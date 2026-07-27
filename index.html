@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>우리학교 메타버스</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "./lib/three.module.min.js" } }
+</script>
+</head>
+<body>
+<canvas id="scene" tabindex="0"></canvas>
+
+<div id="hud">
+  <div id="loc" class="chip">📍 학교 마당</div>
+  <div id="ver" class="chip small"></div>
+</div>
+<div id="help" class="chip small">이동 <b>W A S D</b> · 시점 <b>마우스 드래그</b> · 점프 <b>Space</b> · 달리기 <b>Shift</b></div>
+<div id="fps" class="chip small hidden"></div>
+
+<div id="overlay">
+  <div class="panel">
+    <div class="emoji">🏫</div>
+    <h1 id="schoolName">우리초등학교</h1>
+    <p class="sub">메타버스에 온 걸 환영해요!<br>3인칭 캐릭터로 우리 학교를 돌아다녀 보세요.</p>
+    <div class="controls">
+      <span><b>W A S D</b> / 방향키 — 걷기</span>
+      <span><b>마우스 드래그</b> — 둘러보기</span>
+      <span><b>Space</b> — 점프 · <b>Shift</b> — 달리기</span>
+    </div>
+    <button id="startBtn">입장하기</button>
+    <p id="tagline" class="tiny"></p>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
