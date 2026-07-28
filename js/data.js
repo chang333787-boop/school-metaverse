@@ -11,21 +11,22 @@
 
 export const SCHOOL = {
   name: '정림초등학교',
-  tagline: 'v0.3 · 배치도 날개동 구조 반영',
+  tagline: 'v0.4 · 아이들 요구 1차 반영',
 
   building: {
     floorHeight: 3.4,
     wallColor: 0xf0d98c,          // 교문 사진: 노란 외벽
     roofColor: 0x3e8e5e,          // 위성 사진: 초록 지붕
 
-    // 앞동: x -40~40 (길이 80m 실측), z -36(북)~-24(남 정면), 복도 북측
+    // 앞동: x -40~40 (길이 80m 실측), z -38(북)~-24(남 정면), 복도 북측
+    // (교실 깊이 10.4m — "실이 좁다"는 의견 반영해 실제 교실 체감으로 확대)
     front: {
-      x: [-40, 40], z: [-36, -24], corridorDepth: 3.6,
+      x: [-40, 40], z: [-38, -24], corridorDepth: 3.6,
       rooms: [                     // 서→동 (배치도 1층 아랫줄)
         { name: '원무실',   type: 'office',    span: [-40, -34.5] },
         { name: '유치원',   type: 'classroom', span: [-34.5, -26.5] },
         { name: '사랑반',   type: 'classroom', span: [-26.5, -19.5] },
-        { name: '돌봄교실', type: 'classroom', span: [-19.5, -12.5] },
+        { name: '돌봄교실', type: 'daycare',   span: [-19.5, -12.5] },  // 모둠책상·러그·간식
         { name: '행정실',   type: 'office',    span: [-12.5, -8] },
         { name: '교장실',   type: 'office',    span: [-8, -3.5] },
         { name: '교무실',   type: 'office',    span: [-3.5, 2] },
@@ -39,7 +40,7 @@ export const SCHOOL = {
 
     // 북쪽 날개들 — 방 문은 남쪽(앞동 복도)으로 남
     wings: [
-      { id: 'west', x: [-40, -16], z: [-46, -36], twoStory: true,
+      { id: 'west', x: [-40, -16], z: [-50, -38], twoStory: true,
         rooms: [                   // 배치도 1층 윗줄 서쪽
           { name: '보건실', type: 'nurse',     span: [-40, -35] },
           { name: '나래반', type: 'classroom', span: [-35, -30.5] },
@@ -47,11 +48,11 @@ export const SCHOOL = {
           { name: '도서실', type: 'library',   span: [-27, -22] },
           { name: '계단',   type: 'stair',     span: [-22, -16] },
         ] },
-      { id: 'kitchen', x: [-14, 2], z: [-52, -36], wallHeight: 4.5, roofColor: 0x4a4e54,
+      { id: 'kitchen', x: [-14, 2], z: [-56, -38], wallHeight: 4.5, roofColor: 0x4a4e54,
         rooms: [                   // 위성: 북쪽으로 돌출한 검은 지붕 동
           { name: '급식실', type: 'cafeteria', span: [-14, 2], door: 2.6 },
         ] },
-      { id: 'east', x: [6, 40], z: [-46, -36],
+      { id: 'east', x: [6, 40], z: [-50, -38],
         rooms: [                   // 배치도 1층 윗줄 동쪽
           { name: '2학년',   type: 'classroom', span: [6, 14] },
           { name: '4학년',   type: 'classroom', span: [14, 22] },
@@ -72,10 +73,10 @@ export const SCHOOL = {
     },
   },
 
-  // 예지 보고 + 위성: 체육관은 북서쪽 별동
-  gym:        { center: [-56, -52], width: 30, depth: 20, wallHeight: 8 },
+  // 예지 보고 + 위성: 체육관은 북서쪽 별동 (학교에서 더 떨어뜨림 — 위성 비율)
+  gym:        { center: [-60, -55], width: 30, depth: 20, wallHeight: 8 },
   field:      { center: [6, 8],     width: 96, depth: 64 },  // 흙 운동장
-  garden:     { center: [32, -57],  width: 36, depth: 14 },  // 위성: 북동쪽 큰 밭 전체
+  garden:     { center: [34, -59],  width: 32, depth: 12 },  // 위성: 북동쪽 큰 밭 전체
   playground: { center: [-52, 28] },
   shelter:    { center: [-36, 40], length: 20 },             // 무지개 지붕 쉼터
   bigTree:    [46, 34],                                      // 운동장 남동 큰나무

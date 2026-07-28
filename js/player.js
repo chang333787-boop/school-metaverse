@@ -161,15 +161,22 @@ export class Player {
       }
     }
 
-    // 애니메이션
-    const sw = Math.sin(this.phase) * Math.min(1, this.phase === 0 ? 0 : 1) * 0.65;
+    // 애니메이션 (걷기/달리기 모션 구분)
+    const runAnim = moving && run && !this.airborne;
+    const amp = runAnim ? 0.98 : 0.6;
+    const sw = Math.sin(this.phase) * Math.min(1, this.phase === 0 ? 0 : 1) * amp;
     this.legL.rotation.x = sw;
     this.legR.rotation.x = -sw;
-    this.armL.rotation.x = -sw * 0.85;
-    this.armR.rotation.x = sw * 0.85;
+    this.armL.rotation.x = -sw * (runAnim ? 1.05 : 0.85);
+    this.armR.rotation.x = sw * (runAnim ? 1.05 : 0.85);
+    this.body.rotation.x = runAnim ? 0.14 : 0;   // 달릴 땐 몸을 살짝 숙임
     if (this.airborne) {
+      // 점프 자세 고정: 다리가 허공에서 허우적대던 버그 픽스
       this.armL.rotation.x = -2.6;
       this.armR.rotation.x = -2.6;
+      this.legL.rotation.x = -0.55;
+      this.legR.rotation.x = 0.35;
+      this.body.rotation.x = 0;
     }
     this._syncMesh();
   }
