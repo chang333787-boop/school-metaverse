@@ -17,12 +17,13 @@
 | `js/main.js` | 카메라·HUD·디버그 API(`window.SD`) |
 | `js/textures.js` | 캔버스 텍스처 — 팻말은 `textSign`(양면 정상 표시) |
 
-## data.js 규약 (도면 반영 시)
-- 좌표: x=동서(동쪽+), z=남북(남쪽+), 단위 미터. 실 `span=[x0,x1]`은 건물 중심 기준 로컬 x
-- 본관 양끝 각 8m는 계단(경사로) 구역 — rooms는 `[-W/2+8, W/2-8]` 범위 안에서만 배치
-- 복도는 남쪽(정면), 교실은 북쪽. 문·팻말·칸막이·가구는 room의 `type`에 따라 자동 생성
-- 현재 2층 구조까지 검증됨. 3층 이상 추가 시 슬래브·경사로 로직을 함께 확장해야 함 (world.js의 slab/ramp 부분)
-- room `type`: classroom / office / nurse / cafeteria / library / science / music / broadcast / computer / hall
+## data.js 규약 (v0.3 — 배치도 날개동 구조)
+- 좌표: x=동서(동쪽+), z=남북(남쪽+), 단위 미터. 실 `span=[x0,x1]`은 월드 좌표 x 구간
+- `building.front`: 앞동(남쪽 긴 동, 1층만) — 교실 남향, 복도는 북측 z [-36, zCor]. 방 문은 북쪽 복도로
+- `building.wings[]`: 북쪽 날개들(west 서관·kitchen 급식동·east 동관) — 방 문은 남쪽(앞동 복도 북벽)으로. `twoStory: true`는 서관만
+- `building.upper`: 서관 위 2층(6학년|5학년|소담실). 1층 계단실(type: 'stair', 서관 동쪽 끝) 경사로로 연결 — 경사로는 계단실 동측, 2층 진입 통로는 서측 1.5m
+- room `type`: classroom / office / nurse / cafeteria / library / science / computer / hall / toilet / storage / stair
+- 가구는 방 상대 좌표로 자동 배치(furnish) — 방 폭·깊이 바뀌어도 벽 뚫림 없음
 
 ## 검증 루틴 (push 전 필수)
 1. 문법: `node --input-type=module --check < js/수정파일.js`
