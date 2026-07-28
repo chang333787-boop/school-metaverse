@@ -84,27 +84,27 @@ export function taegeukTexture() {
   return canvasTex(c);
 }
 
-// ---------- 운동장 (트랙+축구장 라인) ----------
+// ---------- 운동장 (흙 마당 — 위성사진: 트랙 없는 맨 흙 + 축구장 라인만) ----------
 export function trackTexture() {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 564;
   const x = c.getContext('2d');
-  x.fillStyle = '#dcc493';
+  x.fillStyle = '#d9bd8f';
   x.fillRect(0, 0, c.width, c.height);
-  // 모래 질감 점
-  x.fillStyle = 'rgba(160,130,80,0.25)';
+  // 모래 질감 점 + 옅은 얼룩
   let seed = 7;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  x.fillStyle = 'rgba(150,120,75,0.18)';
+  for (let i = 0; i < 26; i++) {
+    x.beginPath();
+    x.ellipse(rnd() * 1024, rnd() * 564, 30 + rnd() * 90, 18 + rnd() * 50, rnd() * 3.14, 0, Math.PI * 2);
+    x.fill();
+  }
+  x.fillStyle = 'rgba(160,130,80,0.25)';
   for (let i = 0; i < 900; i++) x.fillRect(rnd() * 1024, rnd() * 564, 2, 2);
-  // 트랙 레인
-  x.strokeStyle = '#ffffff';
-  x.lineWidth = 4;
   const cx = 512, cy = 282;
-  const lanes = [[486, 254], [452, 222], [418, 190], [384, 158]];
-  lanes.forEach(([rx, ry]) => {
-    x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); x.stroke();
-  });
   // 축구장
+  x.strokeStyle = 'rgba(255,255,255,0.75)';
   x.lineWidth = 5;
   x.strokeRect(cx - 260, cy - 130, 520, 260);
   x.beginPath(); x.moveTo(cx, cy - 130); x.lineTo(cx, cy + 130); x.stroke();

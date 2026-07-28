@@ -84,6 +84,7 @@ export function buildWorld(scene) {
   const B = SCHOOL.building;
   const [bx, bz] = B.center;
   const W = B.width, D = B.depth, FH = B.floorHeight;
+  const sxIn = W / 2 - 8;                    // 양끝 계단(경사로) 구역 안쪽 경계
   const zFront = bz + D / 2;                 // -24 (남쪽 정면=복도쪽)
   const zBack = bz - D / 2;                  // -36
   const zDiv = zFront - B.corridorDepth;     // 복도/교실 경계 -27.4
@@ -93,13 +94,13 @@ export function buildWorld(scene) {
   // 바닥판
   box(W + 2, 0.08, D + 2, 0xcfc8ba, bx, 0, bz, { collide: false, walk: true });
   // 현관 앞 포장
-  box(72, 0.06, 6, 0xd8d2c6, bx, 0, zFront + 3, { collide: false, walk: true });
+  box(W + 8, 0.06, 6, 0xd8d2c6, bx, 0, zFront + 3, { collide: false, walk: true });
 
   for (let f = 0; f < 2; f++) {
     const y0 = f * FH;
     const floor = B.floors[f];
     // 복도/교실 경계벽 + 방 문
-    if (f === 0) { wallX(-W / 2, -24, zDiv, y0, FH, innerC); wallX(24, W / 2, zDiv, y0, FH, innerC); }
+    if (f === 0) { wallX(-W / 2, -sxIn, zDiv, y0, FH, innerC); wallX(sxIn, W / 2, zDiv, y0, FH, innerC); }
     floor.rooms.forEach(r => {
       const [s0, s1] = r.span;
       const cx = bx + (s0 + s1) / 2;
@@ -125,11 +126,11 @@ export function buildWorld(scene) {
     wallZ(zBack, zFront, bx - W / 2, y0, FH, wallC);
     wallZ(zBack, zFront, bx + W / 2, y0, FH, wallC);
     // 계단/복도 zone
-    zones.push({ x0: bx - W / 2, x1: bx - 24.5, z0: zDiv, z1: zFront, floor: f, label: `본관 계단 (${floor.label})` });
-    zones.push({ x0: bx + 24.5, x1: bx + W / 2, z0: zDiv, z1: zFront, floor: f, label: `본관 계단 (${floor.label})` });
+    zones.push({ x0: bx - W / 2, x1: bx - sxIn - 0.5, z0: zDiv, z1: zFront, floor: f, label: `본관 계단 (${floor.label})` });
+    zones.push({ x0: bx + sxIn + 0.5, x1: bx + W / 2, z0: zDiv, z1: zFront, floor: f, label: `본관 계단 (${floor.label})` });
     if (f === 1) {
-      zones.push({ x0: bx - W / 2, x1: bx - 24, z0: zBack, z1: zDiv, floor: 1, label: '본관 2층 홀' });
-      zones.push({ x0: bx + 24, x1: bx + W / 2, z0: zBack, z1: zDiv, floor: 1, label: '본관 2층 홀' });
+      zones.push({ x0: bx - W / 2, x1: bx - sxIn, z0: zBack, z1: zDiv, floor: 1, label: '본관 2층 홀' });
+      zones.push({ x0: bx + sxIn, x1: bx + W / 2, z0: zBack, z1: zDiv, floor: 1, label: '본관 2층 홀' });
     }
     zones.push({ x0: bx - W / 2, x1: bx + W / 2, z0: zDiv, z1: zFront, floor: f, label: `본관 ${floor.label} 복도` });
     // 창문(교실 바깥벽=북쪽, 복도 바깥벽=남쪽)
@@ -143,7 +144,7 @@ export function buildWorld(scene) {
         scene.add(wm);
       });
     });
-    for (let wx = -30; wx <= 30; wx += 3) {
+    for (let wx = -(W / 2 - 2); wx <= W / 2 - 2; wx += 3) {
       if (f === 0 && Math.abs(wx) < 3.2) continue;
       const wm = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.4), mat(0xaed4ef));
       wm.position.set(bx + wx, y0 + 1.8, zFront + 0.18);
@@ -155,25 +156,25 @@ export function buildWorld(scene) {
   const slabC = 0xd9d2c2;
   box(W, 0.25, zDiv - zBack, slabC, bx, FH - 0.25, (zBack + zDiv) / 2, { walk: true });
   box(0.5, 0.25, B.corridorDepth, slabC, bx - W / 2 + 0.25, FH - 0.25, (zDiv + zFront) / 2, { walk: true });
-  box(50, 0.25, B.corridorDepth, slabC, bx, FH - 0.25, (zDiv + zFront) / 2, { walk: true });
+  box(W - 14, 0.25, B.corridorDepth, slabC, bx, FH - 0.25, (zDiv + zFront) / 2, { walk: true });
   box(0.5, 0.25, B.corridorDepth, slabC, bx + W / 2 - 0.25, FH - 0.25, (zDiv + zFront) / 2, { walk: true });
 
   // 경사로(계단 대용) + 2층 난간
   const rampL = Math.hypot(6.5, FH);
   const rampAng = Math.atan2(FH, 6.5);
   const rampZ = (zDiv + zFront) / 2;
-  box(rampL, 0.22, 3.1, 0xc9b8a0, bx - 28.25, FH / 2 - 0.11, rampZ, { rot: [0, 0, -rampAng], collide: false, walk: true });
-  box(rampL, 0.22, 3.1, 0xc9b8a0, bx + 28.25, FH / 2 - 0.11, rampZ, { rot: [0, 0, rampAng], collide: false, walk: true });
+  box(rampL, 0.22, 3.1, 0xc9b8a0, bx - (W / 2 - 3.75), FH / 2 - 0.11, rampZ, { rot: [0, 0, -rampAng], collide: false, walk: true });
+  box(rampL, 0.22, 3.1, 0xc9b8a0, bx + (W / 2 - 3.75), FH / 2 - 0.11, rampZ, { rot: [0, 0, rampAng], collide: false, walk: true });
   [[-1], [1]].forEach(([s]) => {
-    const hx0 = s < 0 ? bx - 31.5 : bx + 25, hx1 = s < 0 ? bx - 25 : bx + 31.5;
+    const hx0 = s < 0 ? bx - (W / 2 - 0.5) : bx + (W / 2 - 7), hx1 = s < 0 ? bx - (W / 2 - 7) : bx + (W / 2 - 0.5);
     // 북쪽 난간: 경사로 꼭대기 쪽 2.2m는 2층 출입구로 비워둠
-    const gapC = s < 0 ? bx - 30.4 : bx + 30.4;
+    const gapC = s < 0 ? bx - (W / 2 - 1.6) : bx + (W / 2 - 1.6);
     wallXGaps(hx0, hx1, [{ c: gapC, w: 2.2 }], zDiv + 0.08, FH, 1.05, 0xb08968, 0.12);
     // 복도 본체 쪽(구멍 안쪽) 난간 — 추락 방지
     wallZ(zDiv, zFront, (s < 0 ? hx1 : hx0) + (s < 0 ? 0.07 : -0.07), FH, 1.05, 0xb08968, 0.12);
   });
-  sign('← 2층', bx - 23, 2.45, zDiv + 0.18, 0, 0.45);
-  sign('2층 →', bx + 23, 2.45, zDiv + 0.18, 0, 0.45);
+  sign('← 2층', bx - (sxIn - 1), 2.45, zDiv + 0.18, 0, 0.45);
+  sign('2층 →', bx + (sxIn - 1), 2.45, zDiv + 0.18, 0, 0.45);
 
   // 지붕 + 파라펫 + 물탱크
   box(W + 0.6, 0.25, D + 0.6, B.roofColor, bx, FH * 2 - 0.25, bz);
@@ -220,8 +221,9 @@ export function buildWorld(scene) {
         box(0.9, 0.85, 0.55, 0x9c6644, cx - cw / 2 + 1, y0, -34.4);
         addDeskRows(Math.min(3, Math.floor((cw - 1.5) / 1.8)), r.type === 'computer');
       } else if (r.type === 'office') {
-        for (let i = 0; i < Math.max(2, Math.floor(cw / 2.4)); i++) {
-          box(1.3, 0.74, 0.7, 0xb0a18e, cx + (i - 0.8) * 1.7, y0, -31.8);
+        const nDesk = Math.max(1, Math.round(cw / 2.2) - 1);
+        for (let i = 0; i < nDesk; i++) {
+          box(1.3, 0.74, 0.7, 0xb0a18e, cx + (i - (nDesk - 1) / 2) * 1.7, y0, -31.8);
         }
         const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.4, 10), mat(0xa5673f));
         pot.position.set(bx + s1 - 0.7, y0 + 0.2, -35);
@@ -234,14 +236,15 @@ export function buildWorld(scene) {
           box(1.05, 0.5, 1.95, 0xf2f5f7, cx - 1 + i * 2, y0, -33.5);
           box(0.6, 0.14, 0.35, 0xdfe8ee, cx - 1 + i * 2, y0 + 0.5, -34.2, { collide: false });
         });
-        box(0.9, 1.6, 0.45, 0xe8edf2, cx + 1.6, y0, -35.4);
+        box(0.9, 1.6, 0.45, 0xe8edf2, cx + Math.min(1.6, cw / 2 - 0.75), y0, -35.4);
       } else if (r.type === 'cafeteria') {
-        for (let i = 0; i < 3; i++) {
+        const nT = Math.max(1, Math.floor((cw - 1.6) / 3.6));
+        for (let i = 0; i < nT; i++) {
           for (let j = 0; j < 2; j++) {
-            box(3.4, 0.74, 0.85, 0x9db4c0, cx - 3 + i * 3.6, y0, -33.8 + j * 2.6);
+            box(3.4, 0.74, 0.85, 0x9db4c0, cx + (i - (nT - 1) / 2) * 3.6, y0, -33.8 + j * 2.6);
           }
         }
-        box(6, 0.95, 0.9, 0xc0c6cc, cx, y0, -28.6);
+        box(Math.min(6, cw - 2.5), 0.95, 0.9, 0xc0c6cc, cx, y0, -28.6);
       } else if (r.type === 'library') {
         const books = new THREE.MeshLambertMaterial({ map: bookStripes() });
         for (let i = 0; i < 3; i++) {
@@ -278,24 +281,35 @@ export function buildWorld(scene) {
   const [gx, gz] = G.center;
   const gx0 = gx - G.width / 2, gx1 = gx + G.width / 2;
   const gz0 = gz - G.depth / 2, gz1 = gz + G.depth / 2;
-  const gh = G.wallHeight, gymC = 0xe9e1d0;
-  wallX(gx0, gx1, gz0, 0, gh, gymC, 0.35);
-  wallX(gx0, gx1, gz1, 0, gh, gymC, 0.35);
-  wallZ(gz0, gz1, gx0, 0, gh, gymC, 0.35);
-  wallZGaps(gz0, gz1, [{ c: gz, w: 3 }], gx1, 0, gh, gymC, 0.35);
+  // 예지 사진 반영: 아래 빨간 벽돌 + 위 회색 패널 + 주황 지붕 + 초록 창틀
+  const gh = G.wallHeight;
+  const brickC = 0x9e4f38, panelC = 0x9aa3ab, frameC = 0x2e7d46;
+  const bandH = 3.2; // 벽돌/패널 경계 높이
+  wallX(gx0, gx1, gz0, 0, bandH, brickC, 0.35);
+  wallX(gx0, gx1, gz1, 0, bandH, brickC, 0.35);
+  wallZ(gz0, gz1, gx0, 0, bandH, brickC, 0.35);
+  wallZGaps(gz0, gz1, [{ c: gz, w: 3 }], gx1, 0, bandH, brickC, 0.35);
+  wallX(gx0, gx1, gz0, bandH, gh - bandH, panelC, 0.35);
+  wallX(gx0, gx1, gz1, bandH, gh - bandH, panelC, 0.35);
+  wallZ(gz0, gz1, gx0, bandH, gh - bandH, panelC, 0.35);
+  wallZ(gz0, gz1, gx1, bandH, gh - bandH, panelC, 0.35);
   // 지붕(박공)
   const panelL = Math.hypot(G.depth / 2, 2.5) + 0.6;
   const pAng = Math.atan2(2.5, G.depth / 2);
-  box(G.width + 1.4, 0.22, panelL, 0x7d8a97, gx, gh + 1.14, gz - G.depth / 4, { rot: [-pAng, 0, 0], collide: false });
-  box(G.width + 1.4, 0.22, panelL, 0x7d8a97, gx, gh + 1.14, gz + G.depth / 4, { rot: [pAng, 0, 0], collide: false });
+  box(G.width + 1.4, 0.22, panelL, 0xc35233, gx, gh + 1.14, gz - G.depth / 4, { rot: [-pAng, 0, 0], collide: false });
+  box(G.width + 1.4, 0.22, panelL, 0xc35233, gx, gh + 1.14, gz + G.depth / 4, { rot: [pAng, 0, 0], collide: false });
   // 바닥 코트
   const gymFloor = new THREE.Mesh(new THREE.PlaneGeometry(G.width - 0.8, G.depth - 0.8), new THREE.MeshLambertMaterial({ map: courtTexture() }));
   gymFloor.rotation.x = -Math.PI / 2;
   gymFloor.position.set(gx, 0.03, gz);
   scene.add(gymFloor);
   walkables.push(gymFloor);
-  // 농구 골대 2
-  [[gx0 + 2.2, 1], [gx1 - 2.2, -1]].forEach(([hx, dir]) => {
+  // 무대 (도면: 다목적 강당 + 무대 + 준비실)
+  box(4, 0.9, G.depth - 5, 0xb5793f, gx0 + 2.35, 0, gz, { walk: true });
+  box(2, 0.45, 2.4, 0xa96f3b, gx0 + 5.35, 0, gz, { walk: true });
+  sign('무대', gx0 + 0.55, 4.3, gz, Math.PI / 2, 0.6);
+  // 농구 골대 2 (서쪽은 무대 앞으로)
+  [[gx0 + 7.5, 1], [gx1 - 2.2, -1]].forEach(([hx, dir]) => {
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 3.6, 10), mat(0x555b62));
     pole.position.set(hx, 1.8, gz);
     scene.add(pole); colliders.push(pole);
@@ -313,16 +327,22 @@ export function buildWorld(scene) {
     ball.position.set(gx + dx, 0.15, gz + dz);
     scene.add(ball);
   });
-  // 높은 창
+  // 창 2열: 위 패널띠(높은 창) + 아래 벽돌띠, 둘 다 초록 창틀 (예지 사진)
   for (let wx = gx0 + 3; wx < gx1 - 2; wx += 3.6) {
-    [[gz0 - 0.22, Math.PI], [gz1 + 0.22, 0]].forEach(([wz, ry]) => {
-      const wm = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.1), mat(0xaed4ef));
-      wm.position.set(wx, 4.9, wz);
-      wm.rotation.y = ry;
-      scene.add(wm);
+    [[gz0, -1, Math.PI], [gz1, 1, 0]].forEach(([wz, dir, ry]) => {
+      [5.6, 1.9].forEach(wy => {
+        const fr = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 1.4), mat(frameC));
+        fr.position.set(wx, wy, wz + dir * 0.2);
+        fr.rotation.y = ry;
+        scene.add(fr);
+        const wm = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.1), mat(0xaed4ef));
+        wm.position.set(wx, wy, wz + dir * 0.24);
+        wm.rotation.y = ry;
+        scene.add(wm);
+      });
     });
   }
-  sign('체육관', gx1 + 0.25, 5.4, gz, Math.PI / 2, 0.9);
+  sign('체육관', gx1 + 0.25, gh - 1.2, gz, Math.PI / 2, 0.9);
   zones.push({ x0: gx0, x1: gx1, z0: gz0, z1: gz1, label: '체육관' });
 
   // ---------- 텃밭 ----------
@@ -434,6 +454,22 @@ export function buildWorld(scene) {
   });
   zones.push({ x0: px - 8.5, x1: px + 8.5, z0: pz - 7, z1: pz + 7, label: '놀이터' });
 
+  // ---------- 무지개 지붕 쉼터 (위성사진: 운동장 남서쪽 긴 알록달록 지붕) ----------
+  const SH = SCHOOL.shelter;
+  const [shx, shz] = SH.center, shL = SH.length;
+  const shColors = [0x67b26f, 0xf2b134, 0x4d9bd6, 0xe8863a, 0xd94f6b];
+  const nSeg = Math.round(shL / 2);
+  for (let i = 0; i < nSeg; i++) {
+    box(2, 0.16, 4.4, shColors[i % shColors.length], shx - shL / 2 + 1 + i * 2, 2.5, shz, { collide: false });
+  }
+  for (let sxp = -shL / 2; sxp <= shL / 2 + 0.01; sxp += 4) {
+    box(0.14, 2.5, 0.14, 0x8a949c, shx + sxp, 0, shz - 1.9);
+    box(0.14, 2.5, 0.14, 0x8a949c, shx + sxp, 0, shz + 1.9);
+  }
+  box(shL - 2, 0.42, 0.5, 0xc9b8a0, shx, 0, shz + 1, { walk: true });   // 긴 벤치
+  box(shL - 2, 0.42, 0.5, 0xc9b8a0, shx, 0, shz - 1, { walk: true });
+  zones.push({ x0: shx - shL / 2, x1: shx + shL / 2, z0: shz - 2.5, z1: shz + 2.5, label: '무지개 쉼터' });
+
   // ---------- 국기게양대 ----------
   const [flx, flz] = SCHOOL.flagPole;
   const fpole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 10, 10), mat(0xc8cdd2));
@@ -453,8 +489,21 @@ export function buildWorld(scene) {
   // ---------- 교문 + 길 ----------
   const [gtx, gtz] = SCHOOL.gate;
   box(4, 0.05, gtz - (F.center[1] + F.depth / 2), 0xd8d2c6, gtx, 0.006, (gtz + F.center[1] + F.depth / 2) / 2, { collide: false, walk: true });
-  [-3.5, 3.5].forEach(sx => box(1, 3, 1, 0xb07d62, gtx + sx, 0, gtz));
-  box(9, 0.5, 0.8, 0x8d6b53, gtx, 3.05, gtz, { collide: false });
+  // 교문 사진: 석재 기둥 + 소나무
+  [-3.5, 3.5].forEach(sx => box(1, 3, 1, 0xb9b5aa, gtx + sx, 0, gtz));
+  box(9, 0.5, 0.8, 0x8a9096, gtx, 3.05, gtz, { collide: false });
+  function pine(tx, tz, s = 1) {
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12 * s, 0.18 * s, 1.6 * s, 8), mat(0x7a5230));
+    trunk.position.set(tx, 0.8 * s, tz);
+    scene.add(trunk); colliders.push(trunk);
+    [[1.15, 1.9], [0.9, 2.7], [0.62, 3.4]].forEach(([r, y]) => {
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(r * s, 1.1 * s, 8), mat(0x2f6b3f));
+      cone.position.set(tx, y * s, tz);
+      scene.add(cone);
+    });
+  }
+  pine(gtx + 5.5, gtz - 2.5, 1.15);
+  pine(gtx + 8.5, gtz - 1.2, 0.95);
   const gateSign = sign(SCHOOL.name, gtx, 2.35, gtz, 0, 0.7);
   const gateBlock = new THREE.Mesh(new THREE.BoxGeometry(7, 3, 0.3), new THREE.MeshBasicMaterial({ visible: false }));
   gateBlock.position.set(gtx, 1.5, gtz);
@@ -465,7 +514,8 @@ export function buildWorld(scene) {
   const bd = SCHOOL.bounds;
   const hedgeC = 0x4e7d3a;
   box(bd.x * 2, 0.95, 0.9, hedgeC, 0, 0, bd.zMin);
-  wallXGaps(-bd.x, bd.x, [{ c: gtx, w: 9 }], bd.zMax, 0, 0.95, hedgeC, 0.9);
+  // 정면(남쪽)은 교문 사진처럼 흰 울타리
+  wallXGaps(-bd.x, bd.x, [{ c: gtx, w: 9 }], bd.zMax, 0, 1.1, 0xeef1f3, 0.25);
   box(0.9, 0.95, bd.zMax - bd.zMin, hedgeC, -bd.x, 0, 0);
   box(0.9, 0.95, bd.zMax - bd.zMin, hedgeC, bd.x, 0, 0);
 
@@ -483,7 +533,10 @@ export function buildWorld(scene) {
   for (let tz = -35; tz <= 35; tz += 10) tree(70, tz, 1 + rng() * 0.4);
   for (let tz = -40; tz <= 40; tz += 10) tree(-76, tz, 1 + rng() * 0.4);
   [-24, -10, 6, 20].forEach(tx => tree(tx, -41, 1.1 + rng() * 0.3));
-  tree(36, -40, 1); tree(58, -20, 0.9); tree(-38, 8, 1.1); tree(-38, 28, 1);
+  tree(36, -40, 1); tree(58, -20, 0.9);
+  // 거대한 나무 — 위성사진: 운동장 남동 모서리 랜드마크 (상징물이라 크게)
+  const [btx, btz] = SCHOOL.bigTree;
+  tree(btx, btz, 3.4);
 
   const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   for (let i = 0; i < 5; i++) {
