@@ -240,17 +240,25 @@ export function buildWorld(scene) {
   const hallCx = (hallRoom.span[0] + hallRoom.span[1]) / 2;
   // 남쪽 정면 외벽(현관 구멍)
   wallXGaps(fx0, fx1, [{ c: hallCx, w: 3.6 }], fz1, 0, FH, wallC);
-  // 서/동 외벽
-  wallZ(fz0, fz1, fx0, 0, FH, wallC);
-  wallZ(fz0, fz1, fx1, 0, FH, wallC);
-  // 복도 북벽 = 날개 방들의 남쪽 문이 뚫린 벽
+  // 서 외벽: 원무실 바깥문(초록) / 동 외벽: 주복도 동쪽끝 바깥문(초록)
+  wallZGaps(fz0, fz1, [{ c: FR.westDoor, w: 1.6 }], fx0, 0, FH, wallC);
+  wallZGaps(fz0, fz1, [{ c: FR.eastDoor, w: 1.8 }], fx1, 0, FH, wallC);
+  // 복도 북벽: 서관 방 문 + 세로복도 합류(현관 위) + 마당 문
+  const LC = B.linkCorridor;
   const northGaps = [];
   B.wings.forEach(wg => wg.rooms.forEach(r => {
+    if (r.innerOnly) return;   // 문서고: 복도 문 없음 (나래반에서 진입)
     northGaps.push({ c: (r.span[0] + r.span[1]) / 2, w: r.type === 'stair' ? 2.4 : (r.door || 2) });
   }));
+  northGaps.push({ c: (LC.x[0] + LC.x[1]) / 2, w: LC.x[1] - LC.x[0] });
+  northGaps.push({ c: B.eastWing.yardDoor, w: 1.8 });
   wallXGaps(fx0, fx1, northGaps, fz0, 0, FH, innerC);
   // 복도 사진 느낌: 북벽도 연두 하부띠
   wallXGaps(fx0, fx1, northGaps, fz0, 0, 0.95, 0xbcd9a5, 0.34);
+  // 주복도 동측 북벽(마당쪽)엔 큰 창 — 복도 사진의 바깥 창
+  for (let wx = B.eastWing.x[0] + 2; wx < fx1 - 1.5; wx += 3.2) {
+    if (Math.abs(wx - B.eastWing.yardDoor) > 1.6) windowPane(wx, 1.9, fz0 - 0.18, Math.PI, 2, 1.5);
+  }
 
   // 앞동 방들 (남향, 문은 북쪽 복도로)
   const frontEdges = new Set();
@@ -297,9 +305,14 @@ export function buildWorld(scene) {
     const wh = wg.wallHeight || FH;
     const totalH = wg.twoStory ? FH * 2 : wh;
     const wRoofC = wg.roofColor || roofC;
-    // 외벽 북/서/동 (남쪽은 앞동 복도 북벽이 담당)
+    // 외벽 북/서/동 (남쪽은 앞동 복도 북벽이 담당) — 서벽엔 바깥문(초록: 보건실 옆)
     wallX(wx0, wx1, wz0, 0, totalH, wallC);
-    wallZ(wz0, wz1, wx0, 0, totalH, wallC);
+    if (wg.outDoorZ) {
+      wallZGaps(wz0, wz1, [{ c: wg.outDoorZ, w: 1.6 }], wx0, 0, FH, wallC);
+      wallZ(wz0, wz1, wx0, FH, totalH - FH, wallC);
+    } else {
+      wallZ(wz0, wz1, wx0, 0, totalH, wallC);
+    }
     wallZ(wz0, wz1, wx1, 0, totalH, wallC);
     // 복도 북벽 위 이어올리기 (2층/높은 천장)
     if (totalH > FH) wallX(wx0, wx1, wz1, FH, totalH - FH, wallC);
@@ -309,24 +322,85 @@ export function buildWorld(scene) {
       const [s0, s1] = r.span;
       const cx = (s0 + s1) / 2, cw = s1 - s0;
       edges.add(s0); edges.add(s1);
-      if (r.type !== 'stair') sign(r.name, cx, 2.5, wz1 + 0.18, 0, 0.5);
       zones.push({ x0: s0, x1: s1, z0: wz0, z1: wz1, floor: 0, label: `본관 1층 · ${r.name}` });
       if (r.type !== 'stair') {
         furnish(r, cx, cw, 0, wz0, 1, wz1 - wz0);
         [-cw / 4, cw / 4].forEach(off => windowPane(cx + off, 1.8, wz0 - 0.18, Math.PI));
+      }
+      if (r.type !== 'stair' && !r.innerOnly) {
+        sign(r.name, cx, 2.5, wz1 + 0.18, 0, 0.5);
         // 열린 문짝 + 복도 쪽 창
         box(0.9, 2.2, 0.07, 0x9c6644, cx + (r.door || 2) / 2 + 0.5, 0, wz1 - 0.19, { collide: false });
         [-cw / 4, cw / 4].forEach(off => windowPane(cx + off, 2.35, wz1 + 0.17, 0, 1.3, 0.9));
       }
+      if (r.innerOnly) sign(r.name, s0 - 0.18, 2.2, (wz0 + wz1) / 2, Math.PI / 2, 0.4);
     });
+    // 칸막이 — innerOnly 방의 서쪽 경계엔 안쪽 문 (문서고: 나래반에서 진입)
+    const innerDoorX = new Set(wg.rooms.filter(r => r.innerOnly).map(r => r.span[0]));
     [...edges].filter(x => x > wx0 + 0.01 && x < wx1 - 0.01)
-      .forEach(x => wallZ(wz0, wz1, x, 0, FH, innerC));
+      .forEach(x => {
+        if (innerDoorX.has(x)) wallZGaps(wz0, wz1, [{ c: (wz0 + wz1) / 2, w: 1.4 }], x, 0, FH, innerC);
+        else wallZ(wz0, wz1, x, 0, FH, innerC);
+      });
     if (!wg.twoStory) roofOver(wx0, wx1, wz0, wz1, wh, wRoofC);
-    // 급식동: 높은 창 한 줄
-    if (wg.wallHeight && wg.wallHeight > FH) {
-      for (let wx = wx0 + 2.5; wx < wx1 - 1.5; wx += 4) windowPane(wx, 3.1, wz0 - 0.18, Math.PI, 2, 1);
-    }
   });
+
+  // ---- 급식동 (문은 동쪽 세로복도로, 뒤쪽 바깥문) ----
+  const K = B.kitchen;
+  const [kx0, kx1] = K.x, [kz0, kz1] = K.z;
+  const kh = K.wallHeight;
+  wallXGaps(kx0, kx1, [{ c: K.backDoorX, w: 1.8 }], kz0, 0, kh, wallC);   // 북: 바깥문(시설관리)
+  wallZ(kz0, kz1, kx0, 0, kh, wallC);                                     // 서
+  wallZGaps(kz0, kz1, [{ c: K.doorZ, w: 2.6 }], kx1, 0, kh, wallC);       // 동: 급식실 문 → 세로복도
+  wallX(kx0, kx1, kz1, FH, kh - FH, wallC);                               // 남측 복도벽 위 필러
+  roofOver(kx0, kx1, kz0, kz1, kh, K.roofColor);
+  const kcx = (kx0 + kx1) / 2;
+  furnish({ type: 'cafeteria' }, kcx, kx1 - kx0, 0, kz0, 1, kz1 - kz0);
+  sign('급식실', kx1 + 0.18, 2.6, K.doorZ, Math.PI / 2, 0.5);
+  box(0.9, 2.2, 0.07, 0x9c6644, kx1 - 0.19, 0, K.doorZ + 1.8, { collide: false });
+  for (let wx = kx0 + 2.5; wx < kx1 - 1.5; wx += 4) windowPane(wx, 3.1, kz0 - 0.18, Math.PI, 2, 1);
+  zones.push({ x0: kx0, x1: kx1, z0: kz0, z1: kz1, floor: 0, label: '본관 1층 · 급식실' });
+
+  // ---- 세로복도 (현관 북쪽 → 동관 복도) ----
+  const E = B.eastWing;
+  const [ex0, ex1] = E.x, [ez0, ez1] = E.z;
+  const zCorE = ez0 + E.corridorDepth;                       // 동관 복도 남쪽 경계 -54.4
+  // 동벽(마당쪽): 벽 + 마당을 보는 창
+  wallZ(ez1, kz1, LC.x[1], 0, FH, wallC);
+  [-42.5, -40].forEach(wz => windowPane(LC.x[1] + 0.18, 1.9, wz, Math.PI / 2, 1.6, 1.4));
+  wallZ(ez0, kz0, LC.x[0], 0, FH, wallC);                    // 서벽 급식동 위쪽 짧은 구간
+  roofOver(LC.x[0], LC.x[1], ez1, kz1, FH, roofC);
+  zones.push({ x0: LC.x[0], x1: LC.x[1], z0: ez0, z1: kz1, floor: 0, label: '본관 1층 복도' });
+
+  // ---- 동관 (마당 건너 북쪽 — 복도는 북측, 방 문은 북쪽으로) ----
+  wallX(LC.x[0], ex1, ez0, 0, FH, wallC);                                    // 북 외벽
+  wallZGaps(ez0, ez1, [{ c: (ez0 + zCorE) / 2, w: 1.8 }], ex1, 0, FH, wallC); // 동: 복도 끝 바깥문(초록)
+  wallX(ex0, ex1, ez1, 0, FH, wallC);                                        // 남 외벽(마당쪽)
+  wallZ(zCorE, ez1, ex0, 0, FH, wallC);                                      // 서: 방 서벽
+  const eGaps = E.rooms.map(r => ({ c: (r.span[0] + r.span[1]) / 2, w: r.door || 2 }));
+  wallXGaps(ex0, ex1, eGaps, zCorE, 0, FH, innerC);                          // 복도/방 경계 + 문
+  wallXGaps(ex0, ex1, eGaps, zCorE, 0, 0.95, 0xbcd9a5, 0.34);                // 연두 하부띠
+  const eEdges = new Set();
+  E.rooms.forEach(r => {
+    const [s0, s1] = r.span;
+    const cx = (s0 + s1) / 2, cw = s1 - s0;
+    eEdges.add(s0); eEdges.add(s1);
+    sign(r.name, cx, 2.5, zCorE - 0.18, 0, 0.5);
+    box(0.9, 2.2, 0.07, 0x9c6644, cx + (r.door || 2) / 2 + 0.5, 0, zCorE + 0.19, { collide: false });
+    furnish(r, cx, cw, 0, ez1, -1, ez1 - zCorE);
+    // 남쪽 창은 마당을 봄 + 복도 쪽 창
+    [-cw / 4, cw / 4].forEach(off => windowPane(cx + off, 1.8, ez1 + 0.18, 0));
+    [-cw / 4, cw / 4].forEach(off => windowPane(cx + off, 2.35, zCorE - 0.17, Math.PI, 1.3, 0.9));
+    zones.push({ x0: s0, x1: s1, z0: zCorE, z1: ez1, floor: 0, label: `본관 1층 · ${r.name}` });
+  });
+  [...eEdges].filter(x => x > ex0 + 0.01 && x < ex1 - 0.01)
+    .forEach(x => wallZ(zCorE, ez1, x, 0, FH, innerC));
+  roofOver(LC.x[0], ex1, ez0, ez1, FH, roofC);
+  zones.push({ x0: ex0, x1: ex1, z0: ez0, z1: zCorE, floor: 0, label: '본관 1층 복도' });
+  // 마당 (앞줄과 동관 사이 야외)
+  zones.push({ x0: ex0, x1: fx1, z0: ez1, z1: fz0, label: '마당' });
+  tree(14, -41.2, 0.75);
+  tree(33, -41.2, 0.85);
 
   // ---- 2층 (서관 위: 6학년|5학년|소담실 + 계단) ----
   const westWing = B.wings.find(w => w.twoStory);
@@ -699,6 +773,6 @@ export function buildWorld(scene) {
   return {
     colliders, walkables, zones, dynamic,
     spawn: new THREE.Vector3(0, 0, 38),
-    buildingInfo: { zFront: fz1, zBack: -56, zDiv: zCor, FH },
+    buildingInfo: { zFront: fz1, zBack: -58, zDiv: zCor, FH },
   };
 }

@@ -17,13 +17,16 @@
 | `js/main.js` | 카메라·HUD·디버그 API(`window.SD`) |
 | `js/textures.js` | 캔버스 텍스처 — 팻말은 `textSign`(양면 정상 표시) |
 
-## data.js 규약 (v0.3 — 배치도 날개동 구조)
-- 좌표: x=동서(동쪽+), z=남북(남쪽+), 단위 미터. 실 `span=[x0,x1]`은 월드 좌표 x 구간
-- `building.front`: 앞동(남쪽 긴 동, 1층만) — 교실 남향, 복도는 북측 z [-36, zCor]. 방 문은 북쪽 복도로
-- `building.wings[]`: 북쪽 날개들(west 서관·kitchen 급식동·east 동관) — 방 문은 남쪽(앞동 복도 북벽)으로. `twoStory: true`는 서관만
-- `building.upper`: 서관 위 2층(6학년|5학년|소담실). 1층 계단실(type: 'stair', 서관 동쪽 끝) 경사로로 연결 — 경사로는 계단실 동측, 2층 진입 통로는 서측 1.5m
-- room `type`: classroom / office / nurse / cafeteria / library / science / computer / hall / toilet / storage / stair
-- 가구는 방 상대 좌표로 자동 배치(furnish) — 방 폭·깊이 바뀌어도 벽 뚫림 없음
+## data.js 규약 (v0.5 — 교사 주석으로 복도·문·마당 확정)
+- 좌표: x=동서(동쪽+), z=남북(남쪽+), 단위 미터. 실 `span=[x0,x1]`은 월드 좌표 x 구간. 실 폭은 배치도 픽셀 실측 비율
+- `building.front`: 앞줄(원무실~3학년, 1층만) — 문은 북측 주 복도로, 현관은 남쪽 바깥과 연결. westDoor/eastDoor = 바깥문 z
+- `building.wings[]`: 주 복도에 바로 접한 서관만 (twoStory). `innerOnly: true`(문서고)는 복도 문 없이 옆방(나래반)에서 진입
+- `building.kitchen`: 급식동 — 문은 동쪽 세로복도(doorZ), 뒤쪽 바깥문(backDoorX)
+- `building.linkCorridor`: 현관 북쪽 세로복도 → 동관 복도와 연결
+- `building.eastWing`: 동관(2·4학년·과학실·창고) — **앞줄과의 사이는 야외 마당**. 복도는 건물 북측, 방 문은 북쪽으로. yardDoor = 주복도→마당 문 x
+- `building.upper`: 서관 위 2층(6학년|5학년|소담실). 계단실(type 'stair') 경사로로 연결 — 경사로 동측, 2층 진입 통로 서측 1.5m
+- room `type`: classroom / office / nurse / cafeteria / library / science / computer / hall / toilet / storage / stair / daycare
+- 가구는 방 상대 좌표 자동 배치(furnish) — 방 폭·깊이 바뀌어도 벽 뚫림 없음
 
 ## 검증 루틴 (push 전 필수)
 1. 문법: `node --input-type=module --check < js/수정파일.js`
