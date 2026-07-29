@@ -10,33 +10,38 @@ function canvasTex(canvas) {
   return t;
 }
 
-// ---------- 글자 팻말 ----------
+// ---------- 글자 팻말 (텍스처·지오메트리 캐시 — 같은 글자는 GPU에 1장만) ----------
+const SIGN_CACHE = new Map();
 export function textSign(text, { h = 0.6, bg = '#ffffff', fg = '#1d3557', border = '#1d3557', pad = 26, fontPx = 72 } = {}) {
-  const c = document.createElement('canvas');
-  const ctx = c.getContext('2d');
-  ctx.font = `bold ${fontPx}px ${KR_FONT}`;
-  const tw = Math.ceil(ctx.measureText(text).width);
-  c.width = tw + pad * 2;
-  c.height = fontPx + pad * 1.4;
-  const x = ctx; // re-grab after resize
-  x.font = `bold ${fontPx}px ${KR_FONT}`;
-  x.fillStyle = bg;
-  x.beginPath();
-  x.roundRect(3, 3, c.width - 6, c.height - 6, 18);
-  x.fill();
-  if (border) { x.lineWidth = 6; x.strokeStyle = border; x.stroke(); }
-  x.fillStyle = fg;
-  x.textAlign = 'center';
-  x.textBaseline = 'middle';
-  x.fillText(text, c.width / 2, c.height / 2 + 4);
-  const tex = canvasTex(c);
-  const w = h * (c.width / c.height);
+  const key = `${text}|${h}|${bg}|${fg}|${border}|${pad}|${fontPx}`;
+  let entry = SIGN_CACHE.get(key);
+  if (!entry) {
+    const c = document.createElement('canvas');
+    const ctx = c.getContext('2d');
+    ctx.font = `bold ${fontPx}px ${KR_FONT}`;
+    const tw = Math.ceil(ctx.measureText(text).width);
+    c.width = tw + pad * 2;
+    c.height = fontPx + pad * 1.4;
+    const x = ctx; // re-grab after resize
+    x.font = `bold ${fontPx}px ${KR_FONT}`;
+    x.fillStyle = bg;
+    x.beginPath();
+    x.roundRect(3, 3, c.width - 6, c.height - 6, 18);
+    x.fill();
+    if (border) { x.lineWidth = 6; x.strokeStyle = border; x.stroke(); }
+    x.fillStyle = fg;
+    x.textAlign = 'center';
+    x.textBaseline = 'middle';
+    x.fillText(text, c.width / 2, c.height / 2 + 4);
+    const tex = canvasTex(c);
+    const w = h * (c.width / c.height);
+    entry = { geo: new THREE.PlaneGeometry(w, h), mat: new THREE.MeshBasicMaterial({ map: tex }) };
+    SIGN_CACHE.set(key, entry);
+  }
   // 앞뒤 어느 쪽에서 봐도 글자가 똑바로 보이게 양면 구성
-  const geo = new THREE.PlaneGeometry(w, h);
-  const m = new THREE.MeshBasicMaterial({ map: tex });
   const group = new THREE.Group();
-  const front = new THREE.Mesh(geo, m);
-  const back = new THREE.Mesh(geo, m);
+  const front = new THREE.Mesh(entry.geo, entry.mat);
+  const back = new THREE.Mesh(entry.geo, entry.mat);
   back.rotation.y = Math.PI;
   group.add(front, back);
   return group;
