@@ -193,6 +193,7 @@ export function buildWorld(scene) {
       hairBack.position.set(0, 1.28, -0.26);
       g.add(hairBack);
     }
+    g.traverse(c => { if (c.isMesh) c.castShadow = true; });   // 이름표 추가 전에만
     const tag = textSign(name, { h: 0.26, fontPx: 36, pad: 12 });
     tag.position.y = 1.95;
     g.add(tag);
@@ -980,6 +981,7 @@ export function buildWorld(scene) {
     [[1.15, 1.9], [0.9, 2.7], [0.62, 3.4]].forEach(([r, y]) => {
       const cone = new THREE.Mesh(new THREE.ConeGeometry(r * s, 1.1 * s, 8), mat(0x2f6b3f));
       cone.position.set(tx, y * s, tz);
+      cone.castShadow = true;
       scene.add(cone);
     });
   }
@@ -1010,9 +1012,11 @@ export function buildWorld(scene) {
     scene.add(trunk); colliders.push(trunk);
     const g1 = new THREE.Mesh(new THREE.IcosahedronGeometry(1.05 * s, 0), mat(0x4d8b4d));
     g1.position.set(tx, 1.9 * s, tz);
+    g1.castShadow = true;
     scene.add(g1);
     const g2 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7 * s, 0), mat(0x5e9c53));
     g2.position.set(tx + 0.45 * s, 2.5 * s, tz + 0.2 * s);
+    g2.castShadow = true;
     scene.add(g2);
   }
   for (let tz = -35; tz <= 35; tz += 10) tree(70, tz, 1 + rng() * 0.4);
@@ -1042,6 +1046,13 @@ export function buildWorld(scene) {
   dynamic.clouds.forEach(c => { c.matrixAutoUpdate = true; });
   if (dynamic.flag) dynamic.flag.matrixAutoUpdate = true;
   scene.updateMatrixWorld(true);
+
+  // 그림자 굽기 대상: colliders만 cast(투명·투명벽 제외), walkables만 receive
+  // 문·구름·국기는 cast 금지 (움직이면 유령 그림자)
+  colliders.forEach(m => {
+    if (m.material && m.material.visible !== false && !m.material.transparent) m.castShadow = true;
+  });
+  walkables.forEach(m => { m.receiveShadow = true; });
 
   const CELL = 8;
   const grid = new Map();

@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { SCHOOL } from './data.js';
 import { buildWorld } from './world.js';
 import { Player } from './player.js';
-import { textSign } from './textures.js';
+import { textSign, skyTexture } from './textures.js';
 
 // ---------- 진단 (크래시·끼임 기록) ----------
 let diag;
@@ -23,17 +23,32 @@ const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
 renderer.setSize(window.innerWidth, window.innerHeight);
+// 그림자는 첫 프레임에 한 번만 굽는다 (해·월드가 정적)
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.autoUpdate = false;
+renderer.shadowMap.needsUpdate = true;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x9ed3f5);
-scene.fog = new THREE.Fog(0x9ed3f5, 70, 270);
+scene.background = skyTexture();
+scene.fog = new THREE.Fog(0xcfe9f8, 70, 270);   // 하늘 지평선 색과 동일
 
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 500);
 
-scene.add(new THREE.HemisphereLight(0xeaf6ff, 0x87996b, 1.25));
+scene.add(new THREE.HemisphereLight(0xeaf6ff, 0x87996b, 1.6));  // 그림자로 어두워진 만큼 보강
 const sun = new THREE.DirectionalLight(0xfff2d9, 1.7);
 sun.position.set(60, 95, 45);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -110;
+sun.shadow.camera.right = 110;
+sun.shadow.camera.top = 95;
+sun.shadow.camera.bottom = -95;
+sun.shadow.camera.near = 10;
+sun.shadow.camera.far = 260;
+sun.shadow.bias = -0.0005;
 scene.add(sun);
+scene.add(sun.target);
 
 const world = buildWorld(scene);
 const player = new Player(scene, world);

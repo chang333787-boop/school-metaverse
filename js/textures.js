@@ -149,6 +149,23 @@ export function courtTexture() {
   return canvasTex(c);
 }
 
+// ---------- 하늘 그라디언트 (EquirectangularReflectionMapping 필수) ----------
+export function skyTexture() {
+  const c = document.createElement('canvas');
+  c.width = 16; c.height = 256;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, '#3d8edb');     // 천정
+  g.addColorStop(0.42, '#7cc0ee');
+  g.addColorStop(0.5, '#cfe9f8');   // 지평선 — fog 색과 동일해야 함
+  g.addColorStop(1, '#dfeef7');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 16, 256);
+  const t = canvasTex(c);
+  t.mapping = THREE.EquirectangularReflectionMapping;
+  return t;
+}
+
 // ---------- 얼굴 ----------
 export function faceTexture() {
   const c = document.createElement('canvas');
