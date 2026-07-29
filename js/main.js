@@ -58,12 +58,101 @@ function updateCamera(dt) {
   camera.lookAt(target);
 }
 
+// ---------- 상호작용 (E키: 문·컴퓨터·의자) ----------
+const msgBox = document.createElement('div');
+msgBox.style.cssText = 'position:fixed;left:50%;bottom:64px;transform:translateX(-50%);background:rgba(29,53,87,.85);color:#fff;padding:7px 14px;border-radius:10px;font:14px sans-serif;z-index:40;display:none;';
+document.body.appendChild(msgBox);
+let msgTimer = 0;
+function toast(t) {
+  msgBox.textContent = t;
+  msgBox.style.display = 'block';
+  msgTimer = 1.6;
+}
+const hint = document.createElement('div');
+hint.style.cssText = 'position:fixed;left:10px;bottom:10px;background:rgba(29,53,87,.72);color:#fff;padding:6px 10px;border-radius:8px;font:12px sans-serif;z-index:30;';
+hint.textContent = 'E: 문 열고닫기 · 컴퓨터 켜기 · 의자에 앉기';
+document.body.appendChild(hint);
+
+function interact() {
+  const p = player.pos;
+  let best = null, bestD = 2.3;
+  for (const d of world.doors) {
+    if (Math.abs(p.y - d.y) > 2.4) continue;
+    const dist = Math.hypot(p.x - d.x, p.z - d.z);
+    if (dist < bestD) { best = { kind: 'door', o: d }; bestD = dist; }
+  }
+  for (const it of world.interactables) {
+    if (Math.abs(p.y - it.y) > 2) continue;
+    const dist = Math.hypot(p.x - it.x, p.z - it.z);
+    const lim = it.type === 'chair' ? 1.5 : 1.7;
+    if (dist < Math.min(bestD, lim)) { best = { kind: it.type, o: it }; bestD = dist; }
+  }
+  if (!best) return;
+  if (best.kind === 'door') {
+    const d = best.o;
+    d.open = !d.open;
+    d.group.rotation.y = d.open ? d.openRot : 0;
+    toast(d.open ? '문을 열었다' : '문을 닫았다');
+  } else if (best.kind === 'computer') {
+    const it = best.o;
+    it.on = !it.on;
+    it.mesh.material.color.set(it.on ? 0x9fd8ff : 0x1a2b30);
+    toast(it.on ? '컴퓨터를 켰다! 🖥️' : '컴퓨터를 껐다');
+  } else if (best.kind === 'chair') {
+    player.sit(best.o);
+    toast('의자에 앉았다 (이동키로 일어나기)');
+  }
+}
+
+// ---------- 미니맵 ----------
+const mm = document.createElement('canvas');
+mm.width = 220; mm.height = 160;
+mm.style.cssText = 'position:fixed;right:10px;top:10px;width:176px;height:128px;background:rgba(240,246,250,.85);border:2px solid #1d3557;border-radius:10px;z-index:30;';
+document.body.appendChild(mm);
+const mmx = mm.getContext('2d');
+function mmDraw() {
+  const W = mm.width, H = mm.height;
+  const bd = SCHOOL.bounds;
+  const sx = x => (x + bd.x) / (bd.x * 2) * (W - 10) + 5;
+  const sz = z => (z - SCHOOL.bounds.zMin) / (bd.zMax - bd.zMin) * (H - 10) + 5;
+  const rect = (x0, z0, x1, z1, c) => {
+    mmx.fillStyle = c;
+    mmx.fillRect(sx(x0), sz(z0), sx(x1) - sx(x0), sz(z1) - sz(z0));
+  };
+  mmx.clearRect(0, 0, W, H);
+  const F = SCHOOL.field, B = SCHOOL.building;
+  rect(F.center[0] - F.width / 2, F.center[1] - F.depth / 2, F.center[0] + F.width / 2, F.center[1] + F.depth / 2, '#e4cf9d');
+  rect(B.front.x[0], B.front.z[0], B.front.x[1], B.front.z[1], '#5aa877');
+  B.wings.forEach(w => rect(w.x[0], w.z[0], w.x[1], w.z[1], '#5aa877'));
+  rect(B.kitchen.x[0], B.kitchen.z[0], B.kitchen.x[1], B.kitchen.z[1], '#4a4e54');
+  rect(B.linkCorridor.x[0], B.eastWing.z[0], B.linkCorridor.x[1], B.front.z[0], '#5aa877');
+  rect(B.eastWing.x[0], B.eastWing.z[0], B.eastWing.x[1], B.eastWing.z[1], '#5aa877');
+  const G = SCHOOL.gym;
+  rect(G.center[0] - G.width / 2, G.center[1] - G.depth / 2, G.center[0] + G.width / 2, G.center[1] + G.depth / 2, '#c35233');
+  const GA = SCHOOL.garden;
+  rect(GA.center[0] - GA.width / 2, GA.center[1] - GA.depth / 2, GA.center[0] + GA.width / 2, GA.center[1] + GA.depth / 2, '#8a5a30');
+  rect(SCHOOL.playground.center[0] - 8.5, SCHOOL.playground.center[1] - 7, SCHOOL.playground.center[0] + 8.5, SCHOOL.playground.center[1] + 7, '#e8b64f');
+  rect(SCHOOL.gate[0] - 2, SCHOOL.gate[1] - 1.5, SCHOOL.gate[0] + 2, SCHOOL.gate[1] + 1, '#7a5230');
+  // 내 위치
+  mmx.fillStyle = '#e3453a';
+  mmx.beginPath();
+  mmx.arc(sx(player.pos.x), sz(player.pos.z), 4, 0, Math.PI * 2);
+  mmx.fill();
+  mmx.strokeStyle = '#e3453a';
+  mmx.lineWidth = 2;
+  mmx.beginPath();
+  mmx.moveTo(sx(player.pos.x), sz(player.pos.z));
+  mmx.lineTo(sx(player.pos.x) + Math.sin(player.yaw) * 8, sz(player.pos.z) + Math.cos(player.yaw) * 8);
+  mmx.stroke();
+}
+
 // ---------- 입력 ----------
 const keys = new Set();
 window.addEventListener('keydown', e => {
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
   keys.add(e.code);
   if (e.code === 'KeyF') fpsBox.classList.toggle('hidden');
+  if (e.code === 'KeyE') interact();
 });
 window.addEventListener('keyup', e => keys.delete(e.code));
 window.addEventListener('blur', () => keys.clear());
@@ -116,12 +205,17 @@ function loop() {
   });
   fpsAcc += dt; fpsN++;
   hudAcc += dt;
+  if (msgTimer > 0) {
+    msgTimer -= dt;
+    if (msgTimer <= 0) msgBox.style.display = 'none';
+  }
   if (hudAcc > 0.25) {
     hudAcc = 0;
     locChip.textContent = '📍 ' + zoneLabel();
     fpsVal = Math.round(fpsN / fpsAcc);
     fpsBox.textContent = fpsVal + ' fps';
     fpsAcc = 0; fpsN = 0;
+    mmDraw();
   }
   renderer.render(scene, camera);
 }

@@ -85,9 +85,18 @@ export class Player {
   }
 
   _blockedAt(px, pz, py) {
-    const r = 0.34;
-    const y0 = py + 0.28, y1 = py + 1.55;
+    const r = 0.32;
+    // 낮은 턱(0.55m 이하)은 막지 않고 밟고 올라감 — 계단·텃밭 이랑·무대 단
+    const y0 = py + 0.55, y1 = py + 1.55;
     for (const b of this._boxes) {
+      if (px > b.minX - r && px < b.maxX + r &&
+          pz > b.minZ - r && pz < b.maxZ + r &&
+          b.minY < y1 && b.maxY > y0) return true;
+    }
+    // 닫힌 문
+    for (const d of this.world.doors || []) {
+      if (d.open) continue;
+      const b = d.aabb;
       if (px > b.minX - r && px < b.maxX + r &&
           pz > b.minZ - r && pz < b.maxZ + r &&
           b.minY < y1 && b.maxY > y0) return true;
@@ -101,8 +110,33 @@ export class Player {
     return hits.length ? hits[0].point.y : -100;
   }
 
+  sit(chair) {
+    this.sitting = chair;
+    this.pos.set(chair.x, chair.y + 0.42, chair.z);
+    this.yaw = chair.yaw;
+    this.vy = 0;
+    this.airborne = false;
+  }
+
   update(dt, keys, camYaw) {
     const p = this.pos;
+    // 앉아있는 동안: 이동키 누르면 일어남
+    if (this.sitting) {
+      const wantMove = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].some(k => keys.has(k));
+      if (wantMove) {
+        const ch = this.sitting;
+        this.sitting = null;
+        this.pos.set(ch.x, ch.y, ch.z + 0.6);
+      } else {
+        this.legL.rotation.x = -1.35;
+        this.legR.rotation.x = -1.35;
+        this.armL.rotation.x = -0.4;
+        this.armR.rotation.x = -0.4;
+        this.body.rotation.x = 0;
+        this._syncMesh();
+        return;
+      }
+    }
     // 입력 → 카메라 기준 이동 방향
     let ix = 0, iz = 0;
     if (keys.has('KeyW') || keys.has('ArrowUp')) iz += 1;
