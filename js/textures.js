@@ -167,10 +167,13 @@ export function skyTexture(mode = 'day') {
   if (mode === 'night') {
     let seed = 42;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    for (let i = 0; i < 130; i++) {
-      x.fillStyle = `rgba(255,255,${230 + Math.floor(rnd() * 25)},${0.4 + rnd() * 0.6})`;
+    // 별은 지평선(y=128) 근처까지 자연스럽게 옅어지며 이어짐 (뚝 끊긴 띠 방지)
+    for (let i = 0; i < 165; i++) {
+      const sy = rnd() * 126;
+      const fade = sy > 96 ? (126 - sy) / 30 : 1;
+      x.fillStyle = `rgba(255,255,${230 + Math.floor(rnd() * 25)},${(0.35 + rnd() * 0.6) * fade})`;
       const r = rnd() < 0.12 ? 1.6 : 1;
-      x.fillRect(rnd() * 512, rnd() * 110, r, r);
+      x.fillRect(rnd() * 512, sy, r, r);
     }
   }
   const t = canvasTex(c);
@@ -196,6 +199,26 @@ export function faceTexture() {
   x.fillStyle = 'rgba(240,130,130,0.55)';
   x.beginPath(); x.arc(58, 160, 18, 0, Math.PI * 2); x.fill();
   x.beginPath(); x.arc(198, 160, 18, 0, Math.PI * 2); x.fill();
+  return canvasTex(c);
+}
+
+// ---------- 초록 그물 펜스 (대각 격자 — RepeatWrapping으로 타일링) ----------
+export function netTexture() {
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 64;
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, 64, 64);
+  x.strokeStyle = '#2f8f4f';
+  x.lineWidth = 5;
+  x.beginPath();
+  x.moveTo(0, 0); x.lineTo(64, 64);
+  x.moveTo(64, 0); x.lineTo(0, 64);
+  // 타일 경계에서 이어지도록 모서리 보강
+  x.moveTo(-32, 32); x.lineTo(32, 96);
+  x.moveTo(32, -32); x.lineTo(96, 32);
+  x.moveTo(96, 32); x.lineTo(32, 96);
+  x.moveTo(32, -32); x.lineTo(-32, 32);
+  x.stroke();
   return canvasTex(c);
 }
 

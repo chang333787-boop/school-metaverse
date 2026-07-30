@@ -154,6 +154,7 @@ canvas.addEventListener('wheel', e => {
 }, { passive: true });
 
 const _upDir = new THREE.Vector3(0, 1, 0);
+const _camDir = new THREE.Vector3();
 const ceilRay = new THREE.Raycaster();
 ceilRay.far = 5;
 function updateCamera(dt) {
@@ -167,16 +168,26 @@ function updateCamera(dt) {
     Math.sin(camPitch),
     Math.cos(camYaw) * Math.cos(camPitch)
   );
-  let dist = camDist;
-  camRay.set(_target, _dir);
-  camRay.far = camDist + 0.3;
-  const hits = camRay.intersectObjects(player._nearSolid, false);
-  if (hits.length) dist = Math.max(1.1, hits[0].distance - 0.35);
-  _desired.copy(_target).addScaledVector(_dir, dist);
+  _desired.copy(_target).addScaledVector(_dir, camDist);
   _desired.y = Math.max(_desired.y, player.pos.y + 0.35);
   if (_desired.y > ceilY) _desired.y = Math.max(ceilY, player.pos.y + 0.35);
   const k = 1 - Math.exp(-14 * dt);
   camera.position.lerp(_desired, k);
+  // 벽 관통 방지: 머리→'실제 카메라 위치' 레이로 매 프레임 최종 클램프
+  // (lerp 이동 경로가 벽을 뚫는 것까지 차단 — 벽에 붙으면 카메라가 벽 앞 0.35m까지 다가옴)
+  _camDir.copy(camera.position).sub(_target);
+  const camLen = Math.max(0.001, _camDir.length());
+  _camDir.multiplyScalar(1 / camLen);
+  camRay.set(_target, _camDir);
+  camRay.far = camLen + 0.05;
+  const hits = camRay.intersectObjects(player._nearSolid, false);
+  for (let i = 0; i < hits.length; i++) {
+    if (hits[i].object.userData.noCam) continue;   // 옥상 차단벽 등은 카메라 통과 허용
+    if (hits[i].distance < camLen) {
+      camera.position.copy(_target).addScaledVector(_camDir, Math.max(0.35, hits[i].distance - 0.3));
+    }
+    break;
+  }
   camera.lookAt(_target);
 }
 
