@@ -40,9 +40,9 @@ export const SCHOOL = {
         { name: '유치원',   type: 'classroom', span: [-34.3, -25.3] },
         { name: '사랑반',   type: 'classroom', span: [-25.3, -18] },
         { name: '돌봄교실', type: 'daycare',   span: [-18, -10.7] },
-        { name: '행정실',   type: 'office',    span: [-10.7, -6.7] },
-        { name: '교장실',   type: 'office',    span: [-6.7, -2.7] },
-        { name: '교무실',   type: 'office',    span: [-2.7, 4.3] },
+        { name: '행정실',   type: 'office',    span: [-10.7, -6.5] },
+        { name: '교장실',   type: 'office',    span: [-6.5, -2.9] },
+        { name: '교무실',   type: 'office',    span: [-2.9, 4.3] },   // 행정·교장실보다 큰 실
         { name: '현관',     type: 'hall',      span: [4.3, 8] },
         { name: '화장실',   type: 'toilet',    span: [8, 16.4] },   // 남|여
         { name: '컴퓨터실', type: 'computer',  span: [16.4, 24.2] },
@@ -56,17 +56,23 @@ export const SCHOOL = {
     wings: [
       { id: 'west', x: [-40, -12], z: [-50, -38], twoStory: true,
         rooms: [
-          { name: '보건실', type: 'nurse',     span: [-40, -34.3] },
-          { name: '나래반', type: 'classroom', span: [-34.3, -27] },
-          { name: '문서고', type: 'storage',   span: [-27, -24.3], innerOnly: true },  // 나래반에서 안으로 들어감
-          { name: '도서실', type: 'library',   span: [-24.3, -16.6] },
+          { name: '보건실', type: 'nurse',     span: [-40, -34.6] },
+          { name: '나래반', type: 'classroom', span: [-34.6, -28.6] },
+          { name: '문서고', type: 'storage',   span: [-28.6, -26.4], innerOnly: true },  // 나래반에서 안으로 들어감
+          { name: '도서실', type: 'library',   span: [-26.4, -16.6] },   // 다른 실보다 훨씬 큰 공간
           { name: '계단',   type: 'stair',     span: [-16.6, -12] },
         ] },
     ],
 
-    // 급식동: 급식실·당직실 문은 남쪽 주복도에서 (보라 표시). 바깥문 없음
-    kitchen: { x: [-10.6, 5.4], z: [-56, -38], wallHeight: 4.5, roofColor: 0x46352b,  // 위성: 진갈색 지붕
-               doorC: -4,          // 급식실 남쪽 문 x
+    // 급식동(위성 검은 지붕 전체): 세로복도까지 품는 큰 건물.
+    // 식당홀을 통해 조리실→식품창고로 들어가는 구조 (사용자 설명)
+    kitchen: { x: [-10.6, 8.4], z: [-58, -38], wallHeight: 4.5, roofColor: 0x46352b,
+               doorC: -4,          // 급식실 남쪽 문 x (주복도에서)
+               hallEastDoorZ: -44, // 세로복도→식당홀 문 z
+               cookWallZ: -50,     // 식당홀|조리실 경계
+               cookDoorC: -6,      // 조리실 문 x (식당홀에서)
+               storeDoorZ: -54,    // 조리실→식품창고 문 z (경계 x0)
+               backDoorC: -3,      // 조리실 뒤(북) 시설관리 바깥문 x
                dutyRoom: { x: [-10.6, -6.6], z: [-42, -38], doorC: -8.6 } },  // 당직실
 
     // 세로복도 (현관 북쪽 → 동관 복도로). yardDoorZ = 마당 나가는 유리문(빨강)
@@ -79,7 +85,7 @@ export const SCHOOL = {
         { name: '2학년',   type: 'classroom', span: [8.4, 17.5] },
         { name: '4학년',   type: 'classroom', span: [17.5, 26] },
         { name: '과학실',  type: 'science',   span: [26, 32.8] },
-        { name: '과학창고', type: 'storage',  span: [32.8, 36.2] },
+        { name: '과학준비실', type: 'storage', span: [32.8, 36.2], innerOnly: true },  // 과학실 안에서 들어감
         { name: '창고',    type: 'storage',   span: [36.2, 39.6], external: true },  // 외부에서만 진입(빨강 문 북쪽)
       ],
     },
@@ -93,6 +99,20 @@ export const SCHOOL = {
         { name: '소담실', type: 'office',    span: [-22, -16.6] },
       ],
     },
+  },
+
+  // 교직원 NPC (실명 대신 직함 — 실별 배치)
+  staff: {
+    '보건실': [['보건선생님', '여']],
+    '사랑반': [['사랑반선생님', '여']],
+    '나래반': [['나래반선생님', '남']],
+    '유치원': [['유치원선생님', '여'], ['새싹이', '남', 'small'], ['풀잎이', '여', 'small'], ['하늘이', '여', 'small']],
+    '도서실': [['사서선생님', '여']],
+    '행정실': [['행정실장님', '남'], ['행정 선생님', '여'], ['행정 선생님', '남']],
+    '교무실': [['교감선생님', '남'], ['교무 선생님', '여'], ['교무 선생님', '여']],
+    '교장실': [['교장선생님', '남']],
+    '돌봄교실': [['돌봄선생님', '여']],
+    '급식실': [['급식선생님', '여'], ['청소선생님', '남']],
   },
 
   gym:        { center: [-60, -55], width: 30, depth: 20, wallHeight: 8 },

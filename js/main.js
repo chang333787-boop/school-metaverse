@@ -218,6 +218,7 @@ function targetLabel(t) {
   if (t.kind === 'computer') return t.o.on ? 'E: 컴퓨터 끄기' : 'E: 컴퓨터 켜기';
   if (t.kind === 'chair') return 'E: 의자에 앉기';
   if (t.kind === 'person') return `E: ${t.o.name}에게 말걸기`;
+  if (t.kind === 'locker') return t.o.open ? 'E: 사물함 닫기' : 'E: 사물함 열기';
   if (t.kind === 'garden') return t.o.grown.visible ? 'E: 잘 자라고 있어요' : 'E: 물주기';
   return null;
 }
@@ -253,6 +254,16 @@ function interact() {
     toast(t.o.msg || '의자에 앉았다 (이동키로 일어나기)');
   } else if (t.kind === 'person') {
     talk(t.o);
+  } else if (t.kind === 'locker') {
+    const lk = t.o;
+    lk.open = !lk.open;
+    lk.group.rotation.y = lk.open ? lk.openRot : 0;
+    if (lk.open) {
+      const stuff = ['텅 비어 있다', '체육복이 걸려 있다', '오래된 공책이 있다', '줄넘기가 들어 있다', '실내화 한 짝만 있다…?', '색종이 뭉치가 있다'];
+      toast('사물함을 열었다 — ' + stuff[Math.floor(Math.random() * stuff.length)]);
+    } else {
+      toast('사물함을 닫았다');
+    }
   } else if (t.kind === 'garden') {
     if (!t.o.grown.visible) {
       t.o.grown.visible = true;
