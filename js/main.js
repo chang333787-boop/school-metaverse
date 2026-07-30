@@ -250,8 +250,9 @@ function interact() {
   if (t.kind === 'door') {
     const d = t.o;
     d.open = !d.open;
-    d.group.rotation.y = d.open ? d.openRot : 0;
-    toast(d.open ? '문을 열었다' : '문을 닫았다');
+    if (d.slide) d.slide();
+    else d.group.rotation.y = d.open ? d.openRot : 0;
+    toast(d.open ? '문을 열었다 (드르륵)' : '문을 닫았다');
   } else if (t.kind === 'computer') {
     const it = t.o;
     it.on = !it.on;
@@ -466,6 +467,7 @@ function worldTick(dt) {
       g.rotation.y += dY * Math.min(1, dt * 5);
       if (Math.abs(dY) > 0.06) npcTurn = true;
     }
+    if (pn.tag) pn.tag.rotation.y = camYaw - g.rotation.y;   // 이름표는 항상 카메라를 향함
   }
   if (npcTurn && shadowCd <= 0) {
     renderer.shadowMap.needsUpdate = true;

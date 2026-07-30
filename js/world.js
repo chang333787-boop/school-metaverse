@@ -236,12 +236,17 @@ export function buildWorld(scene) {
       y: opts.y || 0,
       group: g,
       open: opts.glass ? false : true,
-      openRot: (opts.swing || 1) * 1.5,
+      axis, w, baseX: hx, baseZ: hz,
       aabb: axis === 'x'
         ? { minX: hx + 0.03, maxX: hx + w - 0.03, minY: (opts.y || 0), maxY: (opts.y || 0) + 2.2, minZ: hz - 0.1, maxZ: hz + 0.1 }
         : { minX: hx - 0.1, maxX: hx + 0.1, minY: (opts.y || 0), maxY: (opts.y || 0) + 2.2, minZ: hz + 0.03, maxZ: hz + w - 0.03 },
     };
-    g.rotation.y = d.open ? d.openRot : 0;
+    // 한국 학교 문법: 미닫이 — 열리면 문짝이 옆 벽 뒤로 미끄러져 겹침 (방 안을 막지 않음)
+    d.slide = () => {
+      const off = d.open ? d.w * 0.94 : 0;
+      d.group.position.set(d.baseX - (d.axis === 'x' ? off : 0), d.y, d.baseZ - (d.axis === 'x' ? 0 : off));
+    };
+    d.slide();
     doors.push(d);
     return d;
   }
@@ -293,7 +298,7 @@ export function buildWorld(scene) {
     g.rotation.y = yaw;
     scene.add(g);
     interactables.push({ type: 'person', x, y, z, name, group: g, lines: opts.lines || null, li: 0 });
-    persons.push({ group: g, x, z, yaw0: yaw, sc });
+    persons.push({ group: g, x, z, yaw0: yaw, sc, tag });
     return g;
   }
 
@@ -371,8 +376,12 @@ export function buildWorld(scene) {
     const st = SCHOOL.staff && SCHOOL.staff[r.name];
     if (st) {
       st.forEach(([nm, gd, sz], i) => {
-        person(cx - Math.min(cw / 2 - 1.2, 2.4) + i * 1.5, y0, at(3.0 + (i % 2) * 1.5),
-          faceIn, nm, gd === '여', sz === 'small' ? { small: true } : { teacher: true });
+        // 가구(책상 열·침대·식탁)와 안 겹치는 자리 계산
+        const sxp = r.name === '급식실' ? s0 + 2.2 + i * 1.6 : cx - Math.min(cw / 2 - 1.2, 2.4) + i * 1.5;
+        const szp = r.name === '급식실' ? at(depth - 1.4)
+          : r.type === 'nurse' ? at(depth - 2.5)
+          : at(1.9 + (i % 2) * 1.1);
+        person(sxp, y0, szp, faceIn, nm, gd === '여', sz === 'small' ? { small: true } : { teacher: true });
       });
     }
     const classy = r.type === 'classroom' || r.type === 'computer' || r.type === 'science';
@@ -566,6 +575,11 @@ export function buildWorld(scene) {
       box(2.2, 0.72, 1.1, 0xdeb877, cx - 1.8, y0, at(4.8));
       // 낮은 서가 + 원형 러그 + 빈백 독서 코너 + 사서 데스크 (넓어진 도서관)
       box(0.5, 1.1, Math.min(depth - 5, 4.5), 0x9c6b4a, s0 + 0.55, y0, zMid + dir * 1.2);
+      const lowStrip = new THREE.Mesh(UNIT_PLANE, books);
+      lowStrip.scale.set(Math.min(depth - 5, 4.5) - 0.4, 0.5, 1);
+      lowStrip.position.set(s0 + 0.82, y0 + 0.62, zMid + dir * 1.2);
+      lowStrip.rotation.y = Math.PI / 2;
+      scene.add(lowStrip);
       geoAdd(CIRC_GEO, 0xf2b96a, cx + cw / 4, y0 + 0.106, at(2.6), [-Math.PI / 2, 0, 0], 1.6, 1.6, 1);
       [[0.9, 0.4, 0xd94f6b], [-0.6, 0.9, 0x4d9bd6], [0.2, -0.7, 0x67b26f]].forEach(([ox, oz, bc5]) =>
         geoAdd(ICO_GEO, bc5, cx + cw / 4 + ox, y0 + 0.24, at(2.6) + oz, [0, rng() * 3, 0], 0.42, 0.26, 0.42));
@@ -745,6 +759,7 @@ export function buildWorld(scene) {
     }
   });
   for (let bx3 = -38; bx3 <= 50; bx3 += 4.5) bush(bx3, TERR_Z - 1.1, 0.8 + rng() * 0.5);
+  for (let bx6 = 54; bx6 <= 79; bx6 += 4) bush(bx6, TERR_Z - 1.0, 0.9 + rng() * 0.5);   // 동측 테라스 모서리 관목
 
   // ---- 서관 ----
   B.wings.forEach(wg => {
@@ -915,6 +930,13 @@ export function buildWorld(scene) {
   zones.push({ x0: ex0, x1: fx1, z0: ez1, z1: fz0, label: '마당' });
   tree(14, -41.2, 0.75);
   tree(33, -41.2, 0.85);
+  // 마당 채우기: 화단 2 + 벤치
+  [[18, -40.6], [27, -42.2]].forEach(([fbx, fbz]) => {
+    box(2.4, 0.38, 1.0, 0x8a5a3b, fbx, 0, fbz);
+    bush(fbx - 0.5, fbz, 0.6);
+    bush(fbx + 0.55, fbz, 0.55, 0xd9c84a);
+  });
+  box(1.8, 0.42, 0.5, 0xc9b8a0, 22.5, 0, -41.4, { walk: true });
 
   // ---- 2층 ----
   const westWing = B.wings.find(w => w.twoStory);
