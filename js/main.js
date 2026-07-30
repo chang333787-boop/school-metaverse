@@ -313,6 +313,7 @@ function mmDraw() {
   };
   mmx.clearRect(0, 0, W, H);
   const F = SCHOOL.field, B = SCHOOL.building;
+  rect(-bd.x, bd.zMin, bd.x, -18, 'rgba(120,150,100,0.35)');   // 테라스(높은 지대) 톤
   rect(F.center[0] - F.width / 2, F.center[1] - F.depth / 2, F.center[0] + F.width / 2, F.center[1] + F.depth / 2, '#e4cf9d');
   rect(B.front.x[0], B.front.z[0], B.front.x[1], B.front.z[1], '#5aa877');
   B.wings.forEach(w => rect(w.x[0], w.z[0], w.x[1], w.z[1], '#5aa877'));
@@ -324,6 +325,13 @@ function mmDraw() {
   const GA = SCHOOL.garden;
   rect(GA.center[0] - GA.width / 2, GA.center[1] - GA.depth / 2, GA.center[0] + GA.width / 2, GA.center[1] + GA.depth / 2, '#8a5a30');
   rect(SCHOOL.playground.center[0] - 8.5, SCHOOL.playground.center[1] - 7, SCHOOL.playground.center[0] + 8.5, SCHOOL.playground.center[1] + 7, '#e8b64f');
+  rect(SCHOOL.playground.center[0] - 20, SCHOOL.playground.center[1] - 6, SCHOOL.playground.center[0] - 8, SCHOOL.playground.center[1] + 5, '#aeb2b8');   // 자전거 코스
+  rect(-59.3, -43, -48.7, -35, '#8fc978');   // 유치원 놀이터
+  rect(-20, -69.5, 48, -59.5, '#b9bdc2');    // 주차장
+  mmx.fillStyle = '#2f6b3f';                 // 큰 나무
+  mmx.beginPath();
+  mmx.arc(sx(SCHOOL.bigTree[0]), sz(SCHOOL.bigTree[1]), 5, 0, Math.PI * 2);
+  mmx.fill();
   rect(SCHOOL.gate[0] - 2, SCHOOL.gate[1] - 1.5, SCHOOL.gate[0] + 2, SCHOOL.gate[1] + 1, '#7a5230');
   mmx.fillStyle = '#e3453a';
   mmx.beginPath();
