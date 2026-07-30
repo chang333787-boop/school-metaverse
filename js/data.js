@@ -32,8 +32,9 @@ export const SCHOOL = {
     roofColor: 0x3e8e5e,          // 위성 사진: 초록 지붕
 
     // 앞줄: x -40~40, z -38(북)~-24(남 정면), 복도 북측
+    // 복도 폭 2.7m = 학교 편복도 표준(법정 최소 1.8m·설계 관행 2.4~3.0m)
     front: {
-      x: [-40, 40], z: [-38, -24], corridorDepth: 3.6,
+      x: [-40, 40], z: [-38, -24], corridorDepth: 2.7,
       rooms: [                     // 서→동, 폭은 배치도 비율
         { name: '원무실',   type: 'office',    span: [-40, -34.3] },
         { name: '유치원',   type: 'classroom', span: [-34.3, -25.3] },
@@ -73,7 +74,7 @@ export const SCHOOL = {
 
     // 동관: 마당 건너 북쪽, 복도는 건물 북측(z -58~-54.4), 방 문은 북쪽으로
     eastWing: {
-      x: [8.4, 39.6], z: [-58, -44.4], corridorDepth: 3.6,
+      x: [8.4, 39.6], z: [-58, -44.4], corridorDepth: 2.7,
       rooms: [                     // 서→동, 폭은 배치도 비율
         { name: '2학년',   type: 'classroom', span: [8.4, 17.5] },
         { name: '4학년',   type: 'classroom', span: [17.5, 26] },
@@ -85,7 +86,7 @@ export const SCHOOL = {
 
     // 2층: 서관 위 (6학년|5학년|소담실|계단)
     upper: {
-      corridorDepth: 3.4,
+      corridorDepth: 2.7,
       rooms: [
         { name: '6학년', type: 'classroom', span: [-40, -31] },
         { name: '5학년', type: 'classroom', span: [-31, -22] },

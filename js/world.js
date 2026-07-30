@@ -243,7 +243,7 @@ export function buildWorld(scene) {
   const MAT_PERSON = new THREE.MeshLambertMaterial({ vertexColors: true });
   function person(x, y, z, yaw, name, girl, opts = {}) {
     const g = new THREE.Group();
-    const sc = opts.teacher ? 1.12 : 0.88;
+    const sc = opts.teacher ? 0.98 : 0.78;   // 공간감 보정: 실측 공간 대비 사람 비율
     const shirtC = opts.teacher ? (girl ? 0xc76b8e : 0x4a6fa5) : SHIRTS[Math.floor(rng() * SHIRTS.length)];
     const pantsC = 0x5a6b8c, skinC = 0xf6cfa4;
     const hairC = HAIRS[Math.floor(rng() * HAIRS.length)];
@@ -377,18 +377,30 @@ export function buildWorld(scene) {
       scene.add(bul);
       box(1.3, 0.74, 0.7, 0xb0a18e, s0 + 1.5, y0, zB + dir * 1.3);
       box(0.45, 1.5, Math.min(depth - 3, 5), 0xc9a06a, s1 - 0.45, y0, zMid);
+      // 후면(복도쪽) 사물함 — 표준 교실 구성, 앞뒷문 사이
+      if (cw >= 7) {
+        const lkW = cw - 6.8;
+        box(lkW, 1.05, 0.42, 0xe3dccc, cx, y0, at(depth - 0.45));
+        const pastel = [0xf2a6b8, 0xf6c67a, 0x8fd0a8, 0x9bc1e8, 0xc9aee5, 0xf4b8a0];
+        const nCub = Math.max(3, Math.floor(lkW / 0.55));
+        for (let ci = 0; ci < nCub; ci++) {
+          geoAdd(UNIT_PLANE, pastel[ci % pastel.length],
+            cx - lkW / 2 + (ci + 0.5) * (lkW / nCub), y0 + 0.62, at(depth - 0.45) - dir * 0.23,
+            [0, dir > 0 ? Math.PI : 0, 0], lkW / nCub - 0.12, 0.66, 1);
+        }
+      }
       lamp(s0 + cw * 0.38, y0 + FH - 0.12, zMid);
       lamp(s0 + cw * 0.72, y0 + FH - 0.12, zMid);
       // 책상 수 = 학생 수 + 1 (명단 없으면 4)
-      const nx = Math.max(2, Math.min(3, Math.floor((cw - 4) / 1.9) + 1));
-      const nz = Math.max(2, Math.min(4, Math.floor((depth - 3) / 1.7)));
+      const nx = Math.max(2, Math.min(3, Math.floor((cw - 4) / 1.5) + 1));
+      const nz = Math.max(2, Math.min(4, Math.floor((depth - 3) / 1.45)));
       const ppl = SCHOOL.people && SCHOOL.people[r.name];
       const nSeat = Math.min(nx * nz, ppl ? ppl.s.length + 1 : 4);
       const seats = [];
       for (let k = 0; k < nSeat; k++) {
         const i = Math.floor(k / nz), j = k % nz;
-        const dx = s0 + 3.1 + i * 1.9;
-        const dz = zMid + (j - (nz - 1) / 2) * 1.7;
+        const dx = s0 + 3.1 + i * 1.5;
+        const dz = zMid + (j - (nz - 1) / 2) * 1.45;
         const scr = deskChair(dx, y0, dz, r.type === 'computer');
         if (scr) interactables.push({ type: 'computer', x: dx, y: y0, z: dz, mesh: scr });
         seats.push([dx, dz]);
@@ -560,6 +572,9 @@ export function buildWorld(scene) {
       const gaps = r.type === 'toilet'
         ? [{ c: s0 + cw * 0.25, w: 1.6 }, { c: s0 + cw * 0.75, w: 1.6 }]
         : [{ c: doorCOf(r), w: 1.8 }];
+      // 실제 교실처럼 앞문+뒷문
+      const backDoor = ['classroom', 'computer', 'science', 'daycare'].includes(r.type) && cw >= 6.5;
+      if (backDoor) gaps.push({ c: s1 - 1.9, w: 1.8 });
       wallXGaps(s0, s1, gaps, zCor, 0, FH, innerC);
       gaps.forEach(gp => { lintelX(gp.c, gp.w, zCor, innerC); makeDoor(gp.c - gp.w / 2, zCor, gp.w, 'x', { swing: -1 }); });
       // 팻말은 문 바로 위 (교실은 "1반" 표기)
@@ -575,7 +590,8 @@ export function buildWorld(scene) {
       [[s0, gaps[0].c - 1], [gaps[gaps.length - 1].c + 1, s1]].forEach(([a, b]) => {
         if (b - a > 0.8) box(b - a - 0.3, 0.07, 0.06, railC, (a + b) / 2, 0.78, zCor - 0.21, { collide: false });
       });
-      [s0 + cw * 0.55, s0 + cw * 0.85].forEach(wxp => windowPane(wxp, 2.35, zCor - 0.17, Math.PI, 1.3, 0.9));
+      (backDoor ? [s0 + cw * 0.42, s0 + cw * 0.6] : [s0 + cw * 0.55, s0 + cw * 0.85])
+        .forEach(wxp => windowPane(wxp, 2.35, zCor - 0.17, Math.PI, 1.3, 0.9));
     }
     zones.push({ x0: s0, x1: s1, z0: zCor, z1: fz1, floor: 0, label: r.type === 'hall' ? '현관' : `본관 1층 · ${r.name}` });
   });
@@ -695,7 +711,12 @@ export function buildWorld(scene) {
   wallZ(ez0, ez1, ex1, 0, FH, wallC);   // 동 외벽 (바깥문 없음 — 빨강 표시에 없음)
   wallX(ex0, ex1, ez1, 0, FH, wallC);
   wallZ(zCorE, ez1, ex0, 0, FH, wallC);
-  const eGaps = E.rooms.filter(r => !r.external).map(r => ({ c: doorCOf(r), w: 1.8 }));
+  const eBack = r => (r.type === 'classroom' || r.type === 'science') && r.span[1] - r.span[0] >= 6.5;
+  const eGaps = E.rooms.filter(r => !r.external).flatMap(r => {
+    const g = [{ c: doorCOf(r), w: 1.8 }];
+    if (eBack(r)) g.push({ c: r.span[1] - 1.9, w: 1.8 });
+    return g;
+  });
   wallXGaps(ex0, ex1, eGaps, zCorE, 0, FH, innerC);
   wallXGaps(ex0, ex1, eGaps, zCorE, 0, 0.95, wainC, 0.34);
   eGaps.forEach(g => lintelX(g.c, g.w, zCorE, innerC));
@@ -709,7 +730,9 @@ export function buildWorld(scene) {
       const label = SCHOOL.people && SCHOOL.people[r.name] ? `${r.name} 1반` : r.name;
       sign(label, doorCOf(r), 2.42, zCorE - 0.18, 0, 0.45);
       makeDoor(doorCOf(r) - 0.9, zCorE, 1.8, 'x', { swing: -1 });
-      [s0 + cw * 0.55, s0 + cw * 0.85].forEach(wxp => windowPane(wxp, 2.35, zCorE - 0.17, Math.PI, 1.3, 0.9));
+      if (eBack(r)) makeDoor(s1 - 1.9 - 0.9, zCorE, 1.8, 'x', { swing: -1 });
+      (eBack(r) ? [s0 + cw * 0.42, s0 + cw * 0.6] : [s0 + cw * 0.55, s0 + cw * 0.85])
+        .forEach(wxp => windowPane(wxp, 2.35, zCorE - 0.17, Math.PI, 1.3, 0.9));
     }
     furnish(r, cx, cw, 0, ez1, -1, ez1 - zCorE);
     [-cw / 4, cw / 4].forEach(off => windowPane(cx + off, 1.75, ez1 + 0.18, 0, 2.2, 1.6));
@@ -746,9 +769,13 @@ export function buildWorld(scene) {
     const [s0, s1] = r.span;
     const cx = (s0 + s1) / 2, cw = s1 - s0;
     upEdges.add(s0); upEdges.add(s1);
-    wallXGaps(s0, s1, [{ c: doorCOf(r), w: 1.8 }], zCor2, FH, FH, innerC);
-    lintelX(doorCOf(r), 1.8, zCor2, innerC, FH);
-    makeDoor(doorCOf(r) - 0.9, zCor2, 1.8, 'x', { swing: 1, y: FH });
+    const upGaps = [{ c: doorCOf(r), w: 1.8 }];
+    if (r.type === 'classroom' && cw >= 6.5) upGaps.push({ c: s1 - 1.9, w: 1.8 });
+    wallXGaps(s0, s1, upGaps, zCor2, FH, FH, innerC);
+    upGaps.forEach(gp => {
+      lintelX(gp.c, gp.w, zCor2, innerC, FH);
+      makeDoor(gp.c - 0.9, zCor2, 1.8, 'x', { swing: 1, y: FH });
+    });
     const label = SCHOOL.people && SCHOOL.people[r.name] ? `${r.name} 1반` : r.name;
     sign(label, doorCOf(r), FH + 2.42, zCor2 + 0.18, 0, 0.45);
     furnish(r, cx, cw, FH, uz0, 1, zCor2 - uz0);

@@ -61,7 +61,7 @@ const world = buildWorld(scene);
 const player = new Player(scene, world);
 
 // ---------- 카메라 (스크래치 벡터 — 매 프레임 할당 금지) ----------
-let camYaw = 0, camPitch = 0.42, camDist = 5.6;
+let camYaw = 0, camPitch = 0.42, camDist = 4.9;
 const camRay = new THREE.Raycaster();
 const _target = new THREE.Vector3();
 const _dir = new THREE.Vector3();
@@ -97,11 +97,11 @@ window.addEventListener('pointermove', e => {
   lastX = e.clientX; lastY = e.clientY;
 });
 canvas.addEventListener('wheel', e => {
-  camDist = Math.min(10, Math.max(2.6, camDist + e.deltaY * 0.004));
+  camDist = Math.min(10, Math.max(2.2, camDist + e.deltaY * 0.004));
 }, { passive: true });
 
 function updateCamera(dt) {
-  _target.set(player.pos.x, player.pos.y + 1.45, player.pos.z);
+  _target.set(player.pos.x, player.pos.y + 1.3, player.pos.z);
   _dir.set(
     Math.sin(camYaw) * Math.cos(camPitch),
     Math.sin(camPitch),

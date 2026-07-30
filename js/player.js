@@ -142,9 +142,9 @@ export class Player {
     }
   }
 
-  _blockedAt(px, pz, py, r = 0.32) {
+  _blockedAt(px, pz, py, r = 0.26) {
     // 낮은 턱(0.55m 이하)은 밟고 올라감 — 계단·이랑·무대단
-    const y0 = py + 0.55, y1 = py + 1.55;
+    const y0 = py + 0.55, y1 = py + 1.35;
     for (const b of this._nearBoxes) {
       if (px > b.minX - r && px < b.maxX + r &&
           pz > b.minZ - r && pz < b.maxZ + r &&
@@ -161,7 +161,7 @@ export class Player {
   }
 
   _groundAt(px, py, pz) {
-    _origin.set(px, py + 1.7, pz);
+    _origin.set(px, py + 1.5, pz);
     this.ray.set(_origin, DOWN);
     const hits = this.ray.intersectObjects(this._nearRay, false);
     return hits.length ? hits[0].point.y : -100;
@@ -212,7 +212,7 @@ export class Player {
     if (keys.has('KeyD') || keys.has('ArrowRight')) ix += 1;
     const moving = ix !== 0 || iz !== 0;
     const run = keys.has('ShiftLeft') || keys.has('ShiftRight');
-    const speed = run ? 6.6 : 4.2;
+    const speed = run ? 5.8 : 3.6;   // 공간감 보정: 실제 보행 감각에 가깝게
 
     if (moving) {
       const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw);
@@ -225,9 +225,9 @@ export class Player {
       const dx = mx * eff * dt, dz = mz * eff * dt;
       const x0 = p.x, z0 = p.z;
       if (!this._blockedAt(p.x + dx, p.z, p.y)) p.x += dx;
-      else if (!this._blockedAt(p.x + dx, p.z, p.y, 0.2)) p.x += dx;   // 모서리 완화
+      else if (!this._blockedAt(p.x + dx, p.z, p.y, 0.16)) p.x += dx;   // 모서리 완화
       if (!this._blockedAt(p.x, p.z + dz, p.y)) p.z += dz;
-      else if (!this._blockedAt(p.x, p.z + dz, p.y, 0.2)) p.z += dz;
+      else if (!this._blockedAt(p.x, p.z + dz, p.y, 0.16)) p.z += dz;
       const target = Math.atan2(mx, mz);
       let diff = target - this.yaw;
       while (diff > Math.PI) diff -= Math.PI * 2;
@@ -318,12 +318,13 @@ export class Player {
     this.group.position.copy(this.pos);
     this.group.rotation.y = this.yaw;
     this.group.rotation.z = this.lean;
+    // 공간감 보정: 기본 스케일 축소(폭을 더) — 실측 공간 대비 사람 비율 현실화
     const sq = this.squash;
-    this.group.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5);
+    this.group.scale.set(0.8 * (1 + sq * 0.5), 0.86 * (1 - sq), 0.8 * (1 + sq * 0.5));
     const bob = (this.airborne || this.sitting) ? 0 : Math.abs(Math.sin(this.phase)) * 0.05;
     this.group.position.y = this.pos.y + bob;
     this.shadow.position.set(this.pos.x, Math.max(this.groundY, -0.5) + 0.03, this.pos.z);
     const spread = Math.min(1.6, Math.max(0.5, 1 + (this.pos.y - this.groundY) * 0.15));
-    this.shadow.scale.setScalar(1 / spread);
+    this.shadow.scale.setScalar(0.85 / spread);
   }
 }
