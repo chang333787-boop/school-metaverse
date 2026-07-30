@@ -634,6 +634,10 @@ export function buildWorld(scene) {
     .forEach(x => wallZ(zCor, fz1, x, 0, FH, innerC));
   zones.push({ x0: fx0, x1: fx1, z0: fz0, z1: zCor, floor: 0, label: '본관 1층 복도' });
   roofOver(fx0, fx1, fz0, fz1, FH, roofC);
+  // 옥탑 구조물 + 환기구 (위성사진)
+  box(3, 1.6, 2.4, 0xc8ccd2, 20, FH, -31);
+  box(1.1, 0.7, 1.1, 0x9aa5ad, -6, FH, -33);
+  box(1.1, 0.7, 1.1, 0x9aa5ad, 30, FH, -27.5);
 
   sign(SCHOOL.name, hallCx, FH + 1.1, fz1 + 0.35, 0, 1.2);
   box(5, 0.2, 2.6, 0x9aa5ad, hallCx, 3.0, fz1 + 1.25, { collide: false });
@@ -822,7 +826,7 @@ export function buildWorld(scene) {
   zones.push({ x0: ux0, x1: ux1, z0: zCor2, z1: uz1, floor: 1, label: '본관 2층 복도' });
   for (let wx = ux0 + 1.5; wx <= tx0 - 1; wx += 3) windowPane(wx, FH + 1.8, uz1 + 0.18, 0);
   for (let lx = ux0 + 3; lx < tx0; lx += 6) lamp(lx, FH * 2 - 0.12, (zCor2 + uz1) / 2);
-  roofOver(ux0, ux1, uz0, uz1, FH * 2, roofC);
+  roofOver(ux0, ux1, uz0, uz1, FH * 2, 0xd9dce1);  // 위성: 서관 지붕은 밝은 회백색
   const tank = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 1.5, 14), mat(0xc8cdd2));
   tank.position.set(ux0 + 4, FH * 2 + 0.75, uz0 + 3);
   scene.add(tank);
@@ -1150,11 +1154,51 @@ export function buildWorld(scene) {
   gateBlock.position.set(gtx, 1.5, gtz);
   scene.add(gateBlock); colliders.push(gateBlock);
   zones.push({ x0: gtx - 6, x1: gtx + 6, z0: gtz - 4, z1: gtz + 2, label: '교문' });
+  // 정문 디테일 (거리뷰 사진: 파란 간판·현수막·회전차단기·흰 펜스·안전 팻말)
+  const gsb = textSign(SCHOOL.name, { h: 0.9, bg: '#1e4fa3', fg: '#ffffff', border: null });
+  gsb.position.set(gtx + 9, 3.35, gtz - 0.6);
+  scene.add(gsb);
+  const gbn = textSign('함께 놀고 깨우치며 비상하는 "행복한 배움터"', { h: 0.38, bg: '#ffffff', fg: '#d94f6b', border: null });
+  gbn.position.set(gtx + 9, 2.6, gtz - 0.6);
+  scene.add(gbn);
+  [gtx + 5.6, gtx + 12.4].forEach(px4 => box(0.16, 3.7, 0.16, 0x9aa5ad, px4, 0, gtz - 0.6));
+  [-1.6, 0, 1.6].forEach(ox => {   // 회전 차단기 근사
+    box(0.1, 1.1, 0.1, 0xb9bfc6, gtx + ox - 0.7, 0, gtz, { collide: false });
+    box(0.1, 1.1, 0.1, 0xb9bfc6, gtx + ox + 0.7, 0, gtz, { collide: false });
+    box(1.5, 0.1, 0.1, 0xb9bfc6, gtx + ox, 1.1, gtz, { collide: false });
+  });
+  [[gtx - 16, gtx - 4.5], [gtx + 4.5, gtx + 16]].forEach(([a, b]) => {   // 흰 펜스
+    for (let fx2 = a; fx2 <= b; fx2 += 2) box(0.09, 1.15, 0.09, 0xf2f4f6, fx2, 0, gtz - 0.9, { collide: false });
+    box(b - a, 0.07, 0.07, 0xf2f4f6, (a + b) / 2, 1.1, gtz - 0.9, { collide: false });
+    box(b - a, 0.07, 0.07, 0xf2f4f6, (a + b) / 2, 0.6, gtz - 0.9, { collide: false });
+  });
+  const qsign = textSign('지진 옥외대피장소', { h: 0.32, bg: '#f2c94c', fg: '#1d3557', border: null });
+  qsign.position.set(gtx - 5.5, 1.25, gtz - 0.95);
+  scene.add(qsign);
+  // 서쪽 담 너머 비닐하우스 (풍경)
+  [6, -26].forEach(gz2 => {
+    box(6, 1.9, 26, 0xdfe4e8, -89, 0, gz2, { collide: false });
+    box(5, 1.0, 26, 0xcdd5da, -89, 1.9, gz2, { collide: false });
+  });
 
   // ---------- 울타리 + 투명 경계벽 + 나무 + 구름 ----------
+  // ---------- 북측 주차장 + 창고 + 후문 (위성사진) ----------
+  plane(52, 9, 0xb9bdc2, 6, 0.011, -64.5);
+  for (let lx2 = -16; lx2 <= 28; lx2 += 2.75) {
+    geoAdd(UNIT_BOX, 0xe8ebee, lx2, 0.03, -67.2, null, 0.09, 0.02, 4.2);
+    geoAdd(UNIT_BOX, 0xe8ebee, lx2, 0.03, -61.6, null, 0.09, 0.02, 4.2);
+  }
+  [[36, -63.5], [43.5, -61.8]].forEach(([sx2, sz2]) => {
+    box(5, 2.4, 4, 0xdfe3e8, sx2, 0, sz2);
+    box(5.6, 0.28, 4.6, 0x2f6fd0, sx2, 2.4, sz2, { collide: false });
+  });
+  zones.push({ x0: -20, x1: 48, z0: -69.5, z1: -59.5, label: '주차장' });
+
   const bd = SCHOOL.bounds;
   const hedgeC = 0x4e7d3a;
-  box(bd.x * 2, 0.95, 0.9, hedgeC, 0, 0, bd.zMin);
+  wallXGaps(-bd.x, bd.x, [{ c: -30, w: 6 }], bd.zMin, 0, 0.95, hedgeC, 0.9);
+  [-33.5, -26.5].forEach(px3 => box(0.8, 2.2, 0.8, 0xb9b5aa, px3, 0, bd.zMin));
+  sign('후문', -30, 2.0, bd.zMin + 0.6, 0, 0.5);
   wallXGaps(-bd.x, bd.x, [{ c: gtx, w: 9 }], bd.zMax, 0, 1.1, 0xeef1f3, 0.25);
   box(0.9, 0.95, bd.zMax - bd.zMin, hedgeC, -bd.x, 0, (bd.zMin + bd.zMax) / 2);
   box(0.9, 0.95, bd.zMax - bd.zMin, hedgeC, bd.x, 0, (bd.zMin + bd.zMax) / 2);
@@ -1183,6 +1227,11 @@ export function buildWorld(scene) {
   // 건물 앞 관목 줄
   for (let bx2 = fx0 + 2; bx2 < fx1 - 1; bx2 += 4.2) {
     if (Math.abs(bx2 - hallCx) > 3.2) bush(bx2, fz1 + 1.15, 1 + rng() * 0.5);
+  }
+  // 건물 앞 가로수 줄 (위성사진: 남측 전면에 촘촘한 원형 수관)
+  for (let tx2 = fx0 + 4; tx2 <= fx1 - 3; tx2 += 7) {
+    if (Math.abs(tx2 - hallCx) < 4 || Math.abs(tx2 - SCHOOL.flagPole[0]) < 3) continue;
+    tree(tx2, fz1 + 2.3, 0.72 + rng() * 0.3);
   }
   // ---------- 거대나무 (랜드마크 — 개별 메시, 산들바람에 흔들림) ----------
   const [btx, btz] = SCHOOL.bigTree;

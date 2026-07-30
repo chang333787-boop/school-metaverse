@@ -65,7 +65,7 @@ export const SCHOOL = {
     ],
 
     // 급식동: 급식실·당직실 문은 남쪽 주복도에서 (보라 표시). 바깥문 없음
-    kitchen: { x: [-10.6, 5.4], z: [-56, -38], wallHeight: 4.5, roofColor: 0x4a4e54,
+    kitchen: { x: [-10.6, 5.4], z: [-56, -38], wallHeight: 4.5, roofColor: 0x46352b,  // 위성: 진갈색 지붕
                doorC: -4,          // 급식실 남쪽 문 x
                dutyRoom: { x: [-10.6, -6.6], z: [-42, -38], doorC: -8.6 } },  // 당직실
 
