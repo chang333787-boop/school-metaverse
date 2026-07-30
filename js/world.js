@@ -21,6 +21,7 @@ const GLASS_DOOR = new THREE.MeshLambertMaterial({ color: 0xbfe3f5, transparent:
 const NET = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.32 });
 const INVIS = new THREE.MeshBasicMaterial({ visible: false });
 const CURTAIN = new THREE.MeshLambertMaterial({ color: 0x8a8f96 });
+const TAEGEUK_MAT = new THREE.MeshBasicMaterial({ map: taegeukTexture() });
 
 function mulberry32(a) {
   return function () {
@@ -376,7 +377,6 @@ export function buildWorld(scene) {
       bul.rotation.y = Math.PI / 2;
       scene.add(bul);
       box(1.3, 0.74, 0.7, 0xb0a18e, s0 + 1.5, y0, zB + dir * 1.3);
-      box(0.45, 1.5, Math.min(depth - 3, 5), 0xc9a06a, s1 - 0.45, y0, zMid);
       // 후면(복도쪽) 사물함 — 표준 교실 구성, 앞뒷문 사이
       if (cw >= 7) {
         const lkW = cw - 6.8;
@@ -389,6 +389,41 @@ export function buildWorld(scene) {
             [0, dir > 0 ? Math.PI : 0, 0], lkW / nCub - 0.12, 0.66, 1);
         }
       }
+      // ---- 교실답게: 바닥·작품게시판·학급문고·시계·태극기·커튼·분리수거·청소함·화분 ----
+      plane(cw - 0.5, depth - 0.6, 0xe3d2ac, cx, y0 + 0.095, zMid);   // 우드톤 교실 바닥
+      const bbW = Math.min(depth - 4.5, 6.5);
+      geoAdd(UNIT_PLANE, 0x4e7d5a, s1 - 0.21, y0 + 1.78, zMid, [0, -Math.PI / 2, 0], bbW, 1.4, 1);
+      const paper = [0xffffff, 0xfff3c9, 0xffe1e7, 0xe3f2ff, 0xe9ffe3];
+      for (let ai = 0; ai < 8; ai++) {
+        const az = zMid + (ai % 4 - 1.5) * (bbW / 4.4);
+        const ay = y0 + (ai < 4 ? 2.08 : 1.5);
+        geoAdd(UNIT_PLANE, paper[Math.floor(rng() * paper.length)], s1 - 0.23, ay, az,
+          [0, -Math.PI / 2, (rng() - 0.5) * 0.16], 0.44, 0.34, 1);
+      }
+      box(0.42, 0.72, 2.1, 0xa8825e, s1 - 0.4, y0, zMid + dir * 2.9);   // 학급문고
+      [0xe76f51, 0x2a9d8f, 0xe9c46a, 0x457b9d, 0xb56576, 0x6d9f71].forEach((bc2, bi) =>
+        geoAdd(UNIT_BOX, bc2, s1 - 0.4, y0 + 0.87, zMid + dir * 2.9 + (bi - 2.5) * 0.28, null, 0.24, 0.3, 0.09));
+      // 시계 + 태극기 (앞벽 위)
+      geoAdd(UNIT_PLANE, 0xf7f8f9, s0 + 0.185, y0 + 2.82, zMid, [0, Math.PI / 2, 0], 0.46, 0.46, 1);
+      geoAdd(UNIT_PLANE, 0x30343a, s0 + 0.19, y0 + 2.86, zMid, [0, Math.PI / 2, 0.5], 0.05, 0.17, 1);
+      geoAdd(UNIT_PLANE, 0x30343a, s0 + 0.19, y0 + 2.8, zMid, [0, Math.PI / 2, -1.1], 0.05, 0.13, 1);
+      const tg = new THREE.Mesh(UNIT_PLANE, TAEGEUK_MAT);
+      tg.scale.set(0.54, 0.36, 1);
+      tg.position.set(s0 + 0.185, y0 + 2.82, zMid - dir * 1.35);
+      tg.rotation.y = Math.PI / 2;
+      scene.add(tg);
+      // 커튼 (창가 양끝) — 걷어둔 모습
+      box(0.5, 2.3, 0.14, 0xeadfc8, s0 + 0.95, y0 + 0.75, at(0.33), { collide: false });
+      box(0.5, 2.3, 0.14, 0xeadfc8, s1 - 0.95, y0 + 0.75, at(0.33), { collide: false });
+      // 분리수거함 3종 + 청소도구함 (뒷문 동쪽 구석)
+      [0x67b26f, 0x4d9bd6, 0xf2b134].forEach((bc3, bi) =>
+        box(0.3, 0.38, 0.3, bc3, s1 - 0.55, y0, at(depth - 0.75 - bi * 0.45)));
+      box(0.62, 1.5, 0.45, 0x9aa5ad, s1 - 0.62, y0, at(depth - 2.35));
+      // 창가 화분
+      [[s0 + 2.6], [s0 + 4.6]].forEach(([pxp]) => {
+        geoAdd(STUMP_GEO, 0xa5673f, pxp, y0 + 0.19, at(0.5), null, 0.62, 0.38, 0.62);
+        geoAdd(ICO_GEO, 0x4d8b4d, pxp, y0 + 0.62, at(0.5), [0, rng() * 3, 0], 0.3, 0.28, 0.3);
+      });
       lamp(s0 + cw * 0.38, y0 + FH - 0.12, zMid);
       lamp(s0 + cw * 0.72, y0 + FH - 0.12, zMid);
       // 책상 수 = 학생 수 + 1 (명단 없으면 4)
