@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>정림초 배치 에디터</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: #eef3f7; display: flex; min-height: 100vh; }
+#map { background: #cfe6c2; border-right: 2px solid #1d3557; cursor: default; display: block; }
+#side { width: 320px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+h1 { font-size: 18px; color: #1d3557; }
+.hint { font-size: 12px; color: #475569; background: #fff; border-radius: 8px; padding: 8px; line-height: 1.5; }
+button { padding: 8px 10px; border-radius: 8px; border: 1px solid #1d3557; background: #fff; cursor: pointer; font-family: inherit; font-size: 13px; }
+button.on { background: #1d3557; color: #fff; }
+#copyBtn { background: #2a9d8f; color: #fff; border: none; font-weight: 700; font-size: 14px; padding: 11px; }
+#selInfo { font-size: 13px; background: #fff; border-radius: 8px; padding: 8px; min-height: 40px; }
+#roomOps { display: none; gap: 6px; flex-direction: column; }
+#roomOps select { padding: 6px; border-radius: 6px; font-family: inherit; }
+#io { width: 100%; height: 70px; font-size: 11px; border-radius: 8px; border: 1px solid #94a3b8; padding: 6px; font-family: monospace; }
+.tiny { font-size: 11px; color: #64748b; line-height: 1.5; }
+.row { display: flex; gap: 6px; }
+.row button { flex: 1; }
+</style>
+</head>
+<body>
+<canvas id="map" width="980" height="680"></canvas>
+<div id="side">
+  <h1>🏫 배치 에디터</h1>
+  <div class="hint">
+    <b>시설</b>(체육관·운동장·텃밭…): 드래그=이동, 우하단 ■=크기<br>
+    <b>방</b>: 경계선 드래그=폭 조절 · 더블클릭=이름 바꾸기 · 클릭=선택<br>
+    건물 외형·복도는 실측 고정
+  </div>
+  <div class="row">
+    <button id="f1" class="on">1층</button>
+    <button id="f2">2층 (서관 위)</button>
+  </div>
+  <div id="selInfo">선택: 없음</div>
+  <div id="roomOps">
+    <select id="typeSel">
+      <option value="classroom">교실</option>
+      <option value="office">사무/교무</option>
+      <option value="science">과학실</option>
+      <option value="computer">컴퓨터실</option>
+      <option value="library">도서실</option>
+      <option value="nurse">보건실</option>
+      <option value="daycare">돌봄/유치원</option>
+      <option value="toilet">화장실</option>
+      <option value="storage">창고</option>
+      <option value="stair">계단</option>
+      <option value="hall">현관/홀</option>
+    </select>
+    <div class="row">
+      <button id="splitBtn">방 나누기</button>
+      <button id="delBtn">방 삭제</button>
+    </div>
+  </div>
+  <button id="copyBtn">📋 배치 복사 — 채팅에 붙여넣기</button>
+  <textarea id="io" placeholder="이전에 복사한 배치 JSON을 붙여넣고 [불러오기]를 누르면 이어서 편집할 수 있어요"></textarea>
+  <button id="loadBtn">불러오기</button>
+  <p class="tiny">복사된 배치를 Claude 채팅에 붙여넣으면 메타버스에 반영해 드립니다. 이 페이지는 AI 없이 동작합니다.</p>
+</div>
+<script type="module" src="js/editor.js"></script>
+</body>
+</html>

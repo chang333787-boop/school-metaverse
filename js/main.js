@@ -38,7 +38,8 @@ scene.fog = new THREE.Fog(0xcfe9f8, 70, 270);   // 하늘 지평선 색과 동�
 
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 500);
 
-scene.add(new THREE.HemisphereLight(0xeaf6ff, 0x87996b, 2.05)); // ACES 톤매핑 보정 포함
+const hemi = new THREE.HemisphereLight(0xeaf6ff, 0x87996b, 2.05); // ACES 톤매핑 보정 포함
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff2d9, 2.25);
 sun.position.set(60, 95, 45);
 sun.castShadow = true;
@@ -59,6 +60,56 @@ scene.add(sunDisc);
 
 const world = buildWorld(scene);
 const player = new Player(scene, world);
+
+// ---------- 시간대 프리셋 (낮/노을/밤 — 전환 시 그림자 1회만 재굽기) ----------
+const TIMES = {
+  day:    { sky: 'day',    fog: 0xcfe9f8, hemi: [0xeaf6ff, 0x87996b, 2.05], sun: [0xfff2d9, 2.25, [60, 95, 45]],  disc: 0xfff3cf, exp: 1.18, label: '☀️ 낮' },
+  sunset: { sky: 'sunset', fog: 0xf0b183, hemi: [0xffdcc0, 0x6b5a48, 1.5],  sun: [0xff9a55, 1.9,  [-85, 26, 30]], disc: 0xffb066, exp: 1.12, label: '🌇 노을' },
+  night:  { sky: 'night',  fog: 0x253a63, hemi: [0x3a5580, 0x141a26, 0.85], sun: [0xa8c2e8, 0.55, [45, 70, -35]], disc: 0xeef2fa, exp: 1.05, label: '🌙 밤' },
+};
+let timeMode = 'day';
+const timeBtn = document.createElement('button');
+timeBtn.style.cssText = 'position:fixed;right:118px;bottom:10px;z-index:30;padding:6px 10px;border-radius:8px;border:1px solid #1d3557;background:rgba(255,255,255,.85);cursor:pointer;font-size:12px;font-family:inherit;';
+timeBtn.textContent = '☀️ 낮';
+document.body.appendChild(timeBtn);
+function applyTime(mode) {
+  timeMode = mode;
+  const t = TIMES[mode];
+  scene.background = skyTexture(t.sky);
+  scene.fog.color.set(t.fog);
+  hemi.color.set(t.hemi[0]);
+  hemi.groundColor.set(t.hemi[1]);
+  hemi.intensity = t.hemi[2];
+  sun.color.set(t.sun[0]);
+  sun.intensity = t.sun[1];
+  sun.position.set(t.sun[2][0], t.sun[2][1], t.sun[2][2]);
+  sunDisc.material.color.set(t.disc);
+  sunDisc.position.copy(sun.position).normalize().multiplyScalar(235);
+  sunDisc.lookAt(0, 0, 0);
+  sunDisc.scale.setScalar(mode === 'night' ? 0.55 : 1);
+  renderer.toneMappingExposure = t.exp;
+  renderer.shadowMap.needsUpdate = true;
+  timeBtn.textContent = t.label;
+}
+timeBtn.addEventListener('click', () => {
+  applyTime(timeMode === 'day' ? 'sunset' : timeMode === 'sunset' ? 'night' : 'day');
+});
+
+// ---------- 차는 공 (운동장 축구공 2 + 체육관 농구공) ----------
+const BALLS = [];
+function addBall(x, z, r, color) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12), new THREE.MeshLambertMaterial({ color }));
+  m.position.set(x, r, z);
+  scene.add(m);
+  BALLS.push({ m, r, vx: 0, vy: 0, vz: 0, cd: 0 });
+  return BALLS[BALLS.length - 1];
+}
+const F_ = SCHOOL.field, GY_ = SCHOOL.gym;
+const FIELD_BB = { x0: F_.center[0] - F_.width / 2 + 1, x1: F_.center[0] + F_.width / 2 - 1, z0: F_.center[1] - F_.depth / 2 + 1, z1: F_.center[1] + F_.depth / 2 - 1 };
+const GYM_BB = { x0: GY_.center[0] - GY_.width / 2 + 0.8, x1: GY_.center[0] + GY_.width / 2 - 0.8, z0: GY_.center[1] - GY_.depth / 2 + 0.8, z1: GY_.center[1] + GY_.depth / 2 - 0.8 };
+addBall(F_.center[0] - 4, F_.center[1] + 2, 0.24, 0xffffff).bb = FIELD_BB;
+addBall(F_.center[0] + 8, F_.center[1] + 9, 0.24, 0xe07a2f).bb = FIELD_BB;
+addBall(GY_.center[0] + 2, GY_.center[1] + 3, 0.2, 0xe07a2f).bb = GYM_BB;
 
 // ---------- 카메라 (스크래치 벡터 — 매 프레임 할당 금지) ----------
 let camYaw = 0, camPitch = 0.42, camDist = 4.9;
@@ -365,24 +416,10 @@ document.getElementById('schoolName').textContent = SCHOOL.name;
 document.getElementById('tagline').textContent = SCHOOL.tagline;
 document.getElementById('ver').textContent = SCHOOL.tagline;
 
-// ---------- 루프 ----------
-const clock = new THREE.Clock();
-let fpsAcc = 0, fpsN = 0, fpsVal = 0, hudAcc = 0;
-let pixelChecked = false;
-window.__lastErr = null;
-function loop() {
-  requestAnimationFrame(loop);
-  const dt = Math.min(0.05, clock.getDelta());
-  try {
-    player.update(dt, keys, camYaw);
-  } catch (err) {
-    window.__lastErr = String(err.stack || err);
-    diag.crashes++;
-    diag.last.err = String(err).slice(0, 200);
-    saveDiag();
-    return;
-  }
-  updateCamera(dt);
+// ---------- 월드 틱 (루프와 SD.step 양쪽에서 호출 — 깃발·구름·나무·NPC·공) ----------
+let shadowCd = 0;   // 그림자 재굽기 스로틀 (NPC 회전 시 프레임마다 굽던 렉 방지)
+function worldTick(dt) {
+  shadowCd -= dt;
   const t = clock.elapsedTime;
   if (world.dynamic.flag) world.dynamic.flag.rotation.y = Math.sin(t * 1.8) * 0.28 + 0.1;
   world.dynamic.clouds.forEach((c, i) => {
@@ -411,7 +448,63 @@ function loop() {
       if (Math.abs(dY) > 0.06) npcTurn = true;
     }
   }
-  if (npcTurn) renderer.shadowMap.needsUpdate = true;
+  if (npcTurn && shadowCd <= 0) {
+    renderer.shadowMap.needsUpdate = true;
+    shadowCd = 0.6;
+  }
+  // 공 물리 (다가가면 뻥!)
+  for (const b of BALLS) {
+    b.cd -= dt;
+    const bp = b.m.position;
+    const bdx = bp.x - player.pos.x, bdz = bp.z - player.pos.z;
+    const d2 = bdx * bdx + bdz * bdz;
+    if (d2 < 0.8 && b.cd <= 0 && Math.abs(player.pos.y - bp.y) < 1.2) {
+      const dd = Math.sqrt(d2) || 0.01;
+      const pow = (keys.has('ShiftLeft') || keys.has('ShiftRight')) ? 10.5 : 6.5;
+      b.vx = bdx / dd * pow;
+      b.vz = bdz / dd * pow;
+      b.vy = 3.2;
+      b.cd = 0.35;
+    }
+    if (b.vx || b.vy || b.vz) {
+      b.vy -= 13 * dt;
+      const dragK = 1 - 0.12 * dt;
+      b.vx *= dragK; b.vz *= dragK;
+      bp.x += b.vx * dt; bp.y += b.vy * dt; bp.z += b.vz * dt;
+      if (bp.y < b.r) {
+        bp.y = b.r;
+        b.vy = Math.abs(b.vy) > 1 ? -b.vy * 0.55 : 0;
+        b.vx *= 0.94; b.vz *= 0.94;
+      }
+      if (bp.x < b.bb.x0 || bp.x > b.bb.x1) { b.vx = -b.vx * 0.7; bp.x = Math.max(b.bb.x0, Math.min(b.bb.x1, bp.x)); }
+      if (bp.z < b.bb.z0 || bp.z > b.bb.z1) { b.vz = -b.vz * 0.7; bp.z = Math.max(b.bb.z0, Math.min(b.bb.z1, bp.z)); }
+      if (Math.abs(b.vx) < 0.05 && Math.abs(b.vz) < 0.05 && bp.y <= b.r + 0.01) { b.vx = 0; b.vz = 0; b.vy = 0; }
+      b.m.rotation.x += b.vz * dt * 3;
+      b.m.rotation.z -= b.vx * dt * 3;
+    }
+  }
+}
+
+// ---------- 루프 ----------
+const clock = new THREE.Clock();
+let fpsAcc = 0, fpsN = 0, fpsVal = 0, hudAcc = 0;
+let pixelChecked = false;
+window.__lastErr = null;
+function loop() {
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, clock.getDelta());
+  try {
+    player.update(dt, keys, camYaw);
+  } catch (err) {
+    window.__lastErr = String(err.stack || err);
+    diag.crashes++;
+    diag.last.err = String(err).slice(0, 200);
+    saveDiag();
+    return;
+  }
+  updateCamera(dt);
+  worldTick(dt);
+  const t = clock.elapsedTime;
   // 달리기 FOV 킥
   const fovT = player.speedK > 0.5 && (keys.has('ShiftLeft') || keys.has('ShiftRight')) ? 68 : 62;
   if (Math.abs(camera.fov - fovT) > 0.05) {
@@ -465,11 +558,14 @@ window.addEventListener('resize', () => {
 // ---------- 검증용 디버그 (콘솔에서 사용) ----------
 window.SD = {
   player, world,
+  time: applyTime,
+  balls: BALLS,
   step(n = 1, keyList = [], dt = 1 / 60) {
     const ks = new Set(keyList);
     for (let i = 0; i < n; i++) {
       player.update(dt, ks, camYaw);
       updateCamera(dt);
+      worldTick(dt);
     }
     renderer.render(scene, camera);
   },

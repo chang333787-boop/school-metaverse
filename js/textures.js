@@ -149,17 +149,30 @@ export function courtTexture() {
 }
 
 // ---------- 하늘 그라디언트 (EquirectangularReflectionMapping 필수) ----------
-export function skyTexture() {
+// mode: day | sunset | night — 지평선 색은 main.js의 fog 색과 맞춰야 함
+export function skyTexture(mode = 'day') {
+  const stops = {
+    day: [[0, '#3d8edb'], [0.42, '#7cc0ee'], [0.5, '#cfe9f8'], [1, '#dfeef7']],
+    sunset: [[0, '#3f4e8f'], [0.3, '#b06a9a'], [0.44, '#ee9a5f'], [0.5, '#f7c48e'], [1, '#e8b284']],
+    night: [[0, '#070d22'], [0.35, '#141f42'], [0.5, '#253a63'], [1, '#1d2c4a']],
+  }[mode] || [[0, '#3d8edb'], [1, '#dfeef7']];
   const c = document.createElement('canvas');
-  c.width = 16; c.height = 256;
+  c.width = mode === 'night' ? 512 : 16;
+  c.height = 256;
   const x = c.getContext('2d');
   const g = x.createLinearGradient(0, 0, 0, 256);
-  g.addColorStop(0, '#3d8edb');     // 천정
-  g.addColorStop(0.42, '#7cc0ee');
-  g.addColorStop(0.5, '#cfe9f8');   // 지평선 — fog 색과 동일해야 함
-  g.addColorStop(1, '#dfeef7');
+  stops.forEach(([o, col]) => g.addColorStop(o, col));
   x.fillStyle = g;
-  x.fillRect(0, 0, 16, 256);
+  x.fillRect(0, 0, c.width, 256);
+  if (mode === 'night') {
+    let seed = 42;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 130; i++) {
+      x.fillStyle = `rgba(255,255,${230 + Math.floor(rnd() * 25)},${0.4 + rnd() * 0.6})`;
+      const r = rnd() < 0.12 ? 1.6 : 1;
+      x.fillRect(rnd() * 512, rnd() * 110, r, r);
+    }
+  }
   const t = canvasTex(c);
   t.mapping = THREE.EquirectangularReflectionMapping;
   return t;
