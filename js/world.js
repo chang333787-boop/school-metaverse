@@ -1381,11 +1381,13 @@ export function buildWorld(scene) {
   gymFloor.position.set(gx, 0.03, gz);
   scene.add(gymFloor);
   walkables.push(gymFloor);
-  // 내부 연두 골판 하단벽 (실내 사진)
-  box(G.width - 1, 1.8, 0.1, 0x8fc978, gx, 0.25, gz0 + 0.45, { collide: false });
-  box(G.width - 1, 1.8, 0.1, 0x8fc978, gx, 0.25, gz1 - 0.45, { collide: false });
-  box(0.1, 1.8, G.depth - 1, 0x8fc978, gx0 + 0.45, 0.25, gz, { collide: false });
-  box(0.1, 1.8, G.depth - 1, 0x8fc978, gx1 - 0.45, 0.25, gz, { collide: false });
+  // 내부 연두 골판 하단벽 (실내 사진) — 높이를 창턱(1.35)에 맞춰 창을 가리지 않게
+  box(G.width - 1, 1.1, 0.1, 0x8fc978, gx, 0.25, gz0 + 0.45, { collide: false });
+  box(G.width - 1, 1.1, 0.1, 0x8fc978, gx, 0.25, gz1 - 0.45, { collide: false });
+  box(0.1, 1.7, G.depth - 1, 0x8fc978, gx0 + 0.45, 0.25, gz, { collide: false });
+  box(0.1, 1.7, G.depth - 1, 0x8fc978, gx1 - 0.45, 0.25, gz, { collide: false });
+  [gz0 + 0.45, gz1 - 0.45].forEach(gwz2 =>   // 골판 상단 마감 몰딩
+    box(G.width - 1, 0.09, 0.14, 0xe8ebee, gx, 1.35, gwz2, { collide: false }));
   // 북쪽: 방송실 | 무대 | 준비실 (입구에서 보면 우측)
   const gFrontZ = gz0 + 3.6;
   wallXGaps(gx0, -70, [{ c: -72.5, w: 1.6 }], gFrontZ, 0, 2.8, innerC);
