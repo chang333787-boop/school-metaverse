@@ -593,7 +593,7 @@ export function buildWorld(scene) {
         for (let ci2 = 0; ci2 < 8; ci2++) {
           geoAdd(UNIT_PLANE, [0xf2a6b8, 0x9bc1e8, 0xf6c67a, 0x8fd0a8][ci2 % 4],
             sx3 + sd * 0.18, y0 + 0.38 + Math.floor(ci2 / 4) * 0.45,
-            zMid + dir * (1.0 - 1.0 + (ci2 % 4) * 0.6 - 0.9),
+            zMid + dir * (1.0 + (ci2 % 4) * 0.6 - 0.9),
             [0, sd > 0 ? Math.PI / 2 : -Math.PI / 2, 0], 0.4, 0.36, 1);
         }
       });
@@ -797,7 +797,9 @@ export function buildWorld(scene) {
   wallXGaps(kx0, kx1, [{ c: K.backDoorC, w: 1.6 }], kz0, 0, kh, wallC);   // 북벽 + 시설관리 바깥문
   makeDoor(K.backDoorC - 0.8, kz0, 1.6, 'x', { color: 0x7d848c, swing: -1 });
   wallZ(kz0, kz1, kx0, 0, kh, wallC);
-  wallZGaps(kz0, kz1, [{ c: LC.yardDoorZ, w: 1.8 }], kx1, 0, kh, wallC);  // 동벽 + 마당 유리문
+  // 동벽: 동관 복도로 통하는 개구부(북쪽) + 마당 유리문
+  const eCorMid = (kz0 + E.z[0] + E.corridorDepth) / 2;
+  wallZGaps(kz0, kz1, [{ c: eCorMid, w: 2.6 }, { c: LC.yardDoorZ, w: 1.8 }], kx1, 0, kh, wallC);
   lintelZ(LC.yardDoorZ, 1.8, kx1, wallC);
   makeDoor(kx1, LC.yardDoorZ - 0.9, 1.8, 'z', { glass: true, swing: 1 });
   windowPane(kx1 + 0.18, 1.9, -47, Math.PI / 2, 1.4, 1.4);

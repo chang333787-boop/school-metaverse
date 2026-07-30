@@ -151,8 +151,15 @@ canvas.addEventListener('wheel', e => {
   camDist = Math.min(10, Math.max(2.2, camDist + e.deltaY * 0.004));
 }, { passive: true });
 
+const _upDir = new THREE.Vector3(0, 1, 0);
+const ceilRay = new THREE.Raycaster();
+ceilRay.far = 5;
 function updateCamera(dt) {
   _target.set(player.pos.x, player.pos.y + 1.3, player.pos.z);
+  // 실내에서 카메라가 천장을 뚫지 않게 상한 계산
+  ceilRay.set(_target, _upDir);
+  const ceilHits = ceilRay.intersectObjects(player._nearRay, false);
+  const ceilY = ceilHits.length ? ceilHits[0].point.y - 0.22 : Infinity;
   _dir.set(
     Math.sin(camYaw) * Math.cos(camPitch),
     Math.sin(camPitch),
@@ -165,6 +172,7 @@ function updateCamera(dt) {
   if (hits.length) dist = Math.max(1.1, hits[0].distance - 0.35);
   _desired.copy(_target).addScaledVector(_dir, dist);
   _desired.y = Math.max(_desired.y, player.pos.y + 0.35);
+  if (_desired.y > ceilY) _desired.y = Math.max(ceilY, player.pos.y + 0.35);
   const k = 1 - Math.exp(-14 * dt);
   camera.position.lerp(_desired, k);
   camera.lookAt(_target);
