@@ -89,6 +89,8 @@ function applyTime(mode) {
   sunDisc.scale.setScalar(mode === 'night' ? 0.55 : 1);
   renderer.toneMappingExposure = t.exp;
   renderer.shadowMap.needsUpdate = true;
+  if (world.dynamic.nightGlow) world.dynamic.nightGlow.visible = mode === 'night';   // 창문 불빛
+  if (world.dynamic.floodMat) world.dynamic.floodMat.color.set(mode === 'night' ? 0xfff2c0 : 0xb9bfc4);   // 조명탑
   timeBtn.textContent = t.label;
 }
 timeBtn.addEventListener('click', () => {
@@ -496,6 +498,17 @@ function worldTick(dt) {
         bp.y = b.gy + b.r;
         b.vy = Math.abs(b.vy) > 1 ? -b.vy * 0.55 : 0;
         b.vx *= 0.94; b.vz *= 0.94;
+      }
+      // 골인 판정 (큰 골대 골라인 통과)
+      b.gcd = (b.gcd || 0) - dt;
+      if (b.bb === FIELD_BB && b.gcd <= 0 && bp.y < 0.2 && Math.abs(bp.z - F_.center[1]) < 2.5) {
+        const gL = F_.center[0] - (F_.width / 2 - 18), gR = F_.center[0] + (F_.width / 2 - 18);
+        if (bp.x < gL - 0.25 || bp.x > gR + 0.25) {
+          toast('⚽ 골인!!');
+          bp.set(F_.center[0] - 4 + Math.random() * 8, b.gy + b.r, F_.center[1] + 4);
+          b.vx = 0; b.vy = 0; b.vz = 0;
+          b.gcd = 2;
+        }
       }
       if (bp.x < b.bb.x0 || bp.x > b.bb.x1) { b.vx = -b.vx * 0.7; bp.x = Math.max(b.bb.x0, Math.min(b.bb.x1, bp.x)); }
       if (bp.z < b.bb.z0 || bp.z > b.bb.z1) { b.vz = -b.vz * 0.7; bp.z = Math.max(b.bb.z0, Math.min(b.bb.z1, bp.z)); }

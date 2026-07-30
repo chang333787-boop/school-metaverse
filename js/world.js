@@ -178,8 +178,24 @@ export function buildWorld(scene) {
     scene.add(s);
     return s;
   }
+  const glowGeos = [];
   function windowPane(x, y, z, rotY, w = 1.8, h = 1.4) {
     geoAdd(UNIT_PLANE, 0xaed4ef, x, y, z, [0, rotY, 0], w, h, 1);
+    // 창틀 새시 + 세로살 (창문 '스티커' 느낌 해소)
+    geoAdd(UNIT_BOX, 0xe8ecef, x, y + h / 2 + 0.035, z, [0, rotY, 0], w + 0.14, 0.07, 0.09);
+    geoAdd(UNIT_BOX, 0xe8ecef, x, y - h / 2 - 0.035, z, [0, rotY, 0], w + 0.14, 0.07, 0.09);
+    const tx4 = Math.cos(rotY) * (w / 2 + 0.035), tz4 = -Math.sin(rotY) * (w / 2 + 0.035);
+    geoAdd(UNIT_BOX, 0xe8ecef, x + tx4, y, z + tz4, [0, rotY, 0], 0.07, h + 0.14, 0.09);
+    geoAdd(UNIT_BOX, 0xe8ecef, x - tx4, y, z - tz4, [0, rotY, 0], 0.07, h + 0.14, 0.09);
+    geoAdd(UNIT_BOX, 0xdde2e6, x, y, z, [0, rotY, 0], 0.045, h, 0.06);
+    // 밤 모드 불빛 사각 (평소 숨김 — 병합해 한 메시로)
+    const { g } = baseOf(UNIT_PLANE);
+    const gg = g.clone();
+    _eu.set(0, rotY, 0);
+    _q.setFromEuler(_eu);
+    _m4.compose(_vp.set(x + Math.sin(rotY) * 0.03, y + YOFF, z + Math.cos(rotY) * 0.03), _q, _vs.set(w * 0.9, h * 0.9, 1));
+    gg.applyMatrix4(_m4);
+    glowGeos.push(gg);
   }
   function lamp(x, y, z, alongX = true) {   // 형광등: 조명 대신 항상 밝은 박스 (청크별 병합)
     const { g } = baseOf(UNIT_BOX);
@@ -279,22 +295,36 @@ export function buildWorld(scene) {
       geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
       parts.push(geo);
     };
-    partAdd(pantsC, 0.11, 0.25, 0, 0.16, 0.5, 0.19);
-    partAdd(pantsC, -0.11, 0.25, 0, 0.16, 0.5, 0.19);
-    partAdd(shirtC, 0, 0.775, 0, 0.5, 0.55, 0.3);
-    partAdd(shirtC, 0.31, 0.78, 0, 0.13, 0.5, 0.15);
-    partAdd(shirtC, -0.31, 0.78, 0, 0.13, 0.5, 0.15);
-    partAdd(skinC, 0, 1.3, 0, 0.5, 0.48, 0.46);
-    partAdd(hairC, 0, 1.58, 0, 0.54, 0.15, 0.5);
-    if (girl) partAdd(hairC, 0, 1.28, -0.26, 0.54, 0.55, 0.12);
+    if (opts.sit) {
+      // 앉은 자세 (의자 위): 허벅지 앞으로, 정강이 아래로
+      partAdd(pantsC, 0.11, 0.06, 0.2, 0.16, 0.16, 0.38);
+      partAdd(pantsC, -0.11, 0.06, 0.2, 0.16, 0.16, 0.38);
+      partAdd(pantsC, 0.11, -0.15, 0.36, 0.15, 0.3, 0.17);
+      partAdd(pantsC, -0.11, -0.15, 0.36, 0.15, 0.3, 0.17);
+      partAdd(shirtC, 0, 0.42, 0, 0.5, 0.55, 0.3);
+      partAdd(shirtC, 0.31, 0.4, 0.06, 0.13, 0.45, 0.15);
+      partAdd(shirtC, -0.31, 0.4, 0.06, 0.13, 0.45, 0.15);
+      partAdd(skinC, 0, 0.96, 0, 0.5, 0.48, 0.46);
+      partAdd(hairC, 0, 1.24, 0, 0.54, 0.15, 0.5);
+      if (girl) partAdd(hairC, 0, 0.94, -0.26, 0.54, 0.55, 0.12);
+    } else {
+      partAdd(pantsC, 0.11, 0.25, 0, 0.16, 0.5, 0.19);
+      partAdd(pantsC, -0.11, 0.25, 0, 0.16, 0.5, 0.19);
+      partAdd(shirtC, 0, 0.775, 0, 0.5, 0.55, 0.3);
+      partAdd(shirtC, 0.31, 0.78, 0, 0.13, 0.5, 0.15);
+      partAdd(shirtC, -0.31, 0.78, 0, 0.13, 0.5, 0.15);
+      partAdd(skinC, 0, 1.3, 0, 0.5, 0.48, 0.46);
+      partAdd(hairC, 0, 1.58, 0, 0.54, 0.15, 0.5);
+      if (girl) partAdd(hairC, 0, 1.28, -0.26, 0.54, 0.55, 0.12);
+    }
     const bodyMesh = new THREE.Mesh(mergeGeometries(parts, false), MAT_PERSON);
     bodyMesh.castShadow = true;
     g.add(bodyMesh);
     const tag = textSign(name, { h: 0.26, fontPx: 36, pad: 12 });
-    tag.position.y = 1.95;
+    tag.position.y = opts.sit ? 1.62 : 1.95;
     g.add(tag);
     g.scale.setScalar(sc);
-    g.position.set(x, y, z);
+    g.position.set(x, y + (opts.sit ? 0.42 : 0), z);
     g.rotation.y = yaw;
     scene.add(g);
     interactables.push({ type: 'person', x, y, z, name, group: g, lines: opts.lines || null, li: 0 });
@@ -497,8 +527,8 @@ export function buildWorld(scene) {
       if (ppl) {
         ppl.s.forEach(([nm, gd], k) => {
           if (k < seats.length) {
-            const g = person(seats[k][0] + 1.15, y0, seats[k][1], -Math.PI / 2, nm, gd === '여',
-              { lines: ppl.lines && ppl.lines[nm] });
+            const g = person(seats[k][0] + 0.62, y0, seats[k][1], -Math.PI / 2, nm, gd === '여',
+              { sit: true, lines: ppl.lines && ppl.lines[nm] });
             npcs.set(`${r.name}:${nm}`, g);
           }
         });
@@ -520,9 +550,39 @@ export function buildWorld(scene) {
         box(0.3, 0.3, 0.3, tc, cx - cw / 2 + 0.7 + i * 0.55, y0 + 1.1, at(0.7), { collide: false }));
       box(1.6, 0.74, 0.7, 0xdeb877, cx + cw / 2 - 1.3, y0, at(depth - 2));
     } else if (r.type === 'office') {
-      const nDesk = Math.max(1, Math.round(cw / 2.2) - 1);
-      for (let i = 0; i < nDesk; i++) {
-        box(1.3, 0.74, 0.7, 0xb0a18e, cx + (i - (nDesk - 1) / 2) * 1.7, y0, at(4.2));
+      if (r.name === '교장실') {
+        // 큰 책상 + 소파 세트 + 책장 + 교훈 액자
+        box(1.9, 0.78, 0.85, 0x8a5a3b, cx, y0, at(1.3));
+        box(0.55, 1.15, 0.55, 0x3a3f47, cx, y0, at(0.55));
+        box(1.5, 0.72, 0.65, 0x6d4a34, cx - 0.9, y0, at(4.3));
+        box(1.5, 0.72, 0.65, 0x6d4a34, cx + 0.9, y0, at(5.6));
+        box(1.0, 0.42, 0.6, 0xc9b8a0, cx, y0, at(4.95), { walk: true });
+        box(0.45, 1.9, Math.min(2.4, cw - 1.4), 0x8b5e34, s1 - 0.45, y0, zMid);
+        const motto = textSign('꿈을 키우는 정림 어린이', { h: 0.3, bg: '#f7f3e8', fg: '#6d4a34', border: '#8a5a3b' });
+        motto.position.set(cx, y0 + 2.35, at(0.25));
+        motto.rotation.y = faceIn;
+        scene.add(motto);
+      } else if (r.name === '교무실') {
+        // 마주보는 책상 4 + 파티션 + 소파 + 프린터·캐비닛
+        [[-1.6, 3.4], [-1.6, 4.9], [1.4, 3.4], [1.4, 4.9]].forEach(([ox, oz]) => {
+          box(1.3, 0.74, 0.7, 0xb0a18e, cx + ox, y0, at(oz));
+        });
+        box(0.06, 1.15, 2.6, 0x9db4c0, cx - 0.1, y0, at(4.15), { collide: false });
+        box(1.4, 0.68, 0.6, 0x6d8296, s0 + 1.2, y0, at(depth - 1.4));
+        box(0.6, 0.55, 0.55, 0xdfe3e8, s1 - 0.7, y0 + 0.74, at(1.0), { collide: false });
+        box(0.7, 0.74, 0.6, 0xc8ccd0, s1 - 0.7, y0, at(1.0));
+        box(0.9, 1.7, 0.45, 0xc8ccd0, s0 + 0.55, y0, at(0.8));
+      } else if (r.name === '행정실') {
+        // 민원 카운터 + 뒤 사무 책상 + 서류장
+        box(Math.min(2.8, cw - 1.2), 1.02, 0.5, 0xd8d2c6, cx, y0, at(depth - 1.6));
+        box(1.3, 0.74, 0.7, 0xb0a18e, cx - 0.8, y0, at(2.6));
+        box(1.3, 0.74, 0.7, 0xb0a18e, cx + 0.9, y0, at(1.4));
+        box(0.9, 1.7, 0.45, 0xc8ccd0, s0 + 0.55, y0, at(0.7));
+      } else {
+        const nDesk = Math.max(1, Math.round(cw / 2.2) - 1);
+        for (let i = 0; i < nDesk; i++) {
+          box(1.3, 0.74, 0.7, 0xb0a18e, cx + (i - (nDesk - 1) / 2) * 1.7, y0, at(4.2));
+        }
       }
       const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.4, 10), mat(0xa5673f));
       pot.position.set(cx + cw / 2 - 0.7, y0 + 0.2, at(1));
@@ -536,6 +596,10 @@ export function buildWorld(scene) {
         box(0.6, 0.14, 0.35, 0xdfe8ee, cx - 1 + i * 2, y0 + 0.5, at(1.7), { collide: false });
       });
       box(0.9, 1.6, 0.45, 0xe8edf2, cx + Math.min(1.6, cw / 2 - 0.75), y0, at(0.6));
+      box(0.06, 1.5, 2.0, 0xf5f6f8, cx, y0 + 0.25, at(2.5), { collide: false });   // 침대 사이 커튼 스크린
+      box(0.7, 0.9, 0.28, 0xf2f5f7, s0 + 0.65, y0 + 1.05, at(0.35), { collide: false });   // 약장
+      geoAdd(UNIT_BOX, 0xd94848, s0 + 0.65, y0 + 1.5, at(0.5), null, 0.3, 0.08, 0.06);
+      geoAdd(UNIT_BOX, 0xd94848, s0 + 0.65, y0 + 1.5, at(0.5), null, 0.08, 0.3, 0.06);
     } else if (r.type === 'cafeteria') {
       // 급식실 사진: 긴 식탁 + 빨간 둥근의자 + 배식대(스테인리스)
       const colXs = cw >= 12 ? [cx - 2.4, cx + 2.6] : [cx];
@@ -1250,12 +1314,14 @@ export function buildWorld(scene) {
   goalAt(-4, 22, -1, 0.55);
   goalAt(16, 22, 1, 0.55);
   // 야간 조명탑 (사진2·3)
+  const FLOOD = new THREE.MeshBasicMaterial({ color: 0xb9bfc4 });   // 낮=소등, 밤=점등 (main에서 전환)
+  dynamic.floodMat = FLOOD;
   [[-38, 30], [48, 27]].forEach(([lx3, lz3]) => {
     const lp = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 9, 8), mat(0x9aa5ad));
     lp.position.set(lx3, 3.5, lz3);
     scene.add(lp); colliders.push(lp);
     box(2.0, 0.4, 0.28, 0x6b7178, lx3, 8, lz3, { collide: false });
-    [-0.6, 0, 0.6].forEach(ox => box(0.3, 0.26, 0.16, 0, lx3 + ox, 8.42, lz3, { material: BASIC_WHITE, collide: false }));
+    [-0.6, 0, 0.6].forEach(ox => box(0.3, 0.26, 0.16, 0, lx3 + ox, 8.42, lz3, { material: FLOOD, collide: false }));
   });
   zones.push({ x0: F.center[0] - F.width / 2, x1: F.center[0] + F.width / 2, z0: F.center[1] - F.depth / 2, z1: F.center[1] + F.depth / 2, label: '운동장' });
 
@@ -1616,6 +1682,13 @@ export function buildWorld(scene) {
       b.lamps.length = 0;
     }
   });
+  // 밤 창문 불빛 (숨김 상태로 준비 — applyTime에서 켬)
+  if (glowGeos.length) {
+    const glowMesh = new THREE.Mesh(mergeGeometries(glowGeos, false), new THREE.MeshBasicMaterial({ color: 0xffd98c }));
+    glowMesh.visible = false;
+    scene.add(glowMesh);
+    dynamic.nightGlow = glowMesh;
+  }
 
   // ---------- 성능: 정적 행렬 동결 + 8m 격자 ----------
   scene.traverse(o => { o.matrixAutoUpdate = false; o.updateMatrix(); });
