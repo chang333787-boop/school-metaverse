@@ -23,8 +23,11 @@ python3 -m http.server 8001
 | `js/main.js` | 카메라·입력·HUD·루프. `window.SD` = 디버그 API (tp/pos/zone/step) |
 | `js/textures.js` | 캔버스 텍스처 (팻말·태극기·트랙·코트·얼굴·책) |
 
-## 다음 단계 (도면·사진 반영)
+## 투트랙 구조
 
-1. 행정실 도면 → `data.js`의 rooms 배열을 실제 실 배치로 교체
-2. 학생 촬영 사진 → 외벽·문·게시판 텍스처로 부착 (textures.js에 이미지 로더 추가 예정)
-3. 학교 이름 → `data.js` `name` 수정
+| 경로 | 내용 | URL |
+|---|---|---|
+| 루트 | **발전판** — 개발 계속 | https://chang333787-boop.github.io/school-metaverse/ |
+| `classroom/` | **아이들 버전 v0.8 동결** (2026-07-28 수업 결과물, 수정 금지) | https://chang333787-boop.github.io/school-metaverse/classroom/ |
+
+수업 이력: 뼈대 v0.1(전날 제작) → 수업일 v0.2~v0.8 (도면·위성·측량·사진 반영, 아이들 요구 2라운드, NPC·상호작용·성능·그림자). git tag `v0.8-classroom`.

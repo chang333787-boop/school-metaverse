@@ -8,6 +8,11 @@
 - 학생 접속: 크롬북에서 위 링크. 갱신이 안 보이면 `Ctrl+Shift+R`
 - 기술: three.js r170 로컬 번들(lib/), 외부 네트워크 의존 0, 빌드 과정 없음
 
+## 투트랙 구조 (2026-07-30 확정)
+- 루트(`index.html`, `js/`, `lib/`) = **발전판** — 모든 개발·실험은 여기서만
+- `classroom/` = **아이들 버전 v0.8 동결 스냅샷** (2026-07-28 수업 결과물 · git tag `v0.8-classroom` · URL https://chang333787-boop.github.io/school-metaverse/classroom/)
+- **`classroom/` 폴더는 어떤 이유로도 수정·삭제하지 않는다** (버스터·리팩터링·일괄 치환에서 항상 제외)
+
 ## 파일 구조와 수정 지점
 | 파일 | 역할 |
 |---|---|
