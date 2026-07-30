@@ -50,6 +50,9 @@ export class Player {
       this.group.add(p);
     });
     const faceMat = new THREE.MeshLambertMaterial({ map: faceTexture() });
+    // 좁은 방에서 카메라가 바짝 붙었을 때 캐릭터를 흐리게 (얼굴로 화면이 꽉 차는 것 방지)
+    this.mats = [skin, shirt, pants, hair, faceMat];
+    this._fade = 1;
     const headMats = [skin, skin, skin, skin, faceMat, skin];
     this.head = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.52, 0.5), headMats);
     this.head.position.y = 1.36;
@@ -99,6 +102,19 @@ export class Player {
   applyLook(girl, shirtColor) {
     this.shirtMat.color.set(shirtColor);
     this.girlHair.visible = !!girl;
+  }
+
+  setFade(a) {
+    const v = Math.max(0.12, Math.min(1, a));
+    if (Math.abs(v - this._fade) < 0.01) return;
+    this._fade = v;
+    const opaque = v > 0.995;
+    for (const m of this.mats) {
+      m.transparent = !opaque;
+      m.opacity = v;
+      m.depthWrite = opaque;
+    }
+    this.shadow.material.opacity = 0.22 * v;
   }
 
   _pivot(x, y) {

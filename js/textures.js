@@ -95,17 +95,17 @@ export function trackTexture() {
   const x = c.getContext('2d');
   x.fillStyle = '#d9bd8f';
   x.fillRect(0, 0, c.width, c.height);
-  // 모래 질감 점 + 옅은 얼룩
+  // 모래 질감 점 + 옅은 얼룩 (크고 진하면 구름 그림자로 오인 — 작고 옅게)
   let seed = 7;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  x.fillStyle = 'rgba(150,120,75,0.18)';
-  for (let i = 0; i < 26; i++) {
+  x.fillStyle = 'rgba(150,120,75,0.07)';
+  for (let i = 0; i < 46; i++) {
     x.beginPath();
-    x.ellipse(rnd() * 1024, rnd() * 564, 30 + rnd() * 90, 18 + rnd() * 50, rnd() * 3.14, 0, Math.PI * 2);
+    x.ellipse(rnd() * 1024, rnd() * 564, 14 + rnd() * 34, 9 + rnd() * 20, rnd() * 3.14, 0, Math.PI * 2);
     x.fill();
   }
   x.fillStyle = 'rgba(160,130,80,0.25)';
-  for (let i = 0; i < 900; i++) x.fillRect(rnd() * 1024, rnd() * 564, 2, 2);
+  for (let i = 0; i < 1500; i++) x.fillRect(rnd() * 1024, rnd() * 564, 2, 2);
   const cx = 512, cy = 282;
   // 축구장
   x.strokeStyle = 'rgba(255,255,255,0.75)';
@@ -168,11 +168,11 @@ export function skyTexture(mode = 'day') {
     let seed = 42;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     // 별은 지평선(y=128) 근처까지 자연스럽게 옅어지며 이어짐 (뚝 끊긴 띠 방지)
-    for (let i = 0; i < 165; i++) {
+    for (let i = 0; i < 420; i++) {
       const sy = rnd() * 126;
-      const fade = sy > 96 ? (126 - sy) / 30 : 1;
-      x.fillStyle = `rgba(255,255,${230 + Math.floor(rnd() * 25)},${(0.35 + rnd() * 0.6) * fade})`;
-      const r = rnd() < 0.12 ? 1.6 : 1;
+      const fade = sy > 90 ? (126 - sy) / 36 : 1;
+      x.fillStyle = `rgba(255,255,${230 + Math.floor(rnd() * 25)},${(0.3 + rnd() * 0.65) * fade})`;
+      const r = rnd() < 0.1 ? 1.8 : 1;
       x.fillRect(rnd() * 512, sy, r, r);
     }
   }

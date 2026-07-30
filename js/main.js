@@ -38,7 +38,8 @@ scene.fog = new THREE.Fog(0xcfe9f8, 70, 270);   // 하늘 지평선 색과 동�
 
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 500);
 
-const hemi = new THREE.HemisphereLight(0xeaf6ff, 0x87996b, 2.05); // ACES 톤매핑 보정 포함
+// groundColor는 아래 향한 면(실내 벽 하단·처마 밑)에 그대로 물든다 — 잔디 초록을 옅게 써야 실내가 안 칙칙함
+const hemi = new THREE.HemisphereLight(0xeaf6ff, 0xa3a58e, 2.05); // ACES 톤매핑 보정 포함
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff2d9, 2.25);
 sun.position.set(60, 95, 45);
@@ -63,9 +64,9 @@ const player = new Player(scene, world);
 
 // ---------- 시간대 프리셋 (낮/노을/밤 — 전환 시 그림자 1회만 재굽기) ----------
 const TIMES = {
-  day:    { sky: 'day',    fog: 0xcfe9f8, hemi: [0xeaf6ff, 0x87996b, 2.05], sun: [0xfff2d9, 2.25, [60, 95, 45]],  disc: 0xfff3cf, exp: 1.18, label: '☀️ 낮' },
-  sunset: { sky: 'sunset', fog: 0xf0b183, hemi: [0xffdcc0, 0x6b5a48, 1.5],  sun: [0xff9a55, 1.9,  [-85, 26, 30]], disc: 0xffb066, exp: 1.12, label: '🌇 노을' },
-  night:  { sky: 'night',  fog: 0x253a63, hemi: [0x3a5580, 0x141a26, 0.85], sun: [0xa8c2e8, 0.55, [45, 70, -35]], disc: 0xeef2fa, exp: 1.05, label: '🌙 밤' },
+  day:    { sky: 'day',    fog: 0xcfe9f8, fogD: [70, 270], cloud: 0xffffff, hemi: [0xeaf6ff, 0xa3a58e, 2.05], sun: [0xfff2d9, 2.25, [60, 95, 45]],  disc: 0xfff3cf, exp: 1.18, label: '☀️ 낮' },
+  sunset: { sky: 'sunset', fog: 0xf0b183, fogD: [50, 210], cloud: 0xf7cba6, hemi: [0xffdcc0, 0x7d6a55, 1.5],  sun: [0xff9a55, 1.9,  [-85, 26, 30]], disc: 0xffb066, exp: 1.12, label: '🌇 노을' },
+  night:  { sky: 'night',  fog: 0x253a63, fogD: [34, 155], cloud: 0x39496e, hemi: [0x3a5580, 0x181e2b, 0.85], sun: [0xa8c2e8, 0.55, [45, 70, -35]], disc: 0xeef2fa, exp: 1.05, label: '🌙 밤' },
 };
 let timeMode = 'day';
 const timeBtn = document.createElement('button');
@@ -77,6 +78,10 @@ function applyTime(mode) {
   const t = TIMES[mode];
   scene.background = skyTexture(t.sky);
   scene.fog.color.set(t.fog);
+  // 밤·노을엔 안개를 당겨 원경 잔디가 낮처럼 밝게 남는 것을 막는다
+  scene.fog.near = t.fogD[0];
+  scene.fog.far = t.fogD[1];
+  if (world.dynamic.cloudMat) world.dynamic.cloudMat.color.set(t.cloud);
   hemi.color.set(t.hemi[0]);
   hemi.groundColor.set(t.hemi[1]);
   hemi.intensity = t.hemi[2];
@@ -188,6 +193,8 @@ function updateCamera(dt) {
     }
     break;
   }
+  // 카메라가 바짝 붙으면 캐릭터를 흐리게 (좁은 방에서 얼굴로 화면이 꽉 차는 것 방지)
+  player.setFade((camera.position.distanceTo(_target) - 0.65) / 0.85);
   camera.lookAt(_target);
 }
 

@@ -14,7 +14,7 @@
 
 export const SCHOOL = {
   name: '정림초등학교',
-  tagline: '발전판 v0.15 · 감사 4차',
+  tagline: '발전판 v0.16 · 마감 다듬기',
 
   // 반별 명단 (공개 저장소 규칙: 성 없이 이름만) — 교실에 NPC로 배치
   people: {
