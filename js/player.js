@@ -80,6 +80,9 @@ export class Player {
     this.phase = 0;
     this.groundY = 0;
     this.sitting = null;
+    this.speedK = 0;    // 가속 램프 (0→1)
+    this.squash = 0;    // 착지 찌그러짐 / 점프 스트레치
+    this.lean = 0;      // 코너 기울임
     this.ray = new THREE.Raycaster();
     this.ray.far = 45;
     // 격자 캐시 (셀이 바뀔 때만 후보 갱신)
@@ -217,7 +220,9 @@ export class Player {
       let mx = fx * iz + rx * ix, mz = fz * iz + rz * ix;
       const len = Math.hypot(mx, mz);
       mx /= len; mz /= len;
-      const dx = mx * speed * dt, dz = mz * speed * dt;
+      this.speedK = Math.min(1, this.speedK + dt * 6);
+      const eff = speed * (0.35 + 0.65 * this.speedK);
+      const dx = mx * eff * dt, dz = mz * eff * dt;
       const x0 = p.x, z0 = p.z;
       if (!this._blockedAt(p.x + dx, p.z, p.y)) p.x += dx;
       else if (!this._blockedAt(p.x + dx, p.z, p.y, 0.2)) p.x += dx;   // 모서리 완화
@@ -228,7 +233,9 @@ export class Player {
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
       this.yaw += diff * Math.min(1, dt * 14);
-      this.phase += dt * speed * 2.4;
+      const leanT = Math.max(-0.24, Math.min(0.24, diff * 0.45)) * (run ? 1.25 : 1);
+      this.lean += (leanT - this.lean) * Math.min(1, dt * 9);
+      this.phase += dt * eff * 2.4;
       // 끼임 자동 감지: 입력이 있는데 제자리면 기록하고 살짝 밀어냄
       if (Math.hypot(p.x - x0, p.z - z0) < 0.005) {
         this._stillT += dt;
@@ -249,7 +256,10 @@ export class Player {
     } else {
       this.phase *= Math.max(0, 1 - dt * 10);
       this._stillT = 0;
+      this.speedK = Math.max(0, this.speedK - dt * 9);
+      this.lean *= Math.max(0, 1 - dt * 8);
     }
+    this.squash *= Math.max(0, 1 - dt * 8.5);
 
     const gY = this._groundAt(p.x, p.y, p.z);
     this.groundY = gY;
@@ -257,6 +267,7 @@ export class Player {
       if ((keys.has('Space')) && gY > -50) {
         this.vy = 5.2;
         this.airborne = true;
+        this.squash = -0.16;   // 점프 스트레치
         p.y += this.vy * dt;
       } else if (gY > p.y - 1.0 && gY < p.y + 0.7) {
         p.y = gY;
@@ -270,6 +281,7 @@ export class Player {
       p.y += this.vy * dt;
       if (this.vy <= 0 && p.y <= gY) {
         p.y = gY;
+        this.squash = Math.min(0.3, Math.abs(this.vy) * 0.04);   // 착지 찌그러짐
         this.vy = 0;
         this.airborne = false;
       }
@@ -305,6 +317,9 @@ export class Player {
   _syncMesh() {
     this.group.position.copy(this.pos);
     this.group.rotation.y = this.yaw;
+    this.group.rotation.z = this.lean;
+    const sq = this.squash;
+    this.group.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5);
     const bob = (this.airborne || this.sitting) ? 0 : Math.abs(Math.sin(this.phase)) * 0.05;
     this.group.position.y = this.pos.y + bob;
     this.shadow.position.set(this.pos.x, Math.max(this.groundY, -0.5) + 0.03, this.pos.z);

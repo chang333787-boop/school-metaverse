@@ -52,6 +52,10 @@ sun.shadow.camera.far = 260;
 sun.shadow.bias = -0.0005;
 scene.add(sun);
 scene.add(sun.target);
+const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(9, 24), new THREE.MeshBasicMaterial({ color: 0xfff3cf, fog: false }));
+sunDisc.position.copy(sun.position).normalize().multiplyScalar(235);
+sunDisc.lookAt(0, 0, 0);
+scene.add(sunDisc);
 
 const world = buildWorld(scene);
 const player = new Player(scene, world);
@@ -385,6 +389,35 @@ function loop() {
     c.position.x += dt * (0.55 + i * 0.12);
     if (c.position.x > 110) c.position.x = -110;
   });
+  if (world.dynamic.bigTree) {
+    world.dynamic.bigTree.rotation.z = Math.sin(t * 0.6) * 0.013;
+    world.dynamic.bigTree.rotation.x = Math.sin(t * 0.47 + 1) * 0.01;
+  }
+  // NPC 숨쉬기 + 가까우면 플레이어 쳐다보기 (돌면 그림자 1회 재굽기)
+  let npcTurn = false;
+  for (let i = 0; i < world.persons.length; i++) {
+    const pn = world.persons[i];
+    const g = pn.group;
+    if (!g.visible) continue;
+    g.scale.y = pn.sc * (1 + 0.012 * Math.sin(t * 2.1 + i * 1.7));
+    const ddx = player.pos.x - pn.x, ddz = player.pos.z - pn.z;
+    const near = (ddx * ddx + ddz * ddz < 10.2) && Math.abs(player.pos.y - g.position.y) < 2;
+    const targetYaw = near ? Math.atan2(ddx, ddz) : pn.yaw0;
+    let dY = targetYaw - g.rotation.y;
+    while (dY > Math.PI) dY -= Math.PI * 2;
+    while (dY < -Math.PI) dY += Math.PI * 2;
+    if (Math.abs(dY) > 0.01) {
+      g.rotation.y += dY * Math.min(1, dt * 5);
+      if (Math.abs(dY) > 0.06) npcTurn = true;
+    }
+  }
+  if (npcTurn) renderer.shadowMap.needsUpdate = true;
+  // 달리기 FOV 킥
+  const fovT = player.speedK > 0.5 && (keys.has('ShiftLeft') || keys.has('ShiftRight')) ? 68 : 62;
+  if (Math.abs(camera.fov - fovT) > 0.05) {
+    camera.fov += (fovT - camera.fov) * Math.min(1, dt * 5);
+    camera.updateProjectionMatrix();
+  }
   // 말풍선 수명
   for (let i = bubbles.length - 1; i >= 0; i--) {
     bubbles[i].t -= dt;

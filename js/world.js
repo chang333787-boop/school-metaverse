@@ -38,6 +38,7 @@ export function buildWorld(scene) {
   const doors = [];
   const interactables = [];
   const npcs = new Map();          // '방이름:이름' → NPC 그룹 (캐릭터 선택 시 숨김)
+  const persons = [];              // 숨쉬기·쳐다보기 애니메이션용
   const dynamic = { flag: null, clouds: [] };
   const rng = mulberry32(20260728);
 
@@ -107,6 +108,8 @@ export function buildWorld(scene) {
   const PTRUNK_GEO = new THREE.CylinderGeometry(0.12, 0.18, 1.6, 8);
   const ICO_GEO = new THREE.IcosahedronGeometry(1, 0);
   const CONE_GEO = new THREE.ConeGeometry(1, 1, 8);
+  const STUMP_GEO = new THREE.CylinderGeometry(0.3, 0.34, 1, 9);
+  const CANOPY = [0x4d8b4d, 0x55924f, 0x5e9c53, 0x467e49, 0x63a457];
 
   // ---------- 공용 헬퍼 ----------
   function box(w, h, d, color, cx, baseY, cz, opt = {}) {
@@ -281,6 +284,7 @@ export function buildWorld(scene) {
     g.rotation.y = yaw;
     scene.add(g);
     interactables.push({ type: 'person', x, y, z, name, group: g, lines: opts.lines || null, li: 0 });
+    persons.push({ group: g, x, z, yaw0: yaw, sc });
     return g;
   }
 
@@ -1000,6 +1004,20 @@ export function buildWorld(scene) {
   });
   zones.push({ x0: px - 8.5, x1: px + 8.5, z0: pz - 7, z1: pz + 7, label: '놀이터' });
 
+  // ---------- 숲놀이터 (통나무 징검다리 + 균형 통나무) ----------
+  [[-3, -8.6, 0.34], [-1.4, -9.7, 0.46], [0.4, -9.2, 0.58], [2, -8.3, 0.46], [3.5, -9.4, 0.34]].forEach(([ox, oz, h]) => {
+    const st = geoAdd(STUMP_GEO, 0x9c7a53, px + ox, h / 2, pz + oz, null, 1, h, 1);
+    staticEntries.push({ key: st.key, aabb: st.aabb, solid: true });
+    geoAdd(STUMP_GEO, 0xc9a06a, px + ox, h + 0.005, pz + oz, null, 0.86, 0.012, 0.86);  // 나이테 단면
+  });
+  const lg = geoAdd(STUMP_GEO, 0x8a6a45, px - 6.8, 0.42, pz - 5.2, [0, 0, Math.PI / 2], 0.9, 4.4, 0.9);
+  staticEntries.push({ key: lg.key, aabb: lg.aabb, solid: false });
+  [[-9], [-4.6]].forEach(([ox]) => {
+    const sp2 = geoAdd(STUMP_GEO, 0x9c7a53, px + ox, 0.16, pz - 5.2, null, 1, 0.32, 1);
+    staticEntries.push({ key: sp2.key, aabb: sp2.aabb, solid: true });
+  });
+  zones.unshift({ x0: px - 10, x1: px + 5, z0: pz - 11, z1: pz - 7.5, label: '숲놀이터' });
+
   // ---------- 정자 가는 벽돌길 ----------
   box(3, 0.05, 9, 0xc97f5a, px, 0, pz + 11.5, { collide: false, walk: true });
   box(2.4, 0.32, 1.5, 0x8fae6d, px, 0, pz + 12, { walk: true });
@@ -1086,15 +1104,66 @@ export function buildWorld(scene) {
   function tree(tx, tz, s = 1) {
     const r = geoAdd(TRUNK_GEO, 0x8b5e34, tx, 0.7 * s, tz, null, s, s, s);
     staticEntries.push({ key: r.key, aabb: r.aabb, solid: true });
-    geoAdd(ICO_GEO, 0x4d8b4d, tx, 1.9 * s, tz, null, 1.05 * s, 1.05 * s, 1.05 * s);
-    geoAdd(ICO_GEO, 0x5e9c53, tx + 0.45 * s, 2.5 * s, tz + 0.2 * s, null, 0.7 * s, 0.7 * s, 0.7 * s);
+    const c1 = CANOPY[Math.floor(rng() * CANOPY.length)];
+    const c2 = CANOPY[Math.floor(rng() * CANOPY.length)];
+    const ry = rng() * Math.PI;
+    geoAdd(ICO_GEO, c1, tx, 1.9 * s, tz, [0, ry, 0], 1.05 * s, 0.95 * s, 1.05 * s);
+    geoAdd(ICO_GEO, c2, tx + 0.45 * s, 2.5 * s, tz + 0.2 * s, [0, ry + 1, 0], 0.7 * s, 0.66 * s, 0.7 * s);
+    geoAdd(ICO_GEO, c2, tx - 0.5 * s, 2.2 * s, tz - 0.25 * s, [0, ry + 2, 0], 0.55 * s, 0.5 * s, 0.55 * s);
+  }
+  function bush(tx, tz, s = 1) {
+    geoAdd(ICO_GEO, CANOPY[Math.floor(rng() * CANOPY.length)], tx, 0.34 * s, tz, [0, rng() * 3, 0], 0.5 * s, 0.38 * s, 0.5 * s);
   }
   for (let tz = -35; tz <= 35; tz += 10) tree(70, tz, 1 + rng() * 0.4);
   for (let tz = -30; tz <= 40; tz += 10) tree(-80, tz, 1 + rng() * 0.4);
   [-30, -8, 10, 26].forEach(tx => tree(tx, -68, 1.1 + rng() * 0.3));
   tree(58, -20, 0.9);
+  // 건물 앞 관목 줄
+  for (let bx2 = fx0 + 2; bx2 < fx1 - 1; bx2 += 4.2) {
+    if (Math.abs(bx2 - hallCx) > 3.2) bush(bx2, fz1 + 1.15, 1 + rng() * 0.5);
+  }
+  // ---------- 거대나무 (랜드마크 — 개별 메시, 산들바람에 흔들림) ----------
   const [btx, btz] = SCHOOL.bigTree;
-  tree(btx, btz, 3.4);
+  {
+    const parts = [];
+    const bt = (base, color, px2, py2, pz2, rot, sx, sy, sz) => {
+      const { g, f } = baseOf(base);
+      const geo = g.clone();
+      _eu.set(rot ? rot[0] || 0 : 0, rot ? rot[1] || 0 : 0, rot ? rot[2] || 0 : 0);
+      _q.setFromEuler(_eu);
+      _m4.compose(_vp.set(px2, py2, pz2), _q, _vs.set(sx, sy, sz));
+      geo.applyMatrix4(_m4);
+      _col.set(color);
+      const n = geo.attributes.position.count;
+      const cols = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        cols[i * 3] = _col.r * f[i];
+        cols[i * 3 + 1] = _col.g * f[i];
+        cols[i * 3 + 2] = _col.b * f[i];
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+      parts.push(geo);
+    };
+    bt(TRUNK_GEO, 0x7a5230, 0, 2.4, 0, null, 3.4, 3.4, 3.4);
+    bt(TRUNK_GEO, 0x7a5230, 1.1, 4.7, 0.4, [0, 0, -0.5], 1.5, 2.2, 1.5);
+    bt(TRUNK_GEO, 0x7a5230, -1.0, 4.9, -0.3, [0, 0, 0.55], 1.3, 2.0, 1.3);
+    bt(ICO_GEO, 0x4d8b4d, 0, 6.6, 0, null, 3.6, 3.0, 3.6);
+    bt(ICO_GEO, 0x55924f, 2.0, 7.6, 0.8, [0, 1, 0], 2.4, 2.0, 2.4);
+    bt(ICO_GEO, 0x467e49, -2.1, 7.2, -0.7, [0, 2, 0], 2.2, 1.9, 2.2);
+    bt(ICO_GEO, 0x63a457, 0.4, 8.9, -0.2, [0, 3, 0], 1.9, 1.6, 1.9);
+    bt(ICO_GEO, 0x55924f, -1.2, 6.3, 1.7, [0, 4, 0], 1.8, 1.5, 1.8);
+    const btMesh = new THREE.Mesh(mergeGeometries(parts, false), MAT_PERSON);
+    btMesh.castShadow = true;
+    const btGroup = new THREE.Group();
+    btGroup.add(btMesh);
+    btGroup.position.set(btx, 0, btz);
+    scene.add(btGroup);
+    dynamic.bigTree = btGroup;
+    box(1.3, 4.6, 1.3, 0, btx, 0, btz, { material: INVIS });
+    box(2.2, 0.42, 0.55, 0xc9b8a0, btx - 3.8, 0, btz + 1.4, { walk: true });
+    box(2.2, 0.42, 0.55, 0xc9b8a0, btx + 3.6, 0, btz - 1.6, { walk: true });
+    zones.unshift({ x0: btx - 5.5, x1: btx + 5.5, z0: btz - 5.5, z1: btz + 5.5, label: '큰 나무' });
+  }
 
   const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   for (let i = 0; i < 5; i++) {
@@ -1132,6 +1201,8 @@ export function buildWorld(scene) {
   // ---------- 성능: 정적 행렬 동결 + 8m 격자 ----------
   scene.traverse(o => { o.matrixAutoUpdate = false; o.updateMatrix(); });
   doors.forEach(d => { d.group.matrixAutoUpdate = true; });
+  persons.forEach(p => { p.group.matrixAutoUpdate = true; });
+  if (dynamic.bigTree) dynamic.bigTree.matrixAutoUpdate = true;
   dynamic.clouds.forEach(c => { c.matrixAutoUpdate = true; });
   if (dynamic.flag) dynamic.flag.matrixAutoUpdate = true;
   scene.updateMatrixWorld(true);
@@ -1184,7 +1255,7 @@ export function buildWorld(scene) {
   ];
 
   return {
-    colliders, walkables, zones, dynamic, doors, interactables, npcs,
+    colliders, walkables, zones, dynamic, doors, interactables, npcs, persons,
     grid, CELL, safePoints,
     spawn: new THREE.Vector3(0, 0, 38),
     buildingInfo: { zFront: fz1, zBack: -58, zDiv: zCor, FH },
