@@ -3,6 +3,7 @@
 //   체육관: 무대는 북쪽(입구에서 우측), 방송실·준비실·화장실 + 철문
 //   급식실: 긴 식탁+빨간 둥근의자+배식대+커튼 무대, 도서관 앞 쿠션 로비
 import * as THREE from 'three';
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js';
 import { SCHOOL } from './data.js';
 import { textSign, taegeukTexture, trackTexture, courtTexture, bookStripes } from './textures.js';
 
@@ -40,9 +41,82 @@ export function buildWorld(scene) {
   const dynamic = { flag: null, clouds: [] };
   const rng = mulberry32(20260728);
 
+  // ---------- 청크 병합 (v0.9: draw call 1/10) ----------
+  // 단색 정적 상자·면은 개별 Mesh 대신 26m 청크별 지오메트리로 합친다.
+  // 색은 버텍스 컬러로 굽고(재질 1개), 이때 높이·아랫면 기반 가짜 AO도 함께 굽는다.
+  const MCHUNK = 26;
+  const buckets = new Map();       // 'cx_cz' → { geos: [], lamps: [] }
+  const staticEntries = [];        // 병합된 아이템의 충돌/레이 등록 { key, aabb, solid }
+  const NONIDX = new Map();        // base geometry → { g(비인덱스), f(정점별 AO 계수), bb }
+  function baseOf(geo) {
+    let e = NONIDX.get(geo);
+    if (!e) {
+      const g = geo.index ? geo.toNonIndexed() : geo.clone();
+      g.computeBoundingBox();
+      const bb = g.boundingBox;
+      const pos = g.attributes.position, nor = g.attributes.normal;
+      const span = Math.max(1e-6, bb.max.y - bb.min.y);
+      const isFlat = geo.type === 'PlaneGeometry';   // 바닥·천장·창: 높이 그라디언트 무의미
+      const f = new Float32Array(pos.count);
+      for (let i = 0; i < pos.count; i++) {
+        let v = isFlat ? 1 : 0.85 + 0.17 * ((pos.getY(i) - bb.min.y) / span);
+        if (nor.getY(i) < -0.5) v *= 0.78;          // 아랫면(처마 밑·슬래브 밑) 어둡게
+        f[i] = Math.min(1.03, v);
+      }
+      e = { g, f, bb };
+      NONIDX.set(geo, e);
+    }
+    return e;
+  }
+  const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _eu = new THREE.Euler();
+  const _vp = new THREE.Vector3(), _vs = new THREE.Vector3(), _vc = new THREE.Vector3();
+  const _col = new THREE.Color();
+  function geoAdd(base, colorHex, px, py, pz, rot, sx, sy, sz) {
+    const { g, f, bb } = baseOf(base);
+    const geo = g.clone();
+    _eu.set(rot ? rot[0] || 0 : 0, rot ? rot[1] || 0 : 0, rot ? rot[2] || 0 : 0);
+    _q.setFromEuler(_eu);
+    _m4.compose(_vp.set(px, py, pz), _q, _vs.set(sx, sy, sz));
+    geo.applyMatrix4(_m4);
+    _col.set(colorHex);
+    const n = geo.attributes.position.count;
+    const cols = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      cols[i * 3] = _col.r * f[i];
+      cols[i * 3 + 1] = _col.g * f[i];
+      cols[i * 3 + 2] = _col.b * f[i];
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+    const key = Math.floor(px / MCHUNK) + '_' + Math.floor(pz / MCHUNK);
+    let b = buckets.get(key);
+    if (!b) { b = { geos: [], lamps: [] }; buckets.set(key, b); }
+    b.geos.push(geo);
+    // AABB: base 바운딩박스 8모서리를 변환해 계산
+    let minX = 1e9, minY = 1e9, minZ = 1e9, maxX = -1e9, maxY = -1e9, maxZ = -1e9;
+    for (let ci = 0; ci < 8; ci++) {
+      _vc.set(ci & 1 ? bb.max.x : bb.min.x, ci & 2 ? bb.max.y : bb.min.y, ci & 4 ? bb.max.z : bb.min.z);
+      _vc.applyMatrix4(_m4);
+      minX = Math.min(minX, _vc.x); maxX = Math.max(maxX, _vc.x);
+      minY = Math.min(minY, _vc.y); maxY = Math.max(maxY, _vc.y);
+      minZ = Math.min(minZ, _vc.z); maxZ = Math.max(maxZ, _vc.z);
+    }
+    return { key, aabb: { minX, maxX, minY: minY - 0.02, maxY: maxY + 0.02, minZ, maxZ } };
+  }
+  // 나무용 공유 베이스
+  const TRUNK_GEO = new THREE.CylinderGeometry(0.14, 0.2, 1.4, 8);
+  const PTRUNK_GEO = new THREE.CylinderGeometry(0.12, 0.18, 1.6, 8);
+  const ICO_GEO = new THREE.IcosahedronGeometry(1, 0);
+  const CONE_GEO = new THREE.ConeGeometry(1, 1, 8);
+
   // ---------- 공용 헬퍼 ----------
   function box(w, h, d, color, cx, baseY, cz, opt = {}) {
-    const m = new THREE.Mesh(UNIT_BOX, opt.material || mat(color));
+    if (!opt.material) {
+      // 병합 경로 (단색 정적)
+      const r = geoAdd(UNIT_BOX, color, cx, baseY + h / 2, cz, opt.rot, w, h, d);
+      staticEntries.push({ key: r.key, aabb: r.aabb, solid: opt.collide !== false });
+      return null;
+    }
+    const m = new THREE.Mesh(UNIT_BOX, opt.material);
     m.scale.set(w, h, d);
     m.position.set(cx, baseY + h / 2, cz);
     if (opt.rot) m.rotation.set(opt.rot[0] || 0, opt.rot[1] || 0, opt.rot[2] || 0);
@@ -72,7 +146,12 @@ export function buildWorld(scene) {
     if (cur < z1 - 0.05) wallZ(cur, z1, x, y0, h, color, t);
   }
   function plane(w, d, colorOrMat, x, y, z) {
-    const m = new THREE.Mesh(UNIT_PLANE, typeof colorOrMat === 'number' ? mat(colorOrMat) : colorOrMat);
+    if (typeof colorOrMat === 'number') {
+      const r = geoAdd(UNIT_PLANE, colorOrMat, x, y, z, [-Math.PI / 2, 0, 0], w, d, 1);
+      staticEntries.push({ key: r.key, aabb: r.aabb, solid: false });
+      return null;
+    }
+    const m = new THREE.Mesh(UNIT_PLANE, colorOrMat);
     m.scale.set(w, d, 1);
     m.rotation.x = -Math.PI / 2;
     m.position.set(x, y, z);
@@ -88,15 +167,17 @@ export function buildWorld(scene) {
     return s;
   }
   function windowPane(x, y, z, rotY, w = 1.8, h = 1.4) {
-    const wm = new THREE.Mesh(UNIT_PLANE, mat(0xaed4ef));
-    wm.scale.set(w, h, 1);
-    wm.position.set(x, y, z);
-    wm.rotation.y = rotY;
-    scene.add(wm);
-    return wm;
+    geoAdd(UNIT_PLANE, 0xaed4ef, x, y, z, [0, rotY, 0], w, h, 1);
   }
-  function lamp(x, y, z, alongX = true) {   // 형광등: 조명 대신 항상 밝은 박스
-    box(alongX ? 1.7 : 0.22, 0.05, alongX ? 0.22 : 1.7, 0, x, y, z, { material: BASIC_WHITE, collide: false });
+  function lamp(x, y, z, alongX = true) {   // 형광등: 조명 대신 항상 밝은 박스 (청크별 병합)
+    const { g } = baseOf(UNIT_BOX);
+    const geo = g.clone();
+    _m4.compose(_vp.set(x, y, z), _q.identity(), _vs.set(alongX ? 1.7 : 0.22, 0.05, alongX ? 0.22 : 1.7));
+    geo.applyMatrix4(_m4);
+    const key = Math.floor(x / MCHUNK) + '_' + Math.floor(z / MCHUNK);
+    let b = buckets.get(key);
+    if (!b) { b = { geos: [], lamps: [] }; buckets.set(key, b); }
+    b.lamps.push(geo);
   }
 
   // 진짜 뚫린 창이 있는 벽: 창턱(0~1.1) + 상단(2.5~) + 창기둥 + 유리 + 투명 충돌
@@ -156,44 +237,42 @@ export function buildWorld(scene) {
   // 사람 NPC — E키로 말걸기 가능
   const SHIRTS = [0xe8863a, 0x67b26f, 0x4d9bd6, 0xd94f6b, 0xf2b134, 0x8e6fc9, 0x3aa8a0];
   const HAIRS = [0x3a2e28, 0x241d18, 0x4e3b2a];
+  const MAT_PERSON = new THREE.MeshLambertMaterial({ vertexColors: true });
   function person(x, y, z, yaw, name, girl, opts = {}) {
     const g = new THREE.Group();
     const sc = opts.teacher ? 1.12 : 0.88;
-    const shirtM = mat(opts.teacher ? (girl ? 0xc76b8e : 0x4a6fa5) : SHIRTS[Math.floor(rng() * SHIRTS.length)]);
-    const pantsM = mat(0x5a6b8c);
-    const skinM = mat(0xf6cfa4);
-    const hairM = mat(HAIRS[Math.floor(rng() * HAIRS.length)]);
-    [[0.11], [-0.11]].forEach(([lx]) => {
-      const leg = new THREE.Mesh(UNIT_BOX, pantsM);
-      leg.scale.set(0.16, 0.5, 0.19);
-      leg.position.set(lx, 0.25, 0);
-      g.add(leg);
-    });
-    const body = new THREE.Mesh(UNIT_BOX, shirtM);
-    body.scale.set(0.5, 0.55, 0.3);
-    body.position.y = 0.775;
-    g.add(body);
-    [[0.31], [-0.31]].forEach(([axp]) => {
-      const arm = new THREE.Mesh(UNIT_BOX, shirtM);
-      arm.scale.set(0.13, 0.5, 0.15);
-      arm.position.set(axp, 0.78, 0);
-      g.add(arm);
-    });
-    const head = new THREE.Mesh(UNIT_BOX, skinM);
-    head.scale.set(0.5, 0.48, 0.46);
-    head.position.y = 1.3;
-    g.add(head);
-    const hairTop = new THREE.Mesh(UNIT_BOX, hairM);
-    hairTop.scale.set(0.54, 0.15, 0.5);
-    hairTop.position.y = 1.58;
-    g.add(hairTop);
-    if (girl) {
-      const hairBack = new THREE.Mesh(UNIT_BOX, hairM);
-      hairBack.scale.set(0.54, 0.55, 0.12);
-      hairBack.position.set(0, 1.28, -0.26);
-      g.add(hairBack);
-    }
-    g.traverse(c => { if (c.isMesh) c.castShadow = true; });   // 이름표 추가 전에만
+    const shirtC = opts.teacher ? (girl ? 0xc76b8e : 0x4a6fa5) : SHIRTS[Math.floor(rng() * SHIRTS.length)];
+    const pantsC = 0x5a6b8c, skinC = 0xf6cfa4;
+    const hairC = HAIRS[Math.floor(rng() * HAIRS.length)];
+    // 몸 전체를 지오메트리 1개로 병합 (그룹 로컬 좌표)
+    const parts = [];
+    const partAdd = (color, px, py, pz, sx, sy, sz) => {
+      const { g: bg, f } = baseOf(UNIT_BOX);
+      const geo = bg.clone();
+      _m4.compose(_vp.set(px, py, pz), _q.identity(), _vs.set(sx, sy, sz));
+      geo.applyMatrix4(_m4);
+      _col.set(color);
+      const n = geo.attributes.position.count;
+      const cols = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        cols[i * 3] = _col.r * f[i];
+        cols[i * 3 + 1] = _col.g * f[i];
+        cols[i * 3 + 2] = _col.b * f[i];
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+      parts.push(geo);
+    };
+    partAdd(pantsC, 0.11, 0.25, 0, 0.16, 0.5, 0.19);
+    partAdd(pantsC, -0.11, 0.25, 0, 0.16, 0.5, 0.19);
+    partAdd(shirtC, 0, 0.775, 0, 0.5, 0.55, 0.3);
+    partAdd(shirtC, 0.31, 0.78, 0, 0.13, 0.5, 0.15);
+    partAdd(shirtC, -0.31, 0.78, 0, 0.13, 0.5, 0.15);
+    partAdd(skinC, 0, 1.3, 0, 0.5, 0.48, 0.46);
+    partAdd(hairC, 0, 1.58, 0, 0.54, 0.15, 0.5);
+    if (girl) partAdd(hairC, 0, 1.28, -0.26, 0.54, 0.55, 0.12);
+    const bodyMesh = new THREE.Mesh(mergeGeometries(parts, false), MAT_PERSON);
+    bodyMesh.castShadow = true;
+    g.add(bodyMesh);
     const tag = textSign(name, { h: 0.26, fontPx: 36, pad: 12 });
     tag.position.y = 1.95;
     g.add(tag);
@@ -229,6 +308,8 @@ export function buildWorld(scene) {
 
   function roofOver(x0, x1, z0, z1, y, color) {
     box(x1 - x0 + 0.6, 0.25, z1 - z0 + 0.6, color, (x0 + x1) / 2, y - 0.25, (z0 + z1) / 2);
+    // 실내 천장은 밝은 아이보리 (지붕 밑면 노출 방지)
+    geoAdd(UNIT_PLANE, 0xf2efe8, (x0 + x1) / 2, y - 0.27, (z0 + z1) / 2, [Math.PI / 2, 0, 0], x1 - x0, z1 - z0, 1);
     wallX(x0, x1, z1 + 0.15, y, 0.55, color, 0.25);
     wallX(x0, x1, z0 - 0.15, y, 0.55, color, 0.25);
     wallZ(z0, z1, x0 - 0.15, y, 0.55, color, 0.25);
@@ -975,14 +1056,10 @@ export function buildWorld(scene) {
   [-3.5, 3.5].forEach(sx => box(1, 3, 1, 0xb9b5aa, gtx + sx, 0, gtz));
   box(9, 0.5, 0.8, 0x8a9096, gtx, 3.05, gtz, { collide: false });
   function pine(tx, tz, s = 1) {
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12 * s, 0.18 * s, 1.6 * s, 8), mat(0x7a5230));
-    trunk.position.set(tx, 0.8 * s, tz);
-    scene.add(trunk); colliders.push(trunk);
+    const tr = geoAdd(PTRUNK_GEO, 0x7a5230, tx, 0.8 * s, tz, null, s, s, s);
+    staticEntries.push({ key: tr.key, aabb: tr.aabb, solid: true });
     [[1.15, 1.9], [0.9, 2.7], [0.62, 3.4]].forEach(([r, y]) => {
-      const cone = new THREE.Mesh(new THREE.ConeGeometry(r * s, 1.1 * s, 8), mat(0x2f6b3f));
-      cone.position.set(tx, y * s, tz);
-      cone.castShadow = true;
-      scene.add(cone);
+      geoAdd(CONE_GEO, 0x2f6b3f, tx, y * s, tz, null, r * s, 1.1 * s, r * s);
     });
   }
   pine(gtx + 5.5, gtz - 2.5, 1.15);
@@ -1007,17 +1084,10 @@ export function buildWorld(scene) {
   box(0.6, 6, bd.zMax - bd.zMin + 2, 0, bd.x, 0, (bd.zMin + bd.zMax) / 2, { material: INVIS });
 
   function tree(tx, tz, s = 1) {
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14 * s, 0.2 * s, 1.4 * s, 8), mat(0x8b5e34));
-    trunk.position.set(tx, 0.7 * s, tz);
-    scene.add(trunk); colliders.push(trunk);
-    const g1 = new THREE.Mesh(new THREE.IcosahedronGeometry(1.05 * s, 0), mat(0x4d8b4d));
-    g1.position.set(tx, 1.9 * s, tz);
-    g1.castShadow = true;
-    scene.add(g1);
-    const g2 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7 * s, 0), mat(0x5e9c53));
-    g2.position.set(tx + 0.45 * s, 2.5 * s, tz + 0.2 * s);
-    g2.castShadow = true;
-    scene.add(g2);
+    const r = geoAdd(TRUNK_GEO, 0x8b5e34, tx, 0.7 * s, tz, null, s, s, s);
+    staticEntries.push({ key: r.key, aabb: r.aabb, solid: true });
+    geoAdd(ICO_GEO, 0x4d8b4d, tx, 1.9 * s, tz, null, 1.05 * s, 1.05 * s, 1.05 * s);
+    geoAdd(ICO_GEO, 0x5e9c53, tx + 0.45 * s, 2.5 * s, tz + 0.2 * s, null, 0.7 * s, 0.7 * s, 0.7 * s);
   }
   for (let tz = -35; tz <= 35; tz += 10) tree(70, tz, 1 + rng() * 0.4);
   for (let tz = -30; tz <= 40; tz += 10) tree(-80, tz, 1 + rng() * 0.4);
@@ -1040,6 +1110,25 @@ export function buildWorld(scene) {
     dynamic.clouds.push(cg);
   }
 
+  // ---------- 청크 병합 flush ----------
+  const MAT_CHUNK = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const chunkMeshes = new Map();
+  buckets.forEach((b, key) => {
+    if (b.geos.length) {
+      const mesh = new THREE.Mesh(mergeGeometries(b.geos, false), MAT_CHUNK);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      chunkMeshes.set(key, mesh);
+      b.geos.length = 0;
+    }
+    if (b.lamps.length) {
+      const lm = new THREE.Mesh(mergeGeometries(b.lamps, false), BASIC_WHITE);
+      scene.add(lm);
+      b.lamps.length = 0;
+    }
+  });
+
   // ---------- 성능: 정적 행렬 동결 + 8m 격자 ----------
   scene.traverse(o => { o.matrixAutoUpdate = false; o.updateMatrix(); });
   doors.forEach(d => { d.group.matrixAutoUpdate = true; });
@@ -1056,14 +1145,7 @@ export function buildWorld(scene) {
 
   const CELL = 8;
   const grid = new Map();
-  const solidSet = new Set(colliders);
-  const tmpB = new THREE.Box3();
-  [...new Set([...walkables, ...colliders])].forEach(m => {
-    tmpB.setFromObject(m);
-    const e = {
-      m, solid: solidSet.has(m),
-      aabb: { minX: tmpB.min.x, maxX: tmpB.max.x, minY: tmpB.min.y, maxY: tmpB.max.y, minZ: tmpB.min.z, maxZ: tmpB.max.z },
-    };
+  function gridInsert(e) {
     for (let gxc = Math.floor(e.aabb.minX / CELL); gxc <= Math.floor(e.aabb.maxX / CELL); gxc++) {
       for (let gzc = Math.floor(e.aabb.minZ / CELL); gzc <= Math.floor(e.aabb.maxZ / CELL); gzc++) {
         const k = gxc + ':' + gzc;
@@ -1072,6 +1154,21 @@ export function buildWorld(scene) {
         arr.push(e);
       }
     }
+  }
+  const solidSet = new Set(colliders);
+  const tmpB = new THREE.Box3();
+  [...new Set([...walkables, ...colliders])].forEach(m => {
+    tmpB.setFromObject(m);
+    gridInsert({
+      m, solid: solidSet.has(m),
+      aabb: { minX: tmpB.min.x, maxX: tmpB.max.x, minY: tmpB.min.y, maxY: tmpB.max.y, minZ: tmpB.min.z, maxZ: tmpB.max.z },
+    });
+  });
+  // 병합된 정적 아이템: 레이 대상은 자기 청크 메시, 충돌은 개별 AABB
+  staticEntries.forEach(se => {
+    const mesh = chunkMeshes.get(se.key);
+    if (!mesh) return;
+    gridInsert({ m: mesh, solid: se.solid, aabb: se.aabb });
   });
 
   // R키 탈출 지점 (복도·마당·운동장 등 안전한 곳)

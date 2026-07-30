@@ -78,6 +78,7 @@
 
 ### 오브젝트 생성 규칙
 - 상자·면은 `box()`/`plane()` 헬퍼 경유 (공유 UNIT_BOX/UNIT_PLANE + scale)
+- **v0.9 청크 병합**: 단색 정적 `box()`/`plane()`은 자동으로 26m 청크 지오메트리에 병합됨(색·AO=버텍스 컬러). 움직이거나 색이 바뀌는 오브젝트(문·화면·토글류)만 `material:` 옵션으로 개별 Mesh 생성. 나무는 `tree()`/`pine()` 경유
 - 재질은 `mat()` 캐시 경유. `new THREE.Material` 직접 호출 금지
 - 캔버스 텍스처는 캐시 경유 (`textSign`은 자동 캐시)
 - 정적 오브젝트는 `matrixAutoUpdate = false` (buildWorld 끝에서 일괄) + `world.grid` 등록

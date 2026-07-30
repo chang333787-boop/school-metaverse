@@ -25,9 +25,12 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
 renderer.setSize(window.innerWidth, window.innerHeight);
 // 그림자는 첫 프레임에 한 번만 굽는다 (해·월드가 정적)
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.needsUpdate = true;
+// v0.9 그래픽: 게임 톤 (ACES) — 라이트 강도는 이에 맞춰 상향
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.18;
 
 const scene = new THREE.Scene();
 scene.background = skyTexture();
@@ -35,8 +38,8 @@ scene.fog = new THREE.Fog(0xcfe9f8, 70, 270);   // 하늘 지평선 색과 동�
 
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 500);
 
-scene.add(new THREE.HemisphereLight(0xeaf6ff, 0x87996b, 1.6));  // 그림자로 어두워진 만큼 보강
-const sun = new THREE.DirectionalLight(0xfff2d9, 1.7);
+scene.add(new THREE.HemisphereLight(0xeaf6ff, 0x87996b, 2.05)); // ACES 톤매핑 보정 포함
+const sun = new THREE.DirectionalLight(0xfff2d9, 2.25);
 sun.position.set(60, 95, 45);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -59,8 +62,29 @@ const camRay = new THREE.Raycaster();
 const _target = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 const _desired = new THREE.Vector3();
+// v0.9: 일반 TPS 조작 — 화면 클릭 시 마우스 잠금(누르고 있을 필요 없음). 터치는 드래그 유지
+const canLock = 'requestPointerLock' in canvas;
+let locked = false;
+canvas.addEventListener('click', () => {
+  const ov = document.getElementById('overlay');
+  if (canLock && !locked && ov && ov.classList.contains('hidden')) canvas.requestPointerLock();
+});
+document.addEventListener('pointerlockchange', () => {
+  locked = document.pointerLockElement === canvas;
+  hint.textContent = locked
+    ? 'E: 상호작용 · R: 빠져나오기 · ESC: 마우스 커서 보이기'
+    : '화면을 클릭하면 마우스로 둘러볼 수 있어요 · E: 상호작용 · R: 빠져나오기';
+});
+document.addEventListener('mousemove', e => {
+  if (!locked) return;
+  camYaw -= e.movementX * 0.0028;
+  camPitch = Math.min(1.25, Math.max(0.08, camPitch + e.movementY * 0.0024));
+});
 let dragging = false, lastX = 0, lastY = 0;
-canvas.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
+canvas.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'touch') return;
+  dragging = true; lastX = e.clientX; lastY = e.clientY;
+});
 window.addEventListener('pointerup', () => { dragging = false; });
 window.addEventListener('pointermove', e => {
   if (!dragging) return;
@@ -106,7 +130,7 @@ promptBox.style.cssText = 'position:fixed;left:50%;bottom:64px;transform:transla
 document.body.appendChild(promptBox);
 const hint = document.createElement('div');
 hint.style.cssText = 'position:fixed;left:10px;bottom:10px;background:rgba(29,53,87,.72);color:#fff;padding:6px 10px;border-radius:8px;font:12px sans-serif;z-index:30;';
-hint.textContent = 'E: 상호작용 · R: 빠져나오기';
+hint.textContent = '화면을 클릭하면 마우스로 둘러볼 수 있어요 · E: 상호작용 · R: 빠져나오기';
 document.body.appendChild(hint);
 const meChip = document.createElement('div');
 meChip.style.cssText = 'position:fixed;left:10px;top:44px;background:rgba(29,53,87,.72);color:#fff;padding:5px 10px;border-radius:8px;font:12px sans-serif;z-index:30;display:none;';
@@ -331,6 +355,7 @@ function zoneLabel() {
 document.getElementById('startBtn').addEventListener('click', () => {
   overlay.classList.add('hidden');
   canvas.focus();
+  if (canLock) canvas.requestPointerLock();
 });
 document.getElementById('schoolName').textContent = SCHOOL.name;
 document.getElementById('tagline').textContent = SCHOOL.tagline;

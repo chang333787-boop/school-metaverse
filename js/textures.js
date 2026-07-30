@@ -1,5 +1,6 @@
 // 캔버스로 그리는 텍스처들 (외부 이미지 의존 0)
 import * as THREE from 'three';
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js';
 
 const KR_FONT = "'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif";
 
@@ -35,16 +36,14 @@ export function textSign(text, { h = 0.6, bg = '#ffffff', fg = '#1d3557', border
     x.fillText(text, c.width / 2, c.height / 2 + 4);
     const tex = canvasTex(c);
     const w = h * (c.width / c.height);
-    entry = { geo: new THREE.PlaneGeometry(w, h), mat: new THREE.MeshBasicMaterial({ map: tex }) };
+    // 앞뒤를 지오메트리 1개로 병합 (π 회전만으로 뒷면 글자도 똑바로 보임 — UV 뒤집기 금지)
+    const front = new THREE.PlaneGeometry(w, h).toNonIndexed();
+    const back = new THREE.PlaneGeometry(w, h).toNonIndexed();
+    back.rotateY(Math.PI);
+    entry = { geo: mergeGeometries([front, back], false), mat: new THREE.MeshBasicMaterial({ map: tex }) };
     SIGN_CACHE.set(key, entry);
   }
-  // 앞뒤 어느 쪽에서 봐도 글자가 똑바로 보이게 양면 구성
-  const group = new THREE.Group();
-  const front = new THREE.Mesh(entry.geo, entry.mat);
-  const back = new THREE.Mesh(entry.geo, entry.mat);
-  back.rotation.y = Math.PI;
-  group.add(front, back);
-  return group;
+  return new THREE.Mesh(entry.geo, entry.mat);
 }
 
 // ---------- 태극기 (근사) ----------

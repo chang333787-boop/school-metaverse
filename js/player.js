@@ -114,6 +114,8 @@ export class Player {
     this._nearBoxes.length = 0;
     this._nearSolid.length = 0;
     const seen = new Set();
+    const seenRay = new Set();   // 병합 청크 메시는 여러 엔트리가 공유 — 레이 목록엔 1번만
+    const seenSolid = new Set();
     for (let dx = -1; dx <= 1; dx++) {
       for (let dz = -1; dz <= 1; dz++) {
         const arr = this.world.grid.get((cx + dx) + ':' + (cz + dz));
@@ -121,10 +123,16 @@ export class Player {
         for (const e of arr) {
           if (seen.has(e)) continue;
           seen.add(e);
-          this._nearRay.push(e.m);
+          if (!seenRay.has(e.m)) {
+            seenRay.add(e.m);
+            this._nearRay.push(e.m);
+          }
           if (e.solid) {
             this._nearBoxes.push(e.aabb);
-            this._nearSolid.push(e.m);
+            if (!seenSolid.has(e.m)) {
+              seenSolid.add(e.m);
+              this._nearSolid.push(e.m);
+            }
           }
         }
       }
