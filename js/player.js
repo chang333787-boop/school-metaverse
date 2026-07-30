@@ -323,7 +323,7 @@ export class Player {
     this.group.scale.set(0.8 * (1 + sq * 0.5), 0.86 * (1 - sq), 0.8 * (1 + sq * 0.5));
     const bob = (this.airborne || this.sitting) ? 0 : Math.abs(Math.sin(this.phase)) * 0.05;
     this.group.position.y = this.pos.y + bob;
-    this.shadow.position.set(this.pos.x, Math.max(this.groundY, -0.5) + 0.03, this.pos.z);
+    this.shadow.position.set(this.pos.x, Math.max(this.groundY, -1.5) + 0.03, this.pos.z);
     const spread = Math.min(1.6, Math.max(0.5, 1 + (this.pos.y - this.groundY) * 0.15));
     this.shadow.scale.setScalar(0.85 / spread);
   }

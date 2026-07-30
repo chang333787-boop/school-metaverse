@@ -19,6 +19,7 @@ const BASIC_WHITE = new THREE.MeshBasicMaterial({ color: 0xffffff });        // 
 const GLASS = new THREE.MeshLambertMaterial({ color: 0xcfe8f7, transparent: true, opacity: 0.22, side: THREE.DoubleSide });
 const GLASS_DOOR = new THREE.MeshLambertMaterial({ color: 0xbfe3f5, transparent: true, opacity: 0.45 });
 const NET = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.32 });
+const NET_GREEN = new THREE.MeshLambertMaterial({ color: 0x2f8f4f, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
 const INVIS = new THREE.MeshBasicMaterial({ visible: false });
 const CURTAIN = new THREE.MeshLambertMaterial({ color: 0x8a8f96 });
 const TAEGEUK_MAT = new THREE.MeshBasicMaterial({ map: taegeukTexture() });
@@ -78,7 +79,7 @@ export function buildWorld(scene) {
     const geo = g.clone();
     _eu.set(rot ? rot[0] || 0 : 0, rot ? rot[1] || 0 : 0, rot ? rot[2] || 0 : 0);
     _q.setFromEuler(_eu);
-    _m4.compose(_vp.set(px, py, pz), _q, _vs.set(sx, sy, sz));
+    _m4.compose(_vp.set(px, py + YOFF, pz), _q, _vs.set(sx, sy, sz));
     geo.applyMatrix4(_m4);
     _col.set(colorHex);
     const n = geo.attributes.position.count;
@@ -112,17 +113,23 @@ export function buildWorld(scene) {
   const STUMP_GEO = new THREE.CylinderGeometry(0.3, 0.34, 1, 9);
   const CANOPY = [0x4d8b4d, 0x55924f, 0x5e9c53, 0x467e49, 0x63a457];
 
+  // ---------- 지형 단차 (사진: 학교 부지가 운동장보다 1m 높음) ----------
+  // z <= TERR_Z(-18) = 학교 테라스(y0), z > TERR_Z = 운동장 레벨(y -1)
+  const TERR_Z = -18;
+  let YOFF = 0;                      // 남측(운동장 레벨) 구역 생성 시 -1로 설정
+  const terrY = z => (z > TERR_Z ? -1 : 0);
+
   // ---------- 공용 헬퍼 ----------
   function box(w, h, d, color, cx, baseY, cz, opt = {}) {
     if (!opt.material) {
-      // 병합 경로 (단색 정적)
+      // 병합 경로 (단색 정적 — YOFF는 geoAdd에서 한 번만 적용)
       const r = geoAdd(UNIT_BOX, color, cx, baseY + h / 2, cz, opt.rot, w, h, d);
       staticEntries.push({ key: r.key, aabb: r.aabb, solid: opt.collide !== false });
       return null;
     }
     const m = new THREE.Mesh(UNIT_BOX, opt.material);
     m.scale.set(w, h, d);
-    m.position.set(cx, baseY + h / 2, cz);
+    m.position.set(cx, baseY + YOFF + h / 2, cz);
     if (opt.rot) m.rotation.set(opt.rot[0] || 0, opt.rot[1] || 0, opt.rot[2] || 0);
     scene.add(m);
     if (opt.collide !== false) colliders.push(m);
@@ -158,7 +165,7 @@ export function buildWorld(scene) {
     const m = new THREE.Mesh(UNIT_PLANE, colorOrMat);
     m.scale.set(w, d, 1);
     m.rotation.x = -Math.PI / 2;
-    m.position.set(x, y, z);
+    m.position.set(x, y + YOFF, z);
     scene.add(m);
     walkables.push(m);
     return m;
@@ -289,12 +296,17 @@ export function buildWorld(scene) {
     return g;
   }
 
-  // ---------- 하늘/땅 ----------
+  // ---------- 하늘/땅 (기준 지면 = 운동장 레벨 y-1, 학교 테라스 슬래브 = y0) ----------
   const ground = new THREE.Mesh(UNIT_PLANE, mat(0x7cb85c));
   ground.scale.set(320, 240, 1);
   ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -1;
   scene.add(ground);
   walkables.push(ground);
+  // 학교 테라스 (사진: 건물 부지가 운동장보다 높음)
+  box(164, 1, 52, 0x7cb85c, 0, -1, TERR_Z - 26, { walk: true });
+  // 옹벽(축대) 전면
+  box(98, 1.02, 0.35, 0xb5af9f, 6, -1.02, TERR_Z + 0.12, { collide: false });
 
   // ---------- 본관 ----------
   const B = SCHOOL.building;
@@ -535,6 +547,22 @@ export function buildWorld(scene) {
       box(0.9, 0.7, 0.8, 0xb08a5e, cx - cw / 2 + 1.05, y0 + 1.0, at(1.05), { collide: false });
       box(1.1, 0.9, 0.9, 0x8a6a45, cx + cw / 2 - 1.1, y0, at(1.2));
       box(1.4, 0.5, 0.6, 0x9c7a53, cx, y0, at(0.7));
+    } else if (r.type === 'hall') {
+      // 현관 신발장 (양쪽 벽)
+      [[s0 + 0.32, 1], [s1 - 0.32, -1]].forEach(([sx3, sd]) => {
+        box(0.34, 1.15, 2.6, 0xcfc4b2, sx3, y0, zMid + dir * 1.0);
+        for (let ci2 = 0; ci2 < 8; ci2++) {
+          geoAdd(UNIT_PLANE, [0xf2a6b8, 0x9bc1e8, 0xf6c67a, 0x8fd0a8][ci2 % 4],
+            sx3 + sd * 0.18, y0 + 0.38 + Math.floor(ci2 / 4) * 0.45,
+            zMid + dir * (1.0 - 1.0 + (ci2 % 4) * 0.6 - 0.9),
+            [0, sd > 0 ? Math.PI / 2 : -Math.PI / 2, 0], 0.4, 0.36, 1);
+        }
+      });
+    }
+    // 창가 화분 (사무·보건·도서·돌봄 공통 — 창밖에서 봐도 빈 방 느낌 방지)
+    if (['office', 'nurse', 'library', 'daycare'].includes(r.type)) {
+      geoAdd(STUMP_GEO, 0xa5673f, s0 + 1.0, y0 + 0.19, at(0.55), null, 0.6, 0.38, 0.6);
+      geoAdd(ICO_GEO, 0x4d8b4d, s0 + 1.0, y0 + 0.62, at(0.55), [0, rng() * 3, 0], 0.28, 0.26, 0.28);
     }
   }
 
@@ -653,6 +681,30 @@ export function buildWorld(scene) {
   poster1.position.set(hallRoom.span[1] - 0.1, 1.55, -27);
   poster1.rotation.y = Math.PI / 2;
   scene.add(poster1);
+
+  // ---------- 테라스 경계: 계단·구령대·경사로·초록 그물 펜스 (사진2·3) ----------
+  for (let si = 0; si < 4; si++) {   // 현관 앞 중앙 계단 (운동장으로 내려감)
+    box(5.2, 0.8 - si * 0.22, 0.42, 0xc9c4b8, hallCx, -1, TERR_Z + 0.24 + si * 0.42);
+  }
+  // 구령대 (테라스 가장자리, 운동장을 내려다봄)
+  box(6, 0.75, 2.8, 0xd8d2c6, -6, 0, TERR_Z - 1.6, { walk: true });
+  box(1.1, 0.55, 0.7, 0x9aa5ad, -6, 0.75, TERR_Z - 2.4);   // 연단
+  box(1.6, 0.22, 0.5, 0xc9c4b8, -8.6, 0, TERR_Z - 0.4, { walk: true });
+  box(1.6, 0.5, 0.5, 0xc9c4b8, -8.6, 0, TERR_Z - 1.1, { walk: true });
+  zones.unshift({ x0: -9.2, x1: -2.8, z0: TERR_Z - 3.2, z1: TERR_Z, label: '구령대' });
+  // 동·서 경사로
+  [38, -34].forEach(rx2 => {
+    box(3.6, 0.2, 4.8, 0xc4bfae, rx2, -0.62, TERR_Z + 1.7, { rot: [0.235, 0, 0], collide: false, walk: true });
+  });
+  // 테라스 위 초록 그물 펜스 (통로에만 틈)
+  const netSegs = [[-40, -36.6], [-31.4, -9.6], [-2.4, hallCx - 3.2], [hallCx + 3.2, 35.4], [40.6, 52]];
+  netSegs.forEach(([a, b]) => {
+    box(b - a, 1.5, 0.05, 0, (a + b) / 2, 0.15, TERR_Z - 0.15, { material: NET_GREEN });
+    for (let px5 = a; px5 <= b + 0.01; px5 += 4) {
+      box(0.07, 1.7, 0.07, 0x2a6b3f, px5, 0, TERR_Z - 0.15, { collide: false });
+    }
+  });
+  for (let bx3 = -38; bx3 <= 50; bx3 += 4.5) bush(bx3, TERR_Z - 1.1, 0.8 + rng() * 0.5);
 
   // ---- 서관 ----
   B.wings.forEach(wg => {
@@ -949,6 +1001,41 @@ export function buildWorld(scene) {
   sign('체육관', gx1 + 0.25, gh - 1.2, gz, Math.PI / 2, 0.9);
   zones.push({ x0: gx0, x1: gx1, z0: gz0, z1: gz1, label: '체육관' });
 
+  // ---------- 유치원 놀이터 (체육관 남쪽 미니 놀이터 — 위성사진) ----------
+  const kpX = -54, kpZ = -39;
+  plane(10.6, 8, 0x8fae6d, kpX, 0.02, kpZ);
+  const kf = 0x3f8f4f;
+  wallXGaps(kpX - 5.3, kpX + 5.3, [], kpZ - 4, 0.52, 0.09, kf, 0.07);
+  wallXGaps(kpX - 5.3, kpX + 5.3, [], kpZ + 4, 0.52, 0.09, kf, 0.07);
+  wallZGaps(kpZ - 4, kpZ + 4, [], kpX - 5.3, 0.52, 0.09, kf, 0.07);
+  wallZGaps(kpZ - 4, kpZ + 4, [{ c: kpZ, w: 1.6 }], kpX + 5.3, 0.52, 0.09, kf, 0.07);
+  for (let fp = -5.3; fp <= 5.3; fp += 2.65) {
+    box(0.09, 0.85, 0.09, kf, kpX + fp, 0, kpZ - 4, { collide: false });
+    box(0.09, 0.85, 0.09, kf, kpX + fp, 0, kpZ + 4, { collide: false });
+  }
+  // 미니 미끄럼틀
+  box(1.1, 0.14, 1.1, 0xf2b134, kpX - 2.8, 0.92, kpZ - 1.4, { walk: true });
+  [[-0.45, -0.45], [0.45, -0.45], [-0.45, 0.45], [0.45, 0.45]].forEach(([ox, oz]) =>
+    box(0.09, 0.92, 0.09, 0xe8863a, kpX - 2.8 + ox, 0, kpZ - 1.4 + oz, { collide: false }));
+  box(0.65, 0.09, 1.9, 0xe3453a, kpX - 2.8, 0.44, kpZ - 0.05, { rot: [0.48, 0, 0], collide: false, walk: true });
+  box(0.6, 0.08, 1.3, 0x9aa5ad, kpX - 2.8, 0.42, kpZ - 2.35, { rot: [-0.75, 0, 0], collide: false, walk: true });
+  // 스프링 라이더 2
+  [[kpX + 0.6, kpZ + 1.7, 0xd94f6b], [kpX + 2.5, kpZ - 1.1, 0x4d9bd6]].forEach(([sx4, sz4, sc4]) => {
+    const spr = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 0.34, 8), mat(0x555b62));
+    spr.position.set(sx4, 0.17, sz4);
+    scene.add(spr);
+    box(0.6, 0.3, 0.24, sc4, sx4, 0.34, sz4);
+    box(0.2, 0.22, 0.16, sc4, sx4 + 0.32, 0.5, sz4, { collide: false });
+  });
+  // 소형 그네
+  const kgX = kpX - 0.6, kgZ = kpZ + 2.4;
+  [[-0.9], [0.9]].forEach(([ox]) => box(0.08, 1.55, 0.08, 0xf2b134, kgX + ox, 0, kgZ));
+  box(1.9, 0.07, 0.07, 0xf2b134, kgX, 1.55, kgZ, { collide: false });
+  box(0.42, 0.05, 0.2, 0xe3453a, kgX, 0.5, kgZ, { collide: false });
+  [[-0.15], [0.15]].forEach(([ox]) => box(0.025, 1.0, 0.025, 0x777777, kgX + ox, 0.55, kgZ, { collide: false }));
+  sign('유치원 놀이터', kpX + 5.6, 1.5, kpZ - 3.2, Math.PI / 2, 0.4);
+  zones.unshift({ x0: kpX - 5.5, x1: kpX + 5.5, z0: kpZ - 4.2, z1: kpZ + 4.2, label: '유치원 놀이터' });
+
   // ---------- 텃밭 (E키로 물주기) ----------
   const GA = SCHOOL.garden;
   const [axg, azg] = GA.center;
@@ -1007,28 +1094,41 @@ export function buildWorld(scene) {
   box(0.09, 1.3, 0.09, 0x9c6644, axg - 3.6, 0, gdz1 + 0.6, { collide: false });
   zones.push({ x0: gdx0, x1: gdx1, z0: gdz0, z1: gdz1, label: '텃밭' });
 
-  // ---------- 운동장 ----------
+  // ---------- 운동장 (운동장 레벨 y=-1) ----------
   const F = SCHOOL.field;
+  YOFF = -1;
   const fplane = new THREE.Mesh(UNIT_PLANE, new THREE.MeshLambertMaterial({ map: trackTexture() }));
   fplane.scale.set(F.width, F.depth, 1);
   fplane.rotation.x = -Math.PI / 2;
-  fplane.position.set(F.center[0], 0.012, F.center[1]);
+  fplane.position.set(F.center[0], -0.988, F.center[1]);
   scene.add(fplane);
   walkables.push(fplane);
-  [[-1], [1]].forEach(([s]) => {
-    const gxp = F.center[0] + s * (F.width / 2 - 18);
-    [-2.6, 2.6].forEach(zo => {
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2, 8), mat(0xffffff));
-      post.position.set(gxp, 1, F.center[1] + zo);
+  function goalAt(gxp, gcz, s, sc) {   // s=개구 방향(±1), sc=크기 배율
+    [-2.6 * sc, 2.6 * sc].forEach(zo => {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2 * sc, 8), mat(0xffffff));
+      post.position.set(gxp, -1 + sc, gcz + zo);
       scene.add(post); colliders.push(post);
     });
-    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 5.2, 8), mat(0xffffff));
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 5.2 * sc, 8), mat(0xffffff));
     bar.rotation.x = Math.PI / 2;
-    bar.position.set(gxp, 2, F.center[1]);
+    bar.position.set(gxp, -1 + 2 * sc, gcz);
     scene.add(bar);
-    box(0.12, 2, 5.4, 0, gxp + s * 1.1, 0, F.center[1], { material: NET });
-    [-2.7, 2.7].forEach(zo => box(1.15, 2, 0.1, 0, gxp + s * 0.55, 0, F.center[1] + zo, { material: NET }));
-    box(1.15, 0.08, 5.4, 0, gxp + s * 0.55, 1.95, F.center[1], { material: NET, collide: false });
+    box(0.12, 2 * sc, 5.4 * sc, 0, gxp + s * 1.1 * sc, 0, gcz, { material: NET });
+    [-2.7 * sc, 2.7 * sc].forEach(zo => box(1.15 * sc, 2 * sc, 0.1, 0, gxp + s * 0.55 * sc, 0, gcz + zo, { material: NET }));
+    box(1.15 * sc, 0.08, 5.4 * sc, 0, gxp + s * 0.55 * sc, 1.95 * sc, gcz, { material: NET, collide: false });
+  }
+  goalAt(F.center[0] - (F.width / 2 - 18), F.center[1], -1, 1);
+  goalAt(F.center[0] + (F.width / 2 - 18), F.center[1], 1, 1);
+  // 미니 골대 한 쌍 (사진2)
+  goalAt(-4, 22, -1, 0.55);
+  goalAt(16, 22, 1, 0.55);
+  // 야간 조명탑 (사진2·3)
+  [[-38, 30], [48, 27]].forEach(([lx3, lz3]) => {
+    const lp = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 9, 8), mat(0x9aa5ad));
+    lp.position.set(lx3, 3.5, lz3);
+    scene.add(lp); colliders.push(lp);
+    box(2.0, 0.4, 0.28, 0x6b7178, lx3, 8, lz3, { collide: false });
+    [-0.6, 0, 0.6].forEach(ox => box(0.3, 0.26, 0.16, 0, lx3 + ox, 8.42, lz3, { material: BASIC_WHITE, collide: false }));
   });
   zones.push({ x0: F.center[0] - F.width / 2, x1: F.center[0] + F.width / 2, z0: F.center[1] - F.depth / 2, z1: F.center[1] + F.depth / 2, label: '운동장' });
 
@@ -1044,12 +1144,12 @@ export function buildWorld(scene) {
   const swX = px + 4.5, swZ = pz + 3.5;
   const swbar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.4, 8), mat(0x3a6ea5));
   swbar.rotation.z = Math.PI / 2;
-  swbar.position.set(swX, 2.25, swZ);
+  swbar.position.set(swX, 1.25, swZ);
   scene.add(swbar);
   [[-1.7], [1.7]].forEach(([sx]) => {
     [[-0.5], [0.5]].forEach(([zz]) => {
       const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.4, 8), mat(0x3a6ea5));
-      leg.position.set(swX + sx, 1.15, swZ + zz);
+      leg.position.set(swX + sx, 0.15, swZ + zz);
       leg.rotation.x = zz > 0 ? -0.22 : 0.22;
       scene.add(leg); colliders.push(leg);
     });
@@ -1065,7 +1165,7 @@ export function buildWorld(scene) {
     [-0.7, 0.7].forEach(sx => box(0.08, bh, 0.08, 0x3a6ea5, px + 3.5 + sx, 0, pz - 3.5 + zo, { collide: false }));
     const bb = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.4, 8), mat(0xc8cdd2));
     bb.rotation.z = Math.PI / 2;
-    bb.position.set(px + 3.5, bh, pz - 3.5 + zo);
+    bb.position.set(px + 3.5, bh - 1, pz - 3.5 + zo);
     scene.add(bb);
   });
   zones.push({ x0: px - 8.5, x1: px + 8.5, z0: pz - 7, z1: pz + 7, label: '놀이터' });
@@ -1089,13 +1189,13 @@ export function buildWorld(scene) {
   box(2.4, 0.32, 1.5, 0x8fae6d, px, 0, pz + 12, { walk: true });
   for (let i = 0; i < 6; i++) {
     const fl = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), mat([0xe8863a, 0xd94f6b, 0xf2b134][i % 3]));
-    fl.position.set(px - 1 + i * 0.4, 0.45, pz + 12 + (rng() - 0.5) * 0.8);
+    fl.position.set(px - 1 + i * 0.4, -0.55, pz + 12 + (rng() - 0.5) * 0.8);
     scene.add(fl);
   }
   const pvX = px, pvZ = pz + 16.2;
   [[-1.3, -1.3], [1.3, -1.3], [-1.3, 1.3], [1.3, 1.3]].forEach(([ox, oz]) => box(0.14, 2.2, 0.14, 0x8a5a3b, pvX + ox, 0, pvZ + oz));
   const pvRoof = new THREE.Mesh(new THREE.ConeGeometry(2.6, 1.1, 6), mat(0x7a4e2d));
-  pvRoof.position.set(pvX, 2.75, pvZ);
+  pvRoof.position.set(pvX, 1.75, pvZ);
   scene.add(pvRoof);
   box(2, 0.42, 0.6, 0xc9b8a0, pvX, 0, pvZ + 0.85, { walk: true });
   box(2, 0.42, 0.6, 0xc9b8a0, pvX, 0, pvZ - 0.85, { walk: true });
@@ -1117,7 +1217,8 @@ export function buildWorld(scene) {
   box(shL - 2, 0.42, 0.5, 0xc9b8a0, shx, 0, shz - 1, { walk: true });
   zones.push({ x0: shx - shL / 2, x1: shx + shL / 2, z0: shz - 2.5, z1: shz + 2.5, label: '무지개 쉼터' });
 
-  // ---------- 국기게양대 ----------
+  // ---------- 국기게양대 (테라스 위) ----------
+  YOFF = 0;
   const [flx, flz] = SCHOOL.flagPole;
   const fpole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 10, 10), mat(0xc8cdd2));
   fpole.position.set(flx, 5, flz);
@@ -1134,32 +1235,36 @@ export function buildWorld(scene) {
   scene.add(flagGroup);
   dynamic.flag = flagGroup;
 
-  // ---------- 교문 + 길 ----------
+  // ---------- 교문 + 길 (운동장 레벨) ----------
   const [gtx, gtz] = SCHOOL.gate;
+  YOFF = -1;
   box(4, 0.05, gtz - (F.center[1] + F.depth / 2), 0xd8d2c6, gtx, 0.006, (gtz + F.center[1] + F.depth / 2) / 2, { collide: false, walk: true });
   [-3.5, 3.5].forEach(sx => box(1, 3, 1, 0xb9b5aa, gtx + sx, 0, gtz));
   box(9, 0.5, 0.8, 0x8a9096, gtx, 3.05, gtz, { collide: false });
   function pine(tx, tz, s = 1) {
+    const keep = YOFF;
+    YOFF = terrY(tz);
     const tr = geoAdd(PTRUNK_GEO, 0x7a5230, tx, 0.8 * s, tz, null, s, s, s);
     staticEntries.push({ key: tr.key, aabb: tr.aabb, solid: true });
     [[1.15, 1.9], [0.9, 2.7], [0.62, 3.4]].forEach(([r, y]) => {
       geoAdd(CONE_GEO, 0x2f6b3f, tx, y * s, tz, null, r * s, 1.1 * s, r * s);
     });
+    YOFF = keep;
   }
   pine(gtx + 5.5, gtz - 2.5, 1.15);
   pine(gtx + 8.5, gtz - 1.2, 0.95);
-  sign(SCHOOL.name, gtx, 2.35, gtz, 0, 0.7);
+  sign(SCHOOL.name, gtx, 1.35, gtz, 0, 0.7);
   const gateBlock = new THREE.Mesh(UNIT_BOX, INVIS);
   gateBlock.scale.set(7, 3, 0.3);
-  gateBlock.position.set(gtx, 1.5, gtz);
+  gateBlock.position.set(gtx, 0.5, gtz);
   scene.add(gateBlock); colliders.push(gateBlock);
   zones.push({ x0: gtx - 6, x1: gtx + 6, z0: gtz - 4, z1: gtz + 2, label: '교문' });
   // 정문 디테일 (거리뷰 사진: 파란 간판·현수막·회전차단기·흰 펜스·안전 팻말)
   const gsb = textSign(SCHOOL.name, { h: 0.9, bg: '#1e4fa3', fg: '#ffffff', border: null });
-  gsb.position.set(gtx + 9, 3.35, gtz - 0.6);
+  gsb.position.set(gtx + 9, 2.35, gtz - 0.6);
   scene.add(gsb);
   const gbn = textSign('함께 놀고 깨우치며 비상하는 "행복한 배움터"', { h: 0.38, bg: '#ffffff', fg: '#d94f6b', border: null });
-  gbn.position.set(gtx + 9, 2.6, gtz - 0.6);
+  gbn.position.set(gtx + 9, 1.6, gtz - 0.6);
   scene.add(gbn);
   [gtx + 5.6, gtx + 12.4].forEach(px4 => box(0.16, 3.7, 0.16, 0x9aa5ad, px4, 0, gtz - 0.6));
   [-1.6, 0, 1.6].forEach(ox => {   // 회전 차단기 근사
@@ -1173,12 +1278,15 @@ export function buildWorld(scene) {
     box(b - a, 0.07, 0.07, 0xf2f4f6, (a + b) / 2, 0.6, gtz - 0.9, { collide: false });
   });
   const qsign = textSign('지진 옥외대피장소', { h: 0.32, bg: '#f2c94c', fg: '#1d3557', border: null });
-  qsign.position.set(gtx - 5.5, 1.25, gtz - 0.95);
+  qsign.position.set(gtx - 5.5, 0.25, gtz - 0.95);
   scene.add(qsign);
-  // 서쪽 담 너머 비닐하우스 (풍경)
+  // 서쪽 담 너머 비닐하우스 (풍경 — 지형 레벨별)
   [6, -26].forEach(gz2 => {
+    const keep2 = YOFF;
+    YOFF = terrY(gz2);
     box(6, 1.9, 26, 0xdfe4e8, -89, 0, gz2, { collide: false });
     box(5, 1.0, 26, 0xcdd5da, -89, 1.9, gz2, { collide: false });
+    YOFF = keep2;
   });
 
   // ---------- 울타리 + 투명 경계벽 + 나무 + 구름 ----------
@@ -1196,18 +1304,49 @@ export function buildWorld(scene) {
 
   const bd = SCHOOL.bounds;
   const hedgeC = 0x4e7d3a;
+  // 북측(테라스 레벨): 생울타리 + 후문
+  YOFF = 0;
   wallXGaps(-bd.x, bd.x, [{ c: -30, w: 6 }], bd.zMin, 0, 0.95, hedgeC, 0.9);
   [-33.5, -26.5].forEach(px3 => box(0.8, 2.2, 0.8, 0xb9b5aa, px3, 0, bd.zMin));
   sign('후문', -30, 2.0, bd.zMin + 0.6, 0, 0.5);
+  // 서·동 생울타리 — 테라스 구간(y0)
+  box(0.9, 0.95, TERR_Z - bd.zMin, hedgeC, -bd.x, 0, (bd.zMin + TERR_Z) / 2);
+  box(0.9, 0.95, TERR_Z - bd.zMin, hedgeC, bd.x, 0, (bd.zMin + TERR_Z) / 2);
+  // 남측(운동장 레벨): 교문 옆 흰 펜스 + 서쪽 생울타리
+  YOFF = -1;
   wallXGaps(-bd.x, bd.x, [{ c: gtx, w: 9 }], bd.zMax, 0, 1.1, 0xeef1f3, 0.25);
-  box(0.9, 0.95, bd.zMax - bd.zMin, hedgeC, -bd.x, 0, (bd.zMin + bd.zMax) / 2);
-  box(0.9, 0.95, bd.zMax - bd.zMin, hedgeC, bd.x, 0, (bd.zMin + bd.zMax) / 2);
-  box(bd.x * 2 + 2, 6, 0.6, 0, 0, 0, bd.zMin, { material: INVIS });
-  box(bd.x * 2 + 2, 6, 0.6, 0, 0, 0, bd.zMax, { material: INVIS });
-  box(0.6, 6, bd.zMax - bd.zMin + 2, 0, -bd.x, 0, (bd.zMin + bd.zMax) / 2, { material: INVIS });
-  box(0.6, 6, bd.zMax - bd.zMin + 2, 0, bd.x, 0, (bd.zMin + bd.zMax) / 2, { material: INVIS });
+  box(0.9, 0.95, bd.zMax - TERR_Z, hedgeC, -bd.x, 0, (TERR_Z + bd.zMax) / 2);
+  // 동측 남쪽 구간: 흰 장식 펜스 + 개나리 덤불 (사진3 감성)
+  for (let fz3 = TERR_Z + 1; fz3 <= bd.zMax - 0.5; fz3 += 2.2) {
+    box(0.09, 1.25, 0.09, 0xf2f4f6, bd.x, 0, fz3, { collide: false });
+  }
+  box(0.07, 0.07, bd.zMax - TERR_Z - 1, 0xf2f4f6, bd.x, 1.15, (TERR_Z + bd.zMax) / 2, { collide: false });
+  box(0.07, 0.07, bd.zMax - TERR_Z - 1, 0xf2f4f6, bd.x, 0.62, (TERR_Z + bd.zMax) / 2, { collide: false });
+  box(0.3, 1.3, bd.zMax - TERR_Z, 0, bd.x, 0, (TERR_Z + bd.zMax) / 2, { material: INVIS });
+  for (let bz4 = TERR_Z + 3; bz4 <= bd.zMax - 2; bz4 += 5) {
+    bush(bd.x - 2.2, bz4, 0.9 + rng() * 0.5, rng() < 0.5 ? 0xd9c84a : 0x8aa04a);   // 개나리
+  }
+  // 전신주 + 전선 (사진3)
+  [[-6], [14], [34]].forEach(([pz5]) => {
+    const pole5 = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 8.5, 8), mat(0x8a8378));
+    pole5.position.set(bd.x - 1.2, 3.25, pz5);
+    scene.add(pole5); colliders.push(pole5);
+    box(1.7, 0.12, 0.12, 0x6b5d4f, bd.x - 1.2, 7.9, pz5, { collide: false });
+  });
+  [[4], [24]].forEach(([mz]) => {
+    box(0.035, 0.035, 20, 0x2b2b2b, bd.x - 1.65, 7.75, mz, { collide: false });
+    box(0.035, 0.035, 20, 0x2b2b2b, bd.x - 0.75, 7.75, mz, { collide: false });
+  });
+  YOFF = 0;
+  // 경계 투명벽 (양 레벨 모두 커버)
+  box(bd.x * 2 + 2, 8, 0.6, 0, 0, -1.2, bd.zMin, { material: INVIS });
+  box(bd.x * 2 + 2, 8, 0.6, 0, 0, -1.2, bd.zMax, { material: INVIS });
+  box(0.6, 8, bd.zMax - bd.zMin + 2, 0, -bd.x, -1.2, (bd.zMin + bd.zMax) / 2, { material: INVIS });
+  box(0.6, 8, bd.zMax - bd.zMin + 2, 0, bd.x, -1.2, (bd.zMin + bd.zMax) / 2, { material: INVIS });
 
   function tree(tx, tz, s = 1) {
+    const keep = YOFF;
+    YOFF = terrY(tz);
     const r = geoAdd(TRUNK_GEO, 0x8b5e34, tx, 0.7 * s, tz, null, s, s, s);
     staticEntries.push({ key: r.key, aabb: r.aabb, solid: true });
     const c1 = CANOPY[Math.floor(rng() * CANOPY.length)];
@@ -1216,9 +1355,13 @@ export function buildWorld(scene) {
     geoAdd(ICO_GEO, c1, tx, 1.9 * s, tz, [0, ry, 0], 1.05 * s, 0.95 * s, 1.05 * s);
     geoAdd(ICO_GEO, c2, tx + 0.45 * s, 2.5 * s, tz + 0.2 * s, [0, ry + 1, 0], 0.7 * s, 0.66 * s, 0.7 * s);
     geoAdd(ICO_GEO, c2, tx - 0.5 * s, 2.2 * s, tz - 0.25 * s, [0, ry + 2, 0], 0.55 * s, 0.5 * s, 0.55 * s);
+    YOFF = keep;
   }
-  function bush(tx, tz, s = 1) {
-    geoAdd(ICO_GEO, CANOPY[Math.floor(rng() * CANOPY.length)], tx, 0.34 * s, tz, [0, rng() * 3, 0], 0.5 * s, 0.38 * s, 0.5 * s);
+  function bush(tx, tz, s = 1, color) {
+    const keep = YOFF;
+    YOFF = terrY(tz);
+    geoAdd(ICO_GEO, color || CANOPY[Math.floor(rng() * CANOPY.length)], tx, 0.34 * s, tz, [0, rng() * 3, 0], 0.5 * s, 0.38 * s, 0.5 * s);
+    YOFF = keep;
   }
   for (let tz = -35; tz <= 35; tz += 10) tree(70, tz, 1 + rng() * 0.4);
   for (let tz = -30; tz <= 40; tz += 10) tree(-80, tz, 1 + rng() * 0.4);
@@ -1267,12 +1410,15 @@ export function buildWorld(scene) {
     btMesh.castShadow = true;
     const btGroup = new THREE.Group();
     btGroup.add(btMesh);
-    btGroup.position.set(btx, 0, btz);
+    btGroup.position.set(btx, terrY(btz), btz);
     scene.add(btGroup);
     dynamic.bigTree = btGroup;
+    const keep3 = YOFF;
+    YOFF = terrY(btz);
     box(1.3, 4.6, 1.3, 0, btx, 0, btz, { material: INVIS });
     box(2.2, 0.42, 0.55, 0xc9b8a0, btx - 3.8, 0, btz + 1.4, { walk: true });
     box(2.2, 0.42, 0.55, 0xc9b8a0, btx + 3.6, 0, btz - 1.6, { walk: true });
+    YOFF = keep3;
     zones.unshift({ x0: btx - 5.5, x1: btx + 5.5, z0: btz - 5.5, z1: btz + 5.5, label: '큰 나무' });
   }
 
@@ -1360,7 +1506,7 @@ export function buildWorld(scene) {
     { x: 6.9, y: 0, z: -46 },
     { x: 24, y: 0, z: -56.2 },
     { x: 24, y: 0, z: -41 },
-    { x: 0, y: 0, z: 20 },
+    { x: 0, y: -1, z: 20 },
     { x: -60, y: 0, z: -52 },
     { x: -26, y: FH, z: -39.7 },
   ];

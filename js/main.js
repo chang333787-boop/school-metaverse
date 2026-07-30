@@ -97,19 +97,19 @@ timeBtn.addEventListener('click', () => {
 
 // ---------- 차는 공 (운동장 축구공 2 + 체육관 농구공) ----------
 const BALLS = [];
-function addBall(x, z, r, color) {
+function addBall(x, z, r, color, gy = 0) {   // gy = 그 구역의 지면 높이 (운동장 -1)
   const m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12), new THREE.MeshLambertMaterial({ color }));
-  m.position.set(x, r, z);
+  m.position.set(x, gy + r, z);
   scene.add(m);
-  BALLS.push({ m, r, vx: 0, vy: 0, vz: 0, cd: 0 });
+  BALLS.push({ m, r, gy, vx: 0, vy: 0, vz: 0, cd: 0 });
   return BALLS[BALLS.length - 1];
 }
 const F_ = SCHOOL.field, GY_ = SCHOOL.gym;
 const FIELD_BB = { x0: F_.center[0] - F_.width / 2 + 1, x1: F_.center[0] + F_.width / 2 - 1, z0: F_.center[1] - F_.depth / 2 + 1, z1: F_.center[1] + F_.depth / 2 - 1 };
 const GYM_BB = { x0: GY_.center[0] - GY_.width / 2 + 0.8, x1: GY_.center[0] + GY_.width / 2 - 0.8, z0: GY_.center[1] - GY_.depth / 2 + 0.8, z1: GY_.center[1] + GY_.depth / 2 - 0.8 };
-addBall(F_.center[0] - 4, F_.center[1] + 2, 0.24, 0xffffff).bb = FIELD_BB;
-addBall(F_.center[0] + 8, F_.center[1] + 9, 0.24, 0xe07a2f).bb = FIELD_BB;
-addBall(GY_.center[0] + 2, GY_.center[1] + 3, 0.2, 0xe07a2f).bb = GYM_BB;
+addBall(F_.center[0] - 4, F_.center[1] + 2, 0.24, 0xffffff, -1).bb = FIELD_BB;
+addBall(F_.center[0] + 8, F_.center[1] + 9, 0.24, 0xe07a2f, -1).bb = FIELD_BB;
+addBall(GY_.center[0] + 2, GY_.center[1] + 3, 0.2, 0xe07a2f, 0).bb = GYM_BB;
 
 // ---------- 카메라 (스크래치 벡터 — 매 프레임 할당 금지) ----------
 let camYaw = 0, camPitch = 0.42, camDist = 4.9;
@@ -471,14 +471,14 @@ function worldTick(dt) {
       const dragK = 1 - 0.12 * dt;
       b.vx *= dragK; b.vz *= dragK;
       bp.x += b.vx * dt; bp.y += b.vy * dt; bp.z += b.vz * dt;
-      if (bp.y < b.r) {
-        bp.y = b.r;
+      if (bp.y < b.gy + b.r) {
+        bp.y = b.gy + b.r;
         b.vy = Math.abs(b.vy) > 1 ? -b.vy * 0.55 : 0;
         b.vx *= 0.94; b.vz *= 0.94;
       }
       if (bp.x < b.bb.x0 || bp.x > b.bb.x1) { b.vx = -b.vx * 0.7; bp.x = Math.max(b.bb.x0, Math.min(b.bb.x1, bp.x)); }
       if (bp.z < b.bb.z0 || bp.z > b.bb.z1) { b.vz = -b.vz * 0.7; bp.z = Math.max(b.bb.z0, Math.min(b.bb.z1, bp.z)); }
-      if (Math.abs(b.vx) < 0.05 && Math.abs(b.vz) < 0.05 && bp.y <= b.r + 0.01) { b.vx = 0; b.vz = 0; b.vy = 0; }
+      if (Math.abs(b.vx) < 0.05 && Math.abs(b.vz) < 0.05 && bp.y <= b.gy + b.r + 0.01) { b.vx = 0; b.vz = 0; b.vy = 0; }
       b.m.rotation.x += b.vz * dt * 3;
       b.m.rotation.z -= b.vx * dt * 3;
     }
