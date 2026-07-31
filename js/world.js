@@ -1134,6 +1134,29 @@ export function buildWorld(scene) {
   // 복도 나무 핸드레일 — 연두 굽도리(0.95) 상단을 따라 이어진다.
   // ⚠️ 반드시 softBox. 기존 1076줄이 box(collide:false)라 **레일을 밟고 올라설 수 있었다**(실버그).
   // gaps = [{c, w}] 문 개구부. axis 'x' = z벽을 따라 가로로, 'z' = x벽을 따라 세로로.
+  // 복도 창 아래 목재 수납장 줄 (실사: 구관 복도 창측에 짙은 갈색 수납장이 연속으로 놓인다)
+  // 핸드레일과 같은 벽에 두면 서로 관통한다 → **창측 벽 = 수납장 / 교실측 벽 = 핸드레일**로 나눈다.
+  // ⚠️ solidSoftBox: 통과는 막되 밟고 올라설 수는 없어야 한다(높이 0.85 = 점프 1.04로 닿는다).
+  const CAB_H = 0.85, CAB_D = 0.42;
+  function lowCabinet(a0, a1, fixed, dir, gaps = []) {
+    const cuts = [...gaps].sort((p, q) => p.c - q.c);
+    let cur = a0;
+    const runs = [];
+    cuts.forEach(g => {
+      const g0 = g.c - g.w / 2 - 0.15, g1 = g.c + g.w / 2 + 0.15;
+      if (g0 > cur + 0.8) runs.push([cur, g0]);
+      cur = Math.max(cur, g1);
+    });
+    if (a1 - cur > 0.8) runs.push([cur, a1]);
+    const cz = fixed + dir * (CAB_D / 2 + 0.02);
+    runs.forEach(([r0, r1]) => {
+      const len = r1 - r0, ctr = (r0 + r1) / 2;
+      solidSoftBox(len, CAB_H, CAB_D, 0x7a5a3c, ctr, 0.10, cz);                       // 몸통
+      softBox(len + 0.06, 0.05, CAB_D + 0.06, 0x8f6c48, ctr, 0.10 + CAB_H, cz);       // 상판
+      for (let t = r0 + 0.45; t < r1 - 0.2; t += 0.9)                                  // 문짝 손잡이
+        softBox(0.22, 0.03, 0.03, 0xd8d2c6, t, 0.72, cz + dir * (CAB_D / 2 + 0.01));
+    });
+  }
   const RAIL_Y = 1.0, RAIL_OFF = 0.21;
   function railWall(a0, a1, fixed, axis, gaps = [], dir = -1) {
     const cuts = [...gaps].sort((p, q) => p.c - q.c);
@@ -1197,9 +1220,10 @@ export function buildWorld(scene) {
   makeDoor(K.doorC - 1.2, fz0, 2.4, 'x', { swing: 1 });
   // 구관 복도 바닥: 흰 대형 타일 + 양쪽 검은 대리석 띠 (슬래브 0.08 위에 0.10)
   corridorFloor(fx0 + 0.2, fx1 - 0.2, fz0, zCor, 0.100, TILE_W, MARBLE_K, 0.30);
-  // 복도 핸드레일 — 북벽. 개구부는 northGaps(서관 문·급식실·당직실·세로복도)가 이미 정확히 갖고 있다.
-  // ⚠️ 임의 좌표를 쓰면 문 없는 자리에 레일이 끊긴다 — 반드시 실제 개구부 목록을 재사용할 것.
-  railWall(fx0 + 0.3, fx1 - 0.3, fz0, 'x', [...northGaps, { c: -14.3, w: 2.6 }], 1);
+  // ⚠️ 북벽(창측)에는 레일을 깔지 않는다 — 실물은 여기가 **창 아래 목재 수납장** 자리다.
+  //    레일과 수납장을 같은 벽에 두면 브래킷(y 0.90~1.00)이 상판(0.95)을 관통한다.
+  //    교실측(zCor) 레일은 각 실 루프에서 계속 깔린다.
+  lowCabinet(fx0 + 0.3, fx1 - 0.3, fz0, 1, [...northGaps, { c: -14.3, w: 2.6 }]);
   // 소방설비 (실사: 복도 곳곳 / 지금까지 코드에 0개)
   [-33, -18, 2, 21, 35].forEach(fx3 => fireExt(fx3, 0.10, fz0 + 0.42, fz0 + 0.16));
   [-24, 28].forEach(hx => hydrant(hx, fz0 + 0.14, 0));
@@ -1249,6 +1273,18 @@ export function buildWorld(scene) {
       if (r.type === 'toilet') {
         hangSign('남자 화장실', gaps[0].c, FH - CEIL_DROP, zCor - 0.5, 0, 0.26);
         hangSign('여자 화장실', gaps[1].c, FH - CEIL_DROP, zCor - 0.5, 0, 0.26);
+        // 실사: 화장실 앞 복도에 **학생자치회 초록 대형 게시판** + 그 아래 원목 사물함
+        const tbX = (gaps[0].c + gaps[1].c) / 2;
+        softBox(3.4, 1.35, 0.07, 0x3f6b52, tbX, 1.28, zCor - 0.2);            // 초록 판
+        softBox(3.56, 0.09, 0.1, 0x8a6a45, tbX, 2.63, zCor - 0.21);           // 상 프레임
+        softBox(3.56, 0.09, 0.1, 0x8a6a45, tbX, 1.19, zCor - 0.21);           // 하 프레임
+        [[-1.15, 0xf2efe6], [-0.4, 0xfdf3d0], [0.4, 0xf2efe6], [1.15, 0xe8f0f6]].forEach(([ox, pc], pi) =>
+          geoAdd(UNIT_PLANE, pc, tbX + ox, 1.28 + (pi % 2) * 0.34 - 0.14, zCor - 0.24, null, 0.52, 0.66, 1));
+        const tbTag = textSign('학생자치회 소식', { h: 0.19, bg: '#3f6b52', fg: '#ffffff', border: null, fontPx: 40, pad: 9 });
+        tbTag.position.set(tbX, 2.63, zCor - 0.26);
+        scene.add(tbTag);
+        solidSoftBox(3.4, 0.8, 0.4, 0x9c7a53, tbX, 0.10, zCor - 0.4);         // 아래 원목 사물함
+        softBox(3.48, 0.05, 0.46, 0xb08d5a, tbX, 0.90, zCor - 0.4);
       } else {
         hangSign(label, gaps[0].c, FH - CEIL_DROP, zCor - 0.5, 0, 0.28);
       }
@@ -1646,7 +1682,17 @@ export function buildWorld(scene) {
   wallZ(ez0, zCorE, shed0, 0, FH, innerC);   // 복도 동쪽 끝막이 (창고와 분리)
   // 신관(동관) 복도: 실사는 베이지 대형 타일 + 짙은 회색 걸레받이 — 구관(흰 타일+검은 띠)과 다르다
   corridorFloor(ex0 + 0.2, shed0 - 0.2, ez0, zCorE, 0.098, 0xe7e0d0, 0x6a6a66, 0.22);
-  railWall(ex0 + 0.3, shed0 - 0.3, ez0, 'x', [], 1);
+  // 신관(동관) 정체성은 색이 아니라 **형태**로 낸다 — 순백과 크림은 채움광 보정 뒤 거의 같아진다(채널이 포화).
+  // 붉은 벽돌 노출 기둥 + 짙은 회색 걸레받이 (구관의 연두 굽도리와 확실히 구분)
+  const eBrick = [];
+  for (let bx6 = ex0 + 4.6; bx6 < shed0 - 1; bx6 += 8.6) {
+    solidSoftBox(0.5, FH, 0.5, 0xa8503a, bx6, 0, ez0 + 0.27);
+    eBrick.push({ c: bx6, w: 0.62 });           // ⚠️ 수납장이 기둥을 관통하지 않게 개구부로 넘긴다
+  }
+  geoAdd(UNIT_BOX, 0x5a5e60, (ex0 + shed0) / 2, 0.16, zCorE - 0.18, null, shed0 - ex0 - 0.6, 0.12, 0.04);
+  // 동관도 같은 규칙 — 바깥벽(ez0)=수납장 / 교실측(zCorE)=핸드레일
+  lowCabinet(ex0 + 0.3, shed0 - 0.3, ez0, 1, eBrick);
+  railWall(ex0 + 0.3, shed0 - 0.3, zCorE, 'x', eGaps, -1);
   [12, 22, 32].forEach(fx4 => fireExt(fx4, 0.098, ez0 + 0.42, ez0 + 0.16));
   exitLight(ex0 + 0.8, 2.45, (ez0 + zCorE) / 2, Math.PI / 2);
   for (let lx = ex0 + 3; lx < shed0 - 1; lx += 6) lamp(lx, FH - CEIL_DROP - 0.05, (ez0 + zCorE) / 2);
