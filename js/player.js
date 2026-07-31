@@ -50,9 +50,6 @@ export class Player {
       this.group.add(p);
     });
     const faceMat = new THREE.MeshLambertMaterial({ map: faceTexture() });
-    // 좁은 방에서 카메라가 바짝 붙었을 때 캐릭터를 흐리게 (얼굴로 화면이 꽉 차는 것 방지)
-    this.mats = [skin, shirt, pants, hair, faceMat];
-    this._fade = 1;
     const headMats = [skin, skin, skin, skin, faceMat, skin];
     this.head = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.52, 0.5), headMats);
     this.head.position.y = 1.36;
@@ -104,18 +101,8 @@ export class Player {
     this.girlHair.visible = !!girl;
   }
 
-  setFade(a) {
-    const v = Math.max(0.12, Math.min(1, a));
-    if (Math.abs(v - this._fade) < 0.01) return;
-    this._fade = v;
-    const opaque = v > 0.995;
-    for (const m of this.mats) {
-      m.transparent = !opaque;
-      m.opacity = v;
-      m.depthWrite = opaque;
-    }
-    this.shadow.material.opacity = 0.22 * v;
-  }
+  // 캐릭터 페이드는 v0.17에서 제거 — 매 프레임 material.transparent 를 토글하면
+  // 렌더 순서가 흔들려 화면이 떨린다. 근접 컷은 카메라 거리 클램프로 해결한다.
 
   _pivot(x, y) {
     const g = new THREE.Group();

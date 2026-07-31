@@ -159,11 +159,21 @@ canvas.addEventListener('wheel', e => {
 }, { passive: true });
 
 const _upDir = new THREE.Vector3(0, 1, 0);
-const _camDir = new THREE.Vector3();
 const ceilRay = new THREE.Raycaster();
 ceilRay.far = 5;
+let camLen = 4.9;      // 실제 적용 중인 카메라 거리 (이 값만 부드럽게 움직인다)
+let camTgtY = null;    // 부드럽게 따라가는 시선 높이
+// ⚠️ 카메라 규칙 (v0.17에서 되먹임 진동을 겪고 정한 것 — 바꾸지 말 것)
+//  1) 가림 검사는 '이상적인 방향(_dir)'으로만 쏜다. 실제 카메라 위치로 쏘면
+//     lerp 경로 → 방향 → 클램프 → 위치 … 되먹임 루프가 생겨 매 프레임 튄다(떨림).
+//  2) 위치를 lerp 하지 않는다. lerp 는 회전 중 카메라를 벽 안으로 밀어넣는다.
+//     부드럽게 만들 것은 '거리'와 '시선 높이'뿐.
+//  3) 거리는 가까워질 땐 즉시(관통 방지), 멀어질 땐 천천히.
 function updateCamera(dt) {
-  _target.set(player.pos.x, player.pos.y + 1.3, player.pos.z);
+  const tgtYWant = player.pos.y + 1.3;
+  if (camTgtY === null || Math.abs(camTgtY - tgtYWant) > 2.5) camTgtY = tgtYWant;
+  else camTgtY += (tgtYWant - camTgtY) * Math.min(1, dt * 12);
+  _target.set(player.pos.x, camTgtY, player.pos.z);
   // 실내에서 카메라가 천장을 뚫지 않게 상한 계산
   ceilRay.set(_target, _upDir);
   const ceilHits = ceilRay.intersectObjects(player._nearRay, false);
@@ -173,28 +183,23 @@ function updateCamera(dt) {
     Math.sin(camPitch),
     Math.cos(camYaw) * Math.cos(camPitch)
   );
-  _desired.copy(_target).addScaledVector(_dir, camDist);
-  _desired.y = Math.max(_desired.y, player.pos.y + 0.35);
-  if (_desired.y > ceilY) _desired.y = Math.max(ceilY, player.pos.y + 0.35);
-  const k = 1 - Math.exp(-14 * dt);
-  camera.position.lerp(_desired, k);
-  // 벽 관통 방지: 머리→'실제 카메라 위치' 레이로 매 프레임 최종 클램프
-  // (lerp 이동 경로가 벽을 뚫는 것까지 차단 — 벽에 붙으면 카메라가 벽 앞 0.35m까지 다가옴)
-  _camDir.copy(camera.position).sub(_target);
-  const camLen = Math.max(0.001, _camDir.length());
-  _camDir.multiplyScalar(1 / camLen);
-  camRay.set(_target, _camDir);
-  camRay.far = camLen + 0.05;
+  // 가림 검사 (이상 방향으로만)
+  let want = camDist;
+  camRay.set(_target, _dir);
+  camRay.far = camDist + 0.4;
   const hits = camRay.intersectObjects(player._nearSolid, false);
   for (let i = 0; i < hits.length; i++) {
     if (hits[i].object.userData.noCam) continue;   // 옥상 차단벽 등은 카메라 통과 허용
-    if (hits[i].distance < camLen) {
-      camera.position.copy(_target).addScaledVector(_camDir, Math.max(0.35, hits[i].distance - 0.3));
-    }
+    want = Math.max(0.9, hits[i].distance - 0.35);
     break;
   }
-  // 카메라가 바짝 붙으면 캐릭터를 흐리게 (좁은 방에서 얼굴로 화면이 꽉 차는 것 방지)
-  player.setFade((camera.position.distanceTo(_target) - 0.65) / 0.85);
+  // 벽 쪽으론 빠르게(관통 방지) — 다만 한 프레임 이동량을 제한해 '툭' 튀지 않게
+  if (want < camLen) camLen = Math.max(want, camLen - Math.max(0.25, dt * 18));
+  else camLen += (want - camLen) * Math.min(1, dt * 5);          // 트일 땐 부드럽게
+  _desired.copy(_target).addScaledVector(_dir, camLen);
+  _desired.y = Math.max(_desired.y, player.pos.y + 0.35);
+  if (_desired.y > ceilY) _desired.y = Math.max(ceilY, player.pos.y + 0.35);
+  camera.position.copy(_desired);
   camera.lookAt(_target);
 }
 
@@ -617,7 +622,7 @@ window.addEventListener('resize', () => {
 
 // ---------- 검증용 디버그 (콘솔에서 사용) ----------
 window.SD = {
-  player, world,
+  player, world, camera, renderer, scene,
   time: applyTime,
   balls: BALLS,
   step(n = 1, keyList = [], dt = 1 / 60) {
