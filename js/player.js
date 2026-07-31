@@ -1,7 +1,7 @@
 // 3인칭 캐릭터 (이동/중력/충돌/걷기 애니메이션)
 // v0.7: 무릎 관절(앉기 자세), 8m 격자 조회(성능), 끼임 자동감지+기록
 import * as THREE from 'three';
-import { faceTexture } from './textures.js';
+import { faceTexture, shade, cardTone } from './textures.js';
 
 const DOWN = new THREE.Vector3(0, -1, 0);
 const _origin = new THREE.Vector3();   // 매 프레임 할당 금지 — 스크래치 재사용
@@ -12,11 +12,12 @@ export class Player {
     this.group = new THREE.Group();
     scene.add(this.group);
 
-    const skin = new THREE.MeshLambertMaterial({ color: 0xf6cfa4 });
-    this.shirtMat = new THREE.MeshLambertMaterial({ color: 0x4a90d9 });
+    // ⚠️ 캐릭터도 월드와 같은 알베도를 써야 한다. 안 그러면 캐릭터만 붕 떠 보인다.
+    const skin = new THREE.MeshLambertMaterial({ color: shade(0xf6cfa4) });
+    this.shirtMat = new THREE.MeshLambertMaterial({ color: shade(0x4a90d9) });
     const shirt = this.shirtMat;
-    const pants = new THREE.MeshLambertMaterial({ color: 0x2f3e5c });
-    const hair = new THREE.MeshLambertMaterial({ color: 0x3a2e28 });
+    const pants = new THREE.MeshLambertMaterial({ color: shade(0x2f3e5c) });
+    const hair = new THREE.MeshLambertMaterial({ color: shade(0x3a2e28) });
 
     // 다리: 허벅지(골반 피벗) + 정강이(무릎 피벗) — 앉을 때 접힘
     const makeLeg = (x) => {
@@ -50,6 +51,8 @@ export class Player {
       this.group.add(p);
     });
     const faceMat = new THREE.MeshLambertMaterial({ map: faceTexture() });
+    // 골판지 스킨 대상 (원래 색을 기억해 뒀다가 토글로 갈아끼운다)
+    this.skinMats = [skin, this.shirtMat, pants, hair].map(m => ({ m, n: [m.color.r, m.color.g, m.color.b] }));
     const headMats = [skin, skin, skin, skin, faceMat, skin];
     this.head = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.52, 0.5), headMats);
     this.head.position.y = 1.36;
@@ -97,8 +100,20 @@ export class Player {
   }
 
   applyLook(girl, shirtColor) {
-    this.shirtMat.color.set(shirtColor);
+    this.shirtMat.color.set(shade(shirtColor));
+    const e = this.skinMats.find(x => x.m === this.shirtMat);
+    if (e) e.n = [this.shirtMat.color.r, this.shirtMat.color.g, this.shirtMat.color.b];
+    if (this._card) this.setCardboard(true);
     this.girlHair.visible = !!girl;
+  }
+
+  /** 🧻 골판지 스킨 — 캐릭터만 원래 색이면 혼자 붕 뜬다 */
+  setCardboard(on) {
+    this._card = on;
+    this.skinMats.forEach(({ m, n }) => {
+      const v = on ? cardTone(n[0], n[1], n[2]) : n;
+      m.color.setRGB(v[0], v[1], v[2]);
+    });
   }
 
   // 캐릭터 페이드는 v0.17에서 제거 — 매 프레임 material.transparent 를 토글하면

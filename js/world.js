@@ -5,15 +5,29 @@
 import * as THREE from 'three';
 import { mergeGeometries } from '../lib/BufferGeometryUtils.js';
 import { SCHOOL } from './data.js';
-import { textSign, taegeukTexture, trackTexture, courtTexture, bookStripes, netTexture } from './textures.js';
+import { textSign, taegeukTexture, trackTexture, courtTexture, bookStripes, netTexture, shade, cardTone } from './textures.js';
 
 // ---- 공유 지오메트리/재질 (성능 예산: geometries 최소화) ----
 const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
 const UNIT_PLANE = new THREE.PlaneGeometry(1, 1);
 const M = {};
+// ⚠️ 모든 단색은 shade() 를 지나야 한다 (팔레트 8앵커 + 알베도 압축).
+//    개별 hex 를 손보지 말고 textures.js 의 상수를 조정할 것.
 function mat(color) {
-  if (!M[color]) M[color] = new THREE.MeshLambertMaterial({ color });
-  return M[color];
+  const c = shade(color);
+  if (!M[c]) M[c] = new THREE.MeshLambertMaterial({ color: c });
+  return M[c];
+}
+// 실내용 밝은 사본 (같은 색은 한 번만 만든다)
+const M_IN = new Map();
+function matLift(src) {
+  let m = M_IN.get(src);
+  if (!m) {
+    m = src.clone();
+    m.color.setRGB(Math.min(1, src.color.r * 1.26), Math.min(1, src.color.g * 1.11), src.color.b * 0.95);
+    M_IN.set(src, m);
+  }
+  return m;
 }
 const BASIC_WHITE = new THREE.MeshBasicMaterial({ color: 0xffffff });        // 형광등
 // 반투명 면은 depthWrite 를 꺼야 서로를 가리거나 앞뒤가 뒤집히지 않는다
@@ -71,6 +85,29 @@ export function buildWorld(scene) {
     }
     return e;
   }
+  // ---------- 실내 채움광 (조사 S-4) ----------
+  // 채움광(hemi)을 줄여 바깥에 그늘을 만들면 **실내가 같이 어두워진다**. 실내엔 태양이 안 드니까.
+  // 실내 색만 따뜻하게 살짝 올려 형광등 아래 느낌을 만든다. 런타임 비용 0(빌드 때 색에 굽는다).
+  // 부수효과: 바깥이 한색·실내가 난색이라 **창 너머로 따뜻한 교실이 보이는 그림**이 생긴다.
+  // ⚠️ 상자는 벽면보다 0.2m 안쪽 — 외벽 자체는 밝아지면 안 된다.
+  const INDOOR_BOXES = [
+    [-39.8, 39.8, -37.8, -24.2, 7.0],    // 앞줄
+    [-39.8, -12.2, -49.8, -38.2, 7.0],   // 서관 (2층 포함)
+    [-10.4, 8.2, -57.8, -38.2, 4.6],     // 급식동 + 세로복도
+    [8.6, 39.4, -57.8, -44.6, 3.5],      // 동관
+    [-74.8, -45.2, -64.8, -45.2, 8.2],   // 체육관
+  ];
+  // ⚠️ 값의 근거: 실내는 태양이 없어 HemisphereLight 만 받는데, **위를 향한 면(바닥)은
+  //    skyColor(파랑)를 그대로 받아** 따뜻한 나무 바닥이 회녹색이 된다.
+  //    그래서 lift 는 '밝게'가 아니라 **하늘색의 역수**로 잡는다(빨강↑ 파랑↓).
+  const INDOOR_LIFT = [1.26, 1.11, 0.95];
+  function isIndoor(x, y, z) {
+    for (let i = 0; i < INDOOR_BOXES.length; i++) {
+      const b = INDOOR_BOXES[i];
+      if (x > b[0] && x < b[1] && z > b[2] && z < b[3] && y < b[4]) return true;
+    }
+    return false;
+  }
   const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _eu = new THREE.Euler();
   const _vp = new THREE.Vector3(), _vs = new THREE.Vector3(), _vc = new THREE.Vector3();
   const _col = new THREE.Color();
@@ -81,13 +118,14 @@ export function buildWorld(scene) {
     _q.setFromEuler(_eu);
     _m4.compose(_vp.set(px, py + YOFF, pz), _q, _vs.set(sx, sy, sz));
     geo.applyMatrix4(_m4);
-    _col.set(colorHex);
+    _col.set(shade(colorHex));
+    const lift = isIndoor(px, py + YOFF, pz) ? INDOOR_LIFT : null;
     const n = geo.attributes.position.count;
     const cols = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
-      cols[i * 3] = _col.r * f[i];
-      cols[i * 3 + 1] = _col.g * f[i];
-      cols[i * 3 + 2] = _col.b * f[i];
+      cols[i * 3] = Math.min(1, _col.r * f[i] * (lift ? lift[0] : 1));
+      cols[i * 3 + 1] = Math.min(1, _col.g * f[i] * (lift ? lift[1] : 1));
+      cols[i * 3 + 2] = Math.min(1, _col.b * f[i] * (lift ? lift[2] : 1));
     }
     geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
     const key = Math.floor(px / MCHUNK) + '_' + Math.floor(pz / MCHUNK);
@@ -127,6 +165,11 @@ export function buildWorld(scene) {
       const r = geoAdd(UNIT_BOX, color, cx, baseY + h / 2, cz, opt.rot, w, h, d);
       staticEntries.push({ key: r.key, aabb: r.aabb, solid: opt.collide !== false });
       return null;
+    }
+    // 개별 메시(재질 지정)도 실내면 같은 채움광을 받아야 톤이 안 튄다
+    if (opt.material && opt.material.color && opt.material.visible !== false &&
+        !opt.material.transparent && isIndoor(cx, baseY + YOFF + h / 2, cz)) {
+      opt = Object.assign({}, opt, { material: matLift(opt.material) });
     }
     const m = new THREE.Mesh(UNIT_BOX, opt.material);
     m.scale.set(w, h, d);
@@ -368,7 +411,7 @@ export function buildWorld(scene) {
       const geo = bg.clone();
       _m4.compose(_vp.set(px, py, pz), _q.identity(), _vs.set(sx, sy, sz));
       geo.applyMatrix4(_m4);
-      _col.set(color);
+      _col.set(shade(color));
       const n = geo.attributes.position.count;
       const cols = new Float32Array(n * 3);
       for (let i = 0; i < n; i++) {
@@ -1994,7 +2037,7 @@ export function buildWorld(scene) {
       _q.setFromEuler(_eu);
       _m4.compose(_vp.set(px2, py2, pz2), _q, _vs.set(sx, sy, sz));
       geo.applyMatrix4(_m4);
-      _col.set(color);
+      _col.set(shade(color));
       const n = geo.attributes.position.count;
       const cols = new Float32Array(n * 3);
       for (let i = 0; i < n; i++) {
@@ -2097,6 +2140,43 @@ export function buildWorld(scene) {
   // 실내 천장 — 전부 1개 메시 (조명 영향 없는 밝은 무광)
   if (ceilGeos.length) {
     scene.add(new THREE.Mesh(mergeGeometries(ceilGeos, false), new THREE.MeshBasicMaterial({ color: 0xe4e0d6 })));
+  }
+
+  // ---------- 🧻 골판지 모드 (스킨 토글) ----------
+  // 본편 룩은 그대로 두고, 버텍스 컬러와 재질 색만 골판지 톤으로 갈아끼운다.
+  // 지오메트리·물리·배치는 전혀 건드리지 않는다. 토글 1회 비용만 들고 매 프레임 비용 0.
+  // 컨셉: "4학년 아이들이 골판지로 만든 우리 학교" — 조잡함이 결함이 아니라 설정이 된다.
+  {
+    const cardOf = cardTone;   // 톤 정의는 textures.js (캐릭터와 공유)
+    const vcMeshes = [];
+    scene.traverse(o => {
+      if (!o.isMesh || !o.geometry.attributes.color) return;
+      const a = o.geometry.attributes.color;
+      const normal = Float32Array.from(a.array);
+      const card = new Float32Array(a.array.length);
+      for (let i = 0; i < a.array.length; i += 3) {
+        const [r, g, b] = cardOf(normal[i], normal[i + 1], normal[i + 2]);
+        card[i] = r; card[i + 1] = g; card[i + 2] = b;
+      }
+      vcMeshes.push({ attr: a, normal, card });
+    });
+    const texTints = [];
+    scene.traverse(o => { if (o.isMesh && o.material && o.material.map && o.material.type === 'MeshLambertMaterial') texTints.push(o.material); });
+    const matList = [];
+    const pushMat = m => {
+      if (!m || !m.color || matList.some(e => e.m === m)) return;
+      const c = m.color;
+      matList.push({ m, normal: [c.r, c.g, c.b], card: cardOf(c.r, c.g, c.b) });
+    };
+    Object.values(M).forEach(pushMat);
+    M_IN.forEach(pushMat);
+    scene.traverse(o => { if (o.isMesh && o.material && !o.material.map && o.material.type === 'MeshLambertMaterial') pushMat(o.material); });
+    dynamic.setSkin = (on) => {
+      vcMeshes.forEach(e => { e.attr.array.set(on ? e.card : e.normal); e.attr.needsUpdate = true; });
+      matList.forEach(e => { const v = on ? e.card : e.normal; e.m.color.setRGB(v[0], v[1], v[2]); });
+      // 흙·마루처럼 텍스처가 붙은 면은 재질 색으로 갈색을 곱해 톤을 맞춘다
+      texTints.forEach(m => on ? m.color.setRGB(0.80, 0.66, 0.47) : m.color.setRGB(1, 1, 1));
+    };
   }
 
   // ---------- 성능: 정적 행렬 동결 + 8m 격자 ----------

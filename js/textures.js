@@ -4,6 +4,94 @@ import { mergeGeometries } from '../lib/BufferGeometryUtils.js';
 
 const KR_FONT = "'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif";
 
+// ============================================================
+// 팔레트 규율 + 알베도 — 아트 디렉션 조사 반영 (docs/art_direction_20260731.md)
+//
+// ① 색상(hue)을 8개 앵커로 수렴시킨다.
+//    실측: 서로 다른 색 200종 중 절반이 딱 한 번만 쓰였고, 구분 불가한 색 쌍이 348개였다.
+//    = 팔레트가 아니라 그때그때 고른 색 → "한 사람이 그린 그림"으로 안 보이는 이유.
+// ② 알베도를 낮춘다. Inigo Quilez: "화면이 더 밝아야 하면 재질이 아니라 조명을 밝게 하라."
+//    알베도가 0.9면 그늘에서 밝기를 10%밖에 못 잃는다 → 모든 형태가 조명 안 받은 플라스틱.
+//    실측: 200색 중 164색이 명도 0.4 이상이었다(= 어두운 앵커 없음).
+//
+// ⚠️ 색을 바꾸고 싶으면 개별 hex 가 아니라 이 세 상수를 만질 것.
+//    ⚠️ ALBEDO_HI 를 0.6 위로 올리면 다시 플라스틱처럼 보인다.
+// ============================================================
+// ⚠️ 실패에서 배운 것 (한 번 되돌림):
+//  · 알베도를 **HSL 명도**로 낮추면 채도가 상대적으로 올라 전부 탁한 겨자색이 된다.
+//    반드시 **RGB 배율**로 낮출 것 — 그래야 색끼리의 관계(어느 게 더 밝은지)가 보존된다.
+//  · 색상 앵커를 8개까지 줄이면 모래(38°)·외벽(45°)·목재(28°)가 한 색으로 뭉친다.
+//    12개(30° 간격)가 중복 색을 정리하면서 재료 구분은 남기는 지점.
+const HUE_ANCHORS = [8, 25, 45, 70, 95, 125, 155, 190, 210, 250, 285, 330];
+// 0.66 까지 낮췄더니 '노란 외벽'이 베이지가 되어 학교 인식성(스타일 1순위)을 잃었다.
+// 0.84 = 형태에 볼륨은 생기되 밝고 명랑한 학교 색은 유지되는 지점.
+const ALBEDO_K = 0.84;    // RGB 배율. 낮출수록 볼륨이 생기고 높이면 플라스틱이 된다
+const SAT_CAP = 0.62;
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  const l = (mx + mn) / 2;
+  if (d === 0) return [0, 0, l];
+  const s = d / (1 - Math.abs(2 * l - 1));
+  let h;
+  if (mx === r) h = 60 * (((g - b) / d) % 6);
+  else if (mx === g) h = 60 * ((b - r) / d + 2);
+  else h = 60 * ((r - g) / d + 4);
+  return [(h + 360) % 360, s, l];
+}
+function hslToHex(h, s, l) {
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; }
+  else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; }
+  else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+  const q = v => Math.max(0, Math.min(255, Math.round((v + m) * 255)));
+  return (q(r) << 16) | (q(g) << 8) | q(b);
+}
+
+const SHADE_CACHE = new Map();
+/** 모든 단색이 반드시 통과하는 관문. hex(number) → 팔레트·알베도 적용된 hex(number) */
+export function shade(hex, opt) {
+  const key = hex + (opt || '');
+  if (SHADE_CACHE.has(key)) return SHADE_CACHE.get(key);
+  let [h, s, l] = rgbToHsl((hex >> 16) & 255, (hex >> 8) & 255, hex & 255);
+  if (s > 0.12 && opt !== 'keepHue') {          // 무채색·거의 무채색은 색상 스냅 대상이 아님
+    let best = HUE_ANCHORS[0], bd = 999;
+    for (const a of HUE_ANCHORS) {
+      const d = Math.min(Math.abs(h - a), 360 - Math.abs(h - a));
+      if (d < bd) { bd = d; best = a; }
+    }
+    h = best;
+    s = Math.min(s, SAT_CAP);
+  }
+  // 알베도는 RGB 배율로 (명도로 누르면 탁해진다)
+  const snapped = hslToHex(h, s, l);
+  const q = v => Math.max(0, Math.min(255, Math.round(v * ALBEDO_K)));
+  const out = (q((snapped >> 16) & 255) << 16) | (q((snapped >> 8) & 255) << 8) | q(snapped & 255);
+  SHADE_CACHE.set(key, out);
+  return out;
+}
+/** 캔버스 텍스처 안에서 쓰는 문자열 버전 */
+export function shadeCss(css) {
+  const n = parseInt(css.replace('#', ''), 16);
+  return '#' + shade(n).toString(16).padStart(6, '0');
+}
+
+
+// ---------- 🧻 골판지 스킨 톤 (원래 밝기 → 골판지 색) ----------
+const CARD_STEPS = [[0.22, 0x5e442c], [0.40, 0x7d5c3a], [0.56, 0x9c7448], [0.72, 0xba8f5d], [1.01, 0xd3ad78]];
+const CARD_HUE_KEEP = 0.16;   // 원래 색을 조금 남겨 나무·칠판이 아직 구분되게
+export function cardTone(r, g, b) {
+  const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  let c = CARD_STEPS[CARD_STEPS.length - 1][1];
+  for (const [t, v] of CARD_STEPS) if (l <= t) { c = v; break; }
+  const k = CARD_HUE_KEEP;
+  return [((c >> 16 & 255) / 255) * (1 - k) + r * k,
+          ((c >> 8 & 255) / 255) * (1 - k) + g * k,
+          ((c & 255) / 255) * (1 - k) + b * k];
+}
+
 function canvasTex(canvas) {
   const t = new THREE.CanvasTexture(canvas);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -93,7 +181,7 @@ export function trackTexture() {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 564;
   const x = c.getContext('2d');
-  x.fillStyle = '#d9bd8f';
+  x.fillStyle = shadeCss('#d9bd8f');
   x.fillRect(0, 0, c.width, c.height);
   // 모래 질감 점 + 옅은 얼룩 (크고 진하면 구름 그림자로 오인 — 작고 옅게)
   let seed = 7;
@@ -123,7 +211,7 @@ export function courtTexture() {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 709;
   const x = c.getContext('2d');
-  x.fillStyle = '#cf9f63';
+  x.fillStyle = shadeCss('#cf9f63');
   x.fillRect(0, 0, c.width, c.height);
   // 마루판
   x.strokeStyle = 'rgba(120,80,35,0.28)';
@@ -186,7 +274,7 @@ export function faceTexture() {
   const c = document.createElement('canvas');
   c.width = 256; c.height = 256;
   const x = c.getContext('2d');
-  x.fillStyle = '#f6cfa4';
+  x.fillStyle = shadeCss('#f6cfa4');   // 머리 상자와 같은 알베도로
   x.fillRect(0, 0, 256, 256);
   x.fillStyle = '#2b2b2b';
   x.beginPath(); x.arc(84, 112, 15, 0, Math.PI * 2); x.fill();
@@ -227,7 +315,7 @@ export function bookStripes() {
   const c = document.createElement('canvas');
   c.width = 256; c.height = 64;
   const x = c.getContext('2d');
-  const colors = ['#e76f51', '#2a9d8f', '#e9c46a', '#457b9d', '#b56576', '#6d9f71', '#f4a261', '#5e60ce'];
+  const colors = ['#e76f51', '#2a9d8f', '#e9c46a', '#457b9d', '#b56576', '#6d9f71', '#f4a261', '#5e60ce'].map(shadeCss);
   let seed = 13;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   let px = 0;

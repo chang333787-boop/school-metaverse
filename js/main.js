@@ -30,18 +30,25 @@ renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.needsUpdate = true;
 // v0.9 그래픽: 게임 톤 (ACES) — 라이트 강도는 이에 맞춰 상향
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.18;
+renderer.toneMappingExposure = 1.16;
 
 const scene = new THREE.Scene();
 scene.background = skyTexture();
 scene.fog = new THREE.Fog(0xcfe9f8, 70, 270);   // 하늘 지평선 색과 동일
 
-const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 500);
+// FOV 62 → 48: 가까운 무텍스처 상자의 원근 왜곡이 줄고 망원 압축으로 '모형' 느낌이 난다.
+// (좁아진 만큼 카메라 거리를 늘려야 프레이밍이 유지된다 — camDist 4.9 → 6.3)
+const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 500);
 
-// groundColor는 아래 향한 면(실내 벽 하단·처마 밑)에 그대로 물든다 — 잔디 초록을 옅게 써야 실내가 안 칙칙함
-const hemi = new THREE.HemisphereLight(0xeaf6ff, 0xa3a58e, 2.05); // ACES 톤매핑 보정 포함
+// ⚠️ 조명 규칙 (아트 디렉션 조사 반영)
+//  · 태양 : 헤미 ≈ 3 : 1 — 채움광이 세면 그늘이 안 생겨 전부 '색칠한 상자'가 된다
+//  · groundColor 는 **따뜻한 중간톤**. 절대 회색·검정 근처로 두지 말 것(아늑함이 죽는다)
+//  · skyColor 는 진짜 하늘색. 거의 흰색이면 한난 분리가 사라진다
+// ⚠️ skyColor 를 진한 파랑으로 하면 **실내 바닥이 회녹색**이 된다
+//    (실내는 태양이 없어 위 향한 면이 하늘색만 받는다). 옅은 하늘색이 상한.
+const hemi = new THREE.HemisphereLight(0xc9dcf0, 0xb08a5e, 1.45);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xfff2d9, 2.25);
+const sun = new THREE.DirectionalLight(0xfff0cf, 3.30);
 sun.position.set(60, 95, 45);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -64,9 +71,9 @@ const player = new Player(scene, world);
 
 // ---------- 시간대 프리셋 (낮/노을/밤 — 전환 시 그림자 1회만 재굽기) ----------
 const TIMES = {
-  day:    { sky: 'day',    fog: 0xcfe9f8, fogD: [70, 270], cloud: 0xffffff, hemi: [0xeaf6ff, 0xa3a58e, 2.05], sun: [0xfff2d9, 2.25, [60, 95, 45]],  disc: 0xfff3cf, exp: 1.18, label: '☀️ 낮' },
-  sunset: { sky: 'sunset', fog: 0xf0b183, fogD: [50, 210], cloud: 0xf7cba6, hemi: [0xffdcc0, 0x7d6a55, 1.5],  sun: [0xff9a55, 1.9,  [-85, 26, 30]], disc: 0xffb066, exp: 1.12, label: '🌇 노을' },
-  night:  { sky: 'night',  fog: 0x253a63, fogD: [34, 155], cloud: 0x39496e, hemi: [0x3a5580, 0x181e2b, 0.85], sun: [0xa8c2e8, 0.55, [45, 70, -35]], disc: 0xeef2fa, exp: 1.05, label: '🌙 밤' },
+  day:    { sky: 'day',    fog: 0xcfe9f8, fogD: [70, 270], cloud: 0xffffff, hemi: [0xc9dcf0, 0xb08a5e, 1.45], sun: [0xfff0cf, 3.30, [60, 95, 45]],  disc: 0xfff3cf, exp: 1.16, label: '☀️ 낮' },
+  sunset: { sky: 'sunset', fog: 0xf0b183, fogD: [50, 210], cloud: 0xf7cba6, hemi: [0xe8b48f, 0x8a6242, 1.00], sun: [0xff9a55, 2.90, [-85, 26, 30]], disc: 0xffb066, exp: 1.20, label: '🌇 노을' },
+  night:  { sky: 'night',  fog: 0x253a63, fogD: [34, 155], cloud: 0x39496e, hemi: [0x44618f, 0x2a2a38, 0.80], sun: [0xa8c2e8, 1.10, [45, 70, -35]], disc: 0xeef2fa, exp: 1.24, label: '🌙 밤' },
 };
 let timeMode = 'day';
 const timeBtn = document.createElement('button');
@@ -76,17 +83,19 @@ document.body.appendChild(timeBtn);
 function applyTime(mode) {
   timeMode = mode;
   const t = TIMES[mode];
-  scene.background = skyTexture(t.sky);
-  scene.fog.color.set(t.fog);
+  // 골판지 모드에선 하늘·안개도 종이 톤으로 (파란 하늘 아래 갈색 학교는 안 어울린다)
+  const card = typeof cardboard !== 'undefined' && cardboard;
+  scene.background = card ? new THREE.Color(mode === 'night' ? 0x3a3126 : 0xe8dcc2) : skyTexture(t.sky);
+  scene.fog.color.set(card ? (mode === 'night' ? 0x3a3126 : 0xe0d2b6) : t.fog);
   // 밤·노을엔 안개를 당겨 원경 잔디가 낮처럼 밝게 남는 것을 막는다
   scene.fog.near = t.fogD[0];
   scene.fog.far = t.fogD[1];
-  if (world.dynamic.cloudMat) world.dynamic.cloudMat.color.set(t.cloud);
+  if (world.dynamic.cloudMat) world.dynamic.cloudMat.color.set(card ? 0xf3ead6 : t.cloud);
   hemi.color.set(t.hemi[0]);
   hemi.groundColor.set(t.hemi[1]);
   hemi.intensity = t.hemi[2];
-  sun.color.set(t.sun[0]);
-  sun.intensity = t.sun[1];
+  sun.color.set(card ? 0xfff2d6 : t.sun[0]);
+  sun.intensity = t.sun[1] * (card ? 0.92 : 1);
   sun.position.set(t.sun[2][0], t.sun[2][1], t.sun[2][2]);
   sunDisc.material.color.set(t.disc);
   sunDisc.position.copy(sun.position).normalize().multiplyScalar(235);
@@ -100,6 +109,22 @@ function applyTime(mode) {
 }
 timeBtn.addEventListener('click', () => {
   applyTime(timeMode === 'day' ? 'sunset' : timeMode === 'sunset' ? 'night' : 'day');
+});
+
+// ---------- 🧻 골판지 모드 (스킨 — 본편 룩과 별개) ----------
+// "4학년 아이들이 골판지로 만든 우리 학교". 색만 갈아끼우므로 배치·물리는 그대로.
+let cardboard = false;
+const skinBtn = document.createElement('button');
+skinBtn.style.cssText = 'position:fixed;right:214px;bottom:10px;z-index:30;padding:6px 10px;border-radius:8px;border:1px solid #1d3557;background:rgba(255,255,255,.85);cursor:pointer;font-size:12px;font-family:inherit;';
+skinBtn.textContent = '🧻 골판지';
+document.body.appendChild(skinBtn);
+skinBtn.addEventListener('click', () => {
+  cardboard = !cardboard;
+  if (world.dynamic.setSkin) world.dynamic.setSkin(cardboard);
+  player.setCardboard(cardboard);
+  skinBtn.textContent = cardboard ? '🎨 원래대로' : '🧻 골판지';
+  applyTime(timeMode);            // 하늘·안개·구름을 스킨에 맞춰 다시 적용
+  renderer.shadowMap.needsUpdate = true;
 });
 
 // ---------- 차는 공 (운동장 축구공 2 + 체육관 농구공) ----------
@@ -119,7 +144,8 @@ addBall(F_.center[0] + 8, F_.center[1] + 9, 0.24, 0xe07a2f, -1).bb = FIELD_BB;
 addBall(GY_.center[0] + 2, GY_.center[1] + 3, 0.2, 0xe07a2f, 0).bb = GYM_BB;
 
 // ---------- 카메라 (스크래치 벡터 — 매 프레임 할당 금지) ----------
-let camYaw = 0, camPitch = 0.42, camDist = 4.9;
+// FOV 를 좁히면 같은 pitch 로도 화면에 땅이 더 많이 들어온다 → pitch 를 낮춰 지평선을 되돌림
+let camYaw = 0, camPitch = 0.30, camDist = 6.3;
 const camRay = new THREE.Raycaster();
 const _target = new THREE.Vector3();
 const _dir = new THREE.Vector3();
@@ -155,7 +181,7 @@ window.addEventListener('pointermove', e => {
   lastX = e.clientX; lastY = e.clientY;
 });
 canvas.addEventListener('wheel', e => {
-  camDist = Math.min(10, Math.max(2.2, camDist + e.deltaY * 0.004));
+  camDist = Math.min(12, Math.max(2.8, camDist + e.deltaY * 0.004));
 }, { passive: true });
 
 const _upDir = new THREE.Vector3(0, 1, 0);
@@ -579,7 +605,7 @@ function loop() {
   worldTick(dt);
   const t = clock.elapsedTime;
   // 달리기 FOV 킥
-  const fovT = player.speedK > 0.5 && (keys.has('ShiftLeft') || keys.has('ShiftRight')) ? 68 : 62;
+  const fovT = player.speedK > 0.5 && (keys.has('ShiftLeft') || keys.has('ShiftRight')) ? 53 : 48;
   if (Math.abs(camera.fov - fovT) > 0.05) {
     camera.fov += (fovT - camera.fov) * Math.min(1, dt * 5);
     camera.updateProjectionMatrix();
@@ -630,7 +656,7 @@ window.addEventListener('resize', () => {
 
 // ---------- 검증용 디버그 (콘솔에서 사용) ----------
 window.SD = {
-  player, world, camera, renderer, scene,
+  player, world, camera, renderer, scene, THREE,
   time: applyTime,
   balls: BALLS,
   step(n = 1, keyList = [], dt = 1 / 60) {
