@@ -144,13 +144,16 @@ export class Player {
         for (const e of arr) {
           if (seen.has(e)) continue;
           seen.add(e);
-          if (!seenRay.has(e.m)) {
+          // ⚠️ 보이지 않는 충돌 상자·나무 줄기는 '밟을 수 없다'.
+          //    지면 판정은 병합 메시 전체에 레이를 쏘므로, 여기서 빼지 않으면
+          //    투명 벽이나 나뭇가지 위에 올라설 수 있게 된다.
+          if (e.m && !e.m.userData.noRay && !seenRay.has(e.m)) {
             seenRay.add(e.m);
             this._nearRay.push(e.m);
           }
           if (e.solid) {
             this._nearBoxes.push(e.aabb);
-            if (!seenSolid.has(e.m)) {
+            if (e.m && !seenSolid.has(e.m)) {
               seenSolid.add(e.m);
               this._nearSolid.push(e.m);
             }
@@ -179,7 +182,10 @@ export class Player {
   }
 
   _groundAt(px, py, pz) {
-    _origin.set(px, py + 1.5, pz);
+    // ⚠️ 레이 시작 높이는 '올라설 수 있는 턱 높이(0.7)'보다 살짝만 위여야 한다.
+    //    예전엔 머리 위 1.5m 에서 쐈는데, 그러면 위층 슬래브·차양의 윗면이 먼저 잡혀
+    //    **바닥을 뚫고 지붕 위로 순간이동**했다(= 뭘 밟고 옥상 가는 버그).
+    _origin.set(px, py + 0.8, pz);
     this.ray.set(_origin, DOWN);
     const hits = this.ray.intersectObjects(this._nearRay, false);
     return hits.length ? hits[0].point.y : -100;

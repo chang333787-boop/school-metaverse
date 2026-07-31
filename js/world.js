@@ -63,6 +63,11 @@ export function buildWorld(scene) {
   // 색은 버텍스 컬러로 굽고(재질 1개), 이때 높이·아랫면 기반 가짜 AO도 함께 굽는다.
   const MCHUNK = 26;
   const buckets = new Map();       // 'cx_cz' → { geos: [], lamps: [] }
+  // ⚠️ 밟을 수 없는 장식(나뭇잎·덤불 등) 전용 버킷.
+  //    지면 판정(`_groundAt`)은 병합 청크 메시 **전체**에 레이를 쏘기 때문에,
+  //    같은 청크에 들어가면 나뭇잎 위에 올라설 수 있게 된다.
+  //    이 버킷의 메시는 grid 에 등록하지 않아 레이가 통과한다.
+  const softGeos = [];
   const staticEntries = [];        // 병합된 아이템의 충돌/레이 등록 { key, aabb, solid }
   const NONIDX = new Map();        // base geometry → { g(비인덱스), f(정점별 AO 계수), bb }
   function baseOf(geo) {
@@ -143,6 +148,35 @@ export function buildWorld(scene) {
     }
     return { key, aabb: { minX, maxX, minY: minY - 0.02, maxY: maxY + 0.02, minZ, maxZ } };
   }
+  /** 밟을 수 없는 장식용. geoAdd 와 동일하게 변환하되 충돌·레이 대상이 아니다. */
+  function geoSoft(base, colorHex, px, py, pz, rot, sx, sy, sz) {
+    const { g, f } = baseOf(base);
+    const geo = g.clone();
+    _eu.set(rot ? rot[0] || 0 : 0, rot ? rot[1] || 0 : 0, rot ? rot[2] || 0 : 0);
+    _q.setFromEuler(_eu);
+    _m4.compose(_vp.set(px, py + YOFF, pz), _q, _vs.set(sx, sy, sz));
+    geo.applyMatrix4(_m4);
+    _col.set(shade(colorHex));
+    const n = geo.attributes.position.count;
+    const cols = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      cols[i * 3] = _col.r * f[i]; cols[i * 3 + 1] = _col.g * f[i]; cols[i * 3 + 2] = _col.b * f[i];
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+    softGeos.push(geo);
+    let minX=1e9,minY=1e9,minZ=1e9,maxX=-1e9,maxY=-1e9,maxZ=-1e9;
+    const bb = baseOf(base).bb;
+    for (let ci = 0; ci < 8; ci++) {
+      _vc.set(ci & 1 ? bb.max.x : bb.min.x, ci & 2 ? bb.max.y : bb.min.y, ci & 4 ? bb.max.z : bb.min.z);
+      _vc.applyMatrix4(_m4);
+      minX=Math.min(minX,_vc.x); maxX=Math.max(maxX,_vc.x);
+      minY=Math.min(minY,_vc.y); maxY=Math.max(maxY,_vc.y);
+      minZ=Math.min(minZ,_vc.z); maxZ=Math.max(maxZ,_vc.z);
+    }
+    return { key: Math.floor(px / MCHUNK) + '_' + Math.floor(pz / MCHUNK),
+             aabb: { minX, maxX, minY: minY - 0.02, maxY: maxY + 0.02, minZ, maxZ } };
+  }
+
   // 나무용 공유 베이스
   const TRUNK_GEO = new THREE.CylinderGeometry(0.14, 0.2, 1.4, 8);
   const PTRUNK_GEO = new THREE.CylinderGeometry(0.12, 0.18, 1.6, 8);
@@ -175,8 +209,9 @@ export function buildWorld(scene) {
     m.scale.set(w, h, d);
     m.position.set(cx, baseY + YOFF + h / 2, cz);
     if (opt.rot) m.rotation.set(opt.rot[0] || 0, opt.rot[1] || 0, opt.rot[2] || 0);
-    // 눈에 안 보이는 충돌 상자는 카메라를 밀지 않는다 (보이지 않는 것에 카메라가 튀면 떨림으로 보임)
+    // 눈에 안 보이는 충돌 상자는 카메라를 밀지 않고, **밟을 수도 없다**
     if (opt.noCam) m.userData.noCam = true;
+    if (opt.material === INVIS) { m.userData.noRay = true; m.userData.noCam = m.userData.noCam || opt.noCam; }
     scene.add(m);
     if (opt.collide !== false) colliders.push(m);
     if (opt.walk) walkables.push(m);
@@ -1836,10 +1871,10 @@ export function buildWorld(scene) {
   function pine(tx, tz, s = 1) {
     const keep = YOFF;
     YOFF = terrY(tz);
-    const tr = geoAdd(PTRUNK_GEO, 0x7a5230, tx, 0.8 * s, tz, null, s, s, s);
-    staticEntries.push({ key: tr.key, aabb: tr.aabb, solid: true });
+    const tr = geoSoft(PTRUNK_GEO, 0x7a5230, tx, 0.8 * s, tz, null, s, s, s);
+    staticEntries.push({ key: tr.key, aabb: tr.aabb, solid: true, noRay: true });
     [[1.15, 1.9], [0.9, 2.7], [0.62, 3.4]].forEach(([r, y]) => {
-      geoAdd(CONE_GEO, 0x2f6b3f, tx, y * s, tz, null, r * s, 1.1 * s, r * s);
+      geoSoft(CONE_GEO, 0x2f6b3f, tx, y * s, tz, null, r * s, 1.1 * s, r * s);
     });
     YOFF = keep;
   }
@@ -2002,22 +2037,23 @@ export function buildWorld(scene) {
   function tree(tx, tz, s = 1) {
     const keep = YOFF;
     YOFF = terrY(tz);
-    const r = geoAdd(TRUNK_GEO, 0x8b5e34, tx, 0.7 * s, tz, null, s, s, s);
-    staticEntries.push({ key: r.key, aabb: r.aabb, solid: true });
+    // 줄기는 부딪히기만 하고 **올라설 수는 없다** (지오메트리는 soft = 레이 통과, 충돌만 등록)
+    const r = geoSoft(TRUNK_GEO, 0x8b5e34, tx, 0.7 * s, tz, null, s, s, s);
+    staticEntries.push({ key: r.key, aabb: r.aabb, solid: true, noRay: true });
     // ⚠️ 한 나무의 덩어리 3개는 **같은 색**이어야 한다.
     //    색이 다르면 덩어리가 겹치는 면이 z-fighting 으로 깜빡인다(= 나무가 반짝임).
     const c1 = CANOPY[Math.floor(rng() * CANOPY.length)];
     rng();                          // 난수 흐름 유지
     const ry = rng() * Math.PI;
-    geoAdd(ICO_GEO, c1, tx, 1.9 * s, tz, [0, ry, 0], 1.05 * s, 0.95 * s, 1.05 * s);
-    geoAdd(ICO_GEO, c1, tx + 0.45 * s, 2.5 * s, tz + 0.2 * s, [0, ry + 1, 0], 0.7 * s, 0.66 * s, 0.7 * s);
-    geoAdd(ICO_GEO, c1, tx - 0.5 * s, 2.2 * s, tz - 0.25 * s, [0, ry + 2, 0], 0.55 * s, 0.5 * s, 0.55 * s);
+    geoSoft(ICO_GEO, c1, tx, 1.9 * s, tz, [0, ry, 0], 1.05 * s, 0.95 * s, 1.05 * s);
+    geoSoft(ICO_GEO, c1, tx + 0.45 * s, 2.5 * s, tz + 0.2 * s, [0, ry + 1, 0], 0.7 * s, 0.66 * s, 0.7 * s);
+    geoSoft(ICO_GEO, c1, tx - 0.5 * s, 2.2 * s, tz - 0.25 * s, [0, ry + 2, 0], 0.55 * s, 0.5 * s, 0.55 * s);
     YOFF = keep;
   }
   function bush(tx, tz, s = 1, color) {
     const keep = YOFF;
     YOFF = terrY(tz);
-    geoAdd(ICO_GEO, color || CANOPY[Math.floor(rng() * CANOPY.length)], tx, 0.34 * s, tz, [0, rng() * 3, 0], 0.5 * s, 0.38 * s, 0.5 * s);
+    geoSoft(ICO_GEO, color || CANOPY[Math.floor(rng() * CANOPY.length)], tx, 0.34 * s, tz, [0, rng() * 3, 0], 0.5 * s, 0.38 * s, 0.5 * s);
     YOFF = keep;
   }
   for (let tz = -35; tz <= 35; tz += 10) tree(70, tz, 1 + rng() * 0.4);
@@ -2145,6 +2181,12 @@ export function buildWorld(scene) {
     bm.renderOrder = -1;
     scene.add(bm);
   }
+  // 밟을 수 없는 장식(나뭇잎·덤불) — grid 에 등록하지 않는다 (= 지면 레이가 통과)
+  if (softGeos.length) {
+    const sm = new THREE.Mesh(mergeGeometries(softGeos, false), MAT_CHUNK);
+    sm.castShadow = true; sm.receiveShadow = true;
+    scene.add(sm);
+  }
   // 실내 천장 — 전부 1개 메시 (조명 영향 없는 밝은 무광)
   if (ceilGeos.length) {
     scene.add(new THREE.Mesh(mergeGeometries(ceilGeos, false), new THREE.MeshBasicMaterial({ color: 0xe4e0d6 })));
@@ -2227,6 +2269,7 @@ export function buildWorld(scene) {
   });
   // 병합된 정적 아이템: 레이 대상은 자기 청크 메시, 충돌은 개별 AABB
   staticEntries.forEach(se => {
+    if (se.noRay) { gridInsert({ m: null, solid: se.solid, aabb: se.aabb }); return; }  // 충돌만, 밟기 불가
     const mesh = chunkMeshes.get(se.key);
     if (!mesh) return;
     gridInsert({ m: mesh, solid: se.solid, aabb: se.aabb });
