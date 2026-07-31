@@ -455,3 +455,48 @@ export function compassRose() {
   x.beginPath(); x.arc(128, 128, 16, 0, Math.PI * 2); x.fill();
   return canvasTex(c);
 }
+
+// ---------- 자전거 교통코스 바닥 (실사: 컬러 회전교차로 원 + 차선 + 사방치기) ----------
+export function courseTexture() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 512;
+  const x = c.getContext('2d');
+  x.fillStyle = shadeCss('#b4b8bd');                 // 회색 포장 바탕
+  x.fillRect(0, 0, 512, 512);
+  const cx = 236, cy = 250;
+  // 회전교차로 — 컬러 링 3겹 + 분홍 중앙
+  [[110, '#e8c33c'], [86, '#4d9bd6'], [62, '#8fc47a']].forEach(([r, col]) => {
+    x.strokeStyle = shadeCss(col); x.lineWidth = 20;
+    x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
+  });
+  x.fillStyle = shadeCss('#e39bb0');
+  x.beginPath(); x.arc(cx, cy, 46, 0, Math.PI * 2); x.fill();
+  // 진입 차선 4방 (흰 점선)
+  x.strokeStyle = shadeCss('#f2f2ee'); x.lineWidth = 8; x.setLineDash([18, 14]);
+  [[cx, 0, cx, 128], [cx, 372, cx, 512], [0, cy, 114, cy], [358, cy, 512, cy]].forEach(([a, b, d, e]) => {
+    x.beginPath(); x.moveTo(a, b); x.lineTo(d, e); x.stroke();
+  });
+  x.setLineDash([]);
+  // 사방치기 (우상단) — 숫자 1·2·3 + 강아지 얼굴
+  const hx = 420, hy = 78, cell = 52;
+  x.strokeStyle = shadeCss('#f2f2ee'); x.lineWidth = 6;
+  x.font = `bold 30px sans-serif`;
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  [0, 1, 2].forEach(i => {
+    x.strokeRect(hx - cell / 2, hy + i * cell, cell, cell);
+    x.fillStyle = shadeCss(['#e8c33c', '#4d9bd6', '#e39bb0'][i]);
+    x.fillRect(hx - cell / 2 + 3, hy + i * cell + 3, cell - 6, cell - 6);
+    x.fillStyle = shadeCss('#2f3033');
+    x.fillText(String(i + 1), hx, hy + i * cell + cell / 2);
+  });
+  // 강아지 얼굴 (동그라미+귀+점눈코)
+  const dx = 420, dy = 300;
+  x.fillStyle = shadeCss('#d9a05b');
+  x.beginPath(); x.arc(dx, dy, 26, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.arc(dx - 20, dy - 20, 10, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.arc(dx + 20, dy - 20, 10, 0, Math.PI * 2); x.fill();
+  x.fillStyle = shadeCss('#2f3033');
+  [[-9, -4], [9, -4]].forEach(([ex, ey]) => { x.beginPath(); x.arc(dx + ex, dy + ey, 3, 0, Math.PI * 2); x.fill(); });
+  x.beginPath(); x.arc(dx, dy + 8, 4.5, 0, Math.PI * 2); x.fill();
+  return canvasTex(c);
+}

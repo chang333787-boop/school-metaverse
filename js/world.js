@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from '../lib/BufferGeometryUtils.js';
 import { SCHOOL } from './data.js';
-import { textSign, taegeukTexture, trackTexture, courtTexture, bookStripes, netTexture, shade, cardTone, mosaicTexture, rubbleTexture, clockFace, compassRose } from './textures.js';
+import { textSign, taegeukTexture, trackTexture, courtTexture, bookStripes, netTexture, shade, cardTone, mosaicTexture, rubbleTexture, clockFace, compassRose, courseTexture } from './textures.js';
 
 // ---- 공유 지오메트리/재질 (성능 예산: geometries 최소화) ----
 const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
@@ -2199,14 +2199,22 @@ export function buildWorld(scene) {
   // ---------- 놀이터 ----------
   const [px, pz] = SCHOOL.playground.center;
   box(17, 0.05, 14, 0xb4b8bd, px, 0, pz, { collide: false, walk: true });   // 사진: 회색 벽돌 포장
+  // 실사: 놀이기구 아래는 회색 포장이 아니라 **모래밭**이고, 옆에 잔디밭이 붙어 있다
+  box(11, 0.058, 9, 0xdcc9a0, px - 1.5, 0, pz - 0.5, { collide: false, walk: true });   // 모래밭(포장 위 6mm)
+  box(17, 0.04, 4.5, 0x7fb86a, px, 0, pz + 9.3, { collide: false, walk: true });        // 남측 잔디밭
   // 자전거 교통안전 코스 (서쪽 별도 포장 — 노란 라인 + 숫자 타일)
   const rcx = px - 14, rcz = pz - 0.5;
   // 폭 11 = 놀이터 포장(px±8.5) 서단과 딱 맞닿게. 12로 두면 0.5m 겹치고 상면 차가 2mm라 반짝인다
   box(11, 0.048, 11, 0xb4b8bd, rcx, 0, rcz, { collide: false, walk: true });
-  box(7, 0.014, 0.32, 0xf2c531, rcx, 0.05, rcz - 3.2, { collide: false });
-  box(7, 0.014, 0.32, 0xf2c531, rcx, 0.05, rcz + 3.2, { collide: false });
-  box(0.32, 0.014, 6.7, 0xf2c531, rcx - 3.35, 0.05, rcz, { collide: false });
-  box(0.32, 0.014, 6.7, 0xf2c531, rcx + 3.35, 0.05, rcz, { collide: false });
+  // 실사: 노란 직선이 아니라 **컬러 회전교차로 원 + 차선 + 사방치기(숫자·강아지)** — 캔버스 1장(1dc)
+  {
+    const crs = new THREE.Mesh(UNIT_PLANE, new THREE.MeshLambertMaterial({ map: courseTexture() }));
+    crs.scale.set(10.6, 10.6, 1);
+    crs.rotation.x = -Math.PI / 2;
+    crs.position.set(rcx, YOFF + 0.056, rcz);
+    crs.matrixAutoUpdate = false; crs.updateMatrix();
+    scene.add(crs);
+  }
   const t13 = textSign('13', { h: 0.7, bg: '#3aa8a0', fg: '#ffffff', border: null });
   t13.rotation.x = -Math.PI / 2;
   t13.position.set(rcx + 2.1, 0.06, rcz - 1.9);
@@ -2219,8 +2227,9 @@ export function buildWorld(scene) {
   const slX = px - 4.5, slZ = pz - 3;
   box(1.7, 0.14, 1.7, 0x9c7a53, slX, 1.62, slZ, { walk: true });
   [[-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]].forEach(([lx, lz]) => box(0.12, 1.62, 0.12, 0x8a6a45, slX + lx, 0, slZ + lz, { collide: false }));
-  [-0.34, 0.34].forEach(ox => box(0.55, 0.09, 2.9, 0xccd2d8, slX + ox, 0.85, slZ + 1.95, { rot: [0.63, 0, 0], collide: false, walk: true }));
-  [-0.68, 0, 0.68].forEach(ox => box(0.08, 0.16, 2.9, 0x9aa5ad, slX + ox, 0.9, slZ + 1.95, { rot: [0.63, 0, 0], collide: false }));
+  // 실사: 미끄럼면은 좁은 2조각이 아니라 **넓은 스테인리스 한 판** + 양옆 가드
+  box(1.0, 0.07, 2.9, 0xd6dbe0, slX, 0.85, slZ + 1.95, { rot: [0.63, 0, 0], collide: false, walk: true });
+  [-0.56, 0.56].forEach(ox => box(0.08, 0.2, 2.9, 0x9aa5ad, slX + ox, 0.9, slZ + 1.95, { rot: [0.63, 0, 0], collide: false }));
   box(0.85, 0.1, 2.1, 0xa9805a, slX, 0.8, slZ - 1.35, { rot: [-0.95, 0, 0], collide: false, walk: true });
   const swX = px + 4.5, swZ = pz + 3.5;
   const swbar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.4, 8), mat(0x3a6ea5));
@@ -2249,6 +2258,62 @@ export function buildWorld(scene) {
     bb.position.set(px + 3.5, bh - 1, pz - 3.5 + zo);
     scene.add(bb);
   });
+  // 목재 격자 정글짐 (실사: 나무 봉 격자 — box() 봉이라 밟고 올라갈 수 있다. 놀이기구는 올라가는 게 정상)
+  {
+    const jgX = px + 1.2, jgZ = pz - 3.2, JG = 0x9c7a53;
+    [0, 0.75, 1.5].forEach(jy => {
+      [-1.05, -0.35, 0.35, 1.05].forEach(jo => {
+        box(2.2, 0.09, 0.09, JG, jgX, jy + 0.66, jgZ + jo, { walk: true });
+        box(0.09, 0.09, 2.2, JG, jgX + jo, jy + 0.66, jgZ, { walk: true });
+      });
+    });
+    [[-1.05, -1.05], [1.05, -1.05], [-1.05, 1.05], [1.05, 1.05]].forEach(([ox, oz]) =>
+      box(0.11, 2.25, 0.11, 0x8a6a45, jgX + ox, 0, jgZ + oz));
+  }
+  // 구름사다리 (철봉 옆)
+  {
+    const mX = px + 6.8, mZ = pz - 1.5, MB = 0x3a6ea5;
+    [[-0.45, -1.6], [0.45, -1.6], [-0.45, 1.6], [0.45, 1.6]].forEach(([ox, oz]) =>
+      box(0.09, 1.9, 0.09, MB, mX + ox, 0, mZ + oz));
+    [-0.45, 0.45].forEach(ox => box(0.07, 0.07, 3.4, MB, mX + ox, 1.9, mZ, { collide: false }));
+    for (let mzo = -1.3; mzo <= 1.3; mzo += 0.4) {
+      const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 8), mat(0xc8cdd2));
+      rung.rotation.z = Math.PI / 2;
+      rung.position.set(mX, 1.93, mZ + mzo);
+      scene.add(rung);
+    }
+  }
+  // 큰 나무 + 나무 둘레 원형 벤치 (실사: 놀이터 옆 랜드마크)
+  {
+    const btX = px + 7.6, btZ = pz + 5.6;
+    tree(btX, btZ, 1.5);
+    for (let ai = 0; ai < 8; ai++) {
+      const a = (ai / 8) * Math.PI * 2;
+      box(1.05, 0.09, 0.4, 0x30343a, btX + Math.cos(a) * 1.15, 0.42, btZ + Math.sin(a) * 1.15,
+        { rot: [0, -a, 0], walk: true });
+      box(0.07, 0.42, 0.07, 0x30343a, btX + Math.cos(a) * 1.15, 0, btZ + Math.sin(a) * 1.15, { collide: false });
+    }
+  }
+  // 음수대 + 아치 캐노피 (실사: 스테인리스 급수대 4구 + 암갈색 아치 지붕)
+  {
+    const wfX = px + 12.5, wfZ = pz - 5;
+    solidSoftBox(2.2, 0.82, 0.6, 0xc8cdd2, wfX, 0, wfZ);
+    [-0.75, -0.25, 0.25, 0.75].forEach(ox => softBox(0.07, 0.16, 0.07, 0x9aa5ad, wfX + ox, 0.82, wfZ));
+    [[-1.2, -0.5], [1.2, -0.5], [-1.2, 0.5], [1.2, 0.5]].forEach(([ox, oz]) =>
+      solidSoftBox(0.1, 2.1, 0.1, 0x9aa5ad, wfX + ox, 0, wfZ + oz));
+    [[-0.7, 0.24, 0.5], [0, 0.4, 0], [0.7, 0.24, -0.5]].forEach(([ox, ry, rz]) =>
+      softBox(1.1, 0.06, 1.5, 0x6d4a34, wfX + ox, 2.1 + ry, wfZ, [0, 0, rz]));
+  }
+  // 자전거 코스 위 긴 그늘막 (실사: 목재무늬 기둥 + 회색 곡면 지붕이 코스를 덮는다)
+  {
+    const cnX = rcx, cnZ = rcz;
+    // ⚠️ 기둥은 포장(±5.5) **바깥**, 그리고 동측 중앙(놀이터로 나가는 길목 z=27.5)은 비운다
+    //    — 보행 시험에서 두 번 걸려서 확정한 배치
+    [[-5.65, -4.2], [-5.65, 0], [-5.65, 4.2], [5.65, -4.2], [5.65, 4.2]].forEach(([ox, oz]) =>
+      solidSoftBox(0.14, 2.5, 0.14, 0x8a6a45, cnX + ox, 0, cnZ + oz));
+    [[-3.4, 0.2, 0.3], [0, 0.45, 0], [3.4, 0.2, -0.3]].forEach(([ox, oy, rz]) =>
+      softBox(3.6, 0.07, 10.4, 0x9db4c0, cnX + ox, 2.5 + oy, cnZ, { rot: [0, 0, rz] }));
+  }
   zones.push({ x0: px - 8.5, x1: px + 8.5, z0: pz - 7, z1: pz + 7, label: '놀이터' });
 
   // ---------- 숲놀이터 (통나무 징검다리 + 균형 통나무) ----------
