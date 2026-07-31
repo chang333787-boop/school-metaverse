@@ -1698,6 +1698,29 @@ export function buildWorld(scene) {
   });
   zones.push({ x0: LC.x[0], x1: LC.x[1], z0: ez0, z1: kz1, floor: 0, label: '본관 1층 복도' });
 
+  // ===== 중정(마당) 실물화 — 인터로킹 포장 + 원형 화분·원뿔 향나무 + 민트 유리지붕 통로 =====
+  {
+    const ydX0 = LC.x[1] + 0.3, ydX1 = ex1 - 0.3, ydZ0 = ez1 + 0.3, ydZ1 = fz0 - 0.3;
+    const ydCx = (ydX0 + ydX1) / 2, ydCz = (ydZ0 + ydZ1) / 2;
+    box(ydX1 - ydX0, 0.045, ydZ1 - ydZ0, 0xb98a72, ydCx, 0, ydCz, { collide: false, walk: true });   // 붉은 인터로킹
+    box(ydX1 - ydX0 - 3, 0.055, 1.4, 0x9aa0a4, ydCx, 0, ydCz, { collide: false, walk: true });        // 회색 띠
+    // 대형 원형 화분 + 원뿔 향나무 2기
+    [[ydCx - 6, ydCz], [ydCx + 6, ydCz]].forEach(([hx2, hz2]) => {
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.6, 0.62, 10), mat(0x8a5a3c));
+      pot.position.set(hx2, 0.31, hz2);
+      scene.add(pot); colliders.push(pot);
+      geoSoft(CONE_GEO, 0x3f6b45, hx2, 1.35, hz2, null, 0.72, 1.5, 0.72);
+      geoSoft(CONE_GEO, 0x497a4e, hx2, 2.2, hz2, null, 0.45, 1.0, 0.45);
+    });
+    // 민트 유리지붕 연결통로 (마당 서단 — 세로복도 문 앞)
+    [[ydX0 + 1.2, -41]].forEach(([px5, pz5]) => {
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx6, sz6]) =>
+        solidSoftBox(0.12, 2.3, 0.12, 0x9fd8c4, px5 + sx6 * 1.1, 0, pz5 + sz6 * 1.3));
+      softBox(2.6, 0.08, 3.0, 0xbfe3d8, px5, 2.3, pz5);
+      softBox(2.8, 0.05, 3.2, 0x9fd8c4, px5, 2.42, pz5);
+    });
+  }
+
   // ---- 동관 ----
   // 구조(사용자 확정): 안쪽 복도는 2학년→4학년→과학실(+내부 준비실)에서 끝.
   // 창고는 복도와 이어지지 않는 별도 공간 — 북쪽 바깥문으로만 진입. 복도에 바깥문 없음.
@@ -1815,23 +1838,47 @@ export function buildWorld(scene) {
   const wkX = tx0 + 1.5;
   box(wkX - ux0, 0.25, uz1 - uz0, slabC, (ux0 + wkX) / 2, FH - 0.25, (uz0 + uz1) / 2, { walk: true });
   box(tx1 - wkX, 0.25, 2.5, slabC, (wkX + tx1) / 2, FH - 0.25, uz0 + 1.25, { walk: true });
+  // ===== U자형(꺾임) 계단 — 실사 확인(2026-07-31): 반 층 올라 계단참에서 180° 돌아 다시 반 층 =====
+  // 동쪽 레인(A)으로 6단 → 참(y1.7) → 서쪽 레인(B)으로 6단 → 2층.
+  // ⚠️ 시험으로 확정한 두 규칙:
+  //  ① B레인은 **공중 디딤판**(밑이 뚫린 얇은 판) — 바닥까지 채우면 그 밑이 1층 입구인데 막아버린다
+  //  ② 레인 사이에 **솔리드 칸막이** — 틈새(0.3m)에 끼면 지면 레이가 계단을 못 잡아 바닥으로 샌다
   const stepLo = uz1 - 1, stepHi = uz0 + 2.5;
-  const nStep = 12;
-  const rise = FH / nStep, tread = (stepLo - stepHi) / nStep;
-  for (let i = 0; i < nStep; i++) {
-    box(tx1 - wkX - 0.2, (i + 1) * rise, tread + 0.03, 0xc9b8a0, (wkX + tx1) / 2, 0, stepLo - (i + 0.5) * tread);
+  const U_TREAD = 0.55, U_RISE = FH / 12, U_N = 6;
+  const midX = (wkX + tx1) / 2;
+  const LANE_W = (tx1 - wkX) / 2 - 0.2;
+  const laneE = midX + 0.06 + LANE_W / 2;
+  const laneW = midX - 0.06 - LANE_W / 2;
+  // ⚠️ A(오름 시작)는 **서쪽 레인** — 1층 입구 개구부(x -15.5~-13.1)와 정렬돼 진입이 직진이 된다.
+  //    동쪽에 두면 좁은 남측 스트립에서 옆걸음해야 해서 두 번의 보행 시험 모두 실패했다.
+  for (let i = 0; i < U_N; i++) {
+    box(LANE_W, (i + 1) * U_RISE, U_TREAD + 0.03, 0xc9b8a0, laneW, 0, stepLo - (i + 0.5) * U_TREAD);
   }
-  wallZ(stepHi, uz1, wkX, FH, 1.05, 0xb08968, 0.12);
-  // 계단 서측 낙하 방지: 오르는 중간에 옆으로 떨어지지 않게 (투명 벽 + 경사 손잡이 난간)
+  // 챌판 문구 스티커 (실사: 계단마다 컬러 띠 글귀)
+  [[1, 0xe8863a], [3, 0x67b26f], [5, 0x9bc1e8]].forEach(([si, cc]) =>
+    geoAdd(UNIT_PLANE, cc, laneW, (si + 1) * U_RISE - 0.06, stepLo - si * U_TREAD + 0.02, null, LANE_W - 0.2, 0.1, 1));
+  // 계단참 (전 폭, y1.7) — **베이 북벽까지 채운 플랫폼**. 짧게 두면 북단에서 떨어진다(보행 시험에서 낙하 확인)
+  const LAND_Z0 = stepLo - U_N * U_TREAD, LAND_D = (LAND_Z0 - stepHi) - 0.1;
+  box(tx1 - wkX - 0.2, 1.7 + U_RISE * 0.5, LAND_D, 0xc9b8a0, midX, 0, LAND_Z0 - LAND_D / 2, { walk: true });
+  // B 레인 (참에서 북→남 오름, y1.7→3.4) — **동쪽 레인·공중 디딤판** (밑 1층 통행 유지)
+  for (let i = 0; i < U_N; i++) {
+    const topY = 1.7 + (i + 1) * U_RISE;
+    box(LANE_W, 0.28, U_TREAD + 0.03, 0xc9b8a0, laneE, topY - 0.28, LAND_Z0 + (i + 0.5) * U_TREAD, { walk: true });
+  }
+  // B 상부 착지판 — 전 폭 공중판(y3.1~3.4). 아래는 1층 입구 스트립(머리 위 3.1 확보).
+  // 여기서 서쪽으로 걸으면 2층 복도 테라조(3.43)와 3cm 차로 이어진다.
+  box(tx1 - wkX - 0.2, 0.3, 1.15, 0xc9b8a0, midX, FH - 0.3, stepLo + 0.05, { walk: true });
+  // 레인 사이 솔리드 칸막이 (계단 구간 전체 + 참까지)
+  solidSoftBox(0.12, 3.6, stepLo - LAND_Z0 + 0.4, 0xd9d2c2, midX, 0, (stepLo + LAND_Z0) / 2 - 0.2);
+  // 서측 낙하 방지 INVIS + 참 안쪽 손잡이
+  // ⚠️ 높이 3.6 고정 — 더 올리면 2층(py3.4·충돌밴드 3.95~)에서 계단→복도 건너가기가 막힌다(시험으로 확인)
   box(0.1, 3.6, stepLo - stepHi, 0, wkX + 0.05, 0, (stepLo + stepHi) / 2, { material: INVIS, noCam: true });
-  const stairAng = Math.atan2(FH, stepLo - stepHi);
-  box(0.07, 0.09, Math.hypot(stepLo - stepHi, FH) - 0.6, 0xb08968,
-    wkX + 0.14, 2.35, (stepLo + stepHi) / 2, { rot: [stairAng, 0, 0], collide: false });
-  for (let sp3 = 1; sp3 <= 5; sp3++) {
-    const spz = stepLo - sp3 * (stepLo - stepHi) / 6;
-    const spy = sp3 * FH / 6;
-    box(0.06, 0.85, 0.06, 0xb08968, wkX + 0.14, spy, spz, { collide: false });
-  }
+  // 2층 슬래브 가장자리 난간벽 — B 착지판에서 복도로 **건너는 남측 구간(z -39.6~)은 비운다**
+  wallZ(stepHi, -39.6, wkX, FH, 1.05, 0xb08968, 0.12);
+  softBox(0.07, 0.09, LANE_W, 0xb08968, midX, 3.72, LAND_Z0 - 0.3, [0, Math.PI / 2, 0]);
+  // 계단실 2톤 도장 (실사: 위 연민트 / 아래 노랑) — 동벽 실내면 스킨
+  geoAdd(UNIT_PLANE, 0xf2df8a, (tx1 - 0.17), 0.75, (stepLo + stepHi) / 2, [0, -Math.PI / 2, 0], stepLo - stepHi, 1.5, 1);
+  geoAdd(UNIT_PLANE, 0xd7ede4, (tx1 - 0.17), 2.45, (stepLo + stepHi) / 2, [0, -Math.PI / 2, 0], stepLo - stepHi, 1.9, 1);
   sign('2층 ↑', (tx0 + tx1) / 2, 2.5, uz1 + 0.18, 0, 0.45);
   zones.push({ x0: tx0, x1: tx1, z0: uz0, z1: uz1, floor: 1, label: '계단' });
   const upEdges = new Set();
@@ -2055,6 +2102,16 @@ export function buildWorld(scene) {
 
   // ---------- 텃밭 (E키로 물주기) ----------
   const GA = SCHOOL.garden;
+  // 실사 디테일: 검은 멀칭 위 호스 뭉치 + 붉은 대야
+  {
+    const hose = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.045, 6, 14), mat(0x2f5e3a));
+    hose.rotation.x = -Math.PI / 2;
+    hose.position.set(GA.center[0] - 7, 0.08, GA.center[1] + 3.4);
+    scene.add(hose);
+    const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.42, 0.3, 10), mat(0xc0392b));
+    basin.position.set(GA.center[0] - 5.6, 0.15, GA.center[1] + 3.2);
+    scene.add(basin); colliders.push(basin);
+  }
   const [axg, azg] = GA.center;
   const gaW = GA.width || 14, gaD = GA.depth || 15;
   const gdx0 = axg - gaW / 2, gdx1 = axg + gaW / 2, gdz0 = azg - gaD / 2, gdz1 = azg + gaD / 2;
@@ -2454,9 +2511,21 @@ export function buildWorld(scene) {
     geoAdd(UNIT_BOX, 0xe8ebee, lx2, 0.03, -67.2, null, 0.09, 0.02, 4.2);
     geoAdd(UNIT_BOX, 0xe8ebee, lx2, 0.03, -61.6, null, 0.09, 0.02, 4.2);
   }
+  // 실사: 컨테이너 창고는 밝은 회색이 아니라 **노란 골판 + 파란 지붕**
   [[36, -63.5], [43.5, -61.8]].forEach(([sx2, sz2]) => {
-    box(5, 2.4, 4, 0xdfe3e8, sx2, 0, sz2);
+    box(5, 2.4, 4, 0xe8b83c, sx2, 0, sz2);
     box(5.6, 0.28, 4.6, 0x2f6fd0, sx2, 2.4, sz2, { collide: false });
+    geoAdd(UNIT_PLANE, 0xc9992e, sx2 - 1.2, 1.05, sz2 + 2.01, null, 0.9, 2.0, 1);   // 문짝 음영
+    for (let gx5 = -2.1; gx5 <= 2.1; gx5 += 0.6)                                     // 골판 세로줄
+      geoAdd(UNIT_BOX, 0xd4a832, sx2 + gx5, 1.2, sz2 + 2.02, null, 0.07, 2.3, 0.02);
+  });
+  // 장애인 주차구획 (실사: 파란 바탕 + 흰 테두리 + 라바콘)
+  box(2.6, 0.014, 4.6, 0x2f6fd0, -13, 0.03, -64.4, { collide: false });
+  [[-1.25, 0], [1.25, 0]].forEach(([ox]) => box(0.12, 0.016, 4.6, 0xe8ebee, -13 + ox, 0.032, -64.4, { collide: false }));
+  [[-14, -62.4], [-12, -62.4]].forEach(([cx6, cz6]) => {
+    const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.16, 0.42, 8), mat(0xe8632e));
+    cone.position.set(cx6, 0.21, cz6);
+    scene.add(cone);
   });
   zones.push({ x0: -20, x1: 48, z0: -69.5, z1: -59.5, label: '주차장' });
 
@@ -2490,6 +2559,19 @@ export function buildWorld(scene) {
       scene.add(wh2);
     });
     YOFF = keepBus;
+  }
+  // 뒤뜰 피크닉 데크 + 보라 화단 (실사: 학교에서 가장 예쁜 공간 — 목재 데크·테이블·맥문동)
+  {
+    const dkX = -26, dkZ = -54;
+    box(8.5, 0.14, 5, 0x9c6b4a, dkX, 0, dkZ, { walk: true });
+    [[-2.4, -0.6], [2.2, 0.7]].forEach(([ox, oz]) => {
+      const tx6 = dkX + ox, tz6 = dkZ + oz;
+      box(1.5, 0.1, 0.7, 0x8a5a3b, tx6, 0.62, tz6, { collide: false, walk: true });
+      [-0.6, 0.6].forEach(lx => box(0.1, 0.62, 0.62, 0x6d4a34, tx6 + lx, 0.14, tz6));
+      [-0.62, 0.62].forEach(bz => box(1.5, 0.09, 0.32, 0x9c6b4a, tx6, 0.42, tz6 + bz, { collide: false, walk: true }));
+    });
+    for (let fx6 = -30.5; fx6 <= -21.5; fx6 += 1.1)
+      geoSoft(ICO_GEO, 0x9b7bd0, fx6, 0.3, -51.6, [0, fx6, 0], 0.42, 0.34, 0.42);   // 맥문동 보라 띠
   }
   // 뒤편 디테일: 실외기 + 배관 (서관·급식동 뒤)
   [[-38, -50.75], [-30, -50.75], [-22, -50.75], [-8.2, -58.75], [-1.8, -58.75]].forEach(([ax2, az2]) => {
