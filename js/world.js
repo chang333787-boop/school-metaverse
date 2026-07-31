@@ -402,7 +402,7 @@ export function buildWorld(scene) {
     const g = new THREE.Group();
     const sc = opts.small ? 0.6 : opts.teacher ? 0.98 : 0.78;   // small=유치원생
     const shirtC = opts.teacher ? (girl ? 0xc76b8e : 0x4a6fa5) : SHIRTS[Math.floor(rng() * SHIRTS.length)];
-    const pantsC = 0x5a6b8c, skinC = 0xf6cfa4;
+    const pantsC = 0x5a6b8c, skinC = 0xf6cfa4;   // 피부는 partAdd 에서 'bright' 로 통과
     const hairC = HAIRS[Math.floor(rng() * HAIRS.length)];
     // 몸 전체를 지오메트리 1개로 병합 (그룹 로컬 좌표)
     const parts = [];
@@ -411,7 +411,7 @@ export function buildWorld(scene) {
       const geo = bg.clone();
       _m4.compose(_vp.set(px, py, pz), _q.identity(), _vs.set(sx, sy, sz));
       geo.applyMatrix4(_m4);
-      _col.set(shade(color));
+      _col.set(shade(color, color === skinC ? 'bright' : undefined));
       const n = geo.attributes.position.count;
       const cols = new Float32Array(n * 3);
       for (let i = 0; i < n; i++) {
@@ -855,7 +855,7 @@ export function buildWorld(scene) {
           box(0.95, 1.4, 0.95, 0xe8edf2, cx + s * (0.85 + k * 1.15), y0, at(0.75));
           box(0.06, 1.4, 0.95, 0xd2dbe2, cx + s * (0.85 + k * 1.15) - 0.5, y0, at(0.75), { collide: false });
           // 살짝 열린 칸막이 문
-          geoAdd(UNIT_BOX, 0xc4cdd4, cx + s * (0.85 + k * 1.15) + 0.16, y0 + 0.72, at(1.38), [0, s * 0.5, 0], 0.55, 1.28, 0.05);
+          geoAdd(UNIT_BOX, 0xc4cdd4, cx + s * (0.85 + k * 1.15) + s * 0.02, y0 + 0.72, at(1.42), null, 0.9, 1.28, 0.05);
         }
         // 세면대 + 수도꼭지 + 거울 (가운데 칸막이벽에 부착)
         box(0.5, 0.8, 0.45, 0xf2f5f7, cx + s * 0.45, y0, at(depth - 2.2));
@@ -1044,7 +1044,7 @@ export function buildWorld(scene) {
   // 현관 소품: 발판 매트 · 우산꽂이 · 안내 화분 (휑함 해소)
   plane(2.6, 1.5, 0x5a6b7a, hallCx, 0.1, fz1 - 1.2);
   box(0.42, 0.6, 0.42, 0x4a6fa5, hallRoom.span[0] + 0.55, 0, -26.4);
-  [[-0.1, 0.1], [0.08, -0.06], [0, 0]].forEach(([ox, oz], ui) => {
+  [[-0.13, 0.11], [0.12, -0.09], [0.02, 0.02]].forEach(([ox, oz], ui) => {   // 겹치면 반짝임
     box(0.05, 0.85, 0.05, [0xd94f6b, 0xf2b134, 0x67b26f][ui], hallRoom.span[0] + 0.55 + ox, 0.6, -26.4 + oz, { collide: false });
     geoAdd(UNIT_BOX, [0xd94f6b, 0xf2b134, 0x67b26f][ui], hallRoom.span[0] + 0.55 + ox, 1.5, -26.4 + oz, null, 0.09, 0.16, 0.09);
   });
@@ -1438,11 +1438,18 @@ export function buildWorld(scene) {
   makeDoor(gx1, gz, 1.5, 'z', { color: 0x7d848c, swing: -1, closed: true });
   sign('체육관', gx1 + 0.25, 2.6, gz, Math.PI / 2, 0.5);
   // 지붕 + 용마루 + 박공면
-  const panelL = Math.hypot(G.depth / 2, 2.5) + 0.6;
+  // ⚠️ 지붕판 두 장이 용마루에서 서로 겹치거나 처마가 벽 상단을 파고들면
+  //    같은 색 면끼리 z-fighting 이 나서 지붕 전체가 반짝인다(실측 6.7㎡ × 3곳).
+  //    · 각 판의 안쪽 끝이 정확히 용마루에서 만나게 중심을 바깥으로 민다
+  //    · 처마 끝을 벽 상단(gh)보다 0.30 위에 둔다
   const pAng = Math.atan2(2.5, G.depth / 2);
-  box(G.width + 1.4, 0.22, panelL, 0xc35233, gx, gh + 1.14, gz - G.depth / 4, { rot: [-pAng, 0, 0], collide: false });
-  box(G.width + 1.4, 0.22, panelL, 0xc35233, gx, gh + 1.14, gz + G.depth / 4, { rot: [pAng, 0, 0], collide: false });
-  box(G.width + 1.6, 0.35, 1.5, 0xc35233, gx, gh + 2.4, gz, { collide: false });   // 용마루 (지붕판과 동일높이 회피)
+  const panelL = Math.hypot(G.depth / 2, 2.5) + 0.6;
+  const halfZ = panelL / 2 * Math.cos(pAng);          // 판 중심의 z 오프셋
+  const midY = gh + 0.30 + panelL / 2 * Math.sin(pAng);
+  box(G.width + 1.4, 0.22, panelL, 0xc35233, gx, midY, gz - halfZ, { rot: [-pAng, 0, 0], collide: false });
+  box(G.width + 1.4, 0.22, panelL, 0xc35233, gx, midY, gz + halfZ, { rot: [pAng, 0, 0], collide: false });
+  const ridgeY = gh + 0.30 + panelL * Math.sin(pAng);
+  box(G.width + 1.6, 0.35, 1.5, 0xc35233, gx, ridgeY - 0.06, gz, { collide: false });   // 용마루 캡
   [gx0, gx1].forEach(gex => {
     [[0, G.depth - 1], [1, G.depth * 0.62], [2, G.depth * 0.3]].forEach(([k, dd]) => {
       box(0.36, 0.85, dd, panelC, gex, gh + k * 0.82, gz, { collide: false });
@@ -1854,12 +1861,10 @@ export function buildWorld(scene) {
   [gtx + 5.6, gtx + 12.4].forEach(px4 => box(0.16, 3.7, 0.16, 0x9aa5ad, px4, 0, gtz - 0.6));
   // 회전 차단기 (삼각 회전바 3날 + 중심 기둥) — 가로바만 있어 문처럼 보이던 것 수정
   [-1.7, 0, 1.7].forEach(ox => {
-    box(0.16, 1.05, 0.16, 0x8a949c, gtx + ox, 0, gtz, { collide: false });
-    box(0.2, 0.16, 0.2, 0xb9bfc6, gtx + ox, 1.05, gtz, { collide: false });
+    box(0.16, 0.66, 0.16, 0x8a949c, gtx + ox, 0, gtz, { collide: false });   // 날이 기둥을 뚫으면 반짝임
+    box(0.2, 0.16, 0.2, 0xb9bfc6, gtx + ox, 0.66, gtz, { collide: false });
     [0, 2.094, 4.189].forEach(ta2 => {   // 120°씩 3날
-      box(0.07, 0.07, 0.62, 0xb9bfc6, gtx + ox + Math.sin(ta2) * 0.31, 1.0, gtz + Math.cos(ta2) * 0.31,
-        { rot: [0, ta2, 0], collide: false });
-      box(0.07, 0.07, 0.62, 0xb9bfc6, gtx + ox + Math.sin(ta2) * 0.31, 0.72, gtz + Math.cos(ta2) * 0.31,
+      box(0.07, 0.07, 0.46, 0xb9bfc6, gtx + ox + Math.sin(ta2) * 0.41, 0.86, gtz + Math.cos(ta2) * 0.41,
         { rot: [0, ta2, 0], collide: false });
     });
   });
@@ -1935,7 +1940,7 @@ export function buildWorld(scene) {
     geoAdd(STUMP_GEO, 0x2b2e33, bx7, 0.28, -66.9, [0, 0, Math.PI / 2], 0.9, 0.06, 0.9);
     geoAdd(STUMP_GEO, 0x2b2e33, bx7, 0.28, -66.0, [0, 0, Math.PI / 2], 0.9, 0.06, 0.9);
     geoAdd(UNIT_BOX, bColor, bx7, 0.52, -66.45, [-0.45, 0, 0], 0.05, 0.75, 0.05);
-    geoAdd(UNIT_BOX, bColor, bx7, 0.62, -66.45, [0.9, 0, 0], 0.05, 0.5, 0.05);   // 프레임 하단 튜브
+    geoAdd(UNIT_BOX, bColor, bx7 + 0.06, 0.62, -66.45, [0.9, 0, 0], 0.05, 0.5, 0.05);   // 프레임 하단 튜브 (겹치면 반짝임)
     geoAdd(UNIT_BOX, 0x30343a, bx7, 0.82, -66.95, null, 0.34, 0.045, 0.045);
     geoAdd(UNIT_BOX, 0x30343a, bx7, 0.78, -66.05, null, 0.16, 0.05, 0.12);
   });
@@ -1999,12 +2004,14 @@ export function buildWorld(scene) {
     YOFF = terrY(tz);
     const r = geoAdd(TRUNK_GEO, 0x8b5e34, tx, 0.7 * s, tz, null, s, s, s);
     staticEntries.push({ key: r.key, aabb: r.aabb, solid: true });
+    // ⚠️ 한 나무의 덩어리 3개는 **같은 색**이어야 한다.
+    //    색이 다르면 덩어리가 겹치는 면이 z-fighting 으로 깜빡인다(= 나무가 반짝임).
     const c1 = CANOPY[Math.floor(rng() * CANOPY.length)];
-    const c2 = CANOPY[Math.floor(rng() * CANOPY.length)];
+    rng();                          // 난수 흐름 유지
     const ry = rng() * Math.PI;
     geoAdd(ICO_GEO, c1, tx, 1.9 * s, tz, [0, ry, 0], 1.05 * s, 0.95 * s, 1.05 * s);
-    geoAdd(ICO_GEO, c2, tx + 0.45 * s, 2.5 * s, tz + 0.2 * s, [0, ry + 1, 0], 0.7 * s, 0.66 * s, 0.7 * s);
-    geoAdd(ICO_GEO, c2, tx - 0.5 * s, 2.2 * s, tz - 0.25 * s, [0, ry + 2, 0], 0.55 * s, 0.5 * s, 0.55 * s);
+    geoAdd(ICO_GEO, c1, tx + 0.45 * s, 2.5 * s, tz + 0.2 * s, [0, ry + 1, 0], 0.7 * s, 0.66 * s, 0.7 * s);
+    geoAdd(ICO_GEO, c1, tx - 0.5 * s, 2.2 * s, tz - 0.25 * s, [0, ry + 2, 0], 0.55 * s, 0.5 * s, 0.55 * s);
     YOFF = keep;
   }
   function bush(tx, tz, s = 1, color) {
@@ -2051,11 +2058,12 @@ export function buildWorld(scene) {
     bt(TRUNK_GEO, 0x7a5230, 0, 2.4, 0, null, 3.4, 3.4, 3.4);
     bt(TRUNK_GEO, 0x7a5230, 1.1, 4.7, 0.4, [0, 0, -0.5], 1.5, 2.2, 1.5);
     bt(TRUNK_GEO, 0x7a5230, -1.0, 4.9, -0.3, [0, 0, 0.55], 1.3, 2.0, 1.3);
+    // 수관 덩어리는 전부 같은 색 (다르면 겹친 면이 깜빡인다)
     bt(ICO_GEO, 0x4d8b4d, 0, 6.6, 0, null, 3.6, 3.0, 3.6);
-    bt(ICO_GEO, 0x55924f, 2.0, 7.6, 0.8, [0, 1, 0], 2.4, 2.0, 2.4);
-    bt(ICO_GEO, 0x467e49, -2.1, 7.2, -0.7, [0, 2, 0], 2.2, 1.9, 2.2);
-    bt(ICO_GEO, 0x63a457, 0.4, 8.9, -0.2, [0, 3, 0], 1.9, 1.6, 1.9);
-    bt(ICO_GEO, 0x55924f, -1.2, 6.3, 1.7, [0, 4, 0], 1.8, 1.5, 1.8);
+    bt(ICO_GEO, 0x4d8b4d, 2.0, 7.6, 0.8, [0, 1, 0], 2.4, 2.0, 2.4);
+    bt(ICO_GEO, 0x4d8b4d, -2.1, 7.2, -0.7, [0, 2, 0], 2.2, 1.9, 2.2);
+    bt(ICO_GEO, 0x4d8b4d, 0.4, 8.9, -0.2, [0, 3, 0], 1.9, 1.6, 1.9);
+    bt(ICO_GEO, 0x4d8b4d, -1.2, 6.3, 1.7, [0, 4, 0], 1.8, 1.5, 1.8);
     const btMesh = new THREE.Mesh(mergeGeometries(parts, false), MAT_PERSON);
     btMesh.castShadow = true;
     const btGroup = new THREE.Group();

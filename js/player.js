@@ -13,7 +13,7 @@ export class Player {
     scene.add(this.group);
 
     // ⚠️ 캐릭터도 월드와 같은 알베도를 써야 한다. 안 그러면 캐릭터만 붕 떠 보인다.
-    const skin = new THREE.MeshLambertMaterial({ color: shade(0xf6cfa4) });
+    const skin = new THREE.MeshLambertMaterial({ color: shade(0xf6cfa4, 'bright') });
     this.shirtMat = new THREE.MeshLambertMaterial({ color: shade(0x4a90d9) });
     const shirt = this.shirtMat;
     const pants = new THREE.MeshLambertMaterial({ color: shade(0x2f3e5c) });

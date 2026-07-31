@@ -66,8 +66,10 @@ export function shade(hex, opt) {
     s = Math.min(s, SAT_CAP);
   }
   // 알베도는 RGB 배율로 (명도로 누르면 탁해진다)
+  // opt==='bright' = 캐릭터 피부처럼 시선의 초점인 것은 낮추지 않는다
   const snapped = hslToHex(h, s, l);
-  const q = v => Math.max(0, Math.min(255, Math.round(v * ALBEDO_K)));
+  const k = opt === 'bright' ? 1 : ALBEDO_K;
+  const q = v => Math.max(0, Math.min(255, Math.round(v * k)));
   const out = (q((snapped >> 16) & 255) << 16) | (q((snapped >> 8) & 255) << 8) | q(snapped & 255);
   SHADE_CACHE.set(key, out);
   return out;
@@ -274,7 +276,7 @@ export function faceTexture() {
   const c = document.createElement('canvas');
   c.width = 256; c.height = 256;
   const x = c.getContext('2d');
-  x.fillStyle = shadeCss('#f6cfa4');   // 머리 상자와 같은 알베도로
+  x.fillStyle = '#' + shade(0xf6cfa4, 'bright').toString(16).padStart(6,'0');   // 머리 상자와 같은 톤
   x.fillRect(0, 0, 256, 256);
   x.fillStyle = '#2b2b2b';
   x.beginPath(); x.arc(84, 112, 15, 0, Math.PI * 2); x.fill();
