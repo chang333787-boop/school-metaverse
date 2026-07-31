@@ -29,7 +29,7 @@
 - `building.kitchen`: 급식동 — 문은 동쪽 세로복도(doorZ), 뒤쪽 바깥문(backDoorX)
 - `building.linkCorridor`: 현관 북쪽 세로복도 → 동관 복도와 연결
 - `building.eastWing`: 동관(2·4학년·과학실·창고) — **앞줄과의 사이는 야외 마당**. 복도는 건물 북측, 방 문은 북쪽으로. yardDoor = 주복도→마당 문 x
-- `building.upper`: 서관 위 2층(6학년|5학년|소담실). 계단실(type 'stair') 경사로로 연결 — 경사로 동측, 2층 진입 통로 서측 1.5m
+- `building.upper`: 서관 위 2층(6학년|5학년|소담실). 계단실(type 'stair') = **실내 12단 직선 계단**(경사로 아님 — 2026-07-31 정정). 서관 계단실 동측 x −15.1~−12, 남(z−39)→북(z−47.5) 오름. ⚠️실물은 계단참에서 180° 꺾이는 U자형 — 미반영(계획 Phase 8)
 - room `type`: classroom / office / nurse / cafeteria / library / science / computer / hall / toilet / storage / stair / daycare
 - 가구는 방 상대 좌표 자동 배치(furnish) — 방 폭·깊이 바뀌어도 벽 뚫림 없음
 

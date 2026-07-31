@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from '../lib/BufferGeometryUtils.js';
 import { SCHOOL } from './data.js';
-import { textSign, taegeukTexture, trackTexture, courtTexture, bookStripes, netTexture, shade, cardTone } from './textures.js';
+import { textSign, taegeukTexture, trackTexture, courtTexture, bookStripes, netTexture, shade, cardTone, mosaicTexture, rubbleTexture, clockFace } from './textures.js';
 
 // ---- 공유 지오메트리/재질 (성능 예산: geometries 최소화) ----
 const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
@@ -217,6 +217,16 @@ export function buildWorld(scene) {
     if (opt.walk) walkables.push(m);
     return m;
   }
+  // 밟을 수 없는 장식 전용 상자 (v0.21 규칙: 지면 레이는 병합 청크 **전체**를 때리므로
+  // collide:false만으로는 못 막는다 — 띠·난간처럼 올라서면 안 되는 것은 반드시 softGeos로 보낸다)
+  const softBox = (w, h, d, color, cx, baseY, cz, rot) =>
+    geoSoft(UNIT_BOX, color, cx, baseY + h / 2, cz, rot, w, h, d);
+  // 통과는 막되 밟히지는 않는 것 (표지석·기둥) — 나무 줄기와 같은 패턴
+  const solidSoftBox = (w, h, d, color, cx, baseY, cz, rot) => {
+    const r = geoSoft(UNIT_BOX, color, cx, baseY + h / 2, cz, rot, w, h, d);
+    staticEntries.push({ key: r.key, aabb: r.aabb, solid: true, noRay: true });
+    return r;
+  };
   const wallX = (x0, x1, z, y0, h, color, t = 0.3) => box(x1 - x0, h, t, color, (x0 + x1) / 2, y0, z);
   const wallZ = (z0, z1, x, y0, h, color, t = 0.3) => box(t, h, z1 - z0, color, x, y0, (z0 + z1) / 2);
   function wallXGaps(x0, x1, gaps, z, y0, h, color, t = 0.3) {
@@ -508,7 +518,8 @@ export function buildWorld(scene) {
   // 학교 테라스 (사진: 건물 부지가 운동장보다 높음)
   box(164, 1, 52, 0x7cb85c, 0, -1, TERR_Z - 26, { walk: true });
   // 옹벽(축대) 전면 — 상면을 테라스 상면(0)보다 살짝 낮춰 z-fighting 방지
-  box(98, 1.0, 0.35, 0xb5af9f, 6, -1.02, TERR_Z + 0.12, { collide: false });
+  // 테라스 상자(폭 164·중심 0)와 같은 구간을 전부 덮는다 (좁으면 체육관·텃밭 쪽에서 초록 상자 옆면이 드러남)
+  box(164, 1.0, 0.35, 0xb5af9f, 0, -1.02, TERR_Z + 0.12, { collide: false });
 
   // ---------- 본관 ----------
   const B = SCHOOL.building;
@@ -525,16 +536,35 @@ export function buildWorld(scene) {
   const zCor = fz0 + FR.corridorDepth;
   const doorCOf = r => r.span[0] + 1.9;
 
+  // 실사: 옥상은 평지붕 + 파라펫. **초록은 옥상 바닥(방수면)뿐이고 파라펫·처마는 흰/크림**이다.
+  // 밖에서 보이는 것은 파라펫 4면뿐이라 여기가 초록이면 건물에 초록 띠가 둘러 보인다.
+  const PARAPET_C = 0xe8e6de;
+
   function roofOver(x0, x1, z0, z1, y, color) {
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
     // 슬래브 상면을 벽 상단(y)보다 0.1 올려 벽 윗면과의 z-fighting(옥상 반짝임) 차단
     box(x1 - x0 + 0.6, 0.3, z1 - z0 + 0.6, color, cx, y - 0.2, cz);
     // 실내 천장은 밝은 아이보리 (지붕 밑면 노출 방지)
     ceilAdd(cx, y - 0.27, cz, x1 - x0, z1 - z0);
-    wallX(x0, x1, z1 + 0.15, y, 0.55, color, 0.25);
-    wallX(x0, x1, z0 - 0.15, y, 0.55, color, 0.25);
-    wallZ(z0, z1, x0 - 0.15, y, 0.55, color, 0.25);
-    wallZ(z0, z1, x1 + 0.15, y, 0.55, color, 0.25);
+    wallX(x0, x1, z1 + 0.15, y, 0.55, PARAPET_C, 0.25);
+    wallX(x0, x1, z0 - 0.15, y, 0.55, PARAPET_C, 0.25);
+    wallZ(z0, z1, x0 - 0.15, y, 0.55, PARAPET_C, 0.25);
+    wallZ(z0, z1, x1 + 0.15, y, 0.55, PARAPET_C, 0.25);
+    // 실사: 파라펫 위에 **흰 파이프 난간**이 둘러 있다 (옥상에서 사람이 다니는 학교 구조)
+    const RY = y + 0.55, RAILC = 0xe9ecee;
+    const railRun = (len, hor, rx, rz) => {          // 장식 — 밟히면 안 되므로 softBox
+      softBox(hor ? len : 0.07, 0.07, hor ? 0.07 : len, RAILC, rx, RY + 0.68, rz);
+      softBox(hor ? len : 0.05, 0.05, hor ? 0.05 : len, RAILC, rx, RY + 0.34, rz);
+      const n = Math.max(2, Math.round(len / 3.2));
+      for (let i = 0; i <= n; i++) {
+        const t = -len / 2 + (len * i) / n;
+        softBox(0.07, 0.75, 0.07, RAILC, rx + (hor ? t : 0), RY, rz + (hor ? 0 : t));
+      }
+    };
+    railRun(x1 - x0 + 0.9, true, cx, z0 - 0.27);
+    railRun(x1 - x0 + 0.9, true, cx, z1 + 0.27);
+    railRun(z1 - z0 + 0.9, false, x0 - 0.27, cz);
+    railRun(z1 - z0 + 0.9, false, x1 + 0.27, cz);
     // 옥상 진입 차단: 난간 위 투명 벽 (카메라 클램프 대상에선 제외 — userData.noCam)
     const guard = (w, d, gx3, gz3) => {
       const m = box(w, 2.6, d, 0, gx3, y + 0.3, gz3, { material: INVIS });
@@ -1051,6 +1081,20 @@ export function buildWorld(scene) {
   [...frontEdges].filter(x => x > fx0 + 0.01 && x < fx1 - 0.01)
     .forEach(x => wallZ(zCor, fz1, x, 0, FH, innerC));
   zones.push({ x0: fx0, x1: fx1, z0: fz0, z1: zCor, floor: 0, label: '본관 1층 복도' });
+
+  // ===== 외벽 4색 시스템 (실사 실측) =====
+  // 벽 자체는 황토 베이지(data.js wallColor)이고, 그 위에 **코발트 블루 수평띠 2줄 + 비비드 옐로우 1줄**과
+  // **실 경계마다 파란 세로 기둥 스트립**을 덧댄다. 창(sill 1.1 ~ 2.5)을 피해 아래·위 밴드에만 놓는다.
+  const BLUEC = 0x3f6fa8, YELC = 0xe8bf3c, FACE_T = 0.1;
+  const faceZ = fz1 + 0.16;   // 남벽 바깥면(fz1+0.15) 바로 앞
+  // ⚠️ 전부 softBox — box(collide:false)로 하면 **띠를 밟고 올라설 수 있다**(측정으로 확인)
+  const faceBand = (y0b, hb, colb) =>
+    softBox(fx1 - fx0, hb, FACE_T, colb, (fx0 + fx1) / 2, y0b, faceZ);
+  faceBand(0.62, 0.42, BLUEC);    // 창 아래 허리띠
+  faceBand(2.52, 0.5, YELC);      // 창 위 노란 띠 — 얇으면 베이지에 묻힌다(0.34에서 키움)
+  faceBand(3.02, 0.38, BLUEC);    // 처마 밑 파란 띠
+  [...frontEdges].filter(x => x > fx0 + 0.01 && x < fx1 - 0.01)
+    .forEach(x => softBox(0.38, FH, FACE_T, BLUEC, x, 0, faceZ));
   roofOver(fx0, fx1, fz0, fz1, FH, roofC);
   // 옥탑 구조물 + 환기구 (위성사진) — 슬래브 상면(FH+0.1) 위에 얹음
   box(3, 1.6, 2.4, 0xc8ccd2, 20, FH + 0.1, -31);
@@ -1058,13 +1102,14 @@ export function buildWorld(scene) {
   box(1.1, 0.7, 1.1, 0x9aa5ad, 30, FH + 0.1, -27.5);
 
   sign(SCHOOL.name, hallCx, FH + 1.1, fz1 + 0.35, 0, 1.2);
-  box(5, 0.2, 2.6, 0x9aa5ad, hallCx, 3.0, fz1 + 1.25, { collide: false });
-  [-2.1, 2.1].forEach(px => {
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 3.0, 8), mat(0x8a949c));
-    pole.position.set(hallCx + px, 1.5, fz1 + 2.3);
-    scene.add(pole);
+  // 현관 유리문 파란 슬로건 띠 (실사: 문 유리에 흰 글씨 2줄)
+  [['튼튼한 몸과 건강한 마음', -1.62], ['주도적인 배움과 성장', 1.62]].forEach(([txt, ox]) => {
+    const bd = textSign(txt, { h: 0.24, bg: '#1e4fa3', fg: '#ffffff', border: null, fontPx: 44, pad: 14 });
+    bd.position.set(hallCx + ox, 2.02, fz1 + 0.07);
+    scene.add(bd);
   });
-  sign('현관', hallCx, 2.55, fz1 + 2.42, 0, 0.45);
+  // (구 회청색 캐노피 + 원기둥 2개는 제거 — 실물은 그 자리가 짙은 목재 필로티 포치다. 아래 정면 필로티 참조)
+  sign('현관', hallCx, 2.55, fz1 + 0.42, 0, 0.45);
   // 현관 게시판 (사진3: 꿈은 이루어진다) — 벽 안쪽 면(7.85)보다 앞으로 빼서 정면이 보이게
   const hallEx = hallRoom.span[1] - 0.19;
   box(0.06, 1.15, 0.85, 0xc9526b, hallEx, 1.1, -27, { collide: false });
@@ -1089,26 +1134,114 @@ export function buildWorld(scene) {
   // ---------- 테라스 경계: 계단·구령대·경사로·초록 그물 펜스 (사진2·3) ----------
   // 구령대는 **현관 바로 앞**, 중앙 계단과 같은 축에 있다 (사용자 확인한 실제 구조).
   // 계단은 구령대 양옆으로 내려가고, 구령대 정면(운동장쪽)이 조회 방향.
+  // ===== 정면 필로티 포치 (실사 영상 2026-07-31) =====
+  // 실물은 '단상형 구령대'가 아니라 **짙은 목재무늬 사이딩 + 사각기둥 + 평지붕 캔틸레버**의 필로티다.
+  // 그 안에 야외 목재 테이블이 놓여 아이들이 운동장을 내려다보며 앉는다. 현관 유리문은 포치 안쪽.
+  // 계단은 좌우 2벌이 아니라 **중앙 1벌 6단**이고, 계단 좌측 옹벽만 컬러 모자이크, 우측은 흰 마름돌이다.
   const PODIUM_X = hallCx;
-  [PODIUM_X - 4.6, PODIUM_X + 4.6].forEach(sxp => {          // 좌우 계단 (운동장으로 내려감)
-    for (let si = 0; si < 4; si++) {
-      box(3.4, 0.8 - si * 0.22, 0.42, 0xc9c4b8, sxp, -1, TERR_Z + 0.24 + si * 0.42);
+  const PORCH_W = 13, PORCH_Z0 = fz1, PORCH_Z1 = TERR_Z - 1;   // z -24 ~ -19 (깊이 5)
+  const PORCH_H = 3.2, WOODC = 0x3b2d24;                        // 짙은 초콜릿 목재무늬
+  const PORCH_CZ = (PORCH_Z0 + PORCH_Z1) / 2;
+
+  // 캔틸레버 지붕판 (앞으로 0.6 더 내밈) + 밑면 루버 느낌의 얇은 띠
+  box(PORCH_W + 0.8, 0.38, PORCH_Z1 - PORCH_Z0 + 0.6, WOODC, PODIUM_X, PORCH_H, PORCH_CZ + 0.3, { collide: false });
+  box(PORCH_W + 0.4, 0.08, PORCH_Z1 - PORCH_Z0 + 0.4, 0x2e241d, PODIUM_X, PORCH_H - 0.09, PORCH_CZ + 0.2, { collide: false });
+  // 사각 기둥 5개 (앞줄) — 실물은 굵고 목재무늬
+  // ⚠️ 중앙(ox 0)은 비운다 — 계단 축이라 기둥을 두면 현관으로 못 들어간다(측정으로 확인)
+  [-5.6, -2.8, 2.8, 5.6].forEach(ox => box(0.75, PORCH_H, 0.75, WOODC, PODIUM_X + ox, 0, PORCH_Z1 - 0.4));
+  // 좌우 측벽 (실물: 오른쪽은 막힌 목재 벽)
+  [-1, 1].forEach(s => box(0.4, PORCH_H, PORCH_Z1 - PORCH_Z0 - 0.8, WOODC, PODIUM_X + s * (PORCH_W / 2), 0, PORCH_CZ - 0.4));
+  // 포치 앞 검은 철제 난간 — 계단 개구부(폭 3.4)만 비움
+  [[-1, -3.35], [1, 3.35]].forEach(([s, inner]) => {
+    const len = PORCH_W / 2 - Math.abs(inner);
+    const cxr = PODIUM_X + s * (Math.abs(inner) + len / 2);
+    softBox(len, 0.08, 0.08, 0x30343a, cxr, 1.02, PORCH_Z1 - 0.05);
+    softBox(len, 0.06, 0.06, 0x30343a, cxr, 0.55, PORCH_Z1 - 0.05);
+    for (let t = -len / 2 + 0.2; t < len / 2; t += 0.36) {
+      softBox(0.05, 0.95, 0.05, 0x30343a, cxr + t, 0.1, PORCH_Z1 - 0.05);
     }
   });
-  // 구령대 본체 (테라스 가장자리, 운동장을 내려다봄)
-  box(6.4, 0.85, 3.0, 0xd8d2c6, PODIUM_X, 0, TERR_Z - 1.5, { walk: true });
-  box(6.6, 0.12, 3.2, 0xe4dfd2, PODIUM_X, 0.85, TERR_Z - 1.5, { walk: true });   // 상판 테두리
-  box(6.6, 0.1, 0.1, 0x9aa5ad, PODIUM_X, 1.42, TERR_Z - 0.02, { collide: false });   // 정면 난간
-  [-3.15, 0, 3.15].forEach(ox => box(0.09, 0.55, 0.09, 0x9aa5ad, PODIUM_X + ox, 0.97, TERR_Z - 0.02, { collide: false }));
-  box(1.1, 0.55, 0.7, 0x9aa5ad, PODIUM_X, 0.97, TERR_Z - 2.3);   // 연단
-  box(0.03, 0.42, 0.03, 0x30343a, PODIUM_X, 1.52, TERR_Z - 2.35, { collide: false });   // 마이크 스탠드
-  box(0.09, 0.11, 0.09, 0x555b62, PODIUM_X, 1.94, TERR_Z - 2.35, { collide: false });
-  box(0.42, 0.3, 0.3, 0x4a5058, PODIUM_X - 1.95, 0.97, TERR_Z - 2.2, { collide: false });   // 앰프
-  geoAdd(UNIT_PLANE, 0x30343a, PODIUM_X - 1.95, 1.12, TERR_Z - 2.04, null, 0.3, 0.18, 1);
-  // 구령대 옆 디딤단 (현관 쪽에서 올라감)
-  box(1.6, 0.3, 0.5, 0xc9c4b8, PODIUM_X - 3.9, 0, TERR_Z - 2.6, { walk: true });
-  box(1.6, 0.6, 0.5, 0xc9c4b8, PODIUM_X - 3.9, 0, TERR_Z - 3.15, { walk: true });
-  zones.unshift({ x0: PODIUM_X - 3.4, x1: PODIUM_X + 3.4, z0: TERR_Z - 3.2, z1: TERR_Z, label: '구령대' });
+  // 포치 안 야외 테이블 3세트 (원목 상판 + 양옆 벤치)
+  [-4.2, 0, 4.2].forEach(ox => {
+    const tx = PODIUM_X + ox, tz = PORCH_CZ + 0.4;
+    box(1.7, 0.09, 0.8, 0x8a5a3b, tx, 0.66, tz, { collide: false, walk: true });          // 상판
+    [-0.7, 0.7].forEach(lx => box(0.1, 0.66, 0.7, 0x6d4a34, tx + lx, 0, tz));             // 다리판
+    [-0.72, 0.72].forEach(bz => {
+      box(1.7, 0.08, 0.34, 0x9c6b4a, tx, 0.42, tz + bz, { collide: false, walk: true });  // 벤치 판
+      [-0.7, 0.7].forEach(lx => box(0.08, 0.42, 0.3, 0x6d4a34, tx + lx, 0, tz + bz));
+    });
+  });
+
+  // 중앙 계단 1벌 6단 (운동장 y-1 → 테라스 y0) — 실물 폭 약 3m
+  const ST_W = 3.0, ST_TREAD = 0.32, ST_N = 6;
+  for (let si = 0; si < ST_N; si++) {
+    box(ST_W, 1 - si / ST_N, ST_TREAD, 0xb9b0a2, PODIUM_X, -1, TERR_Z + 0.16 + si * ST_TREAD);
+  }
+  // 계단 스테인리스 난간 (양쪽) — 세로 봉 + 경사 손잡이. 경사각 = atan(1 / (6×0.32))
+  const ST_A = Math.atan(1 / (ST_N * ST_TREAD)), ST_LEN = Math.hypot(1, ST_N * ST_TREAD);
+  const ST_CZ = TERR_Z + 0.16 + (ST_N * ST_TREAD) / 2, ST_CY = -0.5;
+  [-1, 1].forEach(s => {
+    const rx = PODIUM_X + s * (ST_W / 2 + 0.06);
+    softBox(0.07, 0.07, ST_LEN, 0xcdd3d8, rx, ST_CY + 0.92, ST_CZ, [-ST_A, 0, 0]);   // 손잡이
+    softBox(0.05, 0.05, ST_LEN, 0xcdd3d8, rx, ST_CY + 0.52, ST_CZ, [-ST_A, 0, 0]);   // 중간대
+    for (let si = 0; si < ST_N; si++) {                                              // 세로 봉
+      const zt = TERR_Z + 0.16 + si * ST_TREAD, yt = -1 + (1 - si / ST_N);
+      softBox(0.05, 0.95, 0.05, 0xcdd3d8, rx, yt, zt);
+      softBox(0.06, 0.09, 0.06, 0xe2e6ea, rx, yt + 0.95, zt);                        // 기둥머리 구슬
+    }
+  });
+
+  // 옹벽 마감 — 계단 **왼쪽만 컬러 모자이크**, 오른쪽은 흰 마름돌 (실사에서 좌우가 다르다)
+  const wallFaceZ = TERR_Z + 0.12 + 0.175 + 0.01;   // 옹벽 남쪽(운동장쪽) 면 바로 앞
+  const facePanel = (tex, x0f, x1f, tile) => {
+    const t = tex; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(Math.max(1, Math.round((x1f - x0f) / tile)), 1);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(x1f - x0f, 1.0), new THREE.MeshLambertMaterial({ map: t }));
+    m.position.set((x0f + x1f) / 2, -0.5, wallFaceZ);
+    m.matrixAutoUpdate = false; m.updateMatrix();
+    scene.add(m);
+  };
+  facePanel(mosaicTexture(), PODIUM_X - 10.5, PODIUM_X - 1.8, 2.2);
+  facePanel(rubbleTexture(), PODIUM_X + 1.8, PODIUM_X + 5.6, 1.4);
+  // 옹벽 상단 흰 캡 (실물: 모자이크 위에 흰 콘크리트 띠)
+  box(19, 0.14, 0.42, 0xf0ece1, PODIUM_X - 2.4, -0.07, TERR_Z + 0.12, { collide: false });
+
+  // 표지석 2기 — 왼쪽 검은 교훈석, 오른쪽 회색 교가비 (실사 확인)
+  // 자연석은 얇으면 '판때기'로 보인다 — 깊이를 두툼하게 주고, 위에 작은 덩어리를 얹어 실루엣을 깬다
+  // ⚠️ 표지석은 통과는 막되 **밟고 올라설 수 없어야 한다**(밟히면 지붕 등반 발판이 된다 — 측정으로 확인)
+  const stone = (sx, sz, w, h, d, colr, tilt) => {
+    box(w + 0.7, 0.24, d + 0.7, 0xcfc7b6, sx, 0, sz);                          // 화강석 기단(낮아서 밟아도 무해)
+    solidSoftBox(w, h * 0.72, d, colr, sx, 0.24, sz, [0, tilt, 0]);            // 아랫덩이
+    solidSoftBox(w * 0.78, h * 0.34, d * 0.82, colr, sx + w * 0.06, 0.24 + h * 0.72, sz, [0, tilt - 0.22, 0]);
+  };
+  // 글씨는 돌보다 작게 — 팻말이 돌보다 넓으면 '검은 판때기'로 보인다
+  stone(PODIUM_X - 8.6, TERR_Z - 1.8, 1.3, 2.15, 1.0, 0x3a3d40, 0.18);
+  const mottoTag = textSign('바르고 크게 자율', { h: 0.19, bg: '#3f4245', fg: '#f2f4f6', border: null, fontPx: 40, pad: 8 });
+  mottoTag.position.set(PODIUM_X - 8.55, 1.62, TERR_Z - 1.45);
+  mottoTag.rotation.y = 0.18;
+  scene.add(mottoTag);
+  stone(PODIUM_X + 8.4, TERR_Z - 1.2, 1.45, 1.95, 0.95, 0x9aa0a4, -0.14);
+  const songTag = textSign('교 가', { h: 0.22, bg: '#a3a9ad', fg: '#2b2f33', border: null, fontPx: 44, pad: 10 });
+  songTag.position.set(PODIUM_X + 8.4, 1.82, TERR_Z - 1.1);
+  songTag.rotation.y = -0.14;
+  scene.add(songTag);
+
+  // 탑시계 (실사: 운동장에서 가장 눈에 띄는 수직 요소 — 기둥형 4면 시계)
+  const CLK_X = PODIUM_X + 17, CLK_Z = TERR_Z - 1.6;
+  box(0.9, 0.3, 0.9, 0xcfc7b6, CLK_X, 0, CLK_Z);
+  solidSoftBox(0.42, 3.3, 0.42, 0xe6e2d6, CLK_X, 0.3, CLK_Z);
+  solidSoftBox(1.05, 1.05, 1.05, 0x51585e, CLK_X, 3.6, CLK_Z);   // 시계 몸통(짙게 해야 흰 문자판이 산다)
+  softBox(1.2, 0.16, 1.2, 0x3a4046, CLK_X, 4.65, CLK_Z);
+  const CLK_MAT = new THREE.MeshBasicMaterial({ map: clockFace() });
+  [[0, 0, 0.535], [Math.PI, 0, -0.535], [Math.PI / 2, 0.535, 0], [-Math.PI / 2, -0.535, 0]].forEach(([ry, ox, oz]) => {
+    const f = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.82), CLK_MAT);
+    f.position.set(CLK_X + ox, 4.12, CLK_Z + oz);
+    f.rotation.y = ry;
+    f.matrixAutoUpdate = false; f.updateMatrix();
+    scene.add(f);
+  });
+
+  zones.unshift({ x0: PODIUM_X - PORCH_W / 2, x1: PODIUM_X + PORCH_W / 2, z0: PORCH_Z0, z1: TERR_Z, label: '구령대(필로티)' });
   // 동·서 경사로 — 윗끝이 테라스면(y0)과 정확히 만나게 배치(턱 제거), 난간은 경사면에 밀착
   const RAMP_A = 0.235, RAMP_Z = TERR_Z + 2.3;
   const rampSurfY = t => -0.57 - t * Math.sin(RAMP_A);       // 경사면 상면 y (t = 로컬 z)
@@ -1128,7 +1261,8 @@ export function buildWorld(scene) {
   NET_TEX.wrapS = NET_TEX.wrapT = THREE.RepeatWrapping;
   const NET_FENCE = new THREE.MeshLambertMaterial({ map: NET_TEX, alphaTest: 0.4, side: THREE.DoubleSide });
   // 구령대(정면 6.6m)와 그 좌우 계단(각 3.4m) 구간은 펜스를 비운다
-  const netSegs = [[-40, -36.6], [-31.4, -9.6], [-2.4, PODIUM_X - 6.6], [PODIUM_X + 6.6, 35.4], [40.6, 52]];
+  // 필로티 앞은 실물에 펜스가 없다 — 모자이크 옹벽 구간(±10.5)까지 비운다
+  const netSegs = [[-40, -36.6], [-31.4, -9.6], [-2.4, PODIUM_X - 10.5], [PODIUM_X + 10.5, 35.4], [40.6, 52]];
   netSegs.forEach(([a, b]) => {
     const len = b - a;
     const ng = new THREE.PlaneGeometry(len, 1.5);
@@ -1145,7 +1279,7 @@ export function buildWorld(scene) {
     }
   });
   for (let bx3 = -38; bx3 <= 50; bx3 += 4.5) {
-    if (Math.abs(bx3 - PODIUM_X) < 7) continue;   // 구령대·계단 자리
+    if (Math.abs(bx3 - PODIUM_X) < 11) continue;   // 필로티·계단·표지석 자리
     bush(bx3, TERR_Z - 1.1, 0.8 + rng() * 0.5);
   }
   for (let bx6 = 54; bx6 <= 79; bx6 += 4) bush(bx6, TERR_Z - 1.0, 0.9 + rng() * 0.5);   // 동측 테라스 모서리 관목
@@ -1443,7 +1577,9 @@ export function buildWorld(scene) {
   const gx0 = gx - G.width / 2, gx1 = gx + G.width / 2;
   const gz0 = gz - G.depth / 2, gz1 = gz + G.depth / 2;
   const gh = G.wallHeight;
-  const brickC = 0xa8503a, panelC = 0xd9cbb2;   // 사진: 상단 베이지 패널
+  // 실사(2026-07-31): 체육관 본체 상부는 베이지 패널이 아니라 **회색 수직 골판 금속**이고,
+  // 붉은 벽돌은 아래 부속동 높이까지만이다.
+  const brickC = 0xa8503a, panelC = 0xa8a096;   // 회색 금속 패널 (#a69e94 계열)
   const bandH = 3.2;
   // 남북 긴 벽: 진짜 뚫린 창 2열 (아래 1.35~2.45 · 위 5.05~6.15)
   const gWins = [];
@@ -1706,6 +1842,26 @@ export function buildWorld(scene) {
   fplane.position.set(F.center[0], -0.988, F.center[1]);
   scene.add(fplane);
   walkables.push(fplane);
+
+  // ===== 통학로 (실사 + 사용자 확인: "정문 기준 오른쪽길(큰 나무 있는 곳)에서 구령대까지") =====
+  // 아이들은 모래 운동장을 가로지르지 않고 **동쪽 가장자리를 돌아** 구령대 계단으로 온다.
+  // 포장 = 베이지 블록 + **중앙 노란 점자블록**(실측 #efd9ad / #ecd194) — 학교 전체를 잇는 시각 축.
+  const PAVE_C = 0xefd9ad, TACT_C = 0xecd194, PAVE_W = 3.0, TACT_W = 0.55;
+  // seg: [x0, x1, z0, z1] — 가로/세로 자동 판별
+  // ⚠️ ②는 큰나무(46,34) 줄기와 데크(x~49.85)를 피해 그 **동쪽**으로 지난다.
+  //    x 45~48로 두면 나무 줄기 충돌에 막혀 길이 끊긴다(측정으로 확인).
+  [[28, 53.0, 38.5, 41.5],      // ① 정문 마당 → 동쪽으로
+   [50.0, 53.0, -16.5, 41.5],   // ② 동쪽 가장자리를 따라 북상 (큰나무 데크 옆을 지난다)
+   [4.5, 53.0, -16.5, -13.5],   // ③ 옹벽 앞을 따라 서쪽으로 → 구령대 계단
+  ].forEach(([x0p, x1p, z0p, z1p]) => {
+    const w = x1p - x0p, d = z1p - z0p, cx2 = (x0p + x1p) / 2, cz2 = (z0p + z1p) / 2;
+    box(w, 0.05, d, PAVE_C, cx2, 0, cz2, { collide: false, walk: true });
+    // 점자블록은 긴 축을 따라 중앙 1줄
+    if (w >= d) box(w, 0.016, TACT_W, TACT_C, cx2, 0.05, cz2, { collide: false });
+    else box(TACT_W, 0.016, d, TACT_C, cx2, 0.05, cz2, { collide: false });
+  });
+  // 큰나무 데크 진입 포장 — 통학로에서 데크로 꺾어 들어가는 짧은 갈래
+  box(4.2, 0.05, 2.6, PAVE_C, 47.6, 0, 30.4, { collide: false, walk: true });
   function goalAt(gxp, gcz, s, sc) {   // s=개구 방향(±1), sc=크기 배율
     [-2.6 * sc, 2.6 * sc].forEach(zo => {
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2 * sc, 8), mat(0xffffff));
@@ -1720,14 +1876,12 @@ export function buildWorld(scene) {
     [-2.7 * sc, 2.7 * sc].forEach(zo => box(1.15 * sc, 2 * sc, 0.1, 0, gxp + s * 0.55 * sc, 0, gcz + zo, { material: NET }));
     box(1.15 * sc, 0.08, 5.4 * sc, 0, gxp + s * 0.55 * sc, 1.95 * sc, gcz, { material: NET, collide: false });
   }
-  goalAt(F.center[0] - (F.width / 2 - 18), F.center[1], -1, 1);
-  goalAt(F.center[0] + (F.width / 2 - 18), F.center[1], 1, 1);
-  // 미니 골대 한 쌍 (사진2) — 자기들끼리 마주보는 미니 코트 + 라인
-  goalAt(-6, 22, -1, 0.55);
-  goalAt(18, 22, 1, 0.55);
-  box(24, 0.012, 0.14, 0xe8e2d2, 6, -0.99, 15.4, { collide: false });    // 미니 코트 터치라인
-  box(24, 0.012, 0.14, 0xe8e2d2, 6, -0.99, 28.6, { collide: false });
-  box(0.14, 0.012, 13.2, 0xe8e2d2, 6, -0.99, 22, { collide: false });    // 하프라인
+  // 골대는 trackTexture()가 그린 골라인 위에 정확히 선다
+  // (캔버스 1024px=96m, strokeRect 반폭 260px → 260 × 96/1024 = 24.375m)
+  const GOAL_DX = 24.375;
+  goalAt(F.center[0] - GOAL_DX, F.center[1], -1, 1);
+  goalAt(F.center[0] + GOAL_DX, F.center[1], 1, 1);
+  // (실사 영상 확인 2026-07-31) 미니 골대·미니 코트는 실제 운동장에 없다 — 제거함
   // 야간 조명탑 (사진2·3) — 큰나무(46,34) 시야를 가리지 않게 서쪽으로
   const FLOOD = new THREE.MeshBasicMaterial({ color: 0xb9bfc4 });   // 낮=소등, 밤=점등 (main에서 전환)
   dynamic.floodMat = FLOOD;
@@ -1745,7 +1899,8 @@ export function buildWorld(scene) {
   box(17, 0.05, 14, 0xb4b8bd, px, 0, pz, { collide: false, walk: true });   // 사진: 회색 벽돌 포장
   // 자전거 교통안전 코스 (서쪽 별도 포장 — 노란 라인 + 숫자 타일)
   const rcx = px - 14, rcz = pz - 0.5;
-  box(12, 0.048, 11, 0xb4b8bd, rcx, 0, rcz, { collide: false, walk: true });
+  // 폭 11 = 놀이터 포장(px±8.5) 서단과 딱 맞닿게. 12로 두면 0.5m 겹치고 상면 차가 2mm라 반짝인다
+  box(11, 0.048, 11, 0xb4b8bd, rcx, 0, rcz, { collide: false, walk: true });
   box(7, 0.014, 0.32, 0xf2c531, rcx, 0.05, rcz - 3.2, { collide: false });
   box(7, 0.014, 0.32, 0xf2c531, rcx, 0.05, rcz + 3.2, { collide: false });
   box(0.32, 0.014, 6.7, 0xf2c531, rcx - 3.35, 0.05, rcz, { collide: false });
@@ -1865,7 +2020,9 @@ export function buildWorld(scene) {
   // ---------- 교문 + 길 (운동장 레벨) ----------
   const [gtx, gtz] = SCHOOL.gate;
   YOFF = -1;
-  box(4, 0.05, gtz - (F.center[1] + F.depth / 2), 0xd8d2c6, gtx, 0.006, (gtz + F.center[1] + F.depth / 2) / 2, { collide: false, walk: true });
+  // 정문 안쪽 진입 마당 — 실사: 교문을 들어서면 폭 넓은 보도블록 마당이고 통학버스가 그 위에 선다.
+  // (폭 4는 문짝 너비만 한 통로였고, 버스가 잔디에 서는 원인이었다)
+  box(16, 0.05, gtz - (F.center[1] + F.depth / 2), 0xd8d2c6, gtx - 5, 0.006, (gtz + F.center[1] + F.depth / 2) / 2, { collide: false, walk: true });
   [-3.5, 3.5].forEach(sx => box(1, 3, 1, 0xb9b5aa, gtx + sx, 0, gtz));
   box(9, 0.5, 0.8, 0x8a9096, gtx, 3.05, gtz, { collide: false });
   function pine(tx, tz, s = 1) {
@@ -1934,29 +2091,39 @@ export function buildWorld(scene) {
     box(5, 2.4, 4, 0xdfe3e8, sx2, 0, sz2);
     box(5.6, 0.28, 4.6, 0x2f6fd0, sx2, 2.4, sz2, { collide: false });
   });
-  // 노란 스쿨버스 (사진)
-  box(2.3, 1.5, 5.2, 0xf2c531, 28, 0.5, -64.5);
-  box(2.32, 0.32, 5.2, 0xf5f6f7, 28, 2.0, -64.5, { collide: false });
-  geoAdd(UNIT_PLANE, 0x2b3a4c, 26.83, 1.55, -64.5, [0, -Math.PI / 2, 0], 4.2, 0.62, 1);
-  geoAdd(UNIT_PLANE, 0x2b3a4c, 29.17, 1.55, -64.5, [0, Math.PI / 2, 0], 4.2, 0.62, 1);
-  geoAdd(UNIT_PLANE, 0x2b3a4c, 28, 1.5, -61.85, [0, Math.PI, 0], 1.9, 0.75, 1);   // 전면 유리
-  geoAdd(UNIT_PLANE, 0x2b3a4c, 28, 1.5, -67.15, [0, 0, 0], 1.9, 0.7, 1);          // 후면 유리
-  geoAdd(UNIT_BOX, 0xf5f6f7, 28, 0.55, -67.17, null, 0.5, 0.15, 0.03);            // 번호판
-  geoAdd(UNIT_BOX, 0xf5f6f7, 28, 0.55, -61.83, null, 0.5, 0.15, 0.03);
-  [-0.75, 0.75].forEach(ox => {                                                    // 전조등 · 후미등
-    geoAdd(UNIT_BOX, 0xfff4d0, 28 + ox, 0.85, -61.83, null, 0.3, 0.18, 0.04);
-    geoAdd(UNIT_BOX, 0xd0392e, 28 + ox, 1.05, -67.17, null, 0.28, 0.16, 0.04);
-  });
-  geoAdd(UNIT_BOX, 0x30343a, 28, 1.02, -61.84, null, 2.2, 0.14, 0.05);             // 앞 범퍼 라인
-  geoAdd(UNIT_BOX, 0x30343a, 28, 0.4, -61.84, null, 2.3, 0.2, 0.06);
-  geoAdd(UNIT_BOX, 0x30343a, 28, 0.4, -67.16, null, 2.3, 0.2, 0.06);
-  [[-0.85, -63], [0.85, -63], [-0.85, -66], [0.85, -66]].forEach(([ox, wz3]) => {
-    const wh2 = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.25, 10), mat(0x24262c));
-    wh2.rotation.z = Math.PI / 2;
-    wh2.position.set(28 + ox, 0.34, wz3);
-    scene.add(wh2);
-  });
   zones.push({ x0: -20, x1: 48, z0: -69.5, z1: -59.5, label: '주차장' });
+
+  // 노란 통학버스 — 실사 확인(2026-07-31): 북측 주차장이 아니라 **정문 안쪽 진입 마당**에 선다.
+  // 좌표를 상수로 뺀 이유: 예전엔 리터럴 28/-64.5가 20줄에 흩어져 있어 옮길 때마다 새는 값이 생겼다.
+  {
+    const BUS_X = 22, BUS_Z = 41.8;             // 정문(30,44.5) 서쪽, 운동장 북단 밖
+    const keepBus = YOFF;
+    YOFF = terrY(BUS_Z);                        // 운동장 레벨(-1)
+    const fZ = BUS_Z - 2.65, rZ = BUS_Z + 2.65; // 앞(남) · 뒤(북)
+    box(2.3, 1.5, 5.2, 0xf2c531, BUS_X, 0.5, BUS_Z);
+    box(2.32, 0.32, 5.2, 0xf5f6f7, BUS_X, 2.0, BUS_Z, { collide: false });
+    geoAdd(UNIT_PLANE, 0x2b3a4c, BUS_X - 1.17, 1.55, BUS_Z, [0, -Math.PI / 2, 0], 4.2, 0.62, 1);
+    geoAdd(UNIT_PLANE, 0x2b3a4c, BUS_X + 1.17, 1.55, BUS_Z, [0, Math.PI / 2, 0], 4.2, 0.62, 1);
+    geoAdd(UNIT_PLANE, 0x2b3a4c, BUS_X, 1.5, fZ, [0, Math.PI, 0], 1.9, 0.75, 1);   // 전면 유리
+    geoAdd(UNIT_PLANE, 0x2b3a4c, BUS_X, 1.5, rZ, [0, 0, 0], 1.9, 0.7, 1);          // 후면 유리
+    geoAdd(UNIT_BOX, 0xf5f6f7, BUS_X, 0.55, rZ - 0.02, null, 0.5, 0.15, 0.03);     // 번호판
+    geoAdd(UNIT_BOX, 0xf5f6f7, BUS_X, 0.55, fZ + 0.02, null, 0.5, 0.15, 0.03);
+    [-0.75, 0.75].forEach(ox => {                                                  // 전조등 · 후미등
+      geoAdd(UNIT_BOX, 0xfff4d0, BUS_X + ox, 0.85, fZ + 0.02, null, 0.3, 0.18, 0.04);
+      geoAdd(UNIT_BOX, 0xd0392e, BUS_X + ox, 1.05, rZ - 0.02, null, 0.28, 0.16, 0.04);
+    });
+    geoAdd(UNIT_BOX, 0x30343a, BUS_X, 1.02, fZ + 0.01, null, 2.2, 0.14, 0.05);     // 앞 범퍼 라인
+    geoAdd(UNIT_BOX, 0x30343a, BUS_X, 0.4, fZ + 0.01, null, 2.3, 0.2, 0.06);
+    geoAdd(UNIT_BOX, 0x30343a, BUS_X, 0.4, rZ - 0.01, null, 2.3, 0.2, 0.06);
+    // 바퀴는 개별 Mesh라 YOFF가 자동 적용되지 않는다 — 직접 더할 것
+    [[-0.85, -1.5], [0.85, -1.5], [-0.85, 1.5], [0.85, 1.5]].forEach(([ox, dz]) => {
+      const wh2 = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.25, 10), mat(0x24262c));
+      wh2.rotation.z = Math.PI / 2;
+      wh2.position.set(BUS_X + ox, 0.34 + YOFF, BUS_Z + dz);
+      scene.add(wh2);
+    });
+    YOFF = keepBus;
+  }
   // 뒤편 디테일: 실외기 + 배관 (서관·급식동 뒤)
   [[-38, -50.75], [-30, -50.75], [-22, -50.75], [-8.2, -58.75], [-1.8, -58.75]].forEach(([ax2, az2]) => {
     box(0.85, 0.7, 0.38, 0xdfe3e8, ax2, 0, az2);
@@ -2063,6 +2230,21 @@ export function buildWorld(scene) {
   // 건물 앞 관목 줄
   for (let bx2 = fx0 + 2; bx2 < fx1 - 1; bx2 += 4.2) {
     if (Math.abs(bx2 - hallCx) > 3.2) bush(bx2, fz1 + 1.15, 1 + rng() * 0.5);
+  }
+  // 건물 앞 **다듬은 향나무 토피어리 줄** (실사: 학교 정면 전체에 둥근 토피어리가 늘어서 있다)
+  // 짧은 줄기 + 둥근 구슬 2단 — 자연수형(tree)과 확실히 구분되게
+  const topiary = (tx3, tz3, s = 1) => {
+    const keep = YOFF;
+    YOFF = terrY(tz3);
+    geoSoft(TRUNK_GEO, 0x6d5236, tx3, 0.28 * s, tz3, null, 0.34 * s, 0.34 * s, 0.34 * s);
+    geoSoft(ICO_GEO, 0x3f6b45, tx3, 0.78 * s, tz3, [0, 0.6, 0], 0.78 * s, 0.66 * s, 0.78 * s);
+    geoSoft(ICO_GEO, 0x497a4e, tx3, 1.32 * s, tz3, [0, 2.1, 0], 0.52 * s, 0.46 * s, 0.52 * s);
+    YOFF = keep;
+  };
+  for (let tx3 = fx0 + 3.4; tx3 <= fx1 - 2; tx3 += 5.6) {
+    if (Math.abs(tx3 - hallCx) < 8.5) continue;                 // 필로티·계단·표지석 자리
+    if (Math.abs(tx3 - SCHOOL.flagPole[0]) < 2.5) continue;
+    topiary(tx3, fz1 + 2.6, 0.9 + rng() * 0.35);
   }
   // 건물 앞 가로수 줄 (위성사진: 남측 전면에 촘촘한 원형 수관)
   for (let tx2 = fx0 + 4; tx2 <= fx1 - 3; tx2 += 7) {

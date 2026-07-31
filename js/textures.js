@@ -329,3 +329,94 @@ export function bookStripes() {
   }
   return canvasTex(c);
 }
+
+// ---------- 컬러 모자이크 옹벽 (실사: 구령대 계단 왼쪽 옹벽) ----------
+// 파스텔 돌조각이 흰 줄눈으로 불규칙하게 붙은 벽. 조각 크기·색이 제각각인 게 특징.
+export function mosaicTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const x = c.getContext('2d');
+  x.fillStyle = shadeCss('#f2efe6');            // 줄눈(흰 시멘트)
+  x.fillRect(0, 0, 256, 128);
+  // 실물은 파스텔 조각이 **크기도 모양도 제각각**이라 격자로 보이면 안 된다.
+  const cols = ['#e3c274', '#dd93a4', '#8fb4cf', '#9ec089', '#e2ddd0', '#cba071'].map(shadeCss);
+  let seed = 29;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const rows = 4, rh = 128 / rows;
+  for (let r = 0; r < rows; r++) {
+    let px = -rnd() * 40;
+    const yBase = r * rh;
+    while (px < 264) {
+      const w = 12 + rnd() * 44;                    // 폭 편차를 크게 (12~56)
+      const hj = rnd() * 7 - 3.5;                   // 줄 높이도 흔든다
+      const y = yBase + 2 + rnd() * 3;
+      const h = rh - 4 + hj;
+      x.fillStyle = cols[Math.floor(rnd() * cols.length)];
+      x.beginPath();
+      // 5각형으로 찍어 돌조각처럼 (모서리마다 다른 크기로 어긋냄)
+      x.moveTo(px + rnd() * 5, y + rnd() * 3);
+      x.lineTo(px + w * (0.45 + rnd() * 0.2), y - rnd() * 3);
+      x.lineTo(px + w - rnd() * 5, y + rnd() * 4);
+      x.lineTo(px + w - rnd() * 4, y + h - rnd() * 3);
+      x.lineTo(px + rnd() * 6, y + h + rnd() * 2);
+      x.closePath();
+      x.fill();
+      px += w * (0.82 + rnd() * 0.2);               // 겹쳐 붙여 줄눈 폭도 제각각
+    }
+  }
+  return canvasTex(c);
+}
+
+// ---------- 흰 마름돌 무늬 (계단 오른쪽 옹벽 — 색 없이 돌 조각만) ----------
+export function rubbleTexture() {
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 128;
+  const x = c.getContext('2d');
+  x.fillStyle = shadeCss('#efece2');
+  x.fillRect(0, 0, 128, 128);
+  x.strokeStyle = shadeCss('#b9b3a4');
+  x.lineWidth = 2;
+  let seed = 91;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 26; i++) {
+    const cx2 = rnd() * 128, cy2 = rnd() * 128, r = 9 + rnd() * 13;
+    x.beginPath();
+    for (let a = 0; a < 5; a++) {
+      const th = (a / 5) * Math.PI * 2 + rnd() * 0.4;
+      const rr = r * (0.7 + rnd() * 0.5);
+      const px2 = cx2 + Math.cos(th) * rr, py2 = cy2 + Math.sin(th) * rr;
+      a === 0 ? x.moveTo(px2, py2) : x.lineTo(px2, py2);
+    }
+    x.closePath();
+    x.stroke();
+  }
+  return canvasTex(c);
+}
+
+// ---------- 탑시계 문자판 (실사: 정면 광장의 4면 기둥형 시계) ----------
+export function clockFace() {
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 128;
+  const x = c.getContext('2d');
+  x.fillStyle = shadeCss('#fbf8f0');
+  x.fillRect(0, 0, 128, 128);
+  x.strokeStyle = shadeCss('#2f3438');
+  x.lineWidth = 6;
+  x.beginPath(); x.arc(64, 64, 55, 0, Math.PI * 2); x.stroke();
+  x.lineWidth = 4;
+  for (let i = 0; i < 12; i++) {                       // 눈금
+    const a = (i / 12) * Math.PI * 2;
+    const r0 = i % 3 === 0 ? 40 : 46;
+    x.beginPath();
+    x.moveTo(64 + Math.sin(a) * r0, 64 - Math.cos(a) * r0);
+    x.lineTo(64 + Math.sin(a) * 51, 64 - Math.cos(a) * 51);
+    x.stroke();
+  }
+  x.lineWidth = 7; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(64, 64); x.lineTo(64 + 24, 64 - 14); x.stroke();   // 시침 ~2시
+  x.lineWidth = 5;
+  x.beginPath(); x.moveTo(64, 64); x.lineTo(64 + 6, 64 - 40); x.stroke();    // 분침 ~12시
+  x.fillStyle = shadeCss('#2f3438');
+  x.beginPath(); x.arc(64, 64, 5, 0, Math.PI * 2); x.fill();
+  return canvasTex(c);
+}
