@@ -1215,6 +1215,20 @@ export function buildWorld(scene) {
   B.wings.forEach(wg => wg.rooms.forEach(r => {
     if (r.innerOnly || r.type === 'stair') return;
     makeDoor(doorCOf(r) - 0.9, fz0, 1.8, 'x', { swing: 1 });
+    if (r.type === 'library') {
+      // 실사(영상): 도서관 입구는 **짙은 목재 아치 프레임 + "슬기샘 도서관" 현판 + 도서반납함**
+      const ldx = doorCOf(r), LW = 0x5a4232;
+      [-1.35, 1.35].forEach(ox => solidSoftBox(0.26, 2.5, 0.3, LW, ldx + ox, 0, fz0 + 0.28));
+      softBox(3.1, 0.3, 0.34, LW, ldx, 2.5, fz0 + 0.28);
+      const lTag = textSign('슬기샘 도서관', { h: 0.22, bg: '#5a4232', fg: '#f7edda', border: null, fontPx: 42, pad: 10 });
+      lTag.position.set(ldx, 2.62, fz0 + 0.47);
+      scene.add(lTag);
+      solidSoftBox(0.55, 1.05, 0.4, 0x7a8b99, ldx + 2.1, 0, fz0 + 0.45);      // 도서반납함
+      geoAdd(UNIT_PLANE, 0x2f3438, ldx + 2.1, 0.88, fz0 + 0.66, null, 0.34, 0.08, 1);   // 투입구
+      const rTag = textSign('도서반납함', { h: 0.11, bg: '#7a8b99', fg: '#ffffff', border: null, fontPx: 30, pad: 8 });
+      rTag.position.set(ldx + 2.1, 0.62, fz0 + 0.66);
+      scene.add(rTag);
+    }
   }));
   makeDoor(K.dutyRoom.doorC - 0.8, fz0, 1.6, 'x', { swing: 1 });
   makeDoor(K.doorC - 1.2, fz0, 2.4, 'x', { swing: 1 });
@@ -1263,10 +1277,13 @@ export function buildWorld(scene) {
       const backDoor = ['classroom', 'computer', 'science', 'daycare'].includes(r.type) && cw >= 6.5;
       if (backDoor) gaps.push({ c: s1 - 1.9, w: 1.8 });
       // 복도쪽 벽: 문 개구부 + 진짜 뚫린 복도창 (복도에서 교실 안이 보임)
-      const cwins = (backDoor ? [s0 + cw * 0.42, s0 + cw * 0.6] : [s0 + cw * 0.55, s0 + cw * 0.85])
-        .map(wxp => ({ c: wxp, w: 1.3 }));
+      // ⚠️ 화장실은 복도창을 뚫지 않는다 — 실물에 없고(사생활), 있으면 학생자치회 게시판이 창을 덮는다
+      const cwins = r.type === 'toilet' ? []
+        : (backDoor ? [s0 + cw * 0.42, s0 + cw * 0.6] : [s0 + cw * 0.55, s0 + cw * 0.85])
+          .map(wxp => ({ c: wxp, w: 1.3 }));
       wallXWin(s0, s1, zCor, innerC, cwins, { h: FH, sill: 1.9, wh: 0.9, doors: gaps });
-      gaps.forEach(gp => makeDoor(gp.c - gp.w / 2, zCor, gp.w, 'x', { swing: -1 }));
+      gaps.forEach(gp => makeDoor(gp.c - gp.w / 2, zCor, gp.w, 'x',
+        { swing: -1, color: r.kinder ? 0xe8c33c : undefined }));   // 실사: 유치원 문은 노란색
       // 팻말: 복도창 상단(2.8)과 천장(FH-0.27=3.13) 사이 띠에만 놓는다.
       // ⚠️ 높이 h 를 키우면 위가 천장에 잘린다 — 중심 2.95 · h 0.30 이 상한
       const label = SCHOOL.people && SCHOOL.people[r.name] ? `${r.name} 1반` : r.name;
@@ -1304,7 +1321,9 @@ export function buildWorld(scene) {
   // 벽 자체는 황토 베이지(data.js wallColor)이고, 그 위에 **코발트 블루 수평띠 2줄 + 비비드 옐로우 1줄**과
   // **실 경계마다 파란 세로 기둥 스트립**을 덧댄다. 창(sill 1.1 ~ 2.5)을 피해 아래·위 밴드에만 놓는다.
   const BLUEC = 0x3f6fa8, YELC = 0xe8bf3c, FACE_T = 0.1;
-  const faceZ = fz1 + 0.16;   // 남벽 바깥면(fz1+0.15) 바로 앞
+  // ⚠️ 0.26 고정 — 창틀 프레임(fz1+0.18)·야간 glow판(fz1+0.19)보다 확실히 앞이어야 한다.
+  //    0.16으로 두면 띠 상자(0.11~0.21)가 그 둘과 겹쳐 **창문이 반짝인다**(실기기 신고)
+  const faceZ = fz1 + 0.26;
   // ⚠️ 전부 softBox — box(collide:false)로 하면 **띠를 밟고 올라설 수 있다**(측정으로 확인)
   const faceBand = (y0b, hb, colb) =>
     softBox(fx1 - fx0, hb, FACE_T, colb, (fx0 + fx1) / 2, y0b, faceZ);
@@ -1446,13 +1465,14 @@ export function buildWorld(scene) {
   const ST_CZ = TERR_Z + 0.16 + (ST_N * ST_TREAD) / 2, ST_CY = -0.5;
   [-1, 1].forEach(s => {
     const rx = PODIUM_X + s * (ST_W / 2 + 0.06);
+    // ⚠️ 세로 기둥은 반드시 **바닥(-1)까지 접지** — 계단(폭 3.0) 바깥 x라 계단 높이에서 시작하면 허공에 뜬다(실기기 신고)
     softBox(0.07, 0.07, ST_LEN, 0xcdd3d8, rx, ST_CY + 0.92, ST_CZ, [-ST_A, 0, 0]);   // 손잡이
     softBox(0.05, 0.05, ST_LEN, 0xcdd3d8, rx, ST_CY + 0.52, ST_CZ, [-ST_A, 0, 0]);   // 중간대
-    for (let si = 0; si < ST_N; si++) {                                              // 세로 봉
+    [0, 2, 4, 5].forEach(si => {                                                     // 세로 기둥(접지)
       const zt = TERR_Z + 0.16 + si * ST_TREAD, yt = -1 + (1 - si / ST_N);
-      softBox(0.05, 0.95, 0.05, 0xcdd3d8, rx, yt, zt);
-      softBox(0.06, 0.09, 0.06, 0xe2e6ea, rx, yt + 0.95, zt);                        // 기둥머리 구슬
-    }
+      softBox(0.06, yt + 0.95 + 1, 0.06, 0xcdd3d8, rx, -1, zt);
+      softBox(0.07, 0.09, 0.07, 0xe2e6ea, rx, yt + 0.95, zt);                        // 기둥머리 구슬
+    });
   });
 
   // 옹벽 마감 — 계단 **왼쪽만 컬러 모자이크**, 오른쪽은 흰 마름돌 (실사에서 좌우가 다르다)
@@ -1868,8 +1888,17 @@ export function buildWorld(scene) {
   // B 상부 착지판 — 전 폭 공중판(y3.1~3.4). 아래는 1층 입구 스트립(머리 위 3.1 확보).
   // 여기서 서쪽으로 걸으면 2층 복도 테라조(3.43)와 3cm 차로 이어진다.
   box(tx1 - wkX - 0.2, 0.3, 1.15, 0xc9b8a0, midX, FH - 0.3, stepLo + 0.05, { walk: true });
-  // 레인 사이 솔리드 칸막이 (계단 구간 전체 + 참까지)
-  solidSoftBox(0.12, 3.6, stepLo - LAND_Z0 + 0.4, 0xd9d2c2, midX, 0, (stepLo + LAND_Z0) / 2 - 0.2);
+  // 레인 사이: 보이는 건 **허리높이 목재 난간벽**, 끼임 방지는 INVIS 전 높이 (3.6짜리 슬래브 벽은 흉하다)
+  solidSoftBox(0.12, 1.05, stepLo - LAND_Z0 + 0.4, 0xb08968, midX, 0, (stepLo + LAND_Z0) / 2 - 0.2);
+  softBox(0.16, 0.07, stepLo - LAND_Z0 + 0.4, 0x8a6a45, midX, 1.05, (stepLo + LAND_Z0) / 2 - 0.2);
+  box(0.12, 3.6, stepLo - LAND_Z0 + 0.4, 0, midX, 0, (stepLo + LAND_Z0) / 2 - 0.2, { material: INVIS, noCam: true });
+  // B 공중 디딤판 밑을 받치는 측판(스트링거) — 밑에서 올려다볼 때 '떠 있는 판'으로 안 보이게
+  {
+    const bAng = Math.atan2(1.7, U_N * U_TREAD);
+    const bLen = Math.hypot(1.7, U_N * U_TREAD) + 0.5;
+    [laneE - LANE_W / 2 + 0.04, laneE + LANE_W / 2 - 0.04].forEach(sx7 =>
+      softBox(0.07, 0.34, bLen, 0xb8a88e, sx7, 2.25, LAND_Z0 + (U_N * U_TREAD) / 2, [-bAng, 0, 0]));
+  }
   // 서측 낙하 방지 INVIS + 참 안쪽 손잡이
   // ⚠️ 높이 3.6 고정 — 더 올리면 2층(py3.4·충돌밴드 3.95~)에서 계단→복도 건너가기가 막힌다(시험으로 확인)
   box(0.1, 3.6, stepLo - stepHi, 0, wkX + 0.05, 0, (stepLo + stepHi) / 2, { material: INVIS, noCam: true });
