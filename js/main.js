@@ -159,6 +159,7 @@ canvas.addEventListener('wheel', e => {
 }, { passive: true });
 
 const _upDir = new THREE.Vector3(0, 1, 0);
+const _probe = new THREE.Vector3();
 const ceilRay = new THREE.Raycaster();
 ceilRay.far = 5;
 let camLen = 4.9;      // 실제 적용 중인 카메라 거리 (이 값만 부드럽게 움직인다)
@@ -183,19 +184,32 @@ function updateCamera(dt) {
     Math.sin(camPitch),
     Math.cos(camYaw) * Math.cos(camPitch)
   );
-  // 가림 검사 (이상 방향으로만)
-  let want = camDist;
-  camRay.set(_target, _dir);
-  camRay.far = camDist + 0.4;
-  const hits = camRay.intersectObjects(player._nearSolid, false);
-  for (let i = 0; i < hits.length; i++) {
-    if (hits[i].object.userData.noCam) continue;   // 옥상 차단벽 등은 카메라 통과 허용
-    want = Math.max(0.9, hits[i].distance - 0.35);
-    break;
+  // 가림 검사 — 정면 1줄(진짜 가림)과 좌우 1줄씩(미리 알림)을 구분해서 쓴다.
+  // ⚠️ 셋을 그냥 min 으로 합치면 옆줄이 걸리는 순간마다 '툭' 튄다(측정으로 확인).
+  //    정면이 막혔을 때만 빠르게 당기고, 옆줄만 막혔으면 아주 천천히 미리 당긴다.
+  let front = camDist, side = camDist;
+  const sideX = Math.cos(camYaw) * 0.45, sideZ = -Math.sin(camYaw) * 0.45;
+  for (let s = -1; s <= 1; s++) {
+    _probe.set(_target.x + sideX * s, _target.y, _target.z + sideZ * s);
+    camRay.set(_probe, _dir);
+    camRay.far = camDist + 0.4;
+    const hits = camRay.intersectObjects(player._nearSolid, false);
+    for (let i = 0; i < hits.length; i++) {
+      if (hits[i].object.userData.noCam) continue;   // 옥상 차단벽 등은 카메라 통과 허용
+      const d = Math.max(0.9, hits[i].distance - 0.35);
+      if (s === 0) front = Math.min(front, d); else side = Math.min(side, d);
+      break;
+    }
   }
-  // 벽 쪽으론 빠르게(관통 방지) — 다만 한 프레임 이동량을 제한해 '툭' 튀지 않게
-  if (want < camLen) camLen = Math.max(want, camLen - Math.max(0.25, dt * 18));
-  else camLen += (want - camLen) * Math.min(1, dt * 5);          // 트일 땐 부드럽게
+  // 세 경우 모두 '지수 수렴 + 프레임당 이동 상한'으로 처리한다.
+  // 지수만 쓰면 격차가 클 때 첫 프레임이 크게 튀고, 상한만 쓰면 영원히 등속으로 기어간다.
+  const ease = (goal, k, cap) => {
+    const step = (goal - camLen) * Math.min(1, dt * k);
+    camLen += Math.max(-cap, Math.min(cap, step));
+  };
+  if (front < camLen) ease(front, 9, 0.09);            // 진짜 가림 — 안전하게 빠르게
+  else if (side < camLen) ease(side, 5, 0.045);        // 예고 — 미리 살짝
+  else ease(Math.min(front, side), 5, 0.12);           // 트일 땐 부드럽게
   _desired.copy(_target).addScaledVector(_dir, camLen);
   _desired.y = Math.max(_desired.y, player.pos.y + 0.35);
   if (_desired.y > ceilY) _desired.y = Math.max(ceilY, player.pos.y + 0.35);
@@ -470,9 +484,11 @@ document.getElementById('tagline').textContent = SCHOOL.tagline;
 document.getElementById('ver').textContent = SCHOOL.tagline;
 
 // ---------- 월드 틱 (루프와 SD.step 양쪽에서 호출 — 깃발·구름·나무·NPC·공) ----------
-let shadowCd = 0;   // 그림자 재굽기 스로틀 (NPC 회전 시 프레임마다 굽던 렉 방지)
+// ⚠️ 그림자 맵은 첫 프레임과 시간대 전환 때만 굽는다.
+// 예전엔 NPC 가 돌 때마다 0.6초 스로틀로 다시 구웠는데,
+// 그때마다 프레임이 끊기고 그림자가 계단처럼 튀어 '미세한 떨림'으로 보였다.
+// NPC 는 castShadow 를 끄고 발밑에 정적 그림자를 미리 구워 대체한다(world.js).
 function worldTick(dt) {
-  shadowCd -= dt;
   const t = clock.elapsedTime;
   if (world.dynamic.flag) world.dynamic.flag.rotation.y = Math.sin(t * 1.8) * 0.28 + 0.1;
   world.dynamic.clouds.forEach((c, i) => {
@@ -483,8 +499,7 @@ function worldTick(dt) {
     world.dynamic.bigTree.rotation.z = Math.sin(t * 0.6) * 0.013;
     world.dynamic.bigTree.rotation.x = Math.sin(t * 0.47 + 1) * 0.01;
   }
-  // NPC 숨쉬기 + 가까우면 플레이어 쳐다보기 (돌면 그림자 1회 재굽기)
-  let npcTurn = false;
+  // NPC 숨쉬기 + 가까우면 플레이어 쳐다보기 (그림자 재굽기 없음)
   for (let i = 0; i < world.persons.length; i++) {
     const pn = world.persons[i];
     const g = pn.group;
@@ -496,15 +511,8 @@ function worldTick(dt) {
     let dY = targetYaw - g.rotation.y;
     while (dY > Math.PI) dY -= Math.PI * 2;
     while (dY < -Math.PI) dY += Math.PI * 2;
-    if (Math.abs(dY) > 0.01) {
-      g.rotation.y += dY * Math.min(1, dt * 5);
-      if (Math.abs(dY) > 0.06) npcTurn = true;
-    }
+    if (Math.abs(dY) > 0.01) g.rotation.y += dY * Math.min(1, dt * 5);
     if (pn.tag) pn.tag.rotation.y = camYaw - g.rotation.y;   // 이름표는 항상 카메라를 향함
-  }
-  if (npcTurn && shadowCd <= 0) {
-    renderer.shadowMap.needsUpdate = true;
-    shadowCd = 0.6;
   }
   // 공 물리 (다가가면 뻥!)
   for (const b of BALLS) {

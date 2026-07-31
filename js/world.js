@@ -16,7 +16,8 @@ function mat(color) {
   return M[color];
 }
 const BASIC_WHITE = new THREE.MeshBasicMaterial({ color: 0xffffff });        // 형광등
-const GLASS = new THREE.MeshLambertMaterial({ color: 0xcfe8f7, transparent: true, opacity: 0.22, side: THREE.DoubleSide });
+// 반투명 면은 depthWrite 를 꺼야 서로를 가리거나 앞뒤가 뒤집히지 않는다
+const GLASS = new THREE.MeshLambertMaterial({ color: 0xcfe8f7, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false });
 const GLASS_DOOR = new THREE.MeshLambertMaterial({ color: 0xa8d4ec, transparent: true, opacity: 0.6 });   // 유리문 인지성↑
 const NET = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.32 });
 const INVIS = new THREE.MeshBasicMaterial({ visible: false });
@@ -339,6 +340,17 @@ export function buildWorld(scene) {
     return d;
   }
 
+  // NPC 발밑 정적 그림자 (위치가 고정이라 미리 구워도 된다 — 전부 1개 메시)
+  const blobGeos = [];
+  function blobAt(x, y, z, sc) {
+    const { g } = baseOf(CIRC_GEO);
+    const gg = g.clone();
+    _eu.set(-Math.PI / 2, 0, 0);
+    _q.setFromEuler(_eu);
+    _m4.compose(_vp.set(x, y + YOFF, z), _q, _vs.set(0.42 * sc, 0.42 * sc, 1));
+    gg.applyMatrix4(_m4);
+    return gg;
+  }
   // 사람 NPC — E키로 말걸기 가능
   const SHIRTS = [0xe8863a, 0x67b26f, 0x4d9bd6, 0xd94f6b, 0xf2b134, 0x8e6fc9, 0x3aa8a0];
   const HAIRS = [0x3a2e28, 0x241d18, 0x4e3b2a];
@@ -390,7 +402,11 @@ export function buildWorld(scene) {
       if (girl) partAdd(hairC, 0, 1.28, -0.26, 0.54, 0.55, 0.12);
     }
     const bodyMesh = new THREE.Mesh(mergeGeometries(parts, false), MAT_PERSON);
-    bodyMesh.castShadow = true;
+    // ⚠️ NPC 는 그림자를 드리우지 않는다.
+    // 사람이 돌 때마다 그림자 맵을 다시 구우면 0.6초마다 화면이 한 번씩 끊기고
+    // 그림자가 계단처럼 튄다(= 미세 떨림). 대신 발밑에 정적 그림자를 미리 굽는다.
+    bodyMesh.castShadow = false;
+    blobGeos.push(blobAt(x, y + 0.02, z, sc));
     g.add(bodyMesh);
     const tag = textSign(name, { h: 0.26, fontPx: 36, pad: 12 });
     tag.position.y = opts.sit ? 1.62 : 1.95;
@@ -937,13 +953,14 @@ export function buildWorld(scene) {
         .map(wxp => ({ c: wxp, w: 1.3 }));
       wallXWin(s0, s1, zCor, innerC, cwins, { h: FH, sill: 1.9, wh: 0.9, doors: gaps });
       gaps.forEach(gp => makeDoor(gp.c - gp.w / 2, zCor, gp.w, 'x', { swing: -1 }));
-      // 팻말은 문 위, 복도창(1.9~2.8)과 겹치지 않게 3.05
+      // 팻말: 복도창 상단(2.8)과 천장(FH-0.27=3.13) 사이 띠에만 놓는다.
+      // ⚠️ 높이 h 를 키우면 위가 천장에 잘린다 — 중심 2.95 · h 0.30 이 상한
       const label = SCHOOL.people && SCHOOL.people[r.name] ? `${r.name} 1반` : r.name;
       if (r.type === 'toilet') {
-        sign('남자 화장실', gaps[0].c, 3.05, zCor - 0.18, 0, 0.4);
-        sign('여자 화장실', gaps[1].c, 3.05, zCor - 0.18, 0, 0.4);
+        sign('남자 화장실', gaps[0].c, 2.95, zCor - 0.18, 0, 0.28);
+        sign('여자 화장실', gaps[1].c, 2.95, zCor - 0.18, 0, 0.28);
       } else {
-        sign(label, gaps[0].c, 3.05, zCor - 0.18, 0, 0.45);
+        sign(label, gaps[0].c, 2.95, zCor - 0.18, 0, 0.3);
       }
       furnish(r, cx, cw, 0, fz1, -1, fz1 - zCor);
       wallXGaps(s0, s1, gaps, zCor, 0, 0.95, wainC, 0.34);
@@ -992,19 +1009,28 @@ export function buildWorld(scene) {
   geoAdd(ICO_GEO, 0x4d8b4d, hallRoom.span[0] + 0.6, 0.78, -28.4, [0, 1.2, 0], 0.42, 0.4, 0.42);
 
   // ---------- 테라스 경계: 계단·구령대·경사로·초록 그물 펜스 (사진2·3) ----------
-  for (let si = 0; si < 4; si++) {   // 현관 앞 중앙 계단 (운동장으로 내려감)
-    box(5.2, 0.8 - si * 0.22, 0.42, 0xc9c4b8, hallCx, -1, TERR_Z + 0.24 + si * 0.42);
-  }
-  // 구령대 (테라스 가장자리, 운동장을 내려다봄)
-  box(6, 0.75, 2.8, 0xd8d2c6, -6, 0, TERR_Z - 1.6, { walk: true });
-  box(1.1, 0.55, 0.7, 0x9aa5ad, -6, 0.75, TERR_Z - 2.4);   // 연단
-  box(0.03, 0.42, 0.03, 0x30343a, -6, 1.3, TERR_Z - 2.45, { collide: false });   // 마이크 스탠드
-  box(0.09, 0.11, 0.09, 0x555b62, -6, 1.72, TERR_Z - 2.45, { collide: false });
-  box(0.42, 0.3, 0.3, 0x4a5058, -6.95, 1.3, TERR_Z - 2.35, { collide: false });   // 앰프
-  geoAdd(UNIT_PLANE, 0x30343a, -6.95, 1.45, TERR_Z - 2.19, null, 0.3, 0.18, 1);
-  box(1.6, 0.22, 0.5, 0xc9c4b8, -8.6, 0, TERR_Z - 0.4, { walk: true });
-  box(1.6, 0.5, 0.5, 0xc9c4b8, -8.6, 0, TERR_Z - 1.1, { walk: true });
-  zones.unshift({ x0: -9.2, x1: -2.8, z0: TERR_Z - 3.2, z1: TERR_Z, label: '구령대' });
+  // 구령대는 **현관 바로 앞**, 중앙 계단과 같은 축에 있다 (사용자 확인한 실제 구조).
+  // 계단은 구령대 양옆으로 내려가고, 구령대 정면(운동장쪽)이 조회 방향.
+  const PODIUM_X = hallCx;
+  [PODIUM_X - 4.6, PODIUM_X + 4.6].forEach(sxp => {          // 좌우 계단 (운동장으로 내려감)
+    for (let si = 0; si < 4; si++) {
+      box(3.4, 0.8 - si * 0.22, 0.42, 0xc9c4b8, sxp, -1, TERR_Z + 0.24 + si * 0.42);
+    }
+  });
+  // 구령대 본체 (테라스 가장자리, 운동장을 내려다봄)
+  box(6.4, 0.85, 3.0, 0xd8d2c6, PODIUM_X, 0, TERR_Z - 1.5, { walk: true });
+  box(6.6, 0.12, 3.2, 0xe4dfd2, PODIUM_X, 0.85, TERR_Z - 1.5, { walk: true });   // 상판 테두리
+  box(6.6, 0.1, 0.1, 0x9aa5ad, PODIUM_X, 1.42, TERR_Z - 0.02, { collide: false });   // 정면 난간
+  [-3.15, 0, 3.15].forEach(ox => box(0.09, 0.55, 0.09, 0x9aa5ad, PODIUM_X + ox, 0.97, TERR_Z - 0.02, { collide: false }));
+  box(1.1, 0.55, 0.7, 0x9aa5ad, PODIUM_X, 0.97, TERR_Z - 2.3);   // 연단
+  box(0.03, 0.42, 0.03, 0x30343a, PODIUM_X, 1.52, TERR_Z - 2.35, { collide: false });   // 마이크 스탠드
+  box(0.09, 0.11, 0.09, 0x555b62, PODIUM_X, 1.94, TERR_Z - 2.35, { collide: false });
+  box(0.42, 0.3, 0.3, 0x4a5058, PODIUM_X - 1.95, 0.97, TERR_Z - 2.2, { collide: false });   // 앰프
+  geoAdd(UNIT_PLANE, 0x30343a, PODIUM_X - 1.95, 1.12, TERR_Z - 2.04, null, 0.3, 0.18, 1);
+  // 구령대 옆 디딤단 (현관 쪽에서 올라감)
+  box(1.6, 0.3, 0.5, 0xc9c4b8, PODIUM_X - 3.9, 0, TERR_Z - 2.6, { walk: true });
+  box(1.6, 0.6, 0.5, 0xc9c4b8, PODIUM_X - 3.9, 0, TERR_Z - 3.15, { walk: true });
+  zones.unshift({ x0: PODIUM_X - 3.4, x1: PODIUM_X + 3.4, z0: TERR_Z - 3.2, z1: TERR_Z, label: '구령대' });
   // 동·서 경사로 — 윗끝이 테라스면(y0)과 정확히 만나게 배치(턱 제거), 난간은 경사면에 밀착
   const RAMP_A = 0.235, RAMP_Z = TERR_Z + 2.3;
   const rampSurfY = t => -0.57 - t * Math.sin(RAMP_A);       // 경사면 상면 y (t = 로컬 z)
@@ -1023,7 +1049,8 @@ export function buildWorld(scene) {
   const NET_TEX = netTexture();
   NET_TEX.wrapS = NET_TEX.wrapT = THREE.RepeatWrapping;
   const NET_FENCE = new THREE.MeshLambertMaterial({ map: NET_TEX, alphaTest: 0.4, side: THREE.DoubleSide });
-  const netSegs = [[-40, -36.6], [-31.4, -9.6], [-2.4, hallCx - 3.2], [hallCx + 3.2, 35.4], [40.6, 52]];
+  // 구령대(정면 6.6m)와 그 좌우 계단(각 3.4m) 구간은 펜스를 비운다
+  const netSegs = [[-40, -36.6], [-31.4, -9.6], [-2.4, PODIUM_X - 6.6], [PODIUM_X + 6.6, 35.4], [40.6, 52]];
   netSegs.forEach(([a, b]) => {
     const len = b - a;
     const ng = new THREE.PlaneGeometry(len, 1.5);
@@ -1039,7 +1066,10 @@ export function buildWorld(scene) {
       box(0.07, 1.7, 0.07, 0x2a6b3f, px5, 0, TERR_Z - 0.15, { collide: false });
     }
   });
-  for (let bx3 = -38; bx3 <= 50; bx3 += 4.5) bush(bx3, TERR_Z - 1.1, 0.8 + rng() * 0.5);
+  for (let bx3 = -38; bx3 <= 50; bx3 += 4.5) {
+    if (Math.abs(bx3 - PODIUM_X) < 7) continue;   // 구령대·계단 자리
+    bush(bx3, TERR_Z - 1.1, 0.8 + rng() * 0.5);
+  }
   for (let bx6 = 54; bx6 <= 79; bx6 += 4) bush(bx6, TERR_Z - 1.0, 0.9 + rng() * 0.5);   // 동측 테라스 모서리 관목
 
   // ---- 서관 ----
@@ -1068,7 +1098,7 @@ export function buildWorld(scene) {
       }
       if (r.type !== 'stair' && !r.innerOnly) {
         const nm = r.name === '도서실' ? '슬기샘 도서관' : r.name;
-        sign(nm, doorCOf(r), 3.05, wz1 + 0.18, 0, 0.45);
+        sign(nm, doorCOf(r), 2.95, wz1 + 0.18, 0, 0.3);
       }
       if (r.innerOnly) sign(r.name, s0 - 0.18, 2.25, (wz0 + wz1) / 2, Math.PI / 2, 0.32);
     });
@@ -1151,14 +1181,14 @@ export function buildWorld(scene) {
   box(0.8, 0.8, 0.8, 0xc9a06a, 1.2, 0, cookZ - 1.3);
   [0, 1].forEach(i => lamp(-6 + i * 5, kh - 0.15, -44, true));
   lamp(-4, kh - 0.15, (kz0 + cookZ) / 2, true);
-  sign('급식실', K.doorC + 1.7, 3.05, fz0 + 0.18, 0, 0.45);
+  sign('급식실', K.doorC + 1.7, 2.95, fz0 + 0.18, 0, 0.3);
   zones.push({ x0: kx0, x1: lcW, z0: cookZ, z1: kz1, floor: 0, label: '본관 1층 · 급식실' });
   zones.push({ x0: kx0, x1: 0, z0: kz0, z1: cookZ, floor: 0, label: '급식실 · 조리실' });
   zones.push({ x0: 0, x1: lcW, z0: kz0, z1: cookZ, floor: 0, label: '급식실 · 식품창고' });
   const D = K.dutyRoom;
   wallX(D.x[0], D.x[1], D.z[0], 0, FH, innerC);
   wallZ(D.z[0], D.z[1], D.x[1], 0, FH, innerC);
-  sign('당직실', D.doorC + 1.2, 3.05, fz0 + 0.18, 0, 0.4);
+  sign('당직실', D.doorC + 1.2, 2.95, fz0 + 0.18, 0, 0.28);
   box(1.3, 0.74, 0.7, 0xb0a18e, (D.x[0] + D.x[1]) / 2, 0, D.z[0] + 1.2);
   box(1.05, 0.5, 1.95, 0xf2f5f7, D.x[1] - 0.8, 0, (D.z[0] + D.z[1]) / 2);
   zones.push({ x0: D.x[0], x1: D.x[1], z0: D.z[0], z1: D.z[1], floor: 0, label: '본관 1층 · 당직실' });
@@ -1228,7 +1258,7 @@ export function buildWorld(scene) {
     eEdges.add(s0); eEdges.add(s1);
     if (!r.external && !r.innerOnly) {
       const label = SCHOOL.people && SCHOOL.people[r.name] ? `${r.name} 1반` : r.name;
-      sign(label, doorCOf(r), 3.05, zCorE - 0.18, 0, 0.45);
+      sign(label, doorCOf(r), 2.95, zCorE - 0.18, 0, 0.3);
       makeDoor(doorCOf(r) - 0.9, zCorE, 1.8, 'x', { swing: -1 });
       if (eBack(r)) makeDoor(s1 - 1.9 - 0.9, zCorE, 1.8, 'x', { swing: -1 });
     }
@@ -1309,7 +1339,7 @@ export function buildWorld(scene) {
     wallXWin(s0, s1, zCor2, innerC, upCWins, { y0: FH, h: FH, sill: 1.9, wh: 0.9, doors: upGaps });
     upGaps.forEach(gp => makeDoor(gp.c - 0.9, zCor2, 1.8, 'x', { swing: 1, y: FH }));
     const label = SCHOOL.people && SCHOOL.people[r.name] ? `${r.name} 1반` : r.name;
-    sign(label, doorCOf(r), FH + 3.05, zCor2 + 0.18, 0, 0.45);
+    sign(label, doorCOf(r), FH + 2.95, zCor2 + 0.18, 0, 0.3);
     furnish(r, cx, cw, FH, uz0, 1, zCor2 - uz0);
     const ww2 = Math.min(2.2, cw - 1.2);
     upNWins.push({ c: cx - cw / 4, w: ww2 }, { c: cx + cw / 4, w: ww2 });
@@ -2051,9 +2081,18 @@ export function buildWorld(scene) {
     scene.add(glowMesh);
     dynamic.nightGlow = glowMesh;
   }
-  // 진짜 뚫린 창 유리 — 전부 1개 메시 (draw call 1)
+  // 진짜 뚫린 창 유리 — 1개 메시(드로우콜 1).
+  // ⚠️ 반투명이므로 GLASS 는 depthWrite:false 여야 한다. 켜 두면 유리끼리·유리문과
+  //    앞뒤가 프레임마다 뒤집혀 깜빡인다. (청크로 쪼개면 드로우콜만 100+ 늘고 효과는 미미)
   if (glassGeos.length) {
     scene.add(new THREE.Mesh(mergeGeometries(glassGeos, false), GLASS));
+  }
+  // NPC 발밑 정적 그림자 (1개 메시)
+  if (blobGeos.length) {
+    const bm = new THREE.Mesh(mergeGeometries(blobGeos, false),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.16, depthWrite: false }));
+    bm.renderOrder = -1;
+    scene.add(bm);
   }
   // 실내 천장 — 전부 1개 메시 (조명 영향 없는 밝은 무광)
   if (ceilGeos.length) {

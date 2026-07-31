@@ -239,19 +239,24 @@ export class Player {
       const leanT = Math.max(-0.24, Math.min(0.24, diff * 0.45)) * (run ? 1.25 : 1);
       this.lean += (leanT - this.lean) * Math.min(1, dt * 9);
       this.phase += dt * eff * 2.4;
-      // 끼임 자동 감지: 입력이 있는데 제자리면 기록하고 살짝 밀어냄
+      // 끼임 자동 감지
+      // ⚠️ 벽에 대고 걷는 건 '끼임'이 아니다. 예전엔 제자리이기만 하면 1초마다
+      //    ±0.25m 랜덤으로 밀어내서, 벽을 향해 걷는 동안 캐릭터가 계속 튀었다(= 떨림).
+      //    지금 서 있는 자리가 '실제로 물체 안'일 때만 밀어낸다.
       if (Math.hypot(p.x - x0, p.z - z0) < 0.005) {
         this._stillT += dt;
         if (this._stillT > 1) {
           this._stillT = 0;
-          const diag = window.__sdDiag;
-          if (diag) {
-            diag.stuck.push([Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, Math.round(p.z * 10) / 10]);
-            if (diag.stuck.length > 40) diag.stuck.shift();
-            try { localStorage.setItem('sd_diag', JSON.stringify(diag)); } catch (e) { /* 무시 */ }
+          if (this._blockedAt(p.x, p.z, p.y, 0.02)) {   // 몸이 실제로 박혀 있을 때만
+            const diag = window.__sdDiag;
+            if (diag) {
+              diag.stuck.push([Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, Math.round(p.z * 10) / 10]);
+              if (diag.stuck.length > 40) diag.stuck.shift();
+              try { localStorage.setItem('sd_diag', JSON.stringify(diag)); } catch (e) { /* 무시 */ }
+            }
+            p.x += (Math.random() - 0.5) * 0.36;
+            p.z += (Math.random() - 0.5) * 0.36;
           }
-          p.x += (Math.random() - 0.5) * 0.5;
-          p.z += (Math.random() - 0.5) * 0.5;
         }
       } else {
         this._stillT = 0;
