@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from '../lib/BufferGeometryUtils.js';
 import { SCHOOL } from './data.js';
-import { textSign, taegeukTexture, trackTexture, courtTexture, bookStripes, netTexture, shade, cardTone, mosaicTexture, rubbleTexture, clockFace } from './textures.js';
+import { textSign, taegeukTexture, trackTexture, courtTexture, bookStripes, netTexture, shade, cardTone, mosaicTexture, rubbleTexture, clockFace, compassRose } from './textures.js';
 
 // ---- 공유 지오메트리/재질 (성능 예산: geometries 최소화) ----
 const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
@@ -1340,14 +1340,60 @@ export function buildWorld(scene) {
   poster2.rotation.y = -Math.PI / 2;
   scene.add(poster2);
   // 현관 소품: 발판 매트 · 우산꽂이 · 안내 화분 (휑함 해소)
+  // ⚠️ 우산꽂이·화분은 아치 기둥·신발장 자리와 겹쳐 이동했다 (조사에서 좌표 충돌 확인)
   plane(2.6, 1.5, 0x5a6b7a, hallCx, 0.1, fz1 - 1.2);
-  box(0.42, 0.6, 0.42, 0x4a6fa5, hallRoom.span[0] + 0.55, 0, -26.4);
+  box(0.42, 0.6, 0.42, 0x4a6fa5, hallRoom.span[0] + 0.55, 0, -25.2);
   [[-0.13, 0.11], [0.12, -0.09], [0.02, 0.02]].forEach(([ox, oz], ui) => {   // 겹치면 반짝임
-    box(0.05, 0.85, 0.05, [0xd94f6b, 0xf2b134, 0x67b26f][ui], hallRoom.span[0] + 0.55 + ox, 0.6, -26.4 + oz, { collide: false });
-    geoAdd(UNIT_BOX, [0xd94f6b, 0xf2b134, 0x67b26f][ui], hallRoom.span[0] + 0.55 + ox, 1.5, -26.4 + oz, null, 0.09, 0.16, 0.09);
+    box(0.05, 0.85, 0.05, [0xd94f6b, 0xf2b134, 0x67b26f][ui], hallRoom.span[0] + 0.55 + ox, 0.6, -25.2 + oz, { collide: false });
+    geoAdd(UNIT_BOX, [0xd94f6b, 0xf2b134, 0x67b26f][ui], hallRoom.span[0] + 0.55 + ox, 1.5, -25.2 + oz, null, 0.09, 0.16, 0.09);
   });
-  geoAdd(STUMP_GEO, 0xa5673f, hallRoom.span[0] + 0.6, 0.22, -28.4, null, 0.8, 0.44, 0.8);
-  geoAdd(ICO_GEO, 0x4d8b4d, hallRoom.span[0] + 0.6, 0.78, -28.4, [0, 1.2, 0], 0.42, 0.4, 0.42);
+  geoAdd(STUMP_GEO, 0xa5673f, hallRoom.span[1] - 0.6, 0.22, -25.4, null, 0.8, 0.44, 0.8);
+  geoAdd(ICO_GEO, 0x4d8b4d, hallRoom.span[1] - 0.6, 0.78, -25.4, [0, 1.2, 0], 0.42, 0.4, 0.42);
+
+  // ===== 현관 로비 세트 (실사 — 인식성 최상위 공간) =====
+  {
+    const HX0 = hallRoom.span[0], HX1 = hallRoom.span[1];
+    // 아치형 목재 게이트 + 현판 (로비 안쪽 z -26.45)
+    const GATE_Z = -26.45, GWOOD = 0x5a4232;
+    [HX0 + 0.47, HX1 - 0.47].forEach(gx4 => solidSoftBox(0.3, 2.3, 0.42, GWOOD, gx4, 0, GATE_Z));
+    softBox(HX1 - HX0 - 0.6, 0.34, 0.46, GWOOD, hallCx, 2.3, GATE_Z);          // 상인방
+    softBox(HX1 - HX0 - 1.2, 0.16, 0.4, 0x6d5236, hallCx, 2.64, GATE_Z);       // 캡 몰딩
+    const gTag = textSign('웃음꽃피는 즐거운학교', { h: 0.24, bg: '#5a4232', fg: '#f7edda', border: null, fontPx: 44, pad: 12 });
+    gTag.position.set(hallCx, 2.47, GATE_Z - 0.27);   // 남면 — 현관으로 **들어오는** 사람이 보는 쪽
+    scene.add(gTag);
+    // 바닥 컴퍼스 로즈 (safePoint 6.15,-29 는 통행 가능해야 — plane 이라 무해)
+    const rose = new THREE.Mesh(UNIT_PLANE, new THREE.MeshBasicMaterial({ map: compassRose() }));
+    rose.scale.set(1.6, 1.6, 1);
+    rose.rotation.x = -Math.PI / 2;
+    rose.position.set(hallCx, 0.104, -29.6);
+    rose.matrixAutoUpdate = false; rose.updateMatrix();
+    scene.add(rose);
+    // 대형 괘종시계 (동벽)
+    box(0.5, 1.95, 0.34, 0x5f4636, HX1 - 0.36, 0, -33.2);
+    geoAdd(UNIT_PLANE, 0xf2efe6, HX1 - 0.62, 1.62, -33.2, [0, -Math.PI / 2, 0], 0.3, 0.3, 1);   // 문자판
+    glassAdd(HX1 - 0.62, 0.85, -33.2, Math.PI / 2, 0.3, 0.9);                                    // 추 유리창
+    geoAdd(UNIT_BOX, 0xd4af5a, HX1 - 0.6, 0.75, -33.2, null, 0.05, 0.42, 0.05);                  // 추
+    // 유리 진열장 2대 (서벽) — 트로피
+    [-31.4, -33.2].forEach(dz3 => {
+      box(0.5, 0.85, 1.5, 0x8a6a48, HX0 + 0.42, 0, dz3);                        // 하부장
+      solidSoftBox(0.46, 0.95, 1.44, 0xf2efe6, HX0 + 0.42, 0.85, dz3);          // 상부 프레임
+      glassAdd(HX0 + 0.66, 1.32, dz3, Math.PI / 2, 1.36, 0.85);
+      [[-0.4, 0.2], [0, 0.28], [0.4, 0.18]].forEach(([oz2, th]) =>
+        geoAdd(UNIT_BOX, 0xd4af5a, HX0 + 0.42, 0.93, dz3 + oz2, null, 0.1, th, 0.1));
+    });
+    // 주황+연두 줄무늬 소파 2연 (동벽 — 세그먼트가 z로 이어진 긴 벤치)
+    [[-29.9, 0], [-31.0, 1]].forEach(([sz4, alt]) => {
+      [0, 1, 2].forEach(si2 => box(0.46, 0.42, 0.34, (si2 + alt) % 2 ? 0x67b26f : 0xe8863a,
+        HX1 - 0.55, 0, sz4 + (si2 - 1) * 0.34, { walk: true }));
+    });
+    // 원목 신발장 2열 (아치 안쪽 양벽) + 위 화분
+    [[HX0 + 0.42, -27.6], [HX1 - 0.42, -27.6]].forEach(([sx5, sz5]) => {
+      box(0.36, 1.1, 1.7, 0x9c7a53, sx5, 0, sz5);
+      [0.36, 0.72].forEach(sy => geoAdd(UNIT_BOX, 0x7a5a3c, sx5, sy, sz5, null, 0.38, 0.03, 1.72));
+      geoAdd(STUMP_GEO, 0xa5673f, sx5, 1.24, sz5 - 0.45, null, 0.4, 0.24, 0.4);
+      geoAdd(ICO_GEO, 0x5a9b5a, sx5, 1.52, sz5 - 0.45, [0, 0.8, 0], 0.24, 0.22, 0.24);
+    });
+  }
 
   // ---------- 테라스 경계: 계단·구령대·경사로·초록 그물 펜스 (사진2·3) ----------
   // 구령대는 **현관 바로 앞**, 중앙 계단과 같은 축에 있다 (사용자 확인한 실제 구조).
@@ -1575,7 +1621,20 @@ export function buildWorld(scene) {
   wallX(kx0, kx1, kz1, FH, kh - FH, wallC);
   roofOver(kx0, kx1, kz0, kz1, kh, K.roofColor);
   // 내부 벽: 세로복도 서벽(식당 문) · 식당|조리실 경계 · 조리실|식품창고 칸막이
-  wallZGaps(kz0, kz1, [{ c: K.hallEastDoorZ, w: 1.6 }], lcW, 0, FH, innerC);
+  // 세로복도 서벽 — 실사(사용자 지적 #20): 복도에서 **급식실 내부가 보이는 창**이 있다.
+  // ⚠️ 창 z 구간은 기존 초록 급식게시판(z -51.8~-49.2)과 문(-44.8~-43.2)을 피해서만 뚫는다.
+  {
+    const dGap = { c: K.hallEastDoorZ, w: 1.6 };
+    const kWins = [{ c: -46.9, w: 3.0 }, { c: -40.9, w: 3.0 }];
+    wallZGaps(kz0, kz1, [dGap], lcW, 0, 1.1, innerC);
+    wallZGaps(kz0, kz1, [dGap, ...kWins], lcW, 1.1, 1.5, innerC);
+    wallZGaps(kz0, kz1, [dGap], lcW, 2.6, FH - 2.6, innerC);
+    kWins.forEach(g => {
+      glassAdd(lcW, 1.85, g.c, Math.PI / 2, g.w, 1.5);
+      paneTrim(lcW, 1.85, g.c, Math.PI / 2, g.w, 1.5, 0.36);
+      box(0.45, 1.5, g.w, 0, lcW, 1.1, g.c, { material: INVIS });   // 통행 차단
+    });
+  }
   lintelZ(K.hallEastDoorZ, 1.6, lcW, innerC);
   makeDoor(lcW, K.hallEastDoorZ - 0.8, 1.6, 'z', { swing: 1 });
   wallXGaps(kx0, lcW, [{ c: K.cookDoorC, w: 1.6 }], cookZ, 0, FH, innerC);
@@ -1704,8 +1763,14 @@ export function buildWorld(scene) {
     if (!r.external && !r.innerOnly) {
       const label = SCHOOL.people && SCHOOL.people[r.name] ? `${r.name} 1반` : r.name;
       hangSign(label, doorCOf(r), FH - CEIL_DROP, zCorE - 0.5, 0, 0.28);
-      makeDoor(doorCOf(r) - 0.9, zCorE, 1.8, 'x', { swing: -1 });
-      if (eBack(r)) makeDoor(s1 - 1.9 - 0.9, zCorE, 1.8, 'x', { swing: -1 });
+      // 신관(동관) 문 = 실사대로 **흰/미색 패널 도어 + 디지털 도어락**(구관의 짙은 원목과 다르다).
+      // 도어락은 문틀 옆 고정(softBox — 문짝에 붙이면 드로우콜 +1/문). 전 학교 배선은 +80dc라 동관 한정.
+      makeDoor(doorCOf(r) - 0.9, zCorE, 1.8, 'x', { swing: -1, color: 0xf2efe6 });
+      softBox(0.07, 0.24, 0.06, 0x22262c, doorCOf(r) + 1.06, 1.15, zCorE - 0.19);
+      if (eBack(r)) {
+        makeDoor(s1 - 1.9 - 0.9, zCorE, 1.8, 'x', { swing: -1, color: 0xf2efe6 });
+        softBox(0.07, 0.24, 0.06, 0x22262c, s1 - 1.9 + 1.06, 1.15, zCorE - 0.19);
+      }
     }
     // 남벽(마당쪽): 진짜 뚫린 창
     const sww = Math.min(2.2, cw / 2 - 0.5);

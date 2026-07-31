@@ -420,3 +420,38 @@ export function clockFace() {
   x.beginPath(); x.arc(64, 64, 5, 0, Math.PI * 2); x.fill();
   return canvasTex(c);
 }
+
+// ---------- 로비 바닥 컴퍼스 로즈 (실사: 현관 로비 중앙 8각 별 모자이크) ----------
+export function compassRose() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const x = c.getContext('2d');
+  x.fillStyle = shadeCss('#dedbd2');            // 테라조 바탕
+  x.fillRect(0, 0, 256, 256);
+  x.strokeStyle = shadeCss('#8f8b80');
+  x.lineWidth = 5;
+  x.beginPath(); x.arc(128, 128, 112, 0, Math.PI * 2); x.stroke();
+  x.beginPath(); x.arc(128, 128, 92, 0, Math.PI * 2); x.stroke();
+  const star = (n, r0, r1, col, rot) => {
+    x.fillStyle = col;
+    for (let i = 0; i < n; i++) {
+      const a = rot + (i / n) * Math.PI * 2;
+      const b1 = a - Math.PI / n, b2 = a + Math.PI / n;
+      x.beginPath();
+      x.moveTo(128 + Math.cos(a) * r1, 128 + Math.sin(a) * r1);
+      x.lineTo(128 + Math.cos(b1) * r0, 128 + Math.sin(b1) * r0);
+      x.lineTo(128, 128);
+      x.closePath(); x.fill();
+      x.beginPath();
+      x.moveTo(128 + Math.cos(a) * r1, 128 + Math.sin(a) * r1);
+      x.lineTo(128 + Math.cos(b2) * r0, 128 + Math.sin(b2) * r0);
+      x.lineTo(128, 128);
+      x.closePath(); x.fill();
+    }
+  };
+  star(4, 30, 88, shadeCss('#7a4e36'), Math.PI / 4);   // 사선 4방(적갈)
+  star(4, 34, 104, shadeCss('#2f3033'), 0);            // 정방 4방(검정)
+  x.fillStyle = shadeCss('#f2efe6');
+  x.beginPath(); x.arc(128, 128, 16, 0, Math.PI * 2); x.fill();
+  return canvasTex(c);
+}
