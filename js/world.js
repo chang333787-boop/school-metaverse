@@ -268,6 +268,41 @@ export function buildWorld(scene) {
     scene.add(s);
     return s;
   }
+  // 소방설비 — 실사에는 복도마다 있는데 지금까지 코드에 0개였다.
+  // ⚠️ 핸드레일 밴드(y 0.955~1.045)를 피한다: 소화기는 0~0.55, 소화전 함은 1.10~1.90.
+  // ⚠️ solidSoftBox — 통과는 막되 밟고 올라설 수는 없어야 한다.
+  function fireExt(x, floorY, z, wallZv) {
+    solidSoftBox(0.17, 0.5, 0.17, 0xc0392b, x, floorY, z);            // 몸통
+    softBox(0.19, 0.06, 0.19, 0x2f3438, x, floorY + 0.5, z);          // 헤드
+    softBox(0.05, 0.12, 0.05, 0x9aa0a4, x, floorY + 0.56, z);         // 손잡이
+    if (wallZv !== undefined)                                          // 벽 소화기 표지
+      geoAdd(UNIT_PLANE, 0xd0392e, x, 1.75, wallZv, [0, z > wallZv ? 0 : Math.PI, 0], 0.24, 0.3, 1);
+  }
+  function hydrant(x, z, rotY) {
+    solidSoftBox(0.62, 0.8, 0.22, 0xc0392b, x, 1.10, z, [0, rotY, 0]);
+    geoAdd(UNIT_PLANE, 0xf2e9d8, x - Math.sin(rotY) * 0.12, 1.5, z - Math.cos(rotY) * 0.12,
+           [0, rotY + Math.PI, 0], 0.42, 0.26, 1);
+  }
+  function exitLight(x, y, z, rotY) {                                  // 초록 비상구 유도등
+    softBox(0.44, 0.2, 0.09, 0x2e9b57, x, y, z, [0, rotY, 0]);
+    geoAdd(UNIT_PLANE, 0x8fe3b0, x - Math.sin(rotY) * 0.06, y + 0.1, z - Math.cos(rotY) * 0.06,
+           [0, rotY + Math.PI, 0], 0.36, 0.14, 1);
+  }
+  // 실사: 실 이름표는 벽에 붙은 흰 팻말이 아니라 **천장에서 짧은 봉으로 내려온 파란 팻말**이다.
+  // ceilY = 그 구역 천장 높이. 팻말 상단이 천장에 닿게 걸고 봉은 천장을 조금 관통시킨다(동일평면 깜빡임 방지).
+  function hangSign(text, x, ceilY, z, rotY = 0, h = 0.3) {
+    const s = textSign(text, { h, bg: '#2f6fd0', fg: '#ffffff', border: null, fontPx: 46, pad: 12 });
+    const top = ceilY - 0.12;
+    s.position.set(x, top - h / 2, z);
+    s.rotation.y = rotY;
+    scene.add(s);
+    // 행거 봉 2개 — softBox(밟기·충돌 없음). box(collide:false)로 만들면 밟힌다
+    [-1, 1].forEach(sd => {
+      const ox = Math.cos(rotY) * sd * (h * 1.1), oz = -Math.sin(rotY) * sd * (h * 1.1);
+      softBox(0.035, 0.16, 0.035, 0xb9bfc4, x + ox, top - 0.02, z + oz);
+    });
+    return s;
+  }
   const glowGeos = [];
   const glassGeos = [];
   const ceilGeos = [];
@@ -539,13 +574,15 @@ export function buildWorld(scene) {
   // 실사: 옥상은 평지붕 + 파라펫. **초록은 옥상 바닥(방수면)뿐이고 파라펫·처마는 흰/크림**이다.
   // 밖에서 보이는 것은 파라펫 4면뿐이라 여기가 초록이면 건물에 초록 띠가 둘러 보인다.
   const PARAPET_C = 0xe8e6de;
+  // 천장은 벽 상단(y)보다 이만큼 아래. 조명·매달림 팻말이 전부 이 값을 기준으로 잡힌다.
+  const CEIL_DROP = 0.27;
 
   function roofOver(x0, x1, z0, z1, y, color) {
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
     // 슬래브 상면을 벽 상단(y)보다 0.1 올려 벽 윗면과의 z-fighting(옥상 반짝임) 차단
     box(x1 - x0 + 0.6, 0.3, z1 - z0 + 0.6, color, cx, y - 0.2, cz);
     // 실내 천장은 밝은 아이보리 (지붕 밑면 노출 방지)
-    ceilAdd(cx, y - 0.27, cz, x1 - x0, z1 - z0);
+    ceilAdd(cx, y - CEIL_DROP, cz, x1 - x0, z1 - z0);
     wallX(x0, x1, z1 + 0.15, y, 0.55, PARAPET_C, 0.25);
     wallX(x0, x1, z0 - 0.15, y, 0.55, PARAPET_C, 0.25);
     wallZ(z0, z1, x0 - 0.15, y, 0.55, PARAPET_C, 0.25);
@@ -751,8 +788,15 @@ export function buildWorld(scene) {
           interactables.push({ type: 'locker', x: lx4, y: y0, z: at(depth - 0.45) - dir * 0.3, group: lg2, open: false, openRot: -dir * 1.85 });
         });
       }
-      lamp(s0 + cw * 0.38, y0 + FH - 0.12, zMid);
-      lamp(s0 + cw * 0.72, y0 + FH - 0.12, zMid);
+      // 실사: 교실 천장은 **LED 평판등 6개(2열×3줄)** + 카세트 에어컨 + 원형 스피커.
+      // ⚠️ y 는 천장(y0+FH-CEIL_DROP) 바로 아래여야 한다 — FH-0.12 는 천장 위라 안 보였다(실버그).
+      const ceilY = y0 + FH - CEIL_DROP - 0.05;
+      [0.34, 0.68].forEach(fxr => {
+        [0.28, 0.5, 0.72].forEach(fzr => lamp(s0 + cw * fxr, ceilY, at(depth * fzr)));
+      });
+      softBox(0.86, 0.14, 0.86, 0xeceae2, s0 + cw * 0.5, ceilY - 0.16, at(depth * 0.24));   // 카세트 에어컨
+      softBox(0.62, 0.05, 0.62, 0xc9c6bd, s0 + cw * 0.5, ceilY - 0.2, at(depth * 0.24));    // 흡입 그릴
+      softBox(0.22, 0.09, 0.22, 0xe6e3da, s0 + cw * 0.5, ceilY - 0.11, at(depth * 0.76));   // 원형 스피커(근사)
       // 책상 수 = 학생 수 + 1 (명단 없으면 4)
       const nx = Math.max(2, Math.min(3, Math.floor((cw - 4) / 1.5) + 1));
       const nz = Math.max(2, Math.min(4, Math.floor((depth - 3) / 1.45)));
@@ -783,7 +827,7 @@ export function buildWorld(scene) {
       }
       return;
     }
-    lamp(cx, y0 + FH - 0.12, zMid);
+    lamp(cx, y0 + FH - CEIL_DROP - 0.05, zMid);
     if (r.type === 'daycare') {
       [[-1.6, 3.4, 0xf6c67a], [1.5, 5.6, 0x8fd0a8]].forEach(([ox, oz, tc]) => {
         box(1.7, 0.52, 1.7, tc, cx + ox, y0, at(oz));
@@ -991,6 +1035,57 @@ export function buildWorld(scene) {
   box(ex1 - ex0 + 1, 0.072, ez1 - ez0, 0xcfc8ba, (ex0 + ex1) / 2, 0, (ez0 + ez1) / 2, { collide: false, walk: true });
   box(fx1 - fx0 + 8, 0.06, 6, 0xd8d2c6, (fx0 + fx1) / 2, 0, fz1 + 3, { collide: false, walk: true });
 
+  // ===== 복도 바닥 마감 (실사) =====
+  // 지금까지 복도는 건물 슬래브(0xcfc8ba) 상면이 그대로 노출돼 있었다.
+  // 실물: **구관 = 흰 대형 타일 + 양쪽 검은 대리석 테두리 띠(0.3m)** / 신관·2층 = 회색 테라조.
+  // ⚠️ 반드시 plane() (병합 + staticEntries) — softBox 로 만들면 지면 레이가 통과해 슬래브로 되돌아간다.
+  // ⚠️ 중앙 타일과 양쪽 띠는 z 구간이 서로 겹치지 않게 계산 → 같은 y 로 둬도 깜빡이지 않는다.
+  const CORR_INSET = 0.17;                     // 굽도리(두께 0.34)의 절반 — 벽면에서 시작
+  function corridorFloor(x0c, x1c, z0c, z1c, yc, mainC, bandC, bandW) {
+    const a = z0c + CORR_INSET, b = z1c - CORR_INSET;
+    if (b - a <= bandW * 2 + 0.1 || x1c - x0c <= 0.2) return;
+    const seg = Math.max(1, Math.ceil((x1c - x0c) / MCHUNK));   // 26m 청크 단위로 쪼개 컬링 유지
+    for (let i = 0; i < seg; i++) {
+      const sx0 = x0c + ((x1c - x0c) * i) / seg, sx1 = x0c + ((x1c - x0c) * (i + 1)) / seg;
+      const w = sx1 - sx0, cxx = (sx0 + sx1) / 2;
+      plane(w, b - a - bandW * 2, mainC, cxx, yc, (a + b) / 2);
+      if (bandW > 0) {
+        plane(w, bandW, bandC, cxx, yc, a + bandW / 2);
+        plane(w, bandW, bandC, cxx, yc, b - bandW / 2);
+      }
+    }
+  }
+  const TILE_W = 0xf2efe6, MARBLE_K = 0x2f3033, TERRAZZO = 0xbdbcb6;
+
+  // 복도 나무 핸드레일 — 연두 굽도리(0.95) 상단을 따라 이어진다.
+  // ⚠️ 반드시 softBox. 기존 1076줄이 box(collide:false)라 **레일을 밟고 올라설 수 있었다**(실버그).
+  // gaps = [{c, w}] 문 개구부. axis 'x' = z벽을 따라 가로로, 'z' = x벽을 따라 세로로.
+  const RAIL_Y = 1.0, RAIL_OFF = 0.21;
+  function railWall(a0, a1, fixed, axis, gaps = [], dir = -1) {
+    const cuts = [...gaps].sort((p, q) => p.c - q.c);
+    let cur = a0;
+    const runs = [];
+    cuts.forEach(g => {
+      const g0 = g.c - g.w / 2 - 0.12, g1 = g.c + g.w / 2 + 0.12;
+      if (g0 > cur + 0.5) runs.push([cur, g0]);
+      cur = Math.max(cur, g1);
+    });
+    if (a1 - cur > 0.5) runs.push([cur, a1]);
+    const off = fixed + dir * RAIL_OFF;
+    runs.forEach(([r0, r1]) => {
+      const len = r1 - r0, ctr = (r0 + r1) / 2;
+      if (axis === 'x') {
+        softBox(len, 0.075, 0.065, railC, ctr, RAIL_Y, off);
+        for (let t = r0 + 0.8; t < r1 - 0.4; t += 1.7)
+          softBox(0.06, 0.1, 0.16, railC, t, RAIL_Y - 0.1, fixed + dir * 0.13);
+      } else {
+        softBox(0.065, 0.075, len, railC, off, RAIL_Y, ctr);
+        for (let t = r0 + 0.8; t < r1 - 0.4; t += 1.7)
+          softBox(0.16, 0.1, 0.06, railC, fixed + dir * 0.13, RAIL_Y - 0.1, t);
+      }
+    });
+  }
+
   // ---- 앞줄 ----
   const hallRoom = FR.rooms.find(r => r.type === 'hall');
   const hallCx = (hallRoom.span[0] + hallRoom.span[1]) / 2;
@@ -1026,7 +1121,20 @@ export function buildWorld(scene) {
   }));
   makeDoor(K.dutyRoom.doorC - 0.8, fz0, 1.6, 'x', { swing: 1 });
   makeDoor(K.doorC - 1.2, fz0, 2.4, 'x', { swing: 1 });
-  for (let lx = fx0 + 3; lx < fx1 - 1; lx += 6) lamp(lx, FH - 0.12, (fz0 + zCor) / 2);
+  // 구관 복도 바닥: 흰 대형 타일 + 양쪽 검은 대리석 띠 (슬래브 0.08 위에 0.10)
+  corridorFloor(fx0 + 0.2, fx1 - 0.2, fz0, zCor, 0.100, TILE_W, MARBLE_K, 0.30);
+  // 복도 핸드레일 — 북벽. 개구부는 northGaps(서관 문·급식실·당직실·세로복도)가 이미 정확히 갖고 있다.
+  // ⚠️ 임의 좌표를 쓰면 문 없는 자리에 레일이 끊긴다 — 반드시 실제 개구부 목록을 재사용할 것.
+  railWall(fx0 + 0.3, fx1 - 0.3, fz0, 'x', [...northGaps, { c: -14.3, w: 2.6 }], 1);
+  // 소방설비 (실사: 복도 곳곳 / 지금까지 코드에 0개)
+  [-33, -18, 2, 21, 35].forEach(fx3 => fireExt(fx3, 0.10, fz0 + 0.42, fz0 + 0.16));
+  [-24, 28].forEach(hx => hydrant(hx, fz0 + 0.14, 0));
+  // 유도등은 복도 끝 바깥문·계단실 개구에만 (문 위 매달림 팻말과 정면으로 겹치지 않게)
+  exitLight(fx0 + 0.9, 2.45, FR.corridorExitZ, Math.PI / 2);
+  exitLight(fx1 - 0.9, 2.45, FR.corridorExitZ, -Math.PI / 2);
+  exitLight(-14.3, 2.45, fz0 + 0.2, 0);
+  // ⚠️ 형광등 y: 천장(FH-CEIL_DROP=3.13)보다 **아래**여야 보인다. FH-0.12(3.28)는 천장 위라 안 보였다.
+  for (let lx = fx0 + 3; lx < fx1 - 1; lx += 6) lamp(lx, FH - CEIL_DROP - 0.05, (fz0 + zCor) / 2);
   // 복도 벤치 — 계단실 개구부(-15.5~-13.1)를 피해 배치
   [-20.6, 15].forEach(bx5 => {
     box(1.8, 0.42, 0.42, 0xc9a06a, bx5, 0, fz0 + 0.55, { walk: true });
@@ -1065,16 +1173,16 @@ export function buildWorld(scene) {
       // ⚠️ 높이 h 를 키우면 위가 천장에 잘린다 — 중심 2.95 · h 0.30 이 상한
       const label = SCHOOL.people && SCHOOL.people[r.name] ? `${r.name} 1반` : r.name;
       if (r.type === 'toilet') {
-        sign('남자 화장실', gaps[0].c, 2.95, zCor - 0.18, 0, 0.28);
-        sign('여자 화장실', gaps[1].c, 2.95, zCor - 0.18, 0, 0.28);
+        hangSign('남자 화장실', gaps[0].c, FH - CEIL_DROP, zCor - 0.5, 0, 0.26);
+        hangSign('여자 화장실', gaps[1].c, FH - CEIL_DROP, zCor - 0.5, 0, 0.26);
       } else {
-        sign(label, gaps[0].c, 2.95, zCor - 0.18, 0, 0.3);
+        hangSign(label, gaps[0].c, FH - CEIL_DROP, zCor - 0.5, 0, 0.28);
       }
       furnish(r, cx, cw, 0, fz1, -1, fz1 - zCor);
       wallXGaps(s0, s1, gaps, zCor, 0, 0.95, wainC, 0.34);
-      [[s0, gaps[0].c - 1], [gaps[gaps.length - 1].c + 1, s1]].forEach(([a, b]) => {
-        if (b - a > 0.8) box(b - a - 0.3, 0.07, 0.06, railC, (a + b) / 2, 0.78, zCor - 0.21, { collide: false });
-      });
+      // 교실쪽 벽 핸드레일 — 문 개구부를 피해 끊어 깐다.
+      // ⚠️ 예전엔 box(collide:false)라 **레일을 밟고 올라설 수 있었다**(실버그) → railWall(softBox)로 교체
+      railWall(s0 + 0.15, s1 - 0.15, zCor, 'x', gaps, -1);
     }
     zones.push({ x0: s0, x1: s1, z0: zCor, z1: fz1, floor: 0, label: r.type === 'hall' ? '현관' : `본관 1층 · ${r.name}` });
   });
@@ -1391,22 +1499,22 @@ export function buildWorld(scene) {
   [[1.2, kz0 + 1.5], [2.2, kz0 + 2.2], [1.7, kz0 + 3.1]].forEach(([bx4, bz5]) =>
     box(0.7, 0.55, 0.5, 0xe8ddc4, bx4, 0, bz5));
   box(0.8, 0.8, 0.8, 0xc9a06a, 1.2, 0, cookZ - 1.3);
-  [0, 1].forEach(i => lamp(-6 + i * 5, kh - 0.15, -44, true));
-  lamp(-4, kh - 0.15, (kz0 + cookZ) / 2, true);
-  sign('급식실', K.doorC + 1.7, 2.95, fz0 + 0.18, 0, 0.3);
+  [0, 1].forEach(i => lamp(-6 + i * 5, kh - CEIL_DROP - 0.05, -44, true));
+  lamp(-4, kh - CEIL_DROP - 0.05, (kz0 + cookZ) / 2, true);
+  hangSign('급식실', K.doorC + 1.7, FH - CEIL_DROP, fz0 + 0.5, 0, 0.28);
   zones.push({ x0: kx0, x1: lcW, z0: cookZ, z1: kz1, floor: 0, label: '본관 1층 · 급식실' });
   zones.push({ x0: kx0, x1: 0, z0: kz0, z1: cookZ, floor: 0, label: '급식실 · 조리실' });
   zones.push({ x0: 0, x1: lcW, z0: kz0, z1: cookZ, floor: 0, label: '급식실 · 식품창고' });
   const D = K.dutyRoom;
   wallX(D.x[0], D.x[1], D.z[0], 0, FH, innerC);
   wallZ(D.z[0], D.z[1], D.x[1], 0, FH, innerC);
-  sign('당직실', D.doorC + 1.2, 2.95, fz0 + 0.18, 0, 0.28);
+  hangSign('당직실', D.doorC + 1.2, FH - CEIL_DROP, fz0 + 0.5, 0, 0.26);
   box(1.3, 0.74, 0.7, 0xb0a18e, (D.x[0] + D.x[1]) / 2, 0, D.z[0] + 1.2);
   box(1.05, 0.5, 1.95, 0xf2f5f7, D.x[1] - 0.8, 0, (D.z[0] + D.z[1]) / 2);
   zones.push({ x0: D.x[0], x1: D.x[1], z0: D.z[0], z1: D.z[1], floor: 0, label: '본관 1층 · 당직실' });
 
   // ---- 세로복도 (급식동 안 내부 통로 — 외벽·지붕은 급식동이 담당) ----
-  [-52, -47, -42].forEach(lz => lamp(6.9, kh - 0.15, lz, false));
+  [-52, -47, -42].forEach(lz => lamp(6.9, kh - CEIL_DROP - 0.05, lz, false));
   // 서벽 급식 게시판 (민벽 해소)
   box(0.07, 1.25, 2.6, 0x3f6b52, lcW + 0.06, 1.05, -50.5, { collide: false });
   const menuSign = textSign('오늘의 급식', { h: 0.24, bg: '#ffffff', fg: '#3a7d44', border: null, fontPx: 40, pad: 12 });
@@ -1462,7 +1570,12 @@ export function buildWorld(scene) {
   wallXWin(ex0, shed0, zCorE, innerC, eCWins, { h: FH, sill: 1.9, wh: 0.9, doors: eGaps });
   wallXGaps(ex0, shed0, eGaps, zCorE, 0, 0.95, wainC, 0.34);
   wallZ(ez0, zCorE, shed0, 0, FH, innerC);   // 복도 동쪽 끝막이 (창고와 분리)
-  for (let lx = ex0 + 3; lx < shed0 - 1; lx += 6) lamp(lx, FH - 0.12, (ez0 + zCorE) / 2);
+  // 신관(동관) 복도: 실사는 베이지 대형 타일 + 짙은 회색 걸레받이 — 구관(흰 타일+검은 띠)과 다르다
+  corridorFloor(ex0 + 0.2, shed0 - 0.2, ez0, zCorE, 0.098, 0xe7e0d0, 0x6a6a66, 0.22);
+  railWall(ex0 + 0.3, shed0 - 0.3, ez0, 'x', [], 1);
+  [12, 22, 32].forEach(fx4 => fireExt(fx4, 0.098, ez0 + 0.42, ez0 + 0.16));
+  exitLight(ex0 + 0.8, 2.45, (ez0 + zCorE) / 2, Math.PI / 2);
+  for (let lx = ex0 + 3; lx < shed0 - 1; lx += 6) lamp(lx, FH - CEIL_DROP - 0.05, (ez0 + zCorE) / 2);
   const eEdges = new Set();
   E.rooms.forEach(r => {
     const [s0, s1] = r.span;
@@ -1470,7 +1583,7 @@ export function buildWorld(scene) {
     eEdges.add(s0); eEdges.add(s1);
     if (!r.external && !r.innerOnly) {
       const label = SCHOOL.people && SCHOOL.people[r.name] ? `${r.name} 1반` : r.name;
-      sign(label, doorCOf(r), 2.95, zCorE - 0.18, 0, 0.3);
+      hangSign(label, doorCOf(r), FH - CEIL_DROP, zCorE - 0.5, 0, 0.28);
       makeDoor(doorCOf(r) - 0.9, zCorE, 1.8, 'x', { swing: -1 });
       if (eBack(r)) makeDoor(s1 - 1.9 - 0.9, zCorE, 1.8, 'x', { swing: -1 });
     }
@@ -1551,7 +1664,7 @@ export function buildWorld(scene) {
     wallXWin(s0, s1, zCor2, innerC, upCWins, { y0: FH, h: FH, sill: 1.9, wh: 0.9, doors: upGaps });
     upGaps.forEach(gp => makeDoor(gp.c - 0.9, zCor2, 1.8, 'x', { swing: 1, y: FH }));
     const label = SCHOOL.people && SCHOOL.people[r.name] ? `${r.name} 1반` : r.name;
-    sign(label, doorCOf(r), FH + 2.95, zCor2 + 0.18, 0, 0.3);
+    hangSign(label, doorCOf(r), FH * 2 - CEIL_DROP, zCor2 + 0.5, 0, 0.28);
     furnish(r, cx, cw, FH, uz0, 1, zCor2 - uz0);
     const ww2 = Math.min(2.2, cw - 1.2);
     upNWins.push({ c: cx - cw / 4, w: ww2 }, { c: cx + cw / 4, w: ww2 });
@@ -1565,7 +1678,11 @@ export function buildWorld(scene) {
   [...upEdges].filter(x => x > ux0 + 0.01 && x < ux1 - 0.01)
     .forEach(x => wallZ(uz0, zCor2, x, FH, FH, innerC));
   zones.push({ x0: ux0, x1: ux1, z0: zCor2, z1: uz1, floor: 1, label: '본관 2층 복도' });
-  for (let lx = ux0 + 3; lx < tx0; lx += 6) lamp(lx, FH * 2 - 0.12, (zCor2 + uz1) / 2);
+  // 2층 복도: 실사는 **회색 테라조**(구관 흰타일과 다르다). 띠 없음.
+  // ⚠️ x 상한은 zone(ux1)이 아니라 **슬래브가 끝나는 wkX** — ux1로 깔면 계단 개구부 위에 바닥이 뜬다.
+  corridorFloor(ux0 + 0.2, wkX - 0.1, zCor2, uz1, FH + 0.03, TERRAZZO, TERRAZZO, 0);
+  railWall(ux0 + 0.3, wkX - 0.3, uz1, 'x', [], -1);
+  for (let lx = ux0 + 3; lx < tx0; lx += 6) lamp(lx, FH * 2 - CEIL_DROP - 0.05, (zCor2 + uz1) / 2);
   roofOver(ux0, ux1, uz0, uz1, FH * 2, 0xd9dce1);  // 위성: 서관 지붕은 밝은 회백색
   const tank = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 1.5, 14), mat(0xc8cdd2));
   tank.position.set(ux0 + 4, FH * 2 + 0.75, uz0 + 3);
