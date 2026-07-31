@@ -39,7 +39,7 @@ export const SCHOOL = {
       x: [-40, 40], z: [-38, -24], corridorDepth: 2.7,
       rooms: [                     // 서→동, 폭은 배치도 비율
         { name: '원무실',   type: 'office',    span: [-40, -34.3] },
-        { name: '유치원',   type: 'classroom', span: [-34.3, -25.3] },
+        { name: '유치원',   type: 'classroom', span: [-34.3, -25.3], kinder: true },   // kinder=유아용 가구 세트(furnish)
         { name: '사랑반',   type: 'classroom', span: [-25.3, -18] },
         { name: '돌봄교실', type: 'daycare',   span: [-18, -10.7] },
         { name: '행정실',   type: 'office',    span: [-10.7, -6.5] },

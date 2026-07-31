@@ -640,6 +640,61 @@ export function buildWorld(scene) {
     return scr;
   }
 
+  // ---- 과학실 전용 세트 (실사: 연두+흰 실험대·유리 약품장 줄·모니터·나무 가로 블라인드) ----
+  // ⚠️ function 선언으로 둔다(호이스팅) — 화살표 const 면 호출부(furnish 안)보다 위여야 하는 TDZ 규칙에 걸린다.
+  // ⚠️ 폭은 반드시 cw 기준으로 클램프 — 상수로 박으면 좁은 방에서 벽을 뚫는다.
+  function sciLab(cx, cw, y0, zB, dir, depth) {
+    const at = o => zB + dir * o;
+    const s0 = cx - cw / 2, s1 = cx + cw / 2;
+    const bw2 = Math.min(cw - 2.6, 3.2);
+    // 학생 실험대 4대 (2열 × 2줄) — 연두 몸통 + 스테인리스 상판 + 캐스터
+    [-1, 1].forEach(sx => [0, 1].forEach(sz => {
+      const dx = cx + sx * Math.min(cw * 0.22, 1.5), dz = at(depth * 0.42 + sz * 2.3);
+      solidSoftBox(1.45, 0.78, 0.72, 0x8fc46a, dx, y0 + 0.06, dz);            // 몸통(통과 차단·밟기 불가)
+      softBox(1.55, 0.06, 0.8, 0xd6dbe0, dx, y0 + 0.84, dz);                  // 스테인리스 상판
+      [[-0.6, -0.28], [0.6, -0.28], [-0.6, 0.28], [0.6, 0.28]].forEach(([ox, oz]) =>
+        softBox(0.08, 0.06, 0.08, 0x4a5058, dx + ox, y0, dz + oz));           // 캐스터
+      softBox(0.05, 0.34, 0.42, 0x22262c, dx + sx * 0.5, y0 + 0.9, dz);       // 모니터
+    }));
+    // 교사용 실험대 (앞벽 쪽 — 교탁 자리)
+    solidSoftBox(bw2, 0.8, 0.75, 0x8fc46a, s0 + 1.7, y0 + 0.06, at(depth * 0.18));
+    softBox(bw2 + 0.1, 0.06, 0.82, 0xd6dbe0, s0 + 1.7, y0 + 0.86, at(depth * 0.18));
+    // 벽면 유리 약품장 줄 (동벽) — 하부장 + 유리 상부장. ⚠️ 파스텔 서랍장은 !isSci 로 이미 뺐다
+    for (let k = 0; k < 3; k++) {
+      const cz = at(3.4 + k * 1.5);
+      solidSoftBox(0.44, 0.85, 1.35, 0xeceae2, s1 - 0.24, y0, cz);            // 하부장
+      solidSoftBox(0.42, 1.05, 1.35, 0xf4f2ea, s1 - 0.25, y0 + 0.9, cz);      // 상부장 프레임
+      glassAdd(s1 - 0.46, y0 + 1.42, cz, Math.PI / 2, 1.2, 0.9);              // 유리문(전 월드 1메시 병합)
+      softBox(0.03, 0.05, 1.3, 0x8fc46a, s1 - 0.46, y0 + 0.88, cz);           // 연두 띠
+    }
+    // 창가 나무 가로 블라인드 — 커튼(s1-0.95)과 안 겹치게 x 폭을 줄이고 z를 안쪽으로
+    for (let k = 0; k < 5; k++)
+      softBox(Math.min(cw - 3.4, 2.6), 0.04, 0.05, 0xb08d5a, cx - 0.3, y0 + 1.2 + k * 0.32, at(0.24));
+  }
+
+  // ---- 유치원 전용 세트 (실사: 저상 가구·놀이매트·캐릭터 벽화) ----
+  // ⚠️ 자동 책상열(x = s0+3.1 한 줄)을 피해 s1 쪽에 놓는다 — 겹치면 책상이 매트 위에 선다.
+  function kinderSet(cx, cw, y0, zB, dir, depth) {
+    const at = o => zB + dir * o;
+    const s0 = cx - cw / 2, s1 = cx + cw / 2;
+    const mw = Math.min(cw - 3.2, 3.2);
+    plane(mw, 2.4, 0xf5c9d6, s1 - mw / 2 - 0.3, y0 + 0.108, at(2.9));          // 놀이매트(분홍)
+    plane(mw * 0.55, 1.5, 0xbfe3a8, s1 - mw * 0.3, y0 + 0.11, at(2.9));        // 연두 겹판
+    // 저상 원형 테이블 2 + 낮은 스툴 4 (아이 치수 — 좌판 0.28이라 _blockedAt 밴드 밖: softBox로 충분)
+    [[-0.9, 0], [0.9, 0]].forEach(([ox]) => {
+      const tx = s1 - mw / 2 - 0.3 + ox, tz = at(2.9);
+      softBox(1.0, 0.06, 1.0, 0xe8c98a, tx, y0 + 0.46, tz);
+      softBox(0.12, 0.46, 0.12, 0xc9a86a, tx, y0, tz);
+      [[-0.62, 0], [0.62, 0]].forEach(([sx2]) =>
+        softBox(0.34, 0.28, 0.34, 0xf2a6b8, tx + sx2, y0, tz));
+    });
+    // 저상 교구장 (창가) + 캐릭터 벽화 띠 (굽도리 위 — 실사: 아이 그림 벽화)
+    solidSoftBox(Math.min(cw - 4, 2.6), 0.62, 0.4, 0xf6c67a, cx - 0.4, y0, at(0.5));
+    geoAdd(UNIT_PLANE, 0x8fd0a8, s1 - 1.4, y0 + 1.35, at(depth - 0.19), [0, dir > 0 ? Math.PI : 0, 0], 2.2, 0.7, 1);
+    [[-0.6, 0xf2a6b8], [0.1, 0xf6c67a], [0.75, 0x9bc1e8]].forEach(([ox, cc]) =>
+      geoAdd(UNIT_PLANE, cc, s1 - 1.4 + ox, y0 + 1.35, at(depth - 0.2), [0, dir > 0 ? Math.PI : 0, 0], 0.38, 0.44, 1));
+  }
+
   // ---- 방 가구 ----
   function furnish(r, cx, cw, y0, zB, dir, depth) {
     const at = o => zB + dir * o;
@@ -659,6 +714,12 @@ export function buildWorld(scene) {
         person(sxp, y0, szp, faceIn, nm, gd === '여', sz === 'small' ? { small: true } : { teacher: true });
       });
     }
+    // 실 성격 플래그 — **벽 마감 블록보다 위**에 선언한다(아래에서 마감 색을 가르려면 여기서 읽어야 한다).
+    // ⚠️ 과학실을 classy 에서 빼지 않는 이유: 실물 과학실에도 태극기·TV·게시판·천장 LED가 있다.
+    //    빼면 그 10덩이를 전부 복제해야 하고, 비-classy 체인엔 science 케이스가 없어 빈 방이 된다.
+    const isSci = r.type === 'science';
+    const isKin = !!r.kinder;
+    const classy = r.type === 'classroom' || r.type === 'computer' || isSci;
     // 바깥벽 실내면 마감 — 노란 외벽이 방 안에서 그대로 보이던 것을 실내 도장으로 덮는다.
     // 창 구간(약 0.95~2.55)은 비워 두고 아래 굽도리(연두)·위 띠(아이보리)만 붙인다.
     // (아래 타입별 분기에 return 이 있으므로 반드시 그 앞에서 그린다)
@@ -670,9 +731,10 @@ export function buildWorld(scene) {
       // ⚠️ 측벽(좌우) 마감판은 넣지 않는다 — 열린 문 너머로 비스듬히 보이면
       //    '문 앞을 초록 판이 가로막는' 것처럼 보인다 (v0.16에서 실제 신고됨)
     }
-    const classy = r.type === 'classroom' || r.type === 'computer' || r.type === 'science';
     if (classy) {
+      // ⚠️ bw 는 게이트 **밖**이어야 한다 — 아래 TV·게시판이 bw 를 쓴다. 안에 넣으면 전 교실 ReferenceError.
       const bw = Math.min(depth - 2.5, 4);
+      if (!isSci) {                      // 과학실 앞벽은 칠판이 아니라 실험대·모니터다(실사)
       const frame = new THREE.Mesh(UNIT_PLANE, mat(0x9aa5ad));
       frame.scale.set(bw + 0.2, 1.4, 1);
       frame.position.set(s0 + 0.17, y0 + 1.7, zMid);
@@ -688,6 +750,7 @@ export function buildWorld(scene) {
       box(0.12, 0.06, bw, 0xc8ccd0, s0 + 0.28, y0 + 1.02, zMid, { collide: false });   // 분필 트레이
       [-0.35, -0.15, 0.05].forEach((co, ci) =>   // 분필·지우개
         geoAdd(UNIT_BOX, ci === 2 ? 0x8a6a45 : 0xf5f5f0, s0 + 0.28, y0 + 1.09, zMid - dir * (bw * 0.3 + co), null, 0.06, 0.05, ci === 2 ? 0.16 : 0.1));
+      }   // ← !isSci 칠판 세트 끝
       // 벽걸이 TV (브래킷 + 베젤 + 화면)
       box(0.05, 0.6, 0.05, 0x30343a, s0 + 0.6, y0 + 2.55, zMid + dir * (bw / 2 + 1), { collide: false });
       box(0.09, 0.78, 1.36, 0x22262c, s0 + 0.62, y0 + 1.82, zMid + dir * (bw / 2 + 1), { collide: false });
@@ -700,12 +763,14 @@ export function buildWorld(scene) {
       bul.rotation.y = Math.PI / 2;
       scene.add(bul);
       // 교탁 — 칠판 앞 가운데. 다리를 달아야 '공중에 뜬 상자'로 안 보인다
+      if (!isSci) {                    // 과학실은 교탁 대신 교사용 실험대
       const tdX = s0 + 1.6, tdZ = zMid + dir * 0.4;
       box(1.25, 0.08, 0.66, 0xc9b89c, tdX, y0 + 0.74, tdZ, { collide: false });
       box(1.1, 0.5, 0.56, 0xb0a18e, tdX, y0 + 0.22, tdZ, { collide: false });
       [[-0.55, -0.28], [0.55, -0.28], [-0.55, 0.28], [0.55, 0.28]].forEach(([ox, oz]) =>
         box(0.06, 0.74, 0.06, 0x8a949c, tdX + ox, y0, tdZ + oz, { collide: false }));
       box(1.25, 0.82, 0.66, 0, tdX, y0, tdZ, { material: INVIS, noCam: true });
+      }   // ← !isSci 교탁 끝
       // 후면(복도쪽) 사물함 — 표준 교실 구성, 앞뒷문 사이
       if (cw >= 7) {
         const lkW = cw - 6.8;
@@ -729,9 +794,11 @@ export function buildWorld(scene) {
         geoAdd(UNIT_PLANE, paper[Math.floor(rng() * paper.length)], s1 - 0.23, ay, az,
           [0, -Math.PI / 2, (rng() - 0.5) * 0.16], 0.44, 0.34, 1);
       }
+      if (!isSci) {                    // 학급문고는 교실만
       box(0.42, 0.72, 2.1, 0xa8825e, s1 - 0.4, y0, zMid + dir * 2.9);   // 학급문고
       [0xe76f51, 0x2a9d8f, 0xe9c46a, 0x457b9d, 0xb56576, 0x6d9f71].forEach((bc2, bi) =>
         geoAdd(UNIT_BOX, bc2, s1 - 0.4, y0 + 0.87, zMid + dir * 2.9 + (bi - 2.5) * 0.28, null, 0.24, 0.3, 0.09));
+      }
       // 원형 벽시계 (테두리 + 문자판 + 시침·분침) + 액자에 넣은 태극기
       geoAdd(CIRC_GEO, 0x4a5058, s0 + 0.175, y0 + 2.82, zMid, [0, Math.PI / 2, 0], 0.27, 0.27, 1);
       geoAdd(CIRC_GEO, 0xf9fafb, s0 + 0.185, y0 + 2.82, zMid, [0, Math.PI / 2, 0], 0.24, 0.24, 1);
@@ -767,8 +834,10 @@ export function buildWorld(scene) {
       [0.55, 0.85, 1.15, 1.45].forEach(vy =>
         geoAdd(UNIT_BOX, 0xc4cdd4, s0 + 0.58, y0 + vy, at(0.85) - dir * 0.26, null, 0.34, 0.05, 0.02));
       geoAdd(UNIT_BOX, 0x67b26f, s0 + 0.58, y0 + 1.72, at(0.85) - dir * 0.26, null, 0.12, 0.06, 0.02);
+      if (!isSci) {                    // ⚠️ 과학실 약품장과 x·z가 겹친다 — 반드시 함께 빼야 한다
       box(0.46, 1.05, 0.85, 0x9fd0e8, s1 - 0.44, y0, zMid - dir * 2.3);
       box(0.32, 0.24, 0.5, 0xf2d34c, s1 - 0.44, y0 + 1.05, zMid - dir * 2.3, { collide: false });
+      }
       plane(2.4, 1.7, 0xf2c9a0, cx + 0.6, y0 + 0.106, at(depth - 2.1));
       // 여닫는 사물함 2칸 (E키 — 방탈출 요소)
       if (cw >= 7) {
@@ -798,6 +867,7 @@ export function buildWorld(scene) {
       softBox(0.62, 0.05, 0.62, 0xc9c6bd, s0 + cw * 0.5, ceilY - 0.2, at(depth * 0.24));    // 흡입 그릴
       softBox(0.22, 0.09, 0.22, 0xe6e3da, s0 + cw * 0.5, ceilY - 0.11, at(depth * 0.76));   // 원형 스피커(근사)
       // 책상 수 = 학생 수 + 1 (명단 없으면 4)
+      if (!isSci) {                    // 과학실은 학생 책상 대신 실험대
       const nx = Math.max(2, Math.min(3, Math.floor((cw - 4) / 1.5) + 1));
       const nz = Math.max(2, Math.min(4, Math.floor((depth - 3) / 1.45)));
       const ppl = SCHOOL.people && SCHOOL.people[r.name];
@@ -825,6 +895,10 @@ export function buildWorld(scene) {
         person(s0 + 2.4, y0, zMid + dir * (depth / 2 - 1.6), Math.PI / 2, '선생님', ppl.t === '여',
           { teacher: true, lines: ppl.lines && ppl.lines['선생님'] });
       }
+      }   // ← !isSci 책상열·NPC 끝
+      // ⚠️ 전용 세트는 반드시 이 return **앞**에서 부른다 — 아래 830줄부터는 classy 가 영원히 도달 못 한다
+      if (isSci) sciLab(cx, cw, y0, zB, dir, depth);
+      if (isKin) kinderSet(cx, cw, y0, zB, dir, depth);
       return;
     }
     lamp(cx, y0 + FH - CEIL_DROP - 0.05, zMid);
