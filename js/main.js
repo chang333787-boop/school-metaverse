@@ -222,7 +222,9 @@ function updateCamera(dt) {
     const hits = camRay.intersectObjects(player._nearSolid, false);
     for (let i = 0; i < hits.length; i++) {
       if (hits[i].object.userData.noCam) continue;   // 옥상 차단벽 등은 카메라 통과 허용
-      const d = Math.max(0.9, hits[i].distance - 0.35);
+      // 기본 0.9m 하한 — 단, 벽이 그보다 가까우면 '벽 앞 0.12m'가 절대 상한
+      // (등을 벽에 붙이면 하한 0.9가 벽 뒤로 밀어넣던 것 — 도서관로비 yaw π 계측으로 확인)
+      const d = Math.max(0.5, Math.min(Math.max(0.9, hits[i].distance - 0.35), hits[i].distance - 0.12));
       if (s === 0) front = Math.min(front, d); else side = Math.min(side, d);
       break;
     }
