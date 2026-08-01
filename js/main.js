@@ -302,6 +302,13 @@ function targetLabel(t) {
   if (t.kind === 'person') return `E: ${t.o.name}에게 말걸기`;
   if (t.kind === 'locker') return t.o.open ? 'E: 사물함 닫기' : 'E: 사물함 열기';
   if (t.kind === 'garden') return t.o.grown.visible ? 'E: 잘 자라고 있어요' : 'E: 물주기';
+  if (t.kind === 'chalk') return t.o.st === 0 ? 'E: 칠판에 낙서하기' : t.o.st === 1 ? 'E: 낙서 더 하기' : 'E: 칠판 지우기';
+  if (t.kind === 'meal') return 'E: 급식 받기';
+  if (t.kind === 'book') return 'E: 책 꺼내 읽기';
+  if (t.kind === 'water') return 'E: 물 마시기';
+  if (t.kind === 'slide') return 'E: 미끄럼틀 타기';
+  if (t.kind === 'flag') return 'E: 국기에 대한 경례';
+  if (t.kind === 'mic') return 'E: 방송하기';
   return null;
 }
 
@@ -337,6 +344,27 @@ function interact() {
     toast(t.o.msg || '의자에 앉았다 (이동키로 일어나기)');
   } else if (t.kind === 'person') {
     talk(t.o);
+  } else if (t.kind === 'chalk') {
+    const c = t.o;
+    c.st = (c.st + 1) % 3;
+    c.m[0].visible = c.st >= 1;
+    c.m[1].visible = c.st >= 2;
+    toast(c.st === 0 ? '칠판을 깨끗이 지웠다 🧽' : c.st === 1 ? '분필로 슥슥… ✏️' : '낙서 완성! 선생님 오시기 전에…');
+  } else if (t.kind === 'meal') {
+    const menus = ['오늘 급식: 카레라이스·미역국·깍두기 🍛', '오늘 급식: 불고기·콩나물국·사과 🍎', '오늘 급식: 짜장밥·계란국·단무지 🍜', '오늘 급식: 치킨마요덮밥·어묵국 🍗'];
+    toast(menus[Math.floor(Math.random() * menus.length)] + ' — 식판 가득!');
+  } else if (t.kind === 'book') {
+    const bks = ['《마당을 나온 암탉》을 꺼내 읽었다 📖', '《구름빵》을 꺼내 읽었다 📖', '《강아지똥》을 꺼내 읽었다 📖', '《흔한남매》는 대출 중이다… 😢', '공룡 도감을 펼쳤다 🦕'];
+    toast(bks[Math.floor(Math.random() * bks.length)]);
+  } else if (t.kind === 'water') {
+    toast('시원한 물 한 모금! 💧 (꿀꺽꿀꺽)');
+  } else if (t.kind === 'slide') {
+    player.escapeTo(t.o.top);
+    toast('미끄럼틀 꼭대기! 앞으로 걸어가면 슝~ 🛝');
+  } else if (t.kind === 'flag') {
+    toast('국기에 대하여 경례! 🇰🇷');
+  } else if (t.kind === 'mic') {
+    toast('아아— 마이크 테스트. 전교생 여러분~ 🎤');
   } else if (t.kind === 'locker') {
     const lk = t.o;
     lk.open = !lk.open;

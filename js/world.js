@@ -757,6 +757,12 @@ export function buildWorld(scene) {
       box(0.12, 0.06, bw, 0xc8ccd0, s0 + 0.28, y0 + 1.02, zMid, { collide: false });   // 분필 트레이
       [-0.35, -0.15, 0.05].forEach((co, ci) =>   // 분필·지우개
         geoAdd(UNIT_BOX, ci === 2 ? 0x8a6a45 : 0xf5f5f0, s0 + 0.28, y0 + 1.09, zMid - dir * (bw * 0.3 + co), null, 0.06, 0.05, ci === 2 ? 0.16 : 0.1));
+      // S10 상호작용: 칠판 낙서 (E로 그리기→더 그리기→지우기)
+      const dA = textSign('3+4=7  참 잘했어요 ⭐', { h: 0.26, bg: '#3f6b52', fg: '#f7f8f9', border: null, fontPx: 40, pad: 10 });
+      dA.position.set(s0 + 0.215, y0 + 1.98, zMid - dir * 0.3); dA.rotation.y = Math.PI / 2; dA.visible = false; scene.add(dA);
+      const dB = textSign('오늘의 낙서: 우리반 최고! ✏️', { h: 0.24, bg: '#3f6b52', fg: '#f2df8a', border: null, fontPx: 40, pad: 10 });
+      dB.position.set(s0 + 0.215, y0 + 1.45, zMid + dir * 0.4); dB.rotation.y = Math.PI / 2; dB.visible = false; scene.add(dB);
+      interactables.push({ type: 'chalk', x: s0 + 0.6, y: y0, z: zMid, st: 0, m: [dA, dB] });
       }   // ← !isSci 칠판 세트 끝
       // 벽걸이 TV (브래킷 + 베젤 + 화면)
       box(0.05, 0.6, 0.05, 0x30343a, s0 + 0.6, y0 + 2.55, zMid + dir * (bw / 2 + 1), { collide: false });
@@ -1010,6 +1016,7 @@ export function buildWorld(scene) {
       [[0xf5f2ea, -2.0], [0x8a5a30, -0.9], [0x67b26f, 0.2], [0xd0392e, 1.3]].forEach(([fc, ox]) =>
         box(0.6, 0.12, 0.5, fc, cx + 0.4 + ox, y0 + 0.9, at(depth - 0.95), { collide: false }));
       box(0.5, 0.3, 0.5, 0x3f9c5a, cx + 2.6, y0 + 0.9, at(depth - 0.95), { collide: false });  // 식판 더미
+      interactables.push({ type: 'meal', x: cx + 0.4, y: y0, z: at(depth - 1.6) });   // S10: 급식 받기
       // 실사(v78·사용자 확인): 남벽 전체가 **회색 주름 커튼**(뒤는 악기 보관) + 커튼 앞 트랙 스포트 1줄
       {
         const cz9 = at(0.24);
@@ -1041,6 +1048,7 @@ export function buildWorld(scene) {
       for (let i = 0; i < nSh; i++) {
         const sx = s0 + 1.5 + i * ((cw - 3) / Math.max(1, nSh - 1));
         box(2, 2.05, 0.5, 0x8b5e34, sx, y0, at(0.8));
+        if (i === 0 || i === nSh - 1) interactables.push({ type: 'book', x: sx, y: y0, z: at(1.5) });   // S10: 책 읽기
         [0.6, 1.25, 1.85].forEach(by => {
           const strip = new THREE.Mesh(UNIT_PLANE, books);
           strip.scale.set(1.8, 0.42, 1);
@@ -2343,6 +2351,7 @@ export function buildWorld(scene) {
   box(0.07, 2.6, 3.2, 0x7cc26b, gx0 + 0.4, 0, gz0 + 1.8, { collide: false });
   sign('방송실', -75.5, 2.35, gFrontZ + 0.18, 0, 0.4);
   box(1.8, 0.74, 0.7, 0x8a6a52, -75.5, 0, gz0 + 1.1);
+  interactables.push({ type: 'mic', x: -75.5, y: 0, z: gz0 + 1.7 });   // S10: 방송하기
   box(1.1, 0.14, 0.5, 0x2b2e33, -75.7, 0.76, gz0 + 1.05, { rot: [0.18, 0, 0], collide: false });
   box(0.45, 0.36, 0.05, 0x14161a, -76.2, 0.95, gz0 + 0.85, { collide: false });
   box(0.45, 0.36, 0.05, 0x14161a, -74.9, 0.95, gz0 + 0.85, { collide: false });
@@ -2430,6 +2439,7 @@ export function buildWorld(scene) {
     box(0.09, 0.92, 0.09, 0xe8863a, kpX - 2.8 + ox, 0, kpZ - 1.4 + oz, { collide: false }));
   box(0.65, 0.09, 1.9, 0xe3453a, kpX - 2.8, 0.44, kpZ - 0.05, { rot: [0.48, 0, 0], collide: false, walk: true });
   box(0.6, 0.08, 1.3, 0x9aa5ad, kpX - 2.8, 0.42, kpZ - 2.35, { rot: [-0.75, 0, 0], collide: false, walk: true });
+  interactables.push({ type: 'slide', x: kpX - 2.8, y: YOFF, z: kpZ + 0.8, top: { x: kpX - 2.8, y: YOFF + 1.1, z: kpZ - 1.4 } });   // S10
   // 스프링 라이더 2
   [[kpX + 0.6, kpZ + 1.7, 0xd94f6b], [kpX + 2.5, kpZ - 1.1, 0x4d9bd6]].forEach(([sx4, sz4, sc4]) => {
     const spr = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 0.34, 8), mat(0x555b62));
@@ -2692,6 +2702,7 @@ export function buildWorld(scene) {
   box(1.0, 0.07, 2.9, 0xd6dbe0, slX, 0.85, slZ + 1.95, { rot: [0.63, 0, 0], collide: false, walk: true });
   [-0.56, 0.56].forEach(ox => box(0.08, 0.2, 2.9, 0x9aa5ad, slX + ox, 0.9, slZ + 1.95, { rot: [0.63, 0, 0], collide: false }));
   box(0.85, 0.1, 2.1, 0xa9805a, slX, 0.8, slZ - 1.35, { rot: [-0.95, 0, 0], collide: false, walk: true });
+  interactables.push({ type: 'slide', x: slX, y: YOFF, z: slZ + 3.2, top: { x: slX, y: YOFF + 1.8, z: slZ } });   // S10
   const swX = px + 4.5, swZ = pz + 3.5;
   const swbar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.4, 8), mat(0x3a6ea5));
   swbar.rotation.z = Math.PI / 2;
@@ -2764,6 +2775,7 @@ export function buildWorld(scene) {
     const wfX = px - 2, wfZ = pz - 9;   // 실사(v79_0225): 숲놀이터 곁 수풀가 — 운동장 서단 고립 아님
     solidSoftBox(2.6, 0.82, 0.6, 0xc8cdd2, wfX, 0, wfZ);
     [-0.9, -0.45, 0, 0.45, 0.9].forEach(ox => softBox(0.07, 0.16, 0.07, 0x9aa5ad, wfX + ox, 0.82, wfZ));   // 5구
+    interactables.push({ type: 'water', x: wfX, y: YOFF, z: wfZ + 0.6 });   // S10: 물 마시기
     [[-1.2, -0.5], [1.2, -0.5], [-1.2, 0.5], [1.2, 0.5]].forEach(([ox, oz]) =>
       solidSoftBox(0.1, 2.1, 0.1, 0x9aa5ad, wfX + ox, 0, wfZ + oz));
     [[-0.7, 0.24, 0.5], [0, 0.4, 0], [0.7, 0.24, -0.5]].forEach(([ox, ry, rz]) =>
@@ -2850,6 +2862,7 @@ export function buildWorld(scene) {
   // ---------- 국기게양대 (테라스 위) ----------
   YOFF = 0;
   const [flx, flz] = SCHOOL.flagPole;
+  interactables.push({ type: 'flag', x: SCHOOL.flagPole[0], y: 0, z: SCHOOL.flagPole[1] + 0.7 });   // S10: 경례
   // 콘크리트 기단 (폴이 바닥을 그대로 관통하던 것 해소)
   box(1.5, 0.28, 1.5, 0xd8d2c6, flx, 0, flz, { walk: true });
   box(1.05, 0.16, 1.05, 0xe4dfd2, flx, 0.28, flz, { walk: true });
