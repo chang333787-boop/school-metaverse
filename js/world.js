@@ -1377,6 +1377,10 @@ export function buildWorld(scene) {
   faceBand(0.62, 0.42, BLUEC);    // 창 아래 허리띠(중앙 구간용)
   faceBand(2.52, 0.5, YELC);
   faceBand(3.02, 0.38, BLUEC);
+  // 실사(hi_0255·0264): 파라펫 코핑이 구간별 컬러 — 중앙 코발트·양끝 머스터드
+  softBox(34.4, 0.4, 0.12, 0x3f6fa8, -0.8, FH + 0.02, fz1 + 0.33);
+  softBox(21.6, 0.4, 0.12, 0xd9a622, -29.1, FH + 0.02, fz1 + 0.33);
+  softBox(23.4, 0.4, 0.12, 0xd9a622, 28.2, FH + 0.02, fz1 + 0.33);
   // 실사(gym_0278·hi_0264): 서·동 양끝 1층은 **비비드 옐로우 대면적** — 가는 띠가 아니라 벽면
   [[-40, -18], [16.4, 40]].forEach(([xa, xb]) => {
     // ⚠️ 하단 밴드는 y0.5부터 — 운동장에서 보면 옹벽(높이 1.0)이 y1 아래를 가린다(자가 심사에서 확인)
@@ -1387,7 +1391,11 @@ export function buildWorld(scene) {
     .forEach(x => softBox(0.38, FH, FACE_T, (x < -18 || x > 16.4) ? YELC : BLUEC, x, 0, faceZ + 0.02));   // 양끝=노랑(실사)·동일평면 금지
   roofOver(fx0, fx1, fz0, fz1, FH, roofC);
   // 옥탑 구조물 + 환기구 (위성사진) — 슬래브 상면(FH+0.1) 위에 얹음
-  box(3, 1.6, 2.4, 0xc8ccd2, 20, FH + 0.1, -31);
+  // 실사(hi_0255): 옥탑은 회색 상자가 아니라 **흰 벽 + 청회색 박공지붕**
+  box(4.6, 2.0, 3.2, 0xe9edf0, 19, FH + 0.1, -31);
+  [[-0.78, 0.6], [0.78, -0.6]].forEach(([oz, rx8]) =>
+    softBox(5.2, 0.13, 2.0, 0x93a9ba, 19, FH + 2.72, -31 + oz, [rx8, 0, 0]));
+  softBox(5.3, 0.12, 0.3, 0x7f97ab, 19, FH + 3.28, -31);
   box(1.1, 0.7, 1.1, 0x9aa5ad, -6, FH + 0.1, -33);
   box(1.1, 0.7, 1.1, 0x9aa5ad, 30, FH + 0.1, -27.5);
 
@@ -2889,6 +2897,36 @@ export function buildWorld(scene) {
   for (let tz = -30; tz <= 40; tz += 10) tree(-80, tz, 1 + rng() * 0.4);
   [-30, -8, 10, 26].forEach(tx => tree(tx, -68, 1.1 + rng() * 0.3));
   tree(58, -20, 0.9);
+  // 실사(hi_0255·0264): 동측 경계는 1.2m 흰 펜스가 아니라 **5.5m 초록 그물 방구망**
+  {
+    const bx0 = 55.3;
+    const bg = new THREE.PlaneGeometry(56, 5.2);
+    const buv = bg.attributes.uv;
+    for (let ui = 0; ui < buv.count; ui++) buv.setXY(ui, buv.getX(ui) * 56 / 0.42, buv.getY(ui) * 5.2 / 0.42);
+    const bm = new THREE.Mesh(bg, NET_FENCE);
+    bm.rotation.y = Math.PI / 2;
+    bm.position.set(bx0, 1.7, 12);
+    bm.matrixAutoUpdate = false; bm.updateMatrix();
+    scene.add(bm);
+    for (let bz3 = -15; bz3 <= 39; bz3 += 6)
+      box(0.14, 5.4, 0.14, 0x3f7d4a, bx0, -1, bz3);
+    box(0.08, 0.08, 56, 0x2a6b3f, bx0, 4.25, 12, { collide: false });
+    box(0.05, 5.4, 56, 0, bx0, -1, 12, { material: INVIS });
+  }
+  // 실사(gym_0278): 건물 앞은 포장 위 점열이 아니라 **웃자란 풀밭 + 대형 반송(구름 수형)**
+  {
+    const keepG = YOFF;
+    YOFF = 0;   // 건물 앞 화단은 테라스 레벨 — 운동장 y로 깔면 테라스 아래 묻힌다(육안 확인)
+  plane(35.5, 5.2, 0x77a054, -22.2, 0.055, TERR_Z - 3.1 + 0.5);
+  plane(23.4, 5.2, 0x77a054, 28.2, 0.055, TERR_Z - 3.1 + 0.5);
+  [[-28, TERR_Z - 2.6], [24, TERR_Z - 2.6], [34, TERR_Z - 2.8]].forEach(([tx8, tz8]) => {
+    const tr8 = geoSoft(TRUNK_GEO, 0x4a3826, tx8, 0.9, tz8, null, 1.6, 1.6, 1.6);
+    staticEntries.push({ key: tr8.key, aabb: tr8.aabb, solid: true, noRay: true });
+    [[0, 1.9, 0], [0.9, 2.4, 0.3], [-0.9, 2.3, -0.2], [0.4, 2.9, -0.4], [-0.4, 2.8, 0.4]].forEach(([ox, oy, oz]) =>
+      geoSoft(ICO_GEO, 0x516d49, tx8 + ox, oy, tz8 + oz, [0, ox * 2 + oy, 0], 0.85, 0.55, 0.85));
+  });
+    YOFF = keepG;
+  }
   // 건물 앞 관목 줄
   for (let bx2 = fx0 + 2; bx2 < fx1 - 1; bx2 += 4.2) {
     if (Math.abs(bx2 - hallCx) > 3.2) bush(bx2, fz1 + 1.15, 1 + rng() * 0.5);
