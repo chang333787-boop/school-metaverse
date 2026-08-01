@@ -1351,11 +1351,12 @@ export function buildWorld(scene) {
   faceBand(3.02, 0.38, BLUEC);
   // 실사(gym_0278·hi_0264): 서·동 양끝 1층은 **비비드 옐로우 대면적** — 가는 띠가 아니라 벽면
   [[-40, -18], [16.4, 40]].forEach(([xa, xb]) => {
-    softBox(xb - xa, 1.06, 0.11, YELC, (xa + xb) / 2, 0.02, faceZ + 0.01);
+    // ⚠️ 하단 밴드는 y0.5부터 — 운동장에서 보면 옹벽(높이 1.0)이 y1 아래를 가린다(자가 심사에서 확인)
+    softBox(xb - xa, 1.06, 0.11, YELC, (xa + xb) / 2, 0.5, faceZ + 0.01);
     softBox(xb - xa, 0.92, 0.11, YELC, (xa + xb) / 2, 2.48, faceZ + 0.01);
   });
   [...frontEdges].filter(x => x > fx0 + 0.01 && x < fx1 - 0.01)
-    .forEach(x => softBox(0.38, FH, FACE_T, BLUEC, x, 0, faceZ + 0.02));   // 띠와 동일평면 금지(33교차 깜빡임)
+    .forEach(x => softBox(0.38, FH, FACE_T, (x < -18 || x > 16.4) ? YELC : BLUEC, x, 0, faceZ + 0.02));   // 양끝=노랑(실사)·동일평면 금지
   roofOver(fx0, fx1, fz0, fz1, FH, roofC);
   // 옥탑 구조물 + 환기구 (위성사진) — 슬래브 상면(FH+0.1) 위에 얹음
   box(3, 1.6, 2.4, 0xc8ccd2, 20, FH + 0.1, -31);
@@ -1610,20 +1611,14 @@ export function buildWorld(scene) {
   const NET_FENCE = new THREE.MeshLambertMaterial({ map: NET_TEX, alphaTest: 0.4, side: THREE.DoubleSide });
   // 구령대(정면 6.6m)와 그 좌우 계단(각 3.4m) 구간은 펜스를 비운다
   // 필로티 앞은 실물에 펜스가 없다 — 모자이크 옹벽 구간(±10.5)까지 비운다
+  // 실사(hi_0255·hi_0276): 정면 테라스 가장자리에 그물펜스는 **없다** — 관목 띠와 잔디뿐.
+  // 낙하 방지 INVIS 충돌만 남기고 그물은 제거, 대신 관목 점열로 옹벽 위를 채운다.
   const netSegs = [[-40, -36.6], [-31.4, -9.6], [-2.4, PODIUM_X - 10.5], [PODIUM_X + 10.5, 35.4], [40.6, 52]];
   netSegs.forEach(([a, b]) => {
     const len = b - a;
-    const ng = new THREE.PlaneGeometry(len, 1.5);
-    const uv = ng.attributes.uv;
-    for (let ui = 0; ui < uv.count; ui++) uv.setXY(ui, uv.getX(ui) * len / 0.42, uv.getY(ui) * 1.5 / 0.42);
-    const nm2 = new THREE.Mesh(ng, NET_FENCE);
-    nm2.position.set((a + b) / 2, 0.82, TERR_Z - 0.15);   // 하단 15cm 틈 없이 지면부터
-    scene.add(nm2);
-    box(len, 1.6, 0.05, 0, (a + b) / 2, 0.05, TERR_Z - 0.15, { material: INVIS });   // 충돌 유지
-    box(len, 0.06, 0.06, 0x2a6b3f, (a + b) / 2, 1.6, TERR_Z - 0.15, { collide: false });   // 상단 레일
-    box(len, 0.07, 0.08, 0x2a6b3f, (a + b) / 2, 0.03, TERR_Z - 0.15, { collide: false });   // 하단 레일
-    for (let px5 = a; px5 <= b + 0.01; px5 += 4) {
-      box(0.07, 1.7, 0.07, 0x2a6b3f, px5, 0, TERR_Z - 0.15, { collide: false });
+    box(len, 1.6, 0.05, 0, (a + b) / 2, 0.05, TERR_Z - 0.15, { material: INVIS });   // 충돌 유지(낙하 방지)
+    for (let px5 = a + 0.9; px5 < b - 0.4; px5 += 1.8) {
+      bush(px5, TERR_Z - 0.55, 0.65 + ((px5 * 7) % 3) * 0.12);
     }
   });
   for (let bx3 = -38; bx3 <= 50; bx3 += 4.5) {
