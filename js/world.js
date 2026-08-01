@@ -969,22 +969,23 @@ export function buildWorld(scene) {
       geoAdd(UNIT_BOX, 0xd94848, s0 + 0.65, y0 + 1.5, at(0.5), null, 0.08, 0.3, 0.06);
     } else if (r.type === 'cafeteria') {
       // 급식실 사진: 긴 식탁 + 빨간 둥근의자 + 배식대(스테인리스)
-      const colXs = cw >= 12 ? [cx - 2.4, cx + 2.6] : [cx];
-      const rowZs = [zMid - 3, zMid, zMid + 3];
+      // 실사(v78·사용자 확인): 식탁 긴 축은 동서가 아니라 **남북** — 4열이 나란히
+      const colXs = cw >= 12 ? [cx - 4.5, cx - 1.5, cx + 1.5, cx + 4.5] : [cx - 1.5, cx + 1.5];
+      const rowZs = [zMid - 1.6, zMid + 2.2];
       colXs.forEach(tx => rowZs.forEach(tz => {
-        box(3.2, 0.08, 0.7, 0xb5713d, tx, y0 + 0.66, tz);
+        box(0.7, 0.08, 3.2, 0xb5713d, tx, y0 + 0.66, tz);
         // 식판·수저통 소품
-        box(0.36, 0.04, 0.26, 0xd8dde2, tx - 0.9, y0 + 0.74, tz - 0.12, { collide: false });
-        box(0.36, 0.04, 0.26, 0xd8dde2, tx + 0.7, y0 + 0.74, tz + 0.12, { collide: false });
+        box(0.26, 0.04, 0.36, 0xd8dde2, tx - 0.12, y0 + 0.74, tz - 0.9, { collide: false });
+        box(0.26, 0.04, 0.36, 0xd8dde2, tx + 0.12, y0 + 0.74, tz + 0.7, { collide: false });
         geoAdd(STUMP_GEO, 0x9aa5ad, tx, y0 + 0.82, tz, null, 0.28, 0.16, 0.28);
-        [[-1.4, -0.28], [1.4, -0.28], [-1.4, 0.28], [1.4, 0.28]].forEach(([ox, oz]) =>
+        [[-0.28, -1.4], [-0.28, 1.4], [0.28, -1.4], [0.28, 1.4]].forEach(([ox, oz]) =>
           box(0.06, 0.66, 0.06, 0xe8ebee, tx + ox, y0, tz + oz, { collide: false }));
-        [-1.05, 0, 1.05].forEach(ox => [-0.66, 0.66].forEach(oz => {
+        [-1.05, 0, 1.05].forEach(oz => [-0.66, 0.66].forEach(ox => {
           const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.06, 10), mat(0xd94848));
           seat.position.set(tx + ox, y0 + 0.45, tz + oz);
           scene.add(seat);
           box(0.05, 0.44, 0.05, 0xe8ebee, tx + ox, y0, tz + oz, { collide: false });
-          interactables.push({ type: 'chair', x: tx + ox, y: y0, z: tz + oz, yaw: oz < 0 ? 0 : Math.PI, msg: '맛있게 먹자! 🍚' });
+          interactables.push({ type: 'chair', x: tx + ox, y: y0, z: tz + oz, yaw: ox < 0 ? Math.PI / 2 : -Math.PI / 2, msg: '맛있게 먹자! 🍚' });
         }));
       }));
       // 배식대: 조리실 접점(안쪽 벽) 앞에 가로로 — 동선 자연화
@@ -1019,14 +1020,14 @@ export function buildWorld(scene) {
       [[0.9, 0.4, 0xd94f6b], [-0.6, 0.9, 0x4d9bd6], [0.2, -0.7, 0x67b26f]].forEach(([ox, oz, bc5]) =>
         geoAdd(ICO_GEO, bc5, cx + cw / 4 + ox, y0 + 0.24, at(2.6) + oz, [0, rng() * 3, 0], 0.42, 0.26, 0.42));
       // 사서 데스크 + 위 소품 (컴퓨터·반납 책더미·명패)
-      box(1.6, 0.78, 0.7, 0xb0a18e, s1 - 1.4, y0, at(depth - 1.3));
-      box(0.42, 0.06, 0.34, 0x30343a, s1 - 1.75, y0 + 0.78, at(depth - 1.3), { collide: false });
-      geoAdd(UNIT_PLANE, 0x2b3a44, s1 - 1.75, y0 + 1.03, at(depth - 1.3) - dir * 0.02, [0, faceIn, 0], 0.4, 0.28, 1);
-      box(0.05, 0.22, 0.3, 0x4a5058, s1 - 1.75, y0 + 0.84, at(depth - 1.3), { collide: false });
+      box(1.6, 0.78, 0.7, 0xb0a18e, s1 - 3.6, y0, at(depth - 1.3));   // 로비 노치를 피해 서쪽
+      box(0.42, 0.06, 0.34, 0x30343a, s1 - 3.95, y0 + 0.78, at(depth - 1.3), { collide: false });
+      geoAdd(UNIT_PLANE, 0x2b3a44, s1 - 3.95, y0 + 1.03, at(depth - 1.3) - dir * 0.02, [0, faceIn, 0], 0.4, 0.28, 1);
+      box(0.05, 0.22, 0.3, 0x4a5058, s1 - 3.95, y0 + 0.84, at(depth - 1.3), { collide: false });
       [0xe76f51, 0x457b9d, 0xe9c46a].forEach((bc6, bi6) =>
-        geoAdd(UNIT_BOX, bc6, s1 - 0.95, y0 + 0.82 + bi6 * 0.07, at(depth - 1.3), null, 0.3, 0.06, 0.22));
+        geoAdd(UNIT_BOX, bc6, s1 - 3.15, y0 + 0.82 + bi6 * 0.07, at(depth - 1.3), null, 0.3, 0.06, 0.22));
       const libTag = textSign('사서 선생님', { h: 0.12, bg: '#ffffff', fg: '#1d3557', border: null, fontPx: 28, pad: 10 });
-      libTag.position.set(s1 - 1.2, y0 + 0.85, at(depth - 1.3) - dir * 0.36);
+      libTag.position.set(s1 - 3.4, y0 + 0.85, at(depth - 1.3) - dir * 0.36);
       libTag.rotation.y = faceIn;
       scene.add(libTag);
     } else if (r.type === 'toilet') {
@@ -1198,7 +1199,9 @@ export function buildWorld(scene) {
   const westWins = [];
   B.wings.forEach(wg => wg.rooms.forEach(r => {
     if (r.innerOnly) return;
-    northGaps.push({ c: r.type === 'stair' ? (r.span[0] + r.span[1]) / 2 : doorCOf(r), w: r.type === 'stair' ? 2.4 : 1.8 });
+    // 실사(사용자 확인): 도서관 앞은 복도가 **북쪽으로 갑자기 넓어지는 로비** — 문 개구가 아니라 전고 개구
+    if (r.type === 'library') northGaps.push({ c: -17.9, w: 2.6, dh: FH });
+    else northGaps.push({ c: r.type === 'stair' ? (r.span[0] + r.span[1]) / 2 : doorCOf(r), w: r.type === 'stair' ? 2.4 : 1.8 });
     if (r.type !== 'stair') {
       const cww = r.span[1] - r.span[0];
       westWins.push({ c: r.span[0] + cww * 0.55, w: 1.3 }, { c: r.span[0] + cww * 0.85, w: 1.3 });
@@ -1209,25 +1212,36 @@ export function buildWorld(scene) {
   northGaps.push({ c: (LC.x[0] + LC.x[1]) / 2, w: LC.x[1] - LC.x[0], dh: FH });   // 세로복도 통로 = 전체 높이 개구
   wallXWin(fx0, ex0, fz0, innerC, westWins, { h: FH, sill: 1.9, wh: 0.9, doors: northGaps });
   const yardWins = [];
-  for (let wx = ex0 + 2.2; wx < fx1 - 1.6; wx += 4.4) yardWins.push({ c: wx, w: 2.0 });
+  // ⚠️ 화장실 맞은편(x 9.5~15) 구간은 창을 뚫지 않는다 — 실사에서 그 벽엔 **학생자치회 게시판**이 붙는다(사용자 확인)
+  for (let wx = ex0 + 2.2; wx < fx1 - 1.6; wx += 4.4) {
+    if (wx > 9.0 && wx < 15.5) continue;
+    yardWins.push({ c: wx, w: 2.0 });
+  }
   wallXWin(ex0, fx1, fz0, innerC, yardWins, { h: FH, sill: 1.1, wh: 1.6 });
   wallXGaps(fx0, fx1, northGaps, fz0, 0, 0.95, wainC, 0.34);
   B.wings.forEach(wg => wg.rooms.forEach(r => {
     if (r.innerOnly || r.type === 'stair') return;
-    makeDoor(doorCOf(r) - 0.9, fz0, 1.8, 'x', r.type === 'library' ? { swing: 1, glass: true } : { swing: 1 });
     if (r.type === 'library') {
-      hangSign('도서관', doorCOf(r) + 3.6, FH - CEIL_DROP, fz0 + 0.55, 0, 0.26);
-      // 실사(영상): 도서관 입구는 **짙은 목재 아치 프레임 + "슬기샘 도서관" 현판 + 도서반납함**
-      const ldx = doorCOf(r), LW = 0x5a4232;
-      [-1.35, 1.35].forEach(ox => solidSoftBox(0.26, 2.5, 0.3, LW, ldx + ox, 0, fz0 + 0.28));
-      softBox(3.1, 0.3, 0.34, LW, ldx, 2.5, fz0 + 0.28);
+      // 실사(사용자 확인): 도서관 문은 긴 복도 쪽이 아니라 **복도와 직각(동향)** — 로비 서벽에 유리 양문
+      const LOB_X = -19.2, LOB_ZN = -41.6;
+      wallX(LOB_X, -16.6, LOB_ZN, 0, FH, innerC);                       // 노치 북벽(도서실과 분리)
+      wallZGaps(LOB_ZN, fz0, [{ c: -39.9, w: 1.7 }], LOB_X, 0, FH, innerC);   // 로비 서벽 + 문 개구
+      lintelZ(-39.9, 1.7, LOB_X, innerC);
+      makeDoor(LOB_X, -39.9 - 0.85, 1.7, 'z', { glass: true, swing: 1 });
+      hangSign('도서관', -17.9, FH - CEIL_DROP, fz0 + 0.55, 0, 0.26);
+      // 아치 프레임 + 현판 + 반납함 — 전부 **동향 문 앞(로비 안)**으로 (실사 d80_0222)
+      const LW = 0x5a4232, ldz = -39.9;
+      [-1.3, 1.3].forEach(oz => solidSoftBox(0.3, 2.5, 0.26, LW, LOB_X + 0.32, 0, ldz + oz));
+      softBox(0.34, 0.3, 2.9, LW, LOB_X + 0.32, 2.5, ldz);
       const lTag = textSign('슬기샘 도서관', { h: 0.22, bg: '#5a4232', fg: '#f7edda', border: null, fontPx: 42, pad: 10 });
-      lTag.position.set(ldx, 2.62, fz0 + 0.47);
+      lTag.position.set(LOB_X + 0.5, 2.62, ldz);
+      lTag.rotation.y = Math.PI / 2;
       scene.add(lTag);
-      solidSoftBox(0.55, 1.05, 0.4, 0x7a8b99, ldx + 2.1, 0, fz0 + 0.45);      // 도서반납함
-      geoAdd(UNIT_PLANE, 0x2f3438, ldx + 2.1, 0.88, fz0 + 0.66, null, 0.34, 0.08, 1);   // 투입구
+      solidSoftBox(0.4, 1.05, 0.55, 0x7a8b99, LOB_X + 0.42, 0, ldz + 2.2);      // 도서반납함(문 옆)
+      geoAdd(UNIT_PLANE, 0x2f3438, LOB_X + 0.64, 0.88, ldz + 2.2, [0, Math.PI / 2, 0], 0.34, 0.08, 1);
       const rTag = textSign('도서반납함', { h: 0.11, bg: '#7a8b99', fg: '#ffffff', border: null, fontPx: 30, pad: 8 });
-      rTag.position.set(ldx + 2.1, 0.62, fz0 + 0.66);
+      rTag.position.set(LOB_X + 0.64, 0.62, ldz + 2.2);
+      rTag.rotation.y = Math.PI / 2;
       scene.add(rTag);
     }
   }));
@@ -1248,7 +1262,7 @@ export function buildWorld(scene) {
   // ⚠️ 북벽(창측)에는 레일을 깔지 않는다 — 실물은 여기가 **창 아래 목재 수납장** 자리다.
   //    레일과 수납장을 같은 벽에 두면 브래킷(y 0.90~1.00)이 상판(0.95)을 관통한다.
   //    교실측(zCor) 레일은 각 실 루프에서 계속 깔린다.
-  lowCabinet(fx0 + 0.3, fx1 - 0.3, fz0, 1, [...northGaps, { c: -14.3, w: 2.6 }, { c: -18.6, w: 2.4 },
+  lowCabinet(fx0 + 0.3, fx1 - 0.3, fz0, 1, [...northGaps, { c: -14.3, w: 2.6 }, { c: -17.9, w: 3.0 },
     { c: -29.8, w: 9.0 }, ...[-33, -18, 2, 21, 35].map(c => ({ c, w: 0.9 }))]);   // 소화기·도넛·유치원 구간 벽감
   // 실사(d80_0205): 유치원 앞 복도 사물함은 짙은 갈색이 아니라 **베이지 2단(h1.05)** + 은색 고리
   solidSoftBox(8.6, 1.05, 0.42, 0xd6c6a2, -29.8, 0.10, fz0 + 0.25);
@@ -1309,18 +1323,18 @@ export function buildWorld(scene) {
       if (r.type === 'toilet') {
         hangSign('남자 화장실', gaps[0].c, FH - CEIL_DROP, zCor - 0.5, 0, 0.26);
         hangSign('여자 화장실', gaps[1].c, FH - CEIL_DROP, zCor - 0.5, 0, 0.26);
-        // 실사: 화장실 앞 복도에 **학생자치회 초록 대형 게시판** + 그 아래 원목 사물함
+        // 실사(사용자 확인): 학생자치회 게시판은 화장실 문 옆이 아니라 **맞은편(북측 창벽)** — 그 구간 창은 위에서 제거함
         const tbX = (gaps[0].c + gaps[1].c) / 2;
-        softBox(3.4, 1.35, 0.07, 0x3f6b52, tbX, 1.28, zCor - 0.2);            // 초록 판
-        softBox(3.56, 0.09, 0.1, 0x8a6a45, tbX, 2.63, zCor - 0.21);           // 상 프레임
-        softBox(3.56, 0.09, 0.1, 0x8a6a45, tbX, 1.19, zCor - 0.21);           // 하 프레임
+        softBox(3.4, 1.35, 0.07, 0x3f6b52, tbX, 1.28, fz0 + 0.2);
+        softBox(3.56, 0.09, 0.1, 0x8a6a45, tbX, 2.63, fz0 + 0.21);
+        softBox(3.56, 0.09, 0.1, 0x8a6a45, tbX, 1.19, fz0 + 0.21);
         [[-1.15, 0xf2efe6], [-0.4, 0xfdf3d0], [0.4, 0xf2efe6], [1.15, 0xe8f0f6]].forEach(([ox, pc], pi) =>
-          geoAdd(UNIT_PLANE, pc, tbX + ox, 1.28 + (pi % 2) * 0.34 - 0.14, zCor - 0.24, null, 0.52, 0.66, 1));
+          geoAdd(UNIT_PLANE, pc, tbX + ox, 1.28 + (pi % 2) * 0.34 - 0.14, fz0 + 0.24, [0, Math.PI, 0], 0.52, 0.66, 1));
         const tbTag = textSign('학생자치회 소식', { h: 0.19, bg: '#3f6b52', fg: '#ffffff', border: null, fontPx: 40, pad: 9 });
-        tbTag.position.set(tbX, 2.63, zCor - 0.26);
+        tbTag.position.set(tbX, 2.63, fz0 + 0.26);
         scene.add(tbTag);
-        solidSoftBox(3.4, 0.8, 0.4, 0x9c7a53, tbX, 0.10, zCor - 0.4);         // 아래 원목 사물함
-        softBox(3.48, 0.05, 0.46, 0xb08d5a, tbX, 0.90, zCor - 0.4);
+        solidSoftBox(3.4, 0.8, 0.4, 0x9c7a53, tbX, 0.10, fz0 + 0.4);
+        softBox(3.48, 0.05, 0.46, 0xb08d5a, tbX, 0.90, fz0 + 0.4);
       } else {
         hangSign(label, gaps[0].c, FH - CEIL_DROP, zCor - 0.5, 0, 0.28);
       }
