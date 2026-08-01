@@ -350,9 +350,11 @@ export function buildWorld(scene) {
   }
   // 창틀 새시 + 세로살. d>0.2 = 벽을 관통하는 진짜 창(양면 새시 + 양면 불빛)
   function paneTrim(x, y, z, rotY, w, h, d = 0.09) {
-    geoAdd(UNIT_BOX, 0xe8ecef, x, y + h / 2 + 0.035, z, [0, rotY, 0], w + 0.14, 0.07, d);
-    geoAdd(UNIT_BOX, 0xe8ecef, x, y - h / 2 - 0.035, z, [0, rotY, 0], w + 0.14, 0.07, d);
-    const tx4 = Math.cos(rotY) * (w / 2 + 0.035), tz4 = -Math.sin(rotY) * (w / 2 + 0.035);
+    // ⚠️ 오프셋 0.045 고정 — 0.035면 bar 가장자리 면이 **창 개구 벽면과 정확히 동일평면**이 되어
+    //    전 학교 모든 창턱·창측이 반짝인다(평면 스캔으로 적발: y1.10 위향 겹침 계열의 정체)
+    geoAdd(UNIT_BOX, 0xe8ecef, x, y + h / 2 + 0.045, z, [0, rotY, 0], w + 0.14, 0.07, d);
+    geoAdd(UNIT_BOX, 0xe8ecef, x, y - h / 2 - 0.045, z, [0, rotY, 0], w + 0.14, 0.07, d);
+    const tx4 = Math.cos(rotY) * (w / 2 + 0.045), tz4 = -Math.sin(rotY) * (w / 2 + 0.045);
     geoAdd(UNIT_BOX, 0xe8ecef, x + tx4, y, z + tz4, [0, rotY, 0], 0.07, h + 0.14, d);
     geoAdd(UNIT_BOX, 0xe8ecef, x - tx4, y, z - tz4, [0, rotY, 0], 0.07, h + 0.14, d);
     geoAdd(UNIT_BOX, 0xdde2e6, x, y, z, [0, rotY, 0], 0.045, h, Math.max(0.06, d - 0.05));
