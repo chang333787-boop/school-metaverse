@@ -1007,6 +1007,17 @@ export function buildWorld(scene) {
       // 실사: 천장 매입등 다수 — 그리드 2×3
       [cx - cw * 0.22, cx + cw * 0.22].forEach(lx9 =>
         [zMid - 3.4, zMid, zMid + 3.4].forEach(lz9 => lamp(lx9, y0 + 3.9, lz9)));
+      // 실사(v78): 벽 마감 = 하부 **갈색 나무 웨인스코팅(1.1m)** + 상부 회청 — 동·서 벽 실내면
+      [[s0 + 0.18, Math.PI / 2], [s1 - 0.18, -Math.PI / 2]].forEach(([wx0, wr]) => {
+        geoAdd(UNIT_PLANE, 0x8a5a3b, wx0, y0 + 0.55, zMid, [0, wr, 0], depth - 0.6, 1.1, 1);
+        geoAdd(UNIT_PLANE, 0x9fb3bd, wx0, y0 + 2.4, zMid, [0, wr, 0], depth - 0.6, 2.4, 1);
+      });
+      // 원형 벽시계(동벽) + 배식창 위 아이 그림 배너
+      geoAdd(UNIT_PLANE, 0xf5f2ea, s1 - 0.2, y0 + 2.6, zMid - 2, [0, -Math.PI / 2, 0], 0.5, 0.5, 1);
+      geoAdd(UNIT_PLANE, 0x2f3438, s1 - 0.21, y0 + 2.6, zMid - 2, [0, -Math.PI / 2, 0], 0.06, 0.3, 1);
+      const kbn = textSign('🍚 오늘도 맛있게, 골고루!', { h: 0.3, bg: '#fdf3d0', fg: '#d94f6b', border: '#f2b134', fontPx: 40, pad: 12 });
+      kbn.position.set(cx + 0.4, y0 + 2.2, at(depth - 1.55));
+      scene.add(kbn);
     } else if (r.type === 'library') {
       const books = new THREE.MeshLambertMaterial({ map: bookStripes() });
       const nSh = Math.max(3, Math.floor((cw - 2.5) / 2.3));
@@ -1276,7 +1287,7 @@ export function buildWorld(scene) {
   // ⚠️ 북벽(창측)에는 레일을 깔지 않는다 — 실물은 여기가 **창 아래 목재 수납장** 자리다.
   //    레일과 수납장을 같은 벽에 두면 브래킷(y 0.90~1.00)이 상판(0.95)을 관통한다.
   //    교실측(zCor) 레일은 각 실 루프에서 계속 깔린다.
-  lowCabinet(fx0 + 0.3, fx1 - 0.3, fz0, 1, [...northGaps, { c: -14.3, w: 2.6 }, { c: -17.9, w: 3.0 },
+  lowCabinet(fx0 + 0.3, fx1 - 0.3, fz0, 1, [...northGaps, { c: -14.3, w: 2.6 }, { c: -17.9, w: 3.0 }, { c: 24, w: 14 },
     { c: -29.8, w: 9.0 }, ...[-33, -18, 2, 21, 35].map(c => ({ c, w: 0.9 }))]);   // 소화기·도넛·유치원 구간 벽감
   // 실사(d80_0205): 유치원 앞 복도 사물함은 짙은 갈색이 아니라 **베이지 2단(h1.05)** + 은색 고리
   solidSoftBox(8.6, 1.05, 0.42, 0xd6c6a2, -29.8, 0.10, fz0 + 0.25);
@@ -1284,6 +1295,17 @@ export function buildWorld(scene) {
   for (let hx3 = -33.7; hx3 < -25.6; hx3 += 0.62) {
     softBox(0.10, 0.03, 0.03, 0xb8b2a6, hx3, 0.45, fz0 + 0.48);
     softBox(0.10, 0.03, 0.03, 0xb8b2a6, hx3, 0.85, fz0 + 0.48);
+  }
+  // 실사(v81): 컴퓨터실~1학년 앞 복도 창측은 낮은 수납장이 아니라 **원목 3단 개별 락커**(손잡이+이름표)
+  {
+    const lk0 = 17.4, lk1 = 30.6, lkz = fz0 + 0.24;
+    solidSoftBox(lk1 - lk0, 1.66, 0.42, 0xc8a878, (lk0 + lk1) / 2, 0.10, lkz);
+    softBox(lk1 - lk0 + 0.08, 0.05, 0.46, 0xd8bc90, (lk0 + lk1) / 2, 1.76, lkz);
+    for (let lx8 = lk0 + 0.3; lx8 < lk1; lx8 += 0.6) {
+      [0.5, 1.05, 1.55].forEach(hy => softBox(0.09, 0.03, 0.03, 0x8a8f94, lx8, hy, lkz + 0.22));   // 손잡이 3단
+      geoAdd(UNIT_PLANE, 0xf2efe6, lx8, 1.42, lkz + 0.222, null, 0.16, 0.1, 1);                     // 이름표
+      softBox(0.02, 1.62, 0.02, 0xa8885c, lx8 + 0.28, 0.12, lkz + 0.21);                            // 칸 세로줄
+    }
   }
   // 소방설비 (실사: 복도 곳곳 / 지금까지 코드에 0개)
   [-33, -18, 2, 21, 35].forEach(fx3 => fireExt(fx3, 0.10, fz0 + 0.42, fz0 + 0.16));
