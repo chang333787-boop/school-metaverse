@@ -117,7 +117,7 @@ export const SCHOOL = {
     '급식실': [['급식선생님', '여'], ['청소선생님', '남']],
   },
 
-  gym:        { center: [-60, -55], width: 30, depth: 20, wallHeight: 8 },
+  gym:        { center: [-63, -42], width: 30, depth: 20, wallHeight: 8 },   // 위성 확인: 측문 길 건너 서쪽(북쪽 구석 아님)
   field:      { center: [6, 8],     width: 96, depth: 64 },
   garden:     { center: [52, -63],  width: 24, depth: 10 },  // 북동쪽 큰 밭
   playground: { center: [-52, 28] },

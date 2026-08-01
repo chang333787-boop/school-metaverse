@@ -1732,7 +1732,8 @@ export function buildWorld(scene) {
       const ww = Math.min(2.2, rcw - 1.2);
       nWins.push({ c: rcx - rcw / 4, w: ww }, { c: rcx + rcw / 4, w: ww });
     });
-    wallXWin(wx0, wx1, wz0, wallC, nWins, { h: FH, sill: 1.05, wh: 1.5, innerDir: 1 });
+    // 계단홀 북측 주차장 문 개구(사용자 확인: 서관·급식동 사이 1층 길)
+    wallXWin(wx0, wx1, wz0, wallC, nWins, { h: FH, sill: 1.05, wh: 1.5, innerDir: 1, doors: [{ c: -13.55, w: 1.8 }] });
     wallZ(wz0, wz1, wx0, 0, totalH, wallC);
     wallZ(wz0, wz1, wx1, 0, totalH, wallC);
     const edges = new Set();
@@ -2100,6 +2101,14 @@ export function buildWorld(scene) {
   geoAdd(UNIT_PLANE, 0xd7ede4, (tx1 - 0.17), 2.45, (stepLo + stepHi) / 2, [0, -Math.PI / 2, 0], stepLo - stepHi, 1.9, 1);
   sign('2층 ↑', (tx0 + tx1) / 2, 2.5, uz1 + 0.18, 0, 0.45);
   plane(4.0, 1.7, 0xbdbcb6, (tx0 + tx1) / 2 + 0.75, 0.102, uz1 - 0.9);   // 홀 테라조(복도 흰타일과 경계)
+  // 실사(사용자 확인): 계단홀에서 북쪽(서관·급식동 사이)으로 **주차장 가는 1층 통로** — 유리문 + 뒤편 포장
+  {
+    const pdX = (wkX + tx1) / 2;
+    // 서관 북벽(uz0)의 계단 구간에 개구 + 유리문 → 주차장. (북벽은 wing loop가 세우므로 여기선 문·포장·팻말만)
+    makeDoor(-13.55 - 0.9, uz0, 1.8, 'x', { glass: true, swing: -1 });
+    box(2.4, 0.04, 8.5, 0x6f7276, pdX, 0.006, uz0 - 4.5, { collide: false, walk: true });   // 아스팔트 통로 → 주차장
+    hangSign('주차장 ↑', pdX, FH - CEIL_DROP, uz0 + 0.6, 0, 0.24);
+  }
   plane(3.4, 0.4, 0xd9b545, (tx0 + tx1) / 2 + 0.75, 0.104, uz1 + 0.25);  // 점자블록 띠(사진3)
   // 실사(d80_0160·0169): 계단참 정면(북벽)에 **목재 프레임 대형 통창** — 참에서 밖(주차장)이 보인다
   {
@@ -2245,47 +2254,47 @@ export function buildWorld(scene) {
     box(G.width - 1, 0.09, 0.14, 0xe8ebee, gx, 1.35, gwz2, { collide: false }));
   // 북쪽: 방송실 | 무대 | 준비실 (입구에서 보면 우측)
   const gFrontZ = gz0 + 3.6;
-  wallXGaps(gx0, -70, [{ c: -72.5, w: 1.6 }], gFrontZ, 0, 2.8, innerC);
-  wallX(-70, -66, gFrontZ, 0, 2.8, innerC);
-  wallXGaps(-52, -48.2, [{ c: -50, w: 1.6 }], gFrontZ, 0, 2.8, innerC);
-  [[-70], [-66], [-52], [-48.2]].forEach(([px2]) => wallZ(gz0, gFrontZ, px2, 0, 2.8, innerC));
+  wallXGaps(gx0, -73, [{ c: -75.5, w: 1.6 }], gFrontZ, 0, 2.8, innerC);
+  wallX(-73, -69, gFrontZ, 0, 2.8, innerC);
+  wallXGaps(-55, -51.2, [{ c: -53, w: 1.6 }], gFrontZ, 0, 2.8, innerC);
+  [[-73], [-69], [-55], [-51.2]].forEach(([px2]) => wallZ(gz0, gFrontZ, px2, 0, 2.8, innerC));
   // 방송실 (사진5: 초록 벽 + 믹서 + 마이크 + 모니터)
-  box(4.7, 2.6, 0.07, 0x7cc26b, -72.5, 0, gz0 + 0.4, { collide: false });
+  box(4.7, 2.6, 0.07, 0x7cc26b, -75.5, 0, gz0 + 0.4, { collide: false });
   box(0.07, 2.6, 3.2, 0x7cc26b, gx0 + 0.4, 0, gz0 + 1.8, { collide: false });
-  sign('방송실', -72.5, 2.35, gFrontZ + 0.18, 0, 0.4);
-  box(1.8, 0.74, 0.7, 0x8a6a52, -72.5, 0, gz0 + 1.1);
-  box(1.1, 0.14, 0.5, 0x2b2e33, -72.7, 0.76, gz0 + 1.05, { rot: [0.18, 0, 0], collide: false });
-  box(0.45, 0.36, 0.05, 0x14161a, -73.2, 0.95, gz0 + 0.85, { collide: false });
-  box(0.45, 0.36, 0.05, 0x14161a, -71.9, 0.95, gz0 + 0.85, { collide: false });
+  sign('방송실', -75.5, 2.35, gFrontZ + 0.18, 0, 0.4);
+  box(1.8, 0.74, 0.7, 0x8a6a52, -75.5, 0, gz0 + 1.1);
+  box(1.1, 0.14, 0.5, 0x2b2e33, -75.7, 0.76, gz0 + 1.05, { rot: [0.18, 0, 0], collide: false });
+  box(0.45, 0.36, 0.05, 0x14161a, -76.2, 0.95, gz0 + 0.85, { collide: false });
+  box(0.45, 0.36, 0.05, 0x14161a, -74.9, 0.95, gz0 + 0.85, { collide: false });
   const micPole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.32, 8), mat(0x30343a));
-  micPole.position.set(-72.1, 0.95, gz0 + 1.15);
+  micPole.position.set(-75.1, 0.95, gz0 + 1.15);
   scene.add(micPole);
   const micHead = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), mat(0x555b62));
-  micHead.position.set(-72.1, 1.13, gz0 + 1.15);
+  micHead.position.set(-75.1, 1.13, gz0 + 1.15);
   scene.add(micHead);
-  zones.push({ x0: gx0, x1: -70, z0: gz0, z1: gFrontZ, label: '체육관 방송실' });
+  zones.push({ x0: gx0, x1: -73, z0: gz0, z1: gFrontZ, label: '체육관 방송실' });
   // 무대 (사진6: 검은 상단막 + 정림초등학교 + 회색 커튼)
-  box(14, 0.9, 3.6, 0xb5793f, -59, 0, gz0 + 1.8, { walk: true });
-  box(2.4, 0.45, 1.1, 0xa96f3b, -59, 0, gFrontZ + 0.55, { walk: true });
-  box(13.6, 3.2, 0.1, 0, -59, 0.9, gz0 + 0.5, { material: CURTAIN, collide: false });
-  box(14.6, 0.8, 0.2, 0x1a1c20, -59, 4.2, gFrontZ - 0.2, { collide: false });
+  box(14, 0.9, 3.6, 0xb5793f, -62, 0, gz0 + 1.8, { walk: true });
+  box(2.4, 0.45, 1.1, 0xa96f3b, -62, 0, gFrontZ + 0.55, { walk: true });
+  box(13.6, 3.2, 0.1, 0, -62, 0.9, gz0 + 0.5, { material: CURTAIN, collide: false });
+  box(14.6, 0.8, 0.2, 0x1a1c20, -62, 4.2, gFrontZ - 0.2, { collide: false });
   const gymBanner = textSign('정림초등학교', { h: 0.4, bg: '#1a1c20', fg: '#ffffff', border: null, fontPx: 48, pad: 14 });
-  gymBanner.position.set(-59, 4.25, gFrontZ - 0.05);
+  gymBanner.position.set(-62, 4.25, gFrontZ - 0.05);
   scene.add(gymBanner);
-  box(14.6, 0.14, 0.12, 0xd8b24a, -59, 3.76, gFrontZ - 0.16, { collide: false });   // 금장 트림
+  box(14.6, 0.14, 0.12, 0xd8b24a, -62, 3.76, gFrontZ - 0.16, { collide: false });   // 금장 트림
   // 준비실 (사진7: 매트·뜀틀·공 카트)
-  sign('준비실', -50, 2.35, gFrontZ + 0.18, 0, 0.4);
-  box(0.07, 2.6, 3.2, 0x7cc26b, -48.35, 0, gz0 + 1.8, { collide: false });
-  box(2.2, 0.5, 1.5, 0x2f6fd0, -50.6, 0, gz0 + 1.1);
-  [[1.05, 0.3], [0.85, 0.6], [0.68, 0.9]].forEach(([w, y], i) => box(w, 0.3, 0.7, i === 2 ? 0xd9b382 : 0xc79a63, -49, y - 0.3, gz0 + 0.9));
-  box(1.0, 0.85, 0.75, 0xd0392e, -51.2, 0, gz0 + 2.8);
-  box(1.0, 0.85, 0.75, 0x2b4fa0, -50, 0, gz0 + 2.9);
-  [[-51.4, 0.95], [-51, 0.98]].forEach(([bx2, by]) => {
-    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 10), mat([0xf2c94c, 0x4d9bd6][bx2 < -51.2 ? 0 : 1]));
+  sign('준비실', -53, 2.35, gFrontZ + 0.18, 0, 0.4);
+  box(0.07, 2.6, 3.2, 0x7cc26b, -51.35, 0, gz0 + 1.8, { collide: false });
+  box(2.2, 0.5, 1.5, 0x2f6fd0, -53.6, 0, gz0 + 1.1);
+  [[1.05, 0.3], [0.85, 0.6], [0.68, 0.9]].forEach(([w, y], i) => box(w, 0.3, 0.7, i === 2 ? 0xd9b382 : 0xc79a63, -52, y - 0.3, gz0 + 0.9));
+  box(1.0, 0.85, 0.75, 0xd0392e, -54.2, 0, gz0 + 2.8);
+  box(1.0, 0.85, 0.75, 0x2b4fa0, -53, 0, gz0 + 2.9);
+  [[-54.4, 0.95], [-54, 0.98]].forEach(([bx2, by]) => {
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 10), mat([0xf2c94c, 0x4d9bd6][bx2 < -54.2 ? 0 : 1]));
     ball.position.set(bx2, by, gz0 + 2.8);
     scene.add(ball);
   });
-  zones.push({ x0: -52, x1: -48.2, z0: gz0, z1: gFrontZ, label: '체육관 준비실' });
+  zones.push({ x0: -55, x1: -51.2, z0: gz0, z1: gFrontZ, label: '체육관 준비실' });
   // 화장실 (동쪽 입구 양옆)
   [[gz0, 1, '화장실(여)'], [gz1, -1, '화장실(남)']].forEach(([wz, d, nm]) => {
     wallZ(Math.min(wz, wz + d * 3.2), Math.max(wz, wz + d * 3.2), gx1 - 3.6, 0, 2.8, innerC);
@@ -2321,7 +2330,10 @@ export function buildWorld(scene) {
   zones.push({ x0: gx0, x1: gx1, z0: gz0, z1: gz1, label: '체육관' });
 
   // ---------- 유치원 놀이터 (체육관 남쪽 미니 놀이터 — 위성사진) ----------
-  const kpX = -54, kpZ = -39;
+  // 위성+사용자 확인: 유치원놀이터는 운동장 서변·**운동장과 같은 높이(y-1)**
+  const kpX = -48, kpZ = -10;
+  const keepKP = YOFF;
+  YOFF = -1;
   plane(10.6, 8, 0x8fae6d, kpX, 0.02, kpZ);
   const kf = 0x3f8f4f;
   wallXGaps(kpX - 5.3, kpX + 5.3, [], kpZ - 4, 0.52, 0.09, kf, 0.07);
@@ -2367,7 +2379,8 @@ export function buildWorld(scene) {
     scene.add(tun);
     solidSoftBox(0.8, 1.3, 0.8, 0xe8863a, kpX + 1.5, 0, kpZ - 2.2);           // 승강대
   }
-  sign('유치원 놀이터', kpX + 5.6, 1.5, kpZ - 3.2, Math.PI / 2, 0.4);
+  sign('유치원 놀이터', kpX + 5.6, 0.5, kpZ - 3.2, Math.PI / 2, 0.4);
+  YOFF = keepKP;
   zones.unshift({ x0: kpX - 5.5, x1: kpX + 5.5, z0: kpZ - 4.2, z1: kpZ + 4.2, label: '유치원 놀이터' });
 
   // ---------- 텃밭 (E키로 물주기) ----------
