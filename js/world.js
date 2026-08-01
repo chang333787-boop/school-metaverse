@@ -993,6 +993,20 @@ export function buildWorld(scene) {
       [[0xf5f2ea, -2.0], [0x8a5a30, -0.9], [0x67b26f, 0.2], [0xd0392e, 1.3]].forEach(([fc, ox]) =>
         box(0.6, 0.12, 0.5, fc, cx + 0.4 + ox, y0 + 0.9, at(depth - 0.95), { collide: false }));
       box(0.5, 0.3, 0.5, 0x3f9c5a, cx + 2.6, y0 + 0.9, at(depth - 0.95), { collide: false });  // 식판 더미
+      // 실사(v78·사용자 확인): 남벽 전체가 **회색 주름 커튼**(뒤는 악기 보관) + 커튼 앞 트랙 스포트 1줄
+      {
+        const cz9 = at(0.24);
+        softBox(cw - 1.2, 2.9, 0.1, 0x8b8f94, cx, y0 + 0.1, cz9);
+        for (let fx9 = cx - (cw - 1.6) / 2; fx9 < cx + (cw - 1.6) / 2; fx9 += 0.55)
+          softBox(0.1, 2.9, 0.13, 0x7c8085, fx9, y0 + 0.1, cz9);
+        softBox(cw - 1.0, 0.18, 0.16, 0x6e7276, cx, y0 + 3.0, cz9);
+        softBox(cw - 2.0, 0.06, 0.06, 0xd8dde2, cx, y0 + 3.55, at(1.1));
+        for (let sx9 = cx - (cw - 3) / 2; sx9 <= cx + (cw - 3) / 2; sx9 += (cw - 3) / 5)
+          lamp(sx9, y0 + 3.5, at(1.15));
+      }
+      // 실사: 천장 매입등 다수 — 그리드 2×3
+      [cx - cw * 0.22, cx + cw * 0.22].forEach(lx9 =>
+        [zMid - 3.4, zMid, zMid + 3.4].forEach(lz9 => lamp(lx9, y0 + 3.9, lz9)));
     } else if (r.type === 'library') {
       const books = new THREE.MeshLambertMaterial({ map: bookStripes() });
       const nSh = Math.max(3, Math.floor((cw - 2.5) / 2.3));
