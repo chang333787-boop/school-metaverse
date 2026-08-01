@@ -1215,7 +1215,14 @@ export function buildWorld(scene) {
   const hallRoom = FR.rooms.find(r => r.type === 'hall');
   const hallCx = (hallRoom.span[0] + hallRoom.span[1]) / 2;
   // 서/동 외벽 + 주복도 양끝 유리문(빨강)
-  wallZGaps(fz0, fz1, [{ c: FR.corridorExitZ, w: 1.8 }], fx0, 0, FH, wallC);
+  wallZGaps(fz0, fz1, [{ c: FR.corridorExitZ, w: 2.2 }], fx0, 0, FH, wallC);
+  makeDoor(fx0, FR.corridorExitZ - 1.1, 2.2, 'z', { glass: true, swing: 1 });
+  {
+    const kTag = textSign('정림초등학교병설유치원', { h: 0.2, bg: '#5a4232', fg: '#f7edda', border: null, fontPx: 38, pad: 10 });
+    kTag.position.set(fx0 + 0.35, 2.5, FR.corridorExitZ);
+    kTag.rotation.y = Math.PI / 2;
+    scene.add(kTag);
+  }
   wallZGaps(fz0, fz1, [{ c: FR.corridorExitZ, w: 1.8 }], fx1, 0, FH, wallC);
   lintelZ(FR.corridorExitZ, 1.8, fx0, wallC);
   lintelZ(FR.corridorExitZ, 1.8, fx1, wallC);
@@ -1228,7 +1235,9 @@ export function buildWorld(scene) {
     if (r.innerOnly) return;
     // 실사(사용자 확인): 도서관 앞은 복도가 **북쪽으로 갑자기 넓어지는 로비** — 문 개구가 아니라 전고 개구
     if (r.type === 'library') northGaps.push({ c: -17.9, w: 2.6, dh: FH });
-    else northGaps.push({ c: r.type === 'stair' ? (r.span[0] + r.span[1]) / 2 : doorCOf(r), w: r.type === 'stair' ? 2.4 : 1.8 });
+    // 실사(사용자 사진3): 계단실 앞은 문형 개구가 아니라 **복도와 벽 없이 트인 홀** — 전고 4.2m 개구
+    else if (r.type === 'stair') northGaps.push({ c: (r.span[0] + r.span[1]) / 2, w: 4.2, dh: FH });
+    else northGaps.push({ c: doorCOf(r), w: 1.8 });
     if (r.type !== 'stair') {
       const cww = r.span[1] - r.span[0];
       westWins.push({ c: r.span[0] + cww * 0.55, w: 1.3 }, { c: r.span[0] + cww * 0.85, w: 1.3 });
@@ -1479,19 +1488,18 @@ export function buildWorld(scene) {
     rose.position.set(hallCx, 0.104, -29.6);
     rose.matrixAutoUpdate = false; rose.updateMatrix();
     scene.add(rose);
-    // 대형 괘종시계 (동벽)
-    box(0.5, 1.95, 0.34, 0x5f4636, HX1 - 0.36, 0, -33.2);
-    geoAdd(UNIT_PLANE, 0xf2efe6, HX1 - 0.62, 1.62, -33.2, [0, -Math.PI / 2, 0], 0.3, 0.3, 1);   // 문자판
-    glassAdd(HX1 - 0.62, 0.85, -33.2, Math.PI / 2, 0.3, 0.9);                                    // 추 유리창
-    geoAdd(UNIT_BOX, 0xd4af5a, HX1 - 0.6, 0.75, -33.2, null, 0.05, 0.42, 0.05);                  // 추
-    // 유리 진열장 2대 (서벽) — 트로피
-    [-31.4, -33.2].forEach(dz3 => {
-      box(0.5, 0.85, 1.5, 0x8a6a48, HX0 + 0.42, 0, dz3);                        // 하부장
-      solidSoftBox(0.46, 0.95, 1.44, 0xf2efe6, HX0 + 0.42, 0.85, dz3);          // 상부 프레임
-      glassAdd(HX0 + 0.66, 1.32, dz3, Math.PI / 2, 1.36, 0.85);
-      [[-0.4, 0.2], [0, 0.28], [0.4, 0.18]].forEach(([oz2, th]) =>
-        geoAdd(UNIT_BOX, 0xd4af5a, HX0 + 0.42, 0.93, dz3 + oz2, null, 0.1, th, 0.1));
-    });
+    // 실사(사용자 사진4): 진열장·괘종시계는 벽이 아니라 **홀 중앙 아일랜드** — 등맞댄 진열장 2 + 시계가 섬으로
+    box(1.7, 0.85, 1.0, 0x8a6a48, hallCx, 0, -32.2);                             // 하부장(등맞댐)
+    solidSoftBox(1.64, 0.95, 0.94, 0xf2efe6, hallCx, 0.85, -32.2);               // 상부 프레임
+    [ -0.51, 0.51 ].forEach(oz3 => glassAdd(hallCx, 1.32, -32.2 + oz3, 0, 1.5, 0.85));
+    [[-0.45, 0.2], [0.05, 0.28], [0.5, 0.18]].forEach(([ox2, th]) =>
+      geoAdd(UNIT_BOX, 0xd4af5a, hallCx + ox2, 0.93, -32.2, null, 0.1, th, 0.1));
+    // 괘종시계 — 아일랜드 남단에 붙어 섬 (사진4: 진열장 옆)
+    // ⚠️ 시계는 섬 **남단(z축)** — 서쪽(x축)에 붙이면 좌측 통로가 0.25m로 막힌다(보행 시험)
+    solidSoftBox(0.5, 1.95, 0.34, 0x5f4636, hallCx, 0, -33.15);
+    geoAdd(UNIT_PLANE, 0xf2efe6, hallCx, 1.62, -33.34, [0, Math.PI, 0], 0.3, 0.3, 1);
+    glassAdd(hallCx, 0.85, -33.33, 0, 0.3, 0.9);
+    geoAdd(UNIT_BOX, 0xd4af5a, hallCx, 0.75, -33.28, null, 0.05, 0.42, 0.05);
     // 주황+연두 줄무늬 소파 2연 (동벽 — 세그먼트가 z로 이어진 긴 벤치)
     [[-29.9, 0], [-31.0, 1]].forEach(([sz4, alt]) => {
       [0, 1, 2].forEach(si2 => box(0.46, 0.42, 0.34, (si2 + alt) % 2 ? 0x67b26f : 0xe8863a,
@@ -2066,6 +2074,8 @@ export function buildWorld(scene) {
   geoAdd(UNIT_PLANE, 0xf2df8a, (tx1 - 0.17), 0.75, (stepLo + stepHi) / 2, [0, -Math.PI / 2, 0], stepLo - stepHi, 1.5, 1);
   geoAdd(UNIT_PLANE, 0xd7ede4, (tx1 - 0.17), 2.45, (stepLo + stepHi) / 2, [0, -Math.PI / 2, 0], stepLo - stepHi, 1.9, 1);
   sign('2층 ↑', (tx0 + tx1) / 2, 2.5, uz1 + 0.18, 0, 0.45);
+  plane(4.0, 1.7, 0xbdbcb6, (tx0 + tx1) / 2 + 0.75, 0.102, uz1 - 0.9);   // 홀 테라조(복도 흰타일과 경계)
+  plane(3.4, 0.4, 0xd9b545, (tx0 + tx1) / 2 + 0.75, 0.104, uz1 + 0.25);  // 점자블록 띠(사진3)
   // 실사(d80_0160·0169): 계단참 정면(북벽)에 **목재 프레임 대형 통창** — 참에서 밖(주차장)이 보인다
   {
     const cwX = (wkX + tx1) / 2, cwW = 2.6;
