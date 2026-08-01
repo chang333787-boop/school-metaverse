@@ -2295,38 +2295,6 @@ export function buildWorld(scene) {
   sign('체육관', gx1 + 0.25, gh - 1.2, gz, Math.PI / 2, 0.9);
   zones.push({ x0: gx0, x1: gx1, z0: gz0, z1: gz1, label: '체육관' });
 
-  // ---------- 별관(노란 단층 — 실사 gym_0078: 체육관 동측·통로 오른쪽) ----------
-  {
-    const bx0 = -56, bx1 = -41, bz0 = -34, bz1 = -27, BH = 3.2;
-    const BYEL = 0xd9b93c;
-    // 벽 4면 + 리본창(남측·북측)
-    const bWins = [];
-    for (let wx = bx0 + 1.8; wx < bx1 - 1.4; wx += 2.8) bWins.push({ c: wx, w: 2.0 });
-    wallXWin(bx0, bx1, bz1, BYEL, bWins, { h: BH, sill: 1.0, wh: 1.4, innerDir: -1,
-      doors: [{ c: (bx0 + bx1) / 2, w: 1.8 }] });
-    wallXWin(bx0, bx1, bz0, BYEL, bWins.map(g => ({ c: g.c, w: g.w })), { h: BH, sill: 1.0, wh: 1.4, innerDir: 1 });
-    wallZ(bz0, bz1, bx0, 0, BH, BYEL);
-    wallZ(bz0, bz1, bx1, 0, BH, BYEL);
-    makeDoor((bx0 + bx1) / 2 - 0.9, bz1, 1.8, 'x', { glass: true, swing: 1 });
-    // 평지붕 + 흰 파라펫 + 노란 창틀 띠
-    box(bx1 - bx0 + 0.5, 0.28, bz1 - bz0 + 0.5, 0x3e8e5e, (bx0 + bx1) / 2, BH - 0.16, (bz0 + bz1) / 2);
-    ceilAdd((bx0 + bx1) / 2, BH - 0.2, (bz0 + bz1) / 2, bx1 - bx0, bz1 - bz0);
-    [[bz1 + 0.12], [bz0 - 0.12]].forEach(([pz9]) => softBox(bx1 - bx0 + 0.5, 0.42, 0.16, 0xe8e6de, (bx0 + bx1) / 2, BH, pz9));
-    [[bx0 - 0.12], [bx1 + 0.12]].forEach(([px9]) => softBox(0.16, 0.42, bz1 - bz0 + 0.5, 0xe8e6de, px9, BH, (bz0 + bz1) / 2));
-    softBox(bx1 - bx0 + 0.3, 0.22, 0.1, BYEL, (bx0 + bx1) / 2, 2.62, bz1 + 0.17);   // 노란 처마 띠
-    // 앞 조경: 향나무 토피어리 + 잔디
-    plane(bx1 - bx0 - 1, 2.6, 0x77a054, (bx0 + bx1) / 2, 0.045, bz1 + 1.8);
-    // ⚠️ topiary()는 3010줄 const라 여기서 못 씀(TDZ) — 인라인
-    [-4.5, 0, 4.5].forEach(ox => {
-      const tx9 = (bx0 + bx1) / 2 + ox, tz9 = bz1 + 1.7;
-      geoSoft(TRUNK_GEO, 0x6d5236, tx9, 0.27, tz9, null, 0.32, 0.32, 0.32);
-      geoSoft(ICO_GEO, 0x3f6b45, tx9, 0.74, tz9, [0, ox, 0], 0.74, 0.62, 0.74);
-      geoSoft(ICO_GEO, 0x497a4e, tx9, 1.26, tz9, [0, ox + 2, 0], 0.5, 0.44, 0.5);
-    });
-    sign('별관', (bx0 + bx1) / 2 + 2.6, 2.5, bz1 + 0.2, 0, 0.4);
-    zones.push({ x0: bx0, x1: bx1, z0: bz0, z1: bz1, label: '별관' });
-  }
-
   // ---------- 유치원 놀이터 (체육관 남쪽 미니 놀이터 — 위성사진) ----------
   const kpX = -54, kpZ = -39;
   plane(10.6, 8, 0x8fae6d, kpX, 0.02, kpZ);
