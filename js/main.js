@@ -146,6 +146,7 @@ addBall(GY_.center[0] + 2, GY_.center[1] + 3, 0.2, 0xe07a2f, 0).bb = GYM_BB;
 // ---------- 카메라 (스크래치 벡터 — 매 프레임 할당 금지) ----------
 // FOV 를 좁히면 같은 pitch 로도 화면에 땅이 더 많이 들어온다 → pitch 를 낮춰 지평선을 되돌림
 let camYaw = 0, camPitch = 0.30, camDist = 6.3;
+let camFrame = 0, camCeilY = null;   // 레이 절약용 (렉 대책)
 const camRay = new THREE.Raycaster();
 const _target = new THREE.Vector3();
 const _dir = new THREE.Vector3();
@@ -202,9 +203,15 @@ function updateCamera(dt) {
   else camTgtY += (tgtYWant - camTgtY) * Math.min(1, dt * 12);
   _target.set(player.pos.x, camTgtY, player.pos.z);
   // 실내에서 카메라가 천장을 뚫지 않게 상한 계산
-  ceilRay.set(_target, _upDir);
-  const ceilHits = ceilRay.intersectObjects(player._nearRay, false);
-  const ceilY = ceilHits.length ? ceilHits[0].point.y - 0.22 : Infinity;
+  // ⚠️ 렉 대책(2026-08-01): 레이는 병합 청크 전체 삼각형을 검사(BVH 없음)해서 밀집 구역에서 ms급.
+  //    천장은 3프레임마다 갱신(천장이 프레임 단위로 변하지 않음), 좌우 예고 레이는 홀짝 교대.
+  camFrame++;
+  if (camFrame % 3 === 0 || camCeilY === null) {
+    ceilRay.set(_target, _upDir);
+    const ceilHits = ceilRay.intersectObjects(player._nearRay, false);
+    camCeilY = ceilHits.length ? ceilHits[0].point.y - 0.22 : Infinity;
+  }
+  const ceilY = camCeilY;
   _dir.set(
     Math.sin(camYaw) * Math.cos(camPitch),
     Math.sin(camPitch),
@@ -215,7 +222,7 @@ function updateCamera(dt) {
   //    정면이 막혔을 때만 빠르게 당기고, 옆줄만 막혔으면 아주 천천히 미리 당긴다.
   let front = camDist, side = camDist;
   const sideX = Math.cos(camYaw) * 0.45, sideZ = -Math.sin(camYaw) * 0.45;
-  for (let s = -1; s <= 1; s++) {
+  for (const s of [0, camFrame % 2 === 0 ? -1 : 1]) {   // 정면 매 프레임 + 좌우 예고는 한쪽씩 교대
     _probe.set(_target.x + sideX * s, _target.y, _target.z + sideZ * s);
     camRay.set(_probe, _dir);
     camRay.far = camDist + 0.4;

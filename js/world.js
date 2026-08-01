@@ -61,7 +61,9 @@ export function buildWorld(scene) {
   // ---------- 청크 병합 (v0.9: draw call 1/10) ----------
   // 단색 정적 상자·면은 개별 Mesh 대신 26m 청크별 지오메트리로 합친다.
   // 색은 버텍스 컬러로 굽고(재질 1개), 이때 높이·아랫면 기반 가짜 AO도 함께 굽는다.
-  const MCHUNK = 26;
+  // ⚠️ 렉 사고(2026-08-01): 서측 밀도 급증으로 26m 청크가 비대해져 카메라 4레이+지면 레이가
+  //    매 프레임 청크 전체 삼각형을 검사(BVH 없음) → 서측 5.3ms/프레임. 13m로 쪼개 레이 비용 1/4.
+  const MCHUNK = 13;
   const buckets = new Map();       // 'cx_cz' → { geos: [], lamps: [] }
   // ⚠️ 밟을 수 없는 장식(나뭇잎·덤불 등) 전용 버킷.
   //    지면 판정(`_groundAt`)은 병합 청크 메시 **전체**에 레이를 쏘기 때문에,
@@ -231,7 +233,8 @@ export function buildWorld(scene) {
   const wallZ = (z0, z1, x, y0, h, color, t = 0.3) => box(t, h, z1 - z0, color, x, y0, (z0 + z1) / 2);
   function wallXGaps(x0, x1, gaps, z, y0, h, color, t = 0.3) {
     let cur = x0;
-    [...gaps].sort((a, b) => a.c - b.c).forEach(g => {
+    // ⚠️ 시작점 정렬 (spansOf와 동일 — c 정렬이면 포함된 틈 사이가 벽으로 남는다)
+    [...gaps].sort((a, b) => (a.c - a.w / 2) - (b.c - b.w / 2)).forEach(g => {
       const g0 = g.c - g.w / 2, g1 = g.c + g.w / 2;
       if (g0 > cur + 0.05) wallX(cur, g0, z, y0, h, color, t);
       cur = Math.max(cur, g1);
@@ -240,7 +243,7 @@ export function buildWorld(scene) {
   }
   function wallZGaps(z0, z1, gaps, x, y0, h, color, t = 0.3) {
     let cur = z0;
-    [...gaps].sort((a, b) => a.c - b.c).forEach(g => {
+    [...gaps].sort((a, b) => (a.c - a.w / 2) - (b.c - b.w / 2)).forEach(g => {
       const g0 = g.c - g.w / 2, g1 = g.c + g.w / 2;
       if (g0 > cur + 0.05) wallZ(cur, g0, x, y0, h, color, t);
       cur = Math.max(cur, g1);
@@ -374,7 +377,9 @@ export function buildWorld(scene) {
   // 개구부를 뺀 남은 구간 목록 (실내 마감판 계산용)
   function spansOf(x0, x1, gaps) {
     const out = []; let cur = x0;
-    [...gaps].sort((a, b) => a.c - b.c).forEach(g => {
+    // ⚠️ 정렬은 반드시 '시작점' 기준 — 중심(c) 기준이면 큰 틈이 나중에 와서
+    //    그 안에 포함된 작은 틈들 사이 구간이 벽으로 살아남는다(도서관 문 앞 유령 굽도리 사고)
+    [...gaps].sort((a, b) => (a.c - a.w / 2) - (b.c - b.w / 2)).forEach(g => {
       const g0 = g.c - g.w / 2, g1 = g.c + g.w / 2;
       if (g0 > cur + 0.05) out.push([cur, g0]);
       cur = Math.max(cur, g1);
@@ -1167,7 +1172,7 @@ export function buildWorld(scene) {
   // ⚠️ solidSoftBox: 통과는 막되 밟고 올라설 수는 없어야 한다(높이 0.85 = 점프 1.04로 닿는다).
   const CAB_H = 0.85, CAB_D = 0.42;
   function lowCabinet(a0, a1, fixed, dir, gaps = []) {
-    const cuts = [...gaps].sort((p, q) => p.c - q.c);
+    const cuts = [...gaps].sort((p, q) => (p.c - p.w / 2) - (q.c - q.w / 2));   // 시작점 정렬(포함-틈 버그 방지)
     let cur = a0;
     const runs = [];
     cuts.forEach(g => {
@@ -1187,7 +1192,7 @@ export function buildWorld(scene) {
   }
   const RAIL_Y = 1.0, RAIL_OFF = 0.21;
   function railWall(a0, a1, fixed, axis, gaps = [], dir = -1, y0 = 0, c = railC) {
-    const cuts = [...gaps].sort((p, q) => p.c - q.c);
+    const cuts = [...gaps].sort((p, q) => (p.c - p.w / 2) - (q.c - q.w / 2));   // 시작점 정렬(포함-틈 버그 방지)
     let cur = a0;
     const runs = [];
     cuts.forEach(g => {
@@ -1224,9 +1229,9 @@ export function buildWorld(scene) {
     scene.add(kTag);
   }
   wallZGaps(fz0, fz1, [{ c: FR.corridorExitZ, w: 1.8 }], fx1, 0, FH, wallC);
-  lintelZ(FR.corridorExitZ, 1.8, fx0, wallC);
+  lintelZ(FR.corridorExitZ, 2.2, fx0, wallC);
   lintelZ(FR.corridorExitZ, 1.8, fx1, wallC);
-  makeDoor(fx0, FR.corridorExitZ - 0.9, 1.8, 'z', { glass: true, swing: 1 });
+  // ⚠️ 측문(서) 문은 위(w2.2) 하나뿐 — 예전 1.8 문과 겹쳐 '이중문'이 되던 것 제거(사용자 보고)
   makeDoor(fx1, FR.corridorExitZ - 0.9, 1.8, 'z', { glass: true, swing: -1 });
   // 복도 북벽 — 서측(서관 문+복도 미니창) / 동측(마당 큰창) 모두 진짜 뚫린 창
   const northGaps = [];
@@ -1243,6 +1248,8 @@ export function buildWorld(scene) {
       westWins.push({ c: r.span[0] + cww * 0.55, w: 1.3 }, { c: r.span[0] + cww * 0.85, w: 1.3 });
     }
   }));
+  // 실사(사진3)+위성: 주차장 문은 계단 '옆' — 서관 동쪽끝(x-12)·급식동(x-10.6) 사이 틈새 길이 주차장으로 통한다
+  northGaps.push({ c: -11.3, w: 1.2 });
   northGaps.push({ c: K.dutyRoom.doorC, w: 1.6 });
   northGaps.push({ c: K.doorC, w: 2.4 });
   northGaps.push({ c: (LC.x[0] + LC.x[1]) / 2, w: LC.x[1] - LC.x[0], dh: FH });   // 세로복도 통로 = 전체 높이 개구
@@ -1284,13 +1291,18 @@ export function buildWorld(scene) {
     if (r.type === 'library') {
       // 실사(사용자 확인): 도서관 문은 긴 복도 쪽이 아니라 **복도와 직각(동향)** — 로비 서벽에 유리 양문
       const LOB_X = -19.2, LOB_ZN = -41.6;
-      wallX(LOB_X, -16.6, LOB_ZN, 0, FH, innerC);                       // 노치 북벽(도서실과 분리)
-      wallZGaps(LOB_ZN, fz0, [{ c: -39.9, w: 1.7 }], LOB_X, 0, FH, innerC);   // 로비 서벽 + 문 개구
-      lintelZ(-39.9, 1.7, LOB_X, innerC);
-      makeDoor(LOB_X, -39.9 - 0.85, 1.7, 'z', { glass: true, swing: 1 });
-      hangSign('도서관', -17.9, FH - CEIL_DROP, fz0 + 0.55, 0, 0.26);
+      // 위상(사용자 그림 재확인): 서벽 문(x-19.2, z-38 중앙) → 전실(x-19.2~-16.6)이 북으로 도서실과 **바로 통한다**
+      // (옛 노치 북벽은 전실을 도서실과 갈라 문이 막다른 방으로 통하게 했다 — 제거)
+      wallX(LOB_X, -16.6, -36.7, 0, FH, innerC);                        // 전실 남벽(복도와 분리·복도 통행선 z-36.2는 유지)
+      wallZ(-39.9, -36.7, -16.6, 0, FH, innerC);                        // 전실 동벽(계단홀과 분리)
+      // 사용자 재확인(그림): 측문에서 동진하는 시선(z-37대) **정면**에 문이 와야 한다 —
+      // 문을 홀 중앙선(z-38)으로 내리고 벽을 남으로 연장(z-36.7까지). 남쪽 틈 z-36.7~-35.4는 주복도 동진 통로.
+      wallZGaps(LOB_ZN, -36.7, [{ c: -38.0, w: 1.7 }], LOB_X, 0, FH, innerC);   // 로비 서벽 + 문 개구
+      lintelZ(-38.0, 1.7, LOB_X, innerC);
+      makeDoor(LOB_X, -38.0 - 0.85, 1.7, 'z', { glass: true, swing: 1 });
+      hangSign('도서관', LOB_X - 0.6, FH - CEIL_DROP, -38.0, Math.PI / 2, 0.26);
       // 아치 프레임 + 현판 + 반납함 — 전부 **동향 문 앞(로비 안)**으로 (실사 d80_0222)
-      const LW = 0x5a4232, ldz = -39.9;
+      const LW = 0x5a4232, ldz = -38.0;
       // ⚠️ 기둥 x는 벽면(-19.05)에서 4cm 이상 — 0.32면 기둥면(-19.03)과 벽면이 2mm 코플레이너로 반짝(평면 스캔 적발)
       [-1.3, 1.3].forEach(oz => solidSoftBox(0.3, 2.5, 0.26, LW, LOB_X + 0.4, 0, ldz + oz));
       softBox(0.34, 0.3, 2.9, LW, LOB_X + 0.32, 2.5, ldz);
@@ -1298,14 +1310,17 @@ export function buildWorld(scene) {
       lTag.position.set(LOB_X + 0.5, 2.62, ldz);
       lTag.rotation.y = Math.PI / 2;
       scene.add(lTag);
-      solidSoftBox(0.4, 1.05, 0.55, 0x7a8b99, LOB_X + 0.42, 0, ldz + 2.2);      // 도서반납함(문 옆)
-      geoAdd(UNIT_PLANE, 0x2f3438, LOB_X + 0.64, 0.88, ldz + 2.2, [0, Math.PI / 2, 0], 0.34, 0.08, 1);
+      solidSoftBox(0.4, 1.05, 0.55, 0x7a8b99, LOB_X + 0.42, 0, ldz - 2.35);      // 도서반납함(문 옆·노치 안)
+      geoAdd(UNIT_PLANE, 0x2f3438, LOB_X + 0.64, 0.88, ldz - 2.35, [0, Math.PI / 2, 0], 0.34, 0.08, 1);
       const rTag = textSign('도서반납함', { h: 0.11, bg: '#7a8b99', fg: '#ffffff', border: null, fontPx: 30, pad: 8 });
-      rTag.position.set(LOB_X + 0.64, 0.62, ldz + 2.2);
+      rTag.position.set(LOB_X + 0.64, 0.62, ldz - 2.35);
       rTag.rotation.y = Math.PI / 2;
       scene.add(rTag);
     }
   }));
+  makeDoor(-11.3 - 0.6, fz0, 1.2, 'x', { glass: true, swing: 1 });
+  hangSign('주차장', -11.3, FH - CEIL_DROP, fz0 + 0.55, 0, 0.24);
+  box(1.3, 0.04, 12.4, 0x6f7276, -11.3, 0.006, fz0 - 6.4, { collide: false, walk: true });   // 틈새 아스팔트 → 뒤 주차장
   makeDoor(K.dutyRoom.doorC - 0.8, fz0, 1.6, 'x', { swing: 1 });
   makeDoor(K.doorC - 1.2, fz0, 2.4, 'x', { swing: 1 });
   // 구관 복도 바닥: 흰 대형 타일 + 양쪽 검은 대리석 띠 (슬래브 0.08 위에 0.10)
@@ -1345,7 +1360,9 @@ export function buildWorld(scene) {
   }
   // 소방설비 (실사: 복도 곳곳 / 지금까지 코드에 0개)
   [-15.4, -5, 2, 21, 35].forEach(fx3 => fireExt(fx3, 0.10, fz0 + 0.42, fz0 + 0.16));   // 서측 홀 구간(벽 없음)엔 벽표지 못 붙이므로 제외
-  [-24, 28].forEach(hx => hydrant(hx, fz0 + 0.14, 0));
+  // ⚠️ 서측 소화전은 옛 fz0 벽이 홀로 뚫리면서 허공에 떠 도서관 문 앞을 막았다 — 새 홀 남벽(z-39.9)으로 이사
+  hydrant(-24, HALL_WALL_Z + 0.14, 0);
+  hydrant(28, fz0 + 0.14, 0);
   // 유도등은 복도 끝 바깥문·계단실 개구에만 (문 위 매달림 팻말과 정면으로 겹치지 않게)
   exitLight(fx0 + 0.9, 2.45, FR.corridorExitZ, Math.PI / 2);
   exitLight(fx1 - 0.9, 2.45, FR.corridorExitZ, -Math.PI / 2);
@@ -1733,7 +1750,7 @@ export function buildWorld(scene) {
       nWins.push({ c: rcx - rcw / 4, w: ww }, { c: rcx + rcw / 4, w: ww });
     });
     // 계단홀 북측 주차장 문 개구(사용자 확인: 서관·급식동 사이 1층 길)
-    wallXWin(wx0, wx1, wz0, wallC, nWins, { h: FH, sill: 1.05, wh: 1.5, innerDir: 1, doors: [{ c: -13.55, w: 1.8 }] });
+    wallXWin(wx0, wx1, wz0, wallC, nWins, { h: FH, sill: 1.05, wh: 1.5, innerDir: 1 });
     wallZ(wz0, wz1, wx0, 0, totalH, wallC);
     wallZ(wz0, wz1, wx1, 0, totalH, wallC);
     const edges = new Set();
@@ -2101,14 +2118,8 @@ export function buildWorld(scene) {
   geoAdd(UNIT_PLANE, 0xd7ede4, (tx1 - 0.17), 2.45, (stepLo + stepHi) / 2, [0, -Math.PI / 2, 0], stepLo - stepHi, 1.9, 1);
   sign('2층 ↑', (tx0 + tx1) / 2, 2.5, uz1 + 0.18, 0, 0.45);
   plane(4.0, 1.7, 0xbdbcb6, (tx0 + tx1) / 2 + 0.75, 0.102, uz1 - 0.9);   // 홀 테라조(복도 흰타일과 경계)
-  // 실사(사용자 확인): 계단홀에서 북쪽(서관·급식동 사이)으로 **주차장 가는 1층 통로** — 유리문 + 뒤편 포장
-  {
-    const pdX = (wkX + tx1) / 2;
-    // 서관 북벽(uz0)의 계단 구간에 개구 + 유리문 → 주차장. (북벽은 wing loop가 세우므로 여기선 문·포장·팻말만)
-    makeDoor(-13.55 - 0.9, uz0, 1.8, 'x', { glass: true, swing: -1 });
-    box(2.4, 0.04, 8.5, 0x6f7276, pdX, 0.006, uz0 - 4.5, { collide: false, walk: true });   // 아스팔트 통로 → 주차장
-    hangSign('주차장 ↑', pdX, FH - CEIL_DROP, uz0 + 0.6, 0, 0.24);
-  }
+  // (주차장 문은 계단 뒤 북벽이 아니라 주복도 fz0의 계단 개구 동쪽 틈새길 — 사용자 사진3 정정.
+  //  북벽 문은 계단참(y1.7 솔리드)에 막혀 도달 불가였다)
   plane(3.4, 0.4, 0xd9b545, (tx0 + tx1) / 2 + 0.75, 0.104, uz1 + 0.25);  // 점자블록 띠(사진3)
   // 실사(d80_0160·0169): 계단참 정면(북벽)에 **목재 프레임 대형 통창** — 참에서 밖(주차장)이 보인다
   {
@@ -2887,7 +2898,8 @@ export function buildWorld(scene) {
   }
   // 뒤뜰 피크닉 데크 + 보라 화단 (실사: 학교에서 가장 예쁜 공간 — 목재 데크·테이블·맥문동)
   {
-    const dkX = -25, dkZ = -54.5;
+    // 위성+사용자 확인: 이 데크는 서관 뒤(주차장 자리)가 아니라 **텃밭 서측** 쉼터다
+    const dkX = 31.5, dkZ = -63.5;
     // 실사(사용자 사진2): 데크는 넓다(~15×8) — 테이블 5·흰 석상·흰 장식펜스·큰나무 2
     box(15, 0.14, 8, 0x9c6b4a, dkX, 0, dkZ, { walk: true });
     for (let fpx = dkX - 7; fpx <= dkX + 7; fpx += 1.4)
@@ -2908,8 +2920,26 @@ export function buildWorld(scene) {
       [-0.6, 0.6].forEach(lx => box(0.1, 0.62, 0.62, 0x6d4a34, tx6 + lx, 0.14, tz6));
       [-0.62, 0.62].forEach(bz => box(1.5, 0.09, 0.32, 0x9c6b4a, tx6, 0.42, tz6 + bz, { collide: false, walk: true }));
     });
-    for (let fx6 = -30.5; fx6 <= -21.5; fx6 += 1.1)
-      geoSoft(ICO_GEO, 0x9b7bd0, fx6, 0.3, -51.6, [0, fx6, 0], 0.42, 0.34, 0.42);   // 맥문동 보라 띠
+    for (let fx6 = dkX - 5.5; fx6 <= dkX + 3.5; fx6 += 1.1)
+      geoSoft(ICO_GEO, 0x9b7bd0, fx6, 0.3, dkZ + 4.6, [0, fx6, 0], 0.42, 0.34, 0.42);   // 맥문동 보라 띠
+  }
+  // 위성+사용자 확인: 보건실·나래반 뒤(서관 북측)는 **바로 주차장**
+  {
+    const pk0 = -33, pk1 = -10.7, pkz0 = -58.5, pkz1 = -50.6;
+    box(pk1 - pk0, 0.05, pkz1 - pkz0, 0x6f7276, (pk0 + pk1) / 2, 0.006, (pkz0 + pkz1) / 2, { collide: false, walk: true });
+    // 주차칸(서관 벽 쪽으로 머리 대는 직각 주차) — 흰 구획선 + 카스토퍼
+    for (let sx8 = pk0 + 1.5; sx8 <= pk1 - 1.5; sx8 += 2.6) {
+      geoAdd(UNIT_PLANE, 0xe8e8e4, sx8, 0.062, pkz1 - 2.5, [-Math.PI / 2, 0, 0], 0.1, 5.0, 1);
+      if (sx8 < pk1 - 3) softBox(1.6, 0.11, 0.14, 0xd9b545, sx8 + 1.3, 0.05, pkz1 - 4.6);
+    }
+    // 주차 차량 2대 (단순 박스카 — 흰 SUV·회색 세단)
+    [[pk0 + 4.1, 0xe9ecee, 1.55], [pk0 + 9.3, 0x8a8f94, 1.35]].forEach(([cx9, cc9, ch9]) => {
+      box(1.75, ch9 * 0.55, 4.1, cc9, cx9, 0.32, pkz1 - 2.9);
+      box(1.6, ch9 * 0.45, 2.3, cc9, cx9, 0.32 + ch9 * 0.55, pkz1 - 2.9, { collide: false });
+      [[-0.92, -1.35], [0.92, -1.35], [-0.92, 1.35], [0.92, 1.35]].forEach(([wx9, wz9]) =>
+        geoAdd(STUMP_GEO, 0x24262a, cx9 + wx9, 0.32, pkz1 - 2.9 + wz9, [0, 0, Math.PI / 2], 0.62, 0.2, 0.62));
+    });
+    sign('주차장', (pk0 + pk1) / 2, 1.5, pkz0 + 0.3, 0, 0.4);
   }
   // 뒤편 디테일: 실외기 + 배관 (서관·급식동 뒤)
   [[-38, -50.75], [-30, -50.75], [-22, -50.75], [-8.2, -58.75], [-1.8, -58.75]].forEach(([ax2, az2]) => {
