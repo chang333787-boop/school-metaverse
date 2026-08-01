@@ -2202,6 +2202,12 @@ export function buildWorld(scene) {
   corridorFloor(ux0 + 0.2, wkX - 0.1, zCor2, uz1, FH + 0.03, TERRAZZO, TERRAZZO, 0);
   railWall(ux0 + 0.3, wkX - 0.3, uz1, 'x', [], -1, FH, 0xc8cdd2);   // ⚠️ y0=FH — 절대 y면 1층 방 안 허공에 뜬다(실버그)
   for (let lx = ux0 + 3; lx < tx0; lx += 6) lamp(lx, FH * 2 - CEIL_DROP - 0.05, (zCor2 + uz1) / 2);
+  // S5: 2층 복도 소품 — 게시판 2·소화기·정수기(실사 학교 2층 복도 표준 구성)
+  // (복도창·문 개구를 피한 벽 실구간: 6학년 -32~-31 · 5학년 -23~-22)
+  geoAdd(UNIT_PLANE, 0x6f8f6a, -22.5, FH + 1.65, zCor2 + 0.17, null, 0.9, 1.1, 1);   // 게시판
+  fireExt(-27, FH + 0.03, zCor2 + 0.42, zCor2 + 0.16);
+  solidSoftBox(0.45, 1.1, 0.45, 0xe9ecee, -31.5, FH + 0.03, zCor2 + 0.45);   // 정수기
+  softBox(0.3, 0.12, 0.3, 0x9db4c0, -31.5, FH + 1.13, zCor2 + 0.45);
   roofOver(ux0, ux1, uz0, uz1, FH * 2, 0xd9dce1);  // 위성: 서관 지붕은 밝은 회백색
   const tank = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 1.5, 14), mat(0xc8cdd2));
   tank.position.set(ux0 + 4, FH * 2 + 0.75, uz0 + 3);
