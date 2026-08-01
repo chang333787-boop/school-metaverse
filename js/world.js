@@ -1469,6 +1469,12 @@ export function buildWorld(scene) {
     for (let si = 0; si < ST_N8; si++) {
       box(ST_TREAD, 1 - si * 0.125, 1.4, 0xdcd6ca, PODIUM_X + sd * (5.5 + 0.17 + si * ST_TREAD), -1, ST_Z);
     }
+    // ⚠️ 상단 참 — 계단 꼭대기(y0)와 테라스(z≤-18)를 잇는 착지판. 없으면 꼭대기 서쪽이 절벽(보행 시험에서 낙하)
+    box(1.6, 1.0, 2.2, 0xdcd6ca, PODIUM_X + sd * 4.85, -1, ST_Z - 0.4, { walk: true });
+    // 참 안쪽 끝 가드 — 여기서 중앙 방향으로 더 가면 운동장(-1)으로 떨어진다(보행 시험 2회 낙하)
+    softBox(0.06, 1.0, 2.0, 0xc9ced4, PODIUM_X + sd * 4.02, 0, ST_Z - 0.3);
+    softBox(0.1, 0.08, 2.0, 0xe2e6ea, PODIUM_X + sd * 4.02, 1.0, ST_Z - 0.3);
+    box(0.12, 1.4, 2.2, 0, PODIUM_X + sd * 4.02, 0, ST_Z - 0.3, { material: INVIS, noCam: true });
     // 계단 경사 난간 (남측·바깥면) — 손잡이 + 접지 기둥 3
     const rA = Math.atan2(1, ST_N8 * ST_TREAD) * -sd;
     const rcx2 = PODIUM_X + sd * (5.67 + (ST_N8 * ST_TREAD) / 2);
