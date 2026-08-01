@@ -2338,6 +2338,9 @@ export function buildWorld(scene) {
   box(17, 0.05, 14, 0xb4b8bd, px, 0, pz, { collide: false, walk: true });   // 사진: 회색 벽돌 포장
   // 실사: 놀이기구 아래는 회색 포장이 아니라 **모래밭**이고, 옆에 잔디밭이 붙어 있다
   box(15, 0.058, 12, 0xdcc9a0, px + 0.5, 0, pz - 0.3, { collide: false, walk: true });   // 모래밭 — 그네·구름사다리까지 안에(v79_0030)
+  // 검정 고무 경계블록 (실사 v79_0030)
+  [[15.4, 0.2, 0, -6.2], [15.4, 0.2, 0, 6.2], [0.2, 12.4, -7.7, 0], [0.2, 12.4, 7.7, 0]].forEach(([w2, d2, ox2, oz2]) =>
+    box(w2, 0.075, d2, 0x26282c, px + 0.5 + ox2, 0, pz - 0.3 + oz2, { collide: false }));
   box(17, 0.04, 4.5, 0x7fb86a, px, 0, pz + 9.3, { collide: false, walk: true });        // 남측 잔디밭
   // 자전거 교통안전 코스 (서쪽 별도 포장 — 노란 라인 + 숫자 타일)
   const rcx = px - 14, rcz = pz - 0.5;
@@ -2379,8 +2382,12 @@ export function buildWorld(scene) {
     [[-0.2], [0.2]].forEach(([cxo]) => box(0.03, 1.62, 0.03, 0x777777, swX + sx + cxo, 0.6, swZ, { collide: false }));
   });
   const ssX = px - 4.5, ssZ = pz + 3.5;
-  box(0.3, 0.35, 0.3, 0x9aa5ad, ssX, 0, ssZ);
-  box(3.2, 0.09, 0.38, 0x67b26f, ssX, 0.42, ssZ, { rot: [0, 0, 0.13], collide: false, walk: true });
+  // 실사(v79_0030): 스테인리스 2빔 + 빔 끝 반매몰 타이어
+  box(0.5, 0.4, 0.9, 0x9aa5ad, ssX, 0, ssZ);
+  box(3.2, 0.07, 0.3, 0xc8cdd2, ssX, 0.42, ssZ - 0.28, { rot: [0, 0, 0.13], collide: false, walk: true });
+  box(3.2, 0.07, 0.3, 0xc8cdd2, ssX, 0.42, ssZ + 0.28, { rot: [0, 0, -0.13], collide: false, walk: true });
+  [[-1.35, -0.28], [1.35, -0.28], [-1.35, 0.28], [1.35, 0.28]].forEach(([ox3, oz3]) =>
+    solidSoftBox(0.55, 0.26, 0.22, 0x26282c, ssX + ox3, 0, ssZ + oz3));
   [[0.9, 1], [1.25, 0], [1.6, -1]].forEach(([bh, zo]) => {
     [-0.7, 0.7].forEach(sx => box(0.08, bh, 0.08, 0x3a6ea5, px + 3.5 + sx, 0, pz - 3.5 + zo, { collide: false }));
     const bb = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.4, 8), mat(0xc8cdd2));
@@ -2443,6 +2450,25 @@ export function buildWorld(scene) {
       solidSoftBox(0.14, 2.5, 0.14, 0x8a6a45, cnX + ox, 0, cnZ + oz));
     [[-3.4, 0.2, 0.3], [0, 0.45, 0], [3.4, 0.2, -0.3]].forEach(([ox, oy, rz]) =>
       softBox(3.6, 0.07, 10.4, 0x9db4c0, cnX + ox, 2.5 + oy, cnZ, [0, 0, rz]));
+  }
+  // 안전수칙 안내판 (실사 v79_0045: 파란 2기둥 안내판)
+  {
+    const sb = textSign('어린이 놀이시설 안전수칙', { h: 0.5, bg: '#f2f5f8', fg: '#2e5fa8', border: '#2e5fa8', fontPx: 40, pad: 14 });
+    sb.position.set(px - 7.8, 1.35, pz + 3.5);
+    sb.rotation.y = Math.PI / 2;
+    scene.add(sb);
+    [-0.7, 0.7].forEach(oz4 => solidSoftBox(0.08, 1.9, 0.08, 0x9aa5ad, px - 7.8, 0, pz + 3.5 + oz4));
+  }
+  // 숲놀이터 벽돌길 + 목재 구조물 (실사 v79_0225)
+  box(2.2, 0.05, 4, 0xd8c49a, px + 2, 0, pz - 6.5, { collide: false, walk: true });
+  box(2.2, 0.05, 4.6, 0xd8c49a, px - 1, 0, pz - 9, { rot: [0, 0.5, 0], collide: false, walk: true });
+  box(2.2, 0.05, 4.2, 0xd8c49a, px - 4, 0, pz - 11, { rot: [0, -0.4, 0], collide: false, walk: true });
+  {
+    const wfx = px - 7, wfz = pz - 9.5;
+    [[-1, -0.8], [1, -0.8], [-1, 0.8], [1, 0.8]].forEach(([ox5, oz5]) =>
+      solidSoftBox(0.12, 1.8, 0.12, 0x8a6a45, wfx + ox5, 0, wfz + oz5));
+    box(2.2, 0.1, 0.1, 0x9c7a53, wfx, 1.75, wfz - 0.8, { walk: true });
+    box(2.2, 0.1, 0.1, 0x9c7a53, wfx, 1.75, wfz + 0.8, { walk: true });
   }
   zones.push({ x0: px - 8.5, x1: px + 8.5, z0: pz - 7, z1: pz + 7, label: '놀이터' });
 
