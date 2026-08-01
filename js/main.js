@@ -147,6 +147,7 @@ addBall(GY_.center[0] + 2, GY_.center[1] + 3, 0.2, 0xe07a2f, 0).bb = GYM_BB;
 // FOV 를 좁히면 같은 pitch 로도 화면에 땅이 더 많이 들어온다 → pitch 를 낮춰 지평선을 되돌림
 let camYaw = 0, camPitch = 0.30, camDist = 6.3;
 let camFrame = 0, camCeilY = null;   // 레이 절약용 (렉 대책)
+let camIdle = 0, _lpx = 0, _lpy = 0, _lpz = 0, _lyaw = 0;   // S11: 정지 시 레이 1/4 주기
 const camRay = new THREE.Raycaster();
 const _target = new THREE.Vector3();
 const _dir = new THREE.Vector3();
@@ -206,6 +207,11 @@ function updateCamera(dt) {
   // ⚠️ 렉 대책(2026-08-01): 레이는 병합 청크 전체 삼각형을 검사(BVH 없음)해서 밀집 구역에서 ms급.
   //    천장은 3프레임마다 갱신(천장이 프레임 단위로 변하지 않음), 좌우 예고 레이는 홀짝 교대.
   camFrame++;
+  // S11: 플레이어·시점이 멈춰 있으면(30프레임+) 가림 레이를 1/4 주기로 — 움직이면 즉시 복귀
+  const moved = Math.abs(player.pos.x - _lpx) + Math.abs(player.pos.y - _lpy) + Math.abs(player.pos.z - _lpz) > 0.001 || Math.abs(camYaw - _lyaw) > 0.0005;
+  _lpx = player.pos.x; _lpy = player.pos.y; _lpz = player.pos.z; _lyaw = camYaw;
+  camIdle = moved ? 0 : camIdle + 1;
+  if (camIdle > 30 && camFrame % 4 !== 0) { camera.position.copy(_desired); camera.lookAt(_target); return; }
   if (camFrame % 3 === 0 || camCeilY === null) {
     ceilRay.set(_target, _upDir);
     const ceilHits = ceilRay.intersectObjects(player._nearRay, false);
