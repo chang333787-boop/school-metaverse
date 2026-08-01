@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from '../lib/BufferGeometryUtils.js';
 import { SCHOOL } from './data.js';
-import { textSign, taegeukTexture, trackTexture, courtTexture, bookStripes, netTexture, shade, cardTone, mosaicTexture, rubbleTexture, clockFace, compassRose, courseTexture } from './textures.js';
+import { textSign, taegeukTexture, trackTexture, courtTexture, bookStripes, netTexture, shade, cardTone, mosaicTexture, rubbleTexture, clockFace, compassRose, courseTexture, ovalRailTexture } from './textures.js';
 
 // ---- 공유 지오메트리/재질 (성능 예산: geometries 최소화) ----
 const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
@@ -1432,14 +1432,15 @@ export function buildWorld(scene) {
   const PORCH_H = 3.2, WOODC = 0x3b2d24;                        // 짙은 초콜릿 목재무늬
   const PORCH_CZ = (PORCH_Z0 + PORCH_Z1) / 2;
 
-  // 캔틸레버 지붕판 (앞으로 0.6 더 내밈) + 밑면 루버 느낌의 얇은 띠
-  box(PORCH_W + 0.8, 0.38, PORCH_Z1 - PORCH_Z0 + 0.6, WOODC, PODIUM_X, PORCH_H, PORCH_CZ + 0.3, { collide: false });
+  // 실사: 깊은 fascia(0.7) + 상단 하늘색 캡 몰딩
+  box(PORCH_W + 0.8, 0.7, PORCH_Z1 - PORCH_Z0 + 0.6, WOODC, PODIUM_X, PORCH_H, PORCH_CZ + 0.3, { collide: false });
+  softBox(PORCH_W + 0.9, 0.08, PORCH_Z1 - PORCH_Z0 + 0.7, 0x5b8fc9, PODIUM_X, PORCH_H + 0.7, PORCH_CZ + 0.3);
   box(PORCH_W + 0.4, 0.08, PORCH_Z1 - PORCH_Z0 + 0.4, 0x2e241d, PODIUM_X, PORCH_H - 0.09, PORCH_CZ + 0.2, { collide: false });
   // 사각 기둥 5개 (앞줄) — 실물은 굵고 목재무늬
-  // ⚠️ 중앙(ox 0)은 비운다 — 계단 축이라 기둥을 두면 현관으로 못 들어간다(측정으로 확인)
-  [-5.6, -2.8, 2.8, 5.6].forEach(ox => box(0.75, PORCH_H, 0.75, WOODC, PODIUM_X + ox, 0, PORCH_Z1 - 0.4));
-  // 좌우 측벽 (실물: 오른쪽은 막힌 목재 벽)
-  [-1, 1].forEach(s => box(0.4, PORCH_H, PORCH_Z1 - PORCH_Z0 - 0.8, WOODC, PODIUM_X + s * (PORCH_W / 2), 0, PORCH_CZ - 0.4));
+  // 실사(hi_0276): 슬림 기둥 4 + 좌측 모서리 기둥 + **우측 와이드 피어**. 좌측벽은 없다(개방)
+  [-3.7, -1.25, 1.25, 3.7].forEach(ox => box(0.42, PORCH_H, 0.42, WOODC, PODIUM_X + ox, 0, PORCH_Z1 - 0.4));
+  box(0.5, PORCH_H, 0.5, WOODC, PODIUM_X - 6.1, 0, PORCH_Z1 - 0.4);
+  box(1.7, PORCH_H, 0.55, WOODC, PODIUM_X + 5.7, 0, PORCH_Z1 - 0.4);
   // 포치 전면 난간 — 실사(hi_0276): **은색 스테인리스가 중앙 끊김 없이 연속**, 개구는 양끝 계단 접속부뿐
   {
     const rlZ = PORCH_Z1 - 0.05;
@@ -1451,6 +1452,16 @@ export function buildWorld(scene) {
       softBox(0.08, 0.08, 0.08, 0xe2e6ea, PODIUM_X + t, 1.0, rlZ);
     }
     box(10.6, 1.05, 0.1, 0, PODIUM_X, 0, rlZ, { material: INVIS, noCam: true });   // 낙하 방지
+    // 오벌 링 패턴 패널 (실사 hi_0288: 세로봉 사이 장타원 링)
+    const ovalTex = ovalRailTexture();
+    ovalTex.wrapS = ovalTex.wrapT = THREE.RepeatWrapping;
+    ovalTex.repeat.set(16, 1);
+    const OVAL_MAT = new THREE.MeshLambertMaterial({ map: ovalTex, alphaTest: 0.4, side: THREE.DoubleSide });
+    const op = new THREE.Mesh(new THREE.PlaneGeometry(10.6, 0.8), OVAL_MAT);
+    op.position.set(PODIUM_X, 0.56, rlZ);
+    op.matrixAutoUpdate = false; op.updateMatrix();
+    scene.add(op);
+    dynamic.ovalMat = OVAL_MAT;
   }
   // 포치 안 야외 테이블 3세트 (원목 상판 + 양옆 벤치)
   [-4.2, 0, 4.2].forEach(ox => {
@@ -1479,6 +1490,17 @@ export function buildWorld(scene) {
     const rA = Math.atan2(1, ST_N8 * ST_TREAD) * -sd;
     const rcx2 = PODIUM_X + sd * (5.67 + (ST_N8 * ST_TREAD) / 2);
     softBox(ST_N8 * ST_TREAD + 0.4, 0.07, 0.07, 0xc9ced4, rcx2, 0.35, ST_Z + 0.72, [0, 0, rA]);
+    {   // 경사 오벌 패널
+      const ot = ovalRailTexture();
+      ot.wrapS = ot.wrapT = THREE.RepeatWrapping;
+      ot.repeat.set(5, 1);
+      const om = new THREE.Mesh(new THREE.PlaneGeometry(ST_N8 * ST_TREAD + 0.3, 0.72),
+        new THREE.MeshLambertMaterial({ map: ot, alphaTest: 0.4, side: THREE.DoubleSide }));
+      om.position.set(rcx2, -0.02, ST_Z + 0.72);
+      om.rotation.z = rA;
+      om.matrixAutoUpdate = false; om.updateMatrix();
+      scene.add(om);
+    }
     [0, 3.5, 7].forEach(si => {
       const sx8 = PODIUM_X + sd * (5.67 + si * ST_TREAD), yt = -si * 0.125 + 0.92;
       softBox(0.05, yt + 1, 0.05, 0xc9ced4, sx8, -1, ST_Z + 0.72);
@@ -1515,14 +1537,15 @@ export function buildWorld(scene) {
     solidSoftBox(w * 0.78, h * 0.34, d * 0.82, colr, sx + w * 0.06, 0.24 + h * 0.72, sz, [0, tilt - 0.22, 0]);
   };
   // 글씨는 돌보다 작게 — 팻말이 돌보다 넓으면 '검은 판때기'로 보인다
-  stone(PODIUM_X - 8.6, TERR_Z - 1.8, 1.3, 2.15, 1.0, 0x3a3d40, 0.18);
+  stone(PODIUM_X - 8.6, TERR_Z - 1.8, 1.3, 2.5, 1.0, 0x3a3d40, 0.18);
   const mottoTag = textSign('바르고 크게 자율', { h: 0.19, bg: '#3f4245', fg: '#f2f4f6', border: null, fontPx: 40, pad: 8 });
   mottoTag.position.set(PODIUM_X - 8.55, 1.62, TERR_Z - 1.45);
   mottoTag.rotation.y = 0.18;
   scene.add(mottoTag);
-  stone(PODIUM_X + 8.4, TERR_Z - 1.2, 1.45, 1.95, 0.95, 0x9aa0a4, -0.14);
+  stone(PODIUM_X + 10.6, TERR_Z - 1.5, 1.9, 2.3, 1.2, 0x9aa0a4, -0.14);
+  plane(1.4, 1.2, 0xdec23a, PODIUM_X + 8.9, -0.99, TERR_Z + 1.1);   // 계단 앞 점자블록(실사 hi_0288)
   const songTag = textSign('교 가', { h: 0.22, bg: '#a3a9ad', fg: '#2b2f33', border: null, fontPx: 44, pad: 10 });
-  songTag.position.set(PODIUM_X + 8.4, 1.82, TERR_Z - 1.1);
+  songTag.position.set(PODIUM_X + 10.6, 2.0, TERR_Z - 1.32);
   songTag.rotation.y = -0.14;
   scene.add(songTag);
 

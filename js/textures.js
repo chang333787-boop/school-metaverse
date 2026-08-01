@@ -500,3 +500,21 @@ export function courseTexture() {
   x.beginPath(); x.arc(dx, dy + 8, 4.5, 0, Math.PI * 2); x.fill();
   return canvasTex(c);
 }
+
+// ---------- 오벌 링 난간 패턴 (실사: 구령대·계단의 스테인리스 장타원 링 난간) ----------
+export function ovalRailTexture() {
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 64;
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, 128, 64);
+  x.strokeStyle = shadeCss('#c9ced4');
+  x.lineWidth = 5;
+  // 세로봉 2 + 장타원 링 1 반복 타일
+  [8, 120].forEach(px => { x.beginPath(); x.moveTo(px, 0); x.lineTo(px, 64); x.stroke(); });
+  x.beginPath();
+  x.ellipse(64, 32, 22, 27, 0, 0, Math.PI * 2);
+  x.stroke();
+  x.beginPath(); x.moveTo(36, 32); x.lineTo(42, 32); x.stroke();
+  x.beginPath(); x.moveTo(86, 32); x.lineTo(92, 32); x.stroke();
+  return canvasTex(c);
+}
