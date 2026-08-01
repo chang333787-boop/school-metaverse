@@ -950,10 +950,20 @@ export function buildWorld(scene) {
         box(1.3, 0.74, 0.7, 0xb0a18e, cx + 0.9, y0, at(1.4));
         box(0.9, 1.7, 0.45, 0xc8ccd0, s0 + 0.55, y0, at(0.7));
       } else {
+        // S4: 일반 사무실(원무실·소담실)이 책상+화분뿐이라 휑함 — 서류장·프린터·게시판·벽시계 보강
         const nDesk = Math.max(1, Math.round(cw / 2.2) - 1);
         for (let i = 0; i < nDesk; i++) {
-          box(1.3, 0.74, 0.7, 0xb0a18e, cx + (i - (nDesk - 1) / 2) * 1.7, y0, at(4.2));
+          const dx8 = cx + (i - (nDesk - 1) / 2) * 1.7;
+          box(1.3, 0.74, 0.7, 0xb0a18e, dx8, y0, at(4.2));
+          box(0.5, 0.42, 0.5, 0x3a3f47, dx8, y0, at(3.4));                      // 의자
+          box(0.34, 0.26, 0.05, 0x2f3438, dx8 - 0.25, y0 + 0.76, at(4.25), { collide: false });   // 모니터
         }
+        box(0.9, 1.7, 0.45, 0xc8ccd0, s0 + 0.55, y0, at(0.8));                  // 서류 캐비닛
+        box(0.6, 0.55, 0.55, 0xdfe3e8, s1 - 0.75, y0 + 0.74, at(depth - 1.2), { collide: false });   // 프린터
+        box(0.7, 0.74, 0.6, 0xc8ccd0, s1 - 0.75, y0, at(depth - 1.2));
+        geoAdd(UNIT_PLANE, 0x6f8f6a, cx - 1.2, y0 + 1.7, at(0.22), null, 1.6, 1.0, 1);          // 게시판
+        geoAdd(CIRC_GEO, 0xf4f2ea, cx + 1.4, y0 + 2.35, at(0.22), [0, faceIn, 0], 0.5, 0.5, 1);   // 벽시계
+        geoAdd(CIRC_GEO, 0x3a3f47, cx + 1.4, y0 + 2.35, at(0.23), [0, faceIn, 0], 0.06, 0.06, 1);
       }
       const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.4, 10), mat(0xa5673f));
       pot.position.set(cx + cw / 2 - 0.7, y0 + 0.2, at(1));
