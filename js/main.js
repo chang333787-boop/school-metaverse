@@ -572,6 +572,17 @@ document.getElementById('ver').textContent = SCHOOL.tagline;
 // NPC 는 castShadow 를 끄고 발밑에 정적 그림자를 미리 구워 대체한다(world.js).
 function worldTick(dt) {
   const t = clock.elapsedTime;
+  // 사이클4: 트랙 러너 — 타원 경로. 방향은 persons 루프(요0 갱신)가 자연히 처리
+  if (world.runners) for (const rn of world.runners) {
+    rn.phase += dt * rn.speed;
+    const px9 = rn.cx + Math.cos(rn.phase) * rn.rx;
+    const pz9 = rn.cz + Math.sin(rn.phase) * rn.rz;
+    rn.group.position.x = px9;
+    rn.group.position.z = pz9;
+    rn.group.position.y = -1 + Math.abs(Math.sin(rn.phase * 22)) * 0.06;   // 잔달음 바운스
+    rn.pe.x = px9; rn.pe.z = pz9;
+    rn.pe.yaw0 = Math.atan2(-Math.sin(rn.phase) * rn.rx, Math.cos(rn.phase) * rn.rz);   // 모델은 yaw0에서 +z를 본다(착석 NPC로 확인)
+  }
   // P7: 문 이징 슬라이드 (움직이는 문만 비용 발생)
   for (const d of world.doors) {
     if (d.curOff === undefined || d.curOff === d.targetOff) continue;

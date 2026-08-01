@@ -541,7 +541,7 @@ export function buildWorld(scene) {
     // 사람이 돌 때마다 그림자 맵을 다시 구우면 0.6초마다 화면이 한 번씩 끊기고
     // 그림자가 계단처럼 튄다(= 미세 떨림). 대신 발밑에 정적 그림자를 미리 굽는다.
     bodyMesh.castShadow = false;
-    blobGeos.push(blobAt(x, y + (isIndoor(x, y + YOFF, z) ? 0.115 : 0.02), z, sc));   // 실내 바닥재(0.10) 위
+    if (!opts.noBlob) blobGeos.push(blobAt(x, y + (isIndoor(x, y + YOFF, z) ? 0.115 : 0.02), z, sc));   // 실내 바닥재(0.10) 위
     g.add(bodyMesh);
     const tag = textSign(name, { h: 0.26, fontPx: 36, pad: 12 });
     tag.position.y = opts.sit ? 1.62 : 1.95;
@@ -2950,6 +2950,42 @@ export function buildWorld(scene) {
 
   // ---------- 울타리 + 투명 경계벽 + 나무 + 구름 ----------
   // ---------- 북측 주차장 + 창고 + 후문 (위성사진) ----------
+  // ---------- 운동장 러너 (사이클4: 생동감 — 트랙을 도는 학생 2) ----------
+  // 이동 NPC는 구운 블롭을 못 쓴다 → 그룹에 붙는 동적 그림자 원판. 갱신은 main.js worldTick.
+  const runners = [];
+  {
+    const keepR = YOFF; YOFF = 0;   // person이 y 절대좌표를 받으므로 러너는 y를 직접 -1로
+    [['달리기 친구', false, 0], ['체육 친구', true, Math.PI]].forEach(([nm, girl, ph]) => {
+      const g = person(6, -1, 8, 0, nm, girl, { noBlob: true });
+      const shd = new THREE.Mesh(CIRC_GEO, new THREE.MeshBasicMaterial({ color: 0x2a2e24, transparent: true, opacity: 0.28 }));
+      shd.rotation.x = -Math.PI / 2; shd.scale.setScalar(0.4); shd.position.y = 0.02;
+      g.add(shd);
+      g.matrixAutoUpdate = true;
+      runners.push({ group: g, pe: persons[persons.length - 1], phase: ph, rx: 20, rz: 13, cx: 6, cz: 8, speed: 0.22 });
+    });
+    YOFF = keepR;
+  }
+  // ---------- 접촉 그림자 스트립 (사이클4: 건물이 지면에 '붙는' 인디식 가짜 AO) ----------
+  // 외벽 밑동을 따라 얇고 어두운 띠 — 병합 plane이라 비용 0에 가깝다. 밟기·충돌 없음.
+  {
+    const aoX = (x0a, x1a, zA, out) => plane(x1a - x0a, 0.34, 0x8f8c7e, (x0a + x1a) / 2, 0.012, zA + out * 0.19);
+    const aoZ = (z0a, z1a, xA, out) => {
+      const g9 = geoAdd(UNIT_PLANE, 0x8f8c7e, xA + out * 0.19, 0.012, (z0a + z1a) / 2, [-Math.PI / 2, 0, 0], 0.34, z1a - z0a, 1);
+      staticEntries.push({ key: g9.key, aabb: g9.aabb, solid: false });
+    };
+    const keepAO = YOFF; YOFF = 0;
+    aoX(-40, 4.2, -23.85, -1);            // 본관 정면(현관 서측)
+    aoX(8.1, 40, -23.85, -1);             // 본관 정면(현관 동측)
+    aoZ(-50, -38.2, -40, -1);             // 서관 서벽
+    aoZ(-44.2, -24, 40, 1);               // 본관 동벽
+    aoX(-10.4, 8.2, -58, -1);             // 급식동 북벽
+    // 체육관 4면 (테라스 레벨)
+    aoX(-77.8, -48.2, -52, -1);
+    aoX(-77.8, -48.2, -32, 1);
+    aoZ(-51.8, -32.2, -78, -1);
+    aoZ(-51.8, -32.2, -48, 1);
+    YOFF = keepAO;
+  }
   // ---------- 학교 앞 동네 (사이클2: 맵 경계 마감 — '밖이 허공' 금지) ----------
   // 남측 잔디 평면이 z44에서 끝나 정문 밖이 하늘이었다. 도로+횡단보도+주택 실루엣+능선으로 마감.
   // 전부 장식(softBox·geoSoft·plane) — bounds(zMax 46) 밖이라 충돌 불요.
@@ -3468,7 +3504,7 @@ export function buildWorld(scene) {
   ];
 
   return {
-    colliders, walkables, zones, dynamic, doors, interactables, npcs, persons,
+    colliders, walkables, zones, dynamic, doors, interactables, npcs, persons, runners,
     grid, CELL, safePoints,
     spawn: new THREE.Vector3(0, 0, 38),
     buildingInfo: { zFront: fz1, zBack: -58, zDiv: zCor, FH },
