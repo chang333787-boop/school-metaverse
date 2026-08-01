@@ -1256,7 +1256,8 @@ export function buildWorld(scene) {
       hangSign('도서관', -17.9, FH - CEIL_DROP, fz0 + 0.55, 0, 0.26);
       // 아치 프레임 + 현판 + 반납함 — 전부 **동향 문 앞(로비 안)**으로 (실사 d80_0222)
       const LW = 0x5a4232, ldz = -39.9;
-      [-1.3, 1.3].forEach(oz => solidSoftBox(0.3, 2.5, 0.26, LW, LOB_X + 0.32, 0, ldz + oz));
+      // ⚠️ 기둥 x는 벽면(-19.05)에서 4cm 이상 — 0.32면 기둥면(-19.03)과 벽면이 2mm 코플레이너로 반짝(평면 스캔 적발)
+      [-1.3, 1.3].forEach(oz => solidSoftBox(0.3, 2.5, 0.26, LW, LOB_X + 0.4, 0, ldz + oz));
       softBox(0.34, 0.3, 2.9, LW, LOB_X + 0.32, 2.5, ldz);
       const lTag = textSign('슬기샘 도서관', { h: 0.22, bg: '#5a4232', fg: '#f7edda', border: null, fontPx: 42, pad: 10 });
       lTag.position.set(LOB_X + 0.5, 2.62, ldz);
