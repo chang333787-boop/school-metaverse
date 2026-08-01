@@ -2019,6 +2019,14 @@ export function buildWorld(scene) {
   geoAdd(UNIT_PLANE, 0xf2df8a, (tx1 - 0.17), 0.75, (stepLo + stepHi) / 2, [0, -Math.PI / 2, 0], stepLo - stepHi, 1.5, 1);
   geoAdd(UNIT_PLANE, 0xd7ede4, (tx1 - 0.17), 2.45, (stepLo + stepHi) / 2, [0, -Math.PI / 2, 0], stepLo - stepHi, 1.9, 1);
   sign('2층 ↑', (tx0 + tx1) / 2, 2.5, uz1 + 0.18, 0, 0.45);
+  // 실사(d80_0160·0169): 계단참 정면(북벽)에 **목재 프레임 대형 통창** — 참에서 밖(주차장)이 보인다
+  {
+    const cwX = (wkX + tx1) / 2, cwW = 2.6;
+    glassAdd(cwX, 3.2, uz0 + 0.15, 0, cwW, 2.6);
+    paneTrim(cwX, 3.2, uz0 + 0.15, 0, cwW, 2.6, 0.36);
+    geoAdd(UNIT_BOX, 0xb08d5a, cwX, 3.2, uz0 + 0.34, null, cwW + 0.2, 0.09, 0.07);   // 목재 중간틀(가로)
+    geoAdd(UNIT_BOX, 0xb08d5a, cwX, 3.2, uz0 + 0.34, null, 0.09, 2.6, 0.07);          // 목재 중간틀(세로)
+  }
   zones.push({ x0: tx0, x1: tx1, z0: uz0, z1: uz1, floor: 1, label: '계단' });
   const upEdges = new Set();
   const upNWins = [];
@@ -2043,9 +2051,12 @@ export function buildWorld(scene) {
   });
   // 2층 북벽·남벽: 진짜 뚫린 창 (서관 벽의 2층 구간)
   wallXWin(ux0, ux1, uz0, wallC, upNWins, { y0: FH, h: FH, sill: 1.05, wh: 1.5, innerDir: 1 });
+  // 실사(d80_0181): 2층 남측은 펀치창이 아니라 **목재 리본창 연속 + 하부 격자 불투명유리 난간**
   const upSWins = [];
-  for (let wx = ux0 + 1.8; wx <= tx0 - 1.2; wx += 3.8) upSWins.push({ c: wx, w: 1.8 });
-  wallXWin(ux0, ux1, uz1, wallC, upSWins, { y0: FH, h: FH, innerDir: -1 });
+  for (let wx = ux0 + 1.6; wx <= tx0 - 1.4; wx += 2.6) upSWins.push({ c: wx, w: 2.2 });
+  wallXWin(ux0, ux1, uz1, wallC, upSWins, { y0: FH, h: FH, sill: 0.9, wh: 1.7, innerDir: -1 });
+  for (const g of upSWins)                                    // 창 아래 반투명 격자유리 띠(안쪽 면)
+    geoAdd(UNIT_PLANE, 0xdcebe4, g.c, FH + 0.55, uz1 - 0.18, [0, Math.PI, 0], g.w, 0.62, 1);
   [...upEdges].filter(x => x > ux0 + 0.01 && x < ux1 - 0.01)
     .forEach(x => wallZ(uz0, zCor2, x, FH, FH, innerC));
   zones.push({ x0: ux0, x1: ux1, z0: zCor2, z1: uz1, floor: 1, label: '본관 2층 복도' });
