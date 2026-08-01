@@ -38,7 +38,10 @@ scene.fog = new THREE.Fog(0xcfe9f8, 70, 270);   // 하늘 지평선 색과 동�
 
 // FOV 62 → 48: 가까운 무텍스처 상자의 원근 왜곡이 줄고 망원 압축으로 '모형' 느낌이 난다.
 // (좁아진 만큼 카메라 거리를 늘려야 프레이밍이 유지된다 — camDist 4.9 → 6.3)
-const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 500);
+// ⚠️ 지직임(원거리 z-fight)의 주범 = 깊이 정밀도. far/near 비가 5000(0.1/500)이면
+// 0.01~0.02m 겹침 데칼이 수십 m 밖에서 전부 떨린다. near 0.35/far 340(안개 270 밖은 안 보임)으로
+// 비를 ~970까지 낮춰 정밀도를 5배 이상 확보. (카메라 최소거리 0.5 > near ✓)
+const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.35, 340);
 
 // ⚠️ 조명 규칙 (아트 디렉션 조사 반영)
 //  · 태양 : 헤미 ≈ 3 : 1 — 채움광이 세면 그늘이 안 생겨 전부 '색칠한 상자'가 된다
@@ -58,7 +61,8 @@ sun.shadow.camera.top = 95;
 sun.shadow.camera.bottom = -95;
 sun.shadow.camera.near = 10;
 sun.shadow.camera.far = 260;
-sun.shadow.bias = -0.0005;
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.035;   // 경사·모서리 그림자 지글거림(acne) 억제
 scene.add(sun);
 scene.add(sun.target);
 const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(9, 24), new THREE.MeshBasicMaterial({ color: 0xfff3cf, fog: false }));
@@ -68,6 +72,15 @@ scene.add(sunDisc);
 
 const world = buildWorld(scene);
 const player = new Player(scene, world);
+// P4(지직임): 반복 캔버스 텍스처(트랙·그물·코스·현판)에 이방성 필터 — 원거리 글랜싱 각 에일리어싱 억제
+{
+  const maxAniso = renderer.capabilities.getMaxAnisotropy();
+  const seenTex = new Set();
+  scene.traverse(o => {
+    const mp = o.isMesh && o.material && o.material.map;
+    if (mp && !seenTex.has(mp)) { seenTex.add(mp); mp.anisotropy = Math.min(8, maxAniso); mp.needsUpdate = true; }
+  });
+}
 
 // ---------- 시간대 프리셋 (낮/노을/밤 — 전환 시 그림자 1회만 재굽기) ----------
 const TIMES = {
@@ -559,6 +572,14 @@ document.getElementById('ver').textContent = SCHOOL.tagline;
 // NPC 는 castShadow 를 끄고 발밑에 정적 그림자를 미리 구워 대체한다(world.js).
 function worldTick(dt) {
   const t = clock.elapsedTime;
+  // P7: 문 이징 슬라이드 (움직이는 문만 비용 발생)
+  for (const d of world.doors) {
+    if (d.curOff === undefined || d.curOff === d.targetOff) continue;
+    const dlt = d.targetOff - d.curOff;
+    d.curOff += Math.sign(dlt) * Math.min(Math.abs(dlt), dt * Math.max(1.6, d.w * 2.6));
+    if (Math.abs(d.targetOff - d.curOff) < 0.002) d.curOff = d.targetOff;
+    d._apply();
+  }
   if (world.dynamic.flag) world.dynamic.flag.rotation.y = Math.sin(t * 1.8) * 0.28 + 0.1;
   world.dynamic.clouds.forEach((c, i) => {
     c.position.x += dt * (0.55 + i * 0.12);

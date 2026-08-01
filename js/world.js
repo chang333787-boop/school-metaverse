@@ -461,9 +461,13 @@ export function buildWorld(scene) {
         : { minX: hx - 0.1, maxX: hx + 0.1, minY: (opts.y || 0), maxY: (opts.y || 0) + 2.2, minZ: hz + 0.03, maxZ: hz + w - 0.03 },
     };
     // 한국 학교 문법: 미닫이 — 열리면 문짝이 옆 벽 뒤로 미끄러져 겹침 (방 안을 막지 않음)
+    // P7(인디 폴리시): 순간이동이 아니라 **이징 슬라이드** — worldTick이 curOff→targetOff를 보간
+    d._apply = () => {
+      d.group.position.set(d.baseX - (d.axis === 'x' ? d.curOff : 0), d.y, d.baseZ - (d.axis === 'x' ? 0 : d.curOff));
+    };
     d.slide = () => {
-      const off = d.open ? d.w * 0.94 : 0;
-      d.group.position.set(d.baseX - (d.axis === 'x' ? off : 0), d.y, d.baseZ - (d.axis === 'x' ? 0 : off));
+      d.targetOff = d.open ? d.w * 0.94 : 0;
+      if (d.curOff === undefined) { d.curOff = d.targetOff; d._apply(); }   // 초기 배치만 즉시
     };
     d.slide();
     doors.push(d);
@@ -472,12 +476,13 @@ export function buildWorld(scene) {
 
   // NPC 발밑 정적 그림자 (위치가 고정이라 미리 구워도 된다 — 전부 1개 메시)
   const blobGeos = [];
+  let blobN = 0;   // ⚠️ 이웃 NPC 그림자끼리 같은 평면에서 겹치면 투명 z-fight(유치원에서 스캐너 적발) — 1.5mm씩 층
   function blobAt(x, y, z, sc) {
     const { g } = baseOf(CIRC_GEO);
     const gg = g.clone();
     _eu.set(-Math.PI / 2, 0, 0);
     _q.setFromEuler(_eu);
-    _m4.compose(_vp.set(x, y + YOFF, z), _q, _vs.set(0.42 * sc, 0.42 * sc, 1));
+    _m4.compose(_vp.set(x, y + YOFF + (blobN++ % 8) * 0.0015, z), _q, _vs.set(0.42 * sc, 0.42 * sc, 1));
     gg.applyMatrix4(_m4);
     return gg;
   }
