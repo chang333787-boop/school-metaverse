@@ -2645,6 +2645,14 @@ export function buildWorld(scene) {
   }
   // 위성원장 #12: 본관 동측 뒤 지붕 위로 솟는 거대 침엽수 (hi_0255·hi_0258)
   pine(33, -40.5, 2.6);   // (-46은 동관 내부 — 마당 동측으로)
+  // S7 실사(gym_0078): 운동장 북측 가장자리를 따라 **검은 격자 배수로** 라인
+  for (let dxg = -40; dxg <= 52; dxg += 1.62)
+    plane(1.5, 0.5, 0x2e3134, dxg, 0.012, -22.8);
+  // S7 실사(hi_0255): 동측 펜스 안쪽 암석 조경 띠
+  for (let rz = -14; rz <= 34; rz += 4.5) {
+    geoSoft(ICO_GEO, 0x8d8a82, 50.9, 0.25, rz, [0, rz * 3, 0], 0.9, 0.55, 0.7);
+    if (rz % 9 < 4) geoSoft(ICO_GEO, 0x7d7a72, 51.6, 0.2, rz + 1.7, [0, rz * 5, 0], 0.55, 0.38, 0.5);
+  }
   zones.push({ x0: F.center[0] - F.width / 2, x1: F.center[0] + F.width / 2, z0: F.center[1] - F.depth / 2, z1: F.center[1] + F.depth / 2, label: '운동장' });
 
   // ---------- 놀이터 ----------
