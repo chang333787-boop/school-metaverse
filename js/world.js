@@ -2979,7 +2979,7 @@ export function buildWorld(scene) {
   tree(58, -20, 0.9);
   // 실사(hi_0255·0264): 동측 경계는 1.2m 흰 펜스가 아니라 **5.5m 초록 그물 방구망**
   {
-    const bx0 = 55.3;
+    const bx0 = 49.4;   // 사진6: 방구망은 보도 **안쪽**(운동장과 보도 사이) — 55.3(보도 밖)은 반대였다
     const bg = new THREE.PlaneGeometry(56, 5.2);
     const buv = bg.attributes.uv;
     for (let ui = 0; ui < buv.count; ui++) buv.setXY(ui, buv.getX(ui) * 56 / 0.42, buv.getY(ui) * 5.2 / 0.42);
@@ -2988,7 +2988,7 @@ export function buildWorld(scene) {
     bm.position.set(bx0, 1.7, 12);
     bm.matrixAutoUpdate = false; bm.updateMatrix();
     scene.add(bm);
-    for (let bz3 = -15; bz3 <= 39; bz3 += 6)
+    for (let bz3 = -12; bz3 <= 36; bz3 += 6)
       box(0.14, 5.4, 0.14, 0x3f7d4a, bx0, -1, bz3);
     box(0.08, 0.08, 56, 0x2a6b3f, bx0, 4.25, 12, { collide: false });
     box(0.05, 5.4, 56, 0, bx0, -1, 12, { material: INVIS });
