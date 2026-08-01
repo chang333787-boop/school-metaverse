@@ -280,13 +280,13 @@ export function buildWorld(scene) {
   }
   function hydrant(x, z, rotY) {
     solidSoftBox(0.62, 0.8, 0.22, 0xc0392b, x, 1.10, z, [0, rotY, 0]);
-    geoAdd(UNIT_PLANE, 0xf2e9d8, x - Math.sin(rotY) * 0.12, 1.5, z - Math.cos(rotY) * 0.12,
-           [0, rotY + Math.PI, 0], 0.42, 0.26, 1);
+    geoAdd(UNIT_PLANE, 0xf2e9d8, x + Math.sin(rotY) * 0.13, 1.5, z + Math.cos(rotY) * 0.13,
+           [0, rotY, 0], 0.42, 0.26, 1);   // ⚠️ +방향·rotY 그대로 — 반대로 하면 표지가 함 뒤에서 벽을 본다
   }
   function exitLight(x, y, z, rotY) {                                  // 초록 비상구 유도등
     softBox(0.44, 0.2, 0.09, 0x2e9b57, x, y, z, [0, rotY, 0]);
-    geoAdd(UNIT_PLANE, 0x8fe3b0, x - Math.sin(rotY) * 0.06, y + 0.1, z - Math.cos(rotY) * 0.06,
-           [0, rotY + Math.PI, 0], 0.36, 0.14, 1);
+    geoAdd(UNIT_PLANE, 0x8fe3b0, x + Math.sin(rotY) * 0.06, y + 0.1, z + Math.cos(rotY) * 0.06,
+           [0, rotY, 0], 0.36, 0.14, 1);
   }
   // 실사: 실 이름표는 벽에 붙은 흰 팻말이 아니라 **천장에서 짧은 봉으로 내려온 파란 팻말**이다.
   // ceilY = 그 구역 천장 높이. 팻말 상단이 천장에 닿게 걸고 봉은 천장을 조금 관통시킨다(동일평면 깜빡임 방지).
@@ -529,7 +529,7 @@ export function buildWorld(scene) {
     // 사람이 돌 때마다 그림자 맵을 다시 구우면 0.6초마다 화면이 한 번씩 끊기고
     // 그림자가 계단처럼 튄다(= 미세 떨림). 대신 발밑에 정적 그림자를 미리 굽는다.
     bodyMesh.castShadow = false;
-    blobGeos.push(blobAt(x, y + 0.02, z, sc));
+    blobGeos.push(blobAt(x, y + (isIndoor(x, y + YOFF, z) ? 0.115 : 0.02), z, sc));   // 실내 바닥재(0.10) 위
     g.add(bodyMesh);
     const tag = textSign(name, { h: 0.26, fontPx: 36, pad: 12 });
     tag.position.y = opts.sit ? 1.62 : 1.95;
@@ -664,7 +664,7 @@ export function buildWorld(scene) {
       const cz = at(3.4 + k * 1.5);
       solidSoftBox(0.44, 0.85, 1.35, 0xeceae2, s1 - 0.24, y0, cz);            // 하부장
       solidSoftBox(0.42, 1.05, 1.35, 0xf4f2ea, s1 - 0.25, y0 + 0.9, cz);      // 상부장 프레임
-      glassAdd(s1 - 0.46, y0 + 1.42, cz, Math.PI / 2, 1.2, 0.9);              // 유리문(전 월드 1메시 병합)
+      glassAdd(s1 - 0.48, y0 + 1.42, cz, Math.PI / 2, 1.2, 0.9);              // 유리문(전 월드 1메시 병합)
       softBox(0.03, 0.05, 1.3, 0x8fc46a, s1 - 0.46, y0 + 0.88, cz);           // 연두 띠
     }
     // 창가 나무 가로 블라인드 — 커튼(s1-0.95)과 안 겹치게 x 폭을 줄이고 z를 안쪽으로
@@ -1158,7 +1158,7 @@ export function buildWorld(scene) {
     });
   }
   const RAIL_Y = 1.0, RAIL_OFF = 0.21;
-  function railWall(a0, a1, fixed, axis, gaps = [], dir = -1) {
+  function railWall(a0, a1, fixed, axis, gaps = [], dir = -1, y0 = 0, c = railC) {
     const cuts = [...gaps].sort((p, q) => p.c - q.c);
     let cur = a0;
     const runs = [];
@@ -1172,13 +1172,13 @@ export function buildWorld(scene) {
     runs.forEach(([r0, r1]) => {
       const len = r1 - r0, ctr = (r0 + r1) / 2;
       if (axis === 'x') {
-        softBox(len, 0.075, 0.065, railC, ctr, RAIL_Y, off);
+        softBox(len, 0.075, 0.065, c, ctr, y0 + RAIL_Y, off);
         for (let t = r0 + 0.8; t < r1 - 0.4; t += 1.7)
-          softBox(0.06, 0.1, 0.16, railC, t, RAIL_Y - 0.1, fixed + dir * 0.13);
+          softBox(0.06, 0.1, 0.16, c, t, y0 + RAIL_Y - 0.1, fixed + dir * 0.13);
       } else {
-        softBox(0.065, 0.075, len, railC, off, RAIL_Y, ctr);
+        softBox(0.065, 0.075, len, c, off, y0 + RAIL_Y, ctr);
         for (let t = r0 + 0.8; t < r1 - 0.4; t += 1.7)
-          softBox(0.16, 0.1, 0.06, railC, fixed + dir * 0.13, RAIL_Y - 0.1, t);
+          softBox(0.16, 0.1, 0.06, c, fixed + dir * 0.13, y0 + RAIL_Y - 0.1, t);
       }
     });
   }
@@ -1237,7 +1237,7 @@ export function buildWorld(scene) {
   // ⚠️ 북벽(창측)에는 레일을 깔지 않는다 — 실물은 여기가 **창 아래 목재 수납장** 자리다.
   //    레일과 수납장을 같은 벽에 두면 브래킷(y 0.90~1.00)이 상판(0.95)을 관통한다.
   //    교실측(zCor) 레일은 각 실 루프에서 계속 깔린다.
-  lowCabinet(fx0 + 0.3, fx1 - 0.3, fz0, 1, [...northGaps, { c: -14.3, w: 2.6 }]);
+  lowCabinet(fx0 + 0.3, fx1 - 0.3, fz0, 1, [...northGaps, { c: -14.3, w: 2.6 }, ...[-33, -18, 2, 21, 35].map(c => ({ c, w: 0.9 }))]);   // 소화기 자리 벽감
   // 소방설비 (실사: 복도 곳곳 / 지금까지 코드에 0개)
   [-33, -18, 2, 21, 35].forEach(fx3 => fireExt(fx3, 0.10, fz0 + 0.42, fz0 + 0.16));
   [-24, 28].forEach(hx => hydrant(hx, fz0 + 0.14, 0));
@@ -1331,7 +1331,7 @@ export function buildWorld(scene) {
   faceBand(2.52, 0.5, YELC);      // 창 위 노란 띠 — 얇으면 베이지에 묻힌다(0.34에서 키움)
   faceBand(3.02, 0.38, BLUEC);    // 처마 밑 파란 띠
   [...frontEdges].filter(x => x > fx0 + 0.01 && x < fx1 - 0.01)
-    .forEach(x => softBox(0.38, FH, FACE_T, BLUEC, x, 0, faceZ));
+    .forEach(x => softBox(0.38, FH, FACE_T, BLUEC, x, 0, faceZ + 0.02));   // 띠와 동일평면 금지(33교차 깜빡임)
   roofOver(fx0, fx1, fz0, fz1, FH, roofC);
   // 옥탑 구조물 + 환기구 (위성사진) — 슬래브 상면(FH+0.1) 위에 얹음
   box(3, 1.6, 2.4, 0xc8ccd2, 20, FH + 0.1, -31);
@@ -1705,14 +1705,14 @@ export function buildWorld(scene) {
   // ---- 세로복도 (급식동 안 내부 통로 — 외벽·지붕은 급식동이 담당) ----
   [-52, -47, -42].forEach(lz => lamp(6.9, kh - CEIL_DROP - 0.05, lz, false));
   // 서벽 급식 게시판 (민벽 해소)
-  box(0.07, 1.25, 2.6, 0x3f6b52, lcW + 0.06, 1.05, -50.5, { collide: false });
+  box(0.07, 1.25, 2.6, 0x3f6b52, lcW + 0.19, 1.05, -50.5, { collide: false });   // 벽면(+0.15) 앞
   const menuSign = textSign('오늘의 급식', { h: 0.24, bg: '#ffffff', fg: '#3a7d44', border: null, fontPx: 40, pad: 12 });
-  menuSign.position.set(lcW + 0.11, 1.95, -50.5);
+  menuSign.position.set(lcW + 0.24, 1.95, -50.5);
   menuSign.rotation.y = Math.PI / 2;
   scene.add(menuSign);
   ['월 · 잡곡밥 · 미역국', '화 · 카레라이스', '수 · 비빔밥 · 만둣국'].forEach((mtxt, mi) => {
     const ms = textSign(mtxt, { h: 0.16, bg: '#fdfaf0', fg: '#4a5058', border: null, fontPx: 30, pad: 10 });
-    ms.position.set(lcW + 0.11, 1.45 - mi * 0.32, -50.5);
+    ms.position.set(lcW + 0.24, 1.45 - mi * 0.32, -50.5);
     ms.rotation.y = Math.PI / 2;
     scene.add(ms);
   });
@@ -1791,9 +1791,17 @@ export function buildWorld(scene) {
     solidSoftBox(0.5, FH, 0.5, 0xa8503a, bx6, 0, ez0 + 0.27);
     eBrick.push({ c: bx6, w: 0.62 });           // ⚠️ 수납장이 기둥을 관통하지 않게 개구부로 넘긴다
   }
-  geoAdd(UNIT_BOX, 0x5a5e60, (ex0 + shed0) / 2, 0.16, zCorE - 0.18, null, shed0 - ex0 - 0.6, 0.12, 0.04);
+  {   // 걸레받이는 문 개구(eGaps)를 건너뛰며 깐다 — 통짜면 문지방을 가로지른다
+    let cur = ex0 + 0.3;
+    [...eGaps].sort((p, q) => p.c - q.c).forEach(g => {
+      const g0 = g.c - g.w / 2 - 0.1, g1 = g.c + g.w / 2 + 0.1;
+      if (g0 > cur + 0.4) geoAdd(UNIT_BOX, 0x5a5e60, (cur + g0) / 2, 0.16, zCorE - 0.18, null, g0 - cur, 0.12, 0.04);
+      cur = Math.max(cur, g1);
+    });
+    if (shed0 - 0.3 - cur > 0.4) geoAdd(UNIT_BOX, 0x5a5e60, (cur + shed0 - 0.3) / 2, 0.16, zCorE - 0.18, null, shed0 - 0.3 - cur, 0.12, 0.04);
+  }
   // 동관도 같은 규칙 — 바깥벽(ez0)=수납장 / 교실측(zCorE)=핸드레일
-  lowCabinet(ex0 + 0.3, shed0 - 0.3, ez0, 1, eBrick);
+  lowCabinet(ex0 + 0.3, shed0 - 0.3, ez0, 1, [...eBrick, ...[12, 22, 32].map(c => ({ c, w: 0.9 }))]);
   railWall(ex0 + 0.3, shed0 - 0.3, zCorE, 'x', eGaps, -1);
   [12, 22, 32].forEach(fx4 => fireExt(fx4, 0.098, ez0 + 0.42, ez0 + 0.16));
   exitLight(ex0 + 0.8, 2.45, (ez0 + zCorE) / 2, Math.PI / 2);
@@ -1942,7 +1950,7 @@ export function buildWorld(scene) {
   // 2층 복도: 실사는 **회색 테라조**(구관 흰타일과 다르다). 띠 없음.
   // ⚠️ x 상한은 zone(ux1)이 아니라 **슬래브가 끝나는 wkX** — ux1로 깔면 계단 개구부 위에 바닥이 뜬다.
   corridorFloor(ux0 + 0.2, wkX - 0.1, zCor2, uz1, FH + 0.03, TERRAZZO, TERRAZZO, 0);
-  railWall(ux0 + 0.3, wkX - 0.3, uz1, 'x', [], -1);
+  railWall(ux0 + 0.3, wkX - 0.3, uz1, 'x', [], -1, FH, 0xc8cdd2);   // ⚠️ y0=FH — 절대 y면 1층 방 안 허공에 뜬다(실버그)
   for (let lx = ux0 + 3; lx < tx0; lx += 6) lamp(lx, FH * 2 - CEIL_DROP - 0.05, (zCor2 + uz1) / 2);
   roofOver(ux0, ux1, uz0, uz1, FH * 2, 0xd9dce1);  // 위성: 서관 지붕은 밝은 회백색
   const tank = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 1.5, 14), mat(0xc8cdd2));
@@ -2239,7 +2247,7 @@ export function buildWorld(scene) {
   // ⚠️ ②는 큰나무(46,34) 줄기와 데크(x~49.85)를 피해 그 **동쪽**으로 지난다.
   //    x 45~48로 두면 나무 줄기 충돌에 막혀 길이 끊긴다(측정으로 확인).
   [[28, 53.0, 38.5, 41.5],      // ① 정문 마당 → 동쪽으로
-   [50.0, 53.0, -16.5, 41.5],   // ② 동쪽 가장자리를 따라 북상 (큰나무 데크 옆을 지난다)
+   [50.0, 53.0, -13.5, 38.5],   // ② 동쪽 북상 — ①(z38.5~)·③(~-13.5)과 상면 중첩 금지
    [4.5, 53.0, -16.5, -13.5],   // ③ 옹벽 앞을 따라 서쪽으로 → 구령대 계단
   ].forEach(([x0p, x1p, z0p, z1p]) => {
     const w = x1p - x0p, d = z1p - z0p, cx2 = (x0p + x1p) / 2, cz2 = (z0p + z1p) / 2;
@@ -2301,14 +2309,7 @@ export function buildWorld(scene) {
     crs.matrixAutoUpdate = false; crs.updateMatrix();
     scene.add(crs);
   }
-  const t13 = textSign('13', { h: 0.7, bg: '#3aa8a0', fg: '#ffffff', border: null });
-  t13.rotation.x = -Math.PI / 2;
-  t13.position.set(rcx + 2.1, 0.06, rcz - 1.9);
-  scene.add(t13);
-  const t6 = textSign('6', { h: 0.7, bg: '#4d9bd6', fg: '#ffffff', border: null });
-  t6.rotation.x = -Math.PI / 2;
-  t6.position.set(rcx - 1.9, 0.06, rcz + 2.1);
-  scene.add(t6);
+  // (숫자 타일은 courseTexture 안에 그려져 있다 — 별도 팻말은 YOFF 누락으로 1m 공중부양했었음)
   zones.unshift({ x0: rcx - 6, x1: rcx + 6, z0: rcz - 5.5, z1: rcz + 5.5, label: '자전거 교통 코스' });
   const slX = px - 4.5, slZ = pz - 3;
   box(1.7, 0.14, 1.7, 0x9c7a53, slX, 1.62, slZ, { walk: true });
@@ -2398,7 +2399,7 @@ export function buildWorld(scene) {
     [[-5.65, -4.2], [-5.65, 0], [-5.65, 4.2], [5.65, -4.2], [5.65, 4.2]].forEach(([ox, oz]) =>
       solidSoftBox(0.14, 2.5, 0.14, 0x8a6a45, cnX + ox, 0, cnZ + oz));
     [[-3.4, 0.2, 0.3], [0, 0.45, 0], [3.4, 0.2, -0.3]].forEach(([ox, oy, rz]) =>
-      softBox(3.6, 0.07, 10.4, 0x9db4c0, cnX + ox, 2.5 + oy, cnZ, { rot: [0, 0, rz] }));
+      softBox(3.6, 0.07, 10.4, 0x9db4c0, cnX + ox, 2.5 + oy, cnZ, [0, 0, rz]));
   }
   zones.push({ x0: px - 8.5, x1: px + 8.5, z0: pz - 7, z1: pz + 7, label: '놀이터' });
 
@@ -2545,8 +2546,10 @@ export function buildWorld(scene) {
     box(5, 2.4, 4, 0xe8b83c, sx2, 0, sz2);
     box(5.6, 0.28, 4.6, 0x2f6fd0, sx2, 2.4, sz2, { collide: false });
     geoAdd(UNIT_PLANE, 0xc9992e, sx2 - 1.2, 1.05, sz2 + 2.01, null, 0.9, 2.0, 1);   // 문짝 음영
-    for (let gx5 = -2.1; gx5 <= 2.1; gx5 += 0.6)                                     // 골판 세로줄
+    for (let gx5 = -2.1; gx5 <= 2.1; gx5 += 0.6) {                                   // 골판 세로줄 (문짝 구간 스킵)
+      if (gx5 > -1.66 && gx5 < -0.74) continue;
       geoAdd(UNIT_BOX, 0xd4a832, sx2 + gx5, 1.2, sz2 + 2.02, null, 0.07, 2.3, 0.02);
+    }
   });
   // 장애인 주차구획 (실사: 파란 바탕 + 흰 테두리 + 라바콘)
   box(2.6, 0.014, 4.6, 0x2f6fd0, -13, 0.03, -64.4, { collide: false });
@@ -2564,7 +2567,7 @@ export function buildWorld(scene) {
     const BUS_X = 22, BUS_Z = 41.8;             // 정문(30,44.5) 서쪽, 운동장 북단 밖
     const keepBus = YOFF;
     YOFF = terrY(BUS_Z);                        // 운동장 레벨(-1)
-    const fZ = BUS_Z - 2.65, rZ = BUS_Z + 2.65; // 앞(남) · 뒤(북)
+    const fZ = BUS_Z - 2.61, rZ = BUS_Z + 2.61; // 차체 면(±2.6) 바로 앞
     box(2.3, 1.5, 5.2, 0xf2c531, BUS_X, 0.5, BUS_Z);
     box(2.32, 0.32, 5.2, 0xf5f6f7, BUS_X, 2.0, BUS_Z, { collide: false });
     geoAdd(UNIT_PLANE, 0x2b3a4c, BUS_X - 1.17, 1.55, BUS_Z, [0, -Math.PI / 2, 0], 4.2, 0.62, 1);
