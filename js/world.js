@@ -2250,6 +2250,28 @@ export function buildWorld(scene) {
   makeDoor(gx1, gz - 1.5, 1.5, 'z', { color: 0x7d848c, swing: 1, closed: true });
   makeDoor(gx1, gz, 1.5, 'z', { color: 0x7d848c, swing: -1, closed: true });
   sign('체육관', gx1 + 0.25, 2.6, gz, Math.PI / 2, 0.5);
+  // S6 전실(사용자 구술): 입구→복도(양쪽 화장실)→안쪽 문→본실
+  {
+    const vx0 = gx1 - 4.3, vh = 3.0;
+    const czS = gz + 1.6, czN = gz - 1.6;                 // 복도 남·북 벽
+    wallZGaps(gz - 4.6, gz + 4.6, [{ c: gz - 0.8, w: 1.6 }], vx0, 0, vh, 0xe8e4da, 0.14);   // 전실 서벽 + 본실 문 개구 (⚠️전실 폭만 — 전체 깊이면 본실이 갈라진다)
+    makeDoor(vx0, gz - 1.6, 1.6, 'z', { glass: true, swing: 1 });
+    wallXGaps(vx0, gx1, [{ c: vx0 + 1.15, w: 0.9 }], czS, 0, vh, 0xe8e4da, 0.14); // 남벽 + 남화장실 문
+    wallXGaps(vx0, gx1, [{ c: vx0 + 1.15, w: 0.9 }], czN, 0, vh, 0xe8e4da, 0.14); // 북벽 + 북화장실 문
+    wallX(vx0, gx1, gz + 4.6, 0, vh, 0xe8e4da, 0.14);    // 남화장실 안벽
+    wallX(vx0, gx1, gz - 4.6, 0, vh, 0xe8e4da, 0.14);    // 북화장실 안벽
+    [[czS, 1, '남자 화장실'], [czN, -1, '여자 화장실']].forEach(([wz9, sdir, nm9]) => {
+      const tz = wz9 + sdir * 1.5;
+      solidSoftBox(0.55, 0.8, 0.42, 0xf0f2f4, gx1 - 0.65, 0, tz);                 // 세면대
+      geoAdd(CIRC_GEO, 0xd8dde2, gx1 - 0.65, 1.45, wz9 + sdir * 1.72, [0, 0, 0], 0.4, 0.5, 1);   // 거울
+      [0, 1].forEach(k9 => solidSoftBox(0.5, 1.5, 0.09, 0xcfd4d9, vx0 + 0.85 + k9 * 1.1, 0, tz + sdir * 1.2));   // 칸막이
+      [0, 1].forEach(k9 => solidSoftBox(0.38, 0.42, 0.5, 0xf0f2f4, vx0 + 0.6 + k9 * 1.1, 0, tz + sdir * 1.35));  // 변기
+      sign(nm9, vx0 + 1.15, 2.2, wz9 + sdir * 0.2, sdir > 0 ? Math.PI : 0, 0.3);
+    });
+    zones.push({ x0: vx0, x1: gx1, z0: czN, z1: czS, label: '체육관 전실' });
+    zones.push({ x0: vx0, x1: gx1, z0: czS, z1: gz + 4.6, label: '체육관 화장실' });
+    zones.push({ x0: vx0, x1: gx1, z0: gz - 4.6, z1: czN, label: '체육관 화장실' });
+  }
   // 실사(crop_gym_0068): 외벽 **원통 케이지 옥상 사다리** — 세로 봉 2 + 링 5
   {
     const cgX = gx1 + 0.22, cgZ = gz + 6;
