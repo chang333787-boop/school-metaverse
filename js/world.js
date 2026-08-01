@@ -2863,9 +2863,22 @@ export function buildWorld(scene) {
   }
   // 뒤뜰 피크닉 데크 + 보라 화단 (실사: 학교에서 가장 예쁜 공간 — 목재 데크·테이블·맥문동)
   {
-    const dkX = -26, dkZ = -54;
-    box(8.5, 0.14, 5, 0x9c6b4a, dkX, 0, dkZ, { walk: true });
-    [[-2.4, -0.6], [2.2, 0.7]].forEach(([ox, oz]) => {
+    const dkX = -25, dkZ = -54.5;
+    // 실사(사용자 사진2): 데크는 넓다(~15×8) — 테이블 5·흰 석상·흰 장식펜스·큰나무 2
+    box(15, 0.14, 8, 0x9c6b4a, dkX, 0, dkZ, { walk: true });
+    for (let fpx = dkX - 7; fpx <= dkX + 7; fpx += 1.4)
+      softBox(0.06, 0.9, 0.06, 0xeceff2, fpx, 0.14, dkZ - 3.9);
+    softBox(15, 0.06, 0.06, 0xeceff2, dkX, 1.0, dkZ - 3.9);
+    softBox(15, 0.05, 0.05, 0xeceff2, dkX, 0.6, dkZ - 3.9);
+    // 흰 석상(기단 + 백색 인물상 근사)
+    box(0.8, 0.5, 0.8, 0xcfc7b6, dkX + 6.2, 0.14, dkZ - 2.6);
+    solidSoftBox(0.42, 1.1, 0.36, 0xf0f0ea, dkX + 6.2, 0.64, dkZ - 2.6);
+    softBox(0.3, 0.3, 0.26, 0xf0f0ea, dkX + 6.2, 1.74, dkZ - 2.6);
+    { const t1 = geoSoft(TRUNK_GEO, 0x6d4e32, dkX - 4, 1.1, dkZ - 5.6, null, 2.0, 2.2, 2.0);
+      staticEntries.push({ key: t1.key, aabb: t1.aabb, solid: true, noRay: true });
+      [[0,3.4,0],[1.3,4.1,0.4],[-1.2,3.9,-0.3]].forEach(([ox2,oy2,oz2]) =>
+        geoSoft(ICO_GEO, 0x3f6b3a, dkX - 4 + ox2, oy2, dkZ - 5.6 + oz2, [0, ox2*2, 0], 1.6, 1.15, 1.6)); }
+    [[-4.6, -1.4], [0.2, -2.2], [4.6, -0.8], [-1.8, 1.6], [3.4, 2.2]].forEach(([ox, oz]) => {
       const tx6 = dkX + ox, tz6 = dkZ + oz;
       box(1.5, 0.1, 0.7, 0x8a5a3b, tx6, 0.62, tz6, { collide: false, walk: true });
       [-0.6, 0.6].forEach(lx => box(0.1, 0.62, 0.62, 0x6d4a34, tx6 + lx, 0.14, tz6));
