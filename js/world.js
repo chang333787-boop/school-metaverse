@@ -2473,6 +2473,14 @@ export function buildWorld(scene) {
   scene.add(bn2);
   [-2.55, 2.55].forEach(ox => box(0.08, 1.85, 0.08, 0x9aa5ad, bnX + ox, 0, bnZ, { collide: false }));
   box(5.2, 0.06, 0.06, 0x9aa5ad, bnX, 1.8, bnZ, { collide: false });
+  // 실사(사용자 위성 구술): 텃밭 근처에 나무의자·쉴 곳 — 입구 양옆 등받이 벤치 2 + 그늘나무
+  [[axg - 4.2], [axg + 4.2]].forEach(([bxw]) => {
+    const bzw = gdz1 + 1.9;
+    box(1.7, 0.08, 0.42, 0x9c6644, bxw, 0.42, bzw, { walk: true });            // 좌판
+    box(1.7, 0.5, 0.07, 0x8a5a3a, bxw, 0.72, bzw + 0.2, { collide: false });   // 등받이(텃밭 쪽 보고 앉음)
+    [-0.7, 0.7].forEach(ox => box(0.09, 0.42, 0.36, 0x6f4a2f, bxw + ox, 0, bzw, { collide: false }));
+  });
+  tree(axg - 7.5, gdz1 + 2.2, 1.15);
   zones.push({ x0: gdx0, x1: gdx1, z0: gdz0, z1: gdz1, label: '텃밭' });
 
   // ---------- 운동장 (운동장 레벨 y=-1) ----------
