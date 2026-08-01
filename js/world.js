@@ -2107,6 +2107,29 @@ export function buildWorld(scene) {
   makeDoor(gx1, gz - 1.5, 1.5, 'z', { color: 0x7d848c, swing: 1, closed: true });
   makeDoor(gx1, gz, 1.5, 'z', { color: 0x7d848c, swing: -1, closed: true });
   sign('체육관', gx1 + 0.25, 2.6, gz, Math.PI / 2, 0.5);
+  // 실사(crop_gym_0068): 외벽 **원통 케이지 옥상 사다리** — 세로 봉 2 + 링 5
+  {
+    const cgX = gx1 + 0.22, cgZ = gz + 6;
+    [-0.16, 0.16].forEach(oz => softBox(0.05, 6.4, 0.05, 0x9aa5ad, cgX, 1.2, cgZ + oz));
+    for (let ry = 2.4; ry <= 7.2; ry += 1.2) softBox(0.5, 0.06, 0.62, 0x9aa5ad, cgX, ry, cgZ);
+    for (let ru = 1.4; ru <= 7.0; ru += 0.45) softBox(0.04, 0.04, 0.3, 0xb9bfc4, cgX, ru, cgZ);
+  }
+  // 실사(gym_0078·0086): 운동장 북서 모서리에서 체육관·유치원 사이로 오르는 **아스팔트 통로 + 8단 석계단 + 라바콘 2**
+  {
+    const keepNW = YOFF;
+    YOFF = 0;
+    // 높은 단이 북(테라스 경계 z-18) 쪽, 낮은 단이 남(운동장) — 테라스면(0)과 최상단 top이 이어진다.
+    // ⚠️ '상단 참' 박스를 남쪽에 두면 계단 남단을 덮어 1m 벽이 된다(보행 시험 2회 실패로 확정) — 참 불필요
+    for (let si = 0; si < 8; si++)
+      box(3.0, 1 - si * 0.125, 0.34, 0xcfc9bd, -43.5, -1, TERR_Z + 0.17 + si * 0.34);
+    box(3.2, 0.04, 5.5, 0x6f7276, -43.5, 0.005, TERR_Z - 3.2, { collide: false, walk: true });   // 아스팔트 통로(테라스 위)
+    YOFF = keepNW;
+    [[-44.3, -14.6], [-42.7, -15.4]].forEach(([cx7, cz7]) => {
+      const cone2 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.16, 0.42, 8), mat(0xe8632e));
+      cone2.position.set(cx7, -0.79, cz7);
+      scene.add(cone2);
+    });
+  }
   // 지붕 + 용마루 + 박공면
   // ⚠️ 지붕판 두 장이 용마루에서 서로 겹치거나 처마가 벽 상단을 파고들면
   //    같은 색 면끼리 z-fighting 이 나서 지붕 전체가 반짝인다(실측 6.7㎡ × 3곳).
@@ -2247,6 +2270,21 @@ export function buildWorld(scene) {
   box(1.9, 0.07, 0.07, 0xf2b134, kgX, 1.55, kgZ, { collide: false });
   box(0.42, 0.05, 0.2, 0xe3453a, kgX, 0.5, kgZ, { collide: false });
   [[-0.15], [0.15]].forEach(([ox]) => box(0.025, 1.0, 0.025, 0x777777, kgX + ox, 0.55, kgZ, { collide: false }));
+  // 실사(gym_0073): 파랑 그늘막 텐트 + 야자수형 그늘 기둥 + 파랑 원통 터널 미끄럼틀
+  [[-1.1, -1.1], [1.1, -1.1], [-1.1, 1.1], [1.1, 1.1]].forEach(([ox, oz]) =>
+    solidSoftBox(0.09, 2.0, 0.09, 0x3a6ea5, kpX - 2.6 + ox, 0, kpZ + 1.6 + oz));
+  softBox(2.9, 0.1, 2.9, 0x4d9bd6, kpX - 2.6, 2.0, kpZ + 1.6);
+  softBox(2.0, 0.08, 2.0, 0x3a6ea5, kpX - 2.6, 2.35, kpZ + 1.6);             // 텐트 꼭대기
+  solidSoftBox(0.16, 2.4, 0.16, 0x9c7a53, kpX + 3.2, 0, kpZ - 1.8);           // 야자수 줄기
+  [[0.6, 0.2], [-0.6, 0.1], [0.1, 0.65]].forEach(([ox, oz]) =>
+    geoSoft(ICO_GEO, 0x4d8b4d, kpX + 3.2 + ox, 2.5, kpZ - 1.8 + oz, [0, ox * 3, 0], 0.75, 0.3, 0.75));
+  {                                                                            // 파랑 터널 미끄럼틀
+    const tun = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 2.2, 10, 1, true), mat(0x4d9bd6));
+    tun.rotation.z = 1.05;
+    tun.position.set(kpX + 0.6, 0.85, kpZ - 2.2);
+    scene.add(tun);
+    solidSoftBox(0.8, 1.3, 0.8, 0xe8863a, kpX + 1.5, 0, kpZ - 2.2);           // 승강대
+  }
   sign('유치원 놀이터', kpX + 5.6, 1.5, kpZ - 3.2, Math.PI / 2, 0.4);
   zones.unshift({ x0: kpX - 5.5, x1: kpX + 5.5, z0: kpZ - 4.2, z1: kpZ + 4.2, label: '유치원 놀이터' });
 
