@@ -1951,22 +1951,33 @@ export function buildWorld(scene) {
     box(LANE_W, (i + 1) * U_RISE, U_TREAD + 0.03, 0xc9b8a0, laneW, 0, stepLo - (i + 0.5) * U_TREAD);
   }
   // 챌판 문구 스티커 (실사: 계단마다 컬러 띠 글귀)
-  [[1, 0xe8863a], [3, 0x67b26f], [5, 0x9bc1e8]].forEach(([si, cc]) =>
+  [0x9bc1e8, 0xe8863a, 0xc9aee5, 0x67b26f, 0xe8863a, 0x9bc1e8].forEach((cc, si) =>
     geoAdd(UNIT_PLANE, cc, laneW, (si + 1) * U_RISE - 0.06, stepLo - si * U_TREAD + 0.02, null, LANE_W - 0.2, 0.1, 1));
   // 계단참 (전 폭, y1.7) — **베이 북벽까지 채운 플랫폼**. 짧게 두면 북단에서 떨어진다(보행 시험에서 낙하 확인)
   const LAND_Z0 = stepLo - U_N * U_TREAD, LAND_D = (LAND_Z0 - stepHi) - 0.1;
   box(tx1 - wkX - 0.2, 1.7 + U_RISE * 0.5, LAND_D, 0xc9b8a0, midX, 0, LAND_Z0 - LAND_D / 2, { walk: true });
+  geoAdd(UNIT_PLANE, 0xf2df8a, midX, 0.9, LAND_Z0 + 0.02, null, tx1 - wkX - 0.2, 1.6, 1);      // 참 남면 노랑 도장
+  geoAdd(UNIT_PLANE, 0x67b26f, midX, 1.74, LAND_Z0 + 0.025, null, tx1 - wkX - 0.2, 0.09, 1);   // 참 코 초록띠
+  plane(LANE_W, 0.4, 0xd9b545, laneW, 0.105, stepLo + 0.4);                                     // 1층 초입 점자블록
+  plane(tx1 - wkX - 0.4, 0.35, 0xcfa85e, midX, 1.87, LAND_Z0 - 0.35);                           // 참 점자블록
   // B 레인 (참에서 북→남 오름, y1.7→3.4) — **동쪽 레인·공중 디딤판** (밑 1층 통행 유지)
   for (let i = 0; i < U_N; i++) {
     const topY = 1.7 + (i + 1) * U_RISE;
     box(LANE_W, 0.28, U_TREAD + 0.03, 0xc9b8a0, laneE, topY - 0.28, LAND_Z0 + (i + 0.5) * U_TREAD, { walk: true });
   }
+  // B레인 챌판 스티커 (⚠️ LAND_Z0 선언 뒤에 있어야 한다 — TDZ 사고 1회)
+  [0x67b26f, 0x9bc1e8, 0xe8863a, 0xc9aee5, 0x9bc1e8, 0x67b26f].forEach((cc, si) =>
+    geoAdd(UNIT_PLANE, cc, laneE, 1.7 + (si + 1) * U_RISE - 0.06, LAND_Z0 + si * U_TREAD - 0.015, [0, Math.PI, 0], LANE_W - 0.2, 0.1, 1));
   // B 상부 착지판 — 전 폭 공중판(y3.1~3.4). 아래는 1층 입구 스트립(머리 위 3.1 확보).
   // 여기서 서쪽으로 걸으면 2층 복도 테라조(3.43)와 3cm 차로 이어진다.
   box(tx1 - wkX - 0.2, 0.3, 1.15, 0xc9b8a0, midX, FH - 0.3, stepLo + 0.05, { walk: true });
   // 레인 사이: 보이는 건 **허리높이 목재 난간벽**, 끼임 방지는 INVIS 전 높이 (3.6짜리 슬래브 벽은 흉하다)
-  solidSoftBox(0.12, 1.05, stepLo - LAND_Z0 + 0.4, 0xb08968, midX, 0, (stepLo + LAND_Z0) / 2 - 0.2);
-  softBox(0.16, 0.07, stepLo - LAND_Z0 + 0.4, 0x8a6a45, midX, 1.05, (stepLo + LAND_Z0) / 2 - 0.2);
+  // 실사(d80_0160): 레인 사이는 목재 반벽이 아니라 **스테인리스 세로봉 + 볼 뉴얼**
+  solidSoftBox(0.12, 0.2, stepLo - LAND_Z0 + 0.4, 0xa9a9a4, midX, 0, (stepLo + LAND_Z0) / 2 - 0.2);
+  for (let bz2 = LAND_Z0 - 0.1; bz2 < stepLo + 0.2; bz2 += 0.55)
+    softBox(0.045, 0.85, 0.045, 0xc8cdd2, midX, 0.22, bz2);
+  softBox(0.06, 0.06, stepLo - LAND_Z0 + 0.4, 0xd4d9dd, midX, 1.05, (stepLo + LAND_Z0) / 2 - 0.2);
+  [LAND_Z0 - 0.35, stepLo + 0.15].forEach(nz => softBox(0.13, 0.13, 0.13, 0xd4d9dd, midX, 1.11, nz));
   box(0.12, 3.6, stepLo - LAND_Z0 + 0.4, 0, midX, 0, (stepLo + LAND_Z0) / 2 - 0.2, { material: INVIS, noCam: true });
   // B 공중 디딤판 밑을 받치는 측판(스트링거) — 밑에서 올려다볼 때 '떠 있는 판'으로 안 보이게
   {
