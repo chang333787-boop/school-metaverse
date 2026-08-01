@@ -1845,8 +1845,14 @@ export function buildWorld(scene) {
     const ydCx = (ydX0 + ydX1) / 2, ydCz = (ydZ0 + ydZ1) / 2;
     box(ydX1 - ydX0, 0.045, ydZ1 - ydZ0, 0xb98a72, ydCx, 0, ydCz, { collide: false, walk: true });   // 붉은 인터로킹
     box(ydX1 - ydX0 - 3, 0.055, 1.4, 0x9aa0a4, ydCx, 0, ydCz, { collide: false, walk: true });        // 회색 띠
-    // 대형 원형 화분 + 원뿔 향나무 2기
-    [[ydCx - 6, ydCz], [ydCx + 6, ydCz]].forEach(([hx2, hz2]) => {
+    // 실사(v80 105~123s): 화분이 통로 **중앙 1열로 연속** + 바닥에 호스
+    {
+      const hose2 = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.04, 6, 12), mat(0x2f5e3a));
+      hose2.rotation.x = -Math.PI / 2;
+      hose2.position.set(ydCx - 9.5, 0.09, ydCz + 1.2);
+      scene.add(hose2);
+    }
+    [[ydCx - 6, ydCz], [ydCx, ydCz], [ydCx + 6, ydCz]].forEach(([hx2, hz2]) => {
       const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.6, 0.62, 10), mat(0x8a5a3c));
       pot.position.set(hx2, 0.31, hz2);
       scene.add(pot); colliders.push(pot);
@@ -1920,6 +1926,14 @@ export function buildWorld(scene) {
       cur = Math.max(cur, g1);
     });
     if (shed0 - 0.3 - cur > 0.4) geoAdd(UNIT_BOX, 0x5a5e60, (cur + shed0 - 0.3) / 2, 0.16, zCorE - 0.18, null, shed0 - 0.3 - cur, 0.12, 0.04);
+  }
+  // 실사(v79 420s): 동관 복도 벽에 **적색 3구 신호등 모형** + 창턱 학생 석고 작품 줄
+  {
+    softBox(0.16, 0.62, 0.1, 0x8f2f2a, 19.5, 1.5, ez0 + 0.26);
+    [1.62, 1.8, 1.98].forEach((sy, si2) =>
+      geoAdd(UNIT_PLANE, [0xd94848, 0xf2b134, 0x67b26f][si2], 19.5, sy, ez0 + 0.315, null, 0.11, 0.11, 1));
+    for (let ax2 = 13; ax2 < 32; ax2 += 3.6)
+      geoAdd(UNIT_PLANE, 0xf2efe6, ax2, 1.32, ez0 + 0.47, null, 0.42, 0.5, 1);   // 석고 작품판(창턱 위)
   }
   // 동관도 같은 규칙 — 바깥벽(ez0)=수납장 / 교실측(zCorE)=핸드레일
   lowCabinet(ex0 + 0.3, shed0 - 0.3, ez0, 1, [...eBrick, ...[12, 22, 32].map(c => ({ c, w: 0.9 }))]);
@@ -2802,6 +2816,15 @@ export function buildWorld(scene) {
       scene.add(wh2);
     });
     YOFF = keepBus;
+  }
+  // 실사(v80 84~87s): 뒤뜰 서측에 **회색 조립식 작업동**(단층·옥상 흰 난간)
+  {
+    const wbX = -35.5, wbZ = -54.5;
+    box(4.6, 2.5, 3.6, 0xc9cdd2, wbX, 0, wbZ);
+    box(1.1, 1.9, 0.08, 0x8a8f94, wbX + 1.2, 0, wbZ + 1.82, { collide: false });   // 문짝
+    [[-1.2, 0]].forEach(([ox]) => geoAdd(UNIT_PLANE, 0x5a6b7a, wbX + ox, 1.5, wbZ + 1.82, null, 1.0, 0.7, 1));
+    [-1, 1].forEach(sx => softBox(0.06, 0.5, 3.7, 0xe9ecee, wbX + sx * 2.32, 2.5, wbZ));
+    [-1, 1].forEach(sz => softBox(4.7, 0.5, 0.06, 0xe9ecee, wbX, 2.5, wbZ + sz * 1.85));
   }
   // 뒤뜰 피크닉 데크 + 보라 화단 (실사: 학교에서 가장 예쁜 공간 — 목재 데크·테이블·맥문동)
   {
