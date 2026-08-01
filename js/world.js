@@ -2152,6 +2152,12 @@ export function buildWorld(scene) {
   geoAdd(UNIT_PLANE, 0xf2df8a, (tx1 - 0.17), 0.75, (stepLo + stepHi) / 2, [0, -Math.PI / 2, 0], stepLo - stepHi, 1.5, 1);
   geoAdd(UNIT_PLANE, 0xd7ede4, (tx1 - 0.17), 2.45, (stepLo + stepHi) / 2, [0, -Math.PI / 2, 0], stepLo - stepHi, 1.9, 1);
   sign('2층 ↑', (tx0 + tx1) / 2, 2.5, uz1 + 0.18, 0, 0.45);
+  // S8: 층수 표시 — 계단 초입(1층)·계단참 위(2층) 벽면
+  geoAdd(UNIT_PLANE, 0x2f5faa, tx1 - 0.18, 1.9, uz1 - 1.2, [0, -Math.PI / 2, 0], 0.34, 0.34, 1);
+  { const f1 = textSign('1', { h: 0.26, bg: '#2f5faa', fg: '#ffffff', border: null, fontPx: 60, pad: 14 });
+    f1.position.set(tx1 - 0.16, 1.9, uz1 - 1.2); f1.rotation.y = -Math.PI / 2; scene.add(f1); }
+  { const f2 = textSign('2', { h: 0.26, bg: '#2f5faa', fg: '#ffffff', border: null, fontPx: 60, pad: 14 });
+    f2.position.set(tx1 - 0.16, FH + 1.9, uz1 - 1.4); f2.rotation.y = -Math.PI / 2; scene.add(f2); }
   plane(4.0, 1.7, 0xbdbcb6, (tx0 + tx1) / 2 + 0.75, 0.102, uz1 - 0.9);   // 홀 테라조(복도 흰타일과 경계)
   // (주차장 문은 계단 뒤 북벽이 아니라 주복도 fz0의 계단 개구 동쪽 틈새길 — 사용자 사진3 정정.
   //  북벽 문은 계단참(y1.7 솔리드)에 막혀 도달 불가였다)
