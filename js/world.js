@@ -2541,13 +2541,23 @@ export function buildWorld(scene) {
   // (캔버스 1024px=96m, strokeRect 반폭 260px → 260 × 96/1024 = 24.375m)
   const GOAL_DX = 24.375;
   goalAt(F.center[0] - GOAL_DX, F.center[1], -1, 1);
-  goalAt(F.center[0] + GOAL_DX, F.center[1], 1, 1);
+  // 위성원장 #6: 동측은 흰 소형이 아니라 **대형 황토 목재틀** 골대 (hi_0255·gym_0062)
+  {
+    const gxp = F.center[0] + GOAL_DX, gcz = F.center[1], sc = 1.4, WOOD_G = 0xc99a4e;
+    [-2.6 * sc, 2.6 * sc].forEach(zo => box(0.14, 2 * sc, 0.14, WOOD_G, gxp, -1, gcz + zo));
+    box(0.14, 0.14, 5.2 * sc + 0.14, WOOD_G, gxp, -1 + 2 * sc, gcz, { collide: false });
+    [-2.6 * sc, 2.6 * sc].forEach(zo => box(1.15 * sc, 0.12, 0.12, WOOD_G, gxp + 0.58 * sc, -1 + 2 * sc - 0.06, gcz + zo, { collide: false }));
+    box(0.12, 2 * sc, 5.4 * sc, 0, gxp + 1.1 * sc, -1, gcz, { material: NET });
+    box(1.15 * sc, 0.08, 5.4 * sc, 0, gxp + 0.55 * sc, -1 + 1.95 * sc, gcz, { material: NET, collide: false });
+  }
+  goalAt(20, 4, 1, 0.75);   // 위성원장: 중동부 이동식 흰 소형 골대 (gym_0078)
   // (실사 영상 확인 2026-07-31) 미니 골대·미니 코트는 실제 운동장에 없다 — 제거함
   // 야간 조명탑 (사진2·3) — 큰나무(46,34) 시야를 가리지 않게 서쪽으로
   const FLOOD = new THREE.MeshBasicMaterial({ color: 0xb9bfc4 });   // 낮=소등, 밤=점등 (main에서 전환)
   dynamic.floodMat = FLOOD;
   // 실사(hi_0255·hi_0264): 콘크리트 전주 + 가로암 3단 × 5등, 약 12m — 통학로변
-  [[44, -15], [-40, 36]].forEach(([lx3, lz3]) => {
+  // 위성원장 #7: 조명탑은 남서가 아니라 **북측 테라스 앞 동·서 각 1** (hi_0255·gym_0078)
+  [[44, -15], [-30, -14]].forEach(([lx3, lz3]) => {
     const lp = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.26, 12, 8), mat(0x8d9298));
     lp.position.set(lx3, 5, lz3);
     scene.add(lp); colliders.push(lp);
@@ -2557,6 +2567,21 @@ export function buildWorld(scene) {
         box(0.3, 0.3, 0.18, 0, lx3 + ox, ay + 0.16, lz3, { material: FLOOD, collide: false });
     });
   });
+  // 위성원장 #5: 야외 농구골대 1기 — 운동장 북동 통로 어귀, 서향 (hi_0258~0267)
+  {
+    const bx = 46, bz = -13;
+    const bpost = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 3.6, 8), mat(0x8d9298));
+    bpost.position.set(bx, terrY(bz) + 1.8, bz);
+    scene.add(bpost); colliders.push(bpost);
+    box(0.9, 0.12, 0.12, 0x8d9298, bx - 0.55, terrY(bz) + 3.15, bz, { collide: false });          // 암
+    box(0.06, 1.05, 1.8, 0xffffff, bx - 1.05, terrY(bz) + 2.55, bz, { collide: false });          // 백보드
+    box(0.05, 0.08, 0.08, 0xe8863a, bx - 1.16, terrY(bz) + 2.62, bz, { collide: false });
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.23, 0.02, 6, 14), mat(0xe8863a));
+    rim.rotation.x = Math.PI / 2; rim.position.set(bx - 1.38, terrY(bz) + 2.6, bz);
+    scene.add(rim);
+  }
+  // 위성원장 #12: 본관 동측 뒤 지붕 위로 솟는 거대 침엽수 (hi_0255·hi_0258)
+  pine(33, -40.5, 2.6);   // (-46은 동관 내부 — 마당 동측으로)
   zones.push({ x0: F.center[0] - F.width / 2, x1: F.center[0] + F.width / 2, z0: F.center[1] - F.depth / 2, z1: F.center[1] + F.depth / 2, label: '운동장' });
 
   // ---------- 놀이터 ----------
