@@ -2355,7 +2355,7 @@ export function buildWorld(scene) {
     });
   });
   const gymFloor = new THREE.Mesh(UNIT_PLANE, new THREE.MeshLambertMaterial({ map: courtTexture() }));
-  gymFloor.scale.set(G.width - 0.8, G.depth - 0.8, 1);
+  gymFloor.scale.set(G.width, G.depth, 1);   // ⚠️-0.8이면 문턱(gx1)에 0.4m 구멍 → 문 열면 잔디가 비친다
   gymFloor.rotation.x = -Math.PI / 2;
   gymFloor.position.set(gx, 0.03, gz);
   scene.add(gymFloor);
@@ -2466,8 +2466,8 @@ export function buildWorld(scene) {
   box(1.1, 0.14, 1.1, 0xf2b134, kpX - 2.8, 0.92, kpZ - 1.4, { walk: true });
   [[-0.45, -0.45], [0.45, -0.45], [-0.45, 0.45], [0.45, 0.45]].forEach(([ox, oz]) =>
     box(0.09, 0.92, 0.09, 0xe8863a, kpX - 2.8 + ox, 0, kpZ - 1.4 + oz, { collide: false }));
-  box(0.65, 0.09, 1.9, 0xe3453a, kpX - 2.8, 0.44, kpZ - 0.05, { rot: [0.48, 0, 0], collide: false, walk: true });
-  box(0.6, 0.08, 1.3, 0x9aa5ad, kpX - 2.8, 0.42, kpZ - 2.35, { rot: [-0.75, 0, 0], collide: false, walk: true });
+  box(0.65, 0.09, 1.9, 0xe3453a, kpX - 2.8, 0.58, kpZ - 0.05, { rot: [-0.48, 0, 0], collide: false, walk: true });
+  box(0.6, 0.08, 1.3, 0x9aa5ad, kpX - 2.8, 0.58, kpZ - 2.35, { rot: [0.75, 0, 0], collide: false, walk: true });
   interactables.push({ type: 'slide', x: kpX - 2.8, y: YOFF, z: kpZ + 0.8, top: { x: kpX - 2.8, y: YOFF + 1.1, z: kpZ - 1.4 } });   // S10
   // 스프링 라이더 2
   [[kpX + 0.6, kpZ + 1.7, 0xd94f6b], [kpX + 2.5, kpZ - 1.1, 0x4d9bd6]].forEach(([sx4, sz4, sc4]) => {
@@ -2728,9 +2728,13 @@ export function buildWorld(scene) {
   box(1.7, 0.14, 1.7, 0x9c7a53, slX, 1.62, slZ, { walk: true });
   [[-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]].forEach(([lx, lz]) => box(0.12, 1.62, 0.12, 0x8a6a45, slX + lx, 0, slZ + lz, { collide: false }));
   // 실사: 미끄럼면은 좁은 2조각이 아니라 **넓은 스테인리스 한 판** + 양옆 가드
-  box(1.0, 0.07, 2.9, 0xd6dbe0, slX, 0.85, slZ + 1.95, { rot: [0.63, 0, 0], collide: false, walk: true });
-  [-0.56, 0.56].forEach(ox => box(0.08, 0.2, 2.9, 0x9aa5ad, slX + ox, 0.9, slZ + 1.95, { rot: [0.63, 0, 0], collide: false }));
-  box(0.85, 0.1, 2.1, 0xa9805a, slX, 0.8, slZ - 1.35, { rot: [-0.95, 0, 0], collide: false, walk: true });
+  // ⚠️rot[0] 부호 규칙: +X회전은 **+z 끝을 들어올린다**. 발판(slZ)은 -z쪽이므로 미끄럼판은 **음수**,
+  //   반대편 오름계단은 **양수**여야 발판에 붙는다. (반대로 두면 판이 발판에서 떨어져 공중에 뜬다 — 실제 사고)
+  box(1.0, 0.07, 2.9, 0xd6dbe0, slX, 0.85, slZ + 1.95, { rot: [-0.63, 0, 0], collide: false, walk: true });
+  [-0.56, 0.56].forEach(ox => box(0.08, 0.2, 2.9, 0x9aa5ad, slX + ox, 0.9, slZ + 1.95, { rot: [-0.63, 0, 0], collide: false }));
+  // 오름길: 54° 경사판은 멀리서 '갈색 벽'으로 읽힌다 — 실제 놀이대처럼 **5단 계단**으로 교체
+  for (let i = 0; i < 5; i++)
+    box(1.1, (i + 1) * 0.352, 0.34, 0xa9805a, slX, 0, slZ - 0.85 - 0.34 * (4.5 - i), { walk: true });
   interactables.push({ type: 'slide', x: slX, y: YOFF, z: slZ + 3.2, top: { x: slX, y: YOFF + 1.8, z: slZ } });   // S10
   const swX = px + 4.5, swZ = pz + 3.5;
   const swbar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.4, 8), mat(0x3a6ea5));
@@ -2751,13 +2755,24 @@ export function buildWorld(scene) {
   });
   const ssX = px - 4.5, ssZ = pz + 3.5;
   // 실사(v79_0030): 스테인리스 2빔 + 빔 끝 반매몰 타이어
-  // ⚠️ 두 빔을 반대 기울기로 두면 시점에 따라 X자로 겹쳐 '부품이 따로 노는' 것처럼 보인다(사용자 지적)
-  //    — 같은 기울기 + 타이어를 빔 끝 바로 아래 정렬
-  box(0.5, 0.4, 0.9, 0x9aa5ad, ssX, 0, ssZ);
-  box(3.2, 0.07, 0.3, 0xc8cdd2, ssX, 0.42, ssZ - 0.28, { rot: [0, 0, 0.13], collide: false, walk: true });
-  box(3.2, 0.07, 0.3, 0xc8cdd2, ssX, 0.42, ssZ + 0.28, { rot: [0, 0, 0.13], collide: false, walk: true });
-  [[-1.5, -0.28], [1.5, -0.28], [-1.5, 0.28], [1.5, 0.28]].forEach(([ox3, oz3]) =>
-    solidSoftBox(0.5, 0.24, 0.24, 0x26282c, ssX + ox3, 0, ssZ + oz3));
+  // 시소 재작성: 얇은 빔 2개 + 흩어진 타이어는 '부품이 따로 논다'(사용자 지적).
+  // 하나의 두꺼운 시소판 + 좌석·손잡이 + 삼각 받침 + 착지 타이어로 한 덩이가 되게 만든다.
+  {
+    const TIL = 0.13;                                  // 기울기(+x 끝이 올라감)
+    const yAt = ox => 0.5 + Math.sin(TIL) * ox;        // 판 중심선 높이
+    solidSoftBox(0.62, 0.5, 1.0, 0x9aa5ad, ssX, 0, ssZ);                       // 받침대(피벗)
+    softBox(0.5, 0.16, 0.86, 0xb4bbc1, ssX, 0.5, ssZ);                          // 피벗 캡
+    box(3.3, 0.16, 0.56, 0xc8cdd2, ssX, yAt(0) - 0.08, ssZ, { rot: [0, 0, TIL], collide: false, walk: true });   // 시소판(한 장)
+    [-1, 1].forEach(sd8 => {
+      const sx8 = ssX + sd8 * 1.35, sy8 = yAt(sd8 * 1.35);
+      softBox(0.58, 0.1, 0.62, sd8 > 0 ? 0xe3453a : 0x3a6ea5, sx8, sy8, ssZ);   // 좌석(빨강/파랑)
+      [-0.24, 0.24].forEach(oz8 => {                                            // ㄷ자 손잡이
+        softBox(0.05, 0.42, 0.05, 0xe8ebee, sx8 - sd8 * 0.34, sy8 + 0.1, ssZ + oz8);
+      });
+      softBox(0.05, 0.05, 0.53, 0xe8ebee, sx8 - sd8 * 0.34, sy8 + 0.52, ssZ);
+      solidSoftBox(0.62, 0.2, 0.62, 0x26282c, ssX + sd8 * 1.62, 0, ssZ);        // 착지 타이어(판 끝 바로 아래)
+    });
+  }
   [[0.9, 1], [1.25, 0], [1.6, -1]].forEach(([bh, zo]) => {
     [-0.7, 0.7].forEach(sx => box(0.08, bh, 0.08, 0x3a6ea5, px + 3.5 + sx, 0, pz - 3.5 + zo, { collide: false }));
     const bb = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.4, 8), mat(0xc8cdd2));
