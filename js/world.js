@@ -471,6 +471,14 @@ export function buildWorld(scene) {
     };
     d.slide();
     doors.push(d);
+    // 사이클5: 실내 미닫이 문틀 양측 노란 모서리 보호대 (한국 학교 표준 — 유리문·바깥 철문 제외)
+    if (!opts.glass && !opts.closed) {
+      const gy = opts.y || 0;
+      if (axis === 'x') [hx - 0.07, hx + w + 0.07].forEach(jx =>
+        softBox(0.07, 1.25, 0.09, 0xf2c94c, jx, gy, hz));
+      else [hz - 0.07, hz + w + 0.07].forEach(jz =>
+        softBox(0.09, 1.25, 0.07, 0xf2c94c, hx, gy, jz));
+    }
     return d;
   }
 
@@ -2964,6 +2972,18 @@ export function buildWorld(scene) {
       runners.push({ group: g, pe: persons[persons.length - 1], phase: ph, rx: 20, rz: 13, cx: 6, cz: 8, speed: 0.22 });
     });
     YOFF = keepR;
+  }
+  // ---------- 천장 크라운 몰딩 (사이클5: 복도 벽-천장 이음 마감) ----------
+  {
+    const CR = 0xe6e0d2, cy = FH - CEIL_DROP - 0.078;   // ⚠️상단이 천장(3.13)에 닿으면 관통·동일평면 줄무늬(스크린샷 적발) — 8mm 이격
+    const keepCR = YOFF; YOFF = 0;
+    softBox(40 - -16.6, 0.07, 0.07, CR, (-16.6 + 40) / 2, cy, fz0 + 0.19);        // 구관 북벽(동측 — 서측 홀 개구 제외)
+    softBox(80, 0.07, 0.07, CR, 0, cy, -35.3 - 0.19);                              // 구관 남벽(교실측)
+    softBox(31.2, 0.07, 0.07, CR, (8.4 + 39.6) / 2, cy, -55.3 - 0.19);            // 동관 복도 남벽(복도면=북측)
+    softBox(31.2, 0.07, 0.07, CR, (8.4 + 39.6) / 2, cy, -58 + 0.19);              // 동관 복도 북벽
+    softBox(23.4, 0.07, 0.07, CR, (-40 + -16.6) / 2, FH + cy, -40.7 + 0.19);      // 2층 복도(교실측=복도면 남측)
+    softBox(23.4, 0.07, 0.07, CR, (-40 + -16.6) / 2, FH + cy, -38 - 0.19);        // 2층 복도(창측=복도면 북측)
+    YOFF = keepCR;
   }
   // ---------- 접촉 그림자 스트립 (사이클4: 건물이 지면에 '붙는' 인디식 가짜 AO) ----------
   // 외벽 밑동을 따라 얇고 어두운 띠 — 병합 plane이라 비용 0에 가깝다. 밟기·충돌 없음.
