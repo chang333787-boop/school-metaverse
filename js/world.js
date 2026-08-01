@@ -668,7 +668,7 @@ export function buildWorld(scene) {
     softBox(bw2 + 0.1, 0.06, 0.82, 0xd6dbe0, s0 + 1.7, y0 + 0.86, at(depth * 0.18));
     // 벽면 유리 약품장 줄 (동벽) — 하부장 + 유리 상부장. ⚠️ 파스텔 서랍장은 !isSci 로 이미 뺐다
     for (let k = 0; k < 3; k++) {
-      const cz = at(3.4 + k * 1.5);
+      const cz = at([3.4, 7.2, 8.7][k]);   // ⚠️ 등간격이면 동벽 약품장이 과학준비실 문(z-49.8±0.7)을 침범(동선 순회 적발) — 문 앞만 비운 배열
       solidSoftBox(0.44, 0.85, 1.35, 0xeceae2, s1 - 0.24, y0, cz);            // 하부장
       solidSoftBox(0.42, 1.05, 1.35, 0xf4f2ea, s1 - 0.25, y0 + 0.9, cz);      // 상부장 프레임
       glassAdd(s1 - 0.48, y0 + 1.42, cz, Math.PI / 2, 1.2, 0.9);              // 유리문(전 월드 1메시 병합)
@@ -1090,15 +1090,17 @@ export function buildWorld(scene) {
       // 깊은 창고는 안쪽까지 채운다 (텅 빈 방 느낌 해소)
       if (depth > 6) {
         const shR = Math.min(cw / 2 - 0.5, 1.5);
-        box(0.45, 1.95, Math.min(depth - 3.5, 5), 0xb08a5e, cx - shR, y0, at(depth / 2 + 0.6));   // 철제 선반
+        // ⚠️ innerOnly 창고(과학준비실·문서고)는 문이 서쪽 벽에 있다 — 선반을 그 벽에 붙이면 문을 막는다(동선 순회 적발) → 좌우 반전
+        const mir = r.innerOnly ? -1 : 1;
+        box(0.45, 1.95, Math.min(depth - 3.5, 5), 0xb08a5e, cx - shR * mir, y0, at(depth / 2 + 0.6));   // 철제 선반
         [0.55, 1.15, 1.72].forEach(sy2 =>
-          geoAdd(UNIT_BOX, 0x8a6a45, cx - shR, y0 + sy2, at(depth / 2 + 0.6), null, 0.5, 0.05, Math.min(depth - 3.5, 5)));
+          geoAdd(UNIT_BOX, 0x8a6a45, cx - shR * mir, y0 + sy2, at(depth / 2 + 0.6), null, 0.5, 0.05, Math.min(depth - 3.5, 5)));
         [[0.5, 0xe8ddc4], [1.1, 0xc9a06a], [1.68, 0xdfe3e8]].forEach(([by2, bc7], bi7) =>
-          box(0.36, 0.34, 0.5, bc7, cx - shR, y0 + by2 + 0.05, at(depth / 2 - 0.9 + bi7 * 1.1), { collide: false }));
-        box(0.45, 1.6, 0.12, 0xd0392e, cx + shR - 0.2, y0, at(depth - 1.2));            // 접이식 사다리
+          box(0.36, 0.34, 0.5, bc7, cx - shR * mir, y0 + by2 + 0.05, at(depth / 2 - 0.9 + bi7 * 1.1), { collide: false }));
+        box(0.45, 1.6, 0.12, 0xd0392e, cx + (shR - 0.2) * mir, y0, at(depth - 1.2));            // 접이식 사다리
         [0.35, 0.75, 1.15, 1.45].forEach(ry3 =>
-          geoAdd(UNIT_BOX, 0xd0392e, cx + shR - 0.2, y0 + ry3, at(depth - 1.2), null, 0.42, 0.05, 0.16));
-        box(0.75, 0.9, 0.75, 0x4d9bd6, cx + shR - 0.3, y0, at(depth - 2.9));            // 체육 용구함
+          geoAdd(UNIT_BOX, 0xd0392e, cx + (shR - 0.2) * mir, y0 + ry3, at(depth - 1.2), null, 0.42, 0.05, 0.16));
+        box(0.75, 0.9, 0.75, 0x4d9bd6, cx + (shR - 0.3) * mir, y0, at(depth - 2.9));            // 체육 용구함
         [[-0.16, 0.16, 0xf2c94c], [0.18, -0.1, 0xd0392e]].forEach(([ox7, oz7, bc8]) => {
           const bl2 = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 10), mat(bc8));
           bl2.position.set(cx + shR - 0.3 + ox7, y0 + 1.06, at(depth - 2.9) + oz7);
@@ -1341,9 +1343,10 @@ export function buildWorld(scene) {
   lowCabinet(fx0 + 0.3, fx1 - 0.3, fz0, 1, [...northGaps, { c: -28.3, w: 23.8 }, { c: -14.3, w: 2.6 }, { c: -17.9, w: 3.0 }, { c: 24, w: 14 },
     { c: -29.8, w: 9.0 }, ...[-33, -18, 2, 21, 35].map(c => ({ c, w: 0.9 }))]);   // 소화기·도넛·유치원 구간 벽감
   // 실사(d80_0205): 유치원 앞 복도 사물함은 짙은 갈색이 아니라 **베이지 2단(h1.05)** + 은색 고리
-  solidSoftBox(8.6, 1.05, 0.42, 0xd6c6a2, -29.8, 0.10, zCor - 0.25);   // 홀 남측벽(유치원 북벽) 앞
-  softBox(8.7, 0.05, 0.46, 0xe2d4b2, -29.8, 1.15, zCor - 0.25);
-  for (let hx3 = -33.7; hx3 < -25.6; hx3 += 0.62) {
+  // ⚠️ 8.6m 통짜면 유치원 문 2개(-32.4·-27.2)를 가로막는다(동선 순회 적발) — 문 사이 3m만
+  solidSoftBox(3.0, 1.05, 0.42, 0xd6c6a2, -29.8, 0.10, zCor - 0.25);   // 홀 남측벽(유치원 북벽) 앞
+  softBox(3.1, 0.05, 0.46, 0xe2d4b2, -29.8, 1.15, zCor - 0.25);
+  for (let hx3 = -31.0; hx3 < -28.4; hx3 += 0.62) {
     softBox(0.10, 0.03, 0.03, 0xb8b2a6, hx3, 0.45, zCor - 0.48);
     softBox(0.10, 0.03, 0.03, 0xb8b2a6, hx3, 0.85, zCor - 0.48);
   }
