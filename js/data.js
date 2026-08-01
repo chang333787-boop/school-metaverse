@@ -123,7 +123,7 @@ export const SCHOOL = {
   playground: { center: [-52, 28] },
   shelter:    { center: [-36, 40], length: 20 },
   bigTree:    [46, 34],
-  flagPole:   [-8, -20],
+  flagPole:   [-3.2, -21.2],   // 실사(gym_0278): 교훈석 바로 뒤·현관 서측
   gate:       [30, 44.5],
   bounds:     { x: 82, zMin: -70, zMax: 46 },
 };

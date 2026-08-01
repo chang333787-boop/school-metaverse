@@ -1338,7 +1338,13 @@ export function buildWorld(scene) {
   box(1.1, 0.7, 1.1, 0x9aa5ad, -6, FH + 0.1, -33);
   box(1.1, 0.7, 1.1, 0x9aa5ad, 30, FH + 0.1, -27.5);
 
-  sign(SCHOOL.name, hallCx, FH + 1.1, fz1 + 0.35, 0, 1.2);
+  // 실사(gym_0278): 학교명은 지붕 위 공중이 아니라 현관 서측 1층 **파란 밴드에 흰 글씨**
+  softBox(6.5, 0.7, 0.08, 0x1e4fa3, hallCx - 6.8, 2.35, faceZ);
+  {
+    const nm = textSign(SCHOOL.name, { h: 0.48, bg: '#1e4fa3', fg: '#ffffff', border: null, fontPx: 56, pad: 14 });
+    nm.position.set(hallCx - 6.8, 2.7, faceZ + 0.06);
+    scene.add(nm);
+  }
   // 현관 유리문 파란 슬로건 띠 (실사: 문 유리에 흰 글씨 2줄)
   [['튼튼한 몸과 건강한 마음', -1.62], ['주도적인 배움과 성장', 1.62]].forEach(([txt, ox]) => {
     const bd = textSign(txt, { h: 0.24, bg: '#1e4fa3', fg: '#ffffff', border: null, fontPx: 44, pad: 14 });
@@ -1434,16 +1440,18 @@ export function buildWorld(scene) {
   [-5.6, -2.8, 2.8, 5.6].forEach(ox => box(0.75, PORCH_H, 0.75, WOODC, PODIUM_X + ox, 0, PORCH_Z1 - 0.4));
   // 좌우 측벽 (실물: 오른쪽은 막힌 목재 벽)
   [-1, 1].forEach(s => box(0.4, PORCH_H, PORCH_Z1 - PORCH_Z0 - 0.8, WOODC, PODIUM_X + s * (PORCH_W / 2), 0, PORCH_CZ - 0.4));
-  // 포치 앞 검은 철제 난간 — 계단 개구부(폭 3.4)만 비움
-  [[-1, -3.35], [1, 3.35]].forEach(([s, inner]) => {
-    const len = PORCH_W / 2 - Math.abs(inner);
-    const cxr = PODIUM_X + s * (Math.abs(inner) + len / 2);
-    softBox(len, 0.08, 0.08, 0x30343a, cxr, 1.02, PORCH_Z1 - 0.05);
-    softBox(len, 0.06, 0.06, 0x30343a, cxr, 0.55, PORCH_Z1 - 0.05);
-    for (let t = -len / 2 + 0.2; t < len / 2; t += 0.36) {
-      softBox(0.05, 0.95, 0.05, 0x30343a, cxr + t, 0.1, PORCH_Z1 - 0.05);
+  // 포치 전면 난간 — 실사(hi_0276): **은색 스테인리스가 중앙 끊김 없이 연속**, 개구는 양끝 계단 접속부뿐
+  {
+    const rlZ = PORCH_Z1 - 0.05;
+    softBox(10.6, 0.07, 0.07, 0xc9ced4, PODIUM_X, 1.0, rlZ);
+    softBox(10.6, 0.05, 0.05, 0xc9ced4, PODIUM_X, 0.55, rlZ);
+    softBox(10.6, 0.05, 0.05, 0xc9ced4, PODIUM_X, 0.15, rlZ);
+    for (let t = -5.1; t <= 5.1; t += 0.85) {
+      softBox(0.05, 1.0, 0.05, 0xc9ced4, PODIUM_X + t, 0, rlZ);
+      softBox(0.08, 0.08, 0.08, 0xe2e6ea, PODIUM_X + t, 1.0, rlZ);
     }
-  });
+    box(10.6, 1.05, 0.1, 0, PODIUM_X, 0, rlZ, { material: INVIS, noCam: true });   // 낙하 방지
+  }
   // 포치 안 야외 테이블 3세트 (원목 상판 + 양옆 벤치)
   [-4.2, 0, 4.2].forEach(ox => {
     const tx = PODIUM_X + ox, tz = PORCH_CZ + 0.4;
@@ -1455,23 +1463,19 @@ export function buildWorld(scene) {
     });
   });
 
-  // 중앙 계단 1벌 6단 (운동장 y-1 → 테라스 y0) — 실물 폭 약 3m
-  const ST_W = 3.0, ST_TREAD = 0.32, ST_N = 6;
-  for (let si = 0; si < ST_N; si++) {
-    box(ST_W, 1 - si / ST_N, ST_TREAD, 0xb9b0a2, PODIUM_X, -1, TERR_Z + 0.16 + si * ST_TREAD);
-  }
-  // 계단 스테인리스 난간 (양쪽) — 세로 봉 + 경사 손잡이. 경사각 = atan(1 / (6×0.32))
-  const ST_A = Math.atan(1 / (ST_N * ST_TREAD)), ST_LEN = Math.hypot(1, ST_N * ST_TREAD);
-  const ST_CZ = TERR_Z + 0.16 + (ST_N * ST_TREAD) / 2, ST_CY = -0.5;
-  [-1, 1].forEach(s => {
-    const rx = PODIUM_X + s * (ST_W / 2 + 0.06);
-    // ⚠️ 세로 기둥은 반드시 **바닥(-1)까지 접지** — 계단(폭 3.0) 바깥 x라 계단 높이에서 시작하면 허공에 뜬다(실기기 신고)
-    softBox(0.07, 0.07, ST_LEN, 0xcdd3d8, rx, ST_CY + 0.92, ST_CZ, [-ST_A, 0, 0]);   // 손잡이
-    softBox(0.05, 0.05, ST_LEN, 0xcdd3d8, rx, ST_CY + 0.52, ST_CZ, [-ST_A, 0, 0]);   // 중간대
-    [0, 2, 4, 5].forEach(si => {                                                     // 세로 기둥(접지)
-      const zt = TERR_Z + 0.16 + si * ST_TREAD, yt = -1 + (1 - si / ST_N);
-      softBox(0.06, yt + 0.95 + 1, 0.06, 0xcdd3d8, rx, -1, zt);
-      softBox(0.07, 0.09, 0.07, 0xe2e6ea, rx, yt + 0.95, zt);                        // 기둥머리 구슬
+  // 측면 계단 2벌 — 실사(hi_0276·hi_0288): 중앙 계단은 없고, 단 양끝에서 **옹벽과 평행하게 좌우로** 8단 하강
+  const ST_TREAD = 0.34, ST_N8 = 8, ST_Z = TERR_Z + 1.0;
+  [-1, 1].forEach(sd => {
+    for (let si = 0; si < ST_N8; si++) {
+      box(ST_TREAD, 1 - si * 0.125, 1.4, 0xdcd6ca, PODIUM_X + sd * (5.5 + 0.17 + si * ST_TREAD), -1, ST_Z);
+    }
+    // 계단 경사 난간 (남측·바깥면) — 손잡이 + 접지 기둥 3
+    const rA = Math.atan2(1, ST_N8 * ST_TREAD) * -sd;
+    const rcx2 = PODIUM_X + sd * (5.67 + (ST_N8 * ST_TREAD) / 2);
+    softBox(ST_N8 * ST_TREAD + 0.4, 0.07, 0.07, 0xc9ced4, rcx2, 0.35, ST_Z + 0.72, [0, 0, rA]);
+    [0, 3.5, 7].forEach(si => {
+      const sx8 = PODIUM_X + sd * (5.67 + si * ST_TREAD), yt = -si * 0.125 + 0.92;
+      softBox(0.05, yt + 1, 0.05, 0xc9ced4, sx8, -1, ST_Z + 0.72);
     });
   });
 
@@ -1485,10 +1489,16 @@ export function buildWorld(scene) {
     m.matrixAutoUpdate = false; m.updateMatrix();
     scene.add(m);
   };
-  facePanel(mosaicTexture(), PODIUM_X - 10.5, PODIUM_X - 1.8, 2.2);
-  facePanel(rubbleTexture(), PODIUM_X + 1.8, PODIUM_X + 5.6, 1.4);
-  // 옹벽 상단 흰 캡 (실물: 모자이크 위에 흰 콘크리트 띠)
-  box(19, 0.14, 0.42, 0xf0ece1, PODIUM_X - 2.4, -0.07, TERR_Z + 0.12, { collide: false });
+  // 실사(hi_0276·hi_0288): 모자이크=포치 정중앙 하부 전폭 · 마름돌=동측 계단 아래 저벽 · 서측=흰 판
+  facePanel(mosaicTexture(), PODIUM_X - 5.5, PODIUM_X + 5.5, 2.2);
+  facePanel(rubbleTexture(), PODIUM_X + 8.6, PODIUM_X + 14, 1.4);
+  {
+    const wp = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 1.0), mat(0xece8dd));
+    wp.position.set(PODIUM_X - 11.3, -0.5, wallFaceZ);
+    wp.matrixAutoUpdate = false; wp.updateMatrix();
+    scene.add(wp);
+  }
+  box(11.4, 0.14, 0.42, 0xf0ece1, PODIUM_X, -0.07, TERR_Z + 0.12, { collide: false });
 
   // 표지석 2기 — 왼쪽 검은 교훈석, 오른쪽 회색 교가비 (실사 확인)
   // 자연석은 얇으면 '판때기'로 보인다 — 깊이를 두툼하게 주고, 위에 작은 덩어리를 얹어 실루엣을 깬다
@@ -1605,9 +1615,9 @@ export function buildWorld(scene) {
         else wallZ(wz0, wz1, x, 0, FH, innerC);
       });
   });
-  // 도서관 앞 로비 (사진1: 쿠션 의자 + 기둥 원형 소파)
-  [0xe8863a, 0x67b26f, 0xe8863a, 0x67b26f].forEach((cc, i) =>
-    box(0.6, 0.42, 0.6, cc, -23.6 + i * 0.85, 0, -37.55, { walk: true }));
+  // 도서관 앞 로비 — 실사(d80_0222): 벤치는 문 **서쪽**(문서고 벽 앞), 반납함만 동쪽
+  [0xe8863a, 0x67b26f, 0xf2c94c, 0x67b26f].forEach((cc, i) =>
+    box(0.6, 0.42, 0.6, cc, (i < 2 ? -28.25 + i * 0.7 : -26.75 + (i - 2) * 0.7), 0, -37.35, { walk: true }));
   const colPole = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 2.6, 10), mat(0xf2ede2));
   colPole.position.set(-18.6, 1.6, -36.6);
   scene.add(colPole);
@@ -2281,12 +2291,16 @@ export function buildWorld(scene) {
   // 야간 조명탑 (사진2·3) — 큰나무(46,34) 시야를 가리지 않게 서쪽으로
   const FLOOD = new THREE.MeshBasicMaterial({ color: 0xb9bfc4 });   // 낮=소등, 밤=점등 (main에서 전환)
   dynamic.floodMat = FLOOD;
-  [[-38, 30], [40, 12]].forEach(([lx3, lz3]) => {
-    const lp = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 9, 8), mat(0x9aa5ad));
-    lp.position.set(lx3, 3.5, lz3);
+  // 실사(hi_0255·hi_0264): 콘크리트 전주 + 가로암 3단 × 5등, 약 12m — 통학로변
+  [[44, -15], [-40, 36]].forEach(([lx3, lz3]) => {
+    const lp = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.26, 12, 8), mat(0x8d9298));
+    lp.position.set(lx3, 5, lz3);
     scene.add(lp); colliders.push(lp);
-    box(2.0, 0.4, 0.28, 0x6b7178, lx3, 8, lz3, { collide: false });
-    [-0.6, 0, 0.6].forEach(ox => box(0.3, 0.26, 0.16, 0, lx3 + ox, 8.42, lz3, { material: FLOOD, collide: false }));
+    [8.4, 9.4, 10.4].forEach(ay => {
+      box(3.2, 0.13, 0.13, 0x3c4146, lx3, ay, lz3, { collide: false });
+      for (let ox = -1.28; ox <= 1.28; ox += 0.64)
+        box(0.3, 0.3, 0.18, 0, lx3 + ox, ay + 0.16, lz3, { material: FLOOD, collide: false });
+    });
   });
   zones.push({ x0: F.center[0] - F.width / 2, x1: F.center[0] + F.width / 2, z0: F.center[1] - F.depth / 2, z1: F.center[1] + F.depth / 2, label: '운동장' });
 
@@ -2294,7 +2308,7 @@ export function buildWorld(scene) {
   const [px, pz] = SCHOOL.playground.center;
   box(17, 0.05, 14, 0xb4b8bd, px, 0, pz, { collide: false, walk: true });   // 사진: 회색 벽돌 포장
   // 실사: 놀이기구 아래는 회색 포장이 아니라 **모래밭**이고, 옆에 잔디밭이 붙어 있다
-  box(11, 0.058, 9, 0xdcc9a0, px - 1.5, 0, pz - 0.5, { collide: false, walk: true });   // 모래밭(포장 위 6mm)
+  box(15, 0.058, 12, 0xdcc9a0, px + 0.5, 0, pz - 0.3, { collide: false, walk: true });   // 모래밭 — 그네·구름사다리까지 안에(v79_0030)
   box(17, 0.04, 4.5, 0x7fb86a, px, 0, pz + 9.3, { collide: false, walk: true });        // 남측 잔디밭
   // 자전거 교통안전 코스 (서쪽 별도 포장 — 노란 라인 + 숫자 타일)
   const rcx = px - 14, rcz = pz - 0.5;
@@ -2372,7 +2386,7 @@ export function buildWorld(scene) {
   }
   // 큰 나무 + 나무 둘레 원형 벤치 (실사: 놀이터 옆 랜드마크)
   {
-    const btX = px + 7.6, btZ = pz + 5.6;
+    const btX = rcx + 3.2, btZ = rcz - 4.6;   // 실사(v79_0030): 페인팅 원 바로 옆·그늘막 밖 북측
     tree(btX, btZ, 1.5);
     for (let ai = 0; ai < 8; ai++) {
       const a = (ai / 8) * Math.PI * 2;
@@ -2383,9 +2397,9 @@ export function buildWorld(scene) {
   }
   // 음수대 + 아치 캐노피 (실사: 스테인리스 급수대 4구 + 암갈색 아치 지붕)
   {
-    const wfX = px + 12.5, wfZ = pz - 5;
-    solidSoftBox(2.2, 0.82, 0.6, 0xc8cdd2, wfX, 0, wfZ);
-    [-0.75, -0.25, 0.25, 0.75].forEach(ox => softBox(0.07, 0.16, 0.07, 0x9aa5ad, wfX + ox, 0.82, wfZ));
+    const wfX = px - 2, wfZ = pz - 9;   // 실사(v79_0225): 숲놀이터 곁 수풀가 — 운동장 서단 고립 아님
+    solidSoftBox(2.6, 0.82, 0.6, 0xc8cdd2, wfX, 0, wfZ);
+    [-0.9, -0.45, 0, 0.45, 0.9].forEach(ox => softBox(0.07, 0.16, 0.07, 0x9aa5ad, wfX + ox, 0.82, wfZ));   // 5구
     [[-1.2, -0.5], [1.2, -0.5], [-1.2, 0.5], [1.2, 0.5]].forEach(([ox, oz]) =>
       solidSoftBox(0.1, 2.1, 0.1, 0x9aa5ad, wfX + ox, 0, wfZ + oz));
     [[-0.7, 0.24, 0.5], [0, 0.4, 0], [0.7, 0.24, -0.5]].forEach(([ox, ry, rz]) =>
