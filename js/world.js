@@ -1214,8 +1214,9 @@ export function buildWorld(scene) {
   wallXGaps(fx0, fx1, northGaps, fz0, 0, 0.95, wainC, 0.34);
   B.wings.forEach(wg => wg.rooms.forEach(r => {
     if (r.innerOnly || r.type === 'stair') return;
-    makeDoor(doorCOf(r) - 0.9, fz0, 1.8, 'x', { swing: 1 });
+    makeDoor(doorCOf(r) - 0.9, fz0, 1.8, 'x', r.type === 'library' ? { swing: 1, glass: true } : { swing: 1 });
     if (r.type === 'library') {
+      hangSign('도서관', doorCOf(r) + 3.6, FH - CEIL_DROP, fz0 + 0.55, 0, 0.26);
       // 실사(영상): 도서관 입구는 **짙은 목재 아치 프레임 + "슬기샘 도서관" 현판 + 도서반납함**
       const ldx = doorCOf(r), LW = 0x5a4232;
       [-1.35, 1.35].forEach(ox => solidSoftBox(0.26, 2.5, 0.3, LW, ldx + ox, 0, fz0 + 0.28));
@@ -1234,10 +1235,28 @@ export function buildWorld(scene) {
   makeDoor(K.doorC - 1.2, fz0, 2.4, 'x', { swing: 1 });
   // 구관 복도 바닥: 흰 대형 타일 + 양쪽 검은 대리석 띠 (슬래브 0.08 위에 0.10)
   corridorFloor(fx0 + 0.2, fx1 - 0.2, fz0, zCor, 0.100, TILE_W, MARBLE_K, 0.30);
+  // 실사(d80_0205): 서측 복도엔 갈색 포인트 타일이 일정 간격 + 유치원 복도면 캐릭터 벽화
+  for (let ptx = -33; ptx < 36; ptx += 7) {
+    if (Math.abs(ptx + 18.6) < 1.6) continue;   // 도넛 벤치 자리
+    plane(0.9, 0.9, 0xb5906a, ptx, 0.105, -36.65);
+  }
+  [[-33.3, 0x8fbf6a, 1.6, 0.5], [-30.7, 0x8fbf6a, 1.6, 0.5], [-28.1, 0x8fbf6a, 1.6, 0.5]].forEach(([bx7, bc8, bw8, bh8]) =>
+    geoAdd(UNIT_PLANE, bc8, bx7, 0.42, zCor - 0.16, [0, Math.PI, 0], bw8, bh8, 1));
+  [[-32.6, 0xe86a6a], [-30.1, 0xf2c94c], [-27.6, 0xe86a6a]].forEach(([bx9, bc9]) =>
+    geoAdd(UNIT_PLANE, bc9, bx9, 0.78, zCor - 0.16, [0, Math.PI, 0], 0.14, 0.2, 1));
+  geoAdd(UNIT_PLANE, 0x8a5a3a, -31.1, 0.95, zCor - 0.16, [0, Math.PI, 0], 0.55, 0.8, 1);   // 곰
   // ⚠️ 북벽(창측)에는 레일을 깔지 않는다 — 실물은 여기가 **창 아래 목재 수납장** 자리다.
   //    레일과 수납장을 같은 벽에 두면 브래킷(y 0.90~1.00)이 상판(0.95)을 관통한다.
   //    교실측(zCor) 레일은 각 실 루프에서 계속 깔린다.
-  lowCabinet(fx0 + 0.3, fx1 - 0.3, fz0, 1, [...northGaps, { c: -14.3, w: 2.6 }, ...[-33, -18, 2, 21, 35].map(c => ({ c, w: 0.9 }))]);   // 소화기 자리 벽감
+  lowCabinet(fx0 + 0.3, fx1 - 0.3, fz0, 1, [...northGaps, { c: -14.3, w: 2.6 }, { c: -18.6, w: 2.4 },
+    { c: -29.8, w: 9.0 }, ...[-33, -18, 2, 21, 35].map(c => ({ c, w: 0.9 }))]);   // 소화기·도넛·유치원 구간 벽감
+  // 실사(d80_0205): 유치원 앞 복도 사물함은 짙은 갈색이 아니라 **베이지 2단(h1.05)** + 은색 고리
+  solidSoftBox(8.6, 1.05, 0.42, 0xd6c6a2, -29.8, 0.10, fz0 + 0.25);
+  softBox(8.7, 0.05, 0.46, 0xe2d4b2, -29.8, 1.15, fz0 + 0.25);
+  for (let hx3 = -33.7; hx3 < -25.6; hx3 += 0.62) {
+    softBox(0.10, 0.03, 0.03, 0xb8b2a6, hx3, 0.45, fz0 + 0.48);
+    softBox(0.10, 0.03, 0.03, 0xb8b2a6, hx3, 0.85, fz0 + 0.48);
+  }
   // 소방설비 (실사: 복도 곳곳 / 지금까지 코드에 0개)
   [-33, -18, 2, 21, 35].forEach(fx3 => fireExt(fx3, 0.10, fz0 + 0.42, fz0 + 0.16));
   [-24, 28].forEach(hx => hydrant(hx, fz0 + 0.14, 0));
@@ -1327,9 +1346,14 @@ export function buildWorld(scene) {
   // ⚠️ 전부 softBox — box(collide:false)로 하면 **띠를 밟고 올라설 수 있다**(측정으로 확인)
   const faceBand = (y0b, hb, colb) =>
     softBox(fx1 - fx0, hb, FACE_T, colb, (fx0 + fx1) / 2, y0b, faceZ);
-  faceBand(0.62, 0.42, BLUEC);    // 창 아래 허리띠
-  faceBand(2.52, 0.5, YELC);      // 창 위 노란 띠 — 얇으면 베이지에 묻힌다(0.34에서 키움)
-  faceBand(3.02, 0.38, BLUEC);    // 처마 밑 파란 띠
+  faceBand(0.62, 0.42, BLUEC);    // 창 아래 허리띠(중앙 구간용)
+  faceBand(2.52, 0.5, YELC);
+  faceBand(3.02, 0.38, BLUEC);
+  // 실사(gym_0278·hi_0264): 서·동 양끝 1층은 **비비드 옐로우 대면적** — 가는 띠가 아니라 벽면
+  [[-40, -18], [16.4, 40]].forEach(([xa, xb]) => {
+    softBox(xb - xa, 1.06, 0.11, YELC, (xa + xb) / 2, 0.02, faceZ + 0.01);
+    softBox(xb - xa, 0.92, 0.11, YELC, (xa + xb) / 2, 2.48, faceZ + 0.01);
+  });
   [...frontEdges].filter(x => x > fx0 + 0.01 && x < fx1 - 0.01)
     .forEach(x => softBox(0.38, FH, FACE_T, BLUEC, x, 0, faceZ + 0.02));   // 띠와 동일평면 금지(33교차 깜빡임)
   roofOver(fx0, fx1, fz0, fz1, FH, roofC);
@@ -1552,13 +1576,14 @@ export function buildWorld(scene) {
   // 탑시계 (실사: 운동장에서 가장 눈에 띄는 수직 요소 — 기둥형 4면 시계)
   const CLK_X = PODIUM_X + 17, CLK_Z = TERR_Z - 1.6;
   box(0.9, 0.3, 0.9, 0xcfc7b6, CLK_X, 0, CLK_Z);
-  solidSoftBox(0.42, 3.3, 0.42, 0xe6e2d6, CLK_X, 0.3, CLK_Z);
-  solidSoftBox(1.05, 1.05, 1.05, 0x51585e, CLK_X, 3.6, CLK_Z);   // 시계 몸통(짙게 해야 흰 문자판이 산다)
-  softBox(1.2, 0.16, 1.2, 0x3a4046, CLK_X, 4.65, CLK_Z);
+  // 실사(hi_0264): 문자판이 지붕선 **위**(약 6m) — 낮으면 건물에 묻힌다
+  solidSoftBox(0.3, 5.2, 0.3, 0x4a4f55, CLK_X, 0.3, CLK_Z);
+  solidSoftBox(1.0, 1.0, 1.0, 0x51585e, CLK_X, 5.5, CLK_Z);
+  softBox(1.15, 0.14, 1.15, 0x3a4046, CLK_X, 6.5, CLK_Z);
   const CLK_MAT = new THREE.MeshBasicMaterial({ map: clockFace() });
-  [[0, 0, 0.535], [Math.PI, 0, -0.535], [Math.PI / 2, 0.535, 0], [-Math.PI / 2, -0.535, 0]].forEach(([ry, ox, oz]) => {
+  [[0, 0, 0.51], [Math.PI, 0, -0.51], [Math.PI / 2, 0.51, 0], [-Math.PI / 2, -0.51, 0]].forEach(([ry, ox, oz]) => {
     const f = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.82), CLK_MAT);
-    f.position.set(CLK_X + ox, 4.12, CLK_Z + oz);
+    f.position.set(CLK_X + ox, 6.0, CLK_Z + oz);
     f.rotation.y = ry;
     f.matrixAutoUpdate = false; f.updateMatrix();
     scene.add(f);
@@ -1647,15 +1672,19 @@ export function buildWorld(scene) {
   // 도서관 앞 로비 — 실사(d80_0222): 벤치는 문 **서쪽**(문서고 벽 앞), 반납함만 동쪽
   [0xe8863a, 0x67b26f, 0xf2c94c, 0x67b26f].forEach((cc, i) =>
     box(0.6, 0.42, 0.6, cc, (i < 2 ? -28.25 + i * 0.7 : -26.75 + (i - 2) * 0.7), 0, -37.35, { walk: true }));
-  const colPole = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 2.6, 10), mat(0xf2ede2));
-  colPole.position.set(-18.6, 1.6, -36.6);
+  // 실사(d80_0222): 지름 ~2.3m 2단 도넛 + 주황 패딩 기둥 — 1/3 스케일이던 것을 실물 크기로
+  const colPole = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 1.0, 12), mat(0xf2ede2));
+  colPole.position.set(-18.6, 2.9, -36.9);
   scene.add(colPole);
-  const colWrap = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 1.0, 10), mat(0xe8863a));
-  colWrap.position.set(-18.6, 0.95, -36.6);
+  const colWrap = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.7, 12), mat(0xe8863a));
+  colWrap.position.set(-18.6, 1.5, -36.9);
   scene.add(colWrap);
-  const colSeat = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.66, 0.42, 12), mat(0xf2c94c));
-  colSeat.position.set(-18.6, 0.21, -36.6);
+  const colSeat = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.05, 0.26, 14), mat(0xf2c94c));
+  colSeat.position.set(-18.6, 0.13, -36.9);
   scene.add(colSeat); colliders.push(colSeat);
+  const colMid = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.38, 14), mat(0xe8863a));
+  colMid.position.set(-18.6, 0.45, -36.9);
+  scene.add(colMid);
 
   // ---- 급식동 (위성 검은 지붕 전체 — 식당홀을 통해 조리실→식품창고로 들어가는 구조) ----
   const kh = K.wallHeight;
