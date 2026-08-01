@@ -1756,6 +1756,18 @@ export function buildWorld(scene) {
     wallXWin(wx0, wx1, wz0, wallC, nWins, { h: FH, sill: 1.05, wh: 1.5, innerDir: 1 });
     wallZ(wz0, wz1, wx0, 0, totalH, wallC);
     wallZ(wz0, wz1, wx1, 0, totalH, wallC);
+    // S3 외피: 서관 서벽(외부·측문 옆)이 2층 통짜 민벽이었다 — 실물형 창 세트(면창)+배수관
+    if (wg.twoStory) {
+      [[-41.5], [-44.5], [-47.5]].forEach(([wzc]) => [1.55, 1.55 + FH].forEach(wy => {
+        geoAdd(UNIT_PLANE, 0x4a4f42, wx0 - 0.16, wy, wzc, [0, -Math.PI / 2, 0], 1.7, 1.45, 1);
+        glassAdd(wx0 - 0.17, wy, wzc, -Math.PI / 2, 1.55, 1.3);
+        paneTrim(wx0 - 0.18, wy, wzc, Math.PI / 2, 1.55, 1.3);
+      }));
+      [-39.2, -48.8].forEach(dz => {
+        softBox(0.09, totalH - 0.3, 0.09, 0x9aa5ad, wx0 - 0.22, 0.1, dz);        // 배수관
+        softBox(0.16, 0.22, 0.14, 0x9aa5ad, wx0 - 0.22, totalH - 0.5, dz);
+      });
+    }
     const edges = new Set();
     wg.rooms.forEach(r => {
       const [s0, s1] = r.span;
@@ -1996,6 +2008,16 @@ export function buildWorld(scene) {
   lowCabinet(ex0 + 0.3, shed0 - 0.3, ez0, 1, [...eBrick, ...[12, 22, 32].map(c => ({ c, w: 0.9 }))]);
   railWall(ex0 + 0.3, shed0 - 0.3, zCorE, 'x', eGaps, -1);
   [12, 22, 32].forEach(fx4 => fireExt(fx4, 0.098, ez0 + 0.42, ez0 + 0.16));
+  // S3 외피: 동관 동벽(x=ex1) 민벽 — 창고 고창 2 + 배수관 2
+  [[-52.8], [-49.6]].forEach(([hz2]) => {
+    geoAdd(UNIT_PLANE, 0x4a4f42, ex1 + 0.16, 2.55, hz2, [0, Math.PI / 2, 0], 1.5, 0.8, 1);
+    glassAdd(ex1 + 0.17, 2.55, hz2, Math.PI / 2, 1.35, 0.65);
+    paneTrim(ex1 + 0.18, 2.55, hz2, Math.PI / 2, 1.35, 0.65);
+  });
+  [-45.6, -56.6].forEach(dz2 => {
+    softBox(0.09, FH - 0.4, 0.09, 0x9aa5ad, ex1 + 0.22, 0.1, dz2);
+    softBox(0.16, 0.22, 0.14, 0x9aa5ad, ex1 + 0.22, FH - 0.6, dz2);
+  });
   exitLight(ex0 + 0.8, 2.45, (ez0 + zCorE) / 2, Math.PI / 2);
   for (let lx = ex0 + 3; lx < shed0 - 1; lx += 6) lamp(lx, FH - CEIL_DROP - 0.05, (ez0 + zCorE) / 2);
   const eEdges = new Set();
