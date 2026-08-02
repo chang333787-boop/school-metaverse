@@ -1654,8 +1654,13 @@ export function buildWorld(scene) {
     // ⚠️ 상단 참 — 계단 꼭대기(y0)와 테라스(z≤-18)를 잇는 착지판. 없으면 꼭대기 서쪽이 절벽(보행 시험에서 낙하)
     box(1.6, 1.0, 2.2, 0xdcd6ca, PODIUM_X + sd * 4.85, -1, ST_Z - 0.4, { walk: true });
     // 참 안쪽 끝 가드 — 여기서 중앙 방향으로 더 가면 운동장(-1)으로 떨어진다(보행 시험 2회 낙하)
-    softBox(0.06, 1.0, 2.0, 0xc9ced4, PODIUM_X + sd * 4.02, 0, ST_Z - 0.3);
-    softBox(0.1, 0.08, 2.0, 0xe2e6ea, PODIUM_X + sd * 4.02, 1.0, ST_Z - 0.3);
+    // ⚠️ 통짜 패널이면 정면에서 '회색 벽 2장'으로 읽힌다(전수 순회 적발) — 스테인리스 난간으로.
+    //    충돌은 아래 INVIS가 이미 담당하므로 여기는 순수 장식.
+    [ST_Z - 1.3, ST_Z + 0.7].forEach(pz9 => softBox(0.07, 1.0, 0.07, 0xc9ced4, PODIUM_X + sd * 4.02, 0, pz9));
+    softBox(0.08, 0.08, 2.0, 0xe2e6ea, PODIUM_X + sd * 4.02, 0.95, ST_Z - 0.3);
+    softBox(0.06, 0.06, 2.0, 0xc9ced4, PODIUM_X + sd * 4.02, 0.52, ST_Z - 0.3);
+    for (let bz9 = ST_Z - 1.15; bz9 < ST_Z + 0.7; bz9 += 0.31)
+      softBox(0.04, 0.95, 0.04, 0xd4d9dd, PODIUM_X + sd * 4.02, 0, bz9);
     box(0.12, 1.4, 2.2, 0, PODIUM_X + sd * 4.02, 0, ST_Z - 0.3, { material: INVIS, noCam: true });
     // 계단 경사 난간 (남측·바깥면) — 손잡이 + 접지 기둥 3
     const rA = Math.atan2(1, ST_N8 * ST_TREAD) * -sd;
@@ -3127,27 +3132,31 @@ export function buildWorld(scene) {
     // 위성+사용자 확인: 이 데크는 서관 뒤(주차장 자리)가 아니라 **텃밭 서측** 쉼터다
     const dkX = 72, dkZ = -62.5;   // 사용자 확인: 데크·식탁은 텃밭 **동측** 빈터
     // 실사(사용자 사진2): 데크는 넓다(~15×8) — 테이블 5·흰 석상·흰 장식펜스·큰나무 2
-    box(15, 0.14, 8, 0x9c6b4a, dkX, 0, dkZ, { walk: true });
+    // ⚠️두께 0.14면 '갈색 바닥 페인트'로 보인다 — 0.3 데크 + 측면 스커트로 단을 만든다
+    box(15, 0.3, 8, 0x9c6b4a, dkX, 0, dkZ, { walk: true });
+    [[15.1, 0.12, -4.05], [15.1, 0.12, 4.05]].forEach(([w9, d9, oz9]) =>
+      softBox(w9, 0.34, d9, 0x7d5238, dkX, 0, dkZ + oz9));
+    [[-7.55], [7.55]].forEach(([ox9]) => softBox(0.12, 0.34, 8.1, 0x7d5238, dkX + ox9, 0, dkZ));
     for (let fpx = dkX - 7; fpx <= dkX + 7; fpx += 1.4)
-      softBox(0.06, 0.9, 0.06, 0xeceff2, fpx, 0.14, dkZ - 3.9);
-    softBox(15, 0.06, 0.06, 0xeceff2, dkX, 1.0, dkZ - 3.9);
-    softBox(15, 0.05, 0.05, 0xeceff2, dkX, 0.6, dkZ - 3.9);
+      softBox(0.06, 0.9, 0.06, 0xeceff2, fpx, 0.3, dkZ - 3.9);
+    softBox(15, 0.06, 0.06, 0xeceff2, dkX, 1.16, dkZ - 3.9);
+    softBox(15, 0.05, 0.05, 0xeceff2, dkX, 0.76, dkZ - 3.9);
     // 흰 석상(기단 + 백색 인물상 근사)
-    box(0.8, 0.5, 0.8, 0xcfc7b6, dkX + 6.2, 0.14, dkZ - 2.6);
-    solidSoftBox(0.42, 1.1, 0.36, 0xf0f0ea, dkX + 6.2, 0.64, dkZ - 2.6);
-    softBox(0.3, 0.3, 0.26, 0xf0f0ea, dkX + 6.2, 1.74, dkZ - 2.6);
+    box(0.8, 0.5, 0.8, 0xcfc7b6, dkX + 6.0, 0.3, dkZ - 2.6);
+    solidSoftBox(0.42, 1.1, 0.36, 0xf0f0ea, dkX + 6.0, 0.8, dkZ - 2.6);
+    softBox(0.3, 0.3, 0.26, 0xf0f0ea, dkX + 6.0, 1.9, dkZ - 2.6);
     { const t1 = geoSoft(TRUNK_GEO, 0x6d4e32, dkX - 4, 1.1, dkZ - 5.6, null, 2.0, 2.2, 2.0);
       staticEntries.push({ key: t1.key, aabb: t1.aabb, solid: true, noRay: true });
       [[0,3.4,0],[1.3,4.1,0.4],[-1.2,3.9,-0.3]].forEach(([ox2,oy2,oz2]) =>
         geoSoft(ICO_GEO, 0x3f6b3a, dkX - 4 + ox2, oy2, dkZ - 5.6 + oz2, [0, ox2*2, 0], 1.6, 1.15, 1.6)); }
-    [[-4.6, -1.4], [0.2, -2.2], [4.6, -0.8], [-1.8, 1.6], [3.4, 2.2]].forEach(([ox, oz]) => {
+    [[-5.2, -1.6], [-1.6, -2.4], [2.2, -1.6], [-3.4, 1.9], [1.4, 2.2]].forEach(([ox, oz]) => {
       const tx6 = dkX + ox, tz6 = dkZ + oz;
-      box(1.5, 0.1, 0.7, 0x8a5a3b, tx6, 0.62, tz6, { collide: false, walk: true });
-      [-0.6, 0.6].forEach(lx => box(0.1, 0.62, 0.62, 0x6d4a34, tx6 + lx, 0.14, tz6));
-      [-0.62, 0.62].forEach(bz => box(1.5, 0.09, 0.32, 0x9c6b4a, tx6, 0.42, tz6 + bz, { collide: false, walk: true }));
+      box(1.5, 0.1, 0.7, 0x8a5a3b, tx6, 0.78, tz6, { collide: false, walk: true });
+      [-0.6, 0.6].forEach(lx => box(0.1, 0.62, 0.62, 0x6d4a34, tx6 + lx, 0.3, tz6));
+      [-0.62, 0.62].forEach(bz => box(1.5, 0.09, 0.32, 0x9c6b4a, tx6, 0.58, tz6 + bz, { collide: false, walk: true }));
     });
     for (let fx6 = dkX - 5.5; fx6 <= dkX + 3.5; fx6 += 1.1)
-      geoSoft(ICO_GEO, 0x9b7bd0, fx6, 0.3, dkZ + 4.6, [0, fx6, 0], 0.42, 0.34, 0.42);   // 맥문동 보라 띠
+      geoSoft(ICO_GEO, 0x9b7bd0, fx6, 0.22, dkZ + 5.1, [0, fx6, 0], 0.42, 0.34, 0.42);   // 맥문동 보라 띠(데크 밖 잔디)
   }
   // 위성+사용자 확인: 보건실·나래반 뒤(서관 북측)는 **바로 주차장**
   {
