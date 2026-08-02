@@ -25,7 +25,10 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 // 긴 수평 모서리(벽 상단·창턱·바닥 띠)마다 모아레 물결이 생기고 걸을 때마다 기어간다.
 // (렌더 버퍼 계측으로는 원리적으로 안 보인다 — 업스케일은 그 뒤 브라우저 단계라서.)
 // → 기기 배율 그대로 렌더(상한 2). 느린 기기는 아래 fps 사다리가 자동으로 낮춘다.
-const PIX_LADDER = [Math.min(window.devicePixelRatio || 1, 2), 1.5, 1.25, 1];
+// ⚠️ 사다리는 **정수 축소만**: dpr → dpr/2. 1.5·1.25 같은 비정수 배율로 내려가면
+//    업스케일 모아레(자글거림)를 도로 불러온다 — 성능이 부족하면 차라리 절반 해상도가 낫다.
+const __dpr = Math.min(window.devicePixelRatio || 1, 2);
+const PIX_LADDER = [__dpr, __dpr / 2];
 let pixStep = 0;
 renderer.setPixelRatio(PIX_LADDER[0]);
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -78,7 +81,7 @@ scene.add(sunDisc);
 
 // ---------- FXAA 후처리 (상용 게임식 최종 AA — 가는 창틀·난간·글자 테두리가 이동 중 기어다니는
 // 에일리어싱은 MSAA·해상도로도 안 죽는다. 씬을 4x MSAA RT에 그리고 FXAA 패스로 화면에 낸다) ----------
-const fxaaRT = new THREE.WebGLRenderTarget(2, 2, { samples: 4 });
+const fxaaRT = new THREE.WebGLRenderTarget(2, 2, { samples: 2 });   // FXAA가 있으니 MSAA는 2x면 충분 — 4x는 프레임 드랍(실사용 보고)
 // RT에는 리니어로 기록된다(three는 캔버스에만 sRGB 변환 적용) — 아래 셰이더 끝에서 직접 sRGB 인코딩
 fxaaRT.texture.minFilter = THREE.LinearFilter;
 fxaaRT.texture.generateMipmaps = false;
@@ -769,12 +772,11 @@ function loop() {
     if (lbl) { promptBox.textContent = lbl; promptBox.style.display = 'block'; }
     else promptBox.style.display = 'none';
     // 해상도 사다리: fps가 지속적으로 낮으면 한 단계씩 내림 (크롬북 보호)
-    if (t > 5 && fpsVal > 0 && fpsVal < 38 && pixStep < PIX_LADDER.length - 1) {
+    if (t > 3 && fpsVal > 0 && fpsVal < 45 && pixStep < PIX_LADDER.length - 1) {
       lowFpsAcc += 0.25;
-      if (lowFpsAcc >= 2) {   // 2초 연속 낮을 때만
+      if (lowFpsAcc >= 1) {   // 1초 연속 낮으면 즉시 절반 해상도로
         lowFpsAcc = 0;
         pixStep++;
-        while (pixStep < PIX_LADDER.length - 1 && PIX_LADDER[pixStep] >= PIX_LADDER[0]) pixStep++;
         renderer.setPixelRatio(PIX_LADDER[pixStep]);
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
