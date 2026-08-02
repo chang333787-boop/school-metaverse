@@ -1632,7 +1632,7 @@ export function buildWorld(scene) {
     const ovalTex = ovalRailTexture();
     ovalTex.wrapS = ovalTex.wrapT = THREE.RepeatWrapping;
     ovalTex.repeat.set(16, 1);
-    const OVAL_MAT = new THREE.MeshLambertMaterial({ map: ovalTex, alphaTest: 0.4, side: THREE.DoubleSide });
+    const OVAL_MAT = new THREE.MeshLambertMaterial({ map: ovalTex, alphaTest: 0.4, alphaToCoverage: true, side: THREE.DoubleSide });
     const op = new THREE.Mesh(new THREE.PlaneGeometry(10.6, 0.8), OVAL_MAT);
     op.position.set(PODIUM_X, 0.56, rlZ);
     op.matrixAutoUpdate = false; op.updateMatrix();
@@ -1676,7 +1676,7 @@ export function buildWorld(scene) {
       ot.wrapS = ot.wrapT = THREE.RepeatWrapping;
       ot.repeat.set(5, 1);
       const om = new THREE.Mesh(new THREE.PlaneGeometry(ST_N8 * ST_TREAD + 0.3, 0.72),
-        new THREE.MeshLambertMaterial({ map: ot, alphaTest: 0.4, side: THREE.DoubleSide }));
+        new THREE.MeshLambertMaterial({ map: ot, alphaTest: 0.4, alphaToCoverage: true, side: THREE.DoubleSide }));
       om.position.set(rcx2, -0.02, ST_Z + 0.72);
       om.rotation.z = rA;
       om.matrixAutoUpdate = false; om.updateMatrix();
@@ -1764,7 +1764,7 @@ export function buildWorld(scene) {
   // 테라스 위 초록 그물 펜스 (통로에만 틈) — 격자 텍스처라 '초록 벽'이 아니라 그물망으로 보임
   const NET_TEX = netTexture();
   NET_TEX.wrapS = NET_TEX.wrapT = THREE.RepeatWrapping;
-  const NET_FENCE = new THREE.MeshLambertMaterial({ map: NET_TEX, alphaTest: 0.4, side: THREE.DoubleSide });
+  const NET_FENCE = new THREE.MeshLambertMaterial({ map: NET_TEX, alphaTest: 0.4, alphaToCoverage: true, side: THREE.DoubleSide });
   // 구령대(정면 6.6m)와 그 좌우 계단(각 3.4m) 구간은 펜스를 비운다
   // 필로티 앞은 실물에 펜스가 없다 — 모자이크 옹벽 구간(±10.5)까지 비운다
   // 실사(hi_0255·hi_0276): 정면 테라스 가장자리에 그물펜스는 **없다** — 관목 띠와 잔디뿐.
