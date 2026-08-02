@@ -76,6 +76,70 @@ sunDisc.position.copy(sun.position).normalize().multiplyScalar(235);
 sunDisc.lookAt(0, 0, 0);
 scene.add(sunDisc);
 
+// ---------- FXAA 후처리 (상용 게임식 최종 AA — 가는 창틀·난간·글자 테두리가 이동 중 기어다니는
+// 에일리어싱은 MSAA·해상도로도 안 죽는다. 씬을 4x MSAA RT에 그리고 FXAA 패스로 화면에 낸다) ----------
+const fxaaRT = new THREE.WebGLRenderTarget(2, 2, { samples: 4 });
+// RT에는 리니어로 기록된다(three는 캔버스에만 sRGB 변환 적용) — 아래 셰이더 끝에서 직접 sRGB 인코딩
+fxaaRT.texture.minFilter = THREE.LinearFilter;
+fxaaRT.texture.generateMipmaps = false;
+const fxaaScene = new THREE.Scene();
+const fxaaCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const fxaaMat = new THREE.ShaderMaterial({
+  uniforms: { tDiffuse: { value: fxaaRT.texture }, resolution: { value: new THREE.Vector2(2, 2) } },
+  depthTest: false, depthWrite: false, toneMapped: false,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: `
+    precision highp float;
+    uniform sampler2D tDiffuse; uniform vec2 resolution; varying vec2 vUv;
+    #define R_MIN (1.0/128.0)
+    #define R_MUL (1.0/8.0)
+    #define SPAN 8.0
+    void main(){
+      vec2 px = 1.0 / resolution;
+      vec3 nw = texture2D(tDiffuse, vUv + vec2(-1.0,-1.0)*px).rgb;
+      vec3 ne = texture2D(tDiffuse, vUv + vec2( 1.0,-1.0)*px).rgb;
+      vec3 sw = texture2D(tDiffuse, vUv + vec2(-1.0, 1.0)*px).rgb;
+      vec3 se = texture2D(tDiffuse, vUv + vec2( 1.0, 1.0)*px).rgb;
+      vec4 mid4 = texture2D(tDiffuse, vUv);
+      vec3 m  = mid4.rgb;
+      vec3 lu = vec3(0.299, 0.587, 0.114);
+      float lNW = dot(nw, lu), lNE = dot(ne, lu), lSW = dot(sw, lu), lSE = dot(se, lu), lM = dot(m, lu);
+      float lMin = min(lM, min(min(lNW,lNE), min(lSW,lSE)));
+      float lMax = max(lM, max(max(lNW,lNE), max(lSW,lSE)));
+      vec2 dir = vec2(-((lNW+lNE)-(lSW+lSE)), ((lNW+lSW)-(lNE+lSE)));
+      float dirReduce = max((lNW+lNE+lSW+lSE)*0.25*R_MUL, R_MIN);
+      float rcp = 1.0/(min(abs(dir.x), abs(dir.y)) + dirReduce);
+      dir = clamp(dir*rcp, vec2(-SPAN), vec2(SPAN)) * px;
+      vec3 a2 = 0.5*(texture2D(tDiffuse, vUv + dir*(1.0/3.0-0.5)).rgb + texture2D(tDiffuse, vUv + dir*(2.0/3.0-0.5)).rgb);
+      vec3 b2 = a2*0.5 + 0.25*(texture2D(tDiffuse, vUv + dir*-0.5).rgb + texture2D(tDiffuse, vUv + dir*0.5).rgb);
+      float lB = dot(b2, lu);
+      vec3 c = (lB < lMin || lB > lMax) ? a2 : b2;
+      c = mix(c*12.92, 1.055*pow(c, vec3(1.0/2.4))-0.055, step(vec3(0.0031308), c));   // linear→sRGB
+      gl_FragColor = vec4(c, mid4.a);
+    }`,
+});
+{
+  const tri = new THREE.BufferGeometry();
+  tri.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1,-1,0, 3,-1,0, -1,3,0]), 3));
+  tri.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0,0, 2,0, 0,2]), 2));
+  const fsq = new THREE.Mesh(tri, fxaaMat);
+  fsq.frustumCulled = false;
+  fxaaScene.add(fsq);
+}
+const _dbs = new THREE.Vector2();
+function syncFxaaSize() {
+  renderer.getDrawingBufferSize(_dbs);
+  if (fxaaRT.width !== _dbs.x || fxaaRT.height !== _dbs.y) fxaaRT.setSize(_dbs.x, _dbs.y);
+  fxaaMat.uniforms.resolution.value.set(_dbs.x, _dbs.y);
+}
+function renderFrame() {
+  syncFxaaSize();
+  renderer.setRenderTarget(fxaaRT);
+  renderer.render(scene, camera);
+  renderer.setRenderTarget(null);
+  renderer.render(fxaaScene, fxaaCam);
+}
+
 const world = buildWorld(scene);
 const player = new Player(scene, world);
 // P4(지직임): 반복 캔버스 텍스처(트랙·그물·코스·현판)에 이방성 필터 — 원거리 글랜싱 각 에일리어싱 억제
@@ -716,7 +780,7 @@ function loop() {
       }
     } else lowFpsAcc = 0;
   }
-  renderer.render(scene, camera);
+  renderFrame();
 }
 loop();
 
@@ -738,7 +802,7 @@ window.SD = {
       updateCamera(dt);
       worldTick(dt);
     }
-    renderer.render(scene, camera);
+    renderFrame();
   },
   tp(x, z, y = 0) { player.escapeTo({ x, y, z }); },
   pos: () => [player.pos.x.toFixed(1), player.pos.y.toFixed(1), player.pos.z.toFixed(1)],
