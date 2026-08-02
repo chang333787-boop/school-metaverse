@@ -869,8 +869,10 @@ export function buildWorld(scene) {
       plane(2.4, 1.7, 0xf2c9a0, cx + 0.6, y0 + 0.106, at(depth - 2.1));
       // 여닫는 사물함 2칸 (E키 — 방탈출 요소)
       if (cw >= 7) {
-        const lkW2 = cw - 6.8;
-        [cx - lkW2 / 2 + 0.35, cx + lkW2 / 2 - 0.35].forEach(lx4 => {
+        // ⚠️ 옛 식 `cw-6.8`은 방이 좁으면 두 문 간격이 0.1~0.3m가 되는데 문짝 폭은 0.5라
+        //    두 사물함 문이 **서로 겹쳐 z-fighting**(복도 창 너머로 보이던 반짝임의 정체).
+        //    문짝 폭(0.5)보다 넓은 고정 간격으로 나란히 놓는다.
+        [cx - 0.28, cx + 0.28].forEach(lx4 => {
           const lg2 = new THREE.Group();
           const ld = new THREE.Mesh(UNIT_BOX, mat(0xded5c6));
           ld.scale.set(0.5, 0.62, 0.05);
@@ -1402,7 +1404,7 @@ export function buildWorld(scene) {
   // 유도등은 복도 끝 바깥문·계단실 개구에만 (문 위 매달림 팻말과 정면으로 겹치지 않게)
   exitLight(fx0 + 0.9, 2.45, FR.corridorExitZ, Math.PI / 2);
   exitLight(fx1 - 0.9, 2.45, FR.corridorExitZ, -Math.PI / 2);
-  exitLight(-14.3, 2.45, fz0 + 0.2, 0);
+  exitLight(-16.9, 2.45, fz0 + 0.2, 0);   // ⚠️-14.3은 계단 개구 중앙 — '2층 ↑' 팻말과 겹쳐 서로 관통(전수 순회 적발)
   // ⚠️ 형광등 y: 천장(FH-CEIL_DROP=3.13)보다 **아래**여야 보인다. FH-0.12(3.28)는 천장 위라 안 보였다.
   for (let lx = fx0 + 3; lx < fx1 - 1; lx += 6) lamp(lx, FH - CEIL_DROP - 0.05, (fz0 + zCor) / 2);
   // 복도 벤치 — 계단실 개구부(-15.5~-13.1)를 피해 배치
