@@ -21,7 +21,13 @@ window.addEventListener('error', ev => {
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+// ⚠️ 반짝임(자글거림)의 최종 원인: 1.25로 렌더한 것을 2.0 화면에 **비정수 업스케일**하면
+// 긴 수평 모서리(벽 상단·창턱·바닥 띠)마다 모아레 물결이 생기고 걸을 때마다 기어간다.
+// (렌더 버퍼 계측으로는 원리적으로 안 보인다 — 업스케일은 그 뒤 브라우저 단계라서.)
+// → 기기 배율 그대로 렌더(상한 2). 느린 기기는 아래 fps 사다리가 자동으로 낮춘다.
+const PIX_LADDER = [Math.min(window.devicePixelRatio || 1, 2), 1.5, 1.25, 1];
+let pixStep = 0;
+renderer.setPixelRatio(PIX_LADDER[0]);
 renderer.setSize(window.innerWidth, window.innerHeight);
 // 그림자는 첫 프레임에 한 번만 굽는다 (해·월드가 정적)
 renderer.shadowMap.enabled = true;
@@ -650,8 +656,7 @@ function worldTick(dt) {
 
 // ---------- 루프 ----------
 const clock = new THREE.Clock();
-let fpsAcc = 0, fpsN = 0, fpsVal = 0, hudAcc = 0;
-let pixelChecked = false;
+let fpsAcc = 0, fpsN = 0, fpsVal = 0, hudAcc = 0, lowFpsAcc = 0;
 window.__lastErr = null;
 function loop() {
   requestAnimationFrame(loop);
@@ -699,14 +704,17 @@ function loop() {
     const lbl = targetLabel(tgt);
     if (lbl) { promptBox.textContent = lbl; promptBox.style.display = 'block'; }
     else promptBox.style.display = 'none';
-    // 해상도 자동 조절 (1회): 첫 5초 뒤 fps<40이면 낮춤
-    if (!pixelChecked && t > 5) {
-      pixelChecked = true;
-      if (fpsVal > 0 && fpsVal < 40) {
-        renderer.setPixelRatio(1);
+    // 해상도 사다리: fps가 지속적으로 낮으면 한 단계씩 내림 (크롬북 보호)
+    if (t > 5 && fpsVal > 0 && fpsVal < 38 && pixStep < PIX_LADDER.length - 1) {
+      lowFpsAcc += 0.25;
+      if (lowFpsAcc >= 2) {   // 2초 연속 낮을 때만
+        lowFpsAcc = 0;
+        pixStep++;
+        while (pixStep < PIX_LADDER.length - 1 && PIX_LADDER[pixStep] >= PIX_LADDER[0]) pixStep++;
+        renderer.setPixelRatio(PIX_LADDER[pixStep]);
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
-    }
+    } else lowFpsAcc = 0;
   }
   renderer.render(scene, camera);
 }
