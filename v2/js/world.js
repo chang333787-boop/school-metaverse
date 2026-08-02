@@ -30,8 +30,10 @@ export function buildWorld(scene) {
   // 낮 채도 관문: 원색을 그대로 쓰지 않고 살짝 눌러 통일감 (v1 shade의 경량판)
   function tone(hex) { _c.set(hex); _c.multiplyScalar(0.97); return _c; }
 
+  const allBoxes = [];   // 감사용 — 장식 포함 전 상자
   function addBox(w, h, d, hex, cx, baseY, cz, opt = {}) {
     if (Math.min(w, h, d) < 0.15 && !opt.thin) throw new Error('헌법① 위반: 부재 <0.15m ' + [w,h,d]);
+    allBoxes.push({ x0: cx-w/2, x1: cx+w/2, y0: baseY, y1: baseY+h, z0: cz-d/2, z1: cz+d/2 });
     const key = Math.floor(cx / CHUNK) + '_' + Math.floor(cz / CHUNK);
     let ch = chunks.get(key);
     if (!ch) { ch = { pos: [], col: [] }; chunks.set(key, ch); }
@@ -69,11 +71,12 @@ export function buildWorld(scene) {
     for (let i = 0; i < n; i++) {
       const wc = x0 + gap * (i + 0.5), ww = Math.min(2.2, gap - 1.6);
       if (ww < 1.0) continue;
-      addBox(ww, wh, 0.2, 0x51606c, wc, y0 + sill, z + (opt.face ?? 1) * 0.08, { collide: false });
+      addBox(ww, wh, 0.2, 0x51606c, wc, y0 + sill, z + (opt.face ?? 1) * 0.13, { collide: false });   // 면이 벽보다 8cm 돌출(v1 교훈: 얕으면 원거리 얼룩)
     }
   }
   function wallWithWinsZ(z0, z1, x, wallHex, opt = {}) {
     const h = opt.h ?? FH, y0 = opt.y0 ?? 0, sill = opt.sill ?? 1.0, wh = opt.wh ?? 1.5;
+    z0 += 0.3; z1 -= 0.3;                        // 코너 인셋 — x벽과 부피 겹침 금지(헌법③ 감사 적발)
     const len = z1 - z0;
     addBox(0.3, h, len, wallHex, x, y0, (z0 + z1) / 2);
     const n = opt.wins ?? Math.max(1, Math.floor(len / 4.2));
@@ -81,7 +84,7 @@ export function buildWorld(scene) {
     for (let i = 0; i < n; i++) {
       const wc = z0 + gap * (i + 0.5), ww = Math.min(2.2, gap - 1.6);
       if (ww < 1.0) continue;
-      addBox(0.2, wh, ww, 0x51606c, x + (opt.face ?? 1) * 0.08, y0 + sill, wc, { collide: false });
+      addBox(0.2, wh, ww, 0x51606c, x + (opt.face ?? 1) * 0.13, y0 + sill, wc, { collide: false });
     }
   }
 
@@ -104,12 +107,12 @@ export function buildWorld(scene) {
   wallWithWinsZ(fz0, fz1, fx1, WALL, { wins: 2, face: 1 });
   addBox(fx1 - fx0 + 0.8, 0.3, fz1 - fz0 + 0.8, 0xd9dce1, (fx0+fx1)/2, FH, (fz0+fz1)/2);       // 지붕 슬래브
   addBox(fx1 - fx0 + 0.8, 0.45, 0.3, 0xe8e6de, (fx0+fx1)/2, FH + 0.3, fz1 + 0.25);            // 파라펫(정면·통벽 0.3)
-  addBox(fx1 - fx0, 0.5, 0.6, BAND, (fx0+fx1)/2, 2.75, fz1 + 0.05, { collide: false });        // 상부 띠(저대비·두께 0.6)
+  addBox(fx1 - fx0 - 0.4, 0.5, 0.6, BAND, (fx0+fx1)/2, 2.75, fz1 + 0.05, { collide: false });   // 상부 띠(끝 0.2 인셋 — 벽 끝면과 동일평면 금지)
 
   // ---------- 서관(2층) ----------
   const wg = B.wings[0]; const [wx0, wx1] = wg.x, [wz0, wz1] = wg.z;
-  wallWithWins(wx0, wx1, wz0, WALL, { h: FH * 2, wins: 6, face: -1 });
-  wallWithWins(wx0, wx1, wz0, WALL, { y0: FH, wins: 6, face: -1, sill: 1.0 });
+  wallWithWins(wx0, wx1, wz0, WALL, { h: FH, wins: 6, face: -1 });                 // 1층 벽+창
+  wallWithWins(wx0, wx1, wz0, WALL, { y0: FH, h: FH, wins: 6, face: -1 });          // 2층 벽+창 (적층 — 겹침 아님)
   wallWithWinsZ(wz0, wz1, wx0, WALL, { h: FH * 2, wins: 3, face: -1 });
   addBox(wx1 - wx0 + 0.8, 0.3, wz1 - wz0 + 0.8, 0xd9dce1, (wx0+wx1)/2, FH * 2, (wz0+wz1)/2);
   addBox(wx1 - wx0 + 0.8, 0.45, 0.3, 0xe8e6de, (wx0+wx1)/2, FH * 2 + 0.3, wz0 - 0.25);
@@ -131,18 +134,18 @@ export function buildWorld(scene) {
   const G = SCHOOL.gym; const gx = G.center[0], gz = G.center[1];
   const gx0 = gx - G.width/2, gx1 = gx + G.width/2, gz0 = gz - G.depth/2, gz1 = gz + G.depth/2;
   addBox(G.width, 3.2, 0.3, 0xa8503a, gx, 0, gz0); addBox(G.width, 3.2, 0.3, 0xa8503a, gx, 0, gz1);
-  addBox(0.3, 3.2, G.depth, 0xa8503a, gx0, 0, gz); addBox(0.3, 3.2, G.depth, 0xa8503a, gx1, 0, gz);
+  addBox(0.3, 3.2, G.depth - 0.6, 0xa8503a, gx0, 0, gz); addBox(0.3, 3.2, G.depth - 0.6, 0xa8503a, gx1, 0, gz);
   addBox(G.width, G.wallHeight - 3.2, 0.3, 0xa8a096, gx, 3.2, gz0);
   addBox(G.width, G.wallHeight - 3.2, 0.3, 0xa8a096, gx, 3.2, gz1);
-  addBox(0.3, G.wallHeight - 3.2, G.depth, 0xa8a096, gx0, 3.2, gz);
-  addBox(0.3, G.wallHeight - 3.2, G.depth, 0xa8a096, gx1, 3.2, gz);
+  addBox(0.3, G.wallHeight - 3.2, G.depth - 0.6, 0xa8a096, gx0, 3.2, gz);
+  addBox(0.3, G.wallHeight - 3.2, G.depth - 0.6, 0xa8a096, gx1, 3.2, gz);
   addBox(G.width + 1, 0.4, G.depth + 1, 0xc35233, gx, G.wallHeight, gz);   // 지붕(낮은 박공 대신 평슬래브 — 셸 단계)
 
   // ---------- 🏗 공사장 연출 (사용자 제안: '실제 건축처럼' — 준공 때 철거 예정) ----------
   // 전 부재 헌법① 충족(≥0.15). 타워크레인·안전펜스·공사안내판·자재 팔레트.
   {
     const CR = 0xe8b23a, ST = 0x8d9298;
-    const cx9 = 44, cz9 = -14;                                   // 크레인: 마당 동측
+    const cx9 = 44, cz9 = -15.5;                                 // 크레인: 운동장 동측(테라스 단 z-18·펜스 z-13 모두와 이격)
     addBox(3, 1.2, 3, 0xc8ccd0, cx9, terrY9(cz9), cz9);          // 기초
     addBox(0.8, 22, 0.8, CR, cx9, terrY9(cz9) + 1.2, cz9);       // 마스트
     addBox(16, 0.8, 0.8, CR, cx9 - 5, terrY9(cz9) + 23.2, cz9);  // 지브
@@ -154,8 +157,8 @@ export function buildWorld(scene) {
     for (let fx9 = -36; fx9 <= 36; fx9 += 8)
       addBox(7.6, 1.8, 0.16, fx9 % 16 === 0 ? 0xe8632e : 0xf0f2f4, fx9 + 4, -1, -13, { thin: true, collide: false });
     // 공사안내판
-    addBox(6, 2.4, 0.3, 0xf0f2f4, 6, -1, -10.5);
-    addBox(0.3, 1.2, 0.3, ST, 3.4, -2.2 + 1.2, -10.5); addBox(0.3, 1.2, 0.3, ST, 8.6, -2.2 + 1.2, -10.5);
+    addBox(6, 2.4, 0.3, 0xf0f2f4, 6, 0.2, -10.5);                           // 판 (y 0.2~2.6 — 다리와 부피 안 겹침)
+    addBox(0.3, 1.2, 0.3, ST, 3.4, -1, -10.5); addBox(0.3, 1.2, 0.3, ST, 8.6, -1, -10.5);   // 다리 (y -1~0.2 — 판과 부피 안 겹침)
   }
   zones.push({ x0: -82, x1: 82, z0: -70, z1: 46, label: '학교 마당 (공사중)' });
 
@@ -169,6 +172,24 @@ export function buildWorld(scene) {
         grid.get(k).push(i);
       }
   });
+  // ---------- 헌법③ 감사: 같은 방향의 면이 같은 평면에서 겹치면 z-fight — 빌드가 직접 적발한다
+  //  (같은쪽 면 a0==b0 또는 a1==b1 + 나머지 두 축에서 실면적 겹침. a1==b0(적층 이음)은 무해라 제외)
+  {
+    const EPS = 0.004, faults = [];
+    const ov = (a0,a1,b0,b1) => Math.min(a1,b1) - Math.max(a0,b0) > 0.02;
+    for (let i = 0; i < allBoxes.length; i++) for (let j = i+1; j < allBoxes.length; j++) {
+      const A = allBoxes[i], B = allBoxes[j];
+      const same = (p,q) => Math.abs(p-q) < EPS;
+      if ((same(A.z0,B.z0)||same(A.z1,B.z1)) && ov(A.x0,A.x1,B.x0,B.x1) && ov(A.y0,A.y1,B.y0,B.y1)) faults.push([i,j,'z']);
+      else if ((same(A.x0,B.x0)||same(A.x1,B.x1)) && ov(A.z0,A.z1,B.z0,B.z1) && ov(A.y0,A.y1,B.y0,B.y1)) faults.push([i,j,'x']);
+      else if ((same(A.y0,B.y0)||same(A.y1,B.y1)) && ov(A.x0,A.x1,B.x0,B.x1) && ov(A.z0,A.z1,B.z0,B.z1)) faults.push([i,j,'y']);
+    }
+    if (faults.length) {
+      const fmt = b9 => '[' + [b9.x0,b9.x1,b9.y0,b9.y1,b9.z0,b9.z1].map(v=>+v.toFixed(2)).join(',') + ']';
+      faults.slice(0, 24).forEach(([i,j,ax]) => console.error('헌법③ ' + ax + ' A=' + fmt(allBoxes[i]) + ' B=' + fmt(allBoxes[j])));
+      console.error('헌법③ 위반 총 ' + faults.length + '쌍 — 반짝임 예정지. 수정 전 커밋 금지.');
+    } else console.log('헌법③ 감사: 동일평면 겹침 0');
+  }
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
   for (const ch of chunks.values()) {
     const g = new THREE.BufferGeometry();
