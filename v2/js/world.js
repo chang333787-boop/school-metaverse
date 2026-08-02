@@ -94,9 +94,7 @@ export function buildWorld(scene) {
   addPanel(320, 240, GRASS, 0, -1.001, -10);                       // 기반 잔디(운동장 레벨)
   addBox(164, 1, 52, PAVE, 0, -1, TERR_Z - 26, { collide: true }); // 테라스 단(통상자 — 옹벽=옆면)
   addPanel(96, 64, SAND, SCHOOL.field.center[0], -0.995, SCHOOL.field.center[1]); // 운동장 모래
-  // 중앙 계단(테라스↔운동장): 폭 6, 5단 — 두꺼운 단(헌법①)
-  for (let i = 0; i < 5; i++)
-    addBox(6, 0.2 * (i + 1), 0.4, PAVE, SCHOOL.flagPole[0] + 9, -1, TERR_Z + 0.2 + 0.4 * i);
+  // (임시 중앙계단은 2단계 포치 계단이 대체 — 철거)
 
   // ---------- 앞줄(본관 1층) ----------
   const WALL = 0xd8c39a, BAND = 0xc9b48d;    // 저대비 띠(헌법②)
@@ -107,8 +105,22 @@ export function buildWorld(scene) {
   wallWithWinsZ(fz0, fz1, fx1, WALL, { wins: 2, face: 1 });
   addBox(fx1 - fx0 + 0.8, 0.3, fz1 - fz0 + 0.8, 0xd9dce1, (fx0+fx1)/2, FH, (fz0+fz1)/2);       // 지붕 슬래브
   addBox(fx1 - fx0 + 0.8, 0.45, 0.3, 0xe8e6de, (fx0+fx1)/2, FH + 0.3, fz1 + 0.25);            // 파라펫(정면·통벽 0.3)
-  addBox(fx1 - fx0 - 0.4, 0.5, 0.6, BAND, (fx0+fx1)/2, 2.75, fz1 + 0.05, { collide: false });   // 상부 띠(끝 0.2 인셋 — 벽 끝면과 동일평면 금지)
+  // (베이지 상부 띠는 2단계 파랑 밴드가 대체 — 철거)
 
+  // ---------- 2단계 공정: 현관 포치·색 밴드·정면 디테일 ----------
+  {
+    const hx = 6.15;                                             // 현관축
+    addBox(3.6, 2.62, 0.2, 0x3d4a55, hx, 0.02, fz1 + 0.19, { collide: false });   // 현관 유리(바닥 2cm 이격 — 동일평면 금지)
+    addBox(76, 0.6, 0.2, 0x4a6fa5, 0, 2.65, fz1 + 0.14, { collide: false });  // 파랑 밴드(창 상단 2.6 위·z 별도 평면)
+    // 필로티 포치: 기둥 4(0.4각) + 평지붕 + 6단 계단 (전부 헌법① 충족)
+    [-4.2, -1.5, 1.5, 4.2].forEach(ox => addBox(0.4, 3.0, 0.4, 0x3b2d24, hx + ox, 0, fz1 + 4.2));
+    addBox(11, 0.45, 5.6, 0x3b2d24, hx, 3.0, fz1 + 3.2);                       // 포치 지붕
+    addBox(11.4, 0.3, 0.6, 0x5b8fc9, hx, 3.45, fz1 + 5.9, { collide: false }); // 하늘색 캡(지붕 위 적층)
+    for (let i = 0; i < 6; i++)                                                // 중앙 계단 6단(포치 남측)
+      addBox(6.4, 0.18 * (6 - i), 0.36, PAVE, hx, -1, fz1 + 6.2 + 0.36 * i);
+  }
+  // 본관 옥탑
+  addBox(4, 1.8, 3, 0xe8e6de, fx1 - 8, FH + 0.3, (fz0 + fz1) / 2);
   // ---------- 서관(2층) ----------
   const wg = B.wings[0]; const [wx0, wx1] = wg.x, [wz0, wz1] = wg.z;
   wallWithWins(wx0, wx1, wz0, WALL, { h: FH, wins: 6, face: -1 });                 // 1층 벽+창
@@ -139,7 +151,9 @@ export function buildWorld(scene) {
   addBox(G.width, G.wallHeight - 3.2, 0.3, 0xa8a096, gx, 3.2, gz1);
   addBox(0.3, G.wallHeight - 3.2, G.depth - 0.6, 0xa8a096, gx0, 3.2, gz);
   addBox(0.3, G.wallHeight - 3.2, G.depth - 0.6, 0xa8a096, gx1, 3.2, gz);
-  addBox(G.width + 1, 0.4, G.depth + 1, 0xc35233, gx, G.wallHeight, gz);   // 지붕(낮은 박공 대신 평슬래브 — 셸 단계)
+  addBox(G.width + 1, 0.4, G.depth + 1, 0xc35233, gx, G.wallHeight, gz);            // 지붕 기단
+  addBox(G.width + 0.4, 0.5, G.depth * 0.62, 0xc35233, gx, G.wallHeight + 0.4, gz);  // 박공 근사 1단
+  addBox(G.width - 0.2, 0.5, G.depth * 0.3, 0xb04a2e, gx, G.wallHeight + 0.9, gz);   // 박공 근사 2단(용마루)
 
   // ---------- 🏗 공사장 연출 (사용자 제안: '실제 건축처럼' — 준공 때 철거 예정) ----------
   // 전 부재 헌법① 충족(≥0.15). 타워크레인·안전펜스·공사안내판·자재 팔레트.
