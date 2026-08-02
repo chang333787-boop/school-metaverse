@@ -1184,7 +1184,9 @@ export function buildWorld(scene) {
   // 실물: **구관 = 흰 대형 타일 + 양쪽 검은 대리석 테두리 띠(0.3m)** / 신관·2층 = 회색 테라조.
   // ⚠️ 반드시 plane() (병합 + staticEntries) — softBox 로 만들면 지면 레이가 통과해 슬래브로 되돌아간다.
   // ⚠️ 중앙 타일과 양쪽 띠는 z 구간이 서로 겹치지 않게 계산 → 같은 y 로 둬도 깜빡이지 않는다.
-  const CORR_INSET = 0.17;                     // 굽도리(두께 0.34)의 절반 — 벽면에서 시작
+  // ⚠️ 굽도리 돌출은 7cm(두께 0.44) — 0.34(=2cm 돌출)면 원거리 그레이징에서 벽면과 픽셀 붕괴해
+  //    초록/베이지가 얼룩으로 섞여 자글거린다(사용자 스크린샷+레이 페어 -35.47/-35.45로 확정)
+  const CORR_INSET = 0.22;                     // 굽도리(두께 0.44)의 절반 — 벽면에서 시작
   function corridorFloor(x0c, x1c, z0c, z1c, yc, mainC, bandC, bandW) {
     const a = z0c + CORR_INSET, b = z1c - CORR_INSET;
     if (b - a <= bandW * 2 + 0.1 || x1c - x0c <= 0.2) return;
@@ -1306,7 +1308,7 @@ export function buildWorld(scene) {
     });
     wallXWin(fx0, -19.2, HALL_WALL_Z, innerC, wWins, { h: FH, sill: 1.9, wh: 0.9, doors: wGaps });
     wGaps.forEach(gp => makeDoor(gp.c - gp.w / 2, HALL_WALL_Z, gp.w, 'x', { swing: 1, slideDir: gp.c < -36 ? -1 : 1 }));
-    wallXGaps(fx0, -19.2, wGaps, HALL_WALL_Z, 0, 0.95, wainC, 0.34);
+    wallXGaps(fx0, -19.2, wGaps, HALL_WALL_Z, 0, 0.95, wainC, 0.44);
     // 홀 바닥(흰 타일 + 포인트) — 서관 슬래브(0.078) 위
     plane(-19.4 - fx0, 1.72, 0xf2efe6, (fx0 + -19.4) / 2, 0.101, HALL_WALL_Z + 0.96);
     // 홀 팻말: 새 벽 위로
@@ -1322,7 +1324,7 @@ export function buildWorld(scene) {
     yardWins.push({ c: wx, w: 2.0 });
   }
   wallXWin(ex0, fx1, fz0, innerC, yardWins, { h: FH, sill: 1.1, wh: 1.6 });
-  wallXGaps(fx0, fx1, [...northGaps, { c: -28.3, w: 23.8 }], fz0, 0, 0.95, wainC, 0.34);   // 서측 홀 구간엔 굽도리도 없다
+  wallXGaps(fx0, fx1, [...northGaps, { c: -28.3, w: 23.8 }], fz0, 0, 0.95, wainC, 0.44);   // 서측 홀 구간엔 굽도리도 없다
   B.wings.forEach(wg => wg.rooms.forEach(r => {
     if (r.innerOnly || r.type === 'stair') return;
     if (r.type === 'library') {
@@ -1469,7 +1471,7 @@ export function buildWorld(scene) {
         hangSign(label, gaps[0].c, FH - CEIL_DROP, zCor - 0.5, 0, 0.28);
       }
       furnish(r, cx, cw, 0, fz1, -1, fz1 - zCor);
-      wallXGaps(s0, s1, gaps, zCor, 0, 0.95, wainC, 0.34);
+      wallXGaps(s0, s1, gaps, zCor, 0, 0.95, wainC, 0.44);
       // 교실쪽 벽 핸드레일 — 문 개구부를 피해 끊어 깐다.
       // ⚠️ 예전엔 box(collide:false)라 **레일을 밟고 올라설 수 있었다**(실버그) → railWall(softBox)로 교체
       railWall(s0 + 0.15, s1 - 0.15, zCor, 'x', gaps, -1);
@@ -2019,7 +2021,7 @@ export function buildWorld(scene) {
       .map(wxp => ({ c: wxp, w: 1.3 }));
   });
   wallXWin(ex0, shed0, zCorE, innerC, eCWins, { h: FH, sill: 1.9, wh: 0.9, doors: eGaps });
-  wallXGaps(ex0, shed0, eGaps, zCorE, 0, 0.95, wainC, 0.34);
+  wallXGaps(ex0, shed0, eGaps, zCorE, 0, 0.95, wainC, 0.44);
   wallZ(ez0, zCorE, shed0, 0, FH, innerC);   // 복도 동쪽 끝막이 (창고와 분리)
   // 신관(동관) 복도: 실사는 베이지 대형 타일 + 짙은 회색 걸레받이 — 구관(흰 타일+검은 띠)과 다르다
   corridorFloor(ex0 + 0.2, shed0 - 0.2, ez0, zCorE, 0.098, 0xe7e0d0, 0x6a6a66, 0.22);
