@@ -1834,16 +1834,16 @@ export function buildWorld(scene) {
     box(0.6, 0.42, 0.6, cc, (i < 2 ? -28.25 + i * 0.7 : -26.75 + (i - 2) * 0.7), 0, -37.35, { walk: true }));
   // 실사(d80_0222): 지름 ~2.3m 2단 도넛 + 주황 패딩 기둥 — 1/3 스케일이던 것을 실물 크기로
   const colPole = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 1.0, 12), mat(0xf2ede2));
-  colPole.position.set(-24.2, 2.9, -36.9);
+  colPole.position.set(-24.2, 2.9, -38.55);
   scene.add(colPole);
   const colWrap = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.7, 12), mat(0xe8863a));
-  colWrap.position.set(-24.2, 1.5, -36.9);
+  colWrap.position.set(-24.2, 1.5, -38.55);
   scene.add(colWrap);
   const colSeat = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.05, 0.26, 14), mat(0xf2c94c));
-  colSeat.position.set(-24.2, 0.13, -36.9);
+  colSeat.position.set(-24.2, 0.13, -38.55);
   scene.add(colSeat); colliders.push(colSeat);
   const colMid = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.38, 14), mat(0xe8863a));
-  colMid.position.set(-24.2, 0.45, -36.9);
+  colMid.position.set(-24.2, 0.45, -38.55);
   scene.add(colMid);
 
   // ---- 급식동 (위성 검은 지붕 전체 — 식당홀을 통해 조리실→식품창고로 들어가는 구조) ----
@@ -3160,7 +3160,7 @@ export function buildWorld(scene) {
   }
   // 위성+사용자 확인: 보건실·나래반 뒤(서관 북측)는 **바로 주차장**
   {
-    const pk0 = -33, pk1 = -10.7, pkz0 = -58.5, pkz1 = -50.6;
+    const pk0 = -33, pk1 = -10.7, pkz0 = -58.5, pkz1 = -50.05;   // pkz1은 서관 북벽(z-50)까지 — 0.6m 띄우면 벽 밑에 잔디가 남는다
     box(pk1 - pk0, 0.05, pkz1 - pkz0, 0x6f7276, (pk0 + pk1) / 2, 0.006, (pkz0 + pkz1) / 2, { collide: false, walk: true });
     // 주차칸(서관 벽 쪽으로 머리 대는 직각 주차) — 흰 구획선 + 카스토퍼
     for (let sx8 = pk0 + 1.5; sx8 <= pk1 - 1.5; sx8 += 2.6) {
@@ -3168,11 +3168,12 @@ export function buildWorld(scene) {
       if (sx8 < pk1 - 3) softBox(1.6, 0.11, 0.14, 0xd9b545, sx8 + 1.3, 0.05, pkz1 - 4.6);
     }
     // 주차 차량 2대 (단순 박스카 — 흰 SUV·회색 세단)
-    [[pk0 + 4.1, 0xe9ecee, 1.55], [pk0 + 9.3, 0x8a8f94, 1.35]].forEach(([cx9, cc9, ch9]) => {
-      box(1.75, ch9 * 0.55, 4.1, cc9, cx9, 0.32, pkz1 - 2.9);
-      box(1.6, ch9 * 0.45, 2.3, cc9, cx9, 0.32 + ch9 * 0.55, pkz1 - 2.9, { collide: false });
+    // ⚠️차는 **구획선 사이 중앙**(선+1.3)에 세운다 — 선 위에 두면 선이 차를 관통한다
+    [[pk0 + 2.8, 0xe9ecee, 1.55], [pk0 + 8.0, 0x8a8f94, 1.35]].forEach(([cx9, cc9, ch9]) => {
+      box(1.75, ch9 * 0.55, 4.1, cc9, cx9, 0.32, pkz1 - 2.4);
+      box(1.6, ch9 * 0.45, 2.3, cc9, cx9, 0.32 + ch9 * 0.55, pkz1 - 2.4, { collide: false });
       [[-0.92, -1.35], [0.92, -1.35], [-0.92, 1.35], [0.92, 1.35]].forEach(([wx9, wz9]) =>
-        geoAdd(STUMP_GEO, 0x24262a, cx9 + wx9, 0.32, pkz1 - 2.9 + wz9, [0, 0, Math.PI / 2], 0.62, 0.2, 0.62));
+        geoAdd(STUMP_GEO, 0x24262a, cx9 + wx9, 0.32, pkz1 - 2.4 + wz9, [0, 0, Math.PI / 2], 0.62, 0.2, 0.62));
     });
     sign('주차장', (pk0 + pk1) / 2, 1.5, pkz0 + 0.3, 0, 0.4);
   }
