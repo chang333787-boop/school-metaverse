@@ -127,9 +127,14 @@ export function textSign(text, { h = 0.6, bg = '#ffffff', fg = '#1d3557', border
     const tex = canvasTex(c);
     const w = h * (c.width / c.height);
     // 앞뒤를 지오메트리 1개로 병합 (π 회전만으로 뒷면 글자도 똑바로 보임 — UV 뒤집기 금지)
+    // ⚠️ 앞·뒤 평면을 **정확히 같은 z(0)** 에 두면 두 면이 완전 동일평면이 되어
+    //    시점·드라이버에 따라 서로 깜빡인다(전 학교 팻말 155개가 반짝이던 진짜 원인 — 픽셀 진단으로 확정).
+    //    6mm 씩 벌려 절대 겹치지 않게 한다(두께감도 자연스러워진다).
     const front = new THREE.PlaneGeometry(w, h).toNonIndexed();
     const back = new THREE.PlaneGeometry(w, h).toNonIndexed();
     back.rotateY(Math.PI);
+    front.translate(0, 0, 0.006);
+    back.translate(0, 0, -0.006);
     entry = { geo: mergeGeometries([front, back], false), mat: new THREE.MeshBasicMaterial({ map: tex }) };
     SIGN_CACHE.set(key, entry);
   }
