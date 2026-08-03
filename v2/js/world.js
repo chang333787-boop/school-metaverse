@@ -44,6 +44,7 @@ export function buildWorld(scene) {
     for (let i = 0; i < 6; i++) ch.col.push(_c.r, _c.g, _c.b);
   }
   function wallX(x0, x1, z, hex, opt = {}) {
+    if (x0 > x1) { console.warn('wallX 인자 역순 자동 정렬', x0, x1, z); const t = x0; x0 = x1; x1 = t; }
     const h = opt.h ?? FH, y0 = opt.y0 ?? 0, gaps = (opt.gaps ?? []).slice().sort((a,b)=>(a.c-a.w/2)-(b.c-b.w/2));
     let cur = x0;
     for (const g of gaps) {
@@ -64,6 +65,8 @@ export function buildWorld(scene) {
     }
   }
   function wallZ(z0, z1, x, hex, opt = {}) {
+    // ⚠️역순으로 넘기면 벽이 조용히 통째로 사라진다(세로복도 서벽 실종 사고) — 자동 정렬로 봉쇄
+    if (z0 > z1) { console.warn('wallZ 인자 역순 자동 정렬', z0, z1, x); const t = z0; z0 = z1; z1 = t; }
     z0 += 0.3; z1 -= 0.3;
     const h = opt.h ?? FH, y0 = opt.y0 ?? 0, gaps = (opt.gaps ?? []).slice().sort((a,b)=>(a.c-a.w/2)-(b.c-b.w/2));
     let cur = z0;
@@ -238,7 +241,7 @@ export function buildWorld(scene) {
   addPanel(kx1-kx0-0.6, kz1-kz0-0.6, FLOOR, (kx0+kx1)/2, 0.012, (kz0+kz1)/2);
   wallX(kx0 + 0.3, 5.25, K.cookWallZ, INNER, { h: K.wallHeight, gaps: [{ c: K.cookDoorC, w: 1.4 }] });   // 동단은 세로복도 서벽(x5.4) 앞까지
   addBox(5.5, 0.95, 1, 0xc4c9cd, -1, 0, K.cookWallZ + 1.3);
-  [[-5.2,-44],[-2.5,-46.5],[1,-43],[4.5,-46]].forEach(([tx,tz]) => {   // 1번 식탁은 당직실 벽과 이격
+  [[-5.2,-44],[-2.5,-46.5],[1,-43],[3.4,-46]].forEach(([tx,tz]) => {   // 양끝 식탁은 당직실 벽·세로복도 서벽과 이격
     addBox(0.8, 0.72, 3.2, 0xb5713d, tx, 0, tz);
     addBox(0.36, 0.42, 3.2, 0xd94848, tx-0.75, 0, tz); addBox(0.36, 0.42, 3.2, 0xd94848, tx+0.75, 0, tz);
   });
@@ -464,6 +467,34 @@ export function buildWorld(scene) {
     addBox(1.4, 0.9, 0.16, 0xf5f6f8, SCHOOL.flagPole[0]+0.85, 8.6, SCHOOL.flagPole[1], { collide: false });
     tree(SCHOOL.bigTree[0], SCHOOL.bigTree[1], 2.2);
     [[-30,-21],[-10,-21],[14,-21],[30,-21],[44,20],[20,40],[-30,40],[56,-40]].forEach(([tx9,tz9]) => tree(tx9, tz9, 1));
+  }
+  {   // 지형 단차 마감 — 옹벽(좌 모자이크·우 마름돌)+동서 오르는 길. 옹벽 상면이 부지 레벨(y0)이라 길만 놓으면 이어진다
+    addBox(84.95, 1, 0.4, 0xb9ad97, -39.525, -1, -17.8);   // 서측(테라스 남면에 맞댐 — 파고들면 동일평면)
+    addBox(72.65, 1, 0.4, 0xc9c4bb, 45.675, -1, -17.8);    // 동측
+    [[-30, 4.4], [40, 4.4]].forEach(([rx, rw]) => {
+      for (let i = 0; i < 3; i++) addBox(rw, 1 - i*0.33, 0.5, PAVE, rx, -1, -17.35 + i*0.5);
+    });
+    // 통학로 — 정문→동측→구령대(노란 점자블록)
+    addPanel(1.2, 57, 0xe9c341, 30, -0.985, 16);
+    addPanel(24, 1.2, 0xe9c341, 18.15, -0.985, -12.5);
+    addPanel(1.2, 5.5, 0xe9c341, 6.15, -0.985, -15.85);
+  }
+  {   // 동네 — 정문 밖이 허공이면 학교가 떠 있어 보인다(v1 사이클2와 같은 처리)
+    addPanel(180, 7, 0x6f7176, 0, -0.99, 52);                                   // 앞길
+    for (let i = 0; i < 22; i++) addPanel(2.2, 0.24, 0xf0ede4, -80 + i*7.6, -0.985, 52);
+    for (let i = 0; i < 7; i++) addPanel(0.8, 6.4, 0xf0ede4, 26.2 + i*1.3, -0.985, 52);   // 정문 앞 횡단보도
+    const HOUSE = [[-64, 0xd9c9b0, 0xa9503f], [-46, 0xcfd6dc, 0x50606e], [-24, 0xe0d3ba, 0x6f4a30],
+                   [4, 0xd2ddd3, 0x466b52], [26, 0xe6d9c6, 0xa9503f], [50, 0xccd4de, 0x50606e], [70, 0xdfd2bd, 0x6f4a30]];
+    HOUSE.forEach(([hx9, wc, rc], i) => {
+      const d9 = i % 2 ? 7.4 : 6.2, h9 = i % 3 ? 5.2 : 6.6;
+      addBox(9, h9, d9, wc, hx9, -1, 62 + (i % 2) * 1.4);
+      addBox(9.8, 0.5, d9 + 0.8, rc, hx9, -1 + h9, 62 + (i % 2) * 1.4);
+      addBox(1.1, 2.1, 0.2, 0x6d5340, hx9, -1, 62 + (i % 2) * 1.4 - d9/2 - 0.11, { collide: false });
+    });
+    [-72, -54, -34, -12, 14, 38, 60, 78].forEach(tx9 => tree(tx9, 47.5, 0.9));
+    // 먼 능선 — 서로 겹치므로 밑동 높이를 어긋내 동일평면을 피한다(잔디 아래는 어차피 안 보인다)
+    [[-58, 96, 26, 13, -1], [6, 104, 34, 16, -3], [62, 92, 24, 11, -2]].forEach(([mx, mz, mw, mh, my]) =>
+      addBox(mw * 2.6, mh, mw, 0x6f8f66, mx, my, mz, { collide: false }));
   }
   zones.push({ x0: SCHOOL.playground.center[0]-7, x1: SCHOOL.playground.center[0]+7, z0: SCHOOL.playground.center[1]-5, z1: SCHOOL.playground.center[1]+5, y: -1, label: '놀이터' });
   zones.push({ x0: -52, x1: -44, z0: -13, z1: -7, y: -1, label: '유치원 놀이터' });
