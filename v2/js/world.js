@@ -149,7 +149,7 @@ export function buildWorld(scene) {
     const [s0, s1] = r.span, cx = (s0+s1)/2, cw = s1-s0;
     if (i > 0) addBox(0.3, FH, fz1-zCor-0.6, INNER, s0, 0, (zCor+fz1)/2);
     addPanel(cw-0.5, fz1-zCor-0.5, r.type==='hall'?FLOOR:0xead9c0, cx, 0.014, (zCor+fz1)/2);
-    zones.push({ x0: s0, x1: s1, z0: zCor, z1: fz1, label: r.name });
+    zones.push({ x0: s0, x1: s1, z0: zCor, z1: fz1, y: 0, label: r.name });
     if (r.type === 'classroom' || r.type === 'computer' || r.type === 'daycare') {
       addBox(3, 1.2, 0.16, 0x2e5d43, cx, 0.9, zCor + 0.28, { collide: false });
       addBox(1.2, 0.85, 0.6, 0x8a5a3b, cx - 2, 0, zCor + 1.4);
@@ -191,7 +191,7 @@ export function buildWorld(scene) {
   wg.rooms.forEach((r, i) => {
     const [s0, s1] = r.span, cx = (s0+s1)/2;
     if (i > 0 && r.type !== 'stair' && r.name !== '문서고') addBox(0.3, FH, 9.65, INNER, s0, 0, -44.875);
-    zones.push({ x0: s0, x1: s1, z0: wz0, z1: HZ, label: r.name });
+    zones.push({ x0: s0, x1: s1, z0: wz0, z1: HZ, y: 0, label: r.name });
     if (r.type === 'library') for (let k = 0; k < 3; k++) addBox(6, 1.9, 0.5, 0x8a6a45, cx, 0, wz0 + 2.2 + k*2.4);
     if (r.type === 'nurse') { addBox(1.05, 0.5, 2, 0xf2f5f7, cx-1, 0, wz0+2.5); addBox(1.05, 0.5, 2, 0xf2f5f7, cx+1, 0, wz0+2.5); }
     if (r.type !== 'stair' && !r.innerOnly) sign(r.name, doorC(r) + 1.2, 2.35, HZ + 0.22, 0, 0.34);
@@ -214,9 +214,14 @@ export function buildWorld(scene) {
       const [s0, s1] = r.span, cx = (s0+s1)/2;
       if (i > 0) addBox(0.3, FH-0.3, zc2-wz0-0.6, INNER, s0, FH+0.3, (wz0+zc2)/2);
       addBox(3, 1.2, 0.16, 0x2e5d43, cx, FH+1.2, wz0+0.53, { collide: false });
-      for (let dx = -1; dx <= 1; dx++) addBox(1.1, 0.72, 0.5, 0xb0a18e, cx + dx*1.45, FH+0.3, wz0+3);
+      // 가구 간격 규칙: 책상 폭 1.1 + 틈 1.1(사람 폭 0.52의 2배) — 좁은 실은 개수를 줄인다.
+      // ⚠️1.45 간격은 틈이 0.35라 사람이 못 지나가 방이 통째로 봉쇄됐었다(SD2.reach가 적발).
+      const nD = (s1 - s0) > 7 ? 3 : 1;
+      for (let d = 0; d < nD; d++) addBox(1.1, 0.72, 0.5, 0xb0a18e, cx + (d - (nD-1)/2)*2.2, FH+0.3, wz0+3);
       sign(r.name, doorC(r)+1.2, FH+2.55, zc2-0.22, 0, 0.34);
+      zones.push({ x0: s0, x1: s1, z0: wz0, z1: zc2, y: FH+0.3, label: r.name });
     });
+    zones.push({ x0: wx0, x1: -17.2, z0: zc2, z1: wz1, y: FH+0.3, label: '2층 복도' });
     wallX(wx0 + 0.3, -17.2, zc2, INNER, { y0: FH+0.3, h: FH-0.3, gaps: B.upper.rooms.map(r => ({ c: doorC(r), w: 1.2 })) });   // 동단은 개구 가드 앞에서
     addBox(0.45, 1.2, 9.64, 0xc8cdd2, wx1-4.6-0.25, FH+0.3, -43.12);   // 개구 가드 — 착지참(z-49.5) 구간은 열어 2층 진입로 확보
   }
@@ -245,7 +250,10 @@ export function buildWorld(scene) {
     addBox(3.7, FH, 0.3, INNER, (D.x[0]+D.x[1])/2, 0, D.z[0]);   // 북측 칸막이
     addBox(1.3, 0.74, 0.7, 0xb0a18e, D.doorC - 0.6, 0, -40.5);
     sign('당직실', D.doorC + 1.2, 2.35, fz0 + 0.22, 0, 0.32);
+    zones.push({ x0: D.x[0], x1: D.x[1], z0: D.z[0], z1: D.z[1], y: 0, label: '당직실' });
   }
+  zones.push({ x0: -6.4, x1: 5.25, z0: K.cookWallZ, z1: kz1, y: 0, label: '급식실' });
+  zones.push({ x0: kx0, x1: 5.25, z0: kz0, z1: K.cookWallZ, y: 0, label: '조리실' });
 
   // ================= 세로복도 =================
   const LC = B.linkCorridor;
@@ -257,8 +265,10 @@ export function buildWorld(scene) {
   // ================= 동관 =================
   const E = B.eastWing, [ex0, ex1] = E.x, [ez0, ez1] = E.z, zCE = ez0 + E.corridorDepth;
   wallX(ex0 + 0.3, ex1, ez1, WALL, { wins: 8, face: 1 });   // 서단 0.3 인셋(공유벽 x8.4 관통 금지)
-  wallX(ex0, ex1, ez0, WALL, { wins: 8, face: -1, gaps: [{ c: 38.1, w: 1.2 }] });     // 창고 외부문(북쪽 — data external)
-  wallZ(ez0, ez1, ex1, WALL, { wins: 2, face: 1, gaps: [{ c: -56.65, w: 1.8 }] });    // 복도 동쪽끝 바깥문(data 확정 목록)
+  wallX(ex0, ex1, ez0, WALL, { wins: 8, face: -1 });
+  // 동벽: 복도 동쪽끝 바깥문(-56.65) + 창고 외부문(-50).
+  // ⚠️창고는 external — 복도 문이 없다. 북벽에 뚫으면 복도로 들어갈 뿐 창고엔 못 들어간다(실제로 그랬음).
+  wallZ(ez0, ez1, ex1, WALL, { wins: 2, face: 1, gaps: [{ c: -56.65, w: 1.8 }, { c: -50, w: 1.2 }] });
   // (동관 서벽 = 급식동 동벽 x8.4 공유 — 이중 시공 금지)
   const eGaps = E.rooms.filter(r => !r.innerOnly && !r.external).map(r => ({ c: doorC(r), w: 1.2 }));
   wallX(ex0 + 0.3, ex1 - 0.3, zCE, INNER, { gaps: eGaps });
@@ -267,7 +277,7 @@ export function buildWorld(scene) {
     const [s0, s1] = r.span, cx = (s0+s1)/2;
     if (i > 0 && r.name !== '과학준비실') addBox(0.3, FH, ez1-zCE-0.6, INNER, s0, 0, (zCE+ez1)/2);
     addPanel(s1-s0-0.5, ez1-zCE-0.5, 0xead9c0, cx, 0.014, (zCE+ez1)/2);
-    zones.push({ x0: s0, x1: s1, z0: zCE, z1: ez1, label: r.name });
+    zones.push({ x0: s0, x1: s1, z0: zCE, z1: ez1, y: 0, label: r.name });
     if (r.type === 'classroom' || r.type === 'science') {
       addBox(3, 1.2, 0.16, 0x2e5d43, cx, 0.9, zCE + 0.28, { collide: false });
       for (let dx = -1; dx <= 1; dx++) for (let dz = 0; dz < 2; dz++)
@@ -279,6 +289,8 @@ export function buildWorld(scene) {
   addBox(0.3, FH, 4.7, INNER, 32.8, 0, -47.05);
   addBox(0.3, 1.0, 1.3, INNER, 32.8, 2.4, -50.05);
   addBox(ex1-ex0+0.8, 0.3, ez1-ez0+0.8, 0xd9dce1, (ex0+ex1)/2, FH, (ez0+ez1)/2);
+  zones.push({ x0: LC.x[0], x1: LC.x[1], z0: -58, z1: fz0, y: 0, label: '세로복도' });
+  zones.push({ x0: ex0, x1: ex1, z0: ez0, z1: zCE, y: 0, label: '동관 복도' });
 
   // ================= 체육관 =================
   const G = SCHOOL.gym, gx = G.center[0], gz = G.center[1];
@@ -315,6 +327,10 @@ export function buildWorld(scene) {
   addBox(G.width+0.4, 0.5, G.depth*0.62, 0xc35233, gx, G.wallHeight+0.4, gz);
   addBox(G.width-0.2, 0.5, G.depth*0.3, 0xb04a2e, gx, G.wallHeight+0.9, gz);
   sign('체육관', gx1 + 0.35, 2.7, gz, Math.PI/2, 0.5);
+  zones.push({ x0: gx0, x1: gx1-3.5, z0: gz0, z1: gz1, y: tY(gz), label: '체육관' });
+  zones.push({ x0: gx1-3.2, x1: gx1, z0: gz-2, z1: gz+2, y: tY(gz), label: '체육관 전실' });
+  zones.push({ x0: gx1-3.0, x1: gx1, z0: gz+2.4, z1: gz+5.2, y: tY(gz), label: '체육관 화장실(남)' });
+  zones.push({ x0: gx1-3.0, x1: gx1, z0: gz-5.2, z1: gz-2.4, y: tY(gz), label: '체육관 화장실(북)' });
 
   // ================= 시설·조경 =================
   addPanel(0.35, 64, 0xf0ede4, SCHOOL.field.center[0], -0.99, SCHOOL.field.center[1]);
@@ -350,7 +366,9 @@ export function buildWorld(scene) {
     const [tx, tz] = SCHOOL.garden.center;
     for (let i = 0; i < 3; i++) addBox(9, 0.35, 1.6, 0x4a3628, tx, 0, tz - 2.6 + i*2.6);
     [-5.2, 5.2].forEach(ox => addBox(0.16, 1.0, 9.6, 0xf2f4f6, tx+ox, 0, tz));
-    [-4.9, 4.9].forEach(oz => addBox(10.24, 1.0, 0.16, 0xf2f4f6, tx, 0, tz+oz));
+    addBox(3.6, 1.0, 0.16, 0xf2f4f6, tx-3.3, 0, tz+4.9);   // 남측 울타리 — 가운데 1.8m 출입구
+    addBox(3.6, 1.0, 0.16, 0xf2f4f6, tx+3.3, 0, tz+4.9);
+    addBox(10.24, 1.0, 0.16, 0xf2f4f6, tx, 0, tz-4.9);
     sign('우리 텃밭', tx, 1.7, tz + 5.6, 0, 0.4);
   }
   {                                                        // 유치원놀이터 — 운동장 서변 y-1 (v1 v0.50)
@@ -375,6 +393,7 @@ export function buildWorld(scene) {
       addBox(1.6, 0.55, 2.0, t9, cx9, 0.7, -53.5);
     });
     sign('주차장', -25, 1.6, -51.2, 0, 0.34);
+    zones.push({ x0: -33, x1: -17, z0: -56, z1: -51, y: 0, label: '주차장' });
   }
   {                                                        // 텃밭 쉼터(퍼걸러) — data.js shelter
     const [sx9, sz9] = SCHOOL.shelter.center, sl = SCHOOL.shelter.length;
@@ -396,7 +415,10 @@ export function buildWorld(scene) {
     tree(SCHOOL.bigTree[0], SCHOOL.bigTree[1], 2.2);
     [[-30,-21],[-10,-21],[14,-21],[30,-21],[44,20],[20,40],[-30,40],[56,-40]].forEach(([tx9,tz9]) => tree(tx9, tz9, 1));
   }
-  zones.push({ x0: -82, x1: 82, z0: -70, z1: 46, label: '학교 마당' });
+  zones.push({ x0: SCHOOL.playground.center[0]-7, x1: SCHOOL.playground.center[0]+7, z0: SCHOOL.playground.center[1]-5, z1: SCHOOL.playground.center[1]+5, y: -1, label: '놀이터' });
+  zones.push({ x0: -52, x1: -44, z0: -13, z1: -7, y: -1, label: '유치원 놀이터' });
+  zones.push({ x0: SCHOOL.garden.center[0]-4, x1: SCHOOL.garden.center[0]+4, z0: SCHOOL.garden.center[1]+3, z1: SCHOOL.garden.center[1]+4.5, y: 0, label: '텃밭' });
+  zones.push({ x0: SCHOOL.field.center[0]-20, x1: SCHOOL.field.center[0]+20, z0: SCHOOL.field.center[1]-20, z1: SCHOOL.field.center[1]+20, y: -1, label: '운동장' });
 
   // ================= 감사 + 병합 =================
   {

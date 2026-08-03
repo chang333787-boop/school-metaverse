@@ -172,9 +172,67 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
+// ---------- 도달성 검사 (전 실 자동 답사) ----------
+// 플레이어와 똑같은 규칙(blockedAt·groundAt·오름 0.55)으로 걸을 수 있는 칸을 전부 채워보고,
+// 등록된 모든 구역에 실제로 닿는지 판정한다. "문이 있다"가 아니라 "도달된다"가 기준.
+function reach(opt = {}) {
+  // 격자 0.3m: 계단 단 깊이(0.72)보다 촘촘해야 한 칸 이동이 한 단을 넘지 않는다(0.5는 두 단을 건너뛰어 오탐)
+  const S = opt.step || 0.3, sx = opt.from ? opt.from[0] : 6, sz = opt.from ? opt.from[1] : 8;
+  const key = (ix, iz, y) => ix + ',' + iz + ',' + Math.round(y * 2);
+  const seen = new Set(), hits = new Map();
+  const start = { x: sx, z: sz, y: groundAt(sx, sz, 2) };
+  const q = [start];
+  seen.add(key(Math.round(sx/S), Math.round(sz/S), start.y));
+  const zs = world.zones;
+  const mark = (x, z, y) => {
+    for (let i = 0; i < zs.length; i++) {
+      const Z = zs[i];
+      if (x > Z.x0 && x < Z.x1 && z > Z.z0 && z < Z.z1 && Math.abs(y - (Z.y ?? 0)) < 1.2)
+        hits.set(i, (hits.get(i) || 0) + 1);
+    }
+  };
+  mark(start.x, start.z, start.y);
+  const DIR = [[1,0],[-1,0],[0,1],[0,-1]];
+  let pops = 0;
+  while (q.length && pops < 900000) {
+    const c = q.pop(); pops++;
+    for (const [dx, dz] of DIR) {
+      const nx = c.x + dx*S, nz = c.z + dz*S;
+      if (nx < -80 || nx > 80 || nz < -68 || nz > 44) continue;
+      if (blockedAt(nx, nz, c.y)) continue;
+      const g = groundAt(nx, nz, c.y + 0.6);
+      if (g > c.y + 0.55) continue;                 // 못 오르는 턱
+      const k = key(Math.round(nx/S), Math.round(nz/S), g);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      mark(nx, nz, g);
+      q.push({ x: nx, z: nz, y: g });
+    }
+  }
+  const bad = [], ok = [];
+  zs.forEach((Z, i) => (hits.get(i) ? ok : bad).push(Z.label));
+  if (opt.probe) {                       // 진단: 지정 구간에서 도달한 최고 지점
+    const [px0, px1, pz0, pz1] = opt.probe;
+    let top = -99, at = null;
+    for (const k of seen) {
+      const [ix, iz, y2] = k.split(',').map(Number);
+      const x = ix*S, z = iz*S, y = y2/2;
+      if (x >= px0 && x <= px1 && z >= pz0 && z <= pz1 && y > top) { top = y; at = [x, z, y]; }
+    }
+    console.log('probe 최고 도달: ' + JSON.stringify(at));
+    return { cells: seen.size, ok, bad, probe: at };
+  }
+  if (bad.length) console.error('🚫 도달 불가 ' + bad.length + '곳: ' + bad.join(', '));
+  else console.log('✅ 도달성: 전 구역 ' + ok.length + '곳 통과 (칸 ' + seen.size + ')');
+  return { cells: seen.size, ok, bad };
+}
+
+// ?check=1 이면 로드 직후 자동 답사(검증용 URL — 학생 접속엔 부담 주지 않도록 기본 꺼둠)
+if (location.search.includes('check=1')) setTimeout(() => reach(), 60);
+
 // 디버그 API (v1과 같은 사용감)
 window.SD2 = {
-  scene, camera, renderer, world,
+  scene, camera, renderer, world, reach,
   tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (terrainY(x, z) + 0.01); P.vy = 0; },
   yaw(v) { camYaw = v; },
   pos: () => [P.x.toFixed(1), P.y.toFixed(1), P.z.toFixed(1)],
