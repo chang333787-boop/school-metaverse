@@ -68,10 +68,44 @@ function blockedAt(x, z, y) {
   return false;
 }
 
+// 카메라 가림 방지(v1 이식): 머리→카메라 선분을 콜라이더 AABB와 교차 검사(슬랩법 — 레이캐스트 아님, 헌법⑤ 유지)
+// 낮은 가구는 통과, 벽·기둥(높이≥1.5m)과 머리 위 부재(인방·천장)만 막는다. 히트 시 벽 앞 0.3m로 당김.
+function camHit(hx, hy, hz, dx, dy, dz, maxD) {
+  let t = maxD;
+  const ex = hx + dx*maxD, ez = hz + dz*maxD;
+  const k0x = Math.floor((Math.min(hx,ex)-0.4)/8), k1x = Math.floor((Math.max(hx,ex)+0.4)/8);
+  const k0z = Math.floor((Math.min(hz,ez)-0.4)/8), k1z = Math.floor((Math.max(hz,ez)+0.4)/8);
+  const seen = new Set();
+  for (let gx=k0x; gx<=k1x; gx++) for (let gz=k0z; gz<=k1z; gz++) {
+    const cell = world.grid.get(gx+':'+gz); if (!cell) continue;
+    for (const i of cell) {
+      if (seen.has(i)) continue; seen.add(i);
+      const b = world.colliders[i];
+      if (b.y1 - b.y0 < 1.5 && b.y0 < hy + 0.4) continue;
+      let t0 = 1e-4, t1 = t, ok = true;
+      for (let ax = 0; ax < 3 && ok; ax++) {
+        const o = ax===0?hx:ax===1?hy:hz, d9 = ax===0?dx:ax===1?dy:dz;
+        const lo = ax===0?b.x0:ax===1?b.y0:b.z0, hi = ax===0?b.x1:ax===1?b.y1:b.z1;
+        if (Math.abs(d9) < 1e-8) { if (o < lo || o > hi) ok = false; }
+        else {
+          let a = (lo-o)/d9, c9 = (hi-o)/d9;
+          if (a > c9) { const s9 = a; a = c9; c9 = s9; }
+          if (a > t0) t0 = a; if (c9 < t1) t1 = c9;
+          if (t0 > t1) ok = false;
+        }
+      }
+      if (ok && t0 < t) t = t0;
+    }
+  }
+  return t;
+}
+
 const keys = new Set();
 addEventListener('keydown', e => keys.add(e.code));
 addEventListener('keyup', e => keys.delete(e.code));
 let camYaw = 0, camPitch = 0.3;
+const CAM_D = 6.3;
+let camD = CAM_D;
 canvas.addEventListener('click', () => canvas.requestPointerLock());
 addEventListener('mousemove', e => {
   if (document.pointerLockElement !== canvas) return;
@@ -101,12 +135,12 @@ function step(dt) {
   if (P.y <= g) { P.y = g; P.vy = 0; P.ground = true; }
   pg.position.set(P.x, P.y, P.z);
   pg.rotation.y = P.yaw;
-  const cd = 6.3;
-  camera.position.set(
-    P.x + Math.sin(camYaw) * Math.cos(camPitch) * cd,
-    P.y + 1.3 + Math.sin(camPitch) * cd,
-    P.z + Math.cos(camYaw) * Math.cos(camPitch) * cd);
-  camera.lookAt(P.x, P.y + 1.3, P.z);
+  const hx = P.x, hy = P.y + 1.3, hz = P.z;
+  const dx = Math.sin(camYaw) * Math.cos(camPitch), dy = Math.sin(camPitch), dz = Math.cos(camYaw) * Math.cos(camPitch);
+  const want = Math.max(0.5, Math.min(CAM_D, camHit(hx, hy, hz, dx, dy, dz, CAM_D) - 0.3));
+  camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);   // 당김은 즉시·복귀는 이징(지터 방지)
+  camera.position.set(hx + dx * camD, hy + dy * camD, hz + dz * camD);
+  camera.lookAt(hx, hy, hz);
 }
 
 // ---------- 루프 + 예산 계측(헌법⑥) ----------
