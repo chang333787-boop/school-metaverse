@@ -252,8 +252,10 @@ export function buildWorld(scene) {
     sign('당직실', D.doorC + 1.2, 2.35, fz0 + 0.22, 0, 0.32);
     zones.push({ x0: D.x[0], x1: D.x[1], z0: D.z[0], z1: D.z[1], y: 0, label: '당직실' });
   }
+  wallZ(kz0, K.cookWallZ, 0, INNER, { h: K.wallHeight, gaps: [{ c: K.storeDoorZ, w: 1.2 }] });   // 조리실→식품창고(v1 실측 x0~5.4)
   zones.push({ x0: -6.4, x1: 5.25, z0: K.cookWallZ, z1: kz1, y: 0, label: '급식실' });
-  zones.push({ x0: kx0, x1: 5.25, z0: kz0, z1: K.cookWallZ, y: 0, label: '조리실' });
+  zones.push({ x0: kx0, x1: -0.3, z0: kz0, z1: K.cookWallZ, y: 0, label: '조리실' });
+  zones.push({ x0: 0.3, x1: 5.25, z0: kz0, z1: K.cookWallZ, y: 0, label: '식품창고' });
 
   // ================= 세로복도 =================
   const LC = B.linkCorridor;
@@ -327,7 +329,20 @@ export function buildWorld(scene) {
   addBox(G.width+0.4, 0.5, G.depth*0.62, 0xc35233, gx, G.wallHeight+0.4, gz);
   addBox(G.width-0.2, 0.5, G.depth*0.3, 0xb04a2e, gx, G.wallHeight+0.9, gz);
   sign('체육관', gx1 + 0.35, 2.7, gz, Math.PI/2, 0.5);
-  zones.push({ x0: gx0, x1: gx1-3.5, z0: gz0, z1: gz1, y: tY(gz), label: '체육관' });
+  {                                                        // 방송실(서북)·준비실(동북) — v1 실측 z-52~-48.4
+    wallZ(gz0, -48.4, -73, INNER, { h: 3.2 });
+    wallX(gx0 + 0.3, -72.85, -48.4, INNER, { h: 3.2, gaps: [{ c: -75.3, w: 1.2 }] });
+    wallZ(gz0, -48.4, -55, INNER, { h: 3.2 });
+    wallX(-54.85, -51.2, -48.4, INNER, { h: 3.2, gaps: [{ c: -53, w: 1.2 }] });
+    addBox(0.3, 3.2, 3.0, INNER, -51.2, 0, -50.2);
+    addBox(2.4, 0.75, 0.6, 0x8a5a3b, -75.3, 0, -50.6);     // 방송 콘솔
+    addBox(1.6, 1.9, 0.5, 0x9aa0a6, -53, 0, -50.6);        // 준비실 선반
+    sign('방송실', -75.3, 2.4, -48.15, 0, 0.3);
+    sign('준비실', -53, 2.4, -48.15, 0, 0.3);
+    zones.push({ x0: -77.5, x1: -73.3, z0: -51.5, z1: -48.7, y: tY(gz), label: '체육관 방송실' });
+    zones.push({ x0: -54.7, x1: -51.5, z0: -51.5, z1: -48.7, y: tY(gz), label: '체육관 준비실' });
+  }
+  zones.push({ x0: gx0, x1: gx1-3.5, z0: -47.5, z1: gz1, y: tY(gz), label: '체육관' });
   zones.push({ x0: gx1-3.2, x1: gx1, z0: gz-2, z1: gz+2, y: tY(gz), label: '체육관 전실' });
   zones.push({ x0: gx1-3.0, x1: gx1, z0: gz+2.4, z1: gz+5.2, y: tY(gz), label: '체육관 화장실(남)' });
   zones.push({ x0: gx1-3.0, x1: gx1, z0: gz-5.2, z1: gz-2.4, y: tY(gz), label: '체육관 화장실(북)' });
@@ -385,15 +400,50 @@ export function buildWorld(scene) {
     addBox(8.8, 0.8, 0.16, 0xeef0e9, kpx+0.1, -1, kpz+3.5);
     sign('유치원 놀이터', kpx, 1.3, kpz+3.3, 0, 0.32);
   }
-  {                                                        // 주차장 — 서관 북측(v1 v0.51: 진입은 주복도 x-11.3 틈새길)
-    addPanel(16, 5, 0x8f9095, -25, 0.008, -53.5);
-    [-31, -27, -23, -19].forEach(lx => addPanel(0.25, 4.6, 0xe8eaea, lx, 0.011, -53.5));
-    [[-29, 0x4d76b3, 0x6f92c4], [-21, 0xc4c9cd, 0xd8dde2]].forEach(([cx9, b9, t9]) => {
-      addBox(1.8, 0.7, 4.0, b9, cx9, 0, -53.5);
-      addBox(1.6, 0.55, 2.0, t9, cx9, 0.7, -53.5);
+  {                                                        // 주차장 — 학교 북쪽 바깥(v1 실측 x-20~48, z-69.5~-59.5). 진입=주복도 x-11.3 틈새길
+    addPanel(68, 10, 0x8f9095, 14, 0.008, -64.5);
+    for (let i = 0; i <= 13; i++) addPanel(0.25, 9, 0xe8eaea, -19 + i*5, 0.011, -64.5);
+    [[-14, 0x4d76b3, 0x6f92c4], [1, 0xc4c9cd, 0xd8dde2], [21, 0xcf6b52, 0xe08a72]].forEach(([cx9, b9, t9]) => {
+      addBox(1.8, 0.7, 4.0, b9, cx9, 0, -64.5);
+      addBox(1.6, 0.55, 2.0, t9, cx9, 0.7, -64.5);
     });
-    sign('주차장', -25, 1.6, -51.2, 0, 0.34);
-    zones.push({ x0: -33, x1: -17, z0: -56, z1: -51, y: 0, label: '주차장' });
+    sign('주차장', 14, 1.6, -59.9, 0, 0.4);
+    zones.push({ x0: -18, x1: 46, z0: -67, z1: -61, y: 0, label: '주차장' });
+  }
+  {                                                        // 숲놀이터(랜드마크·통나무형) — 운동장 서쪽 v1 x-62~-47, z17~20.5
+    const fz9 = 18.75;
+    addPanel(15, 3.5, 0xc9b291, -54.5, -0.99, fz9);
+    [-61, -57.5, -54, -50.5, -47.5].forEach(lx => addBox(0.42, 1.9, 0.42, 0x7a5636, lx, -1, fz9 - 1.2));   // 통나무 기둥 열
+    addBox(14, 0.36, 0.36, 0x8a6a45, -54.5, 0.55, fz9 - 1.2, { collide: false });                          // 가로 통나무(매달리기)
+    // 밟고 건너는 통나무 — 지면에 앉힌다(공중 부재 금지: 지지 없는 부재는 '따로 노는' 것으로 보인다)
+    addBox(3.6, 0.45, 0.5, 0x7a5636, -59.5, -1, fz9 + 0.6);
+    addBox(3.6, 0.75, 0.5, 0x7a5636, -55.5, -1, fz9 + 0.6);
+    addBox(3.6, 0.45, 0.5, 0x7a5636, -51.5, -1, fz9 + 0.6);
+    [-60.5, -58, -49.5].forEach(sx9 => addBox(0.7, 0.45, 0.7, 0x6d4e32, sx9, -1, fz9 + 1.5));              // 그루터기 의자
+    sign('숲놀이터', -54.5, 0.9, fz9 + 1.9, 0, 0.4);
+    zones.push({ x0: -62, x1: -47, z0: 17, z1: 20.5, y: -1, label: '숲놀이터' });
+  }
+  {                                                        // 자전거 교통 코스 — v1 x-72~-60, z22~33
+    addPanel(12, 11, 0x6f7176, -66, -0.99, 27.5);
+    for (let i = 0; i < 5; i++) addPanel(0.22, 1.4, 0xf0ede4, -66, -0.985, 23.2 + i*2.2);                  // 중앙 점선
+    [24.4, 30.6].forEach(cz9 => { for (let i = 0; i < 6; i++) addPanel(0.7, 0.22, 0xf0ede4, -70.5 + i*1.8, -0.985, cz9); });  // 횡단보도
+    addBox(0.22, 2.4, 0.22, 0x5a5f66, -71.2, -1, 26);                                                      // 신호등
+    addBox(0.34, 0.9, 0.3, 0x2f3338, -71.2, 1.4, 26, { collide: false });
+    addBox(0.22, 2.0, 0.22, 0x5a5f66, -60.8, -1, 29);                                                      // 표지판
+    addBox(0.7, 0.7, 0.16, 0xdfe3e8, -60.8, 1.0, 29, { collide: false });
+    sign('자전거 교통 코스', -66, 0.9, 33.4, 0, 0.4);
+    zones.push({ x0: -71, x1: -61, z0: 23, z1: 32, y: -1, label: '자전거 교통 코스' });
+  }
+  {                                                        // 정자 — v1 x-54.6~-49.4, z41.6~46.8
+    const px9 = -52, pz9 = 44.2;
+    [[-2.2,-2.2],[2.2,-2.2],[-2.2,2.2],[2.2,2.2]].forEach(([ox,oz]) => addBox(0.34, 2.6, 0.34, 0x8a5a3b, px9+ox, -1, pz9+oz));
+    addPanel(5.2, 5.2, 0xc9a063, px9, -0.55, pz9);
+    addBox(5.6, 0.32, 5.6, 0x6f4a30, px9, 1.6, pz9);
+    addBox(4.2, 0.4, 4.2, 0x8a5a3b, px9, 1.92, pz9, { collide: false });
+    addBox(4.6, 0.3, 0.35, 0x9c6b45, px9, -0.55, pz9 - 2.0, { collide: false });                           // 앉는 난간
+    addBox(4.6, 0.3, 0.35, 0x9c6b45, px9, -0.55, pz9 + 2.0, { collide: false });
+    sign('정자', px9, 1.2, pz9 + 2.9, 0, 0.38);
+    zones.push({ x0: px9-1.8, x1: px9+1.8, z0: pz9-1.8, z1: pz9+1.8, y: -1, label: '정자' });
   }
   {                                                        // 텃밭 쉼터(퍼걸러) — data.js shelter
     const [sx9, sz9] = SCHOOL.shelter.center, sl = SCHOOL.shelter.length;
