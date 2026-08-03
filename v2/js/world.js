@@ -227,9 +227,11 @@ export function buildWorld(scene) {
   const K = B.kitchen, [kx0, kx1] = K.x, [kz0, kz1] = K.z;
   wallX(kx0, kx1 - 0.3, kz0, WALL, { h: K.wallHeight, wins: 4, face: -1, sill: 2.4, wh: 1.2 });
   wallZ(kz0, kz1, kx0, WALL, { h: K.wallHeight, wins: 4, face: -1 });
-  wallZ(kz0, kz1, kx1, WALL, { h: K.wallHeight, gaps: [{ c: K.hallEastDoorZ, w: 1.8 }, { c: B.linkCorridor.yardDoorZ, w: 1.6 }], face: 1 });   // 이 벽이 곧 세로복도 동벽(x8.4 공유 — 이중 시공 금지)
+  // 이 벽 = 세로복도 동벽 = 동관 서벽(x8.4 3중 공유). 개구: 동관 복도 연결(-56.5)·마당 문(-41).
+  // ⚠️hallEastDoorZ(-44)는 서벽(x5.4) 문 — 여기 두면 2학년 교실 벽에 반쯤 걸린 구멍이 된다(실수했던 지점)
+  wallZ(kz0, kz1, kx1, WALL, { h: K.wallHeight, gaps: [{ c: -56.5, w: 2.4 }, { c: B.linkCorridor.yardDoorZ, w: 1.6 }], face: 1 });
   addPanel(kx1-kx0-0.6, kz1-kz0-0.6, FLOOR, (kx0+kx1)/2, 0.012, (kz0+kz1)/2);
-  wallX(kx0 + 0.3, kx1 - 0.3, K.cookWallZ, INNER, { h: K.wallHeight, gaps: [{ c: K.cookDoorC, w: 1.4 }] });
+  wallX(kx0 + 0.3, 5.25, K.cookWallZ, INNER, { h: K.wallHeight, gaps: [{ c: K.cookDoorC, w: 1.4 }] });   // 동단은 세로복도 서벽(x5.4) 앞까지
   addBox(5.5, 0.95, 1, 0xc4c9cd, -1, 0, K.cookWallZ + 1.3);
   [[-5.2,-44],[-2.5,-46.5],[1,-43],[4.5,-46]].forEach(([tx,tz]) => {   // 1번 식탁은 당직실 벽과 이격
     addBox(0.8, 0.72, 3.2, 0xb5713d, tx, 0, tz);
@@ -247,23 +249,23 @@ export function buildWorld(scene) {
 
   // ================= 세로복도 =================
   const LC = B.linkCorridor;
-  wallZ(fz0, -55.3, LC.x[0], WALL, { gaps: [{ c: K.hallEastDoorZ, w: 1.8 }], face: 1 });
-  // (세로복도 동벽 = 급식동 동벽 x8.4 공유 — 위에서 통합 시공)
-  addPanel(LC.x[1]-LC.x[0]-0.6, fz0 - -55.3 - 0.6, FLOOR, 6.9, 0.012, (fz0 + -55.3)/2);
-  addBox(3.0, 0.3, fz0 - -55.3, 0xd9dce1, 6.45, FH, (fz0 + -55.3)/2);   // 동관 지붕(x8~)과 슬래브 겹침 금지
+  wallZ(fz0, -58, LC.x[0], WALL, { gaps: [{ c: K.hallEastDoorZ, w: 1.8 }], face: 1 });   // z-58까지 — 동관 복도 연결부까지 내려간다
+  // (세로복도 동벽 = 급식동 동벽 x8.4 공유 — 위에서 통합 시공. 동관 복도 개구 -56.5)
+  addPanel(LC.x[1]-LC.x[0]-0.6, 19.1, FLOOR, 6.9, 0.012, -47.85);
+  addBox(3.0, 0.3, 20, 0xd9dce1, 6.45, FH, -48);   // 동관 지붕(x8~)과 슬래브 겹침 금지
 
   // ================= 동관 =================
   const E = B.eastWing, [ex0, ex1] = E.x, [ez0, ez1] = E.z, zCE = ez0 + E.corridorDepth;
-  wallX(ex0, ex1, ez1, WALL, { wins: 8, face: 1 });
-  wallX(ex0, ex1, ez0, WALL, { wins: 8, face: -1 });
-  wallZ(ez0, ez1, ex1, WALL, { wins: 2, face: 1 });
+  wallX(ex0 + 0.3, ex1, ez1, WALL, { wins: 8, face: 1 });   // 서단 0.3 인셋(공유벽 x8.4 관통 금지)
+  wallX(ex0, ex1, ez0, WALL, { wins: 8, face: -1, gaps: [{ c: 38.1, w: 1.2 }] });     // 창고 외부문(북쪽 — data external)
+  wallZ(ez0, ez1, ex1, WALL, { wins: 2, face: 1, gaps: [{ c: -56.65, w: 1.8 }] });    // 복도 동쪽끝 바깥문(data 확정 목록)
   // (동관 서벽 = 급식동 동벽 x8.4 공유 — 이중 시공 금지)
   const eGaps = E.rooms.filter(r => !r.innerOnly && !r.external).map(r => ({ c: doorC(r), w: 1.2 }));
   wallX(ex0 + 0.3, ex1 - 0.3, zCE, INNER, { gaps: eGaps });
   addPanel(ex1-ex0-0.6, zCE-ez0-0.3, FLOOR, (ex0+ex1)/2, 0.012, (ez0+zCE)/2);
   E.rooms.forEach((r, i) => {
     const [s0, s1] = r.span, cx = (s0+s1)/2;
-    if (i > 0) addBox(0.3, FH, ez1-zCE-0.6, INNER, s0, 0, (zCE+ez1)/2);
+    if (i > 0 && r.name !== '과학준비실') addBox(0.3, FH, ez1-zCE-0.6, INNER, s0, 0, (zCE+ez1)/2);
     addPanel(s1-s0-0.5, ez1-zCE-0.5, 0xead9c0, cx, 0.014, (zCE+ez1)/2);
     zones.push({ x0: s0, x1: s1, z0: zCE, z1: ez1, label: r.name });
     if (r.type === 'classroom' || r.type === 'science') {
@@ -273,6 +275,9 @@ export function buildWorld(scene) {
     }
     if (!r.innerOnly && !r.external) sign(r.name, doorC(r)+1.2, 2.35, zCE - 0.22, 0, 0.34);
   });
+  addBox(0.3, FH, 4.3, INNER, 32.8, 0, -52.85);     // 과학준비실 칸막이(과학실에서 진입 — innerOnly)
+  addBox(0.3, FH, 4.7, INNER, 32.8, 0, -47.05);
+  addBox(0.3, 1.0, 1.3, INNER, 32.8, 2.4, -50.05);
   addBox(ex1-ex0+0.8, 0.3, ez1-ez0+0.8, 0xd9dce1, (ex0+ex1)/2, FH, (ez0+ez1)/2);
 
   // ================= 체육관 =================
