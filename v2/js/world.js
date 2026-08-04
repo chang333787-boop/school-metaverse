@@ -176,7 +176,7 @@ export function buildWorld(scene) {
     addBox(76, 0.6, 0.2, 0x4a6fa5, 0, 2.65, fz1 + 0.14, { collide: false });
     [-4.2,-1.5,1.5,4.2].forEach(ox => addBox(0.4, 3.0, 0.4, 0x3b2d24, hx+ox, 0, fz1+4.2));
     addBox(11, 0.45, 5.6, 0x3b2d24, hx, 3.0, fz1+3.2);
-    addBox(11.4, 0.3, 0.6, 0x5b8fc9, hx, 3.45, fz1+5.9, { collide: false });
+    addBox(11.4, 0.3, 0.6, 0xe8b93a, hx, 3.45, fz1+5.9, { collide: false });   // 포치 테두리=노랑 포인트
     for (let i = 0; i < 6; i++) addBox(6.4, 0.18*(6-i), 0.36, PAVE, hx, -1, fz1+6.2+0.36*i);
     sign(SCHOOL.name, hx, 2.6, fz1 + 6.05, 0, 0.5);
   }
@@ -523,6 +523,17 @@ export function buildWorld(scene) {
     // 먼 능선 — 서로 겹치므로 밑동 높이를 어긋내 동일평면을 피한다(잔디 아래는 어차피 안 보인다)
     [[-58, 96, 26, 13, -1], [6, 104, 34, 16, -3], [62, 92, 24, 11, -2]].forEach(([mx, mz, mw, mh, my]) =>
       addBox(mw * 2.6, mh, mw, 0x6f8f66, mx, my, mz, { collide: false }));
+  }
+  {   // 외벽 코발트 블루 띠 — 인식 포인트 1순위(실물 외벽=베이지 주조+파랑 띠+노랑 포인트+흰 파라펫)
+    // ⚠️띠 끝을 벽 끝과 정확히 맞추면 x0가 같아져 감사에 걸린다 → 0.06 인셋
+    const BLU = 0x4a6fa5, IN = 0.06;
+    const bandX = (x0, x1, z, face, y) => addBox(x1-x0-IN*2, 0.55, 0.2, BLU, (x0+x1)/2, y, z + face*0.14, { collide: false });
+    const bandZ = (z0, z1, x, face, y) => addBox(0.2, 0.55, z1-z0-IN*2, BLU, x + face*0.14, y, (z0+z1)/2, { collide: false });
+    bandZ(wz0, wz1, wx0, -1, 2.65); bandZ(wz0, wz1, wx0, -1, 2.65 + FH);        // 서관 서면(1·2층)
+    bandX(wx0, wx1, wz0, -1, 2.65); bandX(wx0, wx1, wz0, -1, 2.65 + FH);        // 서관 북면
+    bandX(ex0, ex1, ez1, 1, 2.65);  bandX(ex0, ex1, ez0, -1, 2.65);             // 동관 남·북면
+    bandZ(ez0, ez1, ex1, 1, 2.65);                                              // 동관 동면
+    bandZ(kz0, kz1, kx0, -1, 3.2);  bandX(kx0, kx1, kz0, -1, 3.2);              // 급식동 서·북면
   }
   zones.push({ x0: fx0, x1: fx1, z0: fz0, z1: zCor, y: 0, label: '본관 복도' });
   zones.push({ x0: -39.7, x1: -16.75, z0: HZ, z1: fz0, y: 0, label: '서측홀' });
