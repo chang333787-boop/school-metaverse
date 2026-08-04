@@ -143,6 +143,32 @@ function step(dt) {
   camera.lookAt(hx, hy, hz);
 }
 
+// ---------- 문짝(미닫이) ----------
+// 움직이므로 청크 병합 밖의 개별 Mesh. 통행은 막지 않는다(콜라이더 없음) — 도달성 검사 결과가 그대로 유지된다.
+// 벽면에서 6cm 띄워 벽 위를 미끄러지게 한다(벽 속으로 사라지면 문이 없어진 것처럼 보인다).
+const doorMat = new THREE.MeshLambertMaterial({ color: 0xc08b4f });
+const DOORS = world.doors.map(d => {
+  const w = Math.min(d.w, 1.9), h = 2.5, OFF = 0.28;   // 개구 높이 2.6에 맞춤(낮으면 문 위가 뻥 뚫려 보인다)
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(d.ax === 'x' ? w : 0.16, h, d.ax === 'x' ? 0.16 : w), doorMat);
+  const bx = d.ax === 'x' ? d.cx : d.cx + OFF, bz = d.ax === 'x' ? d.cz + OFF : d.cz;
+  mesh.position.set(bx, d.y0 + h / 2, bz);
+  mesh.matrixAutoUpdate = false; mesh.updateMatrix();
+  scene.add(mesh);
+  return { mesh, ax: d.ax, bx, bz, w, y0: d.y0, open: 0 };
+});
+function doorTick(dt) {
+  for (const o of DOORS) {
+    const dx = P.x - o.bx, dz = P.z - o.bz;
+    const target = (dx * dx + dz * dz < 9 && Math.abs(P.y - o.y0) < 2) ? 1 : 0;
+    if (Math.abs(target - o.open) < 0.002) continue;
+    o.open += (target - o.open) * Math.min(1, dt * 6);
+    const s = o.open * o.w * 0.94;
+    if (o.ax === 'x') o.mesh.position.x = o.bx + s; else o.mesh.position.z = o.bz + s;
+    o.mesh.updateMatrix();
+  }
+}
+
 // ---------- 시간대·위치표시는 loop() 위에 둔다(loop가 참조 — 아래 두면 TDZ로 월드가 통째로 죽는다) ----------
 // ---------- 시간대(낮·노을·밤) ----------
 // 전환할 때만 그림자를 1회 다시 굽는다. 실시간 시간 흐름은 넣지 않는다(연속 재굽기=프레임 붕괴)
@@ -192,6 +218,7 @@ function loop() {
   const dt = Math.min(0.05, clock.getDelta());
   const t0 = performance.now();
   step(dt);
+  doorTick(dt);
   simMs = Math.max(simMs, performance.now() - t0);
   renderer.render(scene, camera);
   acc += dt; n++;
@@ -280,5 +307,6 @@ window.SD2 = {
   tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (terrainY(x, z) + 0.01); P.vy = 0; },
   yaw(v) { camYaw = v; },
   pos: () => [P.x.toFixed(1), P.y.toFixed(1), P.z.toFixed(1)],
-  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) step(1/60); keyList.forEach(k => keys.delete(k)); renderer.render(scene, camera); },
+  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); } keyList.forEach(k => keys.delete(k)); renderer.render(scene, camera); },
+  doors: () => DOORS.length,
 };

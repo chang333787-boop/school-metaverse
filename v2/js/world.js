@@ -9,7 +9,7 @@ import { SCHOOL } from '../../js/data.js';
 export function buildWorld(scene) {
   const B = SCHOOL.building, FR = B.front;
   const FH = B.floorHeight, TERR_Z = -18;
-  const colliders = [], zones = [], allBoxes = [];
+  const colliders = [], zones = [], allBoxes = [], doors = [];
   const CHUNK = 16, chunks = new Map();
   const box_ = new THREE.BoxGeometry(1, 1, 1).toNonIndexed();
   const bpos = box_.attributes.position, bnrm = box_.attributes.normal;
@@ -51,6 +51,7 @@ export function buildWorld(scene) {
       const g0 = g.c - g.w/2, g1 = g.c + g.w/2, dh = g.dh ?? 2.6;
       if (g0 - cur > 0.05) addBox(g0 - cur, h, 0.3, hex, (cur+g0)/2, y0, z);
       if (h - dh > 0.15) addBox(g1 - g0, h - dh, 0.3, hex, (g0+g1)/2, y0 + dh, z);
+      if (dh <= 2.8 && g.w <= 2.2) doors.push({ ax: 'x', cx: g.c, cz: z, w: g.w, y0 });   // 인방 있는 좁은 개구=문
       cur = Math.max(cur, g1);
     }
     if (x1 - cur > 0.05) addBox(x1 - cur, h, 0.3, hex, (cur+x1)/2, y0, z);
@@ -74,6 +75,7 @@ export function buildWorld(scene) {
       const g0 = g.c - g.w/2, g1 = g.c + g.w/2, dh = g.dh ?? 2.6;
       if (g0 - cur > 0.05) addBox(0.3, h, g0 - cur, hex, x, y0, (cur+g0)/2);
       if (h - dh > 0.15) addBox(0.3, h - dh, g1 - g0, hex, x, y0 + dh, (g0+g1)/2);
+      if (dh <= 2.8 && g.w <= 2.2) doors.push({ ax: 'z', cx: x, cz: g.c, w: g.w, y0 });
       cur = Math.max(cur, g1);
     }
     if (z1 - cur > 0.05) addBox(0.3, h, z1 - cur, hex, x, y0, (cur+z1)/2);
@@ -566,5 +568,5 @@ export function buildWorld(scene) {
     m.matrixAutoUpdate = false;
     scene.add(m);
   }
-  return { colliders, grid, zones, TERR_Z };
+  return { colliders, grid, zones, doors, TERR_Z };
 }
