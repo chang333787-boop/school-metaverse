@@ -158,16 +158,30 @@ export function buildWorld(scene) {
     if (r.type === 'classroom' || r.type === 'computer' || r.type === 'daycare') {
       addBox(3, 1.2, 0.16, 0x2e5d43, cx, 0.9, zCor + 0.23, { collide: false });   // 0.23=벽면(0.15)에 딱 붙임(0.28은 5cm 떠 있었다)
       addBox(1.2, 0.85, 0.6, 0x8a5a3b, cx - 2, 0, zCor + 1.4);
-      for (let dx = -1; dx <= 1; dx++) for (let dz = 0; dz < 2; dz++)
+      for (let dx = -1; dx <= 1; dx++) for (let dz = 0; dz < 2; dz++) {
         addBox(1.1, 0.72, 0.5, 0xb0a18e, cx + dx*1.7, 0, zCor + 3.4 + dz*1.7);
+        addBox(0.5, 0.85, 0.4, 0x8a7f6e, cx + dx*1.7, 0, zCor + 4.05 + dz*1.7);   // 의자(뒤 책상과 0.6 통로 유지)
+      }
     } else if (r.type !== 'hall' && r.type !== 'toilet') {
       addBox(1.3, 0.74, 0.7, 0xb0a18e, cx - 1, 0, zCor + 3.5);
       addBox(1.3, 0.74, 0.7, 0xb0a18e, cx + 1, 0, zCor + 2.2);
       addBox(0.9, 1.7, 0.45, 0xc8ccd0, s0 + 0.7, 0, fz1 - 0.6);
     }
-    if (r.type === 'toilet') addBox(cw-1.2, 1.2, 0.4, 0xdfe8ee, cx, 0, fz1 - 0.55);
+    if (r.type === 'toilet') {
+      addBox(cw-1.2, 1.2, 0.4, 0xdfe8ee, cx, 0, fz1 - 0.55);                       // 세면대
+      addBox(0.3, FH, fz1-zCor-2.2, INNER, cx, 0, (zCor+fz1)/2 - 0.6);             // 남|여 구분벽
+      [-3.1, -1.6, 1.6, 3.1].forEach(ox => addBox(0.24, 1.9, 1.5, 0xdfe8ee, cx+ox, 0, zCor + 1.55));  // 칸막이
+    }
     sign(r.name, doorC(r) + 1.3, 2.35, zCor - 0.22, 0, 0.34);
   });
+  {   // 복도 채우기 — 사물함·소화기·형광등(빈 복도가 v1 대비 가장 크게 비어 보이던 부분)
+    [[9.2, 18.4], [21.6, 39.4]].forEach(([a, b]) => {                              // 개구가 없는 구간에만
+      for (let x = a; x + 1.6 <= b; x += 1.75) addBox(1.6, 1.8, 0.4, 0x8fa3b8, x + 0.8, 0, fz0 + 0.35);
+    });
+    [12.5, 26.5, 35.5].forEach(x => addBox(0.24, 0.6, 0.24, 0xc4402e, x, 1.85, fz0 + 0.32, { collide: false }));  // 소화기
+    for (let x = -37; x <= 38; x += 4.5)                                           // 형광등(지붕 밑면에 맞댐)
+      addBox(1.6, 0.16, 0.5, 0xf7f6ef, x, FH - 0.16, (fz0 + zCor) / 2, { collide: false });
+  }
   addBox(fx1-fx0+0.8, 0.3, fz1-fz0+0.38, 0xd9dce1, 0, FH, (fz0+fz1)/2 + 0.21);   // 북단은 서관 슬래브(z-38)와 접면까지만
   addBox(fx1-fx0+0.8, 0.45, 0.3, 0xe8e6de, 0, FH+0.3, fz1+0.25, { collide: false });
   addBox(4, 1.8, 3, 0xe8e6de, fx1-8, FH+0.3, (fz0+fz1)/2);
