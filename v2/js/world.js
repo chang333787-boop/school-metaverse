@@ -156,7 +156,7 @@ export function buildWorld(scene) {
     addPanel(cw-0.5, fz1-zCor-0.5, r.type==='hall'?FLOOR:0xead9c0, cx, 0.014, (zCor+fz1)/2);
     zones.push({ x0: s0, x1: s1, z0: zCor, z1: fz1, y: 0, label: r.name });
     if (r.type === 'classroom' || r.type === 'computer' || r.type === 'daycare') {
-      addBox(3, 1.2, 0.16, 0x2e5d43, cx, 0.9, zCor + 0.28, { collide: false });
+      addBox(3, 1.2, 0.16, 0x2e5d43, cx, 0.9, zCor + 0.23, { collide: false });   // 0.23=벽면(0.15)에 딱 붙임(0.28은 5cm 떠 있었다)
       addBox(1.2, 0.85, 0.6, 0x8a5a3b, cx - 2, 0, zCor + 1.4);
       for (let dx = -1; dx <= 1; dx++) for (let dz = 0; dz < 2; dz++)
         addBox(1.1, 0.72, 0.5, 0xb0a18e, cx + dx*1.7, 0, zCor + 3.4 + dz*1.7);
@@ -218,7 +218,7 @@ export function buildWorld(scene) {
     B.upper.rooms.forEach((r, i) => {
       const [s0, s1] = r.span, cx = (s0+s1)/2;
       if (i > 0) addBox(0.3, FH-0.3, zc2-wz0-0.6, INNER, s0, FH+0.3, (wz0+zc2)/2);
-      addBox(3, 1.2, 0.16, 0x2e5d43, cx, FH+1.2, wz0+0.53, { collide: false });
+      addBox(3, 1.2, 0.16, 0x2e5d43, cx, FH+1.2, wz0+0.23, { collide: false });   // 2층 칠판은 30cm 떠 있었다
       // 가구 간격 규칙: 책상 폭 1.1 + 틈 1.1(사람 폭 0.52의 2배) — 좁은 실은 개수를 줄인다.
       // ⚠️1.45 간격은 틈이 0.35라 사람이 못 지나가 방이 통째로 봉쇄됐었다(SD2.reach가 적발).
       const nD = (s1 - s0) > 7 ? 3 : 1;
@@ -286,7 +286,7 @@ export function buildWorld(scene) {
     addPanel(s1-s0-0.5, ez1-zCE-0.5, 0xead9c0, cx, 0.014, (zCE+ez1)/2);
     zones.push({ x0: s0, x1: s1, z0: zCE, z1: ez1, y: 0, label: r.name });
     if (r.type === 'classroom' || r.type === 'science') {
-      addBox(3, 1.2, 0.16, 0x2e5d43, cx, 0.9, zCE + 0.28, { collide: false });
+      addBox(3, 1.2, 0.16, 0x2e5d43, cx, 0.9, zCE + 0.23, { collide: false });
       for (let dx = -1; dx <= 1; dx++) for (let dz = 0; dz < 2; dz++)
         addBox(1.1, 0.72, 0.5, r.type==='science'?0x8fc46a:0xb0a18e, cx + dx*1.7, 0, zCE + 3.2 + dz*1.7);
     }
@@ -579,5 +579,5 @@ export function buildWorld(scene) {
     m.matrixAutoUpdate = false;
     scene.add(m);
   }
-  return { colliders, grid, zones, doors, TERR_Z };
+  return { colliders, grid, zones, doors, allBoxes, TERR_Z };
 }

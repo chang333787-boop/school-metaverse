@@ -148,7 +148,10 @@ function step(dt) {
 // 벽면에서 6cm 띄워 벽 위를 미끄러지게 한다(벽 속으로 사라지면 문이 없어진 것처럼 보인다).
 const doorMat = new THREE.MeshLambertMaterial({ color: 0xc08b4f });
 const DOORS = world.doors.map(d => {
-  const w = Math.min(d.w, 1.9), h = 2.5, OFF = 0.28;   // 개구 높이 2.6에 맞춤(낮으면 문 위가 뻥 뚫려 보인다)
+  // 🔴OFF=0: 문은 벽 두께(0.3) 안에서만 미끄러진다 = 포켓 도어.
+  // 벽 밖으로 내밀면(0.28이었음) 벽면에 붙은 칠판과 같은 평면이 되어 반짝인다.
+  // 문짝은 개별 Mesh라 빌드 감사(헌법③)가 보지 못한다 — 그래서 '벽 안에서만 움직인다'를 규칙으로 못박는다.
+  const w = Math.min(d.w, 1.9), h = 2.5, OFF = 0;      // 높이는 개구 2.6에 맞춤
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(d.ax === 'x' ? w : 0.16, h, d.ax === 'x' ? 0.16 : w), doorMat);
   const bx = d.ax === 'x' ? d.cx : d.cx + OFF, bz = d.ax === 'x' ? d.cz + OFF : d.cz;
@@ -163,10 +166,36 @@ function doorTick(dt) {
     const target = (dx * dx + dz * dz < 9 && Math.abs(P.y - o.y0) < 2) ? 1 : 0;
     if (Math.abs(target - o.open) < 0.002) continue;
     o.open += (target - o.open) * Math.min(1, dt * 6);
-    const s = o.open * o.w * 0.94;
+    const s = o.open * o.w * 0.94 * o.dir;
     if (o.ax === 'x') o.mesh.position.x = o.bx + s; else o.mesh.position.z = o.bz + s;
     o.mesh.updateMatrix();
   }
+}
+
+// 문 경로 간섭 검사 — 문짝은 개별 Mesh라 헌법③ 빌드 감사가 못 본다(칠판과 겹쳐 반짝인 사고).
+// 문이 닫힘→열림으로 쓸고 가는 볼륨에 '벽이 아닌 얇은 부재'(칠판·게시판 등)가 있으면 잡는다.
+function sweepHits(o, dir) {
+  const s = o.w * 0.94 * dir, T = 0.09, y0 = o.y0, y1 = o.y0 + 2.5;
+  const lo = Math.min(0, s), hi = Math.max(0, s);
+  const sw = o.ax === 'x'
+    ? { x0: o.bx - o.w/2 + lo, x1: o.bx + o.w/2 + hi, z0: o.bz - T, z1: o.bz + T }
+    : { x0: o.bx - T, x1: o.bx + T, z0: o.bz - o.w/2 + lo, z1: o.bz + o.w/2 + hi };
+  let n = 0;
+  for (const b of world.allBoxes) {
+    if ((o.ax === 'x' ? b.z1 - b.z0 : b.x1 - b.x0) > 0.29) continue;   // 벽(0.3)은 문이 숨는 곳이니 제외
+    if (b.x1 <= sw.x0 || b.x0 >= sw.x1 || b.z1 <= sw.z0 || b.z0 >= sw.z1 || b.y1 <= y0 || b.y0 >= y1) continue;
+    n++;
+  }
+  return n;
+}
+// 열림 방향은 빌드 때 1회 자동 결정 — 간섭이 적은 쪽으로 연다(창문·칠판을 알아서 피한다)
+DOORS.forEach(o => { o.dir = sweepHits(o, 1) <= sweepHits(o, -1) ? 1 : -1; });
+function doorCheck() {
+  const bad = [];
+  for (const o of DOORS) if (sweepHits(o, o.dir)) bad.push([+o.bx.toFixed(1), +o.bz.toFixed(1)]);
+  if (bad.length) console.error('🚪 문 경로 간섭 ' + bad.length + '건: ' + JSON.stringify(bad.slice(0, 6)));
+  else console.log('✅ 문 경로 간섭 0 (문 ' + DOORS.length + '개)');
+  return bad;
 }
 
 // ---------- 시간대·위치표시는 loop() 위에 둔다(loop가 참조 — 아래 두면 TDZ로 월드가 통째로 죽는다) ----------
@@ -297,7 +326,7 @@ function reach(opt = {}) {
 }
 
 // ?check=1 이면 로드 직후 자동 답사(검증용 URL — 학생 접속엔 부담 주지 않도록 기본 꺼둠)
-if (location.search.includes('check=1')) setTimeout(() => reach(), 60);
+if (location.search.includes('check=1')) setTimeout(() => { reach(); doorCheck(); }, 60);
 
 // 디버그 API (v1과 같은 사용감)
 window.SD2 = {
@@ -308,5 +337,5 @@ window.SD2 = {
   yaw(v) { camYaw = v; },
   pos: () => [P.x.toFixed(1), P.y.toFixed(1), P.z.toFixed(1)],
   step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); } keyList.forEach(k => keys.delete(k)); renderer.render(scene, camera); },
-  doors: () => DOORS.length,
+  doors: () => DOORS.length, doorCheck,
 };
