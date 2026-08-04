@@ -143,6 +143,46 @@ function step(dt) {
   camera.lookAt(hx, hy, hz);
 }
 
+// ---------- 시간대·위치표시는 loop() 위에 둔다(loop가 참조 — 아래 두면 TDZ로 월드가 통째로 죽는다) ----------
+// ---------- 시간대(낮·노을·밤) ----------
+// 전환할 때만 그림자를 1회 다시 굽는다. 실시간 시간 흐름은 넣지 않는다(연속 재굽기=프레임 붕괴)
+const TIMES = {
+  day:    { label: '☀️ 낮',  bg: 0xcfe9f8, near: 80, far: 260, sky: 0xc9dcf0, gnd: 0xb08a5e, hi: 1.4,  sc: 0xfff0cf, si: 3.1, sp: [60, 95, 45],   exp: 1.12 },
+  sunset: { label: '🌇 노을', bg: 0xf3c193, near: 60, far: 230, sky: 0xf4cba4, gnd: 0x8a6a4e, hi: 1.15, sc: 0xffb066, si: 2.4, sp: [-88, 34, 26],  exp: 1.06 },
+  night:  { label: '🌙 밤',  bg: 0x1f2b3f, near: 40, far: 175, sky: 0x35485f, gnd: 0x1d2430, hi: 0.6,  sc: 0xa8bcda, si: 0.75, sp: [-30, 80, -60], exp: 1.0 },
+};
+const ORDER = ['day', 'sunset', 'night'];
+let timeKey = 'day';
+const timeBtn = document.createElement('div');
+timeBtn.className = 'chip';
+timeBtn.style.cssText = 'right:10px;bottom:10px;cursor:pointer;user-select:none';
+document.body.appendChild(timeBtn);
+function setTime(k) {
+  const t = TIMES[k]; if (!t) return timeKey;
+  timeKey = k;
+  scene.background.setHex(t.bg);
+  scene.fog.color.setHex(t.bg); scene.fog.near = t.near; scene.fog.far = t.far;
+  hemi.color.setHex(t.sky); hemi.groundColor.setHex(t.gnd); hemi.intensity = t.hi;
+  sun.color.setHex(t.sc); sun.intensity = t.si; sun.position.set(t.sp[0], t.sp[1], t.sp[2]);
+  renderer.toneMappingExposure = t.exp;
+  renderer.shadowMap.needsUpdate = true;
+  timeBtn.textContent = t.label;
+  return k;
+}
+timeBtn.addEventListener('click', e => { e.stopPropagation(); setTime(ORDER[(ORDER.indexOf(timeKey) + 1) % 3]); });
+setTime('day');
+
+// ---------- 현재 위치 표시 ----------
+const locBox = document.getElementById('loc');
+let locT = 0;
+function updateLoc() {
+  let name = '학교';
+  for (const z of world.zones) {
+    if (P.x > z.x0 && P.x < z.x1 && P.z > z.z0 && P.z < z.z1 && Math.abs(P.y - (z.y ?? 0)) < 1.2) { name = z.label; break; }
+  }
+  locBox.textContent = '📍 ' + name;
+}
+
 // ---------- 루프 + 예산 계측(헌법⑥) ----------
 const clock = new THREE.Clock();
 const fpsBox = document.getElementById('fps');
@@ -155,6 +195,8 @@ function loop() {
   simMs = Math.max(simMs, performance.now() - t0);
   renderer.render(scene, camera);
   acc += dt; n++;
+  locT += dt;
+  if (locT > 0.4) { locT = 0; updateLoc(); }
   if (acc > 1) {
     const fps = Math.round(n / acc);
     const dc = renderer.info.render.calls;
@@ -233,6 +275,8 @@ if (location.search.includes('check=1')) setTimeout(() => reach(), 60);
 // 디버그 API (v1과 같은 사용감)
 window.SD2 = {
   scene, camera, renderer, world, reach,
+  time: k => setTime(k || ORDER[(ORDER.indexOf(timeKey) + 1) % 3]),
+  loc: () => { updateLoc(); return locBox.textContent; },
   tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (terrainY(x, z) + 0.01); P.vy = 0; },
   yaw(v) { camYaw = v; },
   pos: () => [P.x.toFixed(1), P.y.toFixed(1), P.z.toFixed(1)],

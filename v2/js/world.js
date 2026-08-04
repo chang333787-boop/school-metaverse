@@ -522,6 +522,9 @@ export function buildWorld(scene) {
     [[-58, 96, 26, 13, -1], [6, 104, 34, 16, -3], [62, 92, 24, 11, -2]].forEach(([mx, mz, mw, mh, my]) =>
       addBox(mw * 2.6, mh, mw, 0x6f8f66, mx, my, mz, { collide: false }));
   }
+  zones.push({ x0: fx0, x1: fx1, z0: fz0, z1: zCor, y: 0, label: '본관 복도' });
+  zones.push({ x0: -39.7, x1: -16.75, z0: HZ, z1: fz0, y: 0, label: '서측홀' });
+  zones.push({ x0: ex0 + 0.3, x1: ex1 - 0.3, z0: ez1 + 0.3, z1: fz0 - 0.3, y: 0, label: '가운데 마당' });
   zones.push({ x0: SCHOOL.playground.center[0]-7, x1: SCHOOL.playground.center[0]+7, z0: SCHOOL.playground.center[1]-5, z1: SCHOOL.playground.center[1]+5, y: -1, label: '놀이터' });
   zones.push({ x0: -52, x1: -44, z0: -13, z1: -7, y: -1, label: '유치원 놀이터' });
   zones.push({ x0: SCHOOL.garden.center[0]-4, x1: SCHOOL.garden.center[0]+4, z0: SCHOOL.garden.center[1]+3, z1: SCHOOL.garden.center[1]+4.5, y: 0, label: '텃밭' });
