@@ -23,7 +23,7 @@ export function buildWorld(scene) {
     return ch;
   }
   function addBox(w, h, d, hex, cx, baseY, cz, opt = {}) {
-    if (Math.min(w, h, d) < 0.15) throw new Error('헌법① 위반 <0.15m: ' + [w, h, d]);
+    if (Math.min(w, h, d) < 0.1499) throw new Error('헌법① 위반 <0.15m: ' + [w, h, d]);   // 0.1499=부동소수 오차 허용(0.15는 합법)
     allBoxes.push({ x0: cx-w/2, x1: cx+w/2, y0: baseY, y1: baseY+h, z0: cz-d/2, z1: cz+d/2 });
     const ch = chunkOf(cx, cz);
     _c.set(hex); _c.multiplyScalar(0.97);
@@ -49,12 +49,12 @@ export function buildWorld(scene) {
     let cur = x0;
     for (const g of gaps) {
       const g0 = g.c - g.w/2, g1 = g.c + g.w/2, dh = g.dh ?? 2.6;
-      if (g0 - cur > 0.05) addBox(g0 - cur, h, 0.3, hex, (cur+g0)/2, y0, z);
-      if (h - dh > 0.15) addBox(g1 - g0, h - dh, 0.3, hex, (g0+g1)/2, y0 + dh, z);
+      if (g0 - cur > 0.1499) addBox(g0 - cur, h, 0.3, hex, (cur+g0)/2, y0, z);
+      if (h - dh > 0.1499) addBox(g1 - g0, h - dh, 0.3, hex, (g0+g1)/2, y0 + dh, z);
       if (dh <= 2.8 && g.w <= 2.2) doors.push({ ax: 'x', cx: g.c, cz: z, w: g.w, y0 });   // 인방 있는 좁은 개구=문
       cur = Math.max(cur, g1);
     }
-    if (x1 - cur > 0.05) addBox(x1 - cur, h, 0.3, hex, (cur+x1)/2, y0, z);
+    if (x1 - cur > 0.1499) addBox(x1 - cur, h, 0.3, hex, (cur+x1)/2, y0, z);
     if (opt.wins) {
       const n = opt.wins, gap = (x1-x0)/n, sill = opt.sill ?? 1.0, wh = opt.wh ?? 1.5, fc = opt.face ?? 1;
       for (let i = 0; i < n; i++) {
@@ -68,17 +68,17 @@ export function buildWorld(scene) {
   function wallZ(z0, z1, x, hex, opt = {}) {
     // ⚠️역순으로 넘기면 벽이 조용히 통째로 사라진다(세로복도 서벽 실종 사고) — 자동 정렬로 봉쇄
     if (z0 > z1) { console.warn('wallZ 인자 역순 자동 정렬', z0, z1, x); const t = z0; z0 = z1; z1 = t; }
-    z0 += 0.3; z1 -= 0.3;
+    z0 += 0.15; z1 -= 0.15;
     const h = opt.h ?? FH, y0 = opt.y0 ?? 0, gaps = (opt.gaps ?? []).slice().sort((a,b)=>(a.c-a.w/2)-(b.c-b.w/2));
     let cur = z0;
     for (const g of gaps) {
       const g0 = g.c - g.w/2, g1 = g.c + g.w/2, dh = g.dh ?? 2.6;
-      if (g0 - cur > 0.05) addBox(0.3, h, g0 - cur, hex, x, y0, (cur+g0)/2);
-      if (h - dh > 0.15) addBox(0.3, h - dh, g1 - g0, hex, x, y0 + dh, (g0+g1)/2);
+      if (g0 - cur > 0.1499) addBox(0.3, h, g0 - cur, hex, x, y0, (cur+g0)/2);
+      if (h - dh > 0.1499) addBox(0.3, h - dh, g1 - g0, hex, x, y0 + dh, (g0+g1)/2);
       if (dh <= 2.8 && g.w <= 2.2) doors.push({ ax: 'z', cx: x, cz: g.c, w: g.w, y0 });
       cur = Math.max(cur, g1);
     }
-    if (z1 - cur > 0.05) addBox(0.3, h, z1 - cur, hex, x, y0, (cur+z1)/2);
+    if (z1 - cur > 0.1499) addBox(0.3, h, z1 - cur, hex, x, y0, (cur+z1)/2);
     if (opt.wins) {
       const n = opt.wins, gap = (z1-z0)/n, sill = opt.sill ?? 1.0, wh = opt.wh ?? 1.5, fc = opt.face ?? 1;
       for (let i = 0; i < n; i++) {
@@ -148,11 +148,11 @@ export function buildWorld(scene) {
   wallZ(fz0, fz1, fx0, WALL, { gaps: [{ c: FR.corridorExitZ, w: 1.8 }], wins: 1, face: -1 });
   wallZ(fz0, fz1, fx1, WALL, { gaps: [{ c: FR.corridorExitZ, w: 1.8 }], wins: 1, face: 1 });
   const cGaps = FR.rooms.map(r => r.type === 'hall' ? { c: (r.span[0]+r.span[1])/2, w: 3.4, dh: FH } : { c: doorC(r), w: 1.2 });
-  wallX(fx0 + 0.3, fx1 - 0.3, zCor, INNER, { gaps: cGaps });   // 내부벽은 외벽에서 0.3 인셋(코너 관통 금지)
-  addPanel(fx1-fx0-0.6, zCor-fz0-0.3, FLOOR, 0, 0.012, (fz0+zCor)/2);
+  wallX(fx0 + 0.15, fx1 - 0.15, zCor, INNER, { gaps: cGaps });   // 내부벽은 외벽에서 0.3 인셋(코너 관통 금지)
+  addPanel(fx1-fx0-0.3, zCor-fz0-0.3, FLOOR, 0, 0.012, (fz0+zCor)/2);
   FR.rooms.forEach((r, i) => {
     const [s0, s1] = r.span, cx = (s0+s1)/2, cw = s1-s0;
-    if (i > 0) addBox(0.3, FH, fz1-zCor-0.6, INNER, s0, 0, (zCor+fz1)/2);
+    if (i > 0) addBox(0.3, FH, fz1-zCor-0.3, INNER, s0, 0, (zCor+fz1)/2);
     addPanel(cw-0.5, fz1-zCor-0.5, r.type==='hall'?FLOOR:0xead9c0, cx, 0.014, (zCor+fz1)/2);
     zones.push({ x0: s0, x1: s1, z0: zCor, z1: fz1, y: 0, label: r.name });
     if (r.type === 'classroom' || r.type === 'computer' || r.type === 'daycare') {
@@ -204,8 +204,8 @@ export function buildWorld(scene) {
   wallZ(wz0, wz1, wx1, WALL, { h: FH });                                          // 동벽(주차장면) — 미시공이던 구멍
   wallZ(wz0, wz1, wx1, WALL, { y0: FH+0.3, h: FH-0.3 });
   wallX(wx0, wx1, wz1, WALL, { y0: FH+0.3, h: FH-0.3, wins: 6, face: 1, sill: 0.8 });  // 2층 남면(1층 z-38은 본관 북벽)
-  addPanel(wx1-wx0-0.6, 11.85, FLOOR, (wx0+wx1)/2, 0.012, -43.775);
-  wallX(wx0 + 0.3, -16.75, HZ, INNER,
+  addPanel(wx1-wx0-0.3, 11.85, FLOOR, (wx0+wx1)/2, 0.012, -43.775);
+  wallX(wx0 + 0.15, -16.75, HZ, INNER,
     { gaps: wg.rooms.filter(r => !r.innerOnly && r.type !== 'stair').map(r => ({ c: doorC(r), w: 1.4 })) });
   wg.rooms.forEach((r, i) => {
     const [s0, s1] = r.span, cx = (s0+s1)/2;
@@ -220,7 +220,7 @@ export function buildWorld(scene) {
   addBox(0.3, 1.0, 1.2, INNER, -28.6, 2.4, -44.4);
   {
     const sx = -14.3, w9 = 3.2;
-    addBox(0.3, FH, wz1-wz0-0.6, INNER, -16.6, 0, (wz0+wz1)/2);
+    addBox(0.3, FH, wz1-wz0-0.3, INNER, -16.6, 0, (wz0+wz1)/2);
     for (let i = 0; i < 13; i++)
       addBox(w9, 0.285*(i+1), 0.72, 0xc9b8a0, sx, 0, fz0 - 0.95 - 0.72*i);
     addBox(3.9, 0.3, 1.6, 0xc9b8a0, -14.65, FH, fz0 - 0.95 - 0.72*12 - 1.15);   // 착지참 — 서쪽 슬래브(x-16.6)까지 닿게
@@ -231,7 +231,7 @@ export function buildWorld(scene) {
     const zc2 = wz1 - 2.7;
     B.upper.rooms.forEach((r, i) => {
       const [s0, s1] = r.span, cx = (s0+s1)/2;
-      if (i > 0) addBox(0.3, FH-0.3, zc2-wz0-0.6, INNER, s0, FH+0.3, (wz0+zc2)/2);
+      if (i > 0) addBox(0.3, FH-0.3, zc2-wz0-0.3, INNER, s0, FH+0.3, (wz0+zc2)/2);
       addBox(3, 1.2, 0.16, 0x2e5d43, cx, FH+1.2, wz0+0.23, { collide: false });   // 2층 칠판은 30cm 떠 있었다
       // 가구 간격 규칙: 책상 폭 1.1 + 틈 1.1(사람 폭 0.52의 2배) — 좁은 실은 개수를 줄인다.
       // ⚠️1.45 간격은 틈이 0.35라 사람이 못 지나가 방이 통째로 봉쇄됐었다(SD2.reach가 적발).
@@ -241,7 +241,7 @@ export function buildWorld(scene) {
       zones.push({ x0: s0, x1: s1, z0: wz0, z1: zc2, y: FH+0.3, label: r.name });
     });
     zones.push({ x0: wx0, x1: -17.2, z0: zc2, z1: wz1, y: FH+0.3, label: '2층 복도' });
-    wallX(wx0 + 0.3, -17.2, zc2, INNER, { y0: FH+0.3, h: FH-0.3, gaps: B.upper.rooms.map(r => ({ c: doorC(r), w: 1.2 })) });   // 동단은 개구 가드 앞에서
+    wallX(wx0 + 0.15, -17.2, zc2, INNER, { y0: FH+0.3, h: FH-0.3, gaps: B.upper.rooms.map(r => ({ c: doorC(r), w: 1.2 })) });   // 동단은 개구 가드 앞에서
     addBox(0.45, 1.2, 9.64, 0xc8cdd2, wx1-4.6-0.25, FH+0.3, -43.12);   // 개구 가드 — 착지참(z-49.5) 구간은 열어 2층 진입로 확보
   }
   addBox(wx1-wx0+0.8, 0.3, wz1-wz0+0.8, 0xd9dce1, (wx0+wx1)/2, FH*2, (wz0+wz1)/2);
@@ -249,13 +249,13 @@ export function buildWorld(scene) {
 
   // ================= 급식동 =================
   const K = B.kitchen, [kx0, kx1] = K.x, [kz0, kz1] = K.z;
-  wallX(kx0, kx1 - 0.3, kz0, WALL, { h: K.wallHeight, wins: 4, face: -1, sill: 2.4, wh: 1.2 });
+  wallX(kx0, kx1 - 0.15, kz0, WALL, { h: K.wallHeight, wins: 4, face: -1, sill: 2.4, wh: 1.2 });
   wallZ(kz0, kz1, kx0, WALL, { h: K.wallHeight, wins: 4, face: -1 });
   // 이 벽 = 세로복도 동벽 = 동관 서벽(x8.4 3중 공유). 개구: 동관 복도 연결(-56.5)·마당 문(-41).
   // ⚠️hallEastDoorZ(-44)는 서벽(x5.4) 문 — 여기 두면 2학년 교실 벽에 반쯤 걸린 구멍이 된다(실수했던 지점)
   wallZ(kz0, kz1, kx1, WALL, { h: K.wallHeight, gaps: [{ c: -56.5, w: 2.4 }, { c: B.linkCorridor.yardDoorZ, w: 1.6 }], face: 1 });
-  addPanel(kx1-kx0-0.6, kz1-kz0-0.6, FLOOR, (kx0+kx1)/2, 0.012, (kz0+kz1)/2);
-  wallX(kx0 + 0.3, 5.25, K.cookWallZ, INNER, { h: K.wallHeight, gaps: [{ c: K.cookDoorC, w: 1.4 }] });   // 동단은 세로복도 서벽(x5.4) 앞까지
+  addPanel(kx1-kx0-0.3, kz1-kz0-0.3, FLOOR, (kx0+kx1)/2, 0.012, (kz0+kz1)/2);
+  wallX(kx0 + 0.15, 5.25, K.cookWallZ, INNER, { h: K.wallHeight, gaps: [{ c: K.cookDoorC, w: 1.4 }] });   // 동단은 세로복도 서벽(x5.4) 앞까지
   addBox(5.5, 0.95, 1, 0xc4c9cd, -1, 0, K.cookWallZ + 1.3);
   [[-5.2,-44],[-2.5,-46.5],[1,-43],[3.4,-46]].forEach(([tx,tz]) => {   // 양끝 식탁은 당직실 벽·세로복도 서벽과 이격
     addBox(0.8, 0.72, 3.2, 0xb5713d, tx, 0, tz);
@@ -280,23 +280,23 @@ export function buildWorld(scene) {
   const LC = B.linkCorridor;
   wallZ(fz0, -58, LC.x[0], WALL, { gaps: [{ c: K.hallEastDoorZ, w: 1.8 }], face: 1 });   // z-58까지 — 동관 복도 연결부까지 내려간다
   // (세로복도 동벽 = 급식동 동벽 x8.4 공유 — 위에서 통합 시공. 동관 복도 개구 -56.5)
-  addPanel(LC.x[1]-LC.x[0]-0.6, 19.1, FLOOR, 6.9, 0.012, -47.85);
+  addPanel(LC.x[1]-LC.x[0]-0.3, 19.1, FLOOR, 6.9, 0.012, -47.85);
   addBox(3.0, 0.3, 20, 0xd9dce1, 6.45, FH, -48);   // 동관 지붕(x8~)과 슬래브 겹침 금지
 
   // ================= 동관 =================
   const E = B.eastWing, [ex0, ex1] = E.x, [ez0, ez1] = E.z, zCE = ez0 + E.corridorDepth;
-  wallX(ex0 + 0.3, ex1, ez1, WALL, { wins: 8, face: 1 });   // 서단 0.3 인셋(공유벽 x8.4 관통 금지)
+  wallX(ex0 + 0.15, ex1, ez1, WALL, { wins: 8, face: 1 });   // 서단 0.3 인셋(공유벽 x8.4 관통 금지)
   wallX(ex0, ex1, ez0, WALL, { wins: 8, face: -1 });
   // 동벽: 복도 동쪽끝 바깥문(-56.65) + 창고 외부문(-50).
   // ⚠️창고는 external — 복도 문이 없다. 북벽에 뚫으면 복도로 들어갈 뿐 창고엔 못 들어간다(실제로 그랬음).
   wallZ(ez0, ez1, ex1, WALL, { wins: 2, face: 1, gaps: [{ c: -56.65, w: 1.8 }, { c: -50, w: 1.2 }] });
   // (동관 서벽 = 급식동 동벽 x8.4 공유 — 이중 시공 금지)
   const eGaps = E.rooms.filter(r => !r.innerOnly && !r.external).map(r => ({ c: doorC(r), w: 1.2 }));
-  wallX(ex0 + 0.3, ex1 - 0.3, zCE, INNER, { gaps: eGaps });
-  addPanel(ex1-ex0-0.6, zCE-ez0-0.3, FLOOR, (ex0+ex1)/2, 0.012, (ez0+zCE)/2);
+  wallX(ex0 + 0.15, ex1 - 0.15, zCE, INNER, { gaps: eGaps });
+  addPanel(ex1-ex0-0.3, zCE-ez0-0.3, FLOOR, (ex0+ex1)/2, 0.012, (ez0+zCE)/2);
   E.rooms.forEach((r, i) => {
     const [s0, s1] = r.span, cx = (s0+s1)/2;
-    if (i > 0 && r.name !== '과학준비실') addBox(0.3, FH, ez1-zCE-0.6, INNER, s0, 0, (zCE+ez1)/2);
+    if (i > 0 && r.name !== '과학준비실') addBox(0.3, FH, ez1-zCE-0.3, INNER, s0, 0, (zCE+ez1)/2);
     addPanel(s1-s0-0.5, ez1-zCE-0.5, 0xead9c0, cx, 0.014, (zCE+ez1)/2);
     zones.push({ x0: s0, x1: s1, z0: zCE, z1: ez1, y: 0, label: r.name });
     if (r.type === 'classroom' || r.type === 'science') {
@@ -350,7 +350,7 @@ export function buildWorld(scene) {
   sign('체육관', gx1 + 0.35, 2.7, gz, Math.PI/2, 0.5);
   {                                                        // 방송실(서북)·준비실(동북) — v1 실측 z-52~-48.4
     wallZ(gz0, -48.4, -73, INNER, { h: 3.2 });
-    wallX(gx0 + 0.3, -72.85, -48.4, INNER, { h: 3.2, gaps: [{ c: -75.3, w: 1.2 }] });
+    wallX(gx0 + 0.15, -72.85, -48.4, INNER, { h: 3.2, gaps: [{ c: -75.3, w: 1.2 }] });
     wallZ(gz0, -48.4, -55, INNER, { h: 3.2 });
     wallX(-54.85, -51.2, -48.4, INNER, { h: 3.2, gaps: [{ c: -53, w: 1.2 }] });
     addBox(0.3, 3.2, 3.0, INNER, -51.2, 0, -50.2);
