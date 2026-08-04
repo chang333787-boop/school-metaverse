@@ -557,6 +557,46 @@ export function buildWorld(scene) {
   zones.push({ x0: SCHOOL.garden.center[0]-4, x1: SCHOOL.garden.center[0]+4, z0: SCHOOL.garden.center[1]+3, z1: SCHOOL.garden.center[1]+4.5, y: 0, label: '텃밭' });
   zones.push({ x0: SCHOOL.field.center[0]-20, x1: SCHOOL.field.center[0]+20, z0: SCHOOL.field.center[1]-20, z1: SCHOOL.field.center[1]+20, y: -1, label: '운동장' });
 
+  // ================= 사람들 =================
+  // 정적(청크 병합 — 드로우콜 0)·충돌 없음(길을 막지 않는다). ⚠️대사는 교사 승인분만 — 임의 생성 금지
+  {
+    const zoneOf = n => zones.find(z => z.label === n);
+    function person(x, y, z, sex, s = 1) {
+      const top = sex === '여' ? 0xe0708a : 0x4d7fd6, no = { collide: false };
+      addBox(0.19*s, 0.55*s, 0.2*s, 0x2b3a55, x - 0.12*s, y, z, no);
+      addBox(0.19*s, 0.55*s, 0.2*s, 0x2b3a55, x + 0.12*s, y, z, no);
+      addBox(0.44*s, 0.5*s, 0.28*s, top, x, y + 0.55*s, z, no);
+      addBox(0.34*s, 0.34*s, 0.34*s, 0xf1c9a0, x, y + 1.05*s, z, no);
+      addBox(0.37*s, 0.19*s, 0.37*s, 0x3a2e28, x, y + 1.39*s, z, no);   // 머리카락은 머리 위에(파고들면 감사)
+    }
+    // 빈 자리 자동 탐색 — 방 안 격자에서 가구와 겹치지 않는 첫 자리(뒤쪽부터).
+    // 사람도 allBoxes에 쌓이므로 다음 사람은 저절로 옆자리로 밀린다. 고정 좌표로 두면 의자·식탁에 박힌다(실제로 그랬음).
+    function freeSpot(zn) {
+      const y = zn.y ?? 0;
+      const near = allBoxes.filter(b => b.x1 > zn.x0 && b.x0 < zn.x1 && b.z1 > zn.z0 && b.z0 < zn.z1
+                                     && b.y0 < y + 1.6 && b.y1 > y + 0.05);
+      for (let z = zn.z1 - 1.0; z > zn.z0 + 0.9; z -= 0.7)
+        for (let x = zn.x0 + 1.0; x < zn.x1 - 0.9; x += 0.9)
+          if (!near.some(b => b.x1 > x - 0.34 && b.x0 < x + 0.34 && b.z1 > z - 0.26 && b.z0 < z + 0.26))
+            return [x, z];
+      return null;
+    }
+    const place = (zn, nm, sex, s) => {
+      const p = freeSpot(zn); if (!p) return;
+      person(p[0], zn.y ?? 0, p[1], sex, s);
+      sign(nm, p[0], (zn.y ?? 0) + 1.62 * s + 0.2, p[1], 0, 0.22);
+    };
+    Object.entries(SCHOOL.people).forEach(([cls, info]) => {
+      const zn = zoneOf(cls); if (!zn) return;
+      place(zn, cls + ' 선생님', info.t, 1.1);
+      info.s.forEach(([nm, sx]) => place(zn, nm, sx, 1));
+    });
+    Object.entries(SCHOOL.staff).forEach(([room, list]) => {
+      const zn = zoneOf(room); if (!zn) return;
+      list.forEach(([nm, sx, sz]) => place(zn, nm, sx, sz === 'small' ? 0.8 : 1.1));
+    });
+  }
+
   // ================= 감사 + 병합 =================
   {
     const EPS = 0.004, faults = [];
