@@ -31,7 +31,8 @@ export function buildWorld(scene) {
     for (let i = 0; i < bpos.count; i++) {
       ch.pos.push(bpos.getX(i)*w+cx, bpos.getY(i)*h+cy, bpos.getZ(i)*d+cz);
       const ny = bnrm.getY(i), nx = bnrm.getX(i);
-      const f = ny > .5 ? 1 : ny < -.5 ? .62 : (nx !== 0 ? .88 : .94);
+      // flat: AO 면제 — 천장·조명은 아랫면만 보이는데 아랫면 0.62를 먹으면 칙칙해진다
+      const f = opt.flat ? 1 : ny > .5 ? 1 : ny < -.5 ? .62 : (nx !== 0 ? .88 : .94);
       ch.col.push(_c.r*f, _c.g*f, _c.b*f);
     }
     if (opt.collide !== false) colliders.push({ x0: cx-w/2, x1: cx+w/2, y0: baseY, y1: baseY+h, z0: cz-d/2, z1: cz+d/2 });
@@ -43,18 +44,30 @@ export function buildWorld(scene) {
     ch.pos.push(x0,y,z0, x0,y,z1, x1,y,z1,  x0,y,z0, x1,y,z1, x1,y,z0);
     for (let i = 0; i < 6; i++) ch.col.push(_c.r, _c.g, _c.b);
   }
+  // 외벽은 '바깥 절반 0.15 + 안쪽 절반 0.15'로 나눠 쌓는다 → 방 안에서 외벽색이 아니라 실내 도장이 보인다.
+  // 두 절반은 맞닿을 뿐 겹치지 않으므로 감사 통과(면이 서로 반대를 향함). 0.15는 헌법① 최소치와 정확히 같다.
+  function wallSeg(ax, len, h, cx, y0, z, hex, opt) {
+    if (opt.inner ?? (hex === WALL)) {
+      const f = opt.face ?? 1;
+      if (ax === 'x') { addBox(len, h, 0.15, hex, cx, y0, z + f*0.075); addBox(len, h, 0.15, INNER, cx, y0, z - f*0.075); }
+      else { addBox(0.15, h, len, hex, z + f*0.075, y0, cx); addBox(0.15, h, len, INNER, z - f*0.075, y0, cx); }
+    } else {
+      if (ax === 'x') addBox(len, h, 0.3, hex, cx, y0, z);
+      else addBox(0.3, h, len, hex, z, y0, cx);
+    }
+  }
   function wallX(x0, x1, z, hex, opt = {}) {
     if (x0 > x1) { console.warn('wallX 인자 역순 자동 정렬', x0, x1, z); const t = x0; x0 = x1; x1 = t; }
     const h = opt.h ?? FH, y0 = opt.y0 ?? 0, gaps = (opt.gaps ?? []).slice().sort((a,b)=>(a.c-a.w/2)-(b.c-b.w/2));
     let cur = x0;
     for (const g of gaps) {
       const g0 = g.c - g.w/2, g1 = g.c + g.w/2, dh = g.dh ?? 2.6;
-      if (g0 - cur > 0.1499) addBox(g0 - cur, h, 0.3, hex, (cur+g0)/2, y0, z);
-      if (h - dh > 0.1499) addBox(g1 - g0, h - dh, 0.3, hex, (g0+g1)/2, y0 + dh, z);
+      if (g0 - cur > 0.1499) wallSeg('x', g0 - cur, h, (cur+g0)/2, y0, z, hex, opt);
+      if (h - dh > 0.1499) wallSeg('x', g1 - g0, h - dh, (g0+g1)/2, y0 + dh, z, hex, opt);
       if (dh <= 2.8 && g.w <= 2.2) doors.push({ ax: 'x', cx: g.c, cz: z, w: g.w, y0 });   // 인방 있는 좁은 개구=문
       cur = Math.max(cur, g1);
     }
-    if (x1 - cur > 0.1499) addBox(x1 - cur, h, 0.3, hex, (cur+x1)/2, y0, z);
+    if (x1 - cur > 0.1499) wallSeg('x', x1 - cur, h, (cur+x1)/2, y0, z, hex, opt);
     if (opt.wins) {
       const n = opt.wins, gap = (x1-x0)/n, sill = opt.sill ?? 1.0, wh = opt.wh ?? 1.5, fc = opt.face ?? 1;
       for (let i = 0; i < n; i++) {
@@ -73,12 +86,12 @@ export function buildWorld(scene) {
     let cur = z0;
     for (const g of gaps) {
       const g0 = g.c - g.w/2, g1 = g.c + g.w/2, dh = g.dh ?? 2.6;
-      if (g0 - cur > 0.1499) addBox(0.3, h, g0 - cur, hex, x, y0, (cur+g0)/2);
-      if (h - dh > 0.1499) addBox(0.3, h - dh, g1 - g0, hex, x, y0 + dh, (g0+g1)/2);
+      if (g0 - cur > 0.1499) wallSeg('z', g0 - cur, h, (cur+g0)/2, y0, x, hex, opt);
+      if (h - dh > 0.1499) wallSeg('z', g1 - g0, h - dh, (g0+g1)/2, y0 + dh, x, hex, opt);
       if (dh <= 2.8 && g.w <= 2.2) doors.push({ ax: 'z', cx: x, cz: g.c, w: g.w, y0 });
       cur = Math.max(cur, g1);
     }
-    if (z1 - cur > 0.1499) addBox(0.3, h, z1 - cur, hex, x, y0, (cur+z1)/2);
+    if (z1 - cur > 0.1499) wallSeg('z', z1 - cur, h, (cur+z1)/2, y0, x, hex, opt);
     if (opt.wins) {
       const n = opt.wins, gap = (z1-z0)/n, sill = opt.sill ?? 1.0, wh = opt.wh ?? 1.5, fc = opt.face ?? 1;
       for (let i = 0; i < n; i++) {
@@ -120,7 +133,24 @@ export function buildWorld(scene) {
     addBox(1.5*s, 1.1*s, 1.5*s, 0x4d8b4d, x, tY(z)+3.1*s, z, { collide: false });
   }
 
-  const WALL = 0xd8c39a, PAVE = 0xcfc8ba, INNER = 0xefe9dc, FLOOR = 0xe7e2d6, WOOD = 0xc9a063;
+  const WALL = 0xd8c39a, PAVE = 0xcfc8ba, INNER = 0xefe9dc, FLOOR = 0xe7e2d6, WOOD = 0xc9a063, CEIL = 0xf2eee4;
+  // 지붕은 두 겹 — 위는 지붕색, 아래는 아이보리 천장. 벽·칸막이 윗면(FH)과 정확히 맞닿아 겹치지 않는다.
+  // (별도 천장판을 방 안에 띄우면 칸막이가 그걸 관통해 감사에 걸린다 — 실제로 26쌍 났었다)
+  // 천장 — 지붕 밑면(짙은 회갈)이 그대로 보이던 것을 아이보리로 덮는다.
+  // ⚠️크기는 '벽 안쪽 면에서 1cm 더 안쪽'. 벽 안쪽에 정확히 맞추면 벽 세그먼트와 x1/z1이 같아져 감사에 걸린다.
+  // ⚠️높이는 지붕 밑면 바로 아래(top-0.16). 벽 윗면(top)과 같은 높이로 두면 칸막이가 관통해 걸린다.
+  // ⚠️천장·조명은 '아래를 향한 면'이라 HemisphereLight의 groundColor(갈색 땅)에 물든다.
+  //   정점색을 아무리 밝게 해도 소용없다 → 조명을 받지 않는 MeshBasicMaterial로 만든다(v1도 같은 결론).
+  const ceilMat = new THREE.MeshBasicMaterial({ color: CEIL });
+  const lampMat = new THREE.MeshBasicMaterial({ color: 0xfdfbf2 });
+  const flatBox = (w, h, d, mat, cx, y, cz) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(cx, y + h / 2, cz);
+    m.matrixAutoUpdate = false; m.updateMatrix();
+    scene.add(m);
+  };
+  const ceil = (x0, x1, z0, z1, top) =>
+    flatBox(x1-x0-0.32, 0.15, z1-z0-0.32, ceilMat, (x0+x1)/2, top - 0.16, (z0+z1)/2);
   const doorC = r => r.span[0] + 1.9;
 
   // ================= 지형 =================
@@ -180,7 +210,7 @@ export function buildWorld(scene) {
     });
     [12.5, 26.5, 35.5].forEach(x => addBox(0.24, 0.6, 0.24, 0xc4402e, x, 1.85, fz0 + 0.32, { collide: false }));  // 소화기
     for (let x = -37; x <= 38; x += 4.5)                                           // 형광등(지붕 밑면에 맞댐)
-      addBox(1.6, 0.16, 0.5, 0xf7f6ef, x, FH - 0.16, (fz0 + zCor) / 2, { collide: false });
+      flatBox(1.6, 0.16, 0.5, lampMat, x, FH - 0.32, (fz0 + zCor) / 2);   // 천장 밑면에 붙임
   }
   addBox(fx1-fx0+0.8, 0.3, fz1-fz0+0.38, 0xd9dce1, 0, FH, (fz0+fz1)/2 + 0.21);   // 북단은 서관 슬래브(z-38)와 접면까지만
   addBox(fx1-fx0+0.8, 0.45, 0.3, 0xe8e6de, 0, FH+0.3, fz1+0.25, { collide: false });
@@ -281,7 +311,7 @@ export function buildWorld(scene) {
   wallZ(fz0, -58, LC.x[0], WALL, { gaps: [{ c: K.hallEastDoorZ, w: 1.8 }], face: 1 });   // z-58까지 — 동관 복도 연결부까지 내려간다
   // (세로복도 동벽 = 급식동 동벽 x8.4 공유 — 위에서 통합 시공. 동관 복도 개구 -56.5)
   addPanel(LC.x[1]-LC.x[0]-0.3, 19.1, FLOOR, 6.9, 0.012, -47.85);
-  addBox(3.0, 0.3, 20, 0xd9dce1, 6.45, FH, -48);   // 동관 지붕(x8~)과 슬래브 겹침 금지
+  addBox(3.0, 0.3, 19.7, 0xd9dce1, 6.45, FH, -47.85);   // 동관 지붕(x8~)과 겹침 금지·북단은 급식동 북벽 안쪽 면까지
 
   // ================= 동관 =================
   const E = B.eastWing, [ex0, ex1] = E.x, [ez0, ez1] = E.z, zCE = ez0 + E.corridorDepth;
@@ -556,6 +586,14 @@ export function buildWorld(scene) {
   zones.push({ x0: -52, x1: -44, z0: -13, z1: -7, y: -1, label: '유치원 놀이터' });
   zones.push({ x0: SCHOOL.garden.center[0]-4, x1: SCHOOL.garden.center[0]+4, z0: SCHOOL.garden.center[1]+3, z1: SCHOOL.garden.center[1]+4.5, y: 0, label: '텃밭' });
   zones.push({ x0: SCHOOL.field.center[0]-20, x1: SCHOOL.field.center[0]+20, z0: SCHOOL.field.center[1]-20, z1: SCHOOL.field.center[1]+20, y: -1, label: '운동장' });
+
+  ceil(fx0, fx1, fz0, fz1, FH);                       // 본관
+  ceil(wx0, wx1 - 4.6, wz0, wz1, FH);                 // 서관 1층(계단 구멍 제외)
+  ceil(wx0, wx1, wz0, wz1, FH * 2);                   // 서관 2층
+  ceil(kx0, 5.4, kz0, kz1, K.wallHeight);             // 급식동(세로복도 제외)
+  ceil(ex0, ex1, ez0, ez1, FH);                       // 동관
+  ceil(LC.x[0], LC.x[1], -58, fz0, FH);               // 세로복도
+  ceil(gx0, gx1, gz0, gz1, G.wallHeight);             // 체육관
 
   // ================= 사람들 =================
   // 정적(청크 병합 — 드로우콜 0)·충돌 없음(길을 막지 않는다). ⚠️대사는 교사 승인분만 — 임의 생성 금지
