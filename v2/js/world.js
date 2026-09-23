@@ -10,6 +10,7 @@ export function buildWorld(scene) {
   const B = SCHOOL.building, FR = B.front;
   const FH = B.floorHeight, TERR_Z = -18;
   const colliders = [], zones = [], allBoxes = [], doors = [];
+  const hotspots = [];   // 상호작용 지점 — main.js가 E키/안내 클릭으로 실행
   const CHUNK = 16, chunks = new Map();
   const box_ = new THREE.BoxGeometry(1, 1, 1).toNonIndexed();
   const bpos = box_.attributes.position, bnrm = box_.attributes.normal;
@@ -155,8 +156,11 @@ export function buildWorld(scene) {
     m.matrixAutoUpdate = false; m.updateMatrix();
     scene.add(m);
   };
-  const ceil = (x0, x1, z0, z1, top) =>
+  const ceil = (x0, x1, z0, z1, top) => {
     flatBox(x1-x0-0.32, 0.15, z1-z0-0.32, ceilMat, (x0+x1)/2, top - 0.16, (z0+z1)/2);
+    // 카메라가 천장을 뚫고 올라가 천장 속(지붕 밑면)이 보이지 않게 충돌 등록(의자·책상 위에 서면 그랬다). 사람 머리엔 닿지 않는 높이
+    colliders.push({ x0: x0 + 0.16, x1: x1 - 0.16, y0: top - 0.16, y1: top - 0.01, z0: z0 + 0.16, z1: z1 - 0.16 });
+  };
   const doorC = r => r.span[0] + 1.9;
 
   // ================= 지형 =================
@@ -204,6 +208,8 @@ export function buildWorld(scene) {
     sign('웃음꽃 피는 즐거운 학교', hc, 3.05, zCor + 0.33, 0, 0.26);
     addBox(0.5, 1.1, 5.0, 0x9fc3cf, hall.span[0] + 0.4, 0, -29.5);
     addBox(0.5, 1.1, 5.0, 0x9fc3cf, hall.span[1] - 0.4, 0, -29.5);
+    addBox(0.5, 1.3, 0.45, 0xe8eef2, hall.span[1] - 0.4, 0, -25.3);   // 정수기(사용자 07-31 "유리장 정수기")
+    hotspots.push({ kind: 'water', x: hall.span[1] - 1.1, z: -25.3, y: 0, r: 1.3, label: '물 마시기' });
   }
   FR.rooms.forEach((r, i) => {
     const [s0, s1] = r.span, cx = (s0+s1)/2, cw = s1-s0;
@@ -212,10 +218,12 @@ export function buildWorld(scene) {
     zones.push({ x0: s0, x1: s1, z0: zCor, z1: fz1, y: 0, label: r.name });
     if (r.type === 'classroom' || r.type === 'computer' || r.type === 'daycare') {
       addBox(3, 1.2, 0.16, 0x2e5d43, cx, 0.9, zCor + 0.23, { collide: false });   // 0.23=벽면(0.15)에 딱 붙임(0.28은 5cm 떠 있었다)
+      hotspots.push({ kind: 'board', x: cx, z: zCor + 1.3, y: 0, r: 2.0, label: '칠판에 낙서하기', bx: cx, by: 1.5, bz: zCor + 0.33 });
       addBox(1.2, 0.85, 0.6, 0x8a5a3b, cx - 2, 0, zCor + 1.4);
       for (let dx = -1; dx <= 1; dx++) for (let dz = 0; dz < 2; dz++) {
         addBox(1.1, 0.72, 0.5, 0xb0a18e, cx + dx*1.7, 0, zCor + 3.4 + dz*1.7);
         addBox(0.5, 0.85, 0.4, 0x8a7f6e, cx + dx*1.7, 0, zCor + 4.05 + dz*1.7);   // 의자(뒤 책상과 0.6 통로 유지)
+        hotspots.push({ kind: 'sit', x: cx + dx*1.7, z: zCor + 4.55 + dz*1.7, y: 0, r: 0.75, label: '의자에 앉기' });
       }
     } else if (r.type !== 'hall' && r.type !== 'toilet') {
       addBox(1.3, 0.74, 0.7, 0xb0a18e, cx - 1, 0, zCor + 3.5);
@@ -254,6 +262,7 @@ export function buildWorld(scene) {
     sign(SCHOOL.name, hx, 2.6, fz1 + 6.05, 0, 0.5);
     // 구령대(포치) — 영상 v2179_0282~0321. 가운데 계단은 없다(계단은 양 끝에서 옹벽을 따라 — 아래 '지형 단차')
     addBox(11.0, 1.0, 0.16, 0xc8cdd2, hx, 0, -18.25);                       // 앞 스테인리스 난간
+    hotspots.push({ kind: 'mic', x: 2.4, z: -21.6, y: 0, r: 1.5, label: '구령대 마이크 잡기' });
     [[2.4, -20.8], [9.9, -20.8]].forEach(([tx9, tz9]) => {                    // 구령대 탁자·의자(사용자 07-31 "구령대 책상")
       addBox(1.4, 0.72, 0.8, 0x8a6a45, tx9, 0, tz9);
       addBox(0.45, 0.85, 0.45, 0x5a4636, tx9 - 0.95, 0, tz9); addBox(0.45, 0.85, 0.45, 0x5a4636, tx9 + 0.95, 0, tz9);
@@ -298,6 +307,7 @@ export function buildWorld(scene) {
       if (r.type === 'library') {
         for (let k = 0; k < 3; k++) addBox(6, 1.9, 0.5, 0x8a6a45, cx + 0.6, 0, wz0 + 2.0 + k * 2.3);
         addBox(2.4, 0.72, 1.2, 0xc9a063, cx + 0.6, 0, -41.2);          // 열람 탁자
+        hotspots.push({ kind: 'read', x: cx + 0.6, z: -40.0, y: 0, r: 1.6, label: '책 읽기' });
       }
       if (r.type === 'nurse') { addBox(1.05, 0.5, 2, 0xf2f5f7, cx-1, 0, wz0+2.5); addBox(1.05, 0.5, 2, 0xf2f5f7, cx+1, 0, wz0+2.5); }
     });
@@ -345,6 +355,7 @@ export function buildWorld(scene) {
       const [s0, s1] = r.span, cx = (s0+s1)/2;
       if (i > 0) addBox(0.3, FH-0.3, zc2-wz0-0.3, INNER, s0, FH+0.3, (wz0+zc2)/2);
       addBox(3, 1.2, 0.16, 0x2e5d43, cx, FH+1.2, wz0+0.23, { collide: false });   // 2층 칠판은 30cm 떠 있었다
+      hotspots.push({ kind: 'board', x: cx, z: wz0 + 1.4, y: FH + 0.3, r: 2.0, label: '칠판에 낙서하기', bx: cx, by: FH + 1.8, bz: wz0 + 0.33 });
       // 가구 간격 규칙: 책상 폭 1.1 + 틈 1.1(사람 폭 0.52의 2배) — 좁은 실은 개수를 줄인다.
       // ⚠️1.45 간격은 틈이 0.35라 사람이 못 지나가 방이 통째로 봉쇄됐었다(SD2.reach가 적발).
       const nD = (s1 - s0) > 7 ? 3 : 1;
@@ -371,6 +382,7 @@ export function buildWorld(scene) {
   addBox(4.0, 1.0, 0.3, INNER, -1, 0, K.cookWallZ);                                   // 배식창 아래(배식대 높이) — 창 = y 1.0~2.0
   addBox(4.0, K.wallHeight - 2.0, 0.3, INNER, -1, 2.0, K.cookWallZ);
   addBox(5.5, 0.95, 1, 0xc4c9cd, -1, 0, K.cookWallZ + 1.3);
+  hotspots.push({ kind: 'meal', x: -1, z: K.cookWallZ + 2.4, y: 0, r: 1.8, label: '급식 받기' });
   // 식탁: 홀 장축(동서) 방향으로 길게 — 사용자 08-01 "식탁 방향" 지적·영상 v2178. 양옆 짙은 빨강 둥근 의자 줄.
   const table9 = (tx, tz) => {
     addBox(3.2, 0.72, 0.8, 0xb5713d, tx, 0, tz);
@@ -422,6 +434,7 @@ export function buildWorld(scene) {
     zones.push({ x0: s0, x1: s1, z0: zCE, z1: ez1, y: 0, label: r.name });
     if (r.type === 'classroom' || r.type === 'science') {
       addBox(3, 1.2, 0.16, 0x2e5d43, cx, 0.9, zCE + 0.23, { collide: false });
+      hotspots.push({ kind: 'board', x: cx, z: zCE + 1.3, y: 0, r: 2.0, label: '칠판에 낙서하기', bx: cx, by: 1.5, bz: zCE + 0.33 });
       for (let dx = -1; dx <= 1; dx++) for (let dz = 0; dz < 2; dz++)
         addBox(1.1, 0.72, 0.5, r.type==='science'?0x8fc46a:0xb0a18e, cx + dx*1.7, 0, zCE + 3.2 + dz*1.7);
     }
@@ -506,6 +519,7 @@ export function buildWorld(scene) {
       chute.rotation.x = -ang;                                   // +z 끝(발판 쪽)을 들어 올린다
       chute.position.set(px - 4, -0.4 - 0.075, pz - 3.4 - 1.5);
       chute.matrixAutoUpdate = false; chute.updateMatrix(); scene.add(chute);
+      hotspots.push({ kind: 'slide', x: px - 4, z: pz - 2.6, y: 0.2, r: 1.0, label: '미끄럼틀 타기', from: [px - 4, 0.2, pz - 3.4], to: [px - 4, -1, pz - 6.8] });
     }
     addBox(0.3, 0.5, 1.0, 0x9aa5ad, px-1, -0.5-0.5+0.5, pz+2);
     addBox(3.2, 0.16, 0.56, 0xc8cdd2, px-1, -0.34, pz+2, { collide: false });
@@ -542,6 +556,7 @@ export function buildWorld(scene) {
   }
   {
     const [tx, tz] = SCHOOL.garden.center;
+    hotspots.push({ kind: 'garden', x: tx, z: tz + 3.6, y: 0, r: 2.6, label: '텃밭에 물 주기' });
     for (let i = 0; i < 3; i++) addBox(9, 0.35, 1.6, 0x4a3628, tx, 0, tz - 2.6 + i*2.6);
     [-5.2, 5.2].forEach(ox => addBox(0.16, 1.0, 9.6, 0xf2f4f6, tx+ox, 0, tz));
     addBox(3.6, 1.0, 0.16, 0xf2f4f6, tx-3.3, 0, tz+4.9);   // 남측 울타리 — 가운데 1.8m 출입구
@@ -842,5 +857,5 @@ export function buildWorld(scene) {
     m.matrixAutoUpdate = false;
     scene.add(m);
   }
-  return { colliders, grid, zones, doors, allBoxes, TERR_Z };
+  return { colliders, grid, zones, doors, allBoxes, hotspots, TERR_Z };
 }

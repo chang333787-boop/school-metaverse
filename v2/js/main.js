@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=30';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=33';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from '../../js/data.js';
 
 const canvas = document.getElementById('scene');
@@ -113,7 +113,31 @@ addEventListener('mousemove', e => {
   camPitch = Math.max(-0.2, Math.min(1.1, camPitch + e.movementY * 0.0022));
 });
 
+// 상호작용 상태 — anim: 정해진 경로 이동(미끄럼틀) / sit: 의자에 앉음(움직이면 일어남)
+const ACT = { anim: null, sit: null };
 function step(dt) {
+  const moving = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].some(k => keys.has(k));
+  if (ACT.anim) {
+    const a = ACT.anim; a.t = Math.min(1, a.t + dt / a.dur);
+    P.x = a.from[0] + (a.to[0] - a.from[0]) * a.t; P.y = a.from[1] + (a.to[1] - a.from[1]) * a.t; P.z = a.from[2] + (a.to[2] - a.from[2]) * a.t;
+    P.vy = 0; if (a.t >= 1) ACT.anim = null;
+  } else if (ACT.sit && !moving) {
+    P.x = ACT.sit.x; P.z = ACT.sit.z; P.y = ACT.sit.y; P.vy = 0;
+  } else {
+    ACT.sit = null;
+    physics(dt);
+  }
+  pg.position.set(P.x, P.y - (ACT.sit ? 0.42 : 0), P.z);
+  pg.rotation.y = P.yaw;
+  const hx = P.x, hy = P.y + 1.3, hz = P.z;
+  const dx = Math.sin(camYaw) * Math.cos(camPitch), dy = Math.sin(camPitch), dz = Math.cos(camYaw) * Math.cos(camPitch);
+  const want = Math.max(0.5, Math.min(CAM_D, camHit(hx, hy, hz, dx, dy, dz, CAM_D) - 0.3));
+  camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);   // 당김은 즉시·복귀는 이징(지터 방지)
+  camera.position.set(hx + dx * camD, hy + dy * camD, hz + dz * camD);
+  camera.lookAt(hx, hy, hz);
+  if (SHOT) applyShot();
+}
+function physics(dt) {
   const sp = keys.has('ShiftLeft') ? 7.5 : 4.2;
   let mx = 0, mz = 0;
   if (keys.has('KeyW') || keys.has('ArrowUp')) { mx -= Math.sin(camYaw); mz -= Math.cos(camYaw); }
@@ -133,15 +157,6 @@ function step(dt) {
   P.y += P.vy * dt;
   const g = groundAt(P.x, P.z, P.y + 0.6);
   if (P.y <= g) { P.y = g; P.vy = 0; P.ground = true; }
-  pg.position.set(P.x, P.y, P.z);
-  pg.rotation.y = P.yaw;
-  const hx = P.x, hy = P.y + 1.3, hz = P.z;
-  const dx = Math.sin(camYaw) * Math.cos(camPitch), dy = Math.sin(camPitch), dz = Math.cos(camYaw) * Math.cos(camPitch);
-  const want = Math.max(0.5, Math.min(CAM_D, camHit(hx, hy, hz, dx, dy, dz, CAM_D) - 0.3));
-  camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);   // 당김은 즉시·복귀는 이징(지터 방지)
-  camera.position.set(hx + dx * camD, hy + dy * camD, hz + dz * camD);
-  camera.lookAt(hx, hy, hz);
-  if (SHOT) applyShot();
 }
 
 // ---------- 사진 대조 모드: ?shot=x,y,z,방위°,올려보기°,화각° ----------
@@ -160,6 +175,80 @@ function applyShot() {
   camera.position.set(SHOT.x, SHOT.y, SHOT.z);
   camera.lookAt(SHOT.x + Math.sin(SHOT.h) * Math.cos(SHOT.p), SHOT.y + Math.sin(SHOT.p), SHOT.z - Math.cos(SHOT.h) * Math.cos(SHOT.p));
 }
+
+// ---------- 상호작용 (E키 또는 안내 클릭) ----------
+// world.hotspots: 칠판·의자·배식대·도서실·정수기·미끄럼틀·텃밭·마이크. 안내 문구는 시스템 안내뿐(인물 대사 아님 — 대사는 교사 승인분만)
+const HOT = world.hotspots;
+const hintEl = document.createElement('div');
+hintEl.className = 'chip';
+hintEl.style.cssText = 'left:50%;bottom:56px;transform:translateX(-50%);display:none;cursor:pointer;font-size:15px;padding:8px 16px';
+document.body.appendChild(hintEl);
+const toastEl = document.createElement('div');
+toastEl.className = 'chip';
+toastEl.style.cssText = 'left:50%;top:56px;transform:translateX(-50%);display:none;font-size:15px;padding:8px 16px';
+document.body.appendChild(toastEl);
+let toastT = 0;
+function toast(msg) { toastEl.textContent = msg; toastEl.style.display = ''; toastT = 2.2; }
+let hotNear = null, hotT = 0;
+function hotTick(dt) {
+  if (toastT > 0 && (toastT -= dt) <= 0) toastEl.style.display = 'none';
+  if ((hotT += dt) < 0.15) return;
+  hotT = 0;
+  let best = null, bd = 1e9;
+  if (!ACT.anim) for (const h of HOT) {
+    const d = (P.x - h.x) ** 2 + (P.z - h.z) ** 2;
+    if (d < h.r * h.r && d < bd && Math.abs(P.y - h.y) < 1.6) { bd = d; best = h; }
+  }
+  if (best !== hotNear) {
+    hotNear = best;
+    hintEl.style.display = best ? '' : 'none';
+    if (best) hintEl.textContent = 'E  ' + (best.kind === 'board' ? ['칠판에 낙서하기', '더 그리기', '칠판 지우기'][best.stage || 0] : best.kind === 'sit' && ACT.sit ? '일어나기' : best.label);
+  }
+}
+// 칠판 낙서 — 투명 캔버스에 분필 선(단계별 2장). 칠판 면에서 2cm 앞(겹치면 반짝임)
+const chalkTex = [1, 2].map(n => {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 180;
+  const g = c.getContext('2d'); g.strokeStyle = g.fillStyle = 'rgba(255,255,250,0.92)'; g.lineWidth = 5; g.lineCap = 'round';
+  g.beginPath(); g.arc(80, 90, 45, 0, Math.PI * 2); g.stroke();                               // 웃는 얼굴
+  g.beginPath(); g.arc(66, 78, 5, 0, 7); g.arc(94, 78, 5, 0, 7); g.fill();
+  g.beginPath(); g.arc(80, 95, 24, 0.2, Math.PI - 0.2); g.stroke();
+  g.font = '900 54px sans-serif'; g.fillText('안녕!', 160, 108);
+  if (n === 2) {
+    for (let k = 0; k < 5; k++) { g.beginPath(); g.arc(400 + Math.cos(k * 1.26) * 26, 70 + Math.sin(k * 1.26) * 26, 16, 0, 7); g.stroke(); }   // 꽃
+    g.beginPath(); g.moveTo(400, 96); g.lineTo(400, 165); g.stroke();
+    g.beginPath(); g.moveTo(170, 150); for (let x = 170; x < 330; x += 20) g.lineTo(x + 10, x % 40 ? 135 : 160); g.stroke();   // 물결
+  }
+  const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx;
+});
+const chalkGeo = new THREE.PlaneGeometry(2.8, 1.0);
+let tray = null;
+function act(h) {
+  switch (h.kind) {
+    case 'board': {
+      h.stage = ((h.stage || 0) + 1) % 3;
+      if (!h.mesh) { h.mesh = new THREE.Mesh(chalkGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false })); h.mesh.position.set(h.bx, h.by, h.bz); scene.add(h.mesh); }
+      h.mesh.visible = h.stage > 0;
+      if (h.stage > 0) { h.mesh.material.map = chalkTex[h.stage - 1]; h.mesh.material.needsUpdate = true; }
+      toast(h.stage === 0 ? '🧽 칠판을 깨끗이 지웠어요' : '✏️ 칠판에 낙서했어요');
+      hotNear = null; break;
+    }
+    case 'sit':
+      ACT.sit = { x: h.x, z: h.z, y: h.y }; P.yaw = Math.PI;   // 의자 바로 뒤(몸을 의자 상자 안에 넣으면 일어날 때 의자 위로 올라선다)
+      toast('🪑 의자에 앉았어요 — 움직이면 일어나요'); hotNear = null; break;
+    case 'meal':
+      if (!tray) { tray = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.34), new THREE.MeshLambertMaterial({ color: 0xc8d2da })); tray.position.set(0, 1.05, 0.3); pg.add(tray); toast('🍚 급식을 받았어요'); }
+      else { pg.remove(tray); tray = null; toast('🍽️ 식판을 반납했어요'); }
+      break;
+    case 'read': toast('📖 조용히 책을 읽고 있어요'); break;
+    case 'water': toast('💧 물을 마셨어요'); break;
+    case 'garden': toast('🌱 텃밭에 물을 줬어요'); break;
+    case 'mic': toast('🎤 구령대 마이크를 잡았어요'); break;
+    case 'slide':
+      ACT.anim = { from: h.from, to: h.to, t: 0, dur: 0.9 }; P.yaw = Math.PI; toast('🛝 슝~'); break;
+  }
+}
+addEventListener('keydown', e => { if (e.code === 'KeyE' && hotNear) act(hotNear); });
+hintEl.addEventListener('click', e => { e.stopPropagation(); if (hotNear) act(hotNear); });
 
 // ---------- 문짝(미닫이) ----------
 // 움직이므로 청크 병합 밖의 개별 Mesh. 통행은 막지 않는다(콜라이더 없음) — 도달성 검사 결과가 그대로 유지된다.
@@ -269,6 +358,7 @@ function loop() {
   const t0 = performance.now();
   step(dt);
   doorTick(dt);
+  hotTick(dt);
   simMs = Math.max(simMs, performance.now() - t0);
   renderer.render(scene, camera);
   acc += dt; n++;
@@ -367,6 +457,7 @@ window.SD2 = {
   tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (terrainY(x, z) + 0.01); P.vy = 0; },
   yaw(v) { camYaw = v; },
   pos: () => [P.x.toFixed(1), P.y.toFixed(1), P.z.toFixed(1)],
-  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); } keyList.forEach(k => keys.delete(k)); renderer.render(scene, camera); },
+  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); hotTick(1/60); } keyList.forEach(k => keys.delete(k)); renderer.render(scene, camera); },
   doors: () => DOORS.length, doorCheck,
+  near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
 };
