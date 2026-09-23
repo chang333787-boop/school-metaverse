@@ -95,6 +95,14 @@ export function buildWorld(scene) {
     _dm.compose(_dv.set(cx, cy, cz), _dq.setFromEuler(_de.set(0, opt.ry || 0, 0)), _ds.set(sx, sy, sz));
     dGeo(opt.chunky ? BLOB0 : BLOB1, _dm, hex, opt);
   }
+  // 두 점 사이 봉(쇠파이프·사슬·그물). seg 6. 감사 대상 아님(곡면)
+  const ROD = new THREE.CylinderGeometry(1, 1, 1, 6, 1).translate(0, 0.5, 0), _up = new THREE.Vector3(0, 1, 0), _rd = new THREE.Vector3();
+  function dRod(x0, y0, z0, x1, y1, z1, r, hex, opt = {}) {
+    _rd.set(x1 - x0, y1 - y0, z1 - z0); const L = _rd.length(); _rd.divideScalar(L);
+    _dm.compose(_dv.set(x0, y0, z0), _dq.setFromUnitVectors(_up, _rd), _ds.set(r, L, r));
+    dGeo(ROD, _dm, hex, opt);
+  }
+  const post = (x, z, y0, y1, r = 0.08) => colliders.push({ x0: x - r, x1: x + r, y0, y1, z0: z - r, z1: z + r });
   // 방향 있는 조립용: 로컬(오른쪽 lx·위 ly·앞 lz)을 90° 단위 facing(0=북 -z, 1=동, 2=남, 3=서)으로 돌려 축정렬 상자로 놓는다
   function partAt(x, y, z, face, s) {
     return (lx, ly, lz, w, h, d, hex, opt) => {
@@ -707,9 +715,21 @@ export function buildWorld(scene) {
 
   // ================= 시설·조경 =================
   addPanel(0.35, 64, 0xf0ede4, SCHOOL.field.center[0], -0.99, SCHOOL.field.center[1]);
+  // 골대(DETAIL-4): 둥근 기둥·가로대 + 뒤로 기운 받침틀 + 그물(가는 줄). 입은 운동장 가운데 쪽
   function goal(x, hex, s) {
-    [-2.6*s, 2.6*s].forEach(oz => addBox(0.16, 2*s, 0.16, hex, x, -1, SCHOOL.field.center[1]+oz));
-    addBox(0.16, 0.16, 5.2*s+0.16, hex, x, -1+2*s, SCHOOL.field.center[1], { collide: false });
+    const zc = SCHOOL.field.center[1], b = x < SCHOOL.field.center[0] ? -1 : 1, H = 2*s, D = 1.1*s, W = 2.6*s, F = { far: true };
+    [-W, W].forEach(oz => {
+      dRod(x, -1, zc + oz, x, -1 + H, zc + oz, 0.06, hex, F); post(x, zc + oz, -1, -1 + H);
+      dRod(x, -1 + H, zc + oz, x + b*D*0.5, -1 + H - 0.1, zc + oz, 0.04, hex, F);         // 위 받침
+      dRod(x + b*D*0.5, -1 + H - 0.1, zc + oz, x + b*D, -1, zc + oz, 0.04, hex, F);        // 뒤로 내려가는 받침
+      dRod(x, -1.0, zc + oz, x + b*D, -1.0, zc + oz, 0.035, hex, F);                      // 바닥 받침
+    });
+    dRod(x, -1 + H, zc - W, x, -1 + H, zc + W, 0.06, hex, F);                               // 가로대
+    dRod(x + b*D, -1, zc - W, x + b*D, -1, zc + W, 0.035, hex, F);                          // 뒤 바닥대
+    for (let k = -W + 0.5; k < W; k += 0.5)                                                // 그물(세로줄)
+      dRod(x + b*D*0.5, -1 + H - 0.1, zc + k, x + b*D, -1, zc + k, 0.012, 0xd8dcdf);
+    for (let t = 0.25; t < 1; t += 0.25)                                                   // 그물(가로줄)
+      dRod(x + b*D*(0.5 + 0.5*t), -1 + (H - 0.1)*(1 - t), zc - W, x + b*D*(0.5 + 0.5*t), -1 + (H - 0.1)*(1 - t), zc + W, 0.012, 0xd8dcdf);
   }
   goal(SCHOOL.field.center[0]-24.4, 0xf0f2f4, 1);
   goal(SCHOOL.field.center[0]+24.4, 0xc99a4e, 1.4);
@@ -720,25 +740,31 @@ export function buildWorld(scene) {
     addBox(1.6, 1.2, 1.6, 0x9c7a53, px-4, -1, pz-2.6);
     {   // 미끄럼틀 — 발판 윗면(0.2)에서 땅까지 한 판으로(떠 있는 계단식 판은 '부품이 따로 노는' 것으로 보였다 — 사용자 08-01)
       const ang = Math.atan2(1.2, 3.0), L = Math.hypot(1.2, 3.0);
-      const chute = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.15, L), new THREE.MeshLambertMaterial({ color: 0xe8b93a }));
-      chute.rotation.x = -ang;                                   // +z 끝(발판 쪽)을 들어 올린다
-      chute.position.set(px - 4, -0.4 - 0.075, pz - 3.4 - 1.5);
-      chute.matrixAutoUpdate = false; chute.updateMatrix(); scene.add(chute);
+      // 판 + 양옆 난간(같은 기울기) — 디테일 층에 병합(예전엔 따로 메시 1개)
+      const base9 = new THREE.Matrix4().compose(new THREE.Vector3(px - 4, -0.4 - 0.075, pz - 3.4 - 1.5), new THREE.Quaternion().setFromEuler(new THREE.Euler(-ang, 0, 0)), new THREE.Vector3(1, 1, 1));
+      const part9 = (w, h, d, ox, oy, hex) => dGeo(box_, base9.clone().multiply(new THREE.Matrix4().compose(new THREE.Vector3(ox, oy, 0), new THREE.Quaternion(), new THREE.Vector3(w, h, d))), hex, { far: true });
+      part9(1.0, 0.15, L, 0, 0, 0xe8b93a);
+      part9(0.07, 0.24, L, -0.535, 0.1, 0xd9a52c); part9(0.07, 0.24, L, 0.535, 0.1, 0xd9a52c);
+      // 발판 위 기둥 넷 + 뾰족 지붕
+      [[-0.72, -0.72], [0.72, -0.72], [-0.72, 0.72], [0.72, 0.72]].forEach(([ox, oz]) => dRod(px - 4 + ox, 0.2, pz - 2.6 + oz, px - 4 + ox, 1.75, pz - 2.6 + oz, 0.05, 0x3a6ea5, { far: true }));
+      dCyl(0, 1.2, 0.75, 0xd94848, px - 4, 1.75, pz - 2.6, { far: true, seg: 4, rot: [0, Math.PI/4, 0] });
       hotspots.push({ kind: 'slide', x: px - 4, z: pz - 2.6, y: 0.2, r: 1.0, label: '미끄럼틀 타기', from: [px - 4, 0.2, pz - 3.4], to: [px - 4, -1, pz - 6.8] });
     }
     addBox(0.3, 0.5, 1.0, 0x9aa5ad, px-1, -0.5-0.5+0.5, pz+2);
     addBox(3.2, 0.16, 0.56, 0xc8cdd2, px-1, -0.34, pz+2, { collide: false });
     [[-1.5],[1.5]].forEach(([ox]) => addBox(0.62, 0.2, 0.62, 0x26282c, px-1+ox, -1, pz+2));
-    [[0],[2.2]].forEach(([oz]) => {
-      addBox(0.16, 2.2, 0.16, 0x3a6ea5, px+3, -1, pz-1+oz); addBox(0.16, 2.2, 0.16, 0x3a6ea5, px+5, -1, pz-1+oz);
+    // 그네(DETAIL-4): 양 끝 A자 다리 + 둥근 가로대 + 사슬 둘 + 고무 의자
+    [pz-1, pz+1.2].forEach(sz9 => {
+      [px+3, px+5].forEach(ex => {
+        dRod(ex, -1, sz9 - 0.6, ex, 1.25, sz9, 0.06, 0x3a6ea5, { far: true }); dRod(ex, -1, sz9 + 0.6, ex, 1.25, sz9, 0.06, 0x3a6ea5, { far: true });
+        post(ex, sz9 - 0.55, -1, 0.2); post(ex, sz9 + 0.55, -1, 0.2);
+      });
+      dRod(px + 2.9, 1.25, sz9, px + 5.1, 1.25, sz9, 0.065, 0x3a6ea5, { far: true });
+      [px+3.6, px+4.4].forEach(sx9 => {
+        dRod(sx9 - 0.2, 1.2, sz9, sx9 - 0.2, -0.47, sz9, 0.015, 0x9aa0a6); dRod(sx9 + 0.2, 1.2, sz9, sx9 + 0.2, -0.47, sz9, 0.015, 0x9aa0a6);
+        dBox(0.5, 0.05, 0.22, 0xd94848, sx9, -0.52, sz9);
+      });
     });
-    addBox(2.16, 0.16, 0.16, 0x3a6ea5, px+4, 1.2, pz-1, { collide: false });
-    addBox(2.16, 0.16, 0.16, 0x3a6ea5, px+4, 1.2, pz+1.2, { collide: false });
-    [pz-1, pz+1.2].forEach(sz9 => [px+3.6, px+4.4].forEach(sx9 => {          // 그네: 가로대에 매달린 줄 2 + 의자(줄 없이 떠 있지 않게)
-      addBox(0.6, 0.15, 0.3, 0xd94848, sx9, -0.55, sz9, { collide: false });
-      addBox(0.16, 1.6, 0.16, 0x9aa0a6, sx9 - 0.22, -0.4, sz9, { collide: false });
-      addBox(0.16, 1.6, 0.16, 0x9aa0a6, sx9 + 0.22, -0.4, sz9, { collide: false });
-    }));
     {   // 둥근 벤치를 두른 나무 — 영상 v2179_0033~0039(놀이터 모래밭 가운데)
       const [tx9, tz9] = [px + 5.5, pz + 3.8];
       tree(tx9, tz9, 1.1);
@@ -747,16 +773,21 @@ export function buildWorld(scene) {
     }
     {   // 구름사다리 — 영상 v2179_0027
       const [lx9, lz9] = [px - 5.5, pz + 3.5];
-      [-1.5, 1.5].forEach(ox => [-0.5, 0.5].forEach(oz => addBox(0.16, 2.1, 0.16, 0x3a6ea5, lx9 + ox, -1, lz9 + oz)));
-      [-0.5, 0.5].forEach(oz => addBox(3.16, 0.16, 0.16, 0x3a6ea5, lx9, 1.1, lz9 + oz, { collide: false }));
-      for (let k = -2; k <= 2; k++) addBox(0.16, 0.16, 0.84, 0xc8cdd2, lx9 + k * 0.55, 1.1, lz9, { collide: false });
+      [-1.5, 1.5].forEach(ox => [-0.5, 0.5].forEach(oz => { dRod(lx9 + ox, -1, lz9 + oz, lx9 + ox, 1.15, lz9 + oz, 0.055, 0x3a6ea5, { far: true }); post(lx9 + ox, lz9 + oz, -1, 1.1); }));
+      [-0.5, 0.5].forEach(oz => dRod(lx9 - 1.55, 1.15, lz9 + oz, lx9 + 1.55, 1.15, lz9 + oz, 0.05, 0x3a6ea5, { far: true }));
+      for (let k = -2.5; k <= 2.5; k++) dRod(lx9 + k * 0.5, 1.15, lz9 - 0.5, lx9 + k * 0.5, 1.15, lz9 + 0.5, 0.03, 0xc8cdd2);
     }
     // 정글짐: x봉과 z봉은 y를 0.09 어긋나게(교차부 동일평면 금지)·봉 끝은 기둥 중심(끝면이 기둥 안)
-    for (let gy9 = 0; gy9 < 3; gy9++) for (let gx9 = 0; gx9 < 3; gx9++) {
-      addBox(2.4, 0.16, 0.16, 0x9c7a53, px+0.5, -1+0.7*(gy9+1), pz-4.5+gx9*1.2, { collide: false });
-      addBox(0.16, 0.16, 2.4, 0x9c7a53, px-0.7+gx9*1.2, -1+0.7*(gy9+1)+0.09, pz-3.3, { collide: false });
+    // 정글짐(DETAIL-4): 3×3 격자 기둥 + 층마다 가로·세로 봉(둥근 봉이라 교차부 동일평면 문제 없음)
+    {
+      const JX = [px-0.7, px+0.5, px+1.7], JZ = [pz-4.5, pz-3.3, pz-2.1];
+      JX.forEach(jx => JZ.forEach(jz => { dRod(jx, -1, jz, jx, 1.2, jz, 0.045, 0x8a6a45, { far: true }); post(jx, jz, -1, 1.2, 0.06); }));
+      for (let gy9 = 1; gy9 <= 3; gy9++) {
+        const yy = -1 + 0.7 * gy9;
+        JZ.forEach(jz => dRod(JX[0], yy, jz, JX[2], yy, jz, 0.035, 0x9c7a53, { far: true }));
+        JX.forEach(jx => dRod(jx, yy, JZ[0], jx, yy, JZ[2], 0.035, 0x9c7a53, { far: true }));
+      }
     }
-    [px-0.7, px+0.5, px+1.7].forEach(jx => { addBox(0.16, 2.2, 0.16, 0x8a6a45, jx, -1, pz-4.62); addBox(0.16, 2.2, 0.16, 0x8a6a45, jx, -1, pz-1.98); });
     sign('놀이터', px, 1.6, pz+5.8, 0, 0.4);
   }
   {
