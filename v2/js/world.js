@@ -47,14 +47,15 @@ export function buildWorld(scene) {
   // 외벽은 '바깥 절반 0.15 + 안쪽 절반 0.15'로 나눠 쌓는다 → 방 안에서 외벽색이 아니라 실내 도장이 보인다.
   // 두 절반은 맞닿을 뿐 겹치지 않으므로 감사 통과(면이 서로 반대를 향함). 0.15는 헌법① 최소치와 정확히 같다.
   function wallSeg(ax, len, h, cx, y0, z, hex, opt) {
-    if (opt.inner ?? (hex === WALL)) {
-      const f = opt.face ?? 1;
-      if (ax === 'x') { addBox(len, h, 0.15, hex, cx, y0, z + f*0.075); addBox(len, h, 0.15, INNER, cx, y0, z - f*0.075); }
-      else { addBox(0.15, h, len, hex, z + f*0.075, y0, cx); addBox(0.15, h, len, INNER, z - f*0.075, y0, cx); }
-    } else {
-      if (ax === 'x') addBox(len, h, 0.3, hex, cx, y0, z);
-      else addBox(0.3, h, len, hex, z, y0, cx);
-    }
+    const box = (th, col, off, yy, hh) => ax === 'x' ? addBox(len, hh, th, col, cx, yy, z + off) : addBox(th, hh, len, col, z + off, yy, cx);
+    // opt.dado = { top, lo, hi }: 안쪽 겹을 아래(lo)·위(hi) 두 톤으로(계단실 노랑/연민트 — 문서 v80c). top은 벽 바닥(opt.y0) 기준
+    if ((opt.inner ?? (hex === WALL)) || opt.dado) {
+      const f = opt.face ?? 1, d = opt.dado;
+      box(0.15, hex, f*0.075, y0, h);
+      const lo = d ? Math.max(0, Math.min(h, (opt.y0 ?? 0) + d.top - y0)) : 0;
+      if (d && lo >= 0.15 && h - lo >= 0.15) { box(0.15, d.lo, -f*0.075, y0, lo); box(0.15, d.hi, -f*0.075, y0 + lo, h - lo); }
+      else box(0.15, d ? (lo >= h - 0.15 ? d.lo : d.hi) : INNER, -f*0.075, y0, h);
+    } else box(0.3, hex, 0, y0, h);
   }
   function wallX(x0, x1, z, hex, opt = {}) {
     if (x0 > x1) { console.warn('wallX 인자 역순 자동 정렬', x0, x1, z); const t = x0; x0 = x1; x1 = t; }
@@ -137,6 +138,7 @@ export function buildWorld(scene) {
     addBox(1.5*s, 1.1*s, 1.5*s, 0x4d8b4d, x, tY(z)+3.1*s, z, { collide: false });
   }
 
+  const STAIR_DADO = { top: 1.3, lo: 0xf2d27a, hi: 0xd4ece2 };   // 계단실 벽: 아래 노랑 / 위 연민트(영상 v2180_0159~0198)
   const WALL = 0xd8c39a, PAVE = 0xcfc8ba, INNER = 0xefe9dc, FLOOR = 0xe7e2d6, WOOD = 0xc9a063, CEIL = 0xf2eee4;
   // 지붕은 두 겹 — 위는 지붕색, 아래는 아이보리 천장. 벽·칸막이 윗면(FH)과 정확히 맞닿아 겹치지 않는다.
   // (별도 천장판을 방 안에 띄우면 칸막이가 그걸 관통해 감사에 걸린다 — 실제로 26쌍 났었다)
@@ -263,12 +265,14 @@ export function buildWorld(scene) {
 
   // ================= 서관 =================
   const [wx0, wx1] = wg.x, [wz0, wz1] = wg.z;
-  wallX(wx0, wx1, wz0, WALL, { h: FH, wins: 6, face: -1, noWin: [[-16.6, -12]] });   // 계단참 자리는 큰 창을 따로
-  wallX(wx0, wx1, wz0, WALL, { y0: FH+0.3, h: FH-0.3, wins: 6, face: -1, sill: 0.8 });
+  wallX(wx0, -16.6, wz0, WALL, { h: FH, wins: 5, face: -1 });
+  wallX(-16.6, wx1, wz0, WALL, { h: FH, face: -1, dado: STAIR_DADO });       // 계단실 북벽(참의 큰 창은 따로)
+  wallX(wx0, -16.6, wz0, WALL, { y0: FH+0.3, h: FH-0.3, wins: 5, face: -1, sill: 0.8 });
+  wallX(-16.6, wx1, wz0, WALL, { y0: FH+0.3, h: FH-0.3, face: -1, dado: STAIR_DADO });
   wallZ(wz0, wz1, wx0, WALL, { h: FH, wins: 2, face: -1, gaps: [{ c: SIDE_Z, w: 2.2, glass: true }] });   // 측문(서측 바깥현관 유리 이중문)
   wallZ(wz0, wz1, wx0, WALL, { y0: FH+0.3, h: FH-0.3, wins: 2, face: -1, sill: 0.8 });
-  wallZ(wz0, wz1, wx1, WALL, { h: FH });                                          // 동벽(주차장면) — 미시공이던 구멍
-  wallZ(wz0, wz1, wx1, WALL, { y0: FH+0.3, h: FH-0.3 });
+  wallZ(wz0, wz1, wx1, WALL, { h: FH, dado: STAIR_DADO });                       // 동벽(주차장면) — 안쪽은 계단실
+  wallZ(wz0, wz1, wx1, WALL, { y0: FH+0.3, h: FH-0.3, dado: STAIR_DADO });
   wallX(wx0, wx1, wz1, WALL, { y0: FH+0.3, h: FH-0.3, wins: 6, face: 1, sill: 0.8 });  // 2층 남면(1층 z-38은 본관 북벽)
   addPanel(wx1-wx0-0.3, wz1-wz0-0.3, FLOOR, (wx0+wx1)/2, 0.012, (wz0+wz1)/2);
   {
@@ -320,7 +324,7 @@ export function buildWorld(scene) {
       //  계단홀(x -16.6~-12)에서 A레인(서쪽 절반)으로 북쪽 반층 참까지 → 180° 돌아 B레인(동쪽 절반)으로 남쪽 2층.
     const STONE = 0xb9b7b0, AX = -15.375, BX = -13.225, LW = 2.15, N = 12, RISE = (FH + 0.3) / 2 / N, TR = 0.2875;
     const Z0 = -44.4, ZL = Z0 - N * TR;                                   // A레인 발치 z-44.4 · 참 남단 z-47.85
-    addBox(0.3, FH, wz1-wz0-0.3, INNER, -16.6, 0, (wz0+wz1)/2);            // 도서실|계단홀
+    wallZ(wz0, wz1, -16.6, INNER, { h: FH, face: -1, dado: STAIR_DADO });       // 도서실|계단홀 — 도서실 쪽은 실내색, 계단 쪽은 두 톤
     for (let i = 0; i < N; i++) addBox(LW, RISE * (i + 1), TR, STONE, AX, 0, Z0 - TR * (i + 0.5));        // A레인
     addBox(4.3, RISE * N, ZL - (wz0 + 0.15), STONE, -14.3, 0, (ZL + wz0 + 0.15) / 2);                    // 반층 참(북벽 창가)
     for (let j = 0; j < N; j++) addBox(LW, 0.3, TR, STONE, BX, RISE * (N + j + 1) - 0.3, ZL + TR * (j + 0.5));   // B레인(떠 있는 디딤판)
@@ -348,7 +352,7 @@ export function buildWorld(scene) {
     });
     zones.push({ x0: wx0, x1: -12.2, z0: zc2, z1: wz1, y: FH+0.3, label: '2층 복도' });
     wallX(wx0 + 0.15, -16.45, zc2, INNER, { y0: FH+0.3, h: FH-0.3, gaps: [...B.upper.rooms.map(r => ({ c: doorC(r), w: 1.2 })), ...B.upper.rooms.filter(twoDoor).map(backDoor)] });
-    addBox(0.3, FH-0.3, (zc2 - 0.15) - (wz0 + 0.15), INNER, -16.6, FH+0.3, (zc2 - 0.15 + wz0 + 0.15) / 2);   // 소담실 동벽(계단홀 쪽)
+    wallZ(wz0, zc2, -16.6, INNER, { y0: FH+0.3, h: FH-0.3, face: -1, dado: STAIR_DADO });   // 소담실 동벽(계단홀 쪽 두 톤)
   }
   addBox(wx1-wx0+0.8, 0.3, wz1-wz0+0.8, 0xd9dce1, (wx0+wx1)/2, FH*2, (wz0+wz1)/2);
   addBox(wx1-wx0+0.8, 0.45, 0.3, 0xe8e6de, (wx0+wx1)/2, FH*2+0.3, wz0-0.25, { collide: false });
@@ -361,7 +365,9 @@ export function buildWorld(scene) {
   // ⚠️hallEastDoorZ(-44)는 서벽(x5.4) 문 — 여기 두면 2학년 교실 벽에 반쯤 걸린 구멍이 된다(실수했던 지점)
   wallZ(kz0, kz1, kx1, WALL, { h: K.wallHeight, gaps: [{ c: -56.5, w: 2.4 }, { c: B.linkCorridor.yardDoorZ, w: 1.6 }], face: 1 });
   addPanel(kx1-kx0-0.3, kz1-kz0-0.3, FLOOR, (kx0+kx1)/2, 0.012, (kz0+kz1)/2);
-  wallX(kx0 + 0.15, 5.25, K.cookWallZ, INNER, { h: K.wallHeight, gaps: [{ c: K.cookDoorC, w: 1.4 }] });   // 동단은 세로복도 서벽(x5.4) 앞까지
+  wallX(kx0 + 0.15, 5.25, K.cookWallZ, INNER, { h: K.wallHeight, gaps: [{ c: K.cookDoorC, w: 1.4 }, { c: -1, w: 4.0, dh: K.wallHeight }] });   // 동단은 세로복도 서벽(x5.4) 앞까지
+  addBox(4.0, 1.0, 0.3, INNER, -1, 0, K.cookWallZ);                                   // 배식창 아래(배식대 높이) — 창 = y 1.0~2.0
+  addBox(4.0, K.wallHeight - 2.0, 0.3, INNER, -1, 2.0, K.cookWallZ);
   addBox(5.5, 0.95, 1, 0xc4c9cd, -1, 0, K.cookWallZ + 1.3);
   // 식탁: 홀 장축(동서) 방향으로 길게 — 사용자 08-01 "식탁 방향" 지적·영상 v2178. 양옆 짙은 빨강 둥근 의자 줄.
   const table9 = (tx, tz) => {
@@ -492,7 +498,13 @@ export function buildWorld(scene) {
     addPanel(16, 13, 0xdcc9a0, px, -0.99, pz);
     for (let i = 0; i < 4; i++) addBox(1.2, 0.3*(4-i), 0.4, 0xa9805a, px-4, -1, pz-1.2+0.4*i);
     addBox(1.6, 1.2, 1.6, 0x9c7a53, px-4, -1, pz-2.6);
-    for (let i = 0; i < 3; i++) addBox(1.1, 0.3, 1.0, 0xd6dbe0, px-4, -1+0.88-0.3*i, pz-3.6-0.95*i, { collide: false });
+    {   // 미끄럼틀 — 발판 윗면(0.2)에서 땅까지 한 판으로(떠 있는 계단식 판은 '부품이 따로 노는' 것으로 보였다 — 사용자 08-01)
+      const ang = Math.atan2(1.2, 3.0), L = Math.hypot(1.2, 3.0);
+      const chute = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.15, L), new THREE.MeshLambertMaterial({ color: 0xe8b93a }));
+      chute.rotation.x = -ang;                                   // +z 끝(발판 쪽)을 들어 올린다
+      chute.position.set(px - 4, -0.4 - 0.075, pz - 3.4 - 1.5);
+      chute.matrixAutoUpdate = false; chute.updateMatrix(); scene.add(chute);
+    }
     addBox(0.3, 0.5, 1.0, 0x9aa5ad, px-1, -0.5-0.5+0.5, pz+2);
     addBox(3.2, 0.16, 0.56, 0xc8cdd2, px-1, -0.34, pz+2, { collide: false });
     [[-1.5],[1.5]].forEach(([ox]) => addBox(0.62, 0.2, 0.62, 0x26282c, px-1+ox, -1, pz+2));
@@ -501,6 +513,23 @@ export function buildWorld(scene) {
     });
     addBox(2.16, 0.16, 0.16, 0x3a6ea5, px+4, 1.2, pz-1, { collide: false });
     addBox(2.16, 0.16, 0.16, 0x3a6ea5, px+4, 1.2, pz+1.2, { collide: false });
+    [pz-1, pz+1.2].forEach(sz9 => [px+3.6, px+4.4].forEach(sx9 => {          // 그네: 가로대에 매달린 줄 2 + 의자(줄 없이 떠 있지 않게)
+      addBox(0.6, 0.15, 0.3, 0xd94848, sx9, -0.55, sz9, { collide: false });
+      addBox(0.16, 1.6, 0.16, 0x9aa0a6, sx9 - 0.22, -0.4, sz9, { collide: false });
+      addBox(0.16, 1.6, 0.16, 0x9aa0a6, sx9 + 0.22, -0.4, sz9, { collide: false });
+    }));
+    {   // 둥근 벤치를 두른 나무 — 영상 v2179_0033~0039(놀이터 모래밭 가운데)
+      const [tx9, tz9] = [px + 5.5, pz + 3.8];
+      tree(tx9, tz9, 1.1);
+      addBox(1.9, 0.42, 0.35, 0x6d5a4a, tx9, -1, tz9 - 0.8); addBox(1.9, 0.42, 0.35, 0x6d5a4a, tx9, -1, tz9 + 0.8);
+      addBox(0.35, 0.42, 1.25, 0x6d5a4a, tx9 - 0.8, -1, tz9); addBox(0.35, 0.42, 1.25, 0x6d5a4a, tx9 + 0.8, -1, tz9);
+    }
+    {   // 구름사다리 — 영상 v2179_0027
+      const [lx9, lz9] = [px - 5.5, pz + 3.5];
+      [-1.5, 1.5].forEach(ox => [-0.5, 0.5].forEach(oz => addBox(0.16, 2.1, 0.16, 0x3a6ea5, lx9 + ox, -1, lz9 + oz)));
+      [-0.5, 0.5].forEach(oz => addBox(3.16, 0.16, 0.16, 0x3a6ea5, lx9, 1.1, lz9 + oz, { collide: false }));
+      for (let k = -2; k <= 2; k++) addBox(0.16, 0.16, 0.84, 0xc8cdd2, lx9 + k * 0.55, 1.1, lz9, { collide: false });
+    }
     // 정글짐: x봉과 z봉은 y를 0.09 어긋나게(교차부 동일평면 금지)·봉 끝은 기둥 중심(끝면이 기둥 안)
     for (let gy9 = 0; gy9 < 3; gy9++) for (let gx9 = 0; gx9 < 3; gx9++) {
       addBox(2.4, 0.16, 0.16, 0x9c7a53, px+0.5, -1+0.7*(gy9+1), pz-4.5+gx9*1.2, { collide: false });
