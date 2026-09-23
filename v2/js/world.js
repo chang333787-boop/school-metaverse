@@ -190,6 +190,10 @@ export function buildWorld(scene) {
   const cGaps = FR.rooms.map(r => r.type === 'hall' ? { c: (r.span[0]+r.span[1])/2, w: 3.4, dh: 2.7 }   // 로비 북단 아치(인방에 현판)
     : r.name === '원무실' ? { c: doorC(r), w: 1.8, glass: true }          // 유치원 정문(원무실 팻말) — 짙은 유리 양문(v80d)
     : { c: doorC(r), w: 1.2 });
+  // 교실은 앞뒤 문 두 개(사용자 07-30 "실제 교실은 앞뒤로 문도 두 개")
+  const twoDoor = r => ['classroom', 'computer', 'daycare', 'science'].includes(r.type);
+  const backDoor = r => ({ c: r.span[1] - 1.9, w: 1.2 });
+  FR.rooms.filter(twoDoor).forEach(r => cGaps.push(backDoor(r)));
   wallX(fx0 + 0.15, fx1 - 0.15, zCor, INNER, { gaps: cGaps });   // 내부벽은 외벽에서 0.3 인셋(코너 관통 금지)
   addPanel(fx1-fx0-0.3, zCor-fz0-0.3, FLOOR, 0, 0.012, (fz0+zCor)/2);
   {   // 현관 로비 — 영상 v2179_0327~0339: 북단 목재 아치에 '웃음꽃 피는 즐거운 학교', 양쪽 유리 진열장
@@ -343,7 +347,7 @@ export function buildWorld(scene) {
       zones.push({ x0: s0, x1: s1, z0: wz0, z1: zc2, y: FH+0.3, label: r.name });
     });
     zones.push({ x0: wx0, x1: -12.2, z0: zc2, z1: wz1, y: FH+0.3, label: '2층 복도' });
-    wallX(wx0 + 0.15, -16.45, zc2, INNER, { y0: FH+0.3, h: FH-0.3, gaps: B.upper.rooms.map(r => ({ c: doorC(r), w: 1.2 })) });
+    wallX(wx0 + 0.15, -16.45, zc2, INNER, { y0: FH+0.3, h: FH-0.3, gaps: [...B.upper.rooms.map(r => ({ c: doorC(r), w: 1.2 })), ...B.upper.rooms.filter(twoDoor).map(backDoor)] });
     addBox(0.3, FH-0.3, (zc2 - 0.15) - (wz0 + 0.15), INNER, -16.6, FH+0.3, (zc2 - 0.15 + wz0 + 0.15) / 2);   // 소담실 동벽(계단홀 쪽)
   }
   addBox(wx1-wx0+0.8, 0.3, wz1-wz0+0.8, 0xd9dce1, (wx0+wx1)/2, FH*2, (wz0+wz1)/2);
@@ -400,6 +404,7 @@ export function buildWorld(scene) {
   wallZ(ez0, ez1, ex1, WALL, { wins: 2, face: 1, gaps: [{ c: -50, w: 1.2 }] });
   // (동관 서벽 = 급식동 동벽 x8.4 공유 — 이중 시공 금지)
   const eGaps = E.rooms.filter(r => !r.innerOnly && !r.external).map(r => ({ c: doorC(r), w: 1.2 }));
+  E.rooms.filter(twoDoor).forEach(r => eGaps.push(backDoor(r)));
   wallX(ex0 + 0.15, ex1 - 0.15, zCE, INNER, { gaps: eGaps });
   addPanel(ex1-ex0-0.3, zCE-ez0-0.3, FLOOR, (ex0+ex1)/2, 0.012, (ez0+zCE)/2);
   E.rooms.forEach((r, i) => {
