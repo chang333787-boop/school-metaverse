@@ -1,7 +1,8 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=42';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=44';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from '../../js/data.js';
+import { createLook } from './look.js?v=4';
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -30,6 +31,8 @@ sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
 scene.add(sun);
 
 const world = buildWorld(scene);
+// 화풍(?look=storybook|diorama|crayon). 없으면 지금 그대로
+const look = createLook(renderer, scene, camera, new URLSearchParams(location.search).get('look') || 'none');
 
 // ---------- 플레이어 (AABB 전용 — 레이캐스트 0) ----------
 const P = { x: 6, y: 0.01, z: 8, vy: 0, yaw: 0, ground: true };
@@ -369,7 +372,7 @@ function loop() {
   doorTick(dt);
   hotTick(dt);
   simMs = Math.max(simMs, performance.now() - t0);
-  renderer.render(scene, camera);
+  look.render();
   acc += dt; n++;
   locT += dt;
   if (locT > 0.4) { locT = 0; updateLoc(); }
@@ -460,13 +463,13 @@ if (location.search.includes('check=1')) setTimeout(() => { reach(); reach({ jum
 
 // 디버그 API (v1과 같은 사용감)
 window.SD2 = {
-  scene, camera, renderer, world, reach,
+  scene, camera, renderer, world, reach, look,
   time: k => setTime(k || ORDER[(ORDER.indexOf(timeKey) + 1) % 3]),
   loc: () => { updateLoc(); return locBox.textContent; },
   tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (terrainY(x, z) + 0.01); P.vy = 0; },
   yaw(v) { camYaw = v; },
   pos: () => [P.x.toFixed(1), P.y.toFixed(1), P.z.toFixed(1)],
-  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); hotTick(1/60); } keyList.forEach(k => keys.delete(k)); renderer.render(scene, camera); },
+  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); hotTick(1/60); } keyList.forEach(k => keys.delete(k)); look.render(); },
   doors: () => DOORS.length, doorCheck,
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
 };
