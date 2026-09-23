@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=55';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=61';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from '../../js/data.js';
 
 const canvas = document.getElementById('scene');
@@ -55,6 +55,20 @@ function groundAt(x, z, fromY) {
   }
   return g;
 }
+// 머리 위 물체 밑면(y0)이 [h0, h1] 사이에 있으면 그 높이(가장 낮은 것), 없으면 null
+function ceilAt(x, z, h0, h1) {
+  let c = null;
+  const k0x = Math.floor((x-0.3)/8), k1x = Math.floor((x+0.3)/8), k0z = Math.floor((z-0.3)/8), k1z = Math.floor((z+0.3)/8);
+  const seen = new Set();
+  for (let gx=k0x; gx<=k1x; gx++) for (let gz=k0z; gz<=k1z; gz++) {
+    const cell = world.grid.get(gx+':'+gz); if (!cell) continue;
+    for (const i of cell) { if (seen.has(i)) continue; seen.add(i);
+      const b = world.colliders[i];
+      if (x > b.x0-0.26 && x < b.x1+0.26 && z > b.z0-0.26 && z < b.z1+0.26 && b.y0 >= h0 - 0.01 && b.y0 < h1 && (c === null || b.y0 < c)) c = b.y0;
+    }
+  }
+  return c;
+}
 function blockedAt(x, z, y) {
   const k0x = Math.floor((x-0.3)/8), k1x = Math.floor((x+0.3)/8), k0z = Math.floor((z-0.3)/8), k1z = Math.floor((z+0.3)/8);
   const seen = new Set();
@@ -81,6 +95,7 @@ function camHit(hx, hy, hz, dx, dy, dz, maxD) {
     for (const i of cell) {
       if (seen.has(i)) continue; seen.add(i);
       const b = world.colliders[i];
+      if (b.nc) continue;                                  // 올라서기 금지용으로 높인 보이지 않는 윗부분·울타리 벽은 카메라를 밀지 않는다
       if (b.y1 - b.y0 < 1.5 && b.y0 < hy + 0.4) continue;
       let t0 = 1e-4, t1 = t, ok = true;
       for (let ax = 0; ax < 3 && ok; ax++) {
@@ -154,8 +169,14 @@ function physics(dt) {
   }
   if (keys.has('Space') && P.ground) { P.vy = 5.2; P.ground = false; }
   P.vy -= 14 * dt;
+  const y0 = P.y;
   P.y += P.vy * dt;
-  const g = groundAt(P.x, P.z, P.y + 0.6);
+  // PHYS-2 머리 부딪힘: 올라가다 머리(발+1.5)가 위쪽 물체 밑면에 닿으면 멈춘다(예전엔 천장을 뚫고 올라갔다)
+  if (P.vy > 0) { const c = ceilAt(P.x, P.z, y0 + 1.5, P.y + 1.5); if (c !== null) { P.y = c - 1.5; P.vy = 0; } }
+  // PHYS-2 바닥: 발 높이 + 0.55까지만 딛고 올라선다(벽 막힘 기준 blockedAt과 같은 값).
+  //   예전엔 발+1.15(fromY=P.y+0.6)까지 붙어 올라가, 1.6 높이 가구 → 천장 → 지붕으로 계단 타듯 올라갔다(09-23 실측).
+  //   떨어질 땐 직전 높이 기준(max) — 한 프레임에 많이 떨어져도 바닥을 뚫지 않게
+  const g = groundAt(P.x, P.z, Math.max(y0, P.y));
   if (P.y <= g) { P.y = g; P.vy = 0; P.ground = true; }
 }
 
@@ -456,7 +477,7 @@ function reach(opt = {}) {
       // jump 모드: 점프 정점(+0.97)에서 막히는지·착지 가능한지 — 무엇을 밟고 어디까지 올라가는지 본다
       const JY = opt.jump ? 0.97 : 0;
       if (blockedAt(nx, nz, c.y + JY)) continue;
-      const g = groundAt(nx, nz, c.y + JY + 0.6);
+      const g = groundAt(nx, nz, c.y + JY);                // 물리와 같은 규칙(발+0.55까지 — PHYS-2)
       if (g > c.y + (opt.jump ? 1.5 : 0.55)) continue;   // 못 오르는 턱
       const k = key(Math.round(nx/S), Math.round(nz/S), g);
       if (seen.has(k)) continue;
@@ -494,9 +515,42 @@ function reach(opt = {}) {
 // ?check=1 이면 로드 직후 자동 답사(검증용 URL — 학생 접속엔 부담 주지 않도록 기본 꺼둠)
 if (location.search.includes('check=1')) setTimeout(() => { reach(); reach({ jump: true }); doorCheck(); }, 60);   // 두 번째 = 점프로 옥상에 오르는지
 
+// ---------- 물리 검사 (PHYS-1 · 09-23) ----------
+// passCheck: 보이는 부재 속으로 몸 중심이 들어가는가(= 뚫고 지나감). 몸 높이 띠만·플레이어 규칙(0.26 부풀림·오름 0.55) 그대로
+// standCheck: 윗면이 발+0.15~1.52(점프 도달)인 충돌 상자 중 위에 몸 공간이 있는 것 = 올라설 수 있는 곳(계단·무대 등 의도된 것 포함 — 목록을 눈으로 본다)
+const gndOf = b => b.y0 >= 3.55 ? FH2 : ((b.z0 + b.z1) / 2 > world.TERR_Z ? -1 : 0);
+const FH2 = SCHOOL.building.floorHeight + 0.3;
+function passCheck() {
+  const out = [];
+  const test = (pts, g) => pts.some(([x, y, z]) => y >= g + 0.05 && y <= g + 1.45 && !blockedAt(x, z, g) && groundAt(x, z, g) < y - 0.02);
+  for (const b of world.allBoxes) {
+    if (b.wall) continue; const g = gndOf(b);
+    if (b.y0 > g + 1.4 || b.y1 < g + 0.12 || b.x1 - b.x0 > 40 || b.z1 - b.z0 > 40 || g > 3) continue;
+    const pts = []; for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) pts.push([b.x0 + (b.x1-b.x0)*(i+0.5)/3, (Math.max(b.y0, g+0.1) + Math.min(b.y1, g+1.4))/2, b.z0 + (b.z1-b.z0)*(j+0.5)/3]);
+    if (test(pts, g)) out.push(['box', +((b.x0+b.x1)/2).toFixed(1), +((b.z0+b.z1)/2).toFixed(1)]);
+  }
+  for (const r of world.visRods) {
+    const g = gndOf(r); if (r.y0 > g + 1.4 || r.y1 < g + 0.12) continue;
+    const pts = []; for (let t = 0.1; t < 1; t += 0.2) pts.push([r.a[0] + (r.b[0]-r.a[0])*t, r.a[1] + (r.b[1]-r.a[1])*t, r.a[2] + (r.b[2]-r.a[2])*t]);
+    if (test(pts, g)) out.push(['rod', +((r.x0+r.x1)/2).toFixed(1), +((r.z0+r.z1)/2).toFixed(1)]);
+  }
+  return out;
+}
+function standCheck() {
+  const out = [];
+  for (const c of world.colliders) {
+    const g = gndOf(c), top = c.y1 - g;
+    if (top < 0.15 || top > 1.52 || c.y0 > g + 0.6) continue;
+    let ok = false;
+    for (let i = 0; i < 3 && !ok; i++) for (let j = 0; j < 3 && !ok; j++) if (!blockedAt(c.x0 + (c.x1-c.x0)*(i+0.5)/3, c.z0 + (c.z1-c.z0)*(j+0.5)/3, c.y1)) ok = true;
+    if (ok) out.push([+top.toFixed(2), +((c.x0+c.x1)/2).toFixed(1), +((c.z0+c.z1)/2).toFixed(1), +(c.x1-c.x0).toFixed(2), +(c.z1-c.z0).toFixed(2)]);
+  }
+  return out;
+}
+
 // 디버그 API (v1과 같은 사용감)
 window.SD2 = {
-  scene, camera, renderer, world, reach, detailTick,
+  scene, camera, renderer, world, reach, detailTick, passCheck, standCheck,
   time: k => setTime(k || ORDER[(ORDER.indexOf(timeKey) + 1) % 3]),
   loc: () => { updateLoc(); return locBox.textContent; },
   tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (terrainY(x, z) + 0.01); P.vy = 0; },
