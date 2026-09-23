@@ -273,13 +273,15 @@ export function buildWorld(scene) {
   wallZ(wz0, wz1, wx0, WALL, { y0: FH+0.3, h: FH-0.3, wins: 2, face: -1, sill: 0.8 });
   wallZ(wz0, wz1, wx1, WALL, { h: FH, dado: STAIR_DADO });                       // 동벽(주차장면) — 안쪽은 계단실
   wallZ(wz0, wz1, wx1, WALL, { y0: FH+0.3, h: FH-0.3, dado: STAIR_DADO });
-  wallX(wx0, wx1, wz1, WALL, { y0: FH+0.3, h: FH-0.3, wins: 6, face: 1, sill: 0.8 });  // 2층 남면(1층 z-38은 본관 북벽)
+  wallX(wx0, wx1, wz1, WALL, { y0: FH+0.3, h: FH-0.3, wins: 6, face: 1, sill: 0.8, noWin: [[-16.6, -12]] });  // 2층 남면(1층 z-38은 본관 북벽)
+  addBox(1.0, 2.2, 0.16, 0x8a5a3b, -14.3, FH + 0.3, wz1 - 0.23);   // 2층 계단홀 옥상 쪽 나무문(문서 v80c) — 닫힌 모양만(열면 지붕 위로 나간다)
   addPanel(wx1-wx0-0.3, wz1-wz0-0.3, FLOOR, (wx0+wx1)/2, 0.012, (wz0+wz1)/2);
   {
     const nurse = wg.rooms.find(r => r.type === 'nurse'), narae = wg.rooms.find(r => r.name === '나래반');
     const nurseDoor = nurse.span[0] + 2.0, naraeDoor = (narae.span[0] + narae.span[1]) / 2;
     // 로비 북벽(z=LOB_Z): 보건실·나래반 문. 동끝은 로비 동벽 바깥면까지(모서리 빈틈 방지 — 맞댐)
-    wallX(wx0 + 0.15, LOB_X + 0.15, LOB_Z, INNER, { gaps: [{ c: nurseDoor, w: 1.2 }, { c: naraeDoor, w: 1.8, glass: true }] });
+    wallX(wx0 + 0.15, LOB_X + 0.15, LOB_Z, INNER, { gaps: [{ c: nurseDoor, w: 1.2 }, { c: naraeDoor, w: 1.8, glass: true }],
+      wins: 4, sill: 1.55, wh: 0.9 });   // 나무틀 높은 창(영상 v2180_0210 오른쪽 벽 위)
     // 로비 동벽(x=LOB_X) = 도서관 서벽 — 측문을 정면으로 마주 보는 도서관 문
     wallZ(LOB_Z, fz0, LOB_X, INNER, { gaps: [{ c: SIDE_Z, w: 1.8, glass: true }] });
     // 로비 북쪽 방들 칸막이(z wz0~LOB_Z): 보건실|나래반, 나래반|문서고(문서고는 나래반 안에서 — 개구), 문서고|도서관
@@ -311,7 +313,7 @@ export function buildWorld(scene) {
     addBox(2.3, 0.45, 2.3, 0xe8893a, dx9, 0, dz9);
     addBox(1.5, 0.4, 1.5, 0xf2b84b, dx9, 0.45, dz9);
     addBox(0.6, FH - 0.85, 0.6, 0xb8d67a, dx9, 0.85, dz9);
-    addBox(2.0, 0.2, 2.0, 0x9ad3bc, dx9, FH - 0.5, dz9, { collide: false });     // 민트 갓 — 천장 가까이(낮으면 십자가처럼 보임)
+    flatBox(2.0, 0.2, 2.0, new THREE.MeshBasicMaterial({ color: 0xa8dcc6 }), dx9, FH - 0.5, dz9);   // 민트 갓 — 아랫면만 보이므로 조명 무시 재질(갈색 물듦 방지)
     // 문서고 벽 앞 쿠션 벤치(주황·초록·노랑) + 도서관 문 옆 도서반납함 — 영상 v2180_0210·0225
     [[-30.4, 0xe8893a], [-29.2, 0x8cc26a], [-28.0, 0xf2c14b]].forEach(([bx9, bc9]) => addBox(1.2, 0.45, 0.6, bc9, bx9, 0, LOB_Z + 0.45));
     addBox(0.4, 0.95, 0.55, 0x3d6fa8, LOB_X - 0.35, 0, SIDE_Z + 1.55);
