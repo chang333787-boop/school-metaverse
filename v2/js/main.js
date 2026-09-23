@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=39';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=40';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from '../../js/data.js';
 
 const canvas = document.getElementById('scene');
@@ -241,6 +241,7 @@ function act(h) {
       break;
     case 'read': toast('📖 조용히 책을 읽고 있어요'); break;
     case 'water': toast('💧 물을 마셨어요'); break;
+    case 'wash': toast('🫧 손을 깨끗이 씻었어요'); break;
     case 'garden': toast('🌱 텃밭에 물을 줬어요'); break;
     case 'mic': toast('🎤 구령대 마이크를 잡았어요'); break;
     case 'slide':
