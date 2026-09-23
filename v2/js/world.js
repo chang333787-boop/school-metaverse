@@ -185,11 +185,18 @@ export function buildWorld(scene) {
   wallX(8.4, fx1, fz0, WALL, { gaps: [{ c: 20, w: 1.8 }], wins: 7, face: -1, noWin: [[8.6, 13.4]] });
   wallZ(fz0, fz1, fx0, WALL, { wins: 1, face: -1 });             // 서벽 — 측문은 서관 서벽(로비)으로
   wallZ(fz0, fz1, fx1, WALL, { gaps: [{ c: FR.corridorExitZ, w: 1.8 }], wins: 1, face: 1 });
-  const cGaps = FR.rooms.map(r => r.type === 'hall' ? { c: (r.span[0]+r.span[1])/2, w: 3.4, dh: FH }
+  const cGaps = FR.rooms.map(r => r.type === 'hall' ? { c: (r.span[0]+r.span[1])/2, w: 3.4, dh: 2.7 }   // 로비 북단 아치(인방에 현판)
     : r.name === '원무실' ? { c: doorC(r), w: 1.8, glass: true }          // 유치원 정문(원무실 팻말) — 짙은 유리 양문(v80d)
     : { c: doorC(r), w: 1.2 });
   wallX(fx0 + 0.15, fx1 - 0.15, zCor, INNER, { gaps: cGaps });   // 내부벽은 외벽에서 0.3 인셋(코너 관통 금지)
   addPanel(fx1-fx0-0.3, zCor-fz0-0.3, FLOOR, 0, 0.012, (fz0+zCor)/2);
+  {   // 현관 로비 — 영상 v2179_0327~0339: 북단 목재 아치에 '웃음꽃 피는 즐거운 학교', 양쪽 유리 진열장
+    const hc = (hall.span[0] + hall.span[1]) / 2;
+    addBox(3.4, 0.6, 0.16, 0x8a5a3b, hc, 2.75, zCor + 0.23, { collide: false });   // 폭 = 양쪽 칸막이 사이(넘으면 칸막이와 겹침)
+    sign('웃음꽃 피는 즐거운 학교', hc, 3.05, zCor + 0.33, 0, 0.26);
+    addBox(0.5, 1.1, 5.0, 0x9fc3cf, hall.span[0] + 0.4, 0, -29.5);
+    addBox(0.5, 1.1, 5.0, 0x9fc3cf, hall.span[1] - 0.4, 0, -29.5);
+  }
   FR.rooms.forEach((r, i) => {
     const [s0, s1] = r.span, cx = (s0+s1)/2, cw = s1-s0;
     if (i > 0) addBox(0.3, FH, fz1-zCor-0.3, INNER, s0, 0, (zCor+fz1)/2);
@@ -236,8 +243,16 @@ export function buildWorld(scene) {
     [-4.2,-1.5,1.5,4.2].forEach(ox => addBox(0.4, 3.0, 0.4, 0x3b2d24, hx+ox, 0, fz1+4.2));
     addBox(11, 0.45, 5.6, 0x3b2d24, hx, 3.0, fz1+3.2);
     addBox(11.4, 0.3, 0.6, 0xe8b93a, hx, 3.45, fz1+5.9, { collide: false });   // 포치 테두리=노랑 포인트
-    for (let i = 0; i < 6; i++) addBox(6.4, 0.18*(6-i), 0.36, PAVE, hx, -1, fz1+6.2+0.36*i);
     sign(SCHOOL.name, hx, 2.6, fz1 + 6.05, 0, 0.5);
+    // 구령대(포치) — 영상 v2179_0282~0321. 가운데 계단은 없다(계단은 양 끝에서 옹벽을 따라 — 아래 '지형 단차')
+    addBox(11.0, 1.0, 0.16, 0xc8cdd2, hx, 0, -18.25);                       // 앞 스테인리스 난간
+    [[2.4, -20.8], [9.9, -20.8]].forEach(([tx9, tz9]) => {                    // 구령대 탁자·의자(사용자 07-31 "구령대 책상")
+      addBox(1.4, 0.72, 0.8, 0x8a6a45, tx9, 0, tz9);
+      addBox(0.45, 0.85, 0.45, 0x5a4636, tx9 - 0.95, 0, tz9); addBox(0.45, 0.85, 0.45, 0x5a4636, tx9 + 0.95, 0, tz9);
+    });
+    addBox(2.2, 1.3, 0.45, 0xa9784a, 3.4, 0, -23.625);                      // 현관 유리문 좌우 나무 신발장(사용자 07-31)
+    addBox(1.6, 1.3, 0.45, 0xa9784a, 8.6, 0, -23.625);
+    addPanel(3.0, 1.4, 0x7a3b3b, hx, 0.03, -23.0);                           // 발매트
   }
 
   // ================= 서관 =================
@@ -584,30 +599,54 @@ export function buildWorld(scene) {
     sign(SCHOOL.name, gtx, 1.5, gtz - 0.65, 0, 0.55);
     addBox(116, 1.1, 0.3, 0xd8d2c6, gtx - 4 - 0.5 - 58, -1, gtz);
     addBox(42, 1.1, 0.3, 0xd8d2c6, gtx + 4 + 0.5 + 21, -1, gtz);
-    addBox(0.16, 10, 0.16, 0xc8cdd2, SCHOOL.flagPole[0], 0, SCHOOL.flagPole[1]);
-    addBox(1.4, 0.9, 0.16, 0xf5f6f8, SCHOOL.flagPole[0]+0.85, 8.6, SCHOOL.flagPole[1], { collide: false });
+    addBox(0.16, 10, 0.16, 0xc8cdd2, -2.6, 0, -19.2);                          // 게양대 — 구령대 서쪽 잔디(길 위에 서 있었음)
+    addBox(1.4, 0.9, 0.16, 0xf5f6f8, -2.6 + 0.85, 8.6, -19.2, { collide: false });
     tree(SCHOOL.bigTree[0], SCHOOL.bigTree[1], 2.2);
-    [[-30,-21],[-10,-21],[14,-21],[30,-21],[44,20],[20,40],[-30,40],[56,-40]].forEach(([tx9,tz9]) => tree(tx9, tz9, 1));
+    [[-30,-19],[-10,-19],[30,-19],[44,20],[20,40],[-30,40],[56,-40]].forEach(([tx9,tz9]) => tree(tx9, tz9, 1));
+    // 건물 앞 산책로: 잔디 두 줄 사이 타일 길 + 노란 점자블록 + 둥근 향나무
+    [[-39.5, 0.65], [11.65, 39.5]].forEach(([a, b]) => {
+      const w = b - a, c = (a + b) / 2;
+      addPanel(w, 2.05, 0x6fa35a, c, 0.015, -22.775);
+      addPanel(w, 2.15, 0x6fa35a, c, 0.015, -19.175);
+      addPanel(w, 1.5, 0xdcc9a6, c, 0.02, -21.0);
+      addPanel(w, 0.3, 0xe9c341, c, 0.03, -21.0);
+    });
+    [-37, -32.5, -28, -23.5, -19, -14.5, -10, -5.5, 16.5 + 3, 23.5, 28, 32.5, 37].forEach((sx9, k) => {
+      const sz9 = k % 2 ? -19.2 : -22.8;
+      addBox(1.1, 0.9, 1.1, 0x3f7a3f, sx9, 0, sz9);
+      addBox(0.7, 0.4, 0.7, 0x4d8b4d, sx9, 0.9, sz9, { collide: false });
+    });
   }
   {   // 지형 단차 마감 — 옹벽(좌 모자이크·우 마름돌)+동서 오르는 길. 옹벽 상면이 부지 레벨(y0)이라 길만 놓으면 이어진다
-    addBox(84.95, 1, 0.4, 0xb9ad97, -39.525, -1, -17.8);   // 서측(테라스 남면에 맞댐 — 파고들면 동일평면)
-    addBox(72.65, 1, 0.4, 0xc9c4bb, 45.675, -1, -17.8);    // 동측
+    addBox(82.65, 1, 0.4, 0xb9ad97, -40.675, -1, -17.8);   // 서측(테라스 남면에 맞댐 — 파고들면 동일평면)
+    addBox(70.35, 1, 0.4, 0xc9c4bb, 46.825, -1, -17.8);    // 동측
+    // 구령대 정면 모자이크 무늬(사용자 07-31 "구령대 정면으로 볼 때 무늬") — x 0.65~11.65
+    const MOS = [0xe07a5f, 0xf2cc8f, 0x81b29a, 0x5b8fc9, 0xf4a261, 0xb48ed6];
+    for (let k = 0; k < 20; k++) addBox(0.55, 1, 0.4, MOS[k % 6], 0.65 + 0.55 * (k + 0.5), -1, -17.8);
+    // 운동장 → 구령대 계단: 양 끝에서 옹벽을 따라 6단씩(사용자 07-31 "운동장에서 구령대 올라가는 계단")
+    for (let i = 0; i < 6; i++) {
+      addBox(0.35, (i + 1) / 6, 1.6, PAVE, 11.65 + 0.35 * (5 - i) + 0.175, -1, -16.8);   // 동쪽 끝(통학로가 닿는 쪽)
+      addBox(0.35, (i + 1) / 6, 1.6, PAVE, 0.65 - 0.35 * (5 - i) - 0.175, -1, -16.8);    // 서쪽 끝
+    }
     [[-30, 4.4], [40, 4.4]].forEach(([rx, rw]) => {
       for (let i = 0; i < 3; i++) addBox(rw, 1 - i*0.33, 0.5, PAVE, rx, -1, -17.35 + i*0.5);
     });
     // 통학로 — 정문→동측→구령대(노란 점자블록)
     addPanel(1.2, 57, 0xe9c341, 30, -0.985, 16);
-    addPanel(24, 1.2, 0xe9c341, 18.15, -0.985, -12.5);
-    addPanel(1.2, 5.5, 0xe9c341, 6.15, -0.985, -15.85);
+    addPanel(17, 1.2, 0xe9c341, 22.1, -0.985, -12.5);
+    addPanel(1.2, 3.4, 0xe9c341, 14.2, -0.985, -14.3);
   }
   {   // 랜드마크 소품 — 인식 포인트(v1 v0.22~0.52)
-    addBox(2.2, 1.15, 0.8, 0x9aa0a6, -3.2, 0, -20.2);                          // 교훈석
-    sign('바르고 크게 자율', -3.2, 1.35, -20.75, 0, 0.3);
-    addBox(1.0, 1.7, 0.5, 0xb9b5aa, -8.5, 0, -20.4);                           // 교가비
-    sign('교가비', -8.5, 1.95, -20.7, 0, 0.26);
-    addBox(0.6, 5, 0.6, 0xdfe3e8, 16, 0, -21);                                 // 탑시계
-    addBox(1.5, 1.5, 0.34, 0xf5f6f8, 16, 4.7, -21, { collide: false });
-    sign('12', 16, 5.45, -21.2, 0, 0.3);
+    // 교훈석 — 구령대 동쪽(영상 v2179_0285: 구령대→계단→교훈석→가로등→향나무→탑시계 순)
+    addBox(1.3, 2.1, 0.7, 0x7d7f7c, 13.4, 0, -19.3);
+    sign('바르고 슬기롭게', 13.4, 1.5, -18.88, 0, 0.2);
+    addBox(0.16, 4.2, 0.16, 0x9aa0a6, 15.0, 0, -19.0);                         // 태양광 가로등
+    addBox(0.7, 0.3, 0.4, 0xdfe3e8, 15.0, 4.2, -19.0, { collide: false });
+    addBox(1.0, 1.7, 0.5, 0xb9b5aa, -8.5, 0, -19.3);                           // 교가비
+    sign('교가비', -8.5, 1.95, -18.98, 0, 0.26);
+    addBox(0.6, 5, 0.6, 0xdfe3e8, 16.5, 0, -19.2);                             // 탑시계
+    addBox(1.5, 1.5, 0.34, 0xf5f6f8, 16.5, 4.7, -19.2, { collide: false });
+    sign('12', 16.5, 5.45, -19.0, 0, 0.3);
     [-30, 42].forEach(lx => {                                                  // 조명탑(운동장 북측 동서)
       addBox(0.5, 12, 0.5, 0xbfc4c9, lx, -1, -12);
       addBox(2.6, 0.7, 0.9, 0xdfe3e8, lx, 10.6, -12, { collide: false });
@@ -654,6 +693,7 @@ export function buildWorld(scene) {
     bandZ(kz0, kz1, kx0, -1, 3.2);  bandX(kx0, kx1, kz0, -1, 3.2);              // 급식동 서·북면
   }
   zones.push({ x0: fx0, x1: fx1, z0: fz0, z1: zCor, y: 0, label: '본관 복도' });
+  zones.push({ x0: 0.65, x1: 11.65, z0: fz1, z1: -18.1, y: 0, label: '구령대' });
   zones.push({ x0: ex0 + 0.3, x1: ex1 - 0.3, z0: ez1 + 0.3, z1: fz0 - 0.3, y: 0, label: '가운데 마당' });
   zones.push({ x0: SCHOOL.playground.center[0]-7, x1: SCHOOL.playground.center[0]+7, z0: SCHOOL.playground.center[1]-5, z1: SCHOOL.playground.center[1]+5, y: -1, label: '놀이터' });
   zones.push({ x0: -52, x1: -44, z0: -13, z1: -7, y: -1, label: '유치원 놀이터' });
