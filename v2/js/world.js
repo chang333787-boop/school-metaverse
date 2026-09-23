@@ -108,6 +108,7 @@ export function buildWorld(scene) {
   }
   const signCache = new Map();
   function sign(text, x, y, z, rotY = 0, h = 0.42) {
+    let w9 = 0;
     let entry = signCache.get(text + h);
     if (!entry) {
       const c = document.createElement('canvas'); const g2 = c.getContext('2d');
@@ -119,17 +120,25 @@ export function buildWorld(scene) {
       g3.fillText(text, c.width/2, c.height/2 + 4);
       const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
       const w = h * c.width / c.height;
+      w9 = w;
       const f = new THREE.PlaneGeometry(w, h).toNonIndexed(); f.translate(0,0,0.008);
       const bk = new THREE.PlaneGeometry(w, h).toNonIndexed(); bk.rotateY(Math.PI); bk.translate(0,0,-0.008);
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([...f.attributes.position.array, ...bk.attributes.position.array]),3));
       geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([...f.attributes.uv.array, ...bk.attributes.uv.array]),2));
-      entry = { geo, mat: new THREE.MeshBasicMaterial({ map: tex }) };
+      entry = { geo, w: w9, mat: new THREE.MeshBasicMaterial({ map: tex }) };
       signCache.set(text + h, entry);
     }
     const m = new THREE.Mesh(entry.geo, entry.mat);
     m.position.set(x, y, z); m.rotation.y = rotY; m.matrixAutoUpdate = false; m.updateMatrix();
     scene.add(m);
+    return { m, w: entry.w };
+  }
+  // 돌출 팻말 — 문 위에서 복도 쪽으로 튀어나온 파란 팻말(영상 v2179_0501·v1). 복도를 따라 걸으면 정면으로 보인다.
+  // 사용자 07-31 "복도에서 문 위에 붙어야", "천장에 잘림" → 문 위·천장 아래 높이. dir = 복도가 있는 쪽(z 부호)
+  function hangSign(text, x, y, zWall, dir, h = 0.3) {
+    const s9 = sign(text, x, y, zWall, Math.PI / 2, h);
+    s9.m.position.z = zWall + dir * (s9.w / 2 + 0.17); s9.m.updateMatrix();
   }
   function tree(x, z, s = 1) {
     addBox(0.5*s, 1.6*s, 0.5*s, 0x6d4e32, x, tY(z), z, { collide: false });
@@ -235,7 +244,7 @@ export function buildWorld(scene) {
       addBox(0.3, FH, fz1-zCor-2.2, INNER, cx, 0, (zCor+fz1)/2 - 0.6);             // 남|여 구분벽
       [-3.1, -1.6, 1.6, 3.1].forEach(ox => addBox(0.24, 1.9, 1.5, 0xdfe8ee, cx+ox, 0, zCor + 1.55));  // 칸막이
     }
-    sign(r.name, doorC(r) + 1.3, 2.35, zCor - 0.22, 0, 0.34);
+    hangSign(r.name, doorC(r), 2.78, zCor, -1);
   });
   {   // 복도 채우기 — 사물함·소화기·형광등(빈 복도가 v1 대비 가장 크게 비어 보이던 부분)
     // 창 아래 낮은 나무 사물함 — 영상 v2179_0462~0519: 북쪽 창 밑으로 복도 끝까지 이어진다(키 큰 철제함 아님)
@@ -311,8 +320,8 @@ export function buildWorld(scene) {
       }
       if (r.type === 'nurse') { addBox(1.05, 0.5, 2, 0xf2f5f7, cx-1, 0, wz0+2.5); addBox(1.05, 0.5, 2, 0xf2f5f7, cx+1, 0, wz0+2.5); }
     });
-    sign('보건실', nurseDoor, 2.35, LOB_Z + 0.22, 0, 0.34);
-    sign('나래반', naraeDoor, 2.45, LOB_Z + 0.22, 0, 0.34);
+    hangSign('보건실', nurseDoor, 2.78, LOB_Z, 1);
+    hangSign('나래반', naraeDoor, 2.78, LOB_Z, 1);
     sign('문서고', -27.5, 2.35, LOB_Z + 0.22, 0, 0.28);
     sign('슬기샘 도서관', LOB_X - 0.22, 2.55, SIDE_Z, Math.PI / 2, 0.34);
     // 도서관 복도창(짙은 초록 시트지) + 창 아래 자작나무색 사물함 — 복도 북벽 x LOB_X~-16.6
@@ -360,7 +369,7 @@ export function buildWorld(scene) {
       // ⚠️1.45 간격은 틈이 0.35라 사람이 못 지나가 방이 통째로 봉쇄됐었다(SD2.reach가 적발).
       const nD = (s1 - s0) > 7 ? 3 : 1;
       for (let d = 0; d < nD; d++) addBox(1.1, 0.72, 0.5, 0xb0a18e, cx + (d - (nD-1)/2)*2.2, FH+0.3, wz0+3);
-      sign(r.name, doorC(r)+1.2, FH+2.55, zc2-0.22, 0, 0.34);
+      hangSign(r.name, doorC(r), FH + 0.3 + 2.72, zc2, 1);
       zones.push({ x0: s0, x1: s1, z0: wz0, z1: zc2, y: FH+0.3, label: r.name });
     });
     zones.push({ x0: wx0, x1: -12.2, z0: zc2, z1: wz1, y: FH+0.3, label: '2층 복도' });
@@ -438,7 +447,7 @@ export function buildWorld(scene) {
       for (let dx = -1; dx <= 1; dx++) for (let dz = 0; dz < 2; dz++)
         addBox(1.1, 0.72, 0.5, r.type==='science'?0x8fc46a:0xb0a18e, cx + dx*1.7, 0, zCE + 3.2 + dz*1.7);
     }
-    if (!r.innerOnly && !r.external) sign(r.name, doorC(r)+1.2, 2.35, zCE - 0.22, 0, 0.34);
+    if (!r.innerOnly && !r.external) hangSign(r.name, doorC(r), 2.78, zCE, -1);
   });
   addBox(0.3, FH, 4.3, INNER, 32.8, 0, -52.85);     // 과학준비실 칸막이(과학실에서 진입 — innerOnly)
   addBox(0.3, FH, 4.7, INNER, 32.8, 0, -47.05);
