@@ -130,7 +130,9 @@ export function buildWorld(scene) {
     scene.add(m);
   }
   function tree(x, z, s = 1) {
-    addBox(0.5*s, 1.6*s, 0.5*s, 0x6d4e32, x, tY(z), z);
+    addBox(0.5*s, 1.6*s, 0.5*s, 0x6d4e32, x, tY(z), z, { collide: false });
+    // 밑동 충돌은 보이지 않게 12m까지 — 밑동(1.6) 위에 올라서면 점프로 지붕(3.7)에 닿았다(사용자 07-30 "나무 위로 못 올라가게")
+    colliders.push({ x0: x-0.25*s, x1: x+0.25*s, y0: tY(z), y1: tY(z)+12, z0: z-0.25*s, z1: z+0.25*s });
     addBox(2.4*s, 1.5*s, 2.4*s, 0x3f7a3f, x, tY(z)+1.6*s, z, { collide: false });
     addBox(1.5*s, 1.1*s, 1.5*s, 0x4d8b4d, x, tY(z)+3.1*s, z, { collide: false });
   }

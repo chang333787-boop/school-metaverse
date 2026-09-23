@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=22';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=26';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from '../../js/data.js';
 
 const canvas = document.getElementById('scene');
@@ -318,9 +318,11 @@ function reach(opt = {}) {
     for (const [dx, dz] of DIR) {
       const nx = c.x + dx*S, nz = c.z + dz*S;
       if (nx < -80 || nx > 80 || nz < -68 || nz > 44) continue;
-      if (blockedAt(nx, nz, c.y)) continue;
-      const g = groundAt(nx, nz, c.y + 0.6);
-      if (g > c.y + 0.55) continue;                 // 못 오르는 턱
+      // jump 모드: 점프 정점(+0.97)에서 막히는지·착지 가능한지 — 무엇을 밟고 어디까지 올라가는지 본다
+      const JY = opt.jump ? 0.97 : 0;
+      if (blockedAt(nx, nz, c.y + JY)) continue;
+      const g = groundAt(nx, nz, c.y + JY + 0.6);
+      if (g > c.y + (opt.jump ? 1.5 : 0.55)) continue;   // 못 오르는 턱
       const k = key(Math.round(nx/S), Math.round(nz/S), g);
       if (seen.has(k)) continue;
       seen.add(k);
@@ -329,7 +331,15 @@ function reach(opt = {}) {
     }
   }
   const bad = [], ok = [];
-  zs.forEach((Z, i) => (hits.get(i) ? ok : bad).push(Z.label));
+  // 점프 모드는 옥상 검사 전용(점프 중엔 낮은 문틀도 막힘으로 쳐서 구역 결과가 의미 없다)
+  if (!opt.jump) zs.forEach((Z, i) => (hits.get(i) ? ok : bad).push(Z.label));
+  // 옥상 도달 검사(사용자 07-30 "어디를 밟고 옥상에 올라가는 버그"): 2층(서관 x-40~-12, z-50~-38) 밖에서 3m 넘게 올라간 칸
+  let roof = 0; const roofAt = [];
+  for (const k of seen) {
+    const [ix, iz, y2] = k.split(',').map(Number), x = ix * S, z = iz * S;
+    if (y2 / 2 > 3.0 && !(x > -40.2 && x < -11.8 && z > -50.2 && z < -37.8)) { roof++; if (roofAt.length < 5) roofAt.push([+x.toFixed(1), +z.toFixed(1), y2 / 2]); }
+  }
+  if (roof) bad.push('옥상 도달 ' + roof + '칸 ' + JSON.stringify(roofAt));
   if (opt.probe) {                       // 진단: 지정 구간에서 도달한 최고 지점
     const [px0, px1, pz0, pz1] = opt.probe;
     let top = -99, at = null;
@@ -342,12 +352,12 @@ function reach(opt = {}) {
     return { cells: seen.size, ok, bad, probe: at };
   }
   if (bad.length) console.error('🚫 도달 불가 ' + bad.length + '곳: ' + bad.join(', '));
-  else console.log('✅ 도달성: 전 구역 ' + ok.length + '곳 통과 (칸 ' + seen.size + ')');
+  else console.log(opt.jump ? '✅ 점프로 옥상 도달 0' : '✅ 도달성: 전 구역 ' + ok.length + '곳 통과 (칸 ' + seen.size + ')');
   return { cells: seen.size, ok, bad };
 }
 
 // ?check=1 이면 로드 직후 자동 답사(검증용 URL — 학생 접속엔 부담 주지 않도록 기본 꺼둠)
-if (location.search.includes('check=1')) setTimeout(() => { reach(); doorCheck(); }, 60);
+if (location.search.includes('check=1')) setTimeout(() => { reach(); reach({ jump: true }); doorCheck(); }, 60);   // 두 번째 = 점프로 옥상에 오르는지
 
 // 디버그 API (v1과 같은 사용감)
 window.SD2 = {
