@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=35';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=38';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from '../../js/data.js';
 
 const canvas = document.getElementById('scene');
@@ -220,7 +220,7 @@ const chalkTex = [1, 2].map(n => {
   }
   const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx;
 });
-const chalkGeo = new THREE.PlaneGeometry(2.8, 1.0);
+const chalkGeo = new THREE.PlaneGeometry(1.5, 0.53);   // 가장 좁은 칠판(과학실 1.6m) 안에 들어가게
 let tray = null;
 function act(h) {
   switch (h.kind) {
@@ -291,7 +291,7 @@ function sweepHits(o, dir) {
     : { x0: o.bx - T, x1: o.bx + T, z0: o.bz - o.w/2 + lo, z1: o.bz + o.w/2 + hi };
   let n = 0;
   for (const b of world.allBoxes) {
-    if (b.y1 - b.y0 >= 2.6) continue;   // 문(2.5)보다 높으면 벽·기둥 = 문이 숨는 곳이니 제외.
+    if (b.wall || b.y1 - b.y0 >= 2.6) continue;   // 벽 조각(징두리로 나뉜 것 포함)·문보다 높은 기둥 = 문이 숨는 곳이니 제외.
                                         // 두께로 판정하면 두 겹 외벽(0.15)을 얇은 부재로 오인한다
     if (b.x1 <= sw.x0 || b.x0 >= sw.x1 || b.z1 <= sw.z0 || b.z0 >= sw.z1 || b.y1 <= y0 || b.y0 >= y1) continue;
     n++;

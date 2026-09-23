@@ -25,7 +25,7 @@ export function buildWorld(scene) {
   }
   function addBox(w, h, d, hex, cx, baseY, cz, opt = {}) {
     if (Math.min(w, h, d) < 0.1499) throw new Error('헌법① 위반 <0.15m: ' + [w, h, d]);   // 0.1499=부동소수 오차 허용(0.15는 합법)
-    allBoxes.push({ x0: cx-w/2, x1: cx+w/2, y0: baseY, y1: baseY+h, z0: cz-d/2, z1: cz+d/2 });
+    allBoxes.push({ x0: cx-w/2, x1: cx+w/2, y0: baseY, y1: baseY+h, z0: cz-d/2, z1: cz+d/2, wall: !!opt.wall });   // wall=벽 조각(문이 숨는 곳)
     const ch = chunkOf(cx, cz);
     _c.set(hex); _c.multiplyScalar(0.97);
     const cy = baseY + h / 2;
@@ -48,7 +48,8 @@ export function buildWorld(scene) {
   // 외벽은 '바깥 절반 0.15 + 안쪽 절반 0.15'로 나눠 쌓는다 → 방 안에서 외벽색이 아니라 실내 도장이 보인다.
   // 두 절반은 맞닿을 뿐 겹치지 않으므로 감사 통과(면이 서로 반대를 향함). 0.15는 헌법① 최소치와 정확히 같다.
   function wallSeg(ax, len, h, cx, y0, z, hex, opt) {
-    const box = (th, col, off, yy, hh) => ax === 'x' ? addBox(len, hh, th, col, cx, yy, z + off) : addBox(th, hh, len, col, z + off, yy, cx);
+    const W9 = { wall: true };
+    const box = (th, col, off, yy, hh) => ax === 'x' ? addBox(len, hh, th, col, cx, yy, z + off, W9) : addBox(th, hh, len, col, z + off, yy, cx, W9);
     // opt.dado = { top, lo, hi }: 안쪽 겹을 아래(lo)·위(hi) 두 톤으로(계단실 노랑/연민트 — 문서 v80c). top은 벽 바닥(opt.y0) 기준
     if ((opt.inner ?? (hex === WALL)) || opt.dado) {
       const f = opt.face ?? 1, d = opt.dado;
@@ -147,6 +148,7 @@ export function buildWorld(scene) {
     addBox(1.5*s, 1.1*s, 1.5*s, 0x4d8b4d, x, tY(z)+3.1*s, z, { collide: false });
   }
 
+  const HALL_DADO = { top: 1.1, lo: 0xbfd89a, hi: 0xefe9dc };   // 본관 복도 벽: 아래 연두 징두리(영상 v2179_0462~0519)
   const STAIR_DADO = { top: 1.3, lo: 0xf2d27a, hi: 0xd4ece2 };   // 계단실 벽: 아래 노랑 / 위 연민트(영상 v2180_0159~0198)
   const WALL = 0xd8c39a, PAVE = 0xcfc8ba, INNER = 0xefe9dc, FLOOR = 0xe7e2d6, WOOD = 0xc9a063, CEIL = 0xf2eee4;
   // 지붕은 두 겹 — 위는 지붕색, 아래는 아이보리 천장. 벽·칸막이 윗면(FH)과 정확히 맞닿아 겹치지 않는다.
@@ -187,21 +189,21 @@ export function buildWorld(scene) {
   //  오른쪽(남벽)=유치원 정문(원무실 팻말) / 가운데=둥근 기둥 소파.
   const LOB_X = -26.4, LOB_Z = -42, SIDE_Z = -39.4;
   // 주복도 북벽 — 서관·급식동 구간은 양쪽 다 실내(실내벽), 마당 구간(x8.4~)만 외벽
-  wallX(fx0, -12, fz0, INNER, { gaps: [
+  wallX(fx0, -12, fz0, INNER, { face: -1, dado: HALL_DADO, gaps: [
     { c: (fx0 + LOB_X) / 2, w: LOB_X - fx0, dh: FH },          // 로비로 통째로 트임
     { c: -14.3, w: 2.6 },                                        // 계단홀
     ...[-24.3, -21.4, -18.5].map(c => ({ c, w: 2.4, sill: 1.05, dh: 2.35, win: true })),   // 도서관 복도창(초록 시트지 자리)
   ] });
-  wallX(-12, 8.4, fz0, INNER, { gaps: [
+  wallX(-12, 8.4, fz0, INNER, { face: -1, dado: HALL_DADO, gaps: [
     { c: -11.3, w: 1.2, glass: true },                           // 뒷통로(주차장 가는 길) 유리문
     { c: B.kitchen.dutyRoom.doorC, w: 1.2 },
     { c: B.kitchen.doorC, w: 1.8 },
     { c: 6.9, w: 3.0, dh: FH },                                  // 세로복도
   ] });
   // 마당면 — 학생자치회 게시판 자리(화장실 문 맞은편)는 창이 아니라 벽(사용자 08-01)
-  wallX(8.4, fx1, fz0, WALL, { gaps: [{ c: 20, w: 1.8 }], wins: 7, face: -1, noWin: [[8.6, 13.4]] });
+  wallX(8.4, fx1, fz0, WALL, { gaps: [{ c: 20, w: 1.8 }], wins: 7, face: -1, noWin: [[8.6, 13.4]], dado: HALL_DADO });
   wallZ(fz0, fz1, fx0, WALL, { wins: 1, face: -1 });             // 서벽 — 측문은 서관 서벽(로비)으로
-  wallZ(fz0, fz1, fx1, WALL, { gaps: [{ c: FR.corridorExitZ, w: 1.8 }], wins: 1, face: 1 });
+  wallZ(fz0, fz1, fx1, WALL, { gaps: [{ c: FR.corridorExitZ, w: 1.8, glass: true }], wins: 1, face: 1 });   // 주복도 동쪽 끝 유리문(영상 v2179_0480·문서 v79g)
   const cGaps = FR.rooms.map(r => r.type === 'hall' ? { c: (r.span[0]+r.span[1])/2, w: 3.4, dh: 2.7 }   // 로비 북단 아치(인방에 현판)
     : r.name === '원무실' ? { c: doorC(r), w: 1.8, glass: true }          // 유치원 정문(원무실 팻말) — 짙은 유리 양문(v80d)
     : { c: doorC(r), w: 1.2 });
@@ -209,8 +211,12 @@ export function buildWorld(scene) {
   const twoDoor = r => ['classroom', 'computer', 'daycare', 'science'].includes(r.type);
   const backDoor = r => ({ c: r.span[1] - 1.9, w: 1.2 });
   FR.rooms.filter(twoDoor).forEach(r => cGaps.push(backDoor(r)));
-  wallX(fx0 + 0.15, fx1 - 0.15, zCor, INNER, { gaps: cGaps });   // 내부벽은 외벽에서 0.3 인셋(코너 관통 금지)
-  addPanel(fx1-fx0-0.3, zCor-fz0-0.3, FLOOR, 0, 0.012, (fz0+zCor)/2);
+  wallX(fx0 + 0.15, fx1 - 0.15, zCor, INNER, { gaps: cGaps, face: 1, dado: HALL_DADO });   // 교실벽 — 복도 쪽(북)만 연두 징두리
+  // 복도 바닥: 흰 타일 + 양쪽 가장자리 짙은 띠(영상) — 띠는 바닥과 같은 높이에 '맞대어' 깐다(겹쳐 올리면 반짝임)
+  addPanel(fx1-fx0-0.3, zCor-fz0-0.7, FLOOR, 0, 0.012, (fz0+zCor)/2);
+  addPanel(fx1-fx0-0.3, 0.2, 0x353a40, 0, 0.012, zCor - 0.25);
+  addPanel(LOB_X - fx0 - 0.15, 0.2, FLOOR, (fx0 + 0.15 + LOB_X) / 2, 0.012, fz0 + 0.25);      // 로비 구간은 띠 없음
+  addPanel(fx1 - 0.15 - LOB_X, 0.2, 0x353a40, (LOB_X + fx1 - 0.15) / 2, 0.012, fz0 + 0.25);
   {   // 현관 로비 — 영상 v2179_0327~0339: 북단 목재 아치에 '웃음꽃 피는 즐거운 학교', 양쪽 유리 진열장
     const hc = (hall.span[0] + hall.span[1]) / 2;
     addBox(3.4, 0.6, 0.16, 0x8a5a3b, hc, 2.75, zCor + 0.23, { collide: false });   // 폭 = 양쪽 칸막이 사이(넘으면 칸막이와 겹침)
@@ -226,7 +232,8 @@ export function buildWorld(scene) {
     addPanel(cw-0.5, fz1-zCor-0.5, r.type==='hall'?FLOOR:0xead9c0, cx, 0.014, (zCor+fz1)/2);
     zones.push({ x0: s0, x1: s1, z0: zCor, z1: fz1, y: 0, label: r.name });
     if (r.type === 'classroom' || r.type === 'computer' || r.type === 'daycare') {
-      addBox(3, 1.2, 0.16, 0x2e5d43, cx, 0.9, zCor + 0.23, { collide: false });   // 0.23=벽면(0.15)에 딱 붙임(0.28은 5cm 떠 있었다)
+      // 칠판 폭은 앞·뒷문 사이에 맞춘다(3m 고정이면 두 문 구멍을 35cm씩 가렸다). 0.23 = 벽면(0.15)에 딱 붙임
+      addBox(Math.min(3, (s1 - 2.5) - (s0 + 2.5) - 0.2), 1.2, 0.16, 0x2e5d43, cx, 0.9, zCor + 0.23, { collide: false });
       hotspots.push({ kind: 'board', x: cx, z: zCor + 1.3, y: 0, r: 2.0, label: '칠판에 낙서하기', bx: cx, by: 1.5, bz: zCor + 0.33 });
       addBox(1.2, 0.85, 0.6, 0x8a5a3b, cx - 2, 0, zCor + 1.4);
       for (let dx = -1; dx <= 1; dx++) for (let dz = 0; dz < 2; dz++) {
@@ -441,7 +448,7 @@ export function buildWorld(scene) {
     addPanel(s1-s0-0.5, ez1-zCE-0.5, 0xead9c0, cx, 0.014, (zCE+ez1)/2);
     zones.push({ x0: s0, x1: s1, z0: zCE, z1: ez1, y: 0, label: r.name });
     if (r.type === 'classroom' || r.type === 'science') {
-      addBox(3, 1.2, 0.16, 0x2e5d43, cx, 0.9, zCE + 0.23, { collide: false });
+      addBox(Math.min(3, (s1 - 2.5) - (s0 + 2.5) - 0.2), 1.2, 0.16, 0x2e5d43, cx, 0.9, zCE + 0.23, { collide: false });   // 앞·뒷문 사이 폭
       hotspots.push({ kind: 'board', x: cx, z: zCE + 1.3, y: 0, r: 2.0, label: '칠판에 낙서하기', bx: cx, by: 1.5, bz: zCE + 0.33 });
       for (let dx = -1; dx <= 1; dx++) for (let dz = 0; dz < 2; dz++)
         addBox(1.1, 0.72, 0.5, r.type==='science'?0x8fc46a:0xb0a18e, cx + dx*1.7, 0, zCE + 3.2 + dz*1.7);
