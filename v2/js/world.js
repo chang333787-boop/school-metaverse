@@ -298,6 +298,19 @@ export function buildWorld(scene) {
     [[2.9, 2.6, 2.8, 0x2f6b46], [4.8, 2.1, 2.5, 0x3a7d52], [6.6, 1.6, 2.2, 0x468c5c], [8.2, 1.0, 1.9, 0x4f9663]]
       .forEach(([yy, r, h, c], i) => dCyl(0, r*s, h*s, c, x, y + yy*s, z, { far: true, seg: 8, rot: [0, ry + i*0.4, 0] }));
   }
+  // 차(DETAIL-5): 차체(바닥 25cm 띄움)·바퀴 4·짙은 유리 캐빈·지붕·전조등·후미등. 길이 방향 = z. 충돌은 예전 상자 그대로
+  function car(cx, cz, body, roof, y = 0, L = 4.0, W = 1.8) {
+    colliders.push({ x0: cx - W/2, x1: cx + W/2, y0: y, y1: y + 1.25, z0: cz - L/2, z1: cz + L/2 });
+    const F = { far: true };
+    dBox(W, 0.5, L, body, cx, y + 0.25, cz, F);
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => dCyl(0.32, 0.32, 0.22, 0x26282c, cx + sx*(W/2 - 0.08), y + 0.32, cz + sz*(L/2 - 0.75), { far: true, seg: 10, rot: [0, 0, Math.PI/2] }));
+    dBox(W - 0.24, 0.4, L * 0.48, 0x34424f, cx, y + 0.75, cz + 0.1, F);       // 유리 캐빈
+    dBox(W - 0.2, 0.08, L * 0.5, roof, cx, y + 1.15, cz + 0.1, F);            // 지붕
+    [-1, 1].forEach(sx => {
+      dBox(0.3, 0.12, 0.04, 0xf4f1e0, cx + sx*(W/2 - 0.3), y + 0.55, cz - L/2 - 0.02);   // 전조등(-z 앞)
+      dBox(0.3, 0.12, 0.04, 0xc0392b, cx + sx*(W/2 - 0.3), y + 0.55, cz + L/2 + 0.02);   // 후미등
+    });
+  }
   // 가구(DETAIL-1): 충돌·자리 계산은 예전 상자 크기 그대로 두고, 보이는 모양만 부품으로 짓는다.
   const METAL = 0x8a9096;
   function studentDesk(cx, y, cz, top = 0xc9a06a, w = 1.1) {        // w×0.5·높이 0.72 — 나무 상판·쇠다리·책 넣는 칸
@@ -598,9 +611,17 @@ export function buildWorld(scene) {
   addBox(5.5, 0.95, 1, 0xc4c9cd, -1, 0, K.cookWallZ + 1.3);
   hotspots.push({ kind: 'meal', x: -1, z: K.cookWallZ + 2.4, y: 0, r: 1.8, label: '급식 받기' });
   // 식탁: 홀 장축(동서) 방향으로 길게 — 사용자 08-01 "식탁 방향" 지적·영상 v2178. 양옆 짙은 빨강 둥근 의자 줄.
+  // DETAIL-5: 상판·쇠다리 + 양옆 팔에 달린 빨간 둥근 의자 4개씩(영상 v2178). 충돌은 예전 상자 그대로
   const table9 = (tx, tz) => {
-    addBox(3.2, 0.72, 0.8, 0xb5713d, tx, 0, tz);
-    addBox(3.2, 0.42, 0.3, 0x9b2c3a, tx, 0, tz - 0.6); addBox(3.2, 0.42, 0.3, 0x9b2c3a, tx, 0, tz + 0.6);
+    colliders.push({ x0: tx - 1.6, x1: tx + 1.6, y0: 0, y1: 0.72, z0: tz - 0.4, z1: tz + 0.4 });
+    [-1, 1].forEach(sd => colliders.push({ x0: tx - 1.6, x1: tx + 1.6, y0: 0, y1: 0.42, z0: tz + sd*0.6 - 0.15, z1: tz + sd*0.6 + 0.15 }));
+    dBox(3.2, 0.05, 0.8, 0xb5713d, tx, 0.67, tz);
+    [-1.45, 1.45].forEach(ox => [-0.3, 0.3].forEach(oz => dBox(0.05, 0.67, 0.05, METAL, tx + ox, 0, tz + oz)));
+    dBox(3.0, 0.04, 0.05, METAL, tx, 0.2, tz);                                                   // 다리 잇는 가로대
+    [-1, 1].forEach(sd => [-1.2, -0.4, 0.4, 1.2].forEach(ox => {
+      dCyl(0.17, 0.17, 0.05, 0x9b2c3a, tx + ox, 0.4, tz + sd*0.62, { seg: 10 });
+      dRod(tx + ox, 0.2, tz + sd*0.3, tx + ox, 0.4, tz + sd*0.62, 0.025, METAL);
+    }));
   };
   [-7.2, -2.6, 2.0].forEach(tx => [-46.6, -44.2].forEach(tz => table9(tx, tz)));
   [-1.2, 3.0].forEach(tx => table9(tx, -40.4));                  // 당직실 동쪽 줄(급식실 남문 앞은 비움)
@@ -823,8 +844,7 @@ export function buildWorld(scene) {
     for (let x = -38; x <= -1; x += 2.5) addPanel(0.14, 2.6, LINE, x, 0.02, -64.9);
     addPanel(4.8, 2.6, 0x3f6fb5, -16.0, 0.02, -51.8);              // 장애인 주차면(뒷통로 나오는 곳 가까이)
     [[-33.8, -56.0, 0x4d76b3, 0x6f92c4], [-24.8, -56.0, 0xe9ecef, 0xd8dde2], [-28.8, -64.8, 0xcf6b52, 0xe08a72]].forEach(([cx9, cz9, b9, t9]) => {
-      addBox(1.8, 0.7, 4.0, b9, cx9, 0, cz9);
-      addBox(1.6, 0.55, 2.0, t9, cx9, 0.7, cz9);
+      car(cx9, cz9, b9, t9);
     });
     addBox(2.4, 2.5, 5.2, 0xe9b52a, -3.5, 0, -62.4);               // 노란 컨테이너 창고(영상 v2180_0027~0039)
     sign('주차장', -26, 1.6, -50.7, 0, 0.4);
@@ -911,8 +931,16 @@ export function buildWorld(scene) {
     });
   }
   {   // 셔틀버스 — 정문 안쪽 마당(사용자 07-31 "셔틀버스 새 위치" · 영상 v2179_0006~0024)
-    addBox(10.5, 2.4, 2.5, 0xf2c230, 23.75, -1, 41.6);
-    addBox(9.0, 0.8, 2.56, 0x2f3a45, 24.3, 0.4, 41.6, { collide: false });   // 창 띠
+    // DETAIL-5: 차체(바닥 35cm)·바퀴 6·옆 창 띠·앞 유리(서쪽 -x가 앞)·문·범퍼·등. 충돌은 예전 상자
+    const bx9 = 23.75, bz9 = 41.6, F = { far: true };
+    colliders.push({ x0: bx9 - 5.25, x1: bx9 + 5.25, y0: -1, y1: 1.4, z0: bz9 - 1.25, z1: bz9 + 1.25 });
+    dBox(10.5, 2.05, 2.5, 0xf2c230, bx9, -0.65, bz9, F);
+    dBox(10.5, 0.2, 2.56, 0x3a3d44, bx9, -0.85, bz9, F);                                       // 범퍼 띠
+    dBox(8.6, 0.75, 2.54, 0x2f3a45, bx9 + 0.6, 0.35, bz9, F);                                  // 옆 창 띠
+    dBox(0.06, 0.95, 2.2, 0x2f3a45, bx9 - 5.28, 0.2, bz9, F);                                  // 앞 유리
+    dBox(0.7, 1.6, 0.04, 0x3a4652, bx9 - 4.3, -0.6, bz9 + 1.27, F);                            // 문(남쪽)
+    [[-3.6], [2.4], [3.9]].forEach(([ox]) => [-1, 1].forEach(sz => dCyl(0.45, 0.45, 0.3, 0x26282c, bx9 + ox, -0.55, bz9 + sz*1.12, { far: true, seg: 10, rot: [Math.PI/2, 0, 0] })));
+    [-1, 1].forEach(sz => { dBox(0.04, 0.18, 0.4, 0xf4f1e0, bx9 - 5.27, -0.45, bz9 + sz*0.85); dBox(0.04, 0.2, 0.3, 0xc0392b, bx9 + 5.27, -0.4, bz9 + sz*0.9); });
   }
   {
     const [gtx, gtz] = SCHOOL.gate;
