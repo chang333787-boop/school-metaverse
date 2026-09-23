@@ -106,6 +106,26 @@ export function buildWorld(scene) {
   }
   const hash2 = (x, z) => { const v = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return v - Math.floor(v); };
 
+  // 아랫단 띠는 모든 시공이 끝난 뒤 깐다(buildPlinths) — 벽에 붙은 신발장·화분·이웃 건물 칸막이와 부딪히는 구간은 건너뛴다
+  const plinths = [];
+  function buildPlinths() {
+    for (const p of plinths) {
+      const bb = p.ax === 'x' ? { z0: p.o - 0.02, z1: p.o + 0.02 } : { x0: p.o - 0.02, x1: p.o + 0.02 };
+      const cut = [];
+      for (const b of allBoxes) {
+        if (b.y0 >= 0.45 || b.y1 <= 0) continue;
+        const hit = p.ax === 'x'
+          ? (b.z1 > bb.z0 + 0.004 && b.z0 < bb.z1 - 0.004 && b.x1 > p.a0 && b.x0 < p.a1)
+          : (b.x1 > bb.x0 + 0.004 && b.x0 < bb.x1 - 0.004 && b.z1 > p.a0 && b.z0 < p.a1);   // 벽 자신(면에 맞닿기만)은 제외
+        if (hit) cut.push(p.ax === 'x' ? [b.x0 - 0.02, b.x1 + 0.02] : [b.z0 - 0.02, b.z1 + 0.02]);
+      }
+      cut.sort((u, v) => u[0] - v[0]);
+      let a = p.a0;
+      const emit = (u, v) => { if (v - u < 0.15) return; p.ax === 'x' ? dBox(v - u, 0.45, 0.04, 0x857563, (u + v)/2, 0, p.o) : dBox(0.04, 0.45, v - u, 0x857563, p.o, 0, (u + v)/2); };
+      for (const [u, v] of cut) { if (u > a) emit(a, Math.min(u, p.a1)); a = Math.max(a, v); }
+      if (a < p.a1) emit(a, p.a1);
+    }
+  }
   // 외벽은 '바깥 절반 0.15 + 안쪽 절반 0.15'로 나눠 쌓는다 → 방 안에서 외벽색이 아니라 실내 도장이 보인다.
   // 두 절반은 맞닿을 뿐 겹치지 않으므로 감사 통과(면이 서로 반대를 향함). 0.15는 헌법① 최소치와 정확히 같다.
   function wallSeg(ax, len, h, cx, y0, z, hex, opt) {
@@ -115,6 +135,8 @@ export function buildWorld(scene) {
     if ((opt.inner ?? (hex === WALL)) || opt.dado) {
       const f = opt.face ?? 1, d = opt.dado;
       box(0.15, hex, f*0.075, y0, h);
+      // 아랫단 띠(DETAIL-3): 바깥벽 1층 바닥 조각에 짙은 띠 0.45 — 벽 면에서 4cm 튀어나옴(맞댐)
+      if (hex === WALL && y0 === 0 && (opt.y0 ?? 0) === 0 && len >= 0.15) plinths.push({ ax, a0: cx - len/2, a1: cx + len/2, o: z + f*0.17 });
       const lo = d ? Math.max(0, Math.min(h, (opt.y0 ?? 0) + d.top - y0)) : 0;
       if (d && lo >= 0.15 && h - lo >= 0.15) { box(0.15, d.lo, -f*0.075, y0, lo); box(0.15, d.hi, -f*0.075, y0 + lo, h - lo); }
       else box(0.15, d ? (lo >= h - 0.15 ? d.lo : d.hi) : INNER, -f*0.075, y0, h);
@@ -143,20 +165,34 @@ export function buildWorld(scene) {
       if (g0 - cur > 0.1499) wallSeg(ax, g0 - cur, h, (cur + g0)/2, y0, line, hex, opt);
       if (sl > 0.1499) wallSeg(ax, g1 - g0, sl, (g0 + g1)/2, y0, line, hex, opt);                   // 창턱 아래
       if (h - dh > 0.1499) wallSeg(ax, g1 - g0, h - dh, (g0 + g1)/2, y0 + dh, line, hex, opt);     // 인방
-      if (g.win) glassPane(ax, g1 - g0, Math.min(dh, h) - sl, (g0 + g1)/2, y0 + sl, line);
+      if (g.win) { glassPane(ax, g1 - g0, Math.min(dh, h) - sl, (g0 + g1)/2, y0 + sl, line); winFrame(ax, g0, g1, y0 + sl, y0 + Math.min(dh, h), line, hex === WALL ? (opt.face ?? 1) : 0); }
       else if (dh <= 2.8 && (g.w <= 2.2 || g.door))
         doors.push(ax === 'x' ? { ax, cx: g.c, cz: line, w: g.w, y0, dh, lintel: h - dh > 0.1499, glass: !!g.glass } : { ax, cx: line, cz: g.c, w: g.w, y0, dh, lintel: h - dh > 0.1499, glass: !!g.glass });
       cur = Math.max(cur, g1);
     }
     if (a1 - cur > 0.1499) wallSeg(ax, a1 - cur, h, (cur + a1)/2, y0, line, hex, opt);
   }
-  // 유리판 — 감사(allBoxes)·충돌엔 넣고, 그림은 투명 유리 한 덩어리로 따로(드로우콜 1)
+  // 유리판 — 충돌은 개구 전체, 그림·감사는 사방 2cm 안쪽(창틀 속에 묻혀 틀 면과 같은 평면이 안 되게). 투명 유리 한 덩어리(드로우콜 1)
   const glassPos = [];
   function glassPane(ax, len, hh, c, y, line) {
     const w = ax === 'x' ? len : 0.16, d = ax === 'x' ? 0.16 : len, cx = ax === 'x' ? c : line, cz = ax === 'x' ? line : c;
-    const bb = { x0: cx - w/2, x1: cx + w/2, y0: y, y1: y + hh, z0: cz - d/2, z1: cz + d/2 };
-    allBoxes.push(bb); colliders.push({ ...bb });
-    for (let i = 0; i < bpos.count; i++) glassPos.push(bpos.getX(i)*w + cx, bpos.getY(i)*hh + y + hh/2, bpos.getZ(i)*d + cz);
+    colliders.push({ x0: cx - w/2, x1: cx + w/2, y0: y, y1: y + hh, z0: cz - d/2, z1: cz + d/2 });
+    const iw = ax === 'x' ? w - 0.04 : w, id = ax === 'x' ? d : d - 0.04, ih = hh - 0.04;
+    allBoxes.push({ x0: cx - iw/2, x1: cx + iw/2, y0: y + 0.02, y1: y + 0.02 + ih, z0: cz - id/2, z1: cz + id/2 });
+    for (let i = 0; i < bpos.count; i++) glassPos.push(bpos.getX(i)*iw + cx, bpos.getY(i)*ih + y + hh/2, bpos.getZ(i)*id + cz);
+  }
+  // 창틀(DETAIL-3): 알루미늄 틀 사방 6cm + 세로 창살(폭 1.3↑ 1개·2.6↑ 2개), 두께 0.2(벽 0.3·유리 0.16 사이 — 어느 면과도 안 겹침).
+  // 바깥벽(f≠0)은 바깥쪽에 창턱(5cm 두께·10cm 튀어나옴)을 단다. 작은 부재라 near 층(멀면 숨김)
+  function winFrame(ax, g0, g1, yb, yt, line, f) {
+    const FR9 = 0xdfe3e6, T = 0.2, len = g1 - g0;
+    const bx = (a0, a1, y0, y1, th = T, off = 0, col = FR9) => ax === 'x'
+      ? dBox(a1 - a0, y1 - y0, th, col, (a0 + a1)/2, y0, line + off)
+      : dBox(th, y1 - y0, a1 - a0, col, line + off, y0, (a0 + a1)/2);
+    bx(g0, g0 + 0.06, yb, yt); bx(g1 - 0.06, g1, yb, yt);
+    bx(g0 + 0.06, g1 - 0.06, yt - 0.06, yt); bx(g0 + 0.06, g1 - 0.06, yb, yb + 0.06);
+    const nm = len > 2.6 ? 2 : len > 1.3 ? 1 : 0;
+    for (let k = 1; k <= nm; k++) { const mc = g0 + len * k / (nm + 1); bx(mc - 0.025, mc + 0.025, yb + 0.06, yt - 0.06); }
+    if (f) bx(g0 - 0.05, g1 + 0.05, yb - 0.05, yb, 0.1, f * 0.2, 0xcfc8ba);
   }
   function wallX(x0, x1, z, hex, opt = {}) {
     if (x0 > x1) { console.warn('wallX 인자 역순 자동 정렬', x0, x1, z); const t = x0; x0 = x1; x1 = t; }
@@ -868,8 +904,9 @@ export function buildWorld(scene) {
     });
     [-37, -32.5, -28, -23.5, -19, -14.5, -10, -5.5, 16.5 + 3, 23.5, 28, 32.5, 37].forEach((sx9, k) => {
       const sz9 = k % 2 ? -19.2 : -22.8;
-      addBox(1.1, 0.9, 1.1, 0x3f7a3f, sx9, 0, sz9);
-      addBox(0.7, 0.4, 0.7, 0x4d8b4d, sx9, 0.9, sz9, { collide: false });
+      colliders.push({ x0: sx9-0.55, x1: sx9+0.55, y0: 0, y1: 0.9, z0: sz9-0.55, z1: sz9+0.55 });   // 둥근 향나무(DETAIL-3) — 충돌은 예전 상자 그대로
+      dBlob(0.62, 0.5, 0.62, 0x3f7a3f, sx9, 0.45, sz9, { far: true, ry: k, jitter: 0.1 });
+      dBlob(0.42, 0.36, 0.42, 0x4d8b4d, sx9 + 0.05, 0.95, sz9 - 0.04, { far: true, ry: k + 1, jitter: 0.1 });
     });
   }
   {   // 지형 단차 마감 — 옹벽(좌 모자이크·우 마름돌)+동서 오르는 길. 옹벽 상면이 부지 레벨(y0)이라 길만 놓으면 이어진다
@@ -955,8 +992,9 @@ export function buildWorld(scene) {
     addPanel(31.05, 6.1, 0xb4806a, 24.075, 0.01, -41.2);
     [12, 17, 22.5, 27, 32, 37].forEach(px9 => {
       addBox(0.8, 0.5, 0.8, 0x8a5a3b, px9, 0, -41.2);
-      addBox(0.7, 0.8, 0.7, 0x3f7a3f, px9, 0.5, -41.2, { collide: false });
-      addBox(0.45, 0.4, 0.45, 0x4d8b4d, px9, 1.3, -41.2, { collide: false });
+      dBox(0.9, 0.06, 0.9, 0x7a4e33, px9, 0.5, -41.2);                                     // 화분 테두리
+      dBlob(0.4, 0.45, 0.4, 0x3f7a3f, px9, 0.95, -41.2, { far: true, ry: px9, jitter: 0.1 });   // 향나무 두 덩어리
+      dBlob(0.28, 0.3, 0.28, 0x4d8b4d, px9, 1.45, -41.2, { far: true, ry: px9 + 1, jitter: 0.1 });
     });
     addBox(28, 0.35, 0.8, 0x6b4a36, 24, 0, -43.85);                            // 동관 남벽 앞 화단
     addBox(28, 0.2, 0.7, 0x5a9a4a, 24, 0.35, -43.85, { collide: false });
@@ -1066,6 +1104,7 @@ export function buildWorld(scene) {
     });
   }
 
+  buildPlinths();   // 감사 전에 — 띠도 감사 대상
   // ================= 감사 + 병합 =================
   {
     const EPS = 0.004, faults = [];
