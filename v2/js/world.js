@@ -201,7 +201,8 @@ export function buildWorld(scene) {
     { c: 6.9, w: 3.0, dh: FH },                                  // 세로복도
   ] });
   // 마당면 — 학생자치회 게시판 자리(화장실 문 맞은편)는 창이 아니라 벽(사용자 08-01)
-  wallX(8.4, fx1, fz0, WALL, { gaps: [{ c: 20, w: 1.8 }], wins: 7, face: -1, noWin: [[8.6, 13.4]], dado: HALL_DADO });
+  wallX(8.4, fx1, fz0, WALL, { gaps: [{ c: 20, w: 1.8, glass: true }],   // 마당으로 나가는 유리문(문서 v79e)
+    wins: 7, face: -1, noWin: [[8.6, 13.4]], dado: HALL_DADO });
   wallZ(fz0, fz1, fx0, WALL, { wins: 1, face: -1 });             // 서벽 — 측문은 서관 서벽(로비)으로
   wallZ(fz0, fz1, fx1, WALL, { gaps: [{ c: FR.corridorExitZ, w: 1.8, glass: true }], wins: 1, face: 1 });   // 주복도 동쪽 끝 유리문(영상 v2179_0480·문서 v79g)
   const cGaps = FR.rooms.map(r => r.type === 'hall' ? { c: (r.span[0]+r.span[1])/2, w: 3.4, dh: 2.7 }   // 로비 북단 아치(인방에 현판)
@@ -391,7 +392,7 @@ export function buildWorld(scene) {
   wallZ(kz0, kz1, kx0, WALL, { h: K.wallHeight, wins: 4, face: -1 });
   // 이 벽 = 세로복도 동벽 = 동관 서벽(x8.4 3중 공유). 개구: 동관 복도 연결(-56.5)·마당 문(-41).
   // ⚠️hallEastDoorZ(-44)는 서벽(x5.4) 문 — 여기 두면 2학년 교실 벽에 반쯤 걸린 구멍이 된다(실수했던 지점)
-  wallZ(kz0, kz1, kx1, WALL, { h: K.wallHeight, gaps: [{ c: -56.5, w: 2.4 }, { c: B.linkCorridor.yardDoorZ, w: 1.6 }], face: 1 });
+  wallZ(kz0, kz1, kx1, WALL, { h: K.wallHeight, gaps: [{ c: -56.5, w: 2.4, glass: true, door: true }, { c: B.linkCorridor.yardDoorZ, w: 1.6, glass: true }], face: 1 });   // 동관 복도 유리문(영상 v2179_0444)·마당 유리문
   addPanel(kx1-kx0-0.3, kz1-kz0-0.3, FLOOR, (kx0+kx1)/2, 0.012, (kz0+kz1)/2);
   wallX(kx0 + 0.15, 5.25, K.cookWallZ, INNER, { h: K.wallHeight, gaps: [{ c: K.cookDoorC, w: 1.4 }, { c: -1, w: 4.0, dh: K.wallHeight }] });   // 동단은 세로복도 서벽(x5.4) 앞까지
   addBox(4.0, 1.0, 0.3, INNER, -1, 0, K.cookWallZ);                                   // 배식창 아래(배식대 높이) — 창 = y 1.0~2.0
@@ -709,6 +710,9 @@ export function buildWorld(scene) {
     // 운동장 → 구령대 계단: 양 끝에서 옹벽을 따라 6단씩(사용자 07-31 "운동장에서 구령대 올라가는 계단")
     for (let i = 0; i < 6; i++) {
       addBox(0.35, (i + 1) / 6, 1.6, PAVE, 11.65 + 0.35 * (5 - i) + 0.175, -1, -16.8);   // 동쪽 끝(통학로가 닿는 쪽)
+      // 스테인리스 난간(사용자 07-31 "구령대 계단 난간") — 단 윗면 위에 단마다 한 칸씩, 바깥(남) 면을 계단 면과 맞춤
+      addBox(0.35, 0.9, 0.16, 0xc8cdd2, 11.65 + 0.35 * (5 - i) + 0.175, -1 + (i + 1) / 6, -16.08);
+      addBox(0.35, 0.9, 0.16, 0xc8cdd2, 0.65 - 0.35 * (5 - i) - 0.175, -1 + (i + 1) / 6, -16.08);
       addBox(0.35, (i + 1) / 6, 1.6, PAVE, 0.65 - 0.35 * (5 - i) - 0.175, -1, -16.8);    // 서쪽 끝
     }
     [[-30, 4.4], [40, 4.4]].forEach(([rx, rw]) => {
@@ -781,6 +785,16 @@ export function buildWorld(scene) {
   zones.push({ x0: fx0, x1: fx1, z0: fz0, z1: zCor, y: 0, label: '본관 복도' });
   zones.push({ x0: 0.65, x1: 11.65, z0: fz1, z1: -18.1, y: 0, label: '구령대' });
   zones.push({ x0: ex0 + 0.3, x1: ex1 - 0.3, z0: ez1 + 0.3, z1: fz0 - 0.3, y: 0, label: '가운데 마당' });
+  {   // 가운데 마당(중정) — 영상 v2180_0102~0129: 벽돌 포장 + 화분 향나무 + 동관 앞 화단
+    addPanel(31.05, 6.1, 0xb4806a, 24.075, 0.01, -41.2);
+    [12, 17, 22.5, 27, 32, 37].forEach(px9 => {
+      addBox(0.8, 0.5, 0.8, 0x8a5a3b, px9, 0, -41.2);
+      addBox(0.7, 0.8, 0.7, 0x3f7a3f, px9, 0.5, -41.2, { collide: false });
+      addBox(0.45, 0.4, 0.45, 0x4d8b4d, px9, 1.3, -41.2, { collide: false });
+    });
+    addBox(28, 0.35, 0.8, 0x6b4a36, 24, 0, -43.85);                            // 동관 남벽 앞 화단
+    addBox(28, 0.2, 0.7, 0x5a9a4a, 24, 0.35, -43.85, { collide: false });
+  }
   zones.push({ x0: SCHOOL.playground.center[0]-7, x1: SCHOOL.playground.center[0]+7, z0: SCHOOL.playground.center[1]-5, z1: SCHOOL.playground.center[1]+5, y: -1, label: '놀이터' });
   zones.push({ x0: -52, x1: -44, z0: -13, z1: -7, y: -1, label: '유치원 놀이터' });
   zones.push({ x0: SCHOOL.garden.center[0]-4, x1: SCHOOL.garden.center[0]+4, z0: SCHOOL.garden.center[1]+3, z1: SCHOOL.garden.center[1]+4.5, y: 0, label: '텃밭' });
