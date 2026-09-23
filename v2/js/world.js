@@ -60,7 +60,8 @@ export function buildWorld(scene) {
   const _p0 = new THREE.Vector3(), _p1 = new THREE.Vector3(), _p2 = new THREE.Vector3();
   const BLOB1 = new THREE.IcosahedronGeometry(1, 1), BLOB0 = new THREE.IcosahedronGeometry(1, 0);
   function dChunk(far, cx, cz) {
-    const M = far ? DFAR : DNEAR, key = Math.floor(cx / CHUNK) + '_' + Math.floor(cz / CHUNK);
+    if (far) return chunkOf(cx, cz);   // 큰 덩어리(나무·차·울타리 기둥)는 건물 청크에 그대로 합친다 — 같은 재질이라 드로우콜이 늘지 않는다
+    const M = DNEAR, key = Math.floor(cx / CHUNK) + '_' + Math.floor(cz / CHUNK);
     let ch = M.get(key);
     if (!ch) { ch = { pos: [], col: [], cx: (Math.floor(cx / CHUNK) + 0.5) * CHUNK, cz: (Math.floor(cz / CHUNK) + 0.5) * CHUNK }; M.set(key, ch); }
     return ch;
@@ -318,6 +319,26 @@ export function buildWorld(scene) {
       dBox(0.3, 0.12, 0.04, 0xc0392b, cx + sx*(W/2 - 0.3), y + 0.55, cz + L/2 + 0.02);   // 후미등
     });
   }
+  // 책장(DETAIL-6): 6×1.9×0.5 양면 서가 — 옆판·지붕판·칸 4단·가운데 등판, 칸마다 양쪽으로 색색 책 덩어리(높이 제각각)
+  const BOOK = [0xc0392b, 0x2e6da4, 0xe8a33d, 0x3fa37a, 0x8a6ad0, 0xe0708a, 0x5bb5c9, 0xf2d15c, 0x6b5b4a, 0xecebe4];
+  function bookshelf(cx, cz, w = 6) {
+    colliders.push(noStand({ x0: cx - w/2, x1: cx + w/2, y0: 0, y1: 1.9, z0: cz - 0.25, z1: cz + 0.25 }));
+    const WD = 0x8a6a45;
+    [-1, 1].forEach(sx => dBox(0.05, 1.9, 0.5, WD, cx + sx*(w/2 - 0.025), 0, cz));
+    dBox(w - 0.1, 0.05, 0.5, WD, cx, 1.85, cz);
+    dBox(w - 0.14, 1.76, 0.04, 0x7a5a3a, cx, 0.09, cz);                                // 가운데 등판(칸 판과 끝면 안 겹치게 2cm씩 안쪽)
+    const LV = [0.05, 0.5, 0.95, 1.4];
+    LV.forEach(y => dBox(w - 0.1, 0.04, 0.5, WD, cx, y, cz));
+    LV.forEach((y, li) => [-1, 1].forEach(sz => {
+      let x = cx - w/2 + 0.07, k = 0;
+      while (x < cx + w/2 - 0.35) {
+        const h9 = hash2(x * 3.1 + li, cz + sz), bw = 0.22 + h9 * 0.3, bh = 0.26 + ((h9 * 7) % 1) * 0.12;
+        const x1 = Math.min(x + bw, cx + w/2 - 0.07);
+        dBox(x1 - x - 0.01, bh, 0.19, BOOK[(k + li * 3 + (sz > 0 ? 5 : 0)) % BOOK.length], (x + x1)/2, y + 0.04, cz + sz * 0.125);
+        x = x1 + 0.01; k++;
+      }
+    }));
+  }
   // 가구(DETAIL-1): 충돌·자리 계산은 예전 상자 크기 그대로 두고, 보이는 모양만 부품으로 짓는다.
   const METAL = 0x8a9096;
   function studentDesk(cx, y, cz, top = 0xc9a06a, w = 1.1) {        // w×0.5·높이 0.72 — 나무 상판·쇠다리·책 넣는 칸
@@ -540,7 +561,7 @@ export function buildWorld(scene) {
       const deep = r.type === 'library' || r.type === 'stair';        // 도서실·계단홀은 복도 벽까지 깊다
       zones.push({ x0: s0, x1: s1, z0: wz0, z1: deep ? fz0 : LOB_Z, y: 0, label: r.name });
       if (r.type === 'library') {
-        for (let k = 0; k < 3; k++) addBox(6, 1.9, 0.5, 0x8a6a45, cx + 0.6, 0, wz0 + 2.0 + k * 2.3);
+        for (let k = 0; k < 3; k++) bookshelf(cx + 0.6, wz0 + 2.0 + k * 2.3);
         addBox(2.4, 0.72, 1.2, 0xc9a063, cx + 0.6, 0, -41.2, NS);          // 열람 탁자
         hotspots.push({ kind: 'read', x: cx + 0.6, z: -40.0, y: 0, r: 1.6, label: '책 읽기' });
       }
@@ -1037,19 +1058,35 @@ export function buildWorld(scene) {
     // 교훈석 — 구령대 동쪽(영상 v2179_0285: 구령대→계단→교훈석→가로등→향나무→탑시계 순)
     addBox(1.3, 2.1, 0.7, 0x7d7f7c, 13.4, 0, -19.3);
     sign('바르고 슬기롭게', 13.4, 1.5, -18.88, 0, 0.2);
-    addBox(0.16, 4.2, 0.16, 0x9aa0a6, 15.0, 0, -19.0);                         // 태양광 가로등
-    addBox(0.7, 0.3, 0.4, 0xdfe3e8, 15.0, 4.2, -19.0, { collide: false });
+    // 태양광 가로등(DETAIL-6): 가늘어지는 기둥·팔·등갓·기울어진 태양광판
+    post(15.0, -19.0, 0, 4.2, 0.1);
+    dCyl(0.06, 0.1, 4.3, 0x9aa0a6, 15.0, 0, -19.0, { far: true, seg: 8 });
+    dRod(15.0, 4.0, -19.0, 15.0, 4.0, -18.25, 0.035, 0x9aa0a6, { far: true });
+    dBox(0.34, 0.1, 0.5, 0xdfe3e8, 15.0, 3.85, -18.1, { far: true });
+    dBox(0.26, 0.04, 0.4, 0xfff6d6, 15.0, 3.81, -18.1, { far: true, flat: true });                 // 등 불빛면
+    dGeo(box_, new THREE.Matrix4().compose(new THREE.Vector3(15.0, 4.55, -19.0), new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.5, 0, 0)), new THREE.Vector3(0.9, 0.05, 0.6)), 0x2b3f6b, { far: true });   // 태양광판
     addBox(1.0, 1.7, 0.5, 0xb9b5aa, -8.5, 0, -19.3);                           // 교가비
     sign('교가비', -8.5, 1.95, -18.98, 0, 0.26);
     addBox(0.6, 5, 0.6, 0xdfe3e8, 16.5, 0, -19.2);                             // 탑시계
     addBox(1.5, 1.5, 0.34, 0xf5f6f8, 16.5, 4.7, -19.2, { collide: false });
     sign('12', 16.5, 5.45, -19.0, 0, 0.3);
-    [-30, 42].forEach(lx => {                                                  // 조명탑(운동장 북측 동서)
-      addBox(0.5, 12, 0.5, 0xbfc4c9, lx, -1, -12);
-      addBox(2.6, 0.7, 0.9, 0xdfe3e8, lx, 10.6, -12, { collide: false });
+    [-30, 42].forEach(lx => {                                                  // 조명탑(운동장 북측 동서) — DETAIL-6: 가늘어지는 기둥·조명틀·등 6개(운동장 쪽)
+      post(lx, -12, -1, 11, 0.25);
+      dCyl(0.16, 0.3, 11.6, 0xbfc4c9, lx, -1, -12, { far: true, seg: 8 });
+      dBox(2.6, 0.9, 0.2, 0xdfe3e8, lx, 10.4, -12, { far: true });
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) dBox(0.6, 0.3, 0.12, 0xfff3c4, lx - 0.85 + i*0.85, 10.5 + j*0.4, -11.84, { far: true, flat: true });
+      dRod(lx, 10.4, -12, lx, 9.6, -12, 0.06, 0xbfc4c9, { far: true });
     });
-    addBox(0.34, 3.4, 0.34, 0x8a9096, 44, -1, 24);                             // 야외 농구골대
-    addBox(0.26, 1.1, 1.8, 0xf5f6f8, 43.72, 2.3, 24, { collide: false });
+    {   // 야외 농구골대(DETAIL-6): 기둥·팔·백보드(빨간 네모)·주황 테·그물
+      post(44, 24, -1, 2.4, 0.17);
+      dCyl(0.1, 0.13, 3.4, 0x8a9096, 44, -1, 24, { far: true, seg: 8 });
+      dRod(44, 2.2, 24, 43.72, 2.5, 24, 0.07, 0x8a9096, { far: true });
+      dBox(0.06, 1.1, 1.8, 0xf5f6f8, 43.69, 2.3, 24, { far: true });
+      dBox(0.03, 0.45, 0.6, 0xd94848, 43.645, 2.45, 24, { far: true });
+      const rim = new THREE.TorusGeometry(0.23, 0.02, 5, 14).rotateX(Math.PI/2);
+      dGeo(rim, new THREE.Matrix4().makeTranslation(43.4, 2.45, 24), 0xe8752a, { far: true });
+      for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; dRod(43.4 + Math.cos(a)*0.23, 2.45, 24 + Math.sin(a)*0.23, 43.4 + Math.cos(a)*0.14, 2.05, 24 + Math.sin(a)*0.14, 0.008, 0xf2f2f2); }
+    }
     [[62, -8], [67, 6]].forEach(([px9, pz9]) => pine(px9, pz9, 1));          // 거대 침엽수
     // 옥상 흰 난간 — 북측은 서관 2층 남벽과 y0가 같아 겹치므로 서관 없는 구간만
     addBox(52.4, 0.45, 0.3, 0xe8e6de, 14.2, FH+0.3, -37.83, { collide: false });
@@ -1254,7 +1291,7 @@ export function buildWorld(scene) {
   buildSigns();
   // 디테일 층 병합 — near 청크는 main.js가 거리로 켜고 끈다(DETAIL_FAR)
   const details = [];
-  for (const [M, far] of [[DNEAR, false], [DFAR, true]]) for (const ch of M.values()) {
+  for (const [M, far] of [[DNEAR, false]]) for (const ch of M.values()) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ch.pos), 3));
     g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(ch.col), 3));

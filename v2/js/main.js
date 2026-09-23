@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=61';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=64';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from '../../js/data.js';
 
 const canvas = document.getElementById('scene');
@@ -518,7 +518,7 @@ if (location.search.includes('check=1')) setTimeout(() => { reach(); reach({ jum
 // ---------- 물리 검사 (PHYS-1 · 09-23) ----------
 // passCheck: 보이는 부재 속으로 몸 중심이 들어가는가(= 뚫고 지나감). 몸 높이 띠만·플레이어 규칙(0.26 부풀림·오름 0.55) 그대로
 // standCheck: 윗면이 발+0.15~1.52(점프 도달)인 충돌 상자 중 위에 몸 공간이 있는 것 = 올라설 수 있는 곳(계단·무대 등 의도된 것 포함 — 목록을 눈으로 본다)
-const gndOf = b => b.y0 >= 3.55 ? FH2 : ((b.z0 + b.z1) / 2 > world.TERR_Z ? -1 : 0);
+const gndOf = b => (b.y0 >= 3.55 && b.x0 > -40.6 && b.x1 < -11.4 && b.z0 > -50.6 && b.z1 < -37.4) ? FH2 : ((b.z0 + b.z1) / 2 > world.TERR_Z ? -1 : 0);   // 2층 = 서관 위만
 const FH2 = SCHOOL.building.floorHeight + 0.3;
 function passCheck() {
   const out = [];
