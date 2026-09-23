@@ -1,8 +1,7 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=44';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=49';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from '../../js/data.js';
-import { createLook } from './look.js?v=4';
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -31,8 +30,6 @@ sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
 scene.add(sun);
 
 const world = buildWorld(scene);
-// 화풍(?look=storybook|diorama|crayon). 없으면 지금 그대로
-const look = createLook(renderer, scene, camera, new URLSearchParams(location.search).get('look') || 'none');
 
 // ---------- 플레이어 (AABB 전용 — 레이캐스트 0) ----------
 const P = { x: 6, y: 0.01, z: 8, vy: 0, yaw: 0, ground: true };
@@ -360,6 +357,20 @@ function updateLoc() {
   locBox.textContent = '📍 ' + name;
 }
 
+// ---------- 디테일 층 거리 컬링(DETAIL-1) ----------
+// 작은 부재(책상 다리·눈·손 등)는 멀면 청크째 숨긴다 — 원경에서 픽셀보다 가는 부재가 반짝이는 것을 막고, 그리는 양도 준다.
+// 16m 청크 중심 기준 + 반대각선(11.3m) 여유. 0.2초마다 한 번.
+const DETAIL_FAR = 55;
+let detailT = 1;
+function detailTick(dt) {
+  detailT += dt; if (detailT < 0.2) return; detailT = 0;
+  const R = (DETAIL_FAR + 11.3) ** 2;
+  for (const d of world.details) {
+    const dx = camera.position.x - d.cx, dz = camera.position.z - d.cz;
+    d.mesh.visible = dx * dx + dz * dz < R;
+  }
+}
+
 // ---------- 루프 + 예산 계측(헌법⑥) ----------
 const clock = new THREE.Clock();
 const fpsBox = document.getElementById('fps');
@@ -372,7 +383,8 @@ function loop() {
   doorTick(dt);
   hotTick(dt);
   simMs = Math.max(simMs, performance.now() - t0);
-  look.render();
+  detailTick(dt);
+  renderer.render(scene, camera);
   acc += dt; n++;
   locT += dt;
   if (locT > 0.4) { locT = 0; updateLoc(); }
@@ -463,13 +475,13 @@ if (location.search.includes('check=1')) setTimeout(() => { reach(); reach({ jum
 
 // 디버그 API (v1과 같은 사용감)
 window.SD2 = {
-  scene, camera, renderer, world, reach, look,
+  scene, camera, renderer, world, reach, detailTick,
   time: k => setTime(k || ORDER[(ORDER.indexOf(timeKey) + 1) % 3]),
   loc: () => { updateLoc(); return locBox.textContent; },
   tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (terrainY(x, z) + 0.01); P.vy = 0; },
   yaw(v) { camYaw = v; },
   pos: () => [P.x.toFixed(1), P.y.toFixed(1), P.z.toFixed(1)],
-  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); hotTick(1/60); } keyList.forEach(k => keys.delete(k)); look.render(); },
+  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); hotTick(1/60); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
   doors: () => DOORS.length, doorCheck,
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
 };
