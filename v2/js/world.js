@@ -382,7 +382,9 @@ export function buildWorld(scene) {
 
   // ================= 세로복도 =================
   const LC = B.linkCorridor;
-  wallZ(-58, fz0, LC.x[0], WALL, { gaps: [{ c: K.hallEastDoorZ, w: 1.8 }], face: 1 });   // z-58까지 — 동관 복도 연결부까지 내려간다
+  wallZ(-58, fz0, LC.x[0], INNER, { gaps: [{ c: K.hallEastDoorZ, w: 1.8 }] });   // z-58까지(동관 복도 연결부) — 양쪽 다 실내라 실내벽
+  // 세로복도에서 급식실이 보이는 창(사용자 07-31 "2·4학년 가는 복도에 급식실 보이는 창문")
+  [-48.0, -40.2].forEach(wz9 => addBox(0.46, 1.4, 2.2, 0x51606c, LC.x[0], 1.0, wz9, { collide: false }));   // 식당홀 문(z-44)이 미끄러지는 자리 밖
   // (세로복도 동벽 = 급식동 동벽 x8.4 공유 — 위에서 통합 시공. 동관 복도 개구 -56.5)
   addPanel(LC.x[1]-LC.x[0]-0.3, 19.1, FLOOR, 6.9, 0.012, -47.85);
   addBox(3.0, 0.3, 19.7, 0xd9dce1, 6.45, FH, -47.85);   // 동관 지붕(x8~)과 겹침 금지·북단은 급식동 북벽 안쪽 면까지
@@ -423,7 +425,7 @@ export function buildWorld(scene) {
   wallX(gx0, gx1, gz0, 0xa8503a, { h: 3.2 });
   wallX(gx0, gx1, gz1, 0xa8503a, { h: 3.2 });
   wallZ(gz0, gz1, gx0, 0xa8503a, { h: 3.2 });
-  wallZ(gz0, gz1, gx1, 0xa8503a, { h: 3.2, gaps: [{ c: gz, w: 3 }] });
+  wallZ(gz0, gz1, gx1, 0xa8503a, { h: 3.2, gaps: [{ c: gz, w: 3, glass: true, door: true }] });   // 체육관 현관 — 유리 양여닫이
   wallX(gx0, gx1, gz0, 0xa8a096, { y0: 3.2, h: G.wallHeight-3.2 });
   wallX(gx0, gx1, gz1, 0xa8a096, { y0: 3.2, h: G.wallHeight-3.2 });
   wallZ(gz0, gz1, gx0, 0xa8a096, { y0: 3.2, h: G.wallHeight-3.2 });
@@ -584,13 +586,26 @@ export function buildWorld(scene) {
     sign('정자', px9, 1.2, pz9 + 2.9, 0, 0.38);
     zones.push({ x0: px9-1.8, x1: px9+1.8, z0: pz9-1.8, z1: pz9+1.8, y: -1, label: '정자' });
   }
-  {                                                        // 텃밭 쉼터(퍼걸러) — data.js shelter
-    const [sx9, sz9] = SCHOOL.shelter.center, sl = SCHOOL.shelter.length;
+  {   // 무지개 쉼터 — 위성·영상 v2179_0024~0039: 남쪽 울타리 따라 초록·주황·파랑 반복 지붕, 갈색 기둥
+    const [sx9, sz9] = SCHOOL.shelter.center, sl = SCHOOL.shelter.length, RB = [0x6cc070, 0xf0a04b, 0x6fb3e0];
     [-sl/2+0.5, 0, sl/2-0.5].forEach(ox => { addBox(0.3, 2.6, 0.3, 0x6d4e32, sx9+ox, -1, sz9-1.7); addBox(0.3, 2.6, 0.3, 0x6d4e32, sx9+ox, -1, sz9+1.7); });
-    addBox(sl, 0.3, 4.4, 0x8a6a45, sx9, 1.6, sz9);
+    for (let k = 0; k < sl / 2; k++) addBox(2, 0.3, 4.4, RB[k % 3], sx9 - sl/2 + 1 + 2*k, 1.6, sz9);
     addBox(sl-2, 0.45, 0.6, 0xb5793f, sx9, -1, sz9-1.0);
     addBox(sl-2, 0.45, 0.6, 0xb5793f, sx9, -1, sz9+1.0);
-    sign('쉼터', sx9, 1.2, sz9+2.1, 0, 0.34);
+    sign('무지개 쉼터', sx9, 1.2, sz9+2.1, 0, 0.34);
+    // 놀이마당: 회색 포장 + 바닥 놀이 원(과녁형 동심원 — 같은 높이의 겹치지 않는 고리라 반짝임 없음)
+    addPanel(18, 11.5, 0xb9bcc0, sx9 + 1, -0.98, sz9 - 3.4);          // 서단 x-44 = 놀이터 모래와 맞댐(겹치면 반짝임)
+    const ringMat = {}, ring = (x, z, r0, r1, col) => {
+      const m9 = new THREE.Mesh(new THREE.RingGeometry(r0, r1, 32), ringMat[col] || (ringMat[col] = new THREE.MeshLambertMaterial({ color: col })));
+      m9.rotation.x = -Math.PI / 2; m9.position.set(x, -0.97, z); m9.matrixAutoUpdate = false; m9.updateMatrix(); scene.add(m9);
+    };
+    [[sx9 - 5, sz9 - 5.5], [sx9 + 1.5, sz9 - 6.5], [sx9 + 6.5, sz9 - 4.8]].forEach(([cx9, cz9]) => {
+      ring(cx9, cz9, 0.0, 0.45, 0xe24b4b); ring(cx9, cz9, 0.6, 0.85, 0xf2c94c); ring(cx9, cz9, 1.0, 1.25, 0x5b8fc9); ring(cx9, cz9, 1.4, 1.6, 0x8cc26a);
+    });
+  }
+  {   // 셔틀버스 — 정문 안쪽 마당(사용자 07-31 "셔틀버스 새 위치" · 영상 v2179_0006~0024)
+    addBox(10.5, 2.4, 2.5, 0xf2c230, 23.75, -1, 41.6);
+    addBox(9.0, 0.8, 2.56, 0x2f3a45, 24.3, 0.4, 41.6, { collide: false });   // 창 띠
   }
   {
     const [gtx, gtz] = SCHOOL.gate;
@@ -602,7 +617,7 @@ export function buildWorld(scene) {
     addBox(0.16, 10, 0.16, 0xc8cdd2, -2.6, 0, -19.2);                          // 게양대 — 구령대 서쪽 잔디(길 위에 서 있었음)
     addBox(1.4, 0.9, 0.16, 0xf5f6f8, -2.6 + 0.85, 8.6, -19.2, { collide: false });
     tree(SCHOOL.bigTree[0], SCHOOL.bigTree[1], 2.2);
-    [[-30,-19],[-10,-19],[30,-19],[44,20],[20,40],[-30,40],[56,-40]].forEach(([tx9,tz9]) => tree(tx9, tz9, 1));
+    [[-30,-19],[-10,-19],[30,-19],[44,20],[15,40],[-22,40],[56,-40]].forEach(([tx9,tz9]) => tree(tx9, tz9, 1));
     // 건물 앞 산책로: 잔디 두 줄 사이 타일 길 + 노란 점자블록 + 둥근 향나무
     [[-39.5, 0.65], [11.65, 39.5]].forEach(([a, b]) => {
       const w = b - a, c = (a + b) / 2;
@@ -631,6 +646,9 @@ export function buildWorld(scene) {
     [[-30, 4.4], [40, 4.4]].forEach(([rx, rw]) => {
       for (let i = 0; i < 3; i++) addBox(rw, 1 - i*0.33, 0.5, PAVE, rx, -1, -17.35 + i*0.5);
     });
+    // 운동장 → 체육관 쪽 화강석 계단(영상 v2179_0084~0090, v1 x-43.5)
+    for (let i = 0; i < 6; i++) addBox(3.0, (i + 1) / 6, 0.27, 0xb8b4ac, -43.5, -1, -17.6 + 0.27 * (5 - i) + 0.135);
+    addPanel(2.2, 23.2, 0xd9c7a0, -45.2, 0.02, -30.0);                       // 계단 위 → 체육관 현관까지 타일 길(영상 v2179_0093~0099)
     // 통학로 — 정문→동측→구령대(노란 점자블록)
     addPanel(1.2, 57, 0xe9c341, 30, -0.985, 16);
     addPanel(17, 1.2, 0xe9c341, 22.1, -0.985, -12.5);
