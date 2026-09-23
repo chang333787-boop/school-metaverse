@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=49';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=50';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from '../../js/data.js';
 
 const canvas = document.getElementById('scene');
@@ -257,31 +257,51 @@ hintEl.addEventListener('click', e => { e.stopPropagation(); if (hotNear) act(ho
 const doorMat = new THREE.MeshLambertMaterial({ color: 0xc08b4f });
 // 유리문(현관·측문·도서관·나래반·유치원 정문·뒷통로 — 실사 확인분): 반투명 하늘색
 const glassMat = new THREE.MeshLambertMaterial({ color: 0xbfe3ee, transparent: true, opacity: 0.42, depthWrite: false });
+// DOOR-INST(09-23): 문짝 80개가 각각 메시(=드로우콜 80)였다 → 재질별 InstancedMesh 4개(나무·유리·문창·손잡이)로.
+// 나무 문엔 위쪽 작은 창(두께 0.18 = 문 면에서 1cm 튀어나옴)과 손잡이(0.22)를 단다(교실 미닫이문 실사).
 const DOORS = world.doors.map(d => {
   // 🔴OFF=0: 문은 벽 두께(0.3) 안에서만 미끄러진다 = 포켓 도어.
   // 벽 밖으로 내밀면(0.28이었음) 벽면에 붙은 칠판과 같은 평면이 되어 반짝인다.
-  // 문짝은 개별 Mesh라 빌드 감사(헌법③)가 보지 못한다 — 그래서 '벽 안에서만 움직인다'를 규칙으로 못박는다.
+  // 문짝은 빌드 감사(헌법③) 밖이다 — 그래서 '벽 안에서만 움직인다'를 규칙으로 못박는다.
   // 🔴문짝은 개구보다 크게(양옆 5cm·위 5cm 벽 속으로 묻음). 예전엔 10cm 좁고 10cm 낮아 닫힌 문 둘레에
   //   가는 틈이 생겼고, 걸을 때 그 틈으로 보이는 방 안이 픽셀보다 가늘게 깜빡였다(09-23 깜빡임 검사기 실측).
   //   묻힌 부분은 벽 속이라 안 보이고, 문짝 두 면(±0.08)은 벽 면(±0.15)·가운데 맞댐면(0)과 겹치지 않는다.
-  const w = d.w + 0.1, h = (d.dh ?? 2.6) + (d.lintel ? 0.05 : 0), OFF = 0;
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(d.ax === 'x' ? w : 0.16, h, d.ax === 'x' ? 0.16 : w), d.glass ? glassMat : doorMat);
-  const bx = d.ax === 'x' ? d.cx : d.cx + OFF, bz = d.ax === 'x' ? d.cz + OFF : d.cz;
-  mesh.position.set(bx, d.y0 + h / 2, bz);
-  mesh.matrixAutoUpdate = false; mesh.updateMatrix();
-  scene.add(mesh);
-  return { mesh, ax: d.ax, bx, bz, w, ow: d.w, h, y0: d.y0, open: 0 };
+  const w = d.w + 0.1, h = (d.dh ?? 2.6) + (d.lintel ? 0.05 : 0);
+  return { ax: d.ax, bx: d.cx, bz: d.cz, w, ow: d.w, h, y0: d.y0, glass: d.glass, open: 0 };
 });
+const _boxG = new THREE.BoxGeometry(1, 1, 1);
+const nWood = DOORS.filter(o => !o.glass).length, nGlass = DOORS.length - nWood;
+const doorInst = {
+  wood: new THREE.InstancedMesh(_boxG, doorMat, Math.max(1, nWood)),
+  glass: new THREE.InstancedMesh(_boxG, glassMat, Math.max(1, nGlass)),
+  win: new THREE.InstancedMesh(_boxG, new THREE.MeshLambertMaterial({ color: 0x9fc6d4 }), Math.max(1, nWood)),
+  knob: new THREE.InstancedMesh(_boxG, new THREE.MeshLambertMaterial({ color: 0x6b6f75 }), Math.max(1, nWood)),
+};
+Object.values(doorInst).forEach(m => { m.frustumCulled = false; scene.add(m); });
+doorInst.wood.count = nWood; doorInst.win.count = nWood; doorInst.knob.count = nWood; doorInst.glass.count = nGlass;
+{ let iw = 0, ig = 0; DOORS.forEach(o => { o.idx = o.glass ? ig++ : iw++; }); }
+const _dM = new THREE.Matrix4(), _dP = new THREE.Vector3(), _dS = new THREE.Vector3(), _dQ = new THREE.Quaternion();
+function setDoor(o) {
+  const s = o.open * (o.slide ?? 0) * (o.dir ?? 1);
+  const X = o.ax === 'x', cx = X ? o.bx + s : o.bx, cz = X ? o.bz : o.bz + s;
+  const put = (m, lx, y, ww, hh, th) => {        // lx = 문 폭 방향 오프셋, th = 두께
+    _dP.set(X ? cx + lx : cx, y, X ? cz : cz + lx); _dS.set(X ? ww : th, hh, X ? th : ww);
+    m.setMatrixAt(o.idx, _dM.compose(_dP, _dQ, _dS));
+  };
+  if (o.glass) { put(doorInst.glass, 0, o.y0 + o.h/2, o.w, o.h, 0.16); doorInst.glass.instanceMatrix.needsUpdate = true; return; }
+  put(doorInst.wood, 0, o.y0 + o.h/2, o.w, o.h, 0.16);
+  const ww = Math.min(0.5, o.ow * 0.4), edge = -(o.dir ?? 1) * (o.ow/2 - 0.16);   // 손잡이 = 나중에 들어가는 쪽 끝
+  put(doorInst.win, edge * 0.35, o.y0 + 1.65, ww, 0.7, 0.18);
+  put(doorInst.knob, edge, o.y0 + 1.0, 0.05, 0.22, 0.22);
+  doorInst.wood.instanceMatrix.needsUpdate = doorInst.win.instanceMatrix.needsUpdate = doorInst.knob.instanceMatrix.needsUpdate = true;
+}
 function doorTick(dt) {
   for (const o of DOORS) {
     const dx = P.x - o.bx, dz = P.z - o.bz;
     const target = (dx * dx + dz * dz < 9 && Math.abs(P.y - o.y0) < 2) ? 1 : 0;
     if (Math.abs(target - o.open) < 0.002) continue;
-    o.open += (target - o.open) * Math.min(1, dt * 6);
-    const s = o.open * o.slide * o.dir;                 // 다 열리면 문짝 끝이 문틀 안쪽 면과 맞닿음(막힌 곳은 그 직전까지)
-    if (o.ax === 'x') o.mesh.position.x = o.bx + s; else o.mesh.position.z = o.bz + s;
-    o.mesh.updateMatrix();
+    o.open += (target - o.open) * Math.min(1, dt * 6);   // 다 열리면 문짝 끝이 문틀 안쪽 면과 맞닿음(막힌 곳은 그 직전까지)
+    setDoor(o);
   }
 }
 
@@ -308,6 +328,7 @@ DOORS.forEach(o => {
   // 끝까지 못 여는 자리(옆 벽 속에 창이 있는 곳)는 부딪히기 직전까지만 연다 — 문짝이 창 유리를 뚫고 나오지 않게
   o.slide = o.ow + 0.05;
   while (o.slide > 0.3 && sweepHits(o, o.dir, o.slide)) o.slide -= 0.05;
+  setDoor(o);
 });
 function doorCheck() {
   const bad = [];

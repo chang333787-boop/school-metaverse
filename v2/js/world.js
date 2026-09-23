@@ -167,33 +167,62 @@ export function buildWorld(scene) {
     if (z0 > z1) { console.warn('wallZ 인자 역순 자동 정렬', z0, z1, x); const t = z0; z0 = z1; z1 = t; }
     wallRun('z', z0 + 0.15, z1 - 0.15, x, hex, opt);
   }
-  const signCache = new Map();
+  // 팻말(SIGN-ATLAS · 09-23): 예전엔 팻말마다 텍스처·메시 1개씩(≈100 드로우콜). 이제 자리만 기록해 두고
+  // 병합 단계에서 글자판 한 장(아틀라스)에 모아 메시 1개로 그린다. 반환값 m은 위치·회전만 가진 Object3D(hangSign이 옮긴다)
+  const signCanvas = new Map(), signList = [];
   function sign(text, x, y, z, rotY = 0, h = 0.42) {
-    let w9 = 0;
-    let entry = signCache.get(text + h);
-    if (!entry) {
-      const c = document.createElement('canvas'); const g2 = c.getContext('2d');
+    let c = signCanvas.get(text);
+    if (!c) {
+      c = document.createElement('canvas'); const g2 = c.getContext('2d');
       g2.font = '900 84px sans-serif';
       c.width = Math.ceil(g2.measureText(text).width) + 56; c.height = 128;
       const g3 = c.getContext('2d');
       g3.fillStyle = '#2f6fd0'; g3.beginPath(); g3.roundRect(2,2,c.width-4,c.height-4,20); g3.fill();
       g3.font = '900 84px sans-serif'; g3.fillStyle = '#fff'; g3.textAlign='center'; g3.textBaseline='middle';
       g3.fillText(text, c.width/2, c.height/2 + 4);
-      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
-      const w = h * c.width / c.height;
-      w9 = w;
-      const f = new THREE.PlaneGeometry(w, h).toNonIndexed(); f.translate(0,0,0.008);
-      const bk = new THREE.PlaneGeometry(w, h).toNonIndexed(); bk.rotateY(Math.PI); bk.translate(0,0,-0.008);
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([...f.attributes.position.array, ...bk.attributes.position.array]),3));
-      geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([...f.attributes.uv.array, ...bk.attributes.uv.array]),2));
-      entry = { geo, w: w9, mat: new THREE.MeshBasicMaterial({ map: tex }) };
-      signCache.set(text + h, entry);
+      signCanvas.set(text, c);
     }
-    const m = new THREE.Mesh(entry.geo, entry.mat);
-    m.position.set(x, y, z); m.rotation.y = rotY; m.matrixAutoUpdate = false; m.updateMatrix();
-    scene.add(m);
-    return { m, w: entry.w };
+    const w = h * c.width / c.height;
+    const m = new THREE.Object3D();
+    m.position.set(x, y, z); m.rotation.y = rotY;
+    signList.push({ m, c, w, h });
+    return { m, w };
+  }
+  function buildSigns() {
+    if (!signList.length) return;
+    // 아틀라스: 폭 2048, 줄 높이 96(+여백 8 — 밉맵 번짐 방지). 글자판은 128→96으로 줄여 담는다
+    const AW = 2048, RH = 96, PAD = 8, uv = new Map();
+    let x = PAD, y = PAD;
+    for (const c of signCanvas.values()) {
+      const w = Math.ceil(c.width * RH / c.height);
+      if (x + w + PAD > AW) { x = PAD; y += RH + PAD; }
+      uv.set(c, [x, y, w]); x += w + PAD;
+    }
+    const AH = y + RH + PAD;
+    const at = document.createElement('canvas'); at.width = AW; at.height = AH;
+    const g = at.getContext('2d');
+    for (const [c, [ux, uy, uw]] of uv) g.drawImage(c, ux, uy, uw, RH);
+    const tex = new THREE.CanvasTexture(at); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    const pos = [], uvs = [], v = new THREE.Vector3();
+    for (const { m, c, w, h } of signList) {
+      m.updateMatrix();
+      const [ux, uy, uw] = uv.get(c);
+      const u0 = ux / AW, u1 = (ux + uw) / AW, v1 = 1 - uy / AH, v0 = 1 - (uy + RH) / AH;
+      // 앞면(+z 0.008)과 뒷면(-z 0.008, 반대로 감김) — 양면 팻말. 뒷면 글자는 좌우를 뒤집어 바로 읽히게
+      const quad = (zz, flip) => {
+        const xs = flip ? [w/2, -w/2] : [-w/2, w/2];
+        const P = [[xs[0], -h/2], [xs[1], -h/2], [xs[1], h/2], [xs[0], -h/2], [xs[1], h/2], [xs[0], h/2]];
+        const U = [[u0, v0], [u1, v0], [u1, v1], [u0, v0], [u1, v1], [u0, v1]];
+        P.forEach(([px, py], i) => { v.set(px, py, zz).applyMatrix4(m.matrix); pos.push(v.x, v.y, v.z); uvs.push(U[i][0], U[i][1]); });
+      };
+      quad(0.008, false); quad(-0.008, true);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.computeBoundingSphere();
+    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex }));
+    mesh.matrixAutoUpdate = false; scene.add(mesh);
   }
   // 돌출 팻말 — 문 위에서 복도 쪽으로 튀어나온 파란 팻말(영상 v2179_0501·v1). 복도를 따라 걸으면 정면으로 보인다.
   // 사용자 07-31 "복도에서 문 위에 붙어야", "천장에 잘림" → 문 위·천장 아래 높이. dir = 복도가 있는 쪽(z 부호)
@@ -1080,6 +1109,7 @@ export function buildWorld(scene) {
     m.matrixAutoUpdate = false;
     scene.add(m);
   }
+  buildSigns();
   // 디테일 층 병합 — near 청크는 main.js가 거리로 켜고 끈다(DETAIL_FAR)
   const details = [];
   for (const [M, far] of [[DNEAR, false], [DFAR, true]]) for (const ch of M.values()) {
