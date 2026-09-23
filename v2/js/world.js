@@ -84,7 +84,7 @@ export function buildWorld(scene) {
       if (h - dh > 0.1499) wallSeg(ax, g1 - g0, h - dh, (g0 + g1)/2, y0 + dh, line, hex, opt);     // 인방
       if (g.win) glassPane(ax, g1 - g0, Math.min(dh, h) - sl, (g0 + g1)/2, y0 + sl, line);
       else if (dh <= 2.8 && (g.w <= 2.2 || g.door))
-        doors.push(ax === 'x' ? { ax, cx: g.c, cz: line, w: g.w, y0, glass: !!g.glass } : { ax, cx: line, cz: g.c, w: g.w, y0, glass: !!g.glass });
+        doors.push(ax === 'x' ? { ax, cx: g.c, cz: line, w: g.w, y0, dh, lintel: h - dh > 0.1499, glass: !!g.glass } : { ax, cx: line, cz: g.c, w: g.w, y0, dh, lintel: h - dh > 0.1499, glass: !!g.glass });
       cur = Math.max(cur, g1);
     }
     if (a1 - cur > 0.1499) wallSeg(ax, a1 - cur, h, (cur + a1)/2, y0, line, hex, opt);

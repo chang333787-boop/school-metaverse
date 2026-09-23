@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=40';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=42';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from '../../js/data.js';
 
 const canvas = document.getElementById('scene');
@@ -261,14 +261,17 @@ const DOORS = world.doors.map(d => {
   // 🔴OFF=0: 문은 벽 두께(0.3) 안에서만 미끄러진다 = 포켓 도어.
   // 벽 밖으로 내밀면(0.28이었음) 벽면에 붙은 칠판과 같은 평면이 되어 반짝인다.
   // 문짝은 개별 Mesh라 빌드 감사(헌법③)가 보지 못한다 — 그래서 '벽 안에서만 움직인다'를 규칙으로 못박는다.
-  const w = d.w - 0.1, h = 2.5, OFF = 0;              // 폭은 개구보다 10cm 좁게·높이는 개구 2.6에 맞춤
+  // 🔴문짝은 개구보다 크게(양옆 5cm·위 5cm 벽 속으로 묻음). 예전엔 10cm 좁고 10cm 낮아 닫힌 문 둘레에
+  //   가는 틈이 생겼고, 걸을 때 그 틈으로 보이는 방 안이 픽셀보다 가늘게 깜빡였다(09-23 깜빡임 검사기 실측).
+  //   묻힌 부분은 벽 속이라 안 보이고, 문짝 두 면(±0.08)은 벽 면(±0.15)·가운데 맞댐면(0)과 겹치지 않는다.
+  const w = d.w + 0.1, h = (d.dh ?? 2.6) + (d.lintel ? 0.05 : 0), OFF = 0;
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(d.ax === 'x' ? w : 0.16, h, d.ax === 'x' ? 0.16 : w), d.glass ? glassMat : doorMat);
   const bx = d.ax === 'x' ? d.cx : d.cx + OFF, bz = d.ax === 'x' ? d.cz + OFF : d.cz;
   mesh.position.set(bx, d.y0 + h / 2, bz);
   mesh.matrixAutoUpdate = false; mesh.updateMatrix();
   scene.add(mesh);
-  return { mesh, ax: d.ax, bx, bz, w, y0: d.y0, open: 0 };
+  return { mesh, ax: d.ax, bx, bz, w, ow: d.w, h, y0: d.y0, open: 0 };
 });
 function doorTick(dt) {
   for (const o of DOORS) {
@@ -276,7 +279,7 @@ function doorTick(dt) {
     const target = (dx * dx + dz * dz < 9 && Math.abs(P.y - o.y0) < 2) ? 1 : 0;
     if (Math.abs(target - o.open) < 0.002) continue;
     o.open += (target - o.open) * Math.min(1, dt * 6);
-    const s = o.open * o.w * 0.94 * o.dir;
+    const s = o.open * o.slide * o.dir;                 // 다 열리면 문짝 끝이 문틀 안쪽 면과 맞닿음(막힌 곳은 그 직전까지)
     if (o.ax === 'x') o.mesh.position.x = o.bx + s; else o.mesh.position.z = o.bz + s;
     o.mesh.updateMatrix();
   }
@@ -284,8 +287,8 @@ function doorTick(dt) {
 
 // 문 경로 간섭 검사 — 문짝은 개별 Mesh라 헌법③ 빌드 감사가 못 본다(칠판과 겹쳐 반짝인 사고).
 // 문이 닫힘→열림으로 쓸고 가는 볼륨에 '벽이 아닌 얇은 부재'(칠판·게시판 등)가 있으면 잡는다.
-function sweepHits(o, dir) {
-  const s = o.w * 0.94 * dir, T = 0.09, y0 = o.y0, y1 = o.y0 + 2.5;
+function sweepHits(o, dir, len = o.ow + 0.05) {
+  const s = len * dir, T = 0.09, y0 = o.y0, y1 = o.y0 + o.h;
   const lo = Math.min(0, s), hi = Math.max(0, s);
   const sw = o.ax === 'x'
     ? { x0: o.bx - o.w/2 + lo, x1: o.bx + o.w/2 + hi, z0: o.bz - T, z1: o.bz + T }
@@ -300,10 +303,15 @@ function sweepHits(o, dir) {
   return n;
 }
 // 열림 방향은 빌드 때 1회 자동 결정 — 간섭이 적은 쪽으로 연다(창문·칠판을 알아서 피한다)
-DOORS.forEach(o => { o.dir = sweepHits(o, 1) <= sweepHits(o, -1) ? 1 : -1; });
+DOORS.forEach(o => {
+  o.dir = sweepHits(o, 1) <= sweepHits(o, -1) ? 1 : -1;
+  // 끝까지 못 여는 자리(옆 벽 속에 창이 있는 곳)는 부딪히기 직전까지만 연다 — 문짝이 창 유리를 뚫고 나오지 않게
+  o.slide = o.ow + 0.05;
+  while (o.slide > 0.3 && sweepHits(o, o.dir, o.slide)) o.slide -= 0.05;
+});
 function doorCheck() {
   const bad = [];
-  for (const o of DOORS) if (sweepHits(o, o.dir)) bad.push([+o.bx.toFixed(1), +o.bz.toFixed(1)]);
+  for (const o of DOORS) if (sweepHits(o, o.dir, o.slide)) bad.push([+o.bx.toFixed(1), +o.bz.toFixed(1)]);
   if (bad.length) console.error('🚪 문 경로 간섭 ' + bad.length + '건: ' + JSON.stringify(bad.slice(0, 6)));
   else console.log('✅ 문 경로 간섭 0 (문 ' + DOORS.length + '개)');
   return bad;
