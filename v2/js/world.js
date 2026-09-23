@@ -64,7 +64,7 @@ export function buildWorld(scene) {
       const g0 = g.c - g.w/2, g1 = g.c + g.w/2, dh = g.dh ?? 2.6;
       if (g0 - cur > 0.1499) wallSeg('x', g0 - cur, h, (cur+g0)/2, y0, z, hex, opt);
       if (h - dh > 0.1499) wallSeg('x', g1 - g0, h - dh, (g0+g1)/2, y0 + dh, z, hex, opt);
-      if (dh <= 2.8 && g.w <= 2.2) doors.push({ ax: 'x', cx: g.c, cz: z, w: g.w, y0 });   // 인방 있는 좁은 개구=문
+      if (dh <= 2.8 && (g.w <= 2.2 || g.door)) doors.push({ ax: 'x', cx: g.c, cz: z, w: g.w, y0, glass: !!g.glass });   // 인방 있는 좁은 개구=문
       cur = Math.max(cur, g1);
     }
     if (x1 - cur > 0.1499) wallSeg('x', x1 - cur, h, (cur+x1)/2, y0, z, hex, opt);
@@ -74,7 +74,8 @@ export function buildWorld(scene) {
         const wc = x0 + gap*(i+.5), ww = Math.min(2.2, gap-1.6);
         if (ww < 1) continue;
         if (gaps.some(g => Math.abs(g.c - wc) < g.w/2 + ww/2 + 0.3)) continue;
-        addBox(ww, wh, 0.2, 0x51606c, wc, y0 + sill, z + fc*0.13, { collide: false });
+        if (opt.noWin && opt.noWin.some(([a, b]) => wc + ww/2 > a && wc - ww/2 < b)) continue;   // 실제로는 벽인 구간
+        addBox(ww, wh, 0.46, 0x51606c, wc, y0 + sill, z, { collide: false });   // 벽(0.3)보다 두꺼워 안·밖 양쪽에서 보인다
       }
     }
   }
@@ -88,7 +89,7 @@ export function buildWorld(scene) {
       const g0 = g.c - g.w/2, g1 = g.c + g.w/2, dh = g.dh ?? 2.6;
       if (g0 - cur > 0.1499) wallSeg('z', g0 - cur, h, (cur+g0)/2, y0, x, hex, opt);
       if (h - dh > 0.1499) wallSeg('z', g1 - g0, h - dh, (g0+g1)/2, y0 + dh, x, hex, opt);
-      if (dh <= 2.8 && g.w <= 2.2) doors.push({ ax: 'z', cx: x, cz: g.c, w: g.w, y0 });
+      if (dh <= 2.8 && (g.w <= 2.2 || g.door)) doors.push({ ax: 'z', cx: x, cz: g.c, w: g.w, y0, glass: !!g.glass });
       cur = Math.max(cur, g1);
     }
     if (z1 - cur > 0.1499) wallSeg('z', z1 - cur, h, (cur+z1)/2, y0, x, hex, opt);
@@ -98,7 +99,8 @@ export function buildWorld(scene) {
         const wc = z0 + gap*(i+.5), ww = Math.min(2.2, gap-1.6);
         if (ww < 1) continue;
         if (gaps.some(g => Math.abs(g.c - wc) < g.w/2 + ww/2 + 0.3)) continue;
-        addBox(0.2, wh, ww, 0x51606c, x + fc*0.13, y0 + sill, wc, { collide: false });
+        if (opt.noWin && opt.noWin.some(([a, b]) => wc + ww/2 > a && wc - ww/2 < b)) continue;
+        addBox(0.46, wh, ww, 0x51606c, x, y0 + sill, wc, { collide: false });
       }
     }
   }
@@ -161,23 +163,31 @@ export function buildWorld(scene) {
   // ================= 본관 =================
   const [fx0, fx1] = FR.x, [fz0, fz1] = FR.z, zCor = fz0 + FR.corridorDepth;
   const hall = FR.rooms.find(r => r.type === 'hall');
-  wallX(fx0, fx1, fz1, WALL, { gaps: [{ c: (hall.span[0]+hall.span[1])/2, w: 3.0 }], wins: 15, sill: 1.0, wh: 1.6, face: 1 });
+  wallX(fx0, fx1, fz1, WALL, { gaps: [{ c: (hall.span[0]+hall.span[1])/2, w: 3.0, glass: true, door: true }], wins: 15, sill: 1.0, wh: 1.6, face: 1 });
   const wg = B.wings[0];
-  // 서측(v1 v0.49 실사): 주복도 서측이 서관 홀로 통째로 트임 — 방 문은 홀벽 z-39.9에.
-  // + 주차장 틈새길(서관·급식동 사이 x-11.3) + 당직실 문
-  const nGaps = [
-    { c: -28.2, w: 22.9, dh: FH },
-    { c: -14.3, w: 2.6 },
-    { c: -11.3, w: 1.2 },
+  // ── 서측 로비 (사용자 08-01 확정 + 영상 v2180_0201~0225 + 문서 v80d) ──
+  //  복도를 따라 서쪽으로 가다 도서관 앞(LOB_X)에서 확 넓어진다. 로비 = x -40~LOB_X, z LOB_Z~zCor.
+  //  측문(서관 서벽 SIDE_Z)으로 들어서면: 왼쪽(북벽)=보건실·나래반 문 / 정면(동벽 x=LOB_X)=도서관 문 /
+  //  오른쪽(남벽)=유치원 정문(원무실 팻말) / 가운데=둥근 기둥 소파.
+  const LOB_X = -26.4, LOB_Z = -42, SIDE_Z = -39.4;
+  // 주복도 북벽 — 서관·급식동 구간은 양쪽 다 실내(실내벽), 마당 구간(x8.4~)만 외벽
+  wallX(fx0, -12, fz0, INNER, { gaps: [
+    { c: (fx0 + LOB_X) / 2, w: LOB_X - fx0, dh: FH },          // 로비로 통째로 트임
+    { c: -14.3, w: 2.6 },                                        // 계단홀
+  ] });
+  wallX(-12, 8.4, fz0, INNER, { gaps: [
+    { c: -11.3, w: 1.2, glass: true },                           // 뒷통로(주차장 가는 길) 유리문
     { c: B.kitchen.dutyRoom.doorC, w: 1.2 },
     { c: B.kitchen.doorC, w: 1.8 },
-    { c: 6.9, w: 3.0, dh: FH },
-    { c: 20, w: 1.8 },
-  ];
-  wallX(fx0, fx1, fz0, WALL, { gaps: nGaps, wins: 10, face: -1 });
-  wallZ(fz0, fz1, fx0, WALL, { gaps: [{ c: FR.corridorExitZ, w: 1.8 }], wins: 1, face: -1 });
+    { c: 6.9, w: 3.0, dh: FH },                                  // 세로복도
+  ] });
+  // 마당면 — 학생자치회 게시판 자리(화장실 문 맞은편)는 창이 아니라 벽(사용자 08-01)
+  wallX(8.4, fx1, fz0, WALL, { gaps: [{ c: 20, w: 1.8 }], wins: 7, face: -1, noWin: [[8.6, 13.4]] });
+  wallZ(fz0, fz1, fx0, WALL, { wins: 1, face: -1 });             // 서벽 — 측문은 서관 서벽(로비)으로
   wallZ(fz0, fz1, fx1, WALL, { gaps: [{ c: FR.corridorExitZ, w: 1.8 }], wins: 1, face: 1 });
-  const cGaps = FR.rooms.map(r => r.type === 'hall' ? { c: (r.span[0]+r.span[1])/2, w: 3.4, dh: FH } : { c: doorC(r), w: 1.2 });
+  const cGaps = FR.rooms.map(r => r.type === 'hall' ? { c: (r.span[0]+r.span[1])/2, w: 3.4, dh: FH }
+    : r.name === '원무실' ? { c: doorC(r), w: 1.8, glass: true }          // 유치원 정문(원무실 팻말) — 짙은 유리 양문(v80d)
+    : { c: doorC(r), w: 1.2 });
   wallX(fx0 + 0.15, fx1 - 0.15, zCor, INNER, { gaps: cGaps });   // 내부벽은 외벽에서 0.3 인셋(코너 관통 금지)
   addPanel(fx1-fx0-0.3, zCor-fz0-0.3, FLOOR, 0, 0.012, (fz0+zCor)/2);
   FR.rooms.forEach((r, i) => {
@@ -205,9 +215,14 @@ export function buildWorld(scene) {
     sign(r.name, doorC(r) + 1.3, 2.35, zCor - 0.22, 0, 0.34);
   });
   {   // 복도 채우기 — 사물함·소화기·형광등(빈 복도가 v1 대비 가장 크게 비어 보이던 부분)
-    [[9.2, 18.4], [21.6, 39.4]].forEach(([a, b]) => {                              // 개구가 없는 구간에만
-      for (let x = a; x + 1.6 <= b; x += 1.75) addBox(1.6, 1.8, 0.4, 0x8fa3b8, x + 0.8, 0, fz0 + 0.35);
+    // 창 아래 낮은 나무 사물함 — 영상 v2179_0462~0519: 북쪽 창 밑으로 복도 끝까지 이어진다(키 큰 철제함 아님)
+    [[8.55, 19.1], [20.9, 39.85]].forEach(([a, b]) => {
+      const n = Math.floor((b - a) / 1.2);
+      for (let k = 0; k < n; k++) addBox(1.2, 0.85, 0.45, k % 2 ? 0xa9784a : 0xb4845a, a + 0.6 + k * 1.2, 0, fz0 + 0.375);
     });
+    // 학생자치회 게시판 — 화장실 문 맞은편 벽(사용자 07-31·08-01 반복 지적: 창이 아니라 벽)
+    addBox(4.4, 1.3, 0.16, 0x2f6e4f, 11.0, 1.05, fz0 + 0.23, { collide: false });
+    sign('학생자치회', 11.0, 2.1, fz0 + 0.33, 0, 0.26);
     [12.5, 26.5, 35.5].forEach(x => addBox(0.24, 0.6, 0.24, 0xc4402e, x, 1.85, fz0 + 0.32, { collide: false }));  // 소화기
     for (let x = -37; x <= 38; x += 4.5)                                           // 형광등(지붕 밑면에 맞댐)
       flatBox(1.6, 0.16, 0.5, lampMat, x, FH - 0.32, (fz0 + zCor) / 2);   // 천장 밑면에 붙임
@@ -226,28 +241,60 @@ export function buildWorld(scene) {
   }
 
   // ================= 서관 =================
-  const [wx0, wx1] = wg.x, [wz0, wz1] = wg.z, HZ = -39.9;   // HZ=서측홀 벽(방 깊이 10.1 — v1 v0.49)
+  const [wx0, wx1] = wg.x, [wz0, wz1] = wg.z;
   wallX(wx0, wx1, wz0, WALL, { h: FH, wins: 6, face: -1 });
   wallX(wx0, wx1, wz0, WALL, { y0: FH+0.3, h: FH-0.3, wins: 6, face: -1, sill: 0.8 });
-  wallZ(wz0, wz1, wx0, WALL, { h: FH, wins: 2, face: -1 });
+  wallZ(wz0, wz1, wx0, WALL, { h: FH, wins: 2, face: -1, gaps: [{ c: SIDE_Z, w: 2.2, glass: true }] });   // 측문(서측 바깥현관 유리 이중문)
   wallZ(wz0, wz1, wx0, WALL, { y0: FH+0.3, h: FH-0.3, wins: 2, face: -1, sill: 0.8 });
   wallZ(wz0, wz1, wx1, WALL, { h: FH });                                          // 동벽(주차장면) — 미시공이던 구멍
   wallZ(wz0, wz1, wx1, WALL, { y0: FH+0.3, h: FH-0.3 });
   wallX(wx0, wx1, wz1, WALL, { y0: FH+0.3, h: FH-0.3, wins: 6, face: 1, sill: 0.8 });  // 2층 남면(1층 z-38은 본관 북벽)
-  addPanel(wx1-wx0-0.3, 11.85, FLOOR, (wx0+wx1)/2, 0.012, -43.775);
-  wallX(wx0 + 0.15, -16.75, HZ, INNER,
-    { gaps: wg.rooms.filter(r => !r.innerOnly && r.type !== 'stair').map(r => ({ c: doorC(r), w: 1.4 })) });
-  wg.rooms.forEach((r, i) => {
-    const [s0, s1] = r.span, cx = (s0+s1)/2;
-    if (i > 0 && r.type !== 'stair' && r.name !== '문서고') addBox(0.3, FH, 9.65, INNER, s0, 0, -44.875);
-    zones.push({ x0: s0, x1: s1, z0: wz0, z1: HZ, y: 0, label: r.name });
-    if (r.type === 'library') for (let k = 0; k < 3; k++) addBox(6, 1.9, 0.5, 0x8a6a45, cx, 0, wz0 + 2.2 + k*2.4);
-    if (r.type === 'nurse') { addBox(1.05, 0.5, 2, 0xf2f5f7, cx-1, 0, wz0+2.5); addBox(1.05, 0.5, 2, 0xf2f5f7, cx+1, 0, wz0+2.5); }
-    if (r.type !== 'stair' && !r.innerOnly) sign(r.name, doorC(r) + 1.2, 2.35, HZ + 0.22, 0, 0.34);
-  });
-  addBox(0.3, FH, 4.7, INNER, -28.6, 0, -47.35);    // 문서고 칸막이(나래반에서 진입 — innerOnly)
-  addBox(0.3, FH, 3.75, INNER, -28.6, 0, -41.925);
-  addBox(0.3, 1.0, 1.2, INNER, -28.6, 2.4, -44.4);
+  addPanel(wx1-wx0-0.3, wz1-wz0-0.3, FLOOR, (wx0+wx1)/2, 0.012, (wz0+wz1)/2);
+  {
+    const nurse = wg.rooms.find(r => r.type === 'nurse'), narae = wg.rooms.find(r => r.name === '나래반');
+    const nurseDoor = nurse.span[0] + 2.0, naraeDoor = (narae.span[0] + narae.span[1]) / 2;
+    // 로비 북벽(z=LOB_Z): 보건실·나래반 문. 동끝은 로비 동벽 바깥면까지(모서리 빈틈 방지 — 맞댐)
+    wallX(wx0 + 0.15, LOB_X + 0.15, LOB_Z, INNER, { gaps: [{ c: nurseDoor, w: 1.2 }, { c: naraeDoor, w: 1.8, glass: true }] });
+    // 로비 동벽(x=LOB_X) = 도서관 서벽 — 측문을 정면으로 마주 보는 도서관 문
+    wallZ(LOB_Z, fz0, LOB_X, INNER, { gaps: [{ c: SIDE_Z, w: 1.8, glass: true }] });
+    // 로비 북쪽 방들 칸막이(z wz0~LOB_Z): 보건실|나래반, 나래반|문서고(문서고는 나래반 안에서 — 개구), 문서고|도서관
+    const pz = (wz0 + 0.15 + LOB_Z - 0.15) / 2, pd = (LOB_Z - 0.15) - (wz0 + 0.15);
+    addBox(0.3, FH, pd, INNER, narae.span[0], 0, pz);
+    addBox(0.3, FH, 3.25, INNER, -28.6, 0, wz0 + 0.15 + 1.625);
+    addBox(0.3, FH, 3.25, INNER, -28.6, 0, LOB_Z - 0.15 - 1.625);
+    addBox(0.3, FH - 2.6, 1.2, INNER, -28.6, 2.6, pz);
+    addBox(0.3, FH, pd, INNER, LOB_X, 0, pz);
+    wg.rooms.forEach(r => {
+      const [s0, s1] = r.span, cx = (s0 + s1) / 2;
+      const deep = r.type === 'library' || r.type === 'stair';        // 도서실·계단홀은 복도 벽까지 깊다
+      zones.push({ x0: s0, x1: s1, z0: wz0, z1: deep ? fz0 : LOB_Z, y: 0, label: r.name });
+      if (r.type === 'library') {
+        for (let k = 0; k < 3; k++) addBox(6, 1.9, 0.5, 0x8a6a45, cx + 0.6, 0, wz0 + 2.0 + k * 2.3);
+        addBox(2.4, 0.72, 1.2, 0xc9a063, cx + 0.6, 0, -41.2);          // 열람 탁자
+      }
+      if (r.type === 'nurse') { addBox(1.05, 0.5, 2, 0xf2f5f7, cx-1, 0, wz0+2.5); addBox(1.05, 0.5, 2, 0xf2f5f7, cx+1, 0, wz0+2.5); }
+    });
+    sign('보건실', nurseDoor, 2.35, LOB_Z + 0.22, 0, 0.34);
+    sign('나래반', naraeDoor, 2.45, LOB_Z + 0.22, 0, 0.34);
+    sign('문서고', -27.5, 2.35, LOB_Z + 0.22, 0, 0.28);
+    sign('슬기샘 도서관', LOB_X - 0.22, 2.55, SIDE_Z, Math.PI / 2, 0.34);
+    // 도서관 복도창(짙은 초록 시트지) + 창 아래 자작나무색 사물함 — 복도 북벽 x LOB_X~-16.6
+    [-24.3, -21.4, -18.5].forEach(wx9 => addBox(2.4, 1.3, 0.46, 0x2f5a44, wx9, 1.05, fz0, { collide: false }));
+    for (let k = 0; k < 8; k++) addBox(1.2, 0.85, 0.45, k % 2 ? 0xd8c3a0 : 0xe2cfad, LOB_X + 0.15 + 0.6 + k * 1.2, 0, fz0 + 0.375);
+    // 로비 가운데 둥근 기둥 소파(주황·노랑 2단 + 연두 기둥 + 민트 잎 갓) — 측문→도서관 시선은 비켜 남쪽에
+    const [dx9, dz9] = [-32.2, -37.4];
+    addBox(2.3, 0.45, 2.3, 0xe8893a, dx9, 0, dz9);
+    addBox(1.5, 0.4, 1.5, 0xf2b84b, dx9, 0.45, dz9);
+    addBox(0.6, FH - 0.85, 0.6, 0xb8d67a, dx9, 0.85, dz9);
+    addBox(2.0, 0.2, 2.0, 0x9ad3bc, dx9, FH - 0.5, dz9, { collide: false });     // 민트 갓 — 천장 가까이(낮으면 십자가처럼 보임)
+    // 문서고 벽 앞 쿠션 벤치(주황·초록·노랑) + 도서관 문 옆 도서반납함 — 영상 v2180_0210·0225
+    [[-30.4, 0xe8893a], [-29.2, 0x8cc26a], [-28.0, 0xf2c14b]].forEach(([bx9, bc9]) => addBox(1.2, 0.45, 0.6, bc9, bx9, 0, LOB_Z + 0.45));
+    addBox(0.4, 0.95, 0.55, 0x3d6fa8, LOB_X - 0.35, 0, SIDE_Z + 1.55);
+    // 측문 안쪽: 오픈 신발장 + 체크 매트
+    addBox(0.45, 1.2, 1.4, 0xb58a5a, wx0 + 0.375, 0, SIDE_Z + 2.0);   // 문 남쪽(북쪽은 로비 북벽과 겹침)
+    addPanel(1.8, 2.0, 0x8a6a4e, wx0 + 1.1, 0.03, SIDE_Z);
+    zones.push({ x0: fx0, x1: LOB_X, z0: LOB_Z, z1: zCor, y: 0, label: '서측 로비' });
+  }
   {
     const sx = -14.3, w9 = 3.2;
     addBox(0.3, FH, wz1-wz0-0.3, INNER, -16.6, 0, (wz0+wz1)/2);
@@ -287,10 +334,14 @@ export function buildWorld(scene) {
   addPanel(kx1-kx0-0.3, kz1-kz0-0.3, FLOOR, (kx0+kx1)/2, 0.012, (kz0+kz1)/2);
   wallX(kx0 + 0.15, 5.25, K.cookWallZ, INNER, { h: K.wallHeight, gaps: [{ c: K.cookDoorC, w: 1.4 }] });   // 동단은 세로복도 서벽(x5.4) 앞까지
   addBox(5.5, 0.95, 1, 0xc4c9cd, -1, 0, K.cookWallZ + 1.3);
-  [[-5.2,-44],[-2.5,-46.5],[1,-43],[3.4,-46]].forEach(([tx,tz]) => {   // 양끝 식탁은 당직실 벽·세로복도 서벽과 이격
-    addBox(0.8, 0.72, 3.2, 0xb5713d, tx, 0, tz);
-    addBox(0.36, 0.42, 3.2, 0xd94848, tx-0.75, 0, tz); addBox(0.36, 0.42, 3.2, 0xd94848, tx+0.75, 0, tz);
-  });
+  // 식탁: 홀 장축(동서) 방향으로 길게 — 사용자 08-01 "식탁 방향" 지적·영상 v2178. 양옆 짙은 빨강 둥근 의자 줄.
+  const table9 = (tx, tz) => {
+    addBox(3.2, 0.72, 0.8, 0xb5713d, tx, 0, tz);
+    addBox(3.2, 0.42, 0.3, 0x9b2c3a, tx, 0, tz - 0.6); addBox(3.2, 0.42, 0.3, 0x9b2c3a, tx, 0, tz + 0.6);
+  };
+  [-7.2, -2.6, 2.0].forEach(tx => [-46.6, -44.2].forEach(tz => table9(tx, tz)));
+  [-1.2, 3.0].forEach(tx => table9(tx, -40.4));                  // 당직실 동쪽 줄(급식실 남문 앞은 비움)
+  addBox(0.2, 3.6, 7.4, 0x9aa0a6, kx0 + 0.25, 0, -46.0, { collide: false });   // 서벽 전폭 회색 주름 커튼 — 단상 없음, 뒤는 악기 보관
   addBox(kx1-kx0+0.8, 0.3, kz1-kz0+0.8, 0x46352b, (kx0+kx1)/2, K.wallHeight, (kz0+kz1)/2);
   sign('급식실', K.doorC + 1.5, 2.35, fz0 + 0.22, 0, 0.36);
   {                                                        // 당직실(급식동 남서 모서리 — data.js dutyRoom)
@@ -308,7 +359,7 @@ export function buildWorld(scene) {
 
   // ================= 세로복도 =================
   const LC = B.linkCorridor;
-  wallZ(fz0, -58, LC.x[0], WALL, { gaps: [{ c: K.hallEastDoorZ, w: 1.8 }], face: 1 });   // z-58까지 — 동관 복도 연결부까지 내려간다
+  wallZ(-58, fz0, LC.x[0], WALL, { gaps: [{ c: K.hallEastDoorZ, w: 1.8 }], face: 1 });   // z-58까지 — 동관 복도 연결부까지 내려간다
   // (세로복도 동벽 = 급식동 동벽 x8.4 공유 — 위에서 통합 시공. 동관 복도 개구 -56.5)
   addPanel(LC.x[1]-LC.x[0]-0.3, 19.1, FLOOR, 6.9, 0.012, -47.85);
   addBox(3.0, 0.3, 19.7, 0xd9dce1, 6.45, FH, -47.85);   // 동관 지붕(x8~)과 겹침 금지·북단은 급식동 북벽 안쪽 면까지
@@ -317,9 +368,9 @@ export function buildWorld(scene) {
   const E = B.eastWing, [ex0, ex1] = E.x, [ez0, ez1] = E.z, zCE = ez0 + E.corridorDepth;
   wallX(ex0 + 0.15, ex1, ez1, WALL, { wins: 8, face: 1 });   // 서단 0.3 인셋(공유벽 x8.4 관통 금지)
   wallX(ex0, ex1, ez0, WALL, { wins: 8, face: -1 });
-  // 동벽: 복도 동쪽끝 바깥문(-56.65) + 창고 외부문(-50).
-  // ⚠️창고는 external — 복도 문이 없다. 북벽에 뚫으면 복도로 들어갈 뿐 창고엔 못 들어간다(실제로 그랬음).
-  wallZ(ez0, ez1, ex1, WALL, { wins: 2, face: 1, gaps: [{ c: -56.65, w: 1.8 }, { c: -50, w: 1.2 }] });
+  // 동벽: 창고 외부문(-50)만. ⚠️복도 동쪽끝엔 문이 없다(사용자 07-30 "그쪽 복도에서 바깥으로 나가는 곳은 없음" — 판벽+점검구)
+  // ⚠️창고는 밖(텃밭 쪽)에서만 들어간다 — 복도와 이어지지 않음. 북벽에 뚫으면 복도로 들어갈 뿐(실제로 그랬음).
+  wallZ(ez0, ez1, ex1, WALL, { wins: 2, face: 1, gaps: [{ c: -50, w: 1.2 }] });
   // (동관 서벽 = 급식동 동벽 x8.4 공유 — 이중 시공 금지)
   const eGaps = E.rooms.filter(r => !r.innerOnly && !r.external).map(r => ({ c: doorC(r), w: 1.2 }));
   wallX(ex0 + 0.15, ex1 - 0.15, zCE, INNER, { gaps: eGaps });
@@ -449,15 +500,31 @@ export function buildWorld(scene) {
     addBox(8.8, 0.8, 0.16, 0xeef0e9, kpx+0.1, -1, kpz+3.5);
     sign('유치원 놀이터', kpx, 1.3, kpz+3.3, 0, 0.32);
   }
-  {                                                        // 주차장 — 학교 북쪽 바깥(v1 실측 x-20~48, z-69.5~-59.5). 진입=주복도 x-11.3 틈새길
-    addPanel(68, 10, 0x8f9095, 14, 0.008, -64.5);
-    for (let i = 0; i <= 13; i++) addPanel(0.25, 9, 0xe8eaea, -19 + i*5, 0.011, -64.5);
-    [[-14, 0x4d76b3, 0x6f92c4], [1, 0xc4c9cd, 0xd8dde2], [21, 0xcf6b52, 0xe08a72]].forEach(([cx9, b9, t9]) => {
-      addBox(1.8, 0.7, 4.0, b9, cx9, 0, -64.5);
-      addBox(1.6, 0.55, 2.0, t9, cx9, 0.7, -64.5);
+  {   // 주차장 — ①서관 바로 뒤(사용자 08-01 "나래반·보건실 뒤가 바로 주차장") ②그 북쪽 띠(위성: 서관·급식동 서쪽 위)
+      //   진입 = 계단홀 옆 뒷통로(x-11.3). 동관·텃밭 위(x>0)에는 주차장이 없다(위성 598019961f).
+    const ASP = 0x8f9095, LINE = 0xe8eaea;
+    addPanel(27.7, 7.3, ASP, -26.05, 0.008, -54.0);              // ① x -39.9~-12.2, z -57.65~-50.35
+    addPanel(40, 8, ASP, -19.5, 0.008, -62.35);                   // ② x -39.5~0.5,  z -66.35~-58.35
+    for (let x = -38.5; x <= -14.5; x += 2.5) addPanel(0.14, 2.6, LINE, x, 0.02, -56.2);
+    for (let x = -38; x <= -1; x += 2.5) addPanel(0.14, 2.6, LINE, x, 0.02, -64.9);
+    addPanel(4.8, 2.6, 0x3f6fb5, -16.0, 0.02, -51.8);              // 장애인 주차면(뒷통로 나오는 곳 가까이)
+    [[-33.8, -56.0, 0x4d76b3, 0x6f92c4], [-24.8, -56.0, 0xe9ecef, 0xd8dde2], [-28.8, -64.8, 0xcf6b52, 0xe08a72]].forEach(([cx9, cz9, b9, t9]) => {
+      addBox(1.8, 0.7, 4.0, b9, cx9, 0, cz9);
+      addBox(1.6, 0.55, 2.0, t9, cx9, 0.7, cz9);
     });
-    sign('주차장', 14, 1.6, -59.9, 0, 0.4);
-    zones.push({ x0: -18, x1: 46, z0: -67, z1: -61, y: 0, label: '주차장' });
+    addBox(2.4, 2.5, 5.2, 0xe9b52a, -3.5, 0, -62.4);               // 노란 컨테이너 창고(영상 v2180_0027~0039)
+    sign('주차장', -26, 1.6, -50.7, 0, 0.4);
+    zones.push({ x0: -39.5, x1: -12.5, z0: -57.5, z1: -50.5, y: 0, label: '주차장' });
+    zones.push({ x0: -39, x1: 0, z0: -66, z1: -58.6, y: 0, label: '주차장(북쪽)' });
+    // 주차장 → 텃밭 흙길(급식동·동관 북쪽 따라) — 영상 v2180_0036~0048
+    addPanel(40, 1.2, 0x8a7a5e, 20.5, 0.006, -59.2);
+    // 텃밭 옆 나무 데크 + 피크닉 테이블(사용자 07-31·08-01: 데크는 텃밭 근처에만, 주차장엔 없음)
+    addBox(6, 0.3, 6, 0x9a7650, 45, 0, -51);
+    [[43.6, -52.4], [46.4, -49.6]].forEach(([px9, pz9]) => {
+      addBox(1.6, 0.42, 0.8, 0x7a5636, px9, 0.3, pz9);
+      addBox(1.6, 0.16, 0.3, 0x6d4e32, px9, 0.3, pz9 - 0.7); addBox(1.6, 0.16, 0.3, 0x6d4e32, px9, 0.3, pz9 + 0.7);
+    });
+    zones.push({ x0: 42.2, x1: 47.8, z0: -53.8, z1: -48.2, y: 0.3, label: '텃밭 쉼터' });
   }
   {                                                        // 숲놀이터(랜드마크·통나무형) — 운동장 서쪽 v1 x-62~-47, z17~20.5
     const fz9 = 18.75;
@@ -545,7 +612,6 @@ export function buildWorld(scene) {
       addBox(3.2, 2.4, 3.2, 0x3a7d52, px9, tY(pz9) + 5.8, pz9, { collide: false });
       addBox(1.8, 2.0, 1.8, 0x468c5c, px9, tY(pz9) + 8.2, pz9, { collide: false });
     });
-    addBox(1.8, 0.45, 0.8, 0xc9a063, -31, 0, -38.95);                          // 서측홀 벤치(통로 1.1m 확보)
     // 옥상 흰 난간 — 북측은 서관 2층 남벽과 y0가 같아 겹치므로 서관 없는 구간만
     addBox(52.4, 0.45, 0.3, 0xe8e6de, 14.2, FH+0.3, -37.83, { collide: false });
     // 동서 난간은 북측 난간·남측 파라펫과 '맞대기'(겹치면 코너에서 동일평면)
@@ -580,7 +646,6 @@ export function buildWorld(scene) {
     bandZ(kz0, kz1, kx0, -1, 3.2);  bandX(kx0, kx1, kz0, -1, 3.2);              // 급식동 서·북면
   }
   zones.push({ x0: fx0, x1: fx1, z0: fz0, z1: zCor, y: 0, label: '본관 복도' });
-  zones.push({ x0: -39.7, x1: -16.75, z0: HZ, z1: fz0, y: 0, label: '서측홀' });
   zones.push({ x0: ex0 + 0.3, x1: ex1 - 0.3, z0: ez1 + 0.3, z1: fz0 - 0.3, y: 0, label: '가운데 마당' });
   zones.push({ x0: SCHOOL.playground.center[0]-7, x1: SCHOOL.playground.center[0]+7, z0: SCHOOL.playground.center[1]-5, z1: SCHOOL.playground.center[1]+5, y: -1, label: '놀이터' });
   zones.push({ x0: -52, x1: -44, z0: -13, z1: -7, y: -1, label: '유치원 놀이터' });
@@ -588,6 +653,8 @@ export function buildWorld(scene) {
   zones.push({ x0: SCHOOL.field.center[0]-20, x1: SCHOOL.field.center[0]+20, z0: SCHOOL.field.center[1]-20, z1: SCHOOL.field.center[1]+20, y: -1, label: '운동장' });
 
   ceil(fx0, fx1, fz0, fz1, FH);                       // 본관
+  [[fx0 + 0.16, LOB_X], [LC.x[0], LC.x[1]]].forEach(([a, b]) =>   // 벽 없는 경계의 천장 틈(맞댐 — 폭 정확히 0.32)
+    flatBox(b - a, 0.15, 0.32, ceilMat, (a + b) / 2, FH - 0.16, fz0));
   ceil(wx0, wx1 - 4.6, wz0, wz1, FH);                 // 서관 1층(계단 구멍 제외)
   ceil(wx0, wx1, wz0, wz1, FH * 2);                   // 서관 2층
   ceil(kx0, 5.4, kz0, kz1, K.wallHeight);             // 급식동(세로복도 제외)

@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=10';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=14';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from '../../js/data.js';
 
 const canvas = document.getElementById('scene');
@@ -141,19 +141,39 @@ function step(dt) {
   camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);   // 당김은 즉시·복귀는 이징(지터 방지)
   camera.position.set(hx + dx * camD, hy + dy * camD, hz + dz * camD);
   camera.lookAt(hx, hy, hz);
+  if (SHOT) applyShot();
+}
+
+// ---------- 사진 대조 모드: ?shot=x,y,z,방위°,올려보기°,화각° ----------
+// 실사 사진을 찍은 자리·방향에 카메라를 그대로 세운다(플레이어·HUD 숨김). 방위 0°=북(-z), 90°=동(+x).
+// "했다"고 말하기 전에 사진과 나란히 놓고 맞는지 보는 용도.
+const SHOT = (() => {
+  const s = new URLSearchParams(location.search).get('shot');
+  if (!s) return null;
+  const [x, y, z, h, p, f] = s.split(',').map(Number);
+  return { x, y, z, h: (h || 0) * Math.PI / 180, p: (p || 0) * Math.PI / 180, f: f || 70 };
+})();
+function applyShot() {
+  if (!SHOT.hid) { document.querySelectorAll('.chip').forEach(c => c.style.display = 'none'); SHOT.hid = true; }
+  pg.visible = false;
+  camera.fov = SHOT.f; camera.updateProjectionMatrix();
+  camera.position.set(SHOT.x, SHOT.y, SHOT.z);
+  camera.lookAt(SHOT.x + Math.sin(SHOT.h) * Math.cos(SHOT.p), SHOT.y + Math.sin(SHOT.p), SHOT.z - Math.cos(SHOT.h) * Math.cos(SHOT.p));
 }
 
 // ---------- 문짝(미닫이) ----------
 // 움직이므로 청크 병합 밖의 개별 Mesh. 통행은 막지 않는다(콜라이더 없음) — 도달성 검사 결과가 그대로 유지된다.
 // 벽면에서 6cm 띄워 벽 위를 미끄러지게 한다(벽 속으로 사라지면 문이 없어진 것처럼 보인다).
 const doorMat = new THREE.MeshLambertMaterial({ color: 0xc08b4f });
+// 유리문(현관·측문·도서관·나래반·유치원 정문·뒷통로 — 실사 확인분): 반투명 하늘색
+const glassMat = new THREE.MeshLambertMaterial({ color: 0xbfe3ee, transparent: true, opacity: 0.42, depthWrite: false });
 const DOORS = world.doors.map(d => {
   // 🔴OFF=0: 문은 벽 두께(0.3) 안에서만 미끄러진다 = 포켓 도어.
   // 벽 밖으로 내밀면(0.28이었음) 벽면에 붙은 칠판과 같은 평면이 되어 반짝인다.
   // 문짝은 개별 Mesh라 빌드 감사(헌법③)가 보지 못한다 — 그래서 '벽 안에서만 움직인다'를 규칙으로 못박는다.
-  const w = Math.min(d.w, 1.9), h = 2.5, OFF = 0;      // 높이는 개구 2.6에 맞춤
+  const w = d.w - 0.1, h = 2.5, OFF = 0;              // 폭은 개구보다 10cm 좁게·높이는 개구 2.6에 맞춤
   const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(d.ax === 'x' ? w : 0.16, h, d.ax === 'x' ? 0.16 : w), doorMat);
+    new THREE.BoxGeometry(d.ax === 'x' ? w : 0.16, h, d.ax === 'x' ? 0.16 : w), d.glass ? glassMat : doorMat);
   const bx = d.ax === 'x' ? d.cx : d.cx + OFF, bz = d.ax === 'x' ? d.cz + OFF : d.cz;
   mesh.position.set(bx, d.y0 + h / 2, bz);
   mesh.matrixAutoUpdate = false; mesh.updateMatrix();
