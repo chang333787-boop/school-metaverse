@@ -242,7 +242,7 @@ export function buildWorld(scene) {
 
   // ================= 서관 =================
   const [wx0, wx1] = wg.x, [wz0, wz1] = wg.z;
-  wallX(wx0, wx1, wz0, WALL, { h: FH, wins: 6, face: -1 });
+  wallX(wx0, wx1, wz0, WALL, { h: FH, wins: 6, face: -1, noWin: [[-16.6, -12]] });   // 계단참 자리는 큰 창을 따로
   wallX(wx0, wx1, wz0, WALL, { y0: FH+0.3, h: FH-0.3, wins: 6, face: -1, sill: 0.8 });
   wallZ(wz0, wz1, wx0, WALL, { h: FH, wins: 2, face: -1, gaps: [{ c: SIDE_Z, w: 2.2, glass: true }] });   // 측문(서측 바깥현관 유리 이중문)
   wallZ(wz0, wz1, wx0, WALL, { y0: FH+0.3, h: FH-0.3, wins: 2, face: -1, sill: 0.8 });
@@ -295,13 +295,21 @@ export function buildWorld(scene) {
     addPanel(1.8, 2.0, 0x8a6a4e, wx0 + 1.1, 0.03, SIDE_Z);
     zones.push({ x0: fx0, x1: LOB_X, z0: LOB_Z, z1: zCor, y: 0, label: '서측 로비' });
   }
-  {
-    const sx = -14.3, w9 = 3.2;
-    addBox(0.3, FH, wz1-wz0-0.3, INNER, -16.6, 0, (wz0+wz1)/2);
-    for (let i = 0; i < 13; i++)
-      addBox(w9, 0.285*(i+1), 0.72, 0xc9b8a0, sx, 0, fz0 - 0.95 - 0.72*i);
-    addBox(3.9, 0.3, 1.6, 0xc9b8a0, -14.65, FH, fz0 - 0.95 - 0.72*12 - 1.15);   // 착지참 — 서쪽 슬래브(x-16.6)까지 닿게
-    sign('2층', sx + 1.7, 2.5, fz0 - 0.5, 0, 0.34);
+  {   // U자 계단 — 사용자 07-31 "1층 계단 위치는 비슷한데 올라가는 방법이 다름" + 영상 v2180_0159~0174 + 문서 v80c
+      //  계단홀(x -16.6~-12)에서 A레인(서쪽 절반)으로 북쪽 반층 참까지 → 180° 돌아 B레인(동쪽 절반)으로 남쪽 2층.
+    const STONE = 0xb9b7b0, AX = -15.375, BX = -13.225, LW = 2.15, N = 12, RISE = (FH + 0.3) / 2 / N, TR = 0.2875;
+    const Z0 = -44.4, ZL = Z0 - N * TR;                                   // A레인 발치 z-44.4 · 참 남단 z-47.85
+    addBox(0.3, FH, wz1-wz0-0.3, INNER, -16.6, 0, (wz0+wz1)/2);            // 도서실|계단홀
+    for (let i = 0; i < N; i++) addBox(LW, RISE * (i + 1), TR, STONE, AX, 0, Z0 - TR * (i + 0.5));        // A레인
+    addBox(4.3, RISE * N, ZL - (wz0 + 0.15), STONE, -14.3, 0, (ZL + wz0 + 0.15) / 2);                    // 반층 참(북벽 창가)
+    for (let j = 0; j < N; j++) addBox(LW, 0.3, TR, STONE, BX, RISE * (N + j + 1) - 0.3, ZL + TR * (j + 0.5));   // B레인(떠 있는 디딤판)
+    addBox(4.6, 0.3, -37.98 - Z0, 0xd9dce1, -14.3, FH, (Z0 - 37.98) / 2);  // 2층 바닥이 계단홀 남쪽 위로 이어져 B레인 끝과 맞닿음
+    addBox(LW, 1.05, 0.16, 0xc8cdd2, AX, FH + 0.3, Z0 + 0.08);            // 2층: A레인 위 빈 곳 난간
+    addBox(3.2, 1.3, 0.46, 0x51606c, -14.3, RISE * N + 0.15, wz0, { collide: false });   // 참의 큰 창(9분할 — 문서 v80c)
+    sign('계단 · 2층', -14.3, 2.95, fz0 + 0.22, 0, 0.3);
+    // 계단홀 위는 2층 바닥이 뚫려 있어 1층 벽 윗단(FH)과 2층 벽 아랫단(FH+0.3) 사이가 비어 하늘이 보였다 → 테두리보로 메움
+    addBox(4.6, 0.3, 0.3, WALL, -14.3, FH, wz0);                                       // 북벽
+    addBox(0.3, 0.3, (Z0) - (wz0 + 0.15), WALL, -12, FH, (Z0 + wz0 + 0.15) / 2);       // 동벽(2층 바닥이 없는 구간만)
   }
   addBox(wx1-wx0-4.6, 0.3, wz1-wz0+0.02, 0xd9dce1, wx0 + (wx1-wx0-4.6)/2, FH, (wz0+wz1)/2+0.01);   // 남단 z-37.98 = 본관 지붕과 정확히 맞댐(하늘 틈 봉합)
   {
@@ -317,9 +325,9 @@ export function buildWorld(scene) {
       sign(r.name, doorC(r)+1.2, FH+2.55, zc2-0.22, 0, 0.34);
       zones.push({ x0: s0, x1: s1, z0: wz0, z1: zc2, y: FH+0.3, label: r.name });
     });
-    zones.push({ x0: wx0, x1: -17.2, z0: zc2, z1: wz1, y: FH+0.3, label: '2층 복도' });
-    wallX(wx0 + 0.15, -17.2, zc2, INNER, { y0: FH+0.3, h: FH-0.3, gaps: B.upper.rooms.map(r => ({ c: doorC(r), w: 1.2 })) });   // 동단은 개구 가드 앞에서
-    addBox(0.45, 1.2, 9.64, 0xc8cdd2, wx1-4.6-0.25, FH+0.3, -43.12);   // 개구 가드 — 착지참(z-49.5) 구간은 열어 2층 진입로 확보
+    zones.push({ x0: wx0, x1: -12.2, z0: zc2, z1: wz1, y: FH+0.3, label: '2층 복도' });
+    wallX(wx0 + 0.15, -16.45, zc2, INNER, { y0: FH+0.3, h: FH-0.3, gaps: B.upper.rooms.map(r => ({ c: doorC(r), w: 1.2 })) });
+    addBox(0.3, FH-0.3, (zc2 - 0.15) - (wz0 + 0.15), INNER, -16.6, FH+0.3, (zc2 - 0.15 + wz0 + 0.15) / 2);   // 소담실 동벽(계단홀 쪽)
   }
   addBox(wx1-wx0+0.8, 0.3, wz1-wz0+0.8, 0xd9dce1, (wx0+wx1)/2, FH*2, (wz0+wz1)/2);
   addBox(wx1-wx0+0.8, 0.45, 0.3, 0xe8e6de, (wx0+wx1)/2, FH*2+0.3, wz0-0.25, { collide: false });
