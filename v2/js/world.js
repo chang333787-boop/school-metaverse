@@ -1811,7 +1811,10 @@ export function buildWorld(scene) {
   LBAY.forEach(([c, w]) => {
     dBox(0.16, 0.05, w, 0xf0ede4, kx1 + 0.23, 0.5, c);                                                  // 흰 징두리 위 창턱(복도 쪽으로 튀어나옴 — 기둥 면과 맞댐)
     // 줄 = 아래 쪽창(흐린 격자 시트 a_444·a_447) | 큰 유리(짙은 청회색 — 급식실 안이 거의 안 보임) | 위 광창(조금 밝게) — 복도 쪽만 · 줄 경계 = 무늬 바뀜(가로살 상자 대신 — 삼각형 예산) · 세로살 = winFrame 4짝
-    [[0.61, 1.1, 'film2', 0xc9cfd2], [1.1, 2.4, 'film', 0xb0b4b0], [2.4, 2.64, 'film', 0xd4d8d8]].forEach(([y0, y1, k9, t9]) => patWall(k9, 'z', c - w/2 + 0.06, c + w/2 - 0.06, y0, y1, kx1 + 0.09, 1, t9));
+    //   큰 유리·광창 = 조명 무시 짙은 청회색(영상 c_353.8·c_358.2 중앙값 #353f37~#3f483c — 예전 초록 시트지 'film'은 그늘에서 거의 검정 #05160e)
+    patWall('film2', 'z', c - w/2 + 0.06, c + w/2 - 0.06, 0.61, 1.1, kx1 + 0.09, 1, 0xc9cfd2);
+    [[1.1, 2.4, 0x3c4843], [2.4, 2.64, 0x56625d]].forEach(([y0, y1, t9]) => patPush('cflat', [[kx1 + 0.09, y0, c - w/2 + 0.06], [kx1 + 0.09, y0, c + w/2 - 0.06], [kx1 + 0.09, y1, c + w/2 - 0.06], [kx1 + 0.09, y1, c - w/2 + 0.06]],
+      [[0.1, 0.1], [0.4, 0.1], [0.4, 0.4], [0.1, 0.4]], [1, 0, 0], t9));
   });
   LPIL.forEach(c => addBox(0.25, FH, 0.6, 0xece6d6, kx1 + 0.275, 0, c));                // 칸 사이 크림 기둥 P1·P2
   wallRun('z', LBZ, kz1 - 0.15, kx1, 0x9a8a78, { h: FH, inner: true, innerHex: 0xbcc8ca, face: 1 });
@@ -2045,7 +2048,7 @@ export function buildWorld(scene) {
     colliders.push(noStand({ x0: cx1 - 0.24, x1: cx1 - 0.15, y0: 0, y1: 0.95, z0: NOTCH_Z + 0.15, z1: lz0 - 0.15 }));
     dCyl(0.14, 0.14, 2.75, 0xf2f2f0, cx1 - 0.22, 0, lz0 + 0.08, { seg: 8 });
     colliders.push({ x0: cx1 - 0.36, x1: cx1 - 0.08, y0: 0, y1: 2.75, z0: lz0 - 0.06, z1: lz0 + 0.22 });
-    floorQ('tileG', cx0 + 0.15, cx1 - 0.15, cz0 + 0.15, lz0 + 0.15, 0, 0xd2cec6);   // LINK-EAST-17: 바닥이 벽보다 어둡게(영상)
+    floorQ('tileG', cx0 + 0.15, cx1 - 0.15, cz0 + 0.15, lz0 + 0.15, 0, 0xc3c5cd);   // LINK-EAST-17: 바닥이 벽보다 어둡고 무채색 회색 테라초(영상 c_356·c_358·a_447 — 베이지 기운 뺌)
     // LINK-EAST-2·15: 소파 1개(칸1 창 아래 — c_353.8·c_356·a_447) · 주황·노랑·연두 세로 줄 6 + 짧은 나무 다리 · 양 끝 흰 화분
     { const z9 = LBAY[0][0], L = 2.28, st = L / 6, BK = [0xef8f45, 0xf2c25a, 0x8cc26a], SE = [0x8cc26a, 0xef8f45, 0xf2c25a];
       colliders.push({ x0: cx0 + 0.15, x1: cx0 + 0.85, y0: 0, y1: 0.45, z0: z9 - L/2, z1: z9 + L/2 });
