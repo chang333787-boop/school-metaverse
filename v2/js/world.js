@@ -915,7 +915,8 @@ export function buildWorld(scene) {
     // [classrooms-14] 교사 자리: 회색 철제 책상 + 모니터 · 주황 메시 의자 · 창가 흰 공기청정기(교사 의자 동쪽 — a_490.5·a_427.5)
     const tdz = zw - dz * (st === 'g4' ? 1.45 : 1.3);
     teacherDesk(xw + 1.3, y0, tdz, 1); chair(xw + 0.72, y0, st === 'g4' ? zw - dz * 1.6 : tdz, -1, 0xd9643a, 1);
-    if (!opt.computer) { addBox(0.5, 1.5, 0.4, 0xf2f3f4, xw + 1.88, y0, zw - dz * 0.75, NS); dBox(0.3, 0.03, 0.25, 0xa9aeb3, xw + 1.88, y0 + 1.5, zw - dz * 0.75); }
+    if (!opt.computer) { const px = xw + (st === 'g4' ? 2.45 : 1.88);   // 4학년은 코너 TV장 옆 창가(a_426)
+      addBox(0.5, 1.5, 0.4, 0xf2f3f4, px, y0, zw - dz * 0.75, NS); dBox(0.3, 0.03, 0.25, 0xa9aeb3, px, y0 + 1.5, zw - dz * 0.75); }
     if (st === 'g3') {   // 3학년 흰 천 덮은 보조 탁자(교사 책상 북쪽 L자) + 나무 스툴(a_487.5·a_490.5)
       const sz = zw - dz * 2.25;
       dBox(1.2, 0.72, 0.6, 0xf4f4f0, xw + 1.5, y0, sz); colliders.push(noStand({ x0: xw + 0.9, x1: xw + 2.1, y0, y1: y0 + 0.72, z0: sz - 0.3, z1: sz + 0.3 }));
@@ -1821,7 +1822,8 @@ export function buildWorld(scene) {
     floorQ(r.external || r.type === 'storage' ? 'tileW' : r.type === 'science' ? 'tileG' : 'wood', x0, x1, z0, ez1 - 0.15, 0, r.external ? 0xb9b6ae : 0xffffff);   // 과학실 = 회베이지 테라초(s_390.5)
     zones.push({ x0: s0, x1: s1, z0: r.external ? ez0 : zCE, z1: ez1, y: 0, label: r.name });
     if (r.type === 'classroom' || r.type === 'science') {
-      if (r.type === 'science') { labRoom(s0 + 0.15, s1 - 0.15, zCE + 0.15, ez1 - 0.15, doorC(r), zCE + 1.45); [3.45, 5.75].forEach(k => acUnit(cx, FH - 0.16, zCE + k)); }
+      if (r.type === 'science') { labRoom(s0 + 0.15, s1 - 0.15, zCE + 0.15, ez1 - 0.15, doorC(r), zCE + 1.45); [3.45, 5.75].forEach(k => acUnit(cx, FH - 0.16, zCE + k));
+        eWins.filter(g => g.c > s0 && g.c < s1).forEach(g => [1, -1].forEach(f => patWall('film2', 'x', g.c - g.w/2 + 0.06, g.c + g.w/2 - 0.06, g.sill + 0.06, g.dh - 0.06, zCE + f * 0.09, f))); }   // 불투명 높은 창(s_403)
       else { const g4 = r.name === '4학년';
         westClass(r.name, s0 + 0.15, s1 - 0.15, zCE + 0.15, ez1 - 0.15, 0, { sill: 0.9, ceilH: FH - 0.16, style: g4 ? 'g4' : '' });   // 서향 교실
         acUnit(cx, FH - 0.16, zCE + 3.45);
