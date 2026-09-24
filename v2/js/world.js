@@ -320,6 +320,14 @@ export function buildWorld(scene) {
     });
   }
 
+  // 배경 나무(위성 나무 무리용 — 가벼운 모양: 5각 줄기 + 둥근 잎 두 덩어리 ≈ 70삼각형). 밑동 충돌 12m(나무 위에 못 올라가게)
+  function bgTree(x, z, s = 1) {
+    const y = tY(z, x), h = hash2(x, z);
+    colliders.push({ x0: x - 0.3*s, x1: x + 0.3*s, y0: y, y1: y + 12, z0: z - 0.3*s, z1: z + 0.3*s });
+    dCyl(0.14*s, 0.22*s, 2.6*s, 0x6d4e32, x, y, z, { far: true, seg: 5 });
+    dBlob(1.6*s, 1.35*s, 1.6*s, [0x3f7a3f, 0x4d8b4d, 0x467f44][Math.floor(h*3) % 3], x, y + 3.2*s, z, { far: true, chunky: true, ry: h*6, jitter: 0.14 });
+    dBlob(1.1*s, 0.95*s, 1.1*s, 0x5c9a4f, x + 0.5*s, y + 4.1*s, z - 0.3*s, { far: true, chunky: true, ry: h*9, jitter: 0.14 });
+  }
   // 침엽수(DETAIL-1): 굵은 줄기 + 8각 원뿔 4단(위로 갈수록 밝은 초록·단마다 비틀어 결이 엇갈리게)
   function pine(x, z, s = 1) {
     const y = tY(z, x), ry = hash2(x, z) * Math.PI * 2;
@@ -1446,9 +1454,12 @@ export function buildWorld(scene) {
     addBox(0.15, 0.9 + GYF - YARD, RZ1 - RZ0, 0xefe3b8, ax1 + 1.525, YARD, (RZ0 + RZ1)/2, NS);
     zones.push({ x0: ax1, x1: LX1 + 0.7, z0: CZ0 - 0.5, z1: CZ1 + 0.5, y: GYF, label: '체육관 현관' });
   }
-  addBox(G.width+1, 0.4, G.depth+1, 0xc35233, gx, GYF + GH, gz);
-  addBox(G.width+0.4, 0.5, G.depth*0.62, 0xc35233, gx, GYF + GH+0.4, gz);
-  addBox(G.width-0.2, 0.5, G.depth*0.3, 0xb04a2e, gx, GYF + GH+0.9, gz);
+  // 지붕(위성 확대: 본 지붕 = 밝은 회색 금속 · 붉은 띠 = 북쪽 3.6m 무대 띠만 한 단 낮게). 두 판은 z = 띠 경계에서 맞대기만
+  { const BZ = gz0 + 3.6, gzc = (BZ + gz1 + 0.5) / 2, gd = gz1 + 0.5 - BZ;
+    addBox(G.width+1, 0.4, BZ - gz0 + 0.5, 0xc35233, gx, GYF + GH, (gz0 - 0.5 + BZ) / 2);
+    addBox(G.width+1, 0.4, gd, 0xb9bcba, gx, GYF + GH, gzc);
+    addBox(G.width+0.4, 0.5, gd*0.72, 0xc3c6c4, gx, GYF + GH+0.4, gzc);
+    addBox(G.width-0.2, 0.5, gd*0.36, 0xcdd0ce, gx, GYF + GH+0.9, gzc); }
   zones.push({ x0: gx0, x1: gx1, z0: gz0 + 3.6, z1: gz1, y: GYF, label: '체육관' });
   ceil(gx0, gx1, gz0, gz1, GYF + GH, 'ctile');
 
@@ -1542,14 +1553,29 @@ export function buildWorld(scene) {
     dCyl(0.06, 0.1, 4.3, 0x9aa0a6, LX, YARD, LZ, { far: true, seg: 8 });
     dRod(LX, YARD + 4.0, LZ, LX, YARD + 4.0, LZ + 0.75, 0.035, 0x9aa0a6, { far: true });
     dBox(0.34, 0.1, 0.5, 0xdfe3e8, LX, YARD + 3.85, LZ + 0.9, { far: true });
-    dBox(0.26, 0.04, 0.4, 0xfff6d6, LX, YARD + 3.81, LZ + 0.9, { far: true, flat: true });
+    lamp(0.26, 0.04, 0.4, LX, YARD + 3.81, LZ + 0.9);                                   // 등 불빛면(밤에도 빛나는 조명 재질)
     dGeo(box_, new THREE.Matrix4().compose(new THREE.Vector3(LX, YARD + 4.55, LZ), new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.5, 0, 0)), new THREE.Vector3(0.9, 0.05, 0.6)), 0x2b3f6b, { far: true });
     addBox(0.6, 5, 0.6, 0xdfe3e8, px1 + 9.0, YARD, S1 + 0.2);                       // 탑시계
     addBox(1.5, 1.5, 0.34, 0xf5f6f8, px1 + 9.0, YARD + 4.7, S1 + 0.2, { collide: false });
     sign('12', px1 + 9.0, YARD + 5.45, S1 + 0.4, 0, 0.3);
     const [fpx, fpz] = SCHOOL.flagPole;                                             // 게양대(구령대 서쪽 — 영상 u_276)
     addBox(0.16, 10, 0.16, 0xc8cdd2, fpx, YARD, fpz);
-    addBox(1.4, 0.9, 0.16, 0xf5f6f8, fpx + 0.85, YARD + 8.6, fpz, { collide: false });
+    { // 태극기(캔버스 한 장 · 양면)
+      const cv = document.createElement('canvas'); cv.width = 180; cv.height = 120; const g = cv.getContext('2d');
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, 180, 120);
+      g.save(); g.translate(90, 60); g.rotate(-0.588);
+      g.fillStyle = '#cd2e3a'; g.beginPath(); g.arc(0, 0, 30, Math.PI, 0); g.fill();
+      g.fillStyle = '#0047a0'; g.beginPath(); g.arc(0, 0, 30, 0, Math.PI); g.fill();
+      g.fillStyle = '#cd2e3a'; g.beginPath(); g.arc(-15, 0, 15, 0, Math.PI); g.fill();
+      g.fillStyle = '#0047a0'; g.beginPath(); g.arc(15, 0, 15, Math.PI, 0); g.fill();
+      g.restore();
+      g.fillStyle = '#000000';
+      [[34, 22, -0.588, [1, 1, 1]], [146, 98, -0.588, [0, 0, 0]], [146, 22, 0.588, [1, 0, 1]], [34, 98, 0.588, [0, 1, 0]]].forEach(([cx, cy, a, bars]) => {
+        g.save(); g.translate(cx, cy); g.rotate(a); bars.forEach((b, k) => { const y = -9 + k * 7; if (b) g.fillRect(-12, y, 24, 5); else { g.fillRect(-12, y, 10, 5); g.fillRect(2, y, 10, 5); } }); g.restore(); });
+      const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+      const fl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.93), new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }));
+      fl.position.set(fpx + 0.78, YARD + 9.05, fpz); fl.matrixAutoUpdate = false; fl.updateMatrix(); scene.add(fl);
+    }
   }
 
   // ================= 운동장·놀이 시설 (FIELD) =================
@@ -1588,7 +1614,7 @@ export function buildWorld(scene) {
       post(lx, FLD.z[0] + 1.2, FIELD, FIELD + 12, 0.25);
       dCyl(0.16, 0.3, 12.6, 0xbfc4c9, lx, FIELD, FLD.z[0] + 1.2, { far: true, seg: 8 });
       dBox(2.6, 0.9, 0.2, 0xdfe3e8, lx, FIELD + 11.4, FLD.z[0] + 1.2, { far: true });
-      for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) dBox(0.6, 0.3, 0.12, 0xfff3c4, lx - 0.85 + i*0.85, FIELD + 11.5 + j*0.4, FLD.z[0] + 1.36, { far: true, flat: true });
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) lamp(0.6, 0.3, 0.12, lx - 0.85 + i*0.85, FIELD + 11.5 + j*0.4, FLD.z[0] + 1.36);   // 조명탑 등(밤에 빛남)
     });
     {   // 야외 농구골대(동쪽 통학로 옆)
       const bx9 = EF - 1.2, bz9 = 22;
@@ -1820,6 +1846,18 @@ export function buildWorld(scene) {
     patQuad('brick', E.x[1] + 0.8, fx1 + 2.5, E.z[1] + 0.2, fz0 - 0.3, Y + 0.012, false, 0xe8d8d0);
     zones.push({ x0: dkx - 3, x1: dkx + 3, z0: dkz - 3, z1: dkz + 3, y: Y + 0.3, label: '텃밭 쉼터' });
     zones.push({ x0: E.x[1], x1: 60, z0: E.z[0], z1: fz0, y: Y, label: '동관 뒤뜰' });
+  }
+
+  // ================= 위성 나무 무리(Esri z19: 체육관 북서쪽 숲·서쪽 울타리 나무 줄·동쪽 가장자리·텃밭 동쪽·정문 옆) =================
+  {
+    const R9 = seeded(4242), jit = () => (R9() - 0.5) * 2.4;   // ±1.2 m
+    patQuad('grass', -86, -53.5, -86, -33.2, YARD + 0.012, false, 0xc4d6ac);   // 숲 바닥(위성: 체육관 북쪽은 나무 그늘 — 베이지 대지 위에 나무만 서 있던 것)
+    for (let x = -84; x <= -58; x += 6.5) for (let z = -84; z <= -38.5; z += 6.5) { const sk = R9(), jx = jit() * 2.2, jz = jit() * 2.2, sc = 0.75 + R9() * 0.7;   // 체육관 북서쪽 숲(격자가 보이지 않게 크게 흩고 15%는 비움 — 과수원처럼 줄 서 보이던 것)
+      if (sk > 0.15 && !(x > -60 && z > -48)) bgTree(x + jx, z + jz, sc); }
+    for (let z = 20; z <= 60; z += 5.5) bgTree(-53.6 + jit() * 0.3, z + jit(), 0.8 + R9() * 0.25);               // 서쪽 울타리 밖 나무 줄(울타리 -50.5와 비닐하우스 -57 사이)
+    for (let z = -38; z <= 30; z += 7) bgTree(55 + jit() * 0.8, z + jit(), 0.9 + R9() * 0.35);                  // 동쪽 가장자리(데크 남쪽부터)
+    for (let z = -84; z <= -58; z += 6.5) bgTree(58.5 + jit() * 0.4, z + jit(), 0.85 + R9() * 0.3);              // 텃밭 동쪽
+    [[26.2, 48.4], [30.5, 49.2], [16.5, 47.8]].forEach(([x, z]) => bgTree(x, z, 1.1));                          // 정문 옆
   }
 
   // ================= 학교 둘레(울타리 다각형 · 정문) + 동네 =================
