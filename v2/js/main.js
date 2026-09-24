@@ -2,6 +2,9 @@
 import * as THREE from 'three';
 import { buildWorld } from './world.js?v=111';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=4';   // LAYOUT-3 실측 배치(v1 data.js 대신)
+import * as NAV from './nav.js?v=1';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
+import { makeMeta } from './mapmeta.js?v=1';       // MAP-API-1: 구역 계약표·출발점·표지점
+import { createMapApi } from './mapapi.js?v=1';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -30,6 +33,7 @@ sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
 scene.add(sun);
 
 const world = buildWorld(scene);
+let MAP = null;   // MAP-API-1 지도 API — loop() 위에서 만든다. setTime('day')가 먼저 돌므로 참조는 전부 MAP?.(TDZ 함정)
 
 // ---------- 플레이어 (AABB 전용 — 레이캐스트 0) ----------
 const P = { x: 13.4, y: world.terrainAt(13.4, -6) + 0.01, z: -6, vy: 0, yaw: 0, ground: true };   // 운동장에서 구령대·본관을 보며 시작
@@ -198,6 +202,7 @@ addEventListener('mousemove', e => {
 
 // 상호작용 상태 — anim: 정해진 경로 이동(미끄럼틀) / sit: 의자에 앉음(움직이면 일어남)
 const ACT = { anim: null, sit: null };
+const CTRL = { frozen: false, speed: 1 };   // MAP-API-1: 게임이 멈춤(입력·점프만 무시 — 중력은 유지)·속도(0.5~2)를 건다
 function step(dt) {
   const moving = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].some(k => keys.has(k));
   if (ACT.anim) {
@@ -219,28 +224,50 @@ function step(dt) {
   const indoor = ceilAt(P.x, P.z, P.y + 1.6, P.y + 5.5) !== null;
   const tFov = camFirst ? 66 : indoor ? 60 : 52;
   if (Math.abs(camera.fov - tFov) > 0.05) { camera.fov += (tFov - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); }
-  pg.visible = !camFirst;
+  pg.visible = !camFirst && camD > 0.45;   // CAM-3: 벽에 붙어 카메라가 머리 바로 뒤까지 오면 캐릭터를 숨긴다(1인칭처럼)
   if (camFirst) {
     const pitch = camPitch - 0.3, ey = P.y + 1.5 - (ACT.sit ? 0.42 : 0);
     camera.position.set(P.x, ey, P.z);
     camera.lookAt(P.x - Math.sin(camYaw) * Math.cos(pitch), ey - Math.sin(pitch), P.z - Math.cos(camYaw) * Math.cos(pitch));
   } else {
     const hx = P.x, hy = P.y + 1.3, hz = P.z, pch = indoor ? Math.min(camPitch, 0.2) : camPitch, CD = indoor ? 3.3 : CAM_D;
-    const dx = Math.sin(camYaw) * Math.cos(pch), dy = Math.sin(pch), dz = Math.cos(camYaw) * Math.cos(pch);
-    const want = Math.max(0.5, Math.min(CD, camHit(hx, hy, hz, dx, dy, dz, CD) - 0.3));
+    const want = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect).want;
     camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);   // 당김은 즉시·복귀는 이징(지터 방지)
-    camera.position.set(hx + dx * camD, hy + dy * camD, hz + dz * camD);
-    camera.lookAt(hx, hy, hz);
+    const C = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect, camD);   // 실제 거리에서 옆벽 비키기
+    camSh = Math.abs(C.sh) > Math.abs(camSh) || C.sh * camSh < 0 ? C.sh : camSh + (C.sh - camSh) * Math.min(1, dt * 8);   // 비키기는 즉시·돌아오기는 이징
+    const rx = Math.cos(camYaw) * camSh, rz = -Math.sin(camYaw) * camSh;
+    camera.position.set(C.x0 + rx, C.y, C.z0 + rz);
+    camera.lookAt(hx + rx, hy, hz + rz);
   }
   if (SHOT) applyShot();
 }
+// CAM-3(09-24 맵 건강 검진): 3인칭 카메라 자리 — 검진(health.js)과 실제 카메라가 이 한 식을 쓴다(SD2.camPose).
+//  ① 머리→뒤 가운데 광선(camHit)으로 벽까지 거리, 여유 0.3을 뺀 자리(최대 CD). 검진 실측: 자세의 1.06%가 벽을 뚫었다.
+//  ② 벽이 0.8m 안이라 0.5까지 못 물러나면: 예전엔 0.5에 섰다 = 벽 뒤(벽 너머 방이 통째로 보임) → 벽 앞 0.12까지만(캐릭터는 숨김)
+//  ③ 옆벽: 카메라 자리에서 좌우로 '근평면 반폭 + 8cm' 광선 — 닿으면 그만큼 반대로 비켜 선다(시선도 같이 비켜 화면이 돌지 않게).
+//     벽에 붙어 벽과 나란히 볼 때 근평면 모서리(반폭 0.33 > 몸 반지름 0.26)가 벽을 파고들던 것.
+const CAMP = { want: 0, d: 0, sh: 0, x0: 0, y: 0, z0: 0 };
+function camPose(hx, hy, hz, yaw, pch, CD, fov, aspect, dUse) {
+  const dx = Math.sin(yaw) * Math.cos(pch), dy = Math.sin(pch), dz = Math.cos(yaw) * Math.cos(pch);
+  const hit = camHit(hx, hy, hz, dx, dy, dz, CD);
+  let want = Math.min(CD, hit - 0.3);
+  if (want < 0.5) want = Math.max(0.1, Math.min(0.5, hit - 0.12));
+  const d = dUse ?? want, cx = hx + dx * d, cy = hy + dy * d, cz = hz + dz * d;
+  const hw = 0.3 * Math.tan(fov * Math.PI / 360) * aspect + 0.08, rx = Math.cos(yaw), rz = -Math.sin(yaw);
+  const r = camHit(cx, cy, cz, rx, 0, rz, hw), l = camHit(cx, cy, cz, -rx, 0, -rz, hw);
+  CAMP.sh = (r < hw && l < hw) ? (r - l) / 2 : r < hw ? r - hw : l < hw ? hw - l : 0;
+  CAMP.want = want; CAMP.d = d; CAMP.x0 = cx; CAMP.y = cy; CAMP.z0 = cz;
+  return CAMP;
+}
+let camSh = 0;
 function physics(dt) {
-  const sp = keys.has('ShiftLeft') ? 7.5 : 4.2;
+  const sp = (keys.has('ShiftLeft') ? 7.5 : 4.2) * CTRL.speed;
   let mx = 0, mz = 0;
   if (keys.has('KeyW') || keys.has('ArrowUp')) { mx -= Math.sin(camYaw); mz -= Math.cos(camYaw); }
   if (keys.has('KeyS') || keys.has('ArrowDown')) { mx += Math.sin(camYaw); mz += Math.cos(camYaw); }
   if (keys.has('KeyA') || keys.has('ArrowLeft')) { mx -= Math.cos(camYaw); mz += Math.sin(camYaw); }
   if (keys.has('KeyD') || keys.has('ArrowRight')) { mx += Math.cos(camYaw); mz -= Math.sin(camYaw); }
+  if (CTRL.frozen) mx = mz = 0;
   const L = Math.hypot(mx, mz);
   if (L > 0) {
     mx /= L; mz /= L;
@@ -249,7 +276,7 @@ function physics(dt) {
     if (!blockedAt(P.x, nz, P.y)) P.z = nz;
     P.yaw = Math.atan2(mx, mz);
   }
-  if (keys.has('Space') && P.ground) { P.vy = 5.2; P.ground = false; }
+  if (keys.has('Space') && P.ground && !CTRL.frozen) { P.vy = 5.2; P.ground = false; }
   P.vy -= 14 * dt;
   const y0 = P.y;
   P.y += P.vy * dt;
@@ -291,7 +318,7 @@ toastEl.className = 'chip';
 toastEl.style.cssText = 'left:50%;top:56px;transform:translateX(-50%);display:none;font-size:15px;padding:8px 16px';
 document.body.appendChild(toastEl);
 let toastT = 0;
-function toast(msg) { toastEl.textContent = msg; toastEl.style.display = ''; toastT = 2.2; }
+function toast(msg, sec = 2.2) { toastEl.textContent = msg; toastEl.style.display = ''; toastT = sec; }
 let hotNear = null, hotT = 0;
 function hotTick(dt) {
   if (toastT > 0 && (toastT -= dt) <= 0) toastEl.style.display = 'none';
@@ -299,6 +326,7 @@ function hotTick(dt) {
   hotT = 0;
   let best = null, bd = 1e9;
   if (!ACT.anim) for (const h of HOT) {
+    if (h.off) continue;   // MAP-API-1: 게임이 끈 지점
     const d = (P.x - h.x) ** 2 + (P.z - h.z) ** 2;
     if (d < h.r * h.r && d < bd && Math.abs(P.y - h.y) < 1.6) { bd = d; best = h; }
   }
@@ -340,6 +368,11 @@ const drumSnd = () => { tone(120, 0, 0.35, 'sine', 0.55, 45); tone(120, 0.3, 0.3
 const xyloSnd = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.4, 'triangle', 0.22));
 const songSnd = () => [392, 440, 494, 523, 494, 440, 392].forEach((f, i) => tone(f, i * 0.28, 0.32, 'triangle', 0.16));
 function act(h) {
+  if (typeof h.use === 'function') {   // MAP-API-1: 게임이 더한 지점(map.interact.add) — 예외는 잡아서 루프가 안 멈추게
+    try { h.use(h); } catch (e) { console.error(e); }
+    hotNear = null; if (h.once) h.off = true; MAP?.emit('interact', h); return;
+  }
+  MAP?.emit('interact', h);
   switch (h.kind) {
     case 'board': {
       h.stage = ((h.stage || 0) + 1) % 3;
@@ -551,6 +584,7 @@ function setTime(k) {
   clouds.material.color.setHex(CLOUD_TINT[k]);
   if (world.glassMesh) { const gmat = world.glassMesh.material; gmat.emissive.setHex(k === 'night' ? 0xb08a3e : k === 'sunset' ? 0x3a2a14 : 0x000000); gmat.opacity = k === 'night' ? 0.62 : 0.32; }
   timeBtn.textContent = t.label;
+  MAP?.emit('time', k);
   return k;
 }
 timeBtn.addEventListener('click', e => { e.stopPropagation(); setTime(ORDER[(ORDER.indexOf(timeKey) + 1) % 3]); });
@@ -559,12 +593,9 @@ setTime('day');
 // ---------- 현재 위치 표시 ----------
 const locBox = document.getElementById('loc');
 let locT = 0;
-function updateLoc() {
-  let name = '학교';
-  for (const z of world.zones) {
-    if (P.x > z.x0 && P.x < z.x1 && P.z > z.z0 && P.z < z.z1 && Math.abs(P.y - (z.y ?? 0)) < 1.2) { name = z.label; break; }
-  }
-  locBox.textContent = '📍 ' + name;
+function updateLoc() {   // MAP-API-1: 가장 좁은 구역(겹쳐도 순서에 안 흔들림)·높이 띠(계단 참도 '계단')
+  const Z = MAP ? MAP.zoneAt(P.x, P.y, P.z) : null;
+  locBox.textContent = '📍 ' + (Z ? Z.label : '학교');
 }
 
 // ---------- 디테일 층 거리 컬링(DETAIL-1) ----------
@@ -582,6 +613,12 @@ function detailTick(dt) {
   }
 }
 
+// ---------- 지도 API(MAP-API-1 · 09-24) — 게임이 받는 지도 계약. 정본 docs/map_api.md ----------
+MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL,
+  q: { groundAt, blockedAt, ceilAt, segHit: camHit },
+  pl: { P, ACT, CTRL, keys, getYaw: () => camYaw, setYaw: v => { camYaw = v; } },
+  ui: { toast, hint: hintEl }, hot: HOT }, NAV, makeMeta(SCHOOL));
+
 // ---------- 루프 + 예산 계측(헌법⑥) ----------
 const clock = new THREE.Clock();
 const fpsBox = document.getElementById('fps');
@@ -593,6 +630,7 @@ function loop() {
   step(dt);
   doorTick(dt);
   hotTick(dt);
+  MAP.tick(dt);   // 구역·트리거·경계 10Hz + 게임 tick(게임 몫 ms는 MAP.game.lastMs)
   simMs = Math.max(simMs, performance.now() - t0);
   skyTick(dt);
   detailTick(dt);
@@ -603,7 +641,7 @@ function loop() {
   if (acc > 1) {
     const fps = Math.round(n / acc);
     const dc = renderer.info.render.calls;
-    fpsBox.textContent = fps + ' fps · ' + dc + ' dc · sim ' + simMs.toFixed(2) + 'ms';
+    fpsBox.textContent = fps + ' fps · ' + dc + ' dc · sim ' + simMs.toFixed(2) + 'ms' + (MAP.game.current ? ' · game ' + MAP.game.lastMs.toFixed(2) + 'ms' : '');
     if (dc > 300) console.warn('예산 초과: drawCalls', dc);
     if (simMs > 1) console.warn('예산 초과: sim ms', simMs.toFixed(2));
     acc = 0; n = 0; simMs = 0;
@@ -620,71 +658,40 @@ addEventListener('resize', () => {
 // ---------- 도달성 검사 (전 실 자동 답사) ----------
 // 플레이어와 똑같은 규칙(blockedAt·groundAt·오름 0.55)으로 걸을 수 있는 칸을 전부 채워보고,
 // 등록된 모든 구역에 실제로 닿는지 판정한다. "문이 있다"가 아니라 "도달된다"가 기준.
+// MAP-API-1(09-24): 칸 채우기는 길격자(nav.js)가 한다 = 게임 길찾기와 같은 칸(단일 출처). 부를 때마다 새로 짓는다(캐시 갱신).
+//   격자 0.3m: 계단 단 깊이(0.72)보다 촘촘해야 한 칸 이동이 한 단을 넘지 않는다(0.5는 두 단을 건너뛰어 오탐)
+//   구역 판정 = MAP.inZone(반열린 구간 + 높이 띠) — 구역 안 칸이 하나라도 닿으면 통과
 function reach(opt = {}) {
-  // 격자 0.3m: 계단 단 깊이(0.72)보다 촘촘해야 한 칸 이동이 한 단을 넘지 않는다(0.5는 두 단을 건너뛰어 오탐)
-  const S = opt.step || 0.3, sx = opt.from ? opt.from[0] : 6, sz = opt.from ? opt.from[1] : 8;
-  const key = (ix, iz, y) => ix + ',' + iz + ',' + Math.round(y * 2);
-  const seen = new Set(), hits = new Map();
-  const start = { x: sx, z: sz, y: groundAt(sx, sz, 2) };
-  const q = [start];
-  seen.add(key(Math.round(sx/S), Math.round(sz/S), start.y));
-  const zs = world.zones;
-  const mark = (x, z, y) => {
-    for (let i = 0; i < zs.length; i++) {
-      const Z = zs[i];
-      if (x > Z.x0 && x < Z.x1 && z > Z.z0 && z < Z.z1 && Math.abs(y - (Z.y ?? 0)) < 1.2)
-        hits.set(i, (hits.get(i) || 0) + 1);
-    }
-  };
-  mark(start.x, start.z, start.y);
-  const DIR = [[1,0],[-1,0],[0,1],[0,-1]];
-  let pops = 0;
-  while (q.length && pops < 900000) {
-    const c = q.pop(); pops++;
-    for (const [dx, dz] of DIR) {
-      const nx = c.x + dx*S, nz = c.z + dz*S;
-      if (nx < -90 || nx > 64 || nz < -90 || nz > 66) continue;
-      // jump 모드: 점프 정점(+0.97)에서 막히는지·착지 가능한지 — 무엇을 밟고 어디까지 올라가는지 본다
-      const JY = opt.jump ? 0.97 : 0;
-      if (blockedAt(nx, nz, c.y + JY)) continue;
-      const g = groundAt(nx, nz, c.y + JY);                // 물리와 같은 규칙(발+0.55까지 — PHYS-2)
-      if (g > c.y + (opt.jump ? 1.5 : 0.55)) continue;   // 못 오르는 턱
-      const k = key(Math.round(nx/S), Math.round(nz/S), g);
-      if (seen.has(k)) continue;
-      seen.add(k);
-      mark(nx, nz, g);
-      q.push({ x: nx, z: nz, y: g });
-    }
+  const NV = MAP.navSync({ jump: !!opt.jump, fresh: true }), N = NV.raw, S = N.S;
+  const zs = world.zones, bad = [], ok = [];
+  if (!opt.jump) {   // 점프 모드는 옥상 검사 전용(점프 중엔 낮은 문틀도 막힘으로 쳐서 구역 결과가 의미 없다)
+    const hit = new Uint8Array(zs.length);
+    for (let i = 0; i < N.count; i++) { const x = N.X(i), z = N.Z(i), y = N.y[i]; for (let k = 0; k < zs.length; k++) if (!hit[k] && MAP.inZone(zs[k], x, y, z)) hit[k] = 1; }
+    zs.forEach((Z, k) => (hit[k] ? ok : bad).push(Z.label));
   }
-  const bad = [], ok = [];
-  // 점프 모드는 옥상 검사 전용(점프 중엔 낮은 문틀도 막힘으로 쳐서 구역 결과가 의미 없다)
-  if (!opt.jump) zs.forEach((Z, i) => (hits.get(i) ? ok : bad).push(Z.label));
-  // 옥상 도달 검사(사용자 07-30 "어디를 밟고 옥상에 올라가는 버그"): 2층(서관 x-40~-12, z-50~-38) 밖에서 3m 넘게 올라간 칸
-  let roof = 0; const roofAt = [];
-  for (const k of seen) {
-    const [ix, iz, y2] = k.split(',').map(Number), x = ix * S, z = iz * S;
-    const U = world.UPPER;   // 2층(서관)만 3m 위가 정상
-    if (y2 / 2 > 3.0 && !(x > U[0] - 0.2 && x < U[1] + 0.2 && z > U[2] - 0.2 && z < U[3] + 0.2)) { roof++; if (roofAt.length < 5) roofAt.push([+x.toFixed(1), +z.toFixed(1), y2 / 2]); }
+  // 옥상 도달 검사(사용자 07-30 "어디를 밟고 옥상에 올라가는 버그"): 2층(서관) 밖에서 3m 넘게 올라간 칸
+  let roof = 0; const roofAt = [], U = world.UPPER;   // 2층(서관)만 3m 위가 정상
+  for (let i = 0; i < N.count; i++) {
+    const y = Math.round(N.y[i] * 2) / 2, x = N.X(i), z = N.Z(i);
+    if (y > 3.0 && !(x > U[0] - 0.2 && x < U[1] + 0.2 && z > U[2] - 0.2 && z < U[3] + 0.2)) { roof++; if (roofAt.length < 5) roofAt.push([+x.toFixed(1), +z.toFixed(1), y]); }
   }
   if (roof) bad.push('옥상 도달 ' + roof + '칸 ' + JSON.stringify(roofAt));
   if (opt.probe) {                       // 진단: 지정 구간에서 도달한 최고 지점
     const [px0, px1, pz0, pz1] = opt.probe;
     let top = -99, at = null;
-    for (const k of seen) {
-      const [ix, iz, y2] = k.split(',').map(Number);
-      const x = ix*S, z = iz*S, y = y2/2;
-      if (x >= px0 && x <= px1 && z >= pz0 && z <= pz1 && y > top) { top = y; at = [x, z, y]; }
-    }
+    for (let i = 0; i < N.count; i++) { const x = N.X(i), z = N.Z(i), y = Math.round(N.y[i] * 2) / 2; if (x >= px0 && x <= px1 && z >= pz0 && z <= pz1 && y > top) { top = y; at = [x, z, y]; } }
     console.log('probe 최고 도달: ' + JSON.stringify(at));
-    return { cells: seen.size, ok, bad, probe: at };
+    return { cells: N.count, ok, bad, probe: at };
   }
   if (bad.length) console.error('🚫 도달 불가 ' + bad.length + '곳: ' + bad.join(', '));
-  else console.log(opt.jump ? '✅ 점프로 옥상 도달 0' : '✅ 도달성: 전 구역 ' + ok.length + '곳 통과 (칸 ' + seen.size + ')');
-  return { cells: seen.size, ok, bad };
+  else console.log(opt.jump ? '✅ 점프로 옥상 도달 0' : '✅ 도달성: 전 구역 ' + ok.length + '곳 통과 (칸 ' + N.count + ')');
+  const res = { cells: N.count, ok, bad }; if (opt.keep) res.nav = NV; return res;
 }
 
 // ?check=1 이면 로드 직후 자동 답사(검증용 URL — 학생 접속엔 부담 주지 않도록 기본 꺼둠)
-if (location.search.includes('check=1')) setTimeout(() => { reach(); reach({ jump: true }); doorCheck(); }, 60);   // 두 번째 = 점프로 옥상에 오르는지
+//   MAP-API-1: + 지도 계약(구역표·출발점·지점·상호작용 도달·갇힘 칸) + 맵 건강 검진 빠른 판(health.js — ?check=1/?health=1일 때만 불러옴)
+if (location.search.includes('check=1')) setTimeout(() => { reach(); reach({ jump: true }); doorCheck(); MAP.check(); window.SD2.health({ quick: true }).catch(e => console.error('🩺 검진 실패', e)); }, 60);   // 두 번째 = 점프로 옥상에 오르는지
+else if (location.search.includes('health=1')) setTimeout(() => window.SD2.health({ img: true }).then(r => console.log('🩺', JSON.stringify(r.counts))), 60);
 
 // ---------- 물리 검사 (PHYS-1 · 09-23) ----------
 // passCheck: 보이는 부재 속으로 몸 중심이 들어가는가(= 뚫고 지나감). 몸 높이 띠만·플레이어 규칙(0.26 부풀림·오름 0.55) 그대로
@@ -727,7 +734,12 @@ window.SD2 = {
   tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (world.baseAt(x, z) + 0.01); P.vy = 0; },
   yaw(v) { camYaw = v; },
   pos: () => [P.x.toFixed(1), P.y.toFixed(1), P.z.toFixed(1)],
-  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); hotTick(1/60); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
+  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); hotTick(1/60); MAP.tick(1/60); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
   doors: () => DOORS.length, doorCheck,
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
+  // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)
+  map: MAP, phys: { groundAt, blockedAt, ceilAt, camHit }, ACT, CTRL, camPose: (...a) => ({ ...camPose(...a) }),
+  health: opt => import('./health.js?v=1').then(m => m.runHealth(window.SD2, opt || {})),
 };
+// 게임 로더(MAP-API-1): ?game=이름 → v2/games/registry.js 허용 목록 → export default start(map) (사진 대조 모드에선 안 켠다)
+{ const GAME = new URLSearchParams(location.search).get('game'); if (GAME && !SHOT) MAP.game.load(GAME, Object.fromEntries(new URLSearchParams(location.search))); }
