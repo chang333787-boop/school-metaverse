@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=84';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=89';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=3';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 
 const canvas = document.getElementById('scene');
@@ -418,14 +418,15 @@ function updateLoc() {
 // ---------- 디테일 층 거리 컬링(DETAIL-1) ----------
 // 작은 부재(책상 다리·눈·손 등)는 멀면 청크째 숨긴다 — 원경에서 픽셀보다 가는 부재가 반짝이는 것을 막고, 그리는 양도 준다.
 // 16m 청크 중심 기준 + 반대각선(11.3m) 여유. 0.2초마다 한 번.
-const DETAIL_FAR = 55;
+const DETAIL_FAR = 55, DETAIL_IN = 20, DETAIL_IN_IN = 30;   // INTERIOR-CULL: 실내 청크 = 카메라가 밖이면 20m·안이면 30m(+반대각선) — 벽 너머·창 너머 책상·사람을 멀리서 그리지 않는다
 let detailT = 1;
 function detailTick(dt) {
   detailT += dt; if (detailT < 0.2) return; detailT = 0;
-  const R = (DETAIL_FAR + 11.3) ** 2;
+  const cp = camera.position, camIn = ceilAt(cp.x, cp.z, cp.y - 0.3, cp.y + 4.5) !== null;
+  const R = (DETAIL_FAR + 11.3) ** 2, RI = ((camIn ? DETAIL_IN_IN : DETAIL_IN) + 11.3) ** 2;
   for (const d of world.details) {
-    const dx = camera.position.x - d.cx, dz = camera.position.z - d.cz;
-    d.mesh.visible = dx * dx + dz * dz < R;
+    const dx = cp.x - d.cx, dz = cp.z - d.cz;
+    d.mesh.visible = dx * dx + dz * dz < (d.inside ? RI : R);
   }
 }
 
