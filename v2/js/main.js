@@ -18,7 +18,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xcfe9f8);
 scene.fog = new THREE.Fog(0xcfe9f8, 80, 260);
 
-const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.4, 320);
+const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 320);   // near 0.2 — 1인칭에서 가까운 벽이 잘리지 않게
 const hemi = new THREE.HemisphereLight(0xc9dcf0, 0xb08a5e, 1.4);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff0cf, 3.1);
@@ -118,7 +118,8 @@ function camHit(hx, hy, hz, dx, dy, dz, maxD) {
 const keys = new Set();
 addEventListener('keydown', e => keys.add(e.code));
 addEventListener('keyup', e => keys.delete(e.code));
-let camYaw = 0, camPitch = 0.3;
+let camYaw = 0, camPitch = 0.3, camFirst = false;
+addEventListener('keydown', e => { if (e.code === 'KeyV') camFirst = !camFirst; });   // 1인칭 ↔ 3인칭
 const CAM_D = 6.3;
 let camD = CAM_D;
 canvas.addEventListener('click', () => canvas.requestPointerLock());
@@ -144,12 +145,25 @@ function step(dt) {
   }
   pg.position.set(P.x, P.y - (ACT.sit ? 0.42 : 0), P.z);
   pg.rotation.y = P.yaw;
-  const hx = P.x, hy = P.y + 1.3, hz = P.z;
-  const dx = Math.sin(camYaw) * Math.cos(camPitch), dy = Math.sin(camPitch), dz = Math.cos(camYaw) * Math.cos(camPitch);
-  const want = Math.max(0.5, Math.min(CAM_D, camHit(hx, hy, hz, dx, dy, dz, CAM_D) - 0.3));
-  camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);   // 당김은 즉시·복귀는 이징(지터 방지)
-  camera.position.set(hx + dx * camD, hy + dy * camD, hz + dz * camD);
-  camera.lookAt(hx, hy, hz);
+  // CAM-2(09-24): 사용자 "복도가 좁은 것 같다" — 실측 복도는 2.5m(게임 2.7m)로 좁지 않았다. 원인은 카메라:
+  //  6.3m 뒤·17° 위에서 내려다보면 실내에선 천장(3.24m) 밑에 붙어 위에서 내려다보고, 화각 48°는 휴대폰 광각보다 훨씬 좁다.
+  //  → 실내(머리 위에 천장)에선 가깝고(3.3m) 낮게(피치 ≤0.2)·화각 60°, 밖은 6.3m·52°. V = 1인칭(눈높이 1.5m) 전환.
+  const indoor = ceilAt(P.x, P.z, P.y + 1.6, P.y + 5.5) !== null;
+  const tFov = camFirst ? 66 : indoor ? 60 : 52;
+  if (Math.abs(camera.fov - tFov) > 0.05) { camera.fov += (tFov - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); }
+  pg.visible = !camFirst;
+  if (camFirst) {
+    const pitch = camPitch - 0.3, ey = P.y + 1.5 - (ACT.sit ? 0.42 : 0);
+    camera.position.set(P.x, ey, P.z);
+    camera.lookAt(P.x - Math.sin(camYaw) * Math.cos(pitch), ey - Math.sin(pitch), P.z - Math.cos(camYaw) * Math.cos(pitch));
+  } else {
+    const hx = P.x, hy = P.y + 1.3, hz = P.z, pch = indoor ? Math.min(camPitch, 0.2) : camPitch, CD = indoor ? 3.3 : CAM_D;
+    const dx = Math.sin(camYaw) * Math.cos(pch), dy = Math.sin(pch), dz = Math.cos(camYaw) * Math.cos(pch);
+    const want = Math.max(0.5, Math.min(CD, camHit(hx, hy, hz, dx, dy, dz, CD) - 0.3));
+    camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);   // 당김은 즉시·복귀는 이징(지터 방지)
+    camera.position.set(hx + dx * camD, hy + dy * camD, hz + dz * camD);
+    camera.lookAt(hx, hy, hz);
+  }
   if (SHOT) applyShot();
 }
 function physics(dt) {
