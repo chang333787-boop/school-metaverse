@@ -1693,7 +1693,7 @@ export function buildWorld(scene) {
     patQuad('gmat', ax1 + 0.35, ax1 + 1.95, SG - 1.3, SG + 1.1, GYF + 0.012, false, 0xd8a8a4);   // 큰 붉은회색 매트(영상 g_103.5)
     patQuad('gmat', ax1 + 0.35, ax1 + 1.15, DN - 0.6, DN + 0.6, GYF + 0.012);                      // 짙은 회색 매트(북 양문 앞)
     patQuad('tactZ', LX1 - 0.34, LX1 - 0.04, LZ0 + LW + 0.1, SG - 1.4, GYF + 0.012);              // 점자 띠(계단 위 가장자리)
-    patQuad('tactZ', LX1 + 0.78, LX1 + 1.08, LZ0 + LW + 0.1, TR3.westZ - 0.45, YARD + 0.022);      // 노랑 점자 줄(계단 아래 → 옆길 따라 운동장 계단 위까지 — 영상 g_094.5~102)
+    patQuad('tactZ', LX1 + 0.78, LX1 + 1.08, LZ0 + LW + 0.1, LZ1, YARD + 0.022);                    // 노랑 점자 줄(현관 계단 옆 — 참 북끝~경사로 북끝까지만 · 영상 g_097.5~102. 그 남쪽 옆길은 맨 보도블록 — g_091.5~096)
     const EZ0 = az0 - 0.14, EZ1 = az1 + 0.14;                                                        // 차양: 동벽 전체(북·남 벽 바깥 면에서 1cm 안쪽)
     addBox(LX1 - ax1 + 0.05, 0.2, EZ1 - EZ0, 0xf1ead8, (ax1 + 0.15 + LX1 + 0.2)/2, GYF + 2.95, (EZ0 + EZ1)/2);
     dBox(0.08, 0.28, EZ1 - EZ0 + 0.16, YEL, LX1 + 0.24, GYF + 2.91, (EZ0 + EZ1)/2, { far: true });
@@ -2026,11 +2026,12 @@ export function buildWorld(scene) {
     // 울타리 1.5 m 밝은 연두(영상 g_075~088) — 동쪽은 한 줄, 출입문 = 북쪽 울타리 동끝 1.2 m(계단 앞 보도블록 쪽으로 열린 문짝)
     const GT0 = KP.x[1] - 1.5, GT1 = KP.x[1] - 0.3;
     meshFence(KP.x[0], KP.z[0], GT0, KP.z[0], Y, 1.5, FNC, FNP);
-    meshFence(GT1, KP.z[0], KP.x[1], KP.z[0], Y, 1.5, FNC, FNP);
+    meshFence(GT1 - 0.01, KP.z[0], KP.x[1], KP.z[0], Y, 1.5, FNC, FNP, false);   // 경첩 쪽 0.3 토막(0.3 딱이면 길이 0 판정에 걸려 안 그려짐 → 1cm 늘림 · 충돌은 문짝·동쪽 울타리가 맡음)
     meshFence(KP.x[0], KP.z[1], KP.x[1], KP.z[1], Y, 1.5, FNC, FNP);
     meshFence(KP.x[0], KP.z[0], KP.x[0], KP.z[1], Y, 1.5, FNC, FNP);
     meshFence(KP.x[1], KP.z[0], KP.x[1], KP.z[1], Y, 1.5, FNC, FNP);
-    meshFence(GT1, KP.z[0] - 0.05, GT1 - 0.2, KP.z[0] - 1.15, Y, 1.3, FNC, FNP);          // 열어 둔 문짝(바깥으로)
+    meshFence(GT1, KP.z[0] - 0.05, GT1 + 0.1, KP.z[0] - 1.15, Y, 1.3, FNC, FNP, false);   // 열어 둔 문짝(바깥으로 활짝 — 문 폭을 가리지 않게 경첩 동쪽으로)
+    colliders.push({ x0: GT1 - 0.02, x1: GT1 + 0.22, y0: Y, y1: Y + 3, z0: KP.z[0] - 1.27, z1: KP.z[0] + 0.12, nc: true });   // 문짝 충돌 = 경첩(GT1) 동쪽만 → 지나갈 폭 = 서쪽 울타리 끝~GT1 전부(몸 중심 띠 0.54 m — 4cm 훑기 x -42.62~-42.10 전 z)
     dBox(0.04, 0.7, 0.9, 0x2f62b8, KP.x[1] + 0.08, Y + 0.6, KP.z[0] + 1.6);                // 파랑 게시판(동쪽 울타리 — 영상 g_084)
     dBox(0.03, 0.5, 0.7, 0xf2f0ea, KP.x[1] + 0.115, Y + 0.72, KP.z[0] + 1.6);
     dCyl(0.05, 0.05, 1.7, 0x9aa0a6, KP.x[1] + 0.35, Y, KP.z[1] - 0.35, { seg: 6 }); post(KP.x[1] + 0.35, KP.z[1] - 0.35, Y, Y + 1.7, 0.06);   // 동남 모서리 둥근 머리 안내판(영상 g_075·g_076.5)
