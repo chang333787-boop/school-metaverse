@@ -3010,14 +3010,14 @@ export function buildWorld(scene) {
     const arcPts = (rx, rz, t0, t1, n, dx = 0, dz = 0) => { const P = []; for (let k = 0; k <= n; k++) { const t = t0 + (t1 - t0) * k / n; P.push([XC + dx + rx * Math.cos(t), ZC + dz + rz * Math.sin(t)]); } return P; };
 
     // ---- 바닥: 크림 보도(북 3m → 남 2.5m) · 굽이 · 남쪽 길 ----
-    patQuad('pave', PX0, PX1, ZR, ZS, Y + 0.02, false, 0xf6f3ee);   // 북 구간은 앞뜰 보도블록 무늬(새 무늬 메시가 본관 동끝 교실 시야에 들면 드로우콜 +1 — 성능 래칫)
+    patQuad('paveE', PX0, PX1, ZR, ZS, Y + 0.02);   // 북 구간도 크림 보도(영상 f_196~210 — 앞뜰 노란 보도와 다름) · paveE 메시는 남 구간 때문에 3학년·체육관 방송실 시점에 이미 그려져 콜 최댓값 그대로
     floor4('paveE', [[PX0, ZS], [PX1, ZS], [PX1S, ZS + 2], [PX0, ZS + 2]], Y + 0.02);
     patQuad('paveE', PX0, PX1S, ZS + 2, ZC, Y + 0.02);
     { const n = 10; for (let k = 0; k < n; k++) { const a = k / n * Math.PI / 2, b = (k + 1) / n * Math.PI / 2;
       floor4('paveE', [[XC + RI * Math.cos(a), ZC + RI * Math.sin(a)], [XC + ROX * Math.cos(a), ZC + ROZ * Math.sin(a)], [XC + ROX * Math.cos(b), ZC + ROZ * Math.sin(b)], [XC + RI * Math.cos(b), ZC + RI * Math.sin(b)]], Y + 0.02); } }
     patQuad('paveE', SX0, XC, SZ0, SZ1, Y + 0.02);
     // 경사로 발치 앞 포장 참(영상 f_192 — 매트 서쪽 넓은 포장 + '주차금지' 콘) · 가로 배수 덮개
-    patQuad('pave', EF - 1.3, PX0, TR3.fieldZ + 0.2, ZR, Y + 0.02, false, 0xf6f3ee);
+    patQuad('paveE', EF - 1.3, PX0, TR3.fieldZ + 0.2, ZR, Y + 0.02);
     dBoxE(PX1 - EF + 1.3, 0.03, 0.3, 0x5b5e62, (EF - 1.3 + PX1) / 2, Y, ZR + 0.15, { flat: true });
     // 서쪽 가 화강석 경계석(철망 발치 — f_198·f_210) · 굽이 안쪽 가 경계석(쉼터와 보도 사이 — f_233) · 남쪽 길 북쪽 가 검은 배수 덮개(운동장 쪽 — f_240·f_243)
     [[ZR + 0.3, -2.01], [-2.01, ZS], [ZS, 33.99], [33.99, ZC]].forEach(([a, b]) => dBoxE(0.12, 0.04, b - a, 0xd4cdb9, PX0 + 0.06, Y, (a + b) / 2));   // 높이 4cm(발 묻힘 띠 0.15 아래) · 청크마다 한 토막
@@ -3070,13 +3070,13 @@ export function buildWorld(scene) {
       dRodE(lx9, Y + 5.2, lz9, lx9 - 0.7, Y + 5.35, lz9, 0.03, 0x9aa0a6, F9); dBoxE(0.45, 0.07, 0.18, 0xd9dde0, lx9 - 0.85, Y + 5.3, lz9, F9); lamp(0.36, 0.03, 0.12, lx9 - 0.85, Y + 5.27, lz9); }
     { const qx = PX1 + 1.2, qz = -1.0;   // 작은 짙은 안내판(f_201 — 글자는 읽히지 않아 넣지 않음)
       dBoxE(0.06, 1.2, 0.06, 0x3a3d44, qx, Y, qz); dBoxE(0.04, 0.35, 0.5, 0x3a3d44, qx, Y + 1.2, qz); post(qx, qz, Y, Y + 1.6, 0.06); }
-    { const ux = 57.8, uz = 15.5;   // 콘크리트 전봇대(f_201·f_210 — 흰 무늬 울타리 바로 안쪽) + 완목 + 변압기
+    { const ux = 49.75, uz = 16.4;   // 콘크리트 전봇대(f_210·f_212 — 흰 울타리 바로 바깥) + 완목 + 변압기
       post(ux, uz, Y, Y + 11, 0.2); dCylE(0.13, 0.19, 10.5, 0xb8b4aa, ux, Y, uz, { far: true, seg: 8 });
       dBoxE(1.8, 0.12, 0.12, 0x8a8f92, ux, Y + 9.6, uz, F9); dBoxE(1.4, 0.1, 0.1, 0x8a8f92, ux, Y + 8.9, uz, F9);
       [-0.33, 0.33].forEach(o => dCylE(0.22, 0.22, 0.75, 0x9aa0a6, ux, Y + 7.4, uz + o, { far: true, seg: 8 })); }
 
     // ---- 남 구간 동쪽: 세운 통나무 경계 + 철사 울타리 학급 화단 · 개수대 자리 트임 ----
-    const KZ0 = SCHOOL.sink[1] - 1.8, KZ1 = SCHOOL.sink[1] + 1.8, LX = PX1S + 0.07, WX = PX1S + 0.7;
+    const KZ0 = SCHOOL.sink[1] - 1.8, KZ1 = SCHOOL.sink[1] + 1.8, LX = PX1S + 0.07, WX = PX1S + 0.7, EWX = 49.0;   // EWX = 화단 동쪽 흰 울타리(아래)
     logLine([[PX1 + 0.07, ZS, -1], [LX, ZS + 2, -1], [LX, KZ0, -1]]);
     logLine([[LX, KZ1, -1], [LX, ZC, -1]]);
     wireLine([[PX1 + 0.5, ZS + 0.3], [WX, ZS + 2.2], [WX, KZ0 - 0.2]]); wireLine([[WX, KZ1 + 0.2], [WX, ZC - 0.2]]);
@@ -3088,10 +3088,14 @@ export function buildWorld(scene) {
     sign('4학년', PX1S + 0.5, Y + 0.45, KZ0 - 0.35, -Math.PI / 2, 0.1, { bg: '#2a2c30', fg: '#ffffff' }); dBoxE(0.03, 0.4, 0.03, 0x2a2c30, PX1S + 0.53, Y, KZ0 - 0.35);   // 학급 화단 팻말(f_225 — 글자 읽힘)
     [[PX1S + 4.2, 24.5, 1.1]].forEach(([x9, z9, s9]) => tree(x9, z9, s9, true));
     hedge(PX1S + 2.2, 19.8, 1.4, 0.9, 1.3, 0x5f8a3e);
+    // 화단 바닥 = 무성한 짙은 풀(영상 f_212~225 — 무릎 높이 풀·여러해살이가 빽빽함: 깎은 잔디가 아님) + 키 큰 풀 덩어리(흰 산형 꽃 섞임)
+    patQuad('grass', LX + 0.08, EWX - 0.15, ZS + 2, ZC, Y + 0.005, false, 0x8ea76f);
+    plants(WX + 0.6, ZS + 2.6, EWX - 0.6, KZ0 - 0.6, 16, [0xf4f4ee, 0xe9e2f0], 0.5);
+    plants(WX + 0.9, KZ1 + 1.8, EWX - 0.6, ZC - 0.6, 6, null, 0.5);
 
     // ---- 개수대(f_222~225): 콘크리트 판 + 스테인리스 기둥 여섯 + 보라 반투명 곡선 지붕 · 등판 + 물통 + 수도꼭지 다섯(서쪽 = 보도를 봄) + 검은 호스 ----
     { const [kx9, kz9] = SCHOOL.sink, SS = 0xc8cdd2;
-      dBoxE(45.85 - LX - 0.07, 0.05, KZ1 - KZ0, 0xa5a197, (LX + 0.07 + 45.85) / 2, Y, kz9, { collide: true });
+      dBoxE(45.85 - LX - 0.07, 0.05, KZ1 - KZ0, 0xc4c0b5, (LX + 0.07 + 45.85) / 2, Y, kz9, { collide: true });   // 밝은 콘크리트(지붕 그늘에서 아스팔트처럼 검게 보이던 것)
       [PX1S + 0.35, 45.55].forEach(x9 => [kz9 - 1.6, kz9, kz9 + 1.6].forEach(z9 => { dRodE(x9, Y + 0.05, z9, x9, Y + 2.45, z9, 0.045, SS, F9); post(x9, z9, Y, Y + 2.4, 0.06); }));
       const RW = (45.55 - PX1S - 0.35) / 2 + 0.12, xm = (PX1S + 0.35 + 45.55) / 2;
       [[1, 1], [-1, 0.985]].forEach(([sz9, r9]) => { const g = new THREE.CylinderGeometry(RW * r9, RW * r9, 3.6, 12, 1, true, 0, Math.PI).rotateZ(Math.PI / 2).rotateY(Math.PI / 2);
@@ -3110,7 +3114,7 @@ export function buildWorld(scene) {
     // ---- 철망 남끝 짙은 향나무(f_225·f_228 — 원기둥 모양 · 발치 담쟁이) ----
     { const jx = EF - 0.4, jz = FZ1 + 1.3;
       colliders.push({ x0: jx - 1.0, x1: jx + 1.0, y0: Y, y1: Y + 12, z0: jz - 1.0, z1: jz + 1.0 });
-      [[1.25, 1.2, 0x2f4a33], [1.15, 2.4, 0x35553a], [0.95, 3.5, 0x2f4a33], [0.65, 4.5, 0x3a5c3e]].forEach(([r, h, c], k) => dBlobE(r, 0.9, r, c, jx + (k % 2) * 0.1, Y + h, jz, { far: true, chunky: true, jitter: 0.12, ry: k }));
+      [[1.25, 1.2, 0x2f4a33], [1.6, 2.55, 0x35553a], [1.45, 3.8, 0x2f4a33], [1.1, 5.0, 0x3a5c3e], [0.7, 6.0, 0x35553a]].forEach(([r, h, c], k) => dBlobE(r, 0.95, r, c, jx + (k % 2) * 0.1, Y + h, jz, { far: true, chunky: true, jitter: 0.12, ry: k }));   // 영상 f_225·f_228: 폭 3m·키 6.5m 빽빽한 원기둥 — 몸 높이(1.5) 아래 층은 막이 크기, 위층만 넓게
       dBlobE(1.2, 0.11, 1.15, 0x3f6a3a, jx + 0.1, Y, jz + 0.1, { chunky: true, jitter: 0.15 }); }
 
     // ---- 굽이 바깥: 통나무 경계 + 철사 울타리 꽃 화단 + 다듬은 큰 생울타리(f_228·f_233) ----
@@ -3122,7 +3126,7 @@ export function buildWorld(scene) {
         dBlobE(0.3, 0.32, 0.3, 0x5f8f45, x, Y + 0.25, z, { chunky: true, jitter: 0.15 }); [0xd9485a, 0xf2b632, 0xe06a8a].forEach((c, j) => dBlobE(0.08, 0.07, 0.08, c, x + (j - 1) * 0.15, Y + 0.55, z + (j % 2) * 0.1, { chunky: true })); });
       for (let z9 = KZ1 + 0.9, k = 0; z9 < ZC + 1.6; z9 += 1.25, k++) hedge(PX1S + 2.15 + (z9 > ZC ? (z9 - ZC) * 0.35 : 0), z9, 1.7, 1.35 + (k % 2) * 0.1, 1.7, [0x4f7a3c, 0x557f40][k % 2]);   // 개수대 남쪽 길게 다듬은 생울타리(f_225·f_228 왼쪽)
       [[PX1S + 1.6, ZC + 3.4, 2.8, 1.8, 2.4], [PX1S - 1.4, SZ1 + 2.3, 2.6, 1.6, 2.2]].forEach(([x9, z9, w, h, d], k) => hedge(x9, z9, w, h, d, [0x4f7a3c, 0x557f40, 0x4a7338][k % 3]));
-      [[PX1S + 5.0, 41.0, 1.2], [PX1S + 6.8, 36.0, 1.15]].forEach(([x9, z9, s9]) => tree(x9, z9, s9, true)); }
+      [[PX1S + 5.0, 41.0, 1.2], [PX1S + 5.3, 36.0, 1.15]].forEach(([x9, z9, s9]) => tree(x9, z9, s9, true)); }   // 흰 울타리(x 49) 안쪽
 
     // ---- 굽이 안쪽: 큰 나무 아래 포장 쉼터(f_225·f_233 — 돌 벤치·나무 조각·공원 벤치·평상, 안쪽 가 마리골드 화단) ----
     { const QX0 = 31.0, QZ0 = 30.6;
@@ -3188,6 +3192,36 @@ export function buildWorld(scene) {
     for (let x9 = SCHOOL.forestPlay.x[0] + 0.3; x9 < XC - 0.3; x9 += 0.8 + R8() * 0.3) { const SW8 = SCHOOL.forestPlay.x[0] + 2.9, SM8 = SCHOOL.forestPlay.x[0] + 5.1; if (Math.abs(x9 - SW8) < 0.95 || Math.abs(x9 - SM8) < 0.95) continue;   // 데크 계단 앞은 비움(숲놀이터 블록 SW9·SM9)
       const s = 0.3 + R8() * 0.15; dBlobE(s * 1.2, s * 0.7, s, pk([0xb8b6ae, 0xa9a79f, 0xcac8c0]), x9, Y + s * 0.2, SZ1 + 0.4, { chunky: true, jitter: 0.18, ry: x9 });
       colliders.push(noStand({ x0: x9 - s * 1.05, x1: x9 + s * 1.05, y0: Y, y1: Y + s * 0.85, z0: SZ1 + 0.4 - s * 0.9, z1: SZ1 + 0.4 + s * 0.9 })); }   // 막이 = 돌 겉모양 크기(발 묻힘 0)
+    // ---- 화단 동쪽 흰 울타리(영상 f_205~f_228 왼쪽 — 화단 뒤 흰 쇠 울타리 + 바로 바깥 전봇대 · 그 너머 밭) ----
+    //   북 = 학교 둘레 x 60(f_201 왼쪽 먼 흰 울타리) 에서 사선으로 들어와 z 14부터 x 49로 남쪽 둘레(정문 동쪽 사선)까지. 바깥 x 49~60은 밭(들어가지 못함)
+    { const EZ1 = 45 + (60 - EWX) / (60 - 21.1) * (55.5 - 45) - 0.08;   // 정문 동쪽 사선 둘레(SOUTH-2: (60,45)→(21.1,55.5))와 만나는 곳
+      const wf = (x0, z0, x1, z1, e0) => { const L = Math.hypot(x1 - x0, z1 - z0), H = 1.3, P = [[x0, Y, z0], [x1, Y, z1], [x1, Y + H, z1], [x0, Y + H, z0]], U = [[0, 0], [L / 0.6, 0], [L / 0.6, H / 0.6], [0, H / 0.6]];   // 흰 쇠 울타리 — 그물판은 울타리 메시(fencePos), 기둥·윗대는 가까이 층(먼 시점 삼각형 — meshFence 기둥은 먼 층)
+        _c.set(0xf6f6f2); for (const i of [0, 1, 2, 0, 2, 3]) { fencePos.push(...P[i]); fenceUV.push(...U[i]); fenceCol.push(_c.r, _c.g, _c.b); }
+        const n = Math.max(1, Math.round(L / 2.5)), at = z => ({ at: [40, z < 12 ? 8 : z < 34 ? 20 : 36] });
+        for (let i = e0 ? 0 : 1; i <= n; i++) { const px = x0 + (x1 - x0) * i / n, pz = z0 + (z1 - z0) * i / n; dBox(0.08, H - 0.19, 0.08, 0xeeeeea, px, Y + 0.25, pz, at(pz)); }   // 콘크리트 턱(0.25) 위에 섬
+        for (let k = 0; k < n; k++) { const za = z0 + (z1 - z0) * k / n; dRod(x0 + (x1 - x0) * k / n, Y + H, za, x0 + (x1 - x0) * (k + 1) / n, Y + H, z0 + (z1 - z0) * (k + 1) / n, 0.025, 0xeeeeea, at(za)); } };
+      wf(59.85, 8.0, EWX, 14.0, true);
+      { const n = Math.ceil(Math.hypot(59.85 - EWX, 6) / 0.3); for (let i = 0; i < n; i++) { const ax = 59.85 + (EWX - 59.85) * i / n, az = 8 + 6 * i / n, bx = 59.85 + (EWX - 59.85) * (i + 1) / n, bz = 8 + 6 * (i + 1) / n;
+        colliders.push({ x0: Math.min(ax, bx) - 0.06, x1: Math.max(ax, bx) + 0.06, y0: Y, y1: Y + 4.5, z0: Math.min(az, bz) - 0.06, z1: Math.max(az, bz) + 0.06, nc: true }); } }   // 사선 = 0.3m 토막 막이(보이지 않는 벽 0)
+      wf(EWX, 14.0, EWX, EZ1, false); colliders.push({ x0: EWX - 0.12, x1: EWX + 0.12, y0: Y, y1: Y + 4.5, z0: 14.0, z1: EZ1 + 0.12, nc: true });
+      slab(59.85, 8.0, EWX, 14.0, 0.22, 0.25, 0xbdb9b0, Y, { far: true }); dBox(0.22, 0.25, EZ1 - 14.0, 0xbdb9b0, EWX, Y, (14.0 + EZ1) / 2, { far: true });   // 콘크리트 턱
+      patQuad('grass', EWX + 0.15, 59.85, 14.2, 45.0, Y + 0.004, false, 0xc9d8a8); }   // 울타리 너머 밭(평평한 풀 — 영상 f_212)
+    // ---- 본관 동쪽 끝 둘레(위성 E-1: 회색 맨바닥 띠 x 56.5~62 → 잔디) · 동쪽 뾰족한 큰 침엽수(f_264 조명탑 왼쪽) · 본관 옥상 앞쪽 흰 실외기 넷(위성) ----
+    { const NC = FY.walkN - 0.12, SC = FY.walkS + 0.12;
+      patQuad('grass', WX1 + 3, 62, fz1 - 10, NC, YARD + 0.012, false, 0xe9f2df);          // 앞뜰 '본관 동쪽 끝 잔디'(x ~WX1+3)에 맞대기
+      patQuad('grass', WX1, 62, NC, SC, YARD + 0.012, false, 0xe9f2df);                    // 산책로 동끝 너머
+      patQuad('grass', 60, 62, SC, TERR_Z, YARD + 0.012, false, 0xe2eed6);                  // 남 화단(x ~60) 너머 둘레 밖
+      pine(56.8, -27.5, 1.8);
+      // 동쪽 둘레 밖 흰 연석 찻길(위성 E: x 58.7~63.5 · z 12~45 남북 → (60,12)에서 북동으로 꺾임 · 남쪽 끝 = 남동 시멘트 마을길) — 둘레 울타리(x 60) 바깥으로 1.5m 비킴
+      floor4('asph', [[60.5, 12], [65, 12], [65, 46.4], [60.5, 46.4]], Y + 0.01);
+      floor4('asph', [[60.5, 12], [74.5, -1.67], [77.5, 1.67], [65, 12]], Y + 0.01);
+      floor4('asph', [[74.5, -1.67], [90.6, -14.75], [93.4, -11.25], [77.5, 1.67]], Y + 0.01);
+      slab(60.45, 12.3, 60.45, 46.3, 0.15, 0.12, 0xe8e8e2, Y, { far: true });   // 흰 연석
+      // '주차금지' 콘 하나 더(f_243 — 남쪽 길 서끝 운동장 쪽 · 버스 쪽)
+      { const cx9 = 17.9, cz9 = 40.7; dCyl(0.08, 0.26, 0.6, 0xe0602f, cx9, Y + 0.02, cz9, { seg: 10, at: [40, 36] }); dCyl(0.05, 0.05, 0.18, 0xe0602f, cx9, Y + 0.62, cz9, { seg: 8, at: [40, 36] });
+        dCyl(0.2, 0.2, 0.04, 0xe0602f, cx9, Y + 0.86, cz9, { seg: 8, rot: [Math.PI / 2, 0, 0], at: [40, 36] }); sign('주차금지', cx9, Y + 0.86, cz9 - 0.015, Math.PI, 0.1, { bg: '#e0602f', fg: '#ffffff' });
+        colliders.push(noStand({ x0: cx9 - 0.26, x1: cx9 + 0.26, y0: Y, y1: Y + 1.0, z0: cz9 - 0.26, z1: cz9 + 0.26 })); }
+      [[25.8, -24.6], [28.8, -24.6], [37.1, -24.6], [46.6, -24.6]].forEach(([x9, z9]) => { dBox(1.0, 0.8, 0.6, 0xe6e8e4, x9, FH + 0.3, z9, { far: true }); }); }
     zones.push({ x0: PX0, x1: PX1 + 3, z0: TR3.fieldZ, z1: 50, y: FIELD, label: '동쪽 통학로' });
   }
   {   // 숲놀이터 EAST-2 — 사용자 09-24 "큰나무 바로 아래 저 구석" · 영상 f_233~243: 남쪽 길 남쪽 나무들 사이 높은 나무 데크(난간·아이 그림판·계단 둘) + 동쪽 검은 그물 놀이틀
