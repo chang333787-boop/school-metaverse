@@ -1901,9 +1901,9 @@ export function buildWorld(scene) {
     // 교훈석(영상 e_311·e_306·p_149·u_283): 산책로 남쪽 경계석에 붙은 네모 화강석 받침 + 뾰족한 짙은 화강석 선돌(높이 약 2.4) · 앞면(동남 — 구령대 쪽)에 흰 세로 새김 글씨
     const SX = px0 - 2.6, SZ9 = FY.walkS + 0.12 + 0.45, MRY = 1.2;
     addBox(1.4, 0.45, 0.9, 0xc9c6bd, SX, YARD, SZ9, NS);
-    const mf = standStone([[-0.5, 0], [0.52, 0], [0.5, 0.5], [0.45, 1.1], [0.36, 1.55], [0.2, 1.95], [0.02, 2.38], [-0.14, 2.3], [-0.3, 2.05], [-0.42, 1.6], [-0.5, 1.0], [-0.53, 0.4]], 0.4, 0x585b5e, SX, YARD + 0.45, SZ9, MRY, 0.22);
+    const mf = standStone([[-0.5, 0], [0.52, 0], [0.5, 0.5], [0.45, 1.1], [0.36, 1.55], [0.2, 1.95], [0.02, 2.38], [-0.14, 2.3], [-0.3, 2.05], [-0.42, 1.6], [-0.5, 1.0], [-0.53, 0.4]], 0.4, 0x66696c, SX, YARD + 0.45, SZ9, MRY, 0.22);
     { const nx = Math.sin(MRY), nz = Math.cos(MRY);   // 뒤쪽 울퉁불퉁한 자연석 덩어리(앞면은 평평 — 글씨 자리)
-      [[0.95, 0.4, 0.26, 0.32], [1.7, 0.3, 0.2, 0.26]].forEach(([v, sx, sy, sz]) => dBlob(sx, sy * 3, sz, 0x505356, SX - nx * 0.12, YARD + 0.45 + v, SZ9 - nz * 0.12, { chunky: true, ry: MRY, jitter: 0.2, far: true })); }
+      [[0.95, 0.4, 0.26, 0.32], [1.7, 0.3, 0.2, 0.26]].forEach(([v, sx, sy, sz]) => dBlob(sx, sy * 3, sz, 0x5c5f62, SX - nx * 0.12, YARD + 0.45 + v, SZ9 - nz * 0.12, { chunky: true, ry: MRY, jitter: 0.2, far: true })); }
     colliders.push(noStand({ x0: SX - 0.55, x1: SX + 0.55, y0: YARD, y1: YARD + 2.85, z0: SZ9 - 0.45, z1: SZ9 + 0.45 }));
     const vText = (str, u, v0, h) => [...str].forEach((ch, k) => { const [x9, y9, z9] = mf(u, v0 - k * h * 1.35); sign(ch, x9, y9, z9, MRY, h, { bg: 'none', fg: '#f2efe6' }); });
     vText('교훈', 0.2, 1.62, 0.2); vText('바르고', -0.03, 1.98, 0.23); vText('슬기롭게', -0.27, 1.74, 0.23);   // 세로쓰기 — 오른쪽 줄부터(영상 e_311: 글자가 앞면을 거의 채움)
