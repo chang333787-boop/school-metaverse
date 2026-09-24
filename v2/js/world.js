@@ -1102,10 +1102,10 @@ export function buildWorld(scene) {
     dBlob(r, r*0.78, r, hex, x, y + r*0.68, z, { far: true, chunky: lite, ry: x, jitter: lite ? 0.16 : 0.1 });
   }
   // 다듬은 회양목 둔덕(앞뜰 — 영상 f_132~183: 폭 1.5~2m·높이 0.9m 넓적한 둥근 덩어리가 서로 닿게 줄지어) — 윗면 밝은 잎 한 겹. 올라서기 금지
-  function mound(x, z, w = 1.7, h = 0.9, d = 1.4, hex = 0x4f8a45, lite = false) {   // lite = 몸통도 20면(뒤뜰 far 층)
+  function mound(x, z, w = 1.7, h = 0.9, d = 1.4, hex = 0x4f8a45, lite = false, ry = null) {   // lite = 몸통도 20면(뒤뜰 far 층) · ry = 몸통 회전(기본 = 자리 해시). 옆이 트인 덩어리는 0 — 축정렬 충돌상자(±0.42w)가 돌린 타원보다 넓어 보이지 않는 벽이 된다
     const y = tY(z, x), hh = hash2(x, z);
     colliders.push(noStand({ x0: x - w * 0.42, x1: x + w * 0.42, y0: y, y1: y + h, z0: z - d * 0.42, z1: z + d * 0.42 }));
-    dBlob(w / 2, h * 0.62, d / 2, hex, x, y + h * 0.38, z, { far: true, chunky: lite, ry: hh * 6, jitter: lite ? 0.14 : 0.1 });
+    dBlob(w / 2, h * 0.62, d / 2, hex, x, y + h * 0.38, z, { far: true, chunky: lite, ry: ry == null ? hh * 6 : ry, jitter: lite ? 0.14 : 0.1 });
     dBlob(w * 0.36, h * 0.3, d * 0.34, 0x8cb85a, x + (hh - 0.5) * 0.2, y + h * 0.72, z, { far: true, chunky: true, ry: hh * 9, jitter: 0.12 });
   }
   // 옆으로 퍼진 소나무(건물 앞 북 화단 — 영상 f_141·f_147·f_150: 굽은 줄기 둘 + 납작한 잎판이 옆으로 3~4단)
@@ -2432,10 +2432,11 @@ export function buildWorld(scene) {
     const MC = [0x6a9444, 0x5f8a3e, 0x74a04c];                                        // 영상 회양목 = 노란 기 도는 연두
     const NP = [-34.5, -16.5, -4.0, 4.6];                                             // 북 화단 퍼진 소나무 자리(영상 g_121·f_141·f_147·f_150)
     const NT = [-24.3, -12.6];                                                        // 북 화단 작은 관상수(g_124·g_130 — 창 상자 앞 가는 줄기·둥근 수관)
+    const open1 = x => x > 33 && x < 40.5 && ![34.5, 38.0].some(q => Math.abs(q - x) < 0.76);   // FRONT-3: 1학년 앞 건물 쪽 줄에서 비우는 자리(잔디로 걸어 들어감)
     for (let x9 = -36.35, k = 0; x9 < fx1 - 0.5; x9 += 1.5, k++) {
       if (x9 > EN.x[0] - 1.0 && x9 < EN.x[1] + 1.0) continue;
       const nearP = NP.some(px => Math.abs(px - x9) < 1.6) || NT.some(px => Math.abs(px - x9) < 1.0), east = x9 > EN.x[1];
-      if (!nearP && !(x9 > 33 && x9 < 40.5 && ![34.5, 38.0].some(q => Math.abs(q - x9) < 0.76))) mound(x9, FY.strip + 0.85, 1.9 + (k % 3) * 0.22, 1.0 + (k % 2) * 0.18, 1.4, MC[k % 3]);   // 건물 쪽 줄(FRONT-3: 조금 더 크게 — g_130·f_132 큰 둥근 회양목 · 위성 D 수관)
+      if (!nearP && !open1(x9)) mound(x9, FY.strip + 0.85, 1.9 + (k % 3) * 0.22, 1.0 + (k % 2) * 0.18, 1.4, MC[k % 3], false, open1(x9 - 1.5) || open1(x9 + 1.5) ? 0 : null);   // 건물 쪽 줄(FRONT-3: 조금 더 크게 — g_130·f_132 큰 둥근 회양목 · 위성 D 수관) · 빈 자리 옆 덩어리는 돌리지 않음(옆면 = 잎)
       if (x9 + 0.75 > -35.2 && !(east && x9 < 40.5)) mound(x9 + 0.75, N0 - 0.85, 1.55 + ((k + 1) % 3) * 0.2, 0.8 + ((k + 1) % 2) * 0.12, 1.25, MC[(k + 1) % 3]);   // 산책로 쪽 줄
     }
     NP.forEach((x9, k) => layerPine(x9, FY.strip + 0.9, 1.05 + (k % 2) * 0.15));     // FRONT-3b: 층진 두툼한 잎판(낮은 잎판 밑은 layerPine 안 올라서기 금지 덩어리 — 몸이 잎판을 뚫지 않게)
