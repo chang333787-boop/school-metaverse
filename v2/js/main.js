@@ -246,12 +246,32 @@ function step(dt) {
 //  ② 벽이 0.8m 안이라 0.5까지 못 물러나면: 예전엔 0.5에 섰다 = 벽 뒤(벽 너머 방이 통째로 보임) → 벽 앞 0.12까지만(캐릭터는 숨김)
 //  ③ 옆벽: 카메라 자리에서 좌우로 '근평면 반폭 + 8cm' 광선 — 닿으면 그만큼 반대로 비켜 선다(시선도 같이 비켜 화면이 돌지 않게).
 //     벽에 붙어 벽과 나란히 볼 때 근평면 모서리(반폭 0.33 > 몸 반지름 0.26)가 벽을 파고들던 것.
+//  ④ CAM-4(integ 09-25): 근평면 사각형(시선 0.3 앞 · 반폭·반높이)이 처마·차양·지붕 끝 같은 판에 걸리면 0.1씩 머리 쪽으로 당긴다(0.5까지 — 0.25씩이면 현관 차양 밑에서 한 번에 0.6m 튀었다).
+//     camHit은 낮은 얇은 부재(가구)를 일부러 무시해 카메라 높이의 처마 판(동관 남쪽 처마 y 3.4~3.7 · 현관 차양)을 못 봤다 — 검진 nearWall과 같은 판정
 const CAMP = { want: 0, d: 0, sh: 0, x0: 0, y: 0, z0: 0 };
+function nearClip(cx, cy, cz, fx, fy, fz, fov, aspect, hy) {
+  const hh = 0.3 * Math.tan(fov * Math.PI / 360), hw = hh * aspect, rl = Math.hypot(fz, fx) || 1, rx = fz / rl, rz = -fx / rl;
+  const ux = rz * fy, uy = fz * rx - fx * rz, uz = -fy * rx, fl = hy - 1.3 + 0.12;
+  const k0x = Math.floor((cx - 1) / 8), k1x = Math.floor((cx + 1) / 8), k0z = Math.floor((cz - 1) / 8), k1z = Math.floor((cz + 1) / 8);
+  for (let gx = k0x; gx <= k1x; gx++) for (let gz = k0z; gz <= k1z; gz++) {
+    const cell = world.grid.get(gx + ':' + gz); if (!cell) continue;
+    for (const i of cell) { const b = world.colliders[i];
+      if (b.nc || b.y1 <= fl || (b.y1 - b.y0 < 1.5 && b.y0 < hy + 0.4)) continue;
+      if (b.x1 < cx - 0.6 || b.x0 > cx + 0.6 || b.z1 < cz - 0.6 || b.z0 > cz + 0.6 || b.y1 < cy - 0.6 || b.y0 > cy + 0.6) continue;
+      for (const [sa, sb] of NCP) { const ex = fx * 0.3 + rx * hw * sa + ux * hh * sb, ey = fy * 0.3 + uy * hh * sb, ez = fz * 0.3 + rz * hw * sa + uz * hh * sb;
+        let t0 = 0, t1 = 1, ok = true;
+        for (let a = 0; a < 3 && ok; a++) { const o = a === 0 ? cx : a === 1 ? cy : cz, d9 = a === 0 ? ex : a === 1 ? ey : ez, lo = a === 0 ? b.x0 : a === 1 ? b.y0 : b.z0, hi = a === 0 ? b.x1 : a === 1 ? b.y1 : b.z1;
+          if (Math.abs(d9) < 1e-8) { if (o < lo || o > hi) ok = false; } else { let p = (lo - o) / d9, q = (hi - o) / d9; if (p > q) { const s9 = p; p = q; q = s9; } if (p > t0) t0 = p; if (q < t1) t1 = q; if (t0 > t1) ok = false; } }
+        if (ok) return true; } } }
+  return false;
+}
+const NCP = [[1, 1], [1, -1], [-1, 1], [-1, -1], [0, 0]];
 function camPose(hx, hy, hz, yaw, pch, CD, fov, aspect, dUse) {
   const dx = Math.sin(yaw) * Math.cos(pch), dy = Math.sin(pch), dz = Math.cos(yaw) * Math.cos(pch);
   const hit = camHit(hx, hy, hz, dx, dy, dz, CD);
   let want = Math.min(CD, hit - 0.3);
   if (want < 0.5) want = Math.max(0.1, Math.min(0.5, hit - 0.12));
+  for (let k = 0; k < 60 && want > 0.5 && nearClip(hx + dx * want, hy + dy * want, hz + dz * want, -dx, -dy, -dz, fov, aspect, hy); k++) want = Math.max(0.5, want - 0.1);   // ④
   const d = dUse ?? want, cx = hx + dx * d, cy = hy + dy * d, cz = hz + dz * d;
   const hw = 0.3 * Math.tan(fov * Math.PI / 360) * aspect + 0.08, rx = Math.cos(yaw), rz = -Math.sin(yaw);
   const r = camHit(cx, cy, cz, rx, 0, rz, hw), l = camHit(cx, cy, cz, -rx, 0, -rz, hw);

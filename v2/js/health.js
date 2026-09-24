@@ -180,7 +180,7 @@ export async function runHealth(SD2, opt = {}) {
     Lst.ghost = clusters(ghost, FX, FZ, FY, 1.5, 20); Lst.floating = clusters(floating, FX, FZ, FY, 2, 12); Lst.sunk = clusters(sunk, FX, FZ, FY, 1.5, 12); Lst.void = clusters(voidF, FX, FZ, FY, 3, 8);
     lap('invisibleGhost');
     // ---------- H6 3인칭 카메라 벽 뚫림(main.js step()과 같은 식) — 1.2m 표본 × 8방향 × 피치 3 ----------
-    { const AS = 1366 / 610, cam = { poses: 0, behind: 0, nearWall: 0, nearFloor: 0, lowClip: 0 }, byP = {}, bad = [];
+    { const AS = 1366 / 610, cam = { poses: 0, behind: 0, nearWall: 0, nearFloor: 0, lowClip: 0 }, byP = {}, bad = [], camCol = new Map();
       const segSolid = (ax, ay, az, bx, by, bz) => { let res = -1; const dx = bx - ax, dy = by - ay, dz = bz - az;
         near((ax + bx) / 2, (az + bz) / 2, 0.9, (b, i) => { if (b.nc) return false; let t0 = 0, t1 = 1; const o = [ax, ay, az], dd = [dx, dy, dz], lo = [b.x0, b.y0, b.z0], hi = [b.x1, b.y1, b.z1];
           for (let a = 0; a < 3; a++) { if (Math.abs(dd[a]) < 1e-8) { if (o[a] < lo[a] || o[a] > hi[a]) return false; } else { let p = (lo[a] - o[a]) / dd[a], q = (hi[a] - o[a]) / dd[a]; if (p > q) { const s = p; p = q; q = s; } if (p > t0) t0 = p; if (q < t1) t1 = q; if (t0 > t1) return false; } }
@@ -194,18 +194,19 @@ export async function runHealth(SD2, opt = {}) {
           const Cp = SD2.camPose(px, hy, pz, yaw, pch, CD, fov, AS), rx0 = Math.cos(yaw), rz0 = -Math.sin(yaw);
           const cx = Cp.x0 + rx0 * Cp.sh, cy = Cp.y, cz = Cp.z0 + rz0 * Cp.sh, lx = px + rx0 * Cp.sh, lz = pz + rz0 * Cp.sh;
           const vx = cx - lx, vy = cy - hy, vz = cz - lz, vl = Math.hypot(vx, vy, vz) || 1;
-          let why = null;
-          if (camHit(lx, hy, lz, vx / vl, vy / vl, vz / vl, vl) < vl - 0.01) why = 'behind';   // 시선(머리)과 카메라 사이에 벽 = 벽 뒤에 선 카메라
+          let why = null, wb = -1;
+          if (camHit(lx, hy, lz, vx / vl, vy / vl, vz / vl, vl) < vl - 0.01) { why = 'behind'; wb = segSolid(lx, hy, lz, cx, cy, cz); }   // 시선(머리)과 카메라 사이에 벽 = 벽 뒤에 선 카메라
           else { const fx = -vx / vl, fy = -vy / vl, fz = -vz / vl, hh = 0.3 * Math.tan(fov * Math.PI / 360), hw = hh * AS; let rx = fz, rz = -fx; const rl = Math.hypot(rx, rz) || 1; rx /= rl; rz /= rl;
             const upx = rz * fy, upy = fz * rx - fx * rz, upz = -fy * rx;
             for (const [sa, sb] of [[1, 1], [1, -1], [-1, 1], [-1, -1], [0, 0]]) { const bi = segSolid(cx, cy, cz, cx + fx * 0.3 + rx * hw * sa + upx * hh * sb, cy + fy * 0.3 + upy * hh * sb, cz + fz * 0.3 + rz * hw * sa + upz * hh * sb);
-              if (bi >= 0) { const b = C[bi]; why = b.y1 <= py + 0.12 ? 'nearFloor' : !(b.y1 - b.y0 < 1.5 && b.y0 < hy + 0.4) ? 'nearWall' : 'lowClip'; break; } } }
+              if (bi >= 0) { const b = C[bi]; wb = bi; why = b.y1 <= py + 0.12 ? 'nearFloor' : !(b.y1 - b.y0 < 1.5 && b.y0 < hy + 0.4) ? 'nearWall' : 'lowClip'; break; } } }
           cam.poses++; const bp = byP[pitch] || (byP[pitch] = { poses: 0, behind: 0, nearWall: 0, nearFloor: 0, lowClip: 0 }); bp.poses++;
-          if (why) { cam[why]++; bp[why]++; if (pitch === 0.3 && (why === 'behind' || why === 'nearWall') && bad.length < 3000) bad.push(i); }
+          if (why) { cam[why]++; bp[why]++; if (pitch === 0.3 && (why === 'behind' || why === 'nearWall')) { if (bad.length < 3000) bad.push(i); if (wb >= 0) camCol.set(wb, (camCol.get(wb) || 0) + 1); } }
         }
       }
       K.camPoses0 = byP[0.3] ? byP[0.3].poses : 0; K.camBehind0 = byP[0.3] ? byP[0.3].behind : 0; K.camWall0 = byP[0.3] ? byP[0.3].nearWall : 0;
-      K.camBadPct0 = +(100 * (K.camBehind0 + K.camWall0) / Math.max(1, K.camPoses0)).toFixed(2); R.camera = { all: cam, byPitch: byP }; Lst.camTop = clusters(bad, FX, FZ, FY, 2, 15); }
+      K.camBadPct0 = +(100 * (K.camBehind0 + K.camWall0) / Math.max(1, K.camPoses0)).toFixed(2); R.camera = { all: cam, byPitch: byP }; Lst.camTop = clusters(bad, FX, FZ, FY, 2, 15);
+      Lst.camColliders = [...camCol.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([i, n]) => { const b = C[i]; return { n, i, box: [b.x0, b.x1, b.y0, b.y1, b.z0, b.z1].map(v => +v.toFixed(2)) }; }); }   // 기본 피치에서 카메라를 벽 뒤로 보내거나 근평면에 걸린 콜라이더(integ 09-25)
     lap('camera');
     // ---------- 문 직진(진짜 SD2.step) — 플레이어를 옮겼다 되돌린다 ----------
     { const P0 = SD2.pos().map(Number), fail = [];
