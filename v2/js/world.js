@@ -2666,7 +2666,8 @@ export function buildWorld(scene) {
       dBox(0.34, 0.72, 0.26, 0xb6babd, x9 + 0.3, Y + 2.5, z9, { far: true }); dBox(0.05, 0.6, 0.2, 0x8a8f92, x9 + 0.495, Y + 2.56, z9);
       dBox(1.6, 0.1, 0.1, 0x6d7278, x9, Y + 9.6, z9, { far: true });                                 // 완목
     }
-    dBox(PX + 49.2, 0.045, 0.12, RUB, (PX - 49.2) / 2, Y, 45.8);                                        // FSW-2: 4.5cm — 난간을 줄여 트인 동쪽 구간을 밟고 지나가도 발이 묻혀 보이지 않게
+    dBox(PX + 49.2, 0.1, 0.12, RUB, (PX - 49.2) / 2, Y, 45.8);
+    colliders.push({ x0: -49.2, x1: PX, y0: Y, y1: Y + 0.1, z0: 45.74, z1: 45.86 });                 // FSW-2: 밟고 넘는 턱(난간을 줄여 트인 동쪽 구간 — 발이 경계석에 묻혀 보이지 않게, 영상 s_052.5 두툼한 고무 경계석)
     dBox(0.12, 0.1, 55.6 - 45.86, RUB, PX, Y, (45.86 + 55.6) / 2);                                   // 서쪽 끝 혀 둘레
     dBox(-31 - PX, 0.1, 0.12, RUB, (PX - 31) / 2, Y, 55.66);
     slab(-31, walkZ(-31) + 0.06, -43.4, 64.36, 0.14, 0.045, RUB, Y);                                  // FSW-2: 모래 남끝(둔덕 쪽) 고무 경계석 — 4.5cm(발 묻힘 검사 층 아래 · 모래 띠 경계석과 윗면이 어긋남)
@@ -2733,7 +2734,7 @@ export function buildWorld(scene) {
       const sE = x => walkZ(-31) + (x + 31) * (64.3 - walkZ(-31)) / (-12.5);                            // 모래 남끝(둔덕 발치)
       [[-41.4, 67.3, 1.05], [-35.6, 66.6, 0.75]].forEach(([x9, z9, s9]) => { bgTree(x9, z9, s9); colliders[colliders.length - 1].nc = true; });   // 모서리 큰 나무 하나(영상 s_039 왼쪽 끝) + 작은 나무 — 그 너머 하우스 지붕이 보이게 · 둔덕 속 줄기라 카메라만 통과(nc)
       [[-42.3, 65.8, 0.85, 0x3f6f3a], [-39.3, 65.7, 0.95, 0x4a7a40], [-35.3, 65.5, 0.8, 0x3f6f3a], [-31.9, 65.3, 0.75, 0x4f8045]].forEach(([x9, z9, r9, c9]) => shrub(x9, z9, r9, c9, true));
-      [-42.6, -40.4, -38.3, -36.1, -34.0, -32.1].forEach((x9, k) => { const z9 = sE(x9) + 0.55, w9 = 0.5 + 0.12 * (k % 3), h9 = 0.32 + 0.08 * ((k + 1) % 3);   // 둔덕 발치 큰 돌(영상 s_039 왼쪽)
+      [-42.8, -41.3, -39.6, -38.0, -36.2, -34.4, -32.8].forEach((x9, k) => { const z9 = sE(x9) + 0.62, w9 = 0.6 + 0.14 * (k % 3), h9 = 0.42 + 0.1 * ((k + 1) % 3);   // 둔덕 발치 큰 돌 줄(영상 s_036~039 왼쪽 — 돌 쌓은 비탈)
         dBlob(w9, h9, 0.42, [0x9d988c, 0xa8a397, 0x8f8a7f][k % 3], x9, Y + h9 * 0.45, z9, { chunky: true, far: true, ry: k * 1.7 });
         colliders.push(noStand({ x0: x9 - w9 * 0.9, x1: x9 + w9 * 0.9, y0: Y, y1: Y + h9, z0: z9 - 0.4, z1: z9 + 0.4 })); });
       dBlob(0.58, 0.42, 0.56, 0x979286, -31.35, Y + 0.16, 64.1, { chunky: true, far: true, ry: 0.7 });          // 보도·경계석 서끝을 막는 큰 돌(보도는 둔덕에서 끝남)
@@ -2885,6 +2886,7 @@ export function buildWorld(scene) {
     meshFence(-50.5, NZ0, -50.5, NZ1, FIELD + 1.8, 4.2, 0x33413a, 0x6f9a5a, false);
     dRod(-50.5, FIELD + 4.6, NZ0, -50.02, FIELD, 45.3, 0.045, 0x6f9a5a, { far: true });            // 끝기둥 버팀대(울타리 선 따라)
     dRod(-50.5, FIELD + 4.6, NZ1, -50.5, FIELD, NZ1 - 2.1, 0.045, 0x6f9a5a, { far: true });
+    for (let z9 = 16.2, k = 0; z9 <= 43; z9 += 1.25, k++) dBlob(0.42 + 0.1 * (k % 3), 0.3 + 0.06 * (k % 2), 0.4, [0x9d988c, 0x8f8a7f, 0xa8a397][k % 3], -51.2 - 0.12 * (k % 2), FIELD + 0.12, z9, { chunky: true, ry: k, at: [-45, 29] });   // FSW-2: 그물 뒤 비탈 발치 돌(영상 s_054~057 왼쪽 아래) — near 층(가까이서만)
     for (let z9 = 1.5, k = 0; z9 <= 41; z9 += 2.2, k++) dBlob(1.6, 1.4, 1.5, k % 2 ? 0x2f4a33 : 0x3a5a3c, -52.3 - (k % 3) * 0.3, FIELD + 1.3, z9, { far: true, chunky: true, jitter: 0.18, ry: k });   // FSW-2: 20면(먼 시점 삼각형 — 하우스를 늘린 만큼 덜어냄) · 윗선 2.7(영상 g_060: 생울타리 위로 하우스 지붕이 보인다)
     [[-55.5, -1, 1.2], [-52.6, 3, 1.1], [-55.5, 7.5, 1.25], [-52.6, 12, 1.05], [-55.2, 16.5, 1.15]].forEach(([x9, z9, s9]) => bgTree(x9, z9, s9));
   }
@@ -3521,7 +3523,7 @@ export function buildWorld(scene) {
     {   // FSW-2 파랑 지붕 큰 창고(위성 Esri 파랑 지붕 게임 x -67~-49 · z 76~89 = 비닐하우스 남끝 · 영상 s_028.5~033 울타리 너머 짙은 지붕 넓은 건물 — 예전 4m 정자 자리)
       const x0 = -66.5, x1 = -48.8, z0 = 77.2, z1 = 88.8, H9 = 3.4, cx9 = (x0 + x1) / 2, cz9 = (z0 + z1) / 2, sy = 2.1 / 1.5;
       slab(x0, cz9, x1, cz9, z1 - z0, H9, 0xd9dad5, Y, { far: true });
-      dGeo(PRISM, new THREE.Matrix4().compose(new THREE.Vector3(cx9, Y + H9 + 0.5 * sy, cz9), new THREE.Quaternion(), new THREE.Vector3(x1 - x0 + 0.8, sy, (z1 - z0 + 1.0) / 2 / 0.866)), 0x3b6a98, { far: true });
+      dGeo(PRISM, new THREE.Matrix4().compose(new THREE.Vector3(cx9, Y + H9 + 0.5 * sy, cz9), new THREE.Quaternion(), new THREE.Vector3(x1 - x0 + 0.8, sy, (z1 - z0 + 1.0) / 2 / 0.866)), 0x3a5570, { far: true });   // 위성 파랑 · 영상은 짙은 청회색
       [x0 + 3, x0 + 9, x1 - 5].forEach(dx9 => slab(dx9 - 1.4, z0 - 0.03, dx9 + 1.4, z0 - 0.03, 0.06, 2.6, 0x8d949a, Y, { far: true }));   // 북면 셔터
     }
     [[-34, 74, 1.0], [-36.5, 77.5, 1.1], [30, 72, 0.95], [40, 56, 0.9]].forEach(([tx9, tz9, s9]) => bgTree(tx9, tz9, s9));   // 울타리 밖 나무 — FSW-2: (-58,66)은 새 하우스 속, (-14,76)은 밭 한가운데라 남서 나무 덩어리로 옮김
