@@ -1193,7 +1193,7 @@ export function buildWorld(scene) {
     // 로비 동벽 = 도서관 서벽: 슬기샘 도서관 유리 양문(서쪽을 봄) + 문 남쪽 도서반납함
     wallZ(LOB_Z, fz0, LOB_X, INNER, { gaps: [{ c: -36.6, w: 1.8, glass: true }] });
     { // 도서관 입구 짙은 나무 파사드(영상 W_222~226): 위 간판 띠(크림 글씨) + 양옆 기둥 판(포스터 액자) + 은색 문틀
-      const FX = LOB_X - 0.15, D9 = 0x7a5a42, zN = LOB_Z + 0.15, zS = fz0 - 0.15;
+      const FX = LOB_X - 0.15, D9 = 0xa8805f, zN = LOB_Z + 0.15, zS = fz0 - 0.15;
       dBox(0.06, 0.45, zS - zN, D9, FX - 0.03, 2.62, (zN + zS) / 2);
       dBox(0.06, 2.62, -37.56 - zN, D9, FX - 0.03, 0, (zN - 37.56) / 2); dBox(0.06, 2.62, zS + 35.64, D9, FX - 0.03, 0, (zS - 35.64) / 2);
       [-37.53, -35.67].forEach(z9 => dBox(0.05, 2.6, 0.06, 0xb9bec4, FX - 0.025, 0, z9));
@@ -1319,7 +1319,8 @@ export function buildWorld(scene) {
     for (let j = 0; j < N; j++) { const za = ZL + TR * j, zb = j === N - 1 ? Z0 + 0.15 : ZL + TR * (j + 1);
       addBox(0.2, RISE * (N + j + 1) - 0.3, zb - za, 0xd3eadf, MX + 0.1, 0, (za + zb) / 2); }
     // 창고 앞벽(작은 전실 북벽 — 크림 평문, 영상 b_013.5·s_160)
-    wallX(MX + 0.2, wx1 - 0.15, Z0, INNER, { face: -1, dado: { top: 1.3, lo: 0xf3e2a0, hi: 0xd3eadf }, gaps: [{ c: (MX + wx1) / 2 + 0.2, w: 0.9, color: 0xe6dcc4 }] });
+    wallX(MX + 0.2, wx1 - 0.15, Z0, INNER, { face: -1, dado: { top: 1.3, lo: 0xf3e2a0, hi: 0xd3eadf }, gaps: [{ c: wx1 - 0.85, w: 0.9, color: 0xe6dcc4 }] });
+    dBox(0.1, 0.1, 0.06, INNER, wx1 - 0.22, 1.0, Z0);   // 벽 속 표지: 창고 문은 서쪽(칸막이 속)으로 열린다 — 동쪽이면 문짝이 동벽을 뚫고 뒷길로 삐져나온다
     zones.unshift({ x0: MX + 0.2, x1: wx1 - 0.15, z0: ZL, z1: Z0 - 0.15, y: 0, label: '계단 밑 창고' });   // 첫 일치 = 이 이름(숨바꼭질 지점)
     // 전실 수레(흰 틀·초록 바닥 — 영상 b_013.5) · 올라서기 금지
     { const cx = MX + 0.75, cz = Z0 + 0.75;
