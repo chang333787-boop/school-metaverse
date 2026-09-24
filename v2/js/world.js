@@ -2415,7 +2415,7 @@ export function buildWorld(scene) {
     for (let x9 = -36.35, k = 0; x9 < fx1 - 0.5; x9 += 1.5, k++) {
       if (x9 > EN.x[0] - 1.0 && x9 < EN.x[1] + 1.0) continue;
       const nearP = NP.some(px => Math.abs(px - x9) < 1.6) || NT.some(px => Math.abs(px - x9) < 1.0), east = x9 > EN.x[1];
-      if (!nearP && !(x9 > 33 && x9 < 40.5 && ![34.5, 38.0].some(q => Math.abs(q - x9) < 0.76))) mound(x9, FY.strip + 0.85, 1.75 + (k % 3) * 0.2, 0.85 + (k % 2) * 0.15, 1.35, MC[k % 3]);   // 건물 쪽 줄
+      if (!nearP && !(x9 > 33 && x9 < 40.5 && ![34.5, 38.0].some(q => Math.abs(q - x9) < 0.76))) mound(x9, FY.strip + 0.85, 1.9 + (k % 3) * 0.22, 1.0 + (k % 2) * 0.18, 1.4, MC[k % 3]);   // 건물 쪽 줄(FRONT-3: 조금 더 크게 — g_130·f_132 큰 둥근 회양목 · 위성 D 수관)
       if (x9 + 0.75 > -35.2 && !(east && x9 < 40.5)) mound(x9 + 0.75, N0 - 0.85, 1.55 + ((k + 1) % 3) * 0.2, 0.8 + ((k + 1) % 2) * 0.12, 1.25, MC[(k + 1) % 3]);   // 산책로 쪽 줄
     }
     NP.forEach((x9, k) => { spreadPine(x9, FY.strip + 0.9, 1.05 + (k % 2) * 0.15);   // 낮게 퍼진 잎판 밑(벽 쪽 회양목을 뺀 자리)은 올라서기 금지 덩어리로 — 몸이 잎판을 뚫지 않게(health ghost)
