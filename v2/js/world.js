@@ -3062,7 +3062,7 @@ export function buildWorld(scene) {
     [-1, 1].forEach(sz => { dBox(0.04, 0.18, 0.4, 0xf4f1e0, bx9 - 5.82, Y + 0.6, bz9 + sz * 0.85);
       dBox(0.04, 0.7, 0.16, 0xc0392b, bx9 + 5.82, Y + 0.75, bz9 + sz * 1.05);                          // 뒷등(세로)
       dRod(bx9 - 5.8, Y + 2.4, bz9 + sz * 1.2, bx9 - 6.25, Y + 2.2, bz9 + sz * 1.35, 0.025, 0x26282c, F); });   // 사이드미러 팔
-    zones.push({ x0: -4.5, x1: SCHOOL.plaza.x[1], z0: SCHOOL.shelter.center[1] + 2.25, z1: 56, y: Y, label: '버스 타는 곳' });
+    zones.push({ x0: Math.max(-4.5, ...zones.filter(q => q.label === '놀이마당').map(q => q.x1)), x1: SCHOOL.plaza.x[1], z0: SCHOOL.shelter.center[1] + 2.25, z1: 56, y: Y, label: '버스 타는 곳' });   // [integ 09-25] 서끝 = 놀이마당 동끝(겹침 53칸 제거)
   }
 
   // ================= 뒤뜰 (영상 IMG_2180 0~107s · 위성): 서관 뒤 주차장 · 노란 창고 · 흙길 · 큰 텃밭 · 동관 동쪽 데크 =================
@@ -3477,7 +3477,7 @@ export function buildWorld(scene) {
       dCyl(0.08, 0.1, 4.2, 0x9aa0a6, GE + 0.55, Y, gtz + 1.6, { far: true, seg: 8 }); post(GE + 0.55, gtz + 1.6, Y, Y + 4.2, 0.1);
       dBox(0.3, 0.15, 0.15, 0xdfe3e8, GE + 0.55, Y + 3.9, gtz + 1.42);
     }
-    zones.push({ x0: SWA[0], x1: GE + 0.6, z0: gtz - 4.5, z1: gtz - 0.1, y: Y, label: '정문' });
+    zones.push({ x0: Math.max(SWA[0], ...zones.filter(q => q.label === '버스 타는 곳').map(q => q.x1)), x1: GE + 0.6, z0: gtz - 4.5, z1: gtz - 0.1, y: Y, label: '정문' });   // [integ 09-25] 서끝 = 버스 타는 곳 동끝(겹침 48칸 제거)
   }
   {   // 동네 — 정문 밖이 허공이면 학교가 떠 있어 보인다
     const Y = FIELD;

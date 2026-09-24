@@ -3,13 +3,15 @@
 //   빠른 판(quick): 걷기/점프 그래프 · 갇힘 · 울타리 밖 · 계단 턱 · 올라서기 금지 무력화 · 구역 이름 · 문 그래프 · 상호작용 지점     (~0.6초)
 //   전체 판        : + 보이는 기하 복셀화 → 보이지 않는 벽·뚫림·떠 있음 · 3인칭 카메라 벽 뚫림 · 문 직진 · 구역별 성능 · 그림(img)
 // 게이트(0이어야 통과)와 래칫(기준선보다 늘면 실패)을 나눈다. 허용목록(ALLOW)은 항목마다 why 필수. 정본 = docs/map_api.md §건강 검진
-export const BASELINE = {   // 래칫 기준선(09-24 impl-gamemap 실측 · NS-RAISE·보건실 책상 뒤) — 줄면 여기도 줄인다. 늘면 실패(새 결함인지 목록으로 확인)
-  ghost: 461, sunk: 1095, floating: 332, nsBypass: 0, perch: 30, noZonePct: 5, multiZone: 1101, tallStep: 2797,
+export const BASELINE = {   // 래칫 기준선(09-25 integ 실측 — 1차 7구간 합친 뒤 · 나무/잎판 충돌·world.soft·구역 겹침 정리) — 줄면 여기도 줄인다. 늘면 실패(새 결함인지 목록으로 확인)
+  // 예전(09-24 impl-gamemap): ghost 461 · sunk 1095 · floating 332 · perch 30 · multiZone 1101 · tallStep 2797
+  ghost: 93, sunk: 110, floating: 301, nsBypass: 0, perch: 27, noZonePct: 5, multiZone: 0, tallStep: 759,
 };
 export const ALLOW = {
   invisible: [   // 보이지 않는 벽 허용 구간(x0,x1,z0,z1) — 이유 필수
     { x0: -95, x1: 70, z0: 58, z1: 70, why: '학교 둘레 밖 도로·동네(정문 밖) — 울타리 밖은 게이트가 따로 본다' },
     { x0: 12.8, x1: 20.2, z0: 54.9, z1: 56.1, why: '정문 선 막이(SOUTH-2 world.js) — 영상은 교문이 열려 있어 보이는 문이 없지만 게임 기초 맵이라 학교 밖 도로로 못 나가게 일부러 막음' },
+    { x0: 7.0, x1: 9.3, z0: -14.0, z1: -13.3, why: '구령대 서쪽 계단 옆 둔덕 끝(1m 낭떠러지) 막이(PORCH-2) — 계단 난간이 발치에서 운동장 높이로 내려가 화단 높이에선 안 보임 · 화단에서 계단 옆으로 뛰어내리지 못하게 일부러 막음' },
   ],
   deadDoors: [],  // 일부러 막힌 문 [x, z, why]
   multiZone: [   // 월드 구역 겹침 중 '일부러 포갠' 짝(작은 구역이 큰 구역 안의 한 자리 — 판정은 가장 좁은 구역이 이긴다). 이 두 라벨만 겹친 칸은 세지 않는다
