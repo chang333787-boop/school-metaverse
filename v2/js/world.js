@@ -1556,7 +1556,11 @@ export function buildWorld(scene) {
     dBox(BOARD[1] - BOARD[0], 1.38, 0.04, 0x2f6e4f, (BOARD[0] + BOARD[1]) / 2, 1.02, LZ + 0.02);
     { const a0 = BOARD[0] + 0.05, a1 = BOARD[1] - 0.05, y0 = 1.07, y1 = 2.35, z = LZ + 0.047, S9 = 2.4;
       patPush('notice', [[a0, y0, z], [a1, y0, z], [a1, y1, z], [a0, y1, z]], [[a0 / S9, y0 / S9], [a1 / S9, y0 / S9], [a1 / S9, y1 / S9], [a0 / S9, y1 / S9]], [0, 0, 1], 0xffffff); }
-    sign('정림 학생자치회 소식', (BOARD[0] + BOARD[1]) / 2 + 0.5, 2.14, LZ + 0.058, 0, 0.22, { bg: '#cdb8e6', fg: '#4b2c7f' });
+    // 제목 리본을 크게(영상 a_459: 판 위쪽 2/3를 덮는 연보라 리본) + 리본 윗선 왼쪽 삼각 깃발 줄(빨·노·파·초·보·주)
+    { const bx = (BOARD[0] + BOARD[1]) / 2 + 0.3, s9 = sign('정림 학생자치회 소식', bx, 2.12, LZ + 0.058, 0, 0.34, { bg: '#cdb8e6', fg: '#4b2c7f' });
+      const tri = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute([-0.055, 0, 0, 0, -0.09, 0, 0.055, 0, 0], 3));
+      [0xd8403a, 0xf2c230, 0x3f78c8, 0x4fa05a, 0x8a5cc0, 0xf08a3a].forEach((hx, k) => dGeo(tri, new THREE.Matrix4().makeTranslation(bx - s9.w / 2 + 0.2 + k * 0.17, 2.392, LZ + 0.066), hx));
+      tri.dispose(); }
     hotspots.push({ kind: 'notice', x: (BOARD[0] + BOARD[1]) / 2, z: fz0 + 1.1, y: 0, r: 1.6, label: '학생자치회 소식 읽기' });
     [LOB_X0 + 1.2, LANEW.c + LANEW.w / 2 + 0.3, 8.5].forEach(x => extinguisher(x, 0, fz0 + 0.3));   // 소화기(바닥 — 뒷길 창 것은 사물함 동쪽 끝으로)
     // [main_corridor-19] 비상구 유도등: 동쪽 끝 유리문 위(a_480) + 천장에 매단 양면 등(a_513·a_523.5·b_138 — 복도를 따라 '비상구 따라가기' 단서)
