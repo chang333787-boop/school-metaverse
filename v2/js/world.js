@@ -2115,7 +2115,7 @@ export function buildWorld(scene) {
     const GP = SCHOOL.garden.poly, DK = SCHOOL.gardenDeck, DX = DK.x, DZ = DK.z, DT = Y + 0.24;
     const PZ = [-56.55, -55.65];                                                // 흙길 z(위성 옅은 선 z -55.3 · 영상 폭 0.9)
     const XB = E.x[1] + 0.15, XH = 49.2;                                        // 벽돌 마당 x(동관 동면 ~ 비비추 화단)
-    const GR = 0xb4c08a, MOW = 'dirt', MAT = 0x3a3836, BRK = 0xae8c80;                        // 누렇게 깎은 잔디(영상 b_036~088 — 풀 무늬는 너무 짙은 초록이라 흙 무늬에 올리브 틴트) · 검은 잡초매트 · 바랜 적갈 인터로킹 블록(보도블록 무늬 — 20×10cm)
+    const GR = 0xb4c08a, MOW = 'dirt', MAT = 0x5a5856, BRK = 0xae8c80;                        // 누렇게 깎은 잔디(영상 b_036~088 — 풀 무늬는 너무 짙은 초록이라 흙 무늬에 올리브 틴트) · 검은 잡초매트 · 바랜 적갈 인터로킹 블록(보도블록 무늬 — 20×10cm)
 
     // ---- 바닥: 아스팔트(연석 안) · 뒷길 · 잔디(서로 맞대기만 — 겹치면 깜빡인다) ----
     patQuad('asph', G.annex.x[1] + 0.15, TR3.westX - 0.3, gz0 - 0.15, G.annex.z[0] - 3, Y + 0.012);
@@ -2177,7 +2177,7 @@ export function buildWorld(scene) {
     byQuad('grass', [[PK.x[0], -61], ISL[2], ISL[3], ISL[4]], Y + 0.024, 0xb9c98f);
     for (let i = 0; i < 4; i++) byRot(ISL[i][0], ISL[i][1], ISL[i + 1][0], ISL[i + 1][1], 0.15, 0.1, Y + 0.012, 0xc9c9c4, { far: true });
     tree(-40, -61.5, 3.4); pine(-48.5, -51, 1.05);
-    addBox(3, 1.2, 1.0, 0x4e7a3e, -45, Y, -68); dBlob(1.55, 0.3, 0.55, 0x5f8d4a, -45, Y + 1.2, -68, { far: true, chunky: true, jitter: 0.12 });
+    addBox(3, 1.2, 1.0, 0x4e7a3e, -45, Y, -68, NS); dBlob(1.55, 0.3, 0.55, 0x5f8d4a, -45, Y + 1.2, -68, { far: true, chunky: true, jitter: 0.12 });
 
     // ---- 노란 창고(위성 B-1·영상 b_033~042): 골함석 컨테이너 두 동 · 평평한 파란 판 지붕(처마 0.25) · 서면(주차장 쪽)에 문(남쪽 끝)·흰 틀 쇠창살 창 ----
     const SHC = 0xf0b41c, SHR = 0xd99e12, SHH = SCHOOL.shed.h;
@@ -2185,10 +2185,10 @@ export function buildWorld(scene) {
       const [ux0, ux1] = u.x, [uz0, uz1] = u.z, cx9 = (ux0 + ux1)/2, cz9 = (uz0 + uz1)/2, dc = uz1 - 0.15 - 0.45, wc = uz1 - 3.5;
       addBox(ux1 - ux0, SHH, uz1 - uz0, SHC, cx9, Y, cz9);
       dBox(ux1 - ux0 + 0.5, 0.1, uz1 - uz0 + 0.5, 0x3f6fb0, cx9, Y + SHH, cz9, { far: true });
-      for (let z9 = uz0 + 0.2; z9 < uz1 - 0.1; z9 += 0.35) {                                      // 골함석 세로 골(0.35 간격 — 문·창 자리는 건너뜀)
+      for (let z9 = uz0 + 0.2; z9 < uz1 - 0.1; z9 += 0.45) {                                      // 골함석 세로 골(0.45 간격 — 문·창 자리는 건너뜀)
         if (Math.abs(z9 - dc) > 0.52 && Math.abs(z9 - wc) > 0.45) dBox(0.04, SHH - 0.2, 0.07, SHR, ux0 - 0.02, Y + 0.1, z9, FAR);
         dBox(0.04, SHH - 0.2, 0.07, SHR, ux1 + 0.02, Y + 0.1, z9, FAR); }
-      for (let x9 = ux0 + 0.2; x9 < ux1 - 0.1; x9 += 0.35) [uz0 - 0.02, uz1 + 0.02].forEach(z9 => dBox(0.07, SHH - 0.2, 0.04, SHR, x9, Y + 0.1, z9, FAR));
+      for (let x9 = ux0 + 0.2; x9 < ux1 - 0.1; x9 += 0.45) [uz0 - 0.02, uz1 + 0.02].forEach(z9 => dBox(0.07, SHH - 0.2, 0.04, SHR, x9, Y + 0.1, z9, FAR));
       dBox(0.04, 2.1, 0.9, 0xe6aa18, ux0 - 0.02, Y + 0.03, dc, FAR); dBox(0.03, 0.05, 0.14, 0xc9ced3, ux0 - 0.055, Y + 1.0, dc + 0.3, FAR);   // 문 + 손잡이
       dBox(0.04, 0.7, 0.8, 0xf2f2ee, ux0 - 0.02, Y + 1.25, wc, FAR); dBox(0.03, 0.58, 0.68, 0x3e4a55, ux0 - 0.05, Y + 1.31, wc, FAR);            // 흰 틀 창 + 어두운 유리
       [-0.2, 0, 0.2].forEach(o => dRod(ux0 - 0.075, Y + 1.3, wc + o, ux0 - 0.075, Y + 1.9, wc + o, 0.012, 0xf4f4f0, FAR));                   // 쇠창살
@@ -2203,11 +2203,11 @@ export function buildWorld(scene) {
       weed(x9, -53.75 + (h9 - 0.5) * 0.3, 0.42 + h9 * 0.22, [0x5e8f45, 0x74a553, 0x4f8a45][k % 3]);
       if (k % 2) weed(x9 + 0.6, -52.35, 0.34 + h9 * 0.12, [0x6b9c4c, 0x588a42][k % 4 > 1 ? 1 : 0]); }
     [[0.4, -52.5], [6.3, -52.4], [11.6, -52.5]].forEach(([x9, z9]) => tree(x9, z9, 0.5));
-    for (let x9 = 14.6; x9 < 44; x9 += 1.25) { const h9 = hash2(x9, 21);
-      dBlob(0.85, 0.95, 0.62, h9 > 0.5 ? 0x4f7f3a : 0x5a8c42, x9, Y + 0.9, -53.3, { chunky: true, ry: h9 * 6, jitter: 0.15 });
-      dBlob(0.6, 0.35, 0.45, 0x7aa65a, x9 + 0.3, Y + 1.55, -53.3, { chunky: true, ry: h9 * 9, jitter: 0.15 }); }
+    for (let x9 = 14.3; x9 < 44; x9 += 2.95) dBox(Math.min(2.9, 44.3 - x9), 1.3, 0.9, 0x4a7a37, x9 + Math.min(2.9, 44.3 - x9) / 2, Y, -53.3);   // 생울타리 몸통(깎은 면)
+    for (let x9 = 15.1; x9 < 44; x9 += 1.5) { const h9 = hash2(x9, 21);                                   // 둥근 윗면(잎 덩어리)
+      dBlob(0.95, 0.42 + h9 * 0.12, 0.58, h9 > 0.5 ? 0x5a8c42 : 0x4f8540, x9, Y + 1.3, -53.3 + (h9 - 0.5) * 0.08, { ry: h9 * 0.4, jitter: 0.14 }); }
     colliders.push(noStand({ x0: 14, x1: 44.6, y0: Y, y1: Y + 1.8, z0: -54.0, z1: -52.6 }));
-    [[4.4, -61.6, 1.0], [8.8, -63.2, 1.05], [12.3, -58.1, 1.0], [15.9, -58.3, 0.9]].forEach(([x9, z9, s9]) => prunedPine(x9, z9, s9));
+    [[4.4, -61.6, 1.0], [8.8, -63.2, 1.05], [13.6, -58.2, 1.0]].forEach(([x9, z9, s9]) => prunedPine(x9, z9, s9));
     // 흙길 끝 큰 나무 무리(영상 b_043~076: 정면 멀리 좁은 원뿔 침엽수 둘 + 짙은 향나무 + 큰 활엽수) · 지주 묶은 어린 나무(b_082~088)
     const tallConifer = (x, z, h) => { const y = tY(z, x); colliders.push({ x0: x - 0.3, x1: x + 0.3, y0: y, y1: y + 14, z0: z - 0.3, z1: z + 0.3 });
       dCyl(0.18, 0.32, h * 0.4, 0x5a4636, x, y, z, { far: true, seg: 6 });
@@ -2226,11 +2226,11 @@ export function buildWorld(scene) {
       const top = Y + 0.18, dBlob = (sx, sy, sz, hex, cx, cy, cz, opt = {}) => dBlob0(sx, sy, sz, hex, cx, cy, cz, cx < 16 ? { ...opt, far: true } : opt);   // x<16(청크 0열)은 건물 청크에 합침 — 가까운 층 청크 +1 방지
       const dRod = (x0, y0, z0, x1, y1, z1, r, hex) => dRod0(x0, y0, z0, x1, y1, z1, r, hex, x0 < 16 ? { far: true } : {});
       if (kind === 'mulch') { for (let x9 = a + 0.4; x9 < b - 0.2; x9 += 0.9) dBlob(0.12, 0.14, 0.12, 0x6aa84f, x9, top + 0.08, rz + (hash2(x9, 3) - 0.5) * 0.5, { chunky: true }); return; }
-      if (kind === 'leafy') { let k9 = 0; for (let x9 = a + 0.3; x9 < b - 0.2; x9 += 0.45, k9++) { const o = k9 % 2 ? 0.26 : -0.26; dBlob(0.3, 0.44, 0.3, hash2(x9, o) > 0.5 ? 0x6aa84f : 0x7cb85a, x9, top + 0.3, rz + o, { chunky: true, ry: x9 * 3 + o, jitter: 0.3 }); } return; }
-      if (kind === 'marigold') { for (let x9 = a + 0.35; x9 < b - 0.2; x9 += 0.7) { const zz = rz + (hash2(x9, 4) - 0.5) * 0.4;
+      if (kind === 'leafy') { let k9 = 0; for (let x9 = a + 0.3; x9 < b - 0.2; x9 += 0.55, k9++) { const o = k9 % 2 ? 0.26 : -0.26; dBlob(0.3, 0.44, 0.3, hash2(x9, o) > 0.5 ? 0x6aa84f : 0x7cb85a, x9, top + 0.3, rz + o, { chunky: true, ry: x9 * 3 + o, jitter: 0.3 }); } return; }
+      if (kind === 'marigold') { for (let x9 = a + 0.35; x9 < b - 0.2; x9 += 0.85) { const zz = rz + (hash2(x9, 4) - 0.5) * 0.4;
           dBlob(0.3, 0.26, 0.3, 0x4f8a3e, x9, top + 0.2, zz, { chunky: true, ry: x9 });
           [[0.12, 0.08], [-0.08, -0.12]].forEach(([ox, oz], j) => dBlob(0.08, 0.07, 0.08, j ? 0xf39a1c : 0xf7c531, x9 + ox, top + 0.42, zz + oz, { chunky: true })); } return; }
-      if (kind === 'potato') { for (let x9 = a + 0.4; x9 < b - 0.3; x9 += 0.8) dBlob(0.55, 0.16, 0.52, hash2(x9, 5) > 0.5 ? 0x4f8f3e : 0x5c9a48, x9, top + 0.08, rz, { chunky: true, ry: x9, jitter: 0.25 }); return; }
+      if (kind === 'potato') { for (let x9 = a + 0.4; x9 < b - 0.3; x9 += 0.95) dBlob(0.55, 0.16, 0.52, hash2(x9, 5) > 0.5 ? 0x4f8f3e : 0x5c9a48, x9, top + 0.08, rz, { chunky: true, ry: x9, jitter: 0.25 }); return; }
       for (let x9 = a + 0.3; x9 < b - 0.1; x9 += 1.2) [-0.35, 0.35].forEach(o => { dRod(x9, top, rz + o, x9, top + 1.6, rz + o * 0.3, 0.02, 0x9c7a53); dBlob(0.2, 0.34, 0.2, 0x4d8b4d, x9, top + 0.9, rz + o * 0.6, { chunky: true, ry: x9 + o }); });   // 콩: A자 지주 + 끈 + 덩굴
       dRod(a + 0.3, top + 1.5, rz, b - 0.1, top + 1.5, rz, 0.01, 0xd8d4c8);
       colliders.push(noStand({ x0: a, x1: b, y0: Y, y1: Y + 1.8, z0: rz - 0.6, z1: rz + 0.6 }));
@@ -2246,7 +2246,7 @@ export function buildWorld(scene) {
     for (let k = 0; k < 5; k++) { const x9 = 26.5 + k * 1.05, z9 = GP[4][1] - 0.35; addBox(0.9, 0.3, 0.35, 0xb4552f, x9, Y, z9);
       for (let j = -1; j <= 1; j++) dBlob(0.12, 0.42, 0.1, 0x9cc45a, x9 + j * 0.28, Y + 0.55, z9, { chunky: true, jitter: 0.3 }); }
     const tp = [35.0, GP[4][1] - 0.4];
-    dCyl(0.05, 0.05, 0.9, 0xeeeeee, tp[0], Y, tp[1], { seg: 8 }); dBox(0.05, 0.05, 0.14, 0x9aa0a6, tp[0], Y + 0.78, tp[1] + 0.09); post(tp[0], tp[1], Y, Y + 0.95, 0.07);
+    dCyl(0.05, 0.05, 0.9, 0xeeeeee, tp[0], Y, tp[1], { seg: 8 }); dBox(0.05, 0.05, 0.14, 0x9aa0a6, tp[0], Y + 0.78, tp[1] + 0.09); colliders.push(noStand({ x0: tp[0] - 0.07, x1: tp[0] + 0.07, y0: Y, y1: Y + 0.95, z0: tp[1] - 0.07, z1: tp[1] + 0.07 }));
     dCyl(0.35, 0.25, 0.18, 0xb0452f, tp[0] + 0.75, Y, tp[1] + 0.1, { seg: 12 }); colliders.push({ x0: tp[0] + 0.4, x1: tp[0] + 1.1, y0: Y, y1: Y + 0.18, z0: tp[1] - 0.3, z1: tp[1] + 0.4 });
     [[0.36, 0], [0.26, 0.03]].forEach(([r9, y9]) => { for (let k = 0; k < 9; k++) { const a = k / 9 * Math.PI * 2, b = (k + 1) / 9 * Math.PI * 2, hx = 36.4, hz = -58.6;
       dRod(hx + Math.cos(a) * r9, Y + 0.03 + y9, hz + Math.sin(a) * r9, hx + Math.cos(b) * r9, Y + 0.03 + y9, hz + Math.sin(b) * r9, 0.02, 0xbfc3c4); } });
@@ -2306,7 +2306,7 @@ export function buildWorld(scene) {
     { const dz9 = -37.9;
       addBox(0.85, -YARD, 2.2, 0xbdb8ae, wx1 + 0.575, YARD, dz9);
       addPanel(0.85, 1.9, 0x8c3a36, wx1 + 0.575, 0.012, dz9); for (let k = 0; k < 4; k++) addPanel(0.06, 1.8, 0x4f8c66, wx1 + 0.27 + k * 0.2, 0.02, dz9);   // 빨강·초록 고무 매트(무늬 판을 새로 쓰면 뒤뜰 화면에 드로우콜 +1)
-      addBox(0.45, 1.1, 0.45, BRICK, wx1 + 0.375, YARD, dz9 - 1.325);
+      addBox(0.45, 1.1, 0.45, BRICK, wx1 + 0.375, YARD, dz9 - 1.325, NS);
       patWall('brickW', 'x', wx1 + 0.17, wx1 + 0.58, YARD + 0.02, YARD + 1.08, dz9 - 1.562, -1);
       dBox(0.55, 0.08, 0.55, 0xcfcac0, wx1 + 0.425, YARD + 1.1, dz9 - 1.3); }
     { const xo = kx0o - 0.04;                                                                     // 급식동 서벽 아랫단 띠 바깥 면
@@ -2318,7 +2318,7 @@ export function buildWorld(scene) {
       dCyl(0.35, 0.35, 0.02, 0x6b6b6b, (wx1 + kx0o) / 2, Y + 0.012, -43.2, { seg: 12, far: true }); dBox(1.0, 0.03, 0.6, 0x6f7274, (wx1 + kx0o) / 2 - 0.3, Y + 0.012, -40.4, FAR); }
 
     // ---- 울타리 밖 북쪽(위성 B-11·영상 b_030~033): 나무 띠(세 무리 — 틈으로 공장이 보임) + 너머 회청색 2층 공장(24° 기운 긴 지붕) ----
-    [[-46, -38], [-24, -12], [-6, 8]].forEach(([a, b], g9) => { for (let x9 = a; x9 <= b; x9 += 3.8) { const h9 = hash2(x9, g9 + 31); bgTree(x9 + (h9 - 0.5) * 1.2, FZ(x9) - 3.2 - h9 * 2.2, 1.0 + h9 * 0.35); } });
+    [[-46, -38], [-24, -14], [-5, 7]].forEach(([a, b], g9) => { for (let x9 = a; x9 <= b; x9 += 4.8) { const h9 = hash2(x9, g9 + 31); bgTree(x9 + (h9 - 0.5) * 1.2, FZ(x9) - 3.2 - h9 * 2.2, 1.0 + h9 * 0.35); } });
     byRot(-32.3, -104, 4.7, -121, 11, 7.5, FIELD, 0xb7c0c8, { far: true, whole: true, at: [-14, -112] });
     byRot(-32.3, -104, 4.7, -121, 11.6, 0.3, FIELD + 7.5, 0xdfe3e6, { far: true, whole: true, at: [-14, -112] });
 
