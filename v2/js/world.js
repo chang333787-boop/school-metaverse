@@ -1055,6 +1055,7 @@ export function buildWorld(scene) {
     colliders.push({ x0: rx0, x1: rx1, y0: 2.9, y1: FH, z0: rzg + 0.15, z1: bz1 - 0.3 });
     lamp(0.22, 0.04, 0.22, (rx0 + rx1)/2 - 0.9, 2.86, (rzg + bz1)/2); lamp(0.22, 0.04, 0.22, (rx0 + rx1)/2 + 0.9, 2.86, (rzg + bz1)/2);
     addBox(bx1 - bx0, 0.3, bz1 - bz0, 0x2f2a26, (bx0 + bx1)/2, FH, (bz0 + bz1)/2);   // 돌출부 지붕
+    dBox(bx1 - bx0 - 0.16, 0.03, bz1 - bz0 - 0.5, 0xdcdedb, (bx0 + bx1)/2, FH + 0.3, (bz0 + 0.42 + bz1 - 0.08)/2, { far: true });   // 윗면 흰 지붕재(위성 밝은 지붕 — 본관 처마 쪽은 비움)
     dBox(bx1 - bx0 + 0.12, 0.1, 0.06, BLUE, (bx0 + bx1)/2, FH + 0.2, bz1 + 0.03);     // 윗선 파랑 띠(영상 p_152 — 양 모서리는 옆면 띠까지 덮음)
     // 포털 바닥 = 짙은 고무 매트, 앞 2단(YARD → -0.15 → 0)
     floorQ('gmat', rx0, rx1, rzg + 0.15, bz1 - 0.4);
@@ -1782,6 +1783,8 @@ export function buildWorld(scene) {
     addBox(RX1 - RX0, Y1 - Y0, RZ1 - ZJ, 0x2f2a26, (RX0 + RX1)/2, Y0, (ZJ + RZ1)/2);   // 구령대 지붕
     addBox(CX1 - CX0, Y1 - Y0, ZJ - CZ0, 0x2f2a26, (CX0 + CX1)/2, Y0, (CZ0 + ZJ)/2);   // 산책로 차양(북쪽 = 돌출부 앞면에 맞댐)
     patQuad('louver', RX0, RX1, ZJ, RZ1, Y0 - 0.012, true);                        // 구령대 = 밝은 루버 천장(영상 p_154·u_290)
+    dBox(RX1 - RX0 - 0.16, 0.03, RZ1 - ZJ - 0.08, 0x8f9a8f, (RX0 + RX1)/2, Y1, (ZJ + RZ1 - 0.08)/2, { far: true });   // 윗면 회녹색 지붕재(위성 — 가장자리 8cm 안쪽이라 땅에선 안 보임)
+    dBox(CX1 - CX0 - 0.16, 0.03, ZJ - CZ0 - 0.08, 0x8f9a8f, (CX0 + CX1)/2, Y1, (CZ0 + 0.08 + ZJ)/2, { far: true });
     const SK = [12.5 - 0.8, 12.5 + 0.8, CZ0 + 0.7, CZ0 + 1.5];                     // 천창 하나 — 현관 입구 앞(영상 p_152·p_156: 유리 두 칸)
     [[CX0, CX1, CZ0, SK[2]], [CX0, CX1, SK[3], ZJ], [CX0, SK[0], SK[2], SK[3]], [SK[1], CX1, SK[2], SK[3]]].forEach(([a, b, c, d]) => patQuad('cwood', a, b, c, d, Y0 - 0.012, true));
     patQuad('cflat', SK[0], SK[1], SK[2], SK[3], Y0 - 0.012, true, 0x9fd3f0);       // 천창 유리(조명 무시 재질 — 땅색에 물들지 않게)
