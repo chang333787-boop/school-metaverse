@@ -1498,7 +1498,13 @@ export function buildWorld(scene) {
     const PX0 = CL.x[1] + 0.4, PX1 = fx1 + 1.0, EZ9 = fz0 - 0.85;                    // 로비 지붕(동쪽 끝 +0.4)과 맞댐
     cut16(PX0, PX1, (u, v) => dBox(v - u, 0.35, RZ0 + 0.01 - EZ9, 0xe9e5dc, (u + v) / 2, FH - 0.056, (EZ9 + RZ0 + 0.01) / 2, { far: true }));
     cut16(RZ0 + 0.01, RZ1 - 0.02, (u, v) => dBox(PX1 - (fx1 + 0.15), 0.35, v - u, 0xe9e5dc, (fx1 + 0.15 + PX1) / 2, FH - 0.056, (u + v) / 2, { far: true }));
-    patQuad('cflat', PX0, PX1, EZ9, fz0 - 0.15, FH - 0.064, true, 0xd9d4c6); patQuad('cflat', fx1 + 0.15, PX1, fz0 - 0.15, RZ1 - 0.02, FH - 0.064, true, 0xd9d4c6); }
+    patQuad('cflat', PX0, PX1, EZ9, fz0 - 0.15, FH - 0.064, true, 0xd9d4c6); patQuad('cflat', fx1 + 0.15, PX1, fz0 - 0.15, RZ1 - 0.02, FH - 0.064, true, 0xd9d4c6);
+    // 동북 모서리(영상 q_107~q_108·b_108): 처마 위 검은 나팔 확성기(북쪽을 봄) · 처마 밑 흰 CCTV · 북면 첫 창 위 작은 흰 등
+    { const kx = fx1 + 0.6, kz = fz0 - 0.5;
+      dBox(0.06, 0.55, 0.06, 0x3a3a3a, kx, FH + 0.294, kz, { far: true });
+      dBox(0.16, 0.16, 0.16, 0x2a2a2a, kx, FH + 0.85, kz, { far: true }); dCyl(0.16, 0.05, 0.3, 0x222222, kx, FH + 0.93, kz - 0.08, { far: true, seg: 6, rot: [-Math.PI / 2, 0, 0] });
+      dBox(0.06, 0.1, 0.06, 0xe6e6e2, kx - 0.2, FH - 0.156, kz + 0.1); dBox(0.12, 0.1, 0.22, 0xf0f0ee, kx - 0.2, FH - 0.256, kz + 0.06);
+      dBox(0.22, 0.15, 0.1, 0xeeeeea, fx1 - 0.85, 2.95, fz0 - 0.2); } }
   ceil(LOB_X0, fx1, fz0 - 0.16, zCor, FH, 'cflat');                          // 주복도(로비·계단홀 트임 앞까지 이어서 틈 없이)
   ceil(HX0, HX1, zCor, RC.z[0] + 0.16, FH, 'cflat');                          // 현관 홀 + 전실
   ceil(fx0, LOB_X0, KBZ, fz0 + 0.16, FH, 'ctile');                            // 측문 통로 남쪽 원무실 블록 북단(서관 몫과 맞댐)
@@ -2083,6 +2089,10 @@ export function buildWorld(scene) {
       dGeo(FLAT, _dm.compose(_dv.set((x0 + x1) / 2, y, (z0 + z1) / 2), _dq.setFromEuler(_de.set(0, Math.atan2(-(z1 - z0), x1 - x0), 0)), _ds.set(L9, 1, w)), hex); };
     const disc = (r, hex, x, y, z) => dGeo(DISC, _dm.compose(_dv.set(x, y, z), _dq.identity(), _ds.set(r, 1, r)), hex);
     const tet = (s, hex, x, y, z, ry = 0) => dGeo(TET, _dm.compose(_dv.set(x, y, z), _dq.setFromEuler(_de.set(0.6, ry, 0.3)), _ds.set(s, s * 0.8, s)), hex);
+    const BLADE = new THREE.CylinderGeometry(0.004, 0.05, 1, 3, 1, true).translate(0, 0.5, 0).toNonIndexed();
+    const tuft = (x, y, z, h, hex, sd = 0) => { for (let k = 0; k < 6; k++) { const a = sd + k * 1.047, ln = 0.28 + 0.14 * ((k * 7 + Math.round(sd * 10)) % 3) / 2;   // 억새·키 큰 풀 = 가는 잎 여섯이 사방으로 벌어진 포기(잎마다 6면)
+      _rd.set(Math.sin(ln) * Math.cos(a), Math.cos(ln), Math.sin(ln) * Math.sin(a));
+      dGeo(BLADE, _dm.compose(_dv.set(x + Math.cos(a) * 0.05, y, z + Math.sin(a) * 0.05), _dq.setFromUnitVectors(_up, _rd), _ds.set(1, h * (0.8 + 0.1 * (k % 3)), 1)), hex, { jitter: 0.2 }); } };
     addBox(lx1 + 0.15 - (cx1 + 0.15), COURT - YARD, lz0 - 0.15 - MZ0, 0xb4806a, (cx1 + 0.15 + lx1 + 0.15)/2, YARD, (MZ0 + lz0 - 0.15)/2);   // 노치(화단)
     addBox(MX1 - DX0, COURT - YARD, MZ1 - MZ0, 0xb4806a, (DX0 + MX1)/2, YARD, (MZ0 + MZ1)/2);
     patQuad('ilock', DX0, MX1, MZ0, RN, COURT + 0.012, false, RED); patQuad('ilock', DX0, MX1, RN, RS, COURT + 0.012, false, GRY); patQuad('ilock', DX0, MX1, RS, MZ1, COURT + 0.012, false, RED);
@@ -2124,7 +2134,7 @@ export function buildWorld(scene) {
     patQuad('dirt', YB1, MX1 - 0.15, MZ0, KZ0, COURT + 0.06, false, SOIL);
     //   포기 = 길게 늘인 20면 덩어리(2.5m) · 꽃 = 사면체 둘(서쪽 x < 33) — 예산(위 노란 꽃 덤불과 같은 이유)
     for (let x9 = YB1 + 1.1; x9 < MX1 - 0.6; x9 += 2.3) { const h9 = hash2(x9, 41), zz = MZ0 + 0.42 + (h9 - 0.5) * 0.12, tall = x9 > 40.5;
-      if (tall) dCyl(0.42, 0.14, 0.95, 0x8e9a60, x9, COURT + 0.05, zz, { seg: 6, rot: [0, h9 * 3, 0], jitter: 0.25 });   // 동끝 키 큰 풀 = 위로 퍼진 다발
+      if (tall) { tuft(x9 - 0.4, COURT + 0.05, zz, 1.05, 0x8e9a60, h9 * 6); tuft(x9 + 0.5, COURT + 0.05, zz + 0.05, 0.9, 0x9aa66e, h9 * 4); }   // 동끝 키 큰 풀
       else dBlob(1.25, 0.4 + h9 * 0.18, 0.42, [0x4f7f3a, 0x5d8f45, 0x466f34][Math.floor(h9 * 3)], x9, COURT + 0.32 + h9 * 0.08, zz, { chunky: true, ry: (h9 - 0.5) * 0.2, jitter: 0.2 });
       if (x9 < 33) for (let k = 0; k < 2; k++) { const hk = hash2(x9 + k, 43);
         tet(0.08, [0xe0485e, 0xf07a3a, 0xf29ab5, 0xd8342c][(k + Math.floor(h9 * 4)) % 4], x9 + (k - 0.5) * 0.8 + (hk - 0.5) * 0.2, COURT + 0.74 + hk * 0.15, zz + (hk - 0.5) * 0.3, hk * 6); }
@@ -2139,7 +2149,7 @@ export function buildWorld(scene) {
       addBox(X1 - X0, 0.15, 0.15, CRB, (X0 + X1) / 2, YARD, Z1 + 0.075); addBox(0.15, 0.15, Z1 - Z0, CRB, X1 + 0.075, YARD, (Z0 + Z1) / 2);
       patQuad('dirt', X0, X1, Z0, Z1, YARD + 0.06, false, SOIL);
       dBlob(0.75, 0.5, 0.62, 0x2e5a2c, 46.0, YARD + 0.45, -40.5, { chunky: true, ry: 0.4, jitter: 0.12 }); dBlob(0.6, 0.45, 0.55, 0x33612f, 47.0, YARD + 0.4, -41.0, { chunky: true, ry: 1.3, jitter: 0.12 });
-      [[45.5, -41.2], [46.9, -40.2], [45.6, -40.1]].forEach(([x9, z9], i) => dCyl(0.34, 0.1, 0.95, i % 2 ? 0x9aa66e : 0x8e9a60, x9, YARD + 0.05, z9, { seg: 6, rot: [0, i, 0], jitter: 0.25 }));   // 억새 = 위로 퍼진 다발
+      [[45.5, -41.2], [46.9, -40.2], [45.6, -40.1]].forEach(([x9, z9], i) => tuft(x9, YARD + 0.05, z9, 1.1 - i * 0.1, i % 2 ? 0x9aa66e : 0x8e9a60, i * 2.1));   // 억새
       [[X0 + 0.1, Z1 - 0.05], [X1 - 0.05, Z1 - 0.05], [X1 - 0.05, Z0 + 0.1]].forEach(([x9, z9], i, A) => { rodL(x9, YARD + 0.06, z9, x9, YARD + 1.0, z9, 0.014, 0x8a9096);
         if (i) [[0.45, 0x8a9096], [0.8, 0x4a8ab0]].forEach(([h, c]) => rodL(A[i - 1][0], YARD + 0.06 + h, A[i - 1][1], x9, YARD + 0.06 + h, z9, 0.007, c)); });
       colliders.push(noStand({ x0: X0, x1: X1, y0: YARD, y1: YARD + 1.0, z0: Z0, z1: Z1 })); }
@@ -2156,6 +2166,7 @@ export function buildWorld(scene) {
       else dGeo(FLAME, _dm.compose(_dv.set(x9, y9 + 0.55, z9), _dq.setFromEuler(_de.set(0, x9, 0)), _ds.set(1, 1.0, 1)), 0x44703a, { far: true, jitter: 0.22 });
       colliders.push(noStand({ x0: x9 - 0.43, x1: x9 + 0.43, y0: y9, y1: y9 + 0.67, z0: z9 - 0.43, z1: z9 + 0.43 }));
     });
+    hotspots.push({ kind: 'pot', x: 36.8, z: PZ9 + 0.75, y: COURT, r: 1.0, label: '향나무 화분에 물 주기' });   // 가운데 향나무 화분(C) 남쪽 — 수돗가에서 물 받고 오는 동선
     // 본관 벽 앞 큰 흰 콘크리트 상자(실외기 덮개 겸 수돗가 — 영상 Q_124·Q_128·b_129·b_130.5): 얼룩 윗판 · 북면 갈색 루버 두 칸 · 동끝 파란 수도관·빨간 밸브 · 윗판 위 빗자루
     { const SX0 = 23.2, SX1 = 27.9, SD = 1.5, sc = (SX0 + SX1) / 2, sz = MZ1 - SD / 2;
       addBox(SX1 - SX0, 1.0, SD, 0xe4e2dc, sc, COURT, sz, NS);
@@ -3402,15 +3413,19 @@ export function buildWorld(scene) {
     });
 
     // ---- 벽돌 마당(동관 동면 ~ 비비추 화단 · 영상 d_089·b_099~106): 바랜 적갈 인터로킹 + 가운데 회베이지 판 · 맨홀 · 콘크리트 전봇대(완목 2단·가로등) ----
-    patQuad('pave', XB, XH, PZ[0], -52, Y + 0.012, false, BRK);
-    patQuad('pave', XB, 46.3, -52, -39.35, Y + 0.012, false, BRK); patQuad('pave', 48.1, XH, -52, -39.35, Y + 0.012, false, BRK);
-    patQuad('pave', 46.3, 48.1, -52, -40, Y + 0.012, false, 0xd2cfc6); patQuad('pave', 46.3, 48.1, -40, -39.35, Y + 0.012, false, BRK);   // 가운데 회베이지 판
-    patQuad('pave', 46.65, XH, -39.35, -36.3, Y + 0.012, false, BRK); patQuad('pave', 46.65, 53.5, -36.3, fz0 - 0.3, Y + 0.012, false, BRK);   // 남쪽 끝 = 본관 북벽 따라 동쪽으로
+    //   COURT-3(영상 q_104.5~q_112): 가운데 마당과 같은 물결 인터로킹('ilock') — 가운데 회색 판 + 가장자리 붉은 띠 · 마당 북쪽 붉은 띠(z -39.35~-38.3)가 동쪽으로 이어짐 · 본관 앞은 회색
+    const BRK2 = 0xbf7873, GRY2 = 0xcfc8bc;
+    patQuad('ilock', XB, XH, PZ[0], -52, Y + 0.012, false, BRK2);
+    patQuad('ilock', XB, 46.3, -52, -39.35, Y + 0.012, false, BRK2); patQuad('ilock', 48.1, XH, -52, -39.35, Y + 0.012, false, BRK2);
+    patQuad('ilock', 46.3, 48.1, -52, -39.35, Y + 0.012, false, GRY2);   // 가운데 회색 판(q_106)
+    patQuad('ilock', 46.65, XH, -39.35, -38.3, Y + 0.012, false, BRK2); patQuad('ilock', 46.65, XH, -38.3, fz0 - 0.3, Y + 0.012, false, GRY2);
+    patQuad('ilock', XH, 53.5, -36.3, fz0 - 0.3, Y + 0.012, false, GRY2);   // 남쪽 끝 = 본관 북벽 따라 동쪽으로(전봇대 둘레 회색 — q_109·q_111)
     [[47.5, -50.5], [47.3, -38.3]].forEach(([x9, z9]) => dCyl(0.35, 0.35, 0.02, 0x6b6b6b, x9, Y + 0.012, z9, { seg: 12, far: true }));
-    { const px9 = 48.4, pz9 = -41.2;
+    { const px9 = 48.5, pz9 = -35.9;                                                            // COURT-3: 본관 북벽 앞 1.6m · 화분 A 동남쪽(영상 q_107~q_112: 마당 동쪽 입구 — 벽돌 마당 가운데 아님)
       dCyl(0.12, 0.18, 11, 0x9a9a96, px9, Y, pz9, { far: true, seg: 8 });
       [9.4, 10.2].forEach(h9 => { dBox(1.8, 0.1, 0.1, 0x8a8a86, px9, Y + h9, pz9, { far: true }); [-0.7, -0.25, 0.25, 0.7].forEach(o => dCyl(0.04, 0.05, 0.12, 0xf2f2ee, px9 + o, Y + h9 + 0.1, pz9, { far: true, seg: 6 })); });
       dRod(px9, Y + 7.5, pz9, px9 - 1.4, Y + 7.9, pz9, 0.04, 0x8a8a86, { far: true }); dBox(0.45, 0.12, 0.2, 0xdfe3e6, px9 - 1.5, Y + 7.78, pz9, { far: true });
+      [-0.12, 0.12].forEach(o => dRod(px9 + o, Y + 8.9, pz9, 49.9 + o, FH + 0.35, -34.75, 0.012, 0x2a2a2a, { far: true }));   // 본관 옥상으로 가는 인입선 둘(q_106·q_109)
       colliders.push({ x0: px9 - 0.2, x1: px9 + 0.2, y0: Y, y1: Y + 11, z0: pz9 - 0.2, z1: pz9 + 0.2 }); }
     // 데크 남쪽: 바위·관목 둔덕(영상 b_099·b_105)
     patQuad(MOW, DX[0], 60, DZ[1], -36.3, Y + 0.012, false, GR); patQuad(MOW, 53.5, 60, -36.3, fz0 - 0.3, Y + 0.012, false, GR);
@@ -3445,7 +3460,8 @@ export function buildWorld(scene) {
     zones.push({ x0: GD.x[0], x1: GD.x[1], z0: GD.z[0], z1: GD.z[1], y: Y, label: '텃밭' });
     zones.push({ x0: GP[3][0], x1: 50, z0: -66, z1: GP[4][1], y: Y, label: '큰 나무 잔디밭' });
     zones.push({ x0: DX[0], x1: DX[1], z0: DZ[0], z1: DZ[1], y: DT, label: '텃밭 쉼터' });
-    zones.push({ x0: XB, x1: DX[0], z0: PZ[0], z1: fz0 - 0.3, y: Y, label: '동관 뒤뜰' });
+    zones.push({ x0: XB, x1: DX[0], z0: PZ[0], z1: -39.35, y: Y, label: '동관 뒤뜰' });
+    zones.push({ x0: XB, x1: DX[0], z0: -39.35, z1: fz0 - 0.3, y: Y, label: '마당 동쪽 입구' });   // COURT-3: 가운데 마당 동쪽 끝 너머 — 전봇대·화분 A(영상 q_106~q_113)
   }
 
   // ================= 위성 나무 무리(Esri z19: 체육관 북서쪽 숲·서쪽 울타리 나무 줄·동쪽 가장자리·텃밭 동쪽·정문 옆) =================
