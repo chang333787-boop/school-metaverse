@@ -80,7 +80,7 @@ export function buildWorld(scene) {
   // geo(비인덱스로 변환)를 행렬 m으로 옮겨 붙인다. 면 방향으로 명암(윗면 1·옆면 .9·아랫면 .62 — addBox와 같은 규칙)
   function dGeo(geo, m, hex, opt = {}) {
     const g = geo.index ? geo.toNonIndexed() : geo, P = g.attributes.position;
-    const ch = dChunk(!!opt.far, _dv.setFromMatrixPosition(m).x, _dv.z);
+    const ch = opt.at ? chunkOf(opt.at[0], opt.at[1]) : dChunk(!!opt.far, _dv.setFromMatrixPosition(m).x, _dv.z);   // at = 이 청크에 합침(넓게 퍼진 먼 산을 한 덩이로 — 드로우콜)
     _c.set(hex); _c.multiplyScalar(0.97);
     const jit = opt.jitter || 0;
     for (let i = 0; i < P.count; i += 3) {
@@ -246,6 +246,7 @@ export function buildWorld(scene) {
   function sign(text, x, y, z, rotY = 0, h = 0.42, sty = null) {
     const key = text + (sty ? '|' + sty.bg + sty.fg : '');
     let c = signCanvas.get(key);
+    if (!c && text === EXIT_KEY) { c = exitCanvas(); signCanvas.set(key, c); }
     if (!c) {
       c = document.createElement('canvas'); const g2 = c.getContext('2d');
       g2.font = '900 84px sans-serif';
@@ -261,6 +262,28 @@ export function buildWorld(scene) {
     m.position.set(x, y, z); m.rotation.y = rotY;
     signList.push({ m, c, w, h });
     return { m, w };
+  }
+  // 비상구 유도등 그림(피난구 — 초록 바탕 · '비상구' · 흰 사람이 문으로 달려간다). 글자판과 같은 아틀라스(조명 무시 재질 → 밤에도 빛남)
+  const EXIT_KEY = '\u0001EXIT';
+  function exitCanvas() {
+    const c = document.createElement('canvas'); c.width = 336; c.height = 128; const g = c.getContext('2d');
+    g.fillStyle = '#10a04e'; g.beginPath(); g.roundRect(2, 2, 332, 124, 14); g.fill();
+    g.fillStyle = '#fff'; g.fillRect(222, 16, 90, 98); g.fillStyle = '#10a04e'; g.fillRect(236, 30, 62, 84);   // 문틀
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(184, 30, 12, 0, Math.PI * 2); g.fill();                           // 머리
+    g.strokeStyle = '#fff'; g.lineWidth = 13; g.lineCap = 'round'; g.lineJoin = 'round';
+    const L = pts => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.stroke(); };
+    L([[176, 48], [158, 80]]);                                   // 몸(앞으로 기울어짐)
+    L([[172, 55], [192, 64], [206, 54]]); L([[172, 55], [154, 60], [140, 72]]);   // 팔
+    L([[158, 80], [180, 92], [184, 114]]); L([[158, 80], [144, 100], [120, 106]]); // 다리
+    g.font = '900 38px sans-serif'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('비상구', 66, 68);
+    return c;
+  }
+  // (x, z) = 벽 안쪽 면 위 점, n = 면 법선 [nx, nz]. 흰 등 상자(3cm) + 그림판(상자 앞 1cm)
+  function exitSign(x, z, y, n) {
+    const [nx, nz] = n, ry = Math.atan2(nx, nz);
+    if (nx === 0) dBox(0.41, 0.18, 0.03, 0xf2f2ee, x, y - 0.09, z + nz * 0.015);
+    else dBox(0.03, 0.18, 0.41, 0xf2f2ee, x + nx * 0.015, y - 0.09, z);
+    sign(EXIT_KEY, x + nx * 0.032, y, z + nz * 0.032, ry, 0.14);
   }
   function buildSigns() {
     if (!signList.length) return;
@@ -592,6 +615,7 @@ export function buildWorld(scene) {
   const floorQ = (kind, x0, x1, z0, z1, y = 0, tint) => patQuad(kind, x0, x1, z0, z1, y + 0.012, false, tint);
   // 조명(표면 부착 LED) — 전부 한 메시(예전엔 등마다 메시 1개 = 드로우콜 1개씩이었다)
   const lampPos = [];
+  let flagMesh = null;
   function lamp(w, h, d, cx, y, cz) { for (let i = 0; i < bpos.count; i++) lampPos.push(bpos.getX(i)*w + cx, bpos.getY(i)*h + y + h/2, bpos.getZ(i)*d + cz); }
   // 천장: 지붕 밑면 바로 아래(top-0.16) 무늬 사각형. 벽 안쪽 면에서 1cm 더 안쪽.
   // 카메라가 천장을 뚫고 올라가 천장 속이 보이지 않게 충돌 등록(사람 머리엔 닿지 않는 높이)
@@ -1461,6 +1485,14 @@ export function buildWorld(scene) {
     addBox(G.width+0.4, 0.5, gd*0.72, 0xc3c6c4, gx, GYF + GH+0.4, gzc);
     addBox(G.width-0.2, 0.5, gd*0.36, 0xcdd0ce, gx, GYF + GH+0.9, gzc); }
   zones.push({ x0: gx0, x1: gx1, z0: gz0 + 3.6, z1: gz1, y: GYF, label: '체육관' });
+  // 비상구 유도등(바깥으로 나가는 문 위 인방 · 문 높이 2.6 위): 현관 자동문(홀 쪽)·측문·계단홀 뒷문·로비 마당 문·급식실 뒷문·체육관 전실 문·부속동 현관
+  exitSign(hc, EZI - 0.15, 2.74, [0, -1]);
+  exitSign(wx0 + 0.15, SIDE_Z, 2.74, [1, 0]);
+  exitSign(wx1 - 0.15, -37.9, 2.74, [-1, 0]);
+  exitSign(CL.x[1] - 0.15, CL.z[1] - 1.3, 2.74, [-1, 0]);
+  exitSign(K.backDoorC, kz0 + 0.15, 2.74, [0, 1]);
+  exitSign(gx1 - 0.15, GDZ, GYF + 2.74, [-1, 0]);
+  exitSign(GA.x[1] - 0.15, GDZ, GYF + 2.74, [-1, 0]);
   ceil(gx0, gx1, gz0, gz1, GYF + GH, 'ctile');
 
   // ================= 앞뜰 (영상 f_132~186·p_146~163 · 위성): 건물 → 자갈 띠 → 북 화단(둥근 회양목) → 산책로(점자블록) → 남 화단(전정 소나무) → 잔디 둔덕 =================
@@ -1560,21 +1592,25 @@ export function buildWorld(scene) {
     sign('12', px1 + 9.0, YARD + 5.45, S1 + 0.4, 0, 0.3);
     const [fpx, fpz] = SCHOOL.flagPole;                                             // 게양대(구령대 서쪽 — 영상 u_276)
     addBox(0.16, 10, 0.16, 0xc8cdd2, fpx, YARD, fpz);
-    { // 태극기(캔버스 한 장 · 양면)
-      const cv = document.createElement('canvas'); cv.width = 180; cv.height = 120; const g = cv.getContext('2d');
-      g.fillStyle = '#ffffff'; g.fillRect(0, 0, 180, 120);
-      g.save(); g.translate(90, 60); g.rotate(-0.588);
-      g.fillStyle = '#cd2e3a'; g.beginPath(); g.arc(0, 0, 30, Math.PI, 0); g.fill();
-      g.fillStyle = '#0047a0'; g.beginPath(); g.arc(0, 0, 30, 0, Math.PI); g.fill();
-      g.fillStyle = '#cd2e3a'; g.beginPath(); g.arc(-15, 0, 15, 0, Math.PI); g.fill();
-      g.fillStyle = '#0047a0'; g.beginPath(); g.arc(15, 0, 15, Math.PI, 0); g.fill();
+    { // 태극기(캔버스 한 장 · 양면 · 3:2). 태극 축 = 좌상-우하 대각선(빨강 머리 좌상·파랑 머리 우하, 빨강이 위) · 건(좌상)·곤(우하)·감(우상)·리(좌하), 괘 막대는 제 대각선에 수직
+      const cv = document.createElement('canvas'); cv.width = 360; cv.height = 240; const g = cv.getContext('2d'), A = Math.atan2(2, 3);
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, 360, 240);
+      g.save(); g.translate(180, 120); g.rotate(A);
+      g.fillStyle = '#cd2e3a'; g.beginPath(); g.arc(0, 0, 60, Math.PI, 0); g.fill();
+      g.fillStyle = '#0047a0'; g.beginPath(); g.arc(0, 0, 60, 0, Math.PI); g.fill();
+      g.fillStyle = '#cd2e3a'; g.beginPath(); g.arc(-30, 0, 30, 0, Math.PI); g.fill();
+      g.fillStyle = '#0047a0'; g.beginPath(); g.arc(30, 0, 30, Math.PI, 0); g.fill();
       g.restore();
       g.fillStyle = '#000000';
-      [[34, 22, -0.588, [1, 1, 1]], [146, 98, -0.588, [0, 0, 0]], [146, 22, 0.588, [1, 0, 1]], [34, 98, 0.588, [0, 1, 0]]].forEach(([cx, cy, a, bars]) => {
-        g.save(); g.translate(cx, cy); g.rotate(a); bars.forEach((b, k) => { const y = -9 + k * 7; if (b) g.fillRect(-12, y, 24, 5); else { g.fillRect(-12, y, 10, 5); g.fillRect(2, y, 10, 5); } }); g.restore(); });
-      const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-      const fl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.93), new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }));
-      fl.position.set(fpx + 0.78, YARD + 9.05, fpz); fl.matrixAutoUpdate = false; fl.updateMatrix(); scene.add(fl);
+      const D = 110, ux = Math.cos(A), uy = Math.sin(A);
+      [[-1, -1, A, [1, 1, 1]], [1, 1, A, [0, 0, 0]], [1, -1, -A, [0, 1, 0]], [-1, 1, -A, [1, 0, 1]]].forEach(([sx, sy, a, bars]) => {
+        g.save(); g.translate(180 + sx * D * ux, 120 + sy * D * uy); g.rotate(a);
+        bars.forEach((b, k) => { const x = -20 + k * 15; if (b) g.fillRect(x, -30, 10, 60); else { g.fillRect(x, -30, 10, 27.5); g.fillRect(x, 2.5, 10, 27.5); } });
+        g.restore(); });
+      const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+      const fl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.93, 14, 4), new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }));
+      fl.position.set(fpx + 0.78, YARD + 9.05, fpz); fl.matrixAutoUpdate = false; fl.updateMatrix(); fl.frustumCulled = false; scene.add(fl);
+      flagMesh = fl;                                                                // main.js가 펄럭이게 한다(정점 75개)
     }
   }
 
@@ -1900,8 +1936,11 @@ export function buildWorld(scene) {
     [-72, -54, -34, -12, 14, 38, 60, 78].forEach(tx9 => tree(tx9, 64, 0.9));
     // 서쪽 비닐하우스(영상 g_060~076 — 높은 철망 너머)
     for (let k = 0; k < 4; k++) dGeo(new THREE.CylinderGeometry(3, 3, 30, 12, 1, true, 0, Math.PI).rotateZ(Math.PI / 2).rotateY(Math.PI / 2), new THREE.Matrix4().makeTranslation(-60 - k * 7, Y, 25), 0xdfe7ea, { far: true });
-    [[-58, 116, 26, 13, -2.3], [6, 124, 34, 16, -4.3], [62, 112, 24, 11, -3.3]].forEach(([mx, mz, mw, mh, my]) =>
-      addBox(mw * 2.6, mh, mw, 0x6f8f66, mx, my, mz, { collide: false }));
+    // 먼 산 능선(남쪽): 둥근 덩어리 5개씩 겹친다(초록 상자는 멀리서 네모 벽으로 보였다)
+    [[-58, 116, 26, 13, -2.3], [6, 124, 34, 16, -4.3], [62, 112, 24, 11, -3.3]].forEach(([mx, mz, mw, mh, my], i) => {
+      for (let k = 0; k < 5; k++) { const t = k / 4 - 0.5, hh = mh * (1 - Math.abs(t) * 0.9) * (0.85 + hash2(mx + k, mz) * 0.3);
+        dBlob(mw * 0.62, hh, mw * 0.5, [0x5f8a5a, 0x6a955f, 0x58804f][(i + k) % 3], mx + t * mw * 2.2, my, mz + (k % 2) * 3, { far: true, jitter: 0.1, ry: k, at: [mx, mz] }); }
+    });
   }
   {   // 외벽 파랑·노랑 띠(인식 포인트 1순위) — 띠 끝 0.06 인셋(감사)
     const IN = 0.06;
@@ -2118,5 +2157,5 @@ export function buildWorld(scene) {
     [LC.x[1], ex1 + 0.15, ez1, fz0, COURT], [gx0, gx1, gz0, gz1, GYF], [G.annex.x[0], G.annex.x[1], G.annex.z[0], G.annex.z[1], GYF]];
   const baseAt = (x, z) => { for (const [a, b, c, d, y] of FLOORS) if (x >= a && x <= b && z >= c && z <= d) return y; return terrainAt(x, z); };
   const UPPER = [wx0, wx1, wz0, wz1, FH + 0.3];
-  return { colliders, grid, zones, doors, allBoxes, hotspots, details, visRods, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh };
+  return { colliders, grid, zones, doors, allBoxes, hotspots, details, visRods, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh };
 }

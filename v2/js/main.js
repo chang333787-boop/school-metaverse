@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=95';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=98';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=3';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 
 const canvas = document.getElementById('scene');
@@ -416,6 +416,44 @@ const stars = (() => {
   const m = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xfff8e8, size: 1.7, sizeAttenuation: false, fog: false }));
   m.visible = false; m.frustumCulled = false; scene.add(m); return m;
 })();
+// 구름(다각 덩어리 9무리 · 한 메시 · 조명 무시 + 정점색: 윗면 흰색·아랫면 푸른 회색). 카메라를 따라다녀 하늘처럼 멀고, 아주 천천히 돈다. 시간대마다 색만 바꾼다
+const clouds = (() => {
+  let sd = 20260924; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+  const pos = [], col = [], blob = new THREE.IcosahedronGeometry(1, 1), bp = blob.attributes.position, m4 = new THREE.Matrix4();
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3(), TOP = new THREE.Color(0xffffff), BOT = new THREE.Color(0xd3dcea), cc = new THREE.Color();
+  for (let i = 0; i < 9; i++) {
+    const th = i / 9 * Math.PI * 2 + rnd() * 0.5, R = 150 + rnd() * 60, cx = Math.cos(th) * R, cz = Math.sin(th) * R, cy = 58 + rnd() * 30, sc = 0.8 + rnd() * 0.5, k = 4 + Math.floor(rnd() * 3);
+    for (let j = 0; j < k; j++) {
+      const ox = (j - (k - 1) / 2) * 9 * sc + (rnd() - 0.5) * 4, big = 1 - Math.abs(j - (k - 1) / 2) / k;
+      m4.compose(new THREE.Vector3(cx + ox * Math.cos(th + 1.57), cy + big * 4.5 * sc, cz + ox * Math.sin(th + 1.57)), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rnd() * 3, 0)),
+        new THREE.Vector3((9 + big * 9) * sc, (5 + big * 7) * sc, (8 + big * 7) * sc));
+      for (let t = 0; t < bp.count; t += 3) {
+        a.fromBufferAttribute(bp, t).applyMatrix4(m4); b.fromBufferAttribute(bp, t + 1).applyMatrix4(m4); c.fromBufferAttribute(bp, t + 2).applyMatrix4(m4);
+        a.y = Math.max(a.y, cy - 1); b.y = Math.max(b.y, cy - 1); c.y = Math.max(c.y, cy - 1);   // 밑면은 납작하게 눌러 닫는다(뭉게구름 밑면 — 면을 빼면 구멍이 보인다)
+        n.subVectors(b, a).cross(c.clone().sub(a)); if (n.lengthSq() < 1e-6) continue; n.normalize();
+        cc.copy(BOT).lerp(TOP, Math.min(1, Math.max(0, (n.y + 0.35) / 1.1)));
+        pos.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z); for (let q = 0; q < 3; q++) col.push(cc.r, cc.g, cc.b);
+      }
+    }
+  }
+  blob.dispose();
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, fog: false }));
+  m.frustumCulled = false; scene.add(m); return m;
+})();
+const CLOUD_TINT = { day: 0xffffff, sunset: 0xffc9a6, night: 0x34425a };
+// 태극기 펄럭임: 깃대 쪽은 고정, 끝으로 갈수록 크게 흔들리고 살짝 처진다(정점 75개 — 매 프레임)
+const flagBase = world.flag ? Float32Array.from(world.flag.geometry.attributes.position.array) : null;
+let flagT = 0;
+function skyTick(dt) {
+  clouds.position.set(camera.position.x, 0, camera.position.z); clouds.rotation.y += dt * 0.004;
+  if (!flagBase) return;
+  flagT += dt; const P = world.flag.geometry.attributes.position, A = P.array;
+  for (let i = 0; i < P.count; i++) { const x = flagBase[i*3], y = flagBase[i*3+1], u = (x + 0.7) / 1.4;
+    A[i*3+2] = Math.sin(flagT * 3.4 - u * 5.2 + y * 0.9) * 0.11 * u + Math.sin(flagT * 1.3 - u * 2.1) * 0.04 * u;
+    A[i*3+1] = y - 0.05 * u * u; }
+  P.needsUpdate = true; world.flag.geometry.computeVertexNormals();
+}
 const ORDER = ['day', 'sunset', 'night'];
 let timeKey = 'day';
 const timeBtn = document.createElement('div');
@@ -432,6 +470,7 @@ function setTime(k) {
   renderer.toneMappingExposure = t.exp;
   renderer.shadowMap.needsUpdate = true;
   stars.visible = k === 'night';
+  clouds.material.color.setHex(CLOUD_TINT[k]);
   if (world.glassMesh) { const gmat = world.glassMesh.material; gmat.emissive.setHex(k === 'night' ? 0xb08a3e : k === 'sunset' ? 0x3a2a14 : 0x000000); gmat.opacity = k === 'night' ? 0.62 : 0.32; }
   timeBtn.textContent = t.label;
   return k;
@@ -477,6 +516,7 @@ function loop() {
   doorTick(dt);
   hotTick(dt);
   simMs = Math.max(simMs, performance.now() - t0);
+  skyTick(dt);
   detailTick(dt);
   renderer.render(scene, camera);
   acc += dt; n++;
