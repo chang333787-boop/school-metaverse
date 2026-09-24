@@ -74,18 +74,20 @@ export function buildWorld(scene) {
   const BRECT = [[...B.front.x, ...B.front.z], [...B.entrance.x, ...B.entrance.z], [...B.wings[0].x, ...B.wings[0].z], [...B.kitchen.x, ...B.kitchen.z],
     [...B.centerLobby.x, ...B.centerLobby.z], [...B.linkCorridor.x, ...B.linkCorridor.z], [...B.eastWing.x, ...B.eastWing.z]];
   { const g = SCHOOL.gym; BRECT.push([g.center[0] - g.width/2, g.center[0] + g.width/2, g.center[1] - g.depth/2, g.center[1] + g.depth/2], [...g.annex.x, ...g.annex.z]); }
-  const insideBuilding = (x, z) => BRECT.some(([a, b, c, d]) => x > a + 0.2 && x < b - 0.2 && z > c + 0.2 && z < d - 0.2);
-  function dChunk(far, cx, cz) {
+  const buildingOf = (x, z) => BRECT.findIndex(([a, b, c, d]) => x > a + 0.2 && x < b - 0.2 && z > c + 0.2 && z < d - 0.2);
+  // OCC-CULL(integ · 09-24): 실내 청크를 '건물 × 층 × 16m 칸'으로 나눈다 — main.js가 벽·슬래브·지붕 뒤라 안 보이는 청크를 숨긴다(bi·fl)
+  function dChunk(far, cx, cz, cy = 0) {
     if (far) return chunkOf(cx, cz);   // 큰 덩어리(나무·차·울타리 기둥)는 건물 청크에 그대로 합친다 — 같은 재질이라 드로우콜이 늘지 않는다
-    const inside = insideBuilding(cx, cz), key = (inside ? 'i' : 'o') + Math.floor(cx / CHUNK) + '_' + Math.floor(cz / CHUNK);
+    const bi = buildingOf(cx, cz), inside = bi >= 0, fl = inside && cy > FH + 0.15 ? 2 : 1;
+    const key = (inside ? 'i' + bi + (fl === 2 ? 'u' : '') + ':' : 'o') + Math.floor(cx / CHUNK) + '_' + Math.floor(cz / CHUNK);
     let ch = DNEAR.get(key);
-    if (!ch) { ch = { pos: [], col: [], cx: (Math.floor(cx / CHUNK) + 0.5) * CHUNK, cz: (Math.floor(cz / CHUNK) + 0.5) * CHUNK, inside }; DNEAR.set(key, ch); }
+    if (!ch) { ch = { pos: [], col: [], cx: (Math.floor(cx / CHUNK) + 0.5) * CHUNK, cz: (Math.floor(cz / CHUNK) + 0.5) * CHUNK, inside, bi, fl }; DNEAR.set(key, ch); }
     return ch;
   }
   // geo(비인덱스로 변환)를 행렬 m으로 옮겨 붙인다. 면 방향으로 명암(윗면 1·옆면 .9·아랫면 .62 — addBox와 같은 규칙)
   function dGeo(geo, m, hex, opt = {}) {
     const g = geo.index ? geo.toNonIndexed() : geo, P = g.attributes.position;
-    const ch = opt.at ? (opt.far ? chunkOf(opt.at[0], opt.at[1]) : dChunk(false, opt.at[0], opt.at[1])) : dChunk(!!opt.far, _dv.setFromMatrixPosition(m).x, _dv.z);   // at = 이 청크에 합침(넓게 퍼진 먼 산을 한 덩이로 — 드로우콜 · near도 된다: 청크 경계가 한 덩어리(텃밭·창고)를 가르면 남쪽 칸 경계 구가 커져 먼 곳에서도 절두체에 든다)
+    const ch = opt.at ? (opt.far ? chunkOf(opt.at[0], opt.at[1]) : dChunk(false, opt.at[0], opt.at[1], _dv.setFromMatrixPosition(m).y)) : dChunk(!!opt.far, _dv.setFromMatrixPosition(m).x, _dv.z, _dv.y);   // at = 이 청크에 합침(넓게 퍼진 먼 산을 한 덩이로 — 드로우콜 · near도 된다: 청크 경계가 한 덩어리(텃밭·창고)를 가르면 남쪽 칸 경계 구가 커져 먼 곳에서도 절두체에 든다)
     _c.set(hex); _c.multiplyScalar(0.97);
     const jit = opt.jitter || 0;
     for (let i = 0; i < P.count; i += 3) {
@@ -3708,9 +3710,9 @@ export function buildWorld(scene) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ch.pos), 3));
     g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(ch.col), 3));
-    g.computeVertexNormals(); g.computeBoundingSphere();
+    g.computeVertexNormals(); g.computeBoundingSphere(); g.computeBoundingBox();
     const m = new THREE.Mesh(g, mat);
-    m.matrixAutoUpdate = false;
+    m.matrixAutoUpdate = false; m.userData.st = true;   // OCC-CULL: main.js가 매 프레임 상자(AABB)로 절두체 검사
     scene.add(m);
   }
   buildSigns();
@@ -3757,7 +3759,19 @@ export function buildWorld(scene) {
   }
   // 디테일 층 병합 — near 청크는 main.js가 거리로 켜고 끈다(DETAIL_FAR)
   const details = [];
-  for (const [M, far] of [[DNEAR, false]]) for (const ch of M.values()) {
+  // OCC-CULL: 무거운 실내 청크(삼각형 > 5000 — 사람·책상이 가득한 교실)는 방(구역) 단위로 한 번 더 나눈다 — 옆 교실이 벽 뒤면 통째로 빠지게.
+  //  삼각형 무게중심이 든 구역(그 높이 아래 가장 위 구역)끼리 묶고, 작은 묶음(< 600)은 나머지에 둔다(드로우콜 억제)
+  const splitRooms = ch => { const T = ch.pos.length / 9; if (!ch.inside || T <= 5000) return [ch];
+    let ax0 = 1e9, ax1 = -1e9, az0 = 1e9, az1 = -1e9; for (let i = 0; i < ch.pos.length; i += 3) { const x = ch.pos[i], z = ch.pos[i + 2]; if (x < ax0) ax0 = x; if (x > ax1) ax1 = x; if (z < az0) az0 = z; if (z > az1) az1 = z; }
+    const ZC = zones.filter(q => q.x1 > ax0 && q.x0 < ax1 && q.z1 > az0 && q.z0 < az1), key = new Int16Array(T), cnt = new Map();
+    for (let t = 0; t < T; t++) { const o = t * 9, x = (ch.pos[o] + ch.pos[o + 3] + ch.pos[o + 6]) / 3, y = (ch.pos[o + 1] + ch.pos[o + 4] + ch.pos[o + 7]) / 3, z = (ch.pos[o + 2] + ch.pos[o + 5] + ch.pos[o + 8]) / 3;
+      let best = -1, by = -1e9; for (let k = 0; k < ZC.length; k++) { const q = ZC[k]; if (x >= q.x0 && x < q.x1 && z >= q.z0 && z < q.z1 && q.y <= y + 0.5 && q.y > by) { by = q.y; best = k; } }
+      key[t] = best; cnt.set(best, (cnt.get(best) || 0) + 1); }
+    for (let t = 0; t < T; t++) if (cnt.get(key[t]) < 600) key[t] = -1;
+    const out = new Map(); for (let t = 0; t < T; t++) { let o = out.get(key[t]); if (!o) { o = { ...ch, pos: [], col: [] }; out.set(key[t], o); }
+      for (let k = t * 9; k < t * 9 + 9; k++) { o.pos.push(ch.pos[k]); o.col.push(ch.col[k]); } }
+    return [...out.values()]; };
+  for (const [M, far] of [[DNEAR, false]]) for (const ch0 of M.values()) for (const ch of splitRooms(ch0)) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ch.pos), 3));
     g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(ch.col), 3));
@@ -3765,7 +3779,8 @@ export function buildWorld(scene) {
     const m = new THREE.Mesh(g, mat);
     m.matrixAutoUpdate = false;
     scene.add(m);
-    if (!far) details.push({ mesh: m, cx: ch.cx, cz: ch.cz, inside: ch.inside });
+    if (!far) { g.computeBoundingBox(); details.push({ mesh: m, cx: ch.cx, cz: ch.cz, inside: ch.inside, bi: ch.bi, fl: ch.fl, box: g.boundingBox }); }
   }
+  details.brect = BRECT; details.wing = 2; details.FH = FH;   // OCC-CULL: main.js 가림 컬링이 건물 칸(BRECT 순서 — 2 = 서관, 2층이 있는 유일한 동)·층고를 읽는다
   return { colliders, grid, zones, doors, allBoxes, hotspots, details, visRods, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh };
 }

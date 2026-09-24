@@ -605,15 +605,117 @@ function updateLoc() {   // MAP-API-1: 가장 좁은 구역(겹쳐도 순서에 
 // 작은 부재(책상 다리·눈·손 등)는 멀면 청크째 숨긴다 — 원경에서 픽셀보다 가는 부재가 반짝이는 것을 막고, 그리는 양도 준다.
 // 16m 청크 중심 기준 + 반대각선(11.3m) 여유. 0.2초마다 한 번.
 const DETAIL_FAR = 55, DETAIL_IN = 20, DETAIL_IN_IN = 30;   // INTERIOR-CULL: 실내 청크 = 카메라가 밖이면 20m·안이면 30m(+반대각선) — 벽 너머·창 너머 책상·사람을 멀리서 그리지 않는다
-let detailT = 1;
-function detailTick(dt) {
-  detailT += dt; if (detailT < 0.2) return; detailT = 0;
-  const cp = camera.position, camIn = ceilAt(cp.x, cp.z, cp.y - 0.3, cp.y + 4.5) !== null;
-  const R = (DETAIL_FAR + 11.3) ** 2, RI = ((camIn ? DETAIL_IN_IN : DETAIL_IN) + 11.3) ** 2;
-  for (const d of world.details) {
-    const dx = cp.x - d.cx, dz = cp.z - d.cz;
-    d.mesh.visible = dx * dx + dz * dz < (d.inside ? RI : R);
+// ---------- 실내 가림 컬링(OCC-CULL · 09-24 integ) — 보이는 모습은 그대로, 벽·슬래브·지붕 뒤라 안 보이는 실내 청크만 뺀다 ----------
+// 합친 뒤 급식 창고 앞 벽을 보는 화면이 17.4만 삼각형(벽 너머 본관·서관 교실 책상·사람까지 그림). 실내 청크(건물 × 층 × 16m 칸 — world.js dChunk)마다:
+//  ① 같은 건물 다른 층 = 슬래브 너머 → 계단 곁(2m)이 아니면 숨김
+//  ② 카메라에서 2D 광선 720개(0.5°)를 쏘아 '높은 벽 조각'(allBoxes wall · 높이 ≥ 2.4 — 창·문은 벽 조각이 없는 구멍이라 그대로 뚫림)에 닿는 거리·높이를 모은다.
+//     청크 상자로 가는 광선 중 하나라도 앞의 벽이 그 선(카메라 높이 → 청크 높이 범위)을 다 막지 못하면 보인다(높이까지 따지므로 지붕 위 카메라는 벽을 넘겨 본다).
+//  ③ 건물 밖 카메라의 선이 그 동 지붕(1층 청크: 서관은 슬래브) 위로 들어가거나 2층 청크에 슬래브 아래로 들어가면 가림.
+// 카메라가 0.15m 넘게 움직일 때만 다시 잰다(가만히 서서 돌리지 않으면 0 ms). 문을 돌아설 때 늦게 뜨지 않게 0.2초 간격과 따로 매 프레임 본다.
+const OCC = { N: 720, R: 46, K: 6, hd: null, hy0: null, hy1: null, hn: null, occ: null, planes: null, stairs: null, x: 1e9, y: 1e9, z: 1e9, ms: 0, off: false };
+world.occ = OCC;   // 검사용(SD2.world.occ.off = true → 가림 컬링 끔: 켠 화면과 픽셀 비교해 '보이는 것을 숨긴 곳 0' 확인)
+function occPrep() {
+  const W = world.allBoxes.filter(b => b.wall && b.y1 - b.y0 >= 2.4), BR = world.details.brect, FH0 = world.details.FH;
+  OCC.occ = W; OCC.hd = new Float32Array(OCC.N * OCC.K); OCC.hy0 = new Float32Array(OCC.N * OCC.K); OCC.hy1 = new Float32Array(OCC.N * OCC.K); OCC.hn = new Uint8Array(OCC.N);
+  OCC.stairs = world.zones.filter(z => z.kind === 'stair' || (z.kind == null && /계단/.test(z.label) && !/창고/.test(z.label)));
+  // 동마다 가로 가림판(③): 지붕·슬래브. 동 바닥 격자(1.5m) 모든 칸에서 충돌 상자(부풀림 없음)가 빈틈없이 덮는 높이 구간(0.05m 단위)만 가림판으로 쓴다 —
+  //  한 칸이라도 뚫려 있으면 그 높이는 판이 아니다(보수적). 서관은 계단 칸을 빼고 재고 그 칸을 모든 판의 구멍으로 둔다.
+  const C = world.colliders, G = world.grid;
+  const inStair = (x, z, e = 0.6) => OCC.stairs.some(q => x > q.x0 - e && x < q.x1 + e && z > q.z0 - e && z < q.z1 + e);
+  const bands = (r, hole) => { const HN = 260, cov = new Uint16Array(HN); let n = 0;   // 높이 2.2 + 0.05·k
+    for (let x = r[0] + 0.6; x < r[1] - 0.3; x += 1.5) for (let z = r[2] + 0.6; z < r[3] - 0.3; z += 1.5) { if (hole && inStair(x, z)) continue; n++;
+      const hit = new Uint8Array(HN), cell = G.get(Math.floor(x / 8) + ':' + Math.floor(z / 8)) || [];
+      for (const k of cell) { const b = C[k]; if (x < b.x0 - 0.02 || x > b.x1 + 0.02 || z < b.z0 - 0.02 || z > b.z1 + 0.02 || b.y1 < 2.2) continue;
+        for (let h = Math.max(0, Math.ceil((b.y0 - 2.2) / 0.05)); h < HN && 2.2 + h * 0.05 <= b.y1; h++) hit[h] = 1; }
+      for (let h = 0; h < HN; h++) cov[h] += hit[h]; }
+    const L = []; for (let h = 0; h < HN; h++) if (n && cov[h] === n) { const b0 = 2.2 + h * 0.05; while (h + 1 < HN && cov[h + 1] === n) h++; L.push({ b: [b0, 2.2 + h * 0.05], hole }); }
+    return L; };
+  OCC.planes = BR.map((r, i) => bands(r, i === world.details.wing));
+}
+// 광선(ox,oz)+(dx,dz)t 와 상자 [x0,x1]×[z0,z1] — 들어가는 t(없으면 -1)·나오는 t를 _sl에
+const _sl = [0, 0];
+function slab(ox, oz, dx, dz, x0, x1, z0, z1) {
+  let t0 = -1e9, t1 = 1e9;
+  if (Math.abs(dx) < 1e-9) { if (ox < x0 || ox > x1) return false; } else { let a = (x0 - ox) / dx, b = (x1 - ox) / dx; if (a > b) { const s = a; a = b; b = s; } if (a > t0) t0 = a; if (b < t1) t1 = b; }
+  if (Math.abs(dz) < 1e-9) { if (oz < z0 || oz > z1) return false; } else { let a = (z0 - oz) / dz, b = (z1 - oz) / dz; if (a > b) { const s = a; a = b; b = s; } if (a > t0) t0 = a; if (b < t1) t1 = b; }
+  if (t0 > t1 || t1 < 0) return false; _sl[0] = Math.max(0, t0); _sl[1] = t1; return true;
+}
+// 상자가 카메라에서 차지하는 광선 번호 범위 [_as[0], _as[1]](k1 ≥ k0, 넘치면 N으로 감음) — 매 갱신 수백 번이라 배열을 만들지 않는다
+const _as = [0, 0];
+function angSpan(cx, cz, x0, x1, z0, z1) {
+  const DA = Math.PI * 2 / OCC.N, a0 = Math.atan2((z0 + z1) / 2 - cz, (x0 + x1) / 2 - cx); let lo = 0, hi = 0;
+  for (let c = 0; c < 4; c++) { let d = Math.atan2((c & 2 ? z1 : z0) - cz, (c & 1 ? x1 : x0) - cx) - a0; if (d > Math.PI) d -= Math.PI * 2; else if (d < -Math.PI) d += Math.PI * 2; if (d < lo) lo = d; if (d > hi) hi = d; }
+  let k0 = Math.ceil((a0 + lo) / DA), k1 = Math.floor((a0 + hi) / DA); if (k1 < k0) k0 = k1 = Math.round(a0 / DA); _as[0] = k0; _as[1] = k1;
+}
+function occRays(cp) {   // 광선마다 가까운 높은 벽 K개(거리·높이 범위)
+  const { N, R, K, hd, hy0, hy1, hn } = OCC, DA = Math.PI * 2 / N; hn.fill(0);
+  for (const w of OCC.occ) {
+    if (w.x1 < cp.x - R || w.x0 > cp.x + R || w.z1 < cp.z - R || w.z0 > cp.z + R) continue;
+    if (cp.x > w.x0 && cp.x < w.x1 && cp.z > w.z0 && cp.z < w.z1) continue;   // 카메라가 벽 속(없어야 하지만)
+    angSpan(cp.x, cp.z, w.x0, w.x1, w.z0, w.z1);
+    for (let k = _as[0], k1 = _as[1]; k <= k1; k++) { const kk = ((k % N) + N) % N, th = kk * DA;
+      if (!slab(cp.x, cp.z, Math.cos(th), Math.sin(th), w.x0, w.x1, w.z0, w.z1) || _sl[0] > R) continue;
+      const t = _sl[0], base = kk * K; let n = hn[kk], j = n;
+      if (n === K) { if (t >= hd[base + K - 1]) continue; j = K - 1; } else hn[kk] = n + 1;
+      while (j > 0 && hd[base + j - 1] > t) { hd[base + j] = hd[base + j - 1]; hy0[base + j] = hy0[base + j - 1]; hy1[base + j] = hy1[base + j - 1]; j--; }
+      hd[base + j] = t; hy0[base + j] = w.y0; hy1[base + j] = w.y1; }
   }
+}
+// ③·② 한 선(카메라 → 광선 위 거리 t·높이 ty)이 벽(광선의 벽 목록) 또는 가림판(그 동 안에서 선 높이가 띠를 지남 — 서관 슬래브의 계단 구멍 제외)에 막히나
+const _fa = new Float32Array(9), _fb = new Float32Array(9);
+function rayRects(cp, dx, dz) { const BR = world.details.brect; for (let i = 0; i < BR.length; i++) { const r = BR[i]; if (OCC.planes[i].length && slab(cp.x, cp.z, dx, dz, r[0], r[1], r[2], r[3])) { _fa[i] = _sl[0]; _fb[i] = _sl[1]; } else _fa[i] = -1; } }
+function lineBlocked(cp, base, n, dx, dz, t, ty) {
+  const { hd, hy0, hy1 } = OCC, hc = cp.y, g = (ty - hc) / Math.max(t, 1e-3);
+  for (let j = 0; j < n; j++) { const d = hd[base + j]; if (d >= t) break; const h = hc + g * d; if (h >= hy0[base + j] - 0.02 && h <= hy1[base + j] + 0.02) return true; }
+  for (let i = 0; i < 9; i++) { if (_fa[i] < 0) continue; const a = _fa[i], b = Math.min(_fb[i], t); if (b <= a) continue;
+    for (const p of OCC.planes[i]) { const [p0, p1] = p.b; let sa = a, sb = b;   // 선 높이가 [p0, p1]인 구간
+      if (Math.abs(g) < 1e-6) { if (hc < p0 || hc > p1) continue; } else { let u = (p0 - hc) / g, v = (p1 - hc) / g; if (u > v) { const w = u; u = v; v = w; } sa = Math.max(a, u); sb = Math.min(b, v); if (sb < sa) continue; }
+      if (p.hole && OCC.stairs.some(q => slab(cp.x + dx * sa, cp.z + dz * sa, dx, dz, q.x0, q.x1, q.z0, q.z1) && _sl[0] <= sb - sa)) continue;
+      return true; } }
+  return false;
+}
+function occVisible(d, cp) {
+  const bx = d.box, BR = world.details.brect[d.bi];
+  const x0 = bx.min.x, x1 = bx.max.x, z0 = bx.min.z, z1 = bx.max.z, y0 = bx.min.y, y1 = bx.max.y;
+  const inB = cp.x > BR[0] && cp.x < BR[1] && cp.z > BR[2] && cp.z < BR[3];
+  const FH0 = world.details.FH, slabOK = d.fl === 1 ? y1 <= FH0 + 0.35 : y0 >= FH0 - 0.05;   // 두 층에 걸친 청크(계단)는 ①을 안 씀
+  if (inB && slabOK && d.bi === world.details.wing) { const camFl = cp.y > FH0 + 0.15 ? 2 : 1;   // ① 슬래브
+    if (camFl !== d.fl && !OCC.stairs.some(z => cp.x > z.x0 - 2 && cp.x < z.x1 + 2 && cp.z > z.z0 - 2 && cp.z < z.z1 + 2)) return false; }
+  if (cp.x >= x0 && cp.x <= x1 && cp.z >= z0 && cp.z <= z1) return true;
+  const { N, K, hd, hy0, hy1, hn } = OCC, DA = Math.PI * 2 / N; angSpan(cp.x, cp.z, x0, x1, z0, z1);
+  for (let k = _as[0], k1 = _as[1]; k <= k1; k++) { const kk = ((k % N) + N) % N, th = kk * DA, dx = Math.cos(th), dz = Math.sin(th);
+    if (!slab(cp.x, cp.z, dx, dz, x0, x1, z0, z1)) continue; const tE = _sl[0], tX = _sl[1];
+    rayRects(cp, dx, dz);
+    let blocked = true;   // 청크의 광선 위 조각을 3×3 선(거리 tE·가운데·tX × 높이 y0·가운데·y1)으로 — 하나라도 안 막히면 보임
+    for (let q = 0; q < 9 && blocked; q++) { const t = q % 3 === 0 ? tE : q % 3 === 1 ? (tE + tX) / 2 : tX, ty = q < 3 ? y0 : q < 6 ? (y0 + y1) / 2 : y1;
+      if (!lineBlocked(cp, kk * K, hn[kk], dx, dz, t, ty)) blocked = false; }
+    if (!blocked) return true;
+  }
+  return false;
+}
+let detailT = 1;
+const _fr = new THREE.Frustum(), _fm = new THREE.Matrix4();
+function detailTick(dt) {
+  detailT += dt;
+  const cp = camera.position, moved = Math.abs(cp.x - OCC.x) + Math.abs(cp.y - OCC.y) + Math.abs(cp.z - OCC.z) > 0.15;
+  if (detailT >= 0.2 || moved) { detailT = 0;
+    const t0 = performance.now(), camIn = ceilAt(cp.x, cp.z, cp.y - 0.3, cp.y + 4.5) !== null;
+    const R = (DETAIL_FAR + 11.3) ** 2, RI = ((camIn ? DETAIL_IN_IN : DETAIL_IN) + 11.3) ** 2;
+    if (!OCC.occ) occPrep();
+    let rays = false;
+    for (const d of world.details) {
+      const dx = cp.x - d.cx, dz = cp.z - d.cz;
+      let v = dx * dx + dz * dz < (d.inside ? RI : R);
+      if (v && d.inside && !OCC.off) { if (!rays) { occRays(cp); rays = true; } v = occVisible(d, cp); }
+      d.on = v;
+    }
+    OCC.x = cp.x; OCC.y = cp.y; OCC.z = cp.z; OCC.ms = performance.now() - t0;
+  }
+  // 절두체는 매 프레임 상자(AABB)로 — three의 경계 구는 길쭉한 청크(교실 줄)에선 카메라 뒤 옆 교실까지 품는다. 정적 청크(world.js st)도 같이(상자 밖이면 그릴 것이 0이라 모습 그대로)
+  camera.updateMatrixWorld(); _fr.setFromProjectionMatrix(_fm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+  for (const d of world.details) d.mesh.visible = d.on && _fr.intersectsBox(d.box);
+  if (!OCC.st) { OCC.st = []; scene.traverse(o => { if (o.userData.st) OCC.st.push(o); }); }
+  for (const m of OCC.st) m.visible = _fr.intersectsBox(m.geometry.boundingBox);
 }
 
 // ---------- 지도 API(MAP-API-1 · 09-24) — 게임이 받는 지도 계약. 정본 docs/map_api.md ----------
