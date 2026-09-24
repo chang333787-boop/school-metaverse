@@ -2159,6 +2159,8 @@ export function buildWorld(scene) {
   wallX(ex0 - 0.15, eSplit, zCE, INNER, { gaps: eAll.filter(g => g.c < eSplit), face: -1, dado: { top: 1.05, lo: 0xbfd89a, hi: CLS_WALL_E } });
   wallX(eSplit, endX - 0.15, zCE, INNER, { gaps: [...eAll.filter(g => g.c > eSplit), ...(PRP ? [{ c: prepX, w: 1.0, dh: 2.2, color: DOORC }] : [])], face: -1, inner: true, innerHex: CLS_WALL_E });
   wallZ(ez0, ez1, endX, INNER, {});                                                                // 창고 서벽
+  // LINK-EAST-4: 복도 쪽 문 = 북향 면이라 반구광만 받아 회갈색(#877d73)이 됐다 — 영상은 문이 벽만큼 밝은 연회색 나무결(c_371.8·a_379.5) → 문 색 밝기 보정(main.js lum)
+  doors.forEach(d => { if (d.ax === 'x' && !d.glass && Math.abs(d.cz - zCE) < 0.01 && d.cx > ex0 && d.cx < corX) d.lum = 1.45; });
   if (corX < endX - 0.3) wallZ(ez0, zCE, corX, INNER, {});                                         // 복도 동쪽 끝 판벽(LINK-EAST-0)
   // LINK-EAST-17: 복도 쪽 흰 벽(북창 빛을 받아 영상에선 가장 밝은 면 — c_365.8·c_371.8·a_447) = 조명 무시 무늬(천장과 같은 이유 — 북·서향 면은 반구광만 받아 회갈색이 됐다)
   //   새 메시(드로우콜)를 만들지 않게 평천장 무늬(cflat — 이미 조명 무시)의 줄 없는 한가운데만 찍어 쓴다(평평한 한 색 = #f4f1ea × 정점색)
@@ -2174,8 +2176,6 @@ export function buildWorld(scene) {
       cur = g1; }
     if (a1 - cur > 0.01) uq(ax, cur, a1, 0, CH, line, f, tint);
   };
-  unlitWall('x', ex0 - 0.15, corX - 0.15, zCE - 0.162, -1, eAll, 0xedeae6);                        // 동관 복도 남벽(≈#e3dfd7)
-  unlitWall('z', zCE - 0.15, ez1 + 0.15, ex0 - 0.162, -1, [], 0xf0ede9);                           // 세로복도 동벽(2학년 서벽)
   // LINK-EAST-33(영상 e_370.5·a_379.5·c_371.8): 문 = 복도 벽보다 0.15 들어간 자리 — 문 양옆 설주 기둥이 복도로 튀어나온다(천장 2.75까지)
   //   문과 이웃 틈(문·창·복도 끝) 사이 벽이 2.4 이하면 한 덩어리(4학년 뒷문~과학실 문 = 분홍 게시물 붙은 기둥 a_379.5) · 그보다 길면 문 옆 0.4만
   //   기둥 면 = 남벽과 같은 조명 무시 흰 면(북향 상자 면은 회갈색이 된다 — LINK-EAST-17)
@@ -2186,13 +2186,16 @@ export function buildWorld(scene) {
       [[pv, a, -1], [b, nx, 1]].forEach(([u, v, s]) => { const L = v - u; if (L < 0.1499) return;
         const [p0, p1] = L <= 2.4 ? [u, v] : s < 0 ? [a - 0.4, a] : [b, b + 0.4]; piers.set(p0.toFixed(3), [p0, p1]); }); }); }
   const onPier = x => [...piers.values()].some(([p0, p1]) => x > p0 - 1e-6 && x < p1 + 1e-6), faceZ = x => onPier(x) ? PZ : zCE - 0.15;
-  piers.forEach(([p0, p1]) => { addBox(p1 - p0, CH, 0.15, INNER, (p0 + p1)/2, 0, zCE - 0.225);
-    uq('x', p0, p1, 0, CH, PZ - 0.012, -1, 0xedeae6); });   // 옆면(0.15 들임)은 조명 그대로 — 그늘진 들임이 영상과 같다(삼각형도 아낌)
+  //   보이는 면 = 조명 무시 사각형 셋(앞 + 양옆 — 윗면은 천장 위·뒷면은 벽 속이라 상자 6면을 만들 필요가 없다) · 충돌은 따로
+  piers.forEach(([p0, p1]) => { colliders.push({ x0: p0, x1: p1, y0: 0, y1: CH, z0: PZ, z1: zCE - 0.15 });
+    uq('x', p0, p1, 0, CH, PZ, -1, 0xedeae6); [[p0, -1], [p1, 1]].forEach(([l9, f9]) => uq('z', PZ, zCE - 0.15, 0, CH, l9, f9, 0xdedad3)); });
+  unlitWall('x', ex0 - 0.15, corX - 0.15, zCE - 0.162, -1, [...eAll, ...[...piers.values()].map(([p0, p1]) => ({ c: (p0 + p1)/2, w: p1 - p0, sill: 0, dh: CH }))], 0xedeae6);   // 동관 복도 남벽(≈#e3dfd7) · 기둥 뒤는 건너뜀
+  unlitWall('z', zCE - 0.15, ez1 + 0.15, ex0 - 0.162, -1, [], 0xf0ede9);                           // 세로복도 동벽(2학년 서벽)
   { // 복도 바닥: 황갈 장판 + 둘레 짙은 숯색 띠 0.3(입구·끝벽 앞도 가로지름 — LINK-EAST-24 c_364.2·a_379.5)
     const x0 = ex0 - 0.15, x1 = corX - 0.15, z0 = ez0 + 0.15, z1 = zCE - 0.15, B9 = 0.3, BC = 0x34332f;
     addPanel(x1 - x0, B9, BC, (x0 + x1)/2, 0.012, z0 + B9/2); addPanel(x1 - x0, B9, BC, (x0 + x1)/2, 0.012, z1 - B9/2);
     addPanel(B9, z1 - z0 - 2*B9, BC, x0 + B9/2, 0.012, (z0 + z1)/2); addPanel(B9, z1 - z0 - 2*B9, BC, x1 - B9/2, 0.012, (z0 + z1)/2);
-    floorQ('ecor', x0 + B9, x1 - B9, z0 + B9, z1 - B9, 0, 0xbdb6a8);                                  // LINK-EAST-17: 바닥이 벽보다 어둡게(영상 #908373)
+    floorQ('ecor', x0 + B9, x1 - B9, z0 + B9, z1 - B9, 0, 0xb7bcdb);                                  // LINK-EAST-17: 바닥이 벽보다 어둡게 · 노란 장판 무늬를 푸른 틴트로 눌러 회베이지(영상 #8e816f 비율 — c_371.8·e_370.5)
     // LINK-EAST-28: 소화기(북벽 밑 — c_371.8·a_379.5) + 빨간 '소화기' 표지 · LINK-EAST-29: 회색 분전함(첫 두 창 사이 — c_364.2·e_369.5)
     [16.2, 20.0, 24.5, corX - 0.8].forEach(x9 => { extinguisher(x9, 0, z0 + 0.14); dBox(0.14, 0.18, 0.03, 0xd0202a, x9, 0.66, z0 + 0.015); });
     dBox(0.5, 0.7, 0.12, 0x9aa0a6, 17.6, 1.5, z0 + 0.06); dBox(0.03, 0.08, 0.03, 0x5a5e63, 17.8, 1.85, z0 + 0.135);

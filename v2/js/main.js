@@ -442,7 +442,7 @@ const DOORS = world.doors.map(d => {
   //   묻힌 부분은 벽 속이라 안 보이고, 문짝 두 면(±0.08)은 벽 면(±0.15)·가운데 맞댐면(0)과 겹치지 않는다.
   const w = d.w + 0.1, h = (d.dh ?? 2.6) + (d.lintel ? 0.05 : 0);
   // slideOver(자동문·현관 양문): 옆 고정 유리 앞으로 12cm 비켜 미끄러진다(실물 자동문처럼) — 벽 속 포켓이 아니라서 간섭 검사 제외
-  return { ax: d.ax, bx: d.cx, bz: d.cz, w, ow: d.w, h, y0: d.y0, glass: d.glass, open: 0, over: d.slideOver ? 0.12 : 0, color: d.color, slot: d.slot };
+  return { ax: d.ax, bx: d.cx, bz: d.cz, w, ow: d.w, h, y0: d.y0, glass: d.glass, open: 0, over: d.slideOver ? 0.12 : 0, color: d.color, slot: d.slot, lum: d.lum };
 });
 const _boxG = new THREE.BoxGeometry(1, 1, 1);
 const nWood = DOORS.filter(o => !o.glass).length, nGlass = DOORS.length - nWood;
@@ -454,7 +454,7 @@ const doorInst = {
 };
 Object.values(doorInst).forEach(m => { m.frustumCulled = false; scene.add(m); });
 doorInst.wood.count = nWood; doorInst.win.count = nWood; doorInst.knob.count = nWood; doorInst.glass.count = nGlass;
-{ let iw = 0, ig = 0; const _dc = new THREE.Color(); DOORS.forEach(o => { o.idx = o.glass ? ig++ : iw++; if (!o.glass) doorInst.wood.setColorAt(o.idx, _dc.set(o.color ?? 0xc08b4f)); }); if (doorInst.wood.instanceColor) doorInst.wood.instanceColor.needsUpdate = true; }
+{ let iw = 0, ig = 0; const _dc = new THREE.Color(); DOORS.forEach(o => { o.idx = o.glass ? ig++ : iw++; if (!o.glass) doorInst.wood.setColorAt(o.idx, _dc.set(o.color ?? 0xc08b4f).multiplyScalar(o.lum ?? 1)); }); if (doorInst.wood.instanceColor) doorInst.wood.instanceColor.needsUpdate = true; }
 const _dM = new THREE.Matrix4(), _dP = new THREE.Vector3(), _dS = new THREE.Vector3(), _dQ = new THREE.Quaternion();
 function setDoor(o) {
   const s = o.open * (o.slide ?? 0) * (o.dir ?? 1);
