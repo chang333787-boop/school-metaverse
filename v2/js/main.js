@@ -413,6 +413,8 @@ function act(h) {
     case 'visit': toast('📝 방문록에 이름을 적었어요'); break;
     case 'clock': { const d = new Date(); toast(`🕰️ 지금은 ${d.getHours()}시 ${d.getMinutes()}분이에요`); break; }
     case 'notice': toast('📋 이번 주 학생자치회 소식을 읽었어요'); break;
+    case 'aed': toast('❤️ AED(자동심장충격기) 보관함이에요 — 위급할 땐 선생님께 바로 알려요'); break;   // LINK-EAST-14 세로복도 입구
+    case 'keypad': [1319, 1175, 1397].forEach((f, i) => tone(f, i * 0.09, 0.07, 'square', 0.05)); toast('🔢 과학실 번호키를 눌렀어요 — 삐빅!'); break;   // LINK-EAST-11 과학실 문
     case 'song': songSnd(); toast('🎵 교가를 흥얼거렸어요'); break;
     case 'motto': toast('📜 우리 학교 교훈 — 바르고 슬기롭게'); break;
     case 'flag': toast('🇰🇷 태극기가 바람에 펄럭여요'); break;
