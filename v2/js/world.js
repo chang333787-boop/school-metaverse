@@ -1467,7 +1467,10 @@ export function buildWorld(scene) {
       [1, 2].forEach(k => [-1, 1].forEach(sd => lamp(1.2, 0.05, 0.22, cx + sd * cw * 0.22, CH - 0.21, zCor + k * 2.5)));
       acUnit(r.name === '3학년' ? cx + 2.2 : cx, CH - 0.16, (zCor + fz1) / 2);   // [classrooms-15] 3학년은 뒤쪽 절반(a_490.5·a_492 삼각측량)
       corWinsOf(r).forEach(g => { dBox(g.w - 0.12, 0.06, 0.17, g.frame, g.c, 2.3, zCor);   // 복도 쪽 실내창: 위 가로살 + 아랫칸 격자 시트(양면)
-        [1, -1].forEach(f => patWall('film2', 'x', g.c - g.w/2 + 0.06, g.c + g.w/2 - 0.06, 1.16, 1.7, zCor + f * 0.09, f)); });
+        const a9 = g.c - g.w/2 + 0.06, b9 = g.c + g.w/2 - 0.06, z9 = zCor - 0.09, S9 = 0.44;
+        patWall('film2', 'x', a9, b9, 1.16, 1.7, zCor + 0.09, 1);
+        // [main_corridor-0] 복도 쪽 면 = 조명 무시 흰 격자 시트(북향이라 film2가 회색으로 렌더되던 것 — 영상 a_466.5·a_474·a_513은 흰 반투명 'ㅁ' 격자): 천장 ctile을 UV로 22cm 격자
+        patPush('ctile', [[a9, 1.16, z9], [b9, 1.16, z9], [b9, 1.7, z9], [a9, 1.7, z9]], [[a9 / S9, 1.16 / S9], [b9 / S9, 1.16 / S9], [b9 / S9, 1.7 / S9], [a9 / S9, 1.7 / S9]], [0, 0, -1], 0xffffff); });
       if (r.name === '3학년') { const fw = facadeGaps.filter(g => g.c > s0 && g.c < s1);   // [classrooms-21] 창 사이 기둥 벽걸이 선풍기(흰 비닐 덮개 — a_490.5)
         for (let k = 1; k < fw.length; k++) wallFan((fw[k - 1].c + fw[k].c) / 2, z1, -1, 2.35, 0xd6d8da); }
       doors.forEach(d => { if (d.ax === 'x' && !d.glass && Math.abs(d.cz - zCor) < 0.01 && d.cx > s0 && d.cx < s1) { d.slot = true; if (d.color == null) d.color = 0xbc9a78; } });   // [classrooms-19] 가로 쪽창·옅은 꿀색 나무(a_480·a_465)
@@ -1489,9 +1492,9 @@ export function buildWorld(scene) {
       addBox(0.9, 1.7, 0.45, 0xc8ccd0, s0 + 0.7, 0, fz1 - 0.6);
       lamp(1.2, 0.05, 0.22, cx, FH - 0.21, (rz0 + fz1)/2);
       offWinsOf(r).forEach(g => { dBox(g.w - 0.12, 0.06, 0.17, g.frame, g.c, 2.3, zCor);   // [main_corridor-0] 사무실 복도 쪽 창: 위 가로살 + 아랫칸 격자 시트(틀 안쪽 1cm 띄움 — 틀과 모서리가 겹치면 비스듬히 볼 때 반짝임)
-        const a9 = g.c - g.w/2 + 0.07, b9 = g.c + g.w/2 - 0.07, z9 = zCor - 0.095, S9 = g.frame === 0x8a98a4 ? 1.2 : 0.3;
+        const a9 = g.c - g.w/2 + 0.07, b9 = g.c + g.w/2 - 0.07, z9 = zCor - 0.095, S9 = g.frame === 0x8a98a4 ? 1.2 : 0.44;
         patWall('film2', 'x', a9, b9, 1.17, 1.7, zCor + 0.095, 1);
-        // 복도 쪽 면 = 조명 무시 흰 격자 시트(북향이라 film2가 회색으로 렌더되던 것 — 영상 b_141·b_148.5는 흰 반투명): 천장 ctile을 UV로 15cm 격자(먹 번짐 판 칸은 60cm 큰 칸)
+        // 복도 쪽 면 = 조명 무시 흰 격자 시트(북향이라 film2가 회색으로 렌더되던 것 — 영상 b_141·b_148.5는 흰 반투명): 천장 ctile을 UV로 22cm 격자(교실 창과 같은 칸 · 먹 번짐 판 칸은 60cm 큰 칸)
         patPush('ctile', [[a9, 1.17, z9], [b9, 1.17, z9], [b9, 1.7, z9], [a9, 1.7, z9]], [[a9 / S9, 1.17 / S9], [b9 / S9, 1.17 / S9], [b9 / S9, 1.7 / S9], [a9 / S9, 1.7 / S9]], [0, 0, -1], S9 > 1 ? 0xe9ecee : 0xffffff); });
     }
     if (r.type === 'toilet') { /* 팻말 = 복도 남벽 블록(TDOOR 이름표·둥근 '화장실' 팻말) */ }
