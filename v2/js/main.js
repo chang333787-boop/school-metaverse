@@ -36,7 +36,7 @@ const world = buildWorld(scene);
 let MAP = null;   // MAP-API-1 지도 API — loop() 위에서 만든다. setTime('day')가 먼저 돌므로 참조는 전부 MAP?.(TDZ 함정)
 
 // ---------- 플레이어 (AABB 전용 — 레이캐스트 0) ----------
-const P = { x: 13.4, y: world.terrainAt(13.4, -6) + 0.01, z: -6, vy: 0, yaw: 0, ground: true };   // 운동장에서 구령대·본관을 보며 시작
+const P = { x: 12.4, y: world.terrainAt(12.4, -6) + 0.01, z: -6, vy: 0, yaw: 0, ground: true };   // 운동장에서 구령대·본관을 보며 시작
 // ---------- 내 캐릭터(CHAR-1 · 09-24 사용자 "캐릭터 모델링도"): 둥근 저폴리 아이(실사 아님) ----------
 // 둥근 머리·앞머리·옆/뒷머리·눈(반짝임)·눈썹·볼·코·웃는 입·귀 / 반팔·어깨·팔(어깨 축)·손 / 반바지+무릎 굽는 다리·흰 실내화 / 빨간 책가방.
 // 부위마다 정점색을 구워 한 메시씩(한 재질) — 드로우콜 8. 앞 = +z(P.yaw 0 = +z로 걷는 방향)
@@ -414,6 +414,8 @@ function act(h) {
     case 'clock': { const d = new Date(); toast(`🕰️ 지금은 ${d.getHours()}시 ${d.getMinutes()}분이에요`); break; }
     case 'notice': toast('📋 이번 주 학생자치회 소식을 읽었어요'); break;
     case 'song': songSnd(); toast('🎵 교가를 흥얼거렸어요'); break;
+    case 'motto': toast('📜 우리 학교 교훈 — 바르고 슬기롭게'); break;
+    case 'flag': toast('🇰🇷 태극기가 바람에 펄럭여요'); break;
     case 'slide':
       ACT.anim = { from: h.from, to: h.to, t: 0, dur: 0.9 }; P.yaw = Math.PI; toast('🛝 슝~'); break;
   }
