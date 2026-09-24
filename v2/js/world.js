@@ -32,7 +32,7 @@ export function buildWorld(scene) {
   // PHYS-1 '올라서기 금지'(ns): 가구·울타리 등은 충돌 높이를 1.6 이상으로 — 점프 도달(0.97 + 오름 0.55 = 1.52)보다 높아
   // 위에 서지 못하고 넘지도 못한다. 보이지 않는 윗부분이 카메라를 밀지 않게 nc(카메라 무시) 표시.
   const NS = { ns: true };
-  function noStand(c, min = 1.6) { c.y1 = Math.max(c.y1, c.y0 + min); c.nc = true; return c; }
+  function noStand(c, min = 1.6) { c.y1 = Math.max(c.y1, c.y0 + min); c.nc = true; c.ns = true; return c; }   // ns = 끝의 NS-RAISE 패스가 알아보는 표시
   function addBox(w, h, d, hex, cx, baseY, cz, opt = {}) {
     if (Math.min(w, h, d) < 0.1499) throw new Error('헌법① 위반 <0.15m: ' + [w, h, d]);   // 0.1499=부동소수 오차 허용(0.15는 합법)
     allBoxes.push({ x0: cx-w/2, x1: cx+w/2, y0: baseY, y1: baseY+h, z0: cz-d/2, z1: cz+d/2, wall: !!opt.wall });   // wall=벽 조각(문이 숨는 곳)
@@ -1183,7 +1183,7 @@ export function buildWorld(scene) {
         [0.25, 0.75].forEach(t => lamp(1.2, 0.05, 0.22, s0 + (s1 - s0) * t, FH - 0.21, (wz0 + fz0) / 2));
       }
       if (r.type === 'nurse') { addBox(1.05, 0.5, 2, 0xf2f5f7, cx - 1, 0, wz0 + 1.6); addBox(1.05, 0.5, 2, 0xf2f5f7, cx + 1, 0, wz0 + 1.6);
-        dBox(0.04, 1.6, 2.2, 0xcfe3ee, cx, 0.4, wz0 + 1.7, { collide: true }); officeDesk(cx + 1.2, 0, LOB_Z - 1.2); lamp(1.2, 0.05, 0.22, cx, FH - 0.21, (wz0 + LOB_Z)/2); }
+        dBox(0.04, 1.6, 2.2, 0xcfe3ee, cx, 0.4, wz0 + 1.7, { collide: true }); officeDesk(cx - 0.6, 0, LOB_Z - 1.2); lamp(1.2, 0.05, 0.22, cx, FH - 0.21, (wz0 + LOB_Z)/2); }   // 책상 cx-0.6 = 문(nurseDoor) 서쪽으로 비킴 — cx+1.2면 문 바로 뒤를 막아 방에 못 들어갔다(맵 검진 09-24: 보건실 걷는 칸 2개)
       if (r.name === '나래반') { westClass(r.name, s0 + 0.15, s1 - 0.15, LOB_Z - 0.15, wz0 + 0.15, 0, { sill: 1.0, backGap: [pz - 0.9, pz + 0.9] }); lamp(1.2, 0.05, 0.22, cx, FH - 0.21, (wz0 + LOB_Z)/2); }   // 동벽 = 문서고 문
       if (r.name === '문서고') [wz0 + 0.5, wz0 + 2.2].forEach(z9 => addBox(1.6, 1.9, 0.5, 0x9aa0a6, cx, 0, z9));
     });
@@ -2296,6 +2296,18 @@ export function buildWorld(scene) {
       console.error('헌법③ 위반 총 ' + faults.length + '쌍 — 수정 전 커밋 금지.');
     } else console.log('헌법③ 감사: 동일평면 겹침 0');
   }
+  // ================= NS-RAISE(MAP-HEALTH-1 · 09-24) — 올라서기 금지 무력화 막기 =================
+  // 건강 검진 실측: NS(1.6) 상자 25개가 옆의 낮은 딛을 곳(벤치·계단·턱·비탈 계단)을 밟고 점프하면 윗면에 올라섰다
+  //   (점프 도달 = 발+1.52 — 딛을 곳이 0.1만 높아도 1.6을 넘는다: 개수대·피크닉 탁자·난간·마당 경계 등).
+  // 규칙: NS 상자(+ 높이 2.6 이하 nc 막이 — 계단 난간 토막 등)마다 1m 안의 '올라설 수 있는'(nc 아닌) 상자 중
+  //   윗면이 NS 윗면-1.55보다 높은 것의 최고 윗면 m → y1 = m + 1.6. 보이지 않는 윗부분만 늘어난다(nc = 카메라 무시).
+  //   새로 만드는 NS에도 자동 적용 — 구간별로 따로 고치지 않는다. 울타리·경계 막이(nc·3m 이상)는 건드리지 않는다.
+  { const R9 = 1.0;
+    for (const c of colliders) { if (!c.ns && !(c.nc && c.y1 - c.y0 <= 2.6)) continue; let m = -1e9;
+      for (const d of colliders) { if (d.nc || d.y1 <= c.y1 - 1.55 || d.y1 >= c.y1) continue;
+        if (d.x1 < c.x0 - R9 || d.x0 > c.x1 + R9 || d.z1 < c.z0 - R9 || d.z0 > c.z1 + R9) continue;
+        if (d.y1 > m) m = d.y1; }
+      if (m > -1e9 && c.y1 < m + 1.6) c.y1 = m + 1.6; } }
   const grid = new Map();
   colliders.forEach((b, i) => {
     for (let gx2 = Math.floor(b.x0/8); gx2 <= Math.floor(b.x1/8); gx2++)
