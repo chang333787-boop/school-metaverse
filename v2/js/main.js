@@ -1,7 +1,7 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=70';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
-import { SCHOOL } from '../../js/data.js';
+import { buildWorld } from './world.js?v=84';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { SCHOOL } from './layout.js?v=3';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -18,7 +18,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xcfe9f8);
 scene.fog = new THREE.Fog(0xcfe9f8, 80, 260);
 
-const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 320);   // near 0.2 — 1인칭에서 가까운 벽이 잘리지 않게
+const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.3, 320);   // near 0.3 — 1인칭 벽 잘림과 원경 깊이 정밀도(바닥층 1cm 간격)의 절충
 const hemi = new THREE.HemisphereLight(0xc9dcf0, 0xb08a5e, 1.4);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff0cf, 3.1);
@@ -32,7 +32,7 @@ scene.add(sun);
 const world = buildWorld(scene);
 
 // ---------- 플레이어 (AABB 전용 — 레이캐스트 0) ----------
-const P = { x: 6, y: 0.01, z: 8, vy: 0, yaw: 0, ground: true };
+const P = { x: 13.4, y: world.terrainAt(13.4, -6) + 0.01, z: -6, vy: 0, yaw: 0, ground: true };   // 운동장에서 구령대·본관을 보며 시작
 const pg = new THREE.Group();
 {
   const m = (w,h,d,c,y)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshLambertMaterial({color:c})); b.position.y=y; pg.add(b); return b; };
@@ -41,7 +41,7 @@ const pg = new THREE.Group();
 }
 scene.add(pg);
 
-function terrainY(x, z) { return z > world.TERR_Z ? -1 : 0; }
+function terrainY(x, z) { return world.terrainAt(x, z); }   // 앞뜰·대지 yard / 운동장 field(LAYOUT-3 세 높이)
 function groundAt(x, z, fromY) {
   let g = terrainY(x, z);
   const k0x = Math.floor((x-0.3)/8), k1x = Math.floor((x+0.3)/8), k0z = Math.floor((z-0.3)/8), k1z = Math.floor((z+0.3)/8);
@@ -289,7 +289,7 @@ hintEl.addEventListener('click', e => { e.stopPropagation(); if (hotNear) act(ho
 // ---------- 문짝(미닫이) ----------
 // 움직이므로 청크 병합 밖의 개별 Mesh. 통행은 막지 않는다(콜라이더 없음) — 도달성 검사 결과가 그대로 유지된다.
 // 벽면에서 6cm 띄워 벽 위를 미끄러지게 한다(벽 속으로 사라지면 문이 없어진 것처럼 보인다).
-const doorMat = new THREE.MeshLambertMaterial({ color: 0xc08b4f });
+const doorMat = new THREE.MeshLambertMaterial({ color: 0xffffff });   // 색은 문마다(instanceColor) — 기본 나무색, 유치원 노랑·사랑반 분홍
 // 유리문(현관·측문·도서관·나래반·유치원 정문·뒷통로 — 실사 확인분): 반투명 하늘색
 const glassMat = new THREE.MeshLambertMaterial({ color: 0xbfe3ee, transparent: true, opacity: 0.42, depthWrite: false });
 // DOOR-INST(09-23): 문짝 80개가 각각 메시(=드로우콜 80)였다 → 재질별 InstancedMesh 4개(나무·유리·문창·손잡이)로.
@@ -302,7 +302,8 @@ const DOORS = world.doors.map(d => {
   //   가는 틈이 생겼고, 걸을 때 그 틈으로 보이는 방 안이 픽셀보다 가늘게 깜빡였다(09-23 깜빡임 검사기 실측).
   //   묻힌 부분은 벽 속이라 안 보이고, 문짝 두 면(±0.08)은 벽 면(±0.15)·가운데 맞댐면(0)과 겹치지 않는다.
   const w = d.w + 0.1, h = (d.dh ?? 2.6) + (d.lintel ? 0.05 : 0);
-  return { ax: d.ax, bx: d.cx, bz: d.cz, w, ow: d.w, h, y0: d.y0, glass: d.glass, open: 0 };
+  // slideOver(자동문·현관 양문): 옆 고정 유리 앞으로 12cm 비켜 미끄러진다(실물 자동문처럼) — 벽 속 포켓이 아니라서 간섭 검사 제외
+  return { ax: d.ax, bx: d.cx, bz: d.cz, w, ow: d.w, h, y0: d.y0, glass: d.glass, open: 0, over: d.slideOver ? 0.12 : 0, color: d.color };
 });
 const _boxG = new THREE.BoxGeometry(1, 1, 1);
 const nWood = DOORS.filter(o => !o.glass).length, nGlass = DOORS.length - nWood;
@@ -314,11 +315,11 @@ const doorInst = {
 };
 Object.values(doorInst).forEach(m => { m.frustumCulled = false; scene.add(m); });
 doorInst.wood.count = nWood; doorInst.win.count = nWood; doorInst.knob.count = nWood; doorInst.glass.count = nGlass;
-{ let iw = 0, ig = 0; DOORS.forEach(o => { o.idx = o.glass ? ig++ : iw++; }); }
+{ let iw = 0, ig = 0; const _dc = new THREE.Color(); DOORS.forEach(o => { o.idx = o.glass ? ig++ : iw++; if (!o.glass) doorInst.wood.setColorAt(o.idx, _dc.set(o.color ?? 0xc08b4f)); }); if (doorInst.wood.instanceColor) doorInst.wood.instanceColor.needsUpdate = true; }
 const _dM = new THREE.Matrix4(), _dP = new THREE.Vector3(), _dS = new THREE.Vector3(), _dQ = new THREE.Quaternion();
 function setDoor(o) {
   const s = o.open * (o.slide ?? 0) * (o.dir ?? 1);
-  const X = o.ax === 'x', cx = X ? o.bx + s : o.bx, cz = X ? o.bz : o.bz + s;
+  const X = o.ax === 'x', cx = X ? o.bx + s : o.bx + (o.over || 0), cz = X ? o.bz + (o.over || 0) : o.bz + s;
   const put = (m, lx, y, ww, hh, th) => {        // lx = 문 폭 방향 오프셋, th = 두께
     _dP.set(X ? cx + lx : cx, y, X ? cz : cz + lx); _dS.set(X ? ww : th, hh, X ? th : ww);
     m.setMatrixAt(o.idx, _dM.compose(_dP, _dQ, _dS));
@@ -359,6 +360,7 @@ function sweepHits(o, dir, len = o.ow + 0.05) {
 }
 // 열림 방향은 빌드 때 1회 자동 결정 — 간섭이 적은 쪽으로 연다(창문·칠판을 알아서 피한다)
 DOORS.forEach(o => {
+  if (o.over) { o.dir = 1; o.slide = o.ow + 0.05; setDoor(o); return; }
   o.dir = sweepHits(o, 1) <= sweepHits(o, -1) ? 1 : -1;
   // 끝까지 못 여는 자리(옆 벽 속에 창이 있는 곳)는 부딪히기 직전까지만 연다 — 문짝이 창 유리를 뚫고 나오지 않게
   o.slide = o.ow + 0.05;
@@ -367,7 +369,7 @@ DOORS.forEach(o => {
 });
 function doorCheck() {
   const bad = [];
-  for (const o of DOORS) if (sweepHits(o, o.dir, o.slide)) bad.push([+o.bx.toFixed(1), +o.bz.toFixed(1)]);
+  for (const o of DOORS) if (!o.over && sweepHits(o, o.dir, o.slide)) bad.push([+o.bx.toFixed(1), +o.bz.toFixed(1)]);
   if (bad.length) console.error('🚪 문 경로 간섭 ' + bad.length + '건: ' + JSON.stringify(bad.slice(0, 6)));
   else console.log('✅ 문 경로 간섭 0 (문 ' + DOORS.length + '개)');
   return bad;
@@ -487,7 +489,7 @@ function reach(opt = {}) {
     const c = q.pop(); pops++;
     for (const [dx, dz] of DIR) {
       const nx = c.x + dx*S, nz = c.z + dz*S;
-      if (nx < -80 || nx > 80 || nz < -68 || nz > 44) continue;
+      if (nx < -90 || nx > 64 || nz < -90 || nz > 66) continue;
       // jump 모드: 점프 정점(+0.97)에서 막히는지·착지 가능한지 — 무엇을 밟고 어디까지 올라가는지 본다
       const JY = opt.jump ? 0.97 : 0;
       if (blockedAt(nx, nz, c.y + JY)) continue;
@@ -507,7 +509,8 @@ function reach(opt = {}) {
   let roof = 0; const roofAt = [];
   for (const k of seen) {
     const [ix, iz, y2] = k.split(',').map(Number), x = ix * S, z = iz * S;
-    if (y2 / 2 > 3.0 && !(x > -40.2 && x < -11.8 && z > -50.2 && z < -37.8)) { roof++; if (roofAt.length < 5) roofAt.push([+x.toFixed(1), +z.toFixed(1), y2 / 2]); }
+    const U = world.UPPER;   // 2층(서관)만 3m 위가 정상
+    if (y2 / 2 > 3.0 && !(x > U[0] - 0.2 && x < U[1] + 0.2 && z > U[2] - 0.2 && z < U[3] + 0.2)) { roof++; if (roofAt.length < 5) roofAt.push([+x.toFixed(1), +z.toFixed(1), y2 / 2]); }
   }
   if (roof) bad.push('옥상 도달 ' + roof + '칸 ' + JSON.stringify(roofAt));
   if (opt.probe) {                       // 진단: 지정 구간에서 도달한 최고 지점
@@ -532,7 +535,7 @@ if (location.search.includes('check=1')) setTimeout(() => { reach(); reach({ jum
 // ---------- 물리 검사 (PHYS-1 · 09-23) ----------
 // passCheck: 보이는 부재 속으로 몸 중심이 들어가는가(= 뚫고 지나감). 몸 높이 띠만·플레이어 규칙(0.26 부풀림·오름 0.55) 그대로
 // standCheck: 윗면이 발+0.15~1.52(점프 도달)인 충돌 상자 중 위에 몸 공간이 있는 것 = 올라설 수 있는 곳(계단·무대 등 의도된 것 포함 — 목록을 눈으로 본다)
-const gndOf = b => (b.y0 >= 3.55 && b.x0 > -40.6 && b.x1 < -11.4 && b.z0 > -50.6 && b.z1 < -37.4) ? FH2 : ((b.z0 + b.z1) / 2 > world.TERR_Z ? -1 : 0);   // 2층 = 서관 위만
+const gndOf = b => { const U = world.UPPER; return (b.y0 >= U[4] - 0.15 && b.x0 > U[0] - 0.6 && b.x1 < U[1] + 0.6 && b.z0 > U[2] - 0.6 && b.z1 < U[3] + 0.6) ? U[4] : world.baseAt((b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2); };   // 2층 = 서관 위만, 나머지는 그 자리 바닥(건물·마당·앞뜰·운동장)
 const FH2 = SCHOOL.building.floorHeight + 0.3;
 function passCheck() {
   const out = [];
@@ -567,7 +570,7 @@ window.SD2 = {
   scene, camera, renderer, world, reach, detailTick, passCheck, standCheck,
   time: k => setTime(k || ORDER[(ORDER.indexOf(timeKey) + 1) % 3]),
   loc: () => { updateLoc(); return locBox.textContent; },
-  tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (terrainY(x, z) + 0.01); P.vy = 0; },
+  tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (world.baseAt(x, z) + 0.01); P.vy = 0; },
   yaw(v) { camYaw = v; },
   pos: () => [P.x.toFixed(1), P.y.toFixed(1), P.z.toFixed(1)],
   step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); hotTick(1/60); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
