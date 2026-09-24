@@ -616,7 +616,7 @@ function detailTick(dt) {
 // ---------- 지도 API(MAP-API-1 · 09-24) — 게임이 받는 지도 계약. 정본 docs/map_api.md ----------
 MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL,
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
-  pl: { P, ACT, CTRL, getYaw: () => camYaw, setYaw: v => { camYaw = v; } },
+  pl: { P, ACT, CTRL, keys, getYaw: () => camYaw, setYaw: v => { camYaw = v; } },
   ui: { toast, hint: hintEl }, hot: HOT }, NAV, makeMeta(SCHOOL));
 
 // ---------- 루프 + 예산 계측(헌법⑥) ----------

@@ -132,6 +132,7 @@ export function createMapApi(host, NAV, META) {
     },
     face(h) { setHeading(h); },
     lookAt(target) { const r = resolve(target); if (r) setHeading(Math.atan2(r.x - P.x, -(r.z - P.z)) / R2D); },
+    unstick: () => unstick(),                                     // 끼였을 때 가장 가까운 걷는 칸으로(3m 안)
     freeze(on2 = true) { CTRL.frozen = !!on2; },
     speed(k = 1) { CTRL.speed = Math.max(0.5, Math.min(2, k)); },
   };
@@ -360,6 +361,9 @@ export function createMapApi(host, NAV, META) {
 
   // ---------- 14. 틱(main 루프 · SD2.step) ----------
   const zs = { cur: null, pend: null, n: 0 }; let slowT = 0, tSec = 0;
+  const MOVE_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'], stuck = { from: null, t: 0, last: -9 }, stuckLog = [];
+  // 끼였을 때 가장 가까운 걷는 칸(3m 안)으로 — 게임의 'R: 처음 자리로' 대신 쓸 수도 있다
+  function unstick() { const N = navSync().raw, i = N.snap(P.x, P.y, P.z, 3, -1.6, 1.6); if (i < 0) return false; return player.teleport([N.X(i), N.y[i], N.Z(i)]); }
   function tick(dt) {
     tSec += dt; mkTick(dt);
     if (banT > 0 && (banT -= dt) <= 0 && banEl) banEl.style.display = 'none';
@@ -387,6 +391,12 @@ export function createMapApi(host, NAV, META) {
     for (const t of TRIG) { const inn = trigIn(t.shape);
       if (inn && !t.inside) { t.inside = true; if (t.cb.enter) { try { t.cb.enter(t.shape); } catch (e) { console.error(e); } } if (t.cb.once) TRIG.delete(t); }
       else if (!inn && t.inside) { t.inside = false; if (t.cb.exit) { try { t.cb.exit(t.shape); } catch (e) { console.error(e); } } } }
+    // 끼임 기록(게임·수업 크래시 대응): 이동키를 누른 채 1.5초 동안 0.05m도 못 움직이고 몸이 충돌 상자 속이면 남긴다(최대 50·2초 간격)
+    if (pl.keys) { let mv = false; for (const k of MOVE_KEYS) if (pl.keys.has(k)) { mv = true; break; }
+      if (mv && !pl.ACT.anim && !pl.ACT.sit) { if (!stuck.from) { stuck.from = [P.x, P.z]; stuck.t = 0; } stuck.t += 0.1;
+        if (Math.hypot(P.x - stuck.from[0], P.z - stuck.from[1]) > 0.05) { stuck.from = [P.x, P.z]; stuck.t = 0; }
+        else if (stuck.t >= 1.5 && tSec - stuck.last > 2 && q.blockedAt(P.x, P.z, P.y)) { stuck.last = tSec; stuck.t = 0; if (stuckLog.length < 50) stuckLog.push([+P.x.toFixed(2), +P.y.toFixed(2), +P.z.toFixed(2), +tSec.toFixed(1)]); emit('stuck', { x: P.x, y: P.y, z: P.z }); } }
+      else stuck.from = null; }
     if (arena.shape) {
       const ok = inArena(P.x, P.z) && P.y > -4 && P.y < 12;
       if (ok) { arena.out = 0; if (P.ground && (arena.safeT += 0.1) >= 0.5) { arena.safeT = 0; arena.safe = [P.x, P.y, P.z]; } }
@@ -403,10 +413,14 @@ export function createMapApi(host, NAV, META) {
     for (const p of pois({ src: 'spawn' })) { const i = N.snap(p.x, p.y, p.z, 0.5); if (i < 0 || !N.inSchool[i] || q.blockedAt(p.x, p.z, p.y)) out.spawnsBad.push(p.id); }
     for (const p of pois({ src: 'landmark' })) if (!p.stand) out.poisBad.push(p.id + '(설 칸 없음)');
     for (const h of HOT) { if (h.off || h.kind === 'game') continue; const i = N.snap(h.x, h.y, h.z, h.r + S / 2, -1.6, 1.6); if (i < 0) out.hotUnreachable.push([h.id, h.label, +h.x.toFixed(2), +h.z.toFixed(2)]); }
+    // 운동장 놀이판: 트랙 타원(폭 ±half)·출발선이 전부 걷는 칸인가(골대·놀이기구가 들어오면 알린다)
+    out.playBad = []; { const T9 = META.PLAY.track, y9 = META.PLAY.y, bad9 = (x, z) => { const i = N.snap(x, y9, z, S * 0.8, -0.3, 0.3); if (i < 0) out.playBad.push([+x.toFixed(1), +z.toFixed(1)]); };
+      const n9 = Math.ceil(2 * Math.PI * Math.max(T9.a, T9.b) / 1.0); for (let k = 0; k < n9; k++) { const t9 = k / n9 * Math.PI * 2; for (const o9 of [-T9.half, 0, T9.half]) bad9(T9.c[0] + Math.cos(t9) * (T9.a + o9), T9.c[1] + Math.sin(t9) * (T9.b + o9)); }
+      for (let x9 = META.PLAY.field.x[0] + 4; x9 < META.PLAY.field.x[1] - 4; x9 += 1) bad9(x9, META.PLAY.redlight.startZ); }
     out.outsidePct = +(100 * outN / N.count).toFixed(1); out.noZoneInSchoolPct = +(100 * noz / Math.max(1, ins)).toFixed(1); out.cells = N.count;
-    out.ok = !out.dupIds.length && !out.extraBad.length && !out.spawnsBad.length && !out.poisBad.length && !out.hotUnreachable.length && !out.traps && out.noZoneInSchoolPct <= 5;
+    out.ok = !out.dupIds.length && !out.extraBad.length && !out.spawnsBad.length && !out.poisBad.length && !out.hotUnreachable.length && !out.playBad.length && !out.traps && out.noZoneInSchoolPct <= 5;
     if (o.log !== false) {
-      const bad = ['dupIds', 'extraBad', 'spawnsBad', 'poisBad', 'hotUnreachable'].filter(k => out[k].length).map(k => k + ' ' + JSON.stringify(out[k].slice(0, 4)));
+      const bad = ['dupIds', 'extraBad', 'spawnsBad', 'poisBad', 'hotUnreachable', 'playBad'].filter(k => out[k].length).map(k => k + ' ' + JSON.stringify(out[k].slice(0, 4)));
       if (out.traps) bad.push('갇힘 칸 ' + out.traps); if (out.noZoneInSchoolPct > 5) bad.push('구역 없는 칸 ' + out.noZoneInSchoolPct + '%');
       if (bad.length) console.error('🚫 지도 계약 ' + bad.length + '건: ' + bad.join(' · '));
       else console.log('✅ 지도 계약 0 (구역 ' + Z.length + ' · 지점 ' + POI.size + ' · 구역 없는 칸 ' + out.noZoneInSchoolPct + '% · 학교 밖 칸 ' + out.outsidePct + '%)');
@@ -435,11 +449,11 @@ export function createMapApi(host, NAV, META) {
       mk: { marker: (x, y, z, o) => t(mk.marker(x, y, z, o)), trail: (p, o) => t(mk.trail(p, o)), many: (k, n, o) => t(mk.many(k, n, o)), add: obj => t(mk.add(obj)) },
       add: obj => t(mk.add(obj)), remove: obj => scene.remove(obj),
       nav: o => nav(o).then(NV => track ? { ...NV, block: x => t(NV.block(x)) } : NV), navSync,
-      mapData, drawMap, coverage, rng, store: store('sm2.game.' + (owner || 'map') + '.'),
+      mapData, drawMap, coverage, rng, store: store('sm2.game.' + (owner || 'map') + '.'), play: META.PLAY, spawns: META.SPAWNS,
       three: THREE,
     };
   }
   const MAP = facadeApi(null, null);
-  Object.assign(MAP, { emit, tick, check, scope, game: { load: loadGame, stop: stopGame, get current() { return game.current; }, get lastMs() { return game.last || 0; } }, warn, entryBad, BRECT, inSchool, zoneIndex });
+  Object.assign(MAP, { emit, tick, check, scope, stuckLog, unstick, game: { load: loadGame, stop: stopGame, get current() { return game.current; }, get lastMs() { return game.last || 0; } }, warn, entryBad, BRECT, inSchool, zoneIndex });
   return MAP;
 }

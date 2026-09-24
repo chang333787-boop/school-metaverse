@@ -144,5 +144,14 @@ export function makeMeta(SCHOOL) {
     { id: 'garden', label: '텃밭', at: rectC(SCHOOL.garden), r: 10 },
     { id: 'parking', label: '주차장', at: rectC(SCHOOL.parking), r: 10 },
   ];
-  return { KINDS, ZONE_META, EXTRA_ZONES, SPAWNS, LANDMARKS };
+  // 운동장 놀이판(달리기 트랙·공 놀이·무궁화 신호등 게임용) — 운동장 흙 사각형(SCHOOL)에서 계산. 골대·숲놀이터를 피한 여백은 실측(09-24 길격자)
+  const FL = { x0: T.westX, x1: SCHOOL.eastFenceX, z0: T.fieldZ, z1: SCHOOL.southFenceZ };
+  const PLAY = {
+    field: { x: [FL.x0 + 0.5, FL.x1 - 0.4], z: [FL.z0 + 0.2, FL.z1 - 0.5] },                  // 운동장 안(울타리·둔덕 발치 제외)
+    ball: { x: [FL.x0 + 4, FL.x1 - 5.2], z: [FL.z0 + 0.9, FL.z1 - 5] },                      // 공이 튕기는 판(골대 앞 여유)
+    track: { c: [(FL.x0 + FL.x1) / 2, (FL.z0 + FL.z1) / 2], a: (FL.x1 - FL.x0) / 2 - 9.75, b: (FL.z1 - FL.z0) / 2 - 7.95, half: 1.5, gates: 8 },   // 타원 트랙(폭 ±1.5)
+    redlight: { startZ: FL.z1 - 5.5, finish: { x: SCHOOL.porch.x.slice(), z: [FL.z0 + 0.3, FL.z0 + 1.5] } },          // 출발선 · 구령대 앞 결승
+    y: T.field,
+  };
+  return { KINDS, ZONE_META, EXTRA_ZONES, SPAWNS, LANDMARKS, PLAY };
 }
