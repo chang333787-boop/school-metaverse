@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=89';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=90';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=3';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 
 const canvas = document.getElementById('scene');
@@ -256,7 +256,21 @@ const chalkTex = [1, 2].map(n => {
   const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx;
 });
 const chalkGeo = new THREE.PlaneGeometry(1.5, 0.53);   // 가장 좁은 칠판(과학실 1.6m) 안에 들어가게
-let tray = null;
+let tray = null, milk = null, shoesIn = false, drumN = 0;
+// 소리(WebAudio — E키 누름이 사용자 제스처라 바로 재생 가능). 짧은 합성음만(파일 없음)
+let AC = null;
+function tone(freq, t0, dur, type = 'sine', vol = 0.25, drop = 0) {
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + t0;
+    o.type = type; o.frequency.setValueAtTime(freq, t); if (drop) o.frequency.exponentialRampToValueAtTime(drop, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g).connect(AC.destination); o.start(t); o.stop(t + dur + 0.02);
+  } catch (e) { /* 소리 막힌 환경 — 무시 */ }
+}
+const drumSnd = () => { tone(120, 0, 0.35, 'sine', 0.55, 45); tone(120, 0.3, 0.3, 'sine', 0.45, 45); tone(900, 0.15, 0.08, 'square', 0.06); };
+const xyloSnd = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.4, 'triangle', 0.22));
+const songSnd = () => [392, 440, 494, 523, 494, 440, 392].forEach((f, i) => tone(f, i * 0.28, 0.32, 'triangle', 0.16));
 function act(h) {
   switch (h.kind) {
     case 'board': {
@@ -279,6 +293,16 @@ function act(h) {
     case 'wash': toast('🫧 손을 깨끗이 씻었어요'); break;
     case 'garden': toast('🌱 텃밭에 물을 줬어요'); break;
     case 'mic': toast('🎤 구령대 마이크를 잡았어요'); break;
+    case 'shoes': shoesIn = !shoesIn; toast(shoesIn ? '👟 실내화로 갈아신었어요' : '👞 운동화로 갈아신었어요'); break;
+    case 'drum': (drumN++ % 2 ? xyloSnd : drumSnd)(); toast(drumN % 2 ? '🥁 둥둥 둥둥!' : '🎶 도미솔도~ 실로폰 소리'); break;
+    case 'milk':
+      if (!milk) { milk = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.14, 0.09), new THREE.MeshLambertMaterial({ color: 0xf4f6f2 })); milk.position.set(0.28, 0.8, 0.12); pg.add(milk); toast('🥛 우유를 하나 꺼냈어요'); }
+      else { pg.remove(milk); milk = null; toast('🥛 우유를 다 마셨어요'); }
+      break;
+    case 'visit': toast('📝 방문록에 이름을 적었어요'); break;
+    case 'clock': { const d = new Date(); toast(`🕰️ 지금은 ${d.getHours()}시 ${d.getMinutes()}분이에요`); break; }
+    case 'notice': toast('📋 이번 주 학생자치회 소식을 읽었어요'); break;
+    case 'song': songSnd(); toast('🎵 교가를 흥얼거렸어요'); break;
     case 'slide':
       ACT.anim = { from: h.from, to: h.to, t: 0, dur: 0.9 }; P.yaw = Math.PI; toast('🛝 슝~'); break;
   }
@@ -383,6 +407,15 @@ const TIMES = {
   sunset: { label: '🌇 노을', bg: 0xf3c193, near: 60, far: 230, sky: 0xf4cba4, gnd: 0x8a6a4e, hi: 1.15, sc: 0xffb066, si: 2.4, sp: [-88, 34, 26],  exp: 1.06 },
   night:  { label: '🌙 밤',  bg: 0x1f2b3f, near: 40, far: 175, sky: 0x35485f, gnd: 0x1d2430, hi: 0.6,  sc: 0xa8bcda, si: 0.75, sp: [-30, 80, -60], exp: 1.0 },
 };
+// 밤하늘 별(점 500개 · 안개 무시) + 밤엔 창 유리가 따뜻하게 빛난다(교실 불 켜진 느낌) — 빛(Light)은 추가하지 않는다
+const stars = (() => {
+  const n = 500, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { const th = Math.random() * Math.PI * 2, ph = 0.08 + Math.random() * 0.5, R = 290;
+    pos[i*3] = Math.cos(th) * Math.cos(ph) * R; pos[i*3+1] = Math.sin(ph) * R; pos[i*3+2] = Math.sin(th) * Math.cos(ph) * R; }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const m = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xfff8e8, size: 1.7, sizeAttenuation: false, fog: false }));
+  m.visible = false; m.frustumCulled = false; scene.add(m); return m;
+})();
 const ORDER = ['day', 'sunset', 'night'];
 let timeKey = 'day';
 const timeBtn = document.createElement('div');
@@ -398,6 +431,8 @@ function setTime(k) {
   sun.color.setHex(t.sc); sun.intensity = t.si; sun.position.set(t.sp[0], t.sp[1], t.sp[2]);
   renderer.toneMappingExposure = t.exp;
   renderer.shadowMap.needsUpdate = true;
+  stars.visible = k === 'night';
+  if (world.glassMesh) { const gmat = world.glassMesh.material; gmat.emissive.setHex(k === 'night' ? 0xb08a3e : k === 'sunset' ? 0x3a2a14 : 0x000000); gmat.opacity = k === 'night' ? 0.62 : 0.32; }
   timeBtn.textContent = t.label;
   return k;
 }

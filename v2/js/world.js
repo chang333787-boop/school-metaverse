@@ -933,6 +933,7 @@ export function buildWorld(scene) {
     patQuad('rmat', hc - 1.2, hc + 1.2, bz1 + 0.02, bz1 + 1.1, YARD + 0.032);
     addBox(0.4, 0.55, 0.3, YEL, bx0 + 0.3, YARD, bz1 + 0.35, NS);
     zones.push({ x0: rx0, x1: rx1, z0: rzg, z1: bz1, y: 0, label: '현관 앞' });
+    hotspots.push({ kind: 'shoes', x: hc, z: rzg + 1.3, y: 0, r: 1.2, label: '실내화로 갈아신기' });   // 신발장 앞(우리 학교 등교 첫 동작)
   }
   { // 현관 홀(영상 e_325~341): 크림 광택 타일 + 나침반, 서쪽 = 유리 진열장 + 사진 게시판, 동쪽 = 신발장(검은 상판·화분) + 진열장, 북끝 = 나무 아치
     const hx0 = HX0 + 0.15, hx1 = HX1 - 0.15, hz0 = zCor + 0.15, hz1 = EZI - 0.15;
@@ -947,6 +948,7 @@ export function buildWorld(scene) {
     addBox(0.62, 0.86, 0.95, 0xf2f2ee, hx1 - 0.31, 0, hz0 + 1.3, NS);
     dBox(0.03, 0.6, 0.85, 0x9fd06a, hx1 - 0.635, 0.12, hz0 + 1.3);
     dBox(0.66, 0.04, 0.99, 0xd6e4e8, hx1 - 0.33, 0.86, hz0 + 1.3);
+    hotspots.push({ kind: 'milk', x: hx1 - 1.0, z: hz0 + 1.3, y: 0, r: 0.9, label: '우유 꺼내기' });
     greenBoard('z', hz0 + 0.45, EZI - 2.95, hx1, -1, 1.35, 2.45);                     // 동벽 게시판은 북쪽(남쪽은 높은 창)
     // 북끝 아치(짙은 나무 틀 + 둥근 모서리) + "웃음꽃 피는 즐거운 학교" 나무 현판(홀 쪽)
     // 기둥·머리틀은 벽 끝·인방과 같은 면이 되지 않게 4cm 감싸고 바닥·인방 밑면에서 살짝 띄운다(감사)
@@ -1007,6 +1009,7 @@ export function buildWorld(scene) {
   { // 복도 채우기 — 학생자치회 게시판·창 아래 낮은 사물함·소화기
     greenBoard('x', BOARD[0], BOARD[1], fz0 + 0.15, 1, 0.95, 2.3, 'notice');
     sign('정림 학생자치회 소식', (BOARD[0] + BOARD[1]) / 2, 2.45, fz0 + 0.24, 0, 0.24, { bg: '#2f6e4f', fg: '#ffffff' });
+    hotspots.push({ kind: 'notice', x: (BOARD[0] + BOARD[1]) / 2, z: fz0 + 1.1, y: 0, r: 1.6, label: '학생자치회 소식 읽기' });
     lockerBank('x', BOARD[1] + 0.4, fx1 - 0.3, fz0 + 0.15, 1, 0.85, 2, null, 0x8a5530, 0xb07a48, true);   // 창 아래 낮은 나무 사물함(영상 a_465)
     [LOB_X0 + 1.2, -10.2, 8.5, 21.8].forEach(x => extinguisher(x, 0, fz0 + 0.3));   // 소화기(바닥)
   }
@@ -1186,6 +1189,7 @@ export function buildWorld(scene) {
   instrumentShelf('z', IPZ0 + 0.3, K.cookWallZ - 0.35, IPX + 0.15, 1);
   instrumentShelf('z', K.cornerDoorZ + 0.7, K.cookWallZ - 0.35, kx1 - 0.15, -1);
   zones.push({ x0: IPX, x1: kx1, z0: IPZ0, z1: K.cookWallZ, y: 0, label: '악기 보관 통로' });
+  hotspots.push({ kind: 'drum', x: 9.1, z: K.cookWallZ - 1.8, y: 0, r: 1.2, label: '악기 두드리기' });
   // 식탁: 홀 장축(동서) 방향 — 사용자 08-01·영상 v2178. 양옆 빨간 둥근 의자(팔 달림)
   const table9 = (tx, tz) => {
     colliders.push(noStand({ x0: tx - 1.6, x1: tx + 1.6, y0: 0, y1: 0.72, z0: tz - 0.4, z1: tz + 0.4 }));
@@ -1245,6 +1249,8 @@ export function buildWorld(scene) {
     dBox(0.34, 0.34, 0.04, 0xf4efe0, cx1 - 0.3, 1.45, lz0 + 0.62);
     dBox(0.08, 0.5, 0.03, 0xd8b35a, cx1 - 0.3, 0.75, lz0 + 0.615);                  // 시계추
     sign('배움터지킴이', dkx, 1.55, dkz + 0.4, 0, 0.18);
+    hotspots.push({ kind: 'visit', x: dkx, z: dkz + 1.0, y: 0, r: 1.1, label: '방문록에 이름 쓰기' });
+    hotspots.push({ kind: 'clock', x: cx1 - 0.3, z: lz0 + 1.1, y: 0, r: 0.9, label: '괘종시계 보기' });
     // 로비 서벽·세로복도 입구 붉은 벽돌 벽 앞 큰 화분 셋(영상 c_350~352)
     [lz1 - 0.7, lz1 - 1.6, lz0 - 0.6].forEach(z9 => bigPot(cx0 + 0.45, 0, z9));
     zones.push({ x0: lx0, x1: lx1, z0: lz0, z1: lz1, y: 0, label: '가운데 로비' });
@@ -1530,6 +1536,7 @@ export function buildWorld(scene) {
     sign('바르고 슬기롭게', px0 - 1.6, YARD + 1.6, S1 + 0.36, 0, 0.2);
     addBox(1.9, 1.3, 0.55, 0xb9b5aa, px1 + 2.8, YARD, S1 + 0.3, NS);               // 교가비(올라서기 금지)
     sign('교가', px1 + 2.8, YARD + 1.0, S1 + 0.6, 0, 0.26);
+    hotspots.push({ kind: 'song', x: px1 + 2.8, z: S1 + 1.3, y: YARD, r: 1.3, label: '교가 흥얼거리기' });
     const LX = px1 + 4.8, LZ = S1 + 0.5;                                            // 태양광 가로등(DETAIL-6)
     post(LX, LZ, YARD, YARD + 4.2, 0.1);
     dCyl(0.06, 0.1, 4.3, 0x9aa0a6, LX, YARD, LZ, { far: true, seg: 8 });
@@ -2006,12 +2013,13 @@ export function buildWorld(scene) {
         grid.get(k).push(i);
       }
   });
-  if (glassPos.length) {   // 창 유리 — 반투명 한 덩어리
+  let glassMesh = null;
+  if (glassPos.length) {   // 창 유리 — 반투명 한 덩어리(밤엔 main.js가 따뜻하게 빛나게 한다)
     const gg = new THREE.BufferGeometry();
     gg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(glassPos), 3));
     gg.computeVertexNormals(); gg.computeBoundingSphere();
     const gm = new THREE.Mesh(gg, new THREE.MeshLambertMaterial({ color: 0xa9d4e4, transparent: true, opacity: 0.32, depthWrite: false }));
-    gm.matrixAutoUpdate = false; gm.renderOrder = 2; scene.add(gm);
+    gm.matrixAutoUpdate = false; gm.renderOrder = 2; scene.add(gm); glassMesh = gm;
   }
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
   for (const ch of chunks.values()) {
@@ -2072,5 +2080,5 @@ export function buildWorld(scene) {
     [LC.x[1], ex1 + 0.15, ez1, fz0, COURT], [gx0, gx1, gz0, gz1, GYF], [G.annex.x[0], G.annex.x[1], G.annex.z[0], G.annex.z[1], GYF]];
   const baseAt = (x, z) => { for (const [a, b, c, d, y] of FLOORS) if (x >= a && x <= b && z >= c && z <= d) return y; return terrainAt(x, z); };
   const UPPER = [wx0, wx1, wz0, wz1, FH + 0.3];
-  return { colliders, grid, zones, doors, allBoxes, hotspots, details, visRods, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary };
+  return { colliders, grid, zones, doors, allBoxes, hotspots, details, visRods, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh };
 }
