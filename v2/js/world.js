@@ -2211,7 +2211,7 @@ export function buildWorld(scene) {
     [lz1 - 0.75, lz1 - 1.4, lz1 - 2.05].forEach((z9, k) => { const x9 = lx0 + 0.55;
       dBox(0.46, 0.05, 0.46, 0xe6e6e6, x9, 0.005, z9); dCyl(0.24, 0.19, 0.4, 0xe9e6de, x9, 0.055, z9, { seg: 8 });
       dCyl(0.025, 0.035, 1.55, 0x6d4e32, x9, 0.45, z9, { seg: 6 });
-      for (let j = 0; j < 4; j++) { const r9 = 0.44 - j * 0.08; [0, 1].forEach(q => dBlob(r9, 0.05, r9 * 0.3, j % 2 ? 0x375f38 : 0x2e5230, x9, 0.95 + j * 0.3, z9, { chunky: true, ry: j * 0.8 + k + q * Math.PI / 2, jitter: 0.25 })); }   // 층마다 가지 넷(납작한 긴 덩어리 둘을 엇갈려 — 원판처럼 보이지 않게)
+      for (let j = 0; j < 5; j++) { const r9 = 0.46 - j * 0.07; [0, 1].forEach(q => dBlob(r9, 0.07 - j * 0.006, r9 * 0.42, j % 2 ? 0x3a6238 : 0x2e5230, x9 + (q ? 0.03 : -0.03), 0.88 + j * 0.24, z9, { chunky: true, ry: j * 0.9 + k + q * Math.PI / 2, jitter: 0.3 })); }   // 층마다 가지 넷(납작한 긴 덩어리 둘을 엇갈려 — 원판·선반처럼 보이지 않게 · 영상 c_350.8 층층 가지)
       colliders.push(noStand({ x0: x9 - 0.28, x1: x9 + 0.28, y0: 0, y1: 0.45, z0: z9 - 0.28, z1: z9 + 0.28 })); });
     dBox(0.25, 1.2, 0.35, 0xf4f4f0, lx0 + 0.285, 0.005, lz0 + 0.2); dBox(0.03, 0.12, 0.12, 0xd23a3a, lx0 + 0.425, 0.95, lz0 + 0.2);   // AED 스탠드
     colliders.push(noStand({ x0: lx0 + 0.15, x1: lx0 + 0.42, y0: 0, y1: 1.2, z0: lz0 + 0.02, z1: lz0 + 0.38 }));
