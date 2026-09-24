@@ -2084,6 +2084,16 @@ export function buildWorld(scene) {
     slope('dirt', 'x', TERR_Z, ZT, XE, XS, YARD, FIELD, 4);
     patPush('dirt', [[XE, YARD, ZT], [XE, FIELD, ZB], [XS, FIELD, ZT], [XS, FIELD, ZT]], [[XE/4, -ZT/4], [XE/4, -ZB/4], [XS/4, -ZT/4], [XS/4, -ZT/4]], [0, 1, 0], 0xffffff);   // 모서리 세모 비탈
     slopeCap('stoneW', TR3.westX + 0.012, 1, TR3.westZ, ZT, YARD + (FIELD - YARD) * (TR3.westZ - ZT) / (ZB - ZT), YARD);   // 대지 동면 돌 옹벽(비탈 위로 드러난 세모 — 계단 쪽으로 높아짐)
+    {   // 큰 적송(영상 g_115.5~120·g_081~085: 조명탑 기둥 바로 동쪽 — 기울어 갈라진 붉은 갈색 줄기 + 넓고 성긴 우산형 수관, 키 ≈7 m)
+      const x9 = -34.7, z9 = -15.2, R7 = seeded(3517), up = (x, y, z, rx, rz, L) => [x - Math.sin(rz) * L, y + Math.cos(rz) * Math.cos(rx) * L, z + Math.sin(rx) * L];
+      colliders.push({ x0: x9 - 0.25, x1: x9 + 0.25, y0: YARD, y1: YARD + 12, z0: z9 - 0.25, z1: z9 + 0.25 });
+      dCyl(0.14, 0.21, 3.0, 0x8a5a3e, x9, YARD, z9, { far: true, rot: [0.1, 0, -0.25] });
+      const T1 = up(x9, YARD, z9, 0.1, -0.25, 3.0);
+      [[-0.1, -0.45, 2.6], [0.25, 0.3, 2.3]].forEach(([rx, rz, L], k) => { dCyl(0.08, 0.13, L, 0x8a5a3e, ...T1, { far: true, rot: [rx, 0, rz] });
+        const T2 = up(...T1, rx, rz, L);
+        for (let j = 0; j < 3; j++) { const a = R7() * 6.28, d = 0.4 + R7() * 0.8, h = -0.3 + j * 0.45;
+          dBlob(1.25 - j * 0.2, 0.26, 0.95 - j * 0.12, [0x3f6b3c, 0x4a7644, 0x436f3f][(j + k) % 3], T2[0] + Math.cos(a) * d, T2[1] + h, T2[2] + Math.sin(a) * d, { far: true, ry: a, jitter: 0.12 }); } });
+    }
     [[-39.4, ZT - 0.35], [-37.0, ZT - 0.35]].forEach(([x9, z9]) => {                       // 주황 볼라드 + 흰 반사띠(영상 g_084~088)
       dCyl(0.09, 0.15, 0.62, 0xe8742c, x9, YARD, z9, { seg: 10, far: true }); dBlob(0.1, 0.09, 0.1, 0xe8742c, x9, YARD + 0.62, z9, { far: true });
       dCyl(0.125, 0.135, 0.08, 0xf2f2f2, x9, YARD + 0.42, z9, { seg: 10 });
