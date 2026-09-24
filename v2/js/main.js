@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=102';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=106';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=3';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 
 const canvas = document.getElementById('scene');
@@ -33,13 +33,80 @@ const world = buildWorld(scene);
 
 // ---------- 플레이어 (AABB 전용 — 레이캐스트 0) ----------
 const P = { x: 13.4, y: world.terrainAt(13.4, -6) + 0.01, z: -6, vy: 0, yaw: 0, ground: true };   // 운동장에서 구령대·본관을 보며 시작
+// ---------- 내 캐릭터(CHAR-1 · 09-24 사용자 "캐릭터 모델링도"): 둥근 저폴리 아이(실사 아님) ----------
+// 둥근 머리·앞머리·옆/뒷머리·눈(반짝임)·눈썹·볼·코·웃는 입·귀 / 반팔·어깨·팔(어깨 축)·손 / 반바지+무릎 굽는 다리·흰 실내화 / 빨간 책가방.
+// 부위마다 정점색을 구워 한 메시씩(한 재질) — 드로우콜 8. 앞 = +z(P.yaw 0 = +z로 걷는 방향)
 const pg = new THREE.Group();
-{
-  const m = (w,h,d,c,y)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshLambertMaterial({color:c})); b.position.y=y; pg.add(b); return b; };
-  m(0.44,0.5,0.3,0x4d9bd6,0.85); m(0.4,0.38,0.38,0xf6cfa4,1.33); m(0.44,0.16,0.42,0x3a2e28,1.56);
-  m(0.16,0.6,0.2,0x2b3a55,0.3).position.x=-0.12; m(0.16,0.6,0.2,0x2b3a55,0.3).position.x=0.12;
-}
+const KID = (() => {
+  const MAT = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  const SPH = new THREE.SphereGeometry(1, 14, 10), CAP = new THREE.SphereGeometry(1, 14, 7, 0, Math.PI * 2, 0, Math.PI * 0.56);
+  const CYL = new THREE.CylinderGeometry(1, 1, 1, 10, 1).translate(0, -0.5, 0), BOX = new THREE.BoxGeometry(1, 1, 1), ICO = new THREE.IcosahedronGeometry(1, 1);
+  const SMILE = new THREE.TorusGeometry(1, 0.28, 4, 10, Math.PI);
+  const C = { top: 0x4d9bd6, top2: 0x3b82bf, bot: 0x2b3a55, skin: 0xf6cfa4, skin2: 0xecb98f, hair: 0x3a2e28, shoe: 0xf4f4f0, sole: 0xc9ced3, bag: 0xe0503c, bag2: 0xb93a2c, eye: 0x2a2222, cheek: 0xf4a3a0, lip: 0xb0504a };
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sv = new THREE.Vector3(), col = new THREE.Color();
+  function bake(parts) {   // [도형, [x,y,z], [sx,sy,sz], 색, [rx,ry,rz]?]
+    const pos = [], cl = [];
+    for (const [geo, p, sc, hex, r] of parts) {
+      const g = geo.index ? geo.toNonIndexed() : geo, P = g.attributes.position;
+      m4.compose(v.set(p[0], p[1], p[2]), q.setFromEuler(e.set(...(r || [0, 0, 0]))), sv.set(sc[0], sc[1], sc[2])); col.set(hex);
+      for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(m4); pos.push(v.x, v.y, v.z); cl.push(col.r, col.g, col.b); }
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(cl, 3)); g.computeVertexNormals();
+    const mesh = new THREE.Mesh(g, MAT); mesh.castShadow = true; return mesh;
+  }
+  const rig = new THREE.Group(); pg.add(rig);
+  const HIP = 0.56, SHO = 1.02;
+  // 몸: 반바지 허리·셔츠(둥근 원통)·밑단·어깨·목 + 책가방(등 = -z)·멜빵
+  const body = bake([
+    [CYL, [0, HIP + 0.12, 0], [0.178, 0.16, 0.128], C.bot], [CYL, [0, 1.09, 0], [0.18, 0.44, 0.13], C.top], [CYL, [0, 0.69, 0], [0.184, 0.04, 0.134], C.top2],
+    [SPH, [-0.165, SHO, 0], [0.085, 0.075, 0.085], C.top], [SPH, [0.165, SHO, 0], [0.085, 0.075, 0.085], C.top], [CYL, [0, 1.18, 0], [0.056, 0.08, 0.056], C.skin],
+    [BOX, [0, 0.9, -0.2], [0.3, 0.34, 0.13], C.bag], [SPH, [0, 1.07, -0.2], [0.15, 0.05, 0.065], C.bag], [BOX, [0, 0.82, -0.272], [0.2, 0.15, 0.03], C.bag2],
+    [BOX, [-0.1, 1.1, -0.06], [0.04, 0.02, 0.26], C.bag2], [BOX, [0.1, 1.1, -0.06], [0.04, 0.02, 0.26], C.bag2], [BOX, [-0.1, 0.95, 0.135], [0.04, 0.3, 0.02], C.bag2], [BOX, [0.1, 0.95, 0.135], [0.04, 0.3, 0.02], C.bag2],
+  ]);
+  rig.add(body);
+  // 머리(목 위 축 — 살짝 끄덕임): 얼굴은 +z
+  const head = new THREE.Group(); head.position.y = 1.18; rig.add(head);
+  const HY = 0.15;
+  head.add(bake([
+    [SPH, [0, HY, 0], [0.19, 0.185, 0.18], C.skin], [ICO, [-0.186, HY - 0.01, 0], [0.034, 0.05, 0.034], C.skin], [ICO, [0.186, HY - 0.01, 0], [0.034, 0.05, 0.034], C.skin],
+    [SPH, [-0.07, HY + 0.01, 0.166], [0.028, 0.04, 0.014], C.eye], [SPH, [0.07, HY + 0.01, 0.166], [0.028, 0.04, 0.014], C.eye],
+    [SPH, [-0.062, HY + 0.026, 0.178], [0.01, 0.01, 0.006], 0xffffff], [SPH, [0.078, HY + 0.026, 0.178], [0.01, 0.01, 0.006], 0xffffff],
+    [BOX, [-0.07, HY + 0.065, 0.168], [0.045, 0.012, 0.012], C.hair, [0, 0, 0.12]], [BOX, [0.07, HY + 0.065, 0.168], [0.045, 0.012, 0.012], C.hair, [0, 0, -0.12]],
+    [SPH, [-0.118, HY - 0.035, 0.148], [0.034, 0.022, 0.012], C.cheek], [SPH, [0.118, HY - 0.035, 0.148], [0.034, 0.022, 0.012], C.cheek],
+    [SPH, [0, HY - 0.018, 0.182], [0.016, 0.014, 0.012], C.skin2], [SMILE, [0, HY - 0.052, 0.172], [0.024, 0.024, 0.012], C.lip, [0, 0, Math.PI]],
+    [CAP, [0, HY + 0.01, -0.006], [0.2, 0.205, 0.195], C.hair, [-0.55, 0, 0]], [SPH, [0, HY + 0.125, 0.12], [0.16, 0.06, 0.075], C.hair, [-0.35, 0, 0]],
+    [SPH, [-0.176, HY + 0.035, 0.035], [0.045, 0.1, 0.075], C.hair], [SPH, [0.176, HY + 0.035, 0.035], [0.045, 0.1, 0.075], C.hair],
+    [SPH, [0, HY - 0.03, -0.11], [0.175, 0.14, 0.09], C.hair], [SPH, [0.03, HY + 0.205, -0.03], [0.03, 0.065, 0.03], C.hair, [0, 0, -0.4]],
+  ]));
+  // 팔(어깨 축 — 걸을 때 흔듦): 반팔 소매 + 팔뚝 + 손
+  const arm = sd => { const g = new THREE.Group(); g.position.set(sd * 0.2, SHO, 0); g.rotation.z = sd * 0.08;
+    g.add(bake([[CYL, [0, 0, 0], [0.062, 0.2, 0.062], C.top], [CYL, [0, -0.18, 0], [0.047, 0.22, 0.047], C.skin], [SPH, [0, -0.43, 0.005], [0.055, 0.06, 0.055], C.skin]])); rig.add(g); return g; };
+  // 다리(엉덩이 축 → 무릎 축): 허벅지(반바지 끝) + 종아리 + 흰 실내화(밑창)
+  const leg = sd => { const g = new THREE.Group(); g.position.set(sd * 0.088, HIP, 0);
+    g.add(bake([[CYL, [0, 0.03, 0], [0.084, 0.17, 0.084], C.bot], [CYL, [0, -0.13, 0], [0.072, 0.13, 0.072], C.skin]]));
+    const knee = new THREE.Group(); knee.position.y = -0.26; g.add(knee);
+    knee.add(bake([[CYL, [0, 0, 0], [0.068, 0.16, 0.068], C.skin], [CYL, [0, -0.15, 0], [0.071, 0.06, 0.071], 0xffffff], [BOX, [0, -0.245, 0.035], [0.13, 0.075, 0.22], C.shoe], [BOX, [0, -0.275, 0.035], [0.135, 0.02, 0.225], C.sole]]));
+    rig.add(g); return { g, knee }; };
+  return { rig, body, head, armL: arm(-1), armR: arm(1), legL: leg(-1), legR: leg(1) };
+})();
 scene.add(pg);
+// 걷기·점프·앉기 동작: 이동 속도로 팔다리를 흔들고(반대쪽끼리), 공중이면 팔을 들고, 앉으면 무릎을 굽혀 의자 위에(몸을 앞으로 0.42·아래로 0.1)
+let kidPh = 0, kidX = P.x, kidZ = P.z, kidT = 0;
+function kidTick(dt) {
+  const v = Math.hypot(P.x - kidX, P.z - kidZ) / Math.max(dt, 1e-3); kidX = P.x; kidZ = P.z; kidT += dt;
+  const K = KID, sit = !!ACT.sit, air = !P.ground && !sit && !ACT.anim, mv = sit ? 0 : Math.min(1, v / 4.2);
+  if (v > 0.3 && !sit) kidPh += dt * (5.5 + v * 1.5);
+  const sw = Math.sin(kidPh) * 0.7 * mv;
+  K.rig.position.set(0, sit ? -0.1 : Math.abs(Math.sin(kidPh)) * 0.04 * mv, sit ? 0.42 : 0);
+  if (sit) { K.legL.g.rotation.x = K.legR.g.rotation.x = -1.5; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 1.5; K.armL.rotation.x = K.armR.rotation.x = -0.85; }
+  else if (air) { K.legL.g.rotation.x = -0.5; K.legR.g.rotation.x = 0.25; K.legL.knee.rotation.x = 0.7; K.legR.knee.rotation.x = 0.3; K.armL.rotation.x = K.armR.rotation.x = -2.5; }
+  else { K.legL.g.rotation.x = sw; K.legR.g.rotation.x = -sw; K.legL.knee.rotation.x = Math.max(0, sw) * 0.9; K.legR.knee.rotation.x = Math.max(0, -sw) * 0.9;
+    K.armL.rotation.x = -sw * 0.85; K.armR.rotation.x = sw * 0.85; }
+  if (tray && !sit) K.armL.rotation.x = K.armR.rotation.x = -1.1;                                  // 식판 받쳐 들기
+  if (milk && !sit && !tray) K.armR.rotation.x = -0.7;                                               // 우유 들기
+  K.head.rotation.x = mv > 0.1 ? 0.04 : Math.sin(kidT * 1.7) * 0.03;                                   // 가만히 있으면 살짝 끄덕끄덕
+  K.body.scale.y = 1 + (mv < 0.1 && !sit ? Math.sin(kidT * 2.2) * 0.008 : 0);                           // 숨쉬기
+}
 
 function terrainY(x, z) { return world.terrainAt(x, z); }   // 앞뜰·대지 yard / 운동장 field(LAYOUT-3 세 높이)
 function groundAt(x, z, fromY) {
@@ -143,8 +210,9 @@ function step(dt) {
     ACT.sit = null;
     physics(dt);
   }
-  pg.position.set(P.x, P.y - (ACT.sit ? 0.42 : 0), P.z);
+  pg.position.set(P.x, P.y, P.z);
   pg.rotation.y = P.yaw;
+  kidTick(dt);
   // CAM-2(09-24): 사용자 "복도가 좁은 것 같다" — 실측 복도는 2.5m(게임 2.7m)로 좁지 않았다. 원인은 카메라:
   //  6.3m 뒤·17° 위에서 내려다보면 실내에선 천장(3.24m) 밑에 붙어 위에서 내려다보고, 화각 48°는 휴대폰 광각보다 훨씬 좁다.
   //  → 실내(머리 위에 천장)에선 가깝고(3.3m) 낮게(피치 ≤0.2)·화각 60°, 밖은 6.3m·52°. V = 1인칭(눈높이 1.5m) 전환.
@@ -285,7 +353,7 @@ function act(h) {
       ACT.sit = { x: h.x, z: h.z, y: h.y }; P.yaw = h.yaw ?? Math.PI;   // 의자 바로 뒤(몸을 의자 상자 안에 넣으면 일어날 때 의자 위로 올라선다)
       toast('🪑 의자에 앉았어요 — 움직이면 일어나요'); hotNear = null; break;
     case 'meal':
-      if (!tray) { tray = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.34), new THREE.MeshLambertMaterial({ color: 0xc8d2da })); tray.position.set(0, 1.05, 0.3); pg.add(tray); toast('🍚 급식을 받았어요'); }
+      if (!tray) { tray = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.34), new THREE.MeshLambertMaterial({ color: 0xc8d2da })); tray.position.set(0, 0.9, 0.4); pg.add(tray); toast('🍚 급식을 받았어요'); }
       else { pg.remove(tray); tray = null; toast('🍽️ 식판을 반납했어요'); }
       break;
     case 'read': toast('📖 조용히 책을 읽고 있어요'); break;
@@ -296,7 +364,7 @@ function act(h) {
     case 'shoes': shoesIn = !shoesIn; toast(shoesIn ? '👟 실내화로 갈아신었어요' : '👞 운동화로 갈아신었어요'); break;
     case 'drum': (drumN++ % 2 ? xyloSnd : drumSnd)(); toast(drumN % 2 ? '🥁 둥둥 둥둥!' : '🎶 도미솔도~ 실로폰 소리'); break;
     case 'milk':
-      if (!milk) { milk = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.14, 0.09), new THREE.MeshLambertMaterial({ color: 0xf4f6f2 })); milk.position.set(0.28, 0.8, 0.12); pg.add(milk); toast('🥛 우유를 하나 꺼냈어요'); }
+      if (!milk) { milk = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.14, 0.09), new THREE.MeshLambertMaterial({ color: 0xf4f6f2 })); milk.position.set(0.22, 0.78, 0.3); pg.add(milk); toast('🥛 우유를 하나 꺼냈어요'); }
       else { pg.remove(milk); milk = null; toast('🥛 우유를 다 마셨어요'); }
       break;
     case 'visit': toast('📝 방문록에 이름을 적었어요'); break;

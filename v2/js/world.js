@@ -1664,10 +1664,9 @@ export function buildWorld(scene) {
   goal(SCHOOL.eastFenceX - 4.5, FCZ, [1, 0], 0xe0a83a, 1.4);                    // 동쪽 큰 골대
   goal(-24, FLD.z[0] + 3.0, [0, -1], 0xf0f2f4, 0.8);                             // 학교 쪽 작은 골대(체육관 쪽으로 붙음) — 가로대 1.6 > 키 1.5
   goal(-24, SCHOOL.southFenceZ - 3.2, [0, 1], 0xf0f2f4, 0.8);                    // 정문 쪽 작은 골대
-  {   // 운동장 동쪽 높은 초록 철망(영상 f_192~219) + 남쪽 낮은 울타리 · 조명탑(북변)
-    const EF = SCHOOL.eastFenceX, SF = SCHOOL.southFenceZ, FP = SCHOOL.forestPlay;
+  {   // 운동장 동쪽 높은 초록 철망(영상 f_192~219) · 조명탑(북변). 남쪽(쉼터·정문 쪽)은 울타리 없이 트임(사용자 09-24 "정문에서 울타리가 운동장을 가로막지 않아")
+    const EF = SCHOOL.eastFenceX, FP = SCHOOL.forestPlay;
     meshFence(EF, TR3.fieldZ + 3.2, EF, FP.z[0] - 0.5, FIELD, 4.2, 0x5e8f5a, 0x4f7a4c);     // 북끝 3.2m = 통학로 → 운동장 드나드는 틈(영상 f_189)
-    meshFence(TR3.westX + 0.2, SF, FP.x[0], SF, FIELD, 1.2, 0x5e8f5a, 0x4f7a4c);
     [-34, 30].forEach(lx => {
       post(lx, FLD.z[0] + 1.2, FIELD, FIELD + 12, 0.25);
       dCyl(0.16, 0.3, 12.6, 0xbfc4c9, lx, FIELD, FLD.z[0] + 1.2, { far: true, seg: 8 });
@@ -2002,49 +2001,68 @@ export function buildWorld(scene) {
     const TOPS = [0x4d7fd6, 0x3fa37a, 0xe8a33d, 0x8a6ad0, 0xd9574a, 0x5bb5c9, 0xf2d15c, 0xe0708a, 0x7a8a9a, 0xf08a5d, 0x6fbf73, 0xffffff];
     const BOTS = [0x2b3a55, 0x3d4f7a, 0x6b5b4a, 0x2f2f36, 0x5a6f8a, 0x8a8f99];
     const SKIN = [0xf1c9a0, 0xe8b98f, 0xf5d3b0], HAIR = [0x3a2e28, 0x2a2220, 0x4a3426, 0x5a3d2b];
+    // CHAR-1(09-24 사용자 "캐릭터 모델링도"): 둥근 머리·머리 모양(짧은/단발/포니테일/양갈래)·눈(반짝임)·눈썹·볼·귀·반팔+팔·손·흰 실내화(아이)·치마/바지.
+    //   실사 아님(사용자 07-30 "사람은 실제처럼 구현하지마") — 둥근 저폴리 인형. 부품은 청크 병합(드로우콜 0). 앞 = face 쪽
+    const PSPH = new THREE.SphereGeometry(1, 8, 6).toNonIndexed(), PSM = new THREE.SphereGeometry(1, 6, 4).toNonIndexed(), PCAP = new THREE.SphereGeometry(1, 8, 4, 0, Math.PI * 2, 0, Math.PI * 0.58).toNonIndexed();   // 머리 80면·중간 덩어리 36면·작은 것 PICO 20면·아주 작은 것(눈·볼·입) POCT 8면
+    const PCYL = new THREE.CylinderGeometry(1, 1, 1, 6, 1).translate(0, -0.5, 0).toNonIndexed(), PBODY = new THREE.CylinderGeometry(0.92, 1, 1, 9, 1).translate(0, 0.5, 0).toNonIndexed(), POCT = new THREE.OctahedronGeometry(1, 0);
+    const PSKIRT = new THREE.CylinderGeometry(0.7, 1, 1, 10, 1).translate(0, -0.5, 0).toNonIndexed(), PICO = new THREE.IcosahedronGeometry(1, 0);
+    const _pq = new THREE.Quaternion(), _pv = new THREE.Vector3(), _ps = new THREE.Vector3(), _pm = new THREE.Matrix4(), _pe = new THREE.Euler();
+    function partGeo(x, y, z, face, s) {   // (지역 lx 오른쪽·ly 위·lz 앞) 단위 도형을 크기 (sx,sy,sz)로 놓는다. rx = 앞뒤로 기울임(+ = 끝이 앞으로)
+      const th = [0, -Math.PI / 2, Math.PI, Math.PI / 2][face & 3], c = Math.cos(th), sn = Math.sin(th);
+      return (geo, lx, ly, lz, sx, sy, sz, hex, rx = 0, rz = 0) => {
+        const X = lx, Z = -lz;
+        _pq.setFromEuler(_pe.set(rx, th, rz, 'YXZ'));
+        _pm.compose(_pv.set(x + (X * c + Z * sn) * s, y + ly * s, z + (-X * sn + Z * c) * s), _pq, _ps.set(sx * s, sy * s, sz * s));
+        dGeo(geo, _pm, hex, { flat: false });
+      };
+    }
     // sit=true: 의자(앉는 판 0.46)에 앉아 책상에 팔을 올린 자세. 앞 = 책상 쪽
     function person(x, y, z, sex, s = 1, face = 2, sit = false) {
-      const P = partAt(x, y, z, face, s), no = { collide: false };
+      const G = partGeo(x, y, z, face, s), P = partAt(x, y, z, face, s), no = { collide: false };
       // 몸 충돌(PHYS-1): 사람을 뚫고 지나가지 않게. 선 사람 = 0.44×0.44×키, 앉은 사람 = 의자 위(0.85~키)만 — 의자·책상은 자기 충돌이 있다
       const hw = 0.22 * s;
       // 높이는 1.6 이상 — 점프 도달(0.97 + 오름 0.55 = 1.52)보다 높아야 머리 위에 올라서지 못한다
       colliders.push({ x0: x - hw, x1: x + hw, y0: y + (sit ? 0.85 : 0), y1: y + Math.max(1.6, 1.5 * s + 0.1), z0: z - hw, z1: z + hw });
       const h1 = hash2(x, z), h2 = hash2(z, x), pick = (a, h) => a[Math.floor(h * a.length) % a.length];
       const top = pick(TOPS, h1), bot = pick(BOTS, h2), skin = pick(SKIN, h1 * 7 % 1), hair = pick(HAIR, h2 * 5 % 1);
-      const girl = sex === '여', SH = 0x3a3d44;
-      const dy = sit ? 0.02 : 0, dz = sit ? -0.02 : 0;                 // 윗몸 위치(앉으면 2cm 높고 2cm 뒤)
+      const girl = sex === '여', adult = s > 1.05, SH = adult ? 0x3a3d44 : 0xf2f2ee, style = Math.floor(h2 * 13 % 1 * 3);
+      // 다리·신발(아이 = 흰 실내화)
       if (sit) {
-        P(-0.1, 0, 0.36, 0.15, 0.08, 0.24, SH, no); P(0.1, 0, 0.36, 0.15, 0.08, 0.24, SH, no);                  // 신발(책상 밑)
-        P(-0.1, 0.08, 0.33, 0.13, 0.38, 0.14, girl ? skin : bot, no); P(0.1, 0.08, 0.33, 0.13, 0.38, 0.14, girl ? skin : bot, no); // 종아리
-        if (girl) P(0, 0.46, 0.07, 0.42, 0.15, 0.4, bot, no);                                                   // 치마(무릎까지)
-        else { P(-0.1, 0.46, 0.12, 0.16, 0.15, 0.44, bot, no); P(0.1, 0.46, 0.12, 0.16, 0.15, 0.44, bot, no); }  // 허벅지
+        P(-0.1, 0, 0.36, 0.14, 0.08, 0.24, SH, no); P(0.1, 0, 0.36, 0.14, 0.08, 0.24, SH, no);
+        [-0.09, 0.09].forEach(lx => { G(PCYL, lx, 0.47, 0.0, 0.07, 0.36, 0.07, girl ? skin : bot, Math.PI / 2); G(PCYL, lx, 0.47, 0.34, 0.058, 0.4, 0.058, girl ? skin : bot); });
+        if (girl) G(PSM, 0, 0.5, 0.12, 0.21, 0.07, 0.24, bot);                                   // 치마(무릎 위)
       } else {
-        P(-0.1, 0, 0.03, 0.15, 0.08, 0.24, SH, no); P(0.1, 0, 0.03, 0.15, 0.08, 0.24, SH, no);                  // 신발(앞으로 3cm)
-        if (girl) {
-          P(-0.09, 0.08, 0, 0.12, 0.3, 0.13, skin, no); P(0.09, 0.08, 0, 0.12, 0.3, 0.13, skin, no);
-          P(0, 0.38, 0, 0.44, 0.2, 0.28, bot, no);
-        } else {
-          P(-0.1, 0.08, 0, 0.16, 0.5, 0.17, bot, no); P(0.1, 0.08, 0, 0.16, 0.5, 0.17, bot, no);
-        }
+        P(-0.1, 0, 0.03, 0.14, 0.08, 0.24, SH, no); P(0.1, 0, 0.03, 0.14, 0.08, 0.24, SH, no);
+        if (girl) { [-0.085, 0.085].forEach(lx => G(PCYL, lx, 0.42, 0, 0.055, 0.35, 0.055, skin)); G(PSKIRT, 0, 0.64, 0, 0.21, 0.26, 0.16, bot); }
+        else [-0.09, 0.09].forEach(lx => G(PCYL, lx, 0.62, 0, 0.072, 0.55, 0.072, bot));
       }
-      P(0, 0.58 + dy, dz, 0.4, 0.46, 0.23, top, no);                                                          // 몸통
-      P(-0.26, 0.74 + dy, dz, 0.11, 0.3, 0.13, top, no); P(0.26, 0.74 + dy, dz, 0.11, 0.3, 0.13, top, no);    // 소매
-      if (sit) {                                                                                             // 책상 위 팔: 소매 + 손(피부색 팔은 나무 책상과 같은 색이라 판자로 보였다)
-        [-0.2, 0.2].forEach(ax => { P(ax, 0.725, 0.24, 0.11, 0.08, 0.28, top, no); P(ax, 0.725, 0.435, 0.09, 0.06, 0.11, skin, no); });
-      }
-      else { P(-0.26, 0.5, 0, 0.09, 0.24, 0.1, skin, no); P(0.26, 0.5, 0, 0.09, 0.24, 0.1, skin, no); }        // 내린 팔·손
-      const Y = 1.04 + dy;
-      P(0, Y, dz, 0.13, 0.04, 0.12, skin, no);                                                                 // 목
-      P(0, Y + 0.04, dz, 0.32, 0.32, 0.29, skin, no);                                                          // 머리
-      P(-0.075, Y + 0.16, dz + 0.155, 0.05, 0.06, 0.04, 0x2a2222, no); P(0.075, Y + 0.16, dz + 0.155, 0.05, 0.06, 0.04, 0x2a2222, no); // 눈(1cm 튀어나옴)
-      P(0, Y + 0.07, dz + 0.155, 0.08, 0.04, 0.04, 0xc0605a, no);                                             // 입
-      P(-0.115, Y + 0.1, dz + 0.155, 0.05, 0.04, 0.04, 0xf2a3a0, no); P(0.115, Y + 0.1, dz + 0.155, 0.05, 0.04, 0.04, 0xf2a3a0, no); // 볼
-      P(0, Y + 0.29, dz - 0.005, 0.36, 0.12, 0.32, hair, no);                                                 // 정수리
-      P(0, Y + 0.26, dz + 0.16, 0.28, 0.06, 0.04, hair, no);                                                  // 앞머리
-      if (girl) P(0, Y - 0.06, dz - 0.17, 0.4, 0.42, 0.06, hair, no);                                         // 긴 뒷머리
-      else P(0, Y + 0.14, dz - 0.165, 0.34, 0.2, 0.05, hair, no);                                             // 짧은 뒷머리
+      // 몸통(둥근 원통)·어깨·팔
+      G(PBODY, 0, 0.58, 0, 0.19, 0.46, 0.13, top);
+      [-0.19, 0.19].forEach(lx => G(PICO, lx, 0.96, 0, 0.08, 0.07, 0.08, top));
+      if (sit) [-1, 1].forEach(sd => { G(PCYL, sd * 0.21, 0.97, 0, 0.055, 0.28, 0.055, top, 0.9); G(PCYL, sd * 0.17, 0.78, 0.2, 0.045, 0.24, 0.045, skin, Math.PI / 2); G(PICO, sd * 0.17, 0.78, 0.45, 0.05, 0.045, 0.055, skin); });
+      else [-1, 1].forEach(sd => { G(PCYL, sd * 0.225, 0.97, 0, 0.058, 0.2, 0.058, top, 0, sd * 0.1); G(PCYL, sd * 0.245, 0.78, 0, 0.046, 0.22, 0.046, skin, 0, sd * 0.1); G(PICO, sd * 0.265, 0.53, 0, 0.052, 0.058, 0.052, skin); });
+      // 머리(둥근)·목·귀·얼굴
+      const Y = 1.2 + (sit ? 0.02 : 0);
+      G(PCYL, 0, Y - 0.08, 0, 0.05, 0.06, 0.05, skin);
+      G(PSPH, 0, Y + 0.09, 0, 0.18, 0.175, 0.17, skin);
+      [-1, 1].forEach(sd => {
+        G(PICO, sd * 0.176, Y + 0.08, 0, 0.03, 0.045, 0.03, skin);                                                   // 귀
+        G(POCT, sd * 0.068, Y + 0.1, 0.158, 0.026, 0.038, 0.016, 0x2a2222);                                           // 눈
+        G(POCT, sd * 0.062, Y + 0.114, 0.171, 0.01, 0.01, 0.006, 0xffffff);                                          // 눈 반짝임
+        G(POCT, sd * 0.068, Y + 0.155, 0.158, 0.036, 0.01, 0.012, hair);                                             // 눈썹
+        if (!adult) G(POCT, sd * 0.112, Y + 0.05, 0.142, 0.032, 0.022, 0.012, 0xf4a3a0);                                 // 볼
+      });
+      G(POCT, 0, Y + 0.025, 0.164, 0.032, 0.013, 0.01, 0xb0504a);                                                      // 입
+      // 머리카락: 뒤통수·정수리 모자 + 앞머리. 여 = 단발/포니테일/양갈래, 남 = 짧은 머리(+어른은 약간 길게)
+      G(PCAP, 0, Y + 0.1, -0.01, 0.192, 0.2, 0.185, hair, 0.55);                                                   // 뒤로 기울인 모자 — 앞 테두리가 눈썹 위(기울이지 않으면 눈을 덮는다)
+      G(PSM, 0, Y + 0.21, 0.11, 0.15, 0.06, 0.075, hair, -0.35);
+      G(PSM, 0, Y + 0.07, -0.11, 0.17, 0.14, 0.085, hair);
+      if (girl) {
+        if (style === 0) { G(PSM, 0, Y - 0.03, -0.1, 0.19, 0.17, 0.1, hair); [-1, 1].forEach(sd => G(PSM, sd * 0.17, Y + 0.02, 0.02, 0.05, 0.13, 0.07, hair)); }   // 단발
+        else if (style === 1) { G(PSM, 0, Y + 0.02, -0.22, 0.07, 0.13, 0.07, hair); G(PICO, 0, Y + 0.12, -0.19, 0.035, 0.035, 0.035, pick(TOPS, h2)); }    // 포니테일 + 머리끈
+        else [-1, 1].forEach(sd => { G(PSM, sd * 0.2, Y - 0.02, -0.04, 0.06, 0.12, 0.06, hair); G(PICO, sd * 0.19, Y + 0.08, -0.04, 0.03, 0.03, 0.03, pick(TOPS, h1)); });   // 양갈래
+      } else [-1, 1].forEach(sd => G(PICO, sd * 0.165, Y + 0.12, 0.03, 0.045, 0.09, 0.07, hair));                   // 옆머리(짧게)
     }
-    // 빈 자리 자동 탐색 — 방 안 격자에서 가구와 겹치지 않는 첫 자리(뒤쪽부터).
     // 사람도 allBoxes에 쌓이므로 다음 사람은 저절로 옆자리로 밀린다. 고정 좌표로 두면 의자·식탁에 박힌다(실제로 그랬음).
     function freeSpot(zn) {
       const y = zn.y ?? 0;
