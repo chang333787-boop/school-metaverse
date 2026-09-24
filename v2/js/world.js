@@ -2242,7 +2242,8 @@ export function buildWorld(scene) {
 
   // ================= 학교 둘레(울타리 다각형 · 정문) + 동네 =================
   {
-    const BND = SCHOOL.boundary, [gtx, gtz] = SCHOOL.gate, Y = FIELD;
+    const BND = SCHOOL.boundary, [gtx, gtz] = SCHOOL.gate;
+    const Y = FIELD;
     // 비스듬한 변의 충돌 = 선을 따라 0.3m 토막(여유 0.06). 예전엔 변마다 AABB 한 장이라 비스듬한 변(정문 양쪽)이
     //   놀이마당 남쪽·놀이터·통학로 끝을 덮는 보이지 않는 벽(최대 6m)이 됐다(SOUTH-2 걷기 실측 z 52.7·44.6에서 멈춤)
     const diagWall = (x0, z0, x1, z1, yb, H) => { const n = Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 0.3);
@@ -2260,14 +2261,15 @@ export function buildWorld(scene) {
       diagWall(x0, z0, x1, z1, Y, 1.6); };
     for (let i = 0; i < BND.length; i++) {
       const [x0, z0] = BND[i], [x1, z1] = BND[(i + 1) % BND.length];
-      const yb = (x, z) => terrainAt(x, z);
-      if (z0 === gtz && z1 === gtz && Math.abs((x0 + x1) / 2 - gtx) < 1) continue;                    // 정문(두 기둥 사이)
+      if (z0 === gtz && z1 === gtz && Math.abs((x0 + x1) / 2 - gtx) < 1) continue;                    // SOUTH-2 정문(두 기둥 사이) — 아래 옛 정문 분기 둘은 꼭짓점이 정문 한가운데에 없어 더는 타지 않는다
       if (z0 === gtz || z1 === gtz) { ornFence(x0, z0, x1, z1); continue; }                            // 정문 양쪽 변 = 흰 장식 울타리(남서 영상 s_009~036 · 남동 s_000 왼쪽 끝)
+      const yb = (x, z) => terrainAt(x, z);
+      if (Math.abs(x1 - gtx) < 0.01 && Math.abs(z1 - gtz) < 0.01) { const t = 1 - 4.5 / Math.hypot(x1 - x0, z1 - z0); meshFence(x0, z0, x0 + (x1 - x0)*t, z0 + (z1 - z0)*t, yb(x0, z0), 1.8); continue; }
+      if (Math.abs(x0 - gtx) < 0.01 && Math.abs(z0 - gtz) < 0.01) { const t = 4.5 / Math.hypot(x1 - x0, z1 - z0); meshFence(x0 + (x1 - x0)*t, z0 + (z1 - z0)*t, x1, z1, yb(x1, z1), 1.3, 0xf6f6f2, 0xe9e9e4); continue; }   // 정문 서쪽 = 흰 무늬 울타리(영상 s_009~024)
       // 높이가 바뀌는 변(서·동)은 둔덕/대지 경계에서 두 토막
       if (z0 === TR3.westZ && z1 === TR3.westZ) continue;          // 체육관 대지 남변 = 대지 위 철망(위에서 이미 둘렀다)
       const ya = yb(x0 + (x1 - x0) * 0.02, z0 + (z1 - z0) * 0.02), yc = yb(x0 + (x1 - x0) * 0.98, z0 + (z1 - z0) * 0.98);   // 끝점이 경계선 위일 때 안쪽 높이로
-      const diag = Math.abs(x1 - x0) > 0.3 && Math.abs(z1 - z0) > 0.3;
-      if (diag) { meshFence(x0, z0, x1, z1, ya, 1.8, undefined, undefined, false); diagWall(x0, z0, x1, z1, ya, 1.8); continue; }
+      if (Math.abs(x1 - x0) > 0.3 && Math.abs(z1 - z0) > 0.3) { meshFence(x0, z0, x1, z1, ya, 1.8, undefined, undefined, false); diagWall(x0, z0, x1, z1, ya, 1.8); continue; }   // 비스듬한 변(남서 모서리) — 토막 충돌
       if (ya === yc) meshFence(x0, z0, x1, z1, ya, 1.8);
       else { const zc = x0 < TR3.westX ? TR3.westZ : TERR_Z, t = (zc - z0) / (z1 - z0); meshFence(x0, z0, x0 + (x1 - x0)*t, zc, ya, 1.8); meshFence(x0 + (x1 - x0)*t, zc, x1, z1, yc, 1.8); }
     }
