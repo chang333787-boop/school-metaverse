@@ -18,6 +18,7 @@ export function makeMeta(SCHOOL) {
     '교장실': M('principal', 'office', 'main', ['staff']),
     '교무실': M('teachers', 'office', 'main', ['staff']),
     '현관': M('entrance', 'hall', 'main', ['entry']),
+    '현관 전실': M('entrance-vestibule', 'hall', 'main', ['entry']),   // 바깥 유리문 ~ 자동문(hall_lobby-32)
     '화장실': M('toilet-main', 'toilet', 'main'),
     '컴퓨터실': M('computer', 'special', 'main'),
     '1학년': M('grade1', 'classroom', 'main'),
@@ -115,7 +116,7 @@ export function makeMeta(SCHOOL) {
     gate: { x: SCHOOL.gate[0], z: SCHOOL.gate[1] - 3.5, h: 0, label: '정문 안' },
     'front-walk': { x: 12.5, z: -18.6, h: 0, label: '앞뜰 산책로(현관 앞)' },
     'field-center': { x: 0, z: 14, h: 0, label: '운동장 가운데' },
-    'center-lobby': { x: 13.8, z: -36.2, h: 0, label: '가운데 로비' },
+    'center-lobby': { x: 12.5, z: -34.9, h: 0, label: '가운데 로비' },   // 로비가 얕아져(hall_lobby-0) 책상 앞 트임 안쪽
     gym: { x: -67, z: -12, h: 0, label: '체육관' },
     'corridor-2f': { x: -25, z: -35.3, h: 270, floor: 2, label: '2층 복도' },
     playground: { x: -38, z: 46, h: 180, label: '놀이터 앞' },

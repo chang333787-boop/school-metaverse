@@ -411,6 +411,7 @@ function act(h) {
       else { pg.remove(milk); milk = null; toast('🥛 우유를 다 마셨어요'); }
       break;
     case 'visit': toast('📝 방문록에 이름을 적었어요'); break;
+    case 'map': toast('🗺️ 학교 안내도 — 현관 · 가운데 로비 · 교실을 찾아가 봐요'); break;
     case 'clock': { const d = new Date(); toast(`🕰️ 지금은 ${d.getHours()}시 ${d.getMinutes()}분이에요`); break; }
     case 'notice': toast('📋 이번 주 학생자치회 소식을 읽었어요'); break;
     case 'song': songSnd(); toast('🎵 교가를 흥얼거렸어요'); break;
