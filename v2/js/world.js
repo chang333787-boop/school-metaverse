@@ -1063,14 +1063,14 @@ export function buildWorld(scene) {
     patQuad('gmat', rx0, rx1, bz1 - 0.4, bz1, -0.15 + 0.012);
     dBox(rx1 - rx0 - 0.06, 0.14, 0.03, DKWOOD, (rx0 + rx1)/2, -0.15, bz1 - 0.385);   // 윗단 챌면 나무판
     // 양옆 신발장(2단 문·갈색 — 영상 e_316~321·p_158~161): 바깥 유리 벽 앞에서 계단 쪽으로 2m
-    lockerBank('z', rzg + 0.2, rzg + 2.2, rx0, 1, 1.75, 2, null, 0x5e3d25, 0x7f5233);   // 중간 갈색 나무결(영상 e_318·e_320 — 예전 주황기)
-    lockerBank('z', rzg + 0.2, rzg + 2.2, rx1, -1, 1.75, 2, null, 0x5e3d25, 0x7f5233);
-    [[rx0, 1], [rx1, -1]].forEach(([wall, f]) => {                                  // 은색 세로 막대 손잡이(검은 네모 손잡이를 감쌈) + 흰 번호표(영상 e_320·p_160) — lockerBank 칸 나눔과 같은 셈
+    lockerBank('z', rzg + 0.2, rzg + 2.2, rx0, 1, 1.75, 2, null, 0x855f47, 0xa6795b);   // 채도 낮춘 나무결(영상 e_320·e_322 밝은 문 H24~25·S0.60~0.64·V0.53~0.59 ↔ 렌더 H25·S0.60·V0.60 — 명도는 예전 그대로, 주황기만 뺌)
+    lockerBank('z', rzg + 0.2, rzg + 2.2, rx1, -1, 1.75, 2, null, 0x855f47, 0xa6795b);
+    [[rx0, 1], [rx1, -1]].forEach(([wall, f]) => {                                  // 은색 세로 막대 손잡이(검은 네모 손잡이를 감쌈) + 빈 은색 명찰틀 셋(위·가운데·아래 — 영상 e_320 확대: 글자 없음) — lockerBank 칸 나눔과 같은 셈
       const a0 = rzg + 0.2, n = Math.max(1, Math.round(2.0 / 0.32)), cw = 2.0 / n, rh = (1.75 - 0.1) / 2, D = 0.45;
       for (let i = 0; i < n; i++) for (let r = 0; r < 2; r++) {
         const ca = a0 + cw * (i + 0.5), y = 0.08 + rh * r;
         dBox(0.04, 0.16, 0.04, 0xc8cdd2, wall + f * (D + 0.045), y + rh * 0.45 - 0.045, ca + cw * 0.28);
-        sign(String((1 - r) * n + i + 1), wall + f * (D + 0.034), y + rh - 0.1, ca, f * Math.PI / 2, 0.05, { bg: '#f4f4f0', fg: '#333333' });
+        [0.2, 0.56, 0.9].forEach(t => dBox(0.03, 0.04, 0.11, 0xb0b5ba, wall + f * (D + 0.035), y + rh * t - 0.02, ca - cw * 0.04));   // 문 앞면(D+0.03)에서 2cm 나옴
       }
     });
     // 바깥 유리 벽: 양옆 둥근 무늬 반투명 판 + 가운데 스테인리스 양문("우리학교 방문을 환영합니다")
@@ -1772,12 +1772,15 @@ export function buildWorld(scene) {
     // 기둥(짙은 나무 0.4각 · 영상 u_283·p_154): 앞줄 = 모서리 둘, 북쪽 줄 = 약 2m 간격 넷(산책로 남쪽 경계석 바로 뒤), 차양 북동 = 돌출부 동쪽 화단 가(p_161)
     const Y0 = 1.9, Y1 = 2.95, PZN = FY.walkS + 0.12 + 0.2, ZJ = FY.walkS + 0.05;   // 처마 밑·지붕 윗면·북쪽 기둥 줄 z·두 지붕 이음줄
     const CX0 = EN.x[0], CX1 = px1, CZ0 = EN.z[1], RX0 = px0 - 0.2, RX1 = px1 + 0.2, RZ1 = FZ + 0.2;
-    const pillar = (x9, z9, d9 = 0.4) => {
+    const pillar = (x9, z9, d9 = 0.4, py = YARD) => {                              // py = 무늬 시작 높이(갓돌 위에 선 기둥은 갓돌 윗면부터)
       addBox(0.4, Y0 - YARD, d9, DKWOOD, x9, YARD, z9);
-      patWall('woodP', 'x', x9 - 0.2, x9 + 0.2, YARD, Y0, z9 + d9/2 + 0.012, 1); patWall('woodP', 'x', x9 - 0.2, x9 + 0.2, YARD, Y0, z9 - d9/2 - 0.012, -1);
-      patWall('woodP', 'z', z9 - d9/2, z9 + d9/2, YARD, Y0, x9 + 0.212, 1); patWall('woodP', 'z', z9 - d9/2, z9 + d9/2, YARD, Y0, x9 - 0.212, -1);
+      patWall('woodP', 'x', x9 - 0.2, x9 + 0.2, py, Y0, z9 + d9/2 + 0.012, 1); patWall('woodP', 'x', x9 - 0.2, x9 + 0.2, py, Y0, z9 - d9/2 - 0.012, -1);
+      patWall('woodP', 'z', z9 - d9/2, z9 + d9/2, py, Y0, x9 + 0.212, 1); patWall('woodP', 'z', z9 - d9/2, z9 + d9/2, py, Y0, x9 - 0.212, -1);
     };
-    [[px0 + 0.5, FZ - 0.3], [px1 - 0.5, FZ - 0.3], [px0 + 0.25, PZN], [px0 + 2.2, PZN], [px0 + 4.1, PZN], [px1 - 0.25, PZN]].forEach(([x9, z9]) => pillar(x9, z9));   // 앞 모서리는 계단 도착 자리 비켜 0.3 안쪽
+    [[px0 + 0.25, PZN], [px0 + 2.2, PZN], [px0 + 4.1, PZN], [px1 - 0.25, PZN]].forEach(([x9, z9]) => pillar(x9, z9));
+    //   앞 모서리 둘(영상 e_304: 계단 도착 트임의 남쪽 모서리 = 앞 난간 줄에 붙은 기둥 · 트임 약 1m) — 깊이 0.28로 흰 갓돌 위에 선다(남면 = 갓돌 앞면 FZ+0.05보다 1cm 뒤).
+    //   북면 z = FZ-0.24 → 계단 통로(z BZ+0.11 ~ FZ-0.17)를 7cm만 먹는다(몸 부풀림 뒤 남는 폭 0.33 · 예전 0.3 안쪽 0.4각 기둥은 통로 남쪽 40cm를 막아 7cm만 남겼다)
+    [px0 + 0.2, px1 - 0.2].forEach(x9 => pillar(x9, FZ - 0.1, 0.28, YARD + 0.02));
     pillar(CX1 - 0.25, CZ0 + 0.185, 0.37);                                       // 차양 북동 기둥(북 경계석 1cm 앞에서 멈춤)
     // 지붕 판 둘(짙은 나무 상자) — 윗면·밑면이 같은 높이로 이음줄 ZJ에서 맞닿기만
     addBox(RX1 - RX0, Y1 - Y0, RZ1 - ZJ, 0x2f2a26, (RX0 + RX1)/2, Y0, (ZJ + RZ1)/2);   // 구령대 지붕
@@ -1801,7 +1804,7 @@ export function buildWorld(scene) {
     bl(RX0 - 0.06, CX0, ZJ - 0.06, ZJ); bl(CX1, RX1 + 0.06, ZJ - 0.06, ZJ);
     bl(CX0 - 0.06, CX0, CZ0, ZJ - 0.06); bl(CX1, CX1 + 0.06, CZ0, ZJ - 0.06); bl(EN.x[1], CX1 + 0.06, CZ0 - 0.06, CZ0);
     // 난간: 앞면(모서리 기둥 사이) + 서·동 옆면(무대 옆 잔디에서 걸어 들어오지 못하게) + 북쪽 서쪽 첫 칸(영상 e_313·p_154) — 나머지 북쪽 칸은 현관 쪽 출입구
-    steelRail(px0 + 0.02, FZ - 0.12, px1 - 0.02, FZ - 0.12, YARD + 0.02);
+    steelRail(px0 + 0.4, FZ - 0.12, px1 - 0.4, FZ - 0.12, YARD + 0.02);          // 앞 모서리 기둥 안쪽 면 사이
     // 계단 난간(영상 u_288~295): 양쪽 두 줄 · 세로로 긴 타원 고리 살. 충돌 = steelRail과 같은 0.3m 토막(높이 1.6·카메라 무시)
     //   고리 살은 칸마다 무늬 판 하나(투명 바탕 + 은색 고리 그림 — 아래 한 메시) — 봉으로 세우면 고리 하나가 삼각형 200개라 무늬로 바꿨다
     const loopPos = [], loopUV = [];
@@ -1845,7 +1848,7 @@ export function buildWorld(scene) {
     patWall('rockW', 'x', px1 + 1.8, px1 + 2.8, FIELD, FIELD + 0.6, BZ + 0.25 + 0.012, 1);
     slope('grass', 'z', px1 + 1.8, px1 + 2.8, BZ, BZ + 0.25, YARD, FIELD + 0.6, 1, 0xf2f6e8); slopeCap('grass', px1 + 1.8, -1, BZ, BZ + 0.25, YARD, FIELD + 0.6);
     patQuad('pave', px1 + 1.8, px1 + 2.8, BZ + 0.25, FZ, FIELD + 0.02);
-    addBox(1.2, 0.45, 0.3, 0xb3b1aa, px0 - 2.4, FIELD, FZ - 0.15);                   // 서쪽 계단 발치 둔덕 끝 회색 낮은 블록(영상 u_283)
+    addBox(1.18, 0.45, 0.3, 0xb3b1aa, px0 - 2.41, FIELD, FZ - 0.15);                 // 서쪽 계단 발치 둔덕 끝 회색 낮은 블록(영상 u_283) — 동쪽 면은 둔덕 끝 잔디 마감(x px0-1.8)보다 2cm 뒤(같은 면 겹침 깜빡임)
     { // 고리 살 무늬 메시(칸마다 세로 타원 고리 둘 + 위아래 짧은 살 — 영상 u_290·p_152)
       const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g9 = cv.getContext('2d');
       g9.strokeStyle = '#ffffff'; g9.lineWidth = 3.2;
