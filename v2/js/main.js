@@ -1,6 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=99';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=102';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=3';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 
 const canvas = document.getElementById('scene');
@@ -243,7 +243,7 @@ function hotTick(dt) {
 // 칠판 낙서 — 투명 캔버스에 분필 선(단계별 2장). 칠판 면에서 2cm 앞(겹치면 반짝임)
 const chalkTex = [1, 2].map(n => {
   const c = document.createElement('canvas'); c.width = 512; c.height = 180;
-  const g = c.getContext('2d'); g.strokeStyle = g.fillStyle = 'rgba(255,255,250,0.92)'; g.lineWidth = 5; g.lineCap = 'round';
+  const g = c.getContext('2d'); g.strokeStyle = g.fillStyle = 'rgba(28,64,150,0.9)'; g.lineWidth = 5; g.lineCap = 'round';   // 흰 칠판 = 파랑 마커
   g.beginPath(); g.arc(80, 90, 45, 0, Math.PI * 2); g.stroke();                               // 웃는 얼굴
   g.beginPath(); g.arc(66, 78, 5, 0, 7); g.arc(94, 78, 5, 0, 7); g.fill();
   g.beginPath(); g.arc(80, 95, 24, 0.2, Math.PI - 0.2); g.stroke();
@@ -275,14 +275,14 @@ function act(h) {
   switch (h.kind) {
     case 'board': {
       h.stage = ((h.stage || 0) + 1) % 3;
-      if (!h.mesh) { h.mesh = new THREE.Mesh(chalkGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false })); h.mesh.position.set(h.bx, h.by, h.bz); scene.add(h.mesh); }
+      if (!h.mesh) { h.mesh = new THREE.Mesh(chalkGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false })); h.mesh.position.set(h.bx, h.by, h.bz); h.mesh.rotation.y = h.ry || 0; scene.add(h.mesh); }
       h.mesh.visible = h.stage > 0;
       if (h.stage > 0) { h.mesh.material.map = chalkTex[h.stage - 1]; h.mesh.material.needsUpdate = true; }
       toast(h.stage === 0 ? '🧽 칠판을 깨끗이 지웠어요' : '✏️ 칠판에 낙서했어요');
       hotNear = null; break;
     }
     case 'sit':
-      ACT.sit = { x: h.x, z: h.z, y: h.y }; P.yaw = Math.PI;   // 의자 바로 뒤(몸을 의자 상자 안에 넣으면 일어날 때 의자 위로 올라선다)
+      ACT.sit = { x: h.x, z: h.z, y: h.y }; P.yaw = h.yaw ?? Math.PI;   // 의자 바로 뒤(몸을 의자 상자 안에 넣으면 일어날 때 의자 위로 올라선다)
       toast('🪑 의자에 앉았어요 — 움직이면 일어나요'); hotNear = null; break;
     case 'meal':
       if (!tray) { tray = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.34), new THREE.MeshLambertMaterial({ color: 0xc8d2da })); tray.position.set(0, 1.05, 0.3); pg.add(tray); toast('🍚 급식을 받았어요'); }
