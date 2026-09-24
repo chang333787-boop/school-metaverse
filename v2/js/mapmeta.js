@@ -143,6 +143,11 @@ export function makeMeta(SCHOOL) {
     { id: 'plaza', label: '남쪽 놀이 마당', at: rectC(SCHOOL.plaza), r: 8 },
     { id: 'garden', label: '텃밭', at: rectC(SCHOOL.garden), r: 10 },
     { id: 'parking', label: '주차장', at: rectC(SCHOOL.parking), r: 10 },
+    // 본관 주복도 지점(main_corridor-16 · 보물찾기·퀴즈 스테이션 단서 자리) — 복도 가운데 줄 z = 북벽 + 1.25. 화장실 앞 x = 여직원·남학생 문(world.js TDOOR 19.7·22.0) 사이
+    { id: 'toilet-front', label: '화장실 앞', at: [20.85, B.front.z[0] + 1.25], r: 2.2 },
+    { id: 'cafe-front', label: '급식실 앞', at: [B.kitchen.doorC, B.front.z[0] + 1.0], r: 2 },
+    { id: 'teachers-front', label: '교무실 앞', at: [B.front.rooms.find(r => r.name === '교무실').span[0] + 1.9, B.front.z[0] + 1.5], r: 2 },
+    { id: 'east-glass-door', label: '동쪽 끝 유리문', at: [B.front.x[1] - 0.8, B.front.z[0] + 1.25], r: 2 },
   ];
   // 운동장 놀이판(달리기 트랙·공 놀이·무궁화 신호등 게임용) — 운동장 흙 사각형(SCHOOL)에서 계산. 골대·숲놀이터를 피한 여백은 실측(09-24 길격자)
   const FL = { x0: T.westX, x1: SCHOOL.eastFenceX, z0: T.fieldZ, z1: SCHOOL.southFenceZ };
