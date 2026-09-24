@@ -196,7 +196,10 @@ export function buildWorld(scene) {
       if (g0 - cur > 0.1499) wallSeg(ax, g0 - cur, h, (cur + g0)/2, y0, line, hex, opt);
       if (sl > 0.1499) wallSeg(ax, g1 - g0, sl, (g0 + g1)/2, y0, line, hex, opt);                   // 창턱 아래
       if (h - dh > 0.1499) wallSeg(ax, g1 - g0, h - dh, (g0 + g1)/2, y0 + dh, line, hex, opt);     // 인방
-      if (g.win) { const fw = (opt.ext ?? hex === WALL) ? (opt.face ?? 1) : 0; glassPane(ax, g1 - g0, Math.min(dh, h) - sl, (g0 + g1)/2, y0 + sl, line); winFrame(ax, g0, g1, y0 + sl, y0 + Math.min(dh, h), line, fw, g.frame, g.noLedge);
+      if (g.win) { const fw = (opt.ext ?? hex === WALL) ? (opt.face ?? 1) : 0;
+        // 실내창 창턱이 점프로 닿는 높이(<1.6)면 유리 충돌을 벽 두께(0.3 + 양쪽 2mm)로 — 유리(0.16)가 창턱 벽(0.3)보다 얇으면
+        //   그 차이 7cm 띠에서 창턱 윗면에 올라앉아 벽 앞 허공에 선다(classrooms 리뷰: 복도 쪽 실내창 창턱 1.1). 그림·감사는 그대로 0.16
+        glassPane(ax, g1 - g0, Math.min(dh, h) - sl, (g0 + g1)/2, y0 + sl, line, !fw && sl < 1.6 ? 0.304 : 0.16); winFrame(ax, g0, g1, y0 + sl, y0 + Math.min(dh, h), line, fw, g.frame, g.noLedge);
         winLog.push({ ax, g0, g1, yb: y0 + sl, yt: y0 + Math.min(dh, h), y0, line, f: fw }); }
       else {
         // 문턱(FLOOR-1): 벽 두께 자리 바닥 — 바닥판은 벽 면에서 끝나므로 문 밑에 기초 윗면이 드러나지 않게 채운다
@@ -210,9 +213,10 @@ export function buildWorld(scene) {
   }
   // 유리판 — 충돌은 개구 전체, 그림·감사는 사방 2cm 안쪽(창틀 속에 묻혀 틀 면과 같은 평면이 안 되게). 투명 유리 한 덩어리(드로우콜 1)
   const glassPos = [], winLog = [];   // winLog = 만든 창 목록(블라인드 등 창 뒤 꾸밈용)
-  function glassPane(ax, len, hh, c, y, line) {
+  function glassPane(ax, len, hh, c, y, line, cth = 0.16) {   // cth = 충돌 두께(그림 두께는 늘 0.16)
     const w = ax === 'x' ? len : 0.16, d = ax === 'x' ? 0.16 : len, cx = ax === 'x' ? c : line, cz = ax === 'x' ? line : c;
-    colliders.push({ x0: cx - w/2, x1: cx + w/2, y0: y, y1: y + hh, z0: cz - d/2, z1: cz + d/2 });
+    const cw = ax === 'x' ? w : cth, cd = ax === 'x' ? cth : d;
+    colliders.push({ x0: cx - cw/2, x1: cx + cw/2, y0: y, y1: y + hh, z0: cz - cd/2, z1: cz + cd/2 });
     const iw = ax === 'x' ? w - 0.04 : w, id = ax === 'x' ? d : d - 0.04, ih = hh - 0.04;
     allBoxes.push({ x0: cx - iw/2, x1: cx + iw/2, y0: y + 0.02, y1: y + 0.02 + ih, z0: cz - id/2, z1: cz + id/2 });
     for (let i = 0; i < bpos.count; i++) glassPos.push(bpos.getX(i)*iw + cx, bpos.getY(i)*ih + y + hh/2, bpos.getZ(i)*id + cz);
