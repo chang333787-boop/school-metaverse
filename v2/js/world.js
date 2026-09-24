@@ -2125,8 +2125,8 @@ export function buildWorld(scene) {
     //   꽃 덮개 = 낮은 오각 뿔(5면)
     const CAP5 = new THREE.CylinderGeometry(0, 1, 1, 5, 1, true).translate(0, 0.5, 0).toNonIndexed();
     [[14.8, -39.9, 1], [16.5, -39.2, 1], [18.45, -39.45, 1.3], [18.35, -37.95, 1]].forEach(([x9, z9, s9], i) => { const h9 = hash2(x9, z9);
-      dBlob(0.62 * s9, 0.5, 0.55 * s9, i % 2 ? 0x4a7a36 : 0x55853e, x9, COURT + 0.48, z9, { chunky: true, ry: h9 * 6, jitter: 0.16 });
-      dGeo(CAP5, _dm.compose(_dv.set(x9 + 0.05, COURT + 0.78, z9 - 0.04), _dq.setFromEuler(_de.set(0, h9 * 4, 0)), _ds.set(0.62 * s9, 0.36, 0.56 * s9)), i % 2 ? 0xf2c01e : 0xe8b31a, { jitter: 0.12 }); });
+      dBlob(0.62 * s9, 0.44, 0.55 * s9, i % 2 ? 0x4a7a36 : 0x55853e, x9, COURT + 0.4, z9, { chunky: true, ry: h9 * 6, jitter: 0.16 });
+      dGeo(CAP5, _dm.compose(_dv.set(x9 + 0.04, COURT + 0.68, z9 - 0.03), _dq.setFromEuler(_de.set(0, h9 * 4, 0)), _ds.set(0.7 * s9, 0.2, 0.64 * s9)), i % 2 ? 0xf2c01e : 0xe8b31a, { jitter: 0.14 }); });   // 납작한 꽃 덮개(뾰족하면 보석처럼 보인다)
     colliders.push(noStand({ x0: cx1 + 0.15, x1: DX0, y0: COURT, y1: COURT + 0.9, z0: MZ0, z1: lz0 - 0.15 }), noStand({ x0: DX0, x1: YB1, y0: COURT, y1: COURT + 0.9, z0: MZ0, z1: YZ }));
     // 동관 앞 땅 화단(영상 Q_117.5~Q_128·b_129~130.5): 낮은 연석 + 빽빽한 포기(서쪽 = 백일홍·원추리 꽃 · 동끝 = 키 큰 풀) + 철사 울 — 올라서지 못함(술래잡기 동선 = 포장)
     addBox(MX1 - YB1, 0.15, 0.15, CRB, (YB1 + MX1)/2, COURT, (KZ0 + KZ1)/2);
@@ -2186,7 +2186,7 @@ export function buildWorld(scene) {
     // 로비 쪽 끝 화분: 노퍽소나무(흰 화분·층층 가지) · 무화과 흰 화분 셋(받침) — 영상 Q_131·b_130.5
     { const nx = 21.4, nz = MZ1 - 0.8;                                                           // 수돗가 상자 서쪽·첫째와 둘째 창 사이 앞(b_130.5 — 문 앞 b_132 시야 밖)
       dCyl(0.22, 0.17, 0.42, 0xf2f2ee, nx, COURT, nz, { seg: 6 }); rodL(nx, COURT + 0.4, nz, nx, COURT + 2.1, nz, 0.045, 0x6d4e32);
-      [[0.52, 0.8], [0.38, 1.22], [0.22, 1.62]].forEach(([r, y], k) => dBlob(r, 0.09, r, k % 2 ? 0x3f6a3a : 0x355f33, nx, COURT + y, nz, { chunky: true, ry: k * 0.7, jitter: 0.2 }));
+      [[0.52, 0.78], [0.42, 1.08], [0.32, 1.38], [0.2, 1.66]].forEach(([r, y], k) => dBlob(r, 0.13, r, k % 2 ? 0x3f6a3a : 0x355f33, nx, COURT + y, nz, { chunky: true, ry: k * 0.7, jitter: 0.25 }));   // 층층 가지(처진 잎 층 — 두껍게)
       colliders.push(noStand({ x0: nx - 0.48, x1: nx + 0.48, y0: COURT, y1: COURT + 0.5, z0: nz - 0.48, z1: nz + 0.48 })); }   // 가지 층까지 막음(몸이 가지를 뚫고 지나가지 않게)
     [[20.7, -36.2], [21.9, -38.9]].forEach(([x9, z9], i) => {
       disc(0.25, 0xe8e8e4, x9, COURT + 0.03, z9); dCyl(0.19, 0.14, 0.36, 0xf2f2ee, x9, COURT + 0.03, z9, { seg: 6 });
