@@ -1489,7 +1489,10 @@ export function buildWorld(scene) {
       addBox(0.9, 1.7, 0.45, 0xc8ccd0, s0 + 0.7, 0, fz1 - 0.6);
       lamp(1.2, 0.05, 0.22, cx, FH - 0.21, (rz0 + fz1)/2);
       offWinsOf(r).forEach(g => { dBox(g.w - 0.12, 0.06, 0.17, g.frame, g.c, 2.3, zCor);   // [main_corridor-0] 사무실 복도 쪽 창: 위 가로살 + 아랫칸 격자 시트(틀 안쪽 1cm 띄움 — 틀과 모서리가 겹치면 비스듬히 볼 때 반짝임)
-        [1, -1].forEach(f => patWall('film2', 'x', g.c - g.w/2 + 0.07, g.c + g.w/2 - 0.07, 1.17, 1.7, zCor + f * 0.095, f)); });
+        const a9 = g.c - g.w/2 + 0.07, b9 = g.c + g.w/2 - 0.07, z9 = zCor - 0.095, S9 = g.frame === 0x8a98a4 ? 1.2 : 0.3;
+        patWall('film2', 'x', a9, b9, 1.17, 1.7, zCor + 0.095, 1);
+        // 복도 쪽 면 = 조명 무시 흰 격자 시트(북향이라 film2가 회색으로 렌더되던 것 — 영상 b_141·b_148.5는 흰 반투명): 천장 ctile을 UV로 15cm 격자(먹 번짐 판 칸은 60cm 큰 칸)
+        patPush('ctile', [[a9, 1.17, z9], [b9, 1.17, z9], [b9, 1.7, z9], [a9, 1.7, z9]], [[a9 / S9, 1.17 / S9], [b9 / S9, 1.17 / S9], [b9 / S9, 1.7 / S9], [a9 / S9, 1.7 / S9]], [0, 0, -1], S9 > 1 ? 0xe9ecee : 0xffffff); });
     }
     if (r.type === 'toilet') { /* 팻말 = 복도 남벽 블록(TDOOR 이름표·둥근 '화장실' 팻말) */ }
     else if (!r.kinderOffice) classSign(r.name, r.span[0] + 1.9, 2.78, zCor, -1);   // [classrooms-18] 크림 교실 팻말(3-1·과학실 판과 같은 틀)
