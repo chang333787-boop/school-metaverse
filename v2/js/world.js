@@ -808,6 +808,14 @@ export function buildWorld(scene) {
   }
   // 철망 울타리(격자 무늬 판 + 기둥 3m + 윗봉) — 무늬판은 전부 한 메시(드로우콜 1). 충돌 = 높이 3 벽(카메라 무시)
   const fencePos = [], fenceUV = [], fenceCol = [];
+  // 옥상 난간(영상 v2180_0105~0129 가운데 마당·f_273 정면: 단층 지붕 가장자리 쇠 난간 — 가로대 둘 + 촘촘한 세로살).
+  // 무늬 사각형만(밉맵이라 멀리서 가는 봉처럼 반짝이지 않는다) · 전부 한 메시. 지붕엔 못 올라가므로 충돌 없음
+  const railPos = [], railUV = [];
+  function roofRail(x0, z0, x1, z1, yb, H = 1.0) {
+    const L = Math.hypot(x1 - x0, z1 - z0); if (L < 0.3) return;
+    const P = [[x0, yb, z0], [x1, yb, z1], [x1, yb + H, z1], [x0, yb + H, z0]], U = [[0, 0], [L / 1.6, 0], [L / 1.6, 1], [0, 1]];
+    for (const i of [0, 1, 2, 0, 2, 3]) { railPos.push(...P[i]); railUV.push(...U[i]); }
+  }
   function meshFence(x0, z0, x1, z1, yb, H = 1.8, col = 0x3d6b4a, post9 = 0x3d5a45, collide = true) {
     const L = Math.hypot(x1 - x0, z1 - z0), P = [[x0, yb, z0], [x1, yb, z1], [x1, yb + H, z1], [x0, yb + H, z0]], U = [[0, 0], [L / 0.6, 0], [L / 0.6, H / 0.6], [0, H / 0.6]];
     if (L < 0.3) return;                                                     // 길이 0 토막(꼭짓점이 경계선 위) — 봉 방향이 NaN이 된다
@@ -1052,7 +1060,11 @@ export function buildWorld(scene) {
     addBox(EN.x[1] - EN.x[0], 0.3, fz1 - RZ0, R3, (EN.x[0] + EN.x[1])/2, FH, (RZ0 + fz1)/2);
     addBox(EN.x[0] - fx0 + 0.4, 0.45, 0.3, 0xe8e6de, (fx0 - 0.4 + EN.x[0])/2, FH + 0.3, fz1 + 0.25, { collide: false });   // 앞 흰 파라펫(돌출부 양옆)
     addBox(fx1 + 0.4 - EN.x[1], 0.45, 0.3, 0xe8e6de, (EN.x[1] + fx1 + 0.4)/2, FH + 0.3, fz1 + 0.25, { collide: false });
-    addBox(4, 1.8, 3, 0xe8e6de, fx1 - 8, FH + 0.3, (fz0 + fz1)/2); }
+    addBox(4, 1.8, 3, 0xe8e6de, fx1 - 8, FH + 0.3, (fz0 + fz1)/2);
+    // 옥상 난간: 앞 = 흰 파라펫 위, 동·서 끝 = 지붕 위, 북 = 가운데 마당~동쪽 끝(서쪽은 서관 2층 벽·급식동 벽·로비 지붕과 맞닿아 없음)
+    roofRail(fx0 - 0.3, fz1 + 0.25, EN.x[0], fz1 + 0.25, FH + 0.75); roofRail(EN.x[1], fz1 + 0.25, fx1 + 0.3, fz1 + 0.25, FH + 0.75);
+    roofRail(fx0 - 0.3, RZ0 + 0.1, fx0 - 0.3, fz1 + 0.1, FH + 0.3); roofRail(fx1 + 0.3, RZ0 + 0.1, fx1 + 0.3, fz1 + 0.1, FH + 0.3);
+    roofRail(CL.x[1] + 0.15, RZ0 + 0.1, fx1 + 0.3, RZ0 + 0.1, FH + 0.3); }
   ceil(LOB_X0, fx1, fz0 - 0.16, zCor, FH, 'cflat');                          // 주복도(로비·계단홀 트임 앞까지 이어서 틈 없이)
   ceil(HX0, HX1, zCor, RC.z[0] + 0.16, FH, 'cflat');                          // 현관 홀 + 전실
   ceil(fx0, LOB_X0, KBZ, fz0 + 0.16, FH, 'ctile');                            // 측문 통로 남쪽 원무실 블록 북단(서관 몫과 맞댐)
@@ -1386,6 +1398,8 @@ export function buildWorld(scene) {
   });
   addBox(endX - ex0 + 0.4, 0.3, ez1 - ez0 + 0.8, 0x4f9a6c, (ex0 + endX + 0.4)/2, FH, (ez0 + ez1)/2);            // 초록 지붕
   addBox(ex1 + 0.4 - (endX + 0.4), 0.3, ez1 - ez0 + 0.8, 0xe6e7e3, (endX + 0.4 + ex1 + 0.4)/2, FH, (ez0 + ez1)/2);   // 창고 흰 지붕(위성)
+  roofRail(ex0, ez1 + 0.3, ex1 + 0.3, ez1 + 0.3, FH + 0.3); roofRail(LC.x[0] + 0.15, ez0 - 0.3, ex1 + 0.3, ez0 - 0.3, FH + 0.3);   // 옥상 난간(마당 쪽·북쪽 — 북쪽은 세로복도 지붕까지)
+  roofRail(ex1 + 0.3, ez0 - 0.3, ex1 + 0.3, ez1 + 0.3, FH + 0.3);
   sign('창고', ex1 + 0.2, 2.5, (ez0 + ez1) / 2 + 0.6, Math.PI / 2, 0.34);
 
   // ================= 체육관 (위성 31 × 26.7 본실 + 동쪽 부속동 · 바닥 GYF = 대지 + 3단) =================
@@ -1927,11 +1941,14 @@ export function buildWorld(scene) {
     for (let i = 0; i < 7; i++) addPanel(0.8, 6.4, 0xf0ede4, SCHOOL.gate[0] - 4 + i*1.3, Y + 0.022, 58.5);
     const HOUSE = [[-64, 0xd9c9b0, 0xa9503f], [-46, 0xcfd6dc, 0x50606e], [-24, 0xe0d3ba, 0x6f4a30],
                    [4, 0xd2ddd3, 0x466b52], [26, 0xe6d9c6, 0xa9503f], [50, 0xccd4de, 0x50606e], [70, 0xdfd2bd, 0x6f4a30]];
+    const PRISM = new THREE.CylinderGeometry(1, 1, 1, 3, 1).rotateZ(-Math.PI / 2).rotateX(-Math.PI / 2);   // 세모 기둥: 축 = x, 꼭짓점 위(y 1)·밑변 y -0.5·반폭 0.866
     HOUSE.forEach(([hx9, wc, rc], i) => {
-      const d9 = i % 2 ? 7.4 : 6.2, h9 = i % 3 ? 5.2 : 6.6, hz = 68 + (i % 2) * 1.4;
+      const d9 = i % 2 ? 7.4 : 6.2, h9 = i % 3 ? 5.2 : 6.6, hz = 68 + (i % 2) * 1.4, rh = 1.6 + (i % 2) * 0.5, sy = rh / 1.5;
       addBox(9, h9, d9, wc, hx9, Y, hz);
-      addBox(9.8, 0.5, d9 + 0.8, rc, hx9, Y + h9, hz);
+      dGeo(PRISM, new THREE.Matrix4().compose(new THREE.Vector3(hx9, Y + h9 + 0.5 * sy, hz), new THREE.Quaternion(), new THREE.Vector3(9.8, sy, (d9 + 0.9) / 2 / 0.866)), rc, { far: true });   // 박공지붕(처마 45cm)
       addBox(1.1, 2.1, 0.2, 0x6d5340, hx9, Y, hz - d9/2 - 0.11, { collide: false });
+      [-2.6, 2.6].forEach(ox => [1.0, 3.5].forEach(wy => {   // 앞 창(학교 쪽 — 짙은 유리 + 흰 틀)
+        dBox(1.5, 1.2, 0.05, 0xf2f0ea, hx9 + ox, Y + wy - 0.06, hz - d9/2 - 0.025, { far: true }); dBox(1.3, 1.0, 0.05, 0x5b7590, hx9 + ox, Y + wy + 0.04, hz - d9/2 - 0.05, { far: true }); }));
     });
     [-72, -54, -34, -12, 14, 38, 60, 78].forEach(tx9 => tree(tx9, 64, 0.9));
     // 서쪽 비닐하우스(영상 g_060~076 — 높은 철망 너머)
@@ -2127,6 +2144,17 @@ export function buildWorld(scene) {
   if (lampPos.length) {   // 조명 — 한 메시(조명 무시 재질)
     const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lampPos, 3)); lg.computeVertexNormals(); lg.computeBoundingSphere();
     const lm = new THREE.Mesh(lg, lampMat); lm.matrixAutoUpdate = false; scene.add(lm);
+  }
+  if (railPos.length) {   // 옥상 난간 — 흰 가로대·세로살 무늬(투명 바탕) × 은회색, 전부 한 메시
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 64; const g9 = cv.getContext('2d');
+    g9.fillStyle = '#ffffff'; g9.fillRect(0, 0, 128, 6); g9.fillRect(0, 54, 128, 4);
+    for (let x = 0; x < 128; x += 16) g9.fillRect(x, 6, 3, 48);
+    g9.fillRect(0, 0, 6, 64);
+    const rt = new THREE.CanvasTexture(cv); rt.wrapS = THREE.RepeatWrapping; rt.colorSpace = THREE.SRGBColorSpace; rt.anisotropy = 4;
+    const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(railPos, 3)); rg.setAttribute('uv', new THREE.Float32BufferAttribute(railUV, 2));
+    rg.computeVertexNormals(); rg.computeBoundingSphere();
+    const rm = new THREE.Mesh(rg, new THREE.MeshLambertMaterial({ map: rt, color: 0xc9ced3, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+    rm.matrixAutoUpdate = false; rm.renderOrder = 1; scene.add(rm);
   }
   if (fencePos.length) {  // 철망 — 흰 격자 무늬 × 정점색(초록·연두·흰), 판 전부 한 메시
     const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g9 = cv.getContext('2d');
