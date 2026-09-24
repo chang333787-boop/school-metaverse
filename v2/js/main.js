@@ -405,7 +405,7 @@ const DOORS = world.doors.map(d => {
   //   묻힌 부분은 벽 속이라 안 보이고, 문짝 두 면(±0.08)은 벽 면(±0.15)·가운데 맞댐면(0)과 겹치지 않는다.
   const w = d.w + 0.1, h = (d.dh ?? 2.6) + (d.lintel ? 0.05 : 0);
   // slideOver(자동문·현관 양문): 옆 고정 유리 앞으로 12cm 비켜 미끄러진다(실물 자동문처럼) — 벽 속 포켓이 아니라서 간섭 검사 제외
-  return { ax: d.ax, bx: d.cx, bz: d.cz, w, ow: d.w, h, y0: d.y0, glass: d.glass, open: 0, over: d.slideOver ? 0.12 : 0, color: d.color };
+  return { ax: d.ax, bx: d.cx, bz: d.cz, w, ow: d.w, h, y0: d.y0, glass: d.glass, open: 0, over: d.slideOver ? 0.12 : 0, color: d.color, slot: d.slot };
 });
 const _boxG = new THREE.BoxGeometry(1, 1, 1);
 const nWood = DOORS.filter(o => !o.glass).length, nGlass = DOORS.length - nWood;
@@ -429,7 +429,8 @@ function setDoor(o) {
   if (o.glass) { put(doorInst.glass, 0, o.y0 + o.h/2, o.w, o.h, 0.16); doorInst.glass.instanceMatrix.needsUpdate = true; return; }
   put(doorInst.wood, 0, o.y0 + o.h/2, o.w, o.h, 0.16);
   const ww = Math.min(0.5, o.ow * 0.4), edge = -(o.dir ?? 1) * (o.ow/2 - 0.16);   // 손잡이 = 나중에 들어가는 쪽 끝
-  put(doorInst.win, edge * 0.35, o.y0 + 1.65, ww, 0.7, 0.18);
+  if (o.slot) put(doorInst.win, edge * 0.35, o.y0 + 1.45, Math.min(0.6, o.ow * 0.5), 0.12, 0.18);   // 교실 문 = 눈높이 가로 쪽창(영상 a_480·a_423 — classrooms-19)
+  else put(doorInst.win, edge * 0.35, o.y0 + 1.65, ww, 0.7, 0.18);
   put(doorInst.knob, edge, o.y0 + 1.0, 0.05, 0.22, 0.22);
   doorInst.wood.instanceMatrix.needsUpdate = doorInst.win.instanceMatrix.needsUpdate = doorInst.knob.instanceMatrix.needsUpdate = true;
 }
