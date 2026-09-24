@@ -991,8 +991,10 @@ export function buildWorld(scene) {
   lockerBank('x', LOB_X + 0.2, STX0 - 0.3, fz0 + 0.15, 1, 0.85, 2, null, 0xd2bc98, 0xeadabb, true);   // 도서관 복도창 아래 자작나무색 사물함(영상 b_1xx)
   // 원무실 블록(영상 IMG_2180 213~216s): 로비 서쪽 끝 = 원무실 동벽의 '병설유치원' 짙은 유리 양문, 북쪽 = 측문 통로
   wallX(fx0 + 0.15, LOB_X0 + 0.15, KBZ, INNER);
-  wallZ(KBZ, zCor, LOB_X0, INNER, { gaps: [{ c: (KBZ + zCor) / 2, w: 1.8, glass: true }] });
-  sign('정림초등학교병설유치원', LOB_X0 + 0.22, 2.75, (KBZ + zCor) / 2, Math.PI / 2, 0.22);
+  wallZ(KBZ, zCor, LOB_X0, INNER, { gaps: [{ c: (KBZ + zCor) / 2, w: 1.8, color: 0x4a4640 }] });   // 짙은 연기색 유리 양문(영상 W_213~215 — 안이 안 보임)
+  sign('정림초등학교병설유치원', LOB_X0 + 0.22, 2.75, (KBZ + zCor) / 2, Math.PI / 2, 0.22, { bg: '#f2f2ee', fg: '#333333' });
+  sign('원무실', LOB_X0 + 0.2, 2.42, (KBZ + zCor) / 2 + 1.05, Math.PI / 2, 0.12, { bg: '#f2f2ee', fg: '#333333' });
+  dBox(0.4, 0.5, 0.3, 0x222222, LOB_X0 + 0.37, 0, -32.3); colliders.push(noStand({ x0: LOB_X0 + 0.17, x1: LOB_X0 + 0.57, y0: 0, y1: 0.5, z0: -32.45, z1: -32.15 }));   // 검은 우산통
   { // 복도 바닥(영상 a_457~502): 흰 45cm 타일 + 양쪽 벽 따라 검은 띠 25cm(트임 앞도 이어짐) + 가운데 줄 3.6m마다 갈색 타일
     const cx0 = LOB_X0 + 0.15, cx1 = fx1 - 0.15, zN = fz0 + 0.15, zS = zCor - 0.15, BW = 0.25, T = 0.45, za = -32.85, zb = -32.4;
     addPanel(cx1 - cx0, BW, 0x2f3236, (cx0 + cx1)/2, 0.012, zN + BW/2);
@@ -1150,27 +1152,60 @@ export function buildWorld(scene) {
   wallZ(wz0, wz1, wx1, WALL, { face: 1, dado: STAIR_DADO, skin: 'panelB', gaps: [{ c: -37.9, w: 1.8, glass: true, door: true }] });   // 계단홀 → 뒷길 유리문
   // 2층 겉벽
   wallX(wx0 - 0.15, STX0, wz0, WALL, { y0: FH+0.3, h: FH-0.3, wins: 5, face: -1, sill: 0.8, skin: 'panelB' });
-  wallX(STX0, wx1 + 0.15, wz0, WALL, { y0: FH+0.3, h: FH-0.3, face: -1, dado: STAIR_DADO, skin: 'panelB', gaps: [{ c: (STX0 + wx1)/2, w: 3.2, sill: 0, dh: 1.3, win: true }] });   // 참 큰 창 윗단(영상 b_168: 참 바닥~2층 높이)
+  wallX(STX0, wx1 + 0.15, wz0, WALL, { y0: FH+0.3, h: FH-0.3, face: -1, dado: STAIR_DADO, skin: 'panelB', gaps: [{ c: (STX0 + wx1)/2, w: 3.2, sill: 0, dh: 2.6, win: true }] });   // 참 큰 창 윗단(영상 b_168·s_187.5: 1층 창과 한 장으로 2층 천장 근처 6.3까지)
   wallZ(wz0, wz1, wx0, KHAKI, { y0: FH+0.3, h: FH-0.3, face: -1, ext: true, skin: 'siding', gaps: [{ c: (wz1 - B.upper.corridorDepth + wz1) / 2, w: 1.4, sill: 0.8, dh: 2.3, win: true }] });   // 2층 서면: 6학년 칠판 벽이라 창은 복도 끝만
-  wallZ(wz0, wz1, wx1, WALL, { y0: FH+0.3, h: FH-0.3, dado: STAIR_DADO, skin: 'panelB' });
-  wallX(wx0 - 0.15, wx1 + 0.15, wz1, WALL, { y0: FH+0.3, h: FH-0.3, wins: 6, face: 1, sill: 0.8, skin: 'panelB', noWin: [[STX0 - 0.2, wx1]] });  // 2층 남면(1층 z-34는 본관 북벽)
-  addBox(1.0, 2.2, 0.16, 0x8a5a3b, (STX0 + wx1)/2, FH + 0.3, wz1 - 0.23);   // 2층 계단홀 옥상 쪽 나무문(문서 v80c) — 닫힌 모양만
-  floorQ('tileG', STX0 + 0.15, wx1 - 0.15, wz0 + 0.15, fz0 + 0.15);        // 계단홀 1층 바닥 = 회색 테라초(영상 b_157~160) · 복도 검은 띠와 맞댐
+  wallZ(wz0, wz1, wx1, WALL, { y0: FH+0.3, h: FH-0.3, dado: STAIR_DADO, skin: 'panelB', gaps: [{ c: -35.2, w: 1.2, sill: 0.9, dh: 2.3, win: true }] });   // 2층 계단홀 동벽 여닫이창(영상 s_184 — 너머 급식동 지붕)
+  // 2층 남면(1층 z-34는 본관 북벽): 옥상문 서쪽부터 복도 서쪽 끝까지 쉼 없는 띠창(영상 s_177~182) — 아래 흰 반투명 + 스테인리스 세로살, 위 나무틀 미서기
+  wallX(wx0 - 0.15, wx1 + 0.15, wz1, WALL, { y0: FH+0.3, h: FH-0.3, face: 1, skin: 'panelB',
+    gaps: Array.from({ length: 12 }, (_, k) => ({ c: -39.7 + 2.1375 / 2 + k * 2.2875, w: 2.1375, sill: 0.25, dh: 2.7, win: true, frame: 0xb08a58 })) });
+  lamp(27.24, 0.82, 0.03, -26.05, FH + 0.31, wz1 - 0.05);                                             // 아랫단 반투명 유리(조명 무시 흰 판 — 뒤에서 빛 받은 뿌연 유리)
+  dBox(27.24, 0.05, 0.17, 0xb08a58, -26.05, FH + 1.13, wz1);                                         // 가로살(+1.15)
+  for (let x9 = -39.4; x9 < -12.5; x9 += 0.6) dRod(x9, FH + 0.25, wz1 - 0.2, x9, FH + 1.13, wz1 - 0.2, 0.012, 0xc8ccd0);
+  dRod(-39.6, FH + 1.0, wz1 - 0.2, -12.5, FH + 1.0, wz1 - 0.2, 0.02, 0xc8ccd0);                         // 가로 손잡이
+  // 옥상문(영상 s_174~178: 남벽 동쪽 끝 밝은 나무 문 — 위 투명 유리·아래 세로 홈 판·둥근 손잡이) — 닫힌 모양만
+  addBox(1.0, 2.2, 0.16, 0xc9a26a, -11.75, FH + 0.3, wz1 - 0.23);
+  dBox(0.7, 1.0, 0.03, 0xcfe0e6, -11.75, FH + 1.35, wz1 - 0.325);
+  [-11.95, -11.75, -11.55].forEach(x9 => dBox(0.03, 0.8, 0.03, 0xb08850, x9, FH + 0.45, wz1 - 0.325));
+  dBlob(0.035, 0.035, 0.035, 0xc0c4c8, -12.12, FH + 1.3, wz1 - 0.345);
+  floorQ('tileG', STX0 + 0.15, wx1 - 0.15, wz0 + 0.15, fz0 + 0.15, 0, 0xbdbdb9);        // 계단홀 1층 바닥 = 회색 테라초(영상 b_157~160·b_013.5 — 복도 흰 타일보다 짙음) · 복도 검은 띠와 맞댐
   {
     const nurse = wg.rooms.find(r => r.type === 'nurse'), narae = wg.rooms.find(r => r.name === '나래반'), docR = wg.rooms.find(r => r.name === '문서고');
-    // 보건실 문 + 나래반 문이 분홍 판 기둥 하나를 사이에 두고 나란히(영상 IMG_2180 205~210s: '밝은숲 보금자리' 그림 유리문·풍선 유리문)
-    const nurseDoor = narae.span[0] - 0.95, naraeDoor = narae.span[0] + 1.05;
-    wallX(wx0 + 0.15, LOB_X + 0.15, LOB_Z, INNER, { gaps: [{ c: nurseDoor, w: 1.2, glass: true }, { c: naraeDoor, w: 1.4, glass: true },
-      { c: (narae.span[0] + 1.9 + docR.span[0] - 0.1) / 2, w: docR.span[0] - 0.1 - narae.span[0] - 1.9 - 0.4, sill: 1.55, dh: 2.45, win: true }] });
-    dBox(0.5, 2.4, 0.04, 0xf0a8b8, narae.span[0], 0.1, LOB_Z + 0.17);   // 분홍 판 기둥(두 문 사이·로비 쪽)
+    // 보건실 문(A) + 나래반 문(B)이 크림 돌판 기둥 하나를 사이에 두고 나란히(영상 W_213~220): A = 민트 그림 필름 한 짝 문, B = 반투명 흰 유리 양문(풍선 스티커)
+    const nurseDoor = narae.span[0] - 0.95, naraeDoor = narae.span[0] + 1.05, PL0 = nurseDoor + 0.5, PL1 = naraeDoor - 0.8;   // PL = 두 문 사이 기둥 x 구간
+    wallX(wx0 + 0.15, PL1, LOB_Z, INNER, { gaps: [{ c: nurseDoor, w: 1.0, color: 0xbfe0c8 }] });
+    // 로비 북벽(영상 W_210~224): 연두 판 징두리 + 짙은 나무 띠 + 나무틀 실내창(창턱 1.5·윗선 2.7, 아랫단 아이 그림 스티커) — 나래반 창·문서고 창
+    //   ⚠️첫 창은 B 문이 동쪽으로 열리는 자리(1.65m) 밖에서 시작 — 문짝이 창 유리를 쓸지 않게
+    const LW1 = [naraeDoor + 2.5, docR.span[0] - 0.25], LW2 = [docR.span[0] + 0.25, LOB_X - 0.3];
+    wallX(PL1, LOB_X + 0.15, LOB_Z, INNER, { face: -1, dado: HALL_DADO, gaps: [{ c: naraeDoor, w: 1.6, color: 0xe3e7ea },
+      ...[LW1, LW2].map(([a, b]) => ({ c: (a + b) / 2, w: b - a, sill: 1.5, dh: 2.7, win: true, frame: 0xb88a58 }))] });
+    [LW1, LW2].forEach(([a, b]) => lamp(b - a - 0.12, 0.54, 0.01, (a + b) / 2, 1.56, LOB_Z + 0.09));   // 유리 아랫단 흰 반투명 필름(안이 덜 보임 — 조명 무시 흰 판, 틀 면 5mm 뒤)
+    dBox(LOB_X - 0.2 - (naraeDoor + 0.85), 0.4, 0.04, 0x5b4636, (naraeDoor + 0.85 + LOB_X - 0.2) / 2, 1.1, LOB_Z + 0.17);   // 짙은 나무 띠(1.1~1.5)
+    dBox(LOB_X - 0.2 - (naraeDoor + 0.85), 0.05, 0.06, 0xeee6cf, (naraeDoor + 0.85 + LOB_X - 0.2) / 2, 1.05, LOB_Z + 0.18);   // 징두리 갓 레일
+    sign('문서고', (LW2[0] + LW2[1]) / 2, 2.88, LOB_Z + 0.2, 0, 0.14);
+    // 두 문 사이 크림 돌판 기둥(0.3 튀어나옴) + 옅은 분홍 세로 판 2장 엇갈림 · 문 위 분홍 머리판 + 크림 글씨(영상 W_216.5~220)
+    addBox(PL1 - PL0, FH, 0.3, 0xece4d2, (PL0 + PL1) / 2, 0, LOB_Z + 0.3);
+    dBox(0.26, 1.0, 0.03, 0xe6b1b5, PL0 + 0.17, 1.6, LOB_Z + 0.465); dBox(0.26, 1.0, 0.03, 0xe6b1b5, PL1 - 0.17, 0.35, LOB_Z + 0.465);
+    dBox(0.5, 0.1, 0.06, INNER, (PL0 + PL1) / 2, 1.0, LOB_Z);                // 벽 속 표지: A 문은 서쪽으로 열린다(동쪽 = B 문 개구 — 문짝이 B 문을 가로막지 않게)
+    dBox(PL0 - 0.02 - (nurseDoor - 0.6), 0.4, 0.06, 0xe7b8b8, (nurseDoor - 0.6 + PL0 - 0.02) / 2, 2.65, LOB_Z + 0.18);
+    dBox(naraeDoor + 0.95 - (PL1 + 0.02), 0.4, 0.06, 0xe7b8b8, (PL1 + 0.02 + naraeDoor + 0.95) / 2, 2.65, LOB_Z + 0.18);
+    sign('밝은숲 보금자리', (nurseDoor - 0.6 + PL0 - 0.02) / 2, 2.85, LOB_Z + 0.22, 0, 0.16, { bg: 'none', fg: '#fff3d6' });
+    sign('Junglim Village', (PL1 + 0.02 + naraeDoor + 0.95) / 2, 2.85, LOB_Z + 0.22, 0, 0.2, { bg: 'none', fg: '#fff3d6' });
     // 로비 동벽 = 도서관 서벽: 슬기샘 도서관 유리 양문(서쪽을 봄) + 문 남쪽 도서반납함
     wallZ(LOB_Z, fz0, LOB_X, INNER, { gaps: [{ c: -36.6, w: 1.8, glass: true }] });
+    { // 도서관 입구 짙은 나무 파사드(영상 W_222~226): 위 간판 띠(크림 글씨) + 양옆 기둥 판(포스터 액자) + 은색 문틀
+      const FX = LOB_X - 0.15, D9 = 0x7a5a42, zN = LOB_Z + 0.15, zS = fz0 - 0.15;
+      dBox(0.06, 0.45, zS - zN, D9, FX - 0.03, 2.62, (zN + zS) / 2);
+      dBox(0.06, 2.62, -37.56 - zN, D9, FX - 0.03, 0, (zN - 37.56) / 2); dBox(0.06, 2.62, zS + 35.64, D9, FX - 0.03, 0, (zS - 35.64) / 2);
+      [-37.53, -35.67].forEach(z9 => dBox(0.05, 2.6, 0.06, 0xb9bec4, FX - 0.025, 0, z9));
+      dBox(0.03, 0.8, 0.5, 0xe8e0f0, FX - 0.075, 1.2, -37.95); dBox(0.03, 0.8, 0.5, 0xf0e6d6, FX - 0.075, 1.2, -35.25);
+      patWall('kidsArt', 'z', -38.15, -37.75, 1.25, 1.95, FX - 0.091, -1); patWall('kidsArt', 'z', -35.45, -35.05, 1.25, 1.95, FX - 0.091, -1);
+      sign('슬기샘 도서관', FX - 0.08, 2.845, -36.6, Math.PI / 2, 0.3, { bg: 'none', fg: '#f3ead8' }); }
     // 로비 북쪽 방들 칸막이(z wz0~LOB_Z): 보건실|나래반, 나래반|문서고(문서고는 나래반 안에서 — 개구), 문서고|도서관, 도서관|계단
     const pz = (wz0 + 0.15 + LOB_Z - 0.15) / 2, pd = (LOB_Z - 0.15) - (wz0 + 0.15);
     addBox(0.3, FH, pd, INNER, narae.span[0], 0, pz);
     wallZ(wz0, LOB_Z, docR.span[0], INNER, { gaps: [{ c: pz, w: 1.0 }] });
     addBox(0.3, FH, pd, INNER, LOB_X, 0, pz);
-    wallZ(wz0, wz1, STX0, INNER, { face: -1, dado: STAIR_DADO, gaps: [{ c: fz0 - 1.4, w: 1.0 }] });   // 계단홀 서벽 = 도서관 뒷문(영상 b_159~160 포스터 붙은 문)
+    wallZ(wz0, wz1, STX0, INNER, { face: -1, dado: STAIR_DADO, gaps: [{ c: fz0 - 1.4, w: 1.0, color: 0xdcd3bd }] });   // 계단홀 서벽 = 도서관 뒷문(크림 평문)(영상 b_159~160 포스터 붙은 문)
     wg.rooms.forEach(r => {
       const [s0, s1] = r.span, cx = (s0 + s1) / 2;
       const deep = r.type === 'library' || r.type === 'stair';
@@ -1188,24 +1223,50 @@ export function buildWorld(scene) {
       if (r.name === '문서고') [wz0 + 0.5, wz0 + 2.2].forEach(z9 => addBox(1.6, 1.9, 0.5, 0x9aa0a6, cx, 0, z9));
     });
     hangSign('보건실', nurseDoor, 2.78, LOB_Z, 1);
-    hangSign('나래반', naraeDoor, 2.78, LOB_Z, 1);
-    sign('밝은숲 보금자리', nurseDoor, 1.95, LOB_Z + 0.2, 0, 0.14, { bg: '#e8f3dc', fg: '#3f7a3f' });
-    sign('슬기샘 도서관', LOB_X - 0.22, 2.55, -36.6, Math.PI / 2, 0.34);
+    hangSign('나래반', naraeDoor + 1.5, 2.78, LOB_Z, 1);   // 영상 W_220: B 문 동쪽 기둥 지나 첫 창 위
+    hangSign('도서관', LOB_X + 0.35, 2.78, fz0, 1);        // 사물함 끝 도서관 남서 모서리에서 복도로(영상 W_207~208)
     // 로비 가운데 남쪽 둥근 기둥 소파(주황·노랑 2단 + 연두 기둥 + 민트 갓) — 측문→도서관 시선은 비켜 남쪽에(영상 W_205~212)
     const [dx9, dz9] = WL.sofa;
     colliders.push({ x0: dx9-1.15, x1: dx9+1.15, y0: 0, y1: 0.45, z0: dz9-1.15, z1: dz9+1.15 }, { x0: dx9-0.75, x1: dx9+0.75, y0: 0.45, y1: 0.85, z0: dz9-0.75, z1: dz9+0.75 }, { x0: dx9-0.3, x1: dx9+0.3, y0: 0.85, y1: FH, z0: dz9-0.3, z1: dz9+0.3 });
-    dCyl(1.15, 1.15, 0.45, 0xe8893a, dx9, 0, dz9, { seg: 20 });
-    dCyl(0.78, 0.78, 0.4, 0xf2b84b, dx9, 0.45, dz9, { seg: 18 });
-    dCyl(0.3, 0.3, FH - 0.85 - 0.5, 0xf0d27a, dx9, 0.85, dz9, { seg: 12, far: true });   // 노랑 기둥(영상 W_206~212)
-    { const cap9 = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 0.95, 0.2, 24), new THREE.MeshBasicMaterial({ color: 0xf4ecd6 }));
-      cap9.position.set(dx9, FH - 0.4, dz9); cap9.matrixAutoUpdate = false; cap9.updateMatrix(); scene.add(cap9); }
+    // 링·기둥 아랫부분은 반은 주황·반은 레몬 노랑(엇갈림 — 영상 W_210 동쪽에서 앉는 링 주황, W_222 서쪽에서 노랑), 기둥 위 = 흰 크림, 천장 = 민트 팔각 깔때기 갓
+    const half = (r, h, y, th0, hex, seg) => { const g = new THREE.CylinderGeometry(r, r, h, seg, 1, false, th0, Math.PI); g.translate(dx9, y + h / 2, dz9); dGeo(g, new THREE.Matrix4(), hex, { far: true }); g.dispose(); };
+    const OR = 0xe79a45, LY = 0xe9d949;   // CylinderGeometry θ 0 = +z 쪽, π/2 = +x(동)
+    half(1.15, 0.45, 0, 0, OR, 12); half(1.15, 0.45, 0, Math.PI, LY, 12);
+    half(0.78, 0.4, 0.45, 0, LY, 10); half(0.78, 0.4, 0.45, Math.PI, OR, 10);
+    half(0.3, 1.1, 0.85, 0, LY, 8); half(0.3, 1.1, 0.85, Math.PI, OR, 8);
+    dCyl(0.27, 0.27, FH - 0.51 - 1.95, 0xf1eee4, dx9, 1.95, dz9, { seg: 12, far: true });
+    { const cap9 = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.33, 0.35, 8), new THREE.MeshBasicMaterial({ color: 0xcfe6cf }));
+      cap9.position.set(dx9, FH - 0.16 - 0.175, dz9); cap9.matrixAutoUpdate = false; cap9.updateMatrix(); scene.add(cap9); }
     // 북벽 창 아래 쿠션 벤치(주황·연두·노랑) + 도서반납함
-    [[-31.6, 0xe8893a], [-30.4, 0x8cc26a], [-29.2, 0xf2c14b], [-28.0, 0xe8893a]].forEach(([bx9, bc9]) => addBox(1.15, 0.45, 0.6, bc9, bx9, 0, LOB_Z + 0.45));
-    addBox(0.45, 0.95, 0.55, 0x3d6fa8, LOB_X - 0.4, 0, -35.2, NS);
-    // 측문 통로: 신발장(오픈) + 체크 매트 + 소화기
-    lockerBank('x', wx0 + 1.5, wx0 + 3.3, KBZ - 0.15, -1, 1.2, 3, null, 0xb58a5a, 0xc49868);
-    patQuad('check', wx0 + 0.15, wx0 + 1.4, VZ[0] + 0.3, VZ[1] - 0.3, 0.02);
-    extinguisher(LOB_X0 - 0.3, 0, VZ[0] + 0.3);
+    // 벤치 2개(영상 W_210·W_222~224): 방석 3칸(주황-연두-노랑 / 주황-연두-주황, 윗면 0.42) + 검은 쇠 다리. 올라서기 허용(벤치)
+    const bz9 = LOB_Z + 0.15 + 0.3;
+    [[-31.0, [0xe8893a, 0x8cc26a, 0xf2c14b]], [-28.0, [0xe8893a, 0x8cc26a, 0xe8893a]]].forEach(([bx9, cs9]) => {
+      cs9.forEach((c9, k) => dBox(0.58, 0.14, 0.55, c9, bx9 + (k - 1) * 0.6, 0.28, bz9));
+      dBox(1.76, 0.04, 0.5, 0x2b2b2b, bx9, 0.24, bz9);
+      [[-0.84, -0.22], [0.84, -0.22], [-0.84, 0.22], [0.84, 0.22]].forEach(([ox, oz]) => dBox(0.04, 0.24, 0.04, 0x2b2b2b, bx9 + ox, 0, bz9 + oz));
+      colliders.push({ x0: bx9 - 0.9, x1: bx9 + 0.9, y0: 0, y1: 0.42, z0: bz9 - 0.28, z1: bz9 + 0.28 }); });
+    // 도서반납함(영상 W_224·W_226): 연회색 몸통 + 서쪽 흰 앞판(글씨) + 짙은 회색 윗판 — 파사드 남쪽 기둥 앞
+    { const rx9 = LOB_X - 0.21 - 0.225;
+      addBox(0.45, 0.95, 0.55, 0xc9cfd6, rx9, 0, -35.2, NS);
+      dBox(0.03, 0.7, 0.45, 0xf4f6f8, rx9 - 0.24, 0.12, -35.2);
+      dBox(0.47, 0.04, 0.57, 0x5a5e62, rx9, 0.95, -35.2);
+      dBox(0.03, 0.06, 0.3, 0x3a3d42, rx9 - 0.27, 0.66, -35.2);
+      sign('도서반납함', rx9 - 0.265, 0.5, -35.2, -Math.PI / 2, 0.08, { bg: '#f4f6f8', fg: '#2f6fd0' }); }
+    // 측문 통로(영상 W_216.5~218): 북벽 서쪽 끝(측문 바로 옆)에 연한 나무 오픈 칸 신발장(2열×5단) + 옆 바닥 소화기 · 문 안 갈색 코일 매트 · 로비 경계 검은 띠
+    { const sx0 = wx0 + 0.2, sx1 = wx0 + 1.0, sz0 = LOB_Z + 0.15, sz1 = LOB_Z + 0.5, SW = 0xcaa87a;
+      [sx0 + 0.015, (sx0 + sx1) / 2, sx1 - 0.015].forEach(x9 => dBox(0.03, 1.2, sz1 - sz0, SW, x9, 0, (sz0 + sz1) / 2));
+      for (let k = 0; k <= 5; k++) dBox(sx1 - sx0 - 0.03, 0.03, sz1 - sz0 - 0.02, SW, (sx0 + sx1) / 2, 0.02 + k * 0.232, (sz0 + sz1) / 2);
+      [[0, 1, 0x3b3b3b], [1, 2, 0xe8e8e8], [0, 3, 0x5a78b0], [1, 0, 0xd06a5a]].forEach(([c9, r9, h9]) => dBox(0.26, 0.08, 0.22, h9, sx0 + 0.2 + c9 * 0.4, 0.05 + r9 * 0.232, (sz0 + sz1) / 2 + 0.03));
+      colliders.push(noStand({ x0: sx0, x1: sx1, y0: 0, y1: 1.2, z0: sz0, z1: sz1 }));
+      extinguisher(sx1 + 0.25, 0, LOB_Z + 0.3); }
+    patQuad('check', wx0 + 0.15, wx0 + 1.6, VZ[0] + 0.3, VZ[1] - 0.3, 0.02, false, 0xb08a60);   // 갈색·베이지 코일 매트(체크 무늬를 갈색으로 물들임)
+    addPanel(0.25, VZ[1] - VZ[0] - 0.3, 0x2f3236, LOB_X0 - 0.125, 0.02, SIDE_Z);                 // 통로|로비 경계 검은 띠
+    // 계단홀 입구 서쪽 모서리: 회색 우산꽂이(우산 몇 개) + 소화기(영상 s_158.5~160·W_199)
+    { const ux9 = STX0 + 0.45, uz9 = fz0 - 0.75;
+      dBox(0.55, 0.42, 0.3, 0x9a948a, ux9, 0, uz9);
+      [[-0.18, 0xf2c230], [-0.06, 0xe68aa8], [0.06, 0x3f6fb0], [0.18, 0xf2c230]].forEach(([o9, c9]) => dRod(ux9 + o9, 0.3, uz9, ux9 + o9 + 0.03, 0.95, uz9 + 0.02, 0.02, c9));
+      colliders.push(noStand({ x0: ux9 - 0.28, x1: ux9 + 0.28, y0: 0, y1: 0.42, z0: uz9 - 0.15, z1: uz9 + 0.15 }));
+      extinguisher(STX0 + 0.3, 0, fz0 - 0.35); }
     zones.push({ x0: LOB_X0, x1: LOB_X, z0: LOB_Z, z1: fz0, y: 0, label: '서측 로비' });
     zones.push({ x0: wx0, x1: LOB_X0, z0: VZ[0], z1: VZ[1], y: 0, label: '측문' });
     [-31.5, -28.0].forEach(x9 => lamp(0.62, 0.05, 0.3, x9, FH - 0.21, (LOB_Z + fz0)/2));
@@ -1217,23 +1278,112 @@ export function buildWorld(scene) {
   { // U자 계단(영상 v2180_0159~0174 · 문서 v80c): 계단홀 서쪽 레인으로 북쪽 반층 참까지 → 180° 돌아 동쪽 레인으로 남쪽 2층
     const N = 12, RISE = (FH + 0.3) / 2 / N, TR = 0.2875, LW = (wx1 - STX0 - 0.3) / 2;
     const AX = STX0 + 0.15 + LW / 2, BX = wx1 - 0.15 - LW / 2, Z0 = -38.9, ZL = Z0 - N * TR;
-    for (let i = 0; i < N; i++) addBox(LW, RISE * (i + 1), TR, STONE, AX, 0, Z0 - TR * (i + 0.5));
-    addBox(wx1 - STX0 - 0.3, RISE * N, ZL - (wz0 + 0.15), STONE, (STX0 + wx1) / 2, 0, (ZL + wz0 + 0.15) / 2);   // 반층 참(북벽 창가)
-    for (let j = 0; j < N; j++) addBox(LW, 0.3, TR, STONE, BX, RISE * (N + j + 1) - 0.3, ZL + TR * (j + 0.5));  // 동 레인(떠 있는 디딤판)
+    const SG = 0xa6a6a2;   // 디딤판·참 = 중간 회색 화강 테라초(영상 s_161.5·s_166.5 — 1층 흰 타일보다 한 톤 짙음)
+    for (let i = 0; i < N; i++) addBox(LW, RISE * (i + 1), TR, SG, AX, 0, Z0 - TR * (i + 0.5));
+    addBox(wx1 - STX0 - 0.3, RISE * N, ZL - (wz0 + 0.15), SG, (STX0 + wx1) / 2, 0, (ZL + wz0 + 0.15) / 2);   // 반층 참(북벽 창가)
+    for (let j = 0; j < N; j++) addBox(LW, 0.3, TR, SG, BX, RISE * (N + j + 1) - 0.3, ZL + TR * (j + 0.5));  // 동 레인 디딤판
     addBox(wx1 - STX0, 0.3, wz1 + 0.02 - Z0, 0xd9dce1, (STX0 + wx1) / 2, FH, (Z0 + wz1 + 0.02) / 2);           // 2층 바닥(계단홀 남쪽 위)
-    addBox(LW, 1.05, 0.16, 0xc8cdd2, AX, FH + 0.3, Z0 + 0.08, NS);                                             // 2층: 서 레인 위 빈 곳 난간(올라서기 금지)
     // 난간(영상 b_160~175): 두 레인 사이 스테인리스 · 벽 쪽 나무 손잡이 · 참 창 앞 막이
-    const MX = STX0 + 0.15 + LW;
+    const MX = STX0 + 0.15 + LW, WC = (STX0 + wx1) / 2, WH = 1.6;
     steelRail(MX - 0.04, Z0 - 0.2, MX - 0.04, ZL + 0.15, RISE, RISE * N);
     steelRail(MX + 0.04, ZL + 0.15, MX + 0.04, Z0 - 0.2, RISE * (N + 1), FH + 0.3);
     dRod(STX0 + 0.21, 0.9, Z0, STX0 + 0.21, 0.9 + RISE * N, ZL, 0.03, 0x8a5a3b);
     dRod(wx1 - 0.21, 0.9 + RISE * N, ZL, wx1 - 0.21, 0.9 + FH + 0.3, Z0, 0.03, 0x8a5a3b);
     steelRail(STX0 + 0.3, wz0 + 0.35, wx1 - 0.3, wz0 + 0.35, RISE * N);
-    floorQ('tileW', STX0 + 0.15, wx1 - 0.15, Z0, wz1 + 0.02, FH + 0.3);
+    // 2층: 서 레인 위 빈 곳 = 스테인리스 세로살 난간(영상 s_174·s_187.5 — 예전 회색 통벽). 충돌은 예전 벽 크기 그대로(떨어짐·올라서기 막기)
+    steelRail(STX0 + 0.3, Z0 + 0.08, MX - 0.1, Z0 + 0.08, FH + 0.3);
+    colliders.push(noStand({ x0: STX0 + 0.15, x1: MX, y0: FH + 0.3, y1: FH + 1.9, z0: Z0, z1: Z0 + 0.16, nc: true }));
+    floorQ('tileG', STX0 + 0.15, wx1 - 0.15, Z0, wz1 + 0.02, FH + 0.3, 0xa9aaa7);                            // 2층 계단홀 = 중간 회색 테라초(영상 s_176~177)
     patQuad('cflat', STX0 + 0.15, wx1 - 0.15, Z0 + 0.01, fz0, FH - 0.012, true);                         // 1층 계단홀 천장(2층 바닥 밑면이 갈색으로 보이던 것)
-    sign('계단 · 2층', (STX0 + wx1) / 2, 2.95, fz0 + 0.22, 0, 0.3);
-    addBox(wx1 - STX0, 0.3, 0.3, WALL, (STX0 + wx1) / 2, FH, wz0);                                            // 테두리보(1·2층 벽 사이 빈 띠)
+    // 계단홀 입구 위 흰 보(영상 s_195·b_013.5 — 글자 없는 작은 회색 판 하나. 예전 '계단 · 2층' 글자 팻말은 영상에 없어 뺐다)
+    addBox(wx1 - STX0 - 0.3, FH - 2.95, 0.3, 0xf2eee4, WC, 2.95, fz0, { collide: false });
+    dBox(0.4, 0.15, 0.03, 0x9aa0a6, WC, 3.05, fz0 + 0.165);
+    // 테두리보(1·2층 벽 사이 띠) — 참 창 폭은 비운다(영상 s_166.5·b_168: 참 바닥~2층 천장 근처까지 한 장으로 이어진 큰 창)
+    addBox(WC - WH - STX0, 0.3, 0.3, WALL, (STX0 + WC - WH) / 2, FH, wz0);
+    addBox(wx1 + 0.15 - (WC + WH), 0.3, 0.3, WALL, (WC + WH + wx1 + 0.15) / 2, FH, wz0);
     addBox(0.3, 0.3, Z0 - (wz0 + 0.15), WALL, wx1, FH, (Z0 + wz0 + 0.15) / 2);
+    { const FC = 0x7a5a3e;   // 참 창: 1층 창(2.0~3.4)과 2층 창(3.7~6.3) 사이도 유리(틀 옆판·세로살 이음) + 맨 아랫줄 반투명 유리 + 가로살
+      glassPane('x', 2 * WH, 0.3, WC, FH, wz0);
+      [-1, 1].forEach(sd => dBox(0.06, 0.3, 0.2, FC, WC + sd * (WH - 0.03), FH, wz0));
+      [-0.8, 0, 0.8].forEach(o => dBox(0.05, 0.3, 0.2, FC, WC + o, FH, wz0));
+      dBox(2 * WH - 0.12, 0.05, 0.17, FC, WC, 2.88, wz0);
+      lamp(2 * WH - 0.14, 0.81, 0.03, WC, 2.07, wz0 + 0.05);          // 반투명 유리 = 빛을 받는 흰 판(조명 무시 재질 — 북향 그늘에서도 뿌옇게 밝다)
+      dBox(2 * WH - 0.12, 0.05, 0.17, FC, WC, 4.98, wz0); }
+    // 칸막이(영상 b_013.5·s_160: 서 레인은 서벽과 칸막이 사이 슬롯) — 동 레인 디딤판 밑면까지 계단형. 동쪽 = 동 레인 밑 창고
+    for (let j = 0; j < N; j++) { const za = ZL + TR * j, zb = j === N - 1 ? Z0 + 0.15 : ZL + TR * (j + 1);
+      addBox(0.2, RISE * (N + j + 1) - 0.3, zb - za, 0xd3eadf, MX + 0.1, 0, (za + zb) / 2); }
+    // 창고 앞벽(작은 전실 북벽 — 크림 평문, 영상 b_013.5·s_160)
+    wallX(MX + 0.2, wx1 - 0.15, Z0, INNER, { face: -1, dado: { top: 1.3, lo: 0xf3e2a0, hi: 0xd3eadf }, gaps: [{ c: (MX + wx1) / 2 + 0.2, w: 0.9, color: 0xe6dcc4 }] });
+    zones.unshift({ x0: MX + 0.2, x1: wx1 - 0.15, z0: ZL, z1: Z0 - 0.15, y: 0, label: '계단 밑 창고' });   // 첫 일치 = 이 이름(숨바꼭질 지점)
+    // 전실 수레(흰 틀·초록 바닥 — 영상 b_013.5) · 올라서기 금지
+    { const cx = MX + 0.75, cz = Z0 + 0.75;
+      dBox(0.6, 0.06, 0.9, 0x3f8a5a, cx, 0.22, cz); [-1, 1].forEach(s => dBox(0.04, 0.04, 0.9, 0xf2f2ee, cx + s * 0.28, 0.28, cz));
+      dRod(cx - 0.28, 0.28, cz + 0.43, cx - 0.28, 1.0, cz + 0.43, 0.018, 0xf2f2ee); dRod(cx + 0.28, 0.28, cz + 0.43, cx + 0.28, 1.0, cz + 0.43, 0.018, 0xf2f2ee);
+      dRod(cx - 0.28, 1.0, cz + 0.43, cx + 0.28, 1.0, cz + 0.43, 0.018, 0xf2f2ee);
+      [[-0.24, -0.38], [0.24, -0.38], [-0.24, 0.38], [0.24, 0.38]].forEach(([ox, oz]) => dCyl(0.07, 0.07, 0.05, 0x2b2b2b, cx + ox, 0.08, cz + oz, { rot: [0, 0, Math.PI / 2], seg: 10 }));
+      [[-0.24, -0.38], [0.24, -0.38], [-0.24, 0.38], [0.24, 0.38]].forEach(([ox, oz]) => dBox(0.04, 0.1, 0.04, 0x9aa0a6, cx + ox, 0.12, cz + oz));
+      colliders.push(noStand({ x0: cx - 0.32, x1: cx + 0.32, y0: 0, y1: 1.05, z0: cz - 0.47, z1: cz + 0.47 })); }
+    // 점자블록(영상 s_160·s_166.5·s_174): 서 레인 첫 단 앞 · 참의 두 레인 끝 · 2층 동 레인 끝 단 앞
+    patQuad('tactX', AX - LW / 2 + 0.15, AX + LW / 2 - 0.15, Z0 + 0.25, Z0 + 0.65, 0.022);
+    [AX, BX].forEach(x9 => patQuad('tactX', x9 - LW / 2 + 0.15, x9 + LW / 2 - 0.15, ZL - 0.5, ZL - 0.1, RISE * N + 0.01));
+    patQuad('tactX', BX - LW / 2 + 0.15, BX + LW / 2 - 0.15, Z0 + 0.15, Z0 + 0.55, FH + 0.3 + 0.022);
+    // 디딤판 앞끝 논슬립 줄(짙은 회색) + 챌면 몇 칸 색 띠(영상 s_161.5·b_163.5 — 글귀 대신 색만)
+    const BAND = [0x9a7cc0, 0x7ab36a, 0xe89a52, 0x6f9fd6];
+    for (let i = 0; i < N; i++) {
+      dBox(LW, 0.03, 0.05, 0x3a3a3a, AX, RISE * (i + 1), Z0 - TR * i - 0.025);
+      dBox(LW, 0.03, 0.05, 0x3a3a3a, BX, RISE * (N + i + 1), ZL + TR * i + 0.025);
+      if (i % 3 === 1) { dBox(LW - 0.5, 0.06, 0.03, BAND[(i / 3) | 0], AX, RISE * i + 0.05, Z0 - TR * i + 0.015);
+        dBox(LW - 0.5, 0.06, 0.03, BAND[((i / 3) | 0) ^ 1], BX, RISE * (N + i) + 0.05, ZL + TR * i - 0.015); }
+    }
+    // 벽 칠(STAIR-PAINT · 영상 s_158.5~187.5): 노랑/민트 경계가 나무 손잡이와 나란히 레인 따라 비스듬히 오르고(참 +1.3), 2층에서 다시 +1.3 수평.
+    //   벽 면 1cm 앞 사다리꼴(건물 청크에 합침 → 드로우콜 0·감사 제외). B·D·T = 바닥선·노랑 윗선·꼭대기선([a0 값, a1 값] 선형)
+    const SY = 0xf3e2a0, SM = 0xd3eadf, PQ = new Map();
+    const paint = (ax, line, f, a0, a1, b0, b1, t0, t1, hex) => {
+      if (a1 - a0 < 0.01 || (t0 - b0) + (t1 - b1) < 0.004 || t0 < b0 - 1e-6 || t1 < b1 - 1e-6) return;
+      const L = line + f * 0.01, P = ax === 'z' ? [[L, b0, a0], [L, b1, a1], [L, t1, a1], [L, t0, a0]] : [[a0, b0, L], [a1, b1, L], [a1, t1, L], [a0, t0, L]];
+      const u = [P[1][0] - P[0][0], P[1][1] - P[0][1], P[1][2] - P[0][2]], v = [P[3][0] - P[0][0], P[3][1] - P[0][1], P[3][2] - P[0][2]];
+      const nn = ax === 'z' ? u[1] * v[2] - u[2] * v[1] : u[0] * v[1] - u[1] * v[0];
+      let arr = PQ.get(hex); if (!arr) PQ.set(hex, arr = []);
+      for (const i of (nn * f < 0 ? [0, 2, 1, 0, 3, 2] : [0, 1, 2, 0, 2, 3])) arr.push(...P[i]);
+    };
+    const tone = (ax, line, f, a0, a1, B, D, T) => {
+      const ts = [0, 1], cr = (P, Q) => { const d0 = P[0] - Q[0], d1 = P[1] - Q[1]; if (d0 * d1 < 0) ts.push(d0 / (d0 - d1)); };
+      cr(B, D); cr(B, T); cr(D, T); ts.sort((p, q) => p - q);
+      const at = (P, t) => P[0] + (P[1] - P[0]) * t;
+      for (let k = 0; k < ts.length - 1; k++) {
+        const u = ts[k], v = ts[k + 1]; if (v - u < 1e-4) continue;
+        const b = [at(B, u), at(B, v)], t = [at(T, u), at(T, v)], d = [Math.max(b[0], Math.min(at(D, u), t[0])), Math.max(b[1], Math.min(at(D, v), t[1]))];
+        paint(ax, line, f, at([a0, a1], u), at([a0, a1], v), b[0], b[1], d[0], d[1], SY);
+        paint(ax, line, f, at([a0, a1], u), at([a0, a1], v), d[0], d[1], t[0], t[1], SM);
+      }
+    };
+    const K = (v) => [v, v], TOP = K(FH * 2), up = 1.3, zS = wz1 - 0.15, z2 = wz1 - B.upper.corridorDepth - 0.15;
+    const byW = z => (Z0 - z) / TR * RISE, byE = z => RISE * N + (z - ZL) / TR * RISE;
+    // 서벽(x STX0 안쪽 면, +x를 봄): 참 · 서 레인 · 1층(도서관 뒷문 z fz0-1.4 ±0.5 비움) · 2층(소담실 동벽)
+    const WX = STX0 + 0.15;
+    tone('z', WX, 1, wz0 + 0.15, ZL, K(RISE * N - 0.01), K(RISE * N + up), TOP);
+    tone('z', WX, 1, ZL, Z0, [byW(ZL), 0], [byW(ZL) + up, up], TOP);
+    tone('z', WX, 1, Z0, fz0 - 1.9, K(0), K(up), K(FH)); tone('z', WX, 1, fz0 - 1.9, fz0 - 0.9, K(2.6), K(2.6), K(FH)); tone('z', WX, 1, fz0 - 0.9, zS, K(0), K(up), K(FH));
+    tone('z', WX, 1, Z0, z2, K(FH + 0.3), K(FH + 0.3 + up), TOP);
+    // 동벽(x wx1 안쪽 면, -x를 봄): 참 · 동 레인 · 1층 전실(뒷길 유리문 z -38.8~-37.0 비움) · 2층(창 z -35.8~-34.6 비움)
+    const EX = wx1 - 0.15;
+    tone('z', EX, -1, wz0 + 0.15, ZL, K(RISE * N - 0.01), K(RISE * N + up), TOP);
+    tone('z', EX, -1, ZL, Z0, [byE(ZL), byE(Z0)], [byE(ZL) + up, byE(Z0) + up], TOP);
+    tone('z', EX, -1, Z0, -38.8, K(0), K(up), K(FH)); tone('z', EX, -1, -38.8, -37.0, K(2.6), K(2.6), K(FH)); tone('z', EX, -1, -37.0, zS, K(0), K(up), K(FH));
+    tone('z', EX, -1, Z0, -35.8, K(FH + 0.3), K(FH + 0.3 + up), TOP); tone('z', EX, -1, -35.8, -34.6, K(FH + 0.3), K(FH + 0.3 + up), K(FH + 1.2));
+    tone('z', EX, -1, -35.8, -34.6, K(FH + 2.6), K(FH + 2.6), TOP); tone('z', EX, -1, -34.6, zS, K(FH + 0.3), K(FH + 0.3 + up), TOP);
+    // 북벽(z wz0 안쪽 면, +z를 봄): 창 양옆 · 창 밑(창턱 2.0까지) · 창 위(6.3~)
+    const NZ = wz0 + 0.15;
+    tone('x', NZ, 1, STX0 + 0.15, WC - WH, K(RISE * N - 0.01), K(RISE * N + up), TOP); tone('x', NZ, 1, WC + WH, wx1 - 0.15, K(RISE * N - 0.01), K(RISE * N + up), TOP);
+    tone('x', NZ, 1, WC - WH, WC + WH, K(RISE * N - 0.01), K(2.0), K(2.0)); tone('x', NZ, 1, WC - WH, WC + WH, K(6.3), K(6.3), TOP);
+    // 칸막이 서면(서 레인 쪽) · 남면(전실 쪽)
+    for (let j = 0; j < N; j++) { const za = ZL + TR * j, zb = Math.min(Z0, ZL + TR * (j + 1)), tj = RISE * (N + j + 1) - 0.3;
+      tone('z', MX, -1, za, zb, [byW(za), byW(zb)], [byW(za) + up, byW(zb) + up], K(tj)); }
+    tone('z', MX, -1, Z0, Z0 + 0.15, K(0), K(up), K(FH)); tone('x', Z0 + 0.15, 1, MX, MX + 0.2, K(0), K(up), K(FH));
+    for (const [hex, arr] of PQ) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); dGeo(g, new THREE.Matrix4(), hex, { at: [WC, (wz0 + fz0) / 2] }); g.dispose(); }
+    // 위치칩 구역(게임 지점 이름): 반층 참 + 두 레인 · 2층 계단홀(동 레인 윗부분 포함)
+    zones.push({ x0: STX0, x1: wx1, z0: wz0, z1: Z0, y: RISE * N, label: '계단참' });
+    zones.push({ x0: STX0, x1: wx1, z0: Z0 - 1.0, z1: wz1 - B.upper.corridorDepth, y: FH + 0.3, label: '2층 계단' });
   }
   addBox(STX0 - wx0, 0.3, wz1 - wz0 + 0.02, 0xd9dce1, (wx0 + STX0)/2, FH, (wz0 + wz1)/2 + 0.01);   // 1층 지붕 = 2층 바닥(남단 z-33.98 = 본관 지붕과 맞댐)
   ceil(wx0, STX0, wz0, KBZ + 0.16, FH, 'ctile');                                // 1층 천장: 로비 북쪽 방들·측문 통로
@@ -1253,9 +1403,17 @@ export function buildWorld(scene) {
       ceil(s0, s1, wz0, zc2, FH * 2, 'ctile');
     });
     zones.push({ x0: wx0, x1: wx1, z0: zc2, z1: wz1, y: FH+0.3, label: '2층 복도' });
-    wallX(wx0 + 0.15, STX0 + 0.15, zc2, INNER, { y0: FH+0.3, h: FH-0.3, gaps: [...B.upper.rooms.map(r => ({ c: doorC(r), w: 1.2 })), ...B.upper.rooms.filter(twoDoor).map(backDoor)] });
+    // 2층 교실 복도벽(영상 s_181~182): 노랑 징두리(+1.15)·민트 위 두 톤 + 교실마다 앞·뒷문 사이 짙은 나무틀 복도창(창턱 +1.2·윗선 +2.4)
+    const upWins = B.upper.rooms.filter(twoDoor).map(r => { const a = doorC(r) + 0.95, b = backDoor(r).c - 0.95; return { c: (a + b) / 2, w: b - a, sill: 1.2, dh: 2.4, win: true, frame: 0x6b4a32 }; });
+    wallX(wx0 + 0.15, STX0 + 0.15, zc2, INNER, { y0: FH+0.3, h: FH-0.3, face: -1, dado: { top: 1.15, lo: 0xf3e2a0, hi: 0xd3eadf }, gaps: [...B.upper.rooms.map(r => ({ c: doorC(r), w: 1.2 })), ...B.upper.rooms.filter(twoDoor).map(backDoor), ...upWins] });
+    { const sd = B.upper.rooms.find(r => r.name === '소담실');   // 소담실 문 위 '상담실' 팻말이 겹쳐 달림 · 계단 쪽 끝 코르크 게시판 · 화재경보 발신기(영상 s_177·s_181)
+      hangSign('상담실', doorC(sd), FH + 0.3 + 2.38, zc2, 1);
+      dBox(1.3, 0.95, 0.04, 0x8a6a45, -17.6, FH + 1.3, zc2 + 0.17); patWall('kidsArt', 'x', -18.2, -17.0, FH + 1.35, FH + 2.2, zc2 + 0.192, 1);
+      dBox(0.25, 0.45, 0.04, 0xc0c4c8, -16.3, FH + 1.2, zc2 + 0.17);
+      dCyl(0.07, 0.07, 0.04, 0xd8342c, -16.3, FH + 1.5, zc2 + 0.19, { rot: [Math.PI / 2, 0, 0], seg: 10 });
+      dCyl(0.03, 0.03, 0.03, 0xe84a3a, -16.3, FH + 1.3, zc2 + 0.19, { rot: [Math.PI / 2, 0, 0], seg: 8 }); }
     wallZ(wz0, zc2, STX0, INNER, { y0: FH+0.3, h: FH-0.3, face: -1, dado: STAIR_DADO });   // 소담실 동벽(계단홀 쪽 두 톤)
-    floorQ('tileW', wx0 + 0.15, STX0 + 0.15, zc2 + 0.15, wz1 - 0.15, FH + 0.3);
+    floorQ('tileG', wx0 + 0.15, STX0 + 0.15, zc2 + 0.15, wz1 - 0.15, FH + 0.3, 0xa9aaa7);   // 2층 복도 = 중간 회색 화강 테라초(영상 s_182 — 1층 흰 타일과 구분)
     ceil(wx0, wx1, zc2, wz1, FH * 2, 'cflat');
     for (let x9 = wx0 + 2; x9 < wx1 - 1; x9 += 3.6) lamp(0.62, 0.05, 0.3, x9, FH * 2 - 0.21, (zc2 + wz1)/2);
   }
