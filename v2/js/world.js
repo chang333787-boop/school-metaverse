@@ -1257,7 +1257,7 @@ export function buildWorld(scene) {
   const LANEW = { c: (wg.x[1] + B.kitchen.x[0]) / 2 - 0.15, w: 1.8, sill: 1.0, dh: 3.05, win: true };   // [main_corridor-12] 두 짝 + 윗창(영상 b_153·b_154.5 — 아래 베이지 사물함·돌 창턱)
   wallX(wg.x[1] - 0.15, B.kitchen.x[0], fz0, WALL, { face: -1, dado: HALL_DADO, gaps: [LANEW] });   // 뒷길 창(영상 b_154·b_019: 큰 나무틀 창 너머 벽돌벽 — 동쪽은 급식동 벽돌 덩어리)
   // 북쪽 면(급식실) = 옅은 청회색 · [main_corridor-11] 조리실 문 gap이 줄 끝 주석에 삼켜져 '조리실' 팻말이 막힌 벽에 붙어 있었다 → 되살림(영상 b_147·b_150 흰 문)
-  wallX(B.kitchen.x[0], CL.x[0] + 0.15, fz0, 0xbcc8ca, { face: -1, dado: HALL_DADO, gaps: [{ c: B.kitchen.dutyRoom.doorC, w: 1.2 }, { c: B.kitchen.staffDoorC, w: 1.0, color: 0xf2f2ee },
+  wallX(B.kitchen.x[0], CL.x[0] + 0.15, fz0, 0xbcc8ca, { face: -1, dado: HALL_DADO, gaps: [{ c: B.kitchen.dutyRoom.doorC, w: 1.2, color: 0xa9afb5 }, { c: B.kitchen.staffDoorC, w: 1.0, color: 0xf2f2ee },   // 당직실 = 회색 철문(영상 b_150)
     { c: B.kitchen.exitC, w: 1.2, color: 0xf2f2ee }, { c: B.kitchen.doorC, w: 1.8, color: 0xf2f2ee }] });   // 당직실 · 조리실 · 급식실 출구 · 입구(흰 양문 — 영상 b_144·k_15)
   // 마당 쪽 벽: 로비 동쪽 모서리부터 학생자치회 게시판(영상 a_456~460: 로비 유리 바로 동쪽 북벽) → 그 동쪽은 창 + 창 아래 낮은 사물함
   const BOARD = [CL.x[1] + 0.35, CL.x[1] + 5.35];
@@ -1356,7 +1356,9 @@ export function buildWorld(scene) {
     const side = new Map([[Math.round(33.8 / T), 0x6a6d72]]), mid = new Map(side);
     for (let k = Math.ceil(cx0 / T); (k + 1) * T <= cx1; k++) if (((k % 8) + 8) % 8 === 0 && !mid.has(k)) mid.set(k, 0xc49c84);
     TDOOR.forEach(([c]) => mid.set(Math.floor(c / T), 'tact'));
-    row(zW0, za, side); row(za, zb, mid); row(zb, zW1, side);
+    const sideS = new Map(side);   // 남쪽 줄(교실·사무실 문 쪽)
+    FR.rooms.filter(r => r.name === '행정실' || r.name === '교장실').forEach(r => sideS.set(Math.floor((r.span[0] + 1.9) / T), 'tact'));   // 행정실·교장실 문 앞 노란 블록(문 쪽 줄 — 영상 b_147·b_151.5)
+    row(zW0, za, side); row(za, zb, mid); row(zb, zW1, sideS);
     floorQ('tileW', LOB_X0 + 0.15, LOB_X - 0.15, LOB_Z + 0.15, zN);          // 서측 로비
     floorQ('tileW', fx0 + 0.15, LOB_X0 + 0.15, VZ[0] + 0.15, KBZ - 0.15);   // 측문 통로(로비 바닥과 맞댐)
     for (let x9 = LOB_X0 + 2.0; x9 <= fx1 - 1; x9 += 3.6) lamp(0.62, 0.05, 0.3, x9, FH - 0.21, (fz0 + zCor) / 2);   // 복도 사각 등(영상 a_457)
@@ -1536,7 +1538,16 @@ export function buildWorld(scene) {
     // [main_corridor-10] 급식동 남벽 게시판(영상 b_141·b_144·b_150·b_151.5): 당직실|조리실 문 사이 큰 생활규칙 판(청보라 테) · 출구|입구 사이 학교 사진 판 · 입구|로비 사이 아이 그림 판(연파랑 테)
     //   (문 자리 재배치는 급식실 안 배치(CAFE-2)와 맞물려 두고, 비어 있는 벽에만 단다)
     { const K = B.kitchen, FZ = fz0 + 0.15;
-      frameBoard('x', K.dutyRoom.doorC + 0.75, K.staffDoorC - 0.65, FZ, 1, 1.05, 2.35, 0x6d6fb8, 'photoB');
+      // 당직실 서쪽 = 큰 생활규칙 판(영상 b_150·b_151.5: 청보라 테 + 옅은 하늘 바탕·보라 제목 띠·흰 카드 셋(사진) — 뒷길 창 바로 동쪽까지)
+      //   새 무늬를 쓰면 그 무늬 메시의 경계 상자가 커져 먼 화면에도 드로우콜 +1 → 복도 천장 cflat(조명 무시 민짜 칸)을 틴트로만
+      { const a0 = K.x[0] + 0.12, a1 = K.dutyRoom.doorC - 0.75, Lb = a1 - a0, cw = (Lb - 0.4) / 3;
+        dBox(Lb, 1.3, 0.04, 0x6d6fb8, (a0 + a1) / 2, 1.05, FZ + 0.02);
+        const q = (u0, u1, y0, y1, z, t) => patPush('cflat', [[u0, y0, z], [u1, y0, z], [u1, y1, z], [u0, y1, z]], [[0.1, 0.1], [0.4, 0.1], [0.4, 0.4], [0.1, 0.4]], [0, 0, 1], t);
+        q(a0 + 0.05, a1 - 0.05, 1.1, 2.3, FZ + 0.044, 0xc2dcf4);                              // 옅은 하늘 바탕
+        q(a0 + Lb * 0.2, a1 - Lb * 0.2, 2.1, 2.24, FZ + 0.048, 0x8f80cc);                     // 보라 제목 띠
+        for (let k = 0; k < 3; k++) { const u = a0 + 0.1 + k * (cw + 0.1);
+          q(u, u + cw, 1.25, 1.98, FZ + 0.048, 0xffffff); q(u + 0.03, u + cw - 0.03, 1.62, 1.92, FZ + 0.052, [0x9cc3e0, 0xe3b39c, 0xb9d89e][k]); } }
+      frameBoard('x', K.dutyRoom.doorC + 0.75, K.staffDoorC - 0.65, FZ, 1, 1.05, 2.35, 0xcfc6ae, 'photoB');   // 당직실|조리실 사이 사진·안내 판(b_147)
       frameBoard('x', K.exitC + 0.85, K.doorC - 1.15, FZ, 1, 1.1, 2.3, 0xe8e2cc, 'photoB');
       frameBoard('x', K.doorC + 1.15, CL.x[0] - 0.3, FZ, 1, 1.05, 2.35, 0x8fb4e0, 'kidsArt'); }
     NBAY.forEach((a, k) => corLocker(a, a + NWW, k === 1 || k === 3 || k === 4 || k === 5));
