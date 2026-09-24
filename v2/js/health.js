@@ -9,6 +9,7 @@ export const BASELINE = {   // 래칫 기준선(09-24 impl-gamemap 실측 · NS-
 export const ALLOW = {
   invisible: [   // 보이지 않는 벽 허용 구간(x0,x1,z0,z1) — 이유 필수
     { x0: -95, x1: 70, z0: 58, z1: 70, why: '학교 둘레 밖 도로·동네(정문 밖) — 울타리 밖은 게이트가 따로 본다' },
+    { x0: 12.8, x1: 20.2, z0: 54.9, z1: 56.1, why: '정문 선 막이(SOUTH-2 world.js) — 영상은 교문이 열려 있어 보이는 문이 없지만 게임 기초 맵이라 학교 밖 도로로 못 나가게 일부러 막음' },
   ],
   deadDoors: [],  // 일부러 막힌 문 [x, z, why]
   multiZone: [   // 월드 구역 겹침 중 '일부러 포갠' 짝(작은 구역이 큰 구역 안의 한 자리 — 판정은 가장 좁은 구역이 이긴다). 이 두 라벨만 겹친 칸은 세지 않는다
@@ -118,7 +119,10 @@ export async function runHealth(SD2, opt = {}) {
     const mark = (x, y, z) => { const ix = Math.floor((x - VX0) / VH), iz = Math.floor((z - VZ0) / VH); if (ix < 0 || iz < 0 || ix >= VNX || iz >= VNZ) return; const iy = Math.floor((y - VY0) / VDY); if (iy < 0 || iy >= VW * 32) return; vb4[(ix * VNZ + iz) * VW + (iy >> 5)] |= (1 << (iy & 31)) >>> 0; };
     const fmark = (ix, iz, y) => { const q = Math.floor((y - VY0) / FQ); if (q < 0 || q >= FW * 32) return; fb[(ix * FNZ + iz) * FW + (q >> 5)] |= (1 << (q & 31)) >>> 0; };
     const V3 = SD2.camera.position.constructor, M4 = SD2.camera.matrixWorld.constructor, va = new V3(), vb = new V3(), vc = new V3(), ident = new M4();
-    let triN = 0;
+    let triN = 0, softN = 0;
+    // 몸이 지나가도 되는 낮은 풀·작물(world.soft — AABB마다 why)은 무게중심이 그 안인 삼각형을 복셀에서 뺀다(뚫림·발 묻힘 검진 오류 · integ 09-25)
+    const SOFT = W.soft || [], SG = new Map(); for (const v of SOFT) for (let gx = Math.floor(v.x0 / 4); gx <= Math.floor(v.x1 / 4); gx++) for (let gz = Math.floor(v.z0 / 4); gz <= Math.floor(v.z1 / 4); gz++) { const k = gx * 1000 + gz; if (!SG.has(k)) SG.set(k, []); SG.get(k).push(v); }
+    const isSoft = (x, y, z) => { const L = SG.get(Math.floor(x / 4) * 1000 + Math.floor(z / 4)); if (L) for (const v of L) if (x > v.x0 && x < v.x1 && z > v.z0 && z < v.z1 && y > v.y0 && y < v.y1) return true; return false; };
     for (const o of meshes) {
       const Pp = o.geometry.attributes.position, I = o.geometry.index, M = o.matrixWorld, useM = !M.equals(ident), nT = I ? I.count / 3 : Pp.count / 3;
       for (let t = 0; t < nT; t++) {
@@ -126,6 +130,7 @@ export async function runHealth(SD2, opt = {}) {
         if (useM) { va.applyMatrix4(M); vb.applyMatrix4(M); vc.applyMatrix4(M); }
         const mnx = Math.min(va.x, vb.x, vc.x), mxx = Math.max(va.x, vb.x, vc.x), mnz = Math.min(va.z, vb.z, vc.z), mxz = Math.max(va.z, vb.z, vc.z);
         if (mxx < VX0 || mnx > VX0 + VNX * VH || mxz < VZ0 || mnz > VZ0 + VNZ * VH) continue; triN++;
+        if (SG.size && isSoft((va.x + vb.x + vc.x) / 3, (va.y + vb.y + vc.y) / 3, (va.z + vb.z + vc.z) / 3)) { softN++; continue; }
         const ux = vb.x - va.x, uy = vb.y - va.y, uz = vb.z - va.z, wx = vc.x - va.x, wy = vc.y - va.y, wz = vc.z - va.z;
         const nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx, nl = Math.hypot(nx, ny, nz); if (nl < 1e-9) continue;
         const area = nl / 2, nyn = ny / nl;
@@ -147,7 +152,7 @@ export async function runHealth(SD2, opt = {}) {
         for (let i = 0; i <= nu; i++) { const s = i / nu; for (let j = 0; j <= nv; j++) { const tt = j / nv; if (s + tt > 1.0001) break; mark(o0.x + Ux * s + Vx * tt, o0.y + Uy * s + Vy * tt, o0.z + Uz * s + Vz * tt); } }
       }
     }
-    K.voxTris = triN; lap('voxel');
+    K.voxTris = triN; K.softTris = softN; lap('voxel');
     // lo = true: 아래 끝이 걸친 층(0.1m)은 빼고 y0 위에서 시작하는 층만 — 발 묻힘·뚫림에서 발+0.05~0.15의 턱·연석·바닥 무늬가 층 반올림으로 세이던 검진 오류(integ 09-24)
     const visAny = (x0, x1, z0, z1, y0, y1, lo = false) => { const a = Math.max(0, Math.floor((x0 - VX0) / VH)), b = Math.min(VNX - 1, Math.floor((x1 - VX0) / VH)), c = Math.max(0, Math.floor((z0 - VZ0) / VH)), d = Math.min(VNZ - 1, Math.floor((z1 - VZ0) / VH));
       const q0 = Math.max(0, lo ? Math.ceil((y0 - VY0) / VDY - 1e-6) : Math.floor((y0 - VY0) / VDY)), q1 = Math.min(VW * 32 - 1, Math.floor((y1 - VY0) / VDY)); if (q1 < q0) return false;
