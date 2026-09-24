@@ -575,10 +575,13 @@ export function buildWorld(scene) {
     for (let k = 0; k < 8; k++) addBox(1.2, 0.85, 0.45, k % 2 ? 0xd8c3a0 : 0xe2cfad, LOB_X + 0.15 + 0.6 + k * 1.2, 0, fz0 + 0.375, NS);
     // 로비 가운데 둥근 기둥 소파(주황·노랑 2단 + 연두 기둥 + 민트 잎 갓) — 측문→도서관 시선은 비켜 남쪽에
     const [dx9, dz9] = [-32.2, -37.4];
-    addBox(2.3, 0.45, 2.3, 0xe8893a, dx9, 0, dz9);
-    addBox(1.5, 0.4, 1.5, 0xf2b84b, dx9, 0.45, dz9);
-    addBox(0.6, FH - 0.85, 0.6, 0xb8d67a, dx9, 0.85, dz9);
-    flatBox(2.0, 0.2, 2.0, new THREE.MeshBasicMaterial({ color: 0xa8dcc6 }), dx9, FH - 0.5, dz9);   // 민트 갓 — 아랫면만 보이므로 조명 무시 재질(갈색 물듦 방지)
+    // DETAIL-8: 둥근 2단 방석·둥근 기둥·둥근 민트 갓(충돌은 예전 상자 그대로 — 앉는 단은 올라설 수 있음)
+    colliders.push({ x0: dx9-1.15, x1: dx9+1.15, y0: 0, y1: 0.45, z0: dz9-1.15, z1: dz9+1.15 }, { x0: dx9-0.75, x1: dx9+0.75, y0: 0.45, y1: 0.85, z0: dz9-0.75, z1: dz9+0.75 }, { x0: dx9-0.3, x1: dx9+0.3, y0: 0.85, y1: FH, z0: dz9-0.3, z1: dz9+0.3 });
+    dCyl(1.15, 1.15, 0.45, 0xe8893a, dx9, 0, dz9, { seg: 20 });
+    dCyl(0.78, 0.78, 0.4, 0xf2b84b, dx9, 0.45, dz9, { seg: 18 });
+    dCyl(0.3, 0.3, FH - 0.85 - 0.5, 0xb8d67a, dx9, 0.85, dz9, { seg: 12, far: true });
+    { const cap9 = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 0.95, 0.2, 24), new THREE.MeshBasicMaterial({ color: 0xa8dcc6 }));   // 민트 갓 — 아랫면만 보이므로 조명 무시 재질(갈색 물듦 방지)
+      cap9.position.set(dx9, FH - 0.4, dz9); cap9.matrixAutoUpdate = false; cap9.updateMatrix(); scene.add(cap9); }
     // 문서고 벽 앞 쿠션 벤치(주황·초록·노랑) + 도서관 문 옆 도서반납함 — 영상 v2180_0210·0225
     [[-30.4, 0xe8893a], [-29.2, 0x8cc26a], [-28.0, 0xf2c14b]].forEach(([bx9, bc9]) => addBox(1.2, 0.45, 0.6, bc9, bx9, 0, LOB_Z + 0.45));
     addBox(0.4, 0.95, 0.55, 0x3d6fa8, LOB_X - 0.35, 0, SIDE_Z + 1.55, NS);
@@ -898,13 +901,30 @@ export function buildWorld(scene) {
     addPanel(9, 7, 0xe2cf9f, kpx, -0.992, kpz);
     addBox(1.4, 1.0, 1.4, 0x9c7a53, kpx-0.5, -1, kpz-1.5);
     addBox(1.0, 0.5, 0.4, 0xa9805a, kpx-0.5, -1, kpz-2.5);
-    addBox(0.9, 0.3, 0.8, 0xd6dbe0, kpx-0.5, -0.38, kpz-0.6, NS);
-    addBox(0.9, 0.3, 0.8, 0xd6dbe0, kpx-0.5, -0.69, kpz+0.2, NS);
-    addBox(0.6, 0.5, 0.6, 0xd97a5a, kpx+1.6, -1, kpz+1.2);
-    addBox(0.6, 0.5, 0.6, 0x5a8fd9, kpx+2.6, -1, kpz-0.4);
-    addBox(0.16, 0.8, 7, 0xeef0e9, kpx-4.5, -1, kpz, NS);
-    addBox(8.8, 0.8, 0.16, 0xeef0e9, kpx+0.1, -1, kpz-3.5, NS);   // 서측 울타리와 모서리 이격
-    addBox(8.8, 0.8, 0.16, 0xeef0e9, kpx+0.1, -1, kpz+3.5, NS);
+    // DETAIL-8: 떠 있던 판 두 장 → 기울어진 미끄럼 판 + 난간, 발판 기둥·지붕
+    {
+      const L9 = Math.hypot(0.95, 2.0), a9 = Math.atan2(0.95, 2.0);
+      const M9 = new THREE.Matrix4().compose(new THREE.Vector3(kpx - 0.5, -0.5 - 0.06, kpz + 0.2), new THREE.Quaternion().setFromEuler(new THREE.Euler(a9, 0, 0)), new THREE.Vector3(1, 1, 1));
+      const pt9 = (w, h, d, ox, oy, hex) => dGeo(box_, M9.clone().multiply(new THREE.Matrix4().compose(new THREE.Vector3(ox, oy, 0), new THREE.Quaternion(), new THREE.Vector3(w, h, d))), hex, { far: true });
+      pt9(0.8, 0.1, L9, 0, 0, 0x7fc6e8); pt9(0.06, 0.18, L9, -0.43, 0.08, 0x5aa9d6); pt9(0.06, 0.18, L9, 0.43, 0.08, 0x5aa9d6);
+      colliders.push(noStand({ x0: kpx - 0.95, x1: kpx - 0.05, y0: -1, y1: -0.4, z0: kpz - 0.8, z1: kpz + 1.2 }));
+      [[-0.62, -0.62], [0.62, -0.62], [-0.62, 0.62], [0.62, 0.62]].forEach(([ox, oz]) => dRod(kpx - 0.5 + ox, 0, kpz - 1.5 + oz, kpx - 0.5 + ox, 1.2, kpz - 1.5 + oz, 0.04, 0xf2c230, { far: true }));
+      dCyl(0, 1.0, 0.55, 0x6fbf73, kpx - 0.5, 1.2, kpz - 1.5, { far: true, seg: 4, rot: [0, Math.PI/4, 0] });
+    }
+    // 스프링 흔들 말(빨강·파랑): 받침·스프링·몸통·머리·손잡이 — 충돌은 예전 상자(올라서기 금지)
+    [[kpx+1.6, kpz+1.2, 0xd97a5a], [kpx+2.6, kpz-0.4, 0x5a8fd9]].forEach(([rx9, rz9, c9]) => {
+      colliders.push(noStand({ x0: rx9 - 0.3, x1: rx9 + 0.3, y0: -1, y1: -0.5, z0: rz9 - 0.3, z1: rz9 + 0.3 }));
+      dBox(0.5, 0.04, 0.5, 0x8a9096, rx9, -1, rz9);
+      dCyl(0.1, 0.12, 0.3, 0x3a3d44, rx9, -0.96, rz9, { seg: 8 });
+      dBlob(0.34, 0.18, 0.18, c9, rx9, -0.5, rz9, { chunky: true });
+      dBlob(0.13, 0.15, 0.13, c9, rx9 + 0.3, -0.33, rz9, { chunky: true });
+      dRod(rx9 + 0.22, -0.25, rz9 - 0.14, rx9 + 0.22, -0.25, rz9 + 0.14, 0.02, 0xf2c230);
+    });
+    // 연두 낮은 메쉬 울타리(문서: 연두 낮은 메쉬 펜스) + 기둥
+    addBox(0.16, 0.8, 7, 0xb5d98f, kpx-4.5, -1, kpz, NS);
+    addBox(8.8, 0.8, 0.16, 0xb5d98f, kpx+0.1, -1, kpz-3.5, NS);   // 서측 울타리와 모서리 이격
+    addBox(8.8, 0.8, 0.16, 0xb5d98f, kpx+0.1, -1, kpz+3.5, NS);
+    for (let k = 0; k <= 6; k++) { dRod(kpx - 4.3 + k*1.45, -1, kpz - 3.62, kpx - 4.3 + k*1.45, -0.1, kpz - 3.62, 0.035, 0x6e9e4f, { far: true }); dRod(kpx - 4.3 + k*1.45, -1, kpz + 3.62, kpx - 4.3 + k*1.45, -0.1, kpz + 3.62, 0.035, 0x6e9e4f, { far: true }); }
     sign('유치원 놀이터', kpx, 1.3, kpz+3.3, 0, 0.32);
   }
   {   // 주차장 — ①서관 바로 뒤(사용자 08-01 "나래반·보건실 뒤가 바로 주차장") ②그 북쪽 띠(위성: 서관·급식동 서쪽 위)
