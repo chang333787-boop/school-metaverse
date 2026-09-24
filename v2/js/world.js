@@ -1361,7 +1361,8 @@ export function buildWorld(scene) {
     row(zW0, za, side); row(za, zb, mid); row(zb, zW1, sideS);
     floorQ('tileW', LOB_X0 + 0.15, LOB_X - 0.15, LOB_Z + 0.15, zN);          // 서측 로비
     floorQ('tileW', fx0 + 0.15, LOB_X0 + 0.15, VZ[0] + 0.15, KBZ - 0.15);   // 측문 통로(로비 바닥과 맞댐)
-    for (let x9 = LOB_X0 + 2.0; x9 <= fx1 - 1; x9 += 3.6) lamp(0.62, 0.05, 0.3, x9, FH - 0.21, (fz0 + zCor) / 2);   // 복도 사각 등(영상 a_457)
+    for (let x9 = LOB_X0 + 2.0; x9 <= fx1 - 1; x9 += 3.6) x9 > CL.x[1] + 1   // 복도 사각 등(영상 a_457) · [main_corridor-25] 로비 동쪽은 60cm 텍스 한 칸 크기 정사각 평판(a_462·a_474 — 칸 가운데 z -32.7에 맞춤)
+      ? lamp(0.56, 0.05, 0.56, x9, FH - 0.21, Math.round(((fz0 + zCor) / 2 - 0.3) / 0.6) * 0.6 + 0.3) : lamp(0.62, 0.05, 0.3, x9, FH - 0.21, (fz0 + zCor) / 2);
   }
   { // 현관 돌출부(영상 p_149~161·e_312~324): 짙은 나무 판 상자 → 움푹한 포털(2단 계단·양옆 신발장) → 유리 벽·양문 → 전실(체크 매트) → 자동문 → 홀
     const [bx0, bx1] = EN.x, [bz0, bz1] = EN.z, [rx0, rx1] = RC.x, rzg = RC.z[0];   // rzg = 바깥 유리 벽 줄(-22.6)
