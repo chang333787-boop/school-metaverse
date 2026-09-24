@@ -986,8 +986,9 @@ export function buildWorld(scene) {
     dCyl(0.02, 0.02, 0.05, 0x2a2a2a, xe - 0.045, y0 + 2.62, ck, { rot: [0, 0, Math.PI / 2], seg: 6 });
     const seats = [];
     if (opt.computer) {   // [classrooms-6] 컴퓨터실(영상 c_465.2~465.8 열린 문 틈): 나무 수납장 몸통 + 짙은 회색 상판 긴 책상 줄(서향) · 모니터·키보드
-      for (let r = 0; r < 3 && xw + 2.4 + r * 1.7 < xe - 1.8; r++) for (const s of [-1, 1]) {
-        const x = xw + 2.4 + r * 1.7, z = zm + s * 1.6;
+      // [integ 09-24] 줄 간격 1.7 → 2.0: 의자 등 ~ 다음 줄 책상 통로 0.6 → 0.9(몸 0.52 + 길격자 0.3 한 칸 — 가운데 자리 '앉기' 6곳이 닿는 칸 없음이던 것)
+      for (let r = 0; r < 3 && xw + 2.4 + r * 2.0 < xe - 1.8; r++) for (const s of [-1, 1]) {
+        const x = xw + 2.4 + r * 2.0, z = zm + s * 1.6;
         colliders.push(noStand({ x0: x - 0.35, x1: x + 0.35, y0, y1: y0 + 0.76, z0: z - 1.2, z1: z + 1.2 }));
         dBox(0.66, 0.72, 2.36, 0x9a744e, x, y0, z); dBox(0.7, 0.04, 2.4, 0x3c3d42, x, y0 + 0.72, z);
         [-0.6, 0, 0.6].forEach(o => dBox(0.03, 0.6, 0.03, 0x6e5238, x + 0.345, y0 + 0.06, z + o));   // 수납장 문 이음(학생 쪽)
@@ -1003,10 +1004,12 @@ export function buildWorld(scene) {
       const cols = Math.max(2, Math.min(4, Math.floor((depth - 2.2) / 1.4) + 1));
       const rows = Math.min(Math.max(1, Math.min(3, Math.floor((W - 4.1) / 1.7) + 1)), Math.ceil(n / cols));
       const order = [...Array(cols).keys()].sort((a, b) => Math.abs(a - (cols-1)/2) - Math.abs(b - (cols-1)/2) || a - b);
-      const pitch = (xe - 0.45) - (xw + 3.15 + (rows - 1) * 1.7) < 0.9 ? 1.4 : 0.7;   // 뒤 통로가 좁은 방(나래반)은 예전처럼 띄워 줄 사이를 건너게 한다
+      // [integ 09-24] 줄 간격 1.7 → 1.9: 의자 등 ~ 다음 줄 책상 통로 0.7 → 0.9(맞붙인 줄 가운데 자리 '앉기'가 0.3m 길격자로 닿는 칸 없음이던 것 — 유치원·사랑반)
+      //   뒤 통로가 좁은 방(나래반)은 줄 간격 1.7을 두고 칸을 띄워(1.4 → 1.6 — 틈 0.7 → 0.9) 칸 사이로 건너게 한다
+      const narrow = (xe - 0.45) - (xw + 3.15 + (rows - 1) * 1.9) < 0.9, RP = narrow ? 1.7 : 1.9, pitch = narrow ? 1.6 : 0.7;
       for (let r = 0; r < rows; r++) for (const c of order) {
         if (seats.length >= n) break;
-        const x = xw + 2.4 + r * 1.7, z = zm + (c - (cols-1)/2) * pitch;
+        const x = xw + 2.4 + r * RP, z = zm + (c - (cols-1)/2) * pitch;
         studentDesk(x, y0, z, top, 0.7, 1);
         chair(x + 0.55, y0, z, 1, opt.chair ?? 0xb98a5a, 1);
         seats.push({ x: x + 0.55, z, sx: x + 1.05, sz: z });
@@ -2824,8 +2827,10 @@ export function buildWorld(scene) {
     zones.push({ x0: GS.x[0], x1: GS.x[1], z0: Z, z1: Z + 1.8, y: FIELD + 0.5, label: '체육관 계단' });
     zones.push({ x0: G.annex.x[1], x1: TR3.westX, z0: PZ0, z1: Z, y: YARD, label: '체육관 옆길' });
     zones.push({ x0: G.annex.x[1], x1: WE, z0: gz0, z1: PZ0, y: YARD, label: '체육관 앞 마당' });
-    zones.push({ x0: TR3.westX - 0.3, x1: -38.5, z0: PZ0, z1: -9.5, y: YARD, label: '체육관 앞 마당' });
-    zones.push({ x0: SCHOOL.field.x[0], x1: TR3.westX, z0: Z, z1: SCHOOL.southFenceZ, y: FIELD, label: '운동장' });   // 운동장 서쪽 띠(놀이터 남·북·계단 앞 — 예전엔 '학교')
+    zones.push({ x0: TR3.westX, x1: -38.5, z0: PZ0, z1: Math.min(-9.5, SCHOOL.field.z[0]), y: YARD, label: '체육관 앞 마당' });   // [integ] x0 = 옆길 동끝·z1 = 운동장 북끝(겹침 제거)
+    { const KP = SCHOOL.kinderPlayground, x0 = SCHOOL.field.x[0], x1 = TR3.westX;   // 운동장 서쪽 띠(놀이터 남·북·계단 앞 — 예전엔 '학교') — [integ] 유치원 놀이터 칸을 비워 겹침 0(계약표 multi: field-2…)
+      zones.push({ x0, x1, z0: Z, z1: KP.z[0], y: FIELD, label: '운동장' }, { x0, x1, z0: KP.z[1], z1: SCHOOL.southFenceZ, y: FIELD, label: '운동장' });
+      if (KP.x[1] < x1) zones.push({ x0: KP.x[1], x1, z0: KP.z[0], z1: KP.z[1], y: FIELD, label: '운동장' }); }
   }
   {   // 운동장 북서 모서리(영상 g_079~120): 둔덕·옹벽 대신 대지 높이 앞마당(아스팔트 + 주황 볼라드 2) → 흙 비탈(z -10 → -3)로 운동장까지
       //   동쪽 끝(x -30~-27)은 옆으로도 흙 비탈(둔덕은 -27부터). 높이는 terrainAt이 같은 식으로 준다(물리·놓기)
@@ -3285,7 +3290,7 @@ export function buildWorld(scene) {
     zones.push({ x0: PK.x[0], x1: PK.x[1], z0: cm[1], z1: wz0 - 12, y: Y, label: '주차장(북쪽)' });
     zones.push({ x0: wx1, x1: K2.x[0], z0: wz0, z1: fz0, y: Y, label: '뒷길' });
     zones.push({ x0: PK.x[1], x1: SHU[0].x[1] + 0.25, z0: SHU[0].z[0] - 0.25, z1: zS, y: Y, label: '노란 창고' });
-    zones.push({ x0: xd(PZ[1]), x1: XB, z0: GP[4][1], z1: kz0o, y: Y, label: '텃밭 길' });
+    zones.push({ x0: Math.max(xd(PZ[1]), PK.x[1]), x1: XB, z0: GP[4][1], z1: kz0o, y: Y, label: '텃밭 길' });   // [integ] 서끝 = 주차장(북쪽) 동끝(겹침 제거)
     zones.push({ x0: GD.x[0], x1: GD.x[1], z0: GD.z[0], z1: GD.z[1], y: Y, label: '텃밭' });
     zones.push({ x0: GP[3][0], x1: 50, z0: -66, z1: GP[4][1], y: Y, label: '큰 나무 잔디밭' });
     zones.push({ x0: DX[0], x1: DX[1], z0: DZ[0], z1: DZ[1], y: DT, label: '텃밭 쉼터' });

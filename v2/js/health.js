@@ -11,6 +11,16 @@ export const ALLOW = {
     { x0: -95, x1: 70, z0: 58, z1: 70, why: '학교 둘레 밖 도로·동네(정문 밖) — 울타리 밖은 게이트가 따로 본다' },
   ],
   deadDoors: [],  // 일부러 막힌 문 [x, z, why]
+  multiZone: [   // 월드 구역 겹침 중 '일부러 포갠' 짝(작은 구역이 큰 구역 안의 한 자리 — 판정은 가장 좁은 구역이 이긴다). 이 두 라벨만 겹친 칸은 세지 않는다
+    { a: '계단참', b: '계단', why: 'U자 계단 반층 참 — 계단 안의 한 자리(숨바꼭질·위치 칩이 참을 부른다)' },
+    { a: '계단 밑 창고', b: '계단', why: '계단 밑 숨는 칸 — world.js가 일부러 첫 일치로 넣은 지점' },
+    { a: '체육관 현관', b: '체육관 옆길', why: '현관 참(차양 밑)이 옆길 보도블록 한가운데에 있다(FWG 영상 g_091~102)' },
+    { a: '체육관 계단', b: '운동장', why: '운동장 서쪽 띠 북끝의 화강석 계단(g_082~091) — 띠 안의 한 자리' },
+    { a: '현관 앞', b: '앞뜰 산책로', why: '현관 돌출부 앞 참이 산책로 띠 안에 있다(합치기 전 기준선에도 있던 겹침)' },
+    { a: '개수대', b: '동쪽 통학로', why: '개수대가 통학로 띠 안에 선다(사용자 09-23 (44,16))' },
+    { a: '숲놀이터', b: '운동장', why: '큰 나무 아래 숲놀이터가 운동장 남동 구석을 차지한다(사용자 09-24 — 합치기 전 기준선 664칸)' },
+    { a: '구령대', b: '앞뜰 남쪽 화단', why: '구령대가 남 화단 띠를 끊고 둔덕까지 나온다(u_272~299 — 구령대가 이긴다)' },
+  ],
 };
 
 export async function runHealth(SD2, opt = {}) {
@@ -62,10 +72,12 @@ export async function runHealth(SD2, opt = {}) {
   lap('ns');
 
   // ---------- H10 구역 이름 ----------
-  { let ins = 0, noz = 0, multi = 0; const own = new Int32Array(Z.length), noZ = [];
+  { let ins = 0, noz = 0, multi = 0; const own = new Int32Array(Z.length), noZ = [], multiPairs = new Map();
     for (let i = 0; i < F.count; i++) { if (!F.inSchool[i]) continue; ins++; const zi = F.zone[i]; if (zi < 0) { noz++; noZ.push(i); } else own[zi]++;
-      if (zi >= 0) { const x = F.X(i), z = F.Z(i), y = F.y[i]; let k = 0; for (const q of Z) if (!q.extra && MAP.inZone(q, x, y, z) && ++k > 1) { multi++; break; } } }   // 월드 구역끼리 겹침만(덧붙인 넓은 구역은 일부러 겹친다)
+      if (zi >= 0) { const x = F.X(i), z = F.Z(i), y = F.y[i], L = []; for (const q of Z) if (!q.extra && MAP.inZone(q, x, y, z)) L.push(q.label);   // 월드 구역끼리 겹침만(덧붙인 넓은 구역은 일부러 겹친다)
+        if (L.length > 1 && !(L.length === 2 && ALLOW.multiZone.some(a => (a.a === L[0] && a.b === L[1]) || (a.a === L[1] && a.b === L[0])))) { multi++; const key = L.join(' | '); multiPairs.set(key, (multiPairs.get(key) || 0) + 1); } } }
     K.noZonePct = +(100 * noz / Math.max(1, ins)).toFixed(1); K.multiZone = multi;
+    Lst.multiZone = [...multiPairs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
     Lst.noZoneTop = clusters(noZ, FX, FZ, FY, 6, 15); Lst.shadowedZones = Z.map((q, k) => [q.label, own[k]]).filter(a => a[1] < 40);
     Lst.anchors = MAP.pois({ src: 'zone' }).map(p => ({ zone: p.zone, label: p.label, at: p.stand ? p.stand.map(v => +v.toFixed(2)) : null })); }
   lap('zones');
@@ -136,8 +148,9 @@ export async function runHealth(SD2, opt = {}) {
       }
     }
     K.voxTris = triN; lap('voxel');
-    const visAny = (x0, x1, z0, z1, y0, y1) => { const a = Math.max(0, Math.floor((x0 - VX0) / VH)), b = Math.min(VNX - 1, Math.floor((x1 - VX0) / VH)), c = Math.max(0, Math.floor((z0 - VZ0) / VH)), d = Math.min(VNZ - 1, Math.floor((z1 - VZ0) / VH));
-      const q0 = Math.max(0, Math.floor((y0 - VY0) / VDY)), q1 = Math.min(VW * 32 - 1, Math.floor((y1 - VY0) / VDY)); if (q1 < q0) return false;
+    // lo = true: 아래 끝이 걸친 층(0.1m)은 빼고 y0 위에서 시작하는 층만 — 발 묻힘·뚫림에서 발+0.05~0.15의 턱·연석·바닥 무늬가 층 반올림으로 세이던 검진 오류(integ 09-24)
+    const visAny = (x0, x1, z0, z1, y0, y1, lo = false) => { const a = Math.max(0, Math.floor((x0 - VX0) / VH)), b = Math.min(VNX - 1, Math.floor((x1 - VX0) / VH)), c = Math.max(0, Math.floor((z0 - VZ0) / VH)), d = Math.min(VNZ - 1, Math.floor((z1 - VZ0) / VH));
+      const q0 = Math.max(0, lo ? Math.ceil((y0 - VY0) / VDY - 1e-6) : Math.floor((y0 - VY0) / VDY)), q1 = Math.min(VW * 32 - 1, Math.floor((y1 - VY0) / VDY)); if (q1 < q0) return false;
       const m = [0, 0, 0, 0]; for (let q = q0; q <= q1; q++) m[q >> 5] |= (1 << (q & 31));
       for (let ix = a; ix <= b; ix++) for (let iz = c; iz <= d; iz++) { const k = (ix * VNZ + iz) * VW; if ((vb4[k] & m[0]) || (vb4[k + 1] & m[1]) || (vb4[k + 2] & m[2]) || (vb4[k + 3] & m[3])) return true; } return false; };
     const floorBelow = (x, z, y) => { const ix = Math.floor((x - FX0) / FHs), iz = Math.floor((z - FZ0) / FHs); if (ix < 0 || iz < 0 || ix >= FNX || iz >= FNZ) return null;
@@ -153,11 +166,12 @@ export async function runHealth(SD2, opt = {}) {
     // ---------- H4·H5 뚫림(몸 높이에 보이는 기하) · 발 묻힘 · 떠 있음 · 바닥 없음 ----------
     const ghost = [], sunk = [], floating = [], voidF = [];
     for (let i = 0; i < F.count; i++) { if (!F.inSchool[i]) continue; const x = F.X(i), z = F.Z(i), y = F.y[i];
-      if (visAny(x - 0.05, x + 0.05, z - 0.05, z + 0.05, y + 0.4, y + 1.3)) ghost.push(i);
-      if (visAny(x - 0.05, x + 0.05, z - 0.05, z + 0.05, y + 0.15, y + 0.4)) sunk.push(i);
+      if (visAny(x - 0.05, x + 0.05, z - 0.05, z + 0.05, y + 0.4, y + 1.3, true)) ghost.push(i);
+      if (visAny(x - 0.05, x + 0.05, z - 0.05, z + 0.05, y + 0.15, y + 0.4, true)) sunk.push(i);
       let best = null; for (const ox of [-0.3, 0, 0.3]) for (const oz of [-0.3, 0, 0.3]) { const v = floorBelow(x + ox, z + oz, y + 0.04); if (v !== null && (best === null || v > best)) best = v; }
       if (best === null) voidF.push(i); else if (y - best > 0.15) floating.push(i); }
     Object.assign(K, { ghost: ghost.length, sunk: sunk.length, floating: floating.length, void: voidF.length });
+    if (opt.raw) { const P3 = a => a.map(i => [+F.X(i).toFixed(2), +F.Z(i).toFixed(2), +F.y[i].toFixed(2)]); R.raw = { ghost: P3(ghost), sunk: P3(sunk), invisible: P3(invis), floating: P3(floating) }; }   // 칸 전체(분류·원인 찾기용)
     Lst.ghost = clusters(ghost, FX, FZ, FY, 1.5, 20); Lst.floating = clusters(floating, FX, FZ, FY, 2, 12); Lst.sunk = clusters(sunk, FX, FZ, FY, 1.5, 12); Lst.void = clusters(voidF, FX, FZ, FY, 3, 8);
     lap('invisibleGhost');
     // ---------- H6 3인칭 카메라 벽 뚫림(main.js step()과 같은 식) — 1.2m 표본 × 8방향 × 피치 3 ----------
