@@ -2370,8 +2370,9 @@ export function buildWorld(scene) {
     pads.push([a0, 0.1, 3.35, 0.7]);                                                                                                                                 // 꼭대기
     pads.forEach(([ang, d, h, r], k) => { const cx = x + Math.cos(ang) * d * s, cz = z + Math.sin(ang) * d * s, cy = y + h * s, rr = r * s;
       if (k < Math.min(n, 3)) dRod(px, py, pz, cx, cy - rr * 0.3, cz, 0.065 * s, 0x5a4636, F9);    // 가지(줄기 끝 → 아래 단 잎판 밑 — 잎판 사이로 보이는 짙은 가지, f_135·f_144)
-      dBlob(rr * 1.15, rr * 0.56, rr, PG[k % 3], cx, cy, cz, { far: true, chunky: k >= n, ry: ang, jitter: 0.12 });   // 가운데·꼭대기는 20면(삼각형 예산 — 1차와 같은 양)
-      if (k < pads.length - 1) dBlob(rr * 0.8, rr * 0.3, rr * 0.7, 0x8cb866, cx, cy + rr * 0.3, cz, { far: true, chunky: true, ry: ang + 1, jitter: 0.12 }); });   // 밝은 윗면(꼭대기는 생략 — 삼각형 예산)
+      const top9 = k === pads.length - 1;
+      dBlob(rr * 1.15, rr * 0.56, rr, top9 ? 0x4c7641 : PG[k % 3], cx, cy, cz, { far: true, chunky: k >= n, ry: ang, jitter: 0.12 });   // 가운데·꼭대기는 20면(삼각형 예산 — 1차와 같은 양) · 꼭대기는 덮개 없이 짙은 색
+      if (!top9) dBlob(rr * 1.08, rr * 0.36, rr * 0.94, 0x4a7440, cx, cy + rr * 0.2, cz, { far: true, chunky: true, ry: ang + 1, jitter: 0.12 }); });   // 짙은 윗면 덮개(해 받는 윗면이 회양목보다 짙게 — 위성 D·f_279 짙은 수관 · 밝힌 밑면과 대비를 줄임 · 꼭대기는 생략 — 삼각형 예산)
   };
   // 북 화단 옆으로 퍼진 소나무(FRONT-3b · 영상 f_138·f_144·g_121: 옆으로 누운 굽은 줄기 둘 + 층진 두툼한 잎판 세 단 · 밝은 황록 ≈(105,111,66))
   //   공용 spreadPine은 얇은 원판이 위로 쌓여 밑면이 검게 보였다 → 이 블록 지역 도우미. 몸 높이(발 +1.3) 아래 잎판은 올라서기 금지 덩어리(x ±2.2) 안에만, 벽 창 상자·산책로 위로는 안 나감
@@ -2383,7 +2384,7 @@ export function buildWorld(scene) {
     [0, 1].forEach(k => { const a = ax + k * Math.PI + (R() - 0.5) * 0.6, t = 0.5 + R() * 0.2; dCyl(0.08 * s, 0.13 * s, 1.5 * s, 0x6a4a36, x, y, z, { far: true, rot: [t * Math.sin(a), 0, -t * Math.cos(a)] }); });
     const pad = (cx, h, cz, r, k) => { const zc = Math.min(Math.max(cz, zW + 0.85 * r), zS - 0.85 * r);
       dBlob(r * 1.25, r * 0.42, r * 0.85, PL[k % 3], cx, y + h, zc, { far: true, ry: (R() - 0.5) * 0.4, jitter: 0.12 });
-      dBlob(r * 0.9, r * 0.2, r * 0.62, 0xa9c574, cx, y + h + r * 0.3, zc, { far: true, chunky: true, ry: R(), jitter: 0.12 }); };
+      dBlob(r * 0.9, r * 0.2, r * 0.62, 0x7f9f55, cx, y + h + r * 0.3, zc, { far: true, chunky: true, ry: R(), jitter: 0.12 }); };   // 윗면(위에서 보면 너무 희던 것 — 위성 D 짙은 수관)
     [-1, 1].forEach((sg, k) => pad(x + sg * (0.5 + R() * 0.2) * s, 1.0 * s, z - 0.25, 0.9 * s, k));                       // 아래 단(몸 높이 — 덩어리 안)
     [-1, 1].forEach((sg, k) => { const a = ax + (sg > 0 ? 0 : Math.PI) + (R() - 0.5) * 1.4, d = (0.9 + R() * 0.5) * s;   // 가운데 단(밑면 ≥ 발 +1.4 — 옆으로 넓게)
       pad(x + Math.cos(a) * d, 1.7 * s, z + Math.sin(a) * d, 0.8 * s, k + 1); });
