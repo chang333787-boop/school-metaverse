@@ -716,11 +716,47 @@ export function buildWorld(scene) {
   wallX(gx0, gx1, gz1, 0xa8503a, { h: 3.2 });
   wallZ(gz0, gz1, gx0, 0xa8503a, { h: 3.2 });
   wallZ(gz0, gz1, gx1, 0xa8503a, { h: 3.2, gaps: [{ c: gz, w: 3, glass: true, door: true }] });   // 체육관 현관 — 유리 양여닫이
-  wallX(gx0, gx1, gz0, 0xa8a096, { y0: 3.2, h: G.wallHeight-3.2 });
-  wallX(gx0, gx1, gz1, 0xa8a096, { y0: 3.2, h: G.wallHeight-3.2 });
+  // 긴 벽(남·북) 윗부분 = 고측창 한 줄(survey: 아래 창 없음·고측창 1열) — 창틀은 winFrame이 자동
+  wallX(gx0, gx1, gz0, 0xa8a096, { y0: 3.2, h: G.wallHeight-3.2, wins: 8, sill: 2.2, wh: 1.4 });
+  wallX(gx0, gx1, gz1, 0xa8a096, { y0: 3.2, h: G.wallHeight-3.2, wins: 8, sill: 2.2, wh: 1.4 });
   wallZ(gz0, gz1, gx0, 0xa8a096, { y0: 3.2, h: G.wallHeight-3.2 });
   wallZ(gz0, gz1, gx1, 0xa8a096, { y0: 3.2, h: G.wallHeight-3.2 });
   addPanel(G.width-0.8, G.depth-0.8, WOOD, gx, 0.012, gz);
+  {   // 체육관 겉모습·코트(DETAIL-7) — 문서 §9: 상부 회색 세로 골판 + 하부 적벽돌, 지붕 가장자리 밝은 트림, 현관 차양(노란 처마·벽돌 기둥)
+    const RIB = 0x9a9288, TRIM = 0xdfe3e6;
+    // 골판 이랑: 바깥면에서 4cm, 0.8 간격. 고측창 높이(5.4~6.8)는 비우고 위·아래 두 띠로
+    const ribs = (ax, a0, a1, line, f) => { for (let a = a0 + 0.5; a < a1 - 0.4; a += 0.8) [[3.35, 5.25], [6.95, 7.95]].forEach(([y0, y1]) => {
+      if (ax === 'x') dBox(0.1, y1 - y0, 0.04, RIB, a, y0, line + f*0.17); else dBox(0.04, y1 - y0, 0.1, RIB, line + f*0.17, y0, a); }); };
+    ribs('x', gx0, gx1, gz0, -1); ribs('x', gx0, gx1, gz1, 1); ribs('z', gz0, gz1, gx0, -1); ribs('z', gz0, gz1, gx1, 1);
+    // 벽돌 기단 위 돌 띠(3.2) — 바깥으로 5cm
+    dBox(G.width + 0.4, 0.15, 0.1, TRIM, gx, 3.1, gz0 - 0.2); dBox(G.width + 0.4, 0.15, 0.1, TRIM, gx, 3.1, gz1 + 0.2);
+    dBox(0.1, 0.15, G.depth + 0.2, TRIM, gx0 - 0.2, 3.1, gz); dBox(0.1, 0.15, G.depth + 0.2, TRIM, gx1 + 0.2, 3.1, gz);
+    // 지붕 가장자리 트림(지붕판 옆면에서 2cm)
+    dBox(G.width + 1.04, 0.2, G.depth + 1.04, TRIM, gx, G.wallHeight + 0.1, gz, { far: true });
+    // 현관 차양: 크림 판 + 노란 처마 테두리 + 붉은 벽돌 기둥 둘(명패는 기존 '체육관' 팻말)
+    const cx9 = gx1 + 1.3;                                                            // 벽 돌띠 바깥면(gx1+0.25)에서 시작 — 띠와 같은 평면 금지
+    dBox(2.1, 0.2, 5.2, 0xf1ead8, cx9, 3.0, gz, { far: true });
+    dBox(0.08, 0.28, 5.36, 0xf2c230, gx1 + 2.39, 2.96, gz, { far: true });
+    [-1, 1].forEach(sz => {
+      dBox(2.1, 0.28, 0.08, 0xf2c230, cx9, 2.96, gz + sz*2.64, { far: true });
+      addBox(0.45, 2.95, 0.45, 0xa8503a, gx1 + 2.0, 0, gz + sz*2.3);
+    });
+    // 코트 선(바닥 판보다 1cm 위 — 가까이서만 보는 실내라 원경 반짝임 없음)·가운데 원
+    const LN = 0xf5f1e6, cw9 = gx1 - 4.6 - (gx0 + 0.8), cc9 = (gx0 + 0.8 + gx1 - 4.6) / 2, ch9 = G.depth - 3.4;
+    addPanel(cw9, 0.08, LN, cc9, 0.022, gz - ch9/2); addPanel(cw9, 0.08, LN, cc9, 0.022, gz + ch9/2);
+    addPanel(0.08, ch9 - 0.08, LN, gx0 + 0.84, 0.022, gz); addPanel(0.08, ch9 - 0.08, LN, gx1 - 4.64, 0.022, gz);
+    addPanel(0.08, ch9 - 0.08, LN, cc9, 0.022, gz);
+    const ring9 = new THREE.Mesh(new THREE.RingGeometry(1.75, 1.83, 40), new THREE.MeshLambertMaterial({ color: LN }));
+    ring9.rotation.x = -Math.PI/2; ring9.position.set(cc9, 0.023, gz); ring9.matrixAutoUpdate = false; ring9.updateMatrix(); scene.add(ring9);
+    // 농구 링(백보드 앞 30cm·높이 3.05) + 그물
+    [[gx0 + 1.2, 1], [gx1 - 4.4, -1]].forEach(([bx9, dir]) => {
+      const rx = bx9 + dir * 0.45;
+      dGeo(new THREE.TorusGeometry(0.23, 0.02, 5, 14).rotateX(Math.PI/2), new THREE.Matrix4().makeTranslation(rx, 3.05, gz), 0xe8752a);
+      dRod(bx9 + dir*0.15, 3.05, gz, rx - dir*0.23, 3.05, gz, 0.025, 0xe8752a);
+      for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; dRod(rx + Math.cos(a)*0.23, 3.05, gz + Math.sin(a)*0.23, rx + Math.cos(a)*0.14, 2.65, gz + Math.sin(a)*0.14, 0.008, 0xf2f2f2); }
+      dBox(0.03, 0.45, 0.6, 0xd94848, bx9 + dir*0.165, 2.75, gz);                     // 백보드 빨간 네모
+    });
+  }
   addBox(14, 0.9, 3.6, 0xb5793f, gx - 1, 0, gz0 + 2.2);
   addBox(2.4, 0.45, 1.2, 0xa96f3b, gx - 1, 0, gz0 + 4.6);
   {                                                        // 전실(v1 S6 실구조): 동문→복도→양쪽 화장실→안쪽문→본실
