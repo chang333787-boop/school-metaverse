@@ -1276,7 +1276,7 @@ export function buildWorld(scene) {
   const DOORCOL = { '유치원': 0xf2c230, '사랑반': 0xf0a8b8 };   // 유치원 노랑 곰 문·사랑반 분홍 문(영상 IMG_2180 W_207·W_224)
   // [main_corridor-5] 화장실 문 넷(영상 a_456·a_457.5·a_517.5·a_520.5): 남직원(노랑 필름)·여직원(연보라) | 손 씻기 게시판 | 남학생(하늘·분홍 꽃)·여학생(연두·잎)
   //   예전 투명 유리 두 짝은 벽에 뚫린 구멍처럼 보였다 → 필름 색 문(glass 아님) + 스테인리스 문틀. 로비 맞은편(14.6~17.5)은 문 없는 벽 + 파란 테 게시판(a_522)
-  const TDOOR = [[18.3, 0xfff1a0, '남직원', '#3f6fb6'], [19.7, 0xf0e2ff, '여직원', '#c9507e'], [22.0, 0xdcf0ff, '남학생', '#3f6fb6'], [23.5, 0xecf8d8, '여학생', '#c9507e']];   // 필름 색은 북(-z)을 봐서 어둡게 렌더 → 밝게
+  const TDOOR = [[18.3, 0xf3dc6a, '남직원', '#3f6fb6'], [19.7, 0xd4bcef, '여직원', '#c9507e'], [22.0, 0xaed6f5, '남학생', '#3f6fb6'], [23.5, 0xc9e69e, '여학생', '#c9507e']];   // 필름 색(문은 조명 무시 — main.js doorInst.film)
   const cGaps = FR.rooms.filter(r => r.span[0] >= LOB_X0 - 0.01 && r.type !== 'toilet').map(r => r.type === 'hall' ? { c: hc, w: 3.32, dh: 2.5 } : { c: r.span[0] + 1.9, w: 1.2, color: DOORCOL[r.name] });
   FR.rooms.filter(r => twoDoor(r) && r.span[0] >= LOB_X0 - 0.01).forEach(r => cGaps.push({ ...backDoor(r), color: DOORCOL[r.name] }));
   TDOOR.forEach(([c, col]) => cGaps.push({ c, w: 0.9, color: col, tf: true }));
@@ -1286,7 +1286,8 @@ export function buildWorld(scene) {
     const n = L >= 2.8 ? 2 : 1, w = (L - (n - 1) * 0.6) / n;
     return Array.from({ length: n }, (_, k) => ({ c: a + w / 2 + k * (w + 0.6), w, sill: 1.1, dh: 2.8, win: true, frame: k === 0 ? 0x8a98a4 : 0x7a5a3e })); };   // 문 옆 첫 칸 = 회청색 틀(먹 번짐 판 틀 — b_141·b_151.5 · 먹 번짐 무늬는 새 무늬 = 드로우콜이라 뺐다)
   const offWins = FR.rooms.flatMap(offWinsOf);
-  wallX(LOB_X0 - 0.15, fx1 - 0.15, zCor, CLS_WALL, { gaps: [...cGaps, ...corWins(), ...offWins], face: 1 });   // + 교실 복도 쪽 실내창(classrooms-1) · 복도 쪽 면은 아래 조명 무시 무늬판이 덮으므로 한 겹(징두리 두 톤 상자 불필요 — 삼각형 절약)
+  wallX(LOB_X0 - 0.15, fx1 - 0.15, zCor, CLS_WALL, { gaps: [...cGaps, ...corWins(), ...offWins], face: 1 });
+  doors.forEach(d => { if (d.ax === 'x' && Math.abs(d.cz - zCor) < 0.01 && TDOOR.some(([c]) => Math.abs(d.cx - c) < 0.01)) d.film = true; });   // [main_corridor-5] 화장실 필름 유리문 = 조명 무시 문짝(북향 면이 회색 판으로 보이던 것)   // + 교실 복도 쪽 실내창(classrooms-1) · 복도 쪽 면은 아래 조명 무시 무늬판이 덮으므로 한 겹(징두리 두 톤 상자 불필요 — 삼각형 절약)
   { // [main_corridor-2] 복도 남벽 복도 쪽 면 = 조명 무시 판(천장과 같은 이유): 이 면은 북(-z)을 봐서 해를 못 받아 반구광만 — 렌더 윗벽 #867f77 회보라·징두리 #776b40 올리브였다.
     //   영상 a_474: 북창 빛을 받는 남벽이 복도에서 가장 밝다(크림 #adaa9b ≈ 바닥 #afafb3 · 민트 징두리 #adc1a1 + 세로 홈 10cm).
     //   새 무늬(=메시·드로우콜)를 만들지 않고 기존 조명 무시 무늬를 UV로 골라 쓴다: 크림 = cflat 민짜 칸(줄눈 없는 UV), 징두리 = ctile T바 줄을 10cm 세로 홈으로(가로 줄은 피한 UV)
