@@ -1321,10 +1321,17 @@ export function buildWorld(scene) {
     TDOOR.forEach(([c, , nm, fg]) => { [-1, 1].forEach(s => dBox(0.05, 2.6, 0.04, 0xe2e6ea, c + s * 0.475, 0, WF - 0.02)); dBox(1.0, 0.05, 0.04, 0xe2e6ea, c, 2.6, WF - 0.02);   // 북(-z)을 봐서 어둡게 렌더 → 밝은 은색
       sign(nm, c, 2.82, WF - 0.02, Math.PI, 0.13, { bg: '#ffffff', fg }); });
     [19.05, 22.9].forEach(x => { const s9 = sign('화장실', x, 2.78, zCor, Math.PI / 2, 0.24, { bg: '#ffffff', fg: '#2f6fd0' }); s9.m.position.z = zCor - (s9.w / 2 + 0.17); s9.m.updateMatrix(); });
+    // [main_corridor-4] 교실 문 위 채광창(영상 a_477·a_480 — 문 위 나무틀 유리 띠): 인방 복도 쪽 면에 조명 무시 판 두 장(나무틀 + 유리) — 문마다 삼각형 4개·새 메시 0
+    //   (문 폭·두 짝 이음·색은 교실 담당 결정(classrooms-19 쪽창·꿀색)을 그대로 둔다 · 유치원·사랑반 색 문은 영상 확인 전이라 뺌)
+    FR.rooms.filter(r => twoDoor(r) && r.span[0] >= LOB_X0 - 0.01 && !DOORCOL[r.name]).forEach(r => [{ c: r.span[0] + 1.9, w: 1.2 }, backDoor(r)].forEach(g => {
+      const q = (a, b, y0, y1, z, tint) => patPush('cflat', [[a, y0, z], [b, y0, z], [b, y1, z], [a, y1, z]], [[0.1, 0.1], [0.4, 0.1], [0.4, 0.4], [0.1, 0.4]], [0, 0, -1], tint);
+      q(g.c - g.w / 2 - 0.05, g.c + g.w / 2 + 0.05, 2.63, 3.07, zCor - 0.16, 0x6a4c36);          // 나무틀
+      q(g.c - g.w / 2 + 0.02, g.c + g.w / 2 - 0.02, 2.69, 3.01, zCor - 0.164, 0xb4c3ca); }));   // 유리(천장 빛이 비친 옅은 청회)
     frameBoard('x', 20.3, 21.4, WF, -1, 1.2, 2.2, 0x8fb4e0, 'kidsArt');
     frameBoard('x', 15.3, 16.9, WF, -1, 1.15, 2.3, 0x4f86c6, 'photoB');
     // [main_corridor-8] 화장실|컴퓨터실 사이 흰 창고 문(열리지 않음 — a_463.5·a_516) · [main_corridor-24] 컴퓨터실 앞문 옆 검은 번호키(a_465)
     dBox(0.9, 2.1, 0.04, 0xf0f0ec, CLO, 0, WF - 0.02); dBox(0.13, 0.03, 0.05, 0x9a9ea3, CLO + 0.3, 1.0, WF - 0.065);   // 레버 손잡이
+    patPush('cflat', [[CLO - 0.43, 0.02, WF - 0.044], [CLO + 0.43, 0.02, WF - 0.044], [CLO + 0.43, 2.08, WF - 0.044], [CLO - 0.43, 2.08, WF - 0.044]], [[0.1, 0.1], [0.4, 0.1], [0.4, 0.4], [0.1, 0.4]], [0, 0, -1], 0xf4f4f0);   // 앞면 = 조명 무시 흰 판(북향이라 회색으로 보이던 것 — a_516)
     { const cd = FR.rooms.find(r => r.type === 'computer').span[0] + 1.9; dBox(0.07, 0.2, 0.03, 0x1e1e22, cd + 0.72, 1.14, WF - 0.015); }
   }
   lockerBank('x', LOB_X + 0.2, STX0 - 0.3, fz0 + 0.15, 1, 0.85, 2, null, 0xd2bc98, 0xeadabb, true);   // 도서관 복도창 아래 자작나무색 사물함(영상 b_1xx)
