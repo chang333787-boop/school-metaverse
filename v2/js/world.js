@@ -1579,7 +1579,7 @@ export function buildWorld(scene) {
   roofRail(ex1 + 0.3, ez0 - 0.3, ex1 + 0.3, ez1 + 0.3, FH + 0.3);
   sign('창고', ex1 + 0.2, 2.5, (ez0 + ez1) / 2 + 0.6, Math.PI / 2, 0.34);
 
-  // ================= 체육관 (위성 31 × 26.7 본실 + 동쪽 부속동 · 바닥 GYF = 대지 + 3단) =================
+  // ================= 체육관 (위성 29.5 × 25.5 본실 + 동쪽 부속동 · 바닥 GYF = 대지 + 3단) =================
   const G = SCHOOL.gym, gx = G.center[0], gz = G.center[1], GA = G.annex, GDZ = G.doorZ;
   const gx0 = gx-G.width/2, gx1 = gx+G.width/2, gz0 = gz-G.depth/2, gz1 = gz+G.depth/2;
   const GH = G.wallHeight, GB = 0xa4674f;                     // 벽돌 = 갈색 도는 적벽돌(영상 g_087~094 — 예전 0xa8503a는 너무 빨갰다)
@@ -1693,7 +1693,7 @@ export function buildWorld(scene) {
     patQuad('gmat', ax1 + 0.35, ax1 + 1.95, SG - 1.3, SG + 1.1, GYF + 0.012, false, 0xd8a8a4);   // 큰 붉은회색 매트(영상 g_103.5)
     patQuad('gmat', ax1 + 0.35, ax1 + 1.15, DN - 0.6, DN + 0.6, GYF + 0.012);                      // 짙은 회색 매트(북 양문 앞)
     patQuad('tactZ', LX1 - 0.34, LX1 - 0.04, LZ0 + LW + 0.1, SG - 1.4, GYF + 0.012);              // 점자 띠(계단 위 가장자리)
-    patQuad('tactZ', LX1 + 0.78, LX1 + 1.08, LZ0 + LW + 0.1, LZ1 - 0.1, YARD + 0.022);             // 점자 띠(계단 아래 — 옆길 보도블록 위)
+    patQuad('tactZ', LX1 + 0.78, LX1 + 1.08, LZ0 + LW + 0.1, TR3.westZ - 0.45, YARD + 0.022);      // 노랑 점자 줄(계단 아래 → 옆길 따라 운동장 계단 위까지 — 영상 g_094.5~102)
     const EZ0 = az0 - 0.14, EZ1 = az1 + 0.14;                                                        // 차양: 동벽 전체(북·남 벽 바깥 면에서 1cm 안쪽)
     addBox(LX1 - ax1 + 0.05, 0.2, EZ1 - EZ0, 0xf1ead8, (ax1 + 0.15 + LX1 + 0.2)/2, GYF + 2.95, (EZ0 + EZ1)/2);
     dBox(0.08, 0.28, EZ1 - EZ0 + 0.16, YEL, LX1 + 0.24, GYF + 2.91, (EZ0 + EZ1)/2, { far: true });
@@ -1906,14 +1906,14 @@ export function buildWorld(scene) {
         for (let i = 0; i < n9; i++) { const ex = lx - 0.9 + i * 1.8 / (n9 - 1);
           dBlob(0.22, 0.2, 0.18, 0x3d4248, ex, ay + 0.26, lz + 0.36, { chunky: true, far: true }); lamp(0.26, 0.2, 0.05, ex, ay + 0.16, lz + 0.55); } }   // 등(밤에 빛남)
     });
-    {   // 야외 농구골대(동쪽 통학로 옆)
-      const bx9 = EF - 1.2, bz9 = 22;
+    {   // 야외 농구골대(운동장 북동 모서리 — 영상 f_264~270: 동쪽 조명탑 동쪽·높은 철망 북끝 기둥 바로 서쪽, 판은 운동장(남)을 봄)
+      const bx9 = EF - 3.2, bz9 = TR3.fieldZ + 3.1;
       post(bx9, bz9, FIELD, FIELD + 3.4, 0.17);
       dCyl(0.1, 0.13, 3.4, 0x8a9096, bx9, FIELD, bz9, { far: true, seg: 8 });
-      dRod(bx9, FIELD + 3.2, bz9, bx9 - 0.28, FIELD + 3.5, bz9, 0.07, 0x8a9096, { far: true });
-      dBox(0.06, 1.1, 1.8, 0xf5f6f8, bx9 - 0.31, FIELD + 3.3, bz9, { far: true });
-      dBox(0.03, 0.45, 0.6, 0xd94848, bx9 - 0.355, FIELD + 3.45, bz9, { far: true });
-      dGeo(new THREE.TorusGeometry(0.23, 0.02, 5, 14).rotateX(Math.PI/2), new THREE.Matrix4().makeTranslation(bx9 - 0.6, FIELD + 3.45, bz9), 0xe8752a, { far: true });
+      dRod(bx9, FIELD + 3.2, bz9, bx9, FIELD + 3.5, bz9 + 0.28, 0.07, 0x8a9096, { far: true });
+      dBox(1.8, 1.1, 0.06, 0xf5f6f8, bx9, FIELD + 3.3, bz9 + 0.31, { far: true });
+      dBox(0.6, 0.45, 0.03, 0xd94848, bx9, FIELD + 3.45, bz9 + 0.355, { far: true });
+      dGeo(new THREE.TorusGeometry(0.23, 0.02, 5, 14).rotateX(Math.PI/2), new THREE.Matrix4().makeTranslation(bx9, FIELD + 3.45, bz9 + 0.6), 0xe8752a, { far: true });
     }
   }
   {   // 놀이터(남서 — 위성 x -8~9 · z 67~85): 모래 + 미끄럼틀·그네·시소·정글짐·구름사다리·둥근 벤치 나무
@@ -2036,8 +2036,8 @@ export function buildWorld(scene) {
     dCyl(0.05, 0.05, 1.7, 0x9aa0a6, KP.x[1] + 0.35, Y, KP.z[1] - 0.35, { seg: 6 }); post(KP.x[1] + 0.35, KP.z[1] - 0.35, Y, Y + 1.7, 0.06);   // 동남 모서리 둥근 머리 안내판(영상 g_075·g_076.5)
     dCyl(0.32, 0.32, 0.04, 0xeef2f4, KP.x[1] + 0.35, Y + 1.75, KP.z[1] - 0.35, { seg: 14, rot: [0, 0, Math.PI / 2], far: true });
     // 검은 배수 띠 + 흰 경계석(동·남 울타리 밖 — 영상 g_072~078)
-    addPanel(0.45, KD + 0.5, 0x3a3c3a, KP.x[1] + 0.28, Y + 0.015, kpz + 0.25); dBox(0.12, 0.08, KD + 0.62, 0xdad6cc, KP.x[1] + 0.56, Y, kpz + 0.31);
-    addPanel(KW + 0.05, 0.45, 0x3a3c3a, kpx - 0.025, Y + 0.015, KP.z[1] + 0.275); dBox(KW + 0.55, 0.08, 0.12, 0xdad6cc, kpx + 0.225, Y, KP.z[1] + 0.56);
+    addPanel(0.45, KD + 0.5, 0x4a4c4a, KP.x[1] + 0.28, Y + 0.015, kpz + 0.25); dBox(0.12, 0.08, KD + 0.62, 0xdad6cc, KP.x[1] + 0.56, Y, kpz + 0.31);
+    addPanel(KW + 0.05, 0.45, 0x4a4c4a, kpx - 0.025, Y + 0.015, KP.z[1] + 0.275); dBox(KW + 0.55, 0.08, 0.12, 0xdad6cc, kpx + 0.225, Y, KP.z[1] + 0.56);
     sign('유치원 놀이터', kpx, Y + 1.8, KP.z[0] - 0.2, 0, 0.32);
     zones.push({ x0: KP.x[0], x1: KP.x[1], z0: KP.z[0], z1: KP.z[1], y: Y, label: '유치원 놀이터' });
   }
@@ -2050,7 +2050,7 @@ export function buildWorld(scene) {
       dBox(0.34, 0.06, 0.6, 0xa29d92, GS.x[1] + 0.15, FIELD + h, z9);
       patWall('stoneW', 'z', z9 - 0.3, z9 + 0.3, FIELD, FIELD + h, GS.x[1] + 0.312, 1); });
     patQuad('pave', KP.x[0], GS.x[1] + 0.3, Z, KP.z[0] - 0.1, FIELD + 0.012);             // 계단 앞 색 보도블록 앞마당(옹벽 발치 따라 놀이터 북쪽 울타리까지)
-    addPanel(0.45, KP.z[0] - 0.1 - (Z + 1.0), 0x3a3c3a, GS.x[1] + 0.525, FIELD + 0.015, (Z + 1.0 + KP.z[0] - 0.1)/2);   // 볼벽 동쪽 발치 배수 띠(비탈 밑으로 들어가는 곳부터)
+    addPanel(0.36, KP.z[0] - 0.1 - (Z + 1.0), 0x4a4c4a, GS.x[1] + 0.48, FIELD + 0.015, (Z + 1.0 + KP.z[0] - 0.1)/2);   // 볼벽 동쪽 발치 배수 띠(비탈 밑으로 들어가는 곳부터)
     // 체육관 옆길 동쪽: 콘크리트 턱(0.35) 위 초록 철망 1.8 — 현관 참 남쪽 끝~계단 위(영상 g_091~115) · 서쪽 = 계단 서끝에서 부속동 남동 모서리까지 철망(체육관 남쪽 띠 마당은 막힘 — g_090·g_091.5)
     const CB0 = -19.5;
     addBox(0.3, 0.35, Z - CB0, 0x9c978c, TR3.westX - 0.15, YARD, (CB0 + Z)/2);
@@ -2091,7 +2091,7 @@ export function buildWorld(scene) {
   }
   {   // 운동장 서쪽 경계(영상 g_060~069·f_252): 1.8 철망 위 높이 7 m 공막이 그물 + 바로 뒤 빽빽한 생울타리 + 하우스 동쪽 나무 무리(위성 A: x -58~-46 · z -2.5~17)
     meshFence(-50.5, SCHOOL.southFenceZ, -50.5, TR3.westZ, FIELD + 1.8, 5.2, 0x33413a, 0x6f9a5a, false);
-    for (let z9 = -3, k = 0; z9 <= 41; z9 += 2.2, k++) dBlob(1.6, 1.8, 1.5, k % 2 ? 0x2f4a33 : 0x3a5a3c, -52.3 - (k % 3) * 0.3, FIELD + 1.6, z9, { far: true, jitter: 0.15, ry: k });
+    for (let z9 = 1.5, k = 0; z9 <= 41; z9 += 2.2, k++) dBlob(1.6, 1.8, 1.5, k % 2 ? 0x2f4a33 : 0x3a5a3c, -52.3 - (k % 3) * 0.3, FIELD + 1.6, z9, { far: true, jitter: 0.15, ry: k });
     [[-55.5, -1, 1.2], [-52.6, 3, 1.1], [-55.5, 7.5, 1.25], [-52.6, 12, 1.05], [-55.2, 16.5, 1.15]].forEach(([x9, z9, s9]) => bgTree(x9, z9, s9));
   }
   {   // 무지개 쉼터(남쪽 울타리 따라 초록·주황·파랑 반복 지붕 — 영상 f_222~240) + 놀이마당(바닥 놀이 원)
@@ -2225,9 +2225,23 @@ export function buildWorld(scene) {
   // ================= 위성 나무 무리(Esri z19: 체육관 북서쪽 숲·서쪽 울타리 나무 줄·동쪽 가장자리·텃밭 동쪽·정문 옆) =================
   {
     const R9 = seeded(4242), jit = () => (R9() - 0.5) * 2.4;   // ±1.2 m
-    patQuad('grass', -86, -53.5, -86, -33.2, YARD + 0.012, false, 0xc4d6ac);   // 숲 바닥(위성: 체육관 북쪽은 나무 그늘 — 베이지 대지 위에 나무만 서 있던 것)
+    // 위성 A(09-24): 체육관 북동 모서리 → 북서로 넓어지는 대각 아스팔트 길 + z -50.5~-47 동서 흙길(울타리 -86까지 · 닫힌 문짝).
+    //   체육관 북쪽 z -47.5~-31 어두운 면은 숲이 아니라 체육관 겨울 그림자 → 체육관|길 사이 나무는 4그루 이하, 결 보이는 수관은 흙길 북쪽 z -61~-51에 빽빽하게
+    const tri = (kind, A, Bp, Cp, tint = 0xffffff) => { const S = PATDEF[kind][0], P9 = [A, Bp, Cp, Cp].map(([x, z]) => [x, YARD + 0.012, z]); patPush(kind, P9, P9.map(q => [q[0] / S, -q[2] / S]), [0, 1, 0], tint); };
+    const fan = (kind, o, chain, tint) => { for (let i = 0; i < chain.length - 1; i++) tri(kind, o, chain[i], chain[i + 1], tint); };
+    fan('asph', [-51.35, -44.65], [[-51.35, -38.7], [-52.4, -39], [-55, -41], [-57, -44], [-58, -44.65]]);                               // 대각 길(기존 아스팔트 서쪽 조각)
+    fan('asph', [-48, -50.5], [[-48, -44.65], [-58, -44.65], [-59, -45.3], [-61, -46.2], [-62.5, -47], [-62.5, -50.5]]);                 // 대각 길(z -44.65 북쪽 조각 — 주차장 서끝까지)
+    patQuad('dirt', -86, -62.5, -50.5, -47, YARD + 0.012, false, 0xd2cab0);                                                             // 동서 흙길(위성 황토 165~181,161~172,127~139)
+    [-50.6, -46.9].forEach(z9 => dBox(0.16, 1.9, 0.16, 0x8a9096, -86.2, YARD, z9, { far: true }));                                       // 울타리 문 기둥 + 닫힌 문짝
+    dBox(0.05, 1.5, 3.5, 0x9aa0a6, -86.2, YARD + 0.1, -48.75, { far: true });
+    patQuad('grass', -86, -53.5, -86, -50.5, YARD + 0.012, false, 0xc4d6ac);                                                          // 숲 바닥(흙길 북쪽)
+    fan('grass', [-86, gz0 - 0.15], [[-86, -47], [-62.5, -47], [-61, -46.2], [-59, -45.3], [-58, -44.65], [-57, -44], [-55, -41], [-53.5, -39.85], [-53.5, gz0 - 0.15]], 0xc4d6ac);   // 체육관 북쪽 잔디(대각 길 남서쪽)
     for (let x = -84; x <= -58; x += 6.5) for (let z = -84; z <= -38.5; z += 6.5) { const sk = R9(), jx = jit() * 2.2, jz = jit() * 2.2, sc = 0.75 + R9() * 0.7;   // 체육관 북서쪽 숲(격자가 보이지 않게 크게 흩고 15%는 비움 — 과수원처럼 줄 서 보이던 것)
-      if (sk > 0.15 && !(x > -60 && z > -48)) bgTree(x + jx, z + jz, sc); }
+      const keep = z >= -46 ? x <= -77.5 : z > -62 ? false : sk > 0.55;   // 그림자 띠 = 서쪽 2열만 · 흙길 둘레 = 아래 빽빽한 줄이 대신 · 그 북쪽(창고·밭) = 드문드문
+      if (sk > 0.15 && keep) bgTree(x + jx, z + jz, sc); }
+    { const R8 = seeded(8123);
+      for (let z = -60.5; z <= -53; z += 3.75) for (let x = -86.5; x <= -59.5; x += 4.5) bgTree(x + (R8() - 0.5) * 1.6, z + (R8() - 0.5) * 1.2, 1.1 + R8() * 0.4);   // 흙길 북쪽 결 보이는 수관(위성 A)
+      for (let z = -44; z <= -24; z += 5) bgTree(-87.2 + (R8() - 0.5) * 0.4, z + (R8() - 0.5) * 1.5, 1.1 + R8() * 0.2); }                // 서쪽 울타리 밖 나무 줄(그림자 밖 수관 — 울타리 -86 너머)
     for (let z = 20; z <= 60; z += 5.5) bgTree(-53.6 + jit() * 0.3, z + jit(), 0.8 + R9() * 0.25);               // 서쪽 울타리 밖 나무 줄(울타리 -50.5와 비닐하우스 -57 사이)
     for (let z = -38; z <= 30; z += 7) bgTree(55 + jit() * 0.8, z + jit(), 0.9 + R9() * 0.35);                  // 동쪽 가장자리(데크 남쪽부터)
     for (let z = -84; z <= -58; z += 6.5) bgTree(58.5 + jit() * 0.4, z + jit(), 0.85 + R9() * 0.3);              // 텃밭 동쪽
