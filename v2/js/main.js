@@ -1,7 +1,7 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=106';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
-import { SCHOOL } from './layout.js?v=3';   // LAYOUT-3 실측 배치(v1 data.js 대신)
+import { buildWorld } from './world.js?v=111';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { SCHOOL } from './layout.js?v=4';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -352,9 +352,19 @@ function act(h) {
     case 'sit':
       ACT.sit = { x: h.x, z: h.z, y: h.y }; P.yaw = h.yaw ?? Math.PI;   // 의자 바로 뒤(몸을 의자 상자 안에 넣으면 일어날 때 의자 위로 올라선다)
       toast('🪑 의자에 앉았어요 — 움직이면 일어나요'); hotNear = null; break;
-    case 'meal':
-      if (!tray) { tray = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.34), new THREE.MeshLambertMaterial({ color: 0xc8d2da })); tray.position.set(0, 0.9, 0.4); pg.add(tray); toast('🍚 급식을 받았어요'); }
-      else { pg.remove(tray); tray = null; toast('🍽️ 식판을 반납했어요'); }
+    case 'meal':   // 배식대: 칸 나뉜 식판에 밥·국·반찬 셋(반납은 식판 반납대에서)
+      if (!tray) {
+        tray = new THREE.Group(); tray.position.set(0, 0.9, 0.4);
+        const TM = c => new THREE.MeshLambertMaterial({ color: c });
+        const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 0.34), TM(0xc8d2da)); tray.add(base);
+        [[-0.13, 0.07, 0xf4f1e8], [0.13, 0.07, 0xc86a3a], [-0.16, -0.08, 0xc8452c], [0, -0.08, 0x6fa04f], [0.16, -0.08, 0xe8c35a]].forEach(([x, z, c], i) => {
+          const f = new THREE.Mesh(i < 2 ? new THREE.SphereGeometry(0.075, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2) : new THREE.BoxGeometry(0.1, 0.03, 0.09), TM(c));
+          f.position.set(x, 0.02, -z); tray.add(f); });
+        pg.add(tray); toast('🍚 급식을 받았어요 — 식탁에 앉아 먹어요');
+      } else toast('🍽️ 다 먹은 식판은 식판 반납대에 돌려줘요');
+      break;
+    case 'trayback':
+      if (tray) { pg.remove(tray); tray = null; toast('🍽️ 식판을 반납했어요 — 잘 먹었습니다!'); } else toast('반납할 식판이 없어요');
       break;
     case 'read': toast('📖 조용히 책을 읽고 있어요'); break;
     case 'water': toast('💧 물을 마셨어요'); break;
