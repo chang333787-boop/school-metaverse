@@ -889,7 +889,18 @@ export function buildWorld(scene) {
   {
     const [tx, tz] = SCHOOL.garden.center;
     hotspots.push({ kind: 'garden', x: tx, z: tz + 3.6, y: 0, r: 2.6, label: '텃밭에 물 주기' });
-    for (let i = 0; i < 3; i++) addBox(9, 0.35, 1.6, 0x4a3628, tx, 0, tz - 2.6 + i*2.6);
+    for (let i = 0; i < 3; i++) addBox(9, 0.35, 1.6, 0x4a3628, tx, 0, tz - 2.6 + i*2.6, i === 2 ? NS : {});   // 토마토 이랑은 올라서기 금지(지주대 통과)
+    // DETAIL-9 채소: 앞 두 이랑 = 배추·상추 두 줄, 셋째 이랑 = 토마토 지주대 + 빨간 열매
+    for (let i = 0; i < 2; i++) [-0.4, 0.4].forEach(oz => { for (let k = 0; k < 11; k++) {
+      const vx = tx - 4 + k * 0.8, vz = tz - 2.6 + i*2.6 + oz;
+      dBlob(0.24, 0.16, 0.24, i ? 0x8cc26a : 0x5fa34a, vx, 0.47, vz, { chunky: true, ry: k, jitter: 0.15 });
+    } });
+    for (let k = 0; k < 8; k++) {
+      const vx = tx - 3.5 + k, vz = tz + 2.6;
+      dRod(vx, 0.35, vz, vx, 1.3, vz, 0.02, 0x9c7a53);
+      dBlob(0.2, 0.3, 0.2, 0x4d8b4d, vx, 0.85, vz, { chunky: true, ry: k });
+      dBlob(0.07, 0.07, 0.07, 0xd9463a, vx + 0.12, 0.75, vz + 0.1, { chunky: true }); dBlob(0.06, 0.06, 0.06, 0xd9463a, vx - 0.1, 0.95, vz - 0.08, { chunky: true });
+    }
     [-5.2, 5.2].forEach(ox => addBox(0.16, 1.0, 9.6, 0xf2f4f6, tx+ox, 0, tz, NS));
     addBox(3.6, 1.0, 0.16, 0xf2f4f6, tx-3.3, 0, tz+4.9, NS);   // 남측 울타리 — 가운데 1.8m 출입구
     addBox(3.6, 1.0, 0.16, 0xf2f4f6, tx+3.3, 0, tz+4.9, NS);
@@ -997,9 +1008,11 @@ export function buildWorld(scene) {
   {                                                        // 정자 — v1 x-54.6~-49.4, z41.6~46.8
     const px9 = -52, pz9 = 44.2;
     [[-2.2,-2.2],[2.2,-2.2],[-2.2,2.2],[2.2,2.2]].forEach(([ox,oz]) => addBox(0.34, 2.6, 0.34, 0x8a5a3b, px9+ox, -1, pz9+oz));
-    addPanel(5.2, 5.2, 0xc9a063, px9, -0.55, pz9);
+    // DETAIL-9: 떠 있던 마루 판 → 올라서는 마루(0.45)·모임지붕(사각뿔)·꼭대기 장식
+    addBox(5.2, 0.44, 5.2, 0xc9a063, px9, -0.99, pz9);                    // 밑면 1cm 띄움(기둥 밑면과 같은 평면 금지)
     addBox(5.6, 0.32, 5.6, 0x6f4a30, px9, 1.6, pz9);
-    addBox(4.2, 0.4, 4.2, 0x8a5a3b, px9, 1.92, pz9, { collide: false });
+    dCyl(0, 4.1, 1.3, 0x5a4a3e, px9, 1.92, pz9, { far: true, seg: 4, rot: [0, Math.PI/4, 0] });
+    dCyl(0.08, 0.12, 0.35, 0xd8b35a, px9, 3.1, pz9, { far: true, seg: 6 });
     addBox(4.6, 0.3, 0.35, 0x9c6b45, px9, -0.55, pz9 - 2.0, NS);                           // 앉는 난간
     addBox(4.6, 0.3, 0.35, 0x9c6b45, px9, -0.55, pz9 + 2.0, NS);
     sign('정자', px9, 1.2, pz9 + 2.9, 0, 0.38);
@@ -1009,8 +1022,12 @@ export function buildWorld(scene) {
     const [sx9, sz9] = SCHOOL.shelter.center, sl = SCHOOL.shelter.length, RB = [0x6cc070, 0xf0a04b, 0x6fb3e0];
     [-sl/2+0.5, 0, sl/2-0.5].forEach(ox => { addBox(0.3, 2.6, 0.3, 0x6d4e32, sx9+ox, -1, sz9-1.7); addBox(0.3, 2.6, 0.3, 0x6d4e32, sx9+ox, -1, sz9+1.7); });
     for (let k = 0; k < sl / 2; k++) addBox(2, 0.3, 4.4, RB[k % 3], sx9 - sl/2 + 1 + 2*k, 1.6, sz9);
-    addBox(sl-2, 0.45, 0.6, 0xb5793f, sx9, -1, sz9-1.0);
-    addBox(sl-2, 0.45, 0.6, 0xb5793f, sx9, -1, sz9+1.0);
+    // DETAIL-9: 긴 벤치 = 앉는 판 + 다리(2m 간격). 충돌은 예전 상자(앉는 높이 0.45 — 올라설 수 있음)
+    [sz9 - 1.0, sz9 + 1.0].forEach(bz9 => {
+      colliders.push({ x0: sx9 - (sl-2)/2, x1: sx9 + (sl-2)/2, y0: -1, y1: -0.55, z0: bz9 - 0.3, z1: bz9 + 0.3 });
+      dBox(sl - 2, 0.06, 0.6, 0xb5793f, sx9, -0.61, bz9);
+      for (let lx = -(sl-2)/2 + 0.3; lx <= (sl-2)/2 - 0.3 + 1e-6; lx += (sl - 2.6) / 8) dBox(0.08, 0.39, 0.5, 0x7a5636, sx9 + lx, -1, bz9);
+    });
     sign('무지개 쉼터', sx9, 1.2, sz9+2.1, 0, 0.34);
     // 놀이마당: 회색 포장 + 바닥 놀이 원(과녁형 동심원 — 같은 높이의 겹치지 않는 고리라 반짝임 없음)
     addPanel(18, 11.5, 0xb9bcc0, sx9 + 1, -0.98, sz9 - 3.4);          // 서단 x-44 = 놀이터 모래와 맞댐(겹치면 반짝임)
