@@ -993,8 +993,8 @@ export function buildWorld(scene) {
   wallX(fx0 + 0.15, LOB_X0 + 0.15, KBZ, INNER);
   wallZ(KBZ, zCor, LOB_X0, INNER, { gaps: [{ c: (KBZ + zCor) / 2, w: 1.8, color: 0x4a4640 }] });   // 짙은 연기색 유리 양문(영상 W_213~215 — 안이 안 보임)
   sign('정림초등학교병설유치원', LOB_X0 + 0.22, 2.75, (KBZ + zCor) / 2, Math.PI / 2, 0.22, { bg: '#f2f2ee', fg: '#333333' });
-  sign('원무실', LOB_X0 + 0.2, 2.42, (KBZ + zCor) / 2 + 1.05, Math.PI / 2, 0.12, { bg: '#f2f2ee', fg: '#333333' });
-  dBox(0.4, 0.5, 0.3, 0x222222, LOB_X0 + 0.37, 0, -32.3); colliders.push(noStand({ x0: LOB_X0 + 0.17, x1: LOB_X0 + 0.57, y0: 0, y1: 0.5, z0: -32.45, z1: -32.15 }));   // 검은 우산통
+  sign('원무실', LOB_X0 + 0.2, 2.42, (KBZ + zCor) / 2 - 1.05, Math.PI / 2, 0.12, { bg: '#f2f2ee', fg: '#333333' });   // 서쪽을 보면 문 오른쪽(북쪽 벽기둥) 위 모서리(영상 W_213.0·W_214.5)
+  dBox(0.4, 0.5, 0.3, 0x222222, LOB_X0 + 0.37, 0, -34.9); colliders.push(noStand({ x0: LOB_X0 + 0.17, x1: LOB_X0 + 0.57, y0: 0, y1: 0.5, z0: -35.05, z1: -34.75 }));   // 검은 우산통 — 문 오른쪽(북쪽) 문짝 앞, 문 개구(-34.65) 밖
   { // 복도 바닥(영상 a_457~502): 흰 45cm 타일 + 양쪽 벽 따라 검은 띠 25cm(트임 앞도 이어짐) + 가운데 줄 3.6m마다 갈색 타일
     const cx0 = LOB_X0 + 0.15, cx1 = fx1 - 0.15, zN = fz0 + 0.15, zS = zCor - 0.15, BW = 0.25, T = 0.45, za = -32.85, zb = -32.4;
     addPanel(cx1 - cx0, BW, 0x2f3236, (cx0 + cx1)/2, 0.012, zN + BW/2);
