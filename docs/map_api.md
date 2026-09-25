@@ -147,3 +147,13 @@ export default async function start(map, params) { …; return { tick(dt) {}, st
 - **동쪽 통학로** 곡선 지붕 쉼터(`shx = EP2.x[1]+1.6, z 38`) 벤치(0.42)가 돌 경계(`EP2.x[1]+0.5`, 0.35·NS) 바로 옆 → NS-RAISE가 돌을 벤치+1.6으로 올려 벤치 위에서 보이지 않는 벽 5간선. 쉼터 z ±1.6 안의 돌을 빼거나 쉼터를 돌 줄에서 띄우면 0.
 - 숲놀이터 데크 난간·통나무 매달리기 가로대(충돌 없음 — ghost 22) · 앞뜰 둔덕 위로 뻗은 전정 소나무 잎판(비탈이라 canopyBox가 줄임 — ghost ≈20) · 유치원 놀이터 놀이기구 지붕·기둥(ghost 15) · 남쪽 놀이터 기구(8).
 - 화장실 문 직진 끼임 2(16.5·22.25 — 그래프 경로는 있음).
+
+## 9. 첫 예제 게임·미니맵·놀이 고르기(GAME-FIND-1 · 09-26)
+
+- **놀이 고르기**(`v2/js/gamepick.js`): 수업 화면 오른쪽 아래 `🎮 놀이` 칩 → 패널(registry.js에서 `dev` 아닌 게임: 제목 + `desc` 한 줄) → 누르면 `game.load(id)`. 게임 중엔 칩이 `⏹ 그만하기`. 패널을 열면 포인터 잠금이 풀리고 ✕·Esc·바깥 누름으로 닫힌다. `?game=<id>` 주소 시작도 그대로.
+- **미니맵**(`v2/js/minimap.js`, `map.minimap`): `show({big, marks})` · `hide()` · `setMarks([{x,z,color,shape:'dot'|'ring'|'star',label,blink,floor,r}])` · `toggle(big?)` · `visible·big·ms`. 오른쪽 위 fps 칩 아래 170px(반경 40m·북쪽 위) / `M`키·지도 클릭 = 학교 전체. 정적 층(drawMap)은 층·크기마다 한 번만 굽고 화살표·표식만 덧그림(최대 30Hz · 바뀐 때만). 2층(y ≥ 3)이면 2층 그림. 게임 칩 줄은 미니맵을 비켜 선다.
+- **HUD 추가**: `hud.goal(글|null)`(가운데 위 목표 줄) · `hud.chip(키, 글, {onClick})`(누를 수 있는 칩) · `ask`의 제목 줄바꿈(`\n`) · `map.sfx('ding'|'tick'|'go'|'done'|'pick'|'buzz'|'warm')`(main.js 합성음 — 파일 없음) · `map.quit()`(게임이 스스로 끝냄) · 범위 파사드 `tracked`(정리 목록 수 — 스스로 뗀 항목은 빠짐).
+- **장소 찾기**(`v2/games/find_place.js`, `?game=find_place&seed=1`): 목표 5곳(구역 입구점 중 staff·kinder·창고·조리·복도·계단·8㎡ 미만·덧붙인 구역 제외, 이름마다 한 곳, 걷는 거리 띠로 가까운 곳 → 먼 곳, 앞 목표와 20m 이상, 동·층 섞기) → 3·2·1 → 목표 줄·시간 칩·미니맵 깜빡이는 점(빛기둥은 20m 안에서만) → 구역 들어감 = 도착(딩) → 끝 화면(걸린 시간·가장 빠른 기록 `map.store` · 다시 하기/그만하기). 30초 뒤 `H`(또는 칩) = 길 리본 5초.
+- **nav.js distField 버그 수정**: 묵은 힙 항목 검사가 거꾸로였고 64비트 거리를 Float32 D와 견줘 같은 칸이 끝없이 다시 들어가 힙이 터졌다(Array buffer allocation failed) → 묵은 항목 건너뜀 + `Math.fround`.
+- 수용 시험(09-26 · 1366×610): 5 목표 `nav.path` ok · 각 목표 2.4m 밖에서 실제로 걸어 들어가 도착 5/5 · 끝 화면 · [다시 하기]/⏹ 실제 클릭 뒤 정리 수 처음과 같음 · HUD 겹침 0 · 게이트·빠른 검진 그대로.
+- **새 게임 만들기**: ① `_template.js` 복사 → `v2/games/<id>.js` ② `registry.js`에 `{title, v, desc}` ③ 목표·소품은 `map.pois`·`nav.random`·`mk.*`로(사람 NPC·인물 대사 금지, 문항은 교사 승인 데이터만) ④ 미니맵 `map.minimap.show()` + `setMarks` ⑤ harness로 `?game=<id>` 수용 시험(걸어서 도착·stop 뒤 정리 수·HUD 겹침·드로우콜 +15 이하).
