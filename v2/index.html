@@ -9,6 +9,11 @@
   #scene{width:100%;height:100%;display:block;outline:none}
   .chip{position:fixed;background:rgba(29,53,87,.8);color:#fff;padding:6px 12px;border-radius:9px;font-size:13px;z-index:20}
   #loc{left:10px;top:10px}#fps{right:10px;top:10px}#help{left:10px;bottom:10px;font-size:12px}
+  /* PERF-LOAD(09-26) 로딩 막 — 월드를 짓는 동안(동기라 주 스레드가 멈춤) 보인다. 점은 transform·opacity만 움직여 합성기에서 돈다. 첫 프레임 뒤 main.js가 지운다 */
+  #boot{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:#cfe9f8;color:#1d3557;font-size:20px;font-weight:700}
+  #boot i{display:inline-block;width:7px;height:7px;margin-left:6px;border-radius:50%;background:#1d3557;will-change:transform,opacity;animation:bootDot 1.2s ease-in-out infinite both}
+  #boot i:nth-child(2){animation-delay:.2s}#boot i:nth-child(3){animation-delay:.4s}
+  @keyframes bootDot{0%,80%,100%{transform:scale(.4);opacity:.3}40%{transform:scale(1);opacity:1}}
 </style>
 <script type="importmap">
 { "imports": { "three": "../lib/three.module.min.js" } }
@@ -16,6 +21,7 @@
 </head>
 <body>
 <canvas id="scene" tabindex="0"></canvas>
+<div id="boot">학교를 짓는 중<i></i><i></i><i></i></div>
 <div id="loc" class="chip">📍 v2 셸</div>
 <div id="fps" class="chip"></div>
 <div id="help" class="chip">이동 WASD · 시점 마우스(클릭) · 점프 Space · 달리기 Shift · 상호작용 E · 1인칭 V</div>

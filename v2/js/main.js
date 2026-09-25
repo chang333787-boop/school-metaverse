@@ -32,7 +32,12 @@ Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 95, bottom: -95,
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
 scene.add(sun);
 
+// PERF-LOAD(09-26): 로딩 막(index.html #boot)이 한 번 칠해진 뒤 월드를 짓는다 — buildWorld는 동기라 그동안 화면이 멈춘다(최상위 await — 모듈).
+//  배경 탭(rAF 멈춤)이면 0.1초 뒤 그냥 짓는다. 잰 값은 SD2.timing(buildMs·firstFrameMs·frameCpuP50/P95·occP95 — 아래 RB)
+await new Promise(r => { requestAnimationFrame(() => setTimeout(r)); setTimeout(r, 100); });
+const TIMING = { buildMs: performance.now(), firstFrameMs: null };
 const world = buildWorld(scene);
+TIMING.buildMs = performance.now() - TIMING.buildMs;
 let MAP = null;   // MAP-API-1 지도 API — loop() 위에서 만든다. setTime('day')가 먼저 돌므로 참조는 전부 MAP?.(TDZ 함정)
 
 // ---------- 플레이어 (AABB 전용 — 레이캐스트 0) ----------
@@ -649,9 +654,15 @@ const DETAIL_FAR = 55, DETAIL_IN = 20, DETAIL_IN_IN = 30;   // INTERIOR-CULL: �
 // 카메라가 0.15m 넘게 움직일 때만 다시 잰다(가만히 서서 돌리지 않으면 0 ms). 문을 돌아설 때 늦게 뜨지 않게 0.2초 간격과 따로 매 프레임 본다.
 const OCC = { N: 720, R: 46, K: 6, hd: null, hy0: null, hy1: null, hn: null, occ: null, planes: null, stairs: null, x: 1e9, y: 1e9, z: 1e9, ms: 0, off: false };
 world.occ = OCC;   // 검사용(SD2.world.occ.off = true → 가림 컬링 끔: 켠 화면과 픽셀 비교해 '보이는 것을 숨긴 곳 0' 확인)
+// PERF-LOAD(09-26): 최근 프레임 CPU(렌더 제외 — 물리·문·지도·하늘·디테일·위치 칩)와 가림 컬링 재계산 ms 고리 버퍼(매 프레임 할당 0) → SD2.timing이 읽을 때 백분위
+const RB = { cpu: new Float32Array(240), occ: new Float32Array(120), ci: 0, oi: 0 };
+const rbPct = (a, n, p) => { const m = Math.min(n, a.length); if (!m) return null; const s = Array.from(a.subarray(0, m)).sort((x, y) => x - y); return +s[Math.min(m - 1, Math.floor(p * m))].toFixed(3); };
 function occPrep() {
   const W = world.allBoxes.filter(b => b.wall && b.y1 - b.y0 >= 2.4), BR = world.details.brect, FH0 = world.details.FH;
   OCC.occ = W; OCC.hd = new Float32Array(OCC.N * OCC.K); OCC.hy0 = new Float32Array(OCC.N * OCC.K); OCC.hy1 = new Float32Array(OCC.N * OCC.K); OCC.hn = new Uint8Array(OCC.N);
+  OCC.rs = new Uint32Array(OCC.N); OCC.nd = new Uint8Array(OCC.N);   // PERF-LOAD: 광선마다 잰 재계산 번호(gen) · 이번에 잴 광선
+  OCC.cs = new Float64Array(OCC.N); OCC.sn = new Float64Array(OCC.N);   // PERF-LOAD: 광선 방향 cos·sin 표(같은 식 kk·DA로 한 번만 — 값이 같다)
+  for (let k = 0; k < OCC.N; k++) { const th = k * (Math.PI * 2 / OCC.N); OCC.cs[k] = Math.cos(th); OCC.sn[k] = Math.sin(th); }
   OCC.stairs = world.zones.filter(z => z.kind === 'stair' || (z.kind == null && /계단/.test(z.label) && !/창고/.test(z.label)));
   // 동마다 가로 가림판(③): 지붕·슬래브. 동 바닥 격자(1.5m) 모든 칸에서 충돌 상자(부풀림 없음)가 빈틈없이 덮는 높이 구간(0.05m 단위)만 가림판으로 쓴다 —
   //  한 칸이라도 뚫려 있으면 그 높이는 판이 아니다(보수적). 서관은 계단 칸을 빼고 재고 그 칸을 모든 판의 구멍으로 둔다.
@@ -682,14 +693,14 @@ function angSpan(cx, cz, x0, x1, z0, z1) {
   for (let c = 0; c < 4; c++) { let d = Math.atan2((c & 2 ? z1 : z0) - cz, (c & 1 ? x1 : x0) - cx) - a0; if (d > Math.PI) d -= Math.PI * 2; else if (d < -Math.PI) d += Math.PI * 2; if (d < lo) lo = d; if (d > hi) hi = d; }
   let k0 = Math.ceil((a0 + lo) / DA), k1 = Math.floor((a0 + hi) / DA); if (k1 < k0) k0 = k1 = Math.round(a0 / DA); _as[0] = k0; _as[1] = k1;
 }
-function occRays(cp) {   // 광선마다 가까운 높은 벽 K개(거리·높이 범위)
-  const { N, R, K, hd, hy0, hy1, hn } = OCC, DA = Math.PI * 2 / N; hn.fill(0);
+function occRays(cp, nd) {   // 광선마다 가까운 높은 벽 K개(거리·높이 범위). nd = 이 광선만 잰다(PERF-LOAD — 목록은 부른 쪽이 비움 · 벽을 번호 순으로 넣으니 전부 잰 것과 같다)
+  const { N, R, K, hd, hy0, hy1, hn, cs, sn } = OCC; if (!nd) hn.fill(0);
   for (const w of OCC.occ) {
     if (w.x1 < cp.x - R || w.x0 > cp.x + R || w.z1 < cp.z - R || w.z0 > cp.z + R) continue;
     if (cp.x > w.x0 && cp.x < w.x1 && cp.z > w.z0 && cp.z < w.z1) continue;   // 카메라가 벽 속(없어야 하지만)
     angSpan(cp.x, cp.z, w.x0, w.x1, w.z0, w.z1);
-    for (let k = _as[0], k1 = _as[1]; k <= k1; k++) { const kk = ((k % N) + N) % N, th = kk * DA;
-      if (!slab(cp.x, cp.z, Math.cos(th), Math.sin(th), w.x0, w.x1, w.z0, w.z1) || _sl[0] > R) continue;
+    for (let k = _as[0], k1 = _as[1]; k <= k1; k++) { const kk = ((k % N) + N) % N; if (nd && !nd[kk]) continue;
+      if (!slab(cp.x, cp.z, cs[kk], sn[kk], w.x0, w.x1, w.z0, w.z1) || _sl[0] > R) continue;
       const t = _sl[0], base = kk * K; let n = hn[kk], j = n;
       if (n === K) { if (t >= hd[base + K - 1]) continue; j = K - 1; } else hn[kk] = n + 1;
       while (j > 0 && hd[base + j - 1] > t) { hd[base + j] = hd[base + j - 1]; hy0[base + j] = hy0[base + j - 1]; hy1[base + j] = hy1[base + j - 1]; j--; }
@@ -698,10 +709,12 @@ function occRays(cp) {   // 광선마다 가까운 높은 벽 K개(거리·높�
 }
 // ③·② 한 선(카메라 → 광선 위 거리 t·높이 ty)이 벽(광선의 벽 목록) 또는 가림판(그 동 안에서 선 높이가 띠를 지남 — 서관 슬래브의 계단 구멍 제외)에 막히나
 const _fa = new Float32Array(9), _fb = new Float32Array(9);
+let _rrP = false;   // PERF-LOAD: 이 광선의 동 사각형 교차(_fa·_fb)를 아직 안 잼 — 벽이 선을 못 막을 때만 잰다(대부분 첫 벽이 막아 9번 slab을 건너뜀 · 결과 같음)
 function rayRects(cp, dx, dz) { const BR = world.details.brect; for (let i = 0; i < BR.length; i++) { const r = BR[i]; if (OCC.planes[i].length && slab(cp.x, cp.z, dx, dz, r[0], r[1], r[2], r[3])) { _fa[i] = _sl[0]; _fb[i] = _sl[1]; } else _fa[i] = -1; } }
 function lineBlocked(cp, base, n, dx, dz, t, ty) {
   const { hd, hy0, hy1 } = OCC, hc = cp.y, g = (ty - hc) / Math.max(t, 1e-3);
   for (let j = 0; j < n; j++) { const d = hd[base + j]; if (d >= t) break; const h = hc + g * d; if (h >= hy0[base + j] - 0.02 && h <= hy1[base + j] + 0.02) return true; }
+  if (_rrP) { _rrP = false; rayRects(cp, dx, dz); }
   for (let i = 0; i < 9; i++) { if (_fa[i] < 0) continue; const a = _fa[i], b = Math.min(_fb[i], t); if (b <= a) continue;
     for (const p of OCC.planes[i]) { const [p0, p1] = p.b; let sa = a, sb = b;   // 선 높이가 [p0, p1]인 구간
       if (Math.abs(g) < 1e-6) { if (hc < p0 || hc > p1) continue; } else { let u = (p0 - hc) / g, v = (p1 - hc) / g; if (u > v) { const w = u; u = v; v = w; } sa = Math.max(a, u); sb = Math.min(b, v); if (sb < sa) continue; }
@@ -709,7 +722,7 @@ function lineBlocked(cp, base, n, dx, dz, t, ty) {
       return true; } }
   return false;
 }
-function occVisible(d, cp) {
+function occVisible(d, cp, pre) {   // pre = 광선 없이 정해지면 그 값, 광선이 필요하면 -1(PERF-LOAD — 부른 쪽이 필요한 광선만 먼저 잰다)
   const bx = d.box, BR = world.details.brect[d.bi];
   const x0 = bx.min.x, x1 = bx.max.x, z0 = bx.min.z, z1 = bx.max.z, y0 = bx.min.y, y1 = bx.max.y;
   const inB = cp.x > BR[0] && cp.x < BR[1] && cp.z > BR[2] && cp.z < BR[3];
@@ -717,10 +730,11 @@ function occVisible(d, cp) {
   if (inB && slabOK && d.bi === world.details.wing) { const camFl = cp.y > FH0 + 0.15 ? 2 : 1;   // ① 슬래브
     if (camFl !== d.fl && !OCC.stairs.some(z => cp.x > z.x0 - 2 && cp.x < z.x1 + 2 && cp.z > z.z0 - 2 && cp.z < z.z1 + 2)) return false; }
   if (cp.x >= x0 && cp.x <= x1 && cp.z >= z0 && cp.z <= z1) return true;
-  const { N, K, hd, hy0, hy1, hn } = OCC, DA = Math.PI * 2 / N; angSpan(cp.x, cp.z, x0, x1, z0, z1);
-  for (let k = _as[0], k1 = _as[1]; k <= k1; k++) { const kk = ((k % N) + N) % N, th = kk * DA, dx = Math.cos(th), dz = Math.sin(th);
+  if (pre) return -1;
+  const { N, K, hn, cs, sn } = OCC; angSpan(cp.x, cp.z, x0, x1, z0, z1);
+  for (let k = _as[0], k1 = _as[1]; k <= k1; k++) { const kk = ((k % N) + N) % N, dx = cs[kk], dz = sn[kk];
     if (!slab(cp.x, cp.z, dx, dz, x0, x1, z0, z1)) continue; const tE = _sl[0], tX = _sl[1];
-    rayRects(cp, dx, dz);
+    _rrP = true;
     let blocked = true;   // 청크의 광선 위 조각을 3×3 선(거리 tE·가운데·tX × 높이 y0·가운데·y1)으로 — 하나라도 안 막히면 보임
     for (let q = 0; q < 9 && blocked; q++) { const t = q % 3 === 0 ? tE : q % 3 === 1 ? (tE + tX) / 2 : tX, ty = q < 3 ? y0 : q < 6 ? (y0 + y1) / 2 : y1;
       if (!lineBlocked(cp, kk * K, hn[kk], dx, dz, t, ty)) blocked = false; }
@@ -729,26 +743,36 @@ function occVisible(d, cp) {
   return false;
 }
 let detailT = 1;
-const _fr = new THREE.Frustum(), _fm = new THREE.Matrix4();
+const _fr = new THREE.Frustum(), _fm = new THREE.Matrix4(), _pd = [];
 function detailTick(dt) {
   detailT += dt;
   const cp = camera.position, moved = Math.abs(cp.x - OCC.x) + Math.abs(cp.y - OCC.y) + Math.abs(cp.z - OCC.z) > 0.15;
+  const t0 = performance.now(); let occW = false;
   if (detailT >= 0.2 || moved) { detailT = 0;
-    const t0 = performance.now(), camIn = ceilAt(cp.x, cp.z, cp.y - 0.3, cp.y + 4.5) !== null;
+    const camIn = ceilAt(cp.x, cp.z, cp.y - 0.3, cp.y + 4.5) !== null;
     const R = (DETAIL_FAR + 11.3) ** 2, RI = ((camIn ? DETAIL_IN_IN : DETAIL_IN) + 11.3) ** 2;
     if (!OCC.occ) occPrep();
-    let rays = false;
+    // PERF-LOAD(09-26): 가림 판정(광선)은 절두체에 든 청크만, 처음 필요한 프레임에 — 판정 자리는 이 재계산 자리(OCC.x·y·z)라 예전(전부 여기서)과 결과가 같다.
+    //  돌아서기만 하면(재계산 없이) 새로 들어온 청크를 그 프레임에 같은 자리로 잰다. 광선도 그 청크들이 쓰는 것만(occRays nd). 동일성 = 경로·제자리 회전 6,269프레임 보이는 청크 집합 같음
+    OCC.gen = (OCC.gen || 0) + 1; OCC.x = cp.x; OCC.y = cp.y; OCC.z = cp.z; occW = true;
     for (const d of world.details) {
       const dx = cp.x - d.cx, dz = cp.z - d.cz;
-      let v = dx * dx + dz * dz < (d.inside ? RI : R);
-      if (v && d.inside && !OCC.off && d.box && d.bi != null) { if (!rays) { occRays(cp); rays = true; } v = occVisible(d, cp); }   // 상자·건물 칸이 없는 항목(main.js가 넣는 필름 문 등)은 거리만
-      d.on = v;
+      d.on = dx * dx + dz * dz < (d.inside ? RI : R);
+      d.pend = d.on && d.inside && !OCC.off && d.box && d.bi != null ? OCC.gen : 0;   // 상자·건물 칸이 없는 항목(main.js가 넣는 필름 문 등)은 거리만
     }
-    OCC.x = cp.x; OCC.y = cp.y; OCC.z = cp.z; OCC.ms = performance.now() - t0;
   }
   // 절두체는 매 프레임 상자(AABB)로 — three의 경계 구는 길쭉한 청크(교실 줄)에선 카메라 뒤 옆 교실까지 품는다. 정적 청크(world.js st)도 같이(상자 밖이면 그릴 것이 0이라 모습 그대로)
   camera.updateMatrixWorld(); _fr.setFromProjectionMatrix(_fm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
-  for (const d of world.details) d.mesh.visible = d.on && (!d.box || _fr.intersectsBox(d.box));
+  _pd.length = 0;
+  for (const d of world.details) { const v = d.on && (!d.box || _fr.intersectsBox(d.box)); if (v && d.pend === OCC.gen) _pd.push(d); else d.mesh.visible = v; }
+  if (_pd.length) { occW = true;   // 이 청크들이 쓰는 광선 중 이 자리로 아직 안 잰 것만 잰다(광선 목록은 자리마다 한 번)
+    const { N, rs, nd, hn } = OCC; let any = false;
+    for (const d of _pd) { const r = occVisible(d, OCC, true); if (r !== -1) { d.mesh.visible = d.on = r; d.pend = 0; continue; }   // 슬래브 너머·카메라가 청크 안 = 광선 없이
+      const b = d.box; angSpan(OCC.x, OCC.z, b.min.x, b.max.x, b.min.z, b.max.z);
+      for (let k = _as[0]; k <= _as[1]; k++) { const kk = ((k % N) + N) % N; if (rs[kk] !== OCC.gen) { rs[kk] = OCC.gen; nd[kk] = 1; hn[kk] = 0; any = true; } } }
+    if (any) { occRays(OCC, nd); nd.fill(0); }
+    for (const d of _pd) if (d.pend) { d.mesh.visible = d.on = occVisible(d, OCC); d.pend = 0; } }
+  if (occW) { OCC.ms = performance.now() - t0; RB.occ[RB.oi++ % RB.occ.length] = OCC.ms; }
   if (!OCC.st) { OCC.st = []; scene.traverse(o => { if (o.userData.st) OCC.st.push(o); }); }
   for (const m of OCC.st) m.visible = _fr.intersectsBox(m.geometry.boundingBox);
 }
@@ -774,10 +798,13 @@ function loop() {
   simMs = Math.max(simMs, performance.now() - t0);
   skyTick(dt);
   detailTick(dt);
+  const tR0 = performance.now();
   renderer.render(scene, camera);
+  const tR1 = performance.now();
   acc += dt; n++;
   locT += dt;
   if (locT > 0.4) { locT = 0; updateLoc(); }
+  RB.cpu[RB.ci++ % RB.cpu.length] = (tR0 - t0) + (performance.now() - tR1);   // PERF-LOAD: 프레임 CPU(렌더 제외)
   if (acc > 1) {
     const fps = Math.round(n / acc);
     const dc = renderer.info.render.calls;
@@ -788,6 +815,8 @@ function loop() {
   }
 }
 loop();
+TIMING.firstFrameMs = performance.now();   // 첫 프레임(페이지 시작부터 ms) — 그 뒤 로딩 막을 걷는다
+document.getElementById('boot')?.remove();
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -880,6 +909,10 @@ window.SD2 = {
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)
   map: MAP, phys: { groundAt, blockedAt, ceilAt, camHit }, ACT, CTRL, camPose: (...a) => ({ ...camPose(...a) }),
   health: opt => import('./health.js?v=2').then(m => m.runHealth(window.SD2, opt || {})),
+  // PERF-LOAD(09-26): 로드·프레임 계측 — buildMs·firstFrameMs(ms) · 최근 240프레임 CPU p50/p95(렌더 제외) · 가림 컬링 재계산 p95. reset() 뒤 걸어 보고 읽는다
+  timing: Object.defineProperties(TIMING, {
+    frameCpuP50: { get: () => rbPct(RB.cpu, RB.ci, 0.5), enumerable: true }, frameCpuP95: { get: () => rbPct(RB.cpu, RB.ci, 0.95), enumerable: true },
+    occP95: { get: () => rbPct(RB.occ, RB.oi, 0.95), enumerable: true }, reset: { value: () => { RB.ci = RB.oi = 0; } } }),
 };
 // 게임 로더(MAP-API-1): ?game=이름 → v2/games/registry.js 허용 목록 → export default start(map) (사진 대조 모드에선 안 켠다)
 { const GAME = new URLSearchParams(location.search).get('game'); if (GAME && !SHOT) MAP.game.load(GAME, Object.fromEntries(new URLSearchParams(location.search))); }

@@ -4871,15 +4871,26 @@ export function buildWorld(scene) {
   buildPlinths();   // 감사 전에 — 띠도 감사 대상
   // ================= 감사 + 병합 =================
   {
-    const EPS = 0.004, faults = [];
-    const ov = (a0,a1,b0,b1) => Math.min(a1,b1) - Math.max(a0,b0) > 0.02;
-    for (let i = 0; i < allBoxes.length; i++) for (let j = i+1; j < allBoxes.length; j++) {
-      const A = allBoxes[i], Bb = allBoxes[j];
-      const sm = (p,q) => Math.abs(p-q) < EPS;
-      if ((sm(A.z0,Bb.z0)||sm(A.z1,Bb.z1)) && ov(A.x0,A.x1,Bb.x0,Bb.x1) && ov(A.y0,A.y1,Bb.y0,Bb.y1)) faults.push([i,j,'z']);
-      else if ((sm(A.x0,Bb.x0)||sm(A.x1,Bb.x1)) && ov(A.z0,A.z1,Bb.z0,Bb.z1) && ov(A.y0,A.y1,Bb.y0,Bb.y1)) faults.push([i,j,'x']);
-      else if ((sm(A.y0,Bb.y0)||sm(A.y1,Bb.y1)) && ov(A.x0,A.x1,Bb.x0,Bb.x1) && ov(A.z0,A.z1,Bb.z0,Bb.z1)) faults.push([i,j,'y']);
-    }
+    // PERF-LOAD(09-26): 예전 이중 루프(상자 7천 → 2,450만 쌍)가 buildWorld 본문(너무 커서 최적화되지 않는 함수)에서 돌아 로드 1.7초(크롬북 ≈6초)였다.
+    //  판정식(sm·ov, z → x → y 순)과 결과 순서(i, j 오름차순)는 그대로 두고 후보 쌍만 고른다: 면 좌표 1cm 칸(EPS 4mm < 1cm → 이웃 칸까지)
+    //  + 그 축과 함께 겹쳐야 하는 가로 구간(겹침 > 0.02) 쓸기. 작은 함수(IIFE)라 최적화된다(≈15ms). 인공 결함 6판(쌍 430~470·NaN)으로 예전 식과 같음 확인.
+    const EPS = 0.004, faults = (() => {
+      const N = allBoxes.length, hit = new Map();
+      const ov = (a0,a1,b0,b1) => Math.min(a1,b1) - Math.max(a0,b0) > 0.02, sm = (p,q) => Math.abs(p-q) < EPS;
+      const judge = (A, Bb) => ((sm(A.z0,Bb.z0)||sm(A.z1,Bb.z1)) && ov(A.x0,A.x1,Bb.x0,Bb.x1) && ov(A.y0,A.y1,Bb.y0,Bb.y1)) ? 'z'
+        : ((sm(A.x0,Bb.x0)||sm(A.x1,Bb.x1)) && ov(A.z0,A.z1,Bb.z0,Bb.z1) && ov(A.y0,A.y1,Bb.y0,Bb.y1)) ? 'x'
+        : ((sm(A.y0,Bb.y0)||sm(A.y1,Bb.y1)) && ov(A.x0,A.x1,Bb.x0,Bb.x1) && ov(A.z0,A.z1,Bb.z0,Bb.z1)) ? 'y' : null;
+      for (const [c, u0, u1] of [['z0','x0','x1'], ['z1','x0','x1'], ['x0','z0','z1'], ['x1','z0','z1'], ['y0','x0','x1'], ['y1','x0','x1']]) {
+        const bk = new Map();   // 면 좌표 1cm 칸 → 상자 번호(좌표가 NaN·무한이면 sm이 늘 거짓 — 뺀다. 가로 구간이 NaN이면 ov가 늘 거짓)
+        for (let i = 0; i < N; i++) { const b = allBoxes[i], k = Math.floor(b[c] / 0.01); if (!isFinite(k) || b[u0] !== b[u0] || b[u1] !== b[u1]) continue; let a = bk.get(k); if (!a) bk.set(k, a = []); a.push(i); }
+        for (const [k, a] of bk) { const n9 = bk.get(k + 1), L = n9 ? a.concat(n9) : a; if (L.length < 2) continue;
+          L.sort((p, q) => allBoxes[p][u0] - allBoxes[q][u0]);
+          for (let s = 0; s < L.length; s++) { const e = allBoxes[L[s]][u1];
+            for (let t = s + 1; t < L.length && allBoxes[L[t]][u0] <= e; t++) { const i = Math.min(L[s], L[t]), j = Math.max(L[s], L[t]), key = i * N + j;
+              if (!hit.has(key)) { const ax = judge(allBoxes[i], allBoxes[j]); if (ax) hit.set(key, [i, j, ax]); } } } }
+      }
+      return [...hit.keys()].sort((p, q) => p - q).map(q => hit.get(q));
+    })();
     if (faults.length) {
       const fmt = b9 => '[' + [b9.x0,b9.x1,b9.y0,b9.y1,b9.z0,b9.z1].map(v=>+v.toFixed(2)).join(',') + ']';
       faults.slice(0, 30).forEach(([i,j,ax]) => console.error('헌법③ ' + ax + ' A=' + fmt(allBoxes[i]) + ' B=' + fmt(allBoxes[j])));
@@ -4905,7 +4916,7 @@ export function buildWorld(scene) {
   //   ② 새 y1 ≤ 발자국 위 가장 낮은 충돌 상자 밑면(천장·슬래브·지붕) − 0.01. (y0 + 2.6 상한은 쓰지 않는다 — 운동장 NS가
   //      1m 안 1.45m 턱보다 낮아져 무력화 4곳이 되살아났다. 위가 트인 곳은 m < 원래 y1이라 늘어나도 +1.6 안쪽.)
   //   ③ 딛을 곳 d = 층 바닥에서 점프로 닿는 윗면만(d.y1 − floorOf(d) ≤ 1.52) — 칠판 윗면(2.5) 같은 것은 세지 않는다.
-  { const R9 = 1.0, JUMP = 1.52, HANG = 0.6;
+  (() => { const R9 = 1.0, JUMP = 1.52, HANG = 0.6;   // PERF-LOAD: 작은 함수(IIFE)로 — buildWorld 본문은 너무 커서 최적화되지 않는다(50 → 수 ms)
     const fp = (a, b) => Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > 0.02 && Math.min(a.z1, b.z1) - Math.max(a.z0, b.z0) > 0.02;   // 발자국 겹침
     const solid = colliders.filter(d => !d.nc), stand = solid.filter(d => d.y1 - floorOf(d) <= JUMP);
     for (const c of colliders) { if (!c.ns && !(c.nc && c.y1 - c.y0 <= 2.6)) continue;
@@ -4919,7 +4930,7 @@ export function buildWorld(scene) {
         if (d.y1 > m) m = d.y1; }
       if (m === -1e9) continue;
       const y9 = Math.min(m + 1.6, ceil9 - 0.01);                                        // ② 천장·슬래브 밑
-      if (y9 > c.y1) c.y1 = y9; } }
+      if (y9 > c.y1) c.y1 = y9; } })();
   const grid = new Map();
   colliders.forEach((b, i) => {
     for (let gx2 = Math.floor(b.x0/8); gx2 <= Math.floor(b.x1/8); gx2++)
