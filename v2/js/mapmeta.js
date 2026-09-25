@@ -3,7 +3,7 @@
 //   kind: classroom·special·office·corridor·hall·stair·toilet·storage·service·gym·stage·yard·path·field·play·garden
 //   bldg: main(본관)·west(서관)·cafe(급식동)·link(가운데)·east(동관)·gym(체육관)·null(바깥)
 //   tags: staff = 교직원 공간(보물·술래 기본 제외) · entry = 드나드는 곳 · covered = 지붕 밑 바깥 · kinder = 유치원
-//   opts: { indoor, yr:[y0,y1] (높이 띠 — 기본 y±1.2), multi (월드에 같은 라벨 구역이 여럿 — 둘째부터 id-2·id-3) }
+//   opts: { indoor, yr:[y0,y1] (높이 띠 — 기본 y±1.2), multi (월드에 같은 라벨 구역이 여럿 — 가장 넓은 구역이 id, 나머지는 월드 순서대로 id-2·id-3) }
 export function makeMeta(SCHOOL) {
   const KINDS = ['classroom', 'special', 'office', 'corridor', 'hall', 'stair', 'toilet', 'storage', 'service', 'gym', 'stage', 'yard', 'path', 'field', 'play', 'garden'];
   const M = (id, kind, bldg, tags = [], opts = {}) => ({ id, kind, bldg, tags, opts });
@@ -90,7 +90,7 @@ export function makeMeta(SCHOOL) {
     '노란 창고': M('shed', 'storage', null, [], { indoor: false }),
     '텃밭 쉼터': M('garden-deck', 'yard', null, ['covered']),
     '동관 뒤뜰': M('east-yard', 'yard', null),
-    '운동장': M('field', 'field', null, [], { multi: true }),                    // 본 운동장 + 서쪽 띠(유치원 놀이터 남·북·계단 앞 — FWG)
+    '운동장': M('field', 'field', null, [], { multi: true }),                    // 본 운동장(field — 가장 넓음) + 서쪽 띠 조각 3개(field-2~4 · 유치원 놀이터 북·남·동 — FWG)
     '동쪽 통학로': M('east-path', 'path', null),
   };
 

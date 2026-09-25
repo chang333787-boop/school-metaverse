@@ -15,6 +15,11 @@ export function createMapApi(host, NAV, META) {
       .map(([id, r]) => ({ id, x0: r.x[0], x1: r.x[1], z0: r.z[0], z1: r.z[1] })); })();
   const bldgAt = (x, z) => { for (const b of BRECT) if (x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1) return b.id; return null; };
   const byId = new Map();
+  // 같은 라벨 월드 구역이 여럿(계약표 multi): 가장 넓은 구역이 계약 id를 갖고 나머지는 월드 순서대로 id-2·id-3.
+  //  push 순서로 매기면 먼저 들어온 작은 조각이 id를 가로챈다(09-26 리뷰: 운동장 서쪽 띠 42㎡ 조각이 'field'가 되어 zone:운동장이 유치원 놀이터 옆으로 갔다)
+  const primary = new Map();
+  for (const z of Z) { const m = META.ZONE_META[z.label]; if (!m || !m.opts.multi) continue;
+    const a = (z.x1 - z.x0) * (z.z1 - z.z0), p = primary.get(z.label); if (!p || a > p.a) primary.set(z.label, { z, a }); }
   function enrich(z, m) {
     if (!m) {   // 병행 작업본이 새 구역을 더했는데 표에 없을 때 — 월드는 뜨게 두고 check()가 알린다
       warn.zonesNoMeta.push(z.label);
@@ -24,7 +29,7 @@ export function createMapApi(host, NAV, META) {
     const y = z.y ?? 0, yr = m.opts.yr || [y - 1.2, y + 1.2];
     Object.assign(z, { id: m.id, kind: m.kind, bldg: m.bldg, tags: m.tags.slice(), indoor: m.opts.indoor ?? (m.bldg !== null),
       floor: y >= 3 ? 2 : 1, y0: yr[0], y1: yr[1], area: (z.x1 - z.x0) * (z.z1 - z.z0), cx: (z.x0 + z.x1) / 2, cz: (z.z0 + z.z1) / 2 });
-    if (byId.has(z.id) && m.opts.multi) { let k = 2; while (byId.has(m.id + '-' + k)) k++; z.id = m.id + '-' + k; }   // 같은 라벨 구역이 여럿(계약표 multi) — 둘째부터 id-2·id-3
+    if (m.opts.multi && primary.has(z.label) && primary.get(z.label).z !== z) { let k = 2; while (byId.has(m.id + '-' + k)) k++; z.id = m.id + '-' + k; }   // multi — 가장 넓은 구역 말고는 id-2·id-3
     if (byId.has(z.id)) warn.dupIds.push(z.id); else byId.set(z.id, z);
   }
   Z.forEach(z => enrich(z, META.ZONE_META[z.label]));
@@ -34,7 +39,8 @@ export function createMapApi(host, NAV, META) {
   const inZone = (z, x, y, zz) => x >= z.x0 && x < z.x1 && zz >= z.z0 && zz < z.z1 && y >= z.y0 && y < z.y1;
   function zoneIndex(x, y, zz) { let best = -1, ba = 1e18; for (let i = 0; i < Z.length; i++) { const z = Z[i]; if (z.area < ba && inZone(z, x, y, zz)) { best = i; ba = z.area; } } return best; }
   const zoneAt = (x, y, zz) => { const i = zoneIndex(x, y, zz); return i < 0 ? null : Z[i]; };
-  const zone = key => byId.get(key) || Z.find(z => z.label === key) || null;
+  // 구역 찾기: id → 계약표 라벨(그 라벨의 계약 id 구역 — multi면 가장 넓은 것) → 덧붙인 구역 라벨(첫 것)
+  const zone = key => byId.get(key) || (Object.prototype.hasOwnProperty.call(META.ZONE_META, key) && byId.get(META.ZONE_META[key].id)) || Z.find(z => z.label === key) || null;
   const matchZone = (z, f = {}) => !!z && (!f.kind || z.kind === f.kind) && (!f.kinds || f.kinds.includes(z.kind)) && (!f.zones || f.zones.includes(z.id) || f.zones.includes(z.label))
     && (!f.tags || f.tags.every(t => z.tags.includes(t))) && (!f.notTags || !f.notTags.some(t => z.tags.includes(t)))
     && (f.indoor === undefined || z.indoor === f.indoor) && (!f.floor || z.floor === f.floor) && (f.bldg === undefined || z.bldg === f.bldg);
@@ -413,15 +419,18 @@ export function createMapApi(host, NAV, META) {
     Z.forEach((z, i) => { if (z.extra && !zcnt[i]) out.extraBad.push(z.id); if (!zcnt[i]) out.poisBad.push('zone:' + z.id + '(칸 0)'); });
     for (const p of pois({ src: 'spawn' })) { const i = N.snap(p.x, p.y, p.z, 0.5); if (i < 0 || !N.inSchool[i] || q.blockedAt(p.x, p.z, p.y)) out.spawnsBad.push(p.id); }
     for (const p of pois({ src: 'landmark' })) if (!p.stand) out.poisBad.push(p.id + '(설 칸 없음)');
+    // 라벨로 부르면 계약 id 구역 · 같은 라벨 월드 구역 중 가장 넓은 것(게임이 '운동장'을 부르면 본 운동장 — 09-26 리뷰)
+    out.labelBad = []; for (const [lab, m] of Object.entries(META.ZONE_META)) { const W = Z.filter(o => o.label === lab && !o.extra); if (!W.length) continue;   // 월드에 없는 표 줄은 metaNoZone이 알린다
+      const z = zone(lab); if (!z || z.id !== m.id || W.some(o => o.area > z.area)) out.labelBad.push(lab + '→' + (z ? z.id : null)); }
     for (const h of HOT) { if (h.off || h.kind === 'game') continue; const i = N.snap(h.x, h.y, h.z, h.r + S / 2, -1.6, 1.6); if (i < 0) out.hotUnreachable.push([h.id, h.label, +h.x.toFixed(2), +h.z.toFixed(2)]); }
     // 운동장 놀이판: 트랙 타원(폭 ±half)·출발선이 전부 걷는 칸인가(골대·놀이기구가 들어오면 알린다)
     out.playBad = []; { const T9 = META.PLAY.track, y9 = META.PLAY.y, bad9 = (x, z) => { const i = N.snap(x, y9, z, S * 0.8, -0.3, 0.3); if (i < 0) out.playBad.push([+x.toFixed(1), +z.toFixed(1)]); };
       const n9 = Math.ceil(2 * Math.PI * Math.max(T9.a, T9.b) / 1.0); for (let k = 0; k < n9; k++) { const t9 = k / n9 * Math.PI * 2; for (const o9 of [-T9.half, 0, T9.half]) bad9(T9.c[0] + Math.cos(t9) * (T9.a + o9), T9.c[1] + Math.sin(t9) * (T9.b + o9)); }
       for (let x9 = META.PLAY.field.x[0] + 4; x9 < META.PLAY.field.x[1] - 4; x9 += 1) bad9(x9, META.PLAY.redlight.startZ); }
     out.outsidePct = +(100 * outN / N.count).toFixed(1); out.noZoneInSchoolPct = +(100 * noz / Math.max(1, ins)).toFixed(1); out.cells = N.count;
-    out.ok = !out.dupIds.length && !out.extraBad.length && !out.spawnsBad.length && !out.poisBad.length && !out.hotUnreachable.length && !out.playBad.length && !out.traps && out.noZoneInSchoolPct <= 5;
+    out.ok = !out.dupIds.length && !out.labelBad.length && !out.extraBad.length && !out.spawnsBad.length && !out.poisBad.length && !out.hotUnreachable.length && !out.playBad.length && !out.traps && out.noZoneInSchoolPct <= 5;
     if (o.log !== false) {
-      const bad = ['dupIds', 'extraBad', 'spawnsBad', 'poisBad', 'hotUnreachable', 'playBad'].filter(k => out[k].length).map(k => k + ' ' + JSON.stringify(out[k].slice(0, 4)));
+      const bad = ['dupIds', 'labelBad', 'extraBad', 'spawnsBad', 'poisBad', 'hotUnreachable', 'playBad'].filter(k => out[k].length).map(k => k + ' ' + JSON.stringify(out[k].slice(0, 4)));
       if (out.traps) bad.push('갇힘 칸 ' + out.traps); if (out.noZoneInSchoolPct > 5) bad.push('구역 없는 칸 ' + out.noZoneInSchoolPct + '%');
       if (bad.length) console.error('🚫 지도 계약 ' + bad.length + '건: ' + bad.join(' · '));
       else console.log('✅ 지도 계약 0 (구역 ' + Z.length + ' · 지점 ' + POI.size + ' · 구역 없는 칸 ' + out.noZoneInSchoolPct + '% · 학교 밖 칸 ' + out.outsidePct + '%)');

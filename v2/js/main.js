@@ -643,15 +643,19 @@ const DETAIL_FAR = 55, DETAIL_IN = 20, DETAIL_IN_IN = 30;   // INTERIOR-CULL: �
 // ---------- 실내 가림 컬링(OCC-CULL · 09-24 integ) — 보이는 모습은 그대로, 벽·슬래브·지붕 뒤라 안 보이는 실내 청크만 뺀다 ----------
 // 합친 뒤 급식 창고 앞 벽을 보는 화면이 17.4만 삼각형(벽 너머 본관·서관 교실 책상·사람까지 그림). 실내 청크(건물 × 층 × 16m 칸 — world.js dChunk)마다:
 //  ① 같은 건물 다른 층 = 슬래브 너머 → 계단 곁(2m)이 아니면 숨김
-//  ② 카메라에서 2D 광선 720개(0.5°)를 쏘아 '높은 벽 조각'(allBoxes wall · 높이 ≥ 2.4 — 창·문은 벽 조각이 없는 구멍이라 그대로 뚫림)에 닿는 거리·높이를 모은다.
+//  ② 카메라에서 2D 광선 720개(0.5°)를 쏘아 '높은 벽 조각'(allBoxes wall · 높이 ≥ 2.4 — 창·문은 벽 조각이 없는 구멍이라 그대로 뚫림)에 닿는 거리·높이·방위 범위를 모은다.
 //     청크 상자로 가는 광선 중 하나라도 앞의 벽이 그 선(카메라 높이 → 청크 높이 범위)을 다 막지 못하면 보인다(높이까지 따지므로 지붕 위 카메라는 벽을 넘겨 본다).
+//     광선 사이도 본다(09-26 리뷰 — 걸으면 복도 끝 소화기가 깜빡): ⓐ 상자 양옆 테 광선(바깥 한 칸씩)까지 쏜다 — 광선 간격보다 좁게 보이는 청크는 지나는 광선이 없어 '가림'이 됐다.
+//     ⓑ 이웃한 두 광선을 막은 벽들의 방위 범위가 그 사이(청크 방위 안)를 다 잇지 못하면 틈(창틀·기둥 옆 0.5°보다 좁은 틈)으로 보인다.
+//        한 벽이 두 광선 사이를 잇는다고 치는 것은 두 광선 모두에서 그 선을 막을 때뿐(한쪽에선 청크 뒤로 가는 비스듬한 벽은 제 광선까지만).
 //  ③ 건물 밖 카메라의 선이 그 동 지붕(1층 청크: 서관은 슬래브) 위로 들어가거나 2층 청크에 슬래브 아래로 들어가면 가림.
 // 카메라가 0.15m 넘게 움직일 때만 다시 잰다(가만히 서서 돌리지 않으면 0 ms). 문을 돌아설 때 늦게 뜨지 않게 0.2초 간격과 따로 매 프레임 본다.
-const OCC = { N: 720, R: 46, K: 6, hd: null, hy0: null, hy1: null, hn: null, occ: null, planes: null, stairs: null, x: 1e9, y: 1e9, z: 1e9, ms: 0, off: false };
+const OCC = { N: 720, R: 46, K: 6, hd: null, hy0: null, hy1: null, hl: null, hh: null, hw: null, hn: null, occ: null, planes: null, stairs: null, x: 1e9, y: 1e9, z: 1e9, ms: 0, off: false };
 world.occ = OCC;   // 검사용(SD2.world.occ.off = true → 가림 컬링 끔: 켠 화면과 픽셀 비교해 '보이는 것을 숨긴 곳 0' 확인)
 function occPrep() {
-  const W = world.allBoxes.filter(b => b.wall && b.y1 - b.y0 >= 2.4), BR = world.details.brect, FH0 = world.details.FH;
-  OCC.occ = W; OCC.hd = new Float32Array(OCC.N * OCC.K); OCC.hy0 = new Float32Array(OCC.N * OCC.K); OCC.hy1 = new Float32Array(OCC.N * OCC.K); OCC.hn = new Uint8Array(OCC.N);
+  const W = world.allBoxes.filter(b => b.wall && b.y1 - b.y0 >= 2.4), BR = world.details.brect, FH0 = world.details.FH, NK = OCC.N * OCC.K;
+  OCC.occ = W; OCC.hd = new Float32Array(NK); OCC.hy0 = new Float32Array(NK); OCC.hy1 = new Float32Array(NK); OCC.hn = new Uint8Array(OCC.N);
+  OCC.hl = new Float32Array(NK); OCC.hh = new Float32Array(NK); OCC.hw = new Int32Array(NK);   // 벽 방위 범위(그 광선 기준, 광선 단위 hl ≤ 0 ≤ hh)·벽 번호
   OCC.stairs = world.zones.filter(z => z.kind === 'stair' || (z.kind == null && /계단/.test(z.label) && !/창고/.test(z.label)));
   // 동마다 가로 가림판(③): 지붕·슬래브. 동 바닥 격자(1.5m) 모든 칸에서 충돌 상자(부풀림 없음)가 빈틈없이 덮는 높이 구간(0.05m 단위)만 가림판으로 쓴다 —
   //  한 칸이라도 뚫려 있으면 그 높이는 판이 아니다(보수적). 서관은 계단 칸을 빼고 재고 그 칸을 모든 판의 구멍으로 둔다.
@@ -675,40 +679,56 @@ function slab(ox, oz, dx, dz, x0, x1, z0, z1) {
   if (Math.abs(dz) < 1e-9) { if (oz < z0 || oz > z1) return false; } else { let a = (z0 - oz) / dz, b = (z1 - oz) / dz; if (a > b) { const s = a; a = b; b = s; } if (a > t0) t0 = a; if (b < t1) t1 = b; }
   if (t0 > t1 || t1 < 0) return false; _sl[0] = Math.max(0, t0); _sl[1] = t1; return true;
 }
-// 상자가 카메라에서 차지하는 광선 번호 범위 [_as[0], _as[1]](k1 ≥ k0, 넘치면 N으로 감음) — 매 갱신 수백 번이라 배열을 만들지 않는다
-const _as = [0, 0];
-function angSpan(cx, cz, x0, x1, z0, z1) {
+// 상자가 카메라에서 차지하는 방위 범위: 광선 번호 단위 소수 _af[0] ≤ _af[1](감지 않음) · 쏠 광선 번호 [_as[0], _as[1]](넘치면 N으로 감음) — 매 갱신 수백 번이라 배열을 만들지 않는다
+//  벽(occRays) = 상자를 지나는 광선만 · 청크(outer) = 양옆 테 광선(바닥·천장 내림)까지 — 청크 방위 전체가 이웃 광선 쌍 사이에 든다
+const _as = [0, 0], _af = [0, 0];
+function angSpan(cx, cz, x0, x1, z0, z1, outer) {
   const DA = Math.PI * 2 / OCC.N, a0 = Math.atan2((z0 + z1) / 2 - cz, (x0 + x1) / 2 - cx); let lo = 0, hi = 0;
   for (let c = 0; c < 4; c++) { let d = Math.atan2((c & 2 ? z1 : z0) - cz, (c & 1 ? x1 : x0) - cx) - a0; if (d > Math.PI) d -= Math.PI * 2; else if (d < -Math.PI) d += Math.PI * 2; if (d < lo) lo = d; if (d > hi) hi = d; }
-  let k0 = Math.ceil((a0 + lo) / DA), k1 = Math.floor((a0 + hi) / DA); if (k1 < k0) k0 = k1 = Math.round(a0 / DA); _as[0] = k0; _as[1] = k1;
+  const A = (a0 + lo) / DA, B = (a0 + hi) / DA; _af[0] = A; _af[1] = B;
+  if (outer) { _as[0] = Math.floor(A); _as[1] = Math.ceil(B); return; }
+  let k0 = Math.ceil(A), k1 = Math.floor(B); if (k1 < k0) k0 = k1 = Math.round(a0 / DA); _as[0] = k0; _as[1] = k1;
 }
-function occRays(cp) {   // 광선마다 가까운 높은 벽 K개(거리·높이 범위)
-  const { N, R, K, hd, hy0, hy1, hn } = OCC, DA = Math.PI * 2 / N; hn.fill(0);
-  for (const w of OCC.occ) {
+function occRays(cp) {   // 광선마다 가까운 높은 벽 K개(거리·높이 범위·방위 범위·벽 번호)
+  const { N, R, K, hd, hy0, hy1, hl, hh, hw, hn } = OCC, DA = Math.PI * 2 / N; hn.fill(0);
+  for (let wi = 0; wi < OCC.occ.length; wi++) { const w = OCC.occ[wi];
     if (w.x1 < cp.x - R || w.x0 > cp.x + R || w.z1 < cp.z - R || w.z0 > cp.z + R) continue;
     if (cp.x > w.x0 && cp.x < w.x1 && cp.z > w.z0 && cp.z < w.z1) continue;   // 카메라가 벽 속(없어야 하지만)
-    angSpan(cp.x, cp.z, w.x0, w.x1, w.z0, w.z1);
+    angSpan(cp.x, cp.z, w.x0, w.x1, w.z0, w.z1); const A = _af[0], B = _af[1];
     for (let k = _as[0], k1 = _as[1]; k <= k1; k++) { const kk = ((k % N) + N) % N, th = kk * DA;
       if (!slab(cp.x, cp.z, Math.cos(th), Math.sin(th), w.x0, w.x1, w.z0, w.z1) || _sl[0] > R) continue;
       const t = _sl[0], base = kk * K; let n = hn[kk], j = n;
       if (n === K) { if (t >= hd[base + K - 1]) continue; j = K - 1; } else hn[kk] = n + 1;
-      while (j > 0 && hd[base + j - 1] > t) { hd[base + j] = hd[base + j - 1]; hy0[base + j] = hy0[base + j - 1]; hy1[base + j] = hy1[base + j - 1]; j--; }
-      hd[base + j] = t; hy0[base + j] = w.y0; hy1[base + j] = w.y1; }
+      while (j > 0 && hd[base + j - 1] > t) { const s = base + j - 1; hd[s + 1] = hd[s]; hy0[s + 1] = hy0[s]; hy1[s + 1] = hy1[s]; hl[s + 1] = hl[s]; hh[s + 1] = hh[s]; hw[s + 1] = hw[s]; j--; }
+      hd[base + j] = t; hy0[base + j] = w.y0; hy1[base + j] = w.y1; hl[base + j] = Math.min(0, A - k); hh[base + j] = Math.max(0, B - k); hw[base + j] = wi; }
   }
 }
-// ③·② 한 선(카메라 → 광선 위 거리 t·높이 ty)이 벽(광선의 벽 목록) 또는 가림판(그 동 안에서 선 높이가 띠를 지남 — 서관 슬래브의 계단 구멍 제외)에 막히나
+// ③·② 한 선(카메라 → 광선 위 거리 t·높이 ty)을 막는 것: 벽 칸 묶음(비트 j = 광선의 j번째 벽, K ≤ 7) | 128(가림판 — 그 동 안에서 선 높이가 띠를 지남, 서관 슬래브의 계단 구멍 제외) · 0 = 안 막힘
 const _fa = new Float32Array(9), _fb = new Float32Array(9);
 function rayRects(cp, dx, dz) { const BR = world.details.brect; for (let i = 0; i < BR.length; i++) { const r = BR[i]; if (OCC.planes[i].length && slab(cp.x, cp.z, dx, dz, r[0], r[1], r[2], r[3])) { _fa[i] = _sl[0]; _fb[i] = _sl[1]; } else _fa[i] = -1; } }
-function lineBlocked(cp, base, n, dx, dz, t, ty) {
-  const { hd, hy0, hy1 } = OCC, hc = cp.y, g = (ty - hc) / Math.max(t, 1e-3);
-  for (let j = 0; j < n; j++) { const d = hd[base + j]; if (d >= t) break; const h = hc + g * d; if (h >= hy0[base + j] - 0.02 && h <= hy1[base + j] + 0.02) return true; }
+function lineMask(cp, base, n, dx, dz, t, ty) {
+  const { hd, hy0, hy1, hl, hh } = OCC, hc = cp.y, g = (ty - hc) / Math.max(t, 1e-3); let m = 0, lo = 0, hi = 0;
+  for (let j = 0; j < n; j++) { const d = hd[base + j]; if (d >= t) break; const h = hc + g * d;
+    if (h >= hy0[base + j] - 0.02 && h <= hy1[base + j] + 0.02) { m |= 1 << j; if (hl[base + j] < lo) lo = hl[base + j]; if (hh[base + j] > hi) hi = hh[base + j]; } }
+  if (m && lo <= -1 && hi >= 1) return m;   // 막은 벽이 양옆 이웃 광선까지 닿음 — 가림판까지 볼 것 없다(틈 판정은 벽으로 충분)
   for (let i = 0; i < 9; i++) { if (_fa[i] < 0) continue; const a = _fa[i], b = Math.min(_fb[i], t); if (b <= a) continue;
     for (const p of OCC.planes[i]) { const [p0, p1] = p.b; let sa = a, sb = b;   // 선 높이가 [p0, p1]인 구간
       if (Math.abs(g) < 1e-6) { if (hc < p0 || hc > p1) continue; } else { let u = (p0 - hc) / g, v = (p1 - hc) / g; if (u > v) { const w = u; u = v; v = w; } sa = Math.max(a, u); sb = Math.min(b, v); if (sb < sa) continue; }
       if (p.hole && OCC.stairs.some(q => slab(cp.x + dx * sa, cp.z + dz * sa, dx, dz, q.x0, q.x1, q.z0, q.z1) && _sl[0] <= sb - sa)) continue;
-      return true; } }
-  return false;
+      return m | 128; } }
+  return m;
 }
+// ⓑ 앞 광선(k−1: 벽 칸 pb·묶음 pm)과 이 광선(k: cb·cm) 사이, 청크 방위 [A, B] 안에 두 광선의 막은 벽들이 못 덮은 틈이 있나(가림판 묶음은 부르지 않는다 — 판은 이어져 있다)
+//  앞 광선 벽이 k까지 뻗어도 k에서 이 선을 막지 않으면(청크 뒤로 감) 제 광선까지만 친다 · 이 광선 쪽도 같은 식
+function occGap(pb, pm, cb, cm, k, A, B) {
+  const { hl, hh, hw, K } = OCC; let R = k - 1, L = k;
+  for (let j = 0; j < K; j++) { if (!(pm >> j & 1)) continue; const e = k - 1 + hh[pb + j];
+    if (e < k) { if (e > R) R = e; continue; }
+    const w = hw[pb + j]; for (let i = 0; i < K; i++) if ((cm >> i & 1) && hw[cb + i] === w) return false; }   // 같은 벽이 두 광선에서 다 막음 = 사이도 막힘
+  for (let i = 0; i < K; i++) { if (!(cm >> i & 1)) continue; const s = k + hl[cb + i]; if (s > k - 1 && s < L) L = s; }
+  return R < L - 0.02 && Math.max(R, A) < Math.min(L, B);
+}
+const _pm = new Uint8Array(9), _cm = new Uint8Array(9);   // 선 9개마다 앞 광선·이 광선의 막음 묶음
 function occVisible(d, cp) {
   const bx = d.box, BR = world.details.brect[d.bi];
   const x0 = bx.min.x, x1 = bx.max.x, z0 = bx.min.z, z1 = bx.max.z, y0 = bx.min.y, y1 = bx.max.y;
@@ -717,14 +737,21 @@ function occVisible(d, cp) {
   if (inB && slabOK && d.bi === world.details.wing) { const camFl = cp.y > FH0 + 0.15 ? 2 : 1;   // ① 슬래브
     if (camFl !== d.fl && !OCC.stairs.some(z => cp.x > z.x0 - 2 && cp.x < z.x1 + 2 && cp.z > z.z0 - 2 && cp.z < z.z1 + 2)) return false; }
   if (cp.x >= x0 && cp.x <= x1 && cp.z >= z0 && cp.z <= z1) return true;
-  const { N, K, hd, hy0, hy1, hn } = OCC, DA = Math.PI * 2 / N; angSpan(cp.x, cp.z, x0, x1, z0, z1);
-  for (let k = _as[0], k1 = _as[1]; k <= k1; k++) { const kk = ((k % N) + N) % N, th = kk * DA, dx = Math.cos(th), dz = Math.sin(th);
-    if (!slab(cp.x, cp.z, dx, dz, x0, x1, z0, z1)) continue; const tE = _sl[0], tX = _sl[1];
+  const { N, K, hn } = OCC, DA = Math.PI * 2 / N; angSpan(cp.x, cp.z, x0, x1, z0, z1, true); const A = _af[0], B = _af[1];
+  let prev = false, pb = 0;
+  for (let k = _as[0], k1 = _as[1]; k <= k1; k++) { const kk = ((k % N) + N) % N, th = kk * DA, dx = Math.cos(th), dz = Math.sin(th), cb = kk * K;
+    let tE, tX;
+    if (slab(cp.x, cp.z, dx, dz, x0, x1, z0, z1)) { tE = _sl[0]; tX = _sl[1]; }
+    else {   // 테 광선(상자 옆을 스침): 상자 네 모서리를 광선에 내린 거리 범위를 청크 거리로 본다
+      tE = 1e9; tX = -1e9; for (let c = 0; c < 4; c++) { const t = ((c & 1 ? x1 : x0) - cp.x) * dx + ((c & 2 ? z1 : z0) - cp.z) * dz; if (t < tE) tE = t; if (t > tX) tX = t; }
+      if (tX <= 0) { prev = false; continue; } tE = Math.max(0, tE); }
     rayRects(cp, dx, dz);
-    let blocked = true;   // 청크의 광선 위 조각을 3×3 선(거리 tE·가운데·tX × 높이 y0·가운데·y1)으로 — 하나라도 안 막히면 보임
-    for (let q = 0; q < 9 && blocked; q++) { const t = q % 3 === 0 ? tE : q % 3 === 1 ? (tE + tX) / 2 : tX, ty = q < 3 ? y0 : q < 6 ? (y0 + y1) / 2 : y1;
-      if (!lineBlocked(cp, kk * K, hn[kk], dx, dz, t, ty)) blocked = false; }
-    if (!blocked) return true;
+    // 청크의 광선 위 조각을 3×3 선(거리 tE·가운데·tX × 높이 y0·가운데·y1)으로 — 하나라도 안 막히거나 앞 광선과의 사이에 틈이 있으면 보임
+    for (let q = 0; q < 9; q++) { const t = q % 3 === 0 ? tE : q % 3 === 1 ? (tE + tX) / 2 : tX, ty = q < 3 ? y0 : q < 6 ? (y0 + y1) / 2 : y1;
+      const m = lineMask(cp, cb, hn[kk], dx, dz, t, ty); if (!m) return true;
+      if (prev && !((m | _pm[q]) & 128) && occGap(pb, _pm[q], cb, m, k, A, B)) return true;
+      _cm[q] = m; }
+    _pm.set(_cm); pb = cb; prev = true;
   }
   return false;
 }
