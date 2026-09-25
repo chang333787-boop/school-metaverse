@@ -29,7 +29,9 @@
 - **판정 = 반열린 구간(x0 ≤ x < x1) + 높이 띠, 여럿이면 가장 좁은 구역.** 겹침 순서에 흔들리지 않는다(위치 칩 `📍`도 이 규칙).
 - **덧붙인 넓은 구역(EXTRA_ZONES 19개)**: 앞뜰 잔디 둔덕·서쪽 대지·북쪽 둘레길·뒷길(북)·급식동 뒤·노란 창고 옆·텃밭 앞 길·텃밭 동쪽·본관 동쪽 끝·동쪽 통학로(철망 옆 띠)·동쪽 가장자리·운동장 서쪽 띠·남쪽 마당·정문·체육관 화장실 2칸·조리실 앞·2층 계단홀. 학교 안 걷는 칸 중 구역 없는 칸 **29.4% → 0%**.
 - 월드 라벨이 바뀌거나 새 구역이 생기면 `mapmeta.js` 표를 같이 고친다. 안 고치면 월드는 뜨고(`id = 'z-라벨'`, tags `nometa`) `check()`가 ⚠️로 알린다(병행 작업본 합칠 때 확인).
-- **같은 라벨 월드 구역이 여럿**이면 표 줄에 `opts.multi` → 둘째부터 `id-2`·`id-3`(예: 운동장 서쪽 띠 `field-2~4`, 체육관 앞 마당 `gym-front-yard-2`). 없으면 `dupIds`로 🚫.
+- **같은 라벨 월드 구역이 여럿**이면 표 줄에 `opts.multi` → **가장 넓은 구역이 계약 id**, 나머지는 월드 순서대로 `id-2`·`id-3`(예: 운동장 = 본 운동장 `field` · 서쪽 띠 조각 3개 `field-2~4`(유치원 놀이터 북·남·동) · 체육관 앞 마당 = 부속동 북쪽 `gym-front-yard` · 운동장 북서 칸 `gym-front-yard-2`). 없으면 `dupIds`로 🚫.
+  - 라벨로 부르면(`map.zone('운동장')`·`'zone:운동장'`·`nav.block('운동장')`) 그 라벨의 계약 id 구역(= 가장 넓은 것). 조각까지 다 고르려면 `zonesWhere({zones:['운동장']})`(라벨이면 조각 전부).
+  - 09-26 리뷰: 예전엔 push 순서로 매겨 먼저 들어온 42㎡ 띠 조각이 `field`를 가로챘다(게임이 '운동장'을 부르면 유치원 놀이터 옆으로 감). `check().labelBad`가 '라벨 → 계약 id·가장 넓은 월드 구역'을 지킨다.
 - 월드 구역끼리 **일부러 포갠 짝**(작은 구역이 큰 구역 안의 한 자리 — 계단참·계단 밑 창고·현관 앞·개수대·숲놀이터·구령대 등)은 `health.js ALLOW.multiZone`에 why와 함께. 그 밖의 겹침은 경계를 옆 구역 끝에 맞춰 없앤다(integ 09-25: 겹침 1101 → 0).
 
 ## 3. 지점(POI) — 게임이 문자열로 부른다
@@ -65,7 +67,7 @@ map.mapData(층) → {bounds, boundary, buildings, zones, landmarks, spawns} · 
 map.rng(seed) (mulberry32) · map.store.get/set (localStorage 'sm2.game.<id>.' · 쓰기 2초마다 몰아서)
 map.play = { field, ball, track:{c,a,b,half,gates}, redlight:{startZ,finish}, y }   // 운동장 놀이판(달리기·공·무궁화 신호등) — SCHOOL 운동장 사각형에서 계산, check()가 트랙·출발선이 전부 걷는 칸인지 본다
 SD2.map.stuckLog — 이동키를 누른 채 1.5초 못 움직이고 몸이 충돌 상자 속이던 자리(최대 50) · map.spawns
-SD2.map.check() → {ok, zonesNoMeta, metaNoZone, dupIds, extraBad, spawnsBad, poisBad, hotUnreachable, playBad, traps, outsidePct, noZoneInSchoolPct}
+SD2.map.check() → {ok, zonesNoMeta, metaNoZone, dupIds, labelBad, extraBad, spawnsBad, poisBad, hotUnreachable, playBad, traps, outsidePct, noZoneInSchoolPct}
 SD2.map.game.load(id, params) / stop() / current   ·  SD2.camPose(…) (3인칭 카메라 식) · SD2.phys{groundAt,blockedAt,ceilAt,camHit} · SD2.CTRL{frozen,speed}
 ```
 
@@ -142,6 +144,10 @@ export default async function start(map, params) { …; return { tick(dt) {}, st
 - **급식실 쓰레기통·양동이**: `dCyl`이 주석 끝에 붙어 그려지지 않고 충돌만 남아 있었다(보이지 않는 벽 + 청소선생님이 그 자리에 섰다).
 - **카메라 CAM-4**(main.js camPose ④): 근평면이 처마·차양 판에 걸리면 0.1씩 당김 — camHit은 낮은 얇은 부재를 무시해 동관 남쪽 처마(y 3.4~3.7)를 못 봤다.
 - 구역: 체육관 앞 마당·운동장 서쪽 띠·텃밭 길·버스 타는 곳·정문 경계를 옆 구역 끝에 맞춤 · 계약표 15줄 + `multi`.
+- **09-26 리뷰 막힘 2건**: ① OCC-CULL(main.js) 광선 간격(0.5°)보다 좁게 보이는 청크(복도 끝에서 본 소화기·벽을 따라 누운 청크)는 지나는 광선이 없어 '가림'이 돼 걸을 때 깜빡 →
+  청크는 양옆 테 광선까지 쏘고, 이웃 두 광선을 막은 벽들이 그 사이(청크 방위 안)를 못 이으면(0.5°보다 좁은 창틀·기둥 틈) 보임으로(한 벽이 사이를 잇는 것은 두 광선 모두에서 그 선을 막을 때만).
+  켬/끔 픽셀 비교: 주복도 3인칭 0.25m 걷기 숨김 41·37자리 → 0 · 걷기 36경로(1인칭 포함) 0 · 무작위 자세 3,600(실내 2,700) 0(1인칭 근평면 0.3이 0.35m 앞 벽을 자르는 자리 3곳 — 컬링과 무관 — 제외) ·
+  구역 닻 최악 14.0만 그대로(과학실 13.0만 → 13.8만) · 갱신 평균 0.10 → 0.15ms(최대 0.7ms). ② multi id: 가장 넓은 구역이 계약 id(§2) — `zone:field`·`zone:운동장` = 본 운동장 가운데(-0.75, -1.35, 14.55 — 42e53ac와 같음, 길격자를 지은 뒤엔 가까운 칸으로 다듬어 ±0.15m).
 
 남김(2차 구간 담당 — 그 구역 기하):
 - **동쪽 통학로** 곡선 지붕 쉼터(`shx = EP2.x[1]+1.6, z 38`) 벤치(0.42)가 돌 경계(`EP2.x[1]+0.5`, 0.35·NS) 바로 옆 → NS-RAISE가 돌을 벤치+1.6으로 올려 벤치 위에서 보이지 않는 벽 5간선. 쉼터 z ±1.6 안의 돌을 빼거나 쉼터를 돌 줄에서 띄우면 0.
