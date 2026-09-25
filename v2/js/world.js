@@ -4925,10 +4925,12 @@ export function buildWorld(scene) {
     const solid = colliders.filter(d => !d.nc), stand = solid.filter(d => d.y1 - floorOf(d) <= JUMP);
     // PERF-LOAD: 딛을 곳·받침 후보를 8m 칸에서만 — 모으는 값이 최댓값·최솟값뿐이라 순서·중복과 무관(결과 같음). 좌표가 유한하지 않거나 뒤집힌 상자는 늘 후보, 그런 c는 전부 훑음
     const ok4 = b => isFinite(b.x0) && isFinite(b.x1) && isFinite(b.z0) && isFinite(b.z1) && b.x0 <= b.x1 && b.z0 <= b.z1;
-    const cells = L => { const H = new Map(), odd = []; for (const d of L) { if (!ok4(d)) { odd.push(d); continue; }
+    const ncell = (b, e) => (Math.floor((b.x1 + e) / 8) - Math.floor((b.x0 - e) / 8) + 1) * (Math.floor((b.z1 + e) / 8) - Math.floor((b.z0 - e) / 8) + 1);   // 걸치는 8m 칸 수
+    const CMAX = 4096;   // 칸 수 상한(occ_merge 로딩 리뷰): 아주 큰 상자(수 km)는 칸마다 넣지 않고 odd(늘 후보)로 · 그런 c는 전부 훑음 — 결과 같음, 빌드가 멈추지 않게
+    const cells = L => { const H = new Map(), odd = []; for (const d of L) { if (!ok4(d) || ncell(d, 0) > CMAX) { odd.push(d); continue; }
         for (let gx = Math.floor(d.x0 / 8); gx <= Math.floor(d.x1 / 8); gx++) for (let gz = Math.floor(d.z0 / 8); gz <= Math.floor(d.z1 / 8); gz++) { const k = gx * 4096 + gz; let a = H.get(k); if (!a) H.set(k, a = []); a.push(d); } }
       return { H, odd, all: L }; };
-    const near = (G, c, e) => { if (!ok4(c)) return G.all; const out = G.odd.slice();
+    const near = (G, c, e) => { if (!ok4(c) || ncell(c, e) > CMAX) return G.all; const out = G.odd.slice();
       for (let gx = Math.floor((c.x0 - e) / 8); gx <= Math.floor((c.x1 + e) / 8); gx++) for (let gz = Math.floor((c.z0 - e) / 8); gz <= Math.floor((c.z1 + e) / 8); gz++) { const a = G.H.get(gx * 4096 + gz); if (a) for (const d of a) out.push(d); }
       return out; };
     const SG = cells(solid), TG = cells(stand);
@@ -5052,5 +5054,6 @@ export function buildWorld(scene) {
     if (!far) { details.push({ mesh: m, cx: ch.cx, cz: ch.cz, inside: ch.inside, bi: ch.bi, fl: ch.fl, box: g.boundingBox }); }
   }
   details.brect = BRECT; details.wing = 2; details.FH = FH;   // OCC-CULL: main.js 가림 컬링이 건물 칸(BRECT 순서 — 2 = 서관, 2층이 있는 유일한 동)·층고를 읽는다
+  for (const g of CYLC.values()) g.dispose(); CYLC.clear();   // 원기둥 캐시는 빌드 동안만(dGeo가 정점을 청크로 복사했다 — 더 안 씀 · 메모리)
   return { colliders, grid, zones, doors, allBoxes, hotspots, details, visRods, soft: softVols, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh };
 }

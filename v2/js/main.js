@@ -36,19 +36,19 @@ scene.add(sun);
 //  배경 탭(rAF 멈춤)이면 0.1초 뒤 그냥 짓는다. 잰 값은 SD2.timing(buildMs·firstFrameMs·frameCpuP50/P95·occP95 — 아래 RB)
 await new Promise(r => { requestAnimationFrame(() => setTimeout(r)); setTimeout(r, 100); });
 // PERF-LOAD: 셰이더 미리 짓기 — 월드를 짓는 동안(동기) GPU 쪽이 셰이더를 따로 컴파일하도록 먼저 던져 둔다(이 맥 차가운 시작 첫 프레임 336 → 298ms).
-//  재질 조합(종류·무늬·알파 자름·정점색·평면 음영·양면·투명·인스턴스·인스턴스 색)이 실제 재질(world.js·캐릭터·문·구름·별)과 같으면 three가 같은 프로그램을 그대로 쓴다.
-//  달라도 모습은 같고 그 재질만 원래대로 첫 프레임에 컴파일된다. 첫 프레임 뒤 버린다(warmDone).
+//  재질 조합(종류·무늬·알파 자름·정점색·평면 음영·양면·투명·인스턴스·인스턴스 색)이 첫 화면의 실제 재질(world.js·캐릭터·문·구름)과 같으면 three가 같은 프로그램을 그대로 쓴다.
+//  첫 프레임 뒤 버린다(warmDone — 버린 재질만 쓰던 프로그램은 같이 지워진다). 그래서 첫 화면에 없는 조합(밤 별 Points·필름 문 인스턴스 MeshBasic·
+//  비인스턴스 Lambert 기본 — 멀리 있거나 밤·상호작용 때만)은 넣지 않는다(occ_merge 로딩 리뷰: 짓고 곧 버리던 3개 — 첫 화면 프로그램 목록 = 미리 짓지 않은 판과 같음).
 const warmDone = (() => { try {
   const T = new THREE.DataTexture(new Uint8Array(4), 1, 1), G = new THREE.BufferGeometry(), s = new THREE.Scene(), mats = []; T.needsUpdate = true;
   G.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3)); G.setAttribute('normal', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 0, 0, 1], 3));
   G.setAttribute('color', new THREE.Float32BufferAttribute([1, 1, 1, 1, 1, 1, 1, 1, 1], 3)); G.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1], 2));
   const L = o => new THREE.MeshLambertMaterial(o), B = o => new THREE.MeshBasicMaterial(o), D = THREE.DoubleSide;
   const add = (m, inst, col) => { mats.push(m); const o = inst ? new THREE.InstancedMesh(G, m, 1) : new THREE.Mesh(G, m); if (col) o.setColorAt(0, new THREE.Color()); s.add(o); };
-  [B({ map: T, alphaTest: 0.5 }), B({}), L({ map: T }), L({}), L({ map: T, alphaTest: 0.5, side: D }), L({ map: T, side: D }), L({ transparent: true }), L({ vertexColors: true }),
+  [B({ map: T, alphaTest: 0.5 }), B({}), L({ map: T }), L({ map: T, alphaTest: 0.5, side: D }), L({ map: T, side: D }), L({ transparent: true }), L({ vertexColors: true }),
    B({ map: T, vertexColors: true }), L({ map: T, vertexColors: true }), L({ map: T, transparent: true, side: D }), L({ map: T, vertexColors: true, transparent: true, side: D }),
    L({ vertexColors: true, flatShading: true }), B({ vertexColors: true, fog: false })].forEach(m => add(m));
-  add(B({ map: T }), true, true); add(L({}), true, true); add(L({ transparent: true }), true); add(L({}), true);
-  const pm = new THREE.PointsMaterial({ sizeAttenuation: false, fog: false }); mats.push(pm); s.add(new THREE.Points(G, pm));
+  add(L({}), true, true); add(L({ transparent: true }), true); add(L({}), true);
   renderer.compile(s, camera, scene);
   return () => { mats.forEach(m => m.dispose()); G.dispose(); T.dispose(); };
 } catch (e) { return () => {}; } })();
@@ -798,18 +798,18 @@ const _fr = new THREE.Frustum(), _fm = new THREE.Matrix4(), _pd = [];
 function detailTick(dt) {
   detailT += dt;
   const cp = camera.position, moved = Math.abs(cp.x - OCC.x) + Math.abs(cp.y - OCC.y) + Math.abs(cp.z - OCC.z) > 0.15;
-  const t0 = performance.now(); let occW = false;
+  let t0 = performance.now(), occW = false, prep = false;
   if (detailT >= 0.2 || moved) { detailT = 0;
     const camIn = ceilAt(cp.x, cp.z, cp.y - 0.3, cp.y + 4.5) !== null;
     const R = (DETAIL_FAR + 11.3) ** 2, RI = ((camIn ? DETAIL_IN_IN : DETAIL_IN) + 11.3) ** 2;
-    if (!OCC.occ) occPrep();
+    if (!OCC.occ) { const tp = performance.now(); occPrep(); prep = true; TIMING.occPrepMs = performance.now() - tp; t0 += TIMING.occPrepMs; }   // 한 번뿐인 준비는 OCC.ms·occP95 고리에서 뺀다
     // PERF-LOAD(09-26): 가림 판정(광선)은 절두체에 든 청크만, 처음 필요한 프레임에 — 판정 자리는 이 재계산 자리(OCC.x·y·z)라 예전(전부 여기서)과 결과가 같다.
     //  돌아서기만 하면(재계산 없이) 새로 들어온 청크를 그 프레임에 같은 자리로 잰다. 광선도 그 청크들이 쓰는 것만(occRays nd) — 테 광선·이웃 광선 쌍(occGap)까지(angSpan outer).
     //  동일성(occ_merge 09-26) = integ 판(전부 여기서 재던 것)과 경로 3개·제자리 회전 6,269프레임 보이는 청크 집합 같음
     OCC.gen = (OCC.gen || 0) + 1; OCC.x = cp.x; OCC.y = cp.y; OCC.z = cp.z; occW = true;
     for (const d of world.details) {
       const dx = cp.x - d.cx, dz = cp.z - d.cz;
-      d.on = dx * dx + dz * dz < (d.inside ? RI : R);
+      d.on = dx * dx + dz * dz < (d.inside ? RI : R);   // d.on = 이 재계산 자리에서 그릴 후보(거리 안) — 절두체에 들어와 가림 판정을 받으면 그 결과로 덮어쓴다(d.pend = 판정을 기다리는 재계산 번호)
       d.pend = d.on && d.inside && !OCC.off && d.box && d.bi != null ? OCC.gen : 0;   // 상자·건물 칸이 없는 항목(main.js가 넣는 필름 문 등)은 거리만
     }
   }
@@ -824,7 +824,7 @@ function detailTick(dt) {
       for (let k = _as[0]; k <= _as[1]; k++) { const kk = ((k % N) + N) % N; if (rs[kk] !== OCC.gen) { rs[kk] = OCC.gen; nd[kk] = 1; hn[kk] = 0; any = true; } } }
     if (any) { occRays(OCC, nd); nd.fill(0); }
     for (const d of _pd) if (d.pend) { d.mesh.visible = d.on = occVisible(d, OCC); d.pend = 0; } }
-  if (occW) { OCC.ms = performance.now() - t0; RB.occ[RB.oi++ % RB.occ.length] = OCC.ms; }
+  if (occW) { OCC.ms = performance.now() - t0; if (!prep) RB.occ[RB.oi++ % RB.occ.length] = OCC.ms; }
   if (!OCC.st) { OCC.st = []; scene.traverse(o => { if (o.userData.st) OCC.st.push(o); }); }
   for (const m of OCC.st) m.visible = _fr.intersectsBox(m.geometry.boundingBox);
 }
