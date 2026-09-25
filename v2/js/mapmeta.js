@@ -3,7 +3,7 @@
 //   kind: classroom·special·office·corridor·hall·stair·toilet·storage·service·gym·stage·yard·path·field·play·garden
 //   bldg: main(본관)·west(서관)·cafe(급식동)·link(가운데)·east(동관)·gym(체육관)·null(바깥)
 //   tags: staff = 교직원 공간(보물·술래 기본 제외) · entry = 드나드는 곳 · covered = 지붕 밑 바깥 · kinder = 유치원
-//   opts: { indoor, yr:[y0,y1] (높이 띠 — 기본 y±1.2) }
+//   opts: { indoor, yr:[y0,y1] (높이 띠 — 기본 y±1.2), multi (월드에 같은 라벨 구역이 여럿 — 둘째부터 id-2·id-3) }
 export function makeMeta(SCHOOL) {
   const KINDS = ['classroom', 'special', 'office', 'corridor', 'hall', 'stair', 'toilet', 'storage', 'service', 'gym', 'stage', 'yard', 'path', 'field', 'play', 'garden'];
   const M = (id, kind, bldg, tags = [], opts = {}) => ({ id, kind, bldg, tags, opts });
@@ -29,6 +29,9 @@ export function makeMeta(SCHOOL) {
     '문서고': M('archive', 'storage', 'west', ['staff']),
     '도서실': M('library', 'special', 'west'),
     '계단': M('stair-west', 'stair', 'west', [], { yr: [-0.3, 3.35] }),   // 반층 참(y≈1.2~2.0)까지 '계단'
+    '계단참': M('stair-landing', 'stair', 'west'),                              // U자 계단 반층 참(계단 안 — 가장 좁은 구역이 이긴다)
+    '2층 계단': M('stair-west-2f', 'stair', 'west'),                            // 2층 윗참(예전 덧붙인 '2층 계단홀' id를 넘겨받음)
+    '계단 밑 창고': M('stair-store', 'storage', 'west'),                        // 계단 밑 숨는 칸(숨바꼭질 지점 — 교직원 공간 아님)
     '서측 로비': M('west-lobby', 'hall', 'west'),
     '측문': M('west-door', 'hall', 'west', ['entry']),
     '6학년': M('grade6', 'classroom', 'west'),
@@ -59,11 +62,19 @@ export function makeMeta(SCHOOL) {
     '체육관 전실': M('gym-lobby', 'hall', 'gym', ['entry']),
     '체육 창고': M('gym-store', 'storage', 'gym', ['staff']),
     '체육관 현관': M('gym-porch', 'hall', 'gym', ['entry', 'covered'], { indoor: false }),
+    '체육관 옆길': M('gym-side-path', 'path', null),                             // 현관 참 북끝 ~ 계단 위 보도블록(FWG)
+    '체육관 앞 마당': M('gym-front-yard', 'yard', null, [], { multi: true }),    // 부속동 북쪽 아스팔트 + 운동장 북서 앞마당(월드 구역 둘)
     // 바깥
     '가운데 마당': M('court', 'yard', null),
     '앞뜰 산책로': M('front-walk', 'path', null),
+    '앞뜰 남쪽 화단': M('front-bed-south', 'yard', null),                       // 산책로 남쪽 화단(전정 소나무·교훈석) ~ 둔덕
     '구령대': M('podium', 'stage', null),
     '놀이터': M('playground', 'play', null),
+    '무지개 쉼터': M('shelter', 'yard', null, ['covered']),
+    '놀이마당': M('play-yard', 'play', null),
+    '모래 놀이터': M('sandpit', 'play', null),
+    '버스 타는 곳': M('bus-stop', 'path', null, ['car']),
+    '정문': M('gate', 'path', null, ['entry']),
     '유치원 놀이터': M('kinder-playground', 'play', null, ['kinder']),
     '체육관 계단': M('gym-steps', 'stair', null),
     '숲놀이터': M('forest-play', 'play', null),
@@ -72,9 +83,12 @@ export function makeMeta(SCHOOL) {
     '주차장(북쪽)': M('parking-north', 'yard', null, ['car']),
     '뒷길': M('back-lane', 'path', null),
     '텃밭': M('garden', 'garden', null),
+    '텃밭 길': M('garden-path', 'path', null),
+    '큰 나무 잔디밭': M('big-tree-lawn', 'yard', null),
+    '노란 창고': M('shed', 'storage', null, [], { indoor: false }),
     '텃밭 쉼터': M('garden-deck', 'yard', null, ['covered']),
     '동관 뒤뜰': M('east-yard', 'yard', null),
-    '운동장': M('field', 'field', null),
+    '운동장': M('field', 'field', null, [], { multi: true }),                    // 본 운동장 + 서쪽 띠(유치원 놀이터 남·북·계단 앞 — FWG)
     '동쪽 통학로': M('east-path', 'path', null),
   };
 
@@ -98,14 +112,14 @@ export function makeMeta(SCHOOL) {
     X(SCHOOL.eastPath.x[1] + 3, 60, T.fieldZ, 50, FD, '동쪽 가장자리', 'east-strip', 'yard'),
     X(-50.5, T.westX, T.westZ, SCHOOL.southFenceZ, FD, '운동장 서쪽 띠', 'field-west', 'field'),
     X(-50.5, SCHOOL.eastPath.x[0], SCHOOL.southFenceZ, 63.5, FD, '남쪽 마당', 'south-plaza', 'yard'),       // 남변 울타리가 비스듬(정문 z 52.5 → 서끝 63) — 울타리 밖은 학교 밖 칸
-    X(SCHOOL.gate[0] - 8, SCHOOL.gate[0] + 8, 44, SCHOOL.gate[1], FD, '정문', 'gate', 'path', null, ['entry']),
+    X(SCHOOL.gate[0] - 8, SCHOOL.gate[0] + 8, 44, SCHOOL.gate[1], FD, '정문 앞', 'gate-front', 'path', null, ['entry']),   // 월드 '정문'(문 칸)이 생겨 id 'gate'는 그쪽으로
     // 체육관 부속동 화장실 두 칸(월드에 '화장실' 팻말이 있는 칸 — 구역만 빠져 있었다)
     X(G.annex.x[0], G.annex.x[1], G.annex.z[0], G.doorZ - 1.4, G.floorY, '체육관 화장실', 'gym-toilet-n', 'toilet', 'gym'),
     X(G.annex.x[0], G.annex.x[1], G.doorZ + 1.4, G.doorZ + 3.6, G.floorY, '체육관 화장실', 'gym-toilet-s', 'toilet', 'gym'),
     // 조리실 쪽 주복도 문 안(당직실과 식당 홀 사이) — 조리실로 들어가는 앞칸
     X(B.kitchen.dutyRoom.x[1], B.kitchen.hallX0, B.kitchen.dutyRoom.z[0], B.kitchen.dutyRoom.z[1], 0, '조리실 앞', 'kitchen-entry', 'service', 'cafe', ['staff']),
-    // 서관 2층 계단홀(U자 계단 윗참 — 2층 복도 북쪽). 월드에 '2층 계단' 구역이 생기면 이 줄은 지운다
-    X(B.wings[0].rooms.find(r => r.type === 'stair').span[0], B.wings[0].x[1], B.wings[0].z[0], B.wings[0].z[1] - B.upper.corridorDepth, B.floorHeight + 0.3, '2층 계단홀', 'stair-west-2f', 'stair', 'west'),
+    // 서관 2층 계단홀(U자 계단 윗참 — 2층 복도 북쪽). 월드 '2층 계단'(윗참)이 생겨 id를 넘기고, 그 북쪽 남는 칸만 받는다
+    X(B.wings[0].rooms.find(r => r.type === 'stair').span[0], B.wings[0].x[1], B.wings[0].z[0], B.wings[0].z[1] - B.upper.corridorDepth, B.floorHeight + 0.3, '2층 계단홀', 'stair-west-2f-hall', 'stair', 'west'),
   ];
 
   // 출발점(게임이 'spawn:<id>'로 부른다) — 전부 물리 질의로 막힘 없음·높이 확인(SD2.map.check().spawnsBad = 0)
@@ -118,7 +132,7 @@ export function makeMeta(SCHOOL) {
     'center-lobby': { x: 13.8, z: -36.2, h: 0, label: '가운데 로비' },
     gym: { x: -67, z: -12, h: 0, label: '체육관' },
     'corridor-2f': { x: -25, z: -35.3, h: 270, floor: 2, label: '2층 복도' },
-    playground: { x: -38, z: 46, h: 180, label: '놀이터 앞' },
+    playground: { x: -40, z: 47, h: 180, label: '놀이터 앞' },   // (-38,46)은 남쪽 놀이터 개편 뒤 놀이기구에 막힘(integ 09-24)
     red: { x: -25, z: 14, h: 90, label: '운동장 서쪽(빨강 팀)' },
     blue: { x: 25, z: 14, h: 270, label: '운동장 동쪽(파랑 팀)' },
     garden: { x: 32.5, z: -56, h: 180, label: '텃밭 앞' },

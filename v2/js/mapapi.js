@@ -24,6 +24,7 @@ export function createMapApi(host, NAV, META) {
     const y = z.y ?? 0, yr = m.opts.yr || [y - 1.2, y + 1.2];
     Object.assign(z, { id: m.id, kind: m.kind, bldg: m.bldg, tags: m.tags.slice(), indoor: m.opts.indoor ?? (m.bldg !== null),
       floor: y >= 3 ? 2 : 1, y0: yr[0], y1: yr[1], area: (z.x1 - z.x0) * (z.z1 - z.z0), cx: (z.x0 + z.x1) / 2, cz: (z.z0 + z.z1) / 2 });
+    if (byId.has(z.id) && m.opts.multi) { let k = 2; while (byId.has(m.id + '-' + k)) k++; z.id = m.id + '-' + k; }   // 같은 라벨 구역이 여럿(계약표 multi) — 둘째부터 id-2·id-3
     if (byId.has(z.id)) warn.dupIds.push(z.id); else byId.set(z.id, z);
   }
   Z.forEach(z => enrich(z, META.ZONE_META[z.label]));

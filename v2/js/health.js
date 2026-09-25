@@ -3,14 +3,27 @@
 //   빠른 판(quick): 걷기/점프 그래프 · 갇힘 · 울타리 밖 · 계단 턱 · 올라서기 금지 무력화 · 구역 이름 · 문 그래프 · 상호작용 지점     (~0.6초)
 //   전체 판        : + 보이는 기하 복셀화 → 보이지 않는 벽·뚫림·떠 있음 · 3인칭 카메라 벽 뚫림 · 문 직진 · 구역별 성능 · 그림(img)
 // 게이트(0이어야 통과)와 래칫(기준선보다 늘면 실패)을 나눈다. 허용목록(ALLOW)은 항목마다 why 필수. 정본 = docs/map_api.md §건강 검진
-export const BASELINE = {   // 래칫 기준선(09-24 impl-gamemap 실측 · NS-RAISE·보건실 책상 뒤) — 줄면 여기도 줄인다. 늘면 실패(새 결함인지 목록으로 확인)
-  ghost: 461, sunk: 1095, floating: 332, nsBypass: 0, perch: 30, noZonePct: 5, multiZone: 1101, tallStep: 2797,
+export const BASELINE = {   // 래칫 기준선(09-25 integ 실측 — 1차 7구간 합친 뒤 · 나무/잎판 충돌·world.soft·구역 겹침 정리) — 줄면 여기도 줄인다. 늘면 실패(새 결함인지 목록으로 확인)
+  // 예전(09-24 impl-gamemap): ghost 461 · sunk 1095 · floating 332 · perch 30 · multiZone 1101 · tallStep 2797
+  ghost: 93, sunk: 110, floating: 301, nsBypass: 0, perch: 27, noZonePct: 5, multiZone: 0, tallStep: 759,
 };
 export const ALLOW = {
   invisible: [   // 보이지 않는 벽 허용 구간(x0,x1,z0,z1) — 이유 필수
     { x0: -95, x1: 70, z0: 58, z1: 70, why: '학교 둘레 밖 도로·동네(정문 밖) — 울타리 밖은 게이트가 따로 본다' },
+    { x0: 12.8, x1: 20.2, z0: 54.9, z1: 56.1, why: '정문 선 막이(SOUTH-2 world.js) — 영상은 교문이 열려 있어 보이는 문이 없지만 게임 기초 맵이라 학교 밖 도로로 못 나가게 일부러 막음' },
+    { x0: 7.0, x1: 9.3, z0: -14.0, z1: -13.3, why: '구령대 서쪽 계단 옆 둔덕 끝(1m 낭떠러지) 막이(PORCH-2) — 계단 난간이 발치에서 운동장 높이로 내려가 화단 높이에선 안 보임 · 화단에서 계단 옆으로 뛰어내리지 못하게 일부러 막음' },
   ],
   deadDoors: [],  // 일부러 막힌 문 [x, z, why]
+  multiZone: [   // 월드 구역 겹침 중 '일부러 포갠' 짝(작은 구역이 큰 구역 안의 한 자리 — 판정은 가장 좁은 구역이 이긴다). 이 두 라벨만 겹친 칸은 세지 않는다
+    { a: '계단참', b: '계단', why: 'U자 계단 반층 참 — 계단 안의 한 자리(숨바꼭질·위치 칩이 참을 부른다)' },
+    { a: '계단 밑 창고', b: '계단', why: '계단 밑 숨는 칸 — world.js가 일부러 첫 일치로 넣은 지점' },
+    { a: '체육관 현관', b: '체육관 옆길', why: '현관 참(차양 밑)이 옆길 보도블록 한가운데에 있다(FWG 영상 g_091~102)' },
+    { a: '체육관 계단', b: '운동장', why: '운동장 서쪽 띠 북끝의 화강석 계단(g_082~091) — 띠 안의 한 자리' },
+    { a: '현관 앞', b: '앞뜰 산책로', why: '현관 돌출부 앞 참이 산책로 띠 안에 있다(합치기 전 기준선에도 있던 겹침)' },
+    { a: '개수대', b: '동쪽 통학로', why: '개수대가 통학로 띠 안에 선다(사용자 09-23 (44,16))' },
+    { a: '숲놀이터', b: '운동장', why: '큰 나무 아래 숲놀이터가 운동장 남동 구석을 차지한다(사용자 09-24 — 합치기 전 기준선 664칸)' },
+    { a: '구령대', b: '앞뜰 남쪽 화단', why: '구령대가 남 화단 띠를 끊고 둔덕까지 나온다(u_272~299 — 구령대가 이긴다)' },
+  ],
 };
 
 export async function runHealth(SD2, opt = {}) {
@@ -62,10 +75,12 @@ export async function runHealth(SD2, opt = {}) {
   lap('ns');
 
   // ---------- H10 구역 이름 ----------
-  { let ins = 0, noz = 0, multi = 0; const own = new Int32Array(Z.length), noZ = [];
+  { let ins = 0, noz = 0, multi = 0; const own = new Int32Array(Z.length), noZ = [], multiPairs = new Map();
     for (let i = 0; i < F.count; i++) { if (!F.inSchool[i]) continue; ins++; const zi = F.zone[i]; if (zi < 0) { noz++; noZ.push(i); } else own[zi]++;
-      if (zi >= 0) { const x = F.X(i), z = F.Z(i), y = F.y[i]; let k = 0; for (const q of Z) if (!q.extra && MAP.inZone(q, x, y, z) && ++k > 1) { multi++; break; } } }   // 월드 구역끼리 겹침만(덧붙인 넓은 구역은 일부러 겹친다)
+      if (zi >= 0) { const x = F.X(i), z = F.Z(i), y = F.y[i], L = []; for (const q of Z) if (!q.extra && MAP.inZone(q, x, y, z)) L.push(q.label);   // 월드 구역끼리 겹침만(덧붙인 넓은 구역은 일부러 겹친다)
+        if (L.length > 1 && !(L.length === 2 && ALLOW.multiZone.some(a => (a.a === L[0] && a.b === L[1]) || (a.a === L[1] && a.b === L[0])))) { multi++; const key = L.join(' | '); multiPairs.set(key, (multiPairs.get(key) || 0) + 1); } } }
     K.noZonePct = +(100 * noz / Math.max(1, ins)).toFixed(1); K.multiZone = multi;
+    Lst.multiZone = [...multiPairs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
     Lst.noZoneTop = clusters(noZ, FX, FZ, FY, 6, 15); Lst.shadowedZones = Z.map((q, k) => [q.label, own[k]]).filter(a => a[1] < 40);
     Lst.anchors = MAP.pois({ src: 'zone' }).map(p => ({ zone: p.zone, label: p.label, at: p.stand ? p.stand.map(v => +v.toFixed(2)) : null })); }
   lap('zones');
@@ -106,7 +121,10 @@ export async function runHealth(SD2, opt = {}) {
     const mark = (x, y, z) => { const ix = Math.floor((x - VX0) / VH), iz = Math.floor((z - VZ0) / VH); if (ix < 0 || iz < 0 || ix >= VNX || iz >= VNZ) return; const iy = Math.floor((y - VY0) / VDY); if (iy < 0 || iy >= VW * 32) return; vb4[(ix * VNZ + iz) * VW + (iy >> 5)] |= (1 << (iy & 31)) >>> 0; };
     const fmark = (ix, iz, y) => { const q = Math.floor((y - VY0) / FQ); if (q < 0 || q >= FW * 32) return; fb[(ix * FNZ + iz) * FW + (q >> 5)] |= (1 << (q & 31)) >>> 0; };
     const V3 = SD2.camera.position.constructor, M4 = SD2.camera.matrixWorld.constructor, va = new V3(), vb = new V3(), vc = new V3(), ident = new M4();
-    let triN = 0;
+    let triN = 0, softN = 0;
+    // 몸이 지나가도 되는 낮은 풀·작물(world.soft — AABB마다 why)은 무게중심이 그 안인 삼각형을 복셀에서 뺀다(뚫림·발 묻힘 검진 오류 · integ 09-25)
+    const SOFT = W.soft || [], SG = new Map(); for (const v of SOFT) for (let gx = Math.floor(v.x0 / 4); gx <= Math.floor(v.x1 / 4); gx++) for (let gz = Math.floor(v.z0 / 4); gz <= Math.floor(v.z1 / 4); gz++) { const k = gx * 1000 + gz; if (!SG.has(k)) SG.set(k, []); SG.get(k).push(v); }
+    const isSoft = (x, y, z) => { const L = SG.get(Math.floor(x / 4) * 1000 + Math.floor(z / 4)); if (L) for (const v of L) if (x > v.x0 && x < v.x1 && z > v.z0 && z < v.z1 && y > v.y0 && y < v.y1) return true; return false; };
     for (const o of meshes) {
       const Pp = o.geometry.attributes.position, I = o.geometry.index, M = o.matrixWorld, useM = !M.equals(ident), nT = I ? I.count / 3 : Pp.count / 3;
       for (let t = 0; t < nT; t++) {
@@ -114,6 +132,7 @@ export async function runHealth(SD2, opt = {}) {
         if (useM) { va.applyMatrix4(M); vb.applyMatrix4(M); vc.applyMatrix4(M); }
         const mnx = Math.min(va.x, vb.x, vc.x), mxx = Math.max(va.x, vb.x, vc.x), mnz = Math.min(va.z, vb.z, vc.z), mxz = Math.max(va.z, vb.z, vc.z);
         if (mxx < VX0 || mnx > VX0 + VNX * VH || mxz < VZ0 || mnz > VZ0 + VNZ * VH) continue; triN++;
+        if (SG.size && isSoft((va.x + vb.x + vc.x) / 3, (va.y + vb.y + vc.y) / 3, (va.z + vb.z + vc.z) / 3)) { softN++; continue; }
         const ux = vb.x - va.x, uy = vb.y - va.y, uz = vb.z - va.z, wx = vc.x - va.x, wy = vc.y - va.y, wz = vc.z - va.z;
         const nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx, nl = Math.hypot(nx, ny, nz); if (nl < 1e-9) continue;
         const area = nl / 2, nyn = ny / nl;
@@ -135,9 +154,10 @@ export async function runHealth(SD2, opt = {}) {
         for (let i = 0; i <= nu; i++) { const s = i / nu; for (let j = 0; j <= nv; j++) { const tt = j / nv; if (s + tt > 1.0001) break; mark(o0.x + Ux * s + Vx * tt, o0.y + Uy * s + Vy * tt, o0.z + Uz * s + Vz * tt); } }
       }
     }
-    K.voxTris = triN; lap('voxel');
-    const visAny = (x0, x1, z0, z1, y0, y1) => { const a = Math.max(0, Math.floor((x0 - VX0) / VH)), b = Math.min(VNX - 1, Math.floor((x1 - VX0) / VH)), c = Math.max(0, Math.floor((z0 - VZ0) / VH)), d = Math.min(VNZ - 1, Math.floor((z1 - VZ0) / VH));
-      const q0 = Math.max(0, Math.floor((y0 - VY0) / VDY)), q1 = Math.min(VW * 32 - 1, Math.floor((y1 - VY0) / VDY)); if (q1 < q0) return false;
+    K.voxTris = triN; K.softTris = softN; lap('voxel');
+    // lo = true: 아래 끝이 걸친 층(0.1m)은 빼고 y0 위에서 시작하는 층만 — 발 묻힘·뚫림에서 발+0.05~0.15의 턱·연석·바닥 무늬가 층 반올림으로 세이던 검진 오류(integ 09-24)
+    const visAny = (x0, x1, z0, z1, y0, y1, lo = false) => { const a = Math.max(0, Math.floor((x0 - VX0) / VH)), b = Math.min(VNX - 1, Math.floor((x1 - VX0) / VH)), c = Math.max(0, Math.floor((z0 - VZ0) / VH)), d = Math.min(VNZ - 1, Math.floor((z1 - VZ0) / VH));
+      const q0 = Math.max(0, lo ? Math.ceil((y0 - VY0) / VDY - 1e-6) : Math.floor((y0 - VY0) / VDY)), q1 = Math.min(VW * 32 - 1, Math.floor((y1 - VY0) / VDY)); if (q1 < q0) return false;
       const m = [0, 0, 0, 0]; for (let q = q0; q <= q1; q++) m[q >> 5] |= (1 << (q & 31));
       for (let ix = a; ix <= b; ix++) for (let iz = c; iz <= d; iz++) { const k = (ix * VNZ + iz) * VW; if ((vb4[k] & m[0]) || (vb4[k + 1] & m[1]) || (vb4[k + 2] & m[2]) || (vb4[k + 3] & m[3])) return true; } return false; };
     const floorBelow = (x, z, y) => { const ix = Math.floor((x - FX0) / FHs), iz = Math.floor((z - FZ0) / FHs); if (ix < 0 || iz < 0 || ix >= FNX || iz >= FNZ) return null;
@@ -153,15 +173,16 @@ export async function runHealth(SD2, opt = {}) {
     // ---------- H4·H5 뚫림(몸 높이에 보이는 기하) · 발 묻힘 · 떠 있음 · 바닥 없음 ----------
     const ghost = [], sunk = [], floating = [], voidF = [];
     for (let i = 0; i < F.count; i++) { if (!F.inSchool[i]) continue; const x = F.X(i), z = F.Z(i), y = F.y[i];
-      if (visAny(x - 0.05, x + 0.05, z - 0.05, z + 0.05, y + 0.4, y + 1.3)) ghost.push(i);
-      if (visAny(x - 0.05, x + 0.05, z - 0.05, z + 0.05, y + 0.15, y + 0.4)) sunk.push(i);
+      if (visAny(x - 0.05, x + 0.05, z - 0.05, z + 0.05, y + 0.4, y + 1.3, true)) ghost.push(i);
+      if (visAny(x - 0.05, x + 0.05, z - 0.05, z + 0.05, y + 0.15, y + 0.4, true)) sunk.push(i);
       let best = null; for (const ox of [-0.3, 0, 0.3]) for (const oz of [-0.3, 0, 0.3]) { const v = floorBelow(x + ox, z + oz, y + 0.04); if (v !== null && (best === null || v > best)) best = v; }
       if (best === null) voidF.push(i); else if (y - best > 0.15) floating.push(i); }
     Object.assign(K, { ghost: ghost.length, sunk: sunk.length, floating: floating.length, void: voidF.length });
+    if (opt.raw) { const P3 = a => a.map(i => [+F.X(i).toFixed(2), +F.Z(i).toFixed(2), +F.y[i].toFixed(2)]); R.raw = { ghost: P3(ghost), sunk: P3(sunk), invisible: P3(invis), floating: P3(floating) }; }   // 칸 전체(분류·원인 찾기용)
     Lst.ghost = clusters(ghost, FX, FZ, FY, 1.5, 20); Lst.floating = clusters(floating, FX, FZ, FY, 2, 12); Lst.sunk = clusters(sunk, FX, FZ, FY, 1.5, 12); Lst.void = clusters(voidF, FX, FZ, FY, 3, 8);
     lap('invisibleGhost');
     // ---------- H6 3인칭 카메라 벽 뚫림(main.js step()과 같은 식) — 1.2m 표본 × 8방향 × 피치 3 ----------
-    { const AS = 1366 / 610, cam = { poses: 0, behind: 0, nearWall: 0, nearFloor: 0, lowClip: 0 }, byP = {}, bad = [];
+    { const AS = 1366 / 610, cam = { poses: 0, behind: 0, nearWall: 0, nearFloor: 0, lowClip: 0 }, byP = {}, bad = [], camCol = new Map();
       const segSolid = (ax, ay, az, bx, by, bz) => { let res = -1; const dx = bx - ax, dy = by - ay, dz = bz - az;
         near((ax + bx) / 2, (az + bz) / 2, 0.9, (b, i) => { if (b.nc) return false; let t0 = 0, t1 = 1; const o = [ax, ay, az], dd = [dx, dy, dz], lo = [b.x0, b.y0, b.z0], hi = [b.x1, b.y1, b.z1];
           for (let a = 0; a < 3; a++) { if (Math.abs(dd[a]) < 1e-8) { if (o[a] < lo[a] || o[a] > hi[a]) return false; } else { let p = (lo[a] - o[a]) / dd[a], q = (hi[a] - o[a]) / dd[a]; if (p > q) { const s = p; p = q; q = s; } if (p > t0) t0 = p; if (q < t1) t1 = q; if (t0 > t1) return false; } }
@@ -175,18 +196,19 @@ export async function runHealth(SD2, opt = {}) {
           const Cp = SD2.camPose(px, hy, pz, yaw, pch, CD, fov, AS), rx0 = Math.cos(yaw), rz0 = -Math.sin(yaw);
           const cx = Cp.x0 + rx0 * Cp.sh, cy = Cp.y, cz = Cp.z0 + rz0 * Cp.sh, lx = px + rx0 * Cp.sh, lz = pz + rz0 * Cp.sh;
           const vx = cx - lx, vy = cy - hy, vz = cz - lz, vl = Math.hypot(vx, vy, vz) || 1;
-          let why = null;
-          if (camHit(lx, hy, lz, vx / vl, vy / vl, vz / vl, vl) < vl - 0.01) why = 'behind';   // 시선(머리)과 카메라 사이에 벽 = 벽 뒤에 선 카메라
+          let why = null, wb = -1;
+          if (camHit(lx, hy, lz, vx / vl, vy / vl, vz / vl, vl) < vl - 0.01) { why = 'behind'; wb = segSolid(lx, hy, lz, cx, cy, cz); }   // 시선(머리)과 카메라 사이에 벽 = 벽 뒤에 선 카메라
           else { const fx = -vx / vl, fy = -vy / vl, fz = -vz / vl, hh = 0.3 * Math.tan(fov * Math.PI / 360), hw = hh * AS; let rx = fz, rz = -fx; const rl = Math.hypot(rx, rz) || 1; rx /= rl; rz /= rl;
             const upx = rz * fy, upy = fz * rx - fx * rz, upz = -fy * rx;
             for (const [sa, sb] of [[1, 1], [1, -1], [-1, 1], [-1, -1], [0, 0]]) { const bi = segSolid(cx, cy, cz, cx + fx * 0.3 + rx * hw * sa + upx * hh * sb, cy + fy * 0.3 + upy * hh * sb, cz + fz * 0.3 + rz * hw * sa + upz * hh * sb);
-              if (bi >= 0) { const b = C[bi]; why = b.y1 <= py + 0.12 ? 'nearFloor' : !(b.y1 - b.y0 < 1.5 && b.y0 < hy + 0.4) ? 'nearWall' : 'lowClip'; break; } } }
+              if (bi >= 0) { const b = C[bi]; wb = bi; why = b.y1 <= py + 0.12 ? 'nearFloor' : !(b.y1 - b.y0 < 1.5 && b.y0 < hy + 0.4) ? 'nearWall' : 'lowClip'; break; } } }
           cam.poses++; const bp = byP[pitch] || (byP[pitch] = { poses: 0, behind: 0, nearWall: 0, nearFloor: 0, lowClip: 0 }); bp.poses++;
-          if (why) { cam[why]++; bp[why]++; if (pitch === 0.3 && (why === 'behind' || why === 'nearWall') && bad.length < 3000) bad.push(i); }
+          if (why) { cam[why]++; bp[why]++; if (pitch === 0.3 && (why === 'behind' || why === 'nearWall')) { if (bad.length < 3000) bad.push(i); if (wb >= 0) camCol.set(wb, (camCol.get(wb) || 0) + 1); } }
         }
       }
       K.camPoses0 = byP[0.3] ? byP[0.3].poses : 0; K.camBehind0 = byP[0.3] ? byP[0.3].behind : 0; K.camWall0 = byP[0.3] ? byP[0.3].nearWall : 0;
-      K.camBadPct0 = +(100 * (K.camBehind0 + K.camWall0) / Math.max(1, K.camPoses0)).toFixed(2); R.camera = { all: cam, byPitch: byP }; Lst.camTop = clusters(bad, FX, FZ, FY, 2, 15); }
+      K.camBadPct0 = +(100 * (K.camBehind0 + K.camWall0) / Math.max(1, K.camPoses0)).toFixed(2); R.camera = { all: cam, byPitch: byP }; Lst.camTop = clusters(bad, FX, FZ, FY, 2, 15);
+      Lst.camColliders = [...camCol.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([i, n]) => { const b = C[i]; return { n, i, box: [b.x0, b.x1, b.y0, b.y1, b.z0, b.z1].map(v => +v.toFixed(2)) }; }); }   // 기본 피치에서 카메라를 벽 뒤로 보내거나 근평면에 걸린 콜라이더(integ 09-25)
     lap('camera');
     // ---------- 문 직진(진짜 SD2.step) — 플레이어를 옮겼다 되돌린다 ----------
     { const P0 = SD2.pos().map(Number), fail = [];
