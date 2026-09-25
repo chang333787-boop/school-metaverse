@@ -145,11 +145,13 @@ function finish(B) {
       return cand.length ? cand[Math.floor(rng() * cand.length)] : -1;
     },
     // 한 칸에서 모든 칸까지 걷는 비용(다익스트라, maxLen m까지) — 도망·난이도 계산용
+    //   game_find(09-26): 예전엔 묵은 힙 항목 검사가 거꾸로(hkey < dc)였고 nd(64비트)를 Float32 D와 견줘, 올림 반올림된 칸이 끝없이 다시 들어가 힙이 터졌다(Array buffer allocation failed).
+    //   → 묵은 항목은 건너뛰고(hkey > dc) 거리는 Math.fround로 D와 같은 정밀도에서 견준다.
     distField(a, maxLen = 1e9) {
       const D = new Float32Array(n).fill(Infinity); if (a < 0) return D;
       heapReset(); D[a] = 0; hpush(a, 0);
-      while (hn) { const c = hpop(); const dc = D[c]; if (hkey < dc) continue; if (dc > maxLen) break;
-        for (let d = 0; d < 4; d++) { const j = e[c * 4 + d]; if (j < 0 || N.mask[j]) continue; const nd = dc + S + Math.abs(y[j] - y[c]) * 0.5; if (nd < D[j]) { D[j] = nd; hpush(j, nd); } } }
+      while (hn) { const c = hpop(); const dc = D[c]; if (hkey > dc) continue; if (dc > maxLen) break;
+        for (let d = 0; d < 4; d++) { const j = e[c * 4 + d]; if (j < 0 || N.mask[j]) continue; const nd = Math.fround(dc + S + Math.abs(y[j] - y[c]) * 0.5); if (nd < D[j]) { D[j] = nd; hpush(j, nd); } } }
       return D;
     },
     export() { return { v: 1, S, ox: OX, oz: OZ, n, ix, iz, y, e, zone: N.zone, clr: N.clr, inSchool: N.inSchool }; },

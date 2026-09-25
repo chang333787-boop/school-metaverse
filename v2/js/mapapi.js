@@ -2,6 +2,9 @@
 //   구역 이름표(id·kind·층·건물·tags) · 출발점 · 표지점 · 상호작용 · 이벤트 · 질의 · 길찾기 · 미니맵 데이터 · 게임 로더(?game=이름).
 //   원칙: 매 프레임 새 객체·전체 순회 금지(구역·트리거·경계는 10Hz) · 예외는 잡아서 월드 루프가 멈추지 않게 · 사람 NPC·대사 생성 금지.
 //   정본 문서 = docs/map_api.md
+//   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
+import { createMinimap } from './minimap.js?v=1';
+import { createGamePicker } from './gamepick.js?v=1';
 export function createMapApi(host, NAV, META) {
   const { THREE, scene, world, SCHOOL, q, pl, ui } = host;
   const HOT = host.hot, Z = world.zones, P = pl.P, CTRL = pl.CTRL;
@@ -181,25 +184,35 @@ export function createMapApi(host, NAV, META) {
 
   // ---------- 8. HUD(DOM · .chip 스타일) ----------
   const el = (css, txt = '') => { const d = document.createElement('div'); d.className = 'chip'; d.style.cssText = css; d.textContent = txt; document.body.appendChild(d); return d; };
-  const chips = new Map(); let banEl = null, banT = 0;
-  const layoutChips = () => { let k = 0; for (const [, c] of chips) { c.el.style.top = (44 + k * 34) + 'px'; k++; } };
+  const chips = new Map(); let banEl = null, banT = 0, goalEl = null, MM = null;   // MM = 미니맵(§11b에서 만든다)
+  // 게임 칩 줄: 오른쪽 위 fps 칩 아래. 미니맵이 보이면(GAME-FIND-1) 작을 땐 그 아래로, 클 땐 그 왼쪽으로 비켜 선다(겹침 0)
+  const layoutChips = () => { const r = MM && MM.rect(), top0 = r && !r.big ? r.top + r.h + 8 : 44, right = r && r.big ? r.right + r.w + 8 : 10; let k = 0;
+    for (const [, c] of chips) { c.el.style.top = (top0 + k * 34) + 'px'; c.el.style.right = right + 'px'; k++; } };
   const hud = {
     toast: (text, sec = 2.2) => ui.toast(text, sec),
     banner(text, sec = 2.5) { if (!banEl) banEl = el('left:50%;top:38%;transform:translate(-50%,-50%);font-size:30px;font-weight:700;padding:14px 28px;display:none;pointer-events:none'); banEl.textContent = text; banEl.style.display = ''; banT = sec; return { remove() { banEl.style.display = 'none'; banT = 0; } }; },
-    chip(key, text) { let c = chips.get(key); if (text == null) { if (c) { c.el.remove(); chips.delete(key); layoutChips(); } return null; }
-      if (!c) { c = { el: el('right:10px;font-size:14px') }; chips.set(key, c); layoutChips(); } c.el.textContent = text; return { remove: () => hud.chip(key, null) }; },
+    // opt.onClick(GAME-FIND-1): 칩을 누르면(터치·커서) — 키 안내 칩을 손가락으로도 쓰게
+    chip(key, text, opt) { let c = chips.get(key); if (text == null) { if (c) { c.el.remove(); chips.delete(key); layoutChips(); } return null; }
+      if (!c) { c = { el: el('right:10px;font-size:14px') }; chips.set(key, c); layoutChips(); } c.el.textContent = text;
+      if (opt && opt.onClick) { c.el.style.cursor = 'pointer'; c.el.onclick = e => { e.stopPropagation(); try { opt.onClick(); } catch (err) { console.error(err); } }; }
+      return { remove: () => hud.chip(key, null) }; },
+    // 목표 줄(GAME-FIND-1): 가운데 위에 계속 떠 있는 한 줄("① 찾아갈 곳: 과학실") — null이면 숨김. 배너(가운데·잠깐)와 따로
+    goal(text) { if (text == null) { if (goalEl) goalEl.style.display = 'none'; return null; }
+      if (!goalEl) goalEl = el('left:50%;top:10px;transform:translateX(-50%);font-size:19px;font-weight:700;padding:7px 18px;border-radius:12px;pointer-events:none;white-space:nowrap;display:none');
+      goalEl.textContent = text; goalEl.style.display = ''; return { remove: () => hud.goal(null) }; },
     // 보기 고르기(퀴즈 스테이션용) — 문항은 교사 승인 데이터만. 1~4 키도 받는다
     ask(title, choices, onHandle) {
       return new Promise(res => {
         document.exitPointerLock?.(); const was = CTRL.frozen; CTRL.frozen = true;
         const box = el('left:50%;top:50%;transform:translate(-50%,-50%);font-size:18px;padding:16px 20px;max-width:560px;max-height:90vh;overflow:auto;text-align:center');
-        const h = document.createElement('div'); h.textContent = title; h.style.cssText = 'font-weight:700;margin-bottom:12px'; box.appendChild(h);
-        const done = i => { removeEventListener('keydown', kd, true); box.remove(); CTRL.frozen = was; res(i); };
+        const h = document.createElement('div'); h.textContent = title; h.style.cssText = 'font-weight:700;margin-bottom:12px;white-space:pre-line;line-height:1.45'; box.appendChild(h);   // 줄바꿈(\n) 허용(GAME-FIND-1 끝 화면)
+        let hh = null;   // 범위 파사드의 정리 항목 — 답하면 같이 뗀다(다시 하기를 여러 번 해도 정리 목록이 쌓이지 않게 · GAME-FIND-1)
+        const done = i => { removeEventListener('keydown', kd, true); box.remove(); CTRL.frozen = was; if (hh) hh.remove(); res(i); };
         const kd = e => { const n = Number(e.key); if (n >= 1 && n <= choices.length) { e.stopPropagation(); done(n - 1); } };
         choices.forEach((c, i) => { const b = document.createElement('button'); b.textContent = (i + 1) + '. ' + c; b.style.cssText = 'display:block;width:100%;min-height:44px;margin:6px 0;font-size:16px;border-radius:8px;border:0;cursor:pointer';
           b.addEventListener('click', ev => { ev.stopPropagation(); done(i); }); box.appendChild(b); });
         addEventListener('keydown', kd, true);
-        if (onHandle) onHandle({ remove: () => { if (box.isConnected) done(-1); } });   // 게임이 멈추면 창을 닫고 -1
+        if (onHandle) hh = onHandle({ remove: () => { if (box.isConnected) done(-1); } }) || null;   // 게임이 멈추면 창을 닫고 -1
       });
     },
   };
@@ -227,7 +240,10 @@ export function createMapApi(host, NAV, META) {
     marks.forEach((m, i) => { K.dia.setColorAt(i, _c.set(m.color)); K.beam.setColorAt(i, _c.set(m.color)); });
     if (K.dia.instanceColor) K.dia.instanceColor.needsUpdate = true; if (K.beam.instanceColor) K.beam.instanceColor.needsUpdate = true; mkTick(0); }
   const MATS = new Map();
-  const lam = c => { const k = 'l' + c; if (!MATS.has(k)) MATS.set(k, new THREE.MeshLambertMaterial({ color: c })); return MATS.get(k); };
+  const lam = (c, glow) => { const k = 'l' + c + (glow ? 'g' : ''); if (!MATS.has(k)) MATS.set(k, new THREE.MeshLambertMaterial(glow ? { color: c, emissive: c, emissiveIntensity: 0.45 } : { color: c })); return MATS.get(k); };
+  // 별(GAME-FIND-1): 다섯 뿔 별 판(두께 0.12 · 36삼각형) — 세로로 서서 y축으로 돈다. 예전 'star'는 팔면체(다이아몬드)였다
+  const starGeo = () => { const s = new THREE.Shape(); for (let i = 0; i < 10; i++) { const a = Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 0.17 : 0.4; if (i) s.lineTo(Math.cos(a) * r, Math.sin(a) * r); else s.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+    s.closePath(); return new THREE.ExtrudeGeometry(s, { depth: 0.12, bevelEnabled: false }).translate(0, 0, -0.06); };
   const mk = {
     // 떠 있는 다이아몬드 + 빛기둥(조명 무시 — 밤에도 보인다). 월드 면에서 6cm 이상 띄운다(같은 평면 = 깜빡임)
     marker(x, y, z, o = {}) { if (marks.length >= mkPool().cap) { console.warn('[map] 표식 64개 초과'); return { remove() {}, set() {} }; }
@@ -245,8 +261,8 @@ export function createMapApi(host, NAV, META) {
     // 같은 모양 여럿(공·고깔·별) — InstancedMesh 한 개 = 드로우콜 1
     many(kind, count, o = {}) {
       const geo = kind === 'cone' ? new THREE.ConeGeometry(0.28, 0.7, 12).translate(0, 0.35, 0) : kind === 'box' ? new THREE.BoxGeometry(0.5, 0.5, 0.5).translate(0, 0.25, 0)
-        : kind === 'star' ? new THREE.OctahedronGeometry(0.35, 0) : new THREE.IcosahedronGeometry(0.35, 1);
-      const m = new THREE.InstancedMesh(geo, lam(o.color ?? 0xffffff), count); m.frustumCulled = false; scene.add(m);
+        : kind === 'star' ? starGeo() : new THREE.IcosahedronGeometry(0.35, 1);
+      const m = new THREE.InstancedMesh(geo, lam(o.color ?? 0xffffff, o.glow), count); m.frustumCulled = false; scene.add(m);   // o.glow = 스스로 빛남(밤에도 보인다)
       for (let i = 0; i < count; i++) m.setMatrixAt(i, _m4.makeScale(0, 0, 0));
       return { mesh: m, count, set(i, x, y, z, s = 1, ry = 0) { m.setMatrixAt(i, _m4.compose(_v.set(x, y, z), _q.setFromEuler(_e.set(0, ry, 0)), _s.set(s, s, s))); m.instanceMatrix.needsUpdate = true; },
         hide(i) { m.setMatrixAt(i, _m4.makeScale(0, 0, 0)); m.instanceMatrix.needsUpdate = true; }, setColor(i, c) { m.setColorAt(i, _c.set(c)); m.instanceColor.needsUpdate = true; },
@@ -325,6 +341,19 @@ export function createMapApi(host, NAV, META) {
     return rows.join('\n');
   }
 
+  // ---------- 11b. 미니맵(GAME-FIND-1 · 09-26) — 모든 게임 공용. 정적 층은 한 번만 굽고 화살표·표식만 덧그린다(minimap.js) ----------
+  //   map.minimap.show({big, marks}) → {remove} · hide() · setMarks([{x,z,color,shape:'dot'|'ring'|'star',label,blink,floor,r}]) · toggle(big?) · visible · big · ms(한 프레임 평균)
+  //   게임 범위 파사드에서 쓰면 stop 때 자동으로 숨고 표식도 비운다. M키·지도 클릭 = 크게(학교 전체)/작게(반경 40m).
+  MM = createMinimap({ mapData, drawMap, P, getYaw: pl.getYaw, onLayout: () => layoutChips() });
+  const minimap = { show: o => MM.show(o), hide: () => MM.hide(), setMarks: m => MM.setMarks(m), toggle: v => MM.toggle(v),
+    get visible() { return MM.visible; }, get big() { return MM.big; }, get marks() { return MM.marks; }, get ms() { return MM.ms; }, get el() { return MM.el; } };
+  // 효과음(GAME-FIND-1): main.js 합성음 도우미 tone(주파수, 시작초, 길이, 파형, 크기, 끝주파수)을 host.ui.tone으로 받아 쓴다(없으면 조용히). 파일 없음·짧게
+  const SFX = { ding: [[988, 0, 0.16, 'sine', 0.2], [1319, 0.1, 0.32, 'sine', 0.18]], tick: [[660, 0, 0.09, 'triangle', 0.14]], go: [[523, 0, 0.12, 'triangle', 0.2], [784, 0.11, 0.28, 'triangle', 0.2]],
+    done: [[523, 0, 0.14, 'triangle', 0.2], [659, 0.13, 0.14, 'triangle', 0.2], [784, 0.26, 0.14, 'triangle', 0.2], [1047, 0.39, 0.45, 'triangle', 0.22]],
+    pick: [[1175, 0, 0.09, 'sine', 0.16], [1568, 0.06, 0.18, 'sine', 0.15]], buzz: [[196, 0, 0.3, 'square', 0.05, 150]],
+    warm: [[440, 0, 0.02, 'sine', 0.0001]] };   // warm = 들리지 않는 소리 — 소리 장치(AudioContext) 만들기(첫 생성 ≈100ms)를 게임 준비 중에 미리(3·2·1 도중 멈칫 방지)
+  const sfx = k => { const T = ui.tone, s = SFX[k]; if (!T || !s) return; for (const a of s) T(...a); };
+
   // ---------- 12. 도구 ----------
   const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
   const rng = seed => { let a = typeof seed === 'number' ? seed >>> 0 : fnv(String(seed)); return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -340,7 +369,7 @@ export function createMapApi(host, NAV, META) {
   //   map = scope(id) — 게임이 만든 자원(이벤트·지점·트리거·충돌·표식·HUD·막기·경계·멈춤)을 기록했다가 stop 때 한꺼번에 정리
   const game = { current: null, ms: 0, msN: 0, msT: 0 };
   async function loadGame(id, params = {}) {
-    if (!/^[a-z_][a-z0-9-]{0,31}$/.test(id || '')) { hud.toast('게임 이름이 올바르지 않아요'); return null; }
+    if (!/^[a-z_][a-z0-9_-]{0,31}$/.test(id || '')) { hud.toast('게임 이름이 올바르지 않아요'); return null; }   // GAME-FIND-1: 가운데 밑줄 허용(find_place) — 점·빗금은 여전히 막힘
     if (game.current) stopGame('replace');
     try {
       const reg = await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url));
@@ -360,11 +389,16 @@ export function createMapApi(host, NAV, META) {
     cur.scope.dispose(); emit('gamestop', { id: cur.id, reason });
   }
   function scope(owner) {
-    const res = new Set(), track = h => { if (h && h.remove) res.add(h); return h; };
+    // GAME-FIND-1: 게임이 스스로 뗀 항목(도착한 표식·끈 리본·답한 창)은 정리 목록에서도 빠진다 — '다시 하기'를 몇 번 해도 목록이 쌓이지 않게
+    const res = new Set(), track = h => { if (h && h.remove) { const r0 = h.remove; h.remove = function () { res.delete(h); return r0.apply(this, arguments); }; res.add(h); } return h; };
     const S = facadeApi(track, owner);
     S.dispose = () => { for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); CTRL.frozen = false; CTRL.speed = 1; if (arena.shape) arena.shape = null; };
+    S.quit = () => { const c = game.current; if (c && c.scope === S) stopGame('quit'); };   // 게임이 스스로 끝낼 때(끝 화면 [그만하기])
+    Object.defineProperty(S, 'tracked', { get: () => res.size });
     return S;
   }
+  // 놀이 고르기 칩(GAME-FIND-1) — 오른쪽 아래 '🎮 놀이' → 목록 → load · 게임 중엔 '⏹ 그만하기'(gamepick.js)
+  const PICK = createGamePicker({ load: id => loadGame(id, {}), stop: () => stopGame('button'), current: () => game.current });
 
   // ---------- 14. 틱(main 루프 · SD2.step) ----------
   const zs = { cur: null, pend: null, n: 0 }; let slowT = 0, tSec = 0;
@@ -372,7 +406,7 @@ export function createMapApi(host, NAV, META) {
   // 끼였을 때 가장 가까운 걷는 칸(3m 안)으로 — 게임의 'R: 처음 자리로' 대신 쓸 수도 있다
   function unstick() { const N = navSync().raw, i = N.snap(P.x, P.y, P.z, 3, -1.6, 1.6); if (i < 0) return false; return player.teleport([N.X(i), N.y[i], N.Z(i)]); }
   function tick(dt) {
-    tSec += dt; mkTick(dt);
+    tSec += dt; mkTick(dt); MM.tick(dt);
     if (banT > 0 && (banT -= dt) <= 0 && banEl) banEl.style.display = 'none';
     if ((slowT += dt) >= 0.1) { slowT = 0; tick10(); }
     if ((storeT += dt) >= 2) { storeT = 0; flushStore(); }
@@ -389,6 +423,7 @@ export function createMapApi(host, NAV, META) {
   const emitTick = dt => { const s = L.get('tick'); if (!s || !s.size) return; tickEv.dt = dt;   // 매 프레임 — 배열 복사 없이
     for (const fn of s) { try { fn(tickEv); } catch (e) { console.error('[map] 이벤트 처리 중 오류(tick)', e); } } };
   function tick10() {
+    PICK.sync();   // 놀이 칩 글자(게임 중 ⏹ 그만하기)
     // 구역 들어감/나감: 새 후보가 2샘플 연속이면 확정 · 지금 구역 경계 0.25m 안이고 후보가 더 넓으면 머문다(문턱 깜빡임 방지)
     let cand = zoneAt(P.x, P.y, P.z); const cur = zs.cur;
     if (cand !== cur && cur && (!cand || cand.area > cur.area) && P.x > cur.x0 - 0.25 && P.x < cur.x1 + 0.25 && P.z > cur.z0 - 0.25 && P.z < cur.z1 + 0.25 && P.y >= cur.y0 && P.y < cur.y1) cand = cur;
@@ -445,8 +480,8 @@ export function createMapApi(host, NAV, META) {
     return {
       version: 1, owner: owner || null,
       zones: Z, zone, zoneAt, zonesWhere, inZone, q: Q, poi, pois, resolve, findEntry,
-      on: (type, fn) => { const off = on(type, fn); t({ remove: off }); return off; },
-      once(type, fn) { const off = on(type, ev => { off(); fn(ev); }); t({ remove: off }); return off; },
+      on: (type, fn) => { const h = t({ remove: on(type, fn) }); return () => h.remove(); },   // 돌려준 off를 부르면 정리 목록에서도 빠진다(GAME-FIND-1)
+      once(type, fn) { let h = null; const off = on(type, ev => { h.remove(); fn(ev); }); h = t({ remove: off }); return () => h.remove(); },
       player,
       interact: { add: o => t(interact.add({ ...o, owner: owner || o.owner })), enable: (f, v) => t(interact.enable(f, v)), list: interact.list },
       trigger: { add: (s, cb) => t(trigger.add(s, cb)) },
@@ -454,8 +489,14 @@ export function createMapApi(host, NAV, META) {
       arena: { set: s => t(arenaApi.set(s)), get: arenaApi.get },
       // HUD는 같은 키를 여러 번 갱신해도 정리 항목이 한 번만 쌓이게(매 프레임 chip 갱신 → 메모리 증가 방지)
       hud: { toast: hud.toast, banner: (x, s) => { const h = hud.banner(x, s); if (track && !hudKeys.has('!banner')) { hudKeys.add('!banner'); t({ remove: () => { if (banEl) banEl.style.display = 'none'; banT = 0; } }); } return h; },
-        chip: (k, x) => { const h = hud.chip(k, x); if (track && x != null && !hudKeys.has(k)) { hudKeys.add(k); t({ remove: () => { hud.chip(k, null); hudKeys.delete(k); } }); } return h; },
+        chip: (k, x, o) => { const h = hud.chip(k, x, o); if (track && x != null && !hudKeys.has(k)) { hudKeys.add(k); t({ remove: () => { hud.chip(k, null); hudKeys.delete(k); } }); } return h; },
+        goal: x => { const h = hud.goal(x); if (track && x != null && !hudKeys.has('!goal')) { hudKeys.add('!goal'); t({ remove: () => { hud.goal(null); hudKeys.delete('!goal'); } }); } return h; },
         ask: (ti, ch) => hud.ask(ti, ch, h => t(h)) },
+      // 미니맵(GAME-FIND-1): 범위 파사드에선 stop 때 자동으로 숨고 표식을 비운다(보이기·표식 정리 항목은 한 번만 쌓임)
+      minimap: { show: o => { const h = minimap.show(o); if (track && !hudKeys.has('!mm')) { hudKeys.add('!mm'); t({ remove: () => { minimap.setMarks([]); minimap.hide(); hudKeys.delete('!mm'); } }); } return h; },
+        hide: () => minimap.hide(), setMarks: m => { minimap.setMarks(m); if (track && !hudKeys.has('!mm')) { hudKeys.add('!mm'); t({ remove: () => { minimap.setMarks([]); minimap.hide(); hudKeys.delete('!mm'); } }); } },
+        toggle: v => minimap.toggle(v), get visible() { return minimap.visible; }, get big() { return minimap.big; }, get ms() { return minimap.ms; }, get marks() { return minimap.marks; }, get el() { return minimap.el; } },
+      sfx: k => sfx(k),   // 짧은 합성 효과음: 'ding'(도착) · 'tick'(3·2·1) · 'go'(출발) · 'done'(끝) · 'pick'(줍기) · 'buzz'(시간 끝) · 'warm'(준비 — 소리 장치만 미리 만듦)
       mk: { marker: (x, y, z, o) => t(mk.marker(x, y, z, o)), trail: (p, o) => t(mk.trail(p, o)), many: (k, n, o) => t(mk.many(k, n, o)), add: obj => t(mk.add(obj)) },
       add: obj => t(mk.add(obj)), remove: obj => scene.remove(obj),
       nav: o => nav(o).then(NV => track ? { ...NV, block: x => t(NV.block(x)) } : NV), navSync,
@@ -465,5 +506,11 @@ export function createMapApi(host, NAV, META) {
   }
   const MAP = facadeApi(null, null);
   Object.assign(MAP, { emit, tick, check, scope, stuckLog, unstick, game: { load: loadGame, stop: stopGame, get current() { return game.current; }, get lastMs() { return game.last || 0; } }, warn, entryBad, BRECT, inSchool, zoneIndex });
+  // 시험용 세기(GAME-FIND-1 수용 시험): 게임을 켰다 끄거나 '다시 하기' 뒤 이벤트·트리거·표식·칩·지점·장면 물체 수가 처음과 같은가
+  MAP.stats = () => { let lis = 0; for (const [, s] of L) lis += s.size; const cur = game.current;
+    return { listeners: lis, trig: TRIG.size, marks: marks.length, chips: chips.size, hot: HOT.length, pois: POI.size, colliders: world.colliders.length, scene: scene.children.length,
+      minimap: MM.visible, mmMarks: MM.marks.length, goal: !!(goalEl && goalEl.style.display !== 'none'), arena: !!arena.shape, frozen: CTRL.frozen, speed: CTRL.speed,
+      game: cur ? cur.id : null, tracked: cur ? cur.scope.tracked : 0, pick: PICK.el.textContent }; };
+  MAP.picker = PICK;
   return MAP;
 }

@@ -400,6 +400,7 @@ let AC = null;
 function tone(freq, t0, dur, type = 'sine', vol = 0.25, drop = 0) {
   try {
     AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();   // GAME-FIND-1: ?game= 주소로 시작하면 첫 소리가 사용자 입력 전이라 멈춘 채 만들어진다 → 다음 소리 때 깨운다
     const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + t0;
     o.type = type; o.frequency.setValueAtTime(freq, t); if (drop) o.frequency.exponentialRampToValueAtTime(drop, t + dur);
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
@@ -833,7 +834,7 @@ function detailTick(dt) {
 MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL,
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
   pl: { P, ACT, CTRL, keys, getYaw: () => camYaw, setYaw: v => { camYaw = v; } },
-  ui: { toast, hint: hintEl }, hot: HOT }, NAV, makeMeta(SCHOOL));
+  ui: { toast, hint: hintEl, tone }, hot: HOT }, NAV, makeMeta(SCHOOL));   // tone = 게임 효과음(GAME-FIND-1 map.sfx)
 
 // ---------- 루프 + 예산 계측(헌법⑥) ----------
 const clock = new THREE.Clock();
