@@ -4876,7 +4876,7 @@ export function buildWorld(scene) {
   {
     // PERF-LOAD(09-26): 예전 이중 루프(상자 7천 → 2,450만 쌍)가 buildWorld 본문(너무 커서 최적화되지 않는 함수)에서 돌아 로드 1.7초(크롬북 ≈6초)였다.
     //  판정식(sm·ov, z → x → y 순)과 결과 순서(i, j 오름차순)는 그대로 두고 후보 쌍만 고른다: 면 좌표 1cm 칸(EPS 4mm < 1cm → 이웃 칸까지)
-    //  + 그 축과 함께 겹쳐야 하는 가로 구간(겹침 > 0.02) 쓸기. 작은 함수(IIFE)라 최적화된다(≈15ms). 인공 결함 6판(쌍 430~470·NaN)으로 예전 식과 같음 확인.
+    //  + 그 축과 함께 겹쳐야 하는 가로 구간(겹침 > 0.02) 쓸기. 작은 함수(IIFE)라 최적화된다(≈8ms). 인공 결함 10판(쌍 430~1,980·NaN·무한·뒤집힌 상자)으로 예전 식과 같음 확인.
     const EPS = 0.004, faults = (() => {
       const N = allBoxes.length, hit = new Map(), V = {};   // V = 좌표 6개를 한 줄 배열로(같은 값 — 정렬·쓸기에서 빠르게)
       for (const k of ['x0', 'x1', 'y0', 'y1', 'z0', 'z1']) { const a = V[k] = new Float64Array(N); for (let i = 0; i < N; i++) a[i] = allBoxes[i][k]; }

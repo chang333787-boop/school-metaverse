@@ -111,6 +111,9 @@ export default async function start(map, params) { …; return { tick(dt) {}, st
 - 잎이 몸 높이로 내려온 나무(전정 소나무·퍼진 소나무·어린 나무)는 world.js `canopyBox()`가 머리 높이(땅+1.4)에서 자른 잎 크기 × 0.8로 막는다(땅 높이가 바뀌는 곳은 같은 높이까지만).
 - `lists.camColliders` = 기본 피치에서 카메라를 벽 뒤로 보내거나 근평면이 걸린 콜라이더 상위 12.
 - 실행: `node …/harness.mjs --url "http://localhost:8001/v2/?check=1" --out <폴더> --eval "(async()=>JSON.stringify((await SD2.health({img:true})).counts))()"` (전체 판 ≈2초)
+- **로드·프레임 계측(PERF-LOAD · 09-26)**: `SD2.timing` = { buildMs(월드 짓기) · firstFrameMs(페이지 시작 → 첫 프레임) · frameCpuP50/P95(최근 240프레임 CPU — 렌더 제외) · occP95(가림 컬링) } · `SD2.timing.reset()` 뒤 걸어 보고 읽는다.
+  이 맥 차가운 시작: 월드 1,867 → 150ms · 첫 프레임 2,120 → 270ms(CPU 4배 늦춤 7.6 → 0.9초) · 걷기 3동선 프레임 CPU p95 1.1/2.4/3.3 → 0.7/1.2/1.6ms. 모습은 그대로(고정 시점 26장 픽셀 차 0 · 전 메시 정점·법선·경계 해시 같음).
+  빌드는 `?check=1` 없이도 헌법③ 감사를 돈다(칸 쓸기 — 예전 전 쌍 비교와 같은 결과). 가림 컬링은 절두체에 든 청크만 재계산 자리 그대로 판정 → 보이는 청크 집합이 예전과 프레임마다 같다.
 
 ## 7. 지금 값(09-25 · integ — 1차 7구간 합친 뒤)
 
