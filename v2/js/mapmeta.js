@@ -71,13 +71,13 @@ export function makeMeta(SCHOOL) {
     '앞뜰 산책로': M('front-walk', 'path', null),
     '앞뜰 남쪽 화단': M('front-bed-south', 'yard', null),                       // 산책로 남쪽 화단(전정 소나무·교훈석) ~ 둔덕
     '구령대': M('podium', 'stage', null),
-    '놀이터': M('playground', 'play', null),
+    '놀이터': M('playground', 'play', null, [], { yr: [-2.55, 1.0] }),            // [quality4 09-26] 미끄럼틀 발판(0.65)·오르기 틀 위도 '놀이터'(예전 높이 띠 −0.15까지 — 구역 없음)
     '무지개 쉼터': M('shelter', 'yard', null, ['covered']),
     '놀이마당': M('play-yard', 'play', null),
     '모래 놀이터': M('sandpit', 'play', null),
     '버스 타는 곳': M('bus-stop', 'path', null, ['car']),
     '정문': M('gate', 'path', null, ['entry']),
-    '유치원 놀이터': M('kinder-playground', 'play', null, ['kinder']),
+    '유치원 놀이터': M('kinder-playground', 'play', null, ['kinder'], { yr: [-2.55, 0.6] }),   // [quality4 09-26] 조합놀이대 발판(−0.15·0.15)도 '유치원 놀이터'(예전 구역 없음)
     '체육관 계단': M('gym-steps', 'stair', null),
     '숲놀이터': M('forest-play', 'play', null),
     '개수대': M('sink', 'yard', null, ['water']),
