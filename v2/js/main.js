@@ -35,6 +35,23 @@ scene.add(sun);
 // PERF-LOAD(09-26): 로딩 막(index.html #boot)이 한 번 칠해진 뒤 월드를 짓는다 — buildWorld는 동기라 그동안 화면이 멈춘다(최상위 await — 모듈).
 //  배경 탭(rAF 멈춤)이면 0.1초 뒤 그냥 짓는다. 잰 값은 SD2.timing(buildMs·firstFrameMs·frameCpuP50/P95·occP95 — 아래 RB)
 await new Promise(r => { requestAnimationFrame(() => setTimeout(r)); setTimeout(r, 100); });
+// PERF-LOAD: 셰이더 미리 짓기 — 월드를 짓는 동안(동기) GPU 쪽이 셰이더를 따로 컴파일하도록 먼저 던져 둔다(이 맥 차가운 시작 첫 프레임 336 → 298ms).
+//  재질 조합(종류·무늬·알파 자름·정점색·평면 음영·양면·투명·인스턴스·인스턴스 색)이 실제 재질(world.js·캐릭터·문·구름·별)과 같으면 three가 같은 프로그램을 그대로 쓴다.
+//  달라도 모습은 같고 그 재질만 원래대로 첫 프레임에 컴파일된다. 첫 프레임 뒤 버린다(warmDone).
+const warmDone = (() => { try {
+  const T = new THREE.DataTexture(new Uint8Array(4), 1, 1), G = new THREE.BufferGeometry(), s = new THREE.Scene(), mats = []; T.needsUpdate = true;
+  G.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3)); G.setAttribute('normal', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 0, 0, 1], 3));
+  G.setAttribute('color', new THREE.Float32BufferAttribute([1, 1, 1, 1, 1, 1, 1, 1, 1], 3)); G.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1], 2));
+  const L = o => new THREE.MeshLambertMaterial(o), B = o => new THREE.MeshBasicMaterial(o), D = THREE.DoubleSide;
+  const add = (m, inst, col) => { mats.push(m); const o = inst ? new THREE.InstancedMesh(G, m, 1) : new THREE.Mesh(G, m); if (col) o.setColorAt(0, new THREE.Color()); s.add(o); };
+  [B({ map: T, alphaTest: 0.5 }), B({}), L({ map: T }), L({}), L({ map: T, alphaTest: 0.5, side: D }), L({ map: T, side: D }), L({ transparent: true }), L({ vertexColors: true }),
+   B({ map: T, vertexColors: true }), L({ map: T, vertexColors: true }), L({ map: T, transparent: true, side: D }), L({ map: T, vertexColors: true, transparent: true, side: D }),
+   L({ vertexColors: true, flatShading: true }), B({ vertexColors: true, fog: false })].forEach(m => add(m));
+  add(B({ map: T }), true, true); add(L({}), true, true); add(L({ transparent: true }), true); add(L({}), true);
+  const pm = new THREE.PointsMaterial({ sizeAttenuation: false, fog: false }); mats.push(pm); s.add(new THREE.Points(G, pm));
+  renderer.compile(s, camera, scene);
+  return () => { mats.forEach(m => m.dispose()); G.dispose(); T.dispose(); };
+} catch (e) { return () => {}; } })();
 const TIMING = { buildMs: performance.now(), firstFrameMs: null };
 const world = buildWorld(scene);
 TIMING.buildMs = performance.now() - TIMING.buildMs;
@@ -820,6 +837,7 @@ function loop() {
 loop();
 TIMING.firstFrameMs = performance.now();   // 첫 프레임(페이지 시작부터 ms) — 그 뒤 로딩 막을 걷는다
 document.getElementById('boot')?.remove();
+warmDone();
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
