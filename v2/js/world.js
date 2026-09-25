@@ -4,7 +4,7 @@
 //  ④ 16m 청크 병합 ⑤ 충돌 AABB 전용 ⑥ 예산 dc≤300·sim≤1ms
 // ============================================================
 import * as THREE from 'three';
-import { SCHOOL } from './layout.js?v=5';   // LAYOUT-3 실측 배치(v1의 js/data.js는 참고용으로 그대로)
+import { SCHOOL } from './layout.js?v=6';   // LAYOUT-3 실측 배치(v1의 js/data.js는 참고용으로 그대로)
 
 // 바깥 지형 높이(main.js 물리·검사도 같은 함수를 쓴다): 앞뜰·체육관 대지 = yard, 그 밖(둔덕 아래·운동장) = field
 const TRN = SCHOOL.terrain;

@@ -1,10 +1,10 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildWorld } from './world.js?v=112';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
-import { SCHOOL } from './layout.js?v=5';   // LAYOUT-3 실측 배치(v1 data.js 대신)
-import * as NAV from './nav.js?v=1';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
-import { makeMeta } from './mapmeta.js?v=1';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=1';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { buildWorld } from './world.js?v=113';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { SCHOOL } from './layout.js?v=6';   // LAYOUT-3 실측 배치(v1 data.js 대신)
+import * as NAV from './nav.js?v=2';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
+import { makeMeta } from './mapmeta.js?v=2';       // MAP-API-1: 구역 계약표·출발점·표지점
+import { createMapApi } from './mapapi.js?v=2';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -879,7 +879,7 @@ window.SD2 = {
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)
   map: MAP, phys: { groundAt, blockedAt, ceilAt, camHit }, ACT, CTRL, camPose: (...a) => ({ ...camPose(...a) }),
-  health: opt => import('./health.js?v=1').then(m => m.runHealth(window.SD2, opt || {})),
+  health: opt => import('./health.js?v=2').then(m => m.runHealth(window.SD2, opt || {})),
 };
 // 게임 로더(MAP-API-1): ?game=이름 → v2/games/registry.js 허용 목록 → export default start(map) (사진 대조 모드에선 안 켠다)
 { const GAME = new URLSearchParams(location.search).get('game'); if (GAME && !SHOT) MAP.game.load(GAME, Object.fromEntries(new URLSearchParams(location.search))); }
