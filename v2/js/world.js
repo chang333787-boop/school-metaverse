@@ -4878,18 +4878,19 @@ export function buildWorld(scene) {
     //  판정식(sm·ov, z → x → y 순)과 결과 순서(i, j 오름차순)는 그대로 두고 후보 쌍만 고른다: 면 좌표 1cm 칸(EPS 4mm < 1cm → 이웃 칸까지)
     //  + 그 축과 함께 겹쳐야 하는 가로 구간(겹침 > 0.02) 쓸기. 작은 함수(IIFE)라 최적화된다(≈15ms). 인공 결함 6판(쌍 430~470·NaN)으로 예전 식과 같음 확인.
     const EPS = 0.004, faults = (() => {
-      const N = allBoxes.length, hit = new Map();
+      const N = allBoxes.length, hit = new Map(), V = {};   // V = 좌표 6개를 한 줄 배열로(같은 값 — 정렬·쓸기에서 빠르게)
+      for (const k of ['x0', 'x1', 'y0', 'y1', 'z0', 'z1']) { const a = V[k] = new Float64Array(N); for (let i = 0; i < N; i++) a[i] = allBoxes[i][k]; }
       const ov = (a0,a1,b0,b1) => Math.min(a1,b1) - Math.max(a0,b0) > 0.02, sm = (p,q) => Math.abs(p-q) < EPS;
       const judge = (A, Bb) => ((sm(A.z0,Bb.z0)||sm(A.z1,Bb.z1)) && ov(A.x0,A.x1,Bb.x0,Bb.x1) && ov(A.y0,A.y1,Bb.y0,Bb.y1)) ? 'z'
         : ((sm(A.x0,Bb.x0)||sm(A.x1,Bb.x1)) && ov(A.z0,A.z1,Bb.z0,Bb.z1) && ov(A.y0,A.y1,Bb.y0,Bb.y1)) ? 'x'
         : ((sm(A.y0,Bb.y0)||sm(A.y1,Bb.y1)) && ov(A.x0,A.x1,Bb.x0,Bb.x1) && ov(A.z0,A.z1,Bb.z0,Bb.z1)) ? 'y' : null;
       for (const [c, u0, u1] of [['z0','x0','x1'], ['z1','x0','x1'], ['x0','z0','z1'], ['x1','z0','z1'], ['y0','x0','x1'], ['y1','x0','x1']]) {
-        const bk = new Map();   // 면 좌표 1cm 칸 → 상자 번호(좌표가 NaN·무한이면 sm이 늘 거짓 — 뺀다. 가로 구간이 NaN이면 ov가 늘 거짓)
-        for (let i = 0; i < N; i++) { const b = allBoxes[i], k = Math.floor(b[c] / 0.01); if (!isFinite(k) || b[u0] !== b[u0] || b[u1] !== b[u1]) continue; let a = bk.get(k); if (!a) bk.set(k, a = []); a.push(i); }
+        const C = V[c], U0 = V[u0], U1 = V[u1], bk = new Map();   // 면 좌표 1cm 칸 → 상자 번호(좌표가 NaN·무한이면 sm이 늘 거짓 — 뺀다. 가로 구간이 NaN이면 ov가 늘 거짓)
+        for (let i = 0; i < N; i++) { const k = Math.floor(C[i] / 0.01); if (!isFinite(k) || U0[i] !== U0[i] || U1[i] !== U1[i]) continue; let a = bk.get(k); if (!a) bk.set(k, a = []); a.push(i); }
         for (const [k, a] of bk) { const n9 = bk.get(k + 1), L = n9 ? a.concat(n9) : a; if (L.length < 2) continue;
-          L.sort((p, q) => allBoxes[p][u0] - allBoxes[q][u0]);
-          for (let s = 0; s < L.length; s++) { const e = allBoxes[L[s]][u1];
-            for (let t = s + 1; t < L.length && allBoxes[L[t]][u0] <= e; t++) { const i = Math.min(L[s], L[t]), j = Math.max(L[s], L[t]), key = i * N + j;
+          L.sort((p, q) => U0[p] - U0[q]);
+          for (let s = 0; s < L.length; s++) { const e = U1[L[s]];
+            for (let t = s + 1; t < L.length && U0[L[t]] <= e; t++) { const i = Math.min(L[s], L[t]), j = Math.max(L[s], L[t]), key = i * N + j;
               if (!hit.has(key)) { const ax = judge(allBoxes[i], allBoxes[j]); if (ax) hit.set(key, [i, j, ax]); } } } }
       }
       return [...hit.keys()].sort((p, q) => p - q).map(q => hit.get(q));
@@ -4961,11 +4962,25 @@ export function buildWorld(scene) {
     gm.matrixAutoUpdate = false; gm.renderOrder = 2; scene.add(gm); glassMesh = gm;
   }
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  // PERF-LOAD: 비인덱스 청크 법선 — three computeVertexNormals(면마다 cb×ab → Float32 저장 → 정점마다 정규화 → Float32)와 같은 식·같은 순서(값이 같다), Vector3 호출 없이
+  const flatNormals = g => { const P = g.attributes.position.array, N = new Float32Array(P.length);
+    for (let i = 0; i + 8 < P.length; i += 9) { const bx = P[i + 3], by = P[i + 4], bz = P[i + 5], cbx = P[i + 6] - bx, cby = P[i + 7] - by, cbz = P[i + 8] - bz, abx = P[i] - bx, aby = P[i + 1] - by, abz = P[i + 2] - bz;
+      const x = Math.fround(cby * abz - cbz * aby), y = Math.fround(cbz * abx - cbx * abz), z = Math.fround(cbx * aby - cby * abx), s = 1 / (Math.sqrt(x * x + y * y + z * z) || 1);
+      N[i] = N[i + 3] = N[i + 6] = x * s; N[i + 1] = N[i + 4] = N[i + 7] = y * s; N[i + 2] = N[i + 5] = N[i + 8] = z * s; }
+    g.setAttribute('normal', new THREE.BufferAttribute(N, 3)); };
+  // PERF-LOAD: 경계 상자·구 — three computeBoundingBox(min·max)·computeBoundingSphere(상자 가운데 → 최대 거리²의 제곱근)와 같은 식을 한 번에. 비었거나 NaN이면 three 것 그대로(경고 문구 포함)
+  const bounds = (g, box) => { const P = g.attributes.position.array; let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+    for (let i = 0; i + 2 < P.length; i += 3) { const x = P[i], y = P[i + 1], z = P[i + 2]; x0 = Math.min(x0, x); y0 = Math.min(y0, y); z0 = Math.min(z0, z); x1 = Math.max(x1, x); y1 = Math.max(y1, y); z1 = Math.max(z1, z); }
+    if (!(x0 <= x1 && y0 <= y1 && z0 <= z1)) { g.computeBoundingSphere(); if (box) g.computeBoundingBox(); return; }
+    const cx = (x0 + x1) * 0.5, cy = (y0 + y1) * 0.5, cz = (z0 + z1) * 0.5; let r2 = 0;
+    for (let i = 0; i + 2 < P.length; i += 3) { const dx = cx - P[i], dy = cy - P[i + 1], dz = cz - P[i + 2]; r2 = Math.max(r2, dx * dx + dy * dy + dz * dz); }
+    g.boundingSphere = new THREE.Sphere(new THREE.Vector3(cx, cy, cz), Math.sqrt(r2));
+    if (box) g.boundingBox = new THREE.Box3(new THREE.Vector3(x0, y0, z0), new THREE.Vector3(x1, y1, z1)); };
   for (const ch of chunks.values()) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ch.pos), 3));
     g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(ch.col), 3));
-    g.computeVertexNormals(); g.computeBoundingSphere(); g.computeBoundingBox();
+    flatNormals(g); bounds(g, true);
     const m = new THREE.Mesh(g, mat);
     m.matrixAutoUpdate = false; m.userData.st = true;   // OCC-CULL: main.js가 매 프레임 상자(AABB)로 절두체 검사
     scene.add(m);
@@ -5030,11 +5045,11 @@ export function buildWorld(scene) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ch.pos), 3));
     g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(ch.col), 3));
-    g.computeVertexNormals(); g.computeBoundingSphere();
+    flatNormals(g); bounds(g, !far);
     const m = new THREE.Mesh(g, mat);
     m.matrixAutoUpdate = false;
     scene.add(m);
-    if (!far) { g.computeBoundingBox(); details.push({ mesh: m, cx: ch.cx, cz: ch.cz, inside: ch.inside, bi: ch.bi, fl: ch.fl, box: g.boundingBox }); }
+    if (!far) { details.push({ mesh: m, cx: ch.cx, cz: ch.cz, inside: ch.inside, bi: ch.bi, fl: ch.fl, box: g.boundingBox }); }
   }
   details.brect = BRECT; details.wing = 2; details.FH = FH;   // OCC-CULL: main.js 가림 컬링이 건물 칸(BRECT 순서 — 2 = 서관, 2층이 있는 유일한 동)·층고를 읽는다
   return { colliders, grid, zones, doors, allBoxes, hotspots, details, visRods, soft: softVols, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh };

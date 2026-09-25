@@ -545,8 +545,10 @@ function sweepHits(o, dir, len = o.ow + 0.05) {
     ? { x0: o.bx - o.w/2 + lo, x1: o.bx + o.w/2 + hi, z0: o.bz - T, z1: o.bz + T }
     : { x0: o.bx - T, x1: o.bx + T, z0: o.bz - o.w/2 + lo, z1: o.bz + o.w/2 + hi };
   let n = 0;
-  if (!sweepHits.L || sweepHits.n !== world.allBoxes.length) { sweepHits.L = world.allBoxes.filter(b => !(b.wall || b.y1 - b.y0 >= 2.6)); sweepHits.n = world.allBoxes.length; }   // PERF-LOAD: 후보만 한 번 추림(세기만 하니 순서 무관)
-  for (const b of sweepHits.L) {
+  if (!o.swC || len > o.swLen || o.swN !== world.allBoxes.length) {   // PERF-LOAD: 문마다 가장 길게 쓸 자리(양쪽)에 걸친 후보만 한 번 추림 — 세기만 하니 순서 무관(같은 값)
+    const e = Math.max(len, o.ow + 0.05), R9 = o.ax === 'x' ? [o.bx - o.w/2 - e, o.bx + o.w/2 + e, o.bz - T, o.bz + T] : [o.bx - T, o.bx + T, o.bz - o.w/2 - e, o.bz + o.w/2 + e];
+    o.swC = world.allBoxes.filter(b => !(b.wall || b.y1 - b.y0 >= 2.6) && !(b.x1 <= R9[0] || b.x0 >= R9[1] || b.z1 <= R9[2] || b.z0 >= R9[3] || b.y1 <= y0 || b.y0 >= y1)); o.swLen = e; o.swN = world.allBoxes.length; }
+  for (const b of o.swC) {
     if (b.wall || b.y1 - b.y0 >= 2.6) continue;   // 벽 조각(징두리로 나뉜 것 포함)·문보다 높은 기둥 = 문이 숨는 곳이니 제외.
                                         // 두께로 판정하면 두 겹 외벽(0.15)을 얇은 부재로 오인한다
     if (b.x1 <= sw.x0 || b.x0 >= sw.x1 || b.z1 <= sw.z0 || b.z0 >= sw.z1 || b.y1 <= y0 || b.y0 >= y1) continue;
