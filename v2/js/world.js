@@ -2415,7 +2415,7 @@ export function buildWorld(scene) {
     wallZ(lz0, lz1, lx1, WALL, { face: 1, gaps: [{ c: (lz0 + 0.15 + LD0) / 2, w: LD0 - lz0 - 0.15, sill: 0.15, dh: 2.9, win: true, frame: 0xc9ced3 },
       { c: LDC, w: LDW, glass: true, door: true, slideOver: true, dh: 2.5 },
       { c: (LD1 + lz1 - 0.15) / 2, w: lz1 - 0.15 - LD1, sill: 0.15, dh: 2.9, win: true, frame: 0xc9ced3 }] });
-    wallX(cx1 - 0.15, lx1 + 0.15, lz0, WALL, { face: -1, gaps: [{ c: (cx1 + lx1) / 2, w: lx1 - cx1 - 0.3, sill: 0.15, dh: 2.9, win: true, frame: 0xc9ced3 }] });   // 북쪽 통유리(hall_lobby-4: 창턱 낮게·가는 스테인리스 틀)
+    wallX(cx1 - 0.15, lx1 + 0.15, lz0, WALL, { face: -1, gaps: [{ c: (cx1 + lx1) / 2, w: lx1 - cx1 - 0.3, sill: 0.15, dh: 2.9, win: true, frame: 0xc9ced3, noLedge: true }] });   // 북쪽 통유리(hall_lobby-4: 창턱 낮게·가는 스테인리스 틀)
     // 윗부분 베이지 롤블라인드(2.03~2.88 — 영상 e_343·L_346): 북쪽 두 폭 · 동쪽 고정 유리 둘
     [-1, 1].forEach(sd => dBox((lx1 - cx1 - 0.3) / 2 - 0.09, 0.85, 0.04, 0xe6ddcf, (cx1 + lx1) / 2 + sd * ((lx1 - cx1 - 0.3) / 4 + 0.015), 2.03, lz0 + 0.125));
     [[lz0 + 0.15, LD0], [LD1, lz1 - 0.15]].forEach(([a, b]) => dBox(0.04, 0.85, b - a - 0.12, 0xe6ddcf, lx1 - 0.125, 2.03, (a + b) / 2));
@@ -2665,18 +2665,17 @@ export function buildWorld(scene) {
     });
     // 본관 북면(영상 Q_113.5~Q_128·b_108): 창마다 아래 튀어나온 크림 상자(실외기 덮개형 · 윗판 — 창턱 바로 밑) · 창 사이 짙은 선홈통 + 네모 깔때기 · 밑단 크림(짙은 띠 없음)
     //   수돗가 상자(23.2~27.9) 양옆은 상자를 자름 · 마당 동쪽 끝 너머(뒤뜰 YARD)까지 이어짐(b_108·Q_109) · 게시판 뒤 첫 창 = 유리 뒤 흰 판(b_132)
-    NWIN.forEach(c => {
+    NWINC.forEach(c => {
       let a = c - 1.7, b = c + 1.7;
       if (a < 23.1 && b > 23.1) b = 23.1; if (a < 28.0 && b > 28.0) a = 28.0;
       if (b - a < 1.0) return;                                                                        // 수돗가 옆 짧은 토막은 생략
       const y0 = b > MX1 ? YARD + 0.005 : COURT + 0.006, m = (a + b) / 2;
-      dBox(b - a, 1.0 - y0, 0.46, 0xf1ebda, m, y0, MZ1 - 0.236);                                     // 벽 면에서 6mm 띄움(마당 받침 상자 뒷면과 같은 평면이 안 되게) · 윗판 턱은 면 수 예산으로 생략
+      dBox(b - a, 0.95 - y0, 0.46, 0xf1ebda, m, y0, MZ1 - 0.236);   // 윗면 0.95 = 본관 창 바깥 창턱(0.95~1.0 — MAIN-COR) 바로 밑(같은 평면 금지)                                     // 벽 면에서 6mm 띄움(마당 받침 상자 뒷면과 같은 평면이 안 되게) · 윗판 턱은 면 수 예산으로 생략
       colliders.push(noStand({ x0: a, x1: b, y0, y1: 1.01, z0: MZ1 - 0.49, z1: MZ1 }));
     });
     cut16(DX0 + 0.06, fx1 + 0.09, (u, v) => dBox(v - u, 0.45 - (YARD + 0.015), 0.03, 0xe8e3d7, (u + v) / 2, YARD + 0.015, MZ1 - 0.03));   // 밑단 크림(짙은 띠 자리 — 벽 면 1cm 앞)
-    [0, 2, 4, 6].forEach(k => { const x9 = NWIN[k] + 1.835, y9 = x9 > MX1 ? YARD : COURT;
+    [0, 2, 4, 6].filter(k => k < NWINC.length - 1).forEach(k => { const x9 = (NWINC[k] + NWINC[k + 1]) / 2, y9 = x9 > MX1 ? YARD : COURT;
       rodL(x9, y9, MZ1 - 0.07, x9, FH + 0.1, MZ1 - 0.07, 0.05, 0x6f706c, {}, PR4); dBox(0.22, 0.25, 0.18, 0x77776f, x9, FH - 0.45, MZ1 - 0.1); });
-    dBox(BOARD[1] - 0.02 - (NWIN[0] - 1.58), 1.21, 0.03, 0xe8ece8, (NWIN[0] - 1.58 + BOARD[1] - 0.02) / 2, 1.07, fz0 + 0.115);
     zones.push({ x0: lx1, x1: MX1, z0: MZ0, z1: MZ1, y: COURT, label: '가운데 마당' });
   }
 

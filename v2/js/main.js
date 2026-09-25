@@ -741,14 +741,14 @@ function detailTick(dt) {
     for (const d of world.details) {
       const dx = cp.x - d.cx, dz = cp.z - d.cz;
       let v = dx * dx + dz * dz < (d.inside ? RI : R);
-      if (v && d.inside && !OCC.off) { if (!rays) { occRays(cp); rays = true; } v = occVisible(d, cp); }
+      if (v && d.inside && !OCC.off && d.box && d.bi != null) { if (!rays) { occRays(cp); rays = true; } v = occVisible(d, cp); }   // 상자·건물 칸이 없는 항목(main.js가 넣는 필름 문 등)은 거리만
       d.on = v;
     }
     OCC.x = cp.x; OCC.y = cp.y; OCC.z = cp.z; OCC.ms = performance.now() - t0;
   }
   // 절두체는 매 프레임 상자(AABB)로 — three의 경계 구는 길쭉한 청크(교실 줄)에선 카메라 뒤 옆 교실까지 품는다. 정적 청크(world.js st)도 같이(상자 밖이면 그릴 것이 0이라 모습 그대로)
   camera.updateMatrixWorld(); _fr.setFromProjectionMatrix(_fm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
-  for (const d of world.details) d.mesh.visible = d.on && _fr.intersectsBox(d.box);
+  for (const d of world.details) d.mesh.visible = d.on && (!d.box || _fr.intersectsBox(d.box));
   if (!OCC.st) { OCC.st = []; scene.traverse(o => { if (o.userData.st) OCC.st.push(o); }); }
   for (const m of OCC.st) m.visible = _fr.intersectsBox(m.geometry.boundingBox);
 }
