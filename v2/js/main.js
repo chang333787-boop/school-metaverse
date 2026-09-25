@@ -528,7 +528,8 @@ function sweepHits(o, dir, len = o.ow + 0.05) {
     ? { x0: o.bx - o.w/2 + lo, x1: o.bx + o.w/2 + hi, z0: o.bz - T, z1: o.bz + T }
     : { x0: o.bx - T, x1: o.bx + T, z0: o.bz - o.w/2 + lo, z1: o.bz + o.w/2 + hi };
   let n = 0;
-  for (const b of world.allBoxes) {
+  if (!sweepHits.L || sweepHits.n !== world.allBoxes.length) { sweepHits.L = world.allBoxes.filter(b => !(b.wall || b.y1 - b.y0 >= 2.6)); sweepHits.n = world.allBoxes.length; }   // PERF-LOAD: 후보만 한 번 추림(세기만 하니 순서 무관)
+  for (const b of sweepHits.L) {
     if (b.wall || b.y1 - b.y0 >= 2.6) continue;   // 벽 조각(징두리로 나뉜 것 포함)·문보다 높은 기둥 = 문이 숨는 곳이니 제외.
                                         // 두께로 판정하면 두 겹 외벽(0.15)을 얇은 부재로 오인한다
     if (b.x1 <= sw.x0 || b.x0 >= sw.x1 || b.z1 <= sw.z0 || b.z0 >= sw.z1 || b.y1 <= y0 || b.y0 >= y1) continue;
@@ -663,6 +664,7 @@ function occPrep() {
   OCC.rs = new Uint32Array(OCC.N); OCC.nd = new Uint8Array(OCC.N);   // PERF-LOAD: 광선마다 잰 재계산 번호(gen) · 이번에 잴 광선
   OCC.cs = new Float64Array(OCC.N); OCC.sn = new Float64Array(OCC.N);   // PERF-LOAD: 광선 방향 cos·sin 표(같은 식 kk·DA로 한 번만 — 값이 같다)
   for (let k = 0; k < OCC.N; k++) { const th = k * (Math.PI * 2 / OCC.N); OCC.cs[k] = Math.cos(th); OCC.sn[k] = Math.sin(th); }
+  OCC.wb = new Float64Array(W.length * 6); W.forEach((w, i) => OCC.wb.set([w.x0, w.x1, w.z0, w.z1, w.y0, w.y1], i * 6));   // PERF-LOAD: 벽 좌표를 한 줄 배열로(같은 값 · 캐시에 붙어 있게)
   OCC.stairs = world.zones.filter(z => z.kind === 'stair' || (z.kind == null && /계단/.test(z.label) && !/창고/.test(z.label)));
   // 동마다 가로 가림판(③): 지붕·슬래브. 동 바닥 격자(1.5m) 모든 칸에서 충돌 상자(부풀림 없음)가 빈틈없이 덮는 높이 구간(0.05m 단위)만 가림판으로 쓴다 —
   //  한 칸이라도 뚫려 있으면 그 높이는 판이 아니다(보수적). 서관은 계단 칸을 빼고 재고 그 칸을 모든 판의 구멍으로 둔다.
@@ -694,31 +696,32 @@ function angSpan(cx, cz, x0, x1, z0, z1) {
   let k0 = Math.ceil((a0 + lo) / DA), k1 = Math.floor((a0 + hi) / DA); if (k1 < k0) k0 = k1 = Math.round(a0 / DA); _as[0] = k0; _as[1] = k1;
 }
 function occRays(cp, nd) {   // 광선마다 가까운 높은 벽 K개(거리·높이 범위). nd = 이 광선만 잰다(PERF-LOAD — 목록은 부른 쪽이 비움 · 벽을 번호 순으로 넣으니 전부 잰 것과 같다)
-  const { N, R, K, hd, hy0, hy1, hn, cs, sn } = OCC; if (!nd) hn.fill(0);
-  for (const w of OCC.occ) {
-    if (w.x1 < cp.x - R || w.x0 > cp.x + R || w.z1 < cp.z - R || w.z0 > cp.z + R) continue;
-    if (cp.x > w.x0 && cp.x < w.x1 && cp.z > w.z0 && cp.z < w.z1) continue;   // 카메라가 벽 속(없어야 하지만)
-    angSpan(cp.x, cp.z, w.x0, w.x1, w.z0, w.z1);
+  const { N, R, K, hd, hy0, hy1, hn, cs, sn, wb } = OCC, px = cp.x, pz = cp.z; if (!nd) hn.fill(0);
+  for (let i = 0; i < wb.length; i += 6) { const x0 = wb[i], x1 = wb[i + 1], z0 = wb[i + 2], z1 = wb[i + 3];
+    if (x1 < px - R || x0 > px + R || z1 < pz - R || z0 > pz + R) continue;
+    if (px > x0 && px < x1 && pz > z0 && pz < z1) continue;   // 카메라가 벽 속(없어야 하지만)
+    angSpan(px, pz, x0, x1, z0, z1);
     for (let k = _as[0], k1 = _as[1]; k <= k1; k++) { const kk = ((k % N) + N) % N; if (nd && !nd[kk]) continue;
-      if (!slab(cp.x, cp.z, cs[kk], sn[kk], w.x0, w.x1, w.z0, w.z1) || _sl[0] > R) continue;
+      if (!slab(px, pz, cs[kk], sn[kk], x0, x1, z0, z1) || _sl[0] > R) continue;
       const t = _sl[0], base = kk * K; let n = hn[kk], j = n;
       if (n === K) { if (t >= hd[base + K - 1]) continue; j = K - 1; } else hn[kk] = n + 1;
       while (j > 0 && hd[base + j - 1] > t) { hd[base + j] = hd[base + j - 1]; hy0[base + j] = hy0[base + j - 1]; hy1[base + j] = hy1[base + j - 1]; j--; }
-      hd[base + j] = t; hy0[base + j] = w.y0; hy1[base + j] = w.y1; }
+      hd[base + j] = t; hy0[base + j] = wb[i + 4]; hy1[base + j] = wb[i + 5]; }
   }
 }
 // ③·② 한 선(카메라 → 광선 위 거리 t·높이 ty)이 벽(광선의 벽 목록) 또는 가림판(그 동 안에서 선 높이가 띠를 지남 — 서관 슬래브의 계단 구멍 제외)에 막히나
 const _fa = new Float32Array(9), _fb = new Float32Array(9);
 let _rrP = false;   // PERF-LOAD: 이 광선의 동 사각형 교차(_fa·_fb)를 아직 안 잼 — 벽이 선을 못 막을 때만 잰다(대부분 첫 벽이 막아 9번 slab을 건너뜀 · 결과 같음)
 function rayRects(cp, dx, dz) { const BR = world.details.brect; for (let i = 0; i < BR.length; i++) { const r = BR[i]; if (OCC.planes[i].length && slab(cp.x, cp.z, dx, dz, r[0], r[1], r[2], r[3])) { _fa[i] = _sl[0]; _fb[i] = _sl[1]; } else _fa[i] = -1; } }
+function stairHole(ox, oz, dx, dz, L) { for (const q of OCC.stairs) if (slab(ox, oz, dx, dz, q.x0, q.x1, q.z0, q.z1) && _sl[0] <= L) return true; return false; }   // 선 조각이 계단 구멍을 지나나(PERF-LOAD: some(닫힘) → 고리 — 같은 판정)
 function lineBlocked(cp, base, n, dx, dz, t, ty) {
   const { hd, hy0, hy1 } = OCC, hc = cp.y, g = (ty - hc) / Math.max(t, 1e-3);
   for (let j = 0; j < n; j++) { const d = hd[base + j]; if (d >= t) break; const h = hc + g * d; if (h >= hy0[base + j] - 0.02 && h <= hy1[base + j] + 0.02) return true; }
   if (_rrP) { _rrP = false; rayRects(cp, dx, dz); }
   for (let i = 0; i < 9; i++) { if (_fa[i] < 0) continue; const a = _fa[i], b = Math.min(_fb[i], t); if (b <= a) continue;
-    for (const p of OCC.planes[i]) { const [p0, p1] = p.b; let sa = a, sb = b;   // 선 높이가 [p0, p1]인 구간
+    for (const p of OCC.planes[i]) { const p0 = p.b[0], p1 = p.b[1]; let sa = a, sb = b;   // 선 높이가 [p0, p1]인 구간
       if (Math.abs(g) < 1e-6) { if (hc < p0 || hc > p1) continue; } else { let u = (p0 - hc) / g, v = (p1 - hc) / g; if (u > v) { const w = u; u = v; v = w; } sa = Math.max(a, u); sb = Math.min(b, v); if (sb < sa) continue; }
-      if (p.hole && OCC.stairs.some(q => slab(cp.x + dx * sa, cp.z + dz * sa, dx, dz, q.x0, q.x1, q.z0, q.z1) && _sl[0] <= sb - sa)) continue;
+      if (p.hole && stairHole(cp.x + dx * sa, cp.z + dz * sa, dx, dz, sb - sa)) continue;
       return true; } }
   return false;
 }

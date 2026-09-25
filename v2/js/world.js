@@ -107,12 +107,14 @@ export function buildWorld(scene) {
     dGeo(box_, _dm, hex, opt);
   }
   // 원기둥(밑면 반지름 rb·윗면 rt). rot=[rx,ry,rz]로 기울일 수 있다(가지). 감사 대상 아님(곡면)
+  const CYLC = new Map();   // PERF-LOAD: 같은 치수 원기둥은 한 번만 짓는다(비인덱스로 — 예전엔 부를 때마다 짓고 dGeo가 toNonIndexed · 정점 같음)
   function dCyl(rt, rb, h, hex, cx, y0, cz, opt = {}) {
-    const g = new THREE.CylinderGeometry(rt, rb, h, opt.seg || 7, 1);
-    g.translate(0, h / 2, 0);
+    const seg = opt.seg || 7, key = rt + ',' + rb + ',' + h + ',' + seg;
+    let g = CYLC.get(key);
+    if (!g) { const g0 = new THREE.CylinderGeometry(rt, rb, h, seg, 1); g0.translate(0, h / 2, 0); g = g0.toNonIndexed(); g0.dispose(); CYLC.set(key, g); }
     const r = opt.rot || [0, 0, 0];
     _dm.compose(_dv.set(cx, y0, cz), _dq.setFromEuler(_de.set(r[0], r[1], r[2])), _ds.set(1, 1, 1));
-    dGeo(g, _dm, hex, opt); g.dispose();
+    dGeo(g, _dm, hex, opt);
   }
   // 둥근 덩어리(정이십면체 1분할 = 80면). 잎·머리숱 같은 부드러운 덩어리에. 감사 대상 아님
   function dBlob(sx, sy, sz, hex, cx, cy, cz, opt = {}) {
@@ -120,7 +122,7 @@ export function buildWorld(scene) {
     dGeo(opt.chunky ? BLOB0 : BLOB1, _dm, hex, opt);
   }
   // 두 점 사이 봉(쇠파이프·사슬·그물). seg 6. 감사 대상 아님(곡면)
-  const ROD = new THREE.CylinderGeometry(1, 1, 1, 6, 1).translate(0, 0.5, 0), _up = new THREE.Vector3(0, 1, 0), _rd = new THREE.Vector3();
+  const ROD = new THREE.CylinderGeometry(1, 1, 1, 6, 1).translate(0, 0.5, 0).toNonIndexed(), _up = new THREE.Vector3(0, 1, 0), _rd = new THREE.Vector3();
   const visRods = [];   // 물리 검사용: 봉·원기둥의 AABB(몸이 뚫고 지나가는지 SD2.solidCheck가 본다)
   const softVols = [];  // [integ 09-25] 몸이 지나가도 되는 낮은 풀·작물 덩어리 AABB(검진 health.js가 뚫림·발 묻힘에서 뺀다 — 풀밭처럼 걸어 들어가는 게 맞는 것만)
   function dRod(x0, y0, z0, x1, y1, z1, r, hex, opt = {}) {
@@ -144,11 +146,12 @@ export function buildWorld(scene) {
   // 아랫단 띠는 모든 시공이 끝난 뒤 깐다(buildPlinths) — 벽에 붙은 신발장·화분·이웃 건물 칸막이와 부딪히는 구간은 건너뛴다
   const plinths = [];
   function buildPlinths() {
+    const low = []; let seen = 0;   // PERF-LOAD: 띠 높이(0~0.45)에 걸친 상자만 추려 둔다 — 띠가 더한 상자도 차례로 이어 붙여 예전(allBoxes 전체를 매번)과 같은 목록·순서
     for (const p of plinths) {
+      for (; seen < allBoxes.length; seen++) { const b = allBoxes[seen]; if (!(b.y0 >= 0.45 || b.y1 <= 0)) low.push(b); }
       const bb = p.ax === 'x' ? { z0: p.o - 0.02, z1: p.o + 0.02 } : { x0: p.o - 0.02, x1: p.o + 0.02 };
       const cut = [];
-      for (const b of allBoxes) {
-        if (b.y0 >= 0.45 || b.y1 <= 0) continue;
+      for (const b of low) {
         const hit = p.ax === 'x'
           ? (b.z1 > bb.z0 + 0.004 && b.z0 < bb.z1 - 0.004 && b.x1 > p.a0 && b.x0 < p.a1)
           : (b.x1 > bb.x0 + 0.004 && b.x0 < bb.x1 - 0.004 && b.z1 > p.a0 && b.z0 < p.a1);   // 벽 자신(면에 맞닿기만)은 제외
@@ -254,7 +257,7 @@ export function buildWorld(scene) {
   }
   // 팻말(SIGN-ATLAS · 09-23): 예전엔 팻말마다 텍스처·메시 1개씩(≈100 드로우콜). 이제 자리만 기록해 두고
   // 병합 단계에서 글자판 한 장(아틀라스)에 모아 메시 1개로 그린다. 반환값 m은 위치·회전만 가진 Object3D(hangSign이 옮긴다)
-  const signCanvas = new Map(), signList = [];
+  const signCanvas = new Map(), signList = []; let signMeasure = null;
   // sty = { bg, fg } — 기본은 파란 팻말. 현관 아치 나무 현판처럼 색이 다른 글자판(09-24)
   function sign(text, x, y, z, rotY = 0, h = 0.42, sty = null) {
     const key = text + (sty ? '|' + sty.bg + sty.fg : '');
@@ -262,9 +265,9 @@ export function buildWorld(scene) {
     if (!c && text === EXIT_KEY) { c = exitCanvas(); signCanvas.set(key, c); }
     if (!c && text === FLAG_KEY) { c = taegukCanvas(); signCanvas.set(key, c); }
     if (!c) {
-      c = document.createElement('canvas'); const g2 = c.getContext('2d');
-      g2.font = '900 84px sans-serif';
-      c.width = Math.ceil(g2.measureText(text).width) + 56; c.height = 128;
+      c = document.createElement('canvas');
+      if (!signMeasure) { signMeasure = document.createElement('canvas').getContext('2d'); signMeasure.font = '900 84px sans-serif'; }   // PERF-LOAD: 글자 폭은 한 붓으로(글꼴 한 번 — 같은 값)
+      c.width = Math.ceil(signMeasure.measureText(text).width) + 56; c.height = 128;
       const g3 = c.getContext('2d');
       if (!(sty && sty.bg === 'none')) { g3.fillStyle = sty ? sty.bg : '#2f6fd0'; g3.beginPath(); g3.roundRect(2,2,c.width-4,c.height-4,20); g3.fill(); }   // bg 'none' = 글자만(벽에 붙인 글자)
       g3.font = '900 84px sans-serif'; g3.fillStyle = sty ? sty.fg : '#fff'; g3.textAlign='center'; g3.textBaseline='middle';
@@ -4919,13 +4922,22 @@ export function buildWorld(scene) {
   (() => { const R9 = 1.0, JUMP = 1.52, HANG = 0.6;   // PERF-LOAD: 작은 함수(IIFE)로 — buildWorld 본문은 너무 커서 최적화되지 않는다(50 → 수 ms)
     const fp = (a, b) => Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > 0.02 && Math.min(a.z1, b.z1) - Math.max(a.z0, b.z0) > 0.02;   // 발자국 겹침
     const solid = colliders.filter(d => !d.nc), stand = solid.filter(d => d.y1 - floorOf(d) <= JUMP);
+    // PERF-LOAD: 딛을 곳·받침 후보를 8m 칸에서만 — 모으는 값이 최댓값·최솟값뿐이라 순서·중복과 무관(결과 같음). 좌표가 유한하지 않거나 뒤집힌 상자는 늘 후보, 그런 c는 전부 훑음
+    const ok4 = b => isFinite(b.x0) && isFinite(b.x1) && isFinite(b.z0) && isFinite(b.z1) && b.x0 <= b.x1 && b.z0 <= b.z1;
+    const cells = L => { const H = new Map(), odd = []; for (const d of L) { if (!ok4(d)) { odd.push(d); continue; }
+        for (let gx = Math.floor(d.x0 / 8); gx <= Math.floor(d.x1 / 8); gx++) for (let gz = Math.floor(d.z0 / 8); gz <= Math.floor(d.z1 / 8); gz++) { const k = gx * 4096 + gz; let a = H.get(k); if (!a) H.set(k, a = []); a.push(d); } }
+      return { H, odd, all: L }; };
+    const near = (G, c, e) => { if (!ok4(c)) return G.all; const out = G.odd.slice();
+      for (let gx = Math.floor((c.x0 - e) / 8); gx <= Math.floor((c.x1 + e) / 8); gx++) for (let gz = Math.floor((c.z0 - e) / 8); gz <= Math.floor((c.z1 + e) / 8); gz++) { const a = G.H.get(gx * 4096 + gz); if (a) for (const d of a) out.push(d); }
+      return out; };
+    const SG = cells(solid), TG = cells(stand);
     for (const c of colliders) { if (!c.ns && !(c.nc && c.y1 - c.y0 <= 2.6)) continue;
       let sup = floorOf(c), ceil9 = 1e9;
-      for (const d of solid) { if (!fp(c, d)) continue;
+      for (const d of near(SG, c, 0)) { if (!fp(c, d)) continue;
         if (d.y1 <= c.y0 + 0.02) { if (d.y1 > sup) sup = d.y1; } else if (d.y0 >= c.y1 - 0.01 && d.y0 < ceil9) ceil9 = d.y0; }
       if (c.y0 > sup + HANG) continue;                                                   // ① 매단 상자
       let m = -1e9;
-      for (const d of stand) { if (d.y1 <= c.y1 - 1.55 || d.y1 >= c.y1) continue;         // ③ stand = 점프로 닿는 윗면
+      for (const d of near(TG, c, R9)) { if (d.y1 <= c.y1 - 1.55 || d.y1 >= c.y1) continue;   // ③ stand = 점프로 닿는 윗면
         if (d.x1 < c.x0 - R9 || d.x0 > c.x1 + R9 || d.z1 < c.z0 - R9 || d.z0 > c.z1 + R9) continue;
         if (d.y1 > m) m = d.y1; }
       if (m === -1e9) continue;
