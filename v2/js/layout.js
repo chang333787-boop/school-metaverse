@@ -91,12 +91,15 @@ export const SCHOOL = {
     //   복도 동쪽 끝은 창고 서벽(판벽 — 과학실 번호키 문이 마지막 문)
     eastWing: {
       x: [12.5, 45], z: [-51, -39.5], corridorDepth: 2.5,   // 서쪽 끝 = 세로복도 동벽(hall_lobby-0 · 가운데 마당 담당 제안과 같은 12.5)
+      // LINK-EAST-0(09-24 영상 e_366~381): 복도 끝 판벽 x 32.3 — 걸음 1.06m/s(세로복도 북창 자와 같음)·문 순서(2학년 앞·뒤 → 4학년 앞·뒤 → 과학실 번호키 문 → 끝벽)·북창 5묶음.
+      //   예전 40.5(창고 서벽)는 8m 길어 끝벽이 소실점의 점이었다. 끝벽 뒤 복도 줄 = 과학준비실(과학실 북벽 문으로만)
+      corridorEndX: 32.3,
       rooms: [
-        { name: '2학년',   type: 'classroom', span: [12.5, 22.5] },
-        { name: '4학년',   type: 'classroom', span: [22.5, 30.8] },
-        { name: '과학실',  type: 'science',   span: [30.8, 37.3] },
-        { name: '과학준비실', type: 'storage', span: [37.3, 40.5], innerOnly: true },
-        { name: '창고',    type: 'storage',   span: [40.5, 45], external: true },   // 밖(동쪽)에서만 — 복도는 창고 앞에서 끝남
+        { name: '2학년',   type: 'classroom', span: [12.5, 22.2] },
+        { name: '4학년',   type: 'classroom', span: [22.2, 29.9] },
+        { name: '과학실',  type: 'science',   span: [29.9, 40.5], door: 31.2 },   // 번호키 문 = 복도 마지막 문(끝벽 앞 — e_379.5~381)
+        { name: '과학준비실', type: 'storage', span: [32.3, 40.5], innerOnly: true, row: 'corridor' },   // 복도 줄(끝벽 뒤) — 남쪽 줄 방이 아님
+        { name: '창고',    type: 'storage',   span: [40.5, 45], external: true },   // 밖(동쪽)에서만 — 복도는 과학실 문 앞 판벽에서 끝남
       ],
     },
 

@@ -434,6 +434,8 @@ function act(h) {
     case 'map': toast('🗺️ 학교 안내도 — 현관 · 가운데 로비 · 교실을 찾아가 봐요'); break;
     case 'clock': { const d = new Date(); toast(`🕰️ 지금은 ${d.getHours()}시 ${d.getMinutes()}분이에요`); break; }
     case 'notice': toast('📋 이번 주 학생자치회 소식을 읽었어요'); break;
+    case 'aed': toast('❤️ AED(자동심장충격기) 보관함이에요 — 위급할 땐 선생님께 바로 알려요'); break;   // LINK-EAST-14 세로복도 입구
+    case 'keypad': [1319, 1175, 1397].forEach((f, i) => tone(f, i * 0.09, 0.07, 'square', 0.05)); toast('🔢 과학실 번호키를 눌렀어요 — 삐빅!'); break;   // LINK-EAST-11 과학실 문
     case 'song': songSnd(); toast('🎵 교가를 흥얼거렸어요'); break;
     case 'motto': toast('📜 우리 학교 교훈 — 바르고 슬기롭게'); break;
     case 'flag': toast('🇰🇷 태극기가 바람에 펄럭여요'); break;
@@ -461,7 +463,7 @@ const DOORS = world.doors.map(d => {
   //   묻힌 부분은 벽 속이라 안 보이고, 문짝 두 면(±0.08)은 벽 면(±0.15)·가운데 맞댐면(0)과 겹치지 않는다.
   const w = d.w + 0.1, h = (d.dh ?? 2.6) + (d.lintel ? 0.05 : 0);
   // slideOver(자동문·현관 양문): 옆 고정 유리 앞으로 12cm 비켜 미끄러진다(실물 자동문처럼) — 벽 속 포켓이 아니라서 간섭 검사 제외
-  return { ax: d.ax, bx: d.cx, bz: d.cz, w, ow: d.w, h, y0: d.y0, glass: d.glass, open: 0, over: d.slideOver ? 0.12 : 0, color: d.color, slot: d.slot, film: d.film };
+  return { ax: d.ax, bx: d.cx, bz: d.cz, w, ow: d.w, h, y0: d.y0, glass: d.glass, open: 0, over: d.slideOver ? 0.12 : 0, color: d.color, slot: d.slot, film: d.film, lum: d.lum };
 });
 const _boxG = new THREE.BoxGeometry(1, 1, 1);
 const nWood = DOORS.filter(o => !o.glass && !o.film).length, nFilm = DOORS.filter(o => o.film).length, nGlass = DOORS.length - nWood - nFilm;
@@ -480,7 +482,7 @@ const doorInst = {
 };
 Object.values(doorInst).forEach(m => { m.frustumCulled = false; scene.add(m); });
 doorInst.wood.count = nWood; doorInst.win.count = nWood; doorInst.knob.count = nWood; doorInst.glass.count = nGlass; doorInst.film.count = nFilm;
-{ let iw = 0, ig = 0, i9 = 0; const _dc = new THREE.Color(); DOORS.forEach(o => { o.idx = o.glass ? ig++ : o.film ? i9++ : iw++; if (o.film) doorInst.film.setColorAt(o.idx, _dc.set(o.color ?? 0xffffff)); else if (!o.glass) doorInst.wood.setColorAt(o.idx, _dc.set(o.color ?? 0xc08b4f)); });
+{ let iw = 0, ig = 0, i9 = 0; const _dc = new THREE.Color(); DOORS.forEach(o => { o.idx = o.glass ? ig++ : o.film ? i9++ : iw++; if (o.film) doorInst.film.setColorAt(o.idx, _dc.set(o.color ?? 0xffffff)); else if (!o.glass) doorInst.wood.setColorAt(o.idx, _dc.set(o.color ?? 0xc08b4f).multiplyScalar(o.lum ?? 1)); });
   if (doorInst.wood.instanceColor) doorInst.wood.instanceColor.needsUpdate = true; if (doorInst.film.instanceColor) doorInst.film.instanceColor.needsUpdate = true; }
 // 필름 문은 실내 디테일처럼 멀면 숨긴다(world.details에 끼우면 detailTick이 거리로 켜고 끔 — 먼 구역 닻 드로우콜 +0)
 if (nFilm) { const fl = DOORS.filter(o => o.film); world.details.push({ mesh: doorInst.film, cx: fl.reduce((a, o) => a + o.bx, 0) / nFilm, cz: fl.reduce((a, o) => a + o.bz, 0) / nFilm, inside: true }); }
