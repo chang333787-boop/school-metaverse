@@ -1127,7 +1127,7 @@ export function buildWorld(scene) {
   }
   // [quality4 09-26] 돌린 타원 발자국(가로 반지름 a·b · y축 회전 ry — dBlob과 같은 회전: 로컬 x축 = 세계 (cos ry, −sin ry))의 k배 안쪽에 드는 축정렬 띠(≤0.3m)로 막는다.
   //   돌린 타원의 AABB 한 장은 모서리가 잎 밖으로 나가 보이지 않는 벽, 긴 쪽 끝은 몸이 뚫었다(앞뜰 낮게 퍼진 향나무 (36,-21) 보이지 않는 벽 2·ghost·발 묻힘).
-  //   띠는 짧은 쪽 축으로 자르고(띠 수 적게) 띠 가운데 현(chord) 길이를 쓴다. ns = 올라서기 금지(1.6)
+  //   띠는 짧은 쪽 축으로 자르고(띠 수 적게) 띠 가운데 현(chord) 길이를 쓴다. ns = 올라서기 금지(1.6) · k: 80면 덩어리 0.9 · 20면(chunky — 면 가운데 0.8, 꼭짓점 1.0) 0.86
   function ellipseCols(cx, cz, a, b, ry, y0, y1, k = 0.9, ns = true) {
     const c = Math.cos(ry), s = Math.sin(ry), hx = k * Math.hypot(a * c, b * s), hz = k * Math.hypot(a * s, b * c), alongX = hz <= hx;   // alongX = z로 자른 띠(띠 길이 방향 x)
     const A2 = 1 / (a * a), B2 = 1 / (b * b), H = alongX ? hz : hx, n = Math.max(2, Math.ceil(2 * H / 0.3));
@@ -1160,7 +1160,7 @@ export function buildWorld(scene) {
     for (let k = 0; k < pads; k++) {
       const h = (1.0 + k * (2.1 / pads)) * s, r = (0.82 - k * 0.09 + R() * 0.2) * s, ang = R() * 6.28, d = (k === pads - 1 ? 0.1 : 0.45 + R() * 0.55) * s;
       dBlob(r, r * 0.34, r * 0.85, PG[k % 3], x + Math.cos(ang) * d, y + h, z + Math.sin(ang) * d, lite ? { ...F, ry: ang } : F);
-      canopyBox(x + Math.cos(ang) * d, z + Math.sin(ang) * d, y + h, r * 0.34, r * (lite ? 0.9 : 1), r * (lite ? 0.77 : 0.85), lite ? ang : 0);   // [integ 09-25] 몸 높이 잎판 = 충돌(앞뜰 남 화단 ghost 200칸)
+      canopyBox(x + Math.cos(ang) * d, z + Math.sin(ang) * d, y + h, r * 0.34, r * (lite ? 0.95 : 1), r * (lite ? 0.81 : 0.85), lite ? ang : 0);   // [integ 09-25] 몸 높이 잎판 = 충돌(앞뜰 남 화단 ghost 200칸) · [quality4 09-26] lite 0.9·0.77 → 0.95·0.81(20면 꼭짓점 쪽 잎을 몸이 1~2cm 뚫음 — 텃밭 ghost 2)
       dBlob(r * 0.7, r * 0.26, r * 0.6, 0x6aa362, x + Math.cos(ang) * d, y + h + r * 0.18, z + Math.sin(ang) * d, { far: true, chunky: lite, ry: ang, jitter: 0.12, ...(at ? { at } : {}) });
     }
   }
@@ -1173,10 +1173,10 @@ export function buildWorld(scene) {
   // 다듬은 회양목 둔덕(앞뜰 — 영상 f_132~183: 폭 1.5~2m·높이 0.9m 넓적한 둥근 덩어리가 서로 닿게 줄지어) — 윗면 밝은 잎 한 겹. 올라서기 금지
   function mound(x, z, w = 1.7, h = 0.9, d = 1.4, hex = 0x4f8a45, lite = false, ry = null) {   // lite = 몸통도 20면(뒤뜰 far 층) · ry = 몸통 회전(기본 = 자리 해시). 옆이 트인 덩어리는 0 — 축정렬 충돌상자(±0.42w)가 돌린 타원보다 넓어 보이지 않는 벽이 된다
     const y = tY(z, x), hh = hash2(x, z);
-    // [integ 09-25] 충돌 = 돌린(ry) 타원의 AABB × 0.8(lite 20면 = 안쪽 반지름 0.79라 0.62) — 예전 w·d × 0.42는 덩어리가 돌아가 있으면 상자 모서리가 밖으로 나가 보이지 않는 벽(앞뜰 북 화단·동관 뒤뜰 둔덕)
+    // [integ 09-25 · quality4가 띠로 바꿈] 충돌 = 돌린(ry) 타원의 AABB × 0.8(lite 20면 = 안쪽 반지름 0.79라 0.62) — 예전 w·d × 0.42는 덩어리가 돌아가 있으면 상자 모서리가 밖으로 나가 보이지 않는 벽(앞뜰 북 화단·동관 뒤뜰 둔덕)
     //   ry(FRONT-3): 넘기면 그 각도로(0 = 축정렬 — 트인 자리 옆 덩어리), 안 넘기면 예전처럼 hash
-    const r9 = ry == null ? hh * 6 : ry, k9 = lite ? 0.62 : 0.8, c9 = Math.cos(r9), s9 = Math.sin(r9), hx9 = k9 * Math.hypot(w / 2 * c9, d / 2 * s9), hz9 = k9 * Math.hypot(w / 2 * s9, d / 2 * c9);
-    colliders.push(noStand({ x0: x - hx9, x1: x + hx9, y0: y, y1: y + h, z0: z - hz9, z1: z + hz9 }));
+    const r9 = ry == null ? hh * 6 : ry;
+    ellipseCols(x, z, w / 2, d / 2, r9, y, y + h, lite ? 0.86 : 0.9);   // [quality4 09-26] AABB × 0.8 → 돌린 타원 띠(k 0.9 · 20면 0.86): AABB × 0.8은 긴 쪽 끝을 몸이 뚫어 발 묻힘(앞뜰 북 화단·동관 뒤뜰 둔덕)
     dBlob(w / 2, h * 0.62, d / 2, hex, x, y + h * 0.38, z, { far: true, chunky: lite, ry: r9, jitter: lite ? 0.14 : 0.1 });
     dBlob(w * 0.36, h * 0.3, d * 0.34, 0x8cb85a, x + (hh - 0.5) * 0.2, y + h * 0.72, z, { far: true, chunky: true, ry: hh * 9, jitter: 0.12 });
   }
@@ -3138,7 +3138,7 @@ export function buildWorld(scene) {
     [[17.6, -20.5, 2.9], [22.2, -20.45, 2.4], [27.0, -20.55, 2.7], [36.0, -21.0, 2.6]].forEach(([x9, z9, w9], k) => {   // 낮게 퍼진 향나무(f_165·f_171 왼쪽 앞)
       dBlob(w9 / 2, 0.5, 0.7, [0x5d8a45, 0x557f3f][k % 2], x9, YARD + 0.18, z9, { far: true, ry: k * 0.3, jitter: 0.12 });
       dBlob(w9 * 0.36, 0.2, 0.5, 0x7aa65a, x9 + 0.1, YARD + 0.52, z9, { far: true, chunky: true, ry: k, jitter: 0.12 });
-      ellipseCols(x9, z9, w9 / 2, 0.7, k * 0.3, YARD, YARD + 0.65, 0.9); ellipseCols(x9 + 0.1, z9, w9 * 0.36, 0.5, k, YARD, YARD + 0.65, 0.8); });   // [quality4 09-26] 축정렬 상자 → 돌린 두 잎 덩어리 띠((36,-21) 보이지 않는 벽 2·ghost·발 묻힘)
+      ellipseCols(x9, z9, w9 / 2, 0.7, k * 0.3, YARD, YARD + 0.65, 0.9); ellipseCols(x9 + 0.1, z9, w9 * 0.36, 0.5, k, YARD, YARD + 0.65, 0.86); });   // [quality4 09-26] 축정렬 상자 → 돌린 두 잎 덩어리 띠((36,-21) 보이지 않는 벽 2·ghost·발 묻힘)
     NT.forEach(x9 => { const z9 = FY.strip + 0.1;                                    // 작은 관상수(가는 줄기 · 둥근 수관 — 키 2.6)
       post(x9, z9, YARD, YARD + 2.6, 0.08); dCyl(0.045, 0.06, 1.7, 0x6b5240, x9, YARD, z9, { far: true, seg: 6 });
       dBlob(0.62, 0.55, 0.6, 0x4f8a3c, x9, YARD + 2.05, z9, { far: true, jitter: 0.14 }); dBlob(0.4, 0.32, 0.38, 0x6aa04c, x9 + 0.15, YARD + 2.4, z9 - 0.05, { far: true, chunky: true }); });
@@ -3606,7 +3606,7 @@ export function buildWorld(scene) {
       [[-42.3, 65.8, 0.85, 0x3f6f3a], [-39.3, 65.7, 0.95, 0x4a7a40], [-35.3, 65.5, 0.8, 0x3f6f3a], [-31.9, 65.3, 0.75, 0x4f8045]].forEach(([x9, z9, r9, c9]) => shrub(x9, z9, r9, c9, true));
       [-42.8, -41.3, -39.6, -38.0, -36.2, -34.4, -32.8].forEach((x9, k) => { const z9 = sE(x9) + 0.62, w9 = 0.6 + 0.14 * (k % 3), h9 = 0.42 + 0.1 * ((k + 1) % 3);   // 둔덕 발치 큰 돌 줄(영상 s_036~039 왼쪽 — 돌 쌓은 비탈)
         dBlob(w9, h9, 0.42, [0x9d988c, 0xa8a397, 0x8f8a7f][k % 3], x9, Y + h9 * 0.45, z9, { chunky: true, far: true, ry: k * 1.7 });
-        colliders.push(noStand({ x0: x9 - w9 * 0.9, x1: x9 + w9 * 0.9, y0: Y, y1: Y + h9, z0: z9 - 0.4, z1: z9 + 0.4 })); });
+        ellipseCols(x9, z9, w9, 0.42, k * 1.7, Y, Y + h9, 0.86); });   // [quality4 09-26] 축정렬 상자(돌을 안 돌린 크기) → 돌린 돌 띠: (-41.3) 돌이 97° 돌아 북쪽 끝을 몸이 밟았다(발 묻힘 3칸)
       dBlob(0.58, 0.42, 0.56, 0x979286, -31.35, Y + 0.16, 64.1, { chunky: true, far: true, ry: 0.7 });          // 보도·경계석 서끝을 막는 큰 돌(보도는 둔덕에서 끝남)
       colliders.push(noStand({ x0: -31.87, x1: -30.83, y0: Y, y1: Y + 0.58, z0: 63.58, z1: 64.62 }));
     }
@@ -3640,7 +3640,7 @@ export function buildWorld(scene) {
       [[0.75, 0.6], [0.4, 0.9]].forEach(([h9, z9]) => addBox(0.5, h9, 0.3, 0x3a6ea5, cx + 0.3, Y, zA + z9 + 0.15));   // 올라가는 발판 2단(남쪽 — 발판 0.75·0.4)
       {   // 야자수 기둥(서쪽 — 영상 g_072: 보라 봉 + 초록 잎 5장)
         const px9 = cx - 1.9, pz9 = zA - 0.2;
-        dRod(px9, Y, pz9, px9, Y + 3.3, pz9, 0.08, PU, F9); post(px9, pz9, Y, Y + 2.2, 0.12);
+        dRod(px9, Y, pz9, px9, Y + 3.3, pz9, 0.08, PU, F9); post(px9, pz9, Y, Y + 3.3, 0.12);   // [quality4 09-26] 막이 2.2 → 봉 끝 3.3: 흰 미끄럼틀 꼭대기(−0.15)에서 점프로 막이 윗면(0.85)에 올라앉았다(perch 6칸)
         for (let k = 0; k < 5; k++) { const a = k * 1.2566 + 0.3; dBlob(0.68, 0.07, 0.22, k % 2 ? 0x3f8f6a : 0x4fa070, px9 + Math.cos(a) * 0.56, Y + 3.3 - 0.12, pz9 + Math.sin(a) * 0.56, { far: true, ry: -a }); }
         dBlob(0.16, 0.14, 0.16, 0x3f8f6a, px9, Y + 3.35, pz9, { far: true, chunky: true });
       }
@@ -3936,7 +3936,7 @@ export function buildWorld(scene) {
     const hedge = (x, z, w, h, d, hex, hl = true, nr = false) => {   // 다듬은 생울타리·회양목(mound 모양) — 막이는 돌린 타원 띠(ellipseCols — 타원 둘레 밖으로 모서리가 튀어나오지 않게 · 보이지 않는 벽/발 묻힘 0)
       dBlobE(w / 2, h * 0.62, d / 2, hex, x, Y + h * 0.38, z, { far: !nr, chunky: true, ry: x, jitter: 0.12 });   // nr = 가까이 층(북 구간 — 먼 시점 삼각형)
       if (hl) dBlobE(w * 0.36, h * 0.3, d * 0.34, 0x8cb85a, x, Y + h * 0.72, z, { far: !nr, chunky: true, ry: z, jitter: 0.12 });
-      ellipseCols(x, z, w / 2, d / 2, x, Y, Y + h, 0.82); };   // [quality4 09-26] 십자 두 장(축정렬) → 돌린(ry = x) 20면 덩어리 띠 — 큰 생울타리 (41.25, 46.8) 보이지 않는 벽 2간선
+      ellipseCols(x, z, w / 2, d / 2, x, Y, Y + h, 0.86); };   // [quality4 09-26] 십자 두 장(축정렬) → 돌린(ry = x) 20면 덩어리 띠 — 큰 생울타리 (41.25, 46.8) 보이지 않는 벽 2간선
     const arcPts = (rx, rz, t0, t1, n, dx = 0, dz = 0) => { const P = []; for (let k = 0; k <= n; k++) { const t = t0 + (t1 - t0) * k / n; P.push([XC + dx + rx * Math.cos(t), ZC + dz + rz * Math.sin(t)]); } return P; };
 
     // ---- 바닥: 크림 보도(북 3m → 남 2.5m) · 굽이 · 남쪽 길 ----
@@ -3989,7 +3989,7 @@ export function buildWorld(scene) {
       dBlobE(sx, sy, sz, pk([0xd3d0c7, 0xc3c0b6, 0xdedbd2, 0xa9a69c]), PX1 + 0.85 + (R8() - 0.5) * 0.12, Y + sy * 0.45, z9, { chunky: true, jitter: 0.18, ry: z9 * 2.3 });
       if (R8() > 0.45) dBlobE(sx * 0.8, sy * 0.9, sz * 0.8, pk([0xd3d0c7, 0xdedbd2, 0xb4b1a8]), PX1 + 1.45, Y + sy * 0.7, z9 + 0.3, { chunky: true, jitter: 0.18, ry: z9 * 1.7 });
     }
-    barrier(PX1 + 0.5, ZR + 0.1, PX1 + 0.5, rz1, Y, 0.0); colliders[colliders.length - 1].x1 = PX1 + 1.35;
+    barrier(PX1 + 0.5, ZR + 0.1, PX1 + 0.5, rz1, Y, 0.0); colliders[colliders.length - 1].x1 = PX1 + 1.6;   // [quality4 09-26] 1.35 → 1.6: 둘째 돌 줄(PX1+1.45 · 반지름 ≤0.4)까지 — 생울타리 막이를 모양대로 줄이자 돌과 울타리 사이 0.3 틈에 몸이 끼어 돌을 밟았다(발 묻힘)
     { const MC9 = [0x6a9444, 0x5f8a3e, 0x74a04c];
       for (let z9 = ZR + 0.9, k = 0; z9 < ZS - 0.5; z9 += 1.75, k++) hedge(PX1 + 2.45 + (k % 2) * 0.25, z9, 1.5 + (k % 3) * 0.2, 0.9 + (k % 2) * 0.2, 1.4, MC9[k % 3], k % 2 === 0, z9 >= -2);
       for (let z9 = ZR + 2.2, k = 0; z9 < ZS - 1; z9 += 3.4, k++) hedge(PX1 + 4.2, z9, 1.8, 1.05, 1.6, MC9[(k + 1) % 3], false, z9 >= -2); }
@@ -4600,7 +4600,7 @@ export function buildWorld(scene) {
       addBox(0.15, 0.15, gtz - 0.6 - IZ, 0xb8b4ab, IX + 0.075, Y, (IZ + gtz - 0.6) / 2);                    // 서쪽 경계석(베이지 보도 쪽)
       [[0.5, 5.3, 0.45], [1.2, 4.2, 0.35], [0.4, 2.6, 0.4], [1.9, 5.6, 0.3], [2.6, 3.4, 0.38], [0.7, 1.2, 0.3]].forEach(([ox, oz, r]) => {
         dBlob(r * 1.3, r * 0.7, r, 0xbdb9b0, IX + ox, Y + r * 0.3, IZ + oz, { far: true, chunky: true, ry: ox * 3 });
-        ellipseCols(IX + ox, IZ + oz, r * 1.3, r, ox * 3, Y, Y + r, 0.82); });   // [quality4 09-26] 자연석 막이(충돌이 없어 발이 묻혔다 — 정문 앞 발 묻힘 27칸)
+        ellipseCols(IX + ox, IZ + oz, r * 1.3, r, ox * 3, Y, Y + r, 0.86); });   // [quality4 09-26] 자연석 막이(충돌이 없어 발이 묻혔다 — 정문 앞 발 묻힘 27칸)
       [[1.0, 3.2], [1.6, 4.9], [0.6, 4.0], [2.3, 2.2], [1.4, 1.5]].forEach(([ox, oz]) => { dBlob(0.45, 0.55, 0.45, 0x7fa35a, IX + ox, Y + 0.4, IZ + oz, { jitter: 0.15 });
         softVols.push({ x0: IX + ox - 0.46, x1: IX + ox + 0.46, y0: Y - 0.2, y1: Y + 0.96, z0: IZ + oz - 0.46, z1: IZ + oz + 0.46, why: '억새(풀 — 걸어 들어감)' }); });   // [integ 09-25]
       const tallPine = (x, z, s = 1) => { const y = Y, R = seeded(Math.floor(Math.abs(x * 57 + z * 91)) + 3), lean = (R() - 0.5) * 0.14, a = R() * 6.28, H = 6.2 * s;
