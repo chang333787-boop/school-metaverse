@@ -67,6 +67,7 @@ export function makeMeta(SCHOOL) {
     '체육관 앞 마당': M('gym-front-yard', 'yard', null, [], { multi: true }),    // 부속동 북쪽 아스팔트 + 운동장 북서 앞마당(월드 구역 둘)
     // 바깥
     '가운데 마당': M('court', 'yard', null),
+    '마당 동쪽 입구': M('court-east', 'yard', null),                                        // COURT-3: 전봇대·화분 A(동관 뒤뜰에서 떼어 냄)
     '앞뜰 산책로': M('front-walk', 'path', null),
     '앞뜰 남쪽 화단': M('front-bed-south', 'yard', null),                       // 산책로 남쪽 화단(전정 소나무·교훈석) ~ 둔덕
     '구령대': M('podium', 'stage', null),
@@ -150,6 +151,8 @@ export function makeMeta(SCHOOL) {
     { id: 'sink', label: '운동장 개수대', at: SCHOOL.sink, r: 3 },
     { id: 'playground', label: '놀이터', at: SCHOOL.playground.center, r: 7 },
     { id: 'garden-deck', label: '텃밭 쉼터', at: SCHOOL.gardenDeck.center, r: 4 },
+    { id: 'court-pots', label: '가운데 마당 향나무 화분 길', at: [36.8, -37.45], r: 3 },          // COURT-3: 사발 화분 5개 줄 가운데(world.js 가운데 마당)
+    { id: 'court-pole', label: '마당 동쪽 전봇대', at: [48.5, -35.9], r: 2.5 },                    // 마당 동쪽 입구 콘크리트 전봇대(영상 q_107~q_112)
     { id: 'shed', label: '노란 창고', at: SCHOOL.shed.center, r: 6 },
     { id: 'shelter', label: '무지개 쉼터', at: SCHOOL.shelter.center, r: 4, rect: [SCHOOL.shelter.center[0] - SCHOOL.shelter.length / 2, SCHOOL.shelter.center[1] - 2.2, SCHOOL.shelter.center[0] + SCHOOL.shelter.length / 2, SCHOOL.shelter.center[1] + 2.2] },
     { id: 'podium', label: '구령대', at: [(SCHOOL.porch.x[0] + SCHOOL.porch.x[1]) / 2, T.fieldZ - 2.5], r: 3.5 },

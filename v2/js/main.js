@@ -423,6 +423,7 @@ function act(h) {
     case 'water': toast('💧 물을 마셨어요'); break;
     case 'wash': toast('🫧 손을 깨끗이 씻었어요'); break;
     case 'garden': toast('🌱 텃밭에 물을 줬어요'); break;
+    case 'pot': toast('🪴 향나무 화분에 물을 줬어요'); break;
     case 'mic': toast('🎤 구령대 마이크를 잡았어요'); break;
     case 'shoes': shoesIn = !shoesIn; toast(shoesIn ? '👟 실내화로 갈아신었어요' : '👞 운동화로 갈아신었어요'); break;
     case 'drum': (drumN++ % 2 ? xyloSnd : drumSnd)(); toast(drumN % 2 ? '🥁 둥둥 둥둥!' : '🎶 도미솔도~ 실로폰 소리'); break;
