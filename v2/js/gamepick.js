@@ -24,7 +24,7 @@ export function createGamePicker(ctx) {
   async function open() {
     close(); document.exitPointerLock?.();
     const my = ++seq;
-    panel = document.createElement('div'); panel.className = 'chip';
+    panel = document.createElement('div'); panel.className = 'chip'; panel.id = 'gpick-panel';   // TOUCH-1: 터치면 왼쪽 위 칩 밑으로(touch.js css)
     panel.style.cssText = 'right:10px;bottom:92px;width:270px;padding:12px 14px 14px;z-index:30;font-size:14px;border-radius:12px;background:rgba(29,53,87,.92)';
     const h = document.createElement('div'); h.textContent = '🎮 놀이 고르기'; h.style.cssText = 'font-weight:700;font-size:15px;padding-right:30px';
     const x = document.createElement('button'); x.className = 'gpick-x'; x.textContent = '✕'; x.title = '닫기'; x.addEventListener('click', e => { e.stopPropagation(); close(); });

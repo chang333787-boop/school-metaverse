@@ -4,7 +4,7 @@
 //   정본 문서 = docs/map_api.md
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
 import { createMinimap } from './minimap.js?v=4';
-import { createGamePicker } from './gamepick.js?v=4';
+import { createGamePicker } from './gamepick.js?v=5';
 export function createMapApi(host, NAV, META) {
   const { THREE, scene, world, SCHOOL, q, pl, ui } = host;
   const HOT = host.hot, Z = world.zones, P = pl.P, CTRL = pl.CTRL;
@@ -186,7 +186,9 @@ export function createMapApi(host, NAV, META) {
   const el = (css, txt = '') => { const d = document.createElement('div'); d.className = 'chip'; d.style.cssText = css; d.textContent = txt; document.body.appendChild(d); return d; };
   const chips = new Map(); let banEl = null, banT = 0, goalEl = null, MM = null;   // MM = 미니맵(§11b에서 만든다)
   // 게임 칩 줄: 오른쪽 위 fps 칩 아래. 미니맵이 보이면(GAME-FIND-1) 작을 땐 그 아래로, 클 땐 그 왼쪽으로 비켜 선다(겹침 0)
-  const layoutChips = () => { const r = MM && MM.rect(), top0 = r && !r.big ? r.top + r.h + 8 : 44, right = r && r.big ? r.right + r.w + 8 : 10; let k = 0;
+  // TOUCH-1: 터치 화면에서 미니맵 아래에 칩이 다 안 들어가면(오른쪽 아래 = 점프·행동 버튼 자리) 미니맵 왼쪽 줄로
+  const layoutChips = () => { const r = MM && MM.rect(), side = r && (r.big || (document.body.classList.contains('touch') && r.top + r.h + 8 + chips.size * 34 > innerHeight - 110));
+    const top0 = r && !side ? r.top + r.h + 8 : 44, right = side ? r.right + r.w + 8 : 10; let k = 0;
     for (const [, c] of chips) { c.el.style.top = (top0 + k * 34) + 'px'; c.el.style.right = right + 'px'; k++; } };
   const hud = {
     toast: (text, sec = 2.2) => ui.toast(text, sec),
