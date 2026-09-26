@@ -7,7 +7,9 @@ export const BASELINE = {   // 래칫 기준선(09-26 quality4 실측 — 3차 �
   // 예전(09-24 impl-gamemap): ghost 461 · sunk 1095 · floating 332 · perch 30 · multiZone 1101 · tallStep 2797
   // 예전(09-25 integ): ghost 93 · sunk 110 · floating 301 · perch 27 · tallStep 759 → 09-26 main 첫 실측 ghost 42 · sunk 75 · floating 53 · perch 14 · tallStep 530
   // noZonePct 5 = 게이트 한도(래칫 아님 — 지금 0.9%)
-  ghost: 13, sunk: 8, floating: 53, nsBypass: 0, perch: 13, noZonePct: 5, multiZone: 0, tallStep: 524,
+  // 리뷰 뒤(유치원 노랑 터널 모습을 main 자리로 되돌림 · 막이만): ghost 13 → 12(터널 속 칸 막힘) · tallStep 524 → 525 = 되살린 파랑 미끄럼틀 꼭대기(터널 출구 발판)와
+  //   분홍 미끄럼틀 둘째 계단 사이 0.52 턱 1(main에도 있던 턱 — 터널을 옮겨 덮었을 때만 사라졌다)
+  ghost: 12, sunk: 8, floating: 53, nsBypass: 0, perch: 13, noZonePct: 5, multiZone: 0, tallStep: 525,
 };
 export const ALLOW = {
   invisible: [   // 보이지 않는 벽 허용 구간(x0,x1,z0,z1) — 이유 필수
