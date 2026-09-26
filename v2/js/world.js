@@ -214,6 +214,10 @@ export function buildWorld(scene) {
   function buildBaseboards() {
     const G9 = new Map(), key = (i, j) => i * 4096 + j, add = b => { for (let i = Math.floor(b.x0 / 4); i <= Math.floor(b.x1 / 4); i++) for (let j = Math.floor(b.z0 / 4); j <= Math.floor(b.z1 / 4); j++) { const k = key(i, j); let L = G9.get(k); if (!L) G9.set(k, L = []); L.push(b); } };
     for (const b of allBoxes) if (b.x1 - b.x0 < 60 && b.z1 - b.z0 < 60) add(b);
+    // 바닥 면(무늬 바닥·색 판·상자 윗면)이 걸레받이 층 높이에 있는가 — 4 m 칸
+    const FG = new Map(), fAdd = (r, y) => { if (!BB_FLOORS.some(v => y > v - 0.03 && y < v + 0.03)) return; for (let i = Math.floor(r.x0 / 4); i <= Math.floor(r.x1 / 4); i++) for (let j = Math.floor(r.z0 / 4); j <= Math.floor(r.z1 / 4); j++) { const k = key(i, j); let L = FG.get(k); if (!L) FG.set(k, L = []); L.push([r.x0, r.x1, r.z0, r.z1, y]); } };
+    for (const q of PQ) fAdd(q, q.y); for (const b of allBoxes) if (!b.detail) fAdd(b, b.y1);
+    const floorAt = (x, z, y) => (FG.get(key(Math.floor(x / 4), Math.floor(z / 4))) || []).some(r => r[4] > y - 0.03 && r[4] < y + 0.03 && x > r[0] - 0.02 && x < r[1] + 0.02 && z > r[2] - 0.02 && z < r[3] + 0.02);
     // 한 줄로 이어지는 조각(창턱 아래 + 벽 기둥)은 먼저 합친다 — 상자 수(삼각형) 절약
     const K9 = p => [p.ax, p.o.toFixed(3), p.s, p.y.toFixed(3), p.h ?? BB_H, p.t ?? BB_T, p.col ?? BB_COL].join('|'), grp = new Map();
     for (const p of baseboards) { const k = K9(p); let L = grp.get(k); if (!L) grp.set(k, L = []); L.push({ ...p }); }
@@ -244,8 +248,13 @@ export function buildWorld(scene) {
         const bx = { x0: X0, x1: X1, y0, y1: y0 + H9, z0: Z0, z1: Z1, detail: true }; allBoxes.push(bx); add(bx);
         _dm.compose(_dv.set(cx, y0 + H9 / 2, cz), _dq.identity(), _ds.set(w, H9, d)); dGeo(skin(p.ax, p.s, !BB_FLOORS.some(v => Math.abs(p.y - v) < 0.01)), _dm, p.col ?? BB_COL, o9);
         };
-      for (const [u, v] of cut) { if (u > a) emit(a, Math.min(u, p.a1)); a = Math.max(a, v); }
-      if (a < p.a1) emit(a, p.a1);
+      // 리뷰 수정: 바닥 층 걸레받이는 '밑에 바닥이 있는 구간'만 — 계단실 2층 벽은 층 높이 선이 계단 구멍 위를 지나 걸레받이가 허공에 떠 있었다
+      const onFloor = BB_FLOORS.some(v => Math.abs(p.y - v) < 0.01);
+      const emitS = (u, v) => { if (!onFloor) return emit(u, v);
+        const n = Math.max(1, Math.ceil((v - u) / 0.1)), ok = []; for (let i = 0; i <= n; i++) { const q = u + (v - u) * i / n; ok.push(floorAt(p.ax === 'x' ? q : p.o + p.s * 0.08, p.ax === 'x' ? p.o + p.s * 0.08 : q, p.y)); }
+        let s = -1; for (let i = 0; i <= n; i++) { if (ok[i] && s < 0) s = i; if ((!ok[i] || i === n) && s >= 0) { const e = ok[i] ? i : i - 1; if (e > s) emit(u + (v - u) * s / n, u + (v - u) * e / n); s = -1; } } };
+      for (const [u, v] of cut) { if (u > a) emitS(a, Math.min(u, p.a1)); a = Math.max(a, v); }
+      if (a < p.a1) emitS(a, p.a1);
     }
   }
   // 외벽은 '바깥 절반 0.15 + 안쪽 절반 0.15'로 나눠 쌓는다 → 방 안에서 외벽색이 아니라 실내 도장이 보인다.
@@ -5271,7 +5280,7 @@ export function buildWorld(scene) {
     const G9 = PQ.filter(q => q.kind === 'grass' && q.rect).map(q => ({ q, x0: Math.max(q.x0, XB[0]), x1: Math.min(q.x1, XB[1]), z0: Math.max(q.z0, ZB[0]), z1: Math.min(q.z1, ZB[1]) })).filter(r => r.x1 - r.x0 > 0.5 && r.z1 - r.z0 > 0.5);
     const M9 = new THREE.Matrix4(), Q9 = new THREE.Quaternion(), E9 = new THREE.Euler(), V9 = new THREE.Vector3(), S9 = new THREE.Vector3();
     const BLADE = new THREE.ConeGeometry(1, 1, 3, 1, true).translate(0, 0.5, 0).toNonIndexed();   // 잎 = 밑이 트인 세모뿔(3 삼각형)
-    const A9 = G9.reduce((a, r) => a + (r.x1 - r.x0) * (r.z1 - r.z0), 0), NT = 4000, GC = [0x7cb85a, 0x8cc46a, 0x6aa94f, 0x9fd07a, 0x79b35c];
+    const A9 = G9.reduce((a, r) => a + (r.x1 - r.x0) * (r.z1 - r.z0), 0), NT = 4000, GC = [0xb4e67e, 0xc2ee8e, 0xa4dc72, 0xcff4a0, 0xaee27a];   // 리뷰 수정: 잎 옆면은 빛을 덜 받아 짙은 점(벌레·쓰레기처럼)으로 보였다 → 잔디보다 밝은 연두
     let nT = 0, nP = 0;
     for (const r of G9) { const want = (r.x1 - r.x0) * (r.z1 - r.z0) / A9 * NT; let n = Math.floor(want) + (R() < want % 1 ? 1 : 0);
       for (; n > 0; n--) { const x = r.x0 + R() * (r.x1 - r.x0), z = r.z0 + R() * (r.z1 - r.z0), y = r.q.y;
@@ -5301,10 +5310,11 @@ export function buildWorld(scene) {
   //  aoD(cm) → 조각마다 정확한 거리 → 부드러운 어둠. 벽: 모서리(세로 모서리 0.8 m) · 바닥 닿는 곳(0.55 m) · 천장 닿는 곳(0.6 m). 바닥·천장: 네 변 0.8 m
   //  ground(잔디·흙): 월드 좌표 두 배율 얼룩 텍스처(9 m·2.7 m) — 가까이서도 한 톤 판으로 안 보이게 + 골대 앞 닳은 자리(밝고 마른 흙)
   //  곱은 톤매핑 뒤(화면 값)에 한다 — 톤매핑 앞에서 곱하면 밝게 날아간 흰 벽에서는 ACES가 눌러 거의 안 보였다
+  // 리뷰(09-26): 벽 AO 모서리 0.3→0.38 · 바닥 닿는 곳 0.38→0.42 · 천장 닿는 곳 0.24→0.3 — 480px 화면에서 거의 안 보였다(탁해지지 않는 선까지)
   const AO_GLSL = `{ vec4 d = vAoD; float ao;
     if (d.z < 0.) { vec4 e = 1. - smoothstep(vec4(0.), vec4(1.0), vec4(d.x, d.y, -d.z - 1., d.w)); e = 1. - AO_FLOOR * e * e; ao = e.x * e.y * e.z * e.w; }
     else { float c = 1. - smoothstep(0., 1.0, min(d.x, d.y)), f = 1. - smoothstep(0., 0.7, d.z), t = 1. - smoothstep(0., 0.8, d.w);
-      ao = (1. - 0.3 * c * c) * (1. - 0.38 * f * f) * (1. - 0.24 * t * t); }
+      ao = (1. - 0.38 * c * c) * (1. - 0.42 * f * f) * (1. - 0.3 * t * t); }
     gMul *= ao; }`;
   const macroTex = (() => {   // 이음매 없는 값 노이즈 두 장(r = 성긴 · g = 고운) — 원시 데이터(색공간 없음)
     const N = 128, cv = document.createElement('canvas'); cv.width = cv.height = N; const g = cv.getContext('2d'), img = g.createImageData(N, N);
