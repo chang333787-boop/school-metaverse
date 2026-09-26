@@ -4828,6 +4828,7 @@ export function buildWorld(scene) {
     const HATG = NI(new THREE.SphereGeometry(1, 10, 3, 0, Math.PI * 2, 0, Math.PI * 0.5));                  // 위생모 돔
     const ARC = NI(new THREE.TorusGeometry(1, 0.16, 3, 5, Math.PI).rotateZ(Math.PI));                      // 웃는 입(아래로 둥근 호)
     const SKIRT = NI(new THREE.CylinderGeometry(0.72, 1, 1, 8, 1, true));
+    const LAPG = NI(new THREE.SphereGeometry(1, 10, 3));   // 앉은 치마(무릎 위 납작한 알 — 옆 분할이 적으면(6) 위에서 뾰족한 마름모로 보였다 · 40면)
     const STICK = NI(new THREE.CylinderGeometry(1, 1, 1, 5, 1, true));
     // 둥근 알약(팔다리) — 극 부채 + 띠 3(비인덱스 48면 · 법선 = 해석값). 길이마다 캐시
     const PILL = new Map();
@@ -4900,7 +4901,7 @@ export function buildWorld(scene) {
         }
       });
       // 몸: 바지(또는 치마) + 셔츠(둥근 알) · 급식 = 흰 앞치마
-      if (skirt) { if (pose === 'sit' || pose === 'sitFloor') put(S64, [0, hipY + 0.01, bz + D.thigh * 0.35], [D.PA[1] * 1.15, D.PA[2] * 0.75, D.thigh * 0.7], bot);
+      if (skirt) { if (pose === 'sit' || pose === 'sitFloor') put(LAPG, [0, hipY + 0.02, bz + D.thigh * 0.3], [D.PA[1] * 1.2, D.legR * 1.3, D.thigh * 0.72], bot);   // 앉은 치마 = 허벅지 위를 덮는 도톰한 알(얇으면 무릎 위 까만 마름모로 보였다 — 검토 09-26)
         else put(SKIRT, [0, hipY - 0.02, 0], [D.PA[1] * 1.28, adult ? 0.32 : 0.2, D.PA[3] * 1.3], bot); }
       if (!skirt) put(S64, [0, D.PA[0] + dy, bz], [D.PA[1], D.PA[2], D.PA[3]], bot);
       put(S85, [0, D.T[0] + dy, bz], [D.T[1], D.T[2], D.T[3]], top);
@@ -4908,7 +4909,8 @@ export function buildWorld(scene) {
       // 팔: 어깨 → 손(자세별). 아이 = 짧은 소매 + 맨팔(끝이 벙어리 손) · 어른 = 긴 소매 + 둥근 손
       const hands = [-1, 1].map(sd => {
         const sx = sd * D.SH[0], L = D.armL;
-        if (pose === 'sit' && o.desk != null) return [sd * 0.13, Math.max(o.desk / s + D.armR * 0.8, shY - L * 0.9), bz + (o.reach ?? 0.3) / s + 0.04];
+        if (pose === 'sit' && o.desk != null) return [sd * 0.13, Math.max((o.desk - y) / s + D.armR * 0.8, shY - L * 0.9),   // o.desk = 월드 y → 발밑 기준(2층 교실 y 3.7에서 팔이 천장까지 솟았다 — 검토 09-26)
+                                                     bz + (o.reach ?? 0.3) / s + 0.04];
         if (pose === 'sit' || pose === 'sitFloor') return [sd * (D.legX + 0.05), hipY + D.legR + 0.05, bz + (pose === 'sit' ? D.thigh * 0.6 : D.floorLeg * 0.5)];
         if (pose === 'work') return [sd * 0.12, shY - L * 0.4, L * 0.85];
         if (pose === 'sweep') return sd > 0 ? [0.07, shY - L * 0.3, L * 0.55] : [0.0, shY - L * 0.85, L * 0.7];
