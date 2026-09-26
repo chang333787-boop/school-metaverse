@@ -65,6 +65,7 @@ map.nav(opt) → Promise<Nav> (크롬북용 6ms씩 나눠 짓기·캐시) · map
         snap(x,y,z,r) · node(대상) · pos(i) · zoneOf(i) · distField(a,maxLen) · block(rect|구역id) → {remove} · export()
 map.mapData(층) → {bounds, boundary, buildings, zones, landmarks, spawns} · map.drawMap(ctx2d, {floor,scale,x0,z0,labels,player,marks}) · map.coverage()
 map.rng(seed) (mulberry32) · map.store.get/set (localStorage 'sm2.game.<id>.' · 쓰기 2초마다 몰아서)
+map.gone(범위가 정리됐나 — await 뒤 확인) · map.camera(읽기 전용 — 겨눔) · map.tone(주파수, 시작초, 길이, 파형, 크기, 끝주파수) · map.player.aim(h|null)(몸만 돌림) · map.player.shoulder(m)(어깨 너머 시점) · map.on('action', {name, down}) ← SD2.map.press(name, down)   // GAME-WG §10
 map.play = { field, ball, track:{c,a,b,half,gates}, redlight:{startZ,finish}, y }   // 운동장 놀이판(달리기·공·무궁화 신호등) — SCHOOL 운동장 사각형에서 계산, check()가 트랙·출발선이 전부 걷는 칸인지 본다
 SD2.map.stuckLog — 이동키를 누른 채 1.5초 못 움직이고 몸이 충돌 상자 속이던 자리(최대 50) · map.spawns
 SD2.map.check() → {ok, zonesNoMeta, metaNoZone, dupIds, labelBad, extraBad, spawnsBad, poisBad, hotUnreachable, playBad, traps, outsidePct, noZoneInSchoolPct}
@@ -203,3 +204,25 @@ export default async function start(map, params) { …; return { tick(dt) {}, st
 - **nav.js distField 버그 수정**: 묵은 힙 항목 검사가 거꾸로였고 64비트 거리를 Float32 D와 견줘 같은 칸이 끝없이 다시 들어가 힙이 터졌다(Array buffer allocation failed) → 묵은 항목 건너뜀 + `Math.fround`.
 - 수용 시험(09-26 · 1366×610): 5 목표 `nav.path` ok · 각 목표 2.4m 밖에서 실제로 걸어 들어가 도착 5/5 · 끝 화면 · [다시 하기]/⏹ 실제 클릭 뒤 정리 수 처음과 같음 · HUD 겹침 0 · 게이트·빠른 검진 그대로.
 - **새 게임 만들기**: ① `_template.js` 복사 → `v2/games/<id>.js` ② `registry.js`에 `{title, v, desc}` ③ 목표·소품은 `map.pois`·`nav.random`·`mk.*`로(사람 NPC·인물 대사 금지, 문항은 교사 승인 데이터만) ④ 미니맵 `map.minimap.show()` + `setMarks` ⑤ harness로 `?game=<id>` 수용 시험(걸어서 도착·stop 뒤 정리 수·HUD 겹침·드로우콜 +15 이하).
+
+## 10. 물총 놀이(GAME-WG · 09-26)
+
+사용자 09-26 "tps 물총은 구현해도 될 듯 — 그 정도는 폭력적이진 않은 듯". `v2/games/watergun.js` · `?game=watergun&seed=1&time=180`(time = 한 판 초, 10~600) · 🎮 놀이 목록 '물총 놀이'.
+- **폭력 없음**: 사람(NPC)은 과녁이 아니다 — NPC는 충돌이 없어 물이 그냥 지나간다. 과녁 = 물풍선(받침대) · 장난감 모닥불(끄기) · 목마른 꽃 화분(물 주면 핌) · 동글동글 장난감 로봇(작은 물 꼭지만 — 맞으면 빙글빙글 3초).
+  로봇 물에 맞으면 💦 젖음 칸만 차고 잠깐 느려진다(100이면 '흠뻑!' 2초 느림) — 피해·죽음·피 없음. 소리는 짧은 밝은 합성음(🔊 칩으로 끔).
+- **조작**: 마우스 왼쪽 누르고 있기(시점 잠금 중) · F 누르고 있기 · 터치 화면 = 💧 버튼(누르고 있기 — 터치 버튼 줄 위·미니맵 왼쪽) · 다른 입력 = `SD2.map.press('fire', true/false)`.
+  조준 = 화면 가운데(조준점). 가운데 광선이 **내 몸 앞부터** 처음 닿는 곳(벽·물체·바닥·과녁 — 카메라와 나 사이는 뺌)으로 물총 꼭지에서 포물선 발사각을 푼다(속도 15m/s · 닿지 않으면 45°). 과녁 위면 조준점이 노랗게.
+  게임 중 바깥에선 카메라를 오른쪽으로 0.55m 비켜 세운다(어깨 너머 — 머리·카메라 오른쪽 1m가 트였을 때만, 0.2초마다 확인).
+- **물통**: 100 · 쏘면 초당 12 · 파란 빛기둥(운동장 개수대 수도꼭지 앞 + 장난감 물통 둘 — 운동장 서쪽·구령대 앞 서쪽) 안에 서 있으면 초당 60 찬다. 수돗가(본관 뒤 가운데 마당)·급식실 개수대는 놀이 경계 밖이라 쓰지 않는다.
+- **점수**: 풍선 +10(3방울) · 불 +30(34방울) · 꽃 +20(38방울) · 로봇 +25(12방울). 풍선 6초·불 14초·꽃 28초 뒤 다른 자리에 다시. 끝 = 점수·가장 높은 점수(`map.store` — 판이 끝날 때만 씀) · [다시 하기]/[그만하기].
+- **자리**: 과녁 = 길격자 무작위 칸(`운동장`·`농구장` · 물 채우는 곳·출발 자리와 떨어지게 34곳을 미리 골라 돌려 씀). 로봇 = 같은 네모 안에서 `nav.path`(로봇 둘레 13m 안 목적지만 · maxExp 4000 · 한 프레임에 로봇 하나만 — 운동장 끝에서 끝 길찾기는 6~60ms 멈칫이었다(리뷰 09-26) · 판 중에 nav.random은 쓰지 않는다: 전 칸을 훑어 수 ms).
+  로봇은 9.5m 안·보이면(`los` — 철망·골대 그물 뒤는 숨는 곳) 0.5초 몸을 흔든 뒤 물 7방울. 놀이 경계 = 네모(x −42~47.5 · z −17.5~42.3 — 구령대·개수대 포함).
+- **그리기**: 전부 InstancedMesh 풀 — 물방울 240(짧은 20면체를 속도 방향으로 늘림 · 튀는 물·김 같이) · 젖은 자국 48(원판 · **곱하기 섞기**라 흰색 = 그대로 → 마르며 흰색으로 · 바닥·낮은 윗면에만(옆면·높은 윗면은 충돌 상자가 보이는 모양과 달라 떠 보임) · 면 법선으로 3cm + polygonOffset) ·
+  로봇 3·풍선 6+받침·모닥불 3+불꽃·화분 4+줄기+꽃머리·물통 2·물총 1 = **드로우콜 +14**(표식 풀 2 포함) · 삼각형 +1.7만 안팎. 새 조명 없음. 물방울 충돌은 2프레임마다(그사이 선분 전체 — 과녁 공·`q.ray`·바닥 `floorY`).
+- **API 추가(작은 일반 고리)**: `map.camera`(읽기 전용) · `map.tone(...)`(main.js 합성음) · `map.player.aim(h|null)`(몸만 방위 h° — main.js `pg.rotation.y = CTRL.face ?? P.yaw`) · `map.player.shoulder(m)`(main.js 3인칭 비키기에 더함 · 옆벽 검사 없음 — 트인 곳에서만) ·
+  `SD2.map.press(name, down)` → `map.on('action', {name, down})`. 셋 다 게임이 멈추면(범위 파사드 dispose) 원래대로(face null · shoulder 0).
+- **`map.gone`**(리뷰 09-26): 범위 파사드가 정리되면 true. 게임은 `await`(특히 첫 `map.nav()` — 길격자를 나눠 짓는 몇 초) 뒤 `if (dead || map.gone) return {}` 로 확인한다 — 로드 중 ⏹ 그만하기/다른 놀이를 고르면 로더는 아직 handle이 없어 `stop()`을 못 부르므로, 확인이 없으면 그 뒤에 만든 HUD·메시·이벤트·멈춤·경계가 영영 남았다(물총: 멈춤 true·장면 +14·DOM +5 실측).
+- 수용 시험(09-26 · 960×540 헤드리스): F·'fire' 신호·마우스(포인터 잠금) 모두 물이 줆 · 개수대 33→100 · 풍선 터짐·불 꺼짐·꽃 핌·로봇 어지러움 각 1 · 로봇 이동·로봇 물에 젖음 ·
+  끝 → localStorage `sm2.game.watergun.best` 저장 · [그만하기] 뒤 장면 물체·HOT·이벤트·트리거·표식·칩 처음과 같음(두 번 켰다 꺼도 같음 — DOM은 mapapi가 처음 만든 배너·목표 줄 2개만 숨김으로 남음) ·
+  쏘는 중 최악 11.2만 삼각형/165콜 · 게임 tick 평균 ≈0.2ms(물방울 80~90개).
+
