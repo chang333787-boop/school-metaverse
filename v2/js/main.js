@@ -1,5 +1,6 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
+import { buildKid } from './kid.js?v=1';   // CHAR-2 내 캐릭터(치비·노란 모자)
 import { buildWorld } from './world.js?v=114';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=7';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=3';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
@@ -47,7 +48,7 @@ const warmDone = (() => { try {
   const add = (m, inst, col) => { mats.push(m); const o = inst ? new THREE.InstancedMesh(G, m, 1) : new THREE.Mesh(G, m); if (col) o.setColorAt(0, new THREE.Color()); s.add(o); };
   [B({ map: T, alphaTest: 0.5 }), B({}), L({ map: T }), L({ map: T, alphaTest: 0.5, side: D }), L({ map: T, side: D }), L({ transparent: true }), L({ vertexColors: true }),
    B({ map: T, vertexColors: true }), L({ map: T, vertexColors: true }), L({ map: T, transparent: true, side: D }), L({ map: T, vertexColors: true, transparent: true, side: D }),
-   L({ vertexColors: true, flatShading: true }), B({ vertexColors: true, fog: false })].forEach(m => add(m));
+   B({ vertexColors: true, fog: false })].forEach(m => add(m));   // (CHAR-2: 캐릭터가 매끈한 음영이 되어 '정점색+평면 음영' 조합은 뺌 — L({vertexColors}) 하나로 같이 쓴다)
   add(L({}), true, true); add(L({ transparent: true }), true); add(L({}), true);
   renderer.compile(s, camera, scene);
   return () => { mats.forEach(m => m.dispose()); G.dispose(); T.dispose(); };
@@ -59,62 +60,12 @@ let MAP = null;   // MAP-API-1 지도 API — loop() 위에서 만든다. setTim
 
 // ---------- 플레이어 (AABB 전용 — 레이캐스트 0) ----------
 const P = { x: 12.4, y: world.terrainAt(12.4, -6) + 0.01, z: -6, vy: 0, yaw: 0, ground: true };   // 운동장에서 구령대·본관을 보며 시작
-// ---------- 내 캐릭터(CHAR-1 · 09-24 사용자 "캐릭터 모델링도"): 둥근 저폴리 아이(실사 아님) ----------
-// 둥근 머리·앞머리·옆/뒷머리·눈(반짝임)·눈썹·볼·코·웃는 입·귀 / 반팔·어깨·팔(어깨 축)·손 / 반바지+무릎 굽는 다리·흰 실내화 / 빨간 책가방.
-// 부위마다 정점색을 구워 한 메시씩(한 재질) — 드로우콜 8. 앞 = +z(P.yaw 0 = +z로 걷는 방향)
+// ---------- 내 캐릭터(CHAR-2 · 09-26 사용자 "캐릭터 생긴 게 너무 징그럽다") — 장난감 치비 · 노란 모자(v2/js/kid.js) ----------
+// CHAR-1(각진 얼굴·반짝이는 큰 눈·코 공·두꺼운 입·긴 목·막대 팔다리)을 버리고: 큰 둥근 머리·목 없음·짧고 통통한 팔다리·눈 둘 + 가는 웃는 입·매끈한 음영.
+// 부위마다 정점색을 구운 메시(한 재질) — 드로우콜 7. 앞 = +z(P.yaw 0 = +z로 걷는 방향). 키 ≈1.3m
 const pg = new THREE.Group();
-const KID = (() => {
-  const MAT = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
-  const SPH = new THREE.SphereGeometry(1, 14, 10), CAP = new THREE.SphereGeometry(1, 14, 7, 0, Math.PI * 2, 0, Math.PI * 0.56);
-  const CYL = new THREE.CylinderGeometry(1, 1, 1, 10, 1).translate(0, -0.5, 0), BOX = new THREE.BoxGeometry(1, 1, 1), ICO = new THREE.IcosahedronGeometry(1, 1);
-  const SMILE = new THREE.TorusGeometry(1, 0.28, 4, 10, Math.PI);
-  const C = { top: 0x4d9bd6, top2: 0x3b82bf, bot: 0x2b3a55, skin: 0xf6cfa4, skin2: 0xecb98f, hair: 0x3a2e28, shoe: 0xf4f4f0, sole: 0xc9ced3, bag: 0xe0503c, bag2: 0xb93a2c, eye: 0x2a2222, cheek: 0xf4a3a0, lip: 0xb0504a };
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sv = new THREE.Vector3(), col = new THREE.Color();
-  function bake(parts) {   // [도형, [x,y,z], [sx,sy,sz], 색, [rx,ry,rz]?]
-    const pos = [], cl = [];
-    for (const [geo, p, sc, hex, r] of parts) {
-      const g = geo.index ? geo.toNonIndexed() : geo, P = g.attributes.position;
-      m4.compose(v.set(p[0], p[1], p[2]), q.setFromEuler(e.set(...(r || [0, 0, 0]))), sv.set(sc[0], sc[1], sc[2])); col.set(hex);
-      for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(m4); pos.push(v.x, v.y, v.z); cl.push(col.r, col.g, col.b); }
-    }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(cl, 3)); g.computeVertexNormals();
-    const mesh = new THREE.Mesh(g, MAT); mesh.castShadow = true; return mesh;
-  }
-  const rig = new THREE.Group(); pg.add(rig);
-  const HIP = 0.56, SHO = 1.02;
-  // 몸: 반바지 허리·셔츠(둥근 원통)·밑단·어깨·목 + 책가방(등 = -z)·멜빵
-  const body = bake([
-    [CYL, [0, HIP + 0.12, 0], [0.178, 0.16, 0.128], C.bot], [CYL, [0, 1.09, 0], [0.18, 0.44, 0.13], C.top], [CYL, [0, 0.69, 0], [0.184, 0.04, 0.134], C.top2],
-    [SPH, [-0.165, SHO, 0], [0.085, 0.075, 0.085], C.top], [SPH, [0.165, SHO, 0], [0.085, 0.075, 0.085], C.top], [CYL, [0, 1.18, 0], [0.056, 0.08, 0.056], C.skin],
-    [BOX, [0, 0.9, -0.2], [0.3, 0.34, 0.13], C.bag], [SPH, [0, 1.07, -0.2], [0.15, 0.05, 0.065], C.bag], [BOX, [0, 0.82, -0.272], [0.2, 0.15, 0.03], C.bag2],
-    [BOX, [-0.1, 1.1, -0.06], [0.04, 0.02, 0.26], C.bag2], [BOX, [0.1, 1.1, -0.06], [0.04, 0.02, 0.26], C.bag2], [BOX, [-0.1, 0.95, 0.135], [0.04, 0.3, 0.02], C.bag2], [BOX, [0.1, 0.95, 0.135], [0.04, 0.3, 0.02], C.bag2],
-  ]);
-  rig.add(body);
-  // 머리(목 위 축 — 살짝 끄덕임): 얼굴은 +z
-  const head = new THREE.Group(); head.position.y = 1.18; rig.add(head);
-  const HY = 0.15;
-  head.add(bake([
-    [SPH, [0, HY, 0], [0.19, 0.185, 0.18], C.skin], [ICO, [-0.186, HY - 0.01, 0], [0.034, 0.05, 0.034], C.skin], [ICO, [0.186, HY - 0.01, 0], [0.034, 0.05, 0.034], C.skin],
-    [SPH, [-0.07, HY + 0.01, 0.166], [0.028, 0.04, 0.014], C.eye], [SPH, [0.07, HY + 0.01, 0.166], [0.028, 0.04, 0.014], C.eye],
-    [SPH, [-0.062, HY + 0.026, 0.178], [0.01, 0.01, 0.006], 0xffffff], [SPH, [0.078, HY + 0.026, 0.178], [0.01, 0.01, 0.006], 0xffffff],
-    [BOX, [-0.07, HY + 0.065, 0.168], [0.045, 0.012, 0.012], C.hair, [0, 0, 0.12]], [BOX, [0.07, HY + 0.065, 0.168], [0.045, 0.012, 0.012], C.hair, [0, 0, -0.12]],
-    [SPH, [-0.118, HY - 0.035, 0.148], [0.034, 0.022, 0.012], C.cheek], [SPH, [0.118, HY - 0.035, 0.148], [0.034, 0.022, 0.012], C.cheek],
-    [SPH, [0, HY - 0.018, 0.182], [0.016, 0.014, 0.012], C.skin2], [SMILE, [0, HY - 0.052, 0.172], [0.024, 0.024, 0.012], C.lip, [0, 0, Math.PI]],
-    [CAP, [0, HY + 0.01, -0.006], [0.2, 0.205, 0.195], C.hair, [-0.55, 0, 0]], [SPH, [0, HY + 0.125, 0.12], [0.16, 0.06, 0.075], C.hair, [-0.35, 0, 0]],
-    [SPH, [-0.176, HY + 0.035, 0.035], [0.045, 0.1, 0.075], C.hair], [SPH, [0.176, HY + 0.035, 0.035], [0.045, 0.1, 0.075], C.hair],
-    [SPH, [0, HY - 0.03, -0.11], [0.175, 0.14, 0.09], C.hair], [SPH, [0.03, HY + 0.205, -0.03], [0.03, 0.065, 0.03], C.hair, [0, 0, -0.4]],
-  ]));
-  // 팔(어깨 축 — 걸을 때 흔듦): 반팔 소매 + 팔뚝 + 손
-  const arm = sd => { const g = new THREE.Group(); g.position.set(sd * 0.2, SHO, 0); g.rotation.z = sd * 0.08;
-    g.add(bake([[CYL, [0, 0, 0], [0.062, 0.2, 0.062], C.top], [CYL, [0, -0.18, 0], [0.047, 0.22, 0.047], C.skin], [SPH, [0, -0.43, 0.005], [0.055, 0.06, 0.055], C.skin]])); rig.add(g); return g; };
-  // 다리(엉덩이 축 → 무릎 축): 허벅지(반바지 끝) + 종아리 + 흰 실내화(밑창)
-  const leg = sd => { const g = new THREE.Group(); g.position.set(sd * 0.088, HIP, 0);
-    g.add(bake([[CYL, [0, 0.03, 0], [0.084, 0.17, 0.084], C.bot], [CYL, [0, -0.13, 0], [0.072, 0.13, 0.072], C.skin]]));
-    const knee = new THREE.Group(); knee.position.y = -0.26; g.add(knee);
-    knee.add(bake([[CYL, [0, 0, 0], [0.068, 0.16, 0.068], C.skin], [CYL, [0, -0.15, 0], [0.071, 0.06, 0.071], 0xffffff], [BOX, [0, -0.245, 0.035], [0.13, 0.075, 0.22], C.shoe], [BOX, [0, -0.275, 0.035], [0.135, 0.02, 0.225], C.sole]]));
-    rig.add(g); return { g, knee }; };
-  return { rig, body, head, armL: arm(-1), armR: arm(1), legL: leg(-1), legR: leg(1) };
-})();
+const KID = buildKid(THREE, 'b');
+pg.add(KID.rig);
 scene.add(pg);
 // 걷기·점프·앉기 동작: 이동 속도로 팔다리를 흔들고(반대쪽끼리), 공중이면 팔을 들고, 앉으면 무릎을 굽혀 의자 위에(몸을 앞으로 0.42·아래로 0.1)
 let kidPh = 0, kidX = P.x, kidZ = P.z, kidT = 0;
@@ -123,7 +74,7 @@ function kidTick(dt) {
   const K = KID, sit = !!ACT.sit, air = !P.ground && !sit && !ACT.anim, mv = sit ? 0 : Math.min(1, v / 4.2);
   if (v > 0.3 && !sit) kidPh += dt * (5.5 + v * 1.5);
   const sw = Math.sin(kidPh) * 0.7 * mv;
-  K.rig.position.set(0, sit ? -0.1 : Math.abs(Math.sin(kidPh)) * 0.04 * mv, sit ? 0.42 : 0);
+  K.rig.position.set(0, sit ? K.sitY : Math.abs(Math.sin(kidPh)) * 0.04 * mv, sit ? 0.42 : 0);   // sitY = 의자 앉는 판(0.46)에 엉덩이
   if (sit) { K.legL.g.rotation.x = K.legR.g.rotation.x = -1.5; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 1.5; K.armL.rotation.x = K.armR.rotation.x = -0.85; }
   else if (air) { K.legL.g.rotation.x = -0.5; K.legR.g.rotation.x = 0.25; K.legL.knee.rotation.x = 0.7; K.legR.knee.rotation.x = 0.3; K.armL.rotation.x = K.armR.rotation.x = -2.5; }
   else { K.legL.g.rotation.x = sw; K.legR.g.rotation.x = -sw; K.legL.knee.rotation.x = Math.max(0, sw) * 0.9; K.legR.knee.rotation.x = Math.max(0, -sw) * 0.9;
@@ -430,7 +381,7 @@ function act(h) {
       toast('🪑 의자에 앉았어요 — 움직이면 일어나요'); hotNear = null; break;
     case 'meal':   // 배식대: 칸 나뉜 식판에 밥·국·반찬 셋(반납은 식판 반납대에서)
       if (!tray) {
-        tray = new THREE.Group(); tray.position.set(0, 0.9, 0.4);
+        tray = new THREE.Group(); tray.position.set(0, KID.tray[0], KID.tray[1]);   // 두 손 앞(CHAR-2 키에 맞춤)
         const TM = c => new THREE.MeshLambertMaterial({ color: c });
         const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 0.34), TM(0xc8d2da)); tray.add(base);
         [[-0.13, 0.07, 0xf4f1e8], [0.13, 0.07, 0xc86a3a], [-0.16, -0.08, 0xc8452c], [0, -0.08, 0x6fa04f], [0.16, -0.08, 0xe8c35a]].forEach(([x, z, c], i) => {
@@ -451,7 +402,7 @@ function act(h) {
     case 'shoes': shoesIn = !shoesIn; toast(shoesIn ? '👟 실내화로 갈아신었어요' : '👞 운동화로 갈아신었어요'); break;
     case 'drum': (drumN++ % 2 ? xyloSnd : drumSnd)(); toast(drumN % 2 ? '🥁 둥둥 둥둥!' : '🎶 도미솔도~ 실로폰 소리'); break;
     case 'milk':
-      if (!milk) { milk = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.14, 0.09), new THREE.MeshLambertMaterial({ color: 0xf4f6f2 })); milk.position.set(0.22, 0.78, 0.3); pg.add(milk); toast('🥛 우유를 하나 꺼냈어요'); }
+      if (!milk) { milk = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.14, 0.09), new THREE.MeshLambertMaterial({ color: 0xf4f6f2 })); milk.position.set(...KID.milk); pg.add(milk); toast('🥛 우유를 하나 꺼냈어요'); }
       else { pg.remove(milk); milk = null; toast('🥛 우유를 다 마셨어요'); }
       break;
     case 'visit': toast('📝 방문록에 이름을 적었어요'); break;
