@@ -92,6 +92,7 @@ export function makeMeta(SCHOOL) {
     '동관 뒤뜰': M('east-yard', 'yard', null),
     '운동장': M('field', 'field', null, [], { multi: true }),                    // 본 운동장(field — 가장 넓음) + 서쪽 띠 조각 3개(field-2~4 · 유치원 놀이터 북·남·동 — FWG)
     '동쪽 통학로': M('east-path', 'path', null),
+    '농구장': M('bball-sand', 'play', null),                                     // EAST-3(09-26): 운동장 동쪽 끝 공막이 철망 ~ 통학로 철망 사이 모래 띠(농구대 둘 · 큰 나무 쉼터 — 코트 선 없음)
   };
 
   // 게임용 넓은 구역(바깥 빈칸 메우기) — world.zones 끝에 덧붙는다(도달성 게이트도 이 구역까지 본다).
@@ -167,7 +168,7 @@ export function makeMeta(SCHOOL) {
     { id: 'east-glass-door', label: '동쪽 끝 유리문', at: [B.front.x[1] - 0.8, B.front.z[0] + 1.25], r: 2 },
   ];
   // 운동장 놀이판(달리기 트랙·공 놀이·무궁화 신호등 게임용) — 운동장 흙 사각형(SCHOOL)에서 계산. 골대·숲놀이터를 피한 여백은 실측(09-24 길격자)
-  const FL = { x0: T.westX, x1: SCHOOL.eastFenceX, z0: T.fieldZ, z1: SCHOOL.southFenceZ };
+  const FL = { x0: T.westX, x1: SCHOOL.bballNet ? SCHOOL.bballNet.x : SCHOOL.eastFenceX, z0: T.fieldZ, z1: SCHOOL.southFenceZ };   // EAST-3: 동끝 = 농구 구역 공막이 철망
   const PLAY = {
     field: { x: [FL.x0 + 0.5, FL.x1 - 0.4], z: [FL.z0 + 0.2, FL.z1 - 0.5] },                  // 운동장 안(울타리·둔덕 발치 제외)
     ball: { x: [FL.x0 + 4, FL.x1 - 5.2], z: [FL.z0 + 0.9, FL.z1 - 5] },                      // 공이 튕기는 판(골대 앞 여유)

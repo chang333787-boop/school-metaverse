@@ -4,7 +4,7 @@
 //  ④ 16m 청크 병합 ⑤ 충돌 AABB 전용 ⑥ 예산 dc≤300·sim≤1ms
 // ============================================================
 import * as THREE from 'three';
-import { SCHOOL } from './layout.js?v=9';   // LAYOUT-3 실측 배치(v1의 js/data.js는 참고용으로 그대로)
+import { SCHOOL } from './layout.js?v=10';   // LAYOUT-3 실측 배치(v1의 js/data.js는 참고용으로 그대로)
 
 // 바깥 지형 높이(main.js 물리·검사도 같은 함수를 쓴다): 앞뜰·체육관 대지 = yard, 그 밖(둔덕 아래·운동장) = field
 const TRN = SCHOOL.terrain;
@@ -3424,7 +3424,7 @@ export function buildWorld(scene) {
     for (let t = 0.25; t < 1; t += 0.25) { const v = D*(0.5 + 0.5*t), yy = Y + (H - 0.1)*(1 - t), [s0x, s0z] = P(-W, v), [s1x, s1z] = P(W, v); dRod(s0x, yy, s0z, s1x, yy, s1z, 0.012, 0xd8dcdf); }
   }
   goal(-35.3, FCZ + 3.0, [-1, 0], 0xe0a83a, 1.4);                                // 서쪽 큰 골대(영상 g_072·g_075: 북쪽 기둥 ≈ 유치원 놀이터 남쪽 울타리 선, 골문선 = 놀이터 동쪽 울타리에서 ≈6.2 m 동쪽)
-  goal(SCHOOL.eastFenceX - 4.5, FCZ, [1, 0], 0xe0a83a, 1.4);                    // 동쪽 큰 골대
+  goal(SCHOOL.bballNet.x - 2.1, FCZ, [1, 0], 0xe0a83a, 1.4);                   // 동쪽 큰 골대 — EAST-3: 농구 구역 공막이 철망 바로 앞(골문선 = 철망 2.1 m 서쪽 · 뒤 그물 끝과 철망 사이 0.5)
   goal(-13, FLD.z[0] + 1.2, [0, -1], 0xf0f2f4, 0.8);                             // 학교 쪽 작은 골대(체육관 쪽으로 붙음) — 가로대 1.6 > 키 1.5 · FRONT-3b: 둔덕 발 배수 띠 바로 앞(영상 f_279·u_280 · 위성 D 흰 사각형 x -14.5~-11.2)
   goal(-24, SCHOOL.southFenceZ - 3.2, [0, 1], 0xf0f2f4, 0.8);                    // 정문 쪽 작은 골대
   {   // 운동장 동쪽 높은 초록 철망(영상 f_192~219) · 조명탑(북변). 남쪽(쉼터·정문 쪽)은 울타리 없이 트임(사용자 09-24 "정문에서 울타리가 운동장을 가로막지 않아")
@@ -4109,13 +4109,33 @@ export function buildWorld(scene) {
       dBlobE(4.0, 3.0, 4.0, 0x5a804e, tx + 0.5, Y + 15.4, tz - 0.4, { far: true, chunky: true, jitter: 0.14 }); }
 
     // ---- 야외 농구대 둘(마주 봄 — f_192·f_198: 북쪽 = 남향 · f_220: 큰 나무 앞 = 북향 · 투명 판 + 녹슨 주황 링) ----
-    [[34.3, 3.5, 1], [34.9, 26.6, -1]].forEach(([hx, hz, dir]) => { const pz = hz - dir * 0.95, S9 = 0xb9bdc0;
+    //   EAST-3: 둘 다 모래 띠 가운데 줄(공막이 철망 x 29 ~ 통학로 철망 39.7 → 34.35)
+    [[34.4, 3.5, 1], [34.4, 26.6, -1]].forEach(([hx, hz, dir]) => { const pz = hz - dir * 0.95, S9 = 0xb9bdc0;
       post(hx, pz, Y, Y + 3.4, 0.12); dCylE(0.07, 0.09, 3.3, S9, hx, Y, pz, { far: true, seg: 8 });
       dRodE(hx, Y + 3.1, pz, hx, Y + 3.3, hz - dir * 0.08, 0.05, S9, F9); dRodE(hx, Y + 2.6, pz, hx, Y + 3.0, hz - dir * 0.08, 0.04, S9, F9);
       dBoxE(1.8, 1.05, 0.04, 0xdfe7ea, hx, Y + 2.85, hz, F9);
       [0.01, 1.0].forEach(y9 => dBoxE(1.76, 0.04, 0.05, 0x9aa0a6, hx, Y + 2.85 + y9, hz, F9));
       [-0.9, 0.9].forEach(o => dBoxE(0.04, 1.04, 0.06, 0x9aa0a6, hx + o, Y + 2.855, hz, F9));
       dGeo(new THREE.TorusGeometry(0.23, 0.02, 5, 14).rotateX(Math.PI / 2), new THREE.Matrix4().makeTranslation(hx, Y + 3.05, hz + dir * 0.28), 0xc4622d, F9); });
+
+    // ---- EAST-3(09-26) 농구 모래 구역: 운동장 동쪽 끝 안쪽 높은 초록 공막이 철망(EAST-2 철망과 같은 모양 — 연두 기둥·가는 회색 그물 두 겹) + 모래 바닥(코트 선 없음) ----
+    //   철망 = x NX 한 줄(z NZ0~NZ1 · 양끝 트임 = 북 둔덕 발치 쪽·남 쉼터 쪽 드나드는 곳) · 충돌 = 보이는 그물 판 그대로(축에 나란한 한 장)
+    { const BN = SCHOOL.bballNet, NX = BN.x, [NZ0, NZ1] = BN.z, H = BN.h, L = NZ1 - NZ0;
+      const panel = (P, U, hex) => { _c.set(hex); for (const i of [0, 1, 2, 0, 2, 3]) { fencePos.push(...P[i]); fenceUV.push(...U[i]); fenceCol.push(_c.r, _c.g, _c.b); } };
+      panel([[NX, Y, NZ0], [NX, Y, NZ1], [NX, Y + H, NZ1], [NX, Y + H, NZ0]], [[0, 0], [L / 0.2, 0], [L / 0.2, H / 0.2], [0, H / 0.2]], 0xa9b3a5);
+      panel([[NX - 0.02, Y, NZ0], [NX - 0.02, Y, NZ1], [NX - 0.02, Y + H, NZ1], [NX - 0.02, Y + H, NZ0]], [[0.5, 0.5], [0.5 + L / 0.14, 0.5], [0.5 + L / 0.14, 0.5 + H / 0.14], [0.5, 0.5 + H / 0.14]], 0x9aa596);   // 엇갈린 칸 한 겹 더(멀리서 회녹색 안개)
+      const n = Math.round(L / 3);
+      for (let i = 0; i <= n; i++) { const z9 = NZ0 + L * i / n; dRod(NX, Y, z9, NX, Y + H + 0.05, z9, 0.05, G9, F9);
+        if (i % 3 === 1) { dRod(NX, Y, z9 + 0.45, NX, Y + H, z9 + 0.45, 0.045, G9, F9); [1.5, 3.0, 4.5].forEach(h => dRod(NX, Y + h, z9, NX, Y + h, z9 + 0.45, 0.035, G9)); } }   // 9m마다 이중 기둥(사다리 보강 — EAST-2 철망과 같음)
+      [NZ0, 0, 16, 32, NZ1].forEach((za, k, A) => { const zb = A[k + 1]; if (zb === undefined) return;   // 가로대 = 16m 청크 경계에서 자름
+        dRod(NX, Y + H, za, NX, Y + H, zb, 0.035, G9, F9); dRod(NX, Y + 0.15, za, NX, Y + 0.15, zb, 0.025, G9, F9); });
+      colliders.push({ x0: NX - 0.12, x1: NX + 0.12, y0: Y, y1: Y + H + 0.3, z0: NZ0 - 0.12, z1: NZ1 + 0.12, nc: true });
+      // 모래(운동장 흙보다 1cm 위 · 놀이터 모래 무늬를 옅게 — 흙과 갈리게) — 경사로 발치 포장 참·큰 나무 쉼터 포장(+2cm)과는 겹치지 않게 잘라 깐다
+      const ST9 = 0xf4efe6, SZ9 = TR3.fieldZ + 0.62;   // 둔덕 발치 배수 띠(FZ+0.22~0.60) 남쪽부터
+      patQuad('sand', NX, EF - 1.3, SZ9, ZR, Y + 0.01, false, ST9);
+      patQuad('sand', NX, EF, ZR, 30.6, Y + 0.01, false, ST9);
+      patQuad('sand', NX, 31.0, 30.6, NZ1, Y + 0.01, false, ST9);
+      zones.push({ x0: NX, x1: EF, z0: TR3.fieldZ, z1: SCHOOL.southFenceZ, y: Y, label: '농구장' }); }
 
     // ---- 남쪽 길 남쪽 가: 자연석 줄(f_240·f_243) ----
     for (let x9 = SCHOOL.forestPlay.x[0] + 0.3; x9 < XC - 0.3; x9 += 0.8 + R8() * 0.3) { const SW8 = SCHOOL.forestPlay.x[0] + 2.9, SM8 = SCHOOL.forestPlay.x[0] + 5.1; if (Math.abs(x9 - SW8) < 0.95 || Math.abs(x9 - SM8) < 0.95) continue;   // 데크 계단 앞은 비움(숲놀이터 블록 SW9·SM9)
@@ -4761,7 +4781,7 @@ export function buildWorld(scene) {
     bandZ(wz0, wz1, wx0, -1, 2.65 + FH, YEL);                                     // 서관 서면 2층(노랑)
   }
   zones.push({ x0: LOB_X0, x1: fx1, z0: fz0, z1: zCor, y: 0, label: '본관 복도' });
-  zones.push({ x0: TR3.westX, x1: SCHOOL.eastFenceX, z0: FLD.z[0], z1: SCHOOL.southFenceZ, y: FIELD, label: '운동장' });
+  zones.push({ x0: TR3.westX, x1: SCHOOL.bballNet.x, z0: FLD.z[0], z1: SCHOOL.southFenceZ, y: FIELD, label: '운동장' });   // EAST-3: 동끝 = 농구 구역 공막이 철망(그 동쪽은 '농구장')
 
   // 교실·사무실 바깥 창 블라인드(영상 a_487~493: 나무 가로살 블라인드를 창 윗부분에 걷어 올림) — 만든 창 목록(winLog)에서 방 안쪽 구역을 찾아
   { const ROOMS = new Set([...FR.rooms, ...wg.rooms, ...B.upper.rooms, ...B.eastWing.rooms].filter(r => !['hall', 'toilet', 'storage', 'stair'].includes(r.type)).map(r => r.name));
