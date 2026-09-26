@@ -3,9 +3,13 @@
 //   빠른 판(quick): 걷기/점프 그래프 · 갇힘 · 울타리 밖 · 계단 턱 · 올라서기 금지 무력화 · 구역 이름 · 문 그래프 · 상호작용 지점     (~0.6초)
 //   전체 판        : + 보이는 기하 복셀화 → 보이지 않는 벽·뚫림·떠 있음 · 3인칭 카메라 벽 뚫림 · 문 직진 · 구역별 성능 · 그림(img)
 // 게이트(0이어야 통과)와 래칫(기준선보다 늘면 실패)을 나눈다. 허용목록(ALLOW)은 항목마다 why 필수. 정본 = docs/map_api.md §건강 검진
-export const BASELINE = {   // 래칫 기준선(09-25 integ 실측 — 1차 7구간 합친 뒤 · 나무/잎판 충돌·world.soft·구역 겹침 정리) — 줄면 여기도 줄인다. 늘면 실패(새 결함인지 목록으로 확인)
+export const BASELINE = {   // 래칫 기준선(09-26 quality4 실측 — 3차 합친 main 위 · 둥근 줄기 십자·돌린 타원 띠 막이·놀이대 막이) — 줄면 여기도 줄인다. 늘면 실패(새 결함인지 목록으로 확인)
   // 예전(09-24 impl-gamemap): ghost 461 · sunk 1095 · floating 332 · perch 30 · multiZone 1101 · tallStep 2797
-  ghost: 93, sunk: 110, floating: 301, nsBypass: 0, perch: 27, noZonePct: 5, multiZone: 0, tallStep: 759,
+  // 예전(09-25 integ): ghost 93 · sunk 110 · floating 301 · perch 27 · tallStep 759 → 09-26 main 첫 실측 ghost 42 · sunk 75 · floating 53 · perch 14 · tallStep 530
+  // noZonePct 5 = 게이트 한도(래칫 아님 — 지금 0.9%)
+  // 리뷰 뒤(유치원 노랑 터널 모습을 main 자리로 되돌림 · 막이만): ghost 13 → 12(터널 속 칸 막힘) · tallStep 524 → 525 = 되살린 파랑 미끄럼틀 꼭대기(터널 출구 발판)와
+  //   분홍 미끄럼틀 둘째 계단 사이 0.52 턱 1(main에도 있던 턱 — 터널을 옮겨 덮었을 때만 사라졌다)
+  ghost: 12, sunk: 8, floating: 53, nsBypass: 0, perch: 13, noZonePct: 5, multiZone: 0, tallStep: 525,
 };
 export const ALLOW = {
   invisible: [   // 보이지 않는 벽 허용 구간(x0,x1,z0,z1) — 이유 필수

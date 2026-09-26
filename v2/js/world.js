@@ -392,7 +392,7 @@ export function buildWorld(scene) {
   // 침엽수(DETAIL-1): 굵은 줄기 + 8각 원뿔 4단(위로 갈수록 밝은 초록·단마다 비틀어 결이 엇갈리게)
   function pine(x, z, s = 1) {
     const y = tY(z, x), ry = hash2(x, z) * Math.PI * 2;
-    colliders.push({ x0: x-0.47*s, x1: x+0.47*s, y0: y, y1: y+12, z0: z-0.47*s, z1: z+0.47*s });   // [integ 09-25] 0.55 → 0.47 = 7각 줄기 안쪽(0.45)+2cm — 보이지 않는 벽
+    roundCol(x, z, (0.5 * s - 0.05) * 0.9, y, y + 12);   // [quality4 09-26] 상자 한 장(0.47s) → 십자 = 몸 높이(0.75) 7각 줄기 안쪽 — s 1.8(본관 동쪽 끝)에서 상자 모서리가 줄기 밖 0.3(보이지 않는 벽 9간선)
     dCyl(0.28*s, 0.5*s, 3.6*s, 0x6d4e32, x, y, z, { far: true });
     [[2.9, 2.6, 2.8, 0x2f6b46], [4.8, 2.1, 2.5, 0x3a7d52], [6.6, 1.6, 2.2, 0x468c5c], [8.2, 1.0, 1.9, 0x4f9663]]
       .forEach(([yy, r, h, c], i) => dCyl(0, r*s, h*s, c, x, y + yy*s, z, { far: true, seg: 8, rot: [0, ry + i*0.4, 0] }));
@@ -1110,6 +1110,7 @@ export function buildWorld(scene) {
   //   머리 높이(땅+1.4)에서 자른 가로 크기 × 0.8의 AABB — 모서리 빈 곳이 보이지 않는 벽이 되지 않게. 올라서기 금지(1.6)·카메라 무시.
   //   땅 높이가 바뀌는 곳(앞뜰 끝 둔덕·체육관 대지 끝)은 막이를 잎판 밑 땅(가운데 높이)이 이어지는 데까지만 줄인다 — 떠 있는 막이가 낮은 비탈 칸을 가두지 않게
   //   (몸 반지름 0.3 바깥까지 같은 높이일 때만). 머리보다 거의 위인 잎은 건너뜀
+  //   [quality4 09-26] 줄인 쪽(비탈 위 잎판)을 밑을 띄운 막이로 따로 막아 보니 비탈 계단이 몸을 막이 높이로 들어 올려 그 자리에 갇혔다(앞뜰 둔덕 7칸) — 줄임 유지(그 ghost는 남김)
   function canopyBox(cx, cz, cy, sy, a, b, ry) {
     const c = Math.cos(ry), sn = Math.sin(ry), ha = Math.hypot(a * c, b * sn), hb = Math.hypot(a * sn, b * c), g = tY(cz, cx);
     const hq = g + 1.4, f = cy <= hq ? 1 : cy - hq >= sy * 0.95 ? 0 : Math.sqrt(1 - ((cy - hq) / sy) ** 2);
@@ -1123,6 +1124,25 @@ export function buildWorld(scene) {
     if (x1 - x0 < 0.3 || z1 - z0 < 0.3) return;
     const y0 = Math.max(g + 0.05, cy - sy * 0.9);
     colliders.push(noStand({ x0, x1, y0, y1: y0 + 1.6, z0, z1 }));
+  }
+  // [quality4 09-26] 돌린 타원 발자국(가로 반지름 a·b · y축 회전 ry — dBlob과 같은 회전: 로컬 x축 = 세계 (cos ry, −sin ry))의 k배 안쪽에 드는 축정렬 띠(≤0.3m)로 막는다.
+  //   돌린 타원의 AABB 한 장은 모서리가 잎 밖으로 나가 보이지 않는 벽, 긴 쪽 끝은 몸이 뚫었다(앞뜰 낮게 퍼진 향나무 (36,-21) 보이지 않는 벽 2·ghost·발 묻힘).
+  //   띠는 짧은 쪽 축으로 자르고(띠 수 적게) 띠 가운데 현(chord) 길이를 쓴다. ns = 올라서기 금지(1.6) · k: 80면 덩어리 0.9 · 20면(chunky — 면 가운데 0.8, 꼭짓점 1.0) 0.86
+  function ellipseCols(cx, cz, a, b, ry, y0, y1, k = 0.9, ns = true) {
+    const c = Math.cos(ry), s = Math.sin(ry), hx = k * Math.hypot(a * c, b * s), hz = k * Math.hypot(a * s, b * c), alongX = hz <= hx;   // alongX = z로 자른 띠(띠 길이 방향 x)
+    const A2 = 1 / (a * a), B2 = 1 / (b * b), H = alongX ? hz : hx, n = Math.max(2, Math.ceil(2 * H / 0.3));
+    // 세계 오프셋 (dx, dz) → 로컬: lx = dx·c − dz·s, lz = dx·s + dz·c. 띠 좌표 t(자르는 축의 오프셋)에서 다른 축 현(chord)의 양 끝 오프셋
+    const chord = t => { const [p, q, r] = alongX ? [c * c * A2 + s * s * B2, 2 * t * c * s * (B2 - A2), t * t * (s * s * A2 + c * c * B2) - k * k]
+                                                    : [s * s * A2 + c * c * B2, 2 * t * c * s * (B2 - A2), t * t * (c * c * A2 + s * s * B2) - k * k];
+      const D = q * q - 4 * p * r; if (D <= 0) return null; const e = Math.sqrt(D); return [(-q - e) / (2 * p), (-q + e) / (2 * p)]; };
+    for (let i = 0; i < n; i++) { const t0 = -H + 2 * H * i / n, t1 = -H + 2 * H * (i + 1) / n, ch = chord((t0 + t1) / 2); if (!ch || ch[1] - ch[0] < 0.1) continue;
+      const box = alongX ? { x0: cx + ch[0], x1: cx + ch[1], y0, y1, z0: cz + t0, z1: cz + t1 } : { x0: cx + t0, x1: cx + t1, y0, y1, z0: cz + ch[0], z1: cz + ch[1] };
+      colliders.push(ns ? noStand(box) : box); }
+  }
+  // [quality4 09-26] 둥근 줄기·공 덩어리(반지름 r = 몸 높이에서 보이는 면 안쪽) 막이 = 십자 두 장(r × 0.62r · 0.62r × r) — 상자 한 장은 굵은 줄기(r ≥ 0.6)에서
+  //   모서리가 줄기 밖(보이지 않는 벽 — 본관 동쪽 끝 큰 침엽수 9간선)이거나, 줄이면 옆을 몸이 뚫었다(큰 나무 잔디밭 향나무 ghost 8칸)
+  function roundCol(x, z, r, y0, y1) {
+    colliders.push({ x0: x - r, x1: x + r, y0, y1, z0: z - 0.62 * r, z1: z + 0.62 * r }, { x0: x - 0.62 * r, x1: x + 0.62 * r, y0, y1, z0: z - r, z1: z + r });
   }
   // 전정한 소나무(영상 f_132~186 앞뜰 — 굽은 줄기 + 납작한 구름 잎판). 밑동 충돌은 12m(나무 위에 못 올라가게)
   //   lite = 가벼운 모양(5각 줄기 + 잎판 20면 BLOB0 — 약 900 → 260삼각형 · 뒤뜰 far 층용, tree의 lite와 같은 이유)
@@ -1140,7 +1160,7 @@ export function buildWorld(scene) {
     for (let k = 0; k < pads; k++) {
       const h = (1.0 + k * (2.1 / pads)) * s, r = (0.82 - k * 0.09 + R() * 0.2) * s, ang = R() * 6.28, d = (k === pads - 1 ? 0.1 : 0.45 + R() * 0.55) * s;
       dBlob(r, r * 0.34, r * 0.85, PG[k % 3], x + Math.cos(ang) * d, y + h, z + Math.sin(ang) * d, lite ? { ...F, ry: ang } : F);
-      canopyBox(x + Math.cos(ang) * d, z + Math.sin(ang) * d, y + h, r * 0.34, r * (lite ? 0.9 : 1), r * (lite ? 0.77 : 0.85), lite ? ang : 0);   // [integ 09-25] 몸 높이 잎판 = 충돌(앞뜰 남 화단 ghost 200칸)
+      canopyBox(x + Math.cos(ang) * d, z + Math.sin(ang) * d, y + h, r * 0.34, r * (lite ? 0.95 : 1), r * (lite ? 0.81 : 0.85), lite ? ang : 0);   // [integ 09-25] 몸 높이 잎판 = 충돌(앞뜰 남 화단 ghost 200칸) · [quality4 09-26] lite 0.9·0.77 → 0.95·0.81(20면 꼭짓점 쪽 잎을 몸이 1~2cm 뚫음 — 텃밭 ghost 2)
       dBlob(r * 0.7, r * 0.26, r * 0.6, 0x6aa362, x + Math.cos(ang) * d, y + h + r * 0.18, z + Math.sin(ang) * d, { far: true, chunky: lite, ry: ang, jitter: 0.12, ...(at ? { at } : {}) });
     }
   }
@@ -1153,10 +1173,10 @@ export function buildWorld(scene) {
   // 다듬은 회양목 둔덕(앞뜰 — 영상 f_132~183: 폭 1.5~2m·높이 0.9m 넓적한 둥근 덩어리가 서로 닿게 줄지어) — 윗면 밝은 잎 한 겹. 올라서기 금지
   function mound(x, z, w = 1.7, h = 0.9, d = 1.4, hex = 0x4f8a45, lite = false, ry = null) {   // lite = 몸통도 20면(뒤뜰 far 층) · ry = 몸통 회전(기본 = 자리 해시). 옆이 트인 덩어리는 0 — 축정렬 충돌상자(±0.42w)가 돌린 타원보다 넓어 보이지 않는 벽이 된다
     const y = tY(z, x), hh = hash2(x, z);
-    // [integ 09-25] 충돌 = 돌린(ry) 타원의 AABB × 0.8(lite 20면 = 안쪽 반지름 0.79라 0.62) — 예전 w·d × 0.42는 덩어리가 돌아가 있으면 상자 모서리가 밖으로 나가 보이지 않는 벽(앞뜰 북 화단·동관 뒤뜰 둔덕)
+    // [integ 09-25 · quality4가 띠로 바꿈] 충돌 = 돌린(ry) 타원의 AABB × 0.8(lite 20면 = 안쪽 반지름 0.79라 0.62) — 예전 w·d × 0.42는 덩어리가 돌아가 있으면 상자 모서리가 밖으로 나가 보이지 않는 벽(앞뜰 북 화단·동관 뒤뜰 둔덕)
     //   ry(FRONT-3): 넘기면 그 각도로(0 = 축정렬 — 트인 자리 옆 덩어리), 안 넘기면 예전처럼 hash
-    const r9 = ry == null ? hh * 6 : ry, k9 = lite ? 0.62 : 0.8, c9 = Math.cos(r9), s9 = Math.sin(r9), hx9 = k9 * Math.hypot(w / 2 * c9, d / 2 * s9), hz9 = k9 * Math.hypot(w / 2 * s9, d / 2 * c9);
-    colliders.push(noStand({ x0: x - hx9, x1: x + hx9, y0: y, y1: y + h, z0: z - hz9, z1: z + hz9 }));
+    const r9 = ry == null ? hh * 6 : ry;
+    ellipseCols(x, z, w / 2, d / 2, r9, y, y + h, lite ? 0.86 : 0.9);   // [quality4 09-26] AABB × 0.8 → 돌린 타원 띠(k 0.9 · 20면 0.86): AABB × 0.8은 긴 쪽 끝을 몸이 뚫어 발 묻힘(앞뜰 북 화단·동관 뒤뜰 둔덕)
     dBlob(w / 2, h * 0.62, d / 2, hex, x, y + h * 0.38, z, { far: true, chunky: lite, ry: r9, jitter: lite ? 0.14 : 0.1 });
     dBlob(w * 0.36, h * 0.3, d * 0.34, 0x8cb85a, x + (hh - 0.5) * 0.2, y + h * 0.72, z, { far: true, chunky: true, ry: hh * 9, jitter: 0.12 });
   }
@@ -1176,8 +1196,8 @@ export function buildWorld(scene) {
   // 층층 공 향나무(구령대 동쪽 3그루·앞뜰 — 영상 u_272·u_284·f_171·f_177: 줄기에 공 모양 덩어리 3~4개가 층층이, 키 3m 안팎)
   function ballJuniper(x, z, s = 1, lite = false) {   // lite = 공 덩어리 20면(뒤뜰 far 층)
     const y = tY(z, x), hh = hash2(x, z);
-    const k9 = lite ? 0.4 : 0.48;   // [integ 09-25] 0.3 → 0.48(lite 20면 0.4): 맨 아래 공(반지름 0.62·높이 0.04~1.06)을 몸이 뚫었다(구령대 동쪽 ghost) — 더 크면 상자 모서리가 공 밖(보이지 않는 벽)
-    colliders.push({ x0: x - k9 * s, x1: x + k9 * s, y0: y, y1: y + 12, z0: z - k9 * s, z1: z + k9 * s });
+    // [integ 09-25] 0.3 → 0.48(lite 20면 0.4): 맨 아래 공(반지름 0.62·높이 0.04~1.06)을 몸이 뚫었다(구령대 동쪽 ghost) — 더 크면 상자 모서리가 공 밖(보이지 않는 벽)
+    roundCol(x, z, (lite ? 0.85 : 0.9) * 0.62 * s, y, y + 12);   // [quality4 09-26] 상자 한 장 → 십자(맨 아래 공 안쪽 면) — 큰 나무 잔디밭 lite s 1.8(공 반지름 1.12)을 상자 0.72가 못 막아 ghost 8칸
     dCyl(0.07 * s, 0.11 * s, 2.6 * s, 0x5e4a3a, x, y, z, { far: true, seg: 6 });
     [[0.62, 0.55, 0, 0], [0.5, 1.35, 0.28, 0.1], [0.4, 2.05, -0.2, -0.12], [0.3, 2.65, 0.05, 0.08]].forEach(([r, h, ox, oz], k) =>
       dBlob(r * s, r * 0.82 * s, r * s, [0x2f6a3a, 0x357242, 0x2b6236, 0x3a7a46][k], x + ox * s * (hh > 0.5 ? 1 : -1), y + h * s, z + oz * s, { far: true, chunky: lite, ry: hh * 5 + k, jitter: lite ? 0.14 : 0.1 }));
@@ -2339,6 +2359,7 @@ export function buildWorld(scene) {
   // ---- 창고(홀 북서 — 회색 유리 양문 · 조리실 문): 선반·쌓은 의자·상자 ----
   [HX + 1.2, HX + 3.2, HX + 5.2].forEach(x9 => addBox(1.8, 1.9, 0.5, 0x9aa0a6, x9, 0, kz0 + 0.45));
   for (let k = 0; k < 3; k++) for (let j = 0; j < 4; j++) dCyl(0.16, 0.16, 0.05, 0x9b2c3a, HX + 3.2 + k * 0.42, 0.05 + j * 0.06, AZ - 1.2, { seg: 10 });
+  colliders.push(noStand({ x0: HX + 3.05, x1: HX + 4.2, y0: 0, y1: 0.28, z0: AZ - 1.35, z1: AZ - 1.05 }));   // [quality4 09-26] 쌓은 의자 셋(충돌이 없어 발이 묻혔다 — 발 묻힘 4칸)
   addBox(1.0, 0.6, 0.7, 0xc9a877, HX + 5.0, 0, AZ - 1.1, NS);
   // ---- 조리실(서): 국솥 2·가스 레인지·밥 찜기·작업대 2·개수대(3칸)·식기세척기·냉장고 2 · 배식창 뒤 급식 수레 ----
   [[kx0 + 0.9, kz0 + 1.1], [kx0 + 2.05, kz0 + 1.1]].forEach(([x9, z9]) => { dCyl(0.55, 0.5, 0.85, 0xb9bec2, x9, 0, z9, { seg: 14 }); dCyl(0.5, 0.5, 0.05, 0x8a9096, x9, 0.85, z9, { seg: 14 });
@@ -2447,6 +2468,7 @@ export function buildWorld(scene) {
     //   앞면 = 흰 걸레받이 + 큰 판 두 칸 + 위 띠, 위 = 옅은 나무 턱(앞으로 5cm) + 유리 칸막이
     const DW = 1.9, DD = 0.6, dkx = cx1 + 0.05 + DW / 2, dkz = lz0 + 0.5 + DD / 2, FZ = dkz + DD / 2 + 0.015;
     addBox(DW, 1.0, DD, 0xe8e6de, dkx, 0, dkz, NS);
+    colliders[colliders.length - 1].z1 -= 0.12;   // [quality4 09-26] 책상 막이 앞면만 12cm 안으로(모습 그대로): 자동문 가운데 선(z −35.425)이 책상 앞 17cm라 몸(0.26)이 책상 동끝에 걸려 못 들어왔다(문 직진)
     dBox(DW - 0.02, 0.1, 0.03, 0xf2f2f0, dkx, 0.005, FZ);
     [-1, 1].forEach(sd => dBox(DW / 2 - 0.03, 0.66, 0.03, 0xbdb7aa, dkx + sd * DW / 4, 0.11, FZ));
     dBox(DW - 0.02, 0.2, 0.03, 0xdcdcd8, dkx, 0.78, FZ);
@@ -3116,7 +3138,7 @@ export function buildWorld(scene) {
     [[17.6, -20.5, 2.9], [22.2, -20.45, 2.4], [27.0, -20.55, 2.7], [36.0, -21.0, 2.6]].forEach(([x9, z9, w9], k) => {   // 낮게 퍼진 향나무(f_165·f_171 왼쪽 앞)
       dBlob(w9 / 2, 0.5, 0.7, [0x5d8a45, 0x557f3f][k % 2], x9, YARD + 0.18, z9, { far: true, ry: k * 0.3, jitter: 0.12 });
       dBlob(w9 * 0.36, 0.2, 0.5, 0x7aa65a, x9 + 0.1, YARD + 0.52, z9, { far: true, chunky: true, ry: k, jitter: 0.12 });
-      colliders.push(noStand({ x0: x9 - w9 * 0.45, x1: x9 + w9 * 0.45, y0: YARD, y1: YARD + 0.65, z0: z9 - 0.62, z1: z9 + 0.62 })); });
+      ellipseCols(x9, z9, w9 / 2, 0.7, k * 0.3, YARD, YARD + 0.65, 0.9); ellipseCols(x9 + 0.1, z9, w9 * 0.36, 0.5, k, YARD, YARD + 0.65, 0.86); });   // [quality4 09-26] 축정렬 상자 → 돌린 두 잎 덩어리 띠((36,-21) 보이지 않는 벽 2·ghost·발 묻힘)
     NT.forEach(x9 => { const z9 = FY.strip + 0.1;                                    // 작은 관상수(가는 줄기 · 둥근 수관 — 키 2.6)
       post(x9, z9, YARD, YARD + 2.6, 0.08); dCyl(0.045, 0.06, 1.7, 0x6b5240, x9, YARD, z9, { far: true, seg: 6 });
       dBlob(0.62, 0.55, 0.6, 0x4f8a3c, x9, YARD + 2.05, z9, { far: true, jitter: 0.14 }); dBlob(0.4, 0.32, 0.38, 0x6aa04c, x9 + 0.15, YARD + 2.4, z9 - 0.05, { far: true, chunky: true }); });
@@ -3584,7 +3606,7 @@ export function buildWorld(scene) {
       [[-42.3, 65.8, 0.85, 0x3f6f3a], [-39.3, 65.7, 0.95, 0x4a7a40], [-35.3, 65.5, 0.8, 0x3f6f3a], [-31.9, 65.3, 0.75, 0x4f8045]].forEach(([x9, z9, r9, c9]) => shrub(x9, z9, r9, c9, true));
       [-42.8, -41.3, -39.6, -38.0, -36.2, -34.4, -32.8].forEach((x9, k) => { const z9 = sE(x9) + 0.62, w9 = 0.6 + 0.14 * (k % 3), h9 = 0.42 + 0.1 * ((k + 1) % 3);   // 둔덕 발치 큰 돌 줄(영상 s_036~039 왼쪽 — 돌 쌓은 비탈)
         dBlob(w9, h9, 0.42, [0x9d988c, 0xa8a397, 0x8f8a7f][k % 3], x9, Y + h9 * 0.45, z9, { chunky: true, far: true, ry: k * 1.7 });
-        colliders.push(noStand({ x0: x9 - w9 * 0.9, x1: x9 + w9 * 0.9, y0: Y, y1: Y + h9, z0: z9 - 0.4, z1: z9 + 0.4 })); });
+        ellipseCols(x9, z9, w9, 0.42, k * 1.7, Y, Y + h9, 0.86); });   // [quality4 09-26] 축정렬 상자(돌을 안 돌린 크기) → 돌린 돌 띠: (-41.3) 돌이 97° 돌아 북쪽 끝을 몸이 밟았다(발 묻힘 3칸)
       dBlob(0.58, 0.42, 0.56, 0x979286, -31.35, Y + 0.16, 64.1, { chunky: true, far: true, ry: 0.7 });          // 보도·경계석 서끝을 막는 큰 돌(보도는 둔덕에서 끝남)
       colliders.push(noStand({ x0: -31.87, x1: -30.83, y0: Y, y1: Y + 0.58, z0: 63.58, z1: 64.62 }));
     }
@@ -3606,18 +3628,19 @@ export function buildWorld(scene) {
       const cx = kpx - 1.3, cz = kpz + 1.4, F9 = { far: true }, PU = 0x6d5fb0, TL = 0x3f9a7a;   // 남쪽 울타리 바로 뒤(영상 g_069~075)
       const zA = cz + 0.2, zB = cz - 1.0;                                                  // 탑 A(남)·탑 B(북) 발판 가운데 z — 두 발판은 맞대기만
       addBox(1.2, 0.15, 1.2, 0x3a6ea5, cx, Y + 1.05, zA); addBox(1.2, 0.15, 1.2, 0x3a6ea5, cx, Y + 1.35, zB);
-      [[-0.55, zA + 0.55], [0.55, zA + 0.55], [-0.55, zA - 0.55], [0.55, zA - 0.55]].forEach(([ox, z9]) => { dRod(cx + ox, Y, z9, cx + ox, Y + 2.6, z9, 0.05, PU, F9); post(cx + ox, z9, Y, Y + 1.05, 0.06); });
-      [[-0.55, zB - 0.55], [0.55, zB - 0.55]].forEach(([ox, z9]) => { dRod(cx + ox, Y, z9, cx + ox, Y + 3.0, z9, 0.05, PU, F9); post(cx + ox, z9, Y, Y + 1.35, 0.06); });
+      [[-0.55, zA + 0.55], [0.55, zA + 0.55], [-0.55, zA - 0.55], [0.55, zA - 0.55]].forEach(([ox, z9]) => { dRod(cx + ox, Y, z9, cx + ox, Y + 2.6, z9, 0.05, PU, F9); colliders.push(noStand({ x0: cx + ox - 0.06, x1: cx + ox + 0.06, y0: Y, y1: Y + 2.6, z0: z9 - 0.06, z1: z9 + 0.06 })); });
+      [[-0.55, zB - 0.55], [0.55, zB - 0.55]].forEach(([ox, z9]) => { dRod(cx + ox, Y, z9, cx + ox, Y + 3.0, z9, 0.05, PU, F9); colliders.push(noStand({ x0: cx + ox - 0.06, x1: cx + ox + 0.06, y0: Y, y1: Y + 3.0, z0: z9 - 0.06, z1: z9 + 0.06 })); });   // [quality4 09-26] 기둥 막이 = 발판 위 봉 끝까지(예전 발판 밑까지 — 발판 위에서 봉을 뚫음 ghost) · 올라서기 금지(NS-RAISE가 발판+1.6까지)
       dCyl(0, 0.92, 0.85, TL, cx, Y + 2.6, zA, { far: true, seg: 6 }); dBlob(0.11, 0.11, 0.11, 0xf2c230, cx, Y + 3.5, zA, { chunky: true, far: true });
       dCyl(0, 0.8, 0.7, TL, cx, Y + 3.0, zB - 0.05, { far: true, seg: 6, rot: [0, 0.5, 0] });
       dBox(0.6, 0.9, 0.06, 0x3563c9, cx - 0.28, Y + 0.12, zA + 0.63);                      // 파랑 장난감 벽판(주판 알 — 영상 g_072)
       [0x3a9d5d, 0xe24b4b, 0xf2c230].forEach((c9, r) => { for (let k = 0; k < 3; k++) dBlob(0.05, 0.05, 0.03, c9, cx - 0.46 + k * 0.18, Y + 0.45 + r * 0.2, zA + 0.68, { chunky: true }); });
-      dCyl(0.42, 0.42, 0.8, 0xf2c230, cx + 1.0, Y + 1.5 + 0.42, zB, { far: true, seg: 10, rot: [0, 0, Math.PI / 2] });   // 노랑 터널(탑 B 동쪽)
+      dCyl(0.42, 0.42, 0.8, 0xf2c230, cx + 1.0, Y + 1.5 + 0.42, zB, { far: true, seg: 10, rot: [0, 0, Math.PI / 2] });   // 노랑 터널(탑 B 동쪽) — 눕힌 원기둥은 밑면에서 −x로 뻗어 cx+0.2~1.0: 서쪽 절반이 탑 B 동쪽 두 기둥 사이 지붕 밑(영상 g_072·g_073.5 — 자리 그대로)
+      colliders.push(noStand({ x0: cx + 0.3, x1: cx + 1.0, y0: Y + 1.5, y1: Y + 2.34, z0: zB - 0.4, z1: zB + 0.4 }));   // [quality4 09-26] 터널 막이(몸 1.5는 기어 지나가지 못함 — 예전 충돌 없음 ghost) · 서끝만 입구(cx+0.2)보다 0.1 안: 부풀림 0.26 → 몸 중심 ≤ cx+0.04 — 탑 가운데 줄(cx)·길격자 열 x −47.1(cx−0.05)로 A→B가 이어지고 터널 속 열(cx+0.25)은 막힘(cx+0.2면 A→B 열이 1cm 차로 끊김 · cx+0.6이면 몸이 입구 속 0.4 — ghost·발 묻힘)
       addBox(0.8, 0.15, 0.9, 0x3a6ea5, cx + 1.0, Y + 1.35, zB);
       [[0.75, 0.6], [0.4, 0.9]].forEach(([h9, z9]) => addBox(0.5, h9, 0.3, 0x3a6ea5, cx + 0.3, Y, zA + z9 + 0.15));   // 올라가는 발판 2단(남쪽 — 발판 0.75·0.4)
       {   // 야자수 기둥(서쪽 — 영상 g_072: 보라 봉 + 초록 잎 5장)
         const px9 = cx - 1.9, pz9 = zA - 0.2;
-        dRod(px9, Y, pz9, px9, Y + 3.3, pz9, 0.08, PU, F9); post(px9, pz9, Y, Y + 2.2, 0.12);
+        dRod(px9, Y, pz9, px9, Y + 3.3, pz9, 0.08, PU, F9); post(px9, pz9, Y, Y + 3.3, 0.12);   // [quality4 09-26] 막이 2.2 → 봉 끝 3.3: 흰 미끄럼틀 꼭대기(−0.15)에서 점프로 막이 윗면(0.85)에 올라앉았다(perch 6칸)
         for (let k = 0; k < 5; k++) { const a = k * 1.2566 + 0.3; dBlob(0.68, 0.07, 0.22, k % 2 ? 0x3f8f6a : 0x4fa070, px9 + Math.cos(a) * 0.56, Y + 3.3 - 0.12, pz9 + Math.sin(a) * 0.56, { far: true, ry: -a }); }
         dBlob(0.16, 0.14, 0.16, 0x3f8f6a, px9, Y + 3.35, pz9, { far: true, chunky: true });
       }
@@ -3641,7 +3664,7 @@ export function buildWorld(scene) {
       {   // 회색 원통 나선 미끄럼틀(뒤쪽 — 영상 g_073.5·g_076.5)
         const pts = [[0.1, 1.85, zB - 0.7], [-0.4, 1.45, zB - 1.5], [-1.2, 1.0, zB - 1.7], [-1.8, 0.55, zB - 1.1], [-1.95, 0.4, zB - 0.3]].map(([ox, h, z9]) => new THREE.Vector3(cx + ox, Y + h, z9));
         dGeo(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 18, 0.33, 8, false), new THREE.Matrix4(), 0xb8bcc0, F9);
-        pts.slice(1).forEach(v => colliders.push(noStand({ x0: v.x - 0.33, x1: v.x + 0.33, y0: Y, y1: Math.max(v.y + 0.33, Y + 1.6), z0: v.z - 0.33, z1: v.z + 0.33 })));
+        pts.forEach(v => colliders.push(noStand({ x0: v.x - 0.33, x1: v.x + 0.33, y0: Y, y1: Math.max(v.y + 0.33, Y + 1.6), z0: v.z - 0.33, z1: v.z + 0.33 })));   // [quality4 09-26] 첫 점(탑 B 발판 위 관 입구)도 — 발판에서 관을 뚫던 ghost
       }
       hotspots.push({ kind: 'slide', x: cx + 0.3, z: zA, y: Y + 1.2, r: 1.0, label: '미끄럼틀 타기', from: [cx + 0.6, Y + 1.2, zA - 0.25], to: [cx + 3.4, Y, zA + 1.3] });
     }
@@ -3910,10 +3933,10 @@ export function buildWorld(scene) {
       dBlobE(r, r * 1.1, r, pk([0x5f8f45, 0x6b9a4c, 0x557f3e]), x, Y + r * 0.8, z, { chunky: true, jitter: 0.15, ry: x * 3 + z });
       if (cols) for (let j = 0; j < 2; j++) dBlobE(0.07, 0.06, 0.07, pk(cols), x + (R8() - 0.5) * r, Y + r * 1.6 + R8() * 0.1, z + (R8() - 0.5) * r, { chunky: true });
       colliders.push(noStand({ x0: x - r * 0.8, x1: x + r * 0.8, y0: Y, y1: Y + 0.5, z0: z - r * 0.8, z1: z + r * 0.8 })); } };
-    const hedge = (x, z, w, h, d, hex, hl = true, nr = false) => {   // 다듬은 생울타리·회양목(mound 모양) — 막이는 십자 두 장(타원 둘레 밖으로 모서리가 튀어나오지 않게 · 보이지 않는 벽/발 묻힘 0)
+    const hedge = (x, z, w, h, d, hex, hl = true, nr = false) => {   // 다듬은 생울타리·회양목(mound 모양) — 막이는 돌린 타원 띠(ellipseCols — 타원 둘레 밖으로 모서리가 튀어나오지 않게 · 보이지 않는 벽/발 묻힘 0)
       dBlobE(w / 2, h * 0.62, d / 2, hex, x, Y + h * 0.38, z, { far: !nr, chunky: true, ry: x, jitter: 0.12 });   // nr = 가까이 층(북 구간 — 먼 시점 삼각형)
       if (hl) dBlobE(w * 0.36, h * 0.3, d * 0.34, 0x8cb85a, x, Y + h * 0.72, z, { far: !nr, chunky: true, ry: z, jitter: 0.12 });
-      colliders.push(noStand({ x0: x - w * 0.46, x1: x + w * 0.46, y0: Y, y1: Y + h, z0: z - d * 0.28, z1: z + d * 0.28 }), noStand({ x0: x - w * 0.28, x1: x + w * 0.28, y0: Y, y1: Y + h, z0: z - d * 0.46, z1: z + d * 0.46 })); };
+      ellipseCols(x, z, w / 2, d / 2, x, Y, Y + h, 0.86); };   // [quality4 09-26] 십자 두 장(축정렬) → 돌린(ry = x) 20면 덩어리 띠 — 큰 생울타리 (41.25, 46.8) 보이지 않는 벽 2간선
     const arcPts = (rx, rz, t0, t1, n, dx = 0, dz = 0) => { const P = []; for (let k = 0; k <= n; k++) { const t = t0 + (t1 - t0) * k / n; P.push([XC + dx + rx * Math.cos(t), ZC + dz + rz * Math.sin(t)]); } return P; };
 
     // ---- 바닥: 크림 보도(북 3m → 남 2.5m) · 굽이 · 남쪽 길 ----
@@ -3966,7 +3989,7 @@ export function buildWorld(scene) {
       dBlobE(sx, sy, sz, pk([0xd3d0c7, 0xc3c0b6, 0xdedbd2, 0xa9a69c]), PX1 + 0.85 + (R8() - 0.5) * 0.12, Y + sy * 0.45, z9, { chunky: true, jitter: 0.18, ry: z9 * 2.3 });
       if (R8() > 0.45) dBlobE(sx * 0.8, sy * 0.9, sz * 0.8, pk([0xd3d0c7, 0xdedbd2, 0xb4b1a8]), PX1 + 1.45, Y + sy * 0.7, z9 + 0.3, { chunky: true, jitter: 0.18, ry: z9 * 1.7 });
     }
-    barrier(PX1 + 0.5, ZR + 0.1, PX1 + 0.5, rz1, Y, 0.0); colliders[colliders.length - 1].x1 = PX1 + 1.35;
+    barrier(PX1 + 0.5, ZR + 0.1, PX1 + 0.5, rz1, Y, 0.0); colliders[colliders.length - 1].x1 = PX1 + 1.6;   // [quality4 09-26] 1.35 → 1.6: 둘째 돌 줄(PX1+1.45 · 반지름 ≤0.4)까지 — 생울타리 막이를 모양대로 줄이자 돌과 울타리 사이 0.3 틈에 몸이 끼어 돌을 밟았다(발 묻힘)
     { const MC9 = [0x6a9444, 0x5f8a3e, 0x74a04c];
       for (let z9 = ZR + 0.9, k = 0; z9 < ZS - 0.5; z9 += 1.75, k++) hedge(PX1 + 2.45 + (k % 2) * 0.25, z9, 1.5 + (k % 3) * 0.2, 0.9 + (k % 2) * 0.2, 1.4, MC9[k % 3], k % 2 === 0, z9 >= -2);
       for (let z9 = ZR + 2.2, k = 0; z9 < ZS - 1; z9 += 3.4, k++) hedge(PX1 + 4.2, z9, 1.8, 1.05, 1.6, MC9[(k + 1) % 3], false, z9 >= -2); }
@@ -4122,7 +4145,7 @@ export function buildWorld(scene) {
       // 동쪽 가장자리 나무 띠 둘째 줄(위성 E-5: z -20~10 x 55.5~59 끊기지 않는 수관 — 기존 x 55 한 줄 사이에 엇갈려) · 가까이 층 한 청크(56,-8)
       //   먼 층이면 급식 창고 등 먼 시점 최악 삼각형 래칫을 넘는다 — 66m 밖에선 숨는다(x 55 줄은 그대로 보임) · 둔덕(z -13.6~-12.4) 위는 피함(아래 밑동이면 잎이 대지 몸 높이에 걸림)
       [[57.7, -21.0, 1.05], [58.4, -16.5, 0.95], [57.5, -6.5, 1.1], [58.4, 0.5, 1.0], [57.6, 6.0, 0.95]].forEach(([x9, z9, s9]) => { const y9 = tY(z9, x9), h9 = hash2(x9, z9), N9 = { at: [56, -8] };
-        colliders.push({ x0: x9 - 0.3 * s9, x1: x9 + 0.3 * s9, y0: y9, y1: y9 + 12, z0: z9 - 0.3 * s9, z1: z9 + 0.3 * s9 });
+        colliders.push({ x0: x9 - 0.19 * s9, x1: x9 + 0.19 * s9, y0: y9, y1: y9 + 12, z0: z9 - 0.19 * s9, z1: z9 + 0.19 * s9 });   // [quality4 09-26] 0.3 → 0.19 = 5각 줄기(밑 0.22) 안쪽(bgTree와 같음) — (58.4,-16.5) 보이지 않는 벽 2간선
         dCyl(0.14 * s9, 0.22 * s9, 2.6 * s9, 0x6d4e32, x9, y9, z9, { ...N9, seg: 5 });
         dBlob(1.7 * s9, 1.4 * s9, 1.7 * s9, [0x3f7a3f, 0x4d8b4d, 0x467f44][Math.floor(h9 * 3) % 3], x9, y9 + 3.2 * s9, z9, { ...N9, chunky: true, ry: h9 * 6, jitter: 0.14 });
         dBlob(1.15 * s9, 0.95 * s9, 1.15 * s9, 0x5c9a4f, x9 - 0.4 * s9, y9 + 4.1 * s9, z9 + 0.3 * s9, { ...N9, chunky: true, ry: h9 * 9, jitter: 0.14 }); });
@@ -4575,8 +4598,9 @@ export function buildWorld(scene) {
     // ---- 정문 동쪽 소나무 섬(영상 s_001.5·g_001~003.5 · 위성 짙은 수관 x 21~33): 화강 경계석 + 자연석 + 억새 + 붉은 줄기 키 큰 소나무 ----
     { const IX = GE - 0.2, IZ = 49.3;
       addBox(0.15, 0.15, gtz - 0.6 - IZ, 0xb8b4ab, IX + 0.075, Y, (IZ + gtz - 0.6) / 2);                    // 서쪽 경계석(베이지 보도 쪽)
-      [[0.5, 5.3, 0.45], [1.2, 4.2, 0.35], [0.4, 2.6, 0.4], [1.9, 5.6, 0.3], [2.6, 3.4, 0.38], [0.7, 1.2, 0.3]].forEach(([ox, oz, r]) =>
-        dBlob(r * 1.3, r * 0.7, r, 0xbdb9b0, IX + ox, Y + r * 0.3, IZ + oz, { far: true, chunky: true, ry: ox * 3 }));
+      [[0.5, 5.3, 0.45], [1.2, 4.2, 0.35], [0.4, 2.6, 0.4], [1.9, 5.6, 0.3], [2.6, 3.4, 0.38], [0.7, 1.2, 0.3]].forEach(([ox, oz, r]) => {
+        dBlob(r * 1.3, r * 0.7, r, 0xbdb9b0, IX + ox, Y + r * 0.3, IZ + oz, { far: true, chunky: true, ry: ox * 3 });
+        ellipseCols(IX + ox, IZ + oz, r * 1.3, r, ox * 3, Y, Y + r, 0.86); });   // [quality4 09-26] 자연석 막이(충돌이 없어 발이 묻혔다 — 정문 앞 발 묻힘 27칸)
       [[1.0, 3.2], [1.6, 4.9], [0.6, 4.0], [2.3, 2.2], [1.4, 1.5]].forEach(([ox, oz]) => { dBlob(0.45, 0.55, 0.45, 0x7fa35a, IX + ox, Y + 0.4, IZ + oz, { jitter: 0.15 });
         softVols.push({ x0: IX + ox - 0.46, x1: IX + ox + 0.46, y0: Y - 0.2, y1: Y + 0.96, z0: IZ + oz - 0.46, z1: IZ + oz + 0.46, why: '억새(풀 — 걸어 들어감)' }); });   // [integ 09-25]
       const tallPine = (x, z, s = 1) => { const y = Y, R = seeded(Math.floor(Math.abs(x * 57 + z * 91)) + 3), lean = (R() - 0.5) * 0.14, a = R() * 6.28, H = 6.2 * s;
