@@ -85,18 +85,30 @@ export function buildWorld(scene) {
     return ch;
   }
   // geo(비인덱스로 변환)를 행렬 m으로 옮겨 붙인다. 면 방향으로 명암(윗면 1·옆면 .9·아랫면 .62 — addBox와 같은 규칙)
+  // smooth(NPC2 · 09-26): 도형의 원래 법선을 역전치로 돌려 청크에 따로 싣는다(명암 곱 없음) — 사람처럼 둥근 것이 각져 보이지 않게.
+  //   그 청크만 법선 배열(ch.nor)을 갖는다(처음 smooth가 들어올 때 앞 삼각형들의 면 법선으로 채움 — 나머지 청크는 병합 때 면 법선 그대로)
+  const _nm = new THREE.Matrix3(), _n0 = new THREE.Vector3();
+  const triNormals = (P, out) => { for (let i = out.length; i + 8 < P.length; i += 9) {
+    const ax = P[i + 3] - P[i], ay = P[i + 4] - P[i + 1], az = P[i + 5] - P[i + 2], bx = P[i + 6] - P[i], by = P[i + 7] - P[i + 1], bz = P[i + 8] - P[i + 2];
+    const x = ay * bz - az * by, y = az * bx - ax * bz, z = ax * by - ay * bx, s = 1 / (Math.sqrt(x * x + y * y + z * z) || 1);
+    out.push(x * s, y * s, z * s, x * s, y * s, z * s, x * s, y * s, z * s); } return out; };
   function dGeo(geo, m, hex, opt = {}) {
-    const g = geo.index ? geo.toNonIndexed() : geo, P = g.attributes.position;
+    const g = geo.index ? geo.toNonIndexed() : geo, P = g.attributes.position, N = opt.smooth && !opt.far ? g.attributes.normal : null;   // smooth = near 층만(정적 청크는 addBox가 법선 없이 쌓는다)
     const ch = opt.at ? (opt.far ? chunkOf(opt.at[0], opt.at[1]) : dChunk(false, opt.at[0], opt.at[1], _dv.setFromMatrixPosition(m).y)) : dChunk(!!opt.far, _dv.setFromMatrixPosition(m).x, _dv.z, _dv.y);   // at = 이 청크에 합침(넓게 퍼진 먼 산을 한 덩이로 — 드로우콜 · near도 된다: 청크 경계가 한 덩어리(텃밭·창고)를 가르면 남쪽 칸 경계 구가 커져 먼 곳에서도 절두체에 든다)
+    if (N && !ch.nor) ch.nor = triNormals(ch.pos, []);
+    if (N) _nm.getNormalMatrix(m);
+    const NO = ch.nor;
     _c.set(hex); _c.multiplyScalar(0.97);
     const jit = opt.jitter || 0;
     for (let i = 0; i < P.count; i += 3) {
       _p0.fromBufferAttribute(P, i).applyMatrix4(m); _p1.fromBufferAttribute(P, i + 1).applyMatrix4(m); _p2.fromBufferAttribute(P, i + 2).applyMatrix4(m);
       const ny = _ds.subVectors(_p1, _p0).cross(_dv.subVectors(_p2, _p0)).normalize().y;
-      let f = opt.flat ? 1 : ny > .5 ? 1 : ny < -.5 ? .62 : .9;
+      let f = opt.flat || N ? 1 : ny > .5 ? 1 : ny < -.5 ? .62 : .9;
       if (jit) f *= 1 + jit * (Math.sin(i * 12.9898 + _p0.x * 3.1) * 0.5);   // 잎 덩어리 면마다 살짝 다른 초록
       ch.pos.push(_p0.x, _p0.y, _p0.z, _p1.x, _p1.y, _p1.z, _p2.x, _p2.y, _p2.z);
       for (let k = 0; k < 3; k++) ch.col.push(_c.r * f, _c.g * f, _c.b * f);
+      if (NO) { if (N) for (let k = 0; k < 3; k++) { _n0.fromBufferAttribute(N, i + k).applyMatrix3(_nm).normalize(); NO.push(_n0.x, _n0.y, _n0.z); }
+        else NO.push(_ds.x, _ds.y, _ds.z, _ds.x, _ds.y, _ds.z, _ds.x, _ds.y, _ds.z); }
     }
   }
   function dBox(w, h, d, hex, cx, y0, cz, opt = {}) {
@@ -444,6 +456,7 @@ export function buildWorld(scene) {
     rBox(rot, w - 0.14, 0.1, 0.36, 0x9aa0a6, cx, y+0.52, cz, 0, -0.03);
   }
   const seatsOf = {};   // 교실 자리 목록(westClass가 채움 — 사람 배치가 학생을 앉히고 남은 자리에 '앉기')
+  const npcSpot = {};   // NPC2: 방 이름 → 교직원 자리 목록(가구를 놓은 곳이 적는다 — { x, z, face, desk(윗면 y), reach(의자 가운데~책상 끝), chair?, pose? })
   function chair(cx, y, cz, back = 1, col = 0x6f8fb0, rot = 0) {   // 0.5×0.85×0.4 — 앉는 판·등받이·쇠다리. back=등받이 쪽(지역 z 부호)
     colliders.push(noStand(rCol(rot, cx, cz, 0.25, 0.2, y, y+0.85)));
     rBox(rot, 0.42, 0.04, 0.4, col, cx, y+0.42, cz, 0, 0);
@@ -461,14 +474,14 @@ export function buildWorld(scene) {
     [-0.3, 0.3].forEach(ox => { rBox(rot, 0.08, 0.07, 0.08, 0x3a3d44, cx, y+0.85, cz, ox, 0.1); rBox(rot, 0.56, 0.34, 0.04, 0x2f3238, cx, y+0.92, cz, ox, 0.1);
       rBox(rot, 0.5, 0.28, 0.03, 0x3d5870, cx, y+0.95, cz, ox, 0.065); });
   }
-  function officeDesk(cx, y, cz) {                                  // 1.3×0.74×0.7 — 상판·옆판·서랍장 + 모니터·키보드
-    colliders.push(noStand({ x0: cx-0.65, x1: cx+0.65, y0: y, y1: y+0.74, z0: cz-0.35, z1: cz+0.35 }));
-    dBox(1.34, 0.04, 0.74, 0xd9cdb6, cx, y+0.7, cz);
-    dBox(0.05, 0.7, 0.66, 0xb8ab94, cx-0.62, y, cz);
-    dBox(0.4, 0.7, 0.62, 0xb8ab94, cx+0.4, y, cz);
-    dBox(0.08, 0.14, 0.08, 0x3a3d44, cx, y+0.74, cz-0.2);
-    dBox(0.56, 0.34, 0.04, 0x2f3238, cx, y+0.88, cz-0.2);
-    dBox(0.44, 0.03, 0.15, 0xe6e6e0, cx, y+0.74, cz+0.08);
+  function officeDesk(cx, y, cz, w = 1.3, dir = 1) {                // w×0.74×0.7 — 상판·옆판·서랍장 + 모니터·키보드. dir = 앉는 쪽(+1 남 · -1 북 — 모니터는 반대쪽)
+    colliders.push(noStand({ x0: cx-w/2, x1: cx+w/2, y0: y, y1: y+0.74, z0: cz-0.35, z1: cz+0.35 }));
+    dBox(w+0.04, 0.04, 0.74, 0xd9cdb6, cx, y+0.7, cz);
+    dBox(0.05, 0.7, 0.66, 0xb8ab94, cx-w/2+0.03, y, cz);
+    dBox(0.4, 0.7, 0.62, 0xb8ab94, cx+w/2-0.25, y, cz);
+    dBox(0.08, 0.14, 0.08, 0x3a3d44, cx, y+0.74, cz-0.2*dir);
+    dBox(0.56, 0.34, 0.04, 0x2f3238, cx, y+0.88, cz-0.2*dir);
+    dBox(0.44, 0.03, 0.15, 0xe6e6e0, cx, y+0.74, cz+0.08*dir);
   }
 
   const HALL_DADO = { top: 1.1, lo: 0xbfd89a, hi: 0xefe9dc };   // 본관 복도 벽: 아래 연두 징두리(영상 v2179_0462~0519)
@@ -973,7 +986,8 @@ export function buildWorld(scene) {
       colliders.push({ x0: tx - 0.06, x1: tx + 0.07, y0: y0 + 1.65, y1: ceilY, z0: tz - 0.77, z1: tz + 0.77, nc: true }); }
     // [classrooms-14] 교사 자리: 회색 철제 책상 + 모니터 · 주황 메시 의자 · 창가 흰 공기청정기(교사 의자 동쪽 — a_490.5·a_427.5)
     const tdz = zw - dz * (st === 'g4' ? 1.45 : 1.3);
-    teacherDesk(xw + 1.3, y0, tdz, 1); chair(xw + 0.72, y0, st === 'g4' ? zw - dz * 1.6 : tdz, -1, 0xd9643a, 1);
+    const tcz = st === 'g4' ? zw - dz * 1.6 : tdz;
+    teacherDesk(xw + 1.3, y0, tdz, 1); chair(xw + 0.72, y0, tcz, -1, 0xd9643a, 1);
     if (!opt.computer) { const px = xw + (st === 'g4' ? 2.45 : 1.88);   // 4학년은 코너 TV장 옆 창가(a_426)
       addBox(0.5, 1.5, 0.4, 0xf2f3f4, px, y0, zw - dz * 0.75, NS); dBox(0.3, 0.03, 0.25, 0xa9aeb3, px, y0 + 1.5, zw - dz * 0.75); }
     if (st === 'g3') {   // 3학년 흰 천 덮은 보조 탁자(교사 책상 북쪽 L자) + 나무 스툴(a_487.5·a_490.5)
@@ -1039,7 +1053,8 @@ export function buildWorld(scene) {
         seats.push({ x: x + 0.55, z, sx: x + 1.05, sz: z });
       }
     }
-    seatsOf[name] = { seats, y: y0, teacher: { x: xw + 1.3, z: zm - dz * 0.6 }, face: 3, tFace: 1 };
+    seatsOf[name] = { seats, y: y0, teacher: { x: xw + 1.3, z: zm - dz * 0.6 }, face: 3, tFace: 1,
+      tSeat: { x: xw + 0.72, z: tcz, face: 1, desk: y0 + 0.85, reach: 0.28 } };   // NPC2: 선생님 책상 의자(책상 끝 xw+1.0 · 윗면 0.85)
   }
   // [classrooms-3·5] 과학실(영상 s_388~408: 번호키 문으로 남향 입장 → 오른쪽(서) = 키 큰 흰 유리장·연두 띠, 왼쪽(동) = 흰 칠판·태극기·벽걸이 TV·준비실 문,
   //   북벽 = 낮은 흰 유리 진열대 + 불투명 높은 창, 남벽 = 창·블라인드). 칠판이 동벽이라 앞줄은 동쪽을 본다(일반 교실 서향의 예외 — 영상 확인).
@@ -1737,6 +1752,11 @@ export function buildWorld(scene) {
     if (CLS9) {
       if (r.type === 'computer') floorQ('tileW', x0, x1, z0, z1, 0, 0xa4a8ac); else floorQ('wood', x0, x1, z0, z1);   // 컴퓨터실 = 회색 올림 바닥(c_465.5)
       westClass(r.name, x0, x1, zCor + 0.15, z1, 0, { sill: 1.0, ceilH: CH - 0.16, style: r.name === '3학년' ? 'g3' : '', computer: r.type === 'computer' });   // 서향 교실(칠판 = 서벽)
+      if (r.kinder) {   // NPC2: 놀이 매트(색 퍼즐 4칸 · 책상 줄 뒤 빈 바닥) — 선생님과 아이 셋이 둘러앉는다(바닥에서 4mm 띄움 — 바닥 무늬와 같은 면 아님)
+        const mx = x1 - 2.6, mz = (zCor + fz1) / 2 + 0.35, MY = 0.034;
+        [[-1, -1, 0xf6c8d0], [1, -1, 0xbfe3f5], [-1, 1, 0xc9ecb5], [1, 1, 0xffe39a]].forEach(([i, j, c]) => dBox(1.2, 0.03, 1.0, c, mx + i * 0.6, 0.004, mz + j * 0.5));
+        npcSpot[r.name] = [[0, -0.72, 2], [0, 0.72, 0], [-0.72, 0.05, 1], [0.72, 0.05, 3]].map(([dx, dz, f]) => ({ x: mx + dx, z: mz + dz, y: MY, face: f, pose: 'sitFloor' }));
+      }
       [1, 2].forEach(k => [-1, 1].forEach(sd => lamp(1.2, 0.05, 0.22, cx + sd * cw * 0.22, CH - 0.21, zCor + k * 2.5)));
       acUnit(r.name === '3학년' ? cx + 2.2 : cx, CH - 0.16, (zCor + fz1) / 2);   // [classrooms-15] 3학년은 뒤쪽 절반(a_490.5·a_492 삼각측량)
       corWinsOf(r).forEach(g => { dBox(g.w - 0.12, 0.06, 0.17, g.frame, g.c, 2.3, zCor);   // 복도 쪽 실내창: 위 가로살 + 아랫칸 격자 시트(양면)
@@ -1760,8 +1780,13 @@ export function buildWorld(scene) {
       [[(x0 + TA) / 2, (z0 + z1) / 2], [(TA + TB) / 2, (z0 + z1) / 2], [(TB + TC) / 2, (z0 + TZ) / 2], [(TB + x1) / 2, (TZ + z1) / 2]].forEach(([lx, lz]) => lamp(0.6, 0.05, 0.22, lx, FH - 0.21, lz));
     } else {
       floorQ('tileW', x0, x1, z0, z1, 0, 0xf2e6cf);
-      officeDesk(cx - 1, 0, rz0 + 3.3);
-      officeDesk(cx + 1, 0, rz0 + 2.0);
+      const OD = [[cx - 1, rz0 + 3.3], [cx + 1, rz0 + 2.0]];
+      OD.forEach(([x9, z9]) => officeDesk(x9, 0, z9));
+      // NPC2 자리: 책상 남쪽 의자(모니터를 봄 · 무릎 = 옆판~서랍장 사이). 행정실장 = 창가 책상 하나 더(방을 봄) · 교감 = 앞(북) 큰 책상 하나 더(선생님들 쪽을 봄)
+      const sp9 = OD.map(([x9, z9]) => ({ x: x9 - 0.2, z: z9 + 0.62, face: 0, desk: 0.74, reach: 0.27, chair: true }));
+      if (r.name === '행정실') { const x9 = cx + 0.6, z9 = fz1 - 1.35; officeDesk(x9, 0, z9); sp9.unshift({ x: x9 - 0.2, z: z9 + 0.62, face: 0, desk: 0.74, reach: 0.27, chair: true }); }
+      if (r.name === '교무실') { const x9 = s1 - 1.3, z9 = rz0 + 1.25; officeDesk(x9, 0, z9, 1.5, -1); sp9.unshift({ x: x9 - 0.2, z: z9 - 0.62, face: 2, desk: 0.74, reach: 0.27, chair: true }); }
+      npcSpot[r.name] = sp9;
       addBox(0.9, 1.7, 0.45, 0xc8ccd0, s0 + 0.7, 0, fz1 - 0.6);
       lamp(1.2, 0.05, 0.22, cx, FH - 0.21, (rz0 + fz1)/2);
       offWinsOf(r).forEach(g => { dBox(g.w - 0.12, 0.06, 0.17, g.frame, g.c, 2.3, zCor);   // [main_corridor-0] 사무실 복도 쪽 창: 위 가로살 + 아랫칸 격자 시트(틀 안쪽 1cm 띄움 — 틀과 모서리가 겹치면 비스듬히 볼 때 반짝임)
@@ -1965,11 +1990,16 @@ export function buildWorld(scene) {
       if (r.type === 'library') {
         for (let k = 0; k < 3; k++) bookshelf(cx + 0.6, wz0 + 1.6 + k * 2.1, 5.2);
         addBox(2.4, 0.72, 1.2, 0xc9a063, cx + 0.6, 0, fz0 - 1.6, NS);          // 열람 탁자
+        { // NPC2: 대출 데스크(입구 유리 양문 z -36.6 북쪽 · 서가 서쪽 빈 띠) — 사서는 북쪽에 앉아 입구·열람 쪽(남)을 본다 · 책 두 더미
+          const x9 = s0 + 1.55, z9 = -38.6;
+          officeDesk(x9, 0, z9, 1.3, -1);
+          dBox(0.22, 0.1, 0.16, 0x5b8fc9, x9 + 0.42, 0.74, z9 - 0.12); dBox(0.2, 0.07, 0.15, 0xe0708a, x9 + 0.42, 0.84, z9 - 0.11);
+          npcSpot[r.name] = [{ x: x9 - 0.2, z: z9 - 0.62, face: 2, desk: 0.74, reach: 0.27, chair: true }]; }
         hotspots.push({ kind: 'read', x: cx + 0.6, z: fz0 - 0.6, y: 0, r: 1.6, label: '책 읽기' });
         [0.25, 0.75].forEach(t => lamp(1.2, 0.05, 0.22, s0 + (s1 - s0) * t, FH - 0.21, (wz0 + fz0) / 2));
       }
       if (r.type === 'nurse') { addBox(1.05, 0.5, 2, 0xf2f5f7, cx - 1, 0, wz0 + 1.6); addBox(1.05, 0.5, 2, 0xf2f5f7, cx + 1, 0, wz0 + 1.6);
-        dBox(0.04, 1.6, 2.2, 0xcfe3ee, cx, 0.4, wz0 + 1.7, { collide: true }); officeDesk(cx - 0.6, 0, LOB_Z - 1.2); lamp(1.2, 0.05, 0.22, cx, FH - 0.21, (wz0 + LOB_Z)/2); }   // 책상 cx-0.6 = 문(nurseDoor) 서쪽으로 비킴 — cx+1.2면 문 바로 뒤를 막아 방에 못 들어갔다(맵 검진 09-24: 보건실 걷는 칸 2개)
+        dBox(0.04, 1.6, 2.2, 0xcfe3ee, cx, 0.4, wz0 + 1.7, { collide: true }); officeDesk(cx - 0.6, 0, LOB_Z - 1.2); npcSpot[r.name] = [{ x: cx - 0.8, z: LOB_Z - 0.58, face: 0, desk: 0.74, reach: 0.27, chair: true }]; lamp(1.2, 0.05, 0.22, cx, FH - 0.21, (wz0 + LOB_Z)/2); }   // 책상 cx-0.6 = 문(nurseDoor) 서쪽으로 비킴 — cx+1.2면 문 바로 뒤를 막아 방에 못 들어갔다(맵 검진 09-24: 보건실 걷는 칸 2개)
       if (r.name === '나래반') { westClass(r.name, s0 + 0.15, s1 - 0.15, LOB_Z - 0.15, wz0 + 0.15, 0, { sill: 1.0, backGap: [pz - 0.9, pz + 0.9] }); lamp(1.2, 0.05, 0.22, cx, FH - 0.21, (wz0 + LOB_Z)/2); }   // 동벽 = 문서고 문
       if (r.name === '문서고') [wz0 + 0.5, wz0 + 2.2].forEach(z9 => addBox(1.6, 1.9, 0.5, 0x9aa0a6, cx, 0, z9));
     });
@@ -4778,79 +4808,165 @@ export function buildWorld(scene) {
   // 정적(청크 병합 — 드로우콜 0)·충돌 없음(길을 막지 않는다). ⚠️대사는 교사 승인분만 — 임의 생성 금지
   {
     const zoneOf = n => zones.find(z => z.label === n);
-    // 사람(DETAIL-1): 신발·다리·몸통·소매·손·목·머리·눈·입·볼·머리숱(여=긴 뒷머리). 옷색은 자리마다 다르게.
-    // 크기 s(아이 1·어른 1.1·유치원 0.8). face = 바라보는 쪽(0북·1동·2남·3서). 발밑 y. 전체 키 ≈ 1.5·s
-    // ⚠️겹치는 부품끼리 폭은 0.02 이상 다르게(머리 .32·앞머리 .28·짧은뒷머리 .34·정수리 .36·긴뒷머리 .40) — s=0.8에서도 면 차이 ≥8mm(감사 EPS 4mm)
+    // 사람(NPC2 · 09-26 사용자 "캐릭터 생긴 게 너무 징그럽다" · "부자연스럽게 서있는 npc들 좀 앉아있게 하고 일을 하시던가, 교실 선생님들 말고"):
+    //   내 캐릭터(kid.js CHAR-2)와 같은 결의 장난감 치비 — 실사 아님(07-30 "사람은 실제처럼 구현하지마"). 예전(CHAR-1) 징그러운 까닭 = 흰 반짝임 든 큰 까만 눈·눈썹·귀·볼 원판·목·막대 팔다리·각진 면.
+    //   이번: 큰 둥근 머리(아이 ≈ 키의 39% · 어른 ≈ 29%) · 목 없음 · 짧고 통통한 팔다리(둥근 알약) · 얼굴 = 작은 세로 타원 눈 둘 + 가는 웃는 입(+ 아이만 옅은 볼) · 코·귀·눈썹·입술·반짝임 없음.
+    //   매끈한 음영 = dGeo smooth(원래 법선). 낮은 분할(머리 10×7 · 작은 것 5×3) — 치비는 분할이 아니라 비례로. 한 명 ≤ 900 삼각형 · 청크 병합(드로우콜 0).
+    //   크기 s(아이 1·어른 1.1·유치원 0.8). face = 바라보는 쪽(0북·1동·2남·3서). 발밑 y. 로컬 앞 = +z(kid.js와 같음)
+    //   pose: 'stand' · 'sit'(의자 앉는 판 0.46 — o.desk = 책상 윗면 y·o.reach = 의자 가운데~책상 끝) · 'sitFloor'(매트) · 'work'(팔 앞으로 — 배식) · 'sweep'(빗자루) · 'explain'(칠판 앞 한 손 들고)
+    //   ⚠️겹치는 둥근 부품은 크기를 다르게(머리 R · 뒷머리 1.06R · 앞머리 덮개 1.08R · 단발 1.12R · 위생모 1.14R) — 곡면이라 감사(상자) 밖이지만 같은 면이 겹쳐 깜빡이지 않게
     const TOPS = [0x4d7fd6, 0x3fa37a, 0xe8a33d, 0x8a6ad0, 0xd9574a, 0x5bb5c9, 0xf2d15c, 0xe0708a, 0x7a8a9a, 0xf08a5d, 0x6fbf73, 0xffffff];
     const BOTS = [0x2b3a55, 0x3d4f7a, 0x6b5b4a, 0x2f2f36, 0x5a6f8a, 0x8a8f99];
-    const SKIN = [0xf1c9a0, 0xe8b98f, 0xf5d3b0], HAIR = [0x3a2e28, 0x2a2220, 0x4a3426, 0x5a3d2b];
-    // CHAR-1(09-24 사용자 "캐릭터 모델링도"): 둥근 머리·머리 모양(짧은/단발/포니테일/양갈래)·눈(반짝임)·눈썹·볼·귀·반팔+팔·손·흰 실내화(아이)·치마/바지.
-    //   실사 아님(사용자 07-30 "사람은 실제처럼 구현하지마") — 둥근 저폴리 인형. 부품은 청크 병합(드로우콜 0). 앞 = face 쪽
-    const PSPH = new THREE.SphereGeometry(1, 8, 6).toNonIndexed(), PSM = new THREE.SphereGeometry(1, 6, 4).toNonIndexed(), PCAP = new THREE.SphereGeometry(1, 8, 4, 0, Math.PI * 2, 0, Math.PI * 0.58).toNonIndexed();   // 머리 80면·중간 덩어리 36면·작은 것 PICO 20면·아주 작은 것(눈·볼·입) POCT 8면
-    const PCYL = new THREE.CylinderGeometry(1, 1, 1, 6, 1).translate(0, -0.5, 0).toNonIndexed(), PBODY = new THREE.CylinderGeometry(0.92, 1, 1, 9, 1).translate(0, 0.5, 0).toNonIndexed(), POCT = new THREE.OctahedronGeometry(1, 0);
-    const PSKIRT = new THREE.CylinderGeometry(0.7, 1, 1, 10, 1).translate(0, -0.5, 0).toNonIndexed(), PICO = new THREE.IcosahedronGeometry(1, 0);
-    const _pq = new THREE.Quaternion(), _pv = new THREE.Vector3(), _ps = new THREE.Vector3(), _pm = new THREE.Matrix4(), _pe = new THREE.Euler();
-    function partGeo(x, y, z, face, s) {   // (지역 lx 오른쪽·ly 위·lz 앞) 단위 도형을 크기 (sx,sy,sz)로 놓는다. rx = 앞뒤로 기울임(+ = 끝이 앞으로)
-      const th = [0, -Math.PI / 2, Math.PI, Math.PI / 2][face & 3], c = Math.cos(th), sn = Math.sin(th);
-      return (geo, lx, ly, lz, sx, sy, sz, hex, rx = 0, rz = 0) => {
-        const X = lx, Z = -lz;
-        _pq.setFromEuler(_pe.set(rx, th, rz, 'YXZ'));
-        _pm.compose(_pv.set(x + (X * c + Z * sn) * s, y + ly * s, z + (-X * sn + Z * c) * s), _pq, _ps.set(sx * s, sy * s, sz * s));
-        dGeo(geo, _pm, hex, { flat: false });
-      };
-    }
-    // sit=true: 의자(앉는 판 0.46)에 앉아 책상에 팔을 올린 자세. 앞 = 책상 쪽
-    function person(x, y, z, sex, s = 1, face = 2, sit = false) {
-      const G = partGeo(x, y, z, face, s), P = partAt(x, y, z, face, s), no = { collide: false };
-      // 몸 충돌(PHYS-1): 사람을 뚫고 지나가지 않게. 선 사람 = 0.44×0.44×키, 앉은 사람 = 의자 위(0.85~키)만 — 의자·책상은 자기 충돌이 있다
-      const hw = 0.22 * s;
-      // 높이는 1.6 이상 — 점프 도달(0.97 + 오름 0.55 = 1.52)보다 높아야 머리 위에 올라서지 못한다
-      colliders.push({ x0: x - hw, x1: x + hw, y0: y + (sit ? 0.85 : 0), y1: y + Math.max(1.6, 1.5 * s + 0.1), z0: z - hw, z1: z + hw });
-      const h1 = hash2(x, z), h2 = hash2(z, x), pick = (a, h) => a[Math.floor(h * a.length) % a.length];
-      const top = pick(TOPS, h1), bot = pick(BOTS, h2), skin = pick(SKIN, h1 * 7 % 1), hair = pick(HAIR, h2 * 5 % 1);
-      const girl = sex === '여', adult = s > 1.05, SH = adult ? 0x3a3d44 : 0xf2f2ee, style = Math.floor(h2 * 13 % 1 * 3);
-      // 다리·신발(아이 = 흰 실내화)
-      if (sit) {
-        P(-0.1, 0, 0.36, 0.14, 0.08, 0.24, SH, no); P(0.1, 0, 0.36, 0.14, 0.08, 0.24, SH, no);
-        [-0.09, 0.09].forEach(lx => { G(PCYL, lx, 0.47, 0.0, 0.07, 0.36, 0.07, girl ? skin : bot, Math.PI / 2); G(PCYL, lx, 0.47, 0.34, 0.058, 0.4, 0.058, girl ? skin : bot); });
-        if (girl) G(PSM, 0, 0.5, 0.12, 0.21, 0.07, 0.24, bot);                                   // 치마(무릎 위)
-      } else {
-        P(-0.1, 0, 0.03, 0.14, 0.08, 0.24, SH, no); P(0.1, 0, 0.03, 0.14, 0.08, 0.24, SH, no);
-        if (girl) { [-0.085, 0.085].forEach(lx => G(PCYL, lx, 0.42, 0, 0.055, 0.35, 0.055, skin)); G(PSKIRT, 0, 0.64, 0, 0.21, 0.26, 0.16, bot); }
-        else [-0.09, 0.09].forEach(lx => G(PCYL, lx, 0.62, 0, 0.072, 0.55, 0.072, bot));
+    const SKIN = [0xf5d3b0, 0xf1c9a0, 0xf7d6b5], HAIR = [0x3a2e28, 0x2a2220, 0x4a3426, 0x5b3f2e];
+    const EYE = 0x2d2a33, MOUTH = 0x9a4a42;
+    const NI = g => { const n = g.toNonIndexed(); g.dispose(); return n; };
+    const HEADG = NI(new THREE.SphereGeometry(1, 10, 7).rotateY(Math.PI / 10));   // 세로 줄 하나가 정면 — 눈이 면 한가운데에 앉게(좌우 대칭)
+    const S85 = NI(new THREE.SphereGeometry(1, 8, 5)), S64 = NI(new THREE.SphereGeometry(1, 6, 4)), S63 = NI(new THREE.SphereGeometry(1, 6, 3)), S53 = NI(new THREE.SphereGeometry(1, 5, 3)), EYEG = NI(new THREE.SphereGeometry(1, 8, 3).rotateX(Math.PI / 2));   // 눈 = 극이 앞을 봄(정면 윤곽이 팔각 — 5분할 공은 마름모로 보였다)
+    const TOPC = NI(new THREE.SphereGeometry(1, 10, 4, 0, Math.PI * 2, 0, Math.PI * 0.44));                 // 앞머리 덮개(선 = 눈 위)
+    const BACKH = NI(new THREE.SphereGeometry(1, 8, 3, Math.PI, Math.PI, Math.PI * 0.43, Math.PI * 0.33));  // 뒤 반구 껍질(목덜미까지)
+    const BOBH = NI(new THREE.SphereGeometry(1, 10, 3, Math.PI * 0.75, Math.PI * 1.5, Math.PI * 0.4, Math.PI * 0.38));   // 단발(얼굴 앞 90°만 비움 — 볼까지)
+    const HATG = NI(new THREE.SphereGeometry(1, 10, 3, 0, Math.PI * 2, 0, Math.PI * 0.5));                  // 위생모 돔
+    const ARC = NI(new THREE.TorusGeometry(1, 0.16, 3, 5, Math.PI).rotateZ(Math.PI));                      // 웃는 입(아래로 둥근 호)
+    const SKIRT = NI(new THREE.CylinderGeometry(0.72, 1, 1, 8, 1, true));
+    const STICK = NI(new THREE.CylinderGeometry(1, 1, 1, 5, 1, true));
+    // 둥근 알약(팔다리) — 극 부채 + 띠 3(비인덱스 48면 · 법선 = 해석값). 길이마다 캐시
+    const PILL = new Map();
+    function pillG(r, len) {
+      const key = Math.round(r * 400) + ':' + Math.round(len * 400); let g = PILL.get(key); if (g) return g;
+      const N = 6, h = len / 2, R9 = [[-90, -h], [-40, -h], [0, -h], [0, h], [40, h], [90, h]].map(([a, yc]) => [a * Math.PI / 180, yc]), pos = [], nor = [];
+      const P = (i, j) => { const [a, yc] = R9[i], f = j / N * Math.PI * 2, ca = Math.cos(a); return [[r * ca * Math.cos(f), yc + r * Math.sin(a), r * ca * Math.sin(f)], [ca * Math.cos(f), Math.sin(a), ca * Math.sin(f)]]; };
+      const tri = (...v) => v.forEach(([p, n]) => { pos.push(...p); nor.push(...n); });
+      for (let i = 0; i < 5; i++) for (let j = 0; j < N; j++) {
+        const A = P(i, j), B9 = P(i, j + 1), C = P(i + 1, j + 1), D = P(i + 1, j);
+        if (i > 0) tri(A, D, B9); if (i < 4) tri(B9, D, C);
       }
-      // 몸통(둥근 원통)·어깨·팔
-      G(PBODY, 0, 0.58, 0, 0.19, 0.46, 0.13, top);
-      [-0.19, 0.19].forEach(lx => G(PICO, lx, 0.96, 0, 0.08, 0.07, 0.08, top));
-      if (sit) [-1, 1].forEach(sd => { G(PCYL, sd * 0.21, 0.97, 0, 0.055, 0.28, 0.055, top, 0.9); G(PCYL, sd * 0.17, 0.78, 0.2, 0.045, 0.24, 0.045, skin, Math.PI / 2); G(PICO, sd * 0.17, 0.78, 0.45, 0.05, 0.045, 0.055, skin); });
-      else [-1, 1].forEach(sd => { G(PCYL, sd * 0.225, 0.97, 0, 0.058, 0.2, 0.058, top, 0, sd * 0.1); G(PCYL, sd * 0.245, 0.78, 0, 0.046, 0.22, 0.046, skin, 0, sd * 0.1); G(PICO, sd * 0.265, 0.53, 0, 0.052, 0.058, 0.052, skin); });
-      // 머리(둥근)·목·귀·얼굴
-      const Y = 1.2 + (sit ? 0.02 : 0);
-      G(PCYL, 0, Y - 0.08, 0, 0.05, 0.06, 0.05, skin);
-      G(PSPH, 0, Y + 0.09, 0, 0.18, 0.175, 0.17, skin);
-      [-1, 1].forEach(sd => {
-        G(PICO, sd * 0.176, Y + 0.08, 0, 0.03, 0.045, 0.03, skin);                                                   // 귀
-        G(POCT, sd * 0.068, Y + 0.1, 0.158, 0.026, 0.038, 0.016, 0x2a2222);                                           // 눈
-        G(POCT, sd * 0.062, Y + 0.114, 0.171, 0.01, 0.01, 0.006, 0xffffff);                                          // 눈 반짝임
-        G(POCT, sd * 0.068, Y + 0.155, 0.158, 0.036, 0.01, 0.012, hair);                                             // 눈썹
-        if (!adult) G(POCT, sd * 0.112, Y + 0.05, 0.142, 0.032, 0.022, 0.012, 0xf4a3a0);                                 // 볼
-      });
-      G(POCT, 0, Y + 0.025, 0.164, 0.032, 0.013, 0.01, 0xb0504a);                                                      // 입
-      // 머리카락: 뒤통수·정수리 모자 + 앞머리. 여 = 단발/포니테일/양갈래, 남 = 짧은 머리(+어른은 약간 길게)
-      G(PCAP, 0, Y + 0.1, -0.01, 0.192, 0.2, 0.185, hair, 0.55);                                                   // 뒤로 기울인 모자 — 앞 테두리가 눈썹 위(기울이지 않으면 눈을 덮는다)
-      G(PSM, 0, Y + 0.21, 0.11, 0.15, 0.06, 0.075, hair, -0.35);
-      G(PSM, 0, Y + 0.07, -0.11, 0.17, 0.14, 0.085, hair);
-      if (girl) {
-        if (style === 0) { G(PSM, 0, Y - 0.03, -0.1, 0.19, 0.17, 0.1, hair); [-1, 1].forEach(sd => G(PSM, sd * 0.17, Y + 0.02, 0.02, 0.05, 0.13, 0.07, hair)); }   // 단발
-        else if (style === 1) { G(PSM, 0, Y + 0.02, -0.22, 0.07, 0.13, 0.07, hair); G(PICO, 0, Y + 0.12, -0.19, 0.035, 0.035, 0.035, pick(TOPS, h2)); }    // 포니테일 + 머리끈
-        else [-1, 1].forEach(sd => { G(PSM, sd * 0.2, Y - 0.02, -0.04, 0.06, 0.12, 0.06, hair); G(PICO, sd * 0.19, Y + 0.08, -0.04, 0.03, 0.03, 0.03, pick(TOPS, h1)); });   // 양갈래
-      } else [-1, 1].forEach(sd => G(PICO, sd * 0.165, Y + 0.12, 0.03, 0.045, 0.09, 0.07, hair));                   // 옆머리(짧게)
+      g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+      PILL.set(key, g); return g;
     }
-    // 사람도 allBoxes에 쌓이므로 다음 사람은 저절로 옆자리로 밀린다. 고정 좌표로 두면 의자·식탁에 박힌다(실제로 그랬음).
+    // 단위 머리 도형 표면까지 거리(낮은 분할 = 면이 공보다 안쪽) — 눈·입·볼을 실제 면 위에 붙인다(떠 있거나 파묻히지 않게)
+    const HP = HEADG.attributes.position, _ry = new THREE.Ray(), _ha = new THREE.Vector3(), _hb = new THREE.Vector3(), _hc = new THREE.Vector3(), _ht = new THREE.Vector3();
+    const headT = (dx, dy, dz) => { _ry.origin.set(0, 0, 0); _ry.direction.set(dx, dy, dz).normalize();
+      for (let i = 0; i < HP.count; i += 3) if (_ry.intersectTriangle(_ha.fromBufferAttribute(HP, i), _hb.fromBufferAttribute(HP, i + 1), _hc.fromBufferAttribute(HP, i + 2), false, _ht)) return _ht.length();
+      return 1; };
+    // 머리 겉면 점(머리 가운데 기준 x·y → z) — 늘린 머리(R = [rx, ry, rz])
+    const faceZ = (R, x, y, inset) => { const ux = x / R[0], uy = y / R[1], uz = Math.sqrt(Math.max(0.05, 1 - ux * ux - uy * uy)); return R[2] * uz * headT(ux, uy, uz) - inset; };
+    // 몸 치수(로컬 — s 곱하기 전): hip 엉덩이 축 · T = 셔츠 [y, rx, ry, rz] · PA = 바지 [y, rx, ry, rz] · SH = 어깨 [x, y] · HC 머리 가운데 · HR 머리 반지름 · leg/arm 반지름·길이
+    const KIDD = { hip: 0.35, legX: 0.078, legR: 0.056, T: [0.585, 0.165, 0.225, 0.135], PA: [0.37, 0.155, 0.1, 0.128], SH: [0.172, 0.745], armR: 0.048, armL: 0.25,
+      HC: 1.055, HR: [0.27, 0.258, 0.252], thigh: 0.19, shin: 0.2, floorLeg: 0.3, shoe: [0.066, 0.048, 0.1] };
+    const ADD = { hip: 0.58, legX: 0.092, legR: 0.066, T: [0.83, 0.192, 0.28, 0.148], PA: [0.6, 0.18, 0.1, 0.142], SH: [0.2, 1.04], armR: 0.056, armL: 0.39,
+      HC: 1.33, HR: [0.235, 0.226, 0.222], thigh: 0.29, shin: 0.4, floorLeg: 0.46, shoe: [0.07, 0.05, 0.115] };
+    const _W9 = new THREE.Matrix4(), _M9 = new THREE.Matrix4(), _q9 = new THREE.Quaternion(), _e9 = new THREE.Euler(), _v9 = new THREE.Vector3(), _s9 = new THREE.Vector3(), _u9 = new THREE.Vector3(), _Y9 = new THREE.Vector3(0, 1, 0);
+    const YAW = [Math.PI, Math.PI / 2, 0, -Math.PI / 2];   // 로컬 앞 +z → 0북·1동·2남·3서
+    // 돌린 로컬 사각형(좌우 ±hw · 앞뒤 z0~z1)의 월드 AABB
+    const footRect = (x, z, face, s, x0, x1, z0, z1) => { const f = face & 3, c = Math.round(Math.cos(YAW[f])), n = Math.round(Math.sin(YAW[f]));
+      const xs = [], zs = []; for (const lx of [x0, x1]) for (const lz of [z0, z1]) { xs.push(x + (lx * c + lz * n) * s); zs.push(z + (-lx * n + lz * c) * s); }
+      return { x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs) }; };
+    const pplBox = [];   // 사람 자리(freeSpot가 비킨다 — 예전엔 신발 dBox가 allBoxes에 들어가 저절로 비켰다)
+    function person(x, y, z, sex, s = 1, face = 2, pose = 'stand', o = {}) {
+      if (pose === true) pose = 'sit';
+      const D = s > 1.05 ? ADD : KIDD, adult = D === ADD, girl = sex === '여';
+      const h1 = hash2(x, z), h2 = hash2(z, x), pick = (a, h) => a[Math.floor(h * a.length) % a.length];
+      let top = pick(TOPS, h1), bot = pick(BOTS, h2);
+      const skin = pick(SKIN, h1 * 7 % 1), hair = pick(HAIR, h2 * 5 % 1), style = Math.floor(h2 * 13 % 1 * 3);
+      if (o.role === 'cleaner') { top = 0x5e7a8e; bot = 0x3b4a5c; }   // 작업복(회청색 위아래)
+      const SHOE = adult ? 0x3a3d44 : 0xf6f6f2;
+      _W9.compose(_v9.set(x, y, z), _q9.setFromEuler(_e9.set(0, YAW[face & 3], 0)), _s9.set(s, s, s));
+      const W = _W9.clone();
+      const put = (geo, p, sc, hex, r) => { _M9.compose(_v9.set(p[0], p[1], p[2]), _q9.setFromEuler(_e9.set(r ? r[0] : 0, r ? r[1] : 0, r ? r[2] : 0)), _s9.set(sc[0], sc[1], sc[2])); _M9.premultiply(W); dGeo(geo, _M9, hex, { smooth: true }); };
+      const limb = (a, b, r, hex, geo) => { _u9.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]); const L = Math.max(0.001, _u9.length()); _u9.divideScalar(L);
+        _M9.compose(_v9.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2), _q9.setFromUnitVectors(_Y9, _u9), geo ? _s9.set(r, geo === STICK ? L : L / 2 + r * 0.4, r) : _s9.set(1, 1, 1));
+        _M9.premultiply(W); dGeo(geo || pillG(r, L), _M9, hex, { smooth: true }); };
+      // ---- 자세: 몸 높이(dy)·몸 앞뒤(bz)·다리·팔 끝점 ----
+      const seat = (o.seat ?? 0.46) / s;
+      let dy = 0, bz = 0;
+      if (pose === 'sit') { dy = seat + D.legR * 0.9 - D.hip; bz = 0.02; }
+      else if (pose === 'sitFloor') dy = D.legR + 0.005 - D.hip;
+      const hipY = D.hip + dy, shY = D.SH[1] + dy, legC = girl && !adult || girl && adult && h1 < 0.5 ? skin : bot, skirt = girl && legC === skin;
+      // 다리 + 신발
+      [-1, 1].forEach(sd => {
+        const lx = sd * D.legX;
+        if (pose === 'sit') {
+          const kz = bz + D.thigh, fy = adult ? 0.08 : Math.max(0.1, hipY - D.shin);
+          limb([lx, hipY, bz - 0.02], [lx * 1.08, hipY, kz], D.legR, legC); limb([lx * 1.08, hipY, kz], [lx * 1.08, fy, kz + 0.04], D.legR * 0.92, legC);
+          put(S63, [lx * 1.08, fy - 0.02, kz + 0.07], D.shoe, SHOE);
+        } else if (pose === 'sitFloor') {
+          const fz = D.floorLeg;
+          limb([lx, hipY, 0], [lx * 1.5, D.legR, fz], D.legR, legC);
+          put(S63, [lx * 1.5, D.legR + 0.03, fz + 0.03], [D.shoe[0], D.shoe[2], D.shoe[1]], SHOE);   // 발끝이 위로
+        } else {
+          const fz = pose === 'sweep' ? sd * -0.07 : 0;
+          limb([lx, hipY, 0], [lx, 0.09, fz], D.legR, legC);
+          put(S63, [lx, 0.045, fz + 0.035], D.shoe, SHOE);
+        }
+      });
+      // 몸: 바지(또는 치마) + 셔츠(둥근 알) · 급식 = 흰 앞치마
+      if (skirt) { if (pose === 'sit' || pose === 'sitFloor') put(S64, [0, hipY + 0.01, bz + D.thigh * 0.35], [D.PA[1] * 1.15, D.PA[2] * 0.75, D.thigh * 0.7], bot);
+        else put(SKIRT, [0, hipY - 0.02, 0], [D.PA[1] * 1.28, adult ? 0.32 : 0.2, D.PA[3] * 1.3], bot); }
+      if (!skirt) put(S64, [0, D.PA[0] + dy, bz], [D.PA[1], D.PA[2], D.PA[3]], bot);
+      put(S85, [0, D.T[0] + dy, bz], [D.T[1], D.T[2], D.T[3]], top);
+      if (o.role === 'cook') put(S64, [0, D.T[0] + dy - 0.05, bz + D.T[3] * 0.62], [D.T[1] * 0.86, D.T[2] * 0.98, D.T[3] * 0.55], 0xf7f7f2);   // 앞치마(셔츠 앞면보다 2cm 앞)
+      // 팔: 어깨 → 손(자세별). 아이 = 짧은 소매 + 맨팔(끝이 벙어리 손) · 어른 = 긴 소매 + 둥근 손
+      const hands = [-1, 1].map(sd => {
+        const sx = sd * D.SH[0], L = D.armL;
+        if (pose === 'sit' && o.desk != null) return [sd * 0.13, Math.max(o.desk / s + D.armR * 0.8, shY - L * 0.9), bz + (o.reach ?? 0.3) / s + 0.04];
+        if (pose === 'sit' || pose === 'sitFloor') return [sd * (D.legX + 0.05), hipY + D.legR + 0.05, bz + (pose === 'sit' ? D.thigh * 0.6 : D.floorLeg * 0.5)];
+        if (pose === 'work') return [sd * 0.12, shY - L * 0.4, L * 0.85];
+        if (pose === 'sweep') return sd > 0 ? [0.07, shY - L * 0.3, L * 0.55] : [0.0, shY - L * 0.85, L * 0.7];
+        if (pose === 'explain' && sd > 0) return [sx + 0.12, shY + L * 0.45, L * 0.35];
+        return [sx + sd * 0.05, shY - L, 0.01];
+      });
+      [-1, 1].forEach((sd, k) => {
+        const S = [sd * D.SH[0], shY, bz], Hn = hands[k];
+        if (adult) { const d9 = Math.hypot(Hn[0] - S[0], Hn[1] - S[1], Hn[2] - S[2]), t = Math.max(0.3, 1 - D.armR * 1.1 / d9);   // 소매 끝(알약 끝 둥근 부분)이 손 공 속에 들게 — 둘이 같은 크기로 겹치면 얼룩진다
+          limb(S, [S[0] + (Hn[0] - S[0]) * t, S[1] + (Hn[1] - S[1]) * t, S[2] + (Hn[2] - S[2]) * t], D.armR, top); put(S53, Hn, [D.armR * 1.3, D.armR * 1.35, D.armR * 1.3], skin); }
+        else { const t = 0.3, E = [S[0] + (Hn[0] - S[0]) * t, S[1] + (Hn[1] - S[1]) * t, S[2] + (Hn[2] - S[2]) * t];
+          limb(S, E, D.armR * 1.3, top, S63); limb(E, Hn, D.armR, skin); }
+      });
+      // 소품: 국자(급식 — 오른손) · 빗자루(청소 — 두 손을 지나 바닥으로)
+      if (o.role === 'cook') { const Hn = hands[1]; limb([Hn[0], Hn[1] - 0.02, Hn[2]], [Hn[0] + 0.02, Hn[1] + 0.26, Hn[2] + 0.1], 0.012, 0xc9ced3, STICK);
+        put(S53, [Hn[0], Hn[1] - 0.06, Hn[2] + 0.02], [0.06, 0.045, 0.06], 0xc9ced3); }
+      let broom = null;
+      if (pose === 'sweep') { const [Lh, R] = hands, dv = [Lh[0] - R[0], Lh[1] - R[1], Lh[2] - R[2]], t = (R[1] - 0.09) / (R[1] - Lh[1]), E = [R[0] + dv[0] * t, 0.09, R[2] + dv[2] * t];
+        limb([R[0] - dv[0] * 0.35, R[1] - dv[1] * 0.35, R[2] - dv[2] * 0.35], E, 0.016, 0xb88a58, STICK); broom = E;
+        put(S64, [E[0], 0.06, E[2] + 0.02], [0.17, 0.06, 0.07], 0xe0b04a); put(S53, [E[0], 0.1, E[2]], [0.11, 0.04, 0.05], 0x4a8ad0); }   // 비(솔) + 파란 머리
+      // ---- 머리(목 없음 — 셔츠 위에 바로) ----
+      const R = D.HR, HC = D.HC + dy, H = (p, sc, hex, r) => put(p[3] || HEADG, [p[0], HC + p[1], bz + p[2]], sc, hex, r);
+      put(HEADG, [0, HC, bz], R, skin);
+      const k = R[0] / 0.27, ex = 0.087 * k, ey = -0.036 * k, eS = adult ? [0.025, 0.037, 0.018] : [0.027, 0.041, 0.019];
+      [-1, 1].forEach(sd => put(EYEG, [sd * ex, HC + ey, bz + faceZ(R, ex, ey, 0.008)], eS, EYE));
+      const my = -0.086 * k; put(ARC, [0, HC + my + 0.012 * k, bz + faceZ(R, 0, my, 0.004)], [0.034 * k, 0.026 * k, 0.018], MOUTH);
+      if (!adult) { const cx9 = 0.152 * k, cy9 = -0.075 * k; [-1, 1].forEach(sd => put(S53, [sd * cx9, HC + cy9, bz + faceZ(R, cx9, cy9, 0.01)], [0.036, 0.02, 0.012], 0xf5c4b0, [0, sd * 0.55, 0])); }
+      // 머리카락: 앞머리 덮개 + 뒤 껍질(바가지) — 여 아이 = 단발/포니테일/양갈래 · 남 = 짧게(정수리 한 올) · 어른 여 = 긴 단발/올림머리/묶음 · 급식 = 흰 위생모
+      if (o.role === 'cook') {
+        put(HATG, [0, HC + 0.01, bz - 0.005], [R[0] * 1.14, R[1] * 1.3, R[2] * 1.14], 0xfbfbf7, [-0.1, 0, 0]);
+        put(BACKH, [0, HC - 0.01, bz], [R[0] * 1.06, R[1] * 1.04, R[2] * 1.06], hair);
+      } else {
+        put(TOPC, [0, HC + 0.004, bz], [R[0] * 1.08, R[1] * 1.08, R[2] * 1.08], hair);
+        if (girl && (style === 0 || adult && style !== 1)) put(BOBH, [0, HC - (adult ? 0.03 : 0.01), bz - 0.004], [R[0] * 1.12, R[1] * (adult ? 1.2 : 1.1), R[2] * 1.12], hair);
+        else put(BACKH, [0, HC, bz - 0.004], [R[0] * 1.06, R[1] * 1.06, R[2] * 1.06], hair);
+        if (girl) {
+          const band = pick(TOPS, h2 * 3 % 1);
+          if (style === 1) { put(S53, [0, HC + (adult ? -0.08 : 0.04), bz - R[2] * 1.12 - 0.04], [0.065, adult ? 0.12 : 0.13, 0.065], hair, [-0.35, 0, 0]);
+            put(S53, [0, HC + (adult ? -0.01 : 0.12), bz - R[2] * 1.05], [0.04, 0.035, 0.04], band); }
+          else if (style === 2 && !adult) [-1, 1].forEach(sd => { put(S53, [sd * R[0] * 1.08, HC - 0.07, bz - 0.06], [0.06, 0.1, 0.06], hair, [0, 0, sd * 0.25]); });
+          else if (style === 2) put(S64, [0, HC + 0.15, bz - R[2] * 0.95], [0.1, 0.09, 0.09], hair);   // 올림머리(둥근 쪽)
+        } else put(S53, [0.02, HC + R[1] * 1.08, bz - 0.02], [0.028, 0.045, 0.026], hair, [0, 0, -0.5]);   // 정수리 한 올
+      }
+      // ---- 충돌(PHYS-1): 선 사람 = 0.44각 · 의자에 앉은 사람 = 의자 위(0.85~)만(의자·책상은 자기 충돌) · 바닥에 앉은 사람 = 뻗은 다리까지
+      //   높이는 1.6 이상 — 점프 도달(0.97 + 오름 0.55 = 1.52)보다 높아야 머리 위에 올라서지 못한다
+      const hw = 0.22 * s, topY = y + (HC + R[1] * 1.1) * s, y1 = Math.max(y + 1.6, y + 1.5 * s + 0.1);
+      if (pose === 'sitFloor') {   // 바닥에 앉음 = 뒷머리~뻗은 다리(검진 뚫림 0)
+        const b = footRect(x, z, face, s, -0.24, 0.24, -0.4, D.floorLeg + 0.08); colliders.push({ ...b, y0: y, y1 }); pplBox.push(b); }
+      else {
+        if (broom) { const b = footRect(x, z, face, s, broom[0] - 0.2, broom[0] + 0.2, 0.15, broom[2] + 0.2); colliders.push({ ...b, y0: y, y1 }); pplBox.push(b); }   // 비 머리(발 묻힘 0 · 보이는 것 둘레만 — 보이지 않는 벽 0)
+        colliders.push({ x0: x - hw, x1: x + hw, y0: y + (pose === 'sit' ? 0.85 : 0), y1, z0: z - hw, z1: z + hw }); pplBox.push({ x0: x - hw, x1: x + hw, z0: z - hw, z1: z + hw }); }
+      return topY;
+    }
+    // 고정 좌표로 두면 의자·식탁에 박힌다(실제로 그랬음) — 빈자리 찾기(가구 상자 + 앞서 놓은 사람 자리 pplBox를 비킨다)
     function freeSpot(zn) {
       const y = zn.y ?? 0;
       const near = allBoxes.filter(b => b.x1 > zn.x0 && b.x0 < zn.x1 && b.z1 > zn.z0 && b.z0 < zn.z1
-                                     && b.y0 < y + 1.6 && b.y1 > y + 0.05);
+                                     && b.y0 < y + 1.6 && b.y1 > y + 0.05).concat(pplBox);
       // 문 앞 1.4m는 비운다(나래반 선생님이 문 바로 안에 서서 문서고까지 막았던 사고 — 09-24 reach)
       const dr = doors.filter(d => Math.abs(d.y0 - y) < 1 && d.cx > zn.x0 - 2 && d.cx < zn.x1 + 2 && d.cz > zn.z0 - 2 && d.cz < zn.z1 + 2);
       for (let z = zn.z1 - 1.0; z > zn.z0 + 0.9; z -= 0.7)
@@ -4859,13 +4975,12 @@ export function buildWorld(scene) {
             return [x, z];
       return null;
     }
-    const place = (zn, nm, sex, s) => {
+    const nameSign = (nm, x, top, z) => sign(nm, x, top + 0.28, z, 0, 0.22);   // 이름 팻말 = 머리 위(앉으면 낮아진다)
+    const place = (zn, nm, sex, s) => {   // 자리가 정해지지 않은 사람(예비) — 방 빈자리에 서서 방 가운데 쪽을 본다(90° 단위)
       const p = freeSpot(zn); if (!p) return;
-      // 방 가운데 쪽을 바라본다(90° 단위) — 뒤통수만 보이던 블록 인형이 아니게
       const dx = (zn.x0 + zn.x1) / 2 - p[0], dz = (zn.z0 + zn.z1) / 2 - p[1];
       const face = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);
-      person(p[0], zn.y ?? 0, p[1], sex, s, face);
-      sign(nm, p[0], (zn.y ?? 0) + 1.62 * s + 0.2, p[1], 0, 0.22);
+      nameSign(nm, p[0], person(p[0], zn.y ?? 0, p[1], sex, s, face), p[1]);
     };
     // 교실(서향): 선생님은 칠판 앞에 서서 아이들 쪽(동)을, 아이들은 자기 자리에 앉아 칠판 쪽(서 = 보건실 쪽)을 본다. 남은 자리 = '앉기'
     const sitSpot = (L, st) => hotspots.push({ kind: 'sit', x: st.sx ?? st.x, z: st.sz ?? st.z + 0.5, y: L.y, r: 0.75, label: '의자에 앉기', yaw: L.face === 3 ? -Math.PI / 2 : Math.PI });
@@ -4877,19 +4992,36 @@ export function buildWorld(scene) {
       sign(cls + ' 선생님', L.teacher.x, L.y + 1.62 * 1.1 + 0.2, L.teacher.z, 0, 0.22);
       info.s.forEach(([nm, sx], i) => {
         const st = L.seats[i]; if (!st) { place(zn, nm, sx, 1); return; }
-        person(st.x, L.y, st.z, sx, 1, L.face ?? 0, true);
+        person(st.x, L.y, st.z, sx, 1, L.face ?? 0, 'sit', { desk: L.y + 0.72, reach: 0.3 });   // 학생 책상 윗면 0.72 · 의자 가운데~책상 끝 0.3
         sign(nm, st.x, L.y + 1.74, st.z, 0, 0.22);
       });
       L.seats.slice(info.s.length).forEach(st => sitSpot(L, st));
     });
     Object.entries(seatsOf).forEach(([nm, L]) => { if (!SCHOOL.people[nm]) L.seats.forEach(st => sitSpot(L, st)); });
-    const FIXED = { '급식선생님': [HX - 0.95, SC - 0.4, 1] };   // 배식창 뒤(조리실)에서 홀을 본다
+    // 교직원(NPC2): 방 가구 자리(npcSpot — 가구를 놓은 곳에서 적어 둔 좌표)에 앉히거나 일하게 한다. 사람 수·이름 팻말은 그대로
+    //   교실형 방(사랑반·돌봄) = 선생님 책상 의자(seatsOf.tSeat) · 나래반 = 칠판 앞에 서서 설명 · 유치원 = 매트에 둘러앉기 ·
+    //   사무실 = 자기 책상(모니터 앞 — 의자는 앉는 사람 몫만) · 급식 = 배식창 뒤 국자 · 청소 = 급식실 북동 구석 빗자루
+    const OCHAIR = 0x3f4550;   // 사무용 의자(짙은 회색)
+    const seatAt = (nm, sx, s, sp) => {   // sp = { x, z, face, desk, reach, chair? , pose? }
+      if (sp.chair) chair(sp.x, sp.y ?? 0, sp.z, sp.face === 0 ? 1 : sp.face === 2 ? -1 : sp.face === 1 ? -1 : 1, OCHAIR, sp.face & 1);
+      nameSign(nm, sp.x, person(sp.x, sp.y ?? 0, sp.z, sx, s, sp.face, sp.pose ?? 'sit', sp), sp.z);
+    };
+    const JOB = {
+      '급식선생님': { x: HX - 0.95, z: SC - 0.4, face: 1, pose: 'work', role: 'cook' },        // 배식창 뒤(조리실)에서 홀을 보며 국자
+      '청소선생님': { x: kx1 - 1.05, z: AZ + 1.9, face: 3, pose: 'sweep', role: 'cleaner' },   // 홀 북동 구석(식탁 줄 동쪽 · 에어컨 남쪽)에서 비질
+    };
     Object.entries(SCHOOL.staff).forEach(([room, list]) => {
       const zn = zoneOf(room); if (!zn) return;
+      const spots = (npcSpot[room] || []).slice(), L = seatsOf[room];
       list.forEach(([nm, sx, sz]) => {
-        const f = FIXED[nm];
-        if (f) { person(f[0], 0, f[1], sx, 1.1, f[2]); sign(nm, f[0], 1.62 * 1.1 + 0.2, f[1], 0, 0.22); }
-        else place(zn, nm, sx, sz === 'small' ? 0.8 : 1.1);
+        const s = sz === 'small' ? 0.8 : 1.1;
+        if (JOB[nm]) return seatAt(nm, sx, s, JOB[nm]);
+        if (L && L.tSeat && sz !== 'small' && !spots.length) {   // 교실형 방 선생님 = 선생님 책상 의자(나래반은 칠판 앞에 서서 설명)
+          if (room === '나래반') return nameSign(nm, L.teacher.x, person(L.teacher.x, L.y, L.teacher.z, sx, s, L.tFace ?? 1, 'explain'), L.teacher.z);
+          return seatAt(nm, sx, s, { ...L.tSeat, y: L.y });
+        }
+        const sp = spots.shift();
+        if (sp) seatAt(nm, sx, s, sp); else place(zn, nm, sx, s);
       });
     });
   }
@@ -5005,7 +5137,8 @@ export function buildWorld(scene) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ch.pos), 3));
     g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(ch.col), 3));
-    flatNormals(g); bounds(g, true);
+    if (ch.nor) g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(ch.nor), 3)); else flatNormals(g);   // NPC2: smooth 도형이 든 청크는 실어 둔 법선
+    bounds(g, true);
     const m = new THREE.Mesh(g, mat);
     m.matrixAutoUpdate = false; m.userData.st = true;   // OCC-CULL: main.js가 매 프레임 상자(AABB)로 절두체 검사
     scene.add(m);
@@ -5063,14 +5196,15 @@ export function buildWorld(scene) {
       let best = -1, by = -1e9; for (let k = 0; k < ZC.length; k++) { const q = ZC[k]; if (x >= q.x0 && x < q.x1 && z >= q.z0 && z < q.z1 && q.y <= y + 0.5 && q.y > by) { by = q.y; best = k; } }
       key[t] = best; cnt.set(best, (cnt.get(best) || 0) + 1); }
     for (let t = 0; t < T; t++) if (cnt.get(key[t]) < 600) key[t] = -1;
-    const out = new Map(); for (let t = 0; t < T; t++) { let o = out.get(key[t]); if (!o) { o = { ...ch, pos: [], col: [] }; out.set(key[t], o); }
-      for (let k = t * 9; k < t * 9 + 9; k++) { o.pos.push(ch.pos[k]); o.col.push(ch.col[k]); } }
+    const out = new Map(); for (let t = 0; t < T; t++) { let o = out.get(key[t]); if (!o) { o = { ...ch, pos: [], col: [], nor: ch.nor && [] }; out.set(key[t], o); }
+      for (let k = t * 9; k < t * 9 + 9; k++) { o.pos.push(ch.pos[k]); o.col.push(ch.col[k]); if (o.nor) o.nor.push(ch.nor[k]); } }
     return [...out.values()]; };
   for (const [M, far] of [[DNEAR, false]]) for (const ch0 of M.values()) for (const ch of splitRooms(ch0)) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ch.pos), 3));
     g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(ch.col), 3));
-    flatNormals(g); bounds(g, !far);
+    if (ch.nor) g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(ch.nor), 3)); else flatNormals(g);
+    bounds(g, !far);
     const m = new THREE.Mesh(g, mat);
     m.matrixAutoUpdate = false;
     scene.add(m);
