@@ -5,8 +5,8 @@ import { buildWorld } from './world.js?v=120';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=10';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=5';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=6';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=6';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
-import { createTouch, touchPrimary } from './touch.js?v=3';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
+import { createMapApi } from './mapapi.js?v=7';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createTouch, touchPrimary } from './touch.js?v=4';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -228,13 +228,14 @@ addEventListener('mousemove', e => {
 const TOUCH = createTouch({ canvas,
   look: (dx, dy) => { camYaw -= dx * 0.0058; camPitch = Math.max(-0.2, Math.min(1.1, camPitch + dy * 0.0042)); },
   act: () => { if (hotNear) act(hotNear); }, view: () => { camFirst = !camFirst; },
-  onEnable: () => { if (hotNear) hintEl.textContent = hintEl.textContent.replace(/^E  /, '✋ '); } });
+  onMode: on => { if (hotNear) hintEl.textContent = on ? hintEl.textContent.replace(/^E  /, '✋ ') : hintEl.textContent.replace(/^✋ /, 'E  ');   // 리뷰: 터치 ↔ 마우스(터치 화면 크롬북) 오갈 때
+    if (MAP && MAP.minimap.visible) MAP.minimap.toggle(MAP.minimap.big); } });   // 미니맵 크기 다시(터치면 버튼 위까지만)
 
 // 상호작용 상태 — anim: 정해진 경로 이동(미끄럼틀) / sit: 의자에 앉음(움직이면 일어남)
 const ACT = { anim: null, sit: null };
 const CTRL = { frozen: false, speed: 1 };   // MAP-API-1: 게임이 멈춤(입력·점프만 무시 — 중력은 유지)·속도(0.5~2)를 건다
 function step(dt) {
-  const moving = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].some(k => keys.has(k)) || TOUCH.m > 0 || TOUCH.jump;
+  const moving = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].some(k => keys.has(k)) || TOUCH.m > 0 || TOUCH.jump || TOUCH.jumpT > 0;   // jumpT: 톡 친 점프(프레임 사이에 떼도) — 앉아 있으면 일어난다
   if (ACT.anim) {
     const a = ACT.anim; a.t = Math.min(1, a.t + dt / a.dur);
     P.x = a.from[0] + (a.to[0] - a.from[0]) * a.t; P.y = a.from[1] + (a.to[1] - a.from[1]) * a.t; P.z = a.from[2] + (a.to[2] - a.from[2]) * a.t;
@@ -371,7 +372,7 @@ const hintEl = document.createElement('div');
 hintEl.className = 'chip'; hintEl.id = 'hint';
 hintEl.style.cssText = 'left:50%;bottom:56px;transform:translateX(-50%);display:none;cursor:pointer;font-size:15px;padding:8px 16px';
 document.body.appendChild(hintEl);
-const toastEl = document.createElement('div');
+const toastEl = document.createElement('div'); toastEl.id = 'toast';   // TOUCH-1 리뷰: 터치면 칩 줄 아래로(touch.js css)
 toastEl.className = 'chip';
 toastEl.style.cssText = 'left:50%;top:56px;transform:translateX(-50%);display:none;font-size:15px;padding:8px 16px';
 document.body.appendChild(toastEl);
@@ -897,7 +898,7 @@ function detailTick(dt) {
 // ---------- 지도 API(MAP-API-1 · 09-24) — 게임이 받는 지도 계약. 정본 docs/map_api.md ----------
 MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL,
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
-  pl: { P, ACT, CTRL, keys, getYaw: () => camYaw, setYaw: v => { camYaw = v; } },
+  pl: { P, ACT, CTRL, keys, touch: TOUCH, getYaw: () => camYaw, setYaw: v => { camYaw = v; } },
   ui: { toast, hint: hintEl, tone }, hot: HOT }, NAV, makeMeta(SCHOOL));   // tone = 게임 효과음(GAME-FIND-1 map.sfx)
 
 // ---------- 루프 + 예산 계측(헌법⑥) ----------

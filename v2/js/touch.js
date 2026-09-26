@@ -46,6 +46,7 @@ export function createTouch(ctx) {
       'body.touch #timeChip{left:calc(10px + env(safe-area-inset-left));right:auto!important}',
       'body.touch #gpick{left:calc(104px + env(safe-area-inset-left));right:auto!important}',
       'body.touch #gpick-panel{left:10px!important;right:auto!important;top:98px!important;bottom:auto!important;max-height:calc(100vh - 110px);overflow:auto}',
+      'body.touch #toast{top:calc(98px + env(safe-area-inset-top))!important}',   // 리뷰: 가운데 위 알림이 왼쪽 위 칩 줄(시간·놀이)과 겹쳤다(iPhone SE)
       'body.touch #hint{bottom:calc(112px + env(safe-area-inset-bottom))!important;font-size:16px!important;padding:10px 18px!important}',
     ].join('\n');
     document.head.appendChild(css);
@@ -58,17 +59,29 @@ export function createTouch(ctx) {
   const bView = mk('tView', 'tbtn', '<i>👁</i>');
   mk('tRot', '', '<div>📱↻ 가로로 돌려 주세요</div><span style="font-size:14px;font-weight:400">가로 화면이 더 넓게 보여요</span>');
 
+  let gOnce = false;
   function enable() {
     if (T.on) return; T.on = true; document.body.classList.add('touch');
     // 캔버스 밖(HUD 칩 사이 빈틈)을 두 번 눌러 확대·당겨서 새로고침 막기 — iOS Safari는 user-scalable=no를 무시한다
-    document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
-    document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
-    ctx.onEnable && ctx.onEnable();
+    if (!gOnce) { gOnce = true; document.addEventListener('gesturestart', e => { if (T.on) e.preventDefault(); }, { passive: false });
+      document.addEventListener('dblclick', e => { if (T.on) e.preventDefault(); }, { passive: false }); }
+    ctx.onMode && ctx.onMode(true);
+  }
+  // 리뷰(09-26): 손가락 상태를 모두 푼다 — 창이 포커스를 잃거나 숨으면 touchend가 안 올 수 있다(알림·앱 전환 → 끝없이 걷던 문제)
+  function reset() {
+    joyEnd(); T.lookId = -1; T.jump = false; T.jumpT = 0;
+    bJump.classList.remove('dn'); bAct.classList.remove('dn'); bView.classList.remove('dn');
+  }
+  // 리뷰(09-26): 터치 화면 크롬북 — 한 번 터치한 뒤 다시 마우스·키보드를 쓰면 데스크톱 화면으로 돌아간다(포인터 잠금도 다시 된다).
+  //   터치가 주 입력인 기기(휴대폰·태블릿)는 블루투스 키보드를 써도 그대로 터치 화면.
+  function disable() {
+    if (!T.on || touchPrimary()) return; reset(); T.on = false; document.body.classList.remove('touch'); joyHint.style.display = '';
+    ctx.onMode && ctx.onMode(false);
   }
   // ---------- 캔버스 손가락(조이스틱·시점) ----------
   let jx0 = 0, jy0 = 0, lx = 0, ly = 0;
-  function joyAt(x, y) {   // 조이스틱 판 가운데 = 엄지 자리(화면 안으로 당김)
-    jx0 = Math.max(JR + 6, Math.min(innerWidth - JR - 6, x)); jy0 = Math.max(JR + 6, Math.min(innerHeight - JR - 6, y));
+  function joyAt(x, y) {   // 조이스틱 판 가운데 = 엄지 자리
+    jx0 = x; jy0 = y;   // 리뷰(09-26): 화면 안으로 당기지 않는다 — 아래 가장자리를 누르면 당긴 만큼 이미 '밀린' 것이 되어 손대자마자 뒤로 달렸다(판은 조금 잘려 보여도 된다)
     joy.style.transform = 'translate(' + jx0 + 'px,' + jy0 + 'px)'; knob.style.transform = ''; joy.style.visibility = 'visible'; joyHint.style.display = 'none';
   }
   function joyMove(x, y) {
@@ -82,6 +95,10 @@ export function createTouch(ctx) {
   function joyEnd() { T.joyId = -1; T.m = T.mx = T.my = 0; joy.style.visibility = 'hidden'; joy.classList.remove('run'); }
   function onStart(e) {
     enable(); if (e.cancelable) e.preventDefault();
+    // 리뷰(09-26): 끝 이벤트를 잃은 손가락(화면에 더는 없는 id)은 버린다 — 안 그러면 조이스틱이 영영 '누른 채'
+    if (T.joyId >= 0 || T.lookId >= 0) { let jOk = false, lOk = false;
+      for (let i = 0; i < e.touches.length; i++) { const id = e.touches[i].identifier; if (id === T.joyId) jOk = true; if (id === T.lookId) lOk = true; }
+      if (T.joyId >= 0 && !jOk) joyEnd(); if (!lOk) T.lookId = -1; }
     for (const t of e.changedTouches) {
       if (T.joyId < 0 && t.clientX < innerWidth * 0.45 && t.clientY > innerHeight * 0.3) { T.joyId = t.identifier; joyAt(t.clientX, t.clientY); joyMove(t.clientX, t.clientY); }
       else if (T.lookId < 0) { T.lookId = t.identifier; lx = t.clientX; ly = t.clientY; }
@@ -104,6 +121,10 @@ export function createTouch(ctx) {
   canvas.addEventListener('contextmenu', e => { if (T.on) e.preventDefault(); });
   // 캔버스 밖을 처음 터치해도(HUD 칩) 켠다 — 버블링만 보고 막지는 않는다(칩 누르기 그대로)
   addEventListener('touchstart', enable, { passive: true, capture: true });
+  addEventListener('blur', () => reset());
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') reset(); });
+  addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') disable(); }, true);   // 터치의 pointerType은 'touch' — 진짜 마우스만
+  addEventListener('keydown', e => { if (!e.repeat) disable(); }, true);
   if (touchPrimary()) setTimeout(enable);   // 다음 차례에(부르는 쪽 main.js가 아직 HUD를 다 짓기 전이다)
 
   // ---------- 버튼 ----------
@@ -118,7 +139,7 @@ export function createTouch(ctx) {
   btn(bView, () => view());
 
   return Object.assign(T, {
-    enable,
+    enable, disable, reset,
     setNear(h) { const on = !!h; if (on === T.near) return; T.near = on; bAct.classList.toggle('hot', on); },   // 무엇인지는 가운데 아래 안내 칩(#hint — 눌러도 된다)이 말한다
     els: { joy, bJump, bAct, bView },
   });

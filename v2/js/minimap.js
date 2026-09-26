@@ -26,9 +26,13 @@ export function createMinimap(ctx) {
     const [x0, z0, x1, z1] = S.bb;
     if (S.big) { const hMax = Math.max(200, innerHeight - TOP - 96 - PAD * 2 - CAPH), wMax = Math.max(200, innerWidth * 0.55);
       S.sB = Math.min(hMax / (z1 - z0), wMax / (x1 - x0)); S.w = Math.round((x1 - x0) * S.sB); S.h = Math.round((z1 - z0) * S.sB); }
-    else { S.w = S.h = SMALL; }
+    else { S.w = S.h = SMALL;
+      // TOUCH-1 리뷰(09-26): 터치 화면이면 오른쪽 아래 점프·행동·시점 버튼 위에서 멈춘다(iPhone SE 가로 320px에선 170px 지도가 버튼을 덮었다)
+      if (document.body.classList.contains('touch')) { let bt = innerHeight;
+        for (const id of ['tJump', 'tAct', 'tView']) { const b = document.getElementById(id); if (!b) continue; const r = b.getBoundingClientRect(); if (r.height > 0) bt = Math.min(bt, r.top); }   // position:fixed라 offsetParent는 늘 null — 크기로 본다
+        S.w = S.h = Math.max(96, Math.min(SMALL, Math.floor(bt - 6 - TOP - PAD * 2 - CAPH))); } }
     cv.width = Math.round(S.w * S.dpr); cv.height = Math.round(S.h * S.dpr); cv.style.width = S.w + 'px'; cv.style.height = S.h + 'px';
-    cap.textContent = S.big ? 'M · 누르면 작게' : 'M · 누르면 크게';
+    cap.textContent = (document.body.classList.contains('touch') ? '' : 'M · ') + (S.big ? '누르면 작게' : '누르면 크게');   // 터치엔 M 키가 없다
     S.dirty = true;
   }
   // 이름표(정적 층에 굽는다): 구역 폭 안에 들어가는 것만 · 같은 이름은 한 번 · 겹치면 건너뜀 · 흰 테두리
