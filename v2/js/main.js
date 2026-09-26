@@ -45,17 +45,18 @@ await new Promise(r => { requestAnimationFrame(() => setTimeout(r)); setTimeout(
 // GFX-3: 창 유리 — 밖에서 보면 '뚫린 구멍'이던 것을 유리로 읽히게(한 줄 셰이더 · 텍스처·패스·드로우콜 0):
 //  ① 비치는 하늘/땅 — 시선을 유리 면에 반사한 방향이 위면 하늘빛, 아래면 땅빛(눈높이보다 위 창은 하늘이 비친다) ② 비스듬할수록 더 비치고 더 불투명(프레넬)
 //  ③ 만화식 사선 반짝임 두 줄(월드 좌표 — 창마다 같은 자리). 정면은 여전히 들여다보인다. 색·세기는 시간대마다(setTime · 밤엔 약하게 — 불 켜진 창 빛을 가리지 않게)
-const GLASS_U = { uSkyRef: { value: new THREE.Color(0x8fc3ea) }, uGndRef: { value: new THREE.Color(0x5d6b73) }, uFr: { value: 0.6 } };
+const GLASS_U = { uSkyRef: { value: new THREE.Color(0x8fc3ea) }, uGndRef: { value: new THREE.Color(0x5d6b73) }, uFr: { value: 0.6 }, uOut: { value: 1 } };
+// GFX-3 리뷰: 안(건물 칸 안 · 눈높이)에서 밖·옆 교실을 볼 땐 사선 반짝임을 끄고 비침도 약하게(uOut 0) — 교실·과학실 창에 흰 사선이 크게 그어져 바깥이 가려졌다. skyTick이 정한다
 function glassFx(sh) {
   Object.assign(sh.uniforms, GLASS_U);
-  sh.fragmentShader = 'uniform vec3 uSkyRef;\nuniform vec3 uGndRef;\nuniform float uFr;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `
+  sh.fragmentShader = 'uniform vec3 uSkyRef;\nuniform vec3 uGndRef;\nuniform float uFr;\nuniform float uOut;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `
   vec3 gV = normalize(-vViewPosition), gN = normalize(vNormal);
   vec3 gWd = (vec4(gV, 0.0) * viewMatrix).xyz, gWn = (vec4(gN, 0.0) * viewMatrix).xyz, gP = cameraPosition + gWd * length(vViewPosition);
-  float gC = 1.0 - abs(dot(gV, gN)), gFr = uFr * (0.3 + 0.7 * gC * gC * gC);
+  float gC = 1.0 - abs(dot(gV, gN)), gFr = uFr * (0.3 + 0.7 * gC * gC * gC) * mix(0.35, 1.0, uOut);
   vec3 gRef = mix(uGndRef, uSkyRef, smoothstep(-0.2, 0.3, reflect(gWd, gWn).y));
   float gS = fract((gP.x + gP.z + gP.y) * 0.21), gW = fwidth(gS) + 0.004;   // 폭 = 화면 한 픽셀 이상(멀리서 반짝임·계단 방지)
   float gB = (smoothstep(0.2 - gW, 0.2 + gW, gS) - smoothstep(0.26 - gW, 0.26 + gW, gS)) + 0.6 * (smoothstep(0.31 - gW, 0.31 + gW, gS) - smoothstep(0.34 - gW, 0.34 + gW, gS));
-  gB *= 1.0 - smoothstep(25.0, 60.0, length(vViewPosition));   // 멀면 줄은 옅게(하늘빛만)
+  gB *= (1.0 - smoothstep(25.0, 60.0, length(vViewPosition))) * uOut;   // 멀면 줄은 옅게(하늘빛만)
   outgoingLight = mix(outgoingLight, gRef, gFr) + gB * uFr * 0.45;
   diffuseColor.a = clamp(mix(diffuseColor.a, 0.9, gFr) + gB * uFr * 0.35, 0.0, 1.0);
 #include <opaque_fragment>`);
@@ -654,12 +655,22 @@ let flagT = 0;
 function skyTick(dt) {
   clouds.position.set(camera.position.x, 0, camera.position.z); clouds.rotation.y += dt * 0.004;
   skyDome.position.copy(camera.position);
+  { const c = camera.position, BR = world.details.brect; let o = 1;   // GFX-3 리뷰: 카메라가 건물 칸 안(지붕 아래)이면 유리 반짝임 끔
+    if (c.y < 9) for (let i = 0; i < BR.length; i++) { const r = BR[i]; if (c.x > r[0] && c.x < r[1] && c.z > r[2] && c.z < r[3]) { o = 0; break; } }
+    if (GLASS_U.uOut.value !== o) { GLASS_U.uOut.value = o; glassApply(timeKey); } }
   if (!flagBase) return;
   flagT += dt; const P = world.flag.geometry.attributes.position, A = P.array;
   for (let i = 0; i < P.count; i++) { const x = flagBase[i*3], y = flagBase[i*3+1], u = (x + 0.7) / 1.4;
     A[i*3+2] = Math.sin(flagT * 3.4 - u * 5.2 + y * 0.9) * 0.11 * u + Math.sin(flagT * 1.3 - u * 2.1) * 0.04 * u;
     A[i*3+1] = y - 0.05 * u * u; }
   P.needsUpdate = true; world.flag.geometry.computeVertexNormals();
+}
+// 창 유리 시간대 색. 밤 '불 켜진 창' 빛은 밖에서 볼 때만 — 안(uOut 0)에서 내다보면 창이 주황 안개처럼 바깥을 덮어 낮처럼 보였다(GFX-3 리뷰) → 안에선 옅은 유리 그대로
+function glassApply(k) {
+  if (!world.glassMesh) return;
+  const gmat = world.glassMesh.material, glow = GLASS_U.uOut.value > 0.5;
+  gmat.emissive.setHex(!glow ? 0x000000 : k === 'night' ? 0xb08a3e : k === 'sunset' ? 0x3a2a14 : 0x000000); gmat.opacity = k === 'night' && glow ? 0.62 : 0.32;
+  GLASS_U.uSkyRef.value.setHex(GLASS_SKY[k][0]); GLASS_U.uGndRef.value.setHex(GLASS_SKY[k][1]); GLASS_U.uFr.value = GLASS_SKY[k][2];
 }
 const GLASS_SKY = { day: [0x8fc3ea, 0x5d6b73, 0.6], sunset: [0xe9b995, 0x5e4a44, 0.55], night: [0x1c2a44, 0x0c1018, 0.22] };   // GFX-3: 유리에 비치는 [하늘, 땅, 세기]
 const ORDER = ['day', 'sunset', 'night'];
@@ -680,8 +691,7 @@ function setTime(k) {
   bakeShadows();
   stars.visible = k === 'night';
   clouds.material.color.setHex(CLOUD_TINT[k]);
-  if (world.glassMesh) { const gmat = world.glassMesh.material; gmat.emissive.setHex(k === 'night' ? 0xb08a3e : k === 'sunset' ? 0x3a2a14 : 0x000000); gmat.opacity = k === 'night' ? 0.62 : 0.32;
-    GLASS_U.uSkyRef.value.setHex(GLASS_SKY[k][0]); GLASS_U.uGndRef.value.setHex(GLASS_SKY[k][1]); GLASS_U.uFr.value = GLASS_SKY[k][2]; }
+  glassApply(k);
   timeBtn.textContent = t.label;
   MAP?.emit('time', k);
   return k;
