@@ -3,8 +3,8 @@
 //   원칙: 매 프레임 새 객체·전체 순회 금지(구역·트리거·경계는 10Hz) · 예외는 잡아서 월드 루프가 멈추지 않게 · 사람 NPC·대사 생성 금지.
 //   정본 문서 = docs/map_api.md
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
-import { createMinimap } from './minimap.js?v=4';
-import { createGamePicker } from './gamepick.js?v=4';
+import { createMinimap } from './minimap.js?v=5';
+import { createGamePicker } from './gamepick.js?v=5';
 export function createMapApi(host, NAV, META) {
   const { THREE, scene, world, SCHOOL, q, pl, ui } = host;
   const HOT = host.hot, Z = world.zones, P = pl.P, CTRL = pl.CTRL;
@@ -186,7 +186,9 @@ export function createMapApi(host, NAV, META) {
   const el = (css, txt = '') => { const d = document.createElement('div'); d.className = 'chip'; d.style.cssText = css; d.textContent = txt; document.body.appendChild(d); return d; };
   const chips = new Map(); let banEl = null, banT = 0, goalEl = null, MM = null;   // MM = 미니맵(§11b에서 만든다)
   // 게임 칩 줄: 오른쪽 위 fps 칩 아래. 미니맵이 보이면(GAME-FIND-1) 작을 땐 그 아래로, 클 땐 그 왼쪽으로 비켜 선다(겹침 0)
-  const layoutChips = () => { const r = MM && MM.rect(), top0 = r && !r.big ? r.top + r.h + 8 : 44, right = r && r.big ? r.right + r.w + 8 : 10; let k = 0;
+  // TOUCH-1: 터치 화면에서 미니맵 아래에 칩이 다 안 들어가면(오른쪽 아래 = 점프·행동 버튼 자리) 미니맵 왼쪽 줄로
+  const layoutChips = () => { const r = MM && MM.rect(), side = r && (r.big || (document.body.classList.contains('touch') && r.top + r.h + 8 + chips.size * 34 > innerHeight - 110));
+    const top0 = r && !side ? r.top + r.h + 8 : side && !r.big && document.body.classList.contains('touch') ? 56 : 44, right = side ? r.right + r.w + 8 : 10; let k = 0;   // 터치 좁은 화면(미니맵 왼쪽 줄): 가운데 위 목표 줄(아래 ≈50px) 밑 56px부터
     for (const [, c] of chips) { c.el.style.top = (top0 + k * 34) + 'px'; c.el.style.right = right + 'px'; k++; } };
   const hud = {
     toast: (text, sec = 2.2) => ui.toast(text, sec),
@@ -434,7 +436,7 @@ export function createMapApi(host, NAV, META) {
       if (inn && !t.inside) { t.inside = true; if (t.cb.enter) { try { t.cb.enter(t.shape); } catch (e) { console.error(e); } } if (t.cb.once) TRIG.delete(t); }
       else if (!inn && t.inside) { t.inside = false; if (t.cb.exit) { try { t.cb.exit(t.shape); } catch (e) { console.error(e); } } } }
     // 끼임 기록(게임·수업 크래시 대응): 이동키를 누른 채 1.5초 동안 0.05m도 못 움직이고 몸이 충돌 상자 속이면 남긴다(최대 50·2초 간격)
-    if (pl.keys) { let mv = false; for (const k of MOVE_KEYS) if (pl.keys.has(k)) { mv = true; break; }
+    if (pl.keys) { let mv = !!(pl.touch && pl.touch.m > 0); for (const k of MOVE_KEYS) if (pl.keys.has(k)) { mv = true; break; }   // TOUCH-1 리뷰: 조이스틱으로 끼어도 기록
       if (mv && !pl.ACT.anim && !pl.ACT.sit) { if (!stuck.from) { stuck.from = [P.x, P.z]; stuck.t = 0; } stuck.t += 0.1;
         if (Math.hypot(P.x - stuck.from[0], P.z - stuck.from[1]) > 0.05) { stuck.from = [P.x, P.z]; stuck.t = 0; }
         else if (stuck.t >= 1.5 && tSec - stuck.last > 2 && q.blockedAt(P.x, P.z, P.y)) { stuck.last = tSec; stuck.t = 0; if (stuckLog.length < 50) stuckLog.push([+P.x.toFixed(2), +P.y.toFixed(2), +P.z.toFixed(2), +tSec.toFixed(1)]); emit('stuck', { x: P.x, y: P.y, z: P.z }); } }

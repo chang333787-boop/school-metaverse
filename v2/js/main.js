@@ -5,14 +5,22 @@ import { buildWorld } from './world.js?v=120';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=10';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=5';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=6';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=5';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=7';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createTouch, touchPrimary } from './touch.js?v=4';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-const DPR = Math.min(window.devicePixelRatio || 1, 2);
-renderer.setPixelRatio(DPR);                       // 네이티브(비정수 업스케일 금지)
+// TOUCH-1 휴대폰 성능 판(09-26): 터치가 주 입력이거나 작은 화면(짧은 변 ≤500)이면 mobile — 픽셀 비율 ≤1.5 · 그림자 지도 1024.
+//  저사양(메모리 ≤3GB 또는 코어 ≤3 — 알려 주는 브라우저만)이면 low — 픽셀 비율 ≤1.25 · 그림자 끔. 나머지(나무·디테일·안개·유리)는 같다.
+//  ?hq=1 = 데스크톱 품질 강제 · ?lq=1 = low 강제(시험용). 고른 값 = SD2.gfx
+const GFX = (() => { const q = new URLSearchParams(location.search), hq = q.get('hq') === '1', lq = q.get('lq') === '1';
+  const mobile = !hq && (lq || touchPrimary() || Math.min(screen.width || 9999, screen.height || 9999) <= 500);
+  const low = !hq && (lq || (mobile && ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 3))));
+  return { mode: low ? 'low' : mobile ? 'mobile' : 'desktop', dpr: Math.min(window.devicePixelRatio || 1, low ? 1.25 : mobile ? 1.5 : 2), shadow: low ? 0 : mobile ? 1024 : 2048 }; })();
+const DPR = GFX.dpr;
+renderer.setPixelRatio(DPR);                       // 네이티브(비정수 업스케일 금지) — 휴대폰은 GFX 상한
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = GFX.shadow > 0;
 renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.needsUpdate = false;   // GFX-2: 굽기는 setTime → bakeShadows가 한다
 // GFX-3(09-26 "그래픽 10점으로"): ACES → Neutral(r170 · Khronos PBR Neutral) — ACES는 채도를 눌러 노란 골대·버스·파랑/주황 기둥·빨간 지붕이 탁했다.
@@ -30,7 +38,7 @@ scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff0cf, 3.1);
 sun.position.set(60, 95, 45);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(GFX.shadow || 1024, GFX.shadow || 1024);
 Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 95, bottom: -95, near: 20, far: 340 }); sun.shadow.camera.updateProjectionMatrix();   // GFX-2: 해는 원점에서 170m(setTime) · 투영 행렬을 다시 만들어야 범위가 먹는다(예전엔 기본 ±5m 그대로였다)
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
 scene.add(sun);
@@ -210,18 +218,24 @@ let camYaw = 0, camPitch = 0.3, camFirst = false;
 addEventListener('keydown', e => { if (e.code === 'KeyV') camFirst = !camFirst; });   // 1인칭 ↔ 3인칭
 const CAM_D = 6.3;
 let camD = CAM_D;
-canvas.addEventListener('click', () => canvas.requestPointerLock());
+canvas.addEventListener('click', () => { if (!TOUCH.on) canvas.requestPointerLock(); });   // 터치 기기엔 포인터 잠금이 없다(드래그가 시점)
 addEventListener('mousemove', e => {
   if (document.pointerLockElement !== canvas) return;
   camYaw -= e.movementX * 0.0026;
   camPitch = Math.max(-0.2, Math.min(1.1, camPitch + e.movementY * 0.0022));
 });
+// TOUCH-1: 터치 조작(v2/js/touch.js) — 왼쪽 조이스틱 = 아날로그 이동(TOUCH.mx·my·m → physics) · 오른쪽 드래그 = 시점(마우스와 같은 부호, 휴대폰용 감도) · 점프/행동/시점 버튼
+const TOUCH = createTouch({ canvas,
+  look: (dx, dy) => { camYaw -= dx * 0.0058; camPitch = Math.max(-0.2, Math.min(1.1, camPitch + dy * 0.0042)); },
+  act: () => { if (hotNear) act(hotNear); }, view: () => { camFirst = !camFirst; },
+  onMode: on => { if (hotNear) hintEl.textContent = on ? hintEl.textContent.replace(/^E  /, '✋ ') : hintEl.textContent.replace(/^✋ /, 'E  ');   // 리뷰: 터치 ↔ 마우스(터치 화면 크롬북) 오갈 때
+    if (MAP && MAP.minimap.visible) MAP.minimap.toggle(MAP.minimap.big); } });   // 미니맵 크기 다시(터치면 버튼 위까지만)
 
 // 상호작용 상태 — anim: 정해진 경로 이동(미끄럼틀) / sit: 의자에 앉음(움직이면 일어남)
 const ACT = { anim: null, sit: null };
 const CTRL = { frozen: false, speed: 1 };   // MAP-API-1: 게임이 멈춤(입력·점프만 무시 — 중력은 유지)·속도(0.5~2)를 건다
 function step(dt) {
-  const moving = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].some(k => keys.has(k));
+  const moving = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].some(k => keys.has(k)) || TOUCH.m > 0 || TOUCH.jump || TOUCH.jumpT > 0;   // jumpT: 톡 친 점프(프레임 사이에 떼도) — 앉아 있으면 일어난다
   if (ACT.anim) {
     const a = ACT.anim; a.t = Math.min(1, a.t + dt / a.dur);
     P.x = a.from[0] + (a.to[0] - a.from[0]) * a.t; P.y = a.from[1] + (a.to[1] - a.from[1]) * a.t; P.z = a.from[2] + (a.to[2] - a.from[2]) * a.t;
@@ -306,16 +320,22 @@ function physics(dt) {
   if (keys.has('KeyS') || keys.has('ArrowDown')) { mx += Math.sin(camYaw); mz += Math.cos(camYaw); }
   if (keys.has('KeyA') || keys.has('ArrowLeft')) { mx -= Math.cos(camYaw); mz += Math.sin(camYaw); }
   if (keys.has('KeyD') || keys.has('ArrowRight')) { mx += Math.cos(camYaw); mz -= Math.sin(camYaw); }
+  let sp2 = sp;
+  if (mx === 0 && mz === 0 && TOUCH.m > 0) {   // TOUCH-1 조이스틱(키를 안 누를 때만): 앞 my·오른쪽 mx를 키와 같은 축으로. 세기 = 걷기 30~100% · 가장자리(≥0.92) = 달리기
+    mx = -Math.sin(camYaw) * TOUCH.my + Math.cos(camYaw) * TOUCH.mx; mz = -Math.cos(camYaw) * TOUCH.my - Math.sin(camYaw) * TOUCH.mx;
+    sp2 = (TOUCH.m >= 0.92 ? 7.5 : 4.2 * Math.max(0.3, Math.min(1, (TOUCH.m - 0.15) / 0.6))) * CTRL.speed;
+  }
   if (CTRL.frozen) mx = mz = 0;
   const L = Math.hypot(mx, mz);
   if (L > 0) {
     mx /= L; mz /= L;
-    const nx = P.x + mx * sp * dt, nz = P.z + mz * sp * dt;
+    const sp = sp2, nx = P.x + mx * sp * dt, nz = P.z + mz * sp * dt;
     if (!blockedAt(nx, P.z, P.y)) P.x = nx;
     if (!blockedAt(P.x, nz, P.y)) P.z = nz;
     P.yaw = Math.atan2(mx, mz);
   }
-  if (keys.has('Space') && P.ground && !CTRL.frozen) { P.vy = 5.2; P.ground = false; }
+  if (TOUCH.jumpT > 0) TOUCH.jumpT -= dt;
+  if ((keys.has('Space') || TOUCH.jump || TOUCH.jumpT > 0) && P.ground && !CTRL.frozen) { P.vy = 5.2; P.ground = false; TOUCH.jumpT = 0; }
   P.vy -= 14 * dt;
   const y0 = P.y;
   P.y += P.vy * dt;
@@ -349,10 +369,10 @@ function applyShot() {
 // world.hotspots: 칠판·의자·배식대·도서실·정수기·미끄럼틀·텃밭·마이크. 안내 문구는 시스템 안내뿐(인물 대사 아님 — 대사는 교사 승인분만)
 const HOT = world.hotspots;
 const hintEl = document.createElement('div');
-hintEl.className = 'chip';
+hintEl.className = 'chip'; hintEl.id = 'hint';
 hintEl.style.cssText = 'left:50%;bottom:56px;transform:translateX(-50%);display:none;cursor:pointer;font-size:15px;padding:8px 16px';
 document.body.appendChild(hintEl);
-const toastEl = document.createElement('div');
+const toastEl = document.createElement('div'); toastEl.id = 'toast';   // TOUCH-1 리뷰: 터치면 칩 줄 아래로(touch.js css)
 toastEl.className = 'chip';
 toastEl.style.cssText = 'left:50%;top:56px;transform:translateX(-50%);display:none;font-size:15px;padding:8px 16px';
 document.body.appendChild(toastEl);
@@ -371,8 +391,8 @@ function hotTick(dt) {
   }
   if (best !== hotNear) {
     hotNear = best;
-    hintEl.style.display = best ? '' : 'none';
-    if (best) hintEl.textContent = 'E  ' + (best.kind === 'board' ? ['칠판에 낙서하기', '더 그리기', '칠판 지우기'][best.stage || 0] : best.kind === 'sit' && ACT.sit ? '일어나기' : best.label);
+    hintEl.style.display = best ? '' : 'none'; TOUCH.setNear(best);
+    if (best) hintEl.textContent = (TOUCH.on ? '✋ ' : 'E  ') + (best.kind === 'board' ? ['칠판에 낙서하기', '더 그리기', '칠판 지우기'][best.stage || 0] : best.kind === 'sit' && ACT.sit ? '일어나기' : best.label);
   }
 }
 // 칠판 낙서 — 투명 캔버스에 분필 선(단계별 2장). 칠판 면에서 2cm 앞(겹치면 반짝임)
@@ -676,7 +696,7 @@ const GLASS_SKY = { day: [0x8fc3ea, 0x5d6b73, 0.6], sunset: [0xe9b995, 0x5e4a44,
 const ORDER = ['day', 'sunset', 'night'];
 let timeKey = 'day';
 const timeBtn = document.createElement('div');
-timeBtn.className = 'chip';
+timeBtn.className = 'chip'; timeBtn.id = 'timeChip';   // TOUCH-1: 터치면 왼쪽 위로(touch.js css)
 timeBtn.style.cssText = 'right:10px;bottom:10px;cursor:pointer;user-select:none';
 document.body.appendChild(timeBtn);
 function setTime(k) {
@@ -878,7 +898,7 @@ function detailTick(dt) {
 // ---------- 지도 API(MAP-API-1 · 09-24) — 게임이 받는 지도 계약. 정본 docs/map_api.md ----------
 MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL,
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
-  pl: { P, ACT, CTRL, keys, getYaw: () => camYaw, setYaw: v => { camYaw = v; } },
+  pl: { P, ACT, CTRL, keys, touch: TOUCH, getYaw: () => camYaw, setYaw: v => { camYaw = v; } },
   ui: { toast, hint: hintEl, tone }, hot: HOT }, NAV, makeMeta(SCHOOL));   // tone = 게임 효과음(GAME-FIND-1 map.sfx)
 
 // ---------- 루프 + 예산 계측(헌법⑥) ----------
@@ -1005,6 +1025,7 @@ window.SD2 = {
   step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); hotTick(1/60); MAP.tick(1/60); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
   doors: () => DOORS.length, doorCheck,
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
+  touch: TOUCH, gfx: GFX, cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)
   map: MAP, phys: { groundAt, blockedAt, ceilAt, camHit }, ACT, CTRL, camPose: (...a) => ({ ...camPose(...a) }),
   health: opt => import('./health.js?v=5').then(m => m.runHealth(window.SD2, opt || {})),
