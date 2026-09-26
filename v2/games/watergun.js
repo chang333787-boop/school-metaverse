@@ -36,7 +36,7 @@ export default async function start(map, params = {}) {
   map.hud.banner('물총 준비 중…', 30);
   map.sfx('warm');
   const nav = await map.nav();
-  if (dead) return {};
+  if (dead || map.gone) return {};   // 리뷰(09-26): 길격자를 짓는 사이 ⏹ 그만하기/다른 놀이 → 범위가 이미 정리됨. 여기서 만들면 HUD·메시·멈춤이 영영 남았다
   map.arena.set({ rect: ARENA });
 
   // ---------- 모양 굽기(부위마다 정점색 · 한 메시) — kid.js bake와 같은 식 ----------
@@ -317,26 +317,32 @@ export default async function start(map, params = {}) {
     }
     aim.x = tx; aim.y = ty; aim.z = tz;
     let dx = tx - nx, dz = tz - nz, dh = Math.hypot(dx, dz); const h = ty - ny;
-    if (dh < 1.2) { _f.set(0, 0, -1).applyQuaternion(cam.quaternion); const l = Math.hypot(_f.x, _f.z) || 1; dx = _f.x / l; dz = _f.z / l; dh = 1; aim.vx = dx * SPEED * 0.95; aim.vz = dz * SPEED * 0.95; aim.vy = SPEED * 0.3; }
-    else { const S2 = SPEED * SPEED, disc = S2 * S2 - G * (G * dh * dh + 2 * h * S2); let a = disc >= 0 ? Math.atan((S2 - Math.sqrt(disc)) / (G * dh)) : Math.PI / 4; a = Math.max(-1.1, Math.min(1.1, a));
+    // 발밑(꼭지에서 1.2m 안)을 겨누면 카메라 앞쪽 1.2m로 — 리뷰(09-26): 전엔 여기서 18°로 쏴 조준점은 발밑인데 물은 15m 앞에 떨어졌다
+    if (dh < 1.2) { _f.set(0, 0, -1).applyQuaternion(cam.quaternion); const l = Math.hypot(_f.x, _f.z) || 1; dx = _f.x / l * 1.2; dz = _f.z / l * 1.2; dh = 1.2; }
+    { const S2 = SPEED * SPEED, disc = S2 * S2 - G * (G * dh * dh + 2 * h * S2); let a = disc >= 0 ? Math.atan((S2 - Math.sqrt(disc)) / (G * dh)) : Math.PI / 4; a = Math.max(-1.1, Math.min(1.1, a));
       const c = Math.cos(a) * SPEED; aim.vx = dx / dh * c; aim.vz = dz / dh * c; aim.vy = Math.sin(a) * SPEED; }
     aim.h = Math.atan2(dx, -dz) * 180 / Math.PI;
   }
 
   // ---------- 로봇(길격자 경로 · 가끔 다가와 물 몇 방울) ----------
+  let planned = false;
   const inRect = (x, z) => x >= BOT_RECT[0] && x <= BOT_RECT[2] && z >= BOT_RECT[1] && z <= BOT_RECT[3];
+  // 리뷰(09-26): 경로는 짧게만(로봇 둘레 ≤ PLAN_R m · maxExp 4000) — 운동장 끝에서 끝(60m+) 길찾기는 한 번에 6~60ms 멈칫이었다. 먼 사람 쪽으로는 몇 번에 나눠 다가간다
+  const PLAN_R = 13;
+  const destAt = (x, z, y) => { if (!inRect(x, z)) return null; const i = nav.snap(x, y, z, 1.5); if (i < 0) return null; const zn = nav.zoneOf(i); return zn && ZONES.includes(zn.id) ? nav.pos(i) : null; };
   function plan(r, me) {
     r.think = 4 + rng() * 3; r.pts = null;
     let dest = null;
     const dMe = Math.hypot(me.x - r.x, me.z - r.z);
-    if (st === 'play' && dMe > 7 && rng() < 0.7) { const a = rng() * Math.PI * 2, d = 5 + rng() * 2.5, x = me.x + Math.cos(a) * d, z = me.z + Math.sin(a) * d;
-      if (inRect(x, z)) { const i = nav.snap(x, Q.floorY(x, z), z, 1.5); if (i >= 0) { const zn = nav.zoneOf(i); if (zn && ZONES.includes(zn.id)) dest = nav.pos(i); } } }
-    // 아니면 과녁 자리 풀 근처 아무 데나(nav.random은 전 칸을 훑어 수 ms — 판 중에는 쓰지 않는다)
-    for (let k = 0; k < 6 && !dest; k++) { const sp = SPOTS[Math.floor(rng() * SPOTS.length)], x = sp.x + (rng() - 0.5) * 4, z = sp.z + (rng() - 0.5) * 4;
-      if (!inRect(x, z)) continue; const i = nav.snap(x, sp.y, z, 1.2); if (i >= 0) { const zn = nav.zoneOf(i); if (zn && ZONES.includes(zn.id)) dest = nav.pos(i); } }
-    if (!dest) { r.think = 1; return; }
-    const res = nav.path([r.x, r.y, r.z], dest, { maxExp: 20000 });
-    if (res.ok && res.pts.length > 1) { r.pts = res.pts; r.pi = 1; } else r.think = 1;
+    if (st === 'play' && dMe > 7 && rng() < 0.7) {
+      if (dMe < PLAN_R + 5) { const a = rng() * Math.PI * 2, d = 5 + rng() * 2.5, x = me.x + Math.cos(a) * d, z = me.z + Math.sin(a) * d; dest = destAt(x, z, Q.floorY(x, z)); }
+      else { const k = (PLAN_R - 2 + rng() * 2) / dMe, x = r.x + (me.x - r.x) * k + (rng() - 0.5) * 3, z = r.z + (me.z - r.z) * k + (rng() - 0.5) * 3; dest = destAt(x, z, r.y); }
+    }
+    // 아니면 둘레 아무 데나(nav.random은 전 칸을 훑어 수 ms — 판 중에는 쓰지 않는다)
+    for (let k = 0; k < 6 && !dest; k++) { const a = rng() * Math.PI * 2, d = 3 + rng() * (PLAN_R - 4); dest = destAt(r.x + Math.cos(a) * d, r.z + Math.sin(a) * d, r.y); }
+    if (!dest) { r.think = 0.5; return; }
+    const res = nav.path([r.x, r.y, r.z], dest, { maxExp: 4000 });
+    if (res.ok && res.pts.length > 1) { r.pts = res.pts; r.pi = 1; } else r.think = 0.5;
   }
   function botTick(r, dt, me) {
     r.bob += dt;
@@ -358,7 +364,7 @@ export default async function start(map, params = {}) {
       r.cd = 3.4 + rng() * 2.4;
       if (Q.los([r.x, r.y + 0.9, r.z], [me.x, me.y + 1.1, me.z], { ignoreNc: false })) { r.wind = 0.5; return; }   // 철망·골대 그물 뒤는 숨는 곳(로봇이 못 봄)
     }
-    if ((r.think -= dt) <= 0 || !r.pts || r.pi >= r.pts.length) { if (r.think <= 0 || !r.pts) plan(r, me); if (!r.pts) return; }
+    if ((r.think -= dt) <= 0 || !r.pts || r.pi >= r.pts.length) { if ((r.think <= 0 || !r.pts) && !planned) { planned = true; plan(r, me); } if (!r.pts) return; }   // 길찾기는 한 프레임에 로봇 하나만
     const p = r.pts[r.pi], ex = p[0] - r.x, ez = p[2] - r.z, d = Math.hypot(ex, ez), sp = 1.7 * dt;
     if (d <= sp) { r.x = p[0]; r.z = p[2]; r.y = p[1]; r.pi++; if (r.pi >= r.pts.length) { r.pts = null; r.think = 0.6 + rng() * 1.2; } }
     else { r.x += ex / d * sp; r.z += ez / d * sp; r.y += (p[1] - r.y) * Math.min(1, dt * 6);
@@ -496,6 +502,7 @@ export default async function start(map, params = {}) {
         _q.setFromEuler(_e.set(droop - 0.35, fl.yaw, 0));
         M.head.setMatrixAt(fl.i, _m4.compose(_v.set(s.x + sy * hz, s.y + 0.36 + hy, s.z + cy * hz), _q, _s.set(hs, hs, hs))); }
       M.stem.instanceMatrix.needsUpdate = M.head.instanceMatrix.needsUpdate = true;
+      planned = false;
       for (const r of R) { botTick(r, dt, me);
         const bob = Math.abs(Math.sin(r.bob * 6)) * 0.04 * (r.pts ? 1 : 0.3), wig = r.wind > 0 ? Math.sin(r.bob * 40) * 0.08 : 0, sq = r.hit > 0 ? 0.08 : 0;
         M.bot.setMatrixAt(r.i, _m4.compose(_v.set(r.x, r.y + 0.01 + bob, r.z), _q.setFromEuler(_e.set(r.dizzy > 0 ? Math.sin(r.bob * 14) * 0.12 : 0, r.yaw + wig, wig * 0.5)), _s.set(1 + sq, 1 - sq, 1 + sq))); }
