@@ -38,17 +38,23 @@ export function buildWorld(scene) {
   // 위에 서지 못하고 넘지도 못한다. 보이지 않는 윗부분이 카메라를 밀지 않게 nc(카메라 무시) 표시.
   const NS = { ns: true };
   function noStand(c, min = 1.6) { c.y1 = Math.max(c.y1, c.y0 + min); c.nc = true; c.ns = true; return c; }   // ns = 끝의 NS-RAISE 패스가 알아보는 표시
+  // GFX-2: 벽 아래쪽 접지 음영(정점색 AO) — 층 바닥에서 0.8 → 층 높이에서 1, 한 층 안에서 y에 대한 선형이라 창턱·인방·통벽 조각이 이음매 없이 같은 면으로 보간된다.
+  //  벽 조각(wall)·벽 겉무늬(patWall)의 옆면만. 두 층 이상에 걸친 것은 1(선형이 어긋난다)
+  const AO_FL = [FIELD, YARD, 0, FH, 2 * FH];
+  const aoFloor = y0 => { let f = null; for (const v of AO_FL) if (v <= y0 + 0.01) f = v; return f; };
+  const aoF = (y, fl) => 0.8 + 0.2 * Math.min(1, Math.max(0, (y - fl) / FH));
   function addBox(w, h, d, hex, cx, baseY, cz, opt = {}) {
     if (Math.min(w, h, d) < 0.1499) throw new Error('헌법① 위반 <0.15m: ' + [w, h, d]);   // 0.1499=부동소수 오차 허용(0.15는 합법)
     allBoxes.push({ x0: cx-w/2, x1: cx+w/2, y0: baseY, y1: baseY+h, z0: cz-d/2, z1: cz+d/2, wall: !!opt.wall });   // wall=벽 조각(문이 숨는 곳)
     const ch = opt.at ? chunkOf(opt.at[0], opt.at[1]) : chunkOf(cx, cz);   // at = 이 청크에 합침(dGeo와 같음)
     _c.set(hex); _c.multiplyScalar(0.97);
-    const cy = baseY + h / 2;
+    const cy = baseY + h / 2, fl = opt.wall && !opt.flat ? aoFloor(baseY) : null, ao = fl !== null && baseY + h <= fl + FH + 0.01;
     for (let i = 0; i < bpos.count; i++) {
-      ch.pos.push(bpos.getX(i)*w+cx, bpos.getY(i)*h+cy, bpos.getZ(i)*d+cz);
+      const vy = bpos.getY(i)*h+cy;
+      ch.pos.push(bpos.getX(i)*w+cx, vy, bpos.getZ(i)*d+cz);
       const ny = bnrm.getY(i), nx = bnrm.getX(i);
       // flat: AO 면제 — 천장·조명은 아랫면만 보이는데 아랫면 0.62를 먹으면 칙칙해진다
-      const f = opt.flat ? 1 : ny > .5 ? 1 : ny < -.5 ? .62 : (nx !== 0 ? .88 : .94);
+      const f = opt.flat ? 1 : ny > .5 ? 1 : ny < -.5 ? .62 : (nx !== 0 ? .88 : .94) * (ao ? aoF(vy, fl) : 1);
       ch.col.push(_c.r*f, _c.g*f, _c.b*f);
     }
     if (opt.collide !== false || opt.ns) colliders.push(opt.ns ? noStand({ x0: cx-w/2, x1: cx+w/2, y0: baseY, y1: baseY+h, z0: cz-d/2, z1: cz+d/2 })
@@ -378,6 +384,7 @@ export function buildWorld(scene) {
   // ⚠️밑동 충돌은 보이지 않게 12m까지 — 밑동 위에 올라서면 점프로 지붕에 닿았다(사용자 07-30 "나무 위로 못 올라가게")
   //   lite = 가벼운 모양(5각 줄기·가지 + 잎 덩어리 20면 BLOB0 — 484 → 160삼각형). 뒤뜰처럼 far 층 청크가 멀리서도 절두체에 통째로 들어오는 곳에 쓴다
   //   (서관 안에서 남동쪽을 보면 뒤뜰 far 층이 창·벽 너머로 +13k 더해져 15만을 넘었다 — 09-24 리뷰)
+  const _tc = new THREE.Color(), _tc2 = new THREE.Color();
   function tree(x, z, s = 1, lite = false) {
     const y = tY(z, x), h = hash2(x, z), ry = h * Math.PI * 2, F = lite ? { far: true, seg: 5 } : { far: true };
     colliders.push({ x0: x-0.21*s, x1: x+0.21*s, y0: y, y1: y+12, z0: z-0.21*s, z1: z+0.21*s });   // [integ 09-25] 0.25 → 0.21: 줄기(밑 반지름 0.22 · 7각 안쪽 0.2)보다 넓으면 큰 나무(s 3.4)에서 줄기 앞 보이지 않는 벽
@@ -388,7 +395,9 @@ export function buildWorld(scene) {
     const cl = [[0, 2.75, 0, 1.3, 1.0], [0.8, 2.45, 0.2, 0.9, 0.8], [-0.7, 2.5, -0.3, 0.95, 0.8], [0.15, 3.45, -0.15, 0.95, 0.8], [-0.2, 2.35, 0.75, 0.8, 0.7]];
     cl.forEach(([ox, oy, oz, r, sy], i) => {
       const c = Math.cos(ry), sn = Math.sin(ry), wx = x + (ox*c - oz*sn)*s, wz = z + (ox*sn + oz*c)*s;
-      dBlob(r*s, r*sy*s, r*s, G[(i + Math.floor(h*3)) % 3], wx, y + oy*s, wz, { far: true, chunky: lite, ry: ry + i, jitter: lite ? 0.16 : 0.12 });
+      // GFX-2: 위아래 명암 — 아래 덩어리는 짙게(× 0.86), 맨 위 덩어리는 햇빛 받은 연두(0x6aa85a 쪽)로
+      _tc.set(G[(i + Math.floor(h*3)) % 3]); if (i === 3) _tc.lerp(_tc2.set(0x6aa85a), 0.55); else if (oy < 2.6) _tc.multiplyScalar(0.86);
+      dBlob(r*s, r*sy*s, r*s, _tc.getHex(), wx, y + oy*s, wz, { far: true, chunky: lite, ry: ry + i, jitter: lite ? 0.16 : 0.12 });
     });
   }
 
@@ -688,11 +697,29 @@ export function buildWorld(scene) {
     const s = PATDEF[kind][0];
     patPush(kind, [[x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1]], [[x0/s, -z0/s], [x1/s, -z0/s], [x1/s, -z1/s], [x0/s, -z1/s]], [0, down ? -1 : 1, 0], tint);
   }
+  // GFX-2: 큰 바닥을 칸으로 나눠 칸 꼭짓점마다 색 얼룩(부드러운 값 노이즈) — 넓은 잔디·운동장 흙이 한 톤 판으로 보이지 않게. 무늬(uv)·높이는 patQuad와 같다
+  //  tintFn(x, z) → 곱할 [r, g, b](1 근처)
+  const vnoise = (x, z) => { const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz, u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
+    const a = hash2(ix, iz), b = hash2(ix + 1, iz), c = hash2(ix, iz + 1), d = hash2(ix + 1, iz + 1); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; };
+  //  skip(ax0, ax1, az0, az1) → true면 그 칸은 빼고 넘어간다(다른 바닥이 통째로 덮는 칸)
+  function patGrid(kind, x0, x1, z0, z1, y, cell, tintFn, skip = null) {
+    const nx = Math.max(1, Math.round((x1 - x0) / cell)), nz = Math.max(1, Math.round((z1 - z0) / cell));
+    for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+      const ax0 = x0 + (x1 - x0) * i / nx, ax1 = x0 + (x1 - x0) * (i + 1) / nx, az0 = z0 + (z1 - z0) * j / nz, az1 = z0 + (z1 - z0) * (j + 1) / nz;
+      if (skip && skip(ax0, ax1, az0, az1)) continue;
+      patQuad(kind, ax0, ax1, az0, az1, y);
+      const P = PAT.get(kind), n = P.pos.length;
+      for (let k = n - 18; k < n; k += 3) { const f = tintFn(P.pos[k], P.pos[k + 2]); P.col[k] *= f[0]; P.col[k + 1] *= f[1]; P.col[k + 2] *= f[2]; }
+    }
+  }
   // 벽 면 무늬 — ax='x': z=line 평면(a=x), ax='z': x=line 평면(a=z). face = 바라보는 쪽 부호
   function patWall(kind, ax, a0, a1, y0, y1, line, face, tint = 0xffffff) {
     const s = PATDEF[kind][0];
     const pts = ax === 'x' ? [[a0, y0, line], [a1, y0, line], [a1, y1, line], [a0, y1, line]] : [[line, y0, a0], [line, y0, a1], [line, y1, a1], [line, y1, a0]];
     patPush(kind, pts, [[a0/s, y0/s], [a1/s, y0/s], [a1/s, y1/s], [a0/s, y1/s]], ax === 'x' ? [0, 0, face] : [face, 0, 0], tint);
+    const lo = Math.min(y0, y1), fl = aoFloor(lo);   // GFX-2 접지 음영(addBox 벽 조각과 같은 식)
+    if (!PATDEF[kind][2] && fl !== null && Math.max(y0, y1) <= fl + FH + 0.01) { const P = PAT.get(kind), n = P.pos.length;
+      for (let k = n - 18; k < n; k += 3) { const f = aoF(P.pos[k + 1], fl); P.col[k] *= f; P.col[k + 1] *= f; P.col[k + 2] *= f; } }
   }
   // 방 바닥(벽 안쪽 면 사이를 정확히 — 문턱은 wallRun이 채운다)
   const floorQ = (kind, x0, x1, z0, z1, y = 0, tint) => patQuad(kind, x0, x1, z0, z1, y + 0.012, false, tint);
@@ -1287,14 +1314,20 @@ export function buildWorld(scene) {
   }
 
   // ================= 지형 (LAYOUT-3 · 세 높이: 건물 0 · 앞뜰 YARD · 운동장 FIELD) =================
-  patQuad('grass', -190, 170, -150, 130, FIELD - 0.012);                 // 바깥 잔디(운동장 흙보다 1.2cm 아래 — 먼 거리 깊이 정밀도 여유)
+  patGrid('grass', -190, 170, -150, 130, FIELD - 0.012, 16, (x, z) => { const n = vnoise(x / 23, z / 23) - 0.5, m = vnoise(x / 9 + 40, z / 9) - 0.5;   // 바깥 잔디(운동장 흙보다 1.2cm 아래 — 먼 거리 깊이 정밀도 여유)
+    return [1 + n * 0.16 + m * 0.05, 1 + n * 0.1 + m * 0.06, 1 + n * 0.02]; },                            // GFX-2: 큰 얼룩(연두 ↔ 짙은 초록)
+    (a0, a1, b0, b1) => a0 >= TR3.westX && a1 <= SCHOOL.field.x[1] && b0 >= SCHOOL.field.z[0] && b1 <= SCHOOL.field.z[1]);   // 운동장 흙이 통째로 덮는 칸은 뺀다(멀리서 흙 밑 잔디 칸이 띠로 비쳤다)
   // 학교 부지(YARD) = 앞뜰 남쪽 끝(TERR_Z) 북쪽 전체 + 체육관 대지(서쪽 띠). 두 상자는 z=TERR_Z에서 맞대기만(윗면 겹침 0)
   const SITE = 0xc2bcb0;
   addBox(150, YARD - FIELD, TERR_Z + 90, SITE, -13, FIELD, (TERR_Z - 90) / 2);                                   // x -88~62 · z -90~TERR_Z
   addBox(TR3.westX + 88, YARD - FIELD, TR3.westZ - TERR_Z, SITE, (TR3.westX - 88) / 2, FIELD, (TERR_Z + TR3.westZ) / 2);   // 체육관 대지(x < westX) 남쪽 연장
   { const F = SCHOOL.field;
-    patQuad('dirt', TR3.westX, F.x[1], F.z[0], F.z[1], FIELD);
-    patQuad('dirt', F.x[0], TR3.westX, TR3.westZ, F.z[1], FIELD);
+    // GFX-2: 운동장 흙 얼룩 — 가운데·많이 밟는 자리는 밝고 마른 흙, 가장자리는 살짝 짙게 + 부드러운 얼룩
+    const FX = (F.x[0] + F.x[1]) / 2, FZc = (F.z[0] + F.z[1]) / 2, FW = (F.x[1] - F.x[0]) / 2, FD = (F.z[1] - F.z[0]) / 2;
+    const dirtT = (x, z) => { const e = Math.max(Math.abs(x - FX) / FW, Math.abs(z - FZc) / FD), n = vnoise(x / 11, z / 11) - 0.5, w = 1 + 0.05 - 0.1 * Math.min(1, e * e) + n * 0.09;
+      return [w, w * (1 - n * 0.012), w * (1 - n * 0.03)]; };
+    patGrid('dirt', TR3.westX, F.x[1], F.z[0], F.z[1], FIELD, 4, dirtT);
+    patGrid('dirt', F.x[0], TR3.westX, TR3.westZ, F.z[1], FIELD, 4, dirtT);
     // 체육관 대지 옹벽(돌) 겉무늬 — 동면(운동장 쪽)·남면
     // (동면 돌 옹벽은 운동장 북서 모서리 흙 비탈 위로 드러난 세모만 — 운동장 북서 모서리 블록)
     patWall('stoneW', 'x', -86, SCHOOL.gymStairs.x[0], FIELD, YARD, TR3.westZ + 0.012, 1);   // 서쪽 볼벽 없음 — 계단 서끝까지(영상 g_087·g_088.5)
@@ -5179,7 +5212,7 @@ export function buildWorld(scene) {
     g.setAttribute('color', new THREE.Float32BufferAttribute(P.col, 3));
     g.computeVertexNormals(); g.computeBoundingSphere();
     const m = new THREE.Mesh(g, basic ? new THREE.MeshBasicMaterial({ map: tex, vertexColors: true }) : new THREE.MeshLambertMaterial({ map: tex, vertexColors: true }));
-    m.matrixAutoUpdate = false; scene.add(m);
+    m.matrixAutoUpdate = false; m.userData.pat = kind; scene.add(m);   // GFX-2: main.js가 바깥 바닥 무늬만 그림자를 받게 고른다
   }
   if (lampPos.length) {   // 조명 — 한 메시(조명 무시 재질)
     const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lampPos, 3)); lg.computeVertexNormals(); lg.computeBoundingSphere();

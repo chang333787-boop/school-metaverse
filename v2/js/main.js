@@ -1,7 +1,7 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=3';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { buildWorld } from './world.js?v=118';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=119';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=10';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=5';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=6';       // MAP-API-1: 구역 계약표·출발점·표지점
@@ -14,7 +14,7 @@ renderer.setPixelRatio(DPR);                       // 네이티브(비정수 업
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.autoUpdate = false;
-renderer.shadowMap.needsUpdate = true;
+renderer.shadowMap.needsUpdate = false;   // GFX-2: 굽기는 setTime → bakeShadows가 한다
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.12;
 
@@ -29,7 +29,7 @@ const sun = new THREE.DirectionalLight(0xfff0cf, 3.1);
 sun.position.set(60, 95, 45);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 95, bottom: -95, near: 10, far: 260 });
+Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 95, bottom: -95, near: 20, far: 340 }); sun.shadow.camera.updateProjectionMatrix();   // GFX-2: 해는 원점에서 170m(setTime) · 투영 행렬을 다시 만들어야 범위가 먹는다(예전엔 기본 ±5m 그대로였다)
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
 scene.add(sun);
 
@@ -50,12 +50,21 @@ const warmDone = (() => { try {
    B({ map: T, vertexColors: true }), L({ map: T, vertexColors: true }), L({ map: T, transparent: true, side: D }), L({ map: T, vertexColors: true, transparent: true, side: D }),
    B({ vertexColors: true, fog: false })].forEach(m => add(m));   // (CHAR-2: 캐릭터가 매끈한 음영이 되어 '정점색+평면 음영' 조합은 뺌 — L({vertexColors}) 하나로 같이 쓴다)
   add(L({}), true, true); add(L({ transparent: true }), true); add(L({}), true);
+  // GFX-2: 그림자를 받는 바깥 바닥(무늬 × 정점색 · receiveShadow) · 발밑 둥근 그림자(무늬 · 투명) · 하늘 돔(정점색 · 안개·톤매핑 무시)
+  { const m = L({ map: T, vertexColors: true }); mats.push(m); const o = new THREE.Mesh(G, m); o.receiveShadow = true; s.add(o); }
+  add(B({ map: T, transparent: true, depthWrite: false })); add(B({ vertexColors: true, fog: false, toneMapped: false, depthWrite: false }));
   renderer.compile(s, camera, scene);
   return () => { mats.forEach(m => m.dispose()); G.dispose(); T.dispose(); };
 } catch (e) { return () => {}; } })();
 const TIMING = { buildMs: performance.now(), firstFrameMs: null };
 const world = buildWorld(scene);
 TIMING.buildMs = performance.now() - TIMING.buildMs;
+// GFX-2(09-26 "그래픽 계속 발전"): 정적 월드 그림자 — 합친 정적 청크(나무·건물·골대 등 st)가 그림자를 던지고, 바깥 바닥 무늬 층만 받는다.
+//  건물 청크는 받지 않는다(지붕 그림자가 교실 바닥·벽에 떨어지면 실내가 어두워진다). near 디테일(사람·책상)은 던지지 않는다(굽는 순간 카메라 거리로 켜고 끈다).
+//  그림자는 시간대를 바꿀 때만 한 번 굽는다(bakeShadows) — 매 프레임 비용 = 받는 바닥 픽셀 샘플링뿐(삼각형·드로우콜 +0)
+const SHADOW_RECV = new Set(['grass', 'dirt', 'pave', 'paveE', 'paveF', 'paveG', 'asph', 'gravel', 'chip', 'ilock', 'sand', 'hop', 'brick']);
+const ST_MESH = [];
+scene.traverse(o => { if (o.userData.st) { o.castShadow = true; ST_MESH.push(o); } else if (o.userData.pat && SHADOW_RECV.has(o.userData.pat)) o.receiveShadow = true; });
 let MAP = null;   // MAP-API-1 지도 API — loop() 위에서 만든다. setTime('day')가 먼저 돌므로 참조는 전부 MAP?.(TDZ 함정)
 
 // ---------- 플레이어 (AABB 전용 — 레이캐스트 0) ----------
@@ -67,6 +76,15 @@ const pg = new THREE.Group();
 const KID = buildKid(THREE, 'b');
 pg.add(KID.rig);
 scene.add(pg);
+KID.rig.traverse(o => { o.castShadow = false; });   // GFX-2: 그림자는 굽기만 하므로 캐릭터 그림자는 구운 자리에 멈춰 남는다 — 대신 발밑 둥근 그림자(아래 blob)
+// GFX-2: 발밑 둥근 그림자 — 부드러운 원(무늬 알파 · 조명 무시 · 깊이 안 씀). 매 프레임 발밑 바닥 높이(groundAt)에, 뛰면 작고 옅어진다
+const blob = (() => {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g = cv.getContext('2d'), gr = g.createRadialGradient(32, 32, 4, 32, 32, 31);
+  gr.addColorStop(0, 'rgba(20,24,34,0.42)'); gr.addColorStop(0.55, 'rgba(20,24,34,0.3)'); gr.addColorStop(1, 'rgba(20,24,34,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tx, transparent: true, depthWrite: false }));
+  m.renderOrder = 1; scene.add(m); return m;
+})();
 // 걷기·점프·앉기 동작: 이동 속도로 팔다리를 흔들고(반대쪽끼리), 공중이면 팔을 들고, 앉으면 무릎을 굽혀 의자 위에(몸을 앞으로 0.42·아래로 0.1)
 let kidPh = 0, kidX = P.x, kidZ = P.z, kidT = 0;
 function kidTick(dt) {
@@ -197,6 +215,8 @@ function step(dt) {
   const indoor = ceilAt(P.x, P.z, P.y + 1.6, P.y + 5.5) !== null;
   const tFov = camFirst ? 66 : indoor ? 60 : 52;
   if (Math.abs(camera.fov - tFov) > 0.05) { camera.fov += (tFov - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); }
+  { const gy = groundAt(P.x, P.z, P.y + 0.05), h = Math.max(0, P.y - gy), k = Math.max(0.35, 1 - h * 0.35);   // GFX-2 발밑 그림자
+    blob.position.set(P.x, gy + 0.045, P.z); blob.scale.setScalar(0.95 * k); blob.material.opacity = k; blob.visible = !ACT.sit && h < 3; }
   pg.visible = !camFirst && camD > 0.45;   // CAM-3: 벽에 붙어 카메라가 머리 바로 뒤까지 오면 캐릭터를 숨긴다(1인칭처럼)
   if (camFirst) {
     const pitch = camPitch - 0.3, ey = P.y + 1.5 - (ACT.sit ? 0.42 : 0);
@@ -293,7 +313,7 @@ const SHOT = (() => {
 })();
 function applyShot() {
   if (!SHOT.hid) { document.querySelectorAll('.chip').forEach(c => c.style.display = 'none'); SHOT.hid = true; }
-  pg.visible = false;
+  pg.visible = false; blob.visible = false;
   camera.fov = SHOT.f; camera.updateProjectionMatrix();
   camera.position.set(SHOT.x, SHOT.y, SHOT.z);
   camera.lookAt(SHOT.x + Math.sin(SHOT.h) * Math.cos(SHOT.p), SHOT.y + Math.sin(SHOT.p), SHOT.z - Math.cos(SHOT.h) * Math.cos(SHOT.p));
@@ -531,8 +551,38 @@ function doorCheck() {
 const TIMES = {
   day:    { label: '☀️ 낮',  bg: 0xcfe9f8, near: 80, far: 260, sky: 0xc9dcf0, gnd: 0xb08a5e, hi: 1.4,  sc: 0xfff0cf, si: 3.1, sp: [60, 95, 45],   exp: 1.12 },
   sunset: { label: '🌇 노을', bg: 0xf3c193, near: 60, far: 230, sky: 0xf4cba4, gnd: 0x8a6a4e, hi: 1.15, sc: 0xffb066, si: 2.4, sp: [-88, 34, 26],  exp: 1.06 },
-  night:  { label: '🌙 밤',  bg: 0x1f2b3f, near: 40, far: 175, sky: 0x35485f, gnd: 0x1d2430, hi: 0.6,  sc: 0xa8bcda, si: 0.75, sp: [-30, 80, -60], exp: 1.0 },
+  night:  { label: '🌙 밤',  bg: 0x1f2b3f, near: 40, far: 175, sky: 0x5a73a0, gnd: 0x2c3444, hi: 1.15, sc: 0xa8bcda, si: 0.9, sp: [-30, 80, -60], exp: 1.12 },
 };
+// GFX-2: 밤 — 해가 안 비치는 쪽 겉벽·나무가 새까만 실루엣이던 것을 푸른 달빛으로(하늘빛 0x35485f·0.6 → 0x5a73a0·1.15). 노을 그늘도 덜 탁하게(1.15 → 1.3)
+TIMES.sunset.hi = 1.3;
+// GFX-2: 하늘 돔 — 단색 배경 대신 지평선(= 안개색 — 먼 땅과 이어진다) → 천정(짙은 하늘색)으로. 정점색 한 메시(조명·안개·톤매핑 무시 — 안개도 톤매핑 뒤에 섞이니 지평선이 배경색과 같다)
+//  카메라를 따라다닌다(skyTick). 반지름 290 < 카메라 far 320. 안쪽을 보게 감는 방향을 뒤집었다(BackSide 셰이더를 따로 만들지 않게)
+const SKY_TOP = { day: 0x86bfee, sunset: 0xa8a2cf, night: 0x0b1322 };
+const skyDome = (() => {
+  const g = new THREE.SphereGeometry(290, 20, 8), ix = g.index.array;
+  for (let i = 0; i < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 3), 3));
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, toneMapped: false, depthWrite: false }));
+  m.frustumCulled = false; m.renderOrder = -1; scene.add(m); return m;
+})();
+function skyPaint(k) {
+  const P = skyDome.geometry.attributes.position, C = skyDome.geometry.attributes.color, lo = new THREE.Color(TIMES[k].bg), hi = new THREE.Color(SKY_TOP[k]), c = new THREE.Color();
+  const sd = new THREE.Vector3(...TIMES[k].sp).setY(0).normalize(), glow = new THREE.Color(0xffc48a);
+  for (let i = 0; i < P.count; i++) { const x = P.getX(i) / 290, y = P.getY(i) / 290, z = P.getZ(i) / 290, t = Math.min(1, Math.max(0, y));
+    c.copy(lo).lerp(hi, Math.pow(t, 0.7));
+    if (k === 'sunset') { const a = Math.max(0, (x * sd.x + z * sd.z) / (Math.hypot(x, z) || 1)); c.lerp(glow, a * a * a * Math.max(0, 1 - t * 2.2) * 0.55); }   // 해 쪽 지평선 주황빛
+    C.setXYZ(i, c.r, c.g, c.b); }
+  C.needsUpdate = true;
+}
+// GFX-2: 그림자 굽기 — 정적 청크는 매 프레임 절두체로 숨기므로(OCC.st) 굽는 순간만 다 켜고, 땅속 먼 곳을 보는 굽기 카메라로 한 번 그린다
+//  (화면 패스는 절두체 밖이라 거의 0 — 그림자 패스는 해 카메라 절두체로 따로 거른다. three 그림자 패스는 '화면 카메라 층'을 보므로 층으로는 못 가린다)
+const bakeCam = new THREE.PerspectiveCamera(1, 1, 0.1, 0.2); bakeCam.position.set(0, -5000, 0); bakeCam.lookAt(0, -6000, 0); bakeCam.updateMatrixWorld();
+function bakeShadows() {
+  const st = ST_MESH, vis = st.map(m => m.visible);
+  st.forEach(m => { m.visible = true; });
+  renderer.shadowMap.needsUpdate = true; renderer.render(scene, bakeCam);
+  st.forEach((m, i) => { m.visible = vis[i]; });
+}
 // 밤하늘 별(점 500개 · 안개 무시) + 밤엔 창 유리가 따뜻하게 빛난다(교실 불 켜진 느낌) — 빛(Light)은 추가하지 않는다
 const stars = (() => {
   const n = 500, pos = new Float32Array(n * 3);
@@ -573,6 +623,7 @@ const flagBase = world.flag ? Float32Array.from(world.flag.geometry.attributes.p
 let flagT = 0;
 function skyTick(dt) {
   clouds.position.set(camera.position.x, 0, camera.position.z); clouds.rotation.y += dt * 0.004;
+  skyDome.position.copy(camera.position);
   if (!flagBase) return;
   flagT += dt; const P = world.flag.geometry.attributes.position, A = P.array;
   for (let i = 0; i < P.count; i++) { const x = flagBase[i*3], y = flagBase[i*3+1], u = (x + 0.7) / 1.4;
@@ -592,9 +643,10 @@ function setTime(k) {
   scene.background.setHex(t.bg);
   scene.fog.color.setHex(t.bg); scene.fog.near = t.near; scene.fog.far = t.far;
   hemi.color.setHex(t.sky); hemi.groundColor.setHex(t.gnd); hemi.intensity = t.hi;
-  sun.color.setHex(t.sc); sun.intensity = t.si; sun.position.set(t.sp[0], t.sp[1], t.sp[2]);
+  sun.color.setHex(t.sc); sun.intensity = t.si; sun.position.set(t.sp[0], t.sp[1], t.sp[2]).setLength(170);   // GFX-2: 그림자 카메라를 월드 밖으로(노을 해 98m 자리면 서쪽 끝이 그 뒤 — 방향은 같다)
   renderer.toneMappingExposure = t.exp;
-  renderer.shadowMap.needsUpdate = true;
+  skyPaint(k);
+  bakeShadows();
   stars.visible = k === 'night';
   clouds.material.color.setHex(CLOUD_TINT[k]);
   if (world.glassMesh) { const gmat = world.glassMesh.material; gmat.emissive.setHex(k === 'night' ? 0xb08a3e : k === 'sunset' ? 0x3a2a14 : 0x000000); gmat.opacity = k === 'night' ? 0.62 : 0.32; }
