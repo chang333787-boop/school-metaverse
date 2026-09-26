@@ -15,8 +15,10 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.needsUpdate = false;   // GFX-2: 굽기는 setTime → bakeShadows가 한다
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
+// GFX-3(09-26 "그래픽 10점으로"): ACES → Neutral(r170 · Khronos PBR Neutral) — ACES는 채도를 눌러 노란 골대·버스·파랑/주황 기둥·빨간 지붕이 탁했다.
+//  Neutral은 밝은 부분만 부드럽게 접고 색상·채도를 그대로 둔다(AgX는 더 탁해서 뺐다). ACES는 노출에 1/0.6을 곱하므로 시간대 exp를 다시 맞췄다(TIMES)
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1.05;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xcfe9f8);
@@ -40,6 +42,24 @@ await new Promise(r => { requestAnimationFrame(() => setTimeout(r)); setTimeout(
 //  재질 조합(종류·무늬·알파 자름·정점색·평면 음영·양면·투명·인스턴스·인스턴스 색)이 첫 화면의 실제 재질(world.js·캐릭터·문·구름)과 같으면 three가 같은 프로그램을 그대로 쓴다.
 //  첫 프레임 뒤 버린다(warmDone — 버린 재질만 쓰던 프로그램은 같이 지워진다). 그래서 첫 화면에 없는 조합(밤 별 Points·필름 문 인스턴스 MeshBasic·
 //  비인스턴스 Lambert 기본 — 멀리 있거나 밤·상호작용 때만)은 넣지 않는다(occ_merge 로딩 리뷰: 짓고 곧 버리던 3개 — 첫 화면 프로그램 목록 = 미리 짓지 않은 판과 같음).
+// GFX-3: 창 유리 — 밖에서 보면 '뚫린 구멍'이던 것을 유리로 읽히게(한 줄 셰이더 · 텍스처·패스·드로우콜 0):
+//  ① 비치는 하늘/땅 — 시선을 유리 면에 반사한 방향이 위면 하늘빛, 아래면 땅빛(눈높이보다 위 창은 하늘이 비친다) ② 비스듬할수록 더 비치고 더 불투명(프레넬)
+//  ③ 만화식 사선 반짝임 두 줄(월드 좌표 — 창마다 같은 자리). 정면은 여전히 들여다보인다. 색·세기는 시간대마다(setTime · 밤엔 약하게 — 불 켜진 창 빛을 가리지 않게)
+const GLASS_U = { uSkyRef: { value: new THREE.Color(0x8fc3ea) }, uGndRef: { value: new THREE.Color(0x5d6b73) }, uFr: { value: 0.6 } };
+function glassFx(sh) {
+  Object.assign(sh.uniforms, GLASS_U);
+  sh.fragmentShader = 'uniform vec3 uSkyRef;\nuniform vec3 uGndRef;\nuniform float uFr;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `
+  vec3 gV = normalize(-vViewPosition), gN = normalize(vNormal);
+  vec3 gWd = (vec4(gV, 0.0) * viewMatrix).xyz, gWn = (vec4(gN, 0.0) * viewMatrix).xyz, gP = cameraPosition + gWd * length(vViewPosition);
+  float gC = 1.0 - abs(dot(gV, gN)), gFr = uFr * (0.3 + 0.7 * gC * gC * gC);
+  vec3 gRef = mix(uGndRef, uSkyRef, smoothstep(-0.2, 0.3, reflect(gWd, gWn).y));
+  float gS = fract((gP.x + gP.z + gP.y) * 0.21), gW = fwidth(gS) + 0.004;   // 폭 = 화면 한 픽셀 이상(멀리서 반짝임·계단 방지)
+  float gB = (smoothstep(0.2 - gW, 0.2 + gW, gS) - smoothstep(0.26 - gW, 0.26 + gW, gS)) + 0.6 * (smoothstep(0.31 - gW, 0.31 + gW, gS) - smoothstep(0.34 - gW, 0.34 + gW, gS));
+  gB *= 1.0 - smoothstep(25.0, 60.0, length(vViewPosition));   // 멀면 줄은 옅게(하늘빛만)
+  outgoingLight = mix(outgoingLight, gRef, gFr) + gB * uFr * 0.45;
+  diffuseColor.a = clamp(mix(diffuseColor.a, 0.9, gFr) + gB * uFr * 0.35, 0.0, 1.0);
+#include <opaque_fragment>`);
+}
 const warmDone = (() => { try {
   const T = new THREE.DataTexture(new Uint8Array(4), 1, 1), G = new THREE.BufferGeometry(), s = new THREE.Scene(), mats = []; T.needsUpdate = true;
   G.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3)); G.setAttribute('normal', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 0, 0, 1], 3));
@@ -49,22 +69,27 @@ const warmDone = (() => { try {
   [B({ map: T, alphaTest: 0.5 }), B({}), L({ map: T }), L({ map: T, alphaTest: 0.5, side: D }), L({ map: T, side: D }), L({ transparent: true }), L({ vertexColors: true }),
    B({ map: T, vertexColors: true }), L({ map: T, vertexColors: true }), L({ map: T, transparent: true, side: D }), L({ map: T, vertexColors: true, transparent: true, side: D }),
    B({ vertexColors: true, fog: false })].forEach(m => add(m));   // (CHAR-2: 캐릭터가 매끈한 음영이 되어 '정점색+평면 음영' 조합은 뺌 — L({vertexColors}) 하나로 같이 쓴다)
-  add(L({}), true, true); add(L({ transparent: true }), true); add(L({}), true);
+  add(L({}), true, true); { const m = L({ transparent: true }); m.onBeforeCompile = glassFx; add(m, true); } add(L({}), true);   // GFX-3: 유리문(인스턴스)도 프레넬
   // GFX-2: 그림자를 받는 바깥 바닥(무늬 × 정점색 · receiveShadow) · 발밑 둥근 그림자(무늬 · 투명) · 하늘 돔(정점색 · 안개·톤매핑 무시)
   { const m = L({ map: T, vertexColors: true }); mats.push(m); const o = new THREE.Mesh(G, m); o.receiveShadow = true; s.add(o); }
   add(B({ map: T, transparent: true, depthWrite: false })); add(B({ vertexColors: true, fog: false, toneMapped: false, depthWrite: false }));
+  { const m = L({ transparent: true, depthWrite: false }); m.onBeforeCompile = glassFx; add(m); }   // GFX-3: 창 유리(프레넬) — 같은 onBeforeCompile이면 같은 프로그램
   renderer.compile(s, camera, scene);
   return () => { mats.forEach(m => m.dispose()); G.dispose(); T.dispose(); };
 } catch (e) { return () => {}; } })();
 const TIMING = { buildMs: performance.now(), firstFrameMs: null };
 const world = buildWorld(scene);
 TIMING.buildMs = performance.now() - TIMING.buildMs;
+if (world.glassMesh) { world.glassMesh.material.onBeforeCompile = glassFx; world.glassMesh.material.needsUpdate = true; }
 // GFX-2(09-26 "그래픽 계속 발전"): 정적 월드 그림자 — 합친 정적 청크(나무·건물·골대 등 st)가 그림자를 던지고, 바깥 바닥 무늬 층만 받는다.
 //  건물 청크는 받지 않는다(지붕 그림자가 교실 바닥·벽에 떨어지면 실내가 어두워진다). near 디테일(사람·책상)은 던지지 않는다(굽는 순간 카메라 거리로 켜고 끈다).
 //  그림자는 시간대를 바꿀 때만 한 번 굽는다(bakeShadows) — 매 프레임 비용 = 받는 바닥 픽셀 샘플링뿐(삼각형·드로우콜 +0)
-const SHADOW_RECV = new Set(['grass', 'dirt', 'pave', 'paveE', 'paveF', 'paveG', 'asph', 'gravel', 'chip', 'ilock', 'sand', 'hop', 'brick']);
+const SHADOW_RECV = new Set(['grass', 'dirt', 'pave', 'paveE', 'paveF', 'paveG', 'asph', 'gravel', 'chip', 'ilock', 'sand', 'hop', 'brick', 'kidHop', 'redRd']);   // GFX-3: 사방치기·정문 붉은 포장도 받는다
 const ST_MESH = [];
 scene.traverse(o => { if (o.userData.st) { o.castShadow = true; ST_MESH.push(o); } else if (o.userData.pat && SHADOW_RECV.has(o.userData.pat)) o.receiveShadow = true; });
+// GFX-3: 바깥 near 디테일 청크(차·놀이기구·골대·벤치·농구대·바깥에 선 사람·아랫단 띠)도 굽는 순간만 켜서 그림자를 던진다 — '떠 보이던' 작은 것이 땅에 붙는다.
+//  굽기는 카메라와 무관(해 카메라 절두체) · 매 프레임 비용 0(굽기만). 실내 청크('i')는 던지지 않는다(지붕 아래라 받는 바닥이 없다)
+for (const d of world.details) if (!d.inside) { d.mesh.castShadow = true; ST_MESH.push(d.mesh); }
 let MAP = null;   // MAP-API-1 지도 API — loop() 위에서 만든다. setTime('day')가 먼저 돌므로 참조는 전부 MAP?.(TDZ 함정)
 
 // ---------- 플레이어 (AABB 전용 — 레이캐스트 0) ----------
@@ -447,6 +472,7 @@ hintEl.addEventListener('click', e => { e.stopPropagation(); if (hotNear) act(ho
 const doorMat = new THREE.MeshLambertMaterial({ color: 0xffffff });   // 색은 문마다(instanceColor) — 기본 나무색, 유치원 노랑·사랑반 분홍
 // 유리문(현관·측문·도서관·나래반·유치원 정문·뒷통로 — 실사 확인분): 반투명 하늘색
 const glassMat = new THREE.MeshLambertMaterial({ color: 0xbfe3ee, transparent: true, opacity: 0.42, depthWrite: false });
+glassMat.onBeforeCompile = glassFx;   // GFX-3: 창 유리와 같은 프레넬(하늘빛·비스듬하면 더 불투명)
 // DOOR-INST(09-23): 문짝 80개가 각각 메시(=드로우콜 80)였다 → 재질별 InstancedMesh 4개(나무·유리·문창·손잡이)로.
 // 나무 문엔 위쪽 작은 창(두께 0.18 = 문 면에서 1cm 튀어나옴)과 손잡이(0.22)를 단다(교실 미닫이문 실사).
 const DOORS = world.doors.map(d => {
@@ -555,6 +581,8 @@ const TIMES = {
 };
 // GFX-2: 밤 — 해가 안 비치는 쪽 겉벽·나무가 새까만 실루엣이던 것을 푸른 달빛으로(하늘빛 0x35485f·0.6 → 0x5a73a0·1.15). 노을 그늘도 덜 탁하게(1.15 → 1.3)
 TIMES.sunset.hi = 1.3;
+// GFX-3: Neutral 노출(ACES 1.12/1.06/1.12와 같은 밝기 — 밤은 살짝 더 밝게 읽히게)
+TIMES.day.exp = 1.05; TIMES.sunset.exp = 1.12; TIMES.night.exp = 1.15;
 // GFX-2: 하늘 돔 — 단색 배경 대신 지평선(= 안개색 — 먼 땅과 이어진다) → 천정(짙은 하늘색)으로. 정점색 한 메시(조명·안개·톤매핑 무시 — 안개도 톤매핑 뒤에 섞이니 지평선이 배경색과 같다)
 //  카메라를 따라다닌다(skyTick). 반지름 290 < 카메라 far 320. 안쪽을 보게 감는 방향을 뒤집었다(BackSide 셰이더를 따로 만들지 않게)
 const SKY_TOP = { day: 0x86bfee, sunset: 0xa8a2cf, night: 0x0b1322 };
@@ -580,8 +608,10 @@ const bakeCam = new THREE.PerspectiveCamera(1, 1, 0.1, 0.2); bakeCam.position.se
 function bakeShadows() {
   const st = ST_MESH, vis = st.map(m => m.visible);
   st.forEach(m => { m.visible = true; });
+  const t0 = performance.now();
   renderer.shadowMap.needsUpdate = true; renderer.render(scene, bakeCam);
   st.forEach((m, i) => { m.visible = vis[i]; });
+  TIMING.bakeMs = +(performance.now() - t0).toFixed(2);   // GFX-3: 굽기 CPU 비용(시간대 전환 1회)
 }
 // 밤하늘 별(점 500개 · 안개 무시) + 밤엔 창 유리가 따뜻하게 빛난다(교실 불 켜진 느낌) — 빛(Light)은 추가하지 않는다
 const stars = (() => {
@@ -631,6 +661,7 @@ function skyTick(dt) {
     A[i*3+1] = y - 0.05 * u * u; }
   P.needsUpdate = true; world.flag.geometry.computeVertexNormals();
 }
+const GLASS_SKY = { day: [0x8fc3ea, 0x5d6b73, 0.6], sunset: [0xe9b995, 0x5e4a44, 0.55], night: [0x1c2a44, 0x0c1018, 0.22] };   // GFX-3: 유리에 비치는 [하늘, 땅, 세기]
 const ORDER = ['day', 'sunset', 'night'];
 let timeKey = 'day';
 const timeBtn = document.createElement('div');
@@ -649,7 +680,8 @@ function setTime(k) {
   bakeShadows();
   stars.visible = k === 'night';
   clouds.material.color.setHex(CLOUD_TINT[k]);
-  if (world.glassMesh) { const gmat = world.glassMesh.material; gmat.emissive.setHex(k === 'night' ? 0xb08a3e : k === 'sunset' ? 0x3a2a14 : 0x000000); gmat.opacity = k === 'night' ? 0.62 : 0.32; }
+  if (world.glassMesh) { const gmat = world.glassMesh.material; gmat.emissive.setHex(k === 'night' ? 0xb08a3e : k === 'sunset' ? 0x3a2a14 : 0x000000); gmat.opacity = k === 'night' ? 0.62 : 0.32;
+    GLASS_U.uSkyRef.value.setHex(GLASS_SKY[k][0]); GLASS_U.uGndRef.value.setHex(GLASS_SKY[k][1]); GLASS_U.uFr.value = GLASS_SKY[k][2]; }
   timeBtn.textContent = t.label;
   MAP?.emit('time', k);
   return k;
