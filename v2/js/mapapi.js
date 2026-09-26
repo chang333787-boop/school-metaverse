@@ -144,6 +144,10 @@ export function createMapApi(host, NAV, META) {
     lookAt(target) { const r = resolve(target); if (r) setHeading(Math.atan2(r.x - P.x, -(r.z - P.z)) / R2D); },
     unstick: () => unstick(),                                     // 끼였을 때 가장 가까운 걷는 칸으로(3m 안)
     freeze(on2 = true) { CTRL.frozen = !!on2; },
+    // GAME-WG(09-26): 몸만 방위 h°로 돌려 세운다(카메라는 그대로 — 물총 겨눔). null = 걷는 방향으로 돌아감. 게임이 멈추면 자동으로 null
+    aim(h) { CTRL.face = h == null ? null : Math.atan2(Math.sin(h * R2D), -Math.cos(h * R2D)); },
+    // GAME-WG: 3인칭 카메라를 오른쪽으로 m만큼 비켜 세움(어깨 너머 · -1~1 · 0 = 끔). 옆벽 검사는 하지 않으니 게임이 트인 곳에서만. 게임이 멈추면 0
+    shoulder(m = 0) { CTRL.shoulder = Math.max(-1, Math.min(1, +m || 0)); },
     speed(k = 1) { CTRL.speed = Math.max(0.5, Math.min(2, k)); },
   };
 
@@ -392,7 +396,7 @@ export function createMapApi(host, NAV, META) {
     // GAME-FIND-1: 게임이 스스로 뗀 항목(도착한 표식·끈 리본·답한 창)은 정리 목록에서도 빠진다 — '다시 하기'를 몇 번 해도 목록이 쌓이지 않게
     const res = new Set(), track = h => { if (h && h.remove) { const r0 = h.remove; h.remove = function () { res.delete(h); return r0.apply(this, arguments); }; res.add(h); } return h; };
     const S = facadeApi(track, owner);
-    S.dispose = () => { for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); CTRL.frozen = false; CTRL.speed = 1; if (arena.shape) arena.shape = null; };
+    S.dispose = () => { for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; if (arena.shape) arena.shape = null; };
     S.quit = () => { const c = game.current; if (c && c.scope === S) stopGame('quit'); };   // 게임이 스스로 끝낼 때(끝 화면 [그만하기])
     Object.defineProperty(S, 'tracked', { get: () => res.size });
     return S;
@@ -502,6 +506,8 @@ export function createMapApi(host, NAV, META) {
       nav: o => nav(o).then(NV => track ? { ...NV, block: x => t(NV.block(x)) } : NV), navSync,
       mapData, drawMap, coverage, rng, store: store('sm2.game.' + (owner || 'map') + '.'), play: META.PLAY, spawns: META.SPAWNS,
       three: THREE,
+      // GAME-WG(09-26): 읽기 전용 카메라(겨눔 — 화면 가운데 광선 = camera.position + (0,0,-1)·quaternion. 바꾸지 말 것) · 짧은 합성음 tone(주파수, 시작초, 길이, 파형, 크기, 끝주파수)
+      camera: host.camera, tone: (...a) => { if (ui.tone) ui.tone(...a); },
     };
   }
   const MAP = facadeApi(null, null);
@@ -512,5 +518,7 @@ export function createMapApi(host, NAV, META) {
       minimap: MM.visible, mmMarks: MM.marks.length, goal: !!(goalEl && goalEl.style.display !== 'none'), arena: !!arena.shape, frozen: CTRL.frozen, speed: CTRL.speed,
       game: cur ? cur.id : null, tracked: cur ? cur.scope.tracked : 0, pick: PICK.el.textContent }; };
   MAP.picker = PICK;
+  // GAME-WG(09-26): 게임 버튼 신호 — 터치 UI·게임패드가 SD2.map.press('fire', true/false)로 누름/뗌을 알리면 게임은 map.on('action', {name, down})으로 받는다(물총 = 'fire')
+  MAP.press = (name, down = true) => emit('action', { name: String(name), down: !!down });
   return MAP;
 }

@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=120';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=10';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=5';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=6';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=5';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=6';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -233,7 +233,7 @@ function step(dt) {
     physics(dt);
   }
   pg.position.set(P.x, P.y, P.z);
-  pg.rotation.y = P.yaw;
+  pg.rotation.y = CTRL.face ?? P.yaw;   // GAME-WG(09-26): 게임이 몸 방향을 잠깐 잡을 수 있다(물총 겨눔 — map.player.aim) · 없으면 걷는 방향
   kidTick(dt);
   // CAM-2(09-24): 사용자 "복도가 좁은 것 같다" — 실측 복도는 2.5m(게임 2.7m)로 좁지 않았다. 원인은 카메라:
   //  6.3m 뒤·17° 위에서 내려다보면 실내에선 천장(3.24m) 밑에 붙어 위에서 내려다보고, 화각 48°는 휴대폰 광각보다 훨씬 좁다.
@@ -254,7 +254,7 @@ function step(dt) {
     camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);   // 당김은 즉시·복귀는 이징(지터 방지)
     const C = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect, camD);   // 실제 거리에서 옆벽 비키기
     camSh = Math.abs(C.sh) > Math.abs(camSh) || C.sh * camSh < 0 ? C.sh : camSh + (C.sh - camSh) * Math.min(1, dt * 8);   // 비키기는 즉시·돌아오기는 이징
-    const rx = Math.cos(camYaw) * camSh, rz = -Math.sin(camYaw) * camSh;
+    const sh9 = camSh + (CTRL.shoulder || 0), rx = Math.cos(camYaw) * sh9, rz = -Math.sin(camYaw) * sh9;   // GAME-WG: CTRL.shoulder = 어깨 너머 시점(게임이 바깥에서만 켬 — map.player.shoulder)
     camera.position.set(C.x0 + rx, C.y, C.z0 + rz);
     camera.lookAt(hx + rx, hy, hz + rz);
   }
