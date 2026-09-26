@@ -117,7 +117,6 @@ export function makeMeta(SCHOOL) {
     X(SCHOOL.gate[0] - 8, SCHOOL.gate[0] + 8, 44, SCHOOL.gate[1], FD, '정문 앞', 'gate-front', 'path', null, ['entry']),   // 월드 '정문'(문 칸)이 생겨 id 'gate'는 그쪽으로
     // 체육관 부속동 화장실 두 칸(월드에 '화장실' 팻말이 있는 칸 — 구역만 빠져 있었다)
     X(G.annex.x[0], G.annex.x[1], G.annex.z[0], G.doorZ - 1.4, G.floorY, '체육관 화장실', 'gym-toilet-n', 'toilet', 'gym'),
-    X(G.annex.x[0], G.annex.x[1], G.doorZ + 1.4, G.doorZ + 3.6, G.floorY, '체육관 화장실', 'gym-toilet-s', 'toilet', 'gym'),
     // 조리실 쪽 주복도 문 안(당직실과 식당 홀 사이) — 조리실로 들어가는 앞칸
     X(B.kitchen.dutyRoom.x[1], B.kitchen.hallX0, B.kitchen.dutyRoom.z[0], B.kitchen.dutyRoom.z[1], 0, '조리실 앞', 'kitchen-entry', 'service', 'cafe', ['staff']),
     // 서관 2층 계단홀(U자 계단 윗참 — 2층 복도 북쪽). 월드 '2층 계단'(윗참)이 생겨 id를 넘기고, 그 북쪽 남는 칸만 받는다

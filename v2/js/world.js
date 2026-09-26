@@ -2986,19 +2986,18 @@ export function buildWorld(scene) {
       dBox(0.15, 0.08, 0.9, YEL, X, GYF + 2.55, c); dBox(0.15, 0.06, 0.9, YEL, X, GYF + 1.94, c);
       [-1, 1].forEach(sd => dBox(0.15, 0.53, 0.08, YEL, X, GYF + 2.0, c + sd * 0.41)); });
     wallX(gx1 + 0.15, ax1 - 0.15, CZ0, INNER, { y0: GYF, h: 3.2, gaps: [{ c: ax0 + 2.6, w: 1.0 }] });
-    wallX(gx1 + 0.15, ax1 - 0.15, CZ1, INNER, { y0: GYF, h: 3.2, gaps: [{ c: ax0 + 2.6, w: 1.0 }] });
-    wallX(gx1 + 0.15, ax1 - 0.15, TZ, INNER, { y0: GYF, h: 3.2 });
+    wallX(gx1 + 0.15, ax1 - 0.15, CZ1, INNER, { y0: GYF, h: 3.2 });   // GYM-1(09-26 사용자 "체육관 입구 들어가면 바로 왼쪽에 문이 또 있고 공간 — 실제로 없는 공간"): 전실 남벽 = 막힌 벽(남 화장실 없앰 · 그 자리까지 체육 창고)
     floorQ('tileG', gx1 + 0.15, ax1 - 0.15, CZ0 + 0.15, CZ1 - 0.15, GYF);
-    floorQ('ttile', gx1 + 0.15, ax1 - 0.15, az0 + 0.15, CZ0 - 0.15, GYF); floorQ('ttile', gx1 + 0.15, ax1 - 0.15, CZ1 + 0.15, TZ - 0.15, GYF);
-    floorQ('tileW', gx1 + 0.15, ax1 - 0.15, TZ + 0.15, az1 - 0.15, GYF, 0xb9b6ae);
-    [[az0 + 0.5, CZ0], [CZ1, TZ - 0.5]].forEach(([z9a, z9b]) => addBox(1.2, 1.1, 0.4, 0xdfe8ee, ax1 - 0.9, GYF, (z9a + z9b)/2, NS));
-    sign('화장실', ax0 + 2.6, GYF + 2.2, CZ0 + 0.22, 0, 0.26); sign('화장실', ax0 + 2.6, GYF + 2.2, CZ1 - 0.22, 0, 0.26);
+    floorQ('ttile', gx1 + 0.15, ax1 - 0.15, az0 + 0.15, CZ0 - 0.15, GYF);
+    floorQ('tileW', gx1 + 0.15, ax1 - 0.15, CZ1 + 0.15, az1 - 0.15, GYF, 0xb9b6ae);
+    addBox(1.2, 1.1, 0.4, 0xdfe8ee, ax1 - 0.9, GYF, (az0 + 0.5 + CZ0)/2, NS);
+    sign('화장실', ax0 + 2.6, GYF + 2.2, CZ0 + 0.22, 0, 0.26);
     [az1 - 1.2, az1 - 3.2].forEach(z9 => addBox(3.6, 1.6, 0.7, 0x8a9096, (gx1 + ax1)/2, GYF, z9));   // 체육 창고 선반
     addBox(ax1 - gx1 + 0.4, 0.3, az1 - az0 + 0.4, 0xe6e7e3, (gx1 + ax1 + 0.4)/2, GYF + AH, (az0 + az1)/2);   // 흰 지붕(위성)
     [-23, -19, -15, -11].forEach(z9 => { dBox(1.1, 0.8, 0.65, 0x8a8f92, gx1 + 2.0, GYF + AH + 0.3, z9, { far: true }); dCyl(0.28, 0.28, 0.03, 0x4a4e52, gx1 + 2.0, GYF + AH + 0.3 + 0.8, z9, { seg: 10 }); });   // 옥상 실외기(위성 A 짙은 덩어리·영상 g_087~090)
     ceil(gx1, ax1, az0, az1, GYF + 3.2 + 0.15, 'ctile');
     zones.push({ x0: gx1, x1: ax1, z0: CZ0, z1: CZ1, y: GYF, label: '체육관 전실' });
-    zones.push({ x0: gx1, x1: ax1, z0: TZ, z1: az1, y: GYF, label: '체육 창고' });
+    zones.push({ x0: gx1, x1: ax1, z0: CZ1, z1: az1, y: GYF, label: '체육 창고' });
     // 현관 밖(영상 g_100~112): 참(GYF) + 동쪽 3단 · 북쪽 끝 크림 낮은 벽 + 스테인리스 손잡이 · 남쪽 끝에서 경사로(크림 낮은 벽)
     //   붉은 독립 기둥은 없다(차양 = 기둥 없는 캔틸레버, 부속동 동벽 전체 길이 — 위성 A 크림 띠 z -28~-7)
     const LX1 = ax1 + 2.0, LZ0 = CZ0 - 0.4, LZ1 = CZ1 + 0.2, LW = 0.2;                   // 참 동쪽 끝·북/남 끝, 북쪽 낮은 벽 두께
