@@ -31,9 +31,14 @@ export function buildWorld(scene) {
   function chunkOf(cx, cz) {
     const key = Math.floor(cx / CHUNK) + '_' + Math.floor(cz / CHUNK);
     let ch = chunks.get(key);
-    if (!ch) { ch = { pos: [], col: [] }; chunks.set(key, ch); }
+    if (!ch) { ch = { pos: [], col: [], ao: [] }; chunks.set(key, ch); }
     return ch;
   }
+  // GFX-3 실내 깊이(셰이더 AO · 삼각형 0 · 드로우콜 0): 정점마다 '가장자리까지 거리' 4개(cm, Int16)를 실어 두면 선형 보간이 면 위 모든 점의 정확한 거리가 되고,
+  //  조각 셰이더가 그 거리로 부드러운 어둠을 곱한다(aoPatch). 벽 면 = (런 시작 모서리까지, 런 끝 모서리까지, 바닥 위 높이, 천장까지) · 바닥·천장 면 = 네 변까지(z 채널 음수 = 바닥 표시)
+  //  AO_NO = '해당 없음'(300 m — 어둠 0). 정점 배열은 필요한 상자에서만 늦게 채운다(aoPad — 앞 정점은 AO_NO)
+  const AO_NO = 30000, aoQ = v => Math.max(-32000, Math.min(AO_NO, Math.round(v * 100))), aoP = v => Math.max(0, aoQ(v));
+  const aoPad = (A, n) => { for (let i = A.length; i < n; i++) A.push(AO_NO); };
   // PHYS-1 '올라서기 금지'(ns): 가구·울타리 등은 충돌 높이를 1.6 이상으로 — 점프 도달(0.97 + 오름 0.55 = 1.52)보다 높아
   // 위에 서지 못하고 넘지도 못한다. 보이지 않는 윗부분이 카메라를 밀지 않게 nc(카메라 무시) 표시.
   const NS = { ns: true };
@@ -49,13 +54,28 @@ export function buildWorld(scene) {
     const ch = opt.at ? chunkOf(opt.at[0], opt.at[1]) : chunkOf(cx, cz);   // at = 이 청크에 합침(dGeo와 같음)
     _c.set(hex); _c.multiplyScalar(0.97);
     const cy = baseY + h / 2, fl = opt.wall && !opt.flat ? aoFloor(baseY) : null, ao = fl !== null && baseY + h <= fl + FH + 0.01;
+    // GFX-3: 셰이더 AO 대상 — wallSeg가 준 aoW(런 양끝·바닥·천장·바깥 면 부호), 아니면 건물 안에 선 얇고 높은 칸막이 상자(교실 사이 벽 등)를 스스로 알아본다
+    let W = opt.flat ? null : opt.aoW || null;
+    if (!W && !opt.flat && !opt.wall && h >= 2.0 && Math.min(w, d) <= 0.35 && Math.max(w, d) >= 0.6 && buildingOf(cx, cz) >= 0) {
+      const f9 = aoFloor(baseY);
+      if (f9 !== null && baseY - f9 < 0.35) W = w >= d ? { ax: 'x', a0: cx - w/2, a1: cx + w/2, fl: baseY, top: baseY + h, out: 0 } : { ax: 'z', a0: cz - d/2, a1: cz + d/2, fl: baseY, top: baseY + h, out: 0 };
+    }
+    if (W) { aoPad(ch.ao, ch.pos.length / 3 * 4); ch.aoUsed = true; }
     for (let i = 0; i < bpos.count; i++) {
-      const vy = bpos.getY(i)*h+cy;
-      ch.pos.push(bpos.getX(i)*w+cx, vy, bpos.getZ(i)*d+cz);
-      const ny = bnrm.getY(i), nx = bnrm.getX(i);
+      const vy = bpos.getY(i)*h+cy, vx = bpos.getX(i)*w+cx, vz = bpos.getZ(i)*d+cz;
+      ch.pos.push(vx, vy, vz);
+      const ny = bnrm.getY(i), nx = bnrm.getX(i), nz = bnrm.getZ(i);
       // flat: AO 면제 — 천장·조명은 아랫면만 보이는데 아랫면 0.62를 먹으면 칙칙해진다
       const f = opt.flat ? 1 : ny > .5 ? 1 : ny < -.5 ? .62 : (nx !== 0 ? .88 : .94) * (ao ? aoF(vy, fl) : 1);
-      ch.col.push(_c.r*f, _c.g*f, _c.b*f);
+      // GFX-3 벽 방향 색: 남쪽을 보는 벽 면(= 교실에서 창을 마주 보는 복도 쪽 벽 · 바깥은 햇빛 받는 남면)은 살짝 따뜻하게, 북쪽을 보는 면은 살짝 차게
+      if (opt.wall && !opt.flat && nz !== 0) { const k = nz > 0 ? [1.025, 1.0, 0.965] : [0.985, 0.99, 1.015]; ch.col.push(_c.r*f*k[0], _c.g*f*k[1], _c.b*f*k[2]); }
+      else ch.col.push(_c.r*f, _c.g*f, _c.b*f);
+      if (W) {
+        const along = W.ax === 'x' ? vx : vz, perp = W.ax === 'x' ? nz : nx;
+        if (ny > .5 || ny < -.5) ch.ao.push(AO_NO, AO_NO, AO_NO, AO_NO);
+        else if (W.out && perp === W.out) ch.ao.push(AO_NO, AO_NO, aoP(vy - W.fl), AO_NO);   // 바깥 면: 땅에 닿는 어둠만
+        else ch.ao.push(aoP(along - W.a0), aoP(W.a1 - along), aoP(vy - W.fl), W.top == null ? AO_NO : aoP(W.top - vy));
+      }
     }
     if (opt.collide !== false || opt.ns) colliders.push(opt.ns ? noStand({ x0: cx-w/2, x1: cx+w/2, y0: baseY, y1: baseY+h, z0: cz-d/2, z1: cz+d/2 })
                                                   : { x0: cx-w/2, x1: cx+w/2, y0: baseY, y1: baseY+h, z0: cz-d/2, z1: cz+d/2 });
@@ -64,6 +84,7 @@ export function buildWorld(scene) {
     const ch = chunkOf(cx, cz);
     _c.set(hex); _c.multiplyScalar(0.97);
     const x0 = cx-w/2, x1 = cx+w/2, z0 = cz-d/2, z1 = cz+d/2;
+    PQ.push({ kind: 'panel', x0, x1, z0, z1, y });
     ch.pos.push(x0,y,z0, x0,y,z1, x1,y,z1,  x0,y,z0, x1,y,z1, x1,y,z0);
     for (let i = 0; i < 6; i++) ch.col.push(_c.r, _c.g, _c.b);
   }
@@ -82,10 +103,15 @@ export function buildWorld(scene) {
   { const g = SCHOOL.gym; BRECT.push([g.center[0] - g.width/2, g.center[0] + g.width/2, g.center[1] - g.depth/2, g.center[1] + g.depth/2], [...g.annex.x, ...g.annex.z]); }
   const buildingOf = (x, z) => BRECT.findIndex(([a, b, c, d]) => x > a + 0.2 && x < b - 0.2 && z > c + 0.2 && z < d - 0.2);
   // OCC-CULL(integ · 09-24): 실내 청크를 '건물 × 층 × 16m 칸'으로 나눈다 — main.js가 벽·슬래브·지붕 뒤라 안 보이는 청크를 숨긴다(bi·fl)
+  function dKey(cx, cz, cy = 0) { const bi = buildingOf(cx, cz), fl = bi >= 0 && cy > FH + 0.15 ? 2 : 1; return (bi >= 0 ? 'i' + bi + (fl === 2 ? 'u' : '') + ':' : 'o') + Math.floor(cx / CHUNK) + '_' + Math.floor(cz / CHUNK); }
+  // GFX-3: 청크 경계 상자(처음 물을 때의 것 · 캐시) 안에 드는가 — 뒤늦게 얹는 걸레받이·풀 포기가 청크 상자를 키우면 절두체·가림 컬링에서 빠지던 청크가 그려진다(드로우콜 +)
+  const chBB = ch => { if (!ch.bb) { const P = ch.pos, b = ch.bb = [1e9, -1e9, 1e9, -1e9, 1e9, -1e9]; for (let i = 0; i < P.length; i += 3) { const x = P[i], y = P[i + 1], z = P[i + 2];
+      if (x < b[0]) b[0] = x; if (x > b[1]) b[1] = x; if (y < b[2]) b[2] = y; if (y > b[3]) b[3] = y; if (z < b[4]) b[4] = z; if (z > b[5]) b[5] = z; } } return ch.bb; };
+  const inBB = (ch, x0, x1, y0, y1, z0, z1, m = 0.05) => { if (!ch) return false; const b = chBB(ch); return x0 >= b[0] - m && x1 <= b[1] + m && y0 >= b[2] - m && y1 <= b[3] + m && z0 >= b[4] - m && z1 <= b[5] + m; };
   function dChunk(far, cx, cz, cy = 0) {
     if (far) return chunkOf(cx, cz);   // 큰 덩어리(나무·차·울타리 기둥)는 건물 청크에 그대로 합친다 — 같은 재질이라 드로우콜이 늘지 않는다
     const bi = buildingOf(cx, cz), inside = bi >= 0, fl = inside && cy > FH + 0.15 ? 2 : 1;
-    const key = (inside ? 'i' + bi + (fl === 2 ? 'u' : '') + ':' : 'o') + Math.floor(cx / CHUNK) + '_' + Math.floor(cz / CHUNK);
+    const key = dKey(cx, cz, cy);
     let ch = DNEAR.get(key);
     if (!ch) { ch = { pos: [], col: [], cx: (Math.floor(cx / CHUNK) + 0.5) * CHUNK, cz: (Math.floor(cz / CHUNK) + 0.5) * CHUNK, inside, bi, fl }; DNEAR.set(key, ch); }
     return ch;
@@ -182,14 +208,61 @@ export function buildWorld(scene) {
       if (a < p.a1) emit(a, p.a1);
     }
   }
+  // GFX-3 걸레받이(실내 벽 발치 짙은 띠 11cm · 벽 면에서 3cm): 시공이 끝난 뒤 깐다 — 가구·계단·문틀·이웃 걸레받이와 부딪히는 구간은 끊는다(모서리 = 먼저 깐 쪽이 이김, 1cm 틈)
+  //  디테일 층(near) · 실내 청크에 합침(at = 방 안쪽 0.6 m — 밖에서는 20 m 밖이면 안 그린다)
+  const baseboards = [], BB_FLOORS = [0, GYF, FH + 0.3], BB_H = 0.113, BB_T = 0.03, BB_COL = 0x8f7d6a;
+  function buildBaseboards() {
+    const G9 = new Map(), key = (i, j) => i * 4096 + j, add = b => { for (let i = Math.floor(b.x0 / 4); i <= Math.floor(b.x1 / 4); i++) for (let j = Math.floor(b.z0 / 4); j <= Math.floor(b.z1 / 4); j++) { const k = key(i, j); let L = G9.get(k); if (!L) G9.set(k, L = []); L.push(b); } };
+    for (const b of allBoxes) if (b.x1 - b.x0 < 60 && b.z1 - b.z0 < 60) add(b);
+    // 한 줄로 이어지는 조각(창턱 아래 + 벽 기둥)은 먼저 합친다 — 상자 수(삼각형) 절약
+    const K9 = p => [p.ax, p.o.toFixed(3), p.s, p.y.toFixed(3), p.h ?? BB_H, p.t ?? BB_T, p.col ?? BB_COL].join('|'), grp = new Map();
+    for (const p of baseboards) { const k = K9(p); let L = grp.get(k); if (!L) grp.set(k, L = []); L.push({ ...p }); }
+    const recs = [];
+    for (const L of grp.values()) { L.sort((u, v) => u.a0 - v.a0); let c = null; for (const p of L) { if (c && p.a0 <= c.a1 + 0.001) c.a1 = Math.max(c.a1, p.a1); else recs.push(c = p); } }
+    // 보이는 면만(앞·위·양끝 = 8 삼각형): 뒤(벽에 붙음)·밑(바닥 속)은 안 그린다 — 감사 상자는 온전히
+    const SKIN = new Map(), skin = (ax, s, bot) => { const k = ax + s + bot; if (!SKIN.has(k)) { const P = box_.attributes.position.array, drop = [bot ? -1 : 3, ax === 'x' ? (s > 0 ? 5 : 4) : (s > 0 ? 1 : 0)], out = [];   // 면 순서 +x −x +y −y +z −z
+        for (let f = 0; f < 6; f++) if (!drop.includes(f)) for (let i = f * 18; i < f * 18 + 18; i++) out.push(P[i]);
+        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(out, 3)); SKIN.set(k, g); } return SKIN.get(k); };
+    for (const p of recs) {
+      const H9 = p.h ?? BB_H, T9 = p.t ?? BB_T, y0 = p.y, y1 = p.y + H9, t0 = p.s > 0 ? p.o : p.o - T9, t1 = t0 + T9;
+      const vol = p.ax === 'x' ? { x0: p.a0, x1: p.a1, z0: t0, z1: t1 } : { x0: t0, x1: t1, z0: p.a0, z1: p.a1 };
+      const cut = [], seen = new Set();
+      for (let i = Math.floor(vol.x0 / 4); i <= Math.floor(vol.x1 / 4); i++) for (let j = Math.floor(vol.z0 / 4); j <= Math.floor(vol.z1 / 4); j++) for (const b of G9.get(key(i, j)) || []) {
+        if (seen.has(b)) continue; seen.add(b);
+        if (b.y1 <= y0 + 0.004 || b.y0 >= y1 - 0.004) continue;
+        if (b.x1 <= vol.x0 + 0.004 || b.x0 >= vol.x1 - 0.004 || b.z1 <= vol.z0 + 0.004 || b.z0 >= vol.z1 - 0.004) continue;   // 맞닿기만(벽 자신) = 제외
+        cut.push(p.ax === 'x' ? [b.x0 - 0.01, b.x1 + 0.01] : [b.z0 - 0.01, b.z1 + 0.01]);
+      }
+      cut.sort((u, v) => u[0] - v[0]);
+      let a = p.a0;
+      const emit = (u, v) => { if (v - u < 0.15) return; const c = (u + v) / 2, tc = (t0 + t1) / 2, at = p.ax === 'x' ? [c, p.o + p.s * 0.6] : [p.o + p.s * 0.6, c];
+        const w = p.ax === 'x' ? v - u : T9, d = p.ax === 'x' ? T9 : v - u, cx = p.ax === 'x' ? c : tc, cz = p.ax === 'x' ? tc : c;
+        // 이미 있는 청크의 경계 상자 안에만(새 청크·커진 상자 = 드로우콜 +) — 방 안쪽 0.6 m 자리의 실내 청크 → 걸레받이 자리의 실내 청크 → 건물 정적 청크(far)
+        const X0 = cx - w/2, X1 = cx + w/2, Z0 = cz - d/2, Z1 = cz + d/2, ok = [at, [cx, cz]].find(q => inBB(DNEAR.get(dKey(q[0], q[1], y0 + 0.05)), X0, X1, y0, y0 + H9, Z0, Z1, 0.3));
+        const o9 = ok ? { at: ok } : inBB(chunks.get(Math.floor(cx / CHUNK) + '_' + Math.floor(cz / CHUNK)), X0, X1, y0, y0 + H9, Z0, Z1, 0.3) ? { far: true, at: [cx, cz] } : null;
+        if (!o9) return;   // 어느 청크 상자에도 안 들면 깔지 않는다(드로우콜·컬링 그대로)
+        const bx = { x0: X0, x1: X1, y0, y1: y0 + H9, z0: Z0, z1: Z1, detail: true }; allBoxes.push(bx); add(bx);
+        _dm.compose(_dv.set(cx, y0 + H9 / 2, cz), _dq.identity(), _ds.set(w, H9, d)); dGeo(skin(p.ax, p.s, !BB_FLOORS.some(v => Math.abs(p.y - v) < 0.01)), _dm, p.col ?? BB_COL, o9);
+        };
+      for (const [u, v] of cut) { if (u > a) emit(a, Math.min(u, p.a1)); a = Math.max(a, v); }
+      if (a < p.a1) emit(a, p.a1);
+    }
+  }
   // 외벽은 '바깥 절반 0.15 + 안쪽 절반 0.15'로 나눠 쌓는다 → 방 안에서 외벽색이 아니라 실내 도장이 보인다.
   // 두 절반은 맞닿을 뿐 겹치지 않으므로 감사 통과(면이 서로 반대를 향함). 0.15는 헌법① 최소치와 정확히 같다.
   function wallSeg(ax, len, h, cx, y0, z, hex, opt) {
-    const W9 = { wall: true };
-    const box = (th, col, off, yy, hh) => ax === 'x' ? addBox(len, hh, th, col, cx, yy, z + off, W9) : addBox(th, hh, len, col, z + off, yy, cx, W9);
     // opt.dado = { top, lo, hi }: 안쪽 겹을 아래(lo)·위(hi) 두 톤으로(계단실 노랑/연민트 — 문서 v80c). top은 벽 바닥(opt.y0) 기준
     // opt.ext: 바깥벽(두 겹) 강제 — 카키 사이딩처럼 WALL이 아닌 바깥색. opt.innerHex: 안쪽 겹 색(로비 벽돌 등)
     const ext = opt.ext ?? (hex === WALL);
+    // GFX-3 셰이더 AO: 런 양끝(wallRun이 _a0·_a1로 넘김 = 방 모서리) · 바닥 = 런 바닥(opt.aoFl) · 천장 = 런 위끝(opt.aoTop) · 두 겹 바깥벽의 바깥 면은 땅 닿는 어둠만
+    const RY0 = opt.y0 ?? 0, AOW = out => ({ wall: true, aoW: { ax, a0: opt._a0 ?? cx - len/2, a1: opt._a1 ?? cx + len/2, fl: opt.aoFl ?? RY0, top: opt.aoTop ?? RY0 + (opt.h ?? FH), out } });
+    const box = (th, col, off, yy, hh) => { const W9 = AOW(ext && off * (opt.face ?? 1) > 0 ? (opt.face ?? 1) : 0);
+      ax === 'x' ? addBox(len, hh, th, col, cx, yy, z + off, W9) : addBox(th, hh, len, col, z + off, yy, cx, W9); };
+    // GFX-3 걸레받이: 런 바닥(건물 층 바닥)에서 시작하는 조각의 실내 면 — 바깥벽은 안쪽 면만(-face), 칸막이는 양면. 가구·문틀과 부딪히는 곳은 buildBaseboards가 끊는다
+    if (Math.abs(y0 - RY0) < 0.01 && BB_FLOORS.some(v => Math.abs(RY0 - v) < 0.01) && !opt.noBase) {
+      const f = opt.face ?? 1;
+      for (const s of ext ? [-f] : [1, -1]) baseboards.push({ ax, a0: cx - len/2, a1: cx + len/2, o: z + s * 0.15, s, y: RY0 });
+    }
     if ((opt.inner ?? ext) || opt.dado) {
       const f = opt.face ?? 1, d = opt.dado;
       box(0.15, hex, f*0.075, y0, h);
@@ -205,7 +278,8 @@ export function buildWorld(scene) {
   // 벽 한 줄 — 문(gaps)과 창(wins·gaps의 win)을 '진짜 구멍'으로 뚫는다.
   //  창 = 창턱 아래 벽 + 인방 + 반투명 유리판(벽 두께 가운데 0.16). 예전엔 벽 위에 불투명 판을 붙여 실내가 안 보였다(사용자 07-30).
   //  문 = 바닥부터 트인 개구 + 인방(dh ≤ 2.8·폭 ≤ 2.2 또는 door:true → 문짝 수집).
-  function wallRun(ax, a0, a1, line, hex, opt) {
+  function wallRun(ax, a0, a1, line, hex, opt0) {
+    const opt = { ...opt0, _a0: opt0._a0 ?? a0, _a1: opt0._a1 ?? a1 };   // GFX-3: 런 양끝 = 방 모서리(셰이더 AO)
     const h = opt.h ?? FH, y0 = opt.y0 ?? 0, doorGaps = opt.gaps ?? [];
     const gaps = doorGaps.map(g => ({ ...g }));
     if (opt.wins) {
@@ -684,18 +758,25 @@ export function buildWorld(scene) {
     woodW:  [1.2, 128, false, (g, N, R) => { for (let i = 0; i < 8; i++) { g.fillStyle = pick(['#4d3c32', '#54423a', '#47372e'], R); g.fillRect(i*16, 0, 16, N); g.globalAlpha = 0.18; g.fillStyle = '#2a1f19'; for (let k = 0; k < 4; k++) g.fillRect(i*16 + 2 + R()*12, 0, 1, N); g.globalAlpha = 1; } g.fillStyle = '#2f241e'; for (let i = 0; i <= 8; i++) g.fillRect(i*16 - 0.5, 0, 1, N); }],   // 현관·구령대 짙은 나무 판 세로결
   };
   const PAT = new Map();
-  function patPush(kind, pts, uv, n, tint) {
-    let P = PAT.get(kind); if (!P) { P = { pos: [], uv: [], col: [] }; PAT.set(kind, P); }
+  const PQ = [];   // GFX-3: 위를 보는 바닥 면 목록(풀 포기 흩뿌리기가 '풀밭인데 위에 다른 바닥이 덮였나'를 본다 — 무늬 바닥·색 판)
+  function patPush(kind, pts, uv, n, tint, ao = null) {   // ao = 네 꼭짓점의 [4] 거리(m · GFX-3 셰이더 AO) — 없으면 AO_NO
+    let P = PAT.get(kind); if (!P) { P = { pos: [], uv: [], col: [], ao: [] }; PAT.set(kind, P); }
+    if (ao) { aoPad(P.ao, P.pos.length / 3 * 4); P.aoUsed = true; }
+    if (n[1] > 0.5) { const xs = pts.map(q => q[0]), zs = pts.map(q => q[2]), ys = pts.map(q => q[1]);   // GFX-3 PQ(위를 보는 바닥 — 비스듬한 네 점 바닥·비탈은 감싸는 상자로, rect = 축정렬 사각형)
+      PQ.push({ kind, x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs), y: Math.max(...ys), rect: new Set(xs).size === 2 && new Set(zs).size === 2 && new Set(ys).size === 1 }); }
     const [a, b, c] = pts;
     const cx = (b[1]-a[1])*(c[2]-a[2]) - (b[2]-a[2])*(c[1]-a[1]), cy = (b[2]-a[2])*(c[0]-a[0]) - (b[0]-a[0])*(c[2]-a[2]), cz = (b[0]-a[0])*(c[1]-a[1]) - (b[1]-a[1])*(c[0]-a[0]);
     const ord = (cx*n[0] + cy*n[1] + cz*n[2]) < 0 ? [0, 2, 1, 0, 3, 2] : [0, 1, 2, 0, 2, 3];
     _c.set(tint); if (!PATDEF[kind][2]) _c.multiplyScalar(n[1] > 0.5 ? 0.97 : n[1] < -0.5 ? 0.62 : 0.9);
-    for (const i of ord) { P.pos.push(pts[i][0], pts[i][1], pts[i][2]); P.uv.push(uv[i][0], uv[i][1]); P.col.push(_c.r, _c.g, _c.b); }
+    for (const i of ord) { P.pos.push(pts[i][0], pts[i][1], pts[i][2]); P.uv.push(uv[i][0], uv[i][1]); P.col.push(_c.r, _c.g, _c.b); if (ao) P.ao.push(...ao[i]); }
   }
   // 바닥(위를 봄)·천장(down=true, 아래를 봄) 사각형
-  function patQuad(kind, x0, x1, z0, z1, y, down = false, tint = 0xffffff) {
+  // edge = true(GFX-3): 네 변까지 거리를 실어 벽 발치·천장 가장자리를 셰이더가 어둡게(방 바닥·천장 — 변 = 벽 안쪽 면)
+  const aoEdge = (x, z, x0, x1, z0, z1) => [aoQ(x - x0), aoQ(x1 - x), aoQ(-(z - z0) - 1), aoQ(z1 - z)];
+  function patQuad(kind, x0, x1, z0, z1, y, down = false, tint = 0xffffff, edge = false) {
     const s = PATDEF[kind][0];
-    patPush(kind, [[x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1]], [[x0/s, -z0/s], [x1/s, -z0/s], [x1/s, -z1/s], [x0/s, -z1/s]], [0, down ? -1 : 1, 0], tint);
+    patPush(kind, [[x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1]], [[x0/s, -z0/s], [x1/s, -z0/s], [x1/s, -z1/s], [x0/s, -z1/s]], [0, down ? -1 : 1, 0], tint,
+      edge ? [aoEdge(x0, z0, x0, x1, z0, z1), aoEdge(x1, z0, x0, x1, z0, z1), aoEdge(x1, z1, x0, x1, z0, z1), aoEdge(x0, z1, x0, x1, z0, z1)] : null);
   }
   // GFX-2: 큰 바닥을 칸으로 나눠 칸 꼭짓점마다 색 얼룩(부드러운 값 노이즈) — 넓은 잔디·운동장 흙이 한 톤 판으로 보이지 않게. 무늬(uv)·높이는 patQuad와 같다
   //  tintFn(x, z) → 곱할 [r, g, b](1 근처)
@@ -716,13 +797,15 @@ export function buildWorld(scene) {
   function patWall(kind, ax, a0, a1, y0, y1, line, face, tint = 0xffffff) {
     const s = PATDEF[kind][0];
     const pts = ax === 'x' ? [[a0, y0, line], [a1, y0, line], [a1, y1, line], [a0, y1, line]] : [[line, y0, a0], [line, y0, a1], [line, y1, a1], [line, y1, a0]];
-    patPush(kind, pts, [[a0/s, y0/s], [a1/s, y0/s], [a1/s, y1/s], [a0/s, y1/s]], ax === 'x' ? [0, 0, face] : [face, 0, 0], tint);
     const lo = Math.min(y0, y1), fl = aoFloor(lo);   // GFX-2 접지 음영(addBox 벽 조각과 같은 식)
+    // GFX-3: 겉무늬 벽도 땅에 닿는 어둠(셰이더) — 예전 GFX-2 정점색 0.8→1(층 높이 전체에 걸친 선형)은 무늬에 묻혀 안 보였다
+    const cA = fl !== null && !PATDEF[kind][2] ? pts.map(p => [AO_NO, AO_NO, aoP(p[1] - fl), AO_NO]) : null;
+    patPush(kind, pts, [[a0/s, y0/s], [a1/s, y0/s], [a1/s, y1/s], [a0/s, y1/s]], ax === 'x' ? [0, 0, face] : [face, 0, 0], tint, cA);
     if (!PATDEF[kind][2] && fl !== null && Math.max(y0, y1) <= fl + FH + 0.01) { const P = PAT.get(kind), n = P.pos.length;
       for (let k = n - 18; k < n; k += 3) { const f = aoF(P.pos[k + 1], fl); P.col[k] *= f; P.col[k + 1] *= f; P.col[k + 2] *= f; } }
   }
   // 방 바닥(벽 안쪽 면 사이를 정확히 — 문턱은 wallRun이 채운다)
-  const floorQ = (kind, x0, x1, z0, z1, y = 0, tint) => patQuad(kind, x0, x1, z0, z1, y + 0.012, false, tint);
+  const floorQ = (kind, x0, x1, z0, z1, y = 0, tint) => patQuad(kind, x0, x1, z0, z1, y + 0.012, false, tint ?? 0xffffff, true);
   // 조명(표면 부착 LED) — 전부 한 메시(예전엔 등마다 메시 1개 = 드로우콜 1개씩이었다)
   const lampPos = [];
   let flagMesh = null;
@@ -730,7 +813,7 @@ export function buildWorld(scene) {
   // 천장: 지붕 밑면 바로 아래(top-0.16) 무늬 사각형. 벽 안쪽 면에서 1cm 더 안쪽.
   // 카메라가 천장을 뚫고 올라가 천장 속이 보이지 않게 충돌 등록(사람 머리엔 닿지 않는 높이)
   const ceil = (x0, x1, z0, z1, top, kind = 'ctile') => {
-    patQuad(kind, x0 + 0.16, x1 - 0.16, z0 + 0.16, z1 - 0.16, top - 0.16, true);
+    patQuad(kind, x0 + 0.16, x1 - 0.16, z0 + 0.16, z1 - 0.16, top - 0.16, true, 0xffffff, true);   // GFX-3: 천장 가장자리 음영
     colliders.push({ x0: x0 + 0.16, x1: x1 - 0.16, y0: top - 0.16, y1: top - 0.01, z0: z0 + 0.16, z1: z1 - 0.16 });
   };
   // 건물 기초(YARD → 0): 바깥벽 바깥 면까지(드러난 쪽만). 이웃 건물과는 맞댐만(겹치면 감사에 걸린다)
@@ -1776,6 +1859,7 @@ export function buildWorld(scene) {
         const isC = q => ['classroom', 'computer', 'daycare'].includes(q.type), cL = isC(FR.rooms[i - 1]), cR = isC(r), zc9 = (zCor + 0.15 + ze)/2, d9 = ze - zCor - 0.15;
         if (cL === cR) addBox(0.3, FH, d9, cL ? CLS_WALL : INNER, s0, 0, zc9);
         else { addBox(0.15, FH, d9, cL ? CLS_WALL : INNER, s0 - 0.075, 0, zc9); addBox(0.15, FH, d9, cR ? CLS_WALL : INNER, s0 + 0.075, 0, zc9); }
+        [1, -1].forEach(s => baseboards.push({ ax: 'z', a0: zCor + 0.15, a1: ze, o: s0 + s * 0.15, s, y: 0 }));   // GFX-3 걸레받이(양면)
       }
     }
     zones.push({ x0: s0, x1: s1, z0: rz0, z1: fz1, y: 0, label: r.name });
@@ -2970,15 +3054,23 @@ export function buildWorld(scene) {
   foundation(gx0 - 0.15, gx1 + 0.15, gz0 - 0.15, gz1 + 0.15, GYF);
   foundation(gx1 + 0.15, GA.x[1] + 0.15, GA.z[0] - 0.15, GA.z[1] + 0.15, GYF);
   // 본실 벽: 아래 적벽돌(3.2 · 남면 흰 틀 창 6) + 위 청회색 골판·고측창. 동벽은 부속동과 공유(안쪽 문 = 전실 · 창고 문)
-  wallX(gx0 - 0.15, gx1 + 0.15, gz0, GB, { y0: GYF, h: 3.2, ext: true, innerHex: 0xc9a77a, skin: 'brickG', face: -1 });
-  wallX(gx0 - 0.15, gx1 + 0.15, gz1, GB, { y0: GYF, h: 3.2, ext: true, innerHex: 0xc9a77a, skin: 'brickG', face: 1, gaps: GBW.map(c => ({ c, w: 1.2, sill: 1.0, dh: 2.3, win: true, frame: 0xf2f0ea, noLedge: true })) });
-  wallZ(gz0, gz1, gx0, GB, { y0: GYF, h: 3.2, ext: true, innerHex: 0xc9a77a, skin: 'brickG', face: -1 });
-  wallZ(gz0, gz1, gx1, GB, { y0: GYF, h: 3.2, ext: true, innerHex: 0xc9a77a, skin: 'brickG', face: 1, gaps: [{ c: GDZ, w: 2.2, door: true }, { c: GTZ + 1.6, w: 2.2, door: true }] });
-  wallX(gx0 - 0.15, gx1 + 0.15, gz0, GWU, { y0: GYF + 3.2, h: GH - 3.2, wins: 8, sill: 2.2, wh: 1.4, frame: 0x9aa0a6 });
-  wallX(gx0 - 0.15, gx1 + 0.15, gz1, GWU, { y0: GYF + 3.2, h: GH - 3.2, gaps: GBW.map(c => ({ c, w: 1.6, sill: 2.3, dh: 3.0, win: true, frame: 0xf2f2f0 })) });
-  wallZ(gz0, gz1, gx0, GWU, { y0: GYF + 3.2, h: GH - 3.2 });
-  wallZ(gz0, gz1, gx1, GWU, { y0: GYF + 3.2, h: GH - 3.2 });
+  wallX(gx0 - 0.15, gx1 + 0.15, gz0, GB, { aoFl: GYF, aoTop: GYF + GH, _a0: gx0 + 0.15, _a1: gx1 - 0.15, y0: GYF, h: 3.2, ext: true, innerHex: 0xc9a77a, skin: 'brickG', face: -1 });
+  wallX(gx0 - 0.15, gx1 + 0.15, gz1, GB, { aoFl: GYF, aoTop: GYF + GH, _a0: gx0 + 0.15, _a1: gx1 - 0.15, y0: GYF, h: 3.2, ext: true, innerHex: 0xc9a77a, skin: 'brickG', face: 1, gaps: GBW.map(c => ({ c, w: 1.2, sill: 1.0, dh: 2.3, win: true, frame: 0xf2f0ea, noLedge: true })) });
+  wallZ(gz0, gz1, gx0, GB, { aoFl: GYF, aoTop: GYF + GH, y0: GYF, h: 3.2, ext: true, innerHex: 0xc9a77a, skin: 'brickG', face: -1 });
+  wallZ(gz0, gz1, gx1, GB, { aoFl: GYF, aoTop: GYF + GH, y0: GYF, h: 3.2, ext: true, innerHex: 0xc9a77a, skin: 'brickG', face: 1, gaps: [{ c: GDZ, w: 2.2, door: true }, { c: GTZ + 1.6, w: 2.2, door: true }] });
+  wallX(gx0 - 0.15, gx1 + 0.15, gz0, GWU, { aoFl: GYF, aoTop: GYF + GH, _a0: gx0 + 0.15, _a1: gx1 - 0.15, y0: GYF + 3.2, h: GH - 3.2, wins: 8, sill: 2.2, wh: 1.4, frame: 0x9aa0a6 });
+  wallX(gx0 - 0.15, gx1 + 0.15, gz1, GWU, { aoFl: GYF, aoTop: GYF + GH, _a0: gx0 + 0.15, _a1: gx1 - 0.15, y0: GYF + 3.2, h: GH - 3.2, gaps: GBW.map(c => ({ c, w: 1.6, sill: 2.3, dh: 3.0, win: true, frame: 0xf2f2f0 })) });
+  wallZ(gz0, gz1, gx0, GWU, { aoFl: GYF, aoTop: GYF + GH, y0: GYF + 3.2, h: GH - 3.2 });
+  wallZ(gz0, gz1, gx1, GWU, { aoFl: GYF, aoTop: GYF + GH, y0: GYF + 3.2, h: GH - 3.2 });
   floorQ('gymw', gx0 + 0.15, gx1 - 0.15, gz0 + 0.15, gz1 - 0.15, GYF);
+  {   // GFX-3 체육관 깊이: 천장 밑 철골 보 4줄(남북 — I형: 위·아래 날개 + 복부, 청회색) · 벽돌 띠 윗끝 나무 턱(청회색 윗벽과 가르는 짙은 선 — 걸레받이와 같은 끊기 규칙)
+    const BT = GYF + GH - 0.17, BH = 0.55, BC = 0xc9d0d6, z0b = gz0 + 0.15, z1b = gz1 - 0.15, zc = (z0b + z1b) / 2, L = z1b - z0b;
+    for (let k = 1; k <= 4; k++) { const x9 = gx0 + G.width * k / 5, o9 = { far: true, at: [gx, (GBZ + gz1 + 0.5) / 2] };   // 본실 지붕 판과 같은 정적 청크(늘 함께 보인다 — 새 청크·드로우콜 0)
+      dBox(0.34, 0.06, L, BC, x9, BT - 0.06, zc, { ...o9, flat: true }); dBox(0.34, 0.06, L, BC, x9, BT - BH, zc, { ...o9, flat: true }); dBox(0.1, BH - 0.12, L, 0xb4bdc6, x9, BT - BH + 0.06, zc, o9); }   // 밑을 보는 면은 땅빛에 물들어 짙어진다 → 밝은 은회색 + flat
+    const LY = GYF + 3.2 - 0.13, LC = 0x8a6a4a;
+    baseboards.push({ ax: 'x', a0: gx0 + 0.15, a1: gx1 - 0.15, o: gz0 + 0.15, s: 1, y: LY, h: 0.13, t: 0.07, col: LC }, { ax: 'x', a0: gx0 + 0.15, a1: gx1 - 0.15, o: gz1 - 0.15, s: -1, y: LY, h: 0.13, t: 0.07, col: LC },
+      { ax: 'z', a0: gz0 + 0.15, a1: gz1 - 0.15, o: gx0 + 0.15, s: 1, y: LY, h: 0.13, t: 0.07, col: LC }, { ax: 'z', a0: gz0 + 0.15, a1: gz1 - 0.15, o: gx1 - 0.15, s: -1, y: LY, h: 0.13, t: 0.07, col: LC });
+  }
   {   // 겉모습·코트(DETAIL-7): 상부 청회색 세로 골판(창 자리는 위아래로 끊음)·크림 띠 / 코트 선·가운데 원·농구 링
     const RIB = 0x8e949b, TRIM = 0xe9dfc4, Y3 = GYF + 3.2, TOP = GYF + GH - 0.05, TOPU = GYF + GH + GUP - 0.05;
     // 창 있는 면(wz = 창 가운데 목록): 창 폭 안의 골은 창 아래·위만. 북면은 고측창 띠(2.2~3.6)를 통째로 비운다. 본실 단(GBZ 남쪽)은 지붕 단 윗끝까지
@@ -5082,6 +5174,7 @@ export function buildWorld(scene) {
   }
 
   buildPlinths();   // 감사 전에 — 띠도 감사 대상
+  buildBaseboards();   // GFX-3 — 감사 전에(걸레받이도 감사 대상)
   // ================= 감사 + 병합 =================
   {
     // PERF-LOAD(09-26): 예전 이중 루프(상자 7천 → 2,450만 쌍)가 buildWorld 본문(너무 커서 최적화되지 않는 함수)에서 돌아 로드 1.7초(크롬북 ≈6초)였다.
@@ -5165,6 +5258,36 @@ export function buildWorld(scene) {
         grid.get(k).push(i);
       }
   });
+  // ================= GFX-3 풀 포기·자갈(가까이서 넓은 잔디·흙이 한 톤 판으로 보이지 않게) =================
+  //  풀밭 무늬(grass) 위 — 다른 바닥이 덮은 곳·충돌 상자 밑·학교 둘레 밖은 뺀다. 이미 있는 바깥 디테일 청크(o)에만 넣는다(드로우콜 0 · 55 m 밖이면 청크째 숨김).
+  //  포기 = 밑 트인 세모뿔 잎 2~3장(6~9 삼각형) · 높이 ≤ 0.15(발 묻힘 검진 아래) · soft 등록 · 자갈 = 납작 사면체(4 삼각형)
+  {
+    const R = seeded(90173), XB = [-86, 60], ZB = [-85, 69], F9 = SCHOOL.field;
+    const collAt = (x, z, y0, y1) => { for (const i of grid.get(Math.floor(x / 8) + ':' + Math.floor(z / 8)) || []) { const b = colliders[i]; if (x > b.x0 - 0.12 && x < b.x1 + 0.12 && z > b.z0 - 0.12 && z < b.z1 + 0.12 && b.y1 > y0 && b.y0 < y1) return true; } return false; };
+    const PG = new Map(); for (const q of PQ) for (let i = Math.floor((q.x0 - 0.1) / 8); i <= Math.floor((q.x1 + 0.1) / 8); i++) for (let j = Math.floor((q.z0 - 0.1) / 8); j <= Math.floor((q.z1 + 0.1) / 8); j++) {
+      if (i < -12 || i > 8 || j < -12 || j > 9) continue; const k = i * 100 + j; let L = PG.get(k); if (!L) PG.set(k, L = []); L.push(q); }   // 학교 둘레(8 m 칸)만
+    const covered = (x, z, y, self) => (PG.get(Math.floor(x / 8) * 100 + Math.floor(z / 8)) || []).some(q => q !== self && q.y > y + 0.002 && x > q.x0 - 0.1 && x < q.x1 + 0.1 && z > q.z0 - 0.1 && z < q.z1 + 0.1);
+    const okChunk = (x, z, y = FIELD) => buildingOf(x, z) < 0 && inBB(DNEAR.get('o' + Math.floor(x / CHUNK) + '_' + Math.floor(z / CHUNK)), x - 0.1, x + 0.1, y - 0.02, y + 0.2, z - 0.1, z + 0.1, 0.2);
+    const G9 = PQ.filter(q => q.kind === 'grass' && q.rect).map(q => ({ q, x0: Math.max(q.x0, XB[0]), x1: Math.min(q.x1, XB[1]), z0: Math.max(q.z0, ZB[0]), z1: Math.min(q.z1, ZB[1]) })).filter(r => r.x1 - r.x0 > 0.5 && r.z1 - r.z0 > 0.5);
+    const M9 = new THREE.Matrix4(), Q9 = new THREE.Quaternion(), E9 = new THREE.Euler(), V9 = new THREE.Vector3(), S9 = new THREE.Vector3();
+    const BLADE = new THREE.ConeGeometry(1, 1, 3, 1, true).translate(0, 0.5, 0).toNonIndexed();   // 잎 = 밑이 트인 세모뿔(3 삼각형)
+    const A9 = G9.reduce((a, r) => a + (r.x1 - r.x0) * (r.z1 - r.z0), 0), NT = 4000, GC = [0x7cb85a, 0x8cc46a, 0x6aa94f, 0x9fd07a, 0x79b35c];
+    let nT = 0, nP = 0;
+    for (const r of G9) { const want = (r.x1 - r.x0) * (r.z1 - r.z0) / A9 * NT; let n = Math.floor(want) + (R() < want % 1 ? 1 : 0);
+      for (; n > 0; n--) { const x = r.x0 + R() * (r.x1 - r.x0), z = r.z0 + R() * (r.z1 - r.z0), y = r.q.y;
+        if (covered(x, z, y, r.q) || collAt(x, z, y - 0.05, y + 0.4) || !okChunk(x, z, y)) continue;
+        const col = GC[Math.floor(R() * GC.length)], k = 2 + Math.floor(R() * 2), s9 = 0.85 + R() * 0.3;
+        for (let b = 0; b < k; b++) { const a = R() * Math.PI * 2, lean = 0.25 + R() * 0.35, hb = (0.1 + R() * 0.05) * s9;
+          M9.compose(V9.set(x + Math.cos(a) * 0.03, y - 0.004, z + Math.sin(a) * 0.03), Q9.setFromEuler(E9.set(Math.sin(a) * lean, R() * 3, -Math.cos(a) * lean)), S9.set(0.045 * s9, hb, 0.045 * s9)); dGeo(BLADE, M9, col, { at: [x, z] }); }
+        softVols.push({ x0: x - 0.15, x1: x + 0.15, y0: y - 0.03, y1: y + 0.2, z0: z - 0.15, z1: z + 0.15, why: 'GFX-3 풀 포기' }); nT++; } }
+    const OCT = new THREE.TetrahedronGeometry(1, 0), PC = [0xa8a092, 0x8f8a80, 0xc2b8a4, 0x9c8f7c];   // 자갈 = 납작 사면체(4 삼각형)
+    for (let i = 0; i < 420 && nP < 200; i++) {   // 운동장 흙 — 가장자리 3 m 띠에 많이, 안쪽은 드문드문
+      const edge = R() < 0.7, x = edge ? (R() < 0.5 ? F9.x[0] + R() * 3 : F9.x[1] - R() * 3) : F9.x[0] + R() * (F9.x[1] - F9.x[0]), z = edge && R() < 0.5 ? (R() < 0.5 ? F9.z[0] + R() * 3 : F9.z[1] - R() * 3) : F9.z[0] + R() * (F9.z[1] - F9.z[0]);
+      if (terrainAt(x, z) !== FIELD || covered(x, z, FIELD + 0.001, null) || collAt(x, z, FIELD - 0.05, FIELD + 0.4) || !okChunk(x, z)) continue;
+      const sc = 0.03 + R() * 0.035; M9.compose(V9.set(x, FIELD + sc * 0.2, z), Q9.setFromEuler(E9.set(0, R() * 3, 0)), S9.set(sc * (1 + R() * 0.5), sc * 0.55, sc));
+      dGeo(OCT, M9, PC[Math.floor(R() * PC.length)], { at: [x, z] }); nP++; }
+    OCT.dispose(); BLADE.dispose();
+  }
   let glassMesh = null;
   if (glassPos.length) {   // 창 유리 — 반투명 한 덩어리(밤엔 main.js가 따뜻하게 빛나게 한다)
     const gg = new THREE.BufferGeometry();
@@ -5174,6 +5297,42 @@ export function buildWorld(scene) {
     gm.matrixAutoUpdate = false; gm.renderOrder = 2; scene.add(gm); glassMesh = gm;
   }
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  // ================= GFX-3 셰이더 AO(재질 셰이더에 몇 줄 — 빛 0·후처리 0·삼각형 0·드로우콜 0) =================
+  //  aoD(cm) → 조각마다 정확한 거리 → 부드러운 어둠. 벽: 모서리(세로 모서리 0.8 m) · 바닥 닿는 곳(0.55 m) · 천장 닿는 곳(0.6 m). 바닥·천장: 네 변 0.8 m
+  //  ground(잔디·흙): 월드 좌표 두 배율 얼룩 텍스처(9 m·2.7 m) — 가까이서도 한 톤 판으로 안 보이게 + 골대 앞 닳은 자리(밝고 마른 흙)
+  //  곱은 톤매핑 뒤(화면 값)에 한다 — 톤매핑 앞에서 곱하면 밝게 날아간 흰 벽에서는 ACES가 눌러 거의 안 보였다
+  const AO_GLSL = `{ vec4 d = vAoD; float ao;
+    if (d.z < 0.) { vec4 e = 1. - smoothstep(vec4(0.), vec4(1.0), vec4(d.x, d.y, -d.z - 1., d.w)); e = 1. - AO_FLOOR * e * e; ao = e.x * e.y * e.z * e.w; }
+    else { float c = 1. - smoothstep(0., 1.0, min(d.x, d.y)), f = 1. - smoothstep(0., 0.7, d.z), t = 1. - smoothstep(0., 0.8, d.w);
+      ao = (1. - 0.3 * c * c) * (1. - 0.38 * f * f) * (1. - 0.24 * t * t); }
+    gMul *= ao; }`;
+  const macroTex = (() => {   // 이음매 없는 값 노이즈 두 장(r = 성긴 · g = 고운) — 원시 데이터(색공간 없음)
+    const N = 128, cv = document.createElement('canvas'); cv.width = cv.height = N; const g = cv.getContext('2d'), img = g.createImageData(N, N);
+    const lat = (P, s) => { const h = (i, j) => { const v = Math.sin(((i % P) + P) % P * 127.1 + (((j % P) + P) % P) * 311.7 + s) * 43758.5453; return v - Math.floor(v); };
+      return (x, y) => { const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy, u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy), a = h(ix, iy), b = h(ix + 1, iy), c = h(ix, iy + 1), e = h(ix + 1, iy + 1);
+        return a + (b - a) * u + (c - a) * v + (a - b - c + e) * u * v; }; };
+    const n1 = lat(4, 1.3), n2 = lat(8, 7.1), n3 = lat(16, 3.7);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const o = (y * N + x) * 4, X = x / N, Y = y / N;
+      img.data[o] = Math.round(255 * (0.65 * n1(X * 4, Y * 4) + 0.35 * n2(X * 8, Y * 8))); img.data[o + 1] = Math.round(255 * (0.6 * n2(X * 8 + 3, Y * 8 + 5) + 0.4 * n3(X * 16, Y * 16))); img.data[o + 2] = 128; img.data[o + 3] = 255; }
+    g.putImageData(img, 0, 0); const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
+  const FCZ0 = (SCHOOL.field.z[0] + SCHOOL.southFenceZ) / 2;
+  const WORN = [[-35.3 + 3.2, FCZ0 + 3.0, 4.2], [SCHOOL.bballNet.x - 2.1 - 3.2, FCZ0, 4.2], [-13, SCHOOL.field.z[0] + 1.2 + 2.4, 2.8], [-24, SCHOOL.southFenceZ - 3.2 - 2.4, 2.8], [(-35.3 + SCHOOL.bballNet.x - 2.1) / 2, FCZ0 + 1.5, 3.2]]
+    .map(([x, z, r]) => new THREE.Vector3(x, z, r));   // 골대 앞(큰 골대 둘·작은 골대 둘) + 가운데 원 — 운동장 높이 흙에서만
+  function aoPatch(m, ao, ground) {
+    m.onBeforeCompile = sh => {
+      if (ground) { sh.uniforms.macroMap = { value: macroTex }; sh.uniforms.worn = { value: WORN }; }
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + (ao ? 'attribute vec4 aoD;\nvarying vec4 vAoD;\n' : '') + (ground ? 'varying vec3 vWp;\n' : ''))
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\n' + (ao ? 'vAoD = aoD * 0.01;\n' : '') + (ground ? 'vWp = position;\n' : ''));
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + (ao ? 'varying vec4 vAoD;\n#define AO_FLOOR ' + (ao === 'ceil' ? '0.22' : '0.3') + '\n' : '') + (ground ? 'varying vec3 vWp;\nuniform sampler2D macroMap;\nuniform vec3 worn[5];\n#define GV ' + (ground === 'grass' ? '1.7' : '1.0') + '\n' : ''))
+        .replace('#include <color_fragment>', '#include <color_fragment>\nvec3 gMul = vec3(1.); float gWorn = 0.;\n' + (ao ? AO_GLSL : '') + (ground ? `{ float m1 = texture2D(macroMap, vWp.xz * 0.111).r, m2 = texture2D(macroMap, vWp.xz * 0.37 + 0.31).g - 0.5;
+          gMul *= (1. + GV * (-0.08 + 0.16 * m1)) * vec3(1. + GV * 0.08 * m2, 1. + GV * 0.03 * m2, 1. - GV * 0.09 * m2);
+          if (abs(vWp.y - (${FIELD.toFixed(3)})) < 0.05) for (int i = 0; i < 5; i++) gWorn = max(gWorn, 1. - smoothstep(0.35, 1., length(vWp.xz - worn[i].xy) / worn[i].z + (m2 - 0.1) * 0.9)); }` : ''))
+        .replace('#include <tonemapping_fragment>', '#include <tonemapping_fragment>\ngl_FragColor.rgb *= gMul;\n' + (ground ? 'gl_FragColor.rgb = mix(gl_FragColor.rgb, min(vec3(1.), gl_FragColor.rgb * vec3(1.1, 1.08, 1.03) + 0.02), 0.6 * gWorn);\n' : ''));
+    };
+    m.customProgramCacheKey = () => 'gfx3' + (ao || '') + (ground || '');
+    return m;
+  }
+  const matAO = aoPatch(new THREE.MeshLambertMaterial({ vertexColors: true }), 'wall', false);
   // PERF-LOAD: 비인덱스 청크 법선 — three computeVertexNormals(면마다 cb×ab → Float32 저장 → 정점마다 정규화 → Float32)와 같은 식·같은 순서(값이 같다), Vector3 호출 없이
   const flatNormals = g => { const P = g.attributes.position.array, N = new Float32Array(P.length);
     for (let i = 0; i + 8 < P.length; i += 9) { const bx = P[i + 3], by = P[i + 4], bz = P[i + 5], cbx = P[i + 6] - bx, cby = P[i + 7] - by, cbz = P[i + 8] - bz, abx = P[i] - bx, aby = P[i + 1] - by, abz = P[i + 2] - bz;
@@ -5194,7 +5353,8 @@ export function buildWorld(scene) {
     g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(ch.col), 3));
     if (ch.nor) g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(ch.nor), 3)); else flatNormals(g);   // NPC2: smooth 도형이 든 청크는 실어 둔 법선
     bounds(g, true);
-    const m = new THREE.Mesh(g, mat);
+    if (ch.aoUsed) { aoPad(ch.ao, ch.pos.length / 3 * 4); g.setAttribute('aoD', new THREE.BufferAttribute(new Int16Array(ch.ao), 4)); }   // GFX-3
+    const m = new THREE.Mesh(g, ch.aoUsed ? matAO : mat);
     m.matrixAutoUpdate = false; m.userData.st = true;   // OCC-CULL: main.js가 매 프레임 상자(AABB)로 절두체 검사
     scene.add(m);
   }
@@ -5211,7 +5371,9 @@ export function buildWorld(scene) {
     g.setAttribute('uv', new THREE.Float32BufferAttribute(P.uv, 2));
     g.setAttribute('color', new THREE.Float32BufferAttribute(P.col, 3));
     g.computeVertexNormals(); g.computeBoundingSphere();
-    const m = new THREE.Mesh(g, basic ? new THREE.MeshBasicMaterial({ map: tex, vertexColors: true }) : new THREE.MeshLambertMaterial({ map: tex, vertexColors: true }));
+    if (P.aoUsed) { aoPad(P.ao, P.pos.length / 3 * 4); g.setAttribute('aoD', new THREE.BufferAttribute(new Int16Array(P.ao), 4)); }   // GFX-3
+    const m0 = basic ? new THREE.MeshBasicMaterial({ map: tex, vertexColors: true }) : new THREE.MeshLambertMaterial({ map: tex, vertexColors: true });
+    const ground = kind === 'grass' || kind === 'dirt', m = new THREE.Mesh(g, P.aoUsed || ground ? aoPatch(m0, P.aoUsed ? (basic ? 'ceil' : 'floor') : null, ground && kind) : m0);
     m.matrixAutoUpdate = false; m.userData.pat = kind; scene.add(m);   // GFX-2: main.js가 바깥 바닥 무늬만 그림자를 받게 고른다
   }
   if (lampPos.length) {   // 조명 — 한 메시(조명 무시 재질)
