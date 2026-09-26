@@ -1,11 +1,11 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildKid } from './kid.js?v=1';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { buildWorld } from './world.js?v=114';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
-import { SCHOOL } from './layout.js?v=7';   // LAYOUT-3 실측 배치(v1 data.js 대신)
-import * as NAV from './nav.js?v=3';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
-import { makeMeta } from './mapmeta.js?v=3';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=3';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { buildKid } from './kid.js?v=2';   // CHAR-2 내 캐릭터(치비·노란 모자)
+import { buildWorld } from './world.js?v=115';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { SCHOOL } from './layout.js?v=8';   // LAYOUT-3 실측 배치(v1 data.js 대신)
+import * as NAV from './nav.js?v=4';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
+import { makeMeta } from './mapmeta.js?v=4';       // MAP-API-1: 구역 계약표·출발점·표지점
+import { createMapApi } from './mapapi.js?v=4';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -913,7 +913,7 @@ window.SD2 = {
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)
   map: MAP, phys: { groundAt, blockedAt, ceilAt, camHit }, ACT, CTRL, camPose: (...a) => ({ ...camPose(...a) }),
-  health: opt => import('./health.js?v=3').then(m => m.runHealth(window.SD2, opt || {})),
+  health: opt => import('./health.js?v=4').then(m => m.runHealth(window.SD2, opt || {})),
   // PERF-LOAD(09-26): 로드·프레임 계측 — buildMs·firstFrameMs(ms) · 최근 240프레임 CPU p50/p95(렌더 제외) · 가림 컬링 재계산 p95. reset() 뒤 걸어 보고 읽는다
   timing: Object.defineProperties(TIMING, {
     frameCpuP50: { get: () => rbPct(RB.cpu, RB.ci, 0.5), enumerable: true }, frameCpuP95: { get: () => rbPct(RB.cpu, RB.ci, 0.95), enumerable: true },
