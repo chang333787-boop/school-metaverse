@@ -3,8 +3,8 @@
 //   원칙: 매 프레임 새 객체·전체 순회 금지(구역·트리거·경계는 10Hz) · 예외는 잡아서 월드 루프가 멈추지 않게 · 사람 NPC·대사 생성 금지.
 //   정본 문서 = docs/map_api.md
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
-import { createMinimap } from './minimap.js?v=3';
-import { createGamePicker } from './gamepick.js?v=3';
+import { createMinimap } from './minimap.js?v=4';
+import { createGamePicker } from './gamepick.js?v=4';
 export function createMapApi(host, NAV, META) {
   const { THREE, scene, world, SCHOOL, q, pl, ui } = host;
   const HOT = host.hot, Z = world.zones, P = pl.P, CTRL = pl.CTRL;
