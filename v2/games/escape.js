@@ -24,11 +24,7 @@ const CSS = [
   '.esc-row{display:flex;justify-content:center;gap:10px}.esc-row button{min-width:110px;min-height:44px;border:0;border-radius:10px;font-size:16px;cursor:pointer;touch-action:manipulation}',
   '.esc-row .ok{background:#ffc62e;color:#223047;font-weight:800}.esc-row .no{background:#51607a;color:#fff}',
   '.esc-lock.bad{animation:escShake .35s}@keyframes escShake{20%{margin-left:-10px}40%{margin-left:10px}60%{margin-left:-6px}80%{margin-left:6px}}',
-  // 휴대폰 가로(터치): 아래 버튼 줄(점프·✋·👁·⬇ — 화면 아래 ≈100px)을 가리지 않게 위쪽에 작게 · 왼쪽 위(📍·시간·그만하기 칩 위 — 여는 동안은 멈춤)에 붙여
-  //   오른쪽 미니맵·단서 칩(📚·📄 — 번호를 넣으며 봐야 한다)을 가리지 않는다(리뷰: 가운데에 두면 좁은 화면에서 단서 칩·놀이 칩을 덮었다)
-  'body.touch .esc-lock{left:calc(8px + env(safe-area-inset-left));top:calc(6px + env(safe-area-inset-top));transform:none;width:min(330px,58vw);padding:8px 12px 10px}',
-  'body.touch .esc-lock h3{font-size:16px;margin:0 0 2px}body.touch .esc-lock p{margin:0 0 4px;font-size:13px}body.touch .esc-dials{margin:2px 0 6px;gap:8px}',
-  'body.touch .esc-dial{gap:3px}body.touch .esc-dial button{height:34px;width:50px}body.touch .esc-dial span{height:42px;font-size:26px;line-height:42px;width:50px}body.touch .esc-row button{min-height:40px;min-width:100px}',
+  // 터치(태블릿·휴대폰) 자물쇠 창 모양은 v2/phone.css(.esc-lock — 합치기 integ2: 게임 파일에 휴대폰 CSS를 따로 두지 않는다)
 ].join('\n');
 
 export default async function start(map, params = {}) {

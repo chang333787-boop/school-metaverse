@@ -74,8 +74,8 @@ body.touch #hint{min-height:44px;box-sizing:border-box}
 body.touch .gpick-x{min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}
 /* 안내(#hint)·알림(#toast)은 휴대폰에선 글자만 — 손가락은 뒤 화면(조이스틱)으로 지나간다. 같은 일은 ✋ 행동 버튼이 한다 */
 body.touch.small #hint,body.touch.small #toast{pointer-events:none}
-/* 큰 글자 배너(3·2·1)는 알림 줄 밑으로 */
-body.small #hudBan{top:52%!important}
+/* 큰 글자 배너(3·2·1)는 알림 줄 밑으로 — 합치기 integ2: 49%(52%면 iPhone SE 가로에서 가운데 아래 안내 #hint와 겹쳤다) */
+body.small #hudBan{top:49%!important}
 /* 큰 지도 덮개 글자 줄 12px */
 body.touch #mmap > div:not(#mm-x){font-size:12px!important}
 /* 견학 이야기 창이 열린 동안(움직일 수 없음) 버튼·조이스틱 표시·안내는 숨긴다 — 시트 가장자리에 반쯤 걸쳐 보이던 것 */
@@ -87,3 +87,25 @@ body.touch:has(#tour-talk) .tbtn,body.touch:has(#tour-talk) #tJoyHint,body.touch
   body.touch.small #toast{top:calc(170px + env(safe-area-inset-top))!important;max-width:calc(100vw - 210px)}
 }
 @media (orientation: portrait){ body.touch.small #hint{bottom:calc(166px + env(safe-area-inset-bottom))!important} }
+
+/* ---------- 합치기(integ2 · 09-27): 행동 사전 엔진·방탈출·숨바꼭질·개미가 된 나 — 게임 창도 같은 안전 구역 ---------- */
+/* ⬇ 웅크리기(엔진 — 게임이 켰을 때만 보임): 오른쪽 아래 버튼 줄의 빈 칸(👁 왼쪽 · right 222 — 테 포함 56px라 8px 띄움) · 같은 50px */
+body.small #tCrouch{right:calc(222px + env(safe-area-inset-right));bottom:calc(24px + env(safe-area-inset-bottom));width:50px;height:50px;font-size:18px}
+/* 가방(엔진 .eng-inv — 열쇠·든 것): 왼쪽 위 아이콘 칩 줄(☀️ 🎮) 밑 */
+html body.touch.small .eng-inv{left:calc(8px + env(safe-area-inset-left));top:calc(88px + env(safe-area-inset-top))}
+body.small .eng-inv span{width:30px;height:30px;font-size:17px}
+/* 쪽지·게시판(엔진 .eng-note — 누르면 닫힘): 화면 안에 다 들어가게(스크롤) · 글자 작게 */
+body.touch.small .eng-note{width:min(520px,calc(100vw - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)));max-height:calc(100vh - 16px);padding:12px 16px 10px;font-size:clamp(13px,4.2vh,15px);box-sizing:border-box}
+body.touch.small .eng-note h3{font-size:16px;margin:0 0 6px}
+body.touch.small .eng-note button{margin-top:8px}
+/* 번호 자물쇠 — 터치(태블릿·휴대폰) 공통: 위쪽에 작게(아래 버튼 줄을 가리지 않게) · 왼쪽(오른쪽 미니맵·단서 칩은 번호를 넣으며 봐야 한다) — escape.js에서 옮김 */
+body.touch .esc-lock{left:calc(8px + env(safe-area-inset-left));top:calc(98px + env(safe-area-inset-top));transform:none;width:min(330px,58vw);padding:8px 12px 10px}
+body.touch .esc-lock h3{font-size:16px;margin:0 0 2px}body.touch .esc-lock p{margin:0 0 4px;font-size:13px}body.touch .esc-dials{margin:2px 0 6px;gap:8px}
+body.touch .esc-dial{gap:3px}body.touch .esc-dial button{height:34px;width:50px}body.touch .esc-dial span{height:42px;font-size:26px;line-height:42px;width:50px}body.touch .esc-row button{min-height:40px;min-width:100px}
+/* 번호 자물쇠(방탈출 .esc-lock — 여는 동안 멈춤): 왼쪽(목표 줄 밑 · 📍·☀️·🎮 자리 — 그동안 숨김) · 오른쪽 미니맵 조각·단서 칩(.gchip)은 그대로 보인다 */
+body.touch.small .esc-lock{left:calc(8px + env(safe-area-inset-left));top:calc(40px + env(safe-area-inset-top));width:min(300px,46vw);max-height:calc(100vh - 48px);overflow:auto;box-sizing:border-box}
+/* 창이 떠 있는 동안(움직일 수 없음 — 쪽지·자물쇠·보기 창) 버튼·조이스틱 표시·안내는 숨긴다(견학 창과 같은 규칙) */
+body.touch:has(.eng-note) .tbtn,body.touch:has(.eng-note) #tJoyHint,body.touch:has(.eng-note) #hint,
+body.touch:has(.esc-lock) .tbtn,body.touch:has(.esc-lock) #tJoyHint,body.touch:has(.esc-lock) #hint,
+body.touch:has(.hudAsk) .tbtn,body.touch:has(.hudAsk) #tJoyHint,body.touch:has(.hudAsk) #hint{visibility:hidden}
+body.touch:has(.esc-lock) #loc,body.touch:has(.esc-lock) #timeChip,body.touch:has(.esc-lock) #gpick,body.touch:has(.esc-lock) .eng-inv{visibility:hidden}

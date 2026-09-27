@@ -78,7 +78,7 @@ export function createTouch(ctx) {
   // 리뷰(09-26): 손가락 상태를 모두 푼다 — 창이 포커스를 잃거나 숨으면 touchend가 안 올 수 있다(알림·앱 전환 → 끝없이 걷던 문제)
   function reset() {
     joyEnd(); T.lookId = -1; T.jump = false; T.jumpT = 0;   // (웅크리기 켬/끔은 손가락 상태가 아니라 그대로 둔다)
-    bJump.classList.remove('dn'); bAct.classList.remove('dn'); bView.classList.remove('dn');
+    bJump.classList.remove('dn'); bAct.classList.remove('dn'); bView.classList.remove('dn'); bCrouch.classList.remove('dn');
   }
   // 리뷰(09-26): 터치 화면 크롬북 — 한 번 터치한 뒤 다시 마우스·키보드를 쓰면 데스크톱 화면으로 돌아간다(포인터 잠금도 다시 된다).
   //   터치가 주 입력인 기기(휴대폰·태블릿)는 블루투스 키보드를 써도 그대로 터치 화면.
