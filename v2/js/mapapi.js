@@ -3,7 +3,7 @@
 //   원칙: 매 프레임 새 객체·전체 순회 금지(구역·트리거·경계는 10Hz) · 예외는 잡아서 월드 루프가 멈추지 않게 · 사람 NPC·대사 생성 금지.
 //   정본 문서 = docs/map_api.md
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
-import { createMinimap } from './minimap.js?v=5';
+import { createMinimap } from './minimap.js?v=6';
 import { createGamePicker } from './gamepick.js?v=5';
 import { createEngine } from './engine.js?v=4';   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 export function createMapApi(host, NAV, META) {
@@ -192,26 +192,27 @@ export function createMapApi(host, NAV, META) {
   const chips = new Map(); let banEl = null, banT = 0, goalEl = null, MM = null;   // MM = 미니맵(§11b에서 만든다)
   // 게임 칩 줄: 오른쪽 위 fps 칩 아래. 미니맵이 보이면(GAME-FIND-1) 작을 땐 그 아래로, 클 땐 그 왼쪽으로 비켜 선다(겹침 0)
   // TOUCH-1: 터치 화면에서 미니맵 아래에 칩이 다 안 들어가면(오른쪽 아래 = 점프·행동 버튼 자리) 미니맵 왼쪽 줄로
-  const layoutChips = () => { const r = MM && MM.rect(), side = r && (r.big || (document.body.classList.contains('touch') && r.top + r.h + 8 + chips.size * 34 > innerHeight - 110));
-    const top0 = r && !side ? r.top + r.h + 8 : side && !r.big && document.body.classList.contains('touch') ? 56 : 44, right = side ? r.right + r.w + 8 : 10; let k = 0;   // 터치 좁은 화면(미니맵 왼쪽 줄): 가운데 위 목표 줄(아래 ≈50px) 밑 56px부터
-    for (const [, c] of chips) { c.el.style.top = (top0 + k * 34) + 'px'; c.el.style.right = right + 'px'; k++; } };
+  // PHONE-UI(09-27): 가로 휴대폰(r.phone)이면 칩 줄 간격 28(글자 12px — touch.js css .hud-chip) · 미니맵 왼쪽 줄은 목표 줄(두 줄까지 ≈50px) 밑 52px부터
+  const layoutChips = () => { const r = MM && MM.rect(), ph = !!(r && r.phone), step = ph ? 28 : 34, side = r && (r.big || (document.body.classList.contains('touch') && r.top + r.h + 8 + chips.size * step > innerHeight - (ph ? 80 : 110)));   // 휴대폰 버튼 윗줄 = 아래 80px
+    const top0 = r && !side ? r.top + r.h + (ph ? 6 : 8) : side && !r.big && document.body.classList.contains('touch') ? (ph ? 52 : 56) : 44, right = side ? r.right + r.w + (ph ? 6 : 8) : 10; let k = 0;   // 터치 좁은 화면(미니맵 왼쪽 줄): 가운데 위 목표 줄(아래 ≈50px) 밑 56px부터
+    for (const [, c] of chips) { c.el.style.top = (top0 + k * step) + 'px'; c.el.style.right = right + 'px'; k++; } };
   const hud = {
     toast: (text, sec = 2.2) => ui.toast(text, sec),
-    banner(text, sec = 2.5) { if (!banEl) banEl = el('left:50%;top:38%;transform:translate(-50%,-50%);font-size:30px;font-weight:700;padding:14px 28px;display:none;pointer-events:none'); banEl.textContent = text; banEl.style.display = ''; banT = sec; return { remove() { banEl.style.display = 'none'; banT = 0; } }; },
+    banner(text, sec = 2.5) { if (!banEl) { banEl = el('left:50%;top:38%;transform:translate(-50%,-50%);font-size:30px;font-weight:700;padding:14px 28px;display:none;pointer-events:none'); banEl.classList.add('hud-ban'); } banEl.textContent = text; banEl.style.display = ''; banT = sec; return { remove() { banEl.style.display = 'none'; banT = 0; } }; },
     // opt.onClick(GAME-FIND-1): 칩을 누르면(터치·커서) — 키 안내 칩을 손가락으로도 쓰게
     chip(key, text, opt) { let c = chips.get(key); if (text == null) { if (c) { c.el.remove(); chips.delete(key); layoutChips(); } return null; }
-      if (!c) { c = { el: el('right:10px;font-size:14px') }; chips.set(key, c); layoutChips(); } c.el.textContent = text;
+      if (!c) { c = { el: el('right:10px;font-size:14px') }; c.el.classList.add('hud-chip'); chips.set(key, c); layoutChips(); } c.el.textContent = text;
       if (opt && opt.onClick) { c.el.style.cursor = 'pointer'; c.el.onclick = e => { e.stopPropagation(); try { opt.onClick(); } catch (err) { console.error(err); } }; }
       return { remove: () => hud.chip(key, null) }; },
     // 목표 줄(GAME-FIND-1): 가운데 위에 계속 떠 있는 한 줄("① 찾아갈 곳: 과학실") — null이면 숨김. 배너(가운데·잠깐)와 따로
     goal(text) { if (text == null) { if (goalEl) goalEl.style.display = 'none'; return null; }
-      if (!goalEl) goalEl = el('left:50%;top:10px;transform:translateX(-50%);font-size:19px;font-weight:700;padding:7px 18px;border-radius:12px;pointer-events:none;white-space:nowrap;display:none');
+      if (!goalEl) { goalEl = el('left:50%;top:10px;transform:translateX(-50%);font-size:19px;font-weight:700;padding:7px 18px;border-radius:12px;pointer-events:none;white-space:nowrap;display:none'); goalEl.classList.add('hud-goal'); }
       goalEl.textContent = text; goalEl.style.display = ''; return { remove: () => hud.goal(null) }; },
     // 보기 고르기(퀴즈 스테이션용) — 문항은 교사 승인 데이터만. 1~4 키도 받는다
     ask(title, choices, onHandle) {
       return new Promise(res => {
         document.exitPointerLock?.(); const was = CTRL.frozen; CTRL.frozen = true;
-        const box = el('left:50%;top:50%;transform:translate(-50%,-50%);font-size:18px;padding:16px 20px;max-width:560px;max-height:90vh;overflow:auto;text-align:center');
+        const box = el('left:50%;top:50%;transform:translate(-50%,-50%);font-size:18px;padding:16px 20px;max-width:560px;max-height:90vh;overflow:auto;text-align:center'); box.classList.add('hud-ask');
         const h = document.createElement('div'); h.textContent = title; h.style.cssText = 'font-weight:700;margin-bottom:12px;white-space:pre-line;line-height:1.45'; box.appendChild(h);   // 줄바꿈(\n) 허용(GAME-FIND-1 끝 화면)
         let hh = null;   // 범위 파사드의 정리 항목 — 답하면 같이 뗀다(다시 하기를 여러 번 해도 정리 목록이 쌓이지 않게 · GAME-FIND-1)
         const done = i => { removeEventListener('keydown', kd, true); box.remove(); CTRL.frozen = was; if (hh) hh.remove(); res(i); };

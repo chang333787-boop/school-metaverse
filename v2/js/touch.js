@@ -51,6 +51,28 @@ export function createTouch(ctx) {
       'body.touch #gpick-panel{left:10px!important;right:auto!important;top:98px!important;bottom:auto!important;max-height:calc(100vh - 110px);overflow:auto}',
       'body.touch #toast{top:calc(98px + env(safe-area-inset-top))!important}',   // 리뷰: 가운데 위 알림이 왼쪽 위 칩 줄(시간·놀이)과 겹쳤다(iPhone SE)
       'body.touch #hint{bottom:calc(112px + env(safe-area-inset-bottom))!important;font-size:16px!important;padding:10px 18px!important}',
+      // PHONE-UI(09-27 사용자 "핸드폰에서 지도가 다 가리는데 핸드폰모드에서 ui최적화필요") — 가로 휴대폰(높이 ≤500): 글자·칩을 줄여 화면 가림을 줄인다
+      //   (미니맵 = minimap.js가 높이 30%·맨 위로 · 칩 줄 간격 = mapapi layoutChips) · 태블릿·데스크톱은 그대로
+      '@media (max-height:500px){',
+      ' body.touch #loc{top:calc(8px + env(safe-area-inset-top));font-size:12px;padding:4px 10px}',
+      ' body.touch #timeChip,body.touch #gpick{top:calc(36px + env(safe-area-inset-top));min-height:32px;font-size:13px!important;padding:4px 11px!important}',
+      ' body.touch #gpick{left:calc(88px + env(safe-area-inset-left))}',
+      ' body.touch #gpick-panel{top:74px!important;max-height:calc(100vh - 84px)}',
+      ' body.touch #toast{top:calc(76px + env(safe-area-inset-top))!important;left:calc(10px + env(safe-area-inset-left))!important;transform:none!important;font-size:13px!important;padding:5px 12px!important;white-space:normal;max-width:34vw;pointer-events:none}',   // 왼쪽 줄(📍·시간 칩 밑) — 가운데·오른쪽 칩 줄과 안 겹침 · 엄지 자리 터치는 통과
+      ' body.touch #hint{bottom:calc(104px + env(safe-area-inset-bottom))!important;font-size:14px!important;padding:7px 14px!important;max-width:52vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      ' body.touch .hud-goal{top:calc(6px + env(safe-area-inset-top))!important;font-size:13px!important;padding:5px 12px!important;border-radius:10px!important;max-width:calc(100vw - 330px);white-space:normal!important;text-align:center;line-height:1.3}',
+      ' body.touch .hud-chip{font-size:12px!important;padding:4px 9px!important}',
+      ' body.touch .hud-ban{font-size:21px!important;padding:8px 18px!important;top:34%!important}',
+      ' body.touch .hud-ask{font-size:15px!important;padding:10px 16px!important;max-width:min(520px,86vw)!important;max-height:94vh!important}',
+      ' body.touch .hud-ask>div{margin-bottom:6px!important}',
+      ' body.touch .hud-ask button{min-height:36px!important;margin:4px 0!important;font-size:14px!important}',
+      ' html body.touch .eng-inv{top:calc(76px + env(safe-area-inset-top))}',
+      ' body.touch .tbtn span{font-size:10px}',
+      ' body.touch #tJump{width:66px;height:66px;font-size:24px;right:calc(14px + env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom))}',
+      ' body.touch #tAct{width:58px;height:58px;font-size:21px;right:calc(90px + env(safe-area-inset-right));bottom:calc(22px + env(safe-area-inset-bottom))}',
+      ' body.touch #tView{width:48px;height:48px;font-size:17px;right:calc(158px + env(safe-area-inset-right));bottom:calc(26px + env(safe-area-inset-bottom))}',
+      ' body.touch #tCrouch{width:54px;height:54px;font-size:19px;right:calc(216px + env(safe-area-inset-right));bottom:calc(24px + env(safe-area-inset-bottom))}',
+      '}',
     ].join('\n');
     document.head.appendChild(css);
   }

@@ -6,16 +6,21 @@
 //   import 없음 — 필요한 것은 mapapi가 ctx로 준다. 매 프레임 새 객체·전체 순회 없음(표식 수만큼만).
 export function createMinimap(ctx) {
   const { mapData, drawMap, P, getYaw, onLayout } = ctx;
-  const SMALL = 170, R = 40, TOP = 46, RIGHT = 10, PAD = 5, CAPH = 15, BG = '#d5dccb';
+  const SMALL = 170, R = 40, RIGHT = 10, PAD = 5, BG = '#d5dccb';
+  // PHONE-UI(09-27 사용자 "핸드폰에서 지도가 다 가리는데"): 가로 휴대폰(터치 · 높이 ≤500)이면 작은 지도 ≈ 화면 높이 30%(84~120px) · fps 칩이 없으니 맨 위(top 8)
+  //   · 이름 줄 작게 · 크게 = 화면 가운데 덮개(버튼 위 · 누르면 닫힘) — 칩은 작은 지도 자리 그대로(rect)
+  let TOP = 46, CAPH = 15, PH = false;
+  const phone = () => document.body.classList.contains('touch') && innerHeight <= 500;
   const box = document.createElement('div');
   box.className = 'chip';
   box.style.cssText = `right:${RIGHT}px;top:${TOP}px;padding:${PAD}px;border-radius:14px;background:rgba(29,53,87,.55);display:none;cursor:pointer;user-select:none;line-height:0`;
+  box.id = 'minimap';
   const cv = document.createElement('canvas'); cv.style.cssText = 'display:block;border-radius:10px';
   const cap = document.createElement('div'); cap.style.cssText = `font-size:11px;line-height:${CAPH}px;height:${CAPH}px;text-align:center;opacity:.9;white-space:nowrap`;
   box.append(cv, cap); document.body.appendChild(box);
   const g = cv.getContext('2d');
   const S = { vis: false, big: false, marks: [], dirty: true, dpr: 1, w: SMALL, h: SMALL, sB: 1, bb: null, fl: 1,
-    px: 1e9, pz: 1e9, yaw: 1e9, ph: -1, t: 0, since: 1, ms: 0, drawN: 0, acc: 0, accT: 0, accN: 0 };
+    px: 1e9, pz: 1e9, pc: 0, sw: SMALL, yaw: 1e9, ph: -1, t: 0, since: 1, ms: 0, drawN: 0, acc: 0, accT: 0, accN: 0 };
   const cache = new Map();   // 정적 층: 'small:층' · 'big:층' → 캔버스(크기·dpr이 바뀌면 비운다)
   const D0 = mapData(1), NB = D0.bounds;   // 길격자 범위 [x0, z0, x1, z1] — 작은 지도 정적 층이 덮는 범위
   { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const [x, z] of D0.boundary) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
@@ -24,13 +29,21 @@ export function createMinimap(ctx) {
   function size() {   // 작게 170px 정사각 · 크게 = 화면 높이에 맞춘 학교 전체(아래 🎮 칩·시간 칩 자리 96px는 비운다)
     S.dpr = Math.min(window.devicePixelRatio || 1, 2);
     const [x0, z0, x1, z1] = S.bb;
-    if (S.big) { const hMax = Math.max(200, innerHeight - TOP - 96 - PAD * 2 - CAPH), wMax = Math.max(200, innerWidth * 0.55);
+    PH = phone(); TOP = PH ? 8 : 46; CAPH = PH ? 12 : 15;
+    cap.style.fontSize = PH ? '10px' : '11px'; cap.style.lineHeight = cap.style.height = CAPH + 'px';
+    S.sw = PH ? Math.max(84, Math.min(120, Math.round(innerHeight * 0.3))) : SMALL;   // 작은 지도 한 변(칩 배치는 크게일 때도 이 자리)
+    box.style.zIndex = PH && S.big ? '24' : '';   // 휴대폰 크게 = 버튼(22) 위 덮개
+    box.style.top = (PH && S.big ? 8 : TOP) + 'px';
+    box.style.right = PH && S.big ? '50%' : RIGHT + 'px'; box.style.transform = PH && S.big ? 'translateX(50%)' : '';
+    if (S.big && PH) { const hMax = Math.max(120, innerHeight - 16 - PAD * 2 - CAPH), wMax = Math.max(160, innerWidth - 140);
       S.sB = Math.min(hMax / (z1 - z0), wMax / (x1 - x0)); S.w = Math.round((x1 - x0) * S.sB); S.h = Math.round((z1 - z0) * S.sB); }
-    else { S.w = S.h = SMALL;
+    else if (S.big) { const hMax = Math.max(200, innerHeight - TOP - 96 - PAD * 2 - CAPH), wMax = Math.max(200, innerWidth * 0.55);
+      S.sB = Math.min(hMax / (z1 - z0), wMax / (x1 - x0)); S.w = Math.round((x1 - x0) * S.sB); S.h = Math.round((z1 - z0) * S.sB); }
+    else { S.w = S.h = S.sw;
       // TOUCH-1 리뷰(09-26): 터치 화면이면 오른쪽 아래 점프·행동·시점 버튼 위에서 멈춘다(iPhone SE 가로 320px에선 170px 지도가 버튼을 덮었다)
       if (document.body.classList.contains('touch')) { let bt = innerHeight;
         for (const id of ['tJump', 'tAct', 'tView']) { const b = document.getElementById(id); if (!b) continue; const r = b.getBoundingClientRect(); if (r.height > 0) bt = Math.min(bt, r.top); }   // position:fixed라 offsetParent는 늘 null — 크기로 본다
-        S.w = S.h = Math.max(96, Math.min(SMALL, Math.floor(bt - 6 - TOP - PAD * 2 - CAPH))); } }
+        S.w = S.h = Math.max(PH ? 84 : 96, Math.min(S.sw, Math.floor(bt - 6 - TOP - PAD * 2 - CAPH))); } }
     cv.width = Math.round(S.w * S.dpr); cv.height = Math.round(S.h * S.dpr); cv.style.width = S.w + 'px'; cv.style.height = S.h + 'px';
     cap.textContent = (document.body.classList.contains('touch') ? '' : 'M · ') + (S.big ? '누르면 작게' : '누르면 크게');   // 터치엔 M 키가 없다
     S.dirty = true;
@@ -106,6 +119,7 @@ export function createMinimap(ctx) {
   function tick(dt) {
     if (!S.vis) return;
     S.t += dt; S.since += dt; S.accT += dt; S.accN++;
+    if ((S.pc -= dt) <= 0) { S.pc = 0.5; if (phone() !== PH) { cache.clear(); size(); onLayout && onLayout(); } }   // 처음 화면을 터치해 터치 모드가 켜진 때 · 회전(0.5초마다 한 번 · 새 객체 없음)
     const fl = P.y >= 3 ? 2 : 1, yaw = getYaw(), ph = S.marks.some(m => m.blink) ? Math.floor(S.t * 3.2) : 0;
     if (fl !== S.fl) { S.fl = fl; S.dirty = true; }
     if (ph !== S.ph) { S.ph = ph; S.dirty = true; }
@@ -127,7 +141,7 @@ export function createMinimap(ctx) {
   addEventListener('keydown', e => { if (e.code === 'KeyM' && !e.repeat && S.vis) toggle(); });
   addEventListener('resize', () => { cache.clear(); if (S.vis) { size(); onLayout && onLayout(); } });
   // 칩 배치용 — 보일 때 상자의 화면 자리(CSS px)
-  const rect = () => S.vis ? { right: RIGHT, top: TOP, w: S.w + PAD * 2, h: S.h + PAD * 2 + CAPH, big: S.big } : null;
+  const rect = () => S.vis ? (PH && S.big ? { right: RIGHT, top: TOP, w: S.sw + PAD * 2, h: S.sw + PAD * 2 + CAPH, big: false, phone: true } : { right: RIGHT, top: TOP, w: S.w + PAD * 2, h: S.h + PAD * 2 + CAPH, big: S.big, phone: PH }) : null;   // 휴대폰 크게 = 덮개 → 칩은 작은 지도 자리 기준
   return { show, hide, setMarks, toggle, tick, rect, el: box, canvas: cv,
     get visible() { return S.vis; }, get big() { return S.big; }, get marks() { return S.marks.slice(); }, get ms() { return S.ms; }, get draws() { return S.drawN; } };
 }

@@ -257,7 +257,7 @@ export default async function start(map, params = {}) {
     endA(false);
   }
   async function endA(win) {
-    st = 'end'; if (seeker) seeker.pause(true); map.player.freeze(true); goal(null); map.player.setCrouch(null);
+    st = 'end'; if (seeker) seeker.pause(true); if (map.hide.current()) map.hide.exit(); map.player.freeze(true); goal(null); map.player.setCrouch(null);   // 버텨서 이겨도 숨은 채(어두운 틈새 화면)로 끝 화면이 뜨지 않게
     const survived = Math.round(ROUND_A - Math.max(0, T)), key = 'bestA.' + areaKey, prev = map.store.get(key, null);
     const rec = prev == null || survived > prev; if (rec) map.store.set(key, survived);
     const wins = map.store.get('winsA', 0) + (win ? 1 : 0); if (win) map.store.set('winsA', wins);
