@@ -1,11 +1,12 @@
 // v2 지도 API(MAP-API-1 · 09-24) — 게임이 믿고 쓰는 '지도 계약'. import 없음(THREE·월드·물리 함수는 main.js가 host로 주입).
 //   구역 이름표(id·kind·층·건물·tags) · 출발점 · 표지점 · 상호작용 · 이벤트 · 질의 · 길찾기 · 미니맵 데이터 · 게임 로더(?game=이름).
-//   원칙: 매 프레임 새 객체·전체 순회 금지(구역·트리거·경계는 10Hz) · 예외는 잡아서 월드 루프가 멈추지 않게 · 사람 NPC·대사 생성 금지.
+//   원칙: 매 프레임 새 객체·전체 순회 금지(구역·트리거·경계는 10Hz) · 예외는 잡아서 월드 루프가 멈추지 않게 · 사람을 술래로 쓰지 않음(글 규칙 = docs/map_api.md §16.1).
 //   정본 문서 = docs/map_api.md
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
 import { createMinimap } from './minimap.js?v=7';
 import { createGamePicker } from './gamepick.js?v=7';
-import { createEngine } from './engine.js?v=7';   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
+import { createEngine } from './engine.js?v=8';
+import { createWorldFx } from './worldfx.js?v=1';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 export function createMapApi(host, NAV, META) {
   const { THREE, scene, world, SCHOOL, q, pl, ui } = host;
   const HOT = host.hot, Z = world.zones, P = pl.P, CTRL = pl.CTRL;
@@ -320,9 +321,10 @@ export function createMapApi(host, NAV, META) {
       export: () => N.export(),
     };
   }
-  function nav(o = {}) { const k = navKey(o); let c = navCache.get(k); if (!c) { const cc = {}; cc.p = NAV.buildSliced(q, o).then(N => (cc.done = postNav(N))); navCache.set(k, (c = cc)); } return c.done ? Promise.resolve(c.done) : c.p; }
+  const navDirty = () => { try { return FX.solidN() > 0 || ENG.stats().locks > 0; } catch (e) { return false; } };   // (만들기 전 = false)   // WORLD-FX: 게임이 더한 충돌이 있는 동안 지은 격자 = 그 게임 전용
+  function nav(o = {}) { const k = navKey(o); let c = navCache.get(k); if (!c) { const cc = { dirty: navDirty() }; cc.p = NAV.buildSliced(q, o).then(N => (cc.done = postNav(N))); navCache.set(k, (c = cc)); } return c.done ? Promise.resolve(c.done) : c.p; }
   // fresh: 새로 짓고 캐시를 바꾼다(도달성 게이트 reach()가 매번 이렇게 — 월드가 바뀌었으면 게임도 새 격자를 받는다)
-  function navSync(o = {}) { const k = navKey(o); let c = navCache.get(k); if (c && c.done && !o.fresh) return c.done; const N = NAV.buildSync(q, o); c = { done: postNav(N) }; c.p = Promise.resolve(c.done); navCache.set(k, c); return c.done; }
+  function navSync(o = {}) { const k = navKey(o); let c = navCache.get(k); if (c && c.done && !o.fresh) return c.done; const N = NAV.buildSync(q, o); c = { done: postNav(N), dirty: navDirty() }; c.p = Promise.resolve(c.done); navCache.set(k, c); return c.done; }
 
   // ---------- 11. 미니맵 데이터(벡터) + 그리기 도우미 ----------
   function mapData(floor = 1) {
@@ -376,7 +378,18 @@ export function createMapApi(host, NAV, META) {
   const ENG = createEngine({ THREE, scene, camera: host.camera, world, P, CTRL, ACT: pl.ACT, q, hot: HOT, ui, touch: pl.touch, kid: host.kid, doorLock: host.doorLock,
     findEntry, floorY, zoneAt, zoneFind: zone, emit, interactAdd: o => interact.add(o), colliderAdd: (b, o) => collider.add(b, o), navDone,
     teleport: (t, o) => player.teleport(t, o), setYaw: pl.setYaw, sfx, resolve: t => resolve(t), face: h => player.face(h), unstick: () => unstick(), bigTree: bigTree ? [bigTree.x, bigTree.z] : null,
-    setScale: pl.setScale, getScale: pl.scale, pGround: pl.pGround, pBlocked: pl.pBlocked });
+    setScale: pl.setScale, getScale: pl.scale, pGround: pl.pGround, pBlocked: pl.pBlocked, fxOp: op => FX.op(op) });
+  // NPC-MOVE·WORLD-FX(found2 · §16): 사람(NPC) 옮기기·숨기기 + 게임이 세상을 바꾸는 동사(소품·방 불·문·그림·바람·튀는 판) — 게임이 멈추면 FX.reset()
+  const FX = createWorldFx({ THREE, scene, camera: host.camera, world, P, q, ui, emit, colliderAdd: (b, o) => collider.add(b, o), navDone, navGet: () => nav(), resolve: t => resolve(t), zoneAt, zoneFind: zone,
+    interactAdd: o => interact.add(o), doorHold: host.doorHold || (() => false), doorActors: host.doorActors || null, rebake: host.rebake || (() => {}), ENG, floorY, sfx, hot: HOT,
+    pBlocked: pl.pBlocked, getScale: pl.scale });
+  FX.op = op => { const o = op; switch (o.op) {
+    case 'moveNpc': case 'hideNpc': case 'showNpc': case 'homeNpc': return FX.npc.storyOp(o);
+    case 'light': return FX.world.light(o.room, o.on !== false);
+    case 'door': { const d = FX.world.door(o.door ?? o.near); if (d && d[o.state || 'open']) d[o.state || 'open'](); return null; }
+    case 'spawn': return FX.world.spawn(o.kind, o.at, o);
+    case 'paint': return FX.world.paint(o.target, o);
+    default: return null; } };
   // 플레이어 동사(웅크리기·숨음·소리) — player 객체에 붙인다(범위 파사드도 같은 player)
   Object.assign(player, { crouch: on => ENG.player.crouch(on), crouched: ENG.player.crouched, setCrouch: v => ENG.player.setCrouch(v), hidden: ENG.player.hidden, hideSpot: ENG.player.hideSpot, noise: ENG.player.noise,
     scale: (s9, o9) => ENG.player.scale(s9, o9), scaled: ENG.player.scaled, groundAt: ENG.player.groundAt, blockedAt: ENG.player.blockedAt });   // SHRINK-1(09-27): 작아지기 — §12.12
@@ -419,7 +432,8 @@ export function createMapApi(host, NAV, META) {
     // GAME-FIND-1: 게임이 스스로 뗀 항목(도착한 표식·끈 리본·답한 창)은 정리 목록에서도 빠진다 — '다시 하기'를 몇 번 해도 목록이 쌓이지 않게
     const res = new Set(), track = h => { if (h && h.remove) { const r0 = h.remove; h.remove = function () { res.delete(h); return r0.apply(this, arguments); }; res.add(h); } return h; };
     const S = facadeApi(track, owner);
-    S.dispose = () => { for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); try { ENG.reset(); } catch (e) { console.error('[map] 엔진 정리 오류', e); } CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
+    S.dispose = () => { for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); try { ENG.reset(); } catch (e) { console.error('[map] 엔진 정리 오류', e); } try { FX.reset(); } catch (e) { console.error('[map] 세상 바꾸기 정리 오류', e); }
+      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
     S.quit = () => { const c = game.current; if (c && c.scope === S) stopGame('quit'); };   // 게임이 스스로 끝낼 때(끝 화면 [그만하기])
     Object.defineProperty(S, 'tracked', { get: () => res.size });
     return S;
@@ -433,7 +447,7 @@ export function createMapApi(host, NAV, META) {
   // 끼였을 때 가장 가까운 걷는 칸(3m 안)으로 — 게임의 'R: 처음 자리로' 대신 쓸 수도 있다
   function unstick() { const N = navSync().raw, i = N.snap(P.x, P.y, P.z, 3, -1.6, 1.6); if (i < 0) return false; return player.teleport([N.X(i), N.y[i], N.Z(i)]); }
   function tick(dt) {
-    tSec += dt; mkTick(dt); MM.tick(dt); ENG.tick(dt);
+    tSec += dt; mkTick(dt); MM.tick(dt); ENG.tick(dt); FX.tick(dt);
     if (banT > 0 && (banT -= dt) <= 0 && banEl) banEl.style.display = 'none';
     if ((slowT += dt) >= 0.1) { slowT = 0; tick10(); }
     if ((storeT += dt) >= 2) { storeT = 0; flushStore(); }
@@ -539,6 +553,8 @@ export function createMapApi(host, NAV, META) {
       time: k => (k ? ENG.setTime(k) : ui.getTime && ui.getTime()),   // 시간대 바꾸기(게임이 멈추면 원래대로) · 인자 없으면 지금 시간대
       // G-ESCAPE(09-27): 불 끄기·손전등(밤 놀이 — 새 조명 없음 · 게임이 멈추면 원래대로) — §12.13
       lights: on => ENG.lights(on), flashlight: on => ENG.flashlight(on),
+      // NPC-MOVE·WORLD-FX(found2 09-27 · §16): 사람 옮기기(대역) · 세상 바꾸기 — 전부 게임이 멈추면(dispose → FX.reset) 처음대로
+      npc: FX.npc, world: FX.world,
     };
   }
   const MAP = facadeApi(null, null);
@@ -547,11 +563,11 @@ export function createMapApi(host, NAV, META) {
   MAP.stats = () => { let lis = 0; for (const [, s] of L) lis += s.size; const cur = game.current;
     return { listeners: lis, trig: TRIG.size, marks: marks.length, chips: chips.size, hot: HOT.length, pois: POI.size, colliders: world.colliders.length, scene: scene.children.length,
       minimap: MM.visible, mmMarks: MM.marks.length, goal: !!(goalEl && goalEl.style.display !== 'none'), arena: !!arena.shape, frozen: CTRL.frozen, speed: CTRL.speed,
-      game: cur ? cur.id : null, tracked: cur ? cur.scope.tracked : 0, pick: PICK.el.textContent, eng: ENG.stats(), crouchOK: !!CTRL.crouchOK, peek: !!CTRL.peek, hold: !!CTRL.hold }; };
+      game: cur ? cur.id : null, tracked: cur ? cur.scope.tracked : 0, pick: PICK.el.textContent, eng: ENG.stats(), crouchOK: !!CTRL.crouchOK, peek: !!CTRL.peek, hold: !!CTRL.hold, fx: FX.stats() }; };
   MAP.picker = PICK;
   MAP.closeModal = () => ENG.closeModal();   // 리뷰(ENGINE-1): 쪽지가 떠 있으면 닫고 true(✋·안내 칩)
   MAP.idleAct = () => ENG.idleAct();   // ENGINE-1: 행동(E·✋)을 할 지점이 없을 때 — 들고 있는 물건 내려놓기
-  MAP.engine = ENG;
+  MAP.engine = ENG; MAP.worldfx = FX;
   // GAME-WG(09-26): 게임 버튼 신호 — 터치 UI·게임패드가 SD2.map.press('fire', true/false)로 누름/뗌을 알리면 게임은 map.on('action', {name, down})으로 받는다(물총 = 'fire')
   MAP.press = (name, down = true) => emit('action', { name: String(name), down: !!down });
   return MAP;
