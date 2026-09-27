@@ -5,7 +5,7 @@
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
 import { createMinimap } from './minimap.js?v=5';
 import { createGamePicker } from './gamepick.js?v=5';
-import { createEngine } from './engine.js?v=3';   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
+import { createEngine } from './engine.js?v=4';   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 export function createMapApi(host, NAV, META) {
   const { THREE, scene, world, SCHOOL, q, pl, ui } = host;
   const HOT = host.hot, Z = world.zones, P = pl.P, CTRL = pl.CTRL;
@@ -524,7 +524,9 @@ export function createMapApi(host, NAV, META) {
       // ENGINE-1(09-27) 행동 사전 — §11. 전부 게임이 멈추면(dispose → ENG.reset) 처음대로
       see: ENG.see, hide: ENG.hide, note: (t9, b9) => ENG.note(t9, b9), investigate: ENG.investigate, dig: ENG.dig, prop: ENG.prop, carry: ENG.carry,
       story: ENG.story, door: ENG.door, chaser: ENG.chaser, fade: (s9, c9) => ENG.fade(s9, c9),
-      time: k => (k ? ENG.setTime(k) : ui.getTime && ui.getTime()),   // 시간대 바꾸기(게임이 멈추면 원래대로) · 인자 없으면 지금 시간대
+      time: k => (k ? ENG.setTime(k) : ui.getTime && ui.getTime()),
+      // G-ESCAPE(09-27): 불 끄기·손전등(밤 놀이 — 새 조명 없음 · 게임이 멈추면 원래대로) — §11.12
+      lights: on => ENG.lights(on), flashlight: on => ENG.flashlight(on),   // 시간대 바꾸기(게임이 멈추면 원래대로) · 인자 없으면 지금 시간대
     };
   }
   const MAP = facadeApi(null, null);

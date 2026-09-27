@@ -570,6 +570,7 @@ export function buildWorld(scene) {
       rBox(rot, 0.5, 0.28, 0.03, 0x3d5870, cx, y+0.95, cz, ox, 0.065); });
   }
   function officeDesk(cx, y, cz, w = 1.3, dir = 1) {                // w×0.74×0.7 — 상판·옆판·서랍장 + 모니터·키보드. dir = 앉는 쪽(+1 남 · -1 북 — 모니터는 반대쪽)
+    hideSpots.push({ kind: 'desk', label: '책상 밑', x: cx - 0.1, y, z: cz, face: dir > 0 ? 0 : 180, w: Math.min(w, 1.2) });   // G-ESCAPE(09-27): 모니터 쪽(앉는 자리의 반대 — 의자·앉은 사람 쪽이 아님) · 좌표만(모양·충돌 변화 0)
     colliders.push(noStand({ x0: cx-w/2, x1: cx+w/2, y0: y, y1: y+0.74, z0: cz-0.35, z1: cz+0.35 }));
     dBox(w+0.04, 0.04, 0.74, 0xd9cdb6, cx, y+0.7, cz);
     dBox(0.05, 0.7, 0.66, 0xb8ab94, cx-w/2+0.03, y, cz);
@@ -5449,5 +5450,5 @@ export function buildWorld(scene) {
   }
   details.brect = BRECT; details.wing = 2; details.FH = FH;   // OCC-CULL: main.js 가림 컬링이 건물 칸(BRECT 순서 — 2 = 서관, 2층이 있는 유일한 동)·층고를 읽는다
   for (const g of CYLC.values()) g.dispose(); CYLC.clear();   // 원기둥 캐시는 빌드 동안만(dGeo가 정점을 청크로 복사했다 — 더 안 씀 · 메모리)
-  return { colliders, grid, zones, doors, allBoxes, hotspots, hideSpots, details, visRods, soft: softVols, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh };
+  return { colliders, grid, zones, doors, allBoxes, hotspots, hideSpots, details, visRods, soft: softVols, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh, lampMat };   // lampMat: G-ESCAPE 밤 '불 끄기'(main.js setDark — 형광등 색만 바꿈)
 }

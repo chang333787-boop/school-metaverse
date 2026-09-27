@@ -6,5 +6,6 @@ export const GAMES = {
   _template: { title: '게임 틀(개발용)', v: 1, dev: true },
   find_place: { title: '장소 찾기', v: 1, desc: '학교 곳곳 5곳을 차례로 찾아가요' },
   watergun: { title: '물총 놀이', v: 1, desc: '운동장에서 물풍선·장난감 불·꽃·로봇에 물을 쏴요(3분)' },
+  escape: { title: '학교 방탈출', v: 1, desc: '방마다 단서를 모아 번호 자물쇠를 풀고, 마지막 방에선 순찰 로봇을 피해 탈출해요(낮·밤)' },
   actions_demo: { title: '행동 사전 예시(개발용)', v: 2, dev: true },   // ENGINE-1: 엔진 동사를 한 번씩 — 글은 자리표시
 };
