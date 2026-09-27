@@ -318,7 +318,7 @@ function camHit(hx, hy, hz, dx, dy, dz, maxD) {
 }
 
 const keys = new Set();
-addEventListener('keydown', e => keys.add(e.code));
+addEventListener('keydown', e => { keys.add(e.code); if (e.code === 'Space' && !e.repeat) TOUCH.jumpT = Math.max(TOUCH.jumpT, 0.12); });   // Space를 한 프레임보다 짧게 톡 쳐도 뛴다(느린 노트북 · 점프 버튼 jumpT와 같은 방식)
 addEventListener('keyup', e => keys.delete(e.code));
 let camYaw = 0, camPitch = 0.3, camFirst = false;
 addEventListener('keydown', e => { if (e.code === 'KeyV') camFirst = !camFirst; });   // 1인칭 ↔ 3인칭
