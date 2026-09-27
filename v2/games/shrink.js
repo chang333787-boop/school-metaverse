@@ -107,6 +107,34 @@ export default async function start(map, params = {}) {
   crumbs.length = Math.min(crumbs.length, N_CRUMB);
   void cz;
 
+  // ③ 놀이 칸 경계 = 책 벽(리뷰: 예전엔 복도 한가운데 보이지 않는 선에서 '학교 밖으로는…' 알림과 함께 되돌아갔다).
+  //   복도 양 끝(놀이 칸 끝) + 복도 건너편 트인 곳(계단실·다른 방 문) — 작은 몸으로 재어 트인 구간만 막는다. 높이 0.5 > 작은 몸이 닿는 0.35
+  const arenaR = [Math.min(room.x0, door0.x) - 1.2, Math.min(room.z0, room.z1, startAt[2]) - 1.2, Math.max(room.x1, door0.x) + 0.6, Math.max(room.z0, room.z1, startAt[2]) + 0.6];
+  const corr = corrId ? map.zone(corrId) : null, WALL_H = 0.5, walls = [];
+  if (corr) {
+    const alongX = Math.abs(door0.z - room.z0) < 0.6 || Math.abs(door0.z - room.z1) < 0.6;   // 복도가 x로 뻗음(문이 방의 z 쪽 벽에)
+    const XZ = (a, b) => alongX ? [a, b] : [b, a];
+    const A0 = alongX ? arenaR[0] : arenaR[1], A1 = alongX ? arenaR[2] : arenaR[3];
+    const B0 = alongX ? corr.z0 : corr.x0, B1 = alongX ? corr.z1 : corr.x1;
+    const rs = Math.sign((alongX ? (room.z0 + room.z1) / 2 : (room.x0 + room.x1) / 2) - (alongX ? door0.z : door0.x)) || 1;   // 방 쪽(+1 = b가 커지는 쪽)
+    const far = rs > 0 ? B0 : B1;   // 복도 건너편 벽 선
+    const open = (a, b) => { const [x, z] = XZ(a, b), y = map.q.floorY(x, z); return free(x, y, z) && top(x, z, y + 0.1) < y + 0.05; };
+    // 한 줄을 0.05 간격으로 재어 트인 구간 [s0, s1]
+    const runs = (s0, s1, ok) => { const R = []; let r0 = null; for (let s = s0; s <= s1 + 1e-6; s += 0.05) { const o = ok(s); if (o && r0 == null) r0 = s; if (!o && r0 != null) { R.push([r0, s - 0.05]); r0 = null; } } if (r0 != null) R.push([r0, s1]); return R.filter(r => r[1] - r[0] > 0.04); };
+    const wall = (a0, a1, b0, b1, alongA) => walls.push({ a0, a1, b0, b1, alongA });
+    for (const aE of [A0 + 0.3, A1 - 0.3]) for (const [s0, s1] of runs(B0 + 0.05, B1 - 0.05, b => open(aE, b))) wall(aE - 0.1, aE + 0.1, s0 - 0.06, s1 + 0.06, false);
+    for (const [s0, s1] of runs(A0 + 0.4, A1 - 0.4, a => open(a, far - rs * 0.12))) wall(s0 - 0.06, s1 + 0.06, rs > 0 ? far : far - 0.2, rs > 0 ? far + 0.2 : far, true);
+    // 책 더미로 쌓기(더미 0.24 폭) — 충돌은 구간마다 상자 하나
+    for (const W of walls) {
+      const L = W.alongA ? W.a1 - W.a0 : W.b1 - W.b0, n = Math.max(1, Math.round(L / 0.24)), st = L / n;
+      for (let k = 0; k < n; k++) { const m = (W.alongA ? W.a0 : W.b0) + st * (k + 0.5), a = W.alongA ? m : (W.a0 + W.a1) / 2, b = W.alongA ? (W.b0 + W.b1) / 2 : m, [x, z] = XZ(a, b);
+        const wa = W.alongA ? st : W.a1 - W.a0, wb = W.alongA ? W.b1 - W.b0 : st, [w, d] = alongX ? [wa, wb] : [wb, wa];
+        books.push({ x, z, y0: map.q.floorY(x, z), h: WALL_H, w, d, wall: true }); }
+      const [xa, za] = XZ(W.a0, W.b0), [xb, zb] = XZ(W.a1, W.b1);
+      W.box = { x0: Math.min(xa, xb), x1: Math.max(xa, xb), z0: Math.min(za, zb), z1: Math.max(za, zb), y0: map.q.floorY((xa + xb) / 2, (za + zb) / 2) };
+    }
+  } else warn('복도를 못 찾음 — 책 벽 없음');
+
   // ---------- 그리기(InstancedMesh 풀 — 책 1 · 연필 1 · 부스러기 1 · 빛줄기 1) ----------
   const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(0, 0, 0, 'YXZ'), _v = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color(), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
   const ZERO = new THREE.Matrix4().makeScale(0, 0, 0), GEOS = [], MATS = [];
@@ -145,15 +173,15 @@ export default async function start(map, params = {}) {
     beamM.setMatrixAt(i, _m4.compose(_v.set(c.x, c.y + 0.03, c.z), _q.identity(), _s.set(1, 0.32, 1))); };
 
   // ---------- 충돌(책 더미 = 상자 하나 · 연필 = 경사 다리 상자 줄) — 범위 파사드가 stop 때 뗀다 ----------
-  for (const b of books) map.collider.add({ x0: b.x - b.w / 2, x1: b.x + b.w / 2, y0: b.y0, y1: b.y0 + b.h, z0: b.z - b.d / 2, z1: b.z + b.d / 2 });
+  for (const b of books) if (!b.wall) map.collider.add({ x0: b.x - b.w / 2, x1: b.x + b.w / 2, y0: b.y0, y1: b.y0 + b.h, z0: b.z - b.d / 2, z1: b.z + b.d / 2 });
+  for (const W of walls) map.collider.add({ x0: W.box.x0, x1: W.box.x1, y0: W.box.y0, y1: W.box.y0 + WALL_H, z0: W.box.z0, z1: W.box.z1 });
   for (const p of pencils) { const L = Math.hypot(p.b[0] - p.a[0], p.b[2] - p.a[2]), n = Math.max(2, Math.ceil(L / 0.03));
     for (let k = 0; k <= n; k++) { const t = k / n, x = p.a[0] + (p.b[0] - p.a[0]) * t, z = p.a[2] + (p.b[2] - p.a[2]) * t, y1 = p.a[1] + (p.b[1] - p.a[1]) * t + PR * 2;
       map.collider.add({ x0: x - 0.03, x1: x + 0.03, y0: y1 - 0.03, y1, z0: z - 0.03, z1: z + 0.03 }); } }
 
   // ---------- 판 ----------
   map.interact.enable(() => true, false);   // 앉기·칠판 등 평소 지점 끔(작은 몸으로 앉으면 이상) — 멈추면 원래대로
-  const arenaR = [Math.min(room.x0, door0.x) - 1.2, Math.min(room.z0, room.z1, startAt[2]) - 1.2, Math.max(room.x1, door0.x) + 0.6, Math.max(room.z0, room.z1, startAt[2]) + 0.6];
-  map.arena.set({ rect: [arenaR[0], arenaR[1], arenaR[2], arenaR[3]] });
+  map.arena.set({ rect: [arenaR[0], arenaR[1], arenaR[2], arenaR[3]], msg: '교실과 그 앞 복도에서만 놀아요' });   // 책 벽 너머로 빠져도(틈) 되돌림
   const marks = () => map.minimap.setMarks(crumbs.filter(c => !c.got).map(c => ({ x: c.x, z: c.z, color: '#e0a458', shape: 'star' })));
   const goalLine = () => map.hud.goal('🍪 과자 부스러기 ' + got + '/' + crumbs.length + ' 모으기');
   const home = () => { PL.teleport(startAt, { h: faceDoor }); map.hud.toast('↩ 처음 자리로'); };
@@ -175,11 +203,12 @@ export default async function start(map, params = {}) {
     else map.quit();
   }
 
+  const SO = { jump: JUMP };
   return {
     tick(dt) {
       if (st === 'shrink') {   // 1.2초에 걸쳐 0.95 → 1/12(지수로 — 처음 빨리, 끝에 천천히)
         shrinkT += dt; const k = Math.min(1, shrinkT / 1.2), s = Math.exp(Math.log(0.95) + (Math.log(S) - Math.log(0.95)) * (1 - (1 - k) * (1 - k)));
-        PL.scale(s, { jump: JUMP * s / S });
+        SO.jump = JUMP * s / S; PL.scale(s, SO);   // 리뷰: 같은 옵션 객체(매 프레임 새 객체 없음)
         if (k >= 1) { PL.scale(S, { jump: JUMP }); st = 'play'; PL.freeze(false); map.hud.banner('개미만큼 작아졌어요!', 1.6); map.hud.toast('📚 책 더미·✏️ 연필 다리로 올라가요', 4); }
       }
       if (!crumbs.length) return;

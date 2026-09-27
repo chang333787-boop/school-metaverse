@@ -58,7 +58,7 @@ export function createEngine(H) {
     scale(s = 1, o = {}) { return H.setScale ? H.setScale(s, o) : 1; },
     scaled: () => (H.getScale ? H.getScale() : 1),
     groundAt: (x, z, fromY) => (H.pGround ? H.pGround(x, z, fromY) : q.groundAt(x, z, fromY)),
-    blockedAt: (x, z, y, h) => (H.pBlocked ? H.pBlocked(x, z, y, h ?? P.bh) : q.blockedAt(x, z, y, h)),   // 지금 몸으로 막히나(작은 몸만 들어가는 틈 찾기)   // 지금 몸(작아졌으면 작은 몸 판)으로 딛는 윗면 — 게임이 소품·과자 자리를 고를 때
+    blockedAt: (x, z, y, h) => (H.pBlocked ? H.pBlocked(x, z, y, h ?? P.bh) : q.blockedAt(x, z, y, h)),   // 지금 몸(작아졌으면 작은 몸 판)으로 막히나 · groundAt = 딛는 윗면 — 게임이 소품·과자 자리·틈을 고를 때
     setCrouch(v) { CTRL.crouchForce = v == null ? null : !!v; },   // 시험·연출용 강제(null = 입력대로)
     hidden: () => !!hidden,
     hideSpot: () => hidden,

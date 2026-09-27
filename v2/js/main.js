@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=122';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=10';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=5';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=6';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=11';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=12';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=5';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 
 const canvas = document.getElementById('scene');
@@ -390,7 +390,7 @@ function step(dt) {
     camera.position.set(P.x, ey, P.z);
     camera.lookAt(P.x - Math.sin(camYaw) * Math.cos(pitch), ey - Math.sin(pitch), P.z - Math.cos(camYaw) * Math.cos(pitch));
   } else if (PHY.T) {   // SHRINK-1 작은 몸 3인칭: 거리·근평면 비례 · 낮은 가구도 카메라를 막는다(camPoseT) · 실내 피치 제한 없음(천장이 멀다) · 바닥 밑으로 안 감
-    const S = PHY.sc, hx = P.x, hy = P.y + headH, hz = P.z, pch = Math.max(0.08, Math.min(0.9, camPitch)), CD = (indoor ? 4.2 : CAM_D) * S;
+    const S = PHY.sc, hx = P.x, hy = P.y + headH, hz = P.z, pch = Math.max(-0.2, Math.min(0.9, camPitch)), CD = (indoor ? 4.2 : CAM_D) * S;   // 리뷰(SHRINK): 올려다보기 −0.2까지(책상 절벽·교탁 봉우리를 밑에서) — 바닥은 tCamHit가 막는다
     const want = camPoseT(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect).want;
     camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);
     const C = camPoseT(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect, camD);
@@ -1162,7 +1162,7 @@ window.SD2 = {
   time: k => setTime(k || ORDER[(ORDER.indexOf(timeKey) + 1) % 3]),
   loc: () => { updateLoc(); return locBox.textContent; },
   tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (world.baseAt(x, z) + 0.01); P.vy = 0; },
-  yaw(v) { camYaw = v; },
+  yaw(v) { camYaw = v; }, pitch(v) { if (v != null) camPitch = Math.max(-0.2, Math.min(1.1, v)); return camPitch; },   // 시험용(리뷰 SHRINK)
   pos: () => [P.x.toFixed(1), P.y.toFixed(1), P.z.toFixed(1)],
   step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); hotTick(1/60); MAP.tick(1/60); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
   doors: () => DOORS.length, doorCheck,

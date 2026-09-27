@@ -5,7 +5,7 @@
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
 import { createMinimap } from './minimap.js?v=5';
 import { createGamePicker } from './gamepick.js?v=5';
-import { createEngine } from './engine.js?v=4';   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
+import { createEngine } from './engine.js?v=5';   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 export function createMapApi(host, NAV, META) {
   const { THREE, scene, world, SCHOOL, q, pl, ui } = host;
   const HOT = host.hot, Z = world.zones, P = pl.P, CTRL = pl.CTRL;
@@ -463,7 +463,7 @@ export function createMapApi(host, NAV, META) {
     if (arena.shape) {
       const ok = inArena(P.x, P.z) && P.y > -4 && P.y < 12;
       if (ok) { arena.out = 0; if (P.ground && (arena.safeT += 0.1) >= 0.5) { arena.safeT = 0; arena.safe = [P.x, P.y, P.z]; } }
-      else if ((arena.out += 0.1) > 0.25) { arena.out = 0; player.teleport(arena.safe || 'spawn:default'); hud.toast('학교 밖으로는 나갈 수 없어요'); }
+      else if ((arena.out += 0.1) > 0.25) { arena.out = 0; player.teleport(arena.safe || 'spawn:default'); hud.toast((arena.shape && arena.shape.msg) || '학교 밖으로는 나갈 수 없어요'); }   // 리뷰(SHRINK): {rect|poly, msg} — 놀이 칸 경계 알림을 게임이 고른다
     }
   }
 
