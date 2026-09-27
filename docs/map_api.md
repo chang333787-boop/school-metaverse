@@ -58,7 +58,7 @@ map.on(type,fn) → off · map.once(type,fn)       // 'zone'{prev,next}(10Hz·2�
 map.interact.add({x,y,z,r,label,use(h),once}) → {remove} · interact.enable(kind|fn, on) · interact.list({kind,zone})
 map.trigger.add({x,y,z,r} | {rect:[x0,z0,x1,z1],y0,y1}, {enter,exit,once}) → {remove}   // 10Hz — r ≥ 0.8 권장(달리기 7.5m/s)
 map.collider.add({x0,x1,y0,y1,z0,z1},{ns}) → {remove}   // 길격자엔 안 들어감 → nav.block을 같이
-map.arena.set('school' | {rect} | {poly} | null)        // 소프트 경계: 밖에 0.25초 넘게 있으면 마지막 안전 지점으로(게임 중 기본 'school')
+map.arena.set('school' | {rect} | {poly} | null)        // 소프트 경계: 밖에 0.25초 넘게 있으면 마지막 안전 지점으로(게임 중 기본 'school') · {rect|poly, msg}면 그때 알림 = msg(기본 '학교 밖으로는 나갈 수 없어요')
 map.hud.toast(글, 초) · banner(글, 초) · chip(키, 글|null) · ask(제목, 보기[]) → Promise<번호>   // 문항은 교사 승인 데이터만
 map.mk.marker(x,y,z,{color,beam}) · mk.trail(pts,{color,width}) · mk.many(kind,n,{color}) · mk.add(obj)
 map.nav(opt) → Promise<Nav> (크롬북용 6ms씩 나눠 짓기·캐시) · map.navSync(opt)
@@ -71,6 +71,7 @@ map.play = { field, ball, track:{c,a,b,half,gates}, redlight:{startZ,finish}, y 
 SD2.map.stuckLog — 이동키를 누른 채 1.5초 못 움직이고 몸이 충돌 상자 속이던 자리(최대 50) · map.spawns
 SD2.map.check() → {ok, zonesNoMeta, metaNoZone, dupIds, labelBad, extraBad, spawnsBad, poisBad, hotUnreachable, playBad, traps, outsidePct, noZoneInSchoolPct}
 SD2.map.game.load(id, params) / stop() / current   ·  SD2.camPose(…) (3인칭 카메라 식) · SD2.phys{groundAt,blockedAt,ceilAt,camHit} · SD2.CTRL{frozen,speed}
+// SHRINK-1(§12.12): map.player.scale(s, o)/scaled()/groundAt/blockedAt/pos()
 // ENGINE-1 행동 사전(§12): map.player.crouch/crouched/setCrouch/hidden/noise · map.see · map.hide · map.note · map.investigate · map.dig · map.prop · map.carry · map.story · map.door · map.chaser · map.fade · map.time
 ```
 
@@ -367,3 +368,29 @@ map.chaser.list()   // 이벤트: map.on('chaser', {id, state}) · 'caught' · '
   소리 0/2/3/3 · 시야(낮은 막이 뒤 웅크림 가림) · 숨기(화각 40·어둡게)·나오기 · 술래 순찰·소리→수상함·시야→쫓기→잡힘·못 본 숨기는 뒤져도 못 찾음·본 숨기는 찾음 · 로봇·유령·순찰 모양 · 3개 상한 ·
   멈춘 뒤(숨고 웅크린 채·로드 중 그만하기 포함) 지점·장면·이벤트·충돌·DOM·시간대·엔진 수 처음과 같음 · 터치 ⬇ 켬/끔·✋ 들기/내려놓기/숨기/나오기·버튼 겹침 0 · 콘솔 오류 0.
 - 예산: 게임 중 교실·큰 나무 8시점 최악 **14.8만 삼각형 / 187콜**(같은 시점 게임 없음 14.3만/174 — 술래 셋·소품·표식·부채꼴 +4.5천 삼각형·+13콜) · 엔진 tick 평균 0.012ms(술래 셋) · 게임 tick ≈0.
+
+### 12.12 작아지기 — `map.player.scale` (SHRINK-1 · 09-27)
+```js
+map.player.scale(s, { speed, jump, gravity, far })   // s = 몸 크기 0.05~1(1 = 원래) · speed = 걷기 배율(기본 √s) · jump = 점프 정점 m(기본 0.97·s) · gravity = 중력 배율(기본 √s) · far = 먼 평면(기본 160)
+map.player.scaled() · map.player.groundAt(x, z, fromY) · map.player.blockedAt(x, z, y, h?)   // 지금 몸 기준(작아졌으면 작은 몸 판) — 게임이 소품·과자 자리를 고를 때
+map.player.pos()   // 매 프레임용 {x,y,z} — 같은 객체를 돌려준다(곧바로 읽기만)
+```
+- 비례하는 것: 몸 반지름 0.26·키 1.5(웅크림 0.8)·오름 0.55·걷기/달리기/웅크려 걷기·점프·중력 · 캐릭터·발밑 그림자 · 3인칭 머리 높이·카메라 거리(실내 4.2·s)·근평면 0.3·s(최소 0.01)·먼 평면.
+- **작은 몸 판**(main.js `tinyBuild` — 처음 작아질 때 한 번, 8m 격자 · 세대 번호로 거름 = 매 프레임 새 객체 없음): world.js가 적어 둔 `c.tiny`(학생 책상 = 상판·책 칸·다리 4 · 의자 = 좌판·등받이·기둥·다리 4 · 교탁 = 상판·서랍장·옆판·모니터 2 · 사물함·신발장 = 윗판 3cm까지)는 그 상자들로,
+  올라서기 금지(NS)로 올린 상자는 보이는 윗면 `vy1`까지, 교실 앞면 창턱 안쪽 막이(perch 막이)는 없음(`tiny: []` — 창턱 7cm 띠를 걷는다 · 유리 충돌은 그대로), 나머지는 같은 상자 그대로(게임이 뗀 충돌도 따라감). 작아진 뒤 `collider.add`한 것도 들어간다.
+  → 작은 몸은 책상 밑·의자 다리 사이를 지나고, 책상·의자 좌판·교탁·사물함·창턱 윗면을 딛는다.
+- 작은 몸 카메라(`camPoseT`): 작은 몸 판의 보이는 상자를 모두 본다(평소 camHit은 낮은 가구를 건너뜀) · 근평면 모서리(≈1.6×근평면)+여유만큼 앞에서 멈춤 · 옆벽 비키기 · 피치 −0.2~0.9(올려다보기 가능 — 바닥 밑으로는 안 감: 바닥 광선이 막음).
+- **게이트 영향 0**: 길격자·도달성·검진·술래 시야는 늘 원래 몸(`groundAt/blockedAt/ceilAt` 그대로 — `c.tiny`는 좌표만, 모양·감사 변화 0). s = 1이면 물리는 예전 함수를 그대로 부른다.
+- 게임이 멈추면(엔진 reset) 크기 1 · 평소 몸이 NS 상자 속(책상 위·밑·창턱)이면 `unstick()`(가까운 걷는 칸).
+
+## 13. 개미가 된 나(GAME-SHRINK · 09-27) — `v2/games/shrink.js` · `?game=shrink` · 🎮 놀이 목록 '개미가 된 나'
+- 몸 1/12(키 12.5cm · 걷기 1.2m/s · 점프 정점 0.3m — 키의 2.4배 '개미 점프' · 중력 √s) · 교실 한 칸(돌봄교실) + 앞 복도에서 과자 부스러기 8개 모으기 · 걸린 시간 · 가장 빠른 기록(`map.store` — 판이 끝날 때만).
+- 부스러기: 복도 사물함 옆 틈(평소 몸은 못 들어감) · 복도 사물함 위 · 의자 밑 · 학생 책상 위 둘 · 교탁 위 · 창가 사물함 위 · 창턱.
+- 오르는 길(게임이 놓는 소품 — 풀): 책 더미 계단(사물함 앞 0.27·0.54·0.81 → 사물함 1.01) · 의자 옆 책 더미 0.25 → 의자 좌판 0.46 → 책상 0.72 · 맞붙은 책상 줄 · 연필 다리(경사 — 책상 0.72 → 교탁 0.85 · 교탁 → 창가 사물함 0.88) · 사물함 → 창턱 1.0.
+- 자리는 월드에서 읽는다: 교실 빈자리 '앉기' 지점(의자·책상 줄) · 숨는 자리 후보(교탁·창 아래 사물함·복도 사물함) · 문 POI · 윗면 높이·틈은 `map.player.groundAt/blockedAt`(작은 몸)으로 잰다. 못 찾은 자리는 교실 바닥 빈 칸으로 채움.
+- 그리기: 책 1 · 연필 1 · 부스러기 1 · 빛줄기 1 = 드로우콜 +4(InstancedMesh) · 새 조명 없음 · 충돌 = 책 더미 상자 · 연필 = 3cm 간격 경사 상자 줄. 평소 지점(앉기·칠판)은 판 동안 끔. 경계 = **책 벽**(높이 0.5 > 작은 몸이 닿는 0.35 — 복도 양 끝 + 복도 건너편 트인 곳(계단실·문), 작은 몸으로 재어 트인 구간만 · 구간마다 충돌 상자 하나 · 같은 책 풀) + 뒤받침 교실+복도 네모(`arena {rect, msg}` — 알림 '교실과 그 앞 복도에서만 놀아요'). ↩ 칩·R = 처음 자리로.
+- 조작: 키보드(WASD·Space) · 터치(조이스틱·점프 버튼) — 부스러기는 닿으면 줍는다(행동 버튼 필요 없음). 사람(NPC)은 그대로(옮기지 않음 · 과녁 아님) · 화면 글은 UI 문구뿐.
+- 수용 시험(09-27 · Playwright): 키 입력(SD2.step)만으로 출발 → 8개 전부 줍고 끝 화면(30 지점 · 53초) · 휴대폰(iPhone 13 가로) 조이스틱 이동·점프 버튼·버튼 겹침 0 · 작아지는 중/책상 위에서 그만하기 → 크기 1·끼임 없음·지점·HUD·엔진 수 처음과 같음(충돌 배열은 계약대로 죽은 칸만 남음) · 두 번째 판 ·
+  게임 중 교실·복도 8시점 최악 12.7만 삼각형/144콜 · 게임 tick ≈0.01ms · 게이트 기준선 그대로(감사 0 · 도달 100 · 옥상 0 · 문 61 간섭 0 · 지도 계약 0 · 10/10 · 17/17 · 최악 14.8만/183콜).
+- 리뷰(09-27): 예전 경계는 복도 한가운데 보이지 않는 선에서 '학교 밖으로는 나갈 수 없어요'와 함께 되돌렸다(무작위 걷기 27판에서 20번 넘게) → 책 벽 뒤 0번 · 작은 몸 카메라 올려다보기 · 작아지는 연출의 매 프레임 옵션 객체 없앰. 무작위 걷기·점프 24,300프레임: 몸이 상자 속 0(순간이동 직후 제외) · 멈춤 9자리(책상 위·밑·틈·창턱·사물함 위·교탁·연필 다리·의자 밑·창가 사물함) 모두 크기 1·끼임 없음 · 끝 화면에서 그만하기 · 다시 하기 · 시간대 바꾸기 · 11시점 최악 12.5만/145콜.
+

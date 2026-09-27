@@ -53,6 +53,12 @@ export function createEngine(H) {
     // 게임이 이 판에서 웅크리기를 쓰게 한다(기본 끔 — 게임 없음 = 게이트 영향 0). 키보드 C·Ctrl 누르고 있기 · 터치 ⬇ 버튼(켬/끔)
     crouch(on = true) { CTRL.crouchOK = !!on; touch.setCrouchBtn(!!on); if (!on) CTRL.crouchForce = null; ctrlGuard(!!on); },
     crouched: () => !!CTRL.crouched,
+    // SHRINK-1(09-27): 몸 크기 s(0.05~1 · 1 = 원래). 물리(반지름·키·오름·점프·걷기·중력)·카메라(거리·근평면)가 비례하고, 작은 몸은 가구 '보이는 윗면'(책상·의자 좌판·교탁·사물함·창턱)을 딛는다.
+    //   o = { speed: 걷기 배율(기본 √s), jump: 점프 정점 m(기본 0.97·s), gravity: 중력 배율(기본 √s), far } · 게임이 멈추면 1로(끼면 unstick). 길격자·도달성·검진은 늘 원래 몸
+    scale(s = 1, o = {}) { return H.setScale ? H.setScale(s, o) : 1; },
+    scaled: () => (H.getScale ? H.getScale() : 1),
+    groundAt: (x, z, fromY) => (H.pGround ? H.pGround(x, z, fromY) : q.groundAt(x, z, fromY)),
+    blockedAt: (x, z, y, h) => (H.pBlocked ? H.pBlocked(x, z, y, h ?? P.bh) : q.blockedAt(x, z, y, h)),   // 지금 몸(작아졌으면 작은 몸 판)으로 막히나 · groundAt = 딛는 윗면 — 게임이 소품·과자 자리·틈을 고를 때
     setCrouch(v) { CTRL.crouchForce = v == null ? null : !!v; },   // 시험·연출용 강제(null = 입력대로)
     hidden: () => !!hidden,
     hideSpot: () => hidden,
@@ -640,11 +646,12 @@ export function createEngine(H) {
     for (const [, p] of POOLS) { scene.remove(p.m); p.m.geometry.dispose(); p.m.material.dispose(); if (p.m.dispose) p.m.dispose(); } POOLS.clear();
     if (G0) { for (const k in G0) G0[k].dispose(); G0 = null; }
     ST.flags.clear(); ST.inv.length = 0; ST.chapter = null; ST.lis.clear(); invDraw();
+    if (H.getScale && H.getScale() !== 1) { H.setScale(1); if (!CTRL.crouched && q.blockedAt(P.x, P.z, P.y)) H.unstick(); }   // SHRINK-1: 원래 크기로 — 책상 위·밑이면(평소 몸엔 NS 상자 속) 가까운 걷는 칸으로
     if (CTRL.crouchOK || CTRL.crouched) { const was = CTRL.crouched; CTRL.crouchOK = false; CTRL.crouchForce = null; CTRL.crouched = false; P.bh = 1.5; touch.setCrouchBtn(false); if (was && q.blockedAt(P.x, P.z, P.y)) H.unstick(); }
     for (const el of [vig, invEl, fadeEl]) if (el) el.remove(); vig = invEl = fadeEl = null; if (css) { css.remove(); css = null; }
     dirtN = 0;
     if (time0 != null) { const k = time0; time0 = null; if (ui.getTime && ui.getTime() !== k) ui.setTime(k); }
   }
-  const stats = () => ({ hides: HIDES.length, hidden: !!hidden, props: PROPS.length, chasers: CH.length, pools: POOLS.size, locks: LOCKS.size, flags: ST.flags.size, inv: ST.inv.length, runners: RUNNERS.length, owned: owned.length, crouchOK: !!CTRL.crouchOK, targets: TARGETS.length, digs: DIGS.length, note: !!noteEl });
+  const stats = () => ({ hides: HIDES.length, hidden: !!hidden, props: PROPS.length, chasers: CH.length, pools: POOLS.size, locks: LOCKS.size, flags: ST.flags.size, inv: ST.inv.length, runners: RUNNERS.length, owned: owned.length, crouchOK: !!CTRL.crouchOK, scale: H.getScale ? H.getScale() : 1, targets: TARGETS.length, digs: DIGS.length, note: !!noteEl });
   return { player, see, hide, note, closeModal, investigate, prop, carry, dig, story, door, chaser, fade, setTime, tick, tick10, idleAct, reset, stats };
 }
