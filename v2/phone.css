@@ -48,6 +48,10 @@ body.small #tJoyHint{left:calc(22px + env(safe-area-inset-left));bottom:calc(20p
 body.small #tJump{right:calc(12px + env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom));width:70px;height:70px;font-size:26px}
 body.small #tAct{right:calc(90px + env(safe-area-inset-right));bottom:calc(20px + env(safe-area-inset-bottom));width:60px;height:60px;font-size:22px}
 body.small #tView{right:calc(158px + env(safe-area-inset-right));bottom:calc(24px + env(safe-area-inset-bottom));width:50px;height:50px;font-size:18px}
+/* 물총 팀 대결(G3-WG 09-27): 알림 줄 = 왼쪽 위 아이콘 칩 줄 밑(글자만 · 3줄) · 점수판 = 가운데(화면 안) */
+body.small .wg-feed{left:calc(8px + env(safe-area-inset-left))!important;top:calc(96px + env(safe-area-inset-top))!important;font-size:12px!important;gap:3px!important}
+body.small .wg-feed > div:nth-last-child(n+4){display:none}
+body.small .wg-board{font-size:12px!important;min-width:0!important;width:min(360px,calc(100vw - 32px));max-height:calc(100vh - 24px);overflow:auto;box-sizing:border-box;padding:8px 10px!important}
 body.small .wg-fire{right:calc(92px + env(safe-area-inset-right))!important;bottom:calc(92px + env(safe-area-inset-bottom))!important;width:66px!important;height:66px!important;font-size:30px!important}
 body.touch.small #hint{bottom:calc(96px + env(safe-area-inset-bottom))!important;font-size:clamp(13px,4vh,15px)!important;padding:7px 14px!important;max-width:48vw;white-space:normal;text-align:center;box-sizing:border-box}
 

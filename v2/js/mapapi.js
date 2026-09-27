@@ -57,13 +57,14 @@ export function createMapApi(host, NAV, META) {
   const U = world.UPPER;
   const floorY = (x, z, floor = 1) => (floor === 2 && x > U[0] && x < U[1] && z > U[2] && z < U[3]) ? q.groundAt(x, z, U[4] + 0.3) : q.groundAt(x, z, world.baseAt(x, z) + 0.3);
   // 선분 a→b가 충돌 상자를 지나는 첫 비율 t(0~1) 또는 null — 8m 격자 칸만 본다. ignoreNc: 보이지 않는 '올라서기 금지' 윗부분·울타리 막이 무시
+  let seenArr = new Uint32Array(8192), seenGen = 0;
   function ray(a, b, opt = {}) {
     const ign = opt.ignoreNc !== false, minH = opt.minH || 0, dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
-    let t = 1, hit = false; const seen = new Set();
+    let t = 1, hit = false; if (++seenGen > 0x3fffffff) { seenArr.fill(0); seenGen = 1; } if (seenArr.length < world.colliders.length) seenArr = new Uint32Array(world.colliders.length * 2);   // G3-WG(09-27): 본 상자 표시 = 세대 번호 배열(예전 new Set()은 부를 때마다 할당 — 물방울 충돌이 매 프레임 수십 번 부른다)
     for (let gx = Math.floor(Math.min(a[0], b[0]) / 8); gx <= Math.floor(Math.max(a[0], b[0]) / 8); gx++)
       for (let gz = Math.floor(Math.min(a[2], b[2]) / 8); gz <= Math.floor(Math.max(a[2], b[2]) / 8); gz++) {
         const cell = world.grid.get(gx + ':' + gz); if (!cell) continue;
-        for (const i of cell) { if (seen.has(i)) continue; seen.add(i); const c = world.colliders[i];
+        for (const i of cell) { if (seenArr[i] === seenGen) continue; seenArr[i] = seenGen; const c = world.colliders[i];
           if ((ign && c.nc) || c.y1 - c.y0 < minH) continue;
           let t0 = 0, t1 = t, ok = true;
           for (let ax = 0; ax < 3 && ok; ax++) { const o = a[ax], d = ax === 0 ? dx : ax === 1 ? dy : dz, lo = ax === 0 ? c.x0 : ax === 1 ? c.y0 : c.z0, hi = ax === 0 ? c.x1 : ax === 1 ? c.y1 : c.z1;
