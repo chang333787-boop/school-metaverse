@@ -121,6 +121,8 @@ export function createEngine(H) {
       '.eng-inv span{width:34px;height:34px;border-radius:9px;background:rgba(29,53,87,.8);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}',
       'body.touch .eng-inv{top:calc(98px + env(safe-area-inset-top))}',
       '.eng-fade{position:fixed;inset:0;z-index:29;pointer-events:none;background:#000;opacity:0;transition:opacity .5s linear;display:none}',
+      '.eng-torch{position:fixed;inset:0;z-index:17;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(2,4,10,0) 0,rgba(2,4,10,0) 12vmax,rgba(2,4,10,.62) 28vmax,rgba(1,2,6,.9) 48vmax)}',
+      '.eng-torch i{position:absolute;inset:0;mix-blend-mode:screen;background:radial-gradient(circle at 50% 50%,rgba(255,232,180,.2) 0,rgba(255,232,180,.08) 9vmax,rgba(255,232,180,0) 17vmax)}',
       '.eng-bub{position:fixed;left:0;top:0;z-index:19;pointer-events:none;font:800 26px sans-serif;display:none;text-shadow:0 2px 0 rgba(255,255,255,.9),0 0 4px rgba(0,0,0,.4)}',
     ].join('\n');
     document.head.appendChild(css);
@@ -623,6 +625,35 @@ export function createEngine(H) {
     }
   }
 
+  // ---------- 11. 불 끄기 · 손전등(G-ESCAPE 09-27 — 밤 놀이. 새 조명(Light) 없음) ----------
+  //   lights(false) = 형광등(lamp 한 메시) 어둡게 + 있는 빛(하늘빛·해) 세기만 줄임(main.js setDark) — 비상구 유도등(sign 아틀라스)은 조명을 안 받아 그대로 빛남
+  //   flashlight(true) = 손에서 화면 가운데 쪽으로 뻗는 빛 원뿔(MeshBasic 더하기 섞기 · 정점 알파 · 드로우콜 1) + 화면 가장자리 어둡게·가운데 밝게(DOM 두 장 — GPU 일 0)
+  let darkOn = false, torch = null;
+  function lights(on = true) { const d = !on; if (d === darkOn || !ui.dark) return !darkOn; darkOn = d; ui.dark(d); return !darkOn; }
+  function flashlight(on = true) {
+    if (on && !torch) {
+      const L = 7, g = new THREE.ConeGeometry(1.35, L, 20, 1, true); g.translate(0, -L / 2, 0); g.rotateX(-X);   // 꼭짓점 = 원점 · 넓은 끝 = +z(lookAt 방향)
+      const Pa = g.attributes.position, col = new Float32Array(Pa.count * 4);
+      for (let i = 0; i < Pa.count; i++) { const t = Math.min(1, Math.max(0, Pa.getZ(i) / L)); col[i * 4] = 1; col[i * 4 + 1] = 0.94; col[i * 4 + 2] = 0.78; col[i * 4 + 3] = 0.3 * Math.pow(1 - t, 1.3); }
+      g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+      const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+      m.frustumCulled = false; m.renderOrder = 3; scene.add(m);
+      ensureCss(); const el = div('eng-torch', '<i></i>');
+      torch = { m, el };
+    } else if (!on && torch) { scene.remove(torch.m); torch.m.geometry.dispose(); torch.m.material.dispose(); torch.el.remove(); torch = null; }
+    return !!torch;
+  }
+  function torchTick() {
+    const m = torch.m, yaw = pgYaw();
+    // 1인칭(카메라가 머리 가까이)·숨음(틈새 시점)이면 원뿔은 숨김(화면 가운데 밝기만) — 원뿔이 카메라를 덮지 않게
+    _v.set(P.x, P.y + (CTRL.crouched ? 0.8 : 1.3), P.z);
+    const first = camera.position.distanceToSquared(_v) < 0.36;
+    m.visible = !hidden && !first;
+    if (!m.visible) return;
+    m.position.set(P.x + Math.sin(yaw) * 0.3 - Math.cos(yaw) * 0.16, P.y + (CTRL.crouched ? 0.5 : 0.92), P.z + Math.cos(yaw) * 0.3 + Math.sin(yaw) * 0.16);
+    camera.getWorldDirection(_n); _s.copy(camera.position).addScaledVector(_n, 9); m.lookAt(_s);
+  }
+
   // ---------- 틱 · 정리 ----------
   function tick(dt) {
     T += dt;
@@ -631,11 +662,12 @@ export function createEngine(H) {
     if (carried) carryTick();
     if (PROPS.length) propTick(dt);
     if (CH.length) chTick(dt);
+    if (torch) torchTick();
   }
   function tick10() { if (CH.length) chSense(); }
   function idleAct() { if (carried) { carry.drop(); return true; } return false; }
   function reset() {
-    GEN++; ctrlGuard(false);
+    GEN++; ctrlGuard(false); flashlight(false); if (darkOn) lights(true);
     if (hidden) hide.exit();
     if (noteDone) noteDone(false);
     if (digging) { CTRL.pose = null; CTRL.frozen = digging.was; digging = null; }
@@ -652,6 +684,6 @@ export function createEngine(H) {
     dirtN = 0;
     if (time0 != null) { const k = time0; time0 = null; if (ui.getTime && ui.getTime() !== k) ui.setTime(k); }
   }
-  const stats = () => ({ hides: HIDES.length, hidden: !!hidden, props: PROPS.length, chasers: CH.length, pools: POOLS.size, locks: LOCKS.size, flags: ST.flags.size, inv: ST.inv.length, runners: RUNNERS.length, owned: owned.length, crouchOK: !!CTRL.crouchOK, scale: H.getScale ? H.getScale() : 1, targets: TARGETS.length, digs: DIGS.length, note: !!noteEl });
-  return { player, see, hide, note, closeModal, investigate, prop, carry, dig, story, door, chaser, fade, setTime, tick, tick10, idleAct, reset, stats };
+  const stats = () => ({ dark: darkOn, torch: !!torch, hides: HIDES.length, hidden: !!hidden, props: PROPS.length, chasers: CH.length, pools: POOLS.size, locks: LOCKS.size, flags: ST.flags.size, inv: ST.inv.length, runners: RUNNERS.length, owned: owned.length, crouchOK: !!CTRL.crouchOK, scale: H.getScale ? H.getScale() : 1, targets: TARGETS.length, digs: DIGS.length, note: !!noteEl });
+  return { player, see, hide, note, closeModal, investigate, prop, carry, dig, story, door, chaser, fade, setTime, lights, flashlight, tick, tick10, idleAct, reset, stats };
 }

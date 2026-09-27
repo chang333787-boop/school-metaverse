@@ -828,13 +828,17 @@ function skyTick(dt) {
 // 창 유리 시간대 색. 밤 '불 켜진 창' 빛은 밖에서 볼 때만 — 안(uOut 0)에서 내다보면 창이 주황 안개처럼 바깥을 덮어 낮처럼 보였다(GFX-3 리뷰) → 안에선 옅은 유리 그대로
 function glassApply(k) {
   if (!world.glassMesh) return;
-  const gmat = world.glassMesh.material, glow = GLASS_U.uOut.value > 0.5;
+  const gmat = world.glassMesh.material, glow = GLASS_U.uOut.value > 0.5 && !darkOn;   // G-ESCAPE: 불 끈 밤엔 '불 켜진 창'도 끔
   gmat.emissive.setHex(!glow ? 0x000000 : k === 'night' ? 0xb08a3e : k === 'sunset' ? 0x3a2a14 : 0x000000); gmat.opacity = k === 'night' && glow ? 0.62 : 0.32;
   GLASS_U.uSkyRef.value.setHex(GLASS_SKY[k][0]); GLASS_U.uGndRef.value.setHex(GLASS_SKY[k][1]); GLASS_U.uFr.value = GLASS_SKY[k][2];
 }
 const GLASS_SKY = { day: [0x8fc3ea, 0x5d6b73, 0.6], sunset: [0xe9b995, 0x5e4a44, 0.55], night: [0x1c2a44, 0x0c1018, 0.22] };   // GFX-3: 유리에 비치는 [하늘, 땅, 세기]
 const ORDER = ['day', 'sunset', 'night'];
 let timeKey = 'day';
+// G-ESCAPE(09-27): 불 끄기 — 형광등(lamp 한 메시) 색을 어둡게 + 하늘빛·해 세기를 줄임 · 비상구 유도등(sign 아틀라스)은 그대로 빛남. 게임이 멈추면 engine reset이 되돌린다
+let darkOn = false;
+const DARK = { hi: 0.4, si: 0.15, lamp: 0x3a3e48 };
+function setDark(on) { on = !!on; if (on === darkOn) return darkOn; darkOn = on; if (world.lampMat) world.lampMat.color.setHex(on ? DARK.lamp : 0xfdfbf2); setTime(timeKey); return darkOn; }
 const timeBtn = document.createElement('div');
 timeBtn.className = 'chip'; timeBtn.id = 'timeChip';   // TOUCH-1: 터치면 왼쪽 위로(touch.js css)
 timeBtn.style.cssText = 'right:10px;bottom:10px;cursor:pointer;user-select:none';
@@ -851,6 +855,7 @@ function setTime(k) {
   bakeShadows();
   stars.visible = k === 'night';
   clouds.material.color.setHex(CLOUD_TINT[k]);
+  if (darkOn) { hemi.intensity = t.hi * DARK.hi; sun.intensity = t.si * DARK.si; }   // G-ESCAPE: 불 끄기(게임 map.lights(false)) — 있는 빛의 세기만 줄인다(새 빛 없음)
   glassApply(k);
   { const i = t.label.indexOf(' '); timeBtn.innerHTML = '<span class="ico">' + t.label.slice(0, i) + '</span><span class="lbl">' + t.label.slice(i) + '</span>'; timeBtn.title = t.label; }   // MOBUI-1: 휴대폰은 아이콘만(phone.css .lbl 숨김) — 글자는 데스크톱과 같다
   MAP?.emit('time', k);
@@ -1039,7 +1044,7 @@ function detailTick(dt) {
 MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL,
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
   pl: { P, ACT, CTRL, keys, touch: TOUCH, getYaw: () => camYaw, setYaw: v => { camYaw = v; }, setScale, tinyAdd: c => tinyAdd(c), pBlocked, pGround, scale: () => PHY.sc },   // SHRINK-1: 작아지기(map.player.scale)
-  ui: { toast, hint: hintEl, tone, setTime: k => setTime(k), getTime: () => timeKey }, hot: HOT,
+  ui: { toast, hint: hintEl, tone, setTime: k => setTime(k), getTime: () => timeKey, dark: on => setDark(on), isDark: () => darkOn }, hot: HOT,
   // ENGINE-1: 행동 사전 고리 — 캐릭터(들기 자리)·문 잠그기(문짝 닫힌 채 — 충돌은 mapapi가)·터치(웅크리기 버튼)
   kid: { pg, KID }, doorLock: (n, on) => { const o = DOORS[n]; if (!o) return false; o.lock = !!on; if (on) { o.open = 0; setDoor(o); } return true; } }, NAV, makeMeta(SCHOOL));   // tone = 게임 효과음(GAME-FIND-1 map.sfx)
 
