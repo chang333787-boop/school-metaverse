@@ -6,8 +6,10 @@
 //   MOBUI-1(09-27 "핸드폰에서 지도가 다 가려"): 휴대폰(body.small)이면 작게 = 오른쪽 위 모서리 조각(THUMB px · 글자 줄 없음),
 //     터치(휴대폰·태블릿)에서 크게 = 화면 가운데 덮개(뒤는 어둡게 #mm-dim · ✕ · 바깥을 누르면 닫힘). 데스크톱(M키·클릭)은 그대로.
 //   import 없음 — 필요한 것은 mapapi가 ctx로 준다. 매 프레임 새 객체·전체 순회 없음(표식 수만큼만).
+//   G3-SHRINK2(09-27 "마지막 부스러기를 못 찾았네"): 확대(zoom) — 작은 지도를 게임이 준 네모 안에서 반경 r m로 크게(가구 윗면 모양까지 — mapapi boxesIn).
+//     개미처럼 작아진 판은 40m 지도에선 교실이 17px라 표식이 한 점으로 겹쳤다. show({zoom:{r, rect:[x0,z0,x1,z1], y}}) · zoom(null) · hide()면 풀림.
 export function createMinimap(ctx) {
-  const { mapData, drawMap, P, getYaw, onLayout } = ctx;
+  const { mapData, drawMap, P, getYaw, onLayout, boxesIn } = ctx;
   const SMALL = 170, R = 40, TOP = 46, RIGHT = 10, PAD = 5, CAPH = 15, BG = '#d5dccb';
   const box = document.createElement('div');
   box.className = 'chip';
@@ -21,7 +23,7 @@ export function createMinimap(ctx) {
   box.append(cv, cap, mmX); document.body.append(dim, box);
   const bc = c => document.body.classList.contains(c);
   const g = cv.getContext('2d');
-  const S = { vis: false, big: false, marks: [], dirty: true, dpr: 1, w: SMALL, h: SMALL, sB: 1, bb: null, fl: 1,
+  const S = { vis: false, big: false, zoom: null, marks: [], dirty: true, dpr: 1, w: SMALL, h: SMALL, sB: 1, bb: null, fl: 1,
     px: 1e9, pz: 1e9, yaw: 1e9, ph: -1, t: 0, since: 1, ms: 0, drawN: 0, acc: 0, accT: 0, accN: 0 };
   const cache = new Map();   // 정적 층: 'small:층' · 'big:층' → 캔버스(크기·dpr이 바뀌면 비운다)
   const D0 = mapData(1), NB = D0.bounds;   // 길격자 범위 [x0, z0, x1, z1] — 작은 지도 정적 층이 덮는 범위
@@ -63,9 +65,17 @@ export function createMinimap(ctx) {
       c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = px * 0.3; c.strokeText(z.label, cx, cy); c.fillStyle = '#2b2419'; c.fillText(z.label, cx, cy);
     }
   }
+  const ZOOMED = () => S.zoom && !S.big;
   function layer(fl) {
-    const key = (S.big ? 'big:' : 'small:') + fl; let c = cache.get(key); if (c) return c;
+    const key = ZOOMED() ? 'zoom:' + fl + ':' + S.zoom.key : (S.big ? 'big:' : 'small:') + fl; let c = cache.get(key); if (c) return c;
     c = document.createElement('canvas'); const x = c.getContext('2d');
+    if (ZOOMED()) { const Z = S.zoom, [x0, z0, x1, z1] = Z.rect, s = SMALL / (2 * Z.r) * S.dpr; c.width = Math.max(1, Math.round((x1 - x0) * s)); c.height = Math.max(1, Math.round((z1 - z0) * s));
+      drawMap(x, { floor: fl, scale: s, x0, z0, labels: false, player: false });
+      // 가구 윗면(책상·의자·사물함…): 낮을수록 밝게 — 작은 몸이 올라설 곳이 보이게
+      for (const b of (boxesIn ? boxesIn(x0, z0, x1, z1, Z.y || 0) : [])) { const h = b[4] - (Z.y || 0);
+        x.fillStyle = h < 0.5 ? '#e3cf9f' : h < 1.0 ? '#c29f68' : '#8d7658'; x.strokeStyle = '#5c4b36'; x.lineWidth = Math.max(1, S.dpr);
+        x.fillRect((b[0] - x0) * s, (b[1] - z0) * s, (b[2] - b[0]) * s, (b[3] - b[1]) * s); x.strokeRect((b[0] - x0) * s, (b[1] - z0) * s, (b[2] - b[0]) * s, (b[3] - b[1]) * s); }
+      cache.set(key, c); return c; }
     if (S.big) { const [x0, z0, x1, z1] = S.bb, s = S.sB * S.dpr; c.width = Math.round((x1 - x0) * s); c.height = Math.round((z1 - z0) * s);
       drawMap(x, { floor: fl, scale: s, x0, z0, labels: false, player: false }); labels(x, mapData(fl), s, x0, z0, 10 * S.dpr); }
     else { const s = SMALL / (2 * R) * S.dpr; c.width = Math.round((NB[2] - NB[0]) * s); c.height = Math.round((NB[3] - NB[1]) * s);
@@ -82,8 +92,9 @@ export function createMinimap(ctx) {
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
     if (S.big) { sc = S.sB * d; ox = S.bb[0]; oz = S.bb[1]; g.drawImage(st, 0, 0); }
     else {
-      sc = SMALL / (2 * R) * d; ox = P.x - W / 2 / sc; oz = P.z - H / 2 / sc;
-      const sx = (ox - NB[0]) * sc, sy = (oz - NB[1]) * sc, ix0 = Math.max(0, sx), iy0 = Math.max(0, sy), ix1 = Math.min(st.width, sx + W), iy1 = Math.min(st.height, sy + H);
+      const zm = S.zoom, L0 = zm ? zm.rect : NB;   // 확대면 게임 네모가 정적 층의 원점
+      sc = SMALL / (2 * (zm ? zm.r : R)) * d; ox = P.x - W / 2 / sc; oz = P.z - H / 2 / sc;
+      const sx = (ox - L0[0]) * sc, sy = (oz - L0[1]) * sc, ix0 = Math.max(0, sx), iy0 = Math.max(0, sy), ix1 = Math.min(st.width, sx + W), iy1 = Math.min(st.height, sy + H);
       g.fillStyle = BG; g.fillRect(0, 0, W, H);
       if (ix1 > ix0 && iy1 > iy0) g.drawImage(st, ix0, iy0, ix1 - ix0, iy1 - iy0, ix0 - sx, iy0 - sy, ix1 - ix0, iy1 - iy0);
       g.font = `700 ${10 * d}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'top'; g.lineJoin = 'round';
@@ -129,12 +140,15 @@ export function createMinimap(ctx) {
   }
   function show(o = {}) {
     if (o.marks) setMarks(o.marks);
+    if (o.zoom !== undefined) zoom(o.zoom);
     if (o.big !== undefined && !!o.big !== S.big) S.big = !!o.big;
     if (!S.vis) { S.vis = true; box.style.display = ''; S.fl = P.y >= 3 ? 2 : 1; }
     size(); onLayout && onLayout(); S.since = 1; tick(0);
     return { remove: hide };
   }
-  function hide() { if (!S.vis) return; S.vis = false; box.style.display = 'none'; S.big = false; dim.style.display = 'none'; box.classList.remove('mm-ov'); onLayout && onLayout(); }   // 표식은 남긴다(게임 범위 파사드가 stop 때 setMarks([]))
+  // 확대: z = { r(반경 m · 2~40), rect:[x0,z0,x1,z1](정적 층을 구울 네모 — 게임 놀이 칸), y(바닥 높이 — 가구 높이 색) } | null
+  function zoom(z) { S.zoom = z && z.rect ? { r: Math.max(2, Math.min(40, z.r || 8)), rect: z.rect.slice(0, 4), y: z.y || 0, key: [z.r || 8, ...z.rect.slice(0, 4).map(v => (+v).toFixed(2)), z.y || 0].join(',') } : null; S.dirty = true; return !!S.zoom; }
+  function hide() { S.zoom = null; if (!S.vis) return; S.vis = false; box.style.display = 'none'; S.big = false; dim.style.display = 'none'; box.classList.remove('mm-ov'); onLayout && onLayout(); }   // 표식은 남긴다(게임 범위 파사드가 stop 때 setMarks([]))
   function setMarks(list) { S.marks = (list || []).filter(m => m && isFinite(m.x) && isFinite(m.z)); S.dirty = true; }
   function toggle(v) { if (!S.vis) return false; S.big = v === undefined ? !S.big : !!v; size(); onLayout && onLayout(); S.since = 1; tick(0); return S.big; }
   box.addEventListener('click', e => { e.stopPropagation(); toggle(); });
@@ -142,6 +156,6 @@ export function createMinimap(ctx) {
   addEventListener('resize', () => { cache.clear(); if (S.vis) { size(); onLayout && onLayout(); } });
   // 칩 배치용 — 보일 때 상자의 화면 자리(CSS px)
   const rect = () => !S.vis ? null : thumb && !S.big ? thumb : S.big && box.classList.contains('mm-ov') ? (thumb || null) : { right: RIGHT, top: TOP, w: S.w + PAD * 2, h: S.h + PAD * 2 + CAPH, big: S.big };   // 덮개가 열려도 칩은 조각 기준 자리 그대로(덮개 뒤)
-  return { show, hide, setMarks, toggle, tick, rect, el: box, canvas: cv,
-    get visible() { return S.vis; }, get big() { return S.big; }, get marks() { return S.marks.slice(); }, get ms() { return S.ms; }, get draws() { return S.drawN; } };
+  return { show, hide, setMarks, toggle, tick, rect, zoom, el: box, canvas: cv,
+    get visible() { return S.vis; }, get big() { return S.big; }, get zoomed() { return !!S.zoom; }, get marks() { return S.marks.slice(); }, get ms() { return S.ms; }, get draws() { return S.drawN; } };
 }
