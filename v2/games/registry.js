@@ -11,5 +11,6 @@ export const GAMES = {
   escape: { title: '학교 방탈출', v: 3, desc: '방마다 단서를 모아 번호 자물쇠를 풀고, 마지막 방에선 순찰 로봇을 피해 탈출해요(낮·밤)' },
   actions_demo: { title: '행동 사전 예시(개발용)', v: 3, dev: true },   // ENGINE-1: 엔진 동사를 한 번씩 — 글은 자리표시
   fx_demo: { title: '세상 바꾸기 예시(개발용)', v: 2, dev: true },   // NPC-MOVE·WORLD-FX(found2 09-27 · §16): 사람 옮기기·소품·다리·바람·불·문·칠판 그림
+  story: { title: '이야기: 무지개 편지', v: 1, desc: '4학년이 되어 1학년 동생의 그림을 찾고, 6학년 선배의 편지를 따라 함께 놀이 날을 준비해요(약 10분)' },   // G3-STORY(09-27): 이야기 RPG · 글 = story_data.js
   hideseek: { title: '숨바꼭질', v: 3, desc: '술래 로봇을 피해 숨거나(2분) · 숨은 로봇 5개를 찾아요(3분)' },   // GAME-HS: 두 놀이 · 구역 셋(서관 1층 · 운동장+큰 나무 · 급식실+동쪽 복도)
 };

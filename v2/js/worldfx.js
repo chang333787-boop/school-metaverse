@@ -79,7 +79,7 @@ export function createWorldFx(H) {
   function signTick() {
     const A = SGN.g.attributes.position.array, cx = camera.position.x, cz = camera.position.z;
     for (let k = 0; k < MAXA; k++) { const a = SGN.slot[k]; if (!a) continue;
-      const th = Math.atan2(cx - a.x, cz - a.z), rx = Math.cos(th), rz = -Math.sin(th), nx = Math.sin(th), nz = Math.cos(th), y = a.y + a.top + 0.28, w2 = a.sw / 2, h2 = a.sh / 2, vis = a.vis !== false;
+      const th = Math.atan2(cx - a.x, cz - a.z), rx = Math.cos(th), rz = -Math.sin(th), nx = Math.sin(th), nz = Math.cos(th), y = a.y + a.top + 0.28, w2 = a.sw / 2, h2 = a.sh / 2, vis = a.vis !== false && !a.nosign;
       let o = k * 36;
       for (let f = 0; f < 2; f++) { const zz = f ? -0.008 : 0.008, x0 = f ? w2 : -w2, x1 = -x0;
         const Q = SQ; Q[0] = x0; Q[1] = -h2; Q[2] = x1; Q[3] = -h2; Q[4] = x1; Q[5] = h2; Q[6] = x0; Q[7] = -h2; Q[8] = x1; Q[9] = h2; Q[10] = x0; Q[11] = h2;
@@ -148,6 +148,7 @@ export function createWorldFx(H) {
       const id = find(t); if (id < 0) { console.warn('[world] npc.move: 모르는 사람', t); return Promise.resolve(false); }
       const T9 = tgt(to, o); if (!T9) { console.warn('[world] npc.move: 모르는 곳', to); return Promise.resolve(false); }
       const a = actorFor(id); if (!a) return Promise.resolve(false);
+      if (o.sign != null) a.nosign = !o.sign;   // g3-story: sign:false = 이름표를 가린 대역(이야기 속 이름 없는 역할 — 실제 아이 이름을 역할에 붙이지 않게)
       if (a.done) { const d = a.done; a.done = null; d(false); }
       const pose = o.pose || (to && to.pose) || 'stand', face = o.face ?? T9.h, g0 = GEN, po = { seat: o.seat, desk: o.desk };
       a.spd = o.speed || (a.r.s > 1.05 ? 1.2 : 1.3);
@@ -170,7 +171,7 @@ export function createWorldFx(H) {
       });
     },
     // 제자리에서 자세·방향만(대역으로)
-    pose(t, pose = 'stand', face, o = {}) { const id = find(t); if (id < 0) return false; const a = actorFor(id); if (!a) return false; stopWalk(a); if (face != null) a.h = face; setPose(a, pose, o); solidOn(a); return true; },
+    pose(t, pose = 'stand', face, o = {}) { const id = find(t); if (id < 0) return false; const a = actorFor(id); if (!a) return false; if (o.sign != null) a.nosign = !o.sign; stopWalk(a); if (face != null) a.h = face; setPose(a, pose, o); solidOn(a); return true; },
     // 시험·검증: 사람 정점(청크)·이름표·사람 충돌을 한 수로 — 게임 전후가 같아야 한다
     checksum() { let h = 2166136261 >>> 0; const mix = v => { h = Math.imul(h ^ (v | 0), 16777619) >>> 0; };
       const seen = new Set(); for (const r of PEOPLE) for (const p of r.parts) seen.add(p.mesh);
@@ -182,7 +183,7 @@ export function createWorldFx(H) {
     // 이야기 파일 op moveNpc{name, to, pose, face, walk, speed, wait} · hideNpc{name} · showNpc{name} · homeNpc{name}
     storyOp(op) {
       if (op.op === 'hideNpc') return npc.hide(op.name); if (op.op === 'showNpc') return npc.show(op.name); if (op.op === 'homeNpc') return npc.home(op.name);
-      const p = npc.move(op.name, op.to, { walk: op.walk, pose: op.pose, face: op.face, speed: op.speed, seat: op.seat }); return op.wait ? p : null;
+      const p = npc.move(op.name, op.to, { walk: op.walk, pose: op.pose, face: op.face, speed: op.speed, seat: op.seat, sign: op.sign }); return op.wait ? p : null;
     },
   };
   function actorTick(dt) {
