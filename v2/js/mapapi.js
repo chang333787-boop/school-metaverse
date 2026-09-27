@@ -194,9 +194,12 @@ export function createMapApi(host, NAV, META) {
   // MOBUI-1(09-27): 휴대폰(body.small)은 칩이 작아(phone.css) 줄 간격 30 · 미니맵이 없으면 오른쪽 위 8px부터 · 글자에서 키 안내 '(H)'를 뺀다(터치엔 키가 없다)
   const small = () => document.body.classList.contains('small');
   const chipText = t => small() ? String(t).replace(/\s*\((?:[A-Z]|[A-Z]:[^)]*)\)\s*$/, '') : t;
-  const layoutChips = () => { const r = MM && MM.rect(), sm = small(), st = sm ? 30 : 34, side = r && (r.big || (document.body.classList.contains('touch') && r.top + r.h + 8 + chips.size * st > innerHeight - 110));
+  // MOBUI-1 리뷰: 터치(휴대폰·태블릿)에서 누르는 칩(.gtap — 💡 길 안내·🎫 도장·🔊 소리)은 44px 칸(가운데 정렬 + 투명 누름 자리 phone.css), 보기만 하는 칩은 30px(휴대폰) 칸 · 데스크톱은 34 그대로
+  const slot = c => c.tap && document.body.classList.contains('touch') ? 44 : small() ? 30 : 34;
+  const layoutChips = () => { const r = MM && MM.rect(), sm = small(), st = sm ? 30 : 34; let tot = 0; for (const [, c] of chips) tot += slot(c);
+    const side = r && (r.big || (document.body.classList.contains('touch') && r.top + r.h + 8 + tot > innerHeight - (sm ? 90 : 110)));   // 휴대폰 버튼 줄 위 = 아래 90px
     const top0 = r && !side ? r.top + r.h + (sm ? 6 : 8) : side && !r.big && document.body.classList.contains('touch') ? 56 : sm ? 8 : 44, right = side ? r.right + r.w + 8 : r ? r.right : 10; let k = 0;   // 터치 좁은 화면(미니맵 왼쪽 줄): 가운데 위 목표 줄(아래 ≈50px) 밑 56px부터
-    for (const [, c] of chips) { c.el.style.top = (top0 + k * st) + 'px'; c.el.style.right = r && !side ? right + 'px' : 'calc(' + right + 'px + env(safe-area-inset-right))'; if (c.raw != null) c.el.textContent = chipText(c.raw); k++; } };   // 미니맵 기준 자리는 이미 안전 여백을 품는다(rect = 화면 자리)
+    for (const [, c] of chips) { const h = slot(c); c.el.style.top = (top0 + k + (h === 44 ? Math.max(0, Math.round((44 - (c.el.offsetHeight || 26)) / 2)) : 0)) + 'px'; k += h - st; c.el.style.right = r && !side ? right + 'px' : 'calc(' + right + 'px + env(safe-area-inset-right))'; if (c.raw != null) c.el.textContent = chipText(c.raw); k += st; } };   // 미니맵 기준 자리는 이미 안전 여백을 품는다(rect = 화면 자리)
   addEventListener('resize', () => layoutChips());
   const hud = {
     toast: (text, sec = 2.2) => ui.toast(text, sec),
@@ -204,7 +207,7 @@ export function createMapApi(host, NAV, META) {
     // opt.onClick(GAME-FIND-1): 칩을 누르면(터치·커서) — 키 안내 칩을 손가락으로도 쓰게
     chip(key, text, opt) { let c = chips.get(key); if (text == null) { if (c) { c.el.remove(); chips.delete(key); layoutChips(); } return null; }
       if (!c) { c = { el: el('right:10px;font-size:14px') }; c.el.classList.add('gchip'); chips.set(key, c); layoutChips(); } c.raw = text; c.el.textContent = chipText(text);
-      if (opt && opt.onClick) { c.el.style.cursor = 'pointer'; c.el.onclick = e => { e.stopPropagation(); try { opt.onClick(); } catch (err) { console.error(err); } }; }
+      if (opt && opt.onClick) { if (!c.tap) { c.tap = true; c.el.classList.add('gtap'); layoutChips(); } c.el.style.cursor = 'pointer'; c.el.onclick = e => { e.stopPropagation(); try { opt.onClick(); } catch (err) { console.error(err); } }; }
       return { remove: () => hud.chip(key, null) }; },
     // 목표 줄(GAME-FIND-1): 가운데 위에 계속 떠 있는 한 줄("① 찾아갈 곳: 과학실") — null이면 숨김. 배너(가운데·잠깐)와 따로
     goal(text) { if (text == null) { if (goalEl) goalEl.style.display = 'none'; return null; }
