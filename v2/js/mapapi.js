@@ -510,6 +510,7 @@ export function createMapApi(host, NAV, META) {
       three: THREE,
       // GAME-WG(09-26): 읽기 전용 카메라(겨눔 — 화면 가운데 광선 = camera.position + (0,0,-1)·quaternion. 바꾸지 말 것) · 짧은 합성음 tone(주파수, 시작초, 길이, 파형, 크기, 끝주파수)
       camera: host.camera, tone: (...a) => { if (ui.tone) ui.tone(...a); },
+      tour: world.tour || [],   // TOUR-1(09-27): 견학 안내 선생님·안내판 자리(읽기 전용 — world.js가 사람·판을 놓은 곳) · 글은 games/tour_data.js
     };
   }
   const MAP = facadeApi(null, null);

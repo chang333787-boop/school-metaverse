@@ -6,4 +6,5 @@ export const GAMES = {
   _template: { title: '게임 틀(개발용)', v: 1, dev: true },
   find_place: { title: '장소 찾기', v: 1, desc: '학교 곳곳 5곳을 차례로 찾아가요' },
   watergun: { title: '물총 놀이', v: 1, desc: '운동장에서 물풍선·장난감 불·꽃·로봇에 물을 쏴요(3분)' },
+  tour: { title: '우리 학교 견학', v: 1, desc: '스쿨버스에서 내려 선생님·안내판을 찾아가 이야기 듣고 도장 모으기' },   // TOUR-1(09-27) · 글 = tour_data.js(교사 작성 — 버스터 없이 새로고침만)
 };

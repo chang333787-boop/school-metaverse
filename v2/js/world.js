@@ -549,6 +549,7 @@ export function buildWorld(scene) {
   }
   const seatsOf = {};   // 교실 자리 목록(westClass가 채움 — 사람 배치가 학생을 앉히고 남은 자리에 '앉기')
   const npcSpot = {};   // NPC2: 방 이름 → 교직원 자리 목록(가구를 놓은 곳이 적는다 — { x, z, face, desk(윗면 y), reach(의자 가운데~책상 끝), chair?, pose? })
+  let NPCN = 0; const tourSpots = [];   // TOUR-1(09-27 견학): 안내 선생님·안내판 자리 { key, kind:'guide'|'board', label, x, y, z, face, top } — 글은 v2/games/tour_data.js(교사 작성), 말 걸기는 견학 모드(?game=tour)에서만
   function chair(cx, y, cz, back = 1, col = 0x6f8fb0, rot = 0) {   // 0.5×0.85×0.4 — 앉는 판·등받이·쇠다리. back=등받이 쪽(지역 z 부호)
     colliders.push(noStand(rCol(rot, cx, cz, 0.25, 0.2, y, y+0.85)));
     rBox(rot, 0.42, 0.04, 0.4, col, cx, y+0.42, cz, 0, 0);
@@ -1212,6 +1213,7 @@ export function buildWorld(scene) {
     const fz = zb + dz * 1.0; dBox(0.03, 0.5, 0.72, 0x5a4632, xe - 0.015, 2.3, fz); sign(FLAG_KEY, xe - 0.042, 2.55, fz, -Math.PI / 2, 0.4);
     const tz = zw - dz * 0.8; dBox(0.07, 0.75, 1.3, 0x1e1f22, xe - 0.035, 1.75, tz); dBox(0.03, 0.67, 1.2, 0x2a3a4a, xe - 0.085, 1.79, tz);
     hotspots.push({ kind: 'board', x: xe - 0.6, z: zb, y: 0, r: 2.0, label: '칠판에 낙서하기', bx: xe - 0.08, by: 1.56, bz: zb, ry: -Math.PI / 2 });
+    npcSpot['과학실'] = [{ x: xe - 0.52, y: 0, z: zb + dz * 0.55, face: 3 }];   // TOUR-1: 견학 안내 과학선생님 = 시연대(x xe-1.76~-0.94) 뒤 칠판 앞 — 학생 쪽(서)을 본다
     // 시연대(칠판 앞 — s_400.5): 흰 몸통 + 연두 앞판(학생 쪽) + 검은 테 흰 상판 + 구즈넥 수전 둘
     { const x = xe - 1.35, z = zb;
       dBox(0.76, 0.78, 2.36, 0xf2f2ee, x, 0, z); dBox(0.03, 0.6, 2.2, LIME, x - 0.395, 0.12, z);
@@ -3131,6 +3133,7 @@ export function buildWorld(scene) {
     zones.push({ x0: gx0, x1: SX0, z0: gz0, z1: NZ, y: GYF, label: '체육관 방송실' });
     zones.push({ x0: SX1, x1: gx1, z0: gz0, z1: NZ, y: GYF, label: '체육관 준비실' });
     zones.push({ x0: SX0, x1: SX1, z0: gz0, z1: NZ, y: GYF + 0.9, label: '체육관 무대' });
+    npcSpot['체육관'] = [{ x: (SX0 + SX1) / 2, y: GYF, z: NZ + 1.1, face: 2 }];   // TOUR-1: 견학 안내 체육선생님 = 무대 앞 가운데(계단 둘 사이) · 코트(남)를 본다
     ceil(gx0, SX0, gz0, NZ, GYF + 3.2 + 0.15, 'ctile'); ceil(SX1, gx1, gz0, NZ, GYF + 3.2 + 0.15, 'ctile');
   }
   {   // 부속동(전실·화장실·체육 창고) — 현관 = 동벽 유리 파사드(영상 g_100~112: 북쪽 벽돌벽(작은 창 2) → 유리 양문 → 벽돌 기둥 → 유리 양문 + 옆 고정 유리)
@@ -4958,6 +4961,41 @@ export function buildWorld(scene) {
     }
   }
 
+  // ================= 견학 안내판(TOUR-1 · 09-27 사용자 "각 특별한 지역마다 게시판같은게 있어서 눌르면 설명볼수도") =================
+  //   장난감 같은 작은 안내판: 나무 기둥 둘 + 크림 판(색 종이 셋) + 빨간 지붕 + 크림 제목 팻말('○○ 안내' — sign 아틀라스라 밤에도 보임).
+  //   실내(opt.wall = 벽 게시판 윗끝 높이)는 복도 벽에 이미 있는 게시판 위에 제목 팻말만. 설명 글은 v2/games/tour_data.js(교사 작성) — 읽기·도장은 견학 모드(?game=tour)에서만.
+  //   face = 판 앞이 보는 쪽(0북·1동·2남·3서) · (x, z) = 판 가운데(실내는 벽 안쪽 면 위 점). 충돌 = 기둥 + 판(보이는 모양 그대로 — 판 밑 0.66m는 몸이 못 지나감)
+  {
+    const WOOD = 0xb88a58, PANEL = 0xf3e6c4, ROOF = 0xd9574a, PAPER = [0xfff6a8, 0xbfe3ff, 0xffc8d6], STY = { bg: '#fff4d6', fg: '#5a3e2c' };
+    function infoBoard(key, label, x, z, face, opt = {}) {
+      const ax = (face & 1) === 0, NX = face === 1 ? 1 : face === 3 ? -1 : 0, NZ = face === 2 ? 1 : face === 0 ? -1 : 0;
+      const y = opt.y ?? tY(z, x), ry = ax ? 0 : Math.PI / 2;
+      // a = 판을 따라(ax면 x · 아니면 z) · n = 판 앞쪽으로
+      const put = (wa, h, dn, hex, a, y0, n) => ax ? dBox(wa, h, dn, hex, x + a, y0, z + n * NZ) : dBox(dn, h, wa, hex, x + n * NX, y0, z + a);
+      const box = (a0, a1, y0, y1, n0, n1) => { const p0 = n0 * (ax ? NZ : NX), p1 = n1 * (ax ? NZ : NX), lo = Math.min(p0, p1), hi = Math.max(p0, p1);
+        return ax ? { x0: x + a0, x1: x + a1, y0, y1, z0: z + lo, z1: z + hi } : { x0: x + lo, x1: x + hi, y0, y1, z0: z + a0, z1: z + a1 }; };
+      if (opt.wall) {   // 벽에 이미 있는 게시판(opt.wall = 그 판 윗끝 y) 위에 제목 팻말만 — 복도 벽은 문·창·게시판으로 꽉 차 있다(새 판은 옆 판과 겹쳤다)
+        sign(label + ' 안내', x + NX * 0.03, y + opt.wall + 0.17, z + NZ * 0.03, ry, 0.2, STY);
+      } else {
+        const { w } = sign(label + ' 안내', x, y + 1.47, z, ry, 0.24, STY), W = Math.max(1.2, w + 0.1), PA = W / 2 + 0.07;
+        put(W + 0.05, 0.62, 0.05, PANEL, 0, y + 0.66, 0);               // 판(기둥 안쪽 면에 맞댐)
+        PAPER.forEach((c, i) => put(0.28, 0.2, 0.03, c, (i - 1) * (W / 3.2), y + 0.8 + (i % 2) * 0.16, 0.04));
+        [-PA, PA].forEach(a => { put(0.09, 1.78, 0.09, WOOD, a, y, 0); colliders.push(box(a - 0.06, a + 0.06, y, y + 1.78, -0.06, 0.06)); });
+        put(W + 0.5, 0.07, 0.36, ROOF, 0, y + 1.78, 0); put(W + 0.3, 0.05, 0.14, 0xb8433a, 0, y + 1.85, 0);   // 지붕(기둥 위) + 용마루
+        colliders.push(box(-W / 2 - 0.03, W / 2 + 0.03, y + 0.66, y + 1.6, -0.06, 0.06));
+      }
+      tourSpots.push({ key, kind: 'board', label: label + ' 안내판', place: label, x, y, z, face, top: y + (opt.wall ? opt.wall : 1.95), wall: !!opt.wall });
+    }
+    // 자리(09-27 · 걷는 칸 탐침으로 비어 있는 곳): 숲놀이터 = 데크 북쪽 돌길(앞 = 북 길) · 텃밭 = 텃밭 길 북쪽 가(앞 = 남 길) · 놀이터 = 북쪽 입구(앞 = 북 놀이마당)
+    //   급식실 = 주복도 북벽 출구|입구 사이 학교 사진 판(frameBoard 1.1~2.3 — [main_corridor-10]) 위에 제목 팻말 · 운동장 = 구령대 서쪽 운동장 북쪽 끝(앞 = 남 운동장) · 큰 나무 = 줄기 북서 모래 띠(앞 = 서 운동장)
+    infoBoard('forest', '숲놀이터', 29.0, 43.9, 0);
+    infoBoard('garden', '텃밭', 18.0, -58.9, 2);
+    infoBoard('playground', '놀이터', -36.5, 47.3, 0);
+    infoBoard('cafeteria', '급식실', (B.kitchen.exitC + B.kitchen.doorC - 0.3) / 2, B.front.z[0] + 0.15, 2, { wall: 2.3, y: 0 });
+    infoBoard('field', '운동장', 6.0, -10.6, 2);
+    infoBoard('bigtree', '큰 나무', 34.2, 25.8, 3);
+  }
+
   // ================= 사람들 =================
   // 정적(청크 병합 — 드로우콜 0)·충돌 없음(길을 막지 않는다). ⚠️대사는 교사 승인분만 — 임의 생성 금지
   {
@@ -4968,6 +5006,7 @@ export function buildWorld(scene) {
     //   매끈한 음영 = dGeo smooth(원래 법선). 낮은 분할(머리 10×7 · 작은 것 5×3) — 치비는 분할이 아니라 비례로. 한 명 ≤ 900 삼각형 · 청크 병합(드로우콜 0).
     //   크기 s(아이 1·어른 1.1·유치원 0.8). face = 바라보는 쪽(0북·1동·2남·3서). 발밑 y. 로컬 앞 = +z(kid.js와 같음)
     //   pose: 'stand' · 'sit'(의자 앉는 판 0.46 — o.desk = 책상 윗면 y·o.reach = 의자 가운데~책상 끝) · 'sitFloor'(매트) · 'work'(팔 앞으로 — 배식) · 'sweep'(빗자루) · 'explain'(칠판 앞 한 손 들고)
+    //     · 'wave'(TOUR-1 — 한 팔을 높이 들어 반기기) · o.role(TOUR-1 견학 안내): 'pe'(체육복 + 호루라기 + 옆구리 공) · 'ai'(태블릿) · 'sci'(흰 실험복)
     //   ⚠️겹치는 둥근 부품은 크기를 다르게(머리 R · 뒷머리 1.06R · 앞머리 덮개 1.08R · 단발 1.12R · 위생모 1.14R) — 곡면이라 감사(상자) 밖이지만 같은 면이 겹쳐 깜빡이지 않게
     const TOPS = [0x4d7fd6, 0x3fa37a, 0xe8a33d, 0x8a6ad0, 0xd9574a, 0x5bb5c9, 0xf2d15c, 0xe0708a, 0x7a8a9a, 0xf08a5d, 0x6fbf73, 0xffffff];
     const BOTS = [0x2b3a55, 0x3d4f7a, 0x6b5b4a, 0x2f2f36, 0x5a6f8a, 0x8a8f99];
@@ -5017,13 +5056,17 @@ export function buildWorld(scene) {
       const xs = [], zs = []; for (const lx of [x0, x1]) for (const lz of [z0, z1]) { xs.push(x + (lx * c + lz * n) * s); zs.push(z + (-lx * n + lz * c) * s); }
       return { x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs) }; };
     const pplBox = [];   // 사람 자리(freeSpot가 비킨다 — 예전엔 신발 dBox가 allBoxes에 들어가 저절로 비켰다)
+    let npcN = 0;   // TOUR-1: 사람 수(world.npcs — 견학 안내 선생님 3명을 더한 뒤 확인용)
     function person(x, y, z, sex, s = 1, face = 2, pose = 'stand', o = {}) {
       if (pose === true) pose = 'sit';
+      npcN++;
       const D = s > 1.05 ? ADD : KIDD, adult = D === ADD, girl = sex === '여';
       const h1 = hash2(x, z), h2 = hash2(z, x), pick = (a, h) => a[Math.floor(h * a.length) % a.length];
       let top = pick(TOPS, h1), bot = pick(BOTS, h2);
       const skin = pick(SKIN, h1 * 7 % 1), hair = pick(HAIR, h2 * 5 % 1), style = Math.floor(h2 * 13 % 1 * 3);
       if (o.role === 'cleaner') { top = 0x5e7a8e; bot = 0x3b4a5c; }   // 작업복(회청색 위아래)
+      if (o.role === 'pe') { top = 0x2f6fd0; bot = 0x24324a; }         // TOUR-1 체육복(파랑 위 · 남색 아래)
+      if (o.role === 'sci') { top = 0xf4f4ee; bot = 0x3d4f7a; }        // TOUR-1 흰 실험복
       const SHOE = adult ? 0x3a3d44 : 0xf6f6f2;
       _W9.compose(_v9.set(x, y, z), _q9.setFromEuler(_e9.set(0, YAW[face & 3], 0)), _s9.set(s, s, s));
       const W = _W9.clone();
@@ -5069,6 +5112,7 @@ export function buildWorld(scene) {
         if (pose === 'work') return [sd * 0.12, shY - L * 0.4, L * 0.85];
         if (pose === 'sweep') return sd > 0 ? [0.07, shY - L * 0.3, L * 0.55] : [0.0, shY - L * 0.85, L * 0.7];
         if (pose === 'explain' && sd > 0) return [sx + 0.12, shY + L * 0.45, L * 0.35];
+        if (pose === 'wave' && sd > 0) return [sx + 0.16, shY + L * 0.92, 0.08];   // TOUR-1 반기는 손(머리 옆 높이)
         return [sx + sd * 0.05, shY - L, 0.01];
       });
       [-1, 1].forEach((sd, k) => {
@@ -5081,6 +5125,14 @@ export function buildWorld(scene) {
       // 소품: 국자(급식 — 오른손) · 빗자루(청소 — 두 손을 지나 바닥으로)
       if (o.role === 'cook') { const Hn = hands[1]; limb([Hn[0], Hn[1] - 0.02, Hn[2]], [Hn[0] + 0.02, Hn[1] + 0.26, Hn[2] + 0.1], 0.012, 0xc9ced3, STICK);
         put(S53, [Hn[0], Hn[1] - 0.06, Hn[2] + 0.02], [0.06, 0.045, 0.06], 0xc9ced3); }
+      if (o.role === 'pe') { const Hn = hands[0];   // TOUR-1: 왼 옆구리에 낀 공(주황 — 손 바깥) + 가슴 호루라기(노랑 · 목줄 두 가닥)
+        put(S85, [Hn[0] - 0.1, Hn[1] + 0.1, Hn[2] + 0.02], [0.12, 0.12, 0.12], 0xe8752a);
+        const wz = D.T[3] + 0.012, wy = D.T[0] + dy + D.T[2] * 0.25; put(S53, [0.035, wy, bz + wz], [0.03, 0.022, 0.034], 0xf2c230);
+        [-1, 1].forEach(sd => limb([0.035 + sd * 0.012, wy + 0.01, bz + wz - 0.004], [sd * 0.07, shY + 0.02, bz + D.T[3] * 0.55], 0.004, 0xd9574a, STICK)); }
+      if (o.role === 'ai') { const Hn = hands[0];   // TOUR-1: 왼손에 든 태블릿(짙은 판 + 파란 화면 — 몸 앞쪽으로 기울여)
+        put(S64, [Hn[0] + 0.05, Hn[1] + 0.08, Hn[2] + 0.07], [0.1, 0.13, 0.012], 0x2a2d33, [-0.35, 0, 0]);
+        put(S64, [Hn[0] + 0.05, Hn[1] + 0.082, Hn[2] + 0.078], [0.085, 0.112, 0.006], 0x5bb5e8, [-0.35, 0, 0]); }
+      if (o.role === 'sci') put(SKIRT, [0, hipY - 0.2, 0], [D.PA[1] * 1.35, 0.3, D.PA[3] * 1.4], top);   // TOUR-1: 실험복 아랫자락(무릎 위까지)
       let broom = null;
       if (pose === 'sweep') { const [Lh, R] = hands, dv = [Lh[0] - R[0], Lh[1] - R[1], Lh[2] - R[2]], t = (R[1] - 0.09) / (R[1] - Lh[1]), E = [R[0] + dv[0] * t, 0.09, R[2] + dv[2] * t];
         limb([R[0] - dv[0] * 0.35, R[1] - dv[1] * 0.35, R[2] - dv[2] * 0.35], E, 0.016, 0xb88a58, STICK); broom = E;
@@ -5131,12 +5183,15 @@ export function buildWorld(scene) {
             return [x, z];
       return null;
     }
+    // TOUR-1(09-27 견학): 안내하는 교직원(이름 → 견학 키). 자리는 사람을 놓는 곳에서 그대로 적는다(글은 tour_data.js)
+    const GUIDE = { '교장선생님': 'principal', '교감선생님': 'vice', '사서선생님': 'library', '보건선생님': 'nurse', '돌봄선생님': 'care', '유치원선생님': 'kinder' };
+    const guideAt = (nm, x, y, z, face, top) => { const key = GUIDE[nm]; if (key) tourSpots.push({ key, kind: 'guide', label: nm, x, y, z, face: face & 3, top }); return top; };
     const nameSign = (nm, x, top, z) => sign(nm, x, top + 0.28, z, 0, 0.22);   // 이름 팻말 = 머리 위(앉으면 낮아진다)
     const place = (zn, nm, sex, s) => {   // 자리가 정해지지 않은 사람(예비) — 방 빈자리에 서서 방 가운데 쪽을 본다(90° 단위)
       const p = freeSpot(zn); if (!p) return;
       const dx = (zn.x0 + zn.x1) / 2 - p[0], dz = (zn.z0 + zn.z1) / 2 - p[1];
       const face = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);
-      nameSign(nm, p[0], person(p[0], zn.y ?? 0, p[1], sex, s, face), p[1]);
+      nameSign(nm, p[0], guideAt(nm, p[0], zn.y ?? 0, p[1], face, person(p[0], zn.y ?? 0, p[1], sex, s, face)), p[1]);
     };
     // 교실(서향): 선생님은 칠판 앞에 서서 아이들 쪽(동)을, 아이들은 자기 자리에 앉아 칠판 쪽(서 = 보건실 쪽)을 본다. 남은 자리 = '앉기'
     const sitSpot = (L, st) => hotspots.push({ kind: 'sit', x: st.sx ?? st.x, z: st.sz ?? st.z + 0.5, y: L.y, r: 0.75, label: '의자에 앉기', yaw: L.face === 3 ? -Math.PI / 2 : Math.PI });
@@ -5160,8 +5215,10 @@ export function buildWorld(scene) {
     const OCHAIR = 0x3f4550;   // 사무용 의자(짙은 회색)
     const seatAt = (nm, sx, s, sp) => {   // sp = { x, z, face, desk, reach, chair? , pose? }
       if (sp.chair) chair(sp.x, sp.y ?? 0, sp.z, sp.face === 0 ? 1 : sp.face === 2 ? -1 : sp.face === 1 ? -1 : 1, OCHAIR, sp.face & 1);
-      nameSign(nm, sp.x, person(sp.x, sp.y ?? 0, sp.z, sx, s, sp.face, sp.pose ?? 'sit', sp), sp.z);
+      nameSign(nm, sp.x, guideAt(nm, sp.x, sp.y ?? 0, sp.z, sp.face, person(sp.x, sp.y ?? 0, sp.z, sx, s, sp.face, sp.pose ?? 'sit', sp)), sp.z);
     };
+    // 교감선생님 = 무지개 쉼터 남쪽 기둥 줄 안(서쪽 기둥 -6.0 · 동쪽 -2.5 사이), 버스 앞문(bus x - 4.6 · 북쪽 옆면) 바로 북쪽 — 버스를 등지고 학교 쪽(북)을 보며 한 손을 든다
+    const VICE = { x: SCHOOL.bus[0] - 4.9, y: FIELD, z: SCHOOL.bus[1] - 2.7, face: 0, pose: 'wave' };
     const JOB = {
       '급식선생님': { x: HX - 0.95, z: SC - 0.4, face: 1, pose: 'work', role: 'cook' },        // 배식창 뒤(조리실)에서 홀을 보며 국자
       '청소선생님': { x: kx1 - 1.05, z: AZ + 1.9, face: 3, pose: 'sweep', role: 'cleaner' },   // 홀 북동 구석(식탁 줄 동쪽 · 에어컨 남쪽)에서 비질
@@ -5172,6 +5229,9 @@ export function buildWorld(scene) {
       list.forEach(([nm, sx, sz]) => {
         const s = sz === 'small' ? 0.8 : 1.1;
         if (JOB[nm]) return seatAt(nm, sx, s, JOB[nm]);
+        if (nm === '교감선생님') {   // TOUR-1(사용자 09-27 "매일 스쿨버스 마중나가시는 교감선생님이 스쿨버스 앞에서 환영"): 교무실 앞 큰 책상 자리는 빈 의자만 두고 버스 앞으로
+          const sp = spots.shift(); if (sp && sp.chair) chair(sp.x, sp.y ?? 0, sp.z, sp.face === 0 ? 1 : sp.face === 2 ? -1 : sp.face === 1 ? -1 : 1, OCHAIR, sp.face & 1);
+          return seatAt(nm, sx, s, VICE); }
         if (L && L.tSeat && sz !== 'small' && !spots.length) {   // 교실형 방 선생님 = 선생님 책상 의자(나래반은 칠판 앞에 서서 설명)
           if (room === '나래반') return nameSign(nm, L.teacher.x, person(L.teacher.x, L.y, L.teacher.z, sx, s, L.tFace ?? 1, 'explain'), L.teacher.z);
           return seatAt(nm, sx, s, { ...L.tSeat, y: L.y });
@@ -5180,6 +5240,15 @@ export function buildWorld(scene) {
         if (sp) seatAt(nm, sx, s, sp); else place(zn, nm, sx, s);
       });
     });
+    // TOUR-1 견학 안내 선생님 3명(사용자 09-27 — 'NPC를 더 늘리지 않는다'의 유일한 예외: 안내가 필요한데 사람이 없던 곳에 한 명씩 · 직함만, 이름 없음)
+    //   체육관 = 무대 앞 가운데(무대 계단 둘 사이) 남쪽(코트)을 보고 · 컴퓨터실 = 앞 화면(칠판) 앞 설명 자리 · 과학실 = 칠판 앞 시연대 뒤(학생 쪽 = 서)
+    { const TG = [];
+      { const sp = (npcSpot['체육관'] || [])[0]; if (sp) TG.push(['pe', '체육선생님', '남', { ...sp, pose: 'stand', role: 'pe' }]); }
+      { const L = seatsOf['컴퓨터실']; if (L) TG.push(['ai', 'AI 보조 강사님', '여', { x: L.teacher.x, y: L.y, z: L.teacher.z, face: L.tFace ?? 1, pose: 'explain', role: 'ai' }]); }
+      { const sp = (npcSpot['과학실'] || [])[0]; if (sp) TG.push(['science', '과학선생님', '여', { ...sp, pose: 'explain', role: 'sci' }]); }
+      TG.forEach(([key, nm, sx, sp]) => { const top = person(sp.x, sp.y, sp.z, sx, 1.1, sp.face, sp.pose, sp); sign(nm, sp.x, top + 0.28, sp.z, (sp.face & 1) ? Math.PI / 2 : 0, 0.22);   // 이름 팻말 = 보는 쪽으로(동·서를 보는 사람은 옆으로 돌려 — 앞에서 읽힘)
+        tourSpots.push({ key, kind: 'guide', label: nm, x: sp.x, y: sp.y, z: sp.z, face: sp.face & 3, top }); }); }
+    NPCN = npcN;
   }
 
   buildPlinths();   // 감사 전에 — 띠도 감사 대상
@@ -5439,5 +5508,5 @@ export function buildWorld(scene) {
   }
   details.brect = BRECT; details.wing = 2; details.FH = FH;   // OCC-CULL: main.js 가림 컬링이 건물 칸(BRECT 순서 — 2 = 서관, 2층이 있는 유일한 동)·층고를 읽는다
   for (const g of CYLC.values()) g.dispose(); CYLC.clear();   // 원기둥 캐시는 빌드 동안만(dGeo가 정점을 청크로 복사했다 — 더 안 씀 · 메모리)
-  return { colliders, grid, zones, doors, allBoxes, hotspots, details, visRods, soft: softVols, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh };
+  return { colliders, grid, zones, doors, allBoxes, hotspots, details, visRods, soft: softVols, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh, tour: tourSpots, npcs: NPCN };
 }
