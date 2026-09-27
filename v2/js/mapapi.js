@@ -3,7 +3,7 @@
 //   원칙: 매 프레임 새 객체·전체 순회 금지(구역·트리거·경계는 10Hz) · 예외는 잡아서 월드 루프가 멈추지 않게 · 사람을 술래로 쓰지 않음(글 규칙 = docs/map_api.md §16.1).
 //   정본 문서 = docs/map_api.md
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
-import { createMinimap } from './minimap.js?v=7';
+import { createMinimap } from './minimap.js?v=8';
 import { createGamePicker } from './gamepick.js?v=7';
 import { createEngine } from './engine.js?v=8';
 import { createWorldFx } from './worldfx.js?v=2';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
@@ -362,9 +362,14 @@ export function createMapApi(host, NAV, META) {
   // ---------- 11b. 미니맵(GAME-FIND-1 · 09-26) — 모든 게임 공용. 정적 층은 한 번만 굽고 화살표·표식만 덧그린다(minimap.js) ----------
   //   map.minimap.show({big, marks}) → {remove} · hide() · setMarks([{x,z,color,shape:'dot'|'ring'|'star',label,blink,floor,r}]) · toggle(big?) · visible · big · ms(한 프레임 평균)
   //   게임 범위 파사드에서 쓰면 stop 때 자동으로 숨고 표식도 비운다. M키·지도 클릭 = 크게(학교 전체)/작게(반경 40m).
-  MM = createMinimap({ mapData, drawMap, P, getYaw: pl.getYaw, onLayout: () => layoutChips() });
-  const minimap = { show: o => MM.show(o), hide: () => MM.hide(), setMarks: m => MM.setMarks(m), toggle: v => MM.toggle(v),
-    get visible() { return MM.visible; }, get big() { return MM.big; }, get marks() { return MM.marks; }, get ms() { return MM.ms; }, get el() { return MM.el; } };
+  //   G3-SHRINK2: show({zoom:{r, rect, y}}) · zoom(z|null) = 게임 네모 안 확대 지도(가구 윗면까지 — 작아진 판) · hide()면 풀림
+  const boxesIn = (x0, z0, x1, z1, y = 0) => { const out = [];   // 확대 지도용 가구 발자국(한 번 굽기 — 매 프레임 아님): 바닥 가까이서 서서 2.6m 안에서 끝나는 상자(벽·천장·게임 충돌 빼고)
+    for (const c of world.colliders) { if (c.y0 < -1e5 || c.dyn || c.x1 <= x0 || c.x0 >= x1 || c.z1 <= z0 || c.z0 >= z1) continue; const top = c.vy1 ?? c.y1;
+      if (c.y0 > y + 0.6 || top < y + 0.05 || top > y + 2.6 || (c.x1 - c.x0) * (c.z1 - c.z0) > 12 || Math.min(c.x1 - c.x0, c.z1 - c.z0) < 0.12) continue; out.push([c.x0, c.z0, c.x1, c.z1, top]); }
+    return out.sort((a, b) => a[4] - b[4]); };
+  MM = createMinimap({ mapData, drawMap, P, getYaw: pl.getYaw, onLayout: () => layoutChips(), boxesIn });
+  const minimap = { show: o => MM.show(o), hide: () => MM.hide(), setMarks: m => MM.setMarks(m), toggle: v => MM.toggle(v), zoom: z => MM.zoom(z),
+    get zoomed() { return MM.zoomed; }, get visible() { return MM.visible; }, get big() { return MM.big; }, get marks() { return MM.marks; }, get ms() { return MM.ms; }, get el() { return MM.el; } };
   // 효과음(GAME-FIND-1): main.js 합성음 도우미 tone(주파수, 시작초, 길이, 파형, 크기, 끝주파수)을 host.ui.tone으로 받아 쓴다(없으면 조용히). 파일 없음·짧게
   const SFX = { ding: [[988, 0, 0.16, 'sine', 0.2], [1319, 0.1, 0.32, 'sine', 0.18]], tick: [[660, 0, 0.09, 'triangle', 0.14]], go: [[523, 0, 0.12, 'triangle', 0.2], [784, 0.11, 0.28, 'triangle', 0.2]],
     done: [[523, 0, 0.14, 'triangle', 0.2], [659, 0.13, 0.14, 'triangle', 0.2], [784, 0.26, 0.14, 'triangle', 0.2], [1047, 0.39, 0.45, 'triangle', 0.22]],
@@ -541,7 +546,7 @@ export function createMapApi(host, NAV, META) {
       // 미니맵(GAME-FIND-1): 범위 파사드에선 stop 때 자동으로 숨고 표식을 비운다(보이기·표식 정리 항목은 한 번만 쌓임)
       minimap: { show: o => { const h = minimap.show(o); if (track && !hudKeys.has('!mm')) { hudKeys.add('!mm'); t({ remove: () => { minimap.setMarks([]); minimap.hide(); hudKeys.delete('!mm'); } }); } return h; },
         hide: () => minimap.hide(), setMarks: m => { minimap.setMarks(m); if (track && !hudKeys.has('!mm')) { hudKeys.add('!mm'); t({ remove: () => { minimap.setMarks([]); minimap.hide(); hudKeys.delete('!mm'); } }); } },
-        toggle: v => minimap.toggle(v), get visible() { return minimap.visible; }, get big() { return minimap.big; }, get ms() { return minimap.ms; }, get marks() { return minimap.marks; }, get el() { return minimap.el; } },
+        toggle: v => minimap.toggle(v), zoom: z => minimap.zoom(z), get zoomed() { return minimap.zoomed; }, get visible() { return minimap.visible; }, get big() { return minimap.big; }, get ms() { return minimap.ms; }, get marks() { return minimap.marks; }, get el() { return minimap.el; } },
       sfx: k => sfx(k),   // 짧은 합성 효과음: 'ding'(도착) · 'tick'(3·2·1) · 'go'(출발) · 'done'(끝) · 'pick'(줍기) · 'buzz'(시간 끝) · 'warm'(준비 — 소리 장치만 미리 만듦)
       mk: { marker: (x, y, z, o) => t(mk.marker(x, y, z, o)), trail: (p, o) => t(mk.trail(p, o)), many: (k, n, o) => t(mk.many(k, n, o)), add: obj => t(mk.add(obj)) },
       add: obj => t(mk.add(obj)), remove: obj => scene.remove(obj),
