@@ -91,6 +91,8 @@ body.touch:has(#tour-talk) .tbtn,body.touch:has(#tour-talk) #tJoyHint,body.touch
 /* ---------- 합치기(integ2 · 09-27): 행동 사전 엔진·방탈출·숨바꼭질·개미가 된 나 — 게임 창도 같은 안전 구역 ---------- */
 /* ⬇ 웅크리기(엔진 — 게임이 켰을 때만 보임): 오른쪽 아래 버튼 줄의 빈 칸(👁 왼쪽 · right 222 — 테 포함 56px라 8px 띄움) · 같은 50px */
 body.small #tCrouch{right:calc(222px + env(safe-area-inset-right));bottom:calc(24px + env(safe-area-inset-bottom));width:50px;height:50px;font-size:18px}
+/* 세로 휴대폰(폭 320~412)이면 right 222 자리가 왼쪽 아래 조이스틱 자리와 겹친다 → 점프 버튼 바로 위(안내 #hint는 세로에서 bottom 166이라 그 위) */
+@media (orientation: portrait){ body.small #tCrouch{right:calc(22px + env(safe-area-inset-right));bottom:calc(96px + env(safe-area-inset-bottom))} }
 /* 가방(엔진 .eng-inv — 열쇠·든 것): 왼쪽 위 아이콘 칩 줄(☀️ 🎮) 밑 */
 html body.touch.small .eng-inv{left:calc(8px + env(safe-area-inset-left));top:calc(88px + env(safe-area-inset-top))}
 body.small .eng-inv span{width:30px;height:30px;font-size:17px}

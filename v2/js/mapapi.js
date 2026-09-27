@@ -379,7 +379,7 @@ export function createMapApi(host, NAV, META) {
     setScale: pl.setScale, getScale: pl.scale, pGround: pl.pGround, pBlocked: pl.pBlocked });
   // 플레이어 동사(웅크리기·숨음·소리) — player 객체에 붙인다(범위 파사드도 같은 player)
   Object.assign(player, { crouch: on => ENG.player.crouch(on), crouched: ENG.player.crouched, setCrouch: v => ENG.player.setCrouch(v), hidden: ENG.player.hidden, hideSpot: ENG.player.hideSpot, noise: ENG.player.noise,
-    scale: (s9, o9) => ENG.player.scale(s9, o9), scaled: ENG.player.scaled, groundAt: ENG.player.groundAt, blockedAt: ENG.player.blockedAt });   // SHRINK-1(09-27): 작아지기 — §11.12
+    scale: (s9, o9) => ENG.player.scale(s9, o9), scaled: ENG.player.scaled, groundAt: ENG.player.groundAt, blockedAt: ENG.player.blockedAt });   // SHRINK-1(09-27): 작아지기 — §12.12
 
   // ---------- 12. 도구 ----------
   const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -537,7 +537,7 @@ export function createMapApi(host, NAV, META) {
       see: ENG.see, hide: ENG.hide, note: (t9, b9) => ENG.note(t9, b9), investigate: ENG.investigate, dig: ENG.dig, prop: ENG.prop, carry: ENG.carry,
       story: ENG.story, door: ENG.door, chaser: ENG.chaser, fade: (s9, c9) => ENG.fade(s9, c9),
       time: k => (k ? ENG.setTime(k) : ui.getTime && ui.getTime()),   // 시간대 바꾸기(게임이 멈추면 원래대로) · 인자 없으면 지금 시간대
-      // G-ESCAPE(09-27): 불 끄기·손전등(밤 놀이 — 새 조명 없음 · 게임이 멈추면 원래대로) — §11.12
+      // G-ESCAPE(09-27): 불 끄기·손전등(밤 놀이 — 새 조명 없음 · 게임이 멈추면 원래대로) — §12.13
       lights: on => ENG.lights(on), flashlight: on => ENG.flashlight(on),
     };
   }

@@ -409,7 +409,7 @@ map.flashlight(true)  // 손전등: 손에서 화면 가운데(카메라가 보�
 
 ### 12.14 휴대폰 배치(MOBUI-1 위 · 합치기 integ2 09-27)
 - 엔진·게임 창의 휴대폰 모양은 전부 `v2/phone.css`(게임 파일에 휴대폰 CSS를 두지 않는다 — 방탈출 자물쇠 창 규칙도 여기로 옮김).
-- ⬇ 웅크리기(`#tCrouch` · 게임이 `map.player.crouch(true)`일 때만) = 오른쪽 아래 버튼 줄 👁 왼쪽(휴대폰 right 222 · 50px) · 가방 `.eng-inv` = 왼쪽 위 아이콘 칩 줄 밑(88px).
+- ⬇ 웅크리기(`#tCrouch` · 게임이 `map.player.crouch(true)`일 때만) = 오른쪽 아래 버튼 줄 👁 왼쪽(휴대폰 right 222 · 50px — 세로 화면은 right 222가 조이스틱 자리라 점프 버튼 바로 위 right 22 · bottom 96) · 가방 `.eng-inv` = 왼쪽 위 아이콘 칩 줄 밑(88px).
 - 쪽지 `.eng-note` = 화면 안(스크롤) · 번호 자물쇠 `.esc-lock` = 왼쪽(목표 줄 밑 · 그동안 📍·☀️·🎮·가방 숨김 — 오른쪽 미니맵 조각·단서 칩은 보임) · 보기 창 `.hudAsk`.
 - 이 창들이 떠 있는 동안(움직일 수 없음) 버튼·조이스틱 표시·안내(`#hint`)는 숨긴다(견학 창과 같은 규칙).
 - 게임 칩·목표 줄·배너는 mapapi가 만든 `.gchip`/`.gtap`·`#hudGoal`·`#hudBan`만 쓴다(g-hideseek의 `hud-*` 클래스·PHONE-UI 미니맵은 합치며 버림 — MOBUI-1이 정본).
