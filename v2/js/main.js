@@ -191,6 +191,7 @@ const PHY = { sc: 1, r: 0.26, st: 0.55, h: 1.5, walk: 4.2, run: 7.5, crawl: 1.9,
 function tinyBuild() {
   const T = { cols: [], grid: new Map(), mark: new Uint32Array(8192), gen: 1 };
   for (const c of world.colliders) { if (c.y0 < -1e5) continue; tinyAdd(c, T); }
+  for (const b of world.allBoxes) if (b.ts) tinyAdd(b, T);   // 보이기만 하던 얇은 부재(걸레받이·창틀 — world.js ts) = 작은 몸에겐 벽·발판(평소 몸·길격자는 그대로)
   return T;
 }
 function tinyAdd(c, T = PHY.T) {   // 게임이 작아진 뒤 더한 충돌(mapapi collider.add)도 여기로
@@ -317,7 +318,7 @@ function camHit(hx, hy, hz, dx, dy, dz, maxD) {
 }
 
 const keys = new Set();
-addEventListener('keydown', e => keys.add(e.code));
+addEventListener('keydown', e => { keys.add(e.code); if (e.code === 'Space' && !e.repeat) TOUCH.jumpT = Math.max(TOUCH.jumpT, 0.12); });   // Space를 한 프레임보다 짧게 톡 쳐도 뛴다(느린 노트북 · 점프 버튼 jumpT와 같은 방식)
 addEventListener('keyup', e => keys.delete(e.code));
 let camYaw = 0, camPitch = 0.3, camFirst = false;
 addEventListener('keydown', e => { if (e.code === 'KeyV') camFirst = !camFirst; });   // 1인칭 ↔ 3인칭

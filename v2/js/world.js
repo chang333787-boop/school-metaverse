@@ -253,7 +253,7 @@ export function buildWorld(scene) {
         const X0 = cx - w/2, X1 = cx + w/2, Z0 = cz - d/2, Z1 = cz + d/2, ok = [at, [cx, cz]].find(q => inBB(DNEAR.get(dKey(q[0], q[1], y0 + 0.05)), X0, X1, y0, y0 + H9, Z0, Z1, 0.3));
         const o9 = ok ? { at: ok } : inBB(chunks.get(Math.floor(cx / CHUNK) + '_' + Math.floor(cz / CHUNK)), X0, X1, y0, y0 + H9, Z0, Z1, 0.3) ? { far: true, at: [cx, cz] } : null;
         if (!o9) return;   // 어느 청크 상자에도 안 들면 깔지 않는다(드로우콜·컬링 그대로)
-        const bx = { x0: X0, x1: X1, y0, y1: y0 + H9, z0: Z0, z1: Z1, detail: true }; allBoxes.push(bx); add(bx);
+        const bx = { x0: X0, x1: X1, y0, y1: y0 + H9, z0: Z0, z1: Z1, detail: true, ts: true }; allBoxes.push(bx); add(bx);   // ts: 작은 몸(SHRINK-1)에겐 막힘 — 키 12.5cm 몸이 11cm 걸레받이 속을 걷던 것
         _dm.compose(_dv.set(cx, y0 + H9 / 2, cz), _dq.identity(), _ds.set(w, H9, d)); dGeo(skin(p.ax, p.s, !BB_FLOORS.some(v => Math.abs(p.y - v) < 0.01)), _dm, p.col ?? BB_COL, o9);
         };
       // 리뷰 수정: 바닥 층 걸레받이는 '밑에 바닥이 있는 구간'만 — 계단실 2층 벽은 층 높이 선이 계단 구멍 위를 지나 걸레받이가 허공에 떠 있었다
@@ -345,9 +345,10 @@ export function buildWorld(scene) {
   // 바깥벽(f≠0)은 바깥쪽에 창턱(5cm 두께·10cm 튀어나옴)을 단다. 작은 부재라 near 층(멀면 숨김)
   function winFrame(ax, g0, g1, yb, yt, line, f, frame, noLedge = false) {
     const FR9 = frame ?? (f ? 0x7a5a3e : 0xdfe3e6), T = 0.2, len = g1 - g0;   // 바깥 창 = 나무색 틀(영상 f_165·a_480·v2180_0108), 안쪽 창 = 연회색
-    const bx = (a0, a1, y0, y1, th = T, off = 0, col = FR9) => ax === 'x'
+    const bx = (a0, a1, y0, y1, th = T, off = 0, col = FR9) => { ax === 'x'
       ? dBox(a1 - a0, y1 - y0, th, col, (a0 + a1)/2, y0, line + off)
       : dBox(th, y1 - y0, a1 - a0, col, line + off, y0, (a0 + a1)/2);
+      allBoxes[allBoxes.length - 1].ts = true; };   // ts: 작은 몸(SHRINK-1)에겐 막힘 — 창턱 7cm 띠·사물함 위에서 틀(유리 충돌보다 2cm 두꺼움)·세로살 속을 걷던 것
     bx(g0, g0 + 0.06, yb, yt); bx(g1 - 0.06, g1, yb, yt);
     bx(g0 + 0.06, g1 - 0.06, yt - 0.06, yt); bx(g0 + 0.06, g1 - 0.06, yb, yb + 0.06);
     const nm = len > 2.3 ? 3 : len > 1.3 ? 1 : 0;                                    // 넓은 창 = 미닫이 4짝

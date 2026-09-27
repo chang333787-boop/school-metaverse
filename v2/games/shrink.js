@@ -92,9 +92,11 @@ export default async function start(map, params = {}) {
         ramp([pb[0], tTop, ez - winS * 0.08], [pb[0], lTop, lz0 + winS * 0.08]);
         addCrumb(winL.x + winL.w / 2 - 0.3, lTop, winL.z, '창가 사물함 위');
         // 창턱: 사물함 뒤(벽 안쪽 면) 3.5cm 띠 — 사물함 윗면보다 높은 곳(창 밑 벽 윗면)
-        const zs = winL.z + winS * (0.225 + 0.035); let sill = null;
-        const isSill = (x, y = top(x, zs, 1.3)) => y > lTop + 0.05 && y < 1.35 && free(x, y, zs);
-        for (let x = winL.x + winL.w / 2 - 0.15; x > winL.x - winL.w / 2 + 0.15; x -= 0.05) if (isSill(x)) { const x2 = isSill(x - 0.4) ? x - 0.4 : x; sill = [x2, top(x2, zs, 1.3), zs]; break; }   // 창 동쪽 끝에서 40cm 안
+        //   띠 폭은 창틀(작은 몸에겐 막힘 — world.js ts)까지라 몇 cm뿐: 사물함 뒷면에서 2~5cm 사이 처음 설 수 있는 줄
+        let sill = null;
+        for (const dz of [0.02, 0.03, 0.015, 0.035, 0.01, 0.045]) { if (sill) break; const zs = winL.z + winS * (0.225 + dz);
+          const isSill = (x, y = top(x, zs, 1.3)) => y > lTop + 0.05 && y < 1.35 && free(x, y, zs);
+          for (let x = winL.x + winL.w / 2 - 0.15; x > winL.x - winL.w / 2 + 0.15; x -= 0.05) if (isSill(x)) { const x2 = isSill(x - 0.4) ? x - 0.4 : x; sill = [x2, top(x2, zs, 1.3), zs]; break; } }   // 창 동쪽 끝에서 40cm 안
         if (sill) addCrumb(sill[0], sill[1], sill[2], '창턱'); else warn('창턱을 못 찾음');
       } else warn('창가 사물함 없음');
     } else warn('교탁 없음');
