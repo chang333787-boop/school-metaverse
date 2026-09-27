@@ -22,6 +22,8 @@ export function buildWorld(scene) {
   const YARD = TR3.yard, FIELD = TR3.field, COURT = TR3.court, GYF = SCHOOL.gym.floorY;
   const colliders = [], zones = [], allBoxes = [], doors = [];
   const hotspots = [];   // 상호작용 지점 — main.js가 E키/안내 클릭으로 실행
+  const hideSpots = [];  // ENGINE-1(09-27): 숨는 자리 후보(가구·장소 좌표만 적어 둠 — 모양·충돌 변화 0). mapapi hide.candidates()가 읽는다. face = 앞면 방위°(0 북·90 동)
+  const hideAt = (kind, label, ax, a0, a1, wall, f, D, H, yb) => { const L = a1 - a0, c = (a0 + a1) / 2; if (H >= 0.75 && L >= 0.9) hideSpots.push({ kind, label, x: ax === 'x' ? c : wall + f*D/2, y: yb, z: ax === 'x' ? wall + f*D/2 : c, face: ax === 'x' ? (f > 0 ? 180 : 0) : (f > 0 ? 90 : 270), w: L }); };
   const CHUNK = 16, chunks = new Map();
   const box_ = new THREE.BoxGeometry(1, 1, 1).toNonIndexed();
   const bpos = box_.attributes.position, bnrm = box_.attributes.normal;
@@ -42,7 +44,7 @@ export function buildWorld(scene) {
   // PHYS-1 '올라서기 금지'(ns): 가구·울타리 등은 충돌 높이를 1.6 이상으로 — 점프 도달(0.97 + 오름 0.55 = 1.52)보다 높아
   // 위에 서지 못하고 넘지도 못한다. 보이지 않는 윗부분이 카메라를 밀지 않게 nc(카메라 무시) 표시.
   const NS = { ns: true };
-  function noStand(c, min = 1.6) { c.y1 = Math.max(c.y1, c.y0 + min); c.nc = true; c.ns = true; return c; }   // ns = 끝의 NS-RAISE 패스가 알아보는 표시
+  function noStand(c, min = 1.6) { if (c.vy1 == null) c.vy1 = c.y1; c.y1 = Math.max(c.y1, c.y0 + min); c.nc = true; c.ns = true; return c; }   // ns = 끝의 NS-RAISE 패스가 알아보는 표시 · vy1(ENGINE-1) = 올리기 전 보이는 윗면(술래 시야 — 책상·덤불 뒤에 웅크리면 가려짐)
   // GFX-2: 벽 아래쪽 접지 음영(정점색 AO) — 층 바닥에서 0.8 → 층 높이에서 1, 한 층 안에서 y에 대한 선형이라 창턱·인방·통벽 조각이 이음매 없이 같은 면으로 보간된다.
   //  벽 조각(wall)·벽 겉무늬(patWall)의 옆면만. 두 층 이상에 걸친 것은 1(선형이 어긋난다)
   const AO_FL = [FIELD, YARD, 0, FH, 2 * FH];
@@ -557,6 +559,7 @@ export function buildWorld(scene) {
     [-0.18, 0.18].forEach(ox => rBox(rot, 0.03, 0.11, 0.03, METAL, cx, y+0.46, cz, ox, back*0.17));
   }
   function teacherDesk(cx, y, cz, rot = 0) {                        // 1.2×0.85×0.6 — 상판·서랍장(손잡이 3)·옆판 + 모니터 둘
+    hideSpots.push({ kind: 'desk', label: '교탁 밑', x: cx, y, z: cz, face: rot ? 270 : 180, w: 1.2 });   // ENGINE-1: 교사 의자 쪽(rot 1 = 서쪽)
     // [classrooms-14] 회색 철제 책상(밝은 상판·짙은 몸통) + 검은 모니터 2대, 서랍 손잡이는 교사 쪽(영상 a_427.5·a_490.5)
     colliders.push(noStand(rCol(rot, cx, cz, 0.6, 0.3, y, y+0.85)));
     rBox(rot, 1.24, 0.05, 0.64, 0xd9d6ce, cx, y+0.8, cz, 0, 0);
@@ -892,6 +895,7 @@ export function buildWorld(scene) {
   function lockerBank(ax, a0, a1, wall, f, H, rows, top = null, body = 0x8a5530, door = 0xa66a3a, flat = false, yb = 0) {
     const D = 0.45, L = a1 - a0, c = (a0 + a1) / 2;
     const at = (w, h, d, hex, ca, y, off) => ax === 'x' ? dBox(w, h, d, hex, ca, y + yb, wall + f*off) : dBox(d, h, w, hex, wall + f*off, y + yb, ca);
+    hideAt('locker', '사물함', ax, a0, a1, wall, f, D, H, yb);   // ENGINE-1
     const lo = Math.min(wall, wall + f*D), hi = Math.max(wall, wall + f*D);
     colliders.push(noStand(ax === 'x' ? { x0: a0, x1: a1, y0: yb, y1: yb + H, z0: lo, z1: hi } : { x0: lo, x1: hi, y0: yb, y1: yb + H, z0: a0, z1: a1 }));
     at(L, H, D, body, c, 0, D/2);
@@ -969,6 +973,7 @@ export function buildWorld(scene) {
   function whiteLockers(ax, a0, a1, wall, f, H, rows, top, body, door, yb = 0, cw = 0.32) {
     const D = 0.45, L = a1 - a0, c = (a0 + a1) / 2;
     const at = (w, h, d, hex, ca, y, off) => ax === 'x' ? dBox(w, h, d, hex, ca, y + yb, wall + f*off) : dBox(d, h, w, hex, wall + f*off, y + yb, ca);
+    hideAt('locker', '사물함', ax, a0, a1, wall, f, D, H, yb);   // ENGINE-1
     const lo = Math.min(wall, wall + f*D), hi = Math.max(wall, wall + f*D);
     colliders.push(noStand(ax === 'x' ? { x0: a0, x1: a1, y0: yb, y1: yb + H, z0: lo, z1: hi } : { x0: lo, x1: hi, y0: yb, y1: yb + H, z0: a0, z1: a1 }));
     at(L, H, D, body, c, 0, D/2);
@@ -982,6 +987,7 @@ export function buildWorld(scene) {
   function tallCab(ax, a0, a1, wall, f, H, yb = 0, body = 0xf2f0ea, door = 0xf7f5f0) {
     const D = 0.45, L = a1 - a0, c = (a0 + a1) / 2;
     const at = (w, h, d, hex, ca, y, off) => ax === 'x' ? dBox(w, h, d, hex, ca, y + yb, wall + f*off) : dBox(d, h, w, hex, wall + f*off, y + yb, ca);
+    hideAt('cabinet', '청소함·장', ax, a0, a1, wall, f, D, H, yb);   // ENGINE-1
     const lo = Math.min(wall, wall + f*D), hi = Math.max(wall, wall + f*D);
     colliders.push(noStand(ax === 'x' ? { x0: a0, x1: a1, y0: yb, y1: yb + H, z0: lo, z1: hi } : { x0: lo, x1: hi, y0: yb, y1: yb + H, z0: a0, z1: a1 }));
     at(L, H, D, body, c, 0, D/2);
@@ -1301,6 +1307,7 @@ export function buildWorld(scene) {
   // 둥근 회양목(앞뜰 화단) — 올라서기 금지
   function shrub(x, z, r = 0.6, hex = 0x4d8b4d, lite = false) {   // lite = 20면(뒤뜰 far 층)
     const y = tY(z, x);
+    if (r >= 0.5) hideSpots.push({ kind: 'bush', label: '덤불 속', x, y, z, face: null, w: r * 2 });   // ENGINE-1(face null = 가장 트인 쪽을 mapapi가 고른다)
     colliders.push(noStand({ x0: x - r*0.85, x1: x + r*0.85, y0: y, y1: y + r*1.4, z0: z - r*0.85, z1: z + r*0.85 }));
     dBlob(r, r*0.78, r, hex, x, y + r*0.68, z, { far: true, chunky: lite, ry: x, jitter: lite ? 0.16 : 0.1 });
   }
@@ -1310,6 +1317,7 @@ export function buildWorld(scene) {
     // [integ 09-25 · quality4가 띠로 바꿈] 충돌 = 돌린(ry) 타원의 AABB × 0.8(lite 20면 = 안쪽 반지름 0.79라 0.62) — 예전 w·d × 0.42는 덩어리가 돌아가 있으면 상자 모서리가 밖으로 나가 보이지 않는 벽(앞뜰 북 화단·동관 뒤뜰 둔덕)
     //   ry(FRONT-3): 넘기면 그 각도로(0 = 축정렬 — 트인 자리 옆 덩어리), 안 넘기면 예전처럼 hash
     const r9 = ry == null ? hh * 6 : ry;
+    if (h >= 0.7) hideSpots.push({ kind: 'bush', label: '덤불 속', x, y, z, face: null, w });   // ENGINE-1
     ellipseCols(x, z, w / 2, d / 2, r9, y, y + h, lite ? 0.86 : 0.9);   // [quality4 09-26] AABB × 0.8 → 돌린 타원 띠(k 0.9 · 20면 0.86): AABB × 0.8은 긴 쪽 끝을 몸이 뚫어 발 묻힘(앞뜰 북 화단·동관 뒤뜰 둔덕)
     dBlob(w / 2, h * 0.62, d / 2, hex, x, y + h * 0.38, z, { far: true, chunky: lite, ry: r9, jitter: lite ? 0.14 : 0.1 });
     dBlob(w * 0.36, h * 0.3, d * 0.34, 0x8cb85a, x + (hh - 0.5) * 0.2, y + h * 0.72, z, { far: true, chunky: true, ry: hh * 9, jitter: 0.12 });
@@ -1939,6 +1947,7 @@ export function buildWorld(scene) {
     const LZ = fz0 + 0.15, LD = 0.3, LH = 0.85;
     const corLocker = (a0, a1, swing, body = 0x5a4232, door = 0x7a5c46, rows = 3, band = true) => {
       const L = a1 - a0, c = (a0 + a1) / 2;
+      if (L >= 0.9) hideSpots.push({ kind: 'locker', label: '복도 사물함', x: c, y: 0, z: LZ + LD / 2, face: 180, w: L });   // ENGINE-1
       dBox(L, band ? LH : LH + 0.11, LD, body, c, 0, LZ + LD / 2);                     // 몸통(띠 없는 뒷길 사물함은 창턱까지 — b_154.5)
       if (band) dBox(L, 0.11, LD, HALL_DADO.lo, c, LH, LZ + LD / 2);                    // 초록 띠(몸통 앞면과 한 면 — 위아래로 맞닿기만)
       dBox(L, 0.05, LD + 0.04, 0x9c9b98, c, LH + 0.11, LZ + (LD + 0.04) / 2);           // 회색 화강석 창턱(앞으로 4cm)
@@ -2500,7 +2509,7 @@ export function buildWorld(scene) {
   [XF + 2.75, XF + 5.15, XF + 7.55].forEach(tx => [-45.9, -41.5, -37.1].forEach(tz => table9(tx, tz)));
   // ---- 북벽 큰 회색 커튼(영상 k_00·k_11~13) — 가운데 악기 통로 입구 자리는 양옆으로 걷었다 ----
   { const cz = AZ + 0.15 + 0.05, c0 = HX + 1.6 + 0.95, o0 = PX + 0.15, o1 = PX + 1.15;
-    [[c0, o0 - 0.3], [o1 + 0.3, kx1 - 0.15]].forEach(([a9, b9]) => patWall('curtain', 'x', a9, b9, 0.05, 3.95, cz, 1));
+    [[c0, o0 - 0.3], [o1 + 0.3, kx1 - 0.15]].forEach(([a9, b9]) => { patWall('curtain', 'x', a9, b9, 0.05, 3.95, cz, 1); hideSpots.push({ kind: 'curtain', label: '커튼 뒤', x: (a9 + b9) / 2, y: 0, z: cz, face: 180, w: b9 - a9 }); });   // ENGINE-1
     [o0 - 0.15, o1 + 0.15].forEach(x9 => dBox(0.3, 3.9, 0.2, 0x8c8783, x9, 0.05, cz + 0.05));  // 걷어 모은 커튼 뭉치
     dBox(kx1 - 0.15 - c0 + 0.1, 0.4, 0.14, 0x7d7874, (c0 + kx1 - 0.15) / 2, 3.95, cz + 0.02);   // 커튼 박스(위 가림판)
     addBox(0.5, 1.8, 0.4, 0xf2f3f4, kx1 - 0.55, 0, AZ + 0.55, NS);                           // 스탠드 에어컨(커튼·창 모서리 — 영상 k_00)
@@ -3120,6 +3129,7 @@ export function buildWorld(scene) {
     addBox(SX1 - SX0 - 0.3, 0.9, NZ - gz0 - 0.15, 0xb5793f, (SX0 + SX1)/2, GYF, (gz0 + 0.15 + NZ)/2);   // 무대(양옆 방 벽 면에 맞댐)
     [SX0 + 1.4, SX1 - 1.4].forEach(x9 => { addBox(1.6, 0.3, 0.3, 0xa96f3b, x9, GYF, NZ + 0.45); addBox(1.6, 0.6, 0.3, 0xa96f3b, x9, GYF, NZ + 0.15); });   // 무대 오르는 2단
     dBox(SX1 - SX0 - 0.4, 2.2, 0.12, 0x8a2e3a, (SX0 + SX1)/2, GYF + 0.9, gz0 + 0.25);   // 무대 뒤 막
+    hideSpots.push({ kind: 'stage', label: '무대 커튼 뒤', x: (SX0 + SX1)/2, y: GYF + 0.9, z: gz0 + 0.25, face: 180, w: SX1 - SX0 - 0.4 });   // ENGINE-1
     wallZ(gz0, NZ, SX0, INNER, { y0: GYF, h: 3.2 });
     wallX(gx0 + 0.15, SX0 + 0.15, NZ, INNER, { y0: GYF, h: 3.2, gaps: [{ c: (gx0 + SX0)/2, w: 1.2 }] });
     wallZ(gz0, NZ, SX1, INNER, { y0: GYF, h: 3.2 });
@@ -5439,5 +5449,5 @@ export function buildWorld(scene) {
   }
   details.brect = BRECT; details.wing = 2; details.FH = FH;   // OCC-CULL: main.js 가림 컬링이 건물 칸(BRECT 순서 — 2 = 서관, 2층이 있는 유일한 동)·층고를 읽는다
   for (const g of CYLC.values()) g.dispose(); CYLC.clear();   // 원기둥 캐시는 빌드 동안만(dGeo가 정점을 청크로 복사했다 — 더 안 씀 · 메모리)
-  return { colliders, grid, zones, doors, allBoxes, hotspots, details, visRods, soft: softVols, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh };
+  return { colliders, grid, zones, doors, allBoxes, hotspots, hideSpots, details, visRods, soft: softVols, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh };
 }

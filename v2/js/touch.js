@@ -10,7 +10,7 @@ export function touchPrimary() {
 }
 export function createTouch(ctx) {
   const { canvas, look, act, view } = ctx;
-  const T = { on: false, mx: 0, my: 0, m: 0, jump: false, jumpT: 0, joyId: -1, lookId: -1, near: false, taps: 0 };
+  const T = { on: false, mx: 0, my: 0, m: 0, jump: false, jumpT: 0, joyId: -1, lookId: -1, near: false, taps: 0, crouch: false };   // ENGINE-1: crouch = ⬇ 버튼 켬/끔(게임이 웅크리기를 켰을 때만 보임)
   const JR = 62;   // 조이스틱 반지름(CSS px) — 이만큼 밀면 m = 1
   if (!document.getElementById('touch-css')) {
     const css = document.createElement('style'); css.id = 'touch-css';
@@ -30,6 +30,9 @@ export function createTouch(ctx) {
       '#tAct.hot{background:#ffc828;color:#1d3557;border-color:#fff;box-shadow:0 0 0 4px rgba(255,200,40,.45),0 3px 0 rgba(0,0,0,.18);animation:tPulse 1s ease-in-out infinite}',
       '@keyframes tPulse{50%{transform:scale(1.07)}}',
       '#tView{right:calc(186px + env(safe-area-inset-right));bottom:calc(34px + env(safe-area-inset-bottom));width:56px;height:56px;font-size:20px}',   // 아래 한 줄(위쪽 오른편은 미니맵 자리)
+      // ENGINE-1 웅크리기(아래 줄 시점 버튼 왼쪽 · 게임이 켰을 때만 — 인라인 display:none으로 숨김 · 위쪽 오른편은 미니맵 자리) · 켜져 있으면 노란 테
+      '#tCrouch{right:calc(254px + env(safe-area-inset-right));bottom:calc(30px + env(safe-area-inset-bottom));width:62px;height:62px;font-size:22px}',
+      '#tCrouch.on{background:rgba(255,200,40,.85);color:#1d3557;border-color:#fff}',
       // 조이스틱(엄지 자리에 뜬다)
       '#tJoy{position:fixed;left:0;top:0;z-index:21;width:' + JR * 2 + 'px;height:' + JR * 2 + 'px;margin:-' + JR + 'px 0 0 -' + JR + 'px;border-radius:50%;background:rgba(29,53,87,.28);border:3px solid rgba(255,255,255,.5);pointer-events:none;visibility:hidden;align-items:center;justify-content:center}',
       '#tJoy b{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 2px 0 rgba(0,0,0,.2)}',
@@ -57,6 +60,7 @@ export function createTouch(ctx) {
   const bJump = mk('tJump', 'tbtn', '<i>⤴</i><span>점프</span>');
   const bAct = mk('tAct', 'tbtn', '<i>✋</i><span>행동</span>');
   const bView = mk('tView', 'tbtn', '<i>👁</i>');
+  const bCrouch = mk('tCrouch', 'tbtn', '<i>⬇</i><span>웅크리기</span>'); bCrouch.style.display = 'none';
   mk('tRot', '', '<div>📱↻ 가로로 돌려 주세요</div><span style="font-size:14px;font-weight:400">가로 화면이 더 넓게 보여요</span>');
 
   let gOnce = false;
@@ -69,7 +73,7 @@ export function createTouch(ctx) {
   }
   // 리뷰(09-26): 손가락 상태를 모두 푼다 — 창이 포커스를 잃거나 숨으면 touchend가 안 올 수 있다(알림·앱 전환 → 끝없이 걷던 문제)
   function reset() {
-    joyEnd(); T.lookId = -1; T.jump = false; T.jumpT = 0;
+    joyEnd(); T.lookId = -1; T.jump = false; T.jumpT = 0;   // (웅크리기 켬/끔은 손가락 상태가 아니라 그대로 둔다)
     bJump.classList.remove('dn'); bAct.classList.remove('dn'); bView.classList.remove('dn');
   }
   // 리뷰(09-26): 터치 화면 크롬북 — 한 번 터치한 뒤 다시 마우스·키보드를 쓰면 데스크톱 화면으로 돌아간다(포인터 잠금도 다시 된다).
@@ -137,10 +141,14 @@ export function createTouch(ctx) {
   btn(bJump, () => { T.jump = true; T.jumpT = 0.25; }, () => { T.jump = false; });   // jumpT: 한 프레임보다 짧게 톡 쳐도 뛴다
   btn(bAct, () => { T.taps++; act(); });
   btn(bView, () => view());
+  btn(bCrouch, () => { T.crouch = !T.crouch; bCrouch.classList.toggle('on', T.crouch); });
 
   return Object.assign(T, {
     enable, disable, reset,
+    // ENGINE-1: 게임이 웅크리기를 켜고 끔 → 버튼 보이기/숨기기(끄면 켬 상태도 풀린다)
+    setCrouchBtn(on) { bCrouch.style.display = on ? '' : 'none'; if (!on) { T.crouch = false; bCrouch.classList.remove('on'); } },
+    setCrouchOn(on) { T.crouch = !!on; bCrouch.classList.toggle('on', T.crouch); },
     setNear(h) { const on = !!h; if (on === T.near) return; T.near = on; bAct.classList.toggle('hot', on); },   // 무엇인지는 가운데 아래 안내 칩(#hint — 눌러도 된다)이 말한다
-    els: { joy, bJump, bAct, bView },
+    els: { joy, bJump, bAct, bView, bCrouch },
   });
 }

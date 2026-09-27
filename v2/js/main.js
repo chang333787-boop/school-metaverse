@@ -1,12 +1,12 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=3';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { buildWorld } from './world.js?v=120';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=121';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=10';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=5';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=6';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=8';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
-import { createTouch, touchPrimary } from './touch.js?v=4';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
+import { createMapApi } from './mapapi.js?v=9';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createTouch, touchPrimary } from './touch.js?v=5';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -102,7 +102,7 @@ for (const d of world.details) if (!d.inside) { d.mesh.castShadow = true; ST_MES
 let MAP = null;   // MAP-API-1 지도 API — loop() 위에서 만든다. setTime('day')가 먼저 돌므로 참조는 전부 MAP?.(TDZ 함정)
 
 // ---------- 플레이어 (AABB 전용 — 레이캐스트 0) ----------
-const P = { x: 12.4, y: world.terrainAt(12.4, -6) + 0.01, z: -6, vy: 0, yaw: 0, ground: true };   // 운동장에서 구령대·본관을 보며 시작
+const P = { x: 12.4, y: world.terrainAt(12.4, -6) + 0.01, z: -6, vy: 0, yaw: 0, ground: true, bh: 1.5, spd: 0 };   // ENGINE-1: bh = 몸 높이(웅크리면 0.8 — 게임이 켰을 때만) · spd = 수평 속도(소리 판정)   // 운동장에서 구령대·본관을 보며 시작
 // ---------- 내 캐릭터(CHAR-2 · 09-26 사용자 "캐릭터 생긴 게 너무 징그럽다") — 장난감 치비 · 노란 모자(v2/js/kid.js) ----------
 // CHAR-1(각진 얼굴·반짝이는 큰 눈·코 공·두꺼운 입·긴 목·막대 팔다리)을 버리고: 큰 둥근 머리·목 없음·짧고 통통한 팔다리·눈 둘 + 가는 웃는 입·매끈한 음영.
 // 부위마다 정점색을 구운 메시(한 재질) — 드로우콜 7. 앞 = +z(P.yaw 0 = +z로 걷는 방향). 키 ≈1.3m
@@ -123,15 +123,19 @@ const blob = (() => {
 let kidPh = 0, kidX = P.x, kidZ = P.z, kidT = 0;
 function kidTick(dt) {
   const v = Math.hypot(P.x - kidX, P.z - kidZ) / Math.max(dt, 1e-3); kidX = P.x; kidZ = P.z; kidT += dt;
-  const K = KID, sit = !!ACT.sit, air = !P.ground && !sit && !ACT.anim, mv = sit ? 0 : Math.min(1, v / 4.2);
+  const K = KID, sit = !!ACT.sit, air = !P.ground && !sit && !ACT.anim, mv = sit ? 0 : Math.min(1, v / 4.2), cr = CTRL.crouched && !sit;
   if (v > 0.3 && !sit) kidPh += dt * (5.5 + v * 1.5);
   const sw = Math.sin(kidPh) * 0.7 * mv;
-  K.rig.position.set(0, sit ? K.sitY : Math.abs(Math.sin(kidPh)) * 0.04 * mv, sit ? 0.42 : 0);   // sitY = 의자 앉는 판(0.46)에 엉덩이
+  K.rig.position.set(0, sit ? K.sitY : cr ? -0.17 : Math.abs(Math.sin(kidPh)) * 0.04 * mv, sit ? 0.42 : 0);   // sitY = 의자 앉는 판(0.46)에 엉덩이 · ENGINE-1 웅크림 = 0.17 낮게
+  K.rig.rotation.x = cr ? 0.28 : 0;   // 웅크리면 몸을 앞으로 숙인다
   if (sit) { K.legL.g.rotation.x = K.legR.g.rotation.x = -1.5; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 1.5; K.armL.rotation.x = K.armR.rotation.x = -0.85; }
+  else if (cr) { K.legL.g.rotation.x = -1.25 + sw * 0.35; K.legR.g.rotation.x = -1.25 - sw * 0.35; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 2.0;   // ENGINE-1 웅크리기(무릎 굽힘 — 발은 땅에)
+    K.armL.rotation.x = -0.9 - sw * 0.3; K.armR.rotation.x = -0.9 + sw * 0.3; }
   else if (air) { K.legL.g.rotation.x = -0.5; K.legR.g.rotation.x = 0.25; K.legL.knee.rotation.x = 0.7; K.legR.knee.rotation.x = 0.3; K.armL.rotation.x = K.armR.rotation.x = -2.5; }
   else { K.legL.g.rotation.x = sw; K.legR.g.rotation.x = -sw; K.legL.knee.rotation.x = Math.max(0, sw) * 0.9; K.legR.knee.rotation.x = Math.max(0, -sw) * 0.9;
     K.armL.rotation.x = -sw * 0.85; K.armR.rotation.x = sw * 0.85; }
-  if (tray && !sit) K.armL.rotation.x = K.armR.rotation.x = -1.1;                                  // 식판 받쳐 들기
+  if ((tray || CTRL.hold) && !sit) K.armL.rotation.x = K.armR.rotation.x = -1.1;                    // 식판 받쳐 들기 · ENGINE-1 물건 들기(map.carry)
+  if (CTRL.pose === 'dig') { const d9 = Math.sin(kidT * 11); K.armL.rotation.x = K.armR.rotation.x = -1.3 + d9 * 0.6; K.rig.rotation.x = 0.35 + d9 * 0.08; }   // ENGINE-1 파기(map.dig)
   if (milk && !sit && !tray) K.armR.rotation.x = -0.7;                                               // 우유 들기
   K.head.rotation.x = mv > 0.1 ? 0.04 : Math.sin(kidT * 1.7) * 0.03;                                   // 가만히 있으면 살짝 끄덕끄덕
   K.body.scale.y = 1 + (mv < 0.1 && !sit ? Math.sin(kidT * 2.2) * 0.008 : 0);                           // 숨쉬기
@@ -165,14 +169,14 @@ function ceilAt(x, z, h0, h1) {
   }
   return c;
 }
-function blockedAt(x, z, y) {
+function blockedAt(x, z, y, h = 1.5) {   // ENGINE-1: h = 몸 높이(기본 1.5 — 길격자·게이트는 그대로 · 웅크린 몸만 0.8)
   const k0x = Math.floor((x-0.3)/8), k1x = Math.floor((x+0.3)/8), k0z = Math.floor((z-0.3)/8), k1z = Math.floor((z+0.3)/8);
   const seen = new Set();
   for (let gx=k0x; gx<=k1x; gx++) for (let gz=k0z; gz<=k1z; gz++) {
     const cell = world.grid.get(gx+':'+gz); if (!cell) continue;
     for (const i of cell) { if (seen.has(i)) continue; seen.add(i);
       const b = world.colliders[i];
-      if (x > b.x0-0.26 && x < b.x1+0.26 && z > b.z0-0.26 && z < b.z1+0.26 && b.y1 > y + 0.55 && b.y0 < y + 1.5) return true;
+      if (x > b.x0-0.26 && x < b.x1+0.26 && z > b.z0-0.26 && z < b.z1+0.26 && b.y1 > y + 0.55 && b.y0 < y + h) return true;
     }
   }
   return false;
@@ -227,13 +231,24 @@ addEventListener('mousemove', e => {
 // TOUCH-1: 터치 조작(v2/js/touch.js) — 왼쪽 조이스틱 = 아날로그 이동(TOUCH.mx·my·m → physics) · 오른쪽 드래그 = 시점(마우스와 같은 부호, 휴대폰용 감도) · 점프/행동/시점 버튼
 const TOUCH = createTouch({ canvas,
   look: (dx, dy) => { camYaw -= dx * 0.0058; camPitch = Math.max(-0.2, Math.min(1.1, camPitch + dy * 0.0042)); },
-  act: () => { if (hotNear) act(hotNear); }, view: () => { camFirst = !camFirst; },
+  act: () => { if (hotNear) act(hotNear); else MAP?.idleAct(); }, view: () => { camFirst = !camFirst; },
   onMode: on => { if (hotNear) hintEl.textContent = on ? hintEl.textContent.replace(/^E  /, '✋ ') : hintEl.textContent.replace(/^✋ /, 'E  ');   // 리뷰: 터치 ↔ 마우스(터치 화면 크롬북) 오갈 때
     if (MAP && MAP.minimap.visible) MAP.minimap.toggle(MAP.minimap.big); } });   // 미니맵 크기 다시(터치면 버튼 위까지만)
 
 // 상호작용 상태 — anim: 정해진 경로 이동(미끄럼틀) / sit: 의자에 앉음(움직이면 일어남)
 const ACT = { anim: null, sit: null };
 const CTRL = { frozen: false, speed: 1 };   // MAP-API-1: 게임이 멈춤(입력·점프만 무시 — 중력은 유지)·속도(0.5~2)를 건다
+// ENGINE-1(09-27 행동 사전): 게임이 켜는 것만 — crouchOK(웅크리기 허용 · 기본 끔 = 게이트 영향 0) · crouched(지금 웅크림) · crouchForce(null|bool — 시험·게임이 강제) ·
+//   peek(숨는 자리 틈새 시점 {x,y,z,yaw,fov}) · hot(강제 상호작용 지점 — 숨은 동안 '나오기') · hold(물건 들기 팔) · pose('dig') · noiseT(뛰어내림 소리 남는 시간)
+Object.assign(CTRL, { crouchOK: false, crouched: false, crouchForce: null, peek: null, hot: null, hold: false, pose: null, noiseT: 0 });
+const CROUCH_H = 0.8;
+// 웅크리기 입력: C·Ctrl 누르고 있기(키보드) · 터치 ⬇ 버튼(누를 때마다 켜고 끔 — 두 엄지가 조이스틱·시점에 있으니) · crouchForce
+function crouchTick() {
+  const want = CTRL.crouchOK && !ACT.sit && !ACT.anim && (CTRL.crouchForce ?? (keys.has('KeyC') || keys.has('ControlLeft') || keys.has('ControlRight') || !!TOUCH.crouch));
+  if (want && !CTRL.crouched) { CTRL.crouched = true; P.bh = CROUCH_H; }
+  else if (!want && CTRL.crouched) {   // 일어서기: 머리 위(발 +0.55 ~ +1.5)가 막혀 있으면 웅크린 채(책상·미끄럼틀 밑)
+    if (!blockedAt(P.x, P.z, P.y, 1.5) || !CTRL.crouchOK) { CTRL.crouched = false; P.bh = 1.5; } }
+}
 function step(dt) {
   const moving = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].some(k => keys.has(k)) || TOUCH.m > 0 || TOUCH.jump || TOUCH.jumpT > 0;   // jumpT: 톡 친 점프(프레임 사이에 떼도) — 앉아 있으면 일어난다
   if (ACT.anim) {
@@ -258,12 +273,23 @@ function step(dt) {
   { const gy = groundAt(P.x, P.z, P.y + 0.05), h = Math.max(0, P.y - gy), k = Math.max(0.35, 1 - h * 0.35);   // GFX-2 발밑 그림자
     blob.position.set(P.x, gy + 0.045, P.z); blob.scale.setScalar(0.95 * k); blob.material.opacity = k; blob.visible = !ACT.sit && h < 3; }
   pg.visible = !camFirst && camD > 0.45;   // CAM-3: 벽에 붙어 카메라가 머리 바로 뒤까지 오면 캐릭터를 숨긴다(1인칭처럼)
+  if (CTRL.peek) {   // ENGINE-1 숨는 자리: 캐릭터 숨김 · 카메라 = 틈새 시점(좁은 화각 · 고개는 ±40°까지만 · 가장자리 어둡게는 mapapi DOM)
+    const K9 = CTRL.peek; pg.visible = false; blob.visible = false;
+    let dy9 = camYaw - K9.yaw; while (dy9 > Math.PI) dy9 -= Math.PI * 2; while (dy9 < -Math.PI) dy9 += Math.PI * 2;
+    if (Math.abs(dy9) > 0.7) camYaw = K9.yaw + Math.sign(dy9) * 0.7;
+    const pitch = Math.max(-0.35, Math.min(0.35, camPitch - 0.3));
+    if (Math.abs(camera.fov - K9.fov) > 0.05) { camera.fov = K9.fov; camera.updateProjectionMatrix(); }
+    camera.position.set(K9.x, K9.y, K9.z);
+    camera.lookAt(K9.x - Math.sin(camYaw) * Math.cos(pitch), K9.y - Math.sin(pitch), K9.z - Math.cos(camYaw) * Math.cos(pitch));
+    if (SHOT) applyShot(); return;
+  }
+  const eyeH = CTRL.crouched ? 0.8 : 1.5, headH = CTRL.crouched ? 0.8 : 1.3;   // ENGINE-1: 웅크리면 눈·머리 높이도 낮게
   if (camFirst) {
-    const pitch = camPitch - 0.3, ey = P.y + 1.5 - (ACT.sit ? 0.42 : 0);
+    const pitch = camPitch - 0.3, ey = P.y + eyeH - (ACT.sit ? 0.42 : 0);
     camera.position.set(P.x, ey, P.z);
     camera.lookAt(P.x - Math.sin(camYaw) * Math.cos(pitch), ey - Math.sin(pitch), P.z - Math.cos(camYaw) * Math.cos(pitch));
   } else {
-    const hx = P.x, hy = P.y + 1.3, hz = P.z, pch = indoor ? Math.min(camPitch, 0.2) : camPitch, CD = indoor ? 3.3 : CAM_D;
+    const hx = P.x, hy = P.y + headH, hz = P.z, pch = indoor ? Math.min(camPitch, 0.2) : camPitch, CD = indoor ? 3.3 : CAM_D;
     const want = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect).want;
     camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);   // 당김은 즉시·복귀는 이징(지터 방지)
     const C = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect, camD);   // 실제 거리에서 옆벽 비키기
@@ -314,7 +340,8 @@ function camPose(hx, hy, hz, yaw, pch, CD, fov, aspect, dUse) {
 }
 let camSh = 0;
 function physics(dt) {
-  const sp = (keys.has('ShiftLeft') ? 7.5 : 4.2) * CTRL.speed;
+  crouchTick();
+  const cr = CTRL.crouched, sp = (cr ? 1.9 : keys.has('ShiftLeft') ? 7.5 : 4.2) * CTRL.speed;   // ENGINE-1: 웅크리면 느리게(달리기 없음)
   let mx = 0, mz = 0;
   if (keys.has('KeyW') || keys.has('ArrowUp')) { mx -= Math.sin(camYaw); mz -= Math.cos(camYaw); }
   if (keys.has('KeyS') || keys.has('ArrowDown')) { mx += Math.sin(camYaw); mz += Math.cos(camYaw); }
@@ -323,29 +350,31 @@ function physics(dt) {
   let sp2 = sp;
   if (mx === 0 && mz === 0 && TOUCH.m > 0) {   // TOUCH-1 조이스틱(키를 안 누를 때만): 앞 my·오른쪽 mx를 키와 같은 축으로. 세기 = 걷기 30~100% · 가장자리(≥0.92) = 달리기
     mx = -Math.sin(camYaw) * TOUCH.my + Math.cos(camYaw) * TOUCH.mx; mz = -Math.cos(camYaw) * TOUCH.my - Math.sin(camYaw) * TOUCH.mx;
-    sp2 = (TOUCH.m >= 0.92 ? 7.5 : 4.2 * Math.max(0.3, Math.min(1, (TOUCH.m - 0.15) / 0.6))) * CTRL.speed;
+    sp2 = (cr ? 1.9 * Math.max(0.4, Math.min(1, TOUCH.m / 0.8)) : TOUCH.m >= 0.92 ? 7.5 : 4.2 * Math.max(0.3, Math.min(1, (TOUCH.m - 0.15) / 0.6))) * CTRL.speed;
   }
   if (CTRL.frozen) mx = mz = 0;
-  const L = Math.hypot(mx, mz);
+  const L = Math.hypot(mx, mz), ox = P.x, oz = P.z;
   if (L > 0) {
     mx /= L; mz /= L;
     const sp = sp2, nx = P.x + mx * sp * dt, nz = P.z + mz * sp * dt;
-    if (!blockedAt(nx, P.z, P.y)) P.x = nx;
-    if (!blockedAt(P.x, nz, P.y)) P.z = nz;
+    if (!blockedAt(nx, P.z, P.y, P.bh)) P.x = nx;
+    if (!blockedAt(P.x, nz, P.y, P.bh)) P.z = nz;
     P.yaw = Math.atan2(mx, mz);
   }
+  P.spd = Math.hypot(P.x - ox, P.z - oz) / Math.max(dt, 1e-4);   // ENGINE-1: 소리 판정(map.player.noise)
   if (TOUCH.jumpT > 0) TOUCH.jumpT -= dt;
-  if ((keys.has('Space') || TOUCH.jump || TOUCH.jumpT > 0) && P.ground && !CTRL.frozen) { P.vy = 5.2; P.ground = false; TOUCH.jumpT = 0; }
+  if ((keys.has('Space') || TOUCH.jump || TOUCH.jumpT > 0) && P.ground && !CTRL.frozen && !cr) { P.vy = 5.2; P.ground = false; TOUCH.jumpT = 0; }
   P.vy -= 14 * dt;
   const y0 = P.y;
   P.y += P.vy * dt;
   // PHYS-2 머리 부딪힘: 올라가다 머리(발+1.5)가 위쪽 물체 밑면에 닿으면 멈춘다(예전엔 천장을 뚫고 올라갔다)
-  if (P.vy > 0) { const c = ceilAt(P.x, P.z, y0 + 1.5, P.y + 1.5); if (c !== null) { P.y = c - 1.5; P.vy = 0; } }
+  if (P.vy > 0) { const c = ceilAt(P.x, P.z, y0 + P.bh, P.y + P.bh); if (c !== null) { P.y = c - P.bh; P.vy = 0; } }
   // PHYS-2 바닥: 발 높이 + 0.55까지만 딛고 올라선다(벽 막힘 기준 blockedAt과 같은 값).
   //   예전엔 발+1.15(fromY=P.y+0.6)까지 붙어 올라가, 1.6 높이 가구 → 천장 → 지붕으로 계단 타듯 올라갔다(09-23 실측).
   //   떨어질 땐 직전 높이 기준(max) — 한 프레임에 많이 떨어져도 바닥을 뚫지 않게
   const g = groundAt(P.x, P.z, Math.max(y0, P.y));
-  if (P.y <= g) { P.y = g; P.vy = 0; P.ground = true; }
+  if (P.y <= g) { if (!P.ground && y0 - g > 0.35) CTRL.noiseT = 0.4; P.y = g; P.vy = 0; P.ground = true; }   // ENGINE-1: 뛰어내린 '쿵' = 큰 소리 0.4초
+  if (CTRL.noiseT > 0) CTRL.noiseT -= dt;
 }
 
 // ---------- 사진 대조 모드: ?shot=x,y,z,방위°,올려보기°,화각° ----------
@@ -378,19 +407,20 @@ toastEl.style.cssText = 'left:50%;top:56px;transform:translateX(-50%);display:no
 document.body.appendChild(toastEl);
 let toastT = 0;
 function toast(msg, sec = 2.2) { toastEl.textContent = msg; toastEl.style.display = ''; toastT = sec; }
-let hotNear = null, hotT = 0;
+let hotNear = null, hotT = 0, hotLab = null;
 function hotTick(dt) {
   if (toastT > 0 && (toastT -= dt) <= 0) toastEl.style.display = 'none';
   if ((hotT += dt) < 0.15) return;
   hotT = 0;
   let best = null, bd = 1e9;
-  if (!ACT.anim) for (const h of HOT) {
+  if (CTRL.hot) best = CTRL.hot;   // ENGINE-1: 숨은 동안엔 '나오기' 하나만
+  else if (!ACT.anim) for (const h of HOT) {
     if (h.off) continue;   // MAP-API-1: 게임이 끈 지점
     const d = (P.x - h.x) ** 2 + (P.z - h.z) ** 2;
     if (d < h.r * h.r && d < bd && Math.abs(P.y - h.y) < 1.6) { bd = d; best = h; }
   }
-  if (best !== hotNear) {
-    hotNear = best;
+  if (best !== hotNear || (best && best.label !== hotLab)) {   // ENGINE-1: 같은 지점이 이름을 바꾸면(숨기 ↔ 나오기) 안내도 다시
+    hotNear = best; hotLab = best && best.label;
     hintEl.style.display = best ? '' : 'none'; TOUCH.setNear(best);
     if (best) hintEl.textContent = (TOUCH.on ? '✋ ' : 'E  ') + (best.kind === 'board' ? ['칠판에 낙서하기', '더 그리기', '칠판 지우기'][best.stage || 0] : best.kind === 'sit' && ACT.sit ? '일어나기' : best.label);
   }
@@ -484,7 +514,7 @@ function act(h) {
       ACT.anim = { from: h.from, to: h.to, t: 0, dur: 0.9 }; P.yaw = Math.PI; toast('🛝 슝~'); break;
   }
 }
-addEventListener('keydown', e => { if (e.code === 'KeyE' && hotNear) act(hotNear); });
+addEventListener('keydown', e => { if (e.code === 'KeyE' && !e.repeat) { if (hotNear) act(hotNear); else MAP?.idleAct(); } });   // ENGINE-1: 할 것이 없을 때 행동 = 게임 몫(들고 있는 물건 내려놓기)
 hintEl.addEventListener('click', e => { e.stopPropagation(); if (hotNear) act(hotNear); });
 
 // ---------- 문짝(미닫이) ----------
@@ -548,7 +578,7 @@ function setDoor(o) {
 function doorTick(dt) {
   for (const o of DOORS) {
     const dx = P.x - o.bx, dz = P.z - o.bz;
-    const target = (dx * dx + dz * dz < 9 && Math.abs(P.y - o.y0) < 2) ? 1 : 0;
+    const target = (!o.lock && dx * dx + dz * dz < 9 && Math.abs(P.y - o.y0) < 2) ? 1 : 0;   // ENGINE-1: 잠근 문(map.story lockDoor)은 닫힌 채
     if (Math.abs(target - o.open) < 0.002) continue;
     o.open += (target - o.open) * Math.min(1, dt * 6);   // 다 열리면 문짝 끝이 문틀 안쪽 면과 맞닿음(막힌 곳은 그 직전까지)
     setDoor(o);
@@ -899,7 +929,9 @@ function detailTick(dt) {
 MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL,
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
   pl: { P, ACT, CTRL, keys, touch: TOUCH, getYaw: () => camYaw, setYaw: v => { camYaw = v; } },
-  ui: { toast, hint: hintEl, tone }, hot: HOT }, NAV, makeMeta(SCHOOL));   // tone = 게임 효과음(GAME-FIND-1 map.sfx)
+  ui: { toast, hint: hintEl, tone, setTime: k => setTime(k), getTime: () => timeKey }, hot: HOT,
+  // ENGINE-1: 행동 사전 고리 — 캐릭터(들기 자리)·문 잠그기(문짝 닫힌 채 — 충돌은 mapapi가)·터치(웅크리기 버튼)
+  kid: { pg, KID }, doorLock: (n, on) => { const o = DOORS[n]; if (!o) return false; o.lock = !!on; if (on) { o.open = 0; setDoor(o); } return true; } }, NAV, makeMeta(SCHOOL));   // tone = 게임 효과음(GAME-FIND-1 map.sfx)
 
 // ---------- 루프 + 예산 계측(헌법⑥) ----------
 const clock = new THREE.Clock();
