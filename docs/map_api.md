@@ -236,7 +236,7 @@ export default async function start(map, params) { …; return { tick(dt) {}, st
 
 ### 11.1 플레이어 — 웅크리기 · 소리 · 숨음
 ```js
-map.player.crouch(true|false)   // 이 판에서 웅크리기를 쓰게 함(기본 끔). 키보드 C·Ctrl 누르고 있기 · 터치 ⬇웅크리기 버튼(누를 때마다 켬/끔 — 두 엄지가 조이스틱·시점에 있으니) · 게임이 끄거나 멈추면 버튼 숨김
+map.player.crouch(true|false)   // 이 판에서 웅크리기를 쓰게 함(기본 끔). 키보드 C·Ctrl 누르고 있기 · 터치 ⬇웅크리기 버튼(누를 때마다 켬/끔 — 두 엄지가 조이스틱·시점에 있으니) · 게임이 끄거나 멈추면 버튼 숨김 · 끌 때 머리 위가 막혀 있으면(낮은 곳 밑) 빠져나올 때까지 웅크린 채(멈추면 reset이 unstick) · 켜 둔 동안 Ctrl+글자 키의 브라우저 기본 동작을 막고 페이지 떠나기 확인(beforeunload)을 건다 — Ctrl+W(탭 닫기)는 페이지가 막을 수 없어서
 map.player.crouched() · map.player.setCrouch(true|false|null)   // 강제(시험·연출) — null = 입력대로
 map.player.noise()  // 0 가만히(·숨음·앉음) · 1 작음(웅크려 걷기) · 2 보통(걷기) · 3 큼(달리기 >5.5m/s · 공중 · 뛰어내린 쿵 0.4초)
 map.player.hidden() · map.player.hideSpot()
@@ -260,13 +260,13 @@ map.hide.candidates({ kinds, near:[x,z], r(30), zone, floor, max(20) }) → [{ k
 ```
 - 앞면 방위 `face`(없으면 8방향 중 설 수 있는 쪽) 앞 칸(`findEntry`)에 '🫣 숨기 · 이름' 지점. **서는 칸은 그 자리와 같은 구역만**(벽 쪽 교탁이 벽 너머 옆 교실 칸을 잡던 것 막음) · 앞에 책상이 붙어 있으면 2.2m까지 찾는다.
 - 행동(E·✋) = 숨기: 캐릭터·발밑 그림자 숨김 · 움직임 멈춤 · 카메라 = **틈새 시점**(자리에서 앞면 쪽 · 눈 높이 사물함·청소함·커튼 1.25 / 교탁 밑 0.55 / 덤불 0.7 / 미끄럼틀 0.6 / 나무 0.9 · 화각 40° · 고개 ±40°) + 가장자리 어둡게(DOM 한 장) · 상호작용 칩은 그 지점 하나('🚪 나오기' — main.js `CTRL.hot`).
-  다시 행동 = 나오기: 앞 빈 칸으로(`findEntry`) · 멈춤 원래대로.
+  다시 행동 = 나오기: 들어갈 때 선 칸(`stand` — add 때 빈 칸으로 확인)으로(막혀 있을 때만 `findEntry`) · 멈춤 원래대로.
 - 들어가는 순간 0.6초 안에 나를 본 술래가 있으면 `spot.seenEnter = true`(그 술래가 뒤지면 찾는다).
 - **후보(world.js `hideSpots` — 좌표만 적음, 모양 변화 0)**: 교실·복도 사물함(`lockerBank`·`whiteLockers`·복도 `corLocker` — 높이 ≥0.75·길이 ≥0.9) · 청소함·장(`tallCab`) · 교탁 밑(`teacherDesk`) · 급식실 커튼(북벽) · 체육관 무대 뒤 막 · 덤불(`shrub` r ≥0.5 · `mound` 높이 ≥0.7) + 미끄럼틀 밑(hotspot 'slide' 판 가운데) · 큰 나무 구멍(`lm:big-tree`). 지금 165개(사물함 44·교탁 11·청소함 1·커튼 2·무대 1·덤불 106) + 미끄럼틀·나무.
   설계 목록 중 배식대 밑·큰 냉장고 옆·책장 끝 칸·뜀틀·숲놀이터 데크 밑은 아직 없음(가구 함수에 한 줄씩 더하면 된다).
 
 ### 11.4 쪽지·조사하기 — `map.note` · `map.investigate`
-- `map.note(제목, 본문)` → Promise(닫으면). **글은 게임 데이터 그대로**(아이들이 쓴 것 — 지금은 `'(여기에 아이들이 쓴 쪽지)'` 같은 자리표시). 종이 카드(줄 무늬) · 여는 동안 멈춤 · E·Esc·Enter·Space·[닫기](터치 포함)로 닫힘 · 줄바꿈 `\n`.
+- `map.note(제목, 본문)` → Promise(닫으면). **글은 게임 데이터 그대로**(아이들이 쓴 것 — 지금은 `'(여기에 아이들이 쓴 쪽지)'` 같은 자리표시). 종이 카드(줄 무늬) · 여는 동안 멈춤 · E·Esc·Enter·Space·쪽지 아무 데나 누르기·✋·안내 칩(`MAP.closeModal`)으로 닫힘 · 줄바꿈 `\n`. 게임이 멈추면 쪽지는 치우되 **약속(Promise)은 풀지 않는다**(`map.fade`도 같음) — 멈춘 게임의 `await` 뒤 코드가 돌아 다음 판에 기억 표시가 새지 않게.
 - `map.investigate.add({ x, z, y?, r(1.2), label('🔍 조사하기'), note:{title, body}?, onUse({used})?, once? })` → `{ hot, used, remove }`.
 
 ### 11.5 파기 — `map.dig.add({ x, z, radius(1.2), reveal, need?, needLabel?, label('⛏ 파기'), onReveal(prop) })`

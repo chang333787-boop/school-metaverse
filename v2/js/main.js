@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=121';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=10';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=5';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=6';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=9';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=10';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=5';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 
 const canvas = document.getElementById('scene');
@@ -231,7 +231,7 @@ addEventListener('mousemove', e => {
 // TOUCH-1: 터치 조작(v2/js/touch.js) — 왼쪽 조이스틱 = 아날로그 이동(TOUCH.mx·my·m → physics) · 오른쪽 드래그 = 시점(마우스와 같은 부호, 휴대폰용 감도) · 점프/행동/시점 버튼
 const TOUCH = createTouch({ canvas,
   look: (dx, dy) => { camYaw -= dx * 0.0058; camPitch = Math.max(-0.2, Math.min(1.1, camPitch + dy * 0.0042)); },
-  act: () => { if (hotNear) act(hotNear); else MAP?.idleAct(); }, view: () => { camFirst = !camFirst; },
+  act: () => { if (MAP?.closeModal()) return; if (hotNear) act(hotNear); else MAP?.idleAct(); }, view: () => { camFirst = !camFirst; },   // 리뷰(ENGINE-1): 쪽지가 떠 있으면 ✋ = 닫기(예전엔 같은 지점을 다시 눌러 쪽지를 또 열었다)
   onMode: on => { if (hotNear) hintEl.textContent = on ? hintEl.textContent.replace(/^E  /, '✋ ') : hintEl.textContent.replace(/^✋ /, 'E  ');   // 리뷰: 터치 ↔ 마우스(터치 화면 크롬북) 오갈 때
     if (MAP && MAP.minimap.visible) MAP.minimap.toggle(MAP.minimap.big); } });   // 미니맵 크기 다시(터치면 버튼 위까지만)
 
@@ -247,7 +247,7 @@ function crouchTick() {
   const want = CTRL.crouchOK && !ACT.sit && !ACT.anim && (CTRL.crouchForce ?? (keys.has('KeyC') || keys.has('ControlLeft') || keys.has('ControlRight') || !!TOUCH.crouch));
   if (want && !CTRL.crouched) { CTRL.crouched = true; P.bh = CROUCH_H; }
   else if (!want && CTRL.crouched) {   // 일어서기: 머리 위(발 +0.55 ~ +1.5)가 막혀 있으면 웅크린 채(책상·미끄럼틀 밑)
-    if (!blockedAt(P.x, P.z, P.y, 1.5) || !CTRL.crouchOK) { CTRL.crouched = false; P.bh = 1.5; } }
+    if (!blockedAt(P.x, P.z, P.y, 1.5)) { CTRL.crouched = false; P.bh = 1.5; } }   // 리뷰(ENGINE-1): 게임이 웅크리기를 꺼도(crouch(false)) 머리 위가 막혀 있으면 빠져나올 때까지 웅크린 채 — 예전엔 낮은 곳 밑에서 일어서며 몸이 상자 안에 끼었다(게임이 멈출 땐 engine.reset이 unstick)
 }
 function step(dt) {
   const moving = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].some(k => keys.has(k)) || TOUCH.m > 0 || TOUCH.jump || TOUCH.jumpT > 0;   // jumpT: 톡 친 점프(프레임 사이에 떼도) — 앉아 있으면 일어난다
@@ -515,7 +515,7 @@ function act(h) {
   }
 }
 addEventListener('keydown', e => { if (e.code === 'KeyE' && !e.repeat) { if (hotNear) act(hotNear); else MAP?.idleAct(); } });   // ENGINE-1: 할 것이 없을 때 행동 = 게임 몫(들고 있는 물건 내려놓기)
-hintEl.addEventListener('click', e => { e.stopPropagation(); if (hotNear) act(hotNear); });
+hintEl.addEventListener('click', e => { e.stopPropagation(); if (MAP?.closeModal()) return; if (hotNear) act(hotNear); });
 
 // ---------- 문짝(미닫이) ----------
 // 움직이므로 청크 병합 밖의 개별 Mesh. 통행은 막지 않는다(콜라이더 없음) — 도달성 검사 결과가 그대로 유지된다.

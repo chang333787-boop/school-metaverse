@@ -51,7 +51,7 @@ export function createEngine(H) {
   // ---------- 1. 웅크리기 · 소리 · 시야 ----------
   const player = {
     // 게임이 이 판에서 웅크리기를 쓰게 한다(기본 끔 — 게임 없음 = 게이트 영향 0). 키보드 C·Ctrl 누르고 있기 · 터치 ⬇ 버튼(켬/끔)
-    crouch(on = true) { CTRL.crouchOK = !!on; touch.setCrouchBtn(!!on); if (!on) CTRL.crouchForce = null; },
+    crouch(on = true) { CTRL.crouchOK = !!on; touch.setCrouchBtn(!!on); if (!on) CTRL.crouchForce = null; ctrlGuard(!!on); },
     crouched: () => !!CTRL.crouched,
     setCrouch(v) { CTRL.crouchForce = v == null ? null : !!v; },   // 시험·연출용 강제(null = 입력대로)
     hidden: () => !!hidden,
@@ -59,6 +59,14 @@ export function createEngine(H) {
     // 소리 0 가만히 · 1 작음(웅크려 걷기) · 2 보통(걷기) · 3 큼(달리기·점프·뛰어내림) — 숨어 있거나 앉아 있으면 0
     noise() { if (hidden || ACT.sit) return 0; if (CTRL.noiseT > 0 || (!P.ground && !ACT.anim)) return 3; const v = P.spd || 0; if (v < 0.3) return 0; if (CTRL.crouched) return 1; return v > 5.5 ? 3 : 2; },
   };
+  // 리뷰(ENGINE-1): Ctrl 웅크리기 안전장치 — Ctrl을 누른 채 W로 걸으면 크롬이 탭을 닫는다(Ctrl+W는 페이지가 막을 수 없다).
+  //   웅크리기를 켠 동안만: Ctrl+글자 키의 브라우저 기본 동작(저장·북마크·전체 선택…)을 막고, 페이지를 떠나려 하면 '나가시겠어요?' 확인(beforeunload)을 띄운다. 끄거나 게임이 멈추면 뗀다
+  let guard = null;
+  function ctrlGuard(on) {
+    if (on && !guard) { guard = { kd: e => { if (e.ctrlKey && !e.metaKey && /^(Key[A-Z]|Digit\d)$/.test(e.code) && e.code !== 'KeyC' && e.code !== 'KeyV') e.preventDefault(); }, bu: e => { e.preventDefault(); e.returnValue = ''; } };
+      addEventListener('keydown', guard.kd); addEventListener('beforeunload', guard.bu); }
+    else if (!on && guard) { removeEventListener('keydown', guard.kd); removeEventListener('beforeunload', guard.bu); guard = null; }
+  }
   // 시야선: 충돌 상자를 지나는가 — 올라서기 금지(NS)로 올린 보이지 않는 윗부분은 빼고 '보이는 윗면'(vy1)까지만 가린다(책상·덤불 뒤에 웅크리면 가려짐).
   //   철망·골대 그물 같은 막이(nc)는 가린다(물총 놀이와 같게). 8m 격자 칸만 · 본 상자 표시는 세대 번호(새 Set 없음)
   let seenGen = 1, seenArr = new Uint32Array(8192);
@@ -157,7 +165,8 @@ export function createEngine(H) {
     exit() {
       const s = hidden; if (!s) return false; hidden = null;
       CTRL.peek = null; CTRL.hot = null; CTRL.frozen = hidePrev ? hidePrev.frozen : false; s.hot.label = s.lab; if (vig) vig.style.display = 'none';
-      const [fx, fz] = fwd(s.face), e = findEntry(s.stand.x + fx * 0.3, s.stand.z + fz * 0.3, s.stand.y, null, 3) || s.stand;   // 옆(앞) 빈 칸으로
+      // 리뷰(ENGINE-1): 들어갈 때 선 칸(stand — add 때 빈 칸으로 확인)으로 나온다. 예전엔 그 앞 0.3m에서 빈 칸을 새로 찾아 책상 많은 교실에선 2m 넘게 떨어진 칸(책상 줄 너머)으로 나왔다
+      const [fx, fz] = fwd(s.face), e = (!q.blockedAt(s.stand.x, s.stand.z, s.stand.y) && s.stand) || findEntry(s.stand.x + fx * 0.3, s.stand.z + fz * 0.3, s.stand.y, null, 3) || s.stand;
       teleport([e.x, e.y, e.z], { h: s.face });
       emit('hide', { spot: s, on: false }); return true;
     },
@@ -195,12 +204,16 @@ export function createEngine(H) {
       noteEl = div('eng-note'); const h = document.createElement('h3'), p = document.createElement('p'), b = document.createElement('button');
       h.textContent = title || ''; p.textContent = body || ''; b.textContent = '닫기'; if (title) noteEl.appendChild(h); noteEl.appendChild(p); noteEl.appendChild(b);
       const t0 = performance.now();
-      const done = () => { if (!noteEl) return; removeEventListener('keydown', kd, true); noteEl.remove(); noteEl = null; noteDone = null; CTRL.frozen = hidden ? true : was; res(true); };
+      // done(false) = 게임이 멈춰 치움(reset) — 약속을 풀지 않는다(멈춘 게임의 'await map.note' 뒤 코드가 돌아 다음 판에 기억 표시가 새지 않게)
+      const done = (fin = true) => { if (!noteEl) return; removeEventListener('keydown', kd, true); noteEl.remove(); noteEl = null; noteDone = null; CTRL.frozen = hidden ? true : was; if (fin) res(true); };
       const kd = e => { if (performance.now() - t0 < 250) return; if (e.code === 'KeyE' || e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space') { e.stopPropagation(); e.preventDefault(); done(); } };
-      b.addEventListener('click', e => { e.stopPropagation(); done(); }); b.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); done(); });
+      // 리뷰: 쪽지 어디를 눌러도 닫힘(휴대폰에선 쪽지가 ✋ 버튼을 덮는다 — 예전엔 '닫기' 버튼만 됐다) · 여는 탭이 바로 닫지 않게 250ms
+      const tap = e => { e.preventDefault(); e.stopPropagation(); if (performance.now() - t0 >= 250) done(); };
+      noteEl.addEventListener('click', tap); noteEl.addEventListener('touchend', tap);
       addEventListener('keydown', kd, true); noteDone = done; emit('note', { title });
     });
   }
+  const closeModal = () => { if (!noteDone) return false; noteDone(); return true; };   // ✋·안내 칩 누름 = 쪽지 닫기(main.js)
   const investigate = {
     // 조사하기 지점(칠판·게시판·책장·사물함…) — o = { x, z, y?, r?, label('🔍 조사하기'), note:{title, body}?, onUse(api)?, once? } → { hot, remove }
     add(o) {
@@ -365,13 +378,14 @@ export function createEngine(H) {
     return true;
   }
   const RUNNERS = [];
-  let fadeEl = null, time0 = null;
+  let fadeEl = null, time0 = null, GEN = 0;   // GEN: reset마다 +1 — 멈춘 판의 fade 약속은 풀지 않는다
   // 시간대(낮·노을·밤) — 게임이 바꾸면 멈출 때 원래대로(reset)
   function setTime(k) { if (!ui.setTime) return; if (time0 == null && ui.getTime) time0 = ui.getTime(); ui.setTime(k); }
   function fade(sec = 1, color = '#000', mid) {
     if (!fadeEl) fadeEl = div('eng-fade');
+    const g0 = GEN;
     return new Promise(res => { const half = Math.max(0.1, sec / 2); fadeEl.style.background = color; fadeEl.style.transition = 'opacity ' + half + 's linear'; fadeEl.style.display = 'block'; void fadeEl.offsetWidth; fadeEl.style.opacity = '1';
-      setTimeout(async () => { if (mid) { try { await mid(); } catch (e) { console.error(e); } } if (!fadeEl) return res(); fadeEl.style.opacity = '0'; setTimeout(() => { if (fadeEl) fadeEl.style.display = 'none'; res(); }, half * 1000); }, half * 1000); });
+      setTimeout(async () => { if (g0 !== GEN) return; if (mid) { try { await mid(); } catch (e) { console.error(e); } } if (g0 !== GEN || !fadeEl) return; fadeEl.style.opacity = '0'; setTimeout(() => { if (g0 !== GEN) return; if (fadeEl) fadeEl.style.display = 'none'; res(); }, half * 1000); }, half * 1000); });
   }
   // 이야기 파일 실행기: scenes = [{ id, when, do:[{op,…}], once(true) }] — 기억·가방·장이 바뀔 때마다 조건을 보고, 맞는 장면을 차례로(한 번에 하나) 실행
   //   op: note{title,body} · show{id, kind?, at?, h?, pick?} · hide{id} · moveNpc{name,to,pose,face}(미지원 — 경고만) · time{k} · lockDoor/unlockDoor{door|near:[x,z]} ·
@@ -615,8 +629,9 @@ export function createEngine(H) {
   function tick10() { if (CH.length) chSense(); }
   function idleAct() { if (carried) { carry.drop(); return true; } return false; }
   function reset() {
+    GEN++; ctrlGuard(false);
     if (hidden) hide.exit();
-    if (noteDone) noteDone();
+    if (noteDone) noteDone(false);
     if (digging) { CTRL.pose = null; CTRL.frozen = digging.was; digging = null; }
     for (const h of [...owned].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } owned.length = 0;
     for (const n of [...LOCKS.keys()]) door.lock(n, false);
@@ -631,5 +646,5 @@ export function createEngine(H) {
     if (time0 != null) { const k = time0; time0 = null; if (ui.getTime && ui.getTime() !== k) ui.setTime(k); }
   }
   const stats = () => ({ hides: HIDES.length, hidden: !!hidden, props: PROPS.length, chasers: CH.length, pools: POOLS.size, locks: LOCKS.size, flags: ST.flags.size, inv: ST.inv.length, runners: RUNNERS.length, owned: owned.length, crouchOK: !!CTRL.crouchOK, targets: TARGETS.length, digs: DIGS.length, note: !!noteEl });
-  return { player, see, hide, note, investigate, prop, carry, dig, story, door, chaser, fade, setTime, tick, tick10, idleAct, reset, stats };
+  return { player, see, hide, note, closeModal, investigate, prop, carry, dig, story, door, chaser, fade, setTime, tick, tick10, idleAct, reset, stats };
 }

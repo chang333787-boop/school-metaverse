@@ -5,7 +5,7 @@
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
 import { createMinimap } from './minimap.js?v=5';
 import { createGamePicker } from './gamepick.js?v=5';
-import { createEngine } from './engine.js?v=1';   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
+import { createEngine } from './engine.js?v=3';   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 export function createMapApi(host, NAV, META) {
   const { THREE, scene, world, SCHOOL, q, pl, ui } = host;
   const HOT = host.hot, Z = world.zones, P = pl.P, CTRL = pl.CTRL;
@@ -535,6 +535,7 @@ export function createMapApi(host, NAV, META) {
       minimap: MM.visible, mmMarks: MM.marks.length, goal: !!(goalEl && goalEl.style.display !== 'none'), arena: !!arena.shape, frozen: CTRL.frozen, speed: CTRL.speed,
       game: cur ? cur.id : null, tracked: cur ? cur.scope.tracked : 0, pick: PICK.el.textContent, eng: ENG.stats(), crouchOK: !!CTRL.crouchOK, peek: !!CTRL.peek, hold: !!CTRL.hold }; };
   MAP.picker = PICK;
+  MAP.closeModal = () => ENG.closeModal();   // 리뷰(ENGINE-1): 쪽지가 떠 있으면 닫고 true(✋·안내 칩)
   MAP.idleAct = () => ENG.idleAct();   // ENGINE-1: 행동(E·✋)을 할 지점이 없을 때 — 들고 있는 물건 내려놓기
   MAP.engine = ENG;
   // GAME-WG(09-26): 게임 버튼 신호 — 터치 UI·게임패드가 SD2.map.press('fire', true/false)로 누름/뗌을 알리면 게임은 map.on('action', {name, down})으로 받는다(물총 = 'fire')

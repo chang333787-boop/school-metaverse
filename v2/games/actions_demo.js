@@ -71,7 +71,9 @@ export default async function start(map, params = {}) {
     goal(4); setMark(goalAt); if (doorInv) { doorInv.remove(); doorInv = null; }
     map.player.crouch(true);
     for (const c of cands.slice(0, 3)) { const h = map.hide.add(c); if (h.spot) hides.push(h); }
-    bot = map.chaser.spawn({ kind: 'patrol', at: rin[0] || inside, path: rin, zone: ROOM, speed: 1.1, chase: 2.6, fov: 80, range: 6, home: inside, onCatch: () => { caughtN++; map.player.teleport(inside, { h: 180 }); map.hud.toast('🔔 딩동! 교실 문 안쪽에서 다시'); } });
+    // 리뷰(ENGINE-1): 순찰은 문에서 먼 귀퉁이부터(예전엔 문 바로 안 귀퉁이에서 시작 → 들어서자마자 잡힘) · 잡히면 문 밖 복도로(문 안 1m 옆이 순찰 귀퉁이라 다시 잡히던 자리)
+    const path = rin.length === 4 ? [rin[2], rin[3], rin[0], rin[1]] : rin;
+    bot = map.chaser.spawn({ kind: 'patrol', at: path[0] || inside, path, zone: ROOM, speed: 1.1, chase: 2.6, fov: 80, range: 6, home: outside, onCatch: () => { caughtN++; map.player.teleport(outside, { h: 180 }); map.hud.toast('🔔 딩동! 교실 문 밖에서 다시'); } });
     puzzle = map.investigate.add({ x: goalAt[0], y: goalAt[1], z: goalAt[2], r: 1.2, label: '🔍 퍼즐 자리 조사하기', onUse: async () => { await map.note(NOTE_PUZZLE.title, NOTE_PUZZLE.body); S.flag('puzzle_seen', true); } });
   }
   const runner = S.run(SCENES, { onDone: () => {} });
