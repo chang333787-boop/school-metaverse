@@ -3,6 +3,8 @@
 //         갱신 때는 그 조각 + 표식 + 플레이어 화살표만 덧그린다(움직였거나·돌았거나·깜빡임 단계가 바뀐 때만 · 최대 30Hz).
 //   작게 = 플레이어 중심 반경 40m(북쪽이 위) · 크게(M키·지도 클릭) = 학교 전체. 플레이어가 2층(y ≥ 3)이면 2층 그림.
 //   자리 = 오른쪽 위 fps 칩 아래(right 10 · top 46). 게임 칩은 mapapi layoutChips가 이 상자(rect) 아래/왼쪽으로 비켜 세운다.
+//   MOBUI-1(09-27 "핸드폰에서 지도가 다 가려"): 휴대폰(body.small)이면 작게 = 오른쪽 위 모서리 조각(THUMB px · 글자 줄 없음),
+//     터치(휴대폰·태블릿)에서 크게 = 화면 가운데 덮개(뒤는 어둡게 #mm-dim · ✕ · 바깥을 누르면 닫힘). 데스크톱(M키·클릭)은 그대로.
 //   import 없음 — 필요한 것은 mapapi가 ctx로 준다. 매 프레임 새 객체·전체 순회 없음(표식 수만큼만).
 export function createMinimap(ctx) {
   const { mapData, drawMap, P, getYaw, onLayout } = ctx;
@@ -12,7 +14,12 @@ export function createMinimap(ctx) {
   box.style.cssText = `right:${RIGHT}px;top:${TOP}px;padding:${PAD}px;border-radius:14px;background:rgba(29,53,87,.55);display:none;cursor:pointer;user-select:none;line-height:0`;
   const cv = document.createElement('canvas'); cv.style.cssText = 'display:block;border-radius:10px';
   const cap = document.createElement('div'); cap.style.cssText = `font-size:11px;line-height:${CAPH}px;height:${CAPH}px;text-align:center;opacity:.9;white-space:nowrap`;
-  box.append(cv, cap); document.body.appendChild(box);
+  box.id = 'mmap';
+  const mmX = document.createElement('div'); mmX.id = 'mm-x'; mmX.textContent = '✕'; mmX.style.display = 'none';   // 덮개일 때만(phone.css가 모양)
+  const dim = document.createElement('div'); dim.id = 'mm-dim'; dim.style.display = 'none';   // 덮개 뒤 어둡게 — 누르면 닫힘(게임 화면·조이스틱은 그동안 안 눌린다)
+  dim.addEventListener('click', e => { e.stopPropagation(); toggle(false); });
+  box.append(cv, cap, mmX); document.body.append(dim, box);
+  const bc = c => document.body.classList.contains(c);
   const g = cv.getContext('2d');
   const S = { vis: false, big: false, marks: [], dirty: true, dpr: 1, w: SMALL, h: SMALL, sB: 1, bb: null, fl: 1,
     px: 1e9, pz: 1e9, yaw: 1e9, ph: -1, t: 0, since: 1, ms: 0, drawN: 0, acc: 0, accT: 0, accN: 0 };
@@ -21,10 +28,15 @@ export function createMinimap(ctx) {
   { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const [x, z] of D0.boundary) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
     S.bb = [x0 - 3, z0 - 3, x1 + 3, z1 + 3]; }   // 큰 지도 = 학교 둘레 + 3m
 
+  let thumb = null;   // 휴대폰 조각 자리(칩 배치용 — 덮개가 열려 있어도 칩은 조각 기준)
   function size() {   // 작게 170px 정사각 · 크게 = 화면 높이에 맞춘 학교 전체(아래 🎮 칩·시간 칩 자리 96px는 비운다)
     S.dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const [x0, z0, x1, z1] = S.bb;
-    if (S.big) { const hMax = Math.max(200, innerHeight - TOP - 96 - PAD * 2 - CAPH), wMax = Math.max(200, innerWidth * 0.55);
+    const [x0, z0, x1, z1] = S.bb, ov = S.big && bc('touch'), sm = !S.big && bc('small');
+    box.classList.toggle('mm-ov', ov); box.classList.toggle('mm-th', sm); dim.style.display = ov && S.vis ? '' : 'none'; mmX.style.display = ov ? '' : 'none';
+    if (ov) { const hMax = Math.max(160, innerHeight - 64 - CAPH), wMax = Math.max(200, innerWidth - 96);   // MOBUI-1: 터치 덮개 = 화면에 꽉(가장자리 여유만)
+      S.sB = Math.min(hMax / (z1 - z0), wMax / (x1 - x0)); S.w = Math.round((x1 - x0) * S.sB); S.h = Math.round((z1 - z0) * S.sB); }
+    else if (sm) S.w = S.h = Math.max(64, Math.min(88, Math.round(innerHeight * 0.24)));   // MOBUI-1: 휴대폰 조각(342 높이 → 82px · SE 320 → 77px)
+    else if (S.big) { const hMax = Math.max(200, innerHeight - TOP - 96 - PAD * 2 - CAPH), wMax = Math.max(200, innerWidth * 0.55);
       S.sB = Math.min(hMax / (z1 - z0), wMax / (x1 - x0)); S.w = Math.round((x1 - x0) * S.sB); S.h = Math.round((z1 - z0) * S.sB); }
     else { S.w = S.h = SMALL;
       // TOUCH-1 리뷰(09-26): 터치 화면이면 오른쪽 아래 점프·행동·시점 버튼 위에서 멈춘다(iPhone SE 가로 320px에선 170px 지도가 버튼을 덮었다)
@@ -32,7 +44,9 @@ export function createMinimap(ctx) {
         for (const id of ['tJump', 'tAct', 'tView']) { const b = document.getElementById(id); if (!b) continue; const r = b.getBoundingClientRect(); if (r.height > 0) bt = Math.min(bt, r.top); }   // position:fixed라 offsetParent는 늘 null — 크기로 본다
         S.w = S.h = Math.max(96, Math.min(SMALL, Math.floor(bt - 6 - TOP - PAD * 2 - CAPH))); } }
     cv.width = Math.round(S.w * S.dpr); cv.height = Math.round(S.h * S.dpr); cv.style.width = S.w + 'px'; cv.style.height = S.h + 'px';
-    cap.textContent = (document.body.classList.contains('touch') ? '' : 'M · ') + (S.big ? '누르면 작게' : '누르면 크게');   // 터치엔 M 키가 없다
+    cap.textContent = ov ? '바깥이나 ✕를 누르면 닫혀요' : (document.body.classList.contains('touch') ? '' : 'M · ') + (S.big ? '누르면 작게' : '누르면 크게');   // 터치엔 M 키가 없다
+    cap.style.display = sm ? 'none' : '';   // 조각엔 글자 줄 없음(누르면 커지는 것은 조각 모양이 말한다)
+    if (!ov) thumb = null; if (sm && S.vis) { const r = box.getBoundingClientRect(); thumb = { right: innerWidth - r.right, top: r.top, w: r.width, h: r.height, big: false }; }
     S.dirty = true;
   }
   // 이름표(정적 층에 굽는다): 구역 폭 안에 들어가는 것만 · 같은 이름은 한 번 · 겹치면 건너뜀 · 흰 테두리
@@ -120,14 +134,14 @@ export function createMinimap(ctx) {
     size(); onLayout && onLayout(); S.since = 1; tick(0);
     return { remove: hide };
   }
-  function hide() { if (!S.vis) return; S.vis = false; box.style.display = 'none'; S.big = false; onLayout && onLayout(); }   // 표식은 남긴다(게임 범위 파사드가 stop 때 setMarks([]))
+  function hide() { if (!S.vis) return; S.vis = false; box.style.display = 'none'; S.big = false; dim.style.display = 'none'; box.classList.remove('mm-ov'); onLayout && onLayout(); }   // 표식은 남긴다(게임 범위 파사드가 stop 때 setMarks([]))
   function setMarks(list) { S.marks = (list || []).filter(m => m && isFinite(m.x) && isFinite(m.z)); S.dirty = true; }
   function toggle(v) { if (!S.vis) return false; S.big = v === undefined ? !S.big : !!v; size(); onLayout && onLayout(); S.since = 1; tick(0); return S.big; }
   box.addEventListener('click', e => { e.stopPropagation(); toggle(); });
   addEventListener('keydown', e => { if (e.code === 'KeyM' && !e.repeat && S.vis) toggle(); });
   addEventListener('resize', () => { cache.clear(); if (S.vis) { size(); onLayout && onLayout(); } });
   // 칩 배치용 — 보일 때 상자의 화면 자리(CSS px)
-  const rect = () => S.vis ? { right: RIGHT, top: TOP, w: S.w + PAD * 2, h: S.h + PAD * 2 + CAPH, big: S.big } : null;
+  const rect = () => !S.vis ? null : thumb && !S.big ? thumb : S.big && box.classList.contains('mm-ov') ? (thumb || null) : { right: RIGHT, top: TOP, w: S.w + PAD * 2, h: S.h + PAD * 2 + CAPH, big: S.big };   // 덮개가 열려도 칩은 조각 기준 자리 그대로(덮개 뒤)
   return { show, hide, setMarks, toggle, tick, rect, el: box, canvas: cv,
     get visible() { return S.vis; }, get big() { return S.big; }, get marks() { return S.marks.slice(); }, get ms() { return S.ms; }, get draws() { return S.drawN; } };
 }

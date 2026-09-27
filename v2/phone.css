@@ -1,0 +1,66 @@
+/* MOBUI-1(09-27 사용자 "핸드폰에서 지도가 다 가리는데 핸드폰 모드에서 UI 최적화 필요") — 휴대폰·태블릿 화면 배치의 단일 자리.
+   켜는 것: touch.js — body.touch(터치 조작 켜짐) + body.small(터치이고 짧은 변 ≤ 500 CSS px = 휴대폰). 데스크톱은 둘 다 없어 이 파일이 아무것도 바꾸지 않는다.
+   휴대폰 안전 구역(가로 · env(safe-area-inset-*) = 노치 여백):
+     왼쪽 위  = 📍 위치(한 줄·말줄임) + 아래 줄 아이콘 칩(☀️ 🎮/⏹ — 글자 .lbl 숨김)
+     가운데 위 = 목표 한 줄(#hudGoal · 말줄임) → 그 밑 물총 물/젖음 칸 → 그 밑 알림(#toast)
+     오른쪽 위 = 미니맵 조각(#mmap.mm-th — 누르면 가운데 덮개 #mmap.mm-ov + 뒤 어둡게 #mm-dim) + 그 밑 게임 칩(.gchip) 세로 줄(mapapi layoutChips)
+     왼쪽 아래 = 조이스틱만 · 오른쪽 아래 = 점프·행동·시점(한 줄) + 게임 버튼(💧 = 행동 위) · 가운데 아래 = 할 수 있는 일 안내(#hint)
+   게임 창(견학 이야기 = 아래 시트 ≤46% · 도장 카드 = 전체 화면 시트 · 놀이 고르기 = 스크롤)도 여기서 휴대폰 모양만 준다(게임 파일은 그대로).
+   글자는 clamp()로 화면 높이에 맞추되 12px 아래로 내려가지 않는다. 고치면 index.html의 phone.css?v= 를 올린다. */
+
+/* ---------- 미니맵: 터치 덮개(휴대폰·태블릿) ---------- */
+#mm-dim{position:fixed;inset:0;z-index:44;background:rgba(12,22,38,.55)}
+#mmap.mm-ov{left:50%!important;top:50%!important;right:auto!important;transform:translate(-50%,-50%);z-index:45;padding:6px!important;background:rgba(29,53,87,.94)!important;border-radius:16px!important;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+#mm-x{position:absolute;right:-12px;top:-12px;width:44px;height:44px;border-radius:50%;background:#fff;color:#1d3557;font:700 20px/44px sans-serif;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer}
+/* ---------- 미니맵: 휴대폰 조각(오른쪽 위 모서리) ---------- */
+#mmap.mm-th{top:calc(6px + env(safe-area-inset-top))!important;right:calc(8px + env(safe-area-inset-right))!important;padding:3px!important;border-radius:14px!important;background:rgba(29,53,87,.7)!important}
+#mmap.mm-th canvas{border-radius:11px}
+#mmap.mm-th::after{content:'🔍';position:absolute;left:-6px;bottom:-6px;width:24px;height:24px;border-radius:50%;background:rgba(29,53,87,.9);border:2px solid rgba(255,255,255,.8);font:12px/24px sans-serif;text-align:center}
+
+/* ---------- 휴대폰: 왼쪽 위 ---------- */
+body.small .chip{font-size:clamp(12px,3.8vh,14px);padding:5px 10px;border-radius:8px}
+body.small #loc{left:calc(8px + env(safe-area-inset-left));top:calc(6px + env(safe-area-inset-top));max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.small .lbl{display:none}
+body.touch.small #timeChip,body.touch.small #gpick{top:calc(38px + env(safe-area-inset-top));min-height:44px;min-width:44px;justify-content:center;padding:4px 8px!important;font-size:20px!important}
+body.touch.small #timeChip{left:calc(8px + env(safe-area-inset-left))}
+body.touch.small #gpick{left:calc(58px + env(safe-area-inset-left))!important}
+body.touch.small #gpick-panel{top:calc(88px + env(safe-area-inset-top))!important;left:calc(8px + env(safe-area-inset-left))!important;width:min(300px,calc(100vw - 32px))!important;max-height:calc(100vh - 98px);box-sizing:border-box;padding:8px 10px 10px!important}
+body.small .gpick-b{min-height:44px;margin-top:6px;padding:6px 10px}
+body.small .gpick-b b{font-size:14px}
+body.small .gpick-b span{font-size:12px}
+body.small .gpick-x{min-width:44px;min-height:44px;top:0;right:0}
+
+/* ---------- 휴대폰: 가운데 위(목표 한 줄 → 물총 칸 → 알림) ---------- */
+body.small #hudGoal{top:calc(6px + env(safe-area-inset-top))!important;font-size:clamp(12px,3.9vh,15px)!important;padding:5px 12px!important;border-radius:9px!important;max-width:calc(100vw - 340px);min-width:0;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box}
+body.small .wg-g{top:calc(40px + env(safe-area-inset-top));bottom:auto!important;width:150px!important;padding:5px 9px!important;font-size:12px!important;box-sizing:border-box}
+body.small .wg-g span{width:46px!important}
+body.small .wg-g > div + div{margin-top:4px!important}
+body.touch.small #toast{top:calc(86px + env(safe-area-inset-top))!important;max-width:calc(100vw - 340px);min-width:120px;white-space:normal;text-align:center;font-size:clamp(12px,3.8vh,14px)!important;padding:5px 12px!important;box-sizing:border-box}
+body.small #hudBan{font-size:clamp(18px,7vh,30px)!important;padding:8px 18px!important;white-space:nowrap}
+body.small .hudAsk{font-size:15px!important;padding:10px 14px!important;max-height:calc(100vh - 16px)!important;width:min(460px,calc(100vw - 32px));box-sizing:border-box}
+body.small .hudAsk button{margin:4px 0!important;font-size:15px!important}
+
+/* ---------- 휴대폰: 오른쪽 위 게임 칩(미니맵 조각 밑 세로 줄) ---------- */
+body.small .gchip{font-size:clamp(12px,3.6vh,13px)!important;padding:4px 9px;white-space:nowrap}
+
+/* ---------- 휴대폰: 아래(조이스틱 · 버튼 · 안내) ---------- */
+body.small #tJoyHint{left:calc(22px + env(safe-area-inset-left));bottom:calc(20px + env(safe-area-inset-bottom));width:108px;height:108px}
+body.small #tJump{right:calc(12px + env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom));width:70px;height:70px;font-size:26px}
+body.small #tAct{right:calc(90px + env(safe-area-inset-right));bottom:calc(20px + env(safe-area-inset-bottom));width:60px;height:60px;font-size:22px}
+body.small #tView{right:calc(158px + env(safe-area-inset-right));bottom:calc(24px + env(safe-area-inset-bottom));width:50px;height:50px;font-size:18px}
+body.small .wg-fire{right:calc(92px + env(safe-area-inset-right))!important;bottom:calc(92px + env(safe-area-inset-bottom))!important;width:66px!important;height:66px!important;font-size:30px!important}
+body.touch.small #hint{bottom:calc(96px + env(safe-area-inset-bottom))!important;font-size:clamp(13px,4vh,15px)!important;padding:7px 14px!important;max-width:48vw;white-space:normal;text-align:center;box-sizing:border-box}
+
+/* ---------- 휴대폰: 견학 창 ---------- */
+body.small #tour-talk{bottom:0!important;width:min(640px,calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)));max-height:46vh;box-sizing:border-box;padding:8px 12px calc(6px + env(safe-area-inset-bottom));gap:10px;border-radius:14px 14px 0 0;border-bottom:0}
+body.small #tour-talk .av{flex:0 0 40px;height:40px;font-size:22px;border-width:2px}
+body.small #tour-talk .bd{display:flex;flex-direction:column;min-height:0}
+body.small #tour-talk .nm{font-size:14px;margin-bottom:2px}
+body.small #tour-talk .tx{font-size:clamp(13px,4.2vh,16px);line-height:1.4;min-height:0;max-height:calc(46vh - 92px)}
+body.small #tour-talk .rw{margin-top:4px}
+body.small .tour-stamp{top:-64px;width:70px;height:70px;font-size:32px}
+body.small #tour-card{left:0;top:0;transform:none;width:100vw;height:100vh;height:100dvh;max-height:none;box-sizing:border-box;border-radius:0;border:0;overflow:auto;padding:0 calc(12px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))}
+body.small #tour-card .hd{position:sticky;top:0;z-index:2;background:rgb(255,251,240);padding:6px 0 4px}
+body.small #tour-card h3{font-size:16px}
+body.small #tour-ui #tour-card button.x{min-width:52px;min-height:44px}
+body.small #tour-card .sl{font-size:12px}

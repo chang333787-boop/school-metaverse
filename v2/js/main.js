@@ -5,8 +5,8 @@ import { buildWorld } from './world.js?v=121';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=10';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=5';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=6';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=9';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
-import { createTouch, touchPrimary } from './touch.js?v=4';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
+import { createMapApi } from './mapapi.js?v=10';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createTouch, touchPrimary } from './touch.js?v=5';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -712,7 +712,7 @@ function setTime(k) {
   stars.visible = k === 'night';
   clouds.material.color.setHex(CLOUD_TINT[k]);
   glassApply(k);
-  timeBtn.textContent = t.label;
+  { const i = t.label.indexOf(' '); timeBtn.innerHTML = '<span class="ico">' + t.label.slice(0, i) + '</span><span class="lbl">' + t.label.slice(i) + '</span>'; timeBtn.title = t.label; }   // MOBUI-1: 휴대폰은 아이콘만(phone.css .lbl 숨김) — 글자는 데스크톱과 같다
   MAP?.emit('time', k);
   return k;
 }

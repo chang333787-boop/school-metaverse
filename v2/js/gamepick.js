@@ -14,8 +14,8 @@ export function createGamePicker(ctx) {
   const chip = document.createElement('div');
   chip.className = 'chip'; chip.id = 'gpick';
   chip.style.cssText = 'right:10px;bottom:48px;cursor:pointer;user-select:none;font-size:14px;padding:8px 14px';
-  chip.textContent = '🎮 놀이';
-  document.body.appendChild(chip);
+    document.body.appendChild(chip);
+  chip.innerHTML = '<span class="ico">🎮</span><span class="lbl"> 놀이</span>';   // MOBUI-1: 아이콘·글자 따로(휴대폰은 아이콘만 — phone.css)
   let panel = null, cur = null, seq = 0;
 
   function close() { if (!panel) return; panel.remove(); panel = null; removeEventListener('keydown', onKey, true); removeEventListener('pointerdown', onDown, true); }
@@ -46,7 +46,7 @@ export function createGamePicker(ctx) {
   }
   chip.addEventListener('click', e => { e.stopPropagation(); if (current()) { stop(); sync(); return; } if (panel) close(); else open(); });
   // 칩 글자 = 지금 게임(10Hz — mapapi tick10). ?game= 주소·콘솔에서 켠 게임도 같이 맞춘다
-  function sync() { const c = current(), id = c ? c.id : null; if (id === cur) return; cur = id; chip.textContent = id ? '⏹ 그만하기' : '🎮 놀이'; chip.title = id ? '지금 놀이를 그만해요' : '놀이를 골라요'; if (id) close(); }
+  function sync() { const c = current(), id = c ? c.id : null; if (id === cur) return; cur = id; chip.innerHTML = id ? '<span class="ico">⏹</span><span class="lbl"> 그만하기</span>' : '<span class="ico">🎮</span><span class="lbl"> 놀이</span>';   /* MOBUI-1: 휴대폰은 아이콘만(phone.css) */ chip.title = id ? '지금 놀이를 그만해요' : '놀이를 골라요'; if (id) close(); }
   sync();
   return { el: chip, open, close, sync, get panel() { return panel; } };
 }

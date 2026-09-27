@@ -59,9 +59,13 @@ export function createTouch(ctx) {
   const bView = mk('tView', 'tbtn', '<i>👁</i>');
   mk('tRot', '', '<div>📱↻ 가로로 돌려 주세요</div><span style="font-size:14px;font-weight:400">가로 화면이 더 넓게 보여요</span>');
 
+  // MOBUI-1(09-27): 휴대폰 판 = body.touch + body.small(짧은 변 ≤ 500 CSS px). 휴대폰 배치 CSS는 전부 v2/phone.css(body.small 아래)
+  //   — 태블릿(iPad 1080×810)은 .touch만(칩·미니맵은 데스크톱 크기 그대로) · 데스크톱은 둘 다 없다(화면 변화 0)
+  const fit = () => { document.body.classList.toggle('small', T.on && Math.min(innerWidth, innerHeight) <= 500); };
+  addEventListener('resize', fit);
   let gOnce = false;
   function enable() {
-    if (T.on) return; T.on = true; document.body.classList.add('touch');
+    if (T.on) return; T.on = true; document.body.classList.add('touch'); fit();
     // 캔버스 밖(HUD 칩 사이 빈틈)을 두 번 눌러 확대·당겨서 새로고침 막기 — iOS Safari는 user-scalable=no를 무시한다
     if (!gOnce) { gOnce = true; document.addEventListener('gesturestart', e => { if (T.on) e.preventDefault(); }, { passive: false });
       document.addEventListener('dblclick', e => { if (T.on) e.preventDefault(); }, { passive: false }); }
@@ -75,7 +79,7 @@ export function createTouch(ctx) {
   // 리뷰(09-26): 터치 화면 크롬북 — 한 번 터치한 뒤 다시 마우스·키보드를 쓰면 데스크톱 화면으로 돌아간다(포인터 잠금도 다시 된다).
   //   터치가 주 입력인 기기(휴대폰·태블릿)는 블루투스 키보드를 써도 그대로 터치 화면.
   function disable() {
-    if (!T.on || touchPrimary()) return; reset(); T.on = false; document.body.classList.remove('touch'); joyHint.style.display = '';
+    if (!T.on || touchPrimary()) return; reset(); T.on = false; document.body.classList.remove('touch'); fit(); joyHint.style.display = '';
     ctx.onMode && ctx.onMode(false);
   }
   // ---------- 캔버스 손가락(조이스틱·시점) ----------
