@@ -103,6 +103,9 @@ body.touch.small .eng-note button{margin-top:8px}
 /* 번호 자물쇠 — 터치(태블릿·휴대폰) 공통: 위쪽에 작게(아래 버튼 줄을 가리지 않게) · 왼쪽(오른쪽 미니맵·단서 칩은 번호를 넣으며 봐야 한다) — escape.js에서 옮김 */
 body.touch .esc-lock{left:calc(8px + env(safe-area-inset-left));top:calc(98px + env(safe-area-inset-top));transform:none;width:min(330px,58vw);padding:8px 12px 10px}
 body.touch .esc-lock h3{font-size:16px;margin:0 0 2px}body.touch .esc-lock p{margin:0 0 4px;font-size:13px}body.touch .esc-dials{margin:2px 0 6px;gap:8px}
+/* 방탈출 2판(09-27): 색 섞기·책 꽂기 창도 같은 .esc-lock 틀 — 휴대폰에선 동그라미·책을 조금 작게(46vw 안에 한 줄) */
+body.touch .esc-cols{gap:10px;margin:2px 0 6px}body.touch .esc-cols button{width:54px;height:54px;font-size:12px}body.touch .esc-prog{font-size:18px;margin:0 0 2px}
+body.touch .esc-books{gap:5px;margin:4px 0 6px}body.touch .esc-books button{width:42px;height:74px;font-size:14px}
 body.touch .esc-dial{gap:3px}body.touch .esc-dial button{height:34px;width:50px}body.touch .esc-dial span{height:42px;font-size:26px;line-height:42px;width:50px}body.touch .esc-row button{min-height:40px;min-width:100px}
 /* 번호 자물쇠(방탈출 .esc-lock — 여는 동안 멈춤): 왼쪽(목표 줄 밑 · 📍·☀️·🎮 자리 — 그동안 숨김) · 오른쪽 미니맵 조각·단서 칩(.gchip)은 그대로 보인다 */
 body.touch.small .esc-lock{left:calc(8px + env(safe-area-inset-left));top:calc(40px + env(safe-area-inset-top));width:min(300px,46vw);max-height:calc(100vh - 48px);overflow:auto;box-sizing:border-box}
