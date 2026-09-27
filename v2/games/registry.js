@@ -10,4 +10,5 @@ export const GAMES = {
   shrink: { title: '개미가 된 나', v: 2, desc: '개미만큼 작아져서 책상·교탁·창턱을 올라 과자 부스러기 8개를 모아요' },   // GAME-SHRINK: map.player.scale(1/12)
   escape: { title: '학교 방탈출', v: 2, desc: '방마다 단서를 모아 번호 자물쇠를 풀고, 마지막 방에선 순찰 로봇을 피해 탈출해요(낮·밤)' },
   actions_demo: { title: '행동 사전 예시(개발용)', v: 2, dev: true },   // ENGINE-1: 엔진 동사를 한 번씩 — 글은 자리표시
+  hideseek: { title: '숨바꼭질', v: 2, desc: '술래 로봇을 피해 숨거나(2분) · 숨은 로봇 5개를 찾아요(3분)' },   // GAME-HS: 두 놀이 · 구역 셋(서관 1층 · 운동장+큰 나무 · 급식실+동쪽 복도)
 };

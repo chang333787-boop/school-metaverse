@@ -1,4 +1,4 @@
-// v2 행동 사전 엔진(ENGINE-1 · 09-27) — 이야기·방탈출·잠입·숨바꼭질이 같이 쓰는 '동사'들. 설계 = docs/tasks/story_engine.md · 정본 문서 = docs/map_api.md §11
+// v2 행동 사전 엔진(ENGINE-1 · 09-27) — 이야기·방탈출·잠입·숨바꼭질이 같이 쓰는 '동사'들. 설계 = docs/tasks/story_engine.md · 정본 문서 = docs/map_api.md §12
 //   웅크리기 · 숨는 자리 · 소리/시야 · 조사하기(쪽지) · 파기 · 들기/놓기 · 소품 풀 · 이야기 상태(기억·가방·장) + 이야기 파일 실행기 · 문 잠그기 · 쫓는 것(장난감 로봇·유령·순찰 로봇)
 //   import 없음(THREE·월드·물리·HUD는 mapapi가 host로 준다). 게임이 부르지 않으면 아무것도 만들지 않는다(메시·DOM·이벤트 0 — 게이트 영향 0).
 //   원칙: 매 프레임 새 객체 없음(모듈 스크래치 재사용) · 감지(시야·소리)는 10Hz · 길찾기는 한 프레임에 한 번 · 새 조명 없음 · 사람(NPC)은 쫓는 것이 아니다 ·
@@ -409,7 +409,7 @@ export function createEngine(H) {
           if (!e && op.kind) { const at = op.at || [P.x, P.z], p = prop.spawn(op.kind, at[0], at.length > 2 ? at[1] : undefined, at.length > 2 ? at[2] : at[1], { h: op.h, rise: op.rise }); if (p) { if (op.pick) carry.pickable(p); e = p; R.ents.set(op.id, p); } }
           if (e && e.show) e.show(); else if (!e) console.warn('[story] show: 모르는 것', op.id); break; }
         case 'hide': { const e = R.ents.get(op.id); if (e && e.hide) e.hide(); else console.warn('[story] hide: 모르는 것', op.id); break; }
-        case 'moveNpc': console.warn('[story] moveNpc는 아직 못 해요 — 사람(NPC)은 월드 청크에 합쳐져 있어 하나만 옮길 수 없어요(docs/map_api.md §11 · 무시함)', op.name); break;
+        case 'moveNpc': console.warn('[story] moveNpc는 아직 못 해요 — 사람(NPC)은 월드 청크에 합쳐져 있어 하나만 옮길 수 없어요(docs/map_api.md §12 · 무시함)', op.name); break;
         case 'time': setTime(op.k); break;
         case 'lockDoor': door.lock(op.door ?? op.near, true, op); break;
         case 'unlockDoor': door.lock(op.door ?? op.near, false); break;
@@ -516,6 +516,8 @@ export function createEngine(H) {
       c.bub = div('eng-bub'); CH.push(c);
       const hnd = own({ id: c.id, get state() { return c.st; }, get pos() { return { x: c.x, y: c.y, z: c.z, h: hdg(Math.sin(c.yaw), Math.cos(c.yaw)) }; }, get catches() { return c.catches; }, raw: c,
         setPath(p) { c.path = p.map(x => H.resolve(x)).filter(Boolean); c.pk = 0; c.pts = null; }, pause(on) { c.paused = !!on; },
+        // 숨바꼭질(GAME-HS): 이 숨는 자리를 지금 뒤지게 한다(그 앞에 가서 2초) — 게임이 고른 자리를 '확인'하는 술래. 거기 숨어 있으면 들어가는 걸 못 봤어도 찾는다
+        inspect(s) { if (!s || !s.stand || !c.alive) return false; c.spot = s; setSt(c, 'searchSpot'); c.inspect = s; return true; },
         remove() { chRemove(c); disown(hnd); } });
       return hnd;
     },
@@ -523,7 +525,7 @@ export function createEngine(H) {
   };
   function chRemove(c) { if (!c.alive) return; c.alive = false; c.pool.m.setMatrixAt(c.i, ZERO); c.pool.m.instanceMatrix.needsUpdate = true; c.pool.used[c.i] = null; psync(c.pool);
     if (c.fan) { scene.remove(c.fan); c.fan.geometry.dispose(); c.fan.material.dispose(); c.fan = null; } if (c.bub) { c.bub.remove(); c.bub = null; } const k = CH.indexOf(c); if (k >= 0) CH.splice(k, 1); }
-  function setSt(c, st, t = 0) { if (c.st === st) return; c.st = st; c.t = t; c.pts = null; c.think = 0; emit('chaser', { id: c.id, state: st }); }
+  function setSt(c, st, t = 0) { if (c.st === st) return; c.st = st; c.t = t; c.pts = null; c.think = 0; c.inspect = null; emit('chaser', { id: c.id, state: st }); }
   // 길: 한 프레임에 술래 하나만(maxExp 4000 — 물총 로봇과 같은 식). 못 찾으면 가까우면 곧장
   //   돌려줌: 1 길 있음 · 0 못 찾음 · -1 이번 프레임은 다른 술래 차례(다음 프레임에 다시)
   function planTo(c, x, y, z) {
@@ -608,7 +610,7 @@ export function createEngine(H) {
           const d = Math.hypot(s.stand.x - c.x, s.stand.z - c.z);
           if (d > 0.7 && c.t === 0) { if (!c.pts) { if ((c.think -= dt) <= 0 && planTo(c, s.stand.x, s.stand.y, s.stand.z) === 0) setSt(c, 'giveup'); } else if (moveAlong(c, dt, c.speed * 1.5)) c.pts = null; break; }
           c.t += dt; turn(c, Math.atan2(s.x - c.x, s.z - c.z), dt * 5);
-          if (c.t >= 2) { if (hidden === s && s.seenEnter) caught(c); else setSt(c, 'giveup'); }
+          if (c.t >= 2) { if (hidden === s && (s.seenEnter || c.inspect === s)) caught(c); else setSt(c, 'giveup'); }
           break; }
         case 'giveup': c.t += dt; c.yaw += Math.sin(c.t * 6) * dt * 2; if (c.t > 1.6) setSt(c, 'patrol'); break;
       }

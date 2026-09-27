@@ -6,7 +6,7 @@ import { SCHOOL } from './layout.js?v=10';   // LAYOUT-3 실측 배치(v1 data.j
 import * as NAV from './nav.js?v=5';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=6';       // MAP-API-1: 구역 계약표·출발점·표지점
 import { createMapApi } from './mapapi.js?v=12';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
-import { createTouch, touchPrimary } from './touch.js?v=5';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
+import { createTouch, touchPrimary } from './touch.js?v=6';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
