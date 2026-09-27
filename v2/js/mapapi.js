@@ -5,6 +5,7 @@
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
 import { createMinimap } from './minimap.js?v=6';
 import { createGamePicker } from './gamepick.js?v=6';
+import { createEngine } from './engine.js?v=3';   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 export function createMapApi(host, NAV, META) {
   const { THREE, scene, world, SCHOOL, q, pl, ui } = host;
   const HOT = host.hot, Z = world.zones, P = pl.P, CTRL = pl.CTRL;
@@ -173,7 +174,7 @@ export function createMapApi(host, NAV, META) {
   const collider = {
     // 동적 충돌 상자 — 길격자에는 안 들어간다(같이 nav.block을 걸 것)
     add(b, o = {}) {
-      const c = { x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, z0: b.z0, z1: b.z1, nc: !!(o.ns || b.nc), dyn: true }; if (o.ns) c.y1 = Math.max(c.y1, c.y0 + 1.6);
+      const c = { x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, z0: b.z0, z1: b.z1, nc: !!(o.ns || b.nc), dyn: true }; if (o.ns) { c.vy1 = c.y1; c.y1 = Math.max(c.y1, c.y0 + 1.6); }   // vy1 = 보이는 윗면(ENGINE-1 술래 시야)
       const i = world.colliders.push(c) - 1, cells = [];
       for (let gx = Math.floor(c.x0 / 8); gx <= Math.floor(c.x1 / 8); gx++) for (let gz = Math.floor(c.z0 / 8); gz <= Math.floor(c.z1 / 8); gz++) { const k = gx + ':' + gz; if (!world.grid.has(k)) world.grid.set(k, []); world.grid.get(k).push(i); cells.push(k); }
       return { box: c, remove() { c.y0 = c.y1 = -1e6; for (const k of cells) { const a = world.grid.get(k), j = a ? a.indexOf(i) : -1; if (j >= 0) a.splice(j, 1); } cells.length = 0; } };   // 인덱스는 유지(다른 참조가 안 밀리게)
@@ -367,6 +368,15 @@ export function createMapApi(host, NAV, META) {
     warm: [[440, 0, 0.02, 'sine', 0.0001]] };   // warm = 들리지 않는 소리 — 소리 장치(AudioContext) 만들기(첫 생성 ≈100ms)를 게임 준비 중에 미리(3·2·1 도중 멈칫 방지)
   const sfx = k => { const T = ui.tone, s = SFX[k]; if (!T || !s) return; for (const a of s) T(...a); };
 
+  // ---------- 11c. 행동 사전 엔진(ENGINE-1 · 09-27 — engine.js · 정본 §12) ----------
+  const navDone = () => { const c = navCache.get('walk'); return c && c.done ? c.done : null; };
+  const bigTree = (POI.get('lm:big-tree') || null);
+  const ENG = createEngine({ THREE, scene, camera: host.camera, world, P, CTRL, ACT: pl.ACT, q, hot: HOT, ui, touch: pl.touch, kid: host.kid, doorLock: host.doorLock,
+    findEntry, floorY, zoneAt, zoneFind: zone, emit, interactAdd: o => interact.add(o), colliderAdd: (b, o) => collider.add(b, o), navDone,
+    teleport: (t, o) => player.teleport(t, o), setYaw: pl.setYaw, sfx, resolve: t => resolve(t), face: h => player.face(h), unstick: () => unstick(), bigTree: bigTree ? [bigTree.x, bigTree.z] : null });
+  // 플레이어 동사(웅크리기·숨음·소리) — player 객체에 붙인다(범위 파사드도 같은 player)
+  Object.assign(player, { crouch: on => ENG.player.crouch(on), crouched: ENG.player.crouched, setCrouch: v => ENG.player.setCrouch(v), hidden: ENG.player.hidden, hideSpot: ENG.player.hideSpot, noise: ENG.player.noise });
+
   // ---------- 12. 도구 ----------
   const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
   const rng = seed => { let a = typeof seed === 'number' ? seed >>> 0 : fnv(String(seed)); return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -405,7 +415,7 @@ export function createMapApi(host, NAV, META) {
     // GAME-FIND-1: 게임이 스스로 뗀 항목(도착한 표식·끈 리본·답한 창)은 정리 목록에서도 빠진다 — '다시 하기'를 몇 번 해도 목록이 쌓이지 않게
     const res = new Set(), track = h => { if (h && h.remove) { const r0 = h.remove; h.remove = function () { res.delete(h); return r0.apply(this, arguments); }; res.add(h); } return h; };
     const S = facadeApi(track, owner);
-    S.dispose = () => { for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
+    S.dispose = () => { for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); try { ENG.reset(); } catch (e) { console.error('[map] 엔진 정리 오류', e); } CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
     S.quit = () => { const c = game.current; if (c && c.scope === S) stopGame('quit'); };   // 게임이 스스로 끝낼 때(끝 화면 [그만하기])
     Object.defineProperty(S, 'tracked', { get: () => res.size });
     return S;
@@ -419,7 +429,7 @@ export function createMapApi(host, NAV, META) {
   // 끼였을 때 가장 가까운 걷는 칸(3m 안)으로 — 게임의 'R: 처음 자리로' 대신 쓸 수도 있다
   function unstick() { const N = navSync().raw, i = N.snap(P.x, P.y, P.z, 3, -1.6, 1.6); if (i < 0) return false; return player.teleport([N.X(i), N.y[i], N.Z(i)]); }
   function tick(dt) {
-    tSec += dt; mkTick(dt); MM.tick(dt);
+    tSec += dt; mkTick(dt); MM.tick(dt); ENG.tick(dt);
     if (banT > 0 && (banT -= dt) <= 0 && banEl) banEl.style.display = 'none';
     if ((slowT += dt) >= 0.1) { slowT = 0; tick10(); }
     if ((storeT += dt) >= 2) { storeT = 0; flushStore(); }
@@ -437,6 +447,7 @@ export function createMapApi(host, NAV, META) {
     for (const fn of s) { try { fn(tickEv); } catch (e) { console.error('[map] 이벤트 처리 중 오류(tick)', e); } } };
   function tick10() {
     PICK.sync();   // 놀이 칩 글자(게임 중 ⏹ 그만하기)
+    ENG.tick10();   // ENGINE-1: 쫓는 것 감지(시야·소리) 10Hz
     // 구역 들어감/나감: 새 후보가 2샘플 연속이면 확정 · 지금 구역 경계 0.25m 안이고 후보가 더 넓으면 머문다(문턱 깜빡임 방지)
     let cand = zoneAt(P.x, P.y, P.z); const cur = zs.cur;
     if (cand !== cur && cur && (!cand || cand.area > cur.area) && P.x > cur.x0 - 0.25 && P.x < cur.x1 + 0.25 && P.z > cur.z0 - 0.25 && P.z < cur.z1 + 0.25 && P.y >= cur.y0 && P.y < cur.y1) cand = cur;
@@ -450,7 +461,7 @@ export function createMapApi(host, NAV, META) {
     if (pl.keys) { let mv = !!(pl.touch && pl.touch.m > 0); for (const k of MOVE_KEYS) if (pl.keys.has(k)) { mv = true; break; }   // TOUCH-1 리뷰: 조이스틱으로 끼어도 기록
       if (mv && !pl.ACT.anim && !pl.ACT.sit) { if (!stuck.from) { stuck.from = [P.x, P.z]; stuck.t = 0; } stuck.t += 0.1;
         if (Math.hypot(P.x - stuck.from[0], P.z - stuck.from[1]) > 0.05) { stuck.from = [P.x, P.z]; stuck.t = 0; }
-        else if (stuck.t >= 1.5 && tSec - stuck.last > 2 && q.blockedAt(P.x, P.z, P.y)) { stuck.last = tSec; stuck.t = 0; if (stuckLog.length < 50) stuckLog.push([+P.x.toFixed(2), +P.y.toFixed(2), +P.z.toFixed(2), +tSec.toFixed(1)]); emit('stuck', { x: P.x, y: P.y, z: P.z }); } }
+        else if (stuck.t >= 1.5 && tSec - stuck.last > 2 && q.blockedAt(P.x, P.z, P.y, P.bh)) { stuck.last = tSec; stuck.t = 0; if (stuckLog.length < 50) stuckLog.push([+P.x.toFixed(2), +P.y.toFixed(2), +P.z.toFixed(2), +tSec.toFixed(1)]); emit('stuck', { x: P.x, y: P.y, z: P.z }); } }
       else stuck.from = null; }
     if (arena.shape) {
       const ok = inArena(P.x, P.z) && P.y > -4 && P.y < 12;
@@ -518,6 +529,10 @@ export function createMapApi(host, NAV, META) {
       // GAME-WG(09-26): 읽기 전용 카메라(겨눔 — 화면 가운데 광선 = camera.position + (0,0,-1)·quaternion. 바꾸지 말 것) · 짧은 합성음 tone(주파수, 시작초, 길이, 파형, 크기, 끝주파수)
       camera: host.camera, tone: (...a) => { if (ui.tone) ui.tone(...a); },
       tour: world.tour || [],   // TOUR-1(09-27): 견학 안내 선생님·안내판 자리(읽기 전용 — world.js가 사람·판을 놓은 곳) · 글은 games/tour_data.js
+      // ENGINE-1(09-27) 행동 사전 — §12. 전부 게임이 멈추면(dispose → ENG.reset) 처음대로
+      see: ENG.see, hide: ENG.hide, note: (t9, b9) => ENG.note(t9, b9), investigate: ENG.investigate, dig: ENG.dig, prop: ENG.prop, carry: ENG.carry,
+      story: ENG.story, door: ENG.door, chaser: ENG.chaser, fade: (s9, c9) => ENG.fade(s9, c9),
+      time: k => (k ? ENG.setTime(k) : ui.getTime && ui.getTime()),   // 시간대 바꾸기(게임이 멈추면 원래대로) · 인자 없으면 지금 시간대
     };
   }
   const MAP = facadeApi(null, null);
@@ -526,8 +541,11 @@ export function createMapApi(host, NAV, META) {
   MAP.stats = () => { let lis = 0; for (const [, s] of L) lis += s.size; const cur = game.current;
     return { listeners: lis, trig: TRIG.size, marks: marks.length, chips: chips.size, hot: HOT.length, pois: POI.size, colliders: world.colliders.length, scene: scene.children.length,
       minimap: MM.visible, mmMarks: MM.marks.length, goal: !!(goalEl && goalEl.style.display !== 'none'), arena: !!arena.shape, frozen: CTRL.frozen, speed: CTRL.speed,
-      game: cur ? cur.id : null, tracked: cur ? cur.scope.tracked : 0, pick: PICK.el.textContent }; };
+      game: cur ? cur.id : null, tracked: cur ? cur.scope.tracked : 0, pick: PICK.el.textContent, eng: ENG.stats(), crouchOK: !!CTRL.crouchOK, peek: !!CTRL.peek, hold: !!CTRL.hold }; };
   MAP.picker = PICK;
+  MAP.closeModal = () => ENG.closeModal();   // 리뷰(ENGINE-1): 쪽지가 떠 있으면 닫고 true(✋·안내 칩)
+  MAP.idleAct = () => ENG.idleAct();   // ENGINE-1: 행동(E·✋)을 할 지점이 없을 때 — 들고 있는 물건 내려놓기
+  MAP.engine = ENG;
   // GAME-WG(09-26): 게임 버튼 신호 — 터치 UI·게임패드가 SD2.map.press('fire', true/false)로 누름/뗌을 알리면 게임은 map.on('action', {name, down})으로 받는다(물총 = 'fire')
   MAP.press = (name, down = true) => emit('action', { name: String(name), down: !!down });
   return MAP;

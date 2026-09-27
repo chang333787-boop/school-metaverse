@@ -11,6 +11,7 @@
 | `v2/js/nav.js` | 0.3m 길격자·A*·경로 펴기·무작위 칸·거리장(순수 함수·타입 배열) | 항상(main.js import) |
 | `v2/js/mapmeta.js` | 구역 계약표(라벨→id·kind·건물·tags) · 덧붙인 넓은 구역 · 출발점 · 표지점 | 항상 |
 | `v2/js/mapapi.js` | 지도 API(`SD2.map`) — 구역·지점·이벤트·질의·플레이어·상호작용·트리거·충돌·HUD·표식·길찾기·미니맵 데이터·게임 로더 | 항상 |
+| `v2/js/engine.js` | 행동 사전 엔진(ENGINE-1 · §12) — 웅크리기·숨는 자리·소리/시야·쪽지·조사·파기·들기/놓기·소품 풀·이야기 상태·이야기 파일 실행기·문 잠그기·쫓는 것 | 항상(mapapi import) — 게임이 부를 때만 메시·DOM을 만든다 |
 | `v2/js/health.js` | 맵 건강 검진(`SD2.health()`) | `?check=1`(빠른 판)·`?health=1`·호출할 때만(학생 접속 0바이트) |
 | `v2/games/registry.js` | 게임 허용 목록(`?game=<id>`) | 게임을 켤 때만 |
 | `v2/games/_template.js` | 새 게임 틀(개발용 수용 시험) | `?game=_template` |
@@ -70,6 +71,7 @@ map.play = { field, ball, track:{c,a,b,half,gates}, redlight:{startZ,finish}, y 
 SD2.map.stuckLog — 이동키를 누른 채 1.5초 못 움직이고 몸이 충돌 상자 속이던 자리(최대 50) · map.spawns
 SD2.map.check() → {ok, zonesNoMeta, metaNoZone, dupIds, labelBad, extraBad, spawnsBad, poisBad, hotUnreachable, playBad, traps, outsidePct, noZoneInSchoolPct}
 SD2.map.game.load(id, params) / stop() / current   ·  SD2.camPose(…) (3인칭 카메라 식) · SD2.phys{groundAt,blockedAt,ceilAt,camHit} · SD2.CTRL{frozen,speed}
+// ENGINE-1 행동 사전(§12): map.player.crouch/crouched/setCrouch/hidden/noise · map.see · map.hide · map.note · map.investigate · map.dig · map.prop · map.carry · map.story · map.door · map.chaser · map.fade · map.time
 ```
 
 - 표식(marker)은 **InstancedMesh 풀 2개**(다이아몬드·빛기둥, 64개까지)라 몇 개를 띄워도 드로우콜 +2. `many`는 종류마다 +1. 게임 몫은 합쳐 **+15콜 이하**(지금 최대 181/200).
@@ -267,3 +269,101 @@ export default async function start(map, params) { …; return { tick(dt) {}, st
 - 새 곳을 더하려면: world.js에 자리(선생님 = `GUIDE` 표에 이름 → 키 · 안내판 = `infoBoard(key, 이름, x, z, 방향)`) + tour_data.js에 같은 키.
 - 수용 시험(09-27 · 960×540 헤드리스 + iPhone 13 가로): 15곳 모두 걸어 들어간 자리에서 E로 창 열림 15/15 · 쪽 넘기기·도장 15/15 · 완주 창·색종이 · 교감 머리 클릭 = 창(마우스 click 삼킴 → 포인터 잠금 안 함) · 휴대폰 탭(교감·버튼·도장 칩) · 새로고침 뒤 도장 유지 · [도장 모두 지우기] · H 리본 · ⏹ 뒤 HOT 110·지점 304·칩 0·표식 0(장면 +2 = 표식 풀) · 견학 밖 교장 앞 힌트 없음.
 
+## 12. 행동 사전 엔진(ENGINE-1 · 09-27) — 이야기·방탈출·잠입·숨바꼭질 공용 동사
+
+설계 = `docs/tasks/story_engine.md`(행동 사전·웅크리기·숨는 자리·쫓는 것·이야기 파일 모양). 코드 = `v2/js/engine.js`(import 없음 — mapapi가 host로 THREE·월드·물리·HUD를 준다) + main.js 작은 고리 + touch.js 웅크리기 버튼.
+**게임이 부르지 않으면 아무것도 만들지 않는다**(메시·DOM·이벤트 0 · 웅크리기 기본 끔) → 게임이 없을 때 게이트·성능 그대로. 게임이 멈추면(범위 파사드 dispose) `ENG.reset()`이 전부 처음대로(숨기·웅크리기·들기·쪽지·소품 풀·쫓는 것·문 잠금·기억·가방·시간대).
+시험용 날 것: `SD2.map.engine`(stats() · tick · reset) · `SD2.map.stats().eng`.
+
+### 12.1 플레이어 — 웅크리기 · 소리 · 숨음
+```js
+map.player.crouch(true|false)   // 이 판에서 웅크리기를 쓰게 함(기본 끔). 키보드 C·Ctrl 누르고 있기 · 터치 ⬇웅크리기 버튼(누를 때마다 켬/끔 — 두 엄지가 조이스틱·시점에 있으니) · 게임이 끄거나 멈추면 버튼 숨김 · 끌 때 머리 위가 막혀 있으면(낮은 곳 밑) 빠져나올 때까지 웅크린 채(멈추면 reset이 unstick) · 켜 둔 동안 Ctrl+글자 키의 브라우저 기본 동작을 막고 페이지 떠나기 확인(beforeunload)을 건다 — Ctrl+W(탭 닫기)는 페이지가 막을 수 없어서
+map.player.crouched() · map.player.setCrouch(true|false|null)   // 강제(시험·연출) — null = 입력대로
+map.player.noise()  // 0 가만히(·숨음·앉음) · 1 작음(웅크려 걷기) · 2 보통(걷기) · 3 큼(달리기 >5.5m/s · 공중 · 뛰어내린 쿵 0.4초)
+map.player.hidden() · map.player.hideSpot()
+```
+- 웅크리면: 몸 높이 `P.bh` 1.5 → **0.8**(physics의 `blockedAt(x,z,y,P.bh)`·머리 부딪힘 `ceilAt(…P.bh)`) · 걷기 4.2 → **1.9m/s**(달리기·점프 없음) · 3인칭 머리 1.3 → 0.8 · 1인칭 눈 1.5 → 0.8 · kid 자세 = 무릎 굽힘(허벅지 −1.25·무릎 2.0) + 몸 0.17 낮게 + 앞으로 숙임 0.28.
+- 일어서기: 손을 떼도 **발+0.55~+1.5가 막혀 있으면 웅크린 채**(책상·미끄럼틀·낮은 판 밑). 게임이 멈추면 강제로 일어서고 막혀 있으면 `unstick()`.
+- `blockedAt`의 넷째 인자 h(기본 1.5)는 **물리만** 쓴다 — 길격자·도달성·검진은 그대로 1.5(게이트 영향 0).
+
+### 12.2 시야 — `map.see(from, to = 'player', fov°, range, {h})`
+- from = `{x, y, z, h}`(y = 눈 높이 · h = 방위° 0 북·90 동) 또는 `[x,y,z]` + `opt.h` · to = `'player'` | `[x,z]` | `[x,y,z]` | `{x,y,z}`.
+- 거리 ≤ range · 부채꼴(fov/2) 안 · 시야선이 막히지 않음. 0.9m 안이면 방향 무관(부딪힘). **숨은 플레이어는 안 보임.** 플레이어 겨눔 점 = 서면 발+1.3 · 웅크리면 발+0.62.
+- 시야선 = 8m 격자 칸만 도는 상자 교차(camHit·q.ray와 같은 격자 · 본 상자는 세대 번호 — 새 Set 없음). **철망·골대 그물 같은 막이(nc)는 가린다**(물총 놀이와 같게).
+  단 올라서기 금지(NS)로 1.6까지 올린 보이지 않는 윗부분은 빼고 **보이는 윗면(`vy1`)까지만** 가린다 — world.js `noStand()`가 올리기 전 윗면을 `vy1`로 적어 둔다(모양·충돌 변화 0) · 게임 `collider.add(…, {ns:true})`도 같이.
+  → 책상·덤불·식탁 뒤에 **웅크리면 안 보이고, 서 있으면 보인다**(시험: 0.9 높이 막이 뒤 서 있음 보임 · 웅크림 안 보임).
+
+### 12.3 숨는 자리 — `map.hide`
+```js
+map.hide.add({ x, z, y?, face?, label, kind, w?, eye?, fov?(40), r?(1.1), stand? }) → { spot, remove }
+map.hide.enter(spot) · exit() · current() · list()
+map.hide.candidates({ kinds, near:[x,z], r(30), zone, floor, max(20) }) → [{ kind, label, x, y, z, face, w, stand:{x,y,z} }]   // 가까운 순 — 좌표만, 게임이 골라 add
+```
+- 앞면 방위 `face`(없으면 8방향 중 설 수 있는 쪽) 앞 칸(`findEntry`)에 '🫣 숨기 · 이름' 지점. **서는 칸은 그 자리와 같은 구역만**(벽 쪽 교탁이 벽 너머 옆 교실 칸을 잡던 것 막음) · 앞에 책상이 붙어 있으면 2.2m까지 찾는다.
+- 행동(E·✋) = 숨기: 캐릭터·발밑 그림자 숨김 · 움직임 멈춤 · 카메라 = **틈새 시점**(자리에서 앞면 쪽 · 눈 높이 사물함·청소함·커튼 1.25 / 교탁 밑 0.55 / 덤불 0.7 / 미끄럼틀 0.6 / 나무 0.9 · 화각 40° · 고개 ±40°) + 가장자리 어둡게(DOM 한 장) · 상호작용 칩은 그 지점 하나('🚪 나오기' — main.js `CTRL.hot`).
+  다시 행동 = 나오기: 들어갈 때 선 칸(`stand` — add 때 빈 칸으로 확인)으로(막혀 있을 때만 `findEntry`) · 멈춤 원래대로.
+- 들어가는 순간 0.6초 안에 나를 본 술래가 있으면 `spot.seenEnter = true`(그 술래가 뒤지면 찾는다).
+- **후보(world.js `hideSpots` — 좌표만 적음, 모양 변화 0)**: 교실·복도 사물함(`lockerBank`·`whiteLockers`·복도 `corLocker` — 높이 ≥0.75·길이 ≥0.9) · 청소함·장(`tallCab`) · 교탁 밑(`teacherDesk`) · 급식실 커튼(북벽) · 체육관 무대 뒤 막 · 덤불(`shrub` r ≥0.5 · `mound` 높이 ≥0.7) + 미끄럼틀 밑(hotspot 'slide' 판 가운데) · 큰 나무 구멍(`lm:big-tree`). 지금 165개(사물함 44·교탁 11·청소함 1·커튼 2·무대 1·덤불 106) + 미끄럼틀·나무.
+  설계 목록 중 배식대 밑·큰 냉장고 옆·책장 끝 칸·뜀틀·숲놀이터 데크 밑은 아직 없음(가구 함수에 한 줄씩 더하면 된다).
+
+### 12.4 쪽지·조사하기 — `map.note` · `map.investigate`
+- `map.note(제목, 본문)` → Promise(닫으면). **글은 게임 데이터 그대로**(아이들이 쓴 것 — 지금은 `'(여기에 아이들이 쓴 쪽지)'` 같은 자리표시). 종이 카드(줄 무늬) · 여는 동안 멈춤 · E·Esc·Enter·Space·쪽지 아무 데나 누르기·✋·안내 칩(`MAP.closeModal`)으로 닫힘 · 줄바꿈 `\n`. 게임이 멈추면 쪽지는 치우되 **약속(Promise)은 풀지 않는다**(`map.fade`도 같음) — 멈춘 게임의 `await` 뒤 코드가 돌아 다음 판에 기억 표시가 새지 않게.
+- `map.investigate.add({ x, z, y?, r(1.2), label('🔍 조사하기'), note:{title, body}?, onUse({used})?, once? })` → `{ hot, used, remove }`.
+
+### 12.5 파기 — `map.dig.add({ x, z, radius(1.2), reveal, need?, needLabel?, label('⛏ 파기'), onReveal(prop) })`
+- 모래·흙·풀 구역만(구역 kind `field`·`play`·`garden`·`yard` + 바깥) — 아니면 `console.warn` 하고 빈 핸들. `map.dig.diggable(x, z)`.
+- `need` = 가방 물건 id **또는 손에 든 소품 종류**(삽을 들고 가서 판다) — 없으면 '🔒 ○ 이(가) 있어야 팔 수 있어요'.
+- 행동 = 1.35초 파기(멈춤 · 팔을 휘두르는 자세 `CTRL.pose='dig'` · 흙 알갱이 풀 48 · 퍽 소리 6번) → 구덩이 원판(풀 8) → `reveal`: `'chest'` | `{kind,h,s}` | `fn(x,y,z)` → 소품이 땅에서 0.7초 올라옴 → `onReveal(prop)`.
+
+### 12.6 소품 풀 · 들기/놓기 — `map.prop` · `map.carry`
+```js
+map.prop.spawn(kind, x, y?, z, { h, s, rise, tilt }) → { id, kind, x,y,z, set(x,y,z,h), show(), hide(), remove() }   // kind = box·chest·key·shovel·note (종류마다 InstancedMesh 8칸 = 드로우콜 1)
+map.carry.pickable(prop, { label('✋ 들기'), onPick }) · pick(prop) · held() · drop() · target({ x, z, y?, r(1.2), accept: 종류|[종류]|fn, label('📦 놓기'), onPlace(prop, t) }) → { placed, remove } · place(t)
+```
+- 든 물건 = kid 식판 자리(두 손 앞 `KID.tray` · 웅크리면 0.2 낮게) · 팔 받쳐 들기(`CTRL.hold`) · 매 프레임 행렬 하나만.
+- **행동을 할 지점이 없는 곳에서 E·✋ = 내려놓기**(main.js `MAP.idleAct()` — 앞 0.7m 바닥, 가까운 받는 놓는 자리면 거기에). 놓는 자리 지점은 받는 물건을 들고 있을 때만 켜진다. 숨으면 먼저 내려놓는다.
+
+### 12.7 이야기 상태 · 이야기 파일 실행기 — `map.story`
+```js
+map.story.flag(k) / flag(k, v) · flags() · give(id, {icon, label}) · take(id) · has(id) · inv() · chapter() / chapter(n) · on(fn(type, data)) → off · onChapter(fn(n, prev)) → off
+map.story.run(scenes, { ents:{이름: {show, hide}}, onDone, onOp }) → { fired, log, ent(name, obj), poke(), busy, remove }
+```
+- 가방 HUD = 왼쪽 위 📍 아래 작은 아이콘 줄(터치면 시간·놀이 칩 줄 아래) — 물건이 없으면 숨김. 바뀌면 `map.on('story', {type, …})`·`'chapter'`도 나간다.
+- 장면 = `{ id, when, do:[{op,…}], once(true) }` · when = `{ flags: {k: true|false} | ['k', '!k'], has: ['id'], chapter }`(빈 조건 = 처음). 기억·가방·장이 바뀔 때마다(매 프레임 아님) 조건을 보고 맞는 장면을 **한 번에 하나씩 차례로**(쪽지·어두워지기는 끝날 때까지 기다림). once 장면이 다 돌면 `onDone`.
+- 동사(op): `note{title,body}` · `show{id, kind?, at?, h?, pick?}`(ents에 없고 kind가 있으면 소품을 만들어 등록 · pick = 들 수 있게) · `hide{id}` · `moveNpc{name,to,pose,face}` · `time{k}` · `lockDoor{door|near, hot?}` · `unlockDoor{door|near}` ·
+  `flag{k, v=true}` · `give{item, icon, label}` · `take{item}` · `fade{sec, color}` · `sound{sfx | tone:[[…]]}` + 덧붙임 `chapter{n}` · `wait{sec}` · `toast{text}`. 모르는 op = 경고만.
+- ⚠️ **`moveNpc`는 아직 못 한다(경고만 · 무시)**: 사람(NPC)은 world.js `person()`이 `dGeo`로 디테일 청크(16m · 건물×층 · 여러 사람·가구가 한 메시)에 **정점째 합쳐** 굽고, 이름표도 `sign()` 아틀라스 한 메시다.
+  한 사람만 숨기려면 청크 안 정점 범위 기록(사람마다 수백~수천 정점) + 그 범위를 접는 갱신 + 대신 설 kid 모양 풀 + 이름표 아틀라스 칸 끄기가 필요해 이번 범위를 넘었다(모습·그리기 양도 바뀌어 게이트 재측정 필요). 하려면: person()이 넣은 정점 범위를 `world.people[i] = {chunk, start, count, sign}`로 적고, 숨길 때 그 범위 position을 0으로 접어 `needsUpdate`(청크 하나 재업로드) + kid.js `buildKid` 풀(3명)로 대신 세우기.
+- `time`(과 `map.time(k)`)은 게임이 멈추면 처음 시간대로 돌아간다.
+
+### 12.8 문 잠그기 — `map.door`
+- `map.door.lock(문 번호 | [x,z] | [x,z,y], true|false, { hot })` · `find(x, z, y?)` · `locked(t)`. 문 61개(`world.doors` · `door:<n>` 지점)를 그대로 쓴다.
+- 잠그면: 문짝 닫힌 채(main.js `doorLock` → `DOORS[n].lock` · doorTick이 안 연다) + 개구부 몸 막는 충돌(`collider.add` — 벽 두께 0.3 · 문 높이) + 길격자 막기(`nav.block` — 술래도 못 지나감) + 양쪽 '🔒 잠긴 문' 지점(`hot:false`면 없음 — 게임이 '🔑 열쇠로 열기'를 따로 둘 때). 풀면 셋 다 원래대로.
+
+### 12.9 쫓는 것 — `map.chaser`
+```js
+map.chaser.spawn({ kind: 'robot'|'ghost'|'patrol', at, path:[[x,z]…] | zone: id|[id…]|{rect}, speed(1.5), chase(3.3), fov(100), range(8), hear(1), home, onCatch(ch), showFov(true) })
+  → { id, state, pos, catches, raw, setPath(pts), pause(on), remove() }   // 한 번에 3개까지(넘으면 null)
+map.chaser.list()   // 이벤트: map.on('chaser', {id, state}) · 'caught' · 'hide' · 'carry' · 'place' · 'dig' · 'door' · 'note' · 'scene'
+```
+- 모양 = kid.js 식 정점색 굽기 장난감 치비(무섭지 않게): **장난감 로봇**(둥근 몸·화면 얼굴·하늘색 눈·더듬이) · **장난감 유령**(동그란 흰 천 · 볼 · 반투명 0.8) · **순찰 로봇**(이름 없는 '순찰' 역할 — 파란 모자·주황 완장 · 사람 아님). 종류마다 InstancedMesh 3칸(드로우콜 1) + 술래마다 바닥 시야 부채꼴(노랑 순찰 · 주황 수상함/뒤지기 · 빨강 쫓기) + 머리 위 ❗/❓/💤(DOM).
+- 상태: **patrol**(경로를 돌거나 zone 안 8m 둘레를 돌아다님) → 소리(`noise` 1·2·3을 2.2·6.5·13m × hear 안에서 들음) → **suspicious**(소리 난 곳으로 가서 둘러봄 5초) → 시야(`see` · 눈 높이 0.9 · 유령 1.1) → **chase**(마지막 본 곳으로 0.6초마다 길 다시 · 0.95m 안 = 잡음) →
+  1.3초 못 보면 **search**(마지막 본 곳 → 5m 안 가장 가까운 숨는 자리) → **searchSpot**(그 앞에 서서 2초 — 조마조마) → 그 자리에 숨어 있고 `seenEnter`면 잡음, 아니면 **giveup**(1.6초 고개 젓기) → patrol.
+  쫓다가 내가 **들어가는 걸 본 자리에 숨으면** 곧장 그 자리를 뒤진다. 구역(zone) 밖으로 나가면 포기.
+- 잡으면: '딩동'(두 음) + 3초 쉼 · 숨어 있었으면 나오게 함 · `onCatch(ch)`(게임이 정함 — 벌·체력 없음) · 없으면 `home`(기본 = 만든 때 내 자리)으로 + 알림.
+- 길: `map.nav()` 격자(`await map.nav()` 뒤에 spawn) · 한 프레임에 술래 하나만 `nav.path`(maxExp 4000 — 물총 로봇과 같은 식) · 감지는 10Hz(mapapi tick10) · 움직임·그리기는 매 프레임 행렬만.
+
+### 12.10 main.js·touch.js 고리(게임이 없으면 동작 그대로)
+- `P.bh`(몸 높이) · `P.spd`(수평 속도) · `blockedAt(x,z,y,h=1.5)` · `crouchTick()`(physics 첫 줄) · `CTRL.{crouchOK, crouched, crouchForce, peek, hot, hold, pose, noiseT}` · kidTick 웅크림·파기·들기 자세 ·
+  step()의 틈새 시점(`CTRL.peek`) · hotTick 강제 지점(`CTRL.hot`)·같은 지점 이름 바뀌면 안내 다시 · E(누르고 있어도 한 번 — `e.repeat` 무시)·✋ = 지점이 없으면 `MAP.idleAct()` · doorTick 잠긴 문은 안 엶 ·
+  host에 `ui.setTime/getTime` · `kid {pg, KID}` · `doorLock(n, on)`.
+- touch.js: `#tCrouch`(⬇ 웅크리기 — 아래 줄 👁 왼쪽 · 켜면 노랑) · `T.crouch` · `setCrouchBtn(on)`(게임이 켜고 끔).
+
+### 12.11 예시 장면 `v2/games/actions_demo.js`(registry `dev: true` — 수업 목록에 안 보임 · `?game=actions_demo`)
+삽 찾기(들기) → 큰 나무 밑 파기(삽을 든 채) → 상자 → 조사하기 → 쪽지(자리표시) → 기억 `chest_open` → 이야기 파일: 상자 숨김·열쇠(가방)·moveNpc(경고)·장 2 → 삽 제자리에 놓기(놓는 자리 · 기억) →
+잠긴 3학년 교실 문(시작 장면 `lockDoor` 둘) '🔑 열쇠로 열기' → `unlockDoor`·열쇠 뺌·장 3 → 교실: 웅크리기 켬 · 숨는 자리 3(청소함·사물함·교탁 밑 — `candidates`) · 순찰 로봇(교실 네 귀퉁이 경로 · 잡히면 교실 문 안쪽) →
+퍼즐 자리 조사(`'(퍼즐 문제 자리)'`) → 어두워졌다 밝아짐 → 노을 → 마무리 쪽지(자리표시) → 끝 화면. **모든 글은 자리표시 — 아이들이 쓴 글로 바꿔 넣는다.**
+- 수용 시험(09-27 · Playwright): 데스크톱 30항목 · 휴대폰(iPhone 13 가로 터치) 12항목 전부 통과 — 이야기 파일 동사 13개 전부 실행 · 들기/내려놓기/놓기 · 파기 · 쪽지 · 문 잠김 충돌 → 열림 · 웅크리기 1.9m/s·소리 1·머리 위 막힘이면 웅크린 채 ·
+  소리 0/2/3/3 · 시야(낮은 막이 뒤 웅크림 가림) · 숨기(화각 40·어둡게)·나오기 · 술래 순찰·소리→수상함·시야→쫓기→잡힘·못 본 숨기는 뒤져도 못 찾음·본 숨기는 찾음 · 로봇·유령·순찰 모양 · 3개 상한 ·
+  멈춘 뒤(숨고 웅크린 채·로드 중 그만하기 포함) 지점·장면·이벤트·충돌·DOM·시간대·엔진 수 처음과 같음 · 터치 ⬇ 켬/끔·✋ 들기/내려놓기/숨기/나오기·버튼 겹침 0 · 콘솔 오류 0.
+- 예산: 게임 중 교실·큰 나무 8시점 최악 **14.8만 삼각형 / 187콜**(같은 시점 게임 없음 14.3만/174 — 술래 셋·소품·표식·부채꼴 +4.5천 삼각형·+13콜) · 엔진 tick 평균 0.012ms(술래 셋) · 게임 tick ≈0.
