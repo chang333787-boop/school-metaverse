@@ -6,7 +6,7 @@
 import { createMinimap } from './minimap.js?v=7';
 import { createGamePicker } from './gamepick.js?v=7';
 import { createEngine } from './engine.js?v=8';
-import { createWorldFx } from './worldfx.js?v=1';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
+import { createWorldFx } from './worldfx.js?v=2';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 export function createMapApi(host, NAV, META) {
   const { THREE, scene, world, SCHOOL, q, pl, ui } = host;
   const HOT = host.hot, Z = world.zones, P = pl.P, CTRL = pl.CTRL;
@@ -407,14 +407,17 @@ export function createMapApi(host, NAV, META) {
   // ---------- 13. 게임 로더 · 범위 파사드(scope) ----------
   // 게임 모듈: export const meta = { id, title, api: 1 } · export default async function start(map, params) → { tick(dt), stop() }
   //   map = scope(id) — 게임이 만든 자원(이벤트·지점·트리거·충돌·표식·HUD·막기·경계·멈춤)을 기록했다가 stop 때 한꺼번에 정리
-  const game = { current: null, ms: 0, msN: 0, msT: 0 };
+  const game = { current: null, ms: 0, msN: 0, msT: 0, seq: 0 };
   async function loadGame(id, params = {}) {
     if (!/^[a-z_][a-z0-9_-]{0,31}$/.test(id || '')) { hud.toast('게임 이름이 올바르지 않아요'); return null; }   // GAME-FIND-1: 가운데 밑줄 허용(find_place) — 점·빗금은 여전히 막힘
     if (game.current) stopGame('replace');
+    const my = ++game.seq;   // 리뷰(found2): 모듈을 받는 동안 ⏹(또는 다른 게임 고르기)가 오면 이 로드는 버린다 — 예전엔 stop이 무시되고 게임이 그대로 시작했다(두 번 누르면 두 게임)
     try {
       const reg = await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url));
+      if (my !== game.seq) return null;
       const ent = reg.GAMES && reg.GAMES[id]; if (!ent) { hud.toast('없는 게임이에요: ' + id); return null; }
       const mod = await import(new URL('../games/' + id + '.js?v=' + (ent.v || 1), import.meta.url));
+      if (my !== game.seq) return null;
       if (!mod.meta || mod.meta.api !== MAP.version) { hud.toast('게임 버전이 지도와 맞지 않아요'); return null; }
       const sc = scope(id); sc.arena.set('school');   // 게임 중에는 학교 경계 밖으로 못 나감(기본)
       const cur = { id, meta: mod.meta, scope: sc, handle: null }; game.current = cur;
@@ -424,6 +427,7 @@ export function createMapApi(host, NAV, META) {
     } catch (e) { console.error('[map] 게임 시작 실패', e); stopGame('error'); hud.toast('게임에 문제가 생겨 멈췄어요'); return null; }
   }
   function stopGame(reason = 'stop') {
+    if (reason !== 'replace') game.seq++;   // 받는 중인 로드 취소
     const cur = game.current; if (!cur) return; game.current = null;
     try { cur.handle && cur.handle.stop && cur.handle.stop(reason); } catch (e) { console.error('[map] 게임 stop 오류', e); }
     cur.scope.dispose(); emit('gamestop', { id: cur.id, reason });

@@ -87,8 +87,9 @@ export function createWorldFx(H) {
     SGN.g.attributes.position.needsUpdate = true;
   }
   function actorFor(id) {
-    const st = hideOrig(id); if (st.actor) return st.actor;
-    if (ACTORS.length >= MAXA) { console.warn('[world] npc: 대역은 한 번에 ' + MAXA + '명까지예요'); showOrig(id); return null; }
+    const s0 = NST.get(id); if (s0 && s0.actor) return s0.actor;
+    if (ACTORS.length >= MAXA) { console.warn('[world] npc: 대역은 한 번에 ' + MAXA + '명까지예요'); return null; }   // 리뷰(found2): 거절이면 아무것도 안 바꾼다(먼저 hide()한 사람이 다시 보이던 것)
+    const st = hideOrig(id);
     const r = PEOPLE[id], a = { id, r, x: r.x, y: r.y, z: r.z, h: FACEH[r.face & 3], pose: null, seat: null, mesh: null, sign: null, base: null, path: null, pi: 0, spd: 1.3, ph: 0, wait: 0,
       col: null, nb: null, done: null, door: { x: r.x, y: r.y, z: r.z }, top: 1.3 };
     a.mesh = new THREE.Mesh(new THREE.BufferGeometry(), world.detailMat || new THREE.MeshLambertMaterial({ vertexColors: true }));
@@ -121,6 +122,9 @@ export function createWorldFx(H) {
     a.colWait = false; a.col = colliderAdd(b); const N = navDone(); a.nb = N ? N.block([a.x - 0.15, a.z - 0.15, a.x + 0.15, a.z + 0.15]) : null;   // 길격자는 몸 가운데만(좁은 복도를 막지 않게)
   }
   function solidOff(a) { if (a.col) { a.col.remove(); a.col = null; } if (a.nb) { a.nb.remove(); a.nb = null; } a.colWait = false; }
+  function stopWalk(a) {   // 리뷰(found2): 걷던 중 pose()로 멈추면 move 약속을 false로 끝내고 문 열림 자리도 뺀다(wait:true 이야기가 멈춰 서던 것)
+    a.path = null; const k = doorActors ? doorActors.indexOf(a.door) : -1; if (k >= 0) doorActors.splice(k, 1);
+    if (a.done) { const d = a.done; a.done = null; d(false); } }
   function dropActor(a) {
     solidOff(a); scene.remove(a.mesh); a.mesh.geometry.dispose(); signFree(a);
     const k = doorActors ? doorActors.indexOf(a.door) : -1; if (k >= 0) doorActors.splice(k, 1);
@@ -166,7 +170,7 @@ export function createWorldFx(H) {
       });
     },
     // 제자리에서 자세·방향만(대역으로)
-    pose(t, pose = 'stand', face, o = {}) { const id = find(t); if (id < 0) return false; const a = actorFor(id); if (!a) return false; a.path = null; if (face != null) a.h = face; setPose(a, pose, o); solidOn(a); return true; },
+    pose(t, pose = 'stand', face, o = {}) { const id = find(t); if (id < 0) return false; const a = actorFor(id); if (!a) return false; stopWalk(a); if (face != null) a.h = face; setPose(a, pose, o); solidOn(a); return true; },
     // 시험·검증: 사람 정점(청크)·이름표·사람 충돌을 한 수로 — 게임 전후가 같아야 한다
     checksum() { let h = 2166136261 >>> 0; const mix = v => { h = Math.imul(h ^ (v | 0), 16777619) >>> 0; };
       const seen = new Set(); for (const r of PEOPLE) for (const p of r.parts) seen.add(p.mesh);
