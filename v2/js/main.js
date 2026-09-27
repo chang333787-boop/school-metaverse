@@ -1,7 +1,7 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=4';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { buildWorld } from './world.js?v=123';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=124';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=11';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=5';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=7';       // MAP-API-1: 구역 계약표·출발점·표지점
@@ -191,6 +191,7 @@ const PHY = { sc: 1, r: 0.26, st: 0.55, h: 1.5, walk: 4.2, run: 7.5, crawl: 1.9,
 function tinyBuild() {
   const T = { cols: [], grid: new Map(), mark: new Uint32Array(8192), gen: 1 };
   for (const c of world.colliders) { if (c.y0 < -1e5) continue; tinyAdd(c, T); }
+  for (const b of world.allBoxes) if (b.ts) tinyAdd(b, T);   // 보이기만 하던 얇은 부재(걸레받이·창틀 — world.js ts) = 작은 몸에겐 벽·발판(평소 몸·길격자는 그대로)
   return T;
 }
 function tinyAdd(c, T = PHY.T) {   // 게임이 작아진 뒤 더한 충돌(mapapi collider.add)도 여기로
