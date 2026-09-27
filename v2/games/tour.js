@@ -23,7 +23,9 @@ const CSS = `
 #tour-ui button.sub{background:#e9e1cf;color:#5a4632}
 #tour-ui button:focus-visible{outline:3px solid #ffb400}
 #tour-card{left:50%;top:50%;transform:translate(-50%,-50%);width:min(620px,94vw);max-height:88vh;overflow:auto;padding:14px 16px}
-#tour-card h3{margin:0 0 2px;font-size:19px}
+#tour-card .hd{display:flex;align-items:center;gap:8px}
+#tour-card h3{margin:0 0 2px;font-size:19px;flex:1}
+#tour-ui #tour-card button.x{padding:4px 12px;font-size:18px}
 #tour-card .ct{font-size:14px;color:#6a5a46;margin-bottom:10px}
 #tour-card .gr{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px 6px}
 #tour-card .sl{text-align:center;font-size:12px;line-height:1.25;color:#5a4a36}
@@ -35,6 +37,7 @@ const CSS = `
 .tour-cf{position:absolute;top:-20px;width:10px;height:14px;border-radius:2px;animation:tourFall 3.2s linear forwards}
 @keyframes tourFall{to{transform:translateY(110vh) rotate(720deg)}}
 body.touch #tour-talk{bottom:8px}
+@media (max-height:520px){#tour-card{padding:8px 12px}#tour-card .ct{margin-bottom:6px}#tour-card .gr{grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px 4px}#tour-card .ci{width:44px;height:44px;font-size:21px;margin-bottom:2px}#tour-card .sl{font-size:11px}#tour-card .rw{margin-top:8px}}
 `;
 
 export default async function start(map, params = {}) {
@@ -60,8 +63,17 @@ export default async function start(map, params = {}) {
     const hx = a.x + fx * fd, hz = a.z + fz * fd;
     const pages = Array.isArray(d.pages) && d.pages.length ? d.pages.map(String) : ['(tour_data.js에 이곳 설명을 써 주세요 — 키: ' + a.key + ')'];
     const mx = a.wall ? a.x + (fz ? 0.95 : 0) + fx * 0.35 : a.x, mz = a.wall ? a.z + (fx ? 0.95 : 0) + fz * 0.35 : a.z;   // 표식 자리(벽 게시판은 제목 팻말 옆·벽 앞 — 판을 가리지 않게)
-    ALL.push({ key: a.key, kind: a.kind, x: a.x, y: a.y, z: a.z, top: a.top, hx, hz, mx, mz, name: d.name || a.label, where: d.where || '', stamp: d.stamp || (a.kind === 'board' ? '📋' : '⭐'), pages, node: -1 });
+    ALL.push({ key: a.key, kind: a.kind, x: a.x, y: a.y, z: a.z, top: a.top, hx, hz, mx, mz, my: a.kind === 'board' ? a.y + (a.wall ? 1.2 : 1.45) : a.y + 1.2, label: a.label, face: a.face, name: d.name || a.label, where: d.where || '', stamp: d.stamp || (a.kind === 'board' ? '📋' : '⭐'), pages, node: -1 });
   }
+  // 표식 자리(리뷰 09-27): 선생님 위 ◆가 이름 팻말(머리 위 +0.28)을 가렸다 — 천장(실내 ≈3m) 때문에 더 올릴 수 없어 팻말 옆으로 비킨다(벽·가구가 없는 쪽).
+  //   안내판은 지붕(+1.9) 위로(◆ 아래 끝 = 가운데 - 0.53 · 흔들림 포함).
+  { const g = document.createElement('canvas').getContext('2d'); g.font = '900 84px sans-serif';
+    for (const s of ALL) { if (s.kind !== 'guide') continue;
+      const [fx, fz] = DIR[s.face & 3], half = 0.22 * (g.measureText(s.label).width + 56) / 128 / 2, a = half + 0.42, Y = s.my + 1.1;
+      let best = null, bt = -1;
+      for (const sd of [1, -1]) { const px = -fz * sd, pz = fx * sd, t = map.q.ray([s.x, Y, s.z], [s.x + px * (a + 0.35), Y, s.z + pz * (a + 0.35)]);
+        const tt = t === null ? 2 : t; if (tt > bt) { bt = tt; best = [px, pz]; } }
+      s.mx = s.x + best[0] * a; s.mz = s.z + best[1] * a; } }
   for (const k of Object.keys(SP)) if (!map.tour.some(a => a.key === k)) console.warn('[견학] tour_data.js의 "' + k + '"는 맵에 자리가 없어 빠졌어요(키 이름 확인)');
   const ORD = Array.isArray(DATA.order) ? DATA.order : [];
   ALL.sort((a, b) => { const i = ORD.indexOf(a.key), j = ORD.indexOf(b.key); return (i < 0 ? 999 : i) - (j < 0 ? 999 : j); });
@@ -131,7 +143,7 @@ export default async function start(map, params = {}) {
   }
   function drawCard() {
     card.textContent = '';
-    mk('h3', '', '🎫 견학 도장 카드', card);
+    const hd = mk('div', 'hd', null, card); mk('h3', '', '🎫 견학 도장 카드', hd); btn('✕', 'sub x', () => closeCard(), hd).setAttribute('aria-label', '닫기');   // 휴대폰 가로(높이 ≈390)에선 아래 [닫기]가 화면 밖 — 위에도 닫기(리뷰 09-27)
     mk('div', 'ct', '도장 ' + stamps.size + ' / ' + N + (stamps.size === N ? ' — 견학 완주! 🎉' : ' · 별(⭐)이 뜬 곳을 찾아가 보세요'), card);
     const gr = mk('div', 'gr', null, card);
     for (const s of ALL) { const sl = mk('div', 'sl' + (stamps.has(s.key) ? ' on' : ''), null, gr); mk('div', 'ci', s.stamp, sl); mk('div', '', s.name, sl); sl.title = s.where; }
@@ -188,7 +200,7 @@ export default async function start(map, params = {}) {
     if (!s) return;
     swallow = !locked && e.pointerType === 'mouse'; talkTo(s);   // 잠기지 않은 마우스 클릭이면 뒤따르는 click(= 포인터 잠금 요청)을 삼킨다(터치는 click이 안 온다 — 삼키면 다음 버튼 탭을 먹었다)
   };
-  const onClick = e => { if (swallow) { swallow = false; e.stopPropagation(); e.preventDefault(); } };
+  const onClick = e => { if (swallow || ((talk || card) && e.target && e.target.tagName === 'CANVAS')) { swallow = false; e.stopPropagation(); e.preventDefault(); } };   // 창이 열린 동안 화면 클릭 = 포인터 잠금 안 함(잠기면 창 버튼을 못 누른다)
   // 창이 열린 동안 E·Enter·Space = 다음, Esc = 닫기(창 밖 E가 주변 지점을 또 부르지 않게 여기서 멈춘다) · C = 도장 카드 · H = 길 안내
   const onKey = e => {
     if (talk) {
@@ -214,7 +226,7 @@ export default async function start(map, params = {}) {
     map.hud.goal(nextS ? '다음: ' + nextS.name + (wh ? ' · ' + wh : '') : '🎉 견학 완주! (C: 도장 카드)');
     for (const s of ALL) {
       const want = !stamps.has(s.key), m = marks.get(s.key);
-      if (want && !m) marks.set(s.key, map.mk.marker(s.mx, Math.min(s.top - 0.2, s.y + 1.2), s.mz, { color: s === nextS ? 0xff8a3c : 0xffd23c, beam: false }));
+      if (want && !m) marks.set(s.key, map.mk.marker(s.mx, s.my, s.mz, { color: s === nextS ? 0xff8a3c : 0xffd23c, beam: false }));
       else if (!want && m) { m.remove(); marks.delete(s.key); }
       else if (m) m.color(s === nextS ? 0xff8a3c : 0xffd23c);
     }
@@ -241,7 +253,7 @@ export default async function start(map, params = {}) {
   map.player.freeze(false);
   if (params.intro !== '0') openTalk({ name: '우리 학교 견학', icon: '🏫', pages: [
     ...(Array.isArray(DATA.welcome) ? DATA.welcome.map(String) : []),
-    '선생님(🙋)과 안내판(📋)을 찾아가 이야기를 듣고 도장을 모아요.\n· 가까이 가서 E(터치 ✋) 또는 사람·안내판을 눌러요\n· 머리 위 ◆ · 미니맵 ⭐ = 아직 못 간 곳(주황 = 다음 추천)\n· H = 다음 곳 길 안내 · C = 도장 카드(' + N + '칸)'] });
+    '선생님(🙋)과 안내판(📋)을 찾아가 이야기를 듣고 도장을 모아요.\n· 가까이 가서 E(터치 ✋) 또는 사람·안내판을 눌러요\n· 떠 있는 ◆ · 미니맵 ⭐ = 아직 못 간 곳(주황 = 다음 추천)\n· H = 다음 곳 길 안내 · C = 도장 카드(' + N + '칸)'] });
 
   return {
     tick(dt) {
