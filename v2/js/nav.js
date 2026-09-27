@@ -127,8 +127,12 @@ function finish(B) {
     },
     // 막기(게임 중 정문 닫기 등): rect = [x0, z0, x1, z1] 또는 (i) => bool. 겹쳐 막아도 remove가 서로 풀지 않게 카운터
     block(rect) {
-      const f = typeof rect === 'function' ? rect : i => { const x = X(i), z = Z(i); return x >= rect[0] && x <= rect[2] && z >= rect[1] && z <= rect[3]; };
-      const list = []; for (let i = 0; i < n; i++) if (f(i)) { N.mask[i]++; list.push(i); }
+      const list = [];
+      if (typeof rect === 'function') { for (let i = 0; i < n; i++) if (rect(i)) { N.mask[i]++; list.push(i); } }
+      else {   // 리뷰(found2): 사각형은 그 안의 열만 본다(전체 16만 칸을 훑던 것 — 소품·대역마다 수 ms). 고른 칸은 전과 같다
+        const a0 = Math.ceil((rect[0] - OX) / S - 1e-9), a1 = Math.floor((rect[2] - OX) / S + 1e-9), b0 = Math.ceil((rect[1] - OZ) / S - 1e-9), b1 = Math.floor((rect[3] - OZ) / S + 1e-9);
+        for (let cx = a0 - 1; cx <= a1 + 1; cx++) for (let cz = b0 - 1; cz <= b1 + 1; cz++) { const c = col(cx, cz); if (c < 0) continue;
+          for (let i = colHead[c]; i >= 0; i = next[i]) { const x = X(i), z = Z(i); if (x >= rect[0] && x <= rect[2] && z >= rect[1] && z <= rect[3]) { N.mask[i]++; list.push(i); } } } }
       return { remove() { for (const i of list) if (N.mask[i]) N.mask[i]--; list.length = 0; } };
     },
     path(a, b, opt = {}) { return astar(a, b, opt); },

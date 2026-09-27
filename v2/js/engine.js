@@ -396,7 +396,7 @@ export function createEngine(H) {
       setTimeout(async () => { if (g0 !== GEN) return; if (mid) { try { await mid(); } catch (e) { console.error(e); } } if (g0 !== GEN || !fadeEl) return; fadeEl.style.opacity = '0'; setTimeout(() => { if (g0 !== GEN) return; if (fadeEl) fadeEl.style.display = 'none'; res(); }, half * 1000); }, half * 1000); });
   }
   // 이야기 파일 실행기: scenes = [{ id, when, do:[{op,…}], once(true) }] — 기억·가방·장이 바뀔 때마다 조건을 보고, 맞는 장면을 차례로(한 번에 하나) 실행
-  //   op: note{title,body} · show{id, kind?, at?, h?, pick?} · hide{id} · moveNpc{name,to,pose,face}(미지원 — 경고만) · time{k} · lockDoor/unlockDoor{door|near:[x,z]} ·
+  //   op: note{title,body} · show{id, kind?, at?, h?, pick?} · hide{id} · moveNpc{name,to,pose,face,walk,wait} · hideNpc/showNpc/homeNpc{name} · light{room,on} · door{door,state} · spawn{id,kind,at,…} · paint{target,…}(§16) · time{k} · lockDoor/unlockDoor{door|near:[x,z]} ·
   //       flag{k,v} · give{item,icon,label} · take{item} · fade{sec,color} · sound{sfx|tone} · chapter{n} · wait{sec} · toast{text}
   //   o = { ents: {이름: {show(),hide()}}, onDone(), onOp(op) } → { remove, fired:Set, ent(name,obj), poke(), get busy }
   function runStory(scenes, o = {}) {
@@ -409,7 +409,8 @@ export function createEngine(H) {
           if (!e && op.kind) { const at = op.at || [P.x, P.z], p = prop.spawn(op.kind, at[0], at.length > 2 ? at[1] : undefined, at.length > 2 ? at[2] : at[1], { h: op.h, rise: op.rise }); if (p) { if (op.pick) carry.pickable(p); e = p; R.ents.set(op.id, p); } }
           if (e && e.show) e.show(); else if (!e) console.warn('[story] show: 모르는 것', op.id); break; }
         case 'hide': { const e = R.ents.get(op.id); if (e && e.hide) e.hide(); else console.warn('[story] hide: 모르는 것', op.id); break; }
-        case 'moveNpc': console.warn('[story] moveNpc는 아직 못 해요 — 사람(NPC)은 월드 청크에 합쳐져 있어 하나만 옮길 수 없어요(docs/map_api.md §12 · 무시함)', op.name); break;
+        case 'moveNpc': case 'hideNpc': case 'showNpc': case 'homeNpc': case 'light': case 'door': case 'spawn': case 'paint': {   // NPC-MOVE·WORLD-FX(found2): worldfx.js(§16)가 한다 — wait:true면 걸어가 도착할 때까지 기다림
+          const r = H.fxOp ? H.fxOp(op) : (console.warn('[story] ' + op.op + ': 세상 바꾸기 모듈 없음'), null); if (r && typeof r.then === 'function') await r; break; }
         case 'time': setTime(op.k); break;
         case 'lockDoor': door.lock(op.door ?? op.near, true, op); break;
         case 'unlockDoor': door.lock(op.door ?? op.near, false); break;

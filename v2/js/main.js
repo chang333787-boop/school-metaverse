@@ -3,9 +3,9 @@ import * as THREE from 'three';
 import { buildKid } from './kid.js?v=4';   // CHAR-2 내 캐릭터(치비·노란 모자)
 import { buildWorld } from './world.js?v=124';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=11';   // LAYOUT-3 실측 배치(v1 data.js 대신)
-import * as NAV from './nav.js?v=5';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
+import * as NAV from './nav.js?v=6';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=7';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=14';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=16';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=7';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 
 const canvas = document.getElementById('scene');
@@ -686,10 +686,13 @@ function setDoor(o) {
   put(doorInst.knob, edge, o.y0 + 1.0, 0.05, 0.22, 0.22);
   doorInst.wood.instanceMatrix.needsUpdate = doorInst.win.instanceMatrix.needsUpdate = doorInst.knob.instanceMatrix.needsUpdate = true;
 }
+const DOOR_ACT = [];   // NPC-MOVE(found2): 걷는 대역 사람 자리({x,y,z} — worldfx.js가 넣고 뺀다) — 사람이 다가가면 문이 열린다
 function doorTick(dt) {
   for (const o of DOORS) {
     const dx = P.x - o.bx, dz = P.z - o.bz;
-    const target = (!o.lock && dx * dx + dz * dz < 9 && Math.abs(P.y - o.y0) < 2) ? 1 : 0;   // ENGINE-1: 잠근 문(map.story lockDoor)은 닫힌 채
+    let near = dx * dx + dz * dz < 9 && Math.abs(P.y - o.y0) < 2;
+    if (!near) for (let i = 0; i < DOOR_ACT.length; i++) { const a = DOOR_ACT[i], ax = a.x - o.bx, az = a.z - o.bz; if (ax * ax + az * az < 4 && Math.abs(a.y - o.y0) < 2) { near = true; break; } }
+    const target = o.lock ? 0 : o.hold != null ? o.hold : near ? 1 : 0;   // ENGINE-1: 잠근 문(map.story lockDoor)은 닫힌 채 · WORLD-FX: o.hold = 게임이 연/닫은 채(1/0)
     if (Math.abs(target - o.open) < 0.002) continue;
     o.open += (target - o.open) * Math.min(1, dt * 6);   // 다 열리면 문짝 끝이 문틀 안쪽 면과 맞닿음(막힌 곳은 그 직전까지)
     setDoor(o);
@@ -1042,12 +1045,16 @@ function detailTick(dt) {
 }
 
 // ---------- 지도 API(MAP-API-1 · 09-24) — 게임이 받는 지도 계약. 정본 docs/map_api.md ----------
+let rebakeT = 0;
 MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL,
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
   pl: { P, ACT, CTRL, keys, touch: TOUCH, getYaw: () => camYaw, setYaw: v => { camYaw = v; }, setScale, tinyAdd: c => tinyAdd(c), pBlocked, pGround, scale: () => PHY.sc },   // SHRINK-1: 작아지기(map.player.scale)
   ui: { toast, hint: hintEl, tone, setTime: k => setTime(k), getTime: () => timeKey, dark: on => setDark(on), isDark: () => darkOn }, hot: HOT,
   // ENGINE-1: 행동 사전 고리 — 캐릭터(들기 자리)·문 잠그기(문짝 닫힌 채 — 충돌은 mapapi가)·터치(웅크리기 버튼)
-  kid: { pg, KID }, doorLock: (n, on) => { const o = DOORS[n]; if (!o) return false; o.lock = !!on; if (on) { o.open = 0; setDoor(o); } return true; } }, NAV, makeMeta(SCHOOL));   // tone = 게임 효과음(GAME-FIND-1 map.sfx)
+  kid: { pg, KID }, doorLock: (n, on) => { const o = DOORS[n]; if (!o) return false; o.lock = !!on; if (on) { o.open = 0; setDoor(o); } return true; },
+  // WORLD-FX(found2): 문 연 채/닫은 채(null = 원래대로 — 다가가면 열림) · 걷는 대역 사람 자리 · 그림자 다시 굽기(바깥 사람을 숨기거나 옮길 때 — 0.6초 몰아서)
+  doorHold: (n, v) => { const o = DOORS[n]; if (!o) return false; o.hold = v == null ? null : v ? 1 : 0; return true; }, doorActors: DOOR_ACT,
+  rebake: () => { if (!rebakeT) rebakeT = setTimeout(() => { rebakeT = 0; bakeShadows(); }, 600); } }, NAV, makeMeta(SCHOOL));   // tone = 게임 효과음(GAME-FIND-1 map.sfx)
 
 // ---------- 루프 + 예산 계측(헌법⑥) ----------
 const clock = new THREE.Clock();

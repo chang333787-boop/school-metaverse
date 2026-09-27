@@ -12,6 +12,7 @@
 | `v2/js/mapmeta.js` | 구역 계약표(라벨→id·kind·건물·tags) · 덧붙인 넓은 구역 · 출발점 · 표지점 | 항상 |
 | `v2/js/mapapi.js` | 지도 API(`SD2.map`) — 구역·지점·이벤트·질의·플레이어·상호작용·트리거·충돌·HUD·표식·길찾기·미니맵 데이터·게임 로더 | 항상 |
 | `v2/js/engine.js` | 행동 사전 엔진(ENGINE-1 · §12) — 웅크리기·숨는 자리·소리/시야·쪽지·조사·파기·들기/놓기·소품 풀·이야기 상태·이야기 파일 실행기·문 잠그기·쫓는 것 | 항상(mapapi import) — 게임이 부를 때만 메시·DOM을 만든다 |
+| `v2/js/worldfx.js` | 사람 옮기기·세상 바꾸기(NPC-MOVE·WORLD-FX · §16) — 사람 숨기기/대역 걷기 · 소품(발판·비탈·컨테이너·단추·선풍기…) · 방 불 · 문 연 채/닫은 채 · 칠판 그림 · 바람·튀는 판 | 항상(mapapi import) — 게임이 부를 때만 만든다 |
 | `v2/js/health.js` | 맵 건강 검진(`SD2.health()`) | `?check=1`(빠른 판)·`?health=1`·호출할 때만(학생 접속 0바이트) |
 | `v2/games/registry.js` | 게임 허용 목록(`?game=<id>`) | 게임을 켤 때만 |
 | `v2/games/_template.js` | 새 게임 틀(개발용 수용 시험) | `?game=_template` |
@@ -74,6 +75,7 @@ SD2.map.game.load(id, params) / stop() / current   ·  SD2.camPose(…) (3인칭
 // SHRINK-1(§12.12): map.player.scale(s, o)/scaled()/groundAt/blockedAt/pos()
 // ENGINE-1 행동 사전(§12): map.player.crouch/crouched/setCrouch/hidden/noise · map.see · map.hide · map.note · map.investigate · map.dig · map.prop · map.carry · map.story · map.door · map.chaser · map.fade · map.time
 // G-ESCAPE(§12.13): map.lights(false|true) 불 끄기 · map.flashlight(true|false) 손전등 — 새 조명 없음 · 게임이 멈추면 원래대로
+// NPC-MOVE·WORLD-FX(§16 · found2 09-27): map.npc.list/get/find/hide/show/home/move/pose/checksum · map.world.spawn/move/remove/get/list/light/door/paint/water/wind/pad — 게임이 멈추면 전부 원래대로
 ```
 
 - 표식(marker)은 **InstancedMesh 풀 2개**(다이아몬드·빛기둥, 64개까지)라 몇 개를 띄워도 드로우콜 +2. `many`는 종류마다 +1. 게임 몫은 합쳐 **+15콜 이하**(지금 최대 181/200).
@@ -91,7 +93,7 @@ export default async function start(map, params) { …; return { tick(dt) {}, st
 - id 규칙 `/^[a-z_][a-z0-9-]{0,31}$/` · 레지스트리에 없으면 거절 · `meta.api !== 1`이면 거절.
 - `map` = 그 게임 전용 **범위 파사드**: 게임이 만든 이벤트·지점·트리거·충돌·표식·HUD·막기·경계·멈춤을 기록했다가 `stop` 때 자동 정리(DOM 리스너처럼 파사드 밖 자원만 게임이 직접).
 - `start`·`tick` 예외 → 게임만 멈추고 토스트 '게임에 문제가 생겨 멈췄어요' — 월드 루프는 계속. tick 평균이 2초 창에서 1ms를 넘으면 `console.warn('게임 예산 초과')`. fps 칩에 `game x.xxms`.
-- **게임 파일은 import 금지**(three 포함 — `map.three`로): 버스터가 다르면 모듈이 두 벌이 된다. 사람 NPC·인물 대사 금지(술래·목표는 장소·물건·공·신호등 — 예외 = §11 견학: 교사가 쓴 글만 안내 선생님이 말한다). 문항·안내문은 교사 승인 데이터만.
+- **게임 파일은 import 금지**(three 포함 — `map.three`로): 버스터가 다르면 모듈이 두 벌이 된다. 사람을 술래·과녁·적으로 쓰지 않는다(술래·목표는 장소·물건·공·신호등·로봇). **글(09-27 사용자 결정 · §16.1)**: 게임 글(이야기·쪽지·퍼즐·대사)은 Claude가 써도 된다 — 단 **이름 있는 실제 학생 NPC의 입에는 지어낸 말을 넣지 않는다**(학생 = 이름 없는 역할 '반 친구'·'6학년 형'·'1학년 동생' 또는 플레이어) · 선생님은 직함으로만 · 실제 학교에 대한 거짓 사실 없음 · 4학년 눈높이·무섭지 않게. 견학(§11) 글은 그대로 교사가 쓴다.
 - 수용 시험(09-24 통과): `?game=_template` → 칩·표식 뜸 → 목표로 teleport + `SD2.step(20)` → 도착 처리 → `stop()` 뒤 HOT 길이·칩 원래대로(표식 풀 메시 2개만 숨김 상태로 남음).
 
 ### 게임 목록(`v2/games/registry.js` — 🎮 놀이 패널에 보이는 것 · `dev`는 주소로만)
@@ -104,6 +106,7 @@ export default async function start(map, params) { …; return { tick(dt) {}, st
 | `escape` | 학교 방탈출 | `escape.js` + 이야기 파일 `escape_story.js` · §14 | 방마다 단서 → 번호 자물쇠 → 다음 방 열쇠 · 마지막 방 잠입(순찰 로봇 / 밤 = 장난감 유령 + 손전등) |
 | `hideseek` | 숨바꼭질 | `hideseek.js` · §15 | A 술래 로봇을 피해 2분 숨기 · B 숨은 로봇 5개 3분 안에 찾기(구역 셋) |
 | `actions_demo` (dev) | 행동 사전 예시 | `actions_demo.js` · §12.11 | 엔진 동사를 한 번씩(글은 자리표시) |
+| `fx_demo` (dev) | 세상 바꾸기 예시 | `fx_demo.js` · §16.8 | 사람 옮기기(걸어서 모임)·소품 놀이 칸·다리 올리기·바람·튀는 판·방 불·문·칠판 그림 |
 | `_template` (dev) | 게임 틀 | `_template.js` · §5 | 새 게임 수용 시험 |
 
 ## 6. 맵 건강 검진 — `SD2.health(opt)` → Promise<보고서>
@@ -219,7 +222,7 @@ export default async function start(map, params) { …; return { tick(dt) {}, st
 - **장소 찾기**(`v2/games/find_place.js`, `?game=find_place&seed=1`): 목표 5곳(구역 입구점 중 staff·kinder·창고·조리·복도·계단·8㎡ 미만·덧붙인 구역 제외, 이름마다 한 곳, 걷는 거리 띠로 가까운 곳 → 먼 곳, 앞 목표와 20m 이상, 동·층 섞기) → 3·2·1 → 목표 줄·시간 칩·미니맵 깜빡이는 점(빛기둥은 20m 안에서만) → 구역 들어감 = 도착(딩) → 끝 화면(걸린 시간·가장 빠른 기록 `map.store` · 다시 하기/그만하기). 30초 뒤 `H`(또는 칩) = 길 리본 5초.
 - **nav.js distField 버그 수정**: 묵은 힙 항목 검사가 거꾸로였고 64비트 거리를 Float32 D와 견줘 같은 칸이 끝없이 다시 들어가 힙이 터졌다(Array buffer allocation failed) → 묵은 항목 건너뜀 + `Math.fround`.
 - 수용 시험(09-26 · 1366×610): 5 목표 `nav.path` ok · 각 목표 2.4m 밖에서 실제로 걸어 들어가 도착 5/5 · 끝 화면 · [다시 하기]/⏹ 실제 클릭 뒤 정리 수 처음과 같음 · HUD 겹침 0 · 게이트·빠른 검진 그대로.
-- **새 게임 만들기**: ① `_template.js` 복사 → `v2/games/<id>.js` ② `registry.js`에 `{title, v, desc}` ③ 목표·소품은 `map.pois`·`nav.random`·`mk.*`로(사람 NPC·인물 대사 금지, 문항은 교사 승인 데이터만) ④ 미니맵 `map.minimap.show()` + `setMarks` ⑤ harness로 `?game=<id>` 수용 시험(걸어서 도착·stop 뒤 정리 수·HUD 겹침·드로우콜 +15 이하).
+- **새 게임 만들기**: ① `_template.js` 복사 → `v2/games/<id>.js` ② `registry.js`에 `{title, v, desc}` ③ 목표·소품은 `map.pois`·`nav.random`·`mk.*`로(사람을 술래·과녁으로 쓰지 않음 · 글은 §16.1 규칙) ④ 미니맵 `map.minimap.show()` + `setMarks` ⑤ harness로 `?game=<id>` 수용 시험(걸어서 도착·stop 뒤 정리 수·HUD 겹침·드로우콜 +15 이하).
 
 ## 10. 물총 놀이(GAME-WG · 09-26)
 
@@ -344,10 +347,9 @@ map.story.run(scenes, { ents:{이름: {show, hide}}, onDone, onOp }) → { fired
 ```
 - 가방 HUD = 왼쪽 위 📍 아래 작은 아이콘 줄(터치면 시간·놀이 칩 줄 아래) — 물건이 없으면 숨김. 바뀌면 `map.on('story', {type, …})`·`'chapter'`도 나간다.
 - 장면 = `{ id, when, do:[{op,…}], once(true) }` · when = `{ flags: {k: true|false} | ['k', '!k'], has: ['id'], chapter }`(빈 조건 = 처음). 기억·가방·장이 바뀔 때마다(매 프레임 아님) 조건을 보고 맞는 장면을 **한 번에 하나씩 차례로**(쪽지·어두워지기는 끝날 때까지 기다림). once 장면이 다 돌면 `onDone`.
-- 동사(op): `note{title,body}` · `show{id, kind?, at?, h?, pick?}`(ents에 없고 kind가 있으면 소품을 만들어 등록 · pick = 들 수 있게) · `hide{id}` · `moveNpc{name,to,pose,face}` · `time{k}` · `lockDoor{door|near, hot?}` · `unlockDoor{door|near}` ·
+- 동사(op): `note{title,body}` · `show{id, kind?, at?, h?, pick?}`(ents에 없고 kind가 있으면 소품을 만들어 등록 · pick = 들 수 있게) · `hide{id}` · `moveNpc{name,to,pose,face,walk,speed,wait}` · `hideNpc/showNpc/homeNpc{name}` · `light{room,on}` · `door{door,state}` · `spawn{kind,at,…}` · `paint{target,text,…}`(§16) · `time{k}` · `lockDoor{door|near, hot?}` · `unlockDoor{door|near}` ·
   `flag{k, v=true}` · `give{item, icon, label}` · `take{item}` · `fade{sec, color}` · `sound{sfx | tone:[[…]]}` + 덧붙임 `chapter{n}` · `wait{sec}` · `toast{text}`. 모르는 op = 경고만.
-- ⚠️ **`moveNpc`는 아직 못 한다(경고만 · 무시)**: 사람(NPC)은 world.js `person()`이 `dGeo`로 디테일 청크(16m · 건물×층 · 여러 사람·가구가 한 메시)에 **정점째 합쳐** 굽고, 이름표도 `sign()` 아틀라스 한 메시다.
-  한 사람만 숨기려면 청크 안 정점 범위 기록(사람마다 수백~수천 정점) + 그 범위를 접는 갱신 + 대신 설 kid 모양 풀 + 이름표 아틀라스 칸 끄기가 필요해 이번 범위를 넘었다(모습·그리기 양도 바뀌어 게이트 재측정 필요). 하려면: person()이 넣은 정점 범위를 `world.people[i] = {chunk, start, count, sign}`로 적고, 숨길 때 그 범위 position을 0으로 접어 `needsUpdate`(청크 하나 재업로드) + kid.js `buildKid` 풀(3명)로 대신 세우기.
+- **`moveNpc`(found2 09-27 — §16.2)**: 사람을 대역으로 옮긴다(`to` = `{x,z,y?}`·`[x,z]`·`'lm:…'` 등 · `walk:true`면 길격자를 따라 걸어감 · `wait:true`면 도착할 때까지 다음 op를 기다림). 예전 '경고만'은 없어졌다.
 - `time`(과 `map.time(k)`)은 게임이 멈추면 처음 시간대로 돌아간다.
 
 ### 12.8 문 잠그기 — `map.door`
@@ -374,7 +376,7 @@ map.chaser.list()   // 이벤트: map.on('chaser', {id, state}) · 'caught' · '
 - touch.js: `#tCrouch`(⬇ 웅크리기 — 아래 줄 👁 왼쪽 · 켜면 노랑) · `T.crouch` · `setCrouchBtn(on)`(게임이 켜고 끔).
 
 ### 12.11 예시 장면 `v2/games/actions_demo.js`(registry `dev: true` — 수업 목록에 안 보임 · `?game=actions_demo`)
-삽 찾기(들기) → 큰 나무 밑 파기(삽을 든 채) → 상자 → 조사하기 → 쪽지(자리표시) → 기억 `chest_open` → 이야기 파일: 상자 숨김·열쇠(가방)·moveNpc(경고)·장 2 → 삽 제자리에 놓기(놓는 자리 · 기억) →
+삽 찾기(들기) → 큰 나무 밑 파기(삽을 든 채) → 상자 → 조사하기 → 쪽지(자리표시) → 기억 `chest_open` → 이야기 파일: 상자 숨김·열쇠(가방)·moveNpc(§16 전엔 경고 — 지금은 옮김)·장 2 → 삽 제자리에 놓기(놓는 자리 · 기억) →
 잠긴 3학년 교실 문(시작 장면 `lockDoor` 둘) '🔑 열쇠로 열기' → `unlockDoor`·열쇠 뺌·장 3 → 교실: 웅크리기 켬 · 숨는 자리 3(청소함·사물함·교탁 밑 — `candidates`) · 순찰 로봇(교실 네 귀퉁이 경로 · 잡히면 교실 문 안쪽) →
 퍼즐 자리 조사(`'(퍼즐 문제 자리)'`) → 어두워졌다 밝아짐 → 노을 → 마무리 쪽지(자리표시) → 끝 화면. **모든 글은 자리표시 — 아이들이 쓴 글로 바꿔 넣는다.**
 - 수용 시험(09-27 · Playwright): 데스크톱 30항목 · 휴대폰(iPhone 13 가로 터치) 12항목 전부 통과 — 이야기 파일 동사 13개 전부 실행 · 들기/내려놓기/놓기 · 파기 · 쪽지 · 문 잠김 충돌 → 열림 · 웅크리기 1.9m/s·소리 1·머리 위 막힘이면 웅크린 채 ·
@@ -506,3 +508,87 @@ map.flashlight(true)  // 손전등: 손에서 화면 가운데(카메라가 보�
 - 휴대폰(iPhone 13 가로 터치): 고르기 창 누르기 · ⬇ 켬/끔(A에만 보임) · ✋ 숨기/나오기 · ✋ 살펴보기 · 💡 칩 · 끝 화면 [그만하기] · 늘 떠 있는 칩·버튼·목표 줄 겹침 0(잠깐 뜨는 알림·배너만 칩 위를 지나감).
 - 예산(구역마다 숨는 자리 서는 칸 + 구역 닻 · 3인칭 4방향 1366×610 · B는 로봇 5개를 다 보이게 한 최악): 서관 13.4만/163콜 · 운동장 14.1만/160 · **급식실 커튼 뒤 14.98만/186**(게임 없이 같은 화면 14.83만/181 — 술래·부채꼴·띠 +1.5천) · B 14.96만/184 · 틈새 시점 최악 10.9만/139 ·
   게임 tick 평균 0.02~0.06ms · 게이트(감사 0 · 도달 100 · 옥상 0 · 문 61 간섭 0 · 지도 계약 0 · 10/10 · 17/17 · 최악 14.8만/183콜) 그대로. 콘솔 오류 0.
+
+## 16. 사람 옮기기 · 세상 바꾸기(NPC-MOVE · WORLD-FX · found2 09-27) — `v2/js/worldfx.js` · 파사드 `map.npc` · `map.world`
+
+사용자 09-27 "게임 상호작용하면 실제 변화도 생기게" · "상황에 따라 애들이나 선생님 위치 바꿔도 돼" · "너가 다 써줘봐". 게임 트랙(개미 2판·방탈출·이야기 RPG·물총 팀전)이 같이 쓰는 기초.
+**게임이 부르지 않으면 아무것도 만들지 않는다**(메시·DOM·매 프레임 일 0 → 게이트 영향 0). 게임이 멈추면(범위 파사드 dispose → `ENG.reset()` 다음 `FX.reset()`) **전부 처음대로** — 사람 정점·이름표·충돌, 소품, 방 불, 문, 그림, 바람. 시험용 날 것 = `SD2.map.worldfx`(`stats()`·`tick`·`reset`) · `SD2.map.stats().fx`.
+
+### 16.1 글 규칙(09-27 사용자 결정 — 게임 글만)
+- 게임의 이야기·쪽지·퍼즐 글·대사는 **Claude가 써도 된다**(예전 '자리표시만'에서 바뀜). 단:
+  - **이름 있는 실제 학생 NPC(이름표 = 실제 아이들 이름)의 입에 지어낸 말을 넣지 않는다.** 이야기 속 학생 = 이름 없는 역할('반 친구'·'6학년 형'·'1학년 동생') 또는 플레이어.
+  - 선생님은 **직함으로만**(이름 없음) · 실제 학교에 대한 **거짓 사실을 쓰지 않는다**(행사·수상·역사·프로그램) · 4학년 눈높이 · 폭력·피·깜짝 놀래기 없음.
+  - 견학(§11 `tour_data.js`)은 그대로 교사가 쓴다.
+- 게임은 이야기 장면에서 **있는 아이들·선생님을 옮기거나 자세를 바꿀 수 있다**(수는 그대로 — 새 사람 없음). 새 인물이 필요하면 로봇·팀 봇 같은 **게임 배우**(사람 아님)만.
+
+### 16.2 사람(NPC) — `map.npc`
+```js
+map.npc.list({ room, adult, name }) → [{ id, name, adult, guide, room, roomLabel, x, y, z, pose, face(방위°), hidden, moved, walking }]   // 58명(world.people)
+map.npc.get(이름|id|견학키) · find(이름|견학키) → id                  // 같은 이름이면 첫 사람 — 확실히 하려면 list()의 id
+map.npc.move(누구, 어디, { walk, speed, pose, face, seat, desk, floor }) → Promise(도착 true · 막히거나 멈추면 false)
+      // 어디 = {x,z,y?,face?,pose?} | [x,z] | [x,y,z] | 'lm:…' 'zone:…' 'spawn:…' 'hot:…'
+      // pose = 'stand'(기본)|'sit'|'sitFloor'|'work'|'sweep'|'wave'|'cheer'(만세)|'explain'|'walk'(= 걷다가 서기)
+      // walk:false(기본) = 바로 그 자리에 · walk:true = 길격자를 따라 걸어감(1.3m/s · 어른 1.2 · speed로) — 문은 다가가면 열린다
+map.npc.pose(누구, pose, face?, {seat, desk}) · hide(누구) · show(누구) · home(누구)(대역을 치우고 원래 자리·모양으로)
+map.npc.checksum()   // 사람 청크 정점 + 이름표 아틀라스 정점 + 사람 충돌을 한 수로 — 게임 전후 같아야 한다(수용 시험)
+map.on('npc', {id, type:'hide'|'show'|'home'|'arrive'})
+```
+- **원래 사람 숨기기**: world.js `person()`이 빌드 때 사람마다 **청크 안 삼각형 범위**(`dGeo`가 삼각형 주인 `ch.own`을 적고, `splitRooms`로 방별로 나눠도 따라감 → 병합 뒤 `world.people[i].parts = [{mesh, start, count}]`) · **이름표 아틀라스 칸**(`sign` 번호 → 정점 [36i, 36i+36) 위치값) · **몸 충돌**(`cols`)을 적어 둔다(모양·충돌·감사 변화 0).
+  숨기면 그 청크의 숨긴 사람 삼각형을 건너뛰고 나머지를 앞으로 당겨 **그리기 범위(drawRange)를 줄인다** — 삼각형 수도 준다. 청크 원본(위치·색·법선)을 처음 건드릴 때 떠 두고 바뀔 때마다 원본에서 다시 짜므로, 모두 보이면 **원본 배열 그대로**(`checksum` 같음). 이름표는 정점을 한 점으로 접고, 충돌은 y를 −1e6으로(되돌릴 때 원래 값). 바깥 사람이면 그림자 한 번 다시 굽기(0.6초 몰아서).
+  58명 모두 범위·이름표·충돌이 잡힌다(시험: `parts` 없는 사람 0 · 이름표 없는 사람 0). 숨길 수 없는 사람 없음.
+- **대역(stand-in)**: 같은 `person()` 부품을 원점에 따로 굽는다(`world.personGeo(id, pose, {seat, desk})` — 색·머리·옷 = 원래 자리 해시 그대로 · 부위 번호 0 몸 · 1/2 다리 · 3/4 팔 · 엉덩이/어깨 높이). 대역마다 메시 1(월드 디테일 재질 그대로) · 이름표는 월드 팻말 아틀라스(같은 재질·같은 글자판)로 **대역 이름표 전부 한 메시**(드로우콜 1 · 매 프레임 카메라 쪽으로 72정점).
+  **한 번에 6명까지**(넘으면 `console.warn` · false). 걷기 = 다리(엉덩이 축)·팔(어깨 축) 정점 회전(매 프레임 스크래치 — 새 객체 없음) · 길 = `map.nav()` 격자 `path`(maxExp 6만) + 끝에 정확한 자리 한 점 · 길이 없으면 바로 옮김(경고).
+  걷는 중 내가 바로 앞 0.8m에 있으면 멈춰 기다린다(최대 6초) · 걷는 동안은 몸 충돌 없음(끼임 방지) → 서면 원래 사람과 같은 몸 충돌(선 0.44각·앉으면 0.85부터) + 길격자 몸 가운데 0.3m 막기(좁은 복도를 막지 않게) · 내가 그 자리에 있으면 비킬 때까지 충돌을 미룬다.
+  걷는 대역 자리는 main.js `DOOR_ACT`(host `doorActors`)에 들어가 **다가가면 문이 열린다**(2m).
+- 이야기 파일: `moveNpc{name, to, pose, face, walk, speed, wait}` · `hideNpc{name}` · `showNpc{name}` · `homeNpc{name}`.
+- 한 번 드는 비용(헤드리스 측정): 옮기기(숨기기 + 대역 굽기 + 길격자 막기) ≈10ms · 긴 길 찾기(교실 → 체육관 133m) ≈11ms · 숨기기 ≈1ms · 정리 ≈1ms — 여러 명을 옮길 땐 어두워지기(`map.fade`)·장면 넘김 때 부르면 끊김이 안 보인다. 걷는 동안 매 프레임은 6명 0.044ms.
+- 리뷰(found2 · 09-27): 걷는 중 `pose()`·`hide()`·`home()`·다른 `move()` = 앞 move 약속이 **false로 끝난다**(예전엔 `pose()`면 영영 안 끝나 `wait:true` 이야기가 멈췄다) · 6명이 차서 거절된 `move`는 아무것도 안 바꾼다(먼저 `hide()`한 사람이 다시 보이던 것) · **두 사람을 같은 자리로 보내지 말 것** — 선 대역의 길격자 막기 때문에 두 번째는 길을 못 찾아(탐색 한도까지 ≈10ms) 그 자리로 바로 옮겨진다(겹쳐 섬) · `nav.block(사각형)`은 그 안의 열만 본다(16만 칸 전체를 훑던 것 — 소품·대역마다 ≈1.5ms → 0.01ms · 고른 칸은 같음).
+- 한계: 대역은 그림자를 굽지 않는다(바깥에서 발밑 그림자 없음 — 실내 사람과 같음) · 작아지기(§12.12)의 작은 몸 판은 숨긴 사람 충돌도 따라간다(같은 상자 객체) · 견학(§11) 말 거는 자리는 옮겨도 그대로(견학 중엔 옮기지 말 것).
+
+### 16.3 소품 — `map.world.spawn(종류, 어디, o)` → 핸들
+```js
+const p = map.world.spawn('platform', { x, z, y? }, { size:[w,h,d], s, h(방위° — 충돌 있는 것은 90° 단위), color, lift, solid:false, nav:false, onUse, label, text, wind })
+p.move({ x, y, z, h }, { tween: 초, ease: 'inOut'|'linear', onDone }) → Promise · p.remove() · p.color(c) · p.hide() · p.show() · p.top · p.x/y/z
+map.world.move(id, 어디, o) · remove(id) · get(id) · list() · kinds
+```
+| 종류 | 기본 크기(m) | 충돌 | 메모 |
+|---|---|---|---|
+| `box` 상자 · `crate` 나무 궤짝 | 0.6×0.5×0.5 · 0.8³ | 올라설 수 있음 | 쌓아서 계단 |
+| `platform` 발판·다리 | 2×0.3×2 | 올라설 수 있음 | `size`로 자유 · **움직이면 위에 선 나도 같이** |
+| `ramp` 비탈 | 1.6×0.6×2.4 | 보이지 않는 계단(한 단 ≤12cm) | 높은 쪽 = 방위 `h` 쪽 |
+| `container` 컨테이너 | 6.06×2.59×2.44 | 올라설 수 있음(점프로는 안 닿음) | 물총 팀전 엄폐물 · `color` |
+| `bookpile` 책 더미 · `plant` 화분 · `cone` 고깔 · `fan` 선풍기 · `button` 단추 | 작음 | 올라서기 금지(NS) | `fan` = 날개 돎 + 앞 바람(`wind:{len, speed, width}` · false = 끔) · `button` = `onUse`(✋/E '🔘 누르기' · `label`) |
+| `flag` 깃발 · `banner` 현수막 | 0.6×1.8 · 2.4×1.9 | 기둥만 | `banner` + `text` = 천에 글(캔버스 판 한 장) |
+| `ball` 공 · `balloon` 풍선 | — | 없음 | 풍선은 살랑 |
+| `chest` · `key` · `shovel` · `note` | — | 없음 | 엔진 소품(§12.6)을 그대로 — 들기·놓기와 함께 |
+- 종류마다 InstancedMesh 1(드로우콜 1 · 8~32칸) · 인스턴스 색(`color`) · 조명 = 있는 빛(새 조명 없음) · 그림자 없음.
+- **보이는 것 = 충돌**: 상자형은 그 크기 그대로(`collider.add`), 작은 가구형은 올라서기 금지(1.6 · 보이는 윗면 `vy1` — 술래 시야) · 길격자가 있으면 발자국 +0.25를 `nav.block`(봇·술래가 돌아감). 길격자가 없을 때 놓고 나중에 지으면 격자가 소품을 품는다 → 그 격자는 게임이 멈출 때 버린다(`navCache` dirty — 다음 게임에 막힌 칸이 남지 않게 · 잠긴 문도 같음).
+- `move(…, {tween})`: 충돌은 떼지 않고 시작~끝을 덮는 격자 칸에 한 번 등록한 뒤 상자 값만 매 프레임 옮김(새 객체 없음) · 위에 서 있으면(발이 윗면 ±8cm·발자국 안) 같은 만큼 나를 옮긴다(작은 몸도) · 끝나면 새 자리로 다시 등록 + 길격자 막기.
+
+### 16.4 바람 · 튀는 판
+```js
+map.world.wind({ rect:[x0,z0,x1,z1], y0, y1, h(방위° — 바람이 가는 쪽), speed(m/s) }) → { set(o), remove }   // 안에 있으면 매 프레임 밀림(벽은 못 뚫음 · 작은 몸은 √s배)
+map.world.pad({ x, z, r(0.6), y?, vy(7) }) → { remove }   // 서 있으면 위로 튐(0.4초 쉼)
+```
+
+### 16.5 방마다 불 — `map.world.light(방, false|true)` · `map.world.dark()`
+- 그 방의 형광등 정점색을 어둡게(0.24 — 처음 쓸 때 lamp 메시에 정점색을 붙이고 재질 `vertexColors`) + **내가 그 방 안에 있으면** 엔진 불 끄기와 같은 어둠(`ui.dark` — 하늘빛·해 세기만 줄임, 10Hz로 들어감/나감 확인). 전체 불 끄기(`map.lights(false)`)가 켜져 있으면 건드리지 않는다.
+- 정리: 정점색 속성을 떼고 `vertexColors` 끔(원래 재질 그대로).
+
+### 16.6 문 — `map.world.door(번호 | [x,z] | 'door:n')` → `{ n, open(), close(), lock(), unlock(), free(), locked }`
+- `open` = 연 채(멀리 있어도 · main.js `doorHold` → `o.hold = 1`) · `close` = 닫은 채 + 몸·길 막힘(엔진 `door.lock(…, {hot:false})` — 안내 없음) · `lock` = 잠김(§12.8 '🔒 잠긴 문') · `free` = 원래대로(다가가면 열림).
+
+### 16.7 그림 · 물웅덩이
+```js
+map.world.paint('board:<방 id|이름>' | { x, y, z, w, h, face(방위° — 보는 쪽) | ry, floor:true, off, two }, { bg, text, color, size, draw(ctx, W, H) }) → { mesh, redraw(spec), at(x,y,z), remove }
+map.world.water('<구역>' | { x, z, r } | { rect }, { y, color, opacity }) → { mesh, level(y), remove }
+```
+- 칠판 = 교실 흰 칠판(world.js `board` 지점 — 폭 `bw`·높이 `bh`를 적어 둠) 면 앞 3cm(분필 낙서판보다 앞) · 캔버스 512 폭 · 판마다 메시 1 · 글은 칸에 맞춰 줄어듦. 프로젝터 화면·벽 그림·바닥 그림도 같은 판.
+
+### 16.8 예시·수용 시험(found2 · 스크래치 `found2/`)
+- `?game=fx_demo`(dev): 체육관 작은 코스 — 🔘 단추(E/✋) → 주황 다리가 올라옴(1.6초) → 노란 비탈 → 파란 발판(1.2m) → 다리 → 가운데 초록 컨테이너(2.59m — 바닥·발판에선 점프로 안 닿고 다리 끝에서만) 위 깃발 = 도착 → **세상이 바뀜**: 풍선이 떠오르고 · 현수막·4학년 칠판 글이 '다리 건너기 성공!'으로 · 깃발 색 · 도착한 선생님 둘이 만세. 그 밖에 체육선생님·4학년 선생님이 걸어와 모임 · 컨테이너 둘 · 선풍기 바람 · 튀는 판 · 4학년 교실 불 끔 · 체육관 문 연 채. 한 판 ≈1분(리뷰 09-27: 예전엔 다리가 허공에서 끝나고 파란 발판은 바닥에서 점프로 닿아 단추가 쓸모없었다).
+- 게임 로더(리뷰 found2): 모듈을 받는 동안 ⏹·다른 게임 고르기 = 그 로드를 버린다(`game.seq` — 예전엔 stop이 무시돼 게임이 그대로 시작했고, 두 번 고르면 두 게임이 겹쳤다).
+- **사람 5명 이상 옮기고 되돌리기**(t2): 앉은 학생(유하)·교실 선생님(4학년 선생님)·견학 안내 선생님(교감선생님 = 바깥 · 체육선생님)·청소선생님(비질)·유치원선생님(바닥에 앉음 → 걸어서 복도로 15초) — 옮긴 뒤 원래 충돌 꺼짐·대역 충돌·checksum 다름 → 멈춘 뒤 **checksum 같음**(3537804358)·충돌 값 같음·살아 있는 충돌 수·지도 수(지점·이벤트·칩·장면 물체) 같음 · 7번째 = 거절.
+- 소품(t5): 발판 윗면 · 비탈(북·동 방향 윗면이 오름 · 걸어 올라 0.9m) · 움직이는 발판 타기(2초 · x +3·y +1 따라감) · 옮긴 충돌 · 컨테이너 막힘 · 종류 15 · 현수막 글 · 선풍기(1초에 3m 밀림) · 튀는 판(2.2m) · 단추(✋) · 칠판 그림 · 물웅덩이 · 방 불(형광등 216정점 어둡게 · 들어가면 어둠 · 나오면 밝음) · 문 닫음(막힘)·엶(지나감) · 이야기 op(moveNpc·light·paint) → 멈춘 뒤 장면 물체 수·살아 있는 충돌·길격자 막기 합·checksum·형광등 속성 전부 처음대로.
+- 게임 판(t6): 로드 중 그만하기 → 수 같음 · 놀이 → 단추로 다리 윗면 1.2m · 멈춘 뒤 같음.
+- 예산(t7): 대역 6명 서 있음 = 밀집 복도 시점 +8콜·+4.6천 삼각형(대역마다 ≈840 · 이름표 전부 1콜 — 원래 사람은 청크에서 빠지므로 같은 시점 안에서 옮기면 0) · 6명 동시에 걷기 `FX.tick` 평균 **0.044ms** · 게임 없음 = 게이트 그대로.
