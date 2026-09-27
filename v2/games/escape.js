@@ -24,8 +24,9 @@ const CSS = [
   '.esc-row{display:flex;justify-content:center;gap:10px}.esc-row button{min-width:110px;min-height:44px;border:0;border-radius:10px;font-size:16px;cursor:pointer;touch-action:manipulation}',
   '.esc-row .ok{background:#ffc62e;color:#223047;font-weight:800}.esc-row .no{background:#51607a;color:#fff}',
   '.esc-lock.bad{animation:escShake .35s}@keyframes escShake{20%{margin-left:-10px}40%{margin-left:10px}60%{margin-left:-6px}80%{margin-left:6px}}',
-  // 휴대폰 가로(터치): 아래 버튼 줄(점프·✋·👁·⬇ — 화면 아래 ≈100px)을 가리지 않게 위쪽에 작게
-  'body.touch .esc-lock{top:calc(6px + env(safe-area-inset-top));transform:translateX(-50%);width:min(340px,70vw);padding:8px 12px 10px}',
+  // 휴대폰 가로(터치): 아래 버튼 줄(점프·✋·👁·⬇ — 화면 아래 ≈100px)을 가리지 않게 위쪽에 작게 · 왼쪽 위(📍·시간·그만하기 칩 위 — 여는 동안은 멈춤)에 붙여
+  //   오른쪽 미니맵·단서 칩(📚·📄 — 번호를 넣으며 봐야 한다)을 가리지 않는다(리뷰: 가운데에 두면 좁은 화면에서 단서 칩·놀이 칩을 덮었다)
+  'body.touch .esc-lock{left:calc(8px + env(safe-area-inset-left));top:calc(6px + env(safe-area-inset-top));transform:none;width:min(330px,58vw);padding:8px 12px 10px}',
   'body.touch .esc-lock h3{font-size:16px;margin:0 0 2px}body.touch .esc-lock p{margin:0 0 4px;font-size:13px}body.touch .esc-dials{margin:2px 0 6px;gap:8px}',
   'body.touch .esc-dial{gap:3px}body.touch .esc-dial button{height:34px;width:50px}body.touch .esc-dial span{height:42px;font-size:26px;line-height:42px;width:50px}body.touch .esc-row button{min-height:40px;min-width:100px}',
 ].join('\n');
@@ -162,9 +163,10 @@ export default async function start(map, params = {}) {
     const m = rooms[cur];
     map.hud.chip('esc-time', '⏱ ' + fmt(T) + (caughtN ? ' · 🔔' + caughtN : ''));
     const ct = m && st === 'room' ? clueText(m) : null; map.hud.chip('esc-clue', ct);
-    map.hud.chip('esc-hint', m && st === 'room' && roomT > HINT_T ? '💡 힌트(H)' : null, { onClick: showHint });
+    map.hud.chip('esc-hint', m && st === 'room' && roomT > HINT_T ? (touch() ? '💡 힌트' : '💡 힌트(H)') : null, { onClick: showHint });
   }
   function setMark(p, label) {
+    hintOn = 0;   // 리뷰: 힌트(8초) 도중 방을 풀면 힌트가 끝나며 setMarks([])로 다음 문 별표까지 지웠다
     if (beam) { beam.remove(); beam = null; }
     if (p) beam = map.mk.marker(p[0], p[1], p[2], { color: 0x3cc8ff, beam: true });
     map.minimap.setMarks(p ? [{ x: p[0], z: p[2], color: '#2b8fe0', shape: 'star', blink: true, label }] : []);
@@ -279,11 +281,13 @@ export default async function start(map, params = {}) {
   }
 
   // ---------- 진행 ----------
+  // 휴대폰(터치)이면 목표 줄을 짧게 — 가로 화면 위쪽이 미니맵·칩과 붙어 있어 긴 줄은 두세 줄로 접혀 화면을 가렸다(사용자 09-27 '핸드폰 모드 UI')
   const goalRoom = m => {
-    const num = CIRC[m.k] || '';
-    const how = m.puzzle === 'count' ? '🔍 방을 살펴 🔢 번호 자물쇠를 풀어요' : m.puzzle === 'colors' ? '📋 게시판과 📚 책을 찾아 번호 자물쇠를 풀어요' : '📄 쪽지 3장을 모아 번호 자물쇠를 풀어요';
-    const sneak = m.stealth ? (touch() ? ' · ⬇ 웅크리기 · ✋ 숨기' : ' · C 웅크리기 · E 숨기') : '';
-    map.hud.goal(num + ' ' + m.z.label + ' — ' + how + sneak);
+    const num = CIRC[m.k] || '', t = touch();
+    const how = t ? (m.puzzle === 'count' ? '🔍 살펴보고 🔢 자물쇠' : m.puzzle === 'colors' ? '📋 게시판·📚 책 → 🔢' : '📄 쪽지 3장 → 🔢')
+      : m.puzzle === 'count' ? '🔍 방을 살펴 🔢 번호 자물쇠를 풀어요' : m.puzzle === 'colors' ? '📋 게시판과 📚 책을 찾아 번호 자물쇠를 풀어요' : '📄 쪽지 3장을 모아 번호 자물쇠를 풀어요';
+    const sneak = m.stealth ? (t ? ' · ⬇ 웅크려 ✋ 숨기' : ' · C 웅크리기 · E 숨기') : '';
+    map.hud.goal(num + ' ' + m.z.label + (t ? ' · ' : ' — ') + how + sneak);
   };
   function enterRoom(i) {
     cur = i; roomT = 0; st = 'room'; const m = rooms[i];
@@ -329,7 +333,7 @@ export default async function start(map, params = {}) {
   const runner = S.run(SC, {});
 
   // ---------- 틱(가벼움: 초 칩 · 들어섬 확인 5Hz) ----------
-  let chk = 0;
+  let chk = 0, wasTouch = touch();
   return {
     tick(dt) {
       if (st === 'prep' || st === 'end' || st === 'ending' || dead) return;
@@ -337,6 +341,7 @@ export default async function start(map, params = {}) {
       if (hintOn > 0 && (hintOn -= dt) <= 0) { hintOn = 0; map.minimap.setMarks([]); }
       const sec = Math.floor(T); if (sec !== shownSec) { shownSec = sec; chips(); }
       if ((chk += dt) < 0.2) return; chk = 0;
+      if (touch() !== wasTouch) { wasTouch = !wasTouch; if (st === 'room' && rooms[cur]) goalRoom(rooms[cur]); }   // 처음 화면을 터치해 터치 모드가 켜진 때(또는 꺼진 때) — 목표 줄 안내(⬇·✋ ↔ C·E)를 바꾼다
       // 다음 방 들어섬: 그 방 구역 안 + 문에서 1.8m 넘게(문을 다시 잠가도 몸이 문틀에 걸리지 않게)
       if (st === 'walk' && cur >= 0 && S.flag('r' + cur + '_unlocked') && !S.flag('r' + cur + '_in')) {
         const m = rooms[cur], p = map.player.get();
