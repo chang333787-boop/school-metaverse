@@ -6,5 +6,6 @@ export const GAMES = {
   _template: { title: '게임 틀(개발용)', v: 1, dev: true },
   find_place: { title: '장소 찾기', v: 1, desc: '학교 곳곳 5곳을 차례로 찾아가요' },
   watergun: { title: '물총 놀이', v: 1, desc: '운동장에서 물풍선·장난감 불·꽃·로봇에 물을 쏴요(3분)' },
+  shrink: { title: '개미가 된 나', v: 1, desc: '개미만큼 작아져서 책상·교탁·창턱을 올라 과자 부스러기 8개를 모아요' },   // GAME-SHRINK: map.player.scale(1/12)
   actions_demo: { title: '행동 사전 예시(개발용)', v: 2, dev: true },   // ENGINE-1: 엔진 동사를 한 번씩 — 글은 자리표시
 };

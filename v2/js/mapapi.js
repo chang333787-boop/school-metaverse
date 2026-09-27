@@ -5,7 +5,7 @@
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
 import { createMinimap } from './minimap.js?v=5';
 import { createGamePicker } from './gamepick.js?v=5';
-import { createEngine } from './engine.js?v=3';   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
+import { createEngine } from './engine.js?v=4';   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 export function createMapApi(host, NAV, META) {
   const { THREE, scene, world, SCHOOL, q, pl, ui } = host;
   const HOT = host.hot, Z = world.zones, P = pl.P, CTRL = pl.CTRL;
@@ -132,8 +132,10 @@ export function createMapApi(host, NAV, META) {
   function emit(type, ev) { const s = L.get(type); if (!s) return; for (const fn of [...s]) { try { fn(ev); } catch (e) { console.error('[map] 이벤트 처리 중 오류(' + type + ')', e); } } }
 
   // ---------- 5. 플레이어 ----------
+  const PXYZ = { x: 0, y: 0, z: 0 };
   const setHeading = h => { pl.setYaw(-h * R2D); P.yaw = Math.atan2(Math.sin(h * R2D), -Math.cos(h * R2D)); };
   const player = {
+    pos: () => { PXYZ.x = P.x; PXYZ.y = P.y; PXYZ.z = P.z; return PXYZ; },   // SHRINK-1: 매 프레임용 — 같은 객체를 돌려준다(곧바로 읽고 저장하지 말 것 · 새 객체 없음)
     get: () => { const zn = zoneAt(P.x, P.y, P.z); return { x: P.x, y: P.y, z: P.z, h: ((-pl.getYaw() / R2D) % 360 + 360) % 360, ground: P.ground, zone: zn ? zn.id : null }; },
     teleport(target, o = {}) {
       const r = resolve(target, o.floor || 1); if (!r) { console.warn('[map] teleport: 모르는 대상', target); return false; }
@@ -175,7 +177,7 @@ export function createMapApi(host, NAV, META) {
     // 동적 충돌 상자 — 길격자에는 안 들어간다(같이 nav.block을 걸 것)
     add(b, o = {}) {
       const c = { x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, z0: b.z0, z1: b.z1, nc: !!(o.ns || b.nc), dyn: true }; if (o.ns) { c.vy1 = c.y1; c.y1 = Math.max(c.y1, c.y0 + 1.6); }   // vy1 = 보이는 윗면(ENGINE-1 술래 시야)
-      const i = world.colliders.push(c) - 1, cells = [];
+      const i = world.colliders.push(c) - 1, cells = []; if (pl.tinyAdd) pl.tinyAdd(c);   // SHRINK-1: 작아진 동안 더한 충돌도 작은 몸 판에
       for (let gx = Math.floor(c.x0 / 8); gx <= Math.floor(c.x1 / 8); gx++) for (let gz = Math.floor(c.z0 / 8); gz <= Math.floor(c.z1 / 8); gz++) { const k = gx + ':' + gz; if (!world.grid.has(k)) world.grid.set(k, []); world.grid.get(k).push(i); cells.push(k); }
       return { box: c, remove() { c.y0 = c.y1 = -1e6; for (const k of cells) { const a = world.grid.get(k), j = a ? a.indexOf(i) : -1; if (j >= 0) a.splice(j, 1); } cells.length = 0; } };   // 인덱스는 유지(다른 참조가 안 밀리게)
     },
@@ -366,9 +368,11 @@ export function createMapApi(host, NAV, META) {
   const bigTree = (POI.get('lm:big-tree') || null);
   const ENG = createEngine({ THREE, scene, camera: host.camera, world, P, CTRL, ACT: pl.ACT, q, hot: HOT, ui, touch: pl.touch, kid: host.kid, doorLock: host.doorLock,
     findEntry, floorY, zoneAt, zoneFind: zone, emit, interactAdd: o => interact.add(o), colliderAdd: (b, o) => collider.add(b, o), navDone,
-    teleport: (t, o) => player.teleport(t, o), setYaw: pl.setYaw, sfx, resolve: t => resolve(t), face: h => player.face(h), unstick: () => unstick(), bigTree: bigTree ? [bigTree.x, bigTree.z] : null });
+    teleport: (t, o) => player.teleport(t, o), setYaw: pl.setYaw, sfx, resolve: t => resolve(t), face: h => player.face(h), unstick: () => unstick(), bigTree: bigTree ? [bigTree.x, bigTree.z] : null,
+    setScale: pl.setScale, getScale: pl.scale, pGround: pl.pGround, pBlocked: pl.pBlocked });
   // 플레이어 동사(웅크리기·숨음·소리) — player 객체에 붙인다(범위 파사드도 같은 player)
-  Object.assign(player, { crouch: on => ENG.player.crouch(on), crouched: ENG.player.crouched, setCrouch: v => ENG.player.setCrouch(v), hidden: ENG.player.hidden, hideSpot: ENG.player.hideSpot, noise: ENG.player.noise });
+  Object.assign(player, { crouch: on => ENG.player.crouch(on), crouched: ENG.player.crouched, setCrouch: v => ENG.player.setCrouch(v), hidden: ENG.player.hidden, hideSpot: ENG.player.hideSpot, noise: ENG.player.noise,
+    scale: (s9, o9) => ENG.player.scale(s9, o9), scaled: ENG.player.scaled, groundAt: ENG.player.groundAt, blockedAt: ENG.player.blockedAt });   // SHRINK-1(09-27): 작아지기 — §11.12
 
   // ---------- 12. 도구 ----------
   const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -454,7 +458,7 @@ export function createMapApi(host, NAV, META) {
     if (pl.keys) { let mv = !!(pl.touch && pl.touch.m > 0); for (const k of MOVE_KEYS) if (pl.keys.has(k)) { mv = true; break; }   // TOUCH-1 리뷰: 조이스틱으로 끼어도 기록
       if (mv && !pl.ACT.anim && !pl.ACT.sit) { if (!stuck.from) { stuck.from = [P.x, P.z]; stuck.t = 0; } stuck.t += 0.1;
         if (Math.hypot(P.x - stuck.from[0], P.z - stuck.from[1]) > 0.05) { stuck.from = [P.x, P.z]; stuck.t = 0; }
-        else if (stuck.t >= 1.5 && tSec - stuck.last > 2 && q.blockedAt(P.x, P.z, P.y, P.bh)) { stuck.last = tSec; stuck.t = 0; if (stuckLog.length < 50) stuckLog.push([+P.x.toFixed(2), +P.y.toFixed(2), +P.z.toFixed(2), +tSec.toFixed(1)]); emit('stuck', { x: P.x, y: P.y, z: P.z }); } }
+        else if (stuck.t >= 1.5 && tSec - stuck.last > 2 && (pl.pBlocked || q.blockedAt)(P.x, P.z, P.y, P.bh)) { stuck.last = tSec; stuck.t = 0; if (stuckLog.length < 50) stuckLog.push([+P.x.toFixed(2), +P.y.toFixed(2), +P.z.toFixed(2), +tSec.toFixed(1)]); emit('stuck', { x: P.x, y: P.y, z: P.z }); } }
       else stuck.from = null; }
     if (arena.shape) {
       const ok = inArena(P.x, P.z) && P.y > -4 && P.y < 12;

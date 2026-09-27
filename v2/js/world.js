@@ -542,8 +542,13 @@ export function buildWorld(scene) {
   const RO = (rot, ox, oz) => rot ? [oz, -ox] : [ox, oz];
   const rBox = (rot, w, h, d, hex, cx, y0, cz, ox, oz, opt) => { const [px, pz] = RO(rot, ox, oz); rot ? dBox(d, h, w, hex, cx + px, y0, cz + pz, opt) : dBox(w, h, d, hex, cx + px, y0, cz + pz, opt); };
   const rCol = (rot, cx, cz, hw, hd, y0, y1) => rot ? { x0: cx-hd, x1: cx+hd, y0, y1, z0: cz-hw, z1: cz+hw } : { x0: cx-hw, x1: cx+hw, y0, y1, z0: cz-hd, z1: cz+hd };
+  // SHRINK-1(09-27): 작아진 몸(map.player.scale — 게임이 켰을 때만)이 쓰는 '보이는 모양' 충돌 — 좌표만 적는다(모양·충돌·게이트 변화 0).
+  //   지역 [ox, oz, 반폭, 반깊이, y0, y1] → 세계 상자. 평소 물리·길격자는 c.tiny를 읽지 않는다(main.js tinyBuild만)
+  const tinyOf = (c, rot, cx, cz, parts) => { c.tiny = parts.map(([ox, oz, hw, hd, a, b]) => { const [px, pz] = RO(rot, ox, oz); return rCol(rot, cx + px, cz + pz, hw, hd, a, b); }); return c; };
   function studentDesk(cx, y, cz, top = 0xc9a06a, w = 1.1, rot = 0) {   // w×0.5·높이 0.72 — 나무 상판·쇠다리·책 넣는 칸
-    colliders.push(noStand(rCol(rot, cx, cz, w/2, 0.25, y, y+0.72)));
+    const lx0 = w/2 - 0.05;
+    colliders.push(tinyOf(noStand(rCol(rot, cx, cz, w/2, 0.25, y, y+0.72)), rot, cx, cz, [[0, 0, w/2, 0.25, y+0.68, y+0.72], [0, -0.03, (w-0.14)/2, 0.18, y+0.52, y+0.62],
+      ...[[-lx0, -0.2], [lx0, -0.2], [-lx0, 0.2], [lx0, 0.2]].map(([ox, oz]) => [ox, oz, 0.02, 0.02, y, y+0.68])]));
     rBox(rot, w, 0.04, 0.5, top, cx, y+0.68, cz, 0, 0);
     const lx = w/2 - 0.05;
     [[-lx, -0.2], [lx, -0.2], [-lx, 0.2], [lx, 0.2]].forEach(([ox, oz]) => rBox(rot, 0.04, 0.68, 0.04, METAL, cx, y, cz, ox, oz));
@@ -552,7 +557,8 @@ export function buildWorld(scene) {
   const seatsOf = {};   // 교실 자리 목록(westClass가 채움 — 사람 배치가 학생을 앉히고 남은 자리에 '앉기')
   const npcSpot = {};   // NPC2: 방 이름 → 교직원 자리 목록(가구를 놓은 곳이 적는다 — { x, z, face, desk(윗면 y), reach(의자 가운데~책상 끝), chair?, pose? })
   function chair(cx, y, cz, back = 1, col = 0x6f8fb0, rot = 0) {   // 0.5×0.85×0.4 — 앉는 판·등받이·쇠다리. back=등받이 쪽(지역 z 부호)
-    colliders.push(noStand(rCol(rot, cx, cz, 0.25, 0.2, y, y+0.85)));
+    colliders.push(tinyOf(noStand(rCol(rot, cx, cz, 0.25, 0.2, y, y+0.85)), rot, cx, cz, [[0, 0, 0.21, 0.2, y+0.42, y+0.46], [0, back*0.17, 0.21, 0.0175, y+0.57, y+0.83],
+      [-0.18, back*0.17, 0.015, 0.015, y+0.46, y+0.57], [0.18, back*0.17, 0.015, 0.015, y+0.46, y+0.57], ...[[-0.18, -0.16], [0.18, -0.16], [-0.18, 0.16], [0.18, 0.16]].map(([ox, oz]) => [ox, oz, 0.015, 0.015, y, y+0.42])]));   // SHRINK-1
     rBox(rot, 0.42, 0.04, 0.4, col, cx, y+0.42, cz, 0, 0);
     rBox(rot, 0.42, 0.26, 0.035, col, cx, y+0.57, cz, 0, back*0.17);
     [[-0.18, -0.16], [0.18, -0.16], [-0.18, 0.16], [0.18, 0.16]].forEach(([ox, oz]) => rBox(rot, 0.03, 0.42, 0.03, METAL, cx, y, cz, ox, oz));
@@ -561,7 +567,8 @@ export function buildWorld(scene) {
   function teacherDesk(cx, y, cz, rot = 0) {                        // 1.2×0.85×0.6 — 상판·서랍장(손잡이 3)·옆판 + 모니터 둘
     hideSpots.push({ kind: 'desk', label: '교탁 밑', x: cx, y, z: cz, face: rot ? 270 : 180, w: 1.2 });   // ENGINE-1: 교사 의자 쪽(rot 1 = 서쪽)
     // [classrooms-14] 회색 철제 책상(밝은 상판·짙은 몸통) + 검은 모니터 2대, 서랍 손잡이는 교사 쪽(영상 a_427.5·a_490.5)
-    colliders.push(noStand(rCol(rot, cx, cz, 0.6, 0.3, y, y+0.85)));
+    colliders.push(tinyOf(noStand(rCol(rot, cx, cz, 0.6, 0.3, y, y+0.85)), rot, cx, cz, [[0, 0, 0.62, 0.32, y+0.8, y+0.85], [-0.36, 0, 0.21, 0.28, y, y+0.8], [0.55, 0, 0.03, 0.28, y, y+0.8],
+      [-0.3, 0.1, 0.28, 0.02, y+0.85, y+1.26], [0.3, 0.1, 0.28, 0.02, y+0.85, y+1.26]]));   // SHRINK-1: 상판·서랍장·옆판·모니터(교탁 밑은 트임)
     rBox(rot, 1.24, 0.05, 0.64, 0xd9d6ce, cx, y+0.8, cz, 0, 0);
     rBox(rot, 0.42, 0.8, 0.56, 0x6b6f76, cx, y, cz, -0.36, 0);
     rBox(rot, 0.06, 0.8, 0.56, 0x6b6f76, cx, y, cz, 0.55, 0);
@@ -897,7 +904,8 @@ export function buildWorld(scene) {
     const at = (w, h, d, hex, ca, y, off) => ax === 'x' ? dBox(w, h, d, hex, ca, y + yb, wall + f*off) : dBox(d, h, w, hex, wall + f*off, y + yb, ca);
     hideAt('locker', '사물함', ax, a0, a1, wall, f, D, H, yb);   // ENGINE-1
     const lo = Math.min(wall, wall + f*D), hi = Math.max(wall, wall + f*D);
-    colliders.push(noStand(ax === 'x' ? { x0: a0, x1: a1, y0: yb, y1: yb + H, z0: lo, z1: hi } : { x0: lo, x1: hi, y0: yb, y1: yb + H, z0: a0, z1: a1 }));
+    { const c9 = noStand(ax === 'x' ? { x0: a0, x1: a1, y0: yb, y1: yb + H, z0: lo, z1: hi } : { x0: lo, x1: hi, y0: yb, y1: yb + H, z0: a0, z1: a1 });
+      c9.tiny = [{ x0: c9.x0, x1: c9.x1, y0: yb, y1: yb + H + (top ? 0.03 : 0), z0: c9.z0, z1: c9.z1 }]; colliders.push(c9); }   // SHRINK-1: 작은 몸은 윗판(3cm)까지 딛는다
     at(L, H, D, body, c, 0, D/2);
     const n = Math.max(1, Math.round(L / 0.32)), cw = L / n, rh = (H - 0.1) / rows;
     if (flat) {
@@ -975,7 +983,8 @@ export function buildWorld(scene) {
     const at = (w, h, d, hex, ca, y, off) => ax === 'x' ? dBox(w, h, d, hex, ca, y + yb, wall + f*off) : dBox(d, h, w, hex, wall + f*off, y + yb, ca);
     hideAt('locker', '사물함', ax, a0, a1, wall, f, D, H, yb);   // ENGINE-1
     const lo = Math.min(wall, wall + f*D), hi = Math.max(wall, wall + f*D);
-    colliders.push(noStand(ax === 'x' ? { x0: a0, x1: a1, y0: yb, y1: yb + H, z0: lo, z1: hi } : { x0: lo, x1: hi, y0: yb, y1: yb + H, z0: a0, z1: a1 }));
+    { const c9 = noStand(ax === 'x' ? { x0: a0, x1: a1, y0: yb, y1: yb + H, z0: lo, z1: hi } : { x0: lo, x1: hi, y0: yb, y1: yb + H, z0: a0, z1: a1 });
+      c9.tiny = [{ x0: c9.x0, x1: c9.x1, y0: yb, y1: yb + H + (top ? 0.03 : 0), z0: c9.z0, z1: c9.z1 }]; colliders.push(c9); }   // SHRINK-1: 작은 몸은 윗판(3cm)까지 딛는다
     at(L, H, D, body, c, 0, D/2);
     const n = Math.max(1, Math.round(L / cw)), rh = (H - 0.1) / rows;
     const fz = wall + f * (D + 0.005), y0 = yb + 0.08, y1 = yb + 0.08 + rh * rows;
@@ -989,7 +998,8 @@ export function buildWorld(scene) {
     const at = (w, h, d, hex, ca, y, off) => ax === 'x' ? dBox(w, h, d, hex, ca, y + yb, wall + f*off) : dBox(d, h, w, hex, wall + f*off, y + yb, ca);
     hideAt('cabinet', '청소함·장', ax, a0, a1, wall, f, D, H, yb);   // ENGINE-1
     const lo = Math.min(wall, wall + f*D), hi = Math.max(wall, wall + f*D);
-    colliders.push(noStand(ax === 'x' ? { x0: a0, x1: a1, y0: yb, y1: yb + H, z0: lo, z1: hi } : { x0: lo, x1: hi, y0: yb, y1: yb + H, z0: a0, z1: a1 }));
+    { const c9 = noStand(ax === 'x' ? { x0: a0, x1: a1, y0: yb, y1: yb + H, z0: lo, z1: hi } : { x0: lo, x1: hi, y0: yb, y1: yb + H, z0: a0, z1: a1 });
+      c9.tiny = [{ x0: c9.x0, x1: c9.x1, y0: yb, y1: yb + H, z0: c9.z0, z1: c9.z1 }]; colliders.push(c9); }   // SHRINK-1(보이는 윗면 = 충돌 윗면)
     at(L, H, D, body, c, 0, D/2);
     [-1, 1].forEach(s => { at(L/2 - 0.03, H - 0.13, 0.03, door, c + s * L/4, 0.08, D + 0.015); at(0.03, 0.2, 0.03, 0x9aa0a6, c + s * 0.06, H * 0.45, D + 0.045); });
   }
@@ -1495,7 +1505,7 @@ export function buildWorld(scene) {
       colliders.push({ x0: x - w / 2, x1: x + w / 2, y0: YARD, y1: t, z0: fz1 + 0.15, z1: fz1 + 0.15 + PD9, nc: true }); });
     dBox(0.15, FH - 0.035 - YARD, 0.1, FBLUE, 33.05, YARD, fz1 + 0.2);                       // 컴퓨터실|1학년 = 가는 파랑 테(f_171)
     // 창턱 안쪽 7cm 턱에 점프로 올라앉지 못하게(유리 충돌 0.16 < 벽 0.3 — health perch) — 창 안쪽 면 앞 얇은 막이(유리 옆이라 보이지 않는 벽 아님)
-    facadeGaps.forEach(g => colliders.push(noStand({ x0: g.c - g.w / 2, x1: g.c + g.w / 2, y0: 1.0, y1: 2.6, z0: fz1 - 0.15, z1: fz1 - 0.08 }, 0.1)));
+    facadeGaps.forEach(g => { const c9 = noStand({ x0: g.c - g.w / 2, x1: g.c + g.w / 2, y0: 1.0, y1: 2.6, z0: fz1 - 0.15, z1: fz1 - 0.08 }, 0.1); c9.tiny = []; colliders.push(c9); });   // SHRINK-1: 작은 몸에겐 없음(창턱 안쪽 7cm = 걷는 곳 · 유리 충돌은 그대로)
     // 교실 창 가운데 살 흰 둥근 환기 캡 둘(영상 g_117·f_132·f_174·f_180 — 노랑 상자 창의 첫 칸)
     facadeGaps.forEach(g => { if (g.c > -33.5 && (g.c < -6.65 || g.c > 33.05) && g.w > 1.3) [1.35, 1.62].forEach(y9 => dCyl(0.085, 0.085, 0.08, 0xf2f2ee, g.c - g.w / 2 + 0.32, y9, fz1 + 0.1, { rot: [Math.PI / 2, 0, 0], seg: 10 })); });
     // 원무실 아래 벽 계량기·수도꼭지(g_114)
