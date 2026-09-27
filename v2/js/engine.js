@@ -508,6 +508,8 @@ export function createEngine(H) {
       c.bub = div('eng-bub'); CH.push(c);
       const hnd = own({ id: c.id, get state() { return c.st; }, get pos() { return { x: c.x, y: c.y, z: c.z, h: hdg(Math.sin(c.yaw), Math.cos(c.yaw)) }; }, get catches() { return c.catches; }, raw: c,
         setPath(p) { c.path = p.map(x => H.resolve(x)).filter(Boolean); c.pk = 0; c.pts = null; }, pause(on) { c.paused = !!on; },
+        // 숨바꼭질(GAME-HS): 이 숨는 자리를 지금 뒤지게 한다(그 앞에 가서 2초) — 게임이 고른 자리를 '확인'하는 술래. 거기 숨어 있으면 들어가는 걸 못 봤어도 찾는다
+        inspect(s) { if (!s || !s.stand || !c.alive) return false; c.spot = s; setSt(c, 'searchSpot'); c.inspect = s; return true; },
         remove() { chRemove(c); disown(hnd); } });
       return hnd;
     },
@@ -515,7 +517,7 @@ export function createEngine(H) {
   };
   function chRemove(c) { if (!c.alive) return; c.alive = false; c.pool.m.setMatrixAt(c.i, ZERO); c.pool.m.instanceMatrix.needsUpdate = true; c.pool.used[c.i] = null; psync(c.pool);
     if (c.fan) { scene.remove(c.fan); c.fan.geometry.dispose(); c.fan.material.dispose(); c.fan = null; } if (c.bub) { c.bub.remove(); c.bub = null; } const k = CH.indexOf(c); if (k >= 0) CH.splice(k, 1); }
-  function setSt(c, st, t = 0) { if (c.st === st) return; c.st = st; c.t = t; c.pts = null; c.think = 0; emit('chaser', { id: c.id, state: st }); }
+  function setSt(c, st, t = 0) { if (c.st === st) return; c.st = st; c.t = t; c.pts = null; c.think = 0; c.inspect = null; emit('chaser', { id: c.id, state: st }); }
   // 길: 한 프레임에 술래 하나만(maxExp 4000 — 물총 로봇과 같은 식). 못 찾으면 가까우면 곧장
   //   돌려줌: 1 길 있음 · 0 못 찾음 · -1 이번 프레임은 다른 술래 차례(다음 프레임에 다시)
   function planTo(c, x, y, z) {
@@ -600,7 +602,7 @@ export function createEngine(H) {
           const d = Math.hypot(s.stand.x - c.x, s.stand.z - c.z);
           if (d > 0.7 && c.t === 0) { if (!c.pts) { if ((c.think -= dt) <= 0 && planTo(c, s.stand.x, s.stand.y, s.stand.z) === 0) setSt(c, 'giveup'); } else if (moveAlong(c, dt, c.speed * 1.5)) c.pts = null; break; }
           c.t += dt; turn(c, Math.atan2(s.x - c.x, s.z - c.z), dt * 5);
-          if (c.t >= 2) { if (hidden === s && s.seenEnter) caught(c); else setSt(c, 'giveup'); }
+          if (c.t >= 2) { if (hidden === s && (s.seenEnter || c.inspect === s)) caught(c); else setSt(c, 'giveup'); }
           break; }
         case 'giveup': c.t += dt; c.yaw += Math.sin(c.t * 6) * dt * 2; if (c.t > 1.6) setSt(c, 'patrol'); break;
       }

@@ -7,4 +7,5 @@ export const GAMES = {
   find_place: { title: '장소 찾기', v: 1, desc: '학교 곳곳 5곳을 차례로 찾아가요' },
   watergun: { title: '물총 놀이', v: 1, desc: '운동장에서 물풍선·장난감 불·꽃·로봇에 물을 쏴요(3분)' },
   actions_demo: { title: '행동 사전 예시(개발용)', v: 2, dev: true },   // ENGINE-1: 엔진 동사를 한 번씩 — 글은 자리표시
+  hideseek: { title: '숨바꼭질', v: 1, desc: '술래 로봇을 피해 숨거나(2분) · 숨은 로봇 5개를 찾아요(3분)' },   // GAME-HS: 두 놀이 · 구역 셋(서관 1층 · 운동장+큰 나무 · 급식실+동쪽 복도)
 };
