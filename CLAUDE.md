@@ -207,6 +207,10 @@ fps ≥ 30 / rayObjs ≤ 80 / drawCalls 관찰. **fps가 무너지면 기능을 
 - `?game=story`(🎮 '이야기: 무지개 편지') — 4학년 주인공 ≈10분: 4학년 교실 → 1학년 동생의 사라진 그림(크레파스·신발장 쪽지) → 도서실·6학년 선배의 편지·칠판 수수께끼 → 그림 돌려주기 → 체육관(불 켜기·상자 3개·꾸미기/안내) → 노을 모임 → 끝 화면. 고르기 3번이 작은 결과를 바꾼다. 정본 docs/map_api.md §17.
 - 글 = `v2/games/story_data.js`(Claude가 씀 · 학생은 이름 없는 역할 · 역할 몸은 대역 이름표 가림 `map.npc.move(…, {sign:false})`) · 게임 = `v2/games/story.js`.
 
+### 오프닝 화면·놀이 고르기(TITLE-1 · 09-27)
+- `v2/`를 그냥 열면 오프닝('정림초에 오신 것을 환영합니다!' · 3D 학교 한 바퀴 · ▶ 시작하기) → 놀이 카드 → 고르면 동그라미 닦기 + 카메라가 날아와 게임 시작(🎮 칩과 같은 `game.load`) · 게임 중 `🏠 메뉴` 칩으로 돌아옴. **`?game`·`?tour=1`·`?shot`·`?check=1`·`?health=1`·`?title=0`이면 오프닝 없음**(게이트·시험 주소는 예전 그대로 — 오프닝 없이 걸으려면 `?title=0`). 정본 docs/map_api.md §18.
+- 코드 = `v2/js/title.js`(main.js 고리: `CAM_OVR` 카메라 · `CTRL.wave` 손 흔들기 · `window.bootP` 로딩 막대) · 모양 = `v2/title.css`(휴대폰 배치도 이 파일 `@media` — 고치면 index.html `title.css?v=`). **카드는 `v2/games/registry.js`에서 자동**(dev 아닌 것) — 새 게임은 `icon`·`group`('탐험'|'대결'|'모험'|'이야기')·`short`(카드 한 줄)·`best`(카드 기록 `{k, u, lbl}`)를 적으면 카드가 예쁘게 나온다(없어도 🎮·'놀이'로 보임).
+
 ⚠️ **검사기의 사각지대**: 감사는 정적 상자만 본다(움직이는 문·개별 Mesh는 못 봄 → doorCheck로 보완). reach는 '막힘'만 보고 '뚫림'은 못 본다(→ passCheck).
 ⚠️ **캐시**: `js`를 고치면 `index.html`의 `main.js?v=` **와** `main.js`의 `world.js?v=`를 **둘 다** 올린다. `layout.js`를 고치면 `world.js`·`main.js` 안의 `layout.js?v=`도 올린다. 안 그러면 옛 코드로 검증하게 된다.
 ⚠️ 브라우저 탭이 백그라운드면 rAF가 멈춰 fps·위치칩이 갱신되지 않는다(버그 아님).

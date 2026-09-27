@@ -7,6 +7,14 @@ import * as NAV from './nav.js?v=6';               // MAP-API-1: 길격자·길�
 import { makeMeta } from './mapmeta.js?v=7';       // MAP-API-1: 구역 계약표·출발점·표지점
 import { createMapApi } from './mapapi.js?v=19';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=7';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
+import { createTitle } from './title.js?v=1';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+
+// TITLE-1: 오프닝을 켤지 — 게이트(?check=1)·검진(?health=1)·사진 대조(?shot)·게임 주소(?game·?tour=1)는 예전 그대로(오프닝 없음). index.html 로딩 막도 같은 규칙
+const QS0 = new URLSearchParams(location.search);
+const TITLE_ON = !QS0.get('shot') && !QS0.get('game') && QS0.get('tour') !== '1' && !location.search.includes('check=1') && !location.search.includes('health=1') && QS0.get('title') !== '0';
+const bootP = (p, s) => { if (TITLE_ON && window.bootP) window.bootP(p, s); };   // 로딩 막대(index.html) — 진짜 단계: 모듈 받음 → 월드 짓기(지난 빌드 시간만큼 차오름) → 첫 프레임
+let CAM_OVR = null;   // TITLE-1: 카메라 고리(오프닝 한 바퀴·날아오기) — step()이 평소 카메라를 정한 뒤 부른다(평소 자리 = 날아오기 목표)
+bootP(0.3, 0.4);
 
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -45,6 +53,7 @@ scene.add(sun);
 
 // PERF-LOAD(09-26): 로딩 막(index.html #boot)이 한 번 칠해진 뒤 월드를 짓는다 — buildWorld는 동기라 그동안 화면이 멈춘다(최상위 await — 모듈).
 //  배경 탭(rAF 멈춤)이면 0.1초 뒤 그냥 짓는다. 잰 값은 SD2.timing(buildMs·firstFrameMs·frameCpuP50/P95·occP95 — 아래 RB)
+{ let bm = 2600; try { bm = +localStorage.getItem('sm2.title.buildMs') || bm; } catch (e) { /* */ } bootP(0.92, Math.min(15, bm * 1.15 / 1000)); }   // TITLE-1: 짓는 동안(주 스레드가 멈춤) 막대는 합성기에서 찬다
 await new Promise(r => { requestAnimationFrame(() => setTimeout(r)); setTimeout(r, 100); });
 // PERF-LOAD: 셰이더 미리 짓기 — 월드를 짓는 동안(동기) GPU 쪽이 셰이더를 따로 컴파일하도록 먼저 던져 둔다(이 맥 차가운 시작 첫 프레임 336 → 298ms).
 //  재질 조합(종류·무늬·알파 자름·정점색·평면 음영·양면·투명·인스턴스·인스턴스 색)이 첫 화면의 실제 재질(world.js·캐릭터·문·구름)과 같으면 three가 같은 프로그램을 그대로 쓴다.
@@ -89,6 +98,7 @@ const warmDone = (() => { try {
 const TIMING = { buildMs: performance.now(), firstFrameMs: null };
 const world = buildWorld(scene);
 TIMING.buildMs = performance.now() - TIMING.buildMs;
+if (TITLE_ON) { bootP(0.95, 0.2); try { localStorage.setItem('sm2.title.buildMs', Math.round(TIMING.buildMs)); } catch (e) { /* */ } }   // 다음 로딩 막대 속도(한 번만 씀)
 if (world.glassMesh) { world.glassMesh.material.onBeforeCompile = glassFx; world.glassMesh.material.needsUpdate = true; }
 // GFX-2(09-26 "그래픽 계속 발전"): 정적 월드 그림자 — 합친 정적 청크(나무·건물·골대 등 st)가 그림자를 던지고, 바깥 바닥 무늬 층만 받는다.
 //  건물 청크는 받지 않는다(지붕 그림자가 교실 바닥·벽에 떨어지면 실내가 어두워진다). near 디테일(사람·책상)은 던지지 않는다(굽는 순간 카메라 거리로 켜고 끈다).
@@ -137,6 +147,8 @@ function kidTick(dt) {
   if ((tray || CTRL.hold) && !sit) K.armL.rotation.x = K.armR.rotation.x = -1.1;                    // 식판 받쳐 들기 · ENGINE-1 물건 들기(map.carry)
   if (CTRL.pose === 'dig') { const d9 = Math.sin(kidT * 11); K.armL.rotation.x = K.armR.rotation.x = -1.3 + d9 * 0.6; K.rig.rotation.x = 0.35 + d9 * 0.08; }   // ENGINE-1 파기(map.dig)
   if (milk && !sit && !tray) K.armR.rotation.x = -0.7;                                               // 우유 들기
+  if (CTRL.wave > 0 && !sit) { CTRL.wave -= dt; K.armR.rotation.x = -2.75 + Math.sin(kidT * 7) * 0.12; K.armR.rotation.z = 0.45 + Math.sin(kidT * 9) * 0.35; }   // TITLE-1: 손 흔들기(오프닝 · 게임 들어갈 때)
+  else if (K.armR.rotation.z !== 0.12) K.armR.rotation.z = 0.12;   // 어깨 기본 벌림(kid.js arm)
   K.head.rotation.x = mv > 0.1 ? 0.04 : Math.sin(kidT * 1.7) * 0.03;                                   // 가만히 있으면 살짝 끄덕끄덕
   K.body.scale.y = 1 + (mv < 0.1 && !sit ? Math.sin(kidT * 2.2) * 0.008 : 0);                           // 숨쉬기
 }
@@ -342,7 +354,7 @@ const ACT = { anim: null, sit: null };
 const CTRL = { frozen: false, speed: 1 };   // MAP-API-1: 게임이 멈춤(입력·점프만 무시 — 중력은 유지)·속도(0.5~2)를 건다
 // ENGINE-1(09-27 행동 사전): 게임이 켜는 것만 — crouchOK(웅크리기 허용 · 기본 끔 = 게이트 영향 0) · crouched(지금 웅크림) · crouchForce(null|bool — 시험·게임이 강제) ·
 //   peek(숨는 자리 틈새 시점 {x,y,z,yaw,fov}) · hot(강제 상호작용 지점 — 숨은 동안 '나오기') · hold(물건 들기 팔) · pose('dig') · noiseT(뛰어내림 소리 남는 시간)
-Object.assign(CTRL, { crouchOK: false, crouched: false, crouchForce: null, peek: null, hot: null, hold: false, pose: null, noiseT: 0 });
+Object.assign(CTRL, { wave: 0, crouchOK: false, crouched: false, crouchForce: null, peek: null, hot: null, hold: false, pose: null, noiseT: 0 });
 const CROUCH_H = 0.8;
 // 웅크리기 입력: C·Ctrl 누르고 있기(키보드) · 터치 ⬇ 버튼(누를 때마다 켜고 끔 — 두 엄지가 조이스틱·시점에 있으니) · crouchForce
 function crouchTick() {
@@ -409,6 +421,7 @@ function step(dt) {
     camera.position.set(C.x0 + rx, C.y, C.z0 + rz);
     camera.lookAt(hx + rx, hy, hz + rz);
   }
+  if (CAM_OVR) CAM_OVR(dt);   // TITLE-1: 오프닝 카메라(평소 자리를 목표로 읽고 덮어쓴다)
   if (SHOT) applyShot();
 }
 // CAM-3(09-24 맵 건강 검진): 3인칭 카메라 자리 — 검진(health.js)과 실제 카메라가 이 한 식을 쓴다(SD2.camPose).
@@ -1089,7 +1102,9 @@ function loop() {
 }
 loop();
 TIMING.firstFrameMs = performance.now();   // 첫 프레임(페이지 시작부터 ms) — 그 뒤 로딩 막을 걷는다
-document.getElementById('boot')?.remove();
+// TITLE-1: 오프닝 — 로딩 막을 제목 화면으로 걷는다(v2/js/title.js · 모양 v2/title.css). 꺼져 있으면(게이트·게임 주소) 예전처럼 막만 걷는다
+const TITLE = TITLE_ON ? createTitle({ THREE, camera, P, CTRL, keys, touch: TOUCH, SCHOOL, tone, toast, game: MAP.game, picker: MAP.picker, setCam: f => { CAM_OVR = f; } }) : null;
+if (TITLE) TITLE.bootDone(); else document.getElementById('boot')?.remove();
 warmDone();
 
 addEventListener('resize', () => {
@@ -1180,7 +1195,7 @@ window.SD2 = {
   step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); hotTick(1/60); MAP.tick(1/60); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
   doors: () => DOORS.length, doorCheck,
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
-  touch: TOUCH, gfx: GFX, cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
+  touch: TOUCH, gfx: GFX, title: TITLE, cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)
   map: MAP, phys: { groundAt, blockedAt, ceilAt, camHit, PHY, pGround, pBlocked, pCeil }, ACT, CTRL, camPose: (...a) => ({ ...camPose(...a) }),
   health: opt => import('./health.js?v=5').then(m => m.runHealth(window.SD2, opt || {})),
