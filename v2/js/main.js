@@ -1,14 +1,15 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { buildWorld } from './world.js?v=127';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
-import { SCHOOL } from './layout.js?v=11';   // LAYOUT-3 실측 배치(v1 data.js 대신)
+import { buildWorld } from './world.js?v=128';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { SCHOOL } from './layout.js?v=13';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
-import { makeMeta } from './mapmeta.js?v=8';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=21';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { makeMeta } from './mapmeta.js?v=10';       // MAP-API-1: 구역 계약표·출발점·표지점
+import { createMapApi } from './mapapi.js?v=22';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=7';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=2';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createActions } from './actions.js?v=1';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
+var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
 // TITLE-1: 오프닝을 켤지 — 게이트(?check=1)·검진(?health=1)·사진 대조(?shot)·게임 주소(?game·?tour=1)는 예전 그대로(오프닝 없음). index.html 로딩 막도 같은 규칙
 const QS0 = new URLSearchParams(location.search);
@@ -440,7 +441,7 @@ function step(dt) {
   //  6.3m 뒤·17° 위에서 내려다보면 실내에선 천장(3.24m) 밑에 붙어 위에서 내려다보고, 화각 48°는 휴대폰 광각보다 훨씬 좁다.
   //  → 실내(머리 위에 천장)에선 가깝고(3.3m) 낮게(피치 ≤0.2)·화각 60°, 밖은 6.3m·52°. V = 1인칭(눈높이 1.5m) 전환.
   const indoor = ceilAt(P.x, P.z, P.y + 1.6, P.y + 5.5) !== null;
-  const tFov = camFirst ? 66 : indoor ? 60 : 52;
+  const tFov = camFirst ? 66 : indoor ? (inCorr ? 64 : 60) : 52;   // CORR-FEEL(09-28 계획 2-20): 복도 구역(본관·동관·세로·2층)만 화각 4° 넓게 — 좁아 보이던 복도(휴대폰 초광각 영상과 비교)
   if (Math.abs(camera.fov - tFov) > 0.05) { camera.fov += (tFov - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); }
   { const S = PHY.sc, gy = pGround(P.x, P.z, P.y + 0.05 * S), h = Math.max(0, P.y - gy) / S, k = Math.max(0.35, 1 - h * 0.35);   // GFX-2 발밑 그림자(SHRINK-1: 몸 크기 비례)
     blob.position.set(P.x, gy + 0.045 * Math.max(S, 0.2), P.z); blob.scale.setScalar(0.95 * k * S); blob.material.opacity = k; blob.visible = !ACT.sit && h < 3; }
@@ -1030,6 +1031,7 @@ const locBox = document.getElementById('loc');
 let locT = 0;
 function updateLoc() {   // MAP-API-1: 가장 좁은 구역(겹쳐도 순서에 안 흔들림)·높이 띠(계단 참도 '계단')
   const Z = MAP ? MAP.zoneAt(P.x, P.y, P.z) : null;
+  inCorr = !!(Z && Z.kind === 'corridor' && Z.id !== 'music-passage');
   locBox.textContent = '📍 ' + (Z ? Z.label : '학교');
 }
 
@@ -1487,7 +1489,7 @@ window.SD2 = {
   cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)
   map: MAP, phys: { groundAt, blockedAt, ceilAt, camHit, PHY, pGround, pBlocked, pCeil }, ACT, CTRL, camPose: (...a) => ({ ...camPose(...a) }),
-  health: opt => import('./health.js?v=6').then(m => m.runHealth(window.SD2, opt || {})),
+  health: opt => import('./health.js?v=8').then(m => m.runHealth(window.SD2, opt || {})),
   // PERF-LOAD(09-26): 로드·프레임 계측 — buildMs·firstFrameMs(ms) · 최근 240프레임 CPU p50/p95(렌더 제외) · 가림 컬링 재계산 p95. reset() 뒤 걸어 보고 읽는다
   timing: Object.defineProperties(TIMING, {
     frameCpuP50: { get: () => rbPct(RB.cpu, RB.ci, 0.5), enumerable: true }, frameCpuP95: { get: () => rbPct(RB.cpu, RB.ci, 0.95), enumerable: true },
