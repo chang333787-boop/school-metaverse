@@ -3,9 +3,9 @@ import * as THREE from 'three';
 import { buildKid } from './kid.js?v=4';   // CHAR-2 내 캐릭터(치비·노란 모자)
 import { buildWorld } from './world.js?v=125';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=11';   // LAYOUT-3 실측 배치(v1 data.js 대신)
-import * as NAV from './nav.js?v=6';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
+import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=7';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=20';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=21';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=7';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=2';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 
@@ -17,16 +17,25 @@ let CAM_OVR = null;   // TITLE-1: 카메라 고리(오프닝 한 바퀴·날아�
 bootP(0.3, 0.4);
 
 const canvas = document.getElementById('scene');
+// PERF-WIN(09-28 교사 "맥북은 괜찮은데 학교 윈도우 컴에서 화면 돌리거나 키가 잔잔하게 씹힘"): 약한 내장 그래픽(UHD 6xx·셀러론) + 윈도 배율 125~150%.
+//  antialias(MSAA)는 컨텍스트를 만들 때만 정할 수 있어(도중에 못 바꿈) 켠 채로 둔다 — 자동 해상도가 배율을 1 아래로 내렸을 때 계단을 가려 주는 쪽이 이득이다(FXAA 같은 후처리 패스는 더하지 않는다).
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+// PERF-WIN: 셰이더 오류 검사(getShaderInfoLog·getProgramInfoLog)는 컴파일이 끝날 때까지 주 스레드를 세운다(점검 실측 300~800ms) — 배포판은 끄고 ?debug=1·?check=1에서만 켠다
+renderer.debug.checkShaderErrors = /[?&](debug|check)=1/.test(location.search);
 // TOUCH-1 휴대폰 성능 판(09-26): 터치가 주 입력이거나 작은 화면(짧은 변 ≤500)이면 mobile — 픽셀 비율 ≤1.5 · 그림자 지도 1024.
 //  저사양(메모리 ≤3GB 또는 코어 ≤3 — 알려 주는 브라우저만)이면 low — 픽셀 비율 ≤1.25 · 그림자 끔. 나머지(나무·디테일·안개·유리)는 같다.
-//  ?hq=1 = 데스크톱 품질 강제 · ?lq=1 = low 강제(시험용). 고른 값 = SD2.gfx
-const GFX = (() => { const q = new URLSearchParams(location.search), hq = q.get('hq') === '1', lq = q.get('lq') === '1';
+//  ?hq=1 = 데스크톱 품질 강제(자동 해상도 끔 · 배율 ≤2) · ?lq=1 = low 강제(시험용). 고른 값 = SD2.gfx
+//  PERF-WIN: 데스크톱은 배율 1.5에서 시작(예전 2) — 여유가 뚜렷하면(8.3ms 120Hz 맥 등) 자동 해상도가 기기 배율(≤2)까지 올린다 = 강한 기기 모습 그대로.
+//   dpr = 지금 배율(자동 해상도가 바꾼다) · cap = 올라갈 수 있는 끝 · start = 시작 배율 · floor = 가장 낮은 배율
+const GFX = (() => { const q = new URLSearchParams(location.search), hq = q.get('hq') === '1', lq = q.get('lq') === '1', dev = window.devicePixelRatio || 1;
   const mobile = !hq && (lq || touchPrimary() || Math.min(screen.width || 9999, screen.height || 9999) <= 500);
   const low = !hq && (lq || (mobile && ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 3))));
-  return { mode: low ? 'low' : mobile ? 'mobile' : 'desktop', dpr: Math.min(window.devicePixelRatio || 1, low ? 1.25 : mobile ? 1.5 : 2), shadow: low ? 0 : mobile ? 1024 : 2048 }; })();
+  const cap = Math.min(dev, low ? 1.25 : mobile ? 1.5 : 2), start = hq ? cap : Math.min(cap, 1.5), fix = +q.get('dpr') || 0;   // ?dpr=0.75 = 배율 고정(시험용)
+  // 자동 해상도는 게이트·검진·사진 대조·?hq=1·?dpr=·?adapt=0에서 끈다(같은 화면을 다시 재야 하는 주소)
+  const adapt = !hq && !fix && q.get('adapt') !== '0' && !/[?&](check|health)=1/.test(location.search) && !q.get('shot');
+  return { mode: low ? 'low' : mobile ? 'mobile' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, 0.6), shadow: low ? 0 : mobile ? 1024 : 2048, adapt, dev }; })();
 const DPR = GFX.dpr;
-renderer.setPixelRatio(DPR);                       // 네이티브(비정수 업스케일 금지) — 휴대폰은 GFX 상한
+renderer.setPixelRatio(DPR);                       // 네이티브(비정수 업스케일 금지) — 휴대폰은 GFX 상한 · PERF-WIN 자동 해상도가 바꾼다(ADAPT)
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = GFX.shadow > 0;
 renderer.shadowMap.autoUpdate = false;
@@ -154,14 +163,22 @@ function kidTick(dt) {
 }
 
 function terrainY(x, z) { return world.terrainAt(x, z); }   // 앞뜰·대지 yard / 운동장 field(LAYOUT-3 세 높이)
+// PERF-WIN: 8m 격자 칸 찾기 = 숫자 열쇠(예전 gx+':'+gz 문자열을 부를 때마다 만들었다 — 점검 할당 1위권). world.grid(문자열 Map)는 그대로 두고
+//  같은 배열을 숫자 Map에 거울로 단다 — mapapi collider.add가 world.grid.set으로 새 칸을 만들면 거울도 따라간다(set을 감쌈). 칸 배열은 같은 객체라 push·splice도 그대로 보인다
+const GRIDN = new Map(), gkey = (gx, gz) => (gx + 2048) * 4096 + (gz + 2048);
+for (const [k, a] of world.grid) { const c = k.indexOf(':'); GRIDN.set(gkey(+k.slice(0, c), +k.slice(c + 1)), a); }
+{ const G = world.grid, set0 = G.set; G.set = function (k, a) { set0.call(G, k, a); const c = k.indexOf(':'); GRIDN.set(gkey(+k.slice(0, c), +k.slice(c + 1)), a); return G; }; }
+world.cell = (gx, gz) => GRIDN.get(gkey(gx, gz));   // mapapi.ray·engine 시야선도 이것으로
+// 본 상자 표시 = 세대 번호 배열(예전 new Set()을 부를 때마다 — 한 프레임 수십 번). colliders가 늘면(게임 충돌 추가) 키운다
+let SEEN = new Uint32Array(8192), SEEN_G = 0;
+function seenGen() { if (SEEN.length < world.colliders.length) { SEEN = new Uint32Array(world.colliders.length * 2); SEEN_G = 0; } if (++SEEN_G > 4e9) { SEEN.fill(0); SEEN_G = 1; } return SEEN_G; }
 function groundAt(x, z, fromY) {
   let g = terrainY(x, z);
-  const k0x = Math.floor((x-0.3)/8), k1x = Math.floor((x+0.3)/8), k0z = Math.floor((z-0.3)/8), k1z = Math.floor((z+0.3)/8);
-  const seen = new Set();
+  const k0x = Math.floor((x-0.3)/8), k1x = Math.floor((x+0.3)/8), k0z = Math.floor((z-0.3)/8), k1z = Math.floor((z+0.3)/8), gen = seenGen(), C = world.colliders;
   for (let gx=k0x; gx<=k1x; gx++) for (let gz=k0z; gz<=k1z; gz++) {
-    const cell = world.grid.get(gx+':'+gz); if (!cell) continue;
-    for (const i of cell) { if (seen.has(i)) continue; seen.add(i);
-      const b = world.colliders[i];
+    const cell = GRIDN.get(gkey(gx, gz)); if (!cell) continue;
+    for (let k = 0; k < cell.length; k++) { const i = cell[k]; if (SEEN[i] === gen) continue; SEEN[i] = gen;
+      const b = C[i];
       if (x > b.x0-0.26 && x < b.x1+0.26 && z > b.z0-0.26 && z < b.z1+0.26 && b.y1 <= fromY + 0.55 && b.y1 > g) g = b.y1;
     }
   }
@@ -170,24 +187,22 @@ function groundAt(x, z, fromY) {
 // 머리 위 물체 밑면(y0)이 [h0, h1] 사이에 있으면 그 높이(가장 낮은 것), 없으면 null
 function ceilAt(x, z, h0, h1) {
   let c = null;
-  const k0x = Math.floor((x-0.3)/8), k1x = Math.floor((x+0.3)/8), k0z = Math.floor((z-0.3)/8), k1z = Math.floor((z+0.3)/8);
-  const seen = new Set();
+  const k0x = Math.floor((x-0.3)/8), k1x = Math.floor((x+0.3)/8), k0z = Math.floor((z-0.3)/8), k1z = Math.floor((z+0.3)/8), gen = seenGen(), C = world.colliders;
   for (let gx=k0x; gx<=k1x; gx++) for (let gz=k0z; gz<=k1z; gz++) {
-    const cell = world.grid.get(gx+':'+gz); if (!cell) continue;
-    for (const i of cell) { if (seen.has(i)) continue; seen.add(i);
-      const b = world.colliders[i];
+    const cell = GRIDN.get(gkey(gx, gz)); if (!cell) continue;
+    for (let k = 0; k < cell.length; k++) { const i = cell[k]; if (SEEN[i] === gen) continue; SEEN[i] = gen;
+      const b = C[i];
       if (x > b.x0-0.26 && x < b.x1+0.26 && z > b.z0-0.26 && z < b.z1+0.26 && b.y0 >= h0 - 0.01 && b.y0 < h1 && (c === null || b.y0 < c)) c = b.y0;
     }
   }
   return c;
 }
 function blockedAt(x, z, y, h = 1.5) {   // ENGINE-1: h = 몸 높이(기본 1.5 — 길격자·게이트는 그대로 · 웅크린 몸만 0.8)
-  const k0x = Math.floor((x-0.3)/8), k1x = Math.floor((x+0.3)/8), k0z = Math.floor((z-0.3)/8), k1z = Math.floor((z+0.3)/8);
-  const seen = new Set();
+  const k0x = Math.floor((x-0.3)/8), k1x = Math.floor((x+0.3)/8), k0z = Math.floor((z-0.3)/8), k1z = Math.floor((z+0.3)/8), gen = seenGen(), C = world.colliders;
   for (let gx=k0x; gx<=k1x; gx++) for (let gz=k0z; gz<=k1z; gz++) {
-    const cell = world.grid.get(gx+':'+gz); if (!cell) continue;
-    for (const i of cell) { if (seen.has(i)) continue; seen.add(i);
-      const b = world.colliders[i];
+    const cell = GRIDN.get(gkey(gx, gz)); if (!cell) continue;
+    for (let k = 0; k < cell.length; k++) { const i = cell[k]; if (SEEN[i] === gen) continue; SEEN[i] = gen;
+      const b = C[i];
       if (x > b.x0-0.26 && x < b.x1+0.26 && z > b.z0-0.26 && z < b.z1+0.26 && b.y1 > y + 0.55 && b.y0 < y + h) return true;
     }
   }
@@ -209,7 +224,7 @@ function tinyBuild() {
 function tinyAdd(c, T = PHY.T) {   // 게임이 작아진 뒤 더한 충돌(mapapi collider.add)도 여기로
   if (!T) return;
   const put = b => { const i = T.cols.push(b) - 1;
-    for (let gx = Math.floor(b.x0 / 8); gx <= Math.floor(b.x1 / 8); gx++) for (let gz = Math.floor(b.z0 / 8); gz <= Math.floor(b.z1 / 8); gz++) { const k = gx + ':' + gz; let a = T.grid.get(k); if (!a) T.grid.set(k, a = []); a.push(i); } };
+    for (let gx = Math.floor(b.x0 / 8); gx <= Math.floor(b.x1 / 8); gx++) for (let gz = Math.floor(b.z0 / 8); gz <= Math.floor(b.z1 / 8); gz++) { const k = gkey(gx, gz); let a = T.grid.get(k); if (!a) T.grid.set(k, a = []); a.push(i); } };
   if (c.tiny) { for (const t of c.tiny) put({ x0: t.x0, x1: t.x1, y0: t.y0, y1: t.y1, z0: t.z0, z1: t.z1, src: c }); }
   else if (c.vy1 != null) put({ x0: c.x0, x1: c.x1, y0: c.y0, y1: c.vy1, z0: c.z0, z1: c.z1, src: c });
   else put(c);
@@ -219,7 +234,7 @@ function tGen(T) { if (++T.gen > 4e9) { T.gen = 1; T.mark.fill(0); } return T.ge
 function tGround(x, z, fromY) {
   const T = PHY.T, r = PHY.r, top = fromY + PHY.st, gen = tGen(T); let g = terrainY(x, z);
   for (let gx = Math.floor((x - 0.3) / 8); gx <= Math.floor((x + 0.3) / 8); gx++) for (let gz = Math.floor((z - 0.3) / 8); gz <= Math.floor((z + 0.3) / 8); gz++) {
-    const cell = T.grid.get(gx + ':' + gz); if (!cell) continue;
+    const cell = T.grid.get(gkey(gx, gz)); if (!cell) continue;
     for (let k = 0; k < cell.length; k++) { const i = cell[k]; if (T.mark[i] === gen) continue; T.mark[i] = gen; const b = T.cols[i];
       if (b.src && b.src.y0 < -1e5) continue;
       if (x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r && b.y1 <= top && b.y1 > g) g = b.y1; } }
@@ -228,7 +243,7 @@ function tGround(x, z, fromY) {
 function tCeil(x, z, h0, h1) {
   const T = PHY.T, r = PHY.r, gen = tGen(T); let c = null;
   for (let gx = Math.floor((x - 0.3) / 8); gx <= Math.floor((x + 0.3) / 8); gx++) for (let gz = Math.floor((z - 0.3) / 8); gz <= Math.floor((z + 0.3) / 8); gz++) {
-    const cell = T.grid.get(gx + ':' + gz); if (!cell) continue;
+    const cell = T.grid.get(gkey(gx, gz)); if (!cell) continue;
     for (let k = 0; k < cell.length; k++) { const i = cell[k]; if (T.mark[i] === gen) continue; T.mark[i] = gen; const b = T.cols[i];
       if (b.src && b.src.y0 < -1e5) continue;
       if (x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r && b.y0 >= h0 - 0.01 * PHY.sc && b.y0 < h1 && (c === null || b.y0 < c)) c = b.y0; } }
@@ -237,7 +252,7 @@ function tCeil(x, z, h0, h1) {
 function tBlocked(x, z, y, h) {
   const T = PHY.T, r = PHY.r, st = y + PHY.st, gen = tGen(T);
   for (let gx = Math.floor((x - 0.3) / 8); gx <= Math.floor((x + 0.3) / 8); gx++) for (let gz = Math.floor((z - 0.3) / 8); gz <= Math.floor((z + 0.3) / 8); gz++) {
-    const cell = T.grid.get(gx + ':' + gz); if (!cell) continue;
+    const cell = T.grid.get(gkey(gx, gz)); if (!cell) continue;
     for (let k = 0; k < cell.length; k++) { const i = cell[k]; if (T.mark[i] === gen) continue; T.mark[i] = gen; const b = T.cols[i];
       if (b.src && b.src.y0 < -1e5) continue;
       if (x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r && b.y1 > st && b.y0 < y + h) return true; } }
@@ -252,7 +267,7 @@ function tCamHit(hx, hy, hz, dx, dy, dz, maxD) {
   const T = PHY.T, gen = tGen(T); let t = maxD;
   const ex = hx + dx * maxD, ez = hz + dz * maxD;
   for (let gx = Math.floor((Math.min(hx, ex) - 0.4) / 8); gx <= Math.floor((Math.max(hx, ex) + 0.4) / 8); gx++) for (let gz = Math.floor((Math.min(hz, ez) - 0.4) / 8); gz <= Math.floor((Math.max(hz, ez) + 0.4) / 8); gz++) {
-    const cell = T.grid.get(gx + ':' + gz); if (!cell) continue;
+    const cell = T.grid.get(gkey(gx, gz)); if (!cell) continue;
     for (let k = 0; k < cell.length; k++) { const i = cell[k]; if (T.mark[i] === gen) continue; T.mark[i] = gen; const b = T.cols[i];
       if (b.nc || (b.src && b.src.y0 < -1e5)) continue;
       let t0 = 1e-4, t1 = t, ok = true;
@@ -303,12 +318,12 @@ function camHit(hx, hy, hz, dx, dy, dz, maxD) {
   const ex = hx + dx*maxD, ez = hz + dz*maxD;
   const k0x = Math.floor((Math.min(hx,ex)-0.4)/8), k1x = Math.floor((Math.max(hx,ex)+0.4)/8);
   const k0z = Math.floor((Math.min(hz,ez)-0.4)/8), k1z = Math.floor((Math.max(hz,ez)+0.4)/8);
-  const seen = new Set();
+  const gen = seenGen(), C = world.colliders;   // PERF-WIN: 세대 번호·숫자 칸(새 Set·문자열 없음)
   for (let gx=k0x; gx<=k1x; gx++) for (let gz=k0z; gz<=k1z; gz++) {
-    const cell = world.grid.get(gx+':'+gz); if (!cell) continue;
-    for (const i of cell) {
-      if (seen.has(i)) continue; seen.add(i);
-      const b = world.colliders[i];
+    const cell = GRIDN.get(gkey(gx, gz)); if (!cell) continue;
+    for (let k = 0; k < cell.length; k++) { const i = cell[k];
+      if (SEEN[i] === gen) continue; SEEN[i] = gen;
+      const b = C[i];
       if (b.nc) continue;                                  // 올라서기 금지용으로 높인 보이지 않는 윗부분·울타리 벽은 카메라를 밀지 않는다
       if (b.y1 - b.y0 < 1.5 && b.y0 < hy + 0.4) continue;
       let t0 = 1e-4, t1 = t, ok = true;
@@ -329,19 +344,45 @@ function camHit(hx, hy, hz, dx, dy, dz, maxD) {
   return t;
 }
 
-const keys = new Set();
-addEventListener('keydown', e => { keys.add(e.code); if (e.code === 'Space' && !e.repeat) TOUCH.jumpT = Math.max(TOUCH.jumpT, 0.12); });   // Space를 한 프레임보다 짧게 톡 쳐도 뛴다(느린 노트북 · 점프 버튼 jumpT와 같은 방식)
-addEventListener('keyup', e => keys.delete(e.code));
+// ---------- 입력(PERF-WIN 09-28 "키가 잔잔하게 씹힘") ----------
+// keys = 누르고 있는 키(e.code — 한글 입력기가 켜져 e.key가 'Process'·keyCode 229여도 e.code는 제자리 글쇠라 그대로 받는다 · isComposing도 막지 않는다).
+//  ① 톡 치기 걸쇠: keydown 뒤 '다음 시뮬레이션 한 번'이 돌기 전에 keyup이 와도(느린 PC 20fps = 한 프레임 50ms) 그 키는 그 한 번 동안 눌린 것으로 본다 —
+//     keyup을 KEY_UP에 미뤄 두었다가 프레임 끝(keysFrameEnd)에 뺀다. keys를 읽는 곳(이동·점프·웅크리기·mapapi·게임 pl.keys)이 모두 한 번은 본다.
+//  ② 안 떨어지는 키 막기: 창 blur(Alt+Tab·윈도 키)·탭 숨김·포인터 잠금 풀림이면 전부 비운다(keyup을 못 받아 계속 걷던 것).
+const keys = new Set(), KEY_NEW = new Set(), KEY_UP = new Set();
+function keysClear() { keys.clear(); KEY_NEW.clear(); KEY_UP.clear(); }
+function keysFrameEnd() { KEY_NEW.clear(); if (KEY_UP.size) { for (const k of KEY_UP) keys.delete(k); KEY_UP.clear(); } }   // 루프가 한 프레임의 시뮬레이션(step·게임 tick)을 끝낸 뒤
+addEventListener('keydown', e => { if (!e.code) return;
+  if (!keys.has(e.code)) KEY_NEW.add(e.code); keys.add(e.code); KEY_UP.delete(e.code);
+  if (e.code === 'Space' && !e.repeat) TOUCH.jumpT = Math.max(TOUCH.jumpT, 0.12); });   // Space를 한 프레임보다 짧게 톡 쳐도 뛴다(느린 노트북 · 점프 버튼 jumpT와 같은 방식)
+addEventListener('keyup', e => { if (!e.code) return; if (KEY_NEW.has(e.code)) KEY_UP.add(e.code); else keys.delete(e.code); });   // 아직 한 번도 안 읽힌 키 = 프레임 끝까지 눌린 채
+addEventListener('blur', keysClear);
+document.addEventListener('visibilitychange', () => { if (document.hidden) keysClear(); });
 let camYaw = 0, camPitch = 0.3, camFirst = false;
-addEventListener('keydown', e => { if (e.code === 'KeyV') camFirst = !camFirst; });   // 1인칭 ↔ 3인칭
+addEventListener('keydown', e => { if (e.code === 'KeyV' && !e.repeat) camFirst = !camFirst; });   // 1인칭 ↔ 3인칭(누르고 있어 자동 반복돼도 한 번만)
 const CAM_D = 6.3;
 let camD = CAM_D;
 canvas.addEventListener('click', () => { if (!TOUCH.on) canvas.requestPointerLock(); });   // 터치 기기엔 포인터 잠금이 없다(드래그가 시점)
+// 마우스 시점(PERF-WIN): 움직임을 모았다가 프레임마다 한 번 더한다(mouseApply — 이벤트 수·프레임 수와 무관하게 같은 양 · 느린 PC에서 여러 이벤트가 한 프레임에 몰려도 부드럽게).
+//  크롬 포인터 잠금 버그(잠금 직후·창 포커스 직후 첫 이벤트에 화면 반쯤 튀는 값)만 버린다: 잠금/포커스 뒤 0.25초 안의 |dx| > max(400, 화면 폭 45%) 한 번.
+//  그 밖엔 버리지 않는다 — 느린 프레임에선 크롬이 mousemove를 rAF에 맞춰 합쳐 보내 빠른 휙 돌리기가 한 이벤트 300px을 넘는다(예전 방식의 고정 문턱은 그걸 버려 시점이 걸렸다).
+//  잠금 중간에 튀는 창 가운데 되돌림 버그는 화면 폭 90%(≥800px)를 한 이벤트에 넘을 때만(사람 손으론 불가능한 값).
+const MOUSE = { dx: 0, dy: 0, t0: 0, drop: 0 };
+document.addEventListener('pointerlockchange', () => { MOUSE.t0 = performance.now(); MOUSE.dx = MOUSE.dy = 0; if (document.pointerLockElement !== canvas) keysClear(); });   // 잠금이 풀리면(Esc·창 전환) 누른 키도 비운다
+addEventListener('focus', () => { MOUSE.t0 = performance.now(); });
 addEventListener('mousemove', e => {
   if (document.pointerLockElement !== canvas) return;
-  camYaw -= e.movementX * 0.0026;
-  camPitch = Math.max(-0.2, Math.min(1.1, camPitch + e.movementY * 0.0022));
+  const mx = e.movementX || 0, my = e.movementY || 0, ax = Math.abs(mx), ay = Math.abs(my);
+  const fresh = performance.now() - MOUSE.t0 < 250, lim = fresh ? Math.max(400, innerWidth * 0.45) : Math.max(800, innerWidth * 0.9), limY = fresh ? Math.max(300, innerHeight * 0.45) : Math.max(700, innerHeight * 0.9);
+  if (ax > lim || ay > limY) { MOUSE.drop++; return; }
+  MOUSE.dx += mx; MOUSE.dy += my;
 });
+function mouseApply() {   // 루프(와 SD2.step) — 모은 움직임을 한 번에
+  if (!MOUSE.dx && !MOUSE.dy) return;
+  camYaw -= MOUSE.dx * 0.0026;
+  camPitch = Math.max(-0.2, Math.min(1.1, camPitch + MOUSE.dy * 0.0022));
+  MOUSE.dx = MOUSE.dy = 0;
+}
 // TOUCH-1: 터치 조작(v2/js/touch.js) — 왼쪽 조이스틱 = 아날로그 이동(TOUCH.mx·my·m → physics) · 오른쪽 드래그 = 시점(마우스와 같은 부호, 휴대폰용 감도) · 점프/행동/시점 버튼
 const TOUCH = createTouch({ canvas,
   look: (dx, dy) => { camYaw -= dx * 0.0058; camPitch = Math.max(-0.2, Math.min(1.1, camPitch + dy * 0.0042)); },
@@ -363,8 +404,10 @@ function crouchTick() {
   else if (!want && CTRL.crouched) {   // 일어서기: 머리 위(발 +0.55 ~ +1.5)가 막혀 있으면 웅크린 채(책상·미끄럼틀 밑)
     if (!pBlocked(P.x, P.z, P.y, PHY.h)) { CTRL.crouched = false; P.bh = PHY.h; } }   // 리뷰(ENGINE-1): 게임이 웅크리기를 꺼도(crouch(false)) 머리 위가 막혀 있으면 빠져나올 때까지 웅크린 채 — 예전엔 낮은 곳 밑에서 일어서며 몸이 상자 안에 끼었다(게임이 멈출 땐 engine.reset이 unstick)
 }
+const MOVE_K = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'];
+const anyKey = L => { for (let i = 0; i < L.length; i++) if (keys.has(L[i])) return true; return false; };   // PERF-WIN: 매 프레임 배열·닫힘(some) 없이
 function step(dt) {
-  const moving = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].some(k => keys.has(k)) || TOUCH.m > 0 || TOUCH.jump || TOUCH.jumpT > 0;   // jumpT: 톡 친 점프(프레임 사이에 떼도) — 앉아 있으면 일어난다
+  const moving = anyKey(MOVE_K) || TOUCH.m > 0 || TOUCH.jump || TOUCH.jumpT > 0;   // jumpT: 톡 친 점프(프레임 사이에 떼도) — 앉아 있으면 일어난다
   if (ACT.anim) {
     const a = ACT.anim; a.t = Math.min(1, a.t + dt / a.dur);
     P.x = a.from[0] + (a.to[0] - a.from[0]) * a.t; P.y = a.from[1] + (a.to[1] - a.from[1]) * a.t; P.z = a.from[2] + (a.to[2] - a.from[2]) * a.t;
@@ -437,11 +480,11 @@ function nearClip(cx, cy, cz, fx, fy, fz, fov, aspect, hy) {
   const ux = rz * fy, uy = fz * rx - fx * rz, uz = -fy * rx, fl = hy - 1.3 + 0.12;
   const k0x = Math.floor((cx - 1) / 8), k1x = Math.floor((cx + 1) / 8), k0z = Math.floor((cz - 1) / 8), k1z = Math.floor((cz + 1) / 8);
   for (let gx = k0x; gx <= k1x; gx++) for (let gz = k0z; gz <= k1z; gz++) {
-    const cell = world.grid.get(gx + ':' + gz); if (!cell) continue;
-    for (const i of cell) { const b = world.colliders[i];
+    const cell = GRIDN.get(gkey(gx, gz)); if (!cell) continue;
+    for (let k = 0; k < cell.length; k++) { const b = world.colliders[cell[k]];
       if (b.nc || b.y1 <= fl || (b.y1 - b.y0 < 1.5 && b.y0 < hy + 0.4)) continue;
       if (b.x1 < cx - 0.6 || b.x0 > cx + 0.6 || b.z1 < cz - 0.6 || b.z0 > cz + 0.6 || b.y1 < cy - 0.6 || b.y0 > cy + 0.6) continue;
-      for (const [sa, sb] of NCP) { const ex = fx * 0.3 + rx * hw * sa + ux * hh * sb, ey = fy * 0.3 + uy * hh * sb, ez = fz * 0.3 + rz * hw * sa + uz * hh * sb;
+      for (let c9 = 0; c9 < 5; c9++) { const sa = NCP[c9][0], sb = NCP[c9][1], ex = fx * 0.3 + rx * hw * sa + ux * hh * sb, ey = fy * 0.3 + uy * hh * sb, ez = fz * 0.3 + rz * hw * sa + uz * hh * sb;
         let t0 = 0, t1 = 1, ok = true;
         for (let a = 0; a < 3 && ok; a++) { const o = a === 0 ? cx : a === 1 ? cy : cz, d9 = a === 0 ? ex : a === 1 ? ey : ez, lo = a === 0 ? b.x0 : a === 1 ? b.y0 : b.z0, hi = a === 0 ? b.x1 : a === 1 ? b.y1 : b.z1;
           if (Math.abs(d9) < 1e-8) { if (o < lo || o > hi) ok = false; } else { let p = (lo - o) / d9, q = (hi - o) / d9; if (p > q) { const s9 = p; p = q; q = s9; } if (p > t0) t0 = p; if (q < t1) t1 = q; if (t0 > t1) ok = false; } }
@@ -828,7 +871,7 @@ const clouds = (() => {
 const CLOUD_TINT = { day: 0xffffff, sunset: 0xffc9a6, night: 0x34425a };
 // 태극기 펄럭임: 깃대 쪽은 고정, 끝으로 갈수록 크게 흔들리고 살짝 처진다(정점 75개 — 매 프레임)
 const flagBase = world.flag ? Float32Array.from(world.flag.geometry.attributes.position.array) : null;
-let flagT = 0;
+let flagT = 0, flagAcc = 1, flagW = null;
 function skyTick(dt) {
   clouds.position.set(camera.position.x, 0, camera.position.z); clouds.rotation.y += dt * 0.004;
   skyDome.position.copy(camera.position);
@@ -836,7 +879,13 @@ function skyTick(dt) {
     if (c.y < 9) for (let i = 0; i < BR.length; i++) { const r = BR[i]; if (c.x > r[0] && c.x < r[1] && c.z > r[2] && c.z < r[3]) { o = 0; break; } }
     if (GLASS_U.uOut.value !== o) { GLASS_U.uOut.value = o; glassApply(timeKey); } }
   if (!flagBase) return;
-  flagT += dt; const P = world.flag.geometry.attributes.position, A = P.array;
+  // PERF-WIN: 펄럭임은 깃발이 가까울 때(70m — 그 밖은 안개·몇 픽셀)만 30Hz로(법선 다시 계산 포함) — 예전엔 안 보여도 매 프레임
+  flagT += dt; flagAcc += dt;
+  if (flagAcc < 1 / 30) return;
+  if (!flagW) { world.flag.updateMatrixWorld(); flagW = new THREE.Vector3().setFromMatrixPosition(world.flag.matrixWorld); }
+  if (camera.position.distanceToSquared(flagW) > 70 * 70) return;
+  flagAcc = 0;
+  const P = world.flag.geometry.attributes.position, A = P.array;
   for (let i = 0; i < P.count; i++) { const x = flagBase[i*3], y = flagBase[i*3+1], u = (x + 0.7) / 1.4;
     A[i*3+2] = Math.sin(flagT * 3.4 - u * 5.2 + y * 0.9) * 0.11 * u + Math.sin(flagT * 1.3 - u * 2.1) * 0.04 * u;
     A[i*3+1] = y - 0.05 * u * u; }
@@ -994,13 +1043,14 @@ function occGap(pb, pm, cb, cm, k, A, B) {
 }
 const _pm = new Uint8Array(9), _cm = new Uint8Array(9);   // 선 9개마다 앞 광선·이 광선의 막음 묶음
 // 청크가 이 자리(cp)에서 보이나. pre = 광선 없이 정해지면 그 값, 광선이 필요하면 -1(PERF-LOAD — 부른 쪽이 이 청크가 쓰는 광선 = angSpan(outer) 범위를 먼저 잰다)
+function nearStair(x, z) { const L = OCC.stairs; for (let i = 0; i < L.length; i++) { const q = L[i]; if (x > q.x0 - 2 && x < q.x1 + 2 && z > q.z0 - 2 && z < q.z1 + 2) return true; } return false; }   // PERF-WIN: some(닫힘) → 고리(같은 판정)
 function occVisible(d, cp, pre) {
   const bx = d.box, BR = world.details.brect[d.bi];
   const x0 = bx.min.x, x1 = bx.max.x, z0 = bx.min.z, z1 = bx.max.z, y0 = bx.min.y, y1 = bx.max.y;
   const inB = cp.x > BR[0] && cp.x < BR[1] && cp.z > BR[2] && cp.z < BR[3];
   const FH0 = world.details.FH, slabOK = d.fl === 1 ? y1 <= FH0 + 0.35 : y0 >= FH0 - 0.05;   // 두 층에 걸친 청크(계단)는 ①을 안 씀
   if (inB && slabOK && d.bi === world.details.wing) { const camFl = cp.y > FH0 + 0.15 ? 2 : 1;   // ① 슬래브
-    if (camFl !== d.fl && !OCC.stairs.some(z => cp.x > z.x0 - 2 && cp.x < z.x1 + 2 && cp.z > z.z0 - 2 && cp.z < z.z1 + 2)) return false; }
+    if (camFl !== d.fl && !nearStair(cp.x, cp.z)) return false; }
   if (cp.x >= x0 && cp.x <= x1 && cp.z >= z0 && cp.z <= z1) return true;
   if (pre) return -1;
   const { N, K, hn, cs, sn } = OCC; angSpan(cp.x, cp.z, x0, x1, z0, z1, true); const A = _af[0], B = _af[1];
@@ -1023,7 +1073,11 @@ function occVisible(d, cp, pre) {
 }
 let detailT = 1;
 const _fr = new THREE.Frustum(), _fm = new THREE.Matrix4(), _pd = [];
-function detailTick(dt) {
+// PERF-WIN(09-28): 한 프레임 가림 판정 예산(루프만 — SD2.step·검진은 끝까지 잰다). 점검에서 앞뜰·긴 폰 화면 한 프레임 8~20ms 튐 → 가까운 청크부터 4개씩 재다가
+//  예산(OCC_BUDGET ms)을 넘기면 남은 청크는 이번 프레임엔 '보임'(안전한 쪽 — 늦게 떠서 깜빡이는 일 없음 · 그리는 양만 잠깐 는다)으로 두고 다음 프레임에 잰다
+const OCC_BUDGET = 1.0, OCC_GROUP = 4;
+const _pdCmp = (a, b) => ((a.cx - OCC.x) ** 2 + (a.cz - OCC.z) ** 2) - ((b.cx - OCC.x) ** 2 + (b.cz - OCC.z) ** 2);
+function detailTick(dt, budget = Infinity) {
   detailT += dt;
   const cp = camera.position, moved = Math.abs(cp.x - OCC.x) + Math.abs(cp.y - OCC.y) + Math.abs(cp.z - OCC.z) > 0.15;
   let t0 = performance.now(), occW = false, prep = false;
@@ -1046,12 +1100,17 @@ function detailTick(dt) {
   _pd.length = 0;
   for (const d of world.details) { const v = d.on && (!d.box || _fr.intersectsBox(d.box)); if (v && d.pend === OCC.gen) _pd.push(d); else d.mesh.visible = v; }
   if (_pd.length) { occW = true;   // 이 청크들이 쓰는 광선 중 이 자리로 아직 안 잰 것만 잰다(광선 목록은 자리마다 한 번)
-    const { N, rs, nd, hn } = OCC; let any = false;
-    for (const d of _pd) { const r = occVisible(d, OCC, true); if (r !== -1) { d.mesh.visible = d.on = r; d.pend = 0; continue; }   // 슬래브 너머·카메라가 청크 안 = 광선 없이
-      const b = d.box; angSpan(OCC.x, OCC.z, b.min.x, b.max.x, b.min.z, b.max.z, true);   // occVisible과 같은 범위(테 광선까지 — occGap이 앞 광선 벽 목록도 읽는다)
-      for (let k = _as[0]; k <= _as[1]; k++) { const kk = ((k % N) + N) % N; if (rs[kk] !== OCC.gen) { rs[kk] = OCC.gen; nd[kk] = 1; hn[kk] = 0; any = true; } } }
-    if (any) { occRays(OCC, nd); nd.fill(0); }
-    for (const d of _pd) if (d.pend) { d.mesh.visible = d.on = occVisible(d, OCC); d.pend = 0; } }
+    const { N, rs, nd, hn } = OCC;
+    if (budget < Infinity && _pd.length > OCC_GROUP) _pd.sort(_pdCmp);   // 예산이 있으면 가까운(화면에 크게 보이는) 청크부터
+    let g0 = 0;
+    while (g0 < _pd.length) { const g1 = budget < Infinity ? Math.min(_pd.length, g0 + OCC_GROUP) : _pd.length; let any = false;
+      for (let i = g0; i < g1; i++) { const d = _pd[i], r = occVisible(d, OCC, true); if (r !== -1) { d.mesh.visible = d.on = r; d.pend = 0; continue; }   // 슬래브 너머·카메라가 청크 안 = 광선 없이
+        const b = d.box; angSpan(OCC.x, OCC.z, b.min.x, b.max.x, b.min.z, b.max.z, true);   // occVisible과 같은 범위(테 광선까지 — occGap이 앞 광선 벽 목록도 읽는다)
+        for (let k = _as[0]; k <= _as[1]; k++) { const kk = ((k % N) + N) % N; if (rs[kk] !== OCC.gen) { rs[kk] = OCC.gen; nd[kk] = 1; hn[kk] = 0; any = true; } } }
+      if (any) { occRays(OCC, nd); nd.fill(0); }
+      for (let i = g0; i < g1; i++) { const d = _pd[i]; if (d.pend) { d.mesh.visible = d.on = occVisible(d, OCC); d.pend = 0; } }
+      g0 = g1; if (performance.now() - t0 > budget) break; }
+    for (let i = g0; i < _pd.length; i++) { _pd[i].mesh.visible = true; OCC.defer = (OCC.defer || 0) + 1; } }   // 예산 넘김 — 남은 청크는 보이게 두고(pend 그대로) 다음 프레임에
   if (occW) { OCC.ms = performance.now() - t0; if (!prep) RB.occ[RB.oi++ % RB.occ.length] = OCC.ms; }
   if (!OCC.st) { OCC.st = []; scene.traverse(o => { if (o.userData.st) OCC.st.push(o); }); }
   for (const m of OCC.st) m.visible = _fr.intersectsBox(m.geometry.boundingBox);
@@ -1067,23 +1126,90 @@ MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL,
   kid: { pg, KID }, doorLock: (n, on) => { const o = DOORS[n]; if (!o) return false; o.lock = !!on; if (on) { o.open = 0; setDoor(o); } return true; },
   // WORLD-FX(found2): 문 연 채/닫은 채(null = 원래대로 — 다가가면 열림) · 걷는 대역 사람 자리 · 그림자 다시 굽기(바깥 사람을 숨기거나 옮길 때 — 0.6초 몰아서)
   doorHold: (n, v) => { const o = DOORS[n]; if (!o) return false; o.hold = v == null ? null : v ? 1 : 0; return true; }, doorActors: DOOR_ACT,
-  rebake: () => { if (!rebakeT) rebakeT = setTimeout(() => { rebakeT = 0; bakeShadows(); }, 600); } }, NAV, makeMeta(SCHOOL));   // tone = 게임 효과음(GAME-FIND-1 map.sfx)
+  rebake: () => { if (!rebakeT) rebakeT = setTimeout(() => { rebakeT = 0; bakeShadows(); }, 600); },
+  prewarm: () => prewarm(), idle }, NAV, makeMeta(SCHOOL));   // PERF-WIN: 게임이 시작한 뒤 새 재질 미리 짓기 · 쉬는 시간 부르기(길격자 미리 짓기)   // tone = 게임 효과음(GAME-FIND-1 map.sfx)
+
+// ---------- 자동 해상도(PERF-WIN 09-28 · 학교 윈도 PC = 약한 내장 그래픽 + 배율 125~150%) ----------
+// 진짜 프레임 간격(rAF 시각 차)을 2초 지수 평균(ema)으로 잰다 — 탭 숨김·250ms 넘는 한두 번 끊김은 버리고(셋 이어지면 느림), 100ms로 자른다(한 번 멈춤이 평균을 끌지 않게).
+//  내리기: ema > 18.5ms(≈54fps 아래)가 1초 이어지면 배율 한 칸(0.25) 내림 — 사다리 = cap부터 0.25씩 0.75까지 + 0.6(바닥).
+//  올리기: 시작 배율(start)까지는 '화면 주사율에 딱 맞게 돈다'(ema < 17.5 · 60Hz면 16.7) 또는 ema < 13이 4초 · start 위(cap까지 — 2배 화면)는 ema < 13(진짜 여유)만.
+//   한 번 버거웠던 칸으로 다시 오르려면 4초 × 2^실패 횟수(최대 64초) · 세 번 실패한 칸은 이번 판엔 다시 안 오른다(오르락내리락 막기).
+//  바닥 칸에선 그림자 지도도 1024로(한 번 다시 굽기 · 2048이던 기기만) — 바닥을 벗어나면 되돌림. 바꾼 뒤 2초는 다시 재기만.
+//  끄기: ?hq=1(품질 강제) · ?dpr=x(고정) · ?adapt=0 · 게이트·검진·사진 대조 주소. 값 = SD2.gfx(dpr·cap·start·floor·shadow·adapt) · SD2.gfx.auto(ema·단계)
+const ADAPT = (() => { const L = []; for (let v = GFX.cap; v >= 0.75 - 1e-6; v = Math.round((v - 0.25) * 100) / 100) L.push(v);
+  if (!L.includes(GFX.start)) { L.push(GFX.start); L.sort((a, b) => b - a); } if (L[L.length - 1] > 0.6 + 1e-6) L.push(0.6);
+  GFX.floor = GFX.adapt ? L[L.length - 1] : GFX.dpr;
+  return { ladder: L, lvl: L.indexOf(GFX.start), s0: L.indexOf(GFX.start), ema: 0, n: 0, big: 0, slowT: 0, goodT: 0, coolT: 3, fail: new Map(), steps: 0, last: 0, shadow0: GFX.shadow, log: [] }; })();
+GFX.auto = ADAPT;
+function setDpr(v) { GFX.dpr = v; renderer.setPixelRatio(v); }
+function setShadowSize(sz) {   // 그림자 지도 크기 바꾸기(자동 해상도 바닥) — 새 지도로 한 번 다시 굽는다
+  if (!GFX.shadow || sun.shadow.mapSize.x === sz) return; GFX.shadow = sz; sun.shadow.mapSize.set(sz, sz);
+  if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } bakeShadows();
+}
+function adaptTick(ts) {
+  const A = ADAPT, raw = A.last ? ts - A.last : 0; A.last = ts;
+  if (!GFX.adapt || !(raw > 0) || document.hidden) return;   // (첫 호출은 performance.now — rAF 시각이 그보다 앞설 수 있다)
+  if (raw > 250) { if (++A.big < 3) return; } else A.big = 0;   // 한두 번 끊김(게임 열기·탭 전환)은 버리고, 250ms 넘는 프레임이 셋 이어지면(아주 느린 기기) 느림으로 센다
+  const d = Math.min(100, raw); A.n++;
+  A.ema = A.n === 1 ? d : A.ema + (d - A.ema) * (1 - Math.exp(-d / 2000));
+  const sec = d / 1000; if (A.coolT > 0) { A.coolT -= sec; A.slowT = A.goodT = 0; return; }
+  if (A.ema > 18.5) { A.slowT += sec; A.goodT = 0; } else { A.slowT = 0; }
+  const L = A.ladder;
+  if (A.slowT >= 1 && A.lvl < L.length - 1) {   // 내림
+    A.fail.set(A.lvl, (A.fail.get(A.lvl) || 0) + 1); A.lvl++; A.steps++; A.log.push([+(performance.now() / 1000).toFixed(1), L[A.lvl], +A.ema.toFixed(1)]);
+    setDpr(L[A.lvl]); if (A.lvl === L.length - 1 && A.shadow0 > 1024) setShadowSize(1024);
+    A.coolT = 2; A.slowT = 0; return;
+  }
+  if (A.lvl === 0) return;
+  const up = A.lvl - 1, good = A.ema < 13 || (up >= A.s0 && A.ema < 17.5);   // start 위로는 진짜 여유(13ms)만
+  if (good) A.goodT += sec; else { A.goodT = 0; return; }
+  const f = A.fail.get(up) || 0; if (f >= 3) return;
+  if (A.goodT >= 4 * Math.min(16, 2 ** f)) {   // 올림
+    const wasFloor = A.lvl === L.length - 1; A.lvl = up; A.steps++; A.log.push([+(performance.now() / 1000).toFixed(1), L[A.lvl], +A.ema.toFixed(1)]);
+    setDpr(L[A.lvl]); if (wasFloor && A.shadow0 > 1024) setShadowSize(A.shadow0);
+    A.coolT = 2; A.goodT = 0;
+  }
+}
+// ---------- 셰이더 미리 짓기(PERF-WIN) — 첫 프레임 뒤 쉬는 시간에 ----------
+// 장면에 있지만 아직 한 번도 안 그려 프로그램이 없는 재질(밤 별 Points · 게임이 만든 물총 자국·숨바꼭질·방탈출 재질 등)만 골라,
+//  같은 지오메트리·재질·그림자 받기·인스턴스(색) 설정의 대역 오브젝트를 임시 장면에 두고 renderer.compile(장면 조명·안개 기준) — 원래 오브젝트는 건드리지 않는다(화면 변화 0).
+//  병렬 컴파일 확장(KHR_parallel_shader_compile)이 있으면 GPU 쪽이 따로 짓고, 셰이더 오류 검사를 껐으니 처음 그릴 때 주 스레드가 서지 않는다.
+//  mapapi가 게임을 시작한 뒤에도 부른다(host.prewarm). 지은 수 = SD2.timing.prewarm
+function prewarm() {
+  const P9 = renderer.properties, tmp = new THREE.Scene(), mats = []; let k = 0;
+  scene.traverse(o => { if (!(o.isMesh || o.isPoints) || !o.material || Array.isArray(o.material)) return; const m = o.material; if (P9.get(m).currentProgram) return; mats.push(m);
+    let p; if (o.isInstancedMesh) { p = new THREE.InstancedMesh(o.geometry, m, 1); if (o.instanceColor) p.setColorAt(0, _pwC); } else p = o.isPoints ? new THREE.Points(o.geometry, m) : new THREE.Mesh(o.geometry, m);
+    p.receiveShadow = o.receiveShadow; tmp.add(p); k++; });
+  if (!k) return 0;
+  const t0 = performance.now();
+  //  지은 뒤 쉬는 시간에 한 재질씩 uniform·attribute 목록을 읽어 둔다(getUniforms — 링크가 안 끝났으면 여기서 기다림 = 처음 그리는 프레임 대신 쉬는 시간에 · 병렬 컴파일이 없는 GPU(SwiftShader 실측)에서 이게 없으면 밤 전환 때 0.3~1초가 그대로 남았다)
+  const touch = () => { const t1 = performance.now(); while (mats.length && performance.now() - t1 < 4) { const pr = P9.get(mats.pop()).currentProgram; if (pr) { try { pr.getUniforms(); pr.getAttributes(); } catch (e) { /* 무시 */ } } } if (mats.length) idle(touch, 400); };
+  //  (compileAsync는 안 쓴다 — 기다리는 동안 게임이 멈춰 재질을 버리면 three의 확인 타이머가 'isReady' 오류를 낸다. compile은 컴파일·링크를 던지기만 하고, 기다림은 위 touch가 쉬는 시간에)
+  try { renderer.compile(tmp, camera, scene); } catch (e) { return 0; }
+  TIMING.prewarm = (TIMING.prewarm || 0) + k; TIMING.prewarmMs = +(performance.now() - t0).toFixed(1); idle(touch, 400); return k;
+}
+const _pwC = new THREE.Color();
+// 쉬는 시간 부르기(requestIdleCallback — 없으면 setTimeout)
+function idle(fn, timeout = 1500) { return window.requestIdleCallback ? requestIdleCallback(fn, { timeout }) : setTimeout(() => fn({ timeRemaining: () => 8, didTimeout: true }), 60); }   // (함수 선언 — mapapi host가 먼저 받는다)
 
 // ---------- 루프 + 예산 계측(헌법⑥) ----------
 const clock = new THREE.Clock();
 const fpsBox = document.getElementById('fps');
 let acc = 0, n = 0, simMs = 0;
-function loop() {
+function loop(ts) {
   requestAnimationFrame(loop);
+  if (!ADAPT.ext) adaptTick(ts || performance.now());   // PERF-WIN 자동 해상도(진짜 프레임 간격 · ext = 시험이 가짜 시각을 넣는 동안 끔)
   const dt = Math.min(0.05, clock.getDelta());
   const t0 = performance.now();
+  mouseApply();   // PERF-WIN: 이 프레임에 모인 마우스 움직임을 한 번에
   step(dt);
   doorTick(dt);
   hotTick(dt);
   MAP.tick(dt);   // 구역·트리거·경계 10Hz + 게임 tick(게임 몫 ms는 MAP.game.lastMs)
+  keysFrameEnd();   // PERF-WIN: 이번 시뮬레이션이 본 '톡 친 키'를 뗀다
   simMs = Math.max(simMs, performance.now() - t0);
   skyTick(dt);
-  detailTick(dt);
+  detailTick(dt, OCC_BUDGET);
   const tR0 = performance.now();
   renderer.render(scene, camera);
   const tR1 = performance.now();
@@ -1094,7 +1220,7 @@ function loop() {
   if (acc > 1) {
     const fps = Math.round(n / acc);
     const dc = renderer.info.render.calls;
-    fpsBox.textContent = fps + ' fps · ' + dc + ' dc · sim ' + simMs.toFixed(2) + 'ms' + (MAP.game.current ? ' · game ' + MAP.game.lastMs.toFixed(2) + 'ms' : '');
+    fpsBox.textContent = fps + ' fps · ' + GFX.dpr + 'x · ' + dc + ' dc · sim ' + simMs.toFixed(2) + 'ms' + (MAP.game.current ? ' · game ' + MAP.game.lastMs.toFixed(2) + 'ms' : '');
     if (dc > 300) console.warn('예산 초과: drawCalls', dc);
     if (simMs > 1) console.warn('예산 초과: sim ms', simMs.toFixed(2));
     acc = 0; n = 0; simMs = 0;
@@ -1106,6 +1232,10 @@ TIMING.firstFrameMs = performance.now();   // 첫 프레임(페이지 시작부�
 const TITLE = TITLE_ON ? createTitle({ THREE, camera, P, CTRL, keys, touch: TOUCH, SCHOOL, tone, toast, game: MAP.game, picker: MAP.picker, setCam: f => { CAM_OVR = f; } }) : null;
 if (TITLE) TITLE.bootDone(); else document.getElementById('boot')?.remove();
 warmDone();
+// PERF-WIN: 첫 화면이 뜬 뒤 쉬는 시간에 — ① 아직 안 지은 셰이더(밤 별 등) ② 게임 길격자(첫 게임을 열 때 1초 뚝뚝 끊기던 것 · 쉬는 조각 ≤8ms · mapapi navIdle)
+//  게이트·검진 주소는 예전 그대로(그쪽은 navSync로 새로 짓는다)
+idle(() => prewarm());
+if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP.navIdle(), 3000);
 
 // PAUSE-1(09-28 사용자 "Alt+Tab이나 Esc를 누르지 않으면 메뉴를 못 누르는 듯"): 마우스가 잠긴 동안엔 커서가 없어 🏠·🎮 칩을 못 누른다.
 //   Esc(브라우저가 잠금을 푼다)로 잠금이 풀리면 '잠깐 멈춤' 창 — ▶ 계속하기(다시 잠금) · 🏠 메뉴로 · 🎮 놀이 바꾸기. 게임·창이 스스로 푼 잠금(쪽지·고르기 창 등 = 멈춤·창 열림)은 띄우지 않는다.
@@ -1237,10 +1367,11 @@ window.SD2 = {
   tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (world.baseAt(x, z) + 0.01); P.vy = 0; },
   yaw(v) { camYaw = v; }, pitch(v) { if (v != null) camPitch = Math.max(-0.2, Math.min(1.1, v)); return camPitch; },   // 시험용(리뷰 SHRINK)
   pos: () => [P.x.toFixed(1), P.y.toFixed(1), P.z.toFixed(1)],
-  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); hotTick(1/60); MAP.tick(1/60); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
+  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { mouseApply(); step(1/60); doorTick(1/60); hotTick(1/60); MAP.tick(1/60); keysFrameEnd(); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
   doors: () => DOORS.length, doorCheck,
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
-  touch: TOUCH, gfx: GFX, title: TITLE, cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
+  touch: TOUCH, gfx: GFX, title: TITLE, input: { keys, KEY_NEW, KEY_UP, MOUSE, clear: keysClear }, prewarm, setDpr, setShadowSize, adaptTick,   // PERF-WIN: 입력 걸쇠·마우스 모음·자동 해상도(시험용)
+  cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)
   map: MAP, phys: { groundAt, blockedAt, ceilAt, camHit, PHY, pGround, pBlocked, pCeil }, ACT, CTRL, camPose: (...a) => ({ ...camPose(...a) }),
   health: opt => import('./health.js?v=5').then(m => m.runHealth(window.SD2, opt || {})),

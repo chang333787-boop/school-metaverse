@@ -107,12 +107,12 @@ export default async function start(map, params = {}) {
   }
   async function say(lines) { for (const [who, text] of lines) { await panel(who, text); if (gone()) return false; } return true; }
   const choose = (line, opts) => panel(line[0], line[1], opts);
-  // 창이 열린 동안: E·Enter·Space = 다음(보기 창이면 1~3) · 화면 클릭 = 포인터 잠금 안 함
+  // 창이 열린 동안: E·Enter·Space = 다음(보기 창이면 1~3) · 화면 클릭 = 포인터 잠금 안 함 · PERF-WIN(09-28): 숫자는 e.code로(한글 입력기면 e.key = 'Process')
   const onKey = e => {
     if (talk) {
       const k = e.code;
       if (!talk.n && ['KeyE', 'Enter', 'Space', 'NumpadEnter'].includes(k)) { e.stopPropagation(); e.preventDefault(); if (!e.repeat && performance.now() - talk.openedAt > 200) talk.next(0); return; }
-      if (talk.n) { const n = Number(e.key); if (n >= 1 && n <= talk.n) { e.stopPropagation(); talk.next(n - 1); return; } if (k === 'KeyE' || k === 'Space') { e.stopPropagation(); e.preventDefault(); } }
+      if (talk.n) { const m9 = /^(?:Digit|Numpad)([1-9])$/.exec(k || ''), n = m9 ? +m9[1] : 0; if (n >= 1 && n <= talk.n) { e.stopPropagation(); talk.next(n - 1); return; } if (k === 'KeyE' || k === 'Space') { e.stopPropagation(); e.preventDefault(); } }
       return;
     }
     if (e.code === 'KeyH' && !e.repeat) guide();

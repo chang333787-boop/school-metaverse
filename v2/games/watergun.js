@@ -49,7 +49,7 @@ export default async function start(map, params = {}) {
   const ROUND_S = Math.max(10, Math.min(600, +params.time || ROUND));
   const seed = params.seed != null && params.seed !== '' ? (isNaN(+params.seed) ? params.seed : +params.seed) : Date.now();
   const rng = map.rng(seed);
-  const inp = { key: false, mouse: false, pad: false, test: false };
+  const inp = { key: false, mouse: false, pad: false, test: false, tap: false };
   let aimOverride = null;
 
   map.player.freeze(true);
@@ -264,12 +264,13 @@ export default async function start(map, params = {}) {
   const clearChips = () => { for (const k of ['wg-score', 'wg-time', 'wg-snd', 'wg-team', 'wg-board']) map.hud.chip(k, null); };
 
   // ---------- 입력: 마우스 왼쪽(시점 잠금 중) · F · 'fire' 신호 · Tab(점수판) ----------
-  const onKD = e => { if (e.code === 'KeyF' && !e.repeat) inp.key = true;
+  // PERF-WIN(09-28): 톡 치기 걸쇠(inp.tap) — 느린 PC(한 프레임 50ms)에서 F·왼쪽 클릭을 프레임 사이에 눌렀다 떼도 다음 tick이 한 번은 쏜다(예전엔 눌림·뗌이 같은 프레임이면 사라짐)
+  const onKD = e => { if (e.code === 'KeyF' && !e.repeat) inp.key = inp.tap = true;
     if (e.code === 'Tab' && mode === 'team' && st !== 'menu') { e.preventDefault(); if (!e.repeat) boardOn(elBoard.style.display === 'none'); } };
   const onKU = e => { if (e.code === 'KeyF') inp.key = false; };
-  const onMD = e => { if (e.button === 0 && document.pointerLockElement) inp.mouse = true; };
+  const onMD = e => { if (e.button === 0 && document.pointerLockElement) inp.mouse = inp.tap = true; };
   const onMU = e => { if (e.button === 0) inp.mouse = false; };
-  const onBlur = () => { inp.key = inp.mouse = inp.pad = false; };
+  const onBlur = () => { inp.key = inp.mouse = inp.pad = inp.tap = false; };
   addEventListener('keydown', onKD); addEventListener('keyup', onKU); addEventListener('mousedown', onMD); addEventListener('mouseup', onMU); addEventListener('blur', onBlur);
   map.on('action', ev => { if (ev && ev.name === 'fire') inp.pad = !!ev.down; });
 
@@ -789,7 +790,7 @@ export default async function start(map, params = {}) {
       if (goalT > 0 && (goalT -= dt) <= 0) goal(null);
       // 몸 방향(물총 자리): 쏘는 동안 = 카메라가 보는 쪽(③) · 아니면 걷는 방향(움직임으로 추정 — main.js P.yaw와 같은 식)
       const mdx = me.x - lastX, mdz = me.z - lastZ; lastX = me.x; lastZ = me.z;
-      const firing = st === 'play' && meAlive && (inp.key || inp.mouse || inp.pad || inp.test);
+      const firing = st === 'play' && meAlive && (inp.key || inp.mouse || inp.pad || inp.test || inp.tap); inp.tap = false;
       if (firing) { _f.set(0, 0, -1).applyQuaternion(cam.quaternion); if (_f.x * _f.x + _f.z * _f.z > 1e-6) gunYaw = Math.atan2(_f.x, _f.z); }
       const gx0 = Math.sin(gunYaw), gz0 = Math.cos(gunYaw);
       const nozX = me.x + gx0 * 0.46 - gz0 * 0.1, nozY = me.y + 0.62, nozZ = me.z + gz0 * 0.46 + gx0 * 0.1;

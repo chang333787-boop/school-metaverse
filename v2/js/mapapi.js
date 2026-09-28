@@ -5,8 +5,10 @@
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
 import { createMinimap } from './minimap.js?v=8';
 import { createGamePicker } from './gamepick.js?v=7';
-import { createEngine } from './engine.js?v=10';
+import { createEngine } from './engine.js?v=11';
 import { createWorldFx } from './worldfx.js?v=4';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
+// PERF-WIN: 숫자 키(윗줄·숫자 패드) → 1~9 · 아니면 0 — e.key는 한글 입력기가 켜져 있으면 'Process'라 e.code로 읽는다
+export const digitOf = e => { const m = /^(?:Digit|Numpad)([0-9])$/.exec(e.code || ''); return m ? +m[1] : 0; };
 export function createMapApi(host, NAV, META) {
   const { THREE, scene, world, SCHOOL, q, pl, ui } = host;
   const HOT = host.hot, Z = world.zones, P = pl.P, CTRL = pl.CTRL;
@@ -63,8 +65,8 @@ export function createMapApi(host, NAV, META) {
     let t = 1, hit = false; if (++seenGen > 0x3fffffff) { seenArr.fill(0); seenGen = 1; } if (seenArr.length < world.colliders.length) seenArr = new Uint32Array(world.colliders.length * 2);   // G3-WG(09-27): 본 상자 표시 = 세대 번호 배열(예전 new Set()은 부를 때마다 할당 — 물방울 충돌이 매 프레임 수십 번 부른다)
     for (let gx = Math.floor(Math.min(a[0], b[0]) / 8); gx <= Math.floor(Math.max(a[0], b[0]) / 8); gx++)
       for (let gz = Math.floor(Math.min(a[2], b[2]) / 8); gz <= Math.floor(Math.max(a[2], b[2]) / 8); gz++) {
-        const cell = world.grid.get(gx + ':' + gz); if (!cell) continue;
-        for (const i of cell) { if (seenArr[i] === seenGen) continue; seenArr[i] = seenGen; const c = world.colliders[i];
+        const cell = world.cell ? world.cell(gx, gz) : world.grid.get(gx + ':' + gz); if (!cell) continue;   // PERF-WIN: 숫자 칸(main.js world.cell)
+        for (let k9 = 0; k9 < cell.length; k9++) { const i = cell[k9]; if (seenArr[i] === seenGen) continue; seenArr[i] = seenGen; const c = world.colliders[i];
           if ((ign && c.nc) || c.y1 - c.y0 < minH) continue;
           let t0 = 0, t1 = t, ok = true;
           for (let ax = 0; ax < 3 && ok; ax++) { const o = a[ax], d = ax === 0 ? dx : ax === 1 ? dy : dz, lo = ax === 0 ? c.x0 : ax === 1 ? c.y0 : c.z0, hi = ax === 0 ? c.x1 : ax === 1 ? c.y1 : c.z1;
@@ -226,7 +228,7 @@ export function createMapApi(host, NAV, META) {
         const h = document.createElement('div'); h.textContent = title; h.style.cssText = 'font-weight:700;margin-bottom:12px;white-space:pre-line;line-height:1.45'; box.appendChild(h);   // 줄바꿈(\n) 허용(GAME-FIND-1 끝 화면)
         let hh = null;   // 범위 파사드의 정리 항목 — 답하면 같이 뗀다(다시 하기를 여러 번 해도 정리 목록이 쌓이지 않게 · GAME-FIND-1)
         const done = i => { removeEventListener('keydown', kd, true); box.remove(); CTRL.frozen = was; if (hh) hh.remove(); res(i); };
-        const kd = e => { const n = Number(e.key); if (n >= 1 && n <= choices.length) { e.stopPropagation(); done(n - 1); } };
+        const kd = e => { const n = digitOf(e); if (n >= 1 && n <= choices.length) { e.stopPropagation(); done(n - 1); } };   // PERF-WIN: 숫자는 e.code로(한글 입력기면 e.key가 'Process')
         choices.forEach((c, i) => { const b = document.createElement('button'); b.textContent = (i + 1) + '. ' + c; b.style.cssText = 'display:block;width:100%;min-height:44px;margin:6px 0;font-size:16px;border-radius:8px;border:0;cursor:pointer';
           b.addEventListener('click', ev => { ev.stopPropagation(); done(i); }); box.appendChild(b); });
         addEventListener('keydown', kd, true);
@@ -292,9 +294,10 @@ export function createMapApi(host, NAV, META) {
   // ---------- 10. 길격자(nav) — 옵션별 캐시 · 게임은 nav()(나눠 빌드), 게이트·시험은 navSync() ----------
   const navCache = new Map();
   const navKey = o => o.jump ? 'jump:' + o.jump : 'walk';
-  function postNav(N) {
-    N.finish((x, y, z) => zoneIndex(x, y, z), inSchool);
-    if (!N.jump) for (const p of POI.values()) {   // 서는 칸(물체 자체가 충돌인 표지점·상호작용 지점 포함)
+  function postNav(N) { const g = postNavGen(N); let r; while (!(r = g.next()).done); return r.value; }
+  function* postNavGen(N) {   // PERF-WIN: 조각으로도 돌 수 있게(쉬는 시간 미리 짓기 — 결과는 postNav와 같다)
+    yield* N.finishGen((x, y, z) => zoneIndex(x, y, z), inSchool);
+    if (!N.jump) for (const p of POI.values()) { yield 0;   // 서는 칸(물체 자체가 충돌인 표지점·상호작용 지점 포함)
       if (p.src === 'zone') { const zi = Z.findIndex(z => 'zone:' + z.id === p.id); let best = -1, bd = 1e18;
         const i0 = N.snap(p.x, p.y, p.z, 1.0); if (i0 >= 0 && N.zone[i0] === zi) best = i0;
         else for (let i = 0; i < N.count; i++) if (N.zone[i] === zi && N.canReturn[i]) { const d = (N.X(i) - Z[zi].cx) ** 2 + (N.Z(i) - Z[zi].cz) ** 2; if (d < bd) { bd = d; best = i; } }
@@ -308,6 +311,9 @@ export function createMapApi(host, NAV, META) {
     const node = (t, r = 1.5) => { if (typeof t === 'number') return t; const p = typeof t === 'string' ? POI.get(t) || (t.startsWith('zone:') && POI.get('zone:' + (zone(t.slice(5)) || {}).id)) : null;
       if (p && p.node != null) return p.node; const x = resolve(t); return x ? N.snap(x.x, x.y, x.z, r) : -1; };
     const zoneF = f => { const tagOK = Z.map(z => matchZone(z, f)); return i => N.zone[i] >= 0 ? tagOK[N.zone[i]] : !(f.kind || f.kinds || f.zones || f.tags || f.indoor || f.floor || f.bldg); };
+    const pools = new Map();   // PERF-WIN: 구역 조건 → 후보 칸(오름차순)
+    const pool = (f, zf) => { const k = [f.kind, f.kinds, f.zones, f.tags, f.notTags, f.indoor, f.floor, f.bldg].map(v => v === undefined ? '~' : JSON.stringify(v)).join('|'); let P9 = pools.get(k);   // undefined ≠ null(bldg)
+      if (!P9) { const a = []; for (let i = 0; i < N.count; i++) if (zf(i)) a.push(i); P9 = Int32Array.from(a); if (pools.size > 64) pools.clear(); pools.set(k, P9); } return P9; };
     return {
       raw: N, count: N.count, traps: N.traps, S: N.S,
       snap: (x, y, z, r) => N.snap(x, y, z, r), node, pos: i => N.pos(i), zoneOf: i => (i >= 0 && N.zone[i] >= 0) ? Z[N.zone[i]] : null, inSchool: i => !!N.inSchool[i],
@@ -316,14 +322,22 @@ export function createMapApi(host, NAV, META) {
         const cost = o.avoidTags ? i => { const z = N.zone[i]; return (z >= 0 && o.avoidTags.some(t => Z[z].tags.includes(t))) ? (o.avoidMul || 4) : 1; } : null;
         return N.path(ia, ib, { ...o, bad, cost }); },
       // 무작위 칸: opt = { zones, kinds, tags, notTags(['staff']), indoor, floor, bldg, minClear(2칸), allowOutside, farFrom:[{x,z,r}], rng }
-      random(o = {}) { const f = { notTags: ['staff'], ...o }, zf = zoneF(f), i = N.random({ ...o, filter: zf }); return i < 0 ? null : N.pos(i); },
+      // PERF-WIN(09-28): 같은 구역 조건(zones·kinds·tags·notTags·indoor·floor·bldg)의 후보 칸 목록을 한 번만 추려 둔다 — 방탈출 openSpot이 40번씩 전체 16만 칸을 훑던 것(시작 ≈0.45초).
+      //   막기(mask)·여유·farFrom·rng는 매번 그대로 보고, 후보 순서가 같아 같은 rng면 같은 칸(결과 동일)
+      random(o = {}) { const f = { notTags: ['staff'], ...o }, zf = zoneF(f), i = N.random({ ...o, filter: zf, pool: pool(f, zf) }); return i < 0 ? null : N.pos(i); },
       distField: (a, maxLen) => N.distField(node(a), maxLen),
       block(t) { if (typeof t === 'string') { const zi = Z.indexOf(zone(t)); return N.block(i => N.zone[i] === zi); } return N.block(t); },
       export: () => N.export(),
     };
   }
   const navDirty = () => { try { return FX.solidN() > 0 || ENG.stats().locks > 0; } catch (e) { return false; } };   // (만들기 전 = false)   // WORLD-FX: 게임이 더한 충돌이 있는 동안 지은 격자 = 그 게임 전용
-  function nav(o = {}) { const k = navKey(o); let c = navCache.get(k); if (!c) { const cc = { dirty: navDirty() }; cc.p = NAV.buildSliced(q, o).then(N => (cc.done = postNav(N))); navCache.set(k, (c = cc)); } return c.done ? Promise.resolve(c.done) : c.p; }
+  // PERF-WIN(09-28): 첫 화면 뒤 쉬는 시간에 걷기 격자를 미리 짓는다(navIdle — 조각 ≤8ms) — 그날 처음 여는 게임이 1초 뚝뚝 끊기던 것. 게임이 nav()로 기다리기 시작하면 rAF 조각으로 바꿔 서두른다.
+  //  짓는 동안 게임 소품·잠긴 문이 생기면(navDirty) 그 격자는 게임 전용(dirty)으로 표시 — 게임이 멈출 때 버린다(예전 규칙 그대로)
+  function nav(o = {}, idle = false) { const k = navKey(o); let c = navCache.get(k);
+    if (!c) { const cc = { dirty: navDirty(), ctl: { idle, onSlice: () => { if (!cc.dirty && navDirty()) cc.dirty = true; } } }; cc.p = NAV.buildSliced(q, o, 6, cc.ctl).then(N => NAV.sliced(postNavGen(N), 6, cc.ctl)).then(F => { if (navDirty()) cc.dirty = true; return (cc.done = F); }); navCache.set(k, (c = cc)); }
+    else if (!idle && c.ctl) c.ctl.idle = false;
+    return c.done ? Promise.resolve(c.done) : c.p; }
+  const navIdle = () => { if (!navCache.has('walk')) nav({}, true).catch(e => console.error('[map] 길격자 미리 짓기 실패', e)); };
   // fresh: 새로 짓고 캐시를 바꾼다(도달성 게이트 reach()가 매번 이렇게 — 월드가 바뀌었으면 게임도 새 격자를 받는다)
   function navSync(o = {}) { const k = navKey(o); let c = navCache.get(k); if (c && c.done && !o.fresh) return c.done; const N = NAV.buildSync(q, o); c = { done: postNav(N), dirty: navDirty() }; c.p = Promise.resolve(c.done); navCache.set(k, c); return c.done; }
 
@@ -429,6 +443,8 @@ export function createMapApi(host, NAV, META) {
       const cur = { id, meta: mod.meta, scope: sc, handle: null }; game.current = cur;
       cur.handle = (await mod.default(sc, params)) || {};
       if (game.current !== cur) return null;
+      // PERF-WIN(09-28): 게임이 만든 재질(물총 자국·숨바꼭질·방탈출 소품 등 — 첫 명중·첫 등장 때에야 그려질 것)을 시작하는 지금 미리 짓는다(처음 쓸 때 0.03~0.15초 멈춤 → 0)
+      if (host.prewarm) { try { host.prewarm(); } catch (e) { console.error('[map] 미리 짓기 오류', e); } }
       emit('gamestart', { id }); return cur;
     } catch (e) { console.error('[map] 게임 시작 실패', e); stopGame('error'); hud.toast('게임에 문제가 생겨 멈췄어요'); return null; }
   }
@@ -569,7 +585,7 @@ export function createMapApi(host, NAV, META) {
     };
   }
   const MAP = facadeApi(null, null);
-  Object.assign(MAP, { emit, tick, check, scope, stuckLog, unstick, game: { load: loadGame, stop: stopGame, get current() { return game.current; }, get lastMs() { return game.last || 0; } }, warn, entryBad, BRECT, inSchool, zoneIndex });
+  Object.assign(MAP, { navIdle, navReady: () => !!navDone(), emit, tick, check, scope, stuckLog, unstick, game: { load: loadGame, stop: stopGame, get current() { return game.current; }, get lastMs() { return game.last || 0; } }, warn, entryBad, BRECT, inSchool, zoneIndex });
   // 시험용 세기(GAME-FIND-1 수용 시험): 게임을 켰다 끄거나 '다시 하기' 뒤 이벤트·트리거·표식·칩·지점·장면 물체 수가 처음과 같은가
   MAP.stats = () => { let lis = 0; for (const [, s] of L) lis += s.size; const cur = game.current;
     return { listeners: lis, trig: TRIG.size, marks: marks.length, chips: chips.size, hot: HOT.length, pois: POI.size, colliders: world.colliders.length, scene: scene.children.length,

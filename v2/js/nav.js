@@ -8,7 +8,7 @@ export const RECT = [-90, -90, 64, 66];                        // 격자 범위 
 const IX0 = -321, IZ0 = -328, NW = 518, NH = 525;             // 열 색인 범위(RECT를 덮고 한 칸 여유)
 const DX = [1, -1, 0, 0], DZ = [0, 0, 1, -1];                   // 방향 0:+x 1:-x 2:+z 3:-z (반대 = d ^ 1)
 
-// ---------- 빌드(생성기 — 4096칸마다 양보) ----------
+// ---------- 빌드(생성기 — 512칸마다 양보 · PERF-WIN: 예전 4096칸은 한 조각이 50~155ms라 나눠 짓기가 소용없었다 — 결과는 같다) ----------
 // q = { groundAt(x,z,fromY), blockedAt(x,z,y) } · o = { jump:false|true|'both', maxPops, recordBlocked }
 //   jump=true  : 점프 정점(발+0.97)에서 막힘·착지(발+1.5까지) — 예전 reach({jump:true})와 같은 규칙(옥상 검사)
 //   jump='both': 걷기 간선 + 점프 간선 둘 다(건강 검진의 '점프로도 못 돌아옴'·올라서기 금지 무력화 검사)
@@ -52,17 +52,26 @@ export function* buildGen(q, o = {}) {
         break;
       }
     }
-    if ((pops & 4095) === 0) yield pops;
+    if ((pops & 511) === 0) yield pops;
   }
   return finish({ n, ix, iz, y, yb, next, e, colHead, pops, jump, blocked: rec ? blocked.subarray(0, nb) : null });
 }
 export function buildSync(q, o = {}) { const g = buildGen(q, o); let r; while (!(r = g.next()).done); return r.value; }
 // rAF마다 sliceMs씩 — 크롬북에서 게임 시작 때 화면이 멈추지 않게
-export function buildSliced(q, o = {}, sliceMs = 6) {
+//  PERF-WIN: ctl = { idle: true } 이면 쉬는 시간(requestIdleCallback — 남은 시간 안에서 ≤8ms)에 짓는다(첫 화면 뒤 미리 짓기). 게임이 기다리기 시작하면 ctl.idle = false → rAF 조각으로.
+//   ctl.onSlice() = 조각마다(부른 쪽 검사 — 예: 그사이 게임 충돌이 생겼나)
+export function buildSliced(q, o = {}, sliceMs = 6, ctl = null) { return sliced(buildGen(q, o), sliceMs, ctl); }
+// 생성기를 조각으로 돌린다(buildSliced·mapapi 후처리 공용)
+export function sliced(g, sliceMs = 6, ctl = null) {
   return new Promise((res, rej) => {
-    const g = buildGen(q, o);
-    const run = () => { try { const t0 = performance.now(); for (;;) { const r = g.next(); if (r.done) return res(r.value); if (performance.now() - t0 > sliceMs) break; } requestAnimationFrame(run); } catch (err) { rej(err); } };
-    run();
+    const ric = typeof requestIdleCallback === 'function';
+    const run = dl => { try {
+        const t0 = performance.now(), idle = ctl && ctl.idle, lim = idle ? Math.max(1, Math.min(8, dl && dl.timeRemaining ? dl.timeRemaining() - 1 : 8)) : sliceMs;
+        for (;;) { const r = g.next(); if (r.done) return res(r.value); if (performance.now() - t0 > lim) break; }
+        if (ctl && ctl.onSlice) ctl.onSlice();
+        if (ctl && ctl.idle && ric) requestIdleCallback(run, { timeout: 500 }); else requestAnimationFrame(() => run());
+      } catch (err) { rej(err); } };
+    if (ctl && ctl.idle && ric) requestIdleCallback(run, { timeout: 500 }); else run();
   });
 }
 
@@ -113,15 +122,17 @@ function finish(B) {
       return best;
     },
     // 후처리: 구역 번호(zoneFn → 인덱스|-1)·학교 안(inFn)·여유 칸 수·갇힘 칸
-    finish(zoneFn, inFn) {
+    finish(zoneFn, inFn) { const g = N.finishGen(zoneFn, inFn); let r; while (!(r = g.next()).done); return r.value; },
+    // PERF-WIN: 같은 후처리를 2048칸마다 양보하며(쉬는 시간 미리 짓기가 한 번에 0.3초 멈추지 않게 — 결과는 같다)
+    *finishGen(zoneFn, inFn) {
       const zn = new Int16Array(n), ins = new Uint8Array(n);
-      for (let i = 0; i < n; i++) { const x = X(i), z = Z(i); zn[i] = zoneFn ? zoneFn(x, y[i], z) : -1; ins[i] = inFn ? (inFn(x, z) ? 1 : 0) : 1; }
+      for (let i = 0; i < n; i++) { const x = X(i), z = Z(i); zn[i] = zoneFn ? zoneFn(x, y[i], z) : -1; ins[i] = inFn ? (inFn(x, z) ? 1 : 0) : 1; if ((i & 2047) === 2047) yield i; }
       N.zone = zn; N.inSchool = ins;
       // 여유(clearance): 나가는 간선이 4개 미만인 칸(벽·가구 옆)에서 다중 BFS, 최대 20칸
       const clr = new Uint8Array(n).fill(20), qq = new Int32Array(n); let h = 0, t = 0;
       for (let i = 0; i < n; i++) { let k = 0; for (let d = 0; d < 4; d++) if (e[i * 4 + d] >= 0) k++; if (k < 4) { clr[i] = 0; qq[t++] = i; } }
       while (h < t) { const v = qq[h++], cv = clr[v] + 1; if (cv >= 20) continue; for (let d = 0; d < 4; d++) { const j = e[v * 4 + d]; if (j >= 0 && clr[j] > cv) { clr[j] = cv; qq[t++] = j; } } }
-      N.clr = clr;
+      N.clr = clr; yield n;
       N.canReturn = back(); let tr = 0; for (let i = 0; i < n; i++) if (!N.canReturn[i]) tr++; N.traps = tr;
       return N;
     },
@@ -137,10 +148,11 @@ function finish(B) {
     },
     path(a, b, opt = {}) { return astar(a, b, opt); },
     // 조건에 맞는 칸 하나(무작위) — filter(i)·minClear(칸)·allowOutside·farFrom [{x,z,r}]·rng
+    //  PERF-WIN: opt.pool = 미리 추린 후보 칸(오름차순 Int32Array — 예: 구역 필터를 통과한 칸) — 전체 n칸 대신 그 칸만 본다(같은 순서라 같은 rng면 같은 칸)
     random(opt = {}) {
-      const rng = opt.rng || Math.random, mc = opt.minClear ?? 2, far = opt.farFrom || [], f = opt.filter;
+      const rng = opt.rng || Math.random, mc = opt.minClear ?? 2, far = opt.farFrom || [], f = opt.filter, pool = opt.pool;
       const cand = [];
-      for (let i = 0; i < n; i++) {
+      for (let pi = 0, pn = pool ? pool.length : n; pi < pn; pi++) { const i = pool ? pool[pi] : pi;
         if (N.mask[i] || (N.clr && N.clr[i] < mc) || (!opt.allowOutside && N.inSchool && !N.inSchool[i]) || (N.canReturn && !N.canReturn[i])) continue;
         if (f && !f(i)) continue;
         let ok = true; for (const p of far) { const dx = X(i) - p.x, dz = Z(i) - p.z; if (dx * dx + dz * dz < p.r * p.r) { ok = false; break; } }

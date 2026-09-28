@@ -81,7 +81,7 @@ export function createEngine(H) {
     if (seenArr.length < world.colliders.length) { const a = new Uint32Array(world.colliders.length * 2); a.set(seenArr); seenArr = a; }
     for (let gx = Math.floor(Math.min(ax, bx) / 8); gx <= Math.floor(Math.max(ax, bx) / 8); gx++)
       for (let gz = Math.floor(Math.min(az, bz) / 8); gz <= Math.floor(Math.max(az, bz) / 8); gz++) {
-        const cell = world.grid.get(gx + ':' + gz); if (!cell) continue;
+        const cell = world.cell ? world.cell(gx, gz) : world.grid.get(gx + ':' + gz); if (!cell) continue;   // PERF-WIN: 숫자 칸(main.js world.cell — 문자열 열쇠 없음)
         for (let k = 0; k < cell.length; k++) { const i = cell[k]; if (seenArr[i] === seenGen) continue; seenArr[i] = seenGen; const c = world.colliders[i];
           const top = c.vy1 != null ? c.vy1 : c.y1; if (top <= c.y0) continue;
           let t0 = 0, t1 = 1, ok = true;
