@@ -361,7 +361,7 @@ export default async function start(map, params = {}) {
   //     + 발사각을 초당 110°까지만 바꾼다(한 프레임 깜빡임이 물줄기를 꺾지 않게).
   //  ② 꼭지 1.2m 안을 겨누면 방향만 카메라 앞으로 바꾸고 높이 차는 그대로 둬서, 앞 가까이 위쪽(벽 윗부분·컨테이너 옆면·골대 가로대·나무 잎판)에 닿으면 50~63°로 치솟았다 → 가까우면 보는 방향 그대로 쏜다.
   //  ③ 쏘기 시작한 첫 프레임은 꼭지 자리가 걷던 방향(뒤로 걸으면 카메라 쪽)이었다 → 쏘는 동안 꼭지 = 카메라가 보는 쪽.
-  //  ④ 포인터 잠금 튐(크롬이 잠그는 순간 수백 px movementY 한 번 → 시점이 끝까지 위로 꺾임) → main.js mousemove가 한 이벤트 300/200px 넘는 값을 버린다.
+  //  ④ 포인터 잠금 튐(크롬이 잠그는 순간 수백 px movementY 한 번 → 시점이 끝까지 위로 꺾임) → main.js mousemove가 잠금 직후 200/150px, 그 밖엔 60fps 기준 300/200px(프레임이 느리면 이벤트가 담은 시간만큼 크게) 넘는 값을 버린다(PERF-WIN).
   const aim = { x: 0, y: 0, z: 0, on: false, h: 0, vx: 0, vy: 0, vz: 0, a: 0, far: false };
   let aimA = null;
   function computeAim(me, nx, ny, nz, dt, targetsFn) {

@@ -31,8 +31,8 @@ const GFX = (() => { const q = new URLSearchParams(location.search), hq = q.get(
   const mobile = !hq && (lq || touchPrimary() || Math.min(screen.width || 9999, screen.height || 9999) <= 500);
   const low = !hq && (lq || (mobile && ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 3))));
   const cap = Math.min(dev, low ? 1.25 : mobile ? 1.5 : 2), start = hq ? cap : Math.min(cap, 1.5), fix = +q.get('dpr') || 0;   // ?dpr=0.75 = 배율 고정(시험용)
-  // 자동 해상도는 게이트·검진·사진 대조·?hq=1·?dpr=·?adapt=0에서 끈다(같은 화면을 다시 재야 하는 주소)
-  const adapt = !hq && !fix && q.get('adapt') !== '0' && !/[?&](check|health)=1/.test(location.search) && !q.get('shot');
+  // 자동 해상도는 게이트·검진·사진 대조·?hq=1·?dpr=·?adapt=0에서 끈다(같은 화면을 다시 재야 하는 주소) · 휴대폰·저사양 판(mobile·low)도 끈다(리뷰 — 휴대폰 판은 예전 그대로)
+  const adapt = !hq && !fix && !mobile && q.get('adapt') !== '0' && !/[?&](check|health)=1/.test(location.search) && !q.get('shot');
   return { mode: low ? 'low' : mobile ? 'mobile' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, 0.6), shadow: low ? 0 : mobile ? 1024 : 2048, adapt, dev }; })();
 const DPR = GFX.dpr;
 renderer.setPixelRatio(DPR);                       // 네이티브(비정수 업스케일 금지) — 휴대폰은 GFX 상한 · PERF-WIN 자동 해상도가 바꾼다(ADAPT)
@@ -363,17 +363,19 @@ addEventListener('keydown', e => { if (e.code === 'KeyV' && !e.repeat) camFirst 
 const CAM_D = 6.3;
 let camD = CAM_D;
 canvas.addEventListener('click', () => { if (!TOUCH.on) canvas.requestPointerLock(); });   // 터치 기기엔 포인터 잠금이 없다(드래그가 시점)
-// 마우스 시점(PERF-WIN): 움직임을 모았다가 프레임마다 한 번 더한다(mouseApply — 이벤트 수·프레임 수와 무관하게 같은 양 · 느린 PC에서 여러 이벤트가 한 프레임에 몰려도 부드럽게).
-//  크롬 포인터 잠금 버그(잠금 직후·창 포커스 직후 첫 이벤트에 화면 반쯤 튀는 값)만 버린다: 잠금/포커스 뒤 0.25초 안의 |dx| > max(400, 화면 폭 45%) 한 번.
-//  그 밖엔 버리지 않는다 — 느린 프레임에선 크롬이 mousemove를 rAF에 맞춰 합쳐 보내 빠른 휙 돌리기가 한 이벤트 300px을 넘는다(예전 방식의 고정 문턱은 그걸 버려 시점이 걸렸다).
-//  잠금 중간에 튀는 창 가운데 되돌림 버그는 화면 폭 90%(≥800px)를 한 이벤트에 넘을 때만(사람 손으론 불가능한 값).
-const MOUSE = { dx: 0, dy: 0, t0: 0, drop: 0 };
+// 마우스 시점(PERF-WIN): 움직임을 모았다가 프레임마다 한 번 더한다(mouseApply — 이벤트 수·프레임 수와 무관하게 같은 양 · 느린 PC에서 여러 이벤트가 한 프레임에 몰려도 부드럽게). 감도는 예전 그대로(0.0026·0.0022 rad/px).
+//  튀는 값 버리기(물총 '위로 꺾임' 버그 — 크롬이 잠그는 순간·창 포커스 직후, 윈도에선 잠금 중에도 가끔 수백 px 한 번):
+//   ① 잠금/포커스 뒤 0.25초 안: 한 이벤트 |dx| > 200 또는 |dy| > 150이면 버림(잠그려고 클릭한 직후 그만큼 휙 돌리는 손은 없다)
+//   ② 그 밖: 이 이벤트가 담은 시간(지난 이벤트부터 · 프레임 간격 이상 · ≤120ms)에 비례한 문턱 — 사람 손 한계(가로 8px/ms · 세로 6px/ms ≈ 초당 8000px)를 넘으면 버림, 최소 300/200px(60fps에선 예전 물총 문턱과 같다).
+//      느린 프레임(크롬이 mousemove를 rAF에 맞춰 합쳐 보냄 — 20fps면 한 이벤트에 50ms치)에선 문턱이 400px로(6fps면 960px) 커져 진짜 빠른 휙 돌리기는 버리지 않는다(리뷰: 고정 문턱은 그걸 버려 시점이 걸렸다).
+const MOUSE = { dx: 0, dy: 0, t0: 0, fd: 16.7, fl: 0, te: 0, drop: 0 };   // fd = 지난 프레임 간격(ms · 루프가 적음 · ≤120) · te = 지난 이벤트 시각
 document.addEventListener('pointerlockchange', () => { MOUSE.t0 = performance.now(); MOUSE.dx = MOUSE.dy = 0; if (document.pointerLockElement !== canvas) keysClear(); });   // 잠금이 풀리면(Esc·창 전환) 누른 키도 비운다
 addEventListener('focus', () => { MOUSE.t0 = performance.now(); });
 addEventListener('mousemove', e => {
   if (document.pointerLockElement !== canvas) return;
+  const now = performance.now(), gap = Math.max(MOUSE.fd, Math.min(120, now - MOUSE.te)); MOUSE.te = now;   // 이 이벤트가 담은 시간 ≈ 지난 이벤트부터(≤120ms) — 프레임 간격보다 짧게 보지는 않는다
   const mx = e.movementX || 0, my = e.movementY || 0, ax = Math.abs(mx), ay = Math.abs(my);
-  const fresh = performance.now() - MOUSE.t0 < 250, lim = fresh ? Math.max(400, innerWidth * 0.45) : Math.max(800, innerWidth * 0.9), limY = fresh ? Math.max(300, innerHeight * 0.45) : Math.max(700, innerHeight * 0.9);
+  const fresh = now - MOUSE.t0 < 250, lim = fresh ? 200 : Math.max(300, gap * 8), limY = fresh ? 150 : Math.max(200, gap * 6);
   if (ax > lim || ay > limY) { MOUSE.drop++; return; }
   MOUSE.dx += mx; MOUSE.dy += my;
 });
@@ -1130,44 +1132,59 @@ MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL,
   prewarm: () => prewarm(), idle }, NAV, makeMeta(SCHOOL));   // PERF-WIN: 게임이 시작한 뒤 새 재질 미리 짓기 · 쉬는 시간 부르기(길격자 미리 짓기)   // tone = 게임 효과음(GAME-FIND-1 map.sfx)
 
 // ---------- 자동 해상도(PERF-WIN 09-28 · 학교 윈도 PC = 약한 내장 그래픽 + 배율 125~150%) ----------
-// 진짜 프레임 간격(rAF 시각 차)을 2초 지수 평균(ema)으로 잰다 — 탭 숨김·250ms 넘는 한두 번 끊김은 버리고(셋 이어지면 느림), 100ms로 자른다(한 번 멈춤이 평균을 끌지 않게).
-//  내리기: ema > 18.5ms(≈54fps 아래)가 1초 이어지면 배율 한 칸(0.25) 내림 — 사다리 = cap부터 0.25씩 0.75까지 + 0.6(바닥).
-//  올리기: 시작 배율(start)까지는 '화면 주사율에 딱 맞게 돈다'(ema < 17.5 · 60Hz면 16.7) 또는 ema < 13이 4초 · start 위(cap까지 — 2배 화면)는 ema < 13(진짜 여유)만.
+// 진짜 프레임 간격(rAF 시각 차)을 최근 2초 창에 모아 0.25초마다 '느린 쪽 8%를 뺀 평균'(ft)을 잰다 — 탭 숨김·250ms 넘는 한두 번 끊김은 버리고(셋 이어지면 느림), 100ms로 자른다.
+//  리뷰(09-28): 예전 지수 평균은 강한 60Hz 기기에서 게임 열기·셰이더 짓기 끊김 한 번(100~250ms)에도 1초 넘게 18.5를 넘어 한 칸 내려갔고, 그게 세 번이면 그 칸으로 영영 못 돌아왔다(흐려진 채).
+//   느린 쪽 8%를 빼면 2초 안의 끊김 몇 번(≤ 9프레임)은 무시되고, 계속 느린 기기(절반이 33ms·전부 22ms 등)만 느림으로 잡힌다.
+//  내리기: ft > 18.5ms(≈54fps 아래)가 1초 이어지면 배율 한 칸(0.25) 내림 — 사다리 = cap부터 0.25씩 0.75까지 + 0.6(바닥).
+//  올리기: 시작 배율(start)까지는 '화면 주사율에 딱 맞게 돈다'(ft < 17.5 · 60Hz면 16.7) 또는 ft < 13이 4초 · start 위(cap까지 — 2배 화면)는 ft < 13(진짜 여유)만.
 //   한 번 버거웠던 칸으로 다시 오르려면 4초 × 2^실패 횟수(최대 64초) · 세 번 실패한 칸은 이번 판엔 다시 안 오른다(오르락내리락 막기).
-//  바닥 칸에선 그림자 지도도 1024로(한 번 다시 굽기 · 2048이던 기기만) — 바닥을 벗어나면 되돌림. 바꾼 뒤 2초는 다시 재기만.
-//  끄기: ?hq=1(품질 강제) · ?dpr=x(고정) · ?adapt=0 · 게이트·검진·사진 대조 주소. 값 = SD2.gfx(dpr·cap·start·floor·shadow·adapt) · SD2.gfx.auto(ema·단계)
+//  바닥 칸에선 그림자 지도도 1024로(한 번 다시 굽기 · 2048이던 기기만) — 바닥을 벗어나면 되돌림. 바꾼 뒤 1.5초는 쉬고 창을 비운다(새 창이 1초 차야 판단).
+//  재지 않는 때: 오프닝·메뉴·날아오기(TITLE — 첫 셰이더·길격자 짓기와 겹친다) · 탭 숨김. 휴대폰·저사양 판(mobile·low)은 예전 그대로(끔).
+//  끄기: ?hq=1(품질 강제) · ?dpr=x(고정) · ?adapt=0 · 게이트·검진·사진 대조 주소. 값 = SD2.gfx(dpr·cap·start·floor·shadow·adapt) · SD2.gfx.auto(ft·단계 log)
 const ADAPT = (() => { const L = []; for (let v = GFX.cap; v >= 0.75 - 1e-6; v = Math.round((v - 0.25) * 100) / 100) L.push(v);
   if (!L.includes(GFX.start)) { L.push(GFX.start); L.sort((a, b) => b - a); } if (L[L.length - 1] > 0.6 + 1e-6) L.push(0.6);
   GFX.floor = GFX.adapt ? L[L.length - 1] : GFX.dpr;
-  return { ladder: L, lvl: L.indexOf(GFX.start), s0: L.indexOf(GFX.start), ema: 0, n: 0, big: 0, slowT: 0, goodT: 0, coolT: 3, fail: new Map(), steps: 0, last: 0, shadow0: GFX.shadow, log: [] }; })();
+  return { ladder: L, lvl: L.indexOf(GFX.start), s0: L.indexOf(GFX.start), ft: 0, buf: new Float32Array(256), srt: new Float32Array(256), bi: 0, bn: 0, winT: 0, evT: 0, big: 0, slowT: 0, goodT: 0, coolT: 3,
+    fail: new Map(), steps: 0, last: 0, shadow0: GFX.shadow, log: [], hold: null }; })();
 GFX.auto = ADAPT;
 function setDpr(v) { GFX.dpr = v; renderer.setPixelRatio(v); }
 function setShadowSize(sz) {   // 그림자 지도 크기 바꾸기(자동 해상도 바닥) — 새 지도로 한 번 다시 굽는다
   if (!GFX.shadow || sun.shadow.mapSize.x === sz) return; GFX.shadow = sz; sun.shadow.mapSize.set(sz, sz);
   if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } bakeShadows();
 }
+function adaptWin() {   // 최근 2초 창의 '느린 쪽 8%를 뺀 평균'(할당 없음 — 정렬은 미리 만든 배열에)
+  const A = ADAPT, B = A.buf, n = Math.min(A.bn, B.length); let k = 0, t = 0;
+  for (let j = 1; j <= n && t < 2000; j++) { const v = B[(A.bi - j + B.length) % B.length]; A.srt[k++] = v; t += v; }
+  const S = A.srt.subarray(0, k).sort(), m = Math.max(1, Math.ceil(k * 0.92)); let s = 0;
+  for (let j = 0; j < m; j++) s += S[j];
+  return s / m;
+}
+function adaptReset(cool) { const A = ADAPT; A.bn = 0; A.winT = 0; A.evT = 0; A.slowT = A.goodT = 0; if (cool != null) A.coolT = Math.max(A.coolT, cool); }
 function adaptTick(ts) {
   const A = ADAPT, raw = A.last ? ts - A.last : 0; A.last = ts;
   if (!GFX.adapt || !(raw > 0) || document.hidden) return;   // (첫 호출은 performance.now — rAF 시각이 그보다 앞설 수 있다)
+  if (A.hold && A.hold()) { if (A.bn || A.winT) adaptReset(2); return; }   // 오프닝·메뉴 동안은 재지 않고, 끝나면 2초 쉬고 새 창으로
   if (raw > 250) { if (++A.big < 3) return; } else A.big = 0;   // 한두 번 끊김(게임 열기·탭 전환)은 버리고, 250ms 넘는 프레임이 셋 이어지면(아주 느린 기기) 느림으로 센다
-  const d = Math.min(100, raw); A.n++;
-  A.ema = A.n === 1 ? d : A.ema + (d - A.ema) * (1 - Math.exp(-d / 2000));
-  const sec = d / 1000; if (A.coolT > 0) { A.coolT -= sec; A.slowT = A.goodT = 0; return; }
-  if (A.ema > 18.5) { A.slowT += sec; A.goodT = 0; } else { A.slowT = 0; }
-  const L = A.ladder;
+  const d = Math.min(100, raw), sec = d / 1000;
+  if (A.coolT > 0) { A.coolT -= sec; return; }
+  A.buf[A.bi] = d; A.bi = (A.bi + 1) % A.buf.length; A.bn++; A.winT += d; A.evT += d;
+  if (A.winT < 1000 || A.evT < 250) return;   // 창이 1초 넘게 찬 뒤 0.25초마다 판단
+  const dtE = A.evT / 1000; A.evT = 0; A.ft = adaptWin();
+  if (A.ft > 18.5) { A.slowT += dtE; A.goodT = 0; } else A.slowT = 0;
+  const L = A.ladder, logp = () => A.log.push([+(performance.now() / 1000).toFixed(1), L[A.lvl], +A.ft.toFixed(1)]);
   if (A.slowT >= 1 && A.lvl < L.length - 1) {   // 내림
-    A.fail.set(A.lvl, (A.fail.get(A.lvl) || 0) + 1); A.lvl++; A.steps++; A.log.push([+(performance.now() / 1000).toFixed(1), L[A.lvl], +A.ema.toFixed(1)]);
+    A.fail.set(A.lvl, (A.fail.get(A.lvl) || 0) + 1); A.lvl++; A.steps++; logp();
     setDpr(L[A.lvl]); if (A.lvl === L.length - 1 && A.shadow0 > 1024) setShadowSize(1024);
-    A.coolT = 2; A.slowT = 0; return;
+    adaptReset(1.5); return;
   }
   if (A.lvl === 0) return;
-  const up = A.lvl - 1, good = A.ema < 13 || (up >= A.s0 && A.ema < 17.5);   // start 위로는 진짜 여유(13ms)만
-  if (good) A.goodT += sec; else { A.goodT = 0; return; }
+  const up = A.lvl - 1, good = A.ft < 13 || (up >= A.s0 && A.ft < 17.5);   // start 위로는 진짜 여유(13ms)만
+  if (good) A.goodT += dtE; else { A.goodT = 0; return; }
   const f = A.fail.get(up) || 0; if (f >= 3) return;
   if (A.goodT >= 4 * Math.min(16, 2 ** f)) {   // 올림
-    const wasFloor = A.lvl === L.length - 1; A.lvl = up; A.steps++; A.log.push([+(performance.now() / 1000).toFixed(1), L[A.lvl], +A.ema.toFixed(1)]);
+    const wasFloor = A.lvl === L.length - 1; A.lvl = up; A.steps++; logp();
     setDpr(L[A.lvl]); if (wasFloor && A.shadow0 > 1024) setShadowSize(A.shadow0);
-    A.coolT = 2; A.goodT = 0;
+    adaptReset(1.5);
   }
 }
 // ---------- 셰이더 미리 짓기(PERF-WIN) — 첫 프레임 뒤 쉬는 시간에 ----------
@@ -1201,6 +1218,7 @@ function loop(ts) {
   if (!ADAPT.ext) adaptTick(ts || performance.now());   // PERF-WIN 자동 해상도(진짜 프레임 간격 · ext = 시험이 가짜 시각을 넣는 동안 끔)
   const dt = Math.min(0.05, clock.getDelta());
   const t0 = performance.now();
+  if (ts) { if (MOUSE.fl) MOUSE.fd = Math.min(120, Math.max(1, ts - MOUSE.fl)); MOUSE.fl = ts; }
   mouseApply();   // PERF-WIN: 이 프레임에 모인 마우스 움직임을 한 번에
   step(dt);
   doorTick(dt);
@@ -1230,6 +1248,7 @@ loop();
 TIMING.firstFrameMs = performance.now();   // 첫 프레임(페이지 시작부터 ms) — 그 뒤 로딩 막을 걷는다
 // TITLE-1: 오프닝 — 로딩 막을 제목 화면으로 걷는다(v2/js/title.js · 모양 v2/title.css). 꺼져 있으면(게이트·게임 주소) 예전처럼 막만 걷는다
 const TITLE = TITLE_ON ? createTitle({ THREE, camera, P, CTRL, keys, touch: TOUCH, SCHOOL, tone, toast, game: MAP.game, picker: MAP.picker, setCam: f => { CAM_OVR = f; } }) : null;
+if (TITLE) ADAPT.hold = () => TITLE.phase !== 'off';   // PERF-WIN 리뷰: 오프닝·메뉴·날아오기 동안 자동 해상도는 재지 않는다
 if (TITLE) TITLE.bootDone(); else document.getElementById('boot')?.remove();
 warmDone();
 // PERF-WIN: 첫 화면이 뜬 뒤 쉬는 시간에 — ① 아직 안 지은 셰이더(밤 별 등) ② 게임 길격자(첫 게임을 열 때 1초 뚝뚝 끊기던 것 · 쉬는 조각 ≤8ms · mapapi navIdle)
