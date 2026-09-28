@@ -316,8 +316,10 @@ function setScale(s, o = {}) {
 
 // 카메라 가림 방지(v1 이식): 머리→카메라 선분을 콜라이더 AABB와 교차 검사(슬랩법 — 레이캐스트 아님, 헌법⑤ 유지)
 // 낮은 가구는 통과, 벽·기둥(높이≥1.5m)과 머리 위 부재(인방·천장)만 막는다. 히트 시 벽 앞 0.3m로 당김.
+let camHitTop = null;   // CAM-IN: null = 예전 판정(낮은 얇은 부재 무시) · 수 = 윗면이 이 높이보다 낮은 얇은 부재만 무시(실내 카메라)
+let hitAx = -1;   // CAM-IN: 마지막 camHit이 맞은 면의 축(0 x · 1 y · 2 z · −1 = 안 맞음/안에서 시작) — 벽을 따라 미끄러지기용
 function camHit(hx, hy, hz, dx, dy, dz, maxD) {
-  let t = maxD;
+  let t = maxD; hitAx = -1;
   const ex = hx + dx*maxD, ez = hz + dz*maxD;
   const k0x = Math.floor((Math.min(hx,ex)-0.4)/8), k1x = Math.floor((Math.max(hx,ex)+0.4)/8);
   const k0z = Math.floor((Math.min(hz,ez)-0.4)/8), k1z = Math.floor((Math.max(hz,ez)+0.4)/8);
@@ -328,8 +330,8 @@ function camHit(hx, hy, hz, dx, dy, dz, maxD) {
       if (SEEN[i] === gen) continue; SEEN[i] = gen;
       const b = C[i];
       if (b.nc) continue;                                  // 올라서기 금지용으로 높인 보이지 않는 윗부분·울타리 벽은 카메라를 밀지 않는다
-      if (b.y1 - b.y0 < 1.5 && b.y0 < hy + 0.4) continue;
-      let t0 = 1e-4, t1 = t, ok = true;
+      if (b.y1 - b.y0 < 1.5 && (camHitTop === null ? b.y0 < hy + 0.4 : b.y1 < camHitTop || (b.y0 < hy + 0.4 && b.x1 - b.x0 < 0.8 && b.z1 - b.z0 < 0.8))) continue;   // CAM-IN: 실내 카메라는 머리보다 높이 솟은 얇은 띠(교실·도서실 복도 창 1.05~2.45)도 막는다 — 예전엔 가구로 보고 지나쳐 카메라가 복도로 나갔다 · 작은 덩어리(앉은 사람 0.44각 등)는 예전처럼 지나친다
+      let t0 = 1e-4, t1 = t, ok = true, ax0 = -1;
       for (let ax = 0; ax < 3 && ok; ax++) {
         const o = ax===0?hx:ax===1?hy:hz, d9 = ax===0?dx:ax===1?dy:dz;
         const lo = ax===0?b.x0:ax===1?b.y0:b.z0, hi = ax===0?b.x1:ax===1?b.y1:b.z1;
@@ -337,11 +339,11 @@ function camHit(hx, hy, hz, dx, dy, dz, maxD) {
         else {
           let a = (lo-o)/d9, c9 = (hi-o)/d9;
           if (a > c9) { const s9 = a; a = c9; c9 = s9; }
-          if (a > t0) t0 = a; if (c9 < t1) t1 = c9;
+          if (a > t0) { t0 = a; ax0 = ax; } if (c9 < t1) t1 = c9;
           if (t0 > t1) ok = false;
         }
       }
-      if (ok && t0 < t) t = t0;
+      if (ok && t0 < t) { t = t0; hitAx = ax0; }
     }
   }
   return t;
@@ -441,11 +443,16 @@ function step(dt) {
   //  6.3m 뒤·17° 위에서 내려다보면 실내에선 천장(3.24m) 밑에 붙어 위에서 내려다보고, 화각 48°는 휴대폰 광각보다 훨씬 좁다.
   //  → 실내(머리 위에 천장)에선 가깝고(3.3m) 낮게(피치 ≤0.2)·화각 60°, 밖은 6.3m·52°. V = 1인칭(눈높이 1.5m) 전환.
   const indoor = ceilAt(P.x, P.z, P.y + 1.6, P.y + 5.5) !== null;
-  const tFov = camFirst ? 66 : indoor ? (inCorr ? 64 : 60) : 52;   // CORR-FEEL(09-28 계획 2-20): 복도 구역(본관·동관·세로·2층)만 화각 4° 넓게 — 좁아 보이던 복도(휴대폰 초광각 영상과 비교)
-  if (Math.abs(camera.fov - tFov) > 0.05) { camera.fov += (tFov - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); }
+  // CAM-IN(09-28): 실내 카메라 섞임 camK(0 = 바깥 카메라 그대로 · 1 = 실내 카메라) — 문을 지날 때 ≈0.4초에 걸쳐 부드럽게(프레임 수와 무관한 지수 감쇠)
+  camK += ((indoor && !PHY.T ? 1 : 0) - camK) * (1 - Math.exp(-dt * CAMIN.blend)); if (camK < 0.002) camK = 0; else if (camK > 0.998) camK = 1;
+  //  화각: 세로 화각 상한(방 70 · 복도 72) + 가로 화각 상한 CAMIN.hfov(102°) — 넓은 화면·휴대폰 가로(2.16:1)에서 가장자리가 늘어나는 어안 느낌이 없게 세로를 줄인다
+  const fovIn = Math.min(inCorr ? CAMIN.vmaxC : CAMIN.vmax, 2 * Math.atan(Math.tan(CAMIN.hfov * Math.PI / 360) / camera.aspect) * 180 / Math.PI);
+  const tFov = camFirst ? 66 : PHY.T ? (indoor ? (inCorr ? 64 : 60) : 52) : 52 + (fovIn - 52) * camK;   // 작은 몸(SHRINK)은 예전 화각 그대로
+  if (Math.abs(camera.fov - tFov) > 0.05) { camera.fov += (tFov - camera.fov) * (1 - Math.exp(-dt * 4)); camera.updateProjectionMatrix(); }
   { const S = PHY.sc, gy = pGround(P.x, P.z, P.y + 0.05 * S), h = Math.max(0, P.y - gy) / S, k = Math.max(0.35, 1 - h * 0.35);   // GFX-2 발밑 그림자(SHRINK-1: 몸 크기 비례)
     blob.position.set(P.x, gy + 0.045 * Math.max(S, 0.2), P.z); blob.scale.setScalar(0.95 * k * S); blob.material.opacity = k; blob.visible = !ACT.sit && h < 3; }
   pg.visible = !camFirst && camD > 0.45 * PHY.sc;   // CAM-3: 벽에 붙어 카메라가 머리 바로 뒤까지 오면 캐릭터를 숨긴다(1인칭처럼)
+  kidFade(camFirst || PHY.T || !camK ? 1 : Math.max(0, Math.min(1, (camD - CAMIN.fade0) / (CAMIN.fade1 - CAMIN.fade0))));   // CAM-IN: 실내에서 카메라가 가까우면 반투명(시야를 막지 않게)
   if (CTRL.peek) {   // ENGINE-1 숨는 자리: 캐릭터 숨김 · 카메라 = 틈새 시점(좁은 화각 · 고개는 ±40°까지만 · 가장자리 어둡게는 mapapi DOM)
     const K9 = CTRL.peek; pg.visible = false; blob.visible = false;
     let dy9 = camYaw - K9.yaw; while (dy9 > Math.PI) dy9 -= Math.PI * 2; while (dy9 < -Math.PI) dy9 += Math.PI * 2;
@@ -470,6 +477,28 @@ function step(dt) {
     const rx = Math.cos(camYaw) * camSh, rz = -Math.sin(camYaw) * camSh;
     camera.position.set(C.x0 + rx, C.y, C.z0 + rz);
     camera.lookAt(hx + rx, hy, hz + rz);
+  } else if (camK > 0) {   // CAM-IN 실내 카메라(섞이는 동안 포함) — 아래 camPoseIn
+    const hx = SE ? SE.x : P.x, hy = (SE ? SE.y + 0.1 : P.y) + headH, hz = SE ? SE.z : P.z, k = camK;
+    const pIn = Math.max(CAMIN.pMin, Math.min(CAMIN.pMax, camPitch + CAMIN.pAdd)), pch = camPitch + (pIn - camPitch) * k, CD = CAM_D + (CAMIN.CD - CAM_D) * k;
+    camDt = dt; camHW = 0.3 * Math.tan(camera.fov * Math.PI / 360) * camera.aspect + 0.08; const C = camPoseIn(hx, hy, hz, camYaw, pch, CD, CAMIN.sh * k + (CTRL.shoulder || 0));
+    // 붐 길이 = 임계 감쇠 스프링(느린 PC에서도 같은 움직임 — 닫힌 식) · 늘어날 땐 0.22초, 줄어들 땐 0.07초 · 벽 여유(len + 0.12)를 넘지는 않는다(벽 뒤로 안 감)
+    const st = C.len < camD ? 0.07 : 0.22, om = 2 / st, x9 = om * dt, e9 = 1 / (1 + x9 + 0.48 * x9 * x9 + 0.235 * x9 * x9 * x9), ch = camD - C.len, tp = (camDv + om * ch) * dt;
+    camDv = (camDv - om * tp) * e9; camD = C.len + (ch + tp) * e9;
+    if (camD > C.len + 0.12) { camD = C.len + 0.12; camDv = 0; } if (camD < 0) { camD = 0; camDv = 0; }
+    camInAt(camD);
+    const ry = Math.cos(camYaw), rw = -Math.sin(camYaw), hw = camHW;
+    const sh = camSide(camYaw, hy, hw);
+    camSh = Math.abs(sh) > Math.abs(camSh) || sh * camSh < 0 ? sh : camSh + (sh - camSh) * (1 - Math.exp(-dt * 8));
+    // 근평면(비킨 뒤 자리)이 처마·판·문설주에 걸리면: 먼저 그 자리에서 옆 비키기를 바로 다시 → 그래도 걸리면 0.1씩 어깨점 쪽으로(CAM-3 ④ · 한 프레임 최대 8번)
+    for (let n9 = 0; n9 < 8 && camD > 0.5 && nearClip(CIN.x + ry * camSh, CIN.y, CIN.z + rw * camSh, CIN.px - CIN.x, CIN.py - CIN.y, CIN.pz - CIN.z, camera.fov, camera.aspect, hy); n9++) {
+      const s9 = camSide(camYaw, hy, hw); if (Math.abs(s9 - camSh) > 0.02) { camSh = s9; continue; }
+      camD = Math.max(0.5, camD - 0.1); camDv = 0; camInAt(camD); camSh = camSide(camYaw, hy, hw); }
+    const cx = CIN.x, cy = CIN.y, cz = CIN.z;
+    // 보는 점 = 어깨 기준점에서 앞으로 ahead·k m, 머리보다 drop·k 아래 → 붐은 위에서 내려다봐도 시선은 거의 수평(복도 끝이 화면 가운데 · 아이는 아래쪽)
+    const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = ry * camSh, rz = rw * camSh, ah = CAMIN.ahead * k * Math.max(0.4, Math.min(1, (camera.fov - 40) / 30));   // 세로 화각이 좁으면(휴대폰 가로) 덜 앞을 봐서 아이가 화면 밑으로 잘리지 않게
+    camera.position.set(cx + rx, cy, cz + rz);
+    camera.lookAt(CIN.px + fx * ah + rx, hy - CAMIN.drop * k, CIN.pz + fz * ah + rz);
+    pg.visible = !camFirst && camD > 0.3;
   } else {
     const hx = SE ? SE.x : P.x, hy = (SE ? SE.y + 0.1 : P.y) + headH, hz = SE ? SE.z : P.z, pch = indoor ? Math.min(camPitch, 0.2) : camPitch, CD = indoor ? 3.3 : CAM_D;
     const want = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect).want;
@@ -522,6 +551,58 @@ function camPose(hx, hy, hz, yaw, pch, CD, fov, aspect, dUse) {
   return CAMP;
 }
 let camSh = 0;
+// CAM-IN(09-28 교사 "실내가 생각보다 좁은 느낌" — 실제 영상 복도는 넓어 보이는데 앱은 답답): 복도 폭(2.5m)은 그대로, 실내 카메라만 바꾼다.
+//  진단(before 보드): 예전 실내 = 머리 뒤 3.3m·피치 ≤0.2·머리를 봄 → 아이가 화면 가운데 소실점(복도 끝)을 통째로 가리고, 벽에 걸리면 붐이 머리 뒤로 '툭' 당겨졌다.
+//  실내: 붐 2.7m·피치 +0.12(기본 0.42 = 24° 위에서) · 오른쪽 어깨 0.42m · 시선은 어깨점 앞 2.4m·머리 0.15 아래 = 거의 수평 → 소실점이 화면 가운데·아이는 왼쪽 아래.
+//  벽: 붐이 벽에 닿으면 곧장 당기지 않고 벽 면(축)을 따라 남은 길이만큼 미끄러진다(천장이면 천장 밑을 따라 뒤로 · 옆벽이면 벽을 따라) — 광선 = 어깨 1 · 붐 1 · 미끄럼 1 · 옆 4(world.grid 칸만) + 근평면 검사.
+//  붐 길이는 임계 감쇠 스프링 · 가까우면 아이가 반투명(fade0~fade1 m) · 1인칭(V)·바깥·작은 몸(PHY.T)·오프닝(CAM_OVR)은 그대로 · 물총 어깨(CTRL.shoulder)는 더해진다.
+const CAMIN = { CD: 2.7, pAdd: 0.12, pMin: -0.1, pMax: 0.62, sh: 0.42, ahead: 2.4, drop: 0.15, hfov: 102, vmax: 70, vmaxC: 72, blend: 2.5, fade0: 0.7, fade1: 2.0 };
+let camK = 0, camDv = 0, camShI = 0, camDt = 1 / 60, camHW = 0.45;
+const CIN = { sh: 0, len: 0, px: 0, py: 0, pz: 0, dx: 0, dy: 0, dz: 0, s1: 0, hx: 0, hy: 0, hz: 0, ex: 0, ey: 0, ez: 0, x: 0, y: 0, z: 0 };
+function camPoseIn(hx, hy, hz, yaw, pch, CD, sh) {
+  camHitTop = hy + 0.15; const r = camPoseIn0(hx, hy, hz, yaw, pch, CD, sh); camHitTop = null; return r;
+}
+function camPoseIn0(hx, hy, hz, yaw, pch, CD, sh) {
+  const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+  if (sh) { const sg = sh > 0 ? 1 : -1, t = camHit(hx, hy, hz, rx * sg, 0, rz * sg, Math.abs(sh) + camHW); sh = sg * Math.max(0, Math.min(Math.abs(sh), t - camHW)); }   // 어깨점이 옆벽에서 근평면 반폭(+8cm) 안으로 안 가게
+  // 어깨 폭은 줄 땐 바로, 늘 땐 천천히(초당 0.6m) — 옆 문간(0.9m)을 지나는 0.2초 동안 어깨점이 문 안으로 튀어 들어가 붐이 문설주에 걸리던 것
+  if (Math.abs(sh) > Math.abs(camShI) && sh * camShI >= 0) sh = Math.sign(sh) * Math.min(Math.abs(sh), Math.abs(camShI) + 0.6 * camDt); camShI = sh;
+  CIN.sh = sh; const px = hx + rx * sh, pz = hz + rz * sh, cp = Math.cos(pch), dx = Math.sin(yaw) * cp, dy = Math.sin(pch), dz = Math.cos(yaw) * cp;
+  CIN.px = px; CIN.py = hy; CIN.pz = pz; CIN.dx = dx; CIN.dy = dy; CIN.dz = dz;
+  const t1 = camHit(px, hy, pz, dx, dy, dz, CD), ax = hitAx;
+  let s1 = CD, s2 = 0; CIN.ex = CIN.ey = CIN.ez = 0;
+  if (t1 < CD) {
+    const dn = Math.abs(ax === 0 ? dx : ax === 1 ? dy : dz);
+    s1 = ax < 0 ? Math.max(0, t1 - 0.3) : Math.max(0, t1 - Math.min(t1, 0.25 / Math.max(dn, 0.1)));   // 벽 면에서 법선으로 0.25 떨어진 곳에서 멈춤(비스듬한 벽도)
+    if (ax >= 0) {   // 남은 길이를 벽 면 위로 투영해 미끄러진다
+      let ex = ax === 0 ? 0 : dx, ey = ax === 1 ? 0 : dy, ez = ax === 2 ? 0 : dz; const el = Math.hypot(ex, ey, ez);
+      if (el > 0.25) { ex /= el; ey /= el; ez /= el; const rem = (CD - s1) * el, bx = px + dx * s1, by = hy + dy * s1, bz = pz + dz * s1;
+        s2 = Math.max(0, Math.min(rem, camHit(bx, by, bz, ex, ey, ez, rem) - 0.25)); CIN.ex = ex; CIN.ey = ey; CIN.ez = ez; } }
+  }
+  CIN.s1 = s1; CIN.len = s1 + s2;
+  return CIN;
+}
+function camSide(yaw, hy, hw) {   // 옆벽 비키기(CAM-3 ③과 같은 식) — 근평면 윗변 높이(+0.2)에서 · 카메라 자리와 근평면 자리(0.3 앞) 두 곳(문 인방·문설주가 옆에 있을 때도)
+  const ry = Math.cos(yaw), rw = -Math.sin(yaw), y9 = CIN.y + 0.2, fx = -Math.sin(yaw) * 0.3, fz = -Math.cos(yaw) * 0.3;
+  camHitTop = hy + 0.15;
+  const r9 = Math.min(camHit(CIN.x, y9, CIN.z, ry, 0, rw, hw), camHit(CIN.x + fx, y9, CIN.z + fz, ry, 0, rw, hw)), l9 = Math.min(camHit(CIN.x, y9, CIN.z, -ry, 0, -rw, hw), camHit(CIN.x + fx, y9, CIN.z + fz, -ry, 0, -rw, hw));
+  camHitTop = null;
+  return (r9 < hw && l9 < hw) ? (r9 - l9) / 2 : r9 < hw ? r9 - hw : l9 < hw ? hw - l9 : 0;
+}
+function camInAt(L) {   // 붐 길이 L의 자리(어깨점 → 붐 → 벽을 따라 · 미끄럼이 없으면 붐 방향으로 여유 0.12까지)
+  const a = Math.min(L, CIN.s1), b = Math.max(0, L - CIN.s1), sl = CIN.ex || CIN.ey || CIN.ez, ex = sl ? CIN.ex : CIN.dx, ey = sl ? CIN.ey : CIN.dy, ez = sl ? CIN.ez : CIN.dz;
+  CIN.x = CIN.px + CIN.dx * a + ex * b; CIN.y = CIN.py + CIN.dy * a + ey * b; CIN.z = CIN.pz + CIN.dz * a + ez * b;
+}
+// 아이 반투명(CAM-IN): 한 재질(kid.js MAT)을 쓰는 메시만 — 투명 대역 재질(KIDF)로 바꿔 끼운다(불투명일 땐 원래 재질 = 화면·정렬 변화 0). KIDF는 prewarm이 미리 짓도록 숨긴 대역 메시에 걸어 둔다
+const KIDM = [], KIDF = KID.body.material.clone(); KIDF.transparent = true;
+KID.rig.traverse(o => { if (o.isMesh && o.material === KID.body.material) KIDM.push(o); });
+const KIDF_D = new THREE.Mesh(KID.body.geometry, KIDF); KIDF_D.visible = false; KIDF_D.position.set(1e4, -1e3, 1e4); KIDF_D.updateMatrixWorld(true); scene.add(KIDF_D);   // 학교 밖 먼 곳(검진 복셀 범위 밖) · 첫 prewarm 뒤 뺀다
+let kidOp = 1;
+function kidFade(op) {
+  if (Math.abs(op - kidOp) < 0.01 && (op < 1 || kidOp === 1)) return;
+  const was = kidOp < 1; kidOp = op >= 0.99 ? 1 : op; KIDF.opacity = Math.max(0.2, kidOp);
+  if ((kidOp < 1) !== was) { const m = kidOp < 1 ? KIDF : KID.body.material; for (let i = 0; i < KIDM.length; i++) KIDM[i].material = m; }
+}
 function physics(dt) {
   crouchTick();
   const cr = CTRL.crouched, sp = (cr ? PHY.crawl : keys.has('ShiftLeft') ? PHY.run : PHY.walk) * CTRL.speed;   // ENGINE-1: 웅크리면 느리게(달리기 없음) · SHRINK-1 PHY = 몸 크기 판
@@ -1348,7 +1429,7 @@ if (TITLE) TITLE.bootDone(); else document.getElementById('boot')?.remove();
 warmDone();
 // PERF-WIN: 첫 화면이 뜬 뒤 쉬는 시간에 — ① 아직 안 지은 셰이더(밤 별 등) ② 게임 길격자(첫 게임을 열 때 1초 뚝뚝 끊기던 것 · 쉬는 조각 ≤8ms · mapapi navIdle)
 //  게이트·검진 주소는 예전 그대로(그쪽은 navSync로 새로 짓는다)
-idle(() => prewarm());
+idle(() => { prewarm(); scene.remove(KIDF_D); });   // CAM-IN: 아이 반투명 재질은 대역 메시로 한 번 지은 뒤 대역을 뺀다
 if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP.navIdle(), 3000);
 
 // PAUSE-1(09-28 사용자 "Alt+Tab이나 Esc를 누르지 않으면 메뉴를 못 누르는 듯"): 마우스가 잠긴 동안엔 커서가 없어 🏠·🎮 칩을 못 누른다.
@@ -1489,6 +1570,7 @@ window.SD2 = {
   cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)
   map: MAP, phys: { groundAt, blockedAt, ceilAt, camHit, PHY, pGround, pBlocked, pCeil }, ACT, CTRL, camPose: (...a) => ({ ...camPose(...a) }),
+  camIn: CAMIN, camState: () => ({ sh: +CIN.sh.toFixed(2), s1: +CIN.s1.toFixed(2), len: +CIN.len.toFixed(2), csh: +camSh.toFixed(2), k: +camK.toFixed(3), d: +camD.toFixed(2), op: +kidOp.toFixed(2), fov: +camera.fov.toFixed(1) }),   // CAM-IN(09-28): 실내 카메라 값(시험·조율용 — SD2.camIn.CD = 3 처럼 바로 바뀜)
   health: opt => import('./health.js?v=8').then(m => m.runHealth(window.SD2, opt || {})),
   // PERF-LOAD(09-26): 로드·프레임 계측 — buildMs·firstFrameMs(ms) · 최근 240프레임 CPU p50/p95(렌더 제외) · 가림 컬링 재계산 p95. reset() 뒤 걸어 보고 읽는다
   timing: Object.defineProperties(TIMING, {
