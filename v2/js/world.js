@@ -4,7 +4,7 @@
 //  ④ 16m 청크 병합 ⑤ 충돌 AABB 전용 ⑥ 예산 dc≤300·sim≤1ms
 // ============================================================
 import * as THREE from 'three';
-import { SCHOOL } from './layout.js?v=11';   // LAYOUT-3 실측 배치(v1의 js/data.js는 참고용으로 그대로)
+import { SCHOOL } from './layout.js?v=12';   // LAYOUT-3 실측 배치(v1의 js/data.js는 참고용으로 그대로)
 
 // 바깥 지형 높이(main.js 물리·검사도 같은 함수를 쓴다): 앞뜰·체육관 대지 = yard, 그 밖(둔덕 아래·운동장) = field
 const TRN = SCHOOL.terrain;
@@ -2076,9 +2076,10 @@ export function buildWorld(scene) {
   const [wx0, wx1] = wg.x, [wz0, wz1] = wg.z;
   foundation(wx0 - 0.15, wx1 + 0.15, wz0 - 0.15, wz1);
   // 서쪽 끝 겉벽(서관 + 원무실 블록 + 본관 서단 한 줄 — 영상 g_111~114 카키 사이딩): 측문(유리 양문) + 보건실·원무실 창
-  wallZ(wz0, fz1, wx0, KHAKI, { face: -1, ext: true, skin: 'siding', gaps: [{ c: SIDE_Z, w: 2.0, glass: true, door: true },
-    { c: -42.2, w: 2.2, sill: 1.0, dh: 2.6, win: true }] });   // 본관 서쪽 끝(원무실 블록 서면)은 창 없는 카키 큰 판(영상 g_111~114)
-  addBox(0.2, 0.6, fz0 - wz0 - 0.24, YEL, wx0 - 0.14, 2.65, (wz0 + fz0)/2, { collide: false });                       // 서면 노랑 띠(서관 몫만 — 본관 서쪽 끝엔 가운데 띠 없음)
+  //   OUT-D(09-28 영상 v05 f_069~070): 서관 서면(z wz0~wz1)은 **적벽돌**(1·2층 · 노랑 띠 없음) — 카키 큰 판은 그 남쪽 원무실 블록·본관 서단(한 층)만
+  wallZ(wz0, wz1, wx0, BRICK, { face: -1, ext: true, skin: 'brickW', frame: 0xa9adb0, gaps: [{ c: SIDE_Z, w: 2.0, glass: true, door: true },
+    { c: -42.2, w: 2.2, sill: 1.0, dh: 2.6, win: true }] });
+  wallZ(wz1, fz1, wx0, KHAKI, { face: -1, ext: true, skin: 'siding' });   // 본관 서쪽 끝(원무실 블록 서면)은 창 없는 카키 큰 판(영상 g_111~114)
   // 1층 북벽(주차장 쪽) + 계단참 큰 창 / 동벽(뒷길 쪽 — 계단홀 유리문)
   //   BACKYARD-0(09-24 영상 b_022~031): 주차장·뒷길 쪽 = 적벽돌(꼭대기까지) + 주황 콘크리트 띠 + 회색 알루미늄 창틀 — 베이지 판·파랑 띠가 아니다
   const WBR = BRICK, WFR = 0xa9adb0;
@@ -2088,7 +2089,7 @@ export function buildWorld(scene) {
   // 2층 겉벽
   wallX(wx0 - 0.15, STX0, wz0, WBR, { y0: FH+0.3, h: FH-0.3, wins: 5, face: -1, sill: 0.8, ext: true, skin: 'brickW', frame: WFR });
   wallX(STX0, wx1 + 0.15, wz0, WBR, { y0: FH+0.3, h: FH-0.3, face: -1, ext: true, dado: STAIR_DADO, skin: 'brickW', gaps: [{ c: (STX0 + wx1)/2, w: 3.2, sill: 0, dh: 2.6, win: true, frame: WFR }] });   // 참 큰 창 윗단(영상 b_168·s_187.5: 1층 창과 한 장으로 2층 천장 근처 6.3까지) · 겉 = 적벽돌(BACKYARD-0)
-  wallZ(wz0, wz1, wx0, KHAKI, { y0: FH+0.3, h: FH-0.3, face: -1, ext: true, skin: 'siding', gaps: [{ c: (wz1 - B.upper.corridorDepth + wz1) / 2, w: 1.4, sill: 0.8, dh: 2.3, win: true }] });   // 2층 서면: 6학년 칠판 벽이라 창은 복도 끝만
+  wallZ(wz0, wz1, wx0, BRICK, { y0: FH+0.3, h: FH-0.3, face: -1, ext: true, skin: 'brickW', frame: 0xa9adb0, gaps: [{ c: (wz1 - B.upper.corridorDepth + wz1) / 2, w: 1.4, sill: 0.8, dh: 2.3, win: true }] });   // 2층 서면: 6학년 칠판 벽이라 창은 복도 끝만
   wallZ(wz0, wz1, wx1, WBR, { y0: FH+0.3, h: FH-0.3, ext: true, dado: STAIR_DADO, skin: 'brickW', gaps: [{ c: -35.2, w: 1.2, sill: 0.9, dh: 2.3, win: true, frame: WFR }] });   // 2층 계단홀 동벽 여닫이창(영상 s_184 — 너머 급식동 지붕) · 겉 = 적벽돌
   // 2층 남면(1층 z-34는 본관 북벽): 옥상문 서쪽부터 복도 서쪽 끝까지 쉼 없는 띠창(영상 s_177~182) — 아래 흰 반투명 + 스테인리스 세로살, 위 나무틀 미서기
   wallX(wx0 - 0.15, wx1 + 0.15, wz1, WALL, { y0: FH+0.3, h: FH-0.3, face: 1, skin: 'panelB',
@@ -2378,6 +2379,19 @@ export function buildWorld(scene) {
   }
   addBox(wx1-wx0+0.8, 0.3, wz1-wz0+0.8, 0xd9dce1, (wx0+wx1)/2, FH*2, (wz0+wz1)/2);
   addBox(wx1-wx0+0.8, 0.45, 0.3, 0xc98a4e, (wx0+wx1)/2, FH*2+0.3, wz0-0.25, { collide: false });   // 북쪽 파라펫 = 주황 콘크리트 갓(영상 b_030)
+  { // OUT-D(09-28 영상 v05 f_069~070): 서관 서면 — 2층 벽 위 남색 학교 이름 글자(북쪽) · 측문 위 회색 차양 = 2층 테라스(스테인리스 난간) · 벽 세로 사다리 · 옥상 가장자리 쇠 난간
+    const XW = wx0 - 0.15, NAVY = { bg: 'none', fg: '#26306e' };
+    [...SCHOOL.name].forEach((ch, k, A) => sign(ch, XW - 0.03, FH * 2 - 0.55, -41.4 + (k - (A.length - 1) / 2) * 0.78, -Math.PI / 2, 0.72, NAVY));
+    const CZ0 = SIDE_Z - 1.7, CZ1 = wz1 - 0.35, CY = FH + 0.3, CD = 1.05, ST9 = 0xc8ccd0;
+    addBox(CD, 0.45, CZ1 - CZ0, 0xb6b8b4, XW - CD / 2, CY - 0.45, (CZ0 + CZ1) / 2, { collide: false });
+    colliders.push({ x0: XW - CD, x1: XW, y0: CY - 0.45, y1: CY, z0: CZ0, z1: CZ1, nc: true });
+    const XR = XW - CD + 0.06;
+    for (let z9 = CZ0 + 0.06, n9 = Math.round((CZ1 - CZ0 - 0.12) / 1.2), k = 0; k <= n9; k++, z9 = CZ0 + 0.06 + (CZ1 - CZ0 - 0.12) * k / n9) dRod(XR, CY, z9, XR, CY + 1.0, z9, 0.025, ST9);
+    [0.12, 0.55, 1.0].forEach(h9 => { dRod(XR, CY + h9, CZ0 + 0.06, XR, CY + h9, CZ1 - 0.06, h9 === 1.0 ? 0.025 : 0.015, ST9); [CZ0 + 0.06, CZ1 - 0.06].forEach(z9 => dRod(XR, CY + h9, z9, XW - 0.02, CY + h9, z9, 0.015, ST9)); });
+    for (let z9 = CZ0 + 0.2; z9 < CZ1 - 0.1; z9 += 0.15) dRod(XR, CY + 0.12, z9, XR, CY + 1.0, z9, 0.007, ST9);   // 촘촘한 세로살
+    [-0.2, 0.2].forEach(o => dRod(XW - 0.2, CY + 0.4, CZ0 - 0.7 + o, XW - 0.2, FH * 2 + 1.1, CZ0 - 0.7 + o, 0.02, ST9));   // 세로 사다리(테라스 옆 → 옥상)
+    for (let y9 = CY + 0.7; y9 < FH * 2 + 1.0; y9 += 0.3) dRod(XW - 0.2, y9, CZ0 - 0.9, XW - 0.2, y9, CZ0 - 0.5, 0.012, ST9);
+    roofRail(wx0 - 0.3, wz0 - 0.05, wx0 - 0.3, wz1 + 0.3, FH * 2 + 0.3); }
   { // BACKYARD-0: 주황 콘크리트 띠(영상 n_030.5·b_022: 1층 창 머리 연속 띠 · 2층 창턱 띠 · 꼭대기 테 · 1층 창마다 창턱) — 벽 면에서 0.1 튀어나옴, 끝 0.06 인셋
     const ORG = 0xc98a4e, I9 = 0.06, xa = wx0 - 0.15 + I9, xb = wx1 + 0.25, za = wz0 - 0.15, zb = wz1 - 0.15 - I9, SW = [(STX0 + wx1)/2 - 1.62, (STX0 + wx1)/2 + 1.62];   // 북동 모서리는 북면 띠가 동면 띠 끝을 덮는다(맞댐)
     [[2.6, 0.2], [FH + 0.3 + 0.6, 0.14]].forEach(([y9, h9]) => {
@@ -3308,7 +3322,23 @@ export function buildWorld(scene) {
     [[NBX, EN.x[0]], [EN.x[1], fx1 + 0.15]].forEach(([a, b]) => { addPanel(b - a, CW, 0xc4c1b8, (a + b) / 2, AY, fzW + CW / 2); patQuad('grass', a < WS ? WS : a, b, fzW + CW, N0 - C, AY, false, GN); });
     patQuad('grass', NBX, WS, fzW + CW, NCZ, AY, false, GN);
     for (let i = 0; i < 6; i++) tri9('grass', [NCX, NCZ], ARC[i], ARC[i + 1], GN);                           // 둥근 끝
-    patQuad('grass', fx1 + 0.15, WX1 + 3, fz1 - 10, N0 - C, AY, false, 0xe9f2df);   // 본관 동쪽 끝 잔디(뒤뜰 길까지)
+    // OUT-D(09-28 영상 v04 f_031~040): 본관 동면을 따라 남쪽으로 벽돌 보도(폭 3 · 회베이지 인터로킹 + 가운데 붉은 띠) · 동쪽 = 계단식 자연석 화단 3단(이름표) ·
+    //   주복도 동쪽 끝 유리문 밖 콘크리트 디딤단 · 예전엔 잔디만(뒤뜰 벽돌 마당 ~ 앞뜰 산책로를 잇는 길이 없었다)
+    { const EW = 54.15, BZ0 = fz1 - 10.3, BZ1 = N0 - C, BRK9 = 0xbf7873, GRY9 = 0xcfc8bc;
+      patQuad('grass', EW, WX1 + 3, fz1 - 10, N0 - C, AY, false, 0xe9f2df);                     // 본관 동쪽 끝 잔디(화단 밑 · 뒤뜰 길까지)
+      patQuad('ilock', fx1 + 0.15, 52.5, BZ0, BZ1, AY, false, GRY9); patQuad('ilock', 52.5, 52.8, BZ0, BZ1, AY, false, BRK9); patQuad('ilock', 52.8, EW, BZ0, BZ1, AY, false, GRY9);
+      addBox(0.9, 0.15, 1.7, 0xc9c6be, fx1 + 0.15 + 0.45, YARD, (fz0 + zCor) / 2);              // 유리문 밖 디딤단(바닥 0 · 마당 -0.3 사이 한 단)
+      addBox(0.15, 0.15, 13.4, 0xc4c1b8, EW + 0.075, YARD, -27.3);                                 // 보도|화단 화강석 경계석
+      // 계단식 화단(서 → 동 0.3 · 0.6 · 0.9 — 앞(서)면 자연석 줄 · 흙 윗면에 풀포기·관목·흰 이름표) — 올라서기 금지(꽃밭)
+      const PZ0 = -34.0, PZ1 = -20.6, TIER = [[EW + 0.15, 55.75, 0.3], [55.75, 57.35, 0.6], [57.35, 59.7, 0.9]], R6 = seeded(6061);
+      TIER.forEach(([a, b, h], k) => {
+        addBox(b - a, h, PZ1 - PZ0, 0x7d6a55, (a + b) / 2, YARD, (PZ0 + PZ1) / 2, NS);
+        for (let z9 = PZ0 + 0.35; z9 < PZ1 - 0.2; z9 += 0.8 + R6() * 0.3) { const r9 = 0.2 + R6() * 0.1;
+          dBlob(r9 * 1.2, r9 * 0.9, r9, [0xa9a69e, 0x9a978f, 0xbab7ae][Math.floor(R6() * 3) % 3], a + 0.05, YARD + h - r9 * 0.5, z9, { chunky: true, jitter: 0.2, ry: z9 }); }
+        for (let z9 = PZ0 + 0.8; z9 < PZ1 - 0.5; z9 += 1.6 + R6() * 0.8) { const r9 = 0.3 + R6() * 0.2, x9 = (a + b) / 2 + (R6() - 0.5) * (b - a - 0.6);
+          dBlob(r9, r9 * 0.8, r9, [0x5a8f45, 0x6b9c4c, 0x4f8540, 0x86b060][Math.floor(R6() * 4) % 4], x9, YARD + h + r9 * 0.5, z9, { chunky: true, jitter: 0.18, ry: z9 });
+          if (k === 0 && R6() > 0.4) { dBox(0.03, 0.3, 0.03, 0xe8e4d8, a + 0.35, YARD + h, z9 + 0.5); dBox(0.03, 0.1, 0.14, 0xf8f8f4, a + 0.33, YARD + h + 0.24, z9 + 0.5); } }
+      }); }
     // 서끝 아스팔트 마당(체육관 앞 마당 아스팔트 x -39.2/-38.5에서 이어 받음)
     patQuad('asph', -39.2, NBX, fzW, N0 - C, AY);
     for (let i = 0; i < 6; i++) tri9('asph', [NBX, N0 - C], ARC[i + 1], ARC[i]);
@@ -3558,6 +3588,12 @@ export function buildWorld(scene) {
       for (let k = 0; k < 34; k++) { const a = R9() * 6.28, e = (R9() - 0.3) * 1.2, r9 = 0.93;
         dBlob(0.08, 0.07, 0.08, k % 3 ? 0xd98fc8 : 0xe6a8d8, hx + Math.cos(a) * Math.cos(e) * r9, YARD + 1.05 + Math.sin(e) * 0.9, hz + Math.sin(a) * Math.cos(e) * r9 * 0.95, { far: true, chunky: true }); }
       colliders.push(noStand({ x0: hx - 0.75, x1: hx + 0.75, y0: YARD, y1: YARD + 1.8, z0: hz - 0.7, z1: hz + 0.7 })); }
+    // 장미(OUT-D · 09-28 아이 "밖의 큰 돌 옆에 장미" — 교사: 큰 돌 = 교훈석): 교훈석 남서쪽 잔디에 낮은 장미 덤불 셋(짙은 초록 잎 + 빨강·분홍 꽃) · 올라서기 금지
+    [[SX - 1.05, SZ9 + 1.1, 0.42, 0xd8263a], [SX - 1.45, SZ9 + 1.8, 0.36, 0xe8578a], [SX - 0.75, SZ9 + 2.1, 0.34, 0xc81e32]].forEach(([rx, rz, r9, fc], k) => {
+      dBlob(r9, r9 * 0.85, r9, [0x3d6e36, 0x44783b, 0x3a6834][k], rx, YARD + r9 * 0.8, rz, { chunky: true, jitter: 0.16, ry: k * 1.7 });
+      for (let j = 0; j < 6; j++) { const a = j * 1.05 + k, e = 0.35 + (j % 3) * 0.25;
+        dBlob(0.075, 0.065, 0.075, j % 3 === 2 ? 0xf2a0b8 : fc, rx + Math.cos(a) * Math.cos(e) * r9 * 0.95, YARD + r9 * 0.8 + Math.sin(e) * r9 * 0.8, rz + Math.sin(a) * Math.cos(e) * r9 * 0.95, { chunky: true }); }
+      colliders.push(noStand({ x0: rx - r9 * 0.85, x1: rx + r9 * 0.85, y0: YARD, y1: YARD + r9 * 1.6, z0: rz - r9 * 0.85, z1: rz + r9 * 0.85 })); });
     // 태양광 가로등(DETAIL-6): 기둥·팔·등 머리(조명 재질)·기운 패널
     const solarLamp = (LX, LZ, cctv) => {
       post(LX, LZ, YARD, YARD + 4.2, 0.1);
@@ -3612,10 +3648,26 @@ export function buildWorld(scene) {
   // 골대(DETAIL-4) — 사용자 09-24 "4개: 동서로 큰 골대, 학교 쪽·정문 쪽에 작은(하프) 골대 — 체육관 쪽으로 붙어 있음"
   //   (x,z) = 골문 가운데, back = 그물이 뻗는 쪽 [dx,dz](운동장 바깥), s ≥ 1 = 큰 골대(7.32×2.44 규격) · 작은 = 3.0×1.8(영상 g_066~079 — 세로가 더 높음)
   //   앞틀(기둥·가로대) + 옆·뒤 = 가로대 끝에서 뒤로 둥글게 굽혀 내려오는 쇠파이프 한 줄(큰 골대는 은색 — 영상 g_066~076·f_261, 앞틀 노랑은 칠 벗겨진 톤) + 그물, 그물 충돌은 계단 3칸(골문 안은 들어감)
-  function goal(x, z, back, hex, s) {
+  const EGX = 26.9;                                                              // 동쪽 큰 골대 골문선(OUT-D: 상수 — 예전 bballNet.x − 2.1)
+  function goal(x, z, back, hex, s, box = false) {
     const big = s >= 1, [bx, bz] = back, px = -bz, pz = bx, H = big ? 2.44 : 1.8, D = big ? 1.6 : 0.9, W = big ? 3.66 : 1.5, F = { far: true }, Y = FIELD;
     const FC9 = big ? 0xd9b060 : hex, BC9 = big ? 0xa9adb0 : hex;
     const P = (u, v) => [x + px*u + bx*v, z + pz*u + bz*v];
+    if (box) {   // OUT-D(09-28 영상 v02 f_018~024): 서쪽 큰 골대 = 그물 없는 상자 틀 — 가로대 양끝에서 수평 봉이 뒤로 곧게(0.55D) → 비스듬히 땅으로(D) · 뒤 윗대·밑대 · 앞틀 크림 · 뒤 봉 회색
+      const DT9 = D * 0.55;
+      [-W, W].forEach(u => { const [ax9, az9] = P(u, 0), [tx9, tz9] = P(u, DT9), [ex9, ez9] = P(u, D);
+        dRod(ax9, Y, az9, ax9, Y + H, az9, 0.06, FC9, F); post(ax9, az9, Y, Y + H);
+        dRod(ax9, Y + H - 0.03, az9, tx9, Y + H - 0.03, tz9, 0.04, BC9, F);
+        dRod(tx9, Y + H - 0.03, tz9, ex9, Y + 0.035, ez9, 0.04, BC9, F);
+        dRod(ax9, Y + 0.035, az9, ex9, Y + 0.035, ez9, 0.035, BC9, F);
+        // 비스듬한 뒤 봉 = 몸이 뚫지 않게 계단 두 칸 막이(봉 아래 삼각 자리 · 봉보다 넓지 않게)
+        [[DT9, (DT9 + D) / 2, H], [(DT9 + D) / 2, D, H / 2]].forEach(([v0, v1, h9]) => { const [c0x, c0z] = P(u - 0.05, v0), [c1x, c1z] = P(u + 0.05, v1);
+          const c9 = { x0: Math.min(c0x, c1x), x1: Math.max(c0x, c1x), z0: Math.min(c0z, c1z), z1: Math.max(c0z, c1z), y0: Y, y1: Y + h9, nc: true }; colliders.push(h9 < 1.6 ? noStand(c9) : c9); }); });
+      { const [a1, b1] = P(-W, 0), [a2, b2] = P(W, 0); dRod(a1, Y + H, b1, a2, Y + H, b2, 0.06, FC9, F); }
+      { const [a1, b1] = P(-W, DT9), [a2, b2] = P(W, DT9); dRod(a1, Y + H - 0.03, b1, a2, Y + H - 0.03, b2, 0.035, BC9, F); }
+      { const [a1, b1] = P(-W, D), [a2, b2] = P(W, D); dRod(a1, Y + 0.035, b1, a2, Y + 0.035, b2, 0.035, BC9, F); }
+      return;
+    }
     [-W, W].forEach(u => {
       const [ax9, az9] = P(u, 0), [b1x, b1z] = P(u, D*0.3), [b2x, b2z] = P(u, D*0.62), [ex9, ez9] = P(u, D);
       dRod(ax9, Y, az9, ax9, Y + H, az9, 0.06, FC9, F); post(ax9, az9, Y, Y + H);
@@ -3634,8 +3686,8 @@ export function buildWorld(scene) {
     for (let k = -W + 0.5; k < W; k += 0.5) { const [s0x, s0z] = P(k, D*0.5), [s1x, s1z] = P(k, D); dRod(s0x, Y + H - 0.1, s0z, s1x, Y, s1z, 0.012, 0xd8dcdf); }
     for (let t = 0.25; t < 1; t += 0.25) { const v = D*(0.5 + 0.5*t), yy = Y + (H - 0.1)*(1 - t), [s0x, s0z] = P(-W, v), [s1x, s1z] = P(W, v); dRod(s0x, yy, s0z, s1x, yy, s1z, 0.012, 0xd8dcdf); }
   }
-  goal(-35.3, FCZ + 3.0, [-1, 0], 0xe0a83a, 1.4);                                // 서쪽 큰 골대(영상 g_072·g_075: 북쪽 기둥 ≈ 유치원 놀이터 남쪽 울타리 선, 골문선 = 놀이터 동쪽 울타리에서 ≈6.2 m 동쪽)
-  goal(SCHOOL.bballNet.x - 2.1, FCZ, [1, 0], 0xe0a83a, 1.4);                   // 동쪽 큰 골대 — EAST-3: 농구 구역 공막이 철망 바로 앞(골문선 = 철망 2.1 m 서쪽 · 뒤 그물 끝과 철망 사이 0.5)
+  goal(-35.3, FCZ + 3.0, [-1, 0], 0xe0a83a, 1.4, true);                          // 서쪽 큰 골대 — OUT-D: 그물 없는 상자 틀(영상 v02 f_018~024)(영상 g_072·g_075: 북쪽 기둥 ≈ 유치원 놀이터 남쪽 울타리 선, 골문선 = 놀이터 동쪽 울타리에서 ≈6.2 m 동쪽)
+  goal(EGX, FCZ, [1, 0], 0xe0a83a, 1.4);                                        // 동쪽 큰 골대 — 골문선 x 26.9(모래|흙 경계선 2.1 m 서쪽 · OUT-D: 뒤 공막이 철망은 없앰 — 영상 v03 f_012)
   goal(-13, FLD.z[0] + 1.2, [0, -1], 0xf0f2f4, 0.8);                             // 학교 쪽 작은 골대(체육관 쪽으로 붙음) — 가로대 1.6 > 키 1.5 · FRONT-3b: 둔덕 발 배수 띠 바로 앞(영상 f_279·u_280 · 위성 D 흰 사각형 x -14.5~-11.2)
   goal(-24, SCHOOL.southFenceZ - 3.2, [0, 1], 0xf0f2f4, 0.8);                    // 정문 쪽 작은 골대
   {   // 운동장 동쪽 높은 초록 철망(영상 f_192~219) · 조명탑(북변). 남쪽(쉼터·정문 쪽)은 울타리 없이 트임(사용자 09-24 "정문에서 울타리가 운동장을 가로막지 않아")
@@ -4014,6 +4066,15 @@ export function buildWorld(scene) {
       colliders.push({ x0: bx9 - 1.6, x1: bx9 + 1.6, y0: Y, y1: Y + 0.46, z0: sz9 - 0.21, z1: sz9 + 0.21 });
       hotspots.push({ kind: 'sit', x: bx9, z: sz9 - 0.5, y: Y, r: 0.9, label: '벤치에 앉기', yaw: Math.PI });
     });
+    // OUT-D(09-28 영상 v02 f_001~008): 남쪽 기둥 줄을 따라 여러 칸에 긴 나무 벤치(2.8 × 0.4 · 앉는 판 0.45 · 짙은 나무 + 검은 쇠 다리) — 칸마다 앉기
+    //   서쪽 끝 칸(휴지통·그림)과 교감선생님이 서는 칸(버스 앞문 북쪽)은 비움 · 올라서기 금지(벤치 줄이 기둥 사이를 막는 턱이 되지 않게)
+    for (let k = 1; k <= 6; k++) { const bx9 = sxa + 0.5 + 3.5 * k + 1.75, bz9 = sz9 + 1.7 - 0.36;
+      dBox(2.8, 0.06, 0.4, 0x6a4a34, bx9, Y + 0.39, bz9); [-1.2, 0, 1.2].forEach(o => dBox(0.06, 0.39, 0.34, 0x2b2d30, bx9 + o, Y, bz9));
+      colliders.push(noStand({ x0: bx9 - 1.4, x1: bx9 + 1.4, y0: Y, y1: Y + 0.45, z0: bz9 - 0.2, z1: bz9 + 0.2 }));
+      hotspots.push({ kind: 'sit', x: bx9, z: bz9 - 0.62, y: Y, r: 0.9, label: '벤치에 앉기', yaw: Math.PI, seat: { x: bx9, y: Y + 0.45 - 0.46, z: bz9 + 0.02, yaw: Math.PI } }); }
+    { const cx9 = SCHOOL.bus[0] - 6.4, cz9 = SCHOOL.bus[1] + 0.6;   // 버스 앞 주황 콘 하나(영상 v02 f_003)
+      dCyl(0.03, 0.16, 0.68, 0xe0582a, cx9, Y + 0.05, cz9, { seg: 8 }); dCyl(0.1, 0.12, 0.1, 0xf4f4f0, cx9, Y + 0.33, cz9, { seg: 8 }); dBox(0.36, 0.05, 0.36, 0x2e2e30, cx9, Y, cz9);
+      colliders.push(noStand({ x0: cx9 - 0.18, x1: cx9 + 0.18, y0: Y, y1: Y + 0.75, z0: cz9 - 0.18, z1: cz9 + 0.18 })); }
     { const tx9 = sxa + 0.5, tz9 = sz9 + 2.25;   // 서쪽 끝 기둥 곁 스테인리스 휴지통(영상 s_043.5·s_046.5)
       dCyl(0.18, 0.17, 0.66, 0xb9bec2, tx9, Y, tz9, { seg: 10 }); dCyl(0.19, 0.19, 0.06, 0x2b2d30, tx9, Y + 0.66, tz9, { seg: 10 });
       colliders.push(noStand({ x0: tx9 - 0.2, x1: tx9 + 0.2, y0: Y, y1: Y + 0.72, z0: tz9 - 0.2, z1: tz9 + 0.2 })); }
@@ -4329,18 +4390,9 @@ export function buildWorld(scene) {
       [-0.9, 0.9].forEach(o => dBoxE(0.04, 1.04, 0.06, 0x9aa0a6, hx + o, Y + 2.855, hz, F9));
       dGeo(new THREE.TorusGeometry(0.23, 0.02, 5, 14).rotateX(Math.PI / 2), new THREE.Matrix4().makeTranslation(hx, Y + 3.05, hz + dir * 0.28), 0xc4622d, F9); });
 
-    // ---- EAST-3(09-26) 농구 모래 구역: 운동장 동쪽 끝 안쪽 높은 초록 공막이 철망(EAST-2 철망과 같은 모양 — 연두 기둥·가는 회색 그물 두 겹) + 모래 바닥(코트 선 없음) ----
-    //   철망 = x NX 한 줄(z NZ0~NZ1 · 양끝 트임 = 북 둔덕 발치 쪽·남 쉼터 쪽 드나드는 곳) · 충돌 = 보이는 그물 판 그대로(축에 나란한 한 장)
-    { const BN = SCHOOL.bballNet, NX = BN.x, [NZ0, NZ1] = BN.z, H = BN.h, L = NZ1 - NZ0;
-      const panel = (P, U, hex) => { _c.set(hex); for (const i of [0, 1, 2, 0, 2, 3]) { fencePos.push(...P[i]); fenceUV.push(...U[i]); fenceCol.push(_c.r, _c.g, _c.b); } };
-      panel([[NX, Y, NZ0], [NX, Y, NZ1], [NX, Y + H, NZ1], [NX, Y + H, NZ0]], [[0, 0], [L / 0.2, 0], [L / 0.2, H / 0.2], [0, H / 0.2]], 0xa9b3a5);
-      panel([[NX - 0.02, Y, NZ0], [NX - 0.02, Y, NZ1], [NX - 0.02, Y + H, NZ1], [NX - 0.02, Y + H, NZ0]], [[0.5, 0.5], [0.5 + L / 0.14, 0.5], [0.5 + L / 0.14, 0.5 + H / 0.14], [0.5, 0.5 + H / 0.14]], 0x9aa596);   // 엇갈린 칸 한 겹 더(멀리서 회녹색 안개)
-      const n = Math.round(L / 3);
-      for (let i = 0; i <= n; i++) { const z9 = NZ0 + L * i / n; dRod(NX, Y, z9, NX, Y + H + 0.05, z9, 0.05, G9, F9);
-        if (i % 3 === 1) { dRod(NX, Y, z9 + 0.45, NX, Y + H, z9 + 0.45, 0.045, G9, F9); [1.5, 3.0, 4.5].forEach(h => dRod(NX, Y + h, z9, NX, Y + h, z9 + 0.45, 0.035, G9)); } }   // 9m마다 이중 기둥(사다리 보강 — EAST-2 철망과 같음)
-      [NZ0, 0, 16, 32, NZ1].forEach((za, k, A) => { const zb = A[k + 1]; if (zb === undefined) return;   // 가로대 = 16m 청크 경계에서 자름
-        dRod(NX, Y + H, za, NX, Y + H, zb, 0.035, G9, F9); dRod(NX, Y + 0.15, za, NX, Y + 0.15, zb, 0.025, G9, F9); });
-      colliders.push({ x0: NX - 0.12, x1: NX + 0.12, y0: Y, y1: Y + H + 0.3, z0: NZ0 - 0.12, z1: NZ1 + 0.12, nc: true });
+    // ---- EAST-3(09-26) 농구 모래 구역 — OUT-D(09-28 영상 v03 f_001~016 · 교사 "골대에 초록색 벽이 2장 구조가 아닌 것"): 공막이 철망은 없다 — 모래 띠와 운동장 흙이 바닥으로만 갈린다 ----
+    //   (예전 x 29 높은 초록 철망 + 통학로 철망 = 나란한 초록 벽 두 장) · 모래 = x NX ~ 통학로 철망 · 운동장 흙보다 1cm 위
+    { const BN = SCHOOL.bballSand, NX = BN.x, NZ1 = BN.z[1];
       // 모래(운동장 흙보다 1cm 위 · 놀이터 모래 무늬를 옅게 — 흙과 갈리게) — 경사로 발치 포장 참·큰 나무 쉼터 포장(+2cm)과는 겹치지 않게 잘라 깐다
       const ST9 = 0xf4efe6, SZ9 = TR3.fieldZ + 0.62;   // 둔덕 발치 배수 띠(FZ+0.22~0.60) 남쪽부터
       patQuad('sand', NX, EF - 1.3, SZ9, ZR, Y + 0.01, false, ST9);
@@ -4348,10 +4400,6 @@ export function buildWorld(scene) {
       patQuad('sand', NX, 31.0, 30.6, NZ1, Y + 0.01, false, ST9);
       zones.push({ x0: NX, x1: EF, z0: TR3.fieldZ, z1: SCHOOL.southFenceZ, y: Y, label: '농구장' }); }
 
-    // ---- 남쪽 길 남쪽 가: 자연석 줄(f_240·f_243) ----
-    for (let x9 = SCHOOL.forestPlay.x[0] + 0.3; x9 < XC - 0.3; x9 += 0.8 + R8() * 0.3) { const SW8 = SCHOOL.forestPlay.x[0] + 2.9, SM8 = SCHOOL.forestPlay.x[0] + 5.1; if (Math.abs(x9 - SW8) < 0.95 || Math.abs(x9 - SM8) < 0.95) continue;   // 데크 계단 앞은 비움(숲놀이터 블록 SW9·SM9)
-      const s = 0.3 + R8() * 0.15; dBlobE(s * 1.2, s * 0.7, s, pk([0xb8b6ae, 0xa9a79f, 0xcac8c0]), x9, Y + s * 0.2, SZ1 + 0.4, { chunky: true, jitter: 0.18, ry: x9 });
-      colliders.push(noStand({ x0: x9 - s * 1.05, x1: x9 + s * 1.05, y0: Y, y1: Y + s * 0.85, z0: SZ1 + 0.4 - s * 0.9, z1: SZ1 + 0.4 + s * 0.9 })); }   // 막이 = 돌 겉모양 크기(발 묻힘 0)
     // ---- 화단 동쪽 흰 울타리(영상 f_205~f_228 왼쪽 — 화단 뒤 흰 쇠 울타리 + 바로 바깥 전봇대 · 그 너머 밭) ----
     //   북 = 학교 둘레 x 60(f_201 왼쪽 먼 흰 울타리) 에서 사선으로 들어와 z 14부터 x 49로 남쪽 둘레(정문 동쪽 사선)까지. 바깥 x 49~60은 밭(들어가지 못함)
     { const EZ1 = 45 + (60 - EWX) / (60 - 21.1) * (55.5 - 45) - 0.08;   // 정문 동쪽 사선 둘레(SOUTH-2: (60,45)→(21.1,55.5))와 만나는 곳
@@ -4391,46 +4439,87 @@ export function buildWorld(scene) {
       [[25.8, -24.6], [28.8, -24.6], [37.1, -24.6], [46.6, -24.6]].forEach(([x9, z9]) => { dBox(1.0, 0.8, 0.6, 0xe6e8e4, x9, FH + 0.3, z9, { far: true }); }); }
     zones.push({ x0: PX0, x1: PX1 + 3, z0: TR3.fieldZ, z1: 50, y: FIELD, label: '동쪽 통학로' });
   }
-  {   // 숲놀이터 EAST-2 — 사용자 09-24 "큰나무 바로 아래 저 구석" · 영상 f_233~243: 남쪽 길 남쪽 나무들 사이 높은 나무 데크(난간·아이 그림판·계단 둘) + 동쪽 검은 그물 놀이틀
-    const FP = SCHOOL.forestPlay, Y = FIELD, DX0 = FP.x[0] + 2.2, DX1 = DX0 + 6.0, DZ0 = 46.0, DZ1 = 48.8, DH = 0.9, WD = 0x8a6b48, RL = 0x7a5c3e, SW9 = DX0 + 0.7, SM9 = DX0 + 2.9;   // 계단 = 서끝 · 가운데(f_240)
-    // 작은 부재 청크 고르기(성능): 16m 칸마다 새 청크가 생기면 드로우콜이 늘고, 긴 구역을 한 청크로 묶으면 경계 구가 커져 본관 동끝 교실 안에서도 절두체에 든다(+1콜)
-    //   → 북 구간(z < 12) = 이미 있는 먼 층 청크(40,-8)에 합침(본관에서 이미 보이는 청크) · 남 구간 = 가까이 층 (40,24)·(40,40) 두 청크(55m 밖이면 숨김)
-    const NA = (o, z) => (o && o.far) ? o : z < 12 ? { ...(o || {}), far: true, at: [40, -8] } : { ...(o || {}), at: [40, z < 34 ? 20 : 36] };
-    const dBoxE = (w, h, d, c, x, y, z, o) => dBox(w, h, d, c, x, y, z, NA(o, z)), dBlobE = (sx, sy, sz, c, x, y, z, o) => dBlob(sx, sy, sz, c, x, y, z, NA(o, z)), dRodE = (x0, y0, z0, x1, y1, z1, r, c, o) => dRod(x0, y0, z0, x1, y1, z1, r, c, NA(o, z0));
-    const dCylE = (rt, rb, h, c, x, y, z, o) => dCyl(rt, rb, h, c, x, y, z, NA(o, z)), slabE = (x0, z0, x1, z1, w, h, c, y0, o) => slab(x0, z0, x1, z1, w, h, c, y0, NA(o, z0));
-    addBox(DX1 - DX0, DH, DZ1 - DZ0, WD, (DX0 + DX1) / 2, Y, (DZ0 + DZ1) / 2);                                 // 데크(올라설 수 있음)
-    for (let x9 = DX0 + 0.3; x9 < DX1 - 0.2; x9 += 0.3) dBoxE(0.03, 0.03, DZ1 - DZ0 - 0.1, 0x6e5438, x9, Y + DH - 0.015, (DZ0 + DZ1) / 2);   // 널 틈
-    const stair = (sx, n9 = 4) => { for (let k = 1; k <= n9; k++) addBox(1.0, DH * k / n9, 0.3, 0x6d5236, sx, Y, DZ0 - 0.15 - 0.3 * (n9 - k));   // 앞(북)으로 내려오는 계단
-      // 양옆 옆판 + 손잡이(f_240 — 계단 양쪽 난간) · 막이: 계단 옆으로 떨어져 데크 앞 좁은 띠(자연석 줄 뒤)에 갇히던 것(검진 갇힘 10칸) 차단
-      const SL = 0.3 * n9, a9 = Math.atan2(DH, SL);
+  {   // 숲놀이터 — OUT-D(09-28 영상 v03 f_021~029): 굽은 남쪽 길 남쪽 긴 나무 데크(서→동 12 m · 높이 0.8 · 앞 = 자연석 옹벽) · 계단 셋(서끝·가운데·그물 칸 앞 — 양옆 손잡이)
+    //   난간 = 윗단 X자 격자 띠 + 아래 세로살(연한 나무) · 남쪽 난간 따라 붙박이 벤치 + 난간 흰 판의 아이 그림 타일 · 데크를 뚫고 선 나무 둘 + 둘레 네모 나무 벤치 상자
+    //   동쪽 끝 = 그물 칸(검은 밧줄 그물 바닥 — 올라가 걸음) + 기둥 사이 빨간 해먹(앉기) · 예전(EAST-2): 6 m 데크 + 들어갈 수 없는 그물 틀
+    const FP = SCHOOL.forestPlay, Y = FIELD, DX0 = 27.2, NX0 = 35.8, DX1 = 39.2, DZ0 = 45.6, DZ1 = 49.5, DH = 0.8, T = Y + DH;
+    const WD = 0xb09068, RL = 0xc2a27a, PS = 0x9c7b55, ST = 0x9a968c;           // 연한 소나무색 판·난간(영상 f_022~025 — 예전 짙은 갈색보다 밝음) · 기둥 · 옹벽 돌
+    const SW9 = DX0 + 1.0, SM9 = 31.9, SN9 = NX0 - 0.8;                             // 계단 가운데 x(서끝 · 가운데 · 그물 칸 바로 서쪽)
+    // 작은 부재 = 가까이 층 (40,36) 한 청크(55m 밖이면 숨김 — 교실·마당 시점 최악 삼각형에 안 든다)
+    const NA = o => ({ ...(o || {}), at: [40, 36] });
+    const dBoxE = (w, h, d, c, x, y, z, o) => dBox(w, h, d, c, x, y, z, NA(o)), dBlobE = (sx, sy, sz, c, x, y, z, o) => dBlob(sx, sy, sz, c, x, y, z, NA(o)), dRodE = (x0, y0, z0, x1, y1, z1, r, c, o) => dRod(x0, y0, z0, x1, y1, z1, r, c, NA(o));
+    const dCylE = (rt, rb, h, c, x, y, z, o) => dCyl(rt, rb, h, c, x, y, z, NA(o));
+    const eu9 = new THREE.Euler(0, 0, 0, 'YZX');
+    const band = (x0, y0, z0, x1, y1, z1, w, t, c) => {   // 두 점 사이 납작한 띠(해먹 천) — 길이축 x · 두께 y · 폭 z
+      const L = Math.hypot(x1 - x0, y1 - y0, z1 - z0), H9 = Math.hypot(x1 - x0, z1 - z0);
+      _dm.compose(_dv.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), _dq.setFromEuler(eu9.set(0, Math.atan2(-(z1 - z0), x1 - x0), Math.atan2(y1 - y0, H9))), _ds.set(L, t, w)); dGeo(box_, _dm, c, NA()); };
+    // ---- 데크 몸통: 옹벽 돌 몸(나무칸) + 나무 윗판(바깥으로 5cm 내밈) · 그물 칸은 낮은 흙 몸 ----
+    addBox(NX0 - DX0, DH - 0.15, DZ1 - DZ0, ST, (DX0 + NX0) / 2, Y, (DZ0 + DZ1) / 2);
+    addBox(NX0 - DX0 + 0.05, 0.15, DZ1 - DZ0 + 0.05, WD, (DX0 - 0.05 + NX0) / 2, T - 0.15, (DZ0 + DZ1 + 0.05) / 2);   // 북(계단 쪽)은 내밀지 않음 — 맨 윗단 윗면과 겹치지 않게
+    for (let x9 = DX0 + 0.14; x9 < NX0 - 0.05; x9 += 0.14) dBoxE(0.03, 0.03, DZ1 - DZ0 + 0.04, 0x8f7250, x9, T - 0.015, (DZ0 + DZ1) / 2);   // 널 틈(남북으로 난 널 — 영상 f_022)
+    addBox(DX1 - NX0, DH - 0.45, DZ1 - DZ0, 0x6f6152, (NX0 + DX1) / 2, Y, (DZ0 + DZ1) / 2);                                        // 그물 칸 밑(흙 · 그물 사이로 보임)
+    patQuad('dirt', NX0 + 0.15, DX1 - 0.15, DZ0 + 0.15, DZ1 - 0.15, T - 0.45 + 0.004, false, 0x6a5a48);
+    // 옹벽 앞 자연석(영상 f_021·f_028 — 데크 밑 둥근 돌 쌓기) · 계단 자리는 비움
+    { const R7 = seeded(3171);
+      for (let x9 = DX0 + 0.25; x9 < DX1 - 0.2; x9 += 0.55 + R7() * 0.25) { if ([SW9, SM9, SN9].some(s9 => Math.abs(x9 - s9) < 0.85)) continue;
+        const s = 0.26 + R7() * 0.14, h9 = 0.3 + R7() * 0.25;
+        dBlobE(s * 1.15, h9, s * 0.8, [0xb8b6ae, 0xa9a79f, 0xc4c1b8, 0x9d9a92][Math.floor(R7() * 4) % 4], x9, Y + h9 * 0.35, DZ0 - s * 0.35, { chunky: true, jitter: 0.18, ry: x9 });
+        colliders.push(noStand({ x0: x9 - s * 1.0, x1: x9 + s * 1.0, y0: Y, y1: Y + h9 * 1.2, z0: DZ0 - s * 1.05, z1: DZ0 })); } }
+    // ---- 계단(4단 · 0.2씩 · 앞 = 북) + 양옆 비스듬한 옆판·손잡이(영상 f_021) ----
+    const stair = sx => { const n9 = 4, SL = 0.28 * n9, a9 = Math.atan2(DH, SL);
+      for (let k = 1; k <= n9; k++) addBox(1.0, DH * k / n9, 0.28, 0x8c6d4b, sx, Y, DZ0 - 0.14 - 0.28 * (n9 - k));
       [-1, 1].forEach(s => { const x9 = sx + s * 0.535;
-        _dm.compose(_dv.set(x9, Y + DH / 2 + 0.02, DZ0 - SL / 2), _dq.setFromEuler(_de.set(-a9, 0, 0)), _ds.set(0.05, 0.22, Math.hypot(SL, DH))); dGeo(box_, _dm, 0x7a5c3e, { at: [40, 36] });
-        dBoxE(0.06, 0.95, 0.06, RL, x9, Y, DZ0 - SL + 0.05);
-        dRodE(x9, Y + 0.95, DZ0 - SL + 0.05, x9, Y + DH + 0.95, DZ0 - 0.05, 0.03, 0x8a6b48);
-        colliders.push(noStand({ x0: x9 - 0.03, x1: x9 + 0.03, y0: Y, y1: Y + DH + 1.0, z0: DZ0 - SL - 0.02, z1: DZ0 })); }); };
-    stair(SM9); stair(SW9);
-    // 난간(기둥 + 윗대 + 살) — 계단 자리는 트임 · 막이는 난간 선마다
-    const rail = (x0, z0, x1, z1, e0 = true, e1 = true, dy = 0) => { const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 1.5));   // e0·e1 = 끝 기둥을 세울지(모서리 기둥은 한 번만) · dy = 윗대 높이 비킴(모서리에서 겹치는 윗대)
-      for (let i = e0 ? 0 : 1; i <= (e1 ? n : n - 1); i++) { const t = i / n; dBoxE(0.08, 0.95, 0.08, RL, x0 + (x1 - x0) * t, Y + DH, z0 + (z1 - z0) * t); }
-      for (let t = 0.25 / L; t < 1; t += 0.25 / L) { if (Math.abs(t * n - Math.round(t * n)) * L / n < 0.1) continue; dBoxE(0.04, 0.8, 0.04, RL, x0 + (x1 - x0) * t, Y + DH + 0.05, z0 + (z1 - z0) * t); }
-      dBoxE(Math.abs(x1 - x0) + 0.1, 0.06, Math.abs(z1 - z0) + 0.1, 0x8a6b48, (x0 + x1) / 2, Y + DH + 0.95 + dy, (z0 + z1) / 2);
-      colliders.push(noStand({ x0: Math.min(x0, x1) - 0.06, x1: Math.max(x0, x1) + 0.06, y0: Y + DH, y1: Y + DH + 1.6, z0: Math.min(z0, z1) - 0.06, z1: Math.max(z0, z1) + 0.06 })); };
-    rail(SW9 + 0.5, DZ0 + 0.04, SM9 - 0.5, DZ0 + 0.04); rail(SM9 + 0.5, DZ0 + 0.04, DX1 - 0.04, DZ0 + 0.04);
-    rail(DX0 + 0.04, DZ1 - 0.04, DX1 - 0.04, DZ1 - 0.04); rail(DX0 + 0.04, DZ0 + 0.04, DX0 + 0.04, DZ1 - 0.16, true, false, 0.01); rail(DX1 - 0.04, DZ0 + 0.16, DX1 - 0.04, DZ1 - 0.16, false, false, 0.01);   // 동쪽(그물 쪽)도 난간
-    // 앞 난간 아이 그림판(색 칸 7) + 흰 안내판(f_240)
-    [0xe8574a, 0xf2c230, 0x4f9fdc, 0x6fbf5a, 0xf08a3a, 0x9a6fd0].forEach((c, k) => dBoxE(0.32, 0.3, 0.03, c, SM9 + 0.75 + k * 0.36, Y + DH + 0.45, DZ0 - 0.02));
-    dBoxE(0.6, 0.7, 0.03, 0xf2f2ee, (SW9 + SM9) / 2, Y + DH + 0.12, DZ0 - 0.02);
-    // 동쪽 검은 그물 놀이틀(f_240 — 통나무 틀 안에 처진 검은 그물) · 들어가지 못함(막이)
-    { const NX0 = DX1, NX1 = FP.x[1], NZ0 = DZ0, NZ1 = DZ1, BY = Y + 0.85;
-      [[NX0 + 0.08, NZ0 + 0.08], [NX1 - 0.08, NZ0 + 0.08], [NX0 + 0.08, NZ1 - 0.08], [NX1 - 0.08, NZ1 - 0.08]].forEach(([px9, pz9]) => dBoxE(0.16, 0.85, 0.16, 0x9a7b52, px9, Y, pz9));
-      dBoxE(NX1 - NX0, 0.15, 0.15, 0xc9a877, (NX0 + NX1) / 2, BY, NZ0 + 0.075); dBoxE(NX1 - NX0, 0.15, 0.15, 0xc9a877, (NX0 + NX1) / 2, BY, NZ1 - 0.075);
-      dBoxE(0.15, 0.15, NZ1 - NZ0 - 0.3, 0xc9a877, NX1 - 0.075, BY + 0.005, (NZ0 + NZ1) / 2);
-      for (let x9 = NX0 + 0.3; x9 < NX1 - 0.1; x9 += 0.3) { dRodE(x9, BY, NZ0 + 0.15, x9, BY - 0.3, (NZ0 + NZ1) / 2, 0.012, 0x2f3236); dRodE(x9, BY - 0.3, (NZ0 + NZ1) / 2, x9, BY, NZ1 - 0.15, 0.012, 0x2f3236); }
-      for (let z9 = NZ0 + 0.3; z9 < NZ1 - 0.1; z9 += 0.3) { const sag = 0.3 * Math.sin(Math.PI * (z9 - NZ0) / (NZ1 - NZ0)); dRodE(NX0, BY - sag * 0.7, z9, (NX0 + NX1) / 2, BY - sag, z9, 0.012, 0x2f3236); dRodE((NX0 + NX1) / 2, BY - sag, z9, NX1 - 0.15, BY - sag * 0.7, z9, 0.012, 0x2f3236); }
-      colliders.push(noStand({ x0: NX0, x1: NX1, y0: Y, y1: Y + 1.0, z0: NZ0, z1: NZ1 })); }
-    sign('숲놀이터', SM9 + 1.65, Y + DH + 1.22, DZ0 - 0.02, Math.PI, 0.3);
-    // 데크 둘레 나무(f_240 — 데크를 뚫고 선 듯 가까이) · 숲놀이터 바닥 = 잔디(나무칩 없음)
-    [[DX0 - 1.3, 47.6, 1.2], [DX1 - 1.0, 50.0, 1.05]].forEach(([x9, z9, s9]) => tree(x9, z9, s9, true));
+        _dm.compose(_dv.set(x9, Y + DH / 2 + 0.02, DZ0 - SL / 2), _dq.setFromEuler(_de.set(-a9, 0, 0)), _ds.set(0.05, 0.22, Math.hypot(SL, DH))); dGeo(box_, _dm, 0x9c7b55, NA());
+        dBoxE(0.07, 0.95, 0.07, PS, x9, Y, DZ0 - SL + 0.05);
+        dRodE(x9, Y + 0.95, DZ0 - SL + 0.05, x9, T + 0.95, DZ0 - 0.05, 0.03, RL);
+        colliders.push(noStand({ x0: x9 - 0.03, x1: x9 + 0.03, y0: Y, y1: T + 1.0, z0: DZ0 - SL - 0.02, z1: DZ0 })); }); };
+    [SW9, SM9, SN9].forEach(stair);
+    // ---- 난간: 기둥(≈1.5 m) · 윗대 · 가운데 대 · 윗단 X자 격자(0.3 칸) · 아래 세로살(0.2) · 막이 = 난간 선마다 ----
+    const rail = (x0, z0, x1, z1, e0 = true, e1 = true, dy = 0, tiles = false) => { const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 1.5)), ux = (x1 - x0) / L, uz = (z1 - z0) / L;
+      for (let i = e0 ? 0 : 1; i <= (e1 ? n : n - 1); i++) { const t = i / n; dBoxE(0.09, 1.0, 0.09, PS, x0 + (x1 - x0) * t, T, z0 + (z1 - z0) * t); }
+      for (let d = 0.2; d < L - 0.1; d += 0.2) { if (Math.abs(d / L * n - Math.round(d / L * n)) * L / n < 0.1) continue; dBoxE(0.035, 0.52, 0.035, RL, x0 + ux * d, T + 0.06, z0 + uz * d); }   // 세로살
+      for (let d = 0.08; d + 0.3 < L - 0.05; d += 0.3) { const ax = x0 + ux * d, az = z0 + uz * d, bx = ax + ux * 0.3, bz = az + uz * 0.3;
+        dRodE(ax, T + 0.62, az, bx, T + 0.92, bz, 0.013, RL); dRodE(ax, T + 0.92, az, bx, T + 0.62, bz, 0.013, RL); }   // X자 격자(영상 f_022·f_025)
+      dBoxE(Math.abs(x1 - x0) + 0.1, 0.06, Math.abs(z1 - z0) + 0.1, RL, (x0 + x1) / 2, T + 0.95 + dy, (z0 + z1) / 2);
+      dBoxE(Math.abs(x1 - x0) + 0.04 + (uz ? 0.035 : 0), 0.04, Math.abs(z1 - z0) + 0.04 + (ux ? 0.035 : 0), RL, (x0 + x1) / 2, T + 0.58 + dy, (z0 + z1) / 2);
+      if (tiles) for (let d = 0.35; d < L - 0.3; d += 0.62) { const k = Math.round(d / 0.62);   // 난간 판 아이 그림 타일(영상 f_025 — 흰 판에 색 그림)
+        dBoxE(0.34, 0.3, 0.03, 0xf2f0ea, x0 + ux * d, T + 0.18, z0 - 0.035); dBoxE(0.24, 0.2, 0.03, [0xe8574a, 0xf2c230, 0x4f9fdc, 0x6fbf5a, 0xf08a3a, 0x9a6fd0][k % 6], x0 + ux * d + (k % 2 ? 0.02 : -0.02), T + 0.23, z0 - 0.065); }   // 북쪽 난간 바깥(길 쪽)에서 보이게
+      colliders.push(noStand({ x0: Math.min(x0, x1) - 0.06, x1: Math.max(x0, x1) + 0.06, y0: T - 0.12, y1: T + 1.6, z0: Math.min(z0, z1) - 0.06, z1: Math.max(z0, z1) + 0.06 })); };
+    const RN = DZ0 + 0.045, RS = DZ1 - 0.045, RW = DX0 + 0.045, RE = DX1 - 0.045;
+    rail(RW + 0.1, RN, SW9 - 0.5, RN, false, true); rail(SW9 + 0.5, RN, SM9 - 0.5, RN, true, true, 0, true); rail(SM9 + 0.5, RN, SN9 - 0.5, RN, true, true, 0, true); rail(SN9 + 0.5, RN, RE, RN, true, true);
+    rail(RW, RS, RE, RS, true, true);
+    rail(RW, RN, RW, RS - 0.1, true, false, 0.01); rail(RE, RN + 0.1, RE, RS - 0.1, false, false, 0.01);
+    // ---- 남쪽 붙박이 벤치(난간 따라 · 앉는 판 0.45 · 나무 상자 자리는 비움) + 앉기 ----
+    const TRS = [[29.4, 47.5], [33.4, 47.5]];                                       // 데크를 뚫고 선 나무(영상 f_022·f_025)
+    [[DX0 + 0.25, NX0 - 0.15]].forEach(([a, b]) => { const bz9 = DZ1 - 0.1 - 0.2;
+      dBoxE(b - a, 0.05, 0.4, RL, (a + b) / 2, T + 0.4, bz9); for (let x9 = a + 0.2; x9 < b; x9 += 1.2) dBoxE(0.08, 0.4, 0.3, PS, x9, T, bz9);
+      colliders.push(noStand({ x0: a, x1: b, y0: T, y1: T + 0.45, z0: bz9 - 0.2, z1: bz9 + 0.2 }));   // 앉는 곳(올라서기 금지 — 난간 너머로 넘지 않게)
+      [28.6, 31.4, 34.6].forEach(x9 => hotspots.push({ kind: 'sit', x: x9, z: bz9 - 0.62, y: T, r: 0.8, label: '데크 벤치에 앉기', yaw: Math.PI, seat: { x: x9, y: T + 0.45 - 0.46, z: bz9 + 0.02, yaw: Math.PI } })); });
+    // ---- 데크를 뚫고 선 나무 둘 + 네모 나무 벤치 상자(0.9 × 0.45) — 가까이 층 모양(먼 층 나무를 늘리지 않음) ----
+    TRS.forEach(([x9, z9], k) => { const h9 = hash2(x9, z9);
+      addBox(0.9, 0.45, 0.9, 0x9c7b55, x9, T, z9, NS); dBoxE(0.96, 0.04, 0.96, RL, x9, T + 0.45, z9);
+      colliders.push({ x0: x9 - 0.21, x1: x9 + 0.21, y0: Y, y1: Y + 12, z0: z9 - 0.21, z1: z9 + 0.21 });
+      dCylE(0.14, 0.2, 4.6, 0x6d5a48, x9, T + 0.49, z9, { seg: 6 });
+      [[0, 5.4, 0, 1.9], [0.9, 4.6, 0.4, 1.3], [-0.8, 4.8, -0.3, 1.35], [0.2, 6.3, -0.2, 1.3]].forEach(([ox, oy, oz, r], i) => dBlobE(r, r * 0.8, r, [0x4d8b4d, 0x5c9a4f, 0x3f7a3f][(i + k) % 3], x9 + ox, T + oy, z9 + oz, { chunky: true, ry: h9 * 6 + i, jitter: 0.14 }));
+      // (나무 벤치 상자엔 앉기 지점을 두지 않는다 — 등 뒤 줄기가 3인칭 카메라를 막아 앉은 몸이 가려진다)
+    });
+    // ---- 그물 칸(영상 f_023·f_024): 나무 틀 안 밝은 회색 밧줄 그물(0.3 칸 · 가운데가 살짝 처짐) — 걸을 수 있음(충돌 윗면 = 그물) ----
+    { const GX0 = NX0, GX1 = DX1 - 0.15, GZ0 = DZ0 + 0.15, GZ1 = DZ1 - 0.15, NY = T - 0.1, NET = 0xc9c8c0;   // 밝은 회색 밧줄 그물(영상 v03 f_027)
+      dBoxE(DX1 - NX0, 0.15, 0.15, WD, (NX0 + DX1) / 2, T - 0.15, DZ0 + 0.075); dBoxE(DX1 - NX0, 0.15, 0.15, WD, (NX0 + DX1) / 2, T - 0.15, DZ1 - 0.075);
+      dBoxE(0.15, 0.15, DZ1 - DZ0 - 0.3, WD, DX1 - 0.075, T - 0.15, (DZ0 + DZ1) / 2);
+      [[NX0, DX1, DZ0, DZ0 + 0.15], [NX0, DX1, DZ1 - 0.15, DZ1], [DX1 - 0.15, DX1, DZ0 + 0.15, DZ1 - 0.15]].forEach(([x0, x1, z0, z1]) => colliders.push({ x0, x1, y0: T - 0.45, y1: T, z0, z1 }));   // 틀 윗면 = 딛는 곳
+      const sag = (x, z) => 0.07 * Math.sin(Math.PI * (x - GX0) / (GX1 - GX0)) * Math.sin(Math.PI * (z - GZ0) / (GZ1 - GZ0));
+      for (let x9 = GX0 + 0.3; x9 < GX1 - 0.1; x9 += 0.3) for (let z9 = GZ0; z9 < GZ1 - 0.01; z9 += (GZ1 - GZ0) / 6) { const z1 = z9 + (GZ1 - GZ0) / 6; dRodE(x9, NY - sag(x9, z9), z9, x9, NY - sag(x9, z1), z1, 0.016, NET); }
+      for (let z9 = GZ0 + 0.3; z9 < GZ1 - 0.1; z9 += 0.3) for (let x9 = GX0; x9 < GX1 - 0.01; x9 += (GX1 - GX0) / 6) { const x1 = x9 + (GX1 - GX0) / 6; dRodE(x9, NY - 0.005 - sag(x9, z9), z9, x1, NY - 0.005 - sag(x1, z9), z9, 0.016, NET); }
+      colliders.push({ x0: GX0, x1: GX1, y0: T - 0.45, y1: NY - 0.02, z0: GZ0, z1: GZ1 });   // 그물 위를 걷는다(가운데 처짐 7cm 안)
+      // 빨간 해먹(기둥 둘 사이 · 동서) + 앉기
+      const HZ = (DZ0 + DZ1) / 2 + 0.3, HA = GX0 + 0.35, HB = GX1 - 0.3, HY = T + 1.45, LOW = T + 0.5;
+      [HA, HB].forEach(x9 => { dBoxE(0.12, HY + 0.35 - (T - 0.45), 0.12, PS, x9, T - 0.45, HZ); colliders.push({ x0: x9 - 0.08, x1: x9 + 0.08, y0: T - 0.45, y1: HY + 0.35, z0: HZ - 0.08, z1: HZ + 0.08 }); });
+      const hp = t => [HA + 0.06 + (HB - HA - 0.12) * t, HY - (HY - LOW) * Math.sin(Math.PI * t)];
+      for (let k = 0; k < 8; k++) { const [xa, ya] = hp(k / 8), [xb, yb] = hp((k + 1) / 8), w9 = 0.12 + 0.5 * Math.sin(Math.PI * (k + 0.5) / 8); band(xa, ya, HZ, xb, yb, HZ, w9, 0.03, 0xd23a3a); }
+      colliders.push(noStand({ x0: HA + 0.5, x1: HB - 0.5, y0: LOW - 0.05, y1: LOW + 0.1, z0: HZ - 0.3, z1: HZ + 0.3 }));
+      hotspots.push({ kind: 'sit', x: (HA + HB) / 2, z: HZ - 0.75, y: NY - 0.02, r: 0.8, label: '해먹에 앉기', yaw: Math.PI, seat: { x: (HA + HB) / 2, y: LOW + 0.05 - 0.46, z: HZ, yaw: Math.PI } }); }
+    sign('숲놀이터', SM9 + 2.0, T + 1.25, DZ0 - 0.02, Math.PI, 0.3);
     zones.push({ x0: FP.x[0], x1: FP.x[1], z0: FP.z[0], z1: FP.z[1], y: Y, label: '숲놀이터' });
   }
   {   // 통학버스(관광버스형 — 영상 g_006.5·s_009~019.5): 쉼터 동쪽 칸 옆에 서쪽을 보고 선다 · 길이 11.6·높이 3.2 · 문 = 오른쪽(북)
@@ -4598,7 +4687,7 @@ export function buildWorld(scene) {
     addBox(3, 1.2, 1.0, 0x4e7a3e, -45, Y, -68, NS); dBlob(1.55, 0.3, 0.55, 0x5f8d4a, -45, Y + 1.2, -68, { far: true, chunky: true, jitter: 0.12 });
 
     // ---- 노란 창고(위성 B-1·영상 b_033~042): 골함석 컨테이너 두 동 · 평평한 파란 판 지붕(처마 0.25) · 서면(주차장 쪽)에 문(남쪽 끝)·흰 틀 쇠창살 창 ----
-    const SHC = 0xf0b41c, SHR = 0xd99e12, SHH = SCHOOL.shed.h;
+    const SHC = 0xf5d20f, SHR = 0xe0bd0a, SHH = SCHOOL.shed.h;   // OUT-D(09-28 영상 v04 f_001~004): 더 레몬 노랑(예전 0xf0b41c 황토빛)
     SHU.forEach(u => {
       const [ux0, ux1] = u.x, [uz0, uz1] = u.z, cx9 = (ux0 + ux1)/2, cz9 = (uz0 + uz1)/2, dc = uz1 - 0.15 - 0.45, wc = uz1 - 3.5;
       const SA = { far: true, at: [cx9, Math.min(cz9, -64.5)] };   // 두 동 다 창고·텃밭 칸(z -64 북쪽 청크)에: 남쪽 동이 흙길·급식동 칸(서쪽 골은 항상 그려지는 대지 청크)에 들어가 서관 안에서도 그려졌다
@@ -4608,7 +4697,7 @@ export function buildWorld(scene) {
         if (Math.abs(z9 - dc) > 0.52 && Math.abs(z9 - wc) > 0.45) dBox(0.04, SHH - 0.2, 0.07, SHR, ux0 - 0.02, Y + 0.1, z9, SA);
         dBox(0.04, SHH - 0.2, 0.07, SHR, ux1 + 0.02, Y + 0.1, z9, SA); }
       for (let x9 = ux0 + 0.2; x9 < ux1 - 0.1; x9 += 0.45) [uz0 - 0.02, uz1 + 0.02].forEach(z9 => dBox(0.07, SHH - 0.2, 0.04, SHR, x9, Y + 0.1, z9, SA));
-      dBox(0.04, 2.1, 0.9, 0xe6aa18, ux0 - 0.02, Y + 0.03, dc, SA); dBox(0.03, 0.05, 0.14, 0xc9ced3, ux0 - 0.055, Y + 1.0, dc + 0.3, SA);   // 문 + 손잡이
+      dBox(0.04, 2.1, 0.9, 0xe8c40c, ux0 - 0.02, Y + 0.03, dc, SA); dBox(0.03, 0.05, 0.14, 0xc9ced3, ux0 - 0.055, Y + 1.0, dc + 0.3, SA);   // 문 + 손잡이
       dBox(0.04, 0.7, 0.8, 0xf2f2ee, ux0 - 0.02, Y + 1.25, wc, SA); dBox(0.03, 0.58, 0.68, 0x3e4a55, ux0 - 0.05, Y + 1.31, wc, SA);            // 흰 틀 창 + 어두운 유리
       [-0.2, 0, 0.2].forEach(o => dRod(ux0 - 0.075, Y + 1.3, wc + o, ux0 - 0.075, Y + 1.9, wc + o, 0.012, 0xf4f4f0, SA));                   // 쇠창살
     });
@@ -4636,6 +4725,13 @@ export function buildWorld(scene) {
     ballJuniper(46.6, -62.4, 1.8, true); tree(49.2, -60.6, 1.9, true);
     bgTree(47.4, -57.7, 0.42); dRod(47.55, Y, -57.7, 47.55, Y + 1.5, -57.7, 0.025, 0xb89a6e); post(47.55, -57.7, Y, Y + 1.5, 0.05);
     shrub(46.2, -51.8, 0.45, 0x5c8f45, true);
+    // OUT-D(09-28 영상 v04 f_021~024): 흙길 동끝에서 침엽수 사이로 북동쪽 잔디밭까지 검은 매트 길 + 둥근 디딤돌(지름 0.5 · 0.8 간격) + 태양광 정원등 셋
+    { const SP = [[40.6, -56.3], [42.2, -57.7], [43.6, -59.6], [44.3, -61.8], [45.0, -64.2]], MW = 0.75;
+      for (let i = 0; i + 1 < SP.length; i++) { const [ax, az] = SP[i], [bx, bz] = SP[i + 1], L = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / L * MW / 2, nz = (bx - ax) / L * MW / 2;
+        byQuad('asph', [[ax + nx, az + nz], [bx + nx, bz + nz], [bx - nx, bz - nz], [ax - nx, az - nz]], Y + 0.018 + (i % 2) * 0.003, MAT);
+        for (let t = 0.4; t < L - 0.1; t += 0.8) { const x9 = ax + (bx - ax) * t / L, z9 = az + (bz - az) * t / L; dCyl(0.24, 0.25, 0.05, 0xb9b6ae, x9, Y + 0.012, z9, { seg: 9, at: [x9, -64.5] }); } }
+      [[41.3, -58.0], [43.0, -60.9], [45.7, -62.9]].forEach(([x9, z9]) => { dCyl(0.025, 0.025, 0.45, 0x2b2d30, x9, Y, z9, { seg: 6, at: [x9, -64.5] }); dBox(0.13, 0.08, 0.13, 0x2b2d30, x9, Y + 0.45, z9, { at: [x9, -64.5] });
+        lamp(0.09, 0.03, 0.09, x9, Y + 0.415, z9); colliders.push(noStand({ x0: x9 - 0.07, x1: x9 + 0.07, y0: Y, y1: Y + 0.55, z0: z9 - 0.07, z1: z9 + 0.07 })); }); }
 
     // ---- 텃밭(위성 B-2·영상 b_051~076): 바닥 거의 전부 검은 잡초매트 + 흙 두둑(동서) — 두둑마다 다른 작물(잎채소·메리골드·고구마·콩 지주·검은 비닐) ----
     const GD = SCHOOL.garden, gxe = z => GP[3][0] + (z - GP[3][1]) * (GP[3][0] - GP[2][0]) / (GP[3][1] - GP[2][1]);   // 비스듬한 동쪽 끝 x
@@ -4659,13 +4755,26 @@ export function buildWorld(scene) {
       let xl = a + 0.3; while (xl + 1.2 < b - 0.1) xl += 1.2;   // [integ 09-25] 충돌 = 첫 지주 ~ 끝 지주(두둑 끝 0.3~1.3m가 보이지 않는 벽이던 것 — 옆 두둑에서 건너올 때)
       colliders.push(noStand({ x0: a + 0.05, x1: xl + 0.25, y0: Y, y1: Y + 1.8, z0: rz - 0.45, z1: rz + 0.45 }));   // z ±0.45 = 지주(±0.35)·덩굴(±0.41)
     };
+    // OUT-D(09-28 영상 v04 f_005~020): 두둑은 나무·흙 테두리 없이 전부 **검은 비닐 멀칭**(구멍에서 작물) · 서쪽 x < FAL은 **휴경 마른 풀밭**(두둑 없음) ·
+    //   고랑에 구불구불 호스 둘(수도 스탠드에서) · 수도 스탠드 + 붉은 대야는 그대로 · (두둑 흰 이름표는 뺐다 — 두둑 위를 걷는 몸에 보이지 않는 벽이 된다)
+    const FAL = 18.6, VIN = 0x1f2022;
     const PLAN = [['marigold', 'leafy'], ['potato', 'mulch', 'leafy'], ['bean', 'potato'], ['leafy', 'mulch', 'marigold'], ['potato', 'bean'], ['mulch', 'leafy']];
     PLAN.forEach((pl, i) => {
-      const rz = GP[4][1] - 1.25 - i * 2.45, a0 = GP[0][0] + 0.8, b0 = gxe(rz - 0.6) - 0.6, sl = (b0 - a0 - 0.5 * (pl.length - 1)) / pl.length;
+      const rz = GP[4][1] - 1.25 - i * 2.45, a0 = FAL + 0.6, b0 = gxe(rz - 0.6) - 0.6, sl = (b0 - a0 - 0.5 * (pl.length - 1)) / pl.length;
       pl.forEach((kind, j) => { const a = a0 + j * (sl + 0.5), b = a + sl;
-        addBox(b - a, 0.18, 1.2, kind === 'mulch' ? 0x2a2a2c : 0x7a5e44, (a + b) / 2, Y, rz, kind === 'bean' ? { collide: false } : {});   // [integ 09-25] 콩 두둑 올라서기 금지는 위 지주 충돌이 맡는다(두둑 전체 NS면 끝이 보이지 않는 벽)
+        addBox(b - a, 0.18, 1.2, VIN, (a + b) / 2, Y, rz);   // 콩 두둑도 몸통 충돌(OUT-D: 예전 collide:false — 지주가 없는 끝 칸에서 발이 두둑 속에 묻혔다) · 올라서기 금지는 지주 충돌(noStand)이 맡는다
+        dBox(b - a - 0.3, 0.03, 0.8, 0x2b2c2f, (a + b) / 2, Y + 0.18, rz, { at: [(a + b) / 2, -64.5] });   // 둥근 윗면(비닐이 부푼 가운데 — 살짝 밝은 띠)
         crop(kind, a, b, rz); });
     });
+    // 휴경 마른 풀밭(서쪽 · 영상 v04 f_007~012 — 누렇게 마른 풀 + 드문드문 풀포기)
+    { const fz0 = GP[0][1] + 0.2, fz1 = GP[4][1] - 0.2;
+      patQuad('dirt', GP[0][0] + 0.2, FAL, fz0, fz1, Y + 0.02, false, 0xc9bf86);
+      for (let k = 0; k < 26; k++) { const x9 = GP[0][0] + 0.6 + hash2(k, 71) * (FAL - GP[0][0] - 1.2), z9 = fz0 + 0.5 + hash2(k, 73) * (fz1 - fz0 - 1.0), r9 = 0.2 + hash2(k, 79) * 0.18;
+        dBlob(r9 * 1.3, r9 * 0.6, r9 * 1.2, [0xa99d62, 0xb8ad6e, 0x9c9a5a][k % 3], x9, Y + r9 * 0.3, z9, { chunky: true, ry: k, jitter: 0.2, far: x9 < 16, ...(x9 < 16 ? {} : { at: [x9, -64.5] }) });
+        softVols.push({ x0: x9 - r9 * 1.3, x1: x9 + r9 * 1.3, y0: Y, y1: Y + r9, z0: z9 - r9 * 1.2, z1: z9 + r9 * 1.2, why: '휴경지 마른 풀(걸어 들어감)' }); } }
+    // 호스 둘(수도 스탠드 → 고랑 따라 서쪽으로 구불구불 · 초록·회색)
+    [[GP[4][1] - 2.48, 0x5f8f4a], [GP[4][1] - 7.38, 0xa8adb0]].forEach(([hz, hc], k) => { let px = 34.9, pz = hz;
+      for (let x9 = 34.0, i = 0; x9 > FAL + 1.5; x9 -= 1.3, i++) { const z9 = hz + Math.sin(i * 1.3 + k) * 0.18; dRod(px, Y + 0.03, pz, x9, Y + 0.03, z9, 0.02, hc, { at: [Math.max(x9, 16.5), -64.5] }); px = x9; pz = z9; } });
     // 텃밭 소품(영상 b_063~076): 긴 화분의 벼 · 수도 스탠드 + 뒤집힌 붉은 대야 · 감긴 회색 호스 · 태양광 정원등
     for (let k = 0; k < 5; k++) { const x9 = 26.5 + k * 1.05, z9 = GP[4][1] - 0.35; addBox(0.9, 0.3, 0.35, 0xb4552f, x9, Y, z9, NS);   // [integ 09-25] 올라서기 금지 — 화분 위에 서면 벼를 몸이 뚫었다(ghost)
       [-0.2, 0.2].forEach(o => dBlob(0.14, 0.42, 0.11, 0x9cc45a, x9 + o, Y + 0.55, z9, { chunky: true, jitter: 0.3, at: [x9, -64.5] })); }   // 텃밭 칸에(위 작물과 같은 이유)
@@ -4727,8 +4836,15 @@ export function buildWorld(scene) {
       [-0.12, 0.12].forEach(o => dRod(px9 + o, Y + 8.9, pz9, 49.9 + o, FH + 0.35, -34.75, 0.012, 0x2a2a2a, { far: true }));   // 본관 옥상으로 가는 인입선 둘(q_106·q_109)
       colliders.push({ x0: px9 - 0.2, x1: px9 + 0.2, y0: Y, y1: Y + 11, z0: pz9 - 0.2, z1: pz9 + 0.2 }); }
     // 데크 남쪽: 바위·관목 둔덕(영상 b_099·b_105)
-    patQuad(MOW, DX[0], 60, DZ[1], -36.3, Y + 0.012, false, GR); patQuad(MOW, 53.5, 60, -36.3, fz0 - 0.3, Y + 0.012, false, GR);
-    [[51.6, -41.4, 1.8, 0.8, 1.3], [54.6, -40.2, 2.0, 0.9, 1.4], [57.8, -41.6, 1.7, 0.8, 1.2], [52.3, -38.2, 1.5, 0.7, 1.1]].forEach(([x9, z9, w9, h9, d9]) => mound(x9, z9, w9, h9, d9, 0x557f47, true));
+    //   OUT-D(09-28 영상 v04 f_025~031 · 교사 "텃밭 뒤 의자 올라가는 곳" = 이 데크): 남서 모서리에서 남쪽으로 내려오는 쐐기 나무 경사로(폭 1.4 · 길이 2.4) → 적갈 벽돌 보도 → 본관 동쪽 보도
+    const EW = 54.15;                                                                             // 본관 동쪽 보도 동쪽 가(보도 x 51.15~EW — 앞뜰 블록)
+    { const RX0 = DX[0] + 0.15, RX1 = RX0 + 1.4, RZ1 = DZ[1] + 2.4;
+      slope('gymw', 'z', RX0, RX1, DZ[1], RZ1, DT, Y + 0.02, 3, 0x948c8c);
+      [[RX0, -1], [RX1, 1]].forEach(([x9, f9]) => slopeCap('gymw', x9, f9, DZ[1], RZ1, DT, Y + 0.02, 0x6f6868));
+      patQuad('ilock', DX[0], EW, RZ1, -36.3, Y + 0.012, false, BRK2);                          // 벽돌 보도(경사로 발치 ~ 본관 북벽 줄)
+      patQuad(MOW, DX[0], EW, DZ[1], RZ1, Y + 0.012, false, GR); }
+    patQuad(MOW, EW, 60, DZ[1], -36.3, Y + 0.012, false, GR); patQuad(MOW, EW, 60, -36.3, fz0 - 0.3, Y + 0.012, false, GR); patQuad('ilock', 53.5, EW, -36.3, fz0 - 0.3, Y + 0.012, false, GRY2);
+    [[55.6, -40.2, 1.6, 0.9, 1.4], [58.0, -41.8, 1.6, 0.8, 1.2]].forEach(([x9, z9, w9, h9, d9]) => mound(x9, z9, w9, h9, d9, 0x557f47, true));
     [[55.6, -37.7], [58.6, -38.5]].forEach(([x9, z9]) => weed(x9, z9, 0.55, 0x4d8b4d));
 
     // ---- 뒷길(영상 b_015~028): 계단홀 문 밖 디딤판·고무 매트·벽돌 기둥 · 급식동 서벽 앞 케이블 트레이 더미·실외기(작은 LG 1·큰 것 5)·맨홀·배수 격자 ----
@@ -4776,7 +4892,47 @@ export function buildWorld(scene) {
     [-50.6, -46.9].forEach(z9 => dBox(0.16, 1.9, 0.16, 0x8a9096, -86.2, YARD, z9, { far: true }));                                       // 울타리 문 기둥 + 닫힌 문짝
     dBox(0.05, 1.5, 3.5, 0x9aa0a6, -86.2, YARD + 0.1, -48.75, { far: true });
     patQuad('grass', -86, -53.5, -86, -50.5, YARD + 0.012, false, 0xc4d6ac);                                                          // 숲 바닥(흙길 북쪽)
-    fan('grass', [-86, gz0 - 0.15], [[-86, -47], [-62.5, -47], [-61, -46.2], [-59, -45.3], [-58, -44.65], [-57, -44], [-55, -41], [-53.5, -39.85], [-53.5, gz0 - 0.15]], 0xc4d6ac);   // 체육관 북쪽 잔디(대각 길 남서쪽)
+    fan('grass', [-86, gz0 - 0.15], [[-86, -47], [-66, -47], [-66, -41.6], [-55.4, -41.6], [-55, -41], [-53.5, -39.85], [-53.5, gz0 - 0.15]], 0xc4d6ac);   // 체육관 북쪽 잔디(대각 길 남서쪽 · OUT-D: 북동 공터 자리는 뺌)
+    // ---- 체육관 북동 공터(OUT-D · 09-28 영상 v05 f_071~078 — 위치는 추정): 대각 길 서쪽 잔디 끝을 콘크리트 바닥으로 · 남쪽(잔디 쪽) 초록 철망 앞에 서→동
+    //   은행나무 둘(철망 뒤) · 스테인리스 이동식 거치대 · 라바콘 · 자전거 보관대(자주 반투명 아치 지붕 + 연두 틀 · 거치대) · 파랑 지붕 분리수거 창고(흰 문) · 회색 1100 L 수거함(빨간 뚜껑)
+    fan('asph', [-66, -41.6], [[-66, -47], [-62.5, -47], [-61, -46.2], [-59, -45.3], [-58, -44.65], [-57, -44], [-55.4, -41.6]], 0xe4e2dc);
+    { const Y9 = YARD, FZ9 = -41.45, LG = 0xa8c858, NA9 = o => ({ ...(o || {}), at: [-58, -44] });
+      meshFence(-66, FZ9, -55.6, FZ9, Y9, 1.5);                                                   // 초록 철망(잔디 쪽)
+      [[-65.0, -39.4, 1.35], [-61.2, -39.0, 1.2]].forEach(([x9, z9, s9]) => {                      // 은행나무(곧은 줄기 + 좁고 높은 부채꼴 수관)
+        colliders.push({ x0: x9 - 0.2, x1: x9 + 0.2, y0: Y9, y1: Y9 + 12, z0: z9 - 0.2, z1: z9 + 0.2 });
+        dCyl(0.14 * s9, 0.22 * s9, 5.2 * s9, 0x5f5044, x9, Y9, z9, { far: true, seg: 6 });
+        [[0, 4.2, 0, 1.6, 1.5], [0.3, 5.8, -0.2, 1.3, 1.4], [-0.1, 7.1, 0.1, 0.9, 1.1]].forEach(([ox, oy, oz, r, sy], k) => dBlob(r * s9, r * sy * s9, r * s9, [0x6f9a3c, 0x7aa545, 0x86ae4c][k], x9 + ox, Y9 + oy * s9, z9 + oz, { far: true, chunky: true, ry: k + x9, jitter: 0.14 })); });
+      { const x9 = -65.4, z9 = -42.3;                                                              // 스테인리스 이동식 거치대(바퀴 달린 사각 틀 · 세로살)
+        [-0.5, 0.5].forEach(o => { dRod(x9 + o, Y9 + 0.1, z9 - 0.3, x9 + o, Y9 + 1.2, z9 - 0.3, 0.02, 0xc9ced3, NA9()); dRod(x9 + o, Y9 + 0.1, z9 + 0.3, x9 + o, Y9 + 1.2, z9 + 0.3, 0.02, 0xc9ced3, NA9()); });
+        [0.12, 1.2].forEach(h => [-0.3, 0.3].forEach(o => dRod(x9 - 0.5, Y9 + h, z9 + o, x9 + 0.5, Y9 + h, z9 + o, 0.018, 0xc9ced3, NA9())));
+        for (let k = -3; k <= 3; k++) dRod(x9 + k * 0.14, Y9 + 0.12, z9 - 0.3, x9 + k * 0.14, Y9 + 1.2, z9 - 0.3, 0.008, 0xc9ced3, NA9());
+        colliders.push(noStand({ x0: x9 - 0.55, x1: x9 + 0.55, y0: Y9, y1: Y9 + 1.25, z0: z9 - 0.35, z1: z9 + 0.35 })); }
+      { const x9 = -63.0, z9 = -43.3;                                                              // 라바콘
+        dCyl(0.03, 0.16, 0.68, 0xe0582a, x9, Y9 + 0.05, z9, { seg: 8, ...NA9() }); dCyl(0.1, 0.12, 0.1, 0xf4f4f0, x9, Y9 + 0.33, z9, { seg: 8, ...NA9() }); dBox(0.36, 0.05, 0.36, 0x2e2e30, x9, Y9, z9, NA9());
+        colliders.push(noStand({ x0: x9 - 0.18, x1: x9 + 0.18, y0: Y9, y1: Y9 + 0.75, z0: z9 - 0.18, z1: z9 + 0.18 })); }
+      { const X0 = -62.6, X1 = -56.9, Z0 = -44.0, Z1 = -41.75, H9 = 2.3, cz = (Z0 + Z1) / 2, R = (Z1 - Z0) / 2;   // 자전거 보관대(영상 v05 f_074~076): 연두 기둥 넷 + 아치 도리 + 자주 반투명 지붕 · 안에 U자 거치대
+        [X0 + 0.1, X1 - 0.1].forEach(x9 => [Z0 + 0.08, Z1 - 0.08].forEach(z9 => { dRod(x9, Y9, z9, x9, Y9 + H9 - 0.4, z9, 0.05, 0xc9ced3, NA9()); post(x9, z9, Y9, Y9 + H9 - 0.4, 0.07); }));
+        const arc = (x9, c9, r9) => { for (let i = 0; i < 6; i++) { const a0 = Math.PI * i / 6, a1 = Math.PI * (i + 1) / 6; dRod(x9, Y9 + H9 - 0.4 + Math.sin(a0) * 0.4, cz - Math.cos(a0) * R, x9, Y9 + H9 - 0.4 + Math.sin(a1) * 0.4, cz - Math.cos(a1) * R, r9, c9, NA9()); } };
+        [X0 + 0.1, (X0 + X1) / 2, X1 - 0.1].forEach(x9 => arc(x9, LG, 0.04));
+        [Z0 + 0.08, Z1 - 0.08].forEach(z9 => dRod(X0, Y9 + H9 - 0.4, z9, X1, Y9 + H9 - 0.4, z9, 0.045, LG, NA9()));
+        { const roof = new THREE.CylinderGeometry(1, 1, X1 - X0 + 0.1, 8, 1, true, 0, Math.PI).rotateZ(Math.PI / 2).scale(1, 0.4, R + 0.04);   // 반원통 지붕(위 · 양면)
+          dGeo(roof, new THREE.Matrix4().makeTranslation((X0 + X1) / 2, Y9 + H9 - 0.4, cz), 0x8a2a7a, NA9()); dGeo(roof.clone().scale(1, 0.985, -0.985), new THREE.Matrix4().makeTranslation((X0 + X1) / 2, Y9 + H9 - 0.4, cz), 0x6a2060, NA9()); }
+        let xl9 = X0 + 0.6; for (let x9 = X0 + 0.6; x9 < X1 - 0.4; x9 += 0.7) { xl9 = x9; dRod(x9, Y9, Z1 - 0.9, x9, Y9 + 0.7, Z1 - 0.9, 0.02, 0xb9bec2, NA9()); dRod(x9, Y9 + 0.7, Z1 - 0.9, x9, Y9 + 0.7, Z1 - 0.3, 0.02, 0xb9bec2, NA9()); dRod(x9, Y9, Z1 - 0.3, x9, Y9 + 0.7, Z1 - 0.3, 0.02, 0xb9bec2, NA9()); }   // U자 거치대(뒤집은 ㄷ)
+        colliders.push(noStand({ x0: X0 + 0.56, x1: xl9 + 0.04, y0: Y9, y1: Y9 + 0.75, z0: Z1 - 0.94, z1: Z1 - 0.26 }));   // 거치대 봉 바깥에 딱 맞춤
+        colliders.push({ x0: X0, x1: X1, y0: Y9 + H9 - 0.4, y1: Y9 + H9 + 0.05, z0: Z0, z1: Z1, nc: true }); }   // 지붕(점프로 못 올라감 — 윗면 = 발 + 1.52보다 높음)
+      { const X0 = -56.6, X1 = -53.8, Z0 = -44.5, Z1 = -42.0, H9 = 2.3;                            // 분리수거 창고(영상 v05 f_075~076): 흰 판 벽 + 파랑 지붕 + 앞(북) 흰 문 · 옆 창살
+        addBox(X1 - X0, H9, Z1 - Z0, 0xe9ebe8, (X0 + X1) / 2, Y9, (Z0 + Z1) / 2);
+        dBox(X1 - X0 + 0.3, 0.1, Z1 - Z0 + 0.3, 0x2f62b0, (X0 + X1) / 2, Y9 + H9, (Z0 + Z1) / 2, NA9());
+        dBox(1.0, 2.0, 0.04, 0xf6f6f2, X0 + 0.9, Y9 + 0.05, Z0 - 0.02, NA9()); dBox(0.04, 0.16, 0.04, 0x8a9096, X0 + 1.3, Y9 + 1.0, Z0 - 0.06, NA9());
+        for (let k = 0; k < 5; k++) dRod(X1 + 0.03, Y9 + 1.2, Z0 + 0.6 + k * 0.3, X1 + 0.03, Y9 + 1.9, Z0 + 0.6 + k * 0.3, 0.012, 0x8a9096, NA9());
+        for (let x9 = X0 + 0.45; x9 < X1 - 0.2; x9 += 0.45) if (Math.abs(x9 - (X0 + 0.9)) > 0.62) dBox(0.04, H9 - 0.1, 0.03, 0xd2d5d2, x9, Y9 + 0.05, Z0 - 0.015, NA9());   // 판 이음(북면)
+        for (let z9 = Z0 + 0.45; z9 < Z1 - 0.2; z9 += 0.45) dBox(0.03, H9 - 0.1, 0.04, 0xd2d5d2, X0 - 0.015, Y9 + 0.05, z9, NA9());                           // 판 이음(서면)
+        sign('분리수거', X0 + 2.1, Y9 + 1.75, Z0 - 0.03, Math.PI, 0.22, { bg: '#2f62b0', fg: '#ffffff' }); }
+      { const x9 = -64.1, z9 = -42.45;                                                             // 회색 1100 L 수거함(빨간 뚜껑 · 바퀴)
+        dBox(1.3, 1.05, 1.0, 0x80868c, x9, Y9 + 0.15, z9, NA9()); dBox(1.36, 0.08, 1.06, 0xc8423a, x9, Y9 + 1.2, z9, NA9());
+        [-0.5, 0.5].forEach(o => [-0.35, 0.35].forEach(p9 => dCyl(0.08, 0.08, 0.06, 0x26282c, x9 + o, Y9 + 0.07, z9 + p9, { seg: 8, rot: [Math.PI / 2, 0, 0], ...NA9() })));
+        colliders.push(noStand({ x0: x9 - 0.66, x1: x9 + 0.66, y0: Y9, y1: Y9 + 1.28, z0: z9 - 0.5, z1: z9 + 0.5 })); }
+    }
     for (let x = -84; x <= -58; x += 6.5) for (let z = -84; z <= -38.5; z += 6.5) { const sk = R9(), jx = jit() * 2.2, jz = jit() * 2.2, sc = 0.75 + R9() * 0.7;   // 체육관 북서쪽 숲(격자가 보이지 않게 크게 흩고 15%는 비움 — 과수원처럼 줄 서 보이던 것)
       const keep = z >= -46 ? x <= -77.5 : z > -62 ? false : sk > 0.55;   // 그림자 띠 = 서쪽 2열만 · 흙길 둘레 = 아래 빽빽한 줄이 대신 · 그 북쪽(창고·밭) = 드문드문
       if (sk > 0.15 && keep) bgTree(x + jx, z + jz, sc); }
@@ -5033,10 +5189,10 @@ export function buildWorld(scene) {
     const bandX = (x0, x1, z, face, y, col = BLUE) => addBox(x1-x0-IN*2, 0.55, 0.2, col, (x0+x1)/2, y, z + face*0.14, { collide: false });
     const bandZ = (z0, z1, x, face, y, col = BLUE) => addBox(0.2, 0.55, z1-z0-IN*2, col, x + face*0.14, y, (z0+z1)/2, { collide: false });
     // 서관 북면·동관 북·동·남면·급식동 서·북면 파랑 띠는 지웠다(BACKYARD-0·1·14 · COURT-3 Q_117.5~b_129: 영상엔 벽돌·노랑·크림 벽뿐)
-    bandZ(wz0, wz1, wx0, -1, 2.65 + FH, YEL);                                     // 서관 서면 2층(노랑)
+    // 서관 서면 2층 노랑 띠는 지웠다(OUT-D · 영상 v05 f_070: 적벽돌 + 남색 학교 이름 글자)
   }
   zones.push({ x0: LOB_X0, x1: fx1, z0: fz0, z1: zCor, y: 0, label: '본관 복도' });
-  zones.push({ x0: TR3.westX, x1: SCHOOL.bballNet.x, z0: FLD.z[0], z1: SCHOOL.southFenceZ, y: FIELD, label: '운동장' });   // EAST-3: 동끝 = 농구 구역 공막이 철망(그 동쪽은 '농구장')
+  zones.push({ x0: TR3.westX, x1: SCHOOL.bballSand.x, z0: FLD.z[0], z1: SCHOOL.southFenceZ, y: FIELD, label: '운동장' });   // EAST-3: 동끝 = 모래|흙 경계선(그 동쪽은 '농구장' — OUT-D: 바닥으로만 갈림)
 
   // 교실·사무실 바깥 창 블라인드(영상 a_487~493: 나무 가로살 블라인드를 창 윗부분에 걷어 올림) — 만든 창 목록(winLog)에서 방 안쪽 구역을 찾아
   { const ROOMS = new Set([...FR.rooms, ...wg.rooms, ...B.upper.rooms, ...B.eastWing.rooms].filter(r => !['hall', 'toilet', 'storage', 'stair'].includes(r.type)).map(r => r.name));
@@ -5076,7 +5232,7 @@ export function buildWorld(scene) {
     }
     // 자리(09-27 · 걷는 칸 탐침으로 비어 있는 곳): 숲놀이터 = 데크 북쪽 돌길(앞 = 북 길) · 텃밭 = 텃밭 길 북쪽 가(앞 = 남 길) · 놀이터 = 북쪽 입구(앞 = 북 놀이마당)
     //   급식실 = 주복도 북벽 출구|입구 사이 학교 사진 판(frameBoard 1.1~2.3 — [main_corridor-10]) 위에 제목 팻말 · 운동장 = 구령대 서쪽 운동장 북쪽 끝(앞 = 남 운동장) · 큰 나무 = 줄기 북서 모래 띠(앞 = 서 운동장)
-    infoBoard('forest', '숲놀이터', 29.0, 43.9, 0);
+    infoBoard('forest', '숲놀이터', 30.2, 43.9, 0);   // OUT-D: 긴 데크 서끝 계단(x 28.2) 앞을 비움
     infoBoard('garden', '텃밭', 18.0, -58.9, 2);
     infoBoard('playground', '놀이터', -36.5, 47.3, 0);
     infoBoard('cafeteria', '급식실', (B.kitchen.exitC + B.kitchen.doorC - 0.3) / 2, B.front.z[0] + 0.15, 2, { wall: 2.3, y: 0 });
@@ -5504,7 +5660,7 @@ export function buildWorld(scene) {
       img.data[o] = Math.round(255 * (0.65 * n1(X * 4, Y * 4) + 0.35 * n2(X * 8, Y * 8))); img.data[o + 1] = Math.round(255 * (0.6 * n2(X * 8 + 3, Y * 8 + 5) + 0.4 * n3(X * 16, Y * 16))); img.data[o + 2] = 128; img.data[o + 3] = 255; }
     g.putImageData(img, 0, 0); const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
   const FCZ0 = (SCHOOL.field.z[0] + SCHOOL.southFenceZ) / 2;
-  const WORN = [[-35.3 + 3.2, FCZ0 + 3.0, 4.2], [SCHOOL.bballNet.x - 2.1 - 3.2, FCZ0, 4.2], [-13, SCHOOL.field.z[0] + 1.2 + 2.4, 2.8], [-24, SCHOOL.southFenceZ - 3.2 - 2.4, 2.8], [(-35.3 + SCHOOL.bballNet.x - 2.1) / 2, FCZ0 + 1.5, 3.2]]
+  const WORN = [[-35.3 + 3.2, FCZ0 + 3.0, 4.2], [26.9 - 3.2, FCZ0, 4.2], [-13, SCHOOL.field.z[0] + 1.2 + 2.4, 2.8], [-24, SCHOOL.southFenceZ - 3.2 - 2.4, 2.8], [(-35.3 + 26.9) / 2, FCZ0 + 1.5, 3.2]]
     .map(([x, z, r]) => new THREE.Vector3(x, z, r));   // 골대 앞(큰 골대 둘·작은 골대 둘) + 가운데 원 — 운동장 높이 흙에서만
   function aoPatch(m, ao, ground) {
     m.onBeforeCompile = sh => {

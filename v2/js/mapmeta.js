@@ -169,9 +169,10 @@ export function makeMeta(SCHOOL) {
     { id: 'east-glass-door', label: '동쪽 끝 유리문', at: [B.front.x[1] - 0.8, B.front.z[0] + 1.25], r: 2 },
   ];
   // 운동장 놀이판(달리기 트랙·공 놀이·무궁화 신호등 게임용) — 운동장 흙 사각형(SCHOOL)에서 계산. 골대·숲놀이터를 피한 여백은 실측(09-24 길격자)
-  const FL = { x0: T.westX, x1: SCHOOL.bballNet ? SCHOOL.bballNet.x : SCHOOL.eastFenceX, z0: T.fieldZ, z1: SCHOOL.southFenceZ };   // EAST-3: 동끝 = 농구 구역 공막이 철망
+  // OUT-D(09-28): 공막이 철망이 없어져 '운동장 안'(field)은 다시 통학로 철망까지(모래 띠 포함) · 공 판·트랙은 축구장(동쪽 골대 뒤 = 모래|흙 경계선 x)까지
+  const FL = { x0: T.westX, x1: SCHOOL.bballSand ? SCHOOL.bballSand.x : SCHOOL.eastFenceX, z0: T.fieldZ, z1: SCHOOL.southFenceZ };
   const PLAY = {
-    field: { x: [FL.x0 + 0.5, FL.x1 - 0.4], z: [FL.z0 + 0.2, FL.z1 - 0.5] },                  // 운동장 안(울타리·둔덕 발치 제외)
+    field: { x: [FL.x0 + 0.5, SCHOOL.eastFenceX - 0.4], z: [FL.z0 + 0.2, FL.z1 - 0.5] },       // 운동장 안(울타리·둔덕 발치 제외 · 모래 띠 포함)
     ball: { x: [FL.x0 + 4, FL.x1 - 5.2], z: [FL.z0 + 0.9, FL.z1 - 5] },                      // 공이 튕기는 판(골대 앞 여유)
     track: { c: [(FL.x0 + FL.x1) / 2, (FL.z0 + FL.z1) / 2], a: (FL.x1 - FL.x0) / 2 - 9.75, b: (FL.z1 - FL.z0) / 2 - 7.95, half: 1.5, gates: 8 },   // 타원 트랙(폭 ±1.5)
     redlight: { startZ: FL.z1 - 5.5, finish: { x: SCHOOL.porch.x.slice(), z: [FL.z0 + 0.3, FL.z0 + 1.5] } },          // 출발선 · 구령대 앞 결승
