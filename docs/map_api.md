@@ -371,7 +371,7 @@ map.story.run(scenes, { ents:{이름: {show, hide}}, onDone, onOp }) → { fired
 - `time`(과 `map.time(k)`)은 게임이 멈추면 처음 시간대로 돌아간다.
 
 ### 12.8 문 잠그기 — `map.door`
-- `map.door.lock(문 번호 | [x,z] | [x,z,y], true|false, { hot })` · `find(x, z, y?)` · `locked(t)`. 문 61개(`world.doors` · `door:<n>` 지점)를 그대로 쓴다.
+- `map.door.lock(문 번호 | [x,z] | [x,z,y], true|false, { hot })` · `find(x, z, y?)` · `locked(t)`. 문 64개(v28 합친 뒤 · `world.doors` · `door:<n>` 지점)를 그대로 쓴다. **게임은 번호 대신 자리 `[x, z]`로** 문을 가리킨다(문 수가 바뀌어도 그대로 — 숨바꼭질 `fx.doors`).
 - 잠그면: 문짝 닫힌 채(main.js `doorLock` → `DOORS[n].lock` · doorTick이 안 연다) + 개구부 몸 막는 충돌(`collider.add` — 벽 두께 0.3 · 문 높이) + 길격자 막기(`nav.block` — 술래도 못 지나감) + 양쪽 '🔒 잠긴 문' 지점(`hot:false`면 없음 — 게임이 '🔑 열쇠로 열기'를 따로 둘 때). 풀면 셋 다 원래대로.
 
 ### 12.9 쫓는 것 — `map.chaser`
@@ -801,7 +801,7 @@ map.world.water('<구역>' | { x, z, r } | { rect }, { y, color, opacity }) → 
 
 ## GYM-2 (09-28) — 체육관 구역·문 추가
 - 새 구역 id: `gym-toilet-s`(체육관 남자 화장실) · `gym-ramp`(무대 통로, multi) · `gym-south-path`(multi) · `gym-west-path` · `gym-north-path` · `gym-shed`(체육 창고(바깥)). `gym-prep`(체육관 준비실)는 이제 체육용품실 칸.
-- 새 문 4개(비상문·방송실 무대 문·남자 화장실 문·바깥 창고 문)는 문 배열 **끝**(61~64)에 붙는다 — 예전 문 번호는 그대로. 여닫이 문도 `map.world.door(n).open()/close()`·`lockDoor`가 미닫이와 똑같이 동작한다.
+- 새 문 4개(비상문·방송실 무대 문·남자 화장실 문·바깥 창고 문)는 문 배열 **끝**(합친 뒤 64개 중 마지막 넷)에 붙는다 — 도서관 뒷문(LIB-2)이 빠져 그 뒤 번호는 한 칸씩 당겨졌으니 번호를 적어 두지 말고 자리 `[x, z]`로 찾는다. 여닫이 문도 `map.world.door(n).open()/close()`·`lockDoor`가 미닫이와 똑같이 동작한다.
 
 ## 20. 급식실·교무실·복도 다시 짜기(CAFE-3 · OFFICE-3 · CORR-FEEL · 09-28 영상 v06~v13 · 계획 2-17~2-21)
 
