@@ -593,6 +593,20 @@ export function buildWorld(scene) {
     [-0.3, 0.3].forEach(ox => { rBox(rot, 0.08, 0.07, 0.08, 0x3a3d44, cx, y+0.85, cz, ox, 0.1); rBox(rot, 0.56, 0.34, 0.04, 0x2f3238, cx, y+0.92, cz, ox, 0.1);
       rBox(rot, 0.5, 0.28, 0.03, 0x3d5870, cx, y+0.95, cz, ox, 0.065); });
   }
+  // NARAE-2(09-28 아이 의견 "나래반은 책상 2~3개, 하나는 큰 선생님 책상"): 큰 나무 선생님 책상 1.8×0.8(x로 길게) — 선생님 의자는 서쪽 끝(칠판 쪽)에서 동(아이들)을 본다
+  function bigDesk(cx, y, cz, dz) {   // dz = 창 쪽 z 부호(가림판은 창 쪽 · 모니터·손잡이는 방 쪽)
+    hideSpots.push({ kind: 'desk', label: '큰 책상 밑', x: cx, y, z: cz, face: 270, w: 1.2 });
+    colliders.push(noStand({ x0: cx - 0.9, x1: cx + 0.9, y0: y, y1: y + 0.76, z0: cz - 0.4, z1: cz + 0.4 }));
+    dBox(1.84, 0.04, 0.84, 0xc9a06a, cx, y + 0.72, cz);                                          // 나무 상판
+    dBox(0.45, 0.72, 0.76, 0xa8834f, cx + 0.64, y, cz);                                           // 서랍장(동끝)
+    [0.2, 0.45, 0.66].forEach(hy => dBox(0.16, 0.03, 0.03, 0xe0d4bc, cx + 0.64, y + hy, cz - dz * 0.395));   // 손잡이(방 쪽)
+    dBox(0.05, 0.72, 0.76, 0xa8834f, cx - 0.855, y, cz);                                          // 옆판(서끝)
+    dBox(1.2, 0.5, 0.03, 0xa8834f, cx - 0.21, y + 0.22, cz + dz * 0.365);                         // 가림판(창 쪽)
+    dBox(0.08, 0.07, 0.08, 0x3a3d44, cx - 0.35, y + 0.76, cz + dz * 0.2); dBox(0.56, 0.34, 0.04, 0x2f3238, cx - 0.35, y + 0.83, cz + dz * 0.22);   // 모니터(방 쪽을 봄)
+    dBox(0.5, 0.28, 0.03, 0x3d5870, cx - 0.35, y + 0.86, cz + dz * 0.185);
+    dBox(0.42, 0.03, 0.15, 0xe6e6e0, cx - 0.35, y + 0.76, cz - dz * 0.08);
+    dBox(0.3, 0.06, 0.22, 0x6fa0d0, cx + 0.45, y + 0.76, cz + dz * 0.05); dBox(0.26, 0.05, 0.2, 0xe8b84a, cx + 0.45, y + 0.82, cz + dz * 0.06);   // 책 더미
+  }
   function officeDesk(cx, y, cz, w = 1.3, dir = 1) {                // w×0.74×0.7 — 상판·옆판·서랍장 + 모니터·키보드. dir = 앉는 쪽(+1 남 · -1 북 — 모니터는 반대쪽)
     hideSpots.push({ kind: 'desk', label: '책상 밑', x: cx - 0.1, y, z: cz, face: dir > 0 ? 0 : 180, w: Math.min(w, 1.2) });   // G-ESCAPE(09-27): 모니터 쪽(앉는 자리의 반대 — 의자·앉은 사람 쪽이 아님) · 좌표만(모양·충돌 변화 0)
     colliders.push(noStand({ x0: cx-w/2, x1: cx+w/2, y0: y, y1: y+0.74, z0: cz-0.35, z1: cz+0.35 }));
@@ -786,7 +800,15 @@ export function buildWorld(scene) {
                   g.stroke(); }
                 if (R() < 0.5) { g.fillStyle = '#f2c230'; g.beginPath(); g.arc(x + w - 14, y + 14, 8, 0, 7); g.fill(); } } }],
     film:   [1.2, 128, false, (g, N) => { const gr = g.createLinearGradient(0, 0, N, N); gr.addColorStop(0, '#3a665e'); gr.addColorStop(0.5, '#2c524b'); gr.addColorStop(1, '#264842'); g.fillStyle = gr; g.fillRect(0, 0, N, N); g.fillStyle = 'rgba(255,255,255,0.07)'; g.fillRect(0, N * 0.15, N, N * 0.08); }],   // 도서관 복도창 짙은 초록 시트지(영상 W_202~207)
-    blind:  [0.5, 64, false, (g, N) => { for (let y = 0; y < N; y += 8) { g.fillStyle = '#a87a4b'; g.fillRect(0, y, N, 6); g.fillStyle = '#7f5a34'; g.fillRect(0, y + 6, N, 2); } }],   // 나무 가로살 블라인드(영상 a_487~493)
+    books:  [1.0, 256, false, (g, N, R) => { g.fillStyle = '#4a3526'; g.fillRect(0, 0, N, N);   // LIB-2 서가 한 칸 책등 줄(u 1m · v = 칸 높이 0~1 — bookRow): 두께·키 제각각 + 띠·라벨
+      const C9 = ['#c8453a', '#3f6fb0', '#e8b83a', '#4f9a5a', '#8a5cc0', '#e8854a', '#2f4f7a', '#d9d2c0', '#6a3f2e', '#5fb0c8', '#f0e6c8', '#b83a5a', '#7a8a3a', '#2b2b2b'];
+      let x = 0; while (x < N) { const w = 5 + Math.floor(R() * 10), h = N * (0.6 + R() * 0.34), c = pick(C9, R);
+        g.fillStyle = c; g.fillRect(x, N - h, w - 1, h);
+        g.fillStyle = 'rgba(255,255,255,0.35)'; if (R() < 0.6) g.fillRect(x + 1, N - h + h * 0.12, w - 3, 4);   // 책등 띠
+        if (R() < 0.5) { g.fillStyle = 'rgba(255,255,255,0.8)'; g.fillRect(x + 1, N - 20, w - 3, 9); }            // 청구기호 라벨
+        g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(x + w - 2, N - h, 1, h);
+        x += w; if (R() < 0.04) x += 6 + Math.floor(R() * 16); } }],
+    blind:  [0.5, 64, false,(g, N) => { for (let y = 0; y < N; y += 8) { g.fillStyle = '#a87a4b'; g.fillRect(0, y, N, 6); g.fillStyle = '#7f5a34'; g.fillRect(0, y + 6, N, 2); } }],   // 나무 가로살 블라인드(영상 a_487~493)
     hop:    [3.0, 256, false, (g, N) => { g.fillStyle = '#b9bcc0'; g.fillRect(0, 0, N, N);   // 사방치기(바닥 그림) — 둘레는 포장 색
               g.fillStyle = '#f2b8a0'; g.beginPath(); g.arc(N * 0.2, N * 0.3, 26, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(N * 0.2, N * 0.3, 18, 0, 7); g.fill();
               g.strokeStyle = '#ffffff'; g.lineWidth = 5; const c = [[1, 5], [1, 4], [0, 3], [2, 3], [1, 2], [0, 1], [2, 1], [1, 0]];
@@ -1142,8 +1164,9 @@ export function buildWorld(scene) {
     // [classrooms-14] 교사 자리: 회색 철제 책상 + 모니터 · 주황 메시 의자 · 창가 흰 공기청정기(교사 의자 동쪽 — a_490.5·a_427.5)
     const tdz = zw - dz * (st === 'g4' ? 1.45 : 1.3);
     const tcz = st === 'g4' ? zw - dz * 1.6 : tdz;
-    teacherDesk(xw + 1.3, y0, tdz, 1); chair(xw + 0.72, y0, tcz, -1, 0xd9643a, 1);
-    if (!opt.computer) { const px = xw + (st === 'g4' ? 2.45 : 1.88);   // 4학년은 코너 TV장 옆 창가(a_426)
+    if (opt.big) bigDesk(xw + 1.9, y0, tdz, dz); else teacherDesk(xw + 1.3, y0, tdz, 1);
+    chair(xw + 0.72, y0, tcz, -1, 0xd9643a, 1);
+    if (!opt.computer) { const px = opt.big ? xe - 0.85 : xw + (st === 'g4' ? 2.45 : 1.88);   // 4학년은 코너 TV장 옆 창가(a_426) · 큰 책상 방(나래반)은 창가 동쪽 끝
       addBox(0.5, 1.5, 0.4, 0xf2f3f4, px, y0, zw - dz * 0.75, NS); dBox(0.3, 0.03, 0.25, 0xa9aeb3, px, y0 + 1.5, zw - dz * 0.75); }
     if (st === 'g3') {   // 3학년 흰 천 덮은 보조 탁자(교사 책상 북쪽 L자) + 나무 스툴(a_487.5·a_490.5)
       const sz = zw - dz * 2.25;
@@ -1193,7 +1216,7 @@ export function buildWorld(scene) {
       }
     } else {
       // [classrooms-13] 아이들 책상: 줄 = x(칠판에서 동쪽으로), 칸 = z — 옆으로 맞붙인 줄(영상 a_492 앞줄 넷·a_430.5) · 의자 = 나무 좌판·회색 쇠다리
-      const n = (SCHOOL.people[name]?.s.length ?? 4) + 2;
+      const n = opt.nDesk ?? (SCHOOL.people[name]?.s.length ?? 4) + 2;   // NARAE-2: opt.nDesk = 책상 수를 정해 둔 방
       const cols = Math.max(2, Math.min(4, Math.floor((depth - 2.2) / 1.4) + 1));
       const rows = Math.min(Math.max(1, Math.min(3, Math.floor((W - 4.1) / 1.7) + 1)), Math.ceil(n / cols));
       const order = [...Array(cols).keys()].sort((a, b) => Math.abs(a - (cols-1)/2) - Math.abs(b - (cols-1)/2) || a - b);
@@ -1202,7 +1225,7 @@ export function buildWorld(scene) {
       const narrow = (xe - 0.45) - (xw + 3.15 + (rows - 1) * 1.9) < 0.9, RP = narrow ? 1.7 : 1.9, pitch = narrow ? 1.6 : 0.7;
       for (let r = 0; r < rows; r++) for (const c of order) {
         if (seats.length >= n) break;
-        const x = xw + 2.4 + r * RP, z = zm + (c - (cols-1)/2) * pitch;
+        const x = xw + (opt.rowX ?? 2.4) + r * RP, z = zm + (c - (cols-1)/2) * pitch;
         studentDesk(x, y0, z, top, 0.7, 1);
         chair(x + 0.55, y0, z, 1, opt.chair ?? 0xb98a5a, 1);
         seats.push({ x: x + 0.55, z, sx: x + 1.05, sz: z });
@@ -1237,7 +1260,11 @@ export function buildWorld(scene) {
       const sx0 = xe - 1.1, sc = (sx0 + xe) / 2, szc = zc + dz * 0.3;
       dBox(1.1, 0.85, 0.6, 0xe9e9e4, sc, 0, szc); dBox(1.1, 0.04, 0.62, 0xc9ced2, sc, 0.85, szc + dz * 0.01); dBox(0.5, 0.03, 0.34, 0x7d848a, sc, 0.89, szc);
       dRod(sc, 0.89, zc + dz * 0.06, sc, 1.18, zc + dz * 0.06, 0.014, 0xc9ced2); dRod(sc, 1.18, zc + dz * 0.06, sc, 1.12, zc + dz * 0.26, 0.012, 0xc9ced2);
-      colliders.push(noStand({ x0: sx0, x1: xe, y0: 0, y1: 0.89, z0: Math.min(zc, zc + dz * 0.61), z1: Math.max(zc, zc + dz * 0.61) })); }
+      colliders.push(noStand({ x0: sx0, x1: xe, y0: 0, y1: 0.89, z0: Math.min(zc, zc + dz * 0.61), z1: Math.max(zc, zc + dz * 0.61) }));
+      // SCI-2(09-28 아이 의견 "과학실 벽쪽에 손 씻는 수도"): 벽 개수대 = 손 씻는 곳 — 레버·물비누 펌프 + '손 씻기' 지점(ACTION-1 손 비비기 · at = 꼭지 끝 · 넷째 = 물 닿는 높이)
+      dBox(0.05, 0.03, 0.14, 0xc9ced2, sc + 0.037, 1.1, zc + dz * 0.1);                                        // 레버
+      dBox(0.1, 0.18, 0.07, 0xf4f4f0, sx0 + 0.2, 1.02, zc + dz * 0.035); dBox(0.03, 0.05, 0.03, 0x7ab36a, sx0 + 0.2, 1.2, zc + dz * 0.035);   // 물비누 펌프(벽)
+      hotspots.push({ kind: 'wash', x: sc, z: zc + dz * 1.05, y: 0, r: 1.0, label: '손 씻기', at: [sc, 1.12, zc + dz * 0.26, 0.9] }); }
     // 창 아래 낮은 흰 수납장
     whiteLockers('x', xw + 0.5, xe - 0.6, zw, -dz, 0.75, 2, 0xe9e6de, 0xf2efe8, 0xf7f5f0, 0);
     // 동벽: 준비실 문 옆 종이타월함 · 짙은 게시판 · 흰 칠판(3.6) · 위 태극기(남쪽) · 남끝 벽걸이 TV
@@ -1248,7 +1275,28 @@ export function buildWorld(scene) {
     const fz = zb + dz * 1.0; dBox(0.03, 0.5, 0.72, 0x5a4632, xe - 0.015, 2.3, fz); sign(FLAG_KEY, xe - 0.042, 2.55, fz, -Math.PI / 2, 0.4);
     const tz = zw - dz * 0.8; dBox(0.07, 0.75, 1.3, 0x1e1f22, xe - 0.035, 1.75, tz); dBox(0.03, 0.67, 1.2, 0x2a3a4a, xe - 0.085, 1.79, tz);
     hotspots.push({ kind: 'board', x: xe - 0.6, z: zb, y: 0, r: 2.0, label: '칠판에 낙서하기', bx: xe - 0.08, by: 1.56, bz: zb, ry: -Math.PI / 2, bw, bh: 1.2 });   // WORLD-FX: 칠판 크기(map.world.paint)
-    npcSpot['과학실'] = [{ x: xe - 0.52, y: 0, z: zb + dz * 0.55, face: 3 }];   // TOUR-1: 견학 안내 과학선생님 = 시연대(x xe-1.76~-0.94) 뒤 칠판 앞 — 학생 쪽(서)을 본다
+    npcSpot['과학실'] = [{ x: xe - 0.52, y: 0, z: zb + dz * 0.55, face: 3 }];
+    // SCI-2(09-28 아이 의견 "선생님 책상 위치 · 프린터 · 컴퓨터 2대" — 교사 확인: 칠판 옆 앞쪽, 학생 쪽을 보게): 칠판 남쪽(시연대 끝과 창가 수납장 사이 · TV 밑) 회색 철제 책상 —
+    //   (칠판 북쪽 벽 앞은 방탈출 소품 자리라 비워 둔다)
+    //   선생님은 동쪽(벽 쪽) 주황 의자에 앉아 서(학생)를 본다 · 컴퓨터 1(모니터·키보드·본체) · 창가 수납장 위 컴퓨터 2 + 프린터
+    { const x9 = xe - 1.15, z9 = zw - dz * 1.2, L9 = 1.2, c0 = Math.min(z9 - L9 / 2, z9 + L9 / 2), c1 = Math.max(z9 - L9 / 2, z9 + L9 / 2);
+      dBox(0.72, 0.04, L9 + 0.04, 0xd9d6ce, x9, 0.72, z9);                                                     // 상판
+      dBox(0.62, 0.72, 0.42, 0x6b6f76, x9, 0, c1 - 0.23);                                                      // 서랍장(남끝)
+      [0.18, 0.43, 0.62].forEach(hy => dBox(0.03, 0.03, 0.16, 0xc9ccd0, x9 + 0.325, hy, c1 - 0.23));           // 서랍 손잡이(선생님 쪽)
+      dBox(0.62, 0.72, 0.04, 0x6b6f76, x9, 0, c0 + 0.02);                                                      // 옆판(북끝)
+      dBox(0.04, 0.5, L9 - 0.5, 0x6b6f76, x9 - 0.3, 0.22, c0 + 0.04 + (L9 - 0.5) / 2);                          // 앞 가림판(학생 쪽)
+      dBox(0.08, 0.07, 0.08, 0x3a3d44, x9 - 0.15, 0.76, z9 - 0.1); dBox(0.04, 0.34, 0.56, 0x2f3238, x9 - 0.17, 0.83, z9 - 0.1);
+      dBox(0.03, 0.28, 0.5, 0x3d5870, x9 - 0.135, 0.86, z9 - 0.1);                                              // 모니터(선생님 쪽 = 동을 봄)
+      dBox(0.15, 0.03, 0.42, 0xe6e6e0, x9 + 0.12, 0.76, z9 - 0.1);                                             // 키보드
+      dBox(0.2, 0.42, 0.4, 0x2f3238, x9 - 0.05, 0, c0 + 0.26);                                                 // 본체(책상 밑 북쪽)
+      colliders.push(noStand({ x0: x9 - 0.36, x1: x9 + 0.36, y0: 0, y1: 0.76, z0: c0 - 0.02, z1: c1 + 0.02 }));
+      hideSpots.push({ kind: 'desk', label: '선생님 책상 밑', x: x9, y: 0, z: z9, face: 90, w: 1.2 });
+      chair(x9 + 0.62, 0, z9, 1, 0xd9643a, 1); }                                                               // 주황 메시 의자(등받이 = 벽 쪽)
+    { const zq = zw - dz * 0.26;   // 창가 수납장(윗면 0.78) 위 동쪽 끝: 컴퓨터 2(모니터는 방 쪽) + 프린터
+      dBox(0.08, 0.07, 0.08, 0x3a3d44, xe - 2.0, 0.78, zq + dz * 0.05); dBox(0.56, 0.34, 0.04, 0x2f3238, xe - 2.0, 0.85, zq + dz * 0.07);
+      dBox(0.5, 0.28, 0.03, 0x3d5870, xe - 2.0, 0.88, zq + dz * 0.035);
+      dBox(0.42, 0.03, 0.14, 0xe6e6e0, xe - 2.0, 0.78, zq - dz * 0.12);
+      dBox(0.46, 0.26, 0.36, 0xeceae4, xe - 1.05, 0.78, zq); dBox(0.34, 0.03, 0.2, 0x5a5e63, xe - 1.05, 1.04, zq + dz * 0.04); dBox(0.3, 0.03, 0.12, 0xf8f8f4, xe - 1.05, 0.9, zq - dz * 0.19); }   // TOUR-1: 견학 안내 과학선생님 = 시연대(x xe-1.76~-0.94) 뒤 칠판 앞 — 학생 쪽(서)을 본다
     // 시연대(칠판 앞 — s_400.5): 흰 몸통 + 연두 앞판(학생 쪽) + 검은 테 흰 상판 + 구즈넥 수전 둘
     { const x = xe - 1.35, z = zb;
       dBox(0.76, 0.78, 2.36, 0xf2f2ee, x, 0, z); dBox(0.03, 0.6, 2.2, LIME, x - 0.395, 0.12, z);
@@ -2011,7 +2059,7 @@ export function buildWorld(scene) {
     const PD = LD + 0.04, CT = FH - 0.16;
     const pil = (x0, x1) => { const c = (x0 + x1) / 2; dBox(x1 - x0, 1.0, PD, HALL_DADO.lo, c, 0, LZ + PD / 2, { collide: true }); addBox(x1 - x0, CT - 1.0, PD, 0xf3ead2, c, 1.0, LZ + PD / 2); };   // 아래 초록 = 디테일 층(멀면 숨김 — 삼각형 예산)
     pil(NW0 - NPW - 0.05, NW0); NBAY.slice(1).forEach(a => pil(a - NPW, a));   // 동쪽 끝 모서리는 기둥 없이(끝 유리문 옆 고정 유리 자리)
-    [NW0 - 0.25, NBAY[2] - NPW / 2, NBAY[4] - NPW / 2, NBAY[6] - NPW / 2].forEach(x => { extinguisher(x, 0, LZ + PD + 0.13);
+    [NW0 - 0.25, NBAY[4] - NPW / 2].forEach(x => { extinguisher(x, 0, LZ + PD + 0.13);   // EXT-2(09-28 아이 "소화기가 너무 많다" · 영상 v05·v09·v11): 기둥 앞 4 → 2
       sign('소화기', x, 1.2, LZ + PD + 0.012, 0, 0.12, { bg: '#d83a2e', fg: '#ffffff' }); });   // 빨간 소화기 표지(a_465·a_475.5)
     // 경보 발신기(회색 판 + 빨간 둥근 벨 — a_462 게시판 동쪽 기둥·a_496.5 동쪽 기둥)
     [[BOARD[1] + 0.2, LZ], [NBAY[6] - NPW / 2, LZ + PD]].forEach(([x, zf]) => { dBox(0.22, 0.3, 0.03, 0xd9d9d4, x, 1.5, zf + 0.015); dCyl(0.075, 0.075, 0.04, 0xc4302b, x, 1.65, zf + 0.03, { rot: [Math.PI / 2, 0, 0], seg: 8 }); });   // 8각(삼각형 예산)
@@ -2029,7 +2077,7 @@ export function buildWorld(scene) {
       [0xd8403a, 0xf2c230, 0x3f78c8, 0x4fa05a, 0x8a5cc0, 0xf08a3a].forEach((hx, k) => dGeo(tri, new THREE.Matrix4().makeTranslation(bx - s9.w / 2 + 0.2 + k * 0.17, 2.392, LZ + 0.066), hx));
       tri.dispose(); }
     hotspots.push({ kind: 'notice', x: (BOARD[0] + BOARD[1]) / 2, z: fz0 + 1.1, y: 0, r: 1.6, label: '학생자치회 소식 읽기', at: [(BOARD[0] + BOARD[1]) / 2, 1.75, LZ] });
-    [LOB_X0 + 1.2, LANEW.c + LANEW.w / 2 + 0.3, 8.5].forEach(x => extinguisher(x, 0, fz0 + 0.3));   // 소화기(바닥 — 뒷길 창 것은 사물함 동쪽 끝으로)
+    [LOB_X0 + 1.2, 8.5].forEach(x => extinguisher(x, 0, fz0 + 0.3));   // 소화기(바닥) — EXT-2: 3 → 2(뒷길 창 것 뺌 · 주복도 합 4)
     // [main_corridor-19] 비상구 유도등: 동쪽 끝 유리문 위(a_480) + 천장에 매단 양면 등(a_513·a_523.5·b_138 — 복도를 따라 '비상구 따라가기' 단서)
     exitSign(fx1 - 0.15, (fz0 + zCor) / 2, 2.55, [-1, 0]);
     [-8, 27.5, 38.7].forEach(x => { const zc = (fz0 + zCor) / 2; dBox(0.03, 0.18, 0.41, 0xf2f2ee, x, 2.81, zc); dRod(x, 2.99, zc, x, FH - 0.16, zc, 0.008, 0xb8bcc0);
@@ -2134,12 +2182,16 @@ export function buildWorld(scene) {
     sign('밝은숲 보금자리', (nurseDoor - 0.6 + PL0 - 0.02) / 2, 2.85, LOB_Z + 0.22, 0, 0.16, { bg: 'none', fg: '#fff3d6' });
     sign('Junglim Village', (PL1 + 0.02 + naraeDoor + 0.95) / 2, 2.85, LOB_Z + 0.22, 0, 0.2, { bg: 'none', fg: '#fff3d6' });
     // 로비 동벽 = 도서관 서벽: 슬기샘 도서관 유리 양문(서쪽을 봄) + 문 남쪽 도서반납함
-    wallZ(LOB_Z, fz0, LOB_X, INNER, { gaps: [{ c: -36.6, w: 1.8, glass: true }] });
+    //   LIB-2(09-28 영상 v10 f_013·f_015): 은색 틀 유리 양문 하나 — 남쪽 짝 = '고정문' 스티커(열리지 않는 유리) · 여는 짝 = 북쪽 0.9
+    wallZ(LOB_Z, fz0, LOB_X, INNER, { gaps: [{ c: -37.05, w: 0.9, glass: true }, { c: -36.075, w: 0.75, sill: 0, dh: 2.6, win: true, frame: 0xb9bec4 }] });   // 두 짝 사이 0.15 문설주(여는 짝이 벽 속 5cm로 묻힘)
+    addPanel(0.3, 0.75, 0xb3aea4, LOB_X, 0.012, -36.075);                                     // 고정 짝 밑 문턱(여는 짝과 한 줄)
+    sign('고정문', LOB_X - 0.105, 1.25, -36.075, Math.PI / 2, 0.075, { bg: '#ffffff', fg: '#d0302a' });   // 로비 쪽 스티커(유리 너머로도 보임)
     { // 도서관 입구 짙은 나무 파사드(영상 W_222~226): 위 간판 띠(크림 글씨) + 양옆 기둥 판(포스터 액자) + 은색 문틀
       const FX = LOB_X - 0.15, D9 = 0xa8805f, zN = LOB_Z + 0.15, zS = fz0 - 0.15;
       dBox(0.06, 0.45, zS - zN, D9, FX - 0.03, 2.62, (zN + zS) / 2);
       dBox(0.06, 2.62, -37.56 - zN, D9, FX - 0.03, 0, (zN - 37.56) / 2); dBox(0.06, 2.62, zS + 35.64, D9, FX - 0.03, 0, (zS - 35.64) / 2);
       [-37.53, -35.67].forEach(z9 => dBox(0.05, 2.6, 0.06, 0xb9bec4, FX - 0.025, 0, z9));
+      dBox(0.05, 2.6, 0.15, 0xb9bec4, FX - 0.025, 0, -36.525);                                      // LIB-2: 가운데 은색 문설주(여는 짝 | 고정 짝)
       dBox(0.03, 0.8, 0.5, 0xe8e0f0, FX - 0.075, 1.2, -37.95); dBox(0.03, 0.8, 0.5, 0xf0e6d6, FX - 0.075, 1.2, -35.25);
       patWall('kidsArt', 'z', -38.15, -37.75, 1.25, 1.95, FX - 0.091, -1); patWall('kidsArt', 'z', -35.45, -35.05, 1.25, 1.95, FX - 0.091, -1);
       sign('슬기샘 도서관', FX - 0.08, 2.845, -36.6, Math.PI / 2, 0.3, { bg: 'none', fg: '#f3ead8' }); }
@@ -2148,26 +2200,139 @@ export function buildWorld(scene) {
     addBox(0.3, FH, pd, INNER, narae.span[0], 0, pz);
     wallZ(wz0, LOB_Z, docR.span[0], INNER, { gaps: [{ c: pz, w: 1.0 }] });
     addBox(0.3, FH, pd, INNER, LOB_X, 0, pz);
-    wallZ(wz0, wz1, STX0, INNER, { face: -1, dado: STAIR_DADO, gaps: [{ c: fz0 - 1.4, w: 1.0, color: 0xdcd3bd }] });   // 계단홀 서벽 = 도서관 뒷문(크림 평문)(영상 b_159~160 포스터 붙은 문)
+    // 계단홀 서벽. LIB-2(09-28 영상 v10 f_001~014: 도서관 출입문은 로비 쪽 하나) — 예전 '도서관 뒷문' 통로는 막고, 계단홀 쪽 크림 평문(v10 f_021 · b_159~160)은 열리지 않는 문짝만
+    wallZ(wz0, wz1, STX0, INNER, { face: -1, dado: STAIR_DADO });
+    { const x9 = STX0 + 0.15, z9 = fz0 - 1.4;
+      dBox(0.04, 2.1, 0.92, 0xdcd3bd, x9 + 0.035, 0, z9);                                    // 문짝(벽 칠 면 1cm 앞보다 더 앞)
+      [-1, 1].forEach(s => dBox(0.05, 2.16, 0.05, 0xc9c0aa, x9 + 0.04, 0, z9 + s * 0.485));  // 문틀 양옆
+      dBox(0.05, 0.05, 0.92, 0xc9c0aa, x9 + 0.04, 2.11, z9);                                   // 문틀 위(양옆 틀 사이 — 같은 면 겹침 없게)
+      dBox(0.05, 0.05, 0.14, 0x9a9ea3, x9 + 0.08, 1.0, z9 + 0.33);                             // 레버 손잡이
+      dBox(0.03, 0.42, 0.3, 0xf2efe6, x9 + 0.07, 1.35, z9 - 0.1); }                            // 문에 붙은 안내 종이
+    // ---- LIB-2(09-28 영상 v10 f_001~014): 도서관 안 — 문 정면 3m 안내 데스크('Information' 흰 둥근 기둥) · 뒤 복합기·책 수레 ·
+    //   북쪽 창 앞 흰 아치 밑 둥근 독서 단(빈백·낮은 둥근 탁자) · 둥근 나무 탁자 2(보라 의자 4씩) · 긴 열람 탁자(나무 의자 8) ·
+    //   벽 서가 6단 · 가운데 양면 낮은 서가 2줄(파랑 받침) · 그림책 진열대 2 · 자작나무 모형 · 천장 에어컨 2 · 시계 · 문 안 왼편 소화기
+    //   책은 칸마다 무늬 한 장(PATTERN 'books' — 예전 책 상자 수백 개 대신: 삼각형 절약)
+    function libraryRoom(r, s0, s1) {
+      const X0 = s0 + 0.15, X1 = s1 - 0.15, N0 = wz0 + 0.15, S1 = fz0 - 0.15;   // 안쪽 면(서 -25.75 · 동 -15.9 · 북 -44.35 · 남 -34.15)
+      const SW9 = 0xa7774c, SB9 = 0x7d5a3c;
+      // 책 한 줄(무늬 한 장): ax 축 a0~a1 · 면 선 line · 법선 f · 높이 y0~y1
+      const bookRow = (ax, a0, a1, line, f, y0, y1, u9) => {
+        const P9 = ax === 'x' ? [[a0, y0, line], [a1, y0, line], [a1, y1, line], [a0, y1, line]] : [[line, y0, a0], [line, y0, a1], [line, y1, a1], [line, y1, a0]];
+        patPush('books', P9, [[u9, 0], [u9 + a1 - a0, 0], [u9 + a1 - a0, 1], [u9, 1]], ax === 'x' ? [0, 0, f] : [f, 0, 0], 0xffffff); };
+      // 서가: ax = 늘어선 축 · a0~a1 · c = 가운데 선 · D 깊이 · H 높이 · lv 칸 · fs = 책이 보이는 쪽([f] 한 면 · [-1, 1] 양면) · 받침(높이·색)
+      const shelf = (ax, a0, a1, c, D, H, lv, fs, base = 0.08, baseHex = SB9) => {
+        const L = a1 - a0, m = (a0 + a1) / 2, one = fs.length === 1;
+        const B = (w, h, d, hex, pa, y, pc) => ax === 'x' ? dBox(w, h, d, hex, pa, y, pc) : dBox(d, h, w, hex, pc, y, pa);
+        B(0.04, H, D, SW9, a0 + 0.02, 0, c); B(0.04, H, D, SW9, a1 - 0.02, 0, c);                 // 옆판
+        B(L - 0.08, 0.04, D, SW9, m, H - 0.04, c);                                                // 윗판
+        B(L - 0.08, base, D - 0.04, baseHex, m, 0, c);                                            // 받침(앞면 2cm 들어감)
+        one ? B(L - 0.08, H - 0.04 - base, 0.03, SB9, m, base, c - fs[0] * (D / 2 - 0.015)) : B(L - 0.1, H - 0.05 - base, 0.03, SB9, m, base + 0.005, c);   // 양면 가운데 판은 칸 판·칸막이와 끝면이 같은 면이 안 되게 사방 5mm 줄임   // 등판(한 면 = 맨 뒤 · 양면 = 가운데)
+        const dd = one ? D - 0.03 : D, cc = one ? c + fs[0] * 0.015 : c, st = (H - 0.04 - base) / lv;
+        for (let k = 1; k < lv; k++) B(L - 0.08, 0.03, dd, SW9, m, base + k * st - 0.015, cc);     // 칸 판
+        const nd = Math.max(0, Math.round(L / 1.0) - 1);
+        for (let k = 1; k <= nd; k++) B(0.03, H - 0.04 - base, one ? D - 0.07 : D - 0.06, SW9, a0 + L * k / (nd + 1), base, one ? c + fs[0] * 0.005 : c);   // 세로 칸막이(칸 판 앞·뒷면보다 1~3cm 들어감 — 같은 면이 안 되게)
+        for (const f of fs) for (let k = 0; k < lv; k++) bookRow(ax, a0 + 0.04, a1 - 0.04, c + f * (D / 2 - 0.04), f, base + k * st + (k ? 0.015 : 0), base + (k + 1) * st - (k < lv - 1 ? 0.015 : 0), hash2(a0 * 7 + k, c * 3 + f) * 5);
+        colliders.push(noStand(ax === 'x' ? { x0: a0, x1: a1, y0: 0, y1: H, z0: c - D / 2, z1: c + D / 2 } : { x0: c - D / 2, x1: c + D / 2, y0: 0, y1: H, z0: a0, z1: a1 }, H >= 1.6 ? 1.6 : 1.6));
+      };
+      // 벽 서가(6단 2.1): 서벽(문서고 벽) · 북벽 창 사이 · 동벽(계단홀 벽 — 예전 뒷문 자리까지)
+      shelf('z', N0 + 0.36, -38.1, X0 + 0.175, 0.35, 2.1, 6, [1]);
+      shelf('x', X0, -24.25, N0 + 0.175, 0.35, 2.1, 6, [1]);
+      shelf('x', -21.9, -19.36, N0 + 0.175, 0.35, 2.1, 6, [1]);
+      shelf('z', N0, S1 - 0.25, X1 - 0.175, 0.35, 2.1, 6, [-1]);
+      shelf('x', -24.1, -22.04, N0 + 0.175, 0.35, 0.9, 2, [1]);                                  // 서쪽 창 밑 낮은 서가(창턱 1.0)
+      // 가운데 양면 낮은 서가 2줄(파랑 받침 — 영상 f_005)
+      shelf('x', -21.6, -17.4, -39.7, 0.5, 1.3, 4, [-1, 1], 0.12, 0x3f78c8);
+      shelf('x', -21.0, -17.4, -38.3, 0.5, 1.3, 4, [-1, 1], 0.12, 0x3f78c8);
+      // 안내 데스크(문 정면 — 영상 f_011~014): 연한 나무 · 앞(서쪽) 높은 턱 · 모니터(사서 쪽) — 사서는 동쪽에 앉아 문(서)을 본다
+      { const x9 = -22.92, z9 = -36.5, L9 = 1.5;
+        dBox(0.6, 0.04, L9 + 0.04, 0xe2cfa6, x9, 0.72, z9);                                       // 상판
+        dBox(0.08, 1.02, L9 + 0.04, 0xd7c09a, x9 - 0.34, 0, z9);                                   // 앞 턱(방문자 쪽)
+        dBox(0.03, 0.8, L9 - 0.1, 0xc4a57a, x9 - 0.395, 0.12, z9);                                  // 앞판 나무결 띠
+        [-1, 1].forEach(sd => dBox(0.52, 0.72, 0.04, 0xd7c09a, x9 + 0.04, 0, z9 + sd * (L9 / 2 - 0.02)));   // 옆판
+        dBox(0.34, 0.72, 0.4, 0xc9b28c, x9 - 0.1, 0, z9 - L9 / 2 + 0.26);                          // 서랍장(북끝)
+        dBox(0.08, 0.12, 0.08, 0x3a3d44, x9 - 0.12, 0.76, z9 + 0.1); dBox(0.04, 0.34, 0.54, 0x2f3238, x9 - 0.12, 0.88, z9 + 0.1);   // 모니터(사서 쪽 = 동을 봄)
+        dBox(0.15, 0.03, 0.42, 0xe6e6e0, x9 + 0.12, 0.76, z9 + 0.1);                                // 키보드
+        dBox(0.16, 0.1, 0.22, 0x5b8fc9, x9 - 0.05, 0.76, z9 - 0.5); dBox(0.15, 0.07, 0.2, 0xe0708a, x9 - 0.05, 0.86, z9 - 0.49);   // 책 두 더미
+        colliders.push(noStand({ x0: x9 - 0.38, x1: x9 + 0.3, y0: 0, y1: 1.02, z0: z9 - L9 / 2 - 0.02, z1: z9 + L9 / 2 + 0.02 }));
+        hideSpots.push({ kind: 'desk', label: '안내 데스크 밑', x: x9 + 0.05, y: 0, z: z9, face: 90, w: 1.2 });
+        npcSpot[r.name] = [{ x: x9 + 0.57, z: z9, face: 3, desk: 0.76, reach: 0.27, chair: true }];
+        // 흰 둥근 기둥(r 0.2 · 천장까지) + 초록 'Information' 팻말(문 쪽)
+        dCyl(0.2, 0.2, FH - 0.17, 0xf1eee6, x9 - 0.08, 0, -37.67, { seg: 12 });
+        colliders.push({ x0: x9 - 0.26, x1: x9 + 0.1, y0: 0, y1: FH - 0.17, z0: -37.85, z1: -37.49 });
+        dBox(0.04, 0.26, 0.74, 0x8cc63f, x9 - 0.3, 2.12, -37.67);
+        sign('Information', x9 - 0.325, 2.25, -37.67, Math.PI / 2, 0.15, { bg: '#8cc63f', fg: '#1f3d12' }); }
+      // 복합기(데스크 북동 — 영상 f_012) · 책 수레 2
+      dBox(0.6, 0.95, 0.55, 0x3a3d42, -22.0, 0, -38.45); dBox(0.62, 0.06, 0.57, 0xd9dcdf, -22.0, 0.95, -38.45); dBox(0.45, 0.04, 0.3, 0xeeeeea, -22.0, 1.01, -38.45);
+      colliders.push(noStand({ x0: -22.31, x1: -21.69, y0: 0, y1: 1.05, z0: -38.74, z1: -38.16 }));
+      const cart = (x9, z9, ax) => { const w = 0.9, d = 0.45, B = (a, h, b, hex, y) => ax === 'x' ? dBox(a, h, b, hex, x9, y, z9) : dBox(b, h, a, hex, x9, y, z9);
+        B(w - 0.06, 0.03, d, SW9, 0.12); B(w - 0.06, 0.03, d, SW9, 0.5); B(w - 0.06, 0.03, d, SW9, 0.88);   // 칸 판 = 옆판 사이
+        [-1, 1].forEach(sd => ax === 'x' ? dBox(0.03, 0.8, d, SW9, x9 + sd * (w / 2 - 0.015), 0.11, z9) : dBox(d, 0.8, 0.03, SW9, x9, 0.11, z9 + sd * (w / 2 - 0.015)));
+        [0.15, 0.53].forEach(y => [-1, 1].forEach(f => ax === 'x' ? bookRow('x', x9 - w / 2 + 0.03, x9 + w / 2 - 0.03, z9 + f * 0.1, f, y, y + 0.3, x9 + y) : bookRow('z', z9 - w / 2 + 0.03, z9 + w / 2 - 0.03, x9 + f * 0.1, f, y, y + 0.3, z9 + y)));
+        [-1, 1].forEach(sd => [-1, 1].forEach(sz => dCyl(0.045, 0.045, 0.1, 0x2b2b2b, ax === 'x' ? x9 + sd * 0.38 : x9 + sz * 0.17, 0.01, ax === 'x' ? z9 + sz * 0.17 : z9 + sd * 0.38, { seg: 6 })));
+        colliders.push(noStand(ax === 'x' ? { x0: x9 - w / 2, x1: x9 + w / 2, y0: 0, y1: 0.91, z0: z9 - d / 2, z1: z9 + d / 2 } : { x0: x9 - d / 2, x1: x9 + d / 2, y0: 0, y1: 0.91, z0: z9 - w / 2, z1: z9 + w / 2 })); };
+      cart(-24.0, -38.35, 'x'); cart(-16.85, -34.8, 'z');
+      // 둥근 나무 탁자 2(지름 1.1) + 보라 의자 4씩(앉는 판·등받이·다리 둘 — 삼각형 절약)
+      const purple = (x9, z9, fx, fz) => { dBox(0.4, 0.04, 0.4, 0xa98bd6, x9, 0.42, z9);
+        fx ? dBox(0.035, 0.36, 0.4, 0xa98bd6, x9 - fx * 0.19, 0.46, z9) : dBox(0.4, 0.36, 0.035, 0xa98bd6, x9, 0.46, z9 - fz * 0.19);
+        fx ? [-1, 1].forEach(s => dBox(0.3, 0.42, 0.03, 0xc9ccd0, x9, 0, z9 + s * 0.17)) : [-1, 1].forEach(s => dBox(0.03, 0.42, 0.3, 0xc9ccd0, x9 + s * 0.17, 0, z9));
+        colliders.push(noStand({ x0: x9 - 0.2, x1: x9 + 0.2, y0: 0, y1: 0.82, z0: z9 - 0.2, z1: z9 + 0.2 })); };
+      [[-23.6, -42.75], [-23.6, -40.35]].forEach(([x9, z9]) => {
+        dCyl(0.55, 0.55, 0.04, 0xd3ad73, x9, 0.68, z9, { seg: 14 }); dCyl(0.06, 0.06, 0.65, 0x8a6a45, x9, 0.03, z9, { seg: 6 }); dBox(0.6, 0.03, 0.6, 0x8a6a45, x9, 0, z9);
+        colliders.push(noStand({ x0: x9 - 0.39, x1: x9 + 0.39, y0: 0, y1: 0.72, z0: z9 - 0.55, z1: z9 + 0.55 }), noStand({ x0: x9 - 0.55, x1: x9 + 0.55, y0: 0, y1: 0.72, z0: z9 - 0.39, z1: z9 + 0.39 }));
+        purple(x9 - 0.78, z9, 1, 0); purple(x9 + 0.78, z9, -1, 0); purple(x9, z9 - 0.78, 0, 1); purple(x9, z9 + 0.78, 0, -1); });
+      // 긴 열람 탁자(3.6×1.2) + 나무 의자 8(남쪽 복도창 앞 — 영상 f_007)
+      { const x9 = -19.2, z9 = -35.95;
+        dBox(3.6, 0.04, 1.2, 0xd3ad73, x9, 0.68, z9);
+        [-1, 1].forEach(sx => [-1, 1].forEach(sz => dBox(0.06, 0.68, 0.06, 0x8a6a45, x9 + sx * 1.7, 0, z9 + sz * 0.52)));
+        colliders.push(noStand({ x0: x9 - 1.8, x1: x9 + 1.8, y0: 0, y1: 0.72, z0: z9 - 0.6, z1: z9 + 0.6 }));
+        [-1.35, -0.45, 0.45, 1.35].forEach(o => [-1, 1].forEach(sz => { const cz = z9 + sz * 0.85, cxx = x9 + o;
+          dBox(0.4, 0.04, 0.4, 0xc99a62, cxx, 0.42, cz); dBox(0.4, 0.34, 0.035, 0xc99a62, cxx, 0.46, cz + sz * 0.19);
+          [-1, 1].forEach(s => dBox(0.03, 0.42, 0.34, 0x8a6a45, cxx + s * 0.18, 0, cz));
+          colliders.push(noStand({ x0: cxx - 0.2, x1: cxx + 0.2, y0: 0, y1: 0.82, z0: cz - 0.2, z1: cz + 0.2 })); }));
+        hotspots.push({ kind: 'read', x: x9, z: z9 - 1.45, y: 0, r: 1.6, label: '책 읽기' }); }
+      // 둥근 독서 단(r 1.4 · 높이 0.18 — 올라설 수 있음) + 흰 아치 + 빈백 2 + 낮은 둥근 탁자 · 방석
+      { const x9 = -18.1, z9 = -42.85, R9 = 1.4, H9 = 0.18;
+        dCyl(R9, R9, H9, 0xe6dccb, x9, 0, z9, { seg: 16 });
+        [[0.92, 0.39], [0.75, 0.66], [0.39, 0.92]].forEach(([a, b]) => colliders.push({ x0: x9 - R9 * a, x1: x9 + R9 * a, y0: 0, y1: H9, z0: z9 - R9 * b, z1: z9 + R9 * b }));
+        [[-0.55, 0.15, 0x6f86a8], [0.55, -0.35, 0x9b8a6e]].forEach(([ox, oz, c9]) => { dBlob(0.36, 0.24, 0.36, c9, x9 + ox, H9 + 0.2, z9 + oz, { chunky: true });
+          colliders.push({ x0: x9 + ox - 0.28, x1: x9 + ox + 0.28, y0: H9, y1: H9 + 0.3, z0: z9 + oz - 0.28, z1: z9 + oz + 0.28 }); });
+        dCyl(0.42, 0.42, 0.03, 0xd3ad73, x9 + 0.1, H9 + 0.3, z9 + 0.55, { seg: 12 }); dCyl(0.05, 0.05, 0.3, 0x8a6a45, x9 + 0.1, H9, z9 + 0.55, { seg: 6 });
+        colliders.push(noStand({ x0: x9 - 0.28, x1: x9 + 0.48, y0: H9, y1: H9 + 0.33, z0: z9 + 0.17, z1: z9 + 0.93 }));
+        dCyl(0.22, 0.22, 0.06, 0xe8a0b8, x9 - 0.6, H9, z9 - 0.75, { seg: 10 });                     // 방석
+        const az = z9 + R9 + 0.1, AW = 1.45, AY = 2.0;   // 아치(단 앞 — 입구는 남쪽)
+        [-1, 1].forEach(sd => { dBox(0.2, AY, 0.2, 0xf4f1ea, x9 + sd * AW, 0, az); colliders.push(noStand({ x0: x9 + sd * AW - 0.1, x1: x9 + sd * AW + 0.1, y0: 0, y1: AY, z0: az - 0.1, z1: az + 0.1 })); });
+        { const g9 = new THREE.TorusGeometry(AW, 0.1, 4, 12, Math.PI); dGeo(g9, new THREE.Matrix4().compose(_dv.set(x9, AY, az), _dq.set(0, 0, 0, 1), _ds.set(1, 0.36, 1)), 0xf4f1ea); g9.dispose(); }
+        dBox(2 * AW + 0.2, 0.12, 0.24, 0xf4f1ea, x9, AY + 0.52, az); }
+      // 그림책 진열대 2(남벽 서쪽 — 층층 받침에 표지가 보이게) · 자작나무 모형(남서 모서리)
+      [-24.35, -23.45].forEach((x9, i9) => {   // 계단식 3단(앞으로 갈수록 낮게) + 뒤 판 — 단마다 그림책 표지 셋이 뒤 턱에 기대 섬
+        const ST9 = [[0, 0.42], [0.3, 0.3], [0.6, 0.18]];
+        ST9.forEach(([y, d]) => dBox(0.85, 0.3, d, 0xb98a5a, x9, y, S1 - d / 2));
+        dBox(0.85, 0.3, 0.04, 0x9a7048, x9, 0.9, S1 - 0.02);
+        ST9.forEach(([y], k) => { const zb = S1 - (k < 2 ? ST9[k + 1][1] : 0.04) - 0.015;
+          [-0.27, 0, 0.27].forEach((o, j) => dBox(0.22, 0.26, 0.03, [0xf2c14b, 0x6fb0e0, 0xe86a6a, 0x8cc26a, 0xc9a0e0, 0xf29a52][(k * 3 + j + i9 * 2) % 6], x9 + o, y + 0.3, zb)); });
+        colliders.push(noStand({ x0: x9 - 0.43, x1: x9 + 0.43, y0: 0, y1: 1.2, z0: S1 - 0.42, z1: S1 })); });
+      { const x9 = -25.1, z9 = -34.75;
+        dBox(0.4, 0.08, 0.4, 0xf2f0ea, x9, 0, z9);
+        dCyl(0.05, 0.07, 2.35, 0xeeeae0, x9, 0.08, z9, { seg: 6 });
+        [0.7, 1.2, 1.75].forEach(y => dBox(0.1, 0.04, 0.03, 0x3a3a3a, x9, y, z9 + 0.06));
+        [[0, 2.45, 0, 0.55], [0.25, 2.05, 0.15, 0.4], [-0.2, 2.15, -0.1, 0.38]].forEach(([ox, oy, oz, rr]) => dBlob(rr, rr * 0.6, rr, 0x9cc46a, x9 + ox, oy, z9 + oz, { chunky: true, ry: ox * 5 }));
+        colliders.push(noStand({ x0: x9 - 0.2, x1: x9 + 0.2, y0: 0, y1: 2.4, z0: z9 - 0.2, z1: z9 + 0.2 })); }
+      // 문 안쪽 왼편(북) 빨간 받침 소화기 · 천장 에어컨 2 · 시계(북벽 창 사이 서가 위)
+      dBox(0.3, 0.05, 0.3, 0xc8342c, X0 + 0.25, 0.005, -37.8); extinguisher(X0 + 0.25, 0.055, -37.8);
+      acUnit(-20.9, FH - 0.16, -41.4); acUnit(-20.9, FH - 0.16, -37.2);
+      dCyl(0.17, 0.17, 0.04, 0xf5f3ec, -20.63, 2.55, N0, { rot: [Math.PI / 2, 0, 0], seg: 16 });
+      dCyl(0.02, 0.02, 0.05, 0x2a2a2a, -20.63, 2.55, N0 + 0.045, { rot: [Math.PI / 2, 0, 0], seg: 6 });
+      [0.25, 0.75].forEach(t => lamp(1.2, 0.05, 0.22, s0 + (s1 - s0) * t, FH - 0.21, (wz0 + fz0) / 2));
+    }
     wg.rooms.forEach(r => {
       const [s0, s1] = r.span, cx = (s0 + s1) / 2;
       const deep = r.type === 'library' || r.type === 'stair';
       zones.push({ x0: s0, x1: s1, z0: wz0, z1: deep ? fz0 : LOB_Z, y: 0, label: r.name });
-      if (r.type !== 'stair') floorQ(r.type === 'library' ? 'wood' : r.type === 'nurse' ? 'ttile' : r.type === 'storage' ? 'tileW' : 'wood', s0 + 0.15, s1 - 0.15, wz0 + 0.15, (deep ? fz0 : LOB_Z) - 0.15);
-      if (r.type === 'library') {
-        for (let k = 0; k < 3; k++) bookshelf(cx + 0.6, wz0 + 1.6 + k * 2.1, 5.2);
-        addBox(2.4, 0.72, 1.2, 0xc9a063, cx + 0.6, 0, fz0 - 1.6, NS);          // 열람 탁자
-        { // NPC2: 대출 데스크(입구 유리 양문 z -36.6 북쪽 · 서가 서쪽 빈 띠) — 사서는 북쪽에 앉아 입구·열람 쪽(남)을 본다 · 책 두 더미
-          const x9 = s0 + 1.55, z9 = -38.6;
-          officeDesk(x9, 0, z9, 1.3, -1);
-          dBox(0.22, 0.1, 0.16, 0x5b8fc9, x9 + 0.42, 0.74, z9 - 0.12); dBox(0.2, 0.07, 0.15, 0xe0708a, x9 + 0.42, 0.84, z9 - 0.11);
-          npcSpot[r.name] = [{ x: x9 - 0.2, z: z9 - 0.62, face: 2, desk: 0.74, reach: 0.27, chair: true }]; }
-        hotspots.push({ kind: 'read', x: cx + 0.6, z: fz0 - 0.6, y: 0, r: 1.6, label: '책 읽기' });
-        [0.25, 0.75].forEach(t => lamp(1.2, 0.05, 0.22, s0 + (s1 - s0) * t, FH - 0.21, (wz0 + fz0) / 2));
-      }
+      if (r.type !== 'stair') floorQ(r.type === 'library' ? 'tileW' : r.type === 'nurse' ? 'ttile' : r.type === 'storage' ? 'tileW' : 'wood', s0 + 0.15, s1 - 0.15, wz0 + 0.15, (deep ? fz0 : LOB_Z) - 0.15, 0, r.type === 'library' ? 0xfbf6ea : undefined);   // LIB-2: 도서관 = 아이보리 장판(영상 v10 — 나무 마루 아님)
+      if (r.type === 'library') libraryRoom(r, s0, s1);
       if (r.type === 'nurse') { addBox(1.05, 0.5, 2, 0xf2f5f7, cx - 1, 0, wz0 + 1.6); addBox(1.05, 0.5, 2, 0xf2f5f7, cx + 1, 0, wz0 + 1.6);
         dBox(0.04, 1.6, 2.2, 0xcfe3ee, cx, 0.4, wz0 + 1.7, { collide: true }); officeDesk(cx - 0.6, 0, LOB_Z - 1.2); npcSpot[r.name] = [{ x: cx - 0.8, z: LOB_Z - 0.58, face: 0, desk: 0.74, reach: 0.27, chair: true }]; lamp(1.2, 0.05, 0.22, cx, FH - 0.21, (wz0 + LOB_Z)/2); }   // 책상 cx-0.6 = 문(nurseDoor) 서쪽으로 비킴 — cx+1.2면 문 바로 뒤를 막아 방에 못 들어갔다(맵 검진 09-24: 보건실 걷는 칸 2개)
-      if (r.name === '나래반') { westClass(r.name, s0 + 0.15, s1 - 0.15, LOB_Z - 0.15, wz0 + 0.15, 0, { sill: 1.0, backGap: [pz - 0.9, pz + 0.9] }); lamp(1.2, 0.05, 0.22, cx, FH - 0.21, (wz0 + LOB_Z)/2); }   // 동벽 = 문서고 문
+      if (r.name === '나래반') { westClass(r.name, s0 + 0.15, s1 - 0.15, LOB_Z - 0.15, wz0 + 0.15, 0, { sill: 1.0, backGap: [pz - 0.9, pz + 0.9], big: true, nDesk: 2, rowX: 3.3 }); lamp(1.2, 0.05, 0.22, cx, FH - 0.21, (wz0 + LOB_Z)/2); }   // 동벽 = 문서고 문   // NARAE-2: 큰 선생님 책상 + 아이 책상 2(나머지는 비움)
       if (r.name === '문서고') [wz0 + 0.5, wz0 + 2.2].forEach(z9 => addBox(1.6, 1.9, 0.5, 0x9aa0a6, cx, 0, z9));
     });
     hangSign('보건실', nurseDoor, 2.78, LOB_Z, 1);
@@ -2211,8 +2376,7 @@ export function buildWorld(scene) {
       [sx0 + 0.015, (sx0 + sx1) / 2, sx1 - 0.015].forEach(x9 => dBox(0.03, 1.2, sz1 - sz0, SW, x9, 0, (sz0 + sz1) / 2));
       for (let k = 0; k <= 5; k++) dBox(sx1 - sx0 - 0.03, 0.03, sz1 - sz0 - 0.02, SW, (sx0 + sx1) / 2, 0.02 + k * 0.232, (sz0 + sz1) / 2);
       [[0, 1, 0x3b3b3b], [1, 2, 0xe8e8e8], [0, 3, 0x5a78b0], [1, 0, 0xd06a5a]].forEach(([c9, r9, h9]) => dBox(0.26, 0.08, 0.22, h9, sx0 + 0.2 + c9 * 0.4, 0.05 + r9 * 0.232, (sz0 + sz1) / 2 + 0.03));
-      colliders.push(noStand({ x0: sx0, x1: sx1, y0: 0, y1: 1.2, z0: sz0, z1: sz1 }));
-      extinguisher(sx1 + 0.25, 0, LOB_Z + 0.3); }
+      colliders.push(noStand({ x0: sx0, x1: sx1, y0: 0, y1: 1.2, z0: sz0, z1: sz1 })); }   // EXT-2: 옆 바닥 소화기 뺌(로비 둘레는 계단홀 입구 1 · 도서관 문 안 1)
     patQuad('check', wx0 + 0.15, wx0 + 1.6, VZ[0] + 0.3, VZ[1] - 0.3, 0.02, false, 0xb08a60);   // 갈색·베이지 코일 매트(체크 무늬를 갈색으로 물들임)
     addPanel(0.25, VZ[1] - VZ[0] - 0.3, 0x2f3236, LOB_X0 - 0.125, 0.02, SIDE_Z);                 // 통로|로비 경계 검은 띠
     // 계단홀 입구 서쪽 모서리: 회색 우산꽂이(우산 몇 개) + 소화기(영상 s_158.5~160·W_199)
@@ -2314,11 +2478,11 @@ export function buildWorld(scene) {
     };
     const K = (v) => [v, v], TOP = K(FH * 2), up = 1.3, zS = wz1 - 0.15, z2 = wz1 - B.upper.corridorDepth - 0.15;
     const byW = z => (Z0 - z) / TR * RISE, byE = z => RISE * N + (z - ZL) / TR * RISE;
-    // 서벽(x STX0 안쪽 면, +x를 봄): 참 · 서 레인 · 1층(도서관 뒷문 z fz0-1.4 ±0.5 비움) · 2층(소담실 동벽)
+    // 서벽(x STX0 안쪽 면, +x를 봄): 참 · 서 레인 · 1층(LIB-2: 뒷문 자리도 칠 — 장식 문짝은 그 앞) · 2층(소담실 동벽)
     const WX = STX0 + 0.15;
     tone('z', WX, 1, wz0 + 0.15, ZL, K(RISE * N - 0.01), K(RISE * N + up), TOP);
     tone('z', WX, 1, ZL, Z0, [byW(ZL), 0], [byW(ZL) + up, up], TOP);
-    tone('z', WX, 1, Z0, fz0 - 1.9, K(0), K(up), K(FH)); tone('z', WX, 1, fz0 - 1.9, fz0 - 0.9, K(2.6), K(2.6), K(FH)); tone('z', WX, 1, fz0 - 0.9, zS, K(0), K(up), K(FH));
+    tone('z', WX, 1, Z0, zS, K(0), K(up), K(FH));   // LIB-2: 뒷문 통로를 막아 벽 한 장(장식 문짝은 칠 앞)
     tone('z', WX, 1, Z0, z2, K(FH + 0.3), K(FH + 0.3 + up), TOP);
     // 동벽(x wx1 안쪽 면, -x를 봄): 참 · 동 레인 · 1층 전실(뒷길 유리문 z -38.8~-37.0 비움) · 2층(창 z -35.8~-34.6 비움)
     const EX = wx1 - 0.15;
@@ -2379,6 +2543,13 @@ export function buildWorld(scene) {
       dBox(0.25, 0.45, 0.04, 0xc0c4c8, -16.3, FH + 1.2, zc2 + 0.17);
       dCyl(0.07, 0.07, 0.04, 0xd8342c, -16.3, FH + 1.5, zc2 + 0.19, { rot: [Math.PI / 2, 0, 0], seg: 10 });
       dCyl(0.03, 0.03, 0.03, 0xe84a3a, -16.3, FH + 1.3, zc2 + 0.19, { rot: [Math.PI / 2, 0, 0], seg: 8 }); }
+    { // SODAM-1(09-28 아이 의견 "소담실 오른쪽에 냉장고"): 들어가서 오른쪽(동벽 — 계단홀 벽) 흰 2도어 냉장고 · 문은 방(서)을 본다
+      const Y = FH + 0.3, x9 = STX0 - 0.15 - 0.34, z9 = -39.6;
+      dBox(0.68, 1.8, 0.7, 0xe9ebec, x9, Y, z9);                                              // 몸통
+      dBox(0.03, 0.03, 0.66, 0xb9bdc0, x9 - 0.355, Y + 1.18, z9);                              // 냉동실|냉장실 문 틈
+      [[Y + 1.28, 0.3], [Y + 0.72, 0.38]].forEach(([y9, h9]) => dBox(0.04, h9, 0.03, 0x9aa0a6, x9 - 0.36, y9, z9 + 0.27));   // 세로 손잡이 둘
+      dBox(0.03, 0.1, 0.16, 0x7ab36a, x9 - 0.355, Y + 1.45, z9 - 0.15);                        // 문에 붙은 초록 자석 메모
+      colliders.push(noStand({ x0: x9 - 0.34, x1: x9 + 0.34, y0: Y, y1: Y + 1.8, z0: z9 - 0.35, z1: z9 + 0.35 })); }
     wallZ(wz0, zc2, STX0, INNER, { y0: FH+0.3, h: FH-0.3, face: -1, dado: STAIR_DADO });   // 소담실 동벽(계단홀 쪽 두 톤)
     floorQ('tileG', wx0 + 0.15, STX0 + 0.15, zc2 + 0.15, wz1 - 0.15, FH + 0.3, 0xa9aaa7);   // 2층 복도 = 중간 회색 화강 테라초(영상 s_182 — 1층 흰 타일과 구분)
     ceil(wx0, wx1, zc2, wz1, FH * 2, 'cflat');
@@ -3005,7 +3176,7 @@ export function buildWorld(scene) {
     addPanel(B9, z1 - z0 - 2*B9, BC, x0 + B9/2, 0.012, (z0 + z1)/2); addPanel(B9, z1 - z0 - 2*B9, BC, x1 - B9/2, 0.012, (z0 + z1)/2);
     floorQ('ecor', x0 + B9, x1 - B9, z0 + B9, z1 - B9, 0, 0xb7bcdb);                                  // LINK-EAST-17: 바닥이 벽보다 어둡게 · 노란 장판 무늬를 푸른 틴트로 눌러 회베이지(영상 #8e816f 비율 — c_371.8·e_370.5)
     // LINK-EAST-28: 소화기(북벽 밑 — c_371.8·a_379.5) + 빨간 '소화기' 표지 · LINK-EAST-29: 회색 분전함(첫 두 창 사이 — c_364.2·e_369.5)
-    [16.2, 20.0, 24.5, corX - 0.8].forEach(x9 => { extinguisher(x9, 0, z0 + 0.14); dBox(0.14, 0.18, 0.03, 0xd0202a, x9, 0.66, z0 + 0.015); });
+    [16.2, corX - 0.8].forEach(x9 => { extinguisher(x9, 0, z0 + 0.14); dBox(0.14, 0.18, 0.03, 0xd0202a, x9, 0.66, z0 + 0.015); });   // EXT-2(영상 v09·v11 "동관 20m에 4개는 과다"): 4 → 2
     dBox(0.5, 0.7, 0.12, 0x9aa0a6, 17.6, 1.75, z0 + 0.06); dBox(0.03, 0.08, 0.03, 0x5a5e63, 17.8, 2.1, z0 + 0.135);   // 높이 1.75~2.45(e_369.5 — 천장 가까이)
     for (let x9 = ex0 + 1.8; x9 < corX - 1; x9 += 3.8) lamp(0.62, 0.05, 0.3, x9, CH - 0.05, (ez0 + zCE)/2);
     ceil(LC.x[1] - 0.32, corX, ez0, zCE, CH + 0.16, 'cflat');                                       // LINK-EAST-16·23: 천장 2.75 · 교차부는 세로복도 우물반자
@@ -5556,11 +5727,11 @@ export function buildWorld(scene) {
       });
     });
     // TOUR-1 견학 안내 선생님 3명(사용자 09-27 — 'NPC를 더 늘리지 않는다'의 유일한 예외: 안내가 필요한데 사람이 없던 곳에 한 명씩 · 직함만, 이름 없음)
-    //   체육관 = 무대 앞 가운데(무대 계단 둘 사이) 남쪽(코트)을 보고 · 컴퓨터실 = 앞 화면(칠판) 앞 설명 자리 · 과학실 = 칠판 앞 시연대 뒤(학생 쪽 = 서)
+    //   체육관 = 무대 앞 가운데(무대 계단 둘 사이) 남쪽(코트)을 보고 · 컴퓨터실 = 앞 화면(칠판) 앞 설명 자리 · 과학실 = 칠판 앞 시연대 뒤(학생 쪽 = 서) · SCI-2(09-28 아이 의견·교사 확인): 과학선생님 = 남자
     { const TG = [];
       { const sp = (npcSpot['체육관'] || [])[0]; if (sp) TG.push(['pe', '체육선생님', '남', { ...sp, pose: 'stand', role: 'pe' }]); }
       { const L = seatsOf['컴퓨터실']; if (L) TG.push(['ai', 'AI 보조 강사님', '여', { x: L.teacher.x, y: L.y, z: L.teacher.z, face: L.tFace ?? 1, pose: 'explain', role: 'ai' }]); }
-      { const sp = (npcSpot['과학실'] || [])[0]; if (sp) TG.push(['science', '과학선생님', '여', { ...sp, pose: 'explain', role: 'sci' }]); }
+      { const sp = (npcSpot['과학실'] || [])[0]; if (sp) TG.push(['science', '과학선생님', '남', { ...sp, pose: 'explain', role: 'sci' }]); }
       TG.forEach(([key, nm, sx, sp]) => { const top = person(sp.x, sp.y, sp.z, sx, 1.1, sp.face, sp.pose, sp); tagSign(sign(nm, sp.x, top + 0.28, sp.z, (sp.face & 1) ? Math.PI / 2 : 0, 0.22), nm, top + 0.28); PEOPLE[PEOPLE.length - 1].tour = key;   // 이름 팻말 = 보는 쪽으로(동·서를 보는 사람은 옆으로 돌려 — 앞에서 읽힘)
         tourSpots.push({ key, kind: 'guide', label: nm, x: sp.x, y: sp.y, z: sp.z, face: sp.face & 3, top }); }); }
     NPCN = npcN;
