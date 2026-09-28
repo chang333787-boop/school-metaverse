@@ -62,7 +62,6 @@ export function makeMeta(SCHOOL) {
     '체육관 방송실': M('gym-booth', 'service', 'gym', ['staff']),
     '체육관 준비실': M('gym-prep', 'service', 'gym', ['staff']),
     '체육관 전실': M('gym-lobby', 'hall', 'gym', ['entry']),
-    '체육 창고': M('gym-store', 'storage', 'gym', ['staff']),
     '체육관 남자 화장실': M('gym-toilet-s', 'toilet', 'gym'),                   // GYM-2(09-28): 전실 남쪽(들어가서 왼쪽) — 09-26에 막았던 문을 되살림
     '무대 통로': M('gym-ramp', 'corridor', 'gym', ['staff'], { multi: true }),     // GYM-2: 체육관 → 무대 동쪽 옆 파란 벽 경사 통로(다리 A·B)
     '체육관 남쪽 길': M('gym-south-path', 'path', null, [], { multi: true }),     // GYM-2: 옆길 계단 위 → 남면 포장길 → 바깥 체육 창고(부속동 남쪽 띠 + 본실 남면)

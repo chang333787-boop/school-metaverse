@@ -3490,8 +3490,8 @@ export function buildWorld(scene) {
   wallRun('z', gz0 + 0.15, GA.z[0], gx1, GB, { ...BR, _a0: gz0 + 0.15, _a1: NZ - 0.15, aoTop: GYF + 3.2, skin: 'brickG', face: 1, dado: RAMPD });
   wallRun('z', GA.z[0], NZ, gx1, 0xeeeeea, { ...BR, _a0: gz0 + 0.15, _a1: NZ - 0.15, aoTop: GYF + 3.2, face: 1, dado: RAMPD });
   wallRun('z', NZ, GA.z[1], gx1, 0xeeeeea, { ...BR, _a0: NZ + 0.15, _a1: gz1 - 0.15, face: 1, ...HALLD, gaps: [
-    { c: GDZ, w: 1.7, dh: 2.3, door: true, swing: { n: -1, leaves: [1.1, 0.6], look: 'quilt' } },   // 남색 누빔 여닫이 양문(넓은 짝 1.1 · 좁은 짝 0.6 작은 창 — 영상 v01 f_006~012 · 체육관 안으로 밂)
-    { c: GTZ + 1.6, w: 2.2, door: true }] });
+    { c: GDZ, w: 1.7, dh: 2.3, door: true, swing: { n: -1, leaves: [1.1, 0.6], look: 'quilt' } }] });   // 남색 누빔 여닫이 양문(넓은 짝 1.1 · 좁은 짝 0.6 작은 창 — 영상 v01 f_006~012 · 체육관 안으로 밂)
+  //   GYM-3(선생님 09-28 휴대폰 사진 "체육관에 이 공간 없다니까"): 본실 동벽 남쪽 창고 문(2.2)과 부속동 남쪽 '체육 창고'를 없앰 — 부속동 남쪽 = 남자 화장실만
   wallRun('z', GA.z[1], gz1 - 0.15, gx1, GB, { ...BR, _a0: NZ + 0.15, _a1: gz1 - 0.15, skin: 'brickG', face: 1, ...HALLD });
   // 윗벽(골판 · 고측창): 안쪽 = 베이지(영상 v01 f_010 — 예전엔 안에서도 청회색)
   const UP = { ...AOH, y0: GYF + 3.2, h: GH - 3.2 };
@@ -3506,7 +3506,7 @@ export function buildWorld(scene) {
       a = Math.max(a, v); }); };
   wain('x', gx0 + 0.15, gx1 - 0.15, gz1 - 0.15, -1);
   wain('z', NZ + 0.15, gz1 - 0.15, gx0 + 0.15, 1, [[EXZ - 0.5, EXZ + 0.5]]);
-  wain('z', NZ + 0.15, gz1 - 0.15, gx1 - 0.15, -1, [[GDZ - 0.85, GDZ + 0.85], [GTZ + 0.5, GTZ + 2.7]]);
+  wain('z', NZ + 0.15, gz1 - 0.15, gx1 - 0.15, -1, [[GDZ - 0.85, GDZ + 0.85]]);
   wain('x', gx0 + 0.15, SX0 + 0.15, NZ + 0.15, 1, [[(gx0 + SX0) / 2 - 0.6, (gx0 + SX0) / 2 + 0.6]]);
   wain('x', SX1 - 0.15, gx1 - 0.15, NZ + 0.15, 1, [[SX1 + 1.4, SX1 + 2.6], [gx1 - 1.65, gx1 - 0.15]]);
   {   // 창마다 남색 커튼 두 폭(창 양옆으로 걷어 둠 — 영상 v01 f_030~037)
@@ -3553,7 +3553,7 @@ export function buildWorld(scene) {
     const ring9 = new THREE.Mesh(new THREE.RingGeometry(1.75, 1.83, 40), new THREE.MeshLambertMaterial({ color: LN }));
     ring9.rotation.x = -Math.PI/2; ring9.position.set(cc9, GYF + 0.023, cz9); ring9.matrixAutoUpdate = false; ring9.updateMatrix(); scene.add(ring9);
     // 이동식 농구대(영상 v01 f_029~030): 벽엔 흰 추 상자만 → 바닥 틀 → 파란 패드 기둥(벽에서 1.3) → 흰 팔 두 줄 → 투명 백보드(벽에서 2.9 · 1.8 × 1.05) + 링 3.05
-    [[gx0 + 0.15, 1], [gx1 - 0.15, -1]].forEach(([W, dir]) => {
+    [[gx0 + 0.15, 1]].forEach(([W, dir]) => {   // GYM-3(선생님 09-28 사진 "골대도 이 자리에 없어 — 반대쪽에만 한 개"): 동벽 농구대 없앰 · 서벽 하나만
       const X = a => W + dir * a, PB = 0x2f4fa8, WH = 0xf2f2f0, BY = GYF + 2.9, BL = X(2.9);
       dBox(0.6, 0.55, 1.3, WH, X(0.3), GYF, cz9); colliders.push(noStand({ x0: Math.min(W, X(0.6)), x1: Math.max(W, X(0.6)), y0: GYF, y1: GYF + 0.55, z0: cz9 - 0.65, z1: cz9 + 0.65 }));   // 추 상자
       dBox(1.3, 0.1, 1.1, 0x3a3d44, X(1.25), GYF, cz9);                                                                    // 바닥 틀(추 상자 앞 → 기둥 앞)
@@ -3683,11 +3683,9 @@ export function buildWorld(scene) {
     wallX(gx1 + 0.15, ax1 - 0.15, CZ0, WHW, { y0: GYF, h: 3.2, gaps: [{ c: ax0 + 2.6, w: 1.0, film: true, color: 0xf6f4f2 }] });   // 여자 화장실 = 불투명 유리문(영상 v01 f_007)
     wallX(gx1 + 0.15, ax1 - 0.15, CZ1, WHW, { y0: GYF, h: 3.2, gaps: [{ c: SDX, w: 0.9, dh: 2.2, glass: true, door: true, late: true, swing: { n: 1, leaves: [0.9], look: 'glass' } }] });
     for (let i = bb0; i < baseboards.length; i++) { const p = baseboards[i]; if ((Math.abs(p.o - (CZ0 + 0.15)) < 0.01 && p.s > 0) || (Math.abs(p.o - (CZ1 - 0.15)) < 0.01 && p.s < 0)) p.col = 0x2a2a2a; }   // 전실 = 흰 벽 + 검은 걸레받이
-    wallX(gx1 + 0.15, ax1 - 0.15, TZ, WHW, { y0: GYF, h: 3.2 });                                // 남자 화장실|체육 창고
     floorQ('tileG', gx1 + 0.15, ax1 - 0.15, CZ0 + 0.15, CZ1 - 0.15, GYF);
     floorQ('ttile', gx1 + 0.15, ax1 - 0.15, az0 + 0.15, CZ0 - 0.15, GYF);
-    floorQ('ttile', gx1 + 0.15, ax1 - 0.15, CZ1 + 0.15, TZ - 0.15, GYF);
-    floorQ('tileW', gx1 + 0.15, ax1 - 0.15, TZ + 0.15, az1 - 0.15, GYF, 0xb9b6ae);
+    floorQ('ttile', gx1 + 0.15, ax1 - 0.15, CZ1 + 0.15, az1 - 0.15, GYF);
     patQuad('gmat', ax1 - 1.35, ax1 - 0.2, DN - 1.0, DS + 1.0, GYF + 0.024, false, 0x55585c);                           // 입구 짙은 매트(영상 v01 f_004)
     patQuad('tactZ', ax0 + 2.3, ax0 + 2.9, CZ0 + 0.2, CZ0 + 0.8, GYF + 0.024);                                         // 여자 화장실 문 앞 노란 점자블록
     addBox(1.2, 1.1, 0.4, 0xdfe8ee, ax1 - 0.9, GYF, (az0 + 0.5 + CZ0)/2, NS);
@@ -3695,7 +3693,7 @@ export function buildWorld(scene) {
     sign('남자 화장실', SDX, GYF + 2.45, CZ1 - 0.22, Math.PI, 0.24);
     dBox(0.55, 0.85, 0.16, 0xe4e4e0, ax1 - 1.2, GYF + 0.8, CZ1 - 0.23); dBox(0.45, 0.12, 0.03, 0xd8342c, ax1 - 1.2, GYF + 1.5, CZ1 - 0.325);   // 소화전함(영상 v01 f_005)
     {   // 남자 화장실 안: 소변기 둘 · 칸 하나(양변기) · 세면대(손 씻기 — ACTION-1 wash)
-      const tz0 = CZ1 + 0.15, tz1 = TZ - 0.15;
+      const tz0 = CZ1 + 0.15, tz1 = az1 - 0.15;   // GYM-3: 창고를 없애 화장실이 부속동 남끝까지
       [ax1 - 1.9, ax1 - 1.1].forEach(x9 => { dBox(0.38, 0.55, 0.3, 0xf4f4f2, x9, GYF + 0.4, tz1 - 0.15); colliders.push(noStand({ x0: x9 - 0.19, x1: x9 + 0.19, y0: GYF, y1: GYF + 0.95, z0: tz1 - 0.3, z1: tz1 })); });
       dBox(0.05, 1.9, 1.3, 0xd8d4cc, gx1 + 1.6, GYF + 0.1, tz1 - 0.65); colliders.push({ x0: gx1 + 1.575, x1: gx1 + 1.625, y0: GYF, y1: GYF + 2.0, z0: tz1 - 1.3, z1: tz1 });
       dBox(0.4, 0.42, 0.55, 0xf4f4f2, gx1 + 0.85, GYF, tz1 - 0.33); dBox(0.4, 0.4, 0.18, 0xf4f4f2, gx1 + 0.85, GYF + 0.42, tz1 - 0.09);
@@ -3706,17 +3704,11 @@ export function buildWorld(scene) {
       colliders.push(noStand({ x0: sx - 0.25, x1: ax1 - 0.15, y0: GYF, y1: GYF + 0.87, z0: sz - 0.35, z1: sz + 0.35 }));
       hotspots.push({ kind: 'wash', x: sx - 0.75, z: sz, y: GYF, r: 1.0, label: '손 씻기', at: [ax1 - 0.36, GYF + 0.96, sz, GYF + 0.8] });
     }
-    [az1 - 1.2, az1 - 3.2].forEach(z9 => addBox(3.6, 1.6, 0.7, 0x8a9096, (gx1 + ax1)/2, GYF, z9));   // 체육 창고 선반
-    { const sx = ax1 - 0.9;                                                                             // 창고 안 체육용품(파란 매트 · 공 바구니 · 콘)
-      addBox(1.0, 0.6, 1.2, 0x3f6fc4, sx, GYF, TZ + 0.9, NS);
-      dCyl(0.3, 0.26, 0.6, 0x9aa0a6, sx - 0.2, GYF, TZ + 2.2, { seg: 10 }); dBlob(0.13, 0.13, 0.13, 0xff7043, sx - 0.2, GYF + 0.66, TZ + 2.2, { chunky: true });
-      colliders.push(noStand({ x0: sx - 0.5, x1: sx + 0.1, y0: GYF, y1: GYF + 0.8, z0: TZ + 1.9, z1: TZ + 2.5 })); }
     addBox(ax1 - gx1 + 0.25, 0.3, az1 - az0 + 0.4, 0xe6e7e3, (gx1 + 0.15 + ax1 + 0.4)/2, GYF + AH, (az0 + az1)/2);   // 흰 지붕(위성) — 본실 동벽 바깥 면에 맞댐(GYM-2: 벽 두 겹)
     [-23, -19, -15, -11].forEach(z9 => { dBox(1.1, 0.8, 0.65, 0x8a8f92, gx1 + 2.0, GYF + AH + 0.3, z9, { far: true }); dCyl(0.28, 0.28, 0.03, 0x4a4e52, gx1 + 2.0, GYF + AH + 0.3 + 0.8, z9, { seg: 10 }); });   // 옥상 실외기(위성 A 짙은 덩어리·영상 g_087~090)
     ceil(gx1, ax1, az0, az1, GYF + 3.2 + 0.15, 'ctile');
     zones.push({ x0: gx1, x1: ax1, z0: CZ0, z1: CZ1, y: GYF, label: '체육관 전실' });
-    zones.push({ x0: gx1, x1: ax1, z0: CZ1, z1: TZ, y: GYF, label: '체육관 남자 화장실' });
-    zones.push({ x0: gx1, x1: ax1, z0: TZ, z1: az1, y: GYF, label: '체육 창고' });
+    zones.push({ x0: gx1, x1: ax1, z0: CZ1, z1: az1, y: GYF, label: '체육관 남자 화장실' });
     // 현관 밖(영상 g_100~112): 참(GYF) + 동쪽 3단 · 북쪽 끝 낮은 벽 + 스테인리스 손잡이 · 남쪽 끝에서 경사로(낮은 벽)
     //   붉은 독립 기둥은 없다(차양 = 기둥 없는 캔틸레버, 부속동 동벽 전체 길이 — 위성 A 크림 띠 z -28~-7)
     const LX1 = ax1 + 2.0, LZ0 = CZ0 - 0.4, LZ1 = CZ1 + 0.2, LW = 0.2, LOW = 0xe8c84a;           // 참 동쪽 끝·북/남 끝, 북쪽 낮은 벽 두께 · 낮은 벽 = 노랑(영상 v01 f_001~003 햇빛 진노랑 ~ 그늘 크림의 가운데)

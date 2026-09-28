@@ -241,7 +241,7 @@ export default async function start(map, params = {}) {
     await talkTo(TG, '체육선생님', '체육선생님께 말 걸기'); if (gone()) return;
     if (!await say(D.c4)) return;
     // 상자 3개: 창고 문 앞 → 무대 앞 표시 자리
-    const ds = map.pois({ src: 'door' }).find(p => p.zones && p.zones.includes('gym') && p.zones.includes('gym-store'));
+    const ds = map.pois({ src: 'door' }).find(p => p.zones && p.zones.includes('gym') && p.zones.includes('gym-prep'));   // GYM-3: 창고 문이 없어져 체육관 준비실 문 앞에서
     const SX = ds ? ds.x - 2.2 : -53.7, SZ = ds ? ds.z : -11.8;
     const BX = [spot(SX, SZ - 1.2, gyY, 'gym'), spot(SX - 1.2, SZ, gyY, 'gym'), spot(SX, SZ + 1.2, gyY, 'gym')];
     const TX = [[TG.x - 4.2, TG.z + 2.1], [TG.x, TG.z + 2.6], [TG.x + 4.2, TG.z + 2.1]].map(([x, z]) => spot(x, z, gyY, 'gym'));
