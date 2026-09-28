@@ -40,7 +40,8 @@ export function makeMeta(SCHOOL) {
     '소담실': M('sodam', 'special', 'west'),
     '2층 복도': M('corridor-2f', 'corridor', 'west'),
     // 급식동
-    '악기 보관 통로': M('music-passage', 'corridor', 'cafe'),
+    '악기실': M('music-passage', 'corridor', 'cafe'),   // CAFE-3(09-28 영상 v13 f_009~013): 예전 라벨 '악기 보관 통로' — id는 그대로(숨바꼭질)
+    '영양사실': M('nutrition', 'office', 'cafe', ['staff']),   // CAFE-3(영상 v12 f_001~003)
     '당직실': M('duty', 'office', 'cafe', ['staff']),
     '급식실': M('cafeteria', 'special', 'cafe'),
     '조리실': M('kitchen', 'service', 'cafe', ['staff']),
