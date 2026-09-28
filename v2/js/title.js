@@ -108,7 +108,7 @@ export function createTitle(h) {
       return b.u === 's' ? '🏆 ' + pre + mmss(v) : b.u === 'n' ? '🎫 ' + pre + (Array.isArray(v) ? v.length : v) + '개' : '🏆 ' + pre + v + (b.u || ''); }
     return null;
   }
-  let cards = [], list = [], focusI = 0;
+  let cards = [], list = [], focusI = 0, filled = Promise.resolve();
   async function fill() {
     let G = {};
     try { G = (await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url))).GAMES || {}; } catch (e) { console.error('[오프닝] 놀이 목록을 못 불러옴', e); }
@@ -134,11 +134,13 @@ export function createTitle(h) {
   }
 
   // ---------- 단계: title → menu → go → off(🏠) → back → menu ----------
-  let phase = 'boot';
+  let phase = 'boot', calmT = 0;   // calmT: 이 시각 전엔 시작·고르기 입력을 받지 않는다(로딩 중 눌러 둔 Enter·꾹 누른 키·두 번 탭이 제목→메뉴→게임으로 줄줄이 넘어가지 않게)
+  const calm = ms => { calmT = performance.now() + ms; }, calmOK = () => performance.now() >= calmT;
   const onKey = e => {
     if (phase === 'off') return;
     e.stopImmediatePropagation(); if (e.type !== 'keydown') return;   // 제목·메뉴·날아오기 동안 키는 월드로 가지 않는다(WASD로 뒤에서 걷지 않게)
     heard = true;
+    if (e.repeat && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); return; }
     if (phase === 'title') { if (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter') { e.preventDefault(); toMenu(); } return; }
     if (phase !== 'menu') return;
     const n = cards.length; if (!n) return;
@@ -159,17 +161,17 @@ export function createTitle(h) {
 
   function show(ph) { phase = ph; root.dataset.ph = ph; root.style.display = ''; }
   function bootDone() {   // main.js: 첫 프레임을 그린 뒤 — 로딩 막을 걷고 제목 글자를 띄운다
-    lockWorld(); CTRL.wave = 1e9; tf = 0; resumeOrbit = false; setCam(camTitle); show('title');
+    lockWorld(); CTRL.wave = 1e9; tf = 0; resumeOrbit = false; setCam(camTitle); show('title'); calm(1200);
     const b = document.getElementById('boot');
     if (b) { window.bootP && window.bootP(1, 0.25); setTimeout(() => { b.classList.add('out'); root.classList.add('go'); setTimeout(() => b.remove(), 600); }, 260); }
     else root.classList.add('go');
-    fill();
+    filled = fill();
   }
   function toMenu() {
-    if (phase !== 'title') return; heard = true; jingle();
-    show('menu'); setTimeout(() => { if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); }, 60);
+    if (phase !== 'title' || !calmOK()) return; heard = true; jingle(); calm(450);
+    show('menu'); filled.then(() => setTimeout(() => { if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); }, 60));
   }
-  function toTitle() { if (phase !== 'menu') return; blip(); show('title'); }
+  function toTitle() { if (phase !== 'menu') return; blip(); calm(350); show('title'); }
   // 동그라미 닦기: 고른 자리(x, y)에서 남색 원이 커져 화면을 덮는다 → cb → 화면 가운데(내 캐릭터)로 작아지며 걷힌다
   function wipeIn(x, y, icon, text, cb) {
     const c = wipe.firstChild, R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) / 100 + 0.2;   // 원 지름 200px → 배율
@@ -185,7 +187,7 @@ export function createTitle(h) {
     setTimeout(() => { wipe.style.display = 'none'; wipe.className = 'ttl-keep'; }, 620);
   }
   function choose(i) {
-    if (phase !== 'menu') return; const e = list[i]; if (!e) return;
+    if (phase !== 'menu' || !calmOK()) return; const e = list[i]; if (!e) return;
     heard = true; store.set('last', e.id); whoosh();
     phase = 'go'; cards.forEach((c, k) => c.classList.add(k === i ? 'pick' : 'dim'));
     const r = cards[i].getBoundingClientRect();
@@ -195,14 +197,15 @@ export function createTitle(h) {
       _fp.copy(camera.position); _fq.copy(camera.quaternion);
       const from = { p: _fp.clone(), q: _fq.clone(), fov: camera.fov };
       setCam(() => { camera.position.copy(from.p); camera.quaternion.copy(from.q); });   // 닦기가 덮은 동안 게임이 내 자리를 옮긴다(시작 자리) — 카메라는 그대로
-      // 게임 시작(🎮 칩·?game=과 같은 길 game.load) — 게임이 준비될 때까지(start가 끝남 · 내가 시작 자리로 옮겨짐 · 묻는 창이 뜸 · 최대 4초) 덮은 채 기다린다
+      // 게임 시작(🎮 칩·?game=과 같은 길 game.load) — 게임이 준비될 때까지(start가 끝남 · 내가 시작 자리로 옮겨짐 · 묻는 창이 뜸 · 최대 7초) 덮은 채 기다린다
       const t0 = performance.now(), px = P.x, pz = P.z; let ready = !e.id;
       if (e.id) Promise.resolve(game.load(e.id, {})).then(() => { ready = true; }, () => { ready = true; }); else if (game.current) game.stop('button');
       const go = () => {
         const moved = Math.hypot(P.x - px, P.z - pz) > 1.5, asks = !!document.querySelector('.hudAsk,#story-talk,#tour-talk');   // 게임이 먼저 묻는 창(물총·숨바꼭질·방탈출 메뉴)을 띄웠으면 그걸 보여 준다
-        if (!ready && !moved && !asks && performance.now() - t0 < 4000) { setTimeout(go, 80); return; }
+        if (!ready && !moved && !asks && performance.now() - t0 < 7000) { setTimeout(go, 80); return; }
         setTimeout(() => {
           camera.position.copy(from.p); camera.quaternion.copy(from.q); camera.fov = from.fov; camera.updateProjectionMatrix();
+          // 🏠은 날아오기가 끝나면 바로(게임 start가 묻는 창을 기다리는 동안에도 돌아갈 수 있게 — 시작 도중 멈춘 게임이 await 뒤에 만드는 칩·표식은 mapapi scope가 바로 치운다)
           startFly(1.7, () => { phase = 'off'; CTRL.wave = 1.6; home.style.display = ''; place(); if (!e.id) toast('🏫 자유 탐험 — 학교 어디든 가 보세요!', 2.6); });
           document.body.classList.remove('title-on'); wipeOut();
         }, ready ? 60 : 240);
@@ -216,8 +219,8 @@ export function createTitle(h) {
     wipeIn(r.left + r.width / 2, r.top + r.height / 2, '🏠', '놀이 고르기', () => {
       if (game.current) game.stop('button');
       lockWorld(); home.style.display = 'none'; CTRL.wave = 0; resumeOrbit = true; tf = Math.random() * ORB_T; setCam(camTitle);
-      show('menu'); root.classList.add('go');
-      fill().then(() => { if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); });   // 기록·'지난번'을 새로
+      show('menu'); root.classList.add('go'); calm(450);
+      (filled = fill()).then(() => { if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); });   // 기록·'지난번'을 새로
       wipeOut();
     });
   }

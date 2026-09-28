@@ -41,7 +41,12 @@ body.title-on > :not(#scene):not(#boot):not(.ttl-keep):not(script):not(style){vi
 .ttl-sub{font-weight:800;font-size:clamp(13px,3vh,19px);color:#fff;padding:5px 16px;border-radius:30px;background:rgba(29,53,87,.72);opacity:0}
 .ttl-start{margin-top:clamp(2px,1vh,10px);min-height:56px;padding:0 clamp(26px,4vw,44px);border-radius:40px;border:4px solid #1d3557;background:#ffd23c;font-weight:900;font-size:clamp(20px,4.6vh,30px);cursor:pointer;
   box-shadow:0 7px 0 #1d3557,0 12px 22px rgba(0,0,0,.25);opacity:0}
+.ttl-start{position:relative;overflow:hidden}
 .ttl-start b{display:inline-block;margin-right:6px;font-size:.85em}
+/* 반짝 지나가는 빛(3.2초마다) — transform만 */
+.ttl-start::after{content:'';position:absolute;top:-20%;bottom:-20%;left:0;width:38%;background:linear-gradient(100deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.75) 50%,rgba(255,255,255,0) 100%);transform:translateX(-160%) skewX(-18deg);pointer-events:none}
+#ttl.go .ttl-start::after{animation:ttlGlint 3.2s ease-in-out 2.4s infinite}
+@keyframes ttlGlint{0%,62%{transform:translateX(-160%) skewX(-18deg)}100%{transform:translateX(330%) skewX(-18deg)}}
 .ttl-keys .kt{display:none}body.touch .ttl-keys .kd{display:none}body.touch .ttl-keys .kt{display:inline}
 .ttl-keys{font-size:13px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);opacity:0}
 /* 등장(덮개가 걷힌 뒤 .go) — 글자 하나씩 통통 튀어 들어오고, 둥실 떠다닌다 · 반짝이 */
@@ -68,7 +73,7 @@ body.title-on > :not(#scene):not(#boot):not(.ttl-keep):not(script):not(style){vi
   text-shadow:2px 0 0 #1d3557,-2px 0 0 #1d3557,0 2px 0 #1d3557,0 -2px 0 #1d3557,0 5px 0 #1d3557}
 .ttl-mlogo .ttl-kid{display:block;animation:ttlWave 1.2s ease-in-out infinite;transform-origin:50% 90%}
 .ttl-back{flex:0 0 auto;width:48px;height:48px;border-radius:50%;border:3px solid #1d3557;background:#fff;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 4px 0 rgba(29,53,87,.4)}
-.ttl-grid{flex:1 1 auto;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));grid-auto-rows:minmax(150px,auto);gap:14px;padding:14px 6px 14px;align-content:start;
+.ttl-grid{flex:1 1 auto;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));grid-auto-rows:minmax(150px,auto);gap:14px;padding:14px 6px 14px;align-content:start;align-content:safe center;
   max-width:1180px;width:100%;margin:0 auto;box-sizing:border-box;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .ttl-foot{flex:0 0 auto;text-align:center;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);padding-top:4px}
 .card{position:relative;display:block;padding:0;border:0;background:none;cursor:pointer;text-align:left;outline:none;animation:ttlCard .55s cubic-bezier(.34,1.56,.64,1) calc(.08s + var(--i) * 70ms) both}
@@ -77,8 +82,8 @@ body.title-on > :not(#scene):not(#boot):not(.ttl-keep):not(script):not(style){vi
 .card .gt{position:absolute;right:10px;top:10px;font-size:12px;font-weight:800;color:#fff;background:var(--gc);padding:2px 9px;border-radius:12px}
 .card .gt i{font-style:normal}
 .card .ic{display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:18px;background:var(--gc);border:3px solid #1d3557;font-size:32px;line-height:1;margin-bottom:8px}
-.card b{display:block;font-size:19px;font-weight:900;line-height:1.2;margin-bottom:4px}
-.card .ds{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;line-height:1.35;color:#4a5a70}
+.card b{word-break:keep-all;display:block;font-size:19px;font-weight:900;line-height:1.2;margin-bottom:4px}
+.card .ds{word-break:keep-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;line-height:1.35;color:#4a5a70}
 .card .bs{display:inline-block;align-self:flex-start;margin-top:auto;padding-top:6px;font-size:12px;font-weight:800;color:#b07800}
 .card .lt{position:absolute;left:-8px;top:-10px;font-size:12px;font-weight:900;background:#ffd23c;border:2px solid #1d3557;border-radius:10px;padding:1px 7px;transform:rotate(-8deg)}
 .card:hover .cin,.card:focus-visible .cin,.card:focus .cin{transform:translateY(-7px) scale(1.035)}
@@ -138,7 +143,10 @@ body.touch:has(.esc-lock) #homeChip{visibility:hidden}
   .ttl-menu h2{font-size:20px}
   .ttl-foot{display:none}
 }
+/* 큰 화면(데스크톱·크롬북) — 카드를 조금 더 크게 */
+@media (min-height:680px) and (min-width:900px){ .ttl-grid{grid-auto-rows:minmax(176px,auto);gap:18px} .card .ic{width:64px;height:64px;font-size:36px} .card b{font-size:21px} .card .ds{font-size:14px} }
 @media (prefers-reduced-motion:reduce){
+  #ttl.go .ttl-start::after{animation:none}
   #ttl.go .ttl-h .ch > span,#ttl.go .ttl-h .spk,.ttl-logo .ttl-kid,.ttl-mlogo .ttl-kid,.tb-t{animation:none}
   #ttl.go .ttl-start{animation:ttlUp .3s ease-out 1s both}
 }
