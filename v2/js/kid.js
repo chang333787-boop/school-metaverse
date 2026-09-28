@@ -17,8 +17,9 @@ export function buildKid(THREE, style = 'a') {
   const m4 = new THREE.Matrix4(), nm = new THREE.Matrix3(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), n = new THREE.Vector3(), sv = new THREE.Vector3(), col = new THREE.Color();
   // [도형, [x,y,z], [sx,sy,sz], 색, [rx,ry,rz]?] → 한 메시(정점색) · 법선 = 원래 도형 법선을 역전치로 돌림(늘린 공도 매끈)
   function bake(parts) {
-    const pos = [], nor = [], cl = [];
+    const pos = [], nor = [], cl = [], rng = [];   // rng = 부위마다 [첫 정점, 정점 수](ACTION-1 신발 색 바꾸기)
     for (const [geo, p, sc, hex, r] of parts) {
+      rng.push([pos.length / 3, (geo.index ? geo.index.count : geo.attributes.position.count)]);
       const g = geo.index ? geo.toNonIndexed() : geo, P = g.attributes.position, N = g.attributes.normal;
       m4.compose(v.set(p[0], p[1], p[2]), q.setFromEuler(e.set(...(r || [0, 0, 0]))), sv.set(sc[0], sc[1], sc[2])); nm.getNormalMatrix(m4); col.set(hex);
       for (let i = 0; i < P.count; i++) {
@@ -28,7 +29,7 @@ export function buildKid(THREE, style = 'a') {
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(cl, 3));
-    const mesh = new THREE.Mesh(g, MAT); mesh.castShadow = true; return mesh;
+    const mesh = new THREE.Mesh(g, MAT); mesh.castShadow = true; mesh.userData.parts = rng; return mesh;
   }
   const rig = new THREE.Group();
   // ---------------- A·B: 치비 아이 ----------------
@@ -72,12 +73,17 @@ export function buildKid(THREE, style = 'a') {
   const arm = sd => { const g = new THREE.Group(); g.position.set(sd * 0.175, SHO, 0); g.rotation.z = sd * 0.12;
     g.add(bake([[CAPS(0.058, 0.05), [0, -0.04, 0], [1, 1, 1], C.top], [CAPS(0.048, 0.13), [0, -0.15, 0], [1, 1, 1], C.skin], [SPHS, [0, -0.25, 0.005], [0.058, 0.06, 0.058], C.skin]])); rig.add(g); return g; };
   // 다리(엉덩이 축 → 무릎 축): 반바지 끝 + 짧은 다리 + 둥근 실내화
+  const shins = [];   // ACTION-1: 무릎 아래 메시(부위 2 = 신발 · 3 = 밑창) — setShoe(색)로 운동화 ↔ 실내화
   const leg = sd => { const g = new THREE.Group(); g.position.set(sd * 0.078, HIP, 0);
     g.add(bake([[CAPS(0.068, 0.06), [0, -0.05, 0], [1, 1, 1], C.bot], [CAPS(0.056, 0.05), [0, -0.12, 0], [1, 1, 1], C.skin]]));
     const knee = new THREE.Group(); knee.position.y = -0.16; g.add(knee);
-    knee.add(bake([[CAPS(0.054, 0.06), [0, -0.04, 0], [1, 1, 1], C.skin], [CYL, [0, -0.1, 0], [0.058, 0.03, 0.058], 0xffffff],
+    knee.add(shins[shins.length] = bake([[CAPS(0.054, 0.06), [0, -0.04, 0], [1, 1, 1], C.skin], [CYL, [0, -0.1, 0], [0.058, 0.03, 0.058], 0xffffff],
       [SPHS, [0, -0.14, 0.03], [0.075, 0.055, 0.115], C.shoe], [SPHS, [0, -0.168, 0.03], [0.072, 0.018, 0.11], C.sole]]));
     rig.add(g); return { g, knee }; };
-  return { rig, body, head, armL: arm(-1), armR: arm(1), legL: leg(-1), legR: leg(1), sitY: 0.46 - HIP, tray: [0.62, 0.3], milk: [0.2, 0.55, 0.2], height: HC + 0.76 + HR[1] };
+  const legL = leg(-1), legR = leg(1);
+  // ACTION-1(09-28): 신발 색(부위 2)만 정점색으로 다시 칠한다 — 메시·재질 그대로(실내화 갈아신기)
+  function setShoe(hex) { col.set(hex); for (const m of shins) { const [a, n] = m.userData.parts[2], C9 = m.geometry.attributes.color;
+    for (let i = a; i < a + n; i++) C9.setXYZ(i, col.r, col.g, col.b); C9.needsUpdate = true; } }
+  return { rig, body, head, armL: arm(-1), armR: arm(1), legL, legR, sitY: 0.46 - HIP, tray: [0.62, 0.3], milk: [0.2, 0.55, 0.2], height: HC + 0.76 + HR[1], setShoe, shoeIn: C.shoe };
 
 }

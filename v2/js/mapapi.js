@@ -143,7 +143,7 @@ export function createMapApi(host, NAV, META) {
     get: () => { const zn = zoneAt(P.x, P.y, P.z); return { x: P.x, y: P.y, z: P.z, h: ((-pl.getYaw() / R2D) % 360 + 360) % 360, ground: P.ground, zone: zn ? zn.id : null }; },
     teleport(target, o = {}) {
       const r = resolve(target, o.floor || 1); if (!r) { console.warn('[map] teleport: 모르는 대상', target); return false; }
-      pl.ACT.anim = null; pl.ACT.sit = null; P.x = r.x; P.z = r.z; P.y = r.y + 0.01; P.vy = 0; P.ground = true;
+      pl.ACT.anim = null; pl.ACT.sit = null; if (pl.acts) pl.acts.stop(true); P.x = r.x; P.z = r.z; P.y = r.y + 0.01; P.vy = 0; P.ground = true;
       const h = o.h ?? r.h; if (h != null) setHeading(h);
       emit('teleport', { x: P.x, y: P.y, z: P.z }); return true;
     },
@@ -156,6 +156,9 @@ export function createMapApi(host, NAV, META) {
     // GAME-WG: 3인칭 카메라를 오른쪽으로 m만큼 비켜 세움(어깨 너머 · -1~1 · 0 = 끔). 옆벽 검사는 하지 않으니 게임이 트인 곳에서만. 게임이 멈추면 0
     shoulder(m = 0) { CTRL.shoulder = Math.max(-1, Math.min(1, +m || 0)); },
     speed(k = 1) { CTRL.speed = Math.max(0.5, Math.min(2, k)); },
+    // ACTION-1(09-28): 보이는 행동 — act('drink'|'wash'|'sanitize'|'spray'|'water'|'mic'|'drum'|'sing'|'write'|'erase'|'point'|'look'|'salute'|'read'|'scribble'|'press'|'shoes'|'reach', { at:[x,y,z], ats, msg, onMid, midAt, onEnd }) → { done, stop() } · 게임이 멈추면 멈춘다. 정본 docs/map_api.md §19
+    act(name, o = {}) { return pl.acts ? pl.acts.play(name, o) : null; },
+    get acting() { return pl.acts ? pl.acts.cur : null; },
   };
 
   // ---------- 6. 상호작용·트리거·동적 충돌 ----------
@@ -460,7 +463,7 @@ export function createMapApi(host, NAV, META) {
     const res = new Set(), track = h => { if (dead && h && h.remove) { try { h.remove(); } catch (e) { console.error(e); } return h; } if (h && h.remove) { const r0 = h.remove; h.remove = function () { res.delete(h); return r0.apply(this, arguments); }; res.add(h); } return h; };
     const S = facadeApi(track, owner);
     S.dispose = () => { dead = true; for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); try { ENG.reset(); } catch (e) { console.error('[map] 엔진 정리 오류', e); } try { FX.reset(); } catch (e) { console.error('[map] 세상 바꾸기 정리 오류', e); }
-      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
+      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; if (pl.acts) pl.acts.stop(true); if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
     S.quit = () => { const c = game.current; if (c && c.scope === S) stopGame('quit'); };   // 게임이 스스로 끝낼 때(끝 화면 [그만하기])
     Object.defineProperty(S, 'tracked', { get: () => res.size });
     return S;

@@ -76,6 +76,7 @@ export function makeMeta(SCHOOL) {
     '놀이마당': M('play-yard', 'play', null),
     '모래 놀이터': M('sandpit', 'play', null),
     '버스 타는 곳': M('bus-stop', 'path', null, ['car']),
+    '버스 안': M('bus-inside', 'hall', null, ['car'], { indoor: true, yr: [SCHOOL.terrain.field + 0.15, SCHOOL.terrain.field + 2.25] }),   // BUS-1(09-28): 통학버스 안(바닥 y -0.35 · 계단 -1.1~-0.6) — 버스 타는 곳 띠 안의 한 자리
     '정문': M('gate', 'path', null, ['entry']),
     '유치원 놀이터': M('kinder-playground', 'play', null, ['kinder'], { yr: [-2.55, 0.6] }),   // [quality4 09-26] 조합놀이대 발판(−0.15·0.15)도 '유치원 놀이터'(예전 구역 없음)
     '체육관 계단': M('gym-steps', 'stair', null),
