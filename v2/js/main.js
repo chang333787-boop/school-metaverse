@@ -453,7 +453,6 @@ function step(dt) {
     blob.position.set(P.x, gy + 0.045 * Math.max(S, 0.2), P.z); blob.scale.setScalar(0.95 * k * S); blob.material.opacity = k; blob.visible = !ACT.sit && h < 3; }
   pg.visible = !camFirst && camD > 0.45 * PHY.sc;   // CAM-3: 벽에 붙어 카메라가 머리 바로 뒤까지 오면 캐릭터를 숨긴다(1인칭처럼)
   kidFade(camFirst || PHY.T || !camK ? 1 : Math.max(0, Math.min(1, (camD - CAMIN.fade0) / (CAMIN.fade1 - CAMIN.fade0))));   // CAM-IN: 실내에서 카메라가 가까우면 반투명(시야를 막지 않게)
-  const lok = camLOk; camLOk = false;   // 리뷰(CAM-IN): 실내 카메라 오프셋 따라가기는 연달아 실내 가지를 탄 프레임에서만(1인칭·작은 몸·틈새·바깥에서 들어오면 곧장)
   if (CTRL.peek) {   // ENGINE-1 숨는 자리: 캐릭터 숨김 · 카메라 = 틈새 시점(좁은 화각 · 고개는 ±40°까지만 · 가장자리 어둡게는 mapapi DOM)
     const K9 = CTRL.peek; pg.visible = false; blob.visible = false;
     let dy9 = camYaw - K9.yaw; while (dy9 > Math.PI) dy9 -= Math.PI * 2; while (dy9 < -Math.PI) dy9 += Math.PI * 2;
@@ -483,10 +482,8 @@ function step(dt) {
     const pIn = Math.max(CAMIN.pMin, Math.min(CAMIN.pMax, camPitch + CAMIN.pAdd)), pch = camPitch + (pIn - camPitch) * k, CD = CAM_D + (CAMIN.CD - CAM_D) * k;
     camDt = dt; camHW = 0.3 * Math.tan(camera.fov * Math.PI / 360) * camera.aspect + 0.08; const C = camPoseIn(hx, hy, hz, camYaw, pch, CD, CAMIN.sh * k + (CTRL.shoulder || 0));
     // 붐 길이 = 임계 감쇠 스프링(느린 PC에서도 같은 움직임 — 닫힌 식) · 늘어날 땐 0.22초, 줄어들 땐 0.07초 · 벽 여유(len + 0.12)를 넘지는 않는다(벽 뒤로 안 감)
-    //  리뷰(CAM-IN): 늘어날 자리가 CAMIN.hold초(0.3) 넘게 이어질 때만 늘인다 — 제자리에서 돌 때 붐이 옆 문간으로 잠깐 늘었다가 문설주에 걸려 툭 당겨지던 것(복도 360° 1.6m 튐 8번)
-    camGrowT = C.len > camD + 0.05 ? camGrowT + dt : 0; const tg = C.len < camD || camGrowT > CAMIN.hold ? C.len : camD;
-    const st = tg < camD ? 0.07 : 0.22, om = 2 / st, x9 = om * dt, e9 = 1 / (1 + x9 + 0.48 * x9 * x9 + 0.235 * x9 * x9 * x9), ch = camD - tg, tp = (camDv + om * ch) * dt;
-    camDv = (camDv - om * tp) * e9; camD = tg + (ch + tp) * e9;
+    const st = C.len < camD ? 0.07 : 0.22, om = 2 / st, x9 = om * dt, e9 = 1 / (1 + x9 + 0.48 * x9 * x9 + 0.235 * x9 * x9 * x9), ch = camD - C.len, tp = (camDv + om * ch) * dt;
+    camDv = (camDv - om * tp) * e9; camD = C.len + (ch + tp) * e9;
     if (camD > C.len + 0.12) { camD = C.len + 0.12; camDv = 0; } if (camD < 0) { camD = 0; camDv = 0; }
     camInAt(camD);
     const ry = Math.cos(camYaw), rw = -Math.sin(camYaw), hw = camHW;
@@ -498,22 +495,8 @@ function step(dt) {
       camD = Math.max(0.5, camD - 0.1); camDv = 0; camInAt(camD); camSh = camSide(camYaw, hy, hw); }
     const cx = CIN.x, cy = CIN.y, cz = CIN.z;
     // 보는 점 = 어깨 기준점에서 앞으로 ahead·k m, 머리보다 drop·k 아래 → 붐은 위에서 내려다봐도 시선은 거의 수평(복도 끝이 화면 가운데 · 아이는 아래쪽)
-    const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = ry * camSh, rz = rw * camSh, ah0 = CAMIN.ahead * k * Math.max(0.4, Math.min(1, (camera.fov - 40) / 30));   // 세로 화각이 좁으면(휴대폰 가로) 덜 앞을 봐서 아이가 화면 밑으로 잘리지 않게
-    // 리뷰(CAM-IN): 붐이 벽에 눌려 짧아지면(교실 사물함 앞 1.2m) 앞을 보던 시선 밑으로 아이가 화면 밖에 빠졌다 → 붐이 짧을수록 앞보기를 줄여 아이를 화면 아래쪽에 둔다(0.15초로 부드럽게)
-    const aK = Math.max(0, Math.min(1, (camD - 0.8) / Math.max(0.5, CD - 0.8)));
-    camAhK = lok ? camAhK + (aK - camAhK) * (1 - Math.exp(-dt / 0.15)) : aK; const ah = ah0 * camAhK;
-    // 리뷰(CAM-IN): 미끄럼 방향이 문설주 모서리에서 뒤집히면(벽 면 ↔ 문설주 옆면) 같은 붐 길이에도 카메라가 1.6m 튀었다(복도에서 제자리 360°).
-    //  → 최종 자리를 '고개 기준(오른쪽·위·뒤) 오프셋'으로 짧게(τ = CAMIN.glide) 따라가게 한다 — 걷기·돌기 자체는 늦지 않고 충돌로 바뀐 몫만 미끄러진다.
-    //  따라가는 중간 자리가 벽 뒤(머리→자리 광선이 막힘)거나 근평면이 걸리면 예전처럼 곧장 목표로(광선 2 · 따라가는 프레임만)
-    const ox = cx + rx - hx, oy = cy - hy, oz = cz + rz - hz, bx = -fx, bz = -fz, tR = ox * ry + oz * rw, tB = ox * bx + oz * bz;
-    if (!lok) { camLR = tR; camLU = oy; camLB = tB; }
-    else { const g9 = 1 - Math.exp(-dt / CAMIN.glide); camLR += (tR - camLR) * g9; camLU += (oy - camLU) * g9; camLB += (tB - camLB) * g9;
-      if (Math.abs(tR - camLR) + Math.abs(oy - camLU) + Math.abs(tB - camLB) < 0.01) { camLR = tR; camLU = oy; camLB = tB; }
-      else { const qx = hx + camLR * ry + camLB * bx, qy = hy + camLU, qz = hz + camLR * rw + camLB * bz, mx = qx - camQX, my = qy - camQY, mz = qz - camQZ, ml = Math.hypot(mx, my, mz);
-        camHitTop = hy + 0.15; const blk = (ml > 1e-4 && camHit(camQX, camQY, camQZ, mx / ml, my / ml, mz / ml, ml + 0.15) < ml + 0.15) || nearClip(qx, qy, qz, CIN.px + fx * ah + rx - qx, hy - CAMIN.drop * k - qy, CIN.pz + fz * ah + rz - qz, camera.fov, camera.aspect, hy); camHitTop = null;
-        if (blk) { camLR = tR; camLU = oy; camLB = tB; } } }   // 지난 자리 → 새 자리 사이에 벽이 있거나(벽을 지나가는 길) 근평면이 걸리면 곧장
-    camLOk = true; camQX = hx + camLR * ry + camLB * bx; camQY = hy + camLU; camQZ = hz + camLR * rw + camLB * bz;
-    camera.position.set(camQX, camQY, camQZ);
+    const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = ry * camSh, rz = rw * camSh, ah = CAMIN.ahead * k * Math.max(0.4, Math.min(1, (camera.fov - 40) / 30));   // 세로 화각이 좁으면(휴대폰 가로) 덜 앞을 봐서 아이가 화면 밑으로 잘리지 않게
+    camera.position.set(cx + rx, cy, cz + rz);
     camera.lookAt(CIN.px + fx * ah + rx, hy - CAMIN.drop * k, CIN.pz + fz * ah + rz);
     pg.visible = !camFirst && camD > 0.3;
   } else {
@@ -538,7 +521,6 @@ function step(dt) {
 //     camHit은 낮은 얇은 부재(가구)를 일부러 무시해 카메라 높이의 처마 판(동관 남쪽 처마 y 3.4~3.7 · 현관 차양)을 못 봤다 — 검진 nearWall과 같은 판정
 const CAMP = { want: 0, d: 0, sh: 0, x0: 0, y: 0, z0: 0 };
 function nearClip(cx, cy, cz, fx, fy, fz, fov, aspect, hy) {
-  { const fl9 = Math.hypot(fx, fy, fz); if (fl9 > 1e-6 && Math.abs(fl9 - 1) > 1e-6) { fx /= fl9; fy /= fl9; fz /= fl9; } }   // 리뷰(CAM-IN): 방향은 단위 벡터로(실내 가지가 붐 길이 벡터를 넘겨 근평면이 0.3×붐 앞에 놓이던 것 — camPose는 이미 단위라 그대로)
   const hh = 0.3 * Math.tan(fov * Math.PI / 360), hw = hh * aspect, rl = Math.hypot(fz, fx) || 1, rx = fz / rl, rz = -fx / rl;
   const ux = rz * fy, uy = fz * rx - fx * rz, uz = -fy * rx, fl = hy - 1.3 + 0.12;
   const k0x = Math.floor((cx - 1) / 8), k1x = Math.floor((cx + 1) / 8), k0z = Math.floor((cz - 1) / 8), k1z = Math.floor((cz + 1) / 8);
@@ -571,12 +553,11 @@ function camPose(hx, hy, hz, yaw, pch, CD, fov, aspect, dUse) {
 let camSh = 0;
 // CAM-IN(09-28 교사 "실내가 생각보다 좁은 느낌" — 실제 영상 복도는 넓어 보이는데 앱은 답답): 복도 폭(2.5m)은 그대로, 실내 카메라만 바꾼다.
 //  진단(before 보드): 예전 실내 = 머리 뒤 3.3m·피치 ≤0.2·머리를 봄 → 아이가 화면 가운데 소실점(복도 끝)을 통째로 가리고, 벽에 걸리면 붐이 머리 뒤로 '툭' 당겨졌다.
-//  실내: 붐 3.0m·피치 +0.05(기본 0.35 = 20° 위에서) · 오른쪽 어깨 0.5m · 시선은 어깨점 앞 3.0m·머리 0.1 아래 = 거의 수평 → 소실점이 화면 가운데·아이는 왼쪽 아래.
-//  리뷰(09-28): 2.7m·가로 102°는 아이가 예전(3.3m)보다 오히려 크게 보였다(휴대폰 가로는 세로 58.7° = 예전 64°보다 좁음) → 3.0m·가로 ≤108°(휴대폰 가로 세로 65° · 960×540 = 70).
+//  실내: 붐 2.7m·피치 +0.12(기본 0.42 = 24° 위에서) · 오른쪽 어깨 0.42m · 시선은 어깨점 앞 2.4m·머리 0.15 아래 = 거의 수평 → 소실점이 화면 가운데·아이는 왼쪽 아래.
 //  벽: 붐이 벽에 닿으면 곧장 당기지 않고 벽 면(축)을 따라 남은 길이만큼 미끄러진다(천장이면 천장 밑을 따라 뒤로 · 옆벽이면 벽을 따라) — 광선 = 어깨 1 · 붐 1 · 미끄럼 1 · 옆 4(world.grid 칸만) + 근평면 검사.
 //  붐 길이는 임계 감쇠 스프링 · 가까우면 아이가 반투명(fade0~fade1 m) · 1인칭(V)·바깥·작은 몸(PHY.T)·오프닝(CAM_OVR)은 그대로 · 물총 어깨(CTRL.shoulder)는 더해진다.
-const CAMIN = { CD: 3.0, pAdd: 0.05, pMin: -0.1, pMax: 0.62, sh: 0.5, ahead: 3.0, drop: 0.1, hfov: 108, vmax: 70, vmaxC: 72, blend: 2.5, fade0: 1.0, fade1: 2.4, hold: 0.3, glide: 0.07 };
-let camK = 0, camDv = 0, camGrowT = 0, camLOk = false, camAhK = 1, camLR = 0, camLU = 0, camLB = 0, camQX = 0, camQY = 0, camQZ = 0, camShI = 0, camDt = 1 / 60, camHW = 0.45;
+const CAMIN = { CD: 2.7, pAdd: 0.12, pMin: -0.1, pMax: 0.62, sh: 0.42, ahead: 2.4, drop: 0.15, hfov: 102, vmax: 70, vmaxC: 72, blend: 2.5, fade0: 0.7, fade1: 2.0 };
+let camK = 0, camDv = 0, camShI = 0, camDt = 1 / 60, camHW = 0.45;
 const CIN = { sh: 0, len: 0, px: 0, py: 0, pz: 0, dx: 0, dy: 0, dz: 0, s1: 0, hx: 0, hy: 0, hz: 0, ex: 0, ey: 0, ez: 0, x: 0, y: 0, z: 0 };
 function camPoseIn(hx, hy, hz, yaw, pch, CD, sh) {
   camHitTop = hy + 0.15; const r = camPoseIn0(hx, hy, hz, yaw, pch, CD, sh); camHitTop = null; return r;
@@ -1581,7 +1562,7 @@ window.SD2 = {
   tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (world.baseAt(x, z) + 0.01); P.vy = 0; },
   yaw(v) { camYaw = v; }, pitch(v) { if (v != null) camPitch = Math.max(-0.2, Math.min(1.1, v)); return camPitch; },   // 시험용(리뷰 SHRINK)
   pos: () => [P.x.toFixed(1), P.y.toFixed(1), P.z.toFixed(1)],
-  step(nn = 1, keyList = [], dt9 = 1/60) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { mouseApply(); step(dt9); doorTick(dt9); hotTick(dt9); MAP.tick(dt9); keysFrameEnd(); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
+  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { mouseApply(); step(1/60); doorTick(1/60); hotTick(1/60); MAP.tick(1/60); keysFrameEnd(); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
   doors: () => DOORS.length, doorCheck,
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
   acts: ACTS, hotNow: () => hotNear, actOn: h => act(h), camOvr: f => { CAM_OVR = f; }, pg,   // ACTION-1: 보이는 행동(시험 — SD2.acts.play('drink', {at:[x,y,z]}) · stats())
