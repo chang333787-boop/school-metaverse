@@ -741,10 +741,11 @@ const DOORS = world.doors.map(d => {
   //   묻힌 부분은 벽 속이라 안 보이고, 문짝 두 면(±0.08)은 벽 면(±0.15)·가운데 맞댐면(0)과 겹치지 않는다.
   const w = d.w + 0.1, h = (d.dh ?? 2.6) + (d.lintel ? 0.05 : 0);
   // slideOver(자동문·현관 양문): 옆 고정 유리 앞으로 12cm 비켜 미끄러진다(실물 자동문처럼) — 벽 속 포켓이 아니라서 간섭 검사 제외
-  return { ax: d.ax, bx: d.cx, bz: d.cz, w, ow: d.w, h, y0: d.y0, glass: d.glass, open: 0, over: d.slideOver ? 0.12 : 0, color: d.color, slot: d.slot, film: d.film, lum: d.lum };
+  return { ax: d.ax, bx: d.cx, bz: d.cz, w, ow: d.w, h, y0: d.y0, glass: d.glass, open: 0, over: d.slideOver ? 0.12 : 0, color: d.color, slot: d.slot, film: d.film, lum: d.lum, swing: d.swing || null };
 });
 const _boxG = new THREE.BoxGeometry(1, 1, 1);
-const nWood = DOORS.filter(o => !o.glass && !o.film).length, nFilm = DOORS.filter(o => o.film).length, nGlass = DOORS.length - nWood - nFilm;
+const SLID = DOORS.filter(o => !o.swing);   // GYM-2: 여닫이 문은 아래 SWING 인스턴스가 따로 그린다(미닫이 인스턴스 번호 밖)
+const nWood = SLID.filter(o => !o.glass && !o.film).length, nFilm = SLID.filter(o => o.film).length, nGlass = SLID.length - nWood - nFilm;
 // 필름 유리문(화장실 넷 — main_corridor-5 · 영상 a_457.5·a_517.5): 복도 쪽 면이 북(-z)을 봐서 반구광만 받아 회색 판으로 보였다 → 조명 무시 + 흰 바탕 무늬(문마다 필름 색)
 const filmTex = (() => { const c = document.createElement('canvas'); c.width = 128; c.height = 256; const g = c.getContext('2d');
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, 128, 256); g.fillStyle = '#d4d6d8'; g.fillRect(0, 0, 128, 7); g.fillRect(0, 249, 128, 7); g.fillRect(0, 0, 7, 256); g.fillRect(121, 0, 7, 256);   // 은색 문 테
@@ -760,12 +761,66 @@ const doorInst = {
 };
 Object.values(doorInst).forEach(m => { m.frustumCulled = false; scene.add(m); });
 doorInst.wood.count = nWood; doorInst.win.count = nWood; doorInst.knob.count = nWood; doorInst.glass.count = nGlass; doorInst.film.count = nFilm;
-{ let iw = 0, ig = 0, i9 = 0; const _dc = new THREE.Color(); DOORS.forEach(o => { o.idx = o.glass ? ig++ : o.film ? i9++ : iw++; if (o.film) doorInst.film.setColorAt(o.idx, _dc.set(o.color ?? 0xffffff)); else if (!o.glass) doorInst.wood.setColorAt(o.idx, _dc.set(o.color ?? 0xc08b4f).multiplyScalar(o.lum ?? 1)); });
+{ let iw = 0, ig = 0, i9 = 0; const _dc = new THREE.Color(); SLID.forEach(o => { o.idx = o.glass ? ig++ : o.film ? i9++ : iw++; if (o.film) doorInst.film.setColorAt(o.idx, _dc.set(o.color ?? 0xffffff)); else if (!o.glass) doorInst.wood.setColorAt(o.idx, _dc.set(o.color ?? 0xc08b4f).multiplyScalar(o.lum ?? 1)); });
   if (doorInst.wood.instanceColor) doorInst.wood.instanceColor.needsUpdate = true; if (doorInst.film.instanceColor) doorInst.film.instanceColor.needsUpdate = true; }
 // 필름 문은 실내 디테일처럼 멀면 숨긴다(world.details에 끼우면 detailTick이 거리로 켜고 끔 — 먼 구역 닻 드로우콜 +0)
 if (nFilm) { const fl = DOORS.filter(o => o.film); world.details.push({ mesh: doorInst.film, cx: fl.reduce((a, o) => a + o.bx, 0) / nFilm, cz: fl.reduce((a, o) => a + o.bz, 0) / nFilm, inside: true }); }
 const _dM = new THREE.Matrix4(), _dP = new THREE.Vector3(), _dS = new THREE.Vector3(), _dQ = new THREE.Quaternion();
+// ---------- 여닫이 문(GYM-2 · 09-28 아이 "체육관 문은 미는 문") ----------
+// world gap의 swing = { n: 열리는 쪽 법선 부호, leaves: [짝 폭 …](1짝 = 한쪽 경첩 · 2짝 = 양쪽 경첩), look: 'quilt'(남색 누빔 · 흰 단추) | 'plain'(민짝 + 작은 창) | 'glass'(유리 + 스테인리스 틀), color }
+// 짝마다 경첩(문틀 안쪽 끝)에서 수직축으로 돈다(다 열면 83°). 통행은 막지 않는다(미닫이와 같은 규칙) · 인스턴스 3개(누빔·민/틀·유리) — 문이 있는 곳 둘레 구로 절두체 컬링
+const quiltTex = (() => { const c = document.createElement('canvas'); c.width = 128; c.height = 256; const g = c.getContext('2d');
+  g.fillStyle = '#1d2757'; g.fillRect(0, 0, 128, 256);
+  for (let j = 0; j < 9; j++) for (let i = 0; i < 5; i++) { const x = i * 32 - (j % 2) * 16, y = j * 32 - 8, gr = g.createRadialGradient(x + 16, y + 16, 2, x + 16, y + 16, 22);   // 누빔(단추 사이가 볼록)
+    gr.addColorStop(0, '#2c3a7a'); gr.addColorStop(1, '#161e46'); g.fillStyle = gr; g.beginPath(); g.ellipse(x + 16, y + 16, 17, 17, 0, 0, 7); g.fill(); }
+  g.fillStyle = '#e9eaee'; for (let j = 0; j < 9; j++) for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(i * 32 - (j % 2) * 16, j * 32 - 8, 2.6, 0, 7); g.fill(); }
+  g.strokeStyle = '#f2f2f2'; g.lineWidth = 6; g.strokeRect(3, 3, 122, 250);   // 흰 문테
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+const SWING = DOORS.filter(o => o.swing), SWP = { q: [], p: [], g: [] };
+SWING.forEach(o => {
+  const sw = o.swing, X = o.ax === 'x', L = sw.leaves || [o.ow], S = L.reduce((a, b) => a + b, 0), m = Math.max(0.03, (o.ow - S) / 2);
+  const line = X ? o.bz : o.bx, c = X ? o.bx : o.bz, g0 = c - o.ow / 2, g1 = c + o.ow / 2, H9 = (o.h - (o.lintel ? 0.05 : 0)) - 0.02;
+  o.lv = L.map((w, k) => {
+    const s = L.length === 1 || k === 0 ? 1 : -1, hinge = s > 0 ? g0 + m : g1 - m, len = w * (o.ow - 2 * m) / S - 0.02, parts = [];   // 짝 폭 = 문틀 안(양끝 m)에 맞춰 줄임
+    const P = (mesh, a, y, pw, ph, t, col) => { const i = SWP[mesh].length; SWP[mesh].push(col ?? 0xffffff); parts.push({ mesh, i, a, y, pw, ph, t }); };
+    if (sw.look === 'glass') { P('g', len / 2, o.y0 + H9 / 2, len - 0.1, H9 - 0.1, 0.03); [0.03, len - 0.03].forEach(a => P('p', a, o.y0 + H9 / 2, 0.06, H9, 0.05, 0xc9cdd1)); P('p', len / 2, o.y0 + H9 - 0.03, len - 0.1, 0.06, 0.05, 0xc9cdd1); P('p', len / 2, o.y0 + 0.06, len - 0.1, 0.12, 0.05, 0xc9cdd1); P('p', len - 0.12, o.y0 + 1.0, 0.03, 0.9, 0.12, 0xb8bcc0); }
+    else if (sw.look === 'quilt') { P('q', len / 2, o.y0 + H9 / 2, len, H9, 0.06); if (w < 0.8) P('p', len / 2, o.y0 + 1.55, 0.25, 0.35, 0.07, 0xbfd8e2); P('p', len - 0.1, o.y0 + 1.05, 0.04, 0.6, 0.14, 0x8a5a36); }   // 좁은 짝 = 작은 창 · 세로 나무 막대 손잡이
+    else { P('p', len / 2, o.y0 + H9 / 2, len, H9, 0.05, sw.color ?? 0xf2f2f0); P('p', len / 2, o.y0 + 1.5, Math.min(0.35, len * 0.4), 0.5, 0.06, 0xd6e4ea); P('p', len - 0.1, o.y0 + 1.0, 0.12, 0.04, 0.12, 0x9aa0a6); }
+    return { hinge, s, parts, w: len };
+  });
+  o.lineC = line;
+});
+const swingInst = {}; let swingR = 0; const _swC = new THREE.Vector3();
+SWING.forEach(o => _swC.add(new THREE.Vector3(o.bx, o.y0 + 1.2, o.bz))); if (SWING.length) _swC.divideScalar(SWING.length);
+SWING.forEach(o => { swingR = Math.max(swingR, Math.hypot(o.bx - _swC.x, o.bz - _swC.z) + o.ow + 1.5); });
+[['q', new THREE.MeshLambertMaterial({ color: 0xffffff, map: quiltTex })], ['p', new THREE.MeshLambertMaterial({ color: 0xffffff })], ['g', glassMat]].forEach(([k, mat]) => {
+  const n = SWP[k].length, im = new THREE.InstancedMesh(_boxG, mat, Math.max(1, n)); im.count = n; swingInst[k] = im;
+  if (k !== 'g') { const _c9 = new THREE.Color(); SWP[k].forEach((col, i) => im.setColorAt(i, _c9.set(col))); if (im.instanceColor) im.instanceColor.needsUpdate = true; }
+  im.boundingSphere = new THREE.Sphere(_swC.clone(), swingR); im.visible = n > 0; scene.add(im); });
+const _sQ = new THREE.Quaternion(), _sY = new THREE.Vector3(0, 1, 0);
+function setSwing(o) {
+  const th = o.open * 1.45, X = o.ax === 'x', n = o.swing.n || 1;
+  for (const L of o.lv) {
+    const dA = L.s * Math.cos(th), dN = n * Math.sin(th);          // 짝 방향(벽 축 성분 · 법선 성분)
+    const dx = X ? dA : dN, dz = X ? dN : dA;
+    _sQ.setFromAxisAngle(_sY, Math.atan2(-dz, dx));
+    const hx = X ? L.hinge : o.lineC, hz = X ? o.lineC : L.hinge;
+    for (const p of L.parts) { _dP.set(hx + dx * p.a, p.y, hz + dz * p.a); _dS.set(p.pw, p.ph, p.t); swingInst[p.mesh].setMatrixAt(p.i, _dM.compose(_dP, _sQ, _dS)); }
+  }
+  for (const k in swingInst) swingInst[k].instanceMatrix.needsUpdate = true;
+}
+// 여닫이 문이 쓸고 가는 자리(짝마다 경첩 → 다 연 자리까지의 사분면 상자)에 얇은 부재가 있는가
+function swingHits(o) {
+  let n = 0; const X = o.ax === 'x', nn = o.swing.n || 1;
+  for (const L of o.lv) { const len = L.w;
+    const a0 = Math.min(L.hinge + L.s * 0.02, L.hinge + L.s * len), a1 = Math.max(L.hinge + L.s * 0.02, L.hinge + L.s * len), b0 = Math.min(o.lineC + nn * 0.16, o.lineC + nn * (len + 0.1)), b1 = Math.max(o.lineC + nn * 0.16, o.lineC + nn * (len + 0.1));
+    const R9 = X ? [a0, a1, b0, b1] : [b0, b1, a0, a1];
+    for (const b of world.allBoxes) { if (b.wall || b.y1 - b.y0 >= 2.6 || b.y1 <= o.y0 + 0.02 || b.y0 >= o.y0 + o.h) continue;
+      if (b.x1 <= R9[0] || b.x0 >= R9[1] || b.z1 <= R9[2] || b.z0 >= R9[3]) continue; n++; } }
+  return n;
+}
 function setDoor(o) {
+  if (o.swing) { setSwing(o); return; }
   const s = o.open * (o.slide ?? 0) * (o.dir ?? 1);
   const X = o.ax === 'x', cx = X ? o.bx + s : o.bx + (o.over || 0), cz = X ? o.bz + (o.over || 0) : o.bz + s;
   const put = (m, lx, y, ww, hh, th) => {        // lx = 문 폭 방향 오프셋, th = 두께
@@ -816,6 +871,7 @@ function sweepHits(o, dir, len = o.ow + 0.05) {
 }
 // 열림 방향은 빌드 때 1회 자동 결정 — 간섭이 적은 쪽으로 연다(창문·칠판을 알아서 피한다)
 DOORS.forEach(o => {
+  if (o.swing) { o.dir = 1; o.slide = 0; setDoor(o); return; }
   if (o.over) { o.dir = 1; o.slide = o.ow + 0.05; setDoor(o); return; }
   o.dir = sweepHits(o, 1) <= sweepHits(o, -1) ? 1 : -1;
   // 끝까지 못 여는 자리(옆 벽 속에 창이 있는 곳)는 부딪히기 직전까지만 연다 — 문짝이 창 유리를 뚫고 나오지 않게
@@ -825,7 +881,7 @@ DOORS.forEach(o => {
 });
 function doorCheck() {
   const bad = [];
-  for (const o of DOORS) if (!o.over && sweepHits(o, o.dir, o.slide)) bad.push([+o.bx.toFixed(1), +o.bz.toFixed(1)]);
+  for (const o of DOORS) if (o.swing ? swingHits(o) : !o.over && sweepHits(o, o.dir, o.slide)) bad.push([+o.bx.toFixed(1), +o.bz.toFixed(1)]);
   if (bad.length) console.error('🚪 문 경로 간섭 ' + bad.length + '건: ' + JSON.stringify(bad.slice(0, 6)));
   else console.log('✅ 문 경로 간섭 0 (문 ' + DOORS.length + '개)');
   return bad;

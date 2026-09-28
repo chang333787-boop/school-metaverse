@@ -62,6 +62,12 @@ export function makeMeta(SCHOOL) {
     '체육관 준비실': M('gym-prep', 'service', 'gym', ['staff']),
     '체육관 전실': M('gym-lobby', 'hall', 'gym', ['entry']),
     '체육 창고': M('gym-store', 'storage', 'gym', ['staff']),
+    '체육관 남자 화장실': M('gym-toilet-s', 'toilet', 'gym'),                   // GYM-2(09-28): 전실 남쪽(들어가서 왼쪽) — 09-26에 막았던 문을 되살림
+    '무대 통로': M('gym-ramp', 'corridor', 'gym', ['staff'], { multi: true }),     // GYM-2: 체육관 → 무대 동쪽 옆 파란 벽 경사 통로(다리 A·B)
+    '체육관 남쪽 길': M('gym-south-path', 'path', null, [], { multi: true }),     // GYM-2: 옆길 계단 위 → 남면 포장길 → 바깥 체육 창고(부속동 남쪽 띠 + 본실 남면)
+    '체육관 서쪽 길': M('gym-west-path', 'path', null),                          // GYM-2: 서면 좁은 길(막돌 옹벽 옆)
+    '체육관 북쪽 길': M('gym-north-path', 'path', null),                         // GYM-2: 북면 포장길(화단·낮은 철망)
+    '체육 창고(바깥)': M('gym-shed', 'storage', null, ['staff']),                // GYM-2: 서남 모서리 노란 골함석 창고
     '체육관 현관': M('gym-porch', 'hall', 'gym', ['entry', 'covered'], { indoor: false }),
     '체육관 옆길': M('gym-side-path', 'path', null),                             // 현관 참 북끝 ~ 계단 위 보도블록(FWG)
     '체육관 앞 마당': M('gym-front-yard', 'yard', null, [], { multi: true }),    // 부속동 북쪽 아스팔트 + 운동장 북서 앞마당(월드 구역 둘)
