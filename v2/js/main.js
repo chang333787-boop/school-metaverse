@@ -1,13 +1,14 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
-import { buildKid } from './kid.js?v=4';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { buildWorld } from './world.js?v=125';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
+import { buildWorld } from './world.js?v=126';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=11';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=6';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
-import { makeMeta } from './mapmeta.js?v=7';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=20';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { makeMeta } from './mapmeta.js?v=8';       // MAP-API-1: 구역 계약표·출발점·표지점
+import { createMapApi } from './mapapi.js?v=21';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=7';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=2';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+import { createActions } from './actions.js?v=1';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 
 // TITLE-1: 오프닝을 켤지 — 게이트(?check=1)·검진(?health=1)·사진 대조(?shot)·게임 주소(?game·?tour=1)는 예전 그대로(오프닝 없음). index.html 로딩 막도 같은 규칙
 const QS0 = new URLSearchParams(location.search);
@@ -136,7 +137,7 @@ function kidTick(dt) {
   const K = KID, sit = !!ACT.sit, air = !P.ground && !sit && !ACT.anim, mv = sit ? 0 : Math.min(1, v / 4.2), cr = CTRL.crouched && !sit;
   if (v > 0.3 && !sit) kidPh += dt * (5.5 + v * 1.5);
   const sw = Math.sin(kidPh) * 0.7 * mv;
-  K.rig.position.set(0, sit ? K.sitY : cr ? -0.17 : Math.abs(Math.sin(kidPh)) * 0.04 * mv, sit ? 0.42 : 0);   // sitY = 의자 앉는 판(0.46)에 엉덩이 · ENGINE-1 웅크림 = 0.17 낮게
+  K.rig.position.set(0, sit ? K.sitY : cr ? -0.17 : Math.abs(Math.sin(kidPh)) * 0.04 * mv, sit && !ACT.sit.seat ? 0.42 : 0);   // ACTION-1: 좌석 앉기는 pg가 이미 좌석 위   // sitY = 의자 앉는 판(0.46)에 엉덩이 · ENGINE-1 웅크림 = 0.17 낮게
   K.rig.rotation.x = cr ? 0.28 : 0;   // 웅크리면 몸을 앞으로 숙인다
   if (sit) { K.legL.g.rotation.x = K.legR.g.rotation.x = -1.5; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 1.5; K.armL.rotation.x = K.armR.rotation.x = -0.85; }
   else if (cr) { K.legL.g.rotation.x = -1.25 + sw * 0.35; K.legR.g.rotation.x = -1.25 - sw * 0.35; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 2.0;   // ENGINE-1 웅크리기(무릎 굽힘 — 발은 땅에)
@@ -151,6 +152,7 @@ function kidTick(dt) {
   else if (K.armR.rotation.z !== 0.12) K.armR.rotation.z = 0.12;   // 어깨 기본 벌림(kid.js arm)
   K.head.rotation.x = mv > 0.1 ? 0.04 : Math.sin(kidT * 1.7) * 0.03;                                   // 가만히 있으면 살짝 끄덕끄덕
   K.body.scale.y = 1 + (mv < 0.1 && !sit ? Math.sin(kidT * 2.2) * 0.008 : 0);                           // 숨쉬기
+  ACTS.pose();                                                       // ACTION-1: 행동 자세(마시기·씻기·분무기…)를 기본 자세 위에
 }
 
 function terrainY(x, z) { return world.terrainAt(x, z); }   // 앞뜰·대지 yard / 운동장 field(LAYOUT-3 세 높이)
@@ -355,6 +357,14 @@ const CTRL = { frozen: false, speed: 1 };   // MAP-API-1: 게임이 멈춤(입�
 // ENGINE-1(09-27 행동 사전): 게임이 켜는 것만 — crouchOK(웅크리기 허용 · 기본 끔 = 게이트 영향 0) · crouched(지금 웅크림) · crouchForce(null|bool — 시험·게임이 강제) ·
 //   peek(숨는 자리 틈새 시점 {x,y,z,yaw,fov}) · hot(강제 상호작용 지점 — 숨은 동안 '나오기') · hold(물건 들기 팔) · pose('dig') · noiseT(뛰어내림 소리 남는 시간)
 Object.assign(CTRL, { wave: 0, crouchOK: false, crouched: false, crouchForce: null, peek: null, hot: null, hold: false, pose: null, noiseT: 0 });
+// ACTION-1(09-28): 보이는 행동 — act()·map.player.act가 부른다(쉬는 동안 비용 0 · 버스 문만 거리 재기). 신발 기본 = 운동화(파랑) — 신발장에서 실내화(흰색)로
+const ACTS = createActions({ THREE, scene, camera, KID, pg, P, ACT, blocked: (x, z, y) => pBlocked(x, z, y, P.bh), groundAt: (x, z, y) => pGround(x, z, y), toast: m => toast(m), tone: (...a) => tone(...a) });
+const SHOE_OUT = 0x4f7fd0;
+KID.setShoe(SHOE_OUT);
+if (world.busDoor) ACTS.busDoor(world.busDoor);
+{ const H9 = world.hotspots;   // 급식실 의자 중 사람이 앉아 있는 자리는 앉기 지점을 뺀다 · 구령대 마이크 머리(집어 들면 사라짐)
+  for (let i = H9.length - 1; i >= 0; i--) { const h = H9[i]; if (h.seat && h.cafe && (world.people || []).some(p => Math.hypot(p.x - h.seat.x, p.z - h.seat.z) < 0.45)) H9.splice(i, 1); }
+  for (const h of H9) if (h.mic) ACTS.micStand(h); }
 const CROUCH_H = 0.8;
 // 웅크리기 입력: C·Ctrl 누르고 있기(키보드) · 터치 ⬇ 버튼(누를 때마다 켜고 끔 — 두 엄지가 조이스틱·시점에 있으니) · crouchForce
 function crouchTick() {
@@ -373,10 +383,13 @@ function step(dt) {
     P.x = ACT.sit.x; P.z = ACT.sit.z; P.y = ACT.sit.y; P.vy = 0;
   } else {
     ACT.sit = null;
+    if (ACTS.busy && moving) ACTS.stop();   // ACTION-1: 움직이면 하던 행동을 바로 멈춘다
     physics(dt);
   }
-  pg.position.set(P.x, P.y, P.z);
-  pg.rotation.y = CTRL.face ?? P.yaw;   // GAME-WG(09-26): 게임이 몸 방향을 잠깐 잡을 수 있다(물총 겨눔 — map.player.aim) · 없으면 걷는 방향
+  ACTS.tick(dt);   // ACTION-1: 한 발 옮기기·시간·물줄기·알갱이·버스 문(쉬는 동안은 버스 문 거리 재기뿐)
+  const SE = ACT.sit && ACT.sit.seat;   // ACTION-1: 좌석 앉기(식탁·버스) — 몸은 서는 칸(P) 대신 좌석 위에 그린다(일어나면 서는 칸에서 바로 걷는다)
+  pg.position.set(SE ? SE.x : P.x, SE ? SE.y : P.y, SE ? SE.z : P.z);
+  pg.rotation.y = SE ? SE.yaw : CTRL.face ?? P.yaw;   // GAME-WG(09-26): 게임이 몸 방향을 잠깐 잡을 수 있다(물총 겨눔 — map.player.aim) · 없으면 걷는 방향
   kidTick(dt);
   // CAM-2(09-24): 사용자 "복도가 좁은 것 같다" — 실측 복도는 2.5m(게임 2.7m)로 좁지 않았다. 원인은 카메라:
   //  6.3m 뒤·17° 위에서 내려다보면 실내에선 천장(3.24m) 밑에 붙어 위에서 내려다보고, 화각 48°는 휴대폰 광각보다 훨씬 좁다.
@@ -399,9 +412,9 @@ function step(dt) {
   }
   const eyeH = (CTRL.crouched ? 0.8 : 1.5) * PHY.sc, headH = (CTRL.crouched ? 0.8 : 1.3) * PHY.sc;   // ENGINE-1: 웅크리면 눈·머리 높이도 낮게 · SHRINK-1 몸 크기 비례
   if (camFirst) {
-    const pitch = camPitch - 0.3, ey = P.y + eyeH - (ACT.sit ? 0.42 * PHY.sc : 0);
-    camera.position.set(P.x, ey, P.z);
-    camera.lookAt(P.x - Math.sin(camYaw) * Math.cos(pitch), ey - Math.sin(pitch), P.z - Math.cos(camYaw) * Math.cos(pitch));
+    const pitch = camPitch - 0.3, ey = (SE ? SE.y : P.y) + eyeH - (ACT.sit ? 0.42 * PHY.sc : 0), ex = SE ? SE.x : P.x, ez = SE ? SE.z : P.z;
+    camera.position.set(ex, ey, ez);
+    camera.lookAt(ex - Math.sin(camYaw) * Math.cos(pitch), ey - Math.sin(pitch), ez - Math.cos(camYaw) * Math.cos(pitch));
   } else if (PHY.T) {   // SHRINK-1 작은 몸 3인칭: 거리·근평면 비례 · 낮은 가구도 카메라를 막는다(camPoseT) · 실내 피치 제한 없음(천장이 멀다) · 바닥 밑으로 안 감
     const S = PHY.sc, hx = P.x, hy = P.y + headH, hz = P.z, pch = Math.max(-0.2, Math.min(0.9, camPitch)), CD = (indoor ? 4.2 : CAM_D) * S;   // 리뷰(SHRINK): 올려다보기 −0.2까지(책상 절벽·교탁 봉우리를 밑에서) — 바닥은 tCamHit가 막는다
     const want = camPoseT(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect).want;
@@ -412,7 +425,7 @@ function step(dt) {
     camera.position.set(C.x0 + rx, C.y, C.z0 + rz);
     camera.lookAt(hx + rx, hy, hz + rz);
   } else {
-    const hx = P.x, hy = P.y + headH, hz = P.z, pch = indoor ? Math.min(camPitch, 0.2) : camPitch, CD = indoor ? 3.3 : CAM_D;
+    const hx = SE ? SE.x : P.x, hy = (SE ? SE.y + 0.1 : P.y) + headH, hz = SE ? SE.z : P.z, pch = indoor ? Math.min(camPitch, 0.2) : camPitch, CD = indoor ? 3.3 : CAM_D;
     const want = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect).want;
     camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);   // 당김은 즉시·복귀는 이징(지터 방지)
     const C = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect, camD);   // 실제 거리에서 옆벽 비키기
@@ -543,6 +556,7 @@ function hotTick(dt) {
     const d = (P.x - h.x) ** 2 + (P.z - h.z) ** 2;
     if (d < h.r * h.r && d < bd && Math.abs(P.y - h.y) < 1.6) { bd = d; best = h; }
   }
+  if (mapOpened && best !== mapOpened) { if (MAP && MAP.minimap.visible && !MAP.game.current) MAP.minimap.hide(); mapOpened = null; }   // ACTION-1: 안내도에서 멀어지면 연 지도를 닫는다
   if (best !== hotNear || (best && best.label !== hotLab)) {   // ENGINE-1: 같은 지점이 이름을 바꾸면(숨기 ↔ 나오기) 안내도 다시
     hotNear = best; hotLab = best && best.label;
     hintEl.style.display = best ? '' : 'none'; TOUCH.setNear(best);
@@ -581,61 +595,84 @@ function tone(freq, t0, dur, type = 'sine', vol = 0.25, drop = 0) {
 const drumSnd = () => { tone(120, 0, 0.35, 'sine', 0.55, 45); tone(120, 0.3, 0.3, 'sine', 0.45, 45); tone(900, 0.15, 0.08, 'square', 0.06); };
 const xyloSnd = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.4, 'triangle', 0.22));
 const songSnd = () => [392, 440, 494, 523, 494, 440, 392].forEach((f, i) => tone(f, i * 0.28, 0.32, 'triangle', 0.16));
+// ACTION-1(09-28 아이 "상호작용이 말만 되고 실제로 보이지 않는 게 대부분"): 지점마다 보이는 행동(actions.js) — 알림 글은 동작 뒤에 짧게.
+//   지점 필드(world.js): at [x,y,z](대상 — 돌아서서 알맞은 거리로 한 발) · ats [[…],…](가장 가까운 것) · wash의 at/ats 넷째 값 = 물이 닿는 높이 · mic [x,y,z,ry](스탠드 위 마이크) ·
+//   sit의 seat {x,y,z,yaw,table?}(몸은 좌석 위 · 서는 칸은 h.x·h.z) · 정본 docs/map_api.md §19
+function makeTray() {   // 칸 나뉜 식판(밥·국·반찬 셋) — 음식은 children 1~5(먹으면 줄어든다)
+  const g = new THREE.Group();
+  const TM = c => new THREE.MeshLambertMaterial({ color: c });
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 0.34), TM(0xc8d2da)));
+  [[-0.13, 0.07, 0xf4f1e8], [0.13, 0.07, 0xc86a3a], [-0.16, -0.08, 0xc8452c], [0, -0.08, 0x6fa04f], [0.16, -0.08, 0xe8c35a]].forEach(([x, z, c], i) => {
+    const f = new THREE.Mesh(i < 2 ? new THREE.SphereGeometry(0.075, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2) : new THREE.BoxGeometry(0.1, 0.03, 0.09), TM(c));
+    f.position.set(x, 0.02, -z); g.add(f); });
+  g.userData.eaten = 0; return g;
+}
+const trayHands = () => { if (!tray) return; pg.add(tray); tray.position.set(0, KID.tray[0], KID.tray[1]); tray.rotation.set(0, 0, 0); };
+const trayFood = k => { if (!tray) return; tray.userData.eaten = k; for (let i = 1; i < tray.children.length; i++) { const f = tray.children[i]; f.visible = k < 0.98; f.scale.setScalar(Math.max(0.05, 1 - k * (0.8 + i * 0.04))); } };
+let mapOpened = null;
 function act(h) {
   if (typeof h.use === 'function') {   // MAP-API-1: 게임이 더한 지점(map.interact.add) — 예외는 잡아서 루프가 안 멈추게
     try { h.use(h); } catch (e) { console.error(e); }
     hotNear = null; if (h.once) h.off = true; MAP?.emit('interact', h); return;
   }
   MAP?.emit('interact', h);
+  const A = (name, o = {}) => ACTS.play(name, { at: h.at, ats: h.ats, h, ...o });
   switch (h.kind) {
     case 'board': {
-      h.stage = ((h.stage || 0) + 1) % 3;
-      if (!h.mesh) { h.mesh = new THREE.Mesh(chalkGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false })); h.mesh.position.set(h.bx, h.by, h.bz); h.mesh.rotation.y = h.ry || 0; scene.add(h.mesh); }
-      h.mesh.visible = h.stage > 0;
-      if (h.stage > 0) { h.mesh.material.map = chalkTex[h.stage - 1]; h.mesh.material.needsUpdate = true; }
-      toast(h.stage === 0 ? '🧽 칠판을 깨끗이 지웠어요' : '✏️ 칠판에 낙서했어요');
+      const nx = ((h.stage || 0) + 1) % 3;
+      A(nx === 0 ? 'erase' : 'write', { at: [h.bx, h.by, h.bz], msg: nx === 0 ? '🧽 칠판을 깨끗이 지웠어요' : '✏️ 칠판에 낙서했어요', midAt: 0.75, onMid: () => {
+        h.stage = nx;
+        if (!h.mesh) { h.mesh = new THREE.Mesh(chalkGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false })); h.mesh.position.set(h.bx, h.by, h.bz); h.mesh.rotation.y = h.ry || 0; scene.add(h.mesh); }
+        h.mesh.visible = h.stage > 0;
+        if (h.stage > 0) { h.mesh.material.map = chalkTex[h.stage - 1]; h.mesh.material.needsUpdate = true; } } });
       hotNear = null; break;
     }
     case 'sit':
-      ACT.sit = { x: h.x, z: h.z, y: h.y }; P.yaw = h.yaw ?? Math.PI;   // 의자 바로 뒤(몸을 의자 상자 안에 넣으면 일어날 때 의자 위로 올라선다)
-      toast('🪑 의자에 앉았어요 — 움직이면 일어나요'); hotNear = null; break;
-    case 'meal':   // 배식대: 칸 나뉜 식판에 밥·국·반찬 셋(반납은 식판 반납대에서)
-      if (!tray) {
-        tray = new THREE.Group(); tray.position.set(0, KID.tray[0], KID.tray[1]);   // 두 손 앞(CHAR-2 키에 맞춤)
-        const TM = c => new THREE.MeshLambertMaterial({ color: c });
-        const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 0.34), TM(0xc8d2da)); tray.add(base);
-        [[-0.13, 0.07, 0xf4f1e8], [0.13, 0.07, 0xc86a3a], [-0.16, -0.08, 0xc8452c], [0, -0.08, 0x6fa04f], [0.16, -0.08, 0xe8c35a]].forEach(([x, z, c], i) => {
-          const f = new THREE.Mesh(i < 2 ? new THREE.SphereGeometry(0.075, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2) : new THREE.BoxGeometry(0.1, 0.03, 0.09), TM(c));
-          f.position.set(x, 0.02, -z); tray.add(f); });
-        pg.add(tray); toast('🍚 급식을 받았어요 — 식탁에 앉아 먹어요');
-      } else toast('🍽️ 다 먹은 식판은 식판 반납대에 돌려줘요');
+      if (ACT.sit) { ACT.sit = null; hotNear = null; break; }   // ACTION-1: 앉아 있을 때 E = 일어나기(안내 '일어나기'와 같게 — 예전엔 같은 의자에 다시 앉았다)
+      ACTS.stop(true);
+      ACT.sit = { x: h.x, z: h.z, y: h.y, seat: h.seat || null }; P.yaw = h.seat ? h.seat.yaw : h.yaw ?? Math.PI;   // 의자 바로 뒤(몸을 의자 상자 안에 넣으면 일어날 때 의자 위로 올라선다) · 좌석(seat)은 몸만 좌석 위
+      if (tray && h.seat && h.seat.table) {   // 식판을 식탁에 내려놓고 숟가락으로 떠먹기 — 8초면 다 먹음 · 일어나면 식판을 다시 든다
+        const T = h.seat.table; scene.add(tray); tray.position.set(T[0], T[1] + 0.02, T[2]); tray.rotation.set(0, h.seat.yaw, 0);
+        const e0 = tray.userData.eaten || 0; let told = e0 >= 1;
+        ACTS.play('eat', { onEat: t => { const k = Math.min(1, e0 + t / 8); trayFood(k); if (k >= 1 && !told) { told = true; toast('😋 다 먹었어요! 식판은 식판 반납대에 돌려줘요'); } }, onEnd: () => trayHands() });
+        toast(e0 >= 1 ? '🍽️ 식판이 비었어요 — 일어나서 반납대로' : '🍚 냠냠 — 식탁에 앉아 먹어요 (움직이면 일어나요)', 2.6);
+      } else toast(h.bus ? '🚌 버스 의자에 앉았어요 — 움직이면 일어나요' : '🪑 의자에 앉았어요 — 움직이면 일어나요');
+      hotNear = null; break;
+    case 'meal':   // 배식대: 두 손을 뻗어 받으면 칸 나뉜 식판에 밥·국·반찬 셋(반납은 식판 반납대에서)
+      if (!tray) A('reach', { msg: '🍚 급식을 받았어요 — 빈 의자에 가서 앉아 먹어요', midAt: 0.5, onMid: () => { if (!tray) { tray = makeTray(); trayHands(); } } });
+      else toast(tray.userData.eaten >= 1 ? '🍽️ 다 먹은 식판은 식판 반납대에 돌려줘요' : '🍚 식판은 이미 받았어요 — 의자에 앉아 먹어요');
       break;
     case 'trayback':
-      if (tray) { pg.remove(tray); tray = null; toast('🍽️ 식판을 반납했어요 — 잘 먹었습니다!'); } else toast('반납할 식판이 없어요');
+      if (tray) { const t9 = tray; A('reach', { msg: t9.userData.eaten >= 1 ? '🍽️ 식판을 반납했어요 — 잘 먹었습니다!' : '🍽️ 식판을 반납했어요', midAt: 0.5,
+        onMid: () => { if (tray !== t9) return; scene.attach(t9); if (h.at) t9.position.set(h.at[0], h.at[1] + 0.02, h.at[2]); tray = null; },
+        onEnd: () => { if (t9.parent === scene) scene.remove(t9); } }); }
+      else toast('반납할 식판이 없어요');
       break;
-    case 'read': toast('📖 조용히 책을 읽고 있어요'); break;
-    case 'water': toast('💧 물을 마셨어요'); break;
-    case 'wash': toast('🫧 손을 깨끗이 씻었어요'); break;
-    case 'garden': toast('🌱 텃밭에 물을 줬어요'); break;
-    case 'pot': toast('🪴 향나무 화분에 물을 줬어요'); break;
-    case 'mic': toast('🎤 구령대 마이크를 잡았어요'); break;
-    case 'shoes': shoesIn = !shoesIn; toast(shoesIn ? '👟 실내화로 갈아신었어요' : '👞 운동화로 갈아신었어요'); break;
-    case 'drum': (drumN++ % 2 ? xyloSnd : drumSnd)(); toast(drumN % 2 ? '🥁 둥둥 둥둥!' : '🎶 도미솔도~ 실로폰 소리'); break;
+    case 'read': A('read'); break;
+    case 'water': A('drink'); break;
+    case 'wash': A(h.pump ? 'sanitize' : 'wash'); break;
+    case 'garden': A('water'); break;
+    case 'pot': A('spray'); break;
+    case 'mic': A('mic', { at: h.at }); break;
+    case 'shoes': A('shoes', { midAt: 0.85, msg: shoesIn ? '👞 운동화로 갈아신었어요' : '👟 실내화로 갈아신었어요', onMid: () => {
+      shoesIn = !shoesIn; KID.setShoe(shoesIn ? KID.shoeIn : SHOE_OUT); h.label = shoesIn ? '운동화로 갈아신기' : '실내화로 갈아신기'; } }); break;
+    case 'drum': (drumN++ % 2 ? xyloSnd : drumSnd)(); A('drum', { msg: drumN % 2 ? '🥁 둥둥 둥둥!' : '🎶 도미솔도~ 실로폰 소리' }); break;
     case 'milk':
       if (!milk) { milk = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.14, 0.09), new THREE.MeshLambertMaterial({ color: 0xf4f6f2 })); milk.position.set(...KID.milk); pg.add(milk); toast('🥛 우유를 하나 꺼냈어요'); }
       else { pg.remove(milk); milk = null; toast('🥛 우유를 다 마셨어요'); }
       break;
-    case 'visit': toast('📝 방문록에 이름을 적었어요'); break;
-    case 'map': toast('🗺️ 학교 안내도 — 현관 · 가운데 로비 · 교실을 찾아가 봐요'); break;
-    case 'clock': { const d = new Date(); toast(`🕰️ 지금은 ${d.getHours()}시 ${d.getMinutes()}분이에요`); break; }
-    case 'notice': toast('📋 이번 주 학생자치회 소식을 읽었어요'); break;
-    case 'aed': toast('❤️ AED(자동심장충격기) 보관함이에요 — 위급할 땐 선생님께 바로 알려요'); break;   // LINK-EAST-14 세로복도 입구
-    case 'keypad': [1319, 1175, 1397].forEach((f, i) => tone(f, i * 0.09, 0.07, 'square', 0.05)); toast('🔢 과학실 번호키를 눌렀어요 — 삐빅!'); break;   // LINK-EAST-11 과학실 문
-    case 'song': songSnd(); toast('🎵 교가를 흥얼거렸어요'); break;
-    case 'motto': toast('📜 우리 학교 교훈 — 바르고 슬기롭게'); break;
-    case 'flag': toast('🇰🇷 태극기가 바람에 펄럭여요'); break;
+    case 'visit': A('scribble', { msg: '📝 방문록에 이름을 적었어요' }); break;
+    case 'map': A('point', { msg: '🗺️ 학교 안내도 — 현관 · 가운데 로비 · 교실을 찾아가 봐요 (M · 지도 닫기)', midAt: 0.6, onMid: () => {   // 안내도 = 큰 지도를 연다(게임이 지도를 안 쓸 때만 — 멀어지면 닫힘)
+      if (MAP && !MAP.minimap.visible && !MAP.game.current) { MAP.minimap.show({ big: true }); mapOpened = h; } } }); break;
+    case 'clock': { const d = new Date(); A('look', { msg: `🕰️ 지금은 ${d.getHours()}시 ${d.getMinutes()}분이에요` }); break; }
+    case 'notice': A('look', { msg: '📋 이번 주 학생자치회 소식을 읽었어요' }); break;
+    case 'aed': A('point', { msg: '❤️ AED(자동심장충격기) 보관함이에요 — 위급할 땐 선생님께 바로 알려요' }); break;   // LINK-EAST-14 세로복도 입구
+    case 'keypad': A('press', { msg: '🔢 과학실 번호키를 눌렀어요 — 삐빅!', midAt: 0.35, onMid: () => [1319, 1175, 1397].forEach((f, i) => tone(f, i * 0.09, 0.07, 'square', 0.05)) }); break;   // LINK-EAST-11 과학실 문
+    case 'song': songSnd(); A('sing', { msg: '🎵 교가를 흥얼거렸어요' }); break;
+    case 'motto': A('look', { msg: '📜 우리 학교 교훈 — 바르고 슬기롭게' }); break;
+    case 'flag': A('salute', { msg: '🇰🇷 태극기가 바람에 펄럭여요' }); break;
     case 'slide':
-      ACT.anim = { from: h.from, to: h.to, t: 0, dur: 0.9 }; P.yaw = Math.PI; toast('🛝 슝~'); break;
+      ACTS.stop(true); ACT.anim = { from: h.from, to: h.to, t: 0, dur: 0.9 }; P.yaw = Math.PI; toast('🛝 슝~'); break;
   }
 }
 addEventListener('keydown', e => { if (e.code === 'KeyE' && !e.repeat) { if (hotNear) act(hotNear); else MAP?.idleAct(); } });   // ENGINE-1: 할 것이 없을 때 행동 = 게임 몫(들고 있는 물건 내려놓기)
@@ -1061,7 +1098,7 @@ function detailTick(dt) {
 let rebakeT = 0;
 MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL,
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
-  pl: { P, ACT, CTRL, keys, touch: TOUCH, getYaw: () => camYaw, setYaw: v => { camYaw = v; }, setScale, tinyAdd: c => tinyAdd(c), pBlocked, pGround, scale: () => PHY.sc },   // SHRINK-1: 작아지기(map.player.scale)
+  pl: { P, ACT, CTRL, keys, touch: TOUCH, acts: ACTS, getYaw: () => camYaw, setYaw: v => { camYaw = v; }, setScale, tinyAdd: c => tinyAdd(c), pBlocked, pGround, scale: () => PHY.sc },   // SHRINK-1: 작아지기(map.player.scale)
   ui: { toast, hint: hintEl, tone, setTime: k => setTime(k), getTime: () => timeKey, dark: on => setDark(on), isDark: () => darkOn }, hot: HOT,
   // ENGINE-1: 행동 사전 고리 — 캐릭터(들기 자리)·문 잠그기(문짝 닫힌 채 — 충돌은 mapapi가)·터치(웅크리기 버튼)
   kid: { pg, KID }, doorLock: (n, on) => { const o = DOORS[n]; if (!o) return false; o.lock = !!on; if (on) { o.open = 0; setDoor(o); } return true; },
@@ -1240,10 +1277,11 @@ window.SD2 = {
   step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { step(1/60); doorTick(1/60); hotTick(1/60); MAP.tick(1/60); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
   doors: () => DOORS.length, doorCheck,
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
+  acts: ACTS, hotNow: () => hotNear, actOn: h => act(h), camOvr: f => { CAM_OVR = f; }, pg,   // ACTION-1: 보이는 행동(시험 — SD2.acts.play('drink', {at:[x,y,z]}) · stats())
   touch: TOUCH, gfx: GFX, title: TITLE, cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)
   map: MAP, phys: { groundAt, blockedAt, ceilAt, camHit, PHY, pGround, pBlocked, pCeil }, ACT, CTRL, camPose: (...a) => ({ ...camPose(...a) }),
-  health: opt => import('./health.js?v=5').then(m => m.runHealth(window.SD2, opt || {})),
+  health: opt => import('./health.js?v=6').then(m => m.runHealth(window.SD2, opt || {})),
   // PERF-LOAD(09-26): 로드·프레임 계측 — buildMs·firstFrameMs(ms) · 최근 240프레임 CPU p50/p95(렌더 제외) · 가림 컬링 재계산 p95. reset() 뒤 걸어 보고 읽는다
   timing: Object.defineProperties(TIMING, {
     frameCpuP50: { get: () => rbPct(RB.cpu, RB.ci, 0.5), enumerable: true }, frameCpuP95: { get: () => rbPct(RB.cpu, RB.ci, 0.95), enumerable: true },
