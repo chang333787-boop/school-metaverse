@@ -35,17 +35,18 @@ const AREAS = {
     zones: ['nurse', 'narae', 'library', 'west-lobby', 'west-door', 'stair-store', 'stair-west', 'stair-landing', 'corridor-main'],
     clip: [-40.2, -44.7, -11, -31.4], ymax: 2,
     home: { x: -29.6, z: -34.6, r: 1.6 }, seeker: { at: [-29.6, -36.6], h: 180 }, start: [-27.2, -36.2], startH: 90, range: 9,
-    fx: { 2: { dark: ['library', 'narae'] }, 3: { dark: ['library', 'nurse'], doors: [31] } },   // 31 = 로비↔도서실 문(도서실은 계단 쪽 문으로 돌아감)
+    fx: { 2: { dark: ['library', 'narae'] }, 3: { dark: ['library', 'narae'], doors: [[-35.35, -38.5]] } },   // 3판 = 보건실 문 닫힘(LIB-2 09-28: 도서관 문은 로비 쪽 하나뿐이라 닫으면 갇힌다 — 예전 31 = 로비↔도서실 문) · 문은 번호 대신 자리[x, z](문 수가 바뀌어도 그대로)
     spots: [
       { x: -37.2, z: -42.9, k: 'curtain', l: '보건실 침대 커튼 뒤', f: 180 },
       { x: -36.2, z: -42.9, k: 'desk', l: '보건실 침대 밑', f: 180, eye: 0.35, st: [-36.2, -41.3] },
       { x: -38.05, z: -39.05, k: 'cabinet', l: '보건실 장 옆', f: 90 },
       { x: -34, z: -41.3, k: 'locker', l: '나래반 사물함', f: 90, w: 2.5 },
       { x: -31.5, z: -44.1, k: 'locker', l: '나래반 뒤 사물함', f: 180, w: 5, st: [-30.75, -43.35] },
-      { x: -18.3, z: -41.75, k: 'cabinet', l: '책장 사이 끝 칸', f: 90 },
-      { x: -22.2, z: -39.75, k: 'cabinet', l: '책장 사이 안쪽 칸', f: 270 },
-      { x: -20.2, z: -35.6, k: 'desk', l: '도서실 책상 밑' },
-      { x: -24.35, z: -38.65, k: 'desk', l: '사서 책상 밑' },
+      { x: -17.2, z: -39.0, k: 'cabinet', l: '책장 사이 끝 칸', f: 90 },       // LIB-2(09-28): 가운데 양면 낮은 서가 두 줄 사이(z -39.45~-38.55)
+      { x: -21.4, z: -39.0, k: 'cabinet', l: '책장 사이 안쪽 칸', f: 270 },
+      { x: -17.8, z: -35.95, k: 'desk', l: '긴 책상 밑', f: 90, st: [-17.0, -35.95] },   // 옆으로 의자가 둘러 있어 동쪽 끝으로 들어감
+      { x: -22.9, z: -36.5, k: 'desk', l: '안내 데스크 밑', f: 90 },
+      { x: -17.4, z: -43.5, k: 'bush', l: '둥근 독서 단 빈백 뒤', eye: 0.7, f: 0, st: [-17.3, -42.2] },
       { x: -20.9, z: -33.6, k: 'locker', l: '복도 사물함', f: 180, w: 9.6 },
       { x: -29.6, z: -34.6, k: 'bush', l: '로비 기둥 뒤', eye: 0.8, f: 0, st: [-29.6, -36.3] },
     ],
@@ -77,7 +78,7 @@ const AREAS = {
     zones: ['cafeteria', 'center-lobby', 'link-corridor', 'corridor-east', 'music-passage'],
     clip: null, ymax: 2,
     home: { x: 12.4, z: -35.1, r: 1.5 }, seeker: { at: [12.6, -35.4], h: 180 }, start: [5.5, -42.2], startH: 180, range: 9,
-    fx: { 2: { dark: ['cafeteria'] }, 3: { dark: ['cafeteria', 'music-passage'], doors: [42] } },   // 42 = 음악 통로↔세로복도 문
+    fx: { 2: { dark: ['cafeteria'] }, 3: { dark: ['cafeteria', 'music-passage'], doors: [[10, -49.7]] } },   // 음악 통로↔세로복도 문(예전 번호 42 — 번호 대신 자리)
     spots: [
       { x: 8.8, z: -48.2, k: 'curtain', l: '급식실 커튼 뒤', f: 180, w: 2.2 },
       { x: 3.8, z: -48.2, k: 'curtain', l: '급식실 커튼 뒤', f: 180, w: 4.5, st: [3.0, -47.8] },
