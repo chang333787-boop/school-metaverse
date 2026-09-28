@@ -1107,6 +1107,51 @@ const TITLE = TITLE_ON ? createTitle({ THREE, camera, P, CTRL, keys, touch: TOUC
 if (TITLE) TITLE.bootDone(); else document.getElementById('boot')?.remove();
 warmDone();
 
+// PAUSE-1(09-28 사용자 "Alt+Tab이나 Esc를 누르지 않으면 메뉴를 못 누르는 듯"): 마우스가 잠긴 동안엔 커서가 없어 🏠·🎮 칩을 못 누른다.
+//   Esc(브라우저가 잠금을 푼다)로 잠금이 풀리면 '잠깐 멈춤' 창 — ▶ 계속하기(다시 잠금) · 🏠 메뉴로 · 🎮 놀이 바꾸기. 게임·창이 스스로 푼 잠금(쪽지·고르기 창 등 = 멈춤·창 열림)은 띄우지 않는다.
+{
+  const pz = document.createElement('div'); pz.id = 'pause';
+  pz.style.cssText = 'position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(20,30,50,.45);font-family:inherit';
+  pz.innerHTML = '<div style="background:#fffdf5;border:4px solid #1d3557;border-radius:18px;padding:18px 22px;min-width:240px;text-align:center;box-shadow:0 8px 0 #1d3557;color:#1d3557">'
+    + '<div style="font-size:22px;font-weight:800;margin-bottom:12px">⏸ 잠깐 멈춤</div>'
+    + '<button data-a="go">▶ 계속하기</button><button data-a="menu">🏠 메뉴로</button><button data-a="pick">🎮 놀이 바꾸기</button>'
+    + '<div style="font-size:12px;color:#5a6a80;margin-top:8px">1·Enter 계속 · 2 메뉴 · 3 놀이 · P/Esc = 멈춤 창</div></div>';
+  pz.querySelectorAll('button').forEach(b => b.style.cssText = 'display:block;width:100%;min-height:46px;margin:8px 0 0;border:0;border-radius:12px;background:#ffd23f;color:#1d3557;font:inherit;font-size:17px;font-weight:700;cursor:pointer');
+  document.body.appendChild(pz);
+  let userLock = false;   // 잠금이 사용자 클릭으로 걸렸는지(게임이 스스로 풀 때와 구분)
+  const hide = () => { pz.style.display = 'none'; };
+  const busy = () => CTRL.frozen || (TITLE && TITLE.phase !== 'off')   // 오프닝·메뉴·날아오는 중 · 게임이 멈춘(쪽지·대화) 동안
+    || (MAP.picker && MAP.picker.panel) || document.querySelector('.eng-note,.hudAsk,.esc-lock,#tour-talk,#story-talk');
+  document.addEventListener('pointerlockchange', () => {
+    if (document.pointerLockElement === canvas) { userLock = true; hide(); return; }
+    if (!userLock) return; userLock = false;
+    setTimeout(() => { if (!document.pointerLockElement && !busy()) show(); }, 120);   // 창이 곧 뜨는 경우(쪽지 등)는 그 창이 먼저
+  });
+  pz.addEventListener('click', e => {
+    const a = e.target.dataset && e.target.dataset.a; e.stopPropagation();
+    if (a === 'menu') { hide(); if (TITLE) TITLE.backToMenu(); else location.href = location.pathname; return; }   // 게임 주소로 들어왔으면 오프닝(메뉴)이 있는 첫 화면으로
+    if (a === 'pick') { hide(); MAP.picker && MAP.picker.open(); return; }
+    hide(); if (!TOUCH.on) canvas.requestPointerLock();   // 계속하기 · 빈 곳 누름
+  });
+  const show = () => { keys.clear(); pz.style.display = 'flex'; };
+  // 단축키(09-28 사용자 "메뉴·게임 키도 버튼 할당"): P = 멈춤 창(잠금 중에도 — 잠금을 풀고 창) · G = 🎮 놀이 고르기 · 멈춤 창 안: Enter/Space/1 계속 · 2 메뉴로 · 3 놀이 바꾸기 · Esc 닫기
+  addEventListener('keydown', e => {
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.isContentEditable)) return;
+    const on = pz.style.display === 'flex';
+    if (on) {
+      const a = { Enter: 'go', NumpadEnter: 'go', Space: 'go', Digit1: 'go', Digit2: 'menu', Digit3: 'pick', KeyP: 'go', Escape: 'close' }[e.code];
+      if (!a) return; e.preventDefault(); e.stopImmediatePropagation();
+      if (a === 'close') hide(); else pz.querySelector('[data-a="' + a + '"]').click();
+      return;
+    }
+    if (TITLE && TITLE.phase !== 'off') return;   // 오프닝·메뉴에선 그 화면의 키
+    if (e.code === 'KeyP') { e.preventDefault(); userLock = false; document.exitPointerLock?.(); show(); }
+    else if (e.code === 'KeyG' && !CTRL.frozen) { e.preventDefault(); document.exitPointerLock?.(); MAP.picker && (MAP.picker.panel ? MAP.picker.close() : MAP.picker.open()); }
+  }, true);
+  window.__pause = { show, hide, get on() { return pz.style.display === 'flex'; }, busy };
+}
+
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
