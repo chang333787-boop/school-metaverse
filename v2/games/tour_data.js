@@ -159,8 +159,6 @@ export const TOUR = {
     ], photos: [] },
     bigtree: { on: true, name: '큰 나무', where: '운동장 동쪽 큰 나무 아래', stamp: '🌲', pages: [
       '우리 학교의 큰 나무예요.\n초록초록 정림초를 지켜 주는 든든한 나무랍니다.',
-    ], videos: [
-      { title: '초록초록한 정림초', url: 'https://youtu.be/E09YRnqXuGI' },
     ], photos: [] },
     garden: { on: true, name: '텃밭', where: '학교 뒤 텃밭 길', stamp: '🌱', pages: [
       '우리 학교 텃밭이에요.\n학교텃밭 선정교로, 심고 가꾸고 거두는 기쁨을 배워요.',
@@ -173,6 +171,7 @@ export const TOUR = {
       '• 마을 공동체 연계 — 문화 공연 및 체험 학습 정기 개최',
     ], videos: [
       { title: '즐거운 생태 수업', url: 'https://youtu.be/SZPxSELC-3g' },
+      { title: '초록초록한 정림초', url: 'https://youtu.be/E09YRnqXuGI' },
       { title: '수박. 내꺼', url: 'https://youtu.be/NHaHIT-6H5A' },
       { title: '블루베리야 안녕! 꼬마 농부 생태 체험', url: 'https://youtu.be/jHMUhX-wf4Y' },
     ], photos: [] },
