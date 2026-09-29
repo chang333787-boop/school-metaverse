@@ -12,6 +12,7 @@
 // 성능: 매 프레임 일 없음(길 리본 시간만) · 표식 = 다이아몬드 풀(+2콜) · 길 리본(H) +1 · DOM·영상 창은 열 때만(닫으면 iframe을 지워 재생·메모리 정지) · 새 조명 없음
 export const meta = { id: 'tour', title: '우리 학교 견학', api: 1 };
 
+const TYPE_MS = 32;   // 타자 글자 간격(ms) — 한 쪽 60자 ≈ 2초
 const GUIDE_R = 2.3, BOARD_R = 1.8, HIDE_R = 1.9, TRAIL_T = 6, PICK_M = 22;
 const CSS = `
 #tour-ui{position:fixed;inset:0;pointer-events:none;z-index:40;font-family:inherit}
@@ -22,6 +23,9 @@ const CSS = `
 #tour-talk .nm{font-weight:800;font-size:16px;color:#8a5a1e;margin-bottom:4px}
 #tour-talk .nm small{font-weight:700;font-size:13px;color:#a08462;margin-left:6px}
 #tour-talk .tx{font-size:17px;line-height:1.5;white-space:pre-line;min-height:52px;max-height:38vh;overflow:auto}
+#tour-talk .tx.done::after{content:'▼';display:inline-block;margin-left:6px;font-size:13px;color:#d9463a;animation:tourBlink .7s steps(2,start) infinite}
+@keyframes tourBlink{to{visibility:hidden}}
+#tour-talk .tx .rest{visibility:hidden}
 #tour-talk .md{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 #tour-talk .md:empty{display:none}
 #tour-talk .rw{display:flex;align-items:center;gap:8px;margin-top:8px}
@@ -59,6 +63,10 @@ const CSS = `
 #tour-media .ph img{display:block;max-width:100%;max-height:calc(92vh - 170px);object-fit:contain}
 #tour-ui #tour-media .ph button{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);font-size:22px;padding:4px 14px}
 #tour-media .ph .pv{left:6px}#tour-media .ph .nx{right:6px}
+#tour-media .em{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#f4ecd8;text-align:center;font-size:19px;font-weight:800;padding:12px}
+#tour-media .em small{font-size:14px;font-weight:600;color:#c9bfa8}
+#tour-media .ph .em{position:static;min-height:220px}
+#tour-card .sh{margin:14px 0 8px;font-weight:800;font-size:15px;color:#8a5a1e}
 #tour-media .cp{font-size:14px;color:#5a4a36;margin-top:6px;text-align:center;min-height:1em}
 .tour-stamp{position:absolute;right:12px;top:-78px;width:86px;height:86px;border-radius:50%;border:4px solid #d9463a;background:#fff0ec;display:flex;align-items:center;justify-content:center;font-size:40px;box-shadow:inset 0 0 0 4px #fff,inset 0 0 0 7px #d9463a;animation:tourStamp .5s cubic-bezier(.2,1.6,.4,1) both}
 @keyframes tourStamp{0%{transform:scale(2.6) rotate(20deg);opacity:0}100%{transform:scale(1) rotate(-12deg);opacity:1}}
@@ -92,8 +100,10 @@ export default async function start(map, params = {}) {
   // ---------- 견학 지점: world.js 자리(map.tour) × tour_data.js 글 ----------
   const DIR = [[0, -1], [1, 0], [0, 1], [-1, 0]];
   const SP = DATA.spots || {}, SPOTS = [];
+  // 영상 칸 = 적어 둔 칸 전부(주소가 빈 칸도 — showEmpty면 '준비 중' 화면) · id = 유튜브 영상 id(없으면 null)
+  const SHOW_EMPTY = DATA.showEmpty !== false;
   const vids = d => [].concat(d.videos || [], d.video ? [d.video] : []).map(v => typeof v === 'string' ? { url: v } : v || {})
-    .map(v => ({ title: String(v.title || ''), id: ytId(v.url) })).filter(v => v.id);
+    .map(v => ({ title: String(v.title || ''), id: ytId(v.url) })).filter(v => v.id || SHOW_EMPTY);
   const phos = d => [].concat(d.photos || []).map(p => typeof p === 'string' ? { src: p } : p || {}).filter(p => p.src)
     .map(p => { let src = ''; try { src = new URL(String(p.src).trim(), DATA_URL).href; } catch (e) { /* 이상한 주소 — 뺀다 */ } return { src, caption: String(p.caption || '') }; }).filter(p => p.src);
   for (const a of map.tour) {
@@ -103,8 +113,8 @@ export default async function start(map, params = {}) {
     const pages = Array.isArray(d.pages) && d.pages.length ? d.pages.map(String) : ['(tour_data.js에 이곳 설명을 써 주세요 — 키: ' + a.key + ')'];
     const mx = a.wall ? a.x + (fz ? 0.95 : 0) + fx * 0.35 : a.x, mz = a.wall ? a.z + (fx ? 0.95 : 0) + fz * 0.35 : a.z;   // 표식 자리(벽 게시판은 제목 팻말 옆·벽 앞 — 판을 가리지 않게)
     const name = d.name || (a.kind === 'board' ? a.place || a.label : a.label);
-    SPOTS.push({ key: a.key, kind: a.kind, hub: !!d.hub, x: a.x, y: a.y, z: a.z, top: a.top, hx, hz, mx, mz, my: a.kind === 'board' ? a.y + (a.wall ? 1.2 : 1.45) : a.y + 1.2,
-      label: a.label, who: a.kind === 'guide' ? a.label : '', face: a.face, name, where: d.where || '', stamp: d.stamp || (a.kind === 'board' ? '📋' : '⭐'), pages,
+    SPOTS.push({ key: a.key, kind: a.kind, hub: !!d.hub, intro: d.stamp === false, x: a.x, y: a.y, z: a.z, top: a.top, hx, hz, mx, mz, my: a.kind === 'board' ? a.y + (a.wall ? 1.2 : 1.45) : a.y + 1.2,
+      label: a.label, who: a.kind === 'guide' ? a.label : '', face: a.face, name, where: d.where || '', stamp: d.stamp || (d.stamp === false ? '🏫' : a.kind === 'board' ? '📋' : '⭐'), pages,
       videos: vids(d), photos: phos(d), node: -1 });
   }
   // 표식 자리(리뷰 09-27): 선생님 위 ◆가 이름 팻말(머리 위 +0.28)을 가렸다 — 천장(실내 ≈3m) 때문에 더 올릴 수 없어 팻말 옆으로 비킨다(벽·가구가 없는 쪽).
@@ -119,7 +129,8 @@ export default async function start(map, params = {}) {
   for (const k of Object.keys(SP)) if (!map.tour.some(a => a.key === k)) console.warn('[견학] tour_data.js의 "' + k + '"는 맵에 자리가 없어 빠졌어요(키 이름 확인)');
   const ORD = Array.isArray(DATA.order) ? DATA.order : [];
   SPOTS.sort((a, b) => { const i = ORD.indexOf(a.key), j = ORD.indexOf(b.key); return (i < 0 ? 999 : i) - (j < 0 ? 999 : j); });
-  const ALL = SPOTS.filter(s => !s.hub), N = ALL.length, BY = new Map(SPOTS.map(s => [s.key, s]));   // ALL = 도장 받는 곳(교감선생님 같은 안내 데스크는 빠짐)
+  // ALL = 도장 받는 곳 · INTRO = 소개만(stamp: false — 각 반 담임선생님: 도장 없이 반 소개 · 교사 09-29) · 교감선생님(hub)은 둘 다 아님
+  const ALL = SPOTS.filter(s => !s.hub && !s.intro), INTRO = SPOTS.filter(s => s.intro), N = ALL.length, BY = new Map(SPOTS.map(s => [s.key, s]));
   for (const s of SPOTS) {   // 말 거는 자리 = 앞 0.9~1m에서 가장 가까운 걷는 칸(책상·실험대 너머 선생님도 — 지점 가운데가 가구 속이면 그 자리에 설 수 없다) · 길 안내 도착 칸도 같은 칸
     s.node = nav.snap(s.hx, s.y, s.hz, 2.6);
     if (s.node >= 0) { const p = nav.pos(s.node); s.hx = p[0]; s.hz = p[2]; }
@@ -128,7 +139,7 @@ export default async function start(map, params = {}) {
   // ---------- 도장(저장) ----------
   const KEY = PROMO ? 'sm2.promo.tour.stamps' : 'sm2.game.tour.stamps';
   let saved = []; try { saved = JSON.parse(localStorage.getItem(KEY) || '[]') || []; } catch (e) { saved = []; }
-  const stamps = new Set((Array.isArray(saved) ? saved : []).filter(k => BY.has(k) && !BY.get(k).hub));
+  const stamps = new Set((Array.isArray(saved) ? saved : []).filter(k => BY.has(k) && !BY.get(k).hub && !BY.get(k).intro));
   // 바뀔 때만 곧바로 쓴다(도장은 이야기 창을 다 넘겨야 하나씩 — 2초에 한 번보다 드묾) · 막힌 환경(비공개 창)은 조용히 이번 판만
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify([...stamps])); } catch (e) { /* 저장 막힘 — 무시 */ } };
 
@@ -139,6 +150,22 @@ export default async function start(map, params = {}) {
   const btn = (txt, cls, fn, parent) => { const b = mk('button', cls, txt, parent); b.type = 'button'; b.addEventListener('click', e => { e.stopPropagation(); fn(); }); return b; };
   const focus = b => setTimeout(() => { try { b && b.isConnected && b.focus({ preventScroll: true }); } catch (e) { /* 무시 */ } }, 0);
 
+  // ---------- 사진 자동 찾기: tour_data.js에 photos를 안 적어도 tour_media/<키>-1.jpg, -2.jpg …(jpg·jpeg·png·webp)를 올리면 나온다 ----------
+  //   그곳 이야기 창을 처음 열 때 한 번만(HEAD 요청 · 번호가 끊기면 멈춤 · 최대 12장). photos를 적어 둔 곳은 찾지 않는다
+  const EXT = ['jpg', 'jpeg', 'png', 'webp'];
+  const exists = u => fetch(u, { method: 'HEAD', cache: 'no-cache' }).then(r => r.ok, () => false);
+  function probePhotos(s) {
+    if (s.probe) return s.probe;
+    if (s.photos.length) return (s.probe = Promise.resolve(s.photos.length));
+    return (s.probe = (async () => {
+      for (let i = 1; i <= 12; i++) {
+        const urls = EXT.map(e => new URL('tour_media/' + s.key + '-' + i + '.' + e, DATA_URL).href), ok = await Promise.all(urls.map(exists)), k = ok.indexOf(true);
+        if (k < 0) break; s.photos.push({ src: urls[k], caption: '' });
+      }
+      return s.photos.length; })());
+  }
+  const hasVid = s => s.videos.some(v => v.id);
+
   // ---------- 영상·사진 창(유튜브 = 화면 안 iframe · 링크로 나가지 않음) ----------
   let media = null;   // { el, s, tab }
   function closeMedia() { if (!media) return; media.el.remove(); media = null; if (talk) focus(talk.b1); }   // iframe째 지운다 = 재생 멈춤
@@ -148,19 +175,24 @@ export default async function start(map, params = {}) {
     const hd = mk('div', 'hd', null, el); const h = mk('h3', '', '', hd);
     const x = btn('✕', 'sub x', () => closeMedia(), hd); x.setAttribute('aria-label', '닫기');
     const tabs = mk('div', 'tabs', null, el), body = mk('div', '', null, el), cap = mk('div', 'cp', '', el);
-    const T = [...s.videos.map((v, i) => ({ k: 'v', i, t: '🎬 ' + (v.title || '영상 ' + (i + 1)) })), ...(s.photos.length ? [{ k: 'p', i: 0, t: '🖼 사진 ' + s.photos.length + '장' }] : [])];
+    const T = [...s.videos.map((v, i) => ({ k: 'v', i, t: '🎬 ' + (v.title || '영상 ' + (i + 1)) })),
+      ...(s.photos.length || SHOW_EMPTY ? [{ k: 'p', i: 0, t: '🖼 사진' + (s.photos.length ? ' ' + s.photos.length + '장' : '') }] : [])];
+    const soon = (parent, ico, what) => { const e = mk('div', 'em', null, parent); mk('div', '', ico + ' ' + what + ' 준비 중이에요', e); mk('small', '', '곧 우리 학교 ' + what + '이 올라와요!', e); };
     media = { el, s, tab: -1, pi: 0 };
     const draw = ti => {
       media.tab = ti; const t = T[ti]; body.textContent = ''; cap.textContent = '';
       [...tabs.children].forEach((b, k) => b.classList.toggle('on', k === ti));
       if (t.k === 'v') {
         const v = s.videos[t.i]; h.textContent = s.name + (v.title && v.title !== s.name ? ' · ' + v.title : '');
-        const vw = mk('div', 'vw', null, body), f = document.createElement('iframe');
+        const vw = mk('div', 'vw', null, body);
+        if (!v.id) { soon(vw, '🎬', '영상'); return; }
+        const f = document.createElement('iframe');
         f.src = 'https://www.youtube-nocookie.com/embed/' + v.id + '?autoplay=1&rel=0&playsinline=1&modestbranding=1';
         f.title = s.name + ' 영상'; f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
         f.allowFullscreen = true; f.referrerPolicy = 'strict-origin-when-cross-origin'; vw.appendChild(f);
       } else {
         h.textContent = s.name + ' · 사진';
+        if (!s.photos.length) { soon(mk('div', 'ph', null, body), '🖼', '사진'); return; }
         const ph = mk('div', 'ph', null, body), img = mk('img', '', null, ph);
         const show = () => { const p = s.photos[media.pi]; img.src = p.src; img.alt = p.caption || s.name + ' 사진'; cap.textContent = (s.photos.length > 1 ? (media.pi + 1) + ' / ' + s.photos.length + (p.caption ? ' · ' : '') : '') + p.caption; };
         img.addEventListener('error', () => { cap.textContent = '사진을 불러오지 못했어요 — tour_data.js의 사진 주소(src)를 확인해 주세요'; });
@@ -174,15 +206,33 @@ export default async function start(map, params = {}) {
     draw(Math.max(0, kind === 'p' ? T.findIndex(t => t.k === 'p') : 0)); focus(x); map.sfx('pick');
   }
 
+  // ---------- 타자 효과(게임처럼 한 글자씩 · 다다다 소리) — 누르면 먼저 끝까지, 다 나오면 ▼ ----------
+  //   자리는 미리 잡아 둔다(아직 안 나온 글자 = 보이지 않는 span) — 창 높이가 글자마다 출렁이지 않게. setInterval(창이 열린 동안만 · 매 프레임 루프 밖)
+  const muted = () => { try { return JSON.parse(localStorage.getItem('sm2.title.mute') || 'false'); } catch (e) { return false; } };
+  function typeText(t, txt) {
+    clearInterval(t.tm); const ch = [...txt]; t.tx.textContent = ''; t.tx.classList.remove('done');
+    const a = mk('span', '', '', t.tx), r = mk('span', 'rest', txt, t.tx), low = t.o.spot && t.o.spot.kind === 'guide', quiet = muted();
+    let i = 0; const t0 = performance.now(); t.typing = true;   // 글자 수 = 지난 시간으로(느린 PC에서 타이머가 프레임마다 한 번만 돌아도 같은 빠르기)
+    t.fin = () => { clearInterval(t.tm); a.textContent = txt; r.textContent = ''; t.typing = false; t.tx.classList.add('done'); };
+    t.tm = setInterval(() => {
+      if (talk !== t) { clearInterval(t.tm); return; }
+      const j = Math.min(ch.length, Math.floor((performance.now() - t0) / TYPE_MS) + 1); if (j === i) return;
+      const beep = !quiet && Math.floor(j / 2) !== Math.floor(i / 2) && /\S/.test(ch[j - 1]); i = j;
+      a.textContent = ch.slice(0, i).join(''); r.textContent = ch.slice(i).join('');
+      if (beep) map.tone((low ? 420 : 560) + Math.random() * 90, 0, 0.035, 'square', 0.03);
+      if (i >= ch.length) t.fin();
+    }, TYPE_MS);
+  }
+
   // ---------- 이야기 창 ----------
-  let talk = null;   // { el, o, i, openedAt, … }
+  let talk = null;   // { el, o, i, openedAt, typing, fin, tm, … }
   let closedAt = -1e9;
   function closeTalk(toBook) {
-    if (!talk) return; const t = talk; talk = null; closeMedia(); t.el.remove(); closedAt = performance.now(); map.player.freeze(false); refresh();
+    if (!talk) return; const t = talk; talk = null; clearInterval(t.tm); closeMedia(); t.el.remove(); closedAt = performance.now(); map.player.freeze(false); refresh();
     if (t.allDone) celebrate(); else if (toBook && t.o.back) t.o.back();   // 도감에서 연 글이면 도감으로 · 마지막 도장 창을 닫으면(버튼·Esc 어느 쪽이든) 완주 창
   }
   function openTalk(o) {   // o = { spot?, name, sub?, icon, pages, review?, back? }
-    if (talk) { closeMedia(); talk.el.remove(); }
+    if (talk) { clearInterval(talk.tm); closeMedia(); talk.el.remove(); }
     if (card) closeCard();
     document.exitPointerLock?.(); map.player.freeze(true);
     const el = mk('div', 'tp'); el.id = 'tour-talk';
@@ -190,16 +240,21 @@ export default async function start(map, params = {}) {
     const nm = mk('div', 'nm', o.name, bd); if (o.sub) mk('small', '', o.sub, nm);
     const tx = mk('div', 'tx', '', bd), md = mk('div', 'md', null, bd), rw = mk('div', 'rw', null, bd), pg = mk('div', 'pg', '', rw);
     const s = o.spot;
-    if (s && s.videos.length) btn('🎬 관련 영상 보기' + (s.videos.length > 1 ? ' (' + s.videos.length + ')' : ''), 'vid', () => openMedia(s, 'v'), md);
-    if (s && s.photos.length) btn('🖼 사진 보기 (' + s.photos.length + ')', 'pho', () => openMedia(s, 'p'), md);
+    if (s && !s.hub) {   // 영상 칸이 있으면 🎬 · 사진은 늘 🖼(비어 있으면 '준비 중' — showEmpty: false면 채운 것만)
+      if (s.videos.length) btn('🎬 관련 영상 보기' + (s.videos.length > 1 ? ' (' + s.videos.length + ')' : ''), 'vid', () => probePhotos(s).then(() => { if (talk && talk.o.spot === s) openMedia(s, 'v'); }), md);
+      const pb = s.photos.length || SHOW_EMPTY ? btn('🖼 사진 보기' + (s.photos.length ? ' (' + s.photos.length + ')' : ''), 'pho', () => probePhotos(s).then(() => { if (talk && talk.o.spot === s) openMedia(s, 'p'); }), md) : null;
+      probePhotos(s).then(n => { if (!talk || talk.o.spot !== s || !n) return;
+        if (pb) pb.textContent = '🖼 사진 보기 (' + n + ')'; else btn('🖼 사진 보기 (' + n + ')', 'pho', () => openMedia(s, 'p'), md); });
+    }
     const b2 = btn('닫기', 'sub', () => closeTalk(), rw), b1 = btn('다음 ▶', '', () => next(), rw);
-    talk = { el, o, i: 0, openedAt: performance.now(), tx, pg, b1, b2, av, stamped: false };
+    talk = { el, o, i: 0, openedAt: performance.now(), tx, pg, b1, b2, av, stamped: false, typing: false, tm: 0, fin: null };
+    tx.addEventListener('click', e => { e.stopPropagation(); if (talk && talk.typing) talk.fin(); });   // 글 칸을 눌러도 바로 끝까지
     show(); map.sfx('pick'); focus(b1);
   }
-  const canStamp = t => { const s = t.o.spot; return !!(s && !s.hub && !t.o.review && !stamps.has(s.key)); };
+  const canStamp = t => { const s = t.o.spot; return !!(s && !s.hub && !s.intro && !t.o.review && !stamps.has(s.key)); };
   function show() {
     const t = talk, P = t.o.pages, last = t.i >= P.length - 1, s = t.o.spot, can = canStamp(t);
-    t.tx.textContent = P[t.i]; t.pg.textContent = P.length > 1 ? (t.i + 1) + ' / ' + P.length : '';
+    typeText(t, P[t.i]); t.pg.textContent = P.length > 1 ? (t.i + 1) + ' / ' + P.length : '';
     t.b1.className = '';
     if (!last) t.b1.textContent = '다음 ▶';
     else if (can) t.b1.textContent = '도장 받기 🖍️';
@@ -207,10 +262,11 @@ export default async function start(map, params = {}) {
     else t.b1.textContent = t.o.back ? '◀ 도감으로' : '닫기';
     t.b2.style.display = last && !can && !(s && s.hub) ? 'none' : '';
     if (last && s && stamps.has(s.key) && !t.stamped) t.pg.textContent = (t.pg.textContent ? t.pg.textContent + ' · ' : '') + '✔ 도장 받은 곳';
-    else if (last && t.o.review && s && !stamps.has(s.key)) t.pg.textContent = (t.pg.textContent ? t.pg.textContent + ' · ' : '') + '도장은 그곳에 가면 받아요';
+    else if (last && t.o.review && s && !s.intro && !stamps.has(s.key)) t.pg.textContent = (t.pg.textContent ? t.pg.textContent + ' · ' : '') + '도장은 그곳에 가면 받아요';
   }
   function next() {
     const t = talk; if (!t) return;
+    if (t.typing) { t.fin(); return; }   // 글자가 나오는 중이면 먼저 끝까지(게임처럼)
     if (t.i < t.o.pages.length - 1) { t.i++; show(); map.sfx('tick'); return; }
     const s = t.o.spot;
     if (canStamp(t)) {   // 도장!
@@ -245,8 +301,14 @@ export default async function start(map, params = {}) {
     for (const s of ALL) {
       const on = stamps.has(s.key), sl = btn('', 'sl' + (on ? ' on' : '') + (cardAll ? ' all' : ''), () => pickCard(s), gr);
       mk('div', 'ci', s.stamp, sl); mk('div', '', s.name, sl);
-      if (s.videos.length || s.photos.length) mk('span', 'mi', s.videos.length ? '🎬' : '🖼', sl);
+      if (hasVid(s) || s.photos.length) mk('span', 'mi', hasVid(s) ? '🎬' : '🖼', sl);
       sl.title = s.where + (on ? ' · ✔ 도장' : '');
+    }
+    if (INTRO.length) {   // 각 반 소개(도장 없음) — 언제든 눌러 읽기
+      mk('div', 'sh', '🏫 우리 반 소개 — 담임선생님이 반을 소개해요(도장 없음)', card);
+      const g2 = mk('div', 'gr', null, card);
+      for (const s of INTRO) { const sl = btn('', 'sl all', () => { const all = cardAll; closeCard(); talkTo(s, { review: true, back: () => openCard(all) }); }, g2);
+        mk('div', 'ci', s.stamp, sl); mk('div', '', s.name, sl); if (hasVid(s) || s.photos.length) mk('span', 'mi', hasVid(s) ? '🎬' : '🖼', sl); sl.title = s.where; }
     }
     const rw = mk('div', 'rw', null, card);
     if (!cardAll) btn(resetArm ? '정말 지울까요? 한 번 더 누르세요' : '도장 모두 지우기', 'sub', () => {
@@ -284,7 +346,7 @@ export default async function start(map, params = {}) {
   }
   map.interact.enable(h => h.kind !== 'game' && SPOTS.some(s => (h.x - s.hx) ** 2 + (h.z - s.hz) ** 2 < HIDE_R * HIDE_R && Math.abs(h.y - s.y) < 1.6), false);
   function labelHots() { for (const s of SPOTS) { const h = hotOf.get(s.key).hot;
-    h.label = s.hub ? '💬 ' + s.who + ' — 학교 정보 모아 보기' : (s.kind === 'board' ? '📋 ' + s.name + ' 안내판 읽기' : '💬 ' + s.who + '과 이야기하기') + (stamps.has(s.key) ? ' ✔' : ''); } }
+    h.label = s.hub ? '💬 ' + s.who + ' — 학교 정보 모아 보기' : s.intro ? '💬 ' + (s.who || s.name) + '과 이야기하기' : (s.kind === 'board' ? '📋 ' + s.name + ' 안내판 읽기' : '💬 ' + s.who + '과 이야기하기') + (stamps.has(s.key) ? ' ✔' : ''); } }
 
   // ---------- 사람·안내판을 직접 누르기(클릭·탭) — 화면에 비친 머리/판 가까이를 누르면(포인터 잠금 중이면 화면 가운데) ----------
   const cam = map.camera, V = new map.three.Vector3();
@@ -348,7 +410,8 @@ export default async function start(map, params = {}) {
       else if (m) m.color(s === nextS ? 0xff8a3c : 0xffd23c);
     }
     map.minimap.setMarks([...ALL.map(s => stamps.has(s.key) ? { x: s.x, z: s.z, color: '#3cb46e', shape: 'dot', r: 3.2 } : { x: s.x, z: s.z, color: s === nextS ? '#ff7a2c' : '#f5b400', shape: 'star', blink: s === nextS }),
-      ...SPOTS.filter(s => s.hub).map(s => ({ x: s.x, z: s.z, color: '#2f6fd0', shape: 'dot', r: 3.6 }))]);
+      ...SPOTS.filter(s => s.hub).map(s => ({ x: s.x, z: s.z, color: '#2f6fd0', shape: 'dot', r: 3.6 })),
+      ...INTRO.map(s => ({ x: s.x, z: s.z, color: '#8a6ad8', shape: 'dot', r: 2.6 }))]);
   }
   function clearTrail() { if (trail) { trail.remove(); trail = null; } trailT = 0; }
   function guide(to) {
@@ -373,6 +436,7 @@ export default async function start(map, params = {}) {
   if (params.intro !== '0') openTalk({ name: '우리 학교 견학', icon: '🏫', pages: [
     ...(Array.isArray(DATA.welcome) ? DATA.welcome.map(String) : []),
     '선생님(🙋)과 안내판(📋)을 찾아가 이야기를 듣고 도장을 모아요.\n· 가까이 가서 E(터치 ✋) 또는 사람·안내판을 눌러요\n· 떠 있는 ◆ · 미니맵 ⭐ = 아직 못 간 곳(주황 = 다음 추천)\n· H = 다음 곳 길 안내 · C = 📖 정림초 도감(' + N + '칸)'
+      + (INTRO.length ? '\n· 각 반에서는 담임선생님이 반을 소개해 줘요(도장 없음)' : '')
       + (hub ? '\n· 바로 앞 ' + hub.who + '께 말을 걸면 모든 곳의 이야기·영상을 한눈에 볼 수 있어요' : '')] });
 
   return {
@@ -385,7 +449,7 @@ export default async function start(map, params = {}) {
       ui.remove(); if (css.isConnected) css.remove(); talk = null; card = null; media = null;   // 지점·표식·리본·칩·목표 줄·미니맵·멈춤은 범위 파사드가 정리
     },
     // 시험·교사용 읽기
-    get spots() { return SPOTS.map(s => ({ key: s.key, kind: s.kind, hub: s.hub, name: s.name, x: +s.x.toFixed(2), y: +s.y.toFixed(2), z: +s.z.toFixed(2), hot: [+s.hx.toFixed(2), +s.hz.toFixed(2)], node: s.node, videos: s.videos.length, photos: s.photos.length })); },
+    get spots() { return SPOTS.map(s => ({ key: s.key, kind: s.kind, hub: s.hub, intro: s.intro, name: s.name, x: +s.x.toFixed(2), y: +s.y.toFixed(2), z: +s.z.toFixed(2), hot: [+s.hx.toFixed(2), +s.hz.toFixed(2)], node: s.node, videos: s.videos.filter(v => v.id).length, vslots: s.videos.length, photos: s.photos.length })); },
     get stamps() { return [...stamps]; }, get total() { return N; }, get open() { return media ? 'media' : talk ? 'talk' : card ? 'card' : null; }, get talking() { return talk && talk.o.spot ? talk.o.spot.key : null; }, get nextKey() { return nextS && nextS.key; },
     talkTo: key => { const s = BY.get(key); if (s) talkTo(s); }, next, closeTalk, openCard, closeCard, openMedia: (key, k) => { const s = BY.get(key); if (s) openMedia(s, k); }, closeMedia, guide: key => guide(key ? BY.get(key) : null), pickAt: (x, y) => { const s = pickAt(x, y); return s && s.key; },
   };

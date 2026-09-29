@@ -13,12 +13,15 @@
 //   · 이 파일은 견학을 켤 때마다 새로 읽어요 — 고친 뒤 캐시 번호를 올릴 필요가 없어요(새로고침만).
 //
 // 🎬 유튜브 영상 넣는 법 (videos) — 이야기 창에 [🎬 관련 영상 보기] 버튼이 생기고, 누르면 화면 안에서 바로 재생돼요(링크로 나가지 않음)
+//   · url이 빈 칸이어도 버튼은 보이고, 누르면 '영상 준비 중이에요' 화면이 나와요(아래 showEmpty).
 //   · url 칸에 유튜브 주소를 그대로 붙여 넣으면 돼요 — 'https://youtu.be/abcdEFGhijk' · 'https://www.youtube.com/watch?v=abcdEFGhijk' · 쇼츠 주소 모두 OK
-//   · 영상이 여러 개면 { title: '제목', url: '주소' } 를 쉼표로 더 이어 쓰세요. url이 빈 칸('')이면 버튼이 안 보여요.
+//   · 영상이 여러 개면 { title: '제목', url: '주소' } 를 쉼표로 더 이어 쓰세요. 영상 칸을 아예 지우면 🎬 버튼이 없어져요.
 //   · 영상은 유튜브에서 '공개' 또는 '일부 공개'여야 하고, '퍼가기 허용'이 켜져 있어야 화면 안에서 재생돼요.
 //
-// 🖼 사진 넣는 법 (photos) — [🖼 사진 보기] 버튼이 생기고, 누르면 사진을 넘겨 볼 수 있어요
-//   · 사진 파일을 저장소의 v2/games/tour_media/ 폴더에 올리고  { src: 'tour_media/파일이름.jpg', caption: '사진 설명' } 처럼 쓰세요.
+// 🖼 사진 넣는 법 — 이야기 창의 [🖼 사진 보기]를 누르면 사진을 넘겨 볼 수 있어요
+//   ① 가장 쉬운 방법(이 파일을 안 고쳐도 됨): 사진 파일을 저장소의 v2/games/tour_media/ 폴더에 '키-번호' 이름으로 올리세요.
+//      예) 숲놀이터 = forest-1.jpg, forest-2.jpg, forest-3.jpg …   교장실 = principal-1.jpg   (jpg·jpeg·png·webp · 번호는 1부터 빠짐없이)
+//   ② 설명(caption)을 달고 싶으면 그곳 photos 칸에  { src: 'tour_media/파일이름.jpg', caption: '사진 설명' } 처럼 쓰세요(이렇게 쓰면 ①은 안 찾아요).
 //   · 인터넷에 이미 있는 사진이면 src에 'https://…' 주소를 써도 돼요.
 //   · 사진은 긴 변 1600px 이하 · 1장 500KB 이하로 줄여서 올리면 휴대폰에서도 빨리 열려요.
 //
@@ -26,12 +29,15 @@
 //
 // 키(key)는 맵의 사람·안내판 자리와 짝이에요(world.js가 놓는 곳) — 키 이름은 바꾸지 마세요.
 //   guide(선생님): vice 교감(스쿨버스 앞 — 도장 대신 '학교 정보 모아 보기') · principal 교장(교장실) · pe 체육(체육관)
-//                  ai AI 교육 선생님(컴퓨터실) · class1~class6 각 반 담임선생님(교실) · library 사서(도서관) · nurse 보건(보건실)
-//                  sarang 사랑반선생님(사랑반) · care 돌봄(돌봄교실) · kinder 유치원 · science 과학(과학실 — 지금은 꺼 둠)
-//   board(안내판): bus 스쿨버스 · playground 놀이터 · forest 숲놀이터 · field 운동장 · bigtree 큰 나무 · garden 텃밭 · cafeteria 급식실(복도 벽)
+//                  ai AI 교육 선생님(컴퓨터실) · class1~class6 각 반 담임선생님(교실 — 도장 없이 소개만) · library 사서(도서관) · nurse 보건(보건실)
+//                  sarang 사랑반선생님(사랑반) · care 돌봄(돌봄교실) · kinder 유치원 · science 과학(과학실)
+//   board(안내판): bus 스쿨버스 · playground 놀이터 · forest 숲놀이터 · field 운동장(지금은 꺼 둠) · bigtree 큰 나무 · garden 텃밭 · cafeteria 급식실(복도 벽)
 // ============================================================
 
 export const TOUR = {
+  // 영상·사진이 아직 없는 곳도 🎬·🖼 버튼을 보여 주고 '준비 중이에요' 화면을 띄울지(true) — 다 채운 뒤 false로 바꾸면 채운 것만 보여요
+  showEmpty: true,
+
   // 견학을 시작할 때 뜨는 첫 인사(스쿨버스 앞)
   welcome: [
     '(여기에 견학 첫 인사말을 써 주세요 — 예: 방문해 주신 분께 드리는 환영 인사)',
@@ -42,7 +48,7 @@ export const TOUR = {
   ],
 
   // 추천 순서(길 안내 '다음 추천'이 이 순서를 따릅니다 — 빼거나 순서를 바꿔도 돼요)
-  order: ['bus', 'playground', 'forest', 'bigtree', 'field', 'principal', 'ai', 'class1', 'class3', 'cafeteria', 'class2', 'class4', 'garden',
+  order: ['bus', 'playground', 'forest', 'bigtree', 'principal', 'ai', 'class1', 'class3', 'cafeteria', 'class2', 'class4', 'science', 'garden',
     'kinder', 'sarang', 'care', 'nurse', 'library', 'class6', 'class5', 'pe'],
 
   spots: {
@@ -67,7 +73,7 @@ export const TOUR = {
     forest: { on: true, name: '숲놀이터', where: '운동장 남동쪽 숲놀이터', stamp: '🌳', pages: [
       '우리 학교 숲놀이터예요.\n(여기에 숲놀이터 설명을 써 주세요)',
     ], videos: [{ title: '숲놀이터', url: '' }], photos: [] },
-    field: { on: true, name: '운동장', where: '구령대 옆 운동장 북쪽', stamp: '🏃', pages: [
+    field: { on: false, name: '운동장', where: '구령대 옆 운동장 북쪽', stamp: '🏃', pages: [
       '우리 학교 운동장이에요.\n(여기에 운동장 설명을 써 주세요)',
     ], videos: [{ title: '운동장', url: '' }], photos: [] },
     bigtree: { on: true, name: '큰 나무', where: '운동장 동쪽 큰 나무 아래', stamp: '🌲', pages: [
@@ -103,30 +109,30 @@ export const TOUR = {
     library: { on: true, name: '도서관', where: '서관 1층 도서관', stamp: '📚', pages: [
       '안녕하세요, 사서선생님이에요. 여기는 우리 학교 도서관이에요.\n(여기에 도서관 소개를 써 주세요)',
     ], videos: [{ title: '도서관', url: '' }], photos: [] },
-    sarang: { on: true, name: '사랑반', where: '본관 1층 사랑반', stamp: '💗', pages: [
+    sarang: { on: true, name: '사랑반', where: '본관 1층 사랑반', stamp: false, pages: [
       '안녕하세요, 사랑반선생님이에요. 여기는 사랑반이에요.\n(여기에 사랑반 소개를 써 주세요)',
     ], videos: [{ title: '사랑반', url: '' }], photos: [] },
-    science: { on: false, name: '과학실', where: '동관 과학실', stamp: '🔬', pages: [
-      '(여기에 과학선생님의 과학실 소개를 써 주세요)',
-    ] },
+    science: { on: true, name: '과학실', where: '동관 과학실', stamp: '🔬', pages: [
+      '안녕하세요, 과학선생님이에요. 여기는 과학실이에요.\n(여기에 과학실 소개를 써 주세요)',
+    ], videos: [{ title: '과학실', url: '' }], photos: [] },
 
-    // ---------- 각 반(담임선생님이 반을 소개하고 도장을 찍어 줘요) ----------
-    class1: { on: true, name: '1학년 교실', where: '본관 1층 동쪽 1학년', stamp: '1️⃣', pages: [
+    // ---------- 각 반(담임선생님이 반을 소개해요 — stamp: false = 도장 없이 소개만 · 도감 '우리 반 소개' 칸에서 언제든 다시 읽기) ----------
+    class1: { on: true, name: '1학년 교실', where: '본관 1층 동쪽 1학년', stamp: false, pages: [
       '안녕하세요! 여기는 1학년 교실이에요.\n(여기에 반 소개를 써 주세요 — 예: 우리 반은 ○○반입니다~)',
     ], videos: [{ title: '1학년', url: '' }], photos: [] },
-    class2: { on: true, name: '2학년 교실', where: '동관 2학년', stamp: '2️⃣', pages: [
+    class2: { on: true, name: '2학년 교실', where: '동관 2학년', stamp: false, pages: [
       '안녕하세요! 여기는 2학년 교실이에요.\n(여기에 반 소개를 써 주세요 — 예: 우리 반은 ○○반입니다~)',
     ], videos: [{ title: '2학년', url: '' }], photos: [] },
-    class3: { on: true, name: '3학년 교실', where: '본관 1층 동쪽 끝 3학년', stamp: '3️⃣', pages: [
+    class3: { on: true, name: '3학년 교실', where: '본관 1층 동쪽 끝 3학년', stamp: false, pages: [
       '안녕하세요! 여기는 3학년 교실이에요.\n(여기에 반 소개를 써 주세요 — 예: 우리 반은 ○○반입니다~)',
     ], videos: [{ title: '3학년', url: '' }], photos: [] },
-    class4: { on: true, name: '4학년 교실', where: '동관 4학년', stamp: '4️⃣', pages: [
+    class4: { on: true, name: '4학년 교실', where: '동관 4학년', stamp: false, pages: [
       '안녕하세요! 여기는 4학년 교실이에요.\n(여기에 반 소개를 써 주세요 — 예: 우리 반은 ○○반입니다~)',
     ], videos: [{ title: '4학년', url: '' }], photos: [] },
-    class5: { on: true, name: '5학년 교실', where: '서관 2층 5학년', stamp: '5️⃣', pages: [
+    class5: { on: true, name: '5학년 교실', where: '서관 2층 5학년', stamp: false, pages: [
       '안녕하세요! 여기는 5학년 교실이에요.\n(여기에 반 소개를 써 주세요 — 예: 우리 반은 ○○반입니다~)',
     ], videos: [{ title: '5학년', url: '' }], photos: [] },
-    class6: { on: true, name: '6학년 교실', where: '서관 2층 6학년', stamp: '6️⃣', pages: [
+    class6: { on: true, name: '6학년 교실', where: '서관 2층 6학년', stamp: false, pages: [
       '안녕하세요! 여기는 6학년 교실이에요.\n(여기에 반 소개를 써 주세요 — 예: 우리 반은 ○○반입니다~)',
     ], videos: [{ title: '6학년', url: '' }], photos: [] },
   },
