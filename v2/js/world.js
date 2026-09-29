@@ -5997,7 +5997,7 @@ export function buildWorld(scene) {
     }
     // TOUR-1(09-27 견학): 안내하는 교직원(이름 → 견학 키). 자리는 사람을 놓는 곳에서 그대로 적는다(글은 tour_data.js)
     const GUIDE = { '교장선생님': 'principal', '교감선생님': 'vice', '사서선생님': 'library', '보건선생님': 'nurse', '돌봄선생님': 'care', '유치원선생님': 'kinder',
-      '1학년 선생님': 'class1', '2학년 선생님': 'class2', '3학년 선생님': 'class3', '4학년 선생님': 'class4', '5학년 선생님': 'class5', '6학년 선생님': 'class6' };   // PROMO-1(09-29): 반마다 담임선생님이 반 소개 + 도장
+      '사랑반선생님': 'sarang', '1학년 선생님': 'class1', '2학년 선생님': 'class2', '3학년 선생님': 'class3', '4학년 선생님': 'class4', '5학년 선생님': 'class5', '6학년 선생님': 'class6' };   // PROMO-1(09-29): 반마다 담임선생님이 반 소개 + 도장
     const guideAt = (nm, x, y, z, face, top) => { const key = GUIDE[nm]; if (key) { tourSpots.push({ key, kind: 'guide', label: nm, x, y, z, face: face & 3, top }); PEOPLE[PEOPLE.length - 1].tour = key; } return top; };
     const tagSign = (r9, nm, y9) => { const p9 = PEOPLE[PEOPLE.length - 1]; if (p9 && p9.sign < 0) { p9.sign = signList.length - 1; p9.name = nm; p9.signY = y9; } return r9; };   // NPC-MOVE: 방금 놓은 사람 = 이 팻말의 주인
     const signH = nm => / 친구$/.test(nm) ? 0.15 : 0.22;   // PROMO-1: 홍보판 'N학년 친구'는 이름보다 길어 교실에서 서로 가렸다 — 작게

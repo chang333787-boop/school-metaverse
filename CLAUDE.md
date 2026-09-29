@@ -12,8 +12,7 @@
 - **홍보판** = 루트 `index.html` → https://chang333787-boop.github.io/school-metaverse/ — 학부모·방문자용. 코드는 `v2/`를 그대로 쓰고 `window.SM_PROMO = true`로만 바뀐다(PROMO-1 · 아래 v2 규칙 '학교 견학' 절)
 - **우리 학교용** = `v2/` → https://chang333787-boop.github.io/school-metaverse/v2/ — 모든 놀이 · 실제 아이 이름. 개발·실험은 여기(v2 코드)에서만
 - v1(루트 `js/`·`editor.html`·`style.css`)은 09-29 삭제 — 명단(people·staff)은 `v2/js/layout.js`로 옮김
-- `classroom/` = **아이들 버전 v0.8 동결 스냅샷** (2026-07-28 수업 결과물 · git tag `v0.8-classroom` · URL https://chang333787-boop.github.io/school-metaverse/classroom/)
-- **`classroom/` 폴더는 어떤 이유로도 수정·삭제하지 않는다** (버스터·리팩터링·일괄 치환에서 항상 제외)
+- `classroom/`(아이들 버전 v0.8 동결 스냅샷 · 2026-07-28 수업 결과물)은 교사 결정으로 09-29 삭제 — 필요하면 git tag `v0.8-classroom`에서 꺼낸다
 
 ## 파일 구조와 수정 지점 (v2)
 | 파일 | 역할 |
@@ -190,7 +189,7 @@ fps ≥ 30 / rayObjs ≤ 80 / drawCalls 관찰. **fps가 무너지면 기능을 
 - `?game=tour`(또는 `?tour=1`, 🎮 놀이 '우리 학교 견학') — 스쿨버스 앞 교감선생님(교무실 책상엔 빈 의자만) 곁에서 시작 → 선생님 9·안내판 6(`world.tour` = world.js `tourSpots`)에 E/✋/클릭으로 말 걸기 → 도장 카드(C) · 길 안내(H). 견학 밖에서는 사람·안내판만 보이고 말 걸기·UI 없음(지점 수·게이트 기준선 그대로).
 - 자리는 world.js(`GUIDE` 표·`infoBoard()`), 글은 `v2/games/tour_data.js`(교사 — 캐시 번호 필요 없음), 게임은 `v2/games/tour.js`. 도장 = localStorage `sm2.game.tour.stamps`(홍보판 `sm2.promo.tour.stamps` · 바뀔 때만 씀).
 - **홍보판(PROMO-1 · 09-29 교사)**: 루트 `index.html`(`window.SM_PROMO`) — ▶ 학교 둘러보기 → 바로 견학 · 🎮 놀이·G·'놀이 바꾸기' 없음 · 🏠 = 처음 화면. 학생 이름표 = **'N학년 친구'**(반마다 6명·책상 6 — layout.js `promoPeople`) · 유치원 아이 = '유치원 친구'. v2/는 실제 명단 그대로.
-- **확정 지점(교사 09-29) 20곳 + 교감**: 버스(통학·체험학습 — 버스 뒤 북동 `infoBoard('bus')`) · 놀이터 · 숲놀이터 · 운동장 · 큰 나무 · 텃밭 · 체육관(체육선생님) · 컴퓨터실(**AI 교육 선생님**) · 각 반 1~6학년(담임선생님 `class1~6` — 반 소개 + 도장) · 급식실 · 돌봄교실 · 유치원 · 보건실 · 도서관 · 교장실(교장선생님 영상 예정). 과학실은 `on: false`. **교감선생님 = `hub: true`**(도장 없음 — 마지막 쪽 [📖 학교 정보 모두 보기] = 안 간 곳도 읽는 도감).
+- **확정 지점(교사 09-29) 21곳 + 교감**: 버스(통학·체험학습 — 버스 뒤 북동 `infoBoard('bus')`) · 놀이터 · 숲놀이터 · 운동장 · 큰 나무 · 텃밭 · 체육관(체육선생님) · 컴퓨터실(**AI 교육 선생님**) · 각 반 1~6학년(담임선생님 `class1~6` — 반 소개 + 도장) · 사랑반(`sarang`) · 급식실 · 돌봄교실 · 유치원 · 보건실 · 도서관 · 교장실(교장선생님 영상 예정). 과학실은 `on: false`. **교감선생님 = `hub: true`**(도장 없음 — 마지막 쪽 [📖 학교 정보 모두 보기] = 안 간 곳도 읽는 도감).
 - 이야기 창 [🎬 관련 영상 보기] = 유튜브 **화면 안 iframe**(youtube-nocookie · 닫으면 iframe째 지움) · [🖼 사진 보기] = `tour_data.js` `photos`(`v2/games/tour_media/` 또는 https 주소 · **아이 얼굴 사진 금지**). 📖 정림초 도감(칩·C) = 받은 곳 다시 읽기 · 안 간 곳 누르면 길 안내.
 - ⚠️ 홍보판 한 화면 삼각형: 1학년 닻 ≈15.5만(예산 15만 +3% — 2학년 1→6명 청크가 동관 쪽 시점에 함께 그려짐). v2 게이트는 14.9만 그대로.
 

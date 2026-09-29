@@ -265,8 +265,8 @@ export default async function start(map, params) { …; return { tick(dt) {}, st
 
 ## 11. 우리 학교 견학(TOUR-1 · 09-27)
 
-> **PROMO-1(09-29 교사 — 이 절보다 우선)**: 루트 `index.html` = 홍보판(`window.SM_PROMO` · ▶ 학교 둘러보기 → 바로 견학 · 학생 이름표 'N학년 친구' 반마다 6명 · 도장 `sm2.promo.tour.stamps`). 지점 = 20곳 + 교감선생님 hub —
-> 버스(`bus` 안내판 · 버스 뒤 북동 8.2, 47.4) · playground · forest · field · bigtree · garden · pe · ai(**AI 교육 선생님**) · class1~class6(각 반 담임 — world.js `GUIDE`) · cafeteria · care · kinder · nurse · library · principal (science는 `on: false`).
+> **PROMO-1(09-29 교사 — 이 절보다 우선)**: 루트 `index.html` = 홍보판(`window.SM_PROMO` · ▶ 학교 둘러보기 → 바로 견학 · 학생 이름표 'N학년 친구' 반마다 6명 · 도장 `sm2.promo.tour.stamps`). 지점 = 21곳 + 교감선생님 hub —
+> 버스(`bus` 안내판 · 버스 뒤 북동 8.2, 47.4) · playground · forest · field · bigtree · garden · pe · ai(**AI 교육 선생님**) · class1~class6(각 반 담임 — world.js `GUIDE`) · sarang(사랑반) · cafeteria · care · kinder · nurse · library · principal (science는 `on: false`).
 > `tour_data.js` 곳마다 `videos: [{ title, url }]`(유튜브 주소 → 화면 안 iframe `youtube-nocookie`) · `photos: [{ src, caption }]`(`tour_media/…` 또는 https) · `hub: true` = 도장 없이 마지막 쪽 [📖 학교 정보 모두 보기].
 > 칩 = `📖 정림초 도감 n/N (C)` — 받은 칸 누르면 다시 읽기(영상 포함) · 안 간 칸 누르면 길 안내. 게임 핸들: `spots`(videos·photos 수 포함) · `open`('media'|'talk'|'card') · `openMedia(key, 'v'|'p')` · `closeMedia` · `openCard(all)` · `guide(key)`.
 

@@ -27,7 +27,7 @@
 // 키(key)는 맵의 사람·안내판 자리와 짝이에요(world.js가 놓는 곳) — 키 이름은 바꾸지 마세요.
 //   guide(선생님): vice 교감(스쿨버스 앞 — 도장 대신 '학교 정보 모아 보기') · principal 교장(교장실) · pe 체육(체육관)
 //                  ai AI 교육 선생님(컴퓨터실) · class1~class6 각 반 담임선생님(교실) · library 사서(도서관) · nurse 보건(보건실)
-//                  care 돌봄(돌봄교실) · kinder 유치원 · science 과학(과학실 — 지금은 꺼 둠)
+//                  sarang 사랑반선생님(사랑반) · care 돌봄(돌봄교실) · kinder 유치원 · science 과학(과학실 — 지금은 꺼 둠)
 //   board(안내판): bus 스쿨버스 · playground 놀이터 · forest 숲놀이터 · field 운동장 · bigtree 큰 나무 · garden 텃밭 · cafeteria 급식실(복도 벽)
 // ============================================================
 
@@ -43,7 +43,7 @@ export const TOUR = {
 
   // 추천 순서(길 안내 '다음 추천'이 이 순서를 따릅니다 — 빼거나 순서를 바꿔도 돼요)
   order: ['bus', 'playground', 'forest', 'bigtree', 'field', 'principal', 'ai', 'class1', 'class3', 'cafeteria', 'class2', 'class4', 'garden',
-    'kinder', 'care', 'nurse', 'library', 'class6', 'class5', 'pe'],
+    'kinder', 'sarang', 'care', 'nurse', 'library', 'class6', 'class5', 'pe'],
 
   spots: {
     // ---------- 교감선생님 = 안내 데스크(도장 없음) — 마지막 쪽에서 [📖 학교 정보 모두 보기]로 모든 곳의 이야기·영상을 한눈에 ----------
@@ -103,6 +103,9 @@ export const TOUR = {
     library: { on: true, name: '도서관', where: '서관 1층 도서관', stamp: '📚', pages: [
       '안녕하세요, 사서선생님이에요. 여기는 우리 학교 도서관이에요.\n(여기에 도서관 소개를 써 주세요)',
     ], videos: [{ title: '도서관', url: '' }], photos: [] },
+    sarang: { on: true, name: '사랑반', where: '본관 1층 사랑반', stamp: '💗', pages: [
+      '안녕하세요, 사랑반선생님이에요. 여기는 사랑반이에요.\n(여기에 사랑반 소개를 써 주세요)',
+    ], videos: [{ title: '사랑반', url: '' }], photos: [] },
     science: { on: false, name: '과학실', where: '동관 과학실', stamp: '🔬', pages: [
       '(여기에 과학선생님의 과학실 소개를 써 주세요)',
     ] },
