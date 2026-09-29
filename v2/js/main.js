@@ -1,13 +1,13 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { buildWorld } from './world.js?v=130';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
-import { SCHOOL } from './layout.js?v=13';   // LAYOUT-3 실측 배치(v1 data.js 대신)
+import { buildWorld } from './world.js?v=132';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { SCHOOL } from './layout.js?v=14';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=11';       // MAP-API-1: 구역 계약표·출발점·표지점
 import { createMapApi } from './mapapi.js?v=22';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=7';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
-import { createTitle } from './title.js?v=2';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+import { createTitle } from './title.js?v=3';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createActions } from './actions.js?v=1';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
@@ -1361,6 +1361,9 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
     + '<button data-a="go">▶ 계속하기</button><button data-a="menu">🏠 메뉴로</button><button data-a="pick">🎮 놀이 바꾸기</button>'
     + '<div style="font-size:12px;color:#5a6a80;margin-top:8px">1·Enter 계속 · 2 메뉴 · 3 놀이 · P/Esc = 멈춤 창</div></div>';
   pz.querySelectorAll('button').forEach(b => b.style.cssText = 'display:block;width:100%;min-height:46px;margin:8px 0 0;border:0;border-radius:12px;background:#ffd23f;color:#1d3557;font:inherit;font-size:17px;font-weight:700;cursor:pointer');
+  if (window.SM_PROMO) {   // PROMO-1(09-29): 홍보판은 견학 하나만 — 놀이 바꾸기 없음 · 메뉴 = 처음 화면
+    pz.querySelector('[data-a=pick]').remove(); pz.querySelector('[data-a=menu]').textContent = '🏠 처음 화면으로';
+    pz.lastElementChild.lastElementChild.textContent = '1·Enter 계속 · 2 처음 화면 · P/Esc = 멈춤 창'; }
   document.body.appendChild(pz);
   let userLock = false;   // 잠금이 사용자 클릭으로 걸렸는지(게임이 스스로 풀 때와 구분)
   const hide = () => { pz.style.display = 'none'; };
@@ -1386,12 +1389,12 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
     if (on) {
       const a = { Enter: 'go', NumpadEnter: 'go', Space: 'go', Digit1: 'go', Digit2: 'menu', Digit3: 'pick', KeyP: 'go', Escape: 'close' }[e.code];
       if (!a) return; e.preventDefault(); e.stopImmediatePropagation();
-      if (a === 'close') hide(); else pz.querySelector('[data-a="' + a + '"]').click();
+      if (a === 'close') hide(); else pz.querySelector('[data-a="' + a + '"]')?.click();
       return;
     }
     if (TITLE && TITLE.phase !== 'off') return;   // 오프닝·메뉴에선 그 화면의 키
     if (e.code === 'KeyP') { e.preventDefault(); userLock = false; document.exitPointerLock?.(); show(); }
-    else if (e.code === 'KeyG' && !CTRL.frozen) { e.preventDefault(); document.exitPointerLock?.(); MAP.picker && (MAP.picker.panel ? MAP.picker.close() : MAP.picker.open()); }
+    else if (e.code === 'KeyG' && !CTRL.frozen && !window.SM_PROMO) { e.preventDefault(); document.exitPointerLock?.(); MAP.picker && (MAP.picker.panel ? MAP.picker.close() : MAP.picker.open()); }
   }, true);
   window.__pause = { show, hide, get on() { return pz.style.display === 'flex'; }, busy };
 }

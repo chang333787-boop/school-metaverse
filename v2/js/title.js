@@ -6,8 +6,10 @@
 //   돌아가기: 🏠 메뉴 칩(🎮 칩 옆) = 지금 게임을 멈추고 같은 닦기로 놀이 고르기. 🎮 놀이 칩은 그대로 쓴다. 마지막 고른 것 = localStorage 'sm2.title.last'(try/catch).
 //   그리기: 카메라는 평소 루프(main.js step 끝의 setCam 고리) — 새 조명·새 물체 없음 · 매 프레임 할당 없음(스크래치 벡터). 화면 움직임은 CSS(transform·opacity)만 — v2/title.css.
 //   import 없음 — main.js가 THREE·카메라·플레이어·게임 로더를 준다.
+//   PROMO-1(09-29 교사 "그냥 school-metaverse로 끝나는 주소는 홍보 주소"): 홍보판(루트 index.html — window.SM_PROMO)은 놀이 카드 없이 ▶ 견학 시작하기 → 바로 견학(tour) · 🏠 = 처음 화면으로.
 export function createTitle(h) {
   const { THREE, camera, P, CTRL, keys, touch, tone, toast, game, picker, setCam } = h;
+  const PROMO = !!window.SM_PROMO, PROMO_GAME = { id: 'tour', title: '우리 학교 견학', icon: '🚌' };
   const store = { get(k, d) { try { const v = localStorage.getItem('sm2.title.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem('sm2.title.' + k, JSON.stringify(v)); } catch (e) { /* 비공개 창 — 이번 판만 */ } } };
   let muted = !!store.get('mute', false), heard = false;   // heard = 첫 손짓(클릭·터치·키)이 있었나 — 그 전엔 소리를 내지 않는다
@@ -80,8 +82,8 @@ export function createTitle(h) {
     + '<section class="ttl-home">'
     +   '<div class="ttl-logo">' + cap(1) + '<span>우리 학교 메타버스</span></div>'
     +   '<h1 class="ttl-h" aria-label="정림초에 오신 것을 환영합니다!"><span class="ln">' + L1 + '</span><span class="ln">' + L2 + '</span>' + spk + '</h1>'
-    +   '<div class="ttl-sub">🏫 정림초등학교 · 3D 학교 놀이터</div>'
-    +   '<button class="ttl-start" type="button"><b>▶</b> 시작하기</button>'
+    +   '<div class="ttl-sub">' + (PROMO ? '🏫 정림초등학교 · 3D 학교 둘러보기' : '🏫 정림초등학교 · 3D 학교 놀이터') + '</div>'
+    +   '<button class="ttl-start" type="button"><b>▶</b> ' + (PROMO ? '학교 둘러보기' : '시작하기') + '</button>'
     +   '<div class="ttl-keys"><span class="kd">클릭 · Enter · Space</span><span class="kt">화면을 톡 눌러요</span></div>'
     + '</section>'
     + '<section class="ttl-menu" aria-label="놀이 고르기">'
@@ -91,7 +93,7 @@ export function createTitle(h) {
     + '</section>';
   document.body.appendChild(root);
   const wipe = el('div', 'ttl-keep', '<div class="c"></div><div class="ico"></div><div class="tx"></div>'); wipe.id = 'ttl-wipe'; document.body.appendChild(wipe);
-  const home = el('div', 'chip', '<span class="ico">🏠</span><span class="lbl"> 메뉴</span>'); home.id = 'homeChip'; home.title = '놀이 고르기 화면으로'; home.style.display = 'none'; document.body.appendChild(home);
+  const home = el('div', 'chip', '<span class="ico">🏠</span><span class="lbl"> ' + (PROMO ? '처음으로' : '메뉴') + '</span>'); home.id = 'homeChip'; home.title = PROMO ? '처음 화면으로' : '놀이 고르기 화면으로'; home.style.display = 'none'; document.body.appendChild(home);
   const $ = s => root.querySelector(s), grid = $('.ttl-grid'), muteB = $('.ttl-mute');
   const paintMute = () => { muteB.textContent = muted ? '🔇' : '🔊'; muteB.classList.toggle('off', muted); };
   paintMute();
@@ -169,6 +171,7 @@ export function createTitle(h) {
   }
   function toMenu() {
     if (phase !== 'title' || !calmOK()) return; heard = true; jingle(); calm(450);
+    if (PROMO) { const r = $('.ttl-start').getBoundingClientRect(); launch(PROMO_GAME, r); return; }   // 홍보판: 카드 없이 바로 견학
     show('menu'); filled.then(() => setTimeout(() => { if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); }, 60));
   }
   function toTitle() { if (phase !== 'menu') return; blip(); calm(350); show('title'); }
@@ -188,9 +191,11 @@ export function createTitle(h) {
   }
   function choose(i) {
     if (phase !== 'menu' || !calmOK()) return; const e = list[i]; if (!e) return;
-    heard = true; store.set('last', e.id); whoosh();
-    phase = 'go'; cards.forEach((c, k) => c.classList.add(k === i ? 'pick' : 'dim'));
-    const r = cards[i].getBoundingClientRect();
+    cards.forEach((c, k) => c.classList.add(k === i ? 'pick' : 'dim'));
+    launch(e, cards[i].getBoundingClientRect());
+  }
+  function launch(e, r) {   // r = 고른 단추 자리(닦기 원이 여기서 커진다)
+    heard = true; if (!PROMO) store.set('last', e.id); whoosh(); phase = 'go';
     setTimeout(() => wipeIn(r.left + r.width / 2, r.top + r.height / 2, e.icon || '🎮', e.title || '', () => {
       root.style.display = 'none'; root.dataset.ph = 'off'; cards.forEach(c => c.classList.remove('pick', 'dim'));
       CTRL.wave = 0; setCam(null);   // 이 프레임은 평소 카메라(목표 자리)가 아니라 멈춘 한 바퀴 자리에서 날아간다 → 아래 startFly 전에 한 프레임 멈춘 자리 기억
@@ -216,9 +221,10 @@ export function createTitle(h) {
   function backToMenu() {
     if (phase !== 'off') return; heard = true; whoosh();
     const r = home.getBoundingClientRect(); phase = 'back';
-    wipeIn(r.left + r.width / 2, r.top + r.height / 2, '🏠', '놀이 고르기', () => {
+    wipeIn(r.left + r.width / 2, r.top + r.height / 2, '🏠', PROMO ? '처음 화면' : '놀이 고르기', () => {
       if (game.current) game.stop('button');
       lockWorld(); home.style.display = 'none'; CTRL.wave = 0; resumeOrbit = true; tf = Math.random() * ORB_T; setCam(camTitle);
+      if (PROMO) { CTRL.wave = 1e9; show('title'); root.classList.add('go'); calm(450); wipeOut(); return; }
       show('menu'); root.classList.add('go'); calm(450);
       (filled = fill()).then(() => { if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); });   // 기록·'지난번'을 새로
       wipeOut();
@@ -232,7 +238,8 @@ export function createTitle(h) {
     const r = gp.getBoundingClientRect(); if (!r.width) return;
     const T = document.body.classList.contains('touch');
     home.style.top = T ? r.top + 'px' : 'auto'; home.style.bottom = T ? 'auto' : (innerHeight - r.bottom) + 'px';
-    if (T) { home.style.left = (r.right + 6) + 'px'; home.style.right = 'auto'; } else { home.style.right = (innerWidth - r.left + 6) + 'px'; home.style.left = 'auto'; }
+    if (PROMO) { if (T) { home.style.left = r.left + 'px'; home.style.right = 'auto'; } else { home.style.right = (innerWidth - r.right) + 'px'; home.style.left = 'auto'; } }   // 홍보판: 🎮 칩은 숨김(자리만) — 그 자리에
+    else if (T) { home.style.left = (r.right + 6) + 'px'; home.style.right = 'auto'; } else { home.style.right = (innerWidth - r.left + 6) + 'px'; home.style.left = 'auto'; }
     home.style.height = r.height + 'px';
   }
   if (gp && window.ResizeObserver) new ResizeObserver(place).observe(gp);

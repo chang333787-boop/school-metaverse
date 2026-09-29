@@ -4,25 +4,27 @@
 
 ## 프로젝트 개요
 - 수업 콘셉트: 아이들이 자료(사진·측량·도면·요청)를 입력 → Claude가 반영 → push → 새로고침으로 변화를 확인하는 반복 루프
-- 배포: main에 push하면 GitHub Pages 자동 배포(1~2분) → https://chang333787-boop.github.io/school-metaverse/
-- 학생 접속: 크롬북에서 위 링크. 갱신이 안 보이면 `Ctrl+Shift+R`
-- 기술: three.js r170 로컬 번들(lib/), 외부 네트워크 의존 0, 빌드 과정 없음
+- 배포: main에 push하면 GitHub Pages 자동 배포(1~2분)
+- 학생 접속: 크롬북에서 우리 학교용 링크(아래). 갱신이 안 보이면 `Ctrl+Shift+R`
+- 기술: three.js r170 로컬 번들(lib/), 외부 네트워크 의존 0(홍보판의 유튜브 영상 창만 예외), 빌드 과정 없음
 
-## 투트랙 구조 (2026-07-30 확정)
-- 루트(`index.html`, `js/`, `lib/`) = **발전판** — 모든 개발·실험은 여기서만
+## 주소·폴더 구조 (2026-09-29 개편 — 교사 "v2는 우리 학교용, 그냥 school-metaverse는 홍보 주소")
+- **홍보판** = 루트 `index.html` → https://chang333787-boop.github.io/school-metaverse/ — 학부모·방문자용. 코드는 `v2/`를 그대로 쓰고 `window.SM_PROMO = true`로만 바뀐다(PROMO-1 · 아래 v2 규칙 '학교 견학' 절)
+- **우리 학교용** = `v2/` → https://chang333787-boop.github.io/school-metaverse/v2/ — 모든 놀이 · 실제 아이 이름. 개발·실험은 여기(v2 코드)에서만
+- v1(루트 `js/`·`editor.html`·`style.css`)은 09-29 삭제 — 명단(people·staff)은 `v2/js/layout.js`로 옮김
 - `classroom/` = **아이들 버전 v0.8 동결 스냅샷** (2026-07-28 수업 결과물 · git tag `v0.8-classroom` · URL https://chang333787-boop.github.io/school-metaverse/classroom/)
 - **`classroom/` 폴더는 어떤 이유로도 수정·삭제하지 않는다** (버스터·리팩터링·일괄 치환에서 항상 제외)
 
-## 파일 구조와 수정 지점
+## 파일 구조와 수정 지점 (v2)
 | 파일 | 역할 |
 |---|---|
-| `js/data.js` | **모든 배치의 단일 수정 지점** — 학교명, 건물 크기, 층·실 배열, 시설 위치 |
-| `js/world.js` | data.js를 3D로 생성 (벽·문·팻말·가구 자동). 새 오브젝트(요청 반영)는 이 파일 하단에 추가 |
-| `js/player.js` | 캐릭터·물리 (보통 수정 불필요) |
-| `js/main.js` | 카메라·HUD·디버그 API(`window.SD`) |
-| `js/textures.js` | 캔버스 텍스처 — 팻말은 `textSign`(양면 정상 표시) |
+| `v2/js/layout.js` | **배치·명단의 단일 수정 지점** — 학교명, 반별 명단·교직원, 건물·실·시설 좌표 (홍보판 명단 변환도 여기) |
+| `v2/js/world.js` | layout.js를 3D로 생성 (벽·문·팻말·가구·사람·견학 지점) |
+| `v2/js/main.js` | 카메라·물리·HUD·게이트·디버그 API(`window.SD2`) |
+| `v2/games/*` | 놀이(registry.js 허용 목록) · 견학 글 = `tour_data.js`(교사) |
+| `tools/harness/` | 게이트·캡처(playwright) — `node tools/harness/check.cjs . --full` (홍보판은 `PAGE=/`) |
 
-## data.js 규약 (v0.5 — 교사 주석으로 복도·문·마당 확정)
+## 배치 규약 (v1 data.js에서 이어진 개념 — 지금 값은 v2/js/layout.js)
 - 좌표: x=동서(동쪽+), z=남북(남쪽+), 단위 미터. 실 `span=[x0,x1]`은 월드 좌표 x 구간. 실 폭은 배치도 픽셀 실측 비율
 - `building.front`: 앞줄(원무실~3학년, 1층만) — 문은 북측 주 복도로, 현관은 남쪽 바깥과 연결. westDoor/eastDoor = 바깥문 z
 - `building.wings[]`: 주 복도에 바로 접한 서관만 (twoStory). `innerOnly: true`(문서고)는 복도 문 없이 옆방(나래반)에서 진입
@@ -34,9 +36,9 @@
 - 가구는 방 상대 좌표 자동 배치(furnish) — 방 폭·깊이 바뀌어도 벽 뚫림 없음
 
 ## 검증 루틴 (push 전 필수)
-1. 문법: `node --input-type=module --check < js/수정파일.js`
-2. 로컬 육안 1회: `python3 -m http.server 8001` (윈도우: `py -m http.server 8001`, 또는 VS Code Live Server) → 콘솔 에러 0 확인
-3. 이동 테스트 필요 시 콘솔에서 `SD.tp(x,z,y)` `SD.step(n,['KeyW'])` `SD.zone()` 사용
+1. 문법: `node --input-type=module --check < v2/js/수정파일.js`
+2. 게이트: `node tools/harness/check.cjs . --full` (우리 학교용) · `PAGE=/ node tools/harness/check.cjs . --full` (홍보판) — 아래 v2 '커밋 게이트'
+3. 로컬 육안 1회: `python3 -m http.server 8001` (윈도우: `py -m http.server 8001`, 또는 VS Code Live Server) → `/`(홍보판)·`/v2/` 콘솔 에러 0 확인
 4. 주의: 브라우저 탭이 백그라운드면 rAF가 멈춰 화면이 정지된 것처럼 보인다 (버그 아님)
 
 ## 멀티 세션 역할 (교사가 첫마디로 "역할: ○○"을 주면 그 역할만 수행)
@@ -106,15 +108,9 @@ fps ≥ 30 / rayObjs ≤ 80 / drawCalls 관찰. **fps가 무너지면 기능을 
 사람 1명 = 메시 약 10개 + 이름표 텍스처 1장. 추가 후 반드시 `SD.perf()` 확인.
 **대사(lines)는 교사가 승인한 것만 data.js에 넣는다. 임의 생성 금지.**
 대사 작성은 아이들이 직접 하게 한다 (수업 활동으로 좋고 AI 예산도 안 든다).
-- **v2 기본 = NPC를 더 늘리지 않는다**(옮기거나 역할만 바꾼다). **유일한 예외(사용자 09-27 '학교 견학')**: 안내가 필요한데 사람이 없던 곳에 견학 안내 선생님 한 명씩 — 체육관 `체육선생님`·컴퓨터실 `AI 보조 강사님`·과학실 `과학선생님`(직함만, 이름 없음 · 58명 = 55 + 3). 이 밖의 추가는 다시 사용자 확인.
+- **v2 기본 = NPC를 더 늘리지 않는다**(옮기거나 역할만 바꾼다). **유일한 예외(사용자 09-27 '학교 견학')**: 안내가 필요한데 사람이 없던 곳에 견학 안내 선생님 한 명씩 — 체육관 `체육선생님`·컴퓨터실 `AI 교육 선생님`(09-29 이름 바꿈)·과학실 `과학선생님`(직함만, 이름 없음 · 58명 = 55 + 3). 이 밖의 추가는 다시 사용자 확인.
 - **게임 글(09-27 사용자 결정 "너가 다 써줘봐")**: v2 게임의 이야기·쪽지·퍼즐 글·대사는 **Claude가 써도 된다.** 단 ①이름 있는 실제 학생 NPC(이름표 = 실제 아이 이름)의 입에 지어낸 말을 넣지 않는다 — 이야기 속 학생은 이름 없는 역할('반 친구'·'6학년 형'·'1학년 동생')이나 플레이어 ②선생님은 직함으로만 ③실제 학교에 대한 거짓 사실(행사·수상·역사·프로그램)을 쓰지 않는다 ④4학년 눈높이 · 폭력·피·깜짝 놀래기 없음. 게임은 장면에 따라 **있는 아이들·선생님의 자리·자세를 바꿔도 된다**(`map.npc.move` — 수는 그대로). 새 사람은 여전히 안 됨(견학 3명 예외만) — 게임 배우는 로봇·팀 봇 같은 이름 없는 것만. 위 '대사(lines)는 교사 승인만'은 맵(data.js·world.js의 NPC 대사) 규칙으로 그대로. 정본 docs/map_api.md §16.1.
 - 견학 글(선생님 말·안내판 설명)은 **교사가 `v2/games/tour_data.js`에 직접 쓴다** — 빈칸은 `(여기에 …를 써 주세요)` 자리표시. Claude는 학교 프로그램·행사·수상·역사 같은 사실을 지어 넣지 않는다(UI 문구만). 정본 docs/map_api.md §11.
-
-## 배치 에디터 결과 반영 (editor.html)
-교사가 `[배치 에디터 결과]` + JSON을 붙여넣으면:
-1. JSON을 통째로 data.js에 덮어쓰지 말 것 — **기존 data.js의 구조·주석을 유지한 채 바뀐 값만 갱신** (rooms 배열·시설 center/width 등)
-2. 겹침·최소폭(2m)·건물 범위 이탈을 검토하고 이상하면 교사에게 되물어 확인
-3. 검증 루틴 통과 후 push. 에디터(editor.html·js/editor.js)는 data.js 스키마가 바뀌면 함께 갱신할 것
 
 ## 지형 단차 (v0.12)
 - 학교 부지=테라스 y0, 운동장 쪽(z > TERR_Z=-18)=y-1. 경계엔 옹벽·중앙 계단·동서 경사로·구령대
@@ -192,7 +188,11 @@ fps ≥ 30 / rayObjs ≤ 80 / drawCalls 관찰. **fps가 무너지면 기능을 
 
 ### 학교 견학(TOUR-1 · 09-27)
 - `?game=tour`(또는 `?tour=1`, 🎮 놀이 '우리 학교 견학') — 스쿨버스 앞 교감선생님(교무실 책상엔 빈 의자만) 곁에서 시작 → 선생님 9·안내판 6(`world.tour` = world.js `tourSpots`)에 E/✋/클릭으로 말 걸기 → 도장 카드(C) · 길 안내(H). 견학 밖에서는 사람·안내판만 보이고 말 걸기·UI 없음(지점 수·게이트 기준선 그대로).
-- 자리는 world.js(`GUIDE` 표·`infoBoard()`), 글은 `v2/games/tour_data.js`(교사 — 캐시 번호 필요 없음), 게임은 `v2/games/tour.js`. 도장 = localStorage `sm2.game.tour.stamps`(바뀔 때만 씀).
+- 자리는 world.js(`GUIDE` 표·`infoBoard()`), 글은 `v2/games/tour_data.js`(교사 — 캐시 번호 필요 없음), 게임은 `v2/games/tour.js`. 도장 = localStorage `sm2.game.tour.stamps`(홍보판 `sm2.promo.tour.stamps` · 바뀔 때만 씀).
+- **홍보판(PROMO-1 · 09-29 교사)**: 루트 `index.html`(`window.SM_PROMO`) — ▶ 학교 둘러보기 → 바로 견학 · 🎮 놀이·G·'놀이 바꾸기' 없음 · 🏠 = 처음 화면. 학생 이름표 = **'N학년 친구'**(반마다 6명·책상 6 — layout.js `promoPeople`) · 유치원 아이 = '유치원 친구'. v2/는 실제 명단 그대로.
+- **확정 지점(교사 09-29) 20곳 + 교감**: 버스(통학·체험학습 — 버스 뒤 북동 `infoBoard('bus')`) · 놀이터 · 숲놀이터 · 운동장 · 큰 나무 · 텃밭 · 체육관(체육선생님) · 컴퓨터실(**AI 교육 선생님**) · 각 반 1~6학년(담임선생님 `class1~6` — 반 소개 + 도장) · 급식실 · 돌봄교실 · 유치원 · 보건실 · 도서관 · 교장실(교장선생님 영상 예정). 과학실은 `on: false`. **교감선생님 = `hub: true`**(도장 없음 — 마지막 쪽 [📖 학교 정보 모두 보기] = 안 간 곳도 읽는 도감).
+- 이야기 창 [🎬 관련 영상 보기] = 유튜브 **화면 안 iframe**(youtube-nocookie · 닫으면 iframe째 지움) · [🖼 사진 보기] = `tour_data.js` `photos`(`v2/games/tour_media/` 또는 https 주소 · **아이 얼굴 사진 금지**). 📖 정림초 도감(칩·C) = 받은 곳 다시 읽기 · 안 간 곳 누르면 길 안내.
+- ⚠️ 홍보판 한 화면 삼각형: 1학년 닻 ≈15.5만(예산 15만 +3% — 2학년 1→6명 청크가 동관 쪽 시점에 함께 그려짐). v2 게이트는 14.9만 그대로.
 
 ### 사람 옮기기·세상 바꾸기(NPC-MOVE·WORLD-FX · 09-27 found2)
 - 코드 = `v2/js/worldfx.js`(mapapi가 만든다 · 게임 파사드 `map.npc`·`map.world`) · 정본 docs/map_api.md §16 · 예시 `?game=fx_demo`(dev).
@@ -254,5 +254,5 @@ fps ≥ 30 / rayObjs ≤ 80 / drawCalls 관찰. **fps가 무너지면 기능을 
 - 방탈출 도서실: 벽이 서가로 꽉 차 무지개 책장이 트인 칸(독서 단 앞)에 선다 · 사서선생님 말 걸기 지점은 데스크 앞(-21.9, -37.3)으로 게임이 스스로 옮긴다(경고 1줄 — 정상).
 
 ⚠️ **검사기의 사각지대**: 감사는 정적 상자만 본다(움직이는 문·개별 Mesh는 못 봄 → doorCheck로 보완). reach는 '막힘'만 보고 '뚫림'은 못 본다(→ passCheck).
-⚠️ **캐시**: `js`를 고치면 `index.html`의 `main.js?v=` **와** `main.js`의 `world.js?v=`를 **둘 다** 올린다. `layout.js`를 고치면 `world.js`·`main.js` 안의 `layout.js?v=`도 올린다. 안 그러면 옛 코드로 검증하게 된다.
+⚠️ **캐시**: `js`를 고치면 `v2/index.html`·루트 `index.html`(홍보판)의 `main.js?v=` **와** `main.js`의 `world.js?v=`를 올린다. `layout.js`를 고치면 `world.js`·`main.js` 안의 `layout.js?v=`도 올린다. 안 그러면 옛 코드로 검증하게 된다.
 ⚠️ 브라우저 탭이 백그라운드면 rAF가 멈춰 fps·위치칩이 갱신되지 않는다(버그 아님).

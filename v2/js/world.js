@@ -4,7 +4,7 @@
 //  ④ 16m 청크 병합 ⑤ 충돌 AABB 전용 ⑥ 예산 dc≤300·sim≤1ms
 // ============================================================
 import * as THREE from 'three';
-import { SCHOOL } from './layout.js?v=13';   // LAYOUT-3 실측 배치(v1의 js/data.js는 참고용으로 그대로)
+import { SCHOOL } from './layout.js?v=14';   // LAYOUT-3 실측 배치(v1의 js/data.js는 참고용으로 그대로)
 
 // 바깥 지형 높이(main.js 물리·검사도 같은 함수를 쓴다): 앞뜰·체육관 대지 = yard, 그 밖(둔덕 아래·운동장) = field
 const TRN = SCHOOL.terrain;
@@ -1242,7 +1242,7 @@ export function buildWorld(scene) {
       }
     } else {
       // [classrooms-13] 아이들 책상: 줄 = x(칠판에서 동쪽으로), 칸 = z — 옆으로 맞붙인 줄(영상 a_492 앞줄 넷·a_430.5) · 의자 = 나무 좌판·회색 쇠다리
-      const n = opt.nDesk ?? (SCHOOL.people[name]?.s.length ?? 4) + 2;   // NARAE-2: opt.nDesk = 책상 수를 정해 둔 방
+      const n = opt.nDesk ?? SCHOOL.people[name]?.desks ?? (SCHOOL.people[name]?.s.length ?? 4) + 2;   // NARAE-2: opt.nDesk = 책상 수를 정해 둔 방 · PROMO-1: people.desks = 홍보판(6명 = 책상 6 — 빈 책상을 더하면 삼각형 예산을 넘는다)
       const cols = Math.max(2, Math.min(4, Math.floor((depth - 2.2) / 1.4) + 1));
       const rows = Math.min(Math.max(1, Math.min(3, Math.floor((W - 4.1) / 1.7) + 1)), Math.ceil(n / cols));
       const order = [...Array(cols).keys()].sort((a, b) => Math.abs(a - (cols-1)/2) - Math.abs(b - (cols-1)/2) || a - b);
@@ -5796,6 +5796,7 @@ export function buildWorld(scene) {
     infoBoard('cafeteria', '급식실', (B.kitchen.exitC + B.kitchen.doorC) / 2, B.front.z[0] + 0.15, 2, { wall: 2.3, y: 0 });
     infoBoard('field', '운동장', 6.0, -10.6, 2);
     infoBoard('bigtree', '큰 나무', 34.2, 25.8, 3);
+    infoBoard('bus', '스쿨버스', 8.2, 47.4, 0);   // PROMO-1(09-29): 버스 뒤끝 북동 · 쉼터 동쪽 빈 마당(앞 = 북) — 통학버스·체험학습 영상
   }
 
   // ================= 사람들 =================
@@ -5995,10 +5996,12 @@ export function buildWorld(scene) {
       return null;
     }
     // TOUR-1(09-27 견학): 안내하는 교직원(이름 → 견학 키). 자리는 사람을 놓는 곳에서 그대로 적는다(글은 tour_data.js)
-    const GUIDE = { '교장선생님': 'principal', '교감선생님': 'vice', '사서선생님': 'library', '보건선생님': 'nurse', '돌봄선생님': 'care', '유치원선생님': 'kinder' };
+    const GUIDE = { '교장선생님': 'principal', '교감선생님': 'vice', '사서선생님': 'library', '보건선생님': 'nurse', '돌봄선생님': 'care', '유치원선생님': 'kinder',
+      '1학년 선생님': 'class1', '2학년 선생님': 'class2', '3학년 선생님': 'class3', '4학년 선생님': 'class4', '5학년 선생님': 'class5', '6학년 선생님': 'class6' };   // PROMO-1(09-29): 반마다 담임선생님이 반 소개 + 도장
     const guideAt = (nm, x, y, z, face, top) => { const key = GUIDE[nm]; if (key) { tourSpots.push({ key, kind: 'guide', label: nm, x, y, z, face: face & 3, top }); PEOPLE[PEOPLE.length - 1].tour = key; } return top; };
     const tagSign = (r9, nm, y9) => { const p9 = PEOPLE[PEOPLE.length - 1]; if (p9 && p9.sign < 0) { p9.sign = signList.length - 1; p9.name = nm; p9.signY = y9; } return r9; };   // NPC-MOVE: 방금 놓은 사람 = 이 팻말의 주인
-    const nameSign = (nm, x, top, z) => tagSign(sign(nm, x, top + 0.28, z, 0, 0.22), nm, top + 0.28);   // 이름 팻말 = 머리 위(앉으면 낮아진다)
+    const signH = nm => / 친구$/.test(nm) ? 0.15 : 0.22;   // PROMO-1: 홍보판 'N학년 친구'는 이름보다 길어 교실에서 서로 가렸다 — 작게
+    const nameSign = (nm, x, top, z) => tagSign(sign(nm, x, top + 0.28, z, 0, signH(nm)), nm, top + 0.28);   // 이름 팻말 = 머리 위(앉으면 낮아진다)
     const place = (zn, nm, sex, s) => {   // 자리가 정해지지 않은 사람(예비) — 방 빈자리에 서서 방 가운데 쪽을 본다(90° 단위)
       const p = freeSpot(zn); if (!p) return;
       const dx = (zn.x0 + zn.x1) / 2 - p[0], dz = (zn.z0 + zn.z1) / 2 - p[1];
@@ -6011,12 +6014,12 @@ export function buildWorld(scene) {
       const zn = zoneOf(cls); if (!zn) return;
       const L = seatsOf[cls];
       if (!L) { place(zn, cls + ' 선생님', info.t, 1.1); info.s.forEach(([nm, sx]) => place(zn, nm, sx, 1)); return; }
-      person(L.teacher.x, L.y, L.teacher.z, info.t, 1.1, L.tFace ?? 2);
+      guideAt(cls + ' 선생님', L.teacher.x, L.y, L.teacher.z, L.tFace ?? 2, person(L.teacher.x, L.y, L.teacher.z, info.t, 1.1, L.tFace ?? 2));
       tagSign(sign(cls + ' 선생님', L.teacher.x, L.y + 1.62 * 1.1 + 0.2, L.teacher.z, 0, 0.22), cls + ' 선생님', L.y + 1.62 * 1.1 + 0.2);
       info.s.forEach(([nm, sx], i) => {
         const st = L.seats[i]; if (!st) { place(zn, nm, sx, 1); return; }
         person(st.x, L.y, st.z, sx, 1, L.face ?? 0, 'sit', { desk: L.y + 0.72, reach: 0.3 });   // 학생 책상 윗면 0.72 · 의자 가운데~책상 끝 0.3
-        tagSign(sign(nm, st.x, L.y + 1.74, st.z, 0, 0.22), nm, L.y + 1.74);
+        tagSign(sign(nm, st.x, L.y + 1.74, st.z, 0, signH(nm)), nm, L.y + 1.74);
       });
       L.seats.slice(info.s.length).forEach(st => sitSpot(L, st));
     });
@@ -6057,7 +6060,7 @@ export function buildWorld(scene) {
     //   체육관 = 무대 앞 가운데(무대 계단 둘 사이) 남쪽(코트)을 보고 · 컴퓨터실 = 앞 화면(칠판) 앞 설명 자리 · 과학실 = 칠판 앞 시연대 뒤(학생 쪽 = 서) · SCI-2(09-28 아이 의견·교사 확인): 과학선생님 = 남자
     { const TG = [];
       { const sp = (npcSpot['체육관'] || [])[0]; if (sp) TG.push(['pe', '체육선생님', '남', { ...sp, pose: 'stand', role: 'pe' }]); }
-      { const L = seatsOf['컴퓨터실']; if (L) TG.push(['ai', 'AI 보조 강사님', '여', { x: L.teacher.x, y: L.y, z: L.teacher.z, face: L.tFace ?? 1, pose: 'explain', role: 'ai' }]); }
+      { const L = seatsOf['컴퓨터실']; if (L) TG.push(['ai', 'AI 교육 선생님', '여', { x: L.teacher.x, y: L.y, z: L.teacher.z, face: L.tFace ?? 1, pose: 'explain', role: 'ai' }]); }
       { const sp = (npcSpot['과학실'] || [])[0]; if (sp) TG.push(['science', '과학선생님', '남', { ...sp, pose: 'explain', role: 'sci' }]); }
       TG.forEach(([key, nm, sx, sp]) => { const top = person(sp.x, sp.y, sp.z, sx, 1.1, sp.face, sp.pose, sp); tagSign(sign(nm, sp.x, top + 0.28, sp.z, (sp.face & 1) ? Math.PI / 2 : 0, 0.22), nm, top + 0.28); PEOPLE[PEOPLE.length - 1].tour = key;   // 이름 팻말 = 보는 쪽으로(동·서를 보는 사람은 옆으로 돌려 — 앞에서 읽힘)
         tourSpots.push({ key, kind: 'guide', label: nm, x: sp.x, y: sp.y, z: sp.z, face: sp.face & 3, top }); }); }

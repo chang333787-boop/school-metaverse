@@ -265,6 +265,11 @@ export default async function start(map, params) { …; return { tick(dt) {}, st
 
 ## 11. 우리 학교 견학(TOUR-1 · 09-27)
 
+> **PROMO-1(09-29 교사 — 이 절보다 우선)**: 루트 `index.html` = 홍보판(`window.SM_PROMO` · ▶ 학교 둘러보기 → 바로 견학 · 학생 이름표 'N학년 친구' 반마다 6명 · 도장 `sm2.promo.tour.stamps`). 지점 = 20곳 + 교감선생님 hub —
+> 버스(`bus` 안내판 · 버스 뒤 북동 8.2, 47.4) · playground · forest · field · bigtree · garden · pe · ai(**AI 교육 선생님**) · class1~class6(각 반 담임 — world.js `GUIDE`) · cafeteria · care · kinder · nurse · library · principal (science는 `on: false`).
+> `tour_data.js` 곳마다 `videos: [{ title, url }]`(유튜브 주소 → 화면 안 iframe `youtube-nocookie`) · `photos: [{ src, caption }]`(`tour_media/…` 또는 https) · `hub: true` = 도장 없이 마지막 쪽 [📖 학교 정보 모두 보기].
+> 칩 = `📖 정림초 도감 n/N (C)` — 받은 칸 누르면 다시 읽기(영상 포함) · 안 간 칸 누르면 길 안내. 게임 핸들: `spots`(videos·photos 수 포함) · `open`('media'|'talk'|'card') · `openMedia(key, 'v'|'p')` · `closeMedia` · `openCard(all)` · `guide(key)`.
+
 사용자 09-27 "학교홍보로 써도될거같아 메타버스 견학 느낌으로 npc누르면 npc가 우리학교 설명해주고 도장도 찍어주고". `v2/games/tour.js` · `?game=tour` 또는 `?tour=1` · 🎮 놀이 '우리 학교 견학'.
 
 - **흐름**: 스쿨버스 앞 교감선생님 곁에서 시작(환영 창 = `welcome` + 조작 안내) → 선생님·안내판 앞에서 **E / 터치 ✋ / 사람·안내판을 직접 클릭·탭**(화면에 비친 머리·판 가까이 · 22m 안 · 벽 너머 안 됨 · 포인터 잠금 중이면 화면 가운데) → 이야기 창(여러 쪽 · [다음 ▶] · Enter/Space/E) → 마지막 쪽 [도장 받기] → 도장 카드 칸이 찬다 → 모두 모으면 '견학 완주! 🎉' 창(+ `finish`) · 색종이.

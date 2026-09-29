@@ -1,4 +1,4 @@
-// usage: node check.cjs [repoDir] [--full] [--shot out.png x z y ...]
+// usage: [PAGE=/] node check.cjs [repoDir] [--full]   (PAGE 기본 /v2/ · PAGE=/ = 홍보판)
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const root = process.argv[2] || '/home/user/school-metaverse';
@@ -12,7 +12,7 @@ srv.listen(0, async () => {
   const lines = [];
   pg.on('console', m => { const t = m.text(); lines.push(t); if (!/THREE\.|GPU stall|WebGL/.test(t)) console.log('[c]', t.slice(0, 400)); });
   pg.on('pageerror', e => console.log('[ERR]', e.message));
-  await pg.goto('http://localhost:' + port + '/v2/?check=1');
+  await pg.goto('http://localhost:' + port + (process.env.PAGE || '/v2/') + '?check=1');   // PAGE=/ = 홍보판(루트 index.html)
   const t0 = Date.now();
   while (Date.now() - t0 < 240000) { if (lines.some(l => /🩺/.test(l) && /빠른|quick|\/10|통과/.test(l))) break; await new Promise(r => setTimeout(r, 1000)); }
   await new Promise(r => setTimeout(r, 1500));
