@@ -60,8 +60,12 @@ body.small #tour-talk{bottom:0!important;width:min(640px,calc(100vw - 16px - env
 body.small #tour-talk .av{flex:0 0 40px;height:40px;font-size:22px;border-width:2px}
 body.small #tour-talk .bd{display:flex;flex-direction:column;min-height:0}
 body.small #tour-talk .nm{font-size:14px;margin-bottom:2px}
-body.small #tour-talk .tx{font-size:clamp(13px,4.2vh,16px);line-height:1.4;min-height:0;max-height:calc(46vh - 92px)}
-body.small #tour-talk .rw{margin-top:4px}
+body.small #tour-talk .tx{font-size:clamp(13px,4.2vh,16px);line-height:1.4;min-height:0;max-height:calc(46vh - 60px)}
+/* 견학 선택 목록(RPG · 09-29): 휴대폰은 대화 시트 위 2칸 격자 · 누름 칸 44px · 닫기 ✕ 44px */
+body.small #tour-talk .tmenu{right:4px;left:auto;display:grid;grid-template-columns:repeat(2,auto);gap:2px 4px;min-width:0;padding:4px;border-width:2px;max-height:calc(54vh - 14px - env(safe-area-inset-top));overflow:auto}
+body.small #tour-talk .tmenu li{display:flex;align-items:center;min-height:44px;box-sizing:border-box;padding:0 12px 0 26px;font-size:15px}
+body.small #tour-talk .tmenu li.on::before{left:8px}
+body.touch #tour-ui #tour-talk button.x{min-width:44px;min-height:44px}
 body.small .tour-stamp{top:-64px;width:70px;height:70px;font-size:32px}
 body.small #tour-card{left:0;top:0;transform:none;width:100vw;height:100vh;height:100dvh;max-height:none;box-sizing:border-box;border-radius:0;border:0;overflow:auto;padding:0 calc(12px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))}
 body.small #tour-card .hd{position:sticky;top:0;z-index:2;background:rgb(255,251,240);padding:6px 0 4px}

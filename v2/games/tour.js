@@ -26,15 +26,16 @@ const CSS = `
 #tour-talk .tx.done::after{content:'▼';display:inline-block;margin-left:6px;font-size:13px;color:#d9463a;animation:tourBlink .7s steps(2,start) infinite}
 @keyframes tourBlink{to{visibility:hidden}}
 #tour-talk .tx .rest{visibility:hidden}
-#tour-talk .md{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-#tour-talk .md:empty{display:none}
-#tour-talk .rw{display:flex;align-items:center;gap:8px;margin-top:8px}
-#tour-talk .pg{font-size:12px;color:#8a7a66;margin-right:auto}
+#tour-talk .pg{font-size:12px;color:#8a7a66;margin-top:4px;min-height:1em}
+#tour-ui #tour-talk button.x{position:absolute;right:6px;top:6px;min-width:36px;min-height:36px;padding:0;background:transparent;color:#a08462;font-size:18px}
+#tour-talk .tmenu{position:absolute;right:10px;bottom:calc(100% + 8px);margin:0;padding:6px;list-style:none;background:rgba(255,251,240,.98);border:3px solid #e8c77a;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.25);min-width:210px;transform-origin:bottom right;animation:tmPop .22s cubic-bezier(.2,1.5,.4,1) both}
+#tour-talk .tmenu li{position:relative;padding:8px 16px 8px 32px;border-radius:9px;font-size:17px;font-weight:800;color:#3a2e22;cursor:pointer;white-space:nowrap}
+#tour-talk .tmenu li.on{background:#fff1c6}
+#tour-talk .tmenu li.on::before{content:'▶';position:absolute;left:11px;color:#d9463a;animation:tmNudge .45s ease-in-out infinite alternate}
+@keyframes tmPop{from{transform:scale(.6);opacity:0}}
+@keyframes tmNudge{to{transform:translateX(4px)}}
 #tour-ui button{pointer-events:auto;min-height:44px;min-width:44px;padding:6px 16px;border:0;border-radius:10px;background:#2f6fd0;color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit}
 #tour-ui button.sub{background:#e9e1cf;color:#5a4632}
-#tour-ui button.vid{background:#d9463a}
-#tour-ui button.pho{background:#2f9a5c}
-#tour-ui button.hub{background:#8a5a1e}
 #tour-ui button:focus-visible{outline:3px solid #ffb400}
 #tour-card{left:50%;top:50%;transform:translate(-50%,-50%);width:min(680px,94vw);max-height:88vh;overflow:auto;padding:14px 16px}
 #tour-card .hd{display:flex;align-items:center;gap:8px}
@@ -68,7 +69,7 @@ const CSS = `
 #tour-media .ph .em{position:static;min-height:220px}
 #tour-card .sh{margin:14px 0 8px;font-weight:800;font-size:15px;color:#8a5a1e}
 #tour-media .cp{font-size:14px;color:#5a4a36;margin-top:6px;text-align:center;min-height:1em}
-.tour-stamp{position:absolute;right:12px;top:-78px;width:86px;height:86px;border-radius:50%;border:4px solid #d9463a;background:#fff0ec;display:flex;align-items:center;justify-content:center;font-size:40px;box-shadow:inset 0 0 0 4px #fff,inset 0 0 0 7px #d9463a;animation:tourStamp .5s cubic-bezier(.2,1.6,.4,1) both}
+.tour-stamp{position:absolute;left:12px;top:-78px;width:86px;height:86px;border-radius:50%;border:4px solid #d9463a;background:#fff0ec;display:flex;align-items:center;justify-content:center;font-size:40px;box-shadow:inset 0 0 0 4px #fff,inset 0 0 0 7px #d9463a;animation:tourStamp .5s cubic-bezier(.2,1.6,.4,1) both}
 @keyframes tourStamp{0%{transform:scale(2.6) rotate(20deg);opacity:0}100%{transform:scale(1) rotate(-12deg);opacity:1}}
 .tour-cf{position:absolute;top:-20px;width:10px;height:14px;border-radius:2px;animation:tourFall 3.2s linear forwards}
 @keyframes tourFall{to{transform:translateY(110vh) rotate(720deg)}}
@@ -168,7 +169,7 @@ export default async function start(map, params = {}) {
 
   // ---------- 영상·사진 창(유튜브 = 화면 안 iframe · 링크로 나가지 않음) ----------
   let media = null;   // { el, s, tab }
-  function closeMedia() { if (!media) return; media.el.remove(); media = null; if (talk) focus(talk.b1); }   // iframe째 지운다 = 재생 멈춤
+  function closeMedia() { if (!media) return; media.el.remove(); media = null; }   // iframe째 지운다 = 재생 멈춤
   function openMedia(s, kind) {
     if (media) media.el.remove();
     const el = mk('div', 'tp'); el.id = 'tour-media'; el.setAttribute('role', 'dialog');
@@ -209,14 +210,14 @@ export default async function start(map, params = {}) {
   // ---------- 타자 효과(게임처럼 한 글자씩 · 다다다 소리) — 누르면 먼저 끝까지, 다 나오면 ▼ ----------
   //   자리는 미리 잡아 둔다(아직 안 나온 글자 = 보이지 않는 span) — 창 높이가 글자마다 출렁이지 않게. setInterval(창이 열린 동안만 · 매 프레임 루프 밖)
   const muted = () => { try { return JSON.parse(localStorage.getItem('sm2.title.mute') || 'false'); } catch (e) { return false; } };
-  function typeText(t, txt) {
+  function typeText(t, txt, done) {
     clearInterval(t.tm); const ch = [...txt]; t.tx.textContent = ''; t.tx.classList.remove('done');
     const a = mk('span', '', '', t.tx), r = mk('span', 'rest', txt, t.tx), low = t.o.spot && t.o.spot.kind === 'guide', quiet = muted();
-    let i = 0; const t0 = performance.now(); t.typing = true;   // 글자 수 = 지난 시간으로(느린 PC에서 타이머가 프레임마다 한 번만 돌아도 같은 빠르기)
-    t.fin = () => { clearInterval(t.tm); a.textContent = txt; r.textContent = ''; t.typing = false; t.tx.classList.add('done'); };
+    let i = 0; const t0 = performance.now(), per = Math.min(TYPE_MS, 4000 / Math.max(1, ch.length)); t.typing = true;   // 긴 쪽도 4초 안에   // 글자 수 = 지난 시간으로(느린 PC에서 타이머가 프레임마다 한 번만 돌아도 같은 빠르기)
+    t.fin = () => { if (!t.typing) return; clearInterval(t.tm); a.textContent = txt; r.textContent = ''; t.typing = false; t.tx.classList.add('done'); if (done && talk === t) done(); };
     t.tm = setInterval(() => {
       if (talk !== t) { clearInterval(t.tm); return; }
-      const j = Math.min(ch.length, Math.floor((performance.now() - t0) / TYPE_MS) + 1); if (j === i) return;
+      const j = Math.min(ch.length, Math.floor((performance.now() - t0) / per) + 1); if (j === i) return;
       const beep = !quiet && Math.floor(j / 2) !== Math.floor(i / 2) && /\S/.test(ch[j - 1]); i = j;
       a.textContent = ch.slice(0, i).join(''); r.textContent = ch.slice(i).join('');
       if (beep) map.tone((low ? 420 : 560) + Math.random() * 90, 0, 0.035, 'square', 0.03);
@@ -224,60 +225,88 @@ export default async function start(map, params = {}) {
     }, TYPE_MS);
   }
 
-  // ---------- 이야기 창 ----------
-  let talk = null;   // { el, o, i, openedAt, typing, fin, tm, … }
+  // ---------- 이야기 창(RPG 선택 목록 · 교사 09-29 '1번 — 가벼운 느낌') ----------
+  //   대사는 타자로 · 쪽 넘김 = E/Enter/Space/✋/창 누르기 · 마지막 쪽이 다 나오면 창 오른쪽 위에 선택 목록(▶ 커서)
+  //   ↑↓(W·S) 이동 · E/Enter/Space/✋ 고르기 · 마우스·터치는 바로 누르기 · Esc/✕ 닫기. 고를 것: 🎬 영상 · 🖼 사진 · 🖍 도장 · 📖 모두 보기(교감) · ◀ 도감 · 👋 인사
+  let talk = null;   // { el, o, i, openedAt, typing, fin, tm, menu, items, cur, menuAt, … }
   let closedAt = -1e9;
   function closeTalk(toBook) {
     if (!talk) return; const t = talk; talk = null; clearInterval(t.tm); closeMedia(); t.el.remove(); closedAt = performance.now(); map.player.freeze(false); refresh();
-    if (t.allDone) celebrate(); else if (toBook && t.o.back) t.o.back();   // 도감에서 연 글이면 도감으로 · 마지막 도장 창을 닫으면(버튼·Esc 어느 쪽이든) 완주 창
+    if (t.allDone) celebrate(); else if (toBook && t.o.back) t.o.back();   // 도감에서 연 글이면 도감으로 · 마지막 도장 창을 닫으면(어느 쪽이든) 완주 창
   }
-  function openTalk(o) {   // o = { spot?, name, sub?, icon, pages, review?, back? }
+  function openTalk(o) {   // o = { spot?, name, sub?, icon, pages, review?, back?, end? }
     if (talk) { clearInterval(talk.tm); closeMedia(); talk.el.remove(); }
     if (card) closeCard();
     document.exitPointerLock?.(); map.player.freeze(true);
     const el = mk('div', 'tp'); el.id = 'tour-talk';
     const av = mk('div', 'av', o.icon, el), bd = mk('div', 'bd', null, el);
     const nm = mk('div', 'nm', o.name, bd); if (o.sub) mk('small', '', o.sub, nm);
-    const tx = mk('div', 'tx', '', bd), md = mk('div', 'md', null, bd), rw = mk('div', 'rw', null, bd), pg = mk('div', 'pg', '', rw);
-    const s = o.spot;
-    if (s && !s.hub) {   // 영상 칸이 있으면 🎬 · 사진은 늘 🖼(비어 있으면 '준비 중' — showEmpty: false면 채운 것만)
-      if (s.videos.length) btn('🎬 관련 영상 보기' + (s.videos.length > 1 ? ' (' + s.videos.length + ')' : ''), 'vid', () => probePhotos(s).then(() => { if (talk && talk.o.spot === s) openMedia(s, 'v'); }), md);
-      const pb = s.photos.length || SHOW_EMPTY ? btn('🖼 사진 보기' + (s.photos.length ? ' (' + s.photos.length + ')' : ''), 'pho', () => probePhotos(s).then(() => { if (talk && talk.o.spot === s) openMedia(s, 'p'); }), md) : null;
-      probePhotos(s).then(n => { if (!talk || talk.o.spot !== s || !n) return;
-        if (pb) pb.textContent = '🖼 사진 보기 (' + n + ')'; else btn('🖼 사진 보기 (' + n + ')', 'pho', () => openMedia(s, 'p'), md); });
-    }
-    const b2 = btn('닫기', 'sub', () => closeTalk(), rw), b1 = btn('다음 ▶', '', () => next(), rw);
-    talk = { el, o, i: 0, openedAt: performance.now(), tx, pg, b1, b2, av, stamped: false, typing: false, tm: 0, fin: null };
-    tx.addEventListener('click', e => { e.stopPropagation(); if (talk && talk.typing) talk.fin(); });   // 글 칸을 눌러도 바로 끝까지
-    show(); map.sfx('pick'); focus(b1);
+    const tx = mk('div', 'tx', '', bd), pg = mk('div', 'pg', '', bd);
+    btn('✕', 'x', () => closeTalk(), el).setAttribute('aria-label', '닫기');
+    talk = { el, o, i: 0, openedAt: performance.now(), tx, pg, av, stamped: false, typing: false, tm: 0, fin: null, menu: null, items: [], cur: 0, menuAt: 0 };
+    el.addEventListener('click', e => { e.stopPropagation(); if (talk && !talk.menu) next(); });   // 창을 누르면 다음(글자가 나오는 중이면 끝까지)
+    show(); map.sfx('pick');
+    const s = o.spot; if (s && !s.hub) probePhotos(s).then(() => { if (talk && talk.o.spot === s && talk.menu) buildMenu(); });   // 찾은 사진 수를 목록 글자에
   }
   const canStamp = t => { const s = t.o.spot; return !!(s && !s.hub && !s.intro && !t.o.review && !stamps.has(s.key)); };
   function show() {
-    const t = talk, P = t.o.pages, last = t.i >= P.length - 1, s = t.o.spot, can = canStamp(t);
-    typeText(t, P[t.i]); t.pg.textContent = P.length > 1 ? (t.i + 1) + ' / ' + P.length : '';
-    t.b1.className = '';
-    if (!last) t.b1.textContent = '다음 ▶';
-    else if (can) t.b1.textContent = '도장 받기 🖍️';
-    else if (s && s.hub) { t.b1.textContent = '📖 학교 정보 모두 보기'; t.b1.className = 'hub'; }
-    else t.b1.textContent = t.o.back ? '◀ 도감으로' : '닫기';
-    t.b2.style.display = last && !can && !(s && s.hub) ? 'none' : '';
-    if (last && s && stamps.has(s.key) && !t.stamped) t.pg.textContent = (t.pg.textContent ? t.pg.textContent + ' · ' : '') + '✔ 도장 받은 곳';
-    else if (last && t.o.review && s && !s.intro && !stamps.has(s.key)) t.pg.textContent = (t.pg.textContent ? t.pg.textContent + ' · ' : '') + '도장은 그곳에 가면 받아요';
+    const t = talk, P = t.o.pages, last = t.i >= P.length - 1;
+    if (t.menu) { t.menu.remove(); t.menu = null; }
+    t.pg.textContent = P.length > 1 ? (t.i + 1) + ' / ' + P.length : '';
+    typeText(t, P[t.i], last ? () => buildMenu() : null);
+  }
+  const blipOK = () => !muted();
+  function menuItems(t) {
+    const s = t.o.spot, L = [], media = k => () => probePhotos(s).then(() => { if (talk && talk.o.spot === s) openMedia(s, k); });
+    if (s && !s.hub) {
+      if (s.videos.length) L.push({ k: 'v', t: '🎬 영상 볼래요' + (s.videos.length > 1 ? ' (' + s.videos.length + ')' : ''), f: media('v') });
+      if (s.photos.length || SHOW_EMPTY) L.push({ k: 'p', t: '🖼 사진 볼래요' + (s.photos.length ? ' (' + s.photos.length + ')' : ''), f: media('p') });
+    }
+    if (canStamp(t)) L.push({ k: 's', t: '🖍 도장 받을래요', f: stampIt });
+    if (s && s.hub) L.push({ k: 'hub', t: '📖 학교 정보 모두 볼래요', f: () => { closeTalk(); openCard(true); } });
+    if (t.o.back) L.push({ k: 'back', t: '◀ 도감으로 돌아가기', f: () => closeTalk(true) });
+    L.push({ k: 'bye', t: t.o.end || '👋 안녕히 계세요', f: () => closeTalk() });
+    return L;
+  }
+  function buildMenu(want) {
+    const t = talk; if (!t || t.typing || t.i < t.o.pages.length - 1) return;
+    const was = t.menu && t.items[t.cur] ? t.items[t.cur].k : null;
+    if (t.menu) t.menu.remove();
+    t.items = menuItems(t);
+    const m = t.menu = mk('ul', 'tmenu', null, t.el); m.setAttribute('role', 'listbox');
+    t.items.forEach((it, k) => { const li = mk('li', '', it.t, m); li.setAttribute('role', 'option');
+      li.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') sel(k); });
+      li.addEventListener('click', e => { e.stopPropagation(); sel(k, true); pick(true); }); });
+    // 커서 기본 자리: 방금 있던 것 → 도장 받기 → 모두 보기 → 맨 위
+    const at = k => t.items.findIndex(it => it.k === k), c = [want, was, 's', 'hub'].map(at).find(n => n >= 0);
+    t.cur = c ?? 0; paintMenu(); t.menuAt = performance.now();
+    const s = t.o.spot; let note = t.o.pages.length > 1 ? t.o.pages.length + ' / ' + t.o.pages.length : '';
+    if (s && !s.hub && !s.intro && stamps.has(s.key) && !t.stamped) note = (note ? note + ' · ' : '') + '✔ 도장 받은 곳';
+    else if (t.o.review && s && !s.hub && !s.intro && !stamps.has(s.key)) note = (note ? note + ' · ' : '') + '도장은 그곳에 가면 받아요';
+    if (!t.stamped) t.pg.textContent = note;
+  }
+  function paintMenu() { const t = talk; if (!t || !t.menu) return; [...t.menu.children].forEach((li, k) => { li.classList.toggle('on', k === t.cur); li.setAttribute('aria-selected', k === t.cur ? 'true' : 'false'); }); }
+  function sel(k, quiet) {
+    const t = talk; if (!t || !t.menu) return; const n = t.items.length, c = ((k % n) + n) % n; if (c === t.cur) return;
+    t.cur = c; paintMenu(); if (!quiet && blipOK()) map.tone(760, 0, 0.03, 'square', 0.025);
+  }
+  function pick(direct) {
+    const t = talk; if (!t || !t.menu) return;
+    if (!direct && performance.now() - t.menuAt < 220) return;   // 마지막 글자를 넘기던 E가 바로 고르지 않게
+    const it = t.items[t.cur]; if (!it) return; if (blipOK()) map.tone(980, 0, 0.05, 'square', 0.03); it.f();
+  }
+  function stampIt() {   // 도장!
+    const t = talk, s = t.o.spot;
+    stamps.add(s.key); save(); t.stamped = true; map.sfx('ding');
+    mk('div', 'tour-stamp', s.stamp, t.el); t.pg.textContent = '도장 받았어요! (' + stamps.size + '/' + N + ') · 📖 도감에 모였어요';
+    refresh(); if (stamps.size === N) t.allDone = true;
+    buildMenu('bye'); t.menuAt = performance.now() + 250;
   }
   function next() {
     const t = talk; if (!t) return;
     if (t.typing) { t.fin(); return; }   // 글자가 나오는 중이면 먼저 끝까지(게임처럼)
     if (t.i < t.o.pages.length - 1) { t.i++; show(); map.sfx('tick'); return; }
-    const s = t.o.spot;
-    if (canStamp(t)) {   // 도장!
-      stamps.add(s.key); save(); t.stamped = true; map.sfx('ding');
-      mk('div', 'tour-stamp', s.stamp, t.el); t.pg.textContent = '도장 받았어요! (' + stamps.size + '/' + N + ') · 📖 도감에 모였어요';
-      t.b1.textContent = '닫기'; t.b2.style.display = 'none'; refresh();
-      if (stamps.size === N) t.allDone = true;
-      return;
-    }
-    if (s && s.hub) { closeTalk(); openCard(true); return; }
-    closeTalk(true);
+    if (t.menu) pick(); else buildMenu();
   }
   function talkTo(s, o = {}) {
     openTalk({ spot: s, name: s.who || s.name, sub: s.who && s.who !== s.name ? s.name : '', icon: s.kind === 'board' ? '📋' : '🙋', pages: s.pages, ...o });
@@ -328,7 +357,7 @@ export default async function start(map, params = {}) {
   function celebrate() {
     map.sfx('done');
     const fin = Array.isArray(DATA.finish) && DATA.finish.length ? DATA.finish.map(String) : [];
-    openTalk({ name: '견학 완주! 🎉', icon: '🏆', pages: ['도장 ' + N + '개를 모두 모았어요! 🎉', ...fin] });
+    openTalk({ name: '견학 완주! 🎉', icon: '🏆', end: '🎉 좋아요!', pages: ['도장 ' + N + '개를 모두 모았어요! 🎉', ...fin] });
     const cols = ['#ff6b6b', '#ffd23c', '#4dabf7', '#69db7c', '#b197fc', '#ffa94d'];
     for (let i = 0; i < 44; i++) { const c = mk('div', 'tour-cf'); c.style.left = (Math.random() * 100) + 'vw'; c.style.background = cols[i % cols.length]; c.style.animationDelay = (Math.random() * 0.9) + 's'; setTimeout(() => c.remove(), 4300); }
   }
@@ -381,8 +410,8 @@ export default async function start(map, params = {}) {
       return;
     }
     if (talk) {
+      if (talk.menu && ['ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(e.code)) { e.stopPropagation(); e.preventDefault(); sel(talk.cur + (e.code === 'ArrowUp' || e.code === 'KeyW' ? -1 : 1)); return; }
       if (['KeyE', 'Enter', 'Space', 'NumpadEnter'].includes(e.code)) {
-        if (e.target && e.target.tagName === 'BUTTON' && e.target !== talk.b1 && e.code !== 'KeyE') return;   // 영상·사진 버튼에 포커스가 있으면 그 버튼이 눌린다
         e.stopPropagation(); e.preventDefault(); if (!e.repeat && performance.now() - talk.openedAt > 200) next(); return; }
       if (e.code === 'Escape') { e.stopPropagation(); closeTalk(); return; }
       return;
@@ -433,9 +462,9 @@ export default async function start(map, params = {}) {
   refresh();
   map.player.freeze(false);
   const hub = SPOTS.find(s => s.hub);
-  if (params.intro !== '0') openTalk({ name: '우리 학교 견학', icon: '🏫', pages: [
+  if (params.intro !== '0') openTalk({ name: '우리 학교 견학', icon: '🏫', end: '▶ 견학 시작!', pages: [
     ...(Array.isArray(DATA.welcome) ? DATA.welcome.map(String) : []),
-    '선생님(🙋)과 안내판(📋)을 찾아가 이야기를 듣고 도장을 모아요.\n· 가까이 가서 E(터치 ✋) 또는 사람·안내판을 눌러요\n· 떠 있는 ◆ · 미니맵 ⭐ = 아직 못 간 곳(주황 = 다음 추천)\n· H = 다음 곳 길 안내 · C = 📖 정림초 도감(' + N + '칸)'
+    '선생님(🙋)과 안내판(📋)을 찾아가 이야기를 듣고 도장을 모아요.\n· 가까이 가서 E(터치 ✋) 또는 사람·안내판을 눌러요 · 고를 때는 ↑↓ + E\n· 떠 있는 ◆ · 미니맵 ⭐ = 아직 못 간 곳(주황 = 다음 추천)\n· H = 다음 곳 길 안내 · C = 📖 정림초 도감(' + N + '칸)'
       + (INTRO.length ? '\n· 각 반에서는 담임선생님이 반을 소개해 줘요(도장 없음)' : '')
       + (hub ? '\n· 바로 앞 ' + hub.who + '께 말을 걸면 모든 곳의 이야기·영상을 한눈에 볼 수 있어요' : '')] });
 
