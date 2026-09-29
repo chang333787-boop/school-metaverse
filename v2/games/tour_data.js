@@ -97,6 +97,7 @@ export const TOUR = {
       { group: '🎉 학교 생활', title: '과일 타르트 만들기(프랑스 문화 체험)', url: 'https://youtu.be/1yXShlY5974' },
       { group: '🎉 학교 생활', title: '대한민국 화이팅! 월드컵 응원', url: 'https://youtu.be/Rh4pgUhMd4A' },
       { group: '🎉 학교 생활', title: '당황하지 않고 탈출! 소방 대피 훈련', url: 'https://youtu.be/uHgPhe3lrNc' },
+      { group: '🎉 학교 생활', title: '동탄어린이집 친구들의 정림초 방문', url: 'https://youtu.be/XHdQ7gVeE98' },
     ] },
 
     // ---------- 등교 ----------
@@ -119,6 +120,8 @@ export const TOUR = {
       { title: '전곡항 요트체험', url: 'https://youtu.be/UoX9Q_4eFzc' },
       { title: '[화성마을교육과정] 융건릉에 방문하다', url: 'https://youtu.be/hmSN1tXdl2Y' },
       { title: '경기예술창작소에서 RAS를 만나다', url: 'https://youtu.be/1llwjxYbaOw' },
+      { title: '정림초의 특별한 수업, 승마체험', url: 'https://youtu.be/O7gEDGNNq7E' },
+      { title: '생존수영 에이스로 거듭난 정림초', url: 'https://youtu.be/yaLNax9z7j0' },
     ], photos: [] },
 
     // ---------- 수업 ----------
@@ -152,7 +155,6 @@ export const TOUR = {
     playground: { on: true, name: '놀이터', where: '운동장 남서쪽 놀이터', stamp: '🎠', pages: [
       '쉬는 시간, 폰 대신 친구 손을 잡고 달려오는 곳이에요.\n"폰을 내려놓으니 더 신나요!" — RAS의 S, Sports!',
     ], videos: [
-      { title: '폰프리 스쿨 추석 미션 — 전통놀이', url: 'https://youtu.be/Ut1kA2VW5Ac' },
       { title: '정림 워터파크 개장!', url: 'https://youtu.be/JPCUhUKKqtg' },
     ], photos: [] },
     forest: { on: true, name: '숲놀이터', where: '운동장 남동쪽 숲놀이터', stamp: '🌳', pages: [
@@ -164,6 +166,7 @@ export const TOUR = {
       '• 나무 데크 · 그물 해먹 — 나무 그늘 아래에서 쉬고 놀아요',
     ], videos: [
       { title: '학생 목수들의 도전! 학교 숲쉼터 제작기', url: 'https://youtu.be/KmeAaHcRcsg' },
+      { title: '폰프리 스쿨 추석 미션 — 전통놀이', url: 'https://youtu.be/Ut1kA2VW5Ac' },
     ], photos: [] },
     bigtree: { on: true, name: '큰 나무', where: '운동장 동쪽 큰 나무 아래', stamp: '🌲', pages: [
       '우리 학교의 큰 나무예요.\n초록초록 정림초를 지켜 주는 든든한 나무랍니다.',
@@ -187,9 +190,13 @@ export const TOUR = {
     // ---------- 체육 · 예술 ----------
     pe: { on: true, name: '체육관', where: '서쪽 체육관 무대 앞', stamp: '⚽', pages: [
       '안녕하세요, 체육선생님이에요. 여기는 체육관이에요.\n폰 대신 공을 잡는 곳 — RAS의 S, Sports가 켜져요!',
+      '새로 지은 신식 체육관이에요.\n큰 학교처럼 여러 반이 나눠 쓰지 않아요 — 체육 시간엔 우리 반이 체육관 전체를 온전히 써요!',
       '파크골프, 티볼, 생존수영, 그리고 연 5회 승마 체험까지.\n모든 체육 프로그램은 학비 부담 없이 전액 지원해요.',
       '체육관은 학교 행사장도 돼요.\nAI 페스티벌, 찾아오는 문화체험 공연, 이웃 학교와의 교류회가 여기서 열려요.',
     ], detail: [
+      '## 우리 체육관의 자랑',
+      '• 새로 지은 신식 체육관',
+      '• 큰 학교와 달리 한 반이 체육관 전체를 온전히 사용',
       '## 체육 활동 — 학비 ZERO 전액 지원',
       '• 놀이 보장 및 체력 챌린지 · 체력측정',
       '• 승마 체험 연 5회(승마체험학습교 선정)',
@@ -210,6 +217,7 @@ export const TOUR = {
       { group: '🎪 체육관 행사', title: '정림 AI 페스티벌 현장', url: 'https://youtu.be/wF1RHiRFyis' },
       { group: '🎪 체육관 행사', title: '춤신춤왕 정림초(찾아오는 문화체험 공연)', url: 'https://youtu.be/CUGtZ_Z5Qcc' },
       { group: '🎪 체육관 행사', title: '정림초X향남초 한마음 교류회', url: 'https://youtu.be/UEihW-gnmCQ' },
+      { group: '🎪 체육관 행사', title: '동탄어린이집 친구들의 정림초 방문', url: 'https://youtu.be/XHdQ7gVeE98' },
     ], photos: [] },
 
     // ---------- 방과 후 · 함께 자라는 곳 ----------
@@ -229,7 +237,6 @@ export const TOUR = {
     kinder: { on: true, name: '유치원', where: '본관 1층 서쪽 유치원', stamp: '🧸', pages: [
       '안녕하세요, 유치원선생님이에요. 여기는 정림초 병설유치원이에요.\n초등학교 언니·오빠들과 한 울타리 안에서 함께 자라요.',
     ], videos: [
-      { title: '동탄어린이집 친구들의 정림초 방문', url: 'https://youtu.be/XHdQ7gVeE98' },
       { title: '어서와요 정림마트', url: 'https://youtu.be/HF4UEusGK58' },
     ], photos: [] },
     nurse: { on: true, name: '보건실', where: '서관 1층 보건실', stamp: '🩹', pages: [
