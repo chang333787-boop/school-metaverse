@@ -90,7 +90,6 @@ export const TOUR = {
       { group: '🏫 학교 소개', title: '2026년 새로워진 정림초', url: 'https://youtu.be/YGX3vSHPAeQ' },
       { group: '📵 폰 프리 스쿨', title: '폰프리스쿨 선포식, 정림초의 즐거운 시작!', url: 'https://youtu.be/DlcB5Fwwk2g' },
       { group: '📵 폰 프리 스쿨', title: '폰프리스쿨 실천학교 현판식', url: 'https://youtu.be/g1WvXHKe5OQ' },
-      { group: '📵 폰 프리 스쿨', title: '폰프리 스쿨 추석 미션 — 전통놀이', url: 'https://youtu.be/Ut1kA2VW5Ac' },
       { group: '🎉 학교 생활', title: '3월 생일 축하 파티', url: 'https://youtu.be/OpZYoec4g1Y' },
       { group: '🎉 학교 생활', title: '교실에서 만나는 특별한 직업 체험', url: 'https://youtu.be/9lsv5C1FcgQ' },
       { group: '🎉 학교 생활', title: '우리 문화의 맛과 멋 — 전통 문화 체험', url: 'https://youtu.be/x1IuWnofh4U' },
@@ -218,7 +217,6 @@ export const TOUR = {
       { group: '🎪 체육관 행사', title: '춤신춤왕 정림초(찾아오는 문화체험 공연)', url: 'https://youtu.be/CUGtZ_Z5Qcc' },
       { group: '🎪 체육관 행사', title: '정림초X향남초 한마음 교류회', url: 'https://youtu.be/UEihW-gnmCQ' },
       { group: '🎪 체육관 행사', title: '동탄어린이집 친구들의 정림초 방문', url: 'https://youtu.be/XHdQ7gVeE98' },
-      { group: '🎪 체육관 행사', title: '대한민국 화이팅! 월드컵 응원', url: 'https://youtu.be/Rh4pgUhMd4A' },
     ], photos: [] },
 
     // ---------- 방과 후 · 함께 자라는 곳 ----------
@@ -267,8 +265,7 @@ export const TOUR = {
       '• 교장실 031-352-2855',
       '• 경기도 화성시 정남면 망월길 69',
     ], videos: [
-      { title: '교장선생님 인사', url: '' },   // ← 교장선생님 인사 영상 주소를 여기에(빈 칸이면 목록에 안 보여요)
-      { title: '교장선생님과 함께하는 파크골프', url: 'https://youtu.be/wS_2b9zL6IA' },
+      { title: '교장선생님 인사', url: '' },   // ← 교장선생님 인사 영상 주소를 여기에(빈 칸이면 🎬 버튼이 안 보여요 · 교사 09-29: 교장실은 인사 영상 자리만)
     ], photos: [] },
 
     // ---------- 각 반·사랑반(도장 없이 담임선생님 소개만 — 반마다 한두 줄 더 쓰셔도 좋아요) ----------
