@@ -91,7 +91,7 @@ export function makeMeta(SCHOOL) {
     '주차장': M('parking', 'yard', null, ['car']),
     '주차장(북쪽)': M('parking-north', 'yard', null, ['car']),
     '뒷길': M('back-lane', 'path', null),
-    '텃밭': M('garden', 'garden', null),
+    '텃밭': M('garden', 'garden', null, [], { multi: true }),                  // GARDEN-2: 서쪽 본 텃밭(garden) + 동쪽 넓힌 텃밭(garden-2)
     '텃밭 길': M('garden-path', 'path', null),
     '큰 나무 잔디밭': M('big-tree-lawn', 'yard', null),
     '노란 창고': M('shed', 'storage', null, [], { indoor: false }),
@@ -111,12 +111,12 @@ export function makeMeta(SCHOOL) {
     X(-42.5, 53.5, SCHOOL.frontYard.walkS, T.fieldZ, (YD + FD) / 2, '앞뜰 잔디 둔덕', 'front-slope', 'yard', null, [], { yr: [FD - 0.4, YD + 1.0] }),
     X(-86, B.front.x[0], -86, T.westZ, YD, '서쪽 대지', 'west-yard', 'yard'),                                   // 체육관 둘레·서관 서쪽(체육관·주차장 구역이 더 좁아 그쪽이 이긴다)
     X(-86, SCHOOL.garden.x[0], -86, SCHOOL.parking.z[0], YD, '북쪽 둘레길', 'north-lane', 'path'),
-    X(SCHOOL.garden.x[0], 60, -86, SCHOOL.garden.z[0], YD, '북쪽 둘레길', 'north-lane-e', 'path'),
+    X(SCHOOL.garden.x[0], SCHOOL.garden.x[1], -86, SCHOOL.garden.z[0], YD, '북쪽 둘레길', 'north-lane-e', 'path'),   // GARDEN-2: 동쪽은 넓힌 텃밭이 울타리까지
     X(B.wings[0].x[1], B.kitchen.x[0], B.wings[0].z[0] - 12, B.wings[0].z[0], YD, '뒷길', 'back-lane-n', 'path'),   // 뒷길(서관|급식동 틈)이 북쪽으로 이어지는 칸
     X(B.kitchen.x[0], SCHOOL.garden.x[0], B.wings[0].z[0] - 12, B.kitchen.z[0], YD, '급식동 뒤', 'cafe-back', 'path'),   // 주차장(북쪽) 경계 = 서관 뒤 12m(world.js 주차장 구역과 같은 식)
     X(SCHOOL.parking.x[1], SCHOOL.garden.x[0], SCHOOL.parking.z[0], B.wings[0].z[0] - 12, YD, '노란 창고 옆', 'shed-side', 'yard'),
     X(SCHOOL.garden.x[0] - 5, 60, SCHOOL.garden.z[1], B.eastWing.z[0], YD, '텃밭 앞 길', 'garden-lane', 'path'),
-    X(SCHOOL.garden.x[1], 60, SCHOOL.garden.z[0], SCHOOL.garden.z[1], YD, '텃밭 동쪽', 'garden-east', 'yard'),
+    X(SCHOOL.garden.x[1], 60, SCHOOL.garden.east[1], SCHOOL.garden.z[1], YD, '텃밭 동쪽', 'garden-east', 'yard'),   // GARDEN-2: 넓힌 텃밭 남쪽(침엽수·디딤돌 길 · 데크 북쪽)
     X(B.front.x[1], 60, B.front.z[0], T.fieldZ, YD, '본관 동쪽 끝', 'main-east', 'yard'),
     X(SCHOOL.eastFenceX, SCHOOL.eastPath.x[0], T.fieldZ, SCHOOL.gate[1] - 2, FD, '동쪽 통학로', 'east-path-verge', 'path'),   // 초록 철망과 통학로 사이 띠
     X(SCHOOL.eastPath.x[1] + 3, 60, T.fieldZ, 50, FD, '동쪽 가장자리', 'east-strip', 'yard'),

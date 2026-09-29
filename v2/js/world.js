@@ -4,7 +4,7 @@
 //  ④ 16m 청크 병합 ⑤ 충돌 AABB 전용 ⑥ 예산 dc≤300·sim≤1ms
 // ============================================================
 import * as THREE from 'three';
-import { SCHOOL } from './layout.js?v=15';   // LAYOUT-3 실측 배치(v1의 js/data.js는 참고용으로 그대로)
+import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1의 js/data.js는 참고용으로 그대로)
 
 // 바깥 지형 높이(main.js 물리·검사도 같은 함수를 쓴다): 앞뜰·체육관 대지 = yard, 그 밖(둔덕 아래·운동장) = field
 const TRN = SCHOOL.terrain;
@@ -5186,9 +5186,12 @@ export function buildWorld(scene) {
     patQuad(MOW, PK.x[1], GP[0][0], FZ(0), zS, Y + 0.012, false, GR);                          // 창고 둘레·동쪽 풀밭(위성 B-9)
     patQuad(MOW, GP[0][0], GP[1][0], FZ(0), GP[0][1], Y + 0.012, false, GR);                  // 텃밭 북쪽 띠
     byQuad(MOW, [[GP[1][0], FZ(GP[1][0])], [GP[2][0], FZ(GP[2][0])], GP[2], GP[1]], Y + 0.012, GR);
-    byQuad(MOW, [GP[2], [50, FZ(50) + 0.9], [50, GP[3][1]], GP[3]], Y + 0.012, GR);             // 텃밭 동쪽 큰 나무 잔디밭
-    byQuad(MOW, [[GP[2][0], FZ(GP[2][0])], [50, FZ(50)], [50, FZ(50) + 0.9], GP[2]], Y + 0.012, GR);
-    byQuad(MOW, [[50, FZ(50)], [60, FZ(60)], [60, DZ[0]], [50, DZ[0]]], Y + 0.012, GR);         // 데크 북쪽
+    // GARDEN-2: 비스듬한 동쪽 끝 너머 = 텃밭(검은 매트 — 아래 텃밭 절) · 잔디는 울타리 앞 띠 · 동쪽 울타리 앞 틈 · 남쪽 침엽수 줄만
+    const [EX, ZS] = SCHOOL.garden.east, gxe0 = z => GP[3][0] + (z - GP[3][1]) * (GP[3][0] - GP[2][0]) / (GP[3][1] - GP[2][1]);
+    byQuad(MOW, [[GP[2][0], FZ(GP[2][0])], [EX, FZ(EX)], [EX, FZ(EX) + 0.9], GP[2]], Y + 0.012, GR);   // 북쪽 울타리 앞 띠
+    byQuad(MOW, [[EX, FZ(EX)], [60, FZ(60)], [60, DZ[0]], [EX, DZ[0]]], Y + 0.012, GR);                 // 동쪽 울타리 앞 틈
+    byQuad(MOW, [[gxe0(ZS), ZS], [50, ZS], [50, GP[3][1]], GP[3]], Y + 0.012, GR);                     // 텃밭 남쪽 큰 나무 잔디밭(침엽수·디딤돌 길)
+    byQuad(MOW, [[50, ZS], [EX, ZS], [EX, DZ[0]], [50, DZ[0]]], Y + 0.012, GR);                          // 데크 북쪽
     patQuad(MOW, GP[0][0], 50, GP[4][1], PZ[0], Y + 0.012, false, GR);                          // 흙길 북쪽(텃밭 앞)
     byQuad(MOW, [[xd(PZ[0]), PZ[0]], [PK.x[1], zS], [GP[0][0], zS], [GP[0][0], PZ[0]]], Y + 0.012, GR);
     byQuad(MOW, [[xd(PZ[1]), PZ[1]], [XB, PZ[1]], [XB, kz0o], [kx0o, kz0o]], Y + 0.012, GR);  // 흙길 남쪽(바위 둘레 화단·생울타리)
@@ -5285,6 +5288,7 @@ export function buildWorld(scene) {
     const GD = SCHOOL.garden, gxe = z => GP[3][0] + (z - GP[3][1]) * (GP[3][0] - GP[2][0]) / (GP[3][1] - GP[2][1]);   // 비스듬한 동쪽 끝 x
     byQuad('asph', [GP[0], GP[1], [GP[1][0], GP[4][1]], GP[4]], Y + 0.012, MAT);
     byQuad('asph', [GP[1], GP[2], GP[3], [GP[1][0], GP[3][1]]], Y + 0.012, MAT);
+    byQuad('asph', [GP[2], [EX, FZ(EX) + 0.9], [EX, ZS], [gxe(ZS), ZS]], Y + 0.012, MAT);   // GARDEN-2 동쪽 넓힌 텃밭
     const crop = (kind, a, b, rz) => {
       // x<16(청크 0열)은 건물 청크에 합침 — 가까운 층 청크 +1 방지. 남쪽 두 줄(z -64 남쪽)은 텃밭 칸(z -64 북쪽 청크)에 at으로 모은다:
       //   청크 경계 -64가 텃밭 남쪽 띠를 가르면 흙길·생울타리 칸의 경계 구가 작물까지 커져, 서관 안에서 동쪽을 볼 때 절두체에 들었다(09-24 리뷰)
@@ -5314,6 +5318,18 @@ export function buildWorld(scene) {
         dBox(b - a - 0.3, 0.03, 0.8, 0x2b2c2f, (a + b) / 2, Y + 0.18, rz, { at: [(a + b) / 2, -64.5] });   // 둥근 윗면(비닐이 부푼 가운데 — 살짝 밝은 띠)
         crop(kind, a, b, rz); });
     });
+    // GARDEN-2: 동쪽 넓힌 텃밭 — 서쪽 두둑과 같은 줄(rz)을 비스듬한 끝 너머로 이어 동쪽 울타리 앞까지 · 북쪽은 울타리 앞 띠까지 더.
+    //   작물은 가벼운 것만(감자·멀칭 새싹·콩 한 줄 — 한 화면 삼각형 예산) · 비스듬한 끝에서 1.2m 띄워 서쪽 두둑과 고랑 하나로 갈린다
+    { const ZN = x => FZ(x) + 0.9, xN = z => { const ax = GP[2][0], az = GP[2][1], bz = ZN(EX); return ax + (z - az) * (EX - ax) / (bz - az); };   // 북쪽 끝선 z → x
+      const EPLAN = [['potato', 'bare'], ['bare', 'mulch'], ['bean', 'bare'], ['mulch', 'bare'], ['bare', 'potato'], ['mulch', 'bare']];   // bare = 아직 안 심은 검은 비닐 두둑 · 과학실 창밖으로 보여 작물은 절반만(한 화면 삼각형 15만 예산 — 다 심으면 +3.9k)
+      for (let i = 2, k = 0; ; i++, k++) {
+        const rz = GP[4][1] - 1.25 - i * 2.45; if (rz - 0.6 < ZN(EX) + 0.3) break;
+        const a0 = Math.max(gxe(rz + 0.6) + 1.2, rz - 0.6 < GP[2][1] + 0.3 ? xN(rz - 0.9) + 0.3 : -1e9), b0 = EX - 0.8; if (b0 - a0 < 3) continue;
+        const pl = EPLAN[k % EPLAN.length], sl = (b0 - a0 - 0.5 * (pl.length - 1)) / pl.length;
+        pl.forEach((kind, j) => { const a = a0 + j * (sl + 0.5), b = a + sl;
+          addBox(b - a, 0.18, 1.2, VIN, (a + b) / 2, Y, rz);
+          dBox(b - a - 0.3, 0.03, 0.8, 0x2b2c2f, (a + b) / 2, Y + 0.18, rz);
+          if (kind !== 'bare') crop(kind, a, b, rz); }); } }
     // 휴경 마른 풀밭(서쪽 · 영상 v04 f_007~012 — 누렇게 마른 풀 + 드문드문 풀포기)
     { const fz0 = GP[0][1] + 0.2, fz1 = GP[4][1] - 0.2;
       patQuad('dirt', GP[0][0] + 0.2, FAL, fz0, fz1, Y + 0.02, false, 0xc9bf86);
@@ -5421,7 +5437,8 @@ export function buildWorld(scene) {
     zones.push({ x0: PK.x[1], x1: SHU[0].x[1] + 0.25, z0: SHU[0].z[0] - 0.25, z1: zS, y: Y, label: '노란 창고' });
     zones.push({ x0: Math.max(xd(PZ[1]), PK.x[1]), x1: XB, z0: GP[4][1], z1: kz0o, y: Y, label: '텃밭 길' });   // [integ] 서끝 = 주차장(북쪽) 동끝(겹침 제거)
     zones.push({ x0: GD.x[0], x1: GD.x[1], z0: GD.z[0], z1: GD.z[1], y: Y, label: '텃밭' });
-    zones.push({ x0: GP[3][0], x1: 50, z0: -66, z1: GP[4][1], y: Y, label: '큰 나무 잔디밭' });
+    zones.push({ x0: GD.x[1], x1: GD.east[0], z0: -86, z1: GD.east[1], y: Y, label: '텃밭' });   // GARDEN-2 동쪽 넓힌 텃밭(계약 multi → garden-2)
+    zones.push({ x0: GP[3][0], x1: 50, z0: GD.east[1], z1: GP[4][1], y: Y, label: '큰 나무 잔디밭' });
     zones.push({ x0: DX[0], x1: DX[1], z0: DZ[0], z1: DZ[1], y: DT, label: '텃밭 쉼터' });
     zones.push({ x0: XB, x1: DX[0], z0: PZ[0], z1: -39.35, y: Y, label: '동관 뒤뜰' });
     zones.push({ x0: XB, x1: DX[0], z0: -39.35, z1: fz0 - 0.3, y: Y, label: '마당 동쪽 입구' });   // COURT-3: 가운데 마당 동쪽 끝 너머 — 전봇대·화분 A(영상 q_106~q_113)
