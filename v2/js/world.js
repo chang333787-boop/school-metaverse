@@ -4,7 +4,7 @@
 //  ④ 16m 청크 병합 ⑤ 충돌 AABB 전용 ⑥ 예산 dc≤300·sim≤1ms
 // ============================================================
 import * as THREE from 'three';
-import { SCHOOL } from './layout.js?v=14';   // LAYOUT-3 실측 배치(v1의 js/data.js는 참고용으로 그대로)
+import { SCHOOL } from './layout.js?v=15';   // LAYOUT-3 실측 배치(v1의 js/data.js는 참고용으로 그대로)
 
 // 바깥 지형 높이(main.js 물리·검사도 같은 함수를 쓴다): 앞뜰·체육관 대지 = yard, 그 밖(둔덕 아래·운동장) = field
 const TRN = SCHOOL.terrain;
@@ -6059,7 +6059,7 @@ export function buildWorld(scene) {
     // TOUR-1 견학 안내 선생님 3명(사용자 09-27 — 'NPC를 더 늘리지 않는다'의 유일한 예외: 안내가 필요한데 사람이 없던 곳에 한 명씩 · 직함만, 이름 없음)
     //   체육관 = 무대 앞 가운데(무대 계단 둘 사이) 남쪽(코트)을 보고 · 컴퓨터실 = 앞 화면(칠판) 앞 설명 자리 · 과학실 = 칠판 앞 시연대 뒤(학생 쪽 = 서) · SCI-2(09-28 아이 의견·교사 확인): 과학선생님 = 남자
     { const TG = [];
-      { const sp = (npcSpot['체육관'] || [])[0]; if (sp) TG.push(['pe', '체육선생님', '남', { ...sp, pose: 'stand', role: 'pe' }]); }
+      { const sp = (npcSpot['체육관'] || [])[0]; if (sp) TG.push(['pe', '체육선생님', '여', { ...sp, pose: 'stand', role: 'pe' }]); }
       { const L = seatsOf['컴퓨터실']; if (L) TG.push(['ai', 'AI 교육 선생님', '여', { x: L.teacher.x, y: L.y, z: L.teacher.z, face: L.tFace ?? 1, pose: 'explain', role: 'ai' }]); }
       { const sp = (npcSpot['과학실'] || [])[0]; if (sp) TG.push(['science', '과학선생님', '남', { ...sp, pose: 'explain', role: 'sci' }]); }
       TG.forEach(([key, nm, sx, sp]) => { const top = person(sp.x, sp.y, sp.z, sx, 1.1, sp.face, sp.pose, sp); tagSign(sign(nm, sp.x, top + 0.28, sp.z, (sp.face & 1) ? Math.PI / 2 : 0, 0.22), nm, top + 0.28); PEOPLE[PEOPLE.length - 1].tour = key;   // 이름 팻말 = 보는 쪽으로(동·서를 보는 사람은 옆으로 돌려 — 앞에서 읽힘)

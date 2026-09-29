@@ -1,6 +1,6 @@
 // 우리 학교 견학(TOUR-1 · 09-27 사용자 "학교홍보로 써도될거같아 메타버스 견학 느낌으로 npc누르면 npc가 우리학교 설명해주고 도장도 찍어주고") — 정본 문서 = docs/map_api.md §11
 // PROMO-1(09-29 교사 "견학 모드를 홍보용으로"): 루트 주소(홍보판)는 ▶ 시작하기 → 바로 이 견학. 지점 = 버스·놀이터·숲놀이터·운동장·큰 나무·텃밭·체육관·컴퓨터실·각 반·급식실·돌봄·유치원·보건실·도서관·교장실
-//   ① 이야기 창의 [🎬 관련 영상 보기] = 유튜브를 화면 안 창(iframe)으로 재생(링크로 나가지 않음) · [🖼 사진 보기] = 사진 넘겨 보기 — 둘 다 tour_data.js의 videos·photos
+//   ① 이야기 창의 [🎬 관련 영상 보기] = 유튜브를 화면 안 창(iframe)으로 재생(링크로 나가지 않음) · 📷 사진 = 사진 넘겨 보기 — 둘 다 tour_data.js의 videos·photos
 //   ② 📖 정림초 도감(칩·C키) = 도장 모음 — 받은 곳은 눌러 다시 읽기(영상 포함) · 안 간 곳은 눌러 길 안내
 //   ③ 교감선생님(hub: true) = 도장 대신 [📖 학교 정보 모두 보기] — 돌지 않아도 모든 곳의 이야기·영상을 도감에서 바로 읽기
 // 흐름: 스쿨버스 앞 교감선생님 곁에서 시작 → 환영 창(tour_data.js welcome + 조작 안내) → 선생님(guide)·안내판(board)을 찾아가
@@ -29,6 +29,7 @@ const CSS = `
 #tour-talk .pg{font-size:12px;color:#8a7a66;margin-top:4px;min-height:1em}
 #tour-ui #tour-talk button.x{position:absolute;right:6px;top:6px;min-width:36px;min-height:36px;padding:0;background:transparent;color:#a08462;font-size:18px}
 #tour-talk .tmenu{position:absolute;right:10px;bottom:calc(100% + 8px);margin:0;padding:6px;list-style:none;background:rgba(255,251,240,.98);border:3px solid #e8c77a;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.25);min-width:210px;transform-origin:bottom right;animation:tmPop .22s cubic-bezier(.2,1.5,.4,1) both}
+#tour-talk .tmenu[data-title]::before{content:attr(data-title);display:block;grid-column:1/-1;font-size:13px;font-weight:800;color:#8a5a1e;padding:2px 8px 4px}
 #tour-talk .tmenu li{position:relative;padding:8px 16px 8px 32px;border-radius:9px;font-size:17px;font-weight:800;color:#3a2e22;cursor:pointer;white-space:nowrap}
 #tour-talk .tmenu li.on{background:#fff1c6}
 #tour-talk .tmenu li.on::before{content:'▶';position:absolute;left:11px;color:#d9463a;animation:tmNudge .45s ease-in-out infinite alternate}
@@ -169,42 +170,37 @@ export default async function start(map, params = {}) {
 
   // ---------- 영상·사진 창(유튜브 = 화면 안 iframe · 링크로 나가지 않음) ----------
   let media = null;   // { el, s, tab }
-  function closeMedia() { if (!media) return; media.el.remove(); media = null; }   // iframe째 지운다 = 재생 멈춤
-  function openMedia(s, kind) {
+  function closeMedia() { if (!media) return; media.el.remove(); media = null; if (talk && talk.menu) buildMenu(); }   // iframe째 지운다 = 재생 멈춤 · 목록의 ✔(본 것)를 새로
+  function openMedia(s, kind, i = 0) {   // 목록에서 고른 영상 하나 / 사진 하나(사진은 ‹ › 로 넘겨 보기)
     if (media) media.el.remove();
     const el = mk('div', 'tp'); el.id = 'tour-media'; el.setAttribute('role', 'dialog');
     const hd = mk('div', 'hd', null, el); const h = mk('h3', '', '', hd);
     const x = btn('✕', 'sub x', () => closeMedia(), hd); x.setAttribute('aria-label', '닫기');
-    const tabs = mk('div', 'tabs', null, el), body = mk('div', '', null, el), cap = mk('div', 'cp', '', el);
-    const T = [...s.videos.map((v, i) => ({ k: 'v', i, t: '🎬 ' + (v.title || '영상 ' + (i + 1)) })),
-      ...(s.photos.length || SHOW_EMPTY ? [{ k: 'p', i: 0, t: '🖼 사진' + (s.photos.length ? ' ' + s.photos.length + '장' : '') }] : [])];
+    const body = mk('div', '', null, el), cap = mk('div', 'cp', '', el);
     const soon = (parent, ico, what) => { const e = mk('div', 'em', null, parent); mk('div', '', ico + ' ' + what + ' 준비 중이에요', e); mk('small', '', '곧 우리 학교 ' + what + '이 올라와요!', e); };
-    media = { el, s, tab: -1, pi: 0 };
-    const draw = ti => {
-      media.tab = ti; const t = T[ti]; body.textContent = ''; cap.textContent = '';
-      [...tabs.children].forEach((b, k) => b.classList.toggle('on', k === ti));
-      if (t.k === 'v') {
-        const v = s.videos[t.i]; h.textContent = s.name + (v.title && v.title !== s.name ? ' · ' + v.title : '');
-        const vw = mk('div', 'vw', null, body);
-        if (!v.id) { soon(vw, '🎬', '영상'); return; }
-        const f = document.createElement('iframe');
+    media = { el, s, pi: i };
+    (s.seen || (s.seen = new Set())).add(kind + i);
+    if (kind === 'v') {
+      const v = s.videos[i] || {}; h.textContent = s.name + (v.title && v.title !== s.name ? ' · ' + v.title : '');
+      const vw = mk('div', 'vw', null, body);
+      if (!v.id) soon(vw, '🎬', '영상');
+      else { const f = document.createElement('iframe');
         f.src = 'https://www.youtube-nocookie.com/embed/' + v.id + '?autoplay=1&rel=0&playsinline=1&modestbranding=1';
         f.title = s.name + ' 영상'; f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-        f.allowFullscreen = true; f.referrerPolicy = 'strict-origin-when-cross-origin'; vw.appendChild(f);
-      } else {
-        h.textContent = s.name + ' · 사진';
-        if (!s.photos.length) { soon(mk('div', 'ph', null, body), '🖼', '사진'); return; }
-        const ph = mk('div', 'ph', null, body), img = mk('img', '', null, ph);
-        const show = () => { const p = s.photos[media.pi]; img.src = p.src; img.alt = p.caption || s.name + ' 사진'; cap.textContent = (s.photos.length > 1 ? (media.pi + 1) + ' / ' + s.photos.length + (p.caption ? ' · ' : '') : '') + p.caption; };
-        img.addEventListener('error', () => { cap.textContent = '사진을 불러오지 못했어요 — tour_data.js의 사진 주소(src)를 확인해 주세요'; });
-        if (s.photos.length > 1) { btn('‹', 'pv', () => { media.pi = (media.pi + s.photos.length - 1) % s.photos.length; show(); }, ph).setAttribute('aria-label', '앞 사진');
-          btn('›', 'nx', () => { media.pi = (media.pi + 1) % s.photos.length; show(); }, ph).setAttribute('aria-label', '다음 사진'); }
-        media.flip = d => { if (s.photos.length > 1) { media.pi = (media.pi + s.photos.length + d) % s.photos.length; show(); } };
+        f.allowFullscreen = true; f.referrerPolicy = 'strict-origin-when-cross-origin'; vw.appendChild(f); }
+    } else {
+      h.textContent = s.name + ' · 사진';
+      if (!s.photos.length) soon(mk('div', 'ph', null, body), '📷', '사진');
+      else {
+        const n = s.photos.length, ph = mk('div', 'ph', null, body), img = mk('img', '', null, ph);
+        const show = () => { const p = s.photos[media.pi]; s.seen.add('p' + media.pi); img.src = p.src; img.alt = p.caption || s.name + ' 사진'; cap.textContent = (n > 1 ? (media.pi + 1) + ' / ' + n + (p.caption ? ' · ' : '') : '') + p.caption; };
+        img.addEventListener('error', () => { cap.textContent = '사진을 불러오지 못했어요 — 사진 파일 이름·주소를 확인해 주세요'; });
+        media.flip = d => { if (n > 1) { media.pi = (media.pi + n + d) % n; show(); } };
+        if (n > 1) { btn('‹', 'pv', () => media.flip(-1), ph).setAttribute('aria-label', '앞 사진'); btn('›', 'nx', () => media.flip(1), ph).setAttribute('aria-label', '다음 사진'); }
         show();
       }
-    };
-    if (T.length > 1) T.forEach((t, k) => btn(t.t, '', () => draw(k), tabs)); else tabs.style.display = 'none';
-    draw(Math.max(0, kind === 'p' ? T.findIndex(t => t.k === 'p') : 0)); focus(x); map.sfx('pick');
+    }
+    focus(x); map.sfx('pick');
   }
 
   // ---------- 타자 효과(게임처럼 한 글자씩 · 다다다 소리) — 누르면 먼저 끝까지, 다 나오면 ▼ ----------
@@ -227,7 +223,7 @@ export default async function start(map, params = {}) {
 
   // ---------- 이야기 창(RPG 선택 목록 · 교사 09-29 '1번 — 가벼운 느낌') ----------
   //   대사는 타자로 · 쪽 넘김 = E/Enter/Space/✋/창 누르기 · 마지막 쪽이 다 나오면 창 오른쪽 위에 선택 목록(▶ 커서)
-  //   ↑↓(W·S) 이동 · E/Enter/Space/✋ 고르기 · 마우스·터치는 바로 누르기 · Esc/✕ 닫기. 고를 것: 🎬 영상 · 🖼 사진 · 🖍 도장 · 📖 모두 보기(교감) · ◀ 도감 · 👋 인사
+  //   ↑↓(W·S) 이동 · E/Enter/Space/✋ 고르기 · 마우스·터치는 바로 누르기 · Esc/✕ 닫기. 고를 것: 🎬 영상(여러 개면 목록) · 📷 사진(목록) · ⭐ 도장 · 📖 모두 보기(교감) · ◀ 도감 · 👋 인사
   let talk = null;   // { el, o, i, openedAt, typing, fin, tm, menu, items, cur, menuAt, … }
   let closedAt = -1e9;
   function closeTalk(toBook) {
@@ -243,7 +239,7 @@ export default async function start(map, params = {}) {
     const nm = mk('div', 'nm', o.name, bd); if (o.sub) mk('small', '', o.sub, nm);
     const tx = mk('div', 'tx', '', bd), pg = mk('div', 'pg', '', bd);
     btn('✕', 'x', () => closeTalk(), el).setAttribute('aria-label', '닫기');
-    talk = { el, o, i: 0, openedAt: performance.now(), tx, pg, av, stamped: false, typing: false, tm: 0, fin: null, menu: null, items: [], cur: 0, menuAt: 0 };
+    talk = { el, o, i: 0, sub: null, openedAt: performance.now(), tx, pg, av, stamped: false, typing: false, tm: 0, fin: null, menu: null, items: [], cur: 0, menuAt: 0 };
     el.addEventListener('click', e => { e.stopPropagation(); if (talk && !talk.menu) next(); });   // 창을 누르면 다음(글자가 나오는 중이면 끝까지)
     show(); map.sfx('pick');
     const s = o.spot; if (s && !s.hub) probePhotos(s).then(() => { if (talk && talk.o.spot === s && talk.menu) buildMenu(); });   // 찾은 사진 수를 목록 글자에
@@ -251,18 +247,31 @@ export default async function start(map, params = {}) {
   const canStamp = t => { const s = t.o.spot; return !!(s && !s.hub && !s.intro && !t.o.review && !stamps.has(s.key)); };
   function show() {
     const t = talk, P = t.o.pages, last = t.i >= P.length - 1;
-    if (t.menu) { t.menu.remove(); t.menu = null; }
+    if (t.menu) { t.menu.remove(); t.menu = null; } t.sub = null;
     t.pg.textContent = P.length > 1 ? (t.i + 1) + ' / ' + P.length : '';
     typeText(t, P[t.i], last ? () => buildMenu() : null);
   }
   const blipOK = () => !muted();
+  // 목록 두 단계(교사 09-29 "영상이 하나가 아니야 — 여러 개 중 하나 고르는 느낌, 사진도"): 🎬 영상 볼래요 → 영상 제목 목록 · 📷 사진 볼래요 → 사진 목록 · ◀ 뒤로(Esc)
+  //   본 것은 ✔ · 하나뿐이면 바로 연다 · 빈 영상 칸은 '(준비 중)'
   function menuItems(t) {
-    const s = t.o.spot, L = [], media = k => () => probePhotos(s).then(() => { if (talk && talk.o.spot === s) openMedia(s, k); });
-    if (s && !s.hub) {
-      if (s.videos.length) L.push({ k: 'v', t: '🎬 영상 볼래요' + (s.videos.length > 1 ? ' (' + s.videos.length + ')' : ''), f: media('v') });
-      if (s.photos.length || SHOW_EMPTY) L.push({ k: 'p', t: '🖼 사진 볼래요' + (s.photos.length ? ' (' + s.photos.length + ')' : ''), f: media('p') });
+    const s = t.o.spot, L = [], seen = k => (s && s.seen && s.seen.has(k) ? ' ✔' : ''), up = k => ({ k: 'up', t: '◀ 뒤로', f: () => { t.sub = null; buildMenu(k); } });
+    if (t.sub === 'v') {
+      s.videos.forEach((v, i) => L.push({ k: 'v' + i, t: '🎬 ' + (v.title || '영상 ' + (i + 1)) + (v.id ? '' : ' (준비 중)') + seen('v' + i), f: () => openMedia(s, 'v', i) }));
+      L.push(up('v')); return L;
     }
-    if (canStamp(t)) L.push({ k: 's', t: '🖍 도장 받을래요', f: stampIt });
+    if (t.sub === 'p') {
+      if (s.photos.length) s.photos.forEach((p, i) => L.push({ k: 'p' + i, t: '📷 ' + (p.caption || '사진 ' + (i + 1)) + seen('p' + i), f: () => openMedia(s, 'p', i) }));
+      else L.push({ k: 'p0', t: '📷 사진 (준비 중)', f: () => openMedia(s, 'p', 0) });
+      L.push(up('p')); return L;
+    }
+    if (s && !s.hub) {
+      if (s.videos.length) L.push({ k: 'v', t: '🎬 영상 볼래요' + (s.videos.length > 1 ? ' (' + s.videos.length + ')' : ''),
+        f: () => { if (s.videos.length === 1) openMedia(s, 'v', 0); else { t.sub = 'v'; buildMenu(); } } });
+      if (s.photos.length || SHOW_EMPTY) L.push({ k: 'p', t: '📷 사진 볼래요' + (s.photos.length ? ' (' + s.photos.length + ')' : ''),
+        f: () => probePhotos(s).then(() => { if (talk !== t) return; if (s.photos.length <= 1) openMedia(s, 'p', 0); else { t.sub = 'p'; buildMenu(); } }) });
+    }
+    if (canStamp(t)) L.push({ k: 's', t: '⭐ 도장 받을래요', f: stampIt });
     if (s && s.hub) L.push({ k: 'hub', t: '📖 학교 정보 모두 볼래요', f: () => { closeTalk(); openCard(true); } });
     if (t.o.back) L.push({ k: 'back', t: '◀ 도감으로 돌아가기', f: () => closeTalk(true) });
     L.push({ k: 'bye', t: t.o.end || '👋 안녕히 계세요', f: () => closeTalk() });
@@ -274,6 +283,7 @@ export default async function start(map, params = {}) {
     if (t.menu) t.menu.remove();
     t.items = menuItems(t);
     const m = t.menu = mk('ul', 'tmenu', null, t.el); m.setAttribute('role', 'listbox');
+    if (t.sub) m.dataset.title = t.sub === 'v' ? '🎬 어떤 영상을 볼까요?' : '📷 어떤 사진을 볼까요?';
     t.items.forEach((it, k) => { const li = mk('li', '', it.t, m); li.setAttribute('role', 'option');
       li.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') sel(k); });
       li.addEventListener('click', e => { e.stopPropagation(); sel(k, true); pick(true); }); });
@@ -330,14 +340,14 @@ export default async function start(map, params = {}) {
     for (const s of ALL) {
       const on = stamps.has(s.key), sl = btn('', 'sl' + (on ? ' on' : '') + (cardAll ? ' all' : ''), () => pickCard(s), gr);
       mk('div', 'ci', s.stamp, sl); mk('div', '', s.name, sl);
-      if (hasVid(s) || s.photos.length) mk('span', 'mi', hasVid(s) ? '🎬' : '🖼', sl);
+      if (hasVid(s) || s.photos.length) mk('span', 'mi', hasVid(s) ? '🎬' : '📷', sl);
       sl.title = s.where + (on ? ' · ✔ 도장' : '');
     }
     if (INTRO.length) {   // 각 반 소개(도장 없음) — 언제든 눌러 읽기
       mk('div', 'sh', '🏫 우리 반 소개 — 담임선생님이 반을 소개해요(도장 없음)', card);
       const g2 = mk('div', 'gr', null, card);
       for (const s of INTRO) { const sl = btn('', 'sl all', () => { const all = cardAll; closeCard(); talkTo(s, { review: true, back: () => openCard(all) }); }, g2);
-        mk('div', 'ci', s.stamp, sl); mk('div', '', s.name, sl); if (hasVid(s) || s.photos.length) mk('span', 'mi', hasVid(s) ? '🎬' : '🖼', sl); sl.title = s.where; }
+        mk('div', 'ci', s.stamp, sl); mk('div', '', s.name, sl); if (hasVid(s) || s.photos.length) mk('span', 'mi', hasVid(s) ? '🎬' : '📷', sl); sl.title = s.where; }
     }
     const rw = mk('div', 'rw', null, card);
     if (!cardAll) btn(resetArm ? '정말 지울까요? 한 번 더 누르세요' : '도장 모두 지우기', 'sub', () => {
@@ -413,7 +423,7 @@ export default async function start(map, params = {}) {
       if (talk.menu && ['ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(e.code)) { e.stopPropagation(); e.preventDefault(); sel(talk.cur + (e.code === 'ArrowUp' || e.code === 'KeyW' ? -1 : 1)); return; }
       if (['KeyE', 'Enter', 'Space', 'NumpadEnter'].includes(e.code)) {
         e.stopPropagation(); e.preventDefault(); if (!e.repeat && performance.now() - talk.openedAt > 200) next(); return; }
-      if (e.code === 'Escape') { e.stopPropagation(); closeTalk(); return; }
+      if (e.code === 'Escape') { e.stopPropagation(); if (talk.sub) { const k = talk.sub; talk.sub = null; buildMenu(k); } else closeTalk(); return; }   // 두 번째 목록이면 뒤로
       return;
     }
     if (card) { if (e.code === 'Escape' || e.code === 'KeyC') { e.stopPropagation(); closeCard(); } return; }

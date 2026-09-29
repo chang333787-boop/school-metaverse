@@ -1,14 +1,14 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { buildWorld } from './world.js?v=133';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
-import { SCHOOL } from './layout.js?v=14';   // LAYOUT-3 실측 배치(v1 data.js 대신)
+import { buildWorld } from './world.js?v=134';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { SCHOOL } from './layout.js?v=15';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=11';       // MAP-API-1: 구역 계약표·출발점·표지점
 import { createMapApi } from './mapapi.js?v=22';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=7';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=3';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
-import { createActions } from './actions.js?v=1';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
+import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
 // TITLE-1: 오프닝을 켤지 — 게이트(?check=1)·검진(?health=1)·사진 대조(?shot)·게임 주소(?game·?tour=1)는 예전 그대로(오프닝 없음). index.html 로딩 막도 같은 규칙
@@ -718,7 +718,7 @@ function act(h) {
     case 'motto': A('look', { msg: '📜 우리 학교 교훈 — 바르고 슬기롭게' }); break;
     case 'flag': A('salute', { msg: '🇰🇷 태극기가 바람에 펄럭여요' }); break;
     case 'slide':
-      ACTS.stop(true); ACT.anim = { from: h.from, to: h.to, t: 0, dur: 0.9 }; P.yaw = Math.PI; toast('🛝 슝~'); break;
+      ACTS.stop(true); ACT.anim = { from: h.from, to: h.to, t: 0, dur: 0.9 }; P.yaw = Math.PI; toast('🎢 슝~'); break;
   }
 }
 addEventListener('keydown', e => { if (e.code === 'KeyE' && !e.repeat) { if (hotNear) act(hotNear); else MAP?.idleAct(); } });   // ENGINE-1: 할 것이 없을 때 행동 = 게임 몫(들고 있는 물건 내려놓기)

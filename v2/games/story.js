@@ -175,11 +175,11 @@ export default async function start(map, params = {}) {
     const crayonMarks = () => { extra = CR.filter((c, i) => crH[i]).map(c => ({ x: c[0], z: c[1], color: '#ffd23c', r: 2 })); marks(); };
     CR.forEach((c, i) => { const n = nav.snap(c[0], 0, c[1], 2); if (n >= 0) { const p = nav.pos(n); c[0] = p[0]; c[1] = p[2]; }
       const mkr = map.mk.marker(c[0], 0.5, c[1], { color: [0xe74c3c, 0x2ecc71, 0x3498db][i] });
-      const ih = map.interact.add({ x: c[0], y: 0, z: c[1], r: 1.6, label: '🖍 크레파스 줍기', use: () => { ih.remove(); mkr.remove(); crH[i] = null; S.crayons++; map.sfx('pick'); map.hud.toast(D.crayon + ' (' + S.crayons + '/3)'); map.hud.chip('st-c', '🖍 ' + S.crayons + '/3'); crayonMarks(); } });
+      const ih = map.interact.add({ x: c[0], y: 0, z: c[1], r: 1.6, label: '🎨 크레파스 줍기', use: () => { ih.remove(); mkr.remove(); crH[i] = null; S.crayons++; map.sfx('pick'); map.hud.toast(D.crayon + ' (' + S.crayons + '/3)'); map.hud.chip('st-c', '🎨 ' + S.crayons + '/3'); crayonMarks(); } });
       crH[i] = { ih, mkr }; });
-    map.hud.chip('st-c', '🖍 0/3');
+    map.hud.chip('st-c', '🎨 0/3');
     const shoe = map.poi('hot:shoes:entrance-porch:1'), SH = shoe ? { x: shoe.x, y: shoe.y, z: shoe.z } : spot(12.5, -21.6);
-    objective('현관 신발장 살펴보기 (가는 길에 크레파스 🖍 줍기)', SH, '현관 신발장');
+    objective('현관 신발장 살펴보기 (가는 길에 크레파스 🎨 줍기)', SH, '현관 신발장');
     crayonMarks();
     await waitUse(SH, '🔍 신발장 살펴보기', 1.8); if (gone()) return;
     map.sfx('ding'); await map.note(D.shoeNote[0], D.shoeNote[1]); if (gone()) return;
@@ -297,7 +297,7 @@ export default async function start(map, params = {}) {
     endEl = mk('div', 'sp'); endEl.id = 'story-end';
     mk('div', 'story-rb', null, endEl); mk('h2', '', D.endTitle, endEl); mk('div', 'b', fill(D.endBody), endEl);
     const ul = mk('ul', '', null, endEl);
-    for (const t of ['🎭 맡은 일: ' + D.roleName[S.role], '🖍 주운 크레파스: ' + S.crayons + ' / 3', '🎁 그림 돌려준 방법: ' + D.giftName[S.gift], '🖼 그림 건 곳: ' + D.placeName[S.place], '⏱ 걸린 시간: ' + fmt(T)]) mk('li', '', t, ul);
+    for (const t of ['🎭 맡은 일: ' + D.roleName[S.role], '🎨 주운 크레파스: ' + S.crayons + ' / 3', '🎁 그림 돌려준 방법: ' + D.giftName[S.gift], '📌 그림 건 곳: ' + D.placeName[S.place], '⏱ 걸린 시간: ' + fmt(T)]) mk('li', '', t, ul);
     const rw = mk('div', 'rw', null, endEl);
     const again = mk('button', '', '🔁 처음부터', rw), quit = mk('button', 'sub', '끝내기', rw);
     again.addEventListener('click', e => { e.stopPropagation(); setTimeout(() => window.SD2?.map?.game?.load('story'), 0); });

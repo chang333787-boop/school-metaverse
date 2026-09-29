@@ -131,7 +131,7 @@ export function createActions(H) {
         c.pts = pts; streamSet(pts, 0.013); streamOn = false; streamF = 0; },
       tick(c, t) { if (t > 0.35 && t < c.def.dur - 0.4) { if (!streamOn) streamOn = true; if (Math.random() < 0.3) { const e = c.pts[8]; emit(1, e[0], e[1], e[2], 0, 0.6, 0, { speed: 0.6, spread: 0.6, life: 0.3, size: 0.018 }); } } else if (t >= c.def.dur - 0.4) streamOn = false; },
       pose(c, t, k) { hip(0.45 * k); K.head.rotation.x += 0.2 * k; K.head.rotation.z = -0.25 * k; K.armL.rotation.x = 0.35 * k; K.armR.rotation.x = -0.75 * k; K.armR.rotation.z = 0.12 - 0.3 * k; } },
-    wash: { dur: 2.8, reach: 0.66, side: 0.1, msg: '🫧 손을 깨끗이 씻었어요',
+    wash: { dur: 2.8, reach: 0.66, side: 0.1, msg: '🧼 손을 깨끗이 씻었어요',
       start(c) { const a = c.at; if (a.length > 3) streamSet([[a[0], a[1], a[2]], [a[0], (a[1] + a[3]) / 2, a[2]], [a[0], a[3], a[2]]], 0.018); },
       tick(c, t) { const dur = c.def.dur; if (t > 0.2 && t < dur - 0.6) { if (Math.random() < 0.35) { handPos(_v2); emit(1, _v2.x, _v2.y + 0.03, _v2.z, 0, 0.3, 0, { speed: 0.4, spread: 0.8, life: 0.7, size: 0.03, g: -0.3, drag: 3, color: 0xffffff }); } }
         else if (t >= dur - 0.6) { streamOn = false; if (!c.shook) { c.shook = true; handPos(_v2); emit(10, _v2.x, _v2.y, _v2.z, 0, 0.4, 0, { speed: 1.4, spread: 0.9, life: 0.5, size: 0.02 }); } } },
