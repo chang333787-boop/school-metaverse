@@ -28,12 +28,19 @@ export function createMinimap(ctx) {
   const cache = new Map();   // 정적 층: 'small:층' · 'big:층' → 캔버스(크기·dpr이 바뀌면 비운다)
   const D0 = mapData(1), NB = D0.bounds;   // 길격자 범위 [x0, z0, x1, z1] — 작은 지도 정적 층이 덮는 범위
   { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const [x, z] of D0.boundary) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
-    S.bb = [x0 - 3, z0 - 3, x1 + 3, z1 + 3]; }   // 큰 지도 = 학교 둘레 + 3m
+    S.bb = S.bbAll = [x0 - 3, z0 - 3, x1 + 3, z1 + 3]; }   // 큰 지도 = 학교 둘레 + 3m
+  { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const b of D0.buildings) { if (b.id === 'gym') continue; x0 = Math.min(x0, b.x0); x1 = Math.max(x1, b.x1); z0 = Math.min(z0, b.z0); z1 = Math.max(z1, b.z1); }
+    S.bbBld = [x0 - 4, z0 - 4, x1 + 4, z1 + 4]; S.focus = false; }   // MAP-LBL(09-30): '🔍 건물 크게' = 본 건물(체육관 빼고) + 4m — 작은 방 이름(보건실·행정실 …)이 읽히게
+  const fb = document.createElement('button'); fb.id = 'mm-f'; fb.type = 'button'; fb.style.cssText = 'position:absolute;left:10px;top:10px;z-index:2;display:none;min-height:36px;padding:4px 12px;border-radius:18px;border:2px solid #1d3557;background:#fff;color:#1d3557;font:800 13px sans-serif;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)';
+  fb.addEventListener('click', e => { e.stopPropagation(); S.focus = !S.focus; S.bb = S.focus ? S.bbBld : S.bbAll; size(); onLayout && onLayout(); S.since = 1; tick(0); });
+  box.append(fb);
 
   let thumb = null;   // 휴대폰 조각 자리(칩 배치용 — 덮개가 열려 있어도 칩은 조각 기준)
   function size() {   // 작게 170px 정사각 · 크게 = 화면 높이에 맞춘 학교 전체(아래 🎮 칩·시간 칩 자리 96px는 비운다)
     S.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (!S.big && S.focus) { S.focus = false; S.bb = S.bbAll; }   // 작게 접으면 다음엔 학교 전체부터
     const [x0, z0, x1, z1] = S.bb, ov = S.big && bc('touch'), sm = !S.big && bc('small');
+    fb.style.display = S.big ? '' : 'none'; fb.textContent = S.focus ? '🗺 학교 전체' : '🔍 건물 크게';
     box.classList.toggle('mm-ov', ov); box.classList.toggle('mm-th', sm); dim.style.display = ov && S.vis ? '' : 'none'; mmX.style.display = ov ? '' : 'none';
     if (ov) { const hMax = Math.max(160, innerHeight - 64 - CAPH), wMax = Math.max(200, innerWidth - 96);   // MOBUI-1: 터치 덮개 = 화면에 꽉(가장자리 여유만)
       S.sB = Math.min(hMax / (z1 - z0), wMax / (x1 - x0)); S.w = Math.round((x1 - x0) * S.sB); S.h = Math.round((z1 - z0) * S.sB); }
@@ -52,22 +59,35 @@ export function createMinimap(ctx) {
     S.dirty = true;
   }
   // 이름표(정적 층에 굽는다): 구역 폭 안에 들어가는 것만 · 같은 이름은 한 번 · 겹치면 건너뜀 · 흰 테두리
+  // MAP-LBL(09-30 교사 '배치도에 보건실이 없다'): 방 칸이 글자보다 좁으면 이름을 아예 건너뛰었다(보건실·나래반·행정실 …) →
+  //   방(실내·복도 아닌 곳)을 먼저 쓰고, 좁으면 글자를 칸에 맞게 줄인다(최소 = 기본의 0.62배 · 그보다 좁으면 그때만 건너뜀)
+  const ROOMY = z => z.indoor && !/^(corridor|hall|stair)$/.test(z.kind);
   function labels(c, D, s, ox, oz, px) {
-    c.font = `700 ${px}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
-    const used = [], seen = new Set();
-    for (const z of D.zones.slice().sort((a, b) => b.area - a.area)) {
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+    const used = [], seen = new Set(), minPx = px * 0.62;
+    for (const z of D.zones.slice().sort((a, b) => (ROOMY(b) - ROOMY(a)) || (b.area - a.area))) {
       if (seen.has(z.label)) continue;
-      const w = c.measureText(z.label).width, zw = (z.x1 - z.x0) * s, zh = (z.z1 - z.z0) * s;
-      if (zw < w * 0.8 || zh < px * 0.9) continue;
+      const zw = (z.x1 - z.x0) * s, zh = (z.z1 - z.z0) * s;
+      c.font = `700 ${px}px sans-serif`; const w0 = c.measureText(z.label).width;
+      const f = Math.min(px, ROOMY(z) ? zw * 0.94 / w0 * px : px, zh / 1.1);
+      if (ROOMY(z) && f < minPx && zh > zw * 1.2) {   // 좁고 긴 방(행정실·교장실 …) = 한 글자씩 세로로
+        const ch = [...z.label], fv = Math.min(px, zw * 0.9, zh * 0.92 / (ch.length * 1.08)); if (fv < minPx * 0.9) continue;
+        const cx = ((z.x0 + z.x1) / 2 - ox) * s, cy = ((z.z0 + z.z1) / 2 - oz) * s, hh = ch.length * fv * 1.08;
+        if (used.some(u => Math.abs(u[0] - cx) < (u[2] + fv) / 2 + 2 && Math.abs(u[1] - cy) < (u[3] + hh) / 2 + 2)) continue;
+        used.push([cx, cy, fv, hh]); seen.add(z.label); c.font = `700 ${fv}px sans-serif`; c.lineWidth = fv * 0.3; c.strokeStyle = 'rgba(255,255,255,.85)'; c.fillStyle = '#2b2419';
+        ch.forEach((t, i) => { const y = cy - hh / 2 + fv * 1.08 * (i + 0.5); c.strokeText(t, cx, y); c.fillText(t, cx, y); });
+        continue; }
+      if (f < (ROOMY(z) ? minPx : px * 0.9) || (!ROOMY(z) && zw < w0 * 0.8)) continue;
+      c.font = `700 ${f}px sans-serif`; const w = c.measureText(z.label).width;
       const cx = ((z.x0 + z.x1) / 2 - ox) * s, cy = ((z.z0 + z.z1) / 2 - oz) * s;
-      if (used.some(u => Math.abs(u[0] - cx) < (u[2] + w) / 2 + 2 && Math.abs(u[1] - cy) < px + 2)) continue;
-      used.push([cx, cy, w]); seen.add(z.label);
-      c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = px * 0.3; c.strokeText(z.label, cx, cy); c.fillStyle = '#2b2419'; c.fillText(z.label, cx, cy);
+      if (used.some(u => Math.abs(u[0] - cx) < (u[2] + w) / 2 + 2 && Math.abs(u[1] - cy) < (u[3] + f) / 2 + 2)) continue;
+      used.push([cx, cy, w, f]); seen.add(z.label);
+      c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = f * 0.3; c.strokeText(z.label, cx, cy); c.fillStyle = '#2b2419'; c.fillText(z.label, cx, cy);
     }
   }
   const ZOOMED = () => S.zoom && !S.big;
   function layer(fl) {
-    const key = ZOOMED() ? 'zoom:' + fl + ':' + S.zoom.key : (S.big ? 'big:' : 'small:') + fl; let c = cache.get(key); if (c) return c;
+    const key = ZOOMED() ? 'zoom:' + fl + ':' + S.zoom.key : (S.big ? (S.focus ? 'bigF:' : 'big:') + S.w + ':' : 'small:') + fl; let c = cache.get(key); if (c) return c;
     c = document.createElement('canvas'); const x = c.getContext('2d');
     if (ZOOMED()) { const Z = S.zoom, [x0, z0, x1, z1] = Z.rect, s = SMALL / (2 * Z.r) * S.dpr; c.width = Math.max(1, Math.round((x1 - x0) * s)); c.height = Math.max(1, Math.round((z1 - z0) * s));
       drawMap(x, { floor: fl, scale: s, x0, z0, labels: false, player: false });

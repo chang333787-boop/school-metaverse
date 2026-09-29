@@ -54,7 +54,7 @@ const CSS = `
 #tour-card .all:not(.on) .ci{border-style:solid;border-color:#e8c77a}
 #tour-card .mi{position:absolute;right:8px;top:2px;font-size:14px}
 #tour-card .rw{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
-#tour-media{left:50%;top:50%;transform:translate(-50%,-50%);width:min(900px,96vw,calc((92vh - 120px) * 16 / 9));padding:10px 12px 12px;z-index:2}
+#tour-media{inset:0;margin:auto;height:fit-content;max-height:96vh;max-height:96dvh;box-sizing:border-box;overflow:auto;width:min(900px,96vw,calc((92vh - 120px) * 16 / 9));width:min(900px,96vw,calc((92dvh - 120px) * 16 / 9));padding:10px 12px 12px;z-index:2}   /* 09-30 교사 '폰에서 영상 볼 때 검은 부분': 아이폰 사파리는 transform 안의 iframe(유튜브)을 어긋나게 그린다 → transform 없이 가운데(inset 0 + margin auto) · 높이는 보이는 화면(dvh) */
 #tour-media .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 #tour-media h3{margin:0;font-size:17px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #tour-ui #tour-media button.x{padding:4px 12px;font-size:18px}
@@ -64,7 +64,7 @@ const CSS = `
 #tour-media .vw{position:relative;width:100%;aspect-ratio:16/9;background:#111;border-radius:10px;overflow:hidden}
 #tour-media .vw iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 #tour-media .ph{position:relative;display:flex;align-items:center;justify-content:center;background:#111;border-radius:10px;min-height:200px;overflow:hidden}
-#tour-media .ph img{display:block;max-width:100%;max-height:calc(92vh - 170px);object-fit:contain}
+#tour-media .ph img{display:block;max-width:100%;max-height:calc(92vh - 170px);max-height:calc(92dvh - 170px);object-fit:contain}
 #tour-ui #tour-media .ph button{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);font-size:22px;padding:4px 14px}
 #tour-media .ph .pv{left:6px}#tour-media .ph .nx{right:6px}
 #tour-media .em{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#f4ecd8;text-align:center;font-size:19px;font-weight:800;padding:12px}

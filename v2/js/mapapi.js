@@ -3,7 +3,7 @@
 //   원칙: 매 프레임 새 객체·전체 순회 금지(구역·트리거·경계는 10Hz) · 예외는 잡아서 월드 루프가 멈추지 않게 · 사람을 술래로 쓰지 않음(글 규칙 = docs/map_api.md §16.1).
 //   정본 문서 = docs/map_api.md
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
-import { createMinimap } from './minimap.js?v=8';
+import { createMinimap } from './minimap.js?v=11';
 import { createGamePicker } from './gamepick.js?v=7';
 import { createEngine } from './engine.js?v=11';
 import { createWorldFx } from './worldfx.js?v=4';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
