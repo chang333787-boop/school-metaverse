@@ -22,8 +22,10 @@ const CSS = `
 #tour-talk .bd{flex:1;min-width:0}
 #tour-talk .nm{font-weight:800;font-size:16px;color:#8a5a1e;margin-bottom:4px}
 #tour-talk .nm small{font-weight:700;font-size:13px;color:#a08462;margin-left:6px}
-#tour-talk .tx{font-size:17px;line-height:1.5;white-space:pre-line;min-height:52px;max-height:38vh;overflow:auto}
-#tour-talk .tx.done::after{content:'▼';display:inline-block;margin-left:6px;font-size:13px;color:#d9463a;animation:tourBlink .7s steps(2,start) infinite}
+#tour-talk .tx{font-size:17px;line-height:1.5;min-height:52px;max-height:38vh;overflow:auto}
+#tour-talk .tx .ln{min-height:1.5em;text-wrap:pretty;word-break:keep-all;overflow-wrap:anywhere}
+#tour-talk .tx .ln.bl{padding-left:.75em;text-indent:-.75em}
+#tour-talk .tx.done > .ln:last-child::after{content:'▼';display:inline-block;margin-left:6px;font-size:13px;color:#d9463a;animation:tourBlink .7s steps(2,start) infinite}
 @keyframes tourBlink{to{visibility:hidden}}
 #tour-talk .tx .rest{visibility:hidden}
 #tour-talk .pg{font-size:12px;color:#8a7a66;margin-top:4px;min-height:1em}
@@ -231,14 +233,18 @@ export default async function start(map, params = {}) {
   const muted = () => { try { return JSON.parse(localStorage.getItem('sm2.title.mute') || 'false'); } catch (e) { return false; } };
   function typeText(t, txt, done) {
     clearInterval(t.tm); const ch = [...txt]; t.tx.textContent = ''; t.tx.classList.remove('done');
-    const a = mk('span', '', '', t.tx), r = mk('span', 'rest', txt, t.tx), low = t.o.spot && t.o.spot.kind === 'guide', quiet = muted();
+    // 줄마다 한 칸(교사 09-29 '줄을 여기 맞춰 깔끔하게'): '· '·'• '로 시작하는 줄은 넘어가도 점 뒤 글자에 맞춘다(.bl 내어쓰기)
+    const LN = txt.split('\n').map(s => { const d = mk('div', 'ln' + (/^[·•]\s/.test(s) ? ' bl' : ''), null, t.tx);
+      return { c: [...s], a: mk('span', '', '', d), r: mk('span', 'rest', s, d) }; });
+    const paint = n => { for (const l of LN) { const k = Math.max(0, Math.min(n, l.c.length)); l.a.textContent = l.c.slice(0, k).join(''); l.r.textContent = l.c.slice(k).join(''); n -= l.c.length + 1; } };
+    const low = t.o.spot && t.o.spot.kind === 'guide', quiet = muted();
     let i = 0; const t0 = performance.now(), per = Math.min(TYPE_MS, 4000 / Math.max(1, ch.length)); t.typing = true;   // 긴 쪽도 4초 안에   // 글자 수 = 지난 시간으로(느린 PC에서 타이머가 프레임마다 한 번만 돌아도 같은 빠르기)
-    t.fin = () => { if (!t.typing) return; clearInterval(t.tm); a.textContent = txt; r.textContent = ''; t.typing = false; t.tx.classList.add('done'); if (done && talk === t) done(); };
+    t.fin = () => { if (!t.typing) return; clearInterval(t.tm); paint(ch.length); t.typing = false; t.tx.classList.add('done'); if (done && talk === t) done(); };
     t.tm = setInterval(() => {
       if (talk !== t) { clearInterval(t.tm); return; }
       const j = Math.min(ch.length, Math.floor((performance.now() - t0) / per) + 1); if (j === i) return;
       const beep = !quiet && Math.floor(j / 2) !== Math.floor(i / 2) && /\S/.test(ch[j - 1]); i = j;
-      a.textContent = ch.slice(0, i).join(''); r.textContent = ch.slice(i).join('');
+      paint(i);
       if (beep) map.tone((low ? 420 : 560) + Math.random() * 90, 0, 0.035, 'square', 0.03);
       if (i >= ch.length) t.fin();
     }, TYPE_MS);
@@ -510,9 +516,9 @@ export default async function start(map, params = {}) {
   refresh();
   map.player.freeze(false);
   const hub = SPOTS.find(s => s.hub);
-  if (params.intro !== '0') openTalk({ name: '우리 학교 견학', icon: '🏫', end: '▶ 견학 시작!', pages: [
+  if (params.intro !== '0') openTalk({ name: '우리 학교 견학', icon: '🏫', end: '🏁 견학 시작!', pages: [
     ...(Array.isArray(DATA.welcome) ? DATA.welcome.map(String) : []),
-    '선생님(🙋)과 안내판(📋)을 찾아가 이야기를 듣고 도장을 모아요.\n· 가까이 가서 E(터치 ✋) 또는 사람·안내판을 눌러요 · 고를 때는 ↑↓ + E\n· 떠 있는 ◆ · 미니맵 ⭐ = 아직 못 간 곳(주황 = 다음 추천)\n· H = 다음 곳 길 안내 · C = 📖 정림초 도감(' + N + '칸)'
+    '선생님(🙋)과 안내판(📋)을 찾아가 이야기를 듣고 도장을 모아요.\n· 가까이 가서 E(터치 ✋) 또는 사람·안내판을 눌러요 · 고를 때는 ↑↓\u00a0+\u00a0E\n· 떠 있는 ◆ · 미니맵 ⭐ = 아직 못 간 곳(주황 = 다음 추천)\n· H = 다음 곳 길 안내 · C = 📖 정림초 도감(' + N + '칸)'
       + (INTRO.length ? '\n· 각 반에서는 담임선생님이 반을 소개해 줘요(도장 없음)' : '')
       + (hub ? '\n· 바로 앞 ' + hub.who + '께 말을 걸면 모든 곳의 이야기·영상을 한눈에 볼 수 있어요' : '')] });
 

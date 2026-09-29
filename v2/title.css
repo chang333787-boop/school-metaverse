@@ -32,7 +32,7 @@ body.title-on > :not(#scene):not(#boot):not(.ttl-keep):not(script):not(style){vi
 .ttl-logo{display:flex;align-items:center;gap:8px;padding:6px 16px 6px 8px;border-radius:40px;background:#fff;border:3px solid #1d3557;box-shadow:0 5px 0 rgba(29,53,87,.35);font-weight:900;font-size:clamp(14px,3.2vh,20px);opacity:0}
 /* 홍보판 배지(PROMO · 09-29 교사 참고 포스터 '경기교육대전환 Phone Off, RAS On!'): 남색 카드 · 굵은 기울임 글씨 · Off 분홍 · On 하늘 · 위에 꺾쇠(⌜ ⌟) 두른 '2026 폰 프리 스쿨 실천학교' */
 .ttl-logo.ttl-pr{padding:0;background:none;border:0;box-shadow:none;border-radius:0}
-.prb{position:relative;display:flex;flex-direction:column;align-items:center;gap:.4em;padding:.6em 1.2em .55em;border-radius:18px;
+.prb{position:relative;display:flex;flex-direction:column;align-items:center;gap:.3em;padding:.5em 1.3em .45em;border-radius:18px;
   background:radial-gradient(120% 90% at 50% 0%,#2f55cc 0%,#1b3494 55%,#12245e 100%);border:3px solid #0b1740;
   box-shadow:0 5px 0 rgba(11,23,64,.45),0 10px 22px rgba(0,0,0,.22);font-size:clamp(14px,3.2vh,20px);font-weight:900;color:#fff;line-height:1.1}
 .prb::before,.prb::after{content:'✦';position:absolute;color:#fff;font-style:normal;pointer-events:none}
@@ -43,11 +43,13 @@ body.title-on > :not(#scene):not(#boot):not(.ttl-keep):not(script):not(style){vi
   background-position:0 0,0 0,100% 0,100% 0,0 100%,0 100%,100% 100%,100% 100%;
   background-size:var(--l) var(--w),var(--w) var(--l),var(--l) var(--w),var(--w) var(--l),var(--l) var(--w),var(--w) var(--l),var(--l) var(--w),var(--w) var(--l)}
 .prb-sch b{color:#ffd23c}
-.prb-slo{display:flex;flex-direction:column;align-items:center;font-family:'Arial Black','Segoe UI Black','Helvetica Neue',Roboto,Arial,sans-serif;font-weight:900;font-style:italic;
-  font-size:1.8em;line-height:1.04;letter-spacing:-.01em;white-space:nowrap;transform:skewX(-5deg);
+.prb-slo{display:flex;flex-direction:row;gap:.3em;align-items:center;font-family:'Arial Black','Segoe UI Black','Helvetica Neue',Roboto,Arial,sans-serif;font-weight:900;font-style:italic;
+  font-size:min(1.75em,6.2vw);line-height:1.04;letter-spacing:-.01em;white-space:nowrap;transform:skewX(-5deg);
   text-shadow:.05em 0 0 #0b1740,-.05em 0 0 #0b1740,0 .05em 0 #0b1740,0 -.05em 0 #0b1740,.036em .036em 0 #0b1740,-.036em .036em 0 #0b1740,.036em -.036em 0 #0b1740,-.036em -.036em 0 #0b1740,.03em .11em 0 #0b1740}
 .prb-slo .off{color:#ffb2a4}.prb-slo .on{color:#a8dcff}
 .prb small{font-size:.56em;font-weight:800;letter-spacing:.14em;color:#cfe0ff}
+.ttl-addr{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:0 .6em;text-align:center;border-radius:18px;max-width:calc(100vw - 32px);box-sizing:border-box}
+.ttl-addr b{font-weight:900}.ttl-addr span{font-size:.86em;font-weight:700;opacity:.92;white-space:nowrap}
 .tb-prb{margin:0 auto 12px;width:max-content;max-width:90vw;box-sizing:border-box;font-size:clamp(14px,3.4vh,21px)}
 .ttl-logo .ttl-kid{width:clamp(34px,7vh,52px);height:auto;animation:ttlWave 1.2s ease-in-out infinite;transform-origin:50% 90%}
 .ttl-h{position:relative;margin:0;text-align:center;font-weight:900;font-size:clamp(30px,min(8.4vw,13vh),104px);line-height:1.12;letter-spacing:.01em}
@@ -135,7 +137,7 @@ body.touch:has(.esc-lock) #homeChip{visibility:hidden}
 @media (max-height:500px){
   .ttl-home{gap:6px}
   .ttl-logo{padding:3px 12px 3px 5px}
-  .prb{gap:.25em;padding:.4em 1em .4em}.prb-slo{flex-direction:row;gap:.3em;font-size:1.4em}.prb small{display:none}
+  .prb{gap:.25em;padding:.4em 1em .4em}.prb-slo{font-size:1.4em}.prb small{display:none}
   .ttl-start{min-height:48px}
   .ttl-menu{padding-top:calc(8px + env(safe-area-inset-top));padding-bottom:calc(4px + env(safe-area-inset-bottom))}
   .ttl-menu header{margin-bottom:4px}
