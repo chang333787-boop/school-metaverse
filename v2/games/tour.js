@@ -69,6 +69,13 @@ const CSS = `
 #tour-media .em small{font-size:14px;font-weight:600;color:#c9bfa8}
 #tour-media .ph .em{position:static;min-height:220px}
 #tour-card .sh{margin:14px 0 8px;font-weight:800;font-size:15px;color:#8a5a1e}
+#tour-media.det{width:min(660px,94vw)}
+#tour-media .dt{max-height:calc(88vh - 80px);overflow:auto;font-size:16px;line-height:1.65;padding:0 4px 4px;overscroll-behavior:contain}
+#tour-media .dt h4{margin:14px 0 4px;font-size:17px;color:#8a5a1e}
+#tour-media .dt h4:first-child{margin-top:2px}
+#tour-media .dt p{margin:6px 0}
+#tour-media .dt ul{margin:4px 0 8px;padding-left:22px}
+#tour-media .dt li{margin:3px 0}
 #tour-media .cp{font-size:14px;color:#5a4a36;margin-top:6px;text-align:center;min-height:1em}
 .tour-stamp{position:absolute;left:12px;top:-78px;width:86px;height:86px;border-radius:50%;border:4px solid #d9463a;background:#fff0ec;display:flex;align-items:center;justify-content:center;font-size:40px;box-shadow:inset 0 0 0 4px #fff,inset 0 0 0 7px #d9463a;animation:tourStamp .5s cubic-bezier(.2,1.6,.4,1) both}
 @keyframes tourStamp{0%{transform:scale(2.6) rotate(20deg);opacity:0}100%{transform:scale(1) rotate(-12deg);opacity:1}}
@@ -117,7 +124,7 @@ export default async function start(map, params = {}) {
     const name = d.name || (a.kind === 'board' ? a.place || a.label : a.label);
     SPOTS.push({ key: a.key, kind: a.kind, hub: !!d.hub, intro: d.stamp === false, x: a.x, y: a.y, z: a.z, top: a.top, hx, hz, mx, mz, my: a.kind === 'board' ? a.y + (a.wall ? 1.2 : 1.45) : a.y + 1.2,
       label: a.label, who: a.kind === 'guide' ? a.label : '', face: a.face, name, where: d.where || '', stamp: d.stamp || (d.stamp === false ? '🏫' : a.kind === 'board' ? '📋' : '⭐'), pages,
-      videos: vids(d), photos: phos(d), node: -1 });
+      videos: vids(d), photos: phos(d), detail: Array.isArray(d.detail) ? d.detail.map(String) : [], node: -1 });
   }
   // 표식 자리(리뷰 09-27): 선생님 위 ◆가 이름 팻말(머리 위 +0.28)을 가렸다 — 천장(실내 ≈3m) 때문에 더 올릴 수 없어 팻말 옆으로 비킨다(벽·가구가 없는 쪽).
   //   안내판은 지붕(+1.9) 위로(◆ 아래 끝 = 가운데 - 0.53 · 흔들림 포함).
@@ -171,6 +178,22 @@ export default async function start(map, params = {}) {
   // ---------- 영상·사진 창(유튜브 = 화면 안 iframe · 링크로 나가지 않음) ----------
   let media = null;   // { el, s, tab }
   function closeMedia() { if (!media) return; media.el.remove(); media = null; if (talk && talk.menu) buildMenu(); }   // iframe째 지운다 = 재생 멈춤 · 목록의 ✔(본 것)를 새로
+  // 📄 자세히 볼래요(교사 09-29 "자세히 설명해야 하는 곳"): tour_data.js detail — '## 소제목' · '• 항목' · 나머지 = 문단. 영상 창과 같은 자리·같은 닫기(Esc·✕)
+  function openDetail(s) {
+    if (media) media.el.remove();
+    const el = mk('div', 'tp det'); el.id = 'tour-media'; el.setAttribute('role', 'dialog');
+    const hd = mk('div', 'hd', null, el); mk('h3', '', '📄 ' + s.name, hd);
+    const x = btn('✕', 'sub x', () => closeMedia(), hd); x.setAttribute('aria-label', '닫기');
+    const dt = mk('div', 'dt', null, el); let ul = null;
+    for (const line of s.detail) {
+      const L = line.trim(); if (!L) { ul = null; continue; }
+      if (L.startsWith('## ')) { ul = null; mk('h4', '', L.slice(3), dt); }
+      else if (/^[•·\-] /.test(L)) { if (!ul) ul = mk('ul', '', null, dt); mk('li', '', L.slice(2), ul); }
+      else { ul = null; mk('p', '', L, dt); }
+    }
+    media = { el, s, pi: 0 }; (s.seen || (s.seen = new Set())).add('d');
+    focus(x); map.sfx('pick');
+  }
   function openMedia(s, kind, i = 0) {   // 목록에서 고른 영상 하나 / 사진 하나(사진은 ‹ › 로 넘겨 보기)
     if (media) media.el.remove();
     const el = mk('div', 'tp'); el.id = 'tour-media'; el.setAttribute('role', 'dialog');
@@ -265,10 +288,11 @@ export default async function start(map, params = {}) {
       else L.push({ k: 'p0', t: '📷 사진 (준비 중)', f: () => openMedia(s, 'p', 0) });
       L.push(up('p')); return L;
     }
-    if (s && !s.hub) {
+    if (s && s.detail.length) L.push({ k: 'd', t: '📄 자세히 볼래요' + seen('d'), f: () => openDetail(s) });
+    if (s && (!s.hub || s.videos.some(v => v.id))) {   // 교감선생님(안내)은 채운 영상만
       if (s.videos.length) L.push({ k: 'v', t: '🎬 영상 볼래요' + (s.videos.length > 1 ? ' (' + s.videos.length + ')' : ''),
         f: () => { if (s.videos.length === 1) openMedia(s, 'v', 0); else { t.sub = 'v'; buildMenu(); } } });
-      if (s.photos.length || SHOW_EMPTY) L.push({ k: 'p', t: '📷 사진 볼래요' + (s.photos.length ? ' (' + s.photos.length + ')' : ''),
+      if (!s.hub && (s.photos.length || SHOW_EMPTY)) L.push({ k: 'p', t: '📷 사진 볼래요' + (s.photos.length ? ' (' + s.photos.length + ')' : ''),
         f: () => probePhotos(s).then(() => { if (talk !== t) return; if (s.photos.length <= 1) openMedia(s, 'p', 0); else { t.sub = 'p'; buildMenu(); } }) });
     }
     if (canStamp(t)) L.push({ k: 's', t: '⭐ 도장 받을래요', f: stampIt });

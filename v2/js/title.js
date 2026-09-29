@@ -80,9 +80,11 @@ export function createTitle(h) {
   root.innerHTML = '<div class="ttl-vig"></div>'
     + '<button class="ttl-mute" type="button" aria-label="소리 켜고 끄기"></button>'
     + '<section class="ttl-home">'
-    +   '<div class="ttl-logo">' + cap(1) + '<span>우리 학교 메타버스</span></div>'
+    +   (PROMO   // 홍보판(09-29 교사): 폰 프리 스쿨 실천학교 표어 'Phone Off, RAS On'(RAS = Reading·Art·Sports — 경기도교육청 정책)을 환영 글 위에
+        ? '<div class="ttl-logo ttl-pr">' + cap(1) + '<span><em><b class="off">Phone Off</b>, <b class="on">RAS On</b></em><small>Reading · Art · Sports</small></span></div>'
+        : '<div class="ttl-logo">' + cap(1) + '<span>우리 학교 메타버스</span></div>')
     +   '<h1 class="ttl-h" aria-label="정림초에 오신 것을 환영합니다!"><span class="ln">' + L1 + '</span><span class="ln">' + L2 + '</span>' + spk + '</h1>'
-    +   '<div class="ttl-sub">' + (PROMO ? '🏫 정림초등학교 · 3D 학교 둘러보기' : '🏫 정림초등학교 · 3D 학교 놀이터') + '</div>'
+    +   '<div class="ttl-sub">' + (PROMO ? '🏫 정림초등학교 · 폰 프리 스쿨 실천학교' : '🏫 정림초등학교 · 3D 학교 놀이터') + '</div>'
     +   '<button class="ttl-start" type="button"><b>▶</b> ' + (PROMO ? '학교 둘러보기' : '시작하기') + '</button>'
     +   '<div class="ttl-keys"><span class="kd">클릭 · Enter · Space</span><span class="kt">화면을 톡 눌러요</span></div>'
     + '</section>'

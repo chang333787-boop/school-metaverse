@@ -30,6 +30,13 @@ body.title-on > :not(#scene):not(#boot):not(.ttl-keep):not(script):not(style){vi
 /* 제목 화면 */
 .ttl-home{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,2.2vh,18px);padding:calc(10px + env(safe-area-inset-top)) 16px calc(10px + env(safe-area-inset-bottom));box-sizing:border-box;cursor:pointer}
 .ttl-logo{display:flex;align-items:center;gap:8px;padding:6px 16px 6px 8px;border-radius:40px;background:#fff;border:3px solid #1d3557;box-shadow:0 5px 0 rgba(29,53,87,.35);font-weight:900;font-size:clamp(14px,3.2vh,20px);opacity:0}
+.ttl-pr span{display:flex;flex-direction:column;align-items:center;line-height:1.1;font-size:clamp(18px,4.2vh,28px);letter-spacing:.01em}
+.ttl-pr em{font-style:normal;white-space:nowrap}
+.ttl-pr .off{color:#7a8594;text-decoration:line-through;text-decoration-thickness:.12em;text-decoration-color:#d9463a}
+.ttl-pr .on{color:#2f9a5c}
+.ttl-pr small{font-size:.5em;font-weight:800;color:#8a5a1e;letter-spacing:.12em;margin-top:2px}
+.tb-pr{font:900 clamp(18px,4.6vh,30px)/1.2 'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;color:#fff;background:#1d3557;border-radius:40px;padding:6px 18px;margin:0 auto 12px;width:max-content;max-width:90vw}
+.tb-pr s{color:#aab4c2;text-decoration-color:#ff7a6b}.tb-pr b{color:#7ee08a}
 .ttl-logo .ttl-kid{width:clamp(34px,7vh,52px);height:auto;animation:ttlWave 1.2s ease-in-out infinite;transform-origin:50% 90%}
 .ttl-h{position:relative;margin:0;text-align:center;font-weight:900;font-size:clamp(30px,min(8.4vw,13vh),104px);line-height:1.12;letter-spacing:.01em}
 .ttl-h .ln{display:block;white-space:nowrap}

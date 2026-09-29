@@ -19,7 +19,7 @@
   @keyframes bootDot{0%,80%,100%{transform:scale(.4);opacity:.3}40%{transform:scale(1);opacity:1}}
   body.promo #gpick,body.promo #gpick-panel{visibility:hidden!important;pointer-events:none!important}   /* 🎮 놀이 칩은 자리만 남긴다(🏠 처음으로 칩이 그 자리에) */
 </style>
-<link rel="stylesheet" href="./v2/title.css?v=2">
+<link rel="stylesheet" href="./v2/title.css?v=4">
 <link rel="stylesheet" href="./v2/phone.css?v=8">
 <script>window.SM_PROMO = true;</script>
 <script type="importmap">
@@ -33,7 +33,7 @@
 (function () { var q = new URLSearchParams(location.search), s = location.search;
   if (q.get('shot') || q.get('game') || q.get('tour') === '1' || s.indexOf('check=1') >= 0 || s.indexOf('health=1') >= 0 || q.get('title') === '0') return;
   var b = document.getElementById('boot'); b.className = 'ttl-boot';
-  b.innerHTML = '<div class="tb-in"><div class="tb-t">정림초에 오신 것을<br>환영합니다!</div><div class="tb-bar"><i></i></div><div class="tb-s">학교를 짓는 중…</div></div>';
+  b.innerHTML = '<div class="tb-in"><div class="tb-pr"><s>Phone Off</s>, <b>RAS On</b></div><div class="tb-t">정림초에 오신 것을<br>환영합니다!</div><div class="tb-bar"><i></i></div><div class="tb-s">학교를 짓는 중…</div></div>';
   var f = b.querySelector('.tb-bar i');
   window.bootP = function (p, sec) { f.style.transitionDuration = (sec || 0.4) + 's'; f.style.transform = 'scaleX(' + Math.max(0, Math.min(1, p)) + ')'; };
   requestAnimationFrame(function () { window.bootP(0.18, 1.2); });
