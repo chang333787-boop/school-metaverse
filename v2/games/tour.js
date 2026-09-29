@@ -112,7 +112,7 @@ export default async function start(map, params = {}) {
   // 영상 칸 = 적어 둔 칸 전부(주소가 빈 칸도 — showEmpty면 '준비 중' 화면) · id = 유튜브 영상 id(없으면 null)
   const SHOW_EMPTY = DATA.showEmpty !== false;
   const vids = d => [].concat(d.videos || [], d.video ? [d.video] : []).map(v => typeof v === 'string' ? { url: v } : v || {})
-    .map(v => ({ title: String(v.title || ''), id: ytId(v.url) })).filter(v => v.id || SHOW_EMPTY);
+    .map(v => ({ title: String(v.title || ''), group: String(v.group || ''), id: ytId(v.url) })).filter(v => v.id || SHOW_EMPTY);
   const phos = d => [].concat(d.photos || []).map(p => typeof p === 'string' ? { src: p } : p || {}).filter(p => p.src)
     .map(p => { let src = ''; try { src = new URL(String(p.src).trim(), DATA_URL).href; } catch (e) { /* 이상한 주소 — 뺀다 */ } return { src, caption: String(p.caption || '') }; }).filter(p => p.src);
   for (const a of map.tour) {
@@ -270,28 +270,42 @@ export default async function start(map, params = {}) {
   const canStamp = t => { const s = t.o.spot; return !!(s && !s.hub && !s.intro && !t.o.review && !stamps.has(s.key)); };
   function show() {
     const t = talk, P = t.o.pages, last = t.i >= P.length - 1;
-    if (t.menu) { t.menu.remove(); t.menu = null; } t.sub = null;
+    if (t.menu) { t.menu.remove(); t.menu = null; } t.sub = null; t.vg = null;
     t.pg.textContent = P.length > 1 ? (t.i + 1) + ' / ' + P.length : '';
     typeText(t, P[t.i], last ? () => buildMenu() : null);
   }
   const blipOK = () => !muted();
   // 목록 두 단계(교사 09-29 "영상이 하나가 아니야 — 여러 개 중 하나 고르는 느낌, 사진도"): 🎬 영상 볼래요 → 영상 제목 목록 · 📷 사진 볼래요 → 사진 목록 · ◀ 뒤로(Esc)
   //   본 것은 ✔ · 하나뿐이면 바로 연다 · 빈 영상 칸은 '(준비 중)'
+  //   영상 묶음(09-29 교사 "체육관 = 체육 활동 / 체육관 행사"): videos에 group을 두 가지 이상 쓰면 🎬 → 묶음 목록(vg) → 그 묶음의 영상(v)
+  const vGroups = s => s ? [...new Set(s.videos.map(v => v.group).filter(Boolean))] : [];
+  function subBack(t) {   // 두 번째(세 번째) 목록에서 한 칸 뒤로 — ◀ 뒤로 · Esc
+    const g = t.vg, gs = vGroups(t.o.spot);
+    if (t.sub === 'v' && g && gs.length > 1) { t.sub = 'vg'; t.vg = null; buildMenu('g' + gs.indexOf(g)); return; }
+    const k = t.sub === 'p' ? 'p' : 'v'; t.sub = null; t.vg = null; buildMenu(k);
+  }
   function menuItems(t) {
-    const s = t.o.spot, L = [], seen = k => (s && s.seen && s.seen.has(k) ? ' ✔' : ''), up = k => ({ k: 'up', t: '◀ 뒤로', f: () => { t.sub = null; buildMenu(k); } });
+    const s = t.o.spot, L = [], seen = k => (s && s.seen && s.seen.has(k) ? ' ✔' : ''), up = () => ({ k: 'up', t: '◀ 뒤로', f: () => subBack(t) });
+    const gs = vGroups(s);
+    if (t.sub === 'vg') {
+      gs.forEach((g, gi) => { const ix = s.videos.map((v, i) => v.group === g ? i : -1).filter(i => i >= 0);
+        L.push({ k: 'g' + gi, t: g + ' (' + ix.length + ')' + (ix.every(i => seen('v' + i)) ? ' ✔' : ''), f: () => { t.sub = 'v'; t.vg = g; buildMenu(); } }); });
+      L.push(up()); return L;
+    }
     if (t.sub === 'v') {
-      s.videos.forEach((v, i) => L.push({ k: 'v' + i, t: '🎬 ' + (v.title || '영상 ' + (i + 1)) + (v.id ? '' : ' (준비 중)') + seen('v' + i), f: () => openMedia(s, 'v', i) }));
-      L.push(up('v')); return L;
+      s.videos.forEach((v, i) => { if (t.vg && v.group !== t.vg) return;
+        L.push({ k: 'v' + i, t: '🎬 ' + (v.title || '영상 ' + (i + 1)) + (v.id ? '' : ' (준비 중)') + seen('v' + i), f: () => openMedia(s, 'v', i) }); });
+      L.push(up()); return L;
     }
     if (t.sub === 'p') {
       if (s.photos.length) s.photos.forEach((p, i) => L.push({ k: 'p' + i, t: '📷 ' + (p.caption || '사진 ' + (i + 1)) + seen('p' + i), f: () => openMedia(s, 'p', i) }));
       else L.push({ k: 'p0', t: '📷 사진 (준비 중)', f: () => openMedia(s, 'p', 0) });
-      L.push(up('p')); return L;
+      L.push(up()); return L;
     }
     if (s && s.detail.length) L.push({ k: 'd', t: '📄 자세히 볼래요' + seen('d'), f: () => openDetail(s) });
     if (s && (!s.hub || s.videos.some(v => v.id))) {   // 교감선생님(안내)은 채운 영상만
       if (s.videos.length) L.push({ k: 'v', t: '🎬 영상 볼래요' + (s.videos.length > 1 ? ' (' + s.videos.length + ')' : ''),
-        f: () => { if (s.videos.length === 1) openMedia(s, 'v', 0); else { t.sub = 'v'; buildMenu(); } } });
+        f: () => { if (s.videos.length === 1) openMedia(s, 'v', 0); else { t.sub = gs.length > 1 ? 'vg' : 'v'; t.vg = null; buildMenu(); } } });
       if (!s.hub && (s.photos.length || SHOW_EMPTY)) L.push({ k: 'p', t: '📷 사진 볼래요' + (s.photos.length ? ' (' + s.photos.length + ')' : ''),
         f: () => probePhotos(s).then(() => { if (talk !== t) return; if (s.photos.length <= 1) openMedia(s, 'p', 0); else { t.sub = 'p'; buildMenu(); } }) });
     }
@@ -307,7 +321,7 @@ export default async function start(map, params = {}) {
     if (t.menu) t.menu.remove();
     t.items = menuItems(t);
     const m = t.menu = mk('ul', 'tmenu', null, t.el); m.setAttribute('role', 'listbox');
-    if (t.sub) m.dataset.title = t.sub === 'v' ? '🎬 어떤 영상을 볼까요?' : '📷 어떤 사진을 볼까요?';
+    if (t.sub) m.dataset.title = t.sub === 'vg' ? '🎬 어떤 영상을 볼까요?' : t.sub === 'v' ? (t.vg || '🎬 어떤 영상을 볼까요?') : '📷 어떤 사진을 볼까요?';
     t.items.forEach((it, k) => { const li = mk('li', '', it.t, m); li.setAttribute('role', 'option');
       li.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') sel(k); });
       li.addEventListener('click', e => { e.stopPropagation(); sel(k, true); pick(true); }); });
@@ -447,7 +461,7 @@ export default async function start(map, params = {}) {
       if (talk.menu && ['ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(e.code)) { e.stopPropagation(); e.preventDefault(); sel(talk.cur + (e.code === 'ArrowUp' || e.code === 'KeyW' ? -1 : 1)); return; }
       if (['KeyE', 'Enter', 'Space', 'NumpadEnter'].includes(e.code)) {
         e.stopPropagation(); e.preventDefault(); if (!e.repeat && performance.now() - talk.openedAt > 200) next(); return; }
-      if (e.code === 'Escape') { e.stopPropagation(); if (talk.sub) { const k = talk.sub; talk.sub = null; buildMenu(k); } else closeTalk(); return; }   // 두 번째 목록이면 뒤로
+      if (e.code === 'Escape') { e.stopPropagation(); if (talk.sub) subBack(talk); else closeTalk(); return; }   // 두 번째 목록이면 뒤로
       return;
     }
     if (card) { if (e.code === 'Escape' || e.code === 'KeyC') { e.stopPropagation(); closeCard(); } return; }

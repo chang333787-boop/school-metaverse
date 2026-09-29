@@ -70,6 +70,9 @@ export function createTitle(h) {
     + '<ellipse cx="25" cy="40" rx="2.4" ry="3.2" fill="#2d2a33"/><ellipse cx="39" cy="40" rx="2.4" ry="3.2" fill="#2d2a33"/>'
     + '<path d="M27 47 Q32 51 37 47" fill="none" stroke="#9a4a42" stroke-width="2.4" stroke-linecap="round"/>'
     + '<circle cx="20" cy="46" r="3" fill="#f6b9a8" opacity=".8"/><circle cx="44" cy="46" r="3" fill="#f6b9a8" opacity=".8"/></svg>';
+  // 홍보판 배지(09-29 교사 참고 포스터) — 로딩 막(index.html .tb-prb)도 같은 모양 · 모양은 title.css .prb
+  const PRB = '<div class="prb"><div class="prb-sch"><b>2026</b> 폰 프리 스쿨 실천학교</div>'
+    + '<div class="prb-slo"><span>Phone <b class="off">Off</b>,</span><span>RAS <b class="on">On</b>!</span></div><small>Reading · Arts · Sports</small></div>';
   const root = el('div', 'ttl-keep'); root.id = 'ttl'; root.dataset.ph = 'title';
   const COLORS = ['#ffd23c', '#ff9f43', '#ff7eb6', '#7cc8ff', '#7ee08a'];
   let ci = 0;
@@ -80,11 +83,11 @@ export function createTitle(h) {
   root.innerHTML = '<div class="ttl-vig"></div>'
     + '<button class="ttl-mute" type="button" aria-label="소리 켜고 끄기"></button>'
     + '<section class="ttl-home">'
-    +   (PROMO   // 홍보판(09-29 교사): 폰 프리 스쿨 실천학교 표어 'Phone Off, RAS On'(RAS = Reading·Art·Sports — 경기도교육청 정책)을 환영 글 위에
-        ? '<div class="ttl-logo ttl-pr">' + cap(1) + '<span><em><b class="off">Phone Off</b>, <b class="on">RAS On</b></em><small>Reading · Art · Sports</small></span></div>'
+    +   (PROMO   // 홍보판(09-29 교사): 폰 프리 스쿨 실천학교 표어 'Phone Off, RAS On'(RAS = Reading·Arts·Sports — 경기도교육청 정책)을 환영 글 위에
+        ? '<div class="ttl-logo ttl-pr">' + PRB + '</div>'
         : '<div class="ttl-logo">' + cap(1) + '<span>우리 학교 메타버스</span></div>')
     +   '<h1 class="ttl-h" aria-label="정림초에 오신 것을 환영합니다!"><span class="ln">' + L1 + '</span><span class="ln">' + L2 + '</span>' + spk + '</h1>'
-    +   '<div class="ttl-sub">' + (PROMO ? '🏫 정림초등학교 · 폰 프리 스쿨 실천학교' : '🏫 정림초등학교 · 3D 학교 놀이터') + '</div>'
+    +   '<div class="ttl-sub">' + (PROMO ? '🏫 경기도 화성시 · 정림초등학교' : '🏫 정림초등학교 · 3D 학교 놀이터') + '</div>'
     +   '<button class="ttl-start" type="button"><b>▶</b> ' + (PROMO ? '학교 둘러보기' : '시작하기') + '</button>'
     +   '<div class="ttl-keys"><span class="kd">클릭 · Enter · Space</span><span class="kt">화면을 톡 눌러요</span></div>'
     + '</section>'

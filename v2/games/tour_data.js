@@ -17,6 +17,7 @@
 //   · url이 빈 칸이어도 버튼은 보이고, 누르면 '영상 준비 중이에요' 화면이 나와요(아래 showEmpty).
 //   · url 칸에 유튜브 주소를 그대로 붙여 넣으면 돼요 — 'https://youtu.be/abcdEFGhijk' · 'https://www.youtube.com/watch?v=abcdEFGhijk' · 쇼츠 주소 모두 OK
 //   · 영상이 여러 개면 { title: '제목', url: '주소' } 를 쉼표로 더 이어 쓰세요 — 🎬 영상 볼래요를 고르면 제목 목록이 떠서 하나씩 골라 봐요(제목이 목록 글자예요). 영상 칸을 아예 지우면 🎬 버튼이 없어져요.
+//   · 영상을 묶고 싶으면 group을 붙이세요 — { title: '제목', url: '주소', group: '🏅 체육 활동' } · 묶음이 두 가지 이상이면 🎬 → 묶음 목록 → 영상 목록 순서로 골라요.
 //   · 영상은 유튜브에서 '공개' 또는 '일부 공개'여야 하고, '퍼가기 허용'이 켜져 있어야 화면 안에서 재생돼요.
 //
 // 📷 사진 넣는 법 — 이야기 창의 [📷 사진 보기]를 누르면 사진을 넘겨 볼 수 있어요
@@ -46,7 +47,7 @@ export const TOUR = {
   // 견학을 시작할 때 뜨는 첫 인사(스쿨버스 앞) — 마지막에 조작 안내 한 쪽이 자동으로 붙어요
   welcome: [
     '정림초등학교에 오신 것을 환영합니다!\n복잡한 도심을 벗어나, 우리 아이의 빛깔이 살아나는 곳이에요.',
-    'Phone Off, RAS On!\n정림초는 2026 폰 프리 스쿨 실천학교예요. 폰을 끄고 서로를 봐요.\n그 대신 책을 읽고(Reading), 예술을 즐기고(Art), 몸으로 뛰놀아요(Sports).',
+    'Phone Off, RAS On!\n정림초는 2026 폰 프리 스쿨 실천학교예요. 폰을 끄고 서로를 봐요.\n그 대신 책을 읽고(Reading), 예술을 즐기고(Arts), 몸으로 뛰놀아요(Sports).',
   ],
   // 도장을 모두 모았을 때 뜨는 마무리 말(공익 방송 끝처럼)
   finish: [
@@ -66,7 +67,7 @@ export const TOUR = {
     ], detail: [
       '## 폰 프리 스쿨 실천학교 · Phone Off, RAS On',
       '폰을 끄고 서로를 봐요. 스마트폰보다 친구와의 대화와 즐거운 학교생활을 선택해요.',
-      '• RAS = Reading · Art · Sports — 읽고, 예술을 즐기고, 몸으로 뛰노는 학교',
+      '• RAS = Reading · Arts · Sports — 읽고, 예술을 즐기고, 몸으로 뛰노는 학교',
       '## 정림초를 선택하는 이유',
       '• 단 한 명도 소외 없는 소수 정예 밀착 케어 — 6학급 가족형 공동체 · 두드림학교 맞춤 지원 · 모두가 함께하는 생일파티',
       '• 대도시 학원 부럽지 않은 AI 미래 교육 — 전학년 1인 1스마트 기기 · SW·로봇 코딩 · 하이러닝 AI 맞춤형 학습',
@@ -81,27 +82,37 @@ export const TOUR = {
       '• 전학·입학 상담 031-352-2176 (교무실)',
       '• 경기도 화성시 정남면 망월길 69',
     ], videos: [
-      { title: '초록초록 정림초에 초대합니다', url: 'https://youtu.be/5GBzPF_7j58' },
-      { title: '폰프리스쿨 선포식, 정림초의 즐거운 시작!', url: 'https://youtu.be/DlcB5Fwwk2g' },
-      { title: '폰프리스쿨 실천학교 현판식', url: 'https://youtu.be/g1WvXHKe5OQ' },
-      { title: '폰프리 스쿨 추석 미션 — 전통놀이', url: 'https://youtu.be/Ut1kA2VW5Ac' },
+      { group: '🏫 학교 소개', title: '2026 정림초 홍보영상', url: 'https://youtu.be/u4tCLmundTA' },
+      { group: '🏫 학교 소개', title: '초록초록 정림초에 초대합니다', url: 'https://youtu.be/5GBzPF_7j58' },
+      { group: '🏫 학교 소개', title: '2026년 새로워진 정림초', url: 'https://youtu.be/YGX3vSHPAeQ' },
+      { group: '📵 폰 프리 스쿨', title: '폰프리스쿨 선포식, 정림초의 즐거운 시작!', url: 'https://youtu.be/DlcB5Fwwk2g' },
+      { group: '📵 폰 프리 스쿨', title: '폰프리스쿨 실천학교 현판식', url: 'https://youtu.be/g1WvXHKe5OQ' },
+      { group: '📵 폰 프리 스쿨', title: '폰프리 스쿨 추석 미션 — 전통놀이', url: 'https://youtu.be/Ut1kA2VW5Ac' },
+      { group: '🎉 학교 생활', title: '3월 생일 축하 파티', url: 'https://youtu.be/OpZYoec4g1Y' },
+      { group: '🎉 학교 생활', title: '교실에서 만나는 특별한 직업 체험', url: 'https://youtu.be/9lsv5C1FcgQ' },
+      { group: '🎉 학교 생활', title: '우리 문화의 맛과 멋 — 전통 문화 체험', url: 'https://youtu.be/x1IuWnofh4U' },
+      { group: '🎉 학교 생활', title: '과일 타르트 만들기(프랑스 문화 체험)', url: 'https://youtu.be/1yXShlY5974' },
+      { group: '🎉 학교 생활', title: '대한민국 화이팅! 월드컵 응원', url: 'https://youtu.be/Rh4pgUhMd4A' },
+      { group: '🎉 학교 생활', title: '당황하지 않고 탈출! 소방 대피 훈련', url: 'https://youtu.be/uHgPhe3lrNc' },
     ] },
 
     // ---------- 등교 ----------
     bus: { on: true, name: '스쿨버스', where: '운동장 남쪽 버스 옆', stamp: '🚌', pages: [
-      '정림초 무료 스쿨버스예요.\n올해는 오산 세교까지 넓혀서 다녀요.',
-      '4월부터 새 버스로 바꿨고, 방학에도 쉬지 않고 연중 운영해요.',
-      '현장체험학습 날에도 버스를 타고 떠나요.\n요트 체험, 융건릉 탐방, 경기예술창작소까지!',
+      '정림초 무료 스쿨버스예요.\n등하굣길, 학생들을 안전하게 태워다 줘요.',
+      '올해는 오산 세교까지 넓혀서 다니고, 4월부터 새 버스로 바꿨어요.\n방학에도 쉬지 않고 연중 운영해요.',
+      '외부 체험활동 날에도 스쿨버스를 타고 떠나요.\n요트 체험, 융건릉 탐방, 경기예술창작소까지!',
     ], detail: [
       '## 무료 스쿨버스',
+      '• 학생들을 안전하게 태워다 줘요',
       '• 오산 세교까지 확대',
       '• 4월부터 새 버스로 교체',
       '• 방학 포함 연중 운영',
-      '## 설레는 현장체험학습',
+      '## 외부 체험활동',
       '• 1·2학기 전학년 현장체험학습',
       '• 다가치탐사대 1~4학년 연 2회',
       '• 마을교육과정 체험 전학년 연 2회',
     ], videos: [
+      // 외부 체험활동 영상은 여기에(교사 09-29)
       { title: '전곡항 요트체험', url: 'https://youtu.be/UoX9Q_4eFzc' },
       { title: '[화성마을교육과정] 융건릉에 방문하다', url: 'https://youtu.be/hmSN1tXdl2Y' },
       { title: '경기예술창작소에서 RAS를 만나다', url: 'https://youtu.be/1llwjxYbaOw' },
@@ -139,6 +150,7 @@ export const TOUR = {
       '쉬는 시간, 폰 대신 친구 손을 잡고 달려오는 곳이에요.\n"폰을 내려놓으니 더 신나요!" — RAS의 S, Sports!',
     ], videos: [
       { title: '폰프리 스쿨 추석 미션 — 전통놀이', url: 'https://youtu.be/Ut1kA2VW5Ac' },
+      { title: '정림 워터파크 개장!', url: 'https://youtu.be/JPCUhUKKqtg' },
     ], photos: [] },
     forest: { on: true, name: '숲놀이터', where: '운동장 남동쪽 숲놀이터', stamp: '🌳', pages: [
       '우리 학교 숲놀이터예요.\n맑은 새소리와 푸른 소나무 사이에서 쉬고 뛰어놀아요.',
@@ -162,12 +174,14 @@ export const TOUR = {
     ], videos: [
       { title: '즐거운 생태 수업', url: 'https://youtu.be/SZPxSELC-3g' },
       { title: '수박. 내꺼', url: 'https://youtu.be/NHaHIT-6H5A' },
+      { title: '블루베리야 안녕! 꼬마 농부 생태 체험', url: 'https://youtu.be/jHMUhX-wf4Y' },
     ], photos: [] },
 
     // ---------- 체육 · 예술 ----------
     pe: { on: true, name: '체육관', where: '서쪽 체육관 무대 앞', stamp: '⚽', pages: [
       '안녕하세요, 체육선생님이에요. 여기는 체육관이에요.\n폰 대신 공을 잡는 곳 — RAS의 S, Sports가 켜져요!',
-      '파크골프, 티볼, 생존수영, 그리고 연 5회 승마 체험까지.\n1인 1악기·연극·무용 같은 문화예술(Art)도 학비 부담 없이 전액 지원해요.',
+      '파크골프, 티볼, 생존수영, 그리고 연 5회 승마 체험까지.\n1인 1악기·연극·무용 같은 문화예술(Arts)도 학비 부담 없이 전액 지원해요.',
+      '체육관은 학교 행사장도 돼요.\nAI 페스티벌, 찾아오는 문화체험 공연, 이웃 학교와의 교류회가 여기서 열려요.',
     ], detail: [
       '## 예체능 학비 ZERO — 전액 지원 특색 교육',
       '• 1인 1악기 문화예술 — 국악, 우쿨렐레, 가야금 등',
@@ -179,13 +193,15 @@ export const TOUR = {
       '• 늘봄 — 뉴스포츠·방송댄스 신설',
       '• 방과후 — 로봇코딩, 태권도 등 전문 강사 수업',
     ], videos: [
-      { title: '교장선생님과 함께하는 파크골프', url: 'https://youtu.be/wS_2b9zL6IA' },
-      { title: '5·6학년 합동체육, 티볼!', url: 'https://youtu.be/B9QckG4QZUY' },
-      { title: '승마하는 학교가 있다고?', url: 'https://youtu.be/y_O-qfIsv_k' },
-      { title: '정림초의 특별한 수업, 승마체험', url: 'https://youtu.be/O7gEDGNNq7E' },
-      { title: '생존수영 에이스로 거듭난 정림초', url: 'https://youtu.be/yaLNax9z7j0' },
-      { title: '정림초X향남초 한마음 교류회', url: 'https://youtu.be/UEihW-gnmCQ' },
-      { title: '춤신춤왕 정림초(찾아오는 문화체험 공연)', url: 'https://youtu.be/CUGtZ_Z5Qcc' },
+      { group: '🏅 체육 활동', title: '교장선생님과 함께하는 파크골프', url: 'https://youtu.be/wS_2b9zL6IA' },
+      { group: '🏅 체육 활동', title: '5·6학년 합동체육, 티볼!', url: 'https://youtu.be/B9QckG4QZUY' },
+      { group: '🏅 체육 활동', title: '승마하는 학교가 있다고?', url: 'https://youtu.be/y_O-qfIsv_k' },
+      { group: '🏅 체육 활동', title: '정림초의 특별한 수업, 승마체험', url: 'https://youtu.be/O7gEDGNNq7E' },
+      { group: '🏅 체육 활동', title: '생존수영 에이스로 거듭난 정림초', url: 'https://youtu.be/yaLNax9z7j0' },
+      { group: '🏅 체육 활동', title: '정림초 체력측정', url: 'https://youtu.be/to03yptKDMI' },
+      { group: '🎪 체육관 행사', title: '정림 AI 페스티벌 현장', url: 'https://youtu.be/wF1RHiRFyis' },
+      { group: '🎪 체육관 행사', title: '춤신춤왕 정림초(찾아오는 문화체험 공연)', url: 'https://youtu.be/CUGtZ_Z5Qcc' },
+      { group: '🎪 체육관 행사', title: '정림초X향남초 한마음 교류회', url: 'https://youtu.be/UEihW-gnmCQ' },
     ], photos: [] },
 
     // ---------- 방과 후 · 함께 자라는 곳 ----------
@@ -199,11 +215,14 @@ export const TOUR = {
       '## 촘촘하게, 더 넓게 늘봄학교',
       '• 뉴스포츠 · 방송댄스 신설',
       '• 방과후 — 로봇코딩, 태권도 등 전문 강사 수업',
+    ], videos: [
+      { title: '정림초 늘봄학교를 소개합니다', url: 'https://youtu.be/VT33xIwMpm0' },
     ], photos: [] },
     kinder: { on: true, name: '유치원', where: '본관 1층 서쪽 유치원', stamp: '🧸', pages: [
       '안녕하세요, 유치원선생님이에요. 여기는 정림초 병설유치원이에요.\n초등학교 언니·오빠들과 한 울타리 안에서 함께 자라요.',
     ], videos: [
       { title: '동탄어린이집 친구들의 정림초 방문', url: 'https://youtu.be/XHdQ7gVeE98' },
+      { title: '어서와요 정림마트', url: 'https://youtu.be/HF4UEusGK58' },
     ], photos: [] },
     nurse: { on: true, name: '보건실', where: '서관 1층 보건실', stamp: '🩹', pages: [
       '안녕하세요, 보건선생님이에요. 여기는 보건실이에요.\n몸도 마음도 건강하게 자라도록 함께해요.',
@@ -212,6 +231,8 @@ export const TOUR = {
       '• 푸드테라피 집단상담 — 전학년',
       '• 마음건강교실 — 5~6학년',
       '• 이주학생 집단상담 운영',
+    ], videos: [
+      { title: '우리 학교에 병원이? 신체검사', url: 'https://youtu.be/OPwEkFLeN6w' },
     ], photos: [] },
 
     // ---------- 교장실(마지막 인사 · 상담) ----------
