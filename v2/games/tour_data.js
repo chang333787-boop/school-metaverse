@@ -57,7 +57,7 @@ export const TOUR = {
   ],
 
   // 추천 순서 = 정림초의 하루(등교 → 수업 → 점심 → 쉬는 시간 → 방과 후 → 교장실 인사)
-  order: ['bus', 'ai', 'science', 'library', 'cafeteria', 'playground', 'forest', 'bigtree', 'garden', 'pe', 'care', 'kinder', 'nurse', 'principal'],
+  order: ['bus', 'ai', 'science', 'library', 'cafeteria', 'playground', 'field', 'forest', 'bigtree', 'garden', 'pe', 'care', 'kinder', 'nurse', 'principal'],
 
   spots: {
     // ---------- 교감선생님 = 안내 데스크(도장 없음 · 선택 목록 '📖 학교 정보 모두 볼래요') ----------
@@ -270,7 +270,23 @@ export const TOUR = {
 
     // ---------- 각 반·사랑반(도장 없이 담임선생님 소개만 — 반마다 한두 줄 더 쓰셔도 좋아요) ----------
     sarang: { on: true, name: '사랑반', where: '본관 1층 사랑반', stamp: false, pages: [
-      '안녕하세요, 사랑반선생님이에요. 여기는 사랑반이에요.\n아이 한 명 한 명의 속도에 맞춰 함께 배워요.',
+      '안녕하세요, 사랑반선생님이에요. 여기는 사랑반이에요.\n사랑반은 특수학급이에요. 아이 한 명 한 명의 속도에 맞춰 함께 배워요.',
+    ] },
+    narae: { on: true, name: '나래반', where: '서관 1층 나래반', stamp: false, pages: [
+      '안녕하세요, 나래반선생님이에요. 여기는 나래반이에요.\n나래반도 특수학급이에요. 아이 한 명 한 명의 속도에 맞춰, 작은 걸음도 함께 기뻐하며 배워요.',
+    ] },
+    // ---------- 교직원(도장 없이 한마디 — 교사 09-29 '선생님들도 다 대사 하나씩') ----------
+    office: { on: true, name: '교무실', where: '본관 1층 교무실', stamp: false, pages: [
+      '안녕하세요, 교무실 선생님이에요.\n수업과 학교 일정을 챙겨요. 전학·입학 상담은 교무실(031-352-2176)로 문의해 주세요.',
+    ] },
+    admin: { on: true, name: '행정실', where: '본관 1층 행정실', stamp: false, pages: [
+      '안녕하세요, 행정실 선생님이에요.\n학교 살림을 챙기고, 스쿨버스·시설이 잘 돌아가도록 뒤에서 도와요.',
+    ] },
+    lunch: { on: true, name: '급식선생님', where: '급식실', stamp: false, pages: [
+      '안녕하세요, 급식선생님이에요.\n매일 맛있고 건강한 점심을 정성껏 준비해요. 골고루 먹어요!',
+    ] },
+    clean: { on: true, name: '청소선생님', where: '급식실', stamp: false, pages: [
+      '안녕하세요, 청소선생님이에요.\n우리 학교가 늘 깨끗하고 안전하도록 구석구석 살펴요.',
     ] },
     class1: { on: true, name: '1학년 교실', where: '본관 1층 동쪽 1학년', stamp: false, pages: [
       '안녕하세요, 1학년 선생님이에요. 여기는 1학년 교실이에요.\n작은 학교라 선생님의 눈길이 아이 한 명 한 명에게 온전히 닿아요.',
@@ -292,8 +308,12 @@ export const TOUR = {
     ] },
 
     // ---------- 꺼 둔 곳 ----------
-    field: { on: false, name: '운동장', where: '구령대 옆 운동장 북쪽', stamp: '🏃', pages: [
-      '우리 학교 운동장이에요.',
-    ] },
+    field: { on: true, name: '운동장', where: '구령대 옆 운동장 북쪽', stamp: '🏃', pages: [
+      '우리 학교 운동장이에요.\n넓은 흙 운동장에서 축구도 하고, 달리기도 하고, 마음껏 뛰어놀아요.',
+      '동쪽 끝 모래 구역엔 농구대가 둘 있어요.\n운동장 끝 큰 나무 그늘은 뛰놀다 쉬어 가는 자리예요.',
+      '소방 대피 훈련도 여기서 해요.\n당황하지 않고, 선생님을 따라 운동장으로!',
+    ], videos: [
+      { title: '당황하지 않고 탈출! 소방 대피 훈련', url: 'https://youtu.be/uHgPhe3lrNc' },
+    ], photos: [] },
   },
 };

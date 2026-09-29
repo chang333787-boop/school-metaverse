@@ -118,7 +118,7 @@ export default async function start(map, params = {}) {
   const phos = d => [].concat(d.photos || []).map(p => typeof p === 'string' ? { src: p } : p || {}).filter(p => p.src)
     .map(p => { let src = ''; try { src = new URL(String(p.src).trim(), DATA_URL).href; } catch (e) { /* 이상한 주소 — 뺀다 */ } return { src, caption: String(p.caption || '') }; }).filter(p => p.src);
   for (const a of map.tour) {
-    const d = SP[a.key] || {}; if (d.on === false) continue;
+    const d = SP[a.key] || SP[a.key.replace(/-\d+$/, '')] || {}; if (d.on === false) continue;   // 같은 이름 선생님이 여럿(admin-2 …) = 같은 글
     const [fx, fz] = DIR[a.face & 3], fd = a.kind === 'board' ? (a.wall ? 0.9 : 1.0) : 0.9;
     const hx = a.x + fx * fd, hz = a.z + fz * fd;
     const pages = Array.isArray(d.pages) && d.pages.length ? d.pages.map(String) : ['(tour_data.js에 이곳 설명을 써 주세요 — 키: ' + a.key + ')'];
@@ -141,7 +141,7 @@ export default async function start(map, params = {}) {
   const ORD = Array.isArray(DATA.order) ? DATA.order : [];
   SPOTS.sort((a, b) => { const i = ORD.indexOf(a.key), j = ORD.indexOf(b.key); return (i < 0 ? 999 : i) - (j < 0 ? 999 : j); });
   // ALL = 도장 받는 곳 · INTRO = 소개만(stamp: false — 각 반 담임선생님: 도장 없이 반 소개 · 교사 09-29) · 교감선생님(hub)은 둘 다 아님
-  const ALL = SPOTS.filter(s => !s.hub && !s.intro), INTRO = SPOTS.filter(s => s.intro), N = ALL.length, BY = new Map(SPOTS.map(s => [s.key, s]));
+  const ALL = SPOTS.filter(s => !s.hub && !s.intro), INTRO = SPOTS.filter(s => s.intro && !/-\d+$/.test(s.key)), N = ALL.length, BY = new Map(SPOTS.map(s => [s.key, s]));
   for (const s of SPOTS) {   // 말 거는 자리 = 앞 0.9~1m에서 가장 가까운 걷는 칸(책상·실험대 너머 선생님도 — 지점 가운데가 가구 속이면 그 자리에 설 수 없다) · 길 안내 도착 칸도 같은 칸
     s.node = nav.snap(s.hx, s.y, s.hz, 2.6);
     if (s.node >= 0) { const p = nav.pos(s.node); s.hx = p[0]; s.hz = p[2]; }
@@ -388,7 +388,7 @@ export default async function start(map, params = {}) {
       sl.title = s.where + (on ? ' · ✔ 도장' : '');
     }
     if (INTRO.length) {   // 각 반 소개(도장 없음) — 언제든 눌러 읽기
-      mk('div', 'sh', '🏫 우리 반 소개 — 담임선생님이 반을 소개해요(도장 없음)', card);
+      mk('div', 'sh', '🏫 선생님 소개 — 반과 하는 일을 소개해요(도장 없음)', card);
       const g2 = mk('div', 'gr', null, card);
       for (const s of INTRO) { const sl = btn('', 'sl all', () => { const all = cardAll; closeCard(); talkTo(s, { review: true, back: () => openCard(all) }); }, g2);
         mk('div', 'ci', s.stamp, sl); mk('div', '', s.name, sl); if (hasVid(s) || s.photos.length) mk('span', 'mi', hasVid(s) ? '🎬' : '📷', sl); sl.title = s.where; }
@@ -516,10 +516,11 @@ export default async function start(map, params = {}) {
   refresh();
   map.player.freeze(false);
   const hub = SPOTS.find(s => s.hub);
-  if (params.intro !== '0') openTalk({ name: '우리 학교 견학', icon: '🏫', end: '🏁 견학 시작!', pages: [
+  if (params.ending === '1') celebrate();   // 미리 보기(교사 09-29 '도장 다 받기 귀찮아 엔딩을 못 봤다'): ?tour=1&ending=1 — 도장은 저장하지 않는다
+  else if (params.intro !== '0') openTalk({ name: '우리 학교 견학', icon: '🏫', end: '🏁 견학 시작!', pages: [
     ...(Array.isArray(DATA.welcome) ? DATA.welcome.map(String) : []),
     '선생님(🙋)과 안내판(📋)을 찾아가 이야기를 듣고 도장을 모아요.\n· 가까이 가서 E(터치 ✋) 또는 사람·안내판을 눌러요 · 고를 때는 ↑↓\u00a0+\u00a0E\n· 떠 있는 ◆ · 미니맵 ⭐ = 아직 못 간 곳(주황 = 다음 추천)\n· H = 다음 곳 길 안내 · C = 📖 정림초 도감(' + N + '칸)'
-      + (INTRO.length ? '\n· 각 반에서는 담임선생님이 반을 소개해 줘요(도장 없음)' : '')
+      + (INTRO.length ? '\n· 각 반·교무실·행정실 선생님들도 한마디씩 해 줘요(도장 없음)' : '')
       + (hub ? '\n· 바로 앞 ' + hub.who + '께 말을 걸면 모든 곳의 이야기·영상을 한눈에 볼 수 있어요' : '')] });
 
   return {

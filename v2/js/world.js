@@ -6014,8 +6014,9 @@ export function buildWorld(scene) {
     }
     // TOUR-1(09-27 견학): 안내하는 교직원(이름 → 견학 키). 자리는 사람을 놓는 곳에서 그대로 적는다(글은 tour_data.js)
     const GUIDE = { '교장선생님': 'principal', '교감선생님': 'vice', '사서선생님': 'library', '보건선생님': 'nurse', '돌봄선생님': 'care', '유치원선생님': 'kinder',
-      '사랑반선생님': 'sarang', '1학년 선생님': 'class1', '2학년 선생님': 'class2', '3학년 선생님': 'class3', '4학년 선생님': 'class4', '5학년 선생님': 'class5', '6학년 선생님': 'class6' };   // PROMO-1(09-29): 반마다 담임선생님이 반 소개 + 도장
-    const guideAt = (nm, x, y, z, face, top) => { const key = GUIDE[nm]; if (key) { tourSpots.push({ key, kind: 'guide', label: nm, x, y, z, face: face & 3, top }); PEOPLE[PEOPLE.length - 1].tour = key; } return top; };
+      '사랑반선생님': 'sarang', '1학년 선생님': 'class1', '2학년 선생님': 'class2', '3학년 선생님': 'class3', '4학년 선생님': 'class4', '5학년 선생님': 'class5', '6학년 선생님': 'class6',   // PROMO-1(09-29): 반마다 담임선생님이 반 소개 + 도장
+      '나래반선생님': 'narae', '행정실장님': 'admin', '행정 선생님': 'admin', '교무 선생님': 'office', '급식선생님': 'lunch', '청소선생님': 'clean' };   // 09-29 교사 '선생님들도 다 대사 하나씩' — 같은 이름이 여럿이면 키-2·키-3(글은 같은 칸)
+    const guideAt = (nm, x, y, z, face, top) => { let key = GUIDE[nm]; if (key) { if (tourSpots.some(t => t.key === key)) { let k = 2; while (tourSpots.some(t => t.key === key + '-' + k)) k++; key = key + '-' + k; } tourSpots.push({ key, kind: 'guide', label: nm, x, y, z, face: face & 3, top }); PEOPLE[PEOPLE.length - 1].tour = key; } return top; };
     const tagSign = (r9, nm, y9) => { const p9 = PEOPLE[PEOPLE.length - 1]; if (p9 && p9.sign < 0) { p9.sign = signList.length - 1; p9.name = nm; p9.signY = y9; } return r9; };   // NPC-MOVE: 방금 놓은 사람 = 이 팻말의 주인
     const signH = nm => / 친구$/.test(nm) ? 0.15 : 0.22;   // PROMO-1: 홍보판 'N학년 친구'는 이름보다 길어 교실에서 서로 가렸다 — 작게
     const nameSign = (nm, x, top, z) => tagSign(sign(nm, x, top + 0.28, z, 0, signH(nm)), nm, top + 0.28);   // 이름 팻말 = 머리 위(앉으면 낮아진다)
@@ -6066,7 +6067,7 @@ export function buildWorld(scene) {
           const sp = spots.shift(); if (sp && sp.chair) chair(sp.x, sp.y ?? 0, sp.z, sp.face === 0 ? 1 : sp.face === 2 ? -1 : sp.face === 1 ? -1 : 1, OCHAIR, sp.face & 1);
           return seatAt(nm, sx, s, VICE); }
         if (L && L.tSeat && sz !== 'small' && !spots.length) {   // 교실형 방 선생님 = 선생님 책상 의자(나래반은 칠판 앞에 서서 설명)
-          if (room === '나래반') return nameSign(nm, L.teacher.x, person(L.teacher.x, L.y, L.teacher.z, sx, s, L.tFace ?? 1, 'explain'), L.teacher.z);
+          if (room === '나래반') return nameSign(nm, L.teacher.x, guideAt(nm, L.teacher.x, L.y, L.teacher.z, L.tFace ?? 1, person(L.teacher.x, L.y, L.teacher.z, sx, s, L.tFace ?? 1, 'explain')), L.teacher.z);   // 09-29: 나래반선생님도 견학 한마디
           return seatAt(nm, sx, s, { ...L.tSeat, y: L.y });
         }
         const sp = spots.shift();
