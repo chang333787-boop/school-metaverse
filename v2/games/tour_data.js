@@ -218,6 +218,7 @@ export const TOUR = {
       { group: '🎪 체육관 행사', title: '춤신춤왕 정림초(찾아오는 문화체험 공연)', url: 'https://youtu.be/CUGtZ_Z5Qcc' },
       { group: '🎪 체육관 행사', title: '정림초X향남초 한마음 교류회', url: 'https://youtu.be/UEihW-gnmCQ' },
       { group: '🎪 체육관 행사', title: '동탄어린이집 친구들의 정림초 방문', url: 'https://youtu.be/XHdQ7gVeE98' },
+      { group: '🎪 체육관 행사', title: '대한민국 화이팅! 월드컵 응원', url: 'https://youtu.be/Rh4pgUhMd4A' },
     ], photos: [] },
 
     // ---------- 방과 후 · 함께 자라는 곳 ----------
@@ -250,6 +251,7 @@ export const TOUR = {
       '• 이주학생 집단상담 운영',
     ], videos: [
       { title: '우리 학교에 병원이? 신체검사', url: 'https://youtu.be/OPwEkFLeN6w' },
+      { title: '당황하지 않고 탈출! 소방 대피 훈련', url: 'https://youtu.be/uHgPhe3lrNc' },
     ], photos: [] },
 
     // ---------- 교장실(마지막 인사 · 상담) ----------
