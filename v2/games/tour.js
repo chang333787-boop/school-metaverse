@@ -448,6 +448,7 @@ export default async function start(map, params = {}) {
   function goLeg(i) {
     if (!G) return; const home = i < 0, s = home ? VH : BY.get(GORDER[i]), tok = {};
     if (G.hot) { G.hot.remove(); G.hot = null; }
+    G.sp = 0; G.dx = null;
     Object.assign(G, { i: home ? G.i : i, home, spot: s, tok, ti: 0, moving: true, npcDone: false, fin: null, stuck: 0, best: 1e9 }); G.trail.length = 0;
     const v = map.npc.get('vice'), p = map.player.pos();
     if (v && Math.hypot(v.x - p.x, v.z - p.z) > 4) {   // 둘러보다 멀리 갔으면: 길격자로 교감선생님 자리까지 먼저(벽을 곧장 가로지르지 않게)
@@ -492,16 +493,25 @@ export default async function start(map, params = {}) {
     if (!G || !G.moving) return;
     const v = map.npc.get('vice'), p = map.player.pos(), T = G.trail;
     if (v) { const n = T.length; if (!n || Math.hypot(v.x - T[n - 2], v.z - T[n - 1]) > 0.25) T.push(v.x, v.z); }
-    while (G.ti < T.length - 2 && Math.hypot(T[G.ti] - p.x, T[G.ti + 1] - p.z) < 0.3) { G.ti += 2; G.best = 1e9; G.stuck = 0; }   // 0.3 = 문틀 사이로 교감선생님 길 그대로(0.7이면 모퉁이를 질러 문틀에 걸렸다)
+    const dT = i => Math.hypot(T[i] - p.x, T[i + 1] - p.z);
+    while (G.ti < T.length - 2 && (dT(G.ti) < 0.3 || dT(G.ti + 2) < dT(G.ti))) { G.ti += 2; G.best = 1e9; G.stuck = 0; }   // 지나친 점(다음 점이 더 가까움)은 건너뜀   // 0.3 = 문틀 사이로 교감선생님 길 그대로(0.7이면 모퉁이를 질러 문틀에 걸렸다)
     const dv = v ? Math.hypot(v.x - p.x, v.z - p.z) : 0;
     if (G.npcDone && !G.fin) {   // 교감선생님이 섰다 → 마지막 몇 걸음은 이야기 자리(방 안쪽)까지 길격자로(예전엔 2m 뒤 문밖 복도에서 멈췄다 — 09-30 교사 '도서관 안쪽으로')
       const s = G.spot, gx = G.home ? VH.hx : s.hx, gz = G.home ? VH.hz : s.hz, r = nav.path([p.x, p.y, p.z], [gx, s.y, gz], { maxExp: 60000 });
       G.fin = [gx, gz]; T.length = 0; if (r.ok) for (const q of r.pts) T.push(q[0], q[2]); T.push(gx, gz); G.ti = 0; G.best = 1e9; G.stuck = 0; }
     if (G.fin && Math.hypot(G.fin[0] - p.x, G.fin[1] - p.z) < 0.7) { if (G.home) guideHome(); else guideArrive(); return; }
-    if (talk || card || media || (!G.fin && dv < 2.2)) { map.player.steer(null); G.stuck = 0; G.best = 1e9; return; }   // 걷는 교감선생님 바로 뒤면 기다림 · 창을 열었으면 멈춤
-    const tx = T[G.ti], tz = T[G.ti + 1], d = Math.hypot(tx - p.x, tz - p.z);
-    map.player.steer(tx - p.x, tz - p.z, G.fin ? GSPD : dv > 6 ? GSPD * 1.6 : GSPD * 1.1, true);
-    if (d < G.best - 0.15) { G.best = d; G.stuck = 0; } else if (G.fin && G.stuck + dt > 1.5 && (G.ti >= T.length - 4 || Math.hypot(G.fin[0] - p.x, G.fin[1] - p.z) < 2.5)) { if (G.home) guideHome(); else guideArrive(); return; }   // 마지막 몇 걸음에서 막히면 거기서 도착
+    // 09-30 교사 '가끔 떨리는 느낌': 예전엔 속도를 두 단계(×1.6 / ×1.1)로 딱 자르고 0.25m 흔적 점을 하나씩 겨눠 프레임마다 속도·방향이 튀었다 →
+    //   속도 = 교감선생님과 거리에 비례(가까우면 서서히 0) + 부드럽게 · 방향 = 0.8m 앞 흔적 점(마지막 걸음은 바로 앞 점) + 부드럽게
+    const want = talk || card || media ? 0 : G.fin ? GSPD : Math.max(0, Math.min(GSPD * 1.6, GSPD * (dv - 2.0) / 1.2));
+    G.sp = (G.sp || 0) + (want - (G.sp || 0)) * Math.min(1, dt * 5);
+    if (G.sp < 0.35) { map.player.steer(null); G.stuck = 0; G.best = 1e9; return; }   // 걷는 교감선생님 바로 뒤면 기다림 · 창을 열었으면 멈춤
+    let k = G.ti, acc = Math.hypot(T[k] - p.x, T[k + 1] - p.z); const LA = G.fin ? 0 : 0.8;
+    while (acc < LA && k < T.length - 2) { acc += Math.hypot(T[k + 2] - T[k], T[k + 3] - T[k + 1]); k += 2; }
+    const tx = T[k], tz = T[k + 1], d = Math.hypot(tx - p.x, tz - p.z);   // 끼임은 겨누는 점까지 거리로
+    let ax = T[k] - p.x, az = T[k + 1] - p.z; const aL = Math.hypot(ax, az) || 1; ax /= aL; az /= aL;
+    if (G.dx == null) { G.dx = ax; G.dz = az; } const blend = Math.min(1, dt * 9); G.dx += (ax - G.dx) * blend; G.dz += (az - G.dz) * blend;
+    map.player.steer(G.dx, G.dz, G.sp, true);
+    if (d < G.best - 0.15 || G.sp < 1.2) { if (d < G.best) G.best = d; G.stuck = 0; } else if (G.fin && G.stuck + dt > 1.5 && (G.ti >= T.length - 4 || Math.hypot(G.fin[0] - p.x, G.fin[1] - p.z) < 2.5)) { if (G.home) guideHome(); else guideArrive(); return; }   // 마지막 몇 걸음에서 막히면 거기서 도착
     else if ((G.stuck += dt) > 1.5) { const k = Math.min(T.length - 2, G.ti + 4); map.player.teleport([T[k], T[k + 1]]); G.ti = k; G.stuck = 0; G.best = 1e9; }   // 끼임(가구 사이 — 걷는 교감선생님은 몸 충돌이 없다) → 조금 앞 흔적으로
   }
   function celebrate() {
