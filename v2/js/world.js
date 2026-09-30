@@ -5890,6 +5890,7 @@ export function buildWorld(scene) {
       if (o.role === 'cleaner') { top = 0x5e7a8e; bot = 0x3b4a5c; }   // 작업복(회청색 위아래)
       if (o.role === 'pe') { top = 0x2f6fd0; bot = 0x24324a; }         // TOUR-1 체육복(파랑 위 · 남색 아래)
       if (o.role === 'sci') { top = 0xf4f4ee; bot = 0x3d4f7a; }        // TOUR-1 흰 실험복
+      if (o.role === 'principal') { top = 0x2c3a58; bot = 0x2c3a58; }  // 09-30 교사 '교장선생님은 남자셔': 남색 양복(아래 흰 셔츠 깃 + 빨간 넥타이) — 어른 얼굴이 다 비슷해 한눈에 알아보게
       const SHOE = adult ? 0x3a3d44 : 0xf6f6f2;
       _W9.compose(_v9.set(x, y, z), _q9.setFromEuler(_e9.set(0, YAW[face & 3], 0)), _s9.set(s, s, s));
       const W = _W9.clone();
@@ -5927,6 +5928,8 @@ export function buildWorld(scene) {
       if (!skirt) put(S64, [0, D.PA[0] + dy, bz], [D.PA[1], D.PA[2], D.PA[3]], bot);
       put(S85, [0, D.T[0] + dy, bz], [D.T[1], D.T[2], D.T[3]], top);
       if (o.role === 'cook') put(S64, [0, D.T[0] + dy - 0.05, bz + D.T[3] * 0.62], [D.T[1] * 0.86, D.T[2] * 0.98, D.T[3] * 0.55], 0xf7f7f2);   // 앞치마(셔츠 앞면보다 2cm 앞)
+      if (o.role === 'principal') { put(S64, [0, D.T[0] + dy + D.T[2] * 0.5, bz + D.T[3] * 0.6], [D.T[1] * 0.34, D.T[2] * 0.42, D.T[3] * 0.5], 0xf7f7f2);   // 양복 앞 흰 셔츠(V)
+        put(S64, [0, D.T[0] + dy + D.T[2] * 0.22, bz + D.T[3] * 0.7], [D.T[1] * 0.11, D.T[2] * 0.62, D.T[3] * 0.42], 0xc0392b); }   // 빨간 넥타이
       // 팔: 어깨 → 손(자세별). 아이 = 짧은 소매 + 맨팔(끝이 벙어리 손) · 어른 = 긴 소매 + 둥근 손
       const hands = [-1, 1].map(sd => {
         const sx = sd * D.SH[0], L = D.armL;
@@ -6071,7 +6074,7 @@ export function buildWorld(scene) {
           return seatAt(nm, sx, s, { ...L.tSeat, y: L.y });
         }
         const sp = spots.shift();
-        if (sp) seatAt(nm, sx, s, sp); else place(zn, nm, sx, s);
+        if (sp) seatAt(nm, sx, s, nm === '교장선생님' ? { ...sp, role: 'principal' } : sp); else place(zn, nm, sx, s);
       });
     });
     // TOUR-1 견학 안내 선생님 3명(사용자 09-27 — 'NPC를 더 늘리지 않는다'의 유일한 예외: 안내가 필요한데 사람이 없던 곳에 한 명씩 · 직함만, 이름 없음)
