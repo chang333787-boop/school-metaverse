@@ -310,7 +310,7 @@ export default async function start(map, params = {}) {
       L.push(up()); return L;
     }
     if (G && t.o.guide) { const ni = guideNextIndex(G.i + 1);   // 🧑‍🏫 안내 모드: 맨 위 = 다음 장소로
-      L.push({ k: 'gnext', t: ni < 0 ? '🚌 스쿨버스 앞으로 돌아가요' : '➡️ 다음 장소로 (' + BY.get(GORDER[ni]).name + ')', f: () => { closeTalk(); if (ni < 0) goLeg(-1); else goLeg(ni); } }); }
+      L.push({ k: 'gnext', t: '🧑‍🏫 다 봤어요 — 교감선생님께', f: () => { closeTalk(); viceTalk(); } }); void ni; }   // 09-30 교사: 다음 장소는 교감선생님께 말을 걸어서
     if (s && s.detail.length) L.push({ k: 'd', t: '📄 자세히 볼래요' + seen('d'), f: () => openDetail(s) });
     if (s && (!s.hub || s.videos.some(v => v.id))) {   // 교감선생님(안내)은 채운 영상만
       if (s.videos.length) L.push({ k: 'v', t: '🎬 영상 볼래요' + (s.videos.length > 1 ? ' (' + s.videos.length + ')' : ''),
@@ -322,8 +322,7 @@ export default async function start(map, params = {}) {
     if (s && s.hub) L.push({ k: 'hub', t: '📖 학교 정보 모두 볼래요', f: () => { closeTalk(); openCard(true); } });
     if (s && s.hub && !G && GORDER.length) L.push({ k: 'gstart', t: '🧑‍🏫 안내해 주세요 (따라가기)', f: () => { closeTalk(); startGuide(); } });
     if (G && t.o.guide) {   // 안내 중엔 👋 대신 — 👀 = 교감선생님은 여기서 기다리고 나는 주변 구경(09-30 교사) · 🚶 = 안내 끝
-      L.push({ k: 'gbrowse', t: '👀 여기 좀 둘러볼게요', f: () => { closeTalk(); guideBrowse(); } });
-      L.push({ k: 'gstop', t: '🚶 안내 그만할래요', f: () => { closeTalk(); stopGuide('이제 마음껏 둘러보세요! 교감선생님은 버스 앞으로 돌아가요'); } }); return L; }
+      L.push({ k: 'gbrowse', t: '👀 여기 좀 둘러볼게요', f: () => { closeTalk(); guideBrowse(); } }); return L; }
     if (t.o.back) L.push({ k: 'back', t: '◀ 도감으로 돌아가기', f: () => closeTalk(true) });
     L.push({ k: 'bye', t: t.o.end || '👋 안녕히 계세요', f: () => closeTalk() });
     return L;
@@ -431,13 +430,16 @@ export default async function start(map, params = {}) {
     goLeg(i);
   }
   function stopGuide(msg) {
-    if (!G) return; G = null; map.player.steer(null); map.npc.home('vice'); map.hud.chip('guide', null); refresh();
+    if (!G) return; if (G.hot) G.hot.remove(); G = null; map.player.steer(null); map.npc.home('vice'); map.hud.chip('guide', null); refresh();
     if (msg) map.hud.toast(msg, 3);
   }
   const VH = BY.get('vice');   // 교감선생님 제자리(버스 앞) — 안내가 끝나면 여기로 돌아와 완주 창
   function sideOf(s) {   // 교감선생님 설 자리 = 이야기 자리(hx,hz) 옆 1.2m(사람·안내판 쪽을 가리지 않게 · 걷는 칸만)
     const dx = s.x - s.hx, dz = s.z - s.hz, L = Math.hypot(dx, dz) || 1, nx = -dz / L, nz = dx / L;
     const bx = -dx / L, bz = -dz / L;   // 뒤쪽(이야기 자리에서 사람·안내판 반대쪽)
+    if (s.kind === 'board') for (const sd of [1, -1]) {   // 09-30 교사: 표지판은 교감선생님이 표지판 옆까지 들어가야 내가 표지판 앞에 선다
+      const x = s.x + nx * 1.15 * sd + bx * 0.35, z = s.z + nz * 1.15 * sd + bz * 0.35, k = nav.snap(x, s.y, z, 0.5);
+      if (k != null && k >= 0) { const q = nav.pos(k); if (Math.hypot(q[0] - s.hx, q[2] - s.hz) > 0.9) return { x: q[0], y: q[1], z: q[2] }; } }
     for (const [ox, oz] of [[nx * 1.2, nz * 1.2], [-nx * 1.2, -nz * 1.2], [nx * 1.8, nz * 1.8], [-nx * 1.8, -nz * 1.8], [nx + bx, nz + bz], [-nx + bx, -nz + bz], [bx * 1.6, bz * 1.6]]) {
       const x = s.hx + ox, z = s.hz + oz, k = nav.snap(x, s.y, z, 0.8);
       if (k != null && k >= 0) { const q = nav.pos(k); if (Math.hypot(q[0] - s.hx, q[2] - s.hz) > 0.9) return { x: q[0], y: q[1], z: q[2] }; } }
@@ -445,6 +447,7 @@ export default async function start(map, params = {}) {
   }
   function goLeg(i) {
     if (!G) return; const home = i < 0, s = home ? VH : BY.get(GORDER[i]), tok = {};
+    if (G.hot) { G.hot.remove(); G.hot = null; }
     Object.assign(G, { i: home ? G.i : i, home, spot: s, tok, ti: 0, moving: true, npcDone: false, fin: null, stuck: 0, best: 1e9 }); G.trail.length = 0;
     const v = map.npc.get('vice'), p = map.player.pos();
     if (v && Math.hypot(v.x - p.x, v.z - p.z) > 4) {   // 둘러보다 멀리 갔으면: 길격자로 교감선생님 자리까지 먼저(벽을 곧장 가로지르지 않게)
@@ -457,10 +460,18 @@ export default async function start(map, params = {}) {
   function guideChip() {   // 칩 = 지금 할 일(걷는 중: 어디로 · 둘러보는 중: 누르면 다음 장소로)
     if (!G) return; const ni = G.moving ? G.i : guideNextIndex(G.i + 1), s = ni >= 0 ? BY.get(GORDER[ni]) : null;
     if (G.moving) map.hud.chip('guide', G.home ? '🧑‍🏫 스쿨버스 앞으로 돌아가는 중' : '🧑‍🏫 안내 ' + (G.i + 1) + '/' + GORDER.length + ' → ' + G.spot.name, { onClick: () => {} });
-    else map.hud.chip('guide', s ? '➡️ 다음 장소로 (' + s.name + ')' : '🚌 스쿨버스 앞으로 돌아가요', { onClick: () => { if (!G || G.moving) return; if (talk) closeTalk(); goLeg(ni); } });
+    else map.hud.chip('guide', '🧑‍🏫 교감선생님께 (다음: ' + (s ? s.name : '스쿨버스 앞') + ')', { onClick: () => { if (!G || G.moving) return; viceTalk(); } });
   }
-  function guideBrowse() {   // 👀 교감선생님은 그 자리에서 기다림 · 칩을 누르면 다시 출발
-    if (!G) return; map.hud.toast('천천히 둘러보세요! 다 보면 오른쪽 「➡️ 다음 장소로」를 눌러요', 3.5); guideChip();
+  function guideBrowse() {   // 👀 교감선생님은 그 자리에서 기다림 · 다 보면 교감선생님께 말 걸기(E · 칩)
+    if (!G) return; map.hud.toast('천천히 둘러보세요! 다 보면 교감선생님께 말을 걸어요 (E · 오른쪽 칩)', 3.5); guideChip();
+  }
+  function viceTalk() {   // 교감선생님: '이제 다음 장소로 갈까요?'
+    if (!G || G.moving) return; if (talk) closeTalk();
+    const ni = guideNextIndex(G.i + 1), nx = ni >= 0 ? BY.get(GORDER[ni]) : null;
+    openTalk({ name: '교감선생님', icon: '🧑‍🏫', pages: [nx ? '다 둘러보셨나요?\n다음은 「' + nx.name + '」예요. 이제 가 볼까요?' : '모든 곳을 다 둘러봤어요! 정말 멋져요.\n이제 스쿨버스 앞으로 돌아갈까요?'],
+      choices: [{ k: 'go', t: nx ? '➡️ 네, 가요!' : '🚌 네, 돌아가요!', f: () => { closeTalk(); goLeg(nx ? ni : -1); } },
+        { k: 'more', t: '👀 조금 더 둘러볼게요', f: () => { closeTalk(); guideBrowse(); } },
+        { k: 'stop', t: '🚶 안내 그만할래요', f: () => { closeTalk(); stopGuide('이제 마음껏 둘러보세요! 교감선생님은 버스 앞으로 돌아가요'); } }] });
   }
   function guideHome() {   // 안내 끝: 버스 앞 — 교감선생님 인사 → 완주 창
     const v = map.npc.get('vice'), p = map.player.pos();
@@ -473,6 +484,7 @@ export default async function start(map, params = {}) {
     const s = G.spot, v = map.npc.get('vice'), p = map.player.pos();
     G.moving = false; map.player.steer(null); map.player.lookAt([s.x, s.z]); guideChip();
     if (v) map.npc.pose('vice', 'explain', (Math.atan2(p.x - v.x, -(p.z - v.z)) * 180 / Math.PI + 360) % 360);
+    if (G.hot) G.hot.remove(); G.hot = v ? map.interact.add({ x: v.x, y: v.y, z: v.z, r: 1.9, label: '💬 교감선생님 — 다음 장소로', use: () => { if (!talk && !card && !media) viceTalk(); } }) : null;
     if (talk) closeTalk();
     talkTo(s, { guide: true });
   }

@@ -3658,7 +3658,7 @@ export function buildWorld(scene) {
     zones.push({ x0: SX1, x1: DX, z0: DZ, z1: NZ, y: GYF, label: '체육관 준비실' });
     zones.push({ x0: DX, x1: gx1, z0: gz0, z1: NZ, y: GYF, label: '무대 통로' }, { x0: SX1, x1: DX, z0: gz0, z1: DZ, y: GYF + 0.7, label: '무대 통로' });
     zones.push({ x0: SX0, x1: SX1, z0: gz0, z1: NZ, y: ST, label: '체육관 무대' });
-    npcSpot['체육관'] = [{ x: SCX, y: GYF, z: NZ + 1.1, face: 2 }];   // TOUR-1: 견학 안내 체육선생님 = 무대 앞 가운데 · 코트(남)를 본다
+    npcSpot['체육관'] = [{ x: SCX, y: GYF, z: NZ + 2.6, face: 2 }];   // 09-30 교사 '체육선생님 어색' — 무대 벽에 붙어 있던 것(1.1)을 코트 쪽으로   // TOUR-1: 견학 안내 체육선생님 = 무대 앞 가운데 · 코트(남)를 본다
     ceil(gx0, SX0, gz0, NZ, GYF + 3.2 + 0.15, 'ctile'); ceil(SX1, gx1, gz0, NZ, GYF + 3.2 + 0.15, 'ctile');
   }
   {   // 부속동(전실 · 양옆 화장실 · 체육 창고) — 현관 = 동벽 유리 파사드(영상 g_100~112: 북쪽 벽돌벽(작은 창 2) → 유리 양문 → 벽돌 기둥 → 유리 양문 + 옆 고정 유리)
@@ -6022,7 +6022,7 @@ export function buildWorld(scene) {
     const guideAt = (nm, x, y, z, face, top) => { let key = GUIDE[nm]; if (key) { if (tourSpots.some(t => t.key === key)) { let k = 2; while (tourSpots.some(t => t.key === key + '-' + k)) k++; key = key + '-' + k; } tourSpots.push({ key, kind: 'guide', label: nm, x, y, z, face: face & 3, top }); PEOPLE[PEOPLE.length - 1].tour = key; } return top; };
     const tagSign = (r9, nm, y9) => { const p9 = PEOPLE[PEOPLE.length - 1]; if (p9 && p9.sign < 0) { p9.sign = signList.length - 1; p9.name = nm; p9.signY = y9; } return r9; };   // NPC-MOVE: 방금 놓은 사람 = 이 팻말의 주인
     const signH = nm => / 친구$/.test(nm) ? 0.15 : 0.22;   // PROMO-1: 홍보판 'N학년 친구'는 이름보다 길어 교실에서 서로 가렸다 — 작게
-    const nameSign = (nm, x, top, z) => tagSign(sign(nm, x, top + 0.28, z, 0, signH(nm)), nm, top + 0.28);   // 이름 팻말 = 머리 위(앉으면 낮아진다)
+    const nameSign = (nm, x, top, z, rot = 0) => tagSign(sign(nm, x, top + 0.28, z, rot, signH(nm)), nm, top + 0.28);   // 이름 팻말 = 머리 위(앉으면 낮아진다)
     const place = (zn, nm, sex, s) => {   // 자리가 정해지지 않은 사람(예비) — 방 빈자리에 서서 방 가운데 쪽을 본다(90° 단위)
       const p = freeSpot(zn); if (!p) return;
       const dx = (zn.x0 + zn.x1) / 2 - p[0], dz = (zn.z0 + zn.z1) / 2 - p[1];
@@ -6052,7 +6052,8 @@ export function buildWorld(scene) {
     const seatAt = (nm, sx, s, sp) => {   // sp = { x, z, face, desk, reach, chair? , pose? }
       if (sp.chair) chair(sp.x, sp.y ?? 0, sp.z, sp.face === 0 ? 1 : sp.face === 2 ? -1 : sp.face === 1 ? -1 : 1, OCHAIR, sp.face & 1);
       if (sp.hiBack) dBox(0.44, 0.5, 0.04, 0x2a2224, sp.x, (sp.y ?? 0) + 0.83, sp.z + (sp.face === 0 ? 0.17 : -0.17));   // OFFICE-3 교장 의자 = 등받이 높게
-      nameSign(nm, sp.x, guideAt(nm, sp.x, sp.y ?? 0, sp.z, sp.face, person(sp.x, sp.y ?? 0, sp.z, sx, s, sp.face, sp.pose ?? 'sit', sp)), sp.z);
+      const so = sp.signOff || 0, [fx9, fz9] = [[0, -1], [1, 0], [0, 1], [-1, 0]][sp.face & 3];   // signOff = 이름표를 바라보는 쪽으로 당김(돌봄교실 — 천장 TV 뒤에 숨던 것 · 09-30)
+      nameSign(nm, sp.x + fx9 * so, guideAt(nm, sp.x, sp.y ?? 0, sp.z, sp.face, person(sp.x, sp.y ?? 0, sp.z, sx, s, sp.face, sp.pose ?? 'sit', sp)), sp.z + fz9 * so, so && (sp.face & 1) ? Math.PI / 2 : 0);   // signOff면 이름표도 바라보는 쪽으로 돌림
     };
     // 교감선생님 = 무지개 쉼터 남쪽 기둥 줄 안(서쪽 기둥 -6.0 · 동쪽 -2.5 사이), 버스 앞문(bus x - 4.6 · 북쪽 옆면) 바로 북쪽 — 버스를 등지고 학교 쪽(북)을 보며 한 손을 든다
     const VICE = { x: SCHOOL.bus[0] - 5.7, y: FIELD, z: SCHOOL.bus[1] - 2.7, face: 0, pose: 'wave' };   // BUS-1(09-28): 0.8m 서쪽으로 — 버스 앞문(bus x - 4.6) 바로 앞을 비워 들어가는 길을 막지 않게(쉼터 서쪽 기둥 -6.0 안)
@@ -6071,7 +6072,7 @@ export function buildWorld(scene) {
           return seatAt(nm, sx, s, VICE); }
         if (L && L.tSeat && sz !== 'small' && !spots.length) {   // 교실형 방 선생님 = 선생님 책상 의자(나래반은 칠판 앞에 서서 설명)
           if (room === '나래반') return nameSign(nm, L.teacher.x, guideAt(nm, L.teacher.x, L.y, L.teacher.z, L.tFace ?? 1, person(L.teacher.x, L.y, L.teacher.z, sx, s, L.tFace ?? 1, 'explain')), L.teacher.z);   // 09-29: 나래반선생님도 견학 한마디
-          return seatAt(nm, sx, s, { ...L.tSeat, y: L.y });
+          return seatAt(nm, sx, s, { ...L.tSeat, y: L.y, signOff: room === '돌봄교실' ? 0.6 : 0 });
         }
         const sp = spots.shift();
         if (sp) seatAt(nm, sx, s, nm === '교장선생님' ? { ...sp, role: 'principal' } : sp); else place(zn, nm, sx, s);

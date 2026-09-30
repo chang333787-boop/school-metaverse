@@ -53,12 +53,12 @@ export const TOUR = {
   finish: [
     '폰은 잠시 내려놓고, 서로의 얼굴을 봅니다.\n책을 펴고, 노래하고, 마음껏 뛰노는 아이들.',
     '작은 학교의 큰 행복, 저마다의 빛깔로 자라는 곳.\nPhone Off, RAS On!\n정림초등학교가 여러분을 기다립니다.',
-    '전학·입학 상담 031-352-2176\n경기도 화성시 정남면 망월길 69',
+    '전학·입학 상담 031-352-2176\n경기도 화성시 효행구 정남면 망월길 69',
   ],
 
-  // 🧑‍🏫 안내 모드(교감선생님이 앞장서면 저절로 따라가기) 순서 — 09-30 길격자 실제 걷는 거리로 짠 최단 동선(버스에서 출발 · 총 ≈670m · 도감 순서대로면 ≈1130m)
+  // 🧑‍🏫 안내 모드(교감선생님이 앞장서면 저절로 따라가기) 순서 — 09-30 길격자 실제 걷는 거리로 짠 최단 동선(놀이터 → 버스 → 숲놀이터 … · 총 ≈645m · 도감 순서대로면 ≈1130m — 교사 09-30 '놀이터 먼저')
   //   speed = 교감선생님 걷는 빠르기(m/s · 1.5~4.5). 순서를 바꾸면 되돌아가는 길이 늘 수 있어요.
-  guide: { speed: 3, order: ['bus', 'playground', 'forest', 'bigtree', 'field', 'ai', 'science', 'cafeteria', 'principal', 'garden', 'care', 'kinder', 'library', 'nurse', 'pe'] },
+  guide: { speed: 3, order: ['playground', 'bus', 'forest', 'bigtree', 'field', 'ai', 'science', 'cafeteria', 'principal', 'garden', 'care', 'kinder', 'library', 'nurse', 'pe'] },
 
   // 추천 순서 = 정림초의 하루(등교 → 수업 → 점심 → 쉬는 시간 → 방과 후 → 교장실 인사)
   order: ['bus', 'ai', 'science', 'library', 'cafeteria', 'playground', 'field', 'forest', 'bigtree', 'garden', 'pe', 'care', 'kinder', 'nurse', 'principal'],
@@ -87,7 +87,7 @@ export const TOUR = {
       '## 주소 이전 없이 전학·입학',
       '소규모 학교 전입학 특례 지정 학교예요. 거주지를 옮기지 않아도 학교장 승낙으로 전입학할 수 있어요.',
       '• 전학·입학 상담 031-352-2176 (교무실)',
-      '• 경기도 화성시 정남면 망월길 69',
+      '• 경기도 화성시 효행구 정남면 망월길 69',
     ], videos: [
       { group: '🏫 학교 소개', title: '2026 정림초 홍보영상', url: 'https://youtu.be/u4tCLmundTA' },
       { group: '🏫 학교 소개', title: '초록초록 정림초에 초대합니다', url: 'https://youtu.be/5GBzPF_7j58' },
@@ -267,7 +267,7 @@ export const TOUR = {
       '## 상담',
       '• 교무실 031-352-2176',
       '• 교장실 031-352-2855',
-      '• 경기도 화성시 정남면 망월길 69',
+      '• 경기도 화성시 효행구 정남면 망월길 69',
     ], videos: [
       { title: '교장선생님 인사', url: '' },   // ← 교장선생님 인사 영상 주소를 여기에(빈 칸이면 🎬 버튼이 안 보여요 · 교사 09-29: 교장실은 인사 영상 자리만)
     ], photos: [] },
