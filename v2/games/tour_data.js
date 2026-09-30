@@ -56,6 +56,10 @@ export const TOUR = {
     '전학·입학 상담 031-352-2176\n경기도 화성시 정남면 망월길 69',
   ],
 
+  // 🧑‍🏫 안내 모드(교감선생님이 앞장서면 저절로 따라가기) 순서 — 09-30 길격자 실제 걷는 거리로 짠 최단 동선(버스에서 출발 · 총 ≈670m · 도감 순서대로면 ≈1130m)
+  //   speed = 교감선생님 걷는 빠르기(m/s · 1.5~4.5). 순서를 바꾸면 되돌아가는 길이 늘 수 있어요.
+  guide: { speed: 3, order: ['bus', 'playground', 'forest', 'bigtree', 'field', 'ai', 'science', 'cafeteria', 'principal', 'garden', 'care', 'kinder', 'library', 'nurse', 'pe'] },
+
   // 추천 순서 = 정림초의 하루(등교 → 수업 → 점심 → 쉬는 시간 → 방과 후 → 교장실 인사)
   order: ['bus', 'ai', 'science', 'library', 'cafeteria', 'playground', 'field', 'forest', 'bigtree', 'garden', 'pe', 'care', 'kinder', 'nurse', 'principal'],
 

@@ -151,7 +151,7 @@ export function createWorldFx(H) {
       if (o.sign != null) a.nosign = !o.sign;   // g3-story: sign:false = 이름표를 가린 대역(이야기 속 이름 없는 역할 — 실제 아이 이름을 역할에 붙이지 않게)
       if (a.done) { const d = a.done; a.done = null; d(false); }
       const pose = o.pose || (to && to.pose) || 'stand', face = o.face ?? T9.h, g0 = GEN, po = { seat: o.seat, desk: o.desk };
-      a.spd = o.speed || (a.r.s > 1.05 ? 1.2 : 1.3);
+      a.spd = o.speed || (a.r.s > 1.05 ? 1.2 : 1.3); a.pass = !!o.pass;   // GUIDE-1(09-30): pass = 앞에 선 나를 기다리지 않고 지나감(걷는 동안은 몸 충돌이 없다 — 견학 안내가 뒤따르는 나를 기다리다 멈추던 것)
       const arrive = () => { a.path = null; const k = doorActors ? doorActors.indexOf(a.door) : -1; if (k >= 0) doorActors.splice(k, 1);
         a.x = T9.x; a.y = T9.y; a.z = T9.z; if (face != null) a.h = face; setPose(a, pose === 'walk' ? 'stand' : pose, po); solidOn(a); emit('npc', { id, type: 'arrive' }); };
       if (!o.walk) { solidOff(a); a.path = null; arrive(); return Promise.resolve(true); }
@@ -193,7 +193,7 @@ export function createWorldFx(H) {
       const dx = nx[0] - a.x, dz = nx[2] - a.z, d = Math.hypot(dx, dz);
       // 내가 바로 앞(0.8m · 앞쪽)에 있으면 잠깐 멈춰 기다린다(부딪혀 끼지 않게)
       const px = P.x - a.x, pz = P.z - a.z, pd = Math.hypot(px, pz);
-      if (pd < 0.8 && Math.abs(P.y - a.y) < 1.4 && d > 0.01 && (px * dx + pz * dz) > 0 && a.wait < 6) { a.wait += dt; swing(a, 0); continue; }
+      if (!a.pass && pd < 0.8 && Math.abs(P.y - a.y) < 1.4 && d > 0.01 && (px * dx + pz * dz) > 0 && a.wait < 6) { a.wait += dt; swing(a, 0); continue; }
       a.wait = 0;
       const step = a.spd * dt;
       if (d <= step || d < 1e-4) { a.x = nx[0]; a.y = nx[1]; a.z = nx[2]; a.pi++; }

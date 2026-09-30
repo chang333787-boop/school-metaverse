@@ -6,7 +6,7 @@
 import { createMinimap } from './minimap.js?v=11';
 import { createGamePicker } from './gamepick.js?v=7';
 import { createEngine } from './engine.js?v=11';
-import { createWorldFx } from './worldfx.js?v=4';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
+import { createWorldFx } from './worldfx.js?v=5';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 // PERF-WIN: 숫자 키(윗줄·숫자 패드) → 1~9 · 아니면 0 — e.key는 한글 입력기가 켜져 있으면 'Process'라 e.code로 읽는다
 export const digitOf = e => { const m = /^(?:Digit|Numpad)([0-9])$/.exec(e.code || ''); return m ? +m[1] : 0; };
 export function createMapApi(host, NAV, META) {
@@ -156,6 +156,9 @@ export function createMapApi(host, NAV, META) {
     // GAME-WG: 3인칭 카메라를 오른쪽으로 m만큼 비켜 세움(어깨 너머 · -1~1 · 0 = 끔). 옆벽 검사는 하지 않으니 게임이 트인 곳에서만. 게임이 멈추면 0
     shoulder(m = 0) { CTRL.shoulder = Math.max(-1, Math.min(1, +m || 0)); },
     speed(k = 1) { CTRL.speed = Math.max(0.5, Math.min(2, k)); },
+    // GUIDE-1(09-30): 자동 걷기 — steer(dx, dz, 속도 m/s, 카메라 따라 돌기) · steer(null) = 끔. 키·조이스틱이 있으면 그쪽이 먼저. 게임이 멈추면 자동으로 끔
+    steer(dx, dz, v = 4.2, cam = true) { if (dx == null) { CTRL.steer = null; return; } const L = Math.hypot(dx, dz); if (L < 1e-6) { CTRL.steer = null; return; }
+      const st = CTRL.steer || (CTRL._st || (CTRL._st = {})); st.x = dx / L; st.z = dz / L; st.v = Math.max(0.5, Math.min(7.5, v)); st.cam = !!cam; CTRL.steer = st; },
     // ACTION-1(09-28): 보이는 행동 — act('drink'|'wash'|'sanitize'|'spray'|'water'|'mic'|'drum'|'sing'|'write'|'erase'|'point'|'look'|'salute'|'read'|'scribble'|'press'|'shoes'|'reach', { at:[x,y,z], ats, msg, onMid, midAt, onEnd }) → { done, stop() } · 게임이 멈추면 멈춘다. 정본 docs/map_api.md §19
     act(name, o = {}) { return pl.acts ? pl.acts.play(name, o) : null; },
     get acting() { return pl.acts ? pl.acts.cur : null; },
@@ -463,7 +466,7 @@ export function createMapApi(host, NAV, META) {
     const res = new Set(), track = h => { if (dead && h && h.remove) { try { h.remove(); } catch (e) { console.error(e); } return h; } if (h && h.remove) { const r0 = h.remove; h.remove = function () { res.delete(h); return r0.apply(this, arguments); }; res.add(h); } return h; };
     const S = facadeApi(track, owner);
     S.dispose = () => { dead = true; for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); try { ENG.reset(); } catch (e) { console.error('[map] 엔진 정리 오류', e); } try { FX.reset(); } catch (e) { console.error('[map] 세상 바꾸기 정리 오류', e); }
-      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; if (pl.acts) pl.acts.stop(true); if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
+      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; CTRL.steer = null; if (pl.acts) pl.acts.stop(true); if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
     S.quit = () => { const c = game.current; if (c && c.scope === S) stopGame('quit'); };   // 게임이 스스로 끝낼 때(끝 화면 [그만하기])
     Object.defineProperty(S, 'tracked', { get: () => res.size });
     return S;

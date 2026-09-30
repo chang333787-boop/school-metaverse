@@ -55,7 +55,7 @@ map.zones · map.zone(id|라벨) · map.zoneAt(x,y,z) · map.zonesWhere({kind,ki
 map.poi(id) · map.pois({src,zone,tag}) · map.resolve(대상) → {x,y,z}      // 대상 = 노드|[x,z]|[x,y,z]|{x,y,z}|'spawn:…'|'zone:…'|'lm:…'|'hot:…'|'door:…'
 map.findEntry(cx,cz,바닥y,[x0,z0,x1,z1]?)                                 // 가구에 안 걸리는 칸(수 ms, 길격자 불필요)
 map.q.groundAt / blocked / ceilAt / floorY(x,z,층) / ray(a,b,{ignoreNc,minH}) / los / inSchool(x,z) / indoor(x,y,z) / moveBody(p,dx,dz)
-map.player.get() → {x,y,z,h,ground,zone} · teleport(대상,{h,floor}) · face(h) · lookAt(대상) · freeze(on) · speed(0.5~2) · unstick()(3m 안 걷는 칸으로)
+map.player.get() → {x,y,z,h,ground,zone} · teleport(대상,{h,floor}) · face(h) · lookAt(대상) · freeze(on) · speed(0.5~2) · unstick()(3m 안 걷는 칸으로) · steer(dx,dz,속도,카메라따라)/steer(null)(GUIDE-1 자동 걷기 — 키·조이스틱이 먼저 · 게임이 멈추면 끔)
 map.on(type,fn) → off · map.once(type,fn)       // 'zone'{prev,next}(10Hz·2표본 확정·경계 0.25m 머묾) · 'interact'{hot} · 'tick'{dt} · 'time' · 'teleport' · 'stuck'{x,y,z} · 'gamestart' · 'gamestop'
 map.interact.add({x,y,z,r,label,use(h),once}) → {remove} · interact.enable(kind|fn, on) · interact.list({kind,zone})
 map.trigger.add({x,y,z,r} | {rect:[x0,z0,x1,z1],y0,y1}, {enter,exit,once}) → {remove}   // 10Hz — r ≥ 0.8 권장(달리기 7.5m/s)
@@ -634,7 +634,7 @@ map.flashlight(true)  // 손전등: 손에서 화면 가운데(카메라가 보�
 ```js
 map.npc.list({ room, adult, name }) → [{ id, name, adult, guide, room, roomLabel, x, y, z, pose, face(방위°), hidden, moved, walking }]   // 58명(world.people)
 map.npc.get(이름|id|견학키) · find(이름|견학키) → id                  // 같은 이름이면 첫 사람 — 확실히 하려면 list()의 id
-map.npc.move(누구, 어디, { walk, speed, pose, face, seat, desk, floor }) → Promise(도착 true · 막히거나 멈추면 false)
+map.npc.move(누구, 어디, { walk, speed, pose, face, seat, desk, floor }) → Promise(도착 true · 막히거나 멈추면 false)   // pass:true = 앞에 선 나를 기다리지 않고 지나감(GUIDE-1 견학 안내)
       // 어디 = {x,z,y?,face?,pose?} | [x,z] | [x,y,z] | 'lm:…' 'zone:…' 'spawn:…' 'hot:…'
       // pose = 'stand'(기본)|'sit'|'sitFloor'|'work'|'sweep'|'wave'|'cheer'(만세)|'explain'|'walk'(= 걷다가 서기)
       // sign:false = 대역 이름표를 가림(이야기 속 이름 없는 역할에 실제 아이 몸을 쓸 때 — g3-story) · sign:true = 다시 보임 · 이야기 op moveNpc{sign}도

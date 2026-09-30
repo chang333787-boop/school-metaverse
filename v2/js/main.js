@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=139';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=25';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=27';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=7';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=7';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
@@ -534,6 +534,10 @@ function physics(dt) {
   if (mx === 0 && mz === 0 && TOUCH.m > 0) {   // TOUCH-1 조이스틱(키를 안 누를 때만): 앞 my·오른쪽 mx를 키와 같은 축으로. 세기 = 걷기 30~100% · 가장자리(≥0.92) = 달리기
     mx = -Math.sin(camYaw) * TOUCH.my + Math.cos(camYaw) * TOUCH.mx; mz = -Math.cos(camYaw) * TOUCH.my - Math.sin(camYaw) * TOUCH.mx;
     sp2 = (cr ? PHY.crawl * Math.max(0.4, Math.min(1, TOUCH.m / 0.8)) : TOUCH.m >= 0.92 ? PHY.run : PHY.walk * Math.max(0.3, Math.min(1, (TOUCH.m - 0.15) / 0.6))) * CTRL.speed;
+  }
+  if (mx === 0 && mz === 0 && CTRL.steer) {   // GUIDE-1(09-30 견학 안내 모드): 게임이 걷는 방향을 준다(키·조이스틱이 없을 때만 — 사람 입력이 항상 먼저) · 충돌·계단은 평소 걷기 그대로
+    const st = CTRL.steer; mx = st.x; mz = st.z; sp2 = st.v;
+    if (st.cam && (mx || mz)) { let d = Math.atan2(-mx, -mz) - camYaw; d = Math.atan2(Math.sin(d), Math.cos(d)); camYaw += d * Math.min(1, dt * 2.2); }   // 카메라를 가는 쪽 뒤로 천천히
   }
   if (CTRL.frozen) mx = mz = 0;
   const L = Math.hypot(mx, mz), ox = P.x, oz = P.z;
