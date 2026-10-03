@@ -80,7 +80,7 @@ export function createNet(o) {
       else upsert(path[0], data);
     } else upsert(path[0], { [path[1]]: data });
   }
-  function req(path, method, data) { return fetch(base + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data), keepalive: true }).catch(() => {}); }
+  function req(path, method, data) { return fetch(base + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data), keepalive: true }).then((r) => { if (r.status === 401 && o.onDenied && !dead) o.onDenied(); }).catch(() => {}); }   // 401 = 방이 닫힘·끝남(DB 규칙)
   function send(P, extra) {
     const d = { x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), h: +P.h.toFixed(2), t: { '.sv': 'timestamp' }, ...extra };
     req('/players/' + id, 'PATCH', d); last.x = P.x; last.y = P.y; last.z = P.z; last.h = P.h;
@@ -90,7 +90,7 @@ export function createNet(o) {
     es = new EventSource(base + '/players.json');
     es.addEventListener('put', (e) => onEvt('put', e)); es.addEventListener('patch', (e) => onEvt('patch', e));
   }
-  const leave = () => { if (dead) return; dead = true; if (es) es.close(); req('/players/' + id, 'DELETE'); };
+  const leave = () => { if (dead) return; dead = true; if (es) es.close(); req('/players/' + id, 'DELETE'); for (const pid of [...others.keys()]) drop(pid); };
   addEventListener('pagehide', leave);
   let joined = false;
   return {

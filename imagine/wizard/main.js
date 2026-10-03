@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createTouch } from '../../v2/js/touch.js?v=7';
-import { createNet } from '../../v2/js/net.js?v=1';
+import { createNet } from '../../v2/js/net.js?v=3';
+import { createLobby } from '../../v2/js/lobby.js?v=1';
 import { build as buildWonders, DISC } from './wonders.js?v=4';
 import { mergeMeshes } from './merge.js?v=2';
 
@@ -590,15 +591,18 @@ let NET = null;
 const nmIn = $('nmIn');
 try { nmIn.value = localStorage.getItem('mp.name') || ''; } catch (e) { /* */ }
 nmIn.addEventListener('keydown', (e) => e.stopPropagation());
-function drawWho() { if (!NET) return; const n = NET.count; $('who').textContent = '👥 마법사 ' + n + '명 · 나: ' + NET.name; }
-function netStart() {
-  if (Qp.get('mp') === '0' || NET) return;
-  NET = createNet({ THREE, scene, room: (Qp.get('room') || 'wizard').replace(/[^a-z0-9_-]/gi, '').slice(0, 24) || 'wizard', kind: 'wizard', onChange: drawWho,
-    onFx: (O, f) => { if (!f || !Array.isArray(f.a) || !Array.isArray(f.b) || !SPELLS[f.s]) return; const from = new THREE.Vector3(...f.a), to = new THREE.Vector3(...f.b);
-      if (W && K.onRemoteFx) K.onRemoteFx(f);
-      if (from.distanceTo(camera.position) > 90) return; const b = glow(SPELLS[f.s].c, 0.9); b.position.copy(from); scene.add(b); BOLTS.push({ b, from, to, t: 0, dur: Math.max(0.15, from.distanceTo(to) / 34), sp: f.s, obj: null, remote: true }); } });
-  if (nmIn.value.trim()) NET.setName(nmIn.value);
-  $('who').classList.remove('hide'); drawWho();
+let LOBBY = null;
+function drawWho() { if (LOBBY) LOBBY.draw(); }
+function netStart() {   // LOBBY-1: 학교와 같은 방 번호로 들어감(위치 방 = c<번호>w) — 번호 없으면 혼자
+  if (Qp.get('mp') === '0' || LOBBY) return;
+  if (nmIn.value.trim()) try { localStorage.setItem('mp.name', nmIn.value.trim().slice(0, 8)); } catch (e) { /* */ }
+  LOBBY = createLobby({ chip: $('who'), suffix: 'w', net: () => NET, toast: (m, t) => toast(m, t),
+    join: (room) => { NET = createNet({ THREE, scene, room, kind: 'wizard', onChange: drawWho, onDenied: () => LOBBY.recheck(),
+      onFx: (O, f) => { if (!f || !Array.isArray(f.a) || !Array.isArray(f.b) || !SPELLS[f.s]) return; const from = new THREE.Vector3(...f.a), to = new THREE.Vector3(...f.b);
+        if (W && K.onRemoteFx) K.onRemoteFx(f);
+        if (from.distanceTo(camera.position) > 90) return; const b = glow(SPELLS[f.s].c, 0.9); b.position.copy(from); scene.add(b); BOLTS.push({ b, from, to, t: 0, dur: Math.max(0.15, from.distanceTo(to) / 34), sp: f.s, obj: null, remote: true }); } }); },
+    leave: () => { if (NET) NET.leave(); NET = null; } });
+  $('who').classList.remove('hide'); $('who').style.cursor = 'pointer';
 }
 function start() {
   if (started) return; started = true; QS.t0 = performance.now(); netStart();
@@ -716,7 +720,8 @@ function update(dt) {
 
   if (W) W.tick(dt);
   if ((nearT -= dt) <= 0) { nearT = 0.15; nearTick(); for (const s of FARS) { s.getWorldPosition(_fp); s.visible = _fp.distanceTo(camera.position) < 48; } }
-  if (NET && started) { NET.tick(dt, { x: P.x, y: P.y, z: P.z, h: P.yaw }); if ((whoT -= dt) <= 0) { whoT = 2; drawWho(); } }
+  if (NET && started) NET.tick(dt, { x: P.x, y: P.y, z: P.z, h: P.yaw });
+  if (LOBBY && (whoT -= dt) <= 0) { whoT = 2; drawWho(); }
   boltTick(dt); partTick(dt); twTick(dt);
 
   // 효과 칩

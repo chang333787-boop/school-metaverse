@@ -90,7 +90,7 @@ const STYLE = `
 export default async function start(map, params = {}) {
   const THREE = map.three;
   let dead = false, board = null, es = null, esB = null, name = '', teacher = false;
-  try { name = localStorage.getItem('mp.name') || ''; } catch (e) { /* */ }
+  try { name = localStorage.getItem('mp.name') || ''; teacher = sessionStorage.getItem('sm.t') === '1'; } catch (e) { /* */ }   // sm.t = 이 탭에서 선생님 비밀번호를 맞힘(함께하기 방 만들기와 같이)
   const css = document.createElement('style'); css.textContent = STYLE; document.head.appendChild(css);
   const ui = document.createElement('div'); ui.id = 'memo-ui'; document.body.appendChild(ui);
   const el = (tag, cls, html, parent = ui) => { const d = document.createElement(tag); if (cls) d.className = cls; if (html != null) d.innerHTML = html; parent.appendChild(d); return d; };
@@ -146,11 +146,11 @@ export default async function start(map, params = {}) {
       const a = prompt('선생님 비밀번호(숫자 4자리)를 새로 정해 주세요'); if (!a) return; if (!/^\d{4}$/.test(a)) return toast('숫자 4자리로 정해 주세요');
       if (prompt('한 번 더 적어 주세요') !== a) return toast('두 번이 달라요. 다시 해 주세요');
       try { await req('/memoPin', 'PUT', await hash(a)); } catch (e) { return toast('저장하지 못했어요', 2); }
-      teacher = true; toast('🔒 비밀번호를 정했어요 — 선생님 모드'); return board ? boardView() : pickBoard();
+      teacher = true; try { sessionStorage.setItem('sm.t', '1'); } catch (e) { /* */ } toast('🔒 비밀번호를 정했어요 — 선생님 모드'); return board ? boardView() : pickBoard();
     }
     const a = prompt('선생님 비밀번호 4자리'); if (!a) return;
     if (await hash(a) !== saved) return toast('비밀번호가 달라요', 2);
-    teacher = true; toast('🔓 선생님 모드', 2); if (board) boardView(); else pickBoard();
+    teacher = true; try { sessionStorage.setItem('sm.t', '1'); } catch (e) { /* */ } toast('🔓 선생님 모드', 2); if (board) boardView(); else pickBoard();
   }
   const secPrompt = (cur) => { const s = prompt('이야기 순서 칸 이름(쉼표로 나눠요 · 비우면 칸 없이 한 줄)\n예) 처음, 가운데, 끝', cur || ''); return s == null ? null : s.split(/[,|]/).map((x) => x.trim()).filter(Boolean).slice(0, 6).join(', ').slice(0, 120); };
   async function pickBoard() {
