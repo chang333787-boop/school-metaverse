@@ -6,6 +6,9 @@
 //   FREE-MOUSE(교사 '화면이 늘 게임에 잠겨 옆 단추를 누르기 힘들다'): 메모장에선 마우스가 늘 보임 · 끌어서 둘러보기 · 땅을 톡 누르면 '🚩 여기에 꽂기'
 //   STORY-2(10-03 밤 · 생각판 '이야기 판' 새 구상 참고): 이야기 줄기 문장(옛날 옛적에·그러던 어느 날·그래서·마침내·그 뒤로) · 🏁 결말 표시(장면 end) · 📖 책처럼 읽기 · 🧭 이야기 코치(결말·없는 장면·갈 곳 없는 보기·아무 데서도 안 가는 장면)
 //   🛤 이야기 길(PATH-1 · 10-03 교사 '깃발 꽂는 것과 잘 이어져야'): 장면 깃발 → 다음 장면 깃발을 학교 바닥에 걷는 길(길격자)로 — 갈림길은 갈라지는 길(색 = 가는 장면) · 깃발 없는 장면은 카드·코치에서 바로 꽂으러
+//   🔐 퀴즈·자물쇠(QUIZ-1 · 10-03 교사 '이야기 만들기는 방탈출이랑도 같이 되는 거지 — 퀴즈를 넣고 싶으면 애들이 넣으면'): 덧붙이기 '🔐' = ✍️ 답 쓰기 · 🔘 보기 고르기 · 📦 물건으로 열기(앞에서 주운 물건) + 💡 힌트 + 맞히면 → 장면 · 정답은 쓴 아이·선생님만 · 해 보기에서 맞혀야 통과(2번 틀리면 힌트 · 3번이면 정답 보고 넘어가기) · 물건 카드에 깃발이 있으면 그 자리까지 찾아가야 주움
+//   🏫 현실 방탈출(REAL-1 · 10-03 교사 '태블릿 들고 진짜 도서관에 가면 태블릿에서도 도서관으로'): 학교 안은 GPS가 안 되니 장소마다 번호 카드(4자리 — 판·깃발로 정해짐)를 붙이고, 그곳에서 번호를 넣으면 아바타가 그 자리로 · 그 사이엔 태블릿 속에서도 걸어 다님(아래 띠 — 멈추지 않음)
+//     🖨 준비물(선생님) = 장소 번호가 찍힌 학교 지도 · 오려 붙일 장소 카드 · 정답표 · 현실 점검표(메타버스와 실제가 다르면 적어서 Claude에게 → 메타버스를 고침)
 //   🎮 이야기로 해 보기(PLAY-1 · 10-03 밤): 판의 장면 순서대로 — 장면 자리(첫 깃발)까지 걸어가면 장면 글 → 💬 대사·🧑 인물·📦 물건(줍기) → ❓ 고르기('→ N번 장면'이면 그 장면으로) → 🏁 끝 · 쓰고 바로 해 보는 수업
 //   선생님(🔒 4자리 · 함께하기와 같은 비밀번호): 판 제목·질문·칸 · 잠금 · 🗂 관리(비우기 = 판 번호를 적어야 · 비운 것은 trash에 보관 → ↩️ 되돌리기)
 //   🌍 세계 만들기(WORLD-1 · 10-03 교사 '메타버스는 두 갈래 — 이야기 설계 · 마법 세계처럼 새로운 세계 만들기(세계관 상상) — 교사가 관리에서 보고 Claude에게 넣으면 구현'):
@@ -19,7 +22,10 @@ const ADD = [   // 장면에 덧붙이는 것
   { k: 'say', e: '💬', n: '대사', q: '무슨 말을 해요?', who: '누가 말해요?' },
   { k: 'item', e: '📦', n: '물건', q: '어떤 물건이 있어요? 무엇에 써요?' },
   { k: 'choice', e: '❓', n: '고르기', q: '어떤 고민을 해요? (보기는 아래에 한 줄씩)' },
+  { k: 'quiz', e: '🔐', n: '퀴즈·자물쇠', q: '어떤 문제를 내요? 맞혀야 다음으로 가요(방탈출처럼)' },
 ];
+const QT = [['text', '✍️ 답 쓰기'], ['pick', '🔘 보기 고르기'], ['item', '📦 물건으로 열기']];   // QUIZ-1 퀴즈 종류
+const QTN = { text: '🔐 퀴즈', pick: '🔐 고르는 퀴즈', item: '🔒 자물쇠' };
 const SCENE = { k: 'scene', e: '🎬', n: '장면', q: '이 장면에서 무슨 일이 일어나요?' };
 const PLACE = { k: 'place', e: '📍', n: '장소', q: '여기는 어떤 곳이에요? (안 적어도 돼요)' };
 const KBY = Object.fromEntries([SCENE, PLACE, ...ADD].map((x) => [x.k, x]));
@@ -47,7 +53,7 @@ const STYLE = `
 #memo-ui textarea{min-height:70px;resize:vertical}
 #memo-ui h3{margin:0 0 8px;font-size:19px}
 #memo-ui .sm{font-size:13px;color:#5a6b80}
-#memo-pick,#memo-form,#memo-sum,#memo-view,#memo-admin{left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,94vw);max-height:88vh;overflow:auto;padding:14px 16px;box-sizing:border-box}
+#memo-pick,#memo-form,#memo-sum,#memo-view,#memo-admin,#memo-quiz{left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,94vw);max-height:88vh;overflow:auto;padding:14px 16px;box-sizing:border-box}
 #memo-pick .bd{display:grid;gap:8px;margin:10px 0}
 #memo-pick .bd button{text-align:left;background:#eef4ff;color:#1d3557;padding:10px 12px;border:2px solid #c9d8f0}
 #memo-pick .bd button small{display:block;font-weight:600;color:#5a6b80;margin-top:2px}
@@ -102,6 +108,7 @@ const STYLE = `
 #memo-ui .lane.dE,#memo-ui .strip.dE{outline:3px dashed #f59f00}
 #memo-ui .cd.drag{opacity:.3}
 #memo-ui .ghost{position:fixed;pointer-events:none;z-index:60;width:260px;opacity:.92;transform:rotate(2deg)}
+#memo-real{left:50%;bottom:14px;transform:translateX(-50%);width:min(520px,94vw);padding:10px 12px;box-sizing:border-box}
 #memo-tour{left:50%;bottom:14px;transform:translateX(-50%);width:min(520px,94vw);padding:10px 12px;max-height:48vh;overflow:auto;box-sizing:border-box}
 #memo-tour .cd{box-shadow:none;border:1px solid #e8edf3;border-top:8px solid var(--k)}
 `;
@@ -133,6 +140,7 @@ export default async function start(map, params = {}) {
   function onEsc(e) {
     if (e.code !== 'Escape') return;
     if (placing) { e.stopPropagation(); placing = null; chips(); toast('📍 깃발 꽂기를 그만했어요', 1.5); }
+    else if (panel && panel._quizStop) { e.stopPropagation(); panel._quizStop(); }
     else if (panel && board) { e.stopPropagation(); if (panel.id === 'memo-form' && back === 'board') { back = null; boardView(); } else close(); }
     else if (tourEl) { e.stopPropagation(); endTour(); }
     else if (hereEl) { e.stopPropagation(); hereOff(); }
@@ -232,6 +240,7 @@ export default async function start(map, params = {}) {
     for (const [sid, n] of before) { if (sid === gone) { map9.set(n, '?'); continue; } const m = after.get(sid); if (m && m !== n) map9.set(n, m); }   // 지운 장면을 가리키던 보기 = '?번'(코치가 짚음)
     if (!map9.size) return;
     for (const [cid, x] of Object.entries(DATA)) {
+      if (valid(x) && x.k === 'quiz' && x.go && map9.has(+x.go)) { const v = map9.get(+x.go), go = v === '?' ? null : v; x.go = go; req(fpath(cid), 'PATCH', { go }).catch(() => {}); continue; }
       if (!valid(x) || x.k !== 'choice' || !x.opt) continue;
       const opt = x.opt.replace(/(\d{1,2})(\s*번)/g, (m, n, b) => map9.has(+n) ? map9.get(+n) + b : m);
       if (opt !== x.opt) { x.opt = opt; req(fpath(cid), 'PATCH', { opt }).catch(() => {}); }
@@ -325,7 +334,7 @@ export default async function start(map, params = {}) {
     for (const [kid, x] of K) {
       const A = KBY[x.k] || PLACE;
       const where = placed(x) ? ' <span class="sm">📍 ' + esc(x.near || x.zone) + '</span>' : '';
-      h += '<div class="it" data-kid="' + esc(kid) + '"><span>' + A.e + '</span><span class="t">' + (x.k === 'place' ? '<b>일어나는 곳</b> ' + esc(x.tx) + where
+      h += '<div class="it" data-kid="' + esc(kid) + '"><span>' + A.e + '</span><span class="t">' + (x.k === 'quiz' ? quizLine(x) + where : x.k === 'place' ? '<b>일어나는 곳</b> ' + esc(x.tx) + where
           : (x.who ? '<b>' + esc(x.who) + '</b> ' : '') + (x.k === 'say' ? '“' + esc(x.tx) + '”' : esc(x.tx)) + (x.opt ? '<br><span class="sm">' + linkN(esc(x.opt)).replace(/\n/g, '<br>') + '</span>' : '') + where)
         + '<span class="sm"> · ' + esc(x.by) + '</span></span>'
         + (placed(x) && !o.noGo ? '<button data-a="goi" title="그 자리로">🚶</button>' : '') + (can && own(x) ? '<button data-a="editi" title="고치기">✏️</button>' : '') + '</div>';
@@ -343,6 +352,13 @@ export default async function start(map, params = {}) {
     inp.value = '';
     try { await req(fpath(id) + '/re/r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), 'PUT', { by: name, tx: tx.slice(0, 120), t: { '.sv': 'timestamp' } }); map.sfx('ding'); } catch (e) { inp.value = tx; toast('댓글을 보내지 못했어요', 2); }
     flush();
+  }
+  const quizAns = (x) => (x.qt || 'text') === 'pick' ? String(x.opt || '').split('\n')[x.ok | 0] || '' : x.qt === 'item' ? '📦 ' + ((DATA[x.item] || {}).tx || '?') + ' 있으면 열림' : String(x.ans || '');
+  function quizLine(x) {
+    const see = teacher || x.by === name, go = x.go ? ' · 맞히면 → ' + linkN(x.go + '번') : '';
+    return '<b>' + (QTN[x.qt || 'text'] || '🔐 퀴즈') + '</b> ' + esc(x.tx)
+      + ((x.qt === 'pick') && x.opt ? '<br><span class="sm">보기: ' + String(x.opt).split('\n').map(esc).join(' / ') + '</span>' : '')
+      + '<br><span class="sm">' + (see ? '🔑 ' + esc(quizAns(x)) + (x.hint ? ' · 💡 ' + esc(x.hint) : '') : '🔑 정답은 쓴 친구·선생님만 봐요' + (x.hint ? ' · 💡 힌트 있음' : '')) + go + '</span>';
   }
   function firstPlace(id) { const f = DATA[id]; if (f && placed(f)) return f; const k = kids(id).find(([, x]) => placed(x)); return k ? k[1] : null; }
   function wire(P) {
@@ -388,7 +404,7 @@ export default async function start(map, params = {}) {
       + (teacher ? '<button class="sub" data-b="sec" title="이야기 칸 정하기">⚙️ 칸</button><button class="sub" data-b="lock" title="' + (board.lock ? '잠금 풀기' : '잠그기(아이들은 보기만)') + '">' + (board.lock ? '🔓' : '🔒') + '</button><button class="sub" data-b="admin" title="판 비우기·되돌리기">🗂 관리</button>' : '<button class="sub" data-b="t" title="선생님">🔒</button>')
       + '<button class="sub" data-b="close">✕ 닫기</button></div>'
       + (board.p ? '<div class="sm" style="margin-top:4px">💡 ' + esc(board.p) + '</div>' : '')
-      + '<div class="bar">' + (can ? '<button data-b="new">＋ 새 장면</button>' : '') + (L.length ? '<button data-b="play" style="background:#2b8a3e">🎮 이야기로 해 보기</button><button class="sub" data-b="book">📖 책처럼 읽기</button>' : '') + '<button class="sub" data-b="tour">▶ 장면 따라 걷기</button><button class="sub" data-b="sum">📤 정리</button>'
+      + '<div class="bar">' + (can ? '<button data-b="new">＋ 새 장면</button>' : '') + (L.length ? '<button data-b="play" style="background:#2b8a3e">' + (Object.values(DATA).some((x) => valid(x) && x.k === 'quiz') ? '🔐 방탈출로 해 보기' : '🎮 이야기로 해 보기') + '</button><button class="sub" data-b="book">📖 책처럼 읽기</button>' : '') + (L.length ? '<button class="sub" data-b="real" title="태블릿 들고 진짜 학교에서">🏫 현실 방탈출</button>' : '') + '<button class="sub" data-b="tour">▶ 장면 따라 걷기</button><button class="sub" data-b="sum">📤 정리</button>'
       + '<span class="sm" style="margin-left:6px">' + (can ? '장면 번호 줄을 끌면 순서가 바뀌어요' : '선생님이 잠근 판 — 보기만') + '</span></div><div class="body"></div>';
     P.innerHTML = h;
     const body = P.querySelector('.body');
@@ -406,6 +422,7 @@ export default async function start(map, params = {}) {
       else if (a === 'tour') startTour(0);
       else if (a === 'play') playStory();
       else if (a === 'book') playStory({ book: true });
+      else if (a === 'real') realMenu();
       else if (a === 'noflag') { const t = scenes().find(([id]) => !firstPlace(id)); if (t && canWrite()) { close(); placing = t[0]; chips(); toast('🚩 ' + (numMap().get(t[0]) || '') + '번 장면 — 꽂을 땅을 톡 누르거나, 화면 가운데로 보고 F · 취소 Esc', 5); } }
       else if (a === 'sum') summary();
       else if (a === 't') teacherLogin();
@@ -524,6 +541,10 @@ export default async function start(map, params = {}) {
     const P = open('memo-form');
     let endSel = !!(old && old.end);
     let optRows = old && old.k === 'choice' ? choiceOpts(old).map((x) => ({ t: x.label, n: x.n || '' })) : [];
+    let qt = old && old.k === 'quiz' ? old.qt || 'text' : 'text', qAns = old && old.ans || '', qHint = old && old.hint || '', qItem = old && old.item || '', qGo = old && old.go || '';
+    let qRows = old && old.k === 'quiz' && old.qt === 'pick' ? String(old.opt || '').split('\n').map((t, i) => ({ t, ok: i === (old.ok | 0) })) : [{ t: '', ok: true }, { t: '', ok: false }];
+    const readQuiz = () => { const g = (sel) => P.querySelector(sel); if (g('#mmAns')) qAns = g('#mmAns').value; if (g('#mmHint')) qHint = g('#mmHint').value; if (g('#mmItem')) qItem = g('#mmItem').value; if (g('#mmGo')) qGo = g('#mmGo').value;
+      const rs = P.querySelectorAll('.qrows .qr'); if (rs.length) qRows = [...rs].map((inp, i) => ({ t: inp.value, ok: !!(qRows[i] && qRows[i].ok) })); };
     const readOpts = () => { const ts = P.querySelectorAll('.opts .ot'); if (!ts.length) return; optRows = [...ts].map((inp) => ({ t: inp.value, n: (P.querySelector('.opts .on[data-i="' + inp.dataset.i + '"]') || {}).value || '' })); };
     const draw = () => {
       const isS = kind === 'scene', A = KBY[kind] || null, n = sid ? N.get(sid) : null;
@@ -551,14 +572,25 @@ export default async function start(map, params = {}) {
             + '<select class="on" data-i="' + i + '" style="width:auto;max-width:46%;font:inherit;font-size:14px;border:2px solid #c9d3df;border-radius:10px;padding:6px"><option value="">→ 어느 장면?</option>' + L.map(([, sf], j) => '<option value="' + (j + 1) + '"' + (+r.n === j + 1 ? ' selected' : '') + '>→ ' + (j + 1) + '번 ' + esc(short(sf.tx, 10)) + '</option>').join('') + [1, 2, 3].map((d) => '<option value="' + (nn + d) + '"' + (+r.n === nn + d ? ' selected' : '') + '>→ ' + (nn + d) + '번(새로 쓸 장면)</option>').join('') + '</select></div>').join('') + '</div>'
             + (rows.length < 5 ? '<button class="sub" data-addopt="1" style="padding:4px 10px;font-size:13px">＋ 보기 더</button>' : '');
         }
+        if (kind === 'quiz') {
+          const items9 = Object.entries(DATA).filter(([, it]) => valid(it) && it.k === 'item'), sel9 = 'style="width:100%;font:inherit;font-size:15px;border:2px solid #c9d3df;border-radius:10px;padding:7px;margin-top:4px"';
+          h += '<div class="mlbl">어떻게 풀어요?</div><div class="chips qt">' + QT.map(([k9, t9]) => '<button data-qt="' + k9 + '" class="' + (qt === k9 ? 'on' : '') + '">' + t9 + '</button>').join('') + '</div>';
+          if (qt === 'text') h += '<input id="mmAns" maxlength="100" placeholder="🔑 정답 (여러 개면 쉼표로 — 예: 3, 세 칸)" value="' + esc(qAns) + '">';
+          else if (qt === 'pick') h += '<div class="qrows">' + qRows.map((r, i) => '<div style="display:flex;gap:4px;margin:4px 0;align-items:center"><button data-qok="' + i + '" title="정답이면 눌러요" style="padding:4px 8px;background:' + (r.ok ? '#d3f9d8' : '#f1f3f5') + ';color:#1d3557">' + (r.ok ? '✅' : '⬜') + '</button><input class="qr" data-i="' + i + '" maxlength="40" placeholder="보기 ' + (i + 1) + '" value="' + esc(r.t) + '" style="flex:1;min-width:0"></div>').join('') + '</div>'
+            + (qRows.length < 4 ? '<button class="sub" data-qadd="1" style="padding:4px 10px;font-size:13px">＋ 보기 더</button> ' : '') + '<span class="sm">✅ = 정답 보기</span>';
+          else h += items9.length ? '<select id="mmItem" ' + sel9 + '><option value="">— 어떤 물건이 있어야 열려요? —</option>' + items9.map(([iid, it]) => '<option value="' + esc(iid) + '"' + (qItem === iid ? ' selected' : '') + '>📦 ' + esc(short(it.tx, 16)) + ' (' + (N.get(it.p) || '?') + '번 장면)</option>').join('') + '</select>' : '<div class="sm" style="color:#d9480f">먼저 앞 장면에 📦 물건 카드(예: 열쇠)를 만들어요</div>';
+          h += '<input id="mmHint" maxlength="100" placeholder="💡 힌트 (안 써도 돼요)" style="margin-top:6px" value="' + esc(qHint) + '">'
+            + '<div class="mlbl">맞히면 어디로?</div><select id="mmGo" ' + sel9 + '><option value="">→ 이 장면 다음 차례로</option>' + L.map(([, sf], j) => '<option value="' + (j + 1) + '"' + (+qGo === j + 1 ? ' selected' : '') + '>→ ' + (j + 1) + '번 ' + esc(short(sf.tx, 12)) + '</option>').join('') + [1, 2, 3].map((d) => '<option value="' + (L.length + d) + '"' + (+qGo === L.length + d ? ' selected' : '') + '>→ ' + (L.length + d) + '번(새로 쓸 장면)</option>').join('') + '</select>';
+        }
         if (isS && S.length) h += '<div class="mlbl">이야기 칸</div><div class="chips sec">' + S.map((s, i) => '<button data-c="' + i + '" class="' + ((old ? secOf(old, S) : (o.sec || 0)) === i ? 'on' : '') + '">' + (i + 1) + '. ' + esc(s) + '</button>').join('') + '</div>';
       } else h += '<div class="sm" style="margin-top:8px">위에서 장면과 종류를 골라요.</div>';
       h += '<div class="row">' + (old ? '<button class="warn" id="mmDel">🗑 지우기</button>' : '') + '<button class="sub" id="mmNo">취소</button><button id="mmOk"' + (Q && (isS || sid) ? '' : ' disabled style="opacity:.45"') + '>💾 저장</button></div>';
-      readOpts();
+      readOpts(); readQuiz();
       const keep = { tx: (P.querySelector('#mmTx') || {}).value, who: (P.querySelector('#mmWho') || {}).value };
       P.innerHTML = h;
       const tx = P.querySelector('#mmTx'), wh = P.querySelector('#mmWho');
       if (tx) tx.value = keep.tx != null ? keep.tx : old ? old.tx || '' : '';
+      if (tx && kind === 'quiz') tx.placeholder = qt === 'pick' ? '예) 사서 선생님이 좋아하는 색은?' : qt === 'item' ? '예) 잠긴 상자가 있어요. 무엇으로 열까요?' : '예) 도서관 책장은 모두 몇 칸일까요?';
       if (wh) wh.value = keep.who != null ? keep.who : old ? old.who || '' : '';
       if (tx) setTimeout(() => (wh && !wh.value ? wh : tx).focus(), 30);
     };
@@ -570,6 +602,9 @@ export default async function start(map, params = {}) {
       if (b.dataset.stem) { const t = P.querySelector('#mmTx'); if (t) { const v = t.value.replace(/^(옛날 옛적에|그러던 어느 날|그래서|그런데|마침내|그 뒤로)\s*/, ''); t.value = b.dataset.stem + ' ' + v; t.focus(); } return; }
       if (b.dataset.endt) { endSel = !endSel; b.classList.toggle('on', endSel); return; }
       if (b.dataset.addopt) { readOpts(); optRows.push({ t: '', n: '' }); draw(); return; }
+      if (b.dataset.qt) { readQuiz(); qt = b.dataset.qt; draw(); return; }
+      if (b.dataset.qok != null) { readQuiz(); qRows.forEach((r, i) => { r.ok = i === +b.dataset.qok; }); draw(); return; }
+      if (b.dataset.qadd) { readQuiz(); qRows.push({ t: '', ok: false }); draw(); return; }
       if (b.dataset.c != null) { secSel = +b.dataset.c; P.querySelectorAll('.sec button').forEach((x) => x.classList.toggle('on', x === b)); return; }
       if (b.id === 'mmNo') done();
       else if (b.id === 'mmDel') {
@@ -585,16 +620,25 @@ export default async function start(map, params = {}) {
       readOpts();
       const isS = kind === 'scene', tx = (P.querySelector('#mmTx') || {}).value || '', who = ((P.querySelector('#mmWho') || {}).value || '').trim(), opt = optRows.filter((r) => r.t.trim()).map((r) => r.t.trim().replace(/\s*(→|->|=>)\s*\d{1,2}\s*번(\s*장면)?\s*$/, '') + (r.n ? ' → ' + r.n + '번 장면' : '')).join('\n');
       if (kind === 'choice' && !opt) return toast('보기를 하나 이상 적어요', 2);
+      let qf = null;
+      if (kind === 'quiz') {
+        readQuiz();
+        qf = { qt, ans: null, ok: null, item: null, opt: null, hint: qHint.trim() ? qHint.trim().slice(0, 100) : null, go: +qGo || null };
+        if (qt === 'text') { if (!qAns.trim()) return toast('🔑 정답을 적어요', 2); qf.ans = qAns.trim().slice(0, 100); }
+        else if (qt === 'pick') { const rows = qRows.filter((r) => r.t.trim()); if (rows.length < 2) return toast('보기를 두 개 이상 적어요', 2); const k9 = rows.findIndex((r) => r.ok); if (k9 < 0) return toast('✅로 정답 보기를 골라요', 2); qf.opt = rows.map((r) => r.t.trim().slice(0, 40)).join('\n'); qf.ok = k9; }
+        else { if (!qItem || !DATA[qItem]) return toast('어떤 물건으로 여는지 골라요', 2); qf.item = qItem; }
+      }
       if (!isS && !sid) return toast('몇 번 장면인지 골라 주세요', 2);
       if (!tx.trim() && kind !== 'place') return toast(isS ? '무슨 일이 일어나는지 적어 주세요' : '내용을 적어 주세요', 2);
       const f = { k: kind, tx: dedupe(tx).slice(0, 300), who: who && (kind === 'who' || kind === 'say') ? who.slice(0, 30) : null, opt: kind === 'choice' && opt ? opt.slice(0, 300) : null };
+      if (qf) Object.assign(f, qf);
       try {
         if (old) {
           if (isS && S.length) { f.sec = secSel; if (secSel !== secOf(old, S)) f.ord = Date.now(); }
           if (isS) f.end = endSel || null;
           await req(fpath(o.id), 'PATCH', f);
         } else {
-          for (const k of ['who', 'opt']) if (f[k] == null) delete f[k];
+          for (const k of Object.keys(f)) if (f[k] == null) delete f[k];
           Object.assign(f, { by: name, t: { '.sv': 'timestamp' }, ord: Date.now() }, pt ? placeFields(pt) : {});
           if (isS) { if (S.length) f.sec = secSel; if (endSel) f.end = true; } else f.p = sid;
           const nid = newId(); await req(fpath(nid), 'PUT', f); lastScene = isS ? nid : sid;
@@ -786,6 +830,7 @@ export default async function start(map, params = {}) {
     L.forEach(([id, f], i) => {
       let branched = false;
       for (const [, x] of kids(id)) if (x.k === 'choice') { for (const o of choiceOpts(x)) { if (o.n == null) loose.push((i + 1) + '번 「' + short(o.label, 8) + '」'); else if (o.n < 1 || o.n > n) bad.push(o.n); else { E[i].push(o.n - 1); branched = true; } } }
+        else if (x.k === 'quiz' && x.go) { if (x.go < 1 || x.go > n) bad.push(x.go); else { E[i].push(x.go - 1); branched = true; } }
       if (!branched && !f.end && i + 1 < n) E[i].push(i + 1);
     });
     const seen = new Set([0]), st = [0]; while (st.length) { const v = st.pop(); for (const w of E[v]) if (!seen.has(w)) { seen.add(w); st.push(w); } }
@@ -801,6 +846,12 @@ export default async function start(map, params = {}) {
     if (loose.length) out.push({ ok: false, t: loose.slice(0, 3).join(', ') + ' — 고르면 몇 번 장면으로 가요?' });
     const lost = L.map((_, i) => i).filter((i) => !seen.has(i)); if (lost.length) out.push({ ok: false, t: lost.map((i) => (i + 1) + '번').join('·') + ' 장면은 아무 데서도 안 와요' });
     const dead = L.map((_, i) => i).filter((i) => seen.has(i) && !E[i].length && !L[i][1].end && i < L.length - 1); if (dead.length) out.push({ ok: false, t: dead.map((i) => (i + 1) + '번').join('·') + ' 장면 뒤에 길이 끊겨요' });
+    const Q9 = []; L.forEach(([sid], i) => { for (const [, x] of kids(sid)) if (x.k === 'quiz') Q9.push([i, x]); });
+    if (Q9.length) {
+      const broken = Q9.filter(([, x]) => (x.qt || 'text') === 'text' ? !x.ans : x.qt === 'pick' ? !x.opt : !DATA[x.item]);
+      const late = Q9.filter(([i, x]) => x.qt === 'item' && DATA[x.item] && scenes().findIndex(([sid]) => sid === DATA[x.item].p) > i);
+      out.push({ ok: !broken.length && !late.length, t: '🔐 퀴즈·자물쇠 ' + Q9.length + '개' + (broken.length ? ' — ' + broken.map(([i]) => (i + 1) + '번').join('·') + ' 장면 퀴즈에 정답이 없어요' : '') + (late.length ? ' — 📦 「' + short(DATA[late[0][1].item].tx, 8) + '」이(가) 자물쇠보다 뒤 장면에 있어요' : '') });
+    }
     const noFlag = L.filter(([id]) => !firstPlace(id)); if (noFlag.length) out.push({ ok: false, t: '🚩 깃발 없는 장면 ' + noFlag.map(([id]) => L.findIndex(([x]) => x === id) + 1).join('·') + '번 — 눌러서 꽂으러 가요', b: 'noflag' });
     const has = (re) => L.some(([, f]) => re.test(String(f.tx))), steps = [['처음', L.length > 0], ['문제가 생겨요', has(/^(그러던 어느 날|그런데)|사라졌|없어졌|잃어버|문제|고장|갇혔|싸웠/)], ['해결', has(/^(그래서|마침내)|찾았|고쳤|도와|해결|구했/)], ['끝', ends > 0 || endish]];
     const miss = steps.filter(([, ok]) => !ok).map(([n9]) => n9);
@@ -832,36 +883,168 @@ export default async function start(map, params = {}) {
   // ───────── 🎮 이야기로 해 보기 ─────────
   let play = null;
   function choiceOpts(x) { return String(x.opt || '').split('\n').map((t) => t.trim()).filter(Boolean).slice(0, 6).map((t) => { const m = t.match(/(\d{1,2})\s*번/); return { label: t.replace(/\s*(→|->|=>)\s*\d{1,2}\s*번(\s*장면)?\s*$/, '').trim() || t, n: m ? +m[1] : null }; }); }
-  function playStop(msg) { if (!play) return; const P0 = play; play = null; if (P0.mk) P0.mk.remove(); map.hud.goal(null); chips(); syncNow(); if (msg) toast(msg, 2.5); }
-  function walkTo(f, n, tx) {   // 장면 자리까지 걸어가기(빛기둥 · 미니맵 별 · ⏩ 바로 가기 칩) — 2.6m 안에 들어오면 끝
+  function playStop(msg) { if (!play) return; const P0 = play; play = null; if (P0.rfin) P0.rfin(); if (P0.mk) P0.mk.remove(); map.hud.goal(null); chips(); syncNow(); if (msg) toast(msg, 2.5); }
+  function walkTo(f, n, tx, goalTx) {   // 장면 자리까지 걸어가기(빛기둥 · 미니맵 별 · ⏩ 바로 가기 칩) — 2.6m 안에 들어오면 끝 · goalTx = 물건 찾기 등
     return new Promise((res) => {
       if (!play) return res(false);
       play.mk = map.mk.marker(f.x, (f.y || 0) + 0.2, f.z, { color: colOf(n), beam: true });
-      map.minimap.setMarks([{ x: f.x, z: f.z, color: hex(colOf(n)), shape: 'star', label: n + '번 장면', blink: true, floor: (f.y || 0) > 2.5 ? 2 : 1 }]);
-      map.hud.goal('🚩 ' + n + '번 장면 자리로 가요 — 📍 ' + (f.near || f.zone || ''));
+      map.minimap.setMarks([{ x: f.x, z: f.z, color: hex(colOf(n)), shape: 'star', label: goalTx ? '📦' : n + '번 장면', blink: true, floor: (f.y || 0) > 2.5 ? 2 : 1 }]);
+      map.hud.goal(goalTx || '🚩 ' + n + '번 장면 자리로 가요 — 📍 ' + (f.near || f.zone || ''));
       const done = (ok) => { clearInterval(play && play.iv); if (play) { play.iv = 0; play.go = null; if (play.mk) { play.mk.remove(); play.mk = null; } } map.hud.goal(null); res(ok); };
-      play.go = () => { goTo(f); };   // ⏩ 바로 가기
-      play.iv = setInterval(() => { if (!play || dead) return done(false); const me = map.player.pos(); if (Math.hypot(me.x - f.x, me.z - f.z) < 2.6 && Math.abs(me.y - (f.y || 0)) < 2) done(true); }, 200);
+      play.go = () => { goTo(f); done(true); };   // ⏩ 바로 가기 = 도착(SIM: 순간 이동 자리가 판정 거리보다 조금 멀면 영영 기다리던 것)
+      play.iv = setInterval(() => { if (!play || dead) return done(false); const me = map.player.pos(); if (Math.hypot(me.x - f.x, me.z - f.z) < 3.2 && Math.abs(me.y - (f.y || 0)) < 2) done(true); }, 200);
       chips();
     });
+  }
+  // 🔐 퀴즈 풀기 — 'ok' 통과 · 'stop' 그만 · 숫자 = 그 장면으로 돌아가기(자물쇠에 필요한 물건을 찾으러)
+  const qnorm = (t) => String(t || '').toLowerCase().replace(/[\s.,!?~'"“”‘’()·\-]/g, '');
+  function quizOk(a, ans) {
+    const A = qnorm(a), L9 = String(ans || '').split(/[,，/]/).map(qnorm).filter(Boolean); if (!A) return false;
+    if (L9.includes(A)) return true;
+    for (const x of L9) { if (A.startsWith(x) && /^(요|이요|예요|이에요|입니다|이다|다|이야|야)$/.test(A.slice(x.length))) return true; if (/^\d+$/.test(x) && A.replace(/\D/g, '') === x && /^\d+[가-힣]{0,3}$/.test(A)) return true; }
+    return false;
+  }
+  function askText(title, sub, canGive) {
+    return new Promise((res) => {
+      const P = open('memo-quiz');
+      P.innerHTML = '<h3 style="white-space:pre-line">' + esc(title) + '</h3><div class="sm">' + esc(sub) + '</div><input id="qIn" maxlength="40" style="margin-top:8px" placeholder="정답을 써요"><div class="row">' + (canGive ? '<button class="sub" data-q="give">🏳 정답 보고 넘어가기</button>' : '') + '<button class="sub" data-q="stop">⏹ 그만</button><button data-q="ok">확인</button></div>';
+      const inp = P.querySelector('#qIn'); setTimeout(() => inp.focus(), 30);
+      const fin = (v) => { P._quizStop = null; close(); res(v); };
+      P._quizStop = () => fin(null);
+      P.onclick = (e) => { const b = e.target.closest('[data-q]'); if (!b) return; const q = b.dataset.q; if (q === 'ok') fin(inp.value); else if (q === 'give') fin('@give'); else fin(null); };
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); fin(inp.value); } });
+    });
+  }
+  async function runQuiz(x) {
+    const hint = x.hint ? '\n💡 힌트: ' + x.hint : '';
+    if ((x.qt || 'text') === 'item') {
+      const it = DATA[x.item];
+      if (play.got.has(x.item)) { await map.hud.ask('🔓 ' + x.tx + '\n\n📦 「' + (it ? it.tx : '물건') + '」(으)로 열었어요!', ['▶']); map.sfx('ding'); return 'ok'; }
+      const si = it ? scenes().findIndex(([sid]) => sid === it.p) : -1;
+      map.sfx('buzz');
+      const r = await map.hud.ask('🔒 ' + x.tx + '\n\n잠겨 있어요 — 열려면 필요한 물건이 있어요.' + hint, si >= 0 ? ['🔙 ' + (si + 1) + '번 장면으로 돌아가 찾기', '⏹ 그만'] : ['⏹ 그만']);
+      return r === 0 && si >= 0 ? si : 'stop';
+    }
+    if (x.qt === 'pick') {
+      const O = String(x.opt || '').split('\n').filter(Boolean), ok = x.ok | 0; let wrong = 0;
+      for (;;) {
+        const r = await map.hud.ask('🔐 ' + x.tx + (wrong ? '\n(땡! 다시 골라요)' : '') + (wrong >= 2 ? hint : ''), wrong >= 3 ? O.concat(['🏳 정답 보고 넘어가기']) : O);
+        if (r < 0 || !play) return 'stop';
+        if (r === ok) { map.sfx('ding'); await map.hud.ask('⭕ 정답!', ['▶']); return 'ok'; }
+        if (r >= O.length) { await map.hud.ask('정답은 「' + (O[ok] || '') + '」였어요', ['▶']); return 'ok'; }
+        wrong++; map.sfx('buzz');
+      }
+    }
+    let wrong = 0;
+    for (;;) {
+      const a = await askText('🔐 ' + x.tx + (wrong >= 2 ? hint : ''), wrong ? '땡! 다시 써 봐요 (' + wrong + '번 틀림)' : '정답을 써요', wrong >= 3);
+      if (a === null || !play) return 'stop';
+      if (a === '@give') { await map.hud.ask('정답은 「' + String(x.ans || '').split(/[,，/]/)[0].trim() + '」였어요', ['▶']); return 'ok'; }
+      if (quizOk(a, x.ans)) { map.sfx('ding'); await map.hud.ask('⭕ 정답!', ['▶']); return 'ok'; }
+      wrong++; map.sfx('buzz');
+    }
+  }
+  // ───────── 🏫 현실 방탈출 — 장소 번호(4자리) · 체크인 · 준비물 ─────────
+  const scode = (fid) => { let h = 7; for (const ch of board.id + ':' + fid) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return String(1000 + (h % 9000)); };
+  function firstPlaceId(id) { const f = DATA[id]; if (f && placed(f)) return [id, f]; const k = kids(id).find(([, x]) => placed(x) && (x.k === 'place' || x.k === 'who' || x.k === 'say')); if (k) return k; const k2 = kids(id).find(([, x]) => placed(x)); return k2 || null; }
+  let realEl = null;
+  function checkIn(fid, f, label) {   // 진짜 그곳에 가서 번호를 넣으면 아바타가 그 자리로(그사이 태블릿 속에서도 걸어 다님 — 아래 띠)
+    return new Promise((res) => {
+      if (!play) return res(false);
+      if (realEl) realEl.remove();
+      const where = (f.zone || '') + (f.near ? ' · ' + f.near + ' 근처' : ''), st = stations().find((t) => t.fid === fid);
+      realEl = el('div', 'mp'); realEl.id = 'memo-real';
+      realEl.innerHTML = '<div style="font-weight:900;font-size:16px">🏫 진짜 「' + esc(where) + '」(으)로 가요' + (st ? ' <span style="background:#fff3bf;border-radius:8px;padding:0 8px">#' + st.no + ' 카드</span>' : '') + '</div><div class="sm" style="margin:2px 0 6px">' + esc(label) + ' — 그곳에 붙은 <b>장소 번호 4자리</b>를 넣어요</div>'
+        + '<div style="display:flex;gap:6px"><input id="rIn" maxlength="4" inputmode="numeric" placeholder="번호" style="width:110px;font-size:20px;text-align:center;letter-spacing:.2em"><button data-r="ok">확인</button><span style="flex:1"></span><button class="sub" data-r="see" title="태블릿 지도에서 어디인지 보기">🗺 어디?</button><button class="sub" data-r="stop">⏹</button></div><div class="sm" id="rWhy" style="min-height:16px;color:#d9480f"></div>';
+      for (const t of ['keydown', 'keyup']) realEl.addEventListener(t, (e) => e.stopPropagation());
+      const inp = realEl.querySelector('#rIn'), why = realEl.querySelector('#rWhy');
+      let mk = null;
+      const fin = (v) => { if (mk) mk.remove(); if (realEl) realEl.remove(); realEl = null; play && (play.rfin = null); res(v); };
+      play.rfin = () => fin(false);
+      const tryCode = () => { const v = inp.value.replace(/\D/g, ''); if (v === scode(fid)) { goTo(f); map.sfx('ding'); toast('🏫 「' + where + '」 도착! 태블릿에서도 여기로 왔어요', 2.5); fin(true); } else { why.textContent = v.length < 4 ? '번호 4자리를 넣어요' : '번호가 달라요 — 그곳의 카드를 다시 봐요'; map.sfx('buzz'); inp.select(); } };
+      realEl.addEventListener('click', (e) => { const b = e.target.closest('[data-r]'); if (!b) return; const r = b.dataset.r;
+        if (r === 'ok') tryCode(); else if (r === 'stop') { fin(false); playStop('⏹ 현실 방탈출을 그만했어요'); }
+        else if (r === 'see') { if (mk) mk.remove(); mk = map.mk.marker(f.x, (f.y || 0) + 0.2, f.z, { color: 0xffd43b, beam: true }); map.minimap.setMarks([{ x: f.x, z: f.z, color: '#f59f00', shape: 'star', label: '여기', blink: true, floor: (f.y || 0) > 2.5 ? 2 : 1 }]); map.minimap.show({ big: true }); setTimeout(() => map.minimap.show({ big: false }), 3500); } });
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); tryCode(); } });
+      setTimeout(() => inp.focus(), 50);
+    });
+  }
+  function stations() {   // 이야기 순서대로 — 장면 자리 · 숨긴 물건 · 퀴즈 자리
+    const L = scenes(), out = [];
+    L.forEach(([sid, f], i) => {
+      const fp = firstPlaceId(sid); if (fp) out.push({ fid: fp[0], f: fp[1], what: '🎬 ' + (i + 1) + '번 장면 — ' + f.tx, kind: 'scene', n: i + 1 });
+      for (const [kid, x] of kids(sid)) { if (!placed(x) || (fp && kid === fp[0])) continue;
+        if (x.k === 'item') out.push({ fid: kid, f: x, what: '📦 숨길 물건 — ' + x.tx, kind: 'item', n: i + 1 });
+        else if (x.k === 'quiz') out.push({ fid: kid, f: x, what: (QTN[x.qt || 'text'] || '🔐') + ' — ' + x.tx, kind: 'quiz', n: i + 1, x }); }
+    });
+    return out.map((t, k) => ({ ...t, no: k + 1, code: scode(t.fid) }));
+  }
+  function mapShot(marks) {
+    let url = null;
+    try { const wasBig = map.minimap.big; map.minimap.setMarks(marks); map.minimap.show({ big: true }); const cv = map.minimap.el && map.minimap.el.querySelector('canvas'); if (cv) url = cv.toDataURL('image/png'); map.minimap.show({ big: wasBig }); } catch (e) { url = null; }
+    syncNow(); return url;
+  }
+  function realKitHtml() {
+    const T = stations(), e9 = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const shot = mapShot(T.map((t) => ({ x: t.f.x, z: t.f.z, color: t.kind === 'item' ? '#f59f00' : t.kind === 'quiz' ? '#7048e8' : '#e03131', label: '#' + t.no, floor: (t.f.y || 0) > 2.5 ? 2 : 1 })));
+    const ans = (t) => t.kind === 'quiz' ? quizAns(t.x) : t.kind === 'item' ? '이 물건 카드를 그곳에 숨겨요' : '';
+    const rowsQ = []; scenes().forEach(([sid], i) => { for (const [, x] of kids(sid)) if (x.k === 'quiz') rowsQ.push('<tr><td>' + (i + 1) + '번 장면</td><td>' + e9(x.tx) + '</td><td><b>' + e9(quizAns(x)) + '</b></td><td>' + e9(x.hint || '') + '</td></tr>'); });
+    return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>현실 방탈출 준비물 — ' + e9(board.t) + '</title><style>'
+      + 'body{font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif;color:#1d3557;margin:24px}h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:22px 0 8px;border-bottom:2px solid #1d3557;padding-bottom:4px}'
+      + 'table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid #adb5bd;padding:6px;vertical-align:top;text-align:left}th{background:#f1f3f5}.chk{white-space:nowrap}'
+      + '.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{border:3px dashed #1d3557;border-radius:14px;padding:14px;break-inside:avoid;min-height:150px}.no{font-size:40px;font-weight:900}.code{font-size:30px;font-weight:900;letter-spacing:.25em;background:#fff3bf;display:inline-block;padding:2px 10px;border-radius:8px}'
+      + '.sm{font-size:12px;color:#5a6b80}.pb{page-break-before:always}img{max-width:100%;border:1px solid #ced4da;border-radius:10px}@media print{button{display:none}}</style></head><body>'
+      + '<button onclick="print()" style="float:right;font-size:16px;padding:8px 14px">🖨 인쇄</button><h1>🏫 현실 방탈출 준비물 — ' + e9(board.t) + '</h1><div class="sm">메타버스 메모장에서 아이들이 만든 방탈출을 진짜 학교에서 · 장소 ' + T.length + '곳 · ' + new Date().toLocaleString('ko-KR') + '</div>'
+      + '<h2>1. 진행 방법</h2><ol style="font-size:14px;line-height:1.7"><li>아래 <b>장소 카드</b>를 오려서 지도 번호 자리에 붙여요(📦 물건 카드는 그 자리에 숨겨요).</li><li>아이들은 태블릿으로 메타버스 메모장 → 이 판 → 📖 판 → <b>🏫 현실 방탈출 → 시작</b>.</li><li>태블릿이 「진짜 ○○으로 가요」라고 하면 그곳에 가서 카드의 <b>장소 번호 4자리</b>를 넣어요 → 태블릿 속 아바타도 그 자리로 가고, 퀴즈·힌트가 열려요.</li><li>퀴즈 답은 <b>진짜 그 장소</b>를 보고 찾아요. 미리 <b>현실 점검표</b>로 메타버스와 실제가 같은지 확인하고, 다르면 정답을 고치거나 Claude에게 알려 메타버스를 고쳐요.</li></ol>'
+      + (shot ? '<h2>2. 장소 지도</h2><img src="' + shot + '" alt="학교 지도"><div class="sm">빨강 = 장면 자리 · 노랑 = 숨길 물건 · 보라 = 퀴즈 자리 · 속 빈 점 = 다른 층</div>' : '')
+      + '<h2>3. 장소 목록 · 현실 점검표</h2><table><tr><th>#</th><th>장소(메타버스)</th><th>할 일</th><th>장소 번호</th><th>정답(선생님)</th><th class="chk">현실 점검</th></tr>'
+      + T.map((t) => '<tr><td><b>' + t.no + '</b></td><td>' + e9(t.f.zone) + (t.f.near ? '<br><span class="sm">' + e9(t.f.near) + ' 근처</span>' : '') + '</td><td>' + e9(t.what) + '</td><td><b>' + t.code + '</b></td><td>' + e9(ans(t)) + '</td><td class="chk">□ 실제와 같아요<br>□ 달라요: ________</td></tr>').join('') + '</table>'
+      + (rowsQ.length ? '<h2>4. 퀴즈 정답표(선생님)</h2><table><tr><th>장면</th><th>문제</th><th>정답</th><th>힌트</th></tr>' + rowsQ.join('') + '</table>' : '')
+      + '<h2 class="pb">5. 오려 붙일 장소 카드</h2><div class="cards">' + T.map((t) => '<div class="card"><div class="no">#' + t.no + '</div><div style="font-weight:800;margin:4px 0">' + e9(t.f.zone) + (t.f.near ? ' · ' + e9(t.f.near) : '') + '</div>'
+        + (t.kind === 'quiz' ? '<div style="font-size:15px;margin:6px 0">🔐 ' + e9(t.f.tx) + '</div>' : t.kind === 'item' ? '<div style="font-size:15px;margin:6px 0">📦 ' + e9(t.f.tx) + ' — 찾았다!</div>' : '<div style="font-size:15px;margin:6px 0">🎬 ' + t.n + '번 장면 자리</div>')
+        + '<div class="sm">태블릿에 이 번호를 넣어요</div><div class="code">' + t.code + '</div></div>').join('') + '</div></body></html>';
+  }
+  function realKit() {
+    if (!stations().length) return toast('🚩 깃발을 꽂은 장면·물건·퀴즈가 있어야 해요', 3);
+    const html = realKitHtml(), w = window.open('', '_blank');
+    if (w) { w.document.open(); w.document.write(html); w.document.close(); return; }
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' })), P = open('memo-sum');
+    P.innerHTML = '<h3>🖨 현실 방탈출 준비물</h3><div class="sm">새 창이 막혔어요 — 아래를 눌러 열어요.</div><div class="row"><a href="' + url + '" target="_blank" style="font-weight:800">📄 준비물 열기</a><button class="sub" id="mmB">◀ 이야기 판</button></div>';
+    P.querySelector('#mmB').onclick = boardView;
+  }
+  function realMenu() {
+    const T = stations(), P = open('memo-sum');
+    P.innerHTML = '<h3>🏫 현실 방탈출</h3><div class="sm" style="line-height:1.6">학교 안은 GPS가 안 돼서, 장소마다 <b>번호 카드</b>를 붙여 두고 그곳에 가면 번호를 넣어요. 그러면 태블릿 속 아바타도 그 자리로 가고, 그 장소의 퀴즈·힌트가 열려요. 그 사이엔 태블릿 속에서도 걸어 다닐 수 있어요.</div>'
+      + '<div class="where" style="margin-top:8px">장소 ' + T.length + '곳: ' + T.slice(0, 8).map((t) => '#' + t.no + ' ' + esc(short(t.f.zone, 6))).join(' · ') + (T.length > 8 ? ' …' : '') + '</div>'
+      + (T.length ? '' : '<div class="sm" style="color:#d9480f">먼저 장면·물건·퀴즈에 🚩 깃발을 꽂아요</div>')
+      + '<div class="row"><button class="sub" id="rB">◀ 이야기 판</button>' + (teacher ? '<button class="sub" id="rKit">🖨 준비물 뽑기(선생님)</button>' : '') + '<button id="rGo"' + (T.length ? '' : ' disabled style="opacity:.45"') + '>▶ 현실로 시작</button></div>'
+      + (teacher ? '' : '<div class="sm" style="margin-top:6px">🖨 준비물(장소 카드·정답표)은 🔒 선생님 모드에서 뽑아요</div>');
+    P.querySelector('#rB').onclick = boardView; const k = P.querySelector('#rKit'); if (k) k.onclick = realKit;
+    P.querySelector('#rGo').onclick = () => { if (T.length) playStory({ real: true }); };
   }
   async function playStory(o = {}) {
     const L = scenes(); if (!L.length) return toast('먼저 장면을 만들어요', 2);
     close(); endTour(); hereOff(); placing = null;
-    play = { i: 0, items: [], steps: 0, mk: null, iv: 0, go: null, book: !!o.book }; chips();
+    play = { i: 0, items: [], got: new Set(), steps: 0, mk: null, iv: 0, go: null, book: !!o.book, real: !!o.real, quiz: 0 }; chips();
+    const escape = Object.values(DATA).some((x) => valid(x) && x.k === 'quiz');
     for (const F of FL.values()) F.g.visible = false;   // 해 보는 동안 깃발 숨김(목표 빛기둥만)
-    map.hud.toast(play.book ? '📖 「' + board.t + '」 — 책처럼 읽어요' : '🎮 「' + board.t + '」 이야기 시작! 빛기둥을 따라가요', 3);
+    map.hud.toast(play.real ? '🏫 「' + board.t + '」 현실 방탈출 시작! 진짜 장소에 가서 번호를 넣어요' : play.book ? '📖 「' + board.t + '」 — 책처럼 읽어요' : (escape ? '🔐 「' + board.t + '」 방탈출 시작! 빛기둥을 따라가요' : '🎮 「' + board.t + '」 이야기 시작! 빛기둥을 따라가요'), 3);
     while (play && play.i >= 0 && play.i < L.length && play.steps++ < 60) {
       const [id, f] = L[play.i], n = play.i + 1, pl = firstPlace(id);
-      if (pl && !play.book) { const ok = await walkTo(pl, n, f.tx); if (!ok || !play) return; }
+      if (pl && play.real) { const fp = firstPlaceId(id); const ok = await checkIn(fp[0], fp[1], '🎬 ' + n + '번 장면'); if (!ok || !play) return; }
+      else if (pl && !play.book) { const ok = await walkTo(pl, n, f.tx); if (!ok || !play) return; }
       let next = f.end ? -1 : play.i + 1;   // 🏁 결말이면 여기서 끝
       if (!play) return;
       let r = await map.hud.ask('🎬 ' + n + '번 장면\n\n' + f.tx, ['다음 ▶']); if (r < 0 || !play) return playStop();
-      for (const [, x] of kids(id)) {
+      let jump = null;
+      for (const [kid, x] of kids(id)) {
         if (!play) return;
+        if (x.k === 'quiz' && placed(x) && !play.book && (!pl || Math.hypot(x.x - pl.x, x.z - pl.z) > 3)) { const ok = play.real ? await checkIn(kid, x, '🔐 퀴즈가 있는 곳') : await walkTo(x, n, x.tx, '🔐 퀴즈가 있는 곳으로 가요 — 빛기둥'); if (!ok || !play) return; }
+        if (x.k === 'quiz') { const q = await runQuiz(x); if (q === 'stop' || !play) return playStop(); if (typeof q === 'number') { jump = q; break; } play.quiz++; if (x.go) next = x.go - 1; continue; }
+        if (x.k === 'item' && placed(x) && !play.book) { const ok = play.real ? await checkIn(kid, x, '📦 「' + short(x.tx, 10) + '」을(를) 찾아요 — 찾으면 그 카드의 번호') : await walkTo(x, n, x.tx, '📦 「' + short(x.tx, 10) + '」을(를) 찾아요 — 빛기둥으로'); if (!ok || !play) return; }
         if (x.k === 'say') r = await map.hud.ask('💬 ' + (x.who || '누군가') + '\n“' + x.tx + '”', ['▶']);
         else if (x.k === 'who') r = await map.hud.ask('🧑 ' + (x.who || '등장인물') + (x.tx ? '\n' + x.tx : ''), ['▶']);
-        else if (x.k === 'item') { r = await map.hud.ask('📦 ' + x.tx, ['✋ 줍기!']); if (r >= 0) { play.items.push(short(x.tx, 12)); map.sfx('ding'); } }
+        else if (x.k === 'item') { r = await map.hud.ask('📦 ' + x.tx, ['✋ 줍기!']); if (r >= 0) { if (!play.got.has(kid)) play.items.push(short(x.tx, 12)); play.got.add(kid); map.sfx('ding'); } }
         else if (x.k === 'choice') {
           const O = choiceOpts(x); if (!O.length) continue;
           r = await map.hud.ask('❓ ' + x.tx, O.map((o) => o.label + (o.n ? '  → ' + o.n + '번' : '')));
@@ -869,11 +1052,11 @@ export default async function start(map, params = {}) {
         }
         if (r < 0 || !play) return playStop();
       }
-      play.i = next;
+      play.i = jump != null ? jump : next;
     }
     if (!play) return;
-    const items = play.items.slice(); playStop();
-    const k = await map.hud.ask('🏁 「' + board.t + '」 이야기 끝!' + (items.length ? '\n\n주운 물건: ' + items.join(' · ') : '') + '\n\n우리 반이 쓴 이야기를 해 봤어요. 고칠 곳이 있으면 📖 이야기 판에서 고쳐요!', ['📖 이야기 판으로', '🔁 다시 해 보기', '닫기']);
+    const items = play.items.slice(), nq = play.quiz; playStop();
+    const k = await map.hud.ask((escape ? '🎉 「' + board.t + '」 탈출 성공!' + (nq ? '\n\n푼 퀴즈·자물쇠 ' + nq + '개' : '') : '🏁 「' + board.t + '」 이야기 끝!') + (items.length ? '\n주운 물건: ' + items.join(' · ') : '') + '\n\n우리 반이 쓴 이야기를 해 봤어요. 고칠 곳이 있으면 📖 이야기 판에서 고쳐요!', ['📖 이야기 판으로', '🔁 다시 해 보기', '닫기']);
     if (k === 0) boardView(); else if (k === 1) playStory(o);
   }
 
@@ -914,6 +1097,7 @@ export default async function start(map, params = {}) {
       if (placed(f)) out.push('   ' + at(f));
       for (const [, x] of kids(id)) {
         const A = KBY[x.k] || PLACE;
+        if (x.k === 'quiz') { out.push('   ' + (QTN[x.qt || 'text'] || '🔐 퀴즈') + ': ' + x.tx + ' · 정답: ' + quizAns(x) + (x.qt === 'pick' && x.opt ? ' (보기: ' + String(x.opt).split('\n').join(' / ') + ')' : '') + (x.hint ? ' · 💡 ' + x.hint : '') + (x.go ? ' · 맞히면 → ' + x.go + '번 장면' : '') + (placed(x) ? '  ' + at(x) : '') + ' · ✍️ ' + x.by); continue; }
         if (x.k === 'place') { out.push('   📍 일어나는 곳' + (x.tx ? ' — ' + x.tx : '') + ': ' + (placed(x) ? at(x).slice(3) : '(자리 없음)') + ' · ✍️ ' + x.by); continue; }
         out.push('   ' + A.e + ' ' + A.n + (x.who ? ' [' + x.who + ']' : '') + ': ' + (x.k === 'say' ? '“' + x.tx + '”' : x.tx || '') + (placed(x) ? '  ' + at(x) : '') + ' · ✍️ ' + x.by);
         if (x.opt) out.push('      보기: ' + String(x.opt).replace(/\n/g, ' / '));
@@ -941,7 +1125,7 @@ export default async function start(map, params = {}) {
       map.hud.chip('memo-s', '🔁 판 바꾸기', { onClick: () => { if (!panel) pickBoard(); } });
       for (const F of FL.values()) F.g.visible = true; map.minimap.show(); return;
     }
-    if (play) { map.hud.chip('memo-p', null); map.hud.chip('memo-f', '⏩ 장면 자리로 바로 가기', { onClick: () => { if (play && play.go) play.go(); } }); map.hud.chip('memo-l', '⏹ 이야기 그만', { onClick: () => playStop('⏹ 이야기를 그만했어요') }); map.hud.chip('memo-s', null); return; }
+    if (play) { map.hud.chip('memo-p', null); if (play.real) map.hud.chip('memo-f', '🏫 진짜 장소에서 번호를 넣어요'); else map.hud.chip('memo-f', '⏩ 장면 자리로 바로 가기', { onClick: () => { if (play && play.go) play.go(); } }); map.hud.chip('memo-l', '⏹ 이야기 그만', { onClick: () => playStop('⏹ 이야기를 그만했어요') }); map.hud.chip('memo-s', null); return; }
     map.hud.chip('memo-f', placing ? '🚩 ' + (numMap().get(placing) || '') + '번 장면 깃발 — 땅을 톡 · F · Esc 취소' : '🚩 깃발 (땅을 톡 · F)', { onClick: () => { if (panel) return; if (placing) placeAt(aimPoint()); else form({ pt: aimPoint() }); } });
     map.hud.chip('memo-l', '📖 이야기 판 (L)', { onClick: () => { if (!panel) boardView(); } });
     map.hud.chip('memo-p', pathOn ? '🛤 이야기 길 끄기' : '🛤 이야기 길 보기', { onClick: () => { if (!panel) pathToggle(); } });
@@ -964,7 +1148,7 @@ export default async function start(map, params = {}) {
     tick() {},
     stop() { dead = true; window.SM_ACT = null; clearTimeout(pathT); pathClear(); if (play) { clearInterval(play.iv); if (play.mk) play.mk.remove(); play = null; } clearTimeout(syncT); if (es) es.close(); if (esB) esB.close(); hereOff(); removeEventListener('keydown', onKey); removeEventListener('keydown', onEsc, true); removeEventListener('sm-click', onWorldClick); removeEventListener('sm-cmd', onCmd); for (const id of [...FL.keys()]) drop3d(id); ui.remove(); css.remove(); },
     get board() { return board; }, get scenes() { return scenes().map(([id, f], i) => ({ id, n: i + 1, ...f, kids: kids(id).map(([kid, x]) => ({ id: kid, ...x })) })); }, summary: () => board ? summaryText() : '',
-    get coach() { return board ? (isW() ? wcoach() : coach()) : []; }, get cards() { return wcards().map(([id, f]) => ({ id, ...f })); }, get kind() { return KIND; }, paths: () => { if (!pathOn) pathToggle(); return new Promise((r) => setTimeout(() => r(pathObjs.length), 6000)); }, book: () => playStory({ book: true }),
+    get coach() { return board ? (isW() ? wcoach() : coach()) : []; }, get stations() { return board && !isW() ? stations().map((t) => ({ no: t.no, code: t.code, zone: t.f.zone, what: t.what, kind: t.kind })) : []; }, realKitHtml: () => realKitHtml(), real: () => playStory({ real: true }), get cards() { return wcards().map(([id, f]) => ({ id, ...f })); }, get kind() { return KIND; }, paths: () => { if (!pathOn) pathToggle(); return new Promise((r) => setTimeout(() => r(pathObjs.length), 6000)); }, book: () => playStory({ book: true }),
     place: (o) => form({ pt: aimPoint(), ...(o || {}) }), view: boardView, tour: startTour, play: () => playStory(), get playing() { return play ? { i: play.i, items: play.items.slice() } : null; }, moveTo: (id, sec, before) => moveTo(id, sec, before),
     enter: (id, info) => { name = name || '시험'; board = { id, ...info }; listen(); chips(); },
   };
