@@ -1349,23 +1349,67 @@ function holdOn() { holdOff(); document.exitPointerLock?.(); CTRL.held = true; h
   holdEl.style.cssText = 'position:fixed;inset:0;z-index:48;display:flex;align-items:center;justify-content:center;background:rgba(10,20,40,.45);color:#fff;font:900 clamp(28px,6vw,56px)/1.3 "Apple SD Gothic Neo","Malgun Gothic",sans-serif;text-align:center;text-shadow:0 3px 0 rgba(0,0,0,.35);pointer-events:auto';
   holdEl.innerHTML = '<div>✋ 잠깐 멈춰요!<div style="font-size:.5em;font-weight:800;margin-top:10px">선생님 말씀을 들어요</div></div>'; document.body.appendChild(holdEl); holdT = setTimeout(() => holdOff(), 90000); }
 function holdOff(say) { clearTimeout(holdT); if (holdEl) { holdEl.remove(); holdEl = null; if (say) toast('▶ 다시 움직여요!', 2); } CTRL.held = false; }
+// 💬 채팅(CHAT-1 · 10-03 교사 '채팅 넣어도 될 것 같아 — 비속어·은어 필터 빡세게'): 방 안에서만 · T 또는 💬 칩 · 40글자 · 정해진 말 단추 · 보내기 전에 chatfilter.js가 막음(DB 규칙도 한 번 더)
+//   왼쪽 아래 최근 말 6줄(20초 뒤 흐려짐 · 입력 중엔 지난 말 20개) · 1.5초에 한 번 · 같은 말 10초 안에 다시 못 보냄 · 선생님이 끄면(ctl/chat/off) 못 보냄
+let chatUI = null, CF = null;
+function chatOn(on) {
+  if (!on) { if (chatUI) chatUI.root.remove(); chatUI = null; return; } if (chatUI) return;
+  const root = document.createElement('div'); root.id = 'mpChat'; root.style.cssText = 'position:fixed;left:10px;bottom:46px;z-index:23;width:min(360px,70vw);pointer-events:none;font:14px/1.4 "Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  root.innerHTML = '<div class="log" style="display:flex;flex-direction:column;gap:3px;max-height:40vh;overflow:hidden"></div>'
+    + '<div class="bar" style="display:none;pointer-events:auto;margin-top:6px;background:rgba(29,53,87,.92);border-radius:12px;padding:6px">'
+    + '<div class="qk" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px"></div>'
+    + '<div style="display:flex;gap:4px"><input maxlength="40" placeholder="말하기 (Enter 보내기 · Esc 닫기)" style="flex:1;min-width:0;font:inherit;font-size:15px;border:0;border-radius:8px;padding:6px 8px"><button class="go" style="font:inherit;font-weight:800;border:0;border-radius:8px;padding:6px 10px;background:#ffd23c;color:#1d3557;cursor:pointer">보내기</button></div>'
+    + '<div class="why" style="color:#ffe066;font-size:12px;min-height:0;margin-top:3px"></div></div>';
+  document.body.appendChild(root);
+  const btn = document.createElement('div'); btn.id = 'mpChatBtn'; btn.className = 'chip'; btn.textContent = '💬'; btn.title = '채팅(T)'; btn.style.cssText = 'left:60px;top:84px;cursor:pointer;padding:4px 9px;pointer-events:auto';
+  document.body.appendChild(btn);
+  const log = root.querySelector('.log'), bar = root.querySelector('.bar'), inp = bar.querySelector('input'), why = bar.querySelector('.why');
+  for (const t of ['keydown', 'keyup', 'keypress']) bar.addEventListener(t, (e) => e.stopPropagation());
+  const U = { root: { remove() { root.remove(); btn.remove(); } }, open, close, add, last: 0, lastTx: '', lastT: 0, lines: [] };
+  function line(m, sys) { const d = document.createElement('div'); d.style.cssText = 'align-self:flex-start;max-width:100%;padding:3px 9px;border-radius:9px;background:rgba(29,53,87,.78);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.3);word-break:break-all;transition:opacity .8s';
+    d.innerHTML = sys ? '<i style="opacity:.8">' + m + '</i>' : '<b style="color:#ffd23c">' + String(m.n || '친구').replace(/[<>&]/g, '') + '</b> ' + String(m.tx).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])); d._t = performance.now(); return d; }
+  function add(m, sys) { const d = line(m, sys); log.appendChild(d); while (log.children.length > 20) log.firstChild.remove(); fade(); }
+  function fade() { const now = performance.now(), openNow = bar.style.display !== 'none'; [...log.children].forEach((d, i, arr) => { const recent = i >= arr.length - 6; d.style.display = openNow || recent ? '' : 'none'; d.style.opacity = openNow || now - d._t < 20000 ? '1' : '0'; }); }
+  setInterval(fade, 2000);
+  function off() { return NET && NET.ctlData && NET.ctlData.chat && NET.ctlData.chat.off; }
+  function open() { if (!NET) return; document.exitPointerLock?.(); bar.style.display = ''; why.textContent = off() ? '🔇 선생님이 채팅을 껐어요' : ''; fade(); setTimeout(() => inp.focus(), 20); }
+  function close() { bar.style.display = 'none'; inp.blur(); fade(); }
+  async function send(tx) {
+    if (!NET || !CF) return; if (off()) { why.textContent = '🔇 선생님이 채팅을 껐어요'; return; }
+    const now = performance.now(); if (now - U.last < 1500) { why.textContent = '조금 천천히 보내요'; return; }
+    const r = CF.checkChat(tx); if (!r.ok) { if (r.why) why.textContent = '🙅 ' + r.why; return; }
+    if (r.text === U.lastTx && now - U.lastT < 10000) { why.textContent = '같은 말을 또 보냈어요'; return; }
+    U.last = now; U.lastTx = r.text; U.lastT = now; why.textContent = '';
+    const ok = await NET.say(r.text); if (!ok) why.textContent = '🙅 보낼 수 없는 말이에요'; else { inp.value = ''; }
+  }
+  bar.querySelector('.go').addEventListener('click', (e) => { e.stopPropagation(); send(inp.value); });
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); send(inp.value); } else if (e.key === 'Escape') { e.preventDefault(); close(); } });
+  btn.addEventListener('click', (e) => { e.stopPropagation(); if (bar.style.display === 'none') open(); else close(); });
+  import('./chatfilter.js?v=1').then((M) => { CF = M; bar.querySelector('.qk').innerHTML = M.QUICK.map((q) => '<button style="font:inherit;font-size:13px;border:0;border-radius:8px;padding:3px 8px;background:#e8edf3;color:#1d3557;cursor:pointer">' + q + '</button>').join('');
+    bar.querySelectorAll('.qk button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); send(b.textContent); })); });
+  chatUI = U;
+}
+addEventListener('keydown', (e) => {   // T = 채팅 열기(방 안 · 다른 입력·창·오프닝이 아닐 때)
+  if (e.code !== 'KeyT' || e.repeat || !chatUI || !NET) return; const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.isContentEditable)) return;
+  if (document.body.classList.contains('title-on') || CTRL.frozen) return; e.preventDefault(); chatUI.open();
+});
 // 😀 이모지 인사(방 안에서만 · 정해진 그림 6개)
 let emoEl = null;
 function emoChip(on) {
   if (!on) { if (emoEl) emoEl.remove(); emoEl = null; return; } if (emoEl) return;
   emoEl = document.createElement('div'); emoEl.id = 'mpEmo'; emoEl.className = 'chip'; emoEl.style.cssText = 'left:10px;top:84px;cursor:pointer;display:flex;gap:2px;align-items:center;padding:4px 6px;pointer-events:auto';
   emoEl.innerHTML = '<span data-e="t" style="padding:2px 6px">😀</span><span class="emo-bar" style="display:none;gap:2px"></span>';
-  import('./net.js?v=7').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" style="font-size:22px;padding:2px 4px;cursor:pointer">' + x + '</span>').join(''); });
+  import('./net.js?v=8').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" style="font-size:22px;padding:2px 4px;cursor:pointer">' + x + '</span>').join(''); });
   emoEl.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-e]'); if (!b) return; const bar = emoEl.querySelector('.emo-bar');
     if (b.dataset.e === 't') { bar.style.display = bar.style.display === 'none' ? 'flex' : 'none'; return; } if (NET) NET.emote(+b.dataset.e); bar.style.display = 'none'; });
   document.body.appendChild(emoEl);
 }
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=7'), import('./lobby.js?v=10')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=8'), import('./lobby.js?v=11')]).then(([N, L]) => {
     const LOBBY = L.createLobby({ chip, net: () => NET, toast: (m, t) => toast(m, t),
-      join: (room) => { CTLK.join = Date.now(); CTLK.init = false; CTLK.m = CTLK.q = null; NET = N.createNet({ THREE, scene, room, kind: 'kid', onChange: () => LOBBY.draw(), onDenied: () => LOBBY.recheck(), onCtl }); emoChip(true); if (!MAP.game.current && !MAP.minimap.visible) MAP.minimap.show(); },
-      leave: () => { if (NET) NET.leave(); NET = null; emoChip(false); MAP.minimap.setPeers([]); holdOff(); },
+      join: (room) => { CTLK.join = Date.now(); CTLK.init = false; CTLK.m = CTLK.q = null; NET = N.createNet({ THREE, scene, room, kind: 'kid', onChange: () => LOBBY.draw(), onDenied: () => LOBBY.recheck(), onCtl, onChat: (m) => { if (chatUI) { if (m) chatUI.add(m); else chatUI.add('🧹 선생님이 채팅을 지웠어요', true); } } }); emoChip(true); chatOn(true); if (!MAP.game.current && !MAP.minimap.visible) MAP.minimap.show(); },
+      leave: () => { if (NET) NET.leave(); NET = null; emoChip(false); chatOn(false); MAP.minimap.setPeers([]); holdOff(); },
       onGoTo: (p) => {   // 👥 칩에서 친구 이름 → 그 친구 곁으로(물총 경기 중엔 안 됨)
         if (!p) return; const g = MAP.game.current; if (g && /^watergun/.test(g.id) && g.handle && (g.handle.state === 'play' || g.handle.state === 'count')) return toast('경기 중에는 갈 수 없어요', 2);
         const y = p.y, a = Math.random() * Math.PI * 2, e = MAP.findEntry(p.x + Math.cos(a) * 1.6, p.z + Math.sin(a) * 1.6, y, null, 4) || MAP.findEntry(p.x, p.z, y, null, 6);

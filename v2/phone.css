@@ -149,3 +149,8 @@ body.touch:has(#memo-board) .tbtn,body.touch:has(#memo-board) #tJoyHint,body.tou
 body.small #mpEmo{top:calc(118px + env(safe-area-inset-top))!important;left:calc(8px + env(safe-area-inset-left))!important}
 body.small #mpInvite{top:calc(8px + env(safe-area-inset-top))!important;font-size:13px!important}
 @media (max-height:500px){ .wg-lobby{padding:10px 12px!important;font-size:13px!important;max-height:94vh!important} }
+
+/* CHAT-1: 휴대폰 — 💬 칩은 😀 칩 옆 · 채팅 줄은 조이스틱 위 */
+body.small #mpChatBtn{top:calc(118px + env(safe-area-inset-top))!important;left:calc(58px + env(safe-area-inset-left))!important}
+body.small #mpChat{bottom:calc(150px + env(safe-area-inset-bottom))!important;width:min(300px,60vw)!important;font-size:12px!important}
+body.touch:has(#mpChat .bar[style*="display: none"]) #mpChat{pointer-events:none}

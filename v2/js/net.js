@@ -20,7 +20,7 @@ export function createNet(o) {
   const others = new Map();
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   const _m = new THREE.Matrix4(), _c = new THREE.Color();
-  let es = null, dead = false, hidden = false, mQ = 0, CTL = {}, selfE = null, act = '', offset = 0, sendT = 0, beatT = 0, cleanT = 8, fxQ = 0, last = { x: 1e9, y: 0, z: 0, h: 0 }, onChange = o.onChange || (() => {});
+  let es = null, dead = false, hidden = false, mQ = 0, CTL = {}, selfE = null, act = '', CHAT = {}, chatSeen = new Set(), chatT0 = Date.now(), selfB = null, offset = 0, sendT = 0, beatT = 0, cleanT = 8, fxQ = 0, last = { x: 1e9, y: 0, z: 0, h: 0 }, onChange = o.onChange || (() => {});
 
   function merge(parts) {
     const P = [], N = [], C = [];
@@ -54,7 +54,7 @@ export function createNet(o) {
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false })); s.scale.set(1.2, 0.3, 1); return s;
   }
-  function drop(pid) { const O = others.get(pid); if (!O) return; scene.remove(O.mesh); O.mesh.geometry.dispose(); scene.remove(O.tag); O.tag.material.map.dispose(); O.tag.material.dispose(); if (O.em) { scene.remove(O.em.s); O.em.s.material.dispose(); } others.delete(pid); onChange(); }
+  function drop(pid) { const O = others.get(pid); if (!O) return; if (O.sb) { scene.remove(O.sb.s); if (O.sb.s.material.map) O.sb.s.material.map.dispose(); O.sb.s.material.dispose(); } scene.remove(O.mesh); O.mesh.geometry.dispose(); scene.remove(O.tag); O.tag.material.map.dispose(); O.tag.material.dispose(); if (O.em) { scene.remove(O.em.s); O.em.s.material.dispose(); } others.delete(pid); onChange(); }
   // 이모지(그림 6개 — 텍스처는 하나씩만 만들어 같이 씀) · 3초 동안 머리 위에서 살짝 떠오름
   const ETEX = [];
   function emoteSprite(old, i) {
@@ -96,7 +96,27 @@ export function createNet(o) {
       else if (data) for (const k in data) route('put', k.split('/').filter(Boolean), data[k]);
     } else route(type, path, data);
   }
-  function route(type, path, data) { if (path[0] === 'players') players(type, path.slice(1), data); else if (path[0] === 'ctl') ctlEvt(type, path.slice(1), data); }
+  function route(type, path, data) { if (path[0] === 'players') players(type, path.slice(1), data); else if (path[0] === 'ctl') ctlEvt(type, path.slice(1), data); else if (path[0] === 'chat') chatEvt(type, path.slice(1), data); }
+  // 채팅(CHAT-1): rooms/<room>/chat/<id> = {n, by, tx, t} · 들어온 뒤의 새 말만 알림(o.onChat) + 말한 사람 머리 위 말풍선 5초
+  function chatEvt(type, path, data) {
+    if (type === 'put') CHAT = setAt(CHAT, path, data); else if (data) for (const k in data) CHAT = setAt(CHAT, [...path, ...k.split('/').filter(Boolean)], data[k]);
+    const fresh = [];
+    for (const cid in CHAT) { const m = CHAT[cid]; if (!m || chatSeen.has(cid) || typeof m.tx !== 'string') continue; chatSeen.add(cid); if (typeof m.t === 'number' && m.t < chatT0 + offset - 3000) continue; fresh.push(m); }
+    fresh.sort((a, b) => (a.t || 0) - (b.t || 0));
+    for (const m of fresh) { if (m.by === id) selfB = bubble(selfB, m.tx); else { const O = others.get(m.by); if (O) O.sb = bubble(O.sb, m.tx); } if (o.onChat) o.onChat(m); }
+    if (!Object.keys(CHAT).length && o.onChat) o.onChat(null);   // 비움(선생님 🧹)
+  }
+  function bubble(old, tx) {
+    let B = old; if (!B) { B = { s: new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })), t: 0, c: document.createElement('canvas') }; B.c.width = 512; B.c.height = 128; B.s.scale.set(2.4, 0.6, 1); scene.add(B.s); }
+    const g = B.c.getContext('2d'); g.clearRect(0, 0, 512, 128); g.font = '700 30px sans-serif';
+    const words = String(tx), lines = []; let cur = '';
+    for (const ch of words) { if (g.measureText(cur + ch).width > 460) { lines.push(cur); cur = ch; if (lines.length === 2) break; } else cur += ch; } if (lines.length < 2 && cur) lines.push(cur);
+    const w = Math.min(500, Math.max(...lines.map((l) => g.measureText(l).width)) + 36), h = 26 + lines.length * 38;
+    g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.roundRect((512 - w) / 2, 4, w, h, 18); g.fill(); g.strokeStyle = '#1d3557'; g.lineWidth = 3; g.stroke();
+    g.fillStyle = '#1d3557'; g.textAlign = 'center'; g.textBaseline = 'top'; lines.forEach((l, i) => g.fillText(l, 256, 16 + i * 38));
+    if (B.s.material.map) B.s.material.map.dispose(); B.s.material.map = new THREE.CanvasTexture(B.c); B.s.material.map.colorSpace = THREE.SRGBColorSpace; B.s.material.needsUpdate = true; B.t = 5; B.s.visible = true; return B;
+  }
+  function bubbleTick(B, dt, x, y, z) { if (!B || B.t <= 0) { if (B) B.s.visible = false; return; } B.t -= dt; B.s.position.set(x, y + 2.75 * scale, z); B.s.material.opacity = Math.min(1, B.t * 2); B.s.visible = B.t > 0 && !hidden; }
   function ctlEvt(type, path, data) {
     if (type === 'put') CTL = setAt(CTL, path, data); else if (data) for (const k in data) CTL = setAt(CTL, [...path, ...k.split('/').filter(Boolean)], data[k]);
     if (o.onCtl) o.onCtl(CTL);
@@ -136,16 +156,21 @@ export function createNet(o) {
       const moved = Math.abs(P.x - last.x) + Math.abs(P.z - last.z) + Math.abs(P.y - last.y) > 0.05 || Math.abs(P.h - last.h) > 0.08;
       if ((moved && sendT <= 0) || beatT <= 0) { send(P); sendT = 1 / 6; beatT = 3; }
       const now = Date.now() + offset, k = Math.min(1, dt * 10);
-      emoteTick(selfE, dt, P.x, P.y - 0.25, P.z);
+      emoteTick(selfE, dt, P.x, P.y - 0.25, P.z); bubbleTick(selfB, dt, P.x, P.y - 0.25, P.z);
       for (const O of others.values()) {
         const stale = O.t && now - O.t > 20000; O.mesh.visible = O.tag.visible = !stale && !hidden;
-        emoteTick(O.em, dt, O.x, O.y, O.z);
+        emoteTick(O.em, dt, O.x, O.y, O.z); bubbleTick(O.sb, dt, O.x, O.y, O.z);
         O.x += (O.tx - O.x) * k; O.y += (O.ty - O.y) * k; O.z += (O.tz - O.z) * k;
         let dh = O.th - O.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); O.h += dh * k;
         O.mesh.position.set(O.x, O.y, O.z); O.mesh.rotation.y = O.h; O.tag.position.set(O.x, O.y + 2.05 * scale, O.z);
       }
       if ((cleanT -= dt) <= 0) { cleanT = 30; for (const [pid, O] of others) if (O.t && now - O.t > 120000) { req('/players/' + pid, 'DELETE'); drop(pid); } }
     },
+    say(tx) { if (!joined) return Promise.resolve(false); const cid = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      const ids = Object.keys(CHAT).sort((a, b) => ((CHAT[a] || {}).t || 0) - ((CHAT[b] || {}).t || 0)); for (const old of ids.slice(0, Math.max(0, ids.length - 39))) req('/chat/' + old, 'DELETE');   // 40개만 남김
+      return fetch(base + '/chat/' + cid + '.json', { method: 'PUT', body: JSON.stringify({ n: name, by: id, tx, t: { '.sv': 'timestamp' } }) }).then((r) => r.ok); },
+    clearChat() { return req('/chat', 'DELETE'); },
+    get chat() { return Object.values(CHAT).filter((m) => m && typeof m.tx === 'string').sort((a, b) => (a.t || 0) - (b.t || 0)); },
     setAct(v) { v = String(v || '').slice(0, 20); if (v === act || !joined) return; act = v; req('/players/' + id + '/a', 'PUT', v); },   // 지금 하는 것(👥 창에서 선생님이 봄)
     emote(i) { if (!joined) return; mQ++; req('/players/' + id + '/m', 'PUT', { q: mQ, i }); selfE = emoteSprite(selfE, i); },
     peers() { const now = Date.now() + offset, a = []; if (!hidden) for (const O of others.values()) if (!(O.t && now - O.t > 20000)) a.push({ x: O.x, y: O.y, z: O.z, act: O.a, label: O.n, color: '#' + O.c.toString(16).padStart(6, '0'), r: 4, floor: O.y > 2.5 ? 2 : 1 }); return a; },
