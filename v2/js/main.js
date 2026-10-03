@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=142';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=39';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=40';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=8';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=13';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
@@ -543,8 +543,10 @@ function physics(dt) {
   let mx = 0, mz = 0;
   if (keys.has('KeyW') || keys.has('ArrowUp')) { mx -= Math.sin(camYaw); mz -= Math.cos(camYaw); }
   if (keys.has('KeyS') || keys.has('ArrowDown')) { mx += Math.sin(camYaw); mz += Math.cos(camYaw); }
-  if (keys.has('KeyA') || keys.has('ArrowLeft')) { mx -= Math.cos(camYaw); mz += Math.sin(camYaw); }
-  if (keys.has('KeyD') || keys.has('ArrowRight')) { mx += Math.cos(camYaw); mz -= Math.sin(camYaw); }
+  const turnK = CTRL.freeMouse && !TOUCH.on;   // FREE-MOUSE: ←→ = 시점 돌리기(로블록스처럼 — 끌기가 어려운 아이) · A·D = 옆걸음
+  if (keys.has('KeyA') || (!turnK && keys.has('ArrowLeft'))) { mx -= Math.cos(camYaw); mz += Math.sin(camYaw); }
+  if (keys.has('KeyD') || (!turnK && keys.has('ArrowRight'))) { mx += Math.cos(camYaw); mz -= Math.sin(camYaw); }
+  if (turnK && !CTRL.frozen) { if (keys.has('ArrowLeft')) camYaw += 2.0 * dt; if (keys.has('ArrowRight')) camYaw -= 2.0 * dt; }
   let sp2 = sp;
   if (mx === 0 && mz === 0 && TOUCH.m > 0) {   // TOUCH-1 조이스틱(키를 안 누를 때만): 앞 my·오른쪽 mx를 키와 같은 축으로. 세기 = 걷기 30~100% · 가장자리(≥0.92) = 달리기
     mx = -Math.sin(camYaw) * TOUCH.my + Math.cos(camYaw) * TOUCH.mx; mz = -Math.cos(camYaw) * TOUCH.my - Math.sin(camYaw) * TOUCH.mx;

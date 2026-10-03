@@ -143,7 +143,7 @@ export function createMapApi(host, NAV, META) {
   const FREE_DEF = new URLSearchParams(location.search).get('lock') !== '1';
   function helpFree(on) {   // FREE-MOUSE: 아래 안내 줄도 '끌기'로(잠금이면 원래 글)
     const h = document.getElementById('help'); if (!h) return;
-    if (on) { if (h.dataset.o == null) h.dataset.o = h.textContent; h.textContent = h.dataset.o.replace(/시점 마우스\(클릭\)/, '둘러보기 = 화면을 누른 채 끌기'); }
+    if (on) { if (h.dataset.o == null) h.dataset.o = h.textContent; h.textContent = h.dataset.o.replace(/시점 마우스\(클릭\)/, '둘러보기 = 화면을 누른 채 끌기 · ←→'); }
     else if (h.dataset.o != null) { h.textContent = h.dataset.o; delete h.dataset.o; }
   }
   CTRL.freeMouse = FREE_DEF; helpFree(FREE_DEF);
