@@ -198,6 +198,11 @@ fps ≥ 30 / rayObjs ≤ 80 / drawCalls 관찰. **fps가 무너지면 기능을 
 - **이야기 하나 = 카드 하나**(registry `use: 'story', params: { set }` — 코드 파일 없이) → 카드 안에서 ✨ AI가 빈칸을 채운 판 / ✏️ 우리 반이 쓴 그대로를 고름(episodes `set`·`pick`). 끝 화면에 비교 목록(`end.list`). 첫 카드 = '신상책을 찾아라'(`story_newbook_a.js` 보물찾기 · `_b.js` 원안). 더하는 법 `docs/tasks/new_episode.md`.
 - 이야기 진행기 단계 추가: `me`(누가 될지 — 그 친구 대사는 '나') · `party`(친구들이 따라옴) · `label`/`goto`(다시 하기) · `pose`(쓰러짐 등) · `appear`(뒤에서 나타남) · `npc`(옮기기) · `hide` · `tp` · `fade` · `sound`. 대역 한도 6→8.
 
+### 메타버스 메모장 MEMO-1(10-03)
+- `v2/games/memo.js`(v2 '메타버스 메모장' · v3 이야기 갈래 `memo_v3`) — 판(주제) 고르기 → F = 화면 가운데가 가리키는 곳에 🚩(📝메모·🧑등장인물·💬대사·📦물건·⚡사건·❓선택·🏁시작끝) → 글 저장 · L = 목록(순서·가 보기·고치기) · 📤 정리 = Claude에게 넘길 글.
+- 저장 = Firebase class-rpg `metaverse/boardList/<판>`(제목·질문) · `metaverse/boards/<판>/flags/<깃발>`(k 종류·tx 글·by 쓴 사람·who·opt 보기·x y z·zone 구역·near 근처 표지점·ord 순서·cam 카메라 자리). **교사가 "○○판대로 만들어"라고 하면 REST로 읽는다**: `curl …/metaverse/boardList.json` → `…/metaverse/boards/<id>/flags.json`. 공개 저장소엔 커밋하지 않는다.
+- 아이가 쓴 글만 저장(빈칸 = 아이가 정하지 않은 것) → 구현할 때 'Claude가 채운 것' 목록을 따로 낸다.
+
 ### 동시 접속 MP-1(10-03)
 - `v2/js/net.js` = Firebase 실시간 DB(class-rpg · `metaverse/rooms/<방>/players/<id>`) REST + EventSource(SDK 없음). 움직이면 초당 6번 · 가만히 3초마다 · 20초 소식 없으면 숨김 · 2분이면 지움 · 나갈 때 DELETE.
 - 방: v2 = `v2` · v3 = `v3` · 마법사 마을 = `wizard`(`?room=` 로 반 나누기) · **홍보판(SM_PROMO)·?check/health/shot·?mp=0에선 켜지지 않음.** 이름 = 왼쪽 위 👥 칩 누르기(마법사 마을은 시작 화면 입력) · localStorage `mp.name`.
