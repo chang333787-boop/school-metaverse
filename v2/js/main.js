@@ -5,9 +5,9 @@ import { buildWorld } from './world.js?v=142';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=27';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=28';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=7';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
-import { createTitle } from './title.js?v=7';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+import { createTitle } from './title.js?v=8';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
@@ -21,21 +21,26 @@ bootP(0.3, 0.4);
 const canvas = document.getElementById('scene');
 // PERF-WIN(09-28 교사 "맥북은 괜찮은데 학교 윈도우 컴에서 화면 돌리거나 키가 잔잔하게 씹힘"): 약한 내장 그래픽(UHD 6xx·셀러론) + 윈도 배율 125~150%.
 //  antialias(MSAA)는 컨텍스트를 만들 때만 정할 수 있어(도중에 못 바꿈) 켠 채로 둔다 — 자동 해상도가 배율을 1 아래로 내렸을 때 계단을 가려 주는 쪽이 이득이다(FXAA 같은 후처리 패스는 더하지 않는다).
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 // PERF-WIN: 셰이더 오류 검사(getShaderInfoLog·getProgramInfoLog)는 컴파일이 끝날 때까지 주 스레드를 세운다(점검 실측 300~800ms) — 배포판은 끄고 ?debug=1·?check=1에서만 켠다
-renderer.debug.checkShaderErrors = /[?&](debug|check)=1/.test(location.search);
 // TOUCH-1 휴대폰 성능 판(09-26): 터치가 주 입력이거나 작은 화면(짧은 변 ≤500)이면 mobile — 픽셀 비율 ≤1.5 · 그림자 지도 1024.
 //  저사양(메모리 ≤3GB 또는 코어 ≤3 — 알려 주는 브라우저만)이면 low — 픽셀 비율 ≤1.25 · 그림자 끔. 나머지(나무·디테일·안개·유리)는 같다.
 //  ?hq=1 = 데스크톱 품질 강제(자동 해상도 끔 · 배율 ≤2) · ?lq=1 = low 강제(시험용). 고른 값 = SD2.gfx
 //  PERF-WIN: 데스크톱은 배율 1.5에서 시작(예전 2) — 여유가 뚜렷하면(8.3ms 120Hz 맥 등) 자동 해상도가 기기 배율(≤2)까지 올린다 = 강한 기기 모습 그대로.
 //   dpr = 지금 배율(자동 해상도가 바꾼다) · cap = 올라갈 수 있는 끝 · start = 시작 배율 · floor = 가장 낮은 배율
+//  PERF-3(10-03 교사 '홍보용·v2 둘 다 렉 최적화'): 크롬북(UA CrOS — 마우스·큰 화면이라 예전엔 데스크톱 판이었다) = cb 판 — 배율 ≤1.5에서 1.25로 시작 · 그림자 1024 ·
+//   자동 해상도를 휴대폰·저사양·크롬북까지 켠다(느리면 내리고 여유면 올림) · 휴대폰·저사양은 MSAA 끔(촘촘한 화면이라 계단이 거의 안 보이고 채우기 비용이 크다 — ?aa=1/0으로 강제)
 const GFX = (() => { const q = new URLSearchParams(location.search), hq = q.get('hq') === '1', lq = q.get('lq') === '1', dev = window.devicePixelRatio || 1;
+  const cros = !hq && /CrOS/.test(navigator.userAgent || '');
   const mobile = !hq && (lq || touchPrimary() || Math.min(screen.width || 9999, screen.height || 9999) <= 500);
-  const low = !hq && (lq || (mobile && ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 3))));
-  const cap = Math.min(dev, low ? 1.25 : mobile ? 1.5 : 2), start = hq ? cap : Math.min(cap, 1.5), fix = +q.get('dpr') || 0;   // ?dpr=0.75 = 배율 고정(시험용)
+  const low = !hq && (lq || ((mobile || cros) && ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 3))));
+  const cap = Math.min(dev, low ? 1.25 : mobile || cros ? 1.5 : 2), start = hq ? cap : Math.min(cap, cros ? 1.25 : 1.5), fix = +q.get('dpr') || 0;   // ?dpr=0.75 = 배율 고정(시험용)
   // 자동 해상도는 게이트·검진·사진 대조·?hq=1·?dpr=·?adapt=0에서 끈다(같은 화면을 다시 재야 하는 주소) · 휴대폰·저사양 판(mobile·low)도 끈다(리뷰 — 휴대폰 판은 예전 그대로)
-  const adapt = !hq && !fix && !mobile && q.get('adapt') !== '0' && !/[?&](check|health)=1/.test(location.search) && !q.get('shot');
-  return { mode: low ? 'low' : mobile ? 'mobile' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, 0.6), shadow: low ? 0 : mobile ? 1024 : 2048, adapt, dev }; })();
+  const adapt = !hq && !fix && q.get('adapt') !== '0' && !/[?&](check|health)=1/.test(location.search) && !q.get('shot');
+  const aaQ = q.get('aa'), aa = aaQ === '1' ? true : aaQ === '0' ? false : !(low || mobile);
+  return { mode: low ? 'low' : mobile ? 'mobile' : cros ? 'cb' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, 0.6), shadow: low ? 0 : mobile || cros ? 1024 : 2048, adapt, aa, dev }; })();
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: GFX.aa, powerPreference: 'high-performance' });
+// PERF-WIN: 셰이더 오류 검사(getShaderInfoLog·getProgramInfoLog)는 컴파일이 끝날 때까지 주 스레드를 세운다(점검 실측 300~800ms) — 배포판은 끄고 ?debug=1·?check=1에서만 켠다
+renderer.debug.checkShaderErrors = /[?&](debug|check)=1/.test(location.search);
 const DPR = GFX.dpr;
 renderer.setPixelRatio(DPR);                       // 네이티브(비정수 업스케일 금지) — 휴대폰은 GFX 상한 · PERF-WIN 자동 해상도가 바꾼다(ADAPT)
 renderer.setSize(innerWidth, innerHeight);
@@ -1042,7 +1047,8 @@ function updateLoc() {   // MAP-API-1: 가장 좁은 구역(겹쳐도 순서에 
 // ---------- 디테일 층 거리 컬링(DETAIL-1) ----------
 // 작은 부재(책상 다리·눈·손 등)는 멀면 청크째 숨긴다 — 원경에서 픽셀보다 가는 부재가 반짝이는 것을 막고, 그리는 양도 준다.
 // 16m 청크 중심 기준 + 반대각선(11.3m) 여유. 0.2초마다 한 번.
-const DETAIL_FAR = 55, DETAIL_IN = 20, DETAIL_IN_IN = 30;   // INTERIOR-CULL: 실내 청크 = 카메라가 밖이면 20m·안이면 30m(+반대각선) — 벽 너머·창 너머 책상·사람을 멀리서 그리지 않는다
+const DETAIL_LITE = GFX.mode !== 'desktop';   // PERF-3: 휴대폰·저사양·크롬북은 디테일 거리를 줄인다(바깥 55→42 · 실내 30→24)
+const DETAIL_FAR = DETAIL_LITE ? 42 : 55, DETAIL_IN = DETAIL_LITE ? 16 : 20, DETAIL_IN_IN = DETAIL_LITE ? 24 : 30;   // INTERIOR-CULL: 실내 청크 = 카메라가 밖이면 20m·안이면 30m(+반대각선) — 벽 너머·창 너머 책상·사람을 멀리서 그리지 않는다
 // ---------- 실내 가림 컬링(OCC-CULL · 09-24 integ) — 보이는 모습은 그대로, 벽·슬래브·지붕 뒤라 안 보이는 실내 청크만 뺀다 ----------
 // 합친 뒤 급식 창고 앞 벽을 보는 화면이 17.4만 삼각형(벽 너머 본관·서관 교실 책상·사람까지 그림). 실내 청크(건물 × 층 × 16m 칸 — world.js dChunk)마다:
 //  ① 같은 건물 다른 층 = 슬래브 너머 → 계단 곁(2m)이 아니면 숨김

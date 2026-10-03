@@ -567,6 +567,7 @@ map.flashlight(true)  // 손전등: 손에서 화면 가운데(카메라가 보�
 
 
 ## 15. 숨바꼭질 2(GAME-HS2 · 09-27) — 숨바꼭질 + 얼음땡 · 3라운드
+> ⚠️ 10-03 교사 결정으로 **뺐다**(registry에서 지우고 `v2/games/hideseek.js` 삭제 — git 기록에서 꺼낼 수 있음). 아래는 기록용.
 
 사용자(09-27): "아이디어는 좋은데 게임성이 있나 싶어 — 술래가 다가오면 그냥 끝나는데 그게 의도한 건가?" → 예전(GAME-HS: 1초 보이면 끝)을 **'들키면 달리기'가 시작**인 놀이로 다시 짰다.
 코드 = `v2/games/hideseek.js`(import 없음 · registry v4) · 🎮 '숨바꼭질' · `?game=hideseek&mode=a|b&area=west|field|cafe&seed=1&round=1..3&time=60`(mode·area를 주면 고르기 창을 건너뜀 · round = 시작 라운드 · time = 라운드 초 10~600).

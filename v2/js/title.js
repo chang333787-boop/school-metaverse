@@ -119,7 +119,7 @@ export function createTitle(h) {
   async function fill() {
     let G = {};
     try { G = (await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url))).GAMES || {}; } catch (e) { console.error('[오프닝] 놀이 목록을 못 불러옴', e); }
-    const ids = Object.keys(G).filter(id => !G[id].dev);
+    const ids = Object.keys(G).filter(id => !G[id].dev && !(G[id].promo && !PROMO));   // 10-03 교사: v2(우리 학교용)엔 홍보 놀이(견학)를 보이지 않는다 — 주소 ?tour=1로는 그대로 열림
     list = [FREE, ...ids.map(id => ({ id, ...G[id] }))];
     const gi = e => { const k = GORDER.indexOf(e.group); return k < 0 ? GORDER.length : k; };
     list = list.map((e, i) => ({ e, i })).sort((a, b) => gi(a.e) - gi(b.e) || a.i - b.i).map(o => o.e);   // 무리(탐험·대결·모험·이야기·놀이)끼리 — 무리 안은 registry 순서
