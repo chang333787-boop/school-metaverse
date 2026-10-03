@@ -202,6 +202,7 @@ fps ≥ 30 / rayObjs ≤ 80 / drawCalls 관찰. **fps가 무너지면 기능을 
 - `v2/games/memo.js`(v2 '메타버스 메모장' · v3 이야기 갈래 `memo_v3`) — 판(주제) 고르기 → F = 화면 가운데가 가리키는 곳에 🚩(📝메모·🧑등장인물·💬대사·📦물건·⚡사건·❓선택·🏁시작끝) → 글 저장 · L = 목록(순서·가 보기·고치기) · 📤 정리 = Claude에게 넘길 글.
 - 저장 = Firebase class-rpg `metaverse/boardList/<판>`(제목·질문) · `metaverse/boards/<판>/flags/<깃발>`(k 종류·tx 글·by 쓴 사람·who·opt 보기·x y z·zone 구역·near 근처 표지점·ord 순서·cam 카메라 자리). **교사가 "○○판대로 만들어"라고 하면 REST로 읽는다**: `curl …/metaverse/boardList.json` → `…/metaverse/boards/<id>/flags.json`. 공개 저장소엔 커밋하지 않는다.
 - 아이가 쓴 글만 저장(빈칸 = 아이가 정하지 않은 것) → 구현할 때 'Claude가 채운 것' 목록을 따로 낸다.
+- **판 = 미리 만든 1~10번(`b01`~`b10`, `n` 순서)** — 아이는 새 판을 못 만들고 선생님이 말한 번호에 들어간다. **🔒 선생님** = 4자리 비밀번호(`metaverse/memoPin` = SHA-256('mv-memo:'+번호) · 처음 누를 때 정함 · 규칙상 한 번만 쓸 수 있음 → 바꾸려면 규칙을 잠시 풀고 Claude가 지움) → 판마다 ✏️ 제목·질문 · 🔒 잠금(아이는 보기만) · 🧹 깃발 모두 지우기 · 아무 깃발이나 고치기. 아이는 **내 이름으로 꽂은 깃발만** 고치기·지우기. 로그인 없는 화면 단 잠금이라 REST를 직접 두드리면 뚫린다(수업용 장치).
 
 ### 동시 접속 MP-1(10-03)
 - `v2/js/net.js` = Firebase 실시간 DB(class-rpg · `metaverse/rooms/<방>/players/<id>`) REST + EventSource(SDK 없음). 움직이면 초당 6번 · 가만히 3초마다 · 20초 소식 없으면 숨김 · 2분이면 지움 · 나갈 때 DELETE.

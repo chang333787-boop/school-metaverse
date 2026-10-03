@@ -61,26 +61,44 @@ export default async function start(map, params = {}) {
   function onEsc(e) { if (e.code === 'Escape' && panel && board) { e.stopPropagation(); close(); } }
 
   // ───────── 판 고르기 ─────────
+  let teacher = false;
+  const hash = async (pin) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('mv-memo:' + pin)))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  async function teacherLogin() {
+    let saved = null; try { saved = await req('/memoPin'); } catch (e) { return map.hud.toast('인터넷을 확인해 주세요', 2); }
+    if (!saved) {
+      const a = prompt('선생님 비밀번호(숫자 4자리)를 새로 정해 주세요'); if (!a) return; if (!/^\d{4}$/.test(a)) return map.hud.toast('숫자 4자리로 정해 주세요', 2.5);
+      if (prompt('한 번 더 적어 주세요') !== a) return map.hud.toast('두 번이 달라요. 다시 해 주세요', 2.5);
+      try { await req('/memoPin', 'PUT', await hash(a)); } catch (e) { return map.hud.toast('저장하지 못했어요', 2); }
+      teacher = true; map.hud.toast('🔒 비밀번호를 정했어요 — 선생님 모드', 2.5); return pickBoard();
+    }
+    const a = prompt('선생님 비밀번호 4자리'); if (!a) return;
+    if (await hash(a) !== saved) return map.hud.toast('비밀번호가 달라요', 2);
+    teacher = true; map.hud.toast('🔓 선생님 모드', 2); pickBoard();
+  }
   async function pickBoard() {
     const P = open('memo-pick');
-    P.innerHTML = '<h3>📝 메타버스 메모장</h3><div class="sm">학교를 걸어 다니며 깃발을 꽂고, 그곳에 무엇이 필요한지 적어요. 같은 판을 고른 친구들의 깃발도 바로 보여요.</div>'
-      + '<div class="where">내 이름 <input id="mmName" maxlength="8" style="width:150px;margin-left:6px" placeholder="이름"></div><div class="sm">어떤 판에 쓸까요?</div><div class="bd">불러오는 중…</div>'
-      + '<details><summary class="sm" style="cursor:pointer">＋ 새 판 만들기(선생님)</summary><input id="mmT" maxlength="40" placeholder="판 제목 예) 신상책 이야기 기획 — 3모둠" style="margin-top:8px"><input id="mmP" maxlength="120" placeholder="질문 예) 우리 이야기에 필요한 장소·인물·사건을 깃발로!" style="margin-top:6px"><div class="row"><button id="mmNew">만들기</button></div></details>'
-      + '<div class="row"><button class="sub" id="mmQuit">그만하기</button></div>';
+    P.innerHTML = '<h3>📝 메타버스 메모장' + (teacher ? ' <span class="sm">· 🔓 선생님 모드</span>' : '') + '</h3><div class="sm">학교를 걸어 다니며 깃발을 꽂고, 그곳에 무엇이 필요한지 적어요. 같은 판을 고른 친구들의 깃발도 바로 보여요.</div>'
+      + '<div class="where">내 이름 <input id="mmName" maxlength="8" style="width:150px;margin-left:6px" placeholder="이름"></div><div class="sm">선생님이 알려 준 판에 들어가요.</div><div class="bd">불러오는 중…</div>'
+      + '<div class="row">' + (teacher ? '' : '<button class="sub" id="mmT">🔒 선생님</button>') + '<button class="sub" id="mmQuit">그만하기</button></div>';
     const nm = P.querySelector('#mmName'); nm.value = name;
     P.querySelector('#mmQuit').onclick = () => map.quit && map.quit();
-    P.querySelector('#mmNew').onclick = async () => {
-      const t = P.querySelector('#mmT').value.trim(); if (!t) return map.hud.toast('판 제목을 적어 주세요', 2);
-      const id = 'b' + Date.now().toString(36), info = { t: t.slice(0, 40), p: P.querySelector('#mmP').value.trim().slice(0, 120), c: { '.sv': 'timestamp' } };
-      try { await req('/boardList/' + id, 'PUT', info); } catch (e) { return map.hud.toast('판을 만들지 못했어요 — 인터넷을 확인해 주세요', 3); }
-      enter(id, { ...info, c: Date.now() });
-    };
+    if (!teacher) P.querySelector('#mmT').onclick = teacherLogin;
     let list = {};
     try { list = (await req('/boardList')) || {}; } catch (e) { P.querySelector('.bd').textContent = '판 목록을 불러오지 못했어요 — 인터넷을 확인해 주세요'; return; }
-    if (dead) return;
-    const ids = Object.keys(list).sort((a, b) => (list[b].c || 0) - (list[a].c || 0)), bd = P.querySelector('.bd'); bd.innerHTML = '';
-    if (!ids.length) bd.innerHTML = '<div class="sm">아직 판이 없어요. 아래에서 새 판을 만들어요.</div>';
-    for (const id of ids) { const b = el('button', '', '📌 ' + esc(list[id].t) + (list[id].p ? '<small>' + esc(list[id].p) + '</small>' : ''), bd); b.onclick = () => enter(id, list[id]); }
+    if (dead || panel !== P) return;
+    const ids = Object.keys(list).sort((a, b) => (list[a].n || 99) - (list[b].n || 99) || (list[a].c || 0) - (list[b].c || 0)), bd = P.querySelector('.bd'); bd.innerHTML = '';
+    if (!ids.length) bd.innerHTML = '<div class="sm">아직 판이 없어요.</div>';
+    for (const id of ids) {
+      const L = list[id], row = el('div', '', null, bd); row.style.cssText = 'display:flex;gap:6px;align-items:stretch';
+      const b = el('button', '', (L.lock ? '🔒 ' : '📌 ') + esc(L.t) + (L.p ? '<small>' + esc(L.p) + '</small>' : ''), row); b.style.flex = '1'; b.onclick = () => enter(id, L);
+      if (teacher) {
+        const ed = el('button', 'sub', '✏️', row); ed.title = '제목·질문 바꾸기'; ed.onclick = async () => { const t = prompt('판 제목', L.t); if (t == null) return; const q = prompt('판 질문(아이들에게 보여요)', L.p || ''); if (q == null) return;
+          try { await req('/boardList/' + id, 'PATCH', { t: (t.trim() || L.t).slice(0, 40), p: q.trim().slice(0, 120) }); } catch (e) { return map.hud.toast('바꾸지 못했어요', 2); } pickBoard(); };
+        const lk = el('button', 'sub', L.lock ? '🔓' : '🔒', row); lk.title = L.lock ? '잠금 풀기' : '잠그기(아이들은 보기만)'; lk.onclick = async () => { try { await req('/boardList/' + id + '/lock', 'PUT', !L.lock); } catch (e) { return; } pickBoard(); };
+        const cl = el('button', 'warn', '🧹', row); cl.title = '깃발 모두 지우기'; cl.onclick = async () => { if (!confirm('「' + L.t + '」의 깃발을 모두 지울까요? 되돌릴 수 없어요.')) return;
+          try { const f = (await fetch(DB + '/boards/' + id + '/flags.json?shallow=true').then((r) => r.json())) || {}; await Promise.all(Object.keys(f).map((k) => req('/boards/' + id + '/flags/' + k, 'DELETE'))); map.hud.toast('🧹 비웠어요', 2); } catch (e) { map.hud.toast('지우지 못했어요', 2); } };
+      }
+    }
     if (params.board && list[params.board]) enter(params.board, list[params.board]);
   }
   function enter(id, info) {
@@ -157,9 +175,12 @@ export default async function start(map, params = {}) {
     for (const p of map.pois({ src: 'landmark' })) { const d = Math.hypot(p.x - x, p.z - z); if (d < bd && Math.abs((p.y || 0) - y) < 3) { bd = d; near = p.label; } }
     return { zone: zn ? zn.label : '학교 바깥', near };
   }
-  function form(id) {
+  async function form(id) {
     if (!board) return;
-    const old = id ? FL.get(id).f : null, pt = old ? { x: old.x, y: old.y, z: old.z } : aimPoint(), pn = old ? { zone: old.zone, near: old.near } : placeName(pt.x, pt.y, pt.z);
+    const aim = id ? null : aimPoint();
+    if (!teacher) { try { board.lock = await req('/boardList/' + board.id + '/lock'); } catch (e) { /* */ } if (board.lock) return map.hud.toast('🔒 선생님이 잠근 판이에요 — 보기만 할 수 있어요', 3); }
+    if (id && !teacher && FL.get(id).f.by !== name) return map.hud.toast('✍️ ' + FL.get(id).f.by + '의 깃발이에요 — 내 깃발만 고칠 수 있어요', 3);
+    const old = id ? FL.get(id).f : null, pt = old ? { x: old.x, y: old.y, z: old.z } : aim, pn = old ? { zone: old.zone, near: old.near } : placeName(pt.x, pt.y, pt.z);
     if (!old) { const pv = map.mk.marker(pt.x, pt.y + 0.3, pt.z, { color: 0xffd43b }); setTimeout(() => pv.remove(), 2500); }
     const P = open('memo-form'); let kind = old ? old.k : 'memo';
     P.innerHTML = '<h3>' + (old ? '✏️ 깃발 고치기' : '🚩 여기에 깃발 꽂기') + '</h3><div class="where">📍 ' + esc(pn.zone) + (pn.near ? ' · ' + esc(pn.near) + ' 근처' : '') + (pt.feet ? ' <span class="sm">(내 발밑)</span>' : '') + '</div>'
