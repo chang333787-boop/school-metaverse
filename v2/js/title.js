@@ -104,7 +104,9 @@ export function createTitle(h) {
   paintMute();
 
   // ---------- 놀이 카드(registry.js — dev 아닌 것 + 자유 탐험) ----------
-  const GROUPS = { 탐험: { c: '#3aa0e8', e: '🧭' }, 대결: { c: '#f06a4a', e: '⚔️' }, 모험: { c: '#35b36b', e: '🗺️' }, 이야기: { c: '#b36ae0', e: '📖' }, 놀이: { c: '#e8a21a', e: '🎲' } };
+  const GROUPS = { 탐험: { c: '#3aa0e8', e: '🧭' }, 대결: { c: '#f06a4a', e: '⚔️' }, 모험: { c: '#35b36b', e: '🗺️' }, 이야기: { c: '#b36ae0', e: '📖' }, 상상: { c: '#2fb39a', e: '🌱' }, 놀이: { c: '#e8a21a', e: '🎲' } };
+  const LCATS = [{ id: '@story', cat: 'story', title: '이야기', icon: '📖', group: '이야기', short: '우리 반이 만든 이야기 속으로' }, { id: '@imagine', cat: 'imagine', title: '상상의 세계', icon: '🌈', group: '상상', short: '상상 속 학교로 떠나요' }];
+  let LCAT = null, REG = null;   // 수업판(v3): 갈래(이야기·상상의 세계) → 그 안의 카드
   const GORDER = Object.keys(GROUPS);
   const FREE = { id: '', title: '자유 탐험', icon: '🏫', group: '탐험', short: '학교 어디든 마음대로 걸어 다녀요' };
   const mmss = s => { s = Math.max(0, Math.round(+s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
@@ -116,11 +118,13 @@ export function createTitle(h) {
     return null;
   }
   let cards = [], list = [], focusI = 0, filled = Promise.resolve();
-  async function fill() {
-    let G = {};
-    try { G = (await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url))).GAMES || {}; } catch (e) { console.error('[오프닝] 놀이 목록을 못 불러옴', e); }
+  async function fill(reuse) {
+    let G = reuse && REG ? REG : {};
+    if (!(reuse && REG)) try { G = (await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url))).GAMES || {}; } catch (e) { console.error('[오프닝] 놀이 목록을 못 불러옴', e); }
+    REG = G;
     const ids = Object.keys(G).filter(id => !G[id].dev && !(G[id].promo && !PROMO) && (LESSON ? G[id].lesson === LESSON : !G[id].lesson));   // 10-03 교사: v2(우리 학교용)엔 홍보 놀이(견학)를 보이지 않는다 — 주소 ?tour=1로는 그대로 열림
-    list = [FREE, ...ids.map(id => ({ id, ...G[id] }))];
+    list = LESSON ? (LCAT ? ids.filter(id => (G[id].cat || 'story') === LCAT).map(id => ({ id, ...G[id] })) : LCATS.slice()) : [FREE, ...ids.map(id => ({ id, ...G[id] }))];
+    const hd = root.querySelector('.ttl-menu h2'); if (hd && LESSON) hd.textContent = LCAT ? (LCATS.find(c => c.cat === LCAT) || {}).title + ' — 무엇을 할까요?' : '어디로 가 볼까요?';
     const gi = e => { const k = GORDER.indexOf(e.group); return k < 0 ? GORDER.length : k; };
     list = list.map((e, i) => ({ e, i })).sort((a, b) => gi(a.e) - gi(b.e) || a.i - b.i).map(o => o.e);   // 무리(탐험·대결·모험·이야기·놀이)끼리 — 무리 안은 registry 순서
     const last = store.get('last', null);
@@ -155,7 +159,7 @@ export function createTitle(h) {
     let k = focusI;
     if (e.code === 'ArrowRight') k++; else if (e.code === 'ArrowLeft') k--; else if (e.code === 'ArrowDown') k += cols; else if (e.code === 'ArrowUp') k -= cols;
     else if (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter') { e.preventDefault(); choose(focusI); return; }
-    else if (e.code === 'Escape') { toTitle(); return; }
+    else if (e.code === 'Escape') { if (LESSON && LCAT) { LCAT = null; refill(); } else toTitle(); return; }
     else return;
     e.preventDefault(); k = Math.max(0, Math.min(n - 1, k)); if (k !== focusI) { focusI = k; cards[k].focus(); blip(); }
   };
@@ -164,7 +168,8 @@ export function createTitle(h) {
   root.addEventListener('pointerdown', () => { heard = true; });
   root.addEventListener('click', e => { if (phase === 'title' && !muteB.contains(e.target)) toMenu(); });
   muteB.addEventListener('click', e => { e.stopPropagation(); heard = true; muted = !muted; store.set('mute', muted); paintMute(); if (!muted) blip(); });
-  $('.ttl-back').addEventListener('click', e => { e.stopPropagation(); toTitle(); });
+  $('.ttl-back').addEventListener('click', e => { e.stopPropagation(); if (LESSON && LCAT) { LCAT = null; refill(); } else toTitle(); });
+  function refill() { blip(); filled = fill(true); filled.then(() => setTimeout(() => { if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); }, 60)); }
 
   function show(ph) { phase = ph; root.dataset.ph = ph; root.style.display = ''; }
   function bootDone() {   // main.js: 첫 프레임을 그린 뒤 — 로딩 막을 걷고 제목 글자를 띄운다
@@ -196,6 +201,8 @@ export function createTitle(h) {
   }
   function choose(i) {
     if (phase !== 'menu' || !calmOK()) return; const e = list[i]; if (!e) return;
+    if (LESSON && !LCAT && e.cat) { LCAT = e.cat; refill(); return; }   // 갈래 → 그 안의 카드
+    if (e.link) { blip(); location.href = new URL(e.link, location.href).href; return; }   // 다른 페이지(상상의 세계 — v2 엔진 밖)
     cards.forEach((c, k) => c.classList.add(k === i ? 'pick' : 'dim'));
     launch(e, cards[i].getBoundingClientRect());
   }

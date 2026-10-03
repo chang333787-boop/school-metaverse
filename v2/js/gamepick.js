@@ -34,7 +34,7 @@ export function createGamePicker(ctx) {
     let games = null;
     try { games = (await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url))).GAMES; } catch (e) { console.error('[놀이] 목록을 못 불러옴', e); }
     if (my !== seq || !panel) return;   // 그사이 닫히거나 다시 열림
-    const ids = games ? Object.keys(games).filter(id => !games[id].dev && !(games[id].promo && !window.SM_PROMO) && (window.SM_LESSON ? games[id].lesson === window.SM_LESSON : !games[id].lesson)) : [];   // 10-03: v2엔 홍보 놀이(견학) 숨김
+    const ids = games ? Object.keys(games).filter(id => !games[id].dev && !games[id].link && !(games[id].promo && !window.SM_PROMO) && (window.SM_LESSON ? games[id].lesson === window.SM_LESSON : !games[id].lesson)) : [];   // 10-03: v2엔 홍보 놀이(견학) 숨김
     list.textContent = ids.length ? '' : (games ? '아직 놀이가 없어요' : '놀이 목록을 못 불러왔어요');
     for (const id of ids) {
       const b = document.createElement('button'); b.className = 'gpick-b'; b.dataset.game = id;

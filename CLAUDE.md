@@ -194,6 +194,7 @@ fps ≥ 30 / rayObjs ≤ 80 / drawCalls 관찰. **fps가 무너지면 기능을 
 
 ### v3 = 이야기 수업용(10-03)
 - `v3/index.html` = v2 엔진을 쓰는 얇은 페이지(`window.SM_LESSON = 'story'`) → 놀이 카드 = 자유 탐험 + registry `lesson: 'story'` 게임만(v2·홍보판엔 숨김).
+- **v3 메뉴 = 갈래 → 카드**(title.js LCATS): 「📖 이야기」(registry `cat: 'story'`) · 「🌈 상상의 세계」(`cat: 'imagine'` — `link`가 있으면 그 페이지로 이동 · 첫 카드 '🌱 10년 뒤 학교' = `imagine/school2036/` — 다른 세션이 만드는 독립 페이지, 이 세션은 `imagine/`을 건드리지 않음). ◀/Esc = 갈래로.
 - **이야기 하나 = 카드 하나**(registry `use: 'story', params: { set }` — 코드 파일 없이) → 카드 안에서 ✨ AI가 빈칸을 채운 판 / ✏️ 우리 반이 쓴 그대로를 고름(episodes `set`·`pick`). 끝 화면에 비교 목록(`end.list`). 첫 카드 = '신상책을 찾아라'(`story_newbook_a.js` 보물찾기 · `_b.js` 원안). 더하는 법 `docs/tasks/new_episode.md`.
 - 이야기 진행기 단계 추가: `me`(누가 될지 — 그 친구 대사는 '나') · `party`(친구들이 따라옴) · `label`/`goto`(다시 하기) · `pose`(쓰러짐 등) · `appear`(뒤에서 나타남) · `npc`(옮기기) · `hide` · `tp` · `fade` · `sound`. 대역 한도 6→8.
 
