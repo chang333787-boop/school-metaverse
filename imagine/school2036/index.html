@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>물음숲 초등학교 2036</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --ink:#1d3557; --paper:#fffdf7; --ai:#2bb8e8; --hu:#ff9a3c; --leaf:#5fae57; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; height:100dvh; overflow:hidden; background:#cfe8f7; font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif; color:var(--ink); -webkit-font-smoothing:antialiased; }
+  #scene { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; outline:none; }
+  button { font:inherit; cursor:pointer; }
+  #boot { position:fixed; inset:0; z-index:90; display:flex; align-items:center; justify-content:center; background:#cfe8f7; font-size:20px; font-weight:700; }
+
+  /* 시작 화면 */
+  #title { position:fixed; inset:0; z-index:40; display:none; align-items:center; padding:24px; background:linear-gradient(90deg, rgba(255,253,247,.92) 0%, rgba(255,253,247,.75) 38%, rgba(255,253,247,0) 70%); }
+  #title.on { display:flex; }
+  .tcard { max-width:520px; }
+  .year { display:inline-block; background:var(--ink); color:#fff; font-weight:800; letter-spacing:.08em; border-radius:999px; padding:5px 14px; font-size:14px; }
+  #titleName { font-size:clamp(34px, 6vw, 58px); margin:14px 0 6px; line-height:1.1; letter-spacing:-.02em; }
+  #titleMotto { font-size:clamp(17px, 2.3vw, 21px); font-weight:700; color:#3a6b35; margin:0 0 14px; }
+  #titleLead { font-size:16px; line-height:1.65; margin:0 0 22px; color:#34495e; }
+  .tbtns { display:flex; flex-wrap:wrap; gap:10px; }
+  .big { border:0; border-radius:14px; padding:14px 20px; font-size:17px; font-weight:800; background:#fff; color:var(--ink); box-shadow:0 2px 0 rgba(29,53,87,.18), 0 6px 18px rgba(29,53,87,.12); min-height:48px; }
+  .big.main { background:var(--ink); color:#fff; }
+  .big:hover { transform:translateY(-1px); }
+  .tfoot { margin-top:18px; font-size:13px; color:#6b7c8f; display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+  .tfoot a { color:#6b7c8f; }
+
+  /* HUD */
+  .hud { position:fixed; z-index:20; display:none; }
+  body[data-mode="walk"] .hud, body[data-mode="tour"] .hud.both { display:flex; }
+  .chip { background:rgba(255,253,247,.94); border-radius:12px; padding:8px 12px; font-weight:800; font-size:15px; box-shadow:0 2px 10px rgba(29,53,87,.15); display:flex; align-items:center; gap:8px; }
+  #hudL { left:12px; top:12px; flex-direction:column; gap:6px; align-items:flex-start; padding-top:env(safe-area-inset-top); }
+  #clock { font-variant-numeric:tabular-nums; font-size:20px; }
+  #now { position:fixed; left:50%; top:12px; transform:translateX(-50%); z-index:20; display:none; cursor:pointer; max-width:min(560px, calc(100vw - 260px)); }
+  body[data-mode="walk"] #now.on { display:flex; }
+  #now .lbl { font-size:12px; color:#fff; background:#e76f51; border-radius:6px; padding:2px 7px; flex:none; }
+  #nowT { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #arrow { display:inline-block; width:26px; height:26px; border-radius:50%; background:#ffd166; text-align:center; line-height:26px; font-size:16px; flex:none; transition:opacity .3s; }
+  #legend { position:fixed; left:50%; top:62px; transform:translateX(-50%); z-index:21; display:none; background:rgba(10,20,35,.88); color:#fff; border-radius:12px; padding:9px 14px; font-weight:700; font-size:14px; gap:16px; }
+  #legend.on { display:flex; }
+  #legend i, .duo i, .row i { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px; vertical-align:-1px; }
+  .c-ai { background:var(--ai); } .c-hu { background:var(--hu); }
+  #toast { position:fixed; left:50%; top:62px; transform:translate(-50%, -8px); z-index:22; opacity:0; pointer-events:none; transition:.25s; background:rgba(29,53,87,.93); color:#fff; border-radius:14px; padding:11px 16px; font-size:15px; line-height:1.5; max-width:min(620px, calc(100vw - 24px)); }
+  #toast.on { opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
+  #legend.on ~ #toast { top:112px; }
+  .tbtn { margin-left:10px; border:0; background:#ffd166; color:var(--ink); font-weight:800; border-radius:8px; padding:5px 10px; font-size:13px; }
+  #btns { right:12px; bottom:12px; gap:8px; flex-wrap:wrap; justify-content:flex-end; max-width:calc(100vw - 24px); padding-bottom:env(safe-area-inset-bottom); }
+  #btns button { border:0; border-radius:12px; padding:10px 13px; font-weight:800; font-size:14px; background:rgba(255,253,247,.95); color:var(--ink); box-shadow:0 2px 10px rgba(29,53,87,.15); min-height:44px; }
+  #btns button.act { background:#0f2236; color:#7fe6ff; }
+  body[data-mode="tour"] #btns .wo { display:none; }
+  #help { left:12px; bottom:12px; font-size:13px; font-weight:600; color:#3c4f63; background:rgba(255,253,247,.85); border-radius:10px; padding:7px 11px; max-width:44vw; }
+  #hint { position:fixed; left:50%; bottom:86px; transform:translateX(-50%); z-index:20; display:none; border:0; background:#ffd166; color:var(--ink); font-weight:800; font-size:16px; border-radius:14px; padding:11px 18px; box-shadow:0 4px 14px rgba(0,0,0,.18); min-height:44px; }
+  body[data-mode="walk"] #hint.on { display:block; }
+  #hint kbd { background:#fff; border-radius:6px; padding:1px 7px; margin-right:6px; font-family:inherit; }
+  #back { right:12px; top:12px; }
+  #back a { color:var(--ink); text-decoration:none; }
+
+  /* 장소 · 장면 창 */
+  #panel { position:fixed; right:12px; top:64px; bottom:76px; width:min(420px, calc(100vw - 24px)); z-index:30; display:none; flex-direction:column; background:var(--paper); border-radius:18px; box-shadow:0 10px 40px rgba(29,53,87,.28); }
+  #panel.on { display:flex; }
+  #panelBody { overflow:auto; padding:20px 22px 22px; line-height:1.65; font-size:16px; }
+  #panelBody h2 { margin:0 0 10px; font-size:24px; }
+  #panelBody p { margin:0 0 8px; }
+  .x { position:absolute; right:10px; top:10px; border:0; background:#eef2f5; border-radius:10px; width:40px; height:40px; font-size:18px; font-weight:800; color:var(--ink); }
+  .duo { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0; font-size:14px; line-height:1.45; }
+  .duo > div { border-radius:12px; padding:10px 12px; }
+  .duo b { display:block; margin-bottom:3px; font-size:13px; }
+  .duo .ai { background:#e3f6fd; } .duo .ai i { background:var(--ai); }
+  .duo .hu { background:#fff0e0; } .duo .hu i { background:var(--hu); }
+  .worry { background:#f3f0fa; border-radius:12px; padding:10px 12px; font-size:14px; line-height:1.5; }
+  .worry b { display:block; color:#6a4c93; margin-bottom:2px; }
+  .here { margin-top:12px; border-top:2px dashed #e0d7c6; padding-top:12px; }
+  .here b { color:#e76f51; display:block; margin-bottom:4px; }
+  .then { font-size:13px; color:#7a8794; border-left:3px solid #d8dee4; padding-left:10px; }
+  .tc-time { font-size:15px; font-weight:700; color:#7a8794; margin-bottom:10px; padding-right:44px; }
+  .tc-time b { color:var(--ink); font-size:24px; margin-left:6px; }
+  .tc-place { display:inline-block; margin-left:8px; font-size:13px; background:#eef2f5; color:#4a5d70; border-radius:999px; padding:3px 10px; vertical-align:3px; }
+
+  /* 하루 따라가기 카드 */
+  #tour { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); width:min(720px, calc(100vw - 24px)); z-index:30; display:none; background:var(--paper); border-radius:20px; box-shadow:0 10px 40px rgba(29,53,87,.3); padding:16px 20px 14px; padding-bottom:calc(14px + env(safe-area-inset-bottom)); }
+  #tour.on { display:block; }
+  #tourBody { font-size:16px; line-height:1.6; max-height:min(44vh, 360px); overflow:auto; }
+  #tourBody p { margin:0 0 6px; }
+  .tnav { display:flex; align-items:center; gap:8px; margin-top:10px; }
+  .tnav button { border:0; border-radius:12px; padding:10px 16px; font-weight:800; font-size:15px; background:#eef2f5; color:var(--ink); min-height:44px; }
+  .tnav button.main { background:var(--ink); color:#fff; }
+  .tnav button:disabled { opacity:.35; }
+  #tourDots { flex:1; display:flex; gap:5px; justify-content:center; flex-wrap:wrap; }
+  #tourDots i { width:9px; height:9px; border-radius:50%; background:#d8dee4; }
+  #tourDots i.done { background:#9fb3c8; } #tourDots i.on { background:#e76f51; transform:scale(1.25); }
+
+  /* 이야기책 */
+  #book { position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(15,30,50,.45); padding:16px; }
+  #book.on { display:flex; }
+  .bookIn { position:relative; width:min(860px, 100%); height:min(88vh, 760px); background:var(--paper); border-radius:20px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+  #bookTabs { display:flex; gap:6px; padding:14px 64px 10px 16px; flex-wrap:wrap; border-bottom:1px solid #ece6d8; }
+  #bookTabs button { border:0; background:#f1ede3; color:#5b5345; border-radius:999px; padding:8px 14px; font-weight:800; font-size:14px; min-height:40px; }
+  #bookTabs button.act { background:var(--ink); color:#fff; }
+  #bookBody { overflow:auto; padding:18px 26px 28px; line-height:1.7; font-size:16px; }
+  #bookBody h3 { font-size:26px; margin:6px 0 10px; } #bookBody h3 small { font-size:14px; background:var(--ink); color:#fff; border-radius:999px; padding:3px 10px; vertical-align:5px; }
+  #bookBody h4 { margin:18px 0 6px; font-size:18px; }
+  .motto { font-weight:800; color:#3a6b35; font-size:18px; }
+  .tt { border-collapse:collapse; width:100%; font-size:15px; }
+  .tt td { border-bottom:1px solid #eee5d3; padding:8px 8px; vertical-align:top; }
+  .tt td.t { font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .subj { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:10px; }
+  .sc { background:#fff; border:1px solid #ece6d8; border-radius:14px; padding:12px 14px; font-size:14px; line-height:1.5; }
+  .sh { font-size:15px; margin-bottom:6px; } .sh span { color:#8a8170; } .sh b { font-size:18px; }
+  .row { margin:3px 0; } .row.ai i { background:var(--ai); } .row.hu i { background:var(--hu); } .row.te i { background:#2a9d8f; }
+  .row.kp { color:#6a4c93; font-weight:700; margin-top:6px; }
+  .prom li { margin-bottom:10px; }
+  dl dt { font-weight:800; font-size:17px; margin-top:10px; } dl dd { margin:2px 0 0; }
+  .openq li { font-size:18px; font-weight:700; margin-bottom:8px; }
+  .note { color:#7a8794; font-size:14px; }
+
+  /* 끝 화면 */
+  #end { position:fixed; inset:0; z-index:45; display:none; align-items:center; justify-content:center; background:rgba(255,236,200,.35); padding:16px; pointer-events:none; }
+  #end.on { display:flex; }
+  .endIn { pointer-events:auto; background:var(--paper); border-radius:22px; box-shadow:0 20px 60px rgba(0,0,0,.25); padding:26px 28px; width:min(560px, 100%); text-align:center; }
+  .endIn h2 { margin:0 0 6px; font-size:26px; }
+  .endIn p { margin:0 0 14px; line-height:1.6; }
+  #endAsk, #endDone { display:none; } #endAsk.on, #endDone.on { display:block; }
+  #seedIn { width:100%; font:inherit; font-size:18px; border:2px solid #e0d7c6; border-radius:14px; padding:12px 14px; resize:none; height:84px; }
+  .ebtns { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
+
+  @media (max-width: 700px), (max-height: 500px) {
+    #help { display:none !important; }
+    #now { top:auto; bottom:136px; max-width:calc(100vw - 24px); }
+    #btns button { padding:9px 10px; font-size:13px; }
+    #panel { top:auto; bottom:12px; height:58vh; }
+    #title { background:linear-gradient(180deg, rgba(255,253,247,.94) 0%, rgba(255,253,247,.85) 60%, rgba(255,253,247,.3) 100%); align-items:flex-start; overflow:auto; }
+    #titleLead { font-size:15px; }
+    .duo { grid-template-columns:1fr; }
+    #hint { bottom:180px; }
+  }
+</style>
+<script type="importmap">{ "imports": { "three": "../../lib/three.module.min.js" } }</script>
+</head>
+<body data-mode="title">
+<canvas id="scene" tabindex="0"></canvas>
+<div id="boot">물음숲을 짓는 중…</div>
+
+<div id="title">
+  <div class="tcard">
+    <span class="year">2036 · 상상의 학교</span>
+    <h1 id="titleName"></h1>
+    <p id="titleMotto"></p>
+    <p id="titleLead"></p>
+    <div class="tbtns">
+      <button class="big main" id="goTour">🎬 하루 따라가기</button>
+      <button class="big" id="goWalk">🚶 혼자 걸어 보기</button>
+      <button class="big" id="goBook">📖 이 학교 이야기</button>
+    </div>
+    <div class="tfoot"><span>이 학교와 사람들은 모두 상상이에요.</span><a href="../../v3/">← 메뉴로</a></div>
+  </div>
+</div>
+
+<div class="hud both" id="hudL"><div class="chip">🌱 물음숲 · <span id="clock">08:02</span></div></div>
+<div class="chip" id="now"><span class="lbl">지금</span><span id="nowT"></span><span id="arrow">↑</span></div>
+<div id="legend"><span><i class="c-ai"></i>AI가 하는 일</span><span><i class="c-hu"></i>사람이 하는 일</span></div>
+<div id="toast"></div>
+<button id="hint"><kbd>E</kbd><span id="hintT"></span> 살펴보기</button>
+<div class="hud" id="help">WASD·화살표 걷기 · 땅을 눌러 걷기 · 끌어서 둘러보기 · E 살펴보기 · L AI 렌즈 · B 이야기책 · Space 시간</div>
+<div class="hud both" id="btns">
+  <button id="bPause" class="wo">⏸ 시간 멈춤</button>
+  <button id="bNext" class="wo">⏭ 다음 장면</button>
+  <button id="bLens">🔍 AI 렌즈</button>
+  <button id="bBook">📖 이야기책</button>
+  <button id="bMode" class="wo">🎬 따라가기</button>
+</div>
+<div class="hud both" id="back"><div class="chip"><a href="../../v3/">← 메뉴</a></div></div>
+
+<div id="panel"><button class="x" id="panelX">✕</button><div id="panelBody"></div></div>
+
+<div id="tour">
+  <div id="tourBody"></div>
+  <div class="tnav">
+    <button id="tPrev">◀ 이전</button>
+    <div id="tourDots"></div>
+    <button id="tWalk">🚶 여기서 걸어 보기</button>
+    <button id="tNext" class="main">다음 ▶</button>
+  </div>
+</div>
+
+<div id="book"><div class="bookIn">
+  <button class="x" id="bookX">✕</button>
+  <div id="bookTabs">
+    <button data-k="school" class="act">학교</button><button data-k="day">하루</button><button data-k="subj">과목</button>
+    <button data-k="promise">반디 약속</button><button data-k="words">낱말</button><button data-k="open">아직 모르는 물음</button>
+  </div>
+  <div id="bookBody"></div>
+</div></div>
+
+<div id="end"><div class="endIn">
+  <div id="endAsk">
+    <h2>물음숲의 하루가 끝났어요</h2>
+    <p>너라면 이 학교에서 <b>무엇을 바꾸고 싶어?</b><br>한 줄로 써서 물음나무에 매달아 봐요.</p>
+    <textarea id="seedIn" maxlength="40" placeholder="예: 반디 없는 날이 일주일에 하루 있었으면"></textarea>
+    <div class="ebtns"><button class="big main" id="seedGo">🌱 물음 씨앗 달기</button></div>
+  </div>
+  <div id="endDone">
+    <h2>물음나무에 매달았어요!</h2>
+    <p>10년 뒤 진짜 학교는 이런 물음들이 모여서 만들어질 거예요.</p>
+    <div class="ebtns"><button class="big" id="endAgain">🎬 하루 다시 보기</button><button class="big" id="endWalk">🚶 걸어 보기</button><a class="big" href="../../v3/" style="text-decoration:none">← 메뉴</a></div>
+  </div>
+</div></div>
+
+<script type="module" src="main.js?v=1"></script>
+</body>
+</html>
