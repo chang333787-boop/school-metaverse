@@ -1,6 +1,7 @@
 // 물음숲 초등학교 (2036) — 걸어 다니는 상상의 학교
 import * as THREE from 'three';
 import { SCHOOL, PROMISES, WORDS, SUBJECTS, OPEN_QUESTIONS, SEEDS, PLACES, DAY, DAY_END } from './data.js';
+import { createTouch } from '../../v2/js/touch.js?v=7';
 
 const $ = (id) => document.getElementById(id);
 const TAU = Math.PI * 2;
@@ -736,7 +737,7 @@ for (let i = 0; i < 4; i++) {
   const lb = label('선생님', { h: 0.36, fs: 30, bg: 'rgba(42,157,143,.9)', pad: 10 }); lb.position.y = 1.95; p.g.add(lb);
   TEACH.push({ p, x: 0, z: 50, yaw: 0, tx: 0, tz: 50, tyaw: 0, pose: 'stand', seatY: 0, area: null, wait: 0, spd: 2.4, vis: true });
 }
-const PLAYER = { p: makePerson({ s: 0.9, skin: 0xf1c27d, shirt: 0xff4d6d, pants: 0x264653, hair: 0x2b2118, bag: 0xffd166 }), b: null, x: -3.5, z: 63.5, yaw: Math.PI, vis: true };
+const PLAYER = { p: makePerson({ s: 0.9, skin: 0xf1c27d, shirt: 0xff4d6d, pants: 0x264653, hair: 0x2b2118, bag: 0xffd166 }), b: null, x: -3.5, z: 63.5, y: 0, vy: 0, yaw: Math.PI, vis: true };
 PLAYER.b = makeBanbi(0xffffff);
 tag(PLAYER.p.g, 'human');
 { const lb = label('나', { h: 0.42, fs: 34, bg: 'rgba(255,77,109,.95)', pad: 12 }); lb.position.y = 2.05; PLAYER.p.g.add(lb); }
@@ -1015,33 +1016,38 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'KeyB') toggleBook();
   else if (e.code === 'KeyT') ST.mode === 'tour' ? startWalk() : startTour(ST.slot < 0 ? 0 : ST.slot);
   else if (e.code === 'KeyN') nextScene();
-  else if (e.code === 'Space') { e.preventDefault(); if (ST.mode === 'walk') togglePause(); }
+  else if (e.code === 'Space') { e.preventDefault(); jumpT = 0.12; }
+  else if (e.code === 'KeyP') { if (ST.mode === 'walk') togglePause(); }
   else if (ST.mode === 'tour' && (e.code === 'ArrowRight')) tourStep(1);
   else if (ST.mode === 'tour' && (e.code === 'ArrowLeft')) tourStep(-1);
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
 addEventListener('blur', () => keys.clear());
 
-let drag = null;
-const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), gPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitP = new THREE.Vector3();
-let moveTarget = null;
-canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, id: e.pointerId }; canvas.setPointerCapture(e.pointerId); });
+let drag = null, jumpT = 0;
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+const look = (dx, dy, k) => { CAM.yaw -= dx * k; CAM.pitch = clamp(CAM.pitch + dy * k * 0.85, 0.05, 1.25); };
+const locked = () => document.pointerLockElement === canvas;
+const TOUCH = createTouch({ canvas, look: (dx, dy) => { if (ST.mode === 'walk') look(dx, dy, 0.0058); else if (ST.mode === 'tour') CAM.orb = (CAM.orb || 0) - dx * 0.004; },
+  act: () => { if (ST.panel) closePanel(); else if (ST.mode === 'walk' && nearPlace) openPlace(nearPlace); }, view: () => {} });
+addEventListener('mousemove', (e) => { if (locked() && ST.mode === 'walk' && !ST.panel) look(e.movementX || 0, e.movementY || 0, 0.0026); });
+canvas.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse' && ST.mode === 'tour') { drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, id: e.pointerId }; canvas.setPointerCapture(e.pointerId); } });
 canvas.addEventListener('pointermove', (e) => {
   if (!drag || drag.id !== e.pointerId) return;
-  const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
-  if (ST.mode === 'walk') { CAM.yaw -= dx * 0.006; CAM.pitch = clamp(CAM.pitch + dy * 0.004, 0.05, 1.25); }
-  else if (ST.mode === 'tour') { CAM.orb = (CAM.orb || 0) - dx * 0.004; }
+  const dx = e.clientX - drag.x; drag.x = e.clientX; drag.y = e.clientY;
+  CAM.orb = (CAM.orb || 0) - dx * 0.004;
 });
 canvas.addEventListener('pointerup', (e) => {
-  if (!drag) return;
-  const moved = Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy);
-  drag = null;
-  if (moved > 7) return;
-  ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-  ray.setFromCamera(ndc, camera);
-  const hit = ray.intersectObjects(LABELS, false)[0];
-  if (hit) { openPlace(hit.object.userData.place); return; }
-  if (ST.mode === 'walk' && ray.ray.intersectPlane(gPlane, hitP)) { moveTarget = { x: hitP.x, z: hitP.z }; clickMark.position.set(hitP.x, 0.07, hitP.z); clickMark.visible = true; }
+  const d = drag; drag = null;
+  if (e.pointerType !== 'mouse' || TOUCH.on) return;
+  if (d && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 7) return;
+  if (!locked()) {
+    ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const hit = ray.intersectObjects(LABELS, false)[0];
+    if (hit) { openPlace(hit.object.userData.place); return; }
+    if (ST.mode === 'walk' && !ST.panel) canvas.requestPointerLock?.();
+  }
 });
 canvas.addEventListener('wheel', (e) => { CAM.dist = clamp(CAM.dist + e.deltaY * 0.01, 3.5, 22); }, { passive: true });
 
@@ -1054,21 +1060,20 @@ function movePlayer(dt) {
   if (keys.has('KeyD') || keys.has('ArrowRight')) ix += 1;
   if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1;
   const fx = -Math.sin(CAM.yaw), fz = -Math.cos(CAM.yaw), rx = -fz, rz = fx;
+  let tsp = 0;
+  if (!ix && !iz && TOUCH.m > 0) { ix = TOUCH.mx; iz = TOUCH.my; tsp = TOUCH.m >= 0.92 ? 7.5 : 4.2 * Math.max(0.3, Math.min(1, (TOUCH.m - 0.15) / 0.6)); }
   let vx = fx * iz + rx * ix, vz = fz * iz + rz * ix;
-  if (ix || iz) { moveTarget = null; clickMark.visible = false; }
-  else if (moveTarget) {
-    const dx = moveTarget.x - P.x, dz = moveTarget.z - P.z, d = Math.hypot(dx, dz);
-    if (d < 0.25) { moveTarget = null; clickMark.visible = false; } else { vx = dx / d; vz = dz / d; }
-  }
+  if (jumpT > 0) jumpT -= dt;
+  if ((keys.has('Space') || TOUCH.jump || jumpT > 0 || TOUCH.jumpT > 0) && P.y <= 0) { P.vy = 5.2; jumpT = 0; TOUCH.jumpT = 0; }
+  P.vy -= 14 * dt; P.y = Math.max(0, P.y + P.vy * dt); if (P.y <= 0) P.vy = 0; if (TOUCH.jumpT > 0) TOUCH.jumpT -= dt;
   const len = Math.hypot(vx, vz);
-  const run = keys.has('ShiftLeft') || keys.has('ShiftRight');
+  const run = tsp ? tsp > 7 : keys.has('ShiftLeft') || keys.has('ShiftRight');
   if (len > 0) {
-    const spd = (run ? 7.5 : 4.4) * dt;
+    const spd = (tsp || (run ? 7.5 : 4.2)) * dt;
     const ox = P.x, oz = P.z;
     P.x += vx / len * spd; P.z += vz / len * spd;
     const n = pushOut(P, 0.32);
-    if (n && moveTarget) { let tx = -n[1], tz = n[0]; if (tx * vx + tz * vz < 0) { tx = -tx; tz = -tz; } P.x += tx * spd * 0.8; P.z += tz * spd * 0.8; pushOut(P, 0.32); }
-    if (!allowed(P.x, P.z)) { P.x = ox; P.z = oz; moveTarget = null; clickMark.visible = false; }
+    if (!allowed(P.x, P.z)) { P.x = ox; P.z = oz; }
     P.yaw += angDiff(Math.atan2(vx, vz), P.yaw) * Math.min(1, dt * 12);
     return { moving: true, run };
   }
@@ -1096,7 +1101,7 @@ function slotCardHTML(i) {
     <div class="duo"><div class="ai"><i></i><b>AI가 해요</b>${esc(s.ai)}</div><div class="hu"><i></i><b>사람이 해요</b>${esc(s.human)}</div></div>
     <div class="then">${esc(s.then)}</div>`;
 }
-function openPlace(k) {
+function openPlace(k) { document.exitPointerLock?.();
   const P = PLACES[k], s = DAY[ST.slot];
   const here = s && s.place === k && ST.mode === 'walk';
   $('panelBody').innerHTML = `<h2>${esc(P.name)}</h2>${P.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
@@ -1123,11 +1128,11 @@ function showBookTab(k) {
   document.querySelectorAll('#bookTabs button').forEach((b) => b.classList.toggle('act', b.dataset.k === k));
   $('bookBody').scrollTop = 0;
 }
-function toggleBook() { $('book').classList.contains('on') ? closeBook() : ($('book').classList.add('on'), showBookTab(document.querySelector('#bookTabs .act')?.dataset.k || 'school')); }
+function toggleBook() { document.exitPointerLock?.(); $('book').classList.contains('on') ? closeBook() : ($('book').classList.add('on'), showBookTab(document.querySelector('#bookTabs .act')?.dataset.k || 'school')); }
 function closeBook() { $('book').classList.remove('on'); }
 
 // 투어
-function startTour(i = 0) {
+function startTour(i = 0) { document.exitPointerLock?.();
   ST.mode = 'tour'; ST.paused = true;
   document.body.dataset.mode = 'tour';
   $('bMode').textContent = '🚶 걸어 보기';
@@ -1205,12 +1210,12 @@ function slotToast(i) {
   toast(`<b>${fmt(s.t)} ${esc(s.title)}</b> — ${esc(s.say[0])}<button class="tbtn" id="toastMore">이야기 보기</button>`, 6500);
   const b = $('toastMore'); if (b) b.onclick = () => openSlot(i);
 }
-function openSlot(i) {
+function openSlot(i) { document.exitPointerLock?.();
   $('panelBody').innerHTML = slotCardHTML(i);
   $('panel').classList.add('on'); ST.panel = 'slot';
 }
 function togglePause() { ST.paused = !ST.paused; setPauseBtn(); }
-function setPauseBtn() { $('bPause').textContent = ST.paused ? '▶ 시간 흐르기' : '⏸ 시간 멈춤'; }
+function setPauseBtn() { $('bPause').textContent = ST.paused ? '▶ 시간 흐르기 (P)' : '⏸ 시간 멈춤 (P)'; }
 
 // 끝 화면 · 물음 씨앗
 const MY_SEEDS = [];
@@ -1223,7 +1228,7 @@ function addSeedLabel(text, save) {
   if (save) { try { localStorage.setItem('q36.seeds', JSON.stringify(MY_SEEDS.slice(-12))); } catch (e) { /* 저장 안 돼도 괜찮아요 */ } }
 }
 try { (JSON.parse(localStorage.getItem('q36.seeds') || '[]') || []).slice(-12).forEach((t) => addSeedLabel(t, false)); } catch (e) { /* 없음 */ }
-function showEnd() {
+function showEnd() { document.exitPointerLock?.();
   ST.endShown = true; ST.paused = true;
   $('end').classList.add('on'); $('endDone').classList.remove('on'); $('endAsk').classList.add('on');
   $('seedIn').value = '';
@@ -1306,7 +1311,7 @@ function frame() {
   }
   if (ST.mode === 'walk') {
     const r = movePlayer(dt);
-    PLAYER.p.g.position.set(PLAYER.x, 0, PLAYER.z); PLAYER.p.g.rotation.y = PLAYER.yaw;
+    PLAYER.p.g.position.set(PLAYER.x, PLAYER.y, PLAYER.z); PLAYER.p.g.rotation.y = PLAYER.yaw;
     PLAYER.pose = 'stand';
     animPerson(PLAYER, r.moving, T, dt, r.run);
     const prev = PLAYER.b.state, st = zoneState(PLAYER, slot ? slot.banbi : 'on');
@@ -1355,8 +1360,8 @@ function frame() {
     camWant.y += k === 1 ? Math.sin(T * 0.4) * 0.15 : 0;
     camera.position.copy(camWant); camera.lookAt(CAM.look);
   } else if (ST.mode === 'walk') {
-    lookWant.set(PLAYER.x, 1.35, PLAYER.z);
-    camWant.set(PLAYER.x + Math.sin(CAM.yaw) * Math.cos(CAM.pitch) * CAM.dist, 1.35 + Math.sin(CAM.pitch) * CAM.dist, PLAYER.z + Math.cos(CAM.yaw) * Math.cos(CAM.pitch) * CAM.dist);
+    lookWant.set(PLAYER.x, 1.35 + PLAYER.y, PLAYER.z);
+    camWant.set(PLAYER.x + Math.sin(CAM.yaw) * Math.cos(CAM.pitch) * CAM.dist, 1.35 + PLAYER.y + Math.sin(CAM.pitch) * CAM.dist, PLAYER.z + Math.cos(CAM.yaw) * Math.cos(CAM.pitch) * CAM.dist);
     camWant.y = Math.max(camWant.y, 0.6);
     const k = 1 - Math.exp(-dt * 9);
     camera.position.lerp(camWant, k); CAM.look.lerp(lookWant, k);
@@ -1386,7 +1391,7 @@ addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; cam
 
 // 확인·시험용
 window.Q36 = {
-  ST, KIDS, PLAYER, CAM, keys, renderer, fps: 0, mt: () => moveTarget,
+  ST, KIDS, PLAYER, CAM, keys, renderer, fps: 0, mt: () => null,
   time: (hhmm) => { const [h, mi] = hhmm.split(':').map(Number); ST.m = h * 60 + mi; },
   tour: startTour, walk: startWalk, lens: setLens, next: nextScene,
   info: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures, fps: window.Q36.fps })
