@@ -61,9 +61,10 @@ export function createLobby(o) {
     cur = info; ls.set('mp.room', JSON.stringify(info)); join('c' + info.c + suffix, info); draw();
     clearInterval(pollT); pollT = setInterval(recheck, 20000);
     if (!quiet) toast('👥 「' + info.n + '」 방에 들어왔어요 — 친구들이 이름표와 함께 보여요', 3);
+    dispatchEvent(new CustomEvent('sm-room', { detail: info }));
   }
   async function recheck() { if (!cur) return; try { if (!(await check(cur.c, cur.r))) out(cur.k ? '🚪 방이 끝났어요' : '🚪 선생님이 방을 닫았어요'); } catch (e) { /* 잠깐 끊김은 그대로 */ } }
-  function out(msg) { clearInterval(pollT); if (cur) leave(); cur = null; ls.set('mp.room', null); draw(); closePop(); if (msg) toast(msg, 3); }
+  function out(msg) { clearInterval(pollT); if (cur) leave(); cur = null; ls.set('mp.room', null); draw(); closePop(); if (msg) toast(msg, 3); dispatchEvent(new CustomEvent('sm-room', { detail: null })); }
   const closePop = () => { if (pop) pop.remove(); pop = null; };
   function place(p) {
     const r = chip.getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight;
@@ -72,14 +73,14 @@ export function createLobby(o) {
   }
   function popup(html) {
     closePop(); document.exitPointerLock?.();
-    pop = document.createElement('div'); pop.className = 'lb-pop'; pop.innerHTML = html;
+    pop = document.createElement('div'); pop.className = 'lb-pop ttl-keep'; /* ttl-keep = 오프닝 화면(놀이 카드) 위에서도 보임 */ pop.innerHTML = html;
     for (const t of ['keydown', 'keyup']) pop.addEventListener(t, (e) => e.stopPropagation());
     pop.addEventListener('click', (e) => e.stopPropagation());
     document.body.appendChild(pop); place(pop); return pop;
   }
   function showBig() {
     if (!cur) return; if (big) big.remove();
-    big = document.createElement('div'); big.className = 'lb-big';
+    big = document.createElement('div'); big.className = 'lb-big ttl-keep';
     big.innerHTML = '<div><div style="font-size:20px;font-weight:800">🏫 ' + esc(cur.n) + '</div><div class="sm" style="font-size:16px;color:#5a6b80">방 번호</div><div class="code">' + cur.c + '</div>'
       + '<div style="font-size:17px">왼쪽 위 <b>👥 함께하기</b> → 「' + esc(cur.n) + '」 고르기 → 번호 넣기</div><button>닫기</button></div>';
     big.querySelector('button').onclick = () => { big.remove(); big = null; };
@@ -141,7 +142,7 @@ export function createLobby(o) {
     let L = {}; try { L = (await req('/lobby')) || {}; } catch (e) { P.querySelector('.rooms').innerHTML = '<div class="sm">방 목록을 불러오지 못했어요 — 인터넷을 확인해 주세요</div>'; return; }
     if (pop !== P) return;
     const ids = Object.keys(L).filter((id) => live(L[id]) && !L[id].x).sort((a, b) => (L[b].t || 0) - (L[a].t || 0));
-    P.querySelector('.rooms').innerHTML = ids.length ? ids.map((id) => '<button data-r="' + esc(id) + '" data-n="' + esc(L[id].n) + '">🏫 ' + esc(L[id].n) + ' <span class="sm">· ' + (L[id].t ? new Date(L[id].t).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }) + ' 열림' : '') + '</span></button>').join('')
+    P.querySelector('.rooms').innerHTML = ids.length ? ids.map((id) => '<button data-r="' + esc(id) + '" data-n="' + esc(L[id].n) + '">🏫 ' + esc(L[id].n) + (L[id].t ? ' <span class="sm">· ' + new Date(L[id].t).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }) + ' 열림</span>' : '') + '</button>').join('')
       : '<div class="sm">아직 열린 방이 없어요 — 선생님이 방을 열면 여기에 보여요.</div>';
     place(P);
   }

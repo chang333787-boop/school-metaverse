@@ -36,11 +36,16 @@ export function createGamePicker(ctx) {
     if (my !== seq || !panel) return;   // 그사이 닫히거나 다시 열림
     const ids = games ? Object.keys(games).filter(id => !games[id].dev && !games[id].link && !(games[id].promo && !window.SM_PROMO) && (window.SM_LESSON ? games[id].lesson === window.SM_LESSON : !games[id].lesson)) : [];   // 10-03: v2엔 홍보 놀이(견학) 숨김
     list.textContent = ids.length ? '' : (games ? '아직 놀이가 없어요' : '놀이 목록을 못 불러왔어요');
-    for (const id of ids) {
+    const tog = ids.filter(id => games[id].mp === 'together'), split = tog.length && tog.length < ids.length;   // MP-MENU: 🧍 혼자 / 👥 친구와 함께
+    const sec = t => { const d = document.createElement('div'); d.textContent = t; d.style.cssText = 'margin-top:10px;font-size:12px;font-weight:800;opacity:.85'; list.appendChild(d); };
+    const ord = split ? ids.filter(id => games[id].mp !== 'together').concat(tog) : ids;
+    if (split) sec('🧍 혼자 하기');
+    for (const id of ord) {
+      if (split && id === tog[0]) sec('👥 친구와 함께' + (window.SM_MP ? (window.SM_MP.room() ? ' — 방에 있어요' : ' — 먼저 왼쪽 위 👥 함께하기로 방에') : ''));
       const b = document.createElement('button'); b.className = 'gpick-b'; b.dataset.game = id;
-      const t = document.createElement('b'); t.textContent = games[id].title || id; b.appendChild(t);
+      const t = document.createElement('b'); t.textContent = (games[id].mp === 'together' ? '👥 ' : '') + (games[id].title || id); b.appendChild(t);
       if (games[id].desc) { const s = document.createElement('span'); s.textContent = games[id].desc; b.appendChild(s); }
-      b.addEventListener('click', e => { e.stopPropagation(); close(); load(id); sync(); });
+      b.addEventListener('click', e => { e.stopPropagation(); close(); if (games[id].needRoom && window.SM_MP && !window.SM_MP.room()) { window.SM_MP.open(); return; } load(id); sync(); });
       list.appendChild(b);
     }
   }

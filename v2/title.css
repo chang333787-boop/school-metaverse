@@ -106,6 +106,11 @@ body.title-on > :not(#scene):not(#boot):not(.ttl-keep):not(script):not(style){vi
 .card b{word-break:keep-all;display:block;font-size:19px;font-weight:900;line-height:1.2;margin-bottom:4px}
 .card .ds{word-break:keep-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;line-height:1.35;color:#4a5a70}
 .card .bs{display:inline-block;align-self:flex-start;margin-top:auto;padding-top:6px;font-size:12px;font-weight:800;color:#b07800}
+.ttl-sec{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:4px 6px 0;color:#fff;text-shadow:0 2px 0 rgba(29,53,87,.55)}
+.ttl-sec b{font-size:19px;font-weight:900}.ttl-sec span{font-size:14px;font-weight:700;opacity:.95}.ttl-sec span.warn{color:#ffe066}
+.ttl-sec.tog{margin-top:8px;padding-top:12px;border-top:2px dashed rgba(255,255,255,.55)}
+.ttl-room{font:inherit;font-weight:900;font-size:14px;border:3px solid #1d3557;border-radius:12px;background:#ffd23c;color:#1d3557;padding:4px 12px;cursor:pointer;box-shadow:0 3px 0 rgba(29,53,87,.4)}
+.card .mpb{position:absolute;right:-6px;top:-10px;font-size:12px;font-weight:900;background:#c3fae8;border:2px solid #1d3557;border-radius:10px;padding:1px 7px;transform:rotate(6deg)}
 .card .lt{position:absolute;left:-8px;top:-10px;font-size:12px;font-weight:900;background:#ffd23c;border:2px solid #1d3557;border-radius:10px;padding:1px 7px;transform:rotate(-8deg)}
 .card:hover .cin,.card:focus-visible .cin,.card:focus .cin{transform:translateY(-7px) scale(1.035)}
 .card:focus-visible .cin,.card:focus .cin{border-color:#1d3557;box-shadow:0 7px 0 var(--gc),0 7px 0 3px #1d3557,0 0 0 5px #ffd23c,0 16px 22px rgba(0,0,0,.25)}

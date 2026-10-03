@@ -127,12 +127,19 @@ export function createTitle(h) {
     const hd = root.querySelector('.ttl-menu h2'); if (hd && LESSON) hd.textContent = LCAT ? (LCATS.find(c => c.cat === LCAT) || {}).title + ' — 무엇을 할까요?' : '어디로 가 볼까요?';
     const gi = e => { const k = GORDER.indexOf(e.group); return k < 0 ? GORDER.length : k; };
     list = list.map((e, i) => ({ e, i })).sort((a, b) => gi(a.e) - gi(b.e) || a.i - b.i).map(o => o.e);   // 무리(탐험·대결·모험·이야기·놀이)끼리 — 무리 안은 registry 순서
+    const TOG = list.filter(e => e.mp === 'together'), split = TOG.length > 0 && TOG.length < list.length;   // MP-MENU(10-03 교사 '싱글·멀티가 구분돼 있어?'): 🧍 혼자 하기 / 👥 친구와 함께 두 칸
+    if (split) list = list.filter(e => e.mp !== 'together').concat(TOG);
     const last = store.get('last', null);
     grid.textContent = '';
+    const head = (html, cls) => { const d = el('div', 'ttl-sec' + (cls ? ' ' + cls : ''), html); grid.appendChild(d); return d; };
+    if (split) head('<b>🧍 혼자 하기</b><span>나 혼자 학교를 탐험하고 놀아요</span>');
     cards = list.map((e, i) => {
+      if (split && e === TOG[0]) { const R = window.SM_MP && window.SM_MP.info && window.SM_MP.info(), N = window.SM_MP && window.SM_MP.net && window.SM_MP.net();
+        const h = head('<b>👥 친구와 함께</b><span>' + (R ? '지금 「' + R.n.replace(/[<>&]/g, '') + '」 방 · ' + (N ? N.count : 1) + '명' : window.SM_MP ? '선생님이 연 방에 들어가면 친구들과 같이 해요' : '이 화면에서는 함께하기가 꺼져 있어요') + '</span>' + (window.SM_MP ? '<button type="button" class="ttl-room">' + (R ? '방 바꾸기' : '👥 방 들어가기') + '</button>' : ''), 'tog');
+        const rb = h.querySelector('.ttl-room'); if (rb) rb.addEventListener('click', ev => { ev.stopPropagation(); blip(); window.SM_MP.open(); }); }
       const g = GROUPS[e.group] || GROUPS.놀이, b = e.id ? best(e.id, e) : null;
       const c = el('button', 'card', '<span class="cin"><span class="gt"><i>' + g.e + '</i><span> ' + (GROUPS[e.group] ? e.group : '놀이') + '</span></span>'
-        + '<span class="ic">' + (e.icon || '🎮') + '</span><b></b><span class="ds"></span>' + (b ? '<span class="bs"></span>' : '') + (last === e.id ? '<span class="lt">지난번</span>' : '') + '</span>');
+        + '<span class="ic">' + (e.icon || '🎮') + '</span><b></b><span class="ds"></span>' + (b ? '<span class="bs"></span>' : '') + (last === e.id ? '<span class="lt">지난번</span>' : '') + (e.mp === 'together' ? '<span class="mpb">👥 함께</span>' : '') + '</span>');
       c.type = 'button'; c.setAttribute('role', 'listitem'); c.style.setProperty('--i', i); c.style.setProperty('--gc', g.c); c.dataset.game = e.id;
       c.querySelector('b').textContent = e.title || e.id; c.querySelector('.ds').textContent = e.short || e.desc || '';
       if (b) c.querySelector('.bs').textContent = b;
@@ -163,6 +170,7 @@ export function createTitle(h) {
     else return;
     e.preventDefault(); k = Math.max(0, Math.min(n - 1, k)); if (k !== focusI) { focusI = k; cards[k].focus(); blip(); }
   };
+  addEventListener('sm-room', () => { if (phase === 'menu') refill(); });   // 방에 들어가면 '👥 친구와 함께' 줄을 새로
   addEventListener('keydown', onKey, true); addEventListener('keyup', e => { if (phase !== 'off' && phase !== 'go') e.stopImmediatePropagation(); }, true);
   function lockWorld() { keys.clear(); try { touch.reset(); } catch (e) { /* */ } document.exitPointerLock?.(); picker && picker.close && picker.close(); document.body.classList.add('title-on'); }
   root.addEventListener('pointerdown', () => { heard = true; });
@@ -203,6 +211,7 @@ export function createTitle(h) {
     if (phase !== 'menu' || !calmOK()) return; const e = list[i]; if (!e) return;
     if (LESSON && !LCAT && e.cat) { LCAT = e.cat; refill(); return; }   // 갈래 → 그 안의 카드
     if (e.link) { blip(); location.href = new URL(e.link, location.href).href; return; }   // 다른 페이지(상상의 세계 — v2 엔진 밖)
+    if (e.needRoom && window.SM_MP && !window.SM_MP.room()) { blip(); window.SM_MP.open(); const t = grid.querySelector('.ttl-sec.tog span'); if (t) { t.textContent = '먼저 방에 들어가요 — 선생님 화면의 방 번호 4자리'; t.classList.add('warn'); } return; }   // 친구 대결은 방이 있어야
     cards.forEach((c, k) => c.classList.add(k === i ? 'pick' : 'dim'));
     launch(e, cards[i].getBoundingClientRect());
   }
