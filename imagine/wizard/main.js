@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createTouch } from '../../v2/js/touch.js?v=7';
-import { createNet } from '../../v2/js/net.js?v=5';
-import { createLobby } from '../../v2/js/lobby.js?v=6';
+import { createNet } from '../../v2/js/net.js?v=6';
+import { createLobby } from '../../v2/js/lobby.js?v=7';
 import { build as buildWonders, DISC } from './wonders.js?v=4';
 import { mergeMeshes } from './merge.js?v=2';
 

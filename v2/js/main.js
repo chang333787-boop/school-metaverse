@@ -1353,17 +1353,22 @@ function emoChip(on) {
   if (!on) { if (emoEl) emoEl.remove(); emoEl = null; return; } if (emoEl) return;
   emoEl = document.createElement('div'); emoEl.id = 'mpEmo'; emoEl.className = 'chip'; emoEl.style.cssText = 'left:10px;top:84px;cursor:pointer;display:flex;gap:2px;align-items:center;padding:4px 6px;pointer-events:auto';
   emoEl.innerHTML = '<span data-e="t" style="padding:2px 6px">😀</span><span class="emo-bar" style="display:none;gap:2px"></span>';
-  import('./net.js?v=5').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" style="font-size:22px;padding:2px 4px;cursor:pointer">' + x + '</span>').join(''); });
+  import('./net.js?v=6').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" style="font-size:22px;padding:2px 4px;cursor:pointer">' + x + '</span>').join(''); });
   emoEl.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-e]'); if (!b) return; const bar = emoEl.querySelector('.emo-bar');
     if (b.dataset.e === 't') { bar.style.display = bar.style.display === 'none' ? 'flex' : 'none'; return; } if (NET) NET.emote(+b.dataset.e); bar.style.display = 'none'; });
   document.body.appendChild(emoEl);
 }
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=5'), import('./lobby.js?v=6')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=6'), import('./lobby.js?v=7')]).then(([N, L]) => {
     const LOBBY = L.createLobby({ chip, net: () => NET, toast: (m, t) => toast(m, t),
       join: (room) => { CTLK.join = Date.now(); CTLK.init = false; CTLK.m = CTLK.q = null; NET = N.createNet({ THREE, scene, room, kind: 'kid', onChange: () => LOBBY.draw(), onDenied: () => LOBBY.recheck(), onCtl }); emoChip(true); if (!MAP.game.current && !MAP.minimap.visible) MAP.minimap.show(); },
       leave: () => { if (NET) NET.leave(); NET = null; emoChip(false); MAP.minimap.setPeers([]); holdOff(); },
+      onGoTo: (p) => {   // 👥 칩에서 친구 이름 → 그 친구 곁으로(물총 경기 중엔 안 됨)
+        if (!p) return; const g = MAP.game.current; if (g && /^watergun/.test(g.id) && g.handle && (g.handle.state === 'play' || g.handle.state === 'count')) return toast('경기 중에는 갈 수 없어요', 2);
+        const y = p.y, a = Math.random() * Math.PI * 2, e = MAP.findEntry(p.x + Math.cos(a) * 1.6, p.z + Math.sin(a) * 1.6, y, null, 4) || MAP.findEntry(p.x, p.z, y, null, 6);
+        if (!e) return toast('그 친구 곁으로 갈 길을 못 찾았어요', 2); MAP.hostTeleport([e.x, e.y, e.z]); toast('👋 ' + p.label + ' 곁으로 왔어요!', 2.5);
+      },
       onTeacher: (k) => {   // 🧑‍🏫 선생님 신호(방 ctl/cmd) — 받는 쪽은 onCtl
         if (!NET) return; const n = NET.name;
         NET.ctl('cmd', { q: Date.now(), k, x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), by: NET.id, n: n.slice(0, 8) });

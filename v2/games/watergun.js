@@ -819,15 +819,17 @@ export default async function start(map, params = {}) {
     const on = (type) => (e) => { let msg; try { msg = JSON.parse(e.data); } catch (er) { return; } if (!msg) return; NM.D = applyEvt(NM.D, type, (msg.path || '/').split('/').filter(Boolean), msg.data); netSync(); };
     NM.es.addEventListener('put', on('put')); NM.es.addEventListener('patch', on('patch'));
     addEventListener('pagehide', netBye);
+    addEventListener('sm-room', netRoomGone);
     clearInterval(NM.beat); NM.beat = setInterval(() => { if (NM.on && performance.now() - NM.lastSend > 2500) netSend(0, map.player.pos(), false, true); }, 1500);   // 탭이 뒤에 있어 화면이 멈춰도 '있어요' 신호
   }
+  function netRoomGone(e) { if (!e.detail && NM.on && !dead) { map.hud.toast('🚪 방이 닫혀서 친구 대결을 마쳤어요', 3); menu(false); } }   // 선생님이 방을 닫으면
   function netBye() { if (!NM.on) return; fetch(MDB + NM.room + '/p/' + NM.pid + '.json', { method: 'DELETE', keepalive: true }).catch(() => {}); fetch(MDB + NM.room + '/s/' + NM.pid + '.json', { method: 'DELETE', keepalive: true }).catch(() => {}); }
   function netLeave() {
     if (!NM.on) return;
     const P = NM.D.p || {}, rest = Object.keys(P).filter((id) => id !== NM.pid).sort((a, b) => (P[a].on || 0) - (P[b].on || 0));
     if (!rest.length) nreq('', 'DELETE').catch(() => {});   // 마지막 사람 = 경기 통째로 치움
     else { netBye(); if (NM.host) nreq('/m/host', 'PUT', rest[0]).catch(() => {}); }
-    if (NM.es) NM.es.close(); NM.es = null; NM.on = false; clearInterval(NM.beat); removeEventListener('pagehide', netBye);
+    if (NM.es) NM.es.close(); NM.es = null; NM.on = false; clearInterval(NM.beat); removeEventListener('pagehide', netBye); removeEventListener('sm-room', netRoomGone);
     const mp = window.SM_MP, N = mp && mp.net(); if (N && N.hide) N.hide(false);
     if (NM.ui) { NM.ui.remove(); NM.ui = null; }
     resetActors();

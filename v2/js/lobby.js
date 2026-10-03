@@ -45,7 +45,7 @@ export async function teacherPin(toast) {
 }
 
 export function createLobby(o) {
-  const { chip, suffix = '', label = '', join, leave, net, toast = () => {}, onTeacher = null } = o;
+  const { chip, suffix = '', label = '', join, leave, net, toast = () => {}, onTeacher = null, onGoTo = null } = o;
   if (!document.getElementById('lb-css')) { const st = document.createElement('style'); st.id = 'lb-css'; st.textContent = CSS; document.head.appendChild(st); }
   let cur = null, pop = null, big = null, pollT = 0;
   const live = (p) => p && typeof p.e === 'number' && p.e > Date.now();
@@ -110,13 +110,13 @@ export function createLobby(o) {
   async function openList() {
     const N = net();
     if (cur) {
-      const others = N ? N.names : [];
+      const others = N && N.peers ? N.peers() : [];
       const P = popup('<h4>👥 ' + esc(cur.n) + ' <span class="sm">· 방 번호 ' + cur.c + '</span></h4>'
-        + '<div class="box">나: <b>' + esc(N ? N.name : '') + '</b><br>' + (others.length ? '친구 ' + others.length + '명: ' + others.map(esc).join(', ') : '<span class="sm">아직 들어온 친구가 없어요</span>') + '</div>'
+        + '<div class="box">나: <b>' + esc(N ? N.name : '') + '</b><br>' + (others.length ? '친구 ' + others.length + '명' + (onGoTo ? ' <span class="sm">(누르면 그 친구 곁으로)</span>' : '') + '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + others.map((p, i) => onGoTo ? '<button class="sub" data-go="' + i + '" style="padding:4px 9px"><span style="color:' + p.color + '">●</span> ' + esc(p.label) + '</button>' : '<span style="padding:2px 6px"><span style="color:' + p.color + '">●</span> ' + esc(p.label) + '</span>').join('') + '</div>' : '<span class="sm">아직 들어온 친구가 없어요</span>') + '</div>'
         + '<div class="sm">• 걷기·뛰기는 서로 보여요<br>• 📝 메모장은 같은 판이면 깃발·카드를 함께 써요<br>• 물총·이야기·방탈출 같은 놀이는 아직 <b>각자 따로</b> 해요</div>'
         + (cur.k ? '<div style="margin-top:8px;font-weight:800">🧑‍🏫 선생님</div><div class="row" style="justify-content:flex-start;margin-top:4px">' + (onTeacher ? '<button data-l="gather" title="방 친구 모두를 내 곁으로">📣 모두 내 곁으로</button><button data-l="hold" title="모두 잠깐 멈추고 선생님 말씀 듣기">✋ 모두 멈춤</button><button class="sub" data-l="release">▶ 다시 움직여요</button>' : '') + '<button class="sub" data-l="big">📺 번호 크게</button><button class="warn" data-l="shut">🔒 방 닫기</button></div>' : '')
         + '<div class="row"><button class="sub" data-l="name">✏️ 내 이름</button><button class="sub" data-l="out">🚪 방 나가기</button><button class="sub" data-l="x">닫기</button></div>');
-      P.onclick = (e) => { e.stopPropagation(); const b = e.target.closest('[data-l]'); if (!b) return; const a = b.dataset.l;
+      P.onclick = (e) => { e.stopPropagation(); const g = e.target.closest('[data-go]'); if (g && onGoTo) { closePop(); onGoTo(others[+g.dataset.go]); return; } const b = e.target.closest('[data-l]'); if (!b) return; const a = b.dataset.l;
         if (a === 'name') { const v = prompt('내 이름(별명)을 적어 주세요 — 친구들 화면에 보여요', N ? N.name : ''); if (v && N) N.setName(v); draw(); closePop(); }
         else if (a === 'out') out('👋 방에서 나왔어요'); else if (a === 'big') { closePop(); showBig(); } else if (a === 'shut') shut();
         else if ((a === 'gather' || a === 'hold' || a === 'release') && onTeacher) { closePop(); onTeacher(a); } else closePop(); };
