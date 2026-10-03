@@ -225,7 +225,19 @@ export default async function start(map, params = {}) {
       if (st.sound) map.sfx(st.sound);
       if (st.chapter != null) chapter(st.chapter);
       if (st.world) await world(st.world);
-      if (st.go) { const p = place(st.go); if (p) { objective(st.goal || '목표로 가요', p, st.label); await arrive(p, st.r); } }
+      if (st.go) { const p = place(st.go); if (p) {
+        if (st.secret) {   // 보물찾기: 빛기둥·지도 표시 없이 수수께끼만 — 오래 못 찾으면 그때 힌트와 표시
+          objective(st.goal || '단서를 풀어 보세요', null);
+          const tm = setTimeout(() => { if (!gone()) { map.hud.toast('💡 ' + (st.hint || '힌트: 조금 더 둘러보세요'), 6); objective(st.goal, p, st.label); } }, (st.hintAfter || 45) * 1000);
+          await arrive(p, st.r); clearTimeout(tm); map.sfx('ding');
+          if (st.find) {   // 방에 들어오면 구체적인 힌트 → 그 물건 앞에서 E(살펴보기) · 25초 못 찾으면 표시
+            const f = place(st.find); if (f) {
+              objective(st.findGoal || '🔍 이 근처를 살펴봐요', null); if (st.findSay) { if (!(await say(st.findSay))) return; }
+              const tm2 = setTimeout(() => { if (!gone()) objective(st.findGoal, f, st.findLabel); }, (st.findAfter || 25) * 1000);
+              await new Promise(res => { const fy = f.y ?? 0, off = map.interact.enable(q => q.kind !== 'game' && Math.hypot(q.x - f.x, q.z - f.z) < 2.9 && Math.abs((q.y || 0) - fy) < 2, false);   // 같은 자리 원래 행동(급식 받기 등)이 E를 먼저 잡지 않게
+                const h = map.interact.add({ x: f.x, y: fy, z: f.z, r: 1.7, label: st.findLabel || '🔍 살펴보기', use: () => { if (talk) return; h.remove(); off.remove(); res(); } }); });
+              clearTimeout(tm2); map.sfx('ding'); } }
+        } else { objective(st.goal || '목표로 가요', p, st.label); await arrive(p, st.r); } } }
       if (st.talk) { const p = place('npc:' + st.talk) || place(st.at); if (p) await talkTo(p, st.talk, st.goal || st.talk + '에게 말 걸기'); }
       if (st.collect) await collect(st);
       if (gone()) return;
