@@ -189,7 +189,7 @@ export default async function start(map, params = {}) {
     if (!v) { toast('먼저 내 이름을 적어 주세요', 2.2); if (nm) nm.focus(); return; }
     name = v; try { localStorage.setItem('mp.name', name); } catch (e) { /* */ }
     dispatchEvent(new CustomEvent('sm-name', { detail: name }));   // 동시 접속 이름표도 같은 이름으로(main.js)
-    board = { id, ...info }; close(); endTour(); placing = null; listen(); chips();
+    board = { id, ...info }; close(); endTour(); placing = null; listen(); chips(); window.SM_ACT = '📝 ' + short(info.t, 10);
     toast('📌 「' + board.t + '」 — 마우스로 끌면 둘러보기 · 땅을 톡 누르면 🚩 깃발 · L = 이야기 판', 5);
   }
 
@@ -620,7 +620,7 @@ export default async function start(map, params = {}) {
 
   return {
     tick() {},
-    stop() { dead = true; clearTimeout(syncT); if (es) es.close(); if (esB) esB.close(); hereOff(); removeEventListener('keydown', onKey); removeEventListener('keydown', onEsc, true); removeEventListener('sm-click', onWorldClick); removeEventListener('sm-cmd', onCmd); for (const id of [...FL.keys()]) drop3d(id); ui.remove(); css.remove(); },
+    stop() { dead = true; window.SM_ACT = null; clearTimeout(syncT); if (es) es.close(); if (esB) esB.close(); hereOff(); removeEventListener('keydown', onKey); removeEventListener('keydown', onEsc, true); removeEventListener('sm-click', onWorldClick); removeEventListener('sm-cmd', onCmd); for (const id of [...FL.keys()]) drop3d(id); ui.remove(); css.remove(); },
     get board() { return board; }, get scenes() { return scenes().map(([id, f], i) => ({ id, n: i + 1, ...f, kids: kids(id).map(([kid, x]) => ({ id: kid, ...x })) })); }, summary: () => board ? summaryText() : '',
     place: (o) => form({ pt: aimPoint(), ...(o || {}) }), view: boardView, tour: startTour, moveTo: (id, sec, before) => moveTo(id, sec, before),
     enter: (id, info) => { name = name || '시험'; board = { id, ...info }; listen(); chips(); },
