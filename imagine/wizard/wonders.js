@@ -91,14 +91,14 @@ export function build(K) {
   sg.setAttribute('position', new THREE.Float32BufferAttribute(SP, 3)); sg.setAttribute('normal', new THREE.Float32BufferAttribute(SN, 3)); sg.setAttribute('color', new THREE.Float32BufferAttribute(SC, 3));
   const STATIC = new THREE.Mesh(sg, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })); scene.add(STATIC);
   K.extraStatic.push(STATIC);
-  const plate = (t, x, y, z, w) => { const s = label(t, w); s.position.set(x, y, z); scene.add(s); return s; };
+  const plate = (t, x, y, z, w) => { const s = label(t, w); s.position.set(x, y, z); s.userData.far = 1; scene.add(s); return s; };
   plate('🐉 용의 언덕', 40.5, 4.6, 10, 3.6); plate('🌦️ 날씨 수정구', -10, 2.9, 1, 3.4); plate('⏳ 낮과 밤 모래시계', 10, 2.9, 1, 4); plate('🗿 말하는 석상 뭉치', -6, 3.1, 15.5, 4);
   plate('♨️ 간헐천', GEY.x, 1.8, GEY.z, 2.6); plate('🕳️ 바위 동굴', CAVE.x + 5, 6.6, CAVE.z, 3.4); plate('🏝️ 하늘 섬', ISL.x, ISL.y + 4.6, ISL.z, 3.4);
 
   // ───────── 용 ─────────
   const egg = new THREE.Mesh(new THREE.SphereGeometry(0.75, 12, 9), lam(0xe8d8ff)); egg.scale.set(0.85, 1.15, 0.85); egg.position.set(DH.x, DH.top + 0.9, DH.z); scene.add(egg);
   for (let k = 0; k < 7; k++) { const sp = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 0), lam(0x9b6bff)); const a = k * 1.9, h = (k % 3 - 1) * 0.35; sp.position.set(Math.sin(a) * 0.62, h, Math.cos(a) * 0.62); egg.add(sp); }
-  let warmth = 0;
+  K.merge(egg); let warmth = 0;
   target(egg, (sp) => {
     if (DR.stage > 0) return null;
     if (sp === 0) { warmth++; burst(DH.x, DH.top + 1, DH.z, 0xff9a3c, 20, 2); egg.rotation.z = 0.2;
@@ -118,7 +118,7 @@ export function build(K) {
     const t = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.1, 7), body); t.position.set(0, 0.5, -0.95); t.rotation.x = -Math.PI / 2 - 0.25; g.add(t);
     const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0.3, 1.4, 0.1, -0.2, 0, 0, -0.4, 1.4, 0.1, -0.2, 1.1, 0.05, 0.4, 0, 0, 0.3], 3)); wg.computeVertexNormals();
     const wl = new THREE.Mesh(wg, wing), wr = new THREE.Mesh(wg, wing); wl.position.set(0.25, 0.85, 0); wr.position.set(-0.25, 0.85, 0); wr.scale.x = -1; g.add(wl, wr);
-    g.userData.w = [wl, wr]; return g;
+    g.userData.w = [wl, wr]; K.merge(g, { keep: [wl, wr] }); return g;
   }
   const DR = { stage: 0, g: null, fed: 0, x: DH.x, y: DH.top, z: DH.z, h: 0, s: 0.6, flap: 0 };
   function hatch() {
@@ -148,7 +148,7 @@ export function build(K) {
       const fl = new THREE.Mesh(new THREE.SphereGeometry(1.2, 8, 6), m); fl.scale.set(1.5, 0.2, 0.7); fl.position.set(sd * 1.3, 0.4, -8.6); G.add(fl);
       const e = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), new THREE.MeshBasicMaterial({ color: 0x1d1530 })); e.position.set(sd * 2.55, 0.5, 4.2); G.add(e); }
     for (let k = 0; k < 9; k++) { const p = new THREE.Mesh(new THREE.IcosahedronGeometry(0.9 + (k % 3) * 0.3, 1), m); p.position.set(Math.sin(k) * 1.4, 2.0, -3 + k * 0.8); p.scale.y = 0.45; G.add(p); }
-    scene.add(G); target(G, (sp) => { if (sp === 1) return '🐋 구름 고래가 물을 받아 마시고 부우— 물줄기를 뿜었어요!'; if (sp === 2) return '🐋 고래가 빛을 받아 반짝반짝 웃어요.'; return '🐋 구름 고래가 느긋하게 하품해요. 후아암~'; }); }
+    scene.add(G); K.merge(G); target(G, (sp) => { if (sp === 1) return '🐋 구름 고래가 물을 받아 마시고 부우— 물줄기를 뿜었어요!'; if (sp === 2) return '🐋 고래가 빛을 받아 반짝반짝 웃어요.'; return '🐋 구름 고래가 느긋하게 하품해요. 후아암~'; }); }
 
   // ───────── 날씨 · 낮밤 ─────────
   const W = { kind: 'sun', t: 0, rained: 0, night: false, bloom: 0, snow: 0 };
@@ -167,7 +167,7 @@ export function build(K) {
   { const gl = lam(0xdff6ff, { transparent: true, opacity: 0.55 }); const c1 = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.6, 8), gl); c1.position.y = 0.35; c1.rotation.x = Math.PI; hg.add(c1);
     const c2 = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.6, 8), gl); c2.position.y = 0.95; hg.add(c2);
     const sand = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.3, 8), lam(0xffd66b)); sand.position.y = 0.2; sand.rotation.x = Math.PI; hg.add(sand);
-    for (const y of [0.02, 1.28]) { const d = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.08, 8), lam(0x6b4128)); d.position.y = y; hg.add(d); } }
+    for (const y of [0.02, 1.28]) { const d = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.08, 8), lam(0x6b4128)); d.position.y = y; hg.add(d); } K.merge(hg); }
   ACTS.push({ x: -10, z: 1, y: 0, r: 2.4, label: '🌦️ 날씨 수정구 만지기', fn: () => K.choose('🌦️ 어떤 날씨를 부를까요?', ['☀️ 맑음', '🌧️ 비', '❄️ 눈'], (i) => setWeather(['sun', 'rain', 'snow'][i])) });
   ACTS.push({ x: 10, z: 1, y: 0, r: 2.4, label: '⏳ 모래시계 뒤집기', fn: () => setNight(!W.night) });
   function setWeather(k) {
@@ -223,13 +223,13 @@ export function build(K) {
     const g = new THREE.Group(), m = lam(BC[i], { side: THREE.DoubleSide });
     const l = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.65), m), r = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.65), m); l.position.x = -0.25; r.position.x = 0.25; const lp = new THREE.Group(), rp = new THREE.Group(); lp.add(l); rp.add(r); g.add(lp, rp);
     const sp = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.66), lam(0xf3e3c3)); sp.rotation.x = Math.PI / 2; g.add(sp);
-    g.rotation.x = -Math.PI / 2 + 0.4; scene.add(g);
+    l.rotation.y = 0.5; r.rotation.y = -0.5; g.rotation.x = -Math.PI / 2 + 0.4; scene.add(g); K.merge(g, { double: true });
     const B = { g, lp, rp, a: i * 1.05, cx: -6 + (i % 3) * 5, cz: -14 + Math.floor(i / 3) * 6, x: 0, y: 3, z: 0, got: false, ph: i };
     BOOKS.push(B);
     ACTS.push({ dyn: () => B.got ? null : [B.x, B.z, Math.max(0, B.y - 1.6)], r: 1.8, label: '📚 날아다니는 책 붙잡기', fn: () => { B.got = true; g.visible = false; booksHeld++; burst(B.x, B.y, B.z, BC[i], 16, 1.5); toast('📚 책을 붙잡았어요! (' + booksHeld + '권 들고 있어요 — 지팡이 가게 앞 책 수레로)', 3); } });
   }
   const cart = new THREE.Group(); cart.position.set(-17.5, 0, 11); scene.add(cart);
-  { const b = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 0.8), lam(0x8a5a3c)); b.position.y = 0.7; cart.add(b); for (const [x, z] of [[-0.55, 0.35], [0.55, 0.35], [-0.55, -0.35], [0.55, -0.35]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.08, 10), lam(0x3a2416)); w.rotation.z = Math.PI / 2; w.position.set(x, 0.18, z); cart.add(w); } }
+  { const b = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 0.8), lam(0x8a5a3c)); b.position.y = 0.7; cart.add(b); for (const [x, z] of [[-0.55, 0.35], [0.55, 0.35], [-0.55, -0.35], [0.55, -0.35]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.08, 10), lam(0x3a2416)); w.rotation.z = Math.PI / 2; w.position.set(x, 0.18, z); cart.add(w); } K.merge(cart); }
   ACTS.push({ x: -17.5, z: 11, y: 0, r: 2.2, get label() { return booksHeld ? '📚 책 수레에 책 꽂기' : '📚 책 수레 (도망친 책 ' + booksBack + '/6)'; }, fn: () => {
     if (!booksHeld) return toast('책 수레가 비었어요. 광장 북쪽에서 날아다니는 책을 붙잡아 와요!', 3);
     booksBack += booksHeld; booksHeld = 0; burst(-17.5, 1.4, 11, 0xffd66b, 24, 2);
@@ -334,7 +334,7 @@ export function build(K) {
       let tx = B.cx + Math.sin(B.a) * 3.5, tz = B.cz + Math.cos(B.a * 1.3) * 3, ty = 2.6 + Math.sin(B.a * 2 + B.ph) * 0.9;
       const dpx = B.x - P.x, dpz = B.z - P.z, dp = Math.hypot(dpx, dpz); if (dp < 4 && dp > 0.01 && !K.sneaking()) { tx += dpx / dp * 3; tz += dpz / dp * 3; ty += 1.2; }
       B.x += (tx - B.x) * Math.min(1, dt * 1.8); B.z += (tz - B.z) * Math.min(1, dt * 1.8); B.y += (ty - B.y) * Math.min(1, dt * 1.8);
-      B.g.position.set(B.x, B.y, B.z); B.g.rotation.z = Math.atan2(tx - B.x, tz - B.z); const f = Math.sin(T * 9 + B.ph) * 0.7; B.lp.rotation.y = f; B.rp.rotation.y = -f; }
+      B.g.position.set(B.x, B.y, B.z); B.g.rotation.z = Math.atan2(tx - B.x, tz - B.z); B.g.scale.x = 0.45 + Math.abs(Math.sin(T * 9 + B.ph)) * 0.55; }
     // 동굴 바위
     if (ROCK.up > 0) { ROCK.up -= dt; boulder.position.y += ((ROCK.up > 0 ? 5.4 : 1.6) - boulder.position.y) * Math.min(1, dt * 2); bSol.y1 = ROCK.up > 0 ? -1 : 3.2; if (ROCK.up <= 0) toast('바위가 쿵— 다시 내려왔어요.', 2); }
   }

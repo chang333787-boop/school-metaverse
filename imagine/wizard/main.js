@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { createTouch } from '../../v2/js/touch.js?v=7';
 import { createNet } from '../../v2/js/net.js?v=1';
-import { build as buildWonders, DISC } from './wonders.js?v=2';
+import { build as buildWonders, DISC } from './wonders.js?v=4';
+import { mergeMeshes } from './merge.js?v=2';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('scene');
@@ -142,7 +143,7 @@ function label(text, w = 4, bg = 'rgba(42,29,79,.85)', fg = '#ffd66b') {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false })); s.scale.set(w, w / 4, 1); return s;
 }
-const placeLabel = (t, x, y, z, w) => { const s = label(t, w); s.position.set(x, y, z); scene.add(s); return s; };
+const placeLabel = (t, x, y, z, w) => { const s = label(t, w); s.position.set(x, y, z); s.userData.far = 1; scene.add(s); return s; };
 placeLabel('🪄 지팡이 가게', -16.6, 5.4, 6, 4.6);
 placeLabel('🧪 물약 가게', 20, 4.4, 7.8, 4);
 placeLabel('🌱 마법 텃밭', -16, 2.9, -22, 4);
@@ -177,6 +178,7 @@ for (let i = 0; i < 4; i++) {
   for (let k = 0; k < 4; k++) { const t = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.5, 4), lam(0x2b1638)); t.position.set((k % 2 ? 0.6 : -0.6), 0.2 * k - 0.2, (k > 1 ? 0.5 : -0.5)); t.rotation.z = (k % 2 ? -1 : 1); m.add(t); }
 }
 const bSol = { x0: -16.6, x1: -15.4, z0: -24.2, z1: -19.8, y0: 0, y1: 1.7 }; SOL.push(bSol);
+BRAMBLE.meshes.forEach((m) => mergeMeshes(THREE, m));
 BRAMBLE.meshes.forEach((m) => target(m, (sp) => {
   if (sp !== 0 || !BRAMBLE.alive) return sp === 1 ? '덤불이 물을 먹고 더 무성해졌어요…' : null;
   BRAMBLE.alive = false; bSol.y1 = -1;
@@ -193,6 +195,7 @@ const MUSH = [[-25.5, -27.8, 1.3, 1.15, 0xff6b9a], [-27.6, -29.0, 2.6, 1.05, 0xf
   const st = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, top - 0.25, 7), lam(0xf3e6cf)); st.position.y = (top - 0.25) / 2; g.add(st);
   const cap = new THREE.Mesh(new THREE.SphereGeometry(r, 9, 5, 0, TAU, 0, Math.PI / 2), lam(hex)); cap.position.y = top - 0.3; cap.scale.y = 0.55; g.add(cap);
   for (let k = 0; k < 4; k++) { const d = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 0), lam(0xffffff)); const a = k * 1.7; d.position.set(Math.sin(a) * r * 0.55, top - 0.3 + r * 0.4, Math.cos(a) * r * 0.55); g.add(d); }
+  g.scale.setScalar(1); mergeMeshes(THREE, g); g.scale.setScalar(0.01);
   return { g, sol: { x0: x - r * 0.8, x1: x + r * 0.8, z0: z - r * 0.8, z1: z + r * 0.8, y0: 0, y1: -1, top } };
 });
 let grown = false;
@@ -220,7 +223,7 @@ target(rune, (sp) => { if (sp === 2) { if (!runeLit) { runeLit = true; runeText.
 // 상자
 const CRATES = [[-5.0, -28.6], [-3.4, -30.6], [-1.6, -32.9]].map(([x, z], i) => {
   const m = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), lam(0xb8803e)); m.position.set(x, 0.6, z); scene.add(m);
-  const band = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.16, 1.24), lam(0x6b4128)); m.add(band);
+  const band = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.16, 1.24), lam(0x6b4128)); m.add(band); mergeMeshes(THREE, m);
   const C = { m, x, z, lvl: 0, y: 0, sol: { x0: x - 0.6, x1: x + 0.6, z0: z - 0.6, z1: z + 0.6, y0: 0, y1: 1.2 } }; SOL.push(C.sol);
   target(m, (sp) => {
     if (sp !== 4) return sp === 0 ? '상자가 그을렸어요. 띄우려면 🪶 띄우기 마법!' : null;
@@ -302,7 +305,8 @@ function wizard(robe, hat, skin = 0xf1c9a0, beard = false) {
   scene.add(g); return g;
 }
 const me = wizard(0x7a4cff, 0x2a1d4f, 0xf1c9a0);
-const WIZ_PARTS = [...me.children];
+const meBody = mergeMeshes(THREE, me, { own: true });
+const WIZ_PARTS = [meBody];
 const FORMS = (() => {
   const mk = (parts) => { const g = new THREE.Group(); for (const [geo, hex, x, y, z, sx = 1, sy = 1, sz = 1] of parts) { const m = new THREE.Mesh(geo, hex === 'eye' ? new THREE.MeshBasicMaterial({ color: 0x1d1530 }) : lam(hex)); m.position.set(x, y, z); m.scale.set(sx, sy, sz); g.add(m); } g.visible = false; me.add(g); return g; };
   return {
@@ -322,8 +326,8 @@ const meGlow = glow(0xfff3a0, 3); meGlow.visible = false; scene.add(meGlow);
 
 const NPCS = [];
 function npc(name, robe, hat, x, z, face, lines, opt = {}) {
-  const g = wizard(robe, hat, opt.skin, opt.beard); g.position.set(x, 0, z); g.rotation.y = face;
-  const L = label(name, 2.6); L.position.set(0, 2.55, 0); g.add(L);
+  const g = wizard(robe, hat, opt.skin, opt.beard); g.position.set(x, 0, z); g.rotation.y = face; mergeMeshes(THREE, g);
+  const L = label(name, 2.6); L.position.set(0, 2.55, 0); L.userData.far = 1; g.add(L);
   const N = { g, name, x, z, lines, path: opt.path || null, pi: 0, wait: 0, float: 0, act: opt.act };
   target(g, (sp) => { if (sp === 4) { N.float = 2.5; burst(N.g.position.x, 1, N.g.position.z, 0xd6a8ff, 16); return name + ': 으앗, 몸이 붕 떠요!'; } if (sp === 3) { burst(N.g.position.x, 1.2, N.g.position.z, 0xdff6ff, 16); return name + ': 으으 추워!'; } if (sp === 1) return name + ': 앗 차가워! 장난꾸러기 같으니.'; if (sp === 2) return name + ': 눈부셔라!'; if (sp === 0) return name + ': 앗 뜨거! 사람한테 불꽃은 안 돼요!'; });
   NPCS.push(N); return N;
@@ -338,7 +342,7 @@ npc('마을 마법사 바람', 0x3aa08a, 0x1d4a40, 9, -16, 0, ['상자는 🪶 �
 const OWLS = [0, 1, 2].map((i) => {
   const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), lam(0x8a6a4a)); g.add(b);
   const wl = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.06, 0.3), lam(0x6b4a2a)); wl.position.x = -0.4; g.add(wl);
-  const wr = wl.clone(); wr.position.x = 0.4; g.add(wr); scene.add(g); return { g, wl, wr, a: i * 2.1, r: 7 + i * 1.5, h: 18 + i * 1.2, s: 0.5 + i * 0.12 };
+  const wr = wl.clone(); wr.position.x = 0.4; g.add(wr); scene.add(g); mergeMeshes(THREE, g); return { g, a: i * 2.1, r: 7 + i * 1.5, h: 18 + i * 1.2, s: 0.5 + i * 0.12 };
 });
 const CN = 26, candle = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.07, 0.45, 6), new THREE.MeshLambertMaterial({ color: 0xfff6e0 }), CN);
 const flame = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.09, 0), new THREE.MeshBasicMaterial({ color: 0xffc85a }), CN);
@@ -349,6 +353,7 @@ const cMesh = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.1, 1.5), lam(0xc0392b)
 const cTrim = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, 1.6), lam(0xffd66b)); cTrim.position.y = -0.04; carpet.add(cTrim);
 scene.add(carpet);
 const CARPET = { a: 0, x: 0, z: 0, sol: { x0: 0, x1: 0, z0: 0, z1: 0, y0: 0.3, y1: 0.48 } }; SOL.push(CARPET.sol);
+mergeMeshes(THREE, carpet);
 target(carpet, (sp) => { if (sp === 4) { CARPET.boost = 4; return '🪶 양탄자가 신나게 빨리 날아요!'; } });
 
 const stars = (() => { const n = 400, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const t = Math.random() * TAU, u = 0.15 + Math.random() * 0.85, r = 180; a[i * 3] = Math.cos(t) * r * Math.sqrt(1 - u * u); a[i * 3 + 1] = u * r; a[i * 3 + 2] = Math.sin(t) * r * Math.sqrt(1 - u * u); }
@@ -633,7 +638,7 @@ function update(dt) {
   for (const s of SCROLLS) if (!s.got) { s.g.position.y = s.y + Math.sin(T * 2 + s.x) * 0.15; s.g.rotation.y += dt * 1.5; }
   seedGlow.material.opacity = 0.6 + Math.sin(T * 3) * 0.3;
   ledgeMark.material.opacity = 0.5 + Math.sin(T * 3) * 0.3; topMark.material.opacity = ledgeMark.material.opacity;
-  for (const O of OWLS) { O.a += dt * O.s; O.g.position.set(TOWER.x + Math.sin(O.a) * O.r, O.h + Math.sin(T * 2 + O.a) * 0.5, TOWER.z + Math.cos(O.a) * O.r); O.g.rotation.y = O.a + Math.PI / 2; const f = Math.sin(T * 10 + O.a) * 0.6; O.wl.rotation.z = f; O.wr.rotation.z = -f; }
+  for (const O of OWLS) { O.a += dt * O.s; O.g.position.set(TOWER.x + Math.sin(O.a) * O.r, O.h + Math.sin(T * 2 + O.a) * 0.5, TOWER.z + Math.cos(O.a) * O.r); O.g.rotation.y = O.a + Math.PI / 2; const f = Math.sin(T * 10 + O.a) * 0.6; O.g.scale.x = 0.7 + Math.abs(f) * 0.5; }
   for (let i = 0; i < CN; i++) { const [x, y, z, ph] = CPOS[i], yy = y + Math.sin(T * 1.2 + ph) * 0.25; _m.makeTranslation(x, yy, z); candle.setMatrixAt(i, _m); _m.makeTranslation(x, yy + 0.3 + Math.sin(T * 15 + ph) * 0.02, z); flame.setMatrixAt(i, _m); }
   candle.instanceMatrix.needsUpdate = true; flame.instanceMatrix.needsUpdate = true;
   for (const N of NPCS) {
@@ -700,7 +705,7 @@ function update(dt) {
     if (P.y < -5) { P.x = 0; P.z = 17; P.y = 0; }
   }
   me.position.set(P.x, P.y, P.z); me.rotation.y = P.yaw;
-  me.children[0].material.color.setHex(FX.frog > 0 ? 0x5fbf3a : 0x7a4cff);
+  meBody.material.color.setHex(FX.frog > 0 ? 0x7fdf5a : 0xffffff);
   if (FX.form <= 0 && MODS.form) { MODS.form = ''; burst(P.x, P.y + 0.5, P.z, 0xffffff, 30, 2); toast('펑! 원래 모습으로 돌아왔어요.', 2); }
   if (formShown !== MODS.form) { formShown = MODS.form; for (const c of WIZ_PARTS) c.visible = !formShown; for (const k in FORMS) FORMS[k].visible = k === formShown; wandMesh.visible = wandTip.visible = wand && !formShown; }
   const moving = started && (keys.size || TOUCH.m > 0) && !busyUI;
@@ -710,7 +715,7 @@ function update(dt) {
   wandTip.material.color.setHex(SPELLS[spell].c);
 
   if (W) W.tick(dt);
-  if ((nearT -= dt) <= 0) { nearT = 0.15; nearTick(); }
+  if ((nearT -= dt) <= 0) { nearT = 0.15; nearTick(); for (const s of FARS) { s.getWorldPosition(_fp); s.visible = _fp.distanceTo(camera.position) < 48; } }
   if (NET && started) { NET.tick(dt, { x: P.x, y: P.y, z: P.z, h: P.yaw }); if ((whoT -= dt) <= 0) { whoT = 2; drawWho(); } }
   boltTick(dt); partTick(dt); twTick(dt);
 
@@ -757,10 +762,11 @@ const fadeEl = document.createElement('div'); fadeEl.style.cssText = 'position:f
 function fade(cb) { fadeEl.style.opacity = 1; setTimeout(() => { cb(); setTimeout(() => { fadeEl.style.opacity = 0; }, 120); }, 380); }
 $('bookClose').onclick = () => closeUI();
 $('quest').onclick = (e) => { e.stopPropagation(); openBook(); };
-const K = { THREE, scene, camera, P, MODS, SOL, CIR, CIRS: CIR, burst, emit, toast, dlg, later, tween, target, glow, label, lam, SPELLS, ACTS, discover, found, extraStatic: EXTRA_STATIC, movers: MOVERS,
+const K = { THREE, scene, camera, P, MODS, SOL, CIR, CIRS: CIR, AIM, merge: (g, o = {}) => mergeMeshes(THREE, g, { aim: AIM, ...o }), burst, emit, toast, dlg, later, tween, target, glow, label, lam, SPELLS, ACTS, discover, found, extraStatic: EXTRA_STATIC, movers: MOVERS,
   hemi, sun, stars, groundAt, choose, fade, freezePond: (sec) => { frozenT = Math.max(frozenT, sec); ice.visible = true; }, tp: (x, z, y = 0) => { P.x = x; P.z = z; P.y = y; P.vy = 0; },
   face: (deg) => { const a = deg * Math.PI / 180; CAM.yaw = -a; P.yaw = Math.atan2(Math.sin(a), -Math.cos(a)); }, rainbowWand: () => { rainbow = true; }, alone: () => !NET || NET.count <= 1, sneaking: () => !RUN };
 const W = buildWonders(K);
+const FARS = []; const _fp = new THREE.Vector3(); scene.traverse((o) => { if (o.isSprite && o.userData.far) FARS.push(o); });
 Object.assign(window.MAGIC, { W, MODS, found, K });
 camera.position.set(0, 12, 40);
 requestAnimationFrame(frame);
