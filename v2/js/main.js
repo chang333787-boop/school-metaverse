@@ -1327,6 +1327,16 @@ function idle(fn, timeout = 1500) { return window.requestIdleCallback ? requestI
 const clock = new THREE.Clock();
 const fpsBox = document.getElementById('fps');
 let acc = 0, n = 0, simMs = 0;
+// MP-1(10-03 교사 '동시 접속이 포인트 — 홍보는 멀티플레이와 상관없음'): v2·v3에서 같은 방 친구들이 보인다 · 홍보판·게이트·사진 대조·?mp=0이면 끔
+let NET = null;
+{ const q = new URLSearchParams(location.search);
+  if (!window.SM_PROMO && q.get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !q.get('shot')) {
+    const room = (q.get('room') || (window.SM_LESSON ? 'v3' : 'v2')).replace(/[^a-z0-9_-]/gi, '').slice(0, 24) || 'v2';
+    const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; chip.title = '이름 바꾸기'; document.body.appendChild(chip);
+    const draw = () => { if (NET) chip.textContent = '👥 ' + NET.count + '명 · ' + NET.name; };
+    chip.addEventListener('click', (e) => { e.stopPropagation(); if (!NET) return; document.exitPointerLock?.(); const v = prompt('내 이름(별명)을 적어 주세요 — 친구들 화면에 보여요', NET.name); if (v) NET.setName(v); draw(); });
+    import('./net.js?v=1').then((m) => { NET = m.createNet({ THREE, scene, room, kind: 'kid', onChange: draw }); draw(); setInterval(draw, 2000); }).catch((e) => console.warn('[동시 접속] 못 켰어요', e));
+  } }
 function loop(ts) {
   requestAnimationFrame(loop);
   if (!ADAPT.ext) adaptTick(ts || performance.now());   // PERF-WIN 자동 해상도(진짜 프레임 간격 · ext = 시험이 가짜 시각을 넣는 동안 끔)
@@ -1337,6 +1347,7 @@ function loop(ts) {
   step(dt);
   doorTick(dt);
   hotTick(dt);
+  if (NET) NET.tick(dt, { x: P.x, y: P.y, z: P.z, h: P.yaw });
   MAP.tick(dt);   // 구역·트리거·경계 10Hz + 게임 tick(게임 몫 ms는 MAP.game.lastMs)
   keysFrameEnd();   // PERF-WIN: 이번 시뮬레이션이 본 '톡 친 키'를 뗀다
   simMs = Math.max(simMs, performance.now() - t0);

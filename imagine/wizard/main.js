@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createTouch } from '../../v2/js/touch.js?v=7';
+import { createNet } from '../../v2/js/net.js?v=1';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('scene');
@@ -366,7 +367,7 @@ const locked = () => document.pointerLockElement === canvas;
 const look = (dx, dy, k) => { CAM.yaw -= dx * k; CAM.pitch = clamp(CAM.pitch + dy * k * 0.85, -0.15, 1.15); };
 const TOUCH = createTouch({ canvas, look: (dx, dy) => { if (!busyUI) look(dx, dy, 0.0058); }, act: () => act(), view: () => {} });
 addEventListener('keydown', (e) => {
-  if (!started) { if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); start(); } return; }
+  if (!started) { if (e.code === 'Enter') { e.preventDefault(); start(); } return; }
   if (busyUI) { if (busyUI === 'dlg' && ['KeyE', 'Enter', 'Space'].includes(e.code)) { e.preventDefault(); dlgNext(); } else if (e.code === 'Escape') closeUI(); return; }
   keys.add(e.code);
   if (e.code === 'Space') { e.preventDefault(); jumpT = 0.12; }
@@ -518,6 +519,7 @@ function cast(at) {
   const to = hit ? hit.point.clone() : ray.ray.at(40, new THREE.Vector3());
   const s = SPELLS[spell], b = glow(s.c, 0.9); b.position.copy(tip); scene.add(b);
   BOLTS.push({ b, from: tip, to, t: 0, dur: Math.max(0.15, tip.distanceTo(to) / 34), sp: spell, obj: hit && hit.object.userData && hit.object.userData.on ? hit.object : null });
+  if (NET) NET.fx({ s: spell, a: [tip.x, tip.y, tip.z].map((v) => +v.toFixed(2)), b: [to.x, to.y, to.z].map((v) => +v.toFixed(2)) });
   P.yaw = Math.atan2(-Math.sin(CAM.yaw), -Math.cos(CAM.yaw));
 }
 function boltTick(dt) {
@@ -527,8 +529,8 @@ function boltTick(dt) {
     if (Math.random() < 0.7) emit(B.b.position.x, B.b.position.y, B.b.position.z, 0, 0.3, 0, SPELLS[B.sp].c, 0.35, 0);
     if (k < 1) continue;
     scene.remove(B.b); B.b.material.dispose(); BOLTS.splice(i, 1);
-    const msg = B.obj ? B.obj.userData.on(B.sp) : null;
-    if (msg) toast(msg, 3.2); else burst(B.to.x, B.to.y + 0.1, B.to.z, SPELLS[B.sp].c, 12, 1.6);
+    const msg = B.remote ? null : B.obj ? B.obj.userData.on(B.sp) : null;
+    if (msg) toast(msg, 3.2); else if (B.remote) burst(B.to.x, B.to.y + 0.1, B.to.z, SPELLS[B.sp].c, 18, 2); else burst(B.to.x, B.to.y + 0.1, B.to.z, SPELLS[B.sp].c, 12, 1.6);
   }
 }
 
@@ -546,8 +548,22 @@ $('endFree').onclick = () => { $('end').classList.add('hide'); busyUI = null; };
 $('endAgain').onclick = () => location.reload();
 
 // ───────── 시작 ─────────
+const Qp = new URLSearchParams(location.search);
+let NET = null;
+const nmIn = $('nmIn');
+try { nmIn.value = localStorage.getItem('mp.name') || ''; } catch (e) { /* */ }
+nmIn.addEventListener('keydown', (e) => e.stopPropagation());
+function drawWho() { if (!NET) return; const n = NET.count; $('who').textContent = '👥 마법사 ' + n + '명 · 나: ' + NET.name; }
+function netStart() {
+  if (Qp.get('mp') === '0' || NET) return;
+  NET = createNet({ THREE, scene, room: (Qp.get('room') || 'wizard').replace(/[^a-z0-9_-]/gi, '').slice(0, 24) || 'wizard', kind: 'wizard', onChange: drawWho,
+    onFx: (O, f) => { if (!f || !Array.isArray(f.a) || !Array.isArray(f.b) || !SPELLS[f.s]) return; const from = new THREE.Vector3(...f.a), to = new THREE.Vector3(...f.b);
+      if (from.distanceTo(camera.position) > 90) return; const b = glow(SPELLS[f.s].c, 0.9); b.position.copy(from); scene.add(b); BOLTS.push({ b, from, to, t: 0, dur: Math.max(0.15, from.distanceTo(to) / 34), sp: f.s, obj: null, remote: true }); } });
+  if (nmIn.value.trim()) NET.setName(nmIn.value);
+  $('who').classList.remove('hide'); drawWho();
+}
 function start() {
-  if (started) return; started = true; QS.t0 = performance.now();
+  if (started) return; started = true; QS.t0 = performance.now(); netStart();
   $('title').classList.add('hide');
   for (const id of ['quest', 'obj', 'cross', 'spells', 'help']) $(id).classList.remove('hide');
   drawSpells(); drawQuest();
@@ -640,6 +656,7 @@ function update(dt) {
   wandTip.material.color.setHex(SPELLS[spell].c);
 
   if ((nearT -= dt) <= 0) { nearT = 0.15; nearTick(); }
+  if (NET && started) { NET.tick(dt, { x: P.x, y: P.y, z: P.z, h: P.yaw }); if ((whoT -= dt) <= 0) { whoT = 2; drawWho(); } }
   boltTick(dt); partTick(dt); twTick(dt);
 
   // 효과 칩
@@ -657,7 +674,7 @@ function update(dt) {
   lookAt.set(hx, hy, hz); camera.lookAt(lookAt);
   if (started && !QS.done) { const [tx, tz] = STEPS[QS.step].at, a = Math.atan2(tx - P.x, tz - P.z), ca = Math.atan2(-Math.sin(CAM.yaw), -Math.cos(CAM.yaw)); $('arrow').style.transform = 'rotate(' + (-(a - ca) * 180 / Math.PI) + 'deg)'; }
 }
-let chipsHTML = '';
+let chipsHTML = '', whoT = 0;
 function blockedCam(x, y, z) {
   for (const b of SOL) if (b.y1 > b.y0 && x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1 && y > b.y0 && y < b.y1) return true;
   for (const c of CIR) if (y > c.y0 && y < c.y1 && (x - c.x) ** 2 + (z - c.z) ** 2 < c.r * c.r) return true;
