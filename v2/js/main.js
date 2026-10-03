@@ -1332,10 +1332,11 @@ let acc = 0, n = 0, simMs = 0;
 let NET = null;
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=3'), import('./lobby.js?v=1')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=4'), import('./lobby.js?v=1')]).then(([N, L]) => {
     const LOBBY = L.createLobby({ chip, net: () => NET, toast: (m, t) => toast(m, t),
       join: (room) => { NET = N.createNet({ THREE, scene, room, kind: 'kid', onChange: () => LOBBY.draw(), onDenied: () => LOBBY.recheck() }); },
       leave: () => { if (NET) NET.leave(); NET = null; } });
+    window.SM_MP = { room: () => LOBBY.room ? 'c' + LOBBY.room.c : null, net: () => NET };   // 게임(물총 친구 대결)이 같은 방·이름을 쓴다
     setInterval(() => LOBBY.draw(), 2000);
     addEventListener('sm-name', (e) => { if (NET && e.detail) { NET.setName(e.detail); LOBBY.draw(); } });   // 게임(메모장 등)에서 적은 이름을 이름표에도
   }).catch((e) => console.warn('[동시 접속] 못 켰어요', e));

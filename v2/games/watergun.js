@@ -10,6 +10,9 @@
 //   ⑤ 그리기 = 전부 InstancedMesh 풀, 매 프레임 새 객체 없음 · 놀이마다 안 쓰는 풀은 visible=false(드로우콜 0)
 // 조작: 마우스 왼쪽 누르고 있기(시점 잠금 뒤) 또는 F = 물 쏘기 · 터치 = 💧 버튼 · 다른 입력 = SD2.map.press('fire', true/false) · Tab/📋 칩 = 점수판(팀 대결)
 // G3-WG '갑자기 위로 쏘는 현상'(09-27) — 원인과 고침은 computeAim 위 주석
+// WG-NET(10-03 교사 '물총 친구끼리 대결 실시간'): 👥 친구와 팀 대결 = 함께하기 방(lobby.js) 친구들 + 빈자리 봇 · Firebase match/c<번호> — 대기실(팀·경기장·시간) → 방장 ▶ 시작 → 모두 같은 서버 시각에 3·2·1
+//   판정: 사람은 맞은 사람 화면이(내 화면에서 닿으면 맞음) · 봇은 방장 화면이(방장 아닌 사람이 쏜 물은 쏜 사람이 'hit'으로 알림) · 점수 = 모두가 받은 soak 사건으로 같이 셈
+//   보내기: 내 상태 초당 10번(이전 것이 도착한 뒤에만 — 순서 뒤집힘 없음) · 방장은 봇 상태 초당 10번 · 받기: match 한 갈래 스트림 · 친구 몸은 부드럽게 따라감(12/초)
 export const meta = { id: 'watergun', title: '물총 놀이', api: 1 };
 
 const ROUND = 180, SHOULDER = 0.55, TANK = 100, USE = 12, REFILL = 60, RATE = 50, SPEED = 15, G = 9.8, BOT_SPEED = 10;
@@ -24,6 +27,7 @@ const WATER_C = 0x8fd8ff, BOT_WATER_C = 0x9ff0dc, STEAM_C = 0xeef2f5, WET_C = 0x
 const BAL_C = [0xff7aa8, 0xffd23c, 0x6ec8ff, 0x8de08a, 0xffa04a, 0xc79bff], FLOW_C = [0xff6f91, 0xffc93c, 0xb57bff, 0xff8a5c], BOT_C = [0xbff5d8, 0xffd9bd, 0xdcd3ff];
 // ---------- 팀 대결 ----------
 const T_GOAL = 15, T_TIME = 300, T_RESPAWN = 3, T_INV = 1.5, T_HIT = 6, T_RATE = 24, T_RANGE = 15, T_SIGHT = 22, T_WALK = 3.2;
+const MDB = 'https://class-rpg-6f409-default-rtdb.asia-southeast1.firebasedatabase.app/metaverse/match/';
 const TEAM_C = [0x3b82f6, 0xf3f5f8], TEAM_W = [WATER_C, BOT_WATER_C], TEAM_N = ['청팀', '백팀'], TEAM_I = ['🔵', '⚪'], TEAM_CSS = ['#7fb2ff', '#ffffff'];
 // 진지 = 골대 앞 7m(서 골대 가운데 z 17.55 · 동 골대 z 14.55 — 운동장 골대가 실제로 z가 어긋나 있다 · 골대에 붙이면 카메라가 그물 뒤에 선다) · 경기장은 두 진지 가운데 C를 중심으로 점 대칭
 const BASES = [{ x: -28.3, z: 17.55 }, { x: 19.6, z: 14.55 }], TC = { x: (BASES[0].x + BASES[1].x) / 2, z: (BASES[0].z + BASES[1].z) / 2 };
@@ -52,6 +56,7 @@ export default async function start(map, params = {}) {
   const rng = map.rng(seed);
   const inp = { key: false, mouse: false, pad: false, test: false, tap: false };
   let aimOverride = null;
+  let ME = 0;   // 내 배우 번호(혼자 팀 대결 = 0 · 친구 대결 = 청 0~3 / 백 4~7 중 내 자리)
 
   map.player.freeze(true);
   const prepBan = map.hud.banner('물총 준비 중…', 30);
@@ -479,13 +484,14 @@ export default async function start(map, params = {}) {
       x: 0, y: 0, z: 0, yaw: 0, px: 0, pz: 0, vx: 0, vz: 0, tank: TANK, wet: 0, wetT: 9, alive: true, reT: 0, inv: 0, fall: 0, soaks: 0, soaked: 0,
       // 두뇌 상태(봇만) — 명령 cmd = { mx, mz(가고 싶은 곳), fire, ax, ay, az(겨눌 곳) }
       cmd: { go: false, mx: 0, mz: 0, fire: false, ax: 0, ay: 0, az: 0, run: 1 }, st: 'go', tgt: -1, seeT: 0, see: false, thinkT: rng() * 0.3, pts: null, pi: 0, stuckT: 0,
-      burst: 0, pause: 0.5, ex: 0, ey: 0, ez: 0, coverT: 0, cover: null, refill: false, strafe: 1, strafeT: 0, walk: 0, emit: 0, lastX: 0, lastZ: 0, dest: null, hitT: 0 });
+      burst: 0, pause: 0.5, ex: 0, ey: 0, ez: 0, coverT: 0, cover: null, refill: false, strafe: 1, strafeT: 0, walk: 0, emit: 0, lastX: 0, lastZ: 0, dest: null, hitT: 0,
+      remote: false, pid: null, net: null });   // remote = 친구(네트워크) · net = 받은 상태 [x,y,z,yaw,쏨,a,b,c,젖음,살아있음]
   }
   let teamScore = [0, 0], tGoal = T_GOAL, tTime = T_TIME, feedN = 0;
   const basePos = [null, null], teamRes = [], props = [], COVERS = [], memo = [{ x: 0, z: 0, t: -99 }, { x: 0, z: 0, t: -99 }];   // memo[팀] = 우리 팀이 마지막으로 본 상대 자리
   let clock = 0, boardOnNow = false, mmT = 0, hudScore = '';
   // 사건(네트워크 층이 같은 사건을 주고받을 자리) — 지금은 이 판 안에서만
-  function emit(ev) { if (ev.type === 'soak') onSoak(ev.by, ev.who); }
+  function emit(ev) { if (ev.type === 'soak') { onSoak(ev.by, ev.who); if (NM.on) netEmit({ k: 'soak', by: ev.by, who: ev.who }); } }
   const snapNav = (x, z, r = 3) => { const i = nav.snap(x, Q.floorY(x, z), z, r); return i < 0 ? null : nav.pos(i); };
   function teamSetup(key) {
     arenaKey = key;
@@ -504,8 +510,7 @@ export default async function start(map, params = {}) {
     }
     map.arena.set({ rect: T_RECT, msg: '경기장 밖으로는 나갈 수 없어요' });
     showSet(TEAM_M, true);
-    for (let i = 1; i < 8; i++) { M.tbib.setColorAt(i - 1, _c.set(TEAM_C[ACT[i].team])); } M.tbib.instanceColor.needsUpdate = true;
-    vestMat.color.set(TEAM_C[0]);
+    recolor();
   }
   // 엄폐 자리: 소품 네 옆 1.1m 밖(길격자 칸으로 다듬음) — 봇이 젖었을 때 상대와 사이에 소품을 두는 곳
   function coverAround(x, z, kind, h, o) {
@@ -515,12 +520,14 @@ export default async function start(map, params = {}) {
     if (d > 4) pts.push([x - w / 2 - 1.1, z - d / 4], [x + w / 2 + 1.1, z + d / 4], [x + w / 2 + 1.1, z - d / 4], [x - w / 2 - 1.1, z + d / 4]);
     for (const [cx, cz] of pts) { const i = nav.snap(cx, Q.floorY(cx, cz), cz, 0.6); if (i >= 0) { const p = nav.pos(i); COVERS.push({ x: p[0], y: p[1], z: p[2], by: -1 }); } }
   }
+  const jOf = a => a.i < ME ? a.i : a.i - 1;   // 인스턴스 칸(나를 뺀 7)
+  function recolor() { for (const a of ACT) if (a.i !== ME) M.tbib.setColorAt(jOf(a), _c.set(TEAM_C[a.team])); M.tbib.instanceColor.needsUpdate = true; vestMat.color.set(TEAM_C[ACT[ME].team]); }
   function teamTeardown() {
     for (const r of teamRes) r.remove(); teamRes.length = 0; for (const p of props) p.remove(); props.length = 0; COVERS.length = 0; inWater = 0;
     showSet(TEAM_M, false); vest.visible = false; elFeed.textContent = ''; feedN = 0; boardOn(false);
   }
   function spawnAt(a, first) {
-    const b = basePos[a.team], k = a.human ? 0 : (a.slot % 4) + 1, ang = (k / 5) * Math.PI * 2 + (first ? 0 : rng() * 0.8), r = a.human ? 0 : 1.6 + rng() * 0.8;
+    const solo = a.human && !NM.on, b = basePos[a.team], k = solo ? 0 : (a.i % 4) + 1, ang = (k / 5) * Math.PI * 2 + (first ? 0 : rng() * 0.8), r = solo ? 0 : 1.6 + rng() * 0.8;
     let x = b.x + Math.cos(ang) * r * (a.team ? -1 : 1), z = b.z + Math.sin(ang) * r; const p = snapNav(x, z, 2) || [b.x, b.y, b.z];
     a.x = a.px = a.lastX = p[0]; a.y = p[1]; a.z = a.pz = a.lastZ = p[2]; a.yaw = a.team ? -Math.PI / 2 : Math.PI / 2;
     a.tank = TANK; a.wet = 0; a.alive = true; a.reT = 0; a.fall = 0; a.inv = first ? 0 : T_INV; a.pts = null; a.tgt = -1; a.see = false; a.seeT = 0; a.refill = false; a.cover = null; a.coverT = 0; a.burst = 0; a.pause = 0.4 + rng() * 0.6; a.st = 'go'; a.dest = null; a.thinkT = rng() * 0.3;
@@ -530,12 +537,15 @@ export default async function start(map, params = {}) {
   // 흠뻑 → 3초 뒤 우리 진지에서(나는 그동안 멈춤 · 봇은 빙글 돌며 주저앉았다가 사라짐)
   function onSoak(by, who) {
     const a = ACT[who], s = by >= 0 ? ACT[by] : null;
+    if (!a) return;
+    if (!a.alive) { if (s) { s.soaks++; teamScore[s.team]++; } a.soaked++; teamChip(); if (s && teamScore[s.team] >= tGoal && st === 'play') finishTeam(); return; }   // 이미 젖은 배우(늦게 온 사건) — 점수만
     a.alive = false; a.reT = T_RESPAWN; a.fall = 0; a.soaked++; a.cmd.fire = false;
     if (s) { s.soaks++; teamScore[s.team]++; }
     burst(a.x, a.y + 0.8, a.z, 16, TEAM_W[s ? s.team : 0], 2.2, 2.6, 0.07); addMark(a.x, a.y + 0.01, a.z, 0, 1, 0, 0.75);
     feed(s, a);
     if (a.human) { SND.soakMe(); map.player.freeze(true); map.player.speed(1); inp.key = inp.mouse = inp.pad = false; map.hud.banner('💦 흠뻑! 3초 뒤 우리 진지에서', 2.6); }
     else if (s && s.human) { SND.soakThem(); pop(a.x, a.y + 1.6, a.z, '💦'); }
+    if (a.remote) a.emit = 0;
     teamChip();
     if (s && teamScore[s.team] >= tGoal && st === 'play') finishTeam();
   }
@@ -627,7 +637,7 @@ export default async function start(map, params = {}) {
       }
       // 쏘기: 반응 0.35~0.7초 뒤 · 1~1.8초 쏘고 0.4~0.9초 쉼 · 오차(거리 비례 — 한 번 쏠 때마다 새로) · 상대가 움직이면 반쯤 앞질러
       if (b.seeT > b.pause && b.tank > 0) {
-        if (b.burst <= 0) { b.burst = 1 + rng() * 0.8; const dd = Math.sqrt(dist2(b, e)), er = 0.1 * dd * (e.human ? 1 : 0.8); b.ex = (rng() - 0.5) * er; b.ey = (rng() - 0.3) * er * 0.5; b.ez = (rng() - 0.5) * er; }
+        if (b.burst <= 0) { b.burst = 1 + rng() * 0.8; const dd = Math.sqrt(dist2(b, e)), er = 0.1 * dd * (e.human || e.remote ? 1 : 0.8); b.ex = (rng() - 0.5) * er; b.ey = (rng() - 0.3) * er * 0.5; b.ez = (rng() - 0.5) * er; }
         b.burst -= dt; if (b.burst <= 0) { b.seeT = 0; b.pause = 0.4 + rng() * 0.5; }
         const fly = Math.sqrt(dist2(b, e)) / 12;
         c.fire = true; c.ax = e.x + e.vx * fly * 0.5 + b.ex; c.ay = e.y + 0.75 + b.ey; c.az = e.z + e.vz * fly * 0.5 + b.ez;
@@ -646,14 +656,16 @@ export default async function start(map, params = {}) {
     // 몸 방향: 쏘면 겨눈 쪽 · 아니면 걷는 쪽
     let want = null; if (c.fire || (b.see && b.tgt >= 0)) { const e = c.fire ? null : ACT[b.tgt]; want = Math.atan2((c.fire ? c.ax : e.x) - b.x, (c.fire ? c.az : e.z) - b.z); } else if (mvx * mvx + mvz * mvz > 1e-6) want = Math.atan2(mvx, mvz);
     if (want != null) b.yaw += wrapA(want - b.yaw) * Math.min(1, dt * 9);
-    if (c.fire && b.tank > 0) {
-      b.tank = Math.max(0, b.tank - USE * dt); b.emit += T_RATE * dt;
-      const sy = Math.sin(b.yaw), cy = Math.cos(b.yaw), nx = b.x + sy * 0.48, ny = b.y + 0.6, nz = b.z + cy * 0.48;
+    if (c.fire && b.tank > 0) { b.tank = Math.max(0, b.tank - USE * dt); fireCmd(b, dt); } else b.emit = 0;
+  }
+  function fireCmd(b, dt) {   // 봇 물(겨눈 곳까지 포물선) — 방장 아닌 화면은 받은 겨눔으로 같은 물을 그린다
+    const c = b.cmd; b.emit += T_RATE * dt;
+    { const sy = Math.sin(b.yaw), cy = Math.cos(b.yaw), nx = b.x + sy * 0.48, ny = b.y + 0.6, nz = b.z + cy * 0.48;
       while (b.emit >= 1) { b.emit -= 1;
         const ex = c.ax - nx, ez = c.az - nz, dh = Math.hypot(ex, ez) || 1, hh = c.ay - ny, S2 = SPEED * SPEED, disc = S2 * S2 - G * (G * dh * dh + 2 * hh * S2);
         const a = disc >= 0 ? Math.atan((S2 - Math.sqrt(disc)) / (G * dh)) : Math.PI / 4 + Math.atan2(hh, dh) / 2, cc = Math.cos(a) * SPEED, j = 0.4;
         spawn(1, nx, ny, nz, ex / dh * cc + (rng() - 0.5) * j, Math.sin(a) * SPEED + (rng() - 0.5) * j, ez / dh * cc + (rng() - 0.5) * j, 2.0, 0.075, TEAM_W[b.team], b.i); }
-    } else b.emit = 0;
+    }
   }
   // 물방울이 배우에게(쏜 팀과 다른 팀만 · 다시 나온 뒤 1.5초는 안 젖음)
   function teamHit(i, ax, ay, az) {
@@ -662,18 +674,24 @@ export default async function start(map, params = {}) {
       if (!segHit(ax, ay, az, bx, by, bz, a.x, a.y + 0.72, a.z, a.human ? 0.45 : 0.48)) continue;
       burst(bx, by, bz, 3, TEAM_W[ot < 0 ? 0 : ot], 1.4, 1.2, 0.045);
       if (a.inv > 0 || st !== 'play') return true;
+      if (NM.on && !a.human) {   // 친구 대결 판정: 친구 몸 = 그 친구 화면이 · 봇 = 방장 화면이(내가 쏜 물은 내가 알려 줌)
+        a.hitT = 0.15;
+        if (a.remote) { if (o === ME && splashT <= 0) { SND.splash(); splashT = 0.12; } return true; }
+        if (!NM.host) { if (o === ME) { NM.hit[k] += T_HIT; if (splashT <= 0) { SND.splash(); splashT = 0.12; } } return true; }
+        if (o >= 0 && ACT[o].remote) return true;
+      }
       a.wet = Math.min(100, a.wet + T_HIT); a.wetT = 0; a.hitT = 0.15;
       if (a.human) { wet = a.wet; wetT = 0; cnt.wet++; SND.wet(); if (soakT <= 0) { slowT = 0.5; map.player.speed(0.85); } }
-      else if (o === 0) { if (splashT <= 0) { SND.splash(); splashT = 0.12; } }
+      else if (o === ME) { if (splashT <= 0) { SND.splash(); splashT = 0.12; } }
       if (a.wet >= 100) emit({ type: 'soak', by: o, who: k });
       return true; }
     return false;
   }
-  const teamTargets = tgt => { for (let k = 4; k < 8; k++) { const a = ACT[k]; if (a.alive) tgt(a.x, a.y + 0.72, a.z, 0.55); } };
+  const teamTargets = tgt => { const t = ACT[ME].team; for (const a of ACT) if (a.team !== t && a.alive) tgt(a.x, a.y + 0.72, a.z, 0.55); };
 
   // 팀 그리기(몸·조끼·다리 둘·팔 둘 — 행렬만)
   function drawBot(a) {
-    const j = a.i - 1;
+    const j = jOf(a);
     if (!a.alive && a.fall >= 1) { M.tbody.setMatrixAt(j, ZERO); M.tbib.setMatrixAt(j, ZERO); M.tleg.setMatrixAt(j * 2, ZERO); M.tleg.setMatrixAt(j * 2 + 1, ZERO); M.tarm.setMatrixAt(j * 2, ZERO); M.tarm.setMatrixAt(j * 2 + 1, ZERO); return; }
     const f = a.alive ? 0 : a.fall, sink = f * f * 0.9, sc = 1 - f * 0.55, yaw = a.yaw + (a.alive ? 0 : f * 9), tilt = a.alive ? 0 : f * 0.5, sq = a.hitT > 0 ? 0.06 : 0;
     const blink = a.inv > 0 && Math.floor(a.inv * 8) % 2 === 0;
@@ -702,14 +720,15 @@ export default async function start(map, params = {}) {
   function teamMarks() {
     const mk = [];
     for (let t = 0; t < 2; t++) mk.push({ x: basePos[t].x, z: basePos[t].z, color: t ? '#e8eef5' : '#2b6fe0', shape: 'ring', label: t ? '백' : '청' });
-    for (let k = 1; k < 4; k++) { const a = ACT[k]; if (a.alive) mk.push({ x: a.x, z: a.z, color: '#3b82f6', shape: 'dot', r: 3 }); }
+    for (const a of ACT) if (a.i !== ME && a.team === ACT[ME].team && a.alive) mk.push({ x: a.x, z: a.z, color: TEAM_CSS[a.team] === '#ffffff' ? '#e8eef5' : '#3b82f6', shape: 'dot', r: 3 });
     map.minimap.setMarks(mk);
   }
   async function finishTeam() {
     st = 'end'; inp.key = inp.mouse = inp.pad = inp.test = false; map.player.aim(null); map.player.speed(1); map.player.freeze(true); goal(null); boardOn(false);
     for (const a of ACT) a.cmd.fire = false;
-    const w = teamScore[0] > teamScore[1] ? 0 : teamScore[1] > teamScore[0] ? 1 : -1, me = ACT[0];
-    const rec = map.store.get('team', { games: 0, wins: 0 }) || { games: 0, wins: 0 }; rec.games++; if (w === 0) rec.wins++; map.store.set('team', rec);   // 판이 끝날 때만 씀
+    const w = teamScore[0] > teamScore[1] ? 0 : teamScore[1] > teamScore[0] ? 1 : -1, me = ACT[ME], myT = me.team;
+    if (NM.on) { netFinish(w); return; }
+    const rec = map.store.get('team', { games: 0, wins: 0 }) || { games: 0, wins: 0 }; rec.games++; if (w === myT) rec.wins++; map.store.set('team', rec);   // 판이 끝날 때만 씀
     last = { mode: 'team', arena: arenaKey, score: teamScore.slice(), win: w, me: { soaks: me.soaks, soaked: me.soaked }, round };
     sfx('done'); if (w === 0) SND.bloom();
     let mvp = null; for (const a of ACT) if (!mvp || a.soaks > mvp.soaks) mvp = a;
@@ -719,6 +738,236 @@ export default async function start(map, params = {}) {
     if (dead || map.gone || i < 0) return;
     if (i === 0) teamBegin(); else if (i === 1) menu(false); else map.quit();
   }
+
+  // =====================================================================================
+  // 👥 친구와 팀 대결(WG-NET) — Firebase match/c<번호>: m(경기: st lobby|count|play|end · host · arena · time · goal · t0 서버 시각 · seq) · p/<pid>{n,tm,on} · s/<pid>[내 상태] · b{자리:[봇 상태]} · ev/<id>{k soak|hit,by,who,n,q,t}
+  // =====================================================================================
+  const NM = { on: false, room: null, pid: null, name: '', host: false, es: null, D: {}, seen: new Set(), off: 0, seq: -1, st: null, sendT: 0, bT: 0, busyS: false, busyB: false,
+    hit: new Float32Array(8), hitT: 0, ui: null, beat: 0, beatN: 0, lastSend: 0, claim: false, lastRes: null, assignKey: '', seenAt: {}, rtt: 0, lag: 0 };
+  const MPX = () => { const mp = window.SM_MP; return mp && mp.room() ? mp : null; };
+  const nreq = (path, method = 'GET', data) => fetch(MDB + NM.room + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data), keepalive: true }).then((r) => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)));
+  const sNow = () => Date.now() + NM.off;
+  const r2 = (v) => Math.round(v * 100) / 100;
+  function applyEvt(root, type, path, d) {
+    const set = (r, p, v) => {
+      if (!p.length) return v && typeof v === 'object' ? v : {};
+      let o = r; for (let i = 0; i < p.length - 1; i++) { if (!o[p[i]] || typeof o[p[i]] !== 'object') { if (v === null) return r; o[p[i]] = {}; } o = o[p[i]]; }
+      if (v === null) delete o[p[p.length - 1]]; else o[p[p.length - 1]] = v; return r;
+    };
+    if (type === 'put') return set(root, path, d);
+    if (d && typeof d === 'object') for (const k in d) root = set(root, [...path, ...k.split('/').filter(Boolean)], d[k]);
+    return root;
+  }
+  // 친구 이름표(사람만 · 8칸)
+  const TAGS = new Array(8).fill(null);
+  function tagFor(a) {
+    let t = TAGS[a.i]; const txt = a.name;
+    if (t && t.userData.txt === txt) return t;
+    if (!t) { t = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); t.scale.set(1.3, 0.33, 1); t.visible = false; map.add(t); TAGS[a.i] = t; }
+    const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d');
+    g.fillStyle = a.team ? 'rgba(245,247,250,.95)' : 'rgba(59,130,246,.92)'; g.beginPath(); g.roundRect(4, 6, 248, 52, 22); g.fill();
+    g.fillStyle = a.team ? '#1d3557' : '#fff'; g.font = '800 32px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt.slice(0, 8), 128, 34);
+    if (t.material.map) t.material.map.dispose(); t.material.map = new THREE.CanvasTexture(c); t.material.map.colorSpace = THREE.SRGBColorSpace; t.material.needsUpdate = true; t.userData.txt = txt; return t;
+  }
+  function tagTick() {
+    for (const a of ACT) { const t = TAGS[a.i]; const on = a.remote && a.i !== ME && (a.alive || a.fall < 1);
+      if (!on) { if (t) t.visible = false; continue; } const tt = tagFor(a); tt.visible = true; tt.position.set(a.x, a.y + 1.78, a.z); }
+  }
+  function resetActors() {
+    ME = 0; NM.assignKey = '';
+    for (const a of ACT) { a.human = a.i === 0; a.remote = false; a.pid = null; a.net = null; a.name = a.human ? '나' : TEAM_N[a.team] + ' 봇 ' + (a.team ? a.i - 3 : a.i); }
+    for (const t of TAGS) if (t) t.visible = false;
+  }
+  // 자리: 들어온 순서대로 팀마다 4자리(청 0~3 · 백 4~7) — 모두가 같은 목록으로 같은 자리를 계산한다
+  function assign() {
+    const P = NM.D.p || {}, ids = Object.keys(P).filter((id) => P[id] && typeof P[id].tm === 'number').sort((a, b) => (P[a].on || 0) - (P[b].on || 0) || (a < b ? -1 : 1));
+    const c = [0, 0], who = new Array(8).fill(null);
+    for (const id of ids) { let t = P[id].tm ? 1 : 0; if (c[t] >= 4) t = 1 - t; if (c[t] >= 4) continue; who[t * 4 + c[t]++] = id; }
+    const key = who.join(',') + '|' + ids.map((id) => P[id].n).join(','); if (key === NM.assignKey) return; NM.assignKey = key;
+    let me = -1;
+    for (const a of ACT) { const id = who[a.i], was = a.remote || a.human;
+      a.pid = id; a.human = id === NM.pid; a.remote = !!id && !a.human;
+      a.name = a.human ? '나' : a.remote ? String(P[id].n || '친구').slice(0, 8) : TEAM_N[a.team] + ' 봇 ' + (a.i % 4 + 1);
+      if (a.human) me = a.i;
+      if (!a.remote) a.net = null; else a.net = (NM.D.s || {})[id] || a.net;
+      if (was && !a.human && !a.remote && basePos[a.team] && (st === 'play' || st === 'count')) spawnAt(a, false);   // 친구가 나간 자리 = 봇이 진지에서
+    }
+    if (me < 0) { console.warn('[WG-NET] 자리 없음', NM.pid, JSON.stringify(P), JSON.stringify(who)); map.hud.toast('😥 두 팀 자리가 꽉 찼어요(4대4) — 다음 경기에 들어와요', 4); setTimeout(() => menu(false), 0); return; }
+    ME = me; recolor();
+  }
+  async function netEnter() {
+    const mp = MPX(); if (!mp) return menu(false);
+    const N = mp.net();
+    resetActors(); NM.on = true; NM.room = mp.room(); NM.pid = (N && N.id) || ('p' + Math.random().toString(36).slice(2, 10)); NM.name = (N && N.name) || '친구';
+    NM.D = {}; NM.seen.clear(); NM.seq = -1; NM.st = null; NM.lastRes = null; NM.seenAt = {}; NM.hit.fill(0);
+    if (N && N.hide) N.hide(true);   // 걷기 이름표 대신 경기 몸(팀 조끼 로봇 + 이름표)
+    st = 'lobby'; lobbyDraw('불러오는 중…');
+    let D0 = null;
+    try {
+      D0 = (await nreq('')) || {};
+      const P = D0.p || {}, n = [0, 0]; for (const id in P) if (P[id] && id !== NM.pid) n[P[id].tm ? 1 : 0]++;
+      const t1 = Date.now(), r = await nreq('/p/' + NM.pid, 'PUT', { n: NM.name, tm: n[0] <= n[1] ? 0 : 1, on: { '.sv': 'timestamp' } }), t2 = Date.now();
+      NM.off = r.on - (t1 + t2) / 2; NM.rtt = t2 - t1;
+      const m = D0.m, live = m && P[m.host] && Object.keys(P).length;
+      if (!live) await nreq('/m', 'PUT', { st: 'lobby', host: NM.pid, arena: (m && m.arena) || 'field', time: (m && m.time) || 180, goal: (m && m.goal) || T_GOAL, seq: ((m && m.seq) || 0) + 1, t0: 0 });
+      else if (m.st === 'end' || (m.st !== 'lobby' && sNow() > m.t0 + m.time * 1000 + 15000)) { /* 끝난 경기 — 대기실로 보이게만 */ }
+    } catch (e) { map.hud.toast('😥 친구 대결에 들어가지 못했어요 — 인터넷·방을 확인해 주세요', 4); NM.on = false; if (N && N.hide) N.hide(false); return menu(false); }
+    if (dead || !NM.on) return;
+    if (D0 && D0.ev) for (const id in D0.ev) NM.seen.add(id);   // 들어오기 전 사건은 점수만(아래 stateChange가 다시 셈)
+    NM.es = new EventSource(MDB + NM.room + '.json');
+    const on = (type) => (e) => { let msg; try { msg = JSON.parse(e.data); } catch (er) { return; } if (!msg) return; NM.D = applyEvt(NM.D, type, (msg.path || '/').split('/').filter(Boolean), msg.data); netSync(); };
+    NM.es.addEventListener('put', on('put')); NM.es.addEventListener('patch', on('patch'));
+    addEventListener('pagehide', netBye);
+    clearInterval(NM.beat); NM.beat = setInterval(() => { if (NM.on && performance.now() - NM.lastSend > 2500) netSend(0, map.player.pos(), false, true); }, 1500);   // 탭이 뒤에 있어 화면이 멈춰도 '있어요' 신호
+  }
+  function netBye() { if (!NM.on) return; fetch(MDB + NM.room + '/p/' + NM.pid + '.json', { method: 'DELETE', keepalive: true }).catch(() => {}); fetch(MDB + NM.room + '/s/' + NM.pid + '.json', { method: 'DELETE', keepalive: true }).catch(() => {}); }
+  function netLeave() {
+    if (!NM.on) return;
+    const P = NM.D.p || {}, rest = Object.keys(P).filter((id) => id !== NM.pid).sort((a, b) => (P[a].on || 0) - (P[b].on || 0));
+    if (!rest.length) nreq('', 'DELETE').catch(() => {});   // 마지막 사람 = 경기 통째로 치움
+    else { netBye(); if (NM.host) nreq('/m/host', 'PUT', rest[0]).catch(() => {}); }
+    if (NM.es) NM.es.close(); NM.es = null; NM.on = false; clearInterval(NM.beat); removeEventListener('pagehide', netBye);
+    const mp = window.SM_MP, N = mp && mp.net(); if (N && N.hide) N.hide(false);
+    if (NM.ui) { NM.ui.remove(); NM.ui = null; }
+    resetActors();
+  }
+  function netSync() {
+    const D = NM.D, m = D.m; if (!m || !NM.on) return;
+    NM.host = m.host === NM.pid;
+    assign(); if (!NM.on) return;
+    const S = D.s || {}, now = performance.now();
+    for (const id in S) if (S[id] !== NM.seenAt[id + '#']) { NM.seenAt[id + '#'] = S[id]; NM.seenAt[id] = now; }
+    for (const a of ACT) if (a.remote) { const v = S[a.pid]; if (v) a.net = v; }
+    if (!NM.host && D.b) for (const a of ACT) if (!a.human && !a.remote) { const v = D.b[a.i]; if (v) a.net = v; }
+    if (m.seq !== NM.seq || m.st !== NM.st) stateChange(m);
+    const E = D.ev || {};
+    for (const id in E) { if (NM.seen.has(id)) continue; NM.seen.add(id); const e = E[id]; if (e && e.q === m.seq) onNetEv(e); }
+    hostCheck(m);
+    if (NM.ui) lobbyDraw();
+  }
+  function onNetEv(e) {
+    const a = ACT[e.who]; if (!a) return;
+    if (e.k === 'soak') onSoak(typeof e.by === 'number' ? e.by : -1, e.who);
+    else if (e.k === 'hit' && NM.host && !a.human && !a.remote && a.alive && a.inv <= 0 && st === 'play') {
+      a.wet = Math.min(100, a.wet + (e.n || 0)); a.wetT = 0; a.hitT = 0.15; if (a.wet >= 100) emit({ type: 'soak', by: e.by, who: e.who });
+    }
+  }
+  function netEmit(e) { const id = 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); NM.seen.add(id); e.q = NM.seq; e.t = { '.sv': 'timestamp' }; nreq('/ev/' + id, 'PUT', e).catch(() => {}); }
+  function stateChange(m) {
+    const newSeq = m.seq !== NM.seq; NM.seq = m.seq; NM.st = m.st;
+    if (m.st === 'count' || m.st === 'play') {
+      if (newSeq || (st !== 'count' && st !== 'play')) {
+        if (arenaKey !== m.arena) { if (arenaKey) teamTeardown(); teamSetup(m.arena); }
+        tTime = m.time; tGoal = m.goal || T_GOAL; lobbyHide(); teamBegin();
+        const E = NM.D.ev || {};   // 늦게 들어옴: 이미 난 사건 = 점수만
+        for (const id in E) { const e = E[id]; if (!e || e.q !== m.seq || e.k !== 'soak') continue; NM.seen.add(id); const s9 = ACT[e.by]; if (s9) { s9.soaks++; teamScore[s9.team]++; } if (ACT[e.who]) ACT[e.who].soaked++; }
+        teamChip();
+      }
+    } else if (m.st === 'end') { if (st === 'count' || st === 'play') finishTeam(); else lobbyDraw(); }
+    else { if (st === 'count' || st === 'play') { map.hud.banner('경기를 멈췄어요', 1.5); } lobbyShow(); }
+  }
+  // 방장이 나갔거나(p 없음) 30초 넘게 소식이 없으면 → 소식 있는 사람 중 가장 먼저 들어온 사람이 방장(지우지는 않음 — 잠깐 다른 탭을 본 친구가 튕기지 않게)
+  //   경기 중 90초 넘게 소식 없는 친구 자리만 방장이 비운다(그 자리는 봇이)
+  function hostCheck(m) {
+    const P = NM.D.p || {}, now = performance.now(); if (!P[NM.pid]) return;
+    const quiet = (id, ms) => NM.seenAt[id] && now - NM.seenAt[id] > ms;
+    if (m.host !== NM.pid && (!P[m.host] || quiet(m.host, 30000))) {
+      const first = Object.keys(P).filter((id) => id === NM.pid || !quiet(id, 30000)).sort((a, b) => (P[a].on || 0) - (P[b].on || 0))[0];
+      if (first === NM.pid && !NM.claim) { NM.claim = true; nreq('/m/host', 'PUT', NM.pid).catch(() => {}).finally(() => { NM.claim = false; }); }
+    }
+    if (NM.host && st === 'play') for (const id in P) if (id !== NM.pid && quiet(id, 90000)) { nreq('/p/' + id, 'DELETE').catch(() => {}); delete NM.seenAt[id]; }
+  }
+  // 친구·(방장 아닌 화면의) 봇: 받은 상태를 부드럽게 따라가고, 쏘고 있으면 같은 물을 그린다
+  function netActor(a, dt, human) {
+    const v = a.net; a.cmd.go = false; a.cmd.fire = false; if (!v) return;
+    const ox = a.x, oz = a.z, k = Math.min(1, dt * 12);
+    if ((v[0] - a.x) ** 2 + (v[2] - a.z) ** 2 > 25) { a.x = v[0]; a.y = v[1]; a.z = v[2]; }   // 다시 출발 등 순간 이동
+    else { a.x += (v[0] - a.x) * k; a.y += (v[1] - a.y) * k; a.z += (v[2] - a.z) * k; }
+    a.yaw += wrapA(v[3] - a.yaw) * Math.min(1, dt * 14);
+    const mv = Math.hypot(a.x - ox, a.z - oz); a.walk += mv * 5.5; a.vx = (a.x - ox) / Math.max(dt, 1e-3); a.vz = (a.z - oz) / Math.max(dt, 1e-3);
+    if (!a.alive || st !== 'play' || !v[4]) { a.emit = 0; return; }
+    a.cmd.fire = true;
+    if (human) {
+      a.emit += T_RATE * 1.25 * dt; const sy = Math.sin(a.yaw), cy = Math.cos(a.yaw), nx = a.x + sy * 0.46 - cy * 0.1, ny = a.y + 0.62, nz = a.z + cy * 0.46 + sy * 0.1;
+      while (a.emit >= 1) { a.emit -= 1; spawn(1, nx, ny, nz, v[5] + (rng() - 0.5) * 0.35, v[6] + (rng() - 0.5) * 0.35, v[7] + (rng() - 0.5) * 0.35, 2.4, 0.075, TEAM_W[a.team], a.i); }
+    } else { a.cmd.ax = v[5]; a.cmd.ay = v[6]; a.cmd.az = v[7]; fireCmd(a, dt); }
+  }
+  // 보내기: 내 상태(경기 중 10번/초 · 대기실 2초마다) · 방장 = 봇 상태 · 내가 봇을 맞힌 양(0.2초마다 모아서)
+  function netSend(dt, me, firing, beat) {
+    NM.sendT -= dt; NM.bT -= dt; NM.hitT -= dt;
+    const busy = st === 'play' || st === 'count';
+    if ((NM.sendT <= 0 || beat) && !NM.busyS) {
+      NM.sendT = busy ? 0.1 : 2; NM.busyS = true; const a = ACT[ME], t1 = NM.lastSend = performance.now();
+      nreq('/s/' + NM.pid, 'PUT', [r2(me.x), r2(me.y), r2(me.z), r2(gunYaw), firing && tank > 0 ? 1 : 0, r2(aim.vx), r2(aim.vy), r2(aim.vz), Math.round(wet), a.alive ? 1 : 0, (NM.beatN = (NM.beatN + 1) % 100)])   // 마지막 = 신호 번호(가만히 있어도 바뀌어야 친구 화면이 '있음'을 안다)
+        .then(() => { NM.lag = Math.round(performance.now() - t1); }).catch(() => {}).finally(() => { NM.busyS = false; });
+    }
+    if (beat) return;
+    if (NM.host && busy && NM.bT <= 0 && !NM.busyB) {
+      NM.bT = 0.1; NM.busyB = true; const b = {};
+      for (const a of ACT) if (!a.human && !a.remote) b[a.i] = [r2(a.x), r2(a.y), r2(a.z), r2(a.yaw), a.cmd.fire && a.alive ? 1 : 0, r2(a.cmd.ax), r2(a.cmd.ay), r2(a.cmd.az), Math.round(a.wet), a.alive ? 1 : 0];
+      nreq('/b', 'PUT', b).catch(() => {}).finally(() => { NM.busyB = false; });
+    }
+    if (NM.hitT <= 0) { NM.hitT = 0.2; for (let k = 0; k < 8; k++) if (NM.hit[k] > 0) { netEmit({ k: 'hit', by: ME, who: k, n: Math.round(NM.hit[k]) }); NM.hit[k] = 0; } }
+  }
+  function netFinish(w) {
+    const myT = ACT[ME].team, me = ACT[ME];
+    let mvp = null; for (const a of ACT) if (!mvp || a.soaks > mvp.soaks) mvp = a;
+    NM.lastRes = { s: teamScore.slice(), w, myT, soaks: me.soaks, soaked: me.soaked, mvp: mvp && mvp.soaks ? (mvp.human ? '나' : mvp.name) + ' ' + mvp.soaks + '번' : '' };
+    const rec = map.store.get('net', { games: 0, wins: 0 }) || { games: 0, wins: 0 }; rec.games++; if (w === myT) rec.wins++; map.store.set('net', rec);
+    sfx('done'); if (w === myT) SND.bloom();
+    map.hud.banner(w < 0 ? '🤝 비겼어요!' : w === myT ? '🎉 우리 팀 승리!' : '다음엔 꼭!', 2.2);
+    if (NM.host && NM.D.m && NM.D.m.st !== 'end') nreq('/m/st', 'PUT', 'end').catch(() => {});
+    setTimeout(() => { if (NM.on && !dead) lobbyShow(); }, 2200);
+  }
+  // ---------- 대기실(팀 · 경기장 · 시간 · ▶ 시작) ----------
+  function lobbyShow() {
+    st = 'lobby'; map.player.freeze(true); map.player.aim(null); goal(null); inp.key = inp.mouse = inp.pad = inp.test = false; boardOn(false);
+    elG.style.display = 'none'; if (fireBtn) fireBtn.style.display = 'none'; land.visible = false; gun.visible = false; vest.visible = false;
+    showSet(TEAM_M, false); for (const t of TAGS) if (t) t.visible = false; for (let i = 0; i < PMAX; i++) kind[i] = 0; M.drop.visible = false;
+    clearChips(); elFeed.textContent = ''; feedN = 0; map.hud.goal(null);
+    document.exitPointerLock?.(); lobbyDraw();
+  }
+  function lobbyHide() { if (NM.ui) { NM.ui.remove(); NM.ui = null; } showSet(TEAM_M, true); }
+  function lobbyDraw(msg) {
+    if (!NM.ui) {
+      NM.ui = document.createElement('div'); NM.ui.className = 'wg-lobby';
+      NM.ui.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,94vw);max-height:90vh;overflow:auto;box-sizing:border-box;pointer-events:auto;background:#fffdf6;color:#1d3557;border:3px solid #1d3557;border-radius:16px;padding:14px 16px;box-shadow:0 8px 28px rgba(0,0,0,.3);font:15px/1.5 "Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+      for (const t of ['keydown', 'keyup']) NM.ui.addEventListener(t, (e) => e.stopPropagation());
+      NM.ui.addEventListener('click', lobbyClick); root.appendChild(NM.ui);
+    }
+    const D = NM.D, m = D.m, P = D.p || {};
+    if (!m) { NM.ui.innerHTML = '<b>👥 친구와 팀 대결</b><div style="margin-top:6px">' + (msg || '불러오는 중…') + '</div>'; return; }
+    const bt = (a, t, on, x = '') => '<button data-w="' + a + '" style="font:inherit;font-weight:800;border:0;border-radius:9px;padding:6px 11px;cursor:pointer;' + (on ? 'background:#1d3557;color:#fff' : 'background:#e8edf3;color:#1d3557') + x + '">' + t + '</button>';
+    const row = (t) => ACT.filter((a) => a.team === t).map((a) => a.human ? '<b>⭐ ' + esc(NM.name) + '(나)</b>' : a.remote ? esc(a.name) : '<span style="opacity:.55">🤖 봇</span>').join(' · ');
+    const hostN = NM.host ? '나' : P[m.host] ? esc(P[m.host].n) : '방장', AN = { field: '운동장', box: '컨테이너 경기장' }, playing = m.st === 'count' || m.st === 'play';
+    const R = NM.lastRes, rec = map.store.get('net', null);
+    let h = '<div style="font-weight:900;font-size:18px">👥 친구와 물총 팀 대결</div>'
+      + (R ? '<div style="margin:6px 0;padding:6px 9px;border-radius:9px;background:#fff3bf">🏁 지난 경기 ' + TEAM_I[0] + ' ' + R.s[0] + ' : ' + R.s[1] + ' ' + TEAM_I[1] + ' — ' + (R.w < 0 ? '비김' : R.w === R.myT ? '우리 팀 승리 🎉' : TEAM_N[R.w] + ' 승리') + '<br><span style="font-size:13px">나 💦 ' + R.soaks + '번 적심 · 😵 ' + R.soaked + '번 젖음' + (R.mvp ? ' · 가장 많이 적신 사람: ' + esc(R.mvp) : '') + '</span></div>' : '')
+      + '<div style="margin-top:6px;padding:7px 9px;border-radius:9px;background:#e7f0ff">🔵 <b>청팀</b> ' + row(0) + '</div>'
+      + '<div style="margin-top:5px;padding:7px 9px;border-radius:9px;background:#f1f3f5">⚪ <b>백팀</b> ' + row(1) + '</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' + bt('team', '🔄 팀 바꾸기') + '</div>';
+    if (playing) h += '<div style="margin-top:8px;font-weight:800">⏳ 경기 중이에요 — 곧 들어가요</div>';
+    else if (NM.host) h += '<div style="margin-top:10px;font-size:13px;color:#5a6b80">방장 = 나 · 정하고 ▶ 시작</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">' + bt('arena-field', '⚽ 운동장', m.arena === 'field') + bt('arena-box', '📦 컨테이너', m.arena === 'box') + '</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">' + bt('time-120', '2분', m.time === 120) + bt('time-180', '3분', m.time === 180) + bt('time-300', '5분', m.time === 300) + '</div>'
+      + '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px">' + bt('start', '▶ 시작!', true, ';font-size:17px;padding:8px 18px') + '</div>';
+    else h += '<div style="margin-top:10px">방장 ⭐' + hostN + '이(가) ▶ 시작을 누르면 모두 같이 시작해요<br><span style="font-size:13px;color:#5a6b80">경기장 ' + (AN[m.arena] || m.arena) + ' · ' + Math.round(m.time / 60) + '분 · 먼저 ' + (m.goal || T_GOAL) + '번 적시면 승리</span></div>';
+    h += '<div style="display:flex;gap:6px;justify-content:space-between;align-items:center;margin-top:10px"><span style="font-size:12px;color:#5a6b80">' + (rec && rec.games ? '친구 대결 ' + rec.wins + '승/' + rec.games + '판 · ' : '') + '방 ' + esc(NM.room.slice(1)) + '</span>' + bt('leave', '나가기') + '</div>';
+    if (NM.ui.dataset.h !== h) { NM.ui.dataset.h = h; NM.ui.innerHTML = h; }
+  }
+  async function lobbyClick(e) {
+    e.stopPropagation(); const b = e.target.closest('[data-w]'); if (!b || !NM.on) return; const w = b.dataset.w, m = NM.D.m || {};
+    try {
+      if (w === 'team') { const t = 1 - ACT[ME].team; if (ACT.filter((a) => a.team === t && (a.remote || a.human)).length >= 4) return map.hud.toast('그 팀은 꽉 찼어요(4명)', 2); await nreq('/p/' + NM.pid + '/tm', 'PUT', t); }
+      else if (w.startsWith('arena-') && NM.host) await nreq('/m/arena', 'PUT', w.slice(6));
+      else if (w.startsWith('time-') && NM.host) await nreq('/m/time', 'PUT', +w.slice(5));
+      else if (w === 'start' && NM.host) { await nreq('/ev', 'DELETE'); await nreq('/b', 'DELETE'); await nreq('/m', 'PATCH', { st: 'count', t0: Math.round(sNow() + 4000), seq: (m.seq || 0) + 1 }); }
+      else if (w === 'leave') { menu(false); }
+    } catch (er) { map.hud.toast('저장하지 못했어요 — 인터넷을 확인해 주세요', 2.5); }
+  }
+  // 시험용
+  function netStart() { const b = NM.ui && NM.ui.querySelector('[data-w="start"]'); if (b) b.click(); return !!b; }
+  function netTeam() { const b = NM.ui && NM.ui.querySelector('[data-w="team"]'); if (b) b.click(); }
 
   // ---------- 한 판(혼자 연습) ----------
   function goal(text, sec) { map.hud.goal(text); goalT = sec || 0; }
@@ -748,17 +997,21 @@ export default async function start(map, params = {}) {
   async function menu(first) {
     st = 'menu'; map.player.freeze(true); map.player.aim(null); goal(null); inp.key = inp.mouse = inp.pad = inp.test = false;
     elG.style.display = 'none'; if (fireBtn) fireBtn.style.display = 'none'; clearChips(); boardOn(false);
-    if (mode === 'solo') soloTeardown(); if (mode === 'team') teamTeardown(); mode = null;
+    if (NM.on) netLeave(); if (mode === 'solo') soloTeardown(); if (mode === 'team' && arenaKey) teamTeardown(); mode = null; arenaKey = null;
     for (let i = 0; i < PMAX; i++) kind[i] = 0;
-    let m = first && /^(solo|team)$/.test(params.mode || '') ? params.mode : null, ak = first && /^(field|box)$/.test(params.arena || '') ? params.arena : null;
+    let m = first && /^(solo|team|net)$/.test(params.mode || '') ? params.mode : null, ak = first && /^(field|box)$/.test(params.arena || '') ? params.arena : null;
     if (m === 'team' && !ak) ak = 'field';
     if (!m) {
-      const rec = map.store.get('team', null);
+      const rec = map.store.get('team', null), inRoom = !!MPX();
       const i = await map.hud.ask('💦 물총 놀이\n무엇을 할까요?', ['🎯 혼자 연습 — 과녁 맞히기(3분)' + (best != null ? '  (최고 ' + best + '점)' : ''),
-        '🔵⚪ 팀 대결 — 운동장(골대 앞 진지)', '🔵⚪ 팀 대결 — 컨테이너 경기장' + (rec && rec.games ? '  (' + rec.wins + '승/' + rec.games + '판)' : ''), '그만하기']);
-      if (dead || map.gone || i < 0) return; if (i === 3) { map.quit(); return; }
-      m = i === 0 ? 'solo' : 'team'; ak = i === 2 ? 'box' : 'field';
+        '🔵⚪ 봇과 팀 대결 — 운동장(골대 앞 진지)', '🔵⚪ 봇과 팀 대결 — 컨테이너 경기장' + (rec && rec.games ? '  (' + rec.wins + '승/' + rec.games + '판)' : ''),
+        inRoom ? '👥 친구와 팀 대결 — 같은 방 친구들과(빈자리는 봇)' : '👥 친구와 팀 대결 — 먼저 왼쪽 위 👥 함께하기로 방에 들어가요', '그만하기']);
+      if (dead || map.gone || i < 0) return; if (i === 4) { map.quit(); return; }
+      if (i === 3) { if (!inRoom) { map.hud.toast('👥 왼쪽 위 「함께하기」를 눌러 선생님이 연 방에 먼저 들어가요', 4); return menu(false); } m = 'net'; }
+      else { m = i === 0 ? 'solo' : 'team'; ak = i === 2 ? 'box' : 'field'; }
     }
+    if (m === 'net') { for (let k = 0; k < 30 && !MPX() && !dead; k++) await new Promise((r) => setTimeout(r, 200));   // ?mode=net — 방(lobby.js)이 다시 들어가는 동안 잠깐 기다림
+      if (!MPX()) { map.hud.toast('👥 왼쪽 위 「함께하기」를 눌러 선생님이 연 방에 먼저 들어가요', 4); return menu(false); } mode = 'team'; return netEnter(); }
     mode = m;
     if (m === 'solo') { soloSetup(); begin(round + 1); }
     else { tGoal = Math.max(1, Math.min(99, +params.goal || T_GOAL)); tTime = Math.max(20, Math.min(900, +params.time || T_TIME)); teamSetup(ak); teamBegin(); }
@@ -771,23 +1024,26 @@ export default async function start(map, params = {}) {
   // ---------- 매 프레임: 팀 ----------
   function teamTick(dt, me) {
     clock += dt;
-    const P0 = ACT[0]; P0.vx = (me.x - P0.x) / Math.max(dt, 1e-3); P0.vz = (me.z - P0.z) / Math.max(dt, 1e-3); P0.x = me.x; P0.y = me.y; P0.z = me.z; P0.tank = tank;
+    const P0 = ACT[ME]; P0.vx = (me.x - P0.x) / Math.max(dt, 1e-3); P0.vz = (me.z - P0.z) / Math.max(dt, 1e-3); P0.x = me.x; P0.y = me.y; P0.z = me.z; P0.tank = tank;
     planBudget = 1; losBudget = 3;
     for (let k = 0; k < 8; k++) { const a = ACT[k];
       if (a.inv > 0) a.inv -= dt; if (a.hitT > 0) a.hitT -= dt;
       a.wetT += dt; if (a.alive && a.wetT > 2.5 && a.wet > 0) a.wet = Math.max(0, a.wet - 18 * dt);
       if (!a.alive) { a.fall = Math.min(1, a.fall + dt / 0.7); if (st === 'play' && (a.reT -= dt) <= 0) { spawnAt(a, false); if (a.human) { map.player.freeze(false); map.hud.banner('다시 출발!', 0.9); } } continue; }
       if (a.human) { a.wet = wet; continue; }
-      if (!a.human) { a.vx = (a.x - a.lastX) / Math.max(dt, 1e-3); a.vz = (a.z - a.lastZ) / Math.max(dt, 1e-3); a.lastX = a.x; a.lastZ = a.z; }
+      if (a.remote) { netActor(a, dt, true); continue; }
+      if (NM.on && !NM.host) { netActor(a, dt, false); continue; }   // 봇은 방장 화면이 움직인다
+      { a.vx = (a.x - a.lastX) / Math.max(dt, 1e-3); a.vz = (a.z - a.lastZ) / Math.max(dt, 1e-3); a.lastX = a.x; a.lastZ = a.z; }
       // 진지에서 물 채우기
       const hb = basePos[a.team]; if ((a.x - hb.x) ** 2 + (a.z - hb.z) ** 2 < 6.8) a.tank = Math.min(TANK, a.tank + REFILL * dt);
       if (st === 'play') { brain(a, dt); applyCmd(a, dt); } else { a.cmd.go = a.cmd.fire = false; }
     }
-    for (let k = 1; k < 8; k++) drawBot(ACT[k]);
+    for (const a of ACT) if (a.i !== ME) drawBot(a);
+    if (NM.on) tagTick();
     M.tbody.instanceMatrix.needsUpdate = M.tbib.instanceMatrix.needsUpdate = M.tleg.instanceMatrix.needsUpdate = M.tarm.instanceMatrix.needsUpdate = true;
     // 내 조끼(내 캐릭터 몸통 위 — 몸 방향 = 물총 방향 추정과 같은 값)
     const camNear = cam.position.distanceToSquared(_v.set(me.x, me.y + 1.3, me.z)) < 0.36;
-    vest.visible = ACT[0].alive && !camNear; if (vest.visible) { vest.position.set(me.x, me.y, me.z); vest.rotation.y = gunYaw; }
+    vest.visible = ACT[ME].alive && !camNear; if (vest.visible) { vest.position.set(me.x, me.y, me.z); vest.rotation.y = gunYaw; }
     // 알림 줄 지우기 · 미니맵 우리 팀 점(3번/초)
     if (feedN && elFeed.firstChild && +elFeed.firstChild.dataset.t < clock) { elFeed.firstChild.remove(); feedN--; }
     if ((mmT -= dt) <= 0) { mmT = 0.33; teamMarks(); }
@@ -796,19 +1052,22 @@ export default async function start(map, params = {}) {
   return {
     tick(dt) {
       if (dead || st === 'menu' || st === 'prep') return;
+      if (st === 'lobby') { if (NM.on) netSend(dt, map.player.pos(), false); return; }
       const me = map.player.get();
       if (splashT > 0) splashT -= dt; if (markCool > 0) markCool -= dt;
-      const team = mode === 'team', meAlive = !team || ACT[0].alive;
+      const team = mode === 'team', meAlive = !team || ACT[ME].alive;
+      if (NM.on && NM.D.m) { const m9 = NM.D.m; if (st === 'count') cd = (m9.t0 - sNow()) / 1000; }
       // 3·2·1
       if (st === 'count') { cd -= dt; const n = Math.ceil(cd);
         if (n !== cdShown) { cdShown = n; if (n > 0) { map.hud.banner(String(n), 1.2); sfx('tick'); } }
         if (cd <= 0) { st = 'play'; map.player.freeze(false); map.hud.banner(team ? '경기 시작!' : '물총 발사!', 1.0); sfx('go');
-          if (team) { goal((coarse ? '💧 버튼' : '클릭·F') + '로 ' + TEAM_I[1] + ' 백팀 봇을 흠뻑 적셔요! 물은 우리 진지(파란 빛기둥)에서', 7);
-            map.hud.toast(TEAM_I[0] + ' 우리 팀 = 파란 조끼 · 먼저 ' + tGoal + '번 적시면 이겨요 · ' + (coarse ? '📋 칩' : 'Tab') + ' = 점수판', 5); }
+          if (team) { const mt = ACT[ME].team; goal((coarse ? '💧 버튼' : '클릭·F') + '로 ' + TEAM_I[1 - mt] + ' ' + TEAM_N[1 - mt] + (NM.on ? '' : ' 봇') + '을 흠뻑 적셔요! 물은 우리 진지(' + (mt ? '흰' : '파란') + ' 빛기둥)에서', 7);
+            map.hud.toast(TEAM_I[mt] + ' 우리 팀 = ' + (mt ? '흰' : '파란') + ' 조끼 · 먼저 ' + tGoal + '번 적시면 이겨요 · ' + (coarse ? '📋 칩' : 'Tab') + ' = 점수판', 5); }
           else { goal(coarse ? '💧 과녁에 물을 쏴요! 💧 버튼 누른 채 끌면 조준' : '💧 과녁에 물을 쏴요! 십자선 = 조준 · 클릭·F 누르고 있기', 6);
             map.hud.toast(coarse ? '🎈풍선 🔥불 🌸꽃 🤖로봇 — 위를 보면 멀리 · 흰 고리 = 물이 떨어질 자리 · 👁 = 1인칭' : '🎈풍선 🔥불 🌸꽃 🤖로봇 — 위를 보면 멀리 · 흰 고리 = 물이 떨어질 자리 · V = 1인칭', 5); } } }
       if (st === 'play') {
-        T -= dt; const s = Math.ceil(T); if (s !== secShown) { secShown = s; if (team) teamChip(); else timeChip(); if (s <= 10 && s > 0) sfx('tick'); }
+        if (NM.on && NM.D.m) T = (NM.D.m.t0 + NM.D.m.time * 1000 - sNow()) / 1000; else T -= dt;
+        const s = Math.ceil(T); if (s !== secShown) { secShown = s; if (team) teamChip(); else timeChip(); if (s <= 10 && s > 0) sfx('tick'); }
         if (T <= 0) { T = 0; if (team) teamChip(); else timeChip(); if (team) finishTeam(); else finish(); }
       }
       if (goalT > 0 && (goalT -= dt) <= 0) goal(null);
@@ -825,10 +1084,10 @@ export default async function start(map, params = {}) {
         aimHold = 0.6;
         if (tank > 0) {
           tank = Math.max(0, tank - USE * dt); emitAcc += (team ? T_RATE * 1.25 : RATE) * dt;
-          while (emitAcc >= 1) { emitAcc -= 1; const j = FP ? 0.22 : 0.35; spawn(1, nozX, nozY, nozZ, aim.vx + (rng() - 0.5) * j, aim.vy + (rng() - 0.5) * j, aim.vz + (rng() - 0.5) * j, 2.4, 0.075, WATER_C, 0); }
+          while (emitAcc >= 1) { emitAcc -= 1; const j = FP ? 0.22 : 0.35; spawn(1, nozX, nozY, nozZ, aim.vx + (rng() - 0.5) * j, aim.vy + (rng() - 0.5) * j, aim.vz + (rng() - 0.5) * j, 2.4, 0.075, team ? TEAM_W[ACT[ME].team] : WATER_C, team ? ME : 0); }   // 물 주인 = 내 배우 번호(친구 대결에서 백팀이면 4~7)
           if ((sprayT -= dt) <= 0) { sprayT = 0.13; SND.spray(); }
-          if (tank <= 0) { SND.empty(); goal(team ? '💧 물이 없어요! 우리 진지(파란 빛기둥)로' : '💧 물이 없어요! 파란 빛기둥에서 채워요', 4); }
-        } else if ((emptyT -= dt) <= 0) { emptyT = 0.7; SND.empty(); if (goalT <= 0) goal(team ? '💧 물이 없어요! 우리 진지(파란 빛기둥)로' : '💧 물이 없어요! 파란 빛기둥에서 채워요', 3); }
+          if (tank <= 0) { SND.empty(); goal(team ? '💧 물이 없어요! 우리 진지(빛기둥)로' : '💧 물이 없어요! 파란 빛기둥에서 채워요', 4); }
+        } else if ((emptyT -= dt) <= 0) { emptyT = 0.7; SND.empty(); if (goalT <= 0) goal(team ? '💧 물이 없어요! 우리 진지(빛기둥)로' : '💧 물이 없어요! 파란 빛기둥에서 채워요', 3); }
       } else emitAcc = 0;
       if (aimHold > 0 && !FP) { aimHold -= dt; map.player.aim(aim.h); gunYaw = Math.atan2(Math.sin(aim.h * Math.PI / 180), -Math.cos(aim.h * Math.PI / 180)); if (aimHold <= 0) map.player.aim(null); }
       else if (mdx * mdx + mdz * mdz > 1e-5) gunYaw = Math.atan2(mdx, mdz);
@@ -853,6 +1112,7 @@ export default async function start(map, params = {}) {
       if (soakT > 0 && (soakT -= dt) <= 0) { map.player.speed(1); wet = 35; }
       if (slowT > 0 && (slowT -= dt) <= 0 && soakT <= 0) map.player.speed(1);
       if (team) teamTick(dt, me);
+      if (NM.on) netSend(dt, me, firing);
 
       // 물방울
       let n = 0; frameN++;
@@ -936,13 +1196,14 @@ export default async function start(map, params = {}) {
     stop() {
       dead = true;
       removeEventListener('keydown', onKD); removeEventListener('keyup', onKU); removeEventListener('mousedown', onMD); removeEventListener('mouseup', onMU); removeEventListener('blur', onBlur);
+      if (NM.on) netLeave(); for (const t of TAGS) if (t) { t.material.map.dispose(); t.material.dispose(); }
       root.remove(); if (fireBtn) fireBtn.remove(); map.player.aim(null); map.player.shoulder(0);
       for (const k in M) M[k].dispose(); for (const g of GEOS) g.dispose(); for (const m of MATS) m.dispose();   // 메시·표식·트리거·충돌·소품은 범위 파사드(map.add·map.world)가 뗀다
     },
     // 시험·교사 시연용
     fire(on = true) { inp.test = !!on; },
     aim(x, y, z) { aimOverride = x == null ? null : [x, y, z]; },
-    endNow() { if (st === 'play') T = 0.001; },
+    endNow() { if (st !== 'play') return; if (NM.on) { if (NM.host) nreq('/m/st', 'PUT', 'end').catch(() => {}); } else T = 0.001; },
     choose(m, ak) { params.mode = m; params.arena = ak; return menu(true); },
     get state() { return st; }, get mode() { return mode; }, get arena() { return arenaKey; }, get score() { return mode === 'team' ? teamScore.slice() : score; }, get tank() { return tank; }, get wet() { return wet; }, get best() { return best; }, get timeLeft() { return T; },
     get counts() { return { ...cnt }; }, get last() { return last; }, get particles() { return pAlive; }, get marks() { return mAlive; }, get round() { return round; }, get seed() { return seed; },
@@ -950,6 +1211,8 @@ export default async function start(map, params = {}) {
     get water() { return WP.map(w => ({ x: w.x, y: w.y, z: w.z, label: w.label })); },
     get actors() { return ACT.map(a => ({ i: a.i, name: a.name, team: a.team, role: a.role, x: +a.x.toFixed(2), y: +a.y.toFixed(2), z: +a.z.toFixed(2), alive: a.alive, wet: Math.round(a.wet), tank: Math.round(a.tank), st: a.st, see: a.see, tgt: a.tgt, soaks: a.soaks, soaked: a.soaked })); },
     get props() { return props.length; }, get covers() { return COVERS.length; }, get bases() { return basePos.map(b => b && { ...b }); },
+    get net() { return NM.on ? { room: NM.room, pid: NM.pid, host: NM.host, me: ME, seq: NM.seq, st: NM.st, rtt: NM.rtt, lag: NM.lag } : null; },
+    netStart: () => netStart(), netTeam: () => netTeam(), get netP() { return NM.on ? JSON.stringify(NM.D.p) : null; },
     soakTest(who, by = 0) { if (mode === 'team' && ACT[who] && ACT[who].alive) emit({ type: 'soak', by, who }); },
     get targets() { return { bal: B.map(b => ({ x: b.spot && b.spot.x, y: b.spot && b.spot.y, z: b.spot && b.spot.z, alive: b.alive, hp: b.hp })), fire: F.map(f => ({ x: f.spot && f.spot.x, y: f.spot && f.spot.y, z: f.spot && f.spot.z, lit: f.lit, hp: f.hp })),
       flow: FL.map(f => ({ x: f.spot && f.spot.x, y: f.spot && f.spot.y, z: f.spot && f.spot.z, water: f.water, done: f.done })), bot: R.map(r => ({ x: r.x, y: r.y, z: r.z, dizzy: r.dizzy, hp: r.hp })) }; },

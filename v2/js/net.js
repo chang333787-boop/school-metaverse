@@ -18,7 +18,7 @@ export function createNet(o) {
   const others = new Map();
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   const _m = new THREE.Matrix4(), _c = new THREE.Color();
-  let es = null, dead = false, offset = 0, sendT = 0, beatT = 0, cleanT = 8, fxQ = 0, last = { x: 1e9, y: 0, z: 0, h: 0 }, onChange = o.onChange || (() => {});
+  let es = null, dead = false, hidden = false, offset = 0, sendT = 0, beatT = 0, cleanT = 8, fxQ = 0, last = { x: 1e9, y: 0, z: 0, h: 0 }, onChange = o.onChange || (() => {});
 
   function merge(parts) {
     const P = [], N = [], C = [];
@@ -107,13 +107,14 @@ export function createNet(o) {
       if ((moved && sendT <= 0) || beatT <= 0) { send(P); sendT = 1 / 6; beatT = 3; }
       const now = Date.now() + offset, k = Math.min(1, dt * 10);
       for (const O of others.values()) {
-        const stale = O.t && now - O.t > 20000; O.mesh.visible = O.tag.visible = !stale;
+        const stale = O.t && now - O.t > 20000; O.mesh.visible = O.tag.visible = !stale && !hidden;
         O.x += (O.tx - O.x) * k; O.y += (O.ty - O.y) * k; O.z += (O.tz - O.z) * k;
         let dh = O.th - O.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); O.h += dh * k;
         O.mesh.position.set(O.x, O.y, O.z); O.mesh.rotation.y = O.h; O.tag.position.set(O.x, O.y + 2.05 * scale, O.z);
       }
       if ((cleanT -= dt) <= 0) { cleanT = 30; for (const [pid, O] of others) if (O.t && now - O.t > 120000) { req('/players/' + pid, 'DELETE'); drop(pid); } }
     },
+    hide(on) { hidden = !!on; for (const O of others.values()) O.mesh.visible = O.tag.visible = !hidden; },   // 물총 친구 대결 동안 걷기 몸 숨김(경기 몸이 대신)
     leave,
   };
 }
