@@ -108,7 +108,7 @@ export function createTitle(h) {
   const LCATS = [{ id: '@story', cat: 'story', title: '이야기', icon: '📖', group: '이야기', short: '우리 반이 만든 이야기 속으로' }, { id: '@imagine', cat: 'imagine', title: '상상의 세계', icon: '🌈', group: '상상', short: '상상 속 학교로 떠나요' }];
   let LCAT = null, REG = null;   // 수업판(v3): 갈래(이야기·상상의 세계) → 그 안의 카드
   const GORDER = Object.keys(GROUPS);
-  const FREE = { id: '', title: '자유 탐험', icon: '🏫', group: '탐험', short: '학교 어디든 마음대로 걸어 다녀요' };
+  const FREE = { id: '', title: '자유 탐험', icon: '🏫', group: '탐험', short: '학교 어디든 걸어 다녀요 · 방에 들어가면 친구들도 보여요' };
   const mmss = s => { s = Math.max(0, Math.round(+s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
   function best(id, e) {   // 게임이 map.store로 남긴 기록(sm2.game.<id>.<키>) — registry best: {k, u:'s'(초)|'n'(개수)|단위, lbl}
     for (const b of [].concat(e.best || [])) { let v = null; try { v = JSON.parse(localStorage.getItem('sm2.game.' + id + '.' + b.k)); } catch (x) { v = null; }

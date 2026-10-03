@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createTouch } from '../../v2/js/touch.js?v=7';
-import { createNet } from '../../v2/js/net.js?v=6';
+import { createNet, EMOTES } from '../../v2/js/net.js?v=6';
 import { createLobby } from '../../v2/js/lobby.js?v=7';
 import { build as buildWonders, DISC } from './wonders.js?v=4';
 import { mergeMeshes } from './merge.js?v=2';
@@ -603,6 +603,11 @@ function netStart() {   // LOBBY-1: 학교와 같은 방 번호로 들어감(위
         if (from.distanceTo(camera.position) > 90) return; const b = glow(SPELLS[f.s].c, 0.9); b.position.copy(from); scene.add(b); BOLTS.push({ b, from, to, t: 0, dur: Math.max(0.15, from.distanceTo(to) / 34), sp: f.s, obj: null, remote: true }); } }); },
     leave: () => { if (NET) NET.leave(); NET = null; } });
   $('who').classList.remove('hide'); $('who').style.cursor = 'pointer';
+  // 😀 이모지 인사(방 안에서만 — v2와 같은 그림 6개)
+  const em = document.createElement('div'); em.id = 'emo'; em.style.cssText = 'position:fixed;right:12px;top:calc(88px + env(safe-area-inset-top));z-index:20;background:rgba(28,18,56,.82);color:#fff;border-radius:10px;padding:4px 8px;font-size:18px;cursor:pointer;display:none;gap:2px;align-items:center';
+  em.innerHTML = '<span data-e="t">😀</span><span class="bar" style="display:none;gap:2px">' + EMOTES.map((x, i) => '<span data-e="' + i + '" style="font-size:22px;padding:0 3px">' + x + '</span>').join('') + '</span>';
+  em.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-e]'); if (!b) return; const bar = em.querySelector('.bar'); if (b.dataset.e === 't') { bar.style.display = bar.style.display === 'none' ? 'flex' : 'none'; return; } if (NET) NET.emote(+b.dataset.e); bar.style.display = 'none'; });
+  document.body.appendChild(em); setInterval(() => { em.style.display = NET ? 'flex' : 'none'; }, 1000);
 }
 function start() {
   if (started) return; started = true; QS.t0 = performance.now(); netStart();
