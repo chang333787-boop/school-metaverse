@@ -13,7 +13,7 @@ export const GAMES = {
   escape: { title: '학교 방탈출', v: 5, desc: '[연습] 사라진 타임캡슐 열쇠 — 방마다 물건을 써서 수수께끼를 풀고, 마지막 교무실에선 순찰 로봇을 피해요(낮·밤) · 새 방탈출은 escape_episodes.js에 더해요', icon: '🔐', group: '모험', short: '[연습] 타임캡슐 열쇠 찾기 — 새 방탈출은 곧!', best: [{ k: 'best', u: 's', lbl: '최고' }, { k: 'bestNight', u: 's', lbl: '밤' }] },
   actions_demo: { title: '행동 사전 예시(개발용)', v: 3, dev: true },   // ENGINE-1: 엔진 동사를 한 번씩 — 글은 자리표시
   fx_demo: { title: '세상 바꾸기 예시(개발용)', v: 2, dev: true },   // NPC-MOVE·WORLD-FX(found2 09-27 · §16): 사람 옮기기·소품·다리·바람·불·문·칠판 그림
-  story: { title: '이야기', v: 9, desc: '[연습] 무지개 편지 — 4학년이 되어 1학년 동생의 그림을 찾고, 6학년 선배의 편지를 따라 함께 놀이 날을 준비해요(약 10분) · 새 이야기는 story_episodes.js에 더해요', icon: '📖', group: '이야기', short: '[연습] 무지개 편지 — 새 이야기는 곧!' },   // G3-STORY(09-27): 이야기 RPG · 글 = story_data.js
-  newbook_a: { title: '신상책을 찾아라! ✨', v: 4, lesson: 'story', desc: '우리 반 이야기를 선생님(AI)이 다듬은 버전', icon: '✨', group: '이야기', short: '다듬은 이야기 — 빈칸을 채웠어요' },
-  newbook_b: { title: '신상책 ✏️', v: 4, lesson: 'story', desc: '우리 반이 쓴 이야기 그대로', icon: '✏️', group: '이야기', short: '우리 반 이야기 그대로' },
+  story: { title: '이야기', v: 10, desc: '[연습] 무지개 편지 — 4학년이 되어 1학년 동생의 그림을 찾고, 6학년 선배의 편지를 따라 함께 놀이 날을 준비해요(약 10분) · 새 이야기는 story_episodes.js에 더해요', icon: '📖', group: '이야기', short: '[연습] 무지개 편지 — 새 이야기는 곧!' },   // G3-STORY(09-27): 이야기 RPG · 글 = story_data.js
+  newbook_a: { title: '신상책을 찾아라! ✨', v: 5, lesson: 'story', desc: '우리 반 이야기를 선생님(AI)이 다듬은 버전', icon: '✨', group: '이야기', short: '다듬은 이야기 — 빈칸을 채웠어요' },
+  newbook_b: { title: '신상책 ✏️', v: 5, lesson: 'story', desc: '우리 반이 쓴 이야기 그대로', icon: '✏️', group: '이야기', short: '우리 반 이야기 그대로' },
 };

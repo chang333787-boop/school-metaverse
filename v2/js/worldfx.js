@@ -116,6 +116,7 @@ export function createWorldFx(H) {
     a.mesh.geometry.attributes.position.needsUpdate = a.mesh.geometry.attributes.normal.needsUpdate = true;
   }
   function solidOn(a) {   // 선 대역 = 몸 충돌(원래 사람과 같은 크기) + 길격자 막기
+    if (a.ghost) { solidOff(a); return; }   // ghost = 몸 충돌 없음(이야기 속 따라오는 친구 — 좁은 문에서 나를 막지 않게 · 10-03)
     solidOff(a); const s = a.r.s, hw = 0.22 * s, sit = a.pose === 'sit';
     const b = { x0: a.x - hw, x1: a.x + hw, y0: a.y + (sit ? 0.85 : 0), y1: a.y + Math.max(1.6, 1.5 * s + 0.1), z0: a.z - hw, z1: a.z + hw };
     if (P.x > b.x0 - 0.3 && P.x < b.x1 + 0.3 && P.z > b.z0 - 0.3 && P.z < b.z1 + 0.3 && P.y < b.y1 && P.y + 1.5 > b.y0) { a.colWait = true; return; }   // 내가 그 자리에 있으면 비킬 때까지 기다림(끼임 방지)
@@ -151,7 +152,7 @@ export function createWorldFx(H) {
       if (o.sign != null) a.nosign = !o.sign;   // g3-story: sign:false = 이름표를 가린 대역(이야기 속 이름 없는 역할 — 실제 아이 이름을 역할에 붙이지 않게)
       if (a.done) { const d = a.done; a.done = null; d(false); }
       const pose = o.pose || (to && to.pose) || 'stand', face = o.face ?? T9.h, g0 = GEN, po = { seat: o.seat, desk: o.desk };
-      a.spd = o.speed || (a.r.s > 1.05 ? 1.2 : 1.3); a.pass = !!o.pass;   // GUIDE-1(09-30): pass = 앞에 선 나를 기다리지 않고 지나감(걷는 동안은 몸 충돌이 없다 — 견학 안내가 뒤따르는 나를 기다리다 멈추던 것)
+      a.spd = o.speed || (a.r.s > 1.05 ? 1.2 : 1.3); a.pass = !!o.pass; if (o.ghost != null) a.ghost = !!o.ghost;   // GUIDE-1(09-30): pass = 앞에 선 나를 기다리지 않고 지나감(걷는 동안은 몸 충돌이 없다 — 견학 안내가 뒤따르는 나를 기다리다 멈추던 것)
       const arrive = () => { a.path = null; const k = doorActors ? doorActors.indexOf(a.door) : -1; if (k >= 0) doorActors.splice(k, 1);
         a.x = T9.x; a.y = T9.y; a.z = T9.z; if (face != null) a.h = face; setPose(a, pose === 'walk' ? 'stand' : pose, po); solidOn(a); emit('npc', { id, type: 'arrive' }); };
       if (!o.walk) { solidOff(a); a.path = null; arrive(); return Promise.resolve(true); }

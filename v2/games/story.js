@@ -199,7 +199,7 @@ export default async function start(map, params = {}) {
     const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < 3.2) return;
     const hr = me.h * Math.PI / 180, fx = Math.sin(hr), fz = -Math.cos(hr), side = (k - (PARTY.length - 1) / 2) * 0.9, back = 1.6 + (k % 2) * 0.7;
     const p = spot(me.x - fx * back + fz * side, me.z - fz * back - fx * side, me.y), face = (Math.atan2(me.x - p.x, -(me.z - p.z)) * 180 / Math.PI + 360) % 360;
-    map.npc.move(n, { x: p.x, y: p.y, z: p.z }, d > 24 ? { face } : { walk: true, speed: 4.4, pass: true, face });
+    map.npc.move(n, { x: p.x, y: p.y, z: p.z }, d > 24 ? { face, ghost: true } : { walk: true, speed: 4.4, pass: true, face, ghost: true });
   }
   function namesOf(w) { return w === 'party' ? PARTY.slice() : [].concat(w || []); }
   async function runSteps(list = D.steps, top = true) {
@@ -218,7 +218,7 @@ export default async function start(map, params = {}) {
       if (st.pose) { const me = map.player.get(), hr = me.h * Math.PI / 180, fx = Math.sin(hr), fz = -Math.cos(hr), L9 = namesOf(st.who);
         L9.forEach((n, k) => { const q = map.npc.get(n);
           if (st.pose !== 'stand' && q && Math.hypot(q.x - me.x, q.z - me.z) > 3.5) { const side = (k - (L9.length - 1) / 2) * 0.85, ahead = 1.4 + (k % 2) * 0.7, p = spot(me.x + fx * ahead + fz * side, me.z + fz * ahead - fx * side, me.y);
-            map.npc.move(n, { x: p.x, y: p.y, z: p.z }, { pose: st.pose, face: me.h }); }
+            map.npc.move(n, { x: p.x, y: p.y, z: p.z }, { pose: st.pose, face: me.h, ghost: true }); }
           else map.npc.pose(n, st.pose); });
         partyHold = st.pose !== 'stand'; }
       if (st.fade) await world([{ op: 'fade', sec: st.fade }]);
@@ -231,7 +231,7 @@ export default async function start(map, params = {}) {
       if (gone()) return;
       if (st.say) { if (!(await say(st.say))) return; }
       if (st.note) await panel('쪽지', st.note);
-      if (st.ask) { const k = await choose(st.ask, st.choices || []); if (gone()) return; if (st.set) VARS[st.set] = { i: k, label: String((st.choices || [])[k] || '').replace(/^\S+\s/, '') };
+      if (st.ask && !st.me) { const k = await choose(st.ask, st.choices || []); if (gone()) return; if (st.set) VARS[st.set] = { i: k, label: String((st.choices || [])[k] || '').replace(/^\S+\s/, '') };
         if (st.reply && st.reply[k]) { if (!(await say(st.reply[k]))) return; } }
       if (st.if) { const [k, v] = Object.entries(st.if)[0] || []; const hit = VARS[k] && VARS[k].i === v; const r = await runSteps(hit ? st.then || [] : st.else || [], false);
         if (r && r.goto) { const j = top ? list.findIndex(x => x.label === r.goto) : -1; if (j >= 0) { i = j; continue; } return r; } }
