@@ -240,7 +240,7 @@ export default async function start(map, params = {}) {
     g.add(new THREE.Mesh(poleG, lam(0xf1f3f5))); g.add(new THREE.Mesh(clothG, lam(col)));
     const tg = tag(num || '?', label3d(f), col); tg.position.y = 2.55; g.add(tg);
     map.add(g);
-    FL.set(id, { g, tag: tg, sig: sigOf(f, num), hot: map.interact.add({ x: f.x, y: f.y || 0, z: f.z, r: 1.6, label: (num ? num + '번 장면' : '깃발') + ' 보기', use: () => view(isScene(f) ? id : f.p) }) });
+    FL.set(id, { g, tag: tg, sig: sigOf(f, num), hot: map.interact.add({ x: f.x, y: f.y || 0, z: f.z, r: 1.6, label: (num ? num + '번 장면' : '깃발') + ' 보기', use: () => { if (!play) view(isScene(f) ? id : f.p); } }) });
   }
   let syncT = 0;
   function sync() { if (!syncT) syncT = setTimeout(syncNow, 40); }
