@@ -170,7 +170,8 @@ export function createTitle(h) {
     else return;
     e.preventDefault(); k = Math.max(0, Math.min(n - 1, k)); if (k !== focusI) { focusI = k; cards[k].focus(); blip(); }
   };
-  addEventListener('sm-room', () => { if (phase === 'menu') refill(); });   // 방에 들어가면 '👥 친구와 함께' 줄을 새로
+  let pendRoom = null;   // 방이 있어야 하는 카드를 눌렀다가 방 창이 떴으면 — 들어가자마자 그 놀이로
+  addEventListener('sm-room', (ev) => { if (phase !== 'menu') return; const id = pendRoom; pendRoom = null; filled = fill(true); filled.then(() => { if (id && ev.detail && phase === 'menu') { const i = list.findIndex(e => e.id === id); if (i >= 0) { calmT = 0; choose(i); } } else if (cards[focusI]) cards[focusI].focus({ preventScroll: true }); }); });
   addEventListener('keydown', onKey, true); addEventListener('keyup', e => { if (phase !== 'off' && phase !== 'go') e.stopImmediatePropagation(); }, true);
   function lockWorld() { keys.clear(); try { touch.reset(); } catch (e) { /* */ } document.exitPointerLock?.(); picker && picker.close && picker.close(); document.body.classList.add('title-on'); }
   root.addEventListener('pointerdown', () => { heard = true; });
@@ -211,7 +212,7 @@ export function createTitle(h) {
     if (phase !== 'menu' || !calmOK()) return; const e = list[i]; if (!e) return;
     if (LESSON && !LCAT && e.cat) { LCAT = e.cat; refill(); return; }   // 갈래 → 그 안의 카드
     if (e.link) { blip(); location.href = new URL(e.link, location.href).href; return; }   // 다른 페이지(상상의 세계 — v2 엔진 밖)
-    if (e.needRoom && window.SM_MP && !window.SM_MP.room()) { blip(); window.SM_MP.open(); const t = grid.querySelector('.ttl-sec.tog span'); if (t) { t.textContent = '먼저 방에 들어가요 — 선생님 화면의 방 번호 4자리'; t.classList.add('warn'); } return; }   // 친구 대결은 방이 있어야
+    if (e.needRoom && window.SM_MP && !window.SM_MP.room()) { blip(); pendRoom = e.id; window.SM_MP.open(); const t = grid.querySelector('.ttl-sec.tog span'); if (t) { t.textContent = '먼저 방에 들어가요 — 선생님 화면의 방 번호 4자리'; t.classList.add('warn'); } return; }   // 친구 대결은 방이 있어야
     cards.forEach((c, k) => c.classList.add(k === i ? 'pick' : 'dim'));
     launch(e, cards[i].getBoundingClientRect());
   }

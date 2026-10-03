@@ -40,7 +40,7 @@ const STYLE = `
 #memo-ui .num{display:inline-block;min-width:24px;padding:1px 6px;border-radius:9px;color:#fff;font-weight:900;text-align:center;margin-right:4px;text-shadow:0 1px 0 rgba(0,0,0,.25)}
 #memo-ui .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px}
 #memo-ui .where{font-weight:800;margin:2px 0 6px}
-#memo-ui .lbl{font-weight:800;margin-top:10px}
+#memo-ui .mlbl{font-weight:800;margin-top:10px}
 #memo-sum pre{white-space:pre-wrap;font-size:13px;background:#f8f9fa;border-radius:10px;padding:10px;max-height:52vh;overflow:auto;font-family:inherit}
 #memo-x{left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px rgba(29,53,87,.7);position:absolute}
 #memo-here{pointer-events:auto;position:absolute;transform:translate(-50%,-130%);font-size:15px;padding:8px 12px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.3);white-space:nowrap}
@@ -458,22 +458,22 @@ export default async function start(map, params = {}) {
       const isS = kind === 'scene', A = KBY[kind] || null, n = sid ? N.get(sid) : null;
       let h = '<h3>' + (old ? '✏️ 고치기' : pt ? '🚩 깃발 꽂기' : isS ? '🎬 새 장면' : '＋ 덧붙이기') + '</h3>'
         + (pn ? '<div class="where">' + '📍 ' + esc(pn.zone) + (pn.near ? ' · ' + esc(pn.near) + ' 근처' : '') + (pt && pt.feet ? ' <span class="sm">(내 발밑)</span>' : '') + '</div>' : '');
-      if (!old && (pt || !o.scene)) {   // 어느 장면?(깃발 · 새로 쓸 때)
-        h += '<div class="lbl">' + (pt ? '이 깃발은 몇 번 장면이에요?' : '어느 장면이에요?') + '</div><div class="chips sc">'
+      if (!old && (pt || (!o.scene && o.kind !== 'scene'))) {   // 어느 장면?(깃발 · 장면을 정하지 않고 덧붙일 때 — 판의 '＋ 새 장면'은 바로 글)
+        h += '<div class="mlbl">' + (pt ? '이 깃발은 몇 번 장면이에요?' : '어느 장면이에요?') + '</div><div class="chips sc">'
           + L.map(([id, f], i) => '<button data-s="' + esc(id) + '" class="' + (!isS && sid === id ? 'on' : '') + '"><span class="num" style="background:' + hex(colOf(i + 1)) + '">' + (i + 1) + '</span>' + esc(short(f.tx, 14)) + '</button>').join('')
           + '<button data-s="@new" class="' + (isS ? 'on' : '') + '">＋ 새 장면</button></div>';
       } else if (!isS && n) h += '<div class="where"><span class="num" style="background:' + hex(colOf(n)) + '">' + n + '</span>번 장면 — ' + esc(short(DATA[sid].tx, 24)) + '</div>';
       if (!isS && (pt || !old)) {
         const opts = (pt ? [PLACE] : []).concat(ADD);
-        h += '<div class="lbl">' + (pt ? '여기에 무엇이 있어요?' : '무엇을 덧붙여요?') + '</div><div class="chips kd">' + opts.map((x) => '<button data-k="' + x.k + '" class="' + (kind === x.k ? 'on' : '') + '">' + x.e + ' ' + (x.k === 'place' ? '장면이 일어나는 곳' : x.n) + '</button>').join('') + '</div>';
+        h += '<div class="mlbl">' + (pt ? '여기에 무엇이 있어요?' : '무엇을 덧붙여요?') + '</div><div class="chips kd">' + opts.map((x) => '<button data-k="' + x.k + '" class="' + (kind === x.k ? 'on' : '') + '">' + x.e + ' ' + (x.k === 'place' ? '장면이 일어나는 곳' : x.n) + '</button>').join('') + '</div>';
       }
       const Q = isS ? SCENE : A;
       if (Q) {
-        h += '<div class="lbl">' + esc(Q.q) + '</div>';
+        h += '<div class="mlbl">' + esc(Q.q) + '</div>';
         if (Q.who) h += '<input id="mmWho" maxlength="30" placeholder="' + esc(Q.who) + '" style="margin-bottom:6px">';
         h += '<textarea id="mmTx" maxlength="300"></textarea>';
         if (kind === 'choice') h += '<textarea id="mmOpt" maxlength="300" style="margin-top:6px" placeholder="보기를 한 줄에 하나씩&#10;예) 책을 찾는다 → 3번 장면&#10;선생님께 간다 → 5번 장면"></textarea>';
-        if (isS && S.length) h += '<div class="lbl">이야기 칸</div><div class="chips sec">' + S.map((s, i) => '<button data-c="' + i + '" class="' + ((old ? secOf(old, S) : (o.sec || 0)) === i ? 'on' : '') + '">' + (i + 1) + '. ' + esc(s) + '</button>').join('') + '</div>';
+        if (isS && S.length) h += '<div class="mlbl">이야기 칸</div><div class="chips sec">' + S.map((s, i) => '<button data-c="' + i + '" class="' + ((old ? secOf(old, S) : (o.sec || 0)) === i ? 'on' : '') + '">' + (i + 1) + '. ' + esc(s) + '</button>').join('') + '</div>';
       } else h += '<div class="sm" style="margin-top:8px">위에서 장면과 종류를 골라요.</div>';
       h += '<div class="row">' + (old ? '<button class="warn" id="mmDel">🗑 지우기</button>' : '') + '<button class="sub" id="mmNo">취소</button><button id="mmOk"' + (Q && (isS || sid) ? '' : ' disabled style="opacity:.45"') + '>💾 저장</button></div>';
       const keep = { tx: (P.querySelector('#mmTx') || {}).value, who: (P.querySelector('#mmWho') || {}).value, opt: (P.querySelector('#mmOpt') || {}).value };
@@ -528,9 +528,9 @@ export default async function start(map, params = {}) {
     if (panel !== P) return;
     const n = Object.keys(DATA).length, no = String(board.n || board.id);
     P.innerHTML = '<h3>🗂 「' + esc(board.t) + '」 관리</h3>'
-      + '<div class="lbl">🧹 판 비우기</div><div class="sm">장면·덧붙인 것·깃발 ' + n + '개를 모두 지워요. 지운 것은 한 번 보관돼서 아래 ↩️로 되돌릴 수 있어요.<br>정말 비우려면 판 번호 <b>' + esc(no) + '</b>을(를) 적어요.</div>'
+      + '<div class="mlbl">🧹 판 비우기</div><div class="sm">장면·덧붙인 것·깃발 ' + n + '개를 모두 지워요. 지운 것은 한 번 보관돼서 아래 ↩️로 되돌릴 수 있어요.<br>정말 비우려면 판 번호 <b>' + esc(no) + '</b>을(를) 적어요.</div>'
       + '<div style="display:flex;gap:6px;margin-top:6px"><input id="mmNo2" maxlength="12" placeholder="판 번호" style="width:120px"><button class="warn" id="mmClr">🧹 비우기</button></div>'
-      + '<div class="lbl">↩️ 되돌리기</div><div class="sm">' + (bak && bak.flags ? new Date(bak.t || 0).toLocaleString('ko-KR') + '에 비운 ' + Object.keys(bak.flags).length + '개가 보관돼 있어요.' : '보관된 것이 없어요.') + '</div>'
+      + '<div class="mlbl">↩️ 되돌리기</div><div class="sm">' + (bak && bak.flags ? new Date(bak.t || 0).toLocaleString('ko-KR') + '에 비운 ' + Object.keys(bak.flags).length + '개가 보관돼 있어요.' : '보관된 것이 없어요.') + '</div>'
       + (bak && bak.flags ? '<div class="row" style="justify-content:flex-start"><button class="sub" id="mmUndo">↩️ 보관한 것 되돌리기(지금 판에 더해요)</button></div>' : '')
       + '<div class="row"><button class="sub" id="mmBk">◀ 이야기 판</button></div>';
     P.querySelector('#mmBk').onclick = boardView;
