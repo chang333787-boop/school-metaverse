@@ -19,10 +19,22 @@ const FONT = '"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
 
 // ───────── 렌더러·장면 ─────────
 const canvas = $('scene');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, isTouch ? 1.5 : 1.75));
+// 기기 판(PERF · 교사 10-03 '렉 걸리는 것 같다') — desktop / cb(크롬북) / mobile / low · ?hq=1 ?lq=1
+const GFX = (() => {
+  const short = Math.min(screen.width, screen.height), mem = navigator.deviceMemory, cores = navigator.hardwareConcurrency;
+  if (Q.get('hq') === '1') return { tier: 'hq', dpr: 2, aa: true, shadow: 2048, shadowEvery: 1 };
+  if (Q.get('lq') === '1' || (mem && mem <= 3) || (cores && cores <= 3)) return { tier: 'low', dpr: 1, aa: false, shadow: 0, shadowEvery: 0 };
+  if (isTouch && short <= 500) return { tier: 'mobile', dpr: 1.25, aa: false, shadow: 1024, shadowEvery: 3 };
+  if (/CrOS/.test(navigator.userAgent)) return { tier: 'cb', dpr: 1, aa: true, shadow: 1024, shadowEvery: 3 };
+  return { tier: 'desktop', dpr: 1.5, aa: true, shadow: 2048, shadowEvery: 1 };
+})();
+GFX.cap = Math.min(devicePixelRatio || 1, GFX.dpr); GFX.cur = GFX.cap; GFX.floor = Math.min(GFX.cap, 0.6);
+if (Q.get('adapt') === '0') GFX.floor = GFX.cap;
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: GFX.aa, powerPreference: 'high-performance' });
+renderer.setPixelRatio(GFX.cur);
 renderer.setSize(innerWidth, innerHeight, false);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = GFX.shadow > 0;
+renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
@@ -33,8 +45,8 @@ scene.fog = new THREE.Fog(0xcfe8f7, 90, 330);
 const hemi = new THREE.HemisphereLight(0xe4f3ff, 0x7d8f5a, 0.95);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffffff, 1.25);
-sun.castShadow = true;
-sun.shadow.mapSize.set(isTouch ? 1024 : 2048, isTouch ? 1024 : 2048);
+sun.castShadow = GFX.shadow > 0;
+sun.shadow.mapSize.set(GFX.shadow || 1024, GFX.shadow || 1024);
 Object.assign(sun.shadow.camera, { left: -82, right: 82, top: 82, bottom: -82, near: 20, far: 320 });
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.05;
@@ -71,7 +83,7 @@ const CYL = (a, b, h, s = 10) => geo(`c${a}|${b}|${h}|${s}`, () => new THREE.Cyl
 const ICO = (r, d = 0) => geo(`i${r}|${d}`, () => new THREE.IcosahedronGeometry(r, d));
 
 const LENS = { ai: [], human: [] };
-function tag(obj, k) { obj.traverse((m) => { if (m.isMesh) LENS[k].push(m); }); return obj; }
+function tag(obj, k) { obj.traverse((m) => { if (m.isMesh) { LENS[k].push(m); m.userData.lens = k; } }); return obj; }
 
 function put(p, g, m, x, y, z, o = {}) {
   const me = new THREE.Mesh(g, m);
@@ -422,7 +434,7 @@ const LAB_TABLES = [];
 }
 
 // 세계 창문
-const SCREEN = { c: document.createElement('canvas'), tex: null, live: null };
+const SCREEN = { c: document.createElement('canvas'), tex: null, live: null, at: new THREE.Vector3(PLACES.window.pos[0], 3, PLACES.window.pos[1] - 6) };
 {
   const [cx, cz] = PLACES.window.pos;
   SCREEN.c.width = 768; SCREEN.c.height = 288;
@@ -688,6 +700,36 @@ const MOWER = new THREE.Group();
   tag(MOWER, 'ai'); scene.add(MOWER);
 }
 
+// ───────── 정적 합치기 (PERF) — 같은 재질·같은 렌즈 표시끼리 한 메시로 ─────────
+function mergeStatic(skipRoots) {
+  const skip = new Set(skipRoots.filter(Boolean));
+  const groups = new Map();
+  scene.updateMatrixWorld(true);
+  scene.traverse((m) => {
+    if (!m.isMesh || m.isInstancedMesh || Array.isArray(m.material) || m.material.transparent || m.userData.keep) return;
+    for (let p = m; p; p = p.parent) if (skip.has(p)) return;
+    const k = m.material.uuid + '|' + (m.userData.lens || '') + '|' + (m.castShadow ? 1 : 0);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(m);
+  });
+  const gone = new Set();
+  let before = 0, after = 0;
+  for (const list of groups.values()) {
+    before += list.length;
+    if (list.length < 2) { after++; continue; }
+    const geos = list.map((m) => { const g = (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()); g.applyMatrix4(m.matrixWorld); return g; });
+    const mesh = new THREE.Mesh(concatGeo(geos), list[0].material);
+    geos.forEach((g) => g.dispose());
+    mesh.castShadow = list[0].castShadow; mesh.receiveShadow = true; mesh.matrixAutoUpdate = false;
+    const lk = list[0].userData.lens; if (lk) { mesh.userData.lens = lk; LENS[lk].push(mesh); }
+    for (const m of list) { m.parent.remove(m); gone.add(m); }
+    scene.add(mesh); after++;
+  }
+  for (const k of ['ai', 'human']) LENS[k] = LENS[k].filter((m) => !gone.has(m));
+  return { before, after };
+}
+const MERGED = mergeStatic([BUS, MOWER, sky, PAV.ball, ...BLADES, ...CLOUDS, ...ROBOT_ARMS.map((a) => a.j1.parent), ...BOTS.map((b) => b.g), ...HOLOS, ...FARM_SHELVES]);
+
 // ───────── 사람 ─────────
 const SKIN = [0xf1c27d, 0xe0ac69, 0xc68642, 0xffdbac, 0x8d5524, 0xf5cfa0];
 const SHIRT = [0xff8a80, 0xffd166, 0x06d6a0, 0x4cc9f0, 0xb388ff, 0xff9f1c, 0x90be6d, 0xf28482, 0x84a59d, 0xf6bd60, 0x7bdff2, 0xcdb4db];
@@ -695,23 +737,45 @@ const PANTS = [0x3d5a80, 0x5c4d7d, 0x2b2d42, 0x6b705c, 0x495057, 0x7f5539];
 const HAIR = [0x2b2118, 0x3b2a1a, 0x5a3825, 0x1c1c1c, 0x8a5a2b, 0xd4a373];
 const BANBI_C = [0x7fe6ff, 0x9dffb0, 0xd0b3ff, 0xffb3e1, 0xfff07a, 0x8fd3ff];
 
+// 여러 상자를 정점색 한 덩어리로 (사람 부위마다 메시 하나)
+function concatGeo(geos) {
+  const names = ['position', 'normal', 'color', 'uv'].filter((n) => geos.every((g) => g.attributes[n]));
+  const out = new THREE.BufferGeometry();
+  for (const n of names) {
+    let len = 0; for (const g of geos) len += g.attributes[n].array.length;
+    const arr = new Float32Array(len); let o = 0;
+    for (const g of geos) { arr.set(g.attributes[n].array, o); o += g.attributes[n].array.length; }
+    out.setAttribute(n, new THREE.BufferAttribute(arr, geos[0].attributes[n].itemSize));
+  }
+  out.computeBoundingSphere();
+  return out;
+}
+const PMAT = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+const _pc = new THREE.Color();
+function vcGeo(parts) {
+  return concatGeo(parts.filter(Boolean).map(([w, h, d, x, y, z, c]) => {
+    const g = new THREE.BoxGeometry(w, h, d).toNonIndexed(); g.translate(x, y, z); g.deleteAttribute('uv');
+    _pc.set(c); const n = g.attributes.position.count, col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { col[i * 3] = _pc.r; col[i * 3 + 1] = _pc.g; col[i * 3 + 2] = _pc.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    return g;
+  }));
+}
 function makePerson(o) {
   const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner);
   const legL = new THREE.Group(), legR = new THREE.Group(), armL = new THREE.Group(), armR = new THREE.Group();
   legL.position.set(-0.11, 0.62, 0); legR.position.set(0.11, 0.62, 0);
   armL.position.set(-0.29, 1.08, 0); armR.position.set(0.29, 1.08, 0);
   inner.add(legL, legR, armL, armR);
-  for (const L of [legL, legR]) { box(L, 0.16, 0.56, 0.18, 0, 0, -0.28, 0, { m: mat(o.pants) }); box(L, 0.17, 0.1, 0.24, 0, 0, -0.57, 0.03, { m: mat(o.shoe || 0x3a3a46) }); }
-  box(inner, 0.44, 0.52, 0.26, 0, 0, 0.87, 0, { m: mat(o.shirt) });
-  for (const A of [armL, armR]) { box(A, 0.13, 0.3, 0.15, 0, 0, -0.13, 0, { m: mat(o.shirt) }); box(A, 0.11, 0.24, 0.13, 0, 0, -0.39, 0, { m: mat(o.skin) }); }
+  const part = (parent, geom) => { const m = new THREE.Mesh(geom, PMAT); m.castShadow = true; parent.add(m); return m; };
+  const legG = vcGeo([[0.16, 0.56, 0.18, 0, -0.28, 0, o.pants], [0.17, 0.1, 0.24, 0, -0.57, 0.03, o.shoe || 0x3a3a46]]);
+  part(legL, legG); part(legR, legG);
+  const armG = vcGeo([[0.13, 0.3, 0.15, 0, -0.13, 0, o.shirt], [0.11, 0.24, 0.13, 0, -0.39, 0, o.skin]]);
+  part(armL, armG); part(armR, armG);
+  part(inner, vcGeo([[0.44, 0.52, 0.26, 0, 0.87, 0, o.shirt], o.vest && [0.46, 0.3, 0.28, 0, 0.98, 0, o.vest], o.bag && [0.34, 0.36, 0.14, 0, 0.9, -0.2, o.bag]]));
   const head = new THREE.Group(); head.position.y = 1.34; inner.add(head);
-  box(head, 0.36, 0.36, 0.34, 0, 0, 0, 0, { m: mat(o.skin) });
-  box(head, 0.38, 0.12, 0.36, 0, 0, 0.16, -0.01, { m: mat(o.hair) });
-  box(head, 0.38, 0.26, 0.1, 0, 0, 0.04, -0.15, { m: mat(o.hair) });
-  if (o.long) box(head, 0.36, 0.36, 0.1, 0, 0, -0.14, -0.16, { m: mat(o.hair) });
-  for (const s of [-1, 1]) box(head, 0.05, 0.06, 0.02, 0, s * 0.08, 0.02, 0.172, { m: basic(0x222222), cast: false });
-  if (o.vest) box(inner, 0.46, 0.3, 0.28, 0, 0, 0.98, 0, { m: mat(o.vest) });
-  if (o.bag) box(inner, 0.34, 0.36, 0.14, 0, 0, 0.9, -0.2, { m: mat(o.bag) });
+  part(head, vcGeo([[0.36, 0.36, 0.34, 0, 0, 0, o.skin], [0.38, 0.12, 0.36, 0, 0.16, -0.01, o.hair], [0.38, 0.26, 0.1, 0, 0.04, -0.15, o.hair],
+    o.long && [0.36, 0.36, 0.1, 0, -0.14, -0.16, o.hair], [0.05, 0.06, 0.02, -0.08, 0.02, 0.172, 0x222222], [0.05, 0.06, 0.02, 0.08, 0.02, 0.172, 0x222222]]));
   g.scale.setScalar(o.s);
   scene.add(g);
   return { g, inner, legL, legR, armL, armR, head, s: o.s, ph: rnd() * TAU };
@@ -722,7 +786,7 @@ function makeBanbi(c) {
   glow.scale.set(0.95, 0.95, 1);
   const g = new THREE.Group(); g.add(orb, glow); scene.add(g);
   tag(orb, 'ai');
-  return { g, orb, glow, c: new THREE.Color(c), pos: g.position, ph: rnd() * TAU, state: 'on' };
+  return { g, orb, glow, c: new THREE.Color(c), pos: g.position, ph: rnd() * TAU, state: 'on', mOn: basic(c), mSleep: basic(c, { transparent: true, opacity: 0.6 }), mOff: basic(0x8a9399) };
 }
 
 const N_KIDS = 24;
@@ -940,7 +1004,7 @@ function updBanbi(b, a, state, t, dt, isPlayer) {
   const k = sleep ? 0.35 + Math.sin(t * 1.5 + b.ph) * 0.1 : off ? 0 : 0.9;
   b.glow.material.opacity += (k - b.glow.material.opacity) * Math.min(1, dt * 4);
   b.orb.scale.setScalar(sleep ? 0.7 : off ? 0.75 : 1);
-  if (!ST.lens) b.orb.material = off ? basic(0x8a9399) : sleep ? basic(b.c.getHex(), { transparent: true, opacity: 0.6 }) : basic(b.c.getHex());
+  if (!ST.lens) b.orb.material = off ? b.mOff : sleep ? b.mSleep : b.mOn;
   b.state = state;
 }
 
@@ -1358,10 +1422,22 @@ $('bookBody').addEventListener('click', (e) => { const b = e.target.closest('[da
 
 // ───────── 루프 ─────────
 const clock = new THREE.Clock();
+const AD = { t: 0, n: 0, good: 0, ft: 0 };
+let frameN = 0;
 let T = 0, scrT = 0, fpsN = 0, fpsT = 0, lastNowMin = -1;
 const camWant = new THREE.Vector3(), lookWant = new THREE.Vector3();
 function frame() {
-  const dt = Math.min(clock.getDelta(), 0.05);
+  const raw = clock.getDelta(), dt = Math.min(raw, 0.05);
+  if (ST.mode !== 'title' && !document.hidden && raw < 0.5) {
+    AD.t += raw; AD.n++;
+    if (AD.t >= 2) {
+      const ft = AD.t / AD.n * 1000;
+      if (ft > 24 && GFX.cur > GFX.floor) { GFX.cur = Math.max(GFX.floor, +(GFX.cur - 0.15).toFixed(2)); renderer.setPixelRatio(GFX.cur); renderer.setSize(innerWidth, innerHeight, false); AD.good = 0; }
+      else if (ft < 15 && GFX.cur < GFX.cap) { AD.good += AD.t; if (AD.good >= 6) { GFX.cur = Math.min(GFX.cap, +(GFX.cur + 0.1).toFixed(2)); renderer.setPixelRatio(GFX.cur); renderer.setSize(innerWidth, innerHeight, false); AD.good = 0; } }
+      else AD.good = 0;
+      AD.ft = Math.round(ft * 10) / 10; AD.t = 0; AD.n = 0;
+    }
+  }
   T += dt;
 
   // 시간 흐름
@@ -1415,7 +1491,6 @@ function frame() {
   }
 
   // 움직이는 것들
-  TREE.foliage.rotation.y = Math.sin(T * 0.25) * 0.01;
   for (const s of TREE.seedLabels) s.position.y = s.userData.base + Math.sin(T * 1.3 + s.position.x) * 0.05;
   for (const h of HOLOS) h.rotation.y += dt * 0.6;
   if (LS.isOpen()) LS.tick(dt);
@@ -1438,7 +1513,7 @@ function frame() {
   beacon.visible = ST.mode === 'walk' && ST.slot >= 0;
   beacon.userData.ring.scale.setScalar(1 + Math.sin(T * 3) * 0.08);
   scrT += dt;
-  if (scrT > 0.25) { scrT = 0; drawScreen(slot?.id === 'world' || performance.now() < (SCREEN.manual || 0), T); }
+  { const live = slot?.id === 'world' || performance.now() < (SCREEN.manual || 0), near = camera.position.distanceToSquared(SCREEN.at) < 4900; if (scrT > (live && near ? 0.25 : near ? 1 : 3)) { scrT = 0; drawScreen(live, T); } }
   applySky(m);
 
   // 카메라
@@ -1483,7 +1558,12 @@ function frame() {
   const mm = Math.floor(m);
   if (mm !== lastNowMin) { lastNowMin = mm; $('clock').textContent = fmt(Math.min(m, DAY_END)); }
 
-  renderer.render(scene, camera);
+  frameN++;
+  const lessonOpen = LS.isOpen();
+  if (!lessonOpen || frameN % 6 === 0) {
+    if (GFX.shadowEvery && frameN % GFX.shadowEvery === 0) renderer.shadowMap.needsUpdate = true;
+    renderer.render(scene, camera);
+  }
   fpsN++; fpsT += dt; if (fpsT > 1) { window.Q36.fps = Math.round(fpsN / fpsT); fpsN = 0; fpsT = 0; }
   requestAnimationFrame(frame);
 }
@@ -1495,6 +1575,7 @@ window.Q36 = {
   ST, KIDS, PLAYER, CAM, keys, renderer, fps: 0, mt: () => null,
   time: (hhmm) => { const [h, mi] = hhmm.split(':').map(Number); ST.m = h * 60 + mi; },
   tour: startTour, walk: startWalk, lens: setLens, next: nextScene,
+  GFX, AD, MERGED,
   info: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures, fps: window.Q36.fps })
 };
 
