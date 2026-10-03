@@ -59,11 +59,24 @@ export default async function start(map, params = {}) {
   map.player.freeze(true);
   map.hud.banner('이야기 준비 중…', 30);
   map.sfx('warm');
-  let D = null, WHO = {};
-  try { const m = await import(new URL('./story_data.js?v=' + DATA_V, import.meta.url)); D = m.STORY; WHO = m.WHO || {}; }
-  catch (e) { console.error('[이야기] story_data.js를 읽지 못했어요', e); }
+  // EP-1(10-03 교사 '지금 것은 연습 게임 — 앞으로 새로 만들 것을 추가할 수 있게'): 에피소드 목록 story_episodes.js → params.ep · 둘 이상이면 시작 때 고르기
+  let EPS = [];
+  try { EPS = (await import(new URL('./story_episodes.js?t=' + Date.now(), import.meta.url))).EPISODES || []; } catch (e) { console.error('[이야기] story_episodes.js를 읽지 못했어요', e); }
   if (gone()) return {};
-  if (!D) { map.hud.banner('', 0.01); map.hud.toast('이야기 글 파일(story_data.js)을 읽지 못했어요', 6); map.player.freeze(false); return {}; }
+  EPS = EPS.filter(e => e && /^[a-z0-9_]+$/.test(e.id || '') && /^[a-z0-9_]+\.js$/.test(e.file || ''));
+  if (!EPS.length) EPS = [{ id: 'rainbow', title: '무지개 편지', icon: '🌈', practice: true, file: 'story_data.js', legacy: 'rainbow' }];
+  const VIS = EPS.filter(e => !e.hidden);   // hidden = 목록엔 안 보임(주소 ?ep=로만 — 만드는 중인 이야기)
+  let EP = EPS.find(e => e.id === params.ep);
+  if (!EP && VIS.length > 1) { map.hud.banner(' ', 0.02);
+    const k = await map.hud.ask('📖 어떤 이야기를 할까요?', VIS.map(e => (e.icon || '📖') + ' ' + (e.practice ? '[연습] ' : '') + e.title)); if (gone()) return {}; EP = VIS[k]; }
+  EP = EP || VIS[0] || EPS[0];
+  let D = null, WHO = {};
+  try { const m = await import(new URL('./' + EP.file + (EP.legacy ? '?v=' + DATA_V : '?t=' + Date.now()), import.meta.url)); D = m.STORY; WHO = m.WHO || {}; }
+  catch (e) { console.error('[이야기] ' + EP.file + '를 읽지 못했어요', e); }
+  if (gone()) return {};
+  if (!D) { map.hud.banner('', 0.01); map.hud.toast('이야기 글 파일(' + EP.file + ')을 읽지 못했어요', 6); map.player.freeze(false); return {}; }
+  const LEG = EP.legacy === 'rainbow' || !Array.isArray(D.steps);   // 무지개 편지 = 예전 코드 그대로 · 새 이야기 = steps(아래 runSteps)
+  if (EP.practice && D.title && !/연습/.test(D.title)) D.title = '[연습] ' + D.title;
   const nav = await map.nav();
   if (gone()) return {};
   map.time('day');
@@ -78,17 +91,20 @@ export default async function start(map, params = {}) {
   const A = { friend: '인우', kid: '빈', senior: '다솜' };
   const P4 = spot(25.0, -42.7, 0, 'grade4'), Pme = spot(27.6, -42.6, 0, 'grade4');
   const P1 = spot(37.4, -30.3, 0, 'grade1'), P6 = spot(-37.0, -37.9, 3.7, 'grade6');
-  map.npc.move(A.friend, { x: P4.x, y: P4.y, z: P4.z }, { pose: 'stand', face: 90, sign: false });
-  map.npc.move(A.kid, { x: P1.x, y: P1.y, z: P1.z }, { pose: 'stand', face: 180, sign: false });
-  map.npc.move(A.senior, { x: P6.x, y: P6.y, z: P6.z }, { pose: 'stand', face: 180, sign: false });
-  const board4 = map.world.paint('board:grade4', { text: D.board4, color: '#1c4096' });
+  if (LEG) {
+    map.npc.move(A.friend, { x: P4.x, y: P4.y, z: P4.z }, { pose: 'stand', face: 90, sign: false });
+    map.npc.move(A.kid, { x: P1.x, y: P1.y, z: P1.z }, { pose: 'stand', face: 180, sign: false });
+    map.npc.move(A.senior, { x: P6.x, y: P6.y, z: P6.z }, { pose: 'stand', face: 180, sign: false }); }
+  const board4 = LEG ? map.world.paint('board:grade4', { text: D.board4, color: '#1c4096' }) : null;
   const T4 = npcAt('4학년 선생님'), T1 = npcAt('1학년 선생님'), TL = npcAt('사서선생님'), TG = npcAt('체육선생님');
 
   // ---------- 이야기 창 ----------
   let css = document.getElementById('story-css'); if (!css) { css = document.createElement('style'); css.id = 'story-css'; css.textContent = CSS; document.head.appendChild(css); }
   const ui = document.createElement('div'); ui.id = 'story-ui'; document.body.appendChild(ui);
   const mk = (tag, cls, txt, parent) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; (parent || ui).appendChild(e); return e; };
-  const fill = t => String(t).replace('{role}', D.roleName[S.role] || '').replace('{place}', D.placeName[S.place] || '').replace('{gift}', D.giftName[S.gift] || '');
+  const VARS = {};   // 새 이야기(steps)의 선택 기억 — 글 안의 {이름}은 고른 보기 글로 바뀐다
+  const fill = t => LEG ? String(t).replace('{role}', D.roleName[S.role] || '').replace('{place}', D.placeName[S.place] || '').replace('{gift}', D.giftName[S.gift] || '')
+    : String(t).replace(/\{([a-z0-9_]+)\}/g, (m0, k) => (VARS[k] && VARS[k].label != null ? VARS[k].label : m0));
   let talk = null;   // { el, next(i), openedAt, n }
   function panel(who, text, choices) {   // → Promise<보기 번호 | 0(다음)>
     return new Promise(res => {
@@ -139,7 +155,7 @@ export default async function start(map, params = {}) {
     if (!r.ok) { map.hud.toast('여기서는 길을 찾지 못했어요 — 조금 움직여 보세요'); return; }
     clearTrail(); trail = map.mk.trail(r.pts, { color: 0x3cc8ff, width: 0.45 }); trailT = TRAIL_T;
   }
-  const chapter = n => { S.ch = n; map.hud.chip('st', '📖 ' + (D.chapters[n] || D.title)); if (n) map.hud.banner(D.chapters[n], 2.4); map.sfx('go'); };
+  const chapter = n => { S.ch = n; const C = D.chapters || []; map.hud.chip('st', '📖 ' + (C[n] || D.title)); if (n && C[n]) map.hud.banner(C[n], 2.4); map.sfx('go'); };
   map.hud.chip('st-h', '💡 길 안내 (H)', { onClick: guide });
   // 말 걸기 자리 → Promise(눌렀을 때)
   //   그동안 가까운 원래 지점(칠판 낙서·신발장·앉기…)은 끈다 — 선생님이 칠판 앞에 서 있어 '칠판에 낙서하기'가 먼저 잡히던 것
@@ -149,12 +165,52 @@ export default async function start(map, params = {}) {
   const talkTo = (p, name, text) => { objective(text, p, name); return waitUse(p, '💬 ' + name + '에게 말 걸기'); };
 
   // ---------- 시작 ----------
-  map.player.teleport([Pme.x, Pme.y, Pme.z], { h: 270 });
+  if (LEG) map.player.teleport([Pme.x, Pme.y, Pme.z], { h: 270 });
+  else { const st = D.start || {}, at = st.at ? place(st.at) : null; if (at) map.player.teleport([at.x, at.y, at.z], { h: st.h ?? 0 }); }
   map.minimap.show();
   map.hud.banner('', 0.01);
   map.hud.chip('st', '📖 ' + D.title);
   let T = 0;
-  run().catch(e => { if (!gone()) { console.error('[이야기]', e); map.hud.toast('이야기에 문제가 생겼어요', 4); } });
+  (LEG ? run() : runSteps()).catch(e => { if (!gone()) { console.error('[이야기]', e); map.hud.toast('이야기에 문제가 생겼어요', 4); } });
+
+  // ---------- 새 이야기 진행기(EP-1 · steps) — 글 파일만으로 이야기를 더한다(docs/tasks/new_episode.md) ----------
+  //   자리(at·go·collect): '구역id'·'zone:구역'·'lm:표지점'·'spawn:…'·'npc:사람 이름'·[x, z]·[x, y, z]
+  function place(t) {
+    if (Array.isArray(t)) return t.length >= 3 ? { x: t[0], y: t[1], z: t[2] } : spot(t[0], t[1], 0);
+    if (typeof t !== 'string') return null;
+    if (t.startsWith('npc:')) return npcAt(t.slice(4));
+    const r = map.resolve(/^(zone|lm|spawn|hot|door):/.test(t) ? t : 'zone:' + t); return r ? { x: r.x, y: r.y ?? 0, z: r.z } : null;
+  }
+  const arrive = (p, r = 2.6) => new Promise(res => { const h = map.trigger.add({ x: p.x, y: p.y ?? 0, z: p.z, r }, { once: true, enter: () => { h.remove(); res(); } }); });
+  function world(ops) { return new Promise(res => { let ok = false; const fin = () => { if (!ok) { ok = true; res(); } };
+    try { map.story.run([{ id: 'w' + Math.random().toString(36).slice(2, 8), do: ops }], { onDone: fin }); } catch (e) { console.error('[이야기] world', e); fin(); } setTimeout(fin, 8000); }); }
+  async function collect(st) {   // 여러 곳 줍기 — 다 주우면 다음
+    const pts = (st.collect || []).map(place).filter(Boolean), need = Math.min(st.n || pts.length, pts.length); let got = 0;
+    const left = pts.slice(), G9 = () => (st.goal || (st.item || '물건') + ' 모으기') + ' (' + got + '/' + need + ')';
+    objective(G9(), left[0], st.item);   // 목표 표시 = 아직 안 주운 곳(하나 주우면 다음 곳으로)
+    await new Promise(res => pts.forEach(p => { const mkr = map.mk.marker(p.x, (p.y ?? 0) + 0.9, p.z, { color: 0xffc23c });
+      const h = map.interact.add({ x: p.x, y: p.y ?? 0, z: p.z, r: 1.6, label: (st.icon || '✨') + ' ' + (st.item || '줍기'), use: () => { if (talk) return; h.remove(); mkr.remove(); got++; map.sfx('ding');
+        left.splice(left.indexOf(p), 1); if (got >= need) res(); else objective(G9(), left[0], st.item); } }); }));
+  }
+  async function runSteps(list = D.steps) {
+    for (const st of list) {
+      if (gone() || S.done) return;
+      if (st.chapter != null) chapter(st.chapter);
+      if (st.world) await world(st.world);
+      if (st.go) { const p = place(st.go); if (p) { objective(st.goal || '목표로 가요', p, st.label); await arrive(p, st.r); } }
+      if (st.talk) { const p = place('npc:' + st.talk) || place(st.at); if (p) await talkTo(p, st.talk, st.goal || st.talk + '에게 말 걸기'); }
+      if (st.collect) await collect(st);
+      if (gone()) return;
+      if (st.say) { if (!(await say(st.say))) return; }
+      if (st.note) await panel('쪽지', st.note);
+      if (st.ask) { const k = await choose(st.ask, st.choices || []); if (gone()) return; if (st.set) VARS[st.set] = { i: k, label: String((st.choices || [])[k] || '').replace(/^\S+\s/, '') };
+        if (st.reply && st.reply[k]) { if (!(await say(st.reply[k]))) return; } }
+      if (st.if) { const [k, v] = Object.entries(st.if)[0] || []; const hit = VARS[k] && VARS[k].i === v; await runSteps(hit ? st.then || [] : st.else || []); }
+      if (st.toast) map.hud.toast(st.toast, 3);
+      if (st.wait) await new Promise(r => setTimeout(r, st.wait * 1000));
+      if (st.end) { S.done = true; map.hud.goal(null); objective(null); map.sfx('done'); ending(); return; }
+    }
+  }
 
   async function run() {
     for (const t of [].concat(D.intro)) { await panel('이야기', t); if (gone()) return; }
@@ -295,12 +351,13 @@ export default async function start(map, params = {}) {
   function ending() {
     map.hud.goal(null); document.exitPointerLock?.(); map.player.freeze(true);
     endEl = mk('div', 'sp'); endEl.id = 'story-end';
-    mk('div', 'story-rb', null, endEl); mk('h2', '', D.endTitle, endEl); mk('div', 'b', fill(D.endBody), endEl);
+    const E9 = LEG ? null : (D.steps.find(x => x.end) || {}).end || {};
+    mk('div', 'story-rb', null, endEl); mk('h2', '', LEG ? D.endTitle : E9.title || D.title, endEl); mk('div', 'b', fill(LEG ? D.endBody : E9.body || ''), endEl);
     const ul = mk('ul', '', null, endEl);
-    for (const t of ['🎭 맡은 일: ' + D.roleName[S.role], '🎨 주운 크레파스: ' + S.crayons + ' / 3', '🎁 그림 돌려준 방법: ' + D.giftName[S.gift], '📌 그림 건 곳: ' + D.placeName[S.place], '⏱ 걸린 시간: ' + fmt(T)]) mk('li', '', t, ul);
+    for (const t of (LEG ? ['🎭 맡은 일: ' + D.roleName[S.role], '🎨 주운 크레파스: ' + S.crayons + ' / 3', '🎁 그림 돌려준 방법: ' + D.giftName[S.gift], '📌 그림 건 곳: ' + D.placeName[S.place]] : []).concat(['⏱ 걸린 시간: ' + fmt(T)])) mk('li', '', t, ul);
     const rw = mk('div', 'rw', null, endEl);
     const again = mk('button', '', '🔁 처음부터', rw), quit = mk('button', 'sub', '끝내기', rw);
-    again.addEventListener('click', e => { e.stopPropagation(); setTimeout(() => window.SD2?.map?.game?.load('story'), 0); });
+    again.addEventListener('click', e => { e.stopPropagation(); setTimeout(() => window.SD2?.map?.game?.load('story', { ep: EP.id }), 0); });
     quit.addEventListener('click', e => { e.stopPropagation(); map.quit(); });
     setTimeout(() => { try { again.focus({ preventScroll: true }); } catch (e) { /* 무시 */ } }, 0);
   }

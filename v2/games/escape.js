@@ -49,10 +49,23 @@ export default async function start(map, params = {}) {
   map.hud.banner('방탈출 준비 중…', 30);
   map.sfx('warm');
   // ---------- 이야기 파일 ----------
-  let DATA = null;
-  try { DATA = (await import(new URL('./escape_story.js?t=' + Date.now(), import.meta.url))).STORY; } catch (e) { console.error('[escape] 이야기 파일을 못 읽음', e); }
+  // EP-1(10-03 교사 '지금 것은 연습 게임 — 새 방탈출을 추가할 수 있게'): 에피소드 목록 escape_episodes.js → params.ep · 둘 이상 보이면 시작 때 고르기
+  let EPS = [];
+  try { EPS = (await import(new URL('./escape_episodes.js?t=' + Date.now(), import.meta.url))).EPISODES || []; } catch (e) { console.error('[escape] escape_episodes.js를 못 읽음', e); }
   if (dead || map.gone) return {};
-  if (!DATA || !Array.isArray(DATA.rooms) || !DATA.rooms.length) { map.hud.toast('이야기 파일(escape_story.js)을 읽지 못했어요'); map.quit(); return {}; }
+  EPS = EPS.filter(e => e && /^[a-z0-9_]+$/.test(e.id || '') && /^[a-z0-9_]+\.js$/.test(e.file || ''));
+  if (!EPS.length) EPS = [{ id: 'timecapsule', title: '사라진 타임캡슐 열쇠', icon: '🔑', practice: true, file: 'escape_story.js' }];
+  const VIS = EPS.filter(e => !e.hidden);
+  let EP = EPS.find(e => e.id === params.ep);
+  if (!EP && VIS.length > 1) { map.hud.banner(' ', 0.02);
+    const k = await map.hud.ask('🔐 어떤 방탈출을 할까요?', VIS.map(e => (e.icon || '🔐') + ' ' + (e.practice ? '[연습] ' : '') + e.title)); if (dead || map.gone) return {}; EP = VIS[k]; }
+  EP = EP || VIS[0] || EPS[0];
+  let DATA = null;
+  try { DATA = (await import(new URL('./' + EP.file + '?t=' + Date.now(), import.meta.url))).STORY; } catch (e) { console.error('[escape] 이야기 파일을 못 읽음', e); }
+  if (dead || map.gone) return {};
+  if (!DATA || !Array.isArray(DATA.rooms) || !DATA.rooms.length) { map.hud.toast('이야기 파일(' + EP.file + ')을 읽지 못했어요'); map.quit(); return {}; }
+  if (EP.practice && DATA.title && !/연습/.test(DATA.title)) DATA.title = '[연습] ' + DATA.title;
+  const BK = EP.id === 'timecapsule' ? '' : EP.id + '.';   // 기록은 에피소드마다(연습 = 예전 키 그대로)
   const nav = await map.nav();
   if (dead || map.gone) return {};
   const S = map.story, seed = params.seed != null && params.seed !== '' ? (isNaN(+params.seed) ? params.seed : +params.seed) : Date.now(), rng = map.rng(seed);
@@ -710,7 +723,7 @@ export default async function start(map, params = {}) {
   async function finish() {
     if (st === 'end') return; st = 'end'; setMark(null); stealthOff(); uiClose(); chips();
     map.hud.chip('esc-clue', null); map.hud.chip('esc-hint', null);
-    const bestKey = night ? 'bestNight' : 'best', best = map.store.get(bestKey, null), nb = best == null || TT < best;
+    const bestKey = BK + (night ? 'bestNight' : 'best'), best = map.store.get(bestKey, null), nb = best == null || TT < best;
     if (nb) map.store.set(bestKey, Math.floor(TT));
     map.hud.goal('🎉 방탈출 성공!'); map.sfx('done');
     const k = await map.hud.ask('🎉 ' + (DATA.title || '학교 방탈출') + ' 성공!\n걸린 시간 ' + fmt(TT) + (nb ? ' (가장 빠른 기록!)' : ' · 가장 빠른 기록 ' + fmt(best)) + '\n잡힌 횟수 ' + caughtN + (night ? ' · 🌙 밤' : ' · ☀️ 낮'), ['그만하기']);
