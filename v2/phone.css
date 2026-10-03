@@ -142,3 +142,10 @@ body.small #story-end ul{font-size:13px;line-height:1.5;margin-bottom:8px}
 /* 창이 떠 있는 동안(움직일 수 없음) 버튼·조이스틱 표시·안내는 숨긴다 · 끝 화면이면 목표 줄·칩도 */
 body.touch:has(#story-talk) .tbtn,body.touch:has(#story-talk) #tJoyHint,body.touch:has(#story-talk) #hint,
 body.touch:has(#story-end) .tbtn,body.touch:has(#story-end) #tJoyHint,body.touch:has(#story-end) #hint{visibility:hidden}
+/* NET-2·WG-NET·MEMO-3(10-03): 함께하기 창이 떠 있는 동안 터치 버튼·조이스틱 표시 숨김 · 😀 칩은 👥 칩 밑 · 물총 대기실은 낮은 화면에 맞게 */
+body.touch:has(.wg-lobby) .tbtn,body.touch:has(.wg-lobby) #tJoyHint,body.touch:has(.wg-lobby) #hint,
+body.touch:has(.lb-pop) .tbtn,body.touch:has(.lb-pop) #tJoyHint,
+body.touch:has(#memo-board) .tbtn,body.touch:has(#memo-board) #tJoyHint,body.touch:has(#memo-form) .tbtn,body.touch:has(#memo-form) #tJoyHint,body.touch:has(#memo-pick) .tbtn,body.touch:has(#memo-pick) #tJoyHint{visibility:hidden}
+body.small #mpEmo{top:calc(118px + env(safe-area-inset-top))!important;left:calc(8px + env(safe-area-inset-left))!important}
+body.small #mpInvite{top:calc(8px + env(safe-area-inset-top))!important;font-size:13px!important}
+@media (max-height:500px){ .wg-lobby{padding:10px 12px!important;font-size:13px!important;max-height:94vh!important} }

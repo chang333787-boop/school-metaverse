@@ -1360,7 +1360,7 @@ function emoChip(on) {
 }
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=6'), import('./lobby.js?v=8')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=6'), import('./lobby.js?v=9')]).then(([N, L]) => {
     const LOBBY = L.createLobby({ chip, net: () => NET, toast: (m, t) => toast(m, t),
       join: (room) => { CTLK.join = Date.now(); CTLK.init = false; CTLK.m = CTLK.q = null; NET = N.createNet({ THREE, scene, room, kind: 'kid', onChange: () => LOBBY.draw(), onDenied: () => LOBBY.recheck(), onCtl }); emoChip(true); if (!MAP.game.current && !MAP.minimap.visible) MAP.minimap.show(); },
       leave: () => { if (NET) NET.leave(); NET = null; emoChip(false); MAP.minimap.setPeers([]); holdOff(); },
