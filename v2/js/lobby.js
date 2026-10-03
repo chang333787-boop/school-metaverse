@@ -45,9 +45,9 @@ export async function teacherPin(toast) {
 }
 
 export function createLobby(o) {
-  const { chip, suffix = '', label = '', join, leave, net, toast = () => {} } = o;
+  const { chip, suffix = '', label = '', join, leave, net, toast = () => {}, onMatch = null } = o;
   if (!document.getElementById('lb-css')) { const st = document.createElement('style'); st.id = 'lb-css'; st.textContent = CSS; document.head.appendChild(st); }
-  let cur = null, pop = null, big = null, pollT = 0;
+  let cur = null, pop = null, big = null, pollT = 0, mes = null, mKey = '';
   const live = (p) => p && typeof p.e === 'number' && p.e > Date.now();
   async function check(c, r) {   // 번호가 살아 있고(8시간 안) 그 방이 닫히지 않았는지
     const p = await req('/codes/' + c); if (!live(p) || (r && p.r !== r)) return null;
@@ -60,11 +60,17 @@ export function createLobby(o) {
   function enter(info, quiet) {
     cur = info; ls.set('mp.room', JSON.stringify(info)); join('c' + info.c + suffix, info); draw();
     clearInterval(pollT); pollT = setInterval(recheck, 20000);
+    if (onMatch) {   // 같은 방에서 물총 친구 대결 대기실이 열리면 알림(main.js가 '들어가기' 창)
+      if (mes) mes.close(); mKey = ''; mes = new EventSource(DB + '/match/c' + info.c + '/m.json');
+      const seen = (m) => { if (!m || !cur) return; const k = m.seq + ':' + m.st; if (k === mKey) return; mKey = k; if (m.st === 'lobby' || m.st === 'count') onMatch(m); };
+      const on = (e) => { let d; try { d = JSON.parse(e.data); } catch (er) { return; } if (d && d.path === '/') seen(d.data); else req('/match/c' + info.c + '/m').then(seen).catch(() => {}); };
+      mes.addEventListener('put', on); mes.addEventListener('patch', on);
+    }
     if (!quiet) toast('👥 「' + info.n + '」 방에 들어왔어요 — 친구들이 이름표와 함께 보여요', 3);
     dispatchEvent(new CustomEvent('sm-room', { detail: info }));
   }
   async function recheck() { if (!cur) return; try { if (!(await check(cur.c, cur.r))) out(cur.k ? '🚪 방이 끝났어요' : '🚪 선생님이 방을 닫았어요'); } catch (e) { /* 잠깐 끊김은 그대로 */ } }
-  function out(msg) { clearInterval(pollT); if (cur) leave(); cur = null; ls.set('mp.room', null); draw(); closePop(); if (msg) toast(msg, 3); dispatchEvent(new CustomEvent('sm-room', { detail: null })); }
+  function out(msg) { clearInterval(pollT); if (mes) { mes.close(); mes = null; } if (cur) leave(); cur = null; ls.set('mp.room', null); draw(); closePop(); if (msg) toast(msg, 3); dispatchEvent(new CustomEvent('sm-room', { detail: null })); }
   const closePop = () => { if (pop) pop.remove(); pop = null; };
   function place(p) {
     const r = chip.getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight;

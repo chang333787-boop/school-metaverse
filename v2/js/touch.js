@@ -101,6 +101,7 @@ export function createTouch(ctx) {
     joy.classList.toggle('run', m >= 0.92);
   }
   function joyEnd() { T.joyId = -1; T.m = T.mx = T.my = 0; joy.style.visibility = 'hidden'; joy.classList.remove('run'); }
+  const TAP = { x: 0, y: 0, t: 0, m: 0 };
   function onStart(e) {
     enable(); if (e.cancelable) e.preventDefault();
     // 리뷰(09-26): 끝 이벤트를 잃은 손가락(화면에 더는 없는 id)은 버린다 — 안 그러면 조이스틱이 영영 '누른 채'
@@ -109,19 +110,19 @@ export function createTouch(ctx) {
       if (T.joyId >= 0 && !jOk) joyEnd(); if (!lOk) T.lookId = -1; }
     for (const t of e.changedTouches) {
       if (T.joyId < 0 && t.clientX < innerWidth * 0.45 && t.clientY > innerHeight * 0.3) { T.joyId = t.identifier; joyAt(t.clientX, t.clientY); joyMove(t.clientX, t.clientY); }
-      else if (T.lookId < 0) { T.lookId = t.identifier; lx = t.clientX; ly = t.clientY; }
+      else if (T.lookId < 0) { T.lookId = t.identifier; lx = t.clientX; ly = t.clientY; TAP.x = lx; TAP.y = ly; TAP.t = performance.now(); TAP.m = 0; }
     }
   }
   function onMove(e) {
     if (e.cancelable) e.preventDefault();
     for (const t of e.changedTouches) {
       if (t.identifier === T.joyId) joyMove(t.clientX, t.clientY);
-      else if (t.identifier === T.lookId) { look(t.clientX - lx, t.clientY - ly); lx = t.clientX; ly = t.clientY; }
+      else if (t.identifier === T.lookId) { TAP.m += Math.abs(t.clientX - lx) + Math.abs(t.clientY - ly); look(t.clientX - lx, t.clientY - ly); lx = t.clientX; ly = t.clientY; }
     }
   }
   function onEnd(e) {
     if (e.cancelable) e.preventDefault();
-    for (const t of e.changedTouches) { if (t.identifier === T.joyId) joyEnd(); else if (t.identifier === T.lookId) T.lookId = -1; }
+    for (const t of e.changedTouches) { if (t.identifier === T.joyId) joyEnd(); else if (t.identifier === T.lookId) { T.lookId = -1; if (e.type === 'touchend' && TAP.m < 10 && performance.now() - TAP.t < 400) dispatchEvent(new CustomEvent('sm-click', { detail: { x: t.clientX, y: t.clientY, touch: true } })); } }   // 톡 = sm-click(마우스 FREE-MOUSE와 같은 신호 — 메모장 깃발)
   }
   const PF = { passive: false };
   canvas.addEventListener('touchstart', onStart, PF); canvas.addEventListener('touchmove', onMove, PF);

@@ -5,8 +5,8 @@ import { buildWorld } from './world.js?v=142';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=35';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
-import { createTouch, touchPrimary } from './touch.js?v=7';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
+import { createMapApi } from './mapapi.js?v=36';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createTouch, touchPrimary } from './touch.js?v=8';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=11';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
@@ -1342,10 +1342,19 @@ let acc = 0, n = 0, simMs = 0;
 let NET = null;
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=4'), import('./lobby.js?v=4')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=4'), import('./lobby.js?v=5')]).then(([N, L]) => {
     const LOBBY = L.createLobby({ chip, net: () => NET, toast: (m, t) => toast(m, t),
       join: (room) => { NET = N.createNet({ THREE, scene, room, kind: 'kid', onChange: () => LOBBY.draw(), onDenied: () => LOBBY.recheck() }); },
-      leave: () => { if (NET) NET.leave(); NET = null; } });
+      leave: () => { if (NET) NET.leave(); NET = null; },
+      onMatch: (m) => {   // WG-NET 초대: 같은 방 친구가 물총 친구 대결 대기실을 열면(내가 물총 중이거나 오프닝이면 안 띄움)
+        const g = MAP.game.current; if ((g && /^watergun/.test(g.id)) || document.body.classList.contains('title-on')) return;
+        let d = document.getElementById('mpInvite'); if (d) d.remove();
+        d = document.createElement('div'); d.id = 'mpInvite'; d.className = 'chip';
+        d.style.cssText = 'left:50%;top:96px;transform:translateX(-50%);z-index:44;display:flex;gap:8px;align-items:center;font-size:15px;padding:8px 12px;pointer-events:auto';
+        d.innerHTML = '💦 같은 방에서 <b>물총 친구 대결</b> ' + (m.st === 'count' ? '경기가 곧 시작해요!' : '대기실이 열렸어요') + '<button data-i="go" style="font:inherit;font-weight:800;border:0;border-radius:9px;padding:5px 11px;background:#ffd23c;color:#1d3557;cursor:pointer">들어가기</button><button data-i="x" style="font:inherit;border:0;background:none;color:#fff;cursor:pointer">✕</button>';
+        d.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-i]'); if (!b) return; d.remove(); if (b.dataset.i === 'go') MAP.game.load('watergun_vs', {}); });
+        document.body.appendChild(d); setTimeout(() => d.remove(), 15000);
+      } });
     window.SM_MP = { room: () => LOBBY.room ? 'c' + LOBBY.room.c : null, net: () => NET, info: () => LOBBY.room, open: () => LOBBY.open() };   // 게임(물총 친구 대결)이 같은 방·이름을 쓴다
     setInterval(() => LOBBY.draw(), 2000);
     addEventListener('sm-name', (e) => { if (NET && e.detail) { NET.setName(e.detail); LOBBY.draw(); } });   // 게임(메모장 등)에서 적은 이름을 이름표에도
