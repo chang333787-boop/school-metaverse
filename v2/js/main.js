@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=142';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=36';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=38';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=8';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=12';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
@@ -554,7 +554,7 @@ function physics(dt) {
     const st = CTRL.steer; mx = st.x; mz = st.z; sp2 = st.v;
     if (st.cam && (mx || mz)) { let d = Math.atan2(-mx, -mz) - camYaw; d = Math.atan2(Math.sin(d), Math.cos(d)); camYaw += d * Math.min(1, dt * 2.2); }   // 카메라를 가는 쪽 뒤로 천천히
   }
-  if (CTRL.frozen) mx = mz = 0;
+  if (CTRL.frozen || CTRL.held) mx = mz = 0;   // held = 선생님 ✋ 모두 멈춤
   const L = Math.hypot(mx, mz), ox = P.x, oz = P.z;
   if (L > 0) {
     mx /= L; mz /= L;
@@ -565,7 +565,7 @@ function physics(dt) {
   }
   P.spd = Math.hypot(P.x - ox, P.z - oz) / Math.max(dt, 1e-4);   // ENGINE-1: 소리 판정(map.player.noise)
   if (TOUCH.jumpT > 0) TOUCH.jumpT -= dt;
-  if ((keys.has('Space') || TOUCH.jump || TOUCH.jumpT > 0) && P.ground && !CTRL.frozen && !cr) { P.vy = PHY.jv; P.ground = false; TOUCH.jumpT = 0; }
+  if ((keys.has('Space') || TOUCH.jump || TOUCH.jumpT > 0) && P.ground && !CTRL.frozen && !CTRL.held && !cr) { P.vy = PHY.jv; P.ground = false; TOUCH.jumpT = 0; }
   P.vy -= PHY.g * dt;
   const y0 = P.y;
   P.y += P.vy * dt;
@@ -1340,23 +1340,62 @@ let acc = 0, n = 0, simMs = 0;
 // MP-1(10-03 교사 '동시 접속이 포인트 — 홍보는 멀티플레이와 상관없음') + LOBBY-1(같은 날 '선생님이 방 파고 코드로 들어오기 · 방 목록'): 주소만으로는 혼자 —
 //   👥 함께하기 칩 → 선생님이 연 방 고르기 + 번호 4자리(lobby.js) → 같은 방 친구들이 보인다 · 홍보판·게이트·사진 대조·?mp=0이면 칩도 없음
 let NET = null;
+const CTLK = { m: null, q: null, join: 0, init: false }, NETP = { x: 0, y: 0, z: 0, h: 0 };
+// ✋ 모두 멈춤(선생님) — 화면 가운데 큰 글 · 움직임 멈춤 · ▶ 다시 움직여요 또는 90초 뒤 풀림
+let holdEl = null, holdT = 0;
+function holdOn() { holdOff(); document.exitPointerLock?.(); CTRL.held = true; holdEl = document.createElement('div'); holdEl.id = 'mpHold';
+  holdEl.style.cssText = 'position:fixed;inset:0;z-index:48;display:flex;align-items:center;justify-content:center;background:rgba(10,20,40,.45);color:#fff;font:900 clamp(28px,6vw,56px)/1.3 "Apple SD Gothic Neo","Malgun Gothic",sans-serif;text-align:center;text-shadow:0 3px 0 rgba(0,0,0,.35);pointer-events:auto';
+  holdEl.innerHTML = '<div>✋ 잠깐 멈춰요!<div style="font-size:.5em;font-weight:800;margin-top:10px">선생님 말씀을 들어요</div></div>'; document.body.appendChild(holdEl); holdT = setTimeout(() => holdOff(), 90000); }
+function holdOff(say) { clearTimeout(holdT); if (holdEl) { holdEl.remove(); holdEl = null; if (say) toast('▶ 다시 움직여요!', 2); } CTRL.held = false; }
+// 😀 이모지 인사(방 안에서만 · 정해진 그림 6개)
+let emoEl = null;
+function emoChip(on) {
+  if (!on) { if (emoEl) emoEl.remove(); emoEl = null; return; } if (emoEl) return;
+  emoEl = document.createElement('div'); emoEl.id = 'mpEmo'; emoEl.className = 'chip'; emoEl.style.cssText = 'left:10px;top:84px;cursor:pointer;display:flex;gap:2px;align-items:center;padding:4px 6px;pointer-events:auto';
+  emoEl.innerHTML = '<span data-e="t" style="padding:2px 6px">😀</span><span class="emo-bar" style="display:none;gap:2px"></span>';
+  import('./net.js?v=5').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" style="font-size:22px;padding:2px 4px;cursor:pointer">' + x + '</span>').join(''); });
+  emoEl.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-e]'); if (!b) return; const bar = emoEl.querySelector('.emo-bar');
+    if (b.dataset.e === 't') { bar.style.display = bar.style.display === 'none' ? 'flex' : 'none'; return; } if (NET) NET.emote(+b.dataset.e); bar.style.display = 'none'; });
+  document.body.appendChild(emoEl);
+}
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=4'), import('./lobby.js?v=5')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=5'), import('./lobby.js?v=6')]).then(([N, L]) => {
     const LOBBY = L.createLobby({ chip, net: () => NET, toast: (m, t) => toast(m, t),
-      join: (room) => { NET = N.createNet({ THREE, scene, room, kind: 'kid', onChange: () => LOBBY.draw(), onDenied: () => LOBBY.recheck() }); },
-      leave: () => { if (NET) NET.leave(); NET = null; },
-      onMatch: (m) => {   // WG-NET 초대: 같은 방 친구가 물총 친구 대결 대기실을 열면(내가 물총 중이거나 오프닝이면 안 띄움)
-        const g = MAP.game.current; if ((g && /^watergun/.test(g.id)) || document.body.classList.contains('title-on')) return;
-        let d = document.getElementById('mpInvite'); if (d) d.remove();
-        d = document.createElement('div'); d.id = 'mpInvite'; d.className = 'chip';
-        d.style.cssText = 'left:50%;top:96px;transform:translateX(-50%);z-index:44;display:flex;gap:8px;align-items:center;font-size:15px;padding:8px 12px;pointer-events:auto';
-        d.innerHTML = '💦 같은 방에서 <b>물총 친구 대결</b> ' + (m.st === 'count' ? '경기가 곧 시작해요!' : '대기실이 열렸어요') + '<button data-i="go" style="font:inherit;font-weight:800;border:0;border-radius:9px;padding:5px 11px;background:#ffd23c;color:#1d3557;cursor:pointer">들어가기</button><button data-i="x" style="font:inherit;border:0;background:none;color:#fff;cursor:pointer">✕</button>';
-        d.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-i]'); if (!b) return; d.remove(); if (b.dataset.i === 'go') MAP.game.load('watergun_vs', {}); });
-        document.body.appendChild(d); setTimeout(() => d.remove(), 15000);
+      join: (room) => { CTLK.join = Date.now(); CTLK.init = false; CTLK.m = CTLK.q = null; NET = N.createNet({ THREE, scene, room, kind: 'kid', onChange: () => LOBBY.draw(), onDenied: () => LOBBY.recheck(), onCtl }); emoChip(true); if (!MAP.game.current && !MAP.minimap.visible) MAP.minimap.show(); },
+      leave: () => { if (NET) NET.leave(); NET = null; emoChip(false); MAP.minimap.setPeers([]); holdOff(); },
+      onTeacher: (k) => {   // 🧑‍🏫 선생님 신호(방 ctl/cmd) — 받는 쪽은 onCtl
+        if (!NET) return; const n = NET.name;
+        NET.ctl('cmd', { q: Date.now(), k, x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), by: NET.id, n: n.slice(0, 8) });
+        toast(k === 'gather' ? '📣 모두를 불렀어요' : k === 'hold' ? '✋ 모두 멈춤 — ▶ 다시 움직여요로 풀어요' : '▶ 다시 움직여요', 2.5);
       } });
     window.SM_MP = { room: () => LOBBY.room ? 'c' + LOBBY.room.c : null, net: () => NET, info: () => LOBBY.room, open: () => LOBBY.open() };   // 게임(물총 친구 대결)이 같은 방·이름을 쓴다
     setInterval(() => LOBBY.draw(), 2000);
+    setInterval(() => { if (NET) MAP.minimap.setPeers(NET.peers()); }, 500);   // 미니맵에 같은 방 친구 점(이름)
+    // 방 신호(net.js ctl): 물총 친구 대결 대기실 초대 · 선생님 📣 모으기 · ✋ 멈춤
+    function onCtl(C) {
+      const first = !CTLK.init; CTLK.init = true;   // 들어올 때 이미 있던 신호는 지난 것(초대·선생님 신호를 다시 하지 않음)
+      const m = C.match; if (m) { const k = m.seq + ':' + m.st; if (k !== CTLK.m) { CTLK.m = k; if ((m.st === 'lobby' || m.st === 'count') && !first) invite(m); } }
+      const c = C.cmd; if (c && c.q !== CTLK.q) { CTLK.q = c.q; if (!first && c.by !== (NET && NET.id)) teacherCmd(c); }
+    }
+    function invite(m) {   // 같은 방 친구가 물총 친구 대결 대기실을 열면(내가 물총 중이거나 오프닝이면 안 띄움)
+      const g = MAP.game.current; if ((g && /^watergun/.test(g.id)) || document.body.classList.contains('title-on')) return;
+      let d = document.getElementById('mpInvite'); if (d) d.remove();
+      d = document.createElement('div'); d.id = 'mpInvite'; d.className = 'chip';
+      d.style.cssText = 'left:50%;top:96px;transform:translateX(-50%);z-index:44;display:flex;gap:8px;align-items:center;font-size:15px;padding:8px 12px;pointer-events:auto';
+      d.innerHTML = '💦 같은 방에서 <b>물총 친구 대결</b> ' + (m.st === 'count' ? '경기가 곧 시작해요!' : '대기실이 열렸어요') + '<button data-i="go" style="font:inherit;font-weight:800;border:0;border-radius:9px;padding:5px 11px;background:#ffd23c;color:#1d3557;cursor:pointer">들어가기</button><button data-i="x" style="font:inherit;border:0;background:none;color:#fff;cursor:pointer">✕</button>';
+      d.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-i]'); if (!b) return; d.remove(); if (b.dataset.i === 'go') MAP.game.load('watergun_vs', {}); });
+      document.body.appendChild(d); setTimeout(() => d.remove(), 15000);
+    }
+    function teacherCmd(c) {
+      const g = MAP.game.current, inMatch = g && /^watergun/.test(g.id) && g.handle && (g.handle.state === 'play' || g.handle.state === 'count');
+      if (c.k === 'gather') {
+        if (inMatch) { toast('📣 선생님이 불러요 — 경기가 끝나면 가요', 3); return; }
+        const a = Math.random() * Math.PI * 2, e = MAP.findEntry(c.x + Math.cos(a) * 2.2, c.z + Math.sin(a) * 2.2, c.y, null, 4) || MAP.findEntry(c.x, c.z, c.y, null, 6);
+        document.exitPointerLock?.(); MAP.hostTeleport(e ? [e.x, e.y, e.z] : [c.x, c.y, c.z]); toast('📣 선생님이 불러서 선생님 곁으로 왔어요!', 3);
+      } else if (c.k === 'hold') holdOn();
+      else if (c.k === 'release') holdOff(true);
+    }
     addEventListener('sm-name', (e) => { if (NET && e.detail) { NET.setName(e.detail); LOBBY.draw(); } });   // 게임(메모장 등)에서 적은 이름을 이름표에도
   }).catch((e) => console.warn('[동시 접속] 못 켰어요', e));
 }
@@ -1370,7 +1409,7 @@ function loop(ts) {
   step(dt);
   doorTick(dt);
   hotTick(dt);
-  if (NET) NET.tick(dt, { x: P.x, y: P.y, z: P.z, h: P.yaw });
+  if (NET) { NETP.x = P.x; NETP.y = P.y; NETP.z = P.z; NETP.h = P.yaw; NET.tick(dt, NETP); }
   MAP.tick(dt);   // 구역·트리거·경계 10Hz + 게임 tick(게임 몫 ms는 MAP.game.lastMs)
   keysFrameEnd();   // PERF-WIN: 이번 시뮬레이션이 본 '톡 친 키'를 뗀다
   simMs = Math.max(simMs, performance.now() - t0);

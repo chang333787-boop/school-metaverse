@@ -3,7 +3,7 @@
 //   원칙: 매 프레임 새 객체·전체 순회 금지(구역·트리거·경계는 10Hz) · 예외는 잡아서 월드 루프가 멈추지 않게 · 사람을 술래로 쓰지 않음(글 규칙 = docs/map_api.md §16.1).
 //   정본 문서 = docs/map_api.md
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
-import { createMinimap } from './minimap.js?v=11';
+import { createMinimap } from './minimap.js?v=12';
 import { createGamePicker } from './gamepick.js?v=11';
 import { createEngine } from './engine.js?v=11';
 import { createWorldFx } from './worldfx.js?v=7';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
@@ -401,7 +401,7 @@ export function createMapApi(host, NAV, META) {
       if (c.y0 > y + 0.6 || top < y + 0.05 || top > y + 2.6 || (c.x1 - c.x0) * (c.z1 - c.z0) > 12 || Math.min(c.x1 - c.x0, c.z1 - c.z0) < 0.12) continue; out.push([c.x0, c.z0, c.x1, c.z1, top]); }
     return out.sort((a, b) => a[4] - b[4]); };
   MM = createMinimap({ mapData, drawMap, P, getYaw: pl.getYaw, onLayout: () => layoutChips(), boxesIn });
-  const minimap = { show: o => MM.show(o), hide: () => MM.hide(), setMarks: m => MM.setMarks(m), toggle: v => MM.toggle(v), zoom: z => MM.zoom(z),
+  const minimap = { show: o => MM.show(o), hide: () => MM.hide(), setMarks: m => MM.setMarks(m), setPeers: m => MM.setPeers(m), toggle: v => MM.toggle(v), zoom: z => MM.zoom(z),
     get zoomed() { return MM.zoomed; }, get visible() { return MM.visible; }, get big() { return MM.big; }, get marks() { return MM.marks; }, get ms() { return MM.ms; }, get el() { return MM.el; } };
   // 효과음(GAME-FIND-1): main.js 합성음 도우미 tone(주파수, 시작초, 길이, 파형, 크기, 끝주파수)을 host.ui.tone으로 받아 쓴다(없으면 조용히). 파일 없음·짧게
   const SFX = { ding: [[988, 0, 0.16, 'sine', 0.2], [1319, 0.1, 0.32, 'sine', 0.18]], tick: [[660, 0, 0.09, 'triangle', 0.14]], go: [[523, 0, 0.12, 'triangle', 0.2], [784, 0.11, 0.28, 'triangle', 0.2]],
@@ -583,7 +583,7 @@ export function createMapApi(host, NAV, META) {
       // 미니맵(GAME-FIND-1): 범위 파사드에선 stop 때 자동으로 숨고 표식을 비운다(보이기·표식 정리 항목은 한 번만 쌓임)
       minimap: { show: o => { const h = minimap.show(o); if (track && !hudKeys.has('!mm')) { hudKeys.add('!mm'); t({ remove: () => { minimap.setMarks([]); minimap.hide(); hudKeys.delete('!mm'); } }); } return h; },
         hide: () => minimap.hide(), setMarks: m => { minimap.setMarks(m); if (track && !hudKeys.has('!mm')) { hudKeys.add('!mm'); t({ remove: () => { minimap.setMarks([]); minimap.hide(); hudKeys.delete('!mm'); } }); } },
-        toggle: v => minimap.toggle(v), zoom: z => minimap.zoom(z), get zoomed() { return minimap.zoomed; }, get visible() { return minimap.visible; }, get big() { return minimap.big; }, get ms() { return minimap.ms; }, get marks() { return minimap.marks; }, get el() { return minimap.el; } },
+        setPeers: m => minimap.setPeers(m), toggle: v => minimap.toggle(v), zoom: z => minimap.zoom(z), get zoomed() { return minimap.zoomed; }, get visible() { return minimap.visible; }, get big() { return minimap.big; }, get ms() { return minimap.ms; }, get marks() { return minimap.marks; }, get el() { return minimap.el; } },
       sfx: k => sfx(k),   // 짧은 합성 효과음: 'ding'(도착) · 'tick'(3·2·1) · 'go'(출발) · 'done'(끝) · 'pick'(줍기) · 'buzz'(시간 끝) · 'warm'(준비 — 소리 장치만 미리 만듦)
       mk: { marker: (x, y, z, o) => t(mk.marker(x, y, z, o)), trail: (p, o) => t(mk.trail(p, o)), many: (k, n, o) => t(mk.many(k, n, o)), add: obj => t(mk.add(obj)) },
       add: obj => t(mk.add(obj)), remove: obj => scene.remove(obj),
@@ -604,7 +604,7 @@ export function createMapApi(host, NAV, META) {
     };
   }
   const MAP = facadeApi(null, null);
-  Object.assign(MAP, { navIdle, navReady: () => !!navDone(), emit, tick, check, scope, stuckLog, unstick, game: { load: loadGame, stop: stopGame, get current() { return game.current; }, get lastMs() { return game.last || 0; } }, warn, entryBad, BRECT, inSchool, zoneIndex });
+  Object.assign(MAP, { hostTeleport: (t, o) => player.teleport(t, o), findEntry, navIdle, navReady: () => !!navDone(), emit, tick, check, scope, stuckLog, unstick, game: { load: loadGame, stop: stopGame, get current() { return game.current; }, get lastMs() { return game.last || 0; } }, warn, entryBad, BRECT, inSchool, zoneIndex });
   // 시험용 세기(GAME-FIND-1 수용 시험): 게임을 켰다 끄거나 '다시 하기' 뒤 이벤트·트리거·표식·칩·지점·장면 물체 수가 처음과 같은가
   MAP.stats = () => { let lis = 0; for (const [, s] of L) lis += s.size; const cur = game.current;
     return { listeners: lis, trig: TRIG.size, marks: marks.length, chips: chips.size, hot: HOT.length, pois: POI.size, colliders: world.colliders.length, scene: scene.children.length,

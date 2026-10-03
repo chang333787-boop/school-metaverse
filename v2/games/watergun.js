@@ -747,6 +747,7 @@ export default async function start(map, params = {}) {
   const MPX = () => { const mp = window.SM_MP; return mp && mp.room() ? mp : null; };
   const nreq = (path, method = 'GET', data) => fetch(MDB + NM.room + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data), keepalive: true }).then((r) => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)));
   const sNow = () => Date.now() + NM.off;
+  const ctlMatch = (seq, st9) => { const mp = window.SM_MP, N = mp && mp.net(); if (N && N.ctl) N.ctl('match', { seq, st: st9 }); };   // 방 신호 → 같은 방 친구에게 '들어가기' 초대(main.js)
   const r2 = (v) => Math.round(v * 100) / 100;
   function applyEvt(root, type, path, d) {
     const set = (r, p, v) => {
@@ -809,7 +810,7 @@ export default async function start(map, params = {}) {
       const t1 = Date.now(), r = await nreq('/p/' + NM.pid, 'PUT', { n: NM.name, tm: n[0] <= n[1] ? 0 : 1, on: { '.sv': 'timestamp' } }), t2 = Date.now();
       NM.off = r.on - (t1 + t2) / 2; NM.rtt = t2 - t1;
       const m = D0.m, live = m && P[m.host] && Object.keys(P).length;
-      if (!live) await nreq('/m', 'PUT', { st: 'lobby', host: NM.pid, arena: (m && m.arena) || 'field', time: (m && m.time) || 180, goal: (m && m.goal) || T_GOAL, seq: ((m && m.seq) || 0) + 1, t0: 0 });
+      if (!live) { const sq = ((m && m.seq) || 0) + 1; await nreq('/m', 'PUT', { st: 'lobby', host: NM.pid, arena: (m && m.arena) || 'field', time: (m && m.time) || 180, goal: (m && m.goal) || T_GOAL, seq: sq, t0: 0 }); ctlMatch(sq, 'lobby'); }
       else if (m.st === 'end' || (m.st !== 'lobby' && sNow() > m.t0 + m.time * 1000 + 15000)) { /* 끝난 경기 — 대기실로 보이게만 */ }
     } catch (e) { map.hud.toast('😥 친구 대결에 들어가지 못했어요 — 인터넷·방을 확인해 주세요', 4); NM.on = false; if (N && N.hide) N.hide(false); return menu(false); }
     if (dead || !NM.on) return;
@@ -916,7 +917,7 @@ export default async function start(map, params = {}) {
     const rec = map.store.get('net', { games: 0, wins: 0 }) || { games: 0, wins: 0 }; rec.games++; if (w === myT) rec.wins++; map.store.set('net', rec);
     sfx('done'); if (w === myT) SND.bloom();
     map.hud.banner(w < 0 ? '🤝 비겼어요!' : w === myT ? '🎉 우리 팀 승리!' : '다음엔 꼭!', 2.2);
-    if (NM.host && NM.D.m && NM.D.m.st !== 'end') nreq('/m/st', 'PUT', 'end').catch(() => {});
+    if (NM.host && NM.D.m && NM.D.m.st !== 'end') { nreq('/m/st', 'PUT', 'end').catch(() => {}); ctlMatch(NM.D.m.seq, 'end'); }
     setTimeout(() => { if (NM.on && !dead) lobbyShow(); }, 2200);
   }
   // ---------- 대기실(팀 · 경기장 · 시간 · ▶ 시작) ----------
@@ -961,7 +962,7 @@ export default async function start(map, params = {}) {
       if (w === 'team') { const t = 1 - ACT[ME].team; if (ACT.filter((a) => a.team === t && (a.remote || a.human)).length >= 4) return map.hud.toast('그 팀은 꽉 찼어요(4명)', 2); await nreq('/p/' + NM.pid + '/tm', 'PUT', t); }
       else if (w.startsWith('arena-') && NM.host) await nreq('/m/arena', 'PUT', w.slice(6));
       else if (w.startsWith('time-') && NM.host) await nreq('/m/time', 'PUT', +w.slice(5));
-      else if (w === 'start' && NM.host) { await nreq('/ev', 'DELETE'); await nreq('/b', 'DELETE'); await nreq('/m', 'PATCH', { st: 'count', t0: Math.round(sNow() + 4000), seq: (m.seq || 0) + 1 }); }
+      else if (w === 'start' && NM.host) { await nreq('/ev', 'DELETE'); await nreq('/b', 'DELETE'); await nreq('/m', 'PATCH', { st: 'count', t0: Math.round(sNow() + 4000), seq: (m.seq || 0) + 1 }); ctlMatch((m.seq || 0) + 1, 'count'); }
       else if (w === 'leave') { menu(false); }
     } catch (er) { map.hud.toast('저장하지 못했어요 — 인터넷을 확인해 주세요', 2.5); }
   }

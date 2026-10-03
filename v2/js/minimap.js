@@ -23,7 +23,7 @@ export function createMinimap(ctx) {
   box.append(cv, cap, mmX); document.body.append(dim, box);
   const bc = c => document.body.classList.contains(c);
   const g = cv.getContext('2d');
-  const S = { vis: false, big: false, zoom: null, marks: [], dirty: true, dpr: 1, w: SMALL, h: SMALL, sB: 1, bb: null, fl: 1,
+  const S = { peers: [], vis: false, big: false, zoom: null, marks: [], dirty: true, dpr: 1, w: SMALL, h: SMALL, sB: 1, bb: null, fl: 1,
     px: 1e9, pz: 1e9, yaw: 1e9, ph: -1, t: 0, since: 1, ms: 0, drawN: 0, acc: 0, accT: 0, accN: 0 };
   const cache = new Map();   // 정적 층: 'small:층' · 'big:층' → 캔버스(크기·dpr이 바뀌면 비운다)
   const D0 = mapData(1), NB = D0.bounds;   // 길격자 범위 [x0, z0, x1, z1] — 작은 지도 정적 층이 덮는 범위
@@ -123,7 +123,7 @@ export function createMinimap(ctx) {
     // 표식: 작은 지도 밖이면 가장자리에 붙여(방향만) 작게 · 다른 층이면 속 빈 점 + '2층' · blink = 깜빡임(완전히 사라지지는 않음)
     const on = S.ph % 2 === 0, e = 9 * d;
     g.textBaseline = 'middle'; g.textAlign = 'left'; g.font = `700 ${11 * d}px sans-serif`;
-    for (const m of S.marks) {
+    for (const m of (S.peers.length ? S.peers.concat(S.marks) : S.marks)) {   // NET-2: 같은 방 친구 점(peers) + 게임 표식
       let X = (m.x - ox) * sc, Y = (m.z - oz) * sc, out = false;
       if (!S.big && (X < e || X > W - e || Y < e || Y > H - e)) { out = true; const dx = X - W / 2, dy = Y - H / 2, k = Math.min((W / 2 - e) / Math.max(Math.abs(dx), 1e-6), (H / 2 - e) / Math.max(Math.abs(dy), 1e-6)); X = W / 2 + dx * k; Y = H / 2 + dy * k; }
       const other = m.floor && m.floor !== fl, col = m.color || '#e0503c', r = (m.r || (m.shape === 'star' ? 5 : 5.5)) * d * (out ? 0.8 : 1);
@@ -169,6 +169,7 @@ export function createMinimap(ctx) {
   // 확대: z = { r(반경 m · 2~40), rect:[x0,z0,x1,z1](정적 층을 구울 네모 — 게임 놀이 칸), y(바닥 높이 — 가구 높이 색) } | null
   function zoom(z) { S.zoom = z && z.rect ? { r: Math.max(2, Math.min(40, z.r || 8)), rect: z.rect.slice(0, 4), y: z.y || 0, key: [z.r || 8, ...z.rect.slice(0, 4).map(v => (+v).toFixed(2)), z.y || 0].join(',') } : null; S.dirty = true; return !!S.zoom; }
   function hide() { S.zoom = null; if (!S.vis) return; S.vis = false; box.style.display = 'none'; S.big = false; dim.style.display = 'none'; box.classList.remove('mm-ov'); onLayout && onLayout(); }   // 표식은 남긴다(게임 범위 파사드가 stop 때 setMarks([]))
+  function setPeers(list) { const a = (list || []).filter(m => m && isFinite(m.x) && isFinite(m.z)); if (a.length || S.peers.length) { S.peers = a; S.dirty = true; } }
   function setMarks(list) { S.marks = (list || []).filter(m => m && isFinite(m.x) && isFinite(m.z)); S.dirty = true; }
   function toggle(v) { if (!S.vis) return false; S.big = v === undefined ? !S.big : !!v; size(); onLayout && onLayout(); S.since = 1; tick(0); return S.big; }
   box.addEventListener('click', e => { e.stopPropagation(); toggle(); });
@@ -176,6 +177,6 @@ export function createMinimap(ctx) {
   addEventListener('resize', () => { cache.clear(); if (S.vis) { size(); onLayout && onLayout(); } });
   // 칩 배치용 — 보일 때 상자의 화면 자리(CSS px)
   const rect = () => !S.vis ? null : thumb && !S.big ? thumb : S.big && box.classList.contains('mm-ov') ? (thumb || null) : { right: RIGHT, top: TOP, w: S.w + PAD * 2, h: S.h + PAD * 2 + CAPH, big: S.big };   // 덮개가 열려도 칩은 조각 기준 자리 그대로(덮개 뒤)
-  return { show, hide, setMarks, toggle, tick, rect, zoom, el: box, canvas: cv,
+  return { show, hide, setMarks, setPeers, toggle, tick, rect, zoom, el: box, canvas: cv,
     get visible() { return S.vis; }, get big() { return S.big; }, get zoomed() { return !!S.zoom; }, get marks() { return S.marks.slice(); }, get ms() { return S.ms; }, get draws() { return S.drawN; } };
 }

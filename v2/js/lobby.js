@@ -45,9 +45,9 @@ export async function teacherPin(toast) {
 }
 
 export function createLobby(o) {
-  const { chip, suffix = '', label = '', join, leave, net, toast = () => {}, onMatch = null } = o;
+  const { chip, suffix = '', label = '', join, leave, net, toast = () => {}, onTeacher = null } = o;
   if (!document.getElementById('lb-css')) { const st = document.createElement('style'); st.id = 'lb-css'; st.textContent = CSS; document.head.appendChild(st); }
-  let cur = null, pop = null, big = null, pollT = 0, mes = null, mKey = '';
+  let cur = null, pop = null, big = null, pollT = 0;
   const live = (p) => p && typeof p.e === 'number' && p.e > Date.now();
   async function check(c, r) {   // 번호가 살아 있고(8시간 안) 그 방이 닫히지 않았는지
     const p = await req('/codes/' + c); if (!live(p) || (r && p.r !== r)) return null;
@@ -60,17 +60,11 @@ export function createLobby(o) {
   function enter(info, quiet) {
     cur = info; ls.set('mp.room', JSON.stringify(info)); join('c' + info.c + suffix, info); draw();
     clearInterval(pollT); pollT = setInterval(recheck, 20000);
-    if (onMatch) {   // 같은 방에서 물총 친구 대결 대기실이 열리면 알림(main.js가 '들어가기' 창)
-      if (mes) mes.close(); mKey = ''; mes = new EventSource(DB + '/match/c' + info.c + '/m.json');
-      const seen = (m) => { if (!m || !cur) return; const k = m.seq + ':' + m.st; if (k === mKey) return; mKey = k; if (m.st === 'lobby' || m.st === 'count') onMatch(m); };
-      const on = (e) => { let d; try { d = JSON.parse(e.data); } catch (er) { return; } if (d && d.path === '/') seen(d.data); else req('/match/c' + info.c + '/m').then(seen).catch(() => {}); };
-      mes.addEventListener('put', on); mes.addEventListener('patch', on);
-    }
     if (!quiet) toast('👥 「' + info.n + '」 방에 들어왔어요 — 친구들이 이름표와 함께 보여요', 3);
     dispatchEvent(new CustomEvent('sm-room', { detail: info }));
   }
   async function recheck() { if (!cur) return; try { if (!(await check(cur.c, cur.r))) out(cur.k ? '🚪 방이 끝났어요' : '🚪 선생님이 방을 닫았어요'); } catch (e) { /* 잠깐 끊김은 그대로 */ } }
-  function out(msg) { clearInterval(pollT); if (mes) { mes.close(); mes = null; } if (cur) leave(); cur = null; ls.set('mp.room', null); draw(); closePop(); if (msg) toast(msg, 3); dispatchEvent(new CustomEvent('sm-room', { detail: null })); }
+  function out(msg) { clearInterval(pollT); if (cur) leave(); cur = null; ls.set('mp.room', null); draw(); closePop(); if (msg) toast(msg, 3); dispatchEvent(new CustomEvent('sm-room', { detail: null })); }
   const closePop = () => { if (pop) pop.remove(); pop = null; };
   function place(p) {
     const r = chip.getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight;
@@ -120,11 +114,12 @@ export function createLobby(o) {
       const P = popup('<h4>👥 ' + esc(cur.n) + ' <span class="sm">· 방 번호 ' + cur.c + '</span></h4>'
         + '<div class="box">나: <b>' + esc(N ? N.name : '') + '</b><br>' + (others.length ? '친구 ' + others.length + '명: ' + others.map(esc).join(', ') : '<span class="sm">아직 들어온 친구가 없어요</span>') + '</div>'
         + '<div class="sm">• 걷기·뛰기는 서로 보여요<br>• 📝 메모장은 같은 판이면 깃발·카드를 함께 써요<br>• 물총·이야기·방탈출 같은 놀이는 아직 <b>각자 따로</b> 해요</div>'
-        + (cur.k ? '<div class="row" style="justify-content:flex-start"><button data-l="big">📺 번호 크게 보기</button><button class="warn" data-l="shut">🔒 방 닫기</button></div>' : '')
+        + (cur.k ? '<div style="margin-top:8px;font-weight:800">🧑‍🏫 선생님</div><div class="row" style="justify-content:flex-start;margin-top:4px">' + (onTeacher ? '<button data-l="gather" title="방 친구 모두를 내 곁으로">📣 모두 내 곁으로</button><button data-l="hold" title="모두 잠깐 멈추고 선생님 말씀 듣기">✋ 모두 멈춤</button><button class="sub" data-l="release">▶ 다시 움직여요</button>' : '') + '<button class="sub" data-l="big">📺 번호 크게</button><button class="warn" data-l="shut">🔒 방 닫기</button></div>' : '')
         + '<div class="row"><button class="sub" data-l="name">✏️ 내 이름</button><button class="sub" data-l="out">🚪 방 나가기</button><button class="sub" data-l="x">닫기</button></div>');
       P.onclick = (e) => { e.stopPropagation(); const b = e.target.closest('[data-l]'); if (!b) return; const a = b.dataset.l;
         if (a === 'name') { const v = prompt('내 이름(별명)을 적어 주세요 — 친구들 화면에 보여요', N ? N.name : ''); if (v && N) N.setName(v); draw(); closePop(); }
-        else if (a === 'out') out('👋 방에서 나왔어요'); else if (a === 'big') { closePop(); showBig(); } else if (a === 'shut') shut(); else closePop(); };
+        else if (a === 'out') out('👋 방에서 나왔어요'); else if (a === 'big') { closePop(); showBig(); } else if (a === 'shut') shut();
+        else if ((a === 'gather' || a === 'hold' || a === 'release') && onTeacher) { closePop(); onTeacher(a); } else closePop(); };
       return;
     }
     const P = popup('<h4>👥 함께하기</h4><div class="sm">선생님이 연 방을 고르고, 화면에 보이는 <b>번호 4자리</b>를 넣어요.</div><div class="rooms"><div class="sm">방을 찾는 중…</div></div>'
