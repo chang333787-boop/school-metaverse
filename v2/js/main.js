@@ -1278,10 +1278,16 @@ function adaptTick(ts) {
   A.buf[A.bi] = d; A.bi = (A.bi + 1) % A.buf.length; A.bn++; A.winT += d; A.evT += d;
   if (A.winT < 1000 || A.evT < 250) return;   // 창이 1초 넘게 찬 뒤 0.25초마다 판단
   const dtE = A.evT / 1000; A.evT = 0; A.ft = adaptWin();
+  const L0 = A.ladder;
+  if (A.pre) {   // 10-03 교사 '갑자기 30프레임 — 해상도가 저절로 낮아졌다': 낮춘 뒤에도 빨라지지 않으면(크롬 에너지 절약·저전력 모드의 30fps 잠금) 되돌리고 한동안 안 낮춘다
+    const P0 = A.pre; A.pre = null;
+    if (A.ft > P0.ft * 0.88) { A.lvl = P0.lvl; setDpr(L0[A.lvl]); if (A.shadow0 > 1024 && GFX.shadow !== A.shadow0) setShadowSize(A.shadow0); A.capT = performance.now() + 300000; A.log.push(['cap', +A.ft.toFixed(1)]); adaptReset(2); return; }
+  }
+  if (A.capT && performance.now() < A.capT) { A.slowT = 0; return; }
   if (A.ft > 18.5) { A.slowT += dtE; A.goodT = 0; } else A.slowT = 0;
   const L = A.ladder, logp = () => A.log.push([+(performance.now() / 1000).toFixed(1), L[A.lvl], +A.ft.toFixed(1)]);
   if (A.slowT >= 1 && A.lvl < L.length - 1) {   // 내림
-    A.fail.set(A.lvl, (A.fail.get(A.lvl) || 0) + 1); A.lvl++; A.steps++; logp();
+    A.pre = { lvl: A.lvl, ft: A.ft }; A.fail.set(A.lvl, (A.fail.get(A.lvl) || 0) + 1); A.lvl++; A.steps++; logp();
     setDpr(L[A.lvl]); if (A.lvl === L.length - 1 && A.shadow0 > 1024) setShadowSize(1024);
     adaptReset(1.5); return;
   }
