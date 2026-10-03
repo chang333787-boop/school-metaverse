@@ -160,6 +160,7 @@ export function createMapApi(host, NAV, META) {
     // WG-FPS(10-03): 1인칭/3인칭('first'|'third') · 위로 보는 한계(라디안 · 기본 −0.2) · 시점 돌리기(터치 화면 px) — 게임이 멈추면 원래대로
     view(v) { if (S0.view == null) S0.view = pl.getFirst(); pl.setFirst(v === 'first'); },
     get first() { return pl.getFirst(); },
+    freeMouse(on = true) { CTRL.freeMouse = !!on; if (on && document.pointerLockElement) document.exitPointerLock(); },   // FREE-MOUSE(10-03): 마우스 늘 보임 · 끌어서 시점 · 톡 = 'sm-click' — 게임이 멈추면 끔
     pitchLow(lo) { CTRL.pitchLo = lo == null ? null : Math.max(-1.3, Math.min(-0.2, +lo)); },
     look(dx, dy) { pl.look(dx || 0, dy || 0); },
     // GUIDE-1(09-30): 자동 걷기 — steer(dx, dz, 속도 m/s, 카메라 따라 돌기) · steer(null) = 끔. 키·조이스틱이 있으면 그쪽이 먼저. 게임이 멈추면 자동으로 끔
@@ -473,7 +474,7 @@ export function createMapApi(host, NAV, META) {
     const res = new Set(), track = h => { if (dead && h && h.remove) { try { h.remove(); } catch (e) { console.error(e); } return h; } if (h && h.remove) { const r0 = h.remove; h.remove = function () { res.delete(h); return r0.apply(this, arguments); }; res.add(h); } return h; };
     const S = facadeApi(track, owner);
     S.dispose = () => { dead = true; for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); try { ENG.reset(); } catch (e) { console.error('[map] 엔진 정리 오류', e); } try { FX.reset(); } catch (e) { console.error('[map] 세상 바꾸기 정리 오류', e); }
-      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; CTRL.steer = null; CTRL.pitchLo = null; if (S0.view != null) { pl.setFirst(S0.view); S0.view = null; } if (pl.acts) pl.acts.stop(true); if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
+      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; CTRL.steer = null; CTRL.pitchLo = null; CTRL.freeMouse = false; if (S0.view != null) { pl.setFirst(S0.view); S0.view = null; } if (pl.acts) pl.acts.stop(true); if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
     S.quit = () => { const c = game.current; if (c && c.scope === S) stopGame('quit'); };   // 게임이 스스로 끝낼 때(끝 화면 [그만하기])
     Object.defineProperty(S, 'tracked', { get: () => res.size });
     return S;

@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=142';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=34';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=35';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=7';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=11';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
@@ -370,7 +370,7 @@ let camYaw = 0, camPitch = 0.3, camFirst = false;
 addEventListener('keydown', e => { if (e.code === 'KeyV' && !e.repeat) camFirst = !camFirst; });   // 1인칭 ↔ 3인칭(누르고 있어 자동 반복돼도 한 번만)
 const CAM_D = 6.3;
 let camD = CAM_D;
-canvas.addEventListener('click', () => { if (!TOUCH.on) canvas.requestPointerLock(); });   // 터치 기기엔 포인터 잠금이 없다(드래그가 시점)
+canvas.addEventListener('click', () => { if (!TOUCH.on && !CTRL.freeMouse) canvas.requestPointerLock(); });   // 터치 기기엔 포인터 잠금이 없다(드래그가 시점) · FREE-MOUSE면 잠그지 않음
 // 마우스 시점(PERF-WIN): 움직임을 모았다가 프레임마다 한 번 더한다(mouseApply — 이벤트 수·프레임 수와 무관하게 같은 양 · 느린 PC에서 여러 이벤트가 한 프레임에 몰려도 부드럽게). 감도는 예전 그대로(0.0026·0.0022 rad/px).
 //  튀는 값 버리기(물총 '위로 꺾임' 버그 — 크롬이 잠그는 순간·창 포커스 직후, 윈도에선 잠금 중에도 가끔 수백 px 한 번):
 //   ① 잠금/포커스 뒤 0.25초 안: 한 이벤트 |dx| > 200 또는 |dy| > 150이면 버림(잠그려고 클릭한 직후 그만큼 휙 돌리는 손은 없다)
@@ -379,7 +379,17 @@ canvas.addEventListener('click', () => { if (!TOUCH.on) canvas.requestPointerLoc
 const MOUSE = { dx: 0, dy: 0, t0: 0, fd: 16.7, fl: 0, te: 0, drop: 0 };   // fd = 지난 프레임 간격(ms · 루프가 적음 · ≤120) · te = 지난 이벤트 시각
 document.addEventListener('pointerlockchange', () => { MOUSE.t0 = performance.now(); MOUSE.dx = MOUSE.dy = 0; if (document.pointerLockElement !== canvas) keysClear(); });   // 잠금이 풀리면(Esc·창 전환) 누른 키도 비운다
 addEventListener('focus', () => { MOUSE.t0 = performance.now(); });
+// FREE-MOUSE(10-03 교사 '화면이 늘 게임에 잠겨 옆 단추를 누르기 힘들다 — Esc로 마우스를 보이게 하는 건 정상이 아니다'): 게임이 map.player.freeMouse(true)를 켜면
+//   마우스는 늘 보이고 · 화면을 누른 채 끌면 시점(잠금과 같은 감도·방향) · 끌지 않고 톡 누르면 'sm-click' 이벤트({x, y} 화면 좌표 — 게임이 그 자리를 쓴다)
+const DRAG = { on: false, x: 0, y: 0, m: 0, t: 0 };
+canvas.addEventListener('mousedown', e => { if (!CTRL.freeMouse || TOUCH.on || (e.button !== 0 && e.button !== 2)) return; DRAG.on = true; DRAG.x = e.clientX; DRAG.y = e.clientY; DRAG.m = 0; DRAG.t = performance.now(); MOUSE.te = DRAG.t; });
+canvas.addEventListener('contextmenu', e => { if (CTRL.freeMouse) e.preventDefault(); });
+addEventListener('mouseup', e => {
+  if (!DRAG.on) return; DRAG.on = false; canvas.style.cursor = '';
+  if (DRAG.m < 6 && performance.now() - DRAG.t < 450 && e.button === 0) dispatchEvent(new CustomEvent('sm-click', { detail: { x: e.clientX, y: e.clientY } }));
+});
 addEventListener('mousemove', e => {
+  if (DRAG.on && CTRL.freeMouse) { const mx = e.movementX || 0, my = e.movementY || 0; DRAG.m += Math.abs(mx) + Math.abs(my); if (DRAG.m >= 6) { canvas.style.cursor = 'grabbing'; if (Math.abs(mx) < 300 && Math.abs(my) < 200) { MOUSE.dx += mx; MOUSE.dy += my; } } return; }
   if (document.pointerLockElement !== canvas) return;
   const now = performance.now(), gap = Math.max(MOUSE.fd, Math.min(120, now - MOUSE.te)); MOUSE.te = now;   // 이 이벤트가 담은 시간 ≈ 지난 이벤트부터(≤120ms) — 프레임 간격보다 짧게 보지는 않는다
   const mx = e.movementX || 0, my = e.movementY || 0, ax = Math.abs(mx), ay = Math.abs(my);
