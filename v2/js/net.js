@@ -96,6 +96,7 @@ export function createNet(o) {
   return {
     get id() { return id; }, get name() { return name; }, get color() { return color; },
     get count() { let n = 1; const now = Date.now() + offset; for (const O of others.values()) if (now - O.t < 20000) n++; return n; },
+    get names() { const now = Date.now() + offset, a = []; for (const O of others.values()) if (now - O.t < 20000) a.push(O.n); return a; },
     setName(v) { v = String(v || '').replace(/[<>]/g, '').trim().slice(0, 8); if (!v) return; name = v; try { localStorage.setItem('mp.name', v); } catch (e) { /* */ } if (joined) req('/players/' + id, 'PATCH', { n: v }); onChange(); },
     fx(f) { fxQ++; if (joined) req('/players/' + id + '/fx', 'PUT', { q: fxQ, ...f }); },
     tick(dt, P) {

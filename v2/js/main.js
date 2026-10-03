@@ -1334,8 +1334,24 @@ let NET = null;
     const room = (q.get('room') || (window.SM_LESSON ? 'v3' : 'v2')).replace(/[^a-z0-9_-]/gi, '').slice(0, 24) || 'v2';
     const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; chip.title = '이름 바꾸기'; document.body.appendChild(chip);
     const draw = () => { if (NET) chip.textContent = '👥 ' + NET.count + '명 · ' + NET.name; };
-    chip.addEventListener('click', (e) => { e.stopPropagation(); if (!NET) return; document.exitPointerLock?.(); const v = prompt('내 이름(별명)을 적어 주세요 — 친구들 화면에 보여요', NET.name); if (v) NET.setName(v); draw(); });
-    import('./net.js?v=1').then((m) => { NET = m.createNet({ THREE, scene, room, kind: 'kid', onChange: draw }); draw(); setInterval(draw, 2000); }).catch((e) => console.warn('[동시 접속] 못 켰어요', e));
+    // 칩 누르기 = 같은 방 친구 목록 + 무엇이 함께 되는지(교사 10-03 '멀티플레이가 어떤 방식인지 명확하지 않다')
+    let pop = null;
+    const popClose = () => { if (pop) pop.remove(); pop = null; };
+    chip.addEventListener('click', (e) => {
+      e.stopPropagation(); if (!NET) return; if (pop) return popClose(); document.exitPointerLock?.();
+      pop = document.createElement('div'); pop.id = 'mpPop';
+      pop.style.cssText = 'position:fixed;left:10px;top:82px;z-index:45;width:min(320px,90vw);background:#fffdf6;color:#1d3557;border:3px solid #1d3557;border-radius:14px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.3);font:14px/1.5 "Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+      const es = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const others = NET.names;
+      pop.innerHTML = '<b style="font-size:16px">👥 같은 방 ' + NET.count + '명</b> <span style="color:#5a6b80">· 방 「' + es(room) + '」</span>'
+        + '<div style="margin:6px 0;padding:6px 8px;background:#eef4ff;border-radius:8px">나: <b>' + es(NET.name) + '</b>' + (others.length ? '<br>친구: ' + others.map(es).join(', ') : '<br><span style="color:#5a6b80">아직 들어온 친구가 없어요</span>') + '</div>'
+        + '<div style="color:#5a6b80;font-size:13px">같은 주소(같은 방)를 연 친구가 이름표와 함께 보여요.<br>• 걷기·뛰기는 서로 보여요<br>• 📝 메모장은 같은 판이면 깃발·카드를 함께 써요<br>• 물총·이야기·방탈출 같은 놀이는 <b>각자 따로</b> 해요(친구 화면엔 걷는 모습만)</div>'
+        + '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px"><button data-p="n" style="font:inherit;font-weight:800;border:0;border-radius:9px;padding:6px 11px;background:#1d3557;color:#fff;cursor:pointer">✏️ 내 이름 바꾸기</button><button data-p="x" style="font:inherit;font-weight:800;border:0;border-radius:9px;padding:6px 11px;background:#e8edf3;color:#1d3557;cursor:pointer">닫기</button></div>';
+      pop.addEventListener('click', (ev) => { ev.stopPropagation(); const b = ev.target.closest('[data-p]'); if (!b) return; if (b.dataset.p === 'n') { const v = prompt('내 이름(별명)을 적어 주세요 — 친구들 화면에 보여요', NET.name); if (v) NET.setName(v); draw(); } popClose(); });
+      document.body.appendChild(pop);
+    });
+    addEventListener('sm-name', (e) => { if (NET && e.detail) { NET.setName(e.detail); draw(); } });   // 게임(메모장 등)에서 적은 이름을 이름표에도
+    import('./net.js?v=2').then((m) => { NET = m.createNet({ THREE, scene, room, kind: 'kid', onChange: draw }); draw(); setInterval(draw, 2000); }).catch((e) => console.warn('[동시 접속] 못 켰어요', e));
   } }
 function loop(ts) {
   requestAnimationFrame(loop);
