@@ -4,6 +4,7 @@
 //     📖 이야기 판(L) = 장면 카드(1, 2, 3… · 끌어서 순서 · 선생님이 칸 '처음, 가운데, 끝') — 장면마다 '무슨 일이 일어나요?' + 덧붙이기(🧑 인물 · 💬 대사 · 📦 물건 · ❓ 고르기)
 //     🚩 깃발 = '몇 번 장면'을 고르고 꽂음(장면이 일어나는 곳 · 인물·물건·대사가 있는 곳) — 깃발 색·번호 = 장면 · ▶ 장면 따라 걷기(N/B) · ❤️ · 💬 댓글 · 📤 정리
 //   FREE-MOUSE(교사 '화면이 늘 게임에 잠겨 옆 단추를 누르기 힘들다'): 메모장에선 마우스가 늘 보임 · 끌어서 둘러보기 · 땅을 톡 누르면 '🚩 여기에 꽂기'
+//   STORY-2(10-03 밤 · 생각판 '이야기 판' 새 구상 참고): 이야기 줄기 문장(옛날 옛적에·그러던 어느 날·그래서·마침내·그 뒤로) · 🏁 결말 표시(장면 end) · 📖 책처럼 읽기 · 🧭 이야기 코치(결말·없는 장면·갈 곳 없는 보기·아무 데서도 안 가는 장면)
 //   🎮 이야기로 해 보기(PLAY-1 · 10-03 밤): 판의 장면 순서대로 — 장면 자리(첫 깃발)까지 걸어가면 장면 글 → 💬 대사·🧑 인물·📦 물건(줍기) → ❓ 고르기('→ N번 장면'이면 그 장면으로) → 🏁 끝 · 쓰고 바로 해 보는 수업
 //   선생님(🔒 4자리 · 함께하기와 같은 비밀번호): 판 제목·질문·칸 · 잠금 · 🗂 관리(비우기 = 판 번호를 적어야 · 비운 것은 trash에 보관 → ↩️ 되돌리기)
 export const meta = { id: 'memo', title: '메타버스 메모장', api: 1 };
@@ -18,7 +19,9 @@ const ADD = [   // 장면에 덧붙이는 것
 const SCENE = { k: 'scene', e: '🎬', n: '장면', q: '이 장면에서 무슨 일이 일어나요?' };
 const PLACE = { k: 'place', e: '📍', n: '장소', q: '여기는 어떤 곳이에요? (안 적어도 돼요)' };
 const KBY = Object.fromEntries([SCENE, PLACE, ...ADD].map((x) => [x.k, x]));
-const OLD = { memo: '📝', event: '⚡', mark: '🏁' };   // MEMO-1·2 때 만든 카드(장면으로 보임)
+const OLD = { memo: '📝', event: '⚡', mark: '🏁' };
+const STEMS = ['옛날 옛적에', '그러던 어느 날', '그래서', '그런데', '마침내', '그 뒤로'];   // 이야기 줄기 문장(3·4학년)
+const stemFor = (n) => n === 0 ? '옛날 옛적에' : n === 1 ? '그러던 어느 날' : '그래서';   // MEMO-1·2 때 만든 카드(장면으로 보임)
 const SC = [0xff6b6b, 0xffa94d, 0xf2c200, 0x51cf66, 0x20c997, 0x339af0, 0x5c7cfa, 0xcc5de8, 0xf06595, 0x868e96];
 const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 const STYLE = `
@@ -57,6 +60,7 @@ const STYLE = `
 #memo-ui .strip{display:flex;flex-wrap:wrap;gap:24px 30px;align-items:flex-start;min-height:120px}
 #memo-ui .strip .cd{width:270px}
 #memo-ui .strip .cd:not(:last-child)::after{content:'➜';position:absolute;right:-24px;top:40px;font-size:18px;color:#8a7b5a}
+#memo-ui .strip .cd.end:not(:last-child)::after{content:'🏁';font-size:16px}
 #memo-ui .cd{background:#fff;border-radius:12px;padding:9px 10px;box-shadow:0 2px 6px rgba(0,0,0,.13);border-top:8px solid var(--k);font-size:14px;position:relative;text-align:left;box-sizing:border-box}
 #memo-ui .cd .hd{display:flex;gap:6px;align-items:center;font-weight:900;font-size:15px;cursor:grab;touch-action:none}
 #memo-ui .cd .by{margin-left:auto;color:#5a6b80;font-weight:600;font-size:12px}
@@ -268,7 +272,7 @@ export default async function start(map, params = {}) {
     const lk = f.lk ? Object.keys(f.lk) : [], me = lk.includes(keyOf(name)), can = canWrite(), own = (x) => teacher || x.by === name;
     const re = f.re ? Object.entries(f.re).filter(([, r]) => r && r.tx).sort((a, b) => (a[1].t || 0) - (b[1].t || 0)) : [];
     const K = kids(id), places = [f, ...K.map(([, x]) => x)].filter(placed).length, showRe = o.re || openRe.has(id);
-    let h = '<div class="cd" data-id="' + esc(id) + '" style="--k:' + hex(colOf(num)) + '"><div class="hd" title="끌어서 순서 바꾸기"><span class="num" style="background:' + hex(colOf(num)) + '">' + num + '</span>' + (OLD[f.k] ? OLD[f.k] + ' ' : '') + '장면<span class="by">✍️ ' + esc(f.by) + '</span></div>'
+    let h = '<div class="cd' + (f.end ? ' end' : '') + '" data-id="' + esc(id) + '" style="--k:' + hex(colOf(num)) + '"><div class="hd" title="끌어서 순서 바꾸기"><span class="num" style="background:' + hex(colOf(num)) + '">' + num + '</span>' + (OLD[f.k] ? OLD[f.k] + ' ' : '') + '장면' + (f.end ? ' <span style="background:#fff3bf;border:1px solid #f59f00;border-radius:8px;padding:0 6px;font-size:12px">🏁 결말</span>' : '') + '<span class="by">✍️ ' + esc(f.by) + '</span></div>'
       + '<div class="tx">' + esc(f.tx) + '</div>'
       + (() => { const pk = placed(f) ? f : (K.find(([, x]) => x.k === 'place' && placed(x)) || [])[1];
         return pk ? '<div class="pl">' + placeLine(pk) + (places > 1 ? ' · 🚩 ' + places + '개' : '') + '</div>' : '<div class="pl' + (places ? '' : ' none') + '">' + (places ? '🚩 깃발 ' + places + '개' : '📍 아직 깃발이 없어요 — ＋ 🚩 깃발') + '</div>'; })();
@@ -336,13 +340,14 @@ export default async function start(map, params = {}) {
       + (teacher ? '<button class="sub" data-b="sec" title="이야기 칸 정하기">⚙️ 칸</button><button class="sub" data-b="lock" title="' + (board.lock ? '잠금 풀기' : '잠그기(아이들은 보기만)') + '">' + (board.lock ? '🔓' : '🔒') + '</button><button class="sub" data-b="admin" title="판 비우기·되돌리기">🗂 관리</button>' : '<button class="sub" data-b="t" title="선생님">🔒</button>')
       + '<button class="sub" data-b="close">✕ 닫기</button></div>'
       + (board.p ? '<div class="sm" style="margin-top:4px">💡 ' + esc(board.p) + '</div>' : '')
-      + '<div class="bar">' + (can ? '<button data-b="new">＋ 새 장면</button>' : '') + (L.length ? '<button data-b="play" style="background:#2b8a3e">🎮 이야기로 해 보기</button>' : '') + '<button class="sub" data-b="tour">▶ 장면 따라 걷기</button><button class="sub" data-b="sum">📤 정리</button>'
+      + '<div class="bar">' + (can ? '<button data-b="new">＋ 새 장면</button>' : '') + (L.length ? '<button data-b="play" style="background:#2b8a3e">🎮 이야기로 해 보기</button><button class="sub" data-b="book">📖 책처럼 읽기</button>' : '') + '<button class="sub" data-b="tour">▶ 장면 따라 걷기</button><button class="sub" data-b="sum">📤 정리</button>'
       + '<span class="sm" style="margin-left:6px">' + (can ? '장면 번호 줄을 끌면 순서가 바뀌어요' : '선생님이 잠근 판 — 보기만') + '</span></div><div class="body"></div>';
     P.innerHTML = h;
     const body = P.querySelector('.body');
     if (!L.length) body.innerHTML = '<div class="sm" style="padding:24px;text-align:center;font-size:15px;line-height:1.8">아직 장면이 없어요.<br><b>＋ 새 장면</b>으로 「무슨 일이 일어나는지」부터 적어 봐요.<br>그다음 장면마다 🧑 인물 · 💬 대사 · 📦 물건을 덧붙이고, 학교에 🚩 깃발을 꽂아요.</div>';
     else if (S.length) body.innerHTML = '<div class="lanes">' + S.map((s, si) => '<div class="lane" data-sec="' + si + '"><h4>' + (si + 1) + '. ' + esc(s) + '</h4>' + L.filter(([, f]) => secOf(f, S) === si).map(([id, f]) => cardHTML(id, f, N.get(id))).join('') + '</div>').join('') + '</div>';
     else body.innerHTML = '<div class="strip" data-sec="0">' + L.map(([id, f]) => cardHTML(id, f, N.get(id))).join('') + '</div>';
+    if (L.length) { const C = coach(); const cb = el('div', '', '<b>🧭 이야기 코치</b> ' + C.map((c) => '<span style="display:inline-block;margin:2px 4px;padding:2px 8px;border-radius:9px;font-size:12px;font-weight:700;background:' + (c.ok ? '#d3f9d8;color:#2b8a3e' : '#fff4e6;color:#d9480f') + '">' + (c.ok ? '● ' : '● ') + esc(c.t) + '</span>').join(''), body); cb.style.cssText = 'margin-top:12px;font-size:13px'; }
     if (O.length) el('div', 'sm', '📌 장면에 아직 안 붙인 것 ' + O.length + '개 — ' + O.map(([, x]) => (KBY[x.k] || PLACE).e + ' ' + esc(short(x.who || x.tx || x.zone, 14))).join(' · '), body).style.marginTop = '12px';
     body.scrollTop = sc[0]; body.scrollLeft = sc[1];
     P.onclick = async (e) => {
@@ -352,6 +357,7 @@ export default async function start(map, params = {}) {
       else if (a === 'new') { if (!canWrite()) return lockMsg(); back = 'board'; form({ kind: 'scene' }); }
       else if (a === 'tour') startTour(0);
       else if (a === 'play') playStory();
+      else if (a === 'book') playStory({ book: true });
       else if (a === 'sum') summary();
       else if (a === 't') teacherLogin();
       else if (a === 'admin') admin();
@@ -460,6 +466,7 @@ export default async function start(map, params = {}) {
     const pn = pt ? placeName(pt.x, pt.y, pt.z) : old && placed(old) ? { zone: old.zone, near: old.near } : null;
     if (pt) { const pv = map.mk.marker(pt.x, pt.y + 0.3, pt.z, { color: 0xffd43b }); setTimeout(() => pv.remove(), 3000); }
     const P = open('memo-form');
+    let endSel = !!(old && old.end);
     const draw = () => {
       const isS = kind === 'scene', A = KBY[kind] || null, n = sid ? N.get(sid) : null;
       let h = '<h3>' + (old ? '✏️ 고치기' : pt ? '🚩 깃발 꽂기' : isS ? '🎬 새 장면' : '＋ 덧붙이기') + '</h3>'
@@ -477,7 +484,9 @@ export default async function start(map, params = {}) {
       if (Q) {
         h += '<div class="mlbl">' + esc(Q.q) + '</div>';
         if (Q.who) h += '<input id="mmWho" maxlength="30" placeholder="' + esc(Q.who) + '" style="margin-bottom:6px">';
-        h += '<textarea id="mmTx" maxlength="300"></textarea>';
+        if (isS) h += '<div class="chips stem">' + STEMS.map((t) => '<button data-stem="' + t + '">' + t + '…</button>').join('') + '</div>';
+        h += '<textarea id="mmTx" maxlength="300"' + (isS && !old ? ' placeholder="' + stemFor(L.length) + ' …"' : '') + '></textarea>';
+        if (isS) h += '<div class="chips"><button data-endt="1" class="' + (endSel ? 'on' : '') + '">🏁 이 장면에서 이야기가 끝나요(결말)</button></div>';
         if (kind === 'choice') h += '<textarea id="mmOpt" maxlength="300" style="margin-top:6px" placeholder="보기를 한 줄에 하나씩&#10;예) 책을 찾는다 → 3번 장면&#10;선생님께 간다 → 5번 장면"></textarea>';
         if (isS && S.length) h += '<div class="mlbl">이야기 칸</div><div class="chips sec">' + S.map((s, i) => '<button data-c="' + i + '" class="' + ((old ? secOf(old, S) : (o.sec || 0)) === i ? 'on' : '') + '">' + (i + 1) + '. ' + esc(s) + '</button>').join('') + '</div>';
       } else h += '<div class="sm" style="margin-top:8px">위에서 장면과 종류를 골라요.</div>';
@@ -495,6 +504,8 @@ export default async function start(map, params = {}) {
       const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.s) { if (b.dataset.s === '@new') { kind = 'scene'; sid = null; } else { sid = b.dataset.s; if (kind === 'scene' || !kind) kind = pt ? 'place' : 'who'; } draw(); return; }
       if (b.dataset.k) { kind = b.dataset.k; draw(); return; }
+      if (b.dataset.stem) { const t = P.querySelector('#mmTx'); if (t) { const v = t.value.replace(/^(옛날 옛적에|그러던 어느 날|그래서|그런데|마침내|그 뒤로)\s*/, ''); t.value = b.dataset.stem + ' ' + v; t.focus(); } return; }
+      if (b.dataset.endt) { endSel = !endSel; b.classList.toggle('on', endSel); return; }
       if (b.dataset.c != null) { secSel = +b.dataset.c; P.querySelectorAll('.sec button').forEach((x) => x.classList.toggle('on', x === b)); return; }
       if (b.id === 'mmNo') done();
       else if (b.id === 'mmDel') {
@@ -512,11 +523,12 @@ export default async function start(map, params = {}) {
       try {
         if (old) {
           if (isS && S.length) { f.sec = secSel; if (secSel !== secOf(old, S)) f.ord = Date.now(); }
+          if (isS) f.end = endSel || null;
           await req(fpath(o.id), 'PATCH', f);
         } else {
           for (const k of ['who', 'opt']) if (f[k] == null) delete f[k];
           Object.assign(f, { by: name, t: { '.sv': 'timestamp' }, ord: Date.now() }, pt ? placeFields(pt) : {});
-          if (isS) { if (S.length) f.sec = secSel; } else f.p = sid;
+          if (isS) { if (S.length) f.sec = secSel; if (endSel) f.end = true; } else f.p = sid;
           const nid = newId(); await req(fpath(nid), 'PUT', f); lastScene = isS ? nid : sid;
         }
         map.sfx('ding'); toast(old ? '✏️ 고쳤어요' : pt ? '🚩 ' + (isS ? '새 장면' : (N.get(sid) || '') + '번 장면') + ' 깃발을 꽂았어요!' : isS ? '🎬 새 장면을 만들었어요!' : '＋ 덧붙였어요!', 2.2);
@@ -549,9 +561,34 @@ export default async function start(map, params = {}) {
     if (u) u.onclick = async () => { try { await req('/boards/' + board.id + '/flags', 'PATCH', bak.flags); toast('↩️ 되돌렸어요', 2); } catch (e) { toast('되돌리지 못했어요', 2); } boardView(); };
   }
 
+  // ───────── 🧭 이야기 코치 — 길(장면 → 다음 장면 · 고르기 → N번)을 따라가 보고 짚어 줌 ─────────
+  function graph() {
+    const L = scenes(), n = L.length, E = L.map(() => []), bad = [], loose = [];
+    L.forEach(([id, f], i) => {
+      let branched = false;
+      for (const [, x] of kids(id)) if (x.k === 'choice') { for (const o of choiceOpts(x)) { if (o.n == null) loose.push((i + 1) + '번 「' + short(o.label, 8) + '」'); else if (o.n < 1 || o.n > n) bad.push(o.n); else { E[i].push(o.n - 1); branched = true; } } }
+      if (!branched && !f.end && i + 1 < n) E[i].push(i + 1);
+    });
+    const seen = new Set([0]), st = [0]; while (st.length) { const v = st.pop(); for (const w of E[v]) if (!seen.has(w)) { seen.add(w); st.push(w); } }
+    return { L, E, bad, loose, seen };
+  }
+  function coach() {
+    const { L, E, bad, loose, seen } = graph(), out = [], ends = L.filter(([, f]) => f.end).length, branch = E.some((e) => e.length > 1);
+    out.push({ ok: true, t: '장면 ' + L.length + '개' + (branch ? ' · 갈림길 있음' : '') });
+    if (!ends) out.push({ ok: !branch, t: branch ? '갈림길마다 🏁 결말 장면을 정해요' : '마지막 장면이 끝이에요(🏁로 표시해도 좋아요)' });
+    else out.push({ ok: true, t: '🏁 결말 ' + ends + '개' });
+    if (bad.length) out.push({ ok: false, t: [...new Set(bad)].map((x) => x + '번').join('·') + ' 장면은 아직 없어요' });
+    if (loose.length) out.push({ ok: false, t: loose.slice(0, 3).join(', ') + ' — 고르면 몇 번 장면으로 가요?' });
+    const lost = L.map((_, i) => i).filter((i) => !seen.has(i)); if (lost.length) out.push({ ok: false, t: lost.map((i) => (i + 1) + '번').join('·') + ' 장면은 아무 데서도 안 와요' });
+    const dead = L.map((_, i) => i).filter((i) => seen.has(i) && !E[i].length && !L[i][1].end && i < L.length - 1); if (dead.length) out.push({ ok: false, t: dead.map((i) => (i + 1) + '번').join('·') + ' 장면 뒤에 길이 끊겨요' });
+    const noFlag = L.filter(([id]) => !firstPlace(id)).length; if (noFlag) out.push({ ok: true, t: '🚩 깃발 없는 장면 ' + noFlag + '개(해 보기 땐 바로 열려요)' });
+    if (out.length === 2 && !bad.length) out.push({ ok: true, t: '처음부터 끝까지 이어져요!' });
+    return out;
+  }
+
   // ───────── 🎮 이야기로 해 보기 ─────────
   let play = null;
-  const choiceOpts = (x) => String(x.opt || '').split('\n').map((t) => t.trim()).filter(Boolean).slice(0, 6).map((t) => { const m = t.match(/(\d{1,2})\s*번/); return { label: t.replace(/\s*(→|->|=>)\s*\d{1,2}\s*번(\s*장면)?\s*$/, '').trim() || t, n: m ? +m[1] : null }; });
+  function choiceOpts(x) { return String(x.opt || '').split('\n').map((t) => t.trim()).filter(Boolean).slice(0, 6).map((t) => { const m = t.match(/(\d{1,2})\s*번/); return { label: t.replace(/\s*(→|->|=>)\s*\d{1,2}\s*번(\s*장면)?\s*$/, '').trim() || t, n: m ? +m[1] : null }; }); }
   function playStop(msg) { if (!play) return; const P0 = play; play = null; if (P0.mk) P0.mk.remove(); map.hud.goal(null); chips(); syncNow(); if (msg) toast(msg, 2.5); }
   function walkTo(f, n, tx) {   // 장면 자리까지 걸어가기(빛기둥 · 미니맵 별 · ⏩ 바로 가기 칩) — 2.6m 안에 들어오면 끝
     return new Promise((res) => {
@@ -565,16 +602,16 @@ export default async function start(map, params = {}) {
       chips();
     });
   }
-  async function playStory() {
+  async function playStory(o = {}) {
     const L = scenes(); if (!L.length) return toast('먼저 장면을 만들어요', 2);
     close(); endTour(); hereOff(); placing = null;
-    play = { i: 0, items: [], steps: 0, mk: null, iv: 0, go: null }; chips();
+    play = { i: 0, items: [], steps: 0, mk: null, iv: 0, go: null, book: !!o.book }; chips();
     for (const F of FL.values()) F.g.visible = false;   // 해 보는 동안 깃발 숨김(목표 빛기둥만)
-    map.hud.toast('🎮 「' + board.t + '」 이야기 시작! 빛기둥을 따라가요', 3);
+    map.hud.toast(play.book ? '📖 「' + board.t + '」 — 책처럼 읽어요' : '🎮 「' + board.t + '」 이야기 시작! 빛기둥을 따라가요', 3);
     while (play && play.i >= 0 && play.i < L.length && play.steps++ < 60) {
       const [id, f] = L[play.i], n = play.i + 1, pl = firstPlace(id);
-      if (pl) { const ok = await walkTo(pl, n, f.tx); if (!ok || !play) return; }
-      let next = play.i + 1;
+      if (pl && !play.book) { const ok = await walkTo(pl, n, f.tx); if (!ok || !play) return; }
+      let next = f.end ? -1 : play.i + 1;   // 🏁 결말이면 여기서 끝
       if (!play) return;
       let r = await map.hud.ask('🎬 ' + n + '번 장면\n\n' + f.tx, ['다음 ▶']); if (r < 0 || !play) return playStop();
       for (const [, x] of kids(id)) {
@@ -594,7 +631,7 @@ export default async function start(map, params = {}) {
     if (!play) return;
     const items = play.items.slice(); playStop();
     const k = await map.hud.ask('🏁 「' + board.t + '」 이야기 끝!' + (items.length ? '\n\n주운 물건: ' + items.join(' · ') : '') + '\n\n우리 반이 쓴 이야기를 해 봤어요. 고칠 곳이 있으면 📖 이야기 판에서 고쳐요!', ['📖 이야기 판으로', '🔁 다시 해 보기', '닫기']);
-    if (k === 0) boardView(); else if (k === 1) playStory();
+    if (k === 0) boardView(); else if (k === 1) playStory(o);
   }
 
   // ───────── ▶ 장면 따라 걷기 ─────────
@@ -629,7 +666,7 @@ export default async function start(map, params = {}) {
     L.forEach(([id, f], i) => {
       const s = secOf(f, S); if (S.length && s !== cur) { cur = s; out.push('## ' + (s + 1) + '. ' + S[s]); }
       const lk = f.lk ? Object.keys(f.lk).length : 0;
-      out.push('### 장면 ' + (i + 1) + ' — ' + String(f.tx).replace(/\n/g, ' ') + '  (✍️ ' + f.by + (lk ? ' · ❤️ ' + lk : '') + ')');
+      out.push('### 장면 ' + (i + 1) + (f.end ? ' 🏁(결말)' : '') + ' — ' + String(f.tx).replace(/\n/g, ' ') + '  (✍️ ' + f.by + (lk ? ' · ❤️ ' + lk : '') + ')');
       if (placed(f)) out.push('   ' + at(f));
       for (const [, x] of kids(id)) {
         const A = KBY[x.k] || PLACE;
@@ -674,6 +711,7 @@ export default async function start(map, params = {}) {
     tick() {},
     stop() { dead = true; window.SM_ACT = null; if (play) { clearInterval(play.iv); if (play.mk) play.mk.remove(); play = null; } clearTimeout(syncT); if (es) es.close(); if (esB) esB.close(); hereOff(); removeEventListener('keydown', onKey); removeEventListener('keydown', onEsc, true); removeEventListener('sm-click', onWorldClick); removeEventListener('sm-cmd', onCmd); for (const id of [...FL.keys()]) drop3d(id); ui.remove(); css.remove(); },
     get board() { return board; }, get scenes() { return scenes().map(([id, f], i) => ({ id, n: i + 1, ...f, kids: kids(id).map(([kid, x]) => ({ id: kid, ...x })) })); }, summary: () => board ? summaryText() : '',
+    get coach() { return board ? coach() : []; }, book: () => playStory({ book: true }),
     place: (o) => form({ pt: aimPoint(), ...(o || {}) }), view: boardView, tour: startTour, play: () => playStory(), get playing() { return play ? { i: play.i, items: play.items.slice() } : null; }, moveTo: (id, sec, before) => moveTo(id, sec, before),
     enter: (id, info) => { name = name || '시험'; board = { id, ...info }; listen(); chips(); },
   };
