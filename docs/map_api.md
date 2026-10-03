@@ -55,6 +55,7 @@ map.zones · map.zone(id|라벨) · map.zoneAt(x,y,z) · map.zonesWhere({kind,ki
 map.poi(id) · map.pois({src,zone,tag}) · map.resolve(대상) → {x,y,z}      // 대상 = 노드|[x,z]|[x,y,z]|{x,y,z}|'spawn:…'|'zone:…'|'lm:…'|'hot:…'|'door:…'
 map.findEntry(cx,cz,바닥y,[x0,z0,x1,z1]?)                                 // 가구에 안 걸리는 칸(수 ms, 길격자 불필요)
 map.q.groundAt / blocked / ceilAt / floorY(x,z,층) / ray(a,b,{ignoreNc,minH}) / los / inSchool(x,z) / indoor(x,y,z) / moveBody(p,dx,dz)
+map.q.rayHit(a,b,{skipDyn}) → {t, n:[x,y,z], dyn, ns, box}|null · q.overlap({x0..z1},{skipDyn}) → 상자|null · q.baseAt(x,z)   // BLOCK-1(§22): 맞은 면 방향 · 겹침 · 땅/1층 바닥(충돌 상자 없이)
 map.player.get() → {x,y,z,h,ground,zone} · teleport(대상,{h,floor}) · face(h) · lookAt(대상) · freeze(on) · speed(0.5~2) · unstick()(3m 안 걷는 칸으로) · steer(dx,dz,속도,카메라따라)/steer(null)(GUIDE-1 자동 걷기 — 키·조이스틱이 먼저 · 게임이 멈추면 끔) · view('first'|'third')·first·pitchLow(라디안)·look(dx,dy)(WG-FPS 10-03 — 1인칭 전환·위로 보는 한계·터치 시점 · 게임이 멈추면 원래대로) · freeMouse(on)(FREE-MOUSE 10-03 — 포인터 잠금 없이 마우스 늘 보임 · 누른 채 끌기 = 시점 · 끌지 않은 톡(마우스·터치) = window 이벤트 `sm-click` {x, y, touch?} · 게임이 멈추면 끔)
 map.on(type,fn) → off · map.once(type,fn)       // 'zone'{prev,next}(10Hz·2표본 확정·경계 0.25m 머묾) · 'interact'{hot} · 'tick'{dt} · 'time' · 'teleport' · 'stuck'{x,y,z} · 'gamestart' · 'gamestop'
 map.interact.add({x,y,z,r,label,use(h),once}) → {remove} · interact.enable(kind|fn, on) · interact.list({kind,zone})
@@ -351,7 +352,7 @@ map.hide.candidates({ kinds, near:[x,z], r(30), zone, floor, max(20) }) → [{ k
 - `map.note(제목, 본문)` → Promise(닫으면). **글은 게임 데이터 그대로**(아이들이 쓴 것 — 지금은 `'(여기에 아이들이 쓴 쪽지)'` 같은 자리표시). 종이 카드(줄 무늬) · 여는 동안 멈춤 · E·Esc·Enter·Space·쪽지 아무 데나 누르기·✋·안내 칩(`MAP.closeModal`)으로 닫힘 · 줄바꿈 `\n`. 게임이 멈추면 쪽지는 치우되 **약속(Promise)은 풀지 않는다**(`map.fade`도 같음) — 멈춘 게임의 `await` 뒤 코드가 돌아 다음 판에 기억 표시가 새지 않게.
 - `map.investigate.add({ x, z, y?, r(1.2), label('🔍 조사하기'), note:{title, body}?, onUse({used})?, once? })` → `{ hot, used, remove }`.
 
-### 12.5 파기 — `map.dig.add({ x, z, radius(1.2), reveal, need?, needLabel?, label('⛏ 파기'), onReveal(prop) })`
+### 12.5 파기 — `map.dig.add({ x, z, radius(1.2), reveal, need?, needLabel?, label('🔨 파기'), onReveal(prop) })`
 - 모래·흙·풀 구역만(구역 kind `field`·`play`·`garden`·`yard` + 바깥) — 아니면 `console.warn` 하고 빈 핸들. `map.dig.diggable(x, z)`.
 - `need` = 가방 물건 id **또는 손에 든 소품 종류**(삽을 들고 가서 판다) — 없으면 '🔒 ○ 이(가) 있어야 팔 수 있어요'.
 - 행동 = 1.35초 파기(멈춤 · 팔을 휘두르는 자세 `CTRL.pose='dig'` · 흙 알갱이 풀 48 · 퍽 소리 6번) → 구덩이 원판(풀 8) → `reveal`: `'chest'` | `{kind,h,s}` | `fn(x,y,z)` → 소품이 땅에서 0.7초 올라옴 → `onReveal(prop)`.
@@ -697,6 +698,11 @@ map.world.water('<구역>' | { x, z, r } | { rect }, { y, color, opacity }) → 
 ```
 - 칠판 = 교실 흰 칠판(world.js `board` 지점 — 폭 `bw`·높이 `bh`를 적어 둠) 면 앞 3cm(분필 낙서판보다 앞) · 캔버스 512 폭 · 판마다 메시 1 · 글은 칸에 맞춰 줄어듦. 프로젝터 화면·벽 그림·바닥 그림도 같은 판.
 
+### 16.7b 가구 통째로 — `map.world.furn`(FURN-1 · 10-03 블록 놀이)
+- 가구 하나 = 올라서기 금지 충돌 상자 하나(`vy1` = 보이는 윗면 · 책상·책장·사물함·배식대…). `furn.idOf(box)`(→ `q.rayHit`의 `box`) = 이름(상자 모서리 cm `x0_z0_y0` — 다른 컴퓨터와 같음) 또는 null.
+- `furn.hide(id)` → `{ok, tris, color:[r,g,b], box}` — 그 발자국(+3cm) 안 · 밑~윗면+0.6(위에 놓인 모니터·책) 안 디테일 삼각형 + 책 무늬를 한 점으로 접기(사람 삼각형은 뺌) + 충돌 끄기. 보이는 삼각형이 없으면 `{ok:false, why:'empty'}`(차·울타리 — 충돌만 꺼지는 일 없게) · 사람을 옮긴 청크는 안 건드림.
+- `furn.show(id)` · `isHidden(id)` · `hidden()` · `box(id)` · 게임이 멈추면 전부 처음대로(정점·충돌). 실외 가구면 그림자 다시 굽기(0.6초 스로틀).
+
 ### 16.8 예시·수용 시험(found2 · 스크래치 `found2/`)
 - `?game=fx_demo`(dev): 체육관 작은 코스 — 🔘 단추(E/✋) → 주황 다리가 올라옴(1.6초) → 노란 비탈 → 파란 발판(1.2m) → 다리 → 가운데 초록 컨테이너(2.59m — 바닥·발판에선 점프로 안 닿고 다리 끝에서만) 위 깃발 = 도착 → **세상이 바뀜**: 풍선이 떠오르고 · 현수막·4학년 칠판 글이 '다리 건너기 성공!'으로 · 깃발 색 · 도착한 선생님 둘이 만세. 그 밖에 체육선생님·4학년 선생님이 걸어와 모임 · 컨테이너 둘 · 선풍기 바람 · 튀는 판 · 4학년 교실 불 끔 · 체육관 문 연 채. 한 판 ≈1분(리뷰 09-27: 예전엔 다리가 허공에서 끝나고 파란 발판은 바닥에서 점프로 닿아 단추가 쓸모없었다).
 - 게임 로더(리뷰 found2): 모듈을 받는 동안 ⏹·다른 게임 고르기 = 그 로드를 버린다(`game.seq` — 예전엔 stop이 무시돼 게임이 그대로 시작했고, 두 번 고르면 두 게임이 겹쳤다).
@@ -827,4 +833,15 @@ map.world.water('<구역>' | { x, z, r } | { rect }, { y, color, opacity }) → 
 - **놀이 목록**: registry `mp: 'together'` → '👥 친구와 함께' 칸 · `needRoom: true` → 방이 없으면 방 고르기 창부터(들어가면 바로 그 놀이).
 - **미니맵**: host `MAP.minimap.setPeers(list)` — 게임 표식(setMarks)과 따로 그리는 친구 점.
 - **물총 친구 대결 판정**(watergun.js WG-NET): 사람 = 맞은 사람 화면 · 봇 = 방장 화면(다른 사람이 쏜 물은 'hit' 사건) · 점수 = soak 사건을 모두 같이 셈 · 서버 시각 t0로 같이 시작.
+
+## 22. 블록 놀이(BLOCK-1 · 10-03) — `v2/games/blocks.js` · `?game=blocks` · 🎮 '블록 놀이'
+- **지금 학교 그대로 + 위에 0.5m 블록**(교사 "지금 퀄리티에 매우 만족" → 학교 전체 블록화 미리 보기에서 ②③ 전부 블록은 가구가 덩어리·무게 2~7배, ④⑦ 건물만 블록은 모습은 같으나 0.25m에서 무게 2~3배 → 시작 안 함).
+- 블록 16종(흰·빨강·주황·노랑·연두·나뭇잎·하늘·파랑·보라·분홍·나무판·벽돌·돌·유리·검정·빛 블록 — 빛 블록 = 조명 무시 재질이라 밤에 빛남 · 새 조명 없음) · 그림 = 아틀라스 한 장(512×128) · 칸 8m마다 메시(단단·유리·빛 × 실내/실외) · 보이는 면만 · 블록끼리 맞닿은 모서리 그늘(AO).
+- 자리: x·z = 0.5m 격자 · 높이 = 5cm 단위(놓인 땅을 따름 — 운동장 -1.35 · 바닥 0 · 2층) · 충돌 = 기둥마다 이어진 묶음 상자 하나(상자는 다시 씀 — 월드 충돌 배열이 늘지 않게) → 0.5m 블록은 걸어서 오름 · 2단(1m)은 점프 · 3단부터 못 넘음 · 1.5m 넘는 묶음은 카메라도 막음.
+- 못 놓는 곳: 벽·가구와 겹침(`q.overlap`) · 땅속(`q.baseAt`) · 내 몸 · 학교 밖 · 28m 위 · 손 닿는 거리 9m 밖 · 판마다 4,000개.
+- 조작: 화면 누르기(마우스는 늘 보임 — FREE-MOUSE) = 놓기/부수기 · 오른쪽 누르기·Shift = 부수기 · 1~0·휠 = 블록 · Q = 놓기/부수기 · Z = 되돌리기(60번) · 흰 테 = 놓을 칸 · 빨간 테 = 부술 것 · 터치 = 🧱/🔨·블록 고르기·↩ 버튼(phone.css `#bk-tb`).
+- 부수기: 내 블록 · 가구 통째로(`map.world.furn` — 퍽 조각 + 소리) · 친구 블록은 선생님이 「🤝 모두 함께 고치기」를 켜야 · 벽·땅은 아직 못 부숨(다음: 부수는 그 벽 상자만 그 자리에서 블록으로 바꾸는 방식 — 시제품 뒤).
+- 판: Firebase `metaverse/blockList/<판> {t, n, lock, open}`(블록 1판~10판) · `metaverse/blocks/<판>/b/<x_z_q> {t, b}` · `…/f/<가구 id> {b, t}` — 판 하나에 듣기 연결 하나 · 쓰기는 0.14초마다 몰아서 PATCH · 내가 막 바꾼 칸(8초)은 늦게 온 전체 자료가 덮지 않음 · 잠금·모두 고치기는 15초마다 확인. 🏠 나만의 판 = 이 기기(`map.store`).
+- 선생님(메모장과 같은 비밀번호 · `sm.t`): 🧑‍🏫 판 관리 = 🔒 잠그기 · 🤝 모두 함께 고치기 · 🏫 가구 모두 되살리기 · 🧹 판 비우기(판 번호를 적어야 · 지운 것은 `trash/bk_<판>`에 한 번).
+- 실측(10-03 시제품·게임): 블록 5,170개 = 화면 삼각형 +3.4만 · 그리기 +26 · 걷기 계산 +0.1ms · 블록 하나 다시 짓기 ≤0.6ms · 가구 하나 숨기기 ≤1ms · 64m 밖 칸은 안 그림. 게이트 영향 0(놀이를 고를 때만 만든다).
 

@@ -6,7 +6,7 @@
 import { createMinimap } from './minimap.js?v=12';
 import { createGamePicker } from './gamepick.js?v=11';
 import { createEngine } from './engine.js?v=11';
-import { createWorldFx } from './worldfx.js?v=7';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
+import { createWorldFx } from './worldfx.js?v=8';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 // PERF-WIN: 숫자 키(윗줄·숫자 패드) → 1~9 · 아니면 0 — e.key는 한글 입력기가 켜져 있으면 'Process'라 e.code로 읽는다
 export const digitOf = e => { const m = /^(?:Digit|Numpad)([0-9])$/.exec(e.code || ''); return m ? +m[1] : 0; };
 export function createMapApi(host, NAV, META) {
@@ -75,8 +75,38 @@ export function createMapApi(host, NAV, META) {
       }
     return hit ? t : null;
   }
+  // BLOCK-1(10-03): ray와 같은 길 + 맞은 면 — { t(0~1), n:[x,y,z] 바깥 법선, dyn(게임이 더한 상자), ns(올라서기 금지 가구 — 보이는 윗면 vy1까지만 맞음), box(엔진 상자 — 읽기만) } 또는 null
+  //   보이지 않는 막이(nc이고 vy1 없음)·꺼진 상자는 건너뜀 · skipDyn = 게임 상자 무시 · 광선이 상자 안에서 시작하면 그 상자는 안 맞은 것으로
+  function rayHit(a, b, opt = {}) {
+    const skipDyn = !!opt.skipDyn, dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+    let t = 1, hc = null, hax = 0; if (++seenGen > 0x3fffffff) { seenArr.fill(0); seenGen = 1; } if (seenArr.length < world.colliders.length) seenArr = new Uint32Array(world.colliders.length * 2);
+    for (let gx = Math.floor(Math.min(a[0], b[0]) / 8); gx <= Math.floor(Math.max(a[0], b[0]) / 8); gx++)
+      for (let gz = Math.floor(Math.min(a[2], b[2]) / 8); gz <= Math.floor(Math.max(a[2], b[2]) / 8); gz++) {
+        const cell = world.cell ? world.cell(gx, gz) : world.grid.get(gx + ':' + gz); if (!cell) continue;
+        for (let k9 = 0; k9 < cell.length; k9++) { const i = cell[k9]; if (seenArr[i] === seenGen) continue; seenArr[i] = seenGen; const c = world.colliders[i];
+          if (c.y1 < -1e5 || (skipDyn && c.dyn) || (c.nc && c.vy1 == null)) continue;
+          const top = c.vy1 != null ? c.vy1 : c.y1; let t0 = 0, t1 = t, ok = true, ax9 = -1;
+          for (let ax = 0; ax < 3 && ok; ax++) { const o = a[ax], d = ax === 0 ? dx : ax === 1 ? dy : dz, lo = ax === 0 ? c.x0 : ax === 1 ? c.y0 : c.z0, hi = ax === 0 ? c.x1 : ax === 1 ? top : c.z1;
+            if (Math.abs(d) < 1e-9) { if (o < lo || o > hi) ok = false; } else { let p = (lo - o) / d, r = (hi - o) / d; if (p > r) { const s = p; p = r; r = s; } if (p > t0) { t0 = p; ax9 = ax; } if (r < t1) t1 = r; if (t0 > t1) ok = false; } }
+          if (ok && ax9 >= 0 && t0 < t) { t = t0; hc = c; hax = ax9; } }
+      }
+    if (!hc) return null;
+    const n = [0, 0, 0]; n[hax] = -Math.sign(hax === 0 ? dx : hax === 1 ? dy : dz);
+    return { t, n, dyn: !!hc.dyn, ns: hc.vy1 != null, box: hc };
+  }
+  // BLOCK-1: 상자 b{x0..z1}와 겹치는 첫 충돌 상자(가구는 보이는 윗면 vy1까지 · 보이지 않는 막이도 막힘 · 꺼진 상자 무시 · skipDyn = 게임 상자 무시) 또는 null
+  function overlap(b, opt = {}) {
+    const skipDyn = !!opt.skipDyn;
+    for (let gx = Math.floor(b.x0 / 8); gx <= Math.floor(b.x1 / 8); gx++) for (let gz = Math.floor(b.z0 / 8); gz <= Math.floor(b.z1 / 8); gz++) {
+      const cell = world.cell ? world.cell(gx, gz) : world.grid.get(gx + ':' + gz); if (!cell) continue;
+      for (let k9 = 0; k9 < cell.length; k9++) { const c = world.colliders[cell[k9]]; if (c.y1 < -1e5 || (skipDyn && c.dyn)) continue; const top = c.vy1 != null ? c.vy1 : c.y1;
+        if (b.x1 > c.x0 && b.x0 < c.x1 && b.z1 > c.z0 && b.z0 < c.z1 && b.y1 > c.y0 && b.y0 < top) return c; }
+    }
+    return null;
+  }
   const Q = {
-    groundAt: q.groundAt, blocked: q.blockedAt, ceilAt: q.ceilAt, floorY, ray, los: (a, b, o) => ray(a, b, o) === null, inSchool,
+    groundAt: q.groundAt, blocked: q.blockedAt, ceilAt: q.ceilAt, floorY, ray, rayHit, overlap, los: (a, b, o) => ray(a, b, o) === null, inSchool,
+    baseAt: (x, z) => world.baseAt(x, z),   // BLOCK-1: 땅·건물 1층 바닥 높이(충돌 상자 없이 — 블록을 땅 밑에 못 놓게)
     indoor: (x, y, z) => q.ceilAt(x, z, y + 1.6, y + 5.5) !== null,
     // 사람이 아닌 이동체(공 등)용 — 플레이어와 같은 축 분리 충돌(반지름 0.26)·오름 0.55
     moveBody(p, dx, dz) { if (!q.blockedAt(p.x + dx, p.z, p.y)) p.x += dx; if (!q.blockedAt(p.x, p.z + dz, p.y)) p.z += dz; const g = q.groundAt(p.x, p.z, p.y); if (g <= p.y + 0.55) p.y = g; return p; },

@@ -436,6 +436,65 @@ export function createWorldFx(H) {
     PAINTS.add(hnd); return hnd;
   }
 
+  // =============== 7. 가구 통째로(FURN-1 · 10-03 블록 놀이 '⛏ 부수기' — 교사 "가구까지 해야 예쁘다 · 도서관 책도 부숴야") ===============
+  //  가구 하나 = 올라서기 금지 충돌 상자 하나(vy1 = 보이는 윗면 · 책상·책장·사물함·배식대…). 보이는 것 = 그 발자국(+3cm) 안 · 밑~윗면+0.6(위에 놓인 모니터·책) 안에
+  //  세 꼭짓점이 다 든 디테일 삼각형 + 책 무늬(books) — 사람 삼각형은 뺀다. 숨기기 = 삼각형을 한 점으로 접기(넓이 0) + 충돌 끄기(y0·y1 → -1e6).
+  //  보이는 삼각형이 없으면 숨기지 않는다(차·울타리처럼 다른 층에 그린 것 — 충돌만 꺼져 '보이는데 뚫리는' 일 방지) · 사람을 옮긴 청크(MST)는 건드리지 않는다.
+  //  게임이 멈추면(reset) 정점·충돌 처음대로. 이름(id) = 상자 모서리 cm(x0_z0_y0) — 같은 판의 다른 컴퓨터와 같은 이름
+  const FURN = new Map(), FSAVE = new Map(); let FIDX = null, FMESH = null;
+  const furnKey = c => Math.round(c.x0 * 100) + '_' + Math.round(c.z0 * 100) + '_' + Math.round(c.y0 * 100);
+  const isFurn = c => !!c && c.vy1 != null && !c.dyn && c.x1 - c.x0 <= 6.5 && c.z1 - c.z0 <= 6.5 && c.vy1 - c.y0 <= 3.2;
+  const furnIdx = () => { if (!FIDX) { FIDX = new Map(); for (const c of world.colliders) if (isFurn(c) && c.y1 > -1e5) FIDX.set(furnKey(c), c); } return FIDX; };
+  const furnMeshes = () => { if (!FMESH) { FMESH = world.details.map(d => d.mesh); scene.traverse(o => { if (o.isMesh && o.userData.pat === 'books') FMESH.push(o); }); } return FMESH; };
+  function furnTris(c) {
+    const e = 0.03, top = c.vy1 + 0.6, out = []; let n = 0, cr = 0, cg = 0, cb = 0;
+    for (const m of furnMeshes()) {
+      const g = m.geometry, Pa = g.attributes.position; if (!Pa || MST.has(m)) continue;
+      const bb = g.boundingBox || (g.computeBoundingBox(), g.boundingBox); if (bb.max.x < c.x0 - e || bb.min.x > c.x1 + e || bb.max.z < c.z0 - e || bb.min.z > c.z1 + e || bb.max.y < c.y0 - e || bb.min.y > top) continue;
+      const A = Pa.array, I = g.index ? g.index.array : null, C = g.attributes.color, nt = Math.floor(Math.min(I ? I.length : Pa.count, g.drawRange.count) / 3), own = [];
+      for (const r of PEOPLE) for (const pt of r.parts) if (pt.mesh === m) own.push(pt.start, pt.start + pt.count);
+      const L = [];
+      for (let t = 0; t < nt; t++) { let ok = true;
+        for (let k = 0; k < 3 && ok; k++) { const v = I ? I[t * 3 + k] : t * 3 + k, x = A[v * 3], y = A[v * 3 + 1], z = A[v * 3 + 2]; if (x < c.x0 - e || x > c.x1 + e || z < c.z0 - e || z > c.z1 + e || y < c.y0 - e || y > top) ok = false; }
+        if (!ok) continue; if (own.length) { const v0 = t * 3; let mine = false; for (let j = 0; j < own.length; j += 2) if (v0 >= own[j] && v0 < own[j + 1]) { mine = true; break; } if (mine) continue; }
+        L.push(t); n++; if (C) { const v = I ? I[t * 3] : t * 3; cr += C.getX(v); cg += C.getY(v); cb += C.getZ(v); } }
+      if (L.length) out.push([m, L]);
+    }
+    return { list: out, n, color: n ? [cr / n, cg / n, cb / n] : [0.6, 0.45, 0.3] };
+  }
+  function furnHide(id) {
+    if (FURN.has(id)) return { ok: true, already: true };
+    const c = furnIdx().get(id); if (!c) return { ok: false, why: 'none' };
+    const T = furnTris(c); if (!T.n) return { ok: false, why: 'empty' };
+    let shadow = false;
+    for (const [m, L] of T.list) { const g = m.geometry, I = g.index;
+      if (!FSAVE.has(m)) FSAVE.set(m, I ? I.array.slice() : g.attributes.position.array.slice());
+      if (I) { const a = I.array; for (const t of L) { a[t * 3 + 1] = a[t * 3]; a[t * 3 + 2] = a[t * 3]; } I.needsUpdate = true; }
+      else { const a = g.attributes.position.array; for (const t of L) { const o = t * 9; a[o + 3] = a[o + 6] = a[o]; a[o + 4] = a[o + 7] = a[o + 1]; a[o + 5] = a[o + 8] = a[o + 2]; } g.attributes.position.needsUpdate = true; }
+      if (m.castShadow) shadow = true; }
+    FURN.set(id, { c, y0: c.y0, y1: c.y1, list: T.list }); c.y0 = c.y1 = -1e6;
+    if (shadow && rebake) rebake();
+    emit('world', { type: 'furn', id, hidden: true });
+    return { ok: true, tris: T.n, color: T.color, box: { x0: c.x0, x1: c.x1, y0: FURN.get(id).y0, top: c.vy1, z0: c.z0, z1: c.z1 } };
+  }
+  function furnShow(id) {
+    const f = FURN.get(id); if (!f) return false; let shadow = false;
+    for (const [m, L] of f.list) { const g = m.geometry, I = g.index, S0 = FSAVE.get(m); if (!S0) continue;
+      if (I) { const a = I.array; for (const t of L) { a[t * 3 + 1] = S0[t * 3 + 1]; a[t * 3 + 2] = S0[t * 3 + 2]; } I.needsUpdate = true; }
+      else { const a = g.attributes.position.array; for (const t of L) { const o = t * 9; for (let k = 3; k < 9; k++) a[o + k] = S0[o + k]; } g.attributes.position.needsUpdate = true; }
+      if (m.castShadow) shadow = true; }
+    f.c.y0 = f.y0; f.c.y1 = f.y1; FURN.delete(id);
+    if (!FURN.size) FSAVE.clear();
+    if (shadow && rebake) rebake();
+    emit('world', { type: 'furn', id, hidden: false });
+    return true;
+  }
+  const furn = {
+    idOf: box => isFurn(box) ? furnKey(box) : null,   // rayHit의 box → 가구 이름(가구가 아니면 null)
+    hide: furnHide, show: furnShow, isHidden: id => FURN.has(id), hidden: () => [...FURN.keys()],
+    box: id => { const c = furnIdx().get(id), f = FURN.get(id); return c ? { x0: c.x0, x1: c.x1, y0: f ? f.y0 : c.y0, top: c.vy1, z0: c.z0, z1: c.z1 } : null; },
+  };
+
   // =============== 틱 · 정리 ===============
   let t10 = 0;
   function tick(dt) {
@@ -461,10 +520,11 @@ export function createWorldFx(H) {
     if (DARKR.size || lampInit) { DARKR.clear(); if (lampInit) { lampInit.g.deleteAttribute('color'); world.lampMesh.material.vertexColors = false; world.lampMesh.material.needsUpdate = true; lampInit = null; } }
     if (fxDark) { fxDark = false; if (!(ENG.stats().dark)) ui.dark(false); }
     for (const n of [...HELD]) doorHold(n, null); HELD.clear();
+    for (const id of [...FURN.keys()]) furnShow(id); FSAVE.clear();   // FURN-1: 부순 가구 처음대로
   }
   const solidN = () => { let n = 0; for (const [, pr] of PROPS) if (pr.cols && pr.cols.length) n++; for (const a of ACTORS) if (a.col) n++; return n; };
-  const stats = () => ({ actors: ACTORS.length, hiddenNpc: [...NST.values()].filter(s => s.hidden).length, props: PROPS.size, pools: POOLS.size, tweens: TW.length, winds: WINDS.length, pads: PADS.length, paints: PAINTS.size, darkRooms: DARKR.size, held: HELD.size, fxDark, doorActors: doorActors ? doorActors.length : 0 });
+  const stats = () => ({ actors: ACTORS.length, hiddenNpc: [...NST.values()].filter(s => s.hidden).length, props: PROPS.size, furn: FURN.size, pools: POOLS.size, tweens: TW.length, winds: WINDS.length, pads: PADS.length, paints: PAINTS.size, darkRooms: DARKR.size, held: HELD.size, fxDark, doorActors: doorActors ? doorActors.length : 0 });
   Object.assign(world_, { spawn, move, remove, get: id => { const p = PROPS.get(id); return p ? (p.api || p.eng) : null; }, list: () => [...PROPS.values()].map(p => p.api || p.eng), kinds: [...Object.keys(KINDS).filter(k => k !== 'blade'), ...ENGK],
-    light, dark: () => [...DARKR], door, paint, water, wind: o => wind.add(o), pad: o => pad.add(o) });
+    light, dark: () => [...DARKR], door, paint, water, wind: o => wind.add(o), pad: o => pad.add(o), furn });
   return { npc, world: world_, tick, reset, stats, solidN };
 }
