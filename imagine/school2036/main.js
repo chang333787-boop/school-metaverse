@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { SCHOOL, PROMISES, WORDS, SUBJECTS, OPEN_QUESTIONS, SEEDS, PLACES, DAY, DAY_END } from './data.js';
 import { createTouch } from '../../v2/js/touch.js?v=7';
+import { createLessons, LESSONS } from './lessons.js?v=6';
 
 const $ = (id) => document.getElementById(id);
 const TAU = Math.PI * 2;
@@ -472,6 +473,7 @@ function drawScreen(live, t) {
 }
 
 // 함께 밥상 · 로봇 주방 · 빛 농장 · 텃밭
+const FARM_SHELVES = [];
 const ROBOT_ARMS = [], BOTS = [];
 const DINE_TABLES = [-31.8, -28.2];
 {
@@ -522,7 +524,7 @@ const DINE_TABLES = [-31.8, -28.2];
   const tx = fx + 2, tz = fz - 3;
   put(null, new THREE.CylinderGeometry(2, 2, 7, 14, 1, true), mat(0xbfefff, { transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false }), tx, 3.5, tz, { cast: false, tag: 'ai' });
   for (let i = 0; i < 6; i++) {
-    cyl(null, 1.75, 1.75, 0.12, 14, 0x6bbf59, tx, 0.7 + i * 1.05, tz, { tag: 'human' });
+    FARM_SHELVES.push(cyl(null, 1.75, 1.75, 0.12, 14, 0x6bbf59, tx, 0.7 + i * 1.05, tz, { tag: 'human' }));
     cyl(null, 1.8, 1.8, 0.05, 14, 0, tx, 1.12 + i * 1.05, tz, { m: basic(0xd27bff), cast: false, tag: 'ai' });
   }
   cyl(null, 0.25, 0.25, 7, 8, 0xdfe6ea, tx, 3.5, tz);
@@ -583,7 +585,7 @@ const GALLERY = [];
   cyl(null, 4.6, 4.6, 0.24, 8, 0xc49a6c, cx, 0.12, cz, { tag: 'human' });
   for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + Math.PI / 8; box(null, 0.24, 3.2, 0.24, 0x8d4a32, cx + Math.sin(a) * 4.2, 1.6, cz + Math.cos(a) * 4.2); }
   put(null, new THREE.ConeGeometry(5.9, 2.4, 8), mat(0xc2553a), cx, 4.4, cz, { ry: Math.PI / 8 });
-  blob(null, 0.3, 0xffd166, cx, 5.75, cz);
+  PAV.ball = blob(null, 0.3, 0xffd166, cx, 5.75, cz);
   for (let i = 0; i < 3; i++) { const a = i / 3 * TAU; cyl(null, 0.36, 0.32, 0.5, 12, pick([0xe63946, 0x457b9d, 0xf4a261]), cx + Math.sin(a) * 1.3, 0.5, cz + Math.cos(a) * 1.3, { tag: 'human' }); cyl(null, 0.36, 0.36, 0.02, 12, 0xfff3e0, cx + Math.sin(a) * 1.3, 0.76, cz + Math.cos(a) * 1.3, { cast: false }); }
   for (let i = 0; i < 8; i++) box(null, 0.16, 0.05, 0.5 - i * 0.03, ['#ff595e', '#ff924c', '#ffca3a', '#c5ca30', '#8ac926', '#52a675', '#1982c4', '#6a4c93'][i].replace('#', '0x') * 1, cx - 0.6 + i * 0.18, 0.62, cz, { tag: 'human' });
   box(null, 1.6, 0.08, 0.6, 0x8d6748, cx, 0.55, cz);
@@ -1009,8 +1011,9 @@ function flyTo(pos, look, dur = 1.8) {
 const keys = new Set();
 addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  if (LS.isOpen()) { if (e.code === 'Escape') LS.close(); else LS.key(e); return; }
   keys.add(e.code);
-  if (e.code === 'KeyE' || e.code === 'Enter') { if (ST.panel) closePanel(); else if (ST.mode === 'walk' && nearPlace) openPlace(nearPlace); }
+  if (e.code === 'KeyE' || e.code === 'Enter') act();
   else if (e.code === 'Escape') { closePanel(); closeBook(); }
   else if (e.code === 'KeyL') setLens(!ST.lens);
   else if (e.code === 'KeyB') toggleBook();
@@ -1029,7 +1032,8 @@ const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 const look = (dx, dy, k) => { CAM.yaw -= dx * k; CAM.pitch = clamp(CAM.pitch + dy * k * 0.85, 0.05, 1.25); };
 const locked = () => document.pointerLockElement === canvas;
 const TOUCH = createTouch({ canvas, look: (dx, dy) => { if (ST.mode === 'walk') look(dx, dy, 0.0058); else if (ST.mode === 'tour') CAM.orb = (CAM.orb || 0) - dx * 0.004; },
-  act: () => { if (ST.panel) closePanel(); else if (ST.mode === 'walk' && nearPlace) openPlace(nearPlace); }, view: () => {} });
+  act: () => act(), view: () => {} });
+function act() { if (LS.isOpen()) return; if (ST.panel) closePanel(); else if (ST.mode === 'walk' && nearKiosk) openLesson(nearKiosk.L.id); else if (ST.mode === 'walk' && nearPlace) openPlace(nearPlace); }
 addEventListener('mousemove', (e) => { if (locked() && ST.mode === 'walk' && !ST.panel) look(e.movementX || 0, e.movementY || 0, 0.0026); });
 canvas.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse' && ST.mode === 'tour') { drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, id: e.pointerId }; canvas.setPointerCapture(e.pointerId); } });
 canvas.addEventListener('pointermove', (e) => {
@@ -1082,7 +1086,7 @@ function movePlayer(dt) {
 
 // ───────── 화면 글(UI) ─────────
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-let nearPlace = null;
+let nearPlace = null, nearKiosk = null, hintShown = null;
 function updateNow() {
   const el = $('now');
   if (ST.mode === 'title') { el.classList.remove('on'); return; }
@@ -1110,10 +1114,11 @@ function openPlace(k) { document.exitPointerLock?.();
     ${here ? `<div class="here"><b>지금 여기선 · ${fmt(s.t)} ${esc(s.title)}</b>${s.say.map((l) => `<p>${esc(l)}</p>`).join('')}</div>` : ''}`;
   $('panel').classList.add('on'); ST.panel = k;
 }
-function closePanel() { $('panel').classList.remove('on'); ST.panel = null; }
+function closePanel() { $('panel').classList.remove('on'); if (LS.isOpen()) LS.close(); ST.panel = null; }
 
 // 이야기책
 const BOOK_TABS = {
+  lessons: () => `<h3>체험 수업 <small>물음 여권 ${LS.count()} / ${LESSONS.length}</small></h3><p>학교 곳곳의 노란 키오스크에서 해 볼 수 있어요. 여기서 바로 열어도 돼요.</p><div class="subj">${LESSONS.map((l) => `<div class="sc"><div class="sh">${l.icon} <b>${esc(l.name)}</b> ${LS.stamps()[l.id] ? '⭐' : ''}</div><div class="row">${esc(l.subject)} · ${esc(PLACES[l.place].name)}</div><div class="row">${esc(l.mission)}</div><button class="lb main" data-lesson="${l.id}">해 보기 ▶</button></div>`).join('')}</div>`,
   school: () => `<h3>${esc(SCHOOL.name)} <small>${SCHOOL.year}</small></h3><p class="motto">"${esc(SCHOOL.motto)}"</p>${SCHOOL.big.map((p) => `<p>${esc(p)}</p>`).join('')}
     <h4>상징 공간</h4><ul>${['tree', 'nest', 'yard', 'bench', 'post'].map((k) => `<li><b>${esc(PLACES[k].name)}</b> — ${esc(PLACES[k].lines[0])}</li>`).join('')}</ul>`,
   day: () => `<h3>물음숲의 하루</h3><table class="tt">${DAY.map((s) => `<tr><td class="t">${fmt(s.t)}</td><td><b>${esc(s.title)}</b><br><small>${esc(PLACES[s.place].name)} · 반디 ${s.banbi === 'nest' ? '잠듦' : s.banbi === 'off' ? '빛 꺼짐' : '깨어 있음'}</small></td><td><small>${esc(s.then)}</small></td></tr>`).join('')}</table>`,
@@ -1153,6 +1158,9 @@ function tourGo(i) {
   $('tourDots').innerHTML = DAY.map((_, j) => `<i class="${j === i ? 'on' : j < i ? 'done' : ''}"></i>`).join('');
   $('tPrev').disabled = i === 0;
   $('tNext').textContent = i === DAY.length - 1 ? '하루 끝 ▶' : '다음 ▶';
+  const li = SLOT_LESSON[s.id], ld = LESSONS.find((l) => l.id === li);
+  $('tLesson').style.display = ld ? '' : 'none';
+  if (ld) { $('tLesson').textContent = `${ld.icon} 이 수업 해 보기`; $('tLesson').onclick = () => openLesson(ld.id); }
   $('tour').classList.add('on');
   if (s.id === 'world') drawScreen(true, 0);
   viewOffset();
@@ -1257,13 +1265,96 @@ $('bMode').onclick = () => ST.mode === 'tour' ? startWalk(false) : startTour(Mat
 $('panelX').onclick = closePanel;
 $('bookX').onclick = closeBook;
 $('now').onclick = () => { if (ST.slot >= 0) openSlot(ST.slot); };
-$('hint').onclick = () => { if (nearPlace) openPlace(nearPlace); };
+$('hint').onclick = () => act();
 $('endAgain').onclick = () => { $('end').classList.remove('on'); startTour(0); };
 $('endWalk').onclick = () => { $('end').classList.remove('on'); startWalk(true); };
 document.querySelectorAll('#bookTabs button').forEach((b) => { b.onclick = () => showBookTab(b.dataset.k); });
 $('titleName').textContent = SCHOOL.name;
 $('titleMotto').textContent = SCHOOL.motto;
 $('titleLead').textContent = SCHOOL.big[0];
+
+// ───────── 체험 수업 (LESSON-1 · 교사 10-03 '실제로 작동하는 걸 보고 싶다') ─────────
+const SLOT_LESSON = { path: 'math', lab: 'filter', bigq: 'stream', world: 'window', lunch: 'farm', arts: 'music', council: 'ai', diary: 'art' };
+const KIOSKS = [];
+for (const L of LESSONS) {
+  const [x, z] = L.at, g = new THREE.Group();
+  g.position.set(x, 0, z); g.rotation.y = Math.atan2(-x, -z); scene.add(g);
+  box(g, 0.5, 1.0, 0.36, 0xf2f5f7, 0, 0.5, 0);
+  box(g, 0.64, 0.44, 0.05, 0, 0, 1.16, 0.08, { m: basic(0x58e1ff), cast: false, rx: -0.5 });
+  const gem = put(g, geo('gem', () => new THREE.OctahedronGeometry(0.2)), basic(0xffd166), 0, 1.95, 0, { cast: false });
+  const lb = label(`${L.icon} ${L.name}`, { h: 0.42, fs: 30, bg: 'rgba(255,209,102,.96)', fg: '#3b2a00', pad: 10 });
+  lb.position.y = 2.5; g.add(lb);
+  tag(g, 'ai');
+  colC(x, z, 0.35);
+  KIOSKS.push({ L, x, z, gem, lb });
+}
+const BUBBLES = [], NOTES = [];
+function bubbleOn(obj, text, sec = 5) {
+  const s = label(text, { h: 0.46, fs: 30, bg: 'rgba(255,255,255,.97)', fg: '#1d3557', pad: 12, border: 'rgba(29,53,87,.25)' });
+  s.position.y = 2.35; obj.add(s); BUBBLES.push({ s, obj, t: sec });
+}
+function callFriend(tip) {
+  return new Promise((res) => {
+    if (ST.mode !== 'walk') { setTimeout(() => res(false), 900); return; }
+    let best = null, bd = 80;
+    for (const k of KIDS) { if (!k.vis) continue; const d = Math.hypot(k.x - PLAYER.x, k.z - PLAYER.z); if (d < bd) { bd = d; best = k; } }
+    if (!best) { setTimeout(() => res(false), 900); return; }
+    const back = { tx: best.tx, tz: best.tz, tyaw: best.tyaw, pose: best.pose, seatY: best.seatY, area: best.area }, slot0 = ST.slot;
+    const fx = PLAYER.x + Math.sin(PLAYER.yaw) * 1.3, fz = PLAYER.z + Math.cos(PLAYER.yaw) * 1.3;
+    Object.assign(best, { tx: fx, tz: fz, pose: 'stand', area: null, spd: 4.2, tyaw: Math.atan2(PLAYER.x - fx, PLAYER.z - fz) });
+    const t0 = performance.now();
+    const iv = setInterval(() => {
+      if (Math.hypot(best.x - fx, best.z - fz) < 0.5 || performance.now() - t0 > 9000) {
+        clearInterval(iv); best.pose = 'wave'; bubbleOn(best.p.g, tip, 7);
+        setTimeout(() => { best.spd = 3; if (ST.slot === slot0) Object.assign(best, back); }, 7000);
+        res(true);
+      }
+    }, 150);
+  });
+}
+function streamMap(src) {
+  const cv = MAPTEX.image, g = cv.getContext('2d');
+  g.fillStyle = '#e8f3d6'; g.fillRect(0, 0, cv.width, cv.height);
+  g.drawImage(src, 8, 54, cv.width - 16, cv.height - 62);
+  g.fillStyle = '#1d3557'; g.font = `700 28px ${FONT}`; g.fillText('우리가 고친 개울 — 냄새 30% 아래!', 14, 38);
+  MAPTEX.needsUpdate = true;
+}
+let HUNG = null;
+function hangArt(src, ai) {
+  const cv = document.createElement('canvas'); cv.width = 320; cv.height = 200; cv.getContext('2d').drawImage(src, 0, 0, 320, 200);
+  if (!HUNG) {
+    const x = 43.6, z = 38;
+    for (const s of [-0.78, 0.78]) cyl(null, 0.06, 0.06, 2.0, 6, 0x8d6748, x + s, 1.0, z);
+    box(null, 1.5, 1.0, 0.06, 0x8d6748, x, 1.45, z);
+    HUNG = { x, z, lab: null, mesh: put(null, new THREE.PlaneGeometry(1.4, 0.875), new THREE.MeshBasicMaterial(), x, 1.45, z + 0.035, { cast: false, tag: 'human' }) };
+  }
+  const m = HUNG.mesh.userData.m0 || HUNG.mesh.material;
+  if (m.map) m.map.dispose();
+  m.map = texOf(cv); m.needsUpdate = true;
+  if (HUNG.lab) scene.remove(HUNG.lab);
+  HUNG.lab = label(ai ? '반디 그림 · 파란 점' : '나의 손자국 (오늘 그림)', { h: 0.36, fs: 30, bg: ai ? 'rgba(46,125,214,.95)' : 'rgba(255,255,255,.96)', fg: ai ? '#fff' : '#333', pad: 10, round: 6 });
+  HUNG.lab.position.set(HUNG.x, 2.15, HUNG.z + 0.1); scene.add(HUNG.lab);
+}
+const NOTE_MAT = label('♪', { h: 0.5, fs: 44, bg: 'rgba(255,209,102,.0)', fg: '#e76f51', pad: 6 }).material;
+function beat(step) {
+  if (PAV.ball) PAV.ball.scale.setScalar(1.6);
+  const s = new THREE.Sprite(NOTE_MAT.clone()); s.scale.set(0.5, 0.5, 1);
+  s.position.set(PAV.x + (Math.random() - 0.5) * 4, 3 + Math.random(), PAV.z + (Math.random() - 0.5) * 4);
+  scene.add(s); NOTES.push({ s, t: 1.6 });
+}
+const BAND = { on: false };
+const LS = createLessons({
+  world: { callFriend, streamMap, hangArt, beat,
+    band: (on) => { BAND.on = on; },
+    screenLive: (sec) => { SCREEN.manual = performance.now() + sec * 1000; },
+    growFarm: (r) => { FARM_SHELVES.forEach((m, i) => { m.scale.y = 1 + r * (2.5 + (i % 2)); }); } },
+  onClose: () => { ST.panel = null; },
+  onStamp: (n) => { $('passN').textContent = n; toast(`물음 여권 도장 ${n} / ${LESSONS.length}`, 3000); }
+});
+$('passN').textContent = LS.count();
+function openLesson(id) { document.exitPointerLock?.(); closePanel(); closeBook(); ST.panel = 'lesson'; LS.open(id); }
+$('pass').onclick = () => { $('book').classList.add('on'); showBookTab('lessons'); };
+$('bookBody').addEventListener('click', (e) => { const b = e.target.closest('[data-lesson]'); if (b) { closeBook(); openLesson(b.dataset.lesson); } });
 
 // ───────── 루프 ─────────
 const clock = new THREE.Clock();
@@ -1327,6 +1418,11 @@ function frame() {
   TREE.foliage.rotation.y = Math.sin(T * 0.25) * 0.01;
   for (const s of TREE.seedLabels) s.position.y = s.userData.base + Math.sin(T * 1.3 + s.position.x) * 0.05;
   for (const h of HOLOS) h.rotation.y += dt * 0.6;
+  if (LS.isOpen()) LS.tick(dt);
+  for (const k of KIOSKS) { k.gem.rotation.y += dt * 1.6; k.gem.position.y = 1.95 + Math.sin(T * 2 + k.x) * 0.08; }
+  for (let i = BUBBLES.length - 1; i >= 0; i--) { const b = BUBBLES[i]; b.t -= dt; if (b.t <= 0) { b.obj.remove(b.s); b.s.material.map.dispose(); b.s.material.dispose(); BUBBLES.splice(i, 1); } }
+  for (let i = NOTES.length - 1; i >= 0; i--) { const n = NOTES[i]; n.t -= dt; n.s.position.y += dt * 1.4; n.s.material.opacity = Math.min(1, n.t); if (n.t <= 0) { scene.remove(n.s); n.s.material.dispose(); NOTES.splice(i, 1); } }
+  if (PAV.ball) PAV.ball.scale.setScalar(1 + (PAV.ball.scale.x - 1) * Math.exp(-dt * 6));
   const lunch = m > 715 && m < 790;
   ROBOT_ARMS.forEach((a) => { const w = lunch ? T * 2 : T * 0.3; a.j1.rotation.z = Math.sin(w + a.ph) * 0.5; a.j2.rotation.z = Math.sin(w * 1.4 + a.ph) * 0.8; a.j1.rotation.y = Math.sin(w * 0.5) * 0.6; });
   BOTS.forEach((b) => {
@@ -1342,7 +1438,7 @@ function frame() {
   beacon.visible = ST.mode === 'walk' && ST.slot >= 0;
   beacon.userData.ring.scale.setScalar(1 + Math.sin(T * 3) * 0.08);
   scrT += dt;
-  if (scrT > 0.25) { scrT = 0; drawScreen(slot?.id === 'world', T); }
+  if (scrT > 0.25) { scrT = 0; drawScreen(slot?.id === 'world' || performance.now() < (SCREEN.manual || 0), T); }
   applySky(m);
 
   // 카메라
@@ -1369,7 +1465,12 @@ function frame() {
     // 가까운 장소
     let best = null, bd = 1e9;
     for (const key in PLACES) { const P = PLACES[key], d = Math.hypot(PLAYER.x - P.pos[0], PLAYER.z - P.pos[1]) / (P.r + 1.5); if (d < 1 && d < bd) { bd = d; best = key; } }
-    if (best !== nearPlace) { nearPlace = best; $('hint').classList.toggle('on', !!best); if (best) $('hintT').textContent = PLACES[best].name; }
+    nearPlace = best;
+    let nk = null, kd = 2.6;
+    for (const k of KIOSKS) { const d = Math.hypot(PLAYER.x - k.x, PLAYER.z - k.z); if (d < kd) { kd = d; nk = k; } }
+    nearKiosk = nk;
+    const hk = nk ? 'k:' + nk.L.id : best;
+    if (hk !== hintShown) { hintShown = hk; $('hint').classList.toggle('on', !!hk); $('hint').classList.toggle('kio', !!nk); if (nk) $('hintT').textContent = `${nk.L.icon} 체험 수업: ${nk.L.name}`; else if (best) $('hintT').textContent = `${PLACES[best].name} 살펴보기`; }
     // 방향 화살표
     if (slot) {
       const [px, pz] = PLACES[slot.place].pos, d = Math.hypot(px - PLAYER.x, pz - PLAYER.z);
