@@ -16,5 +16,5 @@ export const GAMES = {
   story: { title: '이야기', v: 14, desc: '[연습] 무지개 편지 — 4학년이 되어 1학년 동생의 그림을 찾고, 6학년 선배의 편지를 따라 함께 놀이 날을 준비해요(약 10분) · 새 이야기는 story_episodes.js에 더해요', icon: '📖', group: '이야기', short: '[연습] 무지개 편지 — 새 이야기는 곧!' },   // G3-STORY(09-27): 이야기 RPG · 글 = story_data.js
   newbook: { title: '신상책을 찾아라', v: 14, use: 'story', params: { set: 'newbook' }, lesson: 'story', cat: 'story', desc: '4학년 이야기 — ✨ AI가 빈칸을 채운 이야기 · ✏️ 우리 반이 쓴 이야기 그대로', icon: '📚', group: '이야기', short: '✨ AI가 채운 이야기 · ✏️ 우리 반 이야기' },
   school2036: { title: '10년 뒤 학교', v: 1, lesson: 'story', cat: 'imagine', link: '../imagine/school2036/', icon: '🌱', group: '상상', short: '2036년, AI와 함께 자란 학교를 걸어 보기' },
-  wizard: { title: '마법사 마을', v: 1, lesson: 'story', cat: 'imagine', link: '../imagine/wizard/', icon: '🧙', group: '상상', short: '지팡이를 받고 마법으로 견습 마법사 시험을 통과해요' },
+  wizard: { title: '마법사 마을', v: 1, lesson: 'story', cat: 'imagine', link: '../imagine/wizard/', icon: '🧙', group: '상상', short: '용 키워 타기 · 구름 고래 · 날씨·변신 마법 — 신기한 일 16가지' },
 };

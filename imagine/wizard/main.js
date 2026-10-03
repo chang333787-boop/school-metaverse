@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createTouch } from '../../v2/js/touch.js?v=7';
 import { createNet } from '../../v2/js/net.js?v=1';
+import { build as buildWonders, DISC } from './wonders.js?v=2';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('scene');
@@ -17,7 +18,7 @@ const SKY = 0x5a4790;
 scene.background = new THREE.Color(SKY);
 scene.fog = new THREE.Fog(SKY, 50, 150);
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.2, 300);
-scene.add(new THREE.HemisphereLight(0xd8ccff, 0x4a3b2c, 1.35));
+const hemi = new THREE.HemisphereLight(0xd8ccff, 0x4a3b2c, 1.35); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffd7a0, 1.0);
 sun.position.set(-40, 60, 30);
 scene.add(sun);
@@ -301,6 +302,18 @@ function wizard(robe, hat, skin = 0xf1c9a0, beard = false) {
   scene.add(g); return g;
 }
 const me = wizard(0x7a4cff, 0x2a1d4f, 0xf1c9a0);
+const WIZ_PARTS = [...me.children];
+const FORMS = (() => {
+  const mk = (parts) => { const g = new THREE.Group(); for (const [geo, hex, x, y, z, sx = 1, sy = 1, sz = 1] of parts) { const m = new THREE.Mesh(geo, hex === 'eye' ? new THREE.MeshBasicMaterial({ color: 0x1d1530 }) : lam(hex)); m.position.set(x, y, z); m.scale.set(sx, sy, sz); g.add(m); } g.visible = false; me.add(g); return g; };
+  return {
+    frog: mk([[new THREE.SphereGeometry(0.45, 10, 7), 0x5fbf3a, 0, 0.35, 0, 1.1, 0.7, 1], [new THREE.SphereGeometry(0.14, 8, 6), 0x7fdf5a, -0.2, 0.72, 0.25], [new THREE.SphereGeometry(0.14, 8, 6), 0x7fdf5a, 0.2, 0.72, 0.25], [new THREE.SphereGeometry(0.06, 6, 4), 'eye', -0.2, 0.76, 0.37], [new THREE.SphereGeometry(0.06, 6, 4), 'eye', 0.2, 0.76, 0.37], [new THREE.SphereGeometry(0.18, 7, 5), 0x4f9f2a, -0.38, 0.12, 0.25, 1.2, 0.5, 1.6], [new THREE.SphereGeometry(0.18, 7, 5), 0x4f9f2a, 0.38, 0.12, 0.25, 1.2, 0.5, 1.6], [new THREE.ConeGeometry(0.2, 0.3, 8), 0x2a1d4f, 0, 0.82, 0.05]]),
+    bird: mk([[new THREE.SphereGeometry(0.3, 10, 7), 0xc9a24a, 0, 0.45, 0, 1, 0.9, 1.2], [new THREE.SphereGeometry(0.2, 9, 6), 0xd8b25a, 0, 0.75, 0.22], [new THREE.ConeGeometry(0.07, 0.18, 6), 0xffa94d, 0, 0.73, 0.45, 1, 1, 1], [new THREE.SphereGeometry(0.04, 5, 4), 'eye', -0.09, 0.8, 0.38], [new THREE.SphereGeometry(0.04, 5, 4), 'eye', 0.09, 0.8, 0.38], [new THREE.BoxGeometry(0.5, 0.05, 0.3), 0x8a6a3a, -0.38, 0.5, 0], [new THREE.BoxGeometry(0.5, 0.05, 0.3), 0x8a6a3a, 0.38, 0.5, 0], [new THREE.ConeGeometry(0.13, 0.25, 6), 0x2a1d4f, 0, 0.95, 0.18]]),
+    mouse: mk([[new THREE.SphereGeometry(0.16, 9, 6), 0xb0b0b8, 0, 0.13, 0, 1, 0.85, 1.4], [new THREE.SphereGeometry(0.1, 8, 6), 0xc0c0c8, 0, 0.2, 0.2], [new THREE.SphereGeometry(0.06, 7, 5), 0xffb3c6, -0.08, 0.3, 0.17, 1, 1, 0.4], [new THREE.SphereGeometry(0.06, 7, 5), 0xffb3c6, 0.08, 0.3, 0.17, 1, 1, 0.4], [new THREE.SphereGeometry(0.02, 5, 4), 'eye', -0.04, 0.23, 0.29], [new THREE.SphereGeometry(0.02, 5, 4), 'eye', 0.04, 0.23, 0.29], [new THREE.CylinderGeometry(0.012, 0.012, 0.35, 4), 0xffb3c6, 0, 0.12, -0.36, 1, 1, 1], [new THREE.ConeGeometry(0.07, 0.14, 6), 0x2a1d4f, 0, 0.36, 0.16]]),
+  };
+})();
+FORMS.frog.children[5].rotation.y = 0.3; FORMS.mouse.children[6].rotation.x = Math.PI / 2 - 0.4;
+let formShown = '', flaps = 0, RUN = false, rainbow = false;
+const EXTRA_STATIC = [];
 const wandMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.6, 5), lam(0x6b4128)); wandMesh.position.set(0.36, 0.95, 0.25); wandMesh.rotation.x = 1.1; wandMesh.visible = false; me.add(wandMesh);
 const wandTip = glow(0xfff3a0, 0.35); wandTip.position.set(0.36, 1.2, 0.55); wandTip.visible = false; me.add(wandTip);
 const blobShadow = new THREE.Mesh(new THREE.CircleGeometry(0.45, 14), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }));
@@ -345,7 +358,9 @@ const stars = (() => { const n = 400, a = new Float32Array(n * 3); for (let i = 
 // ───────── 플레이어 · 충돌 ─────────
 const P = { x: 0, y: 0, z: 17, vy: 0, yaw: Math.PI, ground: true, src: null };
 const CAM = { yaw: 0, pitch: 0.32, dist: 6.5 };
-const R = 0.3, STEP = 0.55;
+let R = 0.3, STEP = 0.55, BODY = 1.6;
+const MODS = { form: '', flying: false, lift: 0, bounce: 0, flyT: 0 };
+const MOVERS = [];
 function groundAt(x, z, y) {
   let g = 0, src = null;
   for (const b of SOL) { if (b.y1 <= b.y0 || x < b.x0 - 0.05 || x > b.x1 + 0.05 || z < b.z0 - 0.05 || z > b.z1 + 0.05) continue; if (b.y1 <= y + STEP && b.y1 > g) { g = b.y1; src = b; } }
@@ -354,8 +369,8 @@ function groundAt(x, z, y) {
   return [g, src];
 }
 function blocked(x, z, y) {
-  for (const b of SOL) { if (b.y1 <= b.y0 || b.y1 <= y + STEP || b.y0 >= y + 1.6) continue; if (x > b.x0 - R && x < b.x1 + R && z > b.z0 - R && z < b.z1 + R) return true; }
-  for (const c of CIR) { if (c.y1 <= y + STEP || c.y0 >= y + 1.6) continue; if ((x - c.x) ** 2 + (z - c.z) ** 2 < (c.r + R) ** 2) return true; }
+  for (const b of SOL) { if (b.y1 <= b.y0 || b.y1 <= y + STEP || b.y0 >= y + BODY) continue; if (x > b.x0 - R && x < b.x1 + R && z > b.z0 - R && z < b.z1 + R) return true; }
+  for (const c of CIR) { if (c.y1 <= y + STEP || c.y0 >= y + BODY) continue; if ((x - c.x) ** 2 + (z - c.z) ** 2 < (c.r + R) ** 2) return true; }
   return Math.hypot(x, z - 4) > 74;
 }
 const inPond = (x, z) => Math.hypot(x - POND.x, z - POND.z) < POND.r && Math.hypot(x - ISLAND.x, z - ISLAND.z) > ISLAND.r;
@@ -374,6 +389,7 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'KeyE') act();
   else if (e.code === 'KeyF') castQ = true;
   else if (e.code === 'KeyQ') pickSpell(1, true);
+  else if (e.code === 'KeyB') openBook();
   else if (/^Digit[1-5]$/.test(e.code)) pickSpell(+e.code.slice(5) - 1);
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
@@ -411,9 +427,16 @@ const STEPS = [
   { t: '🔥 탑 꼭대기 봉화 밝히기', at: [0, -40] },
 ];
 const QS = { step: 0, done: false, potions: new Set(), t0: 0 };
+const found = new Set();
+function discover(k) {
+  if (!k || found.has(k)) return; const d = DISC.find((x) => x.k === k); if (!d) return; found.add(k); side(); drawBook();
+  burst(P.x, P.y + 1.6, P.z, 0xffd66b, 50, 3, -1); later(0.4, () => toast('📖 새 발견! ' + d.t + ' (' + found.size + '/' + DISC.length + ')', 4));
+}
+function drawBook() { $('bookList').innerHTML = DISC.map((d) => '<li class="' + (found.has(d.k) ? 'ok' : '') + '">' + (found.has(d.k) ? d.t : '❓ ???') + '</li>').join(''); $('bookN').textContent = found.size + ' / ' + DISC.length; }
+function openBook() { if (busyUI) return; busyUI = 'book'; document.exitPointerLock?.(); drawBook(); $('book').classList.remove('hide'); }
 function side() {
   const lit = TORCHES.filter((t) => t.lit).length;
-  $('side').textContent = '🧪 물약 ' + QS.potions.size + '/3 · 🔥 광장 횃불 ' + lit + '/6' + (runeLit ? ' · ✨ 룬 해독' : '');
+  $('side').innerHTML = '📖 신기한 발견 <b>' + found.size + '/' + DISC.length + '</b> (B) · 🧪 물약 ' + QS.potions.size + '/6 · 🔥 횃불 ' + lit + '/6' + (runeLit ? ' · ✨ 룬' : '');
 }
 function drawQuest() {
   $('qlist').innerHTML = STEPS.map((s, i) => '<li class="' + (i < QS.step || QS.done ? 'ok' : i === QS.step ? 'now' : '') + '">' + s.t + '</li>').join('');
@@ -437,9 +460,11 @@ for (const N of NPCS) if (N.path) ACTS.push({ npc: N, r: 2.2, label: N.name + '�
 let near = null;
 function nearTick() {
   let best = null, bd = 1e9;
-  for (const a of ACTS) { const x = a.npc ? a.npc.g.position.x : a.x, z = a.npc ? a.npc.g.position.z : a.z, y = a.npc ? 0 : a.y, d = Math.hypot(P.x - x, P.z - z); if (d < a.r && Math.abs(P.y - y) < 1.5 && d < bd) { bd = d; best = a; } }
+  for (const a of ACTS) { let x, z, y; if (a.dyn) { const q = a.dyn(); if (!q) continue; [x, z, y] = q; } else { x = a.npc ? a.npc.g.position.x : a.x; z = a.npc ? a.npc.g.position.z : a.z; y = a.npc ? 0 : a.y; }
+    const d = Math.hypot(P.x - x, P.z - z), w = d + (a.low ? 2 : 0); if (d < a.r && Math.abs(P.y - y) < 2 && w < bd) { bd = w; best = a; } }
   for (const s of SCROLLS) if (!s.got && Math.hypot(P.x - s.x, P.z - s.z) < 1.6 && Math.abs(P.y + 0.8 - s.y) < 1.6) { best = { label: SPELLS[s.spell].e + ' ' + SPELLS[s.spell].n + ' 두루마리 줍기', fn: () => getScroll(s) }; break; }
-  if (best !== near) { near = best; $('hint').classList.toggle('hide', !best); if (best) $('hintT').textContent = best.label; }
+  if (MODS.flying) best = { label: '🐉 용에서 내리기', fn: () => { MODS.flying = false; P.vy = 0; toast('사뿐히 내렸어요.', 1.5); } };
+  if (best !== near || (best && $('hintT').textContent !== best.label)) { near = best; $('hint').classList.toggle('hide', !best); if (best) $('hintT').textContent = best.label; }
 }
 function act() { if (!started) return; if (busyUI === 'dlg') { dlgNext(); return; } if (busyUI) return; if (near) near.fn(); }
 $('hint').onclick = (e) => { e.stopPropagation(); act(); };
@@ -455,7 +480,7 @@ const D = { lines: [], i: 0, done: null };
 function dlg(lines, done) { D.lines = lines; D.i = 0; D.done = done || null; busyUI = 'dlg'; document.exitPointerLock?.(); $('dlg').classList.remove('hide'); showLine(); }
 function showLine() { const [w, t] = D.lines[D.i]; $('dWho').textContent = w; $('dSay').textContent = t; $('dRow').innerHTML = '<button id="dNext">' + (D.i < D.lines.length - 1 ? '다음 ▶' : '확인') + '</button>'; $('dNext').onclick = (e) => { e.stopPropagation(); dlgNext(); }; }
 function dlgNext() { if (D.i < D.lines.length - 1) { D.i++; showLine(); return; } $('dlg').classList.add('hide'); busyUI = null; const f = D.done; D.done = null; if (f) f(); }
-function closeUI() { if (busyUI === 'dlg') { D.i = D.lines.length - 1; dlgNext(); } else if (busyUI === 'pot') closePot(); else if (busyUI === 'end') { $('end').classList.add('hide'); busyUI = null; } }
+function closeUI() { if (busyUI === 'book' || busyUI === 'choose') { $('book').classList.add('hide'); $('dlg').classList.add('hide'); busyUI = null; return; } if (busyUI === 'dlg') { D.i = D.lines.length - 1; dlgNext(); } else if (busyUI === 'pot') closePot(); else if (busyUI === 'end') { $('end').classList.add('hide'); busyUI = null; } }
 function talkBudeul() {
   if (!wand) return dlg([
     ['지팡이 장인 버들', '어서 오렴, 견습 마법사! 오늘이 바로 견습 마법사 시험 날이지.'],
@@ -475,13 +500,16 @@ function talkSol() {
 }
 
 // 물약
-const INGS = [['🐸', '개구리 다리'], ['☁️', '구름 솜'], ['⭐', '별가루'], ['🌙', '달맞이꽃'], ['⚡', '번개 깃털'], ['🌿', '민트 잎']];
+const INGS = [['🐸', '개구리 다리'], ['☁️', '구름 솜'], ['⭐', '별가루'], ['🌙', '달맞이꽃'], ['⚡', '번개 깃털'], ['🌿', '민트 잎'], ['🍄', '버섯'], ['🪶', '깃털'], ['🧀', '치즈']];
 const RECIPES = [
   { k: '🐸☁️⭐', n: '🦘 높이뛰기 물약', c: 0x8de08a, fx: 'jump', say: '몸이 깃털처럼 가벼워요! 높이 뛸 수 있어요 (60초)' },
   { k: '⚡☁️🌿', n: '⚡ 바람 물약', c: 0x7fd8ff, fx: 'speed', say: '발이 바람처럼 빨라졌어요! (60초)' },
   { k: '🌙⭐🌿', n: '🌟 반짝 물약', c: 0xfff3a0, fx: 'glow', say: '온몸이 반짝반짝 빛나요! (60초)' },
+  { k: '🐸🌿🍄', n: '🐸 개구리 물약', c: 0x6fbf3a, form: 'frog', say: '개굴! 개구리가 됐어요. 엄청 높이 뛰어요 (60초)' },
+  { k: '🪶☁️⚡', n: '🐦 참새 물약', c: 0xc9a24a, form: 'bird', say: '짹짹! 참새가 됐어요. 공중에서 점프를 누르면 날갯짓 (60초)' },
+  { k: '🧀🍄🌙', n: '🐭 생쥐 물약', c: 0xb0b0b8, form: 'mouse', say: '찍찍! 생쥐만큼 작아졌어요. 작은 구멍도 쏙 (60초)' },
 ];
-const FX = { jump: 0, speed: 0, glow: 0, frog: 0 };
+const FX = { jump: 0, speed: 0, glow: 0, frog: 0, form: 0 };
 let potSel = [];
 const ingBox = $('ings');
 INGS.forEach(([e, n], i) => { const b = document.createElement('button'); b.innerHTML = '<span>' + e + '</span>' + n; b.onclick = () => { if (potSel.includes(i) || potSel.length >= 3) return; potSel.push(i); drawPot(); }; ingBox.appendChild(b); });
@@ -493,7 +521,8 @@ $('potClose').onclick = closePot;
 $('potBrew').onclick = () => {
   const key = potSel.map((i) => INGS[i][0]).sort().join(''), r = RECIPES.find((x) => [...x.k.match(/\p{Extended_Pictographic}️?/gu)].sort().join('') === key);
   closePot();
-  if (r) { FX[r.fx] = 60; QS.potions.add(r.fx); side(); burst(17, 1.3, 6, r.c, 60, 3, 1.5); toast('✨ ' + r.n + ' 완성! ' + r.say, 4); }
+  if (r && r.form) { MODS.form = r.form; FX.form = 60; QS.potions.add(r.form); discover(r.form === 'mouse' ? '' : r.form); side(); burst(P.x, P.y + 1, P.z, r.c, 50, 3); toast('✨ ' + r.n + ' 완성! ' + r.say, 4.5); }
+  else if (r) { FX[r.fx] = 60; QS.potions.add(r.fx); side(); burst(17, 1.3, 6, r.c, 60, 3, 1.5); toast('✨ ' + r.n + ' 완성! ' + r.say, 4); }
   else { FX.frog = 15; burst(17, 1.3, 6, 0x6fbf3a, 70, 3, 2); toast('펑! 💨 잘못 섞었어요… 몸이 개구리색이 됐어요! (15초)', 4); }
 };
 
@@ -503,21 +532,24 @@ const BOLTS = [];
 function cast(at) {
   if (!wand) { toast('지팡이가 없어요. 먼저 지팡이 가게에 가 봐요!', 2.5); return; }
   if (castCd > 0) return; castCd = 0.4;
-  if (at) ray.set(camera.position, at.clone().sub(camera.position).normalize()); else ray.setFromCamera(ndc, camera); ray.far = 60;
-  const hits = ray.intersectObjects([STATIC, ground], false).filter((h) => h.distance > 1.2);
-  const first = hits[0], lim = first ? first.distance : 60;
-  let hit = first || null, bt = 1e9;
-  for (const o of AIM) {   // 겨눈 줄에 가까운 마법 대상(조금 빗나가도 맞게)
+  if (at) ray.set(camera.position, at.clone().sub(camera.position).normalize()); else ray.setFromCamera(ndc, camera); ray.far = 140;
+  const hits = ray.intersectObjects([STATIC, ground, ...EXTRA_STATIC], false).filter((h) => h.distance > 1.2);
+  const first = hits[0], lim = first ? first.distance : 140;
+  let hit = first || null, bt = 1e9; const tMin = Math.max(1.2, camera.position.distanceTo(_v.set(P.x, P.y + 0.8, P.z)) * 0.85);
+  const vis = (o) => { let v = o.visible; o.traverseAncestors((x) => { if (!x.visible) v = false; }); return v; };
+  const real = ray.intersectObjects(AIM, false).find((h) => h.distance > tMin && h.distance < lim + 0.9 && vis(h.object));
+  if (real) { hit = real; bt = 0; }
+  if (!real) for (const o of AIM) {   // 겨눈 줄에 가까운 마법 대상(조금 빗나가도 맞게)
     let vis = o.visible; o.traverseAncestors((a) => { if (!a.visible) vis = false; }); if (!vis) continue;
     if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
     const c = o.geometry.boundingSphere.center.clone().applyMatrix4(o.matrixWorld), r = o.geometry.boundingSphere.radius * o.getWorldScale(_s).x;
-    const t = c.clone().sub(ray.ray.origin).dot(ray.ray.direction); if (t < 1.2 || t > lim + r + 0.6) continue;
-    const dist = ray.ray.at(t, new THREE.Vector3()).distanceTo(c); if (dist > r + 0.45 || t >= bt) continue;
+    const t = c.clone().sub(ray.ray.origin).dot(ray.ray.direction); if (t < tMin || t > lim + r + 0.6) continue;
+    const dist = ray.ray.at(t, new THREE.Vector3()).distanceTo(c); if (dist > Math.min(r, 1.6) + 0.45 || t >= bt) continue;
     bt = t; hit = { object: o, point: c, distance: t };
   }
   const tip = _v.set(0.36, 1.2, 0.55).applyMatrix4(me.matrixWorld).clone();
   const to = hit ? hit.point.clone() : ray.ray.at(40, new THREE.Vector3());
-  const s = SPELLS[spell], b = glow(s.c, 0.9); b.position.copy(tip); scene.add(b);
+  const s = SPELLS[spell], b = glow(rainbow ? new THREE.Color().setHSL(Math.random(), 0.9, 0.65).getHex() : s.c, 0.9); b.position.copy(tip); scene.add(b);
   BOLTS.push({ b, from: tip, to, t: 0, dur: Math.max(0.15, tip.distanceTo(to) / 34), sp: spell, obj: hit && hit.object.userData && hit.object.userData.on ? hit.object : null });
   if (NET) NET.fx({ s: spell, a: [tip.x, tip.y, tip.z].map((v) => +v.toFixed(2)), b: [to.x, to.y, to.z].map((v) => +v.toFixed(2)) });
   P.yaw = Math.atan2(-Math.sin(CAM.yaw), -Math.cos(CAM.yaw));
@@ -526,7 +558,7 @@ function boltTick(dt) {
   for (let i = BOLTS.length - 1; i >= 0; i--) {
     const B = BOLTS[i]; B.t += dt; const k = Math.min(1, B.t / B.dur);
     B.b.position.lerpVectors(B.from, B.to, k); B.b.position.y += Math.sin(k * Math.PI) * 0.4;
-    if (Math.random() < 0.7) emit(B.b.position.x, B.b.position.y, B.b.position.z, 0, 0.3, 0, SPELLS[B.sp].c, 0.35, 0);
+    if (Math.random() < 0.7) emit(B.b.position.x, B.b.position.y, B.b.position.z, 0, 0.3, 0, rainbow && !B.remote ? new THREE.Color().setHSL((T * 0.8) % 1, 0.9, 0.65).getHex() : SPELLS[B.sp].c, 0.35, 0);
     if (k < 1) continue;
     scene.remove(B.b); B.b.material.dispose(); BOLTS.splice(i, 1);
     const msg = B.remote ? null : B.obj ? B.obj.userData.on(B.sp) : null;
@@ -558,6 +590,7 @@ function netStart() {
   if (Qp.get('mp') === '0' || NET) return;
   NET = createNet({ THREE, scene, room: (Qp.get('room') || 'wizard').replace(/[^a-z0-9_-]/gi, '').slice(0, 24) || 'wizard', kind: 'wizard', onChange: drawWho,
     onFx: (O, f) => { if (!f || !Array.isArray(f.a) || !Array.isArray(f.b) || !SPELLS[f.s]) return; const from = new THREE.Vector3(...f.a), to = new THREE.Vector3(...f.b);
+      if (W && K.onRemoteFx) K.onRemoteFx(f);
       if (from.distanceTo(camera.position) > 90) return; const b = glow(SPELLS[f.s].c, 0.9); b.position.copy(from); scene.add(b); BOLTS.push({ b, from, to, t: 0, dur: Math.max(0.15, from.distanceTo(to) / 34), sp: f.s, obj: null, remote: true }); } });
   if (nmIn.value.trim()) NET.setName(nmIn.value);
   $('who').classList.remove('hide'); drawWho();
@@ -621,6 +654,8 @@ function update(dt) {
     if (Math.random() < 0.8) emit(P.x, P.y, P.z, (Math.random() - 0.5) * 2, 0.5, (Math.random() - 0.5) * 2, 0xd6a8ff, 0.6, 0);
     if (k >= 1) { rideA = null; P.ground = true; if (P.y > 3 && QS.step === 4) advance(4); }
   } else if (started) {
+    const F = MODS.form, SC = F === 'mouse' ? 0.33 : F === 'frog' ? 0.8 : F === 'bird' ? 0.55 : 1;
+    R = 0.3 * SC; STEP = F === 'mouse' ? 0.25 : 0.55; BODY = 1.6 * SC;
     let ix = 0, iz = 0;
     if (!busyUI) {
       if (keys.has('KeyW') || keys.has('ArrowUp')) iz += 1; if (keys.has('KeyS') || keys.has('ArrowDown')) iz -= 1;
@@ -630,42 +665,62 @@ function update(dt) {
     if (!ix && !iz && TOUCH.m > 0 && !busyUI) { ix = TOUCH.mx; iz = TOUCH.my; tsp = TOUCH.m >= 0.92 ? 7.5 : 4.2 * clamp((TOUCH.m - 0.15) / 0.6, 0.3, 1); }
     const fx = -Math.sin(CAM.yaw), fz = -Math.cos(CAM.yaw), rx = -fz, rz = fx;
     let vx = fx * iz + rx * ix, vz = fz * iz + rz * ix; const L = Math.hypot(vx, vz);
-    const run = tsp ? tsp > 7 : keys.has('ShiftLeft') || keys.has('ShiftRight');
-    if (L > 0) {
-      const sp = (tsp || (run ? 7.5 : 4.2)) * (FX.speed > 0 ? 1.6 : 1) * dt; vx /= L; vz /= L;
-      const nx = P.x + vx * sp, nz = P.z + vz * sp;
-      if (!blocked(nx, P.z, P.y)) P.x = nx; if (!blocked(P.x, nz, P.y)) P.z = nz;
-      P.yaw += Math.atan2(Math.sin(Math.atan2(vx, vz) - P.yaw), Math.cos(Math.atan2(vx, vz) - P.yaw)) * Math.min(1, dt * 12);
-    }
+    const run = tsp ? tsp > 7 : keys.has('ShiftLeft') || keys.has('ShiftRight'); RUN = run;
+    const jumpHeld = !busyUI && (keys.has('Space') || TOUCH.jump);
     if (jumpT > 0) jumpT -= dt; if (TOUCH.jumpT > 0) TOUCH.jumpT -= dt;
-    if (!busyUI && (keys.has('Space') || TOUCH.jump || jumpT > 0 || TOUCH.jumpT > 0) && P.ground) { P.vy = FX.jump > 0 ? 8.6 : 5.2; P.ground = false; jumpT = 0; TOUCH.jumpT = 0; }
-    P.vy -= 14 * dt; const y0 = P.y; P.y += P.vy * dt;
-    const [g, src] = groundAt(P.x, P.z, Math.max(y0, P.y));
-    if (P.y <= g) { P.y = g; P.vy = 0; P.ground = true; P.src = src; } else { P.ground = false; P.src = null; }
-    if (P.ground && P.y < 0.05 && inPond(P.x, P.z) && frozenT <= 0) {
-      burst(P.x, 0.3, P.z, 0x7fd8ff, 50, 3); P.x = 13.2; P.z = -20; P.y = 0; CAM.yaw = -Math.PI / 2; toast('첨벙! 💦 연못은 그냥 건널 수 없어요. 얼려 볼까요?', 3.5);
+    const jumpTap = !busyUI && (jumpT > 0 || TOUCH.jumpT > 0);
+    if (MODS.flying) {
+      MODS.flyT += dt;
+      if (L > 0) { const sp = (run ? 15 : 9.5) * dt; P.x += vx / L * sp; P.z += vz / L * sp; P.yaw += Math.atan2(Math.sin(Math.atan2(vx, vz) - P.yaw), Math.cos(Math.atan2(vx, vz) - P.yaw)) * Math.min(1, dt * 4); }
+      P.y += (jumpHeld ? 6 : -1.4) * dt; P.vy = 0;
+      const gy = groundAt(P.x, P.z, P.y + 2)[0]; if (P.y < gy + 1.7) P.y = gy + 1.7;
+      P.y = Math.min(P.y, 48); const dd = Math.hypot(P.x, P.z - 4); if (dd > 85) { P.x *= 85 / dd; P.z = 4 + (P.z - 4) * 85 / dd; }
+      P.ground = false; P.src = null; jumpT = 0; TOUCH.jumpT = 0;
+    } else {
+      if (L > 0) {
+        const sp = (tsp || (run ? 7.5 : 4.2)) * (FX.speed > 0 ? 1.6 : 1) * (F === 'mouse' ? 0.75 : 1) * dt; vx /= L; vz /= L;
+        const nx = P.x + vx * sp, nz = P.z + vz * sp;
+        if (!blocked(nx, P.z, P.y)) P.x = nx; if (!blocked(P.x, nz, P.y)) P.z = nz;
+        P.yaw += Math.atan2(Math.sin(Math.atan2(vx, vz) - P.yaw), Math.cos(Math.atan2(vx, vz) - P.yaw)) * Math.min(1, dt * 12);
+      }
+      const jv = F === 'frog' ? 10 : F === 'mouse' ? 3.6 : FX.jump > 0 ? 8.6 : 5.2;
+      if ((jumpTap || (jumpHeld && P.ground)) && P.ground) { P.vy = jv; P.ground = false; jumpT = 0; TOUCH.jumpT = 0; flaps = 0; if (F === 'frog') burst(P.x, P.y, P.z, 0x6fbf3a, 8, 1.5); }
+      else if (F === 'bird' && jumpTap && !P.ground && flaps < 5) { P.vy = Math.max(P.vy, 5); flaps++; jumpT = 0; TOUCH.jumpT = 0; burst(P.x, P.y + 0.3, P.z, 0xc9a24a, 6, 1); }
+      if (MODS.bounce) { P.vy = MODS.bounce; MODS.bounce = 0; P.ground = false; }
+      if (MODS.lift) { P.vy = Math.max(P.vy, MODS.lift); MODS.lift = 0; P.ground = false; }
+      P.vy -= 14 * dt; if (F === 'bird' && jumpHeld && P.vy < -1.3) P.vy = -1.3;
+      const y0 = P.y; P.y += P.vy * dt;
+      const [g, src] = groundAt(P.x, P.z, Math.max(y0, P.y));
+      if (P.y <= g) { P.y = g; P.vy = 0; P.ground = true; P.src = src; } else { P.ground = false; P.src = null; }
+      if (P.ground && P.src && P.src.dx != null) { P.x += P.src.dx; P.z += P.src.dz; }
+      if (P.ground && P.y < 0.05 && inPond(P.x, P.z) && frozenT <= 0) {
+        burst(P.x, 0.3, P.z, 0x7fd8ff, 50, 3); P.x = 13.2; P.z = -20; P.y = 0; CAM.yaw = -Math.PI / 2; toast('첨벙! 💦 연못은 그냥 건널 수 없어요. 얼려 볼까요?', 3.5);
+      }
     }
     if (P.y < -5) { P.x = 0; P.z = 17; P.y = 0; }
   }
   me.position.set(P.x, P.y, P.z); me.rotation.y = P.yaw;
   me.children[0].material.color.setHex(FX.frog > 0 ? 0x5fbf3a : 0x7a4cff);
+  if (FX.form <= 0 && MODS.form) { MODS.form = ''; burst(P.x, P.y + 0.5, P.z, 0xffffff, 30, 2); toast('펑! 원래 모습으로 돌아왔어요.', 2); }
+  if (formShown !== MODS.form) { formShown = MODS.form; for (const c of WIZ_PARTS) c.visible = !formShown; for (const k in FORMS) FORMS[k].visible = k === formShown; wandMesh.visible = wandTip.visible = wand && !formShown; }
   const moving = started && (keys.size || TOUCH.m > 0) && !busyUI;
   me.position.y += moving && P.ground ? Math.abs(Math.sin(T * 10)) * 0.06 : 0;
   blobShadow.position.set(P.x, groundAt(P.x, P.z, P.y + 0.01)[0] + 0.03, P.z);
   meGlow.visible = FX.glow > 0; meGlow.position.set(P.x, P.y + 1, P.z); if (FX.glow > 0 && Math.random() < 0.4) emit(P.x + (Math.random() - 0.5) * 0.6, P.y + 0.2, P.z + (Math.random() - 0.5) * 0.6, 0, 0.8, 0, [0xfff3a0, 0xff9bd2, 0x9fe6ff][Math.floor(Math.random() * 3)], 0.9, 0);
   wandTip.material.color.setHex(SPELLS[spell].c);
 
+  if (W) W.tick(dt);
   if ((nearT -= dt) <= 0) { nearT = 0.15; nearTick(); }
   if (NET && started) { NET.tick(dt, { x: P.x, y: P.y, z: P.z, h: P.yaw }); if ((whoT -= dt) <= 0) { whoT = 2; drawWho(); } }
   boltTick(dt); partTick(dt); twTick(dt);
 
   // 효과 칩
-  const ch = []; if (FX.jump > 0) ch.push('🦘 높이뛰기 ' + Math.ceil(FX.jump)); if (FX.speed > 0) ch.push('⚡ 바람 ' + Math.ceil(FX.speed)); if (FX.glow > 0) ch.push('🌟 반짝 ' + Math.ceil(FX.glow)); if (FX.frog > 0) ch.push('🐸 개구리색 ' + Math.ceil(FX.frog)); if (frozenT > 0) ch.push('❄️ 연못 얼음 ' + Math.ceil(frozenT));
+  const ch = []; if (MODS.form) ch.push({ frog: '🐸 개구리 ', bird: '🐦 참새 ', mouse: '🐭 생쥐 ' }[MODS.form] + Math.ceil(FX.form)); if (MODS.flying) ch.push('🐉 비행 중 · E 내리기'); if (W && W.berries()) ch.push('🍇 열매 ' + W.berries()); if (FX.jump > 0) ch.push('🦘 높이뛰기 ' + Math.ceil(FX.jump)); if (FX.speed > 0) ch.push('⚡ 바람 ' + Math.ceil(FX.speed)); if (FX.glow > 0) ch.push('🌟 반짝 ' + Math.ceil(FX.glow)); if (FX.frog > 0) ch.push('🐸 개구리색 ' + Math.ceil(FX.frog)); if (frozenT > 0) ch.push('❄️ 연못 얼음 ' + Math.ceil(frozenT));
   const html = ch.map((t) => '<div class="chip">' + t + '</div>').join(''); if (html !== chipsHTML) { chipsHTML = html; $('chips').innerHTML = html; }
 
   // 카메라
-  const hx = P.x, hy = P.y + 1.4, hz = P.z;
-  let d = started ? CAM.dist : 16;
+  const hx = P.x, hy = P.y + (MODS.form === 'mouse' ? 0.45 : MODS.form ? 0.9 : 1.4), hz = P.z;
+  let d = started ? (MODS.flying ? 10 : MODS.form === 'mouse' ? 2.4 : CAM.dist) : 16;
   const yaw = started ? CAM.yaw : T * 0.08, pitch = started ? CAM.pitch : 0.42;
   for (let k = 1; k <= 6; k++) { const t = d * k / 6, x = hx + Math.sin(yaw) * Math.cos(pitch) * t, y = hy + Math.sin(pitch) * t, z = hz + Math.cos(yaw) * Math.cos(pitch) * t;
     if (y < 0.3 || blockedCam(x, y, z)) { d = Math.max(1.2, t - d / 6); break; } }
@@ -693,6 +748,20 @@ function frame(t) {
 }
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 window.MAGIC = { P, CAM, QS, learned, CRATES, start, cast: () => cast(), cam: () => camera.position.toArray().map((v) => +v.toFixed(2)), castAt: (x, y, z) => { castCd = 0; cast(new THREE.Vector3(x, y, z)); }, act: () => act(), pick: pickSpell, tp: (x, z, y = 0) => { P.x = x; P.z = z; P.y = y; P.vy = 0; }, aim: (yaw, pitch) => { CAM.yaw = yaw; CAM.pitch = pitch; }, near: () => near && near.label, info: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, fps: window.MAGIC.fps, dpr }), fps: 0 };
+function choose(title, opts, cb) {
+  busyUI = 'choose'; document.exitPointerLock?.(); $('dlg').classList.remove('hide'); $('dWho').textContent = '✨'; $('dSay').textContent = title;
+  $('dRow').innerHTML = ''; opts.forEach((o, i) => { const b = document.createElement('button'); b.textContent = o; b.onclick = (e) => { e.stopPropagation(); $('dlg').classList.add('hide'); busyUI = null; cb(i); }; $('dRow').appendChild(b); });
+  const c = document.createElement('button'); c.className = 'sub'; c.textContent = '닫기'; c.onclick = (e) => { e.stopPropagation(); $('dlg').classList.add('hide'); busyUI = null; }; $('dRow').appendChild(c);
+}
+const fadeEl = document.createElement('div'); fadeEl.style.cssText = 'position:fixed;inset:0;z-index:38;background:#120c22;opacity:0;pointer-events:none;transition:opacity .35s'; document.body.appendChild(fadeEl);
+function fade(cb) { fadeEl.style.opacity = 1; setTimeout(() => { cb(); setTimeout(() => { fadeEl.style.opacity = 0; }, 120); }, 380); }
+$('bookClose').onclick = () => closeUI();
+$('quest').onclick = (e) => { e.stopPropagation(); openBook(); };
+const K = { THREE, scene, camera, P, MODS, SOL, CIR, CIRS: CIR, burst, emit, toast, dlg, later, tween, target, glow, label, lam, SPELLS, ACTS, discover, found, extraStatic: EXTRA_STATIC, movers: MOVERS,
+  hemi, sun, stars, groundAt, choose, fade, freezePond: (sec) => { frozenT = Math.max(frozenT, sec); ice.visible = true; }, tp: (x, z, y = 0) => { P.x = x; P.z = z; P.y = y; P.vy = 0; },
+  face: (deg) => { const a = deg * Math.PI / 180; CAM.yaw = -a; P.yaw = Math.atan2(Math.sin(a), -Math.cos(a)); }, rainbowWand: () => { rainbow = true; }, alone: () => !NET || NET.count <= 1, sneaking: () => !RUN };
+const W = buildWonders(K);
+Object.assign(window.MAGIC, { W, MODS, found, K });
 camera.position.set(0, 12, 40);
 requestAnimationFrame(frame);
 if (new URLSearchParams(location.search).get('start') === '1') start();
