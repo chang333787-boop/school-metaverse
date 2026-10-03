@@ -448,7 +448,8 @@ export function createMapApi(host, NAV, META) {
       const reg = await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url));
       if (my !== game.seq) return null;
       const ent = reg.GAMES && reg.GAMES[id]; if (!ent) { hud.toast('없는 게임이에요: ' + id); return null; }
-      const mod = await import(new URL('../games/' + id + '.js?v=' + (ent.v || 1), import.meta.url));
+      const mod = await import(new URL('../games/' + (/^[a-z_][a-z0-9_-]{0,31}$/.test(ent.use || '') ? ent.use : id) + '.js?v=' + (ent.v || 1), import.meta.url));   // LESSON(10-03): use = 다른 게임 파일을 빌려 씀 · params = 미리 정한 값(카드 하나 = 이야기 하나)
+      if (ent.params && typeof ent.params === 'object') params = { ...ent.params, ...params };
       if (my !== game.seq) return null;
       if (!mod.meta || mod.meta.api !== MAP.version) { hud.toast('게임 버전이 지도와 맞지 않아요'); return null; }
       const sc = scope(id); sc.arena.set('school');   // 게임 중에는 학교 경계 밖으로 못 나감(기본)

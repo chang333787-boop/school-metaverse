@@ -49,3 +49,12 @@ export const STORY = {
 ## 글 규칙(공개 저장소)
 - 실제 학생 이름을 대사에 쓰지 않아요 — 학생은 '나' 또는 이름 없는 역할('반 친구'·'1학년 동생'), 선생님은 직함으로.
 - 실제 학교에 대한 사실을 지어내지 않아요. 4학년 눈높이 · 무섭지 않게.
+
+## v3 수업 카드 — 이야기 하나 = 카드 하나(안에서 판 고르기)
+1. 글 파일 2개: `story_<이름>_a.js`(✨ AI가 빈칸을 채운 판) · `story_<이름>_b.js`(✏️ 우리 반이 쓴 그대로)
+2. `story_episodes.js`에 두 줄 — 같은 `set`:
+   `{ id: '<이름>_a', set: '<이름>', title: '…', pick: 'AI가 빈칸을 채운 이야기', icon: '✨', file: 'story_<이름>_a.js', hidden: true }`
+   `{ id: '<이름>_b', set: '<이름>', title: '…', pick: '우리 반이 쓴 이야기 그대로', icon: '✏️', file: 'story_<이름>_b.js', hidden: true }`
+3. `registry.js`에 카드 한 줄: `<이름>: { title: '…', v: 1, use: 'story', params: { set: '<이름>' }, lesson: 'story', icon: '📚', group: '이야기', short: '…' }`
+- 끝 화면 비교 목록: `end: { …, listTitle: '✨ AI가 채운 빈칸', list: ['…'] }`(AI 판) · `listTitle: '✏️ 우리 반이 정한 것'`(우리 반 판)
+

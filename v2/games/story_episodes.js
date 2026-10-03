@@ -5,6 +5,6 @@
 export const EPISODES = [
   { id: 'rainbow', title: '무지개 편지', icon: '🌈', practice: true, file: 'story_data.js', legacy: 'rainbow' },   // 연습 게임(예전 코드로 돌아가요 — legacy)
   { id: 'sample', title: '견본: 보건실 심부름', icon: '🩹', file: 'story_sample.js', hidden: true },
-  { id: 'newbook_a', title: '신상책을 찾아라! (다듬은 이야기)', icon: '✨', file: 'story_newbook_a.js', hidden: true },
-  { id: 'newbook_b', title: '신상책 (우리 반 이야기)', icon: '✏️', file: 'story_newbook_b.js', hidden: true },               // 새 형식 견본(목록엔 안 보임 · ?game=story&ep=sample)
+  { id: 'newbook_a', set: 'newbook', title: '신상책 보물찾기의 비밀', pick: 'AI가 빈칸을 채운 이야기', icon: '✨', file: 'story_newbook_a.js', hidden: true },
+  { id: 'newbook_b', set: 'newbook', title: '신상책', pick: '우리 반이 쓴 이야기 그대로', icon: '✏️', file: 'story_newbook_b.js', hidden: true },               // 새 형식 견본(목록엔 안 보임 · ?game=story&ep=sample)
 ];

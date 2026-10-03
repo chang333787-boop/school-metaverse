@@ -65,10 +65,10 @@ export default async function start(map, params = {}) {
   if (gone()) return {};
   EPS = EPS.filter(e => e && /^[a-z0-9_]+$/.test(e.id || '') && /^[a-z0-9_]+\.js$/.test(e.file || ''));
   if (!EPS.length) EPS = [{ id: 'rainbow', title: '무지개 편지', icon: '🌈', practice: true, file: 'story_data.js', legacy: 'rainbow' }];
-  const VIS = EPS.filter(e => !e.hidden);   // hidden = 목록엔 안 보임(주소 ?ep=로만 — 만드는 중인 이야기)
+  const VIS = params.set ? EPS.filter(e => e.set === params.set) : EPS.filter(e => !e.hidden);   // set = 수업 카드 하나의 판들(AI가 채운 판 · 우리 반 판) · hidden = 목록엔 안 보임(주소 ?ep=로만)
   let EP = EPS.find(e => e.id === params.ep);
   if (!EP && VIS.length > 1) { map.hud.banner(' ', 0.02);
-    const k = await map.hud.ask('📖 어떤 이야기를 할까요?', VIS.map(e => (e.icon || '📖') + ' ' + (e.practice ? '[연습] ' : '') + e.title)); if (gone()) return {}; EP = VIS[k]; }
+    const k = await map.hud.ask(params.set ? '📖 어떤 이야기로 할까요?' : '📖 어떤 이야기를 할까요?', VIS.map(e => (e.icon || '📖') + ' ' + (e.practice ? '[연습] ' : '') + (e.pick || e.title))); if (gone()) return {}; EP = VIS[k]; }
   EP = EP || VIS[0] || EPS[0];
   let D = null, WHO = {};
   try { const m = await import(new URL('./' + EP.file + (EP.legacy ? '?v=' + DATA_V : '?t=' + Date.now()), import.meta.url)); D = m.STORY; WHO = m.WHO || {}; }
@@ -382,6 +382,8 @@ export default async function start(map, params = {}) {
     endEl = mk('div', 'sp'); endEl.id = 'story-end';
     const E9 = LEG ? null : (D.steps.find(x => x.end) || {}).end || {};
     mk('div', 'story-rb', null, endEl); mk('h2', '', LEG ? D.endTitle : E9.title || D.title, endEl); mk('div', 'b', fill(LEG ? D.endBody : E9.body || ''), endEl);
+    if (!LEG && Array.isArray(E9.list) && E9.list.length) { mk('div', 'b', E9.listTitle || '', endEl).style.cssText = 'font-weight:800;margin-top:10px;text-align:left';
+      const ul2 = mk('ul', '', null, endEl); ul2.style.cssText = 'text-align:left;max-height:34vh;overflow:auto;font-size:14px;line-height:1.5'; for (const t of E9.list) mk('li', '', t, ul2); }
     const ul = mk('ul', '', null, endEl);
     for (const t of (LEG ? ['🎭 맡은 일: ' + D.roleName[S.role], '🎨 주운 크레파스: ' + S.crayons + ' / 3', '🎁 그림 돌려준 방법: ' + D.giftName[S.gift], '📌 그림 건 곳: ' + D.placeName[S.place]] : []).concat(['⏱ 걸린 시간: ' + fmt(T)])) mk('li', '', t, ul);
     const rw = mk('div', 'rw', null, endEl);
