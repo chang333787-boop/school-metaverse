@@ -164,5 +164,5 @@ export function createLobby(o) {
     draw();
   })();
   draw();
-  return { draw, recheck, get room() { return cur; }, open: openList, leave: () => out() };
+  return { draw, recheck, get room() { return cur; }, open: openList, leave: () => out(), teacher: (k, extra, quiet) => { if (onTeacher && cur && cur.k) onTeacher(k, extra, quiet); } };
 }

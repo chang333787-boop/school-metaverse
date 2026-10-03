@@ -433,6 +433,8 @@ export default async function start(map, params = {}) {
     hereEl.onclick = (ev) => { ev.stopPropagation(); const p = herePt; hereOff(); form({ pt: p }); };
   }
   addEventListener('sm-click', onWorldClick);
+  function onCmd(e) { const c = e.detail; if (!c || !board || c.b !== board.id || !c.s || dead) return; if (panel && panel.id !== 'memo-view') return; endTour(); view(c.s); }   // 선생님 발표: 그 장면 카드를 같이 봄
+  addEventListener('sm-cmd', onCmd);
   let placing = null;
   async function placeAt(pt) {   // 장면 카드의 '＋ 🚩 깃발' → 그 장면의 장소 깃발
     const sid = placing; placing = null; chips(); if (!DATA[sid]) return;
@@ -546,7 +548,7 @@ export default async function start(map, params = {}) {
   }
 
   // ───────── ▶ 장면 따라 걷기 ─────────
-  let tourI = -1, tourEl = null;
+  let tourI = -1, tourEl = null, lead = false;   // lead = 선생님 발표 — 장면마다 방 친구들을 데려감(SM_MP.gather)
   function goTo(f) {
     let dx = 1.2, dz = 1.2;
     if (f.cam && f.cam.length === 3) { dx = f.cam[0] - f.x; dz = f.cam[2] - f.z; const d = Math.hypot(dx, dz) || 1; dx = dx / d * 2.4; dz = dz / d * 2.4; }
@@ -556,18 +558,18 @@ export default async function start(map, params = {}) {
   function startTour(i) { const L = scenes(); if (!L.length) return toast('아직 장면이 없어요', 2); close(); tourI = Math.max(0, Math.min(L.length - 1, i)); showTour(true); }
   function showTour(move) {
     const L = scenes(), S = secs(); if (tourI >= L.length) tourI = L.length - 1; if (tourI < 0) return endTour();
-    const [id, f] = L[tourI]; if (move) { const p = firstPlace(id); if (p) goTo(p); }
+    const [id, f] = L[tourI]; if (move) { const p = firstPlace(id); if (p) goTo(p); if (lead && window.SM_MP && window.SM_MP.lead()) setTimeout(() => window.SM_MP.gather({ b: board.id, s: id }), 250); }
     if (!tourEl) {
       tourEl = el('div', 'mp'); tourEl.id = 'memo-tour'; wire(tourEl);
       tourEl.addEventListener('keydown', (e) => { if (e.target.matches('input,textarea')) e.stopPropagation(); });
-      tourEl.addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (!b) return; const t = b.dataset.t; if (t === 'end') endTour(); else step(t === 'next' ? 1 : -1); });
+      tourEl.addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (!b) return; const t = b.dataset.t; if (t === 'end') endTour(); else if (t === 'lead') { lead = !lead; if (lead) window.SM_MP.gather({ b: board.id, s: scenes()[tourI][0] }); showTour(false); map.hud.toast(lead ? '👥 장면마다 방 친구들이 선생님 곁으로 와요' : '👥 다 같이 끔', 2.5); } else step(t === 'next' ? 1 : -1); });
     }
     const a = document.activeElement; if (tourEl.contains(a) && a.matches('input') && a.value) return;
     tourEl.innerHTML = '<div class="sm" style="margin-bottom:6px;font-weight:800">▶ 장면 ' + (tourI + 1) + ' / ' + L.length + (S.length ? ' · ' + esc(S[secOf(f, S)]) : '') + (firstPlace(id) ? '' : ' · 📍 깃발 없는 장면') + '</div>' + cardHTML(id, f, tourI + 1, { noGo: true, noAdd: true })
-      + '<div class="row"><button class="sub" data-t="end">✕ 그만</button><button class="sub" data-t="prev"' + (tourI ? '' : ' disabled style="opacity:.4"') + '>◀ 이전 (B)</button><button data-t="next">' + (tourI < L.length - 1 ? '다음 ▶ (N)' : '🏁 끝') + '</button></div>';
+      + '<div class="row">' + (window.SM_MP && window.SM_MP.lead && window.SM_MP.lead() ? '<button class="' + (lead ? '' : 'sub') + '" data-t="lead" title="선생님 발표 — 장면마다 방 친구들도 같이">👥 다 같이 ' + (lead ? '켬' : '끔') + '</button><span style="flex:1"></span>' : '') + '<button class="sub" data-t="end">✕ 그만</button><button class="sub" data-t="prev"' + (tourI ? '' : ' disabled style="opacity:.4"') + '>◀ 이전 (B)</button><button data-t="next">' + (tourI < L.length - 1 ? '다음 ▶ (N)' : '🏁 끝') + '</button></div>';
   }
   function step(d) { const n = scenes().length; if (tourI + d >= n) { endTour(); toast('🏁 마지막 장면까지 봤어요', 2); return; } tourI = Math.max(0, tourI + d); showTour(true); }
-  function endTour() { if (tourEl) tourEl.remove(); tourEl = null; tourI = -1; }
+  function endTour() { if (tourEl) tourEl.remove(); tourEl = null; tourI = -1; lead = false; }
 
   // ───────── 📤 정리 ─────────
   function summaryText() {
@@ -618,7 +620,7 @@ export default async function start(map, params = {}) {
 
   return {
     tick() {},
-    stop() { dead = true; clearTimeout(syncT); if (es) es.close(); if (esB) esB.close(); hereOff(); removeEventListener('keydown', onKey); removeEventListener('keydown', onEsc, true); removeEventListener('sm-click', onWorldClick); for (const id of [...FL.keys()]) drop3d(id); ui.remove(); css.remove(); },
+    stop() { dead = true; clearTimeout(syncT); if (es) es.close(); if (esB) esB.close(); hereOff(); removeEventListener('keydown', onKey); removeEventListener('keydown', onEsc, true); removeEventListener('sm-click', onWorldClick); removeEventListener('sm-cmd', onCmd); for (const id of [...FL.keys()]) drop3d(id); ui.remove(); css.remove(); },
     get board() { return board; }, get scenes() { return scenes().map(([id, f], i) => ({ id, n: i + 1, ...f, kids: kids(id).map(([kid, x]) => ({ id: kid, ...x })) })); }, summary: () => board ? summaryText() : '',
     place: (o) => form({ pt: aimPoint(), ...(o || {}) }), view: boardView, tour: startTour, moveTo: (id, sec, before) => moveTo(id, sec, before),
     enter: (id, info) => { name = name || '시험'; board = { id, ...info }; listen(); chips(); },

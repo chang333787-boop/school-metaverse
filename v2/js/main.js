@@ -1360,7 +1360,7 @@ function emoChip(on) {
 }
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=6'), import('./lobby.js?v=7')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=6'), import('./lobby.js?v=8')]).then(([N, L]) => {
     const LOBBY = L.createLobby({ chip, net: () => NET, toast: (m, t) => toast(m, t),
       join: (room) => { CTLK.join = Date.now(); CTLK.init = false; CTLK.m = CTLK.q = null; NET = N.createNet({ THREE, scene, room, kind: 'kid', onChange: () => LOBBY.draw(), onDenied: () => LOBBY.recheck(), onCtl }); emoChip(true); if (!MAP.game.current && !MAP.minimap.visible) MAP.minimap.show(); },
       leave: () => { if (NET) NET.leave(); NET = null; emoChip(false); MAP.minimap.setPeers([]); holdOff(); },
@@ -1369,12 +1369,13 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
         const y = p.y, a = Math.random() * Math.PI * 2, e = MAP.findEntry(p.x + Math.cos(a) * 1.6, p.z + Math.sin(a) * 1.6, y, null, 4) || MAP.findEntry(p.x, p.z, y, null, 6);
         if (!e) return toast('그 친구 곁으로 갈 길을 못 찾았어요', 2); MAP.hostTeleport([e.x, e.y, e.z]); toast('👋 ' + p.label + ' 곁으로 왔어요!', 2.5);
       },
-      onTeacher: (k) => {   // 🧑‍🏫 선생님 신호(방 ctl/cmd) — 받는 쪽은 onCtl
+      onTeacher: (k, extra, quiet) => {   // 🧑‍🏫 선생님 신호(방 ctl/cmd) — 받는 쪽은 onCtl · extra = 게임이 덧붙임(메모장 발표: b 판 · s 장면)
         if (!NET) return; const n = NET.name;
-        NET.ctl('cmd', { q: Date.now(), k, x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), by: NET.id, n: n.slice(0, 8) });
-        toast(k === 'gather' ? '📣 모두를 불렀어요' : k === 'hold' ? '✋ 모두 멈춤 — ▶ 다시 움직여요로 풀어요' : '▶ 다시 움직여요', 2.5);
+        NET.ctl('cmd', { q: Date.now(), k, x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), by: NET.id, n: n.slice(0, 8), ...(extra || {}) });
+        if (!quiet) toast(k === 'gather' ? '📣 모두를 불렀어요' : k === 'hold' ? '✋ 모두 멈춤 — ▶ 다시 움직여요로 풀어요' : '▶ 다시 움직여요', 2.5);
       } });
-    window.SM_MP = { room: () => LOBBY.room ? 'c' + LOBBY.room.c : null, net: () => NET, info: () => LOBBY.room, open: () => LOBBY.open() };   // 게임(물총 친구 대결)이 같은 방·이름을 쓴다
+    window.SM_MP = { room: () => LOBBY.room ? 'c' + LOBBY.room.c : null, net: () => NET, info: () => LOBBY.room, open: () => LOBBY.open(),
+      lead: () => !!(LOBBY.room && LOBBY.room.k && NET), gather: (extra) => { if (LOBBY.room && LOBBY.room.k && NET) LOBBY.teacher('gather', extra, true); } };   // lead = 이 방을 만든 선생님 화면 · gather = 📣(게임이 판·장면을 덧붙임)   // 게임(물총 친구 대결)이 같은 방·이름을 쓴다
     setInterval(() => LOBBY.draw(), 2000);
     setInterval(() => { if (NET) MAP.minimap.setPeers(NET.peers()); }, 500);   // 미니맵에 같은 방 친구 점(이름)
     // 방 신호(net.js ctl): 물총 친구 대결 대기실 초대 · 선생님 📣 모으기 · ✋ 멈춤
@@ -1397,7 +1398,8 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
       if (c.k === 'gather') {
         if (inMatch) { toast('📣 선생님이 불러요 — 경기가 끝나면 가요', 3); return; }
         const a = Math.random() * Math.PI * 2, e = MAP.findEntry(c.x + Math.cos(a) * 2.2, c.z + Math.sin(a) * 2.2, c.y, null, 4) || MAP.findEntry(c.x, c.z, c.y, null, 6);
-        document.exitPointerLock?.(); MAP.hostTeleport(e ? [e.x, e.y, e.z] : [c.x, c.y, c.z]); toast('📣 선생님이 불러서 선생님 곁으로 왔어요!', 3);
+        document.exitPointerLock?.(); MAP.hostTeleport(e ? [e.x, e.y, e.z] : [c.x, c.y, c.z]); if (!c.s) toast('📣 선생님이 불러서 선생님 곁으로 왔어요!', 3);
+        dispatchEvent(new CustomEvent('sm-cmd', { detail: c }));   // 게임이 덧붙인 것(메모장 발표 = 그 장면 카드 보이기)
       } else if (c.k === 'hold') holdOn();
       else if (c.k === 'release') holdOff(true);
     }
