@@ -55,7 +55,7 @@ map.zones · map.zone(id|라벨) · map.zoneAt(x,y,z) · map.zonesWhere({kind,ki
 map.poi(id) · map.pois({src,zone,tag}) · map.resolve(대상) → {x,y,z}      // 대상 = 노드|[x,z]|[x,y,z]|{x,y,z}|'spawn:…'|'zone:…'|'lm:…'|'hot:…'|'door:…'
 map.findEntry(cx,cz,바닥y,[x0,z0,x1,z1]?)                                 // 가구에 안 걸리는 칸(수 ms, 길격자 불필요)
 map.q.groundAt / blocked / ceilAt / floorY(x,z,층) / ray(a,b,{ignoreNc,minH}) / los / inSchool(x,z) / indoor(x,y,z) / moveBody(p,dx,dz)
-map.player.get() → {x,y,z,h,ground,zone} · teleport(대상,{h,floor}) · face(h) · lookAt(대상) · freeze(on) · speed(0.5~2) · unstick()(3m 안 걷는 칸으로) · steer(dx,dz,속도,카메라따라)/steer(null)(GUIDE-1 자동 걷기 — 키·조이스틱이 먼저 · 게임이 멈추면 끔) · view('first'|'third')·first·pitchLow(라디안)·look(dx,dy)(WG-FPS 10-03 — 1인칭 전환·위로 보는 한계·터치 시점 · 게임이 멈추면 원래대로)
+map.player.get() → {x,y,z,h,ground,zone} · teleport(대상,{h,floor}) · face(h) · lookAt(대상) · freeze(on) · speed(0.5~2) · unstick()(3m 안 걷는 칸으로) · steer(dx,dz,속도,카메라따라)/steer(null)(GUIDE-1 자동 걷기 — 키·조이스틱이 먼저 · 게임이 멈추면 끔) · view('first'|'third')·first·pitchLow(라디안)·look(dx,dy)(WG-FPS 10-03 — 1인칭 전환·위로 보는 한계·터치 시점 · 게임이 멈추면 원래대로) · freeMouse(on)(FREE-MOUSE 10-03 — 포인터 잠금 없이 마우스 늘 보임 · 누른 채 끌기 = 시점 · 끌지 않은 톡(마우스·터치) = window 이벤트 `sm-click` {x, y, touch?} · 게임이 멈추면 끔)
 map.on(type,fn) → off · map.once(type,fn)       // 'zone'{prev,next}(10Hz·2표본 확정·경계 0.25m 머묾) · 'interact'{hot} · 'tick'{dt} · 'time' · 'teleport' · 'stuck'{x,y,z} · 'gamestart' · 'gamestop'
 map.interact.add({x,y,z,r,label,use(h),once}) → {remove} · interact.enable(kind|fn, on) · interact.list({kind,zone})
 map.trigger.add({x,y,z,r} | {rect:[x0,z0,x1,z1],y0,y1}, {enter,exit,once}) → {remove}   // 10Hz — r ≥ 0.8 권장(달리기 7.5m/s)
@@ -818,3 +818,13 @@ map.world.water('<구역>' | { x, z, r } | { rect }, { y, color, opacity }) → 
 - **그대로 둔 것(게임 좌표)**: 식탁 3×3·빨간 의자 90 · 배식대(윗면 0.85)·식판 수레 둘(배식대 남끝) · 커튼 · 급식선생님·청소선생님 자리. 재채기 가림 유리만 뺌(배식창 = 창 둘, '자율' 표지).
 - **교무실**: 칸막이 책상 섬 둘(`officeDesk` 8 — 책상 밑 숨는 자리 8) · 회의 탁자 · 붙박이장 · 교감 책상(빈 의자) → 방탈출 잠입의 숨는 자리·조각·금고 자리가 바뀐다(시험: 조각 3·금고 모두 길 있음 · 숨는 자리 5 · 숨어 4초 안 잡힘). 교장실 ↔ 교무실 나무 문 = 열리지 않는 문짝(문 수에 안 듦).
 - **복도 화각**: 3인칭에서 구역 kind 'corridor'(악기실 빼고)면 화각 60 → 64(main.js `inCorr` — 0.4초마다 구역을 볼 때만 갱신).
+
+## 21. 함께하기(멀티플레이) — 방 · 신호 · 게임에서 쓰기(LOBBY-1 · MP-MENU · WG-NET · NET-2 · 10-03)
+- **방**: `v2/js/lobby.js` — 선생님이 🔒 방 만들기 → 4자리 번호 · 아이는 👥 함께하기 → 방 고르기 + 번호(`?code=1234`로도). 위치 방 = `metaverse/rooms/c<번호>`(마법사 마을 `c<번호>w`) — DB 규칙이 살아 있는(8시간 · 안 닫힌) 번호만 받는다.
+- **게임에서**: `window.SM_MP` = `{ room() → 'c1234'|null, net() → NET, info() → {c, r, n, e, k?}, open() → 방 고르기 창 }` · 방이 바뀌면 `sm-room` 이벤트(detail = info|null) · 게임에서 이름을 정하면 `dispatchEvent(new CustomEvent('sm-name', {detail}))`.
+- **NET(net.js)**: 방 갈래 하나를 스트림 — `players`(위치·이름·이모지 m{q,i}) + `ctl`(방 신호). `NET.peers()` → [{x,y,z,label,color,floor}] · `NET.emote(i)` · `NET.ctl(path, data)` · `NET.hide(on)`(경기 동안 걷기 몸 숨김). **새 함께 기능은 ctl에 얹는다**(연결 하나 = 무료 요금제 동시 연결 100 아끼기).
+- **ctl**: `match {seq, st}`(물총 친구 대결 대기실 → 다른 친구에게 '들어가기' 초대) · `cmd {q, k:'gather'|'hold'|'release', x, y, z, by, n}`(선생님 📣 모두 내 곁으로 · ✋ 멈춤 · ▶ 다시).
+- **놀이 목록**: registry `mp: 'together'` → '👥 친구와 함께' 칸 · `needRoom: true` → 방이 없으면 방 고르기 창부터(들어가면 바로 그 놀이).
+- **미니맵**: host `MAP.minimap.setPeers(list)` — 게임 표식(setMarks)과 따로 그리는 친구 점.
+- **물총 친구 대결 판정**(watergun.js WG-NET): 사람 = 맞은 사람 화면 · 봇 = 방장 화면(다른 사람이 쏜 물은 'hit' 사건) · 점수 = soak 사건을 모두 같이 셈 · 서버 시각 t0로 같이 시작.
+
