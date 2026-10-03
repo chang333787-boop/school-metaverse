@@ -261,6 +261,7 @@ export default async function start(map, params = {}) {
 
   // ───────── 장면 카드(이야기 판·장면 보기·걸어 보기 공용) ─────────
   const openRe = new Set();
+  const linkN = (h) => h.replace(/(\d{1,2})\s*번(?:\s*장면)?/g, (m, n) => '<a href="#" data-a="jump" data-n="' + n + '" style="color:#1c7ed6;font-weight:800">' + m + '</a>');   // '3번 장면' → 그 장면 보기
   function placeLine(f) { return '📍 ' + esc(f.zone) + (f.near ? ' · ' + esc(f.near) + ' 근처' : ''); }
   function cardHTML(id, f, num, o = {}) {
     const lk = f.lk ? Object.keys(f.lk) : [], me = lk.includes(keyOf(name)), can = canWrite(), own = (x) => teacher || x.by === name;
@@ -274,7 +275,7 @@ export default async function start(map, params = {}) {
       const A = KBY[x.k] || PLACE;
       const where = placed(x) ? ' <span class="sm">📍 ' + esc(x.near || x.zone) + '</span>' : '';
       h += '<div class="it" data-kid="' + esc(kid) + '"><span>' + A.e + '</span><span class="t">' + (x.k === 'place' ? '<b>일어나는 곳</b> ' + esc(x.tx) + where
-          : (x.who ? '<b>' + esc(x.who) + '</b> ' : '') + (x.k === 'say' ? '“' + esc(x.tx) + '”' : esc(x.tx)) + (x.opt ? '<br><span class="sm">' + esc(x.opt).replace(/\n/g, '<br>') + '</span>' : '') + where)
+          : (x.who ? '<b>' + esc(x.who) + '</b> ' : '') + (x.k === 'say' ? '“' + esc(x.tx) + '”' : esc(x.tx)) + (x.opt ? '<br><span class="sm">' + linkN(esc(x.opt)).replace(/\n/g, '<br>') + '</span>' : '') + where)
         + '<span class="sm"> · ' + esc(x.by) + '</span></span>'
         + (placed(x) && !o.noGo ? '<button data-a="goi" title="그 자리로">🚶</button>' : '') + (can && own(x) ? '<button data-a="editi" title="고치기">✏️</button>' : '') + '</div>';
     }
@@ -295,6 +296,7 @@ export default async function start(map, params = {}) {
   function firstPlace(id) { const f = DATA[id]; if (f && placed(f)) return f; const k = kids(id).find(([, x]) => placed(x)); return k ? k[1] : null; }
   function wire(P) {
     P.addEventListener('click', async (e) => {
+      const j = e.target.closest('a[data-a="jump"]'); if (j && P.contains(j)) { e.preventDefault(); const L = scenes(), t = L[+j.dataset.n - 1]; if (t) { if (tourEl && P === tourEl) { tourI = +j.dataset.n - 1; showTour(true); } else view(t[0]); } else toast(j.dataset.n + '번 장면은 아직 없어요', 2); return; }
       const b = e.target.closest('button'); if (!b || !P.contains(b)) return;
       const cd = b.closest('.cd'), id = cd && cd.dataset.id, f = id && DATA[id], a = b.dataset.a;
       if (!a || !cd || !f) return;
