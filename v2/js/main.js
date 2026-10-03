@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=142';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=38';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=39';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=8';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=13';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
@@ -1479,7 +1479,7 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
     const a = e.target.dataset && e.target.dataset.a; e.stopPropagation();
     if (a === 'menu') { hide(); if (TITLE) TITLE.backToMenu(); else location.href = location.pathname; return; }   // 게임 주소로 들어왔으면 오프닝(메뉴)이 있는 첫 화면으로
     if (a === 'pick') { hide(); MAP.picker && MAP.picker.open(); return; }
-    hide(); if (!TOUCH.on) canvas.requestPointerLock();   // 계속하기 · 빈 곳 누름
+    hide(); if (!TOUCH.on && !CTRL.freeMouse) canvas.requestPointerLock();   // 계속하기 · 빈 곳 누름(마우스 늘 보임이면 잠그지 않음)
   });
   const show = () => { keys.clear(); pz.style.display = 'flex'; };
   // 단축키(09-28 사용자 "메뉴·게임 키도 버튼 할당"): P = 멈춤 창(잠금 중에도 — 잠금을 풀고 창) · G = 🎮 놀이 고르기 · 멈춤 창 안: Enter/Space/1 계속 · 2 메뉴로 · 3 놀이 바꾸기 · Esc 닫기

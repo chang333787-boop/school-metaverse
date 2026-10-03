@@ -159,6 +159,7 @@ export default async function start(map, params = {}) {
     const P9 = hitAt || [ax, fy, az]; land.position.set(P9[0], P9[1] + 0.04, P9[2]); land.visible = true;
   }
   map.player.pitchLow(-0.75);
+  map.player.freeMouse(false);   // 물총 = 조준 놀이 → 포인터 잠금(화면을 누르면 잠김 · 놀이가 끝나면 마우스 늘 보임으로)
   const vestMat = new THREE.MeshLambertMaterial({ color: TEAM_C[0], emissive: 0x101820 }); MATS.push(vestMat);
   const vest = new THREE.Mesh(vestGeo, vestMat); vest.visible = false; map.add(vest);
 

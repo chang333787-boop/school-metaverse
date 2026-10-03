@@ -139,11 +139,14 @@ export function createMapApi(host, NAV, META) {
   const PXYZ = { x: 0, y: 0, z: 0 };
   const S0 = { view: null };   // WG-FPS: 게임이 바꾸기 전 1인칭 여부(멈추면 되돌림)
   const setHeading = h => { pl.setYaw(-h * R2D); P.yaw = Math.atan2(Math.sin(h * R2D), -Math.cos(h * R2D)); };
-  function helpFree(on) {   // FREE-MOUSE: 아래 안내 줄도 '끌기'로(게임이 멈추면 원래 글)
+  // FREE-MOUSE 기본(10-03 교사 'Esc로 마우스를 보이게 하는 건 정상이 아니다'): 평소·대부분 놀이 = 마우스 늘 보임 + 끌어서 둘러보기 · 조준 놀이(물총)만 freeMouse(false)로 잠금 · ?lock=1 = 예전처럼 잠금
+  const FREE_DEF = new URLSearchParams(location.search).get('lock') !== '1';
+  function helpFree(on) {   // FREE-MOUSE: 아래 안내 줄도 '끌기'로(잠금이면 원래 글)
     const h = document.getElementById('help'); if (!h) return;
     if (on) { if (h.dataset.o == null) h.dataset.o = h.textContent; h.textContent = h.dataset.o.replace(/시점 마우스\(클릭\)/, '둘러보기 = 화면을 누른 채 끌기'); }
     else if (h.dataset.o != null) { h.textContent = h.dataset.o; delete h.dataset.o; }
   }
+  CTRL.freeMouse = FREE_DEF; helpFree(FREE_DEF);
   const player = {
     pos: () => { PXYZ.x = P.x; PXYZ.y = P.y; PXYZ.z = P.z; return PXYZ; },   // SHRINK-1: 매 프레임용 — 같은 객체를 돌려준다(곧바로 읽고 저장하지 말 것 · 새 객체 없음)
     get: () => { const zn = zoneAt(P.x, P.y, P.z); return { x: P.x, y: P.y, z: P.z, h: ((-pl.getYaw() / R2D) % 360 + 360) % 360, ground: P.ground, zone: zn ? zn.id : null }; },
@@ -479,7 +482,7 @@ export function createMapApi(host, NAV, META) {
     const res = new Set(), track = h => { if (dead && h && h.remove) { try { h.remove(); } catch (e) { console.error(e); } return h; } if (h && h.remove) { const r0 = h.remove; h.remove = function () { res.delete(h); return r0.apply(this, arguments); }; res.add(h); } return h; };
     const S = facadeApi(track, owner);
     S.dispose = () => { dead = true; for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); try { ENG.reset(); } catch (e) { console.error('[map] 엔진 정리 오류', e); } try { FX.reset(); } catch (e) { console.error('[map] 세상 바꾸기 정리 오류', e); }
-      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; CTRL.steer = null; CTRL.pitchLo = null; if (CTRL.freeMouse) { CTRL.freeMouse = false; helpFree(false); } if (S0.view != null) { pl.setFirst(S0.view); S0.view = null; } if (pl.acts) pl.acts.stop(true); if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
+      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; CTRL.steer = null; CTRL.pitchLo = null; if (CTRL.freeMouse !== FREE_DEF) { CTRL.freeMouse = FREE_DEF; helpFree(FREE_DEF); } if (S0.view != null) { pl.setFirst(S0.view); S0.view = null; } if (pl.acts) pl.acts.stop(true); if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
     S.quit = () => { const c = game.current; if (c && c.scope === S) stopGame('quit'); };   // 게임이 스스로 끝낼 때(끝 화면 [그만하기])
     Object.defineProperty(S, 'tracked', { get: () => res.size });
     return S;
