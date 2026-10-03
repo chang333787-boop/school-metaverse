@@ -59,6 +59,13 @@ body.touch #memo-ui .cd .it{align-items:center}
 body.touch #memo-ui .cd .add button,body.touch #memo-ui .cd .ri button{min-height:44px;font-size:14px}
 body.touch #memo-ui .cd .pl.none button.nf{min-height:44px;font-size:14px}
 body.touch #memo-ui .cc[data-b]{padding:10px 12px;font-size:14px;min-height:44px;box-sizing:border-box}
+/* 메모장 LINE-1·WORLD-2(10-04): ❓ 선택의 ✅/💥/🔀 단추 · ＋ 자세히 종류 · ⚙️ 칸 바꾸기 줄 · 🔀 갈림길 = 손가락 칸 44px */
+body.touch #memo-ui .opts .seg button,body.touch #memo-ui .chips.wtag button,body.touch #memo-ui .wlr button,body.touch #memo-ui #mmBr{min-height:44px;font-size:15px}
+body.touch #memo-ui .wlr input{min-height:44px}
+body.touch #memo-ui [data-addopt],body.touch #memo-ui [data-qadd],body.touch #memo-ui [data-wa]{min-height:44px;box-sizing:border-box}
+body.touch #memo-ui [data-qok]{min-width:44px;min-height:44px;box-sizing:border-box}
+/* 메모장 공통 단추(10-04 재시험): 판 위 줄(⚙️ 칸 바꾸기·🔒·🗂 관리·✕ 닫기) · 판 단추 줄(＋ 쓰기·📤 정리…) · 창 아래 줄(취소·💾 저장…) = 손가락 칸 44px */
+body.touch #memo-ui .top button,body.touch #memo-ui .bar button,body.touch #memo-ui .row button{min-height:44px;box-sizing:border-box}
 /* 블록 놀이(BLOCK-1 10-03): 🧱/⛏·블록 고르기·↩ = 행동 버튼 위 한 줄 · 블록 판 = 가운데 2줄 */
 body.small #bk-tb{right:calc(88px + env(safe-area-inset-right))!important;bottom:calc(88px + env(safe-area-inset-bottom))!important}
 body.small #bk-tb button{min-width:44px!important;height:44px!important;font-size:18px!important}
