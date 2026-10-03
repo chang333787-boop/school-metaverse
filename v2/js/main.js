@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=142';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=28';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=29';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=7';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=8';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
@@ -390,12 +390,12 @@ addEventListener('mousemove', e => {
 function mouseApply() {   // 루프(와 SD2.step) — 모은 움직임을 한 번에
   if (!MOUSE.dx && !MOUSE.dy) return;
   camYaw -= MOUSE.dx * 0.0026;
-  camPitch = Math.max(-0.2, Math.min(1.1, camPitch + MOUSE.dy * 0.0022));
+  camPitch = Math.max(CTRL.pitchLo ?? -0.2, Math.min(1.1, camPitch + MOUSE.dy * 0.0022));   // WG-FPS: 게임이 위로 보는 한계를 넓힐 수 있다(CTRL.pitchLo)
   MOUSE.dx = MOUSE.dy = 0;
 }
 // TOUCH-1: 터치 조작(v2/js/touch.js) — 왼쪽 조이스틱 = 아날로그 이동(TOUCH.mx·my·m → physics) · 오른쪽 드래그 = 시점(마우스와 같은 부호, 휴대폰용 감도) · 점프/행동/시점 버튼
 const TOUCH = createTouch({ canvas,
-  look: (dx, dy) => { camYaw -= dx * 0.0058; camPitch = Math.max(-0.2, Math.min(1.1, camPitch + dy * 0.0042)); },
+  look: (dx, dy) => { camYaw -= dx * 0.0058; camPitch = Math.max(CTRL.pitchLo ?? -0.2, Math.min(1.1, camPitch + dy * 0.0042)); },
   act: () => { if (MAP?.closeModal()) return; if (hotNear) act(hotNear); else MAP?.idleAct(); }, view: () => { camFirst = !camFirst; },   // 리뷰(ENGINE-1): 쪽지가 떠 있으면 ✋ = 닫기(예전엔 같은 지점을 다시 눌러 쪽지를 또 열었다)
   onMode: on => { if (hotNear) hintEl.textContent = on ? hintEl.textContent.replace(/^E  /, '✋ ') : hintEl.textContent.replace(/^✋ /, 'E  ');   // 리뷰: 터치 ↔ 마우스(터치 화면 크롬북) 오갈 때
     if (MAP && MAP.minimap.visible) MAP.minimap.toggle(MAP.minimap.big); } });   // 미니맵 크기 다시(터치면 버튼 위까지만)
@@ -1227,7 +1227,10 @@ function detailTick(dt, budget = Infinity) {
 let rebakeT = 0;
 MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL,
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
-  pl: { P, ACT, CTRL, keys, touch: TOUCH, acts: ACTS, getYaw: () => camYaw, setYaw: v => { camYaw = v; }, setScale, tinyAdd: c => tinyAdd(c), pBlocked, pGround, scale: () => PHY.sc },   // SHRINK-1: 작아지기(map.player.scale)
+  pl: { P, ACT, CTRL, keys, touch: TOUCH, acts: ACTS, getYaw: () => camYaw, setYaw: v => { camYaw = v; },
+    getFirst: () => camFirst, setFirst: v => { camFirst = !!v; }, getPitch: () => camPitch,   // WG-FPS(10-03): 게임이 1인칭으로 바꾸고 시점 기울기를 읽는다
+    look: (dx, dy) => { camYaw -= dx * 0.0058; camPitch = Math.max(CTRL.pitchLo ?? -0.2, Math.min(1.1, camPitch + dy * 0.0042)); },   /* 휴대폰 발사 버튼을 누른 채 끌기 = 시점 */
+    setScale, tinyAdd: c => tinyAdd(c), pBlocked, pGround, scale: () => PHY.sc },   // SHRINK-1: 작아지기(map.player.scale)
   ui: { toast, hint: hintEl, tone, setTime: k => setTime(k), getTime: () => timeKey, dark: on => setDark(on), isDark: () => darkOn }, hot: HOT,
   // ENGINE-1: 행동 사전 고리 — 캐릭터(들기 자리)·문 잠그기(문짝 닫힌 채 — 충돌은 mapapi가)·터치(웅크리기 버튼)
   kid: { pg, KID }, doorLock: (n, on) => { const o = DOORS[n]; if (!o) return false; o.lock = !!on; if (on) { o.open = 0; setDoor(o); } return true; },

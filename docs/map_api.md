@@ -55,7 +55,7 @@ map.zones · map.zone(id|라벨) · map.zoneAt(x,y,z) · map.zonesWhere({kind,ki
 map.poi(id) · map.pois({src,zone,tag}) · map.resolve(대상) → {x,y,z}      // 대상 = 노드|[x,z]|[x,y,z]|{x,y,z}|'spawn:…'|'zone:…'|'lm:…'|'hot:…'|'door:…'
 map.findEntry(cx,cz,바닥y,[x0,z0,x1,z1]?)                                 // 가구에 안 걸리는 칸(수 ms, 길격자 불필요)
 map.q.groundAt / blocked / ceilAt / floorY(x,z,층) / ray(a,b,{ignoreNc,minH}) / los / inSchool(x,z) / indoor(x,y,z) / moveBody(p,dx,dz)
-map.player.get() → {x,y,z,h,ground,zone} · teleport(대상,{h,floor}) · face(h) · lookAt(대상) · freeze(on) · speed(0.5~2) · unstick()(3m 안 걷는 칸으로) · steer(dx,dz,속도,카메라따라)/steer(null)(GUIDE-1 자동 걷기 — 키·조이스틱이 먼저 · 게임이 멈추면 끔)
+map.player.get() → {x,y,z,h,ground,zone} · teleport(대상,{h,floor}) · face(h) · lookAt(대상) · freeze(on) · speed(0.5~2) · unstick()(3m 안 걷는 칸으로) · steer(dx,dz,속도,카메라따라)/steer(null)(GUIDE-1 자동 걷기 — 키·조이스틱이 먼저 · 게임이 멈추면 끔) · view('first'|'third')·first·pitchLow(라디안)·look(dx,dy)(WG-FPS 10-03 — 1인칭 전환·위로 보는 한계·터치 시점 · 게임이 멈추면 원래대로)
 map.on(type,fn) → off · map.once(type,fn)       // 'zone'{prev,next}(10Hz·2표본 확정·경계 0.25m 머묾) · 'interact'{hot} · 'tick'{dt} · 'time' · 'teleport' · 'stuck'{x,y,z} · 'gamestart' · 'gamestop'
 map.interact.add({x,y,z,r,label,use(h),once}) → {remove} · interact.enable(kind|fn, on) · interact.list({kind,zone})
 map.trigger.add({x,y,z,r} | {rect:[x0,z0,x1,z1],y0,y1}, {enter,exit,once}) → {remove}   // 10Hz — r ≥ 0.8 권장(달리기 7.5m/s)
@@ -230,6 +230,7 @@ export default async function start(map, params) { …; return { tick(dt) {}, st
 - **새 게임 만들기**: ① `_template.js` 복사 → `v2/games/<id>.js` ② `registry.js`에 `{title, v, desc}` ③ 목표·소품은 `map.pois`·`nav.random`·`mk.*`로(사람을 술래·과녁으로 쓰지 않음 · 글은 §16.1 규칙) ④ 미니맵 `map.minimap.show()` + `setMarks` ⑤ harness로 `?game=<id>` 수용 시험(걸어서 도착·stop 뒤 정리 수·HUD 겹침·드로우콜 +15 이하).
 
 ## 10. 물총 놀이(GAME-WG · 09-26)
+> **WG-FPS(10-03 교사 '일반 FPS 느낌이 아니다')**: 기본 1인칭(V = 3인칭) · 내 물줄기 = 십자선 방향 그대로 초속 19m(예전 '엉덩이 꼭지에서 겨눈 점까지 포물선 각 풀기 + 초당 110° 따라가기' 없앰 — 중력 포물선은 그대로) · 위로 보는 한계 −1.05 · 흰 고리 = 물이 떨어질 자리(포물선 6토막 광선) · 1인칭 물총 = 화면 오른쪽 아래 · 휴대폰 💧 누른 채 끌기 = 조준 · 물방울 풀 360→560(팀 대결에서 넘치던 것).
 
 사용자 09-26 "tps 물총은 구현해도 될 듯 — 그 정도는 폭력적이진 않은 듯". `v2/games/watergun.js` · `?game=watergun&seed=1&time=180`(time = 한 판 초, 10~600) · 🎮 놀이 목록 '물총 놀이'.
 - **폭력 없음**: 사람(NPC)은 과녁이 아니다 — NPC는 충돌이 없어 물이 그냥 지나간다. 과녁 = 물풍선(받침대) · 장난감 모닥불(끄기) · 목마른 꽃 화분(물 주면 핌) · 동글동글 장난감 로봇(작은 물 꼭지만 — 맞으면 빙글빙글 3초).

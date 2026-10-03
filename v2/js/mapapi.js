@@ -137,6 +137,7 @@ export function createMapApi(host, NAV, META) {
 
   // ---------- 5. 플레이어 ----------
   const PXYZ = { x: 0, y: 0, z: 0 };
+  const S0 = { view: null };   // WG-FPS: 게임이 바꾸기 전 1인칭 여부(멈추면 되돌림)
   const setHeading = h => { pl.setYaw(-h * R2D); P.yaw = Math.atan2(Math.sin(h * R2D), -Math.cos(h * R2D)); };
   const player = {
     pos: () => { PXYZ.x = P.x; PXYZ.y = P.y; PXYZ.z = P.z; return PXYZ; },   // SHRINK-1: 매 프레임용 — 같은 객체를 돌려준다(곧바로 읽고 저장하지 말 것 · 새 객체 없음)
@@ -156,6 +157,11 @@ export function createMapApi(host, NAV, META) {
     // GAME-WG: 3인칭 카메라를 오른쪽으로 m만큼 비켜 세움(어깨 너머 · -1~1 · 0 = 끔). 옆벽 검사는 하지 않으니 게임이 트인 곳에서만. 게임이 멈추면 0
     shoulder(m = 0) { CTRL.shoulder = Math.max(-1, Math.min(1, +m || 0)); },
     speed(k = 1) { CTRL.speed = Math.max(0.5, Math.min(2, k)); },
+    // WG-FPS(10-03): 1인칭/3인칭('first'|'third') · 위로 보는 한계(라디안 · 기본 −0.2) · 시점 돌리기(터치 화면 px) — 게임이 멈추면 원래대로
+    view(v) { if (S0.view == null) S0.view = pl.getFirst(); pl.setFirst(v === 'first'); },
+    get first() { return pl.getFirst(); },
+    pitchLow(lo) { CTRL.pitchLo = lo == null ? null : Math.max(-1.3, Math.min(-0.2, +lo)); },
+    look(dx, dy) { pl.look(dx || 0, dy || 0); },
     // GUIDE-1(09-30): 자동 걷기 — steer(dx, dz, 속도 m/s, 카메라 따라 돌기) · steer(null) = 끔. 키·조이스틱이 있으면 그쪽이 먼저. 게임이 멈추면 자동으로 끔
     steer(dx, dz, v = 4.2, cam = true) { if (dx == null) { CTRL.steer = null; return; } const L = Math.hypot(dx, dz); if (L < 1e-6) { CTRL.steer = null; return; }
       const st = CTRL.steer || (CTRL._st || (CTRL._st = {})); st.x = dx / L; st.z = dz / L; st.v = Math.max(0.5, Math.min(7.5, v)); st.cam = !!cam; CTRL.steer = st; },
@@ -466,7 +472,7 @@ export function createMapApi(host, NAV, META) {
     const res = new Set(), track = h => { if (dead && h && h.remove) { try { h.remove(); } catch (e) { console.error(e); } return h; } if (h && h.remove) { const r0 = h.remove; h.remove = function () { res.delete(h); return r0.apply(this, arguments); }; res.add(h); } return h; };
     const S = facadeApi(track, owner);
     S.dispose = () => { dead = true; for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); try { ENG.reset(); } catch (e) { console.error('[map] 엔진 정리 오류', e); } try { FX.reset(); } catch (e) { console.error('[map] 세상 바꾸기 정리 오류', e); }
-      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; CTRL.steer = null; if (pl.acts) pl.acts.stop(true); if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
+      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.face = null; CTRL.shoulder = 0; CTRL.steer = null; CTRL.pitchLo = null; if (S0.view != null) { pl.setFirst(S0.view); S0.view = null; } if (pl.acts) pl.acts.stop(true); if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
     S.quit = () => { const c = game.current; if (c && c.scope === S) stopGame('quit'); };   // 게임이 스스로 끝낼 때(끝 화면 [그만하기])
     Object.defineProperty(S, 'tracked', { get: () => res.size });
     return S;

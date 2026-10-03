@@ -13,7 +13,8 @@
 export const meta = { id: 'watergun', title: '물총 놀이', api: 1 };
 
 const ROUND = 180, SHOULDER = 0.55, TANK = 100, USE = 12, REFILL = 60, RATE = 50, SPEED = 15, G = 9.8, BOT_SPEED = 10;
-const PMAX = 360, MMAX = 48, N_BAL = 6, N_FIRE = 3, N_FLOW = 4, N_BOT = 3;
+const FPS_SPEED = 19;   // WG-FPS(10-03): 내 물줄기 = 십자선 방향 그대로 초속 19m(포물선은 중력 그대로 — 위로 보면 멀리)
+const PMAX = 560, MMAX = 48, N_BAL = 6, N_FIRE = 3, N_FLOW = 4, N_BOT = 3;
 const HP_BAL = 3, HP_FIRE = 34, HP_FLOW = 38, HP_BOT = 12;
 const PTS = { bal: 10, fire: 30, flow: 20, bot: 25 };
 const ZONES = ['field', 'bball-sand'];                      // 운동장(본 구역) + 농구 모래 구역 — 과녁·로봇 자리
@@ -139,6 +140,20 @@ export default async function start(map, params = {}) {
   const showSet = (keys, on) => { for (const k of keys) M[k].visible = on; };
   showSet(SOLO_M, false); showSet(TEAM_M, false);
   const gun = new THREE.Mesh(gunGeo, lamV(0x202020)); gun.rotation.order = 'YXZ'; map.add(gun);
+  // WG-FPS: 물이 떨어질 자리(흰 고리 · 포물선을 6토막으로 짚어 벽·바닥에 닿는 첫 자리) — 기본 1인칭(V = 3인칭) · 위로 보는 한계 넓힘(멀리 쏘려면 위로)
+  const land = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.3, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false }));
+  land.rotation.x = -Math.PI / 2; land.renderOrder = 3; land.visible = false; map.add(land);
+  let landK = 0;
+  function landTick(x0, y0, z0) {
+    if ((landK++ & 1) === 1) return;   // 두 프레임에 한 번
+    const fy = Q.floorY(map.player.pos().x, map.player.pos().z), vy0 = aim.vy, disc = vy0 * vy0 + 2 * G * (y0 - fy);
+    let tEnd = disc > 0 ? (vy0 + Math.sqrt(disc)) / G : 2.4; tEnd = Math.min(tEnd, 2.4);
+    let ax = x0, ay = y0, az = z0, hitAt = null;
+    for (let k = 1; k <= 6; k++) { const t = tEnd * k / 6, bx = x0 + aim.vx * t, by = y0 + vy0 * t - 0.5 * G * t * t, bz = z0 + aim.vz * t;
+      const r9 = ray(ax, ay, az, bx, by, bz); if (r9 !== null) { hitAt = [ax + (bx - ax) * r9, ay + (by - ay) * r9, az + (bz - az) * r9]; break; } ax = bx; ay = by; az = bz; }
+    const P9 = hitAt || [ax, fy, az]; land.position.set(P9[0], P9[1] + 0.04, P9[2]); land.visible = true;
+  }
+  map.player.view('first'); map.player.pitchLow(-1.05);
   const vestMat = new THREE.MeshLambertMaterial({ color: TEAM_C[0], emissive: 0x101820 }); MATS.push(vestMat);
   const vest = new THREE.Mesh(vestGeo, vestMat); vest.visible = false; map.add(vest);
 
@@ -253,9 +268,11 @@ export default async function start(map, params = {}) {
     fireBtn = document.createElement('div'); fireBtn.className = 'wg-fire'; fireBtn.textContent = '💧';
     fireBtn.style.cssText = 'position:fixed;right:calc(196px + env(safe-area-inset-right));bottom:calc(100px + env(safe-area-inset-bottom));width:76px;height:76px;border-radius:50%;z-index:22;display:flex;align-items:center;justify-content:center;'
       + 'font-size:34px;background:rgba(79,179,255,.85);border:3px solid rgba(255,255,255,.85);box-shadow:0 3px 0 rgba(0,0,0,.18);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer';
-    const dn = e => { e.preventDefault(); e.stopPropagation(); inp.pad = true; fireBtn.style.transform = 'scale(.92)'; try { fireBtn.setPointerCapture(e.pointerId); } catch (er) { /* 무시 */ } };
+    let fpx = 0, fpy = 0;   // WG-FPS: 💧을 누른 채 끌면 시점(조준) — 엄지 하나로 쏘며 겨누기(왼손 = 조이스틱)
+    const dn = e => { e.preventDefault(); e.stopPropagation(); inp.pad = true; fpx = e.clientX; fpy = e.clientY; fireBtn.style.transform = 'scale(.92)'; try { fireBtn.setPointerCapture(e.pointerId); } catch (er) { /* 무시 */ } };
     const up = e => { e.stopPropagation(); inp.pad = false; fireBtn.style.transform = ''; };
-    fireBtn.addEventListener('pointerdown', dn); fireBtn.addEventListener('pointerup', up); fireBtn.addEventListener('pointercancel', up); fireBtn.addEventListener('lostpointercapture', up);
+    const mv = e => { if (!inp.pad) return; e.preventDefault(); e.stopPropagation(); map.player.look(e.clientX - fpx, e.clientY - fpy); fpx = e.clientX; fpy = e.clientY; };
+    fireBtn.addEventListener('pointerdown', dn); fireBtn.addEventListener('pointermove', mv); fireBtn.addEventListener('pointerup', up); fireBtn.addEventListener('pointercancel', up); fireBtn.addEventListener('lostpointercapture', up);
     fireBtn.style.display = 'none'; document.body.appendChild(fireBtn);
   }
   const sndChip = () => map.hud.chip('wg-snd', muted ? '🔇 소리 끔' : '🔊 소리 켬', { onClick: () => { muted = !muted; sndChip(); } });
@@ -380,6 +397,13 @@ export default async function start(map, params = {}) {
       tx = o.x + _f.x * d; ty = o.y + _f.y * d; tz = o.z + _f.z * d;
     }
     aim.x = tx; aim.y = ty; aim.z = tz;
+    if (!aimOverride) {   // WG-FPS(10-03 교사 '물총 엔진이 일반 FPS 느낌이 아니다'): 예전엔 십자선이 고른 점까지 엉덩이 꼭지에서 포물선 각을 풀어(초당 110°로 늦게 따라감) 쐈다 →
+      //   1인칭 = 카메라가 보는 방향 그대로 · 3인칭 = 꼭지에서 십자선이 가리키는 점 쪽으로 곧장 — 둘 다 같은 빠르기로 쏘고 중력이 포물선을 만든다(위로 보면 멀리)
+      let dx9 = _f.x, dy9 = _f.y, dz9 = _f.z;
+      if (!map.player.first) { dx9 = tx - nx; dy9 = ty - ny; dz9 = tz - nz; const L9 = Math.hypot(dx9, dy9, dz9) || 1; dx9 /= L9; dy9 /= L9; dz9 /= L9; }
+      aim.vx = dx9 * FPS_SPEED; aim.vy = dy9 * FPS_SPEED; aim.vz = dz9 * FPS_SPEED; aim.a = Math.asin(Math.max(-1, Math.min(1, dy9)));
+      aim.h = Math.atan2(dx9, -dz9) * 180 / Math.PI; return;
+    }
     let dx = tx - nx, dz = tz - nz, dh = Math.hypot(dx, dz); const h = ty - ny;
     let a;
     if (dh < 1.2) { dx = _f.x / fl; dz = _f.z / fl; dh = 1; a = Math.atan2(_f.y, fl) + 0.05; }   // ② 발밑·코앞: 보는 방향 그대로(조금 위로 — 물이 처지니까)
@@ -781,8 +805,8 @@ export default async function start(map, params = {}) {
         if (cd <= 0) { st = 'play'; map.player.freeze(false); map.hud.banner(team ? '경기 시작!' : '물총 발사!', 1.0); sfx('go');
           if (team) { goal((coarse ? '💧 버튼' : '클릭·F') + '로 ' + TEAM_I[1] + ' 백팀 봇을 흠뻑 적셔요! 물은 우리 진지(파란 빛기둥)에서', 7);
             map.hud.toast(TEAM_I[0] + ' 우리 팀 = 파란 조끼 · 먼저 ' + tGoal + '번 적시면 이겨요 · ' + (coarse ? '📋 칩' : 'Tab') + ' = 점수판', 5); }
-          else { goal(coarse ? '💧 과녁에 물을 쏴요! 💧 버튼 누르고 있기' : '💧 과녁에 물을 쏴요! 클릭·F 누르고 있기', 6);
-            map.hud.toast(coarse ? '🎈풍선 🔥불 🌸꽃 🤖로봇 — 화면을 밀어 위를 보면 멀리 쏴요' : '🎈풍선 🔥불 🌸꽃 🤖로봇 — 마우스를 위로 올리면 멀리 쏴요', 5); } } }
+          else { goal(coarse ? '💧 과녁에 물을 쏴요! 💧 버튼 누른 채 끌면 조준' : '💧 과녁에 물을 쏴요! 십자선 = 조준 · 클릭·F 누르고 있기', 6);
+            map.hud.toast(coarse ? '🎈풍선 🔥불 🌸꽃 🤖로봇 — 위를 보면 멀리 · 흰 고리 = 물이 떨어질 자리 · 👁 = 3인칭' : '🎈풍선 🔥불 🌸꽃 🤖로봇 — 위를 보면 멀리 · 흰 고리 = 물이 떨어질 자리 · V = 3인칭', 5); } } }
       if (st === 'play') {
         T -= dt; const s = Math.ceil(T); if (s !== secShown) { secShown = s; if (team) teamChip(); else timeChip(); if (s <= 10 && s > 0) sfx('tick'); }
         if (T <= 0) { T = 0; if (team) teamChip(); else timeChip(); if (team) finishTeam(); else finish(); }
@@ -792,25 +816,33 @@ export default async function start(map, params = {}) {
       const mdx = me.x - lastX, mdz = me.z - lastZ; lastX = me.x; lastZ = me.z;
       const firing = st === 'play' && meAlive && (inp.key || inp.mouse || inp.pad || inp.test || inp.tap); inp.tap = false;
       if (firing) { _f.set(0, 0, -1).applyQuaternion(cam.quaternion); if (_f.x * _f.x + _f.z * _f.z > 1e-6) gunYaw = Math.atan2(_f.x, _f.z); }
-      const gx0 = Math.sin(gunYaw), gz0 = Math.cos(gunYaw);
-      const nozX = me.x + gx0 * 0.46 - gz0 * 0.1, nozY = me.y + 0.62, nozZ = me.z + gz0 * 0.46 + gx0 * 0.1;
+      const gx0 = Math.sin(gunYaw), gz0 = Math.cos(gunYaw), FP = map.player.first;
+      let nozX = me.x + gx0 * 0.46 - gz0 * 0.1, nozY = me.y + 0.62, nozZ = me.z + gz0 * 0.46 + gx0 * 0.1;
+      if (FP) { _f.set(0, 0, -1).applyQuaternion(cam.quaternion); const fl9 = Math.hypot(_f.x, _f.z) || 1, rx9 = -_f.z / fl9, rz9 = _f.x / fl9, cp = cam.position;   // 1인칭 꼭지 = 화면 오른쪽 아래 물총 끝
+        nozX = cp.x + _f.x * 0.8 + rx9 * 0.2; nozY = cp.y + _f.y * 0.8 - 0.19; nozZ = cp.z + _f.z * 0.8 + rz9 * 0.2; }   // 물총 끝(눈 앞 0.8 · 오른쪽 0.2 · 아래 0.19)
+      if (st === 'play' && meAlive) { computeAim(me, nozX, nozY, nozZ, dt, team ? teamTargets : soloTargets); landTick(nozX, nozY, nozZ); } else land.visible = false;   // 떨어질 자리 표시(쏘기 전에도)
       if (firing) {
-        if (aimHold <= 0) aimA = null;   // 새로 쏘기 시작 = 발사각 부드럽게 따라가기 새로
-        computeAim(me, nozX, nozY, nozZ, dt, team ? teamTargets : soloTargets); aimHold = 0.6;
+        aimHold = 0.6;
         if (tank > 0) {
           tank = Math.max(0, tank - USE * dt); emitAcc += (team ? T_RATE * 1.25 : RATE) * dt;
-          while (emitAcc >= 1) { emitAcc -= 1; const j = 0.35; spawn(1, nozX, nozY, nozZ, aim.vx + (rng() - 0.5) * j, aim.vy + (rng() - 0.5) * j, aim.vz + (rng() - 0.5) * j, 2.4, 0.075, WATER_C, 0); }
+          while (emitAcc >= 1) { emitAcc -= 1; const j = FP ? 0.22 : 0.35; spawn(1, nozX, nozY, nozZ, aim.vx + (rng() - 0.5) * j, aim.vy + (rng() - 0.5) * j, aim.vz + (rng() - 0.5) * j, 2.4, 0.075, WATER_C, 0); }
           if ((sprayT -= dt) <= 0) { sprayT = 0.13; SND.spray(); }
           if (tank <= 0) { SND.empty(); goal(team ? '💧 물이 없어요! 우리 진지(파란 빛기둥)로' : '💧 물이 없어요! 파란 빛기둥에서 채워요', 4); }
         } else if ((emptyT -= dt) <= 0) { emptyT = 0.7; SND.empty(); if (goalT <= 0) goal(team ? '💧 물이 없어요! 우리 진지(파란 빛기둥)로' : '💧 물이 없어요! 파란 빛기둥에서 채워요', 3); }
       } else emitAcc = 0;
-      if (aimHold > 0) { aimHold -= dt; map.player.aim(aim.h); gunYaw = Math.atan2(Math.sin(aim.h * Math.PI / 180), -Math.cos(aim.h * Math.PI / 180)); if (aimHold <= 0) map.player.aim(null); }
+      if (aimHold > 0 && !FP) { aimHold -= dt; map.player.aim(aim.h); gunYaw = Math.atan2(Math.sin(aim.h * Math.PI / 180), -Math.cos(aim.h * Math.PI / 180)); if (aimHold <= 0) map.player.aim(null); }
       else if (mdx * mdx + mdz * mdz > 1e-5) gunYaw = Math.atan2(mdx, mdz);
-      gun.visible = meAlive;
-      gun.position.set(me.x + Math.sin(gunYaw) * 0.26 - Math.cos(gunYaw) * 0.1, me.y + 0.6, me.z + Math.cos(gunYaw) * 0.26 + Math.sin(gunYaw) * 0.1);
-      gun.rotation.set(firing ? -Math.atan2(aim.vy, Math.hypot(aim.vx, aim.vz)) : 0.15, gunYaw, 0);
+      gun.visible = meAlive && st !== 'menu';
+      if (FP) {   // 1인칭: 물총을 화면 오른쪽 아래에(카메라를 따라 · 쏘면 살짝 뒤로 반동)
+        const kick = firing && tank > 0 ? Math.sin(performance.now() * 0.06) * 0.008 : 0, fl9 = Math.hypot(_f.x, _f.z) || 1, rx9 = -_f.z / fl9, rz9 = _f.x / fl9, cp = cam.position;
+        gun.scale.setScalar(0.42);
+        gun.position.set(cp.x + _f.x * (0.5 - kick) + rx9 * 0.24, cp.y + _f.y * 0.5 - 0.22, cp.z + _f.z * (0.5 - kick) + rz9 * 0.24);
+        gun.quaternion.copy(cam.quaternion); gun.rotateY(Math.PI); gun.rotateX(-0.06);
+      } else { gun.scale.setScalar(1);
+        gun.position.set(me.x + Math.sin(gunYaw) * 0.26 - Math.cos(gunYaw) * 0.1, me.y + 0.6, me.z + Math.cos(gunYaw) * 0.26 + Math.sin(gunYaw) * 0.1);
+        gun.rotation.set(firing ? -Math.atan2(aim.vy, Math.hypot(aim.vx, aim.vz)) : 0.15, gunYaw, 0); }
       // 어깨 너머 시점: 머리·카메라 오른쪽 0.9m가 트였을 때만 0.55m 비켜 섬(0.2초마다 확인 · 부드럽게)
-      if ((shT -= dt) <= 0) { shT = 0.2; _f.set(0, 0, -1).applyQuaternion(cam.quaternion); const rxv = -_f.z, rzv = _f.x, l = Math.hypot(rxv, rzv) || 1, ux = rxv / l * 1.0, uz = rzv / l * 1.0, cp = cam.position;
+      if (FP) { shW = 0; } else if ((shT -= dt) <= 0) { shT = 0.2; _f.set(0, 0, -1).applyQuaternion(cam.quaternion); const rxv = -_f.z, rzv = _f.x, l = Math.hypot(rxv, rzv) || 1, ux = rxv / l * 1.0, uz = rzv / l * 1.0, cp = cam.position;
         shW = st !== 'end' && ray(me.x, me.y + 1.3, me.z, me.x + ux, me.y + 1.3, me.z + uz) === null && ray(cp.x, cp.y, cp.z, cp.x + ux, cp.y, cp.z + uz) === null && !Q.indoor(me.x, me.y, me.z) ? SHOULDER : 0; }
       if (Math.abs(shV - shW) > 1e-3) { shV += Math.sign(shW - shV) * Math.min(Math.abs(shW - shV), dt * (shW < shV ? 4 : 1.5)); map.player.shoulder(shV); }
       // 물 채우기(빛기둥 안)
@@ -846,7 +878,7 @@ export default async function start(map, params = {}) {
         }
         // 그리기(살아 있는 것만 앞으로 모아서)
         const a = life[i] / life0[i];
-        if (k <= 2) { _n.set(vx[i], vy[i], vz[i]).normalize(); _q.setFromUnitVectors(_Z, _n); const s = psz[i]; _s.set(s, s, s * 2.6); }
+        if (k <= 2) { _n.set(vx[i], vy[i], vz[i]).normalize(); _q.setFromUnitVectors(_Z, _n); const s = psz[i] * (k === 1 ? Math.min(1, 0.25 + (life0[i] - life[i]) * 6) : 1); _s.set(s, s, s * 2.6); }   // WG-FPS: 막 나온 물방울은 작게(눈앞에서 물줄기가 덩어리로 보이던 것)
         else if (k === 3) { _q.identity(); const s = psz[i] * (0.4 + 0.6 * a); _s.set(s, s, s); }
         else { _q.identity(); const s = psz[i] * (1.6 - a); _s.set(s, s, s); }
         M.drop.setMatrixAt(n, _m4.compose(_v.set(px[i], py[i], pz[i]), _q, _s));
