@@ -149,6 +149,8 @@ export default async function start(map, params = {}) {
 
   // ── 겨누기: 화면 점 → 맞은 것(블록 · 가구 · 벽 · 땅) + 놓을 칸
   const RC = new THREE.Raycaster(), V2 = new THREE.Vector2(), O = new THREE.Vector3(), Dv = new THREE.Vector3();
+  const isObjCol = (c) => !!map.world.furn.idOf(c);   // 물건(가구·나무) 충돌 상자 — 물건은 삼각형으로 고른다
+  const KN = { desk: '책상', chair: '의자', shelf: '책장', locker: '사물함', cab: '수납장', board: '게시판', plant: '화분', tree: '나무', bush: '덤불', car: '자동차', goal: '골대', tv: 'TV', ac: '에어컨', fan: '선풍기', ext: '소화기', case: '진열장', cart: '책 수레', printer: '복합기', table: '탁자', beanbag: '빈백', cushion: '방석', purifier: '공기청정기' };
   function slab(o, d, x0, y0, z0, x1, y1, z1) { let t0 = 0, t1 = 1e9, ax9 = -1; const lo = [x0, y0, z0], hi = [x1, y1, z1], oo = [o.x, o.y, o.z], dd = [d.x, d.y, d.z];
     for (let ax = 0; ax < 3; ax++) { if (Math.abs(dd[ax]) < 1e-9) { if (oo[ax] < lo[ax] || oo[ax] > hi[ax]) return null; continue; } let p = (lo[ax] - oo[ax]) / dd[ax], r = (hi[ax] - oo[ax]) / dd[ax]; if (p > r) { const s9 = p; p = r; r = s9; } if (p > t0) { t0 = p; ax9 = ax; } if (r < t1) t1 = r; if (t0 > t1) return null; }
     if (ax9 < 0) return null; const n = [0, 0, 0]; n[ax9] = -Math.sign(dd[ax9]); return { t: t0, n }; }
@@ -160,10 +162,14 @@ export default async function start(map, params = {}) {
     for (let t = 0; t < maxT; t += 0.04) { const x = O.x + Dv.x * t, y = O.y + Dv.y * t, z = O.z + Dv.z * t, ix = Math.floor(x / S), iz = Math.floor(z / S), cq = COLQ.get(ckey(ix, iz)); if (!cq) continue;
       let hitQ = null; for (const q of cq) if (y >= q / 20 && y < q / 20 + S) { hitQ = q; break; } if (hitQ == null) continue;
       const h = slab(O, Dv, ix * S, hitQ / 20, iz * S, (ix + 1) * S, hitQ / 20 + S, (iz + 1) * S); if (h) best = { kind: 'block', t: h.t, n: h.n, ix, iz, q: hitQ }; break; }
-    // 2) 학교 충돌 상자(가구는 보이는 윗면까지 · 블록 상자는 빼고)
-    const tEnd = best ? best.t : maxT, w = map.q.rayHit([O.x, O.y, O.z], [O.x + Dv.x * tEnd, O.y + Dv.y * tEnd, O.z + Dv.z * tEnd], { skipDyn: true });
-    if (w) { const fid = w.ns && map.world.furn ? map.world.furn.idOf(w.box) : null; best = { kind: fid ? 'furn' : 'wall', t: w.t * tEnd, n: w.n, furn: fid, box: w.box }; }
-    // 3) 땅·1층 바닥(충돌 상자가 아닌 높이)
+    // 2) 학교 충돌 상자(벽·바닥판·사람 — 물건 충돌·블록 상자는 빼고)
+    const F = map.world.furn, tEnd = best ? best.t : maxT, w = map.q.rayHit([O.x, O.y, O.z], [O.x + Dv.x * tEnd, O.y + Dv.y * tEnd, O.z + Dv.z * tEnd], { skipDyn: true, skip: isObjCol });
+    if (w) best = { kind: 'wall', t: w.t * tEnd, n: w.n, box: w.box };
+    // 3) 물건(가구·나무·소품 — 보이는 삼각형까지 · OBJ-1)
+    const tF = best ? best.t : maxT, f = F.pick([O.x, O.y, O.z], [O.x + Dv.x * tF, O.y + Dv.y * tF, O.z + Dv.z * tF]);
+    if (f) { const ax = Math.abs(f.n[0]) >= Math.abs(f.n[1]) && Math.abs(f.n[0]) >= Math.abs(f.n[2]) ? 0 : Math.abs(f.n[1]) >= Math.abs(f.n[2]) ? 1 : 2, n = [0, 0, 0]; n[ax] = Math.sign(f.n[ax]) || 1;
+      best = { kind: 'furn', t: f.t * tF, n, furn: f.id, fk: f.kind }; }
+    // 4) 땅·1층 바닥(충돌 상자가 아닌 높이)
     const tEnd2 = best ? best.t : maxT;
     for (let t = 0.2; t < tEnd2; t += 0.1) { const y = O.y + Dv.y * t, gb = map.q.baseAt(O.x + Dv.x * t, O.z + Dv.z * t); if (y > gb) continue;
       let a = t - 0.1, c = t; for (let k = 0; k < 6; k++) { const m = (a + c) / 2; if (O.y + Dv.y * m > map.q.baseAt(O.x + Dv.x * m, O.z + Dv.z * m)) a = m; else c = m; }
@@ -212,11 +218,11 @@ export default async function start(map, params = {}) {
       burst((A.ix + 0.5) * S, A.q / 20 + 0.25, (A.iz + 0.5) * S, TYPES[b.t].c, 10, 0.5); map.tone(200, 0, 0.1, 'square', 0.1, 90); ghostOff(); return; }
     if (A.kind === 'furn' && A.furn) { const r = map.world.furn.hide(A.furn);
       if (!r.ok) return toast('이건 부술 수 없어요', 2);
-      if (!r.already) { sendF(A.furn, { b: name || '익명', t: Date.now() }); pushUndo({ furn: A.furn }); const bx = r.box;
+      if (!r.already) { sendF(A.furn, { b: name || '익명', t: Date.now() }); pushUndo({ furn: A.furn }); const bx = r.box; toast('퍽! ' + (KN[r.kind] || '물건') + (r.with && r.with.length ? ' + 위에 있던 것' : ''), 1.1);
         burst((bx.x0 + bx.x1) / 2, (bx.y0 + bx.top) / 2, (bx.z0 + bx.z1) / 2, r.color, 22, Math.max(0.6, Math.min(2.2, Math.max(bx.x1 - bx.x0, bx.z1 - bx.z0) / 2)));
         map.tone(150, 0, 0.22, 'sawtooth', 0.12, 55); map.tone(420, 0.05, 0.12, 'triangle', 0.08, 200); }
       ghostOff(); return; }
-    toast('벽·땅은 아직 못 부숴요 — 블록과 가구(책상·책장·사물함…)를 부술 수 있어요', 2.6);
+    toast('벽·땅은 아직 못 부숴요 — 블록 · 가구(책상·의자·책장·사물함…) · 나무를 부술 수 있어요', 2.6);
   }
   function undo() {
     const u = UNDO.pop(); if (!u) return toast('되돌릴 것이 없어요', 1.4);
@@ -313,7 +319,7 @@ export default async function start(map, params = {}) {
   }
   async function pick() {
     closePanel(); panel = el('div', 'bk-pick'); panel.className = 'bk-panel'; keyStop(panel);
-    panel.innerHTML = '<h3>🧱 블록 놀이' + (teacher ? ' <span class="sm">· 🔓 선생님</span>' : '') + '</h3><div class="sm">우리 학교 곳곳에 블록을 놓고 부숴요. 책상·책장 같은 가구도 🔨로 통째로 부서져요. 같은 판에 들어온 친구들 블록이 바로 보여요.</div>'
+    panel.innerHTML = '<h3>🧱 블록 놀이' + (teacher ? ' <span class="sm">· 🔓 선생님</span>' : '') + '</h3><div class="sm">우리 학교 곳곳에 블록을 놓고 부숴요. 책상·의자·책장·사물함·나무도 🔨로 통째로 퍽! 같은 판에 들어온 친구들 블록이 바로 보여요.</div>'
       + '<div style="margin:8px 0">내 이름 <input id="bkName" maxlength="8" style="width:140px;margin-left:6px" placeholder="이름"></div><div class="sm">선생님이 알려 준 판에 들어가요.</div><div class="bl">불러오는 중…</div>'
       + '<div class="row">' + (teacher ? '' : '<button id="bkT">🔒 선생님</button>') + '<button id="bkQuit">그만하기</button></div>';
     const nm = panel.querySelector('#bkName'); nm.value = name;

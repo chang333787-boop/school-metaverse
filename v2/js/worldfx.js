@@ -436,63 +436,86 @@ export function createWorldFx(H) {
     PAINTS.add(hnd); return hnd;
   }
 
-  // =============== 7. 가구 통째로(FURN-1 · 10-03 블록 놀이 '⛏ 부수기' — 교사 "가구까지 해야 예쁘다 · 도서관 책도 부숴야") ===============
-  //  가구 하나 = 올라서기 금지 충돌 상자 하나(vy1 = 보이는 윗면 · 책상·책장·사물함·배식대…). 보이는 것 = 그 발자국(+3cm) 안 · 밑~윗면+0.6(위에 놓인 모니터·책) 안에
-  //  세 꼭짓점이 다 든 디테일 삼각형 + 책 무늬(books) — 사람 삼각형은 뺀다. 숨기기 = 삼각형을 한 점으로 접기(넓이 0) + 충돌 끄기(y0·y1 → -1e6).
-  //  보이는 삼각형이 없으면 숨기지 않는다(차·울타리처럼 다른 층에 그린 것 — 충돌만 꺼져 '보이는데 뚫리는' 일 방지) · 사람을 옮긴 청크(MST)는 건드리지 않는다.
-  //  게임이 멈추면(reset) 정점·충돌 처음대로. 이름(id) = 상자 모서리 cm(x0_z0_y0) — 같은 판의 다른 컴퓨터와 같은 이름
-  const FURN = new Map(), FSAVE = new Map(); let FIDX = null, FMESH = null;
-  const furnKey = c => Math.round(c.x0 * 100) + '_' + Math.round(c.z0 * 100) + '_' + Math.round(c.y0 * 100);
-  const isFurn = c => !!c && c.vy1 != null && !c.dyn && c.x1 - c.x0 <= 6.5 && c.z1 - c.z0 <= 6.5 && c.vy1 - c.y0 <= 3.2;
-  const furnIdx = () => { if (!FIDX) { FIDX = new Map(); for (const c of world.colliders) if (isFurn(c) && c.y1 > -1e5) FIDX.set(furnKey(c), c); } return FIDX; };
-  const furnMeshes = () => { if (!FMESH) { FMESH = world.details.map(d => d.mesh); scene.traverse(o => { if (o.isMesh && o.userData.pat === 'books') FMESH.push(o); }); } return FMESH; };
-  function furnTris(c) {
-    const e = 0.03, top = c.vy1 + 0.6, out = []; let n = 0, cr = 0, cg = 0, cb = 0;
-    for (const m of furnMeshes()) {
-      const g = m.geometry, Pa = g.attributes.position; if (!Pa || MST.has(m)) continue;
-      const bb = g.boundingBox || (g.computeBoundingBox(), g.boundingBox); if (bb.max.x < c.x0 - e || bb.min.x > c.x1 + e || bb.max.z < c.z0 - e || bb.min.z > c.z1 + e || bb.max.y < c.y0 - e || bb.min.y > top) continue;
-      const A = Pa.array, I = g.index ? g.index.array : null, C = g.attributes.color, nt = Math.floor(Math.min(I ? I.length : Pa.count, g.drawRange.count) / 3), own = [];
-      for (const r of PEOPLE) for (const pt of r.parts) if (pt.mesh === m) own.push(pt.start, pt.start + pt.count);
-      const L = [];
-      for (let t = 0; t < nt; t++) { let ok = true;
-        for (let k = 0; k < 3 && ok; k++) { const v = I ? I[t * 3 + k] : t * 3 + k, x = A[v * 3], y = A[v * 3 + 1], z = A[v * 3 + 2]; if (x < c.x0 - e || x > c.x1 + e || z < c.z0 - e || z > c.z1 + e || y < c.y0 - e || y > top) ok = false; }
-        if (!ok) continue; if (own.length) { const v0 = t * 3; let mine = false; for (let j = 0; j < own.length; j += 2) if (v0 >= own[j] && v0 < own[j + 1]) { mine = true; break; } if (mine) continue; }
-        L.push(t); n++; if (C) { const v = I ? I[t * 3] : t * 3; cr += C.getX(v); cg += C.getY(v); cb += C.getZ(v); } }
-      if (L.length) out.push([m, L]);
-    }
-    return { list: out, n, color: n ? [cr / n, cg / n, cb / n] : [0.6, 0.45, 0.3] };
+  // =============== 7. 물건 통째로(OBJ-1 · FURN-1 · 10-03 블록 놀이 '🔨 부수기' — 교사 "부술 수 있는 게 별로 없고 부순 뒤가 지저분") ===============
+  //  world.js가 짓는 동안 적은 물건(world.objects — 가구·소품·나무·차 {kind, parts:[{mesh,start,count}], c0~c1 = 그 물건 충돌, box}) 하나를 통째로:
+  //  삼각형을 한 점으로 접기(넓이 0) + 충돌 끄기. 위에 얹힌 물건(밑면 = 이 물건 윗면 ±5cm · 가운데가 발자국 안)도 같이(떠 있지 않게).
+  //  이름 = 상자 모서리 cm(x0_z0_y0) — 같은 판의 다른 컴퓨터와 같다. 사람을 옮긴 청크(MST)는 건드리지 않음. 놀이가 멈추면 처음대로(reset).
+  const OBJL = world.objects || [];
+  const FURN = new Map(), FSAVE = new Map(); let FIDX = null, FCOL = null, FGRID = null;
+  const objKey = o => Math.round(o.box[0] * 100) + '_' + Math.round(o.box[2] * 100) + '_' + Math.round(o.box[1] * 100);
+  function fIndex() {
+    if (FIDX) return; FIDX = new Map(); FCOL = new Map(); FGRID = new Map();
+    for (const o of OBJL) { const k = objKey(o); if (FIDX.has(k)) continue; o.key = k; FIDX.set(k, o);
+      for (let i = o.c0; i < o.c1; i++) FCOL.set(world.colliders[i], o);
+      for (let gx = Math.floor(o.box[0] / 8); gx <= Math.floor(o.box[3] / 8); gx++) for (let gz = Math.floor(o.box[2] / 8); gz <= Math.floor(o.box[5] / 8); gz++) {
+        const g = gx + ':' + gz; let L = FGRID.get(g); if (!L) FGRID.set(g, L = []); L.push(o); } }
   }
-  function furnHide(id) {
-    if (FURN.has(id)) return { ok: true, already: true };
-    const c = furnIdx().get(id); if (!c) return { ok: false, why: 'none' };
-    const T = furnTris(c); if (!T.n) return { ok: false, why: 'empty' };
-    let shadow = false;
-    for (const [m, L] of T.list) { const g = m.geometry, I = g.index;
-      if (!FSAVE.has(m)) FSAVE.set(m, I ? I.array.slice() : g.attributes.position.array.slice());
-      if (I) { const a = I.array; for (const t of L) { a[t * 3 + 1] = a[t * 3]; a[t * 3 + 2] = a[t * 3]; } I.needsUpdate = true; }
-      else { const a = g.attributes.position.array; for (const t of L) { const o = t * 9; a[o + 3] = a[o + 6] = a[o]; a[o + 4] = a[o + 7] = a[o + 1]; a[o + 5] = a[o + 8] = a[o + 2]; } g.attributes.position.needsUpdate = true; }
-      if (m.castShadow) shadow = true; }
-    FURN.set(id, { c, y0: c.y0, y1: c.y1, list: T.list }); c.y0 = c.y1 = -1e6;
+  // 선분 a→b가 처음 맞는 물건(삼각형까지 — 상자로 고르고 삼각형으로 확인) → { t(0~1), n:[x,y,z](광선 쪽 면 법선), id, kind } | null
+  const _e1 = [0, 0, 0], _e2 = [0, 0, 0], _pv = [0, 0, 0], _tv = [0, 0, 0], _qv = [0, 0, 0];
+  function triHit(o, a, d, tMax) {
+    let bt = tMax, bn = null;
+    for (const p of o.parts) { const A = p.mesh.geometry.attributes.position.array;
+      for (let v = p.start; v < p.start + p.count; v += 3) { const i = v * 3;
+        _e1[0] = A[i + 3] - A[i]; _e1[1] = A[i + 4] - A[i + 1]; _e1[2] = A[i + 5] - A[i + 2]; _e2[0] = A[i + 6] - A[i]; _e2[1] = A[i + 7] - A[i + 1]; _e2[2] = A[i + 8] - A[i + 2];
+        _pv[0] = d[1] * _e2[2] - d[2] * _e2[1]; _pv[1] = d[2] * _e2[0] - d[0] * _e2[2]; _pv[2] = d[0] * _e2[1] - d[1] * _e2[0];
+        const det = _e1[0] * _pv[0] + _e1[1] * _pv[1] + _e1[2] * _pv[2]; if (Math.abs(det) < 1e-12) continue; const inv = 1 / det;
+        _tv[0] = a[0] - A[i]; _tv[1] = a[1] - A[i + 1]; _tv[2] = a[2] - A[i + 2];
+        const u = (_tv[0] * _pv[0] + _tv[1] * _pv[1] + _tv[2] * _pv[2]) * inv; if (u < 0 || u > 1) continue;
+        _qv[0] = _tv[1] * _e1[2] - _tv[2] * _e1[1]; _qv[1] = _tv[2] * _e1[0] - _tv[0] * _e1[2]; _qv[2] = _tv[0] * _e1[1] - _tv[1] * _e1[0];
+        const w = (d[0] * _qv[0] + d[1] * _qv[1] + d[2] * _qv[2]) * inv; if (w < 0 || u + w > 1) continue;
+        const t = (_e2[0] * _qv[0] + _e2[1] * _qv[1] + _e2[2] * _qv[2]) * inv; if (t <= 1e-6 || t >= bt) continue;
+        let nx = _e1[1] * _e2[2] - _e1[2] * _e2[1], ny = _e1[2] * _e2[0] - _e1[0] * _e2[2], nz = _e1[0] * _e2[1] - _e1[1] * _e2[0]; const nl = Math.hypot(nx, ny, nz) || 1;
+        if (nx * d[0] + ny * d[1] + nz * d[2] > 0) { nx = -nx; ny = -ny; nz = -nz; } bt = t; bn = [nx / nl, ny / nl, nz / nl]; } }
+    return bn ? { t: bt, n: bn } : null;
+  }
+  function furnPick(a, b) {
+    fIndex(); const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], cand = [], seen = new Set();
+    for (let gx = Math.floor(Math.min(a[0], b[0]) / 8); gx <= Math.floor(Math.max(a[0], b[0]) / 8); gx++) for (let gz = Math.floor(Math.min(a[2], b[2]) / 8); gz <= Math.floor(Math.max(a[2], b[2]) / 8); gz++) {
+      const L = FGRID.get(gx + ':' + gz); if (!L) continue;
+      for (const o of L) { if (seen.has(o) || FURN.has(o.key)) continue; seen.add(o);
+        let t0 = 0, t1 = 1, ok = true; for (let ax = 0; ax < 3 && ok; ax++) { const lo = o.box[ax] - 0.01, hi = o.box[ax + 3] + 0.01;
+          if (Math.abs(d[ax]) < 1e-12) { if (a[ax] < lo || a[ax] > hi) ok = false; } else { let p9 = (lo - a[ax]) / d[ax], r9 = (hi - a[ax]) / d[ax]; if (p9 > r9) { const s9 = p9; p9 = r9; r9 = s9; } if (p9 > t0) t0 = p9; if (r9 < t1) t1 = r9; if (t0 > t1) ok = false; } }
+        if (ok) cand.push([t0, o]); } }
+    cand.sort((x, y) => x[0] - y[0]); let best = null;
+    for (const [t0, o] of cand) { if (best && t0 > best.t) break; const h = triHit(o, a, d, best ? best.t : 1); if (h) best = { t: h.t, n: h.n, id: o.key, kind: o.kind }; }
+    return best;
+  }
+  function furnHide(key, by = null) {
+    fIndex(); if (FURN.has(key)) return { ok: true, already: true };
+    const o = FIDX.get(key); if (!o) return { ok: false, why: 'none' };
+    for (const p of o.parts) if (MST.has(p.mesh)) return { ok: false, why: 'busy' };
+    let shadow = false, nC = 0; const rgb = [0, 0, 0];
+    for (const p of o.parts) { const g = p.mesh.geometry, P = g.attributes.position, A = P.array, C = g.attributes.color; if (!FSAVE.has(p.mesh)) FSAVE.set(p.mesh, A.slice());
+      for (let v = p.start; v < p.start + p.count; v += 3) { const i = v * 3; A[i + 3] = A[i + 6] = A[i]; A[i + 4] = A[i + 7] = A[i + 1]; A[i + 5] = A[i + 8] = A[i + 2];
+        if (C && nC < 600) { rgb[0] += C.getX(v); rgb[1] += C.getY(v); rgb[2] += C.getZ(v); nC++; } }
+      P.needsUpdate = true; if (p.mesh.castShadow) shadow = true; }
+    const cols = []; for (let i = o.c0; i < o.c1; i++) { const c = world.colliders[i]; cols.push([c, c.y0, c.y1]); c.y0 = c.y1 = -1e6; }
+    FURN.set(key, { o, cols, by });
+    const top = o.box[4], up = [];
+    for (const q of OBJL) { if (q === o || !q.key || FURN.has(q.key)) continue; const cx = (q.box[0] + q.box[3]) / 2, cz = (q.box[2] + q.box[5]) / 2;
+      if (Math.abs(q.box[1] - top) < 0.05 && cx > o.box[0] && cx < o.box[3] && cz > o.box[2] && cz < o.box[5]) up.push(q.key); }
+    for (const k of up) furnHide(k, key);
     if (shadow && rebake) rebake();
-    emit('world', { type: 'furn', id, hidden: true });
-    return { ok: true, tris: T.n, color: T.color, box: { x0: c.x0, x1: c.x1, y0: FURN.get(id).y0, top: c.vy1, z0: c.z0, z1: c.z1 } };
+    emit('world', { type: 'furn', id: key, hidden: true });
+    return { ok: true, kind: o.kind, with: up, color: nC ? [rgb[0] / nC, rgb[1] / nC, rgb[2] / nC] : [0.6, 0.45, 0.3], box: { x0: o.box[0], x1: o.box[3], y0: o.box[1], top: o.box[4], z0: o.box[2], z1: o.box[5] } };
   }
-  function furnShow(id) {
-    const f = FURN.get(id); if (!f) return false; let shadow = false;
-    for (const [m, L] of f.list) { const g = m.geometry, I = g.index, S0 = FSAVE.get(m); if (!S0) continue;
-      if (I) { const a = I.array; for (const t of L) { a[t * 3 + 1] = S0[t * 3 + 1]; a[t * 3 + 2] = S0[t * 3 + 2]; } I.needsUpdate = true; }
-      else { const a = g.attributes.position.array; for (const t of L) { const o = t * 9; for (let k = 3; k < 9; k++) a[o + k] = S0[o + k]; } g.attributes.position.needsUpdate = true; }
-      if (m.castShadow) shadow = true; }
-    f.c.y0 = f.y0; f.c.y1 = f.y1; FURN.delete(id);
+  function furnShow(key) {
+    const f = FURN.get(key); if (!f) return false; let shadow = false;
+    for (const p of f.o.parts) { const S0 = FSAVE.get(p.mesh); if (!S0) continue; const A = p.mesh.geometry.attributes.position.array;
+      for (let i = p.start * 3; i < (p.start + p.count) * 3; i++) A[i] = S0[i]; p.mesh.geometry.attributes.position.needsUpdate = true; if (p.mesh.castShadow) shadow = true; }
+    for (const [c, y0, y1] of f.cols) { c.y0 = y0; c.y1 = y1; }
+    FURN.delete(key);
+    for (const [k, g] of [...FURN]) if (g.by === key) furnShow(k);   // 같이 숨겼던 것(얹혀 있던 물건)
     if (!FURN.size) FSAVE.clear();
     if (shadow && rebake) rebake();
-    emit('world', { type: 'furn', id, hidden: false });
+    emit('world', { type: 'furn', id: key, hidden: false });
     return true;
   }
   const furn = {
-    idOf: box => isFurn(box) ? furnKey(box) : null,   // rayHit의 box → 가구 이름(가구가 아니면 null)
-    hide: furnHide, show: furnShow, isHidden: id => FURN.has(id), hidden: () => [...FURN.keys()],
-    box: id => { const c = furnIdx().get(id), f = FURN.get(id); return c ? { x0: c.x0, x1: c.x1, y0: f ? f.y0 : c.y0, top: c.vy1, z0: c.z0, z1: c.z1 } : null; },
+    pick: furnPick,                                                                  // 화면 광선 → 물건(삼각형까지)
+    idOf: box => { fIndex(); const o = FCOL.get(box); return o && o.key ? o.key : null; },   // 충돌 상자(q.rayHit의 box) → 물건 이름(물건 것이 아니면 null)
+    hide: id => furnHide(id), show: furnShow, isHidden: id => FURN.has(id), hidden: () => [...FURN].filter(([, f]) => !f.by).map(([k]) => k), count: () => (fIndex(), FIDX.size),
+    box: id => { fIndex(); const o = FIDX.get(id); return o ? { x0: o.box[0], x1: o.box[3], y0: o.box[1], top: o.box[4], z0: o.box[2], z1: o.box[5], kind: o.kind } : null; },
   };
 
   // =============== 틱 · 정리 ===============
