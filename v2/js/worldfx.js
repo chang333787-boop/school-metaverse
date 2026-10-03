@@ -6,7 +6,7 @@
 //   옮기기 = 같은 person() 부품으로 구운 '대역'(한 메시 + 이름표 한 장 · 한 번에 6명까지)이 길격자를 따라 걷는다(팔다리 흔들기 = 정점 회전 · 새 객체 없음).
 //   새 사람을 만들지 않는다(대역은 원래 사람의 모양·색·이름 그대로) · 대사는 여기서 만들지 않는다.
 export function createWorldFx(H) {
-  const { THREE, scene, camera, world, P, q, ui, emit, colliderAdd, navDone, navGet, resolve, zoneAt, zoneFind, interactAdd, doorHold, doorActors, rebake, ENG, floorY, sfx, hot: HOT } = H;
+  const { THREE, scene, camera, world, P, q, ui, emit, colliderAdd, navDone, navGet, resolve, zoneAt, zoneFind, interactAdd, doorHold, doorActors, rebake, ENG, floorY, sfx, hot: HOT, ACT, actStop } = H;
   const R2D = Math.PI / 180;
   const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _v = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color(), _n = new THREE.Vector3(), _nm = new THREE.Matrix3();
   const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -445,10 +445,47 @@ export function createWorldFx(H) {
   const objKey = o => Math.round(o.box[0] * 100) + '_' + Math.round(o.box[2] * 100) + '_' + Math.round(o.box[1] * 100);
   function fIndex() {
     if (FIDX) return; FIDX = new Map(); FCOL = new Map(); FGRID = new Map();
-    for (const o of OBJL) { const k = objKey(o); if (FIDX.has(k)) continue; o.key = k; FIDX.set(k, o);
+    for (const o of OBJL) { const k = objKey(o); if (FIDX.has(k)) continue; o.key = k; o.hots = null; FIDX.set(k, o);
       for (let i = o.c0; i < o.c1; i++) FCOL.set(world.colliders[i], o);
       for (let gx = Math.floor(o.box[0] / 8); gx <= Math.floor(o.box[3] / 8); gx++) for (let gz = Math.floor(o.box[2] / 8); gz <= Math.floor(o.box[5] / 8); gz++) {
         const g = gx + ':' + gz; let L = FGRID.get(g); if (!L) FGRID.set(g, L = []); L.push(o); } }
+    hotLink();
+  }
+  // 지점(E/✋)도 물건 몫(FURN-2 · 10-04 리뷰 '부순 식탁 옆에서 E → 허공에 앉음'): 지점의 '대상 점'을 품은 가장 작은 물건에 묶어 둔다(fIndex 때 한 번 — 부술 때·매 프레임 훑지 않음).
+  //   대상 점 = 앉기: 좌석(seat) · 좌석이 없으면 몸이 그려지는 곳(서는 칸에서 보는 쪽 0.42 — main.js kidTick · 거기 앉는 물건이 없으면 0.42 뒤 — 소파·둥근 벤치처럼 물건을 등지고 선 지점) ·
+  //   칠판: 그림 자리(bx·by·bz) · 마이크 · at/ats(꼭지·화분 잎·방문록·반납 수레…) · 우유: 앞의 냉장고.
+  //   나무·덤불은 고르지 않는다(상자가 넓어 옆 벤치·수돗가·교가 비석을 품었다) · 앉기는 앉는 물건만(책상을 부숴도 옆 의자 앉기는 그대로) · 게임이 더한 지점(use)은 빼고.
+  //   대상 점이 여럿(화분 셋)이면 모두 물건 안일 때만 묶고, 묶인 물건이 다 부서져야 꺼진다. 대상 점이 물건 밖이면(바깥 수돗가·교실 칠판처럼 부술 수 없는 것) 묶지 않는다.
+  const SEATK = new Set(['chair', 'bench', 'sofa', 'bed', 'table', 'beanbag', 'cushion', 'swing', 'rocker', 'seesaw']), FRONTK = { milk: 'fridge' };
+  function objAt(x, y, z, ok, m = 0.12) {   // 점(가로 m · 아래 0.1 · 위 0.15 여유)을 품은 가장 작은 물건 — 8m 칸으로 좁혀서
+    let best = null, bv = 1e9;
+    for (let gx = Math.floor((x - m) / 8); gx <= Math.floor((x + m) / 8); gx++) for (let gz = Math.floor((z - m) / 8); gz <= Math.floor((z + m) / 8); gz++) {
+      const L = FGRID.get(gx + ':' + gz); if (!L) continue;
+      for (const o of L) { const b = o.box; if (x < b[0] - m || x > b[3] + m || z < b[2] - m || z > b[5] + m || y < b[1] - 0.1 || y > b[4] + 0.15 || !ok(o)) continue;
+        const v = (b[3] - b[0]) * (b[4] - b[1]) * (b[5] - b[2]); if (v < bv) { bv = v; best = o; } } }
+    return best;
+  }
+  function hotLink() {
+    const any = o => o.kind !== 'tree' && o.kind !== 'bush', seat = o => SEATK.has(o.kind);
+    for (const h of HOT || []) { if (h.use || h.kind === 'game' || String(h.id).startsWith('game:')) continue; const os = new Set();
+      if (h.kind === 'sit') { let o;
+        if (h.seat) o = objAt(h.seat.x, h.seat.y + 0.4, h.seat.z, seat);
+        else { const yw = h.yaw ?? Math.PI, fx = Math.sin(yw) * 0.42, fz = Math.cos(yw) * 0.42; o = objAt(h.x + fx, h.y + 0.4, h.z + fz, seat) || objAt(h.x - fx, h.y + 0.4, h.z - fz, seat); }
+        if (o) os.add(o); }
+      else if (FRONTK[h.kind]) { const o = objAt(h.x, h.y + 0.9, h.z, q9 => q9.kind === FRONTK[h.kind], (h.r || 1) + 0.2); if (o) os.add(o); }
+      else { const pts = h.kind === 'board' && h.bx != null ? [[h.bx, h.by, h.bz]] : h.mic ? [h.mic] : h.ats || (h.at ? [h.at] : []);
+        for (const a of pts) { const o = objAt(a[0], a[1], a[2], any); if (!o) { os.clear(); break; } os.add(o); } }
+      if (!os.size) continue;
+      h.fN = os.size; h.fHid = 0; h.fOff = null; for (const o of os) (o.hots || (o.hots = [])).push(h); }
+  }
+  // 묶인 지점 끄기/켜기(부술 때·되살릴 때만): 끌 때 원래 off를 h.fOff에 두고(그동안 게임의 interact.enable은 fOff를 읽고 쓴다 — mapapi) 되살리면 그 값으로.
+  //   칠판 그림(h.mesh)도 같이 숨김 · 지금 그 자리에 앉아 있으면 일어선다(먹던 식판은 손으로 — 'eat' 끝 · 친구가 부숴도 같다). 안내 글은 hotTick이 0.15초 안에 지운다.
+  function hotFurn(L, hide) {
+    let up = false; const S = ACT && ACT.sit;
+    for (const h of L) {
+      if (hide) { if (++h.fHid !== h.fN) continue; h.fOff = !!h.off; h.off = true; if (h.mesh) h.mesh.visible = false; if (S && S.x === h.x && S.z === h.z && S.y === h.y) up = true; }
+      else { if (h.fHid-- !== h.fN) continue; h.off = h.fOff; h.fOff = null; if (h.mesh) h.mesh.visible = (h.stage || 0) > 0; } }
+    if (up) { ACT.sit = null; if (actStop) actStop(); }
   }
   // 선분 a→b가 처음 맞는 물건(삼각형까지 — 상자로 고르고 삼각형으로 확인) → { t(0~1), n:[x,y,z](광선 쪽 면 법선), id, kind } | null
   const _e1 = [0, 0, 0], _e2 = [0, 0, 0], _pv = [0, 0, 0], _tv = [0, 0, 0], _qv = [0, 0, 0];
@@ -491,6 +528,7 @@ export function createWorldFx(H) {
       P.needsUpdate = true; if (p.mesh.castShadow) shadow = true; }
     const cols = []; for (let i = o.c0; i < o.c1; i++) { const c = world.colliders[i]; cols.push([c, c.y0, c.y1]); c.y0 = c.y1 = -1e6; }
     FURN.set(key, { o, cols, by });
+    if (o.hots) hotFurn(o.hots, true);   // FURN-2: 이 물건의 앉기·마시기 등 지점 끔
     const top = o.box[4], up = [];
     for (const q of OBJL) { if (q === o || !q.key || FURN.has(q.key)) continue; const cx = (q.box[0] + q.box[3]) / 2, cz = (q.box[2] + q.box[5]) / 2;
       if (Math.abs(q.box[1] - top) < 0.05 && cx > o.box[0] && cx < o.box[3] && cz > o.box[2] && cz < o.box[5]) up.push(q.key); }
@@ -504,7 +542,7 @@ export function createWorldFx(H) {
     for (const p of f.o.parts) { const S0 = FSAVE.get(p.mesh); if (!S0) continue; const A = p.mesh.geometry.attributes.position.array;
       for (let i = p.start * 3; i < (p.start + p.count) * 3; i++) A[i] = S0[i]; p.mesh.geometry.attributes.position.needsUpdate = true; if (p.mesh.castShadow) shadow = true; }
     for (const [c, y0, y1] of f.cols) { c.y0 = y0; c.y1 = y1; }
-    FURN.delete(key);
+    FURN.delete(key); if (f.o.hots) hotFurn(f.o.hots, false);   // FURN-2: 지점 원래대로(게임이 그동안 바꾼 값까지)
     for (const [k, g] of [...FURN]) if (g.by === key) furnShow(k);   // 같이 숨겼던 것(얹혀 있던 물건)
     if (!FURN.size) FSAVE.clear();
     if (shadow && rebake) rebake();

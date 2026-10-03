@@ -21,7 +21,13 @@ const CSS = `
 .lb-big>div{background:#fffdf6;color:#1d3557;border:4px solid #1d3557;border-radius:22px;padding:22px 34px;text-align:center;max-width:92vw}
 .lb-big .code{font-size:clamp(72px,16vw,150px);font-weight:900;letter-spacing:.12em;line-height:1.1;margin:6px 0}
 .lb-big button{font:inherit;font-weight:800;border:0;border-radius:10px;padding:9px 16px;background:#1d3557;color:#fff;cursor:pointer;margin-top:10px}
+.lb-ask{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-start;justify-content:center;padding-top:14vh;background:rgba(10,20,40,.45);box-sizing:border-box}
+.lb-ask .lb-pop{position:relative;width:min(300px,92vw)}
+.lb-ask input.pin{font-size:30px;font-weight:800;letter-spacing:.45em;text-align:center;padding:8px 0 8px .45em;margin:8px 0 2px}
+.lb-ask input.pin::placeholder{font-size:15px;font-weight:600;letter-spacing:0;color:#9aa7b6}
+.lb-ask .err{min-height:1.5em;color:#c92a2a;font-size:13px;font-weight:700}
 `;
+const addCss = () => { if (!document.getElementById('lb-css')) { const st = document.createElement('style'); st.id = 'lb-css'; st.textContent = CSS; document.head.appendChild(st); } };
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const req = (path, method = 'GET', data) => fetch(DB + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data) }).then((r) => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)));
 const rand = (n) => { const a = new Uint8Array(n); crypto.getRandomValues(a); return [...a].map((b) => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join(''); };
@@ -29,24 +35,63 @@ const hash = async (pin) => [...new Uint8Array(await crypto.subtle.digest('SHA-2
 const ss = { get: (k) => { try { return sessionStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) { /* */ } } };
 const ls = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* */ } } };
 
-// 선생님 비밀번호(메모장과 같은 memoPin) — 이 탭에서 한 번 맞히면 sessionStorage sm.t
-export async function teacherPin(toast) {
+// 🔒 비밀번호 창(10-04 · 수업 중 선생님 화면은 아이들에게 투사된다 — prompt 창은 친 숫자가 그대로 보였다): 숫자는 ●로 가림 · Enter 확인 · Esc 취소 · 키가 게임으로 새지 않게
+//   o.sub = 작은 설명 · o.check(v) → 틀리면 알릴 말(창은 그대로 · 칸을 비우고 다시) / 맞으면 null → 그 값으로 끝 · 취소 = null
+export function askPin(title, o = {}) {
+  addCss(); const prev = document.querySelector('.lb-ask'); if (prev && prev._x) prev._x();
+  document.exitPointerLock?.();
+  return new Promise((res) => {
+    const mask = !!(window.CSS && window.CSS.supports && window.CSS.supports('-webkit-text-security', 'disc'));   // 크롬·엣지·사파리 = 글자 칸 + ●(password 칸이면 크롬이 '비밀번호 저장?' 풍선을 투사 화면에 띄움) · 그 밖 = password 칸 · window.CSS = 브라우저 것(이 파일의 CSS는 글자)
+    const wrap = document.createElement('div'); wrap.className = 'lb-ask ttl-keep';   // ttl-keep = 오프닝 화면(놀이 카드) 위에서도 보임
+    wrap.innerHTML = '<div class="lb-pop" role="dialog" aria-modal="true"><h4>🔒 ' + esc(title) + '</h4>' + (o.sub ? '<div class="sm">' + esc(o.sub) + '</div>' : '')
+      + '<input class="pin" type="' + (mask ? 'text' : 'password') + '" inputmode="numeric" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="숫자 4자리" aria-label="' + esc(title) + '"' + (mask ? ' style="-webkit-text-security:disc"' : '') + '>'
+      + '<div class="err" role="alert"></div><div class="row"><button class="sub" data-l="no">취소</button><button data-l="ok">확인</button></div></div>';
+    const inp = wrap.querySelector('input'), err = wrap.querySelector('.err'); let busy = false;
+    const done = (v) => { if (!wrap.isConnected) return; wrap.remove(); res(v); };
+    const ok = async () => {
+      if (busy) return; const v = inp.value;
+      if (!/^\d{4}$/.test(v)) { err.textContent = '숫자 4자리를 넣어 주세요'; inp.focus(); return; }
+      if (o.check) {
+        busy = true; let m = null; try { m = await o.check(v); } catch (e) { m = '인터넷을 확인해 주세요'; } busy = false;
+        if (m) { err.textContent = m; inp.value = ''; inp.focus(); return; }
+      }
+      done(v);
+    };
+    wrap._x = () => done(null); wrap._ok = ok;   // Enter·Esc = 아래 PINKEY(창 잡기 단계)
+    inp.addEventListener('input', () => { const v = inp.value.replace(/\D/g, '').slice(0, 4); if (v !== inp.value) inp.value = v; err.textContent = ''; });
+    wrap.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-l]'); if (b) { if (b.dataset.l === 'ok') ok(); else done(null); } else inp.focus(); });
+    document.body.appendChild(wrap); inp.focus();
+  });
+}
+
+// PINKEY: 🔒 창이 떠 있는 동안 키는 모두 그 창 몫 — window 잡기 단계에서 먼저 받아 끊는다(글자는 그대로 칸에 들어감 · 걷기·단축키 P·G·L·F·놀이의 Esc·보기 고르기 숫자로 안 감)
+//   이 모듈은 놀이(메모장·블록 놀이 — 위에서 import)보다 먼저 읽히므로 이 듣개가 놀이의 잡기 단계 듣개보다 앞선다 · 오프닝(title.js)은 입력칸이면 비켜 준다
+//   keyup은 그대로 보낸다(창을 열 때 누르고 있던 키가 떼어지지 않은 채 남지 않게)
+for (const t of ['keydown', 'keypress']) addEventListener(t, (e) => {
+  const w = document.querySelector('.lb-ask'); if (!w) return;
+  e.stopImmediatePropagation(); if (t !== 'keydown' || e.isComposing) return;
+  if (e.key === 'Enter') { e.preventDefault(); w._ok && w._ok(); } else if (e.key === 'Escape') { e.preventDefault(); w._x && w._x(); }
+}, true);
+
+// 선생님 비밀번호(메모장·블록 놀이와 같은 memoPin) — 이 탭에서 한 번 맞히면 sessionStorage sm.t + 'sm-teacher' 알림(열려 있는 놀이도 바로 선생님 모드로)
+//   돌려줌: false = 안 됨 · true = 맞힘(또는 이미 맞힘) · 'new' = 처음 정함
+export async function teacherPin(toast = () => {}) {
   if (ss.get('sm.t') === '1') return true;
   let saved = null; try { saved = await req('/memoPin'); } catch (e) { toast('인터넷을 확인해 주세요'); return false; }
-  if (!saved) {
-    const a = prompt('선생님 비밀번호(숫자 4자리)를 새로 정해 주세요'); if (!a) return false; if (!/^\d{4}$/.test(a)) { toast('숫자 4자리로 정해 주세요'); return false; }
-    if (prompt('한 번 더 적어 주세요') !== a) { toast('두 번이 달라요. 다시 해 주세요'); return false; }
+  let r = true;
+  if (!saved) {   // 아직 비밀번호가 없음 — 아이가 먼저 정해 버리지 않게 선생님 입구(주소에 ?setpin)에서만 정함(DB 규칙상 한 번 쓰면 못 바꿈 · 메모장과 같은 규칙)
+    if (!new URLSearchParams(location.search).has('setpin')) { toast('🔒 선생님 비밀번호가 아직 없어요 — 선생님께 알려 주세요', 3); return false; }
+    const a = await askPin('선생님 비밀번호를 처음 정해요', { sub: '숫자 4자리 — 한 번 정하면 화면에서는 바꿀 수 없어요 · 메모장·블록 놀이·함께하기 방 만들기에 같이 써요' }); if (!a) return false;
+    if (!(await askPin('한 번 더 넣어 주세요', { check: (v) => v === a ? null : '처음 넣은 것과 달라요 — 다시 넣거나, 취소하고 처음부터 해요' }))) return false;
     try { await req('/memoPin', 'PUT', await hash(a)); } catch (e) { toast('저장하지 못했어요'); return false; }
-  } else {
-    const a = prompt('선생님 비밀번호 4자리'); if (!a) return false;
-    if (await hash(a) !== saved) { toast('비밀번호가 달라요'); return false; }
-  }
-  ss.set('sm.t', '1'); return true;
+    r = 'new';
+  } else if (!(await askPin('선생님 비밀번호', { check: async (v) => (await hash(v)) === saved ? null : '비밀번호가 달라요 — 다시 넣어 주세요' }))) return false;
+  ss.set('sm.t', '1'); dispatchEvent(new CustomEvent('sm-teacher')); return r;
 }
 
 export function createLobby(o) {
   const { chip, suffix = '', label = '', join, leave, net, toast = () => {}, onTeacher = null, onGoTo = null } = o;
-  if (!document.getElementById('lb-css')) { const st = document.createElement('style'); st.id = 'lb-css'; st.textContent = CSS; document.head.appendChild(st); }
+  addCss();
   let cur = null, pop = null, big = null, pollT = 0;
   const live = (p) => p && typeof p.e === 'number' && p.e > Date.now();
   async function check(c, r) {   // 번호가 살아 있고(8시간 안) 그 방이 닫히지 않았는지

@@ -6,7 +6,7 @@
 import { createMinimap } from './minimap.js?v=12';
 import { createGamePicker } from './gamepick.js?v=11';
 import { createEngine } from './engine.js?v=11';
-import { createWorldFx } from './worldfx.js?v=9';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
+import { createWorldFx } from './worldfx.js?v=10';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 // PERF-WIN: 숫자 키(윗줄·숫자 패드) → 1~9 · 아니면 0 — e.key는 한글 입력기가 켜져 있으면 'Process'라 e.code로 읽는다
 export const digitOf = e => { const m = /^(?:Digit|Numpad)([0-9])$/.exec(e.code || ''); return m ? +m[1] : 0; };
 export function createMapApi(host, NAV, META) {
@@ -217,8 +217,10 @@ export function createMapApi(host, NAV, META) {
       HOT.push(h); addPoi({ id: h.id, label: h.label, x: h.x, y: h.y, z: h.z, r: h.r, zone: (zoneAt(h.x, h.y, h.z) || {}).id || null, tags: ['game'], stand: null, src: 'game', hot: h });
       return { hot: h, remove() { const i = HOT.indexOf(h); if (i >= 0) HOT.splice(i, 1); POI.delete(h.id); } }; },
     // 기존 지점 켜고 끄기: filter = kind 문자열 | (h) => bool
-    enable(filter, on2) { const f = typeof filter === 'function' ? filter : h => h.kind === filter; const hit = HOT.filter(f), prev = hit.map(h => !!h.off);
-      hit.forEach(h => { h.off = !on2; }); return { remove() { hit.forEach((h, i) => { h.off = prev[i]; }); } }; },   // remove = 원래대로
+    //   FURN-2: 부순 물건 때문에 꺼진 지점(h.fOff != null — worldfx)은 '원래 값' fOff를 읽고 쓴다 → 물건이 돌아오면 게임이 정한 값으로(부순 동안 켜지지 않게)
+    enable(filter, on2) { const f = typeof filter === 'function' ? filter : h => h.kind === filter; const hit = HOT.filter(f), prev = hit.map(h => (h.fOff != null ? h.fOff : !!h.off));
+      const set = (h, v) => { if (h.fOff != null) h.fOff = v; else h.off = v; };
+      hit.forEach(h => set(h, !on2)); return { remove() { hit.forEach((h, i) => set(h, prev[i])); } }; },   // remove = 원래대로
     list: (f = {}) => HOT.filter(h => (!f.kind || h.kind === f.kind) && (!f.zone || (zoneAt(h.x, h.y, h.z) || {}).id === f.zone)),
   };
   const TRIG = new Set();
@@ -453,7 +455,7 @@ export function createMapApi(host, NAV, META) {
   // NPC-MOVE·WORLD-FX(found2 · §16): 사람(NPC) 옮기기·숨기기 + 게임이 세상을 바꾸는 동사(소품·방 불·문·그림·바람·튀는 판) — 게임이 멈추면 FX.reset()
   const FX = createWorldFx({ THREE, scene, camera: host.camera, world, P, q, ui, emit, colliderAdd: (b, o) => collider.add(b, o), navDone, navGet: () => nav(), resolve: t => resolve(t), zoneAt, zoneFind: zone,
     interactAdd: o => interact.add(o), doorHold: host.doorHold || (() => false), doorActors: host.doorActors || null, rebake: host.rebake || (() => {}), ENG, floorY, sfx, hot: HOT,
-    pBlocked: pl.pBlocked, getScale: pl.scale });
+    pBlocked: pl.pBlocked, getScale: pl.scale, ACT: pl.ACT, actStop: () => { if (pl.acts) pl.acts.stop(true); } });   // FURN-2: 앉은 의자·식탁을 부수면 일어서기
   FX.op = op => { const o = op; switch (o.op) {
     case 'moveNpc': case 'hideNpc': case 'showNpc': case 'homeNpc': return FX.npc.storyOp(o);
     case 'light': return FX.world.light(o.room, o.on !== false);
@@ -472,8 +474,11 @@ export function createMapApi(host, NAV, META) {
   const store = ns => ({
     get(k, d = null) { try { const v = pend.has(ns + k) ? pend.get(ns + k) : localStorage.getItem(ns + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { pend.set(ns + k, JSON.stringify(v)); },   // 쓰기는 2초에 한 번 몰아서(CLAUDE.md 성능 예산)
+    flush() { flushStore(); },   // 지금 바로(게임이 페이지를 떠날 때 — 매 프레임 금지)
   });
   const flushStore = () => { if (!pend.size) return; try { for (const [k, v] of pend) localStorage.setItem(k, v); } catch (e) { /* 비공개 창 등 — 무시 */ } pend.clear(); };
+  // 새로고침·탭 닫기·숨김이면 몰아 두던 것을 바로 씀(10-04 재시험: 마지막 2초 안에 바꾼 것이 Ctrl+Shift+R로 사라졌다 — 수업에선 새로고침이 잦다)
+  addEventListener('pagehide', flushStore); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushStore(); });
 
   // ---------- 13. 게임 로더 · 범위 파사드(scope) ----------
   // 게임 모듈: export const meta = { id, title, api: 1 } · export default async function start(map, params) → { tick(dt), stop() }

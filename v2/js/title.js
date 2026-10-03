@@ -105,7 +105,7 @@ export function createTitle(h) {
 
   // ---------- 놀이 카드(registry.js — dev 아닌 것 + 자유 탐험) ----------
   const GROUPS = { 탐험: { c: '#3aa0e8', e: '🧭' }, 대결: { c: '#f06a4a', e: '⚔️' }, 모험: { c: '#35b36b', e: '🗺️' }, 이야기: { c: '#b36ae0', e: '📖' }, 상상: { c: '#2fb39a', e: '🌱' }, 놀이: { c: '#e8a21a', e: '🎲' } };
-  const LCATS = [{ id: '@story', cat: 'story', title: '이야기', icon: '📖', group: '이야기', short: '우리 반이 만든 이야기 속으로' }, { id: '@imagine', cat: 'imagine', title: '상상의 세계', icon: '🌈', group: '상상', short: '상상 속 학교로 떠나요' }];
+  const LCATS = [{ id: '@story', cat: 'story', title: '이야기', icon: '📖', group: '이야기', short: '우리 반이 만든 이야기 속으로' }, { id: '@imagine', cat: 'imagine', title: '상상의 세계', icon: '🌈', group: '상상', short: '상상 속 새로운 세계로 떠나요' }];
   let LCAT = null, REG = null;   // 수업판(v3): 갈래(이야기·상상의 세계) → 그 안의 카드
   const GORDER = Object.keys(GROUPS);
   const FREE = { id: '', title: '자유 탐험', icon: '🏫', group: '탐험', short: '학교 어디든 걸어 다녀요 · 방에 들어가면 친구들도 보여요' };
@@ -118,7 +118,9 @@ export function createTitle(h) {
     return null;
   }
   let cards = [], list = [], focusI = 0, filled = Promise.resolve();
+  let mpSeen = false;   // 카드를 지을 때 함께하기(window.SM_MP — main.js가 lobby.js를 읽은 뒤)가 있었는지
   async function fill(reuse) {
+    mpSeen = !!window.SM_MP;
     let G = reuse && REG ? REG : {};
     if (!(reuse && REG)) try { G = (await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url))).GAMES || {}; } catch (e) { console.error('[오프닝] 놀이 목록을 못 불러옴', e); }
     REG = G;
@@ -156,6 +158,7 @@ export function createTitle(h) {
   const calm = ms => { calmT = performance.now() + ms; }, calmOK = () => performance.now() >= calmT;
   const onKey = e => {
     if (phase === 'off') return;
+    if (e.target && e.target.closest && e.target.closest('.ttl-keep input, .ttl-keep textarea')) return;   // 오프닝 위에 뜬 창(함께하기 번호·이름 · 🔒 비밀번호)의 입력칸 — 글자·Enter·Esc는 그 창 몫(창이 월드로는 막는다)
     e.stopImmediatePropagation(); if (e.type !== 'keydown') return;   // 제목·메뉴·날아오기 동안 키는 월드로 가지 않는다(WASD로 뒤에서 걷지 않게)
     heard = true;
     if (e.repeat && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); return; }
@@ -191,6 +194,7 @@ export function createTitle(h) {
   function toMenu() {
     if (phase !== 'title' || !calmOK()) return; heard = true; jingle(); calm(450);
     if (PROMO) { const r = $('.ttl-start').getBoundingClientRect(); launch(PROMO_GAME, r); return; }   // 홍보판: 카드 없이 바로 견학
+    if (!mpSeen && window.SM_MP) filled = fill(true);   // 오프닝을 지을 때 아직 함께하기를 못 읽었으면(느린 기기) '👥 방 들어가기' 칸이 '꺼져 있어요'로 남지 않게 다시
     show('menu'); filled.then(() => setTimeout(() => { if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); }, 60));
   }
   function toTitle() { if (phase !== 'menu') return; blip(); calm(350); show('title'); }

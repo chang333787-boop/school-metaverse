@@ -53,6 +53,12 @@ body.small #tView{right:calc(158px + env(safe-area-inset-right));bottom:calc(24p
 body.small .wg-feed{left:calc(8px + env(safe-area-inset-left))!important;top:calc(96px + env(safe-area-inset-top))!important;font-size:12px!important;gap:3px!important}
 body.small .wg-feed > div:nth-last-child(n+4){display:none}
 body.small .wg-board{font-size:12px!important;min-width:0!important;width:min(360px,calc(100vw - 32px));max-height:calc(100vh - 24px);overflow:auto;box-sizing:border-box;padding:8px 10px!important}
+/* 메모장(MEMO · 10-04 리뷰 #26): 터치에서 카드의 ✏️·🚶·🚩·＋ 단추 = 손가락 칸 44px */
+body.touch #memo-ui .cd .it button,body.touch #memo-ui .cd .ft button,body.touch #memo-ui .cd .res .x{min-width:44px;min-height:44px;font-size:16px;padding:4px 8px}
+body.touch #memo-ui .cd .it{align-items:center}
+body.touch #memo-ui .cd .add button,body.touch #memo-ui .cd .ri button{min-height:44px;font-size:14px}
+body.touch #memo-ui .cd .pl.none button.nf{min-height:44px;font-size:14px}
+body.touch #memo-ui .cc[data-b]{padding:10px 12px;font-size:14px;min-height:44px;box-sizing:border-box}
 /* 블록 놀이(BLOCK-1 10-03): 🧱/⛏·블록 고르기·↩ = 행동 버튼 위 한 줄 · 블록 판 = 가운데 2줄 */
 body.small #bk-tb{right:calc(88px + env(safe-area-inset-right))!important;bottom:calc(88px + env(safe-area-inset-bottom))!important}
 body.small #bk-tb button{min-width:44px!important;height:44px!important;font-size:18px!important}

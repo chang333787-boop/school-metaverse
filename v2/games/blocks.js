@@ -1,10 +1,13 @@
 // v2 블록 놀이(BLOCK-1 · 10-03 교사 "우리 학교에 블록 — 지금 퀄리티 그대로" · "가구까지 부숴야 예쁘다")
 //  지금 학교는 그대로 두고 그 위에 0.5m 블록을 놓고 부순다. 가구(책상·책장·사물함…)는 통째로 퍽 부서진다(map.world.furn — 게임이 멈추면 처음대로).
 //  판 = metaverse/blockList/<판> {t 이름, n 순서, lock 잠금, open 모두 고치기} · 블록 = metaverse/blocks/<판>/b/<x_z_q> {t 종류, b 놓은 사람} · 부순 가구 = metaverse/blocks/<판>/f/<id> {b, t}
-//  듣기 = 판 하나에 연결 하나(blocks/<판> — 학교 와이파이 연결 수 아끼기) · 잠금·모두 고치기는 15초마다 확인
+//  듣기 = 판 하나에 연결 하나(blocks/<판> — 학교 와이파이 연결 수 아끼기) · 잠금·모두 고치기는 들어갈 때 한 번 + 6초마다 확인(작은 GET — 연결을 붙잡지 않음)
 //  🏠 나만의 판 = 이 기기에만(map.store — 2초에 한 번 저장). 같은 판 친구 블록은 바로 보인다(EventSource) · 함께하기 방이면 친구 모습도(net.js).
+//  조작(BLOCK-2 · 10-04 리뷰): 누르기 = 놓기(🔨 모드면 부수기) · 오른쪽 '톡' = 부수기(오른쪽으로 끌면 둘러보기만) · 1~0·휠 = 블록 · Q = 놓기/부수기 · Z = 되돌리기(내가 한 것만 · 잠긴 판은 안 됨) · Esc = 판 창 닫기
+//   터치 = 화면 톡 + 오른쪽 아래 🧱/🔨 단추 · 끼이면(되살아난 가구·친구 블록) 저절로 옆 빈자리로 · 선생님 🧹 비우기 → ↩️ 비운 블록 되돌리기(휴지통 한 번)
 //  시제품 실측(10-03): 블록 5,170개 = 화면 삼각형 +3.4만·그리기 +26·걷기 계산 +0.1ms · 한 칸 다시 짓기 ≤0.6ms → 판마다 4,000개까지 · 64m 밖 블록 칸은 안 그림.
 //  블록 좌표: x·z = 0.5m 격자(ix, iz) · 높이 q = 5cm 단위(놓인 땅 높이를 따른다 — 운동장 -1.35 · 바닥 0 · 2층) · 블록은 그림자를 받기만(굽기 없음).
+import { teacherPin } from '../js/lobby.js?v=12';   // 선생님 비밀번호 창(●로 가림 — 메모장·함께하기와 같은 것 · main.js와 같은 ?v=라야 한 벌)
 export const meta = { id: 'blocks', title: '블록 놀이', api: 1 };
 const DB = 'https://class-rpg-6f409-default-rtdb.asia-southeast1.firebasedatabase.app/metaverse';
 const S = 0.5, CK = 8, MAXB = 4000, FAR = 64, REACH = 9;
@@ -15,26 +18,33 @@ export const TYPES = [
   { n: '돌', c: '#9b9b97', tex: 'stone' }, { n: '유리', c: '#cfeefe', glass: true }, { n: '검정', c: '#33363b' }, { n: '빛 블록', c: '#fff1a6', glow: true },
 ];
 const WHY = { full: '이 판은 블록이 가득 찼어요(4,000개) — 몇 개 부수고 놓아요', out: '학교 밖에는 못 놓아요', high: '너무 높아요', ground: '땅속에는 못 놓아요', have: '여기는 이미 블록이 있어요',
-  wall: '벽·가구와 겹쳐요 — 한 칸 옆에 놓아요', me: '내 몸 자리예요 — 한 걸음 비켜서 놓아요', far: '너무 멀어요 — 가까이 가서 놓아요', lock: '🔒 선생님이 잠근 판이에요 — 보기만 할 수 있어요' };
+  wall: '벽·가구와 겹쳐요 — 한 칸 옆에 놓아요', door: '🚪 문 자리예요 — 문 앞 한 칸은 비워 둬요(문이 닫히며 블록을 뚫지 않게)', me: '내 몸 자리예요 — 한 걸음 비켜서 놓아요', far: '너무 멀어요 — 가까이 가서 놓아요', farB: '너무 멀어요 — 가까이 가서 부숴요', lock: '🔒 선생님이 잠근 판이에요 — 보기만 할 수 있어요' };
+const WHYS = { have: '그 자리에 블록이 있어요', full: '판이 가득 찼어요', wall: '벽·가구와 겹쳐요', door: '문 자리예요', out: '학교 밖이에요', high: '너무 높아요', ground: '땅속이에요', lock: '잠긴 판이에요' };   // 되돌리기 알림용 짧은 까닭
+// 아래 가운데 쌓기(데스크톱): 도움말 줄 #help(bottom 10) → 블록 줄 46 → 안내 96 → E 안내 #hint 132(main.js가 56을 직접 적어서 !important · 이 스타일은 놀이가 멈추면 빠짐)
 const STYLE = `
-#bk-bar{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:4px;padding:5px;background:rgba(20,28,40,.62);border-radius:12px;z-index:30}
+#bk-bar{position:fixed;left:50%;bottom:46px;transform:translateX(-50%);display:flex;gap:4px;padding:5px;background:rgba(20,28,40,.62);border-radius:12px;z-index:30}
 #bk-bar .s{width:34px;height:34px;border-radius:7px;border:2px solid rgba(255,255,255,.25);background-size:800% 200%;image-rendering:pixelated;cursor:pointer;position:relative;padding:0}
 #bk-bar .s.on{border-color:#ffd43b;box-shadow:0 0 0 2px #ffd43b}
 #bk-bar .s i{position:absolute;right:2px;bottom:1px;font:700 10px/1 sans-serif;color:#fff;text-shadow:0 1px 2px #000;font-style:normal}
-#bk-tip{position:fixed;left:50%;bottom:62px;transform:translateX(-50%);background:rgba(20,28,40,.72);color:#fff;font:13px/1.4 sans-serif;padding:5px 12px;border-radius:8px;z-index:30;pointer-events:none;white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis}
+#bk-tip{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:rgba(20,28,40,.72);color:#fff;font:13px/1.4 sans-serif;padding:5px 12px;border-radius:8px;z-index:30;pointer-events:none;white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis}
+#bk-tip:empty{display:none}
+body:not(.touch) #hint{bottom:132px!important}
+body.touch #bk-tip{bottom:calc(166px + env(safe-area-inset-bottom));white-space:normal;word-break:keep-all;overflow-wrap:anywhere;text-align:center;max-width:min(560px,80vw)}
 #bk-tb{position:fixed;right:calc(90px + env(safe-area-inset-right));bottom:calc(100px + env(safe-area-inset-bottom));display:none;z-index:30;gap:6px}
-body:has(.bk-panel) #bk-tb,body:has(.bk-panel) #bk-bar{display:none!important}
+body:has(.bk-panel) #bk-tb,body:has(.bk-panel) #bk-bar,body:has(.bk-panel) #bk-tip{display:none!important}
 #bk-tb button{font:600 15px/1 sans-serif;border:0;border-radius:12px;background:rgba(20,28,40,.72);color:#fff;min-width:48px;height:48px;padding:0 10px;cursor:pointer}
 #bk-tb button.on{background:#e8590c}
 #bk-pal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:none;grid-template-columns:repeat(4,58px);gap:8px;padding:12px;background:rgba(20,28,40,.88);border-radius:14px;z-index:62}
 #bk-pal .s{width:58px;height:58px;border-radius:10px;border:3px solid rgba(255,255,255,.25);background-size:800% 200%;image-rendering:pixelated;padding:0}
 #bk-pal .s.on{border-color:#ffd43b}
-.bk-panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,92vw);max-height:86vh;overflow:auto;background:#fffdf8;color:#1d2b3a;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:16px 18px;z-index:60;font:15px/1.5 sans-serif}
+.bk-panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,92vw);max-height:86vh;overflow:auto;background:#fffdf8;color:#1d2b3a;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:16px 18px;z-index:60;font:15px/1.5 sans-serif;word-break:keep-all;overflow-wrap:anywhere}
 .bk-panel h3{margin:0 0 6px;font-size:19px}.bk-panel .sm{font-size:13px;color:#5b6675}
 .bk-panel .bl{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
 .bk-panel button{font:inherit;border:0;border-radius:10px;padding:8px 10px;background:#e8eef6;color:#1d3557;cursor:pointer;text-align:left}
 .bk-panel button.pri{background:#2f6fd6;color:#fff;text-align:center}.bk-panel button.cur{outline:3px solid #ffd43b}
-.bk-panel .row{display:flex;gap:6px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
+.bk-panel .row{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;position:sticky;bottom:-16px;z-index:1;background:#fffdf8;margin:10px -18px -16px;padding:8px 18px 12px;border-top:1px solid #e9edf2}
+.bk-panel button.x{float:right;width:44px;height:44px;margin:-6px -8px 4px 8px;padding:0;text-align:center;font-size:18px;background:#eef1f5}
+@media (max-height:520px){.bk-panel{max-height:calc(100vh - 16px);padding:10px 14px 16px;font-size:14px}.bk-panel h3{font-size:17px;margin:0 0 2px}.bk-panel .hlp{display:none}.bk-panel .bl{grid-template-columns:repeat(3,1fr);gap:5px;margin:6px 0}.bk-panel .bl button{padding:6px 8px}.bk-panel .row{margin:8px -14px -16px;padding:6px 14px 10px}}
 .bk-panel input{font:inherit;border:2px solid #c9d3df;border-radius:10px;padding:5px 8px}
 `;
 
@@ -73,7 +83,7 @@ export default async function start(map, params = {}) {
   const el = (tag, id, html, parent = ui) => { const d = document.createElement(tag); if (id) d.id = id; if (html != null) d.innerHTML = html; parent.appendChild(d); return d; };
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const toast = (s, t = 2.2) => map.hud.toast(s, t);
-  const req = (path, method = 'GET', data) => fetch(DB + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data) }).then((r) => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)));
+  const req = (path, method = 'GET', data, keep) => fetch(DB + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data), keepalive: !!keep }).then((r) => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)));   // keep = 페이지를 떠나는 중에도 보냄
   const keyStop = (n) => { for (const t of ['keydown', 'keyup']) n.addEventListener(t, (e) => e.stopPropagation()); };
   map.player.freeMouse(true);
   window.SM_ACT = '🧱 블록 놀이';
@@ -150,10 +160,39 @@ export default async function start(map, params = {}) {
   // ── 겨누기: 화면 점 → 맞은 것(블록 · 가구 · 벽 · 땅) + 놓을 칸
   const RC = new THREE.Raycaster(), V2 = new THREE.Vector2(), O = new THREE.Vector3(), Dv = new THREE.Vector3();
   const isObjCol = (c) => !!map.world.furn.idOf(c);   // 물건(가구·나무) 충돌 상자 — 물건은 삼각형으로 고른다
-  const KN = { desk: '책상', chair: '의자', shelf: '책장', locker: '사물함', cab: '수납장', board: '게시판', plant: '화분', tree: '나무', bush: '덤불', car: '자동차', goal: '골대', tv: 'TV', ac: '에어컨', fan: '선풍기', ext: '소화기', case: '진열장', cart: '책 수레', printer: '복합기', table: '탁자', beanbag: '빈백', cushion: '방석', purifier: '공기청정기' };
+  // 부술 때 '퍽! ○○' 이름 — world.js objWrap·objScope의 kind마다(OBJ-2로 늘어난 것까지 · 빠지면 시작할 때 콘솔에 알림)
+  const KN = { desk: '책상', chair: '의자', shelf: '책장', locker: '사물함', cab: '수납장', board: '게시판', plant: '화분', tree: '나무', bush: '덤불', car: '자동차', goal: '골대', tv: 'TV', ac: '에어컨', fan: '선풍기', ext: '소화기', case: '진열장', cart: '책 수레', printer: '복합기', table: '탁자', beanbag: '빈백', cushion: '방석', purifier: '공기청정기',
+    monitor: '모니터', labtable: '실험대', umbrella: '우산꽂이', screen: '칸막이', sofa: '소파', bed: '침대', bench: '벤치', fountain: '음수대', fridge: '냉장고', sink: '개수대', bin: '쓰레기통', box: '상자', mat: '매트', trolley: '수레',
+    counter: '배식대', cook: '조리 기구', stand: '보면대', banner: '배너', clock: '시계', aed: '심장충격기', bucket: '대야', cone: '라바콘', piano: '피아노', drum: '북', basket: '공 바구니', slide: '미끄럼틀', swing: '그네',
+    climb: '오르기 틀', rocker: '흔들 말', post: '말뚝', seesaw: '시소', statue: '조각상', rack: '거치대' };
+  try { const W = window.SD2 && window.SD2.world, miss = new Set(); if (W && W.objects) for (const o of W.objects) if (!KN[o.kind]) miss.add(o.kind);   // 시작할 때 한 번(새 kind가 '물건'으로 새지 않게)
+    if (miss.size) console.warn('[blocks] 부술 때 이름(KN)이 없는 물건 종류 — "퍽! 물건"으로 나와요: ' + [...miss].join(', ')); } catch (e) { /* */ }
   function slab(o, d, x0, y0, z0, x1, y1, z1) { let t0 = 0, t1 = 1e9, ax9 = -1; const lo = [x0, y0, z0], hi = [x1, y1, z1], oo = [o.x, o.y, o.z], dd = [d.x, d.y, d.z];
     for (let ax = 0; ax < 3; ax++) { if (Math.abs(dd[ax]) < 1e-9) { if (oo[ax] < lo[ax] || oo[ax] > hi[ax]) return null; continue; } let p = (lo[ax] - oo[ax]) / dd[ax], r = (hi[ax] - oo[ax]) / dd[ax]; if (p > r) { const s9 = p; p = r; r = s9; } if (p > t0) { t0 = p; ax9 = ax; } if (r < t1) t1 = r; if (t0 > t1) return null; }
     if (ax9 < 0) return null; const n = [0, 0, 0]; n[ax9] = -Math.sign(dd[ax9]); return { t: t0, n }; }
+  // 닫힌 문 = 겨누기에서 벽처럼(10-04 재시험: 문은 충돌 상자가 없어 3~9m 떨어진 닫힌 교실 문을 누르면 그 뒤 책상이 '퍽!' 부서지고 블록이 교실 안에 놓였다)
+  //   문 자리 = 문 폭 × 벽 두께(±0.15) × 문 높이 · 8m 칸 숫자 이름으로(누를 때·20번/초 겨눔에서 가까운 칸만) · 열림 = main.js doorTick과 같은 규칙(몸이 3m 안 · 잠긴 문은 늘 닫힘)
+  const DG = new Map(), dkey = (gx, gz) => (gx + 2048) * 4096 + (gz + 2048);
+  for (const p of map.pois({ src: 'door' })) { const d = p.door; if (!d) continue; const X = d.ax === 'x', hw = d.w / 2;
+    const r = { n: +String(p.id).slice(5), cx: d.cx, cz: d.cz, y0: d.y0, y1: d.y0 + (d.dh ?? 2.6), x0: X ? d.cx - hw : d.cx - 0.15, x1: X ? d.cx + hw : d.cx + 0.15, z0: X ? d.cz - 0.15 : d.cz - hw, z1: X ? d.cz + 0.15 : d.cz + hw };
+    for (let gx = Math.floor(r.x0 / 8); gx <= Math.floor(r.x1 / 8); gx++) for (let gz = Math.floor(r.z0 / 8); gz <= Math.floor(r.z1 / 8); gz++) { const k = dkey(gx, gz); let L = DG.get(k); if (!L) DG.set(k, L = []); if (!L.includes(r)) L.push(r); } }
+  const doorShut = (r) => { const me = map.player.pos(), dx = me.x - r.cx, dz = me.z - r.cz; return !(dx * dx + dz * dz < 9 && Math.abs(me.y - r.y0) < 2) || !!(map.door && map.door.locked && map.door.locked(r.n)); };
+  function doorRay(tMax) {   // O + Dv·t(0~tMax)가 처음 맞는 닫힌 문 { t, n, r } 또는 null
+    const ex = O.x + Dv.x * tMax, ez = O.z + Dv.z * tMax; let hit = null;
+    for (let gx = Math.floor(Math.min(O.x, ex) / 8); gx <= Math.floor(Math.max(O.x, ex) / 8); gx++) for (let gz = Math.floor(Math.min(O.z, ez) / 8); gz <= Math.floor(Math.max(O.z, ez) / 8); gz++) {
+      const L = DG.get(dkey(gx, gz)); if (!L) continue;
+      for (let i = 0; i < L.length; i++) { const r = L[i]; const h = slab(O, Dv, r.x0, r.y0, r.z0, r.x1, r.y1, r.z1); if (h && h.t < (hit ? hit.t : tMax) && doorShut(r)) hit = { t: h.t, n: h.n, r }; } }
+    return hit;
+  }
+  // 블록 칸이 문 자리(벽 두께 안)와 겹치나 — 열린 문 자리에 놓으면 문이 블록을 뚫고 닫힌다
+  function inDoor(x0, x1, y0, y1, z0, z1) {
+    for (let gx = Math.floor(x0 / 8); gx <= Math.floor(x1 / 8); gx++) for (let gz = Math.floor(z0 / 8); gz <= Math.floor(z1 / 8); gz++) { const L = DG.get(dkey(gx, gz)); if (!L) continue;
+      for (let i = 0; i < L.length; i++) { const r = L[i]; if (r.x0 < x1 && r.x1 > x0 && r.z0 < z1 && r.z1 > z0 && r.y0 < y1 && r.y1 > y0) return true; } }
+    return false;
+  }
+  // 스쿨버스(차는 부서지는데 버스는 학교에 붙어 있음 — 누르면 '버스'라고 알려 주게) = '버스 안' 구역 둘레 0.5m
+  const BUSZ = map.zones.find((z) => /버스/.test(z.label)) || null;
+  const onBus = (p) => !!BUSZ && p[0] > BUSZ.x0 - 0.5 && p[0] < BUSZ.x1 + 0.5 && p[2] > BUSZ.z0 - 0.5 && p[2] < BUSZ.z1 + 0.5 && p[1] < (BUSZ.y ?? 0) + 4.5;
   function aimAt(sx, sy) {
     V2.set(sx / innerWidth * 2 - 1, -(sy / innerHeight) * 2 + 1); RC.setFromCamera(V2, cam); O.copy(RC.ray.origin); Dv.copy(RC.ray.direction);
     const me = map.player.pos(), mx = me.x, my = me.y + 1, mz = me.z, maxT = Math.hypot(O.x - mx, O.y - my, O.z - mz) + REACH;
@@ -165,6 +204,8 @@ export default async function start(map, params = {}) {
     // 2) 학교 충돌 상자(벽·바닥판·사람 — 물건 충돌·블록 상자는 빼고)
     const F = map.world.furn, tEnd = best ? best.t : maxT, w = map.q.rayHit([O.x, O.y, O.z], [O.x + Dv.x * tEnd, O.y + Dv.y * tEnd, O.z + Dv.z * tEnd], { skipDyn: true, skip: isObjCol });
     if (w) best = { kind: 'wall', t: w.t * tEnd, n: w.n, box: w.box };
+    // 2½) 닫힌 문(충돌 상자가 없어 광선이 지나가던 것)
+    const dh = doorRay(best ? best.t : maxT); if (dh) best = { kind: 'door', t: dh.t, n: dh.n, door: dh.r.n };
     // 3) 물건(가구·나무·소품 — 보이는 삼각형까지 · OBJ-1)
     const tF = best ? best.t : maxT, f = F.pick([O.x, O.y, O.z], [O.x + Dv.x * tF, O.y + Dv.y * tF, O.z + Dv.z * tF]);
     if (f) { const ax = Math.abs(f.n[0]) >= Math.abs(f.n[1]) && Math.abs(f.n[0]) >= Math.abs(f.n[2]) ? 0 : Math.abs(f.n[1]) >= Math.abs(f.n[2]) ? 1 : 2, n = [0, 0, 0]; n[ax] = Math.sign(f.n[ax]) || 1;
@@ -194,23 +235,39 @@ export default async function start(map, params = {}) {
     if (y > 28) return 'high';
     if (y < map.q.baseAt(cx, cz) - 0.04) return 'ground';
     const cq = COLQ.get(ckey(ix, iz)); if (cq) for (const q2 of cq) if (Math.abs(q2 - q) < 10) return 'have';
-    if (map.q.overlap({ x0: ix * S + 0.02, x1: (ix + 1) * S - 0.02, y0: y + 0.02, y1: y + S - 0.02, z0: iz * S + 0.02, z1: (iz + 1) * S - 0.02 }, { skipDyn: true })) return 'wall';
+    const hit = cellHit(ix, iz, q); if (hit) return hit;
     const me = map.player.pos(); if (ix * S < me.x + 0.27 && (ix + 1) * S > me.x - 0.27 && iz * S < me.z + 0.27 && (iz + 1) * S > me.z - 0.27 && y < me.y + 1.5 && y + S > me.y + 0.05) return 'me';
     return null;
   }
+  // 칸이 학교(벽·가구 — 부순 가구는 빼고)나 문 자리와 겹치나: 'wall' | 'door' | null — 놓기·휴지통 되돌리기 같이
+  function cellHit(ix, iz, q) { const y = q / 20, x0 = ix * S + 0.02, x1 = (ix + 1) * S - 0.02, z0 = iz * S + 0.02, z1 = (iz + 1) * S - 0.02;
+    if (map.q.overlap({ x0, x1, y0: y + 0.02, y1: y + S - 0.02, z0, z1 }, { skipDyn: true })) return 'wall';
+    return inDoor(x0, x1, y + 0.02, y + S - 0.02, z0, z1) ? 'door' : null; }
   const canBreak = (b) => !board || board.local || teacher || board.open || (b.b && b.b === (name || '익명'));
+  // 내 몸(±0.27 · 발+0.05~발+1.5 — canPut 'me'와 같은 몸)이 상자 bx{x0,x1,y0,top,z0,z1}와 겹치나
+  const meIn = (bx) => { const me = map.player.pos(); return bx.x0 < me.x + 0.27 && bx.x1 > me.x - 0.27 && bx.z0 < me.z + 0.27 && bx.z1 > me.z - 0.27 && bx.y0 < me.y + 1.5 && bx.top > me.y + 0.05; };
+  // 가구 상자 안에 블록이 있나(되살리기 전에 — 블록과 가구가 겹쳐 보이지 않게 · 누를 때만)
+  function blocksIn(bx) {
+    if (!bx) return false; const q0 = Math.round(bx.y0 * 20) + 1, q1 = Math.round(bx.top * 20) - 1;
+    for (let ix = Math.floor((bx.x0 + 0.05) / S); ix <= Math.floor((bx.x1 - 0.05) / S); ix++) for (let iz = Math.floor((bx.z0 + 0.05) / S); iz <= Math.floor((bx.z1 - 0.05) / S); iz++) {
+      const cq = COLQ.get(ckey(ix, iz)); if (cq) for (const q of cq) if (q + 10 > q0 && q < q1) return true; }
+    return false;
+  }
+  // 맞은 상자가 사람 몸인가(사람 충돌 = 작은 상자가 그 사람 자리에 — 선 사람 0.44각·바닥에 앉은 사람은 다리까지 · 누를 때만 58명을 훑는다)
+  function isPerson(bx, p) { if (Math.max(bx.x1 - bx.x0, bx.z1 - bx.z0) > 1.4) return false; const cx = (bx.x0 + bx.x1) / 2, cz = (bx.z0 + bx.z1) / 2;
+    for (const r of map.npc.list()) if (!r.hidden && Math.hypot(r.x - cx, r.z - cz) < 0.8 && p[1] > r.y - 0.1 && p[1] < r.y + 2.2) return true; return false; }
 
   // ── 손대기(놓기·부수기·되돌리기)
   const UNDO = [];
   const pushUndo = (u) => { UNDO.push(u); if (UNDO.length > 60) UNDO.shift(); };
   function doPut(A) {
-    if (!A || !A.put) return; if (A.far) return toast(WHY.far);
+    if (!A || A.far) return toast(WHY.far, 1.6); if (!A.put) return;   // 아무것도 못 맞힘(9m 밖·하늘) = 너무 멀어요(예전엔 조용히 끝나 왜 안 되는지 몰랐다)
     const { ix, iz, q } = A.put, why = canPut(ix, iz, q); if (why) return toast(WHY[why], 2.4);
-    const k = key(ix, iz, q), v = { t: cur, b: name || '익명' }; apply(k, v); send(k, v); pushUndo({ k, put: true }); flushBuild(9);
+    const k = key(ix, iz, q), v = { t: cur, b: name || '익명' }; apply(k, v); send(k, v); pushUndo({ k, put: true, by: v.b, t: v.t }); flushBuild(9);
     map.tone(330 + cur * 18, 0, 0.06, 'triangle', 0.14, 240); ghostOff();
   }
   function doBreak(A) {
-    if (!A) return; if (A.far) return toast(WHY.far);
+    if (!A || A.far) return toast(WHY.farB, 1.6);
     if (board && board.lock && !teacher) return toast(WHY.lock, 2.4);
     if (A.kind === 'block') { const k = key(A.ix, A.iz, A.q), b = B.get(k); if (!b) return;
       if (!canBreak(b)) return toast('친구(' + b.b + ')가 놓은 블록이에요 — 선생님이 「모두 고치기」를 켜면 부술 수 있어요', 3);
@@ -222,13 +279,34 @@ export default async function start(map, params = {}) {
         burst((bx.x0 + bx.x1) / 2, (bx.y0 + bx.top) / 2, (bx.z0 + bx.z1) / 2, r.color, 22, Math.max(0.6, Math.min(2.2, Math.max(bx.x1 - bx.x0, bx.z1 - bx.z0) / 2)));
         map.tone(150, 0, 0.22, 'sawtooth', 0.12, 55); map.tone(420, 0.05, 0.12, 'triangle', 0.08, 200); }
       ghostOff(); return; }
-    toast('벽·땅은 아직 못 부숴요 — 블록 · 가구(책상·의자·책장·사물함…) · 나무를 부술 수 있어요', 2.6);
+    // 그 밖(학교에 붙은 것) — 무엇을 눌렀는지에 맞게(10-04 재시험: 스쿨버스를 눌러도 '벽·바닥은 못 부숴요'였다)
+    const tail = ' — 블록 · 가구 · 나무를 부숴 봐요';
+    ghostOff();
+    if (A.kind === 'door') return toast('🚪 문은 못 부숴요' + tail, 2.4);
+    if (A.kind === 'ground') return toast('땅은 못 부숴요' + tail, 2.4);
+    if (A.kind === 'wall' && A.box && isPerson(A.box, A.p)) return toast('사람은 부술 수 없어요' + tail, 2.4);
+    if (A.kind === 'wall' && onBus(A.p)) return toast('🚌 스쿨버스는 학교 차라 못 부숴요' + tail, 2.4);
+    if (A.kind === 'wall' && A.box && A.box.vy1 != null) return toast('이건 학교에 붙어 있어서 못 부숴요' + tail, 2.4);   // 올라서기 금지 붙박이(울타리·칸막이…)
+    const ny = A.n ? A.n[1] : 0;
+    toast((ny > 0.5 ? '바닥·계단은' : ny < -0.5 ? '천장은' : '벽은') + ' 못 부숴요' + tail, 2.4);
   }
+  // 되돌리기 = 내가 한 것만 하나씩. 잠긴 판이면 기록은 그대로 두고(풀리면 이어서) · 내 몸 자리면 기록을 다시 쌓고(비키면 됨) ·
+  //   그 밖에 못 되돌리는 것(친구가 그 칸을 바꿈·판이 가득·블록이 가구 자리에)은 알리고 버린다(예전엔 같은 기록에 걸려 Z가 영영 멈췄다)
   function undo() {
+    if (board && board.lock && !teacher) return toast(WHY.lock, 2.4);
     const u = UNDO.pop(); if (!u) return toast('되돌릴 것이 없어요', 1.4);
-    if (u.put) { const b = B.get(u.k); if (b) { apply(u.k, null); send(u.k, null); } }
-    else if (u.del) { if (!B.has(u.k)) { const p = u.k.split('_'), why = canPut(+p[0], +p[1], +p[2]); if (why) { toast(WHY[why], 2); UNDO.push(u); return; } apply(u.k, u.del); send(u.k, u.del); } }
-    else if (u.furn) { map.world.furn.show(u.furn); sendF(u.furn, null); }
+    const skip = (why) => toast('그건 되돌릴 수 없어요(' + why + ') — 되돌리기를 한 번 더 누르면 그 전 것을 되돌려요', 2.8);
+    if (u.put) { const b = B.get(u.k); if (b) { if (b.b !== u.by || b.t !== u.t) return skip('친구가 그 자리를 바꿨어요'); apply(u.k, null); send(u.k, null); } }
+    else if (u.del) { if (B.has(u.k)) return skip(WHYS.have);
+      const p = u.k.split('_'), why = canPut(+p[0], +p[1], +p[2]);
+      if (why === 'me') { UNDO.push(u); return toast(WHY.me, 2); }
+      if (why) return skip(WHYS[why] || WHY[why]);
+      apply(u.k, u.del); send(u.k, u.del); }
+    else if (u.furn) { const F = map.world.furn;
+      if (F.isHidden(u.furn)) { const bx = F.box(u.furn);
+        if (bx && meIn(bx)) { UNDO.push(u); return toast((KN[bx.kind] || '물건') + ' 자리에 서 있어요 — 한 걸음 비켜서 되돌려요', 2.2); }
+        if (blocksIn(bx)) return skip('그 자리에 블록이 있어요');
+        F.show(u.furn); sendF(u.furn, null); } }
     flushBuild(9); map.tone(520, 0, 0.05, 'sine', 0.1, 700);
   }
 
@@ -259,28 +337,35 @@ export default async function start(map, params = {}) {
   }
 
   // ── 같은 판 친구와(Firebase) · 나만의 판(이 기기)
-  const pend = new Map(), pendF = new Map(), MINE = new Map(), MINEF = new Map(); let flushT = 0, localT = 0;   // MINE = 내가 막 바꾼 것(서버가 같은 값을 돌려줄 때까지 · 8초)
+  const pend = new Map(), pendF = new Map(), MINE = new Map(), MINEF = new Map(); let flushT = 0, localT = 0, chkMe = false;   // MINE = 내가 막 바꾼 것(서버가 같은 값을 돌려줄 때까지 · 8초) · chkMe = 가구가 되살아남·친구 블록 → 다음 틱에 내 몸이 끼었나 한 번 봄
   const fresh = (M, k) => { const e = M.get(k); if (!e) return false; if (performance.now() - e > 8000) { M.delete(k); return false; } return true; };
   function send(k, v) { if (!board) return; if (board.local) return saveLocal(); pend.set(k, v); MINE.set(k, performance.now()); if (!flushT) flushT = setTimeout(flush, 140); }
   function sendF(id, v) { if (!board) return; if (board.local) return saveLocal(); pendF.set(id, v); MINEF.set(id, performance.now()); if (!flushT) flushT = setTimeout(flush, 140); }
-  async function flush() {
+  async function flush(keep) {
     flushT = 0; if (!board || board.local || (!pend.size && !pendF.size)) return;
     const o = {}; for (const [k, v] of pend) o['b/' + k] = v; for (const [k, v] of pendF) o['f/' + k] = v; pend.clear(); pendF.clear();
-    try { await req('/blocks/' + board.id, 'PATCH', o); } catch (e) { toast('저장하지 못했어요 — 인터넷을 확인해 주세요', 2.5); }
+    try { await req('/blocks/' + board.id, 'PATCH', o, keep); } catch (e) { if (!keep) toast('저장하지 못했어요 — 인터넷을 확인해 주세요', 2.5); }
   }
-  function saveLocal() { clearTimeout(localT); localT = setTimeout(() => { const o = {}; for (const [k, b] of B) o[k] = [b.t]; map.store.set('mine', { b: o, f: map.world.furn.hidden() }); }, 300); }
-  function clearAll() { for (const k of [...B.keys()]) apply(k, null); for (const id of map.world.furn.hidden()) map.world.furn.show(id); UNDO.length = 0; flushBuild(999); }
-  function norm(v) { return v && typeof v === 'object' ? { t: v.t | 0, b: v.b || '' } : Array.isArray(v) ? { t: v[0] | 0, b: '' } : null; }
+  function saveNow(hard) { clearTimeout(localT); localT = 0; if (!board || !board.local) return; const o = {}; for (const [k, b] of B) o[k] = [b.t]; map.store.set('mine', { b: o, f: map.world.furn.hidden() }); if (hard && map.store.flush) map.store.flush(); }   // hard = 지금 바로 기기에(페이지를 떠날 때)
+  function saveLocal() { clearTimeout(localT); localT = setTimeout(saveNow, 300); }
+  // 기다리던 저장을 지금(판을 바꾸기 전·그만두기 전 — 예전엔 0.3초 안에 그만두면 마지막 블록이 사라지고, 다음 판 자료가 앞 판에 섞일 수 있었다)
+  function settle() { if (localT) saveNow(); if (flushT) { clearTimeout(flushT); flush(); } }
+  // 새로고침·탭 닫기·다른 앱으로(10-04 재시험: 나만의 판에서 놓고 0.4초 안에 Ctrl+Shift+R 하면 그 블록이 사라졌다 — 0.3초 기다림 + map.store 2초 몰아 쓰기) → 기다리던 것을 지금 바로
+  const onLeave = () => { if (dead || !board) return; if (board.local) saveNow(true); else if (flushT) { clearTimeout(flushT); flush(true); } };
+  const onVis = () => { if (document.visibilityState === 'hidden') onLeave(); };
+  addEventListener('pagehide', onLeave); document.addEventListener('visibilitychange', onVis);
+  function clearAll() { for (const k of [...B.keys()]) apply(k, null); const hid = map.world.furn.hidden(); for (const id of hid) map.world.furn.show(id); if (hid.length) chkMe = true; UNDO.length = 0; flushBuild(999); }
+  function norm(v) { return Array.isArray(v) ? { t: v[0] | 0, b: '' } : v && typeof v === 'object' ? { t: v.t | 0, b: v.b || '' } : null; }   // 나만의 판 = [t] 배열 — 배열도 object라 먼저 본다(예전엔 다시 들어오면 모두 흰 블록)
   function onBlocks(path, data, patch) {
-    const one = (k, v) => { const b = B.get(k), same = v ? !!b && b.t === v.t && b.b === v.b : !b; if (same) { MINE.delete(k); return; } if (fresh(MINE, k)) return; apply(k, v); };   // 내가 막 바꾼 칸은 서버가 같은 값을 줄 때까지 내 것 그대로
+    const one = (k, v) => { const b = B.get(k), same = v ? !!b && b.t === v.t && b.b === v.b : !b; if (same) { MINE.delete(k); return; } if (fresh(MINE, k)) return; apply(k, v); if (v) chkMe = true; };   // 내가 막 바꾼 칸은 서버가 같은 값을 줄 때까지 내 것 그대로 · 친구 블록이 내 몸 자리에 오면 다음 틱에 비킴
     if (path === '/') { if (!patch) { const want = data || {}; for (const k of [...B.keys()]) if (!(k in want)) one(k, null); for (const k in want) one(k, norm(want[k])); }
       else for (const k in (data || {})) one(k, data[k] ? norm(data[k]) : null); }
     else { const seg = path.split('/').filter(Boolean); if (seg.length === 1) one(seg[0], data ? norm(data) : null); }
     hudLine();
   }
   function onFurn(path, data, patch) {
-    const F = map.world.furn, setH = (id, on) => { if (!!F.isHidden(id) === on) { MINEF.delete(id); return; } if (fresh(MINEF, id)) return; if (on) F.hide(id); else F.show(id); };
-    if (path === '/') { if (!patch) { const want = data || {}; for (const id of F.hidden()) if (!(id in want)) F.show(id); for (const id in want) setH(id, true); }
+    const F = map.world.furn, setH = (id, on) => { if (!!F.isHidden(id) === on) { MINEF.delete(id); return; } if (fresh(MINEF, id)) return; if (on) F.hide(id); else { F.show(id); chkMe = true; } };   // 되살아난 가구 자리에 내가 있으면 다음 틱에 비킴
+    if (path === '/') { if (!patch) { const want = data || {}; for (const id of F.hidden()) if (!(id in want)) { F.show(id); chkMe = true; } for (const id in want) setH(id, true); }
       else for (const id in (data || {})) setH(id, !!data[id]); }
     else { const seg = path.split('/').filter(Boolean); if (seg.length === 1) setH(seg[0], !!data); }
   }
@@ -297,33 +382,43 @@ export default async function start(map, params = {}) {
     const fn = seg[0] === 'b' ? onBlocks : seg[0] === 'f' ? onFurn : null; if (!fn) return;
     fn(seg.length === 1 ? '/' : '/' + seg[1], data, false);
   }
-  let cfgT = 0;
-  async function cfgPoll() { clearTimeout(cfgT); if (dead || !board || board.local) return; try { const c = await req('/blockList/' + board.id); if (c && board && !board.local) { const ch = !!c.lock !== !!board.lock || !!c.open !== !!board.open; board.lock = !!c.lock; board.open = !!c.open; if (ch) chips(); } } catch (e) { /* */ } cfgT = setTimeout(cfgPoll, 15000); }
+  // 잠금·모두 고치기 확인(작은 GET — 판 줄기에 넣으려면 규칙을 바꿔야 해서 따로) · 들어갈 때 바로 한 번 + 6초마다(예전 15초 — 선생님이 잠근 뒤에도 한참 놓을 수 있었다)
+  let cfgT = 0; const CFG_MS = 6000;
+  async function cfgPoll() { clearTimeout(cfgT); cfgT = 0; if (dead || !board || board.local) return; const bd = board;
+    try { const c = await req('/blockList/' + bd.id);
+      if (c && board === bd) { const lk = !!c.lock !== !!bd.lock, op = !!c.open !== !!bd.open; bd.lock = !!c.lock; bd.open = !!c.open;
+        if (lk || op) { chips(); if (!teacher) toast(lk ? (bd.lock ? '🔒 선생님이 판을 잠갔어요 — 이제 보기만 해요' : '🔓 선생님이 잠금을 풀었어요') : (bd.open ? '🤝 이제 친구 블록도 부술 수 있어요' : '🙅 이제 내 블록만 부술 수 있어요'), 2.6); } } } catch (e) { /* */ }
+    if (!dead && board === bd) cfgT = setTimeout(cfgPoll, CFG_MS); }   // 그사이 판을 바꿨으면 새 판이 따로 돈다(겹쳐 돌지 않게)
   function enter(b) {
+    settle();   // 앞 판에 기다리던 저장을 먼저(앞 판 이름으로)
     if (es) { es.close(); es = null; } clearTimeout(cfgT);
-    closePanel(); clearAll(); board = b; map.store.set('last', b.id);
-    if (b.local) { const m = map.store.get('mine', null); if (m && m.b) for (const k in m.b) apply(k, norm(m.b[k])); if (m && m.f) for (const id of m.f) map.world.furn.hide(id); flushBuild(999); }
-    else { es = stream('/blocks/' + b.id, onBoard); cfgT = setTimeout(cfgPoll, 15000); }
-    chips(); hudLine(); tip();
+    closePanel(); clearAll(); MINE.clear(); MINEF.clear(); board = b; map.store.set('last', b.id);
+    if (b.local) { const m = map.store.get('mine', null); if (m && m.b) for (const k in m.b) apply(k, norm(m.b[k])); if (m && m.f) for (const id of m.f) map.world.furn.hide(id); flushBuild(999); chkMe = true; }
+    else { es = stream('/blocks/' + b.id, onBoard); cfgT = setTimeout(cfgPoll, 0); }
+    chips(); hudLine(); tip(true);
   }
 
   // ── 판 고르기 · 선생님
   let panel = null;
   const closePanel = () => { if (panel) panel.remove(); panel = null; };
-  const hash = async (pin) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('mv-memo:' + pin)))].map((x) => x.toString(16).padStart(2, '0')).join('');
+  function onTeacher() {   // 이 탭에서 선생님 비밀번호를 맞힘(여기 🔒 · 함께하기 방 만들기 · 메모장 — 'sm-teacher') → 바로 선생님 모드
+    if (teacher || dead) return; teacher = true; chips();
+    if (panel && panel.id === 'bk-pick') { const v = panel.querySelector('#bkName').value; pick(); panel.querySelector('#bkName').value = v; }   // 적던 이름은 그대로
+  }
+  addEventListener('sm-teacher', onTeacher);
   async function teacherLogin() {
-    let saved = null; try { saved = await req('/memoPin'); } catch (e) { return toast('인터넷을 확인해 주세요', 2); }
-    if (!saved) return toast('먼저 메타버스 메모장에서 선생님 비밀번호를 정해 주세요', 3);
-    const a = prompt('선생님 비밀번호 4자리'); if (!a) return; if (await hash(a) !== saved) return toast('비밀번호가 달라요', 2);
-    teacher = true; try { sessionStorage.setItem('sm.t', '1'); } catch (e) { /* */ } toast('🔓 선생님 모드', 2); chips(); if (panel) pick();
+    const r = await teacherPin((m) => toast(m, 2)); if (!r || dead) return;
+    onTeacher(); toast(r === 'new' ? '🔒 비밀번호를 정했어요 — 선생님 모드' : '🔓 선생님 모드', 2);
   }
   async function pick() {
     closePanel(); panel = el('div', 'bk-pick'); panel.className = 'bk-panel'; keyStop(panel);
-    panel.innerHTML = '<h3>🧱 블록 놀이' + (teacher ? ' <span class="sm">· 🔓 선생님</span>' : '') + '</h3><div class="sm">우리 학교 곳곳에 블록을 놓고 부숴요. 책상·의자·책장·사물함·나무도 🔨로 통째로 퍽! 같은 판에 들어온 친구들 블록이 바로 보여요.</div>'
+    panel.innerHTML = (board ? '<button class="x" id="bkX" title="닫기">✕</button>' : '') + '<h3>🧱 블록 놀이' + (teacher ? ' <span class="sm">· 🔓 선생님</span>' : '') + '</h3><div class="sm">우리 학교 곳곳에 블록을 놓고 부숴요. 책상·의자·책장·사물함·나무도 🔨로 통째로 퍽! 같은 판에 들어온 친구들 블록이 바로 보여요.</div>'
+      + '<div class="sm hlp" style="margin-top:4px">' + (touchy() ? '화면을 톡 = 놓기 · 오른쪽 아래 🧱 단추를 누르면 🔨 부수기로 바뀌어요' : '누르기 = 놓기 · 오른쪽 누르기 = 부수기 · Q = 놓기/부수기 바꾸기 · Z = 되돌리기') + '</div>'
       + '<div style="margin:8px 0">내 이름 <input id="bkName" maxlength="8" style="width:140px;margin-left:6px" placeholder="이름"></div><div class="sm">선생님이 알려 준 판에 들어가요.</div><div class="bl">불러오는 중…</div>'
-      + '<div class="row">' + (teacher ? '' : '<button id="bkT">🔒 선생님</button>') + '<button id="bkQuit">그만하기</button></div>';
+      + '<div class="row">' + (teacher ? '' : '<button id="bkT">🔒 선생님</button>') + '<button id="bkQuit">그만하기</button>' + (board ? '<button class="pri" id="bkBack">▶ 계속하기</button>' : '') + '</div>';   // 놀이 중에 판 칩으로 열었으면 닫기(Esc도 — onEsc) · 처음엔 판을 골라야 해서 없음
     const nm = panel.querySelector('#bkName'); nm.value = name;
     panel.querySelector('#bkQuit').onclick = () => map.quit && map.quit();
+    if (board) { panel.querySelector('#bkBack').onclick = () => closePanel(); panel.querySelector('#bkX').onclick = () => closePanel(); }   // ✕ = 휴대폰엔 Esc가 없어서
     if (!teacher) panel.querySelector('#bkT').onclick = teacherLogin;
     const P = panel; let list = {};
     try { list = (await req('/blockList')) || {}; } catch (e) { list = {}; P.querySelector('.bl').textContent = '판 목록을 불러오지 못했어요 — 🏠 나만의 판은 쓸 수 있어요'; }
@@ -334,29 +429,60 @@ export default async function start(map, params = {}) {
     P.querySelectorAll('.bl button').forEach((x) => x.onclick = () => {
       const nv = nm.value.trim().replace(/[.#$[\]/]/g, '').slice(0, 8), id = x.dataset.id;
       if (id !== '@mine' && !nv) { nm.focus(); return toast('이름을 먼저 적어요', 2); }
+      const renamed = !!nv && nv !== name;
       if (nv) { name = nv; try { localStorage.setItem('mp.name', nv); } catch (e) { /* */ } dispatchEvent(new CustomEvent('sm-name', { detail: nv })); }
+      if (board && board.id === id) {   // 지금 판을 다시 누름 = 창만 닫기(다시 불러오지 않음 — 블록·↩ 되돌리기 기록 그대로)
+        if (!board.local && list[id]) { board.lock = !!list[id].lock; board.open = !!list[id].open; board.t = list[id].t || id; }
+        closePanel(); chips(); if (renamed) toast('✏️ 이름을 「' + name + '」(으)로 바꿨어요', 2); return; }
       closePanel(); enter(id === '@mine' ? { id: '@mine', local: true, t: '🏠 나만의 판' } : { id, t: list[id].t || id, lock: !!list[id].lock, open: !!list[id].open });
     });
   }
-  async function admin() {
-    if (!board || board.local) return; closePanel(); panel = el('div', 'bk-admin'); panel.className = 'bk-panel'; keyStop(panel);
-    const no = (board.t.match(/\d+/) || [''])[0];
-    panel.innerHTML = '<h3>🧑‍🏫 ' + esc(board.t) + ' 관리</h3><div class="sm">블록 ' + B.size + '개 · 부순 가구 ' + map.world.furn.hidden().length + '개</div><div class="bl">'
-      + '<button data-a="lock">' + (board.lock ? '🔓 잠금 풀기' : '🔒 잠그기(보기만)') + '</button><button data-a="open">' + (board.open ? '🙅 내 블록만 고치기로' : '🤝 모두 함께 고치기') + '</button>'
-      + '<button data-a="furn">🏫 가구 모두 되살리기</button><button data-a="wipe">🧹 이 판 비우기</button></div><div class="row"><button class="pri" data-a="x">닫기</button></div>';
-    panel.querySelectorAll('button').forEach((x) => x.onclick = async () => {
-      const a = x.dataset.a; try {
+  // 휴지통 보관본(🧹 비우기 때 한 번 — trash/bk_<판> {t, d: 블록 JSON 글}) — 관리 창을 처음 열 때·비운 뒤에만 받는다
+  let TR = null;
+  const KEYRE = /^-?\d{1,5}_-?\d{1,5}_-?\d{1,4}$/;
+  async function trashGet(id) { let bak = null; try { bak = await req('/trash/bk_' + id); } catch (e) { return null; }
+    let old = null; try { old = bak && bak.d ? JSON.parse(bak.d) : null; } catch (e) { old = null; }   // 망가진 글이면 없는 것으로
+    return { id, t: bak ? bak.t : 0, old: old && typeof old === 'object' ? old : null }; }
+  async function admin(refetch) {
+    if (!board || board.local) return; closePanel(); const P = panel = el('div', 'bk-admin'); P.className = 'bk-panel'; keyStop(P);
+    const bd = board, no = (bd.t.match(/\d+/) || [''])[0], F = map.world.furn;
+    P.innerHTML = '<button class="x" data-a="x" title="닫기">✕</button><h3>🧑‍🏫 ' + esc(bd.t) + ' 관리</h3><div class="sm">블록 ' + B.size + '개 · 부순 가구 ' + F.hidden().length + '개</div><div class="bl">'
+      + '<button data-a="lock">' + (bd.lock ? '🔓 잠금 풀기' : '🔒 잠그기(보기만)') + '</button><button data-a="open">' + (bd.open ? '🙅 내 블록만 고치기로' : '🤝 모두 함께 고치기') + '</button>'
+      + '<button data-a="furn">🏫 가구 모두 되살리기</button><button data-a="wipe">🧹 이 판 비우기<div class="sm">블록을 지우고 가구도 처음대로</div></button></div>'
+      + '<div class="bk-tr sm">휴지통 확인 중…</div><div class="row"><button class="pri" data-a="x">닫기</button></div>';
+    const showTr = () => { if (panel !== P || dead) return; const d = P.querySelector('.bk-tr'), n = TR && TR.id === bd.id && TR.old ? Object.keys(TR.old).length : 0;
+      d.innerHTML = n ? '<button data-a="undo" style="width:100%">↩️ 비운 블록 되돌리기<div class="sm">' + n + '개 · ' + esc(new Date(TR.t).toLocaleString('ko-KR')) + '에 비움 · 지금 판에 더해요(블록이 있는 칸은 그대로)</div></button>' : '휴지통: 보관된 블록이 없어요'; };
+    if (refetch || !TR || TR.id !== bd.id) trashGet(bd.id).then((T) => { if (T) TR = T; showTr(); }); else showTr();
+    P.onclick = async (e) => {   // 단추가 나중에 생겨도(↩️) 한 곳에서
+      const x = e.target.closest('button[data-a]'); if (!x || panel !== P) return; const a = x.dataset.a;
+      try {
         if (a === 'x') return closePanel();
-        if (a === 'lock') { await req('/blockList/' + board.id + '/lock', 'PUT', !board.lock); board.lock = !board.lock; toast(board.lock ? '🔒 잠갔어요 — 아이들은 보기만 해요' : '🔓 잠금을 풀었어요'); }
-        if (a === 'open') { await req('/blockList/' + board.id + '/open', 'PUT', !board.open); board.open = !board.open; toast(board.open ? '🤝 이제 친구 블록도 부술 수 있어요' : '🙅 이제 내 블록만 부술 수 있어요'); }
-        if (a === 'furn') { if (!confirm('부순 가구를 모두 되살릴까요?')) return; await req('/blocks/' + board.id + '/f', 'DELETE'); toast('🏫 가구를 모두 되살렸어요'); }
-        if (a === 'wipe') { const ans = prompt('「' + board.t + '」의 블록 ' + B.size + '개를 모두 지워요. 지우려면 판 번호' + (no ? '(' + no + ')' : '') + '를 적어 주세요'); if (ans == null) return;
-          if (ans.trim() !== (no || board.t)) return toast('번호가 달라요 — 지우지 않았어요', 2.5);
-          const o = {}; for (const [k, b] of B) o[k] = { t: b.t, b: b.b }; await req('/trash/bk_' + board.id, 'PUT', { t: Date.now(), d: JSON.stringify(o).slice(0, 400000) });
-          await req('/blocks/' + board.id + '/b', 'DELETE'); toast('🧹 비웠어요(지운 것은 휴지통에 한 번 남아요)', 3); }
-      } catch (e) { toast('하지 못했어요 — 인터넷을 확인해 주세요', 2.5); }
-      chips(); if (panel && panel.id === 'bk-admin') admin();
-    });
+        if (a === 'lock') { await req('/blockList/' + bd.id + '/lock', 'PUT', !bd.lock); bd.lock = !bd.lock; toast(bd.lock ? '🔒 잠갔어요 — 아이들은 보기만 해요' : '🔓 잠금을 풀었어요'); }
+        if (a === 'open') { await req('/blockList/' + bd.id + '/open', 'PUT', !bd.open); bd.open = !bd.open; toast(bd.open ? '🤝 이제 친구 블록도 부술 수 있어요' : '🙅 이제 내 블록만 부술 수 있어요'); }
+        if (a === 'furn') {   // 그 자리에 블록이 있는 가구는 그대로 둔다(블록과 가구가 겹쳐 보이지 않게) · 되살아난 자리에 서 있던 아이는 저절로 비킨다(chkMe)
+          const hid = F.hidden(); if (!hid.length) return toast('부순 가구가 없어요', 2);
+          const ok = [], keep = []; for (const id of hid) (blocksIn(F.box(id)) ? keep : ok).push(id);
+          if (!ok.length) return toast('부순 가구 ' + keep.length + '개 자리에 모두 블록이 있어요 — 블록을 먼저 부숴 주세요', 3);
+          if (!confirm('부순 가구 ' + ok.length + '개를 되살릴까요?' + (keep.length ? '\n(' + keep.length + '개는 그 자리에 블록이 있어서 그대로 둬요)' : ''))) return;
+          if (!keep.length) await req('/blocks/' + bd.id + '/f', 'DELETE'); else { const o = {}; for (const id of ok) o[id] = null; await req('/blocks/' + bd.id + '/f', 'PATCH', o); }
+          toast('🏫 가구 ' + ok.length + '개를 되살렸어요' + (keep.length ? ' · ' + keep.length + '개는 블록이 있어 그대로예요' : ''), 3); }
+        if (a === 'wipe') { const fN = F.hidden().length; if (!B.size && !fN) return toast('비울 것이 없어요 — 블록도 부순 가구도 없어요', 2.5);
+          const ans = prompt('「' + bd.t + '」의 블록 ' + B.size + '개를 모두 지우고' + (fN ? ' 부순 가구 ' + fN + '개도 처음대로 되살려요' : '요') + '(블록은 휴지통에 한 번 남아요).\n지우려면 판 번호' + (no ? '(' + no + ')' : '') + '를 적어 주세요'); if (ans == null) return;
+          if (ans.trim() !== (no || bd.t)) return toast('번호가 달라요 — 지우지 않았어요', 2.5);
+          if (B.size) { const o = {}; for (const [k, b] of B) o[k] = { t: b.t, b: b.b }; const t = Date.now(); await req('/trash/bk_' + bd.id, 'PUT', { t, d: JSON.stringify(o) }); TR = { id: bd.id, t, old: o }; }   // 빈 판을 비울 때는 보관본을 덮지 않음
+          await req('/blocks/' + bd.id, 'DELETE'); toast('🧹 비웠어요 — 🧑‍🏫 판 관리의 ↩️로 블록을 되돌릴 수 있어요', 3.2); }
+        if (a === 'undo') { const T = TR && TR.id === bd.id ? TR.old : null; if (!T) return;
+          const add = {}; let n = 0, skip = 0, cut = 0, bump = 0;   // bump = 되살아난 가구·벽·문 자리와 겹치는 칸(비우기 때 가구가 처음대로 돌아옴 — 그 안에 블록이 박히지 않게 · 10-04 재시험)
+          for (const k in T) { if (!KEYRE.test(k)) continue; if (B.has(k)) { skip++; continue; } if (B.size + n >= MAXB) { cut++; continue; }
+            { const p9 = k.split('_'); if (cellHit(+p9[0], +p9[1], +p9[2])) { bump++; continue; } }
+            const v = T[k] || {}; add[k] = { t: Math.max(0, Math.min(TYPES.length - 1, v.t | 0)), b: String(v.b || '').slice(0, 8) }; n++; }
+          if (!n) return toast('되돌릴 블록이 없어요 — ' + (bump ? '가구·벽·문 자리와 겹치거나 ' : '') + '그 칸마다 이미 블록이 있어요', 2.6);
+          if (!confirm('휴지통의 블록 ' + n + '개를 「' + bd.t + '」에 되돌릴까요?(지금 있는 블록은 그대로)')) return;
+          await req('/blocks/' + bd.id + '/b', 'PATCH', add);   // 판 줄기(onBoard)가 받아 바로 보인다 · 보관본은 그대로(다시 눌러도 있는 칸은 건너뜀)
+          toast('↩️ 블록 ' + n + '개를 되돌렸어요' + (skip ? ' · 이미 블록이 있는 ' + skip + '칸은 그대로' : '') + (bump ? ' · 가구·벽·문 자리와 겹치는 ' + bump + '개는 빼요' : '') + (cut ? ' · 판이 가득 차서 ' + cut + '개는 못 넣었어요' : ''), 3.5); }
+      } catch (err) { toast('하지 못했어요 — 인터넷을 확인해 주세요', 2.5); }
+      chips(); if (panel === P) admin(false);
+    };
   }
 
   // ── 화면(칩 · 블록 줄 · 안내)
@@ -365,49 +491,88 @@ export default async function start(map, params = {}) {
   const sw = (i) => { const c = i % 8, r = Math.floor(i / 8); return 'background-image:url(' + atlasURL + ');background-position:' + (c / 7 * 100) + '% ' + (r * 100) + '%'; };
   bar.innerHTML = TYPES.map((T, i) => '<button class="s" data-i="' + i + '" title="' + esc(T.n) + '" style="' + sw(i) + '"><i>' + (i < 9 ? i + 1 : i === 9 ? 0 : '') + '</i></button>').join('');
   pal.innerHTML = TYPES.map((T, i) => '<button class="s" data-i="' + i + '" title="' + esc(T.n) + '" style="' + sw(i) + '"></button>').join('');
-  tb.innerHTML = '<button id="bkMode">🧱</button><button id="bkCur" style="' + sw(cur) + ';background-size:800% 200%;width:48px"></button><button id="bkUndo">↩</button>';
+  tb.innerHTML = '<button id="bkMode">🧱 놓기</button><button id="bkCur" style="' + sw(cur) + ';background-size:800% 200%;width:48px"></button><button id="bkUndo">↩</button>';
+  const mBtn = tb.querySelector('#bkMode');
   const setCur = (i) => { cur = (i + TYPES.length) % TYPES.length; map.store.set('cur', cur); bar.querySelectorAll('.s').forEach((x) => x.classList.toggle('on', +x.dataset.i === cur)); pal.querySelectorAll('.s').forEach((x) => x.classList.toggle('on', +x.dataset.i === cur));
-    const cb = tb.querySelector('#bkCur'); cb.style.backgroundPosition = ((cur % 8) / 7 * 100) + '% ' + (Math.floor(cur / 8) * 100) + '%'; if (mode !== 'put') setMode('put'); tip(); };
+    const cb = tb.querySelector('#bkCur'); cb.style.backgroundPosition = ((cur % 8) / 7 * 100) + '% ' + (Math.floor(cur / 8) * 100) + '%'; if (mode !== 'put') setMode('put'); tip(true); };
   bar.onclick = (e) => { const s = e.target.closest('.s'); if (s) setCur(+s.dataset.i); };
   pal.onclick = (e) => { const s = e.target.closest('.s'); if (s) setCur(+s.dataset.i); pal.style.display = 'none'; };
-  tb.querySelector('#bkMode').onclick = () => setMode(mode === 'put' ? 'break' : 'put');
+  mBtn.onclick = () => setMode(mode === 'put' ? 'break' : 'put');
   tb.querySelector('#bkCur').onclick = () => { pal.style.display = pal.style.display === 'grid' ? 'none' : 'grid'; };
   tb.querySelector('#bkUndo').onclick = () => undo();
   const touchy = () => document.body.classList.contains('touch');
-  function layout() { const t = touchy(); bar.style.display = t ? 'none' : 'flex'; tb.style.display = t ? 'flex' : 'none'; tipEl.style.display = t ? 'none' : ''; }
-  function setMode(m) { mode = m; tb.querySelector('#bkMode').textContent = m === 'put' ? '🧱' : '🔨'; tb.querySelector('#bkMode').classList.toggle('on', m === 'break'); chips(); tip(); ghostOff(); }
-  function tip() { tipEl.textContent = !board ? '' : mode === 'put' ? '🧱 ' + TYPES[cur].n + ' 놓기 — 화면 누르기 · 오른쪽 누르기 = 부수기 · 1~0·휠 = 블록 · Q = 놓기/부수기 · Z = 되돌리기' : '🔨 부수기 — 블록·가구를 누르기 · Q = 놓기로 · Z = 되돌리기'; }
+  let lastTouch = touchy(), tipT = 0;
+  function layout(flash) { const t = touchy(); bar.style.display = t ? 'none' : 'flex'; tb.style.display = t ? 'flex' : 'none'; tip(flash); }   // 터치 = 오른쪽 아래 단추 · 아니면 아래 블록 줄
+  function setMode(m) { mode = m; mBtn.textContent = m === 'put' ? '🧱 놓기' : '🔨 부수기'; mBtn.classList.toggle('on', m === 'break'); chips(); tip(true); ghostOff(); }   // 단추에 글자도(터치 아이가 지금 무엇인지 알게)
+  // 안내 한 줄: 데스크톱 = 늘(키 안내) · 터치 = 들어갈 때·바꿀 때 7초만(휴대폰 화면 가운데를 늘 덮지 않게 · 눌리지 않음 — 조이스틱·버튼을 막지 않음)
+  function tip(flash) {
+    const t = touchy();
+    tipEl.textContent = !board ? '' : t ? (mode === 'put' ? '🧱 화면을 톡 = ' + TYPES[cur].n + ' 놓기 · 🧱 놓기 단추를 누르면 🔨 부수기로 · ↩ = 되돌리기' : '🔨 블록·가구·나무를 톡 = 부수기 · 🔨 부수기 단추를 누르면 🧱 놓기로')
+      : mode === 'put' ? '🧱 ' + TYPES[cur].n + ' 놓기 — 화면 누르기 · 오른쪽 누르기 = 부수기 · 1~0·휠 = 블록 · Q = 놓기/부수기 · Z = 되돌리기' : '🔨 부수기 — 블록·가구·나무를 누르기 · Q = 놓기로 · Z = 되돌리기';
+    if (!t) { clearTimeout(tipT); tipT = 0; tipEl.style.display = ''; return; }
+    if (flash && board) { tipEl.style.display = ''; clearTimeout(tipT); tipT = setTimeout(() => { tipT = 0; if (touchy()) tipEl.style.display = 'none'; }, 7000); }
+    else if (!tipT) tipEl.style.display = 'none';
+  }
   function hudLine() { if (!board) return; map.hud.chip('bk-b', '🧱 ' + board.t + ' · ' + B.size + '개' + (board.lock ? ' · 🔒' : ''), { onClick: () => pick() }); }
   function chips() {
-    if (!board) return; hudLine();
-    map.hud.chip('bk-m', mode === 'put' ? '🧱 놓기 (Q)' : '🔨 부수기 (Q)', { onClick: () => setMode(mode === 'put' ? 'break' : 'put') });
-    map.hud.chip('bk-u', '↩ 되돌리기 (Z)', { onClick: () => undo() });
+    if (!board) return; hudLine(); const k = touchy() ? '' : ' (Q)', kz = touchy() ? '' : ' (Z)';   // 터치(태블릿 포함)엔 키 안내를 뺀다
+    map.hud.chip('bk-m', (mode === 'put' ? '🧱 놓기' : '🔨 부수기') + k, { onClick: () => setMode(mode === 'put' ? 'break' : 'put') });
+    map.hud.chip('bk-u', '↩ 되돌리기' + kz, { onClick: () => undo() });
     map.hud.chip('bk-x', '🚪 빠져나오기', { onClick: () => unstuck() });
-    map.hud.chip('bk-t', teacher && !board.local ? '🧑‍🏫 판 관리' : null, { onClick: () => admin() });
+    map.hud.chip('bk-t', teacher && !board.local ? '🧑‍🏫 판 관리' : null, { onClick: () => admin(true) });
     layout();
   }
-  function unstuck() { const me = map.player.get();   // 블록에 갇혔을 때 — 가까운 빈 땅으로
-    for (let r = 1; r <= 14; r++) for (let a = 0; a < 16; a++) { const x = me.x + Math.cos(a / 16 * 6.283) * r, z = me.z + Math.sin(a / 16 * 6.283) * r, y = map.q.baseAt(x, z);
-      if (!map.q.inSchool(x, z) || map.q.overlap({ x0: x - 0.3, x1: x + 0.3, y0: y + 0.05, y1: y + 1.6, z0: z - 0.3, z1: z + 0.3 })) continue; map.player.teleport({ x, z }); return toast('🚪 빠져나왔어요', 1.6); }
+  // 블록·되살아난 가구에 갇혔을 때 — 가까운 빈자리로. 2층(서관 위)에 있으면 2층에서 먼저 찾는다(예전엔 늘 1층 땅으로 떨어졌다) · 블록 탑 위·1층은 땅으로
+  function unstuck(msg) {
+    const me = map.player.get(), f2 = map.q.floorY(me.x, me.z, 2), up = me.y > 2.5 && f2 > map.q.baseAt(me.x, me.z) + 2;   // f2 = 발밑 2층 바닥(블록은 안 셈) — 2층 사각형 밖이면 땅 높이
+    for (const on2 of up ? [true, false] : [false]) for (let r = 1; r <= 14; r++) for (let a = 0; a < 16; a++) {
+      const x = me.x + Math.cos(a / 16 * 6.283) * r, z = me.z + Math.sin(a / 16 * 6.283) * r, y = on2 ? map.q.floorY(x, z, 2) : map.q.baseAt(x, z);
+      if (on2 && Math.abs(y - f2) > 1.2) continue;   // 2층 밖(창 너머)·계단 구멍은 건너뜀
+      if (!map.q.inSchool(x, z) || map.q.overlap({ x0: x - 0.3, x1: x + 0.3, y0: y + 0.05, y1: y + 1.6, z0: z - 0.3, z1: z + 0.3 })) continue;
+      map.player.teleport(on2 ? [x, y, z] : { x, z }); return toast(msg || '🚪 빠져나왔어요', 2); }
     toast('빈 자리를 못 찾았어요 — 선생님께 말해요', 2.5); }
+  const freeMe = () => { const me = map.player.pos(); if (map.q.blocked(me.x, me.z, me.y)) unstuck('🚪 몸이 끼어서 옆 빈자리로 옮겼어요'); };   // 되살아난 가구·친구 블록 속이면(한 번만 봄)
+  map.on('stuck', () => { if (board && !dead && !panel) unstuck('🚪 몸이 끼어서 옆 빈자리로 옮겼어요'); });   // 그래도 끼어 1.5초 못 움직이면(엔진 'stuck')
   setCur(cur); layout();
 
   // ── 입력
-  let hoverT = 0, mx = -1, my = -1, shift = false;
-  const onCanvas = (e) => e.target && e.target.tagName === 'CANVAS';
-  function onClick(e) { if (!board || panel || dead) return; const d = e.detail || {}; pal.style.display = 'none'; const A = aimAt(d.x, d.y); if (mode === 'break' || shift) doBreak(A); else doPut(A); }
-  function onCtx(e) { if (!board || panel || dead || !onCanvas(e)) return; e.preventDefault(); doBreak(aimAt(e.clientX, e.clientY)); }
-  function onMove(e) { if (!onCanvas(e)) { if (ghost.visible) ghostOff(); mx = -1; return; } mx = e.clientX; my = e.clientY; }
-  function onWheel(e) { if (!board || panel || !onCanvas(e)) return; setCur(cur + (e.deltaY > 0 ? 1 : -1)); }
+  //  Shift(달리기)+누르기 부수기는 없앴다(달리며 놓으려다 친구 블록·가구를 부수고 · 창을 바꾸면 Shift가 눌린 채 굳었다) — 부수기 = 오른쪽 톡 · Q · 🔨
+  let hoverT = 0, mx = -1, my = -1, RT = null, wAcc = 0, wLast = 0, wStep = 0;   // RT = 오른쪽 누름 {t, m 움직인 양} — 끌지 않은 '톡'만 부수기
+  const onCanvas = (e) => !!e.target && e.target.id === 'scene';   // 3D 화면만(미니맵 캔버스 위 휠·오른쪽 누르기는 제외)
+  function onClick(e) { if (!board || panel || dead) return; const d = e.detail || {}; pal.style.display = 'none'; const A = aimAt(d.x, d.y); if (mode === 'break') doBreak(A); else doPut(A); }
+  // 오른쪽 = 메뉴만 막고, 부수기는 '톡'일 때만(main.js DRAG와 같은 6px·0.45초) — 크롬은 누르는 순간·윈도는 뗄 때 contextmenu가 와서 오른쪽으로 끌어 둘러보기만 해도 부서졌다
+  function onCtx(e) { if (board && !dead && onCanvas(e)) e.preventDefault(); }
+  function onDown(e) { if (e.button === 2 && board && !panel && !dead && onCanvas(e) && !touchy()) RT = { t: performance.now(), m: 0 }; }
+  function onUp(e) { if (e.button !== 2 || !RT) return; const r = RT; RT = null;
+    if (!board || panel || dead || !onCanvas(e) || r.m >= 6 || performance.now() - r.t >= 450) return;
+    pal.style.display = 'none'; doBreak(aimAt(e.clientX, e.clientY)); }
+  function onMove(e) { if (RT) RT.m += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0);   // 화면 밖으로 끌어도 센다
+    if (!onCanvas(e)) { if (ghost.visible) ghostOff(); mx = -1; return; } mx = e.clientX; my = e.clientY; }
+  function onBlur() { RT = null; }
+  const onResize = () => layout();
+  // 휠 = 블록 한 칸씩: 쉬었다가 처음 = 늘 한 칸(마우스 휠은 한 칸도 안 놓침) · 이어지는 작은 이벤트(크롬북 터치패드 쓸기 = 20~40개)는 모아서 200px·0.15초마다 한 칸
+  function onWheel(e) {
+    if (!board || panel || !onCanvas(e) || e.ctrlKey) return;   // ctrl = 터치패드 집기(확대)
+    const now = performance.now(), d = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
+    if (!d || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;   // 옆으로 쓸기는 무시
+    const fresh = now - wLast > 220; wLast = now;
+    if (fresh) { wAcc = 0; wStep = now; return setCur(cur + (d > 0 ? 1 : -1)); }
+    if ((d > 0) !== (wAcc > 0)) wAcc = 0;   // 방향이 바뀌면 새로
+    wAcc += d;
+    if (Math.abs(wAcc) >= 200 && now - wStep >= 150) { setCur(cur + (wAcc > 0 ? 1 : -1)); wAcc = 0; wStep = now; }
+  }
+  // Esc = 판 고르기·관리 창 닫기(창 밖에 포커스가 있어도 — 창문 붙잡기 단계라 main.js의 멈춤 창(버블·defaultPrevented 확인)보다 먼저) · 처음 판 고르기는 닫지 않음
+  //   처음 판 고르기(아직 판 없음)는 닫지 않고 Esc만 삼킨다(10-04 재시험: 창 뒤에 '⏸ 잠깐 멈춤'이 몰래 열려, 판을 고르면 화면 가운데 '🏠 메뉴로'를 눌러 첫 화면으로 나갔다) · 비밀번호 창(.lb-ask)이 떠 있으면 그 창 몫
+  function onEsc(e) { if (e.code !== 'Escape' || e.repeat || !panel || dead || document.querySelector('.lb-ask')) return; e.preventDefault(); e.stopPropagation();
+    if (board || panel.id === 'bk-admin') closePanel(); else toast('🧱 판을 먼저 골라요 — 그만하려면 「그만하기」', 2.2); }
   function onKey(e) {
-    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { shift = e.type === 'keydown'; return; }
-    if (e.type !== 'keydown' || !board || panel || e.repeat) return; const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA')) return;
+    if (!board || panel || e.repeat) return; const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA')) return;
     if (e.code === 'KeyQ') setMode(mode === 'put' ? 'break' : 'put');
     else if (e.code === 'KeyZ') undo();
     else { const m = /^(?:Digit|Numpad)(\d)$/.exec(e.code); if (m) { const n = +m[1]; setCur(n === 0 ? 9 : n - 1); } }
   }
-  addEventListener('sm-click', onClick); addEventListener('contextmenu', onCtx); addEventListener('mousemove', onMove); addEventListener('wheel', onWheel, { passive: true });
-  addEventListener('keydown', onKey); addEventListener('keyup', onKey); addEventListener('resize', layout);
+  addEventListener('sm-click', onClick); addEventListener('contextmenu', onCtx); addEventListener('mousedown', onDown); addEventListener('mouseup', onUp); addEventListener('mousemove', onMove); addEventListener('wheel', onWheel, { passive: true });
+  addEventListener('keydown', onKey); addEventListener('keydown', onEsc, true); addEventListener('blur', onBlur); addEventListener('resize', onResize);
 
   // ── 시작: 지난번 판 → 없으면 고르기
   pick();
@@ -419,20 +584,24 @@ export default async function start(map, params = {}) {
       if (DIRTY.size) flushBuild(4);
       pTick(dt);
       if ((hoverT += dt) >= 0.05) { hoverT = 0; if (mx >= 0 && board && !panel && !touchy()) ghostShow(aimAt(mx, my)); else if (ghost.visible && (touchy() || panel)) ghostOff(); }
-      if ((cullT += dt) >= 0.25) { cullT = 0; if (hudDirty) { hudDirty = false; hudLine(); } const cp = cam.position; for (const ms of MESH.values()) for (const m of ms) { const c = m.userData.c, dx = cp.x - c[0], dz = cp.z - c[1]; m.visible = dx * dx + dz * dz < FAR * FAR; } }
+      if (chkMe) { chkMe = false; if (board) freeMe(); }
+      if ((cullT += dt) >= 0.25) { cullT = 0; const t = touchy(); if (t !== lastTouch) { lastTouch = t; layout(t); chips(); }   // 터치 크롬북이 처음 터치(또는 마우스로 돌아옴)하면 단추·안내도 따라 바뀜
+        if (hudDirty) { hudDirty = false; hudLine(); } const cp = cam.position; for (const ms of MESH.values()) for (const m of ms) { const c = m.userData.c, dx = cp.x - c[0], dz = cp.z - c[1]; m.visible = dx * dx + dz * dz < FAR * FAR; } }
     },
     stop() {
-      dead = true; window.SM_ACT = null; clearTimeout(localT); if (flushT) { clearTimeout(flushT); flush(); }
+      settle(); dead = true; window.SM_ACT = null; clearTimeout(tipT);   // 기다리던 저장 먼저(나만의 판은 부순 가구 목록이 아직 맞을 때)
       if (es) es.close(); clearTimeout(cfgT);
-      removeEventListener('sm-click', onClick); removeEventListener('contextmenu', onCtx); removeEventListener('mousemove', onMove); removeEventListener('wheel', onWheel);
-      removeEventListener('keydown', onKey); removeEventListener('keyup', onKey); removeEventListener('resize', layout);
+      removeEventListener('sm-click', onClick); removeEventListener('contextmenu', onCtx); removeEventListener('mousedown', onDown); removeEventListener('mouseup', onUp); removeEventListener('mousemove', onMove); removeEventListener('wheel', onWheel);
+      removeEventListener('keydown', onKey); removeEventListener('keydown', onEsc, true); removeEventListener('blur', onBlur); removeEventListener('resize', onResize); removeEventListener('sm-teacher', onTeacher); removeEventListener('pagehide', onLeave); document.removeEventListener('visibilitychange', onVis);
+      // 놀이가 멈추면 부순 가구가 돌아온다(FX.reset) — 그 자리에 서 있던 아이가 갇히지 않게 지금 되살리고 비켜 준다(블록이 아직 있어 그 자리도 피함)
+      try { const F = map.world.furn, hid = F.hidden(); if (hid.length) { for (const id of hid) F.show(id); const me = map.player.pos(); if (map.q.blocked(me.x, me.z, me.y)) unstuck('🏫 가구가 돌아와서 옆으로 비켜났어요'); } } catch (e) { /* */ }
       for (const ms of MESH.values()) for (const m of ms) m.geometry.dispose(); MESH.clear();
       pMesh.geometry.dispose(); pMesh.material.dispose(); pMesh.dispose(); ghost.geometry.dispose(); ghost.material.dispose();
       for (const k in MAT) MAT[k].dispose(); tex.dispose(); ui.remove(); css.remove(); closePanel();
     },
     // 시험·디버그(읽기 위주)
-    board: () => board && { ...board }, count: () => B.size, blocks: () => [...B.keys()], aim: aimAt, put: (ix, iz, q, t = cur) => { const why = canPut(ix, iz, q); if (why) return why; const k = key(ix, iz, q), v = { t, b: name || '익명' }; apply(k, v); send(k, v); pushUndo({ k, put: true }); flushBuild(99); return 'ok'; },
-    brk: (A) => doBreak(A), place: (A) => doPut(A), undo, mode: (m) => { if (m) setMode(m); return mode; }, cur: (i) => { if (i != null) setCur(i); return cur; },
+    board: () => board && { ...board }, count: () => B.size, blocks: () => [...B.keys()], at: (k) => { const b = B.get(k); return b ? { t: b.t, b: b.b } : null; }, aim: aimAt, put: (ix, iz, q, t = cur) => { const why = canPut(ix, iz, q); if (why) return why; const k = key(ix, iz, q), v = { t, b: name || '익명' }; apply(k, v); send(k, v); pushUndo({ k, put: true, by: v.b, t: v.t }); flushBuild(99); return 'ok'; },
+    brk: (A) => doBreak(A), place: (A) => doPut(A), undo, undoLen: () => UNDO.length, unstuck: (m) => unstuck(m), admin: () => admin(true), panel: () => panel && panel.id, mode: (m) => { if (m) setMode(m); return mode; }, cur: (i) => { if (i != null) setCur(i); return cur; },
     enter: (id) => enter(id === '@mine' ? { id: '@mine', local: true, t: '🏠 나만의 판' } : { id, t: id }), pick, stats: () => ({ blocks: B.size, chunks: MESH.size, meshes: [...MESH.values()].reduce((s, a) => s + a.length, 0), tris: [...MESH.values()].reduce((s, a) => s + a.reduce((x, m) => x + m.geometry.index.count / 3, 0), 0), cols: [...COLP.values()].reduce((s, a) => s + a.length, 0), furn: map.world.furn.hidden().length }),
   };
 }
