@@ -189,7 +189,7 @@ fps ≥ 30 / rayObjs ≤ 80 / drawCalls 관찰. **fps가 무너지면 기능을 
 ### 10-03 정리(교사)
 - **v2 놀이**: 숨바꼭질 삭제 · 견학은 `promo: true`(홍보판 목록에서만 — v2엔 숨김, `?tour=1`로는 열림).
 - **연습 게임 + 에피소드(EP-1)**: 이야기·방탈출의 지금 것 = [연습]. 새 것 = 글 파일 + `story_episodes.js`/`escape_episodes.js` 한 줄(코드 수정 없음 · 둘 이상이면 시작 때 고르기 · `?ep=id`). 이야기 새 형식 = `steps` 진행기(견본 `story_sample.js`). 쓰는 법 `docs/tasks/new_episode.md`.
-- **물총 WG-FPS**: 기본 1인칭 · 십자선 방향 그대로 쏨(중력 포물선) · 흰 고리 = 떨어질 자리. 엔진 고리 `map.player.view/first/pitchLow/look`.
+- **물총 WG-FPS**: 기본 3인칭(1인칭은 멀미 — V) · 십자선 방향 그대로 쏨(중력 포물선) · 흰 고리 = 떨어질 자리. 엔진 고리 `map.player.view/first/pitchLow/look`.
 - **성능 PERF-3**: 기기 판 desktop/cb(크롬북 UA)/mobile/low — 자동 해상도 전부 켬 · 휴대폰·저사양 MSAA 끔(`?aa=`) · 크롬북 그림자 1024 · 디테일 거리 줄임(desktop 외).
 
 ### 학교 견학(TOUR-1 · 09-27)

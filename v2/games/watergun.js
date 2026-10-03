@@ -140,7 +140,7 @@ export default async function start(map, params = {}) {
   const showSet = (keys, on) => { for (const k of keys) M[k].visible = on; };
   showSet(SOLO_M, false); showSet(TEAM_M, false);
   const gun = new THREE.Mesh(gunGeo, lamV(0x202020)); gun.rotation.order = 'YXZ'; map.add(gun);
-  // WG-FPS: 물이 떨어질 자리(흰 고리 · 포물선을 6토막으로 짚어 벽·바닥에 닿는 첫 자리) — 기본 1인칭(V = 3인칭) · 위로 보는 한계 넓힘(멀리 쏘려면 위로)
+  // WG-FPS: 물이 떨어질 자리(흰 고리 · 포물선을 6토막으로 짚어 벽·바닥에 닿는 첫 자리) — 기본 3인칭(10-03 교사 '1인칭은 멀미' · V = 1인칭) · 위로 보는 한계 넓힘(멀리 쏘려면 위로)
   const land = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.3, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false }));
   land.rotation.x = -Math.PI / 2; land.renderOrder = 3; land.visible = false; map.add(land);
   let landK = 0;
@@ -153,7 +153,7 @@ export default async function start(map, params = {}) {
       const r9 = ray(ax, ay, az, bx, by, bz); if (r9 !== null) { hitAt = [ax + (bx - ax) * r9, ay + (by - ay) * r9, az + (bz - az) * r9]; break; } ax = bx; ay = by; az = bz; }
     const P9 = hitAt || [ax, fy, az]; land.position.set(P9[0], P9[1] + 0.04, P9[2]); land.visible = true;
   }
-  map.player.view('first'); map.player.pitchLow(-1.05);
+  map.player.pitchLow(-0.75);
   const vestMat = new THREE.MeshLambertMaterial({ color: TEAM_C[0], emissive: 0x101820 }); MATS.push(vestMat);
   const vest = new THREE.Mesh(vestGeo, vestMat); vest.visible = false; map.add(vest);
 
@@ -806,7 +806,7 @@ export default async function start(map, params = {}) {
           if (team) { goal((coarse ? '💧 버튼' : '클릭·F') + '로 ' + TEAM_I[1] + ' 백팀 봇을 흠뻑 적셔요! 물은 우리 진지(파란 빛기둥)에서', 7);
             map.hud.toast(TEAM_I[0] + ' 우리 팀 = 파란 조끼 · 먼저 ' + tGoal + '번 적시면 이겨요 · ' + (coarse ? '📋 칩' : 'Tab') + ' = 점수판', 5); }
           else { goal(coarse ? '💧 과녁에 물을 쏴요! 💧 버튼 누른 채 끌면 조준' : '💧 과녁에 물을 쏴요! 십자선 = 조준 · 클릭·F 누르고 있기', 6);
-            map.hud.toast(coarse ? '🎈풍선 🔥불 🌸꽃 🤖로봇 — 위를 보면 멀리 · 흰 고리 = 물이 떨어질 자리 · 👁 = 3인칭' : '🎈풍선 🔥불 🌸꽃 🤖로봇 — 위를 보면 멀리 · 흰 고리 = 물이 떨어질 자리 · V = 3인칭', 5); } } }
+            map.hud.toast(coarse ? '🎈풍선 🔥불 🌸꽃 🤖로봇 — 위를 보면 멀리 · 흰 고리 = 물이 떨어질 자리 · 👁 = 1인칭' : '🎈풍선 🔥불 🌸꽃 🤖로봇 — 위를 보면 멀리 · 흰 고리 = 물이 떨어질 자리 · V = 1인칭', 5); } } }
       if (st === 'play') {
         T -= dt; const s = Math.ceil(T); if (s !== secShown) { secShown = s; if (team) teamChip(); else timeChip(); if (s <= 10 && s > 0) sfx('tick'); }
         if (T <= 0) { T = 0; if (team) teamChip(); else timeChip(); if (team) finishTeam(); else finish(); }
