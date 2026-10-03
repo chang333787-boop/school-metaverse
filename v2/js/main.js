@@ -1499,6 +1499,13 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
     if (e.code === 'KeyP') { e.preventDefault(); userLock = false; document.exitPointerLock?.(); show(); }
     else if (e.code === 'KeyG' && !CTRL.frozen && !window.SM_PROMO) { e.preventDefault(); document.exitPointerLock?.(); MAP.picker && (MAP.picker.panel ? MAP.picker.close() : MAP.picker.open()); }
   }, true);
+  // FREE-MOUSE: 잠금이 없으니 Esc가 멈춤 창을 연다(버블 단계 — 게임 창·메모장 등이 Esc를 먼저 쓰고 멈추면 여기까지 안 옴)
+  addEventListener('keydown', e => {
+    if (e.code !== 'Escape' || e.repeat || !CTRL.freeMouse || TOUCH.on || e.defaultPrevented) return;
+    if ((TITLE && TITLE.phase !== 'off') || pz.style.display === 'flex' || busy() || document.querySelector('.lb-pop,.lb-big,.wg-lobby,#mpHold,#memo-here')) return;
+    const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.isContentEditable)) return;
+    userLock = false; show();
+  });
   window.__pause = { show, hide, get on() { return pz.style.display === 'flex'; }, busy };
 }
 
