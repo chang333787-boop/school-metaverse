@@ -9,7 +9,7 @@
 //   PROMO-1(09-29 교사 "그냥 school-metaverse로 끝나는 주소는 홍보 주소"): 홍보판(루트 index.html — window.SM_PROMO)은 놀이 카드 없이 ▶ 견학 시작하기 → 바로 견학(tour) · 🏠 = 처음 화면으로.
 export function createTitle(h) {
   const { THREE, camera, P, CTRL, keys, touch, tone, toast, game, picker, setCam } = h;
-  const PROMO = !!window.SM_PROMO, PROMO_GAME = { id: 'tour', title: '우리 학교 견학', icon: '🚌' };
+  const PROMO = !!window.SM_PROMO, PROMO_GAME = { id: 'tour', title: '우리 학교 견학', icon: '🚌' }, LESSON = window.SM_LESSON || null;
   const store = { get(k, d) { try { const v = localStorage.getItem('sm2.title.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem('sm2.title.' + k, JSON.stringify(v)); } catch (e) { /* 비공개 창 — 이번 판만 */ } } };
   let muted = !!store.get('mute', false), heard = false;   // heard = 첫 손짓(클릭·터치·키)이 있었나 — 그 전엔 소리를 내지 않는다
@@ -85,9 +85,9 @@ export function createTitle(h) {
     + '<section class="ttl-home">'
     +   (PROMO   // 홍보판(09-29 교사): 폰 프리 스쿨 실천학교 표어 'Phone Off, RAS On'(RAS = Reading·Arts·Sports — 경기도교육청 정책)을 환영 글 위에
         ? '<div class="ttl-logo ttl-pr">' + PRB + '</div>'
-        : '<div class="ttl-logo">' + cap(1) + '<span>우리 학교 메타버스</span></div>')
+        : '<div class="ttl-logo">' + cap(1) + '<span>' + (LESSON ? '우리 반 이야기 만들기' : '우리 학교 메타버스') + '</span></div>')
     +   '<h1 class="ttl-h" aria-label="정림초에 오신 것을 환영합니다!"><span class="ln">' + L1 + '</span><span class="ln">' + L2 + '</span>' + spk + '</h1>'
-    +   (PROMO ? '<div class="ttl-sub ttl-addr"><b>🏫 정림초등학교</b><span>경기도 화성시 효행구 정남면 망월길 69</span></div>' : '<div class="ttl-sub">🏫 정림초등학교 · 3D 학교 놀이터</div>')
+    +   (PROMO ? '<div class="ttl-sub ttl-addr"><b>🏫 정림초등학교</b><span>경기도 화성시 효행구 정남면 망월길 69</span></div>' : '<div class="ttl-sub">' + (LESSON ? '🏫 정림초등학교 · 4학년 이야기 수업' : '🏫 정림초등학교 · 3D 학교 놀이터') + '</div>')
     +   '<button class="ttl-start" type="button"><b>▶</b> ' + (PROMO ? '학교 둘러보기' : '시작하기') + '</button>'
     +   '<div class="ttl-keys"><span class="kd">클릭 · Enter · Space</span><span class="kt">화면을 톡 눌러요</span></div>'
     + '</section>'
@@ -119,7 +119,7 @@ export function createTitle(h) {
   async function fill() {
     let G = {};
     try { G = (await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url))).GAMES || {}; } catch (e) { console.error('[오프닝] 놀이 목록을 못 불러옴', e); }
-    const ids = Object.keys(G).filter(id => !G[id].dev && !(G[id].promo && !PROMO));   // 10-03 교사: v2(우리 학교용)엔 홍보 놀이(견학)를 보이지 않는다 — 주소 ?tour=1로는 그대로 열림
+    const ids = Object.keys(G).filter(id => !G[id].dev && !(G[id].promo && !PROMO) && (LESSON ? G[id].lesson === LESSON : !G[id].lesson));   // 10-03 교사: v2(우리 학교용)엔 홍보 놀이(견학)를 보이지 않는다 — 주소 ?tour=1로는 그대로 열림
     list = [FREE, ...ids.map(id => ({ id, ...G[id] }))];
     const gi = e => { const k = GORDER.indexOf(e.group); return k < 0 ? GORDER.length : k; };
     list = list.map((e, i) => ({ e, i })).sort((a, b) => gi(a.e) - gi(b.e) || a.i - b.i).map(o => o.e);   // 무리(탐험·대결·모험·이야기·놀이)끼리 — 무리 안은 registry 순서

@@ -58,7 +58,7 @@ export function createWorldFx(H) {
     st.saved = st.sg = st.cols = null; st.hidden = false; if (outdoor(PEOPLE[id])) rebake();
   }
   // 대역: 모양(자세마다 캐시 · 원점 · 남쪽을 봄) → 대역마다 자기 복사본(걷기 = 팔다리 정점 회전)
-  const GEO = new Map(), ACTORS = [], MAXA = 6;
+  const GEO = new Map(), ACTORS = [], MAXA = 8;
   const geoFor = (id, pose, o) => { const k = id + '|' + pose + '|' + (o.seat ?? '') + '|' + (o.desk ?? ''); let g = GEO.get(k);
     if (!g) { g = world.personGeo(id, pose, o); const pa = g.userData.part, L = []; for (let i = 0; i < pa.length; i++) if (pa[i]) L.push(i); g.userData.limb = Int32Array.from(L); GEO.set(k, g); } return g; };
   // 이름표: 월드 팻말 아틀라스(같은 글자판·같은 재질)를 그대로 — 대역 이름표 전부 한 메시(드로우콜 1 · 72정점 · 매 프레임 카메라 쪽으로)

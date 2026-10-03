@@ -29,6 +29,13 @@ export const STORY = {
     { collect: ['library', [-23.5, -40.5]], n: 2, item: '상자', icon: '📦' },   // 여러 곳 줍기
     { note: '쪽지 글' }, { toast: '알림 글' }, { wait: 1 },
     { world: [{ op: 'light', room: '과학실', on: false }] },          // 세상 바꾸기(map_api §12.7 op — 사람 옮기기·불·문·칠판 글씨…)
+    { me: ['은규', '지원'], ask: '누가 될까요?' },   // 고른 친구 = 나(대사 이름 '나 (은규)')
+    { party: ['은규', '지원'] },                       // 친구들이 나를 따라옴
+    { label: 'pick' }, { goto: 'pick' },               // 되돌아가기(다시 하기)
+    { pose: 'sitFloor', who: 'party' },                // 자세(stand·sit·sitFloor·cheer·wave·explain)
+    { appear: '사서선생님', behind: 1.8 },              // 내 뒤에 나타남
+    { npc: '사서선생님', to: 'library', walk: true },   // 사람 옮기기 · { hide: '사서선생님' } 숨기기
+    { tp: 'library', h: 0 }, { fade: 1 }, { sound: 'go' },
     { end: { title: '끝!', body: '…' } },
   ],
 };

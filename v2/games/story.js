@@ -102,7 +102,8 @@ export default async function start(map, params = {}) {
   let css = document.getElementById('story-css'); if (!css) { css = document.createElement('style'); css.id = 'story-css'; css.textContent = CSS; document.head.appendChild(css); }
   const ui = document.createElement('div'); ui.id = 'story-ui'; document.body.appendChild(ui);
   const mk = (tag, cls, txt, parent) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; (parent || ui).appendChild(e); return e; };
-  const VARS = {};   // 새 이야기(steps)의 선택 기억 — 글 안의 {이름}은 고른 보기 글로 바뀐다
+  const VARS = {};
+  let ME = null, PARTY = [], partyHold = false, partyT = 0, partyK = 0;   // 새 이야기(steps)의 선택 기억 — 글 안의 {이름}은 고른 보기 글로 바뀐다
   const fill = t => LEG ? String(t).replace('{role}', D.roleName[S.role] || '').replace('{place}', D.placeName[S.place] || '').replace('{gift}', D.giftName[S.gift] || '')
     : String(t).replace(/\{([a-z0-9_]+)\}/g, (m0, k) => (VARS[k] && VARS[k].label != null ? VARS[k].label : m0));
   let talk = null;   // { el, next(i), openedAt, n }
@@ -112,7 +113,7 @@ export default async function start(map, params = {}) {
       document.exitPointerLock?.(); map.player.freeze(true);
       const el = mk('div', 'sp'); el.id = 'story-talk';
       mk('div', 'av', WHO[who] || '💬', el); const bd = mk('div', 'bd', null, el);
-      mk('div', 'nm', who, bd); mk('div', 'tx', fill(text), bd);
+      mk('div', 'nm', who === ME ? '나 (' + who + ')' : who, bd); mk('div', 'tx', fill(text), bd);
       const t = { el, openedAt: performance.now(), n: choices ? choices.length : 0 };
       t.next = i => { if (talk !== t) return; talk = null; el.remove(); map.player.freeze(false); map.sfx('tick'); res(i); };
       let first;
@@ -181,7 +182,7 @@ export default async function start(map, params = {}) {
     if (t.startsWith('npc:')) return npcAt(t.slice(4));
     const r = map.resolve(/^(zone|lm|spawn|hot|door):/.test(t) ? t : 'zone:' + t); return r ? { x: r.x, y: r.y ?? 0, z: r.z } : null;
   }
-  const arrive = (p, r = 2.6) => new Promise(res => { const h = map.trigger.add({ x: p.x, y: p.y ?? 0, z: p.z, r }, { once: true, enter: () => { h.remove(); res(); } }); });
+  function arrive(p, r = 2.6) { return new Promise(res => { const h = map.trigger.add({ x: p.x, y: p.y ?? 0, z: p.z, r }, { once: true, enter: () => { h.remove(); res(); } }); }); }
   function world(ops) { return new Promise(res => { let ok = false; const fin = () => { if (!ok) { ok = true; res(); } };
     try { map.story.run([{ id: 'w' + Math.random().toString(36).slice(2, 8), do: ops }], { onDone: fin }); } catch (e) { console.error('[이야기] world', e); fin(); } setTimeout(fin, 8000); }); }
   async function collect(st) {   // 여러 곳 줍기 — 다 주우면 다음
@@ -192,9 +193,36 @@ export default async function start(map, params = {}) {
       const h = map.interact.add({ x: p.x, y: p.y ?? 0, z: p.z, r: 1.6, label: (st.icon || '✨') + ' ' + (st.item || '줍기'), use: () => { if (talk) return; h.remove(); mkr.remove(); got++; map.sfx('ding');
         left.splice(left.indexOf(p), 1); if (got >= need) res(); else objective(G9(), left[0], st.item); } }); }));
   }
-  async function runSteps(list = D.steps) {
-    for (const st of list) {
+  function partyTick(dt) {
+    if (!PARTY.length || partyHold || talk || (partyT -= dt) > 0) return; partyT = 0.2;
+    const k = partyK++ % PARTY.length, n = PARTY[k], q = map.npc.get(n), me = map.player.get(); if (!q || q.walking) return;
+    const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < 3.2) return;
+    const hr = me.h * Math.PI / 180, fx = Math.sin(hr), fz = -Math.cos(hr), side = (k - (PARTY.length - 1) / 2) * 0.9, back = 1.6 + (k % 2) * 0.7;
+    const p = spot(me.x - fx * back + fz * side, me.z - fz * back - fx * side, me.y), face = (Math.atan2(me.x - p.x, -(me.z - p.z)) * 180 / Math.PI + 360) % 360;
+    map.npc.move(n, { x: p.x, y: p.y, z: p.z }, d > 24 ? { face } : { walk: true, speed: 4.4, pass: true, face });
+  }
+  function namesOf(w) { return w === 'party' ? PARTY.slice() : [].concat(w || []); }
+  async function runSteps(list = D.steps, top = true) {
+    for (let i = 0; i < list.length; i++) {
+      const st = list[i];
       if (gone() || S.done) return;
+      if (st.goto) { const j = top ? list.findIndex(x => x.label === st.goto) : -1; if (j >= 0) { i = j; continue; } return { goto: st.goto }; }
+      if (st.me) { const k = await panel('이야기', st.ask || '누가 될까요?', st.me.map(n => (WHO[n] || '🙂') + ' ' + n)); if (gone()) return;
+        ME = st.me[k]; VARS.me = { i: k, label: ME }; map.npc.hide(ME); }
+      if (st.party) { PARTY = st.party.filter(n => n !== ME); partyT = 0; }
+      if (st.hide) for (const n of namesOf(st.hide)) map.npc.hide(n);
+      if (st.tp) { const p = place(st.tp); if (p) map.player.teleport([p.x, p.y, p.z], st.h != null ? { h: st.h } : {}); partyT = 0; }
+      if (st.npc) { const p = place(st.to); if (p) map.npc.move(st.npc, { x: p.x, y: p.y, z: p.z }, st.walk ? { walk: true, speed: st.speed || 3, pass: true, face: st.face } : { face: st.face }); }
+      if (st.appear) { const me = map.player.get(), hr = me.h * Math.PI / 180, b = st.behind || 1.8, p = spot(me.x - Math.sin(hr) * b, me.z + Math.cos(hr) * b, me.y);
+        map.npc.move(st.appear, { x: p.x, y: p.y, z: p.z }, { face: (Math.atan2(me.x - p.x, -(me.z - p.z)) * 180 / Math.PI + 360) % 360 }); }
+      if (st.pose) { const me = map.player.get(), hr = me.h * Math.PI / 180, fx = Math.sin(hr), fz = -Math.cos(hr), L9 = namesOf(st.who);
+        L9.forEach((n, k) => { const q = map.npc.get(n);
+          if (st.pose !== 'stand' && q && Math.hypot(q.x - me.x, q.z - me.z) > 3.5) { const side = (k - (L9.length - 1) / 2) * 0.85, ahead = 1.4 + (k % 2) * 0.7, p = spot(me.x + fx * ahead + fz * side, me.z + fz * ahead - fx * side, me.y);
+            map.npc.move(n, { x: p.x, y: p.y, z: p.z }, { pose: st.pose, face: me.h }); }
+          else map.npc.pose(n, st.pose); });
+        partyHold = st.pose !== 'stand'; }
+      if (st.fade) await world([{ op: 'fade', sec: st.fade }]);
+      if (st.sound) map.sfx(st.sound);
       if (st.chapter != null) chapter(st.chapter);
       if (st.world) await world(st.world);
       if (st.go) { const p = place(st.go); if (p) { objective(st.goal || '목표로 가요', p, st.label); await arrive(p, st.r); } }
@@ -205,7 +233,8 @@ export default async function start(map, params = {}) {
       if (st.note) await panel('쪽지', st.note);
       if (st.ask) { const k = await choose(st.ask, st.choices || []); if (gone()) return; if (st.set) VARS[st.set] = { i: k, label: String((st.choices || [])[k] || '').replace(/^\S+\s/, '') };
         if (st.reply && st.reply[k]) { if (!(await say(st.reply[k]))) return; } }
-      if (st.if) { const [k, v] = Object.entries(st.if)[0] || []; const hit = VARS[k] && VARS[k].i === v; await runSteps(hit ? st.then || [] : st.else || []); }
+      if (st.if) { const [k, v] = Object.entries(st.if)[0] || []; const hit = VARS[k] && VARS[k].i === v; const r = await runSteps(hit ? st.then || [] : st.else || [], false);
+        if (r && r.goto) { const j = top ? list.findIndex(x => x.label === r.goto) : -1; if (j >= 0) { i = j; continue; } return r; } }
       if (st.toast) map.hud.toast(st.toast, 3);
       if (st.wait) await new Promise(r => setTimeout(r, st.wait * 1000));
       if (st.end) { S.done = true; map.hud.goal(null); objective(null); map.sfx('done'); ending(); return; }
@@ -365,6 +394,7 @@ export default async function start(map, params = {}) {
   return {
     tick(dt) {
       if (!S.done) T += dt;
+      if (!LEG) partyTick(dt);
       if (trail && (trailT -= dt) <= 0) clearTrail();
     },
     stop() { dead = true; removeEventListener('keydown', onKey, true); removeEventListener('click', onClick, true); ui.remove(); talk = null; },   // 지점·표식·칩·목표·미니맵·사람·소품·그림·불·문·시간대는 범위 파사드가 정리
