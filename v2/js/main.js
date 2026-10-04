@@ -5,11 +5,11 @@ import { buildWorld } from './world.js?v=154';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=52';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=53';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=20';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=11';
-import { createTop } from './topview.js?v=7';   // TOP-1(10-04 교사 '탑뷰로 학교 보기'): 하늘에서 보기 — 지붕 벗기기(1·2층)·끌어 옮기기·확대·돌리기·방 이름·방위표·축척 · 게임은 map.top   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
+import { createTop } from './topview.js?v=8';   // TOP-1(10-04 교사 '탑뷰로 학교 보기'): 하늘에서 보기 — 지붕 벗기기(1·2층)·끌어 옮기기·확대·돌리기·방 이름·방위표·축척 · 게임은 map.top   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
@@ -519,7 +519,8 @@ function step(dt) {
   if (Math.abs(camera.fov - tFov) > 0.05) { camera.fov += (tFov - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); }
   { const S = PHY.sc, gy = pGround(P.x, P.z, P.y + 0.05 * S), h = Math.max(0, P.y - gy) / S, k = Math.max(0.35, 1 - h * 0.35);   // GFX-2 발밑 그림자(SHRINK-1: 몸 크기 비례)
     blob.position.set(P.x, gy + 0.045 * Math.max(S, 0.2), P.z); blob.scale.setScalar(0.95 * k * S); blob.material.opacity = k; blob.visible = !ACT.sit && h < 3; }
-  pg.visible = !camFirst && camD > 0.45 * PHY.sc;   // CAM-3: 벽에 붙어 카메라가 머리 바로 뒤까지 오면 캐릭터를 숨긴다(1인칭처럼)
+  pg.visible = !camFirst && camD > 0.45 * PHY.sc && !CTRL.hideMe;   // CAM-3: 벽에 붙어 카메라가 머리 바로 뒤까지 오면 캐릭터를 숨긴다(1인칭처럼) · RB-1: 게임이 내 몸을 다른 모양으로 그릴 때(hideMe)
+  if (CTRL.hideMe) blob.visible = false;
   if (CTRL.peek) {   // ENGINE-1 숨는 자리: 캐릭터 숨김 · 카메라 = 틈새 시점(좁은 화각 · 고개는 ±40°까지만 · 가장자리 어둡게는 mapapi DOM)
     const K9 = CTRL.peek; pg.visible = false; blob.visible = false;
     let dy9 = camYaw - K9.yaw; while (dy9 > Math.PI) dy9 -= Math.PI * 2; while (dy9 < -Math.PI) dy9 += Math.PI * 2;
@@ -626,7 +627,7 @@ function physics(dt) {
   }
   P.spd = Math.hypot(P.x - ox, P.z - oz) / Math.max(dt, 1e-4);   // ENGINE-1: 소리 판정(map.player.noise)
   if (TOUCH.jumpT > 0) TOUCH.jumpT -= dt;
-  if ((keys.has('Space') || TOUCH.jump || TOUCH.jumpT > 0) && P.ground && !CTRL.frozen && !CTRL.held && !cr) { P.vy = PHY.jv; P.ground = false; TOUCH.jumpT = 0; }
+  if ((keys.has('Space') || TOUCH.jump || TOUCH.jumpT > 0) && P.ground && !CTRL.frozen && !CTRL.held && !cr && !CTRL.noJump) { P.vy = PHY.jv; P.ground = false; TOUCH.jumpT = 0; }   // RB-1: CTRL.noJump = 게임이 점프를 막음(로봇인 척)
   P.vy -= PHY.g * dt;
   const y0 = P.y;
   P.y += P.vy * dt;
@@ -1501,11 +1502,11 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
     // 방 신호(net.js ctl): 물총 친구 대결 대기실 초대 · 선생님 📣 모으기 · ✋ 멈춤
     function onCtl(C) {
       const first = !CTLK.init; CTLK.init = true;   // 들어올 때 이미 있던 신호는 지난 것(초대·선생님 신호를 다시 하지 않음)
-      const m = C.match; if (m) { const k = m.seq + ':' + m.st; if (k !== CTLK.m) { CTLK.m = k; if ((m.st === 'lobby' || m.st === 'count' || m.st === 'hlobby' || m.st === 'hcount') && !first) invite(m); } }   // HS-2: 'h…' = 숨바꼭질 친구 대결
+      const m = C.match; if (m) { const k = m.seq + ':' + m.st; if (k !== CTLK.m) { CTLK.m = k; if ((m.st === 'lobby' || m.st === 'count' || m.st === 'hlobby' || m.st === 'hcount' || m.st === 'rlobby' || m.st === 'rcount') && !first) invite(m); } }   // HS-2: 'h…' = 숨바꼭질 친구 대결 · RB-1: 'r…' = 로봇인 척
       const c = C.cmd; if (c && c.q !== CTLK.q) { CTLK.q = c.q; if (!first && c.by !== (NET && NET.id)) teacherCmd(c); }
     }
     function invite(m) {   // 같은 방 친구가 물총·숨바꼭질 친구 대결 대기실을 열면(내가 그 놀이 중이거나 오프닝이면 안 띄움)
-      const hs = m.st[0] === 'h', G = hs ? { re: /^hideseek/, id: 'hideseek_vs', t: '🫣 같은 방에서 <b>숨바꼭질 대작전</b> ' } : { re: /^watergun/, id: 'watergun_vs', t: '💦 같은 방에서 <b>물총 친구 대결</b> ' };
+      const G = m.st[0] === 'h' ? { re: /^hideseek/, id: 'hideseek_vs', t: '🫣 같은 방에서 <b>숨바꼭질 대작전</b> ' } : m.st[0] === 'r' ? { re: /^robots/, id: 'robots_vs', t: '🤖 같은 방에서 <b>로봇인 척</b> ' } : { re: /^watergun/, id: 'watergun_vs', t: '💦 같은 방에서 <b>물총 친구 대결</b> ' };
       const g = MAP.game.current; if ((g && G.re.test(g.id)) || document.body.classList.contains('title-on')) return;
       let d = document.getElementById('mpInvite'); if (d) d.remove();
       d = document.createElement('div'); d.id = 'mpInvite'; d.className = 'chip';

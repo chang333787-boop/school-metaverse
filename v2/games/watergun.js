@@ -811,7 +811,7 @@ export default async function start(map, params = {}) {
       const t1 = Date.now(), r = await nreq('/p/' + NM.pid, 'PUT', { n: NM.name, tm: n[0] <= n[1] ? 0 : 1, on: { '.sv': 'timestamp' } }), t2 = Date.now();
       NM.off = r.on - (t1 + t2) / 2; NM.rtt = t2 - t1;
       const m = D0.m, live = m && P[m.host] && Object.keys(P).length;
-      if (live && /^hs/.test(m.arena || '')) { map.hud.toast('🫣 지금 이 방은 숨바꼭질 대작전 중이에요 — 끝나면 다시 와요', 4); NM.on = false; if (N && N.hide) N.hide(false); return menu(false); }   // HS-2: 같은 방 경기 자리(match/c<번호>)를 숨바꼭질과 같이 씀
+      if (live && /^(hs|rb)/.test(m.arena || '')) { map.hud.toast((/^rb/.test(m.arena || '') ? '🤖 지금 이 방은 로봇인 척 중이에요' : '🫣 지금 이 방은 숨바꼭질 대작전 중이에요') + ' — 끝나면 다시 와요', 4); NM.on = false; if (N && N.hide) N.hide(false); return menu(false); }   // HS-2: 같은 방 경기 자리(match/c<번호>)를 숨바꼭질과 같이 씀
       if (!live) { const sq = ((m && m.seq) || 0) + 1; await nreq('/m', 'PUT', { st: 'lobby', host: NM.pid, arena: (m && m.arena) || 'field', time: (m && m.time) || 180, goal: (m && m.goal) || T_GOAL, seq: sq, t0: 0 }); ctlMatch(sq, 'lobby'); }
       else if (m.st === 'end' || (m.st !== 'lobby' && sNow() > m.t0 + m.time * 1000 + 15000)) { /* 끝난 경기 — 대기실로 보이게만 */ }
     } catch (e) { map.hud.toast('😥 친구 대결에 들어가지 못했어요 — 인터넷·방을 확인해 주세요', 4); NM.on = false; if (N && N.hide) N.hide(false); return menu(false); }

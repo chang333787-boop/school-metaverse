@@ -738,7 +738,8 @@ map.world.water('<구역>' | { x, z, r } | { rect }, { y, color, opacity }) → 
 ## 17.9 하늘에서 보기 — `map.top`(TOP-1 · 10-04) — 엔진 `v2/js/topview.js`
 ```js
 map.top.enter({ floor: 1|2|'roof', top: true(똑바로), at: [x,z], d: 거리, yaw, labels: true, help: '안내 글'|false,
-                onExit(){}, onTap(pt){}, onFloor(f){}, tapActions: [{ t: '단추 글', f(pt){}, when(pt){} }] })   // pt = {x, y, z, zone}
+                onExit(){}, onTap(pt){}, onFloor(f){}, tapActions: [{ t: '단추 글', f(pt){}, when(pt){} }],
+                me: false, pop: false, floors: false, helpTop: 60 })   // pt = {x, y, z, zone, sx, sy}
 map.top.exit() · floor(f) · look(x, z, d) · ground(sx, sy) → 땅 점 · on · state {floor, x, z, d, yaw, p}
 ```
 - 게임이 멈추면 저절로 나온다(범위 파사드) · 들어가 있는 동안 main.js busy()가 참(멈춤 창 없음) · 플레이어는 게임이 `map.player.freeze(true)`로.
@@ -746,6 +747,8 @@ map.top.exit() · floor(f) · look(x, z, d) · ground(sx, sy) → 땅 점 · on 
 - **따라가기(HS-1 · 숨바꼭질 숨는 쪽)**: `follow: true`(카메라가 내 몸을 따라감 · 끌어도 안 옮겨짐 · 오른쪽 끌기 = 돌리기 · 톡 = `onTap(pt)` 바로 — 이름 창 없음) · `playerKeys: true`(WASD·화살표·Q/E·Space·Shift는 내 몸으로 — main.js가 매 프레임 camYaw = 지도 yaw → W = 화면 위쪽) · `vision: m`(그 반지름 밖 어둡게 — DOM 한 장 · `map.top.vision(m)`로 바꿈) · `bar: false`(아래 단추 줄 없음) · `floorKeys: false`. 걷기는 게임이 `nav.path` + `map.player.steer(dx, dz, v, false)`.
 - 숨바꼭질 대작전(HS-2)이 이 따라가기를 쓴다 — 도망자 화면(`v2/games/hideseek.js`) · 설계·밸런스는 CLAUDE.md '숨바꼭질 대작전'.
 - `map.player.invisible(on)`(엔진 · HS-1): 내 몸 38% 비침 + `see(…, 'player')`가 1.3m 밖이면 false(술래 chaser가 놓침 → search) · 소리(noise)는 그대로 · 게임이 멈추면 꺼짐.
+- **RB-1(로봇인 척 CCTV 반장 · `v2/games/robots.js`)**: `me: false`('나' 표시 없음 — 내 몸이 경기와 상관없을 때) · `pop: false`(톡해도 이름 창 없이 `onTap(pt)`만 — `pt.sx`·`pt.sy` = 누른 화면 자리 → 움직이는 것을 `map.camera`로 투영해 고름) · `floors: false`(층 단추 없음) · `helpTop: px`(도움말을 목표 줄 밑으로).
+- 몸 고리(RB-1): `map.player.jump(false)` = 점프 막음 · `map.player.show(false)` = 내 캐릭터·발밑 그림자 숨김(게임이 내 몸을 다른 모양으로 그릴 때 — 1인칭·벽 앞 가까운 카메라에서는 게임도 안 그리게) · 게임이 멈추면 풀림. 설계·밸런스는 CLAUDE.md '로봇인 척'.
 
 ## 18. 오프닝 화면 · 놀이 고르기(TITLE-1 · 09-27) — `v2/js/title.js` + 모양 `v2/title.css`
 

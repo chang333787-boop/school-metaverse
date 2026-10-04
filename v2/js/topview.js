@@ -7,6 +7,7 @@
 //     setTool(t|null)로 바꿈 · marks([{x,y,z,t}]) = 게임 이름표(노랑 — 방 이름보다 먼저) · o.floorKeys === false = 1·2·3 키를 게임에 넘김
 //   HS-1(숨바꼭질 숨는 쪽): o.follow = 카메라가 내 몸을 따라감(끌기로 옮기지 않음 · 톡 = onTap) · o.playerKeys = WASD·화살표·Q/E·Space·Shift는 내 몸으로(이 화면 위쪽 = W — 매 프레임 setYaw)
 //     · o.vision = 보이는 반지름(m) — 그 밖은 어둡게(DOM 한 장 · 술래 머리 위 ❗❓는 위에 보임 = 소리 신호) · o.bar === false = 아래 단추 줄 없음
+//   RB-1(로봇인 척 CCTV 반장): o.me === false = '나' 표시 없음 · o.pop === false = 톡 이름 창 없이 onTap만(pt.sx·sy = 화면 자리) · o.floors === false = 층 단추 없음 · o.helpTop = 도움말 위치(px — 목표 줄 밑)
 export function createTop(env) {
   const { THREE, camera, renderer, scene, world, setCam, setView, getZones, zoneAt, player, setYaw } = env;
   const FH = (world.details && world.details.FH) || 3.4;
@@ -112,7 +113,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     S.meEl = el('div', 'me', '나', S.lb);
     if (o.vision) { S.vis = el('div', null, null, document.body); S.vis.id = 'tv-fog'; }
     S.bar = el('div', null, null, document.body); S.bar.id = 'tv-bar'; if (o.bar === false) S.bar.style.display = 'none';
-    const g1 = el('div', 'g', null, S.bar);
+    const g1 = el('div', 'g', null, S.bar); if (o.floors === false) g1.style.display = 'none';   // RB-1: 층 단추 없음(1층만 쓰는 놀이)
     S.fb = [['roof', '🏠<span class="lbl"> 지붕</span>'], [1, '1층'], [2, '2층']].map(([f, t]) => { const b = el('button', null, t, g1); b.type = 'button'; b.title = f === 'roof' ? '지붕 그대로(3)' : f + '층(' + f + ')'; b.onclick = e => { e.stopPropagation(); setFloor(f); }; return [f, b]; });
     const g2 = el('div', 'g', null, S.bar);
     [['↺', '지도를 왼쪽으로 돌리기(Q)', () => rot(-Math.PI / 4)], ['↻', '지도를 오른쪽으로 돌리기(E)', () => rot(Math.PI / 4)]].forEach(([t, ti, f]) => { const b = el('button', null, t, g2); b.type = 'button'; b.title = ti; b.onclick = e => { e.stopPropagation(); f(); }; });
@@ -127,6 +128,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     S.sc = el('div', null, '<span></span><b></b>', document.body); S.sc.id = 'tv-sc';
     if (o.help !== false) { S.help = el('div', null, esc(o.help || (matchMedia('(pointer: coarse)').matches ? '끌어서 옮기기 · 두 손가락으로 확대·돌리기 · 톡 = 그곳 이름' : '끌기·두 손가락 쓸기 = 옮기기 · 휠·벌리기 = 확대 · 오른쪽 끌기·Q/E = 돌리기 · 클릭 = 그곳 이름')), document.body); S.help.id = 'tv-help';
       if (o.follow) { S.help.style.top = 'auto'; S.help.style.bottom = 'calc(14px + env(safe-area-inset-bottom))'; }   // 따라가기 = 위쪽은 게임 목표 줄 자리
+      else if (o.helpTop != null) S.help.style.top = 'calc(' + (+o.helpTop) + 'px + env(safe-area-inset-top))';   // RB-1: 게임 목표 줄 밑으로
       S.helpT = setTimeout(() => { if (S && S.help) S.help.style.opacity = '0'; }, 7000); }
     document.body.classList.add('top-on');
     try { document.exitPointerLock && document.pointerLockElement && document.exitPointerLock(); } catch (e) { /* */ }
@@ -239,8 +241,8 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
   }
   function tap(sx, sy) {
     closePop(); const g = groundAt(sx, sy); if (!g) return;
-    const { zone, y } = zoneUnder(g), pt = { x: g.x, y, z: g.z, zone };
-    if (S.o.follow && !(S.o.tapActions && S.o.tapActions.length)) { if (S.o.onTap) S.o.onTap(pt); return; }   // 따라가기 = 톡 = 게임(그곳으로 걸어가기)
+    const { zone, y } = zoneUnder(g), pt = { x: g.x, y, z: g.z, zone, sx, sy };   // RB-1: sx·sy = 누른 화면 자리(게임이 움직이는 것을 화면에서 고를 때)
+    if ((S.o.follow || S.o.pop === false) && !(S.o.tapActions && S.o.tapActions.length)) { if (S.o.onTap) S.o.onTap(pt); return; }   // 따라가기 = 톡 = 게임(그곳으로 걸어가기) · pop:false = 이름 창 없이 게임만
     const acts = (S.o.tapActions || []).filter(a => !a.when || a.when(pt));
     const d = el('div', null, esc(zone ? zone.label : '바깥') + (zone && zone.floor === 2 ? '<small>2층</small>' : ''), document.body); d.id = 'tv-pop';
     acts.forEach(a => { const b = el('button', null, esc(a.t), d); b.type = 'button'; b.onclick = ev => { ev.stopPropagation(); closePop(); a.f(pt); }; });
@@ -299,7 +301,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     }
     // 나
     const me = player(), pm = proj(me.x, me.y + 1.9, me.z);
-    if (pm && (S.floor === 'roof' || Math.abs(me.y - floorY(S.floor)) < 2.6)) { S.meEl.style.transform = 'translate(' + Math.round(pm[0] - 16) + 'px,' + Math.round(pm[1] - 32) + 'px)'; S.meEl.style.visibility = 'visible'; }
+    if (pm && S.o.me !== false && (S.floor === 'roof' || Math.abs(me.y - floorY(S.floor)) < 2.6)) { S.meEl.style.transform = 'translate(' + Math.round(pm[0] - 16) + 'px,' + Math.round(pm[1] - 32) + 'px)'; S.meEl.style.visibility = 'visible'; }
     else S.meEl.style.visibility = 'hidden';
     if (S.vis) { const me = player(), pm = proj(me.x, me.y + 0.4, me.z), pr = proj(me.x + Math.cos(S.C.yaw) * S.o.vision, me.y + 0.4, me.z - Math.sin(S.C.yaw) * S.o.vision);   // 보이는 반지름 밖 = 어둡게
       if (pm && pr) { const r = Math.hypot(pr[0] - pm[0], pr[1] - pm[1]); S.vis.style.background = 'radial-gradient(circle at ' + pm[0].toFixed(0) + 'px ' + pm[1].toFixed(0) + 'px, rgba(8,12,24,0) ' + (r * 0.8).toFixed(0) + 'px, rgba(8,12,24,.86) ' + (r * 1.08).toFixed(0) + 'px)'; } }

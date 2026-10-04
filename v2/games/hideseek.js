@@ -726,7 +726,7 @@ export default async function start(map, params = {}) {
     try {
       D0 = (await nreq('')) || {};
       const P = D0.p || {}, m = D0.m, live = m && P[m.host] && Object.keys(P).length;
-      if (live && !/^hs/.test(m.arena || '')) { map.hud.toast('💦 지금 이 방은 물총 친구 대결 중이에요 — 끝나면 다시 와요', 4); NM.on = false; if (N && N.hide) N.hide(false); lobbyHide(); map.quit(); return; }
+      if (live && !/^hs/.test(m.arena || '')) { map.hud.toast((/^rb/.test(m.arena || '') ? '🤖 지금 이 방은 로봇인 척 중이에요' : '💦 지금 이 방은 물총 친구 대결 중이에요') + ' — 끝나면 다시 와요', 4); NM.on = false; if (N && N.hide) N.hide(false); lobbyHide(); map.quit(); return; }
       const t1 = Date.now(), r = await nreq('/p/' + NM.pid, 'PUT', { n: NM.name, tm: 99, on: { '.sv': 'timestamp' } }), t2 = Date.now();
       NM.off = r.on - (t1 + t2) / 2;
       if (!live) { const sq = ((m && m.seq) || 0) + 1; await nreq('/m', 'PUT', { st: 'lobby', host: NM.pid, arena: 'hs0', time: 0, goal: 0, seq: sq, t0: 0 }); ctlMatch(sq, 'hlobby'); }
@@ -838,23 +838,23 @@ export default async function start(map, params = {}) {
   // 방장: 판 끝 → 다음 도망자(잡은 사람 — 아직 안 해 봤으면 · 팩맨 VS) → 다 했으면 경기 끝
   function hostRun(t, endAt) {
     if (!NM.host || !R || NM.adv) return; const m = NM.D.m; if (!m || m.st !== 'play' || m.seq !== R.seq) return;
-    if (t < endAt + cfg.end) return;
-    NM.adv = true;
+    if (t < endAt + cfg.end || NM.advSeq === R.seq) return;   // 한 판은 한 번만 넘김(PATCH 응답이 서버 소식보다 먼저 오면 같은 판을 또 넘기며 따라잡기가 두 번 쌓이던 것)
+    NM.adv = true; NM.advSeq = R.seq;
     const side = res ? res.side : (ACT.some(a => a.role === 'run' && a.alive) ? 'r' : 'h');
     if (side === 'd') NM.streak = []; else NM.streak.push(side); if (NM.streak.length >= 2) { const [x, y] = NM.streak.slice(-2); if (x === y) { NM.lvl = Math.max(-2, Math.min(2, NM.lvl + (x === 'h' ? 1 : -1))); NM.streak = []; } }
     const P = NM.D.p || {}, catcher = (() => { const c = ACT.filter(a => a.role === 'hunt' && a.cts && a.pid).sort((a, b) => b.cts - a.cts)[0]; return c && c.pid; })();
     const rounds = m.time || 1, next = (m.goal || 0) + 1;
-    if (next >= rounds) { nreq('/m', 'PATCH', { st: 'end' }).catch(() => {}).finally(() => { NM.adv = false; setTimeout(() => { if (NM.on && NM.host && NM.D.m && NM.D.m.st === 'end') nreq('/m/st', 'PUT', 'lobby').catch(() => {}); }, 9000); }); ctlMatch(m.seq, 'end'); return; }
+    if (next >= rounds) { nreq('/m', 'PATCH', { st: 'end' }).catch(() => { NM.advSeq = null; }).finally(() => { NM.adv = false; setTimeout(() => { if (NM.on && NM.host && NM.D.m && NM.D.m.st === 'end') nreq('/m/st', 'PUT', 'lobby').catch(() => {}); }, 9000); }); ctlMatch(m.seq, 'end'); return; }
     // 다음 도망자: 아직 안 해 본 사람 중 — 잡은 사람 먼저 · 아니면 차례순
     const ids = Object.keys(P).filter(id => P[id] && typeof P[id].tm === 'number');
     const ran = id => P[id].tm >= 1000 || P[id].tm % 1000 >= 100, ordOf = id => (P[id].tm === 99 ? 50 + ids.indexOf(id) : P[id].tm % 100);
     const fresh = ids.filter(id => !ran(id)).sort((a, b) => ordOf(a) - ordOf(b)), rc = ids.length >= 6 ? 2 : 1, pick = [];
     if (catcher && fresh.includes(catcher)) pick.push(catcher);
     for (const id of fresh) if (pick.length < rc && !pick.includes(id)) pick.push(id);
-    if (!pick.length) { nreq('/m', 'PATCH', { st: 'end' }).catch(() => {}).finally(() => { NM.adv = false; }); return; }
+    if (!pick.length) { nreq('/m', 'PATCH', { st: 'end' }).catch(() => { NM.advSeq = null; }).finally(() => { NM.adv = false; }); return; }
     const up = { 'm/seq': m.seq + 1, 'm/goal': next, 'm/t0': Math.round(sNow() + 3000), 'm/arena': 'hs' + NM.lvl };
     for (const id of ids) up['p/' + id + '/tm'] = ordOf(id) % 100 + (pick.includes(id) ? 100 : 0) + (ran(id) ? 1000 : 0);
-    nreq('', 'PATCH', up).catch(() => {}).finally(() => { NM.adv = false; });
+    nreq('', 'PATCH', up).catch(() => { NM.advSeq = null; }).finally(() => { NM.adv = false; });
     nreq('/ev', 'DELETE').catch(() => {}); nreq('/b', 'DELETE').catch(() => {});
   }
   async function hostStart() {
