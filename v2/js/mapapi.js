@@ -644,6 +644,7 @@ export function createMapApi(host, NAV, META) {
       see: ENG.see, hide: ENG.hide, note: (t9, b9) => ENG.note(t9, b9), investigate: ENG.investigate, dig: ENG.dig, prop: ENG.prop, carry: ENG.carry,
       story: ENG.story, door: ENG.door, chaser: ENG.chaser, fade: (s9, c9) => ENG.fade(s9, c9),
       top: host.top ? { enter: o => { const T9 = host.top; t({ remove: () => T9.exit() }); return T9.enter(o); }, exit: () => host.top.exit(), floor: f => host.top.floor(f), look: (x, z, d) => host.top.look(x, z, d), ground: (sx, sy) => host.top.ground(sx, sy), setTool: t => host.top.setTool(t), marks: L => host.top.marks(L), get on() { return host.top.on; }, get state() { return host.top.state; } } : null,   // TOP-1(10-04): 하늘에서 보기(게임이 멈추면 저절로 나옴)
+      lego: on => { if (!world.lego) return; world.lego(!!on); if (on) t({ remove: () => world.lego(false) }); },   // LEGO-2(10-04): 학교 전체 레고 무늬(블록 놀이) — 놀이가 멈추면 꺼짐
       film: host.film ? { play: (shots, o) => { const f = host.film; t({ remove: () => f.stop('stop') }); return f.play(shots, o); }, stop: k => host.film.stop(k), get on() { return host.film.on; } } : null,   // FILM-1(10-04): 오프닝·클로징 영상(게임이 멈추면 영상도 멈춤) — v2/js/film.js
       time: k => (k ? ENG.setTime(k) : ui.getTime && ui.getTime()),   // 시간대 바꾸기(게임이 멈추면 원래대로) · 인자 없으면 지금 시간대
       // G-ESCAPE(09-27): 불 끄기·손전등(밤 놀이 — 새 조명 없음 · 게임이 멈추면 원래대로) — §12.13

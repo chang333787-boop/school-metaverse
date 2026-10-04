@@ -6554,16 +6554,18 @@ export function buildWorld(scene) {
   }
   // LEGO-1(10-04 시제품 · 주소 ?lego=1일 때만 — 교사 '가구는 지금처럼 · 학교 벽만 레고화'): 본관(앞줄 + 현관) 상자 안의 벽 = 엇갈린 블록 줄눈(1.0 × 0.48 · 블록마다 살짝 다른 톤 · 위 모서리 밝게·아래 어둡게)
   //   · 위를 보는 면(바닥 무늬·벽 윗면) = 0.5 m 돌기(그늘 · 테) — 셰이더 몇 줄(삼각형·드로우콜·빛 0) · 가구(dBox 디테일 재질)는 그대로 · 비교 사진용(정할 때까지 기본은 꺼짐)
-  const LEGO = typeof location !== 'undefined' && /[?&]lego=1(&|$)/.test(location.search);
-  const LGB = [FR.x[0] - 0.7, FR.z[0] - 0.4, FR.x[1] + 0.7, B.entrance.z[1] + 0.4].map(v => v.toFixed(2));
+  //   LEGO-2(10-04 교사 '추천으로' — 평소·견학·홍보판은 지금 모습 · 🧱 블록 놀이 동안만 학교 전체 레고(벽·바닥·땅)): 늘 셰이더에 넣어 두고 uLego(공유 uniform)로 켜고 끔(다시 짓기 없음)
+  //     켜기 = world.lego(true) · 게임 파사드 map.lego(on)(놀이가 멈추면 꺼짐) · 주소 ?lego=1 = 처음부터 켬(비교 사진)
+  const LEGO_U = { value: typeof location !== 'undefined' && /[?&]lego=1(&|$)/.test(location.search) ? 1 : 0 };
+  const LGB = ['-140.00', '-140.00', '140.00', '140.00'];   // 학교 대지 전체(벽 = AO 거리가 있는 면 · 무늬 = 바닥·땅·겉벽 판)
   function legoPatch(m, R = LGB, useAo = false) {   // useAo = AO 거리가 있는 면(벽 런·바닥 무늬)만 — 같은 청크에 합쳐진 나무·덤불(먼 디테일)은 빼려고   // R = 그 재질에서 레고가 되는 x·z 상자(디테일 재질 = 본관 남벽 바깥(겉 상자 틀·창틀)만 — 실내 가구는 그대로)
-    if (!LEGO) return m; const prev = m.onBeforeCompile, key = m.customProgramCacheKey && m.customProgramCacheKey !== THREE.Material.prototype.customProgramCacheKey ? m.customProgramCacheKey.bind(m) : null;
-    m.onBeforeCompile = (sh, r) => { if (prev) prev.call(m, sh, r);
+    const prev = m.onBeforeCompile, key = m.customProgramCacheKey && m.customProgramCacheKey !== THREE.Material.prototype.customProgramCacheKey ? m.customProgramCacheKey.bind(m) : null;
+    m.onBeforeCompile = (sh, r) => { if (prev) prev.call(m, sh, r); sh.uniforms.uLego = LEGO_U;
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vLgP;\nvarying vec3 vLgN;\n').replace('#include <begin_vertex>', '#include <begin_vertex>\nvLgP = position; vLgN = normal;\n');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vLgP;\nvarying vec3 vLgN;\nfloat lgH(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n')
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uLego;\nvarying vec3 vLgP;\nvarying vec3 vLgN;\nfloat lgH(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n')
         .replace('#include <color_fragment>', `#include <color_fragment>
 { vec3 P = vLgP, N = vLgN; float nl = length(N);
-  if (nl > 0.5 && P.x > ${R[0]} && P.x < ${R[2]} && P.z > ${R[1]} && P.z < ${R[3]} && P.y > -0.6 && P.y < 5.5${useAo ? ' && min(min(vAoD.x, vAoD.y), vAoD.z) < 250.' : ''}) { N /= nl; vec3 A = abs(N); float k = 1.;
+  if (uLego > 0.5 && nl > 0.5 && P.x > ${R[0]} && P.x < ${R[2]} && P.z > ${R[1]} && P.z < ${R[3]} && P.y > -3. && P.y < 12.${useAo ? ' && min(min(vAoD.x, vAoD.y), vAoD.z) < 250.' : ''}) { N /= nl; vec3 A = abs(N); float k = 1.;
     if (A.y < 0.5) { vec2 uv = A.x > A.z ? vec2(P.z, P.y) : vec2(P.x, P.y);
       float row = floor(uv.y / 0.48), u = uv.x + (mod(row, 2.) > 0.5 ? 0.5 : 0.);
       vec2 f = vec2(fract(u), fract(uv.y / 0.48)); float ex = min(f.x, 1. - f.x), ey = min(f.y, 1. - f.y) * 0.48;
@@ -6578,7 +6580,7 @@ export function buildWorld(scene) {
     m.customProgramCacheKey = () => (key ? key() : '') + 'lego1' + R.join(',') + (useAo ? 'a' : ''); return m;
   }
   const matAO = legoPatch(aoPatch(new THREE.MeshLambertMaterial({ vertexColors: true }), 'wall', false), LGB, true);
-  if (matLegoLater) { matLegoLater = false; legoPatch(mat, [LGB[0], (FR.z[1] - 0.05).toFixed(2), LGB[2], (FR.z[1] + 0.85).toFixed(2)]); }   // 정면 상자 틀·창틀·빗물관(디테일 — 벽에서 0.85 m 안 · 상자 앞면 0.75) — 남벽 안쪽(가구)·앞 화단 덤불은 빼고
+  if (matLegoLater) { matLegoLater = false; legoPatch(mat, [(FR.x[0] - 0.7).toFixed(2), (FR.z[1] - 0.05).toFixed(2), (FR.x[1] + 0.7).toFixed(2), (FR.z[1] + 0.85).toFixed(2)]); }   // 정면 상자 틀·창틀·빗물관(디테일 — 벽에서 0.85 m 안 · 상자 앞면 0.75) — 남벽 안쪽(가구)·앞 화단 덤불은 빼고
   // PERF-LOAD: 비인덱스 청크 법선 — three computeVertexNormals(면마다 cb×ab → Float32 저장 → 정점마다 정규화 → Float32)와 같은 식·같은 순서(값이 같다), Vector3 호출 없이
   const flatNormals = g => { const P = g.attributes.position.array, N = new Float32Array(P.length);
     for (let i = 0; i + 8 < P.length; i += 9) { const bx = P[i + 3], by = P[i + 4], bz = P[i + 5], cbx = P[i + 6] - bx, cby = P[i + 7] - by, cbz = P[i + 8] - bz, abx = P[i] - bx, aby = P[i + 1] - by, abz = P[i + 2] - bz;
@@ -6691,5 +6693,6 @@ export function buildWorld(scene) {
     if ((o.kind === 'chair' || o.kind === 'bench' || o.kind === 'sofa' || o.kind === 'bed') && PEOPLE.some(p => p.pose === 'sit' && p.x > o.box[0] - 0.05 && p.x < o.box[3] + 0.05 && p.z > o.box[2] - 0.05 && p.z < o.box[5] + 0.05 && o.box[1] <= p.y + 0.1 && o.box[4] >= p.y + 0.3)) o.seated = true; }
   { const late = doors.filter(d => d.late); if (late.length) { const keep = doors.filter(d => !d.late); doors.length = 0; doors.push(...keep, ...late); } }   // GYM-2: 새 문은 끝 번호로(옛 문 번호 그대로)
   return { busDoor, colliders, grid, zones, doors, allBoxes, hotspots, hideSpots, details, visRods, soft: softVols, TERR_Z, terrainAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh, tour: tourSpots, npcs: NPCN, lampMat,
+    lego: on => { LEGO_U.value = on ? 1 : 0; }, get legoOn() { return LEGO_U.value > 0.5; },   // LEGO-2
     people: PEOPLE, objects: OBJS.filter(o => o.parts.length && !o.seated), personGeo, signMesh, detailMat: mat, signCanvas: t => signCanvas.get(t) || null, lampMesh };   // NPC-MOVE·WORLD-FX(found2): 사람 기록·대역 굽기·이름표 메시·형광등 메시(방마다 끄기)   // lampMat: G-ESCAPE 밤 '불 끄기'(main.js setDark — 형광등 색만 바꿈)
 }

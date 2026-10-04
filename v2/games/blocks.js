@@ -107,6 +107,7 @@ export default async function start(map, params = {}) {
   // LOCK-2(10-04 교사 '마우스를 눌러야 화면이 돌아가는 건 불편'): 마우스 잠금이 기본 — 가운데 ＋(조준점)를 보고 왼쪽 = 놓기 · 오른쪽 = 부수기(마인크래프트처럼) · Tab = 마우스 보이기(블록 줄·칩 누르기) · 창이 열리면 마우스가 보임
   const SOLO = !!params.solo;   // 🧍 혼자 하기(blocks_solo) = 판 고르기 없이 🏠 나만의 판
   window.SM_ACT = '🧱 블록 놀이';
+  if (map.lego) map.lego(true);   // LEGO-2(10-04 교사 '추천으로'): 블록 놀이 동안만 학교 전체가 레고(벽 줄눈·바닥·땅 돌기) — 놀이가 멈추면 지금 모습
 
   // ── 그림·재질(게임이 멈추면 버림)
   const atlas = makeAtlas(), atlasURL = atlas.toDataURL();
