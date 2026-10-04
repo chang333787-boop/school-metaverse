@@ -7,8 +7,8 @@ import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길�
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
 import { createMapApi } from './mapapi.js?v=45';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=8';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
-import { createTitle } from './title.js?v=17';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
-import { createFilm } from './film.js?v=5';   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
+import { createTitle } from './title.js?v=18';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+import { createFilm } from './film.js?v=6';   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
@@ -38,7 +38,7 @@ const GFX = (() => { const q = new URLSearchParams(location.search), hq = q.get(
   const cap = Math.min(dev, low ? 1.25 : mobile || cros ? 1.5 : 2), start = hq ? cap : Math.min(cap, cros ? 1.25 : 1.5), fix = +q.get('dpr') || 0;   // ?dpr=0.75 = 배율 고정(시험용)
   // 자동 해상도는 게이트·검진·사진 대조·?hq=1·?dpr=·?adapt=0에서 끈다(같은 화면을 다시 재야 하는 주소) · 휴대폰·저사양 판(mobile·low)도 끈다(리뷰 — 휴대폰 판은 예전 그대로)
   const adapt = !hq && !fix && q.get('adapt') !== '0' && !/[?&](check|health)=1/.test(location.search) && !q.get('shot');
-  const aaQ = q.get('aa'), aa = aaQ === '1' ? true : aaQ === '0' ? false : !(low || mobile);
+  const aaQ = q.get('aa'), aa = aaQ === '1' ? true : aaQ === '0' ? false : !low;   // 10-04 교사 '폰으로 하면 계속 떨리고 멀미': 휴대폰도 MSAA(타일 GPU라 싸다 — 가장자리 지글거림이 걸을 때 떨림으로 보였다) · 저사양만 끔
   return { mode: low ? 'low' : mobile ? 'mobile' : cros ? 'cb' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, 0.6), shadow: low ? 0 : mobile || cros ? 1024 : 2048, adapt, aa, dev }; })();
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: GFX.aa, powerPreference: 'high-performance' });
 // PERF-WIN: 셰이더 오류 검사(getShaderInfoLog·getProgramInfoLog)는 컴파일이 끝날 때까지 주 스레드를 세운다(점검 실측 300~800ms) — 배포판은 끄고 ?debug=1·?check=1에서만 켠다
@@ -415,7 +415,11 @@ addEventListener('mousemove', e => {
   if (ax > lim || ay > limY) { MOUSE.drop++; return; }
   MOUSE.dx += mx; MOUSE.dy += my;
 });
-function mouseApply() {   // 루프(와 SD2.step) — 모은 움직임을 한 번에
+const TLOOK = { x: 0, y: 0 };   // 10-04 손가락 시점: 터치 신호마다 바로 돌리면(휴대폰은 신호 박자 ≠ 화면 박자) 프레임마다 도는 양이 들쭉날쭉 → 떨림·멀미 — 모았다가 프레임마다 부드럽게
+function mouseApply(dt = 1 / 60) {   // 루프(와 SD2.step) — 모은 움직임을 한 번에
+  if (TLOOK.x || TLOOK.y) { const k = 1 - Math.exp(-Math.min(0.1, dt) * 40); let ax = TLOOK.x * k, ay = TLOOK.y * k;
+    if (Math.abs(TLOOK.x - ax) < 0.4 && Math.abs(TLOOK.y - ay) < 0.4) { ax = TLOOK.x; ay = TLOOK.y; }
+    TLOOK.x -= ax; TLOOK.y -= ay; camYaw -= ax * 0.0058; camPitch = Math.max(CTRL.pitchLo ?? -0.2, Math.min(1.1, camPitch + ay * 0.0042)); }
   if (!MOUSE.dx && !MOUSE.dy) return;
   camYaw -= MOUSE.dx * 0.0026;
   camPitch = Math.max(CTRL.pitchLo ?? -0.2, Math.min(1.1, camPitch + MOUSE.dy * 0.0022));   // WG-FPS: 게임이 위로 보는 한계를 넓힐 수 있다(CTRL.pitchLo)
@@ -423,7 +427,7 @@ function mouseApply() {   // 루프(와 SD2.step) — 모은 움직임을 한 �
 }
 // TOUCH-1: 터치 조작(v2/js/touch.js) — 왼쪽 조이스틱 = 아날로그 이동(TOUCH.mx·my·m → physics) · 오른쪽 드래그 = 시점(마우스와 같은 부호, 휴대폰용 감도) · 점프/행동/시점 버튼
 const TOUCH = createTouch({ canvas,
-  look: (dx, dy) => { camYaw -= dx * 0.0058; camPitch = Math.max(CTRL.pitchLo ?? -0.2, Math.min(1.1, camPitch + dy * 0.0042)); },
+  look: (dx, dy) => { TLOOK.x += dx; TLOOK.y += dy; },   // 프레임마다 mouseApply가 부드럽게 돌린다
   act: () => { if (MAP?.closeModal()) return; if (hotNear) act(hotNear); else MAP?.idleAct(); }, view: () => { camFirst = !camFirst; },   // 리뷰(ENGINE-1): 쪽지가 떠 있으면 ✋ = 닫기(예전엔 같은 지점을 다시 눌러 쪽지를 또 열었다)
   onMode: on => { if (hotNear) hintEl.textContent = on ? hintEl.textContent.replace(/^E  /, '✋ ') : hintEl.textContent.replace(/^✋ /, 'E  ');   // 리뷰: 터치 ↔ 마우스(터치 화면 크롬북) 오갈 때
     if (MAP && MAP.minimap.visible) MAP.minimap.toggle(MAP.minimap.big); } });   // 미니맵 크기 다시(터치면 버튼 위까지만)
@@ -1255,7 +1259,7 @@ function detailTick(dt, budget = Infinity) {
 
 // ---------- 지도 API(MAP-API-1 · 09-24) — 게임이 받는 지도 계약. 정본 docs/map_api.md ----------
 let rebakeT = 0;
-const FILM = createFilm({ THREE, camera, renderer, scene, world, tone, setCam: f => { CAM_OVR = f; }, setView: v => { FILM_VIEW = v && { far: DETAIL_LITE ? Math.min(v.far, 150) : v.far }; OCC.x = 1e9; },   /* 휴대폰·크롬북은 가구 거리 150m까지 */ setTime: k => setTime(k), getTime: () => timeKey });   // FILM-1
+const FILM = createFilm({ THREE, camera, renderer, scene, world, tone, setCam: f => { CAM_OVR = f; }, setView: v => { FILM_VIEW = v && { far: GFX.mode === 'desktop' ? v.far : GFX.mode === 'cb' ? Math.min(v.far, 150) : Math.min(v.far, 100) }; OCC.x = 1e9; },   /* 크롬북 150m · 휴대폰·저사양 100m(10-04 교사 '폰으로 보니 전체적으로 떨림') */ setTime: k => setTime(k), getTime: () => timeKey });   // FILM-1
 MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL, film: FILM,
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
   pl: { P, ACT, CTRL, keys, touch: TOUCH, acts: ACTS, getYaw: () => camYaw, setYaw: v => { camYaw = v; },
@@ -1479,7 +1483,7 @@ function loop(ts) {
   const dt = Math.min(0.05, clock.getDelta());
   const t0 = performance.now();
   if (ts) { if (MOUSE.fl) MOUSE.fd = Math.min(120, Math.max(1, ts - MOUSE.fl)); MOUSE.fl = ts; }
-  mouseApply();   // PERF-WIN: 이 프레임에 모인 마우스 움직임을 한 번에
+  mouseApply(dt);   // PERF-WIN: 이 프레임에 모인 마우스·손가락 움직임을 한 번에
   step(dt);
   doorTick(dt);
   hotTick(dt);

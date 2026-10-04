@@ -46,7 +46,7 @@ export function createFilm(env) {
 #film .fl-stage{position:absolute;left:0;right:0;top:var(--lb);bottom:var(--lb);z-index:6;pointer-events:none;background:radial-gradient(ellipse 80% 90% at 50% 50%,transparent 45%,rgba(5,8,16,.42) 100%)}
 #film .kick{text-shadow:0 2px 10px rgba(0,0,0,.75)}
 #film .fl-ctl{position:absolute;right:max(14px,env(safe-area-inset-right));bottom:max(8px,calc((var(--lb) - 36px) / 2));z-index:8;display:flex;gap:8px;pointer-events:auto}
-#film .fl-ctl button{font:700 clamp(12px,1.5vw,15px)/1 var(--ff);color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:9px 14px;min-height:36px;cursor:pointer;backdrop-filter:blur(6px)}
+#film .fl-ctl button{font:700 clamp(12px,1.5vw,15px)/1 var(--ff);color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:9px 14px;min-height:36px;cursor:pointer}
 #film .fl-ctl button:hover{background:rgba(255,255,255,.24)}
 #film .fl-prog{position:absolute;left:0;bottom:0;height:3px;background:linear-gradient(90deg,#ffd23c,#ff7a59);z-index:8;width:0}
 #film .fl-brand{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(8px,calc((var(--lb) - 20px) / 2));z-index:8;font:800 clamp(12px,1.3vw,14px)/1.2 var(--ff);letter-spacing:.14em;color:rgba(255,255,255,.62)}
@@ -60,7 +60,7 @@ export function createFilm(env) {
 #film .h1{font:900 clamp(30px,6.2vw,88px)/1.04 var(--ff);letter-spacing:-.02em;text-shadow:0 4px 30px rgba(0,0,0,.45)}
 #film .h2{font:900 clamp(22px,3.6vw,52px)/1.12 var(--ff);letter-spacing:-.01em;text-shadow:0 3px 22px rgba(0,0,0,.5)}
 #film .p{font:600 clamp(14px,1.7vw,21px)/1.5 var(--ff);color:rgba(255,255,255,.92);text-shadow:0 2px 12px rgba(0,0,0,.6)}
-#film .glass{background:linear-gradient(135deg,rgba(14,26,52,.78),rgba(14,26,52,.55));border:1px solid rgba(255,255,255,.16);border-radius:18px;backdrop-filter:blur(10px);box-shadow:0 18px 50px rgba(0,0,0,.35)}
+#film .glass{background:linear-gradient(135deg,rgba(14,26,52,.88),rgba(14,26,52,.74));border:1px solid rgba(255,255,255,.16);border-radius:18px;box-shadow:0 14px 40px rgba(0,0,0,.3)}   /* 뒤 흐림(backdrop-filter)은 휴대폰에서 매 프레임 3D를 다시 흐려 떨림 → 뺌 */
 /* 첫 장면 — 폰 끄기 → RAS 켜기 */
 #film .lock{left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;width:min(92vw,900px)}
 #film .lock .ph{width:clamp(54px,7vw,84px);height:clamp(92px,12vw,144px);margin:0 auto 18px;border:4px solid #fff;border-radius:16px;position:relative;transition:opacity .5s .2s,transform .5s .2s}
@@ -107,7 +107,7 @@ export function createFilm(env) {
 #film .clip{right:clamp(14px,3vw,48px);bottom:clamp(10px,3vh,34px);width:min(40vw,500px);padding:8px;transform:translateY(18px)}
 #film .clip.in{transform:none}
 #film .clip .fr{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000 center/cover no-repeat}
-#film .clip iframe{position:absolute;left:-12%;top:-12%;width:124%;height:124%;border:0;pointer-events:none}   
+#film .clip iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none;transform:scale(1.22);transform-origin:50% 50%}   /* 크기는 칸 그대로 + 확대로 제목 띠만 자름(아이폰은 칸보다 큰 iframe을 옆으로 밀었다) */   
 #film .clip .cap{display:flex;align-items:center;gap:8px;padding:8px 4px 2px;font:700 clamp(11px,1.15vw,14px)/1.3 var(--ff);color:rgba(255,255,255,.9)}
 #film .clip .cap:before{content:'▶';font-size:10px;background:#ff3d3d;border-radius:4px;padding:3px 5px;line-height:1}
 /* 아래 글 · 가운데 글 */
@@ -132,9 +132,8 @@ export function createFilm(env) {
 @media (max-aspect-ratio:1/1){#film .stats{left:12px;right:12px;width:auto;top:auto;bottom:8px;transform:translateY(20px)}#film .stats.in{transform:none}#film .chap{width:auto;right:12px}#film .clip{width:min(70vw,360px);bottom:8px}}
 @media (max-height:520px){#film .lock .ph{width:34px;height:58px;margin-bottom:8px;border-width:3px;border-radius:10px}#film .lock .ph:after{inset:5px 4px 11px}#film .lock .w1{font-size:13vh}#film .lock .dot{width:17vh;height:17vh;font-size:8vh}#film .lock .dots{margin:10px 0 26px}#film .lock .w2{font-size:12vh}#film .lock .sub{margin-top:8px}#film .stats{grid-template-columns:1fr 1fr 1fr;width:min(720px,70vw)}#film .chap .big{font-size:clamp(56px,11vw,120px)}#film .clip{width:min(32vw,300px)}}
 body.film-on>:not(#film):not(#scene){visibility:hidden!important}
-body.film-on #scene{filter:saturate(1.14) contrast(1.06)}
 #scene.fl-punch{animation:flpunch .6s cubic-bezier(.2,.8,.2,1)}
-@keyframes flpunch{0%{transform:scale(1.08);filter:blur(3px) saturate(1.14) contrast(1.06)}100%{transform:none;filter:saturate(1.14) contrast(1.06)}}
+@keyframes flpunch{0%{transform:scale(1.07)}100%{transform:none}}
 #film .fl-flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:4;pointer-events:none}
 /* 갈래 순서(01/05) */
 #film .chn{left:clamp(16px,4vw,64px);top:clamp(10px,2.6vh,24px);display:flex;flex-wrap:wrap;gap:6px;align-items:center;transform:translateY(-8px)}
@@ -182,6 +181,17 @@ body.film-on #scene{filter:saturate(1.14) contrast(1.06)}
     renderer.localClippingEnabled = true; cutSet(null);
     try { renderer.compile(scene, camera); } catch (e) { /* 다음 그림에서 */ }   // 셰이더를 검은 화면 동안 미리(장면마다 자르는 면 수가 같아 다시 짓지 않음)
   }
+  // 자르는 상자 옆면이 높은 상자(지붕·처마·벽)를 세로로 가르면 그 단면은 뚜껑이 없어 속이 보인다 → 그런 상자를 다 품을 때까지 넓힌다(대본 상자가 맞으면 그대로)
+  const safeBox = new Map();
+  function safeCut(c9) {
+    if (!c9) return null; const k = c9.y + ':' + c9.box.join(','); if (safeBox.has(k)) return safeBox.get(k);
+    const B = (env.world && env.world.allBoxes) || []; let [x0, z0, x1, z1] = c9.box;
+    for (let it = 0; it < 12; it++) { let ch = false;
+      for (const b of B) { if (b.y1 <= c9.y + 0.01 || b.x1 <= x0 || b.x0 >= x1 || b.z1 <= z0 || b.z0 >= z1) continue; if (b.x0 >= x0 && b.x1 <= x1 && b.z0 >= z0 && b.z1 <= z1) continue;
+        x0 = Math.min(x0, b.x0 - 0.05); z0 = Math.min(z0, b.z0 - 0.05); x1 = Math.max(x1, b.x1 + 0.05); z1 = Math.max(z1, b.z1 + 0.05); ch = true; }
+      if (!ch) break; }
+    const r = { y: c9.y, box: [x0, z0, x1, z1] }; safeBox.set(k, r); return r;
+  }
   let caps = null;
   const capMat = new THREE.MeshBasicMaterial({ color: 0x2c313b });
   function capsSet(c9) {
@@ -223,7 +233,7 @@ body.film-on #scene{filter:saturate(1.14) contrast(1.06)}
       try { document.exitPointerLock && document.pointerLockElement && document.exitPointerLock(); } catch (e) { /* */ }
       document.body.classList.add('film-on');
       const T = shots.reduce((a, s) => a + (s.dur || 0), 0);
-      cur = { shots, i: -1, t: 0, st: 0, mb: 0, lastCh: null, T, res, o, root, black, flash, stage, prog, onKey, tags: [], ui: [], extra: [], clip: null, last: performance.now(), done: false, prevTime: env.getTime ? env.getTime() : null, fov0: camera.fov, near0: camera.near, far0: camera.far };
+      cur = { shots, i: -1, t: 0, st: 0, mb: 0, lastCh: null, T, res, o, root, black, flash, stage, prog, onKey, tags: [], ui: [], extra: [], clip: null, last: (document.timeline && document.timeline.currentTime) || performance.now(), done: false, prevTime: env.getTime ? env.getTime() : null, fov0: camera.fov, near0: camera.near, far0: camera.far };
       if (shots.some(s => s.cut)) cutOn();
       setView && setView({ far: 420 });
       void root.offsetWidth; requestAnimationFrame(() => { if (cur && cur.root === root) root.classList.add('bars'); });
@@ -235,7 +245,7 @@ body.film-on #scene{filter:saturate(1.14) contrast(1.06)}
     for (const u of c.ui) u.el.remove(); c.ui.length = 0; for (const t of c.tags) t.el.remove(); c.tags.length = 0; for (const e of c.extra) e.remove(); c.extra.length = 0;
     if (c.clip) { c.clip.remove(); c.clip = null; }
     if (s.time && env.setTime) env.setTime(s.time);
-    if (s.cut !== undefined || mats) { cutSet(s.cut || null); capsSet(s.cut || null); }
+    if (s.cut !== undefined || mats) { const c9 = safeCut(s.cut || null); cutSet(c9); capsSet(c9); }
     c.black.classList.toggle('clear', !s.black);
     const tr = s.tr || (s.fadeIn ? 'fade' : i > 0 && !s.black ? 'dip' : 'none');   // FILM-2 전환: fade(0.6초) · dip(짧게 어두워짐) · flash(흰 번쩍 + 줌 펀치)
     if (tr === 'fade' || tr === 'dip') { const b = c.black; b.classList.remove('clear'); b.style.transition = 'none'; b.style.opacity = tr === 'dip' ? '0.85' : ''; void b.offsetWidth;
@@ -319,7 +329,7 @@ body.film-on #scene{filter:saturate(1.14) contrast(1.06)}
   }
   function camF(dt) {   // main.js step()이 평소 카메라를 정한 뒤 부른다 — 시계·카메라·글을 한 번에
     const c = cur; if (!c) return;
-    const now = performance.now(), d9 = Math.min(0.1, (now - c.last) / 1000); c.last = now;
+    const now = (document.timeline && document.timeline.currentTime) || performance.now(), d9 = Math.max(0, Math.min(0.1, (now - c.last) / 1000)); c.last = now;   // 화면 갱신 시각(프레임마다 고른 간격) — 휴대폰에서 카메라가 덜컥거리지 않게
     if (c.i < 0) enter(0);
     if (!c.hold) { c.t += d9; c.st += d9; }
     let s = c.s;

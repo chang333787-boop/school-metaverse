@@ -1,5 +1,7 @@
 // FILM-1(10-04) 견학 오프닝·클로징 장면 대본 — 글·숫자·영상 주소 = tour_data.js 'film'(교사) · 카메라 길·지붕 벗기기 상자 = 여기 · 재생기 = v2/js/film.js
 //   좌표 = layout.js 기준(x 동+ · z 남+) · 장소 = world.tour(견학 지점 자리)에서 읽어 맵이 바뀌어도 따라간다.
+// 지붕 벗기기 상자 = 본관 건물 전체(가장자리가 빈 땅에 오게 — 상자 옆면이 지붕·처마를 세로로 자르면 속 빈 단면이 반짝였다 · 10-04 교사 'AI 장면 반짝임')
+const MAIN_CUT = { y: 3.0, box: [-41.3, -51.6, 52.1, -19.8] };
 const RAS = { R: '#4dabf7', A: '#ff7a59', S: '#38c98a', AI: '#9b8cff', ECO: '#7bd35a' };
 const ytId = u => { const m = String(u || '').match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/); return m ? m[1] : null; };
 const clipOf = (c, title) => { const id = c && ytId(c.url); return id ? { id, start: +c.start || 0, end: +c.end || 0, title: c.title || title || '정림초 유튜브', at: 0.9 } : null; };
@@ -27,7 +29,7 @@ export function buildOpening(D, ctx) {
   if (RT.on !== false && pts.length > 2) shots.push({ dur: 8.4, chord: 'F', sfx: [[0.1, 'whoosh']], cam: { p: [[-8, 168, 44], [-11, 176, 34]], l: [[-11, 0, -4], [-12, 0, -8]] }, fov: 46,   // 학교 전체(스쿨버스까지)가 지도처럼 들어오게
     ui: [{ type: 'route', at: 0.2, out: 8.1, pts, draw: 5.2, kick: RT.kick || '우리 학교 한눈에', title: RT.title || '' }] });
   // 2 · 숫자로 보는 정림초 — 1층 높이에서 자른 본관(인형의 집) 위를 천천히
-  if (F.stats && (F.stats.items || []).length) shots.push({ dur: 9.6, chord: 'Am', cut: { y: 2.95, box: [-46, -53, 57, -21] },
+  if (F.stats && (F.stats.items || []).length) shots.push({ dur: 9.6, chord: 'Am', cut: MAIN_CUT,
     cam: { p: [[-34, 50, 18], [-22, 54, 12]], l: [[-2, 0, -36], [8, 0, -38]] },
     ui: [{ type: 'stats', at: 0.2, out: 9.3, kick: F.stats.kick, title: F.stats.title, items: F.stats.items }] });
   // 2.5 · 공모사업 막대그래프 — 본관 앞을 천천히 옆으로(FILM-2)
@@ -37,10 +39,10 @@ export function buildOpening(D, ctx) {
   // 3~7 · 갈래(R · A · S · AI · 생태) — 장소마다 카메라 · 지붕 벗기기 · 영상 조각
   const lib = sp('library') || [-22.4, 0, -36.5], ai = sp('ai') || [25.6, 0, -28.4], garden = sp('garden') || [18, -0.3, -58.9];
   const CAM = {
-    R: { chord: 'F', cut: { y: 2.95, box: [-27.5, -46, -11.5, -32.5] }, p: [[lib[0] + 16.4, 21, lib[2] + 16.5], [lib[0] + 13.4, 17.5, lib[2] + 13.5]], l: [[lib[0] - 1.6, 0, lib[2] - 4.5], [lib[0] - 2.1, 0, lib[2] - 4.5]] },
+    R: { chord: 'F', cut: MAIN_CUT, p: [[lib[0] + 16.4, 21, lib[2] + 16.5], [lib[0] + 13.4, 17.5, lib[2] + 13.5]], l: [[lib[0] - 1.6, 0, lib[2] - 4.5], [lib[0] - 2.1, 0, lib[2] - 4.5]] },
     A: { chord: 'G', p: [[tree[0] - 34, 9, tree[2] + 2], [tree[0] - 22, 7.5, tree[2] + 9]], l: [[tree[0] - 2, 2, tree[2] + 10], [tree[0] + 2, 2, tree[2] + 14]] },   // 10-04 교사: A = 나무 쪽 · S = 강당
     S: { chord: 'Em', cut: { y: 5.4, box: [-82, -31, -50.5, -3.5] }, p: [[-45, 19, -3], [-49, 15, -7]], l: [[-60, 1, -25], [-61, 1, -26]] },
-    AI: { chord: 'Am', cut: { y: 2.95, box: [23.2, -33, 34, -22.8] }, p: [[ai[0] + 18, 15, ai[2] + 12], [ai[0] + 14, 12, ai[2] + 9.5]], l: [[ai[0] + 8, 0, ai[2] - 2], [ai[0] + 7, 0, ai[2] - 2.5]] },
+    AI: { chord: 'Am', cut: MAIN_CUT, p: [[ai[0] + 18, 15, ai[2] + 12], [ai[0] + 14, 12, ai[2] + 9.5]], l: [[ai[0] + 8, 0, ai[2] - 2], [ai[0] + 7, 0, ai[2] - 2.5]] },
     ECO: { chord: 'Dm', p: [[garden[0] - 10, 26, garden[2] + 22], [garden[0] + 6, 21, garden[2] + 19]], l: [[garden[0] + 14, 0, garden[2] - 10], [garden[0] + 20, 0, garden[2] - 12]] },
   };
   const ORD = ['R', 'A', 'S', 'AI', 'ECO'].filter(k => ch[k] && CAM[k]), NAV = ORD.map(k => ({ t: k === 'ECO' ? '생태' : k, c: RAS[k] }));
