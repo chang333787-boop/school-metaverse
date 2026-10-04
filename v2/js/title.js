@@ -203,7 +203,7 @@ export function createTitle(h) {
   async function opening(r) {
     phase = 'film'; try { sessionStorage.setItem('sm.film.op', '1'); } catch (e) { /* */ }
     let shots = null;
-    try { const [M, T] = await Promise.all([import('../games/tour_film.js?v=1'), import('../games/tour_data.js?t=' + Date.now())]); shots = M.buildOpening(T.TOUR || {}, { spots: (h.world && h.world.tour) || [] }); }
+    try { const [M, T] = await Promise.all([import('../games/tour_film.js?v=3'), import('../games/tour_data.js?t=' + Date.now())]); shots = M.buildOpening(T.TOUR || {}, { spots: (h.world && h.world.tour) || [] }); }
     catch (e) { console.warn('[오프닝] 영상 대본을 못 읽었어요', e); }
     if (shots && shots.length) { await h.film.play(shots, { brand: '정림초등학교 · Phone Off, RAS On' }); muted = !!store.get('mute', false); paintMute(); }
     const fp = camera.position.clone(), fq = camera.quaternion.clone(); setCam(() => { camera.position.copy(fp); camera.quaternion.copy(fq); });   // 영상 마지막 자리 그대로 → 닦기 → 날아오기

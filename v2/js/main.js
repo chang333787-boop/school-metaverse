@@ -7,8 +7,8 @@ import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길�
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
 import { createMapApi } from './mapapi.js?v=45';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=8';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
-import { createTitle } from './title.js?v=15';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
-import { createFilm } from './film.js?v=2';   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
+import { createTitle } from './title.js?v=17';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+import { createFilm } from './film.js?v=4';   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
@@ -1255,7 +1255,7 @@ function detailTick(dt, budget = Infinity) {
 
 // ---------- 지도 API(MAP-API-1 · 09-24) — 게임이 받는 지도 계약. 정본 docs/map_api.md ----------
 let rebakeT = 0;
-const FILM = createFilm({ THREE, camera, renderer, scene, tone, setCam: f => { CAM_OVR = f; }, setView: v => { FILM_VIEW = v && { far: DETAIL_LITE ? Math.min(v.far, 150) : v.far }; OCC.x = 1e9; },   /* 휴대폰·크롬북은 가구 거리 150m까지 */ setTime: k => setTime(k), getTime: () => timeKey });   // FILM-1
+const FILM = createFilm({ THREE, camera, renderer, scene, world, tone, setCam: f => { CAM_OVR = f; }, setView: v => { FILM_VIEW = v && { far: DETAIL_LITE ? Math.min(v.far, 150) : v.far }; OCC.x = 1e9; },   /* 휴대폰·크롬북은 가구 거리 150m까지 */ setTime: k => setTime(k), getTime: () => timeKey });   // FILM-1
 MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL, film: FILM,
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
   pl: { P, ACT, CTRL, keys, touch: TOUCH, acts: ACTS, getYaw: () => camYaw, setYaw: v => { camYaw = v; },

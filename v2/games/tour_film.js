@@ -21,26 +21,36 @@ export function buildOpening(D, ctx) {
     ui: [{ kick: F.place || '', title: F.title || '정림초등학교', at: 3.3, out: 8.3, pos: 'lower' }],
     tags: [['체육관', [-66, 9, -15]], ['본관', [8, 5.5, -29]], ['급식실', [4, 5, -42]], ['운동장', [-2, -0.5, 6]], ['큰 나무', [tree[0], tree[1] + 10, tree[2]]], ['숲놀이터', [forest[0] + 3, forest[1] + 2, forest[2] + 3]], ['텃밭', [30, 0.5, -68]], ['스쿨버스', [bus[0], bus[1] + 3.2, bus[2]]]]
       .map(([t, p], k) => ({ t, p, at: 4.4 + k * 0.22 })) });
+  // 1.5 · 우리 학교 한눈에 — 위에서 내려다본 지도에 견학 길이 그려지며 장소 핀(FILM-2)
+  const RT = F.route || {}, ROUTE = ['bus', 'playground', 'forest', 'bigtree', 'ai', 'science', 'cafeteria', 'garden', 'library', 'pe'];
+  const pts = ROUTE.map(k => { const q = sp(k), d = (D.spots || {})[k] || {}; return q && d.on !== false ? { p: [q[0], q[1] + 1, q[2]], t: d.name || k, i: d.stamp || '📍' } : null; }).filter(Boolean);
+  if (RT.on !== false && pts.length > 2) shots.push({ dur: 8.4, chord: 'F', sfx: [[0.1, 'whoosh']], cam: { p: [[-8, 168, 44], [-11, 176, 34]], l: [[-11, 0, -4], [-12, 0, -8]] }, fov: 46,   // 학교 전체(스쿨버스까지)가 지도처럼 들어오게
+    ui: [{ type: 'route', at: 0.2, out: 8.1, pts, draw: 5.2, kick: RT.kick || '우리 학교 한눈에', title: RT.title || '' }] });
   // 2 · 숫자로 보는 정림초 — 1층 높이에서 자른 본관(인형의 집) 위를 천천히
   if (F.stats && (F.stats.items || []).length) shots.push({ dur: 9.6, chord: 'Am', cut: { y: 2.95, box: [-46, -53, 57, -21] },
     cam: { p: [[-34, 50, 18], [-22, 54, 12]], l: [[-2, 0, -36], [8, 0, -38]] },
     ui: [{ type: 'stats', at: 0.2, out: 9.3, kick: F.stats.kick, title: F.stats.title, items: F.stats.items }] });
+  // 2.5 · 공모사업 막대그래프 — 본관 앞을 천천히 옆으로(FILM-2)
+  const GR = F.grants;
+  if (GR && (GR.items || []).length) shots.push({ dur: 8.2, chord: 'G', cam: { p: [[-30, 11, 2], [-14, 10, 0]], l: [[-20, 2, -30], [-4, 2, -30]] },
+    ui: [{ type: 'bars', at: 0.2, out: 7.9, kick: GR.kick, title: GR.title, items: GR.items, unit: GR.unit || '', c1: '#ffd23c', c2: '#ff7a59' }] });
   // 3~7 · 갈래(R · A · S · AI · 생태) — 장소마다 카메라 · 지붕 벗기기 · 영상 조각
   const lib = sp('library') || [-22.4, 0, -36.5], ai = sp('ai') || [25.6, 0, -28.4], garden = sp('garden') || [18, -0.3, -58.9];
   const CAM = {
     R: { chord: 'F', cut: { y: 2.95, box: [-27.5, -46, -11.5, -32.5] }, p: [[lib[0] + 16.4, 21, lib[2] + 16.5], [lib[0] + 13.4, 17.5, lib[2] + 13.5]], l: [[lib[0] - 1.6, 0, lib[2] - 4.5], [lib[0] - 2.1, 0, lib[2] - 4.5]] },
-    A: { chord: 'G', cut: { y: 5.4, box: [-82, -31, -50.5, -3.5] }, p: [[-45, 19, -3], [-49, 15, -7]], l: [[-60, 1, -25], [-61, 1, -26]] },
-    S: { chord: 'Em', p: [[tree[0] - 34, 9, tree[2] + 2], [tree[0] - 22, 7.5, tree[2] + 9]], l: [[tree[0] - 2, 2, tree[2] + 10], [tree[0] + 2, 2, tree[2] + 14]] },
+    A: { chord: 'G', p: [[tree[0] - 34, 9, tree[2] + 2], [tree[0] - 22, 7.5, tree[2] + 9]], l: [[tree[0] - 2, 2, tree[2] + 10], [tree[0] + 2, 2, tree[2] + 14]] },   // 10-04 교사: A = 나무 쪽 · S = 강당
+    S: { chord: 'Em', cut: { y: 5.4, box: [-82, -31, -50.5, -3.5] }, p: [[-45, 19, -3], [-49, 15, -7]], l: [[-60, 1, -25], [-61, 1, -26]] },
     AI: { chord: 'Am', cut: { y: 2.95, box: [23.2, -33, 34, -22.8] }, p: [[ai[0] + 18, 15, ai[2] + 12], [ai[0] + 14, 12, ai[2] + 9.5]], l: [[ai[0] + 8, 0, ai[2] - 2], [ai[0] + 7, 0, ai[2] - 2.5]] },
     ECO: { chord: 'Dm', p: [[garden[0] - 10, 26, garden[2] + 22], [garden[0] + 6, 21, garden[2] + 19]], l: [[garden[0] + 14, 0, garden[2] - 10], [garden[0] + 20, 0, garden[2] - 12]] },
   };
-  for (const k of ['R', 'A', 'S', 'AI', 'ECO']) { const c = ch[k], m = CAM[k]; if (!c || !m) continue;
+  const ORD = ['R', 'A', 'S', 'AI', 'ECO'].filter(k => ch[k] && CAM[k]), NAV = ORD.map(k => ({ t: k === 'ECO' ? '생태' : k, c: RAS[k] }));
+  for (const k of ORD) { const c = ch[k], m = CAM[k], idx = ORD.indexOf(k);
     const big = k === 'ECO' ? '🌱' : k;
     shots.push({ dur: c.clip ? 6.8 : 5.8, chord: m.chord, sfx: [[0.05, 'whoosh']], cut: m.cut || null, cam: { p: m.p, l: m.l },
-      ui: [{ type: 'chap', at: 0.25, out: (c.clip ? 6.8 : 5.8) - 0.35, big, word: c.word, title: c.title, items: c.items || [], c: RAS[k] }], clip: clip(c.clip) }); }
+      tr: 'flash', ui: [{ type: 'chn', at: 0.1, out: (c.clip ? 6.8 : 5.8) - 0.3, items: NAV, i: idx }, { type: 'chap', at: 0.25, out: (c.clip ? 6.8 : 5.8) - 0.35, big, word: c.word, title: c.title, items: c.items || [], c: RAS[k], ghostText: k === 'ECO' ? 'ECO' : k }], clip: clip(c.clip) }); }
   // 8 · 스쿨버스 앞으로 내려오며 — 이제 직접 걸어 볼까요?
   const fin = F.finale || [];
-  shots.push({ dur: 7.4, chord: 'C', sfx: [[0.2, 'rise'], [4.2, 'bell']],
+  shots.push({ dur: 7.4, chord: 'C', tr: 'flash', sfx: [[0.2, 'rise'], [4.2, 'bell']],
     cam: { p: [[bus[0] + 34, 34, bus[2] + 34], [bus[0] + 14, 11, bus[2] + 19], [bus[0] + 5, 4.4, bus[2] + 11]], l: [[0, 0, 18], [bus[0] - 2, 1, bus[2]], [bus[0] - 3, 1.7, bus[2] - 1]] },
     ui: [fin[0] && { title: fin[0], at: 0.6, out: 4.0, pos: 'center', size: 'h1' }, fin[1] && { title: fin[1], at: 4.2, pos: 'center', size: 'h2', color: '#ffd23c' }].filter(Boolean) });
   return shots;

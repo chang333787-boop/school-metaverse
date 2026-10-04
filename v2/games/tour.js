@@ -531,7 +531,7 @@ export default async function start(map, params = {}) {
   }
   // ---------- 🎬 오프닝·클로징 영상(FILM-1 · 10-04 교사 '교회 오프닝 영상처럼 — 오프닝 → 우리 학교 → 클로징') — 대본 tour_film.js · 재생기 v2/js/film.js ----------
   let FILMM = null;
-  const filmMod = async () => FILMM || (FILMM = await import(new URL('./tour_film.js?v=1', import.meta.url)).catch(e => { console.warn('[견학] 영상 대본을 못 읽었어요', e); return null; }));
+  const filmMod = async () => FILMM || (FILMM = await import(new URL('./tour_film.js?v=3', import.meta.url)).catch(e => { console.warn('[견학] 영상 대본을 못 읽었어요', e); return null; }));
   async function playFilm(kind, o = {}) {
     if (!map.film || map.film.on) return false; const M = await filmMod(); if (!M || dead) return false;
     const me = map.player.pos();

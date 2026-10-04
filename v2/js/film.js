@@ -21,6 +21,18 @@ export function createFilm(env) {
   };
   // 배경 화음(장면마다 하나 — 길게 사라지는 세 음) · 이름 = 근음
   const CH = { C: [261.6, 329.6, 392.0], Am: [220.0, 261.6, 329.6], F: [174.6, 220.0, 261.6], G: [196.0, 246.9, 293.7], Em: [164.8, 196.0, 246.9], Dm: [146.8, 174.6, 220.0] };
+  // 배경 음악(FILM-2): 100bpm — 북(박) · 잔 소리(엇박) · 아르페지오(8분) · 베이스(마디) — 지금 장면의 화음을 따른다(장면마다 chord)
+  const BEAT = 0.6;
+  function music(c) {
+    const s = c.s; if (!s || c.hold) return;
+    const k = s.chord || c.lastCh; if (s.chord) c.lastCh = s.chord; const ch = CH[k]; if (!ch || s.black) { c.mb = Math.ceil(c.t / BEAT); return; }
+    while (c.mb * BEAT < c.t + 0.25) { const dl = Math.max(0, c.mb * BEAT - c.t), b = c.mb;
+      snd(104, dl, 0.34, 'sine', b % 4 === 0 ? 0.26 : 0.17, 44);
+      snd(7200, dl + BEAT / 2, 0.025, 'triangle', 0.012);
+      const ar = [ch[0] * 2, ch[1] * 2, ch[2] * 2, ch[1] * 2]; snd(ar[(b * 2) % 4], dl, 0.24, 'triangle', 0.032); snd(ar[(b * 2 + 1) % 4], dl + BEAT / 2, 0.24, 'triangle', 0.028);
+      if (b % 4 === 0) snd(ch[0] / 2, dl, BEAT * 3.6, 'sine', 0.11);
+      c.mb++; }
+  }
   const chord = (k, dur) => { const c = CH[k]; if (!c) return; c.forEach((f, i) => snd(f, i * 0.03, Math.min(6, dur + 1), 'triangle', 0.055)); snd(c[0] / 2, 0, Math.min(6, dur + 1), 'sine', 0.09); };
 
   // ---------- 모양(한 번) ----------
@@ -57,10 +69,12 @@ export function createFilm(env) {
 #film .lock.off .ph:after{transform:scaleY(.02);opacity:0} #film .lock.gone .ph{opacity:0;transform:scale(.6)}
 #film .lock .w1{font:900 clamp(36px,7.6vw,108px)/1 var(--ff);letter-spacing:-.02em;opacity:0;transform:translateY(20px);transition:all .7s cubic-bezier(.2,.8,.2,1)}
 #film .lock.off .w1{opacity:1;transform:none}
-#film .lock .dots{display:flex;justify-content:center;gap:clamp(12px,2.4vw,34px);margin:22px 0 10px}
+#film .lock .dots{display:flex;justify-content:center;gap:clamp(12px,2.4vw,34px);margin:22px 0 38px}
 #film .lock .dot{width:clamp(64px,9vw,120px);height:clamp(64px,9vw,120px);border-radius:50%;display:grid;place-items:center;font:900 clamp(28px,4.6vw,62px)/1 var(--ff);border:3px solid rgba(255,255,255,.25);color:rgba(255,255,255,.25);transition:all .45s cubic-bezier(.2,.9,.3,1.4)}
 #film .lock .dot.on{color:#fff;border-color:transparent;transform:scale(1.08);box-shadow:0 0 0 6px rgba(255,255,255,.08),0 0 40px var(--c)}
-#film .lock .dot small{display:block;font:800 clamp(10px,1.1vw,13px)/1 var(--ff);letter-spacing:.1em;margin-top:4px;opacity:.9}
+#film .lock .dot{position:relative;line-height:1}
+#film .lock .dot small{position:absolute;left:50%;top:calc(100% + 10px);transform:translateX(-50%);white-space:nowrap;font:800 clamp(10px,1.1vw,13px)/1 var(--ff);letter-spacing:.14em;color:rgba(255,255,255,.4);transition:color .4s}
+#film .lock .dot.on small{color:rgba(255,255,255,.9)}
 #film .lock .w2{font:900 clamp(30px,6vw,84px)/1 var(--ff);color:#ffd23c;opacity:0;transform:scale(.8);transition:all .6s cubic-bezier(.2,.9,.3,1.5)}
 #film .lock.ras .w2{opacity:1;transform:none}
 #film .lock .sub{margin-top:16px;font:700 clamp(13px,1.6vw,19px)/1.4 var(--ff);letter-spacing:.08em;color:rgba(255,255,255,.75);opacity:0;transition:opacity .8s .3s}
@@ -78,7 +92,7 @@ export function createFilm(env) {
 #film .st{padding:clamp(10px,1.4vw,18px);opacity:0;transform:translateY(16px) scale(.96);transition:all .55s cubic-bezier(.2,.9,.3,1.3)}
 #film .st.in{opacity:1;transform:none}
 #film .st .n{font:900 clamp(24px,3.6vw,50px)/1 var(--ff);letter-spacing:-.02em;color:#ffd23c;white-space:nowrap}
-#film .st .n u{text-decoration:none;font-size:.5em;margin-left:3px;color:#fff;font-weight:800}
+#film .st .n u{text-decoration:none;font-size:.5em;margin-left:3px;color:#ffd23c;font-weight:800}
 #film .st .c{margin-top:6px;font:700 clamp(11px,1.15vw,14.5px)/1.35 var(--ff);color:rgba(255,255,255,.88)}
 /* 갈래(R·A·S·AI·생태) */
 #film .chap{left:clamp(16px,4vw,64px);top:50%;transform:translate(-30px,-50%);width:min(560px,58vw)}
@@ -116,8 +130,45 @@ export function createFilm(env) {
 #film .endc .ct{display:inline-flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin-top:14px;font:700 clamp(13px,1.55vw,18px)/1.4 var(--ff)}
 #film .endc .ct b{color:#ffd23c}
 @media (max-aspect-ratio:1/1){#film .stats{left:12px;right:12px;width:auto;top:auto;bottom:8px;transform:translateY(20px)}#film .stats.in{transform:none}#film .chap{width:auto;right:12px}#film .clip{width:min(70vw,360px);bottom:8px}}
-@media (max-height:520px){#film .lock .ph{width:34px;height:58px;margin-bottom:8px;border-width:3px;border-radius:10px}#film .lock .ph:after{inset:5px 4px 11px}#film .lock .w1{font-size:13vh}#film .lock .dot{width:17vh;height:17vh;font-size:8vh}#film .lock .dots{margin:12px 0 6px}#film .lock .w2{font-size:12vh}#film .lock .sub{margin-top:8px}#film .stats{grid-template-columns:1fr 1fr 1fr;width:min(720px,70vw)}#film .chap .big{font-size:clamp(56px,11vw,120px)}#film .clip{width:min(32vw,300px)}}
+@media (max-height:520px){#film .lock .ph{width:34px;height:58px;margin-bottom:8px;border-width:3px;border-radius:10px}#film .lock .ph:after{inset:5px 4px 11px}#film .lock .w1{font-size:13vh}#film .lock .dot{width:17vh;height:17vh;font-size:8vh}#film .lock .dots{margin:10px 0 26px}#film .lock .w2{font-size:12vh}#film .lock .sub{margin-top:8px}#film .stats{grid-template-columns:1fr 1fr 1fr;width:min(720px,70vw)}#film .chap .big{font-size:clamp(56px,11vw,120px)}#film .clip{width:min(32vw,300px)}}
 body.film-on>:not(#film):not(#scene){visibility:hidden!important}
+body.film-on #scene{filter:saturate(1.14) contrast(1.06)}
+#scene.fl-punch{animation:flpunch .6s cubic-bezier(.2,.8,.2,1)}
+@keyframes flpunch{0%{transform:scale(1.08);filter:blur(3px) saturate(1.14) contrast(1.06)}100%{transform:none;filter:saturate(1.14) contrast(1.06)}}
+#film .fl-flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:4;pointer-events:none}
+#film .fl-grain{position:absolute;inset:-60%;z-index:7;pointer-events:none;opacity:.06;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");animation:flgrain .6s steps(5) infinite}
+@keyframes flgrain{0%{transform:translate(0,0)}20%{transform:translate(-4%,3%)}40%{transform:translate(3%,-3%)}60%{transform:translate(-2%,-4%)}80%{transform:translate(4%,2%)}100%{transform:translate(1%,4%)}}
+/* 갈래 순서(01/05) */
+#film .chn{left:clamp(16px,4vw,64px);top:clamp(10px,2.6vh,24px);display:flex;flex-wrap:wrap;gap:6px;align-items:center;transform:translateY(-8px)}
+#film .chn.in{transform:none}
+#film .chn .no{font:900 clamp(12px,1.35vw,16px)/1 var(--ff);color:#ffd23c;margin-right:6px;letter-spacing:.12em}
+#film .chn span{font:800 clamp(11px,1.1vw,13px)/1 var(--ff);padding:6px 10px;border-radius:999px;background:rgba(10,18,36,.55);color:rgba(255,255,255,.62);border:1px solid rgba(255,255,255,.14)}
+#film .chn span.on{background:var(--c);color:#fff;border-color:transparent;box-shadow:0 0 18px var(--c)}
+#film .chn span.done{color:rgba(255,255,255,.9)}
+/* 큰 배경 글자 */
+#film .ghost{position:absolute;right:-2vw;bottom:-6vh;font:900 clamp(160px,34vw,520px)/.8 var(--ff);color:transparent;-webkit-text-stroke:2px rgba(255,255,255,.16);letter-spacing:-.05em;pointer-events:none;opacity:0;transform:translateX(40px);transition:opacity 1.2s,transform 6s linear}
+#film .ghost.in{opacity:1;transform:translateX(-40px)}
+/* 지도 길 */
+#film svg.route{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+#film svg.route path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+#film svg.route .bg{stroke:rgba(10,18,36,.55);stroke-width:9}
+#film svg.route .fg{stroke:#ffd23c;stroke-width:4.5;filter:drop-shadow(0 0 6px rgba(255,210,60,.8))}
+#film .pin{position:absolute;transform:translate(-50%,-100%) scale(.3);opacity:0;transition:transform .45s cubic-bezier(.2,.9,.3,1.6),opacity .3s;pointer-events:none;text-align:center}
+#film .pin.in{opacity:1;transform:translate(-50%,-100%) scale(1)}
+#film .pin i{display:grid;place-items:center;width:clamp(30px,3.4vw,44px);height:clamp(30px,3.4vw,44px);margin:0 auto;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#fff;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+#film .pin i em{transform:rotate(45deg);font-style:normal;font-size:clamp(15px,1.8vw,22px)}
+#film .pin b{display:block;margin-top:4px;white-space:nowrap;font:800 clamp(11px,1.15vw,14px)/1 var(--ff);background:rgba(10,18,36,.78);padding:5px 8px;border-radius:999px}
+/* 막대그래프 */
+#film .bars{right:clamp(14px,3vw,48px);top:50%;transform:translate(30px,-50%);width:min(560px,54vw);padding:clamp(14px,1.8vw,24px)}
+#film .bars.in{transform:translate(0,-50%)}
+#film .bars .br{display:grid;grid-template-columns:minmax(90px,38%) 1fr auto;align-items:center;gap:10px;margin-top:clamp(5px,.8vh,9px);opacity:0;transform:translateX(12px);transition:all .45s ease}
+#film .bars .br.in{opacity:1;transform:none}
+#film .bars .br span{font:700 clamp(11px,1.15vw,14px)/1.2 var(--ff);color:rgba(255,255,255,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#film .bars .tr{height:clamp(10px,1.3vh,14px);border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
+#film .bars .tr i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--c1),var(--c2));transition:width 1.1s cubic-bezier(.2,.9,.2,1)}
+#film .bars .br b{font:900 clamp(12px,1.3vw,16px)/1 var(--ff);color:#ffd23c;min-width:4.6em;text-align:right}
+#film .st .ic{float:right;font-size:clamp(18px,2.2vw,28px);line-height:1;opacity:.95}
+@media (max-height:520px){#film .bars .br{margin-top:3px}#film .bars{width:min(620px,60vw)}#film .chn{display:none}}
 `;
   document.head.appendChild(css);
 
@@ -133,7 +184,19 @@ body.film-on>:not(#film):not(#scene){visibility:hidden!important}
     renderer.localClippingEnabled = true; cutSet(null);
     try { renderer.compile(scene, camera); } catch (e) { /* 다음 그림에서 */ }   // 셰이더를 검은 화면 동안 미리(장면마다 자르는 면 수가 같아 다시 짓지 않음)
   }
-  function cutOff() { if (!mats) return; for (const [m, cp, ci] of mats) { m.clippingPlanes = cp; m.clipIntersection = ci; m.needsUpdate = true; } mats = null; renderer.localClippingEnabled = false; }
+  let caps = null;
+  const capMat = new THREE.MeshBasicMaterial({ color: 0x2c313b });
+  function capsSet(c9) {
+    if (caps) { scene.remove(caps); caps.geometry.dispose(); caps = null; }
+    const B = env.world && env.world.allBoxes; if (!c9 || !B) return;
+    const [bx0, bz0, bx1, bz1] = c9.box, y = c9.y, L = [];
+    for (const b of B) { if (b.y0 >= y || b.y1 <= y) continue; const x0 = Math.max(b.x0, bx0), x1 = Math.min(b.x1, bx1), z0 = Math.max(b.z0, bz0), z1 = Math.min(b.z1, bz1); if (x1 - x0 > 0.01 && z1 - z0 > 0.01) L.push([x0, x1, z0, z1]); }
+    if (!L.length) return;
+    const g = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), m = new THREE.InstancedMesh(g, capMat, L.length), M4 = new THREE.Matrix4();
+    L.forEach(([x0, x1, z0, z1], k) => { M4.makeScale(x1 - x0, 1, z1 - z0).setPosition((x0 + x1) / 2, y - 0.004, (z0 + z1) / 2); m.setMatrixAt(k, M4); });
+    m.frustumCulled = false; m.renderOrder = 1; scene.add(m); caps = m;   // 같은 색끼리 겹치는 곳(모서리)은 싸워도 보이지 않는다
+  }
+  function cutOff() { capsSet(null); if (!mats) return; for (const [m, cp, ci] of mats) { m.clippingPlanes = cp; m.clipIntersection = ci; m.needsUpdate = true; } mats = null; renderer.localClippingEnabled = false; }
 
   // ---------- 재생 ----------
   let cur = null;
@@ -148,7 +211,8 @@ body.film-on>:not(#film):not(#scene){visibility:hidden!important}
     return new Promise(res => {
       const root = el('div', 'ttl-keep', null, document.body); root.id = 'film';   // ttl-keep = 오프닝 화면(title.css)이 숨기지 않게
       el('div', 'fl-bar t', null, root); el('div', 'fl-bar b', null, root);
-      const black = el('div', 'fl-black', null, root), stage = el('div', 'fl-stage', null, root), prog = el('div', 'fl-prog', null, root);
+      const black = el('div', 'fl-black', null, root), flash = el('div', 'fl-flash', null, root), stage = el('div', 'fl-stage', null, root), prog = el('div', 'fl-prog', null, root);
+      el('div', 'fl-grain', null, root);
       el('div', 'fl-brand', esc(o.brand || ''), root);
       const ctl = el('div', 'fl-ctl', null, root);
       const mB = el('button', '', '', ctl); mB.type = 'button'; const paintM = () => { mB.textContent = muted() ? '🔇' : '🔊'; }; paintM();
@@ -162,7 +226,7 @@ body.film-on>:not(#film):not(#scene){visibility:hidden!important}
       try { document.exitPointerLock && document.pointerLockElement && document.exitPointerLock(); } catch (e) { /* */ }
       document.body.classList.add('film-on');
       const T = shots.reduce((a, s) => a + (s.dur || 0), 0);
-      cur = { shots, i: -1, t: 0, st: 0, T, res, o, root, black, stage, prog, onKey, tags: [], ui: [], clip: null, last: performance.now(), done: false, prevTime: env.getTime ? env.getTime() : null, fov0: camera.fov };
+      cur = { shots, i: -1, t: 0, st: 0, mb: 0, lastCh: null, T, res, o, root, black, flash, stage, prog, onKey, tags: [], ui: [], extra: [], clip: null, last: performance.now(), done: false, prevTime: env.getTime ? env.getTime() : null, fov0: camera.fov };
       if (shots.some(s => s.cut)) cutOn();
       setView && setView({ far: 420 });
       void root.offsetWidth; requestAnimationFrame(() => { if (cur && cur.root === root) root.classList.add('bars'); });
@@ -171,12 +235,16 @@ body.film-on>:not(#film):not(#scene){visibility:hidden!important}
   }
   function enter(i) {
     const c = cur, s = c.shots[i]; c.i = i; c.st = 0; c.s = s;
-    for (const u of c.ui) u.el.remove(); c.ui.length = 0; for (const t of c.tags) t.el.remove(); c.tags.length = 0;
+    for (const u of c.ui) u.el.remove(); c.ui.length = 0; for (const t of c.tags) t.el.remove(); c.tags.length = 0; for (const e of c.extra) e.remove(); c.extra.length = 0;
     if (c.clip) { c.clip.remove(); c.clip = null; }
     if (s.time && env.setTime) env.setTime(s.time);
-    if (s.cut !== undefined || mats) cutSet(s.cut || null);
+    if (s.cut !== undefined || mats) { cutSet(s.cut || null); capsSet(s.cut || null); }
     c.black.classList.toggle('clear', !s.black);
-    if (s.fadeIn) { c.black.classList.remove('clear'); c.black.style.transition = 'none'; void c.black.offsetWidth; c.black.style.transition = ''; requestAnimationFrame(() => c.black.classList.add('clear')); }
+    const tr = s.tr || (s.fadeIn ? 'fade' : i > 0 && !s.black ? 'dip' : 'none');   // FILM-2 전환: fade(0.6초) · dip(짧게 어두워짐) · flash(흰 번쩍 + 줌 펀치)
+    if (tr === 'fade' || tr === 'dip') { const b = c.black; b.classList.remove('clear'); b.style.transition = 'none'; b.style.opacity = tr === 'dip' ? '0.85' : ''; void b.offsetWidth;
+      b.style.transition = tr === 'dip' ? 'opacity .32s ease' : ''; requestAnimationFrame(() => { b.style.opacity = ''; b.classList.add('clear'); }); }
+    if (tr === 'flash') { const f = c.flash; f.style.transition = 'none'; f.style.opacity = '0.6'; void f.offsetWidth; f.style.transition = 'opacity .45s ease'; requestAnimationFrame(() => { f.style.opacity = '0'; });
+      const cv = document.getElementById('scene'); if (cv) { cv.classList.remove('fl-punch'); void cv.offsetWidth; cv.classList.add('fl-punch'); } }
     if (s.chord) chord(s.chord, s.dur);
     c.sfx = (s.sfx || []).map(([t, k]) => ({ t, k, done: false }));
     c.pending = (s.ui || []).map(u => ({ u, done: false, out: false }));
@@ -208,7 +276,7 @@ body.film-on>:not(#film):not(#scene){visibility:hidden!important}
         [2.1 + L.length * 0.42, () => { d.classList.add('ras'); SFX.boom(); }]];
     } else if (u.type === 'stats') {
       d = el('div', 'fl-u stats', (u.kick ? '<div class="hd"><div class="kick">' + esc(u.kick) + '</div>' + (u.title ? '<div class="h2" style="margin-top:8px">' + esc(u.title) + '</div>' : '') + '</div>' : ''), c.stage);
-      d._n = []; (u.items || []).forEach((it, k) => { const s = el('div', 'st glass', '<div class="n"><span></span><u>' + esc(it.u || '') + '</u></div><div class="c">' + esc(it.c || '') + '</div>', d);
+      d._n = []; (u.items || []).forEach((it, k) => { const s = el('div', 'st glass', (it.i ? '<span class="ic">' + esc(it.i) + '</span>' : '') + '<div class="n"><span></span><u>' + esc(it.u || '') + '</u></div><div class="c">' + esc(it.c || '') + '</div>', d);
         const num = String(it.n).match(/^(\D*)(\d+(?:\.\d+)?)(\D*)$/), sp = s.querySelector('.n span');
         if (num) d._n.push({ sp, pre: num[1], v: +num[2], dec: (num[2].split('.')[1] || '').length, post: num[3], t0: 0.35 + k * 0.32 }); else sp.textContent = it.n;
         setTimeout(() => { s.classList.add('in'); SFX.pop(); }, (0.3 + k * 0.32) * 1000); });
@@ -216,7 +284,21 @@ body.film-on>:not(#film):not(#scene){visibility:hidden!important}
       d = el('div', 'fl-u chap', '<div class="big" style="--c:' + esc(u.c || '#ffd23c') + '">' + esc(u.big) + (u.word ? '<small>' + esc(u.word) + '</small>' : '') + '</div>'
         + (u.title ? '<div class="h2" style="margin-top:10px">' + lines(u.title) + '</div>' : '') + '<ul style="--c:' + esc(u.c || '#ffd23c') + '">' + (u.items || []).map(x => '<li class="glass">' + esc(x) + '</li>').join('') + '</ul>', c.stage);
       d.style.setProperty('--c', u.c || '#ffd23c');
+      if (u.ghost !== false) { const g = el('div', 'ghost', esc(u.ghostText || u.big), c.stage); requestAnimationFrame(() => g.classList.add('in')); c.extra.push(g); }
       d.querySelectorAll('li').forEach((li, k) => setTimeout(() => li.classList.add('in'), (0.55 + k * 0.28) * 1000));
+    } else if (u.type === 'chn') {   // 갈래 순서(01/05 · 지금 갈래 강조)
+      d = el('div', 'fl-u chn', '<span class="no">' + String(u.i + 1).padStart(2, '0') + ' / ' + String(u.items.length).padStart(2, '0') + '</span>'
+        + u.items.map((x, k) => '<span class="' + (k === u.i ? 'on' : k < u.i ? 'done' : '') + '" style="--c:' + esc(x.c || '#ffd23c') + '">' + esc(x.t) + '</span>').join(''), c.stage);
+    } else if (u.type === 'route') {   // 지도 위 길 + 장소 핀(3D 자리를 매 프레임 화면에 맞춤)
+      d = el('div', 'fl-u', null, c.stage); d.style.inset = '0';
+      d.innerHTML = '<svg class="route"><path class="bg"/><path class="fg"/></svg>' + (u.kick || u.title ? '<div class="fl-u lower in" style="position:absolute">' + (u.kick ? '<div class="kick">' + esc(u.kick) + '</div>' : '') + (u.title ? '<div class="h2" style="margin-top:8px">' + lines(u.title) + '</div>' : '') + '</div>' : '');
+      d._route = { pts: u.pts || [], dur: u.draw || 4.5, pins: (u.pts || []).map(q => { const e = el('div', 'pin', '<i><em>' + esc(q.i || '📍') + '</em></i><b>' + esc(q.t || '') + '</b>', d); return { e, on: false }; }), bg: d.querySelector('.bg'), fg: d.querySelector('.fg') };
+    } else if (u.type === 'bars') {   // 막대그래프(값이 0부터 자람)
+      const mx = Math.max(1, ...(u.items || []).map(x => +x.v || 0));
+      d = el('div', 'fl-u bars glass', (u.kick ? '<div class="kick">' + esc(u.kick) + '</div>' : '') + (u.title ? '<div class="h2" style="margin-top:8px;margin-bottom:6px">' + esc(u.title) + '</div>' : ''), c.stage);
+      d._n = []; (u.items || []).forEach((x, k) => { const r = el('div', 'br', '<span>' + esc(x.t) + '</span><div class="tr"><i style="--c1:' + esc(u.c1 || '#4dabf7') + ';--c2:' + esc(u.c2 || '#9b8cff') + '"></i></div><b></b>', d);
+        const t0 = 0.4 + k * 0.17; d._n.push({ sp: r.querySelector('b'), pre: '', v: +x.v || 0, dec: 0, post: u.unit || '', t0 });
+        setTimeout(() => { r.classList.add('in'); r.querySelector('i').style.width = ((+x.v || 0) / mx * 100).toFixed(1) + '%'; if (k % 2 === 0) SFX.tick(); }, t0 * 1000); });
     } else if (u.type === 'stamps') {
       const n = (u.icons || []).length;
       d = el('div', 'fl-u stamps', '<div class="ring">' + (u.icons || []).map(x => '<div class="sp">' + esc(x) + '</div>').join('') + '<div class="mid"><b>' + esc(u.big || n) + '</b><span>' + esc(u.cap || '') + '</span></div></div>', c.stage);
@@ -249,7 +331,9 @@ body.film-on>:not(#film):not(#scene){visibility:hidden!important}
     if (c.camP) { c.camP.getPoint(e, Vp); c.camL.getPoint(e, Vl); camera.position.copy(Vp); camera.lookAt(Vl); }
     else if (c.p1) { camera.position.set(c.p1[0], c.p1[1], c.p1[2]); camera.lookAt(c.l1[0], c.l1[1], c.l1[2]); }
     const fv = s.fov || 50; if (Math.abs(camera.fov - fv) > 0.01) { camera.fov = fv; camera.updateProjectionMatrix(); }
+    if (scene.fog) { if (!c.fog) c.fog = [scene.fog.near, scene.fog.far]; const k9 = Math.max(1, camera.position.y / 45); scene.fog.near = 140 * k9; scene.fog.far = 420 * k9; }   // 높은 드론 샷이 안개에 바래지 않게(시간대가 바꾼 값 위에 매 프레임)
     camera.updateMatrixWorld();
+    if (c.o.music !== false) music(c);
     for (const x of c.sfx) if (!x.done && c.st >= x.t) { x.done = true; SFX[x.k] && SFX[x.k](); }
     for (const p of c.pending) {
       if (!p.done && c.st >= (p.u.at || 0)) { p.done = true; p.el = makeUI(p.u); c.ui.push(p); }
@@ -259,6 +343,13 @@ body.film-on>:not(#film):not(#scene){visibility:hidden!important}
         n.sp.textContent = n.pre + (n.dec ? v.toFixed(n.dec) : Math.round(v).toLocaleString('ko-KR')) + n.post; }
     }
     const W = c.stage.clientWidth, H = c.stage.clientHeight, top = c.stage.getBoundingClientRect().top - c.root.getBoundingClientRect().top;
+    for (const p of c.ui) { const R = p.el && p.el._route; if (!R || !R.pts.length) continue;   // 지도 길: 화면 자리 → 그려진 만큼(앞에서부터) · 핀은 길이 닿으면
+      const xy = R.pts.map(q => { V.set(q.p[0], q.p[1], q.p[2]).project(camera); return [(V.x + 1) / 2 * innerWidth, (1 - V.y) / 2 * innerHeight - top]; });
+      const dd = 'M' + xy.map(a => a[0].toFixed(1) + ' ' + a[1].toFixed(1)).join(' L'); R.bg.setAttribute('d', dd); R.fg.setAttribute('d', dd);
+      let L = 0; const seg = [0]; for (let k = 1; k < xy.length; k++) { L += Math.hypot(xy[k][0] - xy[k - 1][0], xy[k][1] - xy[k - 1][1]); seg.push(L); }
+      const f = Math.max(0, Math.min(1, (c.st - (p.u.at || 0) - 0.3) / R.dur)), e9 = 1 - Math.pow(1 - f, 2), shown = L * e9;
+      for (const q of [R.bg, R.fg]) { q.style.strokeDasharray = L.toFixed(1) + ' ' + (L + 10).toFixed(1); q.style.strokeDashoffset = (L - shown).toFixed(1); }
+      R.pins.forEach((pn, k) => { pn.e.style.left = xy[k][0].toFixed(1) + 'px'; pn.e.style.top = xy[k][1].toFixed(1) + 'px'; const on = seg[k] <= shown + 0.5; if (on !== pn.on) { pn.on = on; pn.e.classList.toggle('in', on); if (on) SFX.pop(); } }); }
     for (const t of c.tags) { V.set(t.p[0], t.p[1], t.p[2]).project(camera); const vis = c.st >= t.at && V.z < 1 && V.x > -0.95 && V.x < 0.95 && V.y > -0.9 && V.y < 0.85;
       if (vis) { t.el.style.left = ((V.x + 1) / 2 * innerWidth).toFixed(1) + 'px'; t.el.style.top = ((1 - V.y) / 2 * innerHeight - top).toFixed(1) + 'px'; }
       if (vis !== t.on) { t.on = vis; t.el.classList.toggle('in', vis); if (vis) SFX.tick(); } }
@@ -268,7 +359,8 @@ body.film-on>:not(#film):not(#scene){visibility:hidden!important}
   function finish(k) {
     const c = cur; if (!c || c.done) return; c.done = true;
     removeEventListener('keydown', c.onKey, true);
-    cutOff(); setView && setView(null);
+    if (c.fog && scene.fog) { scene.fog.near = c.fog[0]; scene.fog.far = c.fog[1]; }
+    cutOff(); setView && setView(null); const cv = document.getElementById('scene'); if (cv) cv.classList.remove('fl-punch');
     if (c.prevTime && env.setTime && c.o.keepTime !== true) env.setTime(c.prevTime);
     camera.fov = c.fov0; camera.updateProjectionMatrix();
     setCam(null); cur = null;
