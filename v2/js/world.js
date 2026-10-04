@@ -3128,7 +3128,7 @@ export function buildWorld(scene) {
       [z9 - L/2 + 0.08, z9 + L/2 - 0.08].forEach(zz => dBox(0.05, 0.1, 0.05, 0xb58a5a, cx0 + 0.68, 0, zz)); });   // 앞다리 둘(뒷다리는 등받이 밑이라 안 보임 — 삼각형 예산)
       objScope('plant', () => { const pz = z9 - L/2 - 0.3; dBox(0.28, 0.26, 0.28, 0xf2f2ee, cx0 + 0.45, 0, pz); dBlob(0.22, 0.2, 0.22, 0x4f8f47, cx0 + 0.45, 0.42, pz, { chunky: true, jitter: 0.22 });   // 북쪽 끝 흰 화분(남쪽 끝 화분은 로비 벽돌 끝 — hall_lobby-6) · OBJ-2 물건
         colliders.push(noStand({ x0: cx0 + 0.3, x1: cx0 + 0.6, y0: 0, y1: 0.3, z0: pz - 0.15, z1: pz + 0.15 })); });
-      hotspots.push({ kind: 'sit', x: cx0 + 1.05, z: z9, y: 0, r: 0.9, label: '소파에 앉기', yaw: Math.PI / 2 }); }
+      hotspots.push({ kind: 'sit', x: cx0 + 1.05, z: z9, y: 0, r: 0.9, label: '소파에 앉기', yaw: Math.PI / 2, seat: { x: cx0 + 0.52, y: 0.42 - 0.46, z: z9, yaw: Math.PI / 2 } }); }   // SEAT-FIX(10-04): 좌석 없이는 몸이 소파 앞 공중에 그려졌다
     // LINK-EAST-32: 노치 쪽 흰 화분(바퀴 받침) · 짙은 적갈 고무 대야 · 파란 양동이(c_356·a_450)
     [[cx1 - 0.45, NOTCH_Z + 0.4], [cx1 - 0.45, lz0 - 0.45]].forEach(([x9, z9]) => objScope('plant', () => { potPlant(x9, 0, z9, 1.4, true, 0xf2f2ee);   // OBJ-2: 잎 막이까지 화분 하나
       colliders.push(noStand({ x0: x9 - 0.4, x1: cx1 - 0.24, y0: 0, y1: 1.1, z0: z9 - 0.4, z1: z9 + 0.4 })); }));   // 뻗은 잎(반지름 ≈0.6)을 몸이 뚫지 않게(건강 검진 ghost)
@@ -4650,7 +4650,7 @@ export function buildWorld(scene) {
       objScope('bench', () => { dBox(3.2, 0.06, 0.42, 0x5a3e2c, bx9, Y + 0.4, sz9);
       [-1.4, 1.4].forEach(o => dBox(0.06, 0.4, 0.36, 0x2b2d30, bx9 + o, Y, sz9));
       colliders.push({ x0: bx9 - 1.6, x1: bx9 + 1.6, y0: Y, y1: Y + 0.46, z0: sz9 - 0.21, z1: sz9 + 0.21 }); });
-      hotspots.push({ kind: 'sit', x: bx9, z: sz9 - 0.5, y: Y, r: 0.9, label: '벤치에 앉기', yaw: Math.PI });
+      hotspots.push({ kind: 'sit', x: bx9, z: sz9 - 0.5, y: Y, r: 0.9, label: '벤치에 앉기', yaw: Math.PI, seat: { x: bx9, y: Y + 0.46 - 0.46, z: sz9 + 0.02, yaw: Math.PI } });   // SEAT-FIX
     });
     // OUT-D(09-28 영상 v02 f_001~008): 남쪽 기둥 줄을 따라 여러 칸에 긴 나무 벤치(2.8 × 0.4 · 앉는 판 0.45 · 짙은 나무 + 검은 쇠 다리) — 칸마다 앉기
     //   서쪽 끝 칸(휴지통·그림)과 교감선생님이 서는 칸(버스 앞문 북쪽)은 비움 · 올라서기 금지(벤치 줄이 기둥 사이를 막는 턱이 되지 않게)
@@ -4723,7 +4723,8 @@ export function buildWorld(scene) {
           [b0, b1].forEach(b => [1.8, 2.3].forEach(r => { xs.push(tx9 + r * Math.cos(b)); zs.push(tz9 - r * Math.sin(b)); }));
           colliders.push({ x0: Math.min(...xs), x1: Math.max(...xs), y0: Y, y1: Y + 0.45, z0: Math.min(...zs), z1: Math.max(...zs) }); } });
         const cm = c9 * Math.PI / 180;
-        if (c9 < 200) hotspots.push({ kind: 'sit', x: tx9 + 2.75 * Math.cos(cm), z: tz9 - 2.75 * Math.sin(cm), y: Y, r: 0.9, label: '벤치에 앉기', yaw: Math.atan2(Math.cos(cm), -Math.sin(cm)) });
+        if (c9 < 200) { const yw = Math.atan2(Math.cos(cm), -Math.sin(cm));   // SEAT-FIX: 몸은 돌 벤치 위(바깥을 봄)
+          hotspots.push({ kind: 'sit', x: tx9 + 2.75 * Math.cos(cm), z: tz9 - 2.75 * Math.sin(cm), y: Y, r: 0.9, label: '벤치에 앉기', yaw: yw, seat: { x: tx9 + 2.02 * Math.cos(cm), y: Y + 0.45 - 0.46, z: tz9 - 2.02 * Math.sin(cm), yaw: yw } }); }
       });
       [250, 275, 300].forEach(c9 => { const cm = c9 * Math.PI / 180, x9 = tx9 + 2.55 * Math.cos(cm), z9 = tz9 - 2.55 * Math.sin(cm);
         objScope('chair', () => { dCyl(0.22, 0.22, 0.44, 0x62666c, x9, Y, z9, { seg: 9, far: true });   // 북 모양 돌 의자 · OBJ-2 물건
@@ -4951,7 +4952,7 @@ export function buildWorld(scene) {
         for (let k = 0; k < 3; k++) dBoxE(0.04, 0.09, 1.6, 0x6d5236, bx9 + 0.3, Y + 0.6 + k * 0.13, bz9);
         [-0.7, 0.7].forEach(o => { dBoxE(0.5, 0.44, 0.06, 0x2a2c30, bx9 + 0.05, Y + 0.02, bz9 + o); dBoxE(0.06, 0.5, 0.06, 0x2a2c30, bx9 + 0.3, Y + 0.46, bz9 + o); });
         colliders.push(noStand({ x0: bx9 - 0.22, x1: bx9 + 0.36, y0: Y, y1: Y + 0.95, z0: bz9 - 0.82, z1: bz9 + 0.82 })); });
-        hotspots.push({ kind: 'sit', x: bx9 - 0.55, z: bz9, y: Y, r: 0.9, label: '벤치에 앉기', yaw: Math.PI / 2 }); }
+        hotspots.push({ kind: 'sit', x: bx9 - 0.55, z: bz9, y: Y, r: 0.9, label: '벤치에 앉기', yaw: Math.PI / 2, seat: { x: bx9 + 0.05, y: Y + 0.48 - 0.46, z: bz9, yaw: -Math.PI / 2 } }); }   // SEAT-FIX: 등받이를 등지고 서쪽을 봄
       objScope('bench', () => { const px9 = 33.2, pz9 = 30.9;   // 낮고 긴 나무 평상(f_220 농구대 뒤) · OBJ-2 물건
         dBoxE(3.0, 0.08, 0.6, 0x7a6a55, px9, Y + 0.34, pz9); [-1.3, 1.3].forEach(o => dBoxE(0.12, 0.34, 0.5, 0x5e5042, px9 + o, Y, pz9));
         colliders.push({ x0: px9 - 1.5, x1: px9 + 1.5, y0: Y, y1: Y + 0.42, z0: pz9 - 0.3, z1: pz9 + 0.3 }); });

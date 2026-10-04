@@ -841,8 +841,8 @@ export default async function start(map, params = {}) {
     assign(); if (!NM.on) return;
     const S = D.s || {}, now = performance.now();
     for (const id in S) if (S[id] !== NM.seenAt[id + '#']) { NM.seenAt[id + '#'] = S[id]; NM.seenAt[id] = now; }
-    for (const a of ACT) if (a.remote) { const v = S[a.pid]; if (v) a.net = v; }
-    if (!NM.host && D.b) for (const a of ACT) if (!a.human && !a.remote) { const v = D.b[a.i]; if (v) a.net = v; }
+    for (const a of ACT) if (a.remote) { const v = S[a.pid]; if (v) netSet(a, v, now); }
+    if (!NM.host && D.b) for (const a of ACT) if (!a.human && !a.remote) { const v = D.b[a.i]; if (v) netSet(a, v, now); }
     if (m.seq !== NM.seq || m.st !== NM.st) stateChange(m);
     const E = D.ev || {};
     for (const id in E) { if (NM.seen.has(id)) continue; NM.seen.add(id); const e = E[id]; if (e && e.q === m.seq) onNetEv(e); }
@@ -882,11 +882,21 @@ export default async function start(map, params = {}) {
     if (NM.host && st === 'play') for (const id in P) if (id !== NM.pid && quiet(id, 90000)) { nreq('/p/' + id, 'DELETE').catch(() => {}); delete NM.seenAt[id]; }
   }
   // 친구·(방장 아닌 화면의) 봇: 받은 상태를 부드럽게 따라가고, 쏘고 있으면 같은 물을 그린다
+  // NET-SMOOTH(10-04 교사 '물총 멀티에서 우리 팀이 거의 순간이동'): 상태는 앞 요청이 끝나야 다음을 보내서(싱가포르 DB 왕복) 실제로는 초당 3번쯤 온다 —
+  //   예전엔 받은 자리로 0.1초 만에 다가가 다음 소식까지 멈춰(툭툭 끊김) · 5m 넘게 벌어지면 그 자리로 순간 이동했다.
+  //   이제 받은 두 자리로 속도를 구해(≤9m/s) 다음 소식이 올 때까지(≤0.45초) 그 속도로 앞질러 그리고, 부드럽게 따라간다 · 10m 넘게(다시 출발 등)만 바로 옮김
+  function netSet(a, v, now) {
+    if (v === a.net) return; const p = a.net;
+    if (p && a.nt && (v[0] - p[0]) ** 2 + (v[2] - p[2]) ** 2 < 64) { const g = Math.max(0.05, Math.min(1, (now - a.nt) / 1000)); let vx = (v[0] - p[0]) / g, vz = (v[2] - p[2]) / g; const sp = Math.hypot(vx, vz); if (sp > 9) { vx *= 9 / sp; vz *= 9 / sp; } a.nvx = vx; a.nvz = vz; }
+    else { a.nvx = 0; a.nvz = 0; }
+    a.net = v; a.nt = now;
+  }
   function netActor(a, dt, human) {
     const v = a.net; a.cmd.go = false; a.cmd.fire = false; if (!v) return;
-    const ox = a.x, oz = a.z, k = Math.min(1, dt * 12);
-    if ((v[0] - a.x) ** 2 + (v[2] - a.z) ** 2 > 25) { a.x = v[0]; a.y = v[1]; a.z = v[2]; }   // 다시 출발 등 순간 이동
-    else { a.x += (v[0] - a.x) * k; a.y += (v[1] - a.y) * k; a.z += (v[2] - a.z) * k; }
+    const ox = a.x, oz = a.z, age = a.nt ? Math.min(0.45, (performance.now() - a.nt) / 1000) : 0, live = v[9] !== 0 && a.alive;
+    const tx = v[0] + (live ? (a.nvx || 0) * age : 0), tz = v[2] + (live ? (a.nvz || 0) * age : 0);
+    if ((tx - a.x) ** 2 + (tz - a.z) ** 2 > 100) { a.x = tx; a.y = v[1]; a.z = tz; }   // 10m 넘게 = 다시 출발 등
+    else { const k = Math.min(1, dt * 9); a.x += (tx - a.x) * k; a.y += (v[1] - a.y) * Math.min(1, dt * 12); a.z += (tz - a.z) * k; }
     a.yaw += wrapA(v[3] - a.yaw) * Math.min(1, dt * 14);
     const mv = Math.hypot(a.x - ox, a.z - oz); a.walk += mv * 5.5; a.vx = (a.x - ox) / Math.max(dt, 1e-3); a.vz = (a.z - oz) / Math.max(dt, 1e-3);
     if (!a.alive || st !== 'play' || !v[4]) { a.emit = 0; return; }

@@ -170,7 +170,8 @@ export function createMapApi(host, NAV, META) {
   const S0 = { view: null };   // WG-FPS: 게임이 바꾸기 전 1인칭 여부(멈추면 되돌림)
   const setHeading = h => { pl.setYaw(-h * R2D); P.yaw = Math.atan2(Math.sin(h * R2D), -Math.cos(h * R2D)); };
   // FREE-MOUSE 기본(10-03 교사 'Esc로 마우스를 보이게 하는 건 정상이 아니다'): 평소·대부분 놀이 = 마우스 늘 보임 + 끌어서 둘러보기 · 조준 놀이(물총)만 freeMouse(false)로 잠금 · ?lock=1 = 예전처럼 잠금
-  const FREE_DEF = new URLSearchParams(location.search).get('lock') !== '1';
+  //   LOCK-2(10-04 교사 '마우스를 눌러야 화면이 돌아가는 건 불편 — 원래대로'): v2·v3 기본 = 포인터 잠금(움직이면 시점 · Tab = 마우스 보이기 · 창이 열리면 마우스가 보임) · 홍보판은 그대로 늘 보임(교사 '홍보용은 건들지 마') · ?free=1 = 늘 보임
+  const FREE_DEF = !!window.SM_PROMO || new URLSearchParams(location.search).get('free') === '1';
   function helpFree(on) {   // FREE-MOUSE: 아래 안내 줄도 '끌기'로(잠금이면 원래 글)
     const h = document.getElementById('help'); if (!h) return;
     if (on) { if (h.dataset.o == null) h.dataset.o = h.textContent; h.textContent = h.dataset.o.replace(/시점 마우스\(클릭\)/, '둘러보기 = 화면을 누른 채 끌기 · ←→'); }

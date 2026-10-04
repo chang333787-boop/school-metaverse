@@ -1,11 +1,11 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { buildWorld } from './world.js?v=144';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=145';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=43';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=44';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=8';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=14';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
@@ -382,8 +382,24 @@ addEventListener('focus', () => { MOUSE.t0 = performance.now(); });
 // FREE-MOUSE(10-03 교사 '화면이 늘 게임에 잠겨 옆 단추를 누르기 힘들다 — Esc로 마우스를 보이게 하는 건 정상이 아니다'): 게임이 map.player.freeMouse(true)를 켜면
 //   마우스는 늘 보이고 · 화면을 누른 채 끌면 시점(잠금과 같은 감도·방향) · 끌지 않고 톡 누르면 'sm-click' 이벤트({x, y} 화면 좌표 — 게임이 그 자리를 쓴다)
 const DRAG = { on: false, x: 0, y: 0, m: 0, t: 0 };
+// LOCK-2(10-04 교사 '마우스를 눌러야 화면이 전환되는 방식이 불편 — 원래 방식으로 돌리고 대안을 찾아'): 기본 = 포인터 잠금(마우스를 움직이면 시점 — FREE-MOUSE 전과 같음).
+//   대안 ① Tab = 마우스 보이기(단추·칩을 누를 수 있음) ↔ 화면 누르기·Tab = 다시 둘러보기(멈춤 창 없이) ② 놀이 창(메모장·블록 놀이 판 등)이 열리면 그 놀이가 잠금을 푼다
+//   ③ 잠긴 채 화면을 누르면 가운데(조준점)를 누른 것 — 'sm-click'(왼쪽)·'sm-rclick'(오른쪽) {x, y = 화면 가운데, center: true} → 블록 놓기·부수기 · 메모장 깃발. 터치·늘 보임(홍보판)은 예전 그대로
+const CURSOR = { on: false };
+addEventListener('keydown', e => {
+  if (e.code !== 'Tab' || e.repeat || TOUCH.on || CTRL.freeMouse || e.ctrlKey || e.altKey || e.metaKey) return;
+  const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.tagName === 'SELECT' || tg.isContentEditable)) return;   // 입력 칸에선 원래 Tab(다음 칸)
+  if (TITLE && TITLE.phase !== 'off') return;
+  e.preventDefault();
+  if (document.pointerLockElement === canvas) { CURSOR.on = true; document.exitPointerLock(); toast('🖱 마우스가 보여요 — 단추를 눌러요 · 화면을 누르거나 Tab = 다시 둘러보기', 2.6); }
+  else if (!(window.__pause && window.__pause.on)) { CURSOR.on = false; canvas.requestPointerLock(); }
+}, true);
+canvas.addEventListener('mousedown', e => {
+  if (document.pointerLockElement !== canvas || TOUCH.on) return;
+  if (e.button === 0 || e.button === 2) dispatchEvent(new CustomEvent(e.button === 0 ? 'sm-click' : 'sm-rclick', { detail: { x: innerWidth / 2, y: innerHeight / 2, center: true } }));
+});
 canvas.addEventListener('mousedown', e => { if (!CTRL.freeMouse || TOUCH.on || (e.button !== 0 && e.button !== 2)) return; DRAG.on = true; DRAG.x = e.clientX; DRAG.y = e.clientY; DRAG.m = 0; DRAG.t = performance.now(); MOUSE.te = DRAG.t; });
-canvas.addEventListener('contextmenu', e => { if (CTRL.freeMouse) e.preventDefault(); });
+canvas.addEventListener('contextmenu', e => { if (CTRL.freeMouse || document.pointerLockElement === canvas) e.preventDefault(); });
 addEventListener('mouseup', e => {
   if (!DRAG.on) return; DRAG.on = false; canvas.style.cursor = '';
   if (DRAG.m < 6 && performance.now() - DRAG.t < 450 && e.button === 0) dispatchEvent(new CustomEvent('sm-click', { detail: { x: e.clientX, y: e.clientY } }));
@@ -1515,10 +1531,11 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
   let userLock = false;   // 잠금이 사용자 클릭으로 걸렸는지(게임이 스스로 풀 때와 구분)
   const hide = () => { pz.style.display = 'none'; };
   const busy = () => CTRL.frozen || (TITLE && TITLE.phase !== 'off')   // 오프닝·메뉴·날아오는 중 · 게임이 멈춘(쪽지·대화) 동안
-    || (MAP.picker && MAP.picker.panel) || document.querySelector('.eng-note,.hudAsk,.esc-lock,#tour-talk,#story-talk');
+    || (MAP.picker && MAP.picker.panel) || document.querySelector('.eng-note,.hudAsk,.esc-lock,#tour-talk,#story-talk,#memo-ui .mp,.bk-panel,.lb-pop,.lb-big,.lb-ask,.wg-lobby');   // LOCK-2: 놀이 창이 잠금을 푼 것은 멈춤 창 없이
   document.addEventListener('pointerlockchange', () => {
-    if (document.pointerLockElement === canvas) { userLock = true; hide(); return; }
+    if (document.pointerLockElement === canvas) { userLock = true; CURSOR.on = false; hide(); return; }
     if (!userLock) return; userLock = false;
+    if (CURSOR.on) return;   // LOCK-2: Tab으로 마우스를 보인 것 = 멈춤 창 없음
     setTimeout(() => { if (!document.pointerLockElement && !busy()) show(); }, 120);   // 창이 곧 뜨는 경우(쪽지 등)는 그 창이 먼저
   });
   pz.addEventListener('click', e => {

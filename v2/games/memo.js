@@ -95,6 +95,7 @@ const STYLE = `
 #memo-ui .mlbl{font-weight:800;margin-top:10px}
 #memo-sum pre{white-space:pre-wrap;font-size:13px;background:#f8f9fa;border-radius:10px;padding:10px;max-height:52vh;overflow:auto;font-family:inherit}
 #memo-x{left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px rgba(29,53,87,.7);position:absolute}
+#memo-cross{position:fixed;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;pointer-events:none;z-index:25;display:none;background:linear-gradient(#fff,#fff) center/2px 22px no-repeat,linear-gradient(#fff,#fff) center/22px 2px no-repeat;filter:drop-shadow(0 0 2px #000)}
 #memo-here{pointer-events:auto;position:absolute;transform:translate(-50%,-130%);font-size:15px;padding:8px 12px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.3);white-space:nowrap}
 #memo-board{inset:2.5vh 2vw;display:flex;flex-direction:column;padding:12px 14px}
 #memo-board .top{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -188,10 +189,13 @@ export default async function start(map, params = {}) {
   const newId = () => 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   const canWrite = () => teacher || !(board && board.lock);
   const lockMsg = () => toast('🔒 선생님이 잠근 판이에요 — 보기만 할 수 있어요', 3);
-  map.player.freeMouse(true);
+  // LOCK-2(10-04): 마우스 잠금이 기본(움직이면 시점) — 창을 열면 잠금을 풀고(open), 잠긴 채 누르면 가운데(＋)에 깃발 · Tab = 마우스 보이기
+  const crossEl = document.createElement('div'); crossEl.id = 'memo-cross'; document.body.appendChild(crossEl);
+  const crossUp = () => { try { crossEl.style.display = document.pointerLockElement && board && !panel && !play && !isW() ? 'block' : 'none'; } catch (e) { /* 시작 중(아래 변수 준비 전) */ } };
+  document.addEventListener('pointerlockchange', crossUp);
   let panel = null, back = null;
-  const close = () => { if (panel) panel.remove(); panel = null; map.player.freeze(false); };
-  const open = (id) => { close(); hereOff(); map.player.freeze(true); panel = el('div', 'mp'); panel.id = id; keyStop(panel); return panel; };
+  const close = () => { if (panel) panel.remove(); panel = null; map.player.freeze(false); crossUp(); };
+  const open = (id) => { close(); hereOff(); map.player.freeze(true); document.exitPointerLock?.(); panel = el('div', 'mp'); panel.id = id; keyStop(panel); crossUp(); return panel; };   // LOCK-2: 창 = 마우스 보임
   addEventListener('keydown', onEsc, true);
   function onEsc(e) {
     if (e.code !== 'Escape') return;
@@ -280,9 +284,10 @@ export default async function start(map, params = {}) {
     dispatchEvent(new CustomEvent('sm-name', { detail: name }));   // 동시 접속 이름표도 같은 이름으로(main.js)
     board = { id, ...info }; close(); endTour(); placing = null; moving = null; pathClear(); listen(); chips(); window.SM_ACT = (isW() ? '🌍 ' : '📝 ') + short(bare(info.t), 10);
     if (isW()) { boardView(); return; }   // 세계 판 = 학교와 따로 — 할 일이 모두 판 안이라 바로 연다(운동장에 덩그러니 서 있지 않게)
-    toast('📌 「' + board.t + '」 — ' + (isTouch() ? '화면을 누른 채 끌면 둘러보기 · 땅을 톡 누르면 🚩 깃발 · 📖 이야기 판 칩' : '마우스로 끌면 둘러보기 · 땅을 톡 누르면 🚩 깃발 · L = 이야기 판'), 5);
+    toast('📌 「' + board.t + '」 — ' + (isTouch() ? '화면을 누른 채 끌면 둘러보기 · 땅을 톡 누르면 🚩 깃발 · 📖 이야기 판 칩' : '가운데 ＋를 보고 누르면 🚩 깃발 · L = 이야기 판 · Tab = 마우스 보이기'), 5);
   }
   const isTouch = () => document.body.classList.contains('touch');
+  const tapW = () => isTouch() ? '땅을 톡' : '가운데 ＋ 누르기';
   const worldBackHint = () => toast(isTouch() ? '🌍 「🌍 세계 판」 칩을 누르면 다시 열려요' : '🌍 L = 세계 판 다시 열기 · F = 카드 쓰기', 3);
 
   // ───────── 장면 · 덧붙인 것 ─────────
@@ -464,7 +469,7 @@ export default async function start(map, params = {}) {
       else if (a === 'edit') { back = panel && panel.id === 'memo-board' ? 'board' : null; if (tourEl) endTour(); form({ id }); }
       else if (a === 'editi') { back = panel && panel.id === 'memo-board' ? 'board' : null; if (tourEl) endTour(); form({ id: kid }); }
       else if (a === 'add') { if (!canWrite()) return lockMsg(); back = panel && panel.id === 'memo-board' ? 'board' : null; if (tourEl) endTour(); form({ scene: id, kind: b.dataset.k }); }
-      else if (a === 'flag') { if (isW()) return; if (!canWrite()) return lockMsg(); close(); endTour(); moving = null; placing = id; chips(); toast('🚩 ' + (numMap().get(id) || '') + '번 장면 — 꽂을 땅을 톡 누르거나, 화면 가운데로 보고 F · 취소 Esc', 5); }   // 세계 판 = 학교 깃발 없음
+      else if (a === 'flag') { if (isW()) return; if (!canWrite()) return lockMsg(); close(); endTour(); moving = null; placing = id; chips(); toast('🚩 ' + (numMap().get(id) || '') + '번 장면 — ' + (isTouch() ? '꽂을 땅을 톡' : '가운데 ＋를 보고 누르기') + ' · F · 취소 Esc', 5); }   // 세계 판 = 학교 깃발 없음
       else if (a === 'flagi') { if (kid) startMove(kid); }   // 덧붙인 것(📦 열쇠 등)에 나중에 깃발
     });
     P.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.ri input') && !e.isComposing) { e.preventDefault(); sendRe(e.target.closest('.cd')); } });
@@ -571,6 +576,22 @@ export default async function start(map, params = {}) {
 
   // ───────── 겨눔: 화면 가운데(F) · 마우스로 누른 곳 ─────────
   const _f = new THREE.Vector3(), _o = new THREE.Vector3(), cam = map.camera, RC = new THREE.Raycaster(), _ndc = new THREE.Vector2();
+  // 닫힌 문 = 깃발 겨누기에서 벽처럼(10-04 리뷰: 문은 충돌 상자가 없어 닫힌 교실 문을 겨누면 깃발이 교실 안쪽에 꽂혔다) — 블록 놀이와 같은 규칙
+  //   문 자리 = 문 폭 × 벽 두께(±0.15) × 문 높이 · 8m 칸 · 열림 = 몸이 3m 안(main.js doorTick) · 잠긴 문은 늘 닫힘
+  const DG9 = new Map(), dk9 = (gx, gz) => (gx + 2048) * 4096 + (gz + 2048);
+  for (const p of map.pois({ src: 'door' })) { const d = p.door; if (!d) continue; const X = d.ax === 'x', hw = d.w / 2;
+    const r = { n: +String(p.id).slice(5), cx: d.cx, cz: d.cz, y0: d.y0, y1: d.y0 + (d.dh ?? 2.6), x0: X ? d.cx - hw : d.cx - 0.15, x1: X ? d.cx + hw : d.cx + 0.15, z0: X ? d.cz - 0.15 : d.cz - hw, z1: X ? d.cz + 0.15 : d.cz + hw };
+    for (let gx = Math.floor(r.x0 / 8); gx <= Math.floor(r.x1 / 8); gx++) for (let gz = Math.floor(r.z0 / 8); gz <= Math.floor(r.z1 / 8); gz++) { const k = dk9(gx, gz); let L = DG9.get(k); if (!L) DG9.set(k, L = []); if (!L.includes(r)) L.push(r); } }
+  const doorShut9 = (r) => { const me = map.player.pos(), dx = me.x - r.cx, dz = me.z - r.cz; return !(dx * dx + dz * dz < 9 && Math.abs(me.y - r.y0) < 2) || !!(map.door && map.door.locked && map.door.locked(r.n)); };
+  function doorT(a, b) {   // 선분 a→b에서 처음 맞는 닫힌 문의 비율(0~1) 또는 null
+    let best = null; const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    for (let gx = Math.floor(Math.min(a[0], b[0]) / 8); gx <= Math.floor(Math.max(a[0], b[0]) / 8); gx++) for (let gz = Math.floor(Math.min(a[2], b[2]) / 8); gz <= Math.floor(Math.max(a[2], b[2]) / 8); gz++) {
+      const L = DG9.get(dk9(gx, gz)); if (!L) continue;
+      for (const r of L) { let t0 = 0, t1 = best != null ? best : 1, ok = true; const lo = [r.x0, r.y0, r.z0], hi = [r.x1, r.y1, r.z1];
+        for (let ax = 0; ax < 3 && ok; ax++) { if (Math.abs(d[ax]) < 1e-9) { if (a[ax] < lo[ax] || a[ax] > hi[ax]) ok = false; continue; } let p9 = (lo[ax] - a[ax]) / d[ax], q9 = (hi[ax] - a[ax]) / d[ax]; if (p9 > q9) { const s9 = p9; p9 = q9; q9 = s9; } if (p9 > t0) t0 = p9; if (q9 < t1) t1 = q9; if (t0 > t1) ok = false; }
+        if (ok && doorShut9(r)) best = t0; } }
+    return best;
+  }
   function aimPoint(sx, sy) {
     let t0;
     if (sx != null) { _ndc.set(sx / innerWidth * 2 - 1, -(sy / innerHeight) * 2 + 1); RC.setFromCamera(_ndc, cam); _o.copy(RC.ray.origin); _f.copy(RC.ray.direction); t0 = 0.3; }
@@ -578,10 +599,11 @@ export default async function start(map, params = {}) {
     const o = _o, D = 40;
     const a = [o.x + _f.x * t0, o.y + _f.y * t0, o.z + _f.z * t0], b = [o.x + _f.x * D, o.y + _f.y * D, o.z + _f.z * D];
     let r = map.q.ray(a, b);
+    const td = doorT(a, b); if (td != null && (r === null || td < r)) { const L9 = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) || 1; r = Math.max(0, td - 0.35 / L9); }   // 닫힌 문 앞(35cm 앞 바닥)
     if (r === null) for (let k = 1; k <= 80; k++) { const t = k / 80, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, z = a[2] + (b[2] - a[2]) * t, g = map.q.groundAt(x, z, y + 0.5); if (g != null && y <= g + 0.05) { r = t; break; } }
     if (r === null) { if (sx != null) return null; const me = map.player.get(); return { x: +me.x.toFixed(2), y: +me.y.toFixed(2), z: +me.z.toFixed(2), feet: true }; }
-    const x = a[0] + (b[0] - a[0]) * r, y = a[1] + (b[1] - a[1]) * r, z = a[2] + (b[2] - a[2]) * r, g = map.q.groundAt(x, z, y + 0.3);
-    return { x: +x.toFixed(2), y: +(g != null && Math.abs(g - y) < 0.6 ? g : y).toFixed(2), z: +z.toFixed(2) };
+    const x = a[0] + (b[0] - a[0]) * r, y = a[1] + (b[1] - a[1]) * r, z = a[2] + (b[2] - a[2]) * r, g = map.q.groundAt(x, z, y + 0.3), atDoor = td != null && r < td + 1e-6;
+    return { x: +x.toFixed(2), y: +(g != null && (atDoor || Math.abs(g - y) < 0.6) ? g : y).toFixed(2), z: +z.toFixed(2) };   // 문 앞이면 그 바닥에
   }
   // 근처 표지점 = 같은 구역 안의 것만(10-04 재시험: 과학실 안 깃발이 벽 너머 '가운데 마당 향나무 화분 길'로 찍혀 해 보기가 아이를 바깥 마당으로 안내했다)
   //   · 실내 구역 = 그 방 안 표지점만 · 바깥 = 바깥 표지점 중 가려지지 않은 것(표지점 자체의 나무 줄기 등은 r 안이면 봐줌)
@@ -641,6 +663,7 @@ export default async function start(map, params = {}) {
   function onWorldClick(e) {
     if (!board || panel || dead || play || isW()) return;   // 세계 판은 학교에 깃발을 꽂지 않는다
     const d = e.detail; hereOff();
+    if (d.center && !placing && !moving) { const fid = flagAt(d.x, d.y); if (fid) { const f = DATA[fid]; view(isScene(f) ? fid : f.p); return; } if (!canWrite()) return lockMsg(); const pt = aimPoint(d.x, d.y); if (pt) { back = null; form({ pt }); } return; }   // LOCK-2: 잠긴 채 누름 = 가운데(＋) — 깃발이면 그 장면 · 아니면 바로 꽂기 창(단추는 마우스가 없어 못 누름)
     if (!placing && !moving) { const fid = flagAt(d.x, d.y); if (fid) { const f = DATA[fid]; view(isScene(f) ? fid : f.p); return; } }   // 깃발을 누름 = 그 장면 보기(옆에 같은 깃발을 또 꽂지 않게)
     if (!canWrite()) { placing = null; moving = null; const t = performance.now(); if (t - lockT > 4000) { lockT = t; lockMsg(); } return; }   // 잠근 판 = 꽂기 단추 없음
     const pt = aimPoint(d.x, d.y); if (!pt) return;
@@ -663,7 +686,7 @@ export default async function start(map, params = {}) {
     const f = DATA[id]; if (!f || isW()) return; if (!canWrite()) return lockMsg();
     if (!teacher && f.by !== name) return toast('✍️ ' + f.by + '의 것이에요 — 내가 쓴 것만 깃발을 옮길 수 있어요', 3);
     close(); back = null; endTour(); hereOff(); placing = null; moving = id; chips();
-    toast('🚩 ' + cardName(id, f) + ' — ' + (placed(f) ? '옮길' : '꽂을') + ' 땅을 톡 누르거나, 화면 가운데로 보고 F · 취소 Esc', 5);
+    toast('🚩 ' + cardName(id, f) + ' — ' + (placed(f) ? '옮길' : '꽂을') + ' ' + (isTouch() ? '땅을 톡 누르거나' : '가운데 ＋를 보고 누르거나') + ' F · 취소 Esc', 5);
   }
   async function moveAt(pt) {
     const id = moving; moving = null; chips(); const f = DATA[id]; if (!f || !pt) return;
@@ -1532,6 +1555,7 @@ export default async function start(map, params = {}) {
   let chipMode = '';
   function chipOrder(m) { if (chipMode && chipMode !== m) for (const k of ['memo-f', 'memo-l', 'memo-p', 'memo-s']) map.hud.chip(k, null); chipMode = m; }
   function chips() {
+    crossUp();
     if (isW()) {
       chipOrder('world');
       map.hud.chip('memo-p', null);
@@ -1551,7 +1575,7 @@ export default async function start(map, params = {}) {
     }
     chipOrder('story');
     if (!canWrite()) map.hud.chip('memo-f', '🔒 보기만 하는 판', { onClick: lockMsg });   // 잠근 판 = 꽂기 칩 대신 안내(onClick을 바꿔 옛 꽂기 동작이 남지 않게)
-    else map.hud.chip('memo-f', moving ? '🚩 「' + short((DATA[moving] || {}).who || (DATA[moving] || {}).tx, 8) + '」 깃발 — 땅을 톡 · F · Esc 취소' : placing ? '🚩 ' + (numMap().get(placing) || '') + '번 장면 깃발 — 땅을 톡 · F · Esc 취소' : '🚩 깃발 (땅을 톡 · F)', { onClick: () => { if (panel) return; if (moving) moveAt(aimPoint()); else if (placing) placeAt(aimPoint()); else { back = null; form({ pt: aimPoint() }); } } });
+    else map.hud.chip('memo-f', moving ? '🚩 「' + short((DATA[moving] || {}).who || (DATA[moving] || {}).tx, 8) + '」 깃발 — ' + tapW() + ' · F · Esc 취소' : placing ? '🚩 ' + (numMap().get(placing) || '') + '번 장면 깃발 — ' + tapW() + ' · F · Esc 취소' : '🚩 깃발 (' + tapW() + ' · F)', { onClick: () => { if (panel) return; if (moving) moveAt(aimPoint()); else if (placing) placeAt(aimPoint()); else { back = null; form({ pt: aimPoint() }); } } });
     map.hud.chip('memo-l', '📖 이야기 판 (L)', { onClick: () => { if (!panel) boardView(); } });
     map.hud.chip('memo-p', pathOn ? '🛤 이야기 길 끄기' : '🛤 이야기 길 보기', { onClick: () => { if (!panel) pathToggle(); } });
     map.hud.chip('memo-s', '🔁 판 바꾸기', { onClick: () => { if (!panel) { endTour(); pickBoard(); } } });
@@ -1571,10 +1595,10 @@ export default async function start(map, params = {}) {
 
   return {
     tick() {},
-    stop() { dead = true; window.SM_ACT = null; arrOff(); clearTimeout(pathT); pathClear(); if (play) { const P0 = play; play = null; if (P0.wk) P0.wk(false); if (P0.rfin) P0.rfin(); if (P0.mk) P0.mk.remove(); } clearTimeout(syncT); if (es) es.close(); if (esB) esB.close(); hereOff(); removeEventListener('keydown', onKey); removeEventListener('keydown', onEsc, true); removeEventListener('sm-click', onWorldClick); removeEventListener('sm-cmd', onCmd); removeEventListener('sm-teacher', onTeacher); removeEventListener('resize', onRs); for (const id of [...FL.keys()]) drop3d(id); ui.remove(); css.remove(); },
+    stop() { dead = true; window.SM_ACT = null; crossEl.remove(); document.removeEventListener('pointerlockchange', crossUp); arrOff(); clearTimeout(pathT); pathClear(); if (play) { const P0 = play; play = null; if (P0.wk) P0.wk(false); if (P0.rfin) P0.rfin(); if (P0.mk) P0.mk.remove(); } clearTimeout(syncT); if (es) es.close(); if (esB) esB.close(); hereOff(); removeEventListener('keydown', onKey); removeEventListener('keydown', onEsc, true); removeEventListener('sm-click', onWorldClick); removeEventListener('sm-cmd', onCmd); removeEventListener('sm-teacher', onTeacher); removeEventListener('resize', onRs); for (const id of [...FL.keys()]) drop3d(id); ui.remove(); css.remove(); },
     get board() { return board; }, get scenes() { return scenes().map(([id, f], i) => ({ id, n: i + 1, ...f, kids: kids(id).map(([kid, x]) => ({ id: kid, ...x })) })); }, summary: () => board ? summaryText() : '',
     get coach() { return board ? (isW() ? wcoach() : coach()) : []; }, get stations() { return board && !isW() ? stations().map((t) => ({ no: t.no, code: t.code, zone: t.f.zone, what: t.what, kind: t.kind })) : []; }, realKitHtml: () => realKitHtml(), real: () => playStory({ real: true }), get cards() { return wcards().map(([id, f]) => ({ id, ...f })); }, get kind() { return KIND; }, paths: () => { if (!pathOn) pathToggle(); return new Promise((r) => setTimeout(() => r(pathObjs.length), 6000)); }, book: () => playStory({ book: true }),
-    place: (o) => form({ pt: aimPoint(), ...(o || {}) }), view: boardView, tour: startTour, play: () => playStory(), get playing() { return play ? { i: play.i, items: play.items.slice(), over: play.over } : null; }, get cols() { return board && isW() ? wcols().map((c) => ({ k: c.k, e: c.e, n: c.n, q: c.q, u: !!c.u })) : []; }, moveTo: (id, sec, before) => moveTo(id, sec, before),
+    place: (o) => form({ pt: aimPoint(), ...(o || {}) }), aim: (x, y) => aimPoint(x, y), view: boardView, tour: startTour, play: () => playStory(), get playing() { return play ? { i: play.i, items: play.items.slice(), over: play.over } : null; }, get cols() { return board && isW() ? wcols().map((c) => ({ k: c.k, e: c.e, n: c.n, q: c.q, u: !!c.u })) : []; }, moveTo: (id, sec, before) => moveTo(id, sec, before),
     enter: (id, info) => { name = name || '시험'; board = { id, ...info }; listen(); chips(); },
   };
 }
