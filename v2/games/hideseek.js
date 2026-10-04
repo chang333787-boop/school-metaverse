@@ -395,9 +395,11 @@ export default async function start(map, params = {}) {
       net: null, nt: 0, nvx: 0, nvz: 0, ox: SX, oz: SZ };
   }
   function applyLvl(l) { Object.assign(cfg, LVL[String(l)] || LVL['0']); }
+  // 👥 인원 보정(10-04 '7명까지 하면?'): 술래가 도망자 한 명에 5명 넘게 몰리면 도망자 도움 +1 — 시뮬레이션 1 vs 5 35→45% · 1 vs 6 30→44% · 2 vs 6 41→49% · 2 vs 5 = 49%(보정 없음)
+  const headBase = slots => { const rc = slots.filter(q => q.role === 'run').length, hc = slots.length - rc; return (rc <= 1 && hc >= 5) || (rc >= 2 && hc >= 6) ? 1 : 0; };
   function beginRound(r) {
     endRoundUI(); R = r; phase = 'count'; finT = null; starD = null; res = null; nextPing = cfg.seek - cfg.pingLast; callT = {}; chipK = {}; invBtnK = '';
-    applyLvl(r.lvl); nextPing = cfg.seek - cfg.pingLast;
+    r.base = headBase(r.slots); r.eff = Math.max(-2, Math.min(2, (r.lvl || 0) + r.base)); applyLvl(r.eff); nextPing = cfg.seek - cfg.pingLast;
     ACT = r.slots.map((s, i) => mkActor(i, s)); ME = ACT.findIndex(a => a.kind === 'me');
     // 자리: 주 복도 한 줄 — 도망자 = 가운데 · 술래 = 양옆 1.6m 간격(걷는 칸에 맞춤)
     let kr = 0, kh = 0; for (const a of ACT) { const off = a.role === 'run' ? (kr++ ? 0.9 : 0) : (kh % 2 ? -1 : 1) * 1.6 * (1 + (kh++ >> 1));
@@ -416,7 +418,7 @@ export default async function start(map, params = {}) {
     } else { if (map.top.on) map.top.exit(); btn.style.display = 'none'; map.minimap.show({}); map.minimap.setMarks([]); }
     const runN = ACT.filter(a => a.role === 'run').map(a => a.kind === 'me' ? '나' : a.name).join(' · ');
     map.hud.goal(me ? (me.role === 'run' ? '🏃 도망자 — ' + cfg.seek + '초 버티기!' : '👀 술래 — 도망자(' + runN + ') 잡기!') : '👀 구경 — 다음 판부터 같이 해요');
-    const lt = LVL_T[String(r.lvl)];
+    const lt = LVL_T[String(r.eff)] + (r.base ? ' (👥 인원 보정 +' + r.base + ')' : '');
     card('<div style="font-size:1.25em">' + (me && me.role === 'run' ? '🏃 이번 판은 <b>내가 도망자</b>!' : '🏃 이번 판 도망자: <b>' + esc(runN) + '</b>') + '</div>'
       + (r.rounds ? '<div style="opacity:.8;font-size:.85em">' + (r.round + 1) + ' / ' + r.rounds + '판</div>' : '')
       + (me ? '<div style="opacity:.85;font-size:.85em">' + (me.role === 'run' ? '하늘에서 봐요 · 빨간 부채꼴 = 술래 눈 · 👻 F' : '10초 동안 눈 감기 → 찾기 · 🔥 = 가까이 · 마지막 10초 반짝') + '</div>' : '')
@@ -603,9 +605,11 @@ export default async function start(map, params = {}) {
       if (a.kind !== 'bot') led(a.kind === 'me' ? myName() : a.name).run.push(Math.round(s));
       lines.push((a.alive ? '🎉 ' + nm + ' 끝까지 도망!' : '💥 ' + nm + ' 잡힘 — ' + Math.round(s) + '초')); }
     for (const a of ACT) if (a.role === 'hunt' && a.cts && a.kind !== 'bot') led(a.kind === 'me' ? myName() : a.name).ct += a.cts;
-    const runWin = rs.some(a => a.alive), me = ACT[ME];
-    res = { runWin, lines };
-    card('<div style="font-size:1.3em">' + (me ? (me.role === 'run' ? (me.alive ? '🎉 끝까지 숨었어요!' : '💥 다음엔 꼭!') : (runWin ? '😮 도망자가 이겼어요' : '🎉 술래 승리!')) : (runWin ? '🏃 도망자 승리' : '👀 술래 승리')) + '</div>' + lines.map(esc).join('<br>'), cfg.end);
+    // 판 결과 = 도망자 한 명씩: 산 수 > 잡힌 수 = 도망자 승 · 잡힌 수 > 산 수 = 술래 승 · 같으면(2명 중 1:1) 비김 — 2 vs 5 시뮬레이션: 술래 싹쓸이 20% · 도망자 둘 다 17% · 1:1 64%
+    const live = rs.filter(a => a.alive).length, cau = rs.length - live, side = live > cau ? 'r' : cau > live ? 'h' : 'd', runWin = side === 'r', me = ACT[ME];
+    res = { runWin, side, lines };
+    const head = side === 'd' ? '🤝 비겼어요 — ' + live + ' : ' + cau : me ? (me.role === 'run' ? (me.alive ? '🎉 끝까지 숨었어요!' : '💥 다음엔 꼭!') : (runWin ? '😮 도망자가 이겼어요' : '🎉 술래 승리!')) : (runWin ? '🏃 도망자 승리' : '👀 술래 승리');
+    card('<div style="font-size:1.3em">' + head + '</div>' + lines.map(esc).join('<br>'), cfg.end);
     if (me && me.role === 'run' && me.alive) { map.tone(523, 0, 0.15, 'sine', 0.1); map.tone(659, 0.15, 0.15, 'sine', 0.1); map.tone(784, 0.3, 0.3, 'sine', 0.1); }
     map.player.freeze(true); map.player.invisible(false); map.player.speed(1); clearRoute(); chip('hs-hot', null);
     if (!NETM) { const k = me && me.role === 'run' ? 'bestHide' : 'bestSeek';
@@ -718,7 +722,7 @@ export default async function start(map, params = {}) {
     const S = [], mk = (id, role) => ({ kind: id === NM.pid ? 'me' : 'remote', pid: id, name: String(P[id].n || '친구').slice(0, 8), role });
     for (const id of run) S.push(mk(id, 'run')); for (const id of hunt) S.push(mk(id, 'hunt'));
     const want = Math.min(8, run.length + (run.length > 1 ? 5 : 4)); let k = 1; while (S.length < want) S.push({ kind: 'bot', role: 'hunt', name: '술래 봇 ' + k++ });
-    return S;
+    return S.slice(0, 8);   // 8명까지(9번째부터는 구경 — 그리기 칸 8)
   }
   function roundFromNet(m) {
     NM.seq = m.seq; const lvl = +String(m.arena).slice(2) || 0; NM.lvl = lvl;
@@ -775,8 +779,8 @@ export default async function start(map, params = {}) {
     if (!NM.host || !R || NM.adv) return; const m = NM.D.m; if (!m || m.st !== 'play' || m.seq !== R.seq) return;
     if (t < endAt + cfg.end) return;
     NM.adv = true;
-    const runWin = ACT.some(a => a.role === 'run' && a.alive);
-    NM.streak.push(runWin ? 'r' : 'h'); if (NM.streak.length >= 2) { const [x, y] = NM.streak.slice(-2); if (x === y) { NM.lvl = Math.max(-2, Math.min(2, NM.lvl + (x === 'h' ? 1 : -1))); NM.streak = []; } }
+    const side = res ? res.side : (ACT.some(a => a.role === 'run' && a.alive) ? 'r' : 'h');
+    if (side === 'd') NM.streak = []; else NM.streak.push(side); if (NM.streak.length >= 2) { const [x, y] = NM.streak.slice(-2); if (x === y) { NM.lvl = Math.max(-2, Math.min(2, NM.lvl + (x === 'h' ? 1 : -1))); NM.streak = []; } }
     const P = NM.D.p || {}, catcher = (() => { const c = ACT.filter(a => a.role === 'hunt' && a.cts && a.pid).sort((a, b) => b.cts - a.cts)[0]; return c && c.pid; })();
     const rounds = m.time || 1, next = (m.goal || 0) + 1;
     if (next >= rounds) { nreq('/m', 'PATCH', { st: 'end' }).catch(() => {}).finally(() => { NM.adv = false; setTimeout(() => { if (NM.on && NM.host && NM.D.m && NM.D.m.st === 'end') nreq('/m/st', 'PUT', 'lobby').catch(() => {}); }, 9000); }); ctlMatch(m.seq, 'end'); return; }
@@ -814,7 +818,7 @@ export default async function start(map, params = {}) {
     const ids = Object.keys(P).filter(id => P[id]).sort((a, b) => (P[a].on || 0) - (P[b].on || 0)), hostN = NM.host ? '나' : P[m.host] ? esc(P[m.host].n) : '방장';
     const rc = ids.length >= 6 ? 2 : 1, rounds = Math.ceil(ids.length / rc);
     let h = '<div style="font-weight:900;font-size:18px">🫣 숨바꼭질 대작전 — 친구와</div>'
-      + '<div style="margin-top:6px;font-size:13px;color:#4a5b70">🏃 도망자 ' + rc + '명 = 하늘에서 봐요(지도) · 👀 술래 = 3인칭 · 빈자리는 술래 봇<br>한 판 ' + (cfg.hide + cfg.seek) + '초(숨기 ' + cfg.hide + ' + 찾기 ' + cfg.seek + ') · 모두 한 번씩 도망자(' + rounds + '판) · 잡은 사람이 다음 도망자</div>'
+      + '<div style="margin-top:6px;font-size:13px;color:#4a5b70">🏃 도망자 ' + rc + '명 = 하늘에서 봐요(지도) · 👀 술래 = 3인칭 · 빈자리는 술래 봇<br>한 판 ' + (cfg.hide + cfg.seek) + '초(숨기 ' + cfg.hide + ' + 찾기 ' + cfg.seek + ') · 모두 한 번씩 도망자(' + rounds + '판' + (rc > 1 && ids.length % 2 ? ' · 마지막 판은 1명 + 👥 인원 보정' : '') + ')' + (ids.length > 8 ? ' · 8명까지(나머지는 구경하다 차례에 들어와요)' : '') + ' · 잡은 사람이 다음 도망자</div>'
       + '<div style="margin-top:8px;padding:7px 9px;border-radius:9px;background:#eef4ff">👥 ' + ids.map(id => (id === NM.pid ? '<b>⭐ ' + esc(NM.name) + '(나)</b>' : esc(P[id].n))).join(' · ') + '</div>';
     const fb = NM.lastBoard; if (fb) h += '<div style="margin-top:8px;padding:7px 9px;border-radius:9px;background:#fff3bf;font-size:14px">' + fb + '</div>';
     if (m.st === 'play') h += '<div style="margin-top:8px;font-weight:800">⏳ 경기 중이에요 — 다음 판부터 같이 해요</div>';
@@ -845,7 +849,7 @@ export default async function start(map, params = {}) {
     tick,
     stop() { dead = true; removeEventListener('keydown', keyF); clearRoute(); btn.remove(); blindOn(false); if (cardEl) { cardEl.remove(); cardEl = null; } clearTimeout(cardT); map.player.invisible(false); map.player.speed(1); netLeave(); for (const t of TAGS) if (t) { t.material.map && t.material.map.dispose(); t.material.dispose(); }
       for (const g of GEOS) g.dispose(); for (const m of MATS) m.dispose(); },
-    get state() { return R ? { phase, t: W && W.t, lvl: R.lvl, me: ME, host: NETM ? NM.host : true, actors: ACT.map(a => ({ i: a.i, kind: a.kind, name: a.name, role: a.role, alive: a.alive, x: +a.x.toFixed(1), z: +a.z.toFixed(1), inv: +a.inv.toFixed(1), star: +a.star.toFixed(1), caughtT: a.caughtT })), star: starD, res } : { phase: 'lobby', host: NM.host }; },
+    get state() { return R ? { phase, t: W && W.t, lvl: R.lvl, base: R.base, eff: R.eff, round: R.round, me: ME, host: NETM ? NM.host : true, actors: ACT.map(a => ({ i: a.i, kind: a.kind, name: a.name, role: a.role, alive: a.alive, x: +a.x.toFixed(1), z: +a.z.toFixed(1), inv: +a.inv.toFixed(1), star: +a.star.toFixed(1), caughtT: a.caughtT })), star: starD, res } : { phase: 'lobby', host: NM.host }; },
     get net() { return { on: NM.on, host: NM.host, room: NM.room, seq: NM.seq, lvl: NM.lvl, lag: NM.lag, st: NM.st }; },
     netStart: () => (NM.host ? hostStart() : null),
   };
