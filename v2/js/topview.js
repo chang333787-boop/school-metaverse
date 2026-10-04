@@ -87,7 +87,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
   const el = (tag, cls, html, p) => { const d = document.createElement(tag); if (cls) d.className = cls; if (html != null) d.innerHTML = html; if (p) p.appendChild(d); return d; };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const BOUND = [SCHOOLBOX[0] - 40, SCHOOLBOX[1] - 30, SCHOOLBOX[2] + 30, SCHOOLBOX[3] + 60];
-  const D_MIN = 10, D_MAX = 240, P_TOP = Math.PI / 2 - 1e-4, P_TILT = 0.98;
+  const D_MIN = 16, D_MAX = 240, P_TOP = Math.PI / 2 - 1e-4, P_TILT = 0.98, P_LOW = 0.8;   // 10-04 교사 화면: 끝까지 당기고 낮게 눕히면 평소 화면처럼 보이며 방 이름이 하늘에 떠 헷갈림 → 16m · 46° 아래로는 안 감
   const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _ray = new THREE.Raycaster(), _nd = new THREE.Vector2(), _eul = new THREE.Euler(0, 0, 0, 'YXZ'), _pl = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), _hit = new THREE.Vector3();
 
   function enter(o = {}) {
@@ -117,7 +117,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     S.cmp = el('div', null, '<i></i><b>N</b>', document.body); S.cmp.id = 'tv-cmp'; S.cmp.title = '북쪽을 위로';
     S.cmp.onclick = e => { e.stopPropagation(); S.T.yaw = Math.round(S.C.yaw / (2 * Math.PI)) * 2 * Math.PI; };
     S.sc = el('div', null, '<span></span><b></b>', document.body); S.sc.id = 'tv-sc';
-    if (o.help !== false) { S.help = el('div', null, esc(o.help || (matchMedia('(pointer: coarse)').matches ? '끌어서 옮기기 · 두 손가락으로 확대·돌리기 · 톡 = 그곳 이름' : '끌어서 옮기기 · 휠 = 확대 · 오른쪽 끌기·Q/E = 돌리기 · 클릭 = 그곳 이름')), document.body); S.help.id = 'tv-help';
+    if (o.help !== false) { S.help = el('div', null, esc(o.help || (matchMedia('(pointer: coarse)').matches ? '끌어서 옮기기 · 두 손가락으로 확대·돌리기 · 톡 = 그곳 이름' : '끌기·두 손가락 쓸기 = 옮기기 · 휠·벌리기 = 확대 · 오른쪽 끌기·Q/E = 돌리기 · 클릭 = 그곳 이름')), document.body); S.help.id = 'tv-help';
       S.helpT = setTimeout(() => { if (S && S.help) S.help.style.opacity = '0'; }, 7000); }
     document.body.classList.add('top-on');
     try { document.exitPointerLock && document.pointerLockElement && document.exitPointerLock(); } catch (e) { /* */ }
@@ -186,7 +186,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
       let da = n.ang - p0.ang; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI; S.T.yaw += da;
       pan(n.mx - p0.mx, n.my - p0.my); S.pinch = n; return; }
     if (S.moved < 5) return;
-    if (q.b === 2 || e.shiftKey) { S.T.yaw += dx * 0.006; S.T.p = clamp(S.T.p - dy * 0.004, 0.55, P_TOP); paintBar(); return; }   // 오른쪽 끌기 = 돌리기·기울이기
+    if (q.b === 2 || e.shiftKey) { S.T.yaw += dx * 0.006; S.T.p = clamp(S.T.p - dy * 0.004, P_LOW, P_TOP); paintBar(); return; }   // 오른쪽 끌기 = 돌리기·기울이기
     pan(dx, dy);
   }
   function pan(dx, dy) {   // 끄는 대로 땅이 따라옴
@@ -199,7 +199,10 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     if (S.ptr.size < 2) S.pinch = null;
     if (!S.ptr.size) { S.pad.classList.remove('drag'); if (S.moved < 6 && q.b !== 2 && performance.now() - S.tapT < 450) tap(e.clientX, e.clientY); }
   }
-  function onWheel(e) { e.preventDefault(); const k = Math.exp(clamp(e.deltaY, -200, 200) * (e.deltaMode === 1 ? 0.05 : 0.0016)); zoom(k, [e.clientX, e.clientY]); }
+  function onWheel(e) {   // 마우스 휠·트랙패드 벌리기(ctrlKey) = 확대 · 트랙패드 두 손가락 쓸기(작은 값 · 옆 값) = 옮기기(맥북 — 지도 앱처럼)
+    e.preventDefault();
+    if (!e.ctrlKey && e.deltaMode === 0 && (Math.abs(e.deltaX) > 0.5 || Math.abs(e.deltaY) < 50)) { pan(-e.deltaX, -e.deltaY); return; }
+    const k = Math.exp(clamp(e.deltaY, -200, 200) * (e.deltaMode === 1 ? 0.05 : e.ctrlKey ? 0.01 : 0.0016)); zoom(k, [e.clientX, e.clientY]); }
   const KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyQ', 'KeyE']);
   function onKey(e) {
     if (!S) return; const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
