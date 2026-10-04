@@ -1501,16 +1501,17 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
     // 방 신호(net.js ctl): 물총 친구 대결 대기실 초대 · 선생님 📣 모으기 · ✋ 멈춤
     function onCtl(C) {
       const first = !CTLK.init; CTLK.init = true;   // 들어올 때 이미 있던 신호는 지난 것(초대·선생님 신호를 다시 하지 않음)
-      const m = C.match; if (m) { const k = m.seq + ':' + m.st; if (k !== CTLK.m) { CTLK.m = k; if ((m.st === 'lobby' || m.st === 'count') && !first) invite(m); } }
+      const m = C.match; if (m) { const k = m.seq + ':' + m.st; if (k !== CTLK.m) { CTLK.m = k; if ((m.st === 'lobby' || m.st === 'count' || m.st === 'hlobby' || m.st === 'hcount') && !first) invite(m); } }   // HS-2: 'h…' = 숨바꼭질 친구 대결
       const c = C.cmd; if (c && c.q !== CTLK.q) { CTLK.q = c.q; if (!first && c.by !== (NET && NET.id)) teacherCmd(c); }
     }
-    function invite(m) {   // 같은 방 친구가 물총 친구 대결 대기실을 열면(내가 물총 중이거나 오프닝이면 안 띄움)
-      const g = MAP.game.current; if ((g && /^watergun/.test(g.id)) || document.body.classList.contains('title-on')) return;
+    function invite(m) {   // 같은 방 친구가 물총·숨바꼭질 친구 대결 대기실을 열면(내가 그 놀이 중이거나 오프닝이면 안 띄움)
+      const hs = m.st[0] === 'h', G = hs ? { re: /^hideseek/, id: 'hideseek_vs', t: '🫣 같은 방에서 <b>숨바꼭질 대작전</b> ' } : { re: /^watergun/, id: 'watergun_vs', t: '💦 같은 방에서 <b>물총 친구 대결</b> ' };
+      const g = MAP.game.current; if ((g && G.re.test(g.id)) || document.body.classList.contains('title-on')) return;
       let d = document.getElementById('mpInvite'); if (d) d.remove();
       d = document.createElement('div'); d.id = 'mpInvite'; d.className = 'chip';
       d.style.cssText = 'left:50%;top:96px;transform:translateX(-50%);z-index:44;display:flex;gap:8px;align-items:center;font-size:15px;padding:8px 12px;pointer-events:auto';
-      d.innerHTML = '💦 같은 방에서 <b>물총 친구 대결</b> ' + (m.st === 'count' ? '경기가 곧 시작해요!' : '대기실이 열렸어요') + '<button data-i="go" style="font:inherit;font-weight:800;border:0;border-radius:9px;padding:5px 11px;background:#ffd23c;color:#1d3557;cursor:pointer">들어가기</button><button data-i="x" style="font:inherit;border:0;background:none;color:#fff;cursor:pointer">✕</button>';
-      d.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-i]'); if (!b) return; d.remove(); if (b.dataset.i === 'go') MAP.game.load('watergun_vs', {}); });
+      d.innerHTML = G.t + (/count$/.test(m.st) ? '경기가 곧 시작해요!' : '대기실이 열렸어요') + '<button data-i="go" style="font:inherit;font-weight:800;border:0;border-radius:9px;padding:5px 11px;background:#ffd23c;color:#1d3557;cursor:pointer">들어가기</button><button data-i="x" style="font:inherit;border:0;background:none;color:#fff;cursor:pointer">✕</button>';
+      d.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-i]'); if (!b) return; d.remove(); if (b.dataset.i === 'go') MAP.game.load(G.id, {}); });
       document.body.appendChild(d); setTimeout(() => d.remove(), 15000);
     }
     function teacherCmd(c) {
