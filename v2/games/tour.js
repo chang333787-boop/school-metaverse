@@ -434,16 +434,27 @@ export default async function start(map, params = {}) {
     if (msg) map.hud.toast(msg, 3);
   }
   const VH = BY.get('vice');   // 교감선생님 제자리(버스 앞) — 안내가 끝나면 여기로 돌아와 완주 창
-  function sideOf(s) {   // 교감선생님 설 자리 = 이야기 자리(hx,hz) 옆 1.2m(사람·안내판 쪽을 가리지 않게 · 걷는 칸만)
+  function sideOf(s, from) {   // 교감선생님 설 자리 = 이야기 자리(hx,hz) 옆 1.2m(사람·안내판 쪽을 가리지 않게 · 걷는 칸만)
+    //   10-04 교사(홍보판 체육관 — 교감선생님·나·체육선생님이 한 줄로 겹침): 나는 교감선생님 길을 그대로 따라오므로, 교감선생님이 들어오는 쪽 옆에 서면
+    //   내 마지막 걸음을 막는다 → 들어오는 쪽(from)의 반대 옆을 먼저 고르고, 없을 때만 예전 순서
     const dx = s.x - s.hx, dz = s.z - s.hz, L = Math.hypot(dx, dz) || 1, nx = -dz / L, nz = dx / L;
     const bx = -dx / L, bz = -dz / L;   // 뒤쪽(이야기 자리에서 사람·안내판 반대쪽)
-    if (s.kind === 'board') for (const sd of [1, -1]) {   // 09-30 교사: 표지판은 교감선생님이 표지판 옆까지 들어가야 내가 표지판 앞에 선다
-      const x = s.x + nx * 1.15 * sd + bx * 0.35, z = s.z + nz * 1.15 * sd + bz * 0.35, k = nav.snap(x, s.y, z, 0.5);
-      if (k != null && k >= 0) { const q = nav.pos(k); if (Math.hypot(q[0] - s.hx, q[2] - s.hz) > 0.9) return { x: q[0], y: q[1], z: q[2] }; } }
-    for (const [ox, oz] of [[nx * 1.2, nz * 1.2], [-nx * 1.2, -nz * 1.2], [nx * 1.8, nz * 1.8], [-nx * 1.8, -nz * 1.8], [nx + bx, nz + bz], [-nx + bx, -nz + bz], [bx * 1.6, bz * 1.6]]) {
-      const x = s.hx + ox, z = s.hz + oz, k = nav.snap(x, s.y, z, 0.8);
-      if (k != null && k >= 0) { const q = nav.pos(k); if (Math.hypot(q[0] - s.hx, q[2] - s.hz) > 0.9) return { x: q[0], y: q[1], z: q[2] }; } }
+    let ax = 0, az = 0; if (from) { ax = from[0] - s.hx; az = from[1] - s.hz; const aL = Math.hypot(ax, az); if (aL > 0.3) { ax /= aL; az /= aL; } else ax = az = 0; }
+    const away = q => !from || (q[0] - s.hx) * ax + (q[2] - s.hz) * az < 0.35;   // 들어오는 쪽이 아님
+    for (const pass of from ? [0, 1] : [1]) {
+      if (s.kind === 'board') for (const sd of [1, -1]) {   // 09-30 교사: 표지판은 교감선생님이 표지판 옆까지 들어가야 내가 표지판 앞에 선다
+        const x = s.x + nx * 1.15 * sd + bx * 0.35, z = s.z + nz * 1.15 * sd + bz * 0.35, k = nav.snap(x, s.y, z, 0.5);
+        if (k != null && k >= 0) { const q = nav.pos(k); if (Math.hypot(q[0] - s.hx, q[2] - s.hz) > 0.9 && (pass || away(q))) return { x: q[0], y: q[1], z: q[2] }; } }
+      for (const [ox, oz] of [[nx * 1.2, nz * 1.2], [-nx * 1.2, -nz * 1.2], [nx * 1.8, nz * 1.8], [-nx * 1.8, -nz * 1.8], [nx + bx, nz + bz], [-nx + bx, -nz + bz], [bx * 1.6, bz * 1.6]]) {
+        const x = s.hx + ox, z = s.hz + oz, k = nav.snap(x, s.y, z, 0.8);
+        if (k != null && k >= 0) { const q = nav.pos(k); if (Math.hypot(q[0] - s.hx, q[2] - s.hz) > 0.9 && (pass || away(q))) return { x: q[0], y: q[1], z: q[2] }; } }
+    }
     return { x: s.hx + bx * 1.5, y: s.y, z: s.hz + bz * 1.5 };   // 이야기 자리 위엔 서지 않는다(내가 그 자리에 못 들어가 끼였다)
+  }
+  function approachOf(s, v) {   // 교감선생님이 이야기 자리에 들어오는 쪽 = 길격자 길의 끝에서 2.5m 앞 점
+    if (!v) return null; const r = nav.path([v.x, v.y, v.z], [s.hx, s.y, s.hz], { maxExp: 60000 }); if (!r.ok || r.pts.length < 2) return [v.x, v.z];
+    let acc = 0; for (let i = r.pts.length - 1; i > 0; i--) { const a = r.pts[i], b = r.pts[i - 1]; acc += Math.hypot(a[0] - b[0], a[2] - b[2]); if (acc >= 2.5) return [b[0], b[2]]; }
+    return [r.pts[0][0], r.pts[0][2]];
   }
   function goLeg(i) {
     if (!G) return; const home = i < 0, s = home ? VH : BY.get(GORDER[i]), tok = {};
@@ -455,7 +466,7 @@ export default async function start(map, params = {}) {
       const r = nav.path([p.x, p.y, p.z], [v.x, v.y, v.z], { maxExp: 60000 }); if (r.ok) for (const q of r.pts) G.trail.push(q[0], q[2]); }
     if (v) G.trail.push(v.x, v.z);
     map.hud.banner(home ? '🧑‍🏫 스쿨버스 앞으로 돌아가요' : '🧑‍🏫 교감선생님을 따라가요 → ' + s.name, 2.4); refresh(); guideChip();
-    const to = home ? { x: VH.x, y: VH.y, z: VH.z } : sideOf(s);
+    const to = home ? { x: VH.x, y: VH.y, z: VH.z } : sideOf(s, approachOf(s, v));
     map.npc.move('vice', to, { walk: true, speed: GSPD, pass: true }).then(() => { if (G && G.tok === tok) G.npcDone = true; });
   }
   function guideChip() {   // 칩 = 지금 할 일(걷는 중: 어디로 · 둘러보는 중: 누르면 다음 장소로)
@@ -514,7 +525,24 @@ export default async function start(map, params = {}) {
     if (d < G.best - 0.15 || G.sp < 1.2) { if (d < G.best) G.best = d; G.stuck = 0; } else if (G.fin && G.stuck + dt > 1.5 && (G.ti >= T.length - 4 || Math.hypot(G.fin[0] - p.x, G.fin[1] - p.z) < 2.5)) { if (G.home) guideHome(); else guideArrive(); return; }   // 마지막 몇 걸음에서 막히면 거기서 도착
     else if ((G.stuck += dt) > 1.5) { const k = Math.min(T.length - 2, G.ti + 4); map.player.teleport([T[k], T[k + 1]]); G.ti = k; G.stuck = 0; G.best = 1e9; }   // 끼임(가구 사이 — 걷는 교감선생님은 몸 충돌이 없다) → 조금 앞 흔적으로
   }
-  function celebrate() {
+  // ---------- 🎬 오프닝·클로징 영상(FILM-1 · 10-04 교사 '교회 오프닝 영상처럼 — 오프닝 → 우리 학교 → 클로징') — 대본 tour_film.js · 재생기 v2/js/film.js ----------
+  let FILMM = null;
+  const filmMod = async () => FILMM || (FILMM = await import(new URL('./tour_film.js?v=1', import.meta.url)).catch(e => { console.warn('[견학] 영상 대본을 못 읽었어요', e); return null; }));
+  async function playFilm(kind) {
+    if (!map.film || map.film.on) return false; const M = await filmMod(); if (!M || dead) return false;
+    const me = map.player.pos();
+    const shots = kind === 'open' ? M.buildOpening(DATA, { spots: map.tour }) : M.buildClosing(DATA, { me: [me.x, me.y, me.z], icons: ALL.filter(s => stamps.has(s.key)).map(s => s.stamp) });
+    if (!shots || !shots.length) return false;
+    if (talk) closeTalk(); if (card) closeCard(); if (media) closeMedia();
+    map.player.freeze(true);
+    const k = await map.film.play(shots, { brand: '정림초등학교 · Phone Off, RAS On' });
+    if (dead) return true; map.player.freeze(false);
+    if (k === 'video') { const v = SPOTS.find(q => q.hub && q.videos.some(x => x.id)); if (v) openMedia(v, 'v', v.videos.findIndex(x => x.id)); }
+    else if (k === 'card') openCard();
+    return true;
+  }
+  function celebrate(plain) {
+    if (!plain && map.film) { playFilm('close').then(ok => { if (!ok && !dead) celebrate(true); }); return; }   // 클로징 영상(끝 화면 = 상담 전화·주소) — 못 틀면 예전 완주 창
     map.sfx('done');
     const fin = Array.isArray(DATA.finish) && DATA.finish.length ? DATA.finish.map(String) : [];
     openTalk({ name: '견학 완주! 🎉', icon: '🏆', end: '🎉 좋아요!', pages: ['도장 ' + N + '개를 모두 모았어요! 🎉', ...fin] });
@@ -642,6 +670,7 @@ export default async function start(map, params = {}) {
     L.push({ k: 'mbook', t: '📖 정림초 도감 (' + stamps.size + '/' + N + ')', f: () => { closeTalk(); openCard(); } });
     if (map.minimap) L.push({ k: 'mmap', t: '🗺 학교 지도', f: () => { closeTalk(); map.minimap.show(); map.minimap.toggle(true); } });
     if (stamps.size === N) L.push({ k: 'mend', t: '🏆 엔딩 다시 보기', f: () => { closeTalk(); celebrate(); } });
+    if (map.film && (DATA.film || {}).opening !== false) L.push({ k: 'mfilm', t: '🎬 오프닝 영상 보기', f: () => { closeTalk(); playFilm('open'); } });
     L.push({ k: 'mre', t: '🔄 처음부터 다시 하기', f: () => openTalk({ name: '처음부터 다시', icon: '🔄', pages: ['도장이 모두 지워지고, 스쿨버스 앞에서 처음 인사부터 다시 시작해요.\n괜찮을까요?'],
       choices: [{ k: 'y', t: '🔄 네, 처음부터 할래요', f: restart }, { k: 'n', t: '◀ 아니요', f: openMenu }] }) });
     L.push({ k: 'mx', t: '✕ 닫기', f: () => closeTalk() });

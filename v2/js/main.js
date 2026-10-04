@@ -5,9 +5,10 @@ import { buildWorld } from './world.js?v=145';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=44';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=45';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=8';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
-import { createTitle } from './title.js?v=14';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+import { createTitle } from './title.js?v=15';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+import { createFilm } from './film.js?v=1';   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
@@ -15,6 +16,7 @@ var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마�
 const QS0 = new URLSearchParams(location.search);
 const TITLE_ON = !QS0.get('shot') && !QS0.get('game') && QS0.get('tour') !== '1' && !location.search.includes('check=1') && !location.search.includes('health=1') && QS0.get('title') !== '0';
 const bootP = (p, s) => { if (TITLE_ON && window.bootP) window.bootP(p, s); };   // 로딩 막대(index.html) — 진짜 단계: 모듈 받음 → 월드 짓기(지난 빌드 시간만큼 차오름) → 첫 프레임
+let FILM_VIEW = null;   // FILM-1: 영상 동안 디테일 거리·가림 컬링을 넓힘({far}) — 높은 드론 샷·지붕 벗긴 실내 샷에서 가구가 사라지지 않게
 let CAM_OVR = null;   // TITLE-1: 카메라 고리(오프닝 한 바퀴·날아오기) — step()이 평소 카메라를 정한 뒤 부른다(평소 자리 = 날아오기 목표)
 bootP(0.3, 0.4);
 
@@ -1218,7 +1220,7 @@ function detailTick(dt, budget = Infinity) {
   let t0 = performance.now(), occW = false, prep = false;
   if (detailT >= 0.2 || moved) { detailT = 0;
     const camIn = ceilAt(cp.x, cp.z, cp.y - 0.3, cp.y + 4.5) !== null;
-    const R = (DETAIL_FAR + 11.3) ** 2, RI = ((camIn ? DETAIL_IN_IN : DETAIL_IN) + 11.3) ** 2;
+    const R = ((FILM_VIEW ? FILM_VIEW.far : DETAIL_FAR) + 11.3) ** 2, RI = FILM_VIEW ? R : ((camIn ? DETAIL_IN_IN : DETAIL_IN) + 11.3) ** 2;
     if (!OCC.occ) { const tp = performance.now(); occPrep(); prep = true; TIMING.occPrepMs = performance.now() - tp; t0 += TIMING.occPrepMs; }   // 한 번뿐인 준비는 OCC.ms·occP95 고리에서 뺀다
     // PERF-LOAD(09-26): 가림 판정(광선)은 절두체에 든 청크만, 처음 필요한 프레임에 — 판정 자리는 이 재계산 자리(OCC.x·y·z)라 예전(전부 여기서)과 결과가 같다.
     //  돌아서기만 하면(재계산 없이) 새로 들어온 청크를 그 프레임에 같은 자리로 잰다. 광선도 그 청크들이 쓰는 것만(occRays nd) — 테 광선·이웃 광선 쌍(occGap)까지(angSpan outer).
@@ -1227,7 +1229,7 @@ function detailTick(dt, budget = Infinity) {
     for (const d of world.details) {
       const dx = cp.x - d.cx, dz = cp.z - d.cz;
       d.on = dx * dx + dz * dz < (d.inside ? RI : R);   // d.on = 이 재계산 자리에서 그릴 후보(거리 안) — 절두체에 들어와 가림 판정을 받으면 그 결과로 덮어쓴다(d.pend = 판정을 기다리는 재계산 번호)
-      d.pend = d.on && d.inside && !OCC.off && d.box && d.bi != null ? OCC.gen : 0;   // 상자·건물 칸이 없는 항목(main.js가 넣는 필름 문 등)은 거리만
+      d.pend = d.on && d.inside && !OCC.off && !FILM_VIEW && d.box && d.bi != null ? OCC.gen : 0;   // 상자·건물 칸이 없는 항목(main.js가 넣는 필름 문 등)은 거리만
     }
   }
   // 절두체는 매 프레임 상자(AABB)로 — three의 경계 구는 길쭉한 청크(교실 줄)에선 카메라 뒤 옆 교실까지 품는다. 정적 청크(world.js st)도 같이(상자 밖이면 그릴 것이 0이라 모습 그대로)
@@ -1253,7 +1255,8 @@ function detailTick(dt, budget = Infinity) {
 
 // ---------- 지도 API(MAP-API-1 · 09-24) — 게임이 받는 지도 계약. 정본 docs/map_api.md ----------
 let rebakeT = 0;
-MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL,
+const FILM = createFilm({ THREE, camera, renderer, scene, tone, setCam: f => { CAM_OVR = f; }, setView: v => { FILM_VIEW = v && { far: DETAIL_LITE ? Math.min(v.far, 150) : v.far }; OCC.x = 1e9; },   /* 휴대폰·크롬북은 가구 거리 150m까지 */ setTime: k => setTime(k), getTime: () => timeKey });   // FILM-1
+MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL, film: FILM,
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
   pl: { P, ACT, CTRL, keys, touch: TOUCH, acts: ACTS, getYaw: () => camYaw, setYaw: v => { camYaw = v; },
     getFirst: () => camFirst, setFirst: v => { camFirst = !!v; }, getPitch: () => camPitch,   // WG-FPS(10-03): 게임이 1인칭으로 바꾸고 시점 기울기를 읽는다
@@ -1505,7 +1508,7 @@ function loop(ts) {
 loop();
 TIMING.firstFrameMs = performance.now();   // 첫 프레임(페이지 시작부터 ms) — 그 뒤 로딩 막을 걷는다
 // TITLE-1: 오프닝 — 로딩 막을 제목 화면으로 걷는다(v2/js/title.js · 모양 v2/title.css). 꺼져 있으면(게이트·게임 주소) 예전처럼 막만 걷는다
-const TITLE = TITLE_ON ? createTitle({ THREE, camera, P, CTRL, keys, touch: TOUCH, SCHOOL, tone, toast, game: MAP.game, picker: MAP.picker, setCam: f => { CAM_OVR = f; } }) : null;
+const TITLE = TITLE_ON ? createTitle({ THREE, camera, P, CTRL, keys, touch: TOUCH, SCHOOL, tone, toast, game: MAP.game, picker: MAP.picker, setCam: f => { CAM_OVR = f; }, film: FILM, world }) : null;
 if (TITLE) ADAPT.hold = () => TITLE.phase !== 'off';   // PERF-WIN 리뷰: 오프닝·메뉴·날아오기 동안 자동 해상도는 재지 않는다
 if (TITLE) TITLE.bootDone(); else document.getElementById('boot')?.remove();
 warmDone();
@@ -1658,7 +1661,7 @@ window.SD2 = {
   step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { mouseApply(); step(1/60); doorTick(1/60); hotTick(1/60); MAP.tick(1/60); keysFrameEnd(); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
   doors: () => DOORS.length, doorCheck,
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
-  acts: ACTS, hotNow: () => hotNear, actOn: h => act(h), camOvr: f => { CAM_OVR = f; }, pg,   // ACTION-1: 보이는 행동(시험 — SD2.acts.play('drink', {at:[x,y,z]}) · stats())
+  film: FILM, acts: ACTS, hotNow: () => hotNear, actOn: h => act(h), camOvr: f => { CAM_OVR = f; }, pg,   // ACTION-1: 보이는 행동(시험 — SD2.acts.play('drink', {at:[x,y,z]}) · stats())
   touch: TOUCH, gfx: GFX, title: TITLE, input: { keys, KEY_NEW, KEY_UP, MOUSE, clear: keysClear }, prewarm, setDpr, setShadowSize, adaptTick,   // PERF-WIN
   cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)

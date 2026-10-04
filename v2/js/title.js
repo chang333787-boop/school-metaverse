@@ -159,6 +159,7 @@ export function createTitle(h) {
   const onKey = e => {
     if (phase === 'off') return;
     if (e.target && e.target.closest && e.target.closest('.ttl-keep input, .ttl-keep textarea')) return;   // 오프닝 위에 뜬 창(함께하기 번호·이름 · 🔒 비밀번호)의 입력칸 — 글자·Enter·Esc는 그 창 몫(창이 월드로는 막는다)
+    if (phase === 'film') { e.stopImmediatePropagation(); if (e.type === 'keydown' && e.code === 'Escape') { e.preventDefault(); h.film.stop('skip'); } return; }   // FILM-1: 오프닝 영상 동안 Esc = 건너뛰기(나머지 키는 막음)
     e.stopImmediatePropagation(); if (e.type !== 'keydown') return;   // 제목·메뉴·날아오기 동안 키는 월드로 가지 않는다(WASD로 뒤에서 걷지 않게)
     heard = true;
     if (e.repeat && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); return; }
@@ -193,9 +194,20 @@ export function createTitle(h) {
   }
   function toMenu() {
     if (phase !== 'title' || !calmOK()) return; heard = true; jingle(); calm(450);
-    if (PROMO) { const r = $('.ttl-start').getBoundingClientRect(); launch(PROMO_GAME, r); return; }   // 홍보판: 카드 없이 바로 견학
+    if (PROMO) { const r = $('.ttl-start').getBoundingClientRect(); if (h.film && !opSeen()) { opening(r); return; } launch(PROMO_GAME, r); return; }   // 홍보판: 카드 없이 바로 견학(처음 한 번은 🎬 오프닝 영상부터 — FILM-1)
     if (!mpSeen && window.SM_MP) filled = fill(true);   // 오프닝을 지을 때 아직 함께하기를 못 읽었으면(느린 기기) '👥 방 들어가기' 칸이 '꺼져 있어요'로 남지 않게 다시
     show('menu'); filled.then(() => setTimeout(() => { if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); }, 60));
+  }
+  // 🎬 FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 홍보판 ▶ → 오프닝 영상(약 1분 · ⏭ 건너뛰기) → 그 마지막 자리(스쿨버스 앞)에서 닦기 → 견학. 이 탭에서 한 번만(견학 메뉴 '🎬 오프닝 영상 보기'로 다시)
+  const opSeen = () => { try { return sessionStorage.getItem('sm.film.op') === '1'; } catch (e) { return false; } };
+  async function opening(r) {
+    phase = 'film'; try { sessionStorage.setItem('sm.film.op', '1'); } catch (e) { /* */ }
+    let shots = null;
+    try { const [M, T] = await Promise.all([import('../games/tour_film.js?v=1'), import('../games/tour_data.js?t=' + Date.now())]); shots = M.buildOpening(T.TOUR || {}, { spots: (h.world && h.world.tour) || [] }); }
+    catch (e) { console.warn('[오프닝] 영상 대본을 못 읽었어요', e); }
+    if (shots && shots.length) { await h.film.play(shots, { brand: '정림초등학교 · Phone Off, RAS On' }); muted = !!store.get('mute', false); paintMute(); }
+    const fp = camera.position.clone(), fq = camera.quaternion.clone(); setCam(() => { camera.position.copy(fp); camera.quaternion.copy(fq); });   // 영상 마지막 자리 그대로 → 닦기 → 날아오기
+    launch(PROMO_GAME, r);
   }
   function toTitle() { if (phase !== 'menu') return; blip(); calm(350); show('title'); }
   // 동그라미 닦기: 고른 자리(x, y)에서 남색 원이 커져 화면을 덮는다 → cb → 화면 가운데(내 캐릭터)로 작아지며 걷힌다

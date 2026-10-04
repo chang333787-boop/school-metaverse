@@ -635,6 +635,7 @@ export function createMapApi(host, NAV, META) {
       // ENGINE-1(09-27) 행동 사전 — §12. 전부 게임이 멈추면(dispose → ENG.reset) 처음대로
       see: ENG.see, hide: ENG.hide, note: (t9, b9) => ENG.note(t9, b9), investigate: ENG.investigate, dig: ENG.dig, prop: ENG.prop, carry: ENG.carry,
       story: ENG.story, door: ENG.door, chaser: ENG.chaser, fade: (s9, c9) => ENG.fade(s9, c9),
+      film: host.film ? { play: (shots, o) => { const f = host.film; t({ remove: () => f.stop('stop') }); return f.play(shots, o); }, stop: k => host.film.stop(k), get on() { return host.film.on; } } : null,   // FILM-1(10-04): 오프닝·클로징 영상(게임이 멈추면 영상도 멈춤) — v2/js/film.js
       time: k => (k ? ENG.setTime(k) : ui.getTime && ui.getTime()),   // 시간대 바꾸기(게임이 멈추면 원래대로) · 인자 없으면 지금 시간대
       // G-ESCAPE(09-27): 불 끄기·손전등(밤 놀이 — 새 조명 없음 · 게임이 멈추면 원래대로) — §12.13
       lights: on => ENG.lights(on), flashlight: on => ENG.flashlight(on),
