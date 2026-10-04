@@ -128,7 +128,7 @@ export function createFilm(env) {
 #film .endc button.pri{background:#ffd23c}
 #film .endc .ct{display:inline-flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin-top:14px;font:700 clamp(13px,1.55vw,18px)/1.4 var(--ff)}
 #film .endc .ct b{color:#ffd23c}
-@media (max-aspect-ratio:1/1){#film .stats{left:12px;right:12px;width:auto;top:auto;bottom:8px;transform:translateY(20px)}#film .stats.in{transform:none}#film .chap{width:auto;right:12px}#film .clip{width:min(70vw,360px);bottom:8px}}
+@media (max-aspect-ratio:1/1){#film{--lb:clamp(20px,6vh,56px)}#film .stats{left:12px;right:12px;width:auto;top:auto;bottom:8px;transform:translateY(20px)}#film .stats.in{transform:none}#film .chap{width:auto;right:12px;top:9%;transform:translateX(-30px)}#film .chap.in{transform:none}#film .clip{width:min(80vw,380px);right:50%;margin-right:calc(min(80vw,380px) / -2);bottom:10px}#film .bars{left:12px;right:12px;width:auto;top:auto;bottom:8px;transform:translateY(20px)}#film .bars.in{transform:none}}   /* 세로 휴대폰(아이폰 시뮬레이터 10-04): 갈래 글은 위 · 영상 조각은 아래 가운데(겹치지 않게) · 검은 띠 얇게 */
 @media (max-height:520px){#film .lock .ph{width:34px;height:58px;margin-bottom:8px;border-width:3px;border-radius:10px}#film .lock .ph:after{inset:5px 4px 11px}#film .lock .w1{font-size:13vh}#film .lock .dot{width:17vh;height:17vh;font-size:8vh}#film .lock .dots{margin:10px 0 26px}#film .lock .w2{font-size:12vh}#film .lock .sub{margin-top:8px}#film .stats{grid-template-columns:1fr 1fr 1fr;width:min(720px,70vw)}#film .chap .big{font-size:clamp(56px,11vw,120px)}#film .clip{width:min(32vw,300px)}}
 body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
 #scene.fl-punch{animation:flpunch .6s cubic-bezier(.2,.8,.2,1)}
