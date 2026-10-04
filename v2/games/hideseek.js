@@ -27,6 +27,7 @@ export const BAL = {
   meter: 2, meterErr: 0.6, meterEvery: 4, meterUse: 0.6, hotR: 25,   // 📏 2 = 🔥 가까워요(15m · 방향 없음) — 1(거리 어림) = 도망자 5~12%
   stepR: 0,                                // 달리는 발자국(벽 너머) — 0 = 없음(있으면 도망자 0%)
   pingLast: 20, pingEvery: 5, pingR: 6,     // 마지막 20초 = 5초마다 반짝 — 도망자 둘레 6m 동그라미(예전 = 방 이름만 → 바깥 구역이 넓어 안 맞음)
+  crouch: 1,                               // 🙇 봇 도망자도 숨을 자리에서 웅크림(사람 아이처럼 — 시뮬레이션 반영)
   stam: 6, stamRe: 0.5,                    // 🏃 힘(HS-3): 달리기 6초 · 안 달리면 초당 0.5 차오름 — 넓힌 둘레(250m 고리)에서 힘이 없으면 도망자가 끝없이 돌아 70~78% 이김 → 44%
   star: 2, starAt: 20, starDur: 6, starBoost: 1.25,   // ⭐ 별(2 = 술래들에게서 20m 넘게 먼 곳 · 1 = 가운데 — 가운데는 술래 출발점이라 도망자 29%로 떨어짐)
   callDelay: 1.5, callEvery: 2,            // 📢 '과학실이야!' — 방 이름만 · 1.5초 뒤 · 2초마다(정확한 자리를 주면 도망자 5%)
@@ -103,10 +104,11 @@ export function createCore(nav, see, cfg, rng = Math.random) {
   }
   const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
   const gauss = () => { let u = 0, v = 0; while (!u) u = rng(); while (!v) v = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
-  // 시야: 술래 눈(1.35) → 도망자 가슴(1.0) · fov° · range m · 벽·가구(보이는 높이) 가림 = 엔진 see
+  // 시야: 술래 눈(1.35) → 도망자 가슴(서 있으면 0.85 — 도망자 몸은 0.8배 · 🙇 웅크리면 0.4) · fov° · range m · 벽·가구(보이는 높이) 가림 = 엔진 see
+  //   HS-4(10-04 교사 '기물이 있는데 숨는 역할을 못 함 — 사라지는 게 아니라 그냥 가려져서 사람이면 우연히 놓칠 수 있게'): 웅크리면 책상(0.75)·덤불·차·화단 뒤에서 눈높이 줄이 막힘
   const EYE = { x: 0, y: 0, z: 0, h: 0 }, TO = { x: 0, y: 0, z: 0 };
   const sees = (h, r, fov, range) => { const d = dist(h, r); if (d > range) return false; if (r.inv > 0 && d > cfg.invNear) return false;
-    EYE.x = h.x; EYE.y = h.y + 1.35; EYE.z = h.z; EYE.h = h.h || 0; TO.x = r.x; TO.y = r.y + 1.0; TO.z = r.z; return see(EYE, TO, fov, range); };
+    EYE.x = h.x; EYE.y = h.y + 1.35; EYE.z = h.z; EYE.h = h.h || 0; TO.x = r.x; TO.y = r.y + (r.crouch ? 0.4 : 0.85); TO.z = r.z; return see(EYE, TO, fov, range); };
 
   // ---------- 👀 술래 머리 ----------
   //   알게 되는 것: ① 직접 봄(반응 0.35초) ② 친구가 외침(1초 뒤 · ±2m) ③ 거리계 어림(3초마다 · 오차 = 거리 × 0.35) ④ 달리는 발자국(12m · ±1.5m) ⑤ 마지막 15초 반짝
@@ -176,7 +178,7 @@ export function createCore(nav, see, cfg, rng = Math.random) {
     const dPrev = B.dPrev; B.dPrev = dmin; closing = dPrev != null && dmin < dPrev - 0.5;
     let ne = 99; for (const m of K) ne = Math.min(ne, Math.hypot(m.x - r.x, m.z - r.z));
     const danger = seen || dmin < 8, uneasy = dmin < 12 || ne < 9 || (closing && dmin < cfg.R + 6) || (exitsOf(me) < 2 && dmin < cfg.R + 6);
-    r.running = danger || (uneasy && !cfg.stepR); r.mode = danger ? 'danger' : uneasy ? 'uneasy' : 'calm';
+    r.running = danger || (uneasy && !cfg.stepR); r.mode = danger ? 'danger' : uneasy ? 'uneasy' : 'calm'; if (danger || uneasy) r.crouch = false;
     if (!danger && !uneasy) { if (r.path && B.goal >= 0 && W.t - (B.flT || -9) < 2.5) return; B.goal = -1; calm(r, W, K); return; }   // 막 도망치던 길은 끝까지
     B.hide = -1; B.flT = W.t;
     const M = field(B.slot + 1, [me], 46), rs = cfg.rRun / (cfg.hRun * cfg.eff);   // rs = 내 걸음이 술래보다 몇 배 빠른가
@@ -203,7 +205,7 @@ export function createCore(nav, see, cfg, rng = Math.random) {
   }
   function calm(r, W, K) {
     const B = r.b; r.running = false; r.mode = 'calm';
-    if (B.hide >= 0 && (r.path || cellOf(r) === B.hide || Math.hypot(X(B.hide) - r.x, Z(B.hide) - r.z) < 1.5)) { if (!r.path) B.stay = true; return; }
+    if (B.hide >= 0 && (r.path || cellOf(r) === B.hide || Math.hypot(X(B.hide) - r.x, Z(B.hide) - r.z) < 1.5)) { if (!r.path) { B.stay = true; r.crouch = cfg.crouch && W.phase === 'seek'; } return; }   // 숨을 자리에 닿으면 웅크림(사람 아이처럼)
     let best = -1, bs = -1e9;
     for (let k = 0; k < 50; k++) { const c = randCell(), z = nav.zoneOf(c); let md = 30; for (const m of K) md = Math.min(md, Math.hypot(X(c) - m.x, Z(c) - m.z));
       if (W.H0) md = Math.min(md, Math.hypot(X(c) - W.H0.x, Z(c) - W.H0.z) * 0.7);
@@ -211,7 +213,7 @@ export function createCore(nav, see, cfg, rng = Math.random) {
       for (const o of W.A) if (o !== r && o.role === 'run' && o.alive) s -= Math.max(0, 6 - Math.hypot(X(c) - o.x, Z(c) - o.z));
       if (Math.hypot(X(c) - r.x, Z(c) - r.z) > 45) s -= 20;
       if (s > bs) { bs = s; best = c; } }
-    B.hide = best; goTo(r, best);
+    B.hide = best; r.crouch = false; goTo(r, best);
   }
   return { setArena, snapA, randCell, field, fd, cellOf, goTo, move, dist, sees, huntInit, huntTick, runInit, runTick, get list() { return list; }, get zones() { return Zs; }, inA: () => inA };
 }
@@ -401,7 +403,16 @@ export default async function start(map, params = {}) {
   const paintBtn = () => { const a = ACT[ME]; if (!a) return; const k = a.inv > 0 ? '투명 ' + Math.ceil(a.inv) : a.invCd > 0 ? Math.ceil(a.invCd) + '초' : coarse ? '투명' : '투명 F';
     if (k === invBtnK) return; invBtnK = k; btn.lastChild.textContent = k; btn.style.opacity = a.inv > 0 || a.invCd <= 0 ? '1' : '.55'; };
   const chip = (k, t) => { if (chipK[k] === t) return; chipK[k] = t; map.hud.chip(k, t); };
-  const keyF = e => { if (e.repeat || e.code !== 'KeyF') return; const a = ACT[ME]; if (!a || a.role !== 'run') return; e.preventDefault(); useInv(); };
+  const keyF = e => { if (e.repeat) return; const a = ACT[ME]; if (!a || a.role !== 'run') return;
+    if (e.code === 'KeyF') { e.preventDefault(); useInv(); } else if (e.code === 'KeyC') { e.preventDefault(); toggleCrouch(); } };
+  // 🙇 웅크리기(HS-4): C(누를 때마다 바뀜) · 단추 — 엔진 웅크리기(느리게 기어감 · 몸이 낮아져 가구 뒤에 가려짐 — 사라지는 게 아님)
+  const cbtn = document.createElement('div'); cbtn.className = 'hs-btn hs-cbtn';
+  cbtn.style.cssText = 'position:fixed;right:calc(108px + env(safe-area-inset-right));bottom:calc(' + ((coarse ? 24 : 96) + 7) + 'px + env(safe-area-inset-bottom));width:64px;height:64px;border-radius:50%;z-index:24;display:none;flex-direction:column;align-items:center;justify-content:center;'
+    + 'font:800 11px/1.1 system-ui,-apple-system,"Malgun Gothic",sans-serif;color:#fff;background:rgba(47,158,68,.9);border:3px solid rgba(255,255,255,.9);box-shadow:0 3px 0 rgba(0,0,0,.2);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer';
+  cbtn.innerHTML = '<b style="font-size:24px;line-height:1">🙇</b><span>' + (coarse ? '웅크리기' : '웅크리기 C') + '</span>';
+  cbtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); toggleCrouch(); });
+  document.body.appendChild(cbtn);
+  function toggleCrouch() { const a = ACT[ME]; if (!a || a.role !== 'run' || !a.alive || (phase !== 'hide' && phase !== 'seek')) return; const on = !map.player.crouched(); map.player.setCrouch(on); cbtn.style.outline = on ? '4px solid #ffd23c' : ''; if (on) map.hud.toast('🙇 웅크렸어요 — 책상·덤불·차 뒤에 있으면 술래 눈에 잘 안 띄어요(느려져요)', 2.2); }
   addEventListener('keydown', keyF);
   // 술래 눈 가림(숨는 시간)
   function blindOn(on, txt) {
@@ -441,22 +452,22 @@ export default async function start(map, params = {}) {
     if (me) { map.player.teleport([me.x, me.y, me.z], { h: me.h }); }
     if (me && me.role === 'run') {
       if (!map.top.on) map.top.enter({ follow: true, playerKeys: true, vision: cfg.R, bar: false, floor: 1, d: 30, floorKeys: false, onTap: walkTo, onExit: askQuit,
-        help: coarse ? '땅을 톡 = 그곳으로 달리기 · 🏃 힘이 다하면 걷기 · 👻 = 3초 투명 · 빨간 부채꼴 = 술래 눈' : 'WASD·방향키 = 걷기 · Shift(왼쪽·오른쪽) = 달리기 — 🏃 힘 6초 · 땅 클릭 = 그곳으로 · F 👻 투명 · 빨간 부채꼴 = 술래 눈' });
-      btn.style.display = 'flex'; map.minimap.hide();
-    } else { if (map.top.on) map.top.exit(); btn.style.display = 'none'; map.minimap.show({}); map.minimap.setMarks([]); }
+        help: coarse ? '땅을 톡 = 그곳으로 달리기 · 🏃 힘이 다하면 걷기 · 🙇 웅크리면 가구 뒤에 가려져요 · 👻 = 3초 투명 · 빨간 부채꼴 = 술래 눈' : 'WASD·방향키 = 걷기 · Shift = 달리기(🏃 힘 6초) · C 🙇 웅크리기(가구 뒤에 가려짐) · 땅 클릭 = 그곳으로 · F 👻 투명 · 빨간 부채꼴 = 술래 눈' });
+      btn.style.display = 'flex'; cbtn.style.display = 'flex'; cbtn.style.outline = ''; map.player.crouch(true); map.player.setCrouch(false); map.minimap.hide();
+    } else { if (map.top.on) map.top.exit(); btn.style.display = 'none'; cbtn.style.display = 'none'; map.player.setCrouch(null); map.player.crouch(false); map.minimap.show({}); map.minimap.setMarks([]); }
     const runN = ACT.filter(a => a.role === 'run').map(a => a.kind === 'me' ? '나' : a.name).join(' · ');
     map.hud.goal(me ? (me.role === 'run' ? '🏃 도망자 — ' + cfg.seek + '초 버티기!' : '👀 술래 — 도망자(' + runN + ') 잡기!') : '👀 구경 — 다음 판부터 같이 해요');
     const lt = LVL_T[String(r.eff)] + (r.base ? ' (👥 인원 보정 ' + (r.base > 0 ? '+' : '') + r.base + ')' : '');
     card('<div style="font-size:1.25em">' + (me && me.role === 'run' ? '🏃 이번 판은 <b>내가 도망자</b>!' : '🏃 이번 판 도망자: <b>' + esc(runN) + '</b>') + '</div>'
       + (r.rounds ? '<div style="opacity:.8;font-size:.85em">' + (r.round + 1) + ' / ' + r.rounds + '판</div>' : '')
-      + (me ? '<div style="opacity:.85;font-size:.85em">' + (me.role === 'run' ? '하늘에서 봐요 · 빨간 부채꼴 = 술래 눈 · 🏃 힘(달리기 6초 — 쉬면 차요) · 👻 F' : '10초 동안 눈 감기 → 찾기 · 🔥 = 가까이 · 마지막 20초 반짝') + '</div>' : '')
+      + (me ? '<div style="opacity:.85;font-size:.85em">' + (me.role === 'run' ? '하늘에서 봐요 · 빨간 부채꼴 = 술래 눈 · 🏃 힘(달리기 6초 — 쉬면 차요) · 🙇 C 웅크려 가구 뒤에 · 👻 F' : '10초 동안 눈 감기 → 찾기 · 🔥 = 가까이 · 마지막 20초 반짝') + '</div>' : '')
       + (lt ? '<div style="color:#ffd23c;font-size:.85em">⚖️ 따라잡기 — ' + lt + '</div>' : ''), 3);
     if (!me) map.player.freeze(false);
     chip('hs-role', me ? (me.role === 'run' ? '🏃 도망자' : '👀 술래') : '👀 구경');
     star3.hide(0); if (starMk) { starMk.remove(); starMk = null; }
     if (map.top.on) map.top.marks([]);
   }
-  function endRoundUI() { arSafe = null; clearRoute(); map.player.run(true); stamEl.style.display = 'none'; stamK = ''; map.player.invisible(false); map.player.speed(1); blindOn(false); if (starMk) { starMk.remove(); starMk = null; } star3.hide(0); for (const t of TAGS) if (t) t.visible = false; hideBodies(); }
+  function endRoundUI() { arSafe = null; clearRoute(); map.player.run(true); map.player.setCrouch(null); map.player.crouch(false); cbtn.style.display = 'none'; cbtn.style.outline = ''; stamEl.style.display = 'none'; stamK = ''; map.player.invisible(false); map.player.speed(1); blindOn(false); if (starMk) { starMk.remove(); starMk = null; } star3.hide(0); for (const t of TAGS) if (t) t.visible = false; hideBodies(); }
   function hideBodies() { for (let j = 0; j < NA; j++) { M.body.setMatrixAt(j, ZERO); M.bib.setMatrixAt(j, ZERO); M.leg.setMatrixAt(j * 2, ZERO); M.leg.setMatrixAt(j * 2 + 1, ZERO); M.arm.setMatrixAt(j * 2, ZERO); M.arm.setMatrixAt(j * 2 + 1, ZERO); FAN.setMatrixAt(j, ZERO); }
     M.body.instanceMatrix.needsUpdate = M.bib.instanceMatrix.needsUpdate = M.leg.instanceMatrix.needsUpdate = M.arm.instanceMatrix.needsUpdate = FAN.instanceMatrix.needsUpdate = true; }
   function setPhase(p) {
@@ -491,7 +502,7 @@ export default async function start(map, params = {}) {
     if (ri >= route.length) { clearRoute(); return; }
     const p = route[ri], d = Math.hypot(p[0] - me.x, p[2] - me.z);
     if (d < lastD - 0.05) { lastD = d; stuckT = 0; } else if ((stuckT += dt) > 1.5) { clearRoute(); return; }
-    map.player.steer(p[0] - me.x, p[2] - me.z, ACT[ME] && ACT[ME].tired ? 4.2 : 7.0, false);   // 힘이 없으면 걸어서
+    map.player.steer(p[0] - me.x, p[2] - me.z, ACT[ME] && ACT[ME].crouch ? 1.9 : ACT[ME] && ACT[ME].tired ? 4.2 : 7.0, false);   // 힘이 없으면 걸어서 · 웅크리면 기어서
   }
   function useInv() {
     const a = ACT[ME]; if (!a || a.role !== 'run' || !a.alive || phase !== 'seek' || a.inv > 0 || a.invCd > 0) return;
@@ -507,7 +518,7 @@ export default async function start(map, params = {}) {
       if (!a || !a.alive) return; a.alive = false; a.caughtT = (e.n || 0) / 10; a.inv = 0;
       const byN = by ? (by.kind === 'me' ? '내가' : by.kind === 'bot' ? '🤖 술래 봇이' : by.name + '이(가)') : '술래가';
       const last = !ACT.some(q => q.role === 'run' && q.alive);   // 마지막 도망자면 결과 카드가 바로 뜬다(배너와 겹치지 않게)
-      if (a.kind === 'me') { map.player.freeze(true); clearRoute(); map.player.invisible(false); if (!last) map.hud.banner('💥 잡혔어요! (' + Math.round(a.caughtT) + '초)', 2); map.tone(784, 0, 0.25, 'sine', 0.2); map.tone(622, 0.22, 0.4, 'sine', 0.2); }
+      if (a.kind === 'me') { map.player.freeze(true); clearRoute(); map.player.invisible(false); map.player.setCrouch(false); cbtn.style.display = 'none'; if (!last) map.hud.banner('💥 잡혔어요! (' + Math.round(a.caughtT) + '초)', 2); map.tone(784, 0, 0.25, 'sine', 0.2); map.tone(622, 0.22, 0.4, 'sine', 0.2); }
       else { if (!last) map.hud.banner('🎉 ' + byN + ' ' + (a.kind === 'bot' ? '도망 로봇' : a.name) + '을(를) 잡았어요!', 1.8); map.tone(784, 0, 0.1, 'sine', 0.1); map.tone(1046, 0.1, 0.18, 'sine', 0.1); }
       if (by) by.cts = (by.cts || 0) + 1;
       if (!ACT.some(q => q.role === 'run' && q.alive) && finT == null) finT = Math.max(0, W.t);
@@ -552,7 +563,7 @@ export default async function start(map, params = {}) {
     const p = t < 0 ? 'count' : t < cfg.hide ? 'hide' : t < endAt ? 'seek' : 'res'; setPhase(p);
     const me = ACT[ME];
     // 나
-    if (me) { const pp = map.player.get(); me.vx = (pp.x - me.x) / Math.max(dt, 1e-3); me.vz = (pp.z - me.z) / Math.max(dt, 1e-3); me.x = pp.x; me.y = pp.y; me.z = pp.z; me.h = pp.h; me.running = Math.hypot(me.vx, me.vz) > 5.5; }
+    if (me) { const pp = map.player.get(); me.vx = (pp.x - me.x) / Math.max(dt, 1e-3); me.vz = (pp.z - me.z) / Math.max(dt, 1e-3); me.x = pp.x; me.y = pp.y; me.z = pp.z; me.h = pp.h; me.running = Math.hypot(me.vx, me.vz) > 5.5; me.crouch = me.role === 'run' && !!map.player.crouched(); }
     // 투명·별 시계(내 것 · 봇)
     for (const a of ACT) { if (a.kind === 'remote') continue;
       if (a.inv > 0 && (a.inv -= dt) <= 0) { a.inv = 0; a.invCd = cfg.invCd; if (a.kind === 'me') { map.player.invisible(false); map.tone(392, 0, 0.15, 'sine', 0.08); } } else if (a.invCd > 0) a.invCd = Math.max(0, a.invCd - dt);
@@ -592,7 +603,7 @@ export default async function start(map, params = {}) {
       if (me && me.role === 'hunt') {
         if ((seeT -= dt) <= 0) { seeT = 0.1; let saw = null;
           for (const r of ACT) { if (r.role !== 'run' || !r.alive) continue; const d = Math.hypot(r.x - me.x, r.z - me.z); if (d > 25 || (r.inv > 0 && d > cfg.invNear)) continue;
-            if (map.see({ x: me.x, y: me.y + 1.35, z: me.z, h: me.h }, { x: r.x, y: r.y + 1.0, z: r.z }, 100, 25)) { saw = r; break; } }
+            if (map.see({ x: me.x, y: me.y + 1.35, z: me.z, h: me.h }, { x: r.x, y: r.y + (r.crouch ? 0.4 : 0.85), z: r.z }, 100, 25)) { saw = r; break; } }
           if (saw) { if (seeWho === saw.i) { saw.seenT = (saw.seenT || 0) + 0.1; if (saw.seenT >= 0.3 && (callT[saw.i] || -9) < W.t - cfg.callEvery) { callT[saw.i] = W.t; const ci = core.cellOf(saw), z = ci >= 0 ? nav.zoneOf(ci) : null; if (z) emit({ k: 'see', by: me.i, who: saw.i, n: zIdx(z.id) }); } } else { seeWho = saw.i; saw.seenT = 0; } } else seeWho = -1; }
         if ((hotT -= dt) <= 0) { hotT = 0.25; let d0 = 1e9; for (const r of ACT) if (r.role === 'run' && r.alive) d0 = Math.min(d0, Math.hypot(r.x - me.x, r.z - me.z));
           chip('hs-hot', d0 < cfg.hotR ? '🔥 가까이 있어요!' : '❄️ 이 근처엔 없어요'); }
@@ -620,16 +631,20 @@ export default async function start(map, params = {}) {
       if (!vis) { M.body.setMatrixAt(j, ZERO); M.bib.setMatrixAt(j, ZERO); M.leg.setMatrixAt(j * 2, ZERO); M.leg.setMatrixAt(j * 2 + 1, ZERO); M.arm.setMatrixAt(j * 2, ZERO); M.arm.setMatrixAt(j * 2 + 1, ZERO); FAN.setMatrixAt(j, ZERO); if (TAGS[j]) TAGS[j].visible = false; continue; }
       const mv = Math.hypot(a.x - a.ox, a.z - a.oz); a.walk += mv * 5.5; a.ox = a.x; a.oz = a.z;
       const blink = a.inv > 0 && Math.floor(a.inv * 8) % 2 === 0, yaw = Math.PI - a.h * Math.PI / 180, sy = Math.sin(yaw), cy = Math.cos(yaw);
-      const bob = Math.abs(Math.sin(a.walk)) * 0.035, y0 = a.y + 0.01 + bob;
-      if (blink) { M.body.setMatrixAt(j, ZERO); M.bib.setMatrixAt(j, ZERO); } else { _q.setFromEuler(_e.set(0, yaw, 0)); _s.set(1, 1, 1); _v.set(a.x, y0, a.z); M.body.setMatrixAt(j, _m4.compose(_v, _q, _s)); M.bib.setMatrixAt(j, _m4); }
+      // HS-4: 도망자 몸 = 0.8배(키 ≈1.1m) · 🙇 웅크리면 납작(≈0.6m — 책상·덤불·차·화단 뒤면 가려짐) · 다리는 접어 숨기고 팔은 무릎을 안음
+      const sc = a.role === 'run' ? 0.8 : 1, cr = !!a.crouch, hy = cr ? 0.55 : 1;
+      const bob = cr ? 0 : Math.abs(Math.sin(a.walk)) * 0.035, y0 = a.y + 0.01 + bob;
+      if (blink) { M.body.setMatrixAt(j, ZERO); M.bib.setMatrixAt(j, ZERO); } else { _q.setFromEuler(_e.set(0, yaw, 0)); _s.set(sc * (cr ? 1.12 : 1), sc * hy, sc * (cr ? 1.12 : 1)); _v.set(a.x, y0 - (cr ? 0.1 * sc : 0), a.z); M.body.setMatrixAt(j, _m4.compose(_v, _q, _s)); M.bib.setMatrixAt(j, _m4); }
       M.bib.setColorAt(j, _c.set(a.role === 'run' ? (a.star > 0 ? 0xffd23c : 0x3b82f6) : 0xe84848));
-      const sw = Math.sin(a.walk) * 0.7;
+      const sw = cr ? 0 : Math.sin(a.walk) * 0.7;
       for (let s = 0; s < 2; s++) { const side = s ? 1 : -1;
-        if (blink) { M.leg.setMatrixAt(j * 2 + s, ZERO); M.arm.setMatrixAt(j * 2 + s, ZERO); continue; }
-        let ox = 0.085 * side, oy = 0.34; _v.set(a.x + ox * cy, y0 + oy, a.z - ox * sy); _q.setFromEuler(_e.set(sw * side, yaw, 0)); _s.set(1, 1, 1); M.leg.setMatrixAt(j * 2 + s, _m4.compose(_v, _q, _s));
-        ox = 0.21 * side; oy = 0.7; _v.set(a.x + ox * cy, y0 + oy, a.z - ox * sy); _q.setFromEuler(_e.set(-sw * side * 0.8, yaw, 0.12 * side)); M.arm.setMatrixAt(j * 2 + s, _m4.compose(_v, _q, _s)); }
+        if (blink || cr) M.leg.setMatrixAt(j * 2 + s, ZERO);
+        else { const ox = 0.085 * side * sc, oy = 0.34 * sc; _v.set(a.x + ox * cy, y0 + oy, a.z - ox * sy); _q.setFromEuler(_e.set(sw * side, yaw, 0)); _s.set(sc, sc, sc); M.leg.setMatrixAt(j * 2 + s, _m4.compose(_v, _q, _s)); }
+        if (blink) { M.arm.setMatrixAt(j * 2 + s, ZERO); continue; }
+        const ox = (cr ? 0.19 : 0.21) * side * sc, oy = (cr ? 0.42 : 0.7) * sc; _v.set(a.x + ox * cy, y0 + oy, a.z - ox * sy); _q.setFromEuler(_e.set(cr ? -1.1 : -sw * side * 0.8, yaw, (cr ? 0.35 : 0.12) * side)); _s.set(sc, sc * (cr ? 0.8 : 1), sc); M.arm.setMatrixAt(j * 2 + s, _m4.compose(_v, _q, _s)); }
       if (fan) { _q.setFromEuler(_e.set(0, yaw, 0)); _v.set(a.x, a.y + 0.06, a.z); _s.set(1, 1, 1); FAN.setMatrixAt(j, _m4.compose(_v, _q, _s)); } else FAN.setMatrixAt(j, ZERO);
-      if (a.kind === 'remote' && !blink) { const tg = tagFor(j, a.name, a.role === 'run'); tg.visible = true; tg.position.set(a.x, a.y + 1.78, a.z); } else if (TAGS[j]) TAGS[j].visible = false;
+      const tagOn = a.kind === 'remote' && !blink && !(myRole === 'hunt' && a.role === 'run');   // 술래 화면엔 도망자 이름표 없음(가구 뒤에서 이름표만 둥둥 떠 들키지 않게)
+      if (tagOn) { const tg = tagFor(j, a.name, a.role === 'run'); tg.visible = true; tg.position.set(a.x, a.y + (cr ? 0.95 : 1.78) * sc, a.z); } else if (TAGS[j]) TAGS[j].visible = false;
     }
     M.body.instanceMatrix.needsUpdate = M.bib.instanceMatrix.needsUpdate = M.leg.instanceMatrix.needsUpdate = M.arm.instanceMatrix.needsUpdate = FAN.instanceMatrix.needsUpdate = true; M.bib.instanceColor.needsUpdate = true;
   }
@@ -799,7 +814,7 @@ export default async function start(map, params = {}) {
     else { const k = 1 - Math.exp(-18 * dt); a.x += (tx - a.x) * k; a.y += (v[1] - a.y) * Math.min(1, dt * 12); a.z += (tz - a.z) * k; }
     let dh = v[3] - a.h; while (dh > 180) dh -= 360; while (dh < -180) dh += 360; a.h = (a.h + dh * Math.min(1, dt * 12) + 360) % 360;
     a.vx = a.nvx || 0; a.vz = a.nvz || 0; a.running = Math.hypot(a.vx, a.vz) > 5.5;
-    const f = v[4] | 0; a.inv = f & 1 ? Math.max(a.inv, 0.5) : 0; a.star = f & 8 ? Math.max(a.star, 0.5) : (a.star > 0 && !(f & 8) ? 0 : a.star);
+    const f = v[4] | 0; a.crouch = !!(f & 16); a.inv = f & 1 ? Math.max(a.inv, 0.5) : 0; a.star = f & 8 ? Math.max(a.star, 0.5) : (a.star > 0 && !(f & 8) ? 0 : a.star);
   }
   function netEmit(e) { const id = 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); NM.seen.add(id); const o = { k: e.k, q: NM.seq, t: { '.sv': 'timestamp' } }; for (const k of ['by', 'who', 'n']) if (typeof e[k] === 'number') o[k] = e[k]; nreq('/ev/' + id, 'PUT', o).catch(() => {}); }
   function netSendNow() { netSend(0, true); }
@@ -808,7 +823,7 @@ export default async function start(map, params = {}) {
     const busy = R && (phase === 'hide' || phase === 'seek' || phase === 'count');
     if ((NM.sendT <= 0 || beat) && NM.busyS < NF()) {   // 2개까지 겹쳐 보냄
       NM.sendT = busy ? 0.1 : 2; NM.busyS++; const t1 = NM.lastSend = performance.now(), w1 = Date.now(), a = ACT[ME], p = map.player.get();
-      nreq('/s/' + NM.pid, 'PUT', [r2(p.x), r2(p.y), r2(p.z), Math.round(p.h), (a && a.inv > 0 ? 1 : 0) | (a && a.star > 0 ? 8 : 0), (NM.beatN = (NM.beatN + 1) % 100), { '.sv': 'timestamp' }, Math.min(5000, NM.lag || 0)])
+      nreq('/s/' + NM.pid, 'PUT', [r2(p.x), r2(p.y), r2(p.z), Math.round(p.h), (a && a.inv > 0 ? 1 : 0) | (a && a.star > 0 ? 8 : 0) | (a && a.crouch ? 16 : 0), (NM.beatN = (NM.beatN + 1) % 100), { '.sv': 'timestamp' }, Math.min(5000, NM.lag || 0)])
         .then(r => { const rtt = performance.now() - t1; NM.lag = Math.round(NM.lag ? NM.lag * 0.7 + rtt * 0.3 : rtt);
           if (r && typeof r[6] === 'number') { NM.offs.push([rtt, r[6] - (w1 + rtt / 2)]); if (NM.offs.length > 24) NM.offs.shift(); let b = NM.offs[0]; for (const o of NM.offs) if (o[0] < b[0]) b = o; NM.off = b[1]; } })   // 시계 맞추기 = 왕복이 가장 짧았던 것
         .catch(() => {}).finally(() => { NM.busyS--; });
@@ -816,7 +831,7 @@ export default async function start(map, params = {}) {
     if (beat) return;
     if (NM.host && busy && NM.bT <= 0 && NM.busyB < NF()) {
       NM.bT = 0.1; NM.busyB++; const b = {};
-      for (const a of ACT) if (a.kind === 'bot') b[a.i] = [r2(a.x), r2(a.y), r2(a.z), Math.round(a.h), (a.inv > 0 ? 1 : 0) | (a.star > 0 ? 8 : 0), { '.sv': 'timestamp' }];
+      for (const a of ACT) if (a.kind === 'bot') b[a.i] = [r2(a.x), r2(a.y), r2(a.z), Math.round(a.h), (a.inv > 0 ? 1 : 0) | (a.star > 0 ? 8 : 0) | (a.crouch ? 16 : 0), { '.sv': 'timestamp' }];
       nreq('/b', 'PUT', b).catch(() => {}).finally(() => { NM.busyB--; });
     }
   }
@@ -897,7 +912,7 @@ export default async function start(map, params = {}) {
   if (NETM) netEnter(); else soloAsk();
   return {
     tick,
-    stop() { dead = true; removeEventListener('keydown', keyF); clearRoute(); btn.remove(); stamEl.remove(); blindOn(false); if (cardEl) { cardEl.remove(); cardEl = null; } clearTimeout(cardT); map.player.invisible(false); map.player.speed(1); netLeave(); for (const t of TAGS) if (t) { t.material.map && t.material.map.dispose(); t.material.dispose(); }
+    stop() { dead = true; removeEventListener('keydown', keyF); clearRoute(); btn.remove(); cbtn.remove(); stamEl.remove(); blindOn(false); if (cardEl) { cardEl.remove(); cardEl = null; } clearTimeout(cardT); map.player.invisible(false); map.player.speed(1); netLeave(); for (const t of TAGS) if (t) { t.material.map && t.material.map.dispose(); t.material.dispose(); }
       for (const g of GEOS) g.dispose(); for (const m of MATS) m.dispose(); },
     get state() { return R ? { phase, t: W && W.t, lvl: R.lvl, base: R.base, eff: R.eff, round: R.round, me: ME, host: NETM ? NM.host : true, actors: ACT.map(a => ({ i: a.i, kind: a.kind, name: a.name, role: a.role, alive: a.alive, x: +a.x.toFixed(1), z: +a.z.toFixed(1), inv: +a.inv.toFixed(1), star: +a.star.toFixed(1), caughtT: a.caughtT })), star: starD, res } : { phase: 'lobby', host: NM.host }; },
     get net() { return { on: NM.on, host: NM.host, room: NM.room, seq: NM.seq, lvl: NM.lvl, lag: NM.lag, st: NM.st }; },
