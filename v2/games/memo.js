@@ -98,6 +98,11 @@ const STYLE = `
 #memo-cross{position:fixed;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;pointer-events:none;z-index:25;display:none;background:linear-gradient(#fff,#fff) center/2px 22px no-repeat,linear-gradient(#fff,#fff) center/22px 2px no-repeat;filter:drop-shadow(0 0 2px #000)}
 #memo-here{pointer-events:auto;position:absolute;transform:translate(-50%,-130%);font-size:15px;padding:8px 12px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.3);white-space:nowrap}
 #memo-board{inset:2.5vh 2vw;display:flex;flex-direction:column;padding:12px 14px}
+#memo-ui .mp.memo-bg{filter:brightness(.6) saturate(.85);pointer-events:none}
+#memo-ui .memo-bg .lane.pick{filter:brightness(1.6);outline:4px solid #ffd23c;outline-offset:1px}
+#memo-ui .memo-bg .cd.pick{outline:4px solid #ffd23c;outline-offset:1px}
+#memo-ui .cd.flash{animation:mmFlash .9s ease-out 3}
+@keyframes mmFlash{0%{box-shadow:0 0 0 0 rgba(255,200,40,.95);background:#fff8d6}60%{box-shadow:0 0 0 10px rgba(255,200,40,.3)}100%{box-shadow:0 0 0 0 rgba(255,200,40,0)}}
 #memo-board .top{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 #memo-board .top h3{margin:0;flex:1;min-width:180px}
 #memo-board .bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0}
@@ -193,9 +198,24 @@ export default async function start(map, params = {}) {
   const crossEl = document.createElement('div'); crossEl.id = 'memo-cross'; document.body.appendChild(crossEl);
   const crossUp = () => { try { crossEl.style.display = document.pointerLockElement && board && !panel && !play && !isW() ? 'block' : 'none'; } catch (e) { /* 시작 중(아래 변수 준비 전) */ } };
   document.addEventListener('pointerlockchange', crossUp);
-  let panel = null, back = null;
-  const close = () => { if (panel) panel.remove(); panel = null; map.player.freeze(false); crossUp(); };
-  const open = (id) => { close(); hereOff(); map.player.freeze(true); document.exitPointerLock?.(); panel = el('div', 'mp'); panel.id = id; keyStop(panel); crossUp(); return panel; };   // LOCK-2: 창 = 마우스 보임
+  let panel = null, back = null, bgEl = null, flashId = null, flashT = 0;
+  // BOARD-BG(10-04 교사 '카드 쓰기 창이 학교 배경 위에 따로 뜨지 말고 판이 뒤에 있어야 아이들이 이해 쉬움'): 판에서 쓰기 창을 열면 판을 지우지 않고 뒤에 어둡게 둠(누를 수 없음) — 고른 칸이 밝게 · 저장하면 판으로 돌아와 새 카드가 반짝
+  const bgOff = () => { if (bgEl) { bgEl.remove(); bgEl = null; } };
+  const close = () => { if (panel) panel.remove(); panel = null; bgOff(); map.player.freeze(false); crossUp(); };
+  const open = (id) => {
+    const keep = id === 'memo-form' && back === 'board' && panel && panel.id === 'memo-board' ? panel : null;
+    if (keep) panel = null;   // 판 = 뒤 배경
+    close(); hereOff(); map.player.freeze(true); document.exitPointerLock?.();
+    if (keep) { bgEl = keep; keep.classList.add('memo-bg'); keep.setAttribute('inert', ''); }
+    panel = el('div', 'mp'); panel.id = id; keyStop(panel); crossUp(); return panel;   // LOCK-2: 창 = 마우스 보임
+  };
+  const bgBack = () => { if (!bgEl || !panel || panel.id === 'memo-board') return false; panel.remove(); panel = bgEl; bgEl = null; panel.classList.remove('memo-bg'); panel.removeAttribute('inert'); map.player.freeze(true); return true; };   // 뒤에 있던 판을 그대로 다시 앞으로(스크롤 자리 그대로)
+  const bgPick = (k, cardId) => { if (!bgEl) return; bgEl.querySelectorAll('.lane[data-k]').forEach((l) => l.classList.toggle('pick', !!k && l.dataset.k === k)); bgEl.querySelectorAll('.cd.pick').forEach((c) => c.classList.remove('pick'));
+    if (cardId) { const c = bgEl.querySelector('.cd[data-id="' + window.CSS.escape(cardId) + '"]'); if (c) c.classList.add('pick'); } };
+  const flashSoon = (id) => { flashId = id; flashT = Date.now(); };
+  function flashNow(root) { if (!flashId || !root) return; if (Date.now() - flashT > 6000) { flashId = null; return; }
+    const c = root.querySelector('.cd[data-id="' + window.CSS.escape(flashId) + '"]'); if (!c) return; flashId = null;
+    c.classList.add('flash'); try { c.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' }); } catch (e) { /* */ } }
   addEventListener('keydown', onEsc, true);
   function onEsc(e) {
     if (e.code !== 'Escape') return;
@@ -484,6 +504,7 @@ export default async function start(map, params = {}) {
   const coachChips = (C) => C.map((c) => '<span class="cc ' + (c.tip ? 'tip' : c.ok ? 'ok' : 'no') + '"' + (c.b ? ' data-b="' + esc(c.b) + '"' : '') + '>● ' + esc(c.t) + '</span>').join('');   // 코치 칩(🧭 이야기·세계 공용 · data-b = 누르면 그 일로)
   function boardView() {
     if (!board) return;
+    bgBack();
     if (isW()) return worldView();
     const re = panel && panel.id === 'memo-board', P = re ? panel : open('memo-board');
     const old = re && P.querySelector('.body'), sc = old ? [old.scrollTop, old.scrollLeft] : [0, 0];
@@ -904,10 +925,10 @@ export default async function start(map, params = {}) {
     P.innerHTML = h;
     const body = P.querySelector('.body');
     body.innerHTML = '<div class="lanes wl">' + wcols().map((C) => { const L = A.filter(([, f]) => f.k === C.k).sort((a, b) => likes(b[1]) - likes(a[1]) || (a[1].t || 0) - (b[1].t || 0));   // wl = 칸 격자(가로로 굴리지 않아도 🎮 칸까지 보임 · 선생님이 더한 칸은 그 뒤)
-      return '<div class="lane" style="border-top:6px solid ' + hex(C.c) + '"><h4>' + esc(C.e) + ' ' + esc(C.n) + ' <span class="sm">' + L.length + '/' + C.goal + (L.length >= C.goal ? ' ✓' : '') + '</span></h4><div class="sm" style="margin:-4px 0 8px">' + esc(C.q) + '</div>'
+      return '<div class="lane" data-k="' + esc(C.k) + '" style="border-top:6px solid ' + hex(C.c) + '"><h4>' + esc(C.e) + ' ' + esc(C.n) + ' <span class="sm">' + L.length + '/' + C.goal + (L.length >= C.goal ? ' ✓' : '') + '</span></h4><div class="sm" style="margin:-4px 0 8px">' + esc(C.q) + '</div>'
         + L.map(([id, f]) => wcard(id, f)).join('') + (can ? '<button class="sub" data-b="wcat:' + C.k + '" style="width:100%;border:1px dashed #9fb4d0;background:#fff">＋ ' + esc(C.e) + ' 쓰기</button>' : '') + '</div>'; }).join('') + '</div>';
     body.prepend(el('div', 'coach top', '<b>🧭 세계 코치</b> ' + coachChips(W.tips), body));   // 코치는 칸 위(빈 칸 칩·'다 모였어요'가 첫 화면에)
-    body.scrollTop = sc[0]; body.scrollLeft = sc[1];
+    body.scrollTop = sc[0]; body.scrollLeft = sc[1]; flashNow(body);
     P.onclick = async (e) => {
       const b = e.target.closest('[data-b]'); if (!b || b.closest('.cd')) return;
       const a = b.dataset.b;
@@ -941,6 +962,8 @@ export default async function start(map, params = {}) {
     if (old && !teacher && old.by !== name) { back = null; return toast('✍️ ' + old.by + '의 ' + (old.k === 'wd' ? '자세히' : '카드') + '예요 — 내가 쓴 것만 고칠 수 있어요', 3); }
     if (o.detail || (old && old.k === 'wd')) return wdform(o, old);   // ＋ 자세히(카드 밑 짧은 줄)
     let cat = old ? old.k : o.cat || null, loc = old && old.loc || null;   // 새 세계 = 학교와 따로 — 깃발 없음 · 장소는 '어디쯤'
+    if (!(panel && panel.id === 'memo-board')) { worldView(); }   // F·칩으로 열어도 세계 판이 뒤에(BOARD-BG)
+    back = 'board';
     const P = open('memo-form');
     const draw = () => {
       const C = wby()[cat];
@@ -959,6 +982,7 @@ export default async function start(map, params = {}) {
       const tx = P.querySelector('#mmTx'), wy = P.querySelector('#mmWhy');
       if (tx) { tx.value = keep.tx != null ? keep.tx : old ? old.tx || '' : ''; setTimeout(() => tx.focus(), 30); }
       if (wy) wy.value = keep.why != null ? keep.why : old ? old.why || '' : '';
+      bgPick(cat, old ? o.id : null);   // 뒤 판: 고른 칸이 밝게
     };
     const done = () => { if (back === 'board') { back = null; boardView(); } else close(); };
     P.addEventListener('click', async (e) => {
@@ -979,8 +1003,8 @@ export default async function start(map, params = {}) {
         if (!C9) return toast('어느 칸인지 골라요', 2); if (!tx) return toast('내용을 적어 주세요', 2);
         const f = { k: cat, tx: dedupe(tx).slice(0, 300), why: why ? why.slice(0, 200) : null, loc: cat === 'wplace' && loc ? loc : null };
         try {
-          if (old) await req(fpath(o.id), 'PATCH', f);
-          else { if (!f.why) delete f.why; if (!f.loc) delete f.loc; Object.assign(f, { by: name, t: { '.sv': 'timestamp' }, ord: Date.now() }); await req(fpath(newId()), 'PUT', f); }
+          if (old) { await req(fpath(o.id), 'PATCH', f); flashSoon(o.id); }
+          else { if (!f.why) delete f.why; if (!f.loc) delete f.loc; Object.assign(f, { by: name, t: { '.sv': 'timestamp' }, ord: Date.now() }); const nid = newId(); await req(fpath(nid), 'PUT', f); flashSoon(nid); }
           map.sfx('ding'); toast(old ? '✏️ 고쳤어요' : '＋ ' + C9.e + ' 카드를 붙였어요!', 2.2);
         } catch (er) { toast('저장하지 못했어요 — 인터넷을 확인해 주세요', 3); return; }
         done();
@@ -993,6 +1017,8 @@ export default async function start(map, params = {}) {
     const pid = old ? old.p : o.detail, card = DATA[pid]; if (!old && !card) { back = null; return; }
     const C = card ? wby()[card.k] || WC[0] : null;
     let tag = old && WTB[old.tag] ? old.tag : null;
+    if (!(panel && panel.id === 'memo-board')) worldView();   // BOARD-BG: 자세히를 쓸 때도 세계 판이 뒤에
+    back = 'board';
     const P = open('memo-form');
     const draw = () => {
       const keep = (P.querySelector('#mmTx') || {}).value, T = WTB[tag];
@@ -1002,6 +1028,7 @@ export default async function start(map, params = {}) {
         + '<textarea id="mmTx" maxlength="150" style="min-height:56px" placeholder="' + esc(T ? T.ex : '예) 밤이 되면 몸이 반짝반짝 빛나요') + '"></textarea>'
         + '<div class="row">' + (old ? '<button class="warn" id="mmDel">🗑 지우기</button>' : '') + '<button class="sub" id="mmNo">취소</button><button id="mmOk">💾 저장</button></div>';
       const tx = P.querySelector('#mmTx'); tx.value = keep != null ? keep : old ? old.tx || '' : ''; setTimeout(() => tx.focus(), 30);
+      bgPick(card ? card.k : null, pid);   // 뒤 판: 그 카드가 있는 칸 + 그 카드
     };
     const done = () => { if (back === 'board') { back = null; boardView(); } else close(); };
     P.addEventListener('click', async (e) => {
@@ -1016,6 +1043,7 @@ export default async function start(map, params = {}) {
         try {
           if (old) await req(fpath(o.id), 'PATCH', f);
           else { if (!f.tag) delete f.tag; Object.assign(f, { p: pid, by: name, t: { '.sv': 'timestamp' }, ord: Date.now() }); await req(fpath(newId()), 'PUT', f); }
+          flashSoon(pid);   // 판으로 돌아가면 그 카드가 반짝
           map.sfx('ding'); toast(old ? '✏️ 고쳤어요' : '🔎 자세히를 붙였어요!', 2.2);
         } catch (er) { toast('저장하지 못했어요 — 인터넷을 확인해 주세요', 3); return; }
         done();
