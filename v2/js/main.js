@@ -5,10 +5,11 @@ import { buildWorld } from './world.js?v=148';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=47';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=48';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
-import { createTitle } from './title.js?v=19';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
-import { createFilm } from './film.js?v=11';   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
+import { createTitle } from './title.js?v=20';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+import { createFilm } from './film.js?v=11';
+import { createTop } from './topview.js?v=3';   // TOP-1(10-04 교사 '탑뷰로 학교 보기'): 하늘에서 보기 — 지붕 벗기기(1·2층)·끌어 옮기기·확대·돌리기·방 이름·방위표·축척 · 게임은 map.top   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
@@ -1306,7 +1307,9 @@ function detailTick(dt, budget = Infinity) {
 // ---------- 지도 API(MAP-API-1 · 09-24) — 게임이 받는 지도 계약. 정본 docs/map_api.md ----------
 let rebakeT = 0;
 const FILM = createFilm({ THREE, camera, renderer, scene, world, tone, setCam: f => { CAM_OVR = f; }, setView: v => { FILM_VIEW = v && { far: GFX.mode === 'desktop' ? v.far : GFX.mode === 'cb' ? Math.min(v.far, 150) : Math.min(v.far, 100) }; OCC.x = 1e9; },   /* 크롬북 150m · 휴대폰·저사양 100m(10-04 교사 '폰으로 보니 전체적으로 떨림') */ setTime: k => setTime(k), getTime: () => timeKey });   // FILM-1
-MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL, film: FILM,
+const TOP = createTop({ THREE, camera, renderer, scene, world, setCam: f => { CAM_OVR = f; }, setView: v => { FILM_VIEW = v && { far: GFX.mode === 'desktop' ? v.far : GFX.mode === 'cb' ? Math.min(v.far, 150) : Math.min(v.far, 100) }; OCC.x = 1e9; },
+  getZones: () => MAP && MAP.zones, zoneAt: (x, y, z) => MAP && MAP.zoneAt(x, y, z), player: () => ({ x: P.x, y: P.y, z: P.z }) });
+MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL, film: FILM, top: TOP,
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
   pl: { P, ACT, CTRL, keys, touch: TOUCH, acts: ACTS, getYaw: () => camYaw, setYaw: v => { camYaw = v; },
     getFirst: () => camFirst, setFirst: v => { camFirst = !!v; }, getPitch: () => camPitch,   // WG-FPS(10-03): 게임이 1인칭으로 바꾸고 시점 기울기를 읽는다
@@ -1584,7 +1587,7 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
   document.body.appendChild(pz);
   let userLock = false;   // 잠금이 사용자 클릭으로 걸렸는지(게임이 스스로 풀 때와 구분)
   const hide = () => { pz.style.display = 'none'; };
-  const busy = () => CTRL.frozen || (TITLE && TITLE.phase !== 'off')   // 오프닝·메뉴·날아오는 중 · 게임이 멈춘(쪽지·대화) 동안
+  const busy = () => CTRL.frozen || TOP.on || (TITLE && TITLE.phase !== 'off')   // 오프닝·메뉴·날아오는 중 · 게임이 멈춘(쪽지·대화) 동안
     || (MAP.picker && MAP.picker.panel) || document.querySelector('.eng-note,.hudAsk,.esc-lock,#tour-talk,#story-talk,#memo-ui .mp,.bk-panel,.lb-pop,.lb-big,.lb-ask,.wg-lobby');   // LOCK-2: 놀이 창이 잠금을 푼 것은 멈춤 창 없이
   document.addEventListener('pointerlockchange', () => {
     if (document.pointerLockElement === canvas) { userLock = true; CURSOR.on = false; hide(); return; }
@@ -1718,7 +1721,7 @@ window.SD2 = {
   step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { mouseApply(); step(1/60); doorTick(1/60); hotTick(1/60); MAP.tick(1/60); keysFrameEnd(); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
   doors: () => DOORS.length, doorCheck,
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
-  film: FILM, acts: ACTS, hotNow: () => hotNear, actOn: h => act(h), camOvr: f => { CAM_OVR = f; }, pg,   // ACTION-1: 보이는 행동(시험 — SD2.acts.play('drink', {at:[x,y,z]}) · stats())
+  film: FILM, top: TOP, acts: ACTS, hotNow: () => hotNear, actOn: h => act(h), camOvr: f => { CAM_OVR = f; }, pg,   // ACTION-1: 보이는 행동(시험 — SD2.acts.play('drink', {at:[x,y,z]}) · stats())
   touch: TOUCH, gfx: GFX, title: TITLE, input: { keys, KEY_NEW, KEY_UP, MOUSE, clear: keysClear }, prewarm, setDpr, setShadowSize, adaptTick,   // PERF-WIN
   cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)

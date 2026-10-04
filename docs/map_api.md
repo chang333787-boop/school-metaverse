@@ -735,6 +735,15 @@ map.world.water('<구역>' | { x, z, r } | { rect }, { y, color, opacity }) → 
 - 알려진 것: 역할 대역은 원래 아이의 옷·머리 색 그대로(이름표만 가림) · 선생님은 말을 걸어도 몸을 돌리지 않는다 · 크레파스는 신발장을 살피면 남은 것을 치운다.
 
 
+## 17.9 하늘에서 보기 — `map.top`(TOP-1 · 10-04) — 엔진 `v2/js/topview.js`
+```js
+map.top.enter({ floor: 1|2|'roof', top: true(똑바로), at: [x,z], d: 거리, yaw, labels: true, help: '안내 글'|false,
+                onExit(){}, onTap(pt){}, onFloor(f){}, tapActions: [{ t: '단추 글', f(pt){}, when(pt){} }] })   // pt = {x, y, z, zone}
+map.top.exit() · floor(f) · look(x, z, d) · ground(sx, sy) → 땅 점 · on · state {floor, x, z, d, yaw, p}
+```
+- 게임이 멈추면 저절로 나온다(범위 파사드) · 들어가 있는 동안 main.js busy()가 참(멈춤 창 없음) · 플레이어는 게임이 `map.player.freeze(true)`로.
+- 지붕 벗기기는 재질마다 자르는 면 다섯(clipIntersection) — 영상(film.js)과 동시에 켜지 않는다.
+
 ## 18. 오프닝 화면 · 놀이 고르기(TITLE-1 · 09-27) — `v2/js/title.js` + 모양 `v2/title.css`
 
 사용자 09-27 "이 프로그램 자체의 오프닝 화면 — '정림초에 오신 것을 환영합니다' 등 문구로 만들고, 들어가면 각종 게임을 선택 · 애니메이션 효과도 게임처럼".

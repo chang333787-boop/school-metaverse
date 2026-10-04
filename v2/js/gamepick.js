@@ -25,22 +25,25 @@ export function createGamePicker(ctx) {
     close(); document.exitPointerLock?.();
     const my = ++seq;
     panel = document.createElement('div'); panel.className = 'chip'; panel.id = 'gpick-panel';   // TOUCH-1: 터치면 왼쪽 위 칩 밑으로(touch.js css)
-    panel.style.cssText = 'right:10px;bottom:92px;width:270px;padding:12px 14px 14px;z-index:30;font-size:14px;border-radius:12px;background:rgba(29,53,87,.92)';
+    panel.style.cssText = 'right:10px;bottom:92px;width:270px;max-height:calc(100vh - 140px);overflow:auto;padding:12px 14px 14px;z-index:30;font-size:14px;border-radius:12px;background:rgba(29,53,87,.92)';
     const h = document.createElement('div'); h.textContent = '🎮 놀이 고르기'; h.style.cssText = 'font-weight:700;font-size:15px;padding-right:30px';
     const x = document.createElement('button'); x.className = 'gpick-x'; x.textContent = '✕'; x.title = '닫기'; x.addEventListener('click', e => { e.stopPropagation(); close(); });
     const list = document.createElement('div'); list.textContent = '불러오는 중…'; list.style.cssText = 'margin-top:4px;font-size:13px';
     panel.append(h, x, list); document.body.appendChild(panel);
     addEventListener('keydown', onKey, true); addEventListener('pointerdown', onDown, true);
-    let games = null;
-    try { games = (await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url))).GAMES; } catch (e) { console.error('[놀이] 목록을 못 불러옴', e); }
+    let games = null, folders = null;
+    try { const M = await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url)); games = M.GAMES; folders = M.FOLDERS || null; } catch (e) { console.error('[놀이] 목록을 못 불러옴', e); }
     if (my !== seq || !panel) return;   // 그사이 닫히거나 다시 열림
     const ids = games ? Object.keys(games).filter(id => !games[id].dev && !games[id].link && !(games[id].promo && !window.SM_PROMO) && (window.SM_LESSON ? games[id].lesson === window.SM_LESSON : !games[id].lesson)) : [];   // 10-03: v2엔 홍보 놀이(견학) 숨김
     list.textContent = ids.length ? '' : (games ? '아직 놀이가 없어요' : '놀이 목록을 못 불러왔어요');
-    const tog = ids.filter(id => games[id].mp === 'together'), split = tog.length && tog.length < ids.length;   // MP-MENU: 🧍 혼자 / 👥 친구와 함께
     const sec = t => { const d = document.createElement('div'); d.textContent = t; d.style.cssText = 'margin-top:10px;font-size:12px;font-weight:800;opacity:.85'; list.appendChild(d); };
-    const ord = split ? ids.filter(id => games[id].mp !== 'together').concat(tog) : ids;
+    const FL = !window.SM_LESSON && folders && folders.length ? folders : null;   // FOLDER-1(10-04): v2 = 폴더 제목으로 묶음(👥 = 친구와 함께) · v3 = 예전처럼 혼자/함께
+    const tog = ids.filter(id => games[id].mp === 'together'), split = !FL && tog.length && tog.length < ids.length;   // MP-MENU: 🧍 혼자 / 👥 친구와 함께
+    const ord = FL ? FL.flatMap(f => ids.filter(id => (games[id].folder || 'look') === f.k)) : split ? ids.filter(id => games[id].mp !== 'together').concat(tog) : ids;
     if (split) sec('🧍 혼자 하기');
+    let fPrev = null;
     for (const id of ord) {
+      if (FL) { const f = games[id].folder || 'look'; if (f !== fPrev) { fPrev = f; const F9 = FL.find(q => q.k === f); sec((F9 ? F9.icon + ' ' + F9.title : f)); } }
       if (split && id === tog[0]) sec('👥 친구와 함께' + (window.SM_MP ? (window.SM_MP.room() ? ' — 방에 있어요' : ' — 먼저 왼쪽 위 👥 함께하기로 방에') : ''));
       const b = document.createElement('button'); b.className = 'gpick-b'; b.dataset.game = id;
       const t = document.createElement('b'); t.textContent = (games[id].mp === 'together' ? '👥 ' : '') + (games[id].title || id); b.appendChild(t);
