@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=154';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=51';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=52';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=20';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=11';
@@ -598,7 +598,7 @@ function camPose(hx, hy, hz, yaw, pch, CD, fov, aspect, dUse) {
 let camSh = 0;
 function physics(dt) {
   crouchTick();
-  const cr = CTRL.crouched, sp = (cr ? PHY.crawl : keys.has('ShiftLeft') ? PHY.run : PHY.walk) * CTRL.speed;   // ENGINE-1: 웅크리면 느리게(달리기 없음) · SHRINK-1 PHY = 몸 크기 판
+  const cr = CTRL.crouched, sp = (cr ? PHY.crawl : (keys.has('ShiftLeft') || keys.has('ShiftRight')) && !CTRL.noRun ? PHY.run : PHY.walk) * CTRL.speed;   // HS-3: 오른쪽 Shift도 달리기(방향키 + 오른손) · CTRL.noRun = 게임이 달리기를 막음(숨바꼭질 힘)   // ENGINE-1: 웅크리면 느리게(달리기 없음) · SHRINK-1 PHY = 몸 크기 판
   let mx = 0, mz = 0;
   if (keys.has('KeyW') || keys.has('ArrowUp')) { mx -= Math.sin(camYaw); mz -= Math.cos(camYaw); }
   if (keys.has('KeyS') || keys.has('ArrowDown')) { mx += Math.sin(camYaw); mz += Math.cos(camYaw); }
@@ -609,7 +609,7 @@ function physics(dt) {
   let sp2 = sp;
   if (mx === 0 && mz === 0 && TOUCH.m > 0) {   // TOUCH-1 조이스틱(키를 안 누를 때만): 앞 my·오른쪽 mx를 키와 같은 축으로. 세기 = 걷기 30~100% · 가장자리(≥0.92) = 달리기
     mx = -Math.sin(camYaw) * TOUCH.my + Math.cos(camYaw) * TOUCH.mx; mz = -Math.cos(camYaw) * TOUCH.my - Math.sin(camYaw) * TOUCH.mx;
-    sp2 = (cr ? PHY.crawl * Math.max(0.4, Math.min(1, TOUCH.m / 0.8)) : TOUCH.m >= 0.92 ? PHY.run : PHY.walk * Math.max(0.3, Math.min(1, (TOUCH.m - 0.15) / 0.6))) * CTRL.speed;
+    sp2 = (cr ? PHY.crawl * Math.max(0.4, Math.min(1, TOUCH.m / 0.8)) : TOUCH.m >= 0.92 && !CTRL.noRun ? PHY.run : PHY.walk * Math.max(0.3, Math.min(1, (TOUCH.m - 0.15) / 0.6))) * CTRL.speed;
   }
   if (mx === 0 && mz === 0 && CTRL.steer) {   // GUIDE-1(09-30 견학 안내 모드): 게임이 걷는 방향을 준다(키·조이스틱이 없을 때만 — 사람 입력이 항상 먼저) · 충돌·계단은 평소 걷기 그대로
     const st = CTRL.steer; mx = st.x; mz = st.z; sp2 = st.v;
