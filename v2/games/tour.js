@@ -528,10 +528,10 @@ export default async function start(map, params = {}) {
   // ---------- 🎬 오프닝·클로징 영상(FILM-1 · 10-04 교사 '교회 오프닝 영상처럼 — 오프닝 → 우리 학교 → 클로징') — 대본 tour_film.js · 재생기 v2/js/film.js ----------
   let FILMM = null;
   const filmMod = async () => FILMM || (FILMM = await import(new URL('./tour_film.js?v=1', import.meta.url)).catch(e => { console.warn('[견학] 영상 대본을 못 읽었어요', e); return null; }));
-  async function playFilm(kind) {
+  async function playFilm(kind, o = {}) {
     if (!map.film || map.film.on) return false; const M = await filmMod(); if (!M || dead) return false;
     const me = map.player.pos();
-    const shots = kind === 'open' ? M.buildOpening(DATA, { spots: map.tour }) : M.buildClosing(DATA, { me: [me.x, me.y, me.z], icons: ALL.filter(s => stamps.has(s.key)).map(s => s.stamp) });
+    const shots = kind === 'open' ? M.buildOpening(DATA, { spots: map.tour }) : M.buildClosing(DATA, { me: [me.x, me.y, me.z], icons: (o.preview ? ALL : ALL.filter(s => stamps.has(s.key))).map(s => s.stamp) });   // 미리 보기(?ending=1) = 도장 다 찬 모습
     if (!shots || !shots.length) return false;
     if (talk) closeTalk(); if (card) closeCard(); if (media) closeMedia();
     map.player.freeze(true);
@@ -541,8 +541,8 @@ export default async function start(map, params = {}) {
     else if (k === 'card') openCard();
     return true;
   }
-  function celebrate(plain) {
-    if (!plain && map.film) { playFilm('close').then(ok => { if (!ok && !dead) celebrate(true); }); return; }   // 클로징 영상(끝 화면 = 상담 전화·주소) — 못 틀면 예전 완주 창
+  function celebrate(plain, preview) {
+    if (!plain && map.film) { playFilm('close', { preview }).then(ok => { if (!ok && !dead) celebrate(true); }); return; }   // 클로징 영상(끝 화면 = 상담 전화·주소) — 못 틀면 예전 완주 창
     map.sfx('done');
     const fin = Array.isArray(DATA.finish) && DATA.finish.length ? DATA.finish.map(String) : [];
     openTalk({ name: '견학 완주! 🎉', icon: '🏆', end: '🎉 좋아요!', pages: ['도장 ' + N + '개를 모두 모았어요! 🎉', ...fin] });
@@ -682,7 +682,7 @@ export default async function start(map, params = {}) {
   }
   map.hud.chip('tmenu', '☰ 견학 메뉴', { onClick: () => { if (!talk || !G || !G.moving) openMenu(); } });
 
-  if (params.ending === '1') celebrate();
+  if (params.ending === '1') celebrate(false, true);   // 엔딩 미리 보기 주소
   else if (params.guide === '1') startGuide();   // 어르신용 링크: ?tour=1&guide=1 — 처음부터 안내 모드
   else if (params.intro !== '0') openIntro();
 
