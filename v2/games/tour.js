@@ -204,8 +204,9 @@ export default async function start(map, params = {}) {
   //   → iframe은 body 맨 위층(position: fixed)에 두고, 창 안 영상 자리(holder)의 화면 자리를 프레임마다 따라간다(holder가 사라지면 같이 지움)
   function ytFloat(holder, f, z) {
     f.classList.add('yt-float', 'ttl-keep'); Object.assign(f.style, { position: 'fixed', border: '0', zIndex: String(z || 45), borderRadius: '10px', background: '#000', left: '0px', top: '0px', width: '0px', height: '0px' });
-    document.body.appendChild(f); let last = '';
-    const fit = () => { if (!f.isConnected) return; if (!holder.isConnected) { f.remove(); return; }
+    document.body.appendChild(f); let last = ''; const hold = (z || 45) < 1000; if (hold) window.SM_HOLD3D = (window.SM_HOLD3D || 0) + 1;   // 영상 창 = 뒤 3D 쉬엄쉬엄(main.js loop)
+    const done = () => { if (hold) window.SM_HOLD3D = Math.max(0, (window.SM_HOLD3D || 0) - 1); };
+    const fit = () => { if (!f.isConnected) { done(); return; } if (!holder.isConnected) { f.remove(); done(); return; }
       const r = holder.getBoundingClientRect(), cs = getComputedStyle(holder), op = cs.visibility === 'hidden' ? 0 : +(getComputedStyle(holder.closest('.fl-u, .tp') || holder).opacity || 1);
       const k = r.left.toFixed(1) + ',' + r.top.toFixed(1) + ',' + r.width.toFixed(1) + ',' + r.height.toFixed(1) + ',' + op.toFixed(2);
       if (k !== last) { last = k; Object.assign(f.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', opacity: String(op), visibility: r.width > 4 && op > 0.02 ? 'visible' : 'hidden' }); }

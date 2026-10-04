@@ -6,7 +6,7 @@ import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.j
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
 import { createMapApi } from './mapapi.js?v=46';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
-import { createTouch, touchPrimary } from './touch.js?v=8';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
+import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=18';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=7';   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
@@ -34,15 +34,37 @@ const canvas = document.getElementById('scene');
 const GFX = (() => { const q = new URLSearchParams(location.search), hq = q.get('hq') === '1', lq = q.get('lq') === '1', dev = window.devicePixelRatio || 1;
   const cros = !hq && /CrOS/.test(navigator.userAgent || '');
   const mobile = !hq && (lq || touchPrimary() || Math.min(screen.width || 9999, screen.height || 9999) <= 500);
-  const low = !hq && (lq || ((mobile || cros) && ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 3))));
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent || '') || (/Macintosh/.test(navigator.userAgent || '') && navigator.maxTouchPoints > 1);   // MOB-2: 사파리는 메모리·코어를 감추거나 줄여 알린다 → 아이폰·아이패드는 저사양으로 판정하지 않는다
+  const low = !hq && (lq || (!ios && (mobile || cros) && ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 3))));
   const cap = Math.min(dev, low ? 1.25 : mobile || cros ? 1.5 : 2), start = hq ? cap : Math.min(cap, cros ? 1.25 : 1.5), fix = +q.get('dpr') || 0;   // ?dpr=0.75 = 배율 고정(시험용)
   // 자동 해상도는 게이트·검진·사진 대조·?hq=1·?dpr=·?adapt=0에서 끈다(같은 화면을 다시 재야 하는 주소) · 휴대폰·저사양 판(mobile·low)도 끈다(리뷰 — 휴대폰 판은 예전 그대로)
   const adapt = !hq && !fix && q.get('adapt') !== '0' && !/[?&](check|health)=1/.test(location.search) && !q.get('shot');
   const aaQ = q.get('aa'), aa = aaQ === '1' ? true : aaQ === '0' ? false : !low;   // 10-04 교사 '폰으로 하면 계속 떨리고 멀미': 휴대폰도 MSAA(타일 GPU라 싸다 — 가장자리 지글거림이 걸을 때 떨림으로 보였다) · 저사양만 끔
-  return { mode: low ? 'low' : mobile ? 'mobile' : cros ? 'cb' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, 0.6), shadow: low ? 0 : mobile || cros ? 1024 : 2048, adapt, aa, dev }; })();
+  return { mode: low ? 'low' : mobile ? 'mobile' : cros ? 'cb' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, mobile || low ? 1 : 0.6), ios, shadow: low ? 0 : mobile || cros ? 1024 : 2048, adapt, aa, dev }; })();
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: GFX.aa, powerPreference: 'high-performance' });
 // PERF-WIN: 셰이더 오류 검사(getShaderInfoLog·getProgramInfoLog)는 컴파일이 끝날 때까지 주 스레드를 세운다(점검 실측 300~800ms) — 배포판은 끄고 ?debug=1·?check=1에서만 켠다
 renderer.debug.checkShaderErrors = /[?&](debug|check)=1/.test(location.search);
+// MOB-2 그래픽 끊김(WebGL 컨텍스트 잃음): 아이폰은 메모리가 모자라면(영상 재생·다른 앱) 3D 화면을 통째로 잃어 검게 멈춘다 → 알리고 다시 불러온다(도장은 저장돼 있음)
+canvas.addEventListener('webglcontextlost', e => { e.preventDefault();
+  const d = document.createElement('div'); d.className = 'ttl-keep'; d.textContent = '🔄 화면을 다시 불러오는 중이에요…';
+  Object.assign(d.style, { position: 'fixed', inset: '0', zIndex: '99999', display: 'grid', placeItems: 'center', background: 'rgba(16,33,63,.88)', color: '#fff', font: '700 18px sans-serif' });
+  document.body.appendChild(d); setTimeout(() => location.reload(), 1800); }, false);
+canvas.addEventListener('webglcontextrestored', () => location.reload(), false);
+// MOB-2 소리: 아이폰 사파리는 손가락으로 누르는 그 순간에만 소리 장치를 깨울 수 있다(나중에 첫 소리에서 깨우면 막혀 끝까지 조용) →
+//   누를 때마다(깨어 있으면 바로 끝) 깨우고 빈 소리 한 번 · 무음 스위치를 켠 아이폰도 동영상처럼 들리게(audioSession 'playback' — iOS 17+)
+function audioUnlock() {
+  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback';
+    if (AC.state === 'running') return; AC.resume();
+    const b = AC.createBuffer(1, 1, 22050), s = AC.createBufferSource(); s.buffer = b; s.connect(AC.destination); s.start(0); } catch (e) { /* 소리 막힌 환경 */ }
+}
+for (const k of ['touchend', 'pointerup', 'click', 'keydown']) addEventListener(k, audioUnlock, { capture: true, passive: true });
+// MOB-2 안드로이드: 처음 화면을 누르면 주소창 없는 전체 화면 + 가로 고정(아이폰 사파리는 전체 화면을 지원하지 않는다 · 한 번만)
+let fsTried = false;
+canvas.addEventListener('touchend', () => {
+  if (fsTried || GFX.ios || !document.fullscreenEnabled || document.fullscreenElement || !touchPrimary()) return; fsTried = true;
+  document.documentElement.requestFullscreen({ navigationUI: 'hide' }).then(() => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* */ } }).catch(() => {});
+}, { passive: true });
 const DPR = GFX.dpr;
 renderer.setPixelRatio(DPR);                       // 네이티브(비정수 업스케일 금지) — 휴대폰은 GFX 상한 · PERF-WIN 자동 해상도가 바꾼다(ADAPT)
 renderer.setSize(innerWidth, innerHeight, false);   // 모양 크기는 CSS(100% · 몸 = 100dvh) — 그리는 해상도만 fitView가 맞춘다(아이폰 주소창이 줄면 캔버스 아래가 비던 것)
@@ -670,7 +692,7 @@ const chalkTex = [1, 2].map(n => {
 const chalkGeo = new THREE.PlaneGeometry(1.5, 0.53);   // 가장 좁은 칠판(과학실 1.6m) 안에 들어가게
 let tray = null, milk = null, shoesIn = false, drumN = 0;
 // 소리(WebAudio — E키 누름이 사용자 제스처라 바로 재생 가능). 짧은 합성음만(파일 없음)
-let AC = null;
+let AC = null;   // (MOB-2 audioUnlock가 손가락으로 누를 때 먼저 만든다)
 function tone(freq, t0, dur, type = 'sine', vol = 0.25, drop = 0) {
   try {
     AC = AC || new (window.AudioContext || window.webkitAudioContext)();
@@ -1284,8 +1306,8 @@ MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL, film: FILM,
 //  바닥 칸에선 그림자 지도도 1024로(한 번 다시 굽기 · 2048이던 기기만) — 바닥을 벗어나면 되돌림. 바꾼 뒤 1.5초는 쉬고 창을 비운다(새 창이 1초 차야 판단).
 //  재지 않는 때: 오프닝·메뉴·날아오기(TITLE — 첫 셰이더·길격자 짓기와 겹친다) · 탭 숨김. 휴대폰·저사양 판(mobile·low)은 예전 그대로(끔).
 //  끄기: ?hq=1(품질 강제) · ?dpr=x(고정) · ?adapt=0 · 게이트·검진·사진 대조 주소. 값 = SD2.gfx(dpr·cap·start·floor·shadow·adapt) · SD2.gfx.auto(ft·단계 log)
-const ADAPT = (() => { const L = []; for (let v = GFX.cap; v >= 0.75 - 1e-6; v = Math.round((v - 0.25) * 100) / 100) L.push(v);
-  if (!L.includes(GFX.start)) { L.push(GFX.start); L.sort((a, b) => b - a); } if (L[L.length - 1] > 0.6 + 1e-6) L.push(0.6);
+const ADAPT = (() => { const FL = GFX.floor || 0.6, L = []; for (let v = GFX.cap; v >= Math.max(0.75, FL) - 1e-6; v = Math.round((v - 0.25) * 100) / 100) L.push(v);   // MOB-2: 휴대폰 바닥 = 1배
+  if (!L.includes(GFX.start)) { L.push(GFX.start); L.sort((a, b) => b - a); } if (L[L.length - 1] > FL + 1e-6) L.push(FL);
   GFX.floor = GFX.adapt ? L[L.length - 1] : GFX.dpr;
   return { ladder: L, lvl: L.indexOf(GFX.start), s0: L.indexOf(GFX.start), ft: 0, buf: new Float32Array(256), srt: new Float32Array(256), bi: 0, bn: 0, winT: 0, evT: 0, big: 0, slowT: 0, goodT: 0, coolT: 3,
     fail: new Map(), steps: 0, last: 0, shadow0: GFX.shadow, log: [], hold: null }; })();
@@ -1479,6 +1501,7 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
 }
 function loop(ts) {
   requestAnimationFrame(loop);
+  if (window.SM_HOLD3D > 0 && ts) { if (ts - (loop.held || 0) < 250) { ADAPT.last = ts; return; } loop.held = ts; }   // MOB-2: 견학 영상 창(유튜브)이 열린 동안 3D는 쉬엄쉬엄
   if (!ADAPT.ext) adaptTick(ts || performance.now());   // PERF-WIN 자동 해상도(진짜 프레임 간격 · ext = 시험이 가짜 시각을 넣는 동안 끔)
   const dt = Math.min(0.05, clock.getDelta());
   const t0 = performance.now();

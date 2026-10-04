@@ -16,7 +16,7 @@ export function createTouch(ctx) {
     const css = document.createElement('style'); css.id = 'touch-css';
     css.textContent = [
       '#scene{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}',
-      'html,body{overscroll-behavior:none}',
+      'html,body{overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}',   // MOB-2: 아이폰은 가로로 돌리면 글자를 저절로 키운다
       'body.touch{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}',
       '.tch{display:none}',
       'body.touch .tch{display:flex}',
