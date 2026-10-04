@@ -102,6 +102,25 @@ const STYLE = `
 #memo-ui .memo-bg .lane.pick{filter:brightness(1.6);outline:4px solid #ffd23c;outline-offset:1px}
 #memo-ui .memo-bg .cd.pick{outline:4px solid #ffd23c;outline-offset:1px}
 #memo-ui .cd.flash{animation:mmFlash .9s ease-out 3}
+#memo-ui .body.mapmode{overflow:hidden;display:flex;padding:10px}
+#memo-ui .wmap{display:flex;gap:12px;flex:1;min-height:0;width:100%}
+#memo-ui .wcv{flex:1;min-width:0;min-height:180px;display:flex;align-items:center;justify-content:center}
+#memo-ui .wcv canvas{border-radius:12px;box-shadow:0 0 0 2px #d9cfae,0 4px 14px rgba(0,0,0,.12);touch-action:none;display:block}
+#memo-ui .wside{flex:0 0 250px;overflow:auto;display:flex;flex-direction:column;gap:7px;min-height:0}
+#memo-ui .wside .wt,#memo-ui .wside .wpen,#memo-ui .wside .wsz{display:flex;flex-wrap:wrap;gap:5px}
+#memo-ui .wside button{padding:6px 9px;font-size:14px}
+#memo-ui .wside button.on{outline:3px solid #ffd23c;outline-offset:1px}
+#memo-ui .wpen button{background:#fff;color:#1d3557;border:2px solid #d0d7e2;display:inline-flex;align-items:center;gap:5px}
+#memo-ui .wpen i{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid rgba(0,0,0,.25)}
+#memo-ui .wsz button,#memo-ui .wt button.tl{background:#eef4ff;color:#1d3557}
+#memo-ui .wpins{display:flex;flex-direction:column;gap:5px}
+#memo-ui .wpin{display:flex;align-items:center;gap:6px;text-align:left;background:#fff;color:#1d3557;border:2px solid #d0d7e2;width:100%}
+#memo-ui .wpin.on{border-color:#ffd23c;background:#fff8d6}
+#memo-ui .wpin.ro{opacity:.6}
+#memo-ui .wpin .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#memo-ui .wpin i{font-style:normal;padding:0 5px;color:#c92a2a}
+@media (max-width:820px) and (orientation:portrait){#memo-ui .wmap{flex-direction:column}#memo-ui .wside{flex:0 0 auto;max-height:44%}}
+@media (max-height:520px){#memo-ui .wside{flex-basis:200px}#memo-ui .wside button{padding:4px 7px;font-size:13px}}
 @keyframes mmFlash{0%{box-shadow:0 0 0 0 rgba(255,200,40,.95);background:#fff8d6}60%{box-shadow:0 0 0 10px rgba(255,200,40,.3)}100%{box-shadow:0 0 0 0 rgba(255,200,40,0)}}
 #memo-board .top{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 #memo-board .top h3{margin:0;flex:1;min-width:180px}
@@ -302,7 +321,7 @@ export default async function start(map, params = {}) {
     if (!v) { toast('먼저 내 이름을 적어 주세요', 2.2); if (nm) nm.focus(); return; }
     name = v; try { localStorage.setItem('mp.name', name); } catch (e) { /* */ }
     dispatchEvent(new CustomEvent('sm-name', { detail: name }));   // 동시 접속 이름표도 같은 이름으로(main.js)
-    board = { id, ...info }; close(); endTour(); placing = null; moving = null; pathClear(); listen(); chips(); window.SM_ACT = (isW() ? '🌍 ' : '📝 ') + short(bare(info.t), 10);
+    board = { id, ...info }; close(); endTour(); placing = null; moving = null; pathClear(); listen(); chips(); wmode = 'cards'; WM.sel = null; window.SM_ACT = (isW() ? '🌍 ' : '📝 ') + short(bare(info.t), 10);
     if (isW()) { boardView(); return; }   // 세계 판 = 학교와 따로 — 할 일이 모두 판 안이라 바로 연다(운동장에 덩그러니 서 있지 않게)
     toast('📌 「' + board.t + '」 — ' + (isTouch() ? '화면을 누른 채 끌면 둘러보기 · 땅을 톡 누르면 🚩 깃발 · 📖 이야기 판 칩' : '가운데 ＋를 보고 누르면 🚩 깃발 · L = 이야기 판 · Tab = 마우스 보이기'), 5);
   }
@@ -900,7 +919,8 @@ export default async function start(map, params = {}) {
     let h = '<div class="cd" data-id="' + esc(id) + '" style="--k:' + hex(C.c) + '"><div class="hd" style="cursor:default">' + esc(C.e) + ' ' + esc(C.n) + '<span class="by">✍️ ' + esc(f.by) + '</span></div>'
       + '<div class="tx">' + esc(f.tx) + '</div>'
       + (f.why ? '<div class="sm" style="background:#f8f9fa;border-radius:8px;padding:4px 7px;margin-bottom:4px;white-space:pre-wrap">💡 ' + esc(f.why) + '</div>' : '')
-      + (f.k === 'wplace' && f.loc ? '<div class="pl">📍 어디쯤: ' + esc(f.loc) + '</div>' : '');
+      + (f.k === 'wplace' && f.loc ? '<div class="pl">📍 어디쯤: ' + esc(f.loc) + '</div>' : '')
+      + (pinned(f) ? '<div class="pl">🗺️ 지도: ' + mapArea(f.x, f.z) + '</div>' : '');
     for (const [did, d] of wdetails(id)) { const T = WTB[d.tag];   // ＋ 자세히 = 카드 밑 짧은 줄(누구나 덧붙임 · 내 것만 ✏️ · 선생님은 모두)
       h += '<div class="it" data-kid="' + esc(did) + '"><span>' + (T ? T.e : '🔎') + '</span><span class="t">' + (T ? '<b>' + T.n + '</b> ' : '') + esc(d.tx) + '<span class="sm"> · ' + esc(d.by) + '</span></span>'
         + (can && (teacher || d.by === name) ? '<button data-a="editi" title="자세히 고치기·지우기">✏️</button>' : '') + '</div>'; }
@@ -911,8 +931,146 @@ export default async function start(map, params = {}) {
       + (can ? '<div class="ri"><input maxlength="120" placeholder="댓글 달기 (Enter)"><button data-a="rs">보내기</button></div>' : '') + '</div>';
     return h + '</div>';
   }
+  // ───────── 🗺️ 세계 지도(WMAP · 10-04 교사 '세계 판은 그림 구역도 — 어느 구역에 대충 어디 있어야 한다고 그릴 수 있게') ─────────
+  //   판 안 두 번째 화면(🗂 카드 칸 ↔ 🗺️ 세계 지도) · ✏️ 그리기(색 7 · 굵기 3 — 한 획을 다 그으면 저장 → 같은 판 친구 화면에도) · 🧽 지우개(내 선 · 선생님은 모두) · ↩ 내 마지막 선
+  //   · 📍 카드 꽂기(오른쪽 카드를 고르고 지도를 톡 — 내 카드만 · 선생님은 모두 · 꽂은 카드는 끌어 옮김) · 🏰 장소 카드는 꽂은 자리로 📍 어디쯤(가운데·동서남북)이 저절로(하늘·땅속·물속은 그대로)
+  //   저장 = 같은 flags 모음(규칙 그대로): 선 k:'wdraw'(tx·opt = 점 · 한 점 4글자 base36 · tag 색 · sec 굵기 · who 한 획 묶음 · 150점마다 나눔) · 카드 자리 = 카드의 x·z(지도 0~1000 × 0~750 — 세계 판은 학교 깃발이 없다)
+  const MW = 1000, MH = 750;
+  const WPEN = [{ k: 'land', n: '땅', c: '#7cc46a' }, { k: 'water', n: '물', c: '#4aa3df' }, { k: 'mount', n: '산', c: '#8b6b4a' }, { k: 'road', n: '길', c: '#6b7280' }, { k: 'sand', n: '모래·빛', c: '#f2c94c' }, { k: 'fire', n: '꽃·불', c: '#e8597a' }, { k: 'ink', n: '연필', c: '#1d3557' }];
+  const WPB = Object.fromEntries(WPEN.map((x) => [x.k, x])), WSZ = [0, 5, 12, 28];   // 굵기 1 가늘게 · 2 보통 · 3 굵게(칠하기)
+  let wmode = 'cards', wmForce = false;
+  const WM = { tool: 'pen', pen: 'land', sz: 2, sel: null, cv: null, ro: null, cur: null, drag: null, erasing: false, erased: new Set() };
+  const e36 = (v) => Math.max(0, Math.min(1295, Math.round(v))).toString(36).padStart(2, '0');
+  const encPts = (P) => P.map(([x, z]) => e36(x) + e36(z)).join('');
+  const decPts = (t) => { const o = []; t = String(t || ''); for (let i = 0; i + 3 < t.length; i += 4) o.push([parseInt(t.slice(i, i + 2), 36), parseInt(t.slice(i + 2, i + 4), 36)]); return o; };
+  const wstrokes = () => Object.entries(DATA).filter(([, f]) => valid(f) && f.k === 'wdraw').sort((a, b) => (a[1].ord || 0) - (b[1].ord || 0));
+  const pinned = (f) => typeof f.x === 'number' && typeof f.z === 'number' && f.x >= 0 && f.x <= MW && f.z >= 0 && f.z <= MH;
+  const mapLoc = (x, z) => { const dx = (x - MW / 2) / (MW / 2), dz = (z - MH / 2) / (MH / 2); if (Math.abs(dx) < 0.34 && Math.abs(dz) < 0.34) return '가운데'; return Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? '동쪽' : '서쪽') : (dz < 0 ? '북쪽' : '남쪽'); };
+  const mapArea = (x, z) => [['북서쪽', '북쪽', '북동쪽'], ['서쪽', '가운데', '동쪽'], ['남서쪽', '남쪽', '남동쪽']][z < MH / 3 ? 0 : z < MH * 2 / 3 ? 1 : 2][x < MW / 3 ? 0 : x < MW * 2 / 3 ? 1 : 2];
+  const mine = (f) => teacher || f.by === name;
+  function rdp(P, eps) { if (P.length < 3) return P; let dm = 0, ix = 0; const [ax, az] = P[0], [bx, bz] = P[P.length - 1], L = Math.hypot(bx - ax, bz - az) || 1;
+    for (let i = 1; i < P.length - 1; i++) { const d = Math.abs((bx - ax) * (az - P[i][1]) - (ax - P[i][0]) * (bz - az)) / L; if (d > dm) { dm = d; ix = i; } }
+    return dm > eps ? [...rdp(P.slice(0, ix + 1), eps).slice(0, -1), ...rdp(P.slice(ix), eps)] : [P[0], P[P.length - 1]]; }
+  const segD = (a, b, q) => { const dx = b[0] - a[0], dz = b[1] - a[1], L = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((q[0] - a[0]) * dx + (q[1] - a[1]) * dz) / L)); return Math.hypot(a[0] + dx * t - q[0], a[1] + dz * t - q[1]); };
+  function wmMount(body) {
+    const can = canWrite();
+    body.innerHTML = '<div class="wmap"><div class="wcv"><canvas aria-label="세계 지도"></canvas></div><div class="wside">'
+      + (can ? '<div class="wt"><button class="tl" data-m="pen">✏️ 그리기</button><button class="tl" data-m="erase">🧽 지우개</button><button class="tl" data-m="pin">📍 카드 꽂기</button></div>'
+        + '<div class="wpen">' + WPEN.map((x) => '<button data-p="' + x.k + '"><i style="background:' + x.c + '"></i>' + x.n + '</button>').join('') + '</div>'
+        + '<div class="wsz">' + ['가늘게', '보통', '굵게(칠하기)'].map((t, i) => '<button data-s="' + (i + 1) + '">' + t + '</button>').join('') + '</div>'
+        + '<div class="wt"><button class="sub" data-m="undo">↩ 내 마지막 선</button>' + (teacher ? '<button class="warn" data-m="clear">🧹 그림 모두 지우기</button>' : '') + '</div>'
+        : '<div class="sm">🔒 보기만 하는 판이에요</div>')
+      + (teacher ? '<div class="wt"><button class="sub" data-m="png" title="이 지도 그림을 파일로 — Claude에게 세계를 만들어 달라고 할 때 같이 줘요">📷 지도 그림 저장</button></div>' : '')
+      + '<div class="mlbl" style="margin-top:4px">📍 카드 꽂기 <span class="sm">카드를 고르고 지도를 톡</span></div><div class="wpins"></div></div></div>';
+    const cw = body.querySelector('.wcv'), cv = cw.querySelector('canvas'); WM.cv = cv; WM.cur = null; WM.drag = null;
+    const fit = () => { if (!cv.isConnected) { if (WM.ro) { WM.ro.disconnect(); WM.ro = null; } return; }
+      const W = cw.clientWidth, H = cw.clientHeight; if (!W || !H) return; let w = W, h = w * MH / MW; if (h > H) { h = H; w = h * MW / MH; } const d = Math.min(2, devicePixelRatio || 1);
+      cv.style.width = Math.floor(w) + 'px'; cv.style.height = Math.floor(h) + 'px'; cv.width = Math.round(w * d); cv.height = Math.round(h * d); wmPaint(); };
+    if (WM.ro) WM.ro.disconnect(); WM.ro = new ResizeObserver(fit); WM.ro.observe(cw); fit();
+    body.querySelector('.wside').addEventListener('click', wmSide);
+    cv.addEventListener('pointerdown', wmDown); cv.addEventListener('pointermove', wmMove); cv.addEventListener('pointerup', wmUp); cv.addEventListener('pointercancel', wmUp);
+    wmTools(); wmList();
+  }
+  function wmPaint() {
+    const cv = WM.cv; if (!cv || !cv.isConnected || !cv.width) return; const g = cv.getContext('2d'), k = cv.width / MW;
+    g.setTransform(k, 0, 0, k, 0, 0); g.fillStyle = '#f6efd9'; g.fillRect(0, 0, MW, MH);
+    g.strokeStyle = 'rgba(120,100,60,.14)'; g.lineWidth = 2; g.setLineDash([10, 10]);   // 9칸(희미) — 북서·북·북동…
+    for (const x of [MW / 3, MW * 2 / 3]) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, MH); g.stroke(); }
+    for (const z of [MH / 3, MH * 2 / 3]) { g.beginPath(); g.moveTo(0, z); g.lineTo(MW, z); g.stroke(); } g.setLineDash([]);
+    g.fillStyle = 'rgba(120,100,60,.34)'; g.font = '800 26px system-ui,"Malgun Gothic",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('▲ 북쪽', MW / 2, 22); g.fillText('남쪽', MW / 2, MH - 20);
+    g.save(); g.translate(22, MH / 2); g.rotate(-Math.PI / 2); g.fillText('서쪽', 0, 0); g.restore(); g.save(); g.translate(MW - 22, MH / 2); g.rotate(Math.PI / 2); g.fillText('동쪽', 0, 0); g.restore();
+    g.fillStyle = 'rgba(120,100,60,.16)'; g.fillText('가운데', MW / 2, MH / 2);
+    const line = (P, c, w) => { g.strokeStyle = c; g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); P.forEach(([x, z], i) => (i ? g.lineTo(x, z) : g.moveTo(x, z))); if (P.length === 1) g.lineTo(P[0][0] + 0.1, P[0][1]); g.stroke(); };
+    for (const [, f] of wstrokes()) { const P = decPts(f.tx + (f.opt || '')); if (P.length) line(P, (WPB[f.tag] || WPEN[6]).c, WSZ[f.sec] || WSZ[2]); }
+    if (WM.cur) line(WM.cur.pts, WPB[WM.cur.c].c, WSZ[WM.cur.w]);
+    for (const [id, f] of wcards()) {   // 카드 핀 = 칸 그림 + 이름
+      const dz = WM.drag && WM.drag.id === id ? WM.drag : null; if (!pinned(f) && !dz) continue;
+      const C = wby()[f.k] || WC[0], x = dz ? dz.x : f.x, z = dz ? dz.z : f.z, sel = WM.sel === id;
+      g.beginPath(); g.arc(x, z, 22, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill(); g.lineWidth = sel ? 7 : 4; g.strokeStyle = sel ? '#ffd23c' : hex(C.c); g.stroke();
+      g.font = '24px "Apple Color Emoji","Segoe UI Emoji",system-ui,sans-serif'; g.fillStyle = '#000'; g.fillText(C.e, x, z + 1);
+      const t = short(wnm(f).replace(/[「」]/g, ''), 9); g.font = '800 19px system-ui,"Malgun Gothic",sans-serif'; const tw = g.measureText(t).width + 14;
+      g.fillStyle = 'rgba(255,255,255,.93)'; g.fillRect(x - tw / 2, z + 26, tw, 26); g.fillStyle = '#1d3557'; g.fillText(t, x, z + 39); }
+  }
+  function wmTools() {
+    const S = WM.cv && WM.cv.closest('.wmap'); if (!S) return;
+    S.querySelectorAll('[data-m="pen"],[data-m="erase"],[data-m="pin"]').forEach((b) => b.classList.toggle('on', b.dataset.m === WM.tool));
+    S.querySelectorAll('[data-p]').forEach((b) => b.classList.toggle('on', WM.tool === 'pen' && b.dataset.p === WM.pen));
+    S.querySelectorAll('[data-s]').forEach((b) => b.classList.toggle('on', WM.tool === 'pen' && +b.dataset.s === WM.sz));
+    WM.cv.style.cursor = WM.tool === 'pin' ? 'pointer' : WM.tool === 'erase' ? 'cell' : 'crosshair';
+  }
+  function wmList() {
+    const S = WM.cv && WM.cv.closest('.wmap'), box = S && S.querySelector('.wpins'); if (!box) return;
+    const cols = wcols().map((c) => c.k), L = wcards().sort((a, b) => cols.indexOf(a[1].k) - cols.indexOf(b[1].k) || (a[1].t || 0) - (b[1].t || 0));
+    box.innerHTML = L.length ? L.map(([id, f]) => { const C = wby()[f.k] || WC[0], own = mine(f), pin = pinned(f);
+      return '<button class="wpin' + (WM.sel === id ? ' on' : '') + (own ? '' : ' ro') + '" data-pin="' + esc(id) + '" title="' + (own ? '고른 뒤 지도를 톡 = ' + (pin ? '옮기기' : '꽂기') : '✍️ ' + esc(f.by) + '의 카드') + '"><span>' + esc(C.e) + '</span><span class="t">' + esc(short(wnm(f), 12)) + '</span>'
+        + (pin ? '<span class="sm">📍' + mapArea(f.x, f.z) + '</span>' + (own && canWrite() ? '<i data-unpin="' + esc(id) + '" title="지도에서 빼기">✕</i>' : '') : '') + '</button>'; }).join('')
+      : '<div class="sm">아직 카드가 없어요 — 🗂 카드 칸에서 먼저 써요</div>';
+  }
+  const wmPos = (e) => { const r = WM.cv.getBoundingClientRect(); return [Math.max(0, Math.min(MW, (e.clientX - r.left) / r.width * MW)), Math.max(0, Math.min(MH, (e.clientY - r.top) / r.height * MH))]; };
+  const pinAt = (x, z) => { let best = null, bd = 30; for (const [id, f] of wcards()) if (pinned(f)) { const d = Math.hypot(f.x - x, f.z - z); if (d < bd) { bd = d; best = id; } } return best; };
+  function wmDown(e) {
+    if (!canWrite()) return lockMsg(); e.preventDefault(); const [x, z] = wmPos(e); try { WM.cv.setPointerCapture(e.pointerId); } catch (er) { /* */ }
+    if (WM.tool === 'pin') {
+      const hit = pinAt(x, z);
+      if (hit && mine(DATA[hit])) { WM.drag = { id: hit, x, z, moved: false }; WM.sel = hit; wmList(); wmPaint(); return; }
+      if (WM.sel) { wmPin(WM.sel, x, z); return; }
+      toast(hit ? '✍️ ' + DATA[hit].by + '의 카드예요 — 쓴 친구가 옮겨요' : '오른쪽에서 꽂을 카드를 먼저 골라요', 2.2); return;
+    }
+    if (WM.tool === 'erase') { WM.erasing = true; WM.erased.clear(); wmErase(x, z); return; }
+    WM.cur = { pts: [[x, z]], c: WM.pen, w: WM.sz }; wmPaint();
+  }
+  function wmMove(e) {
+    if (!WM.cv) return; const [x, z] = wmPos(e);
+    if (WM.drag) { WM.drag.x = x; WM.drag.z = z; WM.drag.moved = true; wmPaint(); return; }
+    if (WM.erasing) { wmErase(x, z); return; }
+    if (WM.cur) { const q = WM.cur.pts[WM.cur.pts.length - 1]; if (Math.hypot(q[0] - x, q[1] - z) >= 3 && WM.cur.pts.length < 2400) { WM.cur.pts.push([x, z]); wmPaint(); } }
+  }
+  function wmUp() {
+    if (WM.drag) { const d = WM.drag; WM.drag = null; if (d.moved) wmPin(d.id, d.x, d.z); else wmPaint(); return; }
+    if (WM.erasing) { WM.erasing = false; return; }
+    if (WM.cur) { const c = WM.cur; WM.cur = null; wmSave(c); }
+  }
+  function wmSave(c) {   // 한 획 = 선 하나(150점마다 나눠 저장 · 이어지게 한 점 겹침) — 먼저 내 화면에 두고 저장
+    let P = rdp(c.pts, 1.6); if (P.length === 1) P = [P[0], [P[0][0] + 0.5, P[0][1]]];
+    const parts = []; for (let i = 0; ; i += 149) { parts.push(P.slice(i, i + 150)); if (i + 150 >= P.length) break; }
+    const grp = newId(), t0 = Date.now(); let n = 0;
+    for (const q of parts) { const id = n ? newId() : grp, f = { k: 'wdraw', tx: encPts(q.slice(0, 75)), tag: c.c, sec: c.w, by: name, who: grp, ord: t0 + n++ }; if (q.length > 75) f.opt = encPts(q.slice(75));
+      DATA[id] = { ...f, t: Date.now() };
+      req(fpath(id), 'PUT', { ...f, t: { '.sv': 'timestamp' } }).catch(() => { delete DATA[id]; wmPaint(); toast('그림을 저장하지 못했어요 — 인터넷을 확인해 주세요', 2.5); }); }
+    wmPaint();
+  }
+  function wmDelGroup(g) {
+    const up = {}; for (const [id, f] of wstrokes()) if ((f.who || id) === g) { up[id] = null; delete DATA[id]; }
+    wmPaint(); if (Object.keys(up).length) req('/boards/' + board.id + '/flags', 'PATCH', up).catch(() => toast('지우지 못했어요', 2));
+  }
+  function wmErase(x, z) {
+    for (const [id, f] of wstrokes()) { const g = f.who || id; if (WM.erased.has(g) || !mine(f)) continue; const P = decPts(f.tx + (f.opt || '')), r = 10 + (WSZ[f.sec] || 12) / 2;
+      if (P.some((q, i) => Math.hypot(q[0] - x, q[1] - z) < r || (i && segD(P[i - 1], q, [x, z]) < r))) { WM.erased.add(g); wmDelGroup(g); } }
+  }
+  async function wmPin(id, x, z) {
+    const f = DATA[id]; if (!f || !mine(f)) return; const up = { x: Math.round(x), z: Math.round(z) };
+    if (f.k === 'wplace' && (!f.loc || ['가운데', '북쪽', '남쪽', '동쪽', '서쪽'].includes(f.loc))) up.loc = mapLoc(x, z);   // 하늘·땅속·물속은 그대로
+    Object.assign(f, up); WM.sel = null; wmList(); wmPaint();
+    try { await req(fpath(id), 'PATCH', up); map.sfx('pick'); toast('📍 ' + short(wnm(f), 10) + ' — ' + mapArea(x, z) + '에 꽂았어요', 2); } catch (e) { toast('저장하지 못했어요 — 인터넷을 확인해 주세요', 2.5); }
+  }
+  function wmSide(e) {
+    const t = e.target.closest('[data-m],[data-p],[data-s],[data-pin],[data-unpin]'); if (!t) return; e.stopPropagation();
+    if (t.dataset.unpin) { const id = t.dataset.unpin, f = DATA[id]; if (f && mine(f) && canWrite()) { delete f.x; delete f.z; wmList(); wmPaint(); req(fpath(id), 'PATCH', { x: null, z: null }).catch(() => toast('저장하지 못했어요', 2)); } return; }
+    if (t.dataset.pin) { const f = DATA[t.dataset.pin]; if (!f) return; if (!canWrite()) return lockMsg(); if (!mine(f)) return toast('✍️ ' + f.by + '의 카드예요 — 쓴 친구가 꽂아요(💬 댓글로 알려 줘요)', 2.5);
+      WM.tool = 'pin'; WM.sel = WM.sel === t.dataset.pin ? null : t.dataset.pin; wmTools(); wmList(); wmPaint(); if (WM.sel) toast('🗺️ ' + short(wnm(f), 10) + '이(가) 있을 곳을 지도에서 톡', 2.2); return; }
+    if (t.dataset.p) { WM.pen = t.dataset.p; WM.tool = 'pen'; WM.sel = null; wmTools(); wmList(); wmPaint(); return; }
+    if (t.dataset.s) { WM.sz = +t.dataset.s; WM.tool = 'pen'; WM.sel = null; wmTools(); wmList(); wmPaint(); return; }
+    const m = t.dataset.m;
+    if (m === 'pen' || m === 'erase' || m === 'pin') { WM.tool = m; if (m !== 'pin') WM.sel = null; wmTools(); wmList(); wmPaint(); }
+    else if (m === 'undo') { const L = wstrokes().filter(([, f]) => f.by === name); if (!L.length) return toast('지울 내 선이 없어요', 1.8); const [id, f] = L[L.length - 1]; wmDelGroup(f.who || id); }
+    else if (m === 'clear' && teacher) { const L = wstrokes(); if (!L.length) return; if (!confirm('지도 그림 ' + L.length + '개를 모두 지울까요? (카드 자리는 그대로)')) return; const up = {}; for (const [id] of L) { up[id] = null; delete DATA[id]; } wmPaint(); req('/boards/' + board.id + '/flags', 'PATCH', up).catch(() => toast('지우지 못했어요', 2)); }
+    else if (m === 'png' && teacher) WM.cv.toBlob((b) => { if (!b) return; const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'world-map-' + board.id + '.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
+  }
   function worldView() {
     const re = panel && panel.id === 'memo-board', P = re ? panel : open('memo-board');
+    if (re && wmode === 'map' && !wmForce && P.querySelector('.wmap')) { wmPaint(); wmList(); return; }   // 지도 화면은 다시 짓지 않고 다시 그리기만(그리던 선이 끊기지 않게)
+    wmForce = false;
     const old = re && P.querySelector('.body'), sc = old ? [old.scrollTop, old.scrollLeft] : [0, 0];
     if (!re) { wire(P); dragWire(P); }
     const can = canWrite(), A = wcards(), W = wcoach();
@@ -920,19 +1078,22 @@ export default async function start(map, params = {}) {
       + (teacher ? '<button class="sub" data-b="wl" title="칸 이름·질문 고치기 · 칸 더하기(3개까지)">⚙️ 칸 바꾸기</button><button class="sub" data-b="lock" title="' + (board.lock ? '잠금 풀기' : '잠그기(아이들은 보기만)') + '">' + (board.lock ? '🔓' : '🔒') + '</button><button class="sub" data-b="admin" title="정리 글·비우기·되돌리기">🗂 관리</button>' : '<button class="sub" data-b="t" title="선생님만">🔒 선생님</button>')
       + '<button class="sub" data-b="close">✕ 닫기</button></div>'
       + (board.p ? '<div class="sm" style="margin-top:4px">💡 ' + esc(board.p) + '</div>' : '')
-      + '<div class="bar">' + (can ? '<button data-b="wnew">＋ 카드 쓰기</button>' : '') + '<button class="sub" data-b="sum">📤 정리' + (teacher ? '(Claude에게)' : '') + '</button>'
+      + '<div class="bar">' + (can ? '<button data-b="wnew">＋ 카드 쓰기</button>' : '') + '<button class="sub" data-b="wmap" title="카드 칸 ↔ 세계 지도(그리기 · 카드 꽂기)">' + (wmode === 'map' ? '🗂 카드 칸' : '🗺️ 세계 지도') + '</button><button class="sub" data-b="sum">📤 정리' + (teacher ? '(Claude에게)' : '') + '</button>'
       + '<span title="칸을 목표 수만큼 채울수록 올라가요 — 🧭 세계 코치를 봐요" style="display:inline-flex;align-items:center;gap:6px;margin-left:8px;font-weight:800;font-size:13px">🌍 세계 채우기 <span style="display:inline-block;width:120px;height:10px;border-radius:6px;background:#e9ecef;overflow:hidden"><span style="display:block;height:100%;width:' + W.pct + '%;background:' + (W.pct >= 80 ? '#2f9e44' : W.pct >= 50 ? '#f59f00' : '#fa5252') + '"></span></span> ' + W.pct + '%</span></div><div class="body"></div>';
     P.innerHTML = h;
     const body = P.querySelector('.body');
+    body.classList.toggle('mapmode', wmode === 'map');
+    if (wmode === 'map') wmMount(body); else {
     body.innerHTML = '<div class="lanes wl">' + wcols().map((C) => { const L = A.filter(([, f]) => f.k === C.k).sort((a, b) => likes(b[1]) - likes(a[1]) || (a[1].t || 0) - (b[1].t || 0));   // wl = 칸 격자(가로로 굴리지 않아도 🎮 칸까지 보임 · 선생님이 더한 칸은 그 뒤)
       return '<div class="lane" data-k="' + esc(C.k) + '" style="border-top:6px solid ' + hex(C.c) + '"><h4>' + esc(C.e) + ' ' + esc(C.n) + ' <span class="sm">' + L.length + '/' + C.goal + (L.length >= C.goal ? ' ✓' : '') + '</span></h4><div class="sm" style="margin:-4px 0 8px">' + esc(C.q) + '</div>'
         + L.map(([id, f]) => wcard(id, f)).join('') + (can ? '<button class="sub" data-b="wcat:' + C.k + '" style="width:100%;border:1px dashed #9fb4d0;background:#fff">＋ ' + esc(C.e) + ' 쓰기</button>' : '') + '</div>'; }).join('') + '</div>';
     body.prepend(el('div', 'coach top', '<b>🧭 세계 코치</b> ' + coachChips(W.tips), body));   // 코치는 칸 위(빈 칸 칩·'다 모였어요'가 첫 화면에)
-    body.scrollTop = sc[0]; body.scrollLeft = sc[1]; flashNow(body);
+    body.scrollTop = sc[0]; body.scrollLeft = sc[1]; flashNow(body); }
     P.onclick = async (e) => {
       const b = e.target.closest('[data-b]'); if (!b || b.closest('.cd')) return;
       const a = b.dataset.b;
       if (a === 'close') { close(); worldBackHint(); }
+      else if (a === 'wmap') { wmode = wmode === 'map' ? 'cards' : 'map'; wmForce = true; worldView(); }
       else if (a === 'wnew') { if (!canWrite()) return lockMsg(); back = 'board'; form({}); }
       else if (a === 'sum') summary();
       else if (a === 't') teacherLogin();
@@ -1135,11 +1296,20 @@ export default async function start(map, params = {}) {
         out.push('- ' + (likes(f) ? '(❤️' + likes(f) + ') ' : '') + String(f.tx).replace(/\n/g, ' ') + '  · ✍️ ' + f.by);
         if (f.why) out.push('  💡 ' + String(f.why).replace(/\n/g, ' '));
         if (f.k === 'wplace' && f.loc) out.push('  📍 어디쯤: ' + f.loc);
+        if (pinned(f)) out.push('  🗺️ 지도: ' + mapArea(f.x, f.z) + ' (x ' + Math.round(f.x) + ', y ' + Math.round(f.z) + ' — 지도 1000×750)');
         for (const [, d] of wdetails(id)) { const T = WTB[d.tag]; out.push('  └ ' + (T ? T.e + ' ' + T.n + ': ' : '🔎 ') + String(d.tx).replace(/\n/g, ' ') + '  · ✍️ ' + d.by); }
         if (f.re) for (const r of Object.values(f.re).filter((r) => r && r.tx).sort((a, b) => (a.t || 0) - (b.t || 0))) out.push('  💬 ' + r.by + ': ' + r.tx);
       }
       out.push('');
     }
+    { const S9 = wstrokes(), PN = A.filter(([, f]) => pinned(f));   // 🗺️ 세계 지도 — 색마다 몇 선 · 어느 쪽에 · 꽂은 카드
+      if (S9.length || PN.length) {
+        out.push('## 🗺️ 세계 지도' + (full ? '  (그림 파일 = 지도 화면의 📷 지도 그림 저장)' : ''));
+        const byC = new Map(); for (const [id9, f] of S9) { const r = byC.get(f.tag) || { g: new Set(), a: new Map() }; r.g.add(f.who || id9);   // 한 획(나눠 저장한 것) = 1선
+          for (const [x, z] of decPts(f.tx + (f.opt || ''))) { const k = mapArea(x, z); r.a.set(k, (r.a.get(k) || 0) + 1); } byC.set(f.tag, r); }
+        for (const [k, r] of byC) out.push('- ✏️ ' + (WPB[k] || WPEN[6]).n + ' ' + r.g.size + '선 — ' + [...r.a.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([a9]) => a9).join('·'));
+        for (const [, f] of PN) { const C = wby()[f.k] || WC[0]; out.push('- 📍 ' + C.e + ' ' + wnm(f) + ' — ' + mapArea(f.x, f.z)); }
+        out.push(''); } }
     out.push('## 🧭 코치가 본 것', ...W.tips.map((c) => '- ' + (c.ok ? '✓ ' : '! ') + c.t));
     if (full) out.push('',
       '## Claude에게 — 구현 부탁(선생님이 고쳐 써도 돼요)',
@@ -1147,6 +1317,7 @@ export default async function start(map, params = {}) {
       '- 🌍 = 첫 화면·하늘·색·소리 · 📜 규칙 = 놀이 규칙(되는 일·안 되는 일·어기면) · 👫 = 마을 사람·생물(말 걸기) · 🏰 = 지역(📍 어디쯤 — 가운데·북·남·동·서·하늘·땅속·물속에 맞춰 세계 지도를 짠다 · 우리 학교와는 따로) · ✨ = 상호작용·마법·물건 · 🎮 = 퀘스트·도전(처음 할 일 → 해결 → 보상).',
       ...(CS.some((C) => C.u) ? ['- 선생님이 더한 칸(' + CS.filter((C) => C.u).map((C) => C.e + ' ' + C.n).join(' · ') + ')도 칸 질문에 맞게 세계에 넣기.'] : []),
       '- └ 자세히(👀 모습 · 🔊 소리·말 · ⚙️ 하는 일 · 💡 까닭)는 그 카드를 만들 때 그대로 살리기.',
+      '- 🗺️ 세계 지도가 있으면 그 배치대로(색 = 땅·물·산·길·모래·꽃 · 📍 꽂은 카드 자리 · 그림 파일) — 선 점들은 REST boards/<판>/flags 의 k:\'wdraw\'(tx·opt = 점마다 4글자 base36 x·y).',
       '- ❤️ 많은 생각부터 · 서로 부딪히면 ❤️ 많은 쪽 · 💬 댓글의 의견도 살피기 · 빈 칸은 Claude가 채우되 「Claude가 채운 것」 목록을 따로 알려 주기.',
       '- 실제 친구 이름(✍️ 쓴 사람)은 세계의 주민·생물 이름이나 대사에 쓰지 않기 · 선생님은 직함으로 · 우리 학교와는 따로인 세계(학교 사실을 지어 넣지 않기).');
     return out.filter((x, i) => x !== '' || i > 3).join('\n');
@@ -1624,6 +1795,7 @@ export default async function start(map, params = {}) {
   return {
     tick() {},
     stop() { dead = true; window.SM_ACT = null; crossEl.remove(); document.removeEventListener('pointerlockchange', crossUp); arrOff(); clearTimeout(pathT); pathClear(); if (play) { const P0 = play; play = null; if (P0.wk) P0.wk(false); if (P0.rfin) P0.rfin(); if (P0.mk) P0.mk.remove(); } clearTimeout(syncT); if (es) es.close(); if (esB) esB.close(); hereOff(); removeEventListener('keydown', onKey); removeEventListener('keydown', onEsc, true); removeEventListener('sm-click', onWorldClick); removeEventListener('sm-cmd', onCmd); removeEventListener('sm-teacher', onTeacher); removeEventListener('resize', onRs); for (const id of [...FL.keys()]) drop3d(id); ui.remove(); css.remove(); },
+    get wmap() { return { mode: wmode, tool: WM.tool, strokes: wstrokes().length, groups: new Set(wstrokes().map(([id, f]) => f.who || id)).size, pins: wcards().filter(([, f]) => pinned(f)).map(([id, f]) => ({ id, x: f.x, z: f.z, loc: f.loc || null })) }; },
     get board() { return board; }, get scenes() { return scenes().map(([id, f], i) => ({ id, n: i + 1, ...f, kids: kids(id).map(([kid, x]) => ({ id: kid, ...x })) })); }, summary: () => board ? summaryText() : '',
     get coach() { return board ? (isW() ? wcoach() : coach()) : []; }, get stations() { return board && !isW() ? stations().map((t) => ({ no: t.no, code: t.code, zone: t.f.zone, what: t.what, kind: t.kind })) : []; }, realKitHtml: () => realKitHtml(), real: () => playStory({ real: true }), get cards() { return wcards().map(([id, f]) => ({ id, ...f })); }, get kind() { return KIND; }, paths: () => { if (!pathOn) pathToggle(); return new Promise((r) => setTimeout(() => r(pathObjs.length), 6000)); }, book: () => playStory({ book: true }),
     place: (o) => form({ pt: aimPoint(), ...(o || {}) }), aim: (x, y) => aimPoint(x, y), view: boardView, tour: startTour, play: () => playStory(), get playing() { return play ? { i: play.i, items: play.items.slice(), over: play.over } : null; }, get cols() { return board && isW() ? wcols().map((c) => ({ k: c.k, e: c.e, n: c.n, q: c.q, u: !!c.u })) : []; }, moveTo: (id, sec, before) => moveTo(id, sec, before),
