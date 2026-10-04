@@ -1,7 +1,7 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { buildWorld } from './world.js?v=146';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=147';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
@@ -865,7 +865,17 @@ SWING.forEach(o => {
     const P = (mesh, a, y, pw, ph, t, col) => { const i = SWP[mesh].length; SWP[mesh].push(col ?? 0xffffff); parts.push({ mesh, i, a, y, pw, ph, t }); };
     if (sw.look === 'glass') { P('g', len / 2, o.y0 + H9 / 2, len - 0.1, H9 - 0.1, 0.03); [0.03, len - 0.03].forEach(a => P('p', a, o.y0 + H9 / 2, 0.06, H9, 0.05, 0xc9cdd1)); P('p', len / 2, o.y0 + H9 - 0.03, len - 0.1, 0.06, 0.05, 0xc9cdd1); P('p', len / 2, o.y0 + 0.06, len - 0.1, 0.12, 0.05, 0xc9cdd1); P('p', len - 0.12, o.y0 + 1.0, 0.03, 0.9, 0.12, 0xb8bcc0); }
     else if (sw.look === 'quilt') { P('q', len / 2, o.y0 + H9 / 2, len, H9, 0.06); if (w < 0.8) P('p', len / 2, o.y0 + 1.55, 0.25, 0.35, 0.07, 0xbfd8e2); P('p', len - 0.1, o.y0 + 1.05, 0.04, 0.6, 0.14, 0x8a5a36); }   // 좁은 짝 = 작은 창 · 세로 나무 막대 손잡이
-    else { P('p', len / 2, o.y0 + H9 / 2, len, H9, 0.05, sw.color ?? 0xf2f2f0); P('p', len / 2, o.y0 + 1.5, Math.min(0.35, len * 0.4), 0.5, 0.06, 0xd6e4ea); P('p', len - 0.1, o.y0 + 1.0, 0.12, 0.04, 0.12, 0x9aa0a6); }
+    else if (sw.look === 'frost') {   // KINDER-2(10-04 영상 IMG_3424 병설유치원 정문): 불투명 흰 유리 + 스테인리스 틀 + 긴 나무 막대 손잡이(양쪽) + 번호키 + 스티커(sw.deco[짝] = [[u 경첩에서 0~1, y 문 바닥에서, 폭, 높이, 색], …])
+      P('p', len / 2, o.y0 + H9 / 2, len - 0.1, H9 - 0.16, 0.03, 0xe9eef0);
+      [0.03, len - 0.03].forEach(a => P('p', a, o.y0 + H9 / 2, 0.06, H9, 0.05, 0xc9cdd1)); P('p', len / 2, o.y0 + H9 - 0.04, len - 0.1, 0.08, 0.05, 0xc9cdd1); P('p', len / 2, o.y0 + 0.07, len - 0.1, 0.14, 0.05, 0xc9cdd1);
+      P('p', len - 0.13, o.y0 + 1.15, 0.045, 1.15, 0.16, 0x6b3f26);
+      if (k === 0) P('p', len - 0.25, o.y0 + 1.12, 0.08, 0.16, 0.08, 0x3a3d42);
+      (sw.deco?.[k] || []).forEach(([u, y, dw, dh, col], i) => P('p', u * len, o.y0 + y, dw, dh, 0.036 + i * 0.002, col));   // 스티커마다 두께를 2mm씩 달리(겹쳐도 면이 같은 평면이 아니게)
+    }
+    else { P('p', len / 2, o.y0 + H9 / 2, len, H9, 0.05, sw.color ?? 0xf2f2f0);   // sw.win === false = 창 없는 민짝 · sw.panel = 누름 판 두 칸 색 · sw.knob = 둥근 손잡이 색(없으면 은색 레버)
+      if (sw.win !== false) P('p', len / 2, o.y0 + 1.5, Math.min(0.35, len * 0.4), 0.5, 0.06, 0xd6e4ea);
+      if (sw.panel) [1.5, 0.62].forEach(y => P('p', len / 2, o.y0 + y, len * 0.6, 0.72, 0.062, sw.panel));
+      if (sw.knob) P('p', len - 0.09, o.y0 + 0.98, 0.07, 0.07, 0.11, sw.knob); else P('p', len - 0.1, o.y0 + 1.0, 0.12, 0.04, 0.12, 0x9aa0a6); }
     return { hinge, s, parts, w: len };
   });
   o.lineC = line;
