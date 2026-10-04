@@ -17,6 +17,10 @@ const CSS = `
 .lb-pop input{font:inherit;font-size:16px;border:2px solid #c9d3df;border-radius:9px;padding:7px 9px;box-sizing:border-box;width:100%;color:#1d3557;background:#fff}
 .lb-pop .row{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
 .lb-pop .box{margin:6px 0;padding:6px 8px;background:#eef4ff;border-radius:8px}
+.lb-pop .rg{display:grid;gap:6px;margin:6px 0}
+.lb-pop .rg button{text-align:left;background:#eef4ff;color:#1d3557;border:2px solid #c9d8f0;font-size:15px;padding:9px 11px}
+.lb-pop .rg button.on{border-color:#1d3557;background:#fff3bf}
+.lb-pop .now{margin:6px 0;padding:7px 9px;border-radius:9px;background:#fff3bf;font-weight:700}
 .lb-big{position:fixed;inset:0;z-index:47;display:flex;align-items:center;justify-content:center;background:rgba(10,20,40,.55);font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif}
 .lb-big>div{background:#fffdf6;color:#1d3557;border:4px solid #1d3557;border-radius:22px;padding:22px 34px;text-align:center;max-width:92vw}
 .lb-big .code{font-size:clamp(72px,16vw,150px);font-weight:900;letter-spacing:.12em;line-height:1.1;margin:6px 0}
@@ -90,7 +94,7 @@ export async function teacherPin(toast = () => {}) {
 }
 
 export function createLobby(o) {
-  const { chip, suffix = '', label = '', join, leave, net, toast = () => {}, onTeacher = null, onGoTo = null } = o;
+  const { chip, suffix = '', label = '', join, leave, net, toast = () => {}, onTeacher = null, onGoTo = null, rooms = null } = o;   // ROOM-1: rooms = 방 놀이 { list, cur, inIt, count, pick, start, end, join }
   addCss();
   let cur = null, pop = null, big = null, pollT = 0;
   const live = (p) => p && typeof p.e === 'number' && p.e > Date.now();
@@ -156,12 +160,22 @@ export function createLobby(o) {
     const N = net();
     if (cur) {
       const others = N && N.peers ? N.peers() : [];
+      // ROOM-1(10-05 교사 '멀티방을 만들고 그 안에서 모드를 정하는 게 직관적일까?'): 방을 만든 선생님 = '🎮 다 같이 놀이'(누르면 방 친구 모두 그 놀이 대기실로) · 모두 = 지금 방 놀이 줄
+      const RG = rooms ? rooms.list() : [], rgi = rooms ? rooms.cur() : 0, rgNow = RG.find(q => q.i === rgi), inIt = !!(rooms && rooms.inIt());
+      // 지금 방 놀이 칸(노랑) 안에 단추를 둔다 — 창이 길어도 ▶·⏹가 위에 보이게
+      const roomHtml = !rooms ? '' : (rgNow ? '<div class="now">🎮 지금 방 놀이: ' + esc(rgNow.t) + (cur.k ? ' <span class="sm">· 들어온 친구 ' + rooms.count(rgi) + '/' + others.length + '</span>' : '')
+          + ((cur.k || !inIt) ? '<div class="row" style="justify-content:flex-start;margin-top:6px">' + (cur.k ? '<button data-l="rstart" title="다 모이면 — 대기실 방장 화면이 시작을 눌러요">▶ 모두 시작</button><button class="sub" data-l="rend">⏹ 놀이 끝(자유롭게)</button>' : '') + (!inIt ? '<button class="sub" data-l="rjoin">' + (cur.k ? '🎮 나도 같이' : '들어가기') + '</button>' : '') + '</div>' : '') + '</div>' : '')
+        + (cur.k ? '<div style="margin-top:8px;font-weight:800">🎮 다 같이 놀이 <span class="sm">— 누르면 방 친구 모두 그 놀이 대기실로 들어가요</span></div><div class="rg">' + RG.map(q => '<button data-rg="' + q.i + '"' + (q.i === rgi ? ' class="on"' : '') + '>' + esc(q.t) + (q.i === rgi ? ' ✓ 지금' : '') + '</button>').join('') + '</div>' : '');
       const P = popup('<h4>👥 ' + esc(cur.n) + ' <span class="sm">· 방 번호 ' + cur.c + '</span></h4>'
         + '<div class="box">나: <b>' + esc(N ? N.name : '') + '</b><br>' + (others.length ? '친구 ' + others.length + '명' + (onGoTo ? ' <span class="sm">(누르면 그 친구 곁으로)</span>' : '') + '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + others.map((p, i) => onGoTo ? '<button class="sub" data-go="' + i + '" style="padding:4px 9px"><span style="color:' + p.color + '">●</span> ' + esc(p.label) + (p.act ? ' <span class="sm">' + esc(p.act) + '</span>' : '') + '</button>' : '<span style="padding:2px 6px"><span style="color:' + p.color + '">●</span> ' + esc(p.label) + (p.act ? ' <span class="sm">' + esc(p.act) + '</span>' : '') + '</span>').join('') + '</div>' : '<span class="sm">아직 들어온 친구가 없어요</span>') + '</div>'
-        + '<div class="sm">• 걷기·뛰기 · 😀 인사는 서로 보여요<br>• 📝 메모장은 같은 판이면 장면·깃발을 함께 써요<br>• 💦 <b>물총 친구 대결</b>은 같은 방 친구들과 함께<br>• 이야기·방탈출 같은 놀이는 <b>각자 따로</b> 해요</div>'
+        + roomHtml
+        + '<div class="sm">• 걷기·뛰기 · 😀 인사는 서로 보여요<br>• 📝 메모장은 같은 판이면 장면·깃발을 함께 써요<br>' + (rooms ? '• 🎮 <b>대결 놀이</b>(물총·숨바꼭질·로봇인 척)는 선생님이 고르면 방 친구 모두 같이 들어가요<br>' : '• 💦 <b>물총 친구 대결</b>은 같은 방 친구들과 함께<br>') + '• 이야기·방탈출 같은 놀이는 <b>각자 따로</b> 해요</div>'
         + (cur.k ? '<div style="margin-top:8px;font-weight:800">🧑‍🏫 선생님</div><div class="row" style="justify-content:flex-start;margin-top:4px">' + (onTeacher ? '<button data-l="gather" title="방 친구 모두를 내 곁으로">📣 모두 내 곁으로</button><button data-l="hold" title="모두 잠깐 멈추고 선생님 말씀 듣기">✋ 모두 멈춤</button><button class="sub" data-l="release">▶ 다시 움직여요</button><button class="sub" data-l="chatoff">💬 채팅 ' + (N && N.ctlData && N.ctlData.chat && N.ctlData.chat.off ? '켜기' : '끄기') + '</button><button class="sub" data-l="chatclr">🧹 채팅 지우기</button>' : '') + '<button class="sub" data-l="big">📺 번호 크게</button><button class="warn" data-l="shut">🔒 방 닫기</button></div>' : '')
         + '<div class="row"><button class="sub" data-l="name">✏️ 내 이름</button><button class="sub" data-l="out">🚪 방 나가기</button><button class="sub" data-l="x">닫기</button></div>');
-      P.onclick = (e) => { e.stopPropagation(); const g = e.target.closest('[data-go]'); if (g && onGoTo) { closePop(); onGoTo(others[+g.dataset.go]); return; } const b = e.target.closest('[data-l]'); if (!b) return; const a = b.dataset.l;
+      P.onclick = (e) => { e.stopPropagation(); const g = e.target.closest('[data-go]'); if (g && onGoTo) { closePop(); onGoTo(others[+g.dataset.go]); return; }
+        const rg = e.target.closest('[data-rg]'); if (rg && rooms) { closePop(); rooms.pick(+rg.dataset.rg); return; }
+        const b = e.target.closest('[data-l]'); if (!b) return; const a = b.dataset.l;
+        if (rooms && (a === 'rjoin' || a === 'rstart' || a === 'rend')) { closePop(); if (a === 'rjoin') rooms.join(); else if (a === 'rstart') rooms.start(); else rooms.end(); return; }
         if (a === 'name') { const v = prompt('내 이름(별명)을 적어 주세요 — 친구들 화면에 보여요', N ? N.name : ''); if (v && N) N.setName(v); draw(); closePop(); }
         else if (a === 'out') out('👋 방에서 나왔어요'); else if (a === 'big') { closePop(); showBig(); } else if (a === 'shut') shut();
         else if ((a === 'gather' || a === 'hold' || a === 'release') && onTeacher) { closePop(); onTeacher(a); }

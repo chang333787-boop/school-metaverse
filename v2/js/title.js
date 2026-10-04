@@ -126,7 +126,7 @@ export function createTitle(h) {
     let G = reuse && REG ? REG : {};
     if (!(reuse && REG)) try { const M = await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url)); G = M.GAMES || {}; REGF = M.FOLDERS || null; } catch (e) { console.error('[오프닝] 놀이 목록을 못 불러옴', e); }
     REG = G;
-    const ids = Object.keys(G).filter(id => !G[id].dev && !(G[id].promo && !PROMO) && (LESSON ? G[id].lesson === LESSON : !G[id].lesson));   // 10-03 교사: v2(우리 학교용)엔 홍보 놀이(견학)를 보이지 않는다 — 주소 ?tour=1로는 그대로 열림
+    const ids = Object.keys(G).filter(id => !G[id].dev && !G[id].room && !(G[id].promo && !PROMO) && (LESSON ? G[id].lesson === LESSON : !G[id].lesson));   // ROOM-1: 방 놀이(room) = 메뉴엔 없음 — 👥 방 창에서 선생님이 고름   // 10-03 교사: v2(우리 학교용)엔 홍보 놀이(견학)를 보이지 않는다 — 주소 ?tour=1로는 그대로 열림
     list = LESSON ? (LCAT ? ids.filter(id => (G[id].cat || 'story') === LCAT).map(id => ({ id, ...G[id] })) : LCATS.slice()) : [FREE, ...ids.map(id => ({ id, ...G[id] }))];
     if (!LESSON && !PROMO && REGF && REGF.length) {   // FOLDER-1: 폴더 카드(그 안 놀이 수) → 고르면 그 폴더의 카드
       const all = list, fk = e => e.folder || 'look';
@@ -142,10 +142,13 @@ export function createTitle(h) {
     grid.textContent = '';
     const head = (html, cls) => { const d = el('div', 'ttl-sec' + (cls ? ' ' + cls : ''), html); grid.appendChild(d); return d; };
     if (split) head('<b>🧍 혼자 하기</b><span>나 혼자 학교를 탐험하고 놀아요</span>');
-    const togRow = FOLD && TOG.length > 0;   // 폴더 안에 함께 놀이가 있으면 카드 위에 방 줄 하나
+    const RM = FOLD && !LESSON ? Object.keys(G).filter(id => G[id].room && (G[id].folder || 'look') === FOLD) : [];   // ROOM-1: 이 폴더의 방 놀이(숨김) → 방 줄에 이름만
+    const togRow = FOLD && (TOG.length > 0 || RM.length > 0);   // 폴더 안에 함께 놀이가 있으면 카드 위에 방 줄 하나
     cards = list.map((e, i) => {
       if ((split && e === TOG[0]) || (togRow && i === 0)) { const R = window.SM_MP && window.SM_MP.info && window.SM_MP.info(), N = window.SM_MP && window.SM_MP.net && window.SM_MP.net();
-        const h = head('<b>👥 친구와 함께</b><span>' + (R ? '지금 「' + R.n.replace(/[<>&]/g, '') + '」 방 · ' + (N ? N.count : 1) + '명' : window.SM_MP ? '선생님이 연 방에 들어가면 친구들과 같이 해요' : '이 화면에서는 함께하기가 꺼져 있어요') + '</span>' + (window.SM_MP ? '<button type="button" class="ttl-room">' + (R ? '방 바꾸기' : '👥 방 들어가기') + '</button>' : ''), 'tog');
+        const LD = !!(window.SM_MP && window.SM_MP.lead && window.SM_MP.lead()), rmN = RM.map(id => (G[id].icon || '') + ' ' + String(G[id].title || id).replace(/\(친구와\)/, '').trim()).join(' · ');
+        const h = RM.length ? head('<b>👥 친구와 대결</b><span>' + (R ? '「' + R.n.replace(/[<>&]/g, '') + '」 방 · ' + (N ? N.count : 1) + '명 — ' + (LD ? '👥 창에서 다 같이 할 놀이를 골라요' : '선생님이 놀이를 고르면 다 같이 들어가요') : window.SM_MP ? '함께하기 방에 들어가면 선생님이 고른 놀이(' + rmN + ')로 다 같이 들어가요' : '이 화면에서는 함께하기가 꺼져 있어요') + '</span>' + (window.SM_MP ? '<button type="button" class="ttl-room">' + (R ? (LD ? '🎮 놀이 고르기' : '👥 방 보기') : '👥 방 들어가기') + '</button>' : ''), 'tog')
+          : head('<b>👥 친구와 함께</b><span>' + (R ? '지금 「' + R.n.replace(/[<>&]/g, '') + '」 방 · ' + (N ? N.count : 1) + '명' : window.SM_MP ? '선생님이 연 방에 들어가면 친구들과 같이 해요' : '이 화면에서는 함께하기가 꺼져 있어요') + '</span>' + (window.SM_MP ? '<button type="button" class="ttl-room">' + (R ? '방 바꾸기' : '👥 방 들어가기') + '</button>' : ''), 'tog');
         const rb = h.querySelector('.ttl-room'); if (rb) rb.addEventListener('click', ev => { ev.stopPropagation(); blip(); window.SM_MP.open(); }); }
       const g = GROUPS[e.group] || GROUPS.놀이, b = e.id ? best(e.id, e) : null;
       const c = el('button', 'card', '<span class="cin">' + (e.items ? '' : '<span class="gt"><i>' + g.e + '</i><span> ' + (GROUPS[e.group] ? e.group : '놀이') + '</span></span>')
@@ -295,5 +298,9 @@ export function createTitle(h) {
 
   return { bootDone, backToMenu, choose: async id => { id = id || ''; let i = list.findIndex(e => e.id === id);   // 폴더 밖이면 그 폴더를 열고 고른다
       if (i < 0 && !LESSON && REGF) { const g = id ? REG && REG[id] : FREE; if (g) { FOLD = g.folder || 'look'; await (filled = fill(true)); i = list.findIndex(e => e.id === id); } }
-      if (i >= 0) choose(i); }, toMenu, get phase() { return phase; }, get cards() { return list.map(e => e.id); }, el: root, home };
+      if (i >= 0) choose(i); },
+    go: async id => {   // ROOM-1: 방 놀이 — 메뉴에 없는 카드도 제목·메뉴 화면에서 바로 닦기 + 날아오기로 시작(선생님이 고르면 아이 화면이 여기로)
+      if (phase !== 'title' && phase !== 'menu') return false; if (!REG) await (filled = fill()); const g = REG && REG[id]; if (!g || (phase !== 'title' && phase !== 'menu')) return false;
+      launch({ id, ...g }, { left: innerWidth / 2 - 1, top: innerHeight / 2 - 1, width: 2, height: 2 }); return true; },
+    toMenu, get phase() { return phase; }, get cards() { return list.map(e => e.id); }, el: root, home };
 }

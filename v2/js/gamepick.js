@@ -34,7 +34,8 @@ export function createGamePicker(ctx) {
     let games = null, folders = null;
     try { const M = await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url)); games = M.GAMES; folders = M.FOLDERS || null; } catch (e) { console.error('[놀이] 목록을 못 불러옴', e); }
     if (my !== seq || !panel) return;   // 그사이 닫히거나 다시 열림
-    const ids = games ? Object.keys(games).filter(id => !games[id].dev && !games[id].link && !(games[id].promo && !window.SM_PROMO) && (window.SM_LESSON ? games[id].lesson === window.SM_LESSON : !games[id].lesson)) : [];   // 10-03: v2엔 홍보 놀이(견학) 숨김
+    const ids = games ? Object.keys(games).filter(id => !games[id].dev && !games[id].room && !games[id].link && !(games[id].promo && !window.SM_PROMO) && (window.SM_LESSON ? games[id].lesson === window.SM_LESSON : !games[id].lesson)) : [];   // ROOM-1: 방 놀이(room) = 👥 방 창에서 선생님이 고름
+    const rmF = new Set(games ? Object.keys(games).filter(id => games[id].room && !window.SM_LESSON).map(id => games[id].folder || 'look') : []);   // 10-03: v2엔 홍보 놀이(견학) 숨김
     list.textContent = ids.length ? '' : (games ? '아직 놀이가 없어요' : '놀이 목록을 못 불러왔어요');
     const sec = t => { const d = document.createElement('div'); d.textContent = t; d.style.cssText = 'margin-top:10px;font-size:12px;font-weight:800;opacity:.85'; list.appendChild(d); };
     const FL = !window.SM_LESSON && folders && folders.length ? folders : null;   // FOLDER-1(10-04): v2 = 폴더 제목으로 묶음(👥 = 친구와 함께) · v3 = 예전처럼 혼자/함께
@@ -43,7 +44,8 @@ export function createGamePicker(ctx) {
     if (split) sec('🧍 혼자 하기');
     let fPrev = null;
     for (const id of ord) {
-      if (FL) { const f = games[id].folder || 'look'; if (f !== fPrev) { fPrev = f; const F9 = FL.find(q => q.k === f); sec((F9 ? F9.icon + ' ' + F9.title : f)); } }
+      if (FL) { const f = games[id].folder || 'look'; if (f !== fPrev) { fPrev = f; const F9 = FL.find(q => q.k === f); sec((F9 ? F9.icon + ' ' + F9.title : f));
+        if (rmF.has(f)) { const d9 = document.createElement('div'); d9.textContent = '👥 친구와 대결은 함께하기 방에서 — ' + (window.SM_MP && window.SM_MP.lead && window.SM_MP.lead() ? '👥 창의 🎮 다 같이 놀이로 골라요' : '선생님이 고르면 다 같이 들어가요'); d9.style.cssText = 'margin:2px 0 4px;font-size:12px;opacity:.8'; list.appendChild(d9); } } }
       if (split && id === tog[0]) sec('👥 친구와 함께' + (window.SM_MP ? (window.SM_MP.room() ? ' — 방에 있어요' : ' — 먼저 왼쪽 위 👥 함께하기로 방에') : ''));
       const b = document.createElement('button'); b.className = 'gpick-b'; b.dataset.game = id;
       const t = document.createElement('b'); t.textContent = (games[id].mp === 'together' ? '👥 ' : '') + (games[id].title || id); b.appendChild(t);
