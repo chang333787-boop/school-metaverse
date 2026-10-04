@@ -568,7 +568,7 @@ export default async function start(map, params = {}) {
     if ((uiT -= dt) <= 0) { uiT = 0.2;
       chip('hs-time', p === 'count' ? '⏱ 준비' : p === 'hide' ? '🙈 숨기 ' + Math.ceil(cfg.hide - t) : p === 'seek' ? '⏱ ' + fmt(Math.max(0, T1 - t)) : '🏁 끝');
       if (p !== 'seek' || !(me && me.role === 'hunt')) chip('hs-hot', null); }
-    if (NETM && NM.on) { netSend(dt); hostRun(t, endAt); }
+    if (NETM && NM.on) { netSend(dt); hostRun(t, endAt); if ((NM.lagT = (NM.lagT || 0) - dt) <= 0) { NM.lagT = 1; chip('hs-net', NM.lag >= 450 ? '📶 인터넷이 느려요(' + NM.lag + 'ms)' : null); } }
     else if (p === 'res' && t > endAt + cfg.end && !matchEnd) { matchEnd = true; soloEnd(); }
   }
   // 몸 그리기(행렬만) — 보이는 규칙: 술래인 나 = 도망자는 투명이면 안 보임(1.3m 안 제외) · 도망자인 나 = 술래는 반지름 R 안만 + 바닥 부채꼴
@@ -648,7 +648,7 @@ export default async function start(map, params = {}) {
   //   s/<pid> = [x, y, z, h, 표(1 투명 · 8 별), 신호] · b/<자리> = 봇 [x, y, z, h, 표] · ev/<id> { k ct|see|st|sp, by, who, n, q = 판 seq }
   //   판을 바꿀 땐 방장이 m과 모든 p.tm을 한 번에 PATCH(자리가 모두에게 같게) · 잡기 = 도망자 화면 · 봇 = 방장 · 방장이 사라지면 가장 먼저 온 사람이 이어받음(물총과 같은 식)
   // =====================================================================================
-  const NM = { on: false, room: null, pid: null, name: '', host: false, es: null, D: {}, seen: new Set(), off: 0, seq: -1, st: null, sendT: 0, bT: 0, busyS: false, busyB: false,
+  const NM = { on: false, room: null, pid: null, name: '', host: false, es: null, D: {}, seen: new Set(), off: 0, seq: -1, st: null, sendT: 0, bT: 0, busyS: 0, busyB: 0, offs: [],
     ui: null, beat: 0, beatN: 0, lastSend: 0, claim: false, seenAt: {}, lvl: 0, streak: [], adv: false, lag: 0 };
   const nreq = (path, method = 'GET', data) => fetch(MDB + NM.room + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data), keepalive: true }).then(r => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))));
   const sNow = () => Date.now() + NM.off;
@@ -707,9 +707,9 @@ export default async function start(map, params = {}) {
     const S = D.s || {}, now = performance.now();
     for (const id in S) if (S[id] !== NM.seenAt[id + '#']) { NM.seenAt[id + '#'] = S[id]; NM.seenAt[id] = now; }
     if (m.st === 'play' && m.seq !== NM.seq) roundFromNet(m);
-    if (m.st !== NM.st) { const was = NM.st; NM.st = m.st; if (m.st === 'lobby') { if (R) { R = null; endRoundUI(); if (map.top.on) map.top.exit(); btn.style.display = 'none'; map.hud.goal(null); for (const k of ['hs-time', 'hs-hot', 'hs-role']) map.hud.chip(k, null); chipK = {}; } lobbyShow(); } else if (m.st === 'end' && was === 'play') finalBoard(); else if (m.st === 'play') lobbyHide(); }
-    if (R) { for (const a of ACT) if (a.kind === 'remote') { const v = S[a.pid]; if (v) netSet(a, v, now); }
-      if (!NM.host && D.b) for (const a of ACT) if (a.kind === 'bot') { const v = D.b[a.i]; if (v) netSet(a, v, now); } }
+    if (m.st !== NM.st) { const was = NM.st; NM.st = m.st; if (m.st === 'lobby') { if (R) { R = null; endRoundUI(); if (map.top.on) map.top.exit(); btn.style.display = 'none'; map.hud.goal(null); for (const k of ['hs-time', 'hs-hot', 'hs-role', 'hs-net']) map.hud.chip(k, null); chipK = {}; } lobbyShow(); } else if (m.st === 'end' && was === 'play') finalBoard(); else if (m.st === 'play') lobbyHide(); }
+    if (R) { for (const a of ACT) if (a.kind === 'remote') { const v = S[a.pid]; if (v) netSet(a, v); }
+      if (!NM.host && D.b) for (const a of ACT) if (a.kind === 'bot') { const v = D.b[a.i]; if (v) netSet(a, v); } }
     const E = D.ev || {};
     for (const id in E) { if (NM.seen.has(id)) continue; NM.seen.add(id); const e = E[id]; if (e && e.q === NM.seq) onEv(e); }
     hostCheck(m);
@@ -742,17 +742,25 @@ export default async function start(map, params = {}) {
     }
     if (NM.host && m.st === 'play') for (const id in P) if (id !== NM.pid && quiet(id, 90000)) { nreq('/p/' + id, 'DELETE').catch(() => {}); delete NM.seenAt[id]; }
   }
-  function netSet(a, v, now) {
-    if (v === a.net) return; const p = a.net;
-    if (p && a.nt && (v[0] - p[0]) ** 2 + (v[2] - p[2]) ** 2 < 64) { const g = Math.max(0.05, Math.min(1, (now - a.nt) / 1000)); let vx = (v[0] - p[0]) / g, vz = (v[2] - p[2]) / g; const sp = Math.hypot(vx, vz); if (sp > 9.5) { vx *= 9.5 / sp; vz *= 9.5 / sp; } a.nvx = vx; a.nvz = vz; }
+  // NET-LAG(10-04 교사 '실시간으로 잘될까 — 렉'): 상태마다 서버 시각(ts = 저장된 때)을 붙여, 받는 쪽이 '몇 초 전 자리인지'를 알고 그만큼 앞질러 그린다
+  //   (예전 = 받은 때부터만 앞질러 그려 보내는 길·서버 길 시간만큼 늘 뒤처짐) · 늦게 도착한 옛 상태(ts가 더 이른 것)는 버림 · 속도 = 두 상태의 ts 차이로
+  //   보내기는 앞 요청을 기다리지 않고 2개까지 겹쳐 보냄(느린 와이파이 왕복 0.5초에도 초당 ≈4~8번) · 보낸 사람의 왕복/2를 더해 '찍힌 때'를 어림
+  // 겹쳐 보내기 = 왕복 < 300ms면 2개(+200ms 흉내: 나쁜 10% 차이 1.7 → 0.9m) · 더 느리면 1개(크롬 지연 흉내에선 겹치면 줄이 밀림) · 앞질러 그리기 상한 0.6초(방향을 자주 바꾸므로 더 멀리는 안 함)
+  const QS = new URLSearchParams(location.search), NFQ = +(QS.get('nf') || 0), NCAP = +(QS.get('ncap') || 0.6);   // 시험용 ?nf=1|2 · ?ncap=초
+  const NF = () => NFQ || (NM.lag && NM.lag >= 300 ? 1 : 2);
+  function netSet(a, v) {
+    if (v === a.net) return; const ts = (a.kind === 'bot' ? v[5] : v[6]) || 0, p = a.net, pts = a.nts || 0;
+    if (p && ts && pts && ts <= pts) return;   // 옛 상태(순서가 뒤바뀌어 도착)
+    if (p && ts && pts && (v[0] - p[0]) ** 2 + (v[2] - p[2]) ** 2 < 64) { const g = Math.max(0.04, Math.min(1, (ts - pts) / 1000)); let vx = (v[0] - p[0]) / g, vz = (v[2] - p[2]) / g; const sp = Math.hypot(vx, vz); if (sp > 9.5) { vx *= 9.5 / sp; vz *= 9.5 / sp; } a.nvx = vx; a.nvz = vz; }
     else { a.nvx = 0; a.nvz = 0; }
-    a.net = v; a.nt = now;
+    a.net = v; a.nts = ts; a.nt = performance.now();
   }
   function netActor(a, dt) {
     const v = a.net; if (!v) return;
-    const age = a.nt ? Math.min(0.45, (performance.now() - a.nt) / 1000) : 0, tx = v[0] + (a.nvx || 0) * age, tz = v[2] + (a.nvz || 0) * age;
+    const ts = a.nts, up = (a.kind === 'bot' ? 0 : (v[7] || 0)) / 2000;   // 보낸 사람 왕복/2 = 찍고 서버에 닿기까지
+    const age = Math.max(0, Math.min(NCAP, ts ? (sNow() - ts) / 1000 + up : (performance.now() - a.nt) / 1000)), tx = v[0] + (a.nvx || 0) * age, tz = v[2] + (a.nvz || 0) * age;
     if ((tx - a.x) ** 2 + (tz - a.z) ** 2 > 100) { a.x = tx; a.y = v[1]; a.z = tz; }
-    else { const k = Math.min(1, dt * 9); a.x += (tx - a.x) * k; a.y += (v[1] - a.y) * Math.min(1, dt * 12); a.z += (tz - a.z) * k; }
+    else { const k = 1 - Math.exp(-18 * dt); a.x += (tx - a.x) * k; a.y += (v[1] - a.y) * Math.min(1, dt * 12); a.z += (tz - a.z) * k; }
     let dh = v[3] - a.h; while (dh > 180) dh -= 360; while (dh < -180) dh += 360; a.h = (a.h + dh * Math.min(1, dt * 12) + 360) % 360;
     a.vx = a.nvx || 0; a.vz = a.nvz || 0; a.running = Math.hypot(a.vx, a.vz) > 5.5;
     const f = v[4] | 0; a.inv = f & 1 ? Math.max(a.inv, 0.5) : 0; a.star = f & 8 ? Math.max(a.star, 0.5) : (a.star > 0 && !(f & 8) ? 0 : a.star);
@@ -762,16 +770,18 @@ export default async function start(map, params = {}) {
   function netSend(dt, beat) {
     NM.sendT -= dt; NM.bT -= dt;
     const busy = R && (phase === 'hide' || phase === 'seek' || phase === 'count');
-    if ((NM.sendT <= 0 || beat) && !NM.busyS) {
-      NM.sendT = busy ? 0.12 : 2; NM.busyS = true; const t1 = NM.lastSend = performance.now(), a = ACT[ME], p = map.player.get();
-      nreq('/s/' + NM.pid, 'PUT', [r2(p.x), r2(p.y), r2(p.z), Math.round(p.h), (a && a.inv > 0 ? 1 : 0) | (a && a.star > 0 ? 8 : 0), (NM.beatN = (NM.beatN + 1) % 100)])
-        .then(() => { NM.lag = Math.round(performance.now() - t1); }).catch(() => {}).finally(() => { NM.busyS = false; });
+    if ((NM.sendT <= 0 || beat) && NM.busyS < NF()) {   // 2개까지 겹쳐 보냄
+      NM.sendT = busy ? 0.1 : 2; NM.busyS++; const t1 = NM.lastSend = performance.now(), w1 = Date.now(), a = ACT[ME], p = map.player.get();
+      nreq('/s/' + NM.pid, 'PUT', [r2(p.x), r2(p.y), r2(p.z), Math.round(p.h), (a && a.inv > 0 ? 1 : 0) | (a && a.star > 0 ? 8 : 0), (NM.beatN = (NM.beatN + 1) % 100), { '.sv': 'timestamp' }, Math.min(5000, NM.lag || 0)])
+        .then(r => { const rtt = performance.now() - t1; NM.lag = Math.round(NM.lag ? NM.lag * 0.7 + rtt * 0.3 : rtt);
+          if (r && typeof r[6] === 'number') { NM.offs.push([rtt, r[6] - (w1 + rtt / 2)]); if (NM.offs.length > 24) NM.offs.shift(); let b = NM.offs[0]; for (const o of NM.offs) if (o[0] < b[0]) b = o; NM.off = b[1]; } })   // 시계 맞추기 = 왕복이 가장 짧았던 것
+        .catch(() => {}).finally(() => { NM.busyS--; });
     }
     if (beat) return;
-    if (NM.host && busy && NM.bT <= 0 && !NM.busyB) {
-      NM.bT = 0.12; NM.busyB = true; const b = {};
-      for (const a of ACT) if (a.kind === 'bot') b[a.i] = [r2(a.x), r2(a.y), r2(a.z), Math.round(a.h), (a.inv > 0 ? 1 : 0) | (a.star > 0 ? 8 : 0)];
-      nreq('/b', 'PUT', b).catch(() => {}).finally(() => { NM.busyB = false; });
+    if (NM.host && busy && NM.bT <= 0 && NM.busyB < NF()) {
+      NM.bT = 0.1; NM.busyB++; const b = {};
+      for (const a of ACT) if (a.kind === 'bot') b[a.i] = [r2(a.x), r2(a.y), r2(a.z), Math.round(a.h), (a.inv > 0 ? 1 : 0) | (a.star > 0 ? 8 : 0), { '.sv': 'timestamp' }];
+      nreq('/b', 'PUT', b).catch(() => {}).finally(() => { NM.busyB--; });
     }
   }
   // 방장: 판 끝 → 다음 도망자(잡은 사람 — 아직 안 해 봤으면 · 팩맨 VS) → 다 했으면 경기 끝
@@ -819,7 +829,8 @@ export default async function start(map, params = {}) {
     const rc = ids.length >= 6 ? 2 : 1, rounds = Math.ceil(ids.length / rc);
     let h = '<div style="font-weight:900;font-size:18px">🫣 숨바꼭질 대작전 — 친구와</div>'
       + '<div style="margin-top:6px;font-size:13px;color:#4a5b70">🏃 도망자 ' + rc + '명 = 하늘에서 봐요(지도) · 👀 술래 = 3인칭 · 빈자리는 술래 봇<br>한 판 ' + (cfg.hide + cfg.seek) + '초(숨기 ' + cfg.hide + ' + 찾기 ' + cfg.seek + ') · 모두 한 번씩 도망자(' + rounds + '판' + (rc > 1 && ids.length % 2 ? ' · 마지막 판은 1명 + 👥 인원 보정' : '') + ')' + (ids.length > 8 ? ' · 8명까지(나머지는 구경하다 차례에 들어와요)' : '') + ' · 잡은 사람이 다음 도망자</div>'
-      + '<div style="margin-top:8px;padding:7px 9px;border-radius:9px;background:#eef4ff">👥 ' + ids.map(id => (id === NM.pid ? '<b>⭐ ' + esc(NM.name) + '(나)</b>' : esc(P[id].n))).join(' · ') + '</div>';
+      + '<div style="margin-top:8px;padding:7px 9px;border-radius:9px;background:#eef4ff">👥 ' + ids.map(id => (id === NM.pid ? '<b>⭐ ' + esc(NM.name) + '(나)</b>' : esc(P[id].n)) + net1(id)).join(' · ') + '</div>'
+      + (ids.some(id => netMs(id) >= 450) ? '<div style="margin-top:4px;font-size:12px;color:#b4232c">🔴 인터넷이 느린 친구가 있어요 — 친구 몸이 끊겨 보이거나 잡기가 늦을 수 있어요(와이파이 가까이 · 다른 탭 닫기)</div>' : '');
     const fb = NM.lastBoard; if (fb) h += '<div style="margin-top:8px;padding:7px 9px;border-radius:9px;background:#fff3bf;font-size:14px">' + fb + '</div>';
     if (m.st === 'play') h += '<div style="margin-top:8px;font-weight:800">⏳ 경기 중이에요 — 다음 판부터 같이 해요</div>';
     else if (NM.host) h += '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px">' + bt('start', '▶ 시작!', true, ';font-size:17px;padding:8px 18px') + '</div>';
@@ -827,6 +838,9 @@ export default async function start(map, params = {}) {
     h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><span style="font-size:12px;color:#5a6b80">방 ' + esc(NM.room.slice(1)) + '</span>' + bt('leave', '🚪 나가기') + '</div>';
     if (NM.ui.dataset.h !== h) { NM.ui.dataset.h = h; NM.ui.innerHTML = h; }
   }
+  // 📶 왕복 시간(각자 재서 상태 8번째 칸으로 보냄): 🟢 < 250ms · 🟡 < 450 · 🔴 그 이상
+  function netMs(id) { const v = (NM.D.s || {})[id]; return id === NM.pid ? NM.lag || 0 : v && v[7] || 0; }
+  function net1(id) { const ms = netMs(id); return ms ? ' <span style="font-size:11px;color:#5a6b80" title="왕복 ' + ms + 'ms">' + (ms < 250 ? '🟢' : ms < 450 ? '🟡' : '🔴') + '</span>' : ''; }
   async function lobbyClick(e) {
     e.stopPropagation(); const b = e.target.closest('[data-w]'); if (!b || !NM.on) return; const w = b.dataset.w;
     try { if (w === 'start' && NM.host) await hostStart(); else if (w === 'leave') map.quit(); }
@@ -834,7 +848,7 @@ export default async function start(map, params = {}) {
   }
   function finalBoard() {
     if (R) { R = null; endRoundUI(); }
-    if (map.top.on) map.top.exit(); btn.style.display = 'none'; map.hud.goal(null); for (const k of ['hs-time', 'hs-hot', 'hs-role']) map.hud.chip(k, null); chipK = {};
+    if (map.top.on) map.top.exit(); btn.style.display = 'none'; map.hud.goal(null); for (const k of ['hs-time', 'hs-hot', 'hs-role', 'hs-net']) map.hud.chip(k, null); chipK = {};
     const L = [...LED.entries()], best = L.filter(([, v]) => v.run.length).sort((a, b) => Math.max(...b[1].run) - Math.max(...a[1].run))[0], ct = L.filter(([, v]) => v.ct).sort((a, b) => b[1].ct - a[1].ct)[0];
     NM.lastBoard = '🏁 지난 경기 — 🏆 도망왕 ' + (best ? esc(best[0]) + ' ' + Math.max(...best[1].run) + '초' : '-') + ' · 👀 술래왕 ' + (ct ? esc(ct[0]) + ' ' + ct[1].ct + '번' : '-')
       + '<br><span style="font-size:13px">' + L.map(([n, v]) => esc(n) + ' ' + (v.run.length ? '🏃' + v.run.join('·') + '초' : '') + (v.ct ? ' 👀' + v.ct : '')).join(' / ') + '</span>';
