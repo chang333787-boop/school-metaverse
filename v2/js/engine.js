@@ -62,6 +62,8 @@ export function createEngine(H) {
     setCrouch(v) { CTRL.crouchForce = v == null ? null : !!v; },   // 시험·연출용 강제(null = 입력대로)
     hidden: () => !!hidden,
     hideSpot: () => hidden,
+    // HS-1(10-04 비대칭 숨바꼭질): 투명 — 내 몸이 비치고(38%) 술래 시야(see)가 1.3 m 밖이면 못 봄 · 발소리는 그대로 들림 · 게임이 멈추면 꺼짐
+    invisible(on) { if (on === undefined) return invis; return setInvis(on); },
     // 소리 0 가만히 · 1 작음(웅크려 걷기) · 2 보통(걷기) · 3 큼(달리기·점프·뛰어내림) — 숨어 있거나 앉아 있으면 0
     noise() { if (hidden || ACT.sit) return 0; if (CTRL.noiseT > 0 || (!P.ground && !ACT.anim)) return 3; const v = P.spd || 0; if (v < 0.3) return 0; if (CTRL.crouched) return 1; return v > 5.5 ? 3 : 2; },
   };
@@ -103,6 +105,7 @@ export function createEngine(H) {
     const fx0 = Array.isArray(from) ? from[0] : from.x, fy0 = Array.isArray(from) ? from[1] : from.y, fz0 = Array.isArray(from) ? from[2] : from.z, h = Array.isArray(from) ? o.h : from.h;
     const t = targetXYZ(to), dx = t.x - fx0, dz = t.z - fz0, d = Math.hypot(dx, dz);
     if (d > range) return false;
+    if ((to === 'player' || to == null) && invis && d > 1.3) return false;   // HS-1 투명
     if (d > 0.9 && h != null) { const [ux, uz] = fwd(h); if ((dx * ux + dz * uz) / (d || 1) < Math.cos(fovDeg / 2 * R2D)) return false; }
     return !sightBlocked(fx0, fy0, fz0, t.x, t.y, t.z);
   }
@@ -131,6 +134,11 @@ export function createEngine(H) {
 
   // ---------- 3. 숨는 자리 ----------
   const HIDES = []; let hidden = null, vig = null, hidePrev = null;
+  let invis = false, invMats = null;   // HS-1: 투명(내 캐릭터 재질 — 처음 켤 때 원래 값을 적어 둠)
+  function setInvis(on) { on = !!on; if (on === invis) return invis; invis = on;
+    if (!invMats) { invMats = []; kid.pg.traverse(o => { if (o.isMesh && o.material) for (const m of [].concat(o.material)) if (!invMats.some(r => r.m === m)) invMats.push({ m, t: m.transparent, o: m.opacity, d: m.depthWrite }); }); }
+    for (const r of invMats) { r.m.transparent = on ? true : r.t; r.m.opacity = on ? 0.38 : r.o; r.m.depthWrite = on ? false : r.d; r.m.needsUpdate = true; }
+    return invis; }
   // 앞면 방위가 없으면(덤불·나무·미끄럼틀) 8방향 중 걸어 설 수 있는 쪽(near가 있으면 그쪽에 가까운 방향 먼저)
   // 서는 칸은 그 자리와 같은 구역이어야 한다(벽 너머 옆 교실 칸을 잡지 않게 — 교탁이 벽 쪽이면 findEntry가 벽 뒤 칸을 찾았다)
   const sameZone = (x, y, z, e) => { const a = zoneAt(x, y + 0.3, z); if (!a) return true; const b = zoneAt(e.x, e.y + 0.05, e.z); return !!b && b.id === a.id; };
@@ -684,6 +692,7 @@ export function createEngine(H) {
     if (H.getScale && H.getScale() !== 1) { H.setScale(1); if (!CTRL.crouched && q.blockedAt(P.x, P.z, P.y)) H.unstick(); }   // SHRINK-1: 원래 크기로 — 책상 위·밑이면(평소 몸엔 NS 상자 속) 가까운 걷는 칸으로
     if (CTRL.crouchOK || CTRL.crouched) { const was = CTRL.crouched; CTRL.crouchOK = false; CTRL.crouchForce = null; CTRL.crouched = false; P.bh = 1.5; touch.setCrouchBtn(false); if (was && q.blockedAt(P.x, P.z, P.y)) H.unstick(); }
     for (const el of [vig, invEl, fadeEl]) if (el) el.remove(); vig = invEl = fadeEl = null; if (css) { css.remove(); css = null; }
+    setInvis(false);   // HS-1
     dirtN = 0;
     if (time0 != null) { const k = time0; time0 = null; if (ui.getTime && ui.getTime() !== k) ui.setTime(k); }
   }

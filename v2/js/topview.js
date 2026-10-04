@@ -5,8 +5,10 @@
 //   카메라 = CAM_OVR(평소 카메라를 덮어씀) · 디테일 거리·가림 컬링 = 영상과 같은 setView · 안개·near/far는 나올 때 되돌림
 //   TOP-2(블록 위에서 짓기): o.tool = { down(sx,sy,e), move(sx,sy,e), up(sx,sy,e), cancel(), hover(sx,sy) } — 켜져 있으면 왼쪽 끌기·한 손가락 = 도구 · 오른쪽 끌기·두 손가락 = 옮기기(가운데 끌기·Shift = 돌리기) · 톡 창 없음
 //     setTool(t|null)로 바꿈 · marks([{x,y,z,t}]) = 게임 이름표(노랑 — 방 이름보다 먼저) · o.floorKeys === false = 1·2·3 키를 게임에 넘김
+//   HS-1(숨바꼭질 숨는 쪽): o.follow = 카메라가 내 몸을 따라감(끌기로 옮기지 않음 · 톡 = onTap) · o.playerKeys = WASD·화살표·Q/E·Space·Shift는 내 몸으로(이 화면 위쪽 = W — 매 프레임 setYaw)
+//     · o.vision = 보이는 반지름(m) — 그 밖은 어둡게(DOM 한 장 · 술래 머리 위 ❗❓는 위에 보임 = 소리 신호) · o.bar === false = 아래 단추 줄 없음
 export function createTop(env) {
-  const { THREE, camera, renderer, scene, world, setCam, setView, getZones, zoneAt, player } = env;
+  const { THREE, camera, renderer, scene, world, setCam, setView, getZones, zoneAt, player, setYaw } = env;
   const FH = (world.details && world.details.FH) || 3.4;
   const css = document.createElement('style');
   css.textContent = `
@@ -35,6 +37,7 @@ export function createTop(env) {
 #tv-pop:after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-8px;border:8px solid transparent;border-bottom:0;border-top-color:#fff}
 #tv-pop small{display:block;font-weight:600;font-size:12px;color:#5b6b80;margin-top:2px}
 #tv-pop button{display:block;width:100%;margin-top:8px;min-height:42px;border:0;border-radius:9px;background:#ffd23f;color:#1d3557;font:inherit;font-size:14px;cursor:pointer}
+#tv-fog{position:fixed;inset:0;z-index:17;pointer-events:none}
 #tv-help{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translateX(-50%);z-index:25;font:700 13px/1.3 system-ui,-apple-system,'Malgun Gothic',sans-serif;color:#fff;background:rgba(15,25,45,.72);padding:7px 12px;border-radius:10px;pointer-events:none;max-width:calc(100vw - 200px);text-align:center;transition:opacity .6s}
 body.top-on #help,body.top-on #hint,body.top-on .tch,body.top-on #mmap,body.top-on #mm-dim{display:none!important}
 body.small #tv-bar{gap:4px;padding:4px}
@@ -107,7 +110,8 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     S.pad = el('div', null, null, document.body); S.pad.id = 'tv-pad';
     S.lb = el('div', null, null, document.body); S.lb.id = 'tv-lb';
     S.meEl = el('div', 'me', '나', S.lb);
-    S.bar = el('div', null, null, document.body); S.bar.id = 'tv-bar';
+    if (o.vision) { S.vis = el('div', null, null, document.body); S.vis.id = 'tv-fog'; }
+    S.bar = el('div', null, null, document.body); S.bar.id = 'tv-bar'; if (o.bar === false) S.bar.style.display = 'none';
     const g1 = el('div', 'g', null, S.bar);
     S.fb = [['roof', '🏠<span class="lbl"> 지붕</span>'], [1, '1층'], [2, '2층']].map(([f, t]) => { const b = el('button', null, t, g1); b.type = 'button'; b.title = f === 'roof' ? '지붕 그대로(3)' : f + '층(' + f + ')'; b.onclick = e => { e.stopPropagation(); setFloor(f); }; return [f, b]; });
     const g2 = el('div', 'g', null, S.bar);
@@ -122,6 +126,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     S.cmp.onclick = e => { e.stopPropagation(); S.T.yaw = Math.round(S.C.yaw / (2 * Math.PI)) * 2 * Math.PI; };
     S.sc = el('div', null, '<span></span><b></b>', document.body); S.sc.id = 'tv-sc';
     if (o.help !== false) { S.help = el('div', null, esc(o.help || (matchMedia('(pointer: coarse)').matches ? '끌어서 옮기기 · 두 손가락으로 확대·돌리기 · 톡 = 그곳 이름' : '끌기·두 손가락 쓸기 = 옮기기 · 휠·벌리기 = 확대 · 오른쪽 끌기·Q/E = 돌리기 · 클릭 = 그곳 이름')), document.body); S.help.id = 'tv-help';
+      if (o.follow) { S.help.style.top = 'auto'; S.help.style.bottom = 'calc(14px + env(safe-area-inset-bottom))'; }   // 따라가기 = 위쪽은 게임 목표 줄 자리
       S.helpT = setTimeout(() => { if (S && S.help) S.help.style.opacity = '0'; }, 7000); }
     document.body.classList.add('top-on');
     try { document.exitPointerLock && document.pointerLockElement && document.exitPointerLock(); } catch (e) { /* */ }
@@ -144,7 +149,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     camera.near = s.near0; camera.far = s.far0; camera.updateProjectionMatrix();
     removeEventListener('keydown', onKey, true); removeEventListener('keyup', onKeyUp, true); removeEventListener('blur', onBlur);
     clearTimeout(s.helpT);
-    [s.pad, s.lb, s.bar, s.cmp, s.sc, s.help, s.pop].forEach(e => e && e.remove());
+    [s.pad, s.lb, s.bar, s.cmp, s.sc, s.help, s.pop, s.vis].forEach(e => e && e.remove());
     document.body.classList.remove('top-on');
     if (s.o.onLeave) try { s.o.onLeave(); } catch (e) { /* */ }
   }
@@ -192,6 +197,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
       let da = n.ang - p0.ang; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI; S.T.yaw += da;
       pan(n.mx - p0.mx, n.my - p0.my); S.pinch = n; return; }
     if (S.moved < 5) return;
+    if (S.o.follow) { if (q.b === 2 || e.shiftKey) { S.T.yaw += dx * 0.006; } return; }   // 따라가기 = 끌어서 옮기지 않음(오른쪽 끌기 = 돌리기)
     if (S.tool && q.b === 2 && !e.shiftKey) { pan(dx, dy); return; }   // 도구가 있으면 오른쪽 끌기 = 옮기기
     if (q.b === 2 || q.b === 1 || e.shiftKey) { S.T.yaw += dx * 0.006; S.T.p = clamp(S.T.p - dy * 0.004, P_LOW, P_TOP); paintBar(); return; }   // 오른쪽 끌기 = 돌리기·기울이기
     pan(dx, dy);
@@ -215,6 +221,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
   function onKey(e) {
     if (!S) return; const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     const c = e.code;
+    if (S.o.playerKeys && (KEYS.has(c) || c === 'Space' || c.startsWith('Shift'))) return;   // 내 몸으로(main.js)
     if (KEYS.has(c)) { S.keys.add(c); e.preventDefault(); e.stopImmediatePropagation(); return; }
     if (c === 'Equal' || c === 'NumpadAdd') { zoom(1 / 1.3); } else if (c === 'Minus' || c === 'NumpadSubtract') { zoom(1.3); }
     else if (S.o.floorKeys !== false && (c === 'Digit1' || c === 'Numpad1')) setFloor(1); else if (S.o.floorKeys !== false && (c === 'Digit2' || c === 'Numpad2')) setFloor(2); else if (S.o.floorKeys !== false && (c === 'Digit3' || c === 'Numpad3')) setFloor('roof');
@@ -222,7 +229,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     else return;
     e.preventDefault(); e.stopImmediatePropagation();
   }
-  function onKeyUp(e) { if (S && KEYS.has(e.code)) { S.keys.delete(e.code); e.stopImmediatePropagation(); } }
+  function onKeyUp(e) { if (S && !S.o.playerKeys && KEYS.has(e.code)) { S.keys.delete(e.code); e.stopImmediatePropagation(); } }
   function onBlur() { if (S) { S.keys.clear(); S.ptr.clear(); S.pinch = null; S.pad.classList.remove('drag'); if (S.toolOn) { S.toolOn = false; S.tool && S.tool.cancel && S.tool.cancel(); } } }
   // 톡 = 그 자리 이름 + 단추
   function zoneUnder(g) {
@@ -233,6 +240,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
   function tap(sx, sy) {
     closePop(); const g = groundAt(sx, sy); if (!g) return;
     const { zone, y } = zoneUnder(g), pt = { x: g.x, y, z: g.z, zone };
+    if (S.o.follow && !(S.o.tapActions && S.o.tapActions.length)) { if (S.o.onTap) S.o.onTap(pt); return; }   // 따라가기 = 톡 = 게임(그곳으로 걸어가기)
     const acts = (S.o.tapActions || []).filter(a => !a.when || a.when(pt));
     const d = el('div', null, esc(zone ? zone.label : '바깥') + (zone && zone.floor === 2 ? '<small>2층</small>' : ''), document.body); d.id = 'tv-pop';
     acts.forEach(a => { const b = el('button', null, esc(a.t), d); b.type = 'button'; b.onclick = ev => { ev.stopPropagation(); closePop(); a.f(pt); }; });
@@ -250,6 +258,8 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
       if (dx || dy) pan(dx, dy);
       if (kk.has('KeyQ')) S.T.yaw -= 1.6 * dt; if (kk.has('KeyE')) S.T.yaw += 1.6 * dt;   // yaw +면 지도가 시계 방향으로 돈다
     }
+    if (S.o.follow) { const me = player(); S.T.tx = me.x; S.T.tz = me.z; }
+    if (S.o.playerKeys && setYaw) setYaw(S.C.yaw);   // W = 이 화면 위쪽
     const C = S.C, T = S.T, k = 1 - Math.exp(-11 * dt);
     C.tx += (T.tx - C.tx) * k; C.tz += (T.tz - C.tz) * k; C.ty += (T.ty - C.ty) * k; C.yaw += (T.yaw - C.yaw) * k; C.p += (T.p - C.p) * k;
     C.d *= Math.pow(T.d / C.d, k);   // 곱으로 다가감(확대가 고르게)
@@ -291,6 +301,8 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     const me = player(), pm = proj(me.x, me.y + 1.9, me.z);
     if (pm && (S.floor === 'roof' || Math.abs(me.y - floorY(S.floor)) < 2.6)) { S.meEl.style.transform = 'translate(' + Math.round(pm[0] - 16) + 'px,' + Math.round(pm[1] - 32) + 'px)'; S.meEl.style.visibility = 'visible'; }
     else S.meEl.style.visibility = 'hidden';
+    if (S.vis) { const me = player(), pm = proj(me.x, me.y + 0.4, me.z), pr = proj(me.x + Math.cos(S.C.yaw) * S.o.vision, me.y + 0.4, me.z - Math.sin(S.C.yaw) * S.o.vision);   // 보이는 반지름 밖 = 어둡게
+      if (pm && pr) { const r = Math.hypot(pr[0] - pm[0], pr[1] - pm[1]); S.vis.style.background = 'radial-gradient(circle at ' + pm[0].toFixed(0) + 'px ' + pm[1].toFixed(0) + 'px, rgba(8,12,24,0) ' + (r * 0.8).toFixed(0) + 'px, rgba(8,12,24,.86) ' + (r * 1.08).toFixed(0) + 'px)'; } }
     // 톡 창은 그 땅 점을 따라감
     if (S.pop && S.popAt) { const pp = proj(...S.popAt); if (pp) { S.pop.style.left = pp[0] + 'px'; S.pop.style.top = pp[1] + 'px'; } }
     // 방위표: 가운데 땅 점에서 북쪽(−z) 10m가 화면에서 어느 쪽인가
@@ -306,6 +318,6 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     look: (x, z, d) => { if (!S) return; S.T.tx = x; S.T.tz = z; if (d) S.T.d = clamp(d, D_MIN, D_MAX); clampT(); }, ground: (sx, sy) => S ? groundAt(sx, sy) : null,
     setTool: t => { if (!S) return; if (S.toolOn && S.tool && S.tool.cancel) S.tool.cancel(); S.toolOn = false; S.tool = t || null; closePop(); },
     marks: L => { if (!S) return; S.MK.forEach(m => m.el.remove()); S.MK = (L || []).map(m => ({ ...m, el: el('div', 'lb mk', esc(m.t), S.lb) })); },
-    get camera() { return camera; } };
+    get camera() { return camera; }, vision: m => { if (S && S.vis) S.o.vision = m; } };
   return api;
 }

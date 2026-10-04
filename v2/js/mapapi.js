@@ -5,7 +5,7 @@
 //   GAME-FIND-1(09-26): 미니맵(minimap.js)·놀이 고르기 칩(gamepick.js)은 같은 폴더의 HUD 모듈 — 둘 다 import 없음(THREE·월드는 여기서만 host로 받는다).
 import { createMinimap } from './minimap.js?v=12';
 import { createGamePicker } from './gamepick.js?v=12';
-import { createEngine } from './engine.js?v=11';
+import { createEngine } from './engine.js?v=12';
 import { createWorldFx } from './worldfx.js?v=10';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 // PERF-WIN: 숫자 키(윗줄·숫자 패드) → 1~9 · 아니면 0 — e.key는 한글 입력기가 켜져 있으면 'Process'라 e.code로 읽는다
 export const digitOf = e => { const m = /^(?:Digit|Numpad)([0-9])$/.exec(e.code || ''); return m ? +m[1] : 0; };
@@ -473,7 +473,7 @@ export function createMapApi(host, NAV, META) {
     case 'paint': return FX.world.paint(o.target, o);
     default: return null; } };
   // 플레이어 동사(웅크리기·숨음·소리) — player 객체에 붙인다(범위 파사드도 같은 player)
-  Object.assign(player, { crouch: on => ENG.player.crouch(on), crouched: ENG.player.crouched, setCrouch: v => ENG.player.setCrouch(v), hidden: ENG.player.hidden, hideSpot: ENG.player.hideSpot, noise: ENG.player.noise,
+  Object.assign(player, { crouch: on => ENG.player.crouch(on), crouched: ENG.player.crouched, setCrouch: v => ENG.player.setCrouch(v), hidden: ENG.player.hidden, hideSpot: ENG.player.hideSpot, invisible: on => ENG.player.invisible(on), noise: ENG.player.noise,
     scale: (s9, o9) => ENG.player.scale(s9, o9), scaled: ENG.player.scaled, groundAt: ENG.player.groundAt, blockedAt: ENG.player.blockedAt });   // SHRINK-1(09-27): 작아지기 — §12.12
 
   // ---------- 12. 도구 ----------
@@ -643,7 +643,7 @@ export function createMapApi(host, NAV, META) {
       // ENGINE-1(09-27) 행동 사전 — §12. 전부 게임이 멈추면(dispose → ENG.reset) 처음대로
       see: ENG.see, hide: ENG.hide, note: (t9, b9) => ENG.note(t9, b9), investigate: ENG.investigate, dig: ENG.dig, prop: ENG.prop, carry: ENG.carry,
       story: ENG.story, door: ENG.door, chaser: ENG.chaser, fade: (s9, c9) => ENG.fade(s9, c9),
-      top: host.top ? { enter: o => { const T9 = host.top; t({ remove: () => T9.exit() }); return T9.enter(o); }, exit: () => host.top.exit(), floor: f => host.top.floor(f), look: (x, z, d) => host.top.look(x, z, d), ground: (sx, sy) => host.top.ground(sx, sy), setTool: t => host.top.setTool(t), marks: L => host.top.marks(L), get on() { return host.top.on; }, get state() { return host.top.state; } } : null,   // TOP-1(10-04): 하늘에서 보기(게임이 멈추면 저절로 나옴)
+      top: host.top ? { enter: o => { const T9 = host.top; t({ remove: () => T9.exit() }); return T9.enter(o); }, exit: () => host.top.exit(), floor: f => host.top.floor(f), look: (x, z, d) => host.top.look(x, z, d), ground: (sx, sy) => host.top.ground(sx, sy), setTool: t => host.top.setTool(t), marks: L => host.top.marks(L), vision: m => host.top.vision(m), get on() { return host.top.on; }, get state() { return host.top.state; } } : null,   // TOP-1(10-04): 하늘에서 보기(게임이 멈추면 저절로 나옴)
       lego: on => { if (!world.lego) return; world.lego(!!on); if (on) t({ remove: () => world.lego(false) }); },   // LEGO-2(10-04): 학교 전체 레고 무늬(블록 놀이) — 놀이가 멈추면 꺼짐
       film: host.film ? { play: (shots, o) => { const f = host.film; t({ remove: () => f.stop('stop') }); return f.play(shots, o); }, stop: k => host.film.stop(k), get on() { return host.film.on; } } : null,   // FILM-1(10-04): 오프닝·클로징 영상(게임이 멈추면 영상도 멈춤) — v2/js/film.js
       time: k => (k ? ENG.setTime(k) : ui.getTime && ui.getTime()),   // 시간대 바꾸기(게임이 멈추면 원래대로) · 인자 없으면 지금 시간대

@@ -743,6 +743,8 @@ map.top.exit() · floor(f) · look(x, z, d) · ground(sx, sy) → 땅 점 · on 
 ```
 - 게임이 멈추면 저절로 나온다(범위 파사드) · 들어가 있는 동안 main.js busy()가 참(멈춤 창 없음) · 플레이어는 게임이 `map.player.freeze(true)`로.
 - 지붕 벗기기는 재질마다 자르는 면 다섯(clipIntersection) — 영상(film.js)과 동시에 켜지 않는다.
+- **따라가기(HS-1 · 숨바꼭질 숨는 쪽)**: `follow: true`(카메라가 내 몸을 따라감 · 끌어도 안 옮겨짐 · 오른쪽 끌기 = 돌리기 · 톡 = `onTap(pt)` 바로 — 이름 창 없음) · `playerKeys: true`(WASD·화살표·Q/E·Space·Shift는 내 몸으로 — main.js가 매 프레임 camYaw = 지도 yaw → W = 화면 위쪽) · `vision: m`(그 반지름 밖 어둡게 — DOM 한 장 · `map.top.vision(m)`로 바꿈) · `bar: false`(아래 단추 줄 없음) · `floorKeys: false`. 걷기는 게임이 `nav.path` + `map.player.steer(dx, dz, v, false)`.
+- `map.player.invisible(on)`(엔진 · HS-1): 내 몸 38% 비침 + `see(…, 'player')`가 1.3m 밖이면 false(술래 chaser가 놓침 → search) · 소리(noise)는 그대로 · 게임이 멈추면 꺼짐.
 
 ## 18. 오프닝 화면 · 놀이 고르기(TITLE-1 · 09-27) — `v2/js/title.js` + 모양 `v2/title.css`
 
