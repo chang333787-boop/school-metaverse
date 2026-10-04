@@ -6363,7 +6363,7 @@ export function buildWorld(scene) {
           return seatAt(nm, sx, s, VICE); }
         if (L && L.tSeat && sz !== 'small' && !spots.length) {   // 교실형 방 선생님 = 선생님 책상 의자(나래반은 칠판 앞에 서서 설명)
           if (room === '나래반') return nameSign(nm, L.teacher.x, guideAt(nm, L.teacher.x, L.y, L.teacher.z, L.tFace ?? 1, person(L.teacher.x, L.y, L.teacher.z, sx, s, L.tFace ?? 1, 'explain')), L.teacher.z);   // 09-29: 나래반선생님도 견학 한마디
-          return seatAt(nm, sx, s, { ...L.tSeat, y: L.y, signOff: room === '돌봄교실' ? 0.6 : 0 });
+          return seatAt(nm, sx, s, { ...L.tSeat, y: L.y, signOff: 0.6 });   // 이름표를 0.6 앞으로 — 선생님 의자가 천장 TV 바로 밑(돌봄 09-30 · 사랑반 10-04 교사 'TV가 이름 가려')
         }
         const sp = spots.shift();
         if (sp) seatAt(nm, sx, s, nm === '교장선생님' ? { ...sp, role: 'principal' } : sp); else place(zn, nm, sx, s);
