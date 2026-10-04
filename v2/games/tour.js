@@ -200,6 +200,18 @@ export default async function start(map, params = {}) {
     const go = () => { if (!f.isConnected) return; for (const m of ['captions', 'cc']) try { f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'unloadModule', args: [m] }), '*'); } catch (e) { /* */ } };
     f.addEventListener('load', () => [400, 1200, 2500, 4500, 8000, 14000].forEach(t => setTimeout(go, t)));
   }
+  // 아이폰 사파리(10-04 교사 휴대폰 사진 — 영상 왼쪽 검은 띠·오른쪽 잘림): 상자 안(스크롤·둥근 잘라내기·transform) 유튜브 영상을 어긋나게 그린다
+  //   → iframe은 body 맨 위층(position: fixed)에 두고, 창 안 영상 자리(holder)의 화면 자리를 프레임마다 따라간다(holder가 사라지면 같이 지움)
+  function ytFloat(holder, f, z) {
+    f.classList.add('yt-float', 'ttl-keep'); Object.assign(f.style, { position: 'fixed', border: '0', zIndex: String(z || 45), borderRadius: '10px', background: '#000', left: '0px', top: '0px', width: '0px', height: '0px' });
+    document.body.appendChild(f); let last = '';
+    const fit = () => { if (!f.isConnected) return; if (!holder.isConnected) { f.remove(); return; }
+      const r = holder.getBoundingClientRect(), cs = getComputedStyle(holder), op = cs.visibility === 'hidden' ? 0 : +(getComputedStyle(holder.closest('.fl-u, .tp') || holder).opacity || 1);
+      const k = r.left.toFixed(1) + ',' + r.top.toFixed(1) + ',' + r.width.toFixed(1) + ',' + r.height.toFixed(1) + ',' + op.toFixed(2);
+      if (k !== last) { last = k; Object.assign(f.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', opacity: String(op), visibility: r.width > 4 && op > 0.02 ? 'visible' : 'hidden' }); }
+      requestAnimationFrame(fit); };
+    fit(); return f;
+  }
   function openMedia(s, kind, i = 0) {   // 목록에서 고른 영상 하나 / 사진 하나(사진은 ‹ › 로 넘겨 보기)
     if (media) media.el.remove();
     const el = mk('div', 'tp'); el.id = 'tour-media'; el.setAttribute('role', 'dialog');
@@ -216,7 +228,7 @@ export default async function start(map, params = {}) {
       else { const f = document.createElement('iframe');
         f.src = 'https://www.youtube-nocookie.com/embed/' + v.id + '?autoplay=1&rel=0&playsinline=1&modestbranding=1&cc_load_policy=0&enablejsapi=1&origin=' + encodeURIComponent(location.origin) + (v.start ? '&start=' + v.start : '') + (v.end ? '&end=' + v.end : ''); noCC(f);   // 10-04 교사: 자동 자막 끄기(영상에 자막이 이미 박혀 있음)
         f.title = s.name + ' 영상'; f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-        f.allowFullscreen = true; f.referrerPolicy = 'strict-origin-when-cross-origin'; vw.appendChild(f); }
+        f.allowFullscreen = true; f.referrerPolicy = 'strict-origin-when-cross-origin'; ytFloat(vw, f, 45); }   // 창 안이 아니라 맨 위층(위 ytFloat)
     } else {
       h.textContent = s.name + ' · 사진';
       if (!s.photos.length) soon(mk('div', 'ph', null, body), '📷', '사진');

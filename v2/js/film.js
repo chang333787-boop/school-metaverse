@@ -107,7 +107,6 @@ export function createFilm(env) {
 #film .clip{right:clamp(14px,3vw,48px);bottom:clamp(10px,3vh,34px);width:min(40vw,500px);padding:8px;transform:translateY(18px)}
 #film .clip.in{transform:none}
 #film .clip .fr{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000 center/cover no-repeat}
-#film .clip iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none;transform:scale(1.22);transform-origin:50% 50%}   /* 크기는 칸 그대로 + 확대로 제목 띠만 자름(아이폰은 칸보다 큰 iframe을 옆으로 밀었다) */   
 #film .clip .cap{display:flex;align-items:center;gap:8px;padding:8px 4px 2px;font:700 clamp(11px,1.15vw,14px)/1.3 var(--ff);color:rgba(255,255,255,.9)}
 #film .clip .cap:before{content:'▶';font-size:10px;background:#ff3d3d;border-radius:4px;padding:3px 5px;line-height:1}
 /* 아래 글 · 가운데 글 */
@@ -131,7 +130,7 @@ export function createFilm(env) {
 #film .endc .ct b{color:#ffd23c}
 @media (max-aspect-ratio:1/1){#film .stats{left:12px;right:12px;width:auto;top:auto;bottom:8px;transform:translateY(20px)}#film .stats.in{transform:none}#film .chap{width:auto;right:12px}#film .clip{width:min(70vw,360px);bottom:8px}}
 @media (max-height:520px){#film .lock .ph{width:34px;height:58px;margin-bottom:8px;border-width:3px;border-radius:10px}#film .lock .ph:after{inset:5px 4px 11px}#film .lock .w1{font-size:13vh}#film .lock .dot{width:17vh;height:17vh;font-size:8vh}#film .lock .dots{margin:10px 0 26px}#film .lock .w2{font-size:12vh}#film .lock .sub{margin-top:8px}#film .stats{grid-template-columns:1fr 1fr 1fr;width:min(720px,70vw)}#film .chap .big{font-size:clamp(56px,11vw,120px)}#film .clip{width:min(32vw,300px)}}
-body.film-on>:not(#film):not(#scene){visibility:hidden!important}
+body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
 #scene.fl-punch{animation:flpunch .6s cubic-bezier(.2,.8,.2,1)}
 @keyframes flpunch{0%{transform:scale(1.07)}100%{transform:none}}
 #film .fl-flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:4;pointer-events:none}
@@ -191,6 +190,18 @@ body.film-on>:not(#film):not(#scene){visibility:hidden!important}
         x0 = Math.min(x0, b.x0 - 0.05); z0 = Math.min(z0, b.z0 - 0.05); x1 = Math.max(x1, b.x1 + 0.05); z1 = Math.max(z1, b.z1 + 0.05); ch = true; }
       if (!ch) break; }
     const r = { y: c9.y, box: [x0, z0, x1, z1] }; safeBox.set(k, r); return r;
+  }
+  // 아이폰 사파리(10-04 교사 휴대폰 사진 — 영상 왼쪽 검은 띠·오른쪽 잘림): 상자 안(스크롤·둥근 잘라내기·transform) 유튜브 영상을 어긋나게 그린다
+  //   → iframe은 body 맨 위층(position: fixed)에 두고, 창 안 영상 자리(holder)의 화면 자리를 프레임마다 따라간다(holder가 사라지면 같이 지움)
+  function ytFloat(holder, f, z) {
+    f.classList.add('yt-float', 'ttl-keep'); Object.assign(f.style, { position: 'fixed', border: '0', zIndex: String(z || 45), borderRadius: '10px', background: '#000', left: '0px', top: '0px', width: '0px', height: '0px' });
+    document.body.appendChild(f); let last = '';
+    const fit = () => { if (!f.isConnected) return; if (!holder.isConnected) { f.remove(); return; }
+      const r = holder.getBoundingClientRect(), cs = getComputedStyle(holder), op = cs.visibility === 'hidden' ? 0 : +(getComputedStyle(holder.closest('.fl-u, .tp') || holder).opacity || 1);
+      const k = r.left.toFixed(1) + ',' + r.top.toFixed(1) + ',' + r.width.toFixed(1) + ',' + r.height.toFixed(1) + ',' + op.toFixed(2);
+      if (k !== last) { last = k; Object.assign(f.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', opacity: String(op), visibility: r.width > 4 && op > 0.02 ? 'visible' : 'hidden' }); }
+      requestAnimationFrame(fit); };
+    fit(); return f;
   }
   let caps = null;
   const capMat = new THREE.MeshBasicMaterial({ color: 0x2c313b });
@@ -267,7 +278,7 @@ body.film-on>:not(#film):not(#scene){visibility:hidden!important}
         const f = document.createElement('iframe'); f.allow = 'autoplay; encrypted-media'; f.setAttribute('allowfullscreen', ''); f.title = s.clip.title || '';
         f.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(s.clip.id) + '?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&cc_load_policy=0&enablejsapi=1&origin=' + encodeURIComponent(location.origin) + '&start=' + (s.clip.start | 0) + (s.clip.end ? '&end=' + (s.clip.end | 0) : '');
         f.addEventListener('load', () => [400, 1200, 2500, 4500].forEach(t => setTimeout(() => { if (f.isConnected) for (const m of ['captions', 'cc']) try { f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'unloadModule', args: [m] }), '*'); } catch (e) { /* */ } }, t)));   // 자동 자막 끄기(10-04 교사 — 영상에 자막이 박혀 있음)
-        fr.appendChild(f); }, at);
+        ytFloat(fr, f, 9001); }, at);   // 맨 위층(아이폰 어긋남 — 위 ytFloat)
       el('div', 'cap', esc(s.clip.title || '정림초 유튜브'), d); c.clip = d;
     }
   }
