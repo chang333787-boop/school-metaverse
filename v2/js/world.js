@@ -6515,6 +6515,7 @@ export function buildWorld(scene) {
     gm.matrixAutoUpdate = false; gm.renderOrder = 2; scene.add(gm); glassMesh = gm;
   }
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  let matLegoLater = true;   // LEGO-1: 아래 legoPatch가 정의된 뒤 mat에도(본관 남벽 바깥만)
   // ================= GFX-3 셰이더 AO(재질 셰이더에 몇 줄 — 빛 0·후처리 0·삼각형 0·드로우콜 0) =================
   //  aoD(cm) → 조각마다 정확한 거리 → 부드러운 어둠. 벽: 모서리(세로 모서리 0.8 m) · 바닥 닿는 곳(0.55 m) · 천장 닿는 곳(0.6 m). 바닥·천장: 네 변 0.8 m
   //  ground(잔디·흙): 월드 좌표 두 배율 얼룩 텍스처(9 m·2.7 m) — 가까이서도 한 톤 판으로 안 보이게 + 골대 앞 닳은 자리(밝고 마른 흙)
@@ -6551,7 +6552,33 @@ export function buildWorld(scene) {
     m.customProgramCacheKey = () => 'gfx3' + (ao || '') + (ground || '');
     return m;
   }
-  const matAO = aoPatch(new THREE.MeshLambertMaterial({ vertexColors: true }), 'wall', false);
+  // LEGO-1(10-04 시제품 · 주소 ?lego=1일 때만 — 교사 '가구는 지금처럼 · 학교 벽만 레고화'): 본관(앞줄 + 현관) 상자 안의 벽 = 엇갈린 블록 줄눈(1.0 × 0.48 · 블록마다 살짝 다른 톤 · 위 모서리 밝게·아래 어둡게)
+  //   · 위를 보는 면(바닥 무늬·벽 윗면) = 0.5 m 돌기(그늘 · 테) — 셰이더 몇 줄(삼각형·드로우콜·빛 0) · 가구(dBox 디테일 재질)는 그대로 · 비교 사진용(정할 때까지 기본은 꺼짐)
+  const LEGO = typeof location !== 'undefined' && /[?&]lego=1(&|$)/.test(location.search);
+  const LGB = [FR.x[0] - 0.7, FR.z[0] - 0.4, FR.x[1] + 0.7, B.entrance.z[1] + 0.4].map(v => v.toFixed(2));
+  function legoPatch(m, R = LGB, useAo = false) {   // useAo = AO 거리가 있는 면(벽 런·바닥 무늬)만 — 같은 청크에 합쳐진 나무·덤불(먼 디테일)은 빼려고   // R = 그 재질에서 레고가 되는 x·z 상자(디테일 재질 = 본관 남벽 바깥(겉 상자 틀·창틀)만 — 실내 가구는 그대로)
+    if (!LEGO) return m; const prev = m.onBeforeCompile, key = m.customProgramCacheKey && m.customProgramCacheKey !== THREE.Material.prototype.customProgramCacheKey ? m.customProgramCacheKey.bind(m) : null;
+    m.onBeforeCompile = (sh, r) => { if (prev) prev.call(m, sh, r);
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vLgP;\nvarying vec3 vLgN;\n').replace('#include <begin_vertex>', '#include <begin_vertex>\nvLgP = position; vLgN = normal;\n');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vLgP;\nvarying vec3 vLgN;\nfloat lgH(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n')
+        .replace('#include <color_fragment>', `#include <color_fragment>
+{ vec3 P = vLgP, N = vLgN; float nl = length(N);
+  if (nl > 0.5 && P.x > ${R[0]} && P.x < ${R[2]} && P.z > ${R[1]} && P.z < ${R[3]} && P.y > -0.6 && P.y < 5.5${useAo ? ' && min(min(vAoD.x, vAoD.y), vAoD.z) < 250.' : ''}) { N /= nl; vec3 A = abs(N); float k = 1.;
+    if (A.y < 0.5) { vec2 uv = A.x > A.z ? vec2(P.z, P.y) : vec2(P.x, P.y);
+      float row = floor(uv.y / 0.48), u = uv.x + (mod(row, 2.) > 0.5 ? 0.5 : 0.);
+      vec2 f = vec2(fract(u), fract(uv.y / 0.48)); float ex = min(f.x, 1. - f.x), ey = min(f.y, 1. - f.y) * 0.48;
+      float seam = 1. - smoothstep(0.007, 0.022, min(ex, ey));
+      k = (1. - 0.42 * seam) * (1. + 0.11 * (1. - smoothstep(0., 0.05, (1. - f.y) * 0.48)) - 0.13 * (1. - smoothstep(0., 0.05, f.y * 0.48))) * (0.93 + 0.14 * lgH(vec2(floor(u), row)));
+    } else if (N.y > 0.) { vec2 c = fract(P.xz / 0.5) - 0.5; float r = length(c), ds = length(c - vec2(0.035, 0.045));
+      float disk = 1. - smoothstep(0.14, 0.155, r), rim = smoothstep(0.115, 0.15, r) * disk, sh9 = (1. - smoothstep(0.14, 0.175, ds)) * (1. - disk);
+      vec2 g = fract(P.xz / 0.5); float e = min(min(g.x, 1. - g.x), min(g.y, 1. - g.y)) * 0.5, seam = 1. - smoothstep(0.004, 0.014, e);
+      k = (1. + 0.12 * disk - 0.14 * rim - 0.24 * sh9) * (1. - 0.26 * seam); }
+    diffuseColor.rgb *= k; } }
+`); };
+    m.customProgramCacheKey = () => (key ? key() : '') + 'lego1' + R.join(',') + (useAo ? 'a' : ''); return m;
+  }
+  const matAO = legoPatch(aoPatch(new THREE.MeshLambertMaterial({ vertexColors: true }), 'wall', false), LGB, true);
+  if (matLegoLater) { matLegoLater = false; legoPatch(mat, [LGB[0], (FR.z[1] - 0.05).toFixed(2), LGB[2], (FR.z[1] + 0.85).toFixed(2)]); }   // 정면 상자 틀·창틀·빗물관(디테일 — 벽에서 0.85 m 안 · 상자 앞면 0.75) — 남벽 안쪽(가구)·앞 화단 덤불은 빼고
   // PERF-LOAD: 비인덱스 청크 법선 — three computeVertexNormals(면마다 cb×ab → Float32 저장 → 정점마다 정규화 → Float32)와 같은 식·같은 순서(값이 같다), Vector3 호출 없이
   const flatNormals = g => { const P = g.attributes.position.array, N = new Float32Array(P.length);
     for (let i = 0; i + 8 < P.length; i += 9) { const bx = P[i + 3], by = P[i + 4], bz = P[i + 5], cbx = P[i + 6] - bx, cby = P[i + 7] - by, cbz = P[i + 8] - bz, abx = P[i] - bx, aby = P[i + 1] - by, abz = P[i + 2] - bz;
@@ -6596,7 +6623,7 @@ export function buildWorld(scene) {
     g.computeVertexNormals(); g.computeBoundingSphere();
     if (P.aoUsed) { aoPad(P.ao, P.pos.length / 3 * 4); g.setAttribute('aoD', new THREE.BufferAttribute(new Int16Array(P.ao), 4)); }   // GFX-3
     const m0 = basic ? new THREE.MeshBasicMaterial({ map: tex, vertexColors: true }) : new THREE.MeshLambertMaterial({ map: tex, vertexColors: true });
-    const ground = kind === 'grass' || kind === 'dirt', m = new THREE.Mesh(g, P.aoUsed || ground ? aoPatch(m0, P.aoUsed ? (basic ? 'ceil' : 'floor') : null, ground && kind) : m0);
+    const ground = kind === 'grass' || kind === 'dirt', m = new THREE.Mesh(g, legoPatch(P.aoUsed || ground ? aoPatch(m0, P.aoUsed ? (basic ? 'ceil' : 'floor') : null, ground && kind) : m0));   // 무늬 메시엔 나무·덤불이 없다 — 상자만으로   // LEGO-1: 겉벽·바닥 무늬도(시제품)
     m.matrixAutoUpdate = false; m.userData.pat = kind; scene.add(m); objParts(P.obj, P.pos.length / 9, m);   // GFX-2: main.js가 바깥 바닥 무늬만 그림자를 받게 고른다
   }
   let lampMesh = null;   // WORLD-FX: 방마다 불 끄기(worldfx.js가 처음 쓸 때 정점색을 붙인다 — 평소 모양 그대로)
