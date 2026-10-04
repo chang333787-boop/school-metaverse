@@ -6,6 +6,8 @@
 //  조작(BLOCK-2 · 10-04 리뷰): 누르기 = 놓기(🔨 모드면 부수기) · 오른쪽 '톡' = 부수기(오른쪽으로 끌면 둘러보기만) · 1~0·휠 = 블록 · Q = 놓기/부수기 · Z = 되돌리기(내가 한 것만 · 잠긴 판은 안 됨) · Esc = 판 창 닫기
 //   터치 = 화면 톡 + 오른쪽 아래 🧱/🔨 단추 · 끼이면(되살아난 가구·친구 블록) 저절로 옆 빈자리로 · 선생님 🧹 비우기 → ↩️ 비운 블록 되돌리기(휴지통 한 번)
 //  시제품 실측(10-03): 블록 5,170개 = 화면 삼각형 +3.4만·그리기 +26·걷기 계산 +0.1ms · 한 칸 다시 짓기 ≤0.6ms → 판마다 4,000개까지 · 64m 밖 블록 칸은 안 그림.
+//  🗺️ 위에서 짓기(TOP-2 · 10-04 교사 '탑뷰로 할 만한 것 — 위에서 블록 짓기 · 이야기 무대 구역'): 칩 → 하늘에서 보기(map.top) + 도구 = 🧱 벽 긋기(누른 칸 → 뗀 칸 곧은 줄 · 거의 가로·세로면 똑바로 · 높이 1~4칸) ·
+//   🔨 지우기(긋는 줄의 칸 기둥 통째 — 내가 놓은 것만) · ✋ 옮기기 · 오른쪽 끌기·두 손가락 = 화면 옮기기 · 무대 구역(STAGES — 노란 네모) 안에만(나만의 판·선생님은 학교 어디든) · 📍 여기로 내려가기 = 화면 가운데 땅
 //  블록 좌표: x·z = 0.5m 격자(ix, iz) · 높이 q = 5cm 단위(놓인 땅 높이를 따른다 — 운동장 -1.35 · 바닥 0 · 2층) · 블록은 그림자를 받기만(굽기 없음).
 import { teacherPin } from '../js/lobby.js?v=12';   // 선생님 비밀번호 창(●로 가림 — 메모장·함께하기와 같은 것 · main.js와 같은 ?v=라야 한 벌)
 export const meta = { id: 'blocks', title: '블록 놀이', api: 1 };
@@ -33,6 +35,22 @@ body:not(.touch) #hint{bottom:132px!important}
 body.touch #bk-tip{bottom:calc(166px + env(safe-area-inset-bottom));white-space:normal;word-break:keep-all;overflow-wrap:anywhere;text-align:center;max-width:min(560px,80vw)}
 #bk-tb{position:fixed;right:calc(90px + env(safe-area-inset-right));bottom:calc(100px + env(safe-area-inset-bottom));display:none;z-index:30;gap:6px}
 body:has(.bk-panel) #bk-tb,body:has(.bk-panel) #bk-bar,body:has(.bk-panel) #bk-tip{display:none!important}
+body.bk-top #bk-tb,body.bk-top #bk-bar,body.bk-top #bk-tip,body.bk-top #bk-cross{display:none!important}
+#bk-topui{position:fixed;right:calc(12px + env(safe-area-inset-right));top:50%;transform:translateY(-50%);z-index:26;display:flex;flex-direction:column;gap:6px;padding:6px;background:rgba(15,25,45,.82);border-radius:14px}
+#bk-topui .g{display:flex;flex-direction:column;gap:2px;background:rgba(255,255,255,.08);border-radius:10px;padding:2px}
+#bk-topui .g.h{flex-direction:row;align-items:center}
+#bk-topui .g.h b{color:#fff;font:700 12px/1 sans-serif;padding:0 4px}
+#bk-topui button{min-width:44px;min-height:44px;border:0;border-radius:9px;background:transparent;color:#fff;font:700 14px/1 sans-serif;cursor:pointer;padding:0 10px;text-align:left;white-space:nowrap}
+#bk-topui .g.h button{min-width:34px;padding:0;text-align:center}
+#bk-topui button.on{background:#ffd23f;color:#1d3557}
+#bk-topui button.go{background:#3fb37f;text-align:center}
+#bk-topui #bkTopCol{background-size:800% 200%;image-rendering:pixelated;border:2px solid rgba(255,255,255,.4);min-width:44px}
+body.small #bk-topui span{display:none}
+body.small #bk-topui{top:calc(96px + env(safe-area-inset-top));transform:none;flex-direction:row;flex-wrap:wrap;width:196px;gap:4px;padding:4px}
+body.small #bk-topui .g{flex-direction:row}
+body.small #bk-topui .g.h b{display:none}
+body.small #bk-topui button{padding:0 6px;text-align:center}
+body.small #bk-topui #bkTopUndo{min-width:44px!important}
 #bk-tb button{font:600 15px/1 sans-serif;border:0;border-radius:12px;background:rgba(20,28,40,.72);color:#fff;min-width:48px;height:48px;padding:0 10px;cursor:pointer}
 #bk-tb button.on{background:#e8590c}
 #bk-pal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:none;grid-template-columns:repeat(4,58px);gap:8px;padding:12px;background:rgba(20,28,40,.88);border-radius:14px;z-index:62}
@@ -298,6 +316,11 @@ export default async function start(map, params = {}) {
     if (board && board.lock && !teacher) return toast(WHY.lock, 2.4);
     const u = UNDO.pop(); if (!u) return toast('되돌릴 것이 없어요', 1.4);
     const skip = (why) => toast('그건 되돌릴 수 없어요(' + why + ') — 되돌리기를 한 번 더 누르면 그 전 것을 되돌려요', 2.8);
+    if (u.batch) {   // 🗺️ 위에서 짓기 한 줄(여러 칸) — 그사이 친구가 바꾼 칸·내 몸 자리는 건너뜀
+      let n = 0; for (const e of [...u.batch].reverse()) {
+        if (e.put) { const b = B.get(e.k); if (b && b.b === e.by && b.t === e.t) { apply(e.k, null); send(e.k, null); n++; } }
+        else if (e.del && !B.has(e.k)) { const p = e.k.split('_'); if (canPut(+p[0], +p[1], +p[2])) continue; apply(e.k, e.del); send(e.k, e.del); n++; } }
+      flushBuild(12); map.tone(520, 0, 0.05, 'sine', 0.1, 700); return toast('↩ ' + n + '개 되돌렸어요', 1.6); }
     if (u.put) { const b = B.get(u.k); if (b) { if (b.b !== u.by || b.t !== u.t) return skip('친구가 그 자리를 바꿨어요'); apply(u.k, null); send(u.k, null); } }
     else if (u.del) { if (B.has(u.k)) return skip(WHYS.have);
       const p = u.k.split('_'), why = canPut(+p[0], +p[1], +p[2]);
@@ -497,7 +520,7 @@ export default async function start(map, params = {}) {
   tb.innerHTML = '<button id="bkMode">🧱 놓기</button><button id="bkCur" style="' + sw(cur) + ';background-size:800% 200%;width:48px"></button><button id="bkUndo">↩</button>';
   const mBtn = tb.querySelector('#bkMode');
   const setCur = (i) => { cur = (i + TYPES.length) % TYPES.length; map.store.set('cur', cur); bar.querySelectorAll('.s').forEach((x) => x.classList.toggle('on', +x.dataset.i === cur)); pal.querySelectorAll('.s').forEach((x) => x.classList.toggle('on', +x.dataset.i === cur));
-    const cb = tb.querySelector('#bkCur'); cb.style.backgroundPosition = ((cur % 8) / 7 * 100) + '% ' + (Math.floor(cur / 8) * 100) + '%'; if (mode !== 'put') setMode('put'); tip(true); };
+    const cb = tb.querySelector('#bkCur'); cb.style.backgroundPosition = ((cur % 8) / 7 * 100) + '% ' + (Math.floor(cur / 8) * 100) + '%'; if (mode !== 'put') setMode('put'); tip(true); if (setCur.top) setCur.top(); };
   bar.onclick = (e) => { const s = e.target.closest('.s'); if (s) setCur(+s.dataset.i); };
   pal.onclick = (e) => { const s = e.target.closest('.s'); if (s) setCur(+s.dataset.i); pal.style.display = 'none'; };
   mBtn.onclick = () => setMode(mode === 'put' ? 'break' : 'put');
@@ -525,9 +548,10 @@ export default async function start(map, params = {}) {
   }
   function chips() {
     if (!board) return; hudLine(); const k = touchy() ? '' : ' (Q)', kz = touchy() ? '' : ' (Z)';   // 터치(태블릿 포함)엔 키 안내를 뺀다
-    map.hud.chip('bk-m', (mode === 'put' ? '🧱 놓기' : '🔨 부수기') + k, { onClick: () => setMode(mode === 'put' ? 'break' : 'put') });
-    map.hud.chip('bk-u', '↩ 되돌리기' + kz, { onClick: () => undo() });
-    map.hud.chip('bk-x', '🚪 빠져나오기', { onClick: () => unstuck() });
+    map.hud.chip('bk-m', topOn ? null : (mode === 'put' ? '🧱 놓기' : '🔨 부수기') + k, { onClick: () => setMode(mode === 'put' ? 'break' : 'put') });   // 위에서 짓기 = 오른쪽 도구 줄이 대신
+    map.hud.chip('bk-u', topOn ? null : '↩ 되돌리기' + kz, { onClick: () => undo() });   // 위에서 짓기 = 도구 줄에 ↩
+    map.hud.chip('bk-x', topOn ? null : '🚪 빠져나오기', { onClick: () => unstuck() });
+    map.hud.chip('bk-v', map.top && !topOn ? '🗺️ 위에서 짓기' : null, { onClick: () => topEnter() });
     map.hud.chip('bk-t', teacher && !board.local ? '🧑‍🏫 판 관리' : null, { onClick: () => admin(true) });
     layout();
   }
@@ -585,6 +609,118 @@ export default async function start(map, params = {}) {
   addEventListener('sm-click', onClick); addEventListener('sm-rclick', onRClick); addEventListener('contextmenu', onCtx); addEventListener('mousedown', onDown); addEventListener('mouseup', onUp); addEventListener('mousemove', onMove); addEventListener('wheel', onWheel, { passive: true });
   addEventListener('keydown', onKey); addEventListener('keydown', onEsc, true); addEventListener('blur', onBlur); addEventListener('resize', onResize);
 
+  // ── 🗺️ 위에서 짓기(TOP-2) ─────────────────────────────────────────
+  const STAGES = [   // 이야기 무대 구역(학교 공용 판에서 위에서 짓는 곳 — 나만의 판·선생님은 어디든) · [x0, z0, x1, z1]
+    { n: '🎭 운동장 무대 1', r: [-36, 0, -14, 20] },
+    { n: '🎭 운동장 무대 2', r: [2, 0, 24, 20] },
+    { n: '🎭 가운데 마당', r: [16, -40.3, 44, -34.6] },
+  ];
+  let topOn = false, TT = 'put', TH = 3, topUI = null, stroke = null, stageMk = [];
+  const anywhere = () => !!(board && board.local) || teacher;
+  const stageOf = (x, z) => STAGES.find((st) => x > st.r[0] && x < st.r[2] && z > st.r[1] && z < st.r[3]);
+  const stageOK = (ix, iz) => { const x = (ix + 0.5) * S, z = (iz + 0.5) * S; return anywhere() ? map.q.inSchool(x, z) : !!stageOf(x, z); };
+  const PV_MAX = 640, pv = new THREE.InstancedMesh(new THREE.BoxGeometry(S * 0.96, S * 0.96, S * 0.96).translate(0, S / 2, 0), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55, depthWrite: false }), PV_MAX);
+  pv.count = 0; pv.frustumCulled = false; pv.renderOrder = 4; root.add(pv);
+  const _pm = new THREE.Matrix4(), _pc = new THREE.Color();
+  // 화면 점 → 그 아래 칸(땅 또는 블록 기둥 꼭대기) — 땅 위 6m에서부터 10cm씩 훑는다
+  function topCell(sx, sy) {
+    V2.set(sx / innerWidth * 2 - 1, -(sy / innerHeight) * 2 + 1); RC.setFromCamera(V2, cam); const o = RC.ray.origin, d = RC.ray.direction;
+    if (d.y > -0.05) return null;
+    let t = Math.max(0, (o.y - 6) / -d.y); const tEnd = (o.y + 3) / -d.y;
+    for (; t < tEnd; t += 0.1) { const x = o.x + d.x * t, y = o.y + d.y * t, z = o.z + d.z * t, ix = Math.floor(x / S), iz = Math.floor(z / S);
+      const cq = COLQ.get(ckey(ix, iz)); let top = -1e9; if (cq) for (const q of cq) top = Math.max(top, q / 20 + S);
+      if (y <= Math.max(map.q.baseAt(x, z), top)) return { ix, iz }; }
+    return null;
+  }
+  // 누른 칸 → 뗀 칸: 거의 가로·세로(2.5배)면 똑바로 · 아니면 비스듬한 줄 · 160칸까지
+  function lineCells(a, b) {
+    let bx = b.ix, bz = b.iz; const ax = Math.abs(bx - a.ix), az = Math.abs(bz - a.iz);
+    if (ax > az * 2.5) bz = a.iz; else if (az > ax * 2.5) bx = a.ix;
+    const out = []; let x = a.ix, z = a.iz; const dx = Math.abs(bx - x), dz = Math.abs(bz - z), sx = x < bx ? 1 : -1, sz = z < bz ? 1 : -1; let err = dx - dz;
+    for (let n = 0; n < 160; n++) { out.push([x, z]); if (x === bx && z === bz) break; const e2 = 2 * err; if (e2 > -dz) { err -= dz; x += sx; } if (e2 < dx) { err += dx; z += sz; } }
+    return out;
+  }
+  const baseQ = (ix, iz) => Math.round(map.q.baseAt((ix + 0.5) * S, (iz + 0.5) * S) * 20);
+  function pvShow(cells) {   // 미리 보기: 놓을 칸 = 고른 색(못 놓는 칸 = 빨강) · 지울 칸 = 빨강
+    let n = 0; const ok = TYPES[cur].c;
+    for (const [ix, iz] of cells) {
+      if (TT === 'del') { const cq = COLQ.get(ckey(ix, iz)); if (cq) for (const q of cq) { if (n >= PV_MAX) break; pv.setMatrixAt(n, _pm.makeTranslation((ix + 0.5) * S, q / 20 + 0.01, (iz + 0.5) * S)); pv.setColorAt(n, _pc.set('#ff4040')); n++; } continue; }
+      const zOK = stageOK(ix, iz), q0 = baseQ(ix, iz);
+      for (let k = 0; k < TH && n < PV_MAX; k++) { const q = q0 + k * 10, why = zOK ? canPut(ix, iz, q) : 'zone'; if (why === 'have') continue;
+        pv.setMatrixAt(n, _pm.makeTranslation((ix + 0.5) * S, q / 20 + 0.01, (iz + 0.5) * S)); pv.setColorAt(n, _pc.set(why ? '#ff4040' : ok)); n++; } }
+    pv.count = n; pv.instanceMatrix.needsUpdate = true; if (pv.instanceColor) pv.instanceColor.needsUpdate = true;
+  }
+  const RS = { zone: '무대 구역 밖', wall: '벽·가구', door: '문 자리', me: '내 몸 자리', out: '학교 밖', full: '판이 가득', high: '너무 높음', ground: '땅속', lock: '잠긴 판' };
+  const reasons = (w) => Object.entries(w).map(([k, n]) => (RS[k] || k) + ' ' + n + '칸').join(' · ');
+  function commitBuild(cells) {
+    if (board && board.lock && !teacher) return toast(WHY.lock, 2.4);
+    const done = [], why = {};
+    for (const [ix, iz] of cells) { if (!stageOK(ix, iz)) { why.zone = (why.zone || 0) + 1; continue; }
+      const q0 = baseQ(ix, iz);
+      for (let k = 0; k < TH; k++) { const q = q0 + k * 10, w = canPut(ix, iz, q); if (w) { if (w !== 'have') why[w] = (why[w] || 0) + 1; if (w === 'full') break; continue; }
+        const kk = key(ix, iz, q), v = { t: cur, b: name || '익명' }; apply(kk, v); send(kk, v); done.push({ k: kk, put: true, by: v.b, t: v.t }); } }
+    if (done.length) { pushUndo({ batch: done }); flushBuild(12); map.tone(330 + cur * 18, 0, 0.08, 'triangle', 0.14, 240); }
+    const r = Object.keys(why).length ? ' — 못 놓은 곳: ' + reasons(why) : '';
+    toast(done.length ? '🧱 ' + done.length + '개 놓았어요' + r : why.zone && !anywhere() ? '노란 네모(🎭 무대 구역) 안에 그어요' : '놓을 수 있는 칸이 없어요' + r, 2.4);
+  }
+  function commitErase(cells) {
+    if (board && board.lock && !teacher) return toast(WHY.lock, 2.4);
+    const done = []; let deny = 0;
+    for (const [ix, iz] of cells) { const cq = COLQ.get(ckey(ix, iz)); if (!cq) continue;
+      for (const q of [...cq]) { const kk = key(ix, iz, q), b = B.get(kk); if (!b) continue; if (!canBreak(b)) { deny++; continue; }
+        apply(kk, null); send(kk, null); done.push({ k: kk, del: { t: b.t, b: b.b } }); } }
+    if (done.length) { pushUndo({ batch: done }); flushBuild(12); map.tone(200, 0, 0.1, 'square', 0.1, 90); }
+    toast(done.length ? '🔨 ' + done.length + '개 지웠어요' + (deny ? ' · 친구 블록 ' + deny + '개는 그대로' : '') : deny ? '친구가 놓은 블록이에요 — 선생님이 「모두 고치기」를 켜면 지울 수 있어요' : '지울 블록이 없어요', 2.2);
+  }
+  const tool = {
+    down(sx, sy) { const c = topCell(sx, sy); if (!c) return; stroke = { a: c, b: c }; pvShow(lineCells(c, c)); },
+    move(sx, sy) { if (!stroke) return; const c = topCell(sx, sy); if (c && (c.ix !== stroke.b.ix || c.iz !== stroke.b.iz)) { stroke.b = c; pvShow(lineCells(stroke.a, stroke.b)); } },
+    up() { if (!stroke) return; const cells = lineCells(stroke.a, stroke.b); stroke = null; pv.count = 0; if (TT === 'del') commitErase(cells); else commitBuild(cells); },
+    cancel() { stroke = null; pv.count = 0; },
+    hover(sx, sy) { if (stroke) return; const c = topCell(sx, sy); if (c) pvShow([[c.ix, c.iz]]); else pv.count = 0; },
+  };
+  function topPaint() {
+    if (!topUI) return;
+    topUI.querySelectorAll('[data-t]').forEach((b) => b.classList.toggle('on', b.dataset.t === TT));
+    topUI.querySelectorAll('[data-h]').forEach((b) => b.classList.toggle('on', +b.dataset.h === TH));
+    const cb = topUI.querySelector('#bkTopCol'); cb.style.cssText = sw(cur) + ';background-size:800% 200%'; cb.title = TYPES[cur].n + ' — 눌러서 색 바꾸기';
+  }
+  function topEnter() {
+    if (!map.top || topOn || !board || dead) return; closePanel(); pal.style.display = 'none'; ghostOff();
+    const me = map.player.get(), st = stageOf(me.x, me.z) || STAGES.slice().sort((a, b) => Math.hypot((a.r[0] + a.r[2]) / 2 - me.x, (a.r[1] + a.r[3]) / 2 - me.z) - Math.hypot((b.r[0] + b.r[2]) / 2 - me.x, (b.r[1] + b.r[3]) / 2 - me.z))[0];
+    topOn = true; document.body.classList.add('bk-top');
+    map.top.enter({ floor: 1, at: anywhere() && !stageOf(me.x, me.z) ? [me.x, me.z] : [(st.r[0] + st.r[2]) / 2, (st.r[1] + st.r[3]) / 2], d: 34, floorKeys: false, tool: TT === 'pan' ? null : tool,
+      help: '🧱 끌어서 벽 긋기 · 오른쪽 끌기·두 손가락 = 화면 옮기기 · 휠 = 확대' + (anywhere() ? '' : ' · 노란 네모 = 🎭 무대 구역'), onExit: () => topExit(), onLeave: () => topExit(true) });
+    map.top.marks(STAGES.map((q) => ({ x: (q.r[0] + q.r[2]) / 2, y: map.q.baseAt((q.r[0] + q.r[2]) / 2, (q.r[1] + q.r[3]) / 2) + 0.3, z: q.r[1] + 1.2, t: q.n })));
+    stageMk = STAGES.map((q) => { const y = map.q.baseAt((q.r[0] + q.r[2]) / 2, (q.r[1] + q.r[3]) / 2); return map.mk.trail([[q.r[0], y, q.r[1]], [q.r[2], y, q.r[1]], [q.r[2], y, q.r[3]], [q.r[0], y, q.r[3]], [q.r[0], y, q.r[1]]], { color: 0xffd23f, width: 0.3 }); });
+    topUI = el('div', 'bk-topui'); keyStop(topUI);
+    topUI.innerHTML = '<div class="g"><button data-t="put">🧱<span> 벽 긋기</span></button><button data-t="del">🔨<span> 지우기</span></button><button data-t="pan">✋<span> 옮기기</span></button></div>'
+      + '<div class="g h"><b>높이</b>' + [1, 2, 3, 4].map((h) => '<button data-h="' + h + '">' + h + '</button>').join('') + '</div>'
+      + '<div class="g h"><button id="bkTopCol"></button><button id="bkTopUndo" style="min-width:60px">↩<span> 되돌리기</span></button></div>'
+      + '<button class="go" id="bkTopDown">📍<span> 여기로 내려가기</span></button>';
+    topUI.onclick = (e) => { const b = e.target.closest('button'); if (!b) return; e.stopPropagation();
+      if (b.dataset.t) { TT = b.dataset.t; map.top.setTool(TT === 'pan' ? null : tool); pv.count = 0; }
+      else if (b.dataset.h) TH = +b.dataset.h;
+      else if (b.id === 'bkTopCol') pal.style.display = pal.style.display === 'grid' ? 'none' : 'grid';
+      else if (b.id === 'bkTopUndo') undo();
+      else if (b.id === 'bkTopDown') topDown();
+      topPaint(); };
+    topPaint(); chips();
+  }
+  function topExit(left) {   // left = 엔진이 이미 나옴(놀이 멈춤 등)
+    if (!topOn) return; topOn = false; stroke = null; pv.count = 0;
+    if (!left && map.top && map.top.on) map.top.exit();
+    if (topUI) { topUI.remove(); topUI = null; } stageMk.forEach((m) => m.remove()); stageMk = [];
+    document.body.classList.remove('bk-top'); pal.style.display = 'none'; if (!dead) { chips(); layout(); }
+  }
+  function topDown() {   // 화면 가운데 땅(가까운 빈자리)으로 내려가 3인칭
+    const c = topCell(innerWidth / 2, innerHeight / 2); if (!c) return toast('여기는 내려갈 수 없어요', 1.6);
+    const x = (c.ix + 0.5) * S, z = (c.iz + 0.5) * S, e = map.findEntry(x, z, map.q.baseAt(x, z));
+    if (!e) return toast('빈자리가 없어요 — 다른 곳으로 옮겨 봐요', 2);
+    topExit(); map.player.teleport([e.x, e.y, e.z]);
+  }
+  setCur.top = topPaint;
+
   // ── 시작: 지난번 판 → 없으면 고르기 · 혼자 하기 = 바로 나만의 판
   if (SOLO) enter({ id: '@mine', local: true, t: '🏠 나만의 판' }); else pick();
 
@@ -596,13 +732,13 @@ export default async function start(map, params = {}) {
       pTick(dt);
       if ((hoverT += dt) >= 0.05) { hoverT = 0; const L = !!document.pointerLockElement, cOn = L && !!board && !panel;   // 잠김 = 가운데 ＋ · 마우스 보임 = 커서 자리
         if (crossEl.style.display !== (cOn ? 'block' : 'none')) crossEl.style.display = cOn ? 'block' : 'none';
-        if ((L || mx >= 0) && board && !panel && !touchy()) ghostShow(L ? aimAt(innerWidth / 2, innerHeight / 2) : aimAt(mx, my)); else if (ghost.visible && (touchy() || panel)) ghostOff(); }
+        if ((L || mx >= 0) && board && !panel && !touchy() && !topOn) ghostShow(L ? aimAt(innerWidth / 2, innerHeight / 2) : aimAt(mx, my)); else if (ghost.visible && (touchy() || panel)) ghostOff(); }
       if (chkMe) { chkMe = false; if (board) freeMe(); }
       if ((cullT += dt) >= 0.25) { cullT = 0; const t = touchy(); if (t !== lastTouch) { lastTouch = t; layout(t); chips(); }   // 터치 크롬북이 처음 터치(또는 마우스로 돌아옴)하면 단추·안내도 따라 바뀜
-        if (hudDirty) { hudDirty = false; hudLine(); } const cp = cam.position; for (const ms of MESH.values()) for (const m of ms) { const c = m.userData.c, dx = cp.x - c[0], dz = cp.z - c[1]; m.visible = dx * dx + dz * dz < FAR * FAR; } }
+        if (hudDirty) { hudDirty = false; hudLine(); } const cp = cam.position, FR2 = topOn ? 600 * 600 : FAR * FAR; /* 위에서 짓기 = 멀리서 내려다봄 */ for (const ms of MESH.values()) for (const m of ms) { const c = m.userData.c, dx = cp.x - c[0], dz = cp.z - c[1]; m.visible = dx * dx + dz * dz < FR2; } }
     },
     stop() {
-      settle(); dead = true; window.SM_ACT = null; clearTimeout(tipT);   // 기다리던 저장 먼저(나만의 판은 부순 가구 목록이 아직 맞을 때)
+      settle(); dead = true; window.SM_ACT = null; clearTimeout(tipT); topExit(); pv.geometry.dispose(); pv.material.dispose(); pv.dispose();   // 기다리던 저장 먼저(나만의 판은 부순 가구 목록이 아직 맞을 때)
       if (es) es.close(); clearTimeout(cfgT);
       removeEventListener('sm-click', onClick); removeEventListener('sm-rclick', onRClick); removeEventListener('contextmenu', onCtx); crossEl.remove(); removeEventListener('mousedown', onDown); removeEventListener('mouseup', onUp); removeEventListener('mousemove', onMove); removeEventListener('wheel', onWheel);
       removeEventListener('keydown', onKey); removeEventListener('keydown', onEsc, true); removeEventListener('blur', onBlur); removeEventListener('resize', onResize); removeEventListener('sm-teacher', onTeacher); removeEventListener('pagehide', onLeave); document.removeEventListener('visibilitychange', onVis);

@@ -3,6 +3,8 @@
 //   손: 끌기 = 옮기기 · 휠/두 손가락 벌리기 = 확대 · 오른쪽 끌기/두 손가락 돌리기/Q·E = 돌리기 · WASD·화살표 = 옮기기 · +/− = 확대 · 1·2·3 = 1층·2층·지붕 · Esc = 걸어 다니기
 //   화면: 아래 단추 줄 · 방위표(북) · 축척 막대 · 방 이름표(겹치면 큰 방 먼저) · '나' 표시 · 톡 = 그 자리 이름 + 게임이 준 단추(tapActions)
 //   카메라 = CAM_OVR(평소 카메라를 덮어씀) · 디테일 거리·가림 컬링 = 영상과 같은 setView · 안개·near/far는 나올 때 되돌림
+//   TOP-2(블록 위에서 짓기): o.tool = { down(sx,sy,e), move(sx,sy,e), up(sx,sy,e), cancel(), hover(sx,sy) } — 켜져 있으면 왼쪽 끌기·한 손가락 = 도구 · 오른쪽 끌기·두 손가락 = 옮기기(가운데 끌기·Shift = 돌리기) · 톡 창 없음
+//     setTool(t|null)로 바꿈 · marks([{x,y,z,t}]) = 게임 이름표(노랑 — 방 이름보다 먼저) · o.floorKeys === false = 1·2·3 키를 게임에 넘김
 export function createTop(env) {
   const { THREE, camera, renderer, scene, world, setCam, setView, getZones, zoneAt, player } = env;
   const FH = (world.details && world.details.FH) || 3.4;
@@ -13,6 +15,7 @@ export function createTop(env) {
 #tv-lb{position:fixed;inset:0;z-index:16;pointer-events:none;overflow:hidden}
 #tv-lb .lb{position:absolute;left:0;top:0;white-space:nowrap;font:800 13px/1 system-ui,-apple-system,'Malgun Gothic',sans-serif;color:#1d3557;background:rgba(255,255,255,.9);padding:4px 7px;border-radius:7px;box-shadow:0 1px 3px rgba(0,0,0,.28);visibility:hidden}
 #tv-lb .lb.out{color:#fff;background:rgba(29,53,87,.78)}
+#tv-lb .lb.mk{color:#3b2a00;background:#ffd23f;font-size:14px;padding:5px 9px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
 #tv-lb .me{position:absolute;left:0;top:0;font:900 13px/1 system-ui,-apple-system,'Malgun Gothic',sans-serif;color:#fff;background:#e8553a;padding:5px 9px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.35);visibility:hidden}
 #tv-lb .me:after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#e8553a}
 #tv-bar{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));transform:translateX(-50%);width:max-content;z-index:25;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;background:rgba(15,25,45,.8);padding:6px;border-radius:14px;max-width:calc(100vw - 24px);box-sizing:border-box}
@@ -40,6 +43,7 @@ body.small #tv-bar .lbl{display:none}
 body.small #tv-cmp{bottom:calc(120px + env(safe-area-inset-bottom));width:50px;height:50px}
 body.small #tv-sc{left:72px;bottom:calc(126px + env(safe-area-inset-bottom))}
 body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
+@media (orientation:portrait){body.small #tv-help{display:none}}
 `;
   document.head.appendChild(css);
 
@@ -94,7 +98,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     if (S) exit();
     const me = player();
     const f0 = o.floor ?? (me.y > FH - 0.5 ? 2 : 1);
-    S = { o, floor: f0, labels: o.labels !== false, keys: new Set(), ptr: new Map(), tapT: 0,
+    S = { o, floor: f0, labels: o.labels !== false, keys: new Set(), ptr: new Map(), tapT: 0, tool: o.tool || null, toolOn: false, MK: [],
       T: { tx: o.at ? o.at[0] : me.x, tz: o.at ? o.at[1] : me.z, d: o.d ?? 58, yaw: o.yaw ?? 0, p: o.top ? P_TOP : P_TILT },
       C: null, fog: scene.fog ? [scene.fog.near, scene.fog.far] : null, near0: camera.near, far0: camera.far, LB: [], lbFloor: null, popAt: null };
     S.C = { ...S.T, d: Math.max(D_MIN, Math.min(16, S.T.d)), ty: floorY(S.floor) };   // 몸 위 가까이에서 시작 → 위로 솟아오름
@@ -172,21 +176,24 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     S.pad.setPointerCapture && S.pad.setPointerCapture(e.pointerId);
     S.ptr.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, b: e.button, t: performance.now() });
     if (S.ptr.size === 1) { S.moved = 0; S.tapT = performance.now(); }
-    if (S.ptr.size === 2) { S.moved = 99; S.pinch = pinchState(); }
+    if (S.ptr.size === 2) { S.moved = 99; S.pinch = pinchState(); if (S.toolOn) { S.toolOn = false; S.tool && S.tool.cancel && S.tool.cancel(); } }   // 두 손가락 = 옮기기(긋던 것은 취소)
+    if (S.tool && S.ptr.size === 1 && e.button === 0 && !e.shiftKey) { S.toolOn = true; closePop(); S.tool.down && S.tool.down(e.clientX, e.clientY, e); }
     S.pad.classList.add('drag');
   }
   function pinchState() { const [a, b] = [...S.ptr.values()]; return { dist: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; }
   function mpp() { return 2 * S.C.d * Math.tan(camera.fov * Math.PI / 360) / innerHeight; }   // 화면 1px = 땅 몇 m(가운데)
   function onMove(e) {
-    const q = S.ptr.get(e.pointerId); if (!q) return;
+    const q = S.ptr.get(e.pointerId); if (!q) { if (S.tool && S.tool.hover && e.pointerType === 'mouse') S.tool.hover(e.clientX, e.clientY); return; }
     const dx = e.clientX - q.x, dy = e.clientY - q.y; q.x = e.clientX; q.y = e.clientY;
     S.moved = Math.max(S.moved, Math.hypot(q.x - q.x0, q.y - q.y0));
+    if (S.toolOn) { S.tool.move && S.tool.move(e.clientX, e.clientY, e); return; }
     if (S.ptr.size >= 2) { const n = pinchState(), p0 = S.pinch; if (!p0) { S.pinch = n; return; }
       if (n.dist > 4 && p0.dist > 4) zoom(p0.dist / n.dist, [n.mx, n.my]);
       let da = n.ang - p0.ang; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI; S.T.yaw += da;
       pan(n.mx - p0.mx, n.my - p0.my); S.pinch = n; return; }
     if (S.moved < 5) return;
-    if (q.b === 2 || e.shiftKey) { S.T.yaw += dx * 0.006; S.T.p = clamp(S.T.p - dy * 0.004, P_LOW, P_TOP); paintBar(); return; }   // 오른쪽 끌기 = 돌리기·기울이기
+    if (S.tool && q.b === 2 && !e.shiftKey) { pan(dx, dy); return; }   // 도구가 있으면 오른쪽 끌기 = 옮기기
+    if (q.b === 2 || q.b === 1 || e.shiftKey) { S.T.yaw += dx * 0.006; S.T.p = clamp(S.T.p - dy * 0.004, P_LOW, P_TOP); paintBar(); return; }   // 오른쪽 끌기 = 돌리기·기울이기
     pan(dx, dy);
   }
   function pan(dx, dy) {   // 끄는 대로 땅이 따라옴
@@ -197,7 +204,8 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
   function onUp(e) {
     const q = S && S.ptr.get(e.pointerId); if (!q) return; S.ptr.delete(e.pointerId);
     if (S.ptr.size < 2) S.pinch = null;
-    if (!S.ptr.size) { S.pad.classList.remove('drag'); if (S.moved < 6 && q.b !== 2 && performance.now() - S.tapT < 450) tap(e.clientX, e.clientY); }
+    if (S.toolOn) { S.toolOn = false; if (!S.ptr.size) S.pad.classList.remove('drag'); S.tool.up && S.tool.up(e.clientX, e.clientY, e); return; }
+    if (!S.ptr.size) { S.pad.classList.remove('drag'); if (S.moved < 6 && q.b !== 2 && !S.tool && performance.now() - S.tapT < 450) tap(e.clientX, e.clientY); }
   }
   function onWheel(e) {   // 마우스 휠·트랙패드 벌리기(ctrlKey) = 확대 · 트랙패드 두 손가락 쓸기(작은 값 · 옆 값) = 옮기기(맥북 — 지도 앱처럼)
     e.preventDefault();
@@ -209,13 +217,13 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     const c = e.code;
     if (KEYS.has(c)) { S.keys.add(c); e.preventDefault(); e.stopImmediatePropagation(); return; }
     if (c === 'Equal' || c === 'NumpadAdd') { zoom(1 / 1.3); } else if (c === 'Minus' || c === 'NumpadSubtract') { zoom(1.3); }
-    else if (c === 'Digit1' || c === 'Numpad1') setFloor(1); else if (c === 'Digit2' || c === 'Numpad2') setFloor(2); else if (c === 'Digit3' || c === 'Numpad3') setFloor('roof');
+    else if (S.o.floorKeys !== false && (c === 'Digit1' || c === 'Numpad1')) setFloor(1); else if (S.o.floorKeys !== false && (c === 'Digit2' || c === 'Numpad2')) setFloor(2); else if (S.o.floorKeys !== false && (c === 'Digit3' || c === 'Numpad3')) setFloor('roof');
     else if (c === 'Escape') { if (S.pop) closePop(); else if (S.o.onExit) S.o.onExit(); }
     else return;
     e.preventDefault(); e.stopImmediatePropagation();
   }
   function onKeyUp(e) { if (S && KEYS.has(e.code)) { S.keys.delete(e.code); e.stopImmediatePropagation(); } }
-  function onBlur() { if (S) { S.keys.clear(); S.ptr.clear(); S.pinch = null; S.pad.classList.remove('drag'); } }
+  function onBlur() { if (S) { S.keys.clear(); S.ptr.clear(); S.pinch = null; S.pad.classList.remove('drag'); if (S.toolOn) { S.toolOn = false; S.tool && S.tool.cancel && S.tool.cancel(); } } }
   // 톡 = 그 자리 이름 + 단추
   function zoneUnder(g) {
     const ys = S.floor === 2 ? [FH, 0, -0.3, -1.35] : [0, -0.3, -1.35, 0.5];
@@ -265,6 +273,9 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     const W = innerWidth, H = innerHeight, placed = [];
     if (S.frameN = (S.frameN || 0) + 1, S.frameN % 30 === 1 || !S.ui) S.ui = [S.bar, S.cmp, S.sc, S.help].filter(e => e && e.isConnected && e.style.opacity !== '0').map(e => { const r = e.getBoundingClientRect(); return [r.left - 4, r.top - 4, r.right + 4, r.bottom + 4]; });   // 단추 줄·방위표·축척 밑으로 이름표가 숨지 않게(0.5초마다 다시 잼)
     placed.push(...S.ui);
+    for (const m of S.MK) { const p = proj(m.x, m.y, m.z), w = m.el.offsetWidth || 80, h = m.el.offsetHeight || 24;   // 게임 이름표(무대 구역 등) — 겹쳐도 늘 보임 · 방 이름은 그 자리를 피함
+      if (p && p[0] > -w && p[0] < W + w && p[1] > -h && p[1] < H + h) { const x = Math.round(p[0] - w / 2), y = Math.round(p[1] - h / 2); m.el.style.transform = 'translate(' + x + 'px,' + y + 'px)'; m.el.style.visibility = 'visible'; placed.push([x - 3, y - 3, x + w + 3, y + h + 3]); }
+      else m.el.style.visibility = 'hidden'; }
     for (const l of S.LB) {
       let vis = false, px = 0, py = 0;
       if (S.labels) { const z = l.z, p = proj(z.cx, (z.y0 ?? z.y ?? 0) + 0.4, z.cz);
@@ -292,6 +303,9 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
       const k9 = nice + 'm'; if (S.scK !== k9 + Math.round(nice * ppm)) { S.scK = k9 + Math.round(nice * ppm); S.sc.firstChild.textContent = k9; S.sc.lastChild.style.width = Math.round(nice * ppm) + 'px'; } }
   }
   const api = { enter, exit, floor: f => setFloor(f), get on() { return !!S; }, get state() { return S ? { floor: S.floor, x: S.C.tx, z: S.C.tz, d: S.C.d, yaw: S.C.yaw, p: S.C.p } : null },
-    look: (x, z, d) => { if (!S) return; S.T.tx = x; S.T.tz = z; if (d) S.T.d = clamp(d, D_MIN, D_MAX); clampT(); }, ground: (sx, sy) => S ? groundAt(sx, sy) : null };
+    look: (x, z, d) => { if (!S) return; S.T.tx = x; S.T.tz = z; if (d) S.T.d = clamp(d, D_MIN, D_MAX); clampT(); }, ground: (sx, sy) => S ? groundAt(sx, sy) : null,
+    setTool: t => { if (!S) return; if (S.toolOn && S.tool && S.tool.cancel) S.tool.cancel(); S.toolOn = false; S.tool = t || null; closePop(); },
+    marks: L => { if (!S) return; S.MK.forEach(m => m.el.remove()); S.MK = (L || []).map(m => ({ ...m, el: el('div', 'lb mk', esc(m.t), S.lb) })); },
+    get camera() { return camera; } };
   return api;
 }
