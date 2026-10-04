@@ -196,6 +196,10 @@ export default async function start(map, params = {}) {
     media = { el, s, pi: 0 }; (s.seen || (s.seen = new Set())).add('d');
     focus(x); map.sfx('pick');
   }
+  function noCC(f) {   // 유튜브 자동 자막(CC) 끄기 — 자막 모듈을 내린다(재생이 시작된 뒤에 붙으므로 몇 번 되풀이)
+    const go = () => { if (!f.isConnected) return; for (const m of ['captions', 'cc']) try { f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'unloadModule', args: [m] }), '*'); } catch (e) { /* */ } };
+    f.addEventListener('load', () => [400, 1200, 2500, 4500, 8000, 14000].forEach(t => setTimeout(go, t)));
+  }
   function openMedia(s, kind, i = 0) {   // 목록에서 고른 영상 하나 / 사진 하나(사진은 ‹ › 로 넘겨 보기)
     if (media) media.el.remove();
     const el = mk('div', 'tp'); el.id = 'tour-media'; el.setAttribute('role', 'dialog');
@@ -210,7 +214,7 @@ export default async function start(map, params = {}) {
       const vw = mk('div', 'vw', null, body);
       if (!v.id) soon(vw, '🎬', '영상');
       else { const f = document.createElement('iframe');
-        f.src = 'https://www.youtube-nocookie.com/embed/' + v.id + '?autoplay=1&rel=0&playsinline=1&modestbranding=1';
+        f.src = 'https://www.youtube-nocookie.com/embed/' + v.id + '?autoplay=1&rel=0&playsinline=1&modestbranding=1&cc_load_policy=0&enablejsapi=1&origin=' + encodeURIComponent(location.origin); noCC(f);   // 10-04 교사: 자동 자막 끄기(영상에 자막이 이미 박혀 있음)
         f.title = s.name + ' 영상'; f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
         f.allowFullscreen = true; f.referrerPolicy = 'strict-origin-when-cross-origin'; vw.appendChild(f); }
     } else {

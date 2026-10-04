@@ -190,7 +190,8 @@ body.film-on>:not(#film):not(#scene){visibility:hidden!important}
       const at = (s.clip.at || 0.6) * 1000;
       setTimeout(() => { if (!cur || cur.clip !== d) return; d.classList.add('in');
         const f = document.createElement('iframe'); f.allow = 'autoplay; encrypted-media'; f.setAttribute('allowfullscreen', ''); f.title = s.clip.title || '';
-        f.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(s.clip.id) + '?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&start=' + (s.clip.start | 0) + (s.clip.end ? '&end=' + (s.clip.end | 0) : '');
+        f.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(s.clip.id) + '?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&cc_load_policy=0&enablejsapi=1&origin=' + encodeURIComponent(location.origin) + '&start=' + (s.clip.start | 0) + (s.clip.end ? '&end=' + (s.clip.end | 0) : '');
+        f.addEventListener('load', () => [400, 1200, 2500, 4500].forEach(t => setTimeout(() => { if (f.isConnected) for (const m of ['captions', 'cc']) try { f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'unloadModule', args: [m] }), '*'); } catch (e) { /* */ } }, t)));   // 자동 자막 끄기(10-04 교사 — 영상에 자막이 박혀 있음)
         fr.appendChild(f); }, at);
       el('div', 'cap', esc(s.clip.title || '정림초 유튜브'), d); c.clip = d;
     }
