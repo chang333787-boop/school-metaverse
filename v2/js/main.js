@@ -5,10 +5,10 @@ import { buildWorld } from './world.js?v=145';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=46';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=47';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
-import { createTitle } from './title.js?v=18';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
-import { createFilm } from './film.js?v=8';   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
+import { createTitle } from './title.js?v=19';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+import { createFilm } from './film.js?v=10';   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
@@ -31,6 +31,20 @@ const canvas = document.getElementById('scene');
 //   dpr = 지금 배율(자동 해상도가 바꾼다) · cap = 올라갈 수 있는 끝 · start = 시작 배율 · floor = 가장 낮은 배율
 //  PERF-3(10-03 교사 '홍보용·v2 둘 다 렉 최적화'): 크롬북(UA CrOS — 마우스·큰 화면이라 예전엔 데스크톱 판이었다) = cb 판 — 배율 ≤1.5에서 1.25로 시작 · 그림자 1024 ·
 //   자동 해상도를 휴대폰·저사양·크롬북까지 켠다(느리면 내리고 여유면 올림) · 휴대폰·저사양은 MSAA 끔(촘촘한 화면이라 계단이 거의 안 보이고 채우기 비용이 크다 — ?aa=1/0으로 강제)
+// A2HS(10-04 교사 '전체 화면으로 꽉 차게'): 아이폰 사파리는 전체 화면 기능이 없다(iOS 27 확인) → '홈 화면에 추가'로 열면 주소창 없이 꽉 찬 앱 화면이 되게(meta·아이콘을 실행 때 붙임 — 홍보판 index.html은 그대로)
+(() => { const H = document.head, add = (n, c) => { if (!H.querySelector('meta[name="' + n + '"]')) { const m = document.createElement('meta'); m.name = n; m.content = c; H.appendChild(m); } };
+  add('apple-mobile-web-app-capable', 'yes'); add('mobile-web-app-capable', 'yes'); add('apple-mobile-web-app-status-bar-style', 'black-translucent'); add('apple-mobile-web-app-title', '정림초 3D');
+  if (!H.querySelector('link[rel="apple-touch-icon"]')) { try { const c = document.createElement('canvas'); c.width = c.height = 180; const g = c.getContext('2d'); g.fillStyle = '#1d4fa8'; g.fillRect(0, 0, 180, 180); g.fillStyle = '#ffd23c'; g.fillRect(0, 132, 180, 48);
+    g.font = '96px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🏫', 90, 72); g.fillStyle = '#10213f'; g.font = 'bold 30px sans-serif'; g.fillText('정림초', 90, 157);
+    const l = document.createElement('link'); l.rel = 'apple-touch-icon'; l.href = c.toDataURL('image/png'); H.appendChild(l); } catch (e) { /* */ } } })();
+// HAS-1(10-04 아이폰 시뮬레이터 실측): 아이폰 사파리는 CSS :has()가 '맞다'고 판정해도 화면에 적용하지 않는 경우가 있었다(대화창이 열려도 칩·단추가 그대로)
+//   → 창이 열려 있으면 body에 h-<이름> 꼬리표를 직접 붙인다(phone.css·title.css는 :has 대신 이 꼬리표 · 몸통 아래 바뀜만 보고 한 프레임에 한 번)
+{ const HAS = ['#tour-talk', '#tour-media', '#tour-card', '#story-talk', '#story-end', '#memo-board', '#memo-form', '#memo-pick', '.eng-note', '.esc-lock', '.hudAsk', '.lb-pop', '.wg-lobby', '#mmap.mm-ov|mm-ov'];   // '고르개|꼬리표 이름'(이름이 따로면)
+  let pend = false; const sync = () => { pend = false; const B = document.body; if (!B) return; for (const q0 of HAS) { const [q, n] = q0.split('|'), c = 'h-' + (n || q.slice(1)), on = !!document.querySelector(q); if (B.classList.contains(c) !== on) B.classList.toggle(c, on); } };
+  new MutationObserver(() => { if (!pend) { pend = true; requestAnimationFrame(sync); } }).observe(document.documentElement, { childList: true, subtree: true }); }
+// SAFE-1(10-04 아이폰 시뮬레이터 실측): 아이폰 가로 화면 + viewport-fit=cover이면 재생 중인 유튜브 영상만 노치 쪽 안전 여백(≈60px)만큼 밀려 그려지고(검은 띠·반대쪽 잘림)
+//   글자도 노치·다이내믹 아일랜드에 가렸다 → 아이폰은 cover를 빼서 안전한 영역 안에만 그린다(양옆 노치 자리 = 어두운 여백 · 홍보판 index.html은 그대로 — 실행 때 바꿈)
+if (/iP(hone|od)/.test(navigator.userAgent || '')) { const m = document.querySelector('meta[name=viewport]'); if (m && /viewport-fit=cover/.test(m.content)) m.content = m.content.replace(/,?\s*viewport-fit=cover/, ''); document.documentElement.style.background = '#0b1220'; if (document.body) document.body.style.background = '#0b1220'; }
 const GFX = (() => { const q = new URLSearchParams(location.search), hq = q.get('hq') === '1', lq = q.get('lq') === '1', dev = window.devicePixelRatio || 1;
   const cros = !hq && /CrOS/.test(navigator.userAgent || '');
   const mobile = !hq && (lq || touchPrimary() || Math.min(screen.width || 9999, screen.height || 9999) <= 500);

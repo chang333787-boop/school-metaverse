@@ -107,7 +107,7 @@ body.small #hudBan{top:49%!important}
 /* 큰 지도 덮개 글자 줄 12px */
 body.touch #mmap > div:not(#mm-x){font-size:12px!important}
 /* 견학 이야기 창이 열린 동안(움직일 수 없음) 버튼·조이스틱 표시·안내는 숨긴다 — 시트 가장자리에 반쯤 걸쳐 보이던 것 */
-body.touch:has(#tour-talk) .tbtn,body.touch:has(#tour-talk) #tJoyHint,body.touch:has(#tour-talk) #hint,body.touch:has(#tour-card) #hint{visibility:hidden}
+body.touch.h-tour-talk .tbtn,body.touch.h-tour-talk #tJoyHint,body.touch.h-tour-talk #hint,body.touch.h-tour-card #hint{visibility:hidden}
 /* 세로(가로로 돌려 달라는 안내가 뜨는 동안): 가운데 위가 좁다(📍 칩과 미니맵 조각 사이 ≈ 70px) → 목표 줄·물총 칸·알림을 왼쪽 위 아이콘 칩 줄 아래로 */
 @media (orientation: portrait){
   body.small #hudGoal{top:calc(92px + env(safe-area-inset-top))!important;max-width:calc(100vw - 210px)}
@@ -138,10 +138,10 @@ body.touch .esc-dial{gap:3px}body.touch .esc-dial button{height:34px;width:50px}
 /* 번호 자물쇠(방탈출 .esc-lock — 여는 동안 멈춤): 왼쪽(목표 줄 밑 · 📍·☀️·🎮 자리 — 그동안 숨김) · 오른쪽 미니맵 조각·단서 칩(.gchip)은 그대로 보인다 */
 body.touch.small .esc-lock{left:calc(8px + env(safe-area-inset-left));top:calc(40px + env(safe-area-inset-top));width:min(300px,46vw);max-height:calc(100vh - 48px);overflow:auto;box-sizing:border-box}
 /* 창이 떠 있는 동안(움직일 수 없음 — 쪽지·자물쇠·보기 창) 버튼·조이스틱 표시·안내는 숨긴다(견학 창과 같은 규칙) */
-body.touch:has(.eng-note) .tbtn,body.touch:has(.eng-note) #tJoyHint,body.touch:has(.eng-note) #hint,
-body.touch:has(.esc-lock) .tbtn,body.touch:has(.esc-lock) #tJoyHint,body.touch:has(.esc-lock) #hint,
-body.touch:has(.hudAsk) .tbtn,body.touch:has(.hudAsk) #tJoyHint,body.touch:has(.hudAsk) #hint{visibility:hidden}
-body.touch:has(.esc-lock) #loc,body.touch:has(.esc-lock) #timeChip,body.touch:has(.esc-lock) #gpick,body.touch:has(.esc-lock) .eng-inv{visibility:hidden}
+body.touch.h-eng-note .tbtn,body.touch.h-eng-note #tJoyHint,body.touch.h-eng-note #hint,
+body.touch.h-esc-lock .tbtn,body.touch.h-esc-lock #tJoyHint,body.touch.h-esc-lock #hint,
+body.touch.h-hudAsk .tbtn,body.touch.h-hudAsk #tJoyHint,body.touch.h-hudAsk #hint{visibility:hidden}
+body.touch.h-esc-lock #loc,body.touch.h-esc-lock #timeChip,body.touch.h-esc-lock #gpick,body.touch.h-esc-lock .eng-inv{visibility:hidden}
 
 /* ---------- 이야기 RPG '무지개 편지'(G3-STORY · 09-27 · games/story.js) ---------- */
 /* 이야기 창 = 아래 시트(견학 창과 같은 모양 · ≤52%) · 보기 버튼은 44px */
@@ -158,12 +158,12 @@ body.small #story-end h2{font-size:19px;margin-bottom:4px}
 body.small #story-end .b{font-size:14px;margin-bottom:6px}
 body.small #story-end ul{font-size:13px;line-height:1.5;margin-bottom:8px}
 /* 창이 떠 있는 동안(움직일 수 없음) 버튼·조이스틱 표시·안내는 숨긴다 · 끝 화면이면 목표 줄·칩도 */
-body.touch:has(#story-talk) .tbtn,body.touch:has(#story-talk) #tJoyHint,body.touch:has(#story-talk) #hint,
-body.touch:has(#story-end) .tbtn,body.touch:has(#story-end) #tJoyHint,body.touch:has(#story-end) #hint{visibility:hidden}
+body.touch.h-story-talk .tbtn,body.touch.h-story-talk #tJoyHint,body.touch.h-story-talk #hint,
+body.touch.h-story-end .tbtn,body.touch.h-story-end #tJoyHint,body.touch.h-story-end #hint{visibility:hidden}
 /* NET-2·WG-NET·MEMO-3(10-03): 함께하기 창이 떠 있는 동안 터치 버튼·조이스틱 표시 숨김 · 😀 칩은 👥 칩 밑 · 물총 대기실은 낮은 화면에 맞게 */
-body.touch:has(.wg-lobby) .tbtn,body.touch:has(.wg-lobby) #tJoyHint,body.touch:has(.wg-lobby) #hint,
-body.touch:has(.lb-pop) .tbtn,body.touch:has(.lb-pop) #tJoyHint,
-body.touch:has(#memo-board) .tbtn,body.touch:has(#memo-board) #tJoyHint,body.touch:has(#memo-form) .tbtn,body.touch:has(#memo-form) #tJoyHint,body.touch:has(#memo-pick) .tbtn,body.touch:has(#memo-pick) #tJoyHint{visibility:hidden}
+body.touch.h-wg-lobby .tbtn,body.touch.h-wg-lobby #tJoyHint,body.touch.h-wg-lobby #hint,
+body.touch.h-lb-pop .tbtn,body.touch.h-lb-pop #tJoyHint,
+body.touch.h-memo-board .tbtn,body.touch.h-memo-board #tJoyHint,body.touch.h-memo-form .tbtn,body.touch.h-memo-form #tJoyHint,body.touch.h-memo-pick .tbtn,body.touch.h-memo-pick #tJoyHint{visibility:hidden}
 body.small #mpEmo{top:calc(118px + env(safe-area-inset-top))!important;left:calc(8px + env(safe-area-inset-left))!important}
 body.small #mpInvite{top:calc(8px + env(safe-area-inset-top))!important;font-size:13px!important}
 @media (max-height:500px){ .wg-lobby{padding:10px 12px!important;font-size:13px!important;max-height:94vh!important} }
@@ -172,3 +172,30 @@ body.small #mpInvite{top:calc(8px + env(safe-area-inset-top))!important;font-siz
 body.small #mpChatBtn{top:calc(118px + env(safe-area-inset-top))!important;left:calc(58px + env(safe-area-inset-left))!important}
 body.small #mpChat{bottom:calc(150px + env(safe-area-inset-bottom))!important;width:min(300px,60vw)!important;font-size:12px!important}
 body.touch:has(#mpChat .bar[style*="display: none"]) #mpChat{pointer-events:none}
+
+/* LAND-1(10-04 교사 휴대폰 사진): 휴대폰에서 사진·영상·자세히 창 = 화면 전체(가로 화면은 높이가 아주 낮아 창이 우표만 해졌다) · 뒤 대화창·칩·단추는 숨김 */
+body.small #tour-ui #tour-media{position:fixed;inset:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);margin:0;width:auto;height:auto;max-height:none;border-radius:0;border:0;padding:6px 10px 8px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden}
+body.small #tour-ui #tour-media:not(.det){background:#0d1117;color:#fff}
+body.small #tour-ui #tour-media:not(.det) h3{color:#fff;font-size:15px}
+body.small #tour-ui #tour-media.det{overflow:auto}
+body.small #tour-media .hd{flex:0 0 auto;margin-bottom:4px}
+body.small #tour-media:not(.det)>div:not(.hd):not(.cp){flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
+body.small #tour-media .vw{width:min(100%,calc((100dvh - 64px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 16 / 9));height:auto;aspect-ratio:16/9;flex:0 0 auto}
+body.small #tour-media .ph{width:100%;height:100%;min-height:0;background:#0d1117;border-radius:6px}
+body.small #tour-media .ph img{max-width:100%;max-height:100%;object-fit:contain}
+body.small #tour-media .cp{flex:0 0 auto;color:#d6dbe3;font-size:13px;min-height:0;margin-top:4px;text-align:center}
+body.small.h-tour-media #tour-ui #tour-talk,body.small.h-tour-media .gchip,body.small.h-tour-media .tbtn,body.small.h-tour-media #tJoyHint,body.small.h-tour-media #mmap,body.small.h-tour-media #hudGoal{visibility:hidden!important}
+
+/* LAND-2(10-04 휴대폰 전수 점검 — 아이폰 시뮬레이터 실측): 대화·영상·사진·도감 창이 열린 동안 휴대폰은 바깥 HUD(칩·지도·목표 줄·안내·단추)를 숨긴다
+   — 낮은 가로 화면(사파리 주소창 빼고 높이 290~340px)에서 선택 목록이 위쪽 칩·지도·목표 줄과 겹쳤다. 창을 닫으면 그대로 */
+body.small.h-tour-talk .gchip,body.small.h-tour-talk #mmap,body.small.h-tour-talk #hudGoal,body.small.h-tour-talk #loc,body.small.h-tour-talk #timeChip,body.small.h-tour-talk #homeChip,
+body.small.h-tour-media .chip,body.small.h-tour-media .tbtn,body.small.h-tour-media #hint,
+body.small.h-tour-card .chip,body.small.h-tour-card .tbtn,body.small.h-tour-card #mmap,body.small.h-tour-card #hudGoal{visibility:hidden!important}
+/* 작은 글자 12px 미만 없애기(휴대폰) */
+body.small #tour-card .gr div,body.small #tour-ui #tour-card button.sl{font-size:12px!important}
+
+/* LAND-2: 큰 지도(덮개)가 열린 동안 휴대폰 HUD 숨김 */
+body.small.h-mm-ov .gchip,body.small.h-mm-ov #hint,body.small.h-mm-ov #hudGoal,body.small.h-mm-ov .tbtn,body.small.h-mm-ov #loc,body.small.h-mm-ov #timeChip,body.small.h-mm-ov #homeChip{visibility:hidden!important}
+
+/* LAND-2 세로 휴대폰: 선택 목록은 한 줄 칸(두 칸이면 화면 왼쪽 밖으로 나갔다) · 화면 폭 안 */
+@media (orientation:portrait){body.small #tour-talk .tmenu{grid-template-columns:1fr;max-width:calc(100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right))}}

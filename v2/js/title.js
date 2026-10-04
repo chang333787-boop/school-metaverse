@@ -90,6 +90,7 @@ export function createTitle(h) {
     +   (PROMO ? '<div class="ttl-sub ttl-addr"><b>🏫 정림초등학교</b><span>경기도 화성시 효행구 정남면 망월길 69</span></div>' : '<div class="ttl-sub">' + (LESSON ? '🏫 정림초등학교 · 4학년 이야기 수업' : '🏫 정림초등학교 · 3D 학교 놀이터') + '</div>')
     +   '<button class="ttl-start" type="button"><b>▶</b> ' + (PROMO ? '학교 둘러보기' : '시작하기') + '</button>'
     +   '<div class="ttl-keys"><span class="kd">클릭 · Enter · Space</span><span class="kt">화면을 톡 눌러요</span></div>'
+    +   (/iPhone|iPod/.test(navigator.userAgent || '') && !navigator.standalone ? '<div class="ttl-a2hs">⬆️ 공유 → <b>홈 화면에 추가</b>하면 주소창 없이 꽉 찬 화면으로 볼 수 있어요</div>' : '')   // A2HS: 아이폰 사파리엔 전체 화면이 없다
     + '</section>'
     + '<section class="ttl-menu" aria-label="놀이 고르기">'
     +   '<header><button class="ttl-back" type="button" aria-label="처음 화면">◀</button><div class="ttl-mlogo">' + cap(0.55) + '</div><h2>어떤 놀이를 할까요?</h2></header>'

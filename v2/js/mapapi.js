@@ -258,7 +258,14 @@ export function createMapApi(host, NAV, META) {
   const chipText = t => small() ? String(t).replace(/\s*\((?:[A-Z]|[A-Z]:[^)]*)\)\s*$/, '') : t;
   // MOBUI-1 리뷰: 터치(휴대폰·태블릿)에서 누르는 칩(.gtap — 💡 길 안내·🎫 도장·🔊 소리)은 44px 칸(가운데 정렬 + 투명 누름 자리 phone.css), 보기만 하는 칩은 30px(휴대폰) 칸 · 데스크톱은 34 그대로
   const slot = c => c.tap && document.body.classList.contains('touch') ? 44 : small() ? 30 : 34;
+  // LAND-1: 휴대폰 가로(세로 공간이 아주 좁다 — 사파리 주소창·탭 줄)면 칩을 미니맵 왼쪽 · 목표 줄 아래에 가로 한 줄로, 글자는 짧게('📖 정림초 도감 1/15' → '📖 1/15')
+  const shortChip = t => { t = String(t).trim(); if ([...t].length <= 8) return t; const p = t.split(/\s+/), n = t.match(/\d+\s*\/\s*\d+/); if (n) return p[0] + ' ' + n[0].replace(/\s+/g, ''); const w = [...(p[1] || '')]; return p[0] + (w.length ? ' ' + (w.length > 6 ? w.slice(0, 5).join('') + '…' : w.join('')) : ''); };
+  const rowMode = () => small() && document.body.classList.contains('touch') && innerWidth > innerHeight;
   const layoutChips = () => { const r = MM && MM.rect(), sm = small(), st = sm ? 30 : 34; let tot = 0; for (const [, c] of chips) tot += slot(c);
+    if (rowMode()) { let x = r && !r.big ? r.right + r.w + 8 : 10; const y = 52;
+      for (const [, c] of chips) { if (c.raw != null) c.el.textContent = shortChip(chipText(c.raw)); const h = slot(c);
+        c.el.style.top = (y + (h === 44 ? Math.max(0, Math.round((44 - (c.el.offsetHeight || 26)) / 2)) : 0)) + 'px'; c.el.style.right = 'calc(' + x + 'px + env(safe-area-inset-right))'; x += (c.el.offsetWidth || 60) + 6; }
+      return; }
     const side = r && (r.big || (document.body.classList.contains('touch') && r.top + r.h + 8 + tot > innerHeight - (sm ? 90 : 110)));   // 휴대폰 버튼 줄 위 = 아래 90px
     const top0 = r && !side ? r.top + r.h + (sm ? 6 : 8) : side && !r.big && document.body.classList.contains('touch') ? 56 : sm ? 8 : 44, right = side ? r.right + r.w + 8 : r ? r.right : 10; let k = 0;   // 터치 좁은 화면(미니맵 왼쪽 줄): 가운데 위 목표 줄(아래 ≈50px) 밑 56px부터
     for (const [, c] of chips) { const h = slot(c); c.el.style.top = (top0 + k + (h === 44 ? Math.max(0, Math.round((44 - (c.el.offsetHeight || 26)) / 2)) : 0)) + 'px'; k += h - st; c.el.style.right = r && !side ? right + 'px' : 'calc(' + right + 'px + env(safe-area-inset-right))'; if (c.raw != null) c.el.textContent = chipText(c.raw); k += st; } };   // 미니맵 기준 자리는 이미 안전 여백을 품는다(rect = 화면 자리)
@@ -268,7 +275,7 @@ export function createMapApi(host, NAV, META) {
     banner(text, sec = 2.5) { if (!banEl) { banEl = el('left:50%;top:38%;transform:translate(-50%,-50%);font-size:30px;font-weight:700;padding:14px 28px;display:none;pointer-events:none'); banEl.id = 'hudBan'; } banEl.textContent = text; banEl.style.display = ''; banT = sec; return { remove() { banEl.style.display = 'none'; banT = 0; } }; },
     // opt.onClick(GAME-FIND-1): 칩을 누르면(터치·커서) — 키 안내 칩을 손가락으로도 쓰게
     chip(key, text, opt) { let c = chips.get(key); if (text == null) { if (c) { c.el.remove(); chips.delete(key); layoutChips(); } return null; }
-      if (!c) { c = { el: el('right:10px;font-size:14px') }; c.el.classList.add('gchip'); chips.set(key, c); layoutChips(); } c.raw = text; c.el.textContent = chipText(text);
+      if (!c) { c = { el: el('right:10px;font-size:14px') }; c.el.classList.add('gchip'); chips.set(key, c); layoutChips(); } const was = c.raw; c.raw = text; c.el.textContent = rowMode() ? shortChip(chipText(text)) : chipText(text); if (rowMode() && was !== text) layoutChips();   // 가로 한 줄이면 글자 폭이 바뀔 때 다시 줄 세움
       if (opt && opt.onClick) { if (!c.tap) { c.tap = true; c.el.classList.add('gtap'); layoutChips(); } c.el.style.cursor = 'pointer'; c.el.onclick = e => { e.stopPropagation(); try { opt.onClick(); } catch (err) { console.error(err); } }; }
       return { remove: () => hud.chip(key, null) }; },
     // 목표 줄(GAME-FIND-1): 가운데 위에 계속 떠 있는 한 줄("① 찾아갈 곳: 과학실") — null이면 숨김. 배너(가운데·잠깐)와 따로

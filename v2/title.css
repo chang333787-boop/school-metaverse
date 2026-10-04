@@ -136,7 +136,7 @@ body.title-on > :not(#scene):not(#boot):not(.ttl-keep):not(script):not(style){vi
 #homeChip{cursor:pointer;user-select:none;display:flex;align-items:center;box-sizing:border-box;font-size:14px;padding:8px 14px}
 body.touch #homeChip{min-height:44px;min-width:44px;justify-content:center;font-size:15px;padding:6px 14px}
 body.touch.small #homeChip{font-size:20px;padding:4px 8px}
-body.touch:has(.esc-lock) #homeChip{visibility:hidden}
+body.touch.h-esc-lock #homeChip{visibility:hidden}
 
 /* ---------- 휴대폰 가로(높이 ≤ 500) — 카드 4칸 × 2줄이 한 화면에 ---------- */
 @media (max-height:500px){
@@ -177,3 +177,11 @@ body.touch:has(.esc-lock) #homeChip{visibility:hidden}
   #ttl.go .ttl-h .ch > span,#ttl.go .ttl-h .spk,.ttl-logo .ttl-kid,.ttl-mlogo .ttl-kid,.tb-t{animation:none}
   #ttl.go .ttl-start{animation:ttlUp .3s ease-out 1s both}
 }
+
+/* A2HS(10-04): 아이폰 사파리 = '홈 화면에 추가' 안내 한 줄 */
+.ttl-a2hs{margin-top:10px;font-size:clamp(12px,3.4vw,14px);color:#10213f;background:rgba(255,255,255,.82);border-radius:999px;padding:6px 14px;display:inline-block;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.ttl-a2hs b{color:#1d4fa8}
+
+/* LAND-2: 휴대폰 첫 화면 작은 글자 12px 아래로 안 내려가게 */
+.prb-sch,.ttl-addr span{font-size:max(12px,.86em)}
+.prb small,.prb-ras,.ttl-keys .kt,.ttl-keys .kd{font-size:max(12px,1em)}

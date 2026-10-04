@@ -73,7 +73,7 @@ export function createFilm(env) {
 #film .lock .dot{width:clamp(64px,9vw,120px);height:clamp(64px,9vw,120px);border-radius:50%;display:grid;place-items:center;font:900 clamp(28px,4.6vw,62px)/1 var(--ff);border:3px solid rgba(255,255,255,.25);color:rgba(255,255,255,.25);transition:all .45s cubic-bezier(.2,.9,.3,1.4)}
 #film .lock .dot.on{color:#fff;border-color:transparent;transform:scale(1.08);box-shadow:0 0 0 6px rgba(255,255,255,.08),0 0 40px var(--c)}
 #film .lock .dot{position:relative;line-height:1}
-#film .lock .dot small{position:absolute;left:50%;top:calc(100% + 10px);transform:translateX(-50%);white-space:nowrap;font:800 clamp(10px,1.1vw,13px)/1 var(--ff);letter-spacing:.14em;color:rgba(255,255,255,.4);transition:color .4s}
+#film .lock .dot small{position:absolute;left:50%;top:calc(100% + 10px);transform:translateX(-50%);white-space:nowrap;font:800 clamp(12px,1.1vw,13px)/1 var(--ff);letter-spacing:.14em;color:rgba(255,255,255,.4);transition:color .4s}
 #film .lock .dot.on small{color:rgba(255,255,255,.9)}
 #film .lock .w2{font:900 clamp(30px,6vw,84px)/1 var(--ff);color:#ffd23c;opacity:0;transform:scale(.8);transition:all .6s cubic-bezier(.2,.9,.3,1.5)}
 #film .lock.ras .w2{opacity:1;transform:none}
@@ -89,11 +89,11 @@ export function createFilm(env) {
 #film .stats{right:clamp(14px,3vw,48px);top:50%;transform:translate(30px,-50%);width:min(560px,56vw);display:grid;grid-template-columns:1fr 1fr;gap:clamp(8px,1.2vw,14px)}
 #film .stats.in{transform:translate(0,-50%)}
 #film .stats .hd{grid-column:1/-1;margin-bottom:4px}
-#film .st{padding:clamp(10px,1.4vw,18px);opacity:0;transform:translateY(16px) scale(.96);transition:all .55s cubic-bezier(.2,.9,.3,1.3)}
+#film .st{padding:clamp(12px,1.4vw,18px);opacity:0;transform:translateY(16px) scale(.96);transition:all .55s cubic-bezier(.2,.9,.3,1.3)}
 #film .st.in{opacity:1;transform:none}
 #film .st .n{font:900 clamp(24px,3.6vw,50px)/1 var(--ff);letter-spacing:-.02em;color:#ffd23c;white-space:nowrap}
 #film .st .n u{text-decoration:none;font-size:.5em;margin-left:3px;color:#ffd23c;font-weight:800}
-#film .st .c{margin-top:6px;font:700 clamp(11px,1.15vw,14.5px)/1.35 var(--ff);color:rgba(255,255,255,.88)}
+#film .st .c{margin-top:6px;font:700 clamp(12px,1.15vw,14.5px)/1.35 var(--ff);color:rgba(255,255,255,.88)}
 /* 갈래(R·A·S·AI·생태) */
 #film .chap{left:clamp(16px,4vw,64px);top:50%;transform:translate(-30px,-50%);width:min(560px,58vw)}
 #film .chap.in{transform:translate(0,-50%)}
@@ -104,10 +104,10 @@ export function createFilm(env) {
 #film .chap li.in{opacity:1;transform:none}
 #film .chap li:before{content:'';position:absolute;left:14px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--c)}
 /* 영상 조각 */
-#film .clip{right:clamp(14px,3vw,48px);bottom:clamp(10px,3vh,34px);width:min(40vw,500px);padding:8px;transform:translateY(18px)}
+#film .clip{right:clamp(14px,3vw,48px);bottom:clamp(12px,3vh,34px);width:min(40vw,500px);padding:8px;transform:translateY(18px)}
 #film .clip.in{transform:none}
 #film .clip .fr{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000 center/cover no-repeat}
-#film .clip .cap{display:flex;align-items:center;gap:8px;padding:8px 4px 2px;font:700 clamp(11px,1.15vw,14px)/1.3 var(--ff);color:rgba(255,255,255,.9)}
+#film .clip .cap{display:flex;align-items:center;gap:8px;padding:8px 4px 2px;font:700 clamp(12px,1.15vw,14px)/1.3 var(--ff);color:rgba(255,255,255,.9)}
 #film .clip .cap:before{content:'▶';font-size:10px;background:#ff3d3d;border-radius:4px;padding:3px 5px;line-height:1}
 /* 아래 글 · 가운데 글 */
 #film .lower{left:clamp(16px,4vw,64px);bottom:clamp(14px,4vh,40px);max-width:min(760px,70vw)}
@@ -121,7 +121,7 @@ export function createFilm(env) {
 #film .stamps .mid b{font:900 clamp(40px,7vw,96px)/1 var(--ff);color:#ffd23c}
 #film .stamps .mid span{font:800 clamp(13px,1.6vw,19px)/1.3 var(--ff)}
 /* 끝 화면 */
-#film .endc{left:50%;top:50%;transform:translate(-50%,-46%);width:min(94vw,820px);text-align:center;padding:clamp(18px,3vw,36px)}
+#film .endc{box-sizing:border-box;left:50%;top:50%;transform:translate(-50%,-46%);width:min(94vw,820px);text-align:center;padding:clamp(18px,3vw,36px)}
 #film .endc.in{transform:translate(-50%,-50%)}
 #film .endc .row{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:18px;pointer-events:auto}
 #film .endc button{font:800 clamp(13px,1.5vw,17px)/1 var(--ff);border:0;border-radius:999px;padding:13px 20px;min-height:44px;cursor:pointer;background:#fff;color:#10213f}
@@ -129,16 +129,16 @@ export function createFilm(env) {
 #film .endc .ct{display:inline-flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin-top:14px;font:700 clamp(13px,1.55vw,18px)/1.4 var(--ff)}
 #film .endc .ct b{color:#ffd23c}
 @media (max-aspect-ratio:1/1){#film{--lb:clamp(20px,6vh,56px)}#film .stats{left:12px;right:12px;width:auto;top:auto;bottom:8px;transform:translateY(20px)}#film .stats.in{transform:none}#film .chap{width:auto;right:12px;top:9%;transform:translateX(-30px)}#film .chap.in{transform:none}#film .clip{width:min(80vw,380px);right:50%;margin-right:calc(min(80vw,380px) / -2);bottom:10px}#film .bars{left:12px;right:12px;width:auto;top:auto;bottom:8px;transform:translateY(20px)}#film .bars.in{transform:none}}   /* 세로 휴대폰(아이폰 시뮬레이터 10-04): 갈래 글은 위 · 영상 조각은 아래 가운데(겹치지 않게) · 검은 띠 얇게 */
-@media (max-height:520px){#film .lock .ph{width:34px;height:58px;margin-bottom:8px;border-width:3px;border-radius:10px}#film .lock .ph:after{inset:5px 4px 11px}#film .lock .w1{font-size:13vh}#film .lock .dot{width:17vh;height:17vh;font-size:8vh}#film .lock .dots{margin:10px 0 26px}#film .lock .w2{font-size:12vh}#film .lock .sub{margin-top:8px}#film .stats{grid-template-columns:1fr 1fr 1fr;width:min(720px,70vw)}#film .chap .big{font-size:clamp(56px,11vw,120px)}#film .clip{width:min(32vw,300px)}}
+@media (max-height:520px){#film .chap .big{font-size:16vh!important}#film .chap .big small{font-size:6vh!important}#film .chap .h2{font-size:7vh!important;margin-top:4px!important}#film .chap ul{margin-top:8px!important;gap:5px!important}#film .chap li{padding:6px 12px 6px 32px!important;font-size:13px!important}#film .chap li:before{left:12px;width:10px;height:10px;margin-top:-5px}#film .lock .w1{font-size:11vh!important}#film .lock .dot{width:14vh!important;height:14vh!important;font-size:7vh!important}#film .lock .dots{margin:6px 0 22px!important}#film .lock .w2{font-size:10vh!important}#film .lock .sub{margin-top:4px!important}#film .endc{padding:10px 14px!important;width:min(94vw,640px)!important}#film .endc .h1{font-size:8.5vh!important}#film .endc .row{margin-top:8px!important}#film .endc button{min-height:40px!important;padding:9px 14px!important}#film .endc .ct{margin-top:6px!important}#film .lock .ph{width:34px;height:58px;margin-bottom:8px;border-width:3px;border-radius:10px}#film .lock .ph:after{inset:5px 4px 11px}#film .lock .w1{font-size:13vh}#film .lock .dot{width:17vh;height:17vh;font-size:8vh}#film .lock .dots{margin:10px 0 26px}#film .lock .w2{font-size:12vh}#film .lock .sub{margin-top:8px}#film .stats{grid-template-columns:1fr 1fr 1fr;width:min(720px,70vw)}#film .chap .big{font-size:clamp(56px,11vw,120px)}#film .clip{width:min(32vw,300px)}}
 body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
 #scene.fl-punch{animation:flpunch .6s cubic-bezier(.2,.8,.2,1)}
 @keyframes flpunch{0%{transform:scale(1.07)}100%{transform:none}}
 #film .fl-flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:4;pointer-events:none}
 /* 갈래 순서(01/05) */
-#film .chn{left:clamp(16px,4vw,64px);top:clamp(10px,2.6vh,24px);display:flex;flex-wrap:wrap;gap:6px;align-items:center;transform:translateY(-8px)}
+#film .chn{left:clamp(16px,4vw,64px);top:clamp(12px,2.6vh,24px);display:flex;flex-wrap:wrap;gap:6px;align-items:center;transform:translateY(-8px)}
 #film .chn.in{transform:none}
 #film .chn .no{font:900 clamp(12px,1.35vw,16px)/1 var(--ff);color:#ffd23c;margin-right:6px;letter-spacing:.12em}
-#film .chn span{font:800 clamp(11px,1.1vw,13px)/1 var(--ff);padding:6px 10px;border-radius:999px;background:rgba(10,18,36,.55);color:rgba(255,255,255,.62);border:1px solid rgba(255,255,255,.14)}
+#film .chn span{font:800 clamp(12px,1.1vw,13px)/1 var(--ff);padding:6px 10px;border-radius:999px;background:rgba(10,18,36,.55);color:rgba(255,255,255,.62);border:1px solid rgba(255,255,255,.14)}
 #film .chn span.on{background:var(--c);color:#fff;border-color:transparent;box-shadow:0 0 18px var(--c)}
 #film .chn span.done{color:rgba(255,255,255,.9)}
 /* 큰 배경 글자 */
@@ -153,14 +153,14 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
 #film .pin.in{opacity:1;transform:translate(-50%,-100%) scale(1)}
 #film .pin i{display:grid;place-items:center;width:clamp(30px,3.4vw,44px);height:clamp(30px,3.4vw,44px);margin:0 auto;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#fff;box-shadow:0 6px 16px rgba(0,0,0,.35)}
 #film .pin i em{transform:rotate(45deg);font-style:normal;font-size:clamp(15px,1.8vw,22px)}
-#film .pin b{display:block;margin-top:4px;white-space:nowrap;font:800 clamp(11px,1.15vw,14px)/1 var(--ff);background:rgba(10,18,36,.78);padding:5px 8px;border-radius:999px}
+#film .pin b{display:block;margin-top:4px;white-space:nowrap;font:800 clamp(12px,1.15vw,14px)/1 var(--ff);background:rgba(10,18,36,.78);padding:5px 8px;border-radius:999px}
 /* 막대그래프 */
 #film .bars{right:clamp(14px,3vw,48px);top:50%;transform:translate(30px,-50%);width:min(560px,54vw);padding:clamp(14px,1.8vw,24px)}
 #film .bars.in{transform:translate(0,-50%)}
 #film .bars .br{display:grid;grid-template-columns:minmax(90px,38%) 1fr auto;align-items:center;gap:10px;margin-top:clamp(5px,.8vh,9px);opacity:0;transform:translateX(12px);transition:all .45s ease}
 #film .bars .br.in{opacity:1;transform:none}
-#film .bars .br span{font:700 clamp(11px,1.15vw,14px)/1.2 var(--ff);color:rgba(255,255,255,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#film .bars .tr{height:clamp(10px,1.3vh,14px);border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
+#film .bars .br span{font:700 clamp(12px,1.15vw,14px)/1.2 var(--ff);color:rgba(255,255,255,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#film .bars .tr{height:clamp(12px,1.3vh,14px);border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
 #film .bars .tr i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--c1),var(--c2));transition:width 1.1s cubic-bezier(.2,.9,.2,1)}
 #film .bars .br b{font:900 clamp(12px,1.3vw,16px)/1 var(--ff);color:#ffd23c;min-width:4.6em;text-align:right}
 #film .st .ic{float:right;font-size:clamp(18px,2.2vw,28px);line-height:1;opacity:.95}
