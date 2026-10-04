@@ -194,8 +194,9 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
   // 아이폰 사파리(10-04 교사 휴대폰 사진 — 영상 왼쪽 검은 띠·오른쪽 잘림): 상자 안(스크롤·둥근 잘라내기·transform) 유튜브 영상을 어긋나게 그린다
   //   → iframe은 body 맨 위층(position: fixed)에 두고, 창 안 영상 자리(holder)의 화면 자리를 프레임마다 따라간다(holder가 사라지면 같이 지움)
   function ytFloat(holder, f, z) {
-    f.classList.add('yt-float', 'ttl-keep'); Object.assign(f.style, { position: 'fixed', border: '0', zIndex: String(z || 45), borderRadius: '10px', background: '#000', left: '0px', top: '0px', width: '0px', height: '0px' });
-    document.body.appendChild(f); let last = '';
+    f.classList.add('yt-float', 'ttl-keep'); Object.assign(f.style, { position: 'fixed', border: '0', zIndex: String(z || 45), borderRadius: '10px', background: '#000' });
+    if (!f.isConnected) { Object.assign(f.style, { left: '0px', top: '0px', width: '0px', height: '0px' }); document.body.appendChild(f); }   // 미리 지은 조각(clipWarm)은 이미 body에 있다 — 옮겨 붙이면 iframe이 처음부터 다시 불러온다
+    let last = '';
     const fit = () => { if (!f.isConnected) return; if (!holder.isConnected) { f.remove(); return; }
       const r = holder.getBoundingClientRect(), cs = getComputedStyle(holder), op = cs.visibility === 'hidden' ? 0 : +(getComputedStyle(holder.closest('.fl-u, .tp') || holder).opacity || 1);
       const k = r.left.toFixed(1) + ',' + r.top.toFixed(1) + ',' + r.width.toFixed(1) + ',' + r.height.toFixed(1) + ',' + op.toFixed(2);
@@ -244,15 +245,38 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
       try { document.exitPointerLock && document.pointerLockElement && document.exitPointerLock(); } catch (e) { /* */ }
       document.body.classList.add('film-on');
       const T = shots.reduce((a, s) => a + (s.dur || 0), 0);
-      cur = { shots, i: -1, t: 0, st: 0, mb: 0, lastCh: null, T, res, o, root, black, flash, stage, prog, onKey, tags: [], ui: [], extra: [], clip: null, last: (document.timeline && document.timeline.currentTime) || performance.now(), done: false, prevTime: env.getTime ? env.getTime() : null, fov0: camera.fov, near0: camera.near, far0: camera.far };
+      cur = { shots, i: -1, t: 0, st: 0, mb: 0, lastCh: null, T, res, o, root, black, flash, stage, prog, onKey, tags: [], ui: [], extra: [], clip: null, warm: new Map(), last: (document.timeline && document.timeline.currentTime) || performance.now(), done: false, prevTime: env.getTime ? env.getTime() : null, fov0: camera.fov, near0: camera.near, far0: camera.far };
       if (shots.some(s => s.cut)) cutOn();
       setView && setView({ far: 420 });
       void root.offsetWidth; requestAnimationFrame(() => { if (cur && cur.root === root) root.classList.add('bars'); });
       setCam(camF);
     });
   }
+  // CLIP-WARM(10-04 교사 '오프닝 유튜브가 3초 뒤에 나와'): 장면이 시작될 때 iframe을 만들면 유튜브 플레이어가 뜨고 start로 감기까지 2~3초 →
+  //   한 장면 앞에서 미리 지어 둔다(소리 끔·자동 재생 · 3D 캔버스 뒤 z −1 = 화면 안이지만 가려짐 — 화면 밖이면 크롬이 재생을 멈춤) → 그 장면에서 start로 되감고 위층으로
+  const ytSrc = cl => 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(cl.id) + '?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&cc_load_policy=0&enablejsapi=1&origin=' + encodeURIComponent(location.origin) + '&start=' + (cl.start | 0) + (cl.end ? '&end=' + (cl.end | 0) : '');
+  const ytCmd = (f, func, args = []) => { try { f.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args }), '*'); } catch (e) { /* */ } };
+  function clipMake(cl) {
+    const f = document.createElement('iframe'); f.allow = 'autoplay; encrypted-media'; f.setAttribute('allowfullscreen', ''); f.title = cl.title || ''; f.src = ytSrc(cl);
+    f.addEventListener('load', () => { f._ld = true; [400, 1200, 2500, 4500].forEach(t => setTimeout(() => { if (f.isConnected) for (const m of ['captions', 'cc']) ytCmd(f, 'unloadModule', [m]); }, t));   // 자동 자막 끄기(10-04 교사 — 영상에 자막이 박혀 있음)
+      [0, 500, 1500].forEach(t => setTimeout(() => { try { f.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1 }), '*'); } catch (e) { /* */ } }, t)); });   // 재생 상태 받기(playerState — 이미 재생 중이면 playVideo를 보내지 않는다: 가운데 ⏸ 표시가 뜬다)
+    return f;
+  }
+  addEventListener('message', e => {   // 미리 지은 조각들의 재생 상태
+    if (!cur || !/youtube/.test(e.origin)) return; let d; try { d = JSON.parse(e.data); } catch (x) { return; }
+    if (!d || d.event !== 'infoDelivery' || !d.info || d.info.playerState == null) return;
+    for (const f of cur.warm.values()) if (f.contentWindow === e.source) f._st = d.info.playerState;
+  });
+  function clipWarm(i) {   // i번 장면 조각을 미리(이미 있으면 그대로)
+    const c = cur, s = c && c.shots[i]; if (!s || !s.clip || !s.clip.id || c.warm.has(i)) return;
+    const f = clipMake(s.clip); f.classList.add('yt-float', 'ttl-keep');
+    Object.assign(f.style, { position: 'fixed', border: '0', zIndex: '-1', left: '0px', top: '0px', width: '480px', height: '270px', pointerEvents: 'none' });
+    document.body.appendChild(f); c.warm.set(i, f);
+  }
   function enter(i) {
     const c = cur, s = c.shots[i]; c.i = i; c.st = 0; c.s = s;
+    for (const [k, f] of c.warm) if (k < i) { f.remove(); c.warm.delete(k); }   // 지난 장면 몫(건너뛴 것)
+    for (let j = i + 1; j < Math.min(c.shots.length, i + 3); j++) if (c.shots[j].clip) { clipWarm(j); break; }   // 다음 조각 하나만 미리
     for (const u of c.ui) u.el.remove(); c.ui.length = 0; for (const t of c.tags) t.el.remove(); c.tags.length = 0; for (const e of c.extra) e.remove(); c.extra.length = 0;
     if (c.clip) { c.clip.remove(); c.clip = null; }
     if (s.time && env.setTime) env.setTime(s.time);
@@ -273,12 +297,11 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
     if (s.clip && s.clip.id) {
       const d = el('div', 'fl-u clip glass', null, c.stage), fr = el('div', 'fr', null, d);
       fr.style.backgroundImage = 'url(https://i.ytimg.com/vi/' + encodeURIComponent(s.clip.id) + '/hqdefault.jpg)';
-      const at = (s.clip.at || 0.6) * 1000;
-      setTimeout(() => { if (!cur || cur.clip !== d) return; d.classList.add('in');
-        const f = document.createElement('iframe'); f.allow = 'autoplay; encrypted-media'; f.setAttribute('allowfullscreen', ''); f.title = s.clip.title || '';
-        f.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(s.clip.id) + '?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&cc_load_policy=0&enablejsapi=1&origin=' + encodeURIComponent(location.origin) + '&start=' + (s.clip.start | 0) + (s.clip.end ? '&end=' + (s.clip.end | 0) : '');
-        f.addEventListener('load', () => [400, 1200, 2500, 4500].forEach(t => setTimeout(() => { if (f.isConnected) for (const m of ['captions', 'cc']) try { f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'unloadModule', args: [m] }), '*'); } catch (e) { /* */ } }, t)));   // 자동 자막 끄기(10-04 교사 — 영상에 자막이 박혀 있음)
-        ytFloat(fr, f, 9001); }, at);   // 맨 위층(아이폰 어긋남 — 위 ytFloat)
+      const at = (s.clip.at || 0.6) * 1000, wf = c.warm.get(i);
+      if (wf) { c.warm.delete(i); if (wf._ld) { ytCmd(wf, 'seekTo', [s.clip.start | 0, true]); if (wf._st !== 1) ytCmd(wf, 'playVideo'); } }   // 미리 지은 조각 = 처음 자리로 되감기(이미 받아 둔 곳이라 바로) · 멈춰 있을 때만 재생 명령
+      setTimeout(() => { if (!cur || cur.clip !== d) { if (wf) wf.remove(); return; } d.classList.add('in');
+        const f = wf || clipMake(s.clip); f.style.pointerEvents = '';
+        ytFloat(fr, f, 9001); }, wf ? Math.min(at, 250) : at);   // 맨 위층(아이폰 어긋남 — 위 ytFloat) · 미리 지은 것은 바로 보임
       el('div', 'cap', esc(s.clip.title || '정림초 유튜브'), d); c.clip = d;
     }
   }
@@ -378,6 +401,7 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
   }
   function finish(k) {
     const c = cur; if (!c || c.done) return; c.done = true;
+    for (const f of c.warm.values()) f.remove(); c.warm.clear();
     removeEventListener('keydown', c.onKey, true);
     if (c.fog && scene.fog) { scene.fog.near = c.fog[0]; scene.fog.far = c.fog[1]; }
     cutOff(); setView && setView(null); const cv = document.getElementById('scene'); if (cv) cv.classList.remove('fl-punch');
