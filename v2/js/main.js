@@ -45,7 +45,7 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: GFX.aa, powerPrefe
 renderer.debug.checkShaderErrors = /[?&](debug|check)=1/.test(location.search);
 const DPR = GFX.dpr;
 renderer.setPixelRatio(DPR);                       // 네이티브(비정수 업스케일 금지) — 휴대폰은 GFX 상한 · PERF-WIN 자동 해상도가 바꾼다(ADAPT)
-renderer.setSize(innerWidth, innerHeight);
+renderer.setSize(innerWidth, innerHeight, false);   // 모양 크기는 CSS(100% · 몸 = 100dvh) — 그리는 해상도만 fitView가 맞춘다(아이폰 주소창이 줄면 캔버스 아래가 비던 것)
 renderer.shadowMap.enabled = GFX.shadow > 0;
 renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.needsUpdate = false;   // GFX-2: 굽기는 setTime → bakeShadows가 한다
@@ -1577,11 +1577,17 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
   window.__pause = { show, hide, get on() { return pz.style.display === 'flex'; }, busy };
 }
 
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
+// FIT-1(10-04 교사 아이폰 사진 — 화면 아래가 하늘색으로 빔): 아이폰 사파리는 주소창이 커졌다 작아지며 보이는 높이가 바뀌는데 resize가 늦거나 옛 값을 준다.
+//   예전엔 캔버스 크기를 그때 innerHeight 픽셀로 박아(style) 아래가 비었다 → 캔버스는 CSS로 늘 화면을 채우고, 그리는 해상도·비율만 실제 크기를 따라간다
+//   (resize · visualViewport · 돌림 · ResizeObserver · 1초마다 한 번 더 확인)
+function fitView() {
+  const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight; if (!w || !h || (w === fitView.w && h === fitView.h)) return;
+  fitView.w = w; fitView.h = h; camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h, false);
+}
+addEventListener('resize', fitView); addEventListener('orientationchange', () => { fitView(); setTimeout(fitView, 350); });
+if (window.visualViewport) visualViewport.addEventListener('resize', fitView);
+if (window.ResizeObserver) new ResizeObserver(fitView).observe(canvas);
+setInterval(fitView, 1000); fitView();
 
 // ---------- 도달성 검사 (전 실 자동 답사) ----------
 // 플레이어와 똑같은 규칙(blockedAt·groundAt·오름 0.55)으로 걸을 수 있는 칸을 전부 채워보고,
