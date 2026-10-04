@@ -136,8 +136,6 @@ body.film-on #scene{filter:saturate(1.14) contrast(1.06)}
 #scene.fl-punch{animation:flpunch .6s cubic-bezier(.2,.8,.2,1)}
 @keyframes flpunch{0%{transform:scale(1.08);filter:blur(3px) saturate(1.14) contrast(1.06)}100%{transform:none;filter:saturate(1.14) contrast(1.06)}}
 #film .fl-flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:4;pointer-events:none}
-#film .fl-grain{position:absolute;inset:-60%;z-index:7;pointer-events:none;opacity:.06;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");animation:flgrain .6s steps(5) infinite}
-@keyframes flgrain{0%{transform:translate(0,0)}20%{transform:translate(-4%,3%)}40%{transform:translate(3%,-3%)}60%{transform:translate(-2%,-4%)}80%{transform:translate(4%,2%)}100%{transform:translate(1%,4%)}}
 /* 갈래 순서(01/05) */
 #film .chn{left:clamp(16px,4vw,64px);top:clamp(10px,2.6vh,24px);display:flex;flex-wrap:wrap;gap:6px;align-items:center;transform:translateY(-8px)}
 #film .chn.in{transform:none}
@@ -212,7 +210,6 @@ body.film-on #scene{filter:saturate(1.14) contrast(1.06)}
       const root = el('div', 'ttl-keep', null, document.body); root.id = 'film';   // ttl-keep = 오프닝 화면(title.css)이 숨기지 않게
       el('div', 'fl-bar t', null, root); el('div', 'fl-bar b', null, root);
       const black = el('div', 'fl-black', null, root), flash = el('div', 'fl-flash', null, root), stage = el('div', 'fl-stage', null, root), prog = el('div', 'fl-prog', null, root);
-      el('div', 'fl-grain', null, root);
       el('div', 'fl-brand', esc(o.brand || ''), root);
       const ctl = el('div', 'fl-ctl', null, root);
       const mB = el('button', '', '', ctl); mB.type = 'button'; const paintM = () => { mB.textContent = muted() ? '🔇' : '🔊'; }; paintM();
@@ -226,7 +223,7 @@ body.film-on #scene{filter:saturate(1.14) contrast(1.06)}
       try { document.exitPointerLock && document.pointerLockElement && document.exitPointerLock(); } catch (e) { /* */ }
       document.body.classList.add('film-on');
       const T = shots.reduce((a, s) => a + (s.dur || 0), 0);
-      cur = { shots, i: -1, t: 0, st: 0, mb: 0, lastCh: null, T, res, o, root, black, flash, stage, prog, onKey, tags: [], ui: [], extra: [], clip: null, last: performance.now(), done: false, prevTime: env.getTime ? env.getTime() : null, fov0: camera.fov };
+      cur = { shots, i: -1, t: 0, st: 0, mb: 0, lastCh: null, T, res, o, root, black, flash, stage, prog, onKey, tags: [], ui: [], extra: [], clip: null, last: performance.now(), done: false, prevTime: env.getTime ? env.getTime() : null, fov0: camera.fov, near0: camera.near, far0: camera.far };
       if (shots.some(s => s.cut)) cutOn();
       setView && setView({ far: 420 });
       void root.offsetWidth; requestAnimationFrame(() => { if (cur && cur.root === root) root.classList.add('bars'); });
@@ -330,7 +327,9 @@ body.film-on #scene{filter:saturate(1.14) contrast(1.06)}
     const f = Math.min(1, c.st / Math.max(0.01, s.dur || 1)), e = s.lin ? f : easeIO(f);
     if (c.camP) { c.camP.getPoint(e, Vp); c.camL.getPoint(e, Vl); camera.position.copy(Vp); camera.lookAt(Vl); }
     else if (c.p1) { camera.position.set(c.p1[0], c.p1[1], c.p1[2]); camera.lookAt(c.l1[0], c.l1[1], c.l1[2]); }
-    const fv = s.fov || 50; if (Math.abs(camera.fov - fv) > 0.01) { camera.fov = fv; camera.updateProjectionMatrix(); }
+    const fv = (s.fov || 50) * (camera.aspect < 1 ? Math.min(1.6, 1 / Math.sqrt(camera.aspect)) : 1); if (Math.abs(camera.fov - fv) > 0.01) { camera.fov = fv; camera.updateProjectionMatrix(); }   // 세로 화면 = 화각을 넓혀 옆이 덜 잘리게
+    { const nr = Math.max(0.3, Math.min(4, (camera.position.y + 1.5) * 0.05)), fr = Math.max(c.far0, camera.position.y * 3 + 200);   // 높은 샷 = 근평면을 밀어 깊이 정밀도 ↑(멀리서 바닥 무늬·선이 자글거리던 것)
+      if (Math.abs(camera.near - nr) > 0.02 || Math.abs(camera.far - fr) > 5) { camera.near = nr; camera.far = fr; camera.updateProjectionMatrix(); } }
     if (scene.fog) { if (!c.fog) c.fog = [scene.fog.near, scene.fog.far]; const k9 = Math.max(1, camera.position.y / 45); scene.fog.near = 140 * k9; scene.fog.far = 420 * k9; }   // 높은 드론 샷이 안개에 바래지 않게(시간대가 바꾼 값 위에 매 프레임)
     camera.updateMatrixWorld();
     if (c.o.music !== false) music(c);
@@ -362,7 +361,7 @@ body.film-on #scene{filter:saturate(1.14) contrast(1.06)}
     if (c.fog && scene.fog) { scene.fog.near = c.fog[0]; scene.fog.far = c.fog[1]; }
     cutOff(); setView && setView(null); const cv = document.getElementById('scene'); if (cv) cv.classList.remove('fl-punch');
     if (c.prevTime && env.setTime && c.o.keepTime !== true) env.setTime(c.prevTime);
-    camera.fov = c.fov0; camera.updateProjectionMatrix();
+    camera.fov = c.fov0; camera.near = c.near0; camera.far = c.far0; camera.updateProjectionMatrix();
     setCam(null); cur = null;
     document.body.classList.remove('film-on');
     c.root.style.transition = 'opacity .45s'; c.root.style.opacity = '0'; setTimeout(() => c.root.remove(), 480);

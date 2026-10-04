@@ -114,7 +114,7 @@ export default async function start(map, params = {}) {
   // 영상 칸 = 적어 둔 칸 전부(주소가 빈 칸도 — showEmpty면 '준비 중' 화면) · id = 유튜브 영상 id(없으면 null)
   const SHOW_EMPTY = DATA.showEmpty !== false;
   const vids = d => [].concat(d.videos || [], d.video ? [d.video] : []).map(v => typeof v === 'string' ? { url: v } : v || {})
-    .map(v => ({ title: String(v.title || ''), group: String(v.group || ''), id: ytId(v.url) })).filter(v => v.id || SHOW_EMPTY);
+    .map(v => ({ title: String(v.title || ''), group: String(v.group || ''), id: ytId(v.url), start: Math.max(0, +v.start || 0) | 0, end: Math.max(0, +v.end || 0) | 0 })).filter(v => v.id || SHOW_EMPTY);   // start·end(초) = 긴 영상의 한 부분만(학교장 인사)
   const phos = d => [].concat(d.photos || []).map(p => typeof p === 'string' ? { src: p } : p || {}).filter(p => p.src)
     .map(p => { let src = ''; try { src = new URL(String(p.src).trim(), DATA_URL).href; } catch (e) { /* 이상한 주소 — 뺀다 */ } return { src, caption: String(p.caption || '') }; }).filter(p => p.src);
   for (const a of map.tour) {
@@ -214,7 +214,7 @@ export default async function start(map, params = {}) {
       const vw = mk('div', 'vw', null, body);
       if (!v.id) soon(vw, '🎬', '영상');
       else { const f = document.createElement('iframe');
-        f.src = 'https://www.youtube-nocookie.com/embed/' + v.id + '?autoplay=1&rel=0&playsinline=1&modestbranding=1&cc_load_policy=0&enablejsapi=1&origin=' + encodeURIComponent(location.origin); noCC(f);   // 10-04 교사: 자동 자막 끄기(영상에 자막이 이미 박혀 있음)
+        f.src = 'https://www.youtube-nocookie.com/embed/' + v.id + '?autoplay=1&rel=0&playsinline=1&modestbranding=1&cc_load_policy=0&enablejsapi=1&origin=' + encodeURIComponent(location.origin) + (v.start ? '&start=' + v.start : '') + (v.end ? '&end=' + v.end : ''); noCC(f);   // 10-04 교사: 자동 자막 끄기(영상에 자막이 이미 박혀 있음)
         f.title = s.name + ' 영상'; f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
         f.allowFullscreen = true; f.referrerPolicy = 'strict-origin-when-cross-origin'; vw.appendChild(f); }
     } else {
