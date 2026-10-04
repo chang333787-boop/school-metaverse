@@ -338,6 +338,7 @@ export default async function start(map, params = {}) {
     if (canStamp(t)) L.push({ k: 's', t: '⭐ 도장 받을래요', f: stampIt });
     if (s && s.hub) L.push({ k: 'hub', t: '📖 학교 정보 모두 볼래요', f: () => { closeTalk(); openCard(true); } });
     if (s && s.hub && map.film && (DATA.film || {}).opening !== false) L.push({ k: 'hfilm', t: '🎬 오프닝 영상 다시 볼래요', f: () => { closeTalk(); playFilm('open'); } });   // 10-04 교사: 교감선생님께 오프닝 다시 보기
+    if (s && s.hub && stamps.size === N) L.push({ k: 'hend', t: '🏆 클로징 영상 볼래요', f: () => { closeTalk(); celebrate(); } });   // 10-04 교사: 도감을 다 모으면 교감선생님께 클로징(완주 영상)
     if (s && s.hub && !G && GORDER.length) L.push({ k: 'gstart', t: '🧑‍🏫 안내해 주세요 (따라가기)', f: () => { closeTalk(); startGuide(); } });
     if (G && t.o.guide) {   // 안내 중엔 👋 대신 — 👀 = 교감선생님은 여기서 기다리고 나는 주변 구경(09-30 교사) · 🚶 = 안내 끝
       L.push({ k: 'gbrowse', t: '👀 여기 좀 둘러볼게요', f: () => { closeTalk(); guideBrowse(); } }); return L; }
