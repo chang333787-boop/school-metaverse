@@ -726,7 +726,7 @@ export default async function start(map, params = {}) {
     try {
       D0 = (await nreq('')) || {};
       const P = D0.p || {}, m = D0.m, live = m && P[m.host] && Object.keys(P).length;
-      if (live && !/^hs/.test(m.arena || '')) { map.hud.toast((/^rb/.test(m.arena || '') ? '🤖 지금 이 방은 로봇인 척 중이에요' : '💦 지금 이 방은 물총 친구 대결 중이에요') + ' — 끝나면 다시 와요', 4); NM.on = false; if (N && N.hide) N.hide(false); lobbyHide(); map.quit(); return; }
+      if (live && !/^hs/.test(m.arena || '')) { map.hud.toast((/^rb/.test(m.arena || '') ? '🤖 지금 이 방은 로봇인 척 중이에요' : /^gd/.test(m.arena || '') ? '🧭 지금 이 방은 길잡이 중이에요' : '💦 지금 이 방은 물총 친구 대결 중이에요') + ' — 끝나면 다시 와요', 4); NM.on = false; if (N && N.hide) N.hide(false); lobbyHide(); map.quit(); return; }
       const t1 = Date.now(), r = await nreq('/p/' + NM.pid, 'PUT', { n: NM.name, tm: 99, on: { '.sv': 'timestamp' } }), t2 = Date.now();
       NM.off = r.on - (t1 + t2) / 2;
       if (!live) { const sq = ((m && m.seq) || 0) + 1; await nreq('/m', 'PUT', { st: 'lobby', host: NM.pid, arena: 'hs0', time: 0, goal: 0, seq: sq, t0: 0 }); ctlMatch(sq, 'hlobby'); }

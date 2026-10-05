@@ -45,7 +45,7 @@ export function createGamePicker(ctx) {
     let fPrev = null;
     for (const id of ord) {
       if (FL) { const f = games[id].folder || 'look'; if (f !== fPrev) { fPrev = f; const F9 = FL.find(q => q.k === f); sec((F9 ? F9.icon + ' ' + F9.title : f));
-        if (rmF.has(f)) { const d9 = document.createElement('div'); d9.textContent = '👥 친구와 대결은 함께하기 방에서 — ' + (window.SM_MP && window.SM_MP.lead && window.SM_MP.lead() ? '👥 창의 🎮 다 같이 놀이로 골라요' : '선생님이 고르면 다 같이 들어가요'); d9.style.cssText = 'margin:2px 0 4px;font-size:12px;opacity:.8'; list.appendChild(d9); } } }
+        if (rmF.has(f)) { const d9 = document.createElement('div'); d9.textContent = '👥 친구와 하기는 함께하기 방에서 — ' + (window.SM_MP && window.SM_MP.lead && window.SM_MP.lead() ? '👥 창의 🎮 다 같이 놀이로 골라요' : '선생님이 고르면 다 같이 들어가요'); d9.style.cssText = 'margin:2px 0 4px;font-size:12px;opacity:.8'; list.appendChild(d9); } } }
       if (split && id === tog[0]) sec('👥 친구와 함께' + (window.SM_MP ? (window.SM_MP.room() ? ' — 방에 있어요' : ' — 먼저 왼쪽 위 👥 함께하기로 방에') : ''));
       const b = document.createElement('button'); b.className = 'gpick-b'; b.dataset.game = id;
       const t = document.createElement('b'); t.textContent = (games[id].mp === 'together' ? '👥 ' : '') + (games[id].title || id); b.appendChild(t);

@@ -5,9 +5,9 @@ import { buildWorld } from './world.js?v=154';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=54';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=55';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
-import { createTitle } from './title.js?v=21';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+import { createTitle } from './title.js?v=22';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=11';
 import { createTop } from './topview.js?v=8';   // TOP-1(10-04 교사 '탑뷰로 학교 보기'): 하늘에서 보기 — 지붕 벗기기(1·2층)·끌어 옮기기·확대·돌리기·방 이름·방위표·축척 · 게임은 map.top   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
@@ -1479,11 +1479,11 @@ function emoChip(on) {
 }
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=8'), import('./lobby.js?v=13')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=8'), import('./lobby.js?v=14')]).then(([N, L]) => {
     // ROOM-1(10-05 교사 '멀티방을 게임으로 들어가는 게 아니라 멀티방을 만들고 그 안에서 모드를 정하는 게 직관적일까?'): 방 먼저 → 방을 만든 선생님이 👥 창 '🎮 다 같이 놀이'를 고르면 방 친구 모두 그 놀이 대기실로
     //   방 놀이 번호 = ctl/cmd d — 선생님 신호(📣·✋·▶·🎮)마다 지금 방 놀이를 같이 실음(cmd는 마지막 하나만 남으므로 — 늦게 들어온 친구·새로고침한 화면도 앎 · 규칙 그대로)
     //   ⚠️ 번호는 뒤에만 더한다(옛 화면과 어긋나지 않게) · 메뉴(오프닝·🎮)에는 registry room:true 놀이가 안 보임 — 혼자 연습 카드만
-    const ROOMS = [null, { id: 'watergun_vs', t: '💦 물총 팀 대결' }, { id: 'hideseek_vs', t: '🫣 숨바꼭질 대작전' }, { id: 'robots_vs', t: '🤖 로봇인 척' }];
+    const ROOMS = [null, { id: 'watergun_vs', t: '💦 물총 팀 대결' }, { id: 'hideseek_vs', t: '🫣 숨바꼭질 대작전' }, { id: 'robots_vs', t: '🤖 로봇인 척' }, { id: 'guide_vs', t: '🧭 길잡이(둘씩 한 팀)' }];
     let ROOMG = 0, roomT = 0;
     const LOBBY = L.createLobby({ chip, net: () => NET, toast: (m, t) => toast(m, t),
       rooms: window.SM_LESSON ? null : { list: () => ROOMS.map((q, i) => q && { i, t: q.t }).filter(Boolean), cur: () => ROOMG, inIt: () => { const g = MAP.game.current; return !!(g && ROOMS[ROOMG] && g.id === ROOMS[ROOMG].id); },
@@ -1505,12 +1505,12 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
       roomGame: () => (ROOMS[ROOMG] ? ROOMS[ROOMG].id : null), pickGame: (i) => roomPick(i), startAll: () => roomStart() };   // ROOM-1: 방 놀이(선생님 = pickGame(번호 · 0 = 끝)·startAll)   // lead = 이 방을 만든 선생님 화면 · gather = 📣(게임이 판·장면을 덧붙임)   // 게임(물총 친구 대결)이 같은 방·이름을 쓴다
     setInterval(() => LOBBY.draw(), 2000);
     setInterval(() => { if (NET) MAP.minimap.setPeers(NET.peers()); }, 500);   // 미니맵에 같은 방 친구 점(이름)
-    const ACTS = { watergun: '💧 물총', watergun_vs: '💦 물총 대결', hideseek: '🫣 숨바꼭질 연습', hideseek_vs: '🫣 숨바꼭질', robots: '🤖 로봇인 척 연습', robots_vs: '🤖 로봇인 척', memo: '📝 메모장', memo_v3: '📝 메모장', story: '📖 이야기', newbook: '📖 신상책', escape: '🔐 방탈출', shrink: '🐜 개미', find_place: '📍 장소 찾기', tour: '🚌 견학' };
+    const ACTS = { watergun: '💧 물총', watergun_vs: '💦 물총 대결', hideseek: '🫣 숨바꼭질 연습', hideseek_vs: '🫣 숨바꼭질', robots: '🤖 로봇인 척 연습', robots_vs: '🤖 로봇인 척', guide: '🧭 길잡이 연습', guide_vs: '🧭 길잡이', memo: '📝 메모장', memo_v3: '📝 메모장', story: '📖 이야기', newbook: '📖 신상책', escape: '🔐 방탈출', shrink: '🐜 개미', find_place: '📍 장소 찾기', tour: '🚌 견학' };
     setInterval(() => { if (!NET) return; const g = MAP.game.current; NET.setAct(window.SM_ACT || (g ? ACTS[g.id] || '🎮 놀이' : '🏫 자유 탐험')); }, 2000);   // 지금 하는 것 — 게임이 window.SM_ACT로 더 자세히(메모장 = 판 번호)
     // 방 신호(net.js ctl): 물총 친구 대결 대기실 초대 · 선생님 📣 모으기 · ✋ 멈춤
     function onCtl(C) {
       const first = !CTLK.init; CTLK.init = true;   // 들어올 때 이미 있던 신호는 지난 것(초대·선생님 신호를 다시 하지 않음)
-      const m = C.match; if (m) { const k = m.seq + ':' + m.st; if (k !== CTLK.m) { CTLK.m = k; if ((m.st === 'lobby' || m.st === 'count' || m.st === 'hlobby' || m.st === 'hcount' || m.st === 'rlobby' || m.st === 'rcount') && !first) invite(m); } }   // HS-2: 'h…' = 숨바꼭질 친구 대결 · RB-1: 'r…' = 로봇인 척
+      const m = C.match; if (m) { const k = m.seq + ':' + m.st; if (k !== CTLK.m) { CTLK.m = k; if ((m.st === 'lobby' || m.st === 'count' || m.st === 'hlobby' || m.st === 'hcount' || m.st === 'rlobby' || m.st === 'rcount' || m.st === 'globby' || m.st === 'gcount') && !first) invite(m); } }   // HS-2: 'h…' = 숨바꼭질 친구 대결 · RB-1: 'r…' = 로봇인 척 · GUIDE-2: 'g…' = 길잡이
       const c = C.cmd; if (c && c.q !== CTLK.q) { CTLK.q = c.q; roomSync(c, first); if (!first && c.by !== (NET && NET.id)) teacherCmd(c); }
     }
     // ROOM-1: 방 놀이 번호 읽기 — 처음 들어온(새로고침한) 아이는 지금 방 놀이로 바로(선생님 화면은 그대로)
@@ -1535,7 +1535,7 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
       MAP.game.load(id, {});
     }
     function invite(m) {   // 같은 방 친구가 물총·숨바꼭질 친구 대결 대기실을 열면(내가 그 놀이 중이거나 오프닝이면 안 띄움)
-      const G = m.st[0] === 'h' ? { re: /^hideseek/, id: 'hideseek_vs', t: '🫣 같은 방에서 <b>숨바꼭질 대작전</b> ' } : m.st[0] === 'r' ? { re: /^robots/, id: 'robots_vs', t: '🤖 같은 방에서 <b>로봇인 척</b> ' } : { re: /^watergun/, id: 'watergun_vs', t: '💦 같은 방에서 <b>물총 친구 대결</b> ' };
+      const G = m.st[0] === 'h' ? { re: /^hideseek/, id: 'hideseek_vs', t: '🫣 같은 방에서 <b>숨바꼭질 대작전</b> ' } : m.st[0] === 'r' ? { re: /^robots/, id: 'robots_vs', t: '🤖 같은 방에서 <b>로봇인 척</b> ' } : m.st[0] === 'g' ? { re: /^guide/, id: 'guide_vs', t: '🧭 같은 방에서 <b>길잡이</b> ' } : { re: /^watergun/, id: 'watergun_vs', t: '💦 같은 방에서 <b>물총 친구 대결</b> ' };
       const g = MAP.game.current; if ((g && G.re.test(g.id)) || document.body.classList.contains('title-on')) return;
       if (ROOMS[ROOMG] && ROOMS[ROOMG].id === G.id) return;   // ROOM-1: 선생님이 고른 방 놀이 — 저절로 들어가는 중
       let d = document.getElementById('mpInvite'); if (d) d.remove();
@@ -1546,7 +1546,7 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
       document.body.appendChild(d); setTimeout(() => d.remove(), 15000);
     }
     function teacherCmd(c) {
-      const g = MAP.game.current, st9 = g && g.handle && g.handle.state, ph9 = typeof st9 === 'string' ? st9 : st9 && st9.phase, inMatch = !!(g && /^(watergun|hideseek|robots)/.test(g.id) && /^(play|count|hide|seek)$/.test(ph9 || ''));   // 대결 판 중엔 순간이동 안 함
+      const g = MAP.game.current, st9 = g && g.handle && g.handle.state, ph9 = typeof st9 === 'string' ? st9 : st9 && st9.phase, inMatch = !!(g && /^(watergun|hideseek|robots|guide)/.test(g.id) && /^(play|count|hide|seek)$/.test(ph9 || ''));   // 대결 판 중엔 순간이동 안 함
       if (c.k === 'game') { roomGo(); return; }
       if (c.k === 'gstart') { const R9 = ROOMS[ROOMG]; if (g && R9 && g.id === R9.id && g.handle && g.handle.netStart) g.handle.netStart(); return; }
       if (c.k === 'gather') {

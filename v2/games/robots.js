@@ -107,7 +107,7 @@ export function createCrowd(nav, cfg) {
       for (let g = 0; g < 400 && !best; g++) {
         const st = Math.floor(rng() * PO.length), L = []; let h = 0;
         while (L.length < M && h++ < 60) { const zi = rooms[Math.floor(rng() * rooms.length)], P = ZL[zi].pois, p = P[Math.floor(rng() * P.length)];
-          if (used.has(p) || L.some(q => PO[q].zi === zi || d2(q, p) < cfg.minGap)) continue; L.push(p); }
+          if (used.has(p) || d2(st, p) < 6 || L.some(q => PO[q].zi === zi || d2(q, p) < cfg.minGap)) continue; L.push(p); }   // 출발 자리 바로 옆 미션 없음(RB-2)
         if (L.length < M) continue;
         let cur = st, len = 0; const rest = L.slice(); while (rest.length) { rest.sort((a, b) => d2(cur, a) - d2(cur, b)); len += d2(cur, rest[0]) * 1.3; cur = rest.shift(); }
         if (len <= cfg.tour || g > 300) best = { st, ms: L }; }
@@ -251,7 +251,7 @@ export async function simulate(map, over = {}, rounds = 100, o = {}) {
 // =====================================================================================
 const MDB = 'https://class-rpg-6f409-default-rtdb.asia-southeast1.firebasedatabase.app/metaverse/match/';
 const START = [12.5, -32.8];   // 반장 몸(숨김 · 움직이지 않음)이 서 있는 곳
-const SMAX = 7, MINT = 0x4cc9b0, RED = 0xe84848;
+const SMAX = 7, MINT = 0x4cc9b0, RED = 0xe84848, RS = 1.15;   // RS = 로봇 크기(하늘에서 잘 보이게 — 모두 같게)
 const seedOf = (t0, seq) => ((Math.floor(t0 / 7) ^ Math.imul(seq + 1, 2654435761)) >>> 0) % 1000000000;
 
 export default async function start(map, params = {}) {
@@ -317,6 +317,11 @@ export default async function start(map, params = {}) {
   const ringGeo = new THREE.RingGeometry(0.5, 0.68, 28).rotateX(-Math.PI / 2); GEOS.push(ringGeo);
   const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd23c, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false, side: THREE.DoubleSide, fog: false }); MATS.push(ringMat);
   const RING = new THREE.Mesh(ringGeo, ringMat); RING.renderOrder = 6; RING.visible = false; map.add(RING);
+  const hovMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75, depthTest: false, depthWrite: false, side: THREE.DoubleSide, fog: false }); MATS.push(hovMat);
+  const HRING = new THREE.Mesh(ringGeo, hovMat); HRING.renderOrder = 6; HRING.visible = false; map.add(HRING);   // 마우스를 올린 로봇(RB-2 — 누를 수 있다는 표시)
+  let hov = -1, hovXY = null;
+  const onHover = e => { if (e.pointerType !== 'mouse') return; hovXY = [e.clientX, e.clientY]; };
+  addEventListener('pointermove', onHover);
   const TEX = new Map();
   function texOf(key, draw) { let t = TEX.get(key); if (t) return t; const c = document.createElement('canvas'); c.width = 256; c.height = 64; draw(c.getContext('2d')); t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; TEX.set(key, t); return t; }
   const badge = (txt, bg) => texOf('b' + txt + bg, g => { g.fillStyle = bg; g.beginPath(); g.roundRect(4, 6, 248, 52, 22); g.fill(); g.fillStyle = '#fff'; g.font = '800 32px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt.slice(0, 9), 128, 34); });
@@ -336,7 +341,7 @@ export default async function start(map, params = {}) {
     const cm = C.ZL.find(z => z.id === 'corridor-main'); if (cm) { add(0, cm.x0, -24, cm.z0, cm.z1); add(1, -24, -7, cm.z0, cm.z1); add(2, -7, AX1, cm.z0, cm.z1); }
   }
   let areaT = 0, areaA = -1;
-  function areaFlash(a) { areaA = a; areaT = 3.2; for (const p of AREA_PL) p.o.visible = p.a === a; }
+  function areaFlash(a) { areaA = a; areaT = 8; for (const p of AREA_PL) p.o.visible = p.a === a; }   // 3.2초 깜빡 → 4.8초 옅게 남김(RB-2 — 놓쳐도 보이게)
 
   // ---------- 상태 ----------
   //   R = 한 판 { seq, t0(시계 ms), lvl, seed, guard: {kind, pid, name}, spies: [{kind, pid, name}], round, rounds }
@@ -365,6 +370,18 @@ export default async function start(map, params = {}) {
 .rb-meter{position:fixed;left:50%;top:calc(96px + env(safe-area-inset-top));transform:translateX(-50%);z-index:23;display:none;padding:5px 10px;border-radius:10px;background:rgba(18,28,48,.8);color:#fff;font:800 13px/1 system-ui,-apple-system,"Malgun Gothic",sans-serif;pointer-events:none}
 .rb-meter u{display:inline-block;width:120px;height:9px;margin-left:7px;border-radius:5px;background:rgba(255,255,255,.25);overflow:hidden;vertical-align:0;text-decoration:none}
 .rb-meter u s{display:block;height:100%;width:0;background:#5fd068;transition:width .25s}
+.rb-how{position:fixed;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;background:rgba(10,20,40,.55);font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif}
+.rb-how .bx{width:min(560px,92vw);max-height:90vh;overflow:auto;box-sizing:border-box;padding:16px 18px;border-radius:18px;background:#fffdf6;color:#1d3557;border:3px solid #1d3557;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.rb-how h3{margin:0 0 10px;font-size:22px}
+.rb-how .st{display:flex;gap:12px;align-items:center;margin:8px 0;padding:8px 10px;border-radius:12px;background:#eef4ff;font-size:17px;line-height:1.4}
+.rb-how .st b.n{flex:none;width:46px;height:46px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.rb-how .tip{margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff3bf;font-size:15px;font-weight:700}
+.rb-how button{display:block;margin:12px 0 0 auto;font:inherit;font-size:18px;font-weight:900;border:0;border-radius:12px;padding:10px 22px;min-height:44px;background:#1d3557;color:#fff;cursor:pointer}
+.rb-how .auto{margin-top:10px;text-align:right;font-size:14px;color:#5a6b80;font-weight:700}
+body.small .rb-how .bx{padding:10px 12px}
+body.small .rb-how h3{font-size:17px;margin-bottom:4px}
+body.small .rb-how .st{font-size:14px;margin:4px 0;padding:5px 8px}
+body.small .rb-how .st b.n{width:34px;height:34px;font-size:20px}
 body.small .rb-log{top:calc(88px + env(safe-area-inset-top));font-size:12px;max-width:170px;min-width:0;padding:6px 8px}
 body.rb-spy #tJump,body.rb-spy #tAct{display:none!important}
 body.rb-spy .rb-btn.scan{right:calc(18px + env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));width:78px;height:78px}
@@ -401,6 +418,52 @@ body.small .rb-gp .t{display:none}
   }
   const isCaught = e => e >= K && SP[e - K] && !SP[e - K].alive;
 
+  // ---------- 하는 법(RB-2 · 10-05 교사 '딱 보고 어떻게 하는 거지 싶었어') — 그림 세 줄 + 시작 단추(혼자) · 친구 대결은 준비 시간 동안(처음 맡는 역할만) ----------
+  const seenHow = new Set(); let howEl = null;
+  function howHtml(role, S, T, shots) {
+    const st = (i, t) => '<div class="st"><b class="n">' + i + '</b><span>' + t + '</span></div>';
+    return role === 'guard'
+      ? '<h3>🕵️ CCTV 반장 하는 법</h3>' + st('🤖', '로봇 ' + K + '대 중 <b>' + S + '대</b>는 로봇인 척하는 <b>친구(스파이)</b>예요') + st('📡', '스파이가 미션을 하면 그 <b>구역이 색으로 깜빡여요</b> — 그 구역 로봇을 지켜봐요')
+        + st('👆', '수상한 로봇을 <b>눌러 고르고 📸 확인</b>' + (coarse ? '' : '(F)') + ' — 기회 <b>' + shots + '번</b> · 진짜 로봇을 찍으면 한 번 날아가요')
+        + '<div class="tip">🔎 수상한 로봇 = 갑자기 멈칫 · 두리번거림 · 아무것도 없는 데서 서 있기 · 갑자기 뒤돌기<br>스파이 팀이 ⭐ ' + T + '개를 모으기 전에 모두 찾으면 승리!</div>'
+      : '<h3>🤖 스파이 하는 법</h3>' + st('🕵️', '반장이 하늘에서 <b>CCTV로 지켜봐요</b> — 너는 로봇 옷을 입은 스파이') + st('✨', '<b>노란 빛기둥 3곳</b> = 내 미션 → 그 앞에서 <b>' + (coarse ? '📡 스캔 단추' : 'E') + '</b>(2.5초 가만히)')
+        + st('🚶', '들키지 않게 <b>로봇처럼</b>: 같은 빠르기로 똑바로 · 물건 앞에서만 멈추고 스캔 · 두리번 ✗')
+        + '<div class="tip">팀 ⭐ ' + T + '개를 모으면 스파이 승리! · 지금 할 일은 화면 위 줄에 나와요</div>';
+  }
+  function howTo(role, S, T, shots, wait) {   // wait = 혼자(▶ 시작을 누를 때까지) · 아니면 준비 시간 동안만 띄움
+    howClose(); seenHow.add(role); document.exitPointerLock?.();
+    howEl = document.createElement('div'); howEl.className = 'rb-how ttl-keep';
+    howEl.innerHTML = '<div class="bx">' + howHtml(role, S, T, shots) + (wait ? '<button type="button">▶ 시작!</button>' : '<div class="auto">⏱ 곧 시작해요 — 읽어 보세요</div>') + '</div>';
+    for (const t of ['keydown', 'keyup']) howEl.addEventListener(t, e => e.stopPropagation());
+    document.body.appendChild(howEl);
+    if (!wait) return Promise.resolve();
+    return new Promise(res => { const go = () => { removeEventListener('keydown', kk, true); howClose(); res(); }, kk = e => { if (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter') { e.preventDefault(); e.stopPropagation(); go(); } };
+      howEl.querySelector('button').addEventListener('click', e => { e.stopPropagation(); go(); }); addEventListener('keydown', kk, true); });
+  }
+  function howClose() { if (howEl) { howEl.remove(); howEl = null; } }
+  // 지금 할 일(화면 위 목표 줄 · 바뀔 때만)
+  let coachK = '';
+  function nearMission() { const q = SP[ME.s]; if (!q) return -1; for (let i = 0; i < q.ms.length; i++) if (!q.done.has(i) && Math.hypot(PO[q.ms[i]].sx - q.x, PO[q.ms[i]].sz - q.z) < cfg.near) return i; return -1; }
+  function coach() {
+    let t = '';
+    if (phase === 'count') t = ME.role === 'guard' ? '🕵️ 곧 시작 — 로봇들이 움직이기 시작하면 잘 지켜봐요' : ME.role === 'spy' ? '🤖 곧 시작 — 미니맵 별·노란 빛기둥 = 내 미션 자리' : '👀 구경 — 다음 판부터 같이 해요';
+    else if (phase === 'play') {
+      if (ME.role === 'guard') { const last = sigLog[sigLog.length - 1];
+        if (shots <= 0) t = '📸를 다 썼어요 — 시간이 끝날 때까지 버티면 반장 승리';
+        else if (sel >= 0 && !okR.has(sel) && !isCaught(sel)) t = '📸 이 로봇이 스파이 같으면 확인' + (coarse ? '' : '(F)') + ' — 남은 기회 ' + shots + '번';
+        else if (last && tNow - last.t < 8) t = '📡 ' + AREAS[last.a].cn + ' 구역(' + AREAS[last.a].n + ')에서 신호! 그 구역에서 수상한 로봇을 눌러요';
+        else t = '👀 로봇을 지켜봐요 — 멈칫·두리번·뒤돌기 하는 로봇이 스파이일 수 있어요'; }
+      else if (ME.role === 'spy') { const q = SP[ME.s];
+        if (!q || !q.alive) t = '📸 들켰어요 — 하늘에서 친구들을 응원해요';
+        else if (scanT > 0) t = '📡 스캔 중 — 가만히!';
+        else if (nearMission() >= 0) t = '📡 미션 자리예요! ' + (coarse ? '📡 단추' : 'E') + '를 눌러 스캔(2.5초 가만히)';
+        else if (q.done.size >= q.ms.length) t = '🎉 내 미션 끝! 로봇처럼 돌아다니며 버텨요 (팀 ⭐ ' + done + '/' + T + ')';
+        else { let d = 1e9; q.ms.forEach((p, i) => { if (!q.done.has(i)) d = Math.min(d, Math.hypot(PO[p].sx - q.x, PO[p].sz - q.z)); }); t = '🎯 노란 빛기둥(미션 ' + (q.done.size + 1) + '/' + q.ms.length + ')까지 ' + Math.round(d) + 'm — 똑바로 걷고 물건 앞에서만 멈춰요'; } }
+      else t = '👀 구경 중 — 다음 판부터 같이 해요';
+    } else if (phase === 'res') t = res ? (res.spyWin ? '🤖 스파이 팀 승리!' : '🕵️ 반장 승리!') : '🏁 끝';
+    if (t !== coachK) { coachK = t; map.hud.goal(t); }
+  }
+
   // ---------- 한 판 꾸리기 ----------
   function beginRound(r) {
     endRoundUI(); R = r; phase = 'count'; finT = null; res = null; chipK = {}; done = 0; tNow = -cfg.count;
@@ -416,17 +479,16 @@ body.small .rb-gp .t{display:none}
     if (ME.role === 'spy') { const q = SP[ME.s]; map.player.show(false); map.player.teleport([q.x, q.y, q.z], { h: q.h }); map.player.speed(cfg.v / 4.2); if (map.top.on) map.top.exit(); map.minimap.show({}); scanBtn.style.display = coarse ? 'flex' : 'none'; helpSet(true); document.body.classList.add('rb-spy');
       for (let i = 0; i < q.ms.length; i++) { const P = PO[q.ms[i]]; beacons.push(map.mk.marker(P.sx, P.sy, P.sz, { color: 0xffd23c })); } paintMarks(); }
     else { map.player.show(false); map.player.teleport([SX, SY, SZ], { h: 0 }); scanBtn.style.display = 'none'; map.minimap.hide();
-      if (!map.top.on) map.top.enter({ floor: 1, at: [-12, -34.5], d: coarse ? 40 : 35, top: true, me: false, pop: false, floors: false, floorKeys: false, helpTop: 60, onTap: guardTap, onExit: askQuit,
+      if (!map.top.on) map.top.enter({ floor: 1, at: [-12, -35], d: coarse ? 36 : 30, top: true, me: false, pop: false, floors: false, floorKeys: false, helpTop: 60, onTap: guardTap, onExit: askQuit,
         help: ME.role === 'guard' ? (coarse ? '로봇을 톡 = 고르기 → 📸 확인 · 끌기 = 옮기기 · 두 손가락 = 확대' : '로봇 클릭 = 고르기 → 📸 확인(F) · ❓ 의심 표시(R) · 끌기·WASD = 옮기기 · 휠 = 확대') : '구경 중 — 다음 판부터 같이 해요 · 끌기 = 옮기기 · 휠 = 확대' }); }
     const gN = r.guard.kind === 'me' ? '나' : r.guard.kind === 'bot' ? '🤖 반장 봇' : r.guard.name;
     map.hud.goal(ME.role === 'guard' ? '🕵️ CCTV 반장 — 로봇 ' + K + '대 속 스파이 ' + S + '명 찾기!' : ME.role === 'spy' ? '🤖 스파이 — 로봇처럼 걷고 미션 자리에서 E 스캔!' : '👀 구경 — 다음 판부터 같이 해요');
     const lt = LVL_T[String(r.lvl || 0)];
     card('<div style="font-size:1.25em">' + (ME.role === 'guard' ? '🕵️ 이번 판은 <b>내가 CCTV 반장</b>!' : ME.role === 'spy' ? '🤖 너는 <b>로봇인 척하는 스파이</b>!' : '🕵️ 이번 판 CCTV 반장: <b>' + esc(gN) + '</b>') + '</div>'
       + (r.rounds ? '<div style="opacity:.8;font-size:.85em">' + (r.round + 1) + ' / ' + r.rounds + '판</div>' : '')
-      + (ME.role === 'guard' ? '<div style="font-size:.88em">📡 신호 = 스파이가 미션을 한 <b>구역</b>이 칠해져요 · 로봇을 눌러 📸 확인(' + shots + '번) · 진짜 로봇을 찍으면 한 번 날아가요<br>스파이 팀이 ⭐ ' + T + '개를 모으기 전에 모두 찾거나 ' + playT + '초 버티면 승리</div>'
-        : ME.role === 'spy' ? '<div style="font-size:.88em">🤖 <b>로봇 규칙</b>: 같은 빠르기로 <b>똑바로</b> · <b>물건 앞에서만</b> 멈추고 <b>E 스캔</b> · 복도 한가운데서 멈칫 ✗<br>노란 빛기둥 3곳 = 내 미션(가서 E) · 팀 ⭐ ' + T + '개면 승리 · 반장 📸 ' + shots + '번</div>' : '')
-      + (lt ? '<div style="color:#ffd23c;font-size:.85em">⚖️ 따라잡기 — ' + lt + '</div>' : ''), 4.5);
+      + (lt ? '<div style="color:#ffd23c;font-size:.85em">⚖️ 따라잡기 — ' + lt + '</div>' : ''), 2.5);   // 규칙은 하는 법 창·화면 위 '지금 할 일' 줄이 맡음(RB-2)
     chip('rb-role', ME.role === 'guard' ? '🕵️ 반장' : ME.role === 'spy' ? '🤖 스파이' : '👀 구경');
+    coachK = ''; if (NETM && (ME.role === 'guard' || ME.role === 'spy') && !seenHow.has(ME.role)) howTo(ME.role, S, T, shots, false);   // 친구 대결: 처음 맡는 역할이면 준비 시간 동안 하는 법
     paintLog(); paintGP();
   }
   // 아래 안내 줄(#help): 스파이일 때만 '로봇 조작'으로(달리기·점프 없음 · E = 스캔) — 판이 끝나면 원래 글
@@ -501,7 +563,7 @@ body.small .rb-gp .t{display:none}
   function guardTap(pt) {
     if (ME.role !== 'guard' || phase !== 'play' || pt.sx == null) return;
     const cam = map.camera, W = innerWidth, H = innerHeight, lim = coarse ? 46 : 34; let b = -1, bd = lim * lim;
-    for (let e = 0; e < E.length; e++) { if (isCaught(e)) continue; const q = E[e]; _v.set(q.x, q.y + 0.75, q.z).project(cam); if (_v.z > 1) continue;
+    for (let e = 0; e < E.length; e++) { if (isCaught(e)) continue; const q = E[e]; _v.set(q.x, q.y + 0.75 * RS, q.z).project(cam); if (_v.z > 1) continue;
       const sx = (_v.x + 1) / 2 * W, sy = (1 - _v.y) / 2 * H, d = (sx - pt.sx) ** 2 + (sy - pt.sy) ** 2; if (d < bd) { bd = d; b = e; } }
     sel = b; if (b >= 0) map.tone(988, 0, 0.05, 'sine', 0.04); paintGP();
   }
@@ -535,7 +597,7 @@ body.small .rb-gp .t{display:none}
       map.tone(1760, 0, 0.04, 'square', 0.05);
       if (hit) { const q = SP[tgt - K]; q.alive = false; q.scan = false; if (R.guard.kind !== 'bot') led(R.guard.kind === 'me' ? myName() : R.guard.name).g++;
         if (q.kind === 'me') { clearScan(); map.player.freeze(true); scanBtn.style.display = 'none'; for (const b of beacons) b.remove(); beacons = []; map.minimap.setMarks([]); map.hud.banner('📸 들켰어요!', 2); map.tone(523, 0, 0.25, 'sine', 0.15); map.tone(392, 0.22, 0.4, 'sine', 0.15);
-          setTimeout(() => { if (!dead && R && phase === 'play' && ME.role === 'spy') { ME.role = 'watch'; helpSet(false); document.body.classList.remove('rb-spy'); map.minimap.hide(); chip('rb-mis', null); map.top.enter({ floor: 1, at: [-12, -34.5], d: coarse ? 40 : 35, top: true, me: false, pop: false, floors: false, floorKeys: false, helpTop: 60, onExit: askQuit, help: '들켰어요 — 하늘에서 친구들을 응원해요(어느 로봇인지 말하면 안 돼요!)' }); paintLog(); } }, 1600); }
+          setTimeout(() => { if (!dead && R && phase === 'play' && ME.role === 'spy') { ME.role = 'watch'; helpSet(false); document.body.classList.remove('rb-spy'); map.minimap.hide(); chip('rb-mis', null); map.top.enter({ floor: 1, at: [-12, -35], d: coarse ? 36 : 30, top: true, me: false, pop: false, floors: false, floorKeys: false, helpTop: 60, onExit: askQuit, help: '들켰어요 — 하늘에서 친구들을 응원해요(어느 로봇인지 말하면 안 돼요!)' }); paintLog(); } }, 1600); }
         else { map.hud.banner('📸 스파이 ' + (q.kind === 'bot' ? '봇' : q.name) + ' 찾았다!', 1.8); if (ME.role === 'guard') map.tone(1046, 0.1, 0.2, 'sine', 0.1); }
         if (sel === tgt) sel = -1; sus.delete(tgt);
         if (!SP.some(q => q.alive) && finT == null) finT = Math.max(0, et);
@@ -604,18 +666,18 @@ body.small .rb-gp .t{display:none}
     for (const q of SP) if (q.kind === 'remote') netActor(q, dt);
     for (const q of SP) { const b = E[q.e]; b.x = q.x; b.y = q.y; b.z = q.z; b.h = q.h; b.scan = p === 'play' && q.alive && q.scan; }
     if (p === 'play') sigTick();
-    if (areaT > 0 && (areaT -= dt) <= 0) for (const pl of AREA_PL) pl.o.visible = false; else if (areaT > 0) { const o = 0.18 + 0.2 * (0.5 + 0.5 * Math.sin(areaT * 9)); for (const pl of AREA_PL) if (pl.a === areaA) pl.m.opacity = o; }
+    if (areaT > 0 && (areaT -= dt) <= 0) for (const pl of AREA_PL) pl.o.visible = false; else if (areaT > 0) { const o = areaT > 4.8 ? 0.18 + 0.2 * (0.5 + 0.5 * Math.sin(areaT * 9)) : 0.13; for (const pl of AREA_PL) if (pl.a === areaA) pl.m.opacity = o; }
     draw(dt);
     if ((uiT -= dt) <= 0) { uiT = 0.2;
       chip('rb-time', p === 'count' ? '⏱ 준비 ' + Math.ceil(-t) : p === 'play' ? '⏱ ' + fmt(Math.max(0, playT - t)) : '🏁 끝');
       chip('rb-score', '⭐ ' + done + '/' + T + ' · 📸 ' + shots + (SP.length > 1 ? ' · 🤖 남은 스파이 ' + SP.filter(q => q.alive).length : ''));
-      if (ME.role === 'guard') paintGP(); }
+      if (ME.role === 'guard') paintGP(); coach(); }
     if (NETM && NM.on) { netSend(dt); hostRun(t, endAt); if ((NM.lagT = (NM.lagT || 0) - dt) <= 0) { NM.lagT = 1; chip('rb-net', NM.lag >= 450 ? '📶 인터넷이 느려요(' + NM.lag + 'ms)' : null); } }
     else if (p === 'res' && t > endAt + cfg.end && !matchEnd) { matchEnd = true; soloEnd(); }
   }
   let uiT = 0;
   function setPhase(p) {
-    const was = phase; phase = p;
+    const was = phase; phase = p; if (p !== 'count') howClose();
     if (p === 'play') { if (ME.role === 'spy') { map.player.freeze(false); map.hud.banner('🤖 시작! 로봇처럼…', 1.3); } else if (ME.role === 'guard') map.hud.banner('📹 CCTV 켜짐!', 1.2); map.tone(784, 0, 0.14, 'square', 0.05); paintGP(); paintLog(); }
     else if (p === 'res') roundResult(was);
   }
@@ -630,22 +692,26 @@ body.small .rb-gp .t{display:none}
       if (q.hr == null) q.hr = q.h; let dh = q.h - q.hr; while (dh > 180) dh -= 360; while (dh < -180) dh += 360; const st = 640 * dt; q.hr = (q.hr + Math.max(-st, Math.min(st, dh)) + 360) % 360;
       const yaw = Math.PI - q.hr * Math.PI / 180, sy = Math.sin(yaw), cy = Math.cos(yaw), moving = mv > 0.004;
       const bob = moving ? Math.abs(Math.sin(q.walk)) * 0.035 : 0, y0 = q.y + 0.01 + bob, sp = j >= K ? SP[j - K] : null, caught = sp && !sp.alive;
-      _q.setFromEuler(_e.set(0, yaw, caught ? 0.25 : 0)); _s.set(1, 1, 1); _v.set(q.x, y0, q.z); M.body.setMatrixAt(j, _m4.compose(_v, _q, _s)); M.bib.setMatrixAt(j, _m4);
+      _q.setFromEuler(_e.set(0, yaw, caught ? 0.25 : 0)); _s.set(RS, RS, RS); _v.set(q.x, y0, q.z); M.body.setMatrixAt(j, _m4.compose(_v, _q, _s)); M.bib.setMatrixAt(j, _m4);
       M.bib.setColorAt(j, _c.set(sp && (caught || reveal) ? RED : MINT));
       const sw = moving ? Math.sin(q.walk) * 0.7 : 0;
       for (let s = 0; s < 2; s++) { const side = s ? 1 : -1;
-        { const ox = 0.085 * side, oy = 0.34; _v.set(q.x + ox * cy, y0 + oy, q.z - ox * sy); _q.setFromEuler(_e.set(sw * side, yaw, 0)); M.leg.setMatrixAt(j * 2 + s, _m4.compose(_v, _q, _s)); }
-        const up = q.scan && s === 1, ox = 0.21 * side, oy = 0.7; _v.set(q.x + ox * cy, y0 + oy, q.z - ox * sy); _q.setFromEuler(_e.set(up ? -1.45 + Math.sin(q.walk * 0 + tNow * 9) * 0.08 : caught ? -2.6 : -sw * side * 0.8, yaw, 0.12 * side)); M.arm.setMatrixAt(j * 2 + s, _m4.compose(_v, _q, _s)); }
+        { const ox = 0.085 * side * RS, oy = 0.34 * RS; _v.set(q.x + ox * cy, y0 + oy, q.z - ox * sy); _q.setFromEuler(_e.set(sw * side, yaw, 0)); M.leg.setMatrixAt(j * 2 + s, _m4.compose(_v, _q, _s)); }
+        const up = q.scan && s === 1, ox = 0.21 * side * RS, oy = 0.7 * RS; _v.set(q.x + ox * cy, y0 + oy, q.z - ox * sy); _q.setFromEuler(_e.set(up ? -1.45 + Math.sin(q.walk * 0 + tNow * 9) * 0.08 : caught ? -2.6 : -sw * side * 0.8, yaw, 0.12 * side)); M.arm.setMatrixAt(j * 2 + s, _m4.compose(_v, _q, _s)); }
       if (q.scan) { _q.setFromEuler(_e.set(0, yaw, 0)); _v.set(q.x, q.y + 0.07, q.z); _s.set(1, 1, 1); SCAN.setMatrixAt(j, _m4.compose(_v, _q, _s)); } else SCAN.setMatrixAt(j, ZERO);
       // 표: 반장 = ❓·✓ · 모두 = 잡힌 스파이 이름 · 결과 = 스파이 이름 · 스파이 = 친구 스파이 이름(🤝)
-      const top = q.y + 1.72;
+      const top = q.y + 1.72 * RS;
       if (sp && (caught || reveal) && j !== meE) spr(badge((caught ? '📸 ' : '🤖 ') + (sp.kind === 'bot' ? '스파이 봇' : sp.name), 'rgba(232,72,72,.94)'), q.x, top, q.z);   // 내 머리 위 이름표는 3인칭 카메라를 가려서 안 그림
       else if (ME.role === 'spy' && sp && j !== meE) spr(badge('🤝 ' + (sp.kind === 'bot' ? '스파이 봇' : sp.name), 'rgba(59,130,246,.9)'), q.x, top, q.z);
       else if (ME.role === 'guard' && okR.has(j)) spr(badge('✓ 로봇', 'rgba(47,158,68,.9)'), q.x, top, q.z, 1.0);
       else if (ME.role === 'guard' && sus.has(j)) spr(badge('❓', 'rgba(245,158,11,.95)'), q.x, top, q.z, 0.9);
     }
     for (let i = sprN; i < SPR.length; i++) SPR[i].visible = false;
-    if (ME.role === 'guard' && sel >= 0 && E[sel] && phase === 'play') { RING.visible = true; RING.position.set(E[sel].x, E[sel].y + 0.1, E[sel].z); RING.scale.setScalar(1 + Math.sin(tNow * 6) * 0.06); } else RING.visible = false;
+    if (ME.role === 'guard' && sel >= 0 && E[sel] && phase === 'play') { RING.visible = true; RING.position.set(E[sel].x, E[sel].y + 0.1, E[sel].z); RING.scale.setScalar(RS * (1 + Math.sin(tNow * 6) * 0.06)); } else RING.visible = false;
+    hov = -1; if (ME.role === 'guard' && phase === 'play' && hovXY && map.top.on) { const cam = map.camera, W = innerWidth, H = innerHeight; let bd = 34 * 34;
+      for (let e = 0; e < E.length; e++) { if (isCaught(e)) continue; const q = E[e]; _v.set(q.x, q.y + 0.75 * RS, q.z).project(cam); if (_v.z > 1) continue; const d = ((_v.x + 1) / 2 * W - hovXY[0]) ** 2 + ((1 - _v.y) / 2 * H - hovXY[1]) ** 2; if (d < bd) { bd = d; hov = e; } } }
+    if (hov >= 0 && hov !== sel) { HRING.visible = true; HRING.position.set(E[hov].x, E[hov].y + 0.09, E[hov].z); HRING.scale.setScalar(RS); } else HRING.visible = false;
+    { const pad = document.getElementById('tv-pad'); if (pad) { const c9 = hov >= 0 ? 'pointer' : ''; if (pad.style.cursor !== c9) pad.style.cursor = c9; } }
     M.body.instanceMatrix.needsUpdate = M.bib.instanceMatrix.needsUpdate = M.leg.instanceMatrix.needsUpdate = M.arm.instanceMatrix.needsUpdate = SCAN.instanceMatrix.needsUpdate = true; M.bib.instanceColor.needsUpdate = true;
   }
 
@@ -671,6 +737,7 @@ body.small .rb-gp .t{display:none}
     if (!role) { const i = await map.hud.ask('🤖 로봇인 척 — 혼자 연습\n로봇 ' + K + '대 속에 로봇인 척하는 스파이가 숨어 있어요 · 한 판 ' + (cfg.count + playOf(2) + cfg.end) + '초 · 친구와 하려면 🎮 → 대결 → 로봇인 척(친구와)',
       ['🕵️ CCTV 반장 — 하늘에서 보며 스파이 봇 둘 찾기(📸 3번)', '🤖 스파이 — 로봇처럼 걸으며 미션(반장 봇이 지켜봐요)']);
       if (i < 0 || dead) return; role = i === 1 ? 'spy' : 'guard'; }
+    await howTo(role, 2, goalOf(2), shotsOf(2), true); if (dead) return;
     soloRound(role);
   }
   function soloRound(role) {
@@ -682,7 +749,7 @@ body.small .rb-gp .t{display:none}
   async function soloEnd() {
     const role = ME.role === 'guard' ? 'guard' : 'spy';
     const i = await map.hud.ask(res ? (res.spyWin ? '🤖 스파이 팀 승리' : '🕵️ 반장 승리') : '끝', ['🔄 다시 하기', role === 'guard' ? '🤖 스파이 해 보기' : '🕵️ 반장 해 보기', '🏠 그만하기']);
-    if (dead) return; if (i === 0) soloRound(role); else if (i === 1) soloRound(role === 'guard' ? 'spy' : 'guard'); else map.quit();
+    if (dead) return; if (i === 0) soloRound(role); else if (i === 1) { const r2 = role === 'guard' ? 'spy' : 'guard'; if (!seenHow.has(r2)) { await howTo(r2, 2, goalOf(2), shotsOf(2), true); if (dead) return; } soloRound(r2); } else map.quit();
   }
   async function askQuit() { const i = await map.hud.ask('로봇인 척을 그만할까요?', ['▶ 계속하기', '🏠 그만하기']); if (i === 1) map.quit(); }
 
@@ -699,7 +766,7 @@ body.small .rb-gp .t{display:none}
   const ctlMatch = (seq, st) => { const mp = window.SM_MP, N = mp && mp.net(); if (N && N.ctl) N.ctl('match', { seq, st }); };
   const r2 = v => Math.round(v * 100) / 100;
   const isRB = m => !!m && /^rb/.test(m.arena || '');
-  const busyMsg = m => (/^hs/.test(m.arena || '') ? '🫣 지금 이 방은 숨바꼭질 대작전 중이에요' : '💦 지금 이 방은 물총 친구 대결 중이에요') + ' — 끝나면 다시 와요';
+  const busyMsg = m => (/^hs/.test(m.arena || '') ? '🫣 지금 이 방은 숨바꼭질 대작전 중이에요' : /^gd/.test(m.arena || '') ? '🧭 지금 이 방은 길잡이 중이에요' : '💦 지금 이 방은 물총 친구 대결 중이에요') + ' — 끝나면 다시 와요';
   function applyEvt(root, type, path, d) {
     const set = (r, p, v) => {
       if (!p.length) return v && typeof v === 'object' ? v : {};
@@ -830,7 +897,7 @@ body.small .rb-gp .t{display:none}
     const was = id => P[id].tm >= 1000 || P[id].tm % 1000 >= 100, ordOf = id => (P[id].tm === 99 ? 50 + ids.indexOf(id) : P[id].tm % 100);
     const fresh = ids.filter(id => !was(id)).sort((a, b) => ordOf(a) - ordOf(b));
     if (!fresh.length || ids.length < 2) { nreq('/m', 'PATCH', { st: 'end' }).catch(() => { NM.advSeq = null; }).finally(() => { NM.adv = false; }); return; }
-    const g = fresh[0], up = { 'm/seq': m.seq + 1, 'm/goal': next, 'm/t0': Math.round(sNow() + 2500), 'm/arena': 'rb' + NM.lvl };
+    const g = fresh[0], up = { 'm/seq': m.seq + 1, 'm/goal': next, 'm/t0': Math.round(sNow() + 4500), 'm/arena': 'rb' + NM.lvl };   // 판마다 준비 ≈7.5초(새 반장이 하는 법을 읽게)
     for (const id of ids) up['p/' + id + '/tm'] = ordOf(id) % 100 + (id === g ? 100 : 0) + (was(id) ? 1000 : 0);
     nreq('', 'PATCH', up).catch(() => { NM.advSeq = null; }).finally(() => { NM.adv = false; });
     nreq('/ev', 'DELETE').catch(() => {});
@@ -840,7 +907,7 @@ body.small .rb-gp .t{display:none}
     if (ids.length < 2) { map.hud.toast('🤖 로봇인 척은 2명부터 — 혼자면 🎮 → 로봇인 척(혼자)', 3); return; }
     NM.lvl = 0; NM.streak = []; LED.clear();
     const rounds = Math.min(8, ids.length);
-    const up = { 'm/st': 'play', 'm/seq': (m.seq || 0) + 1, 'm/goal': 0, 'm/time': rounds, 'm/t0': Math.round(sNow() + 3000), 'm/arena': 'rb0' };
+    const up = { 'm/st': 'play', 'm/seq': (m.seq || 0) + 1, 'm/goal': 0, 'm/time': rounds, 'm/t0': Math.round(sNow() + 7000), 'm/arena': 'rb0' };   // 첫 판 준비 ≈10초(하는 법 읽기)
     ids.forEach((id, k) => { up['p/' + id + '/tm'] = k + (k === 0 ? 100 : 0); });
     await nreq('/ev', 'DELETE'); await nreq('', 'PATCH', up); ctlMatch((m.seq || 0) + 1, 'rcount');
   }
@@ -858,6 +925,7 @@ body.small .rb-gp .t{display:none}
     const ids = Object.keys(P).filter(id => P[id]).sort((a, b) => (P[a].on || 0) - (P[b].on || 0)), hostN = NM.host ? '나' : P[m.host] ? esc(P[m.host].n) : '방장';
     const S = Math.max(1, Math.min(SMAX, ids.length - 1));
     let h = '<div style="font-weight:900;font-size:18px">🤖 로봇인 척 — 친구와</div>'
+      + '<div style="margin-top:6px;font-size:14px;color:#1d3557;background:#eef4ff;border-radius:9px;padding:6px 8px">🕵️ <b>반장</b>: 색으로 깜빡인 구역에서 수상한 로봇을 골라 📸<br>🤖 <b>스파이</b>: 노란 빛기둥에서 E(스캔) · 로봇처럼 똑바로 걷기</div>'
       + '<div style="margin-top:6px;font-size:13px;color:#4a5b70">🕵️ CCTV 반장 1명 = 하늘에서 봐요 · 🤖 나머지 = 스파이(로봇 ' + K + '대와 똑같은 몸)<br>모두 한 번씩 반장(' + Math.min(8, ids.length) + '판) · 한 판 ' + (cfg.count + playOf(S) + cfg.end) + '초 안팎 · 스파이 ' + S + '명이면 팀 ⭐ ' + goalOf(S) + '개 vs 📸 ' + shotsOf(S) + '번</div>'
       + '<div style="margin-top:8px;padding:7px 9px;border-radius:9px;background:#eef4ff">👥 ' + ids.map(id => (id === NM.pid ? '<b>⭐ ' + esc(NM.name) + '(나)</b>' : esc(P[id].n)) + net1(id)).join(' · ') + '</div>'
       + (ids.length > 8 ? '<div style="margin-top:4px;font-size:12px">8명까지 — 나머지는 구경하다 다음 경기에 들어와요</div>' : '')
@@ -890,7 +958,7 @@ body.small .rb-gp .t{display:none}
   if (NETM) netEnter(); else soloAsk();
   return {
     tick,
-    stop() { dead = true; removeEventListener('keydown', keyH); helpSet(false); document.body.classList.remove('rb-spy'); clearScan(); for (const b of beacons) b.remove(); beacons = []; scanBtn.remove(); gp.remove(); logEl.remove(); meterEl.remove(); css.remove(); if (cardEl) { cardEl.remove(); cardEl = null; } clearTimeout(cardT);
+    stop() { dead = true; removeEventListener('keydown', keyH); removeEventListener('pointermove', onHover); howClose(); helpSet(false); document.body.classList.remove('rb-spy'); clearScan(); for (const b of beacons) b.remove(); beacons = []; scanBtn.remove(); gp.remove(); logEl.remove(); meterEl.remove(); css.remove(); if (cardEl) { cardEl.remove(); cardEl = null; } clearTimeout(cardT);
       hotOff.remove(); map.player.speed(1); map.player.show(true); map.player.jump(true); map.player.run(true); netLeave();
       for (const t of TEX.values()) t.dispose(); for (const g of GEOS) g.dispose(); for (const m of MATS) m.dispose(); },
     get state() { return R ? { phase, t: +tNow.toFixed(1), role: ME.role, lvl: R.lvl || 0, T, done, shots, playT, sel, signals: sigLog.length, host: NETM ? NM.host : true,
