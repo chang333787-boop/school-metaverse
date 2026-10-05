@@ -106,7 +106,9 @@ export function createFilm(env) {
 /* 영상 조각 */
 #film .clip{right:clamp(14px,3vw,48px);bottom:clamp(12px,3vh,34px);width:min(40vw,500px);padding:8px;transform:translateY(18px)}
 #film .clip.in{transform:none}
-#film .clip .fr{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000 center/cover no-repeat}
+#film .clip .fr{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000}
+#film .clip .fr .th{position:absolute;inset:0;background:#000 center/cover no-repeat;transform-origin:60% 45%;animation:flkb 9s ease-out both}
+@keyframes flkb{from{transform:scale(1.03)}to{transform:scale(1.16)}}
 #film .clip .cap{display:flex;align-items:center;gap:8px;padding:8px 4px 2px;font:700 clamp(12px,1.15vw,14px)/1.3 var(--ff);color:rgba(255,255,255,.9)}
 #film .clip .cap:before{content:'▶';font-size:10px;background:#ff3d3d;border-radius:4px;padding:3px 5px;line-height:1}
 /* 아래 글 · 가운데 글 */
@@ -199,8 +201,8 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
     let last = '';
     const fit = () => { if (!f.isConnected) return; if (!holder.isConnected) { f.remove(); return; }
       const r = holder.getBoundingClientRect(), cs = getComputedStyle(holder), op = cs.visibility === 'hidden' ? 0 : +(getComputedStyle(holder.closest('.fl-u, .tp') || holder).opacity || 1);
-      const k = r.left.toFixed(1) + ',' + r.top.toFixed(1) + ',' + r.width.toFixed(1) + ',' + r.height.toFixed(1) + ',' + op.toFixed(2);
-      if (k !== last) { last = k; Object.assign(f.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', opacity: String(op), visibility: r.width > 4 && op > 0.02 ? 'visible' : 'hidden' }); }
+      const on = !!(f._live || f._noApi), k = r.left.toFixed(1) + ',' + r.top.toFixed(1) + ',' + r.width.toFixed(1) + ',' + r.height.toFixed(1) + ',' + op.toFixed(2) + ',' + on;
+      if (k !== last) { last = k; Object.assign(f.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', opacity: String(op), visibility: on && r.width > 4 && op > 0.02 ? 'visible' : 'hidden' }); }   // CLIP-STILL: 재생이 확인되기 전엔 숨김(밑의 사진이 보임)
       requestAnimationFrame(fit); };
     fit(); return f;
   }
@@ -262,10 +264,19 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
       [0, 500, 1500].forEach(t => setTimeout(() => { try { f.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1 }), '*'); } catch (e) { /* */ } }, t)); });   // 재생 상태 받기(playerState — 이미 재생 중이면 playVideo를 보내지 않는다: 가운데 ⏸ 표시가 뜬다)
     return f;
   }
-  addEventListener('message', e => {   // 미리 지은 조각들의 재생 상태
+  // CLIP-STILL(10-05 교사 '어떤 폰으로 홍보 들어갔는데 오프닝 영상들이 자동 재생이 아니고 재생 버튼이 떠 있었다'):
+  //   자동 재생을 막는 폰(카카오톡·네이버 앱 안 브라우저 · 아이폰 저전력 모드 · 자동 재생 끈 브라우저)은 유튜브가 빨간 ▶ 단추만 띄운다(소리 꺼도)
+  //   → 조각 iframe은 '진짜 재생 중'(playerState 1 또는 재생 시각이 흐름)을 받은 뒤에만 보이고, 그 전·끝내 막히면 밑의 영상 사진이 천천히 다가옴(.th — 영상 같은 사진 카드)
+  //   · 플레이어 소식이 아예 없으면(2.5초) 예전처럼 보임(API가 막힌 경우 — 그때는 재생 여부를 모름)
+  addEventListener('message', e => {   // 조각들의 재생 상태(미리 지은 것 · 보이는 것 모두)
     if (!cur || !/youtube/.test(e.origin)) return; let d; try { d = JSON.parse(e.data); } catch (x) { return; }
-    if (!d || d.event !== 'infoDelivery' || !d.info || d.info.playerState == null) return;
-    for (const f of cur.warm.values()) if (f.contentWindow === e.source) f._st = d.info.playerState;
+    if (!d || typeof d !== 'object') return;
+    let f = null; for (const q of document.querySelectorAll('iframe.yt-float')) if (q.contentWindow === e.source) { f = q; break; }
+    if (!f) return; f._msg = true;
+    const info = d.info, st = d.event === 'onStateChange' && typeof info === 'number' ? info : info && typeof info === 'object' && info.playerState != null ? info.playerState : null;
+    if (info && typeof info === 'object' && typeof info.currentTime === 'number') { if (f._ct0 == null) f._ct0 = info.currentTime; else if (Math.abs(info.currentTime - f._ct0) > 0.3) f._moved = true; }
+    if (st != null) { f._st = st; if (st === 1) f._live = true; else if (st !== 3) f._live = false; }   // 1 재생 = 보임 · 멈춤(2)·안 시작(−1)·대기(5)·끝(0 — 추천 화면) = 숨김(사진) · 3 불러오는 중 = 그대로
+    else if (f._moved && f._st == null) f._live = true;   // 상태 소식 없이 재생 시각만 흐름
   });
   function clipWarm(i) {   // i번 장면 조각을 미리(이미 있으면 그대로)
     const c = cur, s = c && c.shots[i]; if (!s || !s.clip || !s.clip.id || c.warm.has(i)) return;
@@ -295,13 +306,14 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
     if (s.cam && s.cam.p.length === 1) { c.p1 = s.cam.p[0]; c.l1 = s.cam.l[0]; } else c.p1 = c.l1 = null;
     for (const t of s.tags || []) { const d = el('div', 'tag', '<b>' + esc(t.t) + '</b><i></i><s></s>', c.stage); c.tags.push({ el: d, p: t.p, at: t.at || 0, on: false }); }
     if (s.clip && s.clip.id) {
-      const d = el('div', 'fl-u clip glass', null, c.stage), fr = el('div', 'fr', null, d);
-      fr.style.backgroundImage = 'url(https://i.ytimg.com/vi/' + encodeURIComponent(s.clip.id) + '/hqdefault.jpg)';
+      const d = el('div', 'fl-u clip glass', null, c.stage), fr = el('div', 'fr', null, d), th = el('div', 'th', null, fr);
+      th.style.backgroundImage = 'url(https://i.ytimg.com/vi/' + encodeURIComponent(s.clip.id) + '/hqdefault.jpg)';   // CLIP-STILL: 재생 전·자동 재생이 막힌 폰 = 이 사진(천천히 다가옴)
       const at = (s.clip.at || 0.6) * 1000, wf = c.warm.get(i);
       if (wf) { c.warm.delete(i); if (wf._ld) { ytCmd(wf, 'seekTo', [s.clip.start | 0, true]); if (wf._st !== 1) ytCmd(wf, 'playVideo'); } }   // 미리 지은 조각 = 처음 자리로 되감기(이미 받아 둔 곳이라 바로) · 멈춰 있을 때만 재생 명령
       setTimeout(() => { if (!cur || cur.clip !== d) { if (wf) wf.remove(); return; } d.classList.add('in');
-        const f = wf || clipMake(s.clip); f.style.pointerEvents = '';
-        ytFloat(fr, f, 9001); }, wf ? Math.min(at, 250) : at);   // 맨 위층(아이폰 어긋남 — 위 ytFloat) · 미리 지은 것은 바로 보임
+        const f = wf || clipMake(s.clip); f.style.pointerEvents = 'none';   // 누를 수 없게(재생 단추·유튜브로 가기를 누르지 않게 — 영상은 보기만)
+        ytFloat(fr, f, 9001);
+        setTimeout(() => { if (!f.isConnected || f._live) return; if (!f._msg) f._noApi = true; else ytCmd(f, 'playVideo'); }, 2500); }, wf ? Math.min(at, 250) : at);   // CLIP-STILL: 소식이 없으면 예전처럼 보임 · 멈춰 있으면 재생을 한 번 더 부탁(막힌 폰은 사진 그대로)   // 맨 위층(아이폰 어긋남 — 위 ytFloat) · 미리 지은 것은 바로 보임
       el('div', 'cap', esc(s.clip.title || '정림초 유튜브'), d); c.clip = d;
     }
   }
