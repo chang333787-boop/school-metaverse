@@ -8,7 +8,7 @@ import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약�
 import { createMapApi } from './mapapi.js?v=56';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=24';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
-import { createFilm } from './film.js?v=14';
+import { createFilm } from './film.js?v=16';
 import { createTop } from './topview.js?v=8';   // TOP-1(10-04 교사 '탑뷰로 학교 보기'): 하늘에서 보기 — 지붕 벗기기(1·2층)·끌어 옮기기·확대·돌리기·방 이름·방위표·축척 · 게임은 map.top   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
@@ -1411,6 +1411,7 @@ function idle(fn, timeout = 1500) { return window.requestIdleCallback ? requestI
 // ---------- 루프 + 예산 계측(헌법⑥) ----------
 const clock = new THREE.Clock();
 const fpsBox = document.getElementById('fps');
+if (window.SM_PROMO && fpsBox && !/[?&]debug/.test(location.search)) fpsBox.style.display = 'none';   // FILM-3(10-05 기기 점검): 홍보판(학부모)엔 개발용 'fps · dc · sim' 칩을 안 보임 — ?debug면 보임
 let acc = 0, n = 0, simMs = 0;
 // MP-1(10-03 교사 '동시 접속이 포인트 — 홍보는 멀티플레이와 상관없음') + LOBBY-1(같은 날 '선생님이 방 파고 코드로 들어오기 · 방 목록'): 주소만으로는 혼자 —
 //   👥 함께하기 칩 → 선생님이 연 방 고르기 + 번호 4자리(lobby.js) → 같은 방 친구들이 보인다 · 홍보판·게이트·사진 대조·?mp=0이면 칩도 없음

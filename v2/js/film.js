@@ -38,14 +38,14 @@ export function createFilm(env) {
 
   // ---------- 모양(한 번) ----------
   const css = document.createElement('style'); css.textContent = `
-#film{--ff:'Pretendard','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;position:fixed;inset:0;z-index:9000;pointer-events:auto;font-family:var(--ff);color:#fff;--lb:clamp(28px,calc((100vh - 100vw / 2.25) / 2),13vh);overflow:hidden;-webkit-user-select:none;user-select:none}
+#film{--ff:'Pretendard','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;position:fixed;inset:0;z-index:9000;pointer-events:auto;font-family:var(--ff);color:#fff;--lb:clamp(28px,calc((100vh - 100vw / 2.25) / 2),13vh);overflow:hidden;-webkit-user-select:none;user-select:none;word-break:keep-all;overflow-wrap:anywhere}
 #film .fl-bar{position:absolute;left:0;right:0;height:var(--lb);background:#05070d;transition:transform .9s cubic-bezier(.7,0,.2,1);z-index:5}
 #film .fl-bar.t{top:0;transform:translateY(-100%)} #film .fl-bar.b{bottom:0;transform:translateY(100%)}
 #film.bars .fl-bar{transform:none}
 #film .fl-black{position:absolute;inset:0;background:#05070d;opacity:1;transition:opacity .6s ease;z-index:4;pointer-events:none}
 #film .fl-black.clear{opacity:0}
-#film .fl-stage{position:absolute;left:0;right:0;top:var(--lb);bottom:var(--lb);z-index:6;pointer-events:none;background:radial-gradient(ellipse 80% 90% at 50% 50%,transparent 45%,rgba(5,8,16,.42) 100%)}
-#film .kick{text-shadow:0 2px 10px rgba(0,0,0,.75)}
+#film .fl-stage{position:absolute;left:0;right:0;top:var(--lb);bottom:var(--lb);z-index:6;pointer-events:none;overflow:hidden;background:radial-gradient(ellipse 80% 90% at 50% 50%,transparent 45%,rgba(5,8,16,.42) 100%)}
+#film .kick{text-shadow:0 1px 2px rgba(0,0,0,.8),0 2px 10px rgba(0,0,0,.75)}
 #film .fl-ctl{position:absolute;right:max(14px,env(safe-area-inset-right));bottom:max(8px,calc((var(--lb) - 36px) / 2));z-index:8;display:flex;gap:8px;pointer-events:auto}
 #film .fl-ctl button{font:700 clamp(12px,1.5vw,15px)/1 var(--ff);color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:9px 14px;min-height:36px;cursor:pointer}
 #film .fl-ctl button:hover{background:rgba(255,255,255,.24)}
@@ -53,13 +53,16 @@ export function createFilm(env) {
 #film .fl-brand{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(8px,calc((var(--lb) - 20px) / 2));z-index:8;font:800 clamp(12px,1.3vw,14px)/1.2 var(--ff);letter-spacing:.14em;color:rgba(255,255,255,.62)}
 #film .fl-u{position:absolute;opacity:0;transition:opacity .5s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
 #film .fl-u.in{opacity:1} #film .fl-u.out{opacity:0!important;transition:opacity .45s ease}
-#film .ln{display:block;overflow:hidden;padding:.06em 0}
-#film .ln>span{display:inline-block;transform:translateY(110%);transition:transform .8s cubic-bezier(.2,.9,.2,1)}
+#film .ln{display:block;overflow:hidden;padding:.3em .5em .45em;margin:-.24em -.5em -.39em}
+#film .ln>span{display:inline-block;transform:translateY(160%);transition:transform .8s cubic-bezier(.2,.9,.2,1)}
 #film .fl-u.in .ln>span{transform:none}
+#film .fl-u.open .ln{overflow:visible}
 #film .kick{font:800 clamp(12px,1.35vw,16px)/1 var(--ff);letter-spacing:.32em;color:#ffd23c;display:flex;align-items:center;gap:12px}
 #film .kick:before{content:'';width:34px;height:2px;background:#ffd23c;display:inline-block}
-#film .h1{font:900 clamp(30px,6.2vw,88px)/1.04 var(--ff);letter-spacing:-.02em;text-shadow:0 4px 30px rgba(0,0,0,.45)}
-#film .h2{font:900 clamp(22px,3.6vw,52px)/1.12 var(--ff);letter-spacing:-.01em;text-shadow:0 3px 22px rgba(0,0,0,.5)}
+#film .h1{font:900 clamp(30px,6.2vw,88px)/1.04 var(--ff);letter-spacing:-.02em;text-shadow:0 1px 2px rgba(0,0,0,.7),0 2px 8px rgba(0,0,0,.55),0 4px 30px rgba(0,0,0,.45)}
+#film .h2{font:900 clamp(22px,3.6vw,52px)/1.12 var(--ff);letter-spacing:-.01em;text-shadow:0 1px 2px rgba(0,0,0,.75),0 2px 8px rgba(0,0,0,.55),0 3px 22px rgba(0,0,0,.5)}
+#film .center .h1,#film .center .h2{text-shadow:0 0 2px rgba(5,10,20,.95),0 2px 6px rgba(0,0,0,.8),0 4px 26px rgba(0,0,0,.6)}
+#film .center:before{content:'';position:absolute;inset:-12% -4%;z-index:-1;background:radial-gradient(closest-side,rgba(5,10,20,.5),rgba(5,10,20,0));pointer-events:none}
 #film .p{font:600 clamp(14px,1.7vw,21px)/1.5 var(--ff);color:rgba(255,255,255,.92);text-shadow:0 2px 12px rgba(0,0,0,.6)}
 #film .glass{background:linear-gradient(135deg,rgba(14,26,52,.88),rgba(14,26,52,.74));border:1px solid rgba(255,255,255,.16);border-radius:18px;box-shadow:0 14px 40px rgba(0,0,0,.3)}   /* 뒤 흐림(backdrop-filter)은 휴대폰에서 매 프레임 3D를 다시 흐려 떨림 → 뺌 */
 /* 첫 장면 — 폰 끄기 → RAS 켜기 */
@@ -94,13 +97,14 @@ export function createFilm(env) {
 #film .st.in{opacity:1;transform:none}
 #film .st .n{font:900 clamp(24px,3.6vw,50px)/1 var(--ff);letter-spacing:-.02em;color:#ffd23c;white-space:nowrap}
 #film .st .n u{text-decoration:none;font-size:.5em;margin-left:3px;color:#ffd23c;font-weight:800}
-#film .st .c{margin-top:6px;font:700 clamp(12px,1.15vw,14.5px)/1.35 var(--ff);color:rgba(255,255,255,.88)}
+#film .st .c{margin-top:6px;font:700 clamp(12px,1.15vw,14.5px)/1.35 var(--ff);color:rgba(255,255,255,.88);text-wrap:balance}
 /* 갈래(R·A·S·AI·생태) */
-#film .chap{left:clamp(16px,4vw,64px);top:50%;transform:translate(-30px,-50%);width:min(560px,58vw)}
+#film .chap{left:max(clamp(16px,4vw,64px),calc(env(safe-area-inset-left) + 10px));top:50%;transform:translate(-30px,-50%);width:min(560px,58vw,calc(100vw - clamp(16px,4vw,64px) - min(40vw,500px) - 16px - clamp(14px,3vw,48px) - 20px))}
 #film .chap.in{transform:translate(0,-50%)}
-#film .chap .big{font:900 clamp(80px,15vw,210px)/.82 var(--ff);letter-spacing:-.04em;color:var(--c);text-shadow:0 10px 40px rgba(0,0,0,.35);display:flex;align-items:flex-end;gap:14px}
-#film .chap .big small{font:900 clamp(18px,2.8vw,40px)/1 var(--ff);color:#fff;letter-spacing:.02em;margin-bottom:.5em}
-#film .chap ul{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+#film .chap .big{font:900 clamp(80px,15vw,210px)/.82 var(--ff);letter-spacing:-.04em;color:var(--c);text-shadow:0 2px 4px rgba(0,0,0,.45),0 10px 40px rgba(0,0,0,.35);display:flex;align-items:flex-end;gap:14px}
+#film .chap .big small{font:900 clamp(18px,2.8vw,40px)/1 var(--ff);color:#fff;letter-spacing:.02em;margin-bottom:.5em;text-shadow:0 1px 2px rgba(0,0,0,.7),0 2px 14px rgba(0,0,0,.5)}
+#film .chap:before{content:'';position:absolute;inset:-8% -14% -8% -10%;z-index:-1;background:radial-gradient(ellipse at 35% 50%,rgba(5,10,20,.38),rgba(5,10,20,0) 70%);pointer-events:none}
+#film .chap ul{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px;justify-items:start}
 #film .chap li{font:700 clamp(13px,1.55vw,19px)/1.35 var(--ff);padding:9px 14px 9px 38px;position:relative;opacity:0;transform:translateX(-14px);transition:all .5s cubic-bezier(.2,.9,.2,1)}
 #film .chap li.in{opacity:1;transform:none}
 #film .chap li:before{content:'';position:absolute;left:14px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--c)}
@@ -117,14 +121,15 @@ export function createFilm(env) {
 @keyframes flin{from{opacity:0}to{opacity:1}}
 /* PICS-1 사진 카드(유튜브 장면 사진이 박자마다 착착 쌓임) — 자리·크기는 영상 조각 칸 그대로(글과 안 겹침) */
 #film .clip.pics .fr{overflow:visible;background:none;border-radius:0}
-#film .clip.pics .pk{position:absolute;inset:6% 8%;border:3px solid #fff;border-radius:6px;background:#1d2533 center/cover no-repeat;box-shadow:0 8px 18px rgba(0,0,0,.45);opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}
+#film .clip.pics .pk{position:absolute;inset:6% 8%;border:3px solid #fff;border-radius:6px;background:#1d2533 center/auto 134% no-repeat;box-shadow:0 8px 18px rgba(0,0,0,.45);opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}
 #film .clip.pics.in .pk{animation:pkin .32s cubic-bezier(.2,1.3,.35,1) var(--d) both}
 @keyframes pkin{0%{opacity:0;transform:translate(var(--x),calc(var(--y) - 22%)) rotate(calc(var(--r) * 3)) scale(1.4)}100%{opacity:1;transform:translate(var(--x),var(--y)) rotate(var(--r)) scale(1)}}
 #film .clip.pics .cap:before{content:'📷';background:none;padding:0;font-size:13px}
+#film .clip.pics .pk.wide{background-size:cover}
 #film .clip .cap{display:flex;align-items:center;gap:8px;padding:8px 4px 2px;font:700 clamp(12px,1.15vw,14px)/1.3 var(--ff);color:rgba(255,255,255,.9)}
 #film .clip .cap:before{content:'▶';font-size:10px;background:#ff3d3d;border-radius:4px;padding:3px 5px;line-height:1}
 /* 아래 글 · 가운데 글 */
-#film .lower{left:clamp(16px,4vw,64px);bottom:clamp(14px,4vh,40px);max-width:min(760px,70vw)}
+#film .lower{left:max(clamp(16px,4vw,64px),calc(env(safe-area-inset-left) + 10px));bottom:clamp(14px,4vh,40px);max-width:min(760px,70vw)}
 #film .center{left:50%;top:50%;transform:translate(-50%,-46%);text-align:center;width:min(94vw,1100px)}
 #film .center.in{transform:translate(-50%,-50%)}
 /* 도장 고리 */
@@ -132,8 +137,8 @@ export function createFilm(env) {
 #film .stamps .ring{position:relative;width:clamp(220px,34vw,400px);height:clamp(220px,34vw,400px);margin:0 auto}
 #film .stamps .sp{position:absolute;left:50%;top:50%;width:clamp(36px,5vw,58px);height:clamp(36px,5vw,58px);margin:calc(clamp(36px,5vw,58px) / -2);display:grid;place-items:center;font-size:clamp(18px,2.6vw,30px);background:#fff;border-radius:50%;box-shadow:0 6px 18px rgba(0,0,0,.3);opacity:0;transform:translate(0,0) scale(.2);transition:all .6s cubic-bezier(.2,.9,.3,1.4)}
 #film .stamps .mid{position:absolute;inset:0;display:grid;place-items:center;align-content:center}
-#film .stamps .mid b{font:900 clamp(40px,7vw,96px)/1 var(--ff);color:#ffd23c}
-#film .stamps .mid span{font:800 clamp(13px,1.6vw,19px)/1.3 var(--ff)}
+#film .stamps .mid b{font:900 clamp(40px,7vw,96px)/1 var(--ff);color:#ffd23c;text-shadow:0 0 2px rgba(5,10,20,.95),0 2px 6px rgba(0,0,0,.8)}
+#film .stamps .mid span{font:800 clamp(13px,1.6vw,19px)/1.3 var(--ff);text-shadow:0 0 2px rgba(5,10,20,.95),0 2px 6px rgba(0,0,0,.8)}
 /* 끝 화면 */
 #film .endc{box-sizing:border-box;left:50%;top:50%;transform:translate(-50%,-46%);width:min(94vw,820px);text-align:center;padding:clamp(18px,3vw,36px)}
 #film .endc.in{transform:translate(-50%,-50%)}
@@ -142,21 +147,29 @@ export function createFilm(env) {
 #film .endc button.pri{background:#ffd23c}
 #film .endc .ct{display:inline-flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin-top:14px;font:700 clamp(13px,1.55vw,18px)/1.4 var(--ff)}
 #film .endc .ct b{color:#ffd23c}
-@media (max-aspect-ratio:1/1){#film{--lb:clamp(20px,6vh,56px)}#film .stats{left:12px;right:12px;width:auto;top:auto;bottom:8px;transform:translateY(20px)}#film .stats.in{transform:none}#film .chap{width:auto;right:12px;top:9%;transform:translateX(-30px)}#film .chap.in{transform:none}#film .clip{width:min(80vw,380px);right:50%;margin-right:calc(min(80vw,380px) / -2);bottom:10px}#film .bars{left:12px;right:12px;width:auto;top:auto;bottom:8px;transform:translateY(20px)}#film .bars.in{transform:none}}   /* 세로 휴대폰(아이폰 시뮬레이터 10-04): 갈래 글은 위 · 영상 조각은 아래 가운데(겹치지 않게) · 검은 띠 얇게 */
-@media (max-height:520px){#film .chap .big{font-size:16vh!important}#film .chap .big small{font-size:6vh!important}#film .chap .h2{font-size:7vh!important;margin-top:4px!important}#film .chap ul{margin-top:8px!important;gap:5px!important}#film .chap li{padding:6px 12px 6px 32px!important;font-size:13px!important}#film .chap li:before{left:12px;width:10px;height:10px;margin-top:-5px}#film .lock .w1{font-size:11vh!important}#film .lock .dot{width:14vh!important;height:14vh!important;font-size:7vh!important}#film .lock .dots{margin:6px 0 22px!important}#film .lock .w2{font-size:10vh!important}#film .lock .sub{margin-top:4px!important}#film .endc{padding:10px 14px!important;width:min(94vw,640px)!important}#film .endc .h1{font-size:8.5vh!important}#film .endc .row{margin-top:8px!important}#film .endc button{min-height:40px!important;padding:9px 14px!important}#film .endc .ct{margin-top:6px!important}#film .lock .ph{width:34px;height:58px;margin-bottom:8px;border-width:3px;border-radius:10px}#film .lock .ph:after{inset:5px 4px 11px}#film .lock .w1{font-size:13vh}#film .lock .dot{width:17vh;height:17vh;font-size:8vh}#film .lock .dots{margin:10px 0 26px}#film .lock .w2{font-size:12vh}#film .lock .sub{margin-top:8px}#film .stats{grid-template-columns:1fr 1fr 1fr;width:min(720px,70vw)}#film .chap .big{font-size:clamp(56px,11vw,120px)}#film .clip{width:min(32vw,300px)}}
+@media (max-aspect-ratio:1/1){#film{--lb:clamp(20px,6vh,56px)}#film .stats{left:12px;right:12px;width:auto;top:auto;bottom:8px;transform:translateY(20px)}#film .stats.in{transform:none}#film .chap{width:auto;right:12px;top:9%;transform:translateX(-30px)}#film .chap.in{transform:none}#film .clip{width:min(80vw,380px);right:50%;margin-right:calc(min(80vw,380px) / -2);bottom:10px}#film .fl-u.bars{left:12px;right:12px;width:auto;top:auto;bottom:8px;transform:translateY(20px)}#film .fl-u.bars.in{transform:none}#film .clip{box-sizing:border-box}#film .chap ul{justify-items:stretch}#film .chap:before{display:none}}   /* 세로 휴대폰(아이폰 시뮬레이터 10-04): 갈래 글은 위 · 영상 조각은 아래 가운데(겹치지 않게) · 검은 띠 얇게 */
+@media (max-height:520px){#film .chap .big{font-size:16vh!important}#film .chap .big small{font-size:6vh!important}#film .chap .h2{font-size:7vh!important;margin-top:4px!important}#film .chap ul{margin-top:8px!important;gap:5px!important}#film .chap li{padding:6px 12px 6px 32px!important;font-size:13px!important}#film .chap li:before{left:12px;width:10px;height:10px;margin-top:-5px}#film .lock .w1{font-size:11vh!important}#film .lock .dot{width:14vh!important;height:14vh!important;font-size:7vh!important}#film .lock .dots{margin:6px 0 22px!important}#film .lock .w2{font-size:10vh!important}#film .lock .sub{margin-top:4px!important}#film .endc{padding:10px 14px!important;width:min(94vw,640px)!important}#film .endc .h1{font-size:8.5vh!important}#film .endc .row{margin-top:8px!important}#film .endc button{min-height:40px!important;padding:9px 14px!important}#film .endc .ct{margin-top:6px!important}#film .lock .ph{width:34px;height:58px;margin-bottom:8px;border-width:3px;border-radius:10px}#film .lock .ph:after{inset:5px 4px 11px}#film .lock .dots{margin-bottom:30px!important}#film .lock .dot small{top:calc(100% + 6px)}#film .clip{bottom:max(12px,calc(54px - var(--lb)))}#film .chap{width:min(560px,58vw,calc(100vw - clamp(16px,4vw,64px) - min(32vw,300px) - 16px - clamp(14px,3vw,48px) - 16px))}#film .stats{grid-template-columns:1fr 1fr 1fr;width:min(720px,70vw)}#film .chap .big{font-size:clamp(56px,11vw,120px)}#film .clip{width:min(32vw,300px)}}
+@media (min-height:521px) and (max-height:780px) and (min-aspect-ratio:1/1){#film .lock .ph{width:42px;height:72px;margin-bottom:10px}#film .lock .w1{font-size:min(7.6vw,13vh)}#film .lock .dot{width:min(9vw,15vh);height:min(9vw,15vh)}#film .lock .dots{margin:12px 0 30px}#film .lock .w2{font-size:min(6vw,11vh)}#film .lock .sub{margin-top:8px}#film .chap .big{font-size:min(15vw,26vh)}#film .clip{bottom:max(12px,calc(54px - var(--lb)))}}
+/* 16:10 노트북·4:3 태블릿 가로: 위아래 검은 띠를 줄임(화면 4분의 1이 검던 것) */
+@media (max-aspect-ratio:17/10) and (min-aspect-ratio:1/1){#film{--lb:clamp(28px,calc((100vh - 100vw / 2.25) / 2),9vh)}}
+@media (max-aspect-ratio:3/2) and (min-aspect-ratio:1/1){#film{--lb:clamp(28px,calc((100vh - 100vw / 2.25) / 2),7vh)}}
+/* 터치: 단추 44px(손가락) · 좁은 세로 폰은 아래 학교 이름 줄을 뺌(🔊 단추 밑으로 들어가던 것) */
+body.touch #film .fl-ctl button{position:relative;font-size:13px}body.touch #film .fl-ctl button:after{content:'';position:absolute;left:-3px;right:-3px;top:-4px;bottom:-4px}
+body.touch #film .endc button{min-height:44px!important}
+@media (max-width:420px){#film .fl-brand{display:none}}
 body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
 #scene.fl-punch{animation:flpunch .6s cubic-bezier(.2,.8,.2,1)}
 @keyframes flpunch{0%{transform:scale(1.07)}100%{transform:none}}
 #film .fl-flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:4;pointer-events:none}
 /* 갈래 순서(01/05) */
-#film .chn{left:clamp(16px,4vw,64px);top:clamp(12px,2.6vh,24px);display:flex;flex-wrap:wrap;gap:6px;align-items:center;transform:translateY(-8px)}
+#film .chn{left:max(clamp(16px,4vw,64px),calc(env(safe-area-inset-left) + 10px));top:clamp(12px,2.6vh,24px);display:flex;flex-wrap:wrap;gap:6px;align-items:center;transform:translateY(-8px)}
 #film .chn.in{transform:none}
 #film .chn .no{font:900 clamp(12px,1.35vw,16px)/1 var(--ff);color:#ffd23c;margin-right:6px;letter-spacing:.12em}
-#film .chn span{font:800 clamp(12px,1.1vw,13px)/1 var(--ff);padding:6px 10px;border-radius:999px;background:rgba(10,18,36,.55);color:rgba(255,255,255,.62);border:1px solid rgba(255,255,255,.14)}
+#film .chn span{font:800 clamp(12px,1.1vw,13px)/1 var(--ff);padding:6px 10px;border-radius:999px;background:rgba(10,18,36,.78);color:rgba(255,255,255,.75);border:1px solid rgba(255,255,255,.14)}
 #film .chn span.on{background:var(--c);color:#fff;border-color:transparent;box-shadow:0 0 18px var(--c)}
 #film .chn span.done{color:rgba(255,255,255,.9)}
 /* 큰 배경 글자 */
-#film .ghost{position:absolute;right:-2vw;bottom:-6vh;font:900 clamp(160px,34vw,520px)/.8 var(--ff);color:transparent;-webkit-text-stroke:2px rgba(255,255,255,.16);letter-spacing:-.05em;pointer-events:none;opacity:0;transform:translateX(40px);transition:opacity 1.2s,transform 6s linear}
+#film .ghost{position:absolute;z-index:-1;right:-2vw;top:-3vh;font:900 clamp(160px,34vw,520px)/.8 var(--ff);color:transparent;-webkit-text-stroke:2px rgba(255,255,255,.16);letter-spacing:-.05em;pointer-events:none;opacity:0;transform:translateX(40px);transition:opacity 1.2s,transform 6s linear}
 #film .ghost.in{opacity:1;transform:translateX(-40px)}
 /* 지도 길 */
 #film svg.route{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
@@ -178,7 +191,14 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
 #film .bars .tr i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--c1),var(--c2));transition:width 1.1s cubic-bezier(.2,.9,.2,1)}
 #film .bars .br b{font:900 clamp(12px,1.3vw,16px)/1 var(--ff);color:#ffd23c;min-width:4.6em;text-align:right}
 #film .st .ic{float:right;font-size:clamp(18px,2.2vw,28px);line-height:1;opacity:.95}
-@media (max-height:520px){#film .bars .br{margin-top:3px}#film .bars{width:min(620px,60vw)}#film .chn{display:none}}
+@media (max-height:520px){#film .bars .br{margin-top:3px}#film .bars{width:min(620px,60vw)}#film .chn{display:none}#film .pin i{width:26px;height:26px}#film .pin i em{font-size:14px}#film .pin b{padding:3px 6px;margin-top:2px}#film .lock .dots{margin-top:12px!important}#film .lock .ph{width:30px;height:50px;margin-bottom:6px;transition:opacity .35s .1s,transform .35s .1s,height .45s .5s cubic-bezier(.4,0,.2,1),margin .45s .5s cubic-bezier(.4,0,.2,1),border-width .45s .5s}#film .lock.gone .ph{height:0;margin-bottom:0;border-width:0}}
+@media (max-height:360px){#film .fl-u.stats,#film .fl-u.bars{top:calc(50% - 10px)}#film .st{padding:9px 12px}#film .stats{gap:7px}#film .fl-u.bars{padding:11px 15px}}
+@media (max-height:420px){#film .stamps .ring{width:min(clamp(220px,34vw,400px),calc(100vh - 2 * var(--lb) - 28px));height:min(clamp(220px,34vw,400px),calc(100vh - 2 * var(--lb) - 28px))}}
+/* 세로: 짧은 폰(아이폰 SE 사파리 ≈375×548)은 갈래 글·사진 칸을 작게(서로 겹치던 것) · 태블릿 세로는 사진 크게·알약은 글만큼 · 큰 배경 글자 없음 */
+@media (max-aspect-ratio:1/1){#film .ghost{display:none}#film .fl-u.stats,#film .fl-u.bars{bottom:max(8px,calc(48px - var(--lb)))}#film .clip{bottom:max(10px,calc(50px - var(--lb)))}}
+@media (max-aspect-ratio:1/1) and (max-height:600px){#film .chap .h2{font-size:20px}#film .chap ul{margin-top:8px;gap:5px}#film .chap li{padding:6px 12px 6px 32px;font-size:13px}#film .chap li:before{left:12px;width:10px;height:10px;margin-top:-5px}#film .clip{width:min(66vw,300px);margin-right:calc(min(66vw,300px) / -2)}}
+@media (max-aspect-ratio:1/1) and (min-width:600px){#film .clip{width:min(80vw,560px);margin-right:calc(min(80vw,560px) / -2)}#film .chap ul{justify-items:start}}
+@media (min-width:1800px) and (min-height:900px){#film .clip{width:min(30vw,780px)}#film .chap{width:min(820px,36vw)}#film .chap .big{font-size:min(15vw,300px)}#film .chap li{font-size:clamp(19px,1.2vw,28px)}#film .h2{font-size:clamp(52px,3.4vw,76px)}#film .stats,#film .bars{width:min(840px,40vw)}#film .clip .cap,#film .bars .br span{font-size:clamp(14px,.85vw,20px)}#film .chn span{font-size:clamp(13px,.75vw,17px)}#film .fl-ctl button{font-size:clamp(15px,.8vw,19px);min-height:44px}#film .st .c{font-size:clamp(14.5px,.9vw,19px)}#film .bars .br b{font-size:clamp(16px,1vw,22px)}#film .bars .tr{height:16px}#film .kick{font-size:clamp(16px,.9vw,21px)}#film .pin i{width:clamp(44px,2.4vw,58px);height:clamp(44px,2.4vw,58px)}#film .pin i em{font-size:clamp(22px,1.2vw,28px)}#film .pin b{font-size:clamp(14px,.8vw,18px)}#film .tag b{font-size:clamp(16px,.85vw,20px)}#film .endc{width:min(94vw,1100px)}#film .endc button{font-size:clamp(17px,.9vw,21px)}#film .fl-brand{font-size:clamp(14px,.75vw,17px)}#film .stamps .ring{width:clamp(400px,26vw,560px);height:clamp(400px,26vw,560px)}}
 `;
   document.head.appendChild(css);
 
@@ -300,8 +320,15 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
   // PICS-1(10-05 교사 '유튜브 말고 관련 사진들 몇 장씩 타다다다 — 유튜브가 나으면 유튜브로'): 장 하나 = 정림초 유튜브 영상들의 장면 사진(유튜브가 주는 앞·가운데·뒤 장면 sd1~3 · 없으면 hq)
   //   → 모든 폰에서 똑같이(자동 재생 막힘·유튜브 제목 띠 없음) · 데이터 ≈ 1MB(유튜브 조각 넷 ≈ 10MB) · 0.6초(배경 음악 한 박)마다 한 장이 찰칵 하고 쌓임
   const picSrc = (p, q) => 'https://i.ytimg.com/vi/' + encodeURIComponent(p.id) + '/' + q + (p.n || 2) + '.jpg';
+  // FILM-3: 화면이 크면(사진 칸 × 화소 배율 > 700px) 유튜브 maxres(1280×720 · 16:9 · 띠 없음) 먼저 → 없으면(작은 회색 대체 그림 = 폭 < 400) sd → hq
+  const bigPics = () => { if (document.body.classList.contains('small') || (navigator.connection && navigator.connection.saveData)) return false;
+    const w = innerWidth < innerHeight ? Math.min(innerWidth * (innerWidth >= 600 ? 0.8 : 0.8), innerWidth >= 600 ? 560 : 380) : innerHeight <= 520 ? Math.min(innerWidth * 0.32, 300) : innerWidth >= 1800 && innerHeight >= 900 ? Math.min(innerWidth * 0.3, 780) : Math.min(innerWidth * 0.4, 500);
+    return w * 0.84 * (devicePixelRatio || 1) > 760; };   // 카드 = 사진 칸의 84% · sd(640) 넘게 커질 때만
   function preloadPics(shots) {
-    for (const s of shots) for (const p of s.pics || []) { if (p.u) continue; const im = new Image(); im.onload = () => { p.u = picSrc(p, 'sd'); }; im.onerror = () => { p.u = picSrc(p, 'hq'); }; im.src = picSrc(p, 'sd'); }
+    const L = []; for (const s of shots) for (const p of s.pics || []) if (!p.u) L.push(p);
+    const tryQ = (p, qs) => { const q = qs[0]; if (!q) { p.u = picSrc(p, 'hq'); return; } const im = new Image();
+      im.onload = () => { if (im.naturalWidth >= 400) { p.u = im.src; p.wide = q === 'maxres'; } else tryQ(p, qs.slice(1)); }; im.onerror = () => tryQ(p, qs.slice(1)); im.src = picSrc(p, q); };
+    for (const p of L) tryQ(p, bigPics() ? ['maxres', 'sd', 'hq'] : ['sd', 'hq']);
   }
   const PK = [[-5, -3, 2], [4, 3, -2], [-3, -2, 1], [6, 2, -1], [-6, -4, 2], [3, 1, -2]];   // 카드마다 기울기(°) · 옆(%) · 위아래(%)
   function enter(i) {
@@ -327,7 +354,7 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
     for (const t of s.tags || []) { const d = el('div', 'tag', '<b>' + esc(t.t) + '</b><i></i><s></s>', c.stage); c.tags.push({ el: d, p: t.p, at: t.at || 0, on: false }); }
     if (s.pics && s.pics.length) {   // PICS-1 사진 카드
       const d = el('div', 'fl-u clip pics glass', null, c.stage), fr = el('div', 'fr', null, d), at = s.picsAt || 0.9, gap = s.picsGap || 0.6;
-      s.pics.forEach((p, j) => { const k = el('div', 'pk', null, fr), m = PK[j % PK.length];
+      s.pics.forEach((p, j) => { const k = el('div', 'pk' + (p.wide ? ' wide' : ''), null, fr), m = PK[j % PK.length];
         k.style.backgroundImage = p.u ? 'url(' + p.u + ')' : 'url(' + picSrc(p, 'sd') + '), url(' + picSrc(p, 'hq') + ')';   // 아직 못 받았으면 sd 위·hq 밑(sd가 없으면 hq가 보임)
         k.style.cssText += ';--r:' + m[0] + 'deg;--x:' + m[1] + '%;--y:' + m[2] + '%;--d:' + (j * gap).toFixed(2) + 's';
         c.sfx.push({ t: at + j * gap + 0.02, k: 'snap', done: false }); });
@@ -398,7 +425,7 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
         + (u.title ? '<div class="' + (u.size === 'h2' ? 'h2' : 'h1') + '" style="margin-top:' + (u.kick ? 10 : 0) + 'px' + (u.color ? ';color:' + esc(u.color) : '') + '">' + lines(u.title) + '</div>' : '')
         + (u.text ? '<div class="p" style="margin-top:10px">' + lines(u.text) + '</div>' : ''), c.stage);
     }
-    requestAnimationFrame(() => d.classList.add('in'));
+    requestAnimationFrame(() => d.classList.add('in')); setTimeout(() => d.classList.add('open'), 1500);   // FILM-3: 줄이 다 올라온 뒤 잘라내기를 풂(그림자가 각진 상자로 잘리지 않게)
     if (u.sfx && SFX[u.sfx]) SFX[u.sfx]();
     return d;
   }
@@ -433,11 +460,12 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
       let L = 0; const seg = [0]; for (let k = 1; k < xy.length; k++) { L += Math.hypot(xy[k][0] - xy[k - 1][0], xy[k][1] - xy[k - 1][1]); seg.push(L); }
       const f = Math.max(0, Math.min(1, (c.st - (p.u.at || 0) - 0.3) / R.dur)), e9 = 1 - Math.pow(1 - f, 2), shown = L * e9;
       for (const q of [R.bg, R.fg]) { q.style.strokeDasharray = L.toFixed(1) + ' ' + (L + 10).toFixed(1); q.style.strokeDashoffset = (L - shown).toFixed(1); }
-      R.pins.forEach((pn, k) => { pn.e.style.left = xy[k][0].toFixed(1) + 'px'; pn.e.style.top = xy[k][1].toFixed(1) + 'px'; const on = seg[k] <= shown + 0.5; if (on !== pn.on) { pn.on = on; pn.e.classList.toggle('in', on); if (on) SFX.pop(); } }); }
-    for (const t of c.tags) { V.set(t.p[0], t.p[1], t.p[2]).project(camera); const vis = c.st >= t.at && V.z < 1 && V.x > -0.95 && V.x < 0.95 && V.y > -0.9 && V.y < 0.85;
+      R.pins.forEach((pn, k) => { const ph = pn.h || (pn.h = pn.e.offsetHeight) || 56, pw = pn.w || (pn.w = pn.e.offsetWidth) || 60;   // 핀 = 점 위에 매달림(-100%)
+        pn.e.style.left = Math.max(pw / 2 + 4, Math.min(W - pw / 2 - 4, xy[k][0])).toFixed(1) + 'px'; pn.e.style.top = Math.max(ph + 4, Math.min(H - 4, xy[k][1])).toFixed(1) + 'px'; const on = seg[k] <= shown + 0.5; if (on !== pn.on) { pn.on = on; pn.e.classList.toggle('in', on); if (on) SFX.pop(); } }); }
+    for (const t of c.tags) { V.set(t.p[0], t.p[1], t.p[2]).project(camera); const py = (1 - V.y) / 2 * innerHeight - top, th = t.h || (t.h = t.el.offsetHeight) || 64;
+      const vis = c.st >= t.at && V.z < 1 && V.x > -0.95 && V.x < 0.95 && py > th + 4 && py < H - 12;   // 무대(검은 띠 사이) 안에 이름표가 다 들어올 때만
       if (vis) { t.el.style.left = ((V.x + 1) / 2 * innerWidth).toFixed(1) + 'px'; t.el.style.top = ((1 - V.y) / 2 * innerHeight - top).toFixed(1) + 'px'; }
       if (vis !== t.on) { t.on = vis; t.el.classList.toggle('in', vis); if (vis) SFX.tick(); } }
-    void W; void H;
     c.prog.style.width = (Math.min(1, c.t / Math.max(1, c.T)) * 100).toFixed(2) + '%';
   }
   function finish(k) {
