@@ -199,3 +199,11 @@ body.small.h-mm-ov .gchip,body.small.h-mm-ov #hint,body.small.h-mm-ov #hudGoal,b
 
 /* LAND-2 세로 휴대폰: 선택 목록은 한 줄 칸(두 칸이면 화면 왼쪽 밖으로 나갔다) · 화면 폭 안 */
 @media (orientation:portrait){body.small #tour-talk .tmenu{grid-template-columns:1fr;max-width:calc(100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right))}}
+
+/* RANK-1(10-05): 경기 순위표 창(.rk-pan — standings.js) — 휴대폰은 가운데 · 화면 높이 안 · 닫기 ✕ 44px(터치) · 글자 ≥12px */
+body.small .rk-pan{right:auto;left:50%;top:50%;transform:translate(-50%,-50%);width:min(480px,calc(100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right)));max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px);padding:10px 12px;font-size:13px}
+body.small .rk-pan .rk-hd{font-size:15px}
+body.small .rk-pan .rk-t{font-size:13px}
+body.small .rk-pan .rk-t td{padding:3px 4px}
+body.touch .rk-pan .rk-x{width:44px;height:44px;right:6px;top:4px}
+body.touch .rk-pan .rk-hd{padding-right:50px}

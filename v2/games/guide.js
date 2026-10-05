@@ -6,6 +6,7 @@
 //   혼자: 🚶 탐험가(길잡이 봇이 말해 줌) · 🧭 길잡이(내 말을 글자 그대로 따르는 탐험 로봇 — 길을 잘못 말하면 함정에 빠지거나 막힘)
 //   친구와(방 놀이 🧭 — 선생님이 👥 창에서 고름): 둘씩 한 팀(홀수면 셋 = 탐험가 둘) · 판마다 역할 바꿈 · 팀마다 보물·함정이 따로(같은 마을)
 export const meta = { id: 'guide', title: '길잡이', api: 1 };
+import { createStandings } from '../js/standings.js?v=1';   // RANK-1: 친구 대결 팀 순위표(판마다 · 📊 칩 · B)
 
 export const BAL = { count: 3, play: 60, end: 5, tre: 3, traps: 5, pickR: 1.9, trapR: 1.5, v: 3.2, tour: 10 };   // tour = 출발 → 보물 셋을 도는 길 상한(칸) — 시뮬레이션(60초): 보통 짝꿍 90%가 셋 다 · 느린 짝꿍 44%(평균 2.3개) · 처음 14%(1.6개) · 12칸이면 80·24·4%
 const CELL = 5, COLS = 12, ROWS = 6, X0 = -34, Z0 = 1, GY = -1.35;   // 지도 마을 = 운동장 x −34~26 · z 1~31(서쪽 골대 x −35 · 동쪽 골대 x 26.8 사이 — 막힌 것 0)
@@ -398,7 +399,23 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
   function offClear(fx, fz, o, rx, rz, d) { const px = fx - rx * o, pz = fz - rz * o; for (let j = 0; j <= 6; j++) if (blkAt(px - rz * d * j / 6, pz + rx * d * j / 6)) return false; return true; }   // 비켜 선 자리 + 그 뒤 카메라 길(d m)이 막힌 칸이 아닌지 · 바라보는 쪽 = (rz, −rx) → 뒤 = (−rz, rx)
   const helpEl = document.getElementById('help'); let help0 = null;   // 아래 안내 줄 = 길잡이 키(로봇인 척 helpSet과 같은 틀 · GD-11)
   function helpSet(on) { if (!helpEl) return; if (on) { if (help0 == null) help0 = helpEl.textContent; helpEl.textContent = '🧭 길잡이 키: 화살표(또는 W A S D) = 방위 → 숫자 1~4 = 칸 수 · Space = ✋ 멈춰 · 멈춤 P'; } else if (help0 != null) { helpEl.textContent = help0; help0 = null; } }
-  const LED = new Map(); const led = n => { let r = LED.get(n); if (!r) LED.set(n, r = { gs: 0, es: 0, g: 0 }); return r; };
+  // RANK-1(10-05 교사 '여러 판에 걸쳐 하는 것은 그 판 안에서 순위 비교'): 팀 순위표(친구와만) — 팀이 함께 점수를 내므로 줄 = 팀
+  //   줄 'T'+팀 번호 { sc: [[그 판 점수, 그 판 길잡이, 💎]…], mem 이름들, pids } · 점수 = 판 점수 합(모든 팀이 같은 판 수 — 셋인 팀이 있으면 모두 3판)
+  //   덤 x.per = 사람(pid) { n, gs: 길잡이 판 최고 점수, es: 탐험가로 찾은 💎 } → 🧭 최고 길잡이 · 🚶 보물왕
+  const RK = !NETM ? null : createStandings(map, {
+    id: 'gd', title: '길잡이', unit: '점', meTag: '우리 팀', nameH: '팀', rule: '점수 = 판마다 팀 점수(💎 하나 100 + 다 찾으면 남은 초 × 2 − 💥 함정 20)의 합',
+    init: () => ({ sc: [], mem: '', pids: [] }), pts: r => r.sc.reduce((s, q) => s + (q ? q[0] : 0), 0),
+    tie: (a, b) => b.sc.reduce((s, q) => s + (q ? q[2] : 0), 0) - a.sc.reduce((s, q) => s + (q ? q[2] : 0), 0),   // 같은 점수면 💎를 더 찾은 팀
+    me: () => { for (const id in RKrows()) if (RKrows()[id].pids.includes(NM.pid)) return id; return null; },
+    cols: () => { const done = Math.max(0, ...Object.values(RKrows()).map(r => r.sc.length)), n = Math.max(RK.x.rounds || 0, done), C = [{ h: '함께', f: r => esc(r.mem) }];
+      for (let i = 0; i < n; i++) C.push({ h: (i + 1) + '판', f: r => r.sc[i] ? '<b>' + r.sc[i][0] + '</b><br><span style="font-size:12px;color:#5a6b80">🧭' + esc(r.sc[i][1]) + ' 💎' + r.sc[i][2] + '</span>' : (i < done ? '<span style="color:#8a97a8">-</span>' : '<span style="color:#8a97a8">⏳</span>') });
+      return C; },
+    progress: () => (R && R.rounds ? (R.round + 1) + '판 / ' + R.rounds + '판' : ''),
+    turns: () => (R ? '🧭 이번 판 길잡이: ' + R.teams.map((tm, i) => '<span style="color:' + TEAMCSS[i % 4] + ';font-weight:900">' + TEAMN[i % 4] + '</span> ' + tm.filter(q => q.role === 'guide').map(q => q.kind === 'me' ? '<b>나</b>' : esc(q.name)).join('·')).join(' · ') + '<br><span style="font-size:12px">판마다 팀 안에서 길잡이가 바뀌어요</span>' : ''),
+    foot: (L, x) => { const P = Object.values(x.per || {}), g = P.filter(q => q.g).sort((a, b) => b.gs - a.gs)[0], e = P.filter(q => q.es).sort((a, b) => b.es - a.es)[0];
+      return '🧭 최고 길잡이 ' + (g ? '<b>' + esc(g.n) + '</b>(' + g.gs + '점)' : '-') + ' · 🚶 보물왕 ' + (e ? '<b>' + esc(e.n) + '</b>(💎 ' + e.es + ')' : '-'); },
+  });
+  const RKrows = () => (RK ? RK.rows : {});
   const clock = () => (NETM ? sNow() : Date.now());
 
   // ---------- 한 판 꾸리기 ----------
@@ -594,10 +611,16 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
     map.player.freeze(true); sayEl.style.display = 'none';
     const S = TSC[MYTEAM] || { s: 0 }, n = GOT.size;
     res = { found: n, score: S.s, traps: TR.size };
-    for (const [ti, tm] of R.teams.entries()) for (const q of tm) if (q.kind !== 'bot') { const r = led(q.kind === 'me' ? myName() : q.name); if (q.role === 'guide') { r.gs = Math.max(r.gs, TSC[ti].s); r.g++; } else r.es += TGOT[ti].size; }
-    const rank = R.teams.length > 1 ? '<br><span style="font-size:.9em">' + R.teams.map((tm, i) => i).sort((a, b) => TSC[b].s - TSC[a].s).map((i, k) => (k + 1) + '등 ' + TEAMN[i % 4] + ' ' + TSC[i].s + '점(💎' + TGOT[i].size + ')').join(' · ') + '</span>' : '';
+    if (RK && NM.on && R) RK.round(R.seq, R.round, (row, x) => {   // RANK-1: 이 판 팀 점수(판마다 한 번) + 사람별 덤(최고 길잡이·보물왕)
+      x.rounds = R.rounds; const per = x.per || (x.per = {});
+      for (const [ti, tm] of R.teams.entries()) { const r = row('T' + ti, TEAMN[ti % 4] + ' 팀'), g = tm.find(q => q.role === 'guide');
+        r.mem = tm.map(q => q.name).join('·'); for (const q of tm) if (q.pid && !r.pids.includes(q.pid)) r.pids.push(q.pid);
+        r.sc[R.round] = [TSC[ti].s, g ? g.name : '', TGOT[ti].size];
+        for (const q of tm) if (q.kind !== 'bot' && q.pid) { const p = per[q.pid] || (per[q.pid] = { n: q.name, gs: 0, es: 0, g: 0 }); if (q.role === 'guide') { p.gs = Math.max(p.gs, TSC[ti].s); p.g++; } else p.es += TGOT[ti].size; } } });
+    // 이번 판 팀 순위(둘째 판부터 — 첫 판은 아래 📊 합계와 같음)
+    const rank = R.teams.length > 1 && (!RK || R.round > 0) ? '<br><span style="font-size:.9em">이번 판: ' + R.teams.map((tm, i) => i).sort((a, b) => TSC[b].s - TSC[a].s).map((i, k) => (k + 1) + '등 ' + TEAMN[i % 4] + ' ' + TSC[i].s + '점(💎' + TGOT[i].size + ')').join(' · ') + '</span>' : '';
     const bon = S.s - n * 100 + trapN * 20;   // 점수 풀이(보여 주기만 — 셈은 그대로 · GD-17)
-    card('<div style="font-size:1.3em">' + (n >= cfg.tre ? '🎉 보물을 모두 찾았어요!' : '💎 보물 ' + n + '/' + cfg.tre) + '</div>' + '💎 ' + n + '개 ' + n * 100 + (bon > 0 ? ' + ⏱ 빨리 찾은 보너스 ' + bon : '') + (trapN ? ' − 💥 ' + trapN + '번 ' + trapN * 20 : '') + ' = ' + S.s + '점' + rank, cfg.end);
+    card('<div style="font-size:1.3em">' + (n >= cfg.tre ? '🎉 보물을 모두 찾았어요!' : '💎 보물 ' + n + '/' + cfg.tre) + '</div>' + '💎 ' + n + '개 ' + n * 100 + (bon > 0 ? ' + ⏱ 빨리 찾은 보너스 ' + bon : '') + (trapN ? ' − 💥 ' + trapN + '번 ' + trapN * 20 : '') + ' = ' + S.s + '점' + rank + (RK && NM.on ? RK.strip() : ''), cfg.end);
     if (n >= cfg.tre) { map.tone(523, 0, 0.15, 'sine', 0.1); map.tone(659, 0.15, 0.15, 'sine', 0.1); map.tone(784, 0.3, 0.3, 'sine', 0.1); }
     if (!NETM) { const k = ME.role === 'guide' ? 'bestGuide' : 'bestExp', b = map.store.get(k, 0); res.best = Math.max(b, S.s); res.newBest = S.s > b && S.s > 0; if (S.s > b) map.store.set(k, S.s); }
     drawMap();
@@ -670,9 +693,9 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
     if (!NM.on) return; const P = NM.D.p || {}, rest = Object.keys(P).filter(id => id !== NM.pid).sort((a, b) => (P[a].on || 0) - (P[b].on || 0));
     if (!rest.length) nreq('', 'DELETE').catch(() => {}); else { netBye(); if (NM.host) nreq('/m/host', 'PUT', rest[0]).catch(() => {}); }
     if (NM.es) NM.es.close(); NM.es = null; NM.on = false; clearInterval(NM.beat); removeEventListener('pagehide', netBye); removeEventListener('sm-room', netRoomGone);
-    const mp = window.SM_MP, N = mp && mp.net(); if (N && N.hide) N.hide(false); lobbyHide();
+    const mp = window.SM_MP, N = mp && mp.net(); if (N && N.hide) N.hide(false); lobbyHide(); if (RK) RK.hide();
   }
-  function toLobbyUI() { if (R) { R = null; endRoundUI(); phase = 'off'; } map.hud.goal(null); for (const k of ['gd-time', 'gd-score', 'gd-role']) map.hud.chip(k, null); chipK = {}; }
+  function toLobbyUI() { if (R) { R = null; endRoundUI(); phase = 'off'; } if (RK) RK.hide(); map.hud.goal(null); for (const k of ['gd-time', 'gd-score', 'gd-role']) map.hud.chip(k, null); chipK = {}; }
   function netSync() {
     const D = NM.D, m = D.m; if (!m || !NM.on || !isGD(m)) return;
     NM.host = m.host === NM.pid;
@@ -695,7 +718,8 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
   }
   function roundFromNet(m) {
     NM.seq = m.seq; const teams = teamsFrom(NM.D.p || {}); if (!teams.length || teams[0].length < 2) return;
-    lobbyHide(); const mine = teams.flat().find(q => q.kind === 'me');
+    lobbyHide(); if (RK) RK.start(NM.room + '#' + (m.seq - (m.goal || 0)));   // RANK-1: 경기 번호 = seq − goal
+    const mine = teams.flat().find(q => q.kind === 'me');
     beginRound({ seq: m.seq, t0: m.t0, seed: (Math.floor(m.t0 / 7) ^ Math.imul(m.seq + 1, 2654435761)) >>> 0, round: m.goal || 0, rounds: m.time || 2, teams, mySlot: mine ? mine.slot : 0 });
     const Ev = NM.D.ev || {};
     Object.keys(Ev).filter(id => Ev[id] && Ev[id].q === m.seq && !NM.seen.has(id)).sort((a, b) => (Ev[a].t || 0) - (Ev[b].t || 0)).forEach(id => { NM.seen.add(id); onEv(Ev[id]); });
@@ -766,6 +790,8 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
       + '<div style="margin-top:6px;font-size:14px;color:#1d3557;background:#f6efd9;border-radius:9px;padding:6px 8px">🧭 <b>길잡이</b>: 지도 보고 방위 → 칸 수(1칸 = 5m)<br>🚶 <b>탐험가</b>: 나침반 띠에서 방위를 찾고 흰 선 칸 세기 — 보물·함정은 안 보여요</div>'
       + '<div style="margin-top:6px;font-size:13px;color:#4a5b70">둘씩 한 팀(홀수면 셋) · 🧭 길잡이 = 지도 · 🚶 탐험가 = 운동장 지도 마을 · 판마다 역할 바꿈 · 한 판 ' + cfg.play + '초 · 보물 3 · 함정 5 · 팀마다 보물 자리가 달라요</div>'
       + '<div style="margin-top:8px;padding:7px 9px;border-radius:9px;background:#eef4ff">' + (pairs.length ? pairs.map((tm, i) => '<span style="color:' + TEAMCSS[i % 4] + ';font-weight:900">■ ' + TEAMN[i % 4] + '</span> ' + tm.map(id => (id === NM.pid ? '<b>' + esc(NM.name) + '(나)</b>' : esc(P[id].n))).join(' · ')).join('<br>') : '아직 아무도 없어요') + '</div>';
+    if (!NM.lastBoard && RK && !NM.lbTry && m.st !== 'play') { NM.lbTry = true; NM.lastBoard = RK.last(NM.room + '#' + (m.seq - (m.goal || 0))); }   // 대기실에서 새로고침해도 지난 표(이 탭에 있으면)
+    if (NM.lastBoard) h += NM.lastBoard;   // RANK-1: 지난 놀이 팀 순위표
     if (m.st === 'play') h += '<div style="margin-top:8px;font-weight:800">⏳ 놀이 중이에요 — 다음 판부터 같이 해요</div>';
     else if (NM.host) h += '<div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;margin-top:10px">' + (ids.length < 2 ? '<span style="font-size:13px;color:#b4232c">친구가 한 명 더 있어야 해요</span>' : '') + bt('start', '▶ 시작!', true, ';font-size:17px;padding:8px 18px') + '</div>';
     else h += '<div style="margin-top:10px">방장 ⭐' + hostN + '이(가) ▶ 시작을 누르면(또는 선생님 ▶ 모두 시작) 모두 같이 시작해요</div>';
@@ -775,11 +801,11 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
   async function lobbyClick(e) { e.stopPropagation(); const b = e.target.closest('[data-w]'); if (!b || !NM.on) return; const w = b.dataset.w; try { if (w === 'start' && NM.host) await hostStart(); else if (w === 'leave') map.quit(); } catch (er) { map.hud.toast('저장하지 못했어요 — 인터넷을 확인해 주세요', 2.5); } }
   function finalBoard() {
     toLobbyUI();
-    const L = [...LED.entries()], bg = L.filter(([, v]) => v.g).sort((a, b) => b[1].gs - a[1].gs)[0], be = L.filter(([, v]) => v.es).sort((a, b) => b[1].es - a[1].es)[0];
-    NM.lastBoard = '🏁 지난 놀이 — 🧭 최고 길잡이 ' + (bg ? esc(bg[0]) + ' ' + bg[1].gs + '점' : '-') + ' · 🚶 보물왕 ' + (be ? esc(be[0]) + ' 💎' + be[1].es : '-');
-    card('<div style="font-size:1.35em">🏁 길잡이 끝!</div>🧭 최고 길잡이 <b>' + (bg ? esc(bg[0]) + '</b> (' + bg[1].gs + '점)' : '-</b>') + '<br>🚶 보물왕 <b>' + (be ? esc(be[0]) + '</b> (💎 ' + be[1].es + ')' : '-</b>'), 6);
+    // RANK-1: 끝 카드 = 팀 🥇🥈🥉 + 최고 길잡이·보물왕 · 대기실 = 지난 놀이 팀 순위표(판마다 점수·길잡이)
+    RK.end(); NM.lastBoard = RK.lobby();
+    card('<div style="font-size:1.35em">🏁 길잡이 끝!</div>' + RK.podium() + '<div style="margin-top:6px;font-size:.85em">' + RK.awards() + '</div>', 6);
     map.tone(523, 0, 0.15, 'sine', 0.1); map.tone(659, 0.15, 0.15, 'sine', 0.1); map.tone(784, 0.3, 0.3, 'sine', 0.1);
-    setTimeout(() => { if (NM.on && !dead) { lobbyShow(); if (NM.lastBoard && NM.ui) { const d = document.createElement('div'); d.style.cssText = 'margin-top:8px;padding:7px 9px;border-radius:9px;background:#fff3bf;font-size:14px'; d.innerHTML = NM.lastBoard; NM.ui.appendChild(d); } } }, 2500);
+    setTimeout(() => { if (NM.on && !dead) lobbyShow(); }, 2500);   // 지난 놀이 표 = lobbyDraw 안(다시 그려도 남게 — 예전엔 덧붙여서 대기실이 바뀌면 사라짐)
   }
 
   // ---------- 시작 ----------
@@ -787,7 +813,7 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
   if (NETM) netEnter(); else soloAsk();
   return {
     tick,
-    stop() { dead = true; removeEventListener('keydown', keyH); removeEventListener('resize', panelRe); clearTimeout(hear.t); howClose(); hcss.remove(); panel.remove(); cmpEl.remove(); sayEl.remove(); logEl.remove(); css.remove(); if (cardEl) { cardEl.remove(); cardEl = null; } clearTimeout(cardT);
+    stop() { dead = true; removeEventListener('keydown', keyH); removeEventListener('resize', panelRe); if (RK) RK.stop(); clearTimeout(hear.t); howClose(); hcss.remove(); panel.remove(); cmpEl.remove(); sayEl.remove(); logEl.remove(); css.remove(); if (cardEl) { cardEl.remove(); cardEl = null; } clearTimeout(cardT);
       helpSet(false); document.body.classList.remove('gd-guide', 'gd-exp');
       hotOff.remove(); arena.remove(); for (const c of COLS9) c.remove(); map.player.show(true); map.player.freeMouse(false); if (mmWas) map.minimap.show(); netLeave();
       for (const g of GEOS) g.dispose(); for (const m of MATS) m.dispose(); },

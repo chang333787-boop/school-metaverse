@@ -12,6 +12,7 @@
 //   혼자(봇) = 🏃 도망자(술래 봇 4) · 👀 술래(술래 봇 3 + 도망자 봇) · 친구 대결(hideseek_vs) = 함께하기 방 · match/c<번호>(물총과 같은 자리 — m.arena 'hs…'로 구별) · 빈자리 = 술래 봇
 //   사람(NPC)은 술래·과녁이 아니다 — 봇은 장난감 로봇(술래 = 빨간 조끼 · 도망자 = 파란 조끼)
 export const meta = { id: 'hideseek', title: '숨바꼭질 대작전', api: 1 };
+import { createStandings } from '../js/standings.js?v=1';   // RANK-1: 친구 대결 경기 순위표(판마다 · 📊 칩 · B)
 // ===================================================================================================
 // 핵심(봇 머리 · 시뮬레이션 공용) — 사람처럼 노는 봇: 반응 지연 · 실수 · 친구에게 외치기 · 🔥 어림
 // ===================================================================================================
@@ -381,8 +382,27 @@ export default async function start(map, params = {}) {
   //   R = 한 판 { seq, t0(시계 ms), lvl, slots: [{ kind:'me'|'remote'|'bot', pid, name, role }], humans }
   //   ACT = 이번 판 배우(자리 = slots 순서 · 도망자 먼저)
   let R = null, ACT = [], ME = -1, phase = 'off', W = null, starD = null, finT = null, blind = null, res = null, matchEnd = false;
-  const LED = new Map();   // 이번 경기 기록: 이름 → { run: [버틴 초], ct: 잡은 수 }
-  const led = n => { let r = LED.get(n); if (!r) LED.set(n, r = { run: [], ct: 0 }); return r; };
+  // RANK-1(10-05 교사 '여러 판에 걸쳐 하는 것은 그 판 안에서 순위 비교 — 잡힌 것·안 잡힌 것·잡혔을 때 몇 초·돌아가면서'): 경기 순위표(친구 대결만)
+  //   줄 = 사람(pid) { run: [[버틴 초, 끝까지 1/0]…], ct: 잡은 수 } · 점수 = 버틴 초 + 끝까지 숨으면 10 + 잡을 때마다 10
+  //   (시뮬레이션 1 vs 4: 도망 한 번 ≈ 33점(끝까지 45% × 50 + 잡힘 가운데 20초) · 술래로 잡기 ≈ 한 경기 0.3~0.6번 — 도망이 중심 · 잡기는 '10초 버틴 만큼')
+  const runPts = r => r.run.reduce((s, q) => s + q[0] + (q[1] ? 10 : 0), 0), bestRun = r => r.run.reduce((b, q) => Math.max(b, q[0] + (q[1] ? 10 : 0)), -1);
+  const RK = !NETM ? null : createStandings(map, {
+    id: 'hs', title: '숨바꼭질', unit: '점', rule: '점수 = 🏃 버틴 초 + 끝까지 숨으면 10 + 👀 잡을 때마다 10',
+    init: () => ({ run: [], ct: 0 }), pts: r => runPts(r) + r.ct * 10,
+    tie: (a, b) => runPts(b) - runPts(a) || b.ct - a.ct,   // 같은 점수면 더 오래 버틴 친구 먼저
+    me: () => NM.pid,
+    cols: [{ h: '🏃 도망자일 때', f: r => r.run.length ? r.run.map(q => q[1] ? '🎉 끝까지' : '💥 ' + q[0] + '초에 잡힘').join('<br>') : turnOf(r.id) === 'now' ? '🏃 지금 도망 중' : '<span style="color:#8a97a8">⏳ 아직</span>' },
+      { h: '👀 술래로 잡기', f: r => r.ct ? '🎯 ' + r.ct + '번' : '<span style="color:#8a97a8">-</span>' }],
+    progress: () => (R && R.rounds ? (R.round + 1) + '판 / ' + R.rounds + '판' : ''),
+    turns: () => { const P = NM.D.p || {}, ids = Object.keys(P).filter(id => P[id] && typeof P[id].tm === 'number').sort((a, b) => (P[a].tm === 99 ? 99 : P[a].tm % 100) - (P[b].tm === 99 ? 99 : P[b].tm % 100));
+      if (!ids.length) return '';
+      return '🏃 도망자 차례: ' + ids.map(id => { const t = turnOf(id), nm = id === NM.pid ? '<b>나</b>' : esc(P[id].n); return t === 'done' ? '✔' + nm : t === 'now' ? '<b style="color:#c2410c">▶' + nm + '</b>' : t === 'late' ? '⏳' + nm : nm; }).join(' · ')
+        + '<br><span style="font-size:12px">✔ 했어요 · ▶ 지금 · 다음 도망자 = 잡은 친구 먼저(안 해 봤으면)</span>'; },
+    foot: (L) => { const rs = L.filter(q => q.r.run.length).sort((a, b) => bestRun(b.r) - bestRun(a.r)), cs = L.filter(q => q.r.ct).sort((a, b) => b.r.ct - a.r.ct);
+      const br = rs[0] && rs[0].r.run.reduce((b, q) => (q[0] + (q[1] ? 10 : 0) > b[0] + (b[1] ? 10 : 0) ? q : b));
+      return '🏆 도망왕 ' + (rs[0] ? '<b>' + esc(rs[0].r.n) + '</b>(' + (br[1] ? '끝까지' : br[0] + '초') + ')' : '-') + ' · 👀 술래왕 ' + (cs[0] ? '<b>' + esc(cs[0].r.n) + '</b>(' + cs[0].r.ct + '번)' : '-'); },
+  });
+  function turnOf(id) { const p = (NM.D.p || {})[id]; if (!p || typeof p.tm !== 'number') return ''; if (p.tm === 99) return 'late'; if (p.tm % 1000 >= 100) return 'now'; return p.tm >= 1000 ? 'done' : ''; }
   let arT = 0, arOut = 0, arSafe = null;
   let invBtnK = '', chipK = {}, uiT = 0, seeT = 0, seeWho = -1, callT = {}, nextPing = 0, hotT = 0;
   // UX(10-05 교사 편의성): 지금 할 일 줄 · 들킴 알림 · 반짝 · 📢 · 혼자 멈춤 · 웅크림 단추 · 별 화살표
@@ -783,9 +803,11 @@ body.small .hs-how button{margin-top:6px;font-size:16px;padding:8px 18px}
     const rs = ACT.filter(a => a.role === 'run'), lines = [];
     // UX-8: 잡은 사람을 밝힘 — 내가 잡았으면 '🎯 내가 … 잡았어요!'(예전 = 💥 실패 표시라 내 잡기인지 몰랐음)
     for (const a of rs) { const s = a.alive ? cfg.seek : a.caughtT, nm = a.kind === 'me' ? '나' : a.kind === 'bot' ? '🤖 도망 로봇' : a.name, c = a.alive ? null : ACT[a.by];
-      if (a.kind !== 'bot') led(a.kind === 'me' ? myName() : a.name).run.push(Math.round(s));
       lines.push(a.alive ? '🎉 ' + nm + ' 끝까지 도망!' : a.kind === 'me' ? '💥 나 잡힘 — ' + Math.round(s) + '초' : c && c.kind === 'me' ? '🎯 내가 ' + nm + jo(nm, '을', '를') + ' 잡았어요! (' + Math.round(s) + '초)' : '👀 ' + nm + ' 잡힘 — ' + Math.round(s) + '초' + (c ? ' (' + c.name + ')' : '')); }
-    for (const a of ACT) if (a.role === 'hunt' && a.cts && a.kind !== 'bot') led(a.kind === 'me' ? myName() : a.name).ct += a.cts;
+    if (RK && NM.on && R) RK.round(R.seq, R.round, (row) => {   // RANK-1: 이 판 기록(판마다 한 번 — 새로고침해서 같은 판을 다시 봐도 두 번 안 셈)
+      for (const a of ACT) if (a.kind !== 'bot' && a.pid) row(a.pid, a.name);   // 이번 판에 있던 친구는 모두 표에(아직 도망자 전이면 ⏳)
+      for (const a of rs) if (a.kind !== 'bot' && a.pid) row(a.pid, a.name).run.push([Math.round(a.alive ? cfg.seek : a.caughtT), a.alive ? 1 : 0]);
+      for (const a of ACT) if (a.role === 'hunt' && a.cts && a.kind !== 'bot' && a.pid) row(a.pid, a.name).ct += a.cts; });
     // 판 결과 = 도망자 한 명씩: 산 수 > 잡힌 수 = 도망자 승 · 잡힌 수 > 산 수 = 술래 승 · 같으면(2명 중 1:1) 비김 — 2 vs 5 시뮬레이션: 술래 싹쓸이 20% · 도망자 둘 다 17% · 1:1 64%
     const live = rs.filter(a => a.alive).length, cau = rs.length - live, side = live > cau ? 'r' : cau > live ? 'h' : 'd', runWin = side === 'r', me = ACT[ME];
     const iCaught = !!me && me.role === 'hunt' && rs.some(a => !a.alive && a.by === ME);
@@ -796,7 +818,7 @@ body.small .hs-how button{margin-top:6px;font-size:16px;padding:8px 18px}
     else if (me && me.role === 'hunt' && runWin) tip = '💡 🔥가 뜨면 그 둘레의 문 뒤·가구 뒤를 살펴요 · 마지막 ' + cfg.pingLast + '초엔 노란 동그라미로!';
     res = { runWin, side, lines, head, tip };
     if (document.body.classList.contains('small')) map.hud.toast('', 0.001);   // UX-16: 휴대폰은 알림 줄(위 86px)과 결과 카드가 같은 자리 → 남은 알림을 지움
-    card('<div style="font-size:1.3em">' + head + '</div>' + lines.map(esc).join('<br>') + (tip ? '<div style="margin-top:6px;color:#ffd23c;font-size:.88em">' + esc(tip) + '</div>' : ''), cfg.end);
+    card('<div style="font-size:1.3em">' + head + '</div>' + lines.map(esc).join('<br>') + (tip ? '<div style="margin-top:6px;color:#ffd23c;font-size:.88em">' + esc(tip) + '</div>' : '') + (RK && NM.on ? RK.strip() : ''), cfg.end);
     if (me && me.role === 'run' && me.alive) { map.tone(523, 0, 0.15, 'sine', 0.1); map.tone(659, 0.15, 0.15, 'sine', 0.1); map.tone(784, 0.3, 0.3, 'sine', 0.1); }
     map.player.freeze(true); map.player.invisible(false); map.player.speed(1); clearRoute(); chip('hs-hot', null); btn.style.display = 'none'; cbtn.style.display = 'none'; stamEl.style.display = 'none'; stamK = 'off';   // UX-15: 끝나면 👻·🙇 단추도 숨김
     if (!NETM) { const k = me && me.role === 'run' ? 'bestHide' : 'bestSeek';
@@ -892,7 +914,7 @@ body.small .hs-how button{margin-top:6px;font-size:16px;padding:8px 18px}
     else { netBye(); if (NM.host) nreq('/m/host', 'PUT', rest[0]).catch(() => {}); }
     if (NM.es) NM.es.close(); NM.es = null; NM.on = false; clearInterval(NM.beat); removeEventListener('pagehide', netBye); removeEventListener('sm-room', netRoomGone);
     const mp = window.SM_MP, N = mp && mp.net(); if (N && N.hide) N.hide(false);
-    lobbyHide();
+    lobbyHide(); if (RK) RK.hide();
   }
   const isHS = m => !!m && /^hs/.test(m.arena || '');
   function netSync() {
@@ -902,7 +924,7 @@ body.small .hs-how button{margin-top:6px;font-size:16px;padding:8px 18px}
     const S = D.s || {}, now = performance.now();
     for (const id in S) if (S[id] !== NM.seenAt[id + '#']) { NM.seenAt[id + '#'] = S[id]; NM.seenAt[id] = now; }
     if (m.st === 'play' && m.seq !== NM.seq) roundFromNet(m);
-    if (m.st !== NM.st) { const was = NM.st; NM.st = m.st; if (m.st === 'lobby') { if (R) { R = null; endRoundUI(); if (map.top.on) map.top.exit(); btn.style.display = 'none'; map.hud.goal(null); coachK = ''; howClose(); for (const k of ['hs-time', 'hs-hot', 'hs-role', 'hs-net']) map.hud.chip(k, null); chipK = {}; } lobbyShow(); } else if (m.st === 'end' && was === 'play') finalBoard(); else if (m.st === 'play') lobbyHide(); }
+    if (m.st !== NM.st) { const was = NM.st; NM.st = m.st; if (m.st === 'lobby') { if (RK) RK.hide(); if (R) { R = null; endRoundUI(); if (map.top.on) map.top.exit(); btn.style.display = 'none'; map.hud.goal(null); coachK = ''; howClose(); for (const k of ['hs-time', 'hs-hot', 'hs-role', 'hs-net']) map.hud.chip(k, null); chipK = {}; } lobbyShow(); } else if (m.st === 'end' && was === 'play') finalBoard(); else if (m.st === 'play') lobbyHide(); }
     if (R) { for (const a of ACT) if (a.kind === 'remote') { const v = S[a.pid]; if (v) netSet(a, v); }
       if (!NM.host && D.b) for (const a of ACT) if (a.kind === 'bot') { const v = D.b[a.i]; if (v) netSet(a, v); } }
     const E = D.ev || {};
@@ -923,7 +945,7 @@ body.small .hs-how button{margin-top:6px;font-size:16px;padding:8px 18px}
     NM.seq = m.seq; const lvl = +String(m.arena).slice(2) || 0; NM.lvl = lvl;
     const slots = slotsFrom(NM.D.p || {});
     NM.D.b = {};   // 지난 판 봇 자리는 버림(방장이 새로 보냄)
-    lobbyHide();
+    lobbyHide(); if (RK) RK.start(NM.room + '#' + (m.seq - (m.goal || 0)));   // RANK-1: 경기 번호 = seq − goal(판이 넘어가도 같음 · 새 경기면 새 표)
     beginRound({ seq: m.seq, t0: m.t0, lvl, slots, round: m.goal, rounds: m.time });
     const E = NM.D.ev || {};   // 늦게 들어옴: 이미 난 사건
     for (const id in E) { const e = E[id]; if (!e || e.q !== m.seq || NM.seen.has(id)) continue; NM.seen.add(id); onEv(e); }
@@ -1003,7 +1025,7 @@ body.small .hs-how button{margin-top:6px;font-size:16px;padding:8px 18px}
   }
   async function hostStart() {
     const m = NM.D.m || {}, P = NM.D.p || {}, ids = Object.keys(P).filter(id => P[id]).sort((a, b) => (P[a].on || 0) - (P[b].on || 0));
-    if (!ids.length) return; NM.lvl = 0; NM.streak = []; LED.clear();
+    if (!ids.length) return; NM.lvl = 0; NM.streak = [];
     const rc = ids.length >= 6 ? 2 : 1, rounds = Math.ceil(ids.length / rc);
     const up = { 'm/st': 'play', 'm/seq': (m.seq || 0) + 1, 'm/goal': 0, 'm/time': rounds, 'm/t0': Math.round(sNow() + 3500), 'm/arena': 'hs0' };
     ids.forEach((id, k) => { up['p/' + id + '/tm'] = k + (k < rc ? 100 : 0); });
@@ -1028,7 +1050,8 @@ body.small .hs-how button{margin-top:6px;font-size:16px;padding:8px 18px}
       + '<div style="flex:1;padding:6px 8px;border-radius:9px;background:#eef4ff"><b>👀 술래일 때</b><br>🔵 파란 조끼 로봇에 닿기 · 🔥 가까이 · 📢 친구가 본 곳</div></div>'
       + '<div style="margin-top:8px;padding:7px 9px;border-radius:9px;background:#eef4ff">👥 ' + ids.map(id => (id === NM.pid ? '<b>⭐ ' + esc(NM.name) + '(나)</b>' : esc(P[id].n)) + net1(id)).join(' · ') + '</div>'
       + (ids.some(id => netMs(id) >= 450) ? '<div style="margin-top:4px;font-size:12px;color:#b4232c">🔴 인터넷이 느린 친구가 있어요 — 친구 몸이 끊겨 보이거나 잡기가 늦을 수 있어요(와이파이 가까이 · 다른 탭 닫기)</div>' : '');
-    const fb = NM.lastBoard; if (fb) h += '<div style="margin-top:8px;padding:7px 9px;border-radius:9px;background:#fff3bf;font-size:14px">' + fb + '</div>';
+    if (!NM.lastBoard && RK && !NM.lbTry && m.st !== 'play') { NM.lbTry = true; NM.lastBoard = RK.last(NM.room + '#' + (m.seq - (m.goal || 0))); }   // 대기실에서 새로고침해도 지난 표(이 탭에 있으면)
+    const fb = NM.lastBoard; if (fb) h += fb;   // RANK-1: 지난 경기 순위표(표 상자째 — standings.js lobby())
     if (m.st === 'play') h += '<div style="margin-top:8px;font-weight:800">⏳ 경기 중이에요 — 다음 판부터 같이 해요</div>';
     else if (NM.host) h += '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px">' + bt('start', '▶ 시작!', true, ';font-size:17px;padding:8px 18px') + '</div>';
     else h += '<div style="margin-top:10px">방장 ⭐' + hostN + '이(가) ▶ 시작을 누르면(또는 선생님 ▶ 모두 시작) 모두 같이 시작해요</div>';   // UX-17: ROOM-1 선생님 시작도
@@ -1046,10 +1069,9 @@ body.small .hs-how button{margin-top:6px;font-size:16px;padding:8px 18px}
   function finalBoard() {
     if (R) { R = null; endRoundUI(); }
     if (map.top.on) map.top.exit(); btn.style.display = 'none'; map.hud.goal(null); coachK = ''; howClose(); for (const k of ['hs-time', 'hs-hot', 'hs-role', 'hs-net']) map.hud.chip(k, null); chipK = {};
-    const L = [...LED.entries()], best = L.filter(([, v]) => v.run.length).sort((a, b) => Math.max(...b[1].run) - Math.max(...a[1].run))[0], ct = L.filter(([, v]) => v.ct).sort((a, b) => b[1].ct - a[1].ct)[0];
-    NM.lastBoard = '🏁 지난 경기 — 🏆 도망왕 ' + (best ? esc(best[0]) + ' ' + Math.max(...best[1].run) + '초' : '-') + ' · 👀 술래왕 ' + (ct ? esc(ct[0]) + ' ' + ct[1].ct + '번' : '-')
-      + '<br><span style="font-size:13px">' + L.map(([n, v]) => esc(n) + ' ' + (v.run.length ? '🏃' + v.run.join('·') + '초' : '') + (v.ct ? ' 👀' + v.ct : '')).join(' / ') + '</span>';
-    card('<div style="font-size:1.35em">🏁 경기 끝!</div>🏆 도망왕 <b>' + (best ? esc(best[0]) + '</b> (' + Math.max(...best[1].run) + '초)' : '-</b>') + '<br>👀 술래왕 <b>' + (ct ? esc(ct[0]) + '</b> (' + ct[1].ct + '번)' : '-</b>'), 6);
+    // RANK-1: 끝 카드 = 🥇🥈🥉 + 도망왕·술래왕 · 대기실 = 지난 경기 순위표(누가 몇 초에 잡혔는지·끝까지·잡은 수)
+    RK.end(); NM.lastBoard = RK.lobby();
+    card('<div style="font-size:1.35em">🏁 경기 끝!</div>' + RK.podium() + '<div style="margin-top:6px;font-size:.85em">' + RK.awards() + '</div>', 6);
     map.tone(523, 0, 0.15, 'sine', 0.1); map.tone(659, 0.15, 0.15, 'sine', 0.1); map.tone(784, 0.3, 0.3, 'sine', 0.1);
     setTimeout(() => { if (NM.on && !dead) lobbyShow(); }, 2500);
   }
@@ -1058,7 +1080,7 @@ body.small .hs-how button{margin-top:6px;font-size:16px;padding:8px 18px}
   if (NETM) netEnter(); else soloAsk();
   return {
     tick,
-    stop() { dead = true; removeEventListener('keydown', keyF); howClose(); clearRoute(); btn.remove(); cbtn.remove(); stamEl.remove(); flashEl.remove(); arwEl.remove(); css.remove(); clearTimeout(flashT); clearTimeout(callMkT); fanTex.dispose(); blindOn(false); if (cardEl) { cardEl.remove(); cardEl = null; } clearTimeout(cardT); map.player.invisible(false); map.player.speed(1); netLeave(); for (const t of TAGS) if (t) { t.material.map && t.material.map.dispose(); t.material.dispose(); }
+    stop() { dead = true; removeEventListener('keydown', keyF); howClose(); if (RK) RK.stop(); clearRoute(); btn.remove(); cbtn.remove(); stamEl.remove(); flashEl.remove(); arwEl.remove(); css.remove(); clearTimeout(flashT); clearTimeout(callMkT); fanTex.dispose(); blindOn(false); if (cardEl) { cardEl.remove(); cardEl = null; } clearTimeout(cardT); map.player.invisible(false); map.player.speed(1); netLeave(); for (const t of TAGS) if (t) { t.material.map && t.material.map.dispose(); t.material.dispose(); }
       for (const g of GEOS) g.dispose(); for (const m of MATS) m.dispose(); },
     get state() { return R ? { phase, t: W && W.t, lvl: R.lvl, base: R.base, eff: R.eff, round: R.round, me: ME, host: NETM ? NM.host : true, actors: ACT.map(a => ({ i: a.i, kind: a.kind, name: a.name, role: a.role, alive: a.alive, x: +a.x.toFixed(1), z: +a.z.toFixed(1), inv: +a.inv.toFixed(1), star: +a.star.toFixed(1), caughtT: a.caughtT })), star: starD, res } : { phase: 'lobby', host: NM.host }; },
     get net() { return { on: NM.on, host: NM.host, room: NM.room, seq: NM.seq, lvl: NM.lvl, lag: NM.lag, st: NM.st }; },

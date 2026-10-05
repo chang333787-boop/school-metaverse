@@ -9,7 +9,7 @@
 //  🗺️ 위에서 짓기(TOP-2 · 10-04 교사 '탑뷰로 할 만한 것 — 위에서 블록 짓기 · 이야기 무대 구역'): 칩 → 하늘에서 보기(map.top) + 도구 = 🧱 벽 긋기(누른 칸 → 뗀 칸 곧은 줄 · 거의 가로·세로면 똑바로 · 높이 1~4칸) ·
 //   🔨 지우기(긋는 줄의 칸 기둥 통째 — 내가 놓은 것만) · ✋ 옮기기 · 오른쪽 끌기·두 손가락 = 화면 옮기기 · 무대 구역(STAGES — 노란 네모) 안에만(나만의 판·선생님은 학교 어디든) · 📍 여기로 내려가기 = 화면 가운데 땅
 //  블록 좌표: x·z = 0.5m 격자(ix, iz) · 높이 q = 5cm 단위(놓인 땅 높이를 따른다 — 운동장 -1.35 · 바닥 0 · 2층) · 블록은 그림자를 받기만(굽기 없음).
-import { teacherPin } from '../js/lobby.js?v=12';   // 선생님 비밀번호 창(●로 가림 — 메모장·함께하기와 같은 것 · main.js와 같은 ?v=라야 한 벌)
+import { teacherPin } from '../js/lobby.js?v=15';   // 선생님 비밀번호 창(●로 가림 — 메모장·함께하기와 같은 것 · main.js와 같은 ?v=라야 한 벌)
 export const meta = { id: 'blocks', title: '블록 놀이', api: 1 };
 const DB = 'https://class-rpg-6f409-default-rtdb.asia-southeast1.firebasedatabase.app/metaverse';
 const S = 0.5, CK = 8, MAXB = 4000, FAR = 64, REACH = 9;
