@@ -358,9 +358,11 @@ export default async function start(map, params = {}) {
   const armGeo = bake([[SPHS, [0, -0.12, 0], [0.058, 0.14, 0.058], TB], [SPHS, [0, -0.25, 0], [0.052, 0.052, 0.052], 0xeef2f6]]);
   [SPH, SPHS, CYL].forEach(g => g.dispose());
   const M = { body: inst(bodyGeo, lamV(0x262626), NA), bib: inst(bibGeo, lamV(0x202020), NA), leg: inst(legGeo, lamV(), NA * 2), arm: inst(armGeo, lamV(0x202020), NA * 2) };
-  // 술래 눈(도망자 화면만 · 바닥 빨간 부채꼴 110° · 7m)
-  const fanGeo = new THREE.CircleGeometry(7, 18, Math.PI / 2 - (55 * Math.PI / 180), 110 * Math.PI / 180).rotateX(-Math.PI / 2); GEOS.push(fanGeo);
-  const fanMat = new THREE.MeshBasicMaterial({ color: 0xff4a4a, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide, fog: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }); MATS.push(fanMat);
+  // 술래 눈(도망자 화면만 · 바닥 빨간 부채꼴 110°) — UX-5(10-05 교사 편의성): 예전 7m만 그려 '빨강 밖 = 안전'으로 배웠는데 실제 눈은 25m·가끔 360° 두리번
+  //   → 내가 보는 반지름(cfg.R 14m — 그 밖 술래는 안 그림)까지 그리고 바깥으로 갈수록 옅게(알파 무늬 한 장 · 그리기 수 그대로) · 봇이 두리번하면 부채꼴이 한 바퀴 돎(draw)
+  const fanGeo = new THREE.CircleGeometry(BAL.R, 24, Math.PI / 2 - (55 * Math.PI / 180), 110 * Math.PI / 180).rotateX(-Math.PI / 2); GEOS.push(fanGeo);
+  const fanTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, '#fff'); gr.addColorStop(0.5, '#b0b0b0'); gr.addColorStop(1, '#1c1c1c'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();   // CircleGeometry uv = 원 가운데 기준 평면 → 부채꼴도 둥글게 옅어짐
+  const fanMat = new THREE.MeshBasicMaterial({ color: 0xff4a4a, transparent: true, opacity: 0.3, alphaMap: fanTex, depthWrite: false, side: THREE.DoubleSide, fog: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }); MATS.push(fanMat);
   const FAN = new THREE.InstancedMesh(fanGeo, fanMat, NA); FAN.frustumCulled = false; FAN.renderOrder = 2; for (let i = 0; i < NA; i++) FAN.setMatrixAt(i, ZERO); map.add(FAN);
   // 이름표(사람만)
   const TAGS = new Array(NA).fill(null);
@@ -383,7 +385,60 @@ export default async function start(map, params = {}) {
   const led = n => { let r = LED.get(n); if (!r) LED.set(n, r = { run: [], ct: 0 }); return r; };
   let arT = 0, arOut = 0, arSafe = null;
   let invBtnK = '', chipK = {}, uiT = 0, seeT = 0, seeWho = -1, callT = {}, nextPing = 0, hotT = 0;
+  // UX(10-05 교사 편의성): 지금 할 일 줄 · 들킴 알림 · 반짝 · 📢 · 혼자 멈춤 · 웅크림 단추 · 별 화살표
+  let coachK = '', seenAlertT = -1e9, lastPingT = -1e9, callInfo = null, hotOn = false, alertAt = 0, starToastAt = 0, pauseAt = 0, quitOpen = false, cbtnCr = null, crawlTT = 0, invTT = 0, arwT = 0, arwOn = false;
   const clock = () => (NETM ? sNow() : Date.now());
+  const jo = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1); return c >= 0xAC00 && c <= 0xD7A3 ? ((c - 0xAC00) % 28 ? a : b) : a + '(' + b + ')'; };   // 받침 따라 을/를 · 이/가
+
+  // ---------- 하는 법 · 들킴 테두리 · 별 화살표 모양(UX-1·6·7 · 10-05 교사 '딱 보고 어떻게 하는 거지' — 로봇인 척 RB-2와 같은 틀) ----------
+  const css = document.createElement('style'); css.textContent = `
+.hs-how{position:fixed;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;background:rgba(10,20,40,.55);font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif}
+.hs-how .bx{width:min(560px,92vw);max-height:90vh;overflow:auto;box-sizing:border-box;padding:16px 18px;border-radius:18px;background:#fffdf6;color:#1d3557;border:3px solid #1d3557;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.hs-how h3{margin:0 0 10px;font-size:22px}
+.hs-how .st{display:flex;gap:12px;align-items:center;margin:8px 0;padding:8px 10px;border-radius:12px;background:#eef4ff;font-size:17px;line-height:1.4}
+.hs-how .st b.n{flex:none;width:46px;height:46px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.hs-how .tip{margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff3bf;font-size:15px;font-weight:700;line-height:1.45}
+.hs-how button{display:block;position:sticky;bottom:0;margin:12px 0 0 auto;font:inherit;font-size:18px;font-weight:900;border:0;border-radius:12px;padding:10px 22px;min-height:44px;background:#1d3557;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.hs-how .auto{margin-top:10px;text-align:right;font-size:14px;color:#5a6b80;font-weight:700}
+body.small .hs-how .bx{padding:10px 12px}
+body.small .hs-how h3{font-size:17px;margin-bottom:4px}
+body.small .hs-how .st{font-size:14px;margin:4px 0;padding:5px 8px}
+body.small .hs-how .st b.n{width:34px;height:34px;font-size:20px}
+body.small .hs-how .tip{font-size:13px;margin-top:4px;padding:5px 8px}
+body.small .hs-how button{margin-top:6px;font-size:16px;padding:8px 18px}
+.hs-flash{position:fixed;inset:0;z-index:22;pointer-events:none;box-shadow:inset 0 0 70px 10px rgba(232,72,72,.85);opacity:0;transition:opacity .25s}
+.hs-arrow{position:fixed;left:0;top:0;z-index:24;display:none;align-items:center;gap:4px;pointer-events:none;padding:5px 11px;border-radius:999px;background:rgba(18,28,48,.88);color:#fff;font:800 13px/1.2 system-ui,-apple-system,"Malgun Gothic",sans-serif;white-space:nowrap;box-shadow:0 0 0 2px rgba(255,210,60,.9),0 3px 10px rgba(0,0,0,.3)}
+.hs-arrow i{display:inline-block;font-style:normal;color:#ffd23c;font-size:16px}
+`; document.head.appendChild(css);
+  const flashEl = document.createElement('div'); flashEl.className = 'hs-flash'; document.body.appendChild(flashEl);
+  let flashT = 0; const flash = () => { flashEl.style.opacity = '1'; clearTimeout(flashT); flashT = setTimeout(() => { flashEl.style.opacity = '0'; }, 600); };
+  const arwEl = document.createElement('div'); arwEl.className = 'hs-arrow'; arwEl.innerHTML = '<i>➤</i><span></span>'; document.body.appendChild(arwEl);
+  const arwI = arwEl.firstChild, arwS = arwEl.lastChild, _av = new THREE.Vector3();
+  const seenHow = new Set(); let howEl = null, howWait = false, howEnd = null;
+  function howHtml(role) {
+    const st = (i, t) => '<div class="st"><b class="n">' + i + '</b><span>' + t + '</span></div>';
+    return role === 'run'
+      ? '<h3>🏃 도망자 하는 법</h3>' + st('🙈', '처음 <b>' + cfg.hide + '초</b>는 술래(빨간 조끼 로봇)가 눈을 감아요 → <b>멀리 달아나요</b>')
+        + st('👀', '<b>빨간 부채꼴</b> = 술래가 보는 쪽 — 그 안에 들어가면 들켜요(멀리까지 · 가끔 두리번)')
+        + st('🏃', coarse ? '<b>땅을 톡</b> = 그곳으로 달리기 · 🏃 힘(' + cfg.stam + '초)을 다 쓰면 걷기만 — 쉬면 차요' : '<b>WASD·방향키</b> 걷기 · <b>Shift</b> 달리기(🏃 힘 ' + cfg.stam + '초 — 쉬면 차요) · 땅 클릭 = 그곳으로')
+        + '<div class="tip">🙇 ' + (coarse ? '단추' : 'C') + ' = 웅크리기 — 가구·덤불 뒤에 가려져요 · 👻 ' + (coarse ? '단추' : 'F') + ' = ' + cfg.inv + '초 투명<br>⭐ 별 = ' + cfg.starDur + '초 무적 · 마지막 ' + cfg.pingLast + '초엔 5초마다 내 둘레가 반짝 → 자리를 옮겨요 · <b>' + cfg.seek + '초 버티면 승리!</b></div>'
+      : '<h3>👀 술래 하는 법</h3>' + st('🙈', '처음 <b>' + cfg.hide + '초</b>는 눈을 감아요 — 도망자가 숨는 시간')
+        + st('🔵', '<b>파란 조끼 작은 로봇</b> = 도망자 — <b>닿기만 하면</b> 잡혀요 (빨간 조끼 = 우리 편 술래)')
+        + st('🔍', '<b>🔥 가까이</b> = ' + cfg.hotR + 'm 안에 있어요 · <b>📢</b> = 친구 술래가 본 곳(미니맵 주황 고리)')
+        + '<div class="tip">✨ 마지막 ' + cfg.pingLast + '초엔 5초마다 도망자 둘레에 노란 동그라미 · ⭐ 별을 먹은 도망자는 ' + cfg.starDur + '초 동안 못 잡아요 · <b>' + cfg.seek + '초 안에 잡으면 승리!</b></div>';
+  }
+  function howTo(role, wait) {   // wait = 혼자(▶ 시작을 누를 때까지 — 시계는 누른 뒤에 감) · 아니면 친구 대결 준비 시간 동안만(도망자 처음 한 번)
+    howClose(); seenHow.add(role); howWait = !!wait; document.exitPointerLock?.();
+    howEl = document.createElement('div'); howEl.className = 'hs-how ttl-keep';
+    howEl.innerHTML = '<div class="bx">' + howHtml(role) + (wait ? '<button type="button">▶ 시작!</button>' : '<div class="auto">⏱ 곧 시작해요 — 읽어 보세요</div>') + '</div>';
+    for (const t of ['keydown', 'keyup']) howEl.addEventListener(t, e => e.stopPropagation());
+    document.body.appendChild(howEl);
+    if (!wait) return Promise.resolve();
+    return new Promise(res => { const kk = e => { if (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter') { e.preventDefault(); e.stopPropagation(); howClose(); } };
+      howEnd = () => { removeEventListener('keydown', kk, true); res(); };   // 닫히면(▶ · Enter · 놀이 멈춤) 기다리던 쪽이 이어 감
+      howEl.querySelector('button').addEventListener('click', e => { e.stopPropagation(); howClose(); }); addEventListener('keydown', kk, true); });
+  }
+  function howClose() { if (howEl) { howEl.remove(); howEl = null; } howWait = false; const f = howEnd; howEnd = null; if (f) f(); }
 
   // ---------- 기술 단추(👻 투명 · 도망자) ----------
   const btn = document.createElement('div'); btn.className = 'hs-btn';
@@ -400,23 +455,30 @@ export default async function start(map, params = {}) {
   function paintStam(a) { const k = !a || !a.alive || phase === 'res' ? 'off' : Math.round(a.st / cfg.stam * 20) + (a.tired ? 't' : ''); if (k === stamK) return; stamK = k;
     if (k === 'off') { stamEl.style.display = 'none'; return; } stamEl.style.display = btn.style.display === 'none' ? 'none' : 'block';
     const b = stamEl.querySelector('i'); b.style.width = Math.max(0, Math.min(100, a.st / cfg.stam * 100)) + '%'; b.style.background = a.tired ? '#e85d5d' : a.st < cfg.stam * 0.35 ? '#f2b84c' : '#5fd068'; }
-  const paintBtn = () => { const a = ACT[ME]; if (!a) return; const k = a.inv > 0 ? '투명 ' + Math.ceil(a.inv) : a.invCd > 0 ? Math.ceil(a.invCd) + '초' : coarse ? '투명' : '투명 F';
-    if (k === invBtnK) return; invBtnK = k; btn.lastChild.textContent = k; btn.style.opacity = a.inv > 0 || a.invCd <= 0 ? '1' : '.55'; };
+  const paintBtn = () => { const a = ACT[ME]; if (!a) return; const k = phase !== 'seek' ? '찾기부터' : a.inv > 0 ? '투명 ' + Math.ceil(a.inv) : a.invCd > 0 ? Math.ceil(a.invCd) + '초' : coarse ? '투명' : '투명 F';   // UX-15: 숨기 동안은 못 씀 → 흐리게 '찾기부터'
+    if (k === invBtnK) return; invBtnK = k; btn.lastChild.textContent = k; btn.style.opacity = phase !== 'seek' ? '.45' : a.inv > 0 || a.invCd <= 0 ? '1' : '.55'; };
   const chip = (k, t) => { if (chipK[k] === t) return; chipK[k] = t; map.hud.chip(k, t); };
   const keyF = e => { if (e.repeat) return; const a = ACT[ME]; if (!a || a.role !== 'run') return;
-    if (e.code === 'KeyF') { e.preventDefault(); useInv(); } else if (e.code === 'KeyC') { e.preventDefault(); toggleCrouch(); } };
+    if (e.code === 'KeyF') { e.preventDefault(); useInv(); } else if (e.code === 'KeyC') { e.preventDefault(); toggleCrouch(); }
+    else if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && map.player.crouched() && a.alive && (phase === 'hide' || phase === 'seek')) { map.player.setCrouch(false); standSay(a.tired ? '💦 일어났어요 — 숨이 차서 걸어요' : '🏃 일어나서 달려요!'); } };   // UX-4: 웅크린 채 Shift = 일어나기(엔진은 웅크리면 늘 기어감 — 예전엔 Shift가 아무 일도 안 함) · 막지 않음(달리기는 엔진이 Shift로)
+  function standSay(t) { setTimeout(() => { if (dead || !R) return; if (map.player.crouched()) map.hud.toast('🙇 위가 막혀 있어요 — 밖으로 기어 나오면 일어나요', 1.6); else map.hud.toast(t, 1.4); }, 150); }   // 책상 밑이면 엔진이 일어서기를 미룸(머리 위가 막힘)
   // 🙇 웅크리기(HS-4): C(누를 때마다 바뀜) · 단추 — 엔진 웅크리기(느리게 기어감 · 몸이 낮아져 가구 뒤에 가려짐 — 사라지는 게 아님)
   const cbtn = document.createElement('div'); cbtn.className = 'hs-btn hs-cbtn';
   cbtn.style.cssText = 'position:fixed;right:calc(108px + env(safe-area-inset-right));bottom:calc(' + ((coarse ? 24 : 96) + 7) + 'px + env(safe-area-inset-bottom));width:64px;height:64px;border-radius:50%;z-index:24;display:none;flex-direction:column;align-items:center;justify-content:center;'
-    + 'font:800 11px/1.1 system-ui,-apple-system,"Malgun Gothic",sans-serif;color:#fff;background:rgba(47,158,68,.9);border:3px solid rgba(255,255,255,.9);box-shadow:0 3px 0 rgba(0,0,0,.2);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer';
+    + 'font:800 12px/1.1 system-ui,-apple-system,"Malgun Gothic",sans-serif;color:#fff;background:rgba(47,158,68,.9);border:3px solid rgba(255,255,255,.9);box-shadow:0 3px 0 rgba(0,0,0,.2);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer';
   cbtn.innerHTML = '<b style="font-size:24px;line-height:1">🙇</b><span>' + (coarse ? '웅크리기' : '웅크리기 C') + '</span>';
   cbtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); toggleCrouch(); });
   document.body.appendChild(cbtn);
-  function toggleCrouch() { const a = ACT[ME]; if (!a || a.role !== 'run' || !a.alive || (phase !== 'hide' && phase !== 'seek')) return; const on = !map.player.crouched(); map.player.setCrouch(on); cbtn.style.outline = on ? '4px solid #ffd23c' : ''; if (on) map.hud.toast('🙇 웅크렸어요 — 책상·덤불·차 뒤에 있으면 술래 눈에 잘 안 띄어요(느려져요)', 2.2); }
+  function toggleCrouch() { const a = ACT[ME]; if (!a || a.role !== 'run' || !a.alive || (phase !== 'hide' && phase !== 'seek')) return; const on = !map.player.crouched(); map.player.setCrouch(on); if (on) map.hud.toast('🙇 웅크렸어요 — 책상·덤불·차 뒤에 있으면 술래 눈에 잘 안 띄어요(느려져요)', 2.2); else standSay('👍 일어났어요 — 다시 빨라요'); }   // 단추 테두리·글자는 엔진의 진짜 상태로(tick · UX-4)
+  function paintCbtn() { const cr = !!map.player.crouched(); if (cr === cbtnCr) return; cbtnCr = cr; cbtn.style.outline = cr ? '4px solid #ffd23c' : ''; cbtn.lastChild.textContent = cr ? (coarse ? '일어나기' : '일어나기 C') : (coarse ? '웅크리기' : '웅크리기 C'); }
   addEventListener('keydown', keyF);
   // 술래 눈 가림(숨는 시간)
+  //   UX-9: z 23 = 터치 점프·✋·👁 단추(22) 위 · 무엇을 찾는지 세 줄(친구 대결 술래에겐 이게 하는 법)
+  const blindInfo = () => '<div style="max-width:min(520px,90vw);margin-top:12px;text-align:left;font-size:clamp(13px,2.4vw,17px);font-weight:700;line-height:1.5;opacity:.92">'
+    + '<div>🔵 <b>파란 조끼 작은 로봇</b> = 도망자 — 닿으면 잡혀요</div><div>🔴 빨간 조끼 = 우리 편 술래</div>'
+    + '<div>🔥 가까이(' + cfg.hotR + 'm 안) · 📢 친구가 본 곳 · ✨ 마지막 ' + cfg.pingLast + '초 노란 동그라미</div></div>';
   function blindOn(on, txt) {
-    if (on && !blind) { blind = document.createElement('div'); blind.className = 'ttl-keep'; blind.style.cssText = 'position:fixed;inset:0;z-index:21;background:radial-gradient(circle,rgba(20,24,40,.93),rgba(6,8,16,.98));display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font:800 clamp(18px,4vw,30px)/1.4 system-ui,-apple-system,"Malgun Gothic",sans-serif;text-align:center;pointer-events:none'; document.body.appendChild(blind); }
+    if (on && !blind) { blind = document.createElement('div'); blind.className = 'ttl-keep'; blind.style.cssText = 'position:fixed;inset:0;z-index:23;background:radial-gradient(circle,rgba(20,24,40,.93),rgba(6,8,16,.98));display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font:800 clamp(18px,4vw,30px)/1.4 system-ui,-apple-system,"Malgun Gothic",sans-serif;text-align:center;pointer-events:none'; document.body.appendChild(blind); }
     if (!on && blind) { blind.remove(); blind = null; }
     if (blind && txt != null && blind.dataset.t !== txt) { blind.dataset.t = txt; blind.innerHTML = txt; }
   }
@@ -438,6 +500,7 @@ export default async function start(map, params = {}) {
   const headBase = slots => { const rc = slots.filter(q => q.role === 'run').length, hc = slots.length - rc; return rc >= 2 && hc <= 5 ? -1 : 0; };
   function beginRound(r) {
     endRoundUI(); R = r; phase = 'count'; finT = null; starD = null; res = null; nextPing = cfg.seek - cfg.pingLast; callT = {}; chipK = {}; invBtnK = '';
+    coachK = ''; seenAlertT = lastPingT = -1e9; callInfo = null; hotOn = false; pauseAt = 0; cbtnCr = null; seekSay = false;
     r.base = headBase(r.slots); r.eff = Math.max(-2, Math.min(2, (r.lvl || 0) + r.base)); applyLvl(r.eff); nextPing = cfg.seek - cfg.pingLast;
     ACT = r.slots.map((s, i) => mkActor(i, s)); ME = ACT.findIndex(a => a.kind === 'me');
     // 자리: 주 복도 한 줄 — 도망자 = 가운데 · 술래 = 양옆 1.6m 간격(걷는 칸에 맞춤)
@@ -452,34 +515,38 @@ export default async function start(map, params = {}) {
     if (me) { map.player.teleport([me.x, me.y, me.z], { h: me.h }); }
     if (me && me.role === 'run') {
       if (!map.top.on) map.top.enter({ follow: true, playerKeys: true, vision: cfg.R, bar: false, floor: 1, d: 30, floorKeys: false, onTap: walkTo, onExit: askQuit,
-        help: coarse ? '땅을 톡 = 그곳으로 달리기 · 🏃 힘이 다하면 걷기 · 🙇 웅크리면 가구 뒤에 가려져요 · 👻 = 3초 투명 · 빨간 부채꼴 = 술래 눈' : 'WASD·방향키 = 걷기 · Shift = 달리기(🏃 힘 6초) · C 🙇 웅크리기(가구 뒤에 가려짐) · 땅 클릭 = 그곳으로 · F 👻 투명 · 빨간 부채꼴 = 술래 눈' });
+        help: coarse ? '땅을 톡 = 그곳으로 달리기 · 🏃 힘이 다하면 걷기 · 🙇 웅크리면 가구 뒤에 가려져요 · 👻 = ' + cfg.inv + '초 투명 · 빨간 부채꼴 = 술래가 보는 쪽(멀리까지 · 가끔 두리번)' : 'WASD·방향키 = 걷기 · Shift = 달리기(🏃 힘 ' + cfg.stam + '초) · C 🙇 웅크리기(가구 뒤에 가려짐) · 땅 클릭 = 그곳으로 · F 👻 투명 · 빨간 부채꼴 = 술래가 보는 쪽(멀리까지 · 가끔 두리번)' });
       btn.style.display = 'flex'; cbtn.style.display = 'flex'; cbtn.style.outline = ''; map.player.crouch(true); map.player.setCrouch(false); map.minimap.hide();
     } else { if (map.top.on) map.top.exit(); btn.style.display = 'none'; cbtn.style.display = 'none'; map.player.setCrouch(null); map.player.crouch(false); map.minimap.show({}); map.minimap.setMarks([]); }
     const runN = ACT.filter(a => a.role === 'run').map(a => a.kind === 'me' ? '나' : a.name).join(' · ');
-    map.hud.goal(me ? (me.role === 'run' ? '🏃 도망자 — ' + cfg.seek + '초 버티기!' : '👀 술래 — 도망자(' + runN + ') 잡기!') : '👀 구경 — 다음 판부터 같이 해요');
     const lt = LVL_T[String(r.eff)] + (r.base ? ' (👥 인원 보정 ' + (r.base > 0 ? '+' : '') + r.base + ')' : '');
-    card('<div style="font-size:1.25em">' + (me && me.role === 'run' ? '🏃 이번 판은 <b>내가 도망자</b>!' : '🏃 이번 판 도망자: <b>' + esc(runN) + '</b>') + '</div>'
+    card('<div style="font-size:1.25em">' + (me && me.role === 'run' ? '🏃 이번 판은 <b>내가 도망자</b>!' : me ? '👀 이번 판은 <b>내가 술래</b> — 도망자: <b>' + esc(runN) + '</b>' : '🏃 이번 판 도망자: <b>' + esc(runN) + '</b>') + '</div>'
       + (r.rounds ? '<div style="opacity:.8;font-size:.85em">' + (r.round + 1) + ' / ' + r.rounds + '판</div>' : '')
-      + (me ? '<div style="opacity:.85;font-size:.85em">' + (me.role === 'run' ? '하늘에서 봐요 · 빨간 부채꼴 = 술래 눈 · 🏃 힘(달리기 6초 — 쉬면 차요) · 🙇 C 웅크려 가구 뒤에 · 👻 F' : '10초 동안 눈 감기 → 찾기 · 🔥 = 가까이 · 마지막 20초 반짝') + '</div>' : '')
-      + (lt ? '<div style="color:#ffd23c;font-size:.85em">⚖️ 따라잡기 — ' + lt + '</div>' : ''), 3);
+      + (lt ? '<div style="color:#ffd23c;font-size:.85em">⚖️ 따라잡기 — ' + lt + '</div>' : ''), 3);   // UX-1: 규칙 줄은 뺌 — 하는 법 창·화면 위 '지금 할 일' 줄이 맡음(로봇인 척 RB-2와 같이)
     if (!me) map.player.freeze(false);
     chip('hs-role', me ? (me.role === 'run' ? '🏃 도망자' : '👀 술래') : '👀 구경');
     star3.hide(0); if (starMk) { starMk.remove(); starMk = null; }
     if (map.top.on) map.top.marks([]);
+    coach();
+    if (NETM && me && me.role === 'run' && !seenHow.has('run')) howTo('run', false);   // 친구 대결: 처음 도망자가 되면 준비 시간 동안 하는 법(술래는 눈 가림 화면이 하는 법)
   }
-  function endRoundUI() { arSafe = null; clearRoute(); map.player.run(true); map.player.setCrouch(null); map.player.crouch(false); cbtn.style.display = 'none'; cbtn.style.outline = ''; stamEl.style.display = 'none'; stamK = ''; map.player.invisible(false); map.player.speed(1); blindOn(false); if (starMk) { starMk.remove(); starMk = null; } star3.hide(0); for (const t of TAGS) if (t) t.visible = false; hideBodies(); }
+  function endRoundUI() { arSafe = null; clearRoute(); map.player.run(true); map.player.setCrouch(null); map.player.crouch(false); cbtn.style.display = 'none'; cbtn.style.outline = ''; cbtnCr = null; btn.style.display = 'none'; stamEl.style.display = 'none'; stamK = ''; map.player.invisible(false); map.player.speed(1); blindOn(false); if (starMk) { starMk.remove(); starMk = null; } star3.hide(0); for (const t of TAGS) if (t) t.visible = false; hideBodies();
+    arwOn = false; arwEl.style.display = 'none'; mmPing = []; mmCall = null; clearTimeout(callMkT); }
   function hideBodies() { for (let j = 0; j < NA; j++) { M.body.setMatrixAt(j, ZERO); M.bib.setMatrixAt(j, ZERO); M.leg.setMatrixAt(j * 2, ZERO); M.leg.setMatrixAt(j * 2 + 1, ZERO); M.arm.setMatrixAt(j * 2, ZERO); M.arm.setMatrixAt(j * 2 + 1, ZERO); FAN.setMatrixAt(j, ZERO); }
     M.body.instanceMatrix.needsUpdate = M.bib.instanceMatrix.needsUpdate = M.leg.instanceMatrix.needsUpdate = M.arm.instanceMatrix.needsUpdate = FAN.instanceMatrix.needsUpdate = true; }
+  // UX-16: 휴대폰(낮은 화면)은 가운데 배너가 도망자의 '나' 표시를 가림 → 위쪽 알림으로(술래는 3인칭이라 배너 그대로)
+  let seekSay = false, seekBan = null;
+  const sayRun = (t, s) => (document.body.classList.contains('small') ? map.hud.toast(t, s + 0.4) : map.hud.banner(t, s));
   function setPhase(p) {
     if (p === phase) return; const was = phase; phase = p; W.phase = p === 'hide' ? 'hide' : 'seek';
-    const me = ACT[ME];
+    const me = ACT[ME]; if (p !== 'count' && !howWait) howClose();
     if (p === 'hide') {
-      if (me && me.role === 'run') { map.player.freeze(false); map.hud.banner('🏃 지금 숨어요! 술래는 눈을 감았어요', 1.8); }
+      if (me && me.role === 'run') { map.player.freeze(false); sayRun('🏃 지금 숨어요! 술래는 눈을 감았어요', 1.8); }
       else if (me) { map.player.freeze(true); }
     } else if (p === 'seek') {
       blindOn(false);
       if (me && me.role === 'hunt') { map.player.freeze(false); map.hud.banner('👀 찾아라!', 1.2); map.tone(784, 0, 0.16, 'square', 0.06); }
-      else if (me && me.role === 'run') { map.hud.banner('👀 술래가 찾기 시작했어요!', 1.4); map.tone(523, 0, 0.12, 'square', 0.05); }
+      else if (me && me.role === 'run') seekSay = true;   // UX-16: 잡기 판정 뒤에(tick) — 찾기 첫 순간에 잡히면 결과 카드와 겹치지 않게 안 띄움
     } else if (p === 'res') { roundResult(was); }
   }
 
@@ -495,6 +562,7 @@ export default async function start(map, params = {}) {
     if (!r.ok || r.pts.length < 2) { map.hud.toast('거기는 갈 수 없어요'); return; }
     clearRoute(); route = r.pts; ri = 1; stuckT = 0; lastD = 1e9;
     routeMk = map.mk.trail(route.map(p => [p[0], p[1] + 0.05, p[2]]), { color: 0x3b82f6 });
+    if (map.player.crouched() && performance.now() - crawlTT > 8000) { crawlTT = performance.now(); map.hud.toast(coarse ? '🙇 웅크린 채 기어가요(느려요) — 🙇를 다시 누르면 일어나요' : '🙇 웅크린 채 기어가요(느려요) — C로 일어나요', 2); }   // UX-4: 톡으로는 기기·달리기를 못 고름 → 저절로 일으키지 않고 알려 줌
   }
   function routeTick(dt) {
     if (!route) return; const me = map.player.get();
@@ -505,7 +573,9 @@ export default async function start(map, params = {}) {
     map.player.steer(p[0] - me.x, p[2] - me.z, ACT[ME] && ACT[ME].crouch ? 1.9 : ACT[ME] && ACT[ME].tired ? 4.2 : 7.0, false);   // 힘이 없으면 걸어서 · 웅크리면 기어서
   }
   function useInv() {
-    const a = ACT[ME]; if (!a || a.role !== 'run' || !a.alive || phase !== 'seek' || a.inv > 0 || a.invCd > 0) return;
+    const a = ACT[ME]; if (!a || a.role !== 'run' || !a.alive) return;
+    if (phase !== 'seek' || a.inv > 0 || a.invCd > 0) { const now = performance.now();   // UX-15: 왜 안 되는지 말해 줌(예전 = 아무 일 없음)
+      if (now - invTT > 1000 && (phase === 'hide' || (phase === 'seek' && a.invCd > 0))) { invTT = now; map.hud.toast(phase === 'hide' ? '👻 투명은 술래가 찾기 시작하면 쓸 수 있어요' : '👻 ' + Math.ceil(a.invCd) + '초 뒤에 또 쓸 수 있어요', 1.4); } return; }
     a.inv = cfg.inv; map.player.invisible(true); map.tone(880, 0, 0.1, 'sine', 0.07); map.tone(1320, 0.08, 0.2, 'sine', 0.06);
   }
 
@@ -515,17 +585,23 @@ export default async function start(map, params = {}) {
     if (!R || !W) return;
     const a = ACT[e.who], by = ACT[e.by];
     if (e.k === 'ct') {   // 잡힘
-      if (!a || !a.alive) return; a.alive = false; a.caughtT = (e.n || 0) / 10; a.inv = 0;
+      if (!a || !a.alive) return; a.alive = false; a.caughtT = (e.n || 0) / 10; a.inv = 0; a.by = e.by;   // UX-8: 누가 잡았는지(내 화면만 — 사건에 이미 있는 by)
       const byN = by ? (by.kind === 'me' ? '내가' : by.kind === 'bot' ? '🤖 술래 봇이' : by.name + '이(가)') : '술래가';
       const last = !ACT.some(q => q.role === 'run' && q.alive);   // 마지막 도망자면 결과 카드가 바로 뜬다(배너와 겹치지 않게)
-      if (a.kind === 'me') { map.player.freeze(true); clearRoute(); map.player.invisible(false); map.player.setCrouch(false); cbtn.style.display = 'none'; if (!last) map.hud.banner('💥 잡혔어요! (' + Math.round(a.caughtT) + '초)', 2); map.tone(784, 0, 0.25, 'sine', 0.2); map.tone(622, 0.22, 0.4, 'sine', 0.2); }
+      if (a.kind === 'me') { a.how = { crouch: !!a.crouch, tired: !!a.tired, ping: W.t - lastPingT < 5 };   // UX-3: 잡힌 까닭 한 줄(결과 카드)
+        map.player.freeze(true); clearRoute(); map.player.invisible(false); map.player.setCrouch(false); cbtn.style.display = 'none'; btn.style.display = 'none'; seekSay = false; if (seekBan && seekBan.remove) seekBan.remove(); seekBan = null; if (!last) map.hud.banner('💥 잡혔어요! (' + Math.round(a.caughtT) + '초)', 2); map.tone(784, 0, 0.25, 'sine', 0.2); map.tone(622, 0.22, 0.4, 'sine', 0.2); }
       else { if (!last) map.hud.banner('🎉 ' + byN + ' ' + (a.kind === 'bot' ? '도망 로봇' : a.name) + '을(를) 잡았어요!', 1.8); map.tone(784, 0, 0.1, 'sine', 0.1); map.tone(1046, 0.1, 0.18, 'sine', 0.1); }
       if (by) by.cts = (by.cts || 0) + 1;
       if (!ACT.some(q => q.role === 'run' && q.alive) && finT == null) finT = Math.max(0, W.t);
     } else if (e.k === 'see') {   // 📢 봤어요 — 방 이름만
-      const z = ZS[e.n]; if (!z || !a) return;
       const me = ACT[ME];
-      if (me && me.role === 'hunt' && (!by || by.kind !== 'me')) map.hud.toast('📢 ' + (by ? (by.kind === 'bot' ? '🤖 봇' : by.name) : '술래') + ': ' + z.z.label + '!', 1.8);
+      // UX-6: 내가 도망자고 가까운 술래(내 눈 반지름 R 안 — 봇 도망자가 아는 만큼)가 봤으면 테두리 번쩍 · 소리 · 알림(3초에 한 번)
+      if (me && me.role === 'run' && a === me && me.alive && by && phase === 'seek' && Math.hypot(by.x - me.x, by.z - me.z) <= cfg.R + 1) { seenAlertT = W.t;
+        if (performance.now() - alertAt > 3000) { alertAt = performance.now(); flash(); map.tone(330, 0, 0.12, 'square', 0.06); map.hud.toast('👀 들켰어요! 술래들이 몰려와요 — 다른 곳으로 달아나요!', 2); } }
+      const z = ZS[e.n]; if (!z || !a) return;
+      if (me && me.role === 'hunt' && (!by || by.kind !== 'me')) {   // UX-11: 쉬운 말 + 미니맵에 그 구역 주황 고리(방 이름과 같은 만큼만 — 밸런스 그대로)
+        map.hud.toast('📢 ' + (!by || by.kind === 'bot' ? '술래 친구가' : by.name + jo(by.name, '이', '가')) + ' 봤어요 → ' + z.z.label + '!', 2.2); callInfo = { label: z.z.label, t: W.t };
+        mmCall = { x: NX(z.cell), z: NZ(z.cell), color: '#ff7a1a', shape: 'ring', blink: true, label: z.z.label }; mmPaint(); clearTimeout(callMkT); callMkT = setTimeout(() => { mmCall = null; if (!dead) mmPaint(); }, 2500); }
       if (W) { const zz = z.z; const cx = Math.max(zz.x0 + 1, Math.min(zz.x1 - 1, a.x + (rng() - 0.5) * Math.min(10, zz.x1 - zz.x0) * 0.7)), cz = Math.max(zz.z0 + 1, Math.min(zz.z1 - 1, a.z + (rng() - 0.5) * Math.min(10, zz.z1 - zz.z0) * 0.7));
         W.know = { x: cx, y: a.y, z: cz, t: W.t + cfg.callDelay, t0: W.t, src: 'call' }; }
     } else if (e.k === 'st') {   // ⭐ 별 나타남
@@ -533,31 +609,79 @@ export default async function start(map, params = {}) {
       starD = { on: true, cell: c, x: NX(c), y: NY[c], z: NZ(c) }; W.star = starD;
       starMk = map.mk.marker(starD.x, starD.y, starD.z, { color: 0xffd23c });
       if (map.top.on) map.top.marks([{ x: starD.x, y: starD.y + 0.5, z: starD.z, t: '⭐ 별!' }]);
-      const me = ACT[ME]; map.hud.toast(me && me.role === 'run' ? '⭐ 별이 나타났어요 — 먹으면 6초 동안 빨라지고 안 잡혀요!' : '⭐ 별이 나타났어요 — 도망자가 먹으면 6초 동안 못 잡아요!', 2.6); map.tone(988, 0, 0.1, 'sine', 0.07); map.tone(1318, 0.1, 0.2, 'sine', 0.07);
+      const me = ACT[ME]; starToastAt = performance.now(); map.hud.toast(me && me.role === 'run' ? '⭐ 별이 나타났어요 — 먹으면 ' + cfg.starDur + '초 동안 빨라지고 안 잡혀요!' : '⭐ 별이 나타났어요 — 도망자가 먹으면 ' + cfg.starDur + '초 동안 못 잡아요!', 2.6); map.tone(988, 0, 0.1, 'sine', 0.07); map.tone(1318, 0.1, 0.2, 'sine', 0.07);
     } else if (e.k === 'sp') {   // ⭐ 별 먹음
       if (!starD || !starD.on || !a) return; starD.on = false; star3.hide(0); if (starMk) { starMk.remove(); starMk = null; } if (map.top.on) map.top.marks([]);
       a.star = cfg.starDur;
-      if (a.kind === 'me') { map.player.speed(cfg.starBoost); map.hud.banner('⭐ 무적! 6초 동안 빨라요', 1.5); } else map.hud.toast('⭐ 도망자가 별을 먹었어요 — 6초 동안 못 잡아요!', 2);
+      if (a.kind === 'me') { map.player.speed(cfg.starBoost); map.hud.banner('⭐ 무적! ' + cfg.starDur + '초 동안 빨라요', 1.5); } else map.hud.toast('⭐ 도망자가 별을 먹었어요 — ' + cfg.starDur + '초 동안 못 잡아요!', 2);
       map.tone(660, 0, 0.08, 'square', 0.06); map.tone(880, 0.08, 0.08, 'square', 0.06); map.tone(1320, 0.16, 0.2, 'square', 0.06);
     }
   }
   function ping() {   // 마지막 20초: 5초마다 반짝 — 도망자 둘레 6m 동그라미(가운데는 조금 비껴서 · 바닥 노란 고리 + 미니맵 별)
-    const me = ACT[ME], L = [];
+    const me = ACT[ME], L = []; let msg = null, sec = 2; lastPingT = W ? W.t : lastPingT;
     for (const a of ACT) { if (a.role !== 'run' || !a.alive) continue;
       const an = rng() * 6.283, q = rng() * cfg.pingR * 0.7, cx = a.x + Math.cos(an) * q, cz = a.z + Math.sin(an) * q, ci = core.snapA(cx, a.y, cz, 3), z = ci >= 0 ? nav.zoneOf(ci) : nav.zoneOf(core.cellOf(a));
       L.push({ x: cx, z: cz, color: '#ffd23c', shape: 'star', blink: true, label: z ? z.label : '' });
       if (W) W.know = { x: cx, y: a.y, z: cz, t: W.t, t0: W.t, src: 'ping' };
       if (me && me.role === 'hunt') { const y = a.y + 0.08, R = cfg.pingR, pts = []; for (let k = 0; k <= 28; k++) { const t = k / 28 * 6.283; pts.push([cx + Math.cos(t) * R, y, cz + Math.sin(t) * R]); }
         const tr = map.mk.trail(pts, { color: 0xffd23c, width: 0.5 }); setTimeout(() => tr.remove(), 2600);
-        map.hud.toast('✨ 반짝! 도망자는 ' + (z ? z.label + ' ' : '') + '노란 동그라미 안에!', 2); } }
-    if (me && me.role === 'hunt') { map.minimap.setMarks(L); setTimeout(() => { if (!dead) map.minimap.setMarks([]); }, 2600); }
-    if (me && me.role === 'run' && L.length) map.hud.toast('✨ 반짝! 술래들에게 내 둘레가 보였어요 — 옮겨요!', 1.8);
+        msg = '✨ 반짝! 도망자는 ' + (z ? z.label + ' ' : '') + '노란 동그라미 안에!'; } }
+    if (me && me.role === 'hunt') { mmPing = L; mmPaint(); setTimeout(() => { mmPing = []; if (!dead) mmPaint(); }, 2600); }   // UX-11: 📢 고리와 같이(서로 지우지 않게)
+    if (me && me.role === 'run' && me.alive && L.length) { msg = '✨ 반짝! 술래들에게 내 둘레가 보였어요 — 옮겨요!'; sec = 1.8; }
+    // UX-7: 별 알림과 같은 순간이면 별 알림이 먼저(2.3초 뒤에 반짝 알림 — 그 판·찾기 중일 때만)
+    if (msg) { const say = () => map.hud.toast(msg, sec); if (performance.now() - starToastAt < 2500) { const seq = R && R.seq, r0 = R; setTimeout(() => { if (!dead && R === r0 && R && R.seq === seq && phase === 'seek') say(); }, 2300); } else say(); }
     map.tone(1175, 0, 0.08, 'sine', 0.05);
+  }
+  let mmPing = [], mmCall = null, callMkT = 0;
+  const mmPaint = () => map.minimap.setMarks(mmCall ? [...mmPing, mmCall] : mmPing);
+  // ---------- 지금 할 일(UX-2 · 10-05 교사 편의성 — 화면 위 목표 줄이 상황 따라 바뀜 · 0.2초마다 · 바뀔 때만 씀 · 로봇인 척 RB-2와 같은 틀) ----------
+  function coach() {
+    const me = ACT[ME]; let t = '';
+    if (phase === 'res') t = (res && res.head) || '🏁 끝';
+    else if (!me) t = '👀 구경 — 다음 판부터 같이 해요';
+    else if (me.role === 'run') {
+      const d0 = Math.round(Math.hypot(me.x - SX, me.z - SZ)); let nh = 1e9; for (const h of ACT) if (h.role === 'hunt' && h.alive) nh = Math.min(nh, Math.hypot(h.x - me.x, h.z - me.z));
+      if (phase === 'count') t = '🏃 곧 시작 — 술래가 눈을 감으면 멀리 달아나요';
+      else if (phase === 'hide') t = d0 < 15 ? '🙈 술래가 눈 감는 중 — 더 멀리! (출발점에서 ' + d0 + 'm)' : d0 < 30 ? '🙈 조금 더 멀리! (출발점에서 ' + d0 + 'm)' : '👍 좋아요(' + d0 + 'm) — 이제 숨을 곳을 골라요';
+      else if (!me.alive) t = ACT.some(q => q.role === 'run' && q.alive) ? '💥 잡혔어요 — 친구 도망자를 응원해요' : '💥 잡혔어요!';
+      else if (me.star > 0) t = '⭐ 무적! ' + Math.ceil(me.star) + '초 동안 안 잡혀요';
+      else if (W.t - seenAlertT < 3) t = me.tired ? '👀 들켰어요! 문·가구 뒤로 돌아 숨어요' : coarse ? '🏃 지금 달아나요! 먼 곳을 톡' : '🏃 지금 달아나요! Shift로 달리기';   // 알림(위)과 겹치지 않게 할 일로
+      else if (W.t - lastPingT < 3) t = '✨ 내 둘레가 보였어요 — 자리를 옮겨요';
+      else if (starD && starD.on) t = '⭐ 별이 나왔어요 — ' + Math.round(Math.hypot(starD.x - me.x, starD.z - me.z)) + 'm (먹으면 ' + cfg.starDur + '초 무적)';
+      else if (nh < cfg.R) t = me.crouch ? '🙇 술래가 가까이 — 들키면 일어나 달아나요' : '⚠️ 술래가 가까이 — 빨간 부채꼴을 피해요';
+      else if (me.tired) t = '💦 숨이 차요 — 걸으며 힘을 모아요';
+      else if (me.crouch) t = coarse ? '🙇 웅크린 중(느려요) — 🙇를 다시 누르면 일어나요' : '🙇 웅크린 중(느려요) — C로 일어나요';
+      else t = '👍 안전해요 — 가구 뒤에서 🙇 웅크리고 힘을 모아요';
+    } else {
+      if (phase === 'count' || phase === 'hide') t = '🙈 눈 감는 중 — 곧 찾기 시작!';
+      else if (W.t - lastPingT < 3) t = '✨ 노란 동그라미로! 미니맵 노란 별 쪽이에요';
+      else if (callInfo && W.t - callInfo.t < 4) t = '📢 ' + callInfo.label + '에서 봤대요 — 미니맵을 봐요';
+      else if (starD && starD.on) t = '⭐ 도망자가 별을 먹으면 ' + cfg.starDur + '초 동안 못 잡아요';
+      else if (hotOn) t = '🔥 가까이 있어요 — 문 뒤·가구 뒤를 살펴봐요';
+      else t = '🔵 파란 조끼 작은 로봇을 찾아요 — 닿으면 잡혀요';
+    }
+    if (t !== coachK) { coachK = t; map.hud.goal(t); }
+  }
+  // ⭐ 별이 화면 밖이면 가장자리 화살표(UX-7 · 도망자 · 0.1초마다 · 새 객체 없음 — 하늘에서 보기는 화면 밖 표식을 숨긴다)
+  function arrowTick() {
+    const me = ACT[ME];
+    if (!(me && me.role === 'run' && me.alive && phase === 'seek' && starD && starD.on && map.top.on)) { if (arwOn) { arwOn = false; arwEl.style.display = 'none'; } return; }
+    const w = innerWidth, h = innerHeight; _av.set(starD.x, starD.y + 0.5, starD.z).project(map.camera);
+    const back = _av.z > 1, sx = (_av.x + 1) / 2 * w, sy = (1 - _av.y) / 2 * h;
+    if (!back && sx >= 40 && sx <= w - 40 && sy >= 60 && sy <= h - 60) { if (arwOn) { arwOn = false; arwEl.style.display = 'none'; } return; }   // 화면 안 = 하늘에서 보기 '⭐ 별!' 이름표가 보임
+    let dx = sx - w / 2, dy = sy - h / 2; if (back) { dx = -dx; dy = -dy; } if (!dx && !dy) dy = -1;
+    const k = Math.min((w / 2 - 56) / Math.max(1e-3, Math.abs(dx)), (h / 2 - 56) / Math.max(1e-3, Math.abs(dy))), x = w / 2 + dx * k, y = h / 2 + dy * k;
+    arwEl.style.transform = 'translate(' + Math.round(x) + 'px,' + Math.round(y) + 'px) translate(-50%,-50%)'; arwI.style.transform = 'rotate(' + Math.atan2(dy, dx).toFixed(2) + 'rad)';
+    const tx = '⭐ ' + Math.round(Math.hypot(starD.x - me.x, starD.z - me.z)) + 'm'; if (arwS.textContent !== tx) arwS.textContent = tx;
+    if (!arwOn) { arwOn = true; arwEl.style.display = 'flex'; }
   }
 
   // ---------- 매 프레임 ----------
   function tick(dt) {
     if (!R || !W) return;
+    if (!NETM) { const hold = quitOpen || !!(window.__pause && window.__pause.on);   // UX-10: 혼자 = '그만할까요?'·멈춤 창이 떠 있는 동안 시계·봇·잡기 모두 멈춤(돌아오면 시계를 그만큼 밂)
+      if (hold) { if (!pauseAt) pauseAt = Date.now(); return; }
+      if (pauseAt) { R.t0 += Date.now() - pauseAt; pauseAt = 0; } }
     const t = (clock() - R.t0) / 1000, T1 = cfg.hide + cfg.seek, endAt = finT != null ? cfg.hide + finT : T1;
     W.t = t - cfg.hide;   // 머리 시계 = 찾기 시작부터(숨기 동안 음수)
     const p = t < 0 ? 'count' : t < cfg.hide ? 'hide' : t < endAt ? 'seek' : 'res'; setPhase(p);
@@ -570,9 +694,9 @@ export default async function start(map, params = {}) {
       if (a.star > 0 && (a.star -= dt) <= 0) { a.star = 0; if (a.kind === 'me') map.player.speed(1); } }
     if (me && me.role === 'run') {   // 🏃 힘: 찾기 동안 달리면 줄고 안 달리면 차오름 · 다 쓰면 1.5초어치 찰 때까지 걷기만(숨기 동안은 마음껏)
       if (me.st == null) me.st = cfg.stam;
-      if (p === 'seek' && me.alive) { if (me.running || (route && !me.tired)) me.st = Math.max(0, me.st - dt); else me.st = Math.min(cfg.stam, me.st + dt * cfg.stamRe); } else me.st = cfg.stam;
+      if (p === 'seek' && me.alive) { if (me.running || (route && !me.tired && !me.crouch)) me.st = Math.max(0, me.st - dt); else me.st = Math.min(cfg.stam, me.st + dt * cfg.stamRe); } else me.st = cfg.stam;   // UX-4: 웅크려 톡 걷기(기어감)는 힘을 안 씀(봇·시뮬레이션과 같게 — 버그였음)
       const tired = me.st <= 0 || (me.tired && me.st < 1.5); if (tired !== me.tired) { me.tired = tired; map.player.run(!tired); if (tired) map.hud.toast('💦 숨이 차요 — 걷거나 숨어서 힘을 모아요', 1.8); }
-      routeTick(dt); paintBtn(); paintStam(me); }
+      routeTick(dt); paintBtn(); paintStam(me); if (me.alive) paintCbtn(); }
     if (me && (p === 'hide' || p === 'seek') && (arT -= dt) <= 0) { arT = 0.2;   // 경기장 밖(계단·체육관·화단 등) = 마지막 자리로
       const ci = nav.snap(me.x, me.y, me.z, 1.2), ok = ci >= 0 && core.inA()[ci];
       if (ok) { arOut = 0; arSafe = [me.x, me.y, me.z]; } else if ((arOut += 0.2) > 0.4 && arSafe) { arOut = 0; clearRoute(); map.player.teleport(arSafe); map.hud.toast('🚧 숨바꼭질은 고깔 안(1층·앞뜰 길)에서만 해요', 2); } }
@@ -587,7 +711,7 @@ export default async function start(map, params = {}) {
       else if (p === 'seek') { core.huntTick(a, W, dt); core.move(a, dt, cfg.hRun * cfg.eff); } }
     if (!host) for (const a of ACT) if (a.kind === 'bot') netActor(a, dt);
     // 숨기: 술래 눈 가림
-    if (me && me.role === 'hunt' && (p === 'count' || p === 'hide')) blindOn(true, p === 'count' ? '👀 술래 준비…' : '🙈 눈 감고 셋 세는 중…<div style="font-size:clamp(48px,12vw,96px);margin-top:10px">' + Math.ceil(cfg.hide - t) + '</div><div style="font-size:clamp(13px,2.4vw,17px);opacity:.75;margin-top:8px">도망자가 숨고 있어요 · 🔥 = 가까이 있다는 뜻 · 마지막 20초엔 반짝!</div>');
+    if (me && me.role === 'hunt' && (p === 'count' || p === 'hide')) blindOn(true, (p === 'count' ? '👀 술래 준비…' : '🙈 열까지 세는 중…<div style="font-size:clamp(48px,12vw,96px);margin-top:10px">' + Math.ceil(cfg.hide - t) + '</div>') + blindInfo());
     if (p === 'seek') {
       // ⭐ 별(방장·혼자가 자리를 정함)
       if (host && cfg.star && !starD && W.t >= cfg.starAt) { const H = ACT.filter(q => q.role === 'hunt'); let c = -1;
@@ -606,15 +730,19 @@ export default async function start(map, params = {}) {
             if (map.see({ x: me.x, y: me.y + 1.35, z: me.z, h: me.h }, { x: r.x, y: r.y + (r.crouch ? 0.4 : 0.85), z: r.z }, 100, 25)) { saw = r; break; } }
           if (saw) { if (seeWho === saw.i) { saw.seenT = (saw.seenT || 0) + 0.1; if (saw.seenT >= 0.3 && (callT[saw.i] || -9) < W.t - cfg.callEvery) { callT[saw.i] = W.t; const ci = core.cellOf(saw), z = ci >= 0 ? nav.zoneOf(ci) : null; if (z) emit({ k: 'see', by: me.i, who: saw.i, n: zIdx(z.id) }); } } else { seeWho = saw.i; saw.seenT = 0; } } else seeWho = -1; }
         if ((hotT -= dt) <= 0) { hotT = 0.25; let d0 = 1e9; for (const r of ACT) if (r.role === 'run' && r.alive) d0 = Math.min(d0, Math.hypot(r.x - me.x, r.z - me.z));
-          chip('hs-hot', d0 < cfg.hotR ? '🔥 가까이 있어요!' : '❄️ 이 근처엔 없어요'); }
+          hotOn = d0 < cfg.hotR; chip('hs-hot', hotOn ? '🔥 가까이 있어요!' : '❄️ 멀리 있어요'); }   // UX-14: 휴대폰 짧은 칩이 '❄️ 이'로 잘리던 것 → '❄️ 멀리'
       }
       if (cfg.pingLast && W.t >= nextPing) { nextPing += cfg.pingEvery; ping(); }
+      if (seekSay) { seekSay = false; if (me && me.alive && finT == null) { seekBan = sayRun('👀 술래가 찾기 시작했어요!', 1.4); map.tone(523, 0, 0.12, 'square', 0.05); } }   // UX-16: 잡기 판정 뒤
+      if ((arwT -= dt) <= 0) { arwT = 0.1; arrowTick(); }
     }
     // 그리기 · 시간
     draw(dt);
     if ((uiT -= dt) <= 0) { uiT = 0.2;
       chip('hs-time', p === 'count' ? '⏱ 준비' : p === 'hide' ? '🙈 숨기 ' + Math.ceil(cfg.hide - t) : p === 'seek' ? '⏱ ' + fmt(Math.max(0, T1 - t)) : '🏁 끝');
-      if (p !== 'seek' || !(me && me.role === 'hunt')) chip('hs-hot', null); }
+      if (p !== 'seek' || !(me && me.role === 'hunt')) { chip('hs-hot', null); hotOn = false; }
+      if (p !== 'seek' && arwOn) arrowTick();
+      coach(); }
     if (NETM && NM.on) { netSend(dt); hostRun(t, endAt); if ((NM.lagT = (NM.lagT || 0) - dt) <= 0) { NM.lagT = 1; chip('hs-net', NM.lag >= 450 ? '📶 인터넷이 느려요(' + NM.lag + 'ms)' : null); } }
     else if (p === 'res' && t > endAt + cfg.end && !matchEnd) { matchEnd = true; soloEnd(); }
   }
@@ -642,7 +770,8 @@ export default async function start(map, params = {}) {
         else { const ox = 0.085 * side * sc, oy = 0.34 * sc; _v.set(a.x + ox * cy, y0 + oy, a.z - ox * sy); _q.setFromEuler(_e.set(sw * side, yaw, 0)); _s.set(sc, sc, sc); M.leg.setMatrixAt(j * 2 + s, _m4.compose(_v, _q, _s)); }
         if (blink) { M.arm.setMatrixAt(j * 2 + s, ZERO); continue; }
         const ox = (cr ? 0.19 : 0.21) * side * sc, oy = (cr ? 0.42 : 0.7) * sc; _v.set(a.x + ox * cy, y0 + oy, a.z - ox * sy); _q.setFromEuler(_e.set(cr ? -1.1 : -sw * side * 0.8, yaw, (cr ? 0.35 : 0.12) * side)); _s.set(sc, sc * (cr ? 0.8 : 1), sc); M.arm.setMatrixAt(j * 2 + s, _m4.compose(_v, _q, _s)); }
-      if (fan) { _q.setFromEuler(_e.set(0, yaw, 0)); _v.set(a.x, a.y + 0.06, a.z); _s.set(1, 1, 1); FAN.setMatrixAt(j, _m4.compose(_v, _q, _s)); } else FAN.setMatrixAt(j, ZERO);
+      if (fan) { let fy = yaw; if (a.b && a.b.glT < 0) fy += (-a.b.glT / 0.6) * Math.PI * 2;   // UX-5: 봇이 두리번(0.6초 360°)하면 부채꼴도 한 바퀴 — 친구·방장 아닌 화면의 봇은 a.b가 없어 그대로
+        _q.setFromEuler(_e.set(0, fy, 0)); _v.set(a.x, a.y + 0.06, a.z); _s.set(1, 1, 1); FAN.setMatrixAt(j, _m4.compose(_v, _q, _s)); } else FAN.setMatrixAt(j, ZERO);
       const tagOn = a.kind === 'remote' && !blink && !(myRole === 'hunt' && a.role === 'run');   // 술래 화면엔 도망자 이름표 없음(가구 뒤에서 이름표만 둥둥 떠 들키지 않게)
       if (tagOn) { const tg = tagFor(j, a.name, a.role === 'run'); tg.visible = true; tg.position.set(a.x, a.y + (cr ? 0.95 : 1.78) * sc, a.z); } else if (TAGS[j]) TAGS[j].visible = false;
     }
@@ -652,17 +781,24 @@ export default async function start(map, params = {}) {
   // ---------- 판 결과 ----------
   function roundResult() {
     const rs = ACT.filter(a => a.role === 'run'), lines = [];
-    for (const a of rs) { const s = a.alive ? cfg.seek : a.caughtT, nm = a.kind === 'me' ? '나' : a.kind === 'bot' ? '🤖 도망 로봇' : a.name;
+    // UX-8: 잡은 사람을 밝힘 — 내가 잡았으면 '🎯 내가 … 잡았어요!'(예전 = 💥 실패 표시라 내 잡기인지 몰랐음)
+    for (const a of rs) { const s = a.alive ? cfg.seek : a.caughtT, nm = a.kind === 'me' ? '나' : a.kind === 'bot' ? '🤖 도망 로봇' : a.name, c = a.alive ? null : ACT[a.by];
       if (a.kind !== 'bot') led(a.kind === 'me' ? myName() : a.name).run.push(Math.round(s));
-      lines.push((a.alive ? '🎉 ' + nm + ' 끝까지 도망!' : '💥 ' + nm + ' 잡힘 — ' + Math.round(s) + '초')); }
+      lines.push(a.alive ? '🎉 ' + nm + ' 끝까지 도망!' : a.kind === 'me' ? '💥 나 잡힘 — ' + Math.round(s) + '초' : c && c.kind === 'me' ? '🎯 내가 ' + nm + jo(nm, '을', '를') + ' 잡았어요! (' + Math.round(s) + '초)' : '👀 ' + nm + ' 잡힘 — ' + Math.round(s) + '초' + (c ? ' (' + c.name + ')' : '')); }
     for (const a of ACT) if (a.role === 'hunt' && a.cts && a.kind !== 'bot') led(a.kind === 'me' ? myName() : a.name).ct += a.cts;
     // 판 결과 = 도망자 한 명씩: 산 수 > 잡힌 수 = 도망자 승 · 잡힌 수 > 산 수 = 술래 승 · 같으면(2명 중 1:1) 비김 — 2 vs 5 시뮬레이션: 술래 싹쓸이 20% · 도망자 둘 다 17% · 1:1 64%
     const live = rs.filter(a => a.alive).length, cau = rs.length - live, side = live > cau ? 'r' : cau > live ? 'h' : 'd', runWin = side === 'r', me = ACT[ME];
-    res = { runWin, side, lines };
-    const head = side === 'd' ? '🤝 비겼어요 — ' + live + ' : ' + cau : me ? (me.role === 'run' ? (me.alive ? '🎉 끝까지 숨었어요!' : '💥 다음엔 꼭!') : (runWin ? '😮 도망자가 이겼어요' : '🎉 술래 승리!')) : (runWin ? '🏃 도망자 승리' : '👀 술래 승리');
-    card('<div style="font-size:1.3em">' + head + '</div>' + lines.map(esc).join('<br>'), cfg.end);
+    const iCaught = !!me && me.role === 'hunt' && rs.some(a => !a.alive && a.by === ME);
+    const head = side === 'd' ? '🤝 비겼어요 — ' + live + ' : ' + cau + (iCaught ? ' · 🎯 내가 잡았어요!' : '') : iCaught ? '🎯 내가 잡았어요!' : me ? (me.role === 'run' ? (me.alive ? '🎉 끝까지 숨었어요!' : '💥 다음엔 꼭!') : (runWin ? '😮 도망자가 이겼어요' : '🎉 술래 승리!')) : (runWin ? '🏃 도망자 승리' : '👀 술래 승리');
+    // UX-3: 잡힌 까닭·진 술래에게 한 줄 도움말(결과 카드 · 혼자 끝 메뉴)
+    let tip = '';
+    if (me && me.role === 'run' && !me.alive) { const h = me.how || {}; tip = me.caughtT <= 3 ? '💡 숨는 ' + cfg.hide + '초 동안 출발점에서 30m 넘게 멀리 달아나요' : h.crouch ? '💡 술래가 다가오면 🙇 일어나서 달아나요' : h.tired ? '💡 🏃 힘(초록 막대)은 술래가 가까울 때만 써요' : h.ping ? '💡 반짝(✨) 뒤엔 바로 자리를 옮겨요' : '💡 문이 두 개인 방에 숨으면 빙 돌아 달아날 수 있어요'; }
+    else if (me && me.role === 'hunt' && runWin) tip = '💡 🔥가 뜨면 그 둘레의 문 뒤·가구 뒤를 살펴요 · 마지막 ' + cfg.pingLast + '초엔 노란 동그라미로!';
+    res = { runWin, side, lines, head, tip };
+    if (document.body.classList.contains('small')) map.hud.toast('', 0.001);   // UX-16: 휴대폰은 알림 줄(위 86px)과 결과 카드가 같은 자리 → 남은 알림을 지움
+    card('<div style="font-size:1.3em">' + head + '</div>' + lines.map(esc).join('<br>') + (tip ? '<div style="margin-top:6px;color:#ffd23c;font-size:.88em">' + esc(tip) + '</div>' : ''), cfg.end);
     if (me && me.role === 'run' && me.alive) { map.tone(523, 0, 0.15, 'sine', 0.1); map.tone(659, 0.15, 0.15, 'sine', 0.1); map.tone(784, 0.3, 0.3, 'sine', 0.1); }
-    map.player.freeze(true); map.player.invisible(false); map.player.speed(1); clearRoute(); chip('hs-hot', null);
+    map.player.freeze(true); map.player.invisible(false); map.player.speed(1); clearRoute(); chip('hs-hot', null); btn.style.display = 'none'; cbtn.style.display = 'none'; stamEl.style.display = 'none'; stamK = 'off';   // UX-15: 끝나면 👻·🙇 단추도 숨김
     if (!NETM) { const k = me && me.role === 'run' ? 'bestHide' : 'bestSeek';
       if (me && me.role === 'run') { const s = me.alive ? cfg.seek : me.caughtT, b = map.store.get(k, 0); if (s > b) map.store.set(k, Math.round(s)); }
       else if (!runWin) { const s = Math.max(...rs.map(a => a.caughtT || 0)), b = map.store.get(k, null); if (b == null || s < b) map.store.set(k, Math.round(s)); } }
@@ -672,8 +808,9 @@ export default async function start(map, params = {}) {
   // ---------- 혼자(봇) ----------
   async function soloAsk() {
     let role = params.role === 'run' || params.role === 'hunt' ? params.role : null;
-    if (!role) { const i = await map.hud.ask('🫣 숨바꼭질 대작전 — 혼자 연습\n한 판 ' + (cfg.hide + cfg.seek) + '초 · 친구와 하려면 🎮 → 대결 → 숨바꼭질(친구와)', ['🏃 도망자 — 하늘에서 보며 술래 로봇 넷을 ' + cfg.seek + '초 피하기', '👀 술래 — 로봇 셋과 함께 도망 로봇 잡기']);
+    if (!role) { const i = await map.hud.ask('🙈 숨바꼭질 대작전 — 혼자 연습\n숨기 ' + cfg.hide + '초 + 찾기 ' + cfg.seek + '초 · 친구와 하려면 함께하기 방에서 선생님이 숨바꼭질을 골라 줘요', ['🏃 도망자 — 하늘에서 보며 술래 로봇 넷을 ' + cfg.seek + '초 피하기', '👀 술래 — 로봇 셋과 함께 도망 로봇 잡기']);   // UX-12·13: ROOM-1 뒤 메뉴엔 '(친구와)' 카드가 없음 · 윈도 10에서 깨지던 그림(유니코드 14) → 🙈
       if (i < 0 || dead) return; role = i === 1 ? 'hunt' : 'run'; }
+    await howTo(role, true); if (dead) return;   // UX-1: 처음 맡는 역할 = 하는 법 창(▶ 시작을 누른 뒤에 준비 3초가 감)
     soloRound(role);
   }
   function soloRound(role) {
@@ -684,12 +821,19 @@ export default async function start(map, params = {}) {
   }
   async function soloEnd() {
     const me = ACT[ME], role = me ? me.role : 'run';
-    const i = await map.hud.ask((res && res.lines.join('\n')) || '끝', ['🔄 다시 하기', role === 'run' ? '👀 술래 해 보기' : '🏃 도망자 해 보기', '🏠 그만하기']);
-    if (dead) return; if (i === 0) soloRound(role); else if (i === 1) soloRound(role === 'run' ? 'hunt' : 'run'); else map.quit();
+    const bs = map.store.get('bestSeek', null), best = role === 'run' ? '🏆 최고 기록: ' + map.store.get('bestHide', 0) + '초 버팀' : bs != null ? '🏆 가장 빨리 잡은 기록: ' + bs + '초' : '';   // UX-8: 머리말 · 판 줄 · 도움말 · 내 기록
+    const i = await map.hud.ask(res ? [res.head, ...res.lines, res.tip, best].filter(Boolean).join('\n') : '끝', ['🔄 다시 하기', role === 'run' ? '👀 술래 해 보기' : '🏃 도망자 해 보기', '🏠 그만하기']);
+    if (dead) return; if (i === 0) soloRound(role); else if (i === 1) { const r2 = role === 'run' ? 'hunt' : 'run'; if (!seenHow.has(r2)) { await howTo(r2, true); if (dead) return; } soloRound(r2); } else map.quit();
   }
+  // UX-10: Esc(하늘에서 보기)·🚶 단추 = 그만할까요? — 혼자면 고르는 동안 멈춤(tick) · 끝 메뉴·결과 중엔 안 겹침 · 친구 대결 중 도망자는 경기가 멈추지 않으니 알림만
+  function refreeze() { const me = ACT[ME]; if (!R || !me || dead) return; map.player.freeze(!(me.alive && (phase === 'seek' || (phase === 'hide' && me.role === 'run')))); }   // 고르는 창이 닫힐 때 '연 때의 얼림'으로 돌아가므로 지금 단계에 맞게 다시
   async function askQuit() {
-    const i = await map.hud.ask('숨바꼭질을 그만할까요?', ['▶ 계속하기', '🏠 그만하기']);
-    if (i === 1) map.quit();
+    if (howEl && !howWait) { howClose(); return; }   // 친구 대결 하는 법 창 = Esc로 닫기
+    if (quitOpen || howEl || phase === 'res' || matchEnd || document.querySelector('.hudAsk')) return;
+    const me = ACT[ME];
+    if (NETM && me && me.alive && (phase === 'count' || phase === 'hide' || phase === 'seek')) { map.hud.toast('🚪 그만하려면 ⏹ 그만하기를 눌러요 — 경기는 계속돼요', 2.5); return; }
+    quitOpen = true; const i = await map.hud.ask('숨바꼭질을 그만할까요?' + (NETM ? '' : '\n(고르는 동안 멈춰 있어요)'), ['▶ 계속하기', '🏠 그만하기']); quitOpen = false;
+    if (i === 1) map.quit(); else refreeze();
   }
 
   // =====================================================================================
@@ -758,7 +902,7 @@ export default async function start(map, params = {}) {
     const S = D.s || {}, now = performance.now();
     for (const id in S) if (S[id] !== NM.seenAt[id + '#']) { NM.seenAt[id + '#'] = S[id]; NM.seenAt[id] = now; }
     if (m.st === 'play' && m.seq !== NM.seq) roundFromNet(m);
-    if (m.st !== NM.st) { const was = NM.st; NM.st = m.st; if (m.st === 'lobby') { if (R) { R = null; endRoundUI(); if (map.top.on) map.top.exit(); btn.style.display = 'none'; map.hud.goal(null); for (const k of ['hs-time', 'hs-hot', 'hs-role', 'hs-net']) map.hud.chip(k, null); chipK = {}; } lobbyShow(); } else if (m.st === 'end' && was === 'play') finalBoard(); else if (m.st === 'play') lobbyHide(); }
+    if (m.st !== NM.st) { const was = NM.st; NM.st = m.st; if (m.st === 'lobby') { if (R) { R = null; endRoundUI(); if (map.top.on) map.top.exit(); btn.style.display = 'none'; map.hud.goal(null); coachK = ''; howClose(); for (const k of ['hs-time', 'hs-hot', 'hs-role', 'hs-net']) map.hud.chip(k, null); chipK = {}; } lobbyShow(); } else if (m.st === 'end' && was === 'play') finalBoard(); else if (m.st === 'play') lobbyHide(); }
     if (R) { for (const a of ACT) if (a.kind === 'remote') { const v = S[a.pid]; if (v) netSet(a, v); }
       if (!NM.host && D.b) for (const a of ACT) if (a.kind === 'bot') { const v = D.b[a.i]; if (v) netSet(a, v); } }
     const E = D.ev || {};
@@ -874,24 +1018,26 @@ export default async function start(map, params = {}) {
       for (const t of ['keydown', 'keyup']) NM.ui.addEventListener(t, e => e.stopPropagation());
       NM.ui.addEventListener('click', lobbyClick); document.body.appendChild(NM.ui); document.exitPointerLock?.(); }
     const D = NM.D, m = D.m, P = D.p || {};
-    if (!m || !isHS(m)) { NM.ui.innerHTML = '<b>🫣 숨바꼭질 대작전 — 친구와</b><div style="margin-top:6px">' + (msg || '불러오는 중…') + '</div>'; return; }
+    if (!m || !isHS(m)) { NM.ui.innerHTML = '<b>🙈 숨바꼭질 대작전 — 친구와</b><div style="margin-top:6px">' + (msg || '불러오는 중…') + '</div>'; return; }
     const bt = (a, t, on, x = '') => '<button data-w="' + a + '" style="font:inherit;font-weight:800;border:0;border-radius:9px;padding:6px 11px;cursor:pointer;' + (on ? 'background:#1d3557;color:#fff' : 'background:#e8edf3;color:#1d3557') + x + '">' + t + '</button>';
     const ids = Object.keys(P).filter(id => P[id]).sort((a, b) => (P[a].on || 0) - (P[b].on || 0)), hostN = NM.host ? '나' : P[m.host] ? esc(P[m.host].n) : '방장';
     const rc = ids.length >= 6 ? 2 : 1, rounds = Math.ceil(ids.length / rc);
-    let h = '<div style="font-weight:900;font-size:18px">🫣 숨바꼭질 대작전 — 친구와</div>'
+    let h = '<div style="font-weight:900;font-size:18px">🙈 숨바꼭질 대작전 — 친구와</div>'
       + '<div style="margin-top:6px;font-size:13px;color:#4a5b70">🏃 도망자 ' + rc + '명 = 하늘에서 봐요(지도) · 👀 술래 = 3인칭 · 빈자리는 술래 봇<br>한 판 ' + (cfg.hide + cfg.seek) + '초(숨기 ' + cfg.hide + ' + 찾기 ' + cfg.seek + ') · 모두 한 번씩 도망자(' + rounds + '판' + (rc > 1 && ids.length % 2 ? ' · 마지막 판은 1명 + 👥 인원 보정' : '') + ')' + (ids.length > 8 ? ' · 8명까지(나머지는 구경하다 차례에 들어와요)' : '') + ' · 잡은 사람이 다음 도망자</div>'
+      + '<div style="display:flex;gap:6px;margin-top:8px;font-size:13px;line-height:1.4"><div style="flex:1;padding:6px 8px;border-radius:9px;background:#eef4ff"><b>🏃 도망자일 때</b><br>하늘에서 봐요 · 처음 ' + cfg.hide + '초 멀리 · 🙇 가구 뒤 · 👻 투명</div>'   // UX-17: 두 역할 한눈에(판마다 바뀜)
+      + '<div style="flex:1;padding:6px 8px;border-radius:9px;background:#eef4ff"><b>👀 술래일 때</b><br>🔵 파란 조끼 로봇에 닿기 · 🔥 가까이 · 📢 친구가 본 곳</div></div>'
       + '<div style="margin-top:8px;padding:7px 9px;border-radius:9px;background:#eef4ff">👥 ' + ids.map(id => (id === NM.pid ? '<b>⭐ ' + esc(NM.name) + '(나)</b>' : esc(P[id].n)) + net1(id)).join(' · ') + '</div>'
       + (ids.some(id => netMs(id) >= 450) ? '<div style="margin-top:4px;font-size:12px;color:#b4232c">🔴 인터넷이 느린 친구가 있어요 — 친구 몸이 끊겨 보이거나 잡기가 늦을 수 있어요(와이파이 가까이 · 다른 탭 닫기)</div>' : '');
     const fb = NM.lastBoard; if (fb) h += '<div style="margin-top:8px;padding:7px 9px;border-radius:9px;background:#fff3bf;font-size:14px">' + fb + '</div>';
     if (m.st === 'play') h += '<div style="margin-top:8px;font-weight:800">⏳ 경기 중이에요 — 다음 판부터 같이 해요</div>';
     else if (NM.host) h += '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px">' + bt('start', '▶ 시작!', true, ';font-size:17px;padding:8px 18px') + '</div>';
-    else h += '<div style="margin-top:10px">방장 ⭐' + hostN + '이(가) ▶ 시작을 누르면 모두 같이 시작해요</div>';
+    else h += '<div style="margin-top:10px">방장 ⭐' + hostN + '이(가) ▶ 시작을 누르면(또는 선생님 ▶ 모두 시작) 모두 같이 시작해요</div>';   // UX-17: ROOM-1 선생님 시작도
     h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><span style="font-size:12px;color:#5a6b80">방 ' + esc(NM.room.slice(1)) + '</span>' + bt('leave', '🚪 나가기') + '</div>';
     if (NM.ui.dataset.h !== h) { NM.ui.dataset.h = h; NM.ui.innerHTML = h; }
   }
-  // 📶 왕복 시간(각자 재서 상태 8번째 칸으로 보냄): 🟢 < 250ms · 🟡 < 450 · 🔴 그 이상
+  // 📶 왕복 시간(각자 재서 상태 8번째 칸으로 보냄): 초록 점 < 250ms · 노랑 < 450 · 빨강 그 이상(UX-13: 색 동그라미 그림 글자는 윈도 10에서 깨짐 → CSS 점)
   function netMs(id) { const v = (NM.D.s || {})[id]; return id === NM.pid ? NM.lag || 0 : v && v[7] || 0; }
-  function net1(id) { const ms = netMs(id); return ms ? ' <span style="font-size:11px;color:#5a6b80" title="왕복 ' + ms + 'ms">' + (ms < 250 ? '🟢' : ms < 450 ? '🟡' : '🔴') + '</span>' : ''; }
+  function net1(id) { const ms = netMs(id); return ms ? ' <span title="왕복 ' + ms + 'ms" style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:1px;background:' + (ms < 250 ? '#2f9e44' : ms < 450 ? '#f2b84c' : '#e03131') + '"></span>' : ''; }
   async function lobbyClick(e) {
     e.stopPropagation(); const b = e.target.closest('[data-w]'); if (!b || !NM.on) return; const w = b.dataset.w;
     try { if (w === 'start' && NM.host) await hostStart(); else if (w === 'leave') map.quit(); }
@@ -899,7 +1045,7 @@ export default async function start(map, params = {}) {
   }
   function finalBoard() {
     if (R) { R = null; endRoundUI(); }
-    if (map.top.on) map.top.exit(); btn.style.display = 'none'; map.hud.goal(null); for (const k of ['hs-time', 'hs-hot', 'hs-role', 'hs-net']) map.hud.chip(k, null); chipK = {};
+    if (map.top.on) map.top.exit(); btn.style.display = 'none'; map.hud.goal(null); coachK = ''; howClose(); for (const k of ['hs-time', 'hs-hot', 'hs-role', 'hs-net']) map.hud.chip(k, null); chipK = {};
     const L = [...LED.entries()], best = L.filter(([, v]) => v.run.length).sort((a, b) => Math.max(...b[1].run) - Math.max(...a[1].run))[0], ct = L.filter(([, v]) => v.ct).sort((a, b) => b[1].ct - a[1].ct)[0];
     NM.lastBoard = '🏁 지난 경기 — 🏆 도망왕 ' + (best ? esc(best[0]) + ' ' + Math.max(...best[1].run) + '초' : '-') + ' · 👀 술래왕 ' + (ct ? esc(ct[0]) + ' ' + ct[1].ct + '번' : '-')
       + '<br><span style="font-size:13px">' + L.map(([n, v]) => esc(n) + ' ' + (v.run.length ? '🏃' + v.run.join('·') + '초' : '') + (v.ct ? ' 👀' + v.ct : '')).join(' / ') + '</span>';
@@ -912,7 +1058,7 @@ export default async function start(map, params = {}) {
   if (NETM) netEnter(); else soloAsk();
   return {
     tick,
-    stop() { dead = true; removeEventListener('keydown', keyF); clearRoute(); btn.remove(); cbtn.remove(); stamEl.remove(); blindOn(false); if (cardEl) { cardEl.remove(); cardEl = null; } clearTimeout(cardT); map.player.invisible(false); map.player.speed(1); netLeave(); for (const t of TAGS) if (t) { t.material.map && t.material.map.dispose(); t.material.dispose(); }
+    stop() { dead = true; removeEventListener('keydown', keyF); howClose(); clearRoute(); btn.remove(); cbtn.remove(); stamEl.remove(); flashEl.remove(); arwEl.remove(); css.remove(); clearTimeout(flashT); clearTimeout(callMkT); fanTex.dispose(); blindOn(false); if (cardEl) { cardEl.remove(); cardEl = null; } clearTimeout(cardT); map.player.invisible(false); map.player.speed(1); netLeave(); for (const t of TAGS) if (t) { t.material.map && t.material.map.dispose(); t.material.dispose(); }
       for (const g of GEOS) g.dispose(); for (const m of MATS) m.dispose(); },
     get state() { return R ? { phase, t: W && W.t, lvl: R.lvl, base: R.base, eff: R.eff, round: R.round, me: ME, host: NETM ? NM.host : true, actors: ACT.map(a => ({ i: a.i, kind: a.kind, name: a.name, role: a.role, alive: a.alive, x: +a.x.toFixed(1), z: +a.z.toFixed(1), inv: +a.inv.toFixed(1), star: +a.star.toFixed(1), caughtT: a.caughtT })), star: starD, res } : { phase: 'lobby', host: NM.host }; },
     get net() { return { on: NM.on, host: NM.host, room: NM.room, seq: NM.seq, lvl: NM.lvl, lag: NM.lag, st: NM.st }; },

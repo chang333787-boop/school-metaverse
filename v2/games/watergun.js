@@ -811,7 +811,7 @@ export default async function start(map, params = {}) {
       const t1 = Date.now(), r = await nreq('/p/' + NM.pid, 'PUT', { n: NM.name, tm: n[0] <= n[1] ? 0 : 1, on: { '.sv': 'timestamp' } }), t2 = Date.now();
       NM.off = r.on - (t1 + t2) / 2; NM.rtt = t2 - t1;
       const m = D0.m, live = m && P[m.host] && Object.keys(P).length;
-      if (live && /^(hs|rb|gd)/.test(m.arena || '')) { map.hud.toast((/^rb/.test(m.arena || '') ? '🤖 지금 이 방은 로봇인 척 중이에요' : /^gd/.test(m.arena || '') ? '🧭 지금 이 방은 길잡이 중이에요' : '🫣 지금 이 방은 숨바꼭질 대작전 중이에요') + ' — 끝나면 다시 와요', 4); NM.on = false; if (N && N.hide) N.hide(false); return menu(false); }   // HS-2: 같은 방 경기 자리(match/c<번호>)를 숨바꼭질과 같이 씀
+      if (live && /^(hs|rb|gd)/.test(m.arena || '')) { map.hud.toast((/^rb/.test(m.arena || '') ? '🤖 지금 이 방은 로봇인 척 중이에요' : /^gd/.test(m.arena || '') ? '🧭 지금 이 방은 길잡이 중이에요' : '🙈 지금 이 방은 숨바꼭질 대작전 중이에요') + ' — 끝나면 다시 와요', 4); NM.on = false; if (N && N.hide) N.hide(false); return menu(false); }   // HS-2: 같은 방 경기 자리(match/c<번호>)를 숨바꼭질과 같이 씀
       if (!live) { const sq = ((m && m.seq) || 0) + 1; await nreq('/m', 'PUT', { st: 'lobby', host: NM.pid, arena: (m && m.arena) || 'field', time: (m && m.time) || 180, goal: (m && m.goal) || T_GOAL, seq: sq, t0: 0 }); ctlMatch(sq, 'lobby'); }
       else if (m.st === 'end' || (m.st !== 'lobby' && sNow() > m.t0 + m.time * 1000 + 15000)) { /* 끝난 경기 — 대기실로 보이게만 */ }
     } catch (e) { map.hud.toast('😥 친구 대결에 들어가지 못했어요 — 인터넷·방을 확인해 주세요', 4); NM.on = false; if (N && N.hide) N.hide(false); return menu(false); }
@@ -1020,9 +1020,10 @@ export default async function start(map, params = {}) {
       const rec = map.store.get('team', null), inRoom = !!MPX();
       const i = await map.hud.ask('💦 물총 놀이\n무엇을 할까요?', ['🎯 혼자 연습 — 과녁 맞히기(3분)' + (best != null ? '  (최고 ' + best + '점)' : ''),
         '🔵⚪ 봇과 팀 대결 — 운동장(골대 앞 진지)', '🔵⚪ 봇과 팀 대결 — 컨테이너 경기장' + (rec && rec.games ? '  (' + rec.wins + '승/' + rec.games + '판)' : ''),
-        inRoom ? '👥 친구와 팀 대결 — 같은 방 친구들과(빈자리는 봇)' : '👥 친구와 팀 대결 — 먼저 왼쪽 위 👥 함께하기로 방에 들어가요', '그만하기']);
+        '👥 친구와 팀 대결 — 선생님이 👥 창에서 고르면 같이 해요', '그만하기']);   // ROOM-1(UX-1 10-05): 친구 대결은 방 놀이(선생님이 고름) — 여기서는 열지 않고 들어가기만
       if (dead || map.gone || i < 0) return; if (i === 4) { map.quit(); return; }
-      if (i === 3) { if (!inRoom) { map.hud.toast('👥 왼쪽 위 「함께하기」를 눌러 선생님이 연 방에 먼저 들어가요', 4); return menu(false); } m = 'net'; }
+      if (i === 3) { const MP9 = window.SM_MP; if (inRoom && MP9 && MP9.roomGame && MP9.roomGame() === 'watergun_vs' && MP9.joinGame) { MP9.joinGame(); return; }
+        map.hud.toast(inRoom ? '👥 선생님이 👥 창에서 💦 물총 팀 대결을 고르면 다 같이 들어가요' : '👥 왼쪽 위 「함께하기」로 선생님이 연 방에 먼저 들어가요', 4); return menu(false); }
       else { m = i === 0 ? 'solo' : 'team'; ak = i === 2 ? 'box' : 'field'; }
     }
     if (m === 'net') { for (let k = 0; k < 30 && !MPX() && !dead; k++) await new Promise((r) => setTimeout(r, 200));   // ?mode=net — 방(lobby.js)이 다시 들어가는 동안 잠깐 기다림

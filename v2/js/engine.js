@@ -160,7 +160,7 @@ export function createEngine(H) {
       if (!st) { console.warn('[engine] hide.add: 앞에 설 칸이 없음', o); return { spot: null, remove() {} }; }
       const EYE = { desk: 0.55, bush: 0.7, slide: 0.6, tree: 0.9 };   // 틈새 눈 높이: 웅크려 들어가는 곳은 낮게 · 서서 들어가는 곳(사물함·청소함·커튼)은 1.25(앞 책상 너머로 보이게)
       const s = { x: o.x, y, z: o.z, face, w, label: o.label || '숨는 자리', kind: o.kind || 'spot', eye: o.eye ?? EYE[o.kind] ?? 1.25, fov: o.fov ?? 40, stand: st, seenEnter: false, enterT: 0, id: HIDES.length + 1 };
-      const lab = '🫣 숨기' + (o.label ? ' · ' + o.label : '');
+      const lab = '🙈 숨기' + (o.label ? ' · ' + o.label : '');
       const ih = interactAdd({ x: st.x, y: st.y, z: st.z, r: o.r ?? 1.1, label: lab, use: () => { if (hidden === s) hide.exit(); else if (!hidden) hide.enter(s); } });
       s.hot = ih.hot; s.lab = lab; HIDES.push(s);
       const hnd = own({ spot: s, remove() { if (hidden === s) hide.exit(); ih.remove(); const i = HIDES.indexOf(s); if (i >= 0) HIDES.splice(i, 1); disown(hnd); } });

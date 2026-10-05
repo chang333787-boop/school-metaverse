@@ -20,7 +20,7 @@
 /* ---------- 휴대폰: 왼쪽 위 ---------- */
 body.small .chip{font-size:clamp(12px,3.8vh,14px);padding:5px 10px;border-radius:8px}
 body.small #loc{left:calc(8px + env(safe-area-inset-left));top:calc(6px + env(safe-area-inset-top));max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-body.small #mpChip{left:calc(8px + env(safe-area-inset-left));top:calc(84px + env(safe-area-inset-top));font-size:11px!important;padding:4px 9px!important}
+body.small #mpChip{left:calc(8px + env(safe-area-inset-left));top:calc(84px + env(safe-area-inset-top));font-size:12px!important;padding:4px 10px!important;line-height:36px;min-height:44px;box-sizing:border-box;max-width:calc(50vw - 16px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}   /* UX-1(10-05): 44px 누름 칸 · 12px · 긴 방 이름은 말줄임 */
 body.small .lbl{display:none}
 body.touch.small #timeChip,body.touch.small #gpick{top:calc(38px + env(safe-area-inset-top));min-height:44px;min-width:44px;justify-content:center;padding:4px 8px!important;font-size:20px!important}
 body.touch.small #timeChip{left:calc(8px + env(safe-area-inset-left))}
@@ -164,7 +164,7 @@ body.touch.h-story-end .tbtn,body.touch.h-story-end #tJoyHint,body.touch.h-story
 body.touch.h-wg-lobby .tbtn,body.touch.h-wg-lobby #tJoyHint,body.touch.h-wg-lobby #hint,
 body.touch.h-lb-pop .tbtn,body.touch.h-lb-pop #tJoyHint,
 body.touch.h-memo-board .tbtn,body.touch.h-memo-board #tJoyHint,body.touch.h-memo-form .tbtn,body.touch.h-memo-form #tJoyHint,body.touch.h-memo-pick .tbtn,body.touch.h-memo-pick #tJoyHint{visibility:hidden}
-body.small #mpEmo{top:calc(118px + env(safe-area-inset-top))!important;left:calc(8px + env(safe-area-inset-left))!important}
+body.small #mpEmo{top:calc(134px + env(safe-area-inset-top))!important;left:calc(8px + env(safe-area-inset-left))!important;min-width:44px;min-height:44px;box-sizing:border-box;justify-content:center}
 body.small #mpInvite{top:calc(8px + env(safe-area-inset-top))!important;font-size:13px!important}
 @media (max-height:500px){ .wg-lobby{padding:10px 12px!important;font-size:13px!important;max-height:94vh!important} }
 

@@ -13,8 +13,9 @@ const cx = c => X0 + c * CELL + CELL / 2, cz = r => Z0 + r * CELL + CELL / 2;
 const cellOf = (x, z) => [Math.floor((x - X0) / CELL), Math.floor((z - Z0) / CELL)];
 const inGrid = (c, r) => c >= 0 && c < COLS && r >= 0 && r < ROWS;
 export const DIRS = [{ t: '북', a: '⬆', dc: 0, dr: -1 }, { t: '동', a: '➡', dc: 1, dr: 0 }, { t: '남', a: '⬇', dc: 0, dr: 1 }, { t: '서', a: '⬅', dc: -1, dr: 0 }];
-const PHR = { 90: '✋ 멈춰!', 91: '👍 잘했어!', 92: '⚠ 함정 조심!', 93: '🎯 거의 다 왔어!' };
+const PHR = { 90: '✋ 멈춰!', 91: '👍 잘했어!', 92: '⚠ 함정 조심!', 93: '🎯 거의 다 왔어! 칸 가운데로 가요' };   // 93 = 길잡이 봇만(보물 칸 가장자리에 선 탐험가 — UX-1 GD-3)
 export const msgText = n => (n >= 90 ? PHR[n] || '' : DIRS[Math.floor(n / 10)].t + '쪽으로 ' + (n % 10) + '칸(' + (n % 10) * CELL + 'm)!');
+const jong = n => { const c = n.charCodeAt(n.length - 1) - 0xAC00; return c >= 0 && c < 11172 && c % 28 > 0; }, iga = n => n + (jong(n) ? '이' : '가');   // 받침 조사(UX-1 GD-16 · '학교이(가)' → '학교가')
 
 // ---------- 지도 마을(고정) — 칸 [열 c(서→동 0~11), 줄 r(북→남 0~5)] ----------
 export const LM = [
@@ -33,6 +34,8 @@ export const START = [3, 5];
 const KEY = (c, r) => c + ',' + r;
 const BLOCK = new Map(), BRIDGE = new Set();
 for (const L of LM) for (const [c, r] of L.cells) { if (L.block) BLOCK.set(KEY(c, r), L); if (L.k === 'bridge') BRIDGE.add(KEY(c, r)); }
+const BLKA = new Uint8Array(COLS * ROWS); for (const L of LM) if (L.block) for (const [c, r] of L.cells) BLKA[r * COLS + c] = 1;   // 매 프레임용(문자열 없이) — 길잡이 3D 화면 비켜 세우기
+const blkAt = (x, z) => { const c = Math.floor((x - X0) / CELL), r = Math.floor((z - Z0) / CELL); return c >= 0 && c < COLS && r >= 0 && r < ROWS && BLKA[r * COLS + c] === 1; };
 
 export function mulberry32(a) { a >>>= 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 // 길(칸 BFS · 4방향 · 막힌 칸·함정 피함) — from/to = [c, r] → [[c, r]...](처음 칸 빼고) | null
@@ -186,20 +189,38 @@ export default async function start(map, params = {}) {
 .gd-panel{position:fixed;left:calc(10px + env(safe-area-inset-left));top:calc(58px + env(safe-area-inset-top));z-index:24;width:min(64vw,940px);box-sizing:border-box;padding:8px 10px 10px;border-radius:14px;background:#fbf6e6;color:#2b2b2b;border:3px solid #7a5c2e;box-shadow:0 8px 24px rgba(0,0,0,.3);font:700 14px/1.35 system-ui,-apple-system,"Malgun Gothic",sans-serif;display:none}
 .gd-panel.on{display:block}
 .gd-panel .hd{display:flex;gap:8px;align-items:center;justify-content:space-between;font-weight:900;margin-bottom:4px}
+.gd-panel .hd .bot{flex:1;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#1d3557;border-radius:8px;padding:0 6px}
+.gd-panel .hd .bot.fl{animation:gdfl 1s}
+@keyframes gdfl{0%,60%{background:#ffd23c}100%{background:transparent}}
 .gd-panel canvas{display:block;width:100%;height:auto;border-radius:8px;touch-action:none}
 .gd-panel .lg{display:flex;flex-wrap:wrap;gap:4px 10px;margin:6px 0 2px;font-size:12px;font-weight:700;color:#4a3a1e}
 .gd-panel .lg span{display:inline-flex;align-items:center;gap:3px}
 .gd-panel .lg canvas{width:22px;height:22px;display:inline-block}
 .gd-panel .ct{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
 .gd-panel .ct .g{display:flex;gap:4px;align-items:center}
+.gd-panel .ct .xg{display:none}
 .gd-panel button{font:inherit;font-weight:800;border:0;border-radius:10px;padding:8px 10px;min-height:44px;min-width:44px;background:#ece3c8;color:#3b2f17;cursor:pointer}
 .gd-panel button.on{background:#1d3557;color:#fff}
 .gd-panel button.ph{background:#e6eef8;color:#1d3557;font-size:13px}
+.gd-panel button.q{background:#f3e3e3;color:#7a1f1f}
+@media (hover:hover){.gd-panel button:hover{filter:brightness(.94);box-shadow:inset 0 0 0 2px #7a5c2e}}
+.gd-panel button:active{transform:translateY(1px)}
+.gd-panel.pick:not(.wait) [data-k]{background:#fff3bf;animation:gdp 1s infinite}
+@keyframes gdp{50%{box-shadow:0 0 0 3px #f2b705}}
+.gd-panel.wait [data-k],.gd-panel.wait [data-p],.gd-panel.done [data-d],.gd-panel.done [data-k],.gd-panel.done [data-p]{opacity:.45}
 .gd-panel .said{margin-top:4px;font-size:12px;color:#6b5a35;min-height:16px}
+.hudAsk{z-index:46}
+body.gd-guide #toast,body.gd-guide #hudBan{z-index:26}
+body.gd-exp #toast{top:calc(176px + env(safe-area-inset-top))!important;z-index:25}
+body.gd-exp.touch.small #toast{top:calc(136px + env(safe-area-inset-top))!important}
 .gd-cmp{position:fixed;left:50%;top:calc(52px + env(safe-area-inset-top));transform:translateX(-50%);z-index:23;width:min(380px,80vw);height:30px;overflow:hidden;border-radius:10px;background:rgba(18,28,48,.82);border:2px solid rgba(255,255,255,.85);display:none;pointer-events:none}
 .gd-cmp i{position:absolute;top:0;width:2px;height:10px;background:rgba(255,255,255,.55)}
 .gd-cmp b{position:absolute;top:5px;transform:translateX(-50%);font:900 15px/1 system-ui,-apple-system,"Malgun Gothic",sans-serif;color:#fff}
 .gd-cmp b.n{color:#ff6b6b}
+.gd-cmp b.t{color:#1d3557;background:#ffd23c;border-radius:6px;padding:1px 5px;top:4px}
+.gd-cmp em{position:absolute;top:4px;font:900 13px/20px system-ui,-apple-system,"Malgun Gothic",sans-serif;font-style:normal;color:#1d3557;background:#ffd23c;border-radius:8px;padding:0 6px;display:none;white-space:nowrap}
+.gd-cmp em.l{left:4px}
+.gd-cmp em.r{right:4px}
 .gd-cmp u{position:absolute;left:50%;bottom:0;transform:translateX(-50%);border:7px solid transparent;border-bottom-color:#ffd23c;text-decoration:none}
 .gd-say{position:fixed;left:50%;top:calc(92px + env(safe-area-inset-top));transform:translateX(-50%);z-index:23;max-width:min(560px,92vw);padding:10px 18px;border-radius:14px;background:rgba(29,53,87,.92);color:#fff;font:900 clamp(18px,3.4vw,28px)/1.3 system-ui,-apple-system,"Malgun Gothic",sans-serif;text-align:center;display:none;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.3)}
 .gd-say small{display:block;font-size:13px;font-weight:700;opacity:.8}
@@ -208,23 +229,34 @@ body.small .gd-panel{left:calc(4px + env(safe-area-inset-left));right:calc(4px +
 body.small .gd-panel.on{display:grid}
 body.small .gd-panel .hd{grid-column:1 / span 2;margin:0}
 body.small .gd-panel canvas{grid-column:1;grid-row:2;height:min(calc(100vh - 84px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),calc((100vw - 250px) / 2));width:auto}
-body.small .gd-panel .ct{grid-column:2;grid-row:2;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:4px;align-content:start}
-body.small .gd-panel .ct .g{display:contents}
+body.small .gd-panel .ct{grid-column:2;grid-row:2;margin:0;display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-content:start}
+body.small .gd-panel .ct .g,body.small .gd-panel .ct .xg{display:contents}
 body.small .gd-panel .lg,body.small .gd-panel .said{display:none}
-body.small .gd-panel button{padding:4px 6px;min-height:40px;min-width:40px;font-size:13px}
+body.small .gd-panel button{padding:2px 4px;min-height:44px;min-width:0;font-size:13px;line-height:1.15;white-space:normal;word-break:keep-all}
+body.small .gd-panel [data-d="0"]{grid-area:1/5/2/9}
+body.small .gd-panel [data-d="3"]{grid-area:2/1/3/5}
+body.small .gd-panel [data-d="2"]{grid-area:2/5/3/9}
+body.small .gd-panel [data-d="1"]{grid-area:2/9/3/13}
+body.small .gd-panel [data-k]{grid-row:3;grid-column:span 3}
+body.small .gd-panel [data-p]{grid-row:4;grid-column:span 4;font-size:12px}
+body.small .gd-panel .xg button{grid-row:5;grid-column:span 6}
+body.small .gd-panel.lgon .lg{display:flex;position:absolute;left:10px;bottom:10px;width:min(560px,calc(100% - 250px));box-sizing:border-box;z-index:1;margin:0;background:rgba(255,253,246,.96);border:2px solid #7a5c2e;border-radius:10px;padding:6px 8px;font-size:12px}
+body.small .gd-panel .lg canvas{width:20px;height:20px;grid-column:auto;grid-row:auto}
 body.small .gd-cmp{top:calc(44px + env(safe-area-inset-top));height:26px}
 body.small .gd-say{top:calc(76px + env(safe-area-inset-top));font-size:16px;padding:7px 12px}
 body.small .gd-log{display:none!important}
 `; document.head.appendChild(css);
   const panel = document.createElement('div'); panel.className = 'gd-panel ttl-keep';
-  panel.innerHTML = '<div class="hd"><span class="t">🧭 길잡이 지도</span><span class="st"></span></div><canvas width="960" height="480"></canvas><div class="lg"></div>'
+  panel.innerHTML = '<div class="hd"><span class="t">🧭 길잡이 지도</span><span class="bot"></span><span class="st"></span></div><canvas width="960" height="480"></canvas><div class="lg"></div>'
     + '<div class="ct"><div class="g dir">' + DIRS.map((D, i) => '<button data-d="' + i + '">' + D.a + ' ' + D.t + '</button>').join('') + '</div><div class="g">' + [1, 2, 3, 4].map(k => '<button data-k="' + k + '">' + k + '칸</button>').join('') + '</div>'
-    + '<div class="g">' + [90, 92, 91].map(n => '<button class="ph" data-p="' + n + '">' + PHR[n] + '</button>').join('') + '</div></div><div class="said"></div>';
-  for (const t of ['keydown', 'keyup']) panel.addEventListener(t, e => e.stopPropagation());
+    + '<div class="g">' + [90, 92, 91].map(n => '<button class="ph" data-p="' + n + '">' + PHR[n] + '</button>').join('') + '</div>'
+    + '<div class="g xg"><button data-lg="1">📖 기호</button><button class="q" data-q="1">⏹ 그만하기</button></div></div><div class="said"></div>';   // xg = 휴대폰만(지도가 화면을 덮어 ⏹ 칩·범례가 안 보임 — UX-1 GD-1·GD-12)
+  panel.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });   // 단추가 포커스를 잡지 않게(키가 계속 먹고 Space가 단추를 다시 누르지 않게 — UX-1 GD-4)
   document.body.appendChild(panel);
   const mapCv = panel.querySelector('canvas'), mctx = mapCv.getContext('2d');
   const cmpEl = document.createElement('div'); cmpEl.className = 'gd-cmp'; document.body.appendChild(cmpEl);
-  { let h = ''; for (let a = 0; a < 360; a += 15) h += '<i data-a="' + a + '"></i>'; for (const [a, t] of [[0, '북'], [90, '동'], [180, '남'], [270, '서']]) h += '<b data-a="' + a + '"' + (a === 0 ? ' class="n"' : '') + '>' + t + '</b>'; cmpEl.innerHTML = h + '<u></u>'; }
+  { let h = ''; for (let a = 0; a < 360; a += 15) h += '<i data-a="' + a + '"></i>'; for (const [a, t] of [[0, '북'], [90, '동'], [180, '남'], [270, '서']]) h += '<b data-a="' + a + '"' + (a === 0 ? ' class="n"' : '') + '>' + t + '</b>'; cmpEl.innerHTML = h + '<em class="l"></em><em class="r"></em><u></u>'; }   // em = 들은 방위가 띠 밖이면 '◀ 북' · '뒤로 돌아 북 ▶'(UX-1 GD-9)
+  const cmpL = cmpEl.querySelector('em.l'), cmpR = cmpEl.querySelector('em.r');
   const sayEl = document.createElement('div'); sayEl.className = 'gd-say'; document.body.appendChild(sayEl);
   const logEl = document.createElement('div'); logEl.className = 'gd-log'; document.body.appendChild(logEl);
   let cardEl = null, cardT = 0;
@@ -253,14 +285,18 @@ body.small .gd-log{display:none!important}
     else if (k === 'post') { g.fillStyle = '#fff'; g.strokeStyle = '#d9480f'; g.lineWidth = Math.max(1.5, s * 0.05); g.fillRect(x + s * 0.18, y + s * 0.3, s * 0.64, s * 0.42); g.strokeRect(x + s * 0.18, y + s * 0.3, s * 0.64, s * 0.42); g.beginPath(); g.moveTo(x + s * 0.18, y + s * 0.3); g.lineTo(X, y + s * 0.55); g.lineTo(x + s * 0.82, y + s * 0.3); g.stroke(); }
     else if (k === 'fire') { g.fillStyle = '#f76707'; g.beginPath(); g.moveTo(X, y + s * 0.12); g.quadraticCurveTo(x + s * 0.82, y + s * 0.5, X + s * 0.18, y + s * 0.82); g.quadraticCurveTo(X, y + s * 0.9, X - s * 0.18, y + s * 0.82); g.quadraticCurveTo(x + s * 0.18, y + s * 0.5, X, y + s * 0.12); g.fill(); g.fillStyle = '#ffd43b'; g.beginPath(); g.arc(X, y + s * 0.62, s * 0.14, 0, 6.283); g.fill(); }
     else if (k === 'start') { g.strokeStyle = '#495057'; g.lineWidth = Math.max(1.5, s * 0.05); g.beginPath(); g.moveTo(x + s * 0.32, y + s * 0.85); g.lineTo(x + s * 0.32, y + s * 0.15); g.stroke(); g.fillStyle = '#2f9e44'; g.beginPath(); g.moveTo(x + s * 0.32, y + s * 0.15); g.lineTo(x + s * 0.8, y + s * 0.28); g.lineTo(x + s * 0.32, y + s * 0.42); g.closePath(); g.fill(); }
-    else if (k === 'tre') { g.fillStyle = i === 2 ? '#c8c8c8' : '#ffc61a'; g.strokeStyle = '#9a6b00'; g.lineWidth = Math.max(1.2, s * 0.04); g.beginPath(); for (let a = 0; a < 10; a++) { const rr = a % 2 ? s * 0.16 : s * 0.38, an = -Math.PI / 2 + a * Math.PI / 5; g.lineTo(X + Math.cos(an) * rr, Y + Math.sin(an) * rr); } g.closePath(); g.fill(); g.stroke(); }
+    else if (k === 'tre') { g.fillStyle = '#ffc61a'; if (i === 2) g.globalAlpha = 0.6; g.strokeStyle = '#9a6b00'; g.lineWidth = Math.max(1.2, s * 0.04); g.beginPath(); for (let a = 0; a < 10; a++) { const rr = a % 2 ? s * 0.16 : s * 0.38, an = -Math.PI / 2 + a * Math.PI / 5; g.lineTo(X + Math.cos(an) * rr, Y + Math.sin(an) * rr); } g.closePath(); g.fill(); g.stroke();
+      if (i === 2) { g.globalAlpha = 1; g.fillStyle = '#2f9e44'; g.beginPath(); g.arc(X + s * 0.24, Y - s * 0.24, s * 0.15, 0, 6.283); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = Math.max(2, s * 0.05); g.beginPath(); g.moveTo(X + s * 0.17, Y - s * 0.24); g.lineTo(X + s * 0.22, Y - s * 0.18); g.lineTo(X + s * 0.31, Y - s * 0.31); g.stroke(); } }   // 찾은 보물 = 흐린 금색 + 초록 ✓(회색이면 '없어짐'으로 읽힘 — UX-1 GD-19)
     else if (k === 'trap') { g.strokeStyle = '#e03131'; g.lineWidth = Math.max(2, s * (i === 2 ? 0.14 : 0.08)); g.globalAlpha = i === 2 ? 1 : 0.85; g.beginPath(); g.moveTo(x + s * 0.25, y + s * 0.25); g.lineTo(x + s * 0.75, y + s * 0.75); g.moveTo(x + s * 0.75, y + s * 0.25); g.lineTo(x + s * 0.25, y + s * 0.75); g.stroke(); }
     else if (k === 'me') { g.fillStyle = '#3b82f6'; g.strokeStyle = '#fff'; g.lineWidth = Math.max(1.5, s * 0.05); g.beginPath(); g.moveTo(X, y + s * 0.15); g.lineTo(x + s * 0.78, y + s * 0.8); g.lineTo(X, y + s * 0.64); g.lineTo(x + s * 0.22, y + s * 0.8); g.closePath(); g.fill(); g.stroke(); }
     g.restore();
   }
   const ML = 0.15, MT = 0.15, MR = 1.35, MB = 0.6;   // 지도 여백(칸 단위) — 방위표는 오른쪽 · 축척은 아래(칸 위 기호를 가리지 않게)
+  let PXK = 1; const fp = b => Math.round(Math.max(b * (mapCv.width / (COLS + ML + MR)), 13 * PXK));   // 지도 글자 = 화면에서 13px 아래로 안 내려감(캔버스 960 → 휴대폰 594px · UX-1 GD-12)
+  const pxk = () => { if (mapCv.clientWidth > 0) PXK = mapCv.width / mapCv.clientWidth; };
   function drawMap() {
     const W = mapCv.width, H = mapCv.height, g = mctx, s = W / (COLS + ML + MR);
+    const otx = (t, x, y) => { g.lineJoin = 'round'; g.lineWidth = 3; g.strokeStyle = '#fff'; g.strokeText(t, x, y); g.fillText(t, x, y); };   // 흰 테 글자
     g.fillStyle = '#efe4c4'; g.fillRect(0, 0, W, H);
     g.save(); g.translate(ML * s, MT * s); g.fillStyle = '#f6efd9'; g.fillRect(0, 0, COLS * s, ROWS * s);
     // 칸 선(5m) + 열 글자(A~L)·줄 번호(1~6)
@@ -269,20 +305,36 @@ body.small .gd-log{display:none!important}
     sym(g, 'start', START[0] * s, START[1] * s, s, 0);
     const S = R && R.lay; if (S) {
       S.traps.forEach((q, i) => { const rev = TR.has(i); if (ME.role === 'guide' || ME.role === 'watch' || rev) sym(g, 'trap', q[0] * s, q[1] * s, s, rev ? 2 : 1); });
-      S.tre.forEach((q, i) => { if (ME.role === 'guide' || ME.role === 'watch' || GOT.has(i)) sym(g, 'tre', q[0] * s, q[1] * s, s, GOT.has(i) ? 2 : 1); if (!GOT.has(i) && (ME.role === 'guide' || ME.role === 'watch')) { g.fillStyle = '#5c4400'; g.font = '900 ' + Math.round(s * 0.2) + 'px system-ui'; g.textAlign = 'center'; g.fillText(String(i + 1), q[0] * s + s / 2, q[1] * s + s * 0.58); } });
+      S.tre.forEach((q, i) => { if (ME.role === 'guide' || ME.role === 'watch' || GOT.has(i)) sym(g, 'tre', q[0] * s, q[1] * s, s, GOT.has(i) ? 2 : 1); if (!GOT.has(i) && (ME.role === 'guide' || ME.role === 'watch')) { g.fillStyle = '#5c4400'; g.font = '900 ' + fp(0.2) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; otx(String(R.num ? R.num[i] : i + 1), q[0] * s + s / 2, q[1] * s + s * 0.54); g.textBaseline = 'alphabetic'; } });   // 번호 = 가까운 차례(UX-1 GD-5)
     }
+    // 방위를 고르면 1~4칸이 어디인지 미리 보기(보여 주기만 — 보내는 말·점수 그대로 · UX-1 GD-7): 점선 칸 + 'n칸' · 막힘·마을 끝 = 빨간 막대 · 함정 칸 = 빨간 점선(로봇이 거기서 멈춤)
+    if (ME.role === 'guide' && selD >= 0 && (phase === 'play' || phase === 'count')) {
+      const fc = bot ? (bot.tx != null ? bot.nc : [bot.c, bot.r]) : (() => { const f = followTarget(); const q = f ? cellOf(f.x, f.z) : START.slice(); return [Math.max(0, Math.min(COLS - 1, q[0])), Math.max(0, Math.min(ROWS - 1, q[1]))]; })();
+      const D = DIRS[selD], fsz = fp(0.2);
+      for (let k = 1; k <= 4; k++) { const c = fc[0] + D.dc * k, r = fc[1] + D.dr * k;
+        if (!inGrid(c, r) || BLOCK.has(KEY(c, r))) { const pc = c - D.dc, pr = r - D.dr; g.strokeStyle = '#e03131'; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath();
+          if (D.dc) { const ex = Math.max(pc, c) * s; g.moveTo(ex, r * s + s * 0.12); g.lineTo(ex, r * s + s * 0.88); } else { const ey = Math.max(pr, r) * s; g.moveTo(c * s + s * 0.12, ey); g.lineTo(c * s + s * 0.88, ey); }
+          g.stroke(); g.lineCap = 'butt'; break; }
+        const trap = !!(S && S.traps.some(q => q[0] === c && q[1] === r)), col = trap ? '#e03131' : '#1d3557';
+        g.setLineDash([10, 7]); g.strokeStyle = col; g.lineWidth = 4; g.strokeRect(c * s + 4, r * s + 4, s - 8, s - 8); g.setLineDash([]);
+        g.font = '900 ' + fsz + 'px system-ui'; const lb = k + '칸', pw = g.measureText(lb).width + 10; g.fillStyle = col; g.fillRect(c * s + 5, r * s + 5, pw, fsz + 6); g.fillStyle = '#fff'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(lb, c * s + 10, r * s + 8 + fsz / 2); g.textBaseline = 'alphabetic';
+        if (trap) break; } }
     // 탐험가(우리 팀 = 파란 화살표 · 다른 팀 = 회색 점)
     for (const a of EXP) { const px = (a.x - X0) / CELL * s, pz = (a.z - Z0) / CELL * s;
       if (a.team === MYTEAM) { g.save(); g.translate(px, pz); g.rotate((a.h || 0) * Math.PI / 180); g.translate(-s * 0.25, -s * 0.25); sym(g, 'me', 0, 0, s * 0.5, 0); g.restore();
-        g.fillStyle = '#1d3557'; g.font = '800 ' + Math.round(s * 0.16) + 'px system-ui'; g.textAlign = 'center'; g.fillText(a.name, px, pz + s * 0.42); }
+        g.fillStyle = '#1d3557'; g.font = '800 ' + fp(0.16) + 'px system-ui'; g.textAlign = 'center'; otx(a.name, px, pz + s * 0.46); }
       else { g.fillStyle = TEAMCSS[a.team % 4]; g.globalAlpha = 0.55; g.beginPath(); g.arc(px, pz, s * 0.1, 0, 6.283); g.fill(); g.globalAlpha = 1; } }
+    // 🤖 탐험 로봇의 말 = 지도 위 말풍선 2.5초(길잡이가 보는 곳 · UX-1 GD-2)
+    if (bot && bot.said && tNow - bot.saidT < 2.5) { const a = bot.a, px = (a.x - X0) / CELL * s, pz = (a.z - Z0) / CELL * s, fs = fp(0.2); g.font = '800 ' + fs + 'px system-ui'; const w = g.measureText(bot.said).width + 16, h = fs + 12;
+      const bx = Math.min(Math.max(px - w / 2, 2), COLS * s - w - 2); let by = pz - s * 0.45 - h; if (by < 2) by = pz + s * 0.5;
+      g.fillStyle = 'rgba(255,255,255,.95)'; g.strokeStyle = '#1d3557'; g.lineWidth = 2; g.fillRect(bx, by, w, h); g.strokeRect(bx, by, w, h); g.fillStyle = '#1d3557'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(bot.said, bx + 8, by + h / 2); g.textBaseline = 'alphabetic'; }
     g.strokeStyle = '#7a5c2e'; g.lineWidth = 3; g.strokeRect(0, 0, COLS * s, ROWS * s); g.restore();
     // 방위표(오른쪽 여백) · 축척(아래 여백)
-    { const ox = (ML + COLS + MR / 2) * s, oy = (MT + 1.0) * s, rr = s * 0.38; g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.arc(ox, oy, rr + 6, 0, 6.283); g.fill(); g.strokeStyle = '#495057'; g.lineWidth = 1.5; g.stroke();
+    { const ox = (ML + COLS + MR / 2) * s, oy = (MT + 1.0) * s, fs = fp(0.17), rr = Math.min(s * 0.38, MR * s / 2 - fs * 1.15), off = rr + fs * 0.6; g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.arc(ox, oy, rr + 6, 0, 6.283); g.fill(); g.strokeStyle = '#495057'; g.lineWidth = 1.5; g.stroke();
       g.fillStyle = '#e03131'; g.beginPath(); g.moveTo(ox, oy - rr); g.lineTo(ox + rr * 0.22, oy); g.lineTo(ox - rr * 0.22, oy); g.closePath(); g.fill(); g.fillStyle = '#495057'; g.beginPath(); g.moveTo(ox, oy + rr); g.lineTo(ox + rr * 0.22, oy); g.lineTo(ox - rr * 0.22, oy); g.closePath(); g.fill();
-      g.font = '900 ' + Math.round(s * 0.17) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#c92a2a'; g.fillText('북', ox, oy - rr - s * 0.2); g.fillStyle = '#343a40'; g.fillText('남', ox, oy + rr + s * 0.2); g.fillText('동', ox + rr + s * 0.2, oy); g.fillText('서', ox - rr - s * 0.2, oy); g.textBaseline = 'alphabetic'; }
-    { const bx = (ML + 0.1) * s, by = H - s * 0.14; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(bx - 6, by - s * 0.34, s * 2 + 12, s * 0.42); g.fillStyle = '#4a3a1e'; g.font = '800 ' + Math.round(s * 0.17) + 'px system-ui'; g.textAlign = 'left'; g.fillText('축척 · 1칸 = 5m', bx + s * 2 + 14, by); g.fillStyle = '#212529'; g.fillRect(bx, by - 4, s, 6); g.fillStyle = '#fff'; g.fillRect(bx + s, by - 4, s, 6); g.strokeStyle = '#212529'; g.lineWidth = 1.5; g.strokeRect(bx, by - 4, s * 2, 6);
-      g.font = '800 ' + Math.round(s * 0.15) + 'px system-ui'; g.textAlign = 'center'; g.fillStyle = '#212529'; g.fillText('0', bx, by - s * 0.1); g.fillText('5m', bx + s, by - s * 0.1); g.fillText('10m', bx + s * 2, by - s * 0.1); }
+      g.font = '900 ' + fs + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#c92a2a'; otx('북', ox, oy - off); g.fillStyle = '#343a40'; otx('남', ox, oy + off); otx('동', ox + off, oy); otx('서', ox - off, oy); g.textBaseline = 'alphabetic'; }
+    { const bx = (ML + 0.1) * s, by = H - s * 0.14, f1 = fp(0.15), f2 = fp(0.17); g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(bx - 6, by - f1 - 10, s * 2 + 12, f1 + 16); g.fillStyle = '#4a3a1e'; g.font = '800 ' + f2 + 'px system-ui'; g.textAlign = 'left'; otx('축척 · 1칸 = 5m', bx + s * 2 + f1 + 6, by); g.fillStyle = '#212529'; g.fillRect(bx, by - 4, s, 6); g.fillStyle = '#fff'; g.fillRect(bx + s, by - 4, s, 6); g.strokeStyle = '#212529'; g.lineWidth = 1.5; g.strokeRect(bx, by - 4, s * 2, 6);
+      g.font = '800 ' + f1 + 'px system-ui'; g.textAlign = 'center'; g.fillStyle = '#212529'; otx('0', bx, by - 7); otx('5m', bx + s, by - 7); otx('10m', bx + s * 2, by - 7); }
   }
 
   // ---------- 하는 법(RB-2와 같은 틀 · 10-05 교사 '딱 보고 어떻게 하는 거지') + 지금 할 일(화면 위 줄) ----------
@@ -302,11 +354,12 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
     const st = (i, t) => '<div class="st"><b class="n">' + i + '</b><span>' + t + '</span></div>';
     return role === 'guide'
       ? '<h3>🧭 길잡이 하는 법</h3>' + st('🗺️', '지도에 <b>⭐ 보물 3개</b>와 <b>✕ 함정</b>이 보여요 — 탐험가 눈에는 하나도 안 보여요')
-        + st('⬆️', '<b>방위</b>(⬆북 ➡동 ⬇남 ⬅서)를 누르고 → <b>칸 수</b>(1~4칸)를 누르면 말이 가요 · 1칸 = 5m') + st('💎', '탐험가가 보물 칸에 서면 💎! 함정(✕)은 피해서 길을 알려 줘요')
+        + st('⬆️', '<b>방위</b>(⬆북 ➡동 ⬇남 ⬅서)를 누르고 → <b>칸 수</b>(1~4칸)를 누르면 말이 가요 · 1칸 = 5m') + st('💎', '탐험가가 보물 칸 <b>가운데</b>에 서면 💎! 함정(✕)은 피해서 길을 알려 줘요')
         + '<div class="tip">지도 위쪽이 <b>북쪽</b>(방위표) · 산·강·다리·학교 같은 기호(범례)로 "다리를 건너요"라고 말해도 좋아요</div>'
+        + (coarse ? '' : '<div class="tip">⌨️ 키보드로도 돼요: 화살표 → 숫자 1~4 · Space = ✋ 멈춰</div>')
       : '<h3>🚶 탐험가 하는 법</h3>' + st('🧭', '<b>길잡이</b>가 "북쪽으로 2칸!"처럼 말해 줘요 — 보물·함정은 안 보여요')
-        + st('⬆️', '화면 위 <b>나침반 띠</b>에서 <b>북</b>을 찾아 그쪽으로 · 바닥 <b>흰 선 한 칸 = 5m</b>') + st('💎', '보물 칸에 서면 💎 · 함정을 밟으면 💥 한 칸 뒤로')
-        + '<div class="tip">' + cfg.play + '초 안에 보물 3개! · 지금 할 일은 화면 위 줄에 나와요</div>';
+        + st('⬆️', '화면 위 <b>나침반 띠</b>에서 <b>북</b>을 찾아 그쪽으로 · 바닥 <b>흰 선 한 칸 = 5m</b>') + st('💎', '보물 칸 <b>가운데</b>에 서면 💎 · 함정을 밟으면 💥 한 칸 뒤로')
+        + '<div class="tip">' + (coarse ? '🎮 왼쪽 엄지 = 걷기 · 오른쪽 화면 끌기 = 둘러보기 · ' + cfg.play + '초 안에 보물 3개!' : '🎮 W A S D = 걷기(처음엔 W = 북쪽) · 화면을 한 번 누르면 마우스로 둘러봐요 · ' + cfg.play + '초 안에 보물 3개! · 지금 할 일은 화면 위 줄에 나와요') + '</div>';   // 조작 안내(UX-1 GD-11)
   }
   function howTo(role, wait) {
     howClose(); seenHow.add(role); document.exitPointerLock?.();
@@ -322,11 +375,12 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
   let coachK = '', lastSaidT = -99, lastHeard = null;
   function coach() {
     let t = '';
-    if (phase === 'count') t = ME.role === 'guide' ? '🧭 곧 시작 — 지도에서 1번 보물까지 길을 찾아 둬요' : ME.role === 'exp' ? '🚶 곧 시작 — 위 나침반 띠에서 북을 찾아 둬요' : '👀 구경';
+    if (phase === 'count') t = ME.role === 'guide' ? '🧭 곧 시작 — ⭐1번(가장 가까운 보물)까지 길을 찾아 둬요' : ME.role === 'exp' ? '🚶 곧 시작 — 위 나침반 띠에서 북을 찾아 둬요' : '👀 구경';
     else if (phase === 'play') {
       if (GOT.size >= cfg.tre) t = '🎉 보물을 모두 찾았어요!';
-      else if (ME.role === 'guide') t = selD >= 0 && tNow - lastSaidT > 1 ? '이제 칸 수(1~4칸)를 눌러요 — "' + DIRS[selD].t + '쪽으로 ?칸"' : tNow - lastSaidT < 4 ? '🚶 탐험가가 가는 중 — 지도를 보며 다음 말을 준비해요' : '🧭 파란 화살표(탐험가) → 보물까지 길을 찾아 방위 → 칸 수를 눌러요';
-      else if (ME.role === 'exp') t = lastHeard ? '🧭 "' + lastHeard.txt + '" — 나침반 띠의 ' + lastHeard.dir + '을 가운데로 맞추고 흰 선 ' + lastHeard.k + '칸' : '🧭 길잡이 말을 기다려요 — 위 나침반 띠에서 북을 찾아 둬요';
+      else if (ME.role === 'guide') { const going = bot ? bot.tx != null || bot.left > 0 : tNow - lastSaidT < 4;   // 혼자 = 로봇이 실제로 걷는 동안만 '가는 중'(막혀 멈췄는데 '가는 중'이던 것)
+        t = selD >= 0 && (tNow - lastSaidT > 1 || !going) ? '이제 칸 수(1~4칸)를 눌러요 — "' + DIRS[selD].t + '쪽으로 ?칸"' : going ? (bot ? '🤖 탐험 로봇이 가는 중 — 지도를 보며 다음 말을 준비해요' : '🚶 탐험가가 가는 중 — 지도를 보며 다음 말을 준비해요') : '🧭 파란 화살표(탐험가) → 보물까지 길을 찾아 방위 → 칸 수를 눌러요'; }
+      else if (ME.role === 'exp') t = lastHeard ? '🧭 노란 「' + lastHeard.dir + '」 쪽으로 돌고 → 흰 선 ' + lastHeard.k + '개 넘어 칸 가운데에!' : '🧭 길잡이 말을 기다려요 — 위 나침반 띠에서 북을 찾아 둬요';   // 말 전체는 말풍선·들은 말 목록에(UX-1 GD-9 — 휴대폰 목표 줄 길이)
       else t = '👀 구경 중 — 다음 판부터 같이 해요';
     } else if (phase === 'res') t = '🏁 끝 — 💎 ' + GOT.size + '/' + cfg.tre;
     if (t !== coachK) { coachK = t; map.hud.goal(t); }
@@ -337,7 +391,13 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
   //   EXP = 탐험가들 { slot, team, kind me|remote|bot, pid, name, x, z, h, net… } · GOT/TR = 내 팀 찾은 보물·밟은 함정(번호)
   let R = null, ME = { role: null, team: -1 }, MYTEAM = -1, phase = 'off', tNow = -9, finT = null, res = null, matchEnd = false;
   let EXP = [], GOT = new Set(), TR = new Set(), score = 0, trapN = 0, LAYS = [], TGOT = [], TTR = [], TSC = [];
-  let selD = -1, saidL = [], heardL = [], bot = null, gbot = null, SENT = new Set();
+  let selD = -1, saidL = [], heardL = [], bot = null, gbot = null, SENT = new Set(), riverT = 0, riverSaid = -99;
+  // UX-1(10-05 교사 편의성): 데스크톱 길잡이 = 3D 화면을 지도 오른쪽 빈 띠 가운데로(로봇이 지도에 가려지지 않게 · GD-6) — 지도 오른쪽 끝은 판을 열 때·창 크기가 바뀔 때만 잰다(매 프레임 X)
+  let panelR = 0, camOff = 0; const panelRe = () => { panelR = panel.classList.contains('on') ? panel.getBoundingClientRect().right : 0; pxk(); };
+  addEventListener('resize', panelRe);
+  function offClear(fx, fz, o, rx, rz, d) { const px = fx - rx * o, pz = fz - rz * o; for (let j = 0; j <= 6; j++) if (blkAt(px - rz * d * j / 6, pz + rx * d * j / 6)) return false; return true; }   // 비켜 선 자리 + 그 뒤 카메라 길(d m)이 막힌 칸이 아닌지 · 바라보는 쪽 = (rz, −rx) → 뒤 = (−rz, rx)
+  const helpEl = document.getElementById('help'); let help0 = null;   // 아래 안내 줄 = 길잡이 키(로봇인 척 helpSet과 같은 틀 · GD-11)
+  function helpSet(on) { if (!helpEl) return; if (on) { if (help0 == null) help0 = helpEl.textContent; helpEl.textContent = '🧭 길잡이 키: 화살표(또는 W A S D) = 방위 → 숫자 1~4 = 칸 수 · Space = ✋ 멈춰 · 멈춤 P'; } else if (help0 != null) { helpEl.textContent = help0; help0 = null; } }
   const LED = new Map(); const led = n => { let r = LED.get(n); if (!r) LED.set(n, r = { gs: 0, es: 0, g: 0 }); return r; };
   const clock = () => (NETM ? sNow() : Date.now());
 
@@ -351,11 +411,15 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
       if (role === 'exp') { const off = (EXP.filter(a => a.team === ti).length) * 1.2 - 0.6 * (tm.length - 2), sx = cx(START[0]) + (ti - (r.teams.length - 1) / 2) * 1.6 + off * 0.5, sz = cz(START[1]);
         EXP.push({ slot: q.slot, team: ti, kind: q.kind, pid: q.pid || null, name: q.name, x: sx, z: sz, y: GY, h: 0, walk: 0, ox: sx, oz: sz, net: null, nts: 0, nvx: 0, nvz: 0 }); } }));
     if (MYTEAM < 0) MYTEAM = 0;
-    r.lay = LAYS[MYTEAM]; GOT = TGOT[MYTEAM]; TR = TTR[MYTEAM]; score = 0; trapN = 0; saidL = []; heardL = []; selD = -1; SENT = new Set();
+    r.lay = LAYS[MYTEAM]; GOT = TGOT[MYTEAM]; TR = TTR[MYTEAM]; score = 0; trapN = 0; saidL = []; heardL = []; selD = -1; SENT = new Set(); riverT = 0; riverSaid = -99;
+    paintBtns(); panel.classList.add('wait'); panel.classList.remove('done', 'lgon'); { const b = panel.querySelector('.hd .bot'); if (b) { b.textContent = ''; b.classList.remove('fl'); } }   // 지난 판 방위 단추가 켜진 채 남지 않게(GD-18)
+    // 지도 번호 = 출발에서 가까운 차례(tourLen과 같은 동점 처리 · 보여 주기만 — 번호·사건·배치는 그대로 · UX-1 GD-5)
+    { const ord = [], left = r.lay.tre.map((_, i) => i); let at = START; while (left.length) { let bi = left[0], bl = 1e9; for (const i of left) { const p = path(at, r.lay.tre[i], r.lay.traps), l = p ? p.length : 1e8; if (l < bl) { bl = l; bi = i; } } ord.push(bi); left.splice(left.indexOf(bi), 1); at = r.lay.tre[bi]; } r.num = r.lay.tre.map((_, i) => ord.indexOf(i) + 1); }
     const me = EXP.find(a => a.kind === 'me');
     map.player.freeze(true); map.player.run(true);
     if (ME.role === 'exp' && me) { map.player.show(true); map.player.teleport([me.x, GY + 0.02, me.z], { h: 0 }); panel.classList.remove('on'); cmpEl.style.display = 'block'; logEl.style.display = 'block'; map.player.freeMouse(false); }
-    else { map.player.show(false); const f = followTarget(); map.player.teleport([f ? f.x : cx(START[0]), GY + 0.02, (f ? f.z : cz(START[1])) + 0], { h: 0 }); panel.classList.add('on'); cmpEl.style.display = 'none'; logEl.style.display = 'none'; map.player.freeMouse(true); }
+    else { map.player.show(false); const f = followTarget(); map.player.teleport([f ? f.x : cx(START[0]), GY + 0.02, (f ? f.z : cz(START[1])) + 0], { h: 0 }); panel.classList.add('on'); cmpEl.style.display = 'none'; logEl.style.display = 'none'; map.player.freeMouse(true); if (ME.role === 'guide') helpSet(true); }
+    document.body.classList.toggle('gd-guide', ME.role !== 'exp'); document.body.classList.toggle('gd-exp', ME.role === 'exp'); panelRe();   // 알림·배너가 지도·나침반 띠에 가려지지 않게(GD-2·GD-10)
     bot = null; gbot = null;
     if (!NETM) { if (ME.role === 'guide') bot = { a: EXP[0], c: START[0], r: START[1], left: 0, d: -1, tx: null, tz: null, wait: 0, said: '' }; else gbot = { cmd: null, t: 0, last: -9 }; }
     const myTeam = r.teams[MYTEAM] || [], gN = (myTeam.find(q => q.role === 'guide') || {}).name || '길잡이', eN = myTeam.filter(q => q.role === 'exp').map(q => q.kind === 'me' ? '나' : q.name).join(' · ');
@@ -367,19 +431,26 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
     paintSaid(); drawMap();
   }
   function followTarget() { return EXP.find(a => a.team === MYTEAM) || EXP[0] || null; }
-  function endRoundUI() { panel.classList.remove('on'); cmpEl.style.display = 'none'; sayEl.style.display = 'none'; logEl.style.display = 'none'; map.player.show(true); map.player.freeMouse(false); hideBodies(); for (let i = 0; i < GEM.count; i++) GEM.setMatrixAt(i, ZERO); for (let i = 0; i < XM.count; i++) XM.setMatrixAt(i, ZERO); GEM.instanceMatrix.needsUpdate = XM.instanceMatrix.needsUpdate = true; }
+  function endRoundUI() { helpSet(false); document.body.classList.remove('gd-guide', 'gd-exp'); panel.classList.remove('on'); cmpEl.style.display = 'none'; sayEl.style.display = 'none'; logEl.style.display = 'none'; map.player.show(true); map.player.freeMouse(false); hideBodies(); for (let i = 0; i < GEM.count; i++) GEM.setMatrixAt(i, ZERO); for (let i = 0; i < XM.count; i++) XM.setMatrixAt(i, ZERO); GEM.instanceMatrix.needsUpdate = XM.instanceMatrix.needsUpdate = true; }
   function hideBodies() { for (let j = 0; j < NB; j++) { RB.body.setMatrixAt(j, ZERO); RB.bib.setMatrixAt(j, ZERO); RB.leg.setMatrixAt(j * 2, ZERO); RB.leg.setMatrixAt(j * 2 + 1, ZERO); } RB.body.instanceMatrix.needsUpdate = RB.bib.instanceMatrix.needsUpdate = RB.leg.instanceMatrix.needsUpdate = true; }
 
   // ---------- 🧭 길잡이 말(단추·키) ----------
-  function sendDir(d) { if (ME.role !== 'guide' || phase !== 'play') return; selD = d; paintBtns(); }
-  function sendK(k) { if (ME.role !== 'guide' || phase !== 'play') return; if (selD < 0) { map.hud.toast('먼저 방위(⬆북 ➡동 ⬇남 ⬅서)를 골라요', 1.8); return; } say(selD * 10 + k); }
+  function sendDir(d) { if (ME.role !== 'guide' || (phase !== 'play' && phase !== 'count')) return; selD = d; paintBtns(); drawMap(); }   // 준비 3초에도 방위만 미리 골라 둠(이 화면만 — 보내는 것 없음 · GD-18)
+  function sendK(k) { if (ME.role !== 'guide') return; if (phase === 'count') { map.hud.toast('⏱ 곧 시작해요 — 방위만 먼저 골라 둘 수 있어요', 1.6); return; } if (phase !== 'play') return; if (selD < 0) { map.hud.toast('먼저 방위(⬆북 ➡동 ⬇남 ⬅서)를 골라요', 1.8); return; } say(selD * 10 + k); }
   function say(n) { if (ME.role !== 'guide' || phase !== 'play') return; emit({ k: 'msg', by: R.mySlot ?? 0, who: MYTEAM, n }); map.tone(880, 0, 0.06, 'sine', 0.05); }
-  function paintBtns() { panel.querySelectorAll('[data-d]').forEach(b => b.classList.toggle('on', +b.dataset.d === selD)); }
+  function paintBtns() { panel.querySelectorAll('[data-d]').forEach(b => b.classList.toggle('on', +b.dataset.d === selD)); panel.classList.toggle('pick', selD >= 0); }
   function paintSaid() { const el = panel.querySelector('.said'); if (el) el.textContent = saidL.length ? '내가 한 말: ' + saidL.slice(-3).join(' → ') : '방위를 고른 뒤 칸 수를 누르면 탐험가에게 말이 가요(키: 화살표·WASD → 1~4 · Space = 멈춰)'; }
-  panel.addEventListener('click', e => { e.stopPropagation(); const b = e.target.closest('button'); if (!b) return; if (b.dataset.d != null) sendDir(+b.dataset.d); else if (b.dataset.k != null) sendK(+b.dataset.k); else if (b.dataset.p != null) say(+b.dataset.p); });
-  const keyH = e => { if (e.repeat || !R) return; const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
-    if (ME.role !== 'guide' || phase !== 'play') return;
+  panel.addEventListener('click', e => { e.stopPropagation(); if (panel.classList.contains('lgon') && e.target.closest('.lg')) { panel.classList.remove('lgon'); return; }   // 휴대폰 범례 = 누르면 닫힘
+    const b = e.target.closest('button'); if (!b) return; b.blur();
+    if (b.dataset.d != null) sendDir(+b.dataset.d); else if (b.dataset.k != null) sendK(+b.dataset.k); else if (b.dataset.p != null) say(+b.dataset.p);
+    else if (b.dataset.lg != null) panel.classList.toggle('lgon');
+    else if (b.dataset.q != null) { if (b.dataset.arm === '1') map.quit(); else { b.dataset.arm = '1'; b.textContent = '⏹ 한 번 더 누르면 그만'; setTimeout(() => { if (b.isConnected) { b.dataset.arm = ''; b.textContent = '⏹ 그만하기'; } }, 2500); } } });   // 휴대폰 ⏹ = 두 번 눌러야(친구와 할 때 엄지가 잘못 닿아 팀이 빠지지 않게 · GD-1)
+  const keyH = e => { if (!R) return; const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    if (ME.role === 'guide' && e.code === 'Space' && (!t || t === document.body || t === document.documentElement || panel.contains(t))) e.preventDefault();   // Space가 단추를 다시 누르지 않게(GD-4 — 다른 창의 단추는 그대로)
+    if (e.repeat || ME.role !== 'guide') return;
     const dk = { ArrowUp: 0, KeyW: 0, ArrowRight: 1, KeyD: 1, ArrowDown: 2, KeyS: 2, ArrowLeft: 3, KeyA: 3 }[e.code], kk = { Digit1: 1, Digit2: 2, Digit3: 3, Digit4: 4, Numpad1: 1, Numpad2: 2, Numpad3: 3, Numpad4: 4 }[e.code];
+    if (phase === 'count' && !howEl) { if (dk != null) { e.preventDefault(); sendDir(dk); } else if (kk != null) { e.preventDefault(); sendK(kk); } return; }
+    if (phase !== 'play') return;
     if (dk != null) { e.preventDefault(); sendDir(dk); } else if (kk != null) { e.preventDefault(); sendK(kk); } else if (e.code === 'Space') { e.preventDefault(); say(90); } };
   addEventListener('keydown', keyH);
 
@@ -391,9 +462,10 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
     if (TSC[ti].done != null && et > TSC[ti].done + 0.05) return;
     if (e.k === 'msg') {
       const txt = msgText(e.n); if (!txt) return;
-      if (ti === MYTEAM) { if (e.n < 90) { lastSaidT = Math.max(0, et); if (ME.role === 'guide') selD = -1, paintBtns(); lastHeard = { txt: txt.replace(/!$/, ''), dir: DIRS[Math.floor(e.n / 10)].t, k: e.n % 10 }; }
+      if (ti === MYTEAM) { if (e.n < 90) { lastSaidT = Math.max(0, et); if (ME.role === 'guide') selD = -1, paintBtns(); lastHeard = { txt: txt.replace(/!$/, ''), dir: DIRS[Math.floor(e.n / 10)].t, k: e.n % 10, di: Math.floor(e.n / 10) }; }
         if (ME.role === 'guide') { saidL.push(txt.replace(/!$/, '')); paintSaid(); } else if (ME.role === 'exp') hear(txt); else if (ME.role === 'watch') { saidL.push(txt); } }
       if (bot && ti === MYTEAM && e.n < 90) botCmd(Math.floor(e.n / 10), e.n % 10); else if (bot && ti === MYTEAM && e.n === 90) { bot.left = 0; botSay('멈췄어요'); }
+      else if (bot && ti === MYTEAM && e.n === 92) botSay('알겠어요! 그래도 저는 말한 대로만 가요'); else if (bot && ti === MYTEAM && e.n === 91) botSay('헤헤, 고마워요!');   // 로봇은 말 그대로만 — 함정을 스스로 피하지 않아요(GD-16)
     } else if (e.k === 'got') {
       const S = TGOT[ti]; if (S.has(e.n)) return; S.add(e.n); TSC[ti].s += 100;
       if (S.size >= cfg.tre) { TSC[ti].done = Math.max(0, et); TSC[ti].s += Math.max(0, Math.round((cfg.play - et) * 2)); }
@@ -408,10 +480,13 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
     logEl.innerHTML = '<div style="font-weight:900">🧭 들은 말</div>' + heardL.slice(-5).reverse().map((t, i) => '<div style="opacity:' + (i ? 0.7 : 1) + '">' + esc(t) + '</div>').join(''); map.tone(660, 0, 0.08, 'square', 0.05); map.tone(880, 0.09, 0.1, 'square', 0.05); }
 
   // ---------- 🚶 탐험가(나): 칸 판정 — 보물 줍기 · 함정 = 직전 칸 가운데로 ----------
-  function meTick() {
+  function meTick(dt) {
     const me = EXP.find(a => a.kind === 'me'); if (!me) return; const p = map.player.get(); const dx = p.x - me.x, dz = p.z - me.z;
     if (dx * dx + dz * dz > 0.0004) me.h = (Math.atan2(dx, -dz) * 180 / Math.PI + 360) % 360; me.x = p.x; me.z = p.z; me.y = p.y;
     if (phase !== 'play') return; checkCell(me);
+    // 강가에 막혀 있으면 까닭을(강 = 보이지 않는 벽처럼 느껴짐 · 다리 = 2·5번째 줄 · UX-1 GD-10)
+    const rx = Math.min(Math.abs(me.x - (X0 + 6 * CELL)), Math.abs(me.x - (X0 + 7 * CELL))), rr = Math.floor((me.z - Z0) / CELL);
+    if (rx < 0.5 && rr >= 0 && rr < ROWS && rr !== 1 && rr !== 4) { if ((riverT += dt) > 0.7 && tNow - riverSaid > 8) { riverSaid = tNow; map.hud.toast('🌊 강은 못 건너요 — 다리로 건너요', 2.2); } } else riverT = 0;
   }
   function checkCell(a) {   // 내 화면 탐험가(사람) · 봇 = 혼자 놀이
     const [c, r] = cellOf(a.x, a.z), L = LAYS[a.team]; if (!L) return;
@@ -422,13 +497,13 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
   }
 
   // ---------- 🤖 탐험 로봇(혼자 길잡이 놀이): 내 말을 글자 그대로 — 칸 가운데에서 칸 가운데로 · 막히면 멈춤 · 함정이면 빠짐 ----------
-  function botSay(t) { if (!bot) return; bot.said = t; map.hud.toast('🤖 ' + t, 1.8); }
+  function botSay(t) { if (!bot) return; bot.said = t; bot.saidT = tNow; const el = panel.querySelector('.hd .bot'); if (el) { el.textContent = '🤖 ' + t; el.classList.remove('fl'); void el.offsetWidth; el.classList.add('fl'); } drawMap(); }   // 로봇 말 = 지도 머리 줄 + 지도 위 말풍선(알림은 지도 밑에 깔려 안 보였다 — UX-1 GD-2)
   function botCmd(d, k) { if (!bot) return; bot.d = d; bot.left = k; botSay(['알겠어요!', '출발!', '가요!'][Math.floor(Math.random() * 3)] + ' ' + DIRS[d].t + '쪽으로 ' + k + '칸'); }
   function botTick(dt) {
     const a = bot.a; if (a.trapCd > 0) a.trapCd -= dt;
     if (bot.tx == null) { if (bot.left <= 0) return; const c2 = bot.c + DIRS[bot.d].dc, r2 = bot.r + DIRS[bot.d].dr;
       if (!inGrid(c2, r2)) { bot.left = 0; botSay('더 갈 수 없어요 — 마을 끝이에요'); return; }
-      const B = BLOCK.get(KEY(c2, r2)); if (B) { bot.left = 0; botSay('앞에 ' + B.n + '이(가) 있어서 못 가요'); return; }
+      const B = BLOCK.get(KEY(c2, r2)); if (B) { bot.left = 0; botSay('앞에 ' + iga(B.n) + ' 있어서 못 가요'); return; }
       bot.tx = cx(c2); bot.tz = cz(r2); bot.nc = [c2, r2]; bot.left--; }
     const dx = bot.tx - a.x, dz = bot.tz - a.z, d = Math.hypot(dx, dz), st = cfg.v * dt;
     if (d > 1e-3) a.h = (Math.atan2(dx, -dz) * 180 / Math.PI + 360) % 360;
@@ -439,6 +514,7 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
   function gbotTick(dt) {
     const me = EXP.find(a => a.kind === 'me'); if (!me || !me.cur) return; gbot.t -= dt; if (gbot.t > 0) return; gbot.t = 0.3;
     const at = me.cur, L = R.lay, c0 = gbot.cmd;
+    { const ti = L.tre.findIndex(q => q[0] === at[0] && q[1] === at[1]); if (ti >= 0 && !GOT.has(ti)) { if (gbot.inK !== ti) { gbot.inK = ti; gbot.inT = tNow; } if (tNow - gbot.inT > 0.8 && tNow - (gbot.nudge ?? -9) > 3) { gbot.nudge = tNow; emit({ k: 'msg', by: 1, who: MYTEAM, n: 93 }); } return; } gbot.inK = -1; }   // 보물 칸 가장자리에 서서 못 주움 → 봇이 입을 닫던 것(GD-3) · 0.8초 머물면 '가운데로'(걸어 들어가는 중엔 조용) · 93 = 혼자 놀이 봇만
     const onLine = c0 && ((DIRS[c0.d].dc && at[1] === c0.from[1] && (at[0] - c0.from[0]) * DIRS[c0.d].dc >= 0 && (at[0] - c0.from[0]) * DIRS[c0.d].dc <= c0.k) || (DIRS[c0.d].dr && at[0] === c0.from[0] && (at[1] - c0.from[1]) * DIRS[c0.d].dr >= 0 && (at[1] - c0.from[1]) * DIRS[c0.d].dr <= c0.k));
     const arrived = c0 && at[0] === c0.to[0] && at[1] === c0.to[1];
     if (c0 && onLine && !arrived && tNow - c0.t < 9) return;
@@ -455,31 +531,46 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
     const t = (clock() - R.t0) / 1000 - cfg.count; tNow = t;
     const endAt = finT != null ? finT : cfg.play, p = t < 0 ? 'count' : t < endAt ? 'play' : 'res';
     if (p !== phase) setPhase(p);
-    if (ME.role === 'exp') { meTick(); const me = EXP.find(a => a.kind === 'me'); if (me && me.trapCd > 0) me.trapCd -= dt; }
+    if (ME.role === 'exp') { meTick(dt); const me = EXP.find(a => a.kind === 'me'); if (me && me.trapCd > 0) me.trapCd -= dt; }
     if (p === 'play' && bot) botTick(dt);
     if (p === 'play' && gbot) gbotTick(dt);
     for (const a of EXP) if (a.kind === 'remote') netActor(a, dt);
-    if (ME.role !== 'exp') { const f = followTarget(); if (f) map.player.teleport([f.x, GY + 0.02, f.z]); }   // 길잡이·구경 화면 = 우리 팀 탐험가 뒤를 따라감(내 몸은 숨김)
+    if (ME.role !== 'exp') { const f = followTarget(); if (f) { let x = f.x, z = f.z, want = 0; const W = innerWidth;   // 길잡이·구경 화면 = 우리 팀 탐험가 뒤를 따라감(내 몸은 숨김)
+        // 데스크톱: 숨은 나를 왼쪽으로 비켜 세워 로봇이 지도 오른쪽 빈 띠 가운데에 보이게(GD-6) — 비켜 선 자리나 그 뒤 카메라 길이 산·강·건물 칸이면 반만·안 비킴(카메라가 막혀 당겨지지 않게) · 비키는 양은 부드럽게
+        if (panelR && !document.body.classList.contains('small') && W - panelR > 160) { const cam = map.camera; cam.getWorldDirection(_dir); const hl = Math.hypot(_dir.x, _dir.z) || 1, rx = -_dir.z / hl, rz = _dir.x / hl, pp = map.player.pos(), dist = Math.hypot(cam.position.x - pp.x, cam.position.z - pp.z) || 5.7, cd = Math.max(dist, 5),
+            off = Math.min(4.5, (panelR / W) * dist * Math.tan(cam.fov * Math.PI / 360) * cam.aspect);
+          const rise = cam.position.y - (GY + 1.32), um = rise > 0.58 ? 0.58 / rise : 1;   // 머리→카메라 선이 막힌 칸 높이(1.8m) 아래인 구간만 봄(보통 시점이면 머리 뒤 ≈1.9m · 낮게 보면 끝까지)
+          for (let k = 1; k > 0.2; k -= 0.5) if (offClear(f.x, f.z, off * k, rx, rz, cd * um)) { want = off * k; break; }
+          let nv = camOff + (want - camOff) * (1 - Math.exp(-6 * dt)); if (!offClear(f.x, f.z, nv, rx, rz, cd * um)) nv = want; camOff = nv;   // 부드럽게 가다가 막힌 자리를 지나면 바로 목표로
+          x = Math.max(X0 - 1.2, Math.min(X0 + COLS * CELL + 1.2, f.x - rx * camOff)); z = Math.max(Z0 - 1.2, Math.min(Z0 + ROWS * CELL + 1.2, f.z - rz * camOff)); } else camOff = 0;
+        map.player.teleport([x, GY + 0.02, z]); } }
     if (ME.role === 'exp') compassTick();
     draw(dt);
     if ((mapT -= dt) <= 0 && (ME.role !== 'exp')) { mapT = 0.1; drawMap(); }
     if ((uiT -= dt) <= 0) { uiT = 0.2; const S = TSC[MYTEAM] || { s: 0 };
       chip('gd-time', p === 'count' ? '⏱ 준비 ' + Math.ceil(-t) : p === 'play' ? '⏱ ' + fmt(Math.max(0, cfg.play - t)) : '🏁 끝');
       chip('gd-score', '💎 ' + GOT.size + '/' + cfg.tre + ' · 💥 ' + TR.size + ' · ' + S.s + '점');
-      const st = panel.querySelector('.st'); if (st) st.textContent = '⏱ ' + (p === 'count' ? '준비' : fmt(Math.max(0, cfg.play - Math.max(0, t)))) + ' · 💎 ' + GOT.size + '/' + cfg.tre + ' · ' + S.s + '점'; coach(); }
+      const st = panel.querySelector('.st'); if (st) st.textContent = (p === 'count' ? '⏱ 준비 ' + Math.ceil(-t) : p === 'play' ? '⏱ ' + fmt(Math.max(0, cfg.play - t)) : '🏁 끝') + ' · 💎 ' + GOT.size + '/' + cfg.tre + ' · ' + S.s + '점'; coach(); }   // 끝나면 시계를 멈춤(GD-17)
     if (NETM && NM.on) { netSend(dt); hostRun(t, endAt); }
     else if (p === 'res' && t > endAt + cfg.end && !matchEnd) { matchEnd = true; soloEnd(); }
   }
   function setPhase(p) {
     const was = phase; phase = p; if (p !== 'count') howClose();
-    if (p === 'play') { if (ME.role === 'exp') { map.player.freeze(false); map.hud.banner('🚶 출발!', 1.1); } else if (ME.role === 'guide') map.hud.banner('🧭 길을 알려 줘요!', 1.2); map.tone(784, 0, 0.14, 'square', 0.05); if (gbot) gbot.t = 0.4; }
-    else if (p === 'res') roundResult(was);
+    if (p === 'play') { panel.classList.remove('wait'); if (ME.role === 'exp') { map.player.freeze(false); map.hud.banner('🚶 출발!', 1.1); } else if (ME.role === 'guide') map.hud.banner('🧭 길을 알려 줘요!', 1.2); map.tone(784, 0, 0.14, 'square', 0.05); if (gbot) gbot.t = 0.4; }
+    else if (p === 'res') { panel.classList.add('done'); panel.classList.remove('wait'); selD = -1; paintBtns(); { const b = panel.querySelector('.hd .bot'); if (b) b.textContent = ''; } roundResult(was); }   // 끝 = 단추 흐리게 · 로봇 말 지움(GD-18)
   }
   // 나침반 띠: 카메라가 보는 방향(북 = −z)을 가운데로 — 15°마다 눈금
   const _dir = new THREE.Vector3();
   function compassTick() {
     map.camera.getWorldDirection(_dir); const yaw = (Math.atan2(_dir.x, -_dir.z) * 180 / Math.PI + 360) % 360, W = cmpEl.clientWidth || 380, pxd = W / 180;
-    for (const el of cmpEl.children) { if (!el.dataset || el.dataset.a == null) continue; let d = +el.dataset.a - yaw; while (d > 180) d -= 360; while (d < -180) d += 360; const vis = Math.abs(d) < 92; el.style.display = vis ? 'block' : 'none'; if (vis) el.style.left = (W / 2 + d * pxd) + 'px'; }
+    for (const el of cmpEl.children) { if (!el.dataset || el.dataset.a == null) continue; let d = +el.dataset.a - yaw; while (d > 180) d -= 360; while (d < -180) d += 360; const vis = Math.abs(d) < (el.tagName === 'B' ? 84 : 92); el.style.display = vis ? 'block' : 'none'; if (vis) el.style.left = (W / 2 + d * pxd) + 'px'; }   // 글자는 84° 안에서만(띠 끝에서 반쯤 잘리지 않게)
+    // 들은 방위 = 노란 글자 · 띠 밖이면 끝에 '◀ 북' / '뒤로 돌아 북 ▶'(어느 쪽으로 돌지 · UX-1 GD-9) — 글이 바뀔 때만 씀
+    const ta = lastHeard && phase === 'play' ? lastHeard.di * 90 : -1;
+    if (ta !== cmpEl._ta) { cmpEl._ta = ta; for (const el of cmpEl.querySelectorAll('b')) el.classList.toggle('t', +el.dataset.a === ta); }
+    let side = '', txt = '';
+    if (ta >= 0) { let d = ta - yaw; while (d > 180) d -= 360; while (d < -180) d += 360; const ad = Math.abs(d);
+      if (ad >= 80) { side = d > 0 ? 'r' : 'l'; if (ad > 150 && cmpEl._side) side = cmpEl._side; const dir = lastHeard.dir, back = ad > 150 ? '뒤로 돌아 ' : ''; txt = side === 'r' ? back + dir + ' ▶' : '◀ ' + back + dir; } }   // 거의 뒤면 좌우가 흔들리지 않게 고른 쪽 그대로
+    if (side !== cmpEl._side || txt !== cmpEl._tx) { cmpEl._tx = txt; cmpEl._side = side; cmpL.style.display = side === 'l' ? 'block' : 'none'; cmpR.style.display = side === 'r' ? 'block' : 'none'; if (side === 'l') cmpL.textContent = txt; else if (side === 'r') cmpR.textContent = txt; }
   }
   // 몸 그리기: 탐험가(나는 내 캐릭터 · 남·봇 = 장난감 로봇 팀 색) · 찾은 보석 · 드러난 함정 ✕
   function draw(dt) {
@@ -505,9 +596,10 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
     res = { found: n, score: S.s, traps: TR.size };
     for (const [ti, tm] of R.teams.entries()) for (const q of tm) if (q.kind !== 'bot') { const r = led(q.kind === 'me' ? myName() : q.name); if (q.role === 'guide') { r.gs = Math.max(r.gs, TSC[ti].s); r.g++; } else r.es += TGOT[ti].size; }
     const rank = R.teams.length > 1 ? '<br><span style="font-size:.9em">' + R.teams.map((tm, i) => i).sort((a, b) => TSC[b].s - TSC[a].s).map((i, k) => (k + 1) + '등 ' + TEAMN[i % 4] + ' ' + TSC[i].s + '점(💎' + TGOT[i].size + ')').join(' · ') + '</span>' : '';
-    card('<div style="font-size:1.3em">' + (n >= cfg.tre ? '🎉 보물을 모두 찾았어요!' : '💎 보물 ' + n + '/' + cfg.tre) + '</div>' + S.s + '점 · 💥 함정 ' + TR.size + '번' + rank, cfg.end);
+    const bon = S.s - n * 100 + trapN * 20;   // 점수 풀이(보여 주기만 — 셈은 그대로 · GD-17)
+    card('<div style="font-size:1.3em">' + (n >= cfg.tre ? '🎉 보물을 모두 찾았어요!' : '💎 보물 ' + n + '/' + cfg.tre) + '</div>' + '💎 ' + n + '개 ' + n * 100 + (bon > 0 ? ' + ⏱ 빨리 찾은 보너스 ' + bon : '') + (trapN ? ' − 💥 ' + trapN + '번 ' + trapN * 20 : '') + ' = ' + S.s + '점' + rank, cfg.end);
     if (n >= cfg.tre) { map.tone(523, 0, 0.15, 'sine', 0.1); map.tone(659, 0.15, 0.15, 'sine', 0.1); map.tone(784, 0.3, 0.3, 'sine', 0.1); }
-    if (!NETM) { const k = ME.role === 'guide' ? 'bestGuide' : 'bestExp', b = map.store.get(k, 0); if (S.s > b) map.store.set(k, S.s); }
+    if (!NETM) { const k = ME.role === 'guide' ? 'bestGuide' : 'bestExp', b = map.store.get(k, 0); res.best = Math.max(b, S.s); res.newBest = S.s > b && S.s > 0; if (S.s > b) map.store.set(k, S.s); }
     drawMap();
   }
   const myName = () => (NETM ? NM.name : '나');
@@ -528,7 +620,7 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
   }
   async function soloEnd() {
     const role = ME.role === 'guide' ? 'guide' : 'exp';
-    const i = await map.hud.ask((res ? '💎 ' + res.found + '/' + cfg.tre + ' · ' + res.score + '점' : '끝'), ['🔄 다시 하기', role === 'guide' ? '🚶 탐험가 해 보기' : '🧭 길잡이 해 보기', '🏠 그만하기']);
+    const i = await map.hud.ask((res ? '💎 ' + res.found + '/' + cfg.tre + ' · ' + res.score + '점' + (res.newBest ? ' · 🏆 새 기록!' : res.best > 0 ? ' · 🏆 내 최고 ' + res.best + '점' : '') + (res.found === 0 ? '\n💡 ' + (role === 'guide' ? '방위 단추 → 칸 수 단추를 차례로 눌러 봐요' : '나침반 띠의 노란 글자를 가운데로 맞추고 걸어 봐요') : '') : '끝'), ['🔄 다시 하기', role === 'guide' ? '🚶 탐험가 해 보기' : '🧭 길잡이 해 보기', '🏠 그만하기']);
     if (dead) return; if (i === 0) soloRound(role); else if (i === 1) { const r2 = role === 'guide' ? 'exp' : 'guide'; if (!seenHow.has(r2)) { await howTo(r2, true); if (dead) return; } soloRound(r2); } else map.quit();
   }
 
@@ -543,7 +635,7 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
   const ctlMatch = (seq, st) => { const mp = window.SM_MP, N = mp && mp.net(); if (N && N.ctl) N.ctl('match', { seq, st }); };
   const r2 = v => Math.round(v * 100) / 100;
   const isGD = m => !!m && /^gd/.test(m.arena || '');
-  const busyMsg = m => (/^hs/.test(m.arena || '') ? '🫣 지금 이 방은 숨바꼭질 대작전 중이에요' : /^rb/.test(m.arena || '') ? '🤖 지금 이 방은 로봇인 척 중이에요' : '💦 지금 이 방은 물총 친구 대결 중이에요') + ' — 끝나면 다시 와요';
+  const busyMsg = m => (/^hs/.test(m.arena || '') ? '🙈 지금 이 방은 숨바꼭질 대작전 중이에요' : /^rb/.test(m.arena || '') ? '🤖 지금 이 방은 로봇인 척 중이에요' : '💦 지금 이 방은 물총 친구 대결 중이에요') + ' — 끝나면 다시 와요';
   function applyEvt(root, type, path, d) {
     const set = (r, p, v) => { if (!p.length) return v && typeof v === 'object' ? v : {}; let o = r; for (let i = 0; i < p.length - 1; i++) { if (!o[p[i]] || typeof o[p[i]] !== 'object') { if (v === null) return r; o[p[i]] = {}; } o = o[p[i]]; } if (v === null) delete o[p[p.length - 1]]; else o[p[p.length - 1]] = v; return r; };
     if (type === 'put') return set(root, path, d);
@@ -695,7 +787,8 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
   if (NETM) netEnter(); else soloAsk();
   return {
     tick,
-    stop() { dead = true; removeEventListener('keydown', keyH); clearTimeout(hear.t); howClose(); hcss.remove(); panel.remove(); cmpEl.remove(); sayEl.remove(); logEl.remove(); css.remove(); if (cardEl) { cardEl.remove(); cardEl = null; } clearTimeout(cardT);
+    stop() { dead = true; removeEventListener('keydown', keyH); removeEventListener('resize', panelRe); clearTimeout(hear.t); howClose(); hcss.remove(); panel.remove(); cmpEl.remove(); sayEl.remove(); logEl.remove(); css.remove(); if (cardEl) { cardEl.remove(); cardEl = null; } clearTimeout(cardT);
+      helpSet(false); document.body.classList.remove('gd-guide', 'gd-exp');
       hotOff.remove(); arena.remove(); for (const c of COLS9) c.remove(); map.player.show(true); map.player.freeMouse(false); if (mmWas) map.minimap.show(); netLeave();
       for (const g of GEOS) g.dispose(); for (const m of MATS) m.dispose(); },
     get state() { return R ? { phase, t: +tNow.toFixed(1), role: ME.role, team: MYTEAM, round: R.round, rounds: R.rounds, found: GOT.size, traps: TR.size, score: (TSC[MYTEAM] || {}).s, lay: R.lay, teams: R.teams.map((tm, i) => ({ n: tm.map(q => q.name + ':' + q.role), s: TSC[i].s, got: [...TGOT[i]] })), exp: EXP.map(a => ({ name: a.name, team: a.team, kind: a.kind, x: +a.x.toFixed(1), z: +a.z.toFixed(1), cur: a.cur })), res } : { phase: 'lobby', host: NM.host }; },

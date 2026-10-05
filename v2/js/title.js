@@ -93,14 +93,15 @@ export function createTitle(h) {
     +   (/iPhone|iPod/.test(navigator.userAgent || '') && !navigator.standalone ? '<div class="ttl-a2hs">⬆️ 공유 → <b>홈 화면에 추가</b>하면 주소창 없이 꽉 찬 화면으로 볼 수 있어요</div>' : '')   // A2HS: 아이폰 사파리엔 전체 화면이 없다
     + '</section>'
     + '<section class="ttl-menu" aria-label="놀이 고르기">'
-    +   '<header><button class="ttl-back" type="button" aria-label="처음 화면">◀</button><div class="ttl-mlogo">' + cap(0.55) + '</div><h2>어떤 놀이를 할까요?</h2></header>'
+    +   '<header style="flex-wrap:wrap;row-gap:6px"><button class="ttl-back" type="button" aria-label="처음 화면">◀</button><div class="ttl-mlogo">' + cap(0.55) + '</div><h2 style="flex:1 1 8em;min-width:0">어떤 놀이를 할까요?</h2>'
+    +     '<button class="ttl-room ttl-hmp" type="button" hidden style="margin-left:auto;flex:0 0 auto;min-height:44px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis"></button></header>'   // UX-1: 메뉴 화면의 👥(걷는 화면의 👥 칩은 메뉴에선 숨음) · 좁으면(세로 휴대폰) 단추가 다음 줄로
     +   '<div class="ttl-grid" role="list"></div>'
     +   '<div class="ttl-foot">← → ↑ ↓ 고르기 · Enter 시작 · 게임 중엔 🏠 메뉴로 돌아와요</div>'
     + '</section>';
   document.body.appendChild(root);
   const wipe = el('div', 'ttl-keep', '<div class="c"></div><div class="ico"></div><div class="tx"></div>'); wipe.id = 'ttl-wipe'; document.body.appendChild(wipe);
   const home = el('div', 'chip', '<span class="ico">🏠</span><span class="lbl"> ' + (PROMO ? '처음으로' : '메뉴') + '</span>'); home.id = 'homeChip'; home.title = PROMO ? '처음 화면으로' : '놀이 고르기 화면으로'; home.style.display = 'none'; document.body.appendChild(home);
-  const $ = s => root.querySelector(s), grid = $('.ttl-grid'), muteB = $('.ttl-mute');
+  const $ = s => root.querySelector(s), grid = $('.ttl-grid'), muteB = $('.ttl-mute'), hmp = $('.ttl-hmp');
   const paintMute = () => { muteB.textContent = muted ? '🔇' : '🔊'; muteB.classList.toggle('off', muted); };
   paintMute();
 
@@ -136,20 +137,22 @@ export function createTitle(h) {
     else if (hd && REGF && !PROMO) hd.textContent = FOLD ? ((REGF.find(f => f.k === FOLD) || {}).icon || '') + ' ' + ((REGF.find(f => f.k === FOLD) || {}).title || '') + ' — 무엇을 할까요?' : '어떤 놀이를 할까요?';
     const gi = e => { const k = GORDER.indexOf(e.group); return k < 0 ? GORDER.length : k; };
     if (!list.some(e => e.fold)) list = list.map((e, i) => ({ e, i })).sort((a, b) => gi(a.e) - gi(b.e) || a.i - b.i).map(o => o.e);   // 폴더 카드는 FOLDERS 순서 그대로   // 무리(탐험·대결·모험·이야기·놀이)끼리 — 무리 안은 registry 순서
-    const TOG = list.filter(e => e.mp === 'together'), split = !FOLD && TOG.length > 0 && TOG.length < list.length;   // MP-MENU(10-03 교사 '싱글·멀티가 구분돼 있어?'): 🧍 혼자 하기 / 👥 친구와 함께 두 칸 · 폴더 안은 나누지 않고 카드의 '👥 함께' 표 + 위 한 줄(방 들어가기)
+    const TOG = list.filter(e => e.mp === 'together'), split = !FOLD && TOG.length > 0 && TOG.length < list.length;   // MP-MENU(10-03 교사 '싱글·멀티가 구분돼 있어?'): 🙋 혼자 하기 / 👥 친구와 함께 두 칸 · 폴더 안은 나누지 않고 카드의 '👥 함께' 표 + 위 한 줄(방 들어가기)
     if (split) list = list.filter(e => e.mp !== 'together').concat(TOG);
     const last = store.get('last', null);
     grid.textContent = '';
     const head = (html, cls) => { const d = el('div', 'ttl-sec' + (cls ? ' ' + cls : ''), html); grid.appendChild(d); return d; };
-    if (split) head('<b>🧍 혼자 하기</b><span>나 혼자 학교를 탐험하고 놀아요</span>');
+    if (split) head('<b>🙋 혼자 하기</b><span>나 혼자 학교를 탐험하고 놀아요</span>');
     const RM = FOLD && !LESSON ? Object.keys(G).filter(id => G[id].room && (G[id].folder || 'look') === FOLD) : [];   // ROOM-1: 이 폴더의 방 놀이(숨김) → 방 줄에 이름만
     const togRow = FOLD && (TOG.length > 0 || RM.length > 0);   // 폴더 안에 함께 놀이가 있으면 카드 위에 방 줄 하나
     cards = list.map((e, i) => {
-      if ((split && e === TOG[0]) || (togRow && i === 0)) { const R = window.SM_MP && window.SM_MP.info && window.SM_MP.info(), N = window.SM_MP && window.SM_MP.net && window.SM_MP.net();
-        const LD = !!(window.SM_MP && window.SM_MP.lead && window.SM_MP.lead()), rmN = RM.map(id => (G[id].icon || '') + ' ' + String(G[id].title || id).replace(/\(친구와\)/, '').trim()).join(' · ');
-        const h = RM.length ? head('<b>👥 친구와 ' + (FOLD === 'vs' ? '대결' : '함께') + '</b><span>' + (R ? '「' + R.n.replace(/[<>&]/g, '') + '」 방 · ' + (N ? N.count : 1) + '명 — ' + (LD ? '👥 창에서 다 같이 할 놀이를 골라요' : '선생님이 놀이를 고르면 다 같이 들어가요') : window.SM_MP ? '함께하기 방에 들어가면 선생님이 고른 놀이(' + rmN + ')로 다 같이 들어가요' : '이 화면에서는 함께하기가 꺼져 있어요') + '</span>' + (window.SM_MP ? '<button type="button" class="ttl-room">' + (R ? (LD ? '🎮 놀이 고르기' : '👥 방 보기') : '👥 방 들어가기') + '</button>' : ''), 'tog')
-          : head('<b>👥 친구와 함께</b><span>' + (R ? '지금 「' + R.n.replace(/[<>&]/g, '') + '」 방 · ' + (N ? N.count : 1) + '명' : window.SM_MP ? '선생님이 연 방에 들어가면 친구들과 같이 해요' : '이 화면에서는 함께하기가 꺼져 있어요') + '</span>' + (window.SM_MP ? '<button type="button" class="ttl-room">' + (R ? '방 바꾸기' : '👥 방 들어가기') + '</button>' : ''), 'tog');
-        const rb = h.querySelector('.ttl-room'); if (rb) rb.addEventListener('click', ev => { ev.stopPropagation(); blip(); window.SM_MP.open(); }); }
+      if ((split && e === TOG[0]) || (togRow && (RM.length ? i === 0 : e === TOG[0]))) { const R = window.SM_MP && window.SM_MP.info && window.SM_MP.info(), N = window.SM_MP && window.SM_MP.net && window.SM_MP.net();   // UX-1: 방 놀이 없는 폴더(만들기·생각 모으기) = 첫 👥 카드 바로 위
+        const LD = !!(window.SM_MP && window.SM_MP.lead && window.SM_MP.lead()), RL = window.SM_MP && window.SM_MP.roomList ? window.SM_MP.roomList() : null;   // UX-1: 방 놀이 이름·순서 = 선생님 👥 창과 같게
+        const rmN = RL ? RL.filter(q => RM.includes(q.id)).map(q => q.t).join(' · ') : RM.map(id => (G[id].icon || '') + ' ' + String(G[id].title || id).replace(/\(친구와\)/, '').trim()).join(' · ');
+        const g9 = window.SM_MP && window.SM_MP.roomGame && window.SM_MP.roomGame(), call9 = !!(R && !LD && g9 && RM.includes(g9) && window.SM_MP.joinGame && window.SM_MP.roomName);   // UX-1: 이 폴더의 방 놀이가 도는데 나는 밖 = 줄 단추가 '▶ 같이 하기'
+        const h = RM.length ? head('<b>👥 친구와 ' + (FOLD === 'vs' ? '대결' : '함께') + '</b><span>' + (R ? '「' + R.n.replace(/[<>&]/g, '') + '」 방 · ' + (N ? N.count : 1) + '명 — ' + (LD ? '👥 창에서 다 같이 할 놀이를 골라요' : call9 ? '친구들이 지금 하고 있어요' : '선생님이 놀이를 고르면 다 같이 들어가요') : window.SM_MP ? '함께하기 방에 들어가면 선생님이 고른 놀이(' + rmN + ')로 다 같이 들어가요' : '이 화면에서는 함께하기가 꺼져 있어요') + '</span>' + (window.SM_MP ? '<button type="button" class="ttl-room' + (call9 ? ' call" style="background:#7ee08a">▶ ' + window.SM_MP.roomName().replace(/[<>&]/g, '') + ' 같이 하기' : '">' + (R ? (LD ? '🎮 놀이 고르기' : '👥 방 보기') : '👥 방 들어가기')) + '</button>' : ''), 'tog')
+          : head('<b>👥 친구와 함께</b><span>' + (R ? '지금 「' + R.n.replace(/[<>&]/g, '') + '」 방 · ' + (N ? N.count : 1) + '명 · ' : '') + '같은 판 번호를 고르면 친구 것이 바로 보여요 · 방에 들어가면 친구 모습도 보여요</span>' + (window.SM_MP ? '<button type="button" class="ttl-room">' + (R ? '👥 방 보기' : '👥 방 들어가기') + '</button>' : ''), 'tog');   // UX-1: 블록·메모장은 방 없이 판 번호로 같이 함(방이 꼭 있어야 하는 줄 알았다)
+        h.dataset.rm = RM.join(','); h.dataset.call = call9 ? '1' : '0'; const rb = h.querySelector('.ttl-room'); if (rb) { rb.style.minHeight = '44px'; rb.addEventListener('click', ev => { ev.stopPropagation(); blip(); const M = window.SM_MP; if (rb.classList.contains('call') && M.joinGame) M.joinGame(); else M.open(rb); }); } }
       const g = GROUPS[e.group] || GROUPS.놀이, b = e.id ? best(e.id, e) : null;
       const c = el('button', 'card', '<span class="cin">' + (e.items ? '' : '<span class="gt"><i>' + g.e + '</i><span> ' + (GROUPS[e.group] ? e.group : '놀이') + '</span></span>')
         + '<span class="ic">' + (e.icon || '🎮') + '</span><b></b><span class="ds"></span>' + (b ? '<span class="bs"></span>' : '') + (last === e.id || (e.items && e.items.some(x => x.id === last)) ? '<span class="lt">지난번</span>' : '') + (e.mp === 'together' ? '<span class="mpb">👥 함께</span>' : '') + (e.items ? '<span class="mpb fn">📁 ' + e.items.length + '개</span>' : '') + '</span>');
@@ -162,7 +165,22 @@ export function createTitle(h) {
       grid.appendChild(c); return c;
     });
     focusI = Math.max(0, list.findIndex(e => e.id === last || (e.items && e.items.some(x => x.id === last))));
+    paintMP();
   }
+  // UX-1(10-05 교사 편의성): 메뉴 머리 오른쪽 👥 — 방 밖 = '👥 함께하기'(방 고르기 창) · 방 안 = '👥 방 · n명' · 방 놀이가 도는데 나(아이)는 밖 = 초록 '▶ … 같이 하기'(누르면 바로 들어감)
+  //   폴더 안 방 줄(.ttl-sec.tog)의 사람 수는 글자만 고침 · 방 놀이가 시작·끝나 줄 단추가 바뀔 때만 카드를 한 번 다시 지음 · 메뉴에 있는 동안 2초마다
+  function paintMP() {
+    const M = window.SM_MP; if (!M || PROMO) { hmp.hidden = true; return; }
+    const R = M.info && M.info(), N = M.net && M.net(), g = M.roomGame && M.roomGame(), LD = !!(M.lead && M.lead()), call = !!(R && g && !LD && M.joinGame && M.roomName);
+    hmp.hidden = false; hmp.classList.toggle('call', call); hmp.style.background = call ? '#7ee08a' : '';
+    hmp.textContent = call ? '▶ ' + M.roomName() + ' 같이 하기' : R ? '👥 ' + R.n + ' · ' + (N ? N.count : 1) + '명' : '👥 함께하기';
+    hmp.title = call ? '친구들이 지금 하고 있어요 — 누르면 같이 들어가요' : R ? '방 친구·방 놀이 보기' : '선생님이 연 방에 번호 4자리로 들어가요';
+    const s = grid.querySelector('.ttl-sec.tog span'); if (s && R && !s.classList.contains('warn')) s.textContent = s.textContent.replace(/· \d+명/, '· ' + (N ? N.count : 1) + '명');
+    const row = grid.querySelector('.ttl-sec.tog'); if (row && row.dataset.rm && phase === 'menu' && !paintMP.re) {   // 방 놀이가 시작·끝나면(선생님) 폴더 카드를 한 번 다시 지음
+      const c2 = call && row.dataset.rm.split(',').includes(g); if ((c2 ? '1' : '0') !== row.dataset.call) { paintMP.re = true; filled = fill(true); filled.then(() => { paintMP.re = false; if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); }, () => { paintMP.re = false; }); } }
+  }
+  hmp.addEventListener('click', ev => { ev.stopPropagation(); blip(); const M = window.SM_MP; if (!M) return; if (hmp.classList.contains('call') && M.joinGame) M.joinGame(); else M.open(hmp); });
+  setInterval(() => { if (phase === 'menu') paintMP(); }, 2000);
 
   // ---------- 단계: title → menu → go → off(🏠) → back → menu ----------
   let phase = 'boot', calmT = 0;   // calmT: 이 시각 전엔 시작·고르기 입력을 받지 않는다(로딩 중 눌러 둔 Enter·꾹 누른 키·두 번 탭이 제목→메뉴→게임으로 줄줄이 넘어가지 않게)
@@ -171,6 +189,7 @@ export function createTitle(h) {
     if (phase === 'off') return;
     if (e.target && e.target.closest && e.target.closest('.ttl-keep input, .ttl-keep textarea')) return;   // 오프닝 위에 뜬 창(함께하기 번호·이름 · 🔒 비밀번호)의 입력칸 — 글자·Enter·Esc는 그 창 몫(창이 월드로는 막는다)
     if (phase === 'film') { e.stopImmediatePropagation(); if (e.type === 'keydown' && e.code === 'Escape') { e.preventDefault(); h.film.stop('skip'); } return; }   // FILM-1: 오프닝 영상 동안 Esc = 건너뛰기(나머지 키는 막음)
+    if (document.querySelector('.lb-pop,.lb-big')) { if (e.code !== 'Escape') e.stopImmediatePropagation(); return; }   // UX-1: 👥 창·📺 큰 번호가 떠 있으면 키는 그 창 몫 — Esc = 창 닫기(lobby.js 잡기 단계) · 뒤 카드를 Enter로 고르거나 폴더가 바뀌지 않게
     e.stopImmediatePropagation(); if (e.type !== 'keydown') return;   // 제목·메뉴·날아오기 동안 키는 월드로 가지 않는다(WASD로 뒤에서 걷지 않게)
     heard = true;
     if (e.repeat && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); return; }
@@ -207,7 +226,7 @@ export function createTitle(h) {
     if (phase !== 'title' || !calmOK()) return; heard = true; jingle(); calm(450);
     if (PROMO) { const r = $('.ttl-start').getBoundingClientRect(); if (h.film && !opSeen()) { opening(r); return; } launch(PROMO_GAME, r); return; }   // 홍보판: 카드 없이 바로 견학(처음 한 번은 🎬 오프닝 영상부터 — FILM-1)
     if (!mpSeen && window.SM_MP) filled = fill(true);   // 오프닝을 지을 때 아직 함께하기를 못 읽었으면(느린 기기) '👥 방 들어가기' 칸이 '꺼져 있어요'로 남지 않게 다시
-    show('menu'); filled.then(() => setTimeout(() => { if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); }, 60));
+    show('menu'); paintMP(); filled.then(() => setTimeout(() => { if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); }, 60));
   }
   // 🎬 FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 홍보판 ▶ → 오프닝 영상(약 1분 · ⏭ 건너뛰기) → 그 마지막 자리(스쿨버스 앞)에서 닦기 → 견학. 이 탭에서 한 번만(견학 메뉴 '🎬 오프닝 영상 보기'로 다시)
   const opSeen = () => { try { return sessionStorage.getItem('sm.film.op') === '1'; } catch (e) { return false; } };
@@ -240,7 +259,7 @@ export function createTitle(h) {
     if (LESSON && !LCAT && e.cat) { LCAT = e.cat; refill(); return; }   // 갈래 → 그 안의 카드
     if (!LESSON && !FOLD && e.fold) { FOLD = e.fold; refill(); return; }   // FOLDER-1: 폴더 → 그 안의 카드
     if (e.link) { blip(); location.href = new URL(e.link, location.href).href; return; }   // 다른 페이지(상상의 세계 — v2 엔진 밖)
-    if (e.needRoom && window.SM_MP && !window.SM_MP.room()) { blip(); pendRoom = e.id; window.SM_MP.open(); const t = grid.querySelector('.ttl-sec.tog span'); if (t) { t.textContent = '먼저 방에 들어가요 — 선생님 화면의 방 번호 4자리'; t.classList.add('warn'); } return; }   // 친구 대결은 방이 있어야
+    if (e.needRoom && window.SM_MP && !window.SM_MP.room()) { blip(); pendRoom = e.id; window.SM_MP.open(cards[i]); const t = grid.querySelector('.ttl-sec.tog span'); if (t) { t.textContent = '먼저 방에 들어가요 — 선생님 화면의 방 번호 4자리'; t.classList.add('warn'); } return; }   // 친구 대결은 방이 있어야
     cards.forEach((c, k) => c.classList.add(k === i ? 'pick' : 'dim'));
     launch(e, cards[i].getBoundingClientRect());
   }
@@ -268,7 +287,10 @@ export function createTitle(h) {
       go();
     }), 260);
   }
-  function backToMenu() {
+  function backToMenu() {   // UX-1: 선생님이 고른 방 놀이 중이면 화면 안 확인('나가도 다시 들어올 수 있어요') — 혼자 놀이·선생님은 바로
+    if (phase !== 'off') return; const M = window.SM_MP; if (M && M.confirmLeave) M.confirmLeave(goMenu); else goMenu();
+  }
+  function goMenu() {
     if (phase !== 'off') return; heard = true; whoosh();
     const r = home.getBoundingClientRect(); phase = 'back';
     wipeIn(r.left + r.width / 2, r.top + r.height / 2, '🏠', PROMO ? '처음 화면' : '놀이 고르기', () => {

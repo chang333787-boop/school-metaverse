@@ -31,7 +31,16 @@ const CSS = `
 .lb-ask input.pin::placeholder{font-size:15px;font-weight:600;letter-spacing:0;color:#9aa7b6}
 .lb-ask .err{min-height:1.5em;color:#c92a2a;font-size:13px;font-weight:700}
 `;
-const addCss = () => { if (!document.getElementById('lb-css')) { const st = document.createElement('style'); st.id = 'lb-css'; st.textContent = CSS; document.head.appendChild(st); } };
+// UX-1(10-05 교사 편의성): 창 안 알림 줄(.msg — 오프닝 메뉴 위에서도 보임) · 방 놀이 '▶ 같이 하기' 큰 단추 · 칩 강조 · 터치 44px — 따로 붙임(메모장·블록 놀이가 읽는 옛 판 lobby.js가 먼저 lb-css를 붙여도 빠지지 않게)
+const CSS2 = `
+.lb-pop{max-height:calc(100vh - 24px)}
+.lb-pop .msg{margin-top:6px;color:#c92a2a;font-size:13px;font-weight:700}.lb-pop .msg.ok{color:#2b8a3e}.lb-pop .msg:empty{display:none}
+.lb-pop button.big{display:block;width:100%;font-size:16px;padding:10px 12px;background:#ffd23c;color:#1d3557;border:2px solid #1d3557;text-align:center}
+.lb-pop details{margin-top:6px}.lb-pop summary{cursor:pointer;font-weight:700;min-height:24px}
+#mpChip.mp-call{background:#ffd23c;color:#1d3557;font-weight:800;box-shadow:0 0 0 3px #1d3557}
+body.touch .lb-pop button,body.touch .lb-big button{min-height:44px}
+`;
+const addCss = () => { for (const [id, tx] of [['lb-css', CSS], ['lb-css2', CSS2]]) if (!document.getElementById(id)) { const st = document.createElement('style'); st.id = id; st.textContent = tx; document.head.appendChild(st); } };
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const req = (path, method = 'GET', data) => fetch(DB + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data) }).then((r) => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)));
 const rand = (n) => { const a = new Uint8Array(n); crypto.getRandomValues(a); return [...a].map((b) => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join(''); };
@@ -96,15 +105,18 @@ export async function teacherPin(toast = () => {}) {
 export function createLobby(o) {
   const { chip, suffix = '', label = '', join, leave, net, toast = () => {}, onTeacher = null, onGoTo = null, rooms = null } = o;   // ROOM-1: rooms = 방 놀이 { list, cur, inIt, count, pick, start, end, join }
   addCss();
-  let cur = null, pop = null, big = null, pollT = 0;
+  let cur = null, pop = null, big = null, pollT = 0, popT = 0, anchor = null;   // anchor = 창을 연 단추(메뉴 머리 👥·카드 — 없으면 👥 칩 밑)
   const live = (p) => p && typeof p.e === 'number' && p.e > Date.now();
+  // UX-1: 알림은 열린 창 안 빨간 줄(오프닝 메뉴에선 #toast가 가려져 '번호가 달라요'가 안 보였다) · 창이 없으면 예전처럼 toast
+  const say = (m, sec = 3, ok) => { const el = pop && pop.isConnected && pop.querySelector('.msg'); if (el) { el.textContent = m || ''; el.classList.toggle('ok', !!ok); } else if (m) toast(m, sec); };
   async function check(c, r) {   // 번호가 살아 있고(8시간 안) 그 방이 닫히지 않았는지
     const p = await req('/codes/' + c); if (!live(p) || (r && p.r !== r)) return null;
     const x = await req('/lobby/' + p.r + '/x'); return x ? null : p;
   }
-  function draw() {
-    const N = net();
-    chip.textContent = cur && N ? '👥 ' + cur.n + ' · ' + N.count + '명 · ' + N.name : '👥 함께하기 (방 들어가기)';
+  function draw() {   // UX-1(10-05 교사 편의성): 방 놀이가 도는데 나(아이)는 밖이면(⏹·🏠로 나옴) 칩이 노랗게 '…하는 중' → 누르면 창 맨 위 '▶ 같이 하기'
+    const N = net(), rg = rooms && cur && !cur.k && N && rooms.cur() ? rooms.list().find((q) => q.i === rooms.cur()) : null, call = !!(rg && !rooms.inIt());
+    chip.textContent = cur && N ? (call ? '👥 ' + (document.body.classList.contains('small') ? '' : cur.n + ' · ') + '🎮 ' + rg.t.replace(/^\S+\s+/, '').replace(/\s*\(.*?\)/, '') + ' 하는 중' : '👥 ' + cur.n + ' · ' + N.count + '명 · ' + N.name) : '👥 함께하기 (방 들어가기)';   // 휴대폰은 방 이름을 빼고 짧게(왼쪽 위 칩 줄)
+    chip.classList.toggle('mp-call', call);
   }
   function enter(info, quiet) {
     cur = info; ls.set('mp.room', JSON.stringify(info)); join('c' + info.c + suffix, info); draw();
@@ -114,10 +126,11 @@ export function createLobby(o) {
   }
   async function recheck() { if (!cur) return; try { if (!(await check(cur.c, cur.r))) out(cur.k ? '🚪 방이 끝났어요' : '🚪 선생님이 방을 닫았어요'); } catch (e) { /* 잠깐 끊김은 그대로 */ } }
   function out(msg) { clearInterval(pollT); if (cur) leave(); cur = null; ls.set('mp.room', null); draw(); closePop(); if (msg) toast(msg, 3); dispatchEvent(new CustomEvent('sm-room', { detail: null })); }
-  const closePop = () => { if (pop) pop.remove(); pop = null; };
-  function place(p) {
-    const r = chip.getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight;
-    p.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px';
+  const closePop = () => { clearInterval(popT); if (pop) pop.remove(); pop = null; };
+  function place(p) {   // UX-1: 연 단추 밑(오른쪽 단추면 오른쪽 끝을 맞춤) · 숨은 단추면 👥 칩 밑
+    const A = anchor && anchor.isConnected && anchor.getClientRects().length ? anchor : chip, r = A.getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight;
+    const x = r.left > innerWidth / 2 ? r.right - w : r.left;
+    p.style.left = Math.max(8, Math.min(innerWidth - w - 8, x)) + 'px';
     p.style.top = Math.max(8, Math.min(innerHeight - h - 8, r.bottom + 6)) + 'px';
   }
   function popup(html) {
@@ -131,51 +144,74 @@ export function createLobby(o) {
     if (!cur) return; if (big) big.remove();
     big = document.createElement('div'); big.className = 'lb-big ttl-keep';
     big.innerHTML = '<div><div style="font-size:20px;font-weight:800">🏫 ' + esc(cur.n) + '</div><div class="sm" style="font-size:16px;color:#5a6b80">방 번호</div><div class="code">' + cur.c + '</div>'
-      + '<div style="font-size:17px">왼쪽 위 <b>👥 함께하기</b> → 「' + esc(cur.n) + '」 고르기 → 번호 넣기</div><button>닫기</button></div>';
+      + '<div style="font-size:17px"><b>👥 함께하기</b> 단추(메뉴 화면 = 오른쪽 위 · 걷는 화면 = 왼쪽 위) → 「' + esc(cur.n) + '」 고르기 → 번호 4자리</div><button>닫기</button></div>';   // UX-1: 메뉴 화면엔 👥가 오른쪽 위(title.js 머리 단추)
     big.querySelector('button').onclick = () => { big.remove(); big = null; };
+    big.addEventListener('click', (e) => { if (e.target === big) { big.remove(); big = null; } });   // UX-1: 어두운 바깥을 눌러도 닫힘(Esc는 아래 잡기 단계 듣개)
     for (const t of ['keydown', 'keyup']) big.addEventListener(t, (e) => { e.stopPropagation(); if (e.key === 'Escape' && big) { big.remove(); big = null; } });
     document.body.appendChild(big); document.exitPointerLock?.();
   }
   async function create() {
-    if (!(await teacherPin(toast))) return;
+    if (!(await teacherPin(say))) return;   // UX-1: 비밀번호 없음·오프라인 알림도 창 안 줄로
     const n = prompt('방 이름(아이들 목록에 보여요)', '우리 반'); if (n == null) return;
     const name = (n.trim() || '우리 반').replace(/[<>]/g, '').slice(0, 20), rid = rand(10), k = rand(24), e = Date.now() + HOURS * 3600e3;
     try {
       let c = null;
       for (let i = 0; i < 25 && !c; i++) { const t = String(1000 + Math.floor(Math.random() * 9000)); if (!live(await req('/codes/' + t))) c = t; }
-      if (!c) return toast('번호를 만들지 못했어요 — 다시 해 주세요');
+      if (!c) return say('번호를 만들지 못했어요 — 다시 해 주세요');
       await req('/keys/' + rid, 'PUT', k);
       await req('/lobby/' + rid, 'PUT', { n: name, e, t: { '.sv': 'timestamp' } });
       await req('/codes/' + c, 'PUT', { r: rid, e, t: { '.sv': 'timestamp' } });
       closePop(); if (cur) out(); enter({ c, r: rid, n: name, e, k }); const M = net(); if (M) M.setName('선생님'); showBig();
       req('/lobby').then((L) => { for (const id in L || {}) if (!live(L[id])) req('/lobby/' + id, 'DELETE').catch(() => {}); }).catch(() => {});   // 끝난 방 치우기
-    } catch (er) { toast('방을 만들지 못했어요 — 인터넷을 확인해 주세요', 3); }
+    } catch (er) { say('방을 만들지 못했어요 — 인터넷을 확인해 주세요', 3); }
+  }
+  // UX-1(10-05 교사 편의성): 화면 안 확인 창(방 놀이에서 나갈 때 — confirm()은 경기 상태 보내기를 멈춰서 안 씀) · 아니오·Esc·바깥 = 그냥 닫기
+  function ask(text, yes, no, onYes, sub) {
+    anchor = null; const P = popup('<h4>' + esc(text) + '</h4>' + (sub ? '<div class="sm">' + esc(sub) + '</div>' : '') + '<div class="row"><button class="sub" data-l="no">' + esc(no) + '</button><button class="warn" data-l="yes">' + esc(yes) + '</button></div>');
+    P.style.left = '50%'; P.style.top = '30%'; P.style.transform = 'translateX(-50%)';
+    P.onclick = (e) => { e.stopPropagation(); const b = e.target.closest('[data-l]'); if (!b) return; closePop(); if (b.dataset.l === 'yes' && onYes) onYes(); };
+    const nb = P.querySelector('[data-l=no]'); if (nb) nb.focus({ preventScroll: true });
   }
   async function shut() {
     if (!cur || !cur.k || !confirm('「' + cur.n + '」 방을 닫을까요? 들어와 있는 친구들이 모두 나가요.')) return;
     try { await req('/lobby/' + cur.r + '/x/' + cur.k, 'PUT', true); } catch (e) { return toast('닫지 못했어요'); }
     out('🔒 방을 닫았어요');
   }
-  async function openList() {
+  async function openList(a) {
+    anchor = a instanceof Element ? a : null;
     const N = net();
     if (cur) {
-      const others = N && N.peers ? N.peers() : [];
+      let others = N && N.peers ? N.peers() : [];
       // ROOM-1(10-05 교사 '멀티방을 만들고 그 안에서 모드를 정하는 게 직관적일까?'): 방을 만든 선생님 = '🎮 다 같이 놀이'(누르면 방 친구 모두 그 놀이 대기실로) · 모두 = 지금 방 놀이 줄
-      const RG = rooms ? rooms.list() : [], rgi = rooms ? rooms.cur() : 0, rgNow = RG.find(q => q.i === rgi), inIt = !!(rooms && rooms.inIt());
-      // 지금 방 놀이 칸(노랑) 안에 단추를 둔다 — 창이 길어도 ▶·⏹가 위에 보이게
-      const roomHtml = !rooms ? '' : (rgNow ? '<div class="now">🎮 지금 방 놀이: ' + esc(rgNow.t) + (cur.k ? ' <span class="sm">· 들어온 친구 ' + rooms.count(rgi) + '/' + others.length + '</span>' : '')
-          + ((cur.k || !inIt) ? '<div class="row" style="justify-content:flex-start;margin-top:6px">' + (cur.k ? '<button data-l="rstart" title="다 모이면 — 대기실 방장 화면이 시작을 눌러요">▶ 모두 시작</button><button class="sub" data-l="rend">⏹ 놀이 끝(자유롭게)</button>' : '') + (!inIt ? '<button class="sub" data-l="rjoin">' + (cur.k ? '🎮 나도 같이' : '들어가기') + '</button>' : '') + '</div>' : '') + '</div>' : '')
-        + (cur.k ? '<div style="margin-top:8px;font-weight:800">🎮 다 같이 놀이 <span class="sm">— 누르면 방 친구 모두 그 놀이 대기실로 들어가요</span></div><div class="rg">' + RG.map(q => '<button data-rg="' + q.i + '"' + (q.i === rgi ? ' class="on"' : '') + '>' + esc(q.t) + (q.i === rgi ? ' ✓ 지금' : '') + '</button>').join('') + '</div>' : '');
+      const RG = rooms ? rooms.list() : [], rgi = rooms ? rooms.cur() : 0, rgNow = RG.find(q => q.i === rgi), inIt = !!(rooms && rooms.inIt()), rgName = rgNow ? rgNow.t.replace(/\s*\(.*?\)/, '') : '';
+      // UX-1(10-05 교사 편의성): 순서 = 지금 방 놀이(맨 위 — 아이는 노란 '▶ 같이 하기' 큰 단추) → 알림 줄 → (선생님) 다 같이 놀이·선생님 단추 → 친구 → 도움말 — 선생님 단추가 도움말 밑에 묻혀 스크롤해야 보이던 것
+      const roomHtml = !rooms || !rgNow ? '' : '<div class="now">🎮 지금 방 놀이: ' + esc(rgNow.t) + (cur.k ? ' <span class="sm cnt">· 들어온 친구 ' + rooms.count(rgi) + '/' + others.length + '</span>' : '')
+        + (cur.k ? '<div class="row" style="justify-content:flex-start;margin-top:6px"><button data-l="rstart" title="다 모이면 — 대기실 방장 화면이 시작을 눌러요">▶ 모두 시작 · ' + rooms.count(rgi) + '명 들어옴</button><button class="sub" data-l="rend">⏹ 놀이 끝(자유롭게)</button>' + (!inIt ? '<button class="sub" data-l="rjoin">🎮 나도 같이</button>' : '') + '</div><div class="sm" style="font-weight:400;margin-top:3px">▶ = 친구들이 대기실에 다 들어오면 눌러요</div>'
+          : !inIt ? '<button data-l="rjoin" class="big" style="margin-top:6px">▶ ' + esc(rgName) + ' 같이 하기</button><div class="sm" style="font-weight:400;margin-top:3px">친구들이 지금 하고 있어요</div>' : '<div class="sm" style="font-weight:400">지금 같이 하고 있어요</div>')
+        + '</div>';
+      const frHtml = () => '나: <b>' + esc(N ? N.name : '') + '</b><br>' + (others.length ? '친구 ' + others.length + '명' + (onGoTo ? ' <span class="sm">(누르면 그 친구 곁으로)</span>' : '') + '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + others.map((p, i) => onGoTo ? '<button class="sub" data-go="' + i + '" style="padding:4px 9px"><span style="color:' + p.color + '">●</span> ' + esc(p.label) + (p.act ? ' <span class="sm">' + esc(p.act) + '</span>' : '') + '</button>' : '<span style="padding:2px 6px"><span style="color:' + p.color + '">●</span> ' + esc(p.label) + (p.act ? ' <span class="sm">' + esc(p.act) + '</span>' : '') + '</span>').join('') + '</div>' : '<span class="sm">아직 들어온 친구가 없어요</span>');
+      const tips = '• 걷기·뛰기 · 😀 인사는 서로 보여요<br>• 📝 메모장은 같은 판이면 장면·깃발을 함께 써요<br>' + (rooms ? '• 🎮 <b>다 같이 놀이</b>(물총·숨바꼭질·로봇인 척·길잡이)는 선생님이 고르면 방 친구 모두 같이 들어가요<br>' : '• 💦 <b>물총 친구 대결</b>은 같은 방 친구들과 함께<br>') + '• 이야기·방탈출 같은 놀이는 <b>각자 따로</b> 해요';
       const P = popup('<h4>👥 ' + esc(cur.n) + ' <span class="sm">· 방 번호 ' + cur.c + '</span></h4>'
-        + '<div class="box">나: <b>' + esc(N ? N.name : '') + '</b><br>' + (others.length ? '친구 ' + others.length + '명' + (onGoTo ? ' <span class="sm">(누르면 그 친구 곁으로)</span>' : '') + '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + others.map((p, i) => onGoTo ? '<button class="sub" data-go="' + i + '" style="padding:4px 9px"><span style="color:' + p.color + '">●</span> ' + esc(p.label) + (p.act ? ' <span class="sm">' + esc(p.act) + '</span>' : '') + '</button>' : '<span style="padding:2px 6px"><span style="color:' + p.color + '">●</span> ' + esc(p.label) + (p.act ? ' <span class="sm">' + esc(p.act) + '</span>' : '') + '</span>').join('') + '</div>' : '<span class="sm">아직 들어온 친구가 없어요</span>') + '</div>'
-        + roomHtml
-        + '<div class="sm">• 걷기·뛰기 · 😀 인사는 서로 보여요<br>• 📝 메모장은 같은 판이면 장면·깃발을 함께 써요<br>' + (rooms ? '• 🎮 <b>다 같이 놀이</b>(물총·숨바꼭질·로봇인 척·길잡이)는 선생님이 고르면 방 친구 모두 같이 들어가요<br>' : '• 💦 <b>물총 친구 대결</b>은 같은 방 친구들과 함께<br>') + '• 이야기·방탈출 같은 놀이는 <b>각자 따로</b> 해요</div>'
+        + roomHtml + '<div class="msg" role="alert"></div>'
+        + (cur.k && rooms ? '<div style="margin-top:8px;font-weight:800">🎮 다 같이 놀이 <span class="sm">— 누르면 방 친구 모두 그 놀이 대기실로 들어가요</span></div><div class="rg">' + RG.map(q => '<button data-rg="' + q.i + '"' + (q.i === rgi ? ' class="on"' : '') + '>' + esc(q.t) + (q.i === rgi ? ' ✓ 지금' : '') + '</button>').join('') + '</div>' : '')
         + (cur.k ? '<div style="margin-top:8px;font-weight:800">🧑‍🏫 선생님</div><div class="row" style="justify-content:flex-start;margin-top:4px">' + (onTeacher ? '<button data-l="gather" title="방 친구 모두를 내 곁으로">📣 모두 내 곁으로</button><button data-l="hold" title="모두 잠깐 멈추고 선생님 말씀 듣기">✋ 모두 멈춤</button><button class="sub" data-l="release">▶ 다시 움직여요</button><button class="sub" data-l="chatoff">💬 채팅 ' + (N && N.ctlData && N.ctlData.chat && N.ctlData.chat.off ? '켜기' : '끄기') + '</button><button class="sub" data-l="chatclr">🧹 채팅 지우기</button>' : '') + '<button class="sub" data-l="big">📺 번호 크게</button><button class="warn" data-l="shut">🔒 방 닫기</button></div>' : '')
+        + '<div class="box fr">' + frHtml() + '</div>'
+        + (cur.k ? '<details class="sm"><summary>❓ 친구들이 할 수 있는 것</summary>' + tips + '</details>' : '<div class="sm">' + tips + '</div>')
         + '<div class="row"><button class="sub" data-l="name">✏️ 내 이름</button><button class="sub" data-l="out">🚪 방 나가기</button><button class="sub" data-l="x">닫기</button></div>');
-      P.onclick = (e) => { e.stopPropagation(); const g = e.target.closest('[data-go]'); if (g && onGoTo) { closePop(); onGoTo(others[+g.dataset.go]); return; }
-        const rg = e.target.closest('[data-rg]'); if (rg && rooms) { closePop(); rooms.pick(+rg.dataset.rg); return; }
+      // UX-1: 창이 열린 동안 2초마다 친구 목록·들어온 수만 고침(창 전체를 다시 짓지 않음 — 스크롤·누름 그대로) · 방 놀이가 바뀌면(선생님이 고름·내가 들어감) 그때만 다시 짓기
+      clearInterval(popT); popT = setInterval(() => {
+        if (pop !== P || !P.isConnected) { clearInterval(popT); return; }
+        if (rooms && (rooms.cur() !== rgi || rooms.inIt() !== inIt)) { const m = P.querySelector('.msg'), mt = m ? m.textContent : '', ok = !!(m && m.classList.contains('ok')); openList(anchor); if (mt) say(mt, 0, ok); return; }
+        others = N && N.peers ? N.peers() : []; const f = P.querySelector('.fr'); if (f) f.innerHTML = frHtml();
+        if (rooms && rgNow) { const c = P.querySelector('.cnt'); if (c) c.textContent = '· 들어온 친구 ' + rooms.count(rgi) + '/' + others.length; const s = P.querySelector('[data-l=rstart]'); if (s) s.textContent = '▶ 모두 시작 · ' + rooms.count(rgi) + '명 들어옴'; }
+      }, 2000);
+      P.onclick = (e) => { e.stopPropagation(); const g = e.target.closest('[data-go]'); if (g && onGoTo) { const p9 = others[+g.dataset.go]; closePop(); onGoTo(p9); return; }
+        // UX-1: 다 같이 놀이 고르기·▶ 모두 시작·⏹ 끝 = 창을 닫지 않고 다시 그려 '보냈어요'를 창 안에(메뉴 화면에선 toast가 안 보였다)
+        const rg = e.target.closest('[data-rg]'); if (rg && rooms) { rooms.pick(+rg.dataset.rg, true); openList(anchor); say('✓ 보냈어요 — 친구들이 2초 뒤 대기실로 가요 · 다 모이면 ▶ 모두 시작', 0, true); return; }
         const b = e.target.closest('[data-l]'); if (!b) return; const a = b.dataset.l;
-        if (rooms && (a === 'rjoin' || a === 'rstart' || a === 'rend')) { closePop(); if (a === 'rjoin') rooms.join(); else if (a === 'rstart') rooms.start(); else rooms.end(); return; }
+        if (rooms && a === 'rjoin') { closePop(); rooms.join(); return; }
+        if (rooms && a === 'rstart') { rooms.start(true); openList(anchor); say('▶ 시작 신호를 보냈어요 — 대기실 화면이 3·2·1을 세요', 0, true); return; }
+        if (rooms && a === 'rend') { rooms.end(true); openList(anchor); say('⏹ 방 놀이를 마쳤어요 — 모두 자유롭게 다녀요', 0, true); return; }
         if (a === 'name') { const v = prompt('내 이름(별명)을 적어 주세요 — 친구들 화면에 보여요', N ? N.name : ''); if (v && N) N.setName(v); draw(); closePop(); }
         else if (a === 'out') out('👋 방에서 나왔어요'); else if (a === 'big') { closePop(); showBig(); } else if (a === 'shut') shut();
         else if ((a === 'gather' || a === 'hold' || a === 'release') && onTeacher) { closePop(); onTeacher(a); }
@@ -185,31 +221,42 @@ export function createLobby(o) {
     }
     const P = popup('<h4>👥 함께하기</h4><div class="sm">선생님이 연 방을 고르고, 화면에 보이는 <b>번호 4자리</b>를 넣어요.</div><div class="rooms"><div class="sm">방을 찾는 중…</div></div>'
       + '<div class="pick" style="display:none"><div style="display:flex;gap:6px;margin-top:4px"><input class="nm" maxlength="8" placeholder="내 이름" style="flex:1"><input class="cd" maxlength="4" inputmode="numeric" placeholder="번호 4자리" style="width:110px"></div><div class="row"><button data-l="go">들어가기</button></div></div>'
+      + '<div class="msg" role="alert"></div>'
       + '<div class="row"><button class="sub" data-l="new" title="선생님 비밀번호가 필요해요">🔒 선생님: 방 만들기</button><button class="sub" data-l="x">닫기</button></div>');
     let sel = null;
     const nm = P.querySelector('.nm'), cd = P.querySelector('.cd'); nm.value = ls.get('mp.name') || '';
-    const go = async () => {
+    const go = async () => {   // UX-1: 틀림·빠짐은 창 안 빨간 줄(say)
       const name = nm.value.trim().replace(/[<>]/g, '').slice(0, 8), c = cd.value.trim();
-      if (!name) { toast('내 이름을 적어 주세요'); nm.focus(); return; }
-      if (!/^\d{4}$/.test(c)) { toast('번호 4자리를 넣어 주세요'); cd.focus(); return; }
-      let p = null; try { p = await check(c, sel.r); } catch (e) { return toast('인터넷을 확인해 주세요'); }
-      if (!p) { toast('번호가 달라요 — 선생님 화면의 번호를 다시 봐요', 3); cd.select(); return; }
+      if (!name) { say('내 이름을 적어 주세요'); nm.focus(); return; }
+      if (!/^\d{4}$/.test(c)) { say('번호 4자리를 넣어 주세요'); cd.focus(); return; }
+      let p = null; try { p = await check(c, sel.r); } catch (e) { return say('인터넷을 확인해 주세요'); }
+      if (!p) { say('번호가 달라요 — 선생님 화면의 번호를 다시 봐요', 3); cd.select(); return; }
       ls.set('mp.name', name); closePop(); enter({ c, r: sel.r, n: sel.n, e: p.e });
       const M = net(); if (M) M.setName(name); draw();
     };
+    nm.addEventListener('input', () => say(''));
+    cd.addEventListener('input', () => { const v = cd.value.replace(/\D/g, '').slice(0, 4); if (v !== cd.value) cd.value = v; say(''); });   // 숫자만
+    nm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (cd.value) go(); else cd.focus(); } });   // UX-1: 이름 칸 Enter = 번호 칸으로(한글 입력 중 Enter는 글자 마무리)
     cd.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) go(); });
     P.onclick = (e) => { e.stopPropagation(); const b = e.target.closest('[data-l],[data-r]'); if (!b) return;
       if (b.dataset.r) { sel = { r: b.dataset.r, n: b.dataset.n }; P.querySelectorAll('.rooms button').forEach((x) => x.classList.toggle('on', x === b)); P.querySelector('.pick').style.display = ''; place(P); (nm.value ? cd : nm).focus(); return; }
       const a = b.dataset.l; if (a === 'go') go(); else if (a === 'new') create(); else closePop(); };
-    let L = {}; try { L = (await req('/lobby')) || {}; } catch (e) { P.querySelector('.rooms').innerHTML = '<div class="sm">방 목록을 불러오지 못했어요 — 인터넷을 확인해 주세요</div>'; return; }
-    if (pop !== P) return;
-    const ids = Object.keys(L).filter((id) => live(L[id]) && !L[id].x).sort((a, b) => (L[b].t || 0) - (L[a].t || 0));
-    P.querySelector('.rooms').innerHTML = ids.length ? ids.map((id) => '<button data-r="' + esc(id) + '" data-n="' + esc(L[id].n) + '">🏫 ' + esc(L[id].n) + (L[id].t ? ' <span class="sm">· ' + new Date(L[id].t).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }) + ' 열림</span>' : '') + '</button>').join('')
-      : '<div class="sm">아직 열린 방이 없어요 — 선생님이 방을 열면 여기에 보여요.</div>';
-    place(P);
+    // UX-1: 열린 방이 없으면 4초마다 다시 찾음(2분까지 — 선생님이 방을 열기 전에 창을 연 아이가 '없어요'에 갇히지 않게) · 방 칸만 다시 씀(이름·번호 칸 그대로)
+    const t0 = Date.now(), again = () => { if (Date.now() - t0 < 120000) setTimeout(() => { if (pop === P && !sel) load(); }, 4000); };
+    const load = async () => {
+      let L = {}; try { L = (await req('/lobby')) || {}; } catch (e) { if (pop === P) { P.querySelector('.rooms').innerHTML = '<div class="sm">방 목록을 불러오지 못했어요 — 인터넷을 확인해 주세요</div>'; again(); } return; }
+      if (pop !== P || sel) return;
+      const ids = Object.keys(L).filter((id) => live(L[id]) && !L[id].x).sort((a, b) => (L[b].t || 0) - (L[a].t || 0));
+      P.querySelector('.rooms').innerHTML = ids.length ? ids.map((id) => '<button data-r="' + esc(id) + '" data-n="' + esc(L[id].n) + '">🏫 ' + esc(L[id].n) + (L[id].t ? ' <span class="sm">· ' + new Date(L[id].t).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }) + ' 열림</span>' : '') + '</button>').join('')
+        : '<div class="sm">아직 열린 방이 없어요 — 선생님이 방을 열면 저절로 여기에 보여요.</div>';
+      place(P); if (!ids.length) again();
+    };
+    await load();
   }
   chip.addEventListener('click', (e) => { e.stopPropagation(); if (pop) closePop(); else openList(); });
   addEventListener('click', (e) => { if (pop && !pop.contains(e.target) && e.target !== chip) closePop(); });
+  // UX-1(10-05 교사 편의성): Esc = 📺 큰 번호 → 창 순서로 닫기(잡기 단계 — 오프닝 메뉴가 Esc로 폴더를 바꾸지 않게 · 예전엔 큰 번호 div에 듣개가 있어 Esc가 닿지 않았다) · 🔒 비밀번호 창은 PINKEY 몫
+  addEventListener('keydown', (e) => { if (e.key !== 'Escape' || e.isComposing || document.querySelector('.lb-ask')) return; if (big) { big.remove(); big = null; } else if (pop) closePop(); else return; e.preventDefault(); e.stopImmediatePropagation(); }, true);
 
   // 시작: ?code=1234 또는 지난번 방(아직 열려 있으면 조용히 다시)
   (async () => {
@@ -225,5 +272,6 @@ export function createLobby(o) {
     draw();
   })();
   draw();
-  return { draw, recheck, get room() { return cur; }, open: openList, leave: () => out(), teacher: (k, extra, quiet) => { if (onTeacher && cur && cur.k) onTeacher(k, extra, quiet); } };
+  // open(a) = 단추 a 밑에 창(같은 단추를 다시 누르면 닫힘 — 👥 칩처럼) · ask = 화면 안 확인 창
+  return { draw, recheck, get room() { return cur; }, open: (a) => (pop && a instanceof Element && a === anchor ? closePop() : openList(a)), ask, leave: () => out(), teacher: (k, extra, quiet) => { if (onTeacher && cur && cur.k) onTeacher(k, extra, quiet); } };
 }
