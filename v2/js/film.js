@@ -14,6 +14,7 @@ export function createFilm(env) {
     whoosh: () => { snd(180, 0, 0.55, 'sine', 0.13, 1300); snd(2200, 0.18, 0.3, 'sine', 0.03, 900); },
     tick: () => snd(1760, 0, 0.05, 'triangle', 0.05),
     pop: () => { snd(660, 0, 0.12, 'triangle', 0.1, 990); },
+    snap: () => { snd(2600, 0, 0.025, 'square', 0.035); snd(1100, 0.03, 0.06, 'triangle', 0.06, 500); },   // PICS-1: 사진 카드 찰칵
     off: () => { snd(880, 0, 0.18, 'square', 0.05, 220); snd(120, 0.12, 0.25, 'sine', 0.12, 60); },
     on: () => [523, 659, 784].forEach((f, i) => snd(f, i * 0.09, 0.5, 'triangle', 0.13)),
     bell: () => { snd(1568, 0, 1.4, 'sine', 0.08); snd(2093, 0.02, 1.2, 'sine', 0.05); },
@@ -107,8 +108,19 @@ export function createFilm(env) {
 #film .clip{right:clamp(14px,3vw,48px);bottom:clamp(12px,3vh,34px);width:min(40vw,500px);padding:8px;transform:translateY(18px)}
 #film .clip.in{transform:none}
 #film .clip .fr{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000}
-#film .clip .fr .th{position:absolute;inset:0;background:#000 center/cover no-repeat;transform-origin:60% 45%;animation:flkb 9s ease-out both}
-@keyframes flkb{from{transform:scale(1.03)}to{transform:scale(1.16)}}
+#film .clip .fr .th{position:absolute;inset:0;background:center/cover no-repeat;transform-origin:60% 45%;animation:flkb 4.6s ease-out both}
+#film .clip .fr .th.t1{background-color:#000}
+#film .clip .fr .th.t2,#film .clip .fr .th.t3{opacity:0;animation:flkb 4.6s ease-out both,flin .7s ease both}
+#film .clip .fr .th.t2{transform-origin:35% 50%;animation-delay:2.1s,2.1s}
+#film .clip .fr .th.t3{transform-origin:55% 35%;animation-delay:4.2s,4.2s}
+@keyframes flkb{from{transform:scale(1.03)}to{transform:scale(1.17)}}
+@keyframes flin{from{opacity:0}to{opacity:1}}
+/* PICS-1 사진 카드(유튜브 장면 사진이 박자마다 착착 쌓임) — 자리·크기는 영상 조각 칸 그대로(글과 안 겹침) */
+#film .clip.pics .fr{overflow:visible;background:none;border-radius:0}
+#film .clip.pics .pk{position:absolute;inset:6% 8%;border:3px solid #fff;border-radius:6px;background:#1d2533 center/cover no-repeat;box-shadow:0 8px 18px rgba(0,0,0,.45);opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}
+#film .clip.pics.in .pk{animation:pkin .32s cubic-bezier(.2,1.3,.35,1) var(--d) both}
+@keyframes pkin{0%{opacity:0;transform:translate(var(--x),calc(var(--y) - 22%)) rotate(calc(var(--r) * 3)) scale(1.4)}100%{opacity:1;transform:translate(var(--x),var(--y)) rotate(var(--r)) scale(1)}}
+#film .clip.pics .cap:before{content:'📷';background:none;padding:0;font-size:13px}
 #film .clip .cap{display:flex;align-items:center;gap:8px;padding:8px 4px 2px;font:700 clamp(12px,1.15vw,14px)/1.3 var(--ff);color:rgba(255,255,255,.9)}
 #film .clip .cap:before{content:'▶';font-size:10px;background:#ff3d3d;border-radius:4px;padding:3px 5px;line-height:1}
 /* 아래 글 · 가운데 글 */
@@ -247,6 +259,7 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
       try { document.exitPointerLock && document.pointerLockElement && document.exitPointerLock(); } catch (e) { /* */ }
       document.body.classList.add('film-on');
       const T = shots.reduce((a, s) => a + (s.dur || 0), 0);
+      preloadPics(shots);   // PICS-1: 사진은 처음에 다 받아 둠(장마다 5~6장 · 한 장 ≈ 40KB — 유튜브 조각 하나보다 훨씬 가벼움)
       cur = { shots, i: -1, t: 0, st: 0, mb: 0, lastCh: null, T, res, o, root, black, flash, stage, prog, onKey, tags: [], ui: [], extra: [], clip: null, warm: new Map(), last: (document.timeline && document.timeline.currentTime) || performance.now(), done: false, prevTime: env.getTime ? env.getTime() : null, fov0: camera.fov, near0: camera.near, far0: camera.far };
       if (shots.some(s => s.cut)) cutOn();
       setView && setView({ far: 420 });
@@ -284,6 +297,13 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
     Object.assign(f.style, { position: 'fixed', border: '0', zIndex: '-1', left: '0px', top: '0px', width: '480px', height: '270px', pointerEvents: 'none' });
     document.body.appendChild(f); c.warm.set(i, f);
   }
+  // PICS-1(10-05 교사 '유튜브 말고 관련 사진들 몇 장씩 타다다다 — 유튜브가 나으면 유튜브로'): 장 하나 = 정림초 유튜브 영상들의 장면 사진(유튜브가 주는 앞·가운데·뒤 장면 sd1~3 · 없으면 hq)
+  //   → 모든 폰에서 똑같이(자동 재생 막힘·유튜브 제목 띠 없음) · 데이터 ≈ 1MB(유튜브 조각 넷 ≈ 10MB) · 0.6초(배경 음악 한 박)마다 한 장이 찰칵 하고 쌓임
+  const picSrc = (p, q) => 'https://i.ytimg.com/vi/' + encodeURIComponent(p.id) + '/' + q + (p.n || 2) + '.jpg';
+  function preloadPics(shots) {
+    for (const s of shots) for (const p of s.pics || []) { if (p.u) continue; const im = new Image(); im.onload = () => { p.u = picSrc(p, 'sd'); }; im.onerror = () => { p.u = picSrc(p, 'hq'); }; im.src = picSrc(p, 'sd'); }
+  }
+  const PK = [[-5, -3, 2], [4, 3, -2], [-3, -2, 1], [6, 2, -1], [-6, -4, 2], [3, 1, -2]];   // 카드마다 기울기(°) · 옆(%) · 위아래(%)
   function enter(i) {
     const c = cur, s = c.shots[i]; c.i = i; c.st = 0; c.s = s;
     for (const [k, f] of c.warm) if (k < i) { f.remove(); c.warm.delete(k); }   // 지난 장면 몫(건너뛴 것)
@@ -305,9 +325,18 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
     c.camL = s.cam && s.cam.l.length > 1 ? new THREE.CatmullRomCurve3(s.cam.l.map(a => new THREE.Vector3(a[0], a[1], a[2])), false, 'centripetal') : null;
     if (s.cam && s.cam.p.length === 1) { c.p1 = s.cam.p[0]; c.l1 = s.cam.l[0]; } else c.p1 = c.l1 = null;
     for (const t of s.tags || []) { const d = el('div', 'tag', '<b>' + esc(t.t) + '</b><i></i><s></s>', c.stage); c.tags.push({ el: d, p: t.p, at: t.at || 0, on: false }); }
-    if (s.clip && s.clip.id) {
-      const d = el('div', 'fl-u clip glass', null, c.stage), fr = el('div', 'fr', null, d), th = el('div', 'th', null, fr);
-      th.style.backgroundImage = 'url(https://i.ytimg.com/vi/' + encodeURIComponent(s.clip.id) + '/hqdefault.jpg)';   // CLIP-STILL: 재생 전·자동 재생이 막힌 폰 = 이 사진(천천히 다가옴)
+    if (s.pics && s.pics.length) {   // PICS-1 사진 카드
+      const d = el('div', 'fl-u clip pics glass', null, c.stage), fr = el('div', 'fr', null, d), at = s.picsAt || 0.9, gap = s.picsGap || 0.6;
+      s.pics.forEach((p, j) => { const k = el('div', 'pk', null, fr), m = PK[j % PK.length];
+        k.style.backgroundImage = p.u ? 'url(' + p.u + ')' : 'url(' + picSrc(p, 'sd') + '), url(' + picSrc(p, 'hq') + ')';   // 아직 못 받았으면 sd 위·hq 밑(sd가 없으면 hq가 보임)
+        k.style.cssText += ';--r:' + m[0] + 'deg;--x:' + m[1] + '%;--y:' + m[2] + '%;--d:' + (j * gap).toFixed(2) + 's';
+        c.sfx.push({ t: at + j * gap + 0.02, k: 'snap', done: false }); });
+      setTimeout(() => { if (cur && cur.clip === d) d.classList.add('in'); }, at * 1000);
+      el('div', 'cap', esc(s.picsTitle || '정림초 유튜브 속 우리 학교'), d); c.clip = d;
+    } else if (s.clip && s.clip.id) {
+      const d = el('div', 'fl-u clip glass', null, c.stage), fr = el('div', 'fr', null, d);
+      // CLIP-STILL: 재생 전·자동 재생이 막힌 폰 = 그 영상의 장면 사진 셋(유튜브가 주는 가운데·뒤·앞 장면 hq2·hq3·hq1)이 천천히 다가오며 이어짐(짧은 영상처럼) · 사진이 없으면 밑 사진이 그대로
+      ['hq2', 'hq3', 'hq1'].forEach((k, j) => { el('div', 'th t' + (j + 1), null, fr).style.backgroundImage = 'url(https://i.ytimg.com/vi/' + encodeURIComponent(s.clip.id) + '/' + k + '.jpg)' + (j ? '' : ', url(https://i.ytimg.com/vi/' + encodeURIComponent(s.clip.id) + '/hqdefault.jpg)'); });
       const at = (s.clip.at || 0.6) * 1000, wf = c.warm.get(i);
       if (wf) { c.warm.delete(i); if (wf._ld) { ytCmd(wf, 'seekTo', [s.clip.start | 0, true]); if (wf._st !== 1) ytCmd(wf, 'playVideo'); } }   // 미리 지은 조각 = 처음 자리로 되감기(이미 받아 둔 곳이라 바로) · 멈춰 있을 때만 재생 명령
       setTimeout(() => { if (!cur || cur.clip !== d) { if (wf) wf.remove(); return; } d.classList.add('in');

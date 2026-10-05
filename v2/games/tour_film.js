@@ -4,6 +4,8 @@
 const MAIN_CUT = { y: 3.0, box: [-41.3, -51.6, 52.1, -19.8] };
 const RAS = { R: '#4dabf7', A: '#ff7a59', S: '#38c98a', AI: '#9b8cff', ECO: '#7bd35a' };
 const ytId = u => { const m = String(u || '').match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/); return m ? m[1] : null; };
+// PICS-1: pics = ['유튜브 주소#장면'] — #1 앞 · #2 가운데 · #3 뒤(유튜브가 주는 장면 사진) → 영상 조각 대신 사진 카드
+const picsOf = (c, vids) => { const L = [].concat((c && c.pics) || []).map(u => { const id = ytId(u), n = +(String(u).match(/#([123])\s*$/) || [])[1] || 2; return id ? { id, n, title: vids.get(id) || '' } : null; }).filter(Boolean); return L.length ? L : null; };
 const clipOf = (c, title) => { const id = c && ytId(c.url); return id ? { id, start: +c.start || 0, end: +c.end || 0, title: c.title || title || '정림초 유튜브', at: 0.9 } : null; };
 
 export function buildOpening(D, ctx) {
@@ -47,9 +49,10 @@ export function buildOpening(D, ctx) {
   };
   const ORD = ['R', 'A', 'S', 'AI', 'ECO'].filter(k => ch[k] && CAM[k]), NAV = ORD.map(k => ({ t: k === 'ECO' ? '생태' : k, c: RAS[k] }));
   for (const k of ORD) { const c = ch[k], m = CAM[k], idx = ORD.indexOf(k);
-    const big = k === 'ECO' ? '🌱' : k;
-    shots.push({ dur: c.clip ? 6.8 : 5.8, chord: m.chord, sfx: [[0.05, 'whoosh']], cut: m.cut || null, cam: { p: m.p, l: m.l },
-      tr: 'flash', ui: [{ type: 'chn', at: 0.1, out: (c.clip ? 6.8 : 5.8) - 0.3, items: NAV, i: idx }, { type: 'chap', at: 0.25, out: (c.clip ? 6.8 : 5.8) - 0.35, big, word: c.word, title: c.title, items: c.items || [], c: RAS[k], ghostText: k === 'ECO' ? 'ECO' : k }], clip: clip(c.clip) }); }
+    const big = k === 'ECO' ? '🌱' : k, pics = picsOf(c, vids), dur = pics || c.clip ? 6.8 : 5.8;   // 사진(pics)이 있으면 사진 카드 · 없으면 영상 조각(clip)
+    shots.push({ dur, chord: m.chord, sfx: [[0.05, 'whoosh']], cut: m.cut || null, cam: { p: m.p, l: m.l },
+      tr: 'flash', ui: [{ type: 'chn', at: 0.1, out: dur - 0.3, items: NAV, i: idx }, { type: 'chap', at: 0.25, out: dur - 0.35, big, word: c.word, title: c.title, items: c.items || [], c: RAS[k], ghostText: k === 'ECO' ? 'ECO' : k }],
+      pics, picsTitle: c.picsTitle || '', clip: pics ? null : clip(c.clip) }); }
   // 8 · 스쿨버스 앞으로 내려오며 — 이제 직접 걸어 볼까요?
   const fin = F.finale || [];
   shots.push({ dur: 7.4, chord: 'C', tr: 'flash', sfx: [[0.2, 'rise'], [4.2, 'bell']],

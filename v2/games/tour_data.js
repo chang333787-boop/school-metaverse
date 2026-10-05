@@ -60,6 +60,8 @@ export const TOUR = {
   //   3D 우리 학교 위를 카메라가 날며 찍고, 화면 위에 글·숫자 카드가 움직여요. 글은 따옴표 안만 고치세요(위 홍보물 사실로만 채웠어요).
   //   숫자 카드 n: 숫자 부분이 0부터 올라가요('1.2' → 0.0 … 1.2) · 숫자가 없으면 그대로 보여요.
   //   clip = 화면 오른쪽 아래에 소리 없이 나오는 정림초 유튜브 영상 조각 — url(위 영상 주소 그대로) · start(몇 초부터 — 10-04: 활동 중인 가운데 장면으로 골라 둠: 북 치기 33 · 말 타기 34 · 태블릿 31 · 묘목 심기 30) · end(몇 초까지 — 비우면 끝까지)
+  //   pics = 영상 조각 대신 나오는 사진 카드(10-05 — 자동 재생을 막는 폰에서도 똑같이 · 0.6초마다 한 장씩 착착 쌓여요 · 마지막 장이 맨 위에 남아요)
+  //     '유튜브 주소#장면' — #1 앞 · #2 가운데 · #3 뒤 장면(유튜브가 영상마다 주는 사진) · picsTitle = 사진 아래 한 줄 · pics가 있으면 clip은 쓰지 않아요(pics 줄을 지우면 다시 영상)
   //   어느 장면을 빼려면 그 줄을 지우세요. 오프닝을 아예 끄려면 opening: false.
   film: {
     opening: true,
@@ -81,15 +83,20 @@ export const TOUR = {
       { t: 'AI 융합교육', v: 480 }, { t: '마을 교육과정', v: 420 }, { t: '소규모학교 연극', v: 200 },
     ] },
     chapters: [
-      { key: 'R', word: 'Reading', title: '폰을 끈 자리에\n책을 펴요', items: ['RAS의 R — 서관 1층 도서관'] },
+      { key: 'R', word: 'Reading', title: '폰을 끈 자리에\n책을 펴요', items: ['RAS의 R — 서관 1층 도서관'],
+        picsTitle: '폰 프리 스쿨 선포식 · 현판식', pics: ['https://youtu.be/DlcB5Fwwk2g#1', 'https://youtu.be/DlcB5Fwwk2g#2', 'https://youtu.be/g1WvXHKe5OQ#3', 'https://youtu.be/u4tCLmundTA#2'] },
       { key: 'A', word: 'Arts', title: '학비 ZERO\n문화예술 교육', items: ['1인 1악기 전학년 — 국악 · 우쿨렐레 · 가야금', '연극 1~6학년 · 무용 1~4학년', '작곡교실 4~6학년 · 바둑교실 3~4학년'],
-        clip: { url: 'https://youtu.be/1llwjxYbaOw', start: 33 } },
+        clip: { url: 'https://youtu.be/1llwjxYbaOw', start: 33 },
+        picsTitle: '경기예술창작소 · 찾아오는 문화 공연', pics: ['https://youtu.be/CUGtZ_Z5Qcc#1', 'https://youtu.be/x1IuWnofh4U#2', 'https://youtu.be/CUGtZ_Z5Qcc#3', 'https://youtu.be/1llwjxYbaOw#3', 'https://youtu.be/1llwjxYbaOw#2'] },
       { key: 'S', word: 'Sports', title: '폰 대신\n공을 잡아요', items: ['파크골프 · 티볼 · 생존수영', '승마 체험 연 5회', '체육 시간엔 우리 반이 체육관 전체를'],
-        clip: { url: 'https://youtu.be/O7gEDGNNq7E', start: 34 } },
+        clip: { url: 'https://youtu.be/O7gEDGNNq7E', start: 34 },
+        picsTitle: '파크골프 · 티볼 · 생존수영 · 승마', pics: ['https://youtu.be/wS_2b9zL6IA#3', 'https://youtu.be/B9QckG4QZUY#3', 'https://youtu.be/yaLNax9z7j0#2', 'https://youtu.be/B9QckG4QZUY#2', 'https://youtu.be/y_O-qfIsv_k#3', 'https://youtu.be/O7gEDGNNq7E#2'] },
       { key: 'AI', word: '미래 교육', title: '대도시 학원 부럽지 않은\nAI 미래 교육', items: ['전학년 1인 1스마트 기기', 'SW · 로봇 코딩 교육', '하이러닝 AI 맞춤형 학습'],
-        clip: { url: 'https://youtu.be/wF1RHiRFyis', start: 31 } },
+        clip: { url: 'https://youtu.be/wF1RHiRFyis', start: 31 },
+        picsTitle: 'AI 페스티벌 · 가천대와 미래교육', pics: ['https://youtu.be/wF1RHiRFyis#1', 'https://youtu.be/wF1RHiRFyis#3', 'https://youtu.be/2R_J5ALMzss#2', 'https://youtu.be/2R_J5ALMzss#3', 'https://youtu.be/wF1RHiRFyis#2'] },
       { key: 'ECO', word: '생태 배움터', title: '심고, 가꾸고,\n수확하는 기쁨', items: ['봄 — 블루베리 묘목 심기', '여름 — 직접 키운 수박 수확', '학생 목수들이 직접 만든 숲쉼터'],
-        clip: { url: 'https://youtu.be/jHMUhX-wf4Y', start: 30 } },
+        clip: { url: 'https://youtu.be/jHMUhX-wf4Y', start: 30 },
+        picsTitle: '생태 수업 · 숲쉼터 · 수박 · 블루베리', pics: ['https://youtu.be/SZPxSELC-3g#2', 'https://youtu.be/KmeAaHcRcsg#3', 'https://youtu.be/NHaHIT-6H5A#3', 'https://youtu.be/5GBzPF_7j58#2', 'https://youtu.be/jHMUhX-wf4Y#3'] },
     ],
     finale: ['작은 학교의 큰 행복', '이제, 정림초를\n직접 걸어 볼까요?'],
     // 클로징: 도장 고리 → 아래 글이 차례로 → 끝 화면(상담 전화·주소 = 위 finish 마지막 쪽)
