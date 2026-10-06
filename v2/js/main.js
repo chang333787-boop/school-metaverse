@@ -5,9 +5,9 @@ import { buildWorld } from './world.js?v=154';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=58';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=59';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
-import { createTitle } from './title.js?v=24';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+import { createTitle } from './title.js?v=25';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=16';
 import { createTop } from './topview.js?v=8';   // TOP-1(10-04 교사 '탑뷰로 학교 보기'): 하늘에서 보기 — 지붕 벗기기(1·2층)·끌어 옮기기·확대·돌리기·방 이름·방위표·축척 · 게임은 map.top   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
@@ -1476,24 +1476,24 @@ function emoChip(on) {
   if (!on) { if (emoEl) emoEl.remove(); emoEl = null; return; } if (emoEl) return;
   emoEl = document.createElement('div'); emoEl.id = 'mpEmo'; emoEl.className = 'chip'; emoEl.style.cssText = 'left:10px;top:84px;cursor:pointer;display:flex;gap:2px;align-items:center;padding:4px 6px;pointer-events:auto';
   emoEl.innerHTML = '<span data-e="t" style="padding:2px 6px">😀</span><span class="emo-bar" style="display:none;gap:2px"></span>';
-  import('./net.js?v=8').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" style="font-size:22px;padding:2px 4px;cursor:pointer">' + x + '</span>').join(''); });
+  import('./net.js?v=9').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" style="font-size:22px;padding:2px 4px;cursor:pointer">' + x + '</span>').join(''); });
   emoEl.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-e]'); if (!b) return; const bar = emoEl.querySelector('.emo-bar');
     if (b.dataset.e === 't') { bar.style.display = bar.style.display === 'none' ? 'flex' : 'none'; return; } if (NET) NET.emote(+b.dataset.e); bar.style.display = 'none'; });
   document.body.appendChild(emoEl);
 }
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=8'), import('./lobby.js?v=15')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=9'), import('./lobby.js?v=16')]).then(([N, L]) => {
     // ROOM-1(10-05 교사 '멀티방을 게임으로 들어가는 게 아니라 멀티방을 만들고 그 안에서 모드를 정하는 게 직관적일까?'): 방 먼저 → 방을 만든 선생님이 👥 창 '🎮 다 같이 놀이'를 고르면 방 친구 모두 그 놀이 대기실로
     //   방 놀이 번호 = ctl/cmd d — 선생님 신호(📣·✋·▶·🎮)마다 지금 방 놀이를 같이 실음(cmd는 마지막 하나만 남으므로 — 늦게 들어온 친구·새로고침한 화면도 앎 · 규칙 그대로)
     //   ⚠️ 번호는 뒤에만 더한다(옛 화면과 어긋나지 않게) · 메뉴(오프닝·🎮)에는 registry room:true 놀이가 안 보임 — 혼자 연습 카드만
     const ROOMS = [null, { id: 'watergun_vs', t: '💦 물총 팀 대결' }, { id: 'hideseek_vs', t: '🙈 숨바꼭질 대작전' }, { id: 'robots_vs', t: '🤖 로봇인 척' }, { id: 'guide_vs', t: '🧭 길잡이(둘씩 한 팀)' }];
-    let ROOMG = 0, roomT = 0, PENDG = null, holdTk = null, holdTkT = 0;   // UX-1: PENDG = 경기 중에 받은 📣(놀이가 끝나면 감) · holdTk = 선생님 화면 '✋ 모두 멈춤 중' 칩
+    let ROOMG = 0, ROOMRUN = false, roomT = 0, PENDG = null, holdTk = null, holdTkT = 0, OWNERID = null, LASTRES = null, goT = 0, endT = 0, WR = null, wrT = 0, wrMin = false, ownerPlay = null;   // ROOM-2: ROOMRUN = 방 놀이가 도는 중(신호 d + 100) · OWNERID = 방장 net id(신호 by) · LASTRES = 지난 경기 결과(게임이 넘김) · WR = 🏠 대기실 창   // UX-1: PENDG = 경기 중에 받은 📣(놀이가 끝나면 감) · holdTk = 선생님 화면 '✋ 모두 멈춤 중' 칩
     const actKey = (s) => String(s || '').replace(/^\S+\s+/, '');   // UX-1: 하는 것 글은 맨 앞 그림(이모지)을 빼고 견줌(숨바꼭질 그림을 바꾼 뒤에도 옛 화면 친구를 같이 셈)
     const rgName = () => (ROOMS[ROOMG] ? ROOMS[ROOMG].t.replace(/\s*\(.*?\)/, '') : null);
     const LOBBY = L.createLobby({ chip, net: () => NET, toast: (m, t) => toast(m, t),
       rooms: window.SM_LESSON ? null : { list: () => ROOMS.map((q, i) => q && { i, t: q.t }).filter(Boolean), cur: () => ROOMG, inIt: () => { const g = MAP.game.current; return !!(g && ROOMS[ROOMG] && g.id === ROOMS[ROOMG].id); },
-        count: (i) => (NET && ROOMS[i] ? NET.peers().filter(p => actKey(p.act) === actKey(ACTS[ROOMS[i].id])).length : 0), pick: (i, q) => roomPick(i, q), start: (q) => roomStart(q), end: (q) => roomPick(0, q), join: () => roomLaunch(ROOMS[ROOMG] && ROOMS[ROOMG].id) },   // q = 조용히(👥 창이 창 안에 '보냈어요'를 씀)
+        count: (i) => inGame(i), pick: (i, q) => roomPick(i, q), start: (q) => roomStart(q), end: (q) => roomEnd(q), join: () => roomLaunch(ROOMS[ROOMG] && ROOMS[ROOMG].id), panel: () => wrShow(true), run: () => (ROOMRUN ? ROOMG : 0) },   // q = 조용히(👥 창이 창 안에 '보냈어요'를 씀)
       join: (room) => { CTLK.join = Date.now(); CTLK.init = false; CTLK.m = CTLK.q = null; NET = N.createNet({ THREE, scene, room, kind: 'kid', onChange: () => LOBBY.draw(), onDenied: () => LOBBY.recheck(), onCtl, onChat: (m) => { if (chatUI) { if (m) chatUI.add(m); else chatUI.add('🧹 선생님이 채팅을 지웠어요', true); } } }); emoChip(true); chatOn(true); document.body.classList.add('mp-in'); if (!MAP.game.current && !MAP.minimap.visible) MAP.minimap.show(); },   // mp-in = 방 안(phone.css가 왼쪽 위 칩 줄 밑을 비킴 — :has 대신)
       leave: () => { if (NET) NET.leave(); NET = null; emoChip(false); chatOn(false); document.body.classList.remove('mp-in'); MAP.minimap.setPeers([]); holdOff(); holdChip(false); PENDG = null; },
       onGoTo: (p) => {   // 👥 칩에서 친구 이름 → 그 친구 곁으로(물총 경기 중엔 안 됨)
@@ -1503,11 +1503,55 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
       },
       onTeacher: (k, extra, quiet) => {   // 🧑‍🏫 선생님 신호(방 ctl/cmd) — 받는 쪽은 onCtl · extra = 게임이 덧붙임(메모장 발표: b 판 · s 장면)
         if (!NET) return; const n = NET.name;
-        NET.ctl('cmd', { q: Date.now(), k, x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), by: NET.id, n: n.slice(0, 8), d: ROOMG, ...(extra || {}) });   // d = 지금 방 놀이 번호(ROOM-1)
-        if (!quiet) toast(k === 'gather' ? '📣 모두를 불렀어요' : k === 'hold' ? '✋ 모두 멈춤 — ▶ 다시 움직여요로 풀어요' : k === 'game' ? (ROOMS[ROOMG] ? '🎮 방 친구 모두 「' + ROOMS[ROOMG].t + '」 대기실로! — 다 모이면 ▶ 모두 시작' : '⏹ 방 놀이를 마쳤어요 — 모두 자유롭게') : k === 'gstart' ? '▶ 시작 신호를 보냈어요' : '▶ 다시 움직여요', 2.8);
+        NET.ctl('cmd', { q: Date.now(), k, x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), by: NET.id, n: n.slice(0, 8), d: ROOMG + (ROOMRUN ? 100 : 0), ...(extra || {}) });   // ROOM-2: d = 방 놀이 번호 + 100(도는 중)   // d = 지금 방 놀이 번호(ROOM-1)
+        if (!quiet && (k === 'go' || k === 'end')) toast(k === 'go' ? '▶ 모두 같이 들어가요!' : '🏠 모두 대기실로', 2.5);
+        else if (!quiet) toast(k === 'gather' ? '📣 모두를 불렀어요' : k === 'hold' ? '✋ 모두 멈춤 — ▶ 다시 움직여요로 풀어요' : k === 'game' ? (ROOMS[ROOMG] ? '🎮 방 친구 모두 「' + ROOMS[ROOMG].t + '」 대기실로! — 다 모이면 ▶ 모두 시작' : '⏹ 방 놀이를 마쳤어요 — 모두 자유롭게') : k === 'gstart' ? '▶ 시작 신호를 보냈어요' : '▶ 다시 움직여요', 2.8);
         if (k === 'hold') holdChip(true); else if (k === 'release' || k === 'gather') holdChip(false);   // UX-1: 선생님 화면엔 멈춤 막이 없어(내 신호는 안 받음) 반 전체가 멈춘 줄 몰랐다 → 위 가운데 노란 칩(누르면 ▶ 다시 움직여요)
       } });
     // UX-1(10-05 교사 편의성): ✋ 모두 멈춤 중 칩(선생님 화면) — 아이 쪽 멈춤과 같이 90초 뒤 저절로 사라짐
+    const WRG = { watergun_vs: '두 팀으로 물총 · 4분', hideseek_vs: '도망자 1명 vs 나머지 술래 · 한 판 1분', robots_vs: '반장 1명이 로봇 속 스파이 찾기', guide_vs: '둘씩 한 팀 · 지도로 길 알려 주기' };
+    function wrCss() { if (document.getElementById('wr-css')) return; const st = document.createElement('style'); st.id = 'wr-css'; st.textContent = `
+#mpWR{position:fixed;inset:0;z-index:41;display:flex;align-items:center;justify-content:center;background:rgba(10,20,40,.45);font-family:inherit}
+#mpWR .bx{width:min(620px,94vw);max-height:calc(100vh - 20px);overflow:auto;box-sizing:border-box;padding:16px 18px;border-radius:18px;background:#fffdf6;color:#1d3557;border:3px solid #1d3557;box-shadow:0 10px 30px rgba(0,0,0,.35);font-size:15px;line-height:1.45}
+#mpWR .hd{font-weight:900;font-size:20px}#mpWR .hd span{font-size:14px;color:#5a6b80;font-weight:700}
+#mpWR .sub{margin-top:2px;font-size:14px;color:#4a5b70}
+#mpWR .gm{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:10px 0}
+#mpWR .gm button{font:inherit;text-align:left;border:2px solid #c9d8f0;background:#eef4ff;color:#1d3557;border-radius:12px;padding:9px 10px;cursor:pointer;min-height:64px}
+#mpWR .gm button b{display:block;font-size:16px}#mpWR .gm button small{font-size:12px;color:#4a5b70}
+#mpWR .gm button.on{border-color:#1d3557;background:#fff3bf;box-shadow:0 0 0 2px #ffd23c}
+#mpWR .gm button:disabled{cursor:default}
+#mpWR .pl{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}#mpWR .pl span{padding:5px 9px;border-radius:999px;background:#eef4ff;font-size:14px}#mpWR .pl span.me{background:#fff3bf;font-weight:800}#mpWR .pl span.away{opacity:.6}
+#mpWR .last{margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff8dc;border:2px solid #f2d27a;font-size:14px}
+#mpWR .last .rk-lb{margin:0;padding:0;border:0;background:none}
+#mpWR .row{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;align-items:center;margin-top:12px}
+#mpWR .row button{font:inherit;font-weight:800;border:0;border-radius:10px;padding:9px 14px;cursor:pointer;min-height:44px;background:#e8edf3;color:#1d3557}
+#mpWR .row button.go{background:#1d3557;color:#fff;font-size:17px;padding:10px 20px}#mpWR .row button.go:disabled{opacity:.45;cursor:default}
+#mpWR .wait{flex:1;font-weight:800;color:#2b5a96}
+#mpWR label{font-size:14px;display:flex;gap:6px;align-items:center;cursor:pointer}
+body.small #mpWR .bx{padding:10px 12px;font-size:14px}body.small #mpWR .gm{grid-template-columns:repeat(4,1fr)}body.small #mpWR .gm button{min-height:56px;padding:6px}body.small #mpWR .gm button small{display:none}
+`; document.head.appendChild(st); }
+    function wrShow(on) { clearInterval(wrT); if (!on || !NET || !LOBBY.room || window.SM_LESSON) { if (WR) { WR.remove(); WR = null; } return; } const g = MAP.game.current;
+      if (g && ROOMS.some(q => q && q.id === g.id)) return;   // 방 놀이 중(대기실·경기)엔 그 놀이 화면
+      wrCss(); if (!WR) { WR = document.createElement('div'); WR.id = 'mpWR'; WR.className = 'ttl-keep'; document.body.appendChild(WR); for (const t of ['keydown', 'keyup']) WR.addEventListener(t, (e) => e.stopPropagation()); WR.addEventListener('click', wrClick); document.exitPointerLock?.(); }
+      wrDraw(); wrT = setInterval(wrDraw, 1000); }
+    function wrDraw() { if (!WR || !NET || !LOBBY.room) return; const Rm = LOBBY.room, own = !!Rm.k, Rg = ROOMS[ROOMG], ros = NET.roster(), esc9 = (x) => String(x == null ? '' : x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const ownName = own ? NET.name : (ros.find(p => p.id === OWNERID) || {}).label;
+      const pl = ['<span class="me">' + (own ? '⭐ ' : '') + esc9(NET.name) + '(나)</span>'].concat(ros.map(p => { const away = Rg && ROOMRUN ? actKey(p.act) !== actKey(ACTS[Rg.id]) : !/자유 탐험/.test(p.act || '') && !/대기실/.test(p.act || ''); return '<span class="' + (away ? 'away' : '') + '">' + (p.id === OWNERID ? '⭐ ' : '') + esc9(p.label) + (away && p.act ? ' · ' + esc9(p.act) : '') + '</span>'; })).join('');
+      const tiles = ROOMS.map((q, i) => q && '<button data-g="' + i + '"' + (i === ROOMG ? ' class="on"' : '') + (own ? '' : ' disabled') + '><b>' + esc9(q.t.replace(/\s*\(.*?\)/, '')) + '</b><small>' + esc9(WRG[q.id] || '') + '</small></button>').filter(Boolean).join('');
+      const L9 = LASTRES && Date.now() - LASTRES.at < 15 * 60e3 ? '<div class="last"><b>🏁 지난 경기 — ' + esc9(LASTRES.t || '') + '</b>' + (LASTRES.html || '') + '</div>' : '';
+      const run = ROOMRUN && Rg;
+      const h = '<div class="bx"><div class="hd">🏠 ' + esc9(Rm.n) + ' 대기실 <span>· 번호 ' + Rm.c + ' · ' + (ros.length + 1) + '명</span></div>'
+        + '<div class="sub">' + (own ? '⭐ 내가 방장 — 놀이를 고르고 ▶ 시작을 누르면 모두 같이 들어가요' : '⭐ 방장' + (ownName ? '(' + esc9(ownName) + ')' : '') + '이 놀이를 고르고 ▶ 시작을 누르면 같이 들어가요') + '</div>'
+        + '<div class="gm">' + tiles + '</div><div class="pl">' + pl + '</div>' + L9
+        + '<div class="row">' + (run ? '<span class="wait">🎮 ' + esc9(Rg.t.replace(/\s*\(.*?\)/, '')) + ' 하는 중</span><button data-w="join" class="go">▶ 같이 하기</button>' + (own ? '<button data-w="end">⏹ 모두 대기실로</button>' : '')
+          : own ? (LOBBY.teacherRoom ? '<label><input type="checkbox" data-w="play"' + (meIn() ? ' checked' : '') + '> 🎮 나도 같이 하기</label>' : '') + '<button data-w="go" class="go"' + (Rg ? '' : ' disabled') + '>▶ 시작' + (Rg ? '' : ' (놀이를 골라요)') + '</button>'
+          : '<span class="wait">' + (Rg ? '🎮 ' + esc9(Rg.t.replace(/\s*\(.*?\)/, '')) + ' — 방장이 ▶ 시작하면 같이 들어가요' : '방장이 놀이를 고르는 중…') + '</span>')
+        + '<button data-w="min">🚶 둘러보며 기다리기</button>' + (own ? '<button data-w="big">📺 번호 크게</button>' : '') + '<button data-w="out">🚪 방 나가기</button></div></div>';
+      if (WR.dataset.h !== h) { WR.dataset.h = h; WR.innerHTML = h; } }
+    function wrClick(e) { e.stopPropagation(); const t = e.target.closest('[data-g],[data-w]'); if (!t) { if (e.target === WR) wrShow(false); return; }
+      if (t.dataset.g) { roomPick(+t.dataset.g); return; }
+      const w = t.dataset.w; if (w === 'go') roomStart(); else if (w === 'end') roomEnd(); else if (w === 'join') { wrShow(false); roomLaunch(ROOMS[ROOMG] && ROOMS[ROOMG].id); }
+      else if (w === 'play') { ownerPlay = !!t.checked; wrDraw(); } else if (w === 'min') { wrShow(false); toast('👥 칩 → 🏠 대기실로 다시 열어요', 2.5); } else if (w === 'big') LOBBY.showBig && LOBBY.showBig(); else if (w === 'out') { wrShow(false); LOBBY.leave(); } }
     function holdChip(on) { clearTimeout(holdTkT); if (holdTk) { holdTk.remove(); holdTk = null; } if (!on) return;
       holdTk = document.createElement('div'); holdTk.id = 'mpHoldT'; holdTk.className = 'chip ttl-keep';
       holdTk.style.cssText = 'left:50%;top:96px;transform:translateX(-50%);z-index:44;min-height:44px;display:flex;align-items:center;box-sizing:border-box;background:#ffd23c;color:#1d3557;font-weight:800;font-size:15px;padding:8px 14px;cursor:pointer;pointer-events:auto;white-space:nowrap';
@@ -1517,36 +1561,46 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
     window.SM_MP = { room: () => LOBBY.room ? 'c' + LOBBY.room.c : null, net: () => NET, info: () => LOBBY.room, open: (a) => LOBBY.open(a),   // UX-1: a = 창을 연 단추(그 밑에 뜸)
       lead: () => !!(LOBBY.room && LOBBY.room.k && NET), gather: (extra) => { if (LOBBY.room && LOBBY.room.k && NET) LOBBY.teacher('gather', extra, true); },
       roomGame: () => (ROOMS[ROOMG] ? ROOMS[ROOMG].id : null), pickGame: (i) => roomPick(i), startAll: () => roomStart(),
+      roomRun: () => (ROOMRUN && ROOMS[ROOMG] ? ROOMS[ROOMG].id : null), isOwner: () => !!(LOBBY.room && LOBBY.room.k), setLast: (r) => { LASTRES = r ? { ...r, at: Date.now() } : null; }, waiting: () => wrShow(true), endAll: () => roomEnd(),   // ROOM-2
       // UX-1(10-05 교사 편의성): 방 놀이 밖으로 나온 아이가 다시 들어가는 길(메뉴 머리·🎮 목록·👥 창의 '▶ 같이 하기') · 이름·목록 = 선생님 👥 창과 같은 글·순서 · 방 놀이 중 나가기는 화면 안 확인
       joinGame: () => roomLaunch(ROOMS[ROOMG] && ROOMS[ROOMG].id), roomName: rgName, roomList: () => ROOMS.filter(Boolean).map(q => ({ id: q.id, t: q.t.replace(/\s*\(.*?\)/, '') })),
       confirmLeave: (fn) => { const g = MAP.game.current; if (g && ROOMS[ROOMG] && g.id === ROOMS[ROOMG].id && !(LOBBY.room && LOBBY.room.k)) LOBBY.ask('방 놀이에서 나갈까요?', '🚪 나가기', '▶ 계속하기', fn, '나가도 👥 단추의 「▶ 같이 하기」로 다시 들어올 수 있어요'); else fn(); } };   // ROOM-1: 방 놀이(선생님 = pickGame(번호 · 0 = 끝)·startAll)   // lead = 이 방을 만든 선생님 화면 · gather = 📣(게임이 판·장면을 덧붙임)   // 게임(물총 친구 대결)이 같은 방·이름을 쓴다
     setInterval(() => LOBBY.draw(), 2000);
     MAP.on('gamestart', () => LOBBY.draw());   // UX-1: 들어가고 나올 때 👥 칩(노란 '…하는 중')을 바로
-    MAP.on('gamestop', (ev) => { LOBBY.draw(); const p = PENDG; PENDG = null; if (!p || (ev && ev.reason === 'replace') || Date.now() - p.t > 180000 || (TITLE && TITLE.phase !== 'off')) return; gatherTo(p.c, '📣 선생님 곁으로 왔어요!'); });   // UX-1: 경기 중에 받은 📣 = 놀이가 끝나면(3분 안) 선생님 곁으로
+    MAP.on('gamestop', (ev) => { LOBBY.draw(); if (NET && ev && ev.id && ROOMS.some(q => q && q.id === ev.id) && !(ev.reason === 'replace')) setTimeout(() => wrShow(true), 300); const p = PENDG; PENDG = null; if (!p || (ev && ev.reason === 'replace') || Date.now() - p.t > 180000 || (TITLE && TITLE.phase !== 'off')) return; gatherTo(p.c, '📣 선생님 곁으로 왔어요!'); });   // UX-1: 경기 중에 받은 📣 = 놀이가 끝나면(3분 안) 선생님 곁으로   // ROOM-2: 방 놀이에서 나오면(끝·나가기) 🏠 대기실
     setInterval(() => { if (NET) MAP.minimap.setPeers(NET.peers()); }, 500);   // 미니맵에 같은 방 친구 점(이름)
     const ACTS = { watergun: '💧 물총', watergun_vs: '💦 물총 대결', hideseek: '🙈 숨바꼭질 연습', hideseek_vs: '🙈 숨바꼭질', robots: '🤖 로봇인 척 연습', robots_vs: '🤖 로봇인 척', guide: '🧭 길잡이 연습', guide_vs: '🧭 길잡이', memo: '📝 메모장', memo_v3: '📝 메모장', story: '📖 이야기', newbook: '📖 신상책', escape: '🔐 방탈출', shrink: '🐜 개미', find_place: '📍 장소 찾기', tour: '🚌 견학' };
     setInterval(() => { if (!NET) return; const g = MAP.game.current; NET.setAct(window.SM_ACT || (g ? ACTS[g.id] || '🎮 놀이' : '🏫 자유 탐험')); }, 2000);   // 지금 하는 것 — 게임이 window.SM_ACT로 더 자세히(메모장 = 판 번호)
     // 방 신호(net.js ctl): 물총 친구 대결 대기실 초대 · 선생님 📣 모으기 · ✋ 멈춤
     function onCtl(C) {
       const first = !CTLK.init; CTLK.init = true;   // 들어올 때 이미 있던 신호는 지난 것(초대·선생님 신호를 다시 하지 않음)
-      const m = C.match; if (m) { const k = m.seq + ':' + m.st; if (k !== CTLK.m) { CTLK.m = k; if ((m.st === 'lobby' || m.st === 'count' || m.st === 'hlobby' || m.st === 'hcount' || m.st === 'rlobby' || m.st === 'rcount' || m.st === 'globby' || m.st === 'gcount') && !first) invite(m); } }   // HS-2: 'h…' = 숨바꼭질 친구 대결 · RB-1: 'r…' = 로봇인 척 · GUIDE-2: 'g…' = 길잡이
-      const c = C.cmd; if (c && c.q !== CTLK.q) { CTLK.q = c.q; roomSync(c, first); if (!first && c.by !== (NET && NET.id)) teacherCmd(c); }
+      const m = C.match; if (m) { const k = m.seq + ':' + m.st; if (k !== CTLK.m) { CTLK.m = k; if (m.st === 'end' && !first && ROOMRUN && LOBBY.room && LOBBY.room.k) { clearTimeout(endT); endT = setTimeout(() => { if (ROOMRUN) roomEnd(true); }, 2000); }   // ROOM-2: 경기 끝 → 방장이 '대기실로'(아이 화면은 결과를 보고 스스로 나옴)
+ if ((m.st === 'lobby' || m.st === 'count' || m.st === 'hlobby' || m.st === 'hcount' || m.st === 'rlobby' || m.st === 'rcount' || m.st === 'globby' || m.st === 'gcount') && !first) invite(m); } }   // HS-2: 'h…' = 숨바꼭질 친구 대결 · RB-1: 'r…' = 로봇인 척 · GUIDE-2: 'g…' = 길잡이
+      const c = C.cmd; if (c && c.q !== CTLK.q) { CTLK.q = c.q; if (c.by) OWNERID = c.by; roomSync(c, first); if (!first && c.by !== (NET && NET.id)) teacherCmd(c); wrDraw(); }
     }
     // ROOM-1: 방 놀이 번호 읽기 — 처음 들어온(새로고침한) 아이는 지금 방 놀이로 바로(선생님 화면은 그대로)
     function roomSync(c, first) {
       if (typeof c.d !== 'number') return; const R9 = LOBBY.room, born = R9 && R9.e ? R9.e - 8 * 3600e3 - 120e3 : 0;
       if (c.q < born) return;   // 같은 번호를 쓰던 지난 방의 신호(방 번호는 8시간 뒤 다시 쓰일 수 있다)
-      ROOMG = ROOMS[c.d] ? c.d : 0;
-      if (first && ROOMG && !(R9 && R9.k)) { const g = MAP.game.current; if (!(g && g.id === ROOMS[ROOMG].id)) { toast('🎮 지금 방 놀이: ' + ROOMS[ROOMG].t + ' — 같이 들어가요!', 3); clearTimeout(roomT); roomT = setTimeout(() => roomLaunch(ROOMS[ROOMG] && ROOMS[ROOMG].id), 1500); } }
+      ROOMG = ROOMS[c.d % 100] ? c.d % 100 : 0; ROOMRUN = !!ROOMG && c.d >= 100;
+      if (first && !(R9 && R9.k)) { const g = MAP.game.current; if (ROOMRUN && !(g && g.id === ROOMS[ROOMG].id)) { toast('🎮 지금 방 놀이: ' + ROOMS[ROOMG].t + ' — 같이 들어가요!', 3); clearTimeout(roomT); roomT = setTimeout(() => roomLaunch(ROOMS[ROOMG] && ROOMS[ROOMG].id), 1500); } else if (!ROOMRUN) wrShow(true); }   // ROOM-2: 늦게 온 친구 = 도는 중이면 바로 · 아니면 🏠 대기실
     }
-    function roomPick(i, q) { if (!LOBBY.room || !LOBBY.room.k || !NET) return; ROOMG = ROOMS[i] ? i : 0; LOBBY.teacher('game', null, q); }   // 선생님: 방 놀이 고르기(0 = 끝)
-    function roomStart(q) { const R9 = ROOMS[ROOMG], g = MAP.game.current; if (!R9) return; if (g && g.id === R9.id && g.handle && g.handle.netStart) g.handle.netStart(); LOBBY.teacher('gstart', null, q); }   // ▶ 모두 시작 = 대기실 방장 화면이 시작(선생님도 들어가 있으면 그 화면)
-    function roomGo() {   // 아이: 선생님이 고름 → 2초 뒤 그 놀이로(쓰던 글은 그 사이 마무리) · 0 = 방 놀이를 끝내고 자유롭게
-      const R9 = ROOMS[ROOMG], g = MAP.game.current; clearTimeout(roomT);
+    function roomPick(i, q) { if (!LOBBY.room || !LOBBY.room.k || !NET) return; if (ROOMRUN) roomEnd(true); ROOMG = ROOMS[i] ? i : 0; LOBBY.teacher('game', null, true); wrDraw(); }   // ROOM-2: 방장 = 놀이 고르기(대기실에 보임 — ▶ 시작을 눌러야 들어감)
+    // ROOM-2 ▶ 시작(방장): 모두 그 놀이로 → 방 친구가 다 들어오면(또는 12초) 놀이 대기실 방장 화면이 3·2·1 · 방장이 아이면 같이 · 선생님은 '🎮 나도 같이'를 켰을 때만
+    function roomStart(q) { const R9 = ROOMS[ROOMG]; if (!R9 || !NET || !(LOBBY.room && LOBBY.room.k)) return; ROOMRUN = true; LASTRES = null; LOBBY.teacher('go', null, q); wrShow(false); if (meIn()) roomLaunch(R9.id);
+      clearInterval(goT); const t0 = Date.now(); let ok = 0;
+      goT = setInterval(() => { if (!ROOMRUN || ROOMS[ROOMG] !== R9) { clearInterval(goT); return; } const total = NET.roster().length + (meIn() ? 1 : 0), n = inGame(ROOMG) + (meIn() && MAP.game.current && MAP.game.current.id === R9.id ? 1 : 0);
+        if (n >= total) ok++; else ok = 0; if (ok >= 3 || Date.now() - t0 > 14000) { clearInterval(goT); const g = MAP.game.current; if (g && g.id === R9.id && g.handle && g.handle.netStart) g.handle.netStart(); LOBBY.teacher('gstart', null, true); } }, 500); }
+    function roomEnd(q) { if (!(LOBBY.room && LOBBY.room.k) || !NET) return; clearInterval(goT); ROOMRUN = false; LOBBY.teacher('end', null, q); const g = MAP.game.current; if (g && ROOMS[ROOMG] && g.id === ROOMS[ROOMG].id && !gameEnding(g)) MAP.game.stop(); wrShow(true); }
+    const meIn = () => (ownerPlay != null ? ownerPlay : !LOBBY.teacherRoom);   // 방장도 같이 하나(아이 방장 = 같이 · 선생님 = 대기실에서 '🎮 나도 같이')
+    const inGame = (i) => (NET && ROOMS[i] ? NET.roster().filter(p => actKey(p.act) === actKey(ACTS[ROOMS[i].id])).length : 0);   // 그 놀이에 들어온 친구 수(경기 중에도)
+    const gameEnding = (g) => { const n9 = g && g.handle && g.handle.net; return !!(n9 && n9.st === 'end'); };   // 결과 보는 중(스스로 대기실로 나옴)   // ▶ 모두 시작 = 대기실 방장 화면이 시작(선생님도 들어가 있으면 그 화면)
+    function roomGo() {   // 아이: 방장이 ▶ 시작 → 1초 뒤 그 놀이로 · 0 = 방 놀이를 끝내고 자유롭게
+      const R9 = ROOMS[ROOMG], g = MAP.game.current; clearTimeout(roomT); wrShow(false);
       if (!R9) { if (g && ROOMS.some(q => q && q.id === g.id)) { MAP.game.stop(); toast('🏫 선생님이 놀이를 마쳤어요 — 자유롭게 다녀요', 3); } return; }
       if (g && g.id === R9.id) return;
-      toast('🎮 선생님이 고른 놀이: ' + R9.t.replace(/\s*\(.*?\)/, '') + ' — 2초 뒤 같이 들어가요!', 3);   // UX-1: '을(를)' 대신
-      roomT = setTimeout(() => { if (ROOMS[ROOMG] === R9) roomLaunch(R9.id); }, 2000);
+      toast('▶ ' + R9.t.replace(/\s*\(.*?\)/, '') + ' — 같이 들어가요!', 2.5);
+      roomT = setTimeout(() => { if (ROOMS[ROOMG] === R9 && ROOMRUN) roomLaunch(R9.id); }, 900);
     }
     function roomLaunch(id) {   // 오프닝·메뉴 화면이면 닦기와 함께(메뉴에 없는 카드도) · 넘어가는 중이면 조금 뒤
       if (!id) return; clearTimeout(roomT); const g = MAP.game.current; if (g && g.id === id) return;
@@ -1566,7 +1620,9 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
     }
     function teacherCmd(c) {
       const g = MAP.game.current, st9 = g && g.handle && g.handle.state, ph9 = typeof st9 === 'string' ? st9 : st9 && st9.phase, inMatch = !!(g && /^(watergun|hideseek|robots|guide)/.test(g.id) && /^(play|count|hide|seek)$/.test(ph9 || ''));   // 대결 판 중엔 순간이동 안 함
-      if (c.k === 'game') { roomGo(); return; }
+      if (c.k === 'game') { const g9 = MAP.game.current; if (g9 && ROOMS.some(q => q && q.id === g9.id) && !gameEnding(g9)) MAP.game.stop(); wrShow(true); return; }   // ROOM-2: 방장이 놀이를 골랐어요(대기실에 보임)
+      if (c.k === 'go') { roomGo(); return; }   // ROOM-2: ▶ 시작 = 모두 그 놀이로
+      if (c.k === 'end') { const g9 = MAP.game.current; if (g9 && ROOMS.some(q => q && q.id === g9.id) && !gameEnding(g9)) { MAP.game.stop(); toast('🏠 방장이 놀이를 마쳤어요 — 대기실로', 3); } else if (!g9) wrShow(true); return; }
       if (c.k === 'gstart') { const R9 = ROOMS[ROOMG]; if (g && R9 && g.id === R9.id && g.handle && g.handle.netStart) g.handle.netStart(); return; }
       if (c.k === 'gather') {
         if (inMatch) { PENDG = { c, t: Date.now() }; toast('📣 선생님이 불러요 — 놀이가 끝나면 선생님 곁으로 가요', 3); return; }   // UX-1: 예전엔 말만 하고 끝나도 안 갔다
@@ -1579,7 +1635,8 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
       const a = Math.random() * Math.PI * 2, e = MAP.findEntry(c.x + Math.cos(a) * 2.2, c.z + Math.sin(a) * 2.2, c.y, null, 4) || MAP.findEntry(c.x, c.z, c.y, null, 6);
       document.exitPointerLock?.(); MAP.hostTeleport(e ? [e.x, e.y, e.z] : [c.x, c.y, c.z]); if (msg) toast(msg, 3);
     }
-    addEventListener('sm-name', (e) => { if (NET && e.detail) { NET.setName(e.detail); LOBBY.draw(); } });   // 게임(메모장 등)에서 적은 이름을 이름표에도
+    addEventListener('sm-name', (e) => { if (NET && e.detail) { NET.setName(e.detail); LOBBY.draw(); } });
+    addEventListener('sm-room', (e) => { if (e.detail) setTimeout(() => wrShow(true), 700); else { ROOMG = 0; ROOMRUN = false; OWNERID = null; LASTRES = null; wrShow(false); } });   // ROOM-2: 방에 들어오면 🏠 대기실(방장은 큰 번호 다음) · 나가면 닫기   // 게임(메모장 등)에서 적은 이름을 이름표에도
   }).catch((e) => console.warn('[동시 접속] 못 켰어요', e));
 }
 function loop(ts) {

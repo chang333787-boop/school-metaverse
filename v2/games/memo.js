@@ -21,7 +21,7 @@
 //     · '→ N번 장면' 갈림길은 boardList br(🗂 관리 '🔀 갈림길 허용')일 때만 새로 씀 — 예전에 쓴 갈림길 보기는 그대로 보이고 그대로 동작 · 장면 자리 = 그 장면의 🚩(다음 장면 깃발 = 다음 목적지)
 //   WORLD-2(10-04 교사 '하나의 주제 밑에 애들이 자유롭게 추가'): 선생님 ⚙️ 칸 바꾸기(boardList wl — 줄마다 'k|그림|이름|질문' · 바꾼 기본 칸 + 더한 칸 u1~u3)
 //     · 카드마다 ＋ 자세히(k:'wd' · p = 카드 id · tag look/sound/job/why 또는 없음 — 칸 카드 수·❤️ 순·칸 목표엔 안 섞임) · 🧭 '🔎 자세히를 덧붙인 카드' · 📤 정리 = 칸 → 카드 → 자세히 나무
-import { teacherPin } from '../js/lobby.js?v=15';   // 선생님 비밀번호 창(●로 가림 — 함께하기·블록 놀이와 같은 것 · main.js와 같은 ?v=라야 한 벌)
+import { teacherPin } from '../js/lobby.js?v=16';   // 선생님 비밀번호 창(●로 가림 — 함께하기·블록 놀이와 같은 것 · main.js와 같은 ?v=라야 한 벌)
 export const meta = { id: 'memo', title: '메타버스 메모장', api: 1 };
 
 const DB = 'https://class-rpg-6f409-default-rtdb.asia-southeast1.firebasedatabase.app/metaverse';

@@ -852,7 +852,7 @@ body.rb-top #tv-lb .lb:not(.mk){opacity:.6}
   // ---------- 혼자(봇) ----------
   async function soloAsk() {
     let role = params.role === 'guard' || params.role === 'spy' ? params.role : null;
-    if (!role) { const i = await map.hud.ask('🤖 로봇인 척 — 혼자 연습\n로봇 ' + K + '대 속에 로봇인 척하는 스파이가 숨어 있어요 · 한 판 ' + (cfg.count + playOf(2) + cfg.end) + '초 · 친구와 하려면 함께하기 방에서 선생님이 🤖 로봇인 척을 골라요',
+    if (!role) { const i = await map.hud.ask('🤖 로봇인 척 — 혼자 연습\n로봇 ' + K + '대 속에 로봇인 척하는 스파이가 숨어 있어요 · 한 판 ' + (cfg.count + playOf(2) + cfg.end) + '초 · 친구와 하려면 👥 함께하기 방의 🏠 대기실에서 방장이 🤖 로봇인 척을 골라요',
       ['🕵️ CCTV 반장 — 하늘에서 보며 스파이 봇 둘 찾기(📸 3번)', '🤖 스파이 — 로봇처럼 걸으며 미션(반장 봇이 지켜봐요)']);
       if (i < 0 || dead) return; role = i === 1 ? 'spy' : 'guard'; }
     await howTo(role, 2, goalOf(2), shotsOf(2), true); if (dead) return;
@@ -879,6 +879,8 @@ body.rb-top #tv-lb .lb:not(.mk){opacity:.6}
   //   p/<pid> { n, tm = 차례 + 100(이번 판 반장) + 1000(반장을 해 봄) · 99 = 늦게 옴, on } · s/<pid> = [x, y, z, h, 표(1 스캔), 신호, ts, 왕복]
   //   ev/<id> { k mi(미션 · by 스파이 자리 · n 몇 번째)|sh(📸 · who 몸 번호 · n 1 = 스파이), q = 판 seq } — 📸 판정 = 반장 화면 · 미션 = 그 스파이 화면
   // =====================================================================================
+  const roomLed = () => { const mp = window.SM_MP; return !!(NETM && mp && mp.roomGame && mp.roomGame() === 'robots_vs'); };   // ROOM-2: 방장이 🏠 대기실에서 고른 방 놀이
+  const roomBack = (t, html, ms) => { const mp = window.SM_MP; if (!roomLed()) return false; if (mp.setLast) mp.setLast({ t, html }); setTimeout(() => { if (!dead) map.quit(); }, ms); return true; };   // 결과를 대기실로 넘기고 ms 뒤 모두 같이 나감
   const NM = { on: false, room: null, pid: null, name: '', host: false, es: null, D: {}, seen: new Set(), off: 0, seq: -1, st: null, sendT: 0, busyS: 0, offs: [],
     ui: null, beat: 0, beatN: 0, lastSend: 0, claim: false, seenAt: {}, lvl: 0, streak: [], adv: false, lag: 0 };
   const nreq = (path, method = 'GET', data) => fetch(MDB + NM.room + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data), keepalive: true }).then(r => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))));
@@ -1053,6 +1055,7 @@ body.rb-top #tv-lb .lb:not(.mk){opacity:.6}
     if (!NM.lastBoard && RK && !NM.lbTry && m.st !== 'play') { NM.lbTry = true; NM.lastBoard = RK.last(NM.room + '#' + (m.seq - (m.goal || 0))); }   // 대기실에서 새로고침해도 지난 표(이 탭에 있으면)
     const fb = NM.lastBoard; if (fb) h += fb;   // RANK-1: 지난 경기 순위표(표 상자째 — standings.js lobby())
     if (m.st === 'play') h += '<div style="margin-top:8px;font-weight:800">⏳ 경기 중이에요 — 다음 판부터 같이 해요</div>';
+    else if (roomLed()) h += '<div style="margin-top:10px;font-weight:800;color:#2b5a96">🏠 방장이 ▶ 시작했어요 — 친구들이 다 들어오면 곧 3·2·1</div>';
     else if (NM.host) h += '<div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;margin-top:10px">' + (ids.length < 2 ? '<span style="font-size:13px;color:#b4232c">친구가 한 명 더 있어야 해요</span>' : '') + bt('start', '▶ 시작!', true, ';font-size:17px;padding:8px 18px') + '</div>';
     else h += '<div style="margin-top:10px">방장 ⭐' + hostN + '이(가) ▶ 시작을 누르면 모두 같이 시작해요</div>';
     h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><span style="font-size:12px;color:#5a6b80">방 ' + esc(NM.room.slice(1)) + '</span>' + bt('leave', '🚪 나가기') + '</div>';
@@ -1071,7 +1074,7 @@ body.rb-top #tv-lb .lb:not(.mk){opacity:.6}
     RK.end(); NM.lastBoard = RK.lobby();
     card('<div style="font-size:1.35em">🏁 경기 끝!</div>' + RK.podium() + '<div style="margin-top:6px;font-size:.85em">' + RK.awards() + '</div>', 6);
     map.tone(523, 0, 0.15, 'sine', 0.1); map.tone(659, 0.15, 0.15, 'sine', 0.1); map.tone(784, 0.3, 0.3, 'sine', 0.1);
-    setTimeout(() => { if (NM.on && !dead) lobbyShow(); }, 2500);
+    if (!roomBack('🤖 로봇인 척', NM.lastBoard, 6500)) setTimeout(() => { if (NM.on && !dead) lobbyShow(); }, 2500);
   }
 
   // ---------- 시작 ----------

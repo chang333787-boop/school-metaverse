@@ -41,8 +41,8 @@ export function createGamePicker(ctx) {
       const M = window.SM_MP, R = M.info && M.info(), LD = !!(M.lead && M.lead()), g9 = M.roomGame && M.roomGame(), c9 = current(), inIt = !!(c9 && g9 && c9.id === g9);
       const btn = (t, s9, bg, fn) => { const b = document.createElement('button'); b.className = 'gpick-b'; if (bg) b.style.background = bg; const t9 = document.createElement('b'); t9.textContent = t; const s0 = document.createElement('span'); s0.textContent = s9; b.append(t9, s0); b.addEventListener('click', e => { e.stopPropagation(); close(); fn(); }); list.appendChild(b); };
       if (R && g9 && !LD && !inIt && M.joinGame && M.roomName) btn('▶ ' + M.roomName() + ' 같이 하기', '친구들이 지금 하고 있어요', '#ffd23c', () => M.joinGame());
-      else if (R) { const d9 = document.createElement('div'); d9.textContent = '👥 「' + R.n + '」 방 — ' + (inIt ? '지금 방 놀이를 같이 하고 있어요' : LD ? '다 같이 놀이는 👥 창에서 골라요' : '선생님이 놀이를 고르면 다 같이 들어가요'); d9.style.cssText = 'margin:6px 0 2px;font-size:12px;opacity:.9'; list.appendChild(d9); }
-      else btn('👥 친구와 하려면 — 방 들어가기', '선생님이 연 방에 번호 4자리로 들어가요', '', () => M.open());
+      else if (R) { const d9 = document.createElement('div'); d9.textContent = '👥 「' + R.n + '」 방 — ' + (inIt ? '지금 방 놀이를 같이 하고 있어요' : LD ? '🏠 대기실(👥 칩)에서 놀이를 고르고 ▶ 시작' : '방장이 🏠 대기실에서 ▶ 시작하면 다 같이 들어가요'); d9.style.cssText = 'margin:6px 0 2px;font-size:12px;opacity:.9'; list.appendChild(d9); }
+      else btn('👥 친구와 하려면 — 방 들어가기', '친구·선생님 방에 번호 4자리로 들어가거나 🏠 내 방 만들기', '', () => M.open());
     }
     const sec = t => { const d = document.createElement('div'); d.textContent = t; d.style.cssText = 'margin-top:10px;font-size:12px;font-weight:800;opacity:.85'; list.appendChild(d); };
     const FL = !window.SM_LESSON && folders && folders.length ? folders : null;   // FOLDER-1(10-04): v2 = 폴더 제목으로 묶음(👥 = 친구와 함께) · v3 = 예전처럼 혼자/함께

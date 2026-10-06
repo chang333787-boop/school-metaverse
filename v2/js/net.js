@@ -176,6 +176,7 @@ export function createNet(o) {
     peers() { const now = Date.now() + offset, a = []; if (!hidden) for (const O of others.values()) if (!(O.t && now - O.t > 20000)) a.push({ x: O.x, y: O.y, z: O.z, act: O.a, label: O.n, color: '#' + O.c.toString(16).padStart(6, '0'), r: 4, floor: O.y > 2.5 ? 2 : 1 }); return a; },
     ctl(path, data) { return req('/ctl/' + path, 'PUT', data); },
     get ctlData() { return CTL; },
+    roster() { const now = Date.now() + offset, a = []; for (const [id, O] of others) if (!(O.t && now - O.t > 20000)) a.push({ id, label: O.n, act: O.a }); return a; },   // ROOM-2: 경기 중(hide)에도 같은 방 친구 명단
     hide(on) { hidden = !!on; for (const O of others.values()) O.mesh.visible = O.tag.visible = !hidden; },   // 물총 친구 대결 동안 걷기 몸 숨김(경기 몸이 대신)
     leave,
   };
