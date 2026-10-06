@@ -24,23 +24,23 @@ export function createWorldFx(H) {
     return { id: r.id, name: r.name, adult: r.s > 1.05, guide: r.tour || null, room: zn ? zn.id : null, roomLabel: zn ? zn.label : null, x, y, z,
       pose: a ? a.pose : r.pose, face: a ? a.h : FACEH[r.face & 3], hidden: !!(st && st.hidden && !a), moved: !!a, walking: !!(a && a.path) }; }
   function collapse(A, o, n) { const a = A.array, x = a[o], y = a[o + 1], z = a[o + 2], arr = a.slice(o, o + n); for (let i = o; i < o + n; i += 3) { a[i] = x; a[i + 1] = y; a[i + 2] = z; } A.needsUpdate = true; return arr; }
-  // 청크에서 사람 빼기: 그 청크의 숨긴 사람들 삼각형을 건너뛰고 나머지를 앞으로 당겨 그리기 범위를 줄인다(삼각형 수도 준다 — 예산 그대로).
-  //   처음 건드릴 때 청크 원본(위치·색·법선)을 떠 두고, 바뀔 때마다 원본에서 다시 짠다 → 모두 보이면 원본 그대로 되돌림(정점 배열 같음 — checksum)
-  const MST = new Map();   // mesh → { pos0, col0, nor0, ids:Set }
-  function chunkApply(mesh) {
-    const st = MST.get(mesh), g = mesh.geometry, A = g.attributes, names = ['position', 'color', 'normal'].filter(k => A[k]);
-    if (!st.ids.size) { for (const k of names) { A[k].array.set(st[k]); A[k].needsUpdate = true; } g.setDrawRange(0, Infinity); MST.delete(mesh); return; }
-    const R = []; for (const id of st.ids) for (const p of PEOPLE[id].parts) if (p.mesh === mesh) R.push([p.start, p.start + p.count]); R.sort((a, b) => a[0] - b[0]);
-    const n = A.position.count; let w = 0, v = 0;
-    for (const k of names) A[k].array.set(st[k]);
-    const cp = (from, to) => { const len = (to - from) * 3; if (w !== from) for (const k of names) A[k].array.copyWithin(w * 3, from * 3, from * 3 + len); w += to - from; };
-    for (const [a, b] of R) { if (a > v) cp(v, a); v = Math.max(v, b); } if (v < n) cp(v, n);
-    for (const k of names) A[k].needsUpdate = true; g.setDrawRange(0, w);
-  }
+  // 청크에서 사람 빼기(STORY-PERF · 10-06 크롬북 렉): 그 사람 정점만 첫 정점 한 점으로 모은다(넓이 0 삼각형 = 안 보이고 그림자도 없음) + 바뀐 칸만 GPU로(addUpdateRange)
+  //   예전 = 청크 원본을 떠 두고 숨긴 사람을 건너뛰어 다시 짜서(앞으로 당김) 청크 전체를 다시 올렸다 — 대역이 생길 때마다 크롬북에서 크게 멈췄다
+  //   되돌리면 떠 둔 그 칸만 원본으로(정점 배열 같음 — checksum) · MST = 사람이 숨은 청크(물건 부수기 'busy' 판정용 · 값 = 숨은 사람 수)
+  const MST = new Map(), PST = new Map();   // mesh → 숨은 사람 수 · id → [[속성, 시작(float), 떠 둔 원본]]
   function chunkHide(id, on) {
-    const ms = new Set(PEOPLE[id].parts.map(p => p.mesh));
-    for (const m of ms) { let st = MST.get(m); if (!st) { if (!on) continue; const A = m.geometry.attributes; st = { ids: new Set() }; for (const k of ['position', 'color', 'normal']) if (A[k]) st[k] = A[k].array.slice(); MST.set(m, st); }
-      if (on) st.ids.add(id); else st.ids.delete(id); chunkApply(m); }
+    if (on) {
+      if (PST.has(id)) return; const L = [];
+      for (const p of PEOPLE[id].parts) { const A = p.mesh.geometry.attributes.position, a = A.array, o = p.start * 3, n = p.count * 3;
+        L.push([A, o, a.slice(o, o + n), p.mesh]); const x = a[o], y = a[o + 1], z = a[o + 2];
+        for (let i = o; i < o + n; i += 3) { a[i] = x; a[i + 1] = y; a[i + 2] = z; }
+        A.addUpdateRange(o, n); A.needsUpdate = true; MST.set(p.mesh, (MST.get(p.mesh) || 0) + 1); }
+      PST.set(id, L);
+    } else {
+      const L = PST.get(id); if (!L) return;
+      for (const [A, o, arr, m] of L) { A.array.set(arr, o); A.addUpdateRange(o, arr.length); A.needsUpdate = true; const k = (MST.get(m) || 1) - 1; if (k > 0) MST.set(m, k); else MST.delete(m); }
+      PST.delete(id);
+    }
   }
   function hideOrig(id) {
     const r = PEOPLE[id]; let st = NST.get(id); if (!st) NST.set(id, st = { hidden: false, actor: null });
@@ -60,7 +60,8 @@ export function createWorldFx(H) {
   // 대역: 모양(자세마다 캐시 · 원점 · 남쪽을 봄) → 대역마다 자기 복사본(걷기 = 팔다리 정점 회전)
   const GEO = new Map(), ACTORS = [], MAXA = 8;
   const geoFor = (id, pose, o) => { const k = id + '|' + pose + '|' + (o.seat ?? '') + '|' + (o.desk ?? ''); let g = GEO.get(k);
-    if (!g) { g = world.personGeo(id, pose, o); const pa = g.userData.part, L = []; for (let i = 0; i < pa.length; i++) if (pa[i]) L.push(i); g.userData.limb = Int32Array.from(L); GEO.set(k, g); } return g; };
+    if (!g) { g = world.personGeo(id, pose, o); const pa = g.userData.part, L = []; for (let i = 0; i < pa.length; i++) if (pa[i]) L.push(i); g.userData.limb = Int32Array.from(L);
+      g.userData.l0 = L.length ? L[0] : 0; g.userData.l1 = L.length ? L[L.length - 1] + 1 : 0; GEO.set(k, g); } return g; };   // STORY-PERF: 팔다리 정점 칸(걷기 때 그 칸만 GPU로)
   // 이름표: 월드 팻말 아틀라스(같은 글자판·같은 재질)를 그대로 — 대역 이름표 전부 한 메시(드로우콜 1 · 72정점 · 매 프레임 카메라 쪽으로)
   let SGN = null;
   function signMesh() {
@@ -98,6 +99,9 @@ export function createWorldFx(H) {
   }
   function setPose(a, pose, o = {}) {
     const g = geoFor(a.id, pose === 'walk' ? 'stand' : pose, o), old = a.mesh.geometry;
+    if (a.base === g && old && old.attributes.position) {   // STORY-PERF: 같은 자세 모양 = 걷기로 돌아간 팔다리만 원래대로(새 버퍼 없음)
+      old.attributes.position.array.set(g.attributes.position.array); old.attributes.normal.array.set(g.attributes.normal.array);
+      old.attributes.position.clearUpdateRanges(); old.attributes.normal.clearUpdateRanges(); old.attributes.position.needsUpdate = old.attributes.normal.needsUpdate = true; a.pose = pose; a.seat = o.seat ?? null; a.top = g.userData.top; place(a); return; }   // 몸 전체를 다시(남은 팔다리 칸 표시는 지움)
     const c = new THREE.BufferGeometry();   // 대역 자기 복사본(걷기가 정점을 바꾼다 — 색은 함께 씀)
     c.setAttribute('position', new THREE.BufferAttribute(g.attributes.position.array.slice(), 3)); c.setAttribute('normal', new THREE.BufferAttribute(g.attributes.normal.array.slice(), 3));
     c.setAttribute('color', g.attributes.color); c.boundingSphere = g.boundingSphere.clone();
@@ -113,7 +117,8 @@ export function createWorldFx(H) {
     for (let k = 0; k < L.length; k++) { const i = L[k], p = pa[i], j = i * 3, pv = p <= 2 ? hy : sy, sg = p === 1 || p === 4 ? 1 : -1, cc = p <= 2 ? c1 : c2, ss = (p <= 2 ? s1 : s2) * sg;
       const y0 = bp[j + 1] - pv, z0 = bp[j + 2]; wp[j + 1] = pv + y0 * cc - z0 * ss; wp[j + 2] = y0 * ss + z0 * cc;
       const ny = bn[j + 1], nz = bn[j + 2]; wn[j + 1] = ny * cc - nz * ss; wn[j + 2] = ny * ss + nz * cc; }
-    a.mesh.geometry.attributes.position.needsUpdate = a.mesh.geometry.attributes.normal.needsUpdate = true;
+    const PA = a.mesh.geometry.attributes.position, NA = a.mesh.geometry.attributes.normal, o3 = g.userData.l0 * 3, n3 = (g.userData.l1 - g.userData.l0) * 3;   // STORY-PERF: 바뀐 팔다리 칸만 올림(예전 = 몸 전체를 매 프레임)
+    if (n3 > 0) { PA.addUpdateRange(o3, n3); NA.addUpdateRange(o3, n3); } PA.needsUpdate = NA.needsUpdate = true;
   }
   function solidOn(a) {   // 선 대역 = 몸 충돌(원래 사람과 같은 크기) + 길격자 막기
     if (a.ghost) { solidOff(a); return; }   // ghost = 몸 충돌 없음(이야기 속 따라오는 친구 — 좁은 문에서 나를 막지 않게 · 10-03)
@@ -162,8 +167,8 @@ export function createWorldFx(H) {
         (async () => {
           const N = navDone() || await navGet(); if (g0 !== GEN || a.done !== res) return;
           solidOff(a);   // 제 자리 막기부터 풀고(출발 칸이 막혀 길을 못 찾던 것)
-          const pr = N.path([a.x, a.y, a.z], [T9.x, T9.y, T9.z], { maxExp: 60000 });
-          if (!pr.ok) { console.warn('[world] npc.move: 길을 못 찾아 바로 옮겨요', pr.reason); arrive(); a.done = null; res(true); return; }
+          const pr = N.path([a.x, a.y, a.z], [T9.x, T9.y, T9.z], { maxExp: o.maxExp || 60000 });
+          if (!pr.ok) { if (!o.quiet) console.warn('[world] npc.move: 길을 못 찾아 바로 옮겨요', pr.reason); arrive(); a.done = null; res(true); return; }
           const pts = pr.pts.slice(); pts.unshift([a.x, a.y, a.z]); pts.push([T9.x, T9.y, T9.z]);
           solidOff(a); if (a.pose !== 'stand') setPose(a, 'stand', {});
           a.path = pts; a.pi = 0; a.ph = 0; a.wait = 0; a.fin = () => { arrive(); const d = a.done; a.done = null; if (d) d(true); };
@@ -525,7 +530,7 @@ export function createWorldFx(H) {
     for (const p of o.parts) { const g = p.mesh.geometry, P = g.attributes.position, A = P.array, C = g.attributes.color; if (!FSAVE.has(p.mesh)) FSAVE.set(p.mesh, A.slice());
       for (let v = p.start; v < p.start + p.count; v += 3) { const i = v * 3; A[i + 3] = A[i + 6] = A[i]; A[i + 4] = A[i + 7] = A[i + 1]; A[i + 5] = A[i + 8] = A[i + 2];
         if (C && nC < 600) { rgb[0] += C.getX(v); rgb[1] += C.getY(v); rgb[2] += C.getZ(v); nC++; } }
-      P.needsUpdate = true; if (p.mesh.castShadow) shadow = true; }
+      P.addUpdateRange(p.start * 3, p.count * 3); P.needsUpdate = true; if (p.mesh.castShadow) shadow = true; }
     const cols = []; for (let i = o.c0; i < o.c1; i++) { const c = world.colliders[i]; cols.push([c, c.y0, c.y1]); c.y0 = c.y1 = -1e6; }
     FURN.set(key, { o, cols, by });
     if (o.hots) hotFurn(o.hots, true);   // FURN-2: 이 물건의 앉기·마시기 등 지점 끔
@@ -540,7 +545,7 @@ export function createWorldFx(H) {
   function furnShow(key) {
     const f = FURN.get(key); if (!f) return false; let shadow = false;
     for (const p of f.o.parts) { const S0 = FSAVE.get(p.mesh); if (!S0) continue; const A = p.mesh.geometry.attributes.position.array;
-      for (let i = p.start * 3; i < (p.start + p.count) * 3; i++) A[i] = S0[i]; p.mesh.geometry.attributes.position.needsUpdate = true; if (p.mesh.castShadow) shadow = true; }
+      for (let i = p.start * 3; i < (p.start + p.count) * 3; i++) A[i] = S0[i]; p.mesh.geometry.attributes.position.addUpdateRange(p.start * 3, p.count * 3); p.mesh.geometry.attributes.position.needsUpdate = true; if (p.mesh.castShadow) shadow = true; }
     for (const [c, y0, y1] of f.cols) { c.y0 = y0; c.y1 = y1; }
     FURN.delete(key); if (f.o.hots) hotFurn(f.o.hots, false);   // FURN-2: 지점 원래대로(게임이 그동안 바꾼 값까지)
     for (const [k, g] of [...FURN]) if (g.by === key) furnShow(k);   // 같이 숨겼던 것(얹혀 있던 물건)

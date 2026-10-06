@@ -199,7 +199,7 @@ export default async function start(map, params = {}) {
     const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < 3.2) return;
     const hr = me.h * Math.PI / 180, fx = Math.sin(hr), fz = -Math.cos(hr), side = (k - (PARTY.length - 1) / 2) * 0.9, back = 1.6 + (k % 2) * 0.7;
     const p = spot(me.x - fx * back + fz * side, me.z - fz * back - fx * side, me.y), face = (Math.atan2(me.x - p.x, -(me.z - p.z)) * 180 / Math.PI + 360) % 360;
-    map.npc.move(n, { x: p.x, y: p.y, z: p.z }, d > 24 ? { face, ghost: true } : { walk: true, speed: 4.4, pass: true, face, ghost: true });
+    map.npc.move(n, { x: p.x, y: p.y, z: p.z }, d > 24 ? { face, ghost: true } : { walk: true, speed: 4.4, pass: true, face, ghost: true, maxExp: 6000, quiet: true });   // STORY-PERF: 길찾기 한도 6000(예전 60000 — 막힌 곳이면 크롬북에서 수백 ms)
   }
   function namesOf(w) { return w === 'party' ? PARTY.slice() : [].concat(w || []); }
   async function runSteps(list = D.steps, top = true) {

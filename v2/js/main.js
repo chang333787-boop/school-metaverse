@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=154';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=56';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=58';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=24';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=16';
@@ -51,10 +51,10 @@ const GFX = (() => { const q = new URLSearchParams(location.search), hq = q.get(
   const mobile = !hq && (lq || touchPrimary() || Math.min(screen.width || 9999, screen.height || 9999) <= 500);
   const ios = /iP(hone|ad|od)/.test(navigator.userAgent || '') || (/Macintosh/.test(navigator.userAgent || '') && navigator.maxTouchPoints > 1);   // MOB-2: 사파리는 메모리·코어를 감추거나 줄여 알린다 → 아이폰·아이패드는 저사양으로 판정하지 않는다
   const low = !hq && (lq || (!ios && (mobile || cros) && ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 3))));
-  const cap = Math.min(dev, low ? 1.25 : mobile || cros ? 1.5 : 2), start = hq ? cap : Math.min(cap, cros ? 1.25 : 1.5), fix = +q.get('dpr') || 0;   // ?dpr=0.75 = 배율 고정(시험용)
+  const cap = Math.min(dev, low ? 1.25 : mobile || cros ? 1.5 : 2), start = hq ? cap : Math.min(cap, cros ? 1 : 1.5), fix = +q.get('dpr') || 0;   // ?dpr=0.75 = 배율 고정(시험용) · STORY-PERF(10-06 교사 '크롬북 렉 — 프레임 중요'): 크롬북은 1배에서 시작(여유면 자동 해상도가 올림)
   // 자동 해상도는 게이트·검진·사진 대조·?hq=1·?dpr=·?adapt=0에서 끈다(같은 화면을 다시 재야 하는 주소) · 휴대폰·저사양 판(mobile·low)도 끈다(리뷰 — 휴대폰 판은 예전 그대로)
   const adapt = !hq && !fix && q.get('adapt') !== '0' && !/[?&](check|health)=1/.test(location.search) && !q.get('shot');
-  const aaQ = q.get('aa'), aa = aaQ === '1' ? true : aaQ === '0' ? false : !low;   // 10-04 교사 '폰으로 하면 계속 떨리고 멀미': 휴대폰도 MSAA(타일 GPU라 싸다 — 가장자리 지글거림이 걸을 때 떨림으로 보였다) · 저사양만 끔
+  const aaQ = q.get('aa'), aa = aaQ === '1' ? true : aaQ === '0' ? false : !low && !cros;   // STORY-PERF(10-06): 크롬북도 MSAA 끔(약한 내장 그래픽 — 4배 표본·풀기 대역폭이 프레임을 먹는다 · ?aa=1이면 켬)   // 10-04 교사 '폰으로 하면 계속 떨리고 멀미': 휴대폰도 MSAA(타일 GPU라 싸다 — 가장자리 지글거림이 걸을 때 떨림으로 보였다) · 저사양만 끔
   return { mode: low ? 'low' : mobile ? 'mobile' : cros ? 'cb' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, mobile || low ? 1 : 0.6), ios, shadow: low ? 0 : mobile || cros ? 1024 : 2048, adapt, aa, dev }; })();
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: GFX.aa, powerPreference: 'high-performance' });
 // PERF-WIN: 셰이더 오류 검사(getShaderInfoLog·getProgramInfoLog)는 컴파일이 끝날 때까지 주 스레드를 세운다(점검 실측 300~800ms) — 배포판은 끄고 ?debug=1·?check=1에서만 켠다
