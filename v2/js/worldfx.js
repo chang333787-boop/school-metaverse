@@ -80,7 +80,7 @@ export function createWorldFx(H) {
   function signTick() {
     const A = SGN.g.attributes.position.array, cx = camera.position.x, cz = camera.position.z;
     for (let k = 0; k < MAXA; k++) { const a = SGN.slot[k]; if (!a) continue;
-      const th = Math.atan2(cx - a.x, cz - a.z), rx = Math.cos(th), rz = -Math.sin(th), nx = Math.sin(th), nz = Math.cos(th), y = a.y + a.top + 0.28, w2 = a.sw / 2, h2 = a.sh / 2, vis = a.vis !== false && !a.nosign;
+      const th = Math.atan2(cx - a.x, cz - a.z), rx = Math.cos(th), rz = -Math.sin(th), nx = Math.sin(th), nz = Math.cos(th), sc9 = a.sc || 1, y = a.y + (a.top + 0.28) * sc9, w2 = a.sw / 2 * sc9, h2 = a.sh / 2 * sc9, vis = a.vis !== false && !a.nosign;
       let o = k * 36;
       for (let f = 0; f < 2; f++) { const zz = f ? -0.008 : 0.008, x0 = f ? w2 : -w2, x1 = -x0;
         const Q = SQ; Q[0] = x0; Q[1] = -h2; Q[2] = x1; Q[3] = -h2; Q[4] = x1; Q[5] = h2; Q[6] = x0; Q[7] = -h2; Q[8] = x1; Q[9] = h2; Q[10] = x0; Q[11] = h2;
@@ -167,7 +167,7 @@ export function createWorldFx(H) {
         (async () => {
           const N = navDone() || await navGet(); if (g0 !== GEN || a.done !== res) return;
           solidOff(a);   // 제 자리 막기부터 풀고(출발 칸이 막혀 길을 못 찾던 것)
-          const pr = N.path([a.x, a.y, a.z], [T9.x, T9.y, T9.z], { maxExp: o.maxExp || 60000 });
+          const pr = o.direct ? { ok: true, pts: [] } : N.path([a.x, a.y, a.z], [T9.x, T9.y, T9.z], { maxExp: o.maxExp || 60000 });   // STORY-FX: direct = 길격자 없이 곧장(작아진 친구 — 0.3 m 칸 지그재그가 몸보다 큼)
           if (!pr.ok) { if (!o.quiet) console.warn('[world] npc.move: 길을 못 찾아 바로 옮겨요', pr.reason); arrive(); a.done = null; res(true); return; }
           const pts = pr.pts.slice(); pts.unshift([a.x, a.y, a.z]); pts.push([T9.x, T9.y, T9.z]);
           solidOff(a); if (a.pose !== 'stand') setPose(a, 'stand', {});
@@ -176,6 +176,8 @@ export function createWorldFx(H) {
         })().catch(e => { console.error('[world] npc.move', e); });
       });
     },
+    // STORY-FX(10-06): 대역 크기(이야기 '개미만 해졌다' — 친구들도 같이 작아짐) · 1 = 원래 · 걷기·자세가 바뀌어도 그대로
+    scale(t, sc = 1) { const id = find(t); if (id < 0) return false; const a = actorFor(id); if (!a) return false; a.sc = Math.max(0.03, sc); a.mesh.scale.setScalar(a.sc); place(a); return true; },   // 이름표도 같은 비율(signTick)
     // 제자리에서 자세·방향만(대역으로)
     pose(t, pose = 'stand', face, o = {}) { const id = find(t); if (id < 0) return false; const a = actorFor(id); if (!a) return false; if (o.sign != null) a.nosign = !o.sign; stopWalk(a); if (face != null) a.h = face; setPose(a, pose, o); solidOn(a); return true; },
     // 시험·검증: 사람 정점(청크)·이름표·사람 충돌을 한 수로 — 게임 전후가 같아야 한다

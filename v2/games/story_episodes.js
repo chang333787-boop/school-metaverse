@@ -6,5 +6,7 @@ export const EPISODES = [
   { id: 'rainbow', title: '무지개 편지', icon: '🌈', practice: true, file: 'story_data.js', legacy: 'rainbow' },   // 연습 게임(예전 코드로 돌아가요 — legacy)
   { id: 'sample', title: '견본: 보건실 심부름', icon: '🩹', file: 'story_sample.js', hidden: true },
   { id: 'newbook_a', set: 'newbook', title: '신상책 보물찾기의 비밀', pick: 'AI가 빈칸을 채운 이야기', icon: '✨', file: 'story_newbook_a.js', hidden: true },
+  { id: 'robotpart_a', set: 'robotpart', title: '로봇 부품 소동', pick: 'AI가 다듬은 이야기', icon: '🤖', file: 'story_robotpart_a.js', hidden: true },   // 이야기 판 1번(은규·지원·인우) — STORY-FX 10-06
+  { id: 'cricket_a', set: 'cricket', title: '작아진 우리와 곤충 재판', pick: 'AI가 다듬은 이야기', icon: '🦗', file: 'story_cricket_a.js', hidden: true },   // 이야기 판 2번(예지·시아·유은)
   { id: 'newbook_b', set: 'newbook', title: '신상책', pick: '우리 반이 쓴 이야기 그대로', icon: '✏️', file: 'story_newbook_b.js', hidden: true },               // 새 형식 견본(목록엔 안 보임 · ?game=story&ep=sample)
 ];

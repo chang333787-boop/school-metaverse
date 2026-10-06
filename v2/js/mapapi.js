@@ -6,7 +6,7 @@
 import { createMinimap } from './minimap.js?v=12';
 import { createGamePicker } from './gamepick.js?v=16';
 import { createEngine } from './engine.js?v=13';
-import { createWorldFx } from './worldfx.js?v=12';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
+import { createWorldFx } from './worldfx.js?v=13';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 // PERF-WIN: 숫자 키(윗줄·숫자 패드) → 1~9 · 아니면 0 — e.key는 한글 입력기가 켜져 있으면 'Process'라 e.code로 읽는다
 export const digitOf = e => { const m = /^(?:Digit|Numpad)([0-9])$/.exec(e.code || ''); return m ? +m[1] : 0; };
 export function createMapApi(host, NAV, META) {

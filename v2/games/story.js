@@ -165,6 +165,252 @@ export default async function start(map, params = {}) {
     const h = map.interact.add({ x: p.x, y, z: p.z, r, label, use: () => { if (talk) return; h.remove(); off.remove(); res(); } }); });
   const talkTo = (p, name, text) => { objective(text, p, name); return waitUse(p, '💬 ' + name + '에게 말 걸기'); };
 
+  // ---------- 무대 생물·소품(STORY-FX · 10-06 교사 '아이들 이야기 판으로 — 새 인물은 센스 있게 모델링 · 새 기능은 반짝이 말고 실제로 눈에 보이게') ----------
+  //   이야기 글의 새 칸(한 칸에 하나씩 · 위에서 아래로):
+  //     fx: 종류, id, at(자리 | 'me' | 'head:이름' | 'hand:이름'), fwd·side(앞·옆 m), dy, h(방위°), s(크기), anim  — 만들기(같은 id면 바꿔 그림)
+  //     fxMove: id, to, sec, arc(뛰는 높이 m), dy, face(true), wait  · fxAnim: id, anim · fxDel: id | 'all'
+  //     morph: id, to(종류), anim — 펑! 하고 다른 모습으로 · powder: id(color) — 위에서 가루가 떨어짐 · glow: 'party'|이름|'me'(color) — 둘레에 빛 알갱이
+  //     shrink: 크기(1/12 …) — 나와 친구들(party)이 1.4초 동안 작아짐 · grow: true — 원래대로 · grass: 자리, r, n, hmin, hmax — 큰 풀숲(작아졌을 때 · 한 메시)
+  //     chase: id, sec, speed, goal — 그 생물이 나를 쫓아옴(잡히거나 시간이 끝나면 다음) · hold: id, on(이름|'me'|null) — 손에 듦 · act: 이름, pose, faceTo(이름|'me')
+  //     emote: 이름|'me', icon, sec — 머리 위 그림 · use: id, label, goal — 그 물건 앞에서 E · circle: 'party', r — 내 앞에 둥글게 · tiny 판에선 친구도 작은 걸음
+  //   모양 = 기본 도형 묶음(Group · 색마다 재질 하나 · MeshLambert — 새 조명 없음) · 이야기 동안 몇 개뿐이라 드로우콜 작음 · 멈추면 모두 치움
+  const T3 = map.three, FX = new Map(), FXDISP = [], MATC = new Map(), FXROOT = new T3.Group(); map.add(FXROOT);
+  const fxMat = (c, o) => { const k = c + '|' + (o ? JSON.stringify(o) : ''); let m = MATC.get(k); if (!m) { m = new T3.MeshLambertMaterial({ color: c, ...(o || {}) }); MATC.set(k, m); FXDISP.push(m); } return m; };
+  const FG = { b: new T3.BoxGeometry(1, 1, 1), s: new T3.SphereGeometry(1, 14, 10), c: new T3.CylinderGeometry(1, 1, 1, 10), k: new T3.ConeGeometry(1, 1, 12) }; FXDISP.push(...Object.values(FG));
+  const PT = (par, g, c, pos, sc, rot, o) => { const m = new T3.Mesh(FG[g], fxMat(c, o)); m.position.set(pos[0], pos[1], pos[2]); m.scale.set(sc[0], sc[1], sc[2]); if (rot) m.rotation.set(rot[0], rot[1], rot[2]); par.add(m); return m; };
+  const pivot = (par, pos) => { const g = new T3.Group(); g.position.set(pos[0], pos[1], pos[2]); par.add(g); return g; };
+  const EYE = (par, x, y, z, r, white = 0xffffff) => { PT(par, 's', white, [x, y, z], [r, r, r]); PT(par, 's', 0x161616, [x, y, z - r * 0.62], [r * 0.55, r * 0.55, r * 0.55]); };   // 큰 눈(무섭지 않게 — 동그란 흰자 + 앞쪽 검은자)
+  // 모양들(앞 = −z · 바닥 = y 0 · 단위 m · 실제보다 크게 — 아이 눈에 잘 보이게)
+  const MODEL = {
+    cricket(g, R) {   // 귀뚜라미 ≈ 11cm — 갈색 몸 · 긴 더듬이 · 큰 뒷다리
+      PT(g, 's', 0x6b4423, [0, 0.026, 0.008], [0.024, 0.02, 0.048]); PT(g, 's', 0x4a2e16, [0, 0.04, 0.02], [0.02, 0.008, 0.042]);
+      const hd = PT(g, 's', 0x5a381c, [0, 0.03, -0.044], [0.019, 0.018, 0.018]); EYE(g, 0.011, 0.038, -0.054, 0.007);
+      R.ant = [-1, 1].map(sd => PT(g, 'c', 0x3d2614, [sd * 0.008, 0.06, -0.09], [0.0014, 0.08, 0.0014], [-1.05, 0, sd * 0.3]));
+      R.legs = [-1, 1].map(sd => { const p = pivot(g, [sd * 0.024, 0.03, 0.025]); PT(p, 'c', 0x7a4f2a, [0, 0.012, 0.018], [0.007, 0.05, 0.007], [0.95, 0, 0]); PT(p, 'c', 0x7a4f2a, [0, -0.012, 0.045], [0.0035, 0.05, 0.0035], [-0.55, 0, 0]); return p; });
+      for (const sd of [-1, 1]) for (const z of [-0.025, -0.004]) PT(g, 'c', 0x5a381c, [sd * 0.02, 0.012, z], [0.0022, 0.028, 0.0022], [0.3, 0, sd * 0.8]);
+      R.band = PT(g, 'b', 0xffffff, [0.03, 0.03, 0.04], [0.01, 0.012, 0.016]); R.band.visible = false; void hd;   // 반창고(재판 장면 — 다친 다리)
+    },
+    mantis(g, R) {   // 사마귀 ≈ 45cm(작아진 우리에겐 거인) — 연두 몸 · 세모 머리 · 큰 눈 · 접힌 앞다리
+      PT(g, 's', 0x5cb85c, [0, 0.12, 0.12], [0.05, 0.045, 0.13], [0.25, 0, 0]); PT(g, 's', 0x8fd88f, [0, 0.16, 0.13], [0.04, 0.012, 0.12], [0.25, 0, 0], { transparent: true, opacity: 0.85 });
+      PT(g, 'c', 0x6cc06c, [0, 0.22, -0.02], [0.02, 0.2, 0.02], [-0.45, 0, 0]);
+      const hd = pivot(g, [0, 0.32, -0.07]); R.head = hd; PT(hd, 'k', 0x7bd07b, [0, 0.0, -0.01], [0.05, 0.06, 0.035], [Math.PI, 0, 0]); EYE(hd, 0.034, 0.018, -0.02, 0.019, 0xe6f58a); EYE(hd, -0.034, 0.018, -0.02, 0.019, 0xe6f58a);
+      for (const sd of [-1, 1]) PT(hd, 'c', 0x4f9f4f, [sd * 0.012, 0.06, -0.04], [0.0025, 0.1, 0.0025], [-0.7, 0, sd * 0.35]);
+      R.arms = [-1, 1].map(sd => { const p = pivot(g, [sd * 0.03, 0.25, -0.08]); PT(p, 'c', 0x6cc06c, [0, -0.04, -0.03], [0.013, 0.1, 0.013], [0.6, 0, 0]); const lo = pivot(p, [0, -0.08, -0.06]); PT(lo, 'c', 0x5cb85c, [0, 0.03, -0.02], [0.011, 0.09, 0.011], [-0.9, 0, 0]);
+        for (let k = 0; k < 3; k++) PT(lo, 'k', 0x3d8b40, [0, 0.01 + k * 0.022, -0.035], [0.004, 0.012, 0.004], [-1.9, 0, 0]); p.userData.lo = lo; return p; });
+      R.legs = []; for (const z of [0.03, 0.13]) for (const sd of [-1, 1]) { const p = pivot(g, [sd * 0.035, 0.11, z]); PT(p, 'c', 0x4f9f4f, [sd * 0.04, -0.05, 0], [0.007, 0.14, 0.007], [0, 0, sd * 0.6]); R.legs.push(p); }
+    },
+    beetle(g, R) {   // 장수풍뎅이 재판관 ≈ 34cm — 반짝이는 고동색 · 큰 뿔 · 재판관 모자 · 나무 망치
+      const sc = 2; const b = pivot(g, [0, 0.14, 0]); b.scale.setScalar(sc);
+      PT(b, 's', 0x3b2416, [0, 0.05, 0.025], [0.056, 0.042, 0.078]); PT(b, 'b', 0x5a3a22, [0, 0.074, 0.03], [0.004, 0.012, 0.13]);
+      PT(b, 's', 0x4a2c18, [0, 0.062, -0.045], [0.047, 0.037, 0.036]); PT(b, 's', 0x3b2416, [0, 0.05, -0.08], [0.026, 0.022, 0.026]);
+      EYE(b, 0.018, 0.058, -0.096, 0.008); EYE(b, -0.018, 0.058, -0.096, 0.008);
+      PT(b, 'k', 0x2a170c, [0, 0.1, -0.106], [0.012, 0.075, 0.012], [-0.45, 0, 0]); PT(b, 's', 0x2a170c, [0, 0.135, -0.124], [0.012, 0.006, 0.012]);
+      PT(b, 'k', 0x2a170c, [0, 0.105, -0.05], [0.009, 0.045, 0.009], [-0.9, 0, 0]);
+      PT(b, 'c', 0x111111, [0, 0.105, -0.032], [0.022, 0.012, 0.022]); PT(b, 'b', 0x111111, [0, 0.115, -0.032], [0.056, 0.005, 0.056], [0, 0.785, 0]); PT(b, 'c', 0xf2c230, [0.03, 0.105, -0.032], [0.0025, 0.02, 0.0025]);   // 재판관 모자
+      for (const sd of [-1, 1]) for (const z of [-0.035, 0.0, 0.04]) PT(b, 'c', 0x2a170c, [sd * 0.05, 0.022, z], [0.0035, 0.05, 0.0035], [0, 0, sd * 0.75]);
+      const arm = pivot(b, [0.04, 0.05, -0.07]); R.arm = arm; PT(arm, 'c', 0x2a170c, [0.012, 0.012, -0.012], [0.004, 0.04, 0.004], [-0.6, 0, -0.4]);
+      PT(arm, 'c', 0x8b5a2b, [0.03, 0.03, -0.035], [0.004, 0.05, 0.004]); PT(arm, 'c', 0x6b4423, [0.03, 0.058, -0.035], [0.011, 0.03, 0.011], [0, 0, Math.PI / 2]);   // 망치
+      PT(g, 'c', 0x8b6b4a, [0, 0.07, 0.01], [0.17, 0.14, 0.17]); PT(g, 'c', 0xc4a57a, [0, 0.142, 0.01], [0.165, 0.006, 0.165]); for (let k = 0; k < 5; k++) { const a = k * 1.256; PT(g, 'k', 0x6b4f35, [Math.cos(a) * 0.17, 0.03, 0.01 + Math.sin(a) * 0.17], [0.03, 0.06, 0.03], [0, 0, 0]); }   // 그루터기 재판대 + 뿌리
+    },
+    ant(g, R) {   // 개미 ≈ 6cm(구경꾼)
+      for (const [z, r] of [[0.022, 0.014], [0, 0.009], [-0.02, 0.011]]) PT(g, 's', 0x3a1f12, [0, 0.014, z], [r, r * 0.85, r * 1.15]); EYE(g, 0.006, 0.018, -0.028, 0.004);
+      R.legs = []; for (const z of [-0.006, 0.0, 0.006]) for (const sd of [-1, 1]) { const p = pivot(g, [sd * 0.006, 0.012, z]); PT(p, 'c', 0x2a170c, [sd * 0.012, -0.004, 0], [0.0018, 0.026, 0.0018], [0, 0, sd * 1.0]); R.legs.push(p); }
+      for (const sd of [-1, 1]) PT(g, 'c', 0x2a170c, [sd * 0.005, 0.026, -0.036], [0.0012, 0.022, 0.0012], [-0.9, 0, sd * 0.4]);
+    },
+    butterfly(g, R) {   // 나비 ≈ 날개 폭 26cm — 주황 날개 · 검은 무늬 · 펄럭임
+      PT(g, 'c', 0x2b2b2b, [0, 0.03, 0], [0.006, 0.06, 0.006], [Math.PI / 2, 0, 0]); PT(g, 's', 0x2b2b2b, [0, 0.03, -0.034], [0.008, 0.008, 0.008]);
+      for (const sd of [-1, 1]) PT(g, 'c', 0x2b2b2b, [sd * 0.006, 0.045, -0.05], [0.0012, 0.03, 0.0012], [-0.8, 0, sd * 0.4]);
+      R.wings = [-1, 1].map(sd => { const w = pivot(g, [sd * 0.004, 0.03, 0]); PT(w, 's', 0xff9f1a, [sd * 0.06, 0, -0.012], [0.06, 0.002, 0.045]); PT(w, 's', 0xffc94d, [sd * 0.045, 0, 0.03], [0.04, 0.002, 0.03]);
+        PT(w, 's', 0x2b2b2b, [sd * 0.085, 0.001, -0.025], [0.014, 0.002, 0.012]); PT(w, 's', 0xffffff, [sd * 0.1, 0.002, -0.01], [0.006, 0.002, 0.006]); return w; });
+    },
+    egg(g) { PT(g, 's', 0xf5efc0, [0, 0.016, 0], [0.012, 0.016, 0.012]); PT(g, 's', 0xfffbe0, [0.004, 0.022, -0.004], [0.004, 0.005, 0.004]); },
+    caterpillar(g, R) {   // 애벌레 ≈ 14cm — 초록 마디 · 노랑·검정 띠 · 기어감
+      R.seg = []; for (let k = 0; k < 7; k++) { const p = pivot(g, [0, 0.016, 0.06 - k * 0.02]); PT(p, 's', k === 6 ? 0x6abf45 : 0x7cc850, [0, 0, 0], [0.017, 0.016, 0.014]);
+        if (k < 6 && k % 2 === 0) PT(p, 'b', 0x222222, [0, 0.013, 0], [0.02, 0.003, 0.004]); if (k < 6 && k % 2) PT(p, 'b', 0xf2c230, [0, 0.013, 0], [0.02, 0.003, 0.004]); R.seg.push(p); }
+      const hd = R.seg[6]; EYE(hd, 0.007, 0.005, -0.011, 0.004); for (const sd of [-1, 1]) PT(hd, 'c', 0x333333, [sd * 0.006, 0.018, -0.004], [0.0012, 0.012, 0.0012]);
+    },
+    pupa(g) {   // 번데기 ≈ 10cm — 나뭇가지에 매달린 연두·금빛 점
+      PT(g, 'c', 0x6b4423, [0.03, 0.16, 0], [0.006, 0.12, 0.006], [0, 0, Math.PI / 2]); PT(g, 'c', 0x7a5230, [0.085, 0.085, 0], [0.008, 0.17, 0.008]); PT(g, 's', 0x5aa04a, [0.1, 0.17, 0], [0.02, 0.01, 0.014]); PT(g, 'c', 0x6b4423, [0, 0.13, 0], [0.002, 0.03, 0.002]);
+      PT(g, 's', 0x7cbf5a, [0, 0.085, 0], [0.02, 0.042, 0.02]); PT(g, 'k', 0x6aa84a, [0, 0.035, 0], [0.012, 0.03, 0.012], [Math.PI, 0, 0]);
+      for (const [x, y] of [[0.012, 0.1], [-0.01, 0.09], [0.004, 0.07]]) PT(g, 's', 0xf2c230, [x, y, -0.016], [0.003, 0.003, 0.003]);
+    },
+    leaf(g) {   // 큰 잎 ≈ 34cm
+      PT(g, 's', 0x4caf50, [0, 0.004, 0], [0.17, 0.005, 0.085]); PT(g, 'b', 0x3d8b40, [0, 0.009, 0], [0.32, 0.003, 0.007]);
+      for (const x of [-0.08, 0, 0.08]) for (const sd of [-1, 1]) PT(g, 'b', 0x3d8b40, [x, 0.009, sd * 0.03], [0.004, 0.002, 0.06], [0, sd * 0.6, 0]);
+      PT(g, 'c', 0x3d8b40, [0.19, 0.006, 0], [0.004, 0.06, 0.004], [0, 0, Math.PI / 2]);
+    },
+    stick(g, R) {   // 나뭇가지 ≈ 70cm
+      PT(g, 'c', 0x7a5230, [0, 0.35, 0], [0.012, 0.7, 0.012]); PT(g, 'c', 0x7a5230, [0.05, 0.5, 0], [0.006, 0.16, 0.006], [0, 0, -0.7]); PT(g, 's', 0x5aa04a, [0.1, 0.56, 0], [0.025, 0.012, 0.018]); R.swing = g;
+    },
+    part(g, R) {   // 로봇 부품 ≈ 6cm — 회색 몸 · 톱니 · 파란 하트 스티커(은규가 붙인 것)
+      PT(g, 'b', 0x9aa5b1, [0, 0.013, 0], [0.055, 0.026, 0.038]); PT(g, 'c', 0xc0c7cf, [0, 0.032, 0], [0.019, 0.008, 0.019]);
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; PT(g, 'b', 0xc0c7cf, [Math.cos(a) * 0.021, 0.032, Math.sin(a) * 0.021], [0.006, 0.008, 0.006], [0, -a, 0]); }
+      PT(g, 'b', 0xd4af37, [0.02, 0.008, -0.02], [0.004, 0.006, 0.012]); PT(g, 'b', 0xd4af37, [0.01, 0.008, -0.02], [0.004, 0.006, 0.012]);
+      const hp = pivot(g, [0, 0.013, 0.0195]); R.heart = hp; PT(hp, 's', 0x2f7de1, [-0.005, 0.004, 0], [0.006, 0.006, 0.002]); PT(hp, 's', 0x2f7de1, [0.005, 0.004, 0], [0.006, 0.006, 0.002]); PT(hp, 'b', 0x2f7de1, [0, -0.002, 0], [0.009, 0.009, 0.003], [0, 0, Math.PI / 4]);
+    },
+    partplain(g) { MODEL.part(g, {}); g.children.slice(-1)[0].visible = false; },   // 하트 없는 같은 부품(인우 것)
+    robot0(g, R) { robotBase(g, R, 0); }, robot1(g, R) { robotBase(g, R, 1); }, robot2(g, R) { robotBase(g, R, 2); },
+  };
+  function robotBase(g, R, st) {   // 코딩 로봇 ≈ 22cm — 0 = 바퀴판만 · 1 = 몸통까지(팔 자리 비어 있음) · 2 = 완성(팔·머리·눈 불·안테나)
+    PT(g, 'b', 0x3d5a80, [0, 0.03, 0], [0.16, 0.03, 0.12]); for (const x of [-0.085, 0.085]) for (const z of [-0.045, 0.045]) PT(g, 'c', 0x222222, [x, 0.022, z], [0.022, 0.014, 0.022], [0, 0, Math.PI / 2]);
+    PT(g, 'b', 0xf2c230, [0, 0.047, 0.055], [0.04, 0.006, 0.006]);
+    if (st >= 1) { PT(g, 'b', 0xe8edf3, [0, 0.09, 0], [0.1, 0.08, 0.08]); PT(g, 'b', 0x98c1d9, [0, 0.095, -0.041], [0.06, 0.04, 0.003]); PT(g, 's', 0xee6c4d, [0, 0.095, -0.043], [0.008, 0.008, 0.003]); }
+    if (st >= 2) { R.arms = [-1, 1].map(sd => { const p = pivot(g, [sd * 0.058, 0.115, 0]); PT(p, 'b', 0x9aa5b1, [sd * 0.012, -0.02, 0], [0.018, 0.05, 0.02]); PT(p, 's', 0xee6c4d, [sd * 0.012, -0.05, 0], [0.012, 0.012, 0.012]); return p; });
+      const hd = pivot(g, [0, 0.16, 0]); R.head = hd; PT(hd, 'b', 0xe8edf3, [0, 0.025, 0], [0.08, 0.05, 0.065]); R.eyes = [-1, 1].map(sd => PT(hd, 's', 0x3ff0ff, [sd * 0.018, 0.03, -0.033], [0.008, 0.008, 0.004], null, { emissive: 0x1aa0c0 }));
+      PT(hd, 'c', 0x9aa5b1, [0, 0.06, 0], [0.003, 0.025, 0.003]); PT(hd, 's', 0xee6c4d, [0, 0.075, 0], [0.008, 0.008, 0.008]); }
+  }
+  let SC = 1, shrinkA = null, glowSet = [], partyScale = 1;
+  const actorScaleOf = n => (PARTY.includes(n) ? partyScale : 1);
+  function whereOf(t, st = {}) {   // 자리 → {x,y,z,h}
+    const me = map.player.get();
+    let p = null, h = st.h;
+    if (t === 'me' || t == null) p = { x: me.x, y: me.y, z: me.z, h: me.h };
+    else if (typeof t === 'string' && /^(head|hand|feet):/.test(t)) { const [k, n] = [t.slice(0, t.indexOf(':')), t.slice(t.indexOf(':') + 1)];
+      const isMe = n === 'me' || n === ME, q = isMe ? { x: me.x, y: me.y, z: me.z, h: me.h } : npcAt(n) && { ...npcAt(n), h: (map.npc.get(n) || {}).face ?? 0 }, s9 = isMe ? SC : actorScaleOf(n);
+      if (!q) return null; const hr = (q.h || 0) * Math.PI / 180;
+      const hh = isMe ? 1.5 : ((map.npc.get(n) || {}).pose === 'sit' ? 1.08 : 1.42); p = k === 'head' ? { x: q.x, y: q.y + hh * s9, z: q.z } : k === 'hand' ? { x: q.x + Math.cos(hr) * 0.26 * s9 + Math.sin(hr) * 0.18 * s9, y: q.y + 0.95 * s9, z: q.z + Math.sin(hr) * 0.26 * s9 - Math.cos(hr) * 0.18 * s9 } : { x: q.x, y: q.y, z: q.z };
+      h = h ?? q.h; }
+    else p = place(t);
+    if (!p) return null;
+    if (st.fwd || st.side) { const hr = (me.h || 0) * Math.PI / 180, f = st.fwd || 0, sd = st.side || 0; p = { ...p, x: p.x + Math.sin(hr) * f + Math.cos(hr) * sd, z: p.z - Math.cos(hr) * f + Math.sin(hr) * sd }; }
+    if (st.ground) { const gy = map.player.groundAt(p.x, p.z, (p.y ?? 0) + 0.6); if (gy != null && isFinite(gy)) p.y = gy; }
+    return { x: p.x, y: (p.y ?? 0) + (st.dy || 0), z: p.z, h: h ?? p.h ?? 0 };
+  }
+  function fxMake(kind, id, at, st = {}) {
+    if (!MODEL[kind]) { console.warn('[이야기] 모르는 모양', kind); return null; }
+    const old = FX.get(id); if (old) { FXROOT.remove(old.g); FX.delete(id); }
+    const g = new T3.Group(), R = {}; MODEL[kind](g, R); const s = st.s || 1; g.scale.setScalar(s);
+    const o = { id, kind, g, R, x: at.x, y: at.y, z: at.z, h: at.h || 0, s, anim: st.anim || 'idle', t: Math.random() * 6, mv: null, hold: null, pop: 0 };
+    FXROOT.add(g); FX.set(id, o); fxPlace(o); return o;
+  }
+  function fxPlace(o) { o.g.position.set(o.x, o.y, o.z); o.g.rotation.y = -o.h * Math.PI / 180; }
+  // 알갱이(펑·가루·빛) — 점 묶음 하나 · 1~1.8초 뒤 치움
+  const PUFF = [];
+  function particles(x, y, z, o = {}) {
+    const n = o.n || 40, pos = new Float32Array(n * 3), vel = new Float32Array(n * 3), R0 = o.r || 0.15;
+    for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, r = Math.random() * R0, up = o.fall ? 0.25 + Math.random() * 0.25 : Math.random() * 0.2;
+      pos[i * 3] = x + Math.cos(a) * r; pos[i * 3 + 1] = y + up; pos[i * 3 + 2] = z + Math.sin(a) * r;
+      const sp = o.fall ? 0 : (o.speed || 0.4); vel[i * 3] = Math.cos(a) * sp * Math.random(); vel[i * 3 + 1] = o.fall ? -(0.12 + Math.random() * 0.2) : sp * (0.3 + Math.random()); vel[i * 3 + 2] = Math.sin(a) * sp * Math.random(); }
+    const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.BufferAttribute(pos, 3));
+    const m = new T3.PointsMaterial({ color: o.color || 0xffe066, size: o.size || 0.03, transparent: true, opacity: 1, depthWrite: false });
+    const pt = new T3.Points(geo, m); FXROOT.add(pt); PUFF.push({ pt, vel, t: 0, life: o.life || 1.4, swirl: o.swirl || 0, cx: x, cz: z });
+  }
+  // 머리 위 그림(💢 ❓ ❤️ …) — 글자 그림판 스프라이트
+  const EMO = [];
+  function emote(who, icon, sec = 2.5) {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 96; const c2 = cv.getContext('2d'); c2.font = '72px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText(icon, 48, 54);
+    const tex = new T3.CanvasTexture(cv); tex.colorSpace = T3.SRGBColorSpace; const sp = new T3.Sprite(new T3.SpriteMaterial({ map: tex, depthTest: false, transparent: true })); sp.renderOrder = 10; FXROOT.add(sp);
+    EMO.push({ sp, who, t: 0, life: sec });
+  }
+  // 큰 풀숲(작아졌을 때) — 풀잎 = 원뿔 인스턴스 하나(드로우콜 1)
+  const GRASS = [];
+  function grassAt(c, st) {
+    const n = st.n || 60, r = st.r || 1.6, r0 = st.r0 || 0.25, hmin = st.hmin || 0.18, hmax = st.hmax || 0.5;
+    const im = new T3.InstancedMesh(FG.k, fxMat(0xffffff), n), M4 = new T3.Matrix4(), Q = new T3.Quaternion(), E = new T3.Euler(), V = new T3.Vector3(), S9 = new T3.Vector3(), C9 = new T3.Color();
+    for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, rr = r0 + Math.sqrt(Math.random()) * (r - r0), x = c.x + Math.cos(a) * rr, z = c.z + Math.sin(a) * rr, h = hmin + Math.random() * (hmax - hmin);
+      const gy = map.player.groundAt(x, z, c.y + 0.6); E.set((Math.random() - 0.5) * 0.35, Math.random() * 6, (Math.random() - 0.5) * 0.35); Q.setFromEuler(E);
+      V.set(x, (gy != null && isFinite(gy) ? gy : c.y) + h / 2, z); S9.set(0.012 + Math.random() * 0.012, h, 0.004); M4.compose(V, Q, S9); im.setMatrixAt(i, M4); im.setColorAt(i, C9.setHSL(0.27 + Math.random() * 0.06, 0.55, 0.32 + Math.random() * 0.14)); }
+    im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; FXROOT.add(im); GRASS.push(im); im.userData.grow = 0; im.scale.y = 0.01;
+  }
+  function ringPt(x, z, me) {
+    if (SC < 1) { const gy = map.player.groundAt(x, z, me.y + 0.5 * SC); return { x, y: gy != null && isFinite(gy) ? gy : me.y, z }; }
+    const zz = map.zoneAt(me.x, me.y, me.z), r = zz ? [zz.x0, zz.z0, zz.x1, zz.z1] : null, z9 = map.zoneAt(x, me.y, z);
+    if ((z9 && z9.id) === (zz && zz.id) && !map.player.blockedAt(x, z, me.y)) { const gy = map.player.groundAt(x, z, me.y + 0.3); return { x, y: gy != null && isFinite(gy) && Math.abs(gy - me.y) < 0.6 ? gy : me.y, z }; }   // 같은 방 · 막히지 않음 = 그 자리
+    return map.findEntry(x, z, me.y, r, 3) || map.findEntry(me.x, me.z, me.y, r, 3) || { x: me.x, y: me.y, z: me.z };
+  }
+  function ringAt(a, r, me, used) {   // 둘러서기 한 자리: 같은 방·막히지 않음·친구끼리 겹치지 않음 — 반지름·각도를 조금씩 바꿔 가며 찾음
+    const zz = map.zoneAt(me.x, me.y, me.z), id = zz && zz.id;
+    const ok = (x, z) => used.every(u => Math.hypot(u.x - x, u.z - z) > 0.55 * SC) && (SC < 1 || ((map.zoneAt(x, me.y, z) || {}).id === id && !map.player.blockedAt(x, z, me.y)));
+    for (const k of [1, 0.7, 1.35, 0.5, 1.7]) for (const da of [0, 0.35, -0.35, 0.7, -0.7, 1.2, -1.2]) { const x = me.x + Math.sin(a + da) * r * k, z = me.z - Math.cos(a + da) * r * k; if (!ok(x, z)) continue;
+      const gy = map.player.groundAt(x, z, me.y + 0.5 * Math.max(SC, 0.3)), p = { x, y: gy != null && isFinite(gy) && Math.abs(gy - me.y) < 0.6 * Math.max(SC, 0.3) ? gy : me.y, z }; used.push(p); return p; }
+    const p = ringPt(me.x + Math.sin(a) * r, me.z - Math.cos(a) * r, me); used.push(p); return p;
+  }
+  const lerp = (a, b, k) => a + (b - a) * k, ease = k => k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+  let chaseR = null;
+  function fxTick(dt) {
+    for (const o of FX.values()) {
+      o.t += dt; const R = o.R, t = o.t;
+      if (o.mv) { const m = o.mv; m.k = Math.min(1, m.k + dt / m.sec); const e = ease(m.k); o.x = lerp(m.a.x, m.b.x, e); o.z = lerp(m.a.z, m.b.z, e); o.y = lerp(m.a.y, m.b.y, e) + (m.arc ? Math.sin(Math.PI * m.k) * m.arc : 0);
+        if (m.face) o.h = (Math.atan2(m.b.x - m.a.x, -(m.b.z - m.a.z)) * 180 / Math.PI + 360) % 360; if (m.k >= 1) { o.mv = null; m.done(); } }
+      if (o.hold) { const hd = o.holdAt === 'head', p = whereOf((hd ? 'head:' : 'hand:') + o.hold); if (p) { o.x = p.x; o.y = hd ? p.y : p.y - (o.kind === 'stick' ? 0.12 : 0.01) * o.s; o.z = p.z; if (!hd) o.h = p.h; } }
+      if (o === (chaseR && chaseR.o)) { const me = map.player.get(), dx = me.x - o.x, dz = me.z - o.z, d = Math.hypot(dx, dz), stp = chaseR.speed * dt;
+        if (d > 0.01) { o.x += dx / d * Math.min(stp, d); o.z += dz / d * Math.min(stp, d); o.h = (Math.atan2(dx, -dz) * 180 / Math.PI + 360) % 360; }
+        const gy = map.player.groundAt(o.x, o.z, o.y + 0.6); if (gy != null && isFinite(gy)) o.y += (gy - o.y) * Math.min(1, dt * 8);
+        chaseR.t += dt; if (d < chaseR.catchR || chaseR.t > chaseR.sec) { const r9 = chaseR; chaseR = null; r9.done(d < r9.catchR); } }
+      // 움직임(몸짓)
+      const walking = !!(o.mv && !o.mv.arc) || o === (chaseR && chaseR.o) || o.anim === 'walk';
+      if (R.legs) R.legs.forEach((p, k) => { p.rotation.x = walking ? Math.sin(t * 14 + k * 1.7) * 0.45 : Math.sin(t * 2 + k) * 0.04; });
+      if (R.ant) R.ant.forEach((a, k) => { a.rotation.z = (k ? 1 : -1) * 0.3 + Math.sin(t * 3 + k) * 0.12; });
+      if (R.wings) { const f = o.anim === 'fly' || (o.mv && o.mv.arc) ? Math.sin(t * 16) * 0.9 : o.anim === 'open' ? Math.sin(t * 2.4) * 0.35 - 0.1 : -1.25; R.wings[0].rotation.z = f; R.wings[1].rotation.z = -f; }
+      if (R.seg) R.seg.forEach((p, k) => { p.position.y = 0.016 + Math.max(0, Math.sin(t * 5 - k * 0.8)) * 0.008; });
+      if (R.arms && o.kind === 'mantis') R.arms.forEach((p, k) => { const strike = o === (chaseR && chaseR.o) || o.anim === 'strike'; p.rotation.x = strike ? -0.5 + Math.sin(t * 7 + k) * 0.35 : -0.1 + Math.sin(t * 1.5) * 0.05; });
+      if (R.head && o.kind === 'mantis') R.head.rotation.y = Math.sin(t * 1.3) * 0.35;
+      if (R.arm) R.arm.rotation.x = o.anim === 'gavel' ? (Math.sin(t * 9) > 0 ? -0.9 : 0.1) : 0;
+      if (R.swing) R.swing.rotation.x = o.anim === 'swat' ? -Math.abs(Math.sin(t * 7)) * 1.6 : -0.25;
+      if (o.kind.startsWith('robot') && R.head) { const dance = o.anim === 'dance'; o.g.rotation.y = -o.h * Math.PI / 180 + (dance ? Math.sin(t * 3) * 0.8 : 0); R.head.rotation.y = dance ? Math.sin(t * 6) * 0.4 : 0;
+        if (R.arms) R.arms.forEach((p, k) => { p.rotation.x = dance ? Math.sin(t * 6 + k * Math.PI) * 1.1 : 0; }); }
+      let bob = 0; if (o.anim === 'idle' && !o.mv) bob = Math.sin(t * 2.2) * 0.003 * o.s / Math.max(0.2, o.s); if (o.anim === 'hop') bob = Math.abs(Math.sin(t * 5)) * 0.03 * o.s; if (o.anim === 'fly') bob = Math.sin(t * 3) * 0.04 * o.s;
+      if (o.anim === 'spin') o.h = (o.h + 70 * dt) % 360;
+      if (o.anim === 'hurt') { o.g.rotation.z = Math.sin(t * 10) * 0.25; } else o.g.rotation.z = 0;
+      if (o.anim === 'dance' && !R.head) bob = Math.abs(Math.sin(t * 6)) * 0.02 * o.s;
+      if (o.pop) { o.pop = Math.max(0, o.pop - dt); }
+      o.g.position.set(o.x, o.y + bob, o.z); if (!o.kind.startsWith('robot')) o.g.rotation.y = -o.h * Math.PI / 180;
+      const tgtS = o.s * (o.grow != null ? o.grow : 1); if (o.grow != null) { o.grow = Math.min(1, o.grow + dt * 3.5); if (o.grow >= 1) o.grow = null; } o.g.scale.setScalar(tgtS);
+    }
+    for (let i = PUFF.length - 1; i >= 0; i--) { const p = PUFF[i]; p.t += dt; const A = p.pt.geometry.attributes.position, a = A.array, v = p.vel;
+      for (let k = 0; k < a.length; k += 3) { if (p.swirl) { const dx = a[k] - p.cx, dz = a[k + 2] - p.cz, an = p.swirl * dt; a[k] = p.cx + dx * Math.cos(an) - dz * Math.sin(an); a[k + 2] = p.cz + dx * Math.sin(an) + dz * Math.cos(an); }
+        a[k] += v[k] * dt; a[k + 1] += v[k + 1] * dt; a[k + 2] += v[k + 2] * dt; if (!p.swirl && v[k + 1] > -2) v[k + 1] -= 0.4 * dt; }
+      A.needsUpdate = true; p.pt.material.opacity = Math.max(0, 1 - p.t / p.life); if (p.t >= p.life) { FXROOT.remove(p.pt); p.pt.geometry.dispose(); p.pt.material.dispose(); PUFF.splice(i, 1); } }
+    for (let i = EMO.length - 1; i >= 0; i--) { const e = EMO[i]; e.t += dt; const p = whereOf('head:' + e.who); if (p) { const s9 = e.who === 'me' || e.who === ME ? SC : actorScaleOf(e.who); e.sp.position.set(p.x, p.y + 0.35 * s9 + Math.sin(e.t * 6) * 0.02 * s9, p.z); e.sp.scale.setScalar(0.42 * s9 * Math.min(1, e.t * 6)); }
+      if (e.t >= e.life) { FXROOT.remove(e.sp); e.sp.material.map.dispose(); e.sp.material.dispose(); EMO.splice(i, 1); } }
+    for (const im of GRASS) if (im.userData.grow < 1) { im.userData.grow = Math.min(1, im.userData.grow + dt * 1.2); im.scale.y = ease(im.userData.grow); }
+    if (shrinkA) { const A = shrinkA; A.k = Math.min(1, A.k + dt / A.sec); const s = lerp(A.from, A.to, ease(A.k)); SC = s;
+      if (s < 0.999) map.player.scale(s);
+      partyScale = s; for (const n of PARTY) map.npc.scale(n, s); if (A.k >= 1) { shrinkA = null; if (A.to === 1) map.player.scale(1); A.done(); } }
+  }
+  function fxStop() { for (const o of FX.values()) FXROOT.remove(o.g); FX.clear(); for (const p of PUFF) { FXROOT.remove(p.pt); p.pt.geometry.dispose(); p.pt.material.dispose(); } PUFF.length = 0;
+    for (const e of EMO) { FXROOT.remove(e.sp); e.sp.material.map && e.sp.material.map.dispose(); e.sp.material.dispose(); } EMO.length = 0;
+    for (const im of GRASS) { FXROOT.remove(im); im.dispose(); } GRASS.length = 0; for (const d of FXDISP) d.dispose && d.dispose(); if (SC !== 1) map.player.scale(1); }
+  // 이야기 칸 하나 실행(runSteps가 부름) — 기다릴 것이 있으면 Promise
+  async function fxStep(st) {
+    if (st.fx) { const at = whereOf(st.at ?? 'me', st); if (at && st.faceMe) { const me = map.player.get(); at.h = (Math.atan2(me.x - at.x, -(me.z - at.z)) * 180 / Math.PI + 360) % 360; } if (at) { const o = fxMake(st.fx, st.id || st.fx, at, st); if (o && st.pop !== false) { o.grow = 0.05; particles(at.x, at.y + 0.02, at.z, { color: 0xffffff, n: 18, r: 0.06 * (st.s || 1), speed: 0.25 * (st.s || 1), size: 0.02, life: 0.7 }); } } }
+    if (st.fxAnim) { const o = FX.get(st.fxAnim); if (o) o.anim = st.anim || 'idle'; }
+    if (st.fxDel) { for (const [k, o] of [...FX]) if (st.fxDel === 'all' || k === st.fxDel) { particles(o.x, o.y + 0.02, o.z, { color: 0xffffff, n: 14, r: 0.05, speed: 0.2, size: 0.018, life: 0.6 }); FXROOT.remove(o.g); FX.delete(k); } }
+    if (st.hold) { const o = FX.get(st.hold); if (o) { o.hold = st.on === 'me' ? ME || 'me' : st.on || null; o.holdAt = st.where || 'hand'; } }   // where: 'hand' | 'head'
+    if (st.fxMove) { const o = FX.get(st.fxMove), b = whereOf(st.to, st); if (o && b) { o.hold = null; const p = new Promise(res => { o.mv = { a: { x: o.x, y: o.y, z: o.z }, b, k: 0, sec: st.sec || 1, arc: st.arc || 0, face: st.face !== false, done: res }; });
+      if (st.wait !== false) await p; if (st.h != null) o.h = st.h; } }
+    if (st.morph) { const o = FX.get(st.morph); if (o) { particles(o.x, o.y + 0.03 * o.s, o.z, { color: st.color || 0xfff4c2, n: 46, r: 0.06 * o.s * 3, speed: 0.35, size: 0.022, life: 1.1 }); map.sfx('ding');
+      o.grow = 1; const k0 = performance.now(); await new Promise(r => setTimeout(r, 260)); void k0;
+      const n = fxMake(st.to, o.id, { x: o.x, y: o.y + (st.dy || 0), z: o.z, h: o.h }, { s: st.s || o.s, anim: st.anim || 'idle' }); if (n) n.grow = 0.05; } }
+    if (st.powder) { const o = FX.get(st.powder), p = o ? { x: o.x, y: o.y + 0.12 * o.s, z: o.z } : whereOf(st.powder); if (p) { particles(p.x, p.y, p.z, { color: st.color || 0xffd54a, n: 70, r: 0.08, fall: true, size: 0.016, life: 1.8 }); map.sfx('tick'); await new Promise(r => setTimeout(r, 900)); } }
+    if (st.glow) { for (const n of st.glow === 'party' ? [...PARTY, 'me'] : [].concat(st.glow)) { const p = whereOf(n === 'me' ? 'me' : 'feet:' + n); if (p) { const k9 = n === 'me' ? SC : actorScaleOf(n); particles(p.x, p.y + 0.4 * k9, p.z, { color: st.color || 0x9ef07a, n: 40, r: 0.4 * k9, swirl: 4, speed: 0.2 * k9, size: 0.07 * Math.sqrt(k9), life: 1.6 }); } } }
+    if (st.shrink != null || st.grow) { const to = st.grow ? 1 : st.shrink; if (st.grow) { map.tone(330, 0, 1.1, 'sine', 0.12, 990); map.tone(660, 0.15, 1.0, 'triangle', 0.05, 1320); } else { map.tone(990, 0, 1.1, 'sine', 0.12, 260); map.tone(1320, 0.1, 0.9, 'triangle', 0.05, 330); } await new Promise(res => { shrinkA = { k: 0, sec: st.sec || 1.4, from: SC, to, done: res }; }); }
+    if (st.grass) { const c = whereOf(st.grass, { ground: true }); if (c) grassAt(c, st); }
+    if (st.act) { const n = st.act; if (n !== ME) { let face = st.face; if (st.faceTo) { const q = st.faceTo === 'me' || st.faceTo === ME ? map.player.get() : npcAt(st.faceTo), me9 = npcAt(n); if (q && me9) face = (Math.atan2(q.x - me9.x, -(q.z - me9.z)) * 180 / Math.PI + 360) % 360; }
+      if (st.away && face != null) face = (face + 180) % 360; map.npc.pose(n, st.pose || 'stand', face); if (PARTY.includes(n)) map.npc.scale(n, partyScale); } }
+    if (st.emote) for (const n of st.emote === 'party' ? [...PARTY, 'me'] : [st.emote]) emote(n === ME ? 'me' : n, st.icon || '❗', st.sec || 2.5);
+    if (st.circle) { const L9 = namesOf(st.circle, st.except), me = map.player.get(), hr = me.h * Math.PI / 180, r = (st.r || 1.2) * SC, used = [{ x: me.x, z: me.z }];
+      L9.forEach((n, k) => { const a = hr + (k - (L9.length - 1) / 2) * (st.arc || 0.55), p = ringAt(a, r, me, used);
+        map.npc.move(n, p, { pose: st.pose || 'stand', face: (Math.atan2(me.x - p.x, -(me.z - p.z)) * 180 / Math.PI + 360) % 360, ghost: true }); map.npc.scale(n, partyScale); });
+      partyHold = true; }
+    if (st.line) { const L9 = namesOf(st.line), me = map.player.get(), hr = me.h * Math.PI / 180, gap = (st.gap || 0.9) * SC;   // 내 양옆에 한 줄(같은 쪽을 봄 — 재판정 앞)
+      L9.forEach((n, k) => { const j = (k >> 1) + 1, sd = k & 1 ? 1 : -1, p = ringPt(me.x + Math.cos(hr) * sd * j * gap + Math.sin(hr) * (st.back || 0) * SC, me.z + Math.sin(hr) * sd * j * gap - Math.cos(hr) * (st.back || 0) * SC, me);
+        map.npc.move(n, p, { pose: 'stand', face: me.h, ghost: true }); map.npc.scale(n, partyScale); });
+      partyHold = true; }
+    if (st.free) partyHold = false;
+    if (st.stay) partyHold = true;
+    if (st.time) map.time(st.time);
+    if (st.fxFace) { const o = FX.get(st.fxFace), me = map.player.get(); if (o) o.h = (Math.atan2(me.x - o.x, -(me.z - o.z)) * 180 / Math.PI + 360) % 360; }   // 그 생물이 나를 봄
+    if (st.banner) map.hud.banner(st.banner, st.bannerSec || 2.2);
+    if (st.grassOff) { for (const im of GRASS) { FXROOT.remove(im); im.dispose(); } GRASS.length = 0; }
+    if (st.dark) { map.fade(st.dark, st.darkColor); await new Promise(r => setTimeout(r, st.dark * 500 + 60)); }   // 어두워진 한가운데까지만 기다림 → 다음 칸(tp 등)이 깜깜할 때 일어남
+    if (st.fxShow) { const [id, part, on] = st.fxShow, o = FX.get(id); if (o && o.R[part]) o.R[part].visible = on !== false; }
+    if (st.use) { const o = FX.get(st.use); if (o) { objective(st.goal || '살펴봐요', { x: o.x, y: o.y, z: o.z }, st.label || ''); await waitUse({ x: o.x, y: o.y, z: o.z }, st.label || '🔍 살펴보기', st.r || 1.6); objective(null); map.sfx('ding'); } }
+    if (st.chase) { const o = FX.get(st.chase); if (o) { if (st.goal) map.hud.goal(st.goal); map.player.freeze(false); const caught = await new Promise(res => { chaseR = { o, speed: st.speed || 1.6, sec: st.sec || 12, catchR: st.catchR || 0.22, t: 0, done: res }; });
+      map.hud.goal(null); map.sfx(caught ? 'buzz' : 'tick'); VARS.caught = { i: caught ? 1 : 0, label: caught ? '잡힘' : '시간' }; } }
+  }
+  const FXKEYS = ['fx', 'fxAnim', 'fxDel', 'hold', 'fxMove', 'morph', 'powder', 'glow', 'shrink', 'grow', 'grass', 'act', 'emote', 'circle', 'line', 'free', 'stay', 'time', 'fxShow', 'fxFace', 'banner', 'grassOff', 'dark', 'use', 'chase'];
+
   // ---------- 시작 ----------
   if (LEG) map.player.teleport([Pme.x, Pme.y, Pme.z], { h: 270 });
   else { const st = D.start || {}, at = st.at ? place(st.at) : null; if (at) map.player.teleport([at.x, at.y, at.z], { h: st.h ?? 0 }); }
@@ -177,6 +423,7 @@ export default async function start(map, params = {}) {
   // ---------- 새 이야기 진행기(EP-1 · steps) — 글 파일만으로 이야기를 더한다(docs/tasks/new_episode.md) ----------
   //   자리(at·go·collect): '구역id'·'zone:구역'·'lm:표지점'·'spawn:…'·'npc:사람 이름'·[x, z]·[x, y, z]
   function place(t) {
+    if (t && typeof t === 'object' && !Array.isArray(t)) t = t[ME] ?? t._;   // STORY-FX: 누가 되었는지(ME)에 따라 다른 자리 { 은규: …, 인우: …, _: 그 밖 }
     if (Array.isArray(t)) return t.length >= 3 ? { x: t[0], y: t[1], z: t[2] } : spot(t[0], t[1], 0);
     if (typeof t !== 'string') return null;
     if (t.startsWith('npc:')) return npcAt(t.slice(4));
@@ -196,12 +443,13 @@ export default async function start(map, params = {}) {
   function partyTick(dt) {
     if (!PARTY.length || partyHold || talk || (partyT -= dt) > 0) return; partyT = 0.2;
     const k = partyK++ % PARTY.length, n = PARTY[k], q = map.npc.get(n), me = map.player.get(); if (!q || q.walking) return;
-    const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < 3.2) return;
-    const hr = me.h * Math.PI / 180, fx = Math.sin(hr), fz = -Math.cos(hr), side = (k - (PARTY.length - 1) / 2) * 0.9, back = 1.6 + (k % 2) * 0.7;
-    const p = spot(me.x - fx * back + fz * side, me.z - fz * back - fx * side, me.y), face = (Math.atan2(me.x - p.x, -(me.z - p.z)) * 180 / Math.PI + 360) % 360;
-    map.npc.move(n, { x: p.x, y: p.y, z: p.z }, d > 24 ? { face, ghost: true } : { walk: true, speed: 4.4, pass: true, face, ghost: true, maxExp: 6000, quiet: true });   // STORY-PERF: 길찾기 한도 6000(예전 60000 — 막힌 곳이면 크롬북에서 수백 ms)
+    const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < 3.2 * SC) return;   // STORY-FX: 작아지면 거리·빠르기도 몸 크기만큼
+    const hr = me.h * Math.PI / 180, fx = Math.sin(hr), fz = -Math.cos(hr), side = (k - (PARTY.length - 1) / 2) * 0.9 * SC, back = (1.6 + (k % 2) * 0.7) * SC, X = me.x - fx * back + fz * side, Z = me.z - fz * back - fx * side;
+    const p = SC < 1 ? { x: X, y: (g => g != null && isFinite(g) ? g : me.y)(map.player.groundAt(X, Z, me.y + 0.4 * SC)), z: Z } : spot(X, Z, me.y), face = (Math.atan2(me.x - p.x, -(me.z - p.z)) * 180 / Math.PI + 360) % 360;
+    map.npc.move(n, { x: p.x, y: p.y, z: p.z }, d > 24 * SC ? { face, ghost: true } : { walk: true, speed: 4.4 * Math.sqrt(SC), pass: true, face, ghost: true, maxExp: 6000, quiet: true, direct: SC < 1 });   // STORY-PERF: 길찾기 한도 6000(예전 60000 — 막힌 곳이면 크롬북에서 수백 ms) · 작으면 곧장
+    if (SC < 1) map.npc.scale(n, partyScale);
   }
-  function namesOf(w) { return w === 'party' ? PARTY.slice() : [].concat(w || []); }
+  function namesOf(w, ex) { return (w === 'party' ? PARTY.slice() : [].concat(w || [])).filter(n => n !== ME && !(ex && [].concat(ex).includes(n))); }   // STORY-FX: 내가 된 친구·except는 빼고
   async function runSteps(list = D.steps, top = true) {
     for (let i = 0; i < list.length; i++) {
       const st = list[i];
@@ -212,7 +460,7 @@ export default async function start(map, params = {}) {
       if (st.party) { PARTY = st.party.filter(n => n !== ME); partyT = 0; }
       if (st.hide) for (const n of namesOf(st.hide)) map.npc.hide(n);
       if (st.tp) { const p = place(st.tp); if (p) map.player.teleport([p.x, p.y, p.z], st.h != null ? { h: st.h } : {}); partyT = 0; }
-      if (st.npc) { const p = place(st.to); if (p) map.npc.move(st.npc, { x: p.x, y: p.y, z: p.z }, st.walk ? { walk: true, speed: st.speed || 3, pass: true, face: st.face } : { face: st.face }); }
+      if (st.npc && st.npc !== ME) { const p = place(st.to); if (p) { const pr = map.npc.move(st.npc, { x: p.x, y: p.y, z: p.z }, st.walk ? { walk: true, speed: st.speed || 3, pass: true, face: st.face, pose: st.npcPose } : { face: st.face, pose: st.npcPose }); if (st.until) await pr; } }   // STORY-FX: until = 도착까지 기다림 · npcPose = 도착 자세(앉기 등)
       if (st.appear) { const me = map.player.get(), hr = me.h * Math.PI / 180, b = st.behind || 1.8, p = spot(me.x - Math.sin(hr) * b, me.z + Math.cos(hr) * b, me.y);
         map.npc.move(st.appear, { x: p.x, y: p.y, z: p.z }, { face: (Math.atan2(me.x - p.x, -(me.z - p.z)) * 180 / Math.PI + 360) % 360 }); }
       if (st.pose) { const me = map.player.get(), hr = me.h * Math.PI / 180, fx = Math.sin(hr), fz = -Math.cos(hr), L9 = namesOf(st.who);
@@ -221,6 +469,7 @@ export default async function start(map, params = {}) {
             map.npc.move(n, { x: p.x, y: p.y, z: p.z }, { pose: st.pose, face: me.h, ghost: true }); }
           else map.npc.pose(n, st.pose); });
         partyHold = st.pose !== 'stand'; }
+      if (FXKEYS.some(k => st[k] != null)) { await fxStep(st); if (gone()) return; }   // STORY-FX: 무대 생물·소품·작아지기
       if (st.fade) await world([{ op: 'fade', sec: st.fade }]);
       if (st.sound) map.sfx(st.sound);
       if (st.chapter != null) chapter(st.chapter);
@@ -237,9 +486,10 @@ export default async function start(map, params = {}) {
               await new Promise(res => { const fy = f.y ?? 0, off = map.interact.enable(q => q.kind !== 'game' && Math.hypot(q.x - f.x, q.z - f.z) < 2.9 && Math.abs((q.y || 0) - fy) < 2, false);   // 같은 자리 원래 행동(급식 받기 등)이 E를 먼저 잡지 않게
                 const h = map.interact.add({ x: f.x, y: fy, z: f.z, r: 1.7, label: st.findLabel || '🔍 살펴보기', use: () => { if (talk) return; h.remove(); off.remove(); res(); } }); });
               clearTimeout(tm2); map.sfx('ding'); } }
-        } else { objective(st.goal || '목표로 가요', p, st.label); await arrive(p, st.r); } } }
-      if (st.talk) { const p = place('npc:' + st.talk) || place(st.at); if (p) await talkTo(p, st.talk, st.goal || st.talk + '에게 말 걸기'); }
-      if (st.collect) await collect(st);
+        } else { objective(st.goal || '목표로 가요', p, st.label); await arrive(p, st.r); }
+        objective(null); } }   // STORY-FX: 도착하면 목표 표시를 지움(지난 목적지 빛기둥·별이 남아 있던 것)
+      if (st.talk) { const p = place('npc:' + st.talk) || place(st.at); if (p) { await talkTo(p, st.talk, st.goal || st.talk + '에게 말 걸기'); objective(null); } }
+      if (st.collect) { await collect(st); objective(null); }
       if (gone()) return;
       if (st.say) { if (!(await say(st.say))) return; }
       if (st.note) await panel('쪽지', st.note);
@@ -408,12 +658,12 @@ export default async function start(map, params = {}) {
   return {
     tick(dt) {
       if (!S.done) T += dt;
-      if (!LEG) partyTick(dt);
+      if (!LEG) { partyTick(dt); fxTick(dt); }
       if (trail && (trailT -= dt) <= 0) clearTrail();
     },
-    stop() { dead = true; removeEventListener('keydown', onKey, true); removeEventListener('click', onClick, true); ui.remove(); talk = null; },   // 지점·표식·칩·목표·미니맵·사람·소품·그림·불·문·시간대는 범위 파사드가 정리
+    stop() { dead = true; fxStop(); removeEventListener('keydown', onKey, true); removeEventListener('click', onClick, true); ui.remove(); talk = null; },   // 지점·표식·칩·목표·미니맵·사람·소품·그림·불·문·시간대는 범위 파사드가 정리
     // 시험용 읽기
-    get state() { return { ...S, T, talk: talk ? talk.el.querySelector('.nm').textContent : null, choices: talk ? talk.n : 0, goal: cur && cur.label, end: !!endEl }; },
+    get state() { return { ...S, T, talk: talk ? talk.el.querySelector('.nm').textContent : null, choices: talk ? talk.n : 0, goal: cur && cur.label, tgt: cur ? [cur.x, cur.y, cur.z] : null, sc: SC, fx: [...FX.keys()], end: !!endEl }; },
     next(i = 0) { if (talk) talk.next(i); },
     get pos() { return { P4, P1, P6, T4, T1, TL, TG, Pme }; },
   };
