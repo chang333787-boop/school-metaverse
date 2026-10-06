@@ -111,6 +111,12 @@ export function createTitle(h) {
   let LCAT = null, REG = null;   // 수업판(v3): 갈래(이야기·상상의 세계) → 그 안의 카드
   let FOLD = null, REGF = null;  // FOLDER-1(10-04 교사 '폴더형식으로'): v2 = 폴더(registry FOLDERS) → 그 안의 카드 · ◀/Esc = 폴더로
   const GORDER = Object.keys(GROUPS);
+  // MODE-1: 맨 위 갈래 셋 — 놀이마다 갈래 = 방 놀이·함께 놀이(생각 모으기 폴더 밖) → 멀티 · 생각 모으기 폴더 → 생각 · 나머지 → 싱글
+  const MODES = [{ k: 'solo', title: '싱글플레이', icon: '🧍', group: '탐험', short: '혼자 학교를 탐험하고 · 로봇과 연습하고 · 이야기 속 주인공이 돼요' },
+    { k: 'multi', title: '멀티플레이', icon: '👥', group: '대결', short: '친구와 방을 만들어 같이 놀아요 — 물총 · 숨바꼭질 · 로봇인 척 · 길잡이 · 블록' },
+    { k: 'think', title: '생각 모으기', icon: '💡', group: '상상', short: '이야기 장면 · 새로운 세계를 친구들과 함께 적어요' }];
+  let MODE = null, pendPick = null;   // pendPick = 방 없이 방 놀이 카드를 눌렀을 때 — 방에 들어가면(방장이면) 그 놀이를 골라 둠
+  const modeOf = g => !g ? 'solo' : (g.room || (g.mp === 'together' && (g.folder || 'look') !== 'think')) ? 'multi' : (g.folder || 'look') === 'think' ? 'think' : 'solo';
   const FREE = { id: '', folder: 'look', title: '자유 탐험', icon: '🏫', group: '탐험', short: '학교 어디든 걸어 다녀요 · 방에 들어가면 친구들도 보여요' };
   const mmss = s => { s = Math.max(0, Math.round(+s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
   function best(id, e) {   // 게임이 map.store로 남긴 기록(sm2.game.<id>.<키>) — registry best: {k, u:'s'(초)|'n'(개수)|단위, lbl}
@@ -129,21 +135,31 @@ export function createTitle(h) {
     REG = G;
     const ids = Object.keys(G).filter(id => !G[id].dev && !G[id].room && !(G[id].promo && !PROMO) && (LESSON ? G[id].lesson === LESSON : !G[id].lesson));   // ROOM-1: 방 놀이(room) = 메뉴엔 없음 — 👥 방 창에서 선생님이 고름   // 10-03 교사: v2(우리 학교용)엔 홍보 놀이(견학)를 보이지 않는다 — 주소 ?tour=1로는 그대로 열림
     list = LESSON ? (LCAT ? ids.filter(id => (G[id].cat || 'story') === LCAT).map(id => ({ id, ...G[id] })) : LCATS.slice()) : [FREE, ...ids.map(id => ({ id, ...G[id] }))];
-    if (!LESSON && !PROMO && REGF && REGF.length) {   // FOLDER-1: 폴더 카드(그 안 놀이 수) → 고르면 그 폴더의 카드
-      const all = list, fk = e => e.folder || 'look';
-      list = FOLD ? all.filter(e => fk(e) === FOLD) : REGF.map(f => ({ id: '@' + f.k, fold: f.k, title: f.title, icon: f.icon, group: f.group, short: f.short, items: all.filter(e => fk(e) === f.k) })).filter(f => f.items.length);
-      if (FOLD && !list.length) { FOLD = null; return fill(true); } }
+    if (!LESSON && !PROMO && REGF && REGF.length) {   // FOLDER-1: 폴더 카드(그 안 놀이 수) → 고르면 그 폴더의 카드   // MODE-1: 그 위에 갈래 셋
+      const all = [FREE].concat(Object.keys(G).filter(id => !G[id].dev && !(G[id].promo && !PROMO) && !G[id].lesson).map(id => ({ id, ...G[id] }))), fk = e => e.folder || 'look';   // 방 놀이(room)도 — 멀티플레이 갈래에 보임
+      if (!MODE) list = MODES.map(m => ({ id: '@m-' + m.k, mode: m.k, title: m.title, icon: m.icon, group: m.group, short: m.short, items: all.filter(e => modeOf(e) === m.k) }));
+      else if (MODE === 'multi') { const M9 = window.SM_MP, R9 = M9 && M9.info && M9.info(), N9 = M9 && M9.net && M9.net();
+        list = [{ id: '@room', roomc: true, title: R9 ? '우리 방 대기실' : '방 만들기 · 들어가기', icon: '🏠', group: '대결', short: R9 ? '「' + R9.n + '」 · ' + (N9 ? N9.count : 1) + '명 — 방장이 놀이를 고르고 ▶ 시작해요' : '선생님 방 번호 4자리로 들어가거나 🏠 내 방을 만들어요' }].concat(all.filter(e => modeOf(e) === 'multi').map(e => (e.room ? { ...e, title: String(e.title || e.id).replace(/\s*\(친구와\)/, ''), short: (e.short || '') } : e)));
+        const RL9 = M9 && M9.roomList ? M9.roomList().map(q => q.id) : [], ro = e => (e.room && RL9.includes(e.id) ? RL9.indexOf(e.id) : e.roomc ? -1 : 99); list.sort((a, b) => ro(a) - ro(b)); }   // 방 놀이 = 대기실과 같은 순서(물총·숨바꼭질·로봇인 척·길잡이)
+      else if (MODE === 'think') list = all.filter(e => modeOf(e) === 'think');
+      else { const sol = all.filter(e => modeOf(e) === 'solo');
+        list = FOLD ? sol.filter(e => fk(e) === FOLD) : REGF.map(f => ({ id: '@' + f.k, fold: f.k, title: f.k === 'vs' ? '대결 연습' : f.title, icon: f.icon, group: f.group, short: f.k === 'vs' ? '물총 · 숨바꼭질 · 로봇인 척 — 로봇과 겨루며 연습해요' : f.short, items: sol.filter(e => fk(e) === f.k) })).filter(f => f.items.length); }
+      if (MODE === 'solo' && FOLD && !list.length) { FOLD = null; return fill(true); } }
     const hd = root.querySelector('.ttl-menu h2'); if (hd && LESSON) hd.textContent = LCAT ? (LCATS.find(c => c.cat === LCAT) || {}).title + ' — 무엇을 할까요?' : '어디로 가 볼까요?';
-    else if (hd && REGF && !PROMO) hd.textContent = FOLD ? ((REGF.find(f => f.k === FOLD) || {}).icon || '') + ' ' + ((REGF.find(f => f.k === FOLD) || {}).title || '') + ' — 무엇을 할까요?' : '어떤 놀이를 할까요?';
+    else if (hd && REGF && !PROMO) { const F9 = REGF.find(f => f.k === FOLD) || {}, M9 = MODES.find(m => m.k === MODE);
+      hd.textContent = !MODE ? '어떻게 놀까요?' : MODE === 'solo' && FOLD ? '🧍 싱글 · ' + (F9.icon || '') + ' ' + (FOLD === 'vs' ? '대결 연습' : F9.title || '') + ' — 무엇을 할까요?' : M9.icon + ' ' + M9.title + (MODE === 'multi' ? ' — 친구와 같이 놀아요' : MODE === 'think' ? ' — 함께 적어요' : ' — 어떤 놀이를 할까요?'); }
     const gi = e => { const k = GORDER.indexOf(e.group); return k < 0 ? GORDER.length : k; };
-    if (!list.some(e => e.fold)) list = list.map((e, i) => ({ e, i })).sort((a, b) => gi(a.e) - gi(b.e) || a.i - b.i).map(o => o.e);   // 폴더 카드는 FOLDERS 순서 그대로   // 무리(탐험·대결·모험·이야기·놀이)끼리 — 무리 안은 registry 순서
-    const TOG = list.filter(e => e.mp === 'together'), split = !FOLD && TOG.length > 0 && TOG.length < list.length;   // MP-MENU(10-03 교사 '싱글·멀티가 구분돼 있어?'): 🙋 혼자 하기 / 👥 친구와 함께 두 칸 · 폴더 안은 나누지 않고 카드의 '👥 함께' 표 + 위 한 줄(방 들어가기)
+    if (!list.some(e => e.fold || e.mode || e.roomc)) list = list.map((e, i) => ({ e, i })).sort((a, b) => gi(a.e) - gi(b.e) || a.i - b.i).map(o => o.e);   // 폴더 카드는 FOLDERS 순서 그대로   // 무리(탐험·대결·모험·이야기·놀이)끼리 — 무리 안은 registry 순서
+    const TOG = LESSON || !REGF ? list.filter(e => e.mp === 'together') : [], split = !FOLD && TOG.length > 0 && TOG.length < list.length;   // MODE-1: v2는 갈래(싱글·멀티·생각)가 나누므로 두 칸·방 줄은 v3만   // MP-MENU(10-03 교사 '싱글·멀티가 구분돼 있어?'): 🙋 혼자 하기 / 👥 친구와 함께 두 칸 · 폴더 안은 나누지 않고 카드의 '👥 함께' 표 + 위 한 줄(방 들어가기)
     if (split) list = list.filter(e => e.mp !== 'together').concat(TOG);
     const last = store.get('last', null);
     grid.textContent = '';
     const head = (html, cls) => { const d = el('div', 'ttl-sec' + (cls ? ' ' + cls : ''), html); grid.appendChild(d); return d; };
     if (split) head('<b>🙋 혼자 하기</b><span>나 혼자 학교를 탐험하고 놀아요</span>');
-    const RM = FOLD && !LESSON ? Object.keys(G).filter(id => G[id].room && (G[id].folder || 'look') === FOLD) : [];   // ROOM-1: 이 폴더의 방 놀이(숨김) → 방 줄에 이름만
+    if (!LESSON && REGF && MODE === 'multi') head('<span>' + (window.SM_MP ? '방에 들어가면 🏠 대기실에서 친구들과 만나요 — 방장이 놀이를 고르고 ▶ 시작하면 다 같이 들어가요 · 블록 놀이는 같은 판 번호로' : '이 화면에서는 함께하기가 꺼져 있어요') + '</span>');
+    if (!LESSON && REGF && MODE === 'think') head('<span>같은 판 번호를 고르면 친구가 쓴 것이 바로 보여요 — 방이 없어도 돼요</span>');
+    grid.classList.toggle('modes', !LESSON && !!REGF && !PROMO && !MODE);
+    const RM = [];   // MODE-1: 방 놀이 = 멀티플레이 갈래의 카드(예전 = 폴더 위 방 줄)   // ROOM-1: 이 폴더의 방 놀이(숨김) → 방 줄에 이름만
     const togRow = FOLD && (TOG.length > 0 || RM.length > 0);   // 폴더 안에 함께 놀이가 있으면 카드 위에 방 줄 하나
     cards = list.map((e, i) => {
       if ((split && e === TOG[0]) || (togRow && (RM.length ? i === 0 : e === TOG[0]))) { const R = window.SM_MP && window.SM_MP.info && window.SM_MP.info(), N = window.SM_MP && window.SM_MP.net && window.SM_MP.net();   // UX-1: 방 놀이 없는 폴더(만들기·생각 모으기) = 첫 👥 카드 바로 위
@@ -154,8 +170,9 @@ export function createTitle(h) {
           : head('<b>👥 친구와 함께</b><span>' + (R ? '지금 「' + R.n.replace(/[<>&]/g, '') + '」 방 · ' + (N ? N.count : 1) + '명 · ' : '') + '같은 판 번호를 고르면 친구 것이 바로 보여요 · 방에 들어가면 친구 모습도 보여요</span>' + (window.SM_MP ? '<button type="button" class="ttl-room">' + (R ? '👥 방 보기' : '👥 방 들어가기') + '</button>' : ''), 'tog');   // UX-1: 블록·메모장은 방 없이 판 번호로 같이 함(방이 꼭 있어야 하는 줄 알았다)
         h.dataset.rm = RM.join(','); h.dataset.call = call9 ? '1' : '0'; const rb = h.querySelector('.ttl-room'); if (rb) { rb.style.minHeight = '44px'; rb.addEventListener('click', ev => { ev.stopPropagation(); blip(); const M = window.SM_MP; if (rb.classList.contains('call') && M.joinGame) M.joinGame(); else M.open(rb); }); } }
       const g = GROUPS[e.group] || GROUPS.놀이, b = e.id ? best(e.id, e) : null;
-      const c = el('button', 'card', '<span class="cin">' + (e.items ? '' : '<span class="gt"><i>' + g.e + '</i><span> ' + (GROUPS[e.group] ? e.group : '놀이') + '</span></span>')
-        + '<span class="ic">' + (e.icon || '🎮') + '</span><b></b><span class="ds"></span>' + (b ? '<span class="bs"></span>' : '') + (last === e.id || (e.items && e.items.some(x => x.id === last)) ? '<span class="lt">지난번</span>' : '') + (e.mp === 'together' ? '<span class="mpb">👥 함께</span>' : '') + (e.items ? '<span class="mpb fn">📁 ' + e.items.length + '개</span>' : '') + '</span>');
+      const c = el('button', 'card', '<span class="cin">' + (e.items || (!LESSON && (MODE === 'multi' || MODE === 'think')) ? '' : '<span class="gt"><i>' + g.e + '</i><span> ' + (GROUPS[e.group] ? e.group : '놀이') + '</span></span>')
+        + '<span class="ic">' + (e.icon || '🎮') + '</span><b></b><span class="ds"></span>' + (b ? '<span class="bs"></span>' : '') + (last === e.id || (e.items && e.items.some(x => x.id === last)) ? '<span class="lt">지난번</span>' : '') + (e.room ? '<span class="mpb">🏠 방에서</span>' : e.mp === 'together' && MODE !== 'think' && MODE !== 'multi' ? '<span class="mpb">👥 함께</span>' : '') + (e.items ? '<span class="mpb fn">' + (e.mode ? '' : '📁 ') + e.items.length + '개</span>' : '') + '</span>');
+      if (e.mode) c.classList.add('mode');
       c.type = 'button'; c.setAttribute('role', 'listitem'); c.style.setProperty('--i', i); c.style.setProperty('--gc', g.c); c.dataset.game = e.id;
       c.querySelector('b').textContent = e.title || e.id; c.querySelector('.ds').textContent = e.short || e.desc || '';
       if (b) c.querySelector('.bs').textContent = b;
@@ -200,18 +217,19 @@ export function createTitle(h) {
     let k = focusI;
     if (e.code === 'ArrowRight') k++; else if (e.code === 'ArrowLeft') k--; else if (e.code === 'ArrowDown') k += cols; else if (e.code === 'ArrowUp') k -= cols;
     else if (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter') { e.preventDefault(); choose(focusI); return; }
-    else if (e.code === 'Escape') { if (LESSON && LCAT) { LCAT = null; refill(); } else if (FOLD) { FOLD = null; refill(); } else toTitle(); return; }
+    else if (e.code === 'Escape') { if (LESSON && LCAT) { LCAT = null; refill(); } else if (FOLD) { FOLD = null; refill(); } else if (MODE) { MODE = null; refill(); } else toTitle(); return; }
     else return;
     e.preventDefault(); k = Math.max(0, Math.min(n - 1, k)); if (k !== focusI) { focusI = k; cards[k].focus(); blip(); }
   };
   let pendRoom = null;   // 방이 있어야 하는 카드를 눌렀다가 방 창이 떴으면 — 들어가자마자 그 놀이로
-  addEventListener('sm-room', (ev) => { if (phase !== 'menu') return; const id = pendRoom; pendRoom = null; filled = fill(true); filled.then(() => { if (id && ev.detail && phase === 'menu') { const i = list.findIndex(e => e.id === id); if (i >= 0) { calmT = 0; choose(i); } } else if (cards[focusI]) cards[focusI].focus({ preventScroll: true }); }); });
+  addEventListener('sm-room', (ev) => { const pk = pendPick; pendPick = null; if (pk && ev.detail) setTimeout(() => { const M = window.SM_MP; if (!M || !M.room() || !(M.isOwner && M.isOwner()) || !M.roomList) return; const k = M.roomList().findIndex(q => q.id === pk) + 1; if (k > 0) M.pickGame(k); }, 900);
+    if (phase !== 'menu') return; const id = pendRoom; pendRoom = null; filled = fill(true); filled.then(() => { if (id && ev.detail && phase === 'menu') { const i = list.findIndex(e => e.id === id); if (i >= 0) { calmT = 0; choose(i); } } else if (cards[focusI]) cards[focusI].focus({ preventScroll: true }); }); });
   addEventListener('keydown', onKey, true); addEventListener('keyup', e => { if (phase !== 'off' && phase !== 'go') e.stopImmediatePropagation(); }, true);
   function lockWorld() { keys.clear(); try { touch.reset(); } catch (e) { /* */ } document.exitPointerLock?.(); picker && picker.close && picker.close(); document.body.classList.add('title-on'); }
   root.addEventListener('pointerdown', () => { heard = true; });
   root.addEventListener('click', e => { if (phase === 'title' && !muteB.contains(e.target)) toMenu(); });
   muteB.addEventListener('click', e => { e.stopPropagation(); heard = true; muted = !muted; store.set('mute', muted); paintMute(); if (!muted) blip(); });
-  $('.ttl-back').addEventListener('click', e => { e.stopPropagation(); if (LESSON && LCAT) { LCAT = null; refill(); } else if (FOLD) { FOLD = null; refill(); } else toTitle(); });
+  $('.ttl-back').addEventListener('click', e => { e.stopPropagation(); if (LESSON && LCAT) { LCAT = null; refill(); } else if (FOLD) { FOLD = null; refill(); } else if (MODE) { MODE = null; refill(); } else toTitle(); });
   function refill() { blip(); filled = fill(true); filled.then(() => setTimeout(() => { if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); }, 60)); }
 
   function show(ph) { phase = ph; root.dataset.ph = ph; root.style.display = ''; }
@@ -257,7 +275,13 @@ export function createTitle(h) {
   function choose(i) {
     if (phase !== 'menu' || !calmOK()) return; const e = list[i]; if (!e) return;
     if (LESSON && !LCAT && e.cat) { LCAT = e.cat; refill(); return; }   // 갈래 → 그 안의 카드
+    if (!LESSON && !MODE && e.mode) { MODE = e.mode; FOLD = null; refill(); return; }   // MODE-1: 갈래 → 그 안
     if (!LESSON && !FOLD && e.fold) { FOLD = e.fold; refill(); return; }   // FOLDER-1: 폴더 → 그 안의 카드
+    if (e.roomc || e.room) { const M = window.SM_MP; blip(); if (!M) return;   // MODE-1: 방 카드 = 방 고르기 창 또는 🏠 대기실 · 방 놀이 카드 = (방장이면) 그 놀이를 골라 두고 대기실
+      const k = e.room && M.roomList ? M.roomList().findIndex(q => q.id === e.id) + 1 : 0;
+      if (!M.room()) { pendPick = e.room ? e.id : null; M.open(cards[i]); return; }
+      if (k > 0 && M.isOwner && M.isOwner() && M.pickGame) M.pickGame(k); else if (k > 0 && M.roomGame && M.roomGame() !== e.id && M.isOwner && !M.isOwner()) toast('놀이는 방장이 골라요 — 대기실에서 기다려요', 2.5);
+      if (M.waiting) M.waiting(); return; }
     if (e.link) { blip(); location.href = new URL(e.link, location.href).href; return; }   // 다른 페이지(상상의 세계 — v2 엔진 밖)
     if (e.needRoom && window.SM_MP && !window.SM_MP.room()) { blip(); pendRoom = e.id; window.SM_MP.open(cards[i]); const t = grid.querySelector('.ttl-sec.tog span'); if (t) { t.textContent = '먼저 방에 들어가요 — 선생님 화면의 방 번호 4자리'; t.classList.add('warn'); } return; }   // 친구 대결은 방이 있어야
     cards.forEach((c, k) => c.classList.add(k === i ? 'pick' : 'dim'));
@@ -319,7 +343,7 @@ export function createTitle(h) {
   new MutationObserver(place).observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
   return { bootDone, backToMenu, choose: async id => { id = id || ''; let i = list.findIndex(e => e.id === id);   // 폴더 밖이면 그 폴더를 열고 고른다
-      if (i < 0 && !LESSON && REGF) { const g = id ? REG && REG[id] : FREE; if (g) { FOLD = g.folder || 'look'; await (filled = fill(true)); i = list.findIndex(e => e.id === id); } }
+      if (i < 0 && !LESSON && REGF) { const g = id ? REG && REG[id] : FREE; if (g) { MODE = modeOf(g); FOLD = MODE === 'solo' ? g.folder || 'look' : null; await (filled = fill(true)); i = list.findIndex(e => e.id === id); } }
       if (i >= 0) choose(i); },
     go: async id => {   // ROOM-1: 방 놀이 — 메뉴에 없는 카드도 제목·메뉴 화면에서 바로 닦기 + 날아오기로 시작(선생님이 고르면 아이 화면이 여기로)
       if (phase !== 'title' && phase !== 'menu') return false; if (!REG) await (filled = fill()); const g = REG && REG[id]; if (!g || (phase !== 'title' && phase !== 'menu')) return false;
