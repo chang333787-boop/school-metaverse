@@ -1476,14 +1476,14 @@ function emoChip(on) {
   if (!on) { if (emoEl) emoEl.remove(); emoEl = null; return; } if (emoEl) return;
   emoEl = document.createElement('div'); emoEl.id = 'mpEmo'; emoEl.className = 'chip'; emoEl.style.cssText = 'left:10px;top:84px;cursor:pointer;display:flex;gap:2px;align-items:center;padding:4px 6px;pointer-events:auto';
   emoEl.innerHTML = '<span data-e="t" style="padding:2px 6px">😀</span><span class="emo-bar" style="display:none;gap:2px"></span>';
-  import('./net.js?v=9').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" style="font-size:22px;padding:2px 4px;cursor:pointer">' + x + '</span>').join(''); });
+  import('./net.js?v=10').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" style="font-size:22px;padding:2px 4px;cursor:pointer">' + x + '</span>').join(''); });
   emoEl.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-e]'); if (!b) return; const bar = emoEl.querySelector('.emo-bar');
     if (b.dataset.e === 't') { bar.style.display = bar.style.display === 'none' ? 'flex' : 'none'; return; } if (NET) NET.emote(+b.dataset.e); bar.style.display = 'none'; });
   document.body.appendChild(emoEl);
 }
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=9'), import('./lobby.js?v=16')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=10'), import('./lobby.js?v=16')]).then(([N, L]) => {
     // ROOM-1(10-05 교사 '멀티방을 게임으로 들어가는 게 아니라 멀티방을 만들고 그 안에서 모드를 정하는 게 직관적일까?'): 방 먼저 → 방을 만든 선생님이 👥 창 '🎮 다 같이 놀이'를 고르면 방 친구 모두 그 놀이 대기실로
     //   방 놀이 번호 = ctl/cmd d — 선생님 신호(📣·✋·▶·🎮)마다 지금 방 놀이를 같이 실음(cmd는 마지막 하나만 남으므로 — 늦게 들어온 친구·새로고침한 화면도 앎 · 규칙 그대로)
     //   ⚠️ 번호는 뒤에만 더한다(옛 화면과 어긋나지 않게) · 메뉴(오프닝·🎮)에는 registry room:true 놀이가 안 보임 — 혼자 연습 카드만
@@ -1509,55 +1509,127 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
         if (k === 'hold') holdChip(true); else if (k === 'release' || k === 'gather') holdChip(false);   // UX-1: 선생님 화면엔 멈춤 막이 없어(내 신호는 안 받음) 반 전체가 멈춘 줄 몰랐다 → 위 가운데 노란 칩(누르면 ▶ 다시 움직여요)
       } });
     // UX-1(10-05 교사 편의성): ✋ 모두 멈춤 중 칩(선생님 화면) — 아이 쪽 멈춤과 같이 90초 뒤 저절로 사라짐
-    const WRG = { watergun_vs: '두 팀으로 물총 · 4분', hideseek_vs: '도망자 1명 vs 나머지 술래 · 한 판 1분', robots_vs: '반장 1명이 로봇 속 스파이 찾기', guide_vs: '둘씩 한 팀 · 지도로 길 알려 주기' };
+    // ROOM-3: 놀이 카드(그림·규칙·한 판) — 대기실 아래 큰 카드
+    const WRG = { watergun_vs: { i: '💦', c: ['#2f80ed', '#56ccf2'], r: '청팀 vs 백팀 — 물총으로 상대 팀을 흠뻑 적셔요', m: '4분 · 둘로 나눠 팀 대결' },
+      hideseek_vs: { i: '🙈', c: ['#f2994a', '#f2c94c'], r: '도망자 1명 vs 나머지 모두 술래', m: '한 판 1분 · 모두 한 번씩 도망자' },
+      robots_vs: { i: '🤖', c: ['#6c5ce7', '#a29bfe'], r: '반장 1명이 로봇 무리 속 스파이 친구를 찾아요', m: '한 판 1분 · 모두 한 번씩 반장' },
+      guide_vs: { i: '🧭', c: ['#219653', '#6fcf97'], r: '둘씩 한 팀 — 지도를 보고 길을 알려 줘요', m: '한 판 1분 · 팀 안에서 역할 바꾸기' } };
     const map9tone = (on) => { try { tone(on ? 880 : 520, 0, 0.12, 'sine', 0.08); if (on) tone(1320, 0.1, 0.16, 'sine', 0.07); } catch (e) { /* */ } };
+    const hexOf = (c) => (typeof c === 'number' ? '#' + c.toString(16).padStart(6, '0') : /^#[0-9a-f]{6}$/i.test(c || '') ? c : '#4dabf7');
+    const avSvg = (hex) => '<svg class="av" viewBox="0 0 64 64" aria-hidden="true"><path d="M9 64q0-17 23-17t23 17z" fill="' + hex + '"/><circle cx="32" cy="31" r="16" fill="#f5cfa6"/><path d="M15 28a17 15 0 0 1 34 0z" fill="' + hex + '"/><rect x="30" y="24.5" width="22" height="5" rx="2.5" fill="' + hex + '"/><circle cx="26" cy="33" r="2.4" fill="#1d1530"/><circle cx="38" cy="33" r="2.4" fill="#1d1530"/><path d="M27 39.5q5 4 10 0" stroke="#1d1530" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="21.5" cy="37.5" r="2.6" fill="#ff8f8f" opacity=".5"/><circle cx="42.5" cy="37.5" r="2.6" fill="#ff8f8f" opacity=".5"/></svg>';
     function wrCss() { if (document.getElementById('wr-css')) return; const st = document.createElement('style'); st.id = 'wr-css'; st.textContent = `
-#mpWR{position:fixed;inset:0;z-index:41;display:flex;align-items:center;justify-content:center;background:rgba(10,20,40,.45);font-family:inherit}
-#mpWR .bx{width:min(620px,94vw);max-height:calc(100vh - 20px);overflow:auto;box-sizing:border-box;padding:16px 18px;border-radius:18px;background:#fffdf6;color:#1d3557;border:3px solid #1d3557;box-shadow:0 10px 30px rgba(0,0,0,.35);font-size:15px;line-height:1.45}
-#mpWR .hd{font-weight:900;font-size:20px}#mpWR .hd span{font-size:14px;color:#5a6b80;font-weight:700}
-#mpWR .sub{margin-top:2px;font-size:14px;color:#4a5b70}
-#mpWR .gm{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:10px 0}
-#mpWR .gm button{font:inherit;text-align:left;border:2px solid #c9d8f0;background:#eef4ff;color:#1d3557;border-radius:12px;padding:9px 10px;cursor:pointer;min-height:64px}
-#mpWR .gm button b{display:block;font-size:16px}#mpWR .gm button small{font-size:12px;color:#4a5b70}
-#mpWR .gm button.on{border-color:#1d3557;background:#fff3bf;box-shadow:0 0 0 2px #ffd23c}
-#mpWR .gm button:disabled{cursor:default}
-#mpWR .pl{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}#mpWR .pl span{padding:5px 9px;border-radius:999px;background:#eef4ff;font-size:14px}#mpWR .pl span.me{background:#fff3bf;font-weight:800}#mpWR .pl span.away{opacity:.6}#mpWR .pl span.rdy{background:#d3f9d8;color:#1b5e20;font-weight:800;box-shadow:0 0 0 2px #2f9e44}
-#mpWR .row button.rdy{background:#2f9e44;color:#fff;font-size:16px}
-#mpWR .last{margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff8dc;border:2px solid #f2d27a;font-size:14px}
+#mpWR{position:fixed;inset:0;z-index:45;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:radial-gradient(circle at 70% 20%,#2b5aa6,#152b55 70%);color:#1d3557;font:15px/1.4 "Apple SD Gothic Neo","Malgun Gothic",sans-serif;-webkit-text-size-adjust:100%}
+#mpWR button{font:inherit;cursor:pointer}
+#mpWR .top{display:flex;align-items:center;gap:10px;color:#fff;flex-wrap:wrap;flex:none}
+#mpWR .top .rn{font-weight:900;font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+#mpWR .top .cd{background:#ffd23c;color:#1d3557;border-radius:8px;padding:2px 10px;font-weight:900;font-size:16px;letter-spacing:1px}
+#mpWR .top .ct{font-weight:800;opacity:.9}#mpWR .top .gap{flex:1}
+#mpWR .top button{font-weight:800;border:0;border-radius:10px;padding:6px 12px;min-height:44px;background:rgba(255,255,255,.16);color:#fff}
+#mpWR .top button.out{background:#e85d5d}
+#mpWR .bd{flex:1;min-height:0;display:flex;gap:12px}
+#mpWR .side{width:224px;flex:none;display:flex;flex-direction:column;gap:8px;background:#eaf1fc;border-radius:16px;padding:10px;overflow:auto;box-shadow:inset 0 0 0 3px #c2d3ee}
+#mpWR .big{font-weight:900;font-size:26px;border:0;border-radius:14px;padding:12px 8px;min-height:66px;color:#fff;background:linear-gradient(180deg,#3d7cf0,#1d4fb8);box-shadow:0 4px 0 #143a87;letter-spacing:1px}
+#mpWR .big.rd{background:linear-gradient(180deg,#ffae5c,#f07b1a);box-shadow:0 4px 0 #b85a0e}
+#mpWR .big.ok{background:linear-gradient(180deg,#46d27a,#24a352);box-shadow:0 4px 0 #1b7a3c;font-style:italic}
+#mpWR .big:disabled{filter:grayscale(.75);opacity:.55;cursor:default}
+#mpWR .big:not(:disabled):active{transform:translateY(3px);box-shadow:0 1px 0 #143a87}
+#mpWR .hint{font-size:13px;color:#2f4d7a;font-weight:800;text-align:center;line-height:1.35}
+#mpWR .sh{font-size:13px;font-weight:900;color:#5a6b80;margin-top:4px}
+#mpWR .gl{display:flex;flex-direction:column;gap:6px}
+#mpWR .gl button{font-weight:800;text-align:left;border:2px solid #c9d8f0;background:#fff;color:#1d3557;border-radius:12px;padding:7px 10px;min-height:44px}
+#mpWR .gl button.on{border-color:#1d3557;background:#fff3bf;box-shadow:0 0 0 2px #ffd23c}
+#mpWR .gl button:disabled{cursor:default}#mpWR .gl button:disabled:not(.on){opacity:.5}
+#mpWR .sb{font-weight:800;border:0;border-radius:10px;padding:7px 10px;min-height:44px;background:#d6e2f5;color:#1d3557}
+#mpWR .side .fill{flex:1}
+#mpWR .main{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;min-height:0}
+#mpWR .slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:10px;flex:1;min-height:0}
+#mpWR .sl{position:relative;background:linear-gradient(180deg,#f8fbff,#d7e4f7);border:3px solid #b9cbe6;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px 30px;min-height:0;overflow:hidden;box-sizing:border-box}
+#mpWR .sl .av{width:auto;height:min(92px,58%);max-width:80%;flex:none}
+#mpWR .sl .nm{font-weight:900;font-size:17px;max-width:94%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#mpWR .sl .st{position:absolute;left:0;right:0;bottom:5px;text-align:center;font-size:13px;font-weight:800;color:#5a6b80;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+#mpWR .sl.me{border-color:#ffd23c;box-shadow:inset 0 0 0 2px #ffd23c}
+#mpWR .sl .tg{position:absolute;left:6px;top:6px;background:#ffd23c;color:#1d3557;font-weight:900;font-size:13px;border-radius:7px;padding:1px 7px;box-shadow:0 2px 0 #c99a12}
+#mpWR .sl .tg.me{left:auto;right:6px;background:#1d3557;color:#fff;box-shadow:none}
+#mpWR .sl.rdy{border-color:#2f9e44}
+#mpWR .sl.rdy .st{color:#fff;font-size:21px;font-style:italic;font-weight:900;letter-spacing:2px;bottom:2px;text-shadow:0 2px 0 #1b7a3c,0 0 6px #1b7a3c,0 0 2px #1b7a3c}
+#mpWR .sl.ing .st{color:#2b5a96}
+#mpWR .sl.away{opacity:.55}
+#mpWR .sl.empty{background:rgba(255,255,255,.08);border:3px dashed rgba(255,255,255,.3);color:rgba(255,255,255,.55);font-weight:800;padding:8px 4px}
+#mpWR .sl .mini{position:absolute;right:6px;top:30px;border:0;border-radius:8px;padding:3px 7px;min-height:30px;font-size:12px;font-weight:800;background:#1d3557;color:#fff}
+#mpWR .sum{color:#fff;font-weight:800;font-size:15px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:none}
+#mpWR .sum .rd9{background:#2f9e44;border-radius:8px;padding:1px 8px}#mpWR .sum .gn{display:none;background:#ffd23c;color:#1d3557;border-radius:8px;padding:1px 8px}body.small #mpWR .sum .gn{display:inline}
+#mpWR .sum button{border:0;border-radius:10px;padding:5px 10px;min-height:40px;font-weight:800;background:#ffd23c;color:#1d3557}
+#mpWR .low{display:flex;gap:10px;flex:none;min-height:0}
+#mpWR .card{flex:1.25;min-width:0;border-radius:16px;padding:12px 16px;color:#fff;background:linear-gradient(135deg,var(--c1),var(--c2));box-shadow:inset 0 0 0 3px rgba(255,255,255,.35),0 4px 0 rgba(0,0,0,.25);display:flex;gap:14px;align-items:center}
+#mpWR .card .ic{font-size:56px;line-height:1;flex:none}
+#mpWR .card b{display:block;font-size:24px;line-height:1.2;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+#mpWR .card .r{font-size:15px;font-weight:800}#mpWR .card .m{font-size:13px;font-weight:700;opacity:.95}
+#mpWR .card.none{background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 3px rgba(255,255,255,.25);font-weight:800;font-size:17px}
+#mpWR .last{flex:1;min-width:0;max-height:170px;overflow:auto;border-radius:16px;padding:9px 12px;background:#fff8dc;border:2px solid #f2d27a;font-size:13px}
 #mpWR .last .rk-lb{margin:0;padding:0;border:0;background:none}
-#mpWR .row{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;align-items:center;margin-top:12px}
-#mpWR .row button{font:inherit;font-weight:800;border:0;border-radius:10px;padding:9px 14px;cursor:pointer;min-height:44px;background:#e8edf3;color:#1d3557}
-#mpWR .row button.go{background:#1d3557;color:#fff;font-size:17px;padding:10px 20px}#mpWR .row button.go:disabled{opacity:.45;cursor:default}
-#mpWR .wait{flex:1;font-weight:800;color:#2b5a96}
-#mpWR label{font-size:14px;display:flex;gap:6px;align-items:center;cursor:pointer}
-body.small #mpWR .bx{padding:10px 12px;font-size:14px}body.small #mpWR .gm{grid-template-columns:repeat(4,1fr)}body.small #mpWR .gm button{min-height:56px;padding:6px}body.small #mpWR .gm button small{display:none}
+body.wr-on #mpChat{z-index:46}
+body.wr-on.small #mpChat{display:none}
+@media (max-height:620px){#mpWR .big{font-size:22px;min-height:54px;padding:8px}#mpWR .card .ic{font-size:40px}#mpWR .card b{font-size:20px}#mpWR .last{max-height:120px}#mpWR .sl .nm{font-size:15px}}
+body.small #mpWR{gap:6px;padding:max(6px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+body.small #mpWR .top .rn{font-size:16px}body.small #mpWR .top .cd{font-size:14px}body.small #mpWR .top button{min-height:40px;padding:4px 10px;font-size:13px}
+body.small #mpWR .bd{gap:8px}
+body.small #mpWR .side{width:150px;padding:7px;gap:6px}
+body.small #mpWR .big{font-size:18px;min-height:46px;padding:6px}
+body.small #mpWR .hint{font-size:12px}
+body.small #mpWR .gl{display:grid;grid-template-columns:1fr 1fr;gap:5px}body.small #mpWR .gl button{font-size:13px;padding:4px;min-height:44px;text-align:center}
+body.small #mpWR .gl button .gt{display:none}body.small #mpWR .sb{font-size:12px;min-height:40px;padding:4px}
+body.small #mpWR .slots{gap:6px}body.small #mpWR .sl{padding:4px 2px 20px;border-width:2px}body.small #mpWR .sl .av{height:min(52px,52%)}
+body.small #mpWR .sl .nm{font-size:13px}body.small #mpWR .sl .st{font-size:12px;bottom:2px}body.small #mpWR .sl.rdy .st{font-size:15px}
+body.small #mpWR .sl .tg{font-size:12px;left:3px;top:3px;padding:0 4px}body.small #mpWR .sl .tg.me{left:auto;right:3px}body.small #mpWR .sl .mini{top:22px;right:3px;min-height:26px}
+body.small #mpWR .sum{font-size:13px}body.small #mpWR .low{display:none}
+@media (orientation:portrait){body.small #mpWR .bd{flex-direction:column}body.small #mpWR .side{width:auto;flex:none;display:grid;grid-template-columns:1fr 1fr;align-items:start}
+  body.small #mpWR .side .big,body.small #mpWR .side .hint{grid-column:1/-1}body.small #mpWR .side .sh,body.small #mpWR .side .fill{display:none}body.small #mpWR .gl{grid-column:1/-1;grid-template-columns:repeat(4,1fr)}
+  body.small #mpWR .slots{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr))}body.small #mpWR .top .rn{max-width:60vw}}
 `; document.head.appendChild(st); }
-    function wrShow(on) { clearInterval(wrT); if (!on || !NET || !LOBBY.room || window.SM_LESSON) { if (WR) { WR.remove(); WR = null; } return; } const g = MAP.game.current;
+    function wrShow(on) { clearInterval(wrT); if (!on || !NET || !LOBBY.room || window.SM_LESSON) { if (WR) { WR.remove(); WR = null; } document.body.classList.remove('wr-on'); return; } const g = MAP.game.current;
       if (g && ROOMS.some(q => q && q.id === g.id)) return;   // 방 놀이 중(대기실·경기)엔 그 놀이 화면
       wrCss(); if (!WR) { WR = document.createElement('div'); WR.id = 'mpWR'; WR.className = 'ttl-keep'; document.body.appendChild(WR); for (const t of ['keydown', 'keyup']) WR.addEventListener(t, (e) => e.stopPropagation()); WR.addEventListener('click', wrClick); document.exitPointerLock?.(); }
-      wrDraw(); wrT = setInterval(wrDraw, 1000); }
+      document.body.classList.add('wr-on'); wrDraw(); wrT = setInterval(wrDraw, 1000); }
     function setReady(v) { READY = !!v; if (NET) NET.setAct(actNow()); wrDraw(); }
-    const isRdy = (p) => actKey(p.act) === actKey(RDY), inLobby = (p) => isRdy(p) || /자유 탐험/.test(p.act || '') || !p.act || (!ROOMRUN && ROOMS.some(q => q && actKey(p.act) === actKey(ACTS[q.id])));   // 방 놀이에서 막 돌아오는 친구도(준비 안 됨으로)   // 대기실(놀이 밖)에 있는 친구
-    function wrDraw() { if (!WR || !NET || !LOBBY.room) return; const Rm = LOBBY.room, own = !!Rm.k, Rg = ROOMS[ROOMG], ros = NET.roster(), esc9 = (x) => String(x == null ? '' : x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-      const ownName = own ? NET.name : (ros.find(p => p.id === OWNERID) || {}).label;
-      const pl = ['<span class="me' + (READY && !own ? ' rdy' : '') + '">' + (own ? '⭐ ' : READY ? '✅ ' : '') + esc9(NET.name) + '(나)</span>'].concat(ros.map(p => { const away = Rg && ROOMRUN ? actKey(p.act) !== actKey(ACTS[Rg.id]) : !inLobby(p), rd = !ROOMRUN && isRdy(p) && p.id !== OWNERID; return '<span class="' + (away ? 'away' : rd ? 'rdy' : '') + '">' + (p.id === OWNERID ? '⭐ ' : rd ? '✅ ' : '') + esc9(p.label) + (away && p.act ? ' · ' + esc9(p.act) : '') + '</span>'; })).join('');
-      const need = ros.filter(p => inLobby(p) && p.id !== OWNERID), rdN = need.filter(isRdy).length, allRdy = rdN >= need.length;   // 준비할 친구 = 대기실에 있는 방장 아닌 친구(다른 것 하는 친구는 안 기다림)
-      const tiles = ROOMS.map((q, i) => q && '<button data-g="' + i + '"' + (i === ROOMG ? ' class="on"' : '') + (own ? '' : ' disabled') + '><b>' + esc9(q.t.replace(/\s*\(.*?\)/, '')) + '</b><small>' + esc9(WRG[q.id] || '') + '</small></button>').filter(Boolean).join('');
+    const isRdy = (p) => actKey(p.act) === actKey(RDY), isWatch = (p) => actKey(p.act) === actKey(WATCH),
+      inLobby = (p) => isRdy(p) || isWatch(p) || /자유 탐험/.test(p.act || '') || !p.act || (!ROOMRUN && ROOMS.some(q => q && actKey(p.act) === actKey(ACTS[q.id])));   // 방 놀이에서 막 돌아오는 친구도(준비 안 됨으로)   // 대기실(놀이 밖)에 있는 친구
+    let wrAnn = null;   // ROOM-3: 방장이 누구인지 알림(아직 신호가 없던 방 — 친구 화면에 👑가 뜨게)
+    function wrDraw() { if (!WR || !NET || !LOBBY.room) return; const Rm = LOBBY.room, own = !!Rm.k, Rg = ROOMS[ROOMG], G = Rg && WRG[Rg.id], ros = NET.roster(), esc9 = (x) => String(x == null ? '' : x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      if (own && !ROOMRUN && OWNERID !== NET.id && wrAnn !== Rm.c && Date.now() - (CTLK.join || 0) > 2500) { wrAnn = Rm.c; LOBBY.teacher('game', null, true); }
+      const run = !!(ROOMRUN && Rg), gName = (q) => q.t.replace(/^\S+\s+/, '').replace(/\s*\(.*?\)/, '');
+      const meP = { id: NET.id, label: NET.name, act: actNow(), color: hexOf(NET.color), me: true }, all = [meP].concat(ros.map(p => ({ ...p, color: hexOf(p.color) })));
+      const host = all.find(p => p.id === (own ? NET.id : OWNERID)) || null, hostWatch = !!host && (host.me ? !meIn() : isWatch(host));
+      const rest = all.filter(p => p !== host), order = (host && !hostWatch ? [host] : []).concat(rest.filter(p => p.me), rest.filter(p => !p.me));
+      const need = all.filter(p => p !== host && (p.me || (inLobby(p) && !isWatch(p)))), rdN = need.filter(p => (p.me ? READY : isRdy(p))).length, allRdy = rdN >= need.length;   // 준비할 사람 = 대기실에 있는 방장 아닌 친구 + 나(다른 것 하는 친구는 안 기다림)
+      let playN = 0;
+      const slot = (p) => { const isH = p === host, inG = run && (p.me ? false : actKey(p.act) === actKey(ACTS[Rg.id])), away = run ? !inG : !p.me && !inLobby(p), rdy = !run && !isH && (p.me ? READY : isRdy(p));
+        if (!away) playN++;
+        const st = run ? (inG ? '🎮 경기 중' : p.me ? '대기실' : '📍 ' + (p.act || '다른 곳')) : isH ? '' : rdy ? 'READY' : away ? '📍 ' + (p.act || '다른 곳') : '준비 중…';
+        return '<div class="sl' + (p.me ? ' me' : '') + (rdy ? ' rdy' : '') + (inG ? ' ing' : '') + (away ? ' away' : '') + '">' + (isH ? '<span class="tg">👑 방장</span>' : '') + (p.me ? '<span class="tg me">나</span>' : '')
+          + (p.me && isH && !run ? '<button class="mini" data-w="watch" title="이번 놀이는 구경만 해요">👀 구경만</button>' : '')
+          + avSvg(p.color) + '<div class="nm">' + esc9(p.label) + '</div><div class="st">' + esc9(st) + '</div></div>'; };
+      const cells = order.slice(0, 8).map(slot); while (cells.length < 8) cells.push('<div class="sl empty">빈 자리</div>');
+      const more = order.length > 8 ? ' · 자리가 꽉 차서 ' + (order.length - 8) + '명은 구경' : '';
+      const side = (run
+          ? '<button class="big ok" data-w="join">▶ 같이 하기</button><div class="hint">🎮 지금 「' + esc9(gName(Rg)) + '」 하는 중</div>' + (own ? '<button class="sb" data-w="end">⏹ 모두 대기실로</button>' : '')
+          : own ? '<button class="big" data-w="go"' + (Rg && (allRdy || LOBBY.teacherRoom) ? '' : ' disabled') + '>▶ 시작</button><div class="hint">' + (!Rg ? '먼저 아래에서 놀이를 골라요' : !allRdy && !LOBBY.teacherRoom ? '친구들이 모두 READY를 누르면 시작할 수 있어요 (' + rdN + '/' + need.length + ')' : '누르면 모두 같이 들어가요') + '</div>'
+          : '<button class="big ' + (READY ? 'ok' : 'rd') + '" data-w="ready">' + (READY ? 'READY ✓' : '준비하기') + '</button><div class="hint">' + (!Rg ? '방장이 놀이를 고르는 중이에요' : READY ? '방장이 ▶ 시작하면 같이 들어가요 (다시 누르면 취소)' : '준비되면 눌러요') + '</div>')
+        + '<div class="sh">🎮 놀이' + (own ? ' 고르기' : ' (방장이 골라요)') + '</div><div class="gl">' + ROOMS.map((q, i) => q && '<button data-g="' + i + '"' + (i === ROOMG ? ' class="on"' : '') + (own ? '' : ' disabled') + '>' + q.t.split(' ')[0] + '<span class="gt"> ' + esc9(gName(q)) + '</span></button>').filter(Boolean).join('') + '</div>'
+        + '<div class="fill"></div><button class="sb" data-w="min">🚶 학교 둘러보며 기다리기</button>' + (chatUI ? '<button class="sb" data-w="chat">💬 채팅</button>' : '');
+      const sum = '<div class="sum">' + (Rg ? '<span class="gn">' + Rg.t.split(' ')[0] + ' ' + esc9(gName(Rg)) + '</span>' : '') + '<span>🎮 함께 하는 사람 ' + playN + '명 ' + (host ? (hostWatch ? '(방장은 구경)' : '(방장 포함)') : '') + '</span>' + (!run && need.length ? '<span class="rd9">READY ' + rdN + '/' + need.length + '</span>' : '') + esc9(more)
+        + (hostWatch ? '<span>👀 구경석: 👑 ' + esc9(host.label) + (host.me ? '(나)' : '') + '</span>' + (host.me && !run ? '<button data-w="play1">🎮 나도 같이 하기</button>' : '') : '') + '</div>';
+      const card = G ? '<div class="card" style="--c1:' + G.c[0] + ';--c2:' + G.c[1] + '"><div class="ic">' + G.i + '</div><div><b>' + esc9(gName(Rg)) + '</b><div class="r">' + esc9(G.r) + '</div><div class="m">' + esc9(G.m) + '</div></div></div>'
+        : '<div class="card none">' + (own ? '👈 왼쪽에서 함께 할 놀이를 골라요' : '⏳ 방장이 놀이를 고르는 중이에요') + '</div>';
       const L9 = LASTRES && Date.now() - LASTRES.at < 15 * 60e3 ? '<div class="last"><b>🏁 지난 경기 — ' + esc9(LASTRES.t || '') + '</b>' + (LASTRES.html || '') + '</div>' : '';
-      const run = ROOMRUN && Rg;
-      const h = '<div class="bx"><div class="hd">🏠 ' + esc9(Rm.n) + ' 대기실 <span>· 번호 ' + Rm.c + ' · ' + (ros.length + 1) + '명</span></div>'
-        + '<div class="sub">' + (own ? '⭐ 내가 방장 — 놀이를 고르고 ▶ 시작을 누르면 모두 같이 들어가요' : '⭐ 방장' + (ownName ? '(' + esc9(ownName) + ')' : '') + '이 놀이를 고르고 ▶ 시작을 누르면 같이 들어가요') + '</div>'
-        + '<div class="gm">' + tiles + '</div><div class="pl">' + pl + '</div>' + L9
-        + '<div class="row">' + (run ? '<span class="wait">🎮 ' + esc9(Rg.t.replace(/\s*\(.*?\)/, '')) + ' 하는 중</span><button data-w="join" class="go">▶ 같이 하기</button>' + (own ? '<button data-w="end">⏹ 모두 대기실로</button>' : '')
-          : own ? (LOBBY.teacherRoom ? '<label><input type="checkbox" data-w="play"' + (meIn() ? ' checked' : '') + '> 🎮 나도 같이 하기</label>' : '') + (need.length ? '<span class="wait">✅ 준비 ' + rdN + '/' + need.length + (allRdy ? ' — 모두 준비!' : '') + '</span>' : '')
-            + '<button data-w="go" class="go"' + (Rg && (allRdy || LOBBY.teacherRoom) ? '' : ' disabled') + '>▶ 시작' + (!Rg ? ' (놀이를 골라요)' : !allRdy && !LOBBY.teacherRoom ? ' (모두 준비하면)' : '') + '</button>'   // 선생님 방장은 준비가 덜 돼도 시작(수업 진행)
-          : '<span class="wait">' + (Rg ? '🎮 ' + esc9(Rg.t.replace(/\s*\(.*?\)/, '')) + (READY ? ' — 준비 완료! 방장이 ▶ 시작하면 들어가요' : ' — ✅ 준비를 눌러요') : '방장이 놀이를 고르는 중…') + '</span><button data-w="ready" class="' + (READY ? 'rdy' : 'go') + '">' + (READY ? '✅ 준비 완료 (누르면 취소)' : '✅ 준비') + '</button>')
-        + '<button data-w="min">🚶 둘러보며 기다리기</button>' + (own ? '<button data-w="big">📺 번호 크게</button>' : '') + '<button data-w="out">🚪 방 나가기</button></div></div>';
+      const h = '<div class="top"><span class="rn">🏠 ' + esc9(Rm.n) + '</span><span class="cd">' + Rm.c + '</span><span class="ct">👥 ' + all.length + '명</span><span class="gap"></span>'
+        + (own ? '<button data-w="big">📺 방 번호 크게</button>' : '') + '<button class="out" data-w="out">🚪 방 나가기</button></div>'
+        + '<div class="bd"><div class="side">' + side + '</div><div class="main"><div class="slots">' + cells.join('') + '</div>' + sum + '<div class="low">' + card + L9 + '</div></div></div>';
       if (WR.dataset.h !== h) { WR.dataset.h = h; WR.innerHTML = h; } }
-    function wrClick(e) { e.stopPropagation(); const t = e.target.closest('[data-g],[data-w]'); if (!t) { if (e.target === WR) wrShow(false); return; }
-      if (t.dataset.g) { roomPick(+t.dataset.g); return; }
+    function wrClick(e) { e.stopPropagation(); const t = e.target.closest('[data-g],[data-w]'); if (!t || t.disabled) return;
+      if (t.dataset.g) { roomPick(+t.dataset.g); map9tone(true); return; }
       const w = t.dataset.w; if (w === 'ready') { setReady(!READY); map9tone(READY); return; } if (w === 'go') roomStart(); else if (w === 'end') roomEnd(); else if (w === 'join') { wrShow(false); roomLaunch(ROOMS[ROOMG] && ROOMS[ROOMG].id); }
-      else if (w === 'play') { ownerPlay = !!t.checked; wrDraw(); } else if (w === 'min') { wrShow(false); toast('👥 칩 → 🏠 대기실로 다시 열어요', 2.5); } else if (w === 'big') LOBBY.showBig && LOBBY.showBig(); else if (w === 'out') { wrShow(false); LOBBY.leave(); } }
+      else if (w === 'watch' || w === 'play1') { ownerPlay = w === 'play1'; if (NET) NET.setAct(actNow()); wrDraw(); } else if (w === 'chat') { if (chatUI) chatUI.open(true); }
+      else if (w === 'min') { wrShow(false); toast('👥 칩 → 🏠 대기실로 다시 열어요', 2.5); } else if (w === 'big') LOBBY.showBig && LOBBY.showBig(); else if (w === 'out') { wrShow(false); LOBBY.leave(); } }
     function holdChip(on) { clearTimeout(holdTkT); if (holdTk) { holdTk.remove(); holdTk = null; } if (!on) return;
       holdTk = document.createElement('div'); holdTk.id = 'mpHoldT'; holdTk.className = 'chip ttl-keep';
       holdTk.style.cssText = 'left:50%;top:96px;transform:translateX(-50%);z-index:44;min-height:44px;display:flex;align-items:center;box-sizing:border-box;background:#ffd23c;color:#1d3557;font-weight:800;font-size:15px;padding:8px 14px;cursor:pointer;pointer-events:auto;white-space:nowrap';
@@ -1576,7 +1648,7 @@ body.small #mpWR .bx{padding:10px 12px;font-size:14px}body.small #mpWR .gm{grid-
     MAP.on('gamestop', (ev) => { LOBBY.draw(); if (NET && ev && ev.id && ROOMS.some(q => q && q.id === ev.id) && !(ev.reason === 'replace')) setTimeout(() => wrShow(true), 300); const p = PENDG; PENDG = null; if (!p || (ev && ev.reason === 'replace') || Date.now() - p.t > 180000 || (TITLE && TITLE.phase !== 'off')) return; gatherTo(p.c, '📣 선생님 곁으로 왔어요!'); });   // UX-1: 경기 중에 받은 📣 = 놀이가 끝나면(3분 안) 선생님 곁으로   // ROOM-2: 방 놀이에서 나오면(끝·나가기) 🏠 대기실
     setInterval(() => { if (NET) MAP.minimap.setPeers(NET.peers()); }, 500);   // 미니맵에 같은 방 친구 점(이름)
     const ACTS = { watergun: '💧 물총', watergun_vs: '💦 물총 대결', hideseek: '🙈 숨바꼭질 연습', hideseek_vs: '🙈 숨바꼭질', robots: '🤖 로봇인 척 연습', robots_vs: '🤖 로봇인 척', guide: '🧭 길잡이 연습', guide_vs: '🧭 길잡이', memo: '📝 메모장', memo_v3: '📝 메모장', story: '📖 이야기', newbook: '📖 신상책', escape: '🔐 방탈출', shrink: '🐜 개미', find_place: '📍 장소 찾기', tour: '🚌 견학' };
-    const RDY = '✅ 준비 완료', actNow = () => { const g = MAP.game.current; return window.SM_ACT || (g ? ACTS[g.id] || '🎮 놀이' : READY && LOBBY.room ? RDY : '🏫 자유 탐험'); };   // READY-1: 대기실에서 준비 = 지금 하는 것 글
+    const RDY = '✅ 준비 완료', WATCH = '👀 진행(구경)', actNow = () => { const g = MAP.game.current; return window.SM_ACT || (g ? ACTS[g.id] || '🎮 놀이' : READY && LOBBY.room ? RDY : LOBBY.room && LOBBY.room.k && !meIn() ? WATCH : '🏫 자유 탐험'); };   // ROOM-3: 방장이 구경이면 '👀 진행(구경)'(친구 화면 구경석)   // READY-1: 대기실에서 준비 = 지금 하는 것 글
     setInterval(() => { if (!NET) return; NET.setAct(actNow()); }, 2000);   // 지금 하는 것 — 게임이 window.SM_ACT로 더 자세히(메모장 = 판 번호)
     // 방 신호(net.js ctl): 물총 친구 대결 대기실 초대 · 선생님 📣 모으기 · ✋ 멈춤
     function onCtl(C) {
