@@ -8,5 +8,8 @@ export const EPISODES = [
   { id: 'newbook_a', set: 'newbook', title: '신상책 보물찾기의 비밀', pick: 'AI가 빈칸을 채운 이야기', icon: '✨', file: 'story_newbook_a.js', hidden: true },
   { id: 'robotpart_a', set: 'robotpart', title: '로봇 부품 소동', pick: 'AI가 다듬은 이야기', icon: '🤖', file: 'story_robotpart_a.js', hidden: true },   // 이야기 판 1번(은규·지원·인우) — STORY-FX 10-06
   { id: 'cricket_a', set: 'cricket', title: '작아진 우리와 곤충 재판', pick: 'AI가 다듬은 이야기', icon: '🦗', file: 'story_cricket_a.js', hidden: true },   // 이야기 판 2번(예지·시아·유은)
+  { id: 'world_bee', set: 'world_bee', title: '꿀벌 세계', icon: '🐝', file: 'world_bee.js', hidden: true },          // 세계 판 3번 — WORLD-FX 10-07
+  { id: 'world_fruit', set: 'world_fruit', title: '과일 세계', icon: '🍒', file: 'world_fruit.js', hidden: true },    // 세계 판 4번
+  { id: 'world_animal', set: 'world_animal', title: '동물 세계', icon: '🦫', file: 'world_animal.js', hidden: true }, // 세계 판 5번
   { id: 'newbook_b', set: 'newbook', title: '신상책', pick: '우리 반이 쓴 이야기 그대로', icon: '✏️', file: 'story_newbook_b.js', hidden: true },               // 새 형식 견본(목록엔 안 보임 · ?game=story&ep=sample)
 ];
