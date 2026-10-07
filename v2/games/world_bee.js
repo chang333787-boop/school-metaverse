@@ -191,3 +191,162 @@ export const STORY = {
     } },
   ],
 };
+
+// ───────── 자유 탐험(SANDBOX · 10-07 교사 '마법사 마을 깊이가 최소 · E만 누르지 말고 보이는 모습 · 40분 고민했는데 3분이면 허무') ─────────
+//   이야기(1~4장) 뒤 꿀벌 세계가 열림 — 신기한 일 16가지(앞 이야기 5 + 탐험 11) · F 🌼 꽃가루 · R 💃 8자 춤 · Space 날기 · B 목록
+const G = -0.3, Q = (x, z, y = 0) => [x, G + y, z];
+const HV = Q(13.5, -71.6);
+STORY.sandbox = {
+  title: '꿀벌 세계의 신기한 일',
+  skills: [
+    { k: 'pollen', key: 'KeyF', icon: '🌼', name: '꽃가루', color: 0xffd23c, tone: [[880, 0, 0.08, 'sine', 0.1], [1175, 0.06, 0.12, 'sine', 0.08]] },
+    { k: 'dance', key: 'KeyR', icon: '💃', name: '8자 춤', color: 0xfff176, swirl: 6, emote: '💃', affect: { kind: 'bee', anim: 'waggle', r: 2.5 }, tone: [[660, 0, 0.1, 'triangle', 0.1], [880, 0.1, 0.1, 'triangle', 0.1], [660, 0.2, 0.1, 'triangle', 0.1]] },
+  ],
+  exit: { at: Q(13.5, -66.75), r: 2.6, label: '🌸 큰 꽃문으로 나가기' },
+  acts: [
+    { start: { use: 'bb', label: '💬 붕붕이와 이야기', r: 2.4 }, steps: [{ sayOne: [
+      ['붕붕이', '꿀 한 숟가락을 만들려면 꿀벌 열두 마리가 평생 일해야 해. 그러니까 꿀은 정말 소중해!'],
+      ['붕붕이', '해바라기 꼭대기에 가 봤어? 버섯을 밟고 폴짝 날아오르면 갈 수 있어.'],
+      ['붕붕이', '연못 쪽에서 길 잃은 친구가 울고 있대. 8자 춤(R)으로 길을 알려 줄 수 있을 거야.'],
+      ['붕붕이', '하얀 꽃에 꽃가루(F)를 묻혀 주면 신기한 일이 생겨!'],
+      ['붕붕이', '서쪽 개미들이 빵 부스러기를 찾고 있었어. 개미랑 꿀벌은 이웃이야.'],
+    ] }] },
+    { start: { use: 'queen', label: '💬 여왕벌께 인사', r: 2.4 }, steps: [{ sayOne: [
+      ['여왕벌', '나는 하루에 알을 아주 많이 낳는단다. 그래서 일벌들이 아기 벌을 돌봐 주지.'],
+      ['여왕벌', '벌집 탑 아래 아기 벌들이 배고프다고 하는구나. 로열젤리를 갖다 줄 수 있니?'],
+      ['여왕벌', '말벌이 오면 우리는 다 같이 모여서 날개를 떨어 뜨거운 공을 만든단다. 그게 우리의 방법이야.'],
+    ] }] },
+  ],
+  disc: [
+    { k: 'shrink', t: '🐝 꿀벌만큼 작아지기', h: '텃밭의 커다란 꽃으로 들어가요(이야기 1장)' },
+    { k: 'work', t: '🌼 일벌이 되어 꽃꿀 모으기', h: '붕붕이가 알려 주는 일(이야기 3장)' },
+    { k: 'waggle', t: '💃 8자 춤 배우기', h: '붕붕이의 춤(이야기 3장)' },
+    { k: 'scent', t: '🌸 꽃향기 힘', h: '진한 분홍 꽃 향기(이야기 3장)' },
+    { k: 'queen', t: '👑 여왕벌의 선물', h: '벌집 탑 앞 여왕벌(이야기 4장)' },
+    { k: 'pollinate', t: '🍓 꽃가루로 딸기 열매 맺기', h: '서쪽 하얀 꽃 세 송이에 꽃가루(F)를 묻혀요', mark: 'wf1', start: { skill: 'pollen', on: 'wf1', r: 0.4 }, steps: [
+      { morph: 'wf1', to: 'berry', s: 0.55, color: 0xffffff },
+      { say: [['붕붕이', '봤지? 꽃가루가 옮겨지면 꽃이 열매가 돼! 나머지 두 송이도 해 봐.']] },
+      { waitSkill: { k: 'pollen', on: 'wf2', goal: '🌼 하얀 꽃에 꽃가루(F) (2/3)', r: 1.4 } }, { morph: 'wf2', to: 'berry', s: 0.55 },
+      { waitSkill: { k: 'pollen', on: 'wf3', goal: '🌼 하얀 꽃에 꽃가루(F) (3/3)', r: 1.4 } }, { morph: 'wf3', to: 'berry', s: 0.55 },
+      { say: [['이야기', '하얀 꽃 세 송이가 빨간 딸기가 되었어요. 텃밭의 딸기도 이렇게 꿀벌 덕분에 열려요.']] },
+    ] },
+    { k: 'lost', t: '🧭 길 잃은 꿀벌 집에 데려다주기', h: '연못가에서 우는 꿀벌에게 8자 춤(R)으로 길을 알려 줘요', mark: 'lb', start: { use: 'lb', label: '💬 우는 꿀벌', r: 2.2 }, steps: [
+      { wander: ['lb'], rect: null }, { fxFace: 'lb' }, { emote: 'lb', icon: '😢' },
+      { say: [['길 잃은 꿀벌', '훌쩍… 꽃꿀을 찾다가 너무 멀리 왔어. 벌집이 어느 쪽인지 모르겠어.']] },
+      { waitSkill: { k: 'dance', on: 'lb', goal: '💃 8자 춤(R)으로 벌집 쪽을 알려 줘요', r: 2.2 } },
+      { emote: 'lb', icon: '😮' }, { follow: ['lb'], d: 0.35, speed: 2 },
+      { say: [['길 잃은 꿀벌', '아! 춤을 보니까 알겠어. 벌집은 저쪽이구나! 같이 가 줄래?']] },
+      { goal: '🐝 꿀벌을 벌집 탑까지 데려가요', go: HV, label: '벌집 탑', r: 0.5 },
+      { follow: ['lb'], off: true }, { wander: ['lb'], rect: [12.4, -71.2, 14.6, -69.6], speed: 0.25, fly: true }, { emote: 'lb', icon: '😊' },
+      { say: [['길 잃은 꿀벌', '집이다! 고마워. 진짜 꿀벌들도 이렇게 춤으로 길을 알려 줘.']] },
+    ] },
+    { k: 'babies', t: '👶 아기 벌에게 로열젤리 주기', h: '벌집 탑 동쪽 로열젤리를 머리에 이고 아기 벌(애벌레) 셋에게', mark: 'j1', after: ['queen'], start: { use: 'j1', label: '🍯 로열젤리 들기', r: 2 }, steps: [
+      { carry: { id: 'j1', to: 'lv1', goal: '🍯 로열젤리를 아기 벌에게 (1/3)', r: 0.6, del: true } }, { fxScale: 'lv1', s: 2.2, sec: 0.8 }, { morph: 'lv1', to: 'bee', s: 0.08 }, { wander: ['lv1'], rect: [12.4, -71.2, 14.6, -69.6], speed: 0.25, fly: true },
+      { carry: { id: 'j2', to: 'lv2', goal: '🍯 로열젤리를 아기 벌에게 (2/3)', r: 0.6, del: true } }, { fxScale: 'lv2', s: 2.2, sec: 0.8 }, { morph: 'lv2', to: 'bee', s: 0.08 }, { wander: ['lv2'], rect: [12.4, -71.2, 14.6, -69.6], speed: 0.25, fly: true },
+      { carry: { id: 'j3', to: 'lv3', goal: '🍯 로열젤리를 아기 벌에게 (3/3)', r: 0.6, del: true } }, { fxScale: 'lv3', s: 2.2, sec: 0.8 }, { morph: 'lv3', to: 'bee', s: 0.08 }, { wander: ['lv3'], rect: [12.4, -71.2, 14.6, -69.6], speed: 0.25, fly: true },
+      { say: [['여왕벌', '고맙구나! 애벌레가 무럭무럭 자라 일벌이 되었어. 꿀벌은 알 → 애벌레 → 번데기 → 어른벌레로 자란단다.']] },
+    ] },
+    { k: 'wax', t: '🏗 밀랍 조각으로 육각형 방 짓기', h: '꽃들 사이 반짝이는 밀랍 조각 여섯 개를 모아요', mark: 'wx1', start: { near: 'wx1', r: 1.0 }, steps: [
+      { say: [['붕붕이', '그거 밀랍이야! 여섯 개를 모으면 벌집에 새 방을 지을 수 있어.']] },
+      { catch: { ids: ['wx1', 'wx2', 'wx3', 'wx4', 'wx5', 'wx6'], goal: '🏗 밀랍 조각 모으기', r: 0.5, color: 0xffd23c } },
+      { goal: '🏗 벌집 탑으로 가져가요', go: HV, label: '벌집 탑', r: 0.55 },
+      { fx: 'comb', id: 'cc1', at: Q(13.74, -71.62, 0.08), h: 90, s: 0.45 }, { wait: 0.3 }, { fx: 'comb', id: 'cc2', at: Q(13.74, -71.5, 0.13), h: 90, s: 0.45 }, { wait: 0.3 },
+      { fx: 'comb', id: 'cc3', at: Q(13.74, -71.74, 0.13), h: 90, s: 0.45 }, { wait: 0.3 }, { fx: 'comb', id: 'cc4', at: Q(13.74, -71.62, 0.18), h: 90, s: 0.45 }, { wait: 0.3 },
+      { fx: 'comb', id: 'cc5', at: Q(13.74, -71.5, 0.23), h: 90, s: 0.45 }, { wait: 0.3 }, { fx: 'comb', id: 'cc6', at: Q(13.74, -71.74, 0.23), h: 90, s: 0.45 },
+      { say: [['여왕벌', '육각형 방 여섯 칸 완성! 육각형은 빈틈없이 꼭 맞아서 튼튼하고, 꿀을 가장 많이 담을 수 있어.']] },
+    ] },
+    { k: 'guard', t: '🛡 말벌 쫓아내기', h: '아기 벌을 돌본 뒤, 벌집을 노리는 말벌이 나타나요 — 날아올라 붙잡아요', mark: HV, after: ['babies'], start: { near: HV, r: 1.2 }, steps: [
+      { fx: 'bee', id: 'wasp', at: Q(16.4, -70.4, 0.4), s: 0.14, color: 0xff8f00, stripe: 0x111111 }, { fxFace: 'wasp' }, { emote: 'queen', icon: '😱' },
+      { say: [['여왕벌', '말벌이다! 혼자서는 이길 수 없어. 날아올라 말벌을 붙잡으면 우리가 다 함께 도울게!']] },
+      { fxMove: 'wasp', to: Q(14.4, -70.9, 0.25), sec: 1.4, arc: 0.1 },
+      { catch: { ids: ['wasp'], goal: '🛡 말벌을 붙잡아요 (날아서!)', flee: 0.5, range: 0.9, wander: [12.8, -72.4, 14.8, -70.0], speed: 0.35, r: 0.5, then: 'stay', dy: 1.0, color: 0xff8f00 } },
+      { fxMove: 'w1', to: 'wasp', sec: 0.6, wait: false }, { fxMove: 'w2', to: 'wasp', sec: 0.7, wait: false }, { fxMove: 'w3', to: 'wasp', sec: 0.8, wait: false }, { fxMove: 'w4', to: 'wasp', sec: 0.9 },
+      { glow: 'me', color: 0xff7043 }, { emote: 'wasp', icon: '😵' },
+      { say: [['이야기', '꿀벌들이 말벌을 둘러싸고 날개를 부르르 떨었어요. 뜨거운 꿀벌 공! 말벌은 깜짝 놀라 도망쳤어요.']] },
+      { fxMove: 'wasp', to: Q(18, -76, 1.2), sec: 1.5, arc: 0.4 }, { fxDel: 'wasp' },
+      { wander: ['w1', 'w2', 'w3', 'w4'], rect: [12.4, -71.2, 14.6, -69.6], speed: 0.25, fly: true },
+      { say: [['여왕벌', '진짜 꿀벌들도 말벌이 오면 이렇게 다 같이 모여 지킨단다. 고마워, 용감한 꿀벌!']] },
+    ] },
+    { k: 'cool', t: '💧 물방울로 벌집 식히기', h: '더운 날! 연못 물방울을 머리에 이고 벌집 탑 꼭대기까지 날아올라요', mark: 'dw', start: { use: 'dw', label: '💧 물방울 들기', r: 2 }, steps: [
+      { say: [['붕붕이', '오늘 너무 덥다… 벌집 꼭대기에 물방울을 올려 주면 우리가 날갯짓으로 시원하게 만들 수 있어!']] },
+      { carry: { id: 'dw', to: Q(13.5, -71.6, 0.55), goal: '💧 벌집 탑 꼭대기로 날아올라요 (Space)', r: 0.35, del: true } },
+      { fxMove: 'w1', to: Q(13.3, -71.6, 0.6), sec: 0.6, wait: false }, { fxMove: 'w2', to: Q(13.7, -71.6, 0.6), sec: 0.6, wait: false }, { fxMove: 'w3', to: Q(13.5, -71.4, 0.6), sec: 0.6 },
+      { rain: { at: Q(13.5, -71.6, 0.5), r: 0.3, n: 30, color: 0xe1f5fe, size: 0.03, h: 0.2, puffs: 3 } },
+      { say: [['붕붕이', '휘이잉~ 시원하다! 진짜 꿀벌도 더운 날엔 물을 날라 와서 날갯짓으로 벌집을 식혀.']] },
+      { wander: ['w1', 'w2', 'w3'], rect: [12.4, -71.2, 14.6, -69.6], speed: 0.25, fly: true },
+    ] },
+    { k: 'ride', t: '🦋 나비 등에 타고 텃밭 날기', h: '동쪽 꽃밭의 나비에게 다가가요', mark: 'bfy', start: { use: 'bfy', label: '🦋 나비 등에 타기', r: 2 }, steps: [
+      { wander: ['bfy'], rect: null }, { fxAnim: 'bfy', anim: 'fly' },
+      { say: [['나비', '꽉 잡아! 텃밭 구경 시켜 줄게.']] },
+      { ride: { id: 'bfy', path: [Q(14.6, -69.4, 0.5), Q(12.0, -70.8, 0.8), Q(12.2, -74.2, 0.9), Q(15.6, -74.6, 0.7), Q(16.4, -71.0, 0.5), Q(14.7, -68.4, 0.15)], seg: 1.8, dy: 0.25, off: Q(14.9, -68.2) } },
+      { fxAnim: 'bfy', anim: 'open' }, { wander: ['bfy'], rect: [14.2, -69.0, 15.4, -67.8], speed: 0.15 },
+      { say: [['이야기', '나비 등에서 본 텃밭은 꽃 숲이었어요. 나비도 꿀벌처럼 꽃가루를 옮겨 줘요.']] },
+    ] },
+    { k: 'web', t: '🕸 거미줄에 걸린 꿀벌 구하기', h: '동쪽 거미줄 — 네 귀퉁이 매듭을 차례로 건드려 풀어요(위 매듭은 날아서!)', mark: 'web', start: { use: 'sb', label: '🕸 거미줄 살펴보기', r: 2.2 }, steps: [
+      { emote: 'sb', icon: '😣' },
+      { say: [['걸린 꿀벌', '살려 줘! 거미줄에 걸렸어. 귀퉁이 매듭 네 개를 왼쪽 위부터 시계 방향으로 풀어 줘!']] },
+      { seq: { ids: ['a1', 'a2', 'a3', 'a4'], goal: '🕸 매듭 풀기 — 왼쪽 위부터 시계 방향', show: true, r: 0.7, dy: 0.12, color: 0xffffff, wrong: '앗, 순서가 틀렸어요! 왼쪽 위부터 다시' } },
+      { fxDel: 'web' }, { fxDel: 'a1' }, { fxDel: 'a2' }, { fxDel: 'a3' }, { fxDel: 'a4' },
+      { fxMove: 'sb', to: Q(15.4, -69.4, 0.25), sec: 0.8, arc: 0.1 }, { emote: 'sb', icon: '😊' },
+      { say: [['구한 꿀벌', '풀려났다! 고마워. 거미도 나쁜 건 아니야. 해충을 잡아 주니까. 나는 이제 조심해서 다닐게!']] },
+      { wander: ['sb'], rect: [12.4, -71.2, 14.6, -69.6], speed: 0.25, fly: true },
+    ] },
+    { k: 'ants', t: '🐜 개미에게 빵 부스러기 갖다주기', h: '서쪽 개미굴 — 북쪽 꽃문 근처 빵 부스러기 셋을 모아 가요', mark: 'ah', start: { use: 'ah', label: '🐜 개미굴 살펴보기', r: 2.2 }, steps: [
+      { say: [['일개미', '안녕, 꿀벌 친구! 우리 저녁거리가 모자라. 꽃문 쪽에 빵 부스러기가 떨어져 있다던데…']] },
+      { catch: { ids: ['cr1', 'cr2', 'cr3'], goal: '🍞 빵 부스러기 모으기', r: 0.45, then: 'follow', d: 0.25 } },
+      { goal: '🐜 부스러기를 개미굴로', go: 'ah', label: '개미굴', r: 0.4 },
+      { fxMove: 'cr1', to: 'ah', sec: 0.5, wait: false }, { fxMove: 'cr2', to: 'ah', sec: 0.6, wait: false }, { fxMove: 'cr3', to: 'ah', sec: 0.7 },
+      { fxDel: 'cr1' }, { fxDel: 'cr2' }, { fxDel: 'cr3' },
+      { fxAnim: 'an1', anim: 'hop' }, { fxAnim: 'an2', anim: 'hop' }, { fxAnim: 'an3', anim: 'hop' }, { emote: 'an1', icon: '🎉' },
+      { say: [['일개미', '고마워! 개미는 무거운 것도 친구들과 힘을 합쳐 날라. 우리도 꿀벌처럼 일을 나눠 한단다.']] },
+    ] },
+    { k: 'rain', t: '🌧 버섯 우산으로 비 피하기', h: '남서쪽 빈 들판에 가면 비구름이 몰려와요', mark: Q(12.9, -74.6), start: { near: Q(12.9, -74.6), r: 1.4 }, steps: [
+      { fx: 'puff', id: 'rc', at: Q(12.8, -74.7, 1.2), s: 0.12, color: 0x8a96a8, pop: false }, { tone: [[110, 0, 0.6, 'sawtooth', 0.04, 70]] },
+      { banner: '🌧 소나기! 빗방울이 우리만큼 커요 — 버섯 우산 밑으로!', bannerSec: 2.4 },
+      { rain: { at: Q(12.8, -74.7, 0), r: 0.6, n: 40, color: 0x8fd3ff, size: 0.05, h: 1.0, puffs: 8 } },
+      { goal: '🍄 큰 버섯 밑으로 피해요', go: Q(12.4, -75.0), label: '버섯 우산', r: 0.22 },
+      { rain: { at: Q(12.6, -74.8, 0), r: 0.7, n: 40, color: 0x8fd3ff, size: 0.05, h: 1.0, puffs: 8 } },
+      { say: [['{mate}', '휴, 살았다! 우리한텐 빗방울 하나가 수박만 해. 꿀벌들이 비 오는 날 벌집에서 쉬는 이유를 알겠어.']] },
+      { fxDel: 'rc' },
+    ] },
+    { k: 'sunflower', t: '🌻 해바라기 꼭대기 오르기', h: '남서쪽 해바라기 — 옆 빨간 버섯을 밟고 날아올라요', mark: 'sf2', start: { near: Q(11.8, -73.8, 0.59), r: 0.7, dy: 0.12 }, steps: [
+      { banner: '🌻 해바라기 꼭대기! 텃밭이 한눈에 보여요', bannerSec: 2.6 },
+      { say: [['이야기', '해바라기 얼굴 가운데의 작은 점들은 하나하나가 아주 작은 꽃이에요. 꽃 수백 송이가 모여 해바라기 하나가 된 거예요!']] },
+    ] },
+  ],
+};
+// 이야기 단계에 발견 표시 · 탐험 무대 · 자유 탐험 넣기
+{
+  const S = STORY.steps, at = (pred) => S.findIndex(pred), ins = (i, ...a) => S.splice(i, 0, ...a);
+  ins(at(st => st.toast && /Space = 날기/.test(st.toast)) + 1, { found: 'shrink' });
+  ins(at(st => st.say && /8자로 날면/.test(JSON.stringify(st.say))) + 1, { found: 'waggle' });
+  ins(at(st => st.say && /진한 분홍 꽃/.test(JSON.stringify(st.say))), { found: 'work' });
+  ins(at(st => st.toast && /12초 동안/.test(st.toast)) + 1, { found: 'scent' });
+  const iq = at(st => st.chapter === 5);
+  ins(iq, { found: 'queen' },
+    // 탐험 무대(작은 세상)
+    { fx: 'water', id: 'pond', at: Q(15.6, -73.6, 0.01), w: 1.0, d: 0.7, static: true, pop: false },
+    { fx: 'flower', id: 'sf2', at: Q(11.8, -73.8), s: 0.62, color: 0xffd23c, pop: false }, { fx: 'shroom', id: 'm1', at: Q(12.25, -73.35), s: 0.35, pop: false },
+    { fx: 'shroom', id: 'm2', at: Q(12.4, -75.0), s: 0.9, color: 0x8d6e63, pop: false },
+    { solid: [[11.72, 0.25, -73.88, 11.88, 0.29, -73.72], [12.17, G, -73.43, 12.33, -0.05, -73.27], [12.25, 0.13, -75.15, 12.55, 0.17, -74.85]] },
+    { fx: 'flower', id: 'wf1', at: Q(11.9, -70.2), s: 0.3, color: 0xffffff, pop: false }, { fx: 'flower', id: 'wf2', at: Q(12.0, -71.4), s: 0.3, color: 0xffffff, pop: false }, { fx: 'flower', id: 'wf3', at: Q(12.6, -72.3), s: 0.3, color: 0xffffff, pop: false },
+    { fx: 'bee', id: 'lb', at: Q(15.4, -73.2, 0.1), s: 0.09, pop: false }, { wander: ['lb'], rect: [15.0, -74.2, 16.2, -73.0], speed: 0.15, fly: true },
+    { fx: 'larva', id: 'lv1', at: Q(13.22, -71.32), s: 0.5, pop: false }, { fx: 'larva', id: 'lv2', at: Q(13.8, -71.32), s: 0.5, pop: false }, { fx: 'larva', id: 'lv3', at: Q(13.5, -71.95), s: 0.5, pop: false },
+    { fx: 'honey', id: 'j1', at: Q(14.25, -71.85), s: 0.11, pop: false }, { fx: 'honey', id: 'j2', at: Q(14.35, -71.65), s: 0.11, pop: false }, { fx: 'honey', id: 'j3', at: Q(14.25, -71.45), s: 0.11, pop: false },
+    { fx: 'comb', id: 'wx1', at: Q(12.2, -69.5, 0.04), s: 0.5, anim: 'spin', pop: false }, { fx: 'comb', id: 'wx2', at: Q(15.2, -70.4, 0.04), s: 0.5, anim: 'spin', pop: false }, { fx: 'comb', id: 'wx3', at: Q(14.9, -72.8, 0.04), s: 0.5, anim: 'spin', pop: false },
+    { fx: 'comb', id: 'wx4', at: Q(11.7, -72.6, 0.04), s: 0.5, anim: 'spin', pop: false }, { fx: 'comb', id: 'wx5', at: Q(13.2, -68.6, 0.04), s: 0.5, anim: 'spin', pop: false }, { fx: 'comb', id: 'wx6', at: Q(16.0, -72.0, 0.04), s: 0.5, anim: 'spin', pop: false },
+    { fx: 'drop', id: 'dw', at: Q(15.2, -73.3), s: 0.5, pop: false },
+    { fx: 'butterfly', id: 'bfy', at: Q(14.8, -68.4, 0.08), s: 1, anim: 'open', pop: false }, { wander: ['bfy'], rect: [14.2, -69.0, 15.4, -67.8], speed: 0.15 },
+    { fx: 'web', id: 'web', at: Q(15.8, -69.0), s: 0.25, pop: false }, { fx: 'bee', id: 'sb', at: Q(15.8, -69.02, 0.12), s: 0.08, anim: 'hurt', pop: false },
+    { fx: 'drop', id: 'a1', at: Q(15.6, -69.0, 0.28), s: 0.3, pop: false }, { fx: 'drop', id: 'a2', at: Q(16.0, -69.0, 0.28), s: 0.3, pop: false }, { fx: 'drop', id: 'a3', at: Q(16.0, -69.0, 0.0), s: 0.3, pop: false }, { fx: 'drop', id: 'a4', at: Q(15.6, -69.0, 0.0), s: 0.3, pop: false },
+    { fx: 'mud', id: 'ah', at: Q(11.6, -68.6, 0.003), s: 0.12, pop: false },
+    { fx: 'ant', id: 'an1', at: Q(11.5, -68.9), s: 1.6, pop: false }, { fx: 'ant', id: 'an2', at: Q(11.8, -68.4), s: 1.6, pop: false }, { fx: 'ant', id: 'an3', at: Q(11.4, -68.3), s: 1.6, pop: false },
+    { wander: ['an1', 'an2', 'an3'], rect: [11.2, -69.4, 12.2, -68.1], speed: 0.12 },
+    { fx: 'seed', id: 'cr1', at: Q(12.8, -67.8), s: 0.6, pop: false }, { fx: 'seed', id: 'cr2', at: Q(14.6, -67.6), s: 0.6, pop: false }, { fx: 'seed', id: 'cr3', at: Q(13.4, -67.2), s: 0.6, pop: false },
+    { say: [
+      ['여왕벌', '이제 꿀벌 세계를 마음껏 둘러보렴. 우리 세계엔 아직 신기한 일이 많단다.'],
+      ['이야기', '🔎 꿀벌 세계의 신기한 일 16가지! B = 목록 · 지도의 노란 ? = 힌트 · F 🌼 꽃가루 · R 💃 8자 춤 · Space 날기 · 다 둘러보면 큰 꽃문(북쪽)으로 나가요.'],
+    ] },
+    { free: true },
+    { sandbox: true });
+}

@@ -265,7 +265,8 @@ export default async function start(map, params = {}) {
   function whereOf(t, st = {}) {   // 자리 → {x,y,z,h}
     const me = map.player.get();
     let p = null, h = st.h;
-    if (t === 'me' || t == null) p = { x: me.x, y: me.y, z: me.z, h: me.h };
+    if (typeof t === 'string' && FX.has(t)) { const o9 = FX.get(t); p = { x: o9.x, y: o9.y, z: o9.z }; h = h ?? o9.h; }
+    else if (t === 'me' || t == null) p = { x: me.x, y: me.y, z: me.z, h: me.h };
     else if (typeof t === 'string' && /^(head|hand|feet):/.test(t)) { const [k, n] = [t.slice(0, t.indexOf(':')), t.slice(t.indexOf(':') + 1)];
       const isMe = n === 'me' || n === ME, q = isMe ? { x: me.x, y: me.y, z: me.z, h: me.h } : npcAt(n) && { ...npcAt(n), h: (map.npc.get(n) || {}).face ?? 0 }, s9 = isMe ? SC : actorScaleOf(n);
       if (!q) return null; const hr = (q.h || 0) * Math.PI / 180;
@@ -282,7 +283,7 @@ export default async function start(map, params = {}) {
     const old = FX.get(id); if (old) { FXROOT.remove(old.g); FX.delete(id); }
     const g = new T3.Group(), R = {}; MODEL[kind](g, R, st); const s = st.s || 1; g.scale.setScalar(s);
     const o = { id, kind, g, R, x: at.x, y: at.y, z: at.z, h: at.h || 0, s, anim: st.anim || g.userData.anim || 'idle', t: Math.random() * 6, mv: null, hold: null, pop: 0 };
-    FXROOT.add(g); FX.set(id, o); fxPlace(o); if (st.static) mergeStatic(g); return o;
+    FXROOT.add(g); FX.set(id, o); fxPlace(o); if (!st.noMerge) mergeStatic(g, st.static ? [] : Object.values(R).flat().filter(v => v && v.isObject3D)); return o;   // 그리기 수: 벌 한 마리 25 → 7
   }
   function fxPlace(o) { o.g.position.set(o.x, o.y, o.z); o.g.rotation.y = -o.h * Math.PI / 180; }
   // 알갱이(펑·가루·빛) — 점 묶음 하나 · 1~1.8초 뒤 치움
@@ -329,19 +330,24 @@ export default async function start(map, params = {}) {
   const lerp = (a, b, k) => a + (b - a) * k, ease = k => k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
   let chaseR = null;
   function fxTick(dt) {
+    sbTick(dt);
     if (BODY) { const me = map.player.get(), o = BODY.o, d = Math.hypot(me.x - BODY.lx, me.z - BODY.lz), gy = map.player.groundAt(me.x, me.z, me.y + 0.05), air = gy != null && isFinite(gy) && me.y - gy > 0.08 * Math.max(SC, 0.2);
-      o.x = me.x; o.y = me.y; o.z = me.z; o.h = me.h; o.s = BODY.base * SC; o.anim = air && o.R.wings ? 'fly' : d > 0.0005 ? 'walk' : 'idle'; BODY.lx = me.x; BODY.lz = me.z;
-      if (o.R.wingHide) o.R.wings.forEach((w, k) => { w.visible = air; w.rotation.y = (k ? -1 : 1) * (0.35 + Math.sin(o.t * 12) * 0.35); }); }
+      o.x = me.x; o.y = me.y; o.z = me.z; o.h = me.h; o.s = BODY.base * SC; o.anim = BODY.pose && d < 0.0005 ? BODY.pose : air && o.R.wings ? 'fly' : d > 0.0005 ? 'walk' : 'idle';   // pose = 내 몸 자세(잠) — 움직이면 풀림 BODY.lx = me.x; BODY.lz = me.z;
+      if (o.R.wingHide) o.R.wings.forEach((w, k) => { w.visible = air; w.rotation.y = (k ? -1 : 1) * (0.35 + Math.sin(o.t * 12) * 0.35); });
+      if (o.act) { o.act.t += dt; const t9 = o.act.t, R9 = o.R; if (o.act.k === 'swing' && R9.tool) { R9.tool.rotation.z = Math.sin(t9 * 22) * 0.7; if (R9.arms) R9.arms[0].rotation.x = -1.2; } else if (o.act.k === 'sing' && R9.arms) R9.arms.forEach((a, k) => { a.rotation.x = -2.3 + Math.sin(t9 * 10 + k) * 0.2; }); else if (R9.arms) R9.arms[1].rotation.x = -1.4; else if (R9.head) R9.head.rotation.x = -0.45;
+        if (t9 > 0.8) { o.act = null; if (R9.tool) R9.tool.rotation.z = 0; if (R9.arms) R9.arms.forEach(a => { a.rotation.x = 0; }); if (R9.head) R9.head.rotation.x = 0; } } }
     for (const o of FX.values()) {
       o.t += dt; const R = o.R, t = o.t; o.moving = false;
       if (o.wd && !o.mv && !o.hold) { const w = o.wd; if (w.wait > 0) w.wait -= dt; else { const dx = w.tx - o.x, dz = w.tz - o.z, d = Math.hypot(dx, dz);
         if (d < 0.05) { w.tx = w.r[0] + Math.random() * (w.r[2] - w.r[0]); w.tz = w.r[1] + Math.random() * (w.r[3] - w.r[1]); w.wait = 0.4 + Math.random() * 2.2; } else { const s9 = Math.min(d, w.sp * dt); o.x += dx / d * s9; o.z += dz / d * s9; o.h = (Math.atan2(dx, -dz) * 180 / Math.PI + 360) % 360; o.moving = true; } } }
+      if (o.flee && !o.mv && !o.hold) { const me = map.player.get(), dx = o.x - me.x, dz = o.z - me.z, d = Math.hypot(dx, dz); if (d < o.flee.range && d > 1e-3) { const s9 = o.flee.sp * dt; o.x += dx / d * s9; o.z += dz / d * s9; if (o.wd) { const r = o.wd.r; o.x = Math.max(r[0], Math.min(r[2], o.x)); o.z = Math.max(r[1], Math.min(r[3], o.z)); o.wd.tx = o.x; o.wd.tz = o.z; o.wd.wait = 0.3; } o.h = (Math.atan2(dx, -dz) * 180 / Math.PI + 360) % 360; o.moving = true; } }
+      if (o.sTo != null) { o.s += (o.sTo - o.s) * Math.min(1, dt * (o.sRate || 2.5)); if (Math.abs(o.sTo - o.s) < 0.002) { o.s = o.sTo; o.sTo = null; } }
       if (o.fol && !o.mv && !o.hold) { const me = map.player.get(), hr = me.h * Math.PI / 180, F = o.fol, back = F.d * (1 + 0.5 * (F.k >> 1)), side = (F.k % 2 ? 1 : -1) * F.d * 0.55, tx = me.x - Math.sin(hr) * back + Math.cos(hr) * side, tz = me.z + Math.cos(hr) * back + Math.sin(hr) * side, dx = tx - o.x, dz = tz - o.z, d = Math.hypot(dx, dz);
         if (d > F.d * 4) { o.x = tx; o.z = tz; } else if (d > F.d * 0.25) { const s9 = Math.min(d, F.sp * dt * Math.min(1.6, d / F.d + 0.4)); o.x += dx / d * s9; o.z += dz / d * s9; o.h = (Math.atan2(dx, -dz) * 180 / Math.PI + 360) % 360; o.moving = true; }
         const gy = map.player.groundAt(o.x, o.z, me.y + 0.4); o.y += ((gy != null && isFinite(gy) && Math.abs(gy - me.y) < 0.8 ? gy : me.y) - o.y) * Math.min(1, dt * 8); }
       if (o.anim === 'waggle') { if (!o.wb) o.wb = { x: o.x, z: o.z }; const a = t * 2.4, px = o.x; o.x = o.wb.x + Math.sin(a) * 0.9 * o.s; o.z = o.wb.z + Math.sin(2 * a) * 0.45 * o.s; o.h = (Math.atan2(o.x - px, -(Math.cos(2 * a))) * 180 / Math.PI + 360) % 360; } else if (o.wb) { o.x = o.wb.x; o.z = o.wb.z; o.wb = null; }
       if (o.g.userData.spinner) { if (R.ring) R.ring.rotation.y += dt * 1.6; else o.h = (o.h + 50 * dt) % 360; }
-      if (R.head && o.kind === 'capy') R.head.rotation.x = o.anim === 'sleep' ? 0.45 : o.anim === 'eat' ? 0.3 + Math.abs(Math.sin(t * 6)) * 0.25 : 0;
+      if (R.head && o.kind === 'capy' && !o.act) R.head.rotation.x = o.anim === 'sleep' ? 0.45 : o.anim === 'eat' ? 0.3 + Math.abs(Math.sin(t * 6)) * 0.25 : 0;
       if (o.mv) { const m = o.mv; m.k = Math.min(1, m.k + dt / m.sec); const e = ease(m.k); o.x = lerp(m.a.x, m.b.x, e); o.z = lerp(m.a.z, m.b.z, e); o.y = lerp(m.a.y, m.b.y, e) + (m.arc ? Math.sin(Math.PI * m.k) * m.arc : 0);
         if (m.face) o.h = (Math.atan2(m.b.x - m.a.x, -(m.b.z - m.a.z)) * 180 / Math.PI + 360) % 360; if (m.k >= 1) { o.mv = null; m.done(); } }
       if (o.hold) { const hd = o.holdAt === 'head', p = whereOf((hd ? 'head:' : 'hand:') + o.hold); if (p) { o.x = p.x; o.y = hd ? p.y : p.y - (o.kind === 'stick' ? 0.12 : 0.01) * o.s; o.z = p.z; if (!hd) o.h = p.h; } }
@@ -384,7 +390,7 @@ export default async function start(map, params = {}) {
   }
   function fxStop() { for (const o of FX.values()) FXROOT.remove(o.g); FX.clear(); for (const p of PUFF) { FXROOT.remove(p.pt); p.pt.geometry.dispose(); p.pt.material.dispose(); } PUFF.length = 0;
     for (const e of EMO) { FXROOT.remove(e.sp); e.sp.material.map && e.sp.material.map.dispose(); e.sp.material.dispose(); } EMO.length = 0;
-    for (const im of GRASS) { FXROOT.remove(im); im.dispose(); } GRASS.length = 0; for (const d of FXDISP) d.dispose && d.dispose(); clearTimeout(physT); if (SC !== 1 || PHYS) map.player.scale(1); removeEventListener('keydown', bookKey, true); removeEventListener('keyup', bookKey, true); if (bookEl) { bookEl.remove(); bookEl = null; } }
+    for (const im of GRASS) { FXROOT.remove(im); im.dispose(); } GRASS.length = 0; for (const d of FXDISP) d.dispose && d.dispose(); clearTimeout(physT); if (SC !== 1 || PHYS) map.player.scale(1); removeEventListener('keydown', bookKey, true); removeEventListener('keyup', bookKey, true); if (bookEl) { bookEl.remove(); bookEl = null; } removeEventListener('keydown', sbKey, true); if (discEl) { discEl.remove(); discEl = null; } RIDE = HOP = null; }
   // 이야기 칸 하나 실행(runSteps가 부름) — 기다릴 것이 있으면 Promise
   async function fxStep(st) {
     await worldStep(st);
@@ -423,6 +429,7 @@ export default async function start(map, params = {}) {
     if (st.use) { const o = FX.get(st.use); if (o) { objective(st.goal || '살펴봐요', { x: o.x, y: o.y, z: o.z }, st.label || ''); await waitUse({ x: o.x, y: o.y, z: o.z }, st.label || '🔍 살펴보기', st.r || 1.6 * RS()); objective(null); map.sfx('ding'); } }
     if (st.chase) { const o = FX.get(st.chase); if (o) { if (st.goal) map.hud.goal(st.goal); map.player.freeze(false); const caught = await new Promise(res => { chaseR = { o, speed: st.speed || 1.6, sec: st.sec || 12, catchR: st.catchR || 0.22, t: 0, done: res }; });
       map.hud.goal(null); map.sfx(caught ? 'buzz' : 'tick'); VARS.caught = { i: caught ? 1 : 0, label: caught ? '잡힘' : '시간' }; } }
+    await mechStep(st);
   }
   // ---------- WORLD-FX(10-07 교사 '세계 만들기 3·4·5번 판 — 학교처럼 · 세계관을 탄탄하게 · 아이들 시야가 넓어지게') ----------
   //   새 모양: bee·queen·hive·flower·honey · nyonyo·fairyK·fairyC·cloud·castle·stage·house·shop·bush·tidy·portal · capy·potion·keeper·pen·food
@@ -442,7 +449,7 @@ export default async function start(map, params = {}) {
   Object.assign(MODEL, {
     bee(g, R, st = {}) {   // 꿀벌 ≈ 1m(아이들 말 '꿀벌도 내가 작아진 만큼 작아진다' — 나와 비슷한 크기) · 노랑·검정 줄 · 날개 펄럭
       const q = st.queen ? 1.6 : 1; const b = pivot(g, [0, 0.55 * q, 0]); b.scale.setScalar(q);
-      PT(b, 's', 0xf4c430, [0, 0, 0.12], [0.3, 0.28, 0.42]); for (const z of [0.0, 0.22]) PT(b, 'c', 0x2b2b2b, [0, 0, z], [0.305, 0.07, 0.305], [Math.PI / 2, 0, 0]);
+      PT(b, 's', st.color || 0xf4c430, [0, 0, 0.12], [0.3, 0.28, 0.42]); for (const z of [0.0, 0.22]) PT(b, 'c', st.stripe || 0x2b2b2b, [0, 0, z], [0.305, 0.07, 0.305], [Math.PI / 2, 0, 0]);   // color·stripe = 말벌 등
       PT(b, 'k', 0x2b2b2b, [0, -0.02, 0.58], [0.06, 0.14, 0.06], [-Math.PI / 2, 0, 0]);
       PT(b, 's', 0x3b2a14, [0, 0.06, -0.38], [0.22, 0.22, 0.22]); EYE(b, 0.09, 0.1, -0.55, 0.06); EYE(b, -0.09, 0.1, -0.55, 0.06);
       for (const sd of [-1, 1]) { PT(b, 'c', 0x2b2b2b, [sd * 0.07, 0.3, -0.5], [0.012, 0.22, 0.012], [-0.5, 0, sd * 0.35]); PT(b, 's', 0x2b2b2b, [sd * 0.1, 0.4, -0.56], [0.03, 0.03, 0.03]); }
@@ -468,8 +475,8 @@ export default async function start(map, params = {}) {
     },
     honey(g, R) { PT(g, 's', 0xf2a516, [0, 0.12, 0], [0.12, 0.12, 0.12], null, { transparent: true, opacity: 0.9 }); PT(g, 'c', 0xf2a516, [0, 0.23, 0], [0.06, 0.04, 0.06]); PT(g, 'c', 0x8b5a2b, [0, 0.27, 0], [0.07, 0.03, 0.07]); R.top = 0.32; },
     nyonyo(g, R, st = {}) {   // 뇨뇨(아이들 그림 말) ≈ 0.7m — 동그랗고 · 과일 색 · 머리 위 초록 새싹 · 점눈 · 웃음 · 팔다리는 선
-      const c = st.color != null ? st.color : 0xfafafa, b = pivot(g, [0, 0, 0]); R.body = b;
-      PT(b, 's', c, [0, 0.42, 0], [0.3, 0.29, 0.3]); PT(b, 'c', 0x4caf50, [0, 0.75, 0], [0.02, 0.09, 0.02]);
+      const c = st.color != null ? st.color : 0xfafafa, b = pivot(g, [0, 0, 0]);
+      PT(b, 's', c, [0, 0.42, 0], [0.3, 0.29, 0.3], null, st.ghost ? { transparent: true, opacity: 0.5, emissive: 0x2a4a6a } : null); PT(b, 'c', 0x4caf50, [0, 0.75, 0], [0.02, 0.09, 0.02]);
       for (const sd of [-1, 1]) PT(b, 's', 0x66bb6a, [sd * 0.07, 0.8, 0], [0.08, 0.02, 0.045], [0, 0, sd * 0.4]);
       for (const sd of [-1, 1]) PT(b, 's', 0x161616, [sd * 0.09, 0.48, -0.27], [0.03, 0.035, 0.02]);
       PT(b, 'b', 0x161616, [0, 0.38, -0.285], [0.1, 0.018, 0.01]); for (const sd of [-1, 1]) PT(b, 's', 0xff9aa2, [sd * 0.17, 0.39, -0.23], [0.04, 0.025, 0.01], null, { transparent: true, opacity: 0.7 });
@@ -546,10 +553,11 @@ export default async function start(map, params = {}) {
     puff(g, R, st = {}) { const c = st.color || 0x7ab8ff; for (let k = 0; k < 6; k++) { const a = k * 1.05; PT(g, 's', c, [Math.cos(a) * 3.2, (k % 2) * 0.8, Math.sin(a) * 2.2], [3, 1.8, 3]); } PT(g, 's', c, [0, 0.8, 0], [4, 2.4, 4]); },
   });
   function o9(g) { return g.userData; }   // 모양이 정하는 기본 몸짓(fxMake가 읽음)
-  function mergeStatic(g) {   // 움직이지 않는 큰 모양(성·무대·집·구름) = 색마다 메시 하나(그리기 수 줄임)
-    g.updateMatrixWorld(true); const inv = new T3.Matrix4().copy(g.matrixWorld).invert(), M9 = new T3.Matrix4(), by = new Map();
-    g.traverse(m => { if (!m.isMesh) return; const q = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone(); q.applyMatrix4(M9.multiplyMatrices(inv, m.matrixWorld)); const L = by.get(m.material) || []; L.push(q); by.set(m.material, L); });
-    for (const c of [...g.children]) g.remove(c);
+  function mergeStatic(g, keep) {   // 움직이지 않는 부분 = 색마다 메시 하나(그리기 수 줄임) · keep = 움직이는 부품(날개·다리·머리…)은 그대로
+    g.updateMatrixWorld(true); const inv = new T3.Matrix4().copy(g.matrixWorld).invert(), M9 = new T3.Matrix4(), by = new Map(), KS = new Set(keep || []), gone9 = [];
+    const kept = m => { for (let a = m; a && a !== g; a = a.parent) if (KS.has(a)) return true; return false; };
+    g.traverse(m => { if (!m.isMesh || kept(m)) return; gone9.push(m); const q = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone(); q.applyMatrix4(M9.multiplyMatrices(inv, m.matrixWorld)); const L = by.get(m.material) || []; L.push(q); by.set(m.material, L); });
+    for (const m of gone9) m.parent.remove(m);
     for (const [mat, L] of by) { let n = 0; for (const q of L) n += q.attributes.position.count; const P = new Float32Array(n * 3), N = new Float32Array(n * 3); let o = 0;
       for (const q of L) { P.set(q.attributes.position.array, o * 3); N.set(q.attributes.normal.array, o * 3); o += q.attributes.position.count; q.dispose(); }
       const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.BufferAttribute(P, 3)); geo.setAttribute('normal', new T3.BufferAttribute(N, 3)); geo.computeBoundingSphere(); FXDISP.push(geo); g.add(new T3.Mesh(geo, mat)); }
@@ -607,7 +615,133 @@ export default async function start(map, params = {}) {
     if (st.tone) for (const a of st.tone) map.tone(...a);
     if (st.book != null) await openBook(st.book === true ? 0 : st.book);
   }
-  const FXKEYS = ['setv', 'body', 'phys', 'solid', 'arena', 'wander', 'follow', 'rain', 'tone', 'book', 'fx', 'fxAnim', 'fxDel', 'hold', 'fxMove', 'morph', 'powder', 'glow', 'shrink', 'grow', 'grass', 'act', 'emote', 'circle', 'line', 'free', 'stay', 'time', 'fxShow', 'fxFace', 'banner', 'grassOff', 'dark', 'use', 'chase'];
+  // ---------- SANDBOX(10-07 교사 '깊이는 마법사 마을이 최소 기준 · E만 누르는 퀘스트 말고 장수풍뎅이처럼 보이는 모습 · 40분 고민했는데 3분이면 허무') ----------
+  //   D.sandbox = { title, disc:[{k, t, h, mark, need, after, start:{use|at|near|skill, on, r, label}, steps}], acts:[{…같은 꼴 · 발견 아님}], skills:[{k, key, icon, name, need, color, anim, emote, tone, steps}], exit:{use|at, label} }
+  //   새 칸(몸으로 하는 일): carry(머리에 이고 나르기) · catch(도망가는 것 잡기) · ride(타고 날기) · hop(포물선으로 날아가기) · seq(차례대로 닿기) · fxScale(자라기) · waitSkill(능력 쓰기) ·
+  //          spawn(여러 개 뿌리기) · found(발견 표시) · sayOne(여러 말 중 하나) · tpBy(고른 곳으로 순간이동) · skills(능력 켜기) · sandbox(자유 탐험 — 나가기까지)
+  Object.assign(MODEL, {
+    berry(g, R) { PT(g, 'k', 0xe53950, [0, 0.12, 0], [0.11, 0.2, 0.11], [Math.PI, 0, 0]); PT(g, 's', 0xe53950, [0, 0.19, 0], [0.11, 0.07, 0.11]); for (let k = 0; k < 5; k++) { const a = k * 1.2566; PT(g, 's', 0x4caf50, [Math.cos(a) * 0.06, 0.25, Math.sin(a) * 0.06], [0.05, 0.012, 0.025], [0, -a, 0]); } for (let k = 0; k < 8; k++) PT(g, 's', 0xffe066, [Math.cos(k * 0.8) * 0.085, 0.13 + (k % 3) * 0.03, Math.sin(k * 0.8) * 0.085], [0.008, 0.008, 0.008]); R.top = 0.3; },
+    larva(g, R) { for (let k = 0; k < 4; k++) PT(g, 's', 0xfff8e1, [Math.cos(k * 0.7) * 0.06, 0.05, Math.sin(k * 0.7) * 0.06], [0.05, 0.045, 0.045]); EYE(g, 0.02, 0.07, -0.0, 0.01); R.top = 0.12; },
+    drop(g, R) { PT(g, 's', 0x8fd3ff, [0, 0.1, 0], [0.08, 0.1, 0.08], null, { transparent: true, opacity: 0.75, emissive: 0x0d3b57 }); PT(g, 'k', 0x8fd3ff, [0, 0.2, 0], [0.05, 0.08, 0.05], null, { transparent: true, opacity: 0.75 }); R.top = 0.26; o9(g).spinner = true; },
+    web(g, R) { const c = 0xf2f2f2; R.th = []; for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; R.th.push(PT(g, 'c', c, [Math.cos(a) * 0.4, 0.8 + Math.sin(a) * 0.4, 0], [0.006, 0.8, 0.006], [0, 0, a + Math.PI / 2])); }
+      for (const r of [0.15, 0.3, 0.45, 0.6]) PT(g, 't', c, [0, 0.8, 0], [r, r, 0.05], null, { transparent: true, opacity: 0.85 }); for (const x of [-0.8, 0.8]) PT(g, 'c', 0x6b4423, [x, 0.6, 0], [0.04, 1.2, 0.04]); R.top = 1.5; },
+    shroom(g, R, st = {}) { PT(g, 'c', 0xf5ecd7, [0, 0.25, 0], [0.12, 0.5, 0.12]); PT(g, 's', st.color || 0xe53935, [0, 0.52, 0], [0.4, 0.2, 0.4]); for (let k = 0; k < 6; k++) { const a = k * 1.05; PT(g, 's', 0xffffff, [Math.cos(a) * 0.24, 0.6, Math.sin(a) * 0.24], [0.06, 0.03, 0.06]); } R.top = 0.75; },
+    comb(g, R) { const m = PT(g, 'c', 0xf2b233, [0, 0.06, 0], [0.12, 0.12, 0.12]); m.geometry = FG.h; PT(g, 'c', 0xd9901a, [0, 0.121, 0], [0.09, 0.002, 0.09]); R.top = 0.15; },
+    bird(g, R, st = {}) { const c = st.color || 0x6d8bd1; PT(g, 's', c, [0, 0.12, 0.02], [0.08, 0.07, 0.11]); PT(g, 's', c, [0, 0.19, -0.07], [0.055, 0.055, 0.055]); EYE(g, 0.03, 0.21, -0.11, 0.012); EYE(g, -0.03, 0.21, -0.11, 0.012);
+      PT(g, 'k', 0xffb300, [0, 0.19, -0.13], [0.018, 0.04, 0.018], [-Math.PI / 2, 0, 0]); PT(g, 'b', c, [0, 0.13, 0.13], [0.06, 0.015, 0.08]);
+      R.wings = [-1, 1].map(sd => { const w = pivot(g, [sd * 0.06, 0.15, 0.02]); PT(w, 's', 0xffffff, [sd * 0.07, 0, 0], [0.08, 0.01, 0.05]); return w; }); for (const sd of [-1, 1]) PT(g, 'c', 0xffb300, [sd * 0.03, 0.03, 0.02], [0.006, 0.06, 0.006]); R.top = 0.28; },
+    orange(g, R) { PT(g, 's', 0xff9f1a, [0, 0.12, 0], [0.12, 0.11, 0.12]); PT(g, 's', 0x4caf50, [0.03, 0.235, 0], [0.04, 0.01, 0.02]); R.top = 0.26; },
+    plank(g, R) { PT(g, 'b', 0xb5834f, [0, 0.03, 0], [0.9, 0.06, 0.18]); for (const x of [-0.3, 0.3]) PT(g, 's', 0x5a3a22, [x, 0.065, 0], [0.015, 0.008, 0.015]); R.top = 0.1; },
+    leafpile(g, R) { for (let k = 0; k < 9; k++) { const a = k * 0.7; PT(g, 's', [0xd9822b, 0xc0392b, 0xf1c40f][k % 3], [Math.cos(a) * 0.12 * (k % 3), 0.06 + (k % 4) * 0.025, Math.sin(a) * 0.12 * (k % 2)], [0.14, 0.04, 0.09], [0, a, 0.3]); } R.top = 0.2; },
+    mud(g, R) { PT(g, 'c', 0x6d4c33, [0, 0.015, 0], [1.2, 0.03, 0.9]); for (let k = 0; k < 5; k++) PT(g, 's', 0x5a3d28, [Math.cos(k) * 0.6, 0.03, Math.sin(k) * 0.4], [0.18, 0.04, 0.12]); },
+    spring(g, R) { for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; PT(g, 's', 0x9e9e9e, [Math.cos(a) * 1.1, 0.12, Math.sin(a) * 1.1], [0.3, 0.2, 0.3]); } R.water = PT(g, 'c', 0x9fe3e6, [0, 0.08, 0], [1.05, 0.06, 1.05], null, { transparent: true, opacity: 0.85 }); R.top = 0.4; },
+    stone(g, R, st = {}) { PT(g, 'c', st.color || 0xb0b0b0, [0, 0.08, 0], [0.55, 0.16, 0.5]); R.top = 0.18; },
+    sprout(g, R) { PT(g, 'c', 0x5cbf60, [0, 0.12, 0], [0.02, 0.24, 0.02]); for (const sd of [-1, 1]) PT(g, 's', 0x66bb6a, [sd * 0.07, 0.25, 0], [0.08, 0.02, 0.05], [0, 0, sd * 0.4]); PT(g, 'c', 0x7a5230, [0, 0.01, 0], [0.22, 0.02, 0.22]); R.top = 0.32; },
+    seed(g, R) { PT(g, 's', 0x8d6e63, [0, 0.06, 0], [0.06, 0.05, 0.09]); R.top = 0.12; },
+    gift(g, R, st = {}) { PT(g, 'b', st.color || 0xff6fa8, [0, 0.12, 0], [0.24, 0.24, 0.24]); PT(g, 'b', 0xffd23c, [0, 0.12, 0], [0.26, 0.25, 0.05]); PT(g, 'b', 0xffd23c, [0, 0.12, 0], [0.05, 0.25, 0.26]); PT(g, 's', 0xffd23c, [0, 0.27, 0], [0.06, 0.04, 0.06]); R.top = 0.32; },
+    rainbow(g, R) { [0xe53935, 0xff9800, 0xffeb3b, 0x4caf50, 0x2196f3, 0x7e57c2].forEach((c, k) => { const geo = new T3.TorusGeometry(4 - k * 0.32, 0.16, 6, 28, Math.PI); FXDISP.push(geo); const m = new T3.Mesh(geo, fxMat(c, { emissive: 0x222222 })); g.add(m); }); R.top = 4.2; },
+    bucket(g, R) { PT(g, 'c', 0x4fc3f7, [0, 0.12, 0], [0.14, 0.24, 0.14]); PT(g, 'c', 0x8fd3ff, [0, 0.235, 0], [0.12, 0.01, 0.12]); PT(g, 't', 0x546e7a, [0, 0.3, 0], [0.12, 0.12, 0.12], [0, 0, 0]); R.top = 0.36; },
+  });
+  let SB = null, RIDE = null, HOP = null, SKCD = 0, SKON = false, discEl = null;
+  const WAIT = new Set();
+  const FOUND = new Set(map.store.get('found.' + EP.id, []) || []);
+  const discAll = () => (D.sandbox && D.sandbox.disc) || [];
+  const nFound = () => discAll().filter(d => FOUND.has(d.k)).length;
+  const cond = (o) => !o || Object.entries(o).every(([k, v]) => (VARS[k] ? VARS[k].i : -1) === v);
+  const avail = (d) => cond(d.need) && (d.after || []).every(k => FOUND.has(k));
+  const posOf = (t) => (t == null ? null : whereOf(t, {}));
+  const until = (fn, ms = 100) => new Promise(res => { const iv = setInterval(() => { let ok = false; try { ok = dead || fn(); } catch (e) { console.error(e); ok = true; } if (ok) { clearInterval(iv); res(); } }, ms); });
+  const nearP = (T, r, dy) => { const me = map.player.get(); return Math.hypot(T.x - me.x, T.z - me.z) < r && Math.abs(T.y - me.y) < (dy || Math.max(1.2 * Math.max(SC, 0.3), r)); };
+  function moveFx(o, b, sec, arc = 0, face = true) { return new Promise(res => { o.mv = { a: { x: o.x, y: o.y, z: o.z }, b, k: 0, sec, arc, face, done: res }; }); }
+  function discover(k, quiet) { if (!k || FOUND.has(k)) return; FOUND.add(k); map.store.set('found.' + EP.id, [...FOUND]); const d = discAll().find(x => x.k === k); sbChip(); sbMarks();
+    if (!quiet && d) { const me = map.player.get(); particles(me.x, me.y + 1.1 * SC, me.z, { color: 0xffd66b, n: 70, r: 0.7 * SC, speed: 0.6 * SC, size: 0.09 * Math.sqrt(SC), life: 1.5 }); map.sfx('done'); map.hud.toast('📖 새 발견! ' + d.t + ' (' + nFound() + '/' + discAll().length + ')', 4); } }
+  function sbChip() { if (!D.sandbox || !SB) return; map.hud.chip('st-d', '🔎 신기한 일 ' + nFound() + '/' + discAll().length + ' (B)', { onClick: () => openDisc() }); }
+  function sbMarks() { if (!SB) return; extra = discAll().filter(d => d.mark && !FOUND.has(d.k) && avail(d)).map(d => { const p = posOf(d.mark); return p && { x: p.x, z: p.z, color: '#ffd23c', label: '?' }; }).filter(Boolean); marks(); }
+  function sbSkills() { const L = (D.sandbox && D.sandbox.skills) || []; L.forEach((sk, i) => map.hud.chip('st-k' + i, SKON && cond(sk.need) ? sk.icon + ' ' + sk.name + ' (' + sk.key.replace('Key', '') + ')' : null, SKON && cond(sk.need) ? { onClick: () => useSkill(sk) } : undefined)); }
+  function openDisc() { if (!D.sandbox || talk || bookEl || discEl) return; if (!document.getElementById('story-book-css')) { const s9 = document.createElement('style'); s9.id = 'story-book-css'; s9.textContent = BCSS; document.head.appendChild(s9); }
+    document.exitPointerLock?.(); map.player.freeze(true); const esc9 = x => String(x).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])), L = discAll();
+    discEl = document.createElement('div'); discEl.id = 'story-book'; discEl.className = 'ttl-keep';
+    discEl.innerHTML = '<div class="bk"><div class="hd"><b>🔎 ' + esc9(D.sandbox.title || '신기한 일') + '</b><span>' + nFound() + ' / ' + L.length + '</span></div><div class="pg"><div class="lg">찾은 것은 ✅ · 아직 못 찾은 것은 ❓ 힌트(지도에 노란 ? 표시)</div><ul>'
+      + L.map(d => '<li class="' + (FOUND.has(d.k) ? 'k' : avail(d) ? 'a' : 's') + '"><i>' + (FOUND.has(d.k) ? '✅' : avail(d) ? '❓' : '🔒') + '</i>' + esc9(FOUND.has(d.k) ? d.t : (avail(d) ? d.t.replace(/^(\S+)\s.*$/, '$1 ') + '— ' + d.h : '나중에 열려요 — ' + (d.lock || d.h))) + '</li>').join('')
+      + '</ul></div><div class="ft"><span class="dots">B 또는 ✕로 닫기</span><button data-b="x" class="go">닫기 ✓</button></div></div>';
+    discEl.addEventListener('click', e => { e.stopPropagation(); if (e.target === discEl || e.target.closest('[data-b]')) closeDisc(); }); document.body.appendChild(discEl); map.sfx('tick'); }
+  function closeDisc() { if (!discEl) return; discEl.remove(); discEl = null; map.player.freeze(false); }
+  async function runDisc(d) { if (!SB || SB.busy || talk || bookEl || discEl) return; SB.busy = d.k || 'act'; sbArm(false);
+    try { await runSteps(d.steps || [], false); } catch (e) { console.error('[이야기] 발견', d.k, e); }
+    if (gone()) return; SB.busy = null; objective(null); map.player.freeze(false); if (d.k && !d.act && !SB.cancel) discover(d.k); SB.cancel = false; sbSkills(); sbArm(true); }
+  function sbArm(on) { if (!SB) return; for (const h of SB.hs) h.h.remove(); SB.hs = []; if (!on) return;
+    const add = (d, s, label) => { const p = posOf(s.use || s.at); if (!p) return; const h = map.interact.add({ x: p.x, y: p.y, z: p.z, r: (s.r || 1.6) * RS(), label: label, use: () => { if (d.exit) sbExit(); else runDisc(d); } }); SB.hs.push({ h, d, id: s.use }); };
+    for (const d of discAll()) if (!FOUND.has(d.k) && avail(d) && d.start && (d.start.use || d.start.at)) add(d, d.start, d.start.label || '🔎 살펴보기');
+    for (const a of (D.sandbox.acts || [])) if (avail(a) && (a.start.use || a.start.at)) add({ ...a, act: true }, a.start, a.start.label);
+    const X = D.sandbox.exit; if (X) add({ exit: true }, X, X.label || '🚪 나가기'); }
+  async function sbExit() { if (!SB || SB.busy) return; SB.busy = 'exit'; const n = nFound(), N = discAll().length;
+    const k = await panel('이야기', '신기한 일을 ' + n + '/' + N + ' 찾았어요. ' + (n < N ? '아직 남은 게 있어요! ' : '모두 찾았어요! ') + '이 세계를 나갈까요?', ['🔎 더 둘러볼래요', '🚪 이제 나갈래요']); SB.busy = null;
+    if (k === 1 && SB.done) SB.done(); }
+  function useSkill(sk) { if (!SKON || talk || bookEl || discEl || SKCD > 0 || !cond(sk.need)) return; if (SB && SB.busy && SB.busy !== 'wait') { if (!WAIT.size) return; }
+    SKCD = sk.cd || 0.6; const me = map.player.get(), hr = me.h * Math.PI / 180, r = (sk.r || 1.6) * RS(), px = me.x + Math.sin(hr) * r * 0.45, pz = me.z - Math.cos(hr) * r * 0.45;
+    particles(px, me.y + 0.7 * SC, pz, { color: sk.color || 0xffffff, n: 44, r: 0.35 * r, speed: 0.35 * SC, size: 0.07 * Math.sqrt(SC), life: 1.1, swirl: sk.swirl || 0 });
+    if (sk.tone) for (const a of sk.tone) map.tone(...a); else map.sfx('pick'); if (BODY) BODY.o.act = { k: sk.anim || 'cast', t: 0 }; if (sk.emote) emote('me', sk.emote, 1.4);
+    for (const w of [...WAIT]) w(sk.k, px, pz, me.y);
+    if (sk.affect) for (const o of FX.values()) if (o.kind === sk.affect.kind && Math.hypot(o.x - me.x, o.z - me.z) < (sk.affect.r || 4) * RS()) { o.anim = sk.affect.anim || 'dance'; if (sk.affect.come && !o.fol) moveFx(o, { x: me.x + (Math.random() - 0.5) * 2 * RS(), y: o.y, z: me.z + (Math.random() - 0.5) * 2 * RS() }, 1.2, 0.2).then(() => { o.anim = 'idle'; }); else setTimeout(() => { if (o.anim === (sk.affect.anim || 'dance')) o.anim = 'idle'; }, 3000); }
+    if (SB && !SB.busy) { for (const d of discAll()) if (!FOUND.has(d.k) && avail(d) && d.start && d.start.skill === sk.k) { const p = posOf(d.start.on || d.start.at); if (!d.start.on && !d.start.at) { runDisc(d); return; } if (p && Math.hypot(p.x - px, p.z - pz) < r + (d.start.r || 0.5) * RS() && Math.abs(p.y - me.y) < 1.6 * Math.max(SC, 0.3) + (d.start.dy || 0)) { runDisc(d); return; } }
+      if (sk.steps) runDisc({ act: true, steps: sk.steps }); }
+  }
+  const sbKey = e => { if (!SKON || e.type !== 'keydown' || e.repeat || talk || bookEl) return; if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    if (e.code === 'KeyB' && D.sandbox && SB) { e.stopPropagation(); if (discEl) closeDisc(); else openDisc(); return; } if (discEl) { if (e.code === 'Escape') closeDisc(); return; }
+    const sk = ((D.sandbox && D.sandbox.skills) || []).find(s => s.key === e.code); if (sk) { e.stopPropagation(); useSkill(sk); } };
+  addEventListener('keydown', sbKey, true);
+  function caught(o, c) { particles(o.x, o.y + 0.2 * Math.max(o.s, SC), o.z, { color: c.color || 0xfff4c2, n: 30, r: 0.2 * Math.max(o.s, SC) * 3, speed: 0.3 * Math.max(SC, 0.2), size: 0.05 * Math.sqrt(Math.max(SC, 0.1)), life: 0.9 }); map.sfx('pick');
+    o.flee = null; o.wd = null; if (c.then === 'follow') o.fol = { d: (c.d || 0.9) * RS(), sp: 3.5 * Math.max(SC, 0.3), k: (SB ? SB.folK = (SB.folK || 0) + 1 : 1) }; else if (c.then === 'stay') { o.anim = 'hop'; } else { FXROOT.remove(o.g); FX.delete(o.id); } }
+  async function mechStep(st) {
+    if (st.skills !== undefined) { SKON = !!st.skills; sbSkills(); }
+    if (st.found) discover(st.found);
+    if (st.cancel && SB) SB.cancel = true;
+    if (st.bodyPose !== undefined && BODY) BODY.pose = st.bodyPose;
+    if (st.ifFound) await runSteps(FOUND.has(st.ifFound) ? st.then || [] : st.else || [], false);
+    if (st.seti) for (const [k, v] of Object.entries(st.seti)) VARS[k] = { i: v, label: String(v) };
+    if (st.still) { const w = st.still; objective(w.goal || '가만히 기다려요', null); let lx = null, lz = null, t9 = 0; await until(() => { const me = map.player.get(); if (lx != null && Math.hypot(me.x - lx, me.z - lz) < 0.01 * Math.max(SC, 0.2)) t9 += 0.1; else t9 = 0; lx = me.x; lz = me.z; return t9 >= (w.sec || 3); }); objective(null); }
+    if (st.sayOne) { const L = st.sayOne, l = L[Math.floor(Math.random() * L.length)]; await panel(l[0], l[1]); }
+    if (st.spawn) { const s = st.spawn, R9 = s.rect; for (let i = 1; i <= s.n; i++) { const x = R9[0] + Math.random() * (R9[2] - R9[0]), z = R9[1] + Math.random() * (R9[3] - R9[1]), gy = s.y != null ? s.y : map.player.groundAt(x, z, (s.from || 0) + 1);
+      const o = fxMake(s.kind, s.id + i, { x, y: (gy != null && isFinite(gy) ? gy : 0) + (s.dy || 0), z, h: Math.random() * 360 }, { s: s.s || 1, color: Array.isArray(s.color) ? s.color[i % s.color.length] : s.color, anim: s.anim });
+      if (o && s.wander) o.wd = { r: s.wander === true ? R9 : s.wander, sp: s.speed || 0.6, tx: x, tz: z, wait: Math.random() * 1.5 }; } }
+    if (st.fxScale) { const o = FX.get(st.fxScale); if (o) { o.sTo = st.s; o.sRate = st.rate || 2.5; map.sfx('ding'); await new Promise(r => setTimeout(r, (st.sec || 1) * 1000)); } }
+    if (st.tpBy) { const L = st.tpBy.to, i = VARS[st.tpBy.var] ? VARS[st.tpBy.var].i : 0, p = posOf(L[i]); if (p) { const me = map.player.get(); particles(me.x, me.y + 0.8, me.z, { color: 0xff7eb6, n: 50, r: 0.6, swirl: 6, speed: 0.2, size: 0.07, life: 1.0 }); map.fade(0.7); await new Promise(r => setTimeout(r, 380)); map.player.teleport([p.x, p.y + 0.05, p.z], st.tpBy.h != null ? { h: st.tpBy.h } : {}); } }
+    if (st.carry) { const c = st.carry, o = FX.get(c.id), T = posOf(c.to); if (o && T) { o.wd = null; o.fol = null; o.flee = null; o.hold = ME || 'me'; o.holdAt = 'head'; map.sfx('pick'); objective(c.goal || '📦 나르기', T, c.label);
+      await until(() => nearP(T, (c.r || 1.0) * RS())); objective(null); o.hold = null; await moveFx(o, { x: T.x, y: T.y + (c.dy || 0), z: T.z }, 0.6, 0.3 * Math.max(SC, 0.2), false); map.sfx('ding'); if (c.del) { FXROOT.remove(o.g); FX.delete(o.id); } } }
+    if (st.catch) { const c = st.catch, left = [].concat(c.ids).filter(id => FX.has(id)), N = left.length; let got = 0, tick = 0; const G9 = () => (c.goal || '잡기') + ' (' + got + '/' + N + ')';
+      for (const id of left) { const o = FX.get(id); if (c.flee) o.flee = { sp: c.flee * Math.max(SC, 0.15), range: (c.range || 2.2) * RS() }; if (c.wander && !o.wd) o.wd = { r: c.wander, sp: (c.speed || 0.6) * Math.max(SC, 0.15), tx: o.x, tz: o.z, wait: 0 }; }
+      const nearest = () => { const me = map.player.get(); let b = null, bd = 1e9; for (const id of left) { const o = FX.get(id); if (!o) continue; const d = Math.hypot(o.x - me.x, o.z - me.z); if (d < bd) { bd = d; b = o; } } return b; };
+      const n0 = nearest(); objective(G9(), n0 && { x: n0.x, y: n0.y, z: n0.z }, c.label);
+      await until(() => { const me = map.player.get(); for (let i = left.length - 1; i >= 0; i--) { const o = FX.get(left[i]); if (!o) { left.splice(i, 1); continue; }
+          if (Math.hypot(o.x - me.x, o.z - me.z) < (c.r || 0.7) * RS() && Math.abs(o.y - me.y) < (c.dy || 1.3) * Math.max(SC, 0.3) + (o.R.top || 0.5) * o.s) { left.splice(i, 1); got++; caught(o, c); const n9 = nearest(); objective(G9(), n9 && { x: n9.x, y: n9.y, z: n9.z }, c.label); } }
+        if (++tick % 6 === 0 && left.length) { const n9 = nearest(); if (n9 && cur && Math.hypot(n9.x - cur.x, n9.z - cur.z) > 0.8 * RS()) objective(G9(), { x: n9.x, y: n9.y, z: n9.z }, c.label); } return !left.length; });
+      objective(null); }
+    if (st.seq) { const q = st.seq, ids = [].concat(q.ids); let i = 0, last = null; const notes = q.notes || [523, 587, 659, 698, 784, 880, 988];
+      const show = () => { const o = FX.get(ids[i]); objective((q.goal || '차례대로 닿기') + ' (' + i + '/' + ids.length + ')', q.show && o ? { x: o.x, y: o.y, z: o.z } : null, q.label); SB && (SB.seqNext = ids[i]); };
+      show(); await until(() => { const me = map.player.get(); let hit = null; for (const id of ids) { const o = FX.get(id); if (!o) continue; const top = (o.R.top || 0.5) * o.s; if (Math.hypot(o.x - me.x, o.z - me.z) < (q.r || 0.8) * RS() && (q.dy ? Math.abs(me.y - o.y) < q.dy : me.y > o.y - 0.5 * Math.max(SC, 0.3) && me.y < o.y + top + 1.2 * Math.max(SC, 0.3))) { hit = id; break; } }   // dy = 높이도 맞춰야(날아서 닿기)
+        if (hit === last) return false; last = hit; if (!hit) return false; const o = FX.get(hit);
+        if (hit === ids[i]) { map.tone(notes[i % notes.length], 0, 0.3, 'sine', 0.14); particles(o.x, o.y + (o.R.top || 0.5) * o.s, o.z, { color: q.color || 0xffd23c, n: 30, r: 0.3 * o.s * 2, speed: 0.3 * Math.max(SC, 0.2), size: 0.06 * Math.sqrt(Math.max(SC, 0.1)), life: 1 }); if (q.hop) o.anim = 'hop'; i++; if (i >= ids.length) return true; show(); }
+        else if (i > 0 || q.strict) { map.sfx('buzz'); if (q.wrong) map.hud.toast(q.wrong, 2.4); if (q.hop) for (const id of ids) { const o2 = FX.get(id); if (o2) o2.anim = 'idle'; } i = 0; show(); } return false; }, 80);
+      objective(null); if (SB) SB.seqNext = null; }
+    if (st.waitSkill) { const w = st.waitSkill, T = posOf(w.on || w.at); objective(w.goal || '능력을 써요', T, w.label); if (SB) SB.waitSkill = w.k;
+      await new Promise(res => { const f = (k, px, pz, py) => { if (k !== w.k) return; if (!T || (Math.hypot(T.x - px, T.z - pz) < (w.r || 1.4) * RS() && Math.abs(T.y - py) < 2 * Math.max(SC, 0.3) + (w.dy || 0))) { WAIT.delete(f); res(); } }; WAIT.add(f); }); objective(null); if (SB) SB.waitSkill = null; }
+    if (st.ride) { const r = st.ride, o = FX.get(r.id); if (o) { o.wd = null; o.fol = null; map.player.freeze(true); RIDE = { o, dy: (r.dy != null ? r.dy : 0.5) * o.s };
+      for (const p of r.path) { const b = posOf(p); if (!b) continue; await moveFx(o, b, r.seg || 1.6, r.arc || 0); if (gone()) return; } const end = RIDE; RIDE = null; map.player.freeze(false);
+      if (r.off) { const b = posOf(r.off); if (b) map.player.teleport([b.x, b.y + 0.02, b.z]); } else map.player.teleport([end.o.x, end.o.y + end.dy, end.o.z]); } }
+    if (st.hop) { const h = st.hop, T = posOf(h.to); if (T) { map.player.freeze(true); const me = map.player.get(); map.sfx('go'); await new Promise(res => { HOP = { a: { x: me.x, y: me.y, z: me.z }, b: T, k: 0, dur: h.sec || 1.0, hg: (h.h || 1.5) * Math.max(SC, 0.08), done: res }; }); map.player.freeze(false); } }
+    if (st.sandbox) { if (!D.sandbox) return; SB = { busy: null, hs: [], done: null, folK: 0 }; SKON = true; sbSkills(); sbChip(); sbMarks(); sbArm(true);
+      if (st.sandbox !== 'quiet') map.hud.toast('🔎 이제 자유롭게 둘러봐요! 신기한 일 ' + discAll().length + '가지 — B = 목록 · 지도의 노란 ? = 힌트', 6);
+      await new Promise(res => { SB.done = res; }); sbArm(false); for (const h of SB.hs) h.h.remove(); map.hud.chip('st-d', null); extra = []; marks(); SB = null; SKON = false; sbSkills(); }
+  }
+  function sbTick(dt) {
+    if (SKCD > 0) SKCD -= dt;
+    if (SB) { for (const s of SB.hs) if (s.id && FX.has(s.id)) { const o = FX.get(s.id); s.h.hot.x = o.x; s.h.hot.z = o.z; s.h.hot.y = o.y; }
+      if (!SB.busy && !talk && !bookEl && !discEl && (SB.nt = (SB.nt || 0) - dt) <= 0) { SB.nt = 0.15; for (const d of discAll()) if (!FOUND.has(d.k) && avail(d) && d.start && d.start.near) { const p = posOf(d.start.near); if (p && nearP(p, (d.start.r || 1.0) * RS(), d.start.dy)) { runDisc(d); break; } } } }
+    if (RIDE) { const o = RIDE.o; map.player.teleport([o.x, o.y + RIDE.dy, o.z], { h: o.h }); }
+    if (HOP) { HOP.k = Math.min(1, HOP.k + dt / HOP.dur); const k = HOP.k, a = HOP.a, b = HOP.b; map.player.teleport([a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k + Math.sin(Math.PI * k) * HOP.hg, a.z + (b.z - a.z) * k], { h: (Math.atan2(b.x - a.x, -(b.z - a.z)) * 180 / Math.PI + 360) % 360 });
+      if (k >= 1) { const d = HOP.done; HOP = null; d(); } }
+  }
+  const FXKEYS = ['bodyPose', 'cancel', 'ifFound', 'still', 'seti', 'skills', 'found', 'sayOne', 'spawn', 'fxScale', 'tpBy', 'carry', 'catch', 'seq', 'waitSkill', 'ride', 'hop', 'sandbox', 'setv', 'body', 'phys', 'solid', 'arena', 'wander', 'follow', 'rain', 'tone', 'book', 'fx', 'fxAnim', 'fxDel', 'hold', 'fxMove', 'morph', 'powder', 'glow', 'shrink', 'grow', 'grass', 'act', 'emote', 'circle', 'line', 'free', 'stay', 'time', 'fxShow', 'fxFace', 'banner', 'grassOff', 'dark', 'use', 'chase'];
 
   // ---------- 시작 ----------
   if (LEG) map.player.teleport([Pme.x, Pme.y, Pme.z], { h: 270 });
@@ -621,6 +755,7 @@ export default async function start(map, params = {}) {
   // ---------- 새 이야기 진행기(EP-1 · steps) — 글 파일만으로 이야기를 더한다(docs/tasks/new_episode.md) ----------
   //   자리(at·go·collect): '구역id'·'zone:구역'·'lm:표지점'·'spawn:…'·'npc:사람 이름'·[x, z]·[x, y, z]
   function place(t) {
+    if (typeof t === 'string' && FX.has(t)) { const o9 = FX.get(t); return { x: o9.x, y: o9.y, z: o9.z }; }   // SANDBOX: 무대 생물 id
     if (t && typeof t === 'object' && !Array.isArray(t)) t = t[ME] ?? t._;   // STORY-FX: 누가 되었는지(ME)에 따라 다른 자리 { 은규: …, 인우: …, _: 그 밖 }
     if (Array.isArray(t)) return t.length >= 3 ? { x: t[0], y: t[1], z: t[2] } : spot(t[0], t[1], 0);
     if (typeof t !== 'string') return null;
@@ -862,7 +997,8 @@ export default async function start(map, params = {}) {
     },
     stop() { dead = true; fxStop(); removeEventListener('keydown', onKey, true); removeEventListener('click', onClick, true); ui.remove(); talk = null; },   // 지점·표식·칩·목표·미니맵·사람·소품·그림·불·문·시간대는 범위 파사드가 정리
     // 시험용 읽기
-    get state() { return { ...S, T, talk: talk ? talk.el.querySelector('.nm').textContent : null, choices: talk ? talk.n : 0, goal: cur && cur.label, tgt: cur ? [cur.x, cur.y, cur.z] : null, sc: SC, fx: [...FX.keys()], end: !!endEl }; },
+    get state() { return { ...S, T, talk: talk ? talk.el.querySelector('.nm').textContent : null, choices: talk ? talk.n : 0, goal: cur && cur.label, tgt: cur ? [cur.x, cur.y, cur.z] : null, sc: SC, fx: [...FX.keys()], sb: SB ? { busy: SB.busy, waitSkill: SB.waitSkill || null, seqNext: SB.seqNext || null, seqPos: SB.seqNext && FX.has(SB.seqNext) ? (o9 => [o9.x, o9.y, o9.z])(FX.get(SB.seqNext)) : null, found: nFound(), total: discAll().length, role: VARS.role ? VARS.role.i : null, left: discAll().filter(d => !FOUND.has(d.k) && avail(d)).map(d => d.k) } : null, end: !!endEl }; },
+    sbStart(k) { const d = discAll().find(x => x.k === k); if (d) runDisc(d); }, skill(k) { const sk = ((D.sandbox && D.sandbox.skills) || []).find(x => x.k === k); if (sk) { SKCD = 0; useSkill(sk); } }, sbExitNow() { if (SB && SB.done) SB.done(); }, sbAct(i) { const a = ((D.sandbox && D.sandbox.acts) || [])[i]; if (a) runDisc({ ...a, act: true }); }, sbReset() { FOUND.clear(); map.store.set('found.' + EP.id, []); },
     next(i = 0) { if (talk) talk.next(i); },
     get pos() { return { P4, P1, P6, T4, T1, TL, TG, Pme }; },
   };

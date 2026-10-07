@@ -223,3 +223,126 @@ export const STORY = {
     } },
   ],
 };
+
+// ───────── 자유 탐험(SANDBOX · 10-07 교사 '마법사 마을 깊이가 최소 · E만 누르지 말고 보이는 모습 · 40분 고민했는데 3분이면 허무') ─────────
+//   밥을 먹은 뒤 '동물원 놀이 시간' — 카피바라 존이 넓은 마당으로 열림 · 신기한 일 16가지(앞 이야기 4 + 탐험 12) · F 🗣 꾸잉(친구 부르기) · R 💦 첨벙 · B 목록 · 사육사에게 '잘 시간'
+const YD = [-38, 3.5, -13, 28.5];
+const PEN = [];   // 울타리 충돌(문 = 남쪽 6·7번 칸은 열림)
+for (let k = 0; k < 28; k++) { if (k === 6 || k === 7) continue; const a = (k + 0.5) / 28 * Math.PI * 2, x = ZC[0] + Math.cos(a) * 5, z = ZC[1] + Math.sin(a) * 5, w = Math.abs(Math.sin(a)) * 1.12 / 2 + 0.08, d = Math.abs(Math.cos(a)) * 1.12 / 2 + 0.08; PEN.push([x - w, -1.35, z - d, x + w, -0.35, z + d]); }
+STORY.sandbox = {
+  title: '동물 세계의 신기한 일',
+  skills: [
+    { k: 'call', key: 'KeyF', icon: '🗣', name: '꾸잉', color: 0xd7ccc8, anim: 'call', emote: '🗣', affect: { kind: 'capy', anim: 'idle', r: 9, come: true }, tone: [[740, 0, 0.12, 'triangle', 0.12, 980], [740, 0.16, 0.14, 'triangle', 0.12, 1040]] },
+    { k: 'splash', key: 'KeyR', icon: '💦', name: '첨벙', color: 0x6ec6ff, emote: '😆', tone: [[300, 0, 0.2, 'sine', 0.1, 120]] },
+  ],
+  exit: { at: F(-22, 22.4), r: 1.8, label: '🌇 우리로 돌아가 잘 준비하기' },
+  acts: [
+    { start: { use: 'c1', r: 1.6, label: '💬 느릿이' }, steps: [{ sayOne: [['느릿이', '하아암… 해 드는 자리에서 가만히 있으면 잠이 솔솔 와. 너도 해 봐.'], ['느릿이', '카피바라는 하루에 풀을 아주 많이 먹어. 그래서 늘 오물오물…'], ['느릿이', '울타리 밖 마당 구석에 아기들이 숨었대. 꾸잉(F) 하고 부르면 나올지도.']] }] },
+    { start: { use: 'c2', r: 1.6, label: '💬 첨벙이' }, steps: [{ sayOne: [['첨벙이', '카피바라는 발가락 사이에 물갈퀴가 조금 있어. 그래서 헤엄을 잘 쳐!'], ['첨벙이', '연못에 들어오면 경주하자! 내가 이길걸?'], ['첨벙이', '물속에서는 코랑 눈이랑 귀만 내놓고 숨어 있을 수도 있어.']] }] },
+    { start: { use: 'c3', r: 1.6, label: '💬 오물이' }, steps: [{ sayOne: [['오물이', '오물오물… 건초 더미 옆에 풀이 많아. 풀 뜯기 대회 할래?'], ['오물이', '당근 바구니는 사육사님 창고 옆에 있어. 당근 좋아…'], ['오물이', '카피바라 이빨은 평생 자라서, 풀을 많이 씹어야 알맞게 닳아.']] }] },
+    { after: ['yuzu'], start: { use: 'keeper', r: 1.8, label: '💬 사육사' }, steps: [{ sayOne: [['사육사', '카피바라는 순해서 다른 동물들이랑도 잘 지낸단다.'], ['사육사', '울타리 문은 꼭 닫아야 해. 한 마리가 나가면 모두 따라 나가거든.']] }] },
+  ],
+  disc: [
+    { k: 'potion', t: '🧪 물약을 마시고 아기 카피바라로', h: '운동장의 민트색 물약(이야기 1장)' },
+    { k: 'hospital', t: '🩺 동물병원 건강 검사', h: '구조대원과 동물병원(이야기 2장)' },
+    { k: 'friends', t: '🦫 카피바라 친구 셋 사귀기', h: '느릿이·첨벙이·오물이(이야기 3장)' },
+    { k: 'feed', t: '🥕 밥 먹는 규칙 지키기', h: '사육사가 주는 밥(이야기 4장)' },
+    { k: 'swim', t: '🏊 첨벙이와 연못 헤엄 경주', h: '우리 안 연못으로 들어가요', mark: F(-21.2, 16.6), start: { near: F(-21.2, 16.6), r: 1.6 }, steps: [
+      { say: [['첨벙이', '헤엄 경주! 물 위 부표 세 개를 차례로 돌고 오기야. 준비, 시작!']] },
+      { fxMove: 'c2', to: 'b1', sec: 2.2, wait: false },
+      { seq: { ids: ['b1', 'b2', 'b3'], goal: '🏊 부표를 차례로 돌아요', show: true, r: 1.0, color: 0x6ec6ff, wrong: '앗, 순서가 달라요! 처음 부표부터' } },
+      { rain: { at: 'me', r: 0.5, n: 30, color: 0x9be7ff, size: 0.06, h: 0.6, puffs: 3 } }, { emote: 'c2', icon: '😮' },
+      { say: [['첨벙이', '헉, 나보다 빨라! 카피바라 발가락 사이 물갈퀴를 잘 쓰는걸?']] }, { wander: ['c2'], rect: [-24, 14, -20, 18], speed: 0.4 }] },
+    { k: 'bird', t: '🐦 등에 새가 앉았어요', h: '동쪽 큰 나무 그늘에서 가만히(움직이지 않기)', mark: F(-15.4, 25.4), start: { near: F(-15.6, 25.2), r: 2.4 }, steps: [
+      { say: [['이야기', '나무 위에서 작은 새가 우리를 내려다봐요. 가만히 있어 볼까요?']] },
+      { still: { sec: 3, goal: '🐦 3초 동안 움직이지 말고 기다려요' } },
+      { fx: 'bird', id: 'bd', at: F(-15.4, 26.6), dy: 3.2, s: 1.6, color: 0x6d8bd1 }, { fxMove: 'bd', to: 'head:me', sec: 1.4, arc: 0.6 }, { hold: 'bd', on: 'me', where: 'head' },
+      { emote: 'bd', icon: '🎵' },
+      { say: [['이야기', '새가 등에 사뿐히 앉았어요! 카피바라는 성격이 순해서 새들이 등에 앉아 쉬어 가기도 해요(진짜 카피바라도 그래요).']] },
+      { wait: 2 }, { fxMove: 'bd', to: F(-10, 30), dy: 5, sec: 1.6, arc: 1 }, { fxDel: 'bd' }] },
+    { k: 'yuzu', t: '🍊 귤 온천에 들어가기', h: '사육사의 부탁 — 마당에 굴러다니는 귤 다섯 개', mark: 'keeper', start: { use: 'keeper', r: 1.8, label: '🍊 사육사의 부탁 듣기' }, steps: [
+      { fxFace: 'keeper' }, { say: [['사육사', '추운 날 어떤 동물원에서는 카피바라에게 귤을 띄운 따뜻한 온천을 해 준단다. 마당에 귤이 굴러다니던데, 다섯 개만 모아 줄래?']] },
+      { spawn: { kind: 'orange', id: 'og', n: 5, rect: [-36, 5, -15, 27], y: -1.35, s: 1.6 } },
+      { catch: { ids: ['og1', 'og2', 'og3', 'og4', 'og5'], goal: '🍊 굴러다니는 귤 모으기', flee: 1.2, range: 2.4, wander: YD, speed: 0.7, r: 0.9, then: 'follow', d: 0.6, color: 0xff9f1a } },
+      { goal: '♨️ 온천(서쪽)으로 가요', go: 'spa', label: '온천', r: 1.6 },
+      { fxMove: 'og1', to: F(-30.4, 22.2), dy: 0.05, sec: 0.5, wait: false }, { fxMove: 'og2', to: F(-29.6, 21.6), dy: 0.05, sec: 0.6, wait: false }, { fxMove: 'og3', to: F(-30.2, 21.4), dy: 0.05, sec: 0.7, wait: false },
+      { fxMove: 'og4', to: F(-29.6, 22.4), dy: 0.05, sec: 0.8, wait: false }, { fxMove: 'og5', to: F(-30.0, 22.0), dy: 0.05, sec: 0.9 },
+      { follow: ['og1', 'og2', 'og3', 'og4', 'og5'], off: true },
+      { goal: '♨️ 귤 온천에 쏙!', go: F(-30, 22), label: '귤 온천', r: 0.7 },
+      { rain: { at: F(-30, 22), r: 0.9, n: 30, color: 0xffffff, size: 0.12, h: 0.1, puffs: 6 } }, { emote: 'me', icon: '😊', sec: 3 }, { emote: 'mate', icon: '😊', sec: 3 },
+      { say: [['{mate}', '으아~ 따뜻하다… 귤 냄새도 좋아. 카피바라가 왜 온천을 좋아하는지 알겠어.']] }] },
+    { k: 'grass', t: '🌿 오물이와 풀 뜯기 대회', h: '우리 안 건초 더미 옆에서 오물이가 기다려요', mark: F(-24.2, 14.5), start: { near: F(-24.2, 14.8), r: 1.4 }, steps: [
+      { say: [['오물이', '풀 뜯기 대회! 마당 풀 여섯 덤불을 먼저 먹는 쪽이 이기는 거야. 시작!']] },
+      { spawn: { kind: 'sprout', id: 'gs', n: 6, rect: [-36, 5, -15, 27], y: -1.35, s: 2.4 } }, { fxAnim: 'c3', anim: 'eat' },
+      { catch: { ids: ['gs1', 'gs2', 'gs3', 'gs4', 'gs5', 'gs6'], goal: '🌿 풀 덤불 먹기', r: 0.8, color: 0x7cb342 } },
+      { fxAnim: 'c3', anim: 'idle' }, { emote: 'c3', icon: '😮' },
+      { say: [['오물이', '벌써 여섯 덤불?! 나는 다섯 개밖에 못 먹었는데… 너 진짜 카피바라 같아!']] }] },
+    { k: 'mud', t: '🟤 진흙 목욕', h: '마당 서쪽 진흙 웅덩이로 첨벙(R)', mark: 'mudp', start: { skill: 'splash', on: 'mudp', r: 1.6 }, steps: [
+      { glow: 'me', color: 0x6d4c33 }, { body: 'capy', color: 0x5d4037 }, { emote: 'me', icon: '😆' },
+      { say: [['{mate}', '으하하, 진흙투성이! 진흙을 바르면 뜨거운 햇볕도 벌레도 막아 준대. 카피바라의 선크림이야!']] },
+      { wait: 2 }, { body: 'capy', color: 0xa87a4f }] },
+    { k: 'fence', t: '🔧 울타리 문 고치기', h: '사육사 창고(북서쪽) 널빤지 셋을 우리 남쪽 문으로', mark: 'pl1', start: { use: 'pl1', r: 1.6, label: '🪵 널빤지 들기' }, steps: [
+      { say: [['사육사', '고마워! 우리 남쪽 문이 헐거워졌거든. 한 마리가 나가면 모두 따라 나갈 수 있으니까, 널빤지로 튼튼하게 막자.']] },
+      { carry: { id: 'pl1', to: F(-22.4, 21.3), goal: '🪵 널빤지를 우리 남쪽 문으로 (1/3)', r: 1.3 } },
+      { carry: { id: 'pl2', to: F(-22.0, 21.4, 0.35), goal: '🪵 널빤지를 우리 남쪽 문으로 (2/3)', r: 1.3 } },
+      { carry: { id: 'pl3', to: F(-21.6, 21.3, 0.7), goal: '🪵 널빤지를 우리 남쪽 문으로 (3/3)', r: 1.3 } },
+      { sound: 'done' }, { say: [['사육사', '튼튼해졌다! 규칙에는 다 이유가 있단다. 모두가 안전하려고 지키는 거야.']] }] },
+    { k: 'leaves', t: '🍂 사육사 도와 낙엽 치우기', h: '마당 곳곳의 낙엽 더미 다섯', mark: 'lf1', start: { near: 'lf1', r: 1.6 }, steps: [
+      { say: [['사육사', '오, 낙엽 치우는 걸 도와주려고? 다섯 더미만 모아 주면 마당이 깨끗해지겠다!']] },
+      { catch: { ids: ['lf1', 'lf2', 'lf3', 'lf4', 'lf5'], goal: '🍂 낙엽 더미 치우기', r: 0.9, color: 0xd9822b } },
+      { say: [['사육사', '깨끗해졌다! 동물원 사육사는 매일 청소하고, 밥 주고, 건강도 살핀단다.']] }] },
+    { k: 'babies', t: '👶 숨은 아기 카피바라 찾기', h: '마당 구석구석 숨은 아기 셋 — 꾸잉(F)으로 부르고 데려와요', mark: 'bb1', start: { near: 'bb1', r: 2.4 }, steps: [
+      { say: [['느릿이', '어, 우리 아기들이네! 마당에서 놀다가 길을 잃었나 봐. 데려다줄래?']] },
+      { catch: { ids: ['bb1', 'bb2', 'bb3'], goal: '👶 아기 카피바라 데려오기 (꾸잉 F로 부르면 다가와요)', flee: 0.5, range: 1.8, wander: YD, speed: 0.4, r: 1.0, then: 'follow', d: 0.5, color: 0xd7ccc8 } },
+      { goal: '👶 아기들을 느릿이에게', go: 'c1', label: '느릿이', r: 1.6 },
+      { follow: ['bb1', 'bb2', 'bb3'], off: true }, { fxMove: 'bb1', to: 'c1', sec: 0.8, wait: false }, { fxMove: 'bb2', to: 'c1', sec: 0.9, wait: false }, { fxMove: 'bb3', to: 'c1', sec: 1.0 },
+      { emote: 'c1', icon: '❤️', sec: 3 }, { say: [['느릿이', '고마워… 카피바라는 엄마가 아니어도 무리가 다 같이 아기들을 돌봐 준단다.']] },
+      { wander: ['bb1', 'bb2', 'bb3'], rect: [-24, 13, -20, 19], speed: 0.3 }] },
+    { k: 'visit', t: '🏫 구경 온 반 친구들에게 첨벙 인사', h: '동쪽 울타리 밖 반 친구들 앞에서 첨벙(R)', mark: F(-13.6, 14), start: { skill: 'splash', at: F(-13.6, 14), r: 2.6 }, steps: [
+      { act: '유은', pose: 'cheer', faceTo: 'me' }, { act: '예지', pose: 'cheer', faceTo: 'me' }, { emote: '유은', icon: '😄' }, { emote: '예지', icon: '😍' },
+      { say: [['유은', '저 아기 카피바라 좀 봐! 우리한테 인사하는 것 같아!'], ['은규', '…귀엽네.'], ['인우', '…진짜 귀엽다.']] },
+      { act: '유은', pose: 'stand', faceTo: 'me' }, { act: '예지', pose: 'stand', faceTo: 'me' }] },
+    { k: 'photo', t: '📸 친구들과 기념사진', h: '친구 셋을 사귀고 아기들을 찾은 뒤, 사진기 앞에서', mark: 'cam', after: ['babies'], start: { use: 'cam', r: 1.8, label: '📸 기념사진 찍기' }, steps: [
+      { fxMove: 'c1', to: 'me', side: -0.8, sec: 0.8, wait: false }, { fxMove: 'c2', to: 'me', side: 0.8, sec: 0.8, wait: false }, { fxMove: 'c3', to: 'me', fwd: -0.8, sec: 0.8, wait: false },
+      { fxMove: 'mate', to: 'me', side: 0.5, fwd: -0.5, sec: 0.8 },
+      { banner: '📸 하나, 둘…', bannerSec: 1.2 }, { wait: 1.2 }, { dark: 0.5, darkColor: '#ffffff' }, { banner: '📸 찰칵! 카피바라 친구들과 기념사진', bannerSec: 2.4 }, { sound: 'done' },
+      { say: [['{mate}', '꿈에서 깨도 이 사진은 기억할 거야!']] }] },
+    { k: 'sleepy', t: '😴 해 드는 자리에서 낮잠', h: '느릿이 말처럼, 마당 북서쪽 해 드는 자리에서 가만히', mark: F(-31, 8), start: { near: F(-31, 8), r: 1.8 }, steps: [
+      { say: [['이야기', '햇볕이 따뜻해요… 느릿이처럼 가만히 있어 볼까요?']] }, { still: { sec: 4, goal: '😴 4초 동안 가만히' } },
+      { bodyPose: 'sleep' }, { emote: 'me', icon: '💤', sec: 3 }, { wait: 2.5 }, { bodyPose: null },
+      { say: [['이야기', '꾸벅… 카피바라는 하루에 짧은 낮잠을 여러 번 자요. 느긋한 게 카피바라의 힘!']] }] },
+    { k: 'carrot', t: '🥕 당근을 오물이에게', h: '창고 옆 당근 바구니에서 당근을 이고 오물이에게', mark: 'cart', start: { use: 'cart', r: 1.6, label: '🥕 당근 하나 들기' }, steps: [
+      { fx: 'food', id: 'cr', at: 'me', s: 1.0 }, { carry: { id: 'cr', to: 'c3', goal: '🥕 당근을 오물이에게', r: 1.4, del: true } },
+      { fxAnim: 'c3', anim: 'eat' }, { emote: 'c3', icon: '😋', sec: 3 }, { say: [['오물이', '오물오물… 최고야! 카피바라 이빨은 평생 자라서, 이렇게 씹어 줘야 알맞게 닳아.']] }, { fxAnim: 'c3', anim: 'idle' }] },
+  ],
+};
+{
+  const S = STORY.steps, at = (pred) => S.findIndex(pred), ins = (i, ...a) => S.splice(i, 0, ...a), js = (st) => JSON.stringify(st);
+  ins(at(st => st.say && /꾸잉\?! 우리 카피바라가/.test(js(st))) + 1, { found: 'potion' });
+  ins(at(st => st.say && /심장 소리 쿵쿵/.test(js(st))) + 1, { found: 'hospital' });
+  ins(at(st => st.say && /졸졸 따라왔어요/.test(js(st))) + 1, { found: 'friends' });
+  ins(at(st => st.say && /잘 먹는구나/.test(js(st))) + 1, { found: 'feed' });
+  const iN = at(st => st.label === 'night');
+  ins(iN,
+    { fx: 'drop', id: 'b1', at: F(-22.6, 15.8, 0.05), s: 2.5, pop: false }, { fx: 'drop', id: 'b2', at: F(-20.0, 15.8, 0.05), s: 2.5, pop: false }, { fx: 'drop', id: 'b3', at: F(-21.0, 17.6, 0.05), s: 2.5, pop: false },
+    { fx: 'tree', id: 'tr', at: F(-15.4, 26.6), fruit: 0x8bc34a, pop: false }, { fx: 'spring', id: 'spa', at: F(-30, 22), s: 1, pop: false }, { fx: 'mud', id: 'mudp', at: F(-32, 11), s: 1.6, pop: false },
+    { fx: 'plank', id: 'pl1', at: F(-34, 25.4), s: 1.2, pop: false }, { fx: 'plank', id: 'pl2', at: F(-34, 25.9), s: 1.2, pop: false }, { fx: 'plank', id: 'pl3', at: F(-34, 26.4), s: 1.2, pop: false },
+    { fx: 'food', id: 'cart', at: F(-33.2, 23.6), s: 1.8, pop: false }, { fx: 'gift', id: 'cam', at: F(-26, 26.5), s: 1.6, color: 0x37474f, pop: false },
+    { fx: 'leafpile', id: 'lf1', at: F(-17, 7), s: 2, pop: false }, { fx: 'leafpile', id: 'lf2', at: F(-27, 5), s: 2, pop: false }, { fx: 'leafpile', id: 'lf3', at: F(-36, 15), s: 2, pop: false },
+    { fx: 'leafpile', id: 'lf4', at: F(-14.5, 22), s: 2, pop: false }, { fx: 'leafpile', id: 'lf5', at: F(-22, 27.5), s: 2, pop: false },
+    { fx: 'capy', id: 'bb1', at: F(-36, 27), s: 0.32, color: 0xb08050, pop: false }, { fx: 'capy', id: 'bb2', at: F(-14, 5), s: 0.32, color: 0xa87a4f, pop: false }, { fx: 'capy', id: 'bb3', at: F(-37, 5), s: 0.32, color: 0x96643a, pop: false },
+    { fxMove: 'keeper', to: F(-28, 24.5), sec: 0.2 },
+    { npc: '은규', to: F(-11.6, 12.6), face: 270 }, { npc: '인우', to: F(-11.6, 14.0), face: 270 }, { npc: '예지', to: F(-11.6, 15.4), face: 270 }, { npc: '유은', to: F(-11.6, 16.8), face: 270 },
+    { solid: PEN },
+    { follow: ['c1', 'c2', 'c3'], off: true }, { wander: ['c1'], rect: [-24, 13, -20, 19], speed: 0.3 }, { wander: ['c2'], rect: [-24, 14, -20, 18], speed: 0.4 }, { wander: ['c3'], rect: [-24.5, 13.5, -22.5, 15.5], speed: 0.3 },
+    { arena: YD, arenaMsg: '여기까지가 카피바라 마당이에요' },
+    { say: [
+      ['사육사', '밥도 잘 먹었으니, 이제 놀이 시간! 오늘은 마당 문을 열어 줄게. 해 질 녘에 우리 문 앞으로 오면 잘 시간이야.'],
+      ['이야기', '🔎 동물 세계의 신기한 일 16가지! B = 목록 · 지도의 노란 ? = 힌트 · F 🗣 꾸잉(친구 부르기) · R 💦 첨벙 · 다 둘러보면 우리 남쪽 문 앞으로 가요.'],
+    ] },
+    { sandbox: true },
+    { dark: 1.2 }, { tp: F(-22, 18.6), h: 0 }, { arena: [-26.4, 11.6, -17.6, 20.4], arenaMsg: '밤에는 우리 안에 있어야 해요' },
+    { follow: ['mate', 'c1', 'c2', 'c3'], d: 0.7, speed: 3 });
+  const iT = at(st => st.say && /작은 틈이 있어/.test(js(st)));
+  S[iT] = { say: [['이야기', '밤이 되었어요. 사육사 선생님도 퇴근했어요.'], ['{mate}', '쉿… 사육사님이 깜빡하고 울타리 문을 살짝 열어 두셨어. 저기로 나가면 집에 갈 수 있을지도 몰라.']] };
+}
