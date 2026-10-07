@@ -44,8 +44,8 @@ export const GAMES = {
   wizard: { title: '마법사 마을', v: 1, lesson: 'story', cat: 'imagine', link: '../imagine/wizard/', icon: '🧙', group: '상상', short: '용 키워 타기 · 구름 고래 · 날씨·변신 마법 — 신기한 일 16가지' },
   blocks_solo: { title: '블록 놀이(혼자)', folder: 'make', v: 8, use: 'blocks', params: { solo: true }, desc: '🏠 나만의 판에서 혼자 블록을 쌓고 가구·나무를 부숴요 — 이 기기에 저장돼요', icon: '🧱', group: '놀이', short: '혼자 블록 쌓기 · 이 기기에 저장' },
   blocks: { title: '블록 놀이(같이)', folder: 'make', v: 8, mp: 'together', desc: '같은 판 친구들과 학교 곳곳에 블록을 놓고 부숴요 — 책상·책장 같은 가구도 🔨로 통째로 퍽! 친구들 블록이 바로 보여요(선생님이 판 잠그기·비우기)', icon: '🧱', group: '놀이', short: '같은 판 친구와 블록 쌓기 · 가구 부수기' },
-  memo: { title: '메타버스 메모장', folder: 'think', v: 28, mp: 'together', desc: '우리 이야기를 장면으로 나눠 적고(인물·대사·물건 덧붙이기) 학교 곳곳에 장면 깃발을 꽂아요 — 같은 판 친구들 것이 바로 보여요', icon: '📝', group: '이야기', short: '장면 적고 학교에 장면 깃발 꽂기' },
-  memo_world: { title: '세계 만들기', folder: 'think', v: 28, use: 'memo', params: { kind: 'world' }, mp: 'together', desc: '우리가 상상한 새로운 세계를 함께 쌓아요 — 어떤 세계·규칙·사는 존재·장소(새 세계의 어디쯤)·신기한 것·할 일을 카드로 · 선생님이 정리해 Claude에게 넘기면 진짜 세계가 돼요', icon: '🌍', group: '상상', short: '새로운 세계를 함께 상상해 카드로 쌓기' },
-  world_v3: { title: '우리가 만드는 세계', v: 28, use: 'memo', params: { kind: 'world' }, mp: 'together', lesson: 'story', cat: 'imagine', desc: '새로운 세계를 함께 상상해요 — 세계·규칙·사는 존재·장소·신기한 것·할 일', icon: '🌍', group: '상상', short: '세계관을 함께 상상해 카드로 쌓기' },
-  memo_v3: { title: '메타버스 메모장', v: 28, mp: 'together', use: 'memo', lesson: 'story', cat: 'story', desc: '이야기를 장면으로 나눠 적고 학교 곳곳에 장면 깃발을 꽂아요', icon: '📝', group: '이야기', short: '장면 적고 학교에 장면 깃발 꽂기' },
+  memo: { title: '메타버스 메모장', folder: 'think', v: 29, mp: 'together', desc: '우리 이야기를 장면으로 나눠 적고(인물·대사·물건 덧붙이기) 학교 곳곳에 장면 깃발을 꽂아요 — 같은 판 친구들 것이 바로 보여요', icon: '📝', group: '이야기', short: '장면 적고 학교에 장면 깃발 꽂기' },
+  memo_world: { title: '세계 만들기', folder: 'think', v: 29, use: 'memo', params: { kind: 'world' }, mp: 'together', desc: '우리가 상상한 새로운 세계를 함께 쌓아요 — 어떤 세계·규칙·사는 존재·장소(새 세계의 어디쯤)·신기한 것·할 일을 카드로 · 선생님이 정리해 Claude에게 넘기면 진짜 세계가 돼요', icon: '🌍', group: '상상', short: '새로운 세계를 함께 상상해 카드로 쌓기' },
+  world_v3: { title: '우리가 만드는 세계', v: 29, use: 'memo', params: { kind: 'world' }, mp: 'together', lesson: 'story', cat: 'imagine', desc: '새로운 세계를 함께 상상해요 — 세계·규칙·사는 존재·장소·신기한 것·할 일', icon: '🌍', group: '상상', short: '세계관을 함께 상상해 카드로 쌓기' },
+  memo_v3: { title: '메타버스 메모장', v: 29, mp: 'together', use: 'memo', lesson: 'story', cat: 'story', desc: '이야기를 장면으로 나눠 적고 학교 곳곳에 장면 깃발을 꽂아요', icon: '📝', group: '이야기', short: '장면 적고 학교에 장면 깃발 꽂기' },
 };

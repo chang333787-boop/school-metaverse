@@ -1,5 +1,5 @@
 // 메타버스 메모장(MEMO-1 · 10-03 교사 '운동장 어디에 깃발을 꽂고 여기에 뭐가 필요해요 — 저장하면 내가 보고 Claude에게 만들라고') — RPG 생각판의 메타버스판.
-//   판 1~10번(선생님이 정해 둔 판에 들어감) · Firebase class-rpg metaverse/boards/<판>/flags · 같은 판 친구 것이 바로 보임
+//   판 1~20번(선생님이 정해 둔 판에 들어감 · 고르기 창 = 두 줄 칸) · Firebase class-rpg metaverse/boards/<판>/flags · 같은 판 친구 것이 바로 보임
 //   MEMO-3(10-03 교사 '종류가 많으면 헷갈림 — 사건(장면)을 먼저 적고 거기에 인물·장소·대사·물건을 붙이는 방식 · 깃발은 몇 번 장면과 연결됐는지 보이게'):
 //     📖 이야기 판(L) = 장면 카드(1, 2, 3… · 끌어서 순서 · 선생님이 칸 '처음, 가운데, 끝') — 장면마다 '무슨 일이 일어나요?' + 덧붙이기(🧑 인물 · 💬 대사 · 📦 물건 · ❓ 고르기)
 //     🚩 깃발 = '몇 번 장면'을 고르고 꽂음(장면이 일어나는 곳 · 인물·물건·대사가 있는 곳) — 깃발 색·번호 = 장면 · ▶ 장면 따라 걷기(N/B) · ❤️ · 💬 댓글 · 📤 정리
@@ -12,7 +12,7 @@
 //   🎮 이야기로 해 보기(PLAY-1 · 10-03 밤): 판의 장면 순서대로 — 장면 자리(첫 깃발)까지 걸어가면 장면 글 → 💬 대사·🧑 인물·📦 물건(줍기) → ❓ 고르기('→ N번 장면'이면 그 장면으로) → 🏁 끝 · 쓰고 바로 해 보는 수업
 //   선생님(🔒 4자리 · 함께하기와 같은 비밀번호): 판 제목·질문·칸 · 잠금 · 🗂 관리(비우기 = 판 번호를 적어야 · 비운 것은 trash에 보관 → ↩️ 되돌리기)
 //   🌍 세계 만들기(WORLD-1 · 10-03 교사 '메타버스는 두 갈래 — 이야기 설계 · 마법 세계처럼 새로운 세계 만들기(세계관 상상) — 교사가 관리에서 보고 Claude에게 넣으면 구현'):
-//     판 종류 boardList ty:'world'(세계 1~5번 판 w01~w05) · 카드 = 여섯 칸(🌍 어떤 세계? · 📜 규칙 · 👫 누가 살아? · 🏰 어떤 곳? · ✨ 신기한 것 · 🎮 무엇을 해?) + 💡 까닭(why)
+//     판 종류 boardList ty:'world'(세계 1~20번 판 w01~w20) · 카드 = 여섯 칸(🌍 어떤 세계? · 📜 규칙 · 👫 누가 살아? · 🏰 어떤 곳? · ✨ 신기한 것 · 🎮 무엇을 해?) + 💡 까닭(why)
 //     🏰 장소 카드 = 새 세계 안 📍 어디쯤(WLOC — 10-04 교사 '새 세계인데 왜 학교에 깃발' → 우리 학교와 따로 · 학교 깃발 없음) · 🧭 세계 코치(칸별 목표 · 세계 채우기 % · 할 일이 장소·주민·신기한 것과 이어지나 · 까닭) · 📤 정리 = Claude 구현 부탁 틀까지
 //   10-04 마감 점검: 📤 정리의 퀴즈 정답·힌트 = 쓴 친구·선생님만(카드와 같은 규칙) · 장면 자리(sceneSpot) = 장면 → 📍 일어나는 곳 → 인물·대사(📦·🔐 숨긴 자리는 따로) · 덧붙인 것 🚩 꽂기·✏️ 깃발 옮기기(moving)
 //     · 보기의 장면 번호 = '→ N번' 꼬리만(TAIL — '1번 사물함'은 글) · 새 장면은 마지막 장면의 칸 끝 · 깃발을 누르면 그 장면 보기 · 해 보기: ⏹ = 창·걷기 타이머까지 정리 · 안 쓴 장면 🚧 · 자물쇠는 같은 장면의 열쇠 뒤로
@@ -83,7 +83,7 @@ const STYLE = `
 #memo-ui h3{margin:0 0 8px;font-size:19px}
 #memo-ui .sm{font-size:13px;color:#5a6b80}
 #memo-pick,#memo-form,#memo-sum,#memo-view,#memo-admin,#memo-quiz{left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,94vw);max-height:88vh;overflow:auto;padding:14px 16px;box-sizing:border-box}
-#memo-pick .bd{display:grid;gap:8px;margin:10px 0}
+#memo-pick .bd{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin:10px 0}#memo-pick .bd>.sm{grid-column:1/-1}
 #memo-pick .bd button{text-align:left;background:#eef4ff;color:#1d3557;padding:10px 12px;border:2px solid #c9d8f0}
 #memo-pick .bd button small{display:block;font-weight:600;color:#5a6b80;margin-top:2px}
 #memo-ui .chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
