@@ -159,7 +159,7 @@ export default async function start(map, params = {}) {
       map.hud.toast('여기서는 길을 찾지 못했어요 — 조금 움직여 보세요'); return; }
     clearTrail(); trail = map.mk.trail(r.pts, { color: 0x3cc8ff, width: W9 }); trailT = TRAIL_T;
   }
-  const chapter = n => { S.ch = n; const C = D.chapters || []; map.hud.chip('st', '📖 ' + (C[n] || D.title)); if (n && C[n]) map.hud.banner(C[n], 2.4); map.sfx('go'); };
+  const chapter = n => { S.ch = n; const C = D.chapters || []; map.hud.chip('st', '📖 ' + (C[n] || D.title)); if (n && C[n]) { map.hud.banner(C[n], 2.4); map.sfx('go'); } };   // 장 이름이 없으면 배너·소리도 없음
   map.hud.chip('st-h', '💡 길 안내 (H)', { onClick: guide });
   // 말 걸기 자리 → Promise(눌렀을 때)
   //   그동안 가까운 원래 지점(칠판 낙서·신발장·앉기…)은 끈다 — 선생님이 칠판 앞에 서 있어 '칠판에 낙서하기'가 먼저 잡히던 것
