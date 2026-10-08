@@ -50,6 +50,13 @@ export const STORY = {
       ] },
     ],
   },
+  // WORLD-LOOK(10-08 교사 '그래픽이 학교 메타버스에 갇힌 느낌'): 물약을 마신 순간부터 '꿈속 동화책' — 라벤더 하늘 · 분홍 안개(학교 건물은 꿈처럼 흐려짐) · 비눗방울 · 꽃 들판 동물원 · 만화 그림자 · 꿈 테두리
+  //   하얗게 번쩍 → '사실 꿈이었다' = 원래 학교 화풍으로 돌아옴(꿈과 현실이 화면으로도 갈림)
+  toon: [125, 190, 238, 255],
+  looks: { dream: { top: 0xb9a6ff, horizon: 0xffe0ee, fogColor: 0xf6dcef, fog: [9, 40], hemi: [0xfff2ff, 0xc5e6b8, 1.4], sun: [0xffe6cc, 2.1], exp: 1.12, clouds: 0xffe6f5, far: 300, ui: 'dream', minimap: false,
+    amb: { color: 0xeaf4ff, n: 60, r: 12, size: 0.5, rise: 0.06, wind: [0.05, 0.02], opacity: 0.42 },
+    sunset: { top: 0xb68cff, horizon: 0xffc6a8, fogColor: 0xf3c4c9, hemi: [0xffd9e0, 0xb4cfa0, 1.3], sun: [0xffb487, 1.7] },
+    night: { top: 0x24195a, horizon: 0x5c4590, fogColor: 0x4e3d80, hemi: [0x9d8ee0, 0x3b4f45, 1.0], sun: [0xbfb0ff, 0.6], stars: true } } },
   steps: [
     { hide: '보건선생님' },
     { npc: '은규', to: F(-4.6, 4.6), face: 180 },
@@ -68,6 +75,7 @@ export const STORY = {
     { ask: ['{mate}', '냄새가 엄청 달콤해… 한 모금만 마셔 볼까?'], choices: ['🧪 같이 한 모금!', '🤔 조금 무섭지만… 마셔 볼래'], set: 'drink' },
     { fxDel: 'potion' },
     { glow: 'party', color: 0x7cf0c4 },
+    { look: 'dream' },
     { body: 'capy', bodyS: 1, color: 0xa87a4f },
     { hide: { 시아: '지원', 지원: '시아' } },
     { party: [] },
@@ -108,6 +116,7 @@ export const STORY = {
     { dark: 1.6 },
     { fxDel: 'vet' },
     { fxDel: 'rescue' },
+    { fx: 'ground', id: 'mead', at: [-6, -1.338, 16], w: 70, d: 31, c1: 0x93d27c, c2: 0xc6eba0, cell: 1.2, dots: [0xffffff, 0xffd1e8, 0xfff3a0, 0xd9c8ff], ndots: 420, dotR: 0.07, static: true, pop: false },   // 꿈속 운동장 = 꽃 들판(운동장 흙을 덮음)
     { fx: 'pen', id: 'pen', at: F(ZC[0], ZC[1]), r: 5, static: true, pop: false },
     { fx: 'capy', id: 'c1', at: F(-24, 14), s: 0.65, color: 0x8d5f38, anim: 'sleep', pop: false },
     { fx: 'capy', id: 'c2', at: F(-21, 15.6), s: 0.65, color: 0xa87a4f, pop: false },
@@ -187,6 +196,7 @@ export const STORY = {
     // 마지막 장 — 꿈(아이들 반전)
     { chapter: 5 },
     { dark: 2.4, darkColor: '#ffffff' },
+    { look: null },
     { arena: 'school' },
     { body: null },
     { fxDel: 'all' },
@@ -338,11 +348,68 @@ STORY.sandbox = {
     { arena: YD, arenaMsg: '여기까지가 카피바라 마당이에요' },
     { say: [
       ['사육사', '밥도 잘 먹었으니, 이제 놀이 시간! 오늘은 마당 문을 열어 줄게. 해 질 녘에 우리 문 앞으로 오면 잘 시간이야.'],
-      ['이야기', '🔎 동물 세계의 신기한 일 16가지! B = 목록 · 지도의 노란 ? = 힌트 · F 🗣 꾸잉(친구 부르기) · R 💦 첨벙 · 다 둘러보면 우리 남쪽 문 앞으로 가요.'],
+      ['느릿이', '하아암… 카피바라는 무리 지어 살아. 친구가 많아지면 무리도 커지지. 꾸잉(F) 하고 불러 봐…'],
     ] },
     { sandbox: true },
     { dark: 1.2 }, { tp: F(-22, 18.6), h: 0 }, { arena: [-26.4, 11.6, -17.6, 20.4], arenaMsg: '밤에는 우리 안에 있어야 해요' },
     { follow: ['mate', 'c1', 'c2', 'c3'], d: 0.7, speed: 3 });
   const iT = at(st => st.say && /작은 틈이 있어/.test(js(st)));
   S[iT] = { say: [['이야기', '밤이 되었어요. 사육사 선생님도 퇴근했어요.'], ['{mate}', '쉿… 사육사님이 깜빡하고 울타리 문을 살짝 열어 두셨어. 저기로 나가면 집에 갈 수 있을지도 몰라.']] };
+}
+
+// ───────── SANDBOX-2(10-08 교사 기본값 '풍성 4 · 놀이 4 · 효과 3~4 · 이야기 4 · 직관성 높게') ─────────
+//   들어갈 때 영상(마당 이름표) · 하는 법 창 · 🦫 무리 게이지 = 꾸잉(F)으로 친구를 부르고 신기한 일을 찾으면 차오름 →
+//   1단계 마당 카피바라 둘이 무리에 들어옴 → 2단계 무리가 나를 따라 함(첨벙·잠 — 아이들 규칙 '한 마리가 하면 모두 따라 해요'를 좋은 쪽으로) → 가득 = 👑 무리 대장(노을 · 사육사·반 친구들 박수 — 17번째)
+{
+  const SBX = STORY.sandbox, Y0 = -1.35;
+  const TAGS = [['🏊 연못', -21.2, 16.6, 0.3], ['♨️ 온천', -30, 22, 0.6], ['🟤 진흙', -32, 11, 0.3], ['🧑‍🌾 사육사', -28, 24.5, 2.1], ['📸 사진기', -26, 26.5, 0.8], ['🌳 나무 그늘', -15.4, 26.6, 3.4], ['🏫 반 친구들', -11.6, 14.7, 1.9], ['🥕 당근', -33.2, 23.6, 0.7]].map(([t, x, z, dy]) => ({ t, p: [x, Y0 + dy, z] }));
+  SBX.intro = [
+    { dur: 5.5, fov: 52, chord: 'F', cam: { p: [[-27, 9.5, 41], [-13, 7.5, 37]], l: [[-25, Y0, 16], [-24, Y0, 16]] }, tags: TAGS, ui: [{ at: 0.5, kick: '🦫 동물원 놀이 시간', title: '신기한 일 17가지 ·\n무리를 키워요', pos: 'lower' }] },
+    { dur: 4, fov: 50, chord: 'C', cam: { p: [[-18.6, -0.3, 22], [-25, -0.3, 21.6]], l: [[-22, -1.0, 16], [-22, -1.0, 16]] }, ui: [{ at: 0.4, kick: '🦫 무리', title: '카피바라는 서로 따라 해요\n내가 하면 친구들도!', pos: 'lower' }] },
+  ];
+  SBX.how = { title: '동물 세계 — 이렇게 놀아요', lines: [
+    ['❓', '노란 ? 를 찾아가요', '화면 위 줄이 가장 가까운 신기한 일을 알려 줘요. [H] = 길 안내 · [B] = 목록'],
+    ['🦫', '아기 카피바라의 능력', '{skills} — 꾸잉으로 친구를 부르고, 첨벙으로 장난쳐요'],
+    ['👣', '무리를 키워요', '꾸잉으로 카피바라 친구를 부르고 신기한 일을 찾을수록 {meter} 게이지가 차요. 무리가 커지면 친구들이 나를 따라 해요!'],
+  ], tip: '다 둘러보면 해 질 녘에 우리 남쪽 문 앞에서 잘 준비를 해요' };
+  SBX.herdD = 0.75;
+  SBX.mimic = { splash: { anim: 'hop', emote: '😆', color: 0x9be7ff }, call: { anim: 'idle', emote: '🗣' } };
+  SBX.meter = { icon: '🦫', name: '무리', max: 15, hint: '꾸잉(F)으로 카피바라 친구를 부르고 신기한 일을 찾아요',
+    feed: { disc: 1, skills: { call: { kind: 'capy', r: 9, n: 1, icon: '❤️', say: '카피바라 친구가 반가워해요' } } },
+    stages: [
+      { at: 6, t: '무리가 커져요', keep: [{ herd: ['mate', 'c4', 'c5'] }],
+        steps: [
+          { emote: 'c4', icon: '❤️' }, { emote: 'c5', icon: '❤️' }, { fxMove: 'c4', to: 'me', side: -0.9, fwd: -0.6, sec: 1.4, arc: 0.15, wait: false }, { fxMove: 'c5', to: 'me', side: 0.9, fwd: -0.6, sec: 1.4, arc: 0.15 },
+          { herd: ['mate', 'c4', 'c5'] },
+          { film: [{ dur: 4.5, fov: 50, chord: 'F', rel: true, cam: { p: [[3.2, 1.5, 3.6], [-3.2, 1.2, 3.8]], l: [[0, 0.2, 0], [0, 0.2, 0]] }, ui: [{ at: 0.4, kick: '🦫 무리 1단계', title: '마당 카피바라들이\n무리에 들어왔어요', pos: 'lower' }] }], bg: true },
+          { filmWait: true },
+          { say: [['이야기', '마당의 카피바라 둘이 졸졸 따라오기 시작했어요. 카피바라는 무리 지어 사는 동물이라, 친구가 생기면 같이 다녀요.']] },
+        ] },
+      { at: 10, t: '무리가 나를 따라 해요', keep: [{ herd: ['mate', 'c4', 'c5', 'c1', 'c2', 'c3'] }, { mimic: true }],
+        steps: [
+          { herd: ['mate', 'c4', 'c5', 'c1', 'c2', 'c3'] }, { mimic: true },
+          { say: [['느릿이', '하아암… 우리도 같이 갈래. 카피바라는 서로 따라 해. 네가 첨벙 하면 우리도 첨벙, 네가 자면 우리도 꾸벅.']] },
+          { waitSkill: { k: 'splash', goal: '💦 첨벙(R)을 해 봐요 — 무리가 따라 해요!' } },
+          { wait: 0.9 },
+          { say: [['{mate}', '봤어? 다 같이 첨벙! 한 마리가 하면 모두 따라 하니까… 우리가 좋은 걸 하면 다들 좋은 걸 따라 하겠다!']] },
+        ] },
+      { at: 15, t: '무리 대장', found: 'leader', keep: [{ time: 'sunset' }],
+        steps: [
+          { time: 'sunset' },
+          { film: [{ dur: 7, fov: 54, chord: 'C', rel: true, cam: { p: [[4.2, 1.2, 1.5], [0, 2.4, 5], [-4.2, 1.4, 1.8]], l: [[0, 0.25, 0], [0, 0.25, 0], [0, 0.25, 0]] }, ui: [{ at: 0.6, kick: '👑 무리 가득!', title: '모두가 믿고 따르는\n무리 대장', pos: 'lower' }] }], bg: true },
+          { emote: 'keeper', icon: '👏', sec: 4 }, { fxAnim: 'keeper', anim: 'hop' },
+          { act: '유은', pose: 'cheer', faceTo: 'me' }, { act: '예지', pose: 'cheer', faceTo: 'me' }, { emote: '유은', icon: '👏' }, { emote: '예지', icon: '👏' }, { emote: '은규', icon: '😮' }, { emote: '인우', icon: '😮' },
+          { fxAnim: 'c1', anim: 'hop' }, { fxAnim: 'c2', anim: 'hop' }, { fxAnim: 'c3', anim: 'hop' }, { fxAnim: 'c4', anim: 'hop' }, { fxAnim: 'c5', anim: 'hop' }, { fxAnim: 'mate', anim: 'hop' }, { sound: 'done' },
+          { rain: { at: 'me', r: 1.2, n: 30, color: 0xffd23c, size: 0.07, h: 1.6, puffs: 5 } },
+          { filmWait: true },
+          ...['c1', 'c2', 'c3', 'c4', 'c5', 'mate'].map(id => ({ fxAnim: id, anim: 'idle' })), { fxAnim: 'keeper', anim: 'idle' },
+          { say: [
+            ['사육사', '와, 무리가 모두 너를 따라다니는구나! 카피바라 무리는 믿을 수 있는 친구를 따라다녀.'],
+            ['사육사', '규칙을 잘 지켰더니 모두가 좋은 걸 따라 하게 됐어. 한 마리가 잘하면, 모두가 잘하게 되는 거지!'],
+            ['{mate}', '처음엔 규칙이 무섭기만 했는데… 이제 왜 있는지 알겠어.'],
+          ] },
+          { act: '유은', pose: 'stand', faceTo: 'me' }, { act: '예지', pose: 'stand', faceTo: 'me' },
+        ] },
+    ] };
+  SBX.disc.push({ k: 'leader', t: '👑 카피바라 무리 대장', h: '🦫 무리 게이지를 가득 채워요(꾸잉 F로 친구 부르기 · 신기한 일)' });
 }

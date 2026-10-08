@@ -5,10 +5,10 @@ import { buildWorld } from './world.js?v=154';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=60';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=61';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=26';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
-import { createFilm } from './film.js?v=16';
+import { createFilm } from './film.js?v=17';
 import { createTop } from './topview.js?v=8';   // TOP-1(10-04 교사 '탑뷰로 학교 보기'): 하늘에서 보기 — 지붕 벗기기(1·2층)·끌어 옮기기·확대·돌리기·방 이름·방위표·축척 · 게임은 map.top   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
 import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
@@ -341,19 +341,20 @@ function camPoseT(hx, hy, hz, yaw, pch, CD, fov, aspect, dUse) {
   TCAM.want = want; TCAM.d = d; TCAM.x0 = cx; TCAM.y = cy; TCAM.z0 = cz;
   return TCAM;
 }
+let LOOK = null;   // WORLD-LOOK(10-08): 게임이 덮어쓴 세계 화풍(setLook) — 먼 평면(far)도 여기서
 // s = 몸 크기(0.05~1) · o.speed = 걷기 배율(기본 √s) · o.jump = 점프 정점 높이 m(기본 0.97·s) · o.gravity = 중력 배율(기본 √s) · o.far = 먼 평면(기본 160)
 function setScale(s, o = {}) {
   s = Math.max(0.05, Math.min(1, +s || 1));
   if (s === 1) {
     Object.assign(PHY, { sc: 1, r: 0.26, st: 0.55, h: 1.5, walk: 4.2, run: 7.5, crawl: 1.9, jv: 5.2, g: 14, T: null });
-    pg.scale.setScalar(1); camera.near = 0.3; camera.far = 320; camera.updateProjectionMatrix(); camD = CAM_D; camSh = 0;
+    pg.scale.setScalar(1); camera.near = 0.3; camera.far = (LOOK && LOOK.far) || 320; camera.updateProjectionMatrix(); camD = CAM_D; camSh = 0;
     P.bh = CTRL.crouched ? CROUCH_H : 1.5; return 1;
   }
   const k = o.speed ?? Math.sqrt(s), gk = o.gravity ?? Math.sqrt(s), apex = o.jump ?? 0.97 * s;
   Object.assign(PHY, { sc: s, r: 0.26 * s, st: 0.55 * s, h: 1.5 * s, walk: 4.2 * k, run: 7.5 * k, crawl: 1.9 * k, g: 14 * gk });
   PHY.jv = Math.sqrt(2 * PHY.g * apex);
   if (!PHY.T) PHY.T = tinyBuild();
-  pg.scale.setScalar(s); camera.near = Math.max(0.01, 0.3 * s); camera.far = o.far ?? 160; camera.updateProjectionMatrix(); camD = CAM_D * s; camSh = 0;
+  pg.scale.setScalar(s); camera.near = Math.max(0.01, 0.3 * s); camera.far = o.far ?? ((LOOK && LOOK.far) || 160); camera.updateProjectionMatrix(); camD = CAM_D * s; camSh = 0;
   P.bh = (CTRL.crouched ? CROUCH_H : 1.5) * s; P.vy = 0;
   return s;
 }
@@ -1110,11 +1111,35 @@ function setTime(k) {
   clouds.material.color.setHex(CLOUD_TINT[k]);
   if (darkOn) { hemi.intensity = t.hi * DARK.hi; sun.intensity = t.si * DARK.si; }   // G-ESCAPE: 불 끄기(게임 map.lights(false)) — 있는 빛의 세기만 줄인다(새 빛 없음)
   glassApply(k);
+  if (LOOK) lookApply();   // WORLD-LOOK: 세계 화풍이 켜져 있으면 시간대 위에 덮어씀(세계마다 낮·노을·밤 색을 따로 줄 수 있음)
   { const i = t.label.indexOf(' '); timeBtn.innerHTML = '<span class="ico">' + t.label.slice(0, i) + '</span><span class="lbl">' + t.label.slice(i) + '</span>'; timeBtn.title = t.label; }   // MOBUI-1: 휴대폰은 아이콘만(phone.css .lbl 숨김) — 글자는 데스크톱과 같다
   MAP?.emit('time', k);
   return k;
 }
 timeBtn.addEventListener('click', e => { e.stopPropagation(); setTime(ORDER[(ORDER.indexOf(timeKey) + 1) % 3]); });
+// ---------- WORLD-LOOK(10-08 교사 '새 세계는 다른 프로그램 느낌이어도 됨 — 그래픽 스타일이 학교 메타버스에 갇힌 느낌') ----------
+//   게임이 세계 화풍을 덮어씀: { top, horizon(하늘 위·지평선 = 배경), fogColor, fog:[near, far], hemi:[하늘빛, 땅빛, 세기], sun:[색, 세기], exp(노출), clouds(색 | false), stars, far(먼 평면 — 안개 너머는 그리지 않음), ui(body data-look — 화면 껍질), day/sunset/night: {덮어쓸 값} }
+//   새 빛 없음(있는 빛의 색·세기만) · null = 원래 시간대 그대로(setTime이 모두 되돌림)
+function lookApply() {
+  const o = LOOK && (LOOK[timeKey] ? { ...LOOK, ...LOOK[timeKey] } : LOOK); if (!o) return;
+  if (o.horizon != null) { scene.background.setHex(o.horizon); scene.fog.color.setHex(o.fogColor ?? o.horizon); }
+  if (o.fog) { scene.fog.near = o.fog[0]; scene.fog.far = o.fog[1]; }
+  if (o.hemi) { hemi.color.setHex(o.hemi[0]); hemi.groundColor.setHex(o.hemi[1]); hemi.intensity = o.hemi[2]; }
+  if (o.sun) { sun.color.setHex(o.sun[0]); sun.intensity = o.sun[1]; }
+  if (o.exp) renderer.toneMappingExposure = o.exp;
+  if (o.top != null) { const P9 = skyDome.geometry.attributes.position, C9 = skyDome.geometry.attributes.color, lo = new THREE.Color(o.horizon), hi = new THREE.Color(o.top), c = new THREE.Color();
+    for (let i = 0; i < P9.count; i++) { const t = Math.min(1, Math.max(0, P9.getY(i) / 290)); c.copy(lo).lerp(hi, Math.pow(t, o.skyPow || 0.7)); C9.setXYZ(i, c.r, c.g, c.b); } C9.needsUpdate = true; }
+  stars.visible = o.stars != null ? !!o.stars : timeKey === 'night';
+  clouds.visible = o.clouds !== false; if (typeof o.clouds === 'number') clouds.material.color.setHex(o.clouds);
+  if (o.far) { camera.far = o.far; camera.updateProjectionMatrix(); }
+  document.body.dataset.look = o.ui || '';
+}
+function setLook(o) {
+  const was = LOOK; LOOK = o || null;
+  if (LOOK) { lookApply(); return; }
+  if (!was) return; delete document.body.dataset.look; clouds.visible = true;
+  camera.far = PHY.sc < 0.999 ? 160 : 320; camera.updateProjectionMatrix(); setTime(timeKey);
+}
 setTime('day');
 
 // ---------- 현재 위치 표시 ----------
@@ -1307,10 +1332,10 @@ function detailTick(dt, budget = Infinity) {
 
 // ---------- 지도 API(MAP-API-1 · 09-24) — 게임이 받는 지도 계약. 정본 docs/map_api.md ----------
 let rebakeT = 0;
-const FILM = createFilm({ THREE, camera, renderer, scene, world, tone, setCam: f => { CAM_OVR = f; }, setView: v => { FILM_VIEW = v && { far: GFX.mode === 'desktop' ? v.far : GFX.mode === 'cb' ? Math.min(v.far, 150) : Math.min(v.far, 100) }; OCC.x = 1e9; },   /* 크롬북 150m · 휴대폰·저사양 100m(10-04 교사 '폰으로 보니 전체적으로 떨림') */ setTime: k => setTime(k), getTime: () => timeKey });   // FILM-1
+const FILM = createFilm({ THREE, camera, renderer, scene, world, tone, setCam: f => { CAM_OVR = f; }, setView: v => { FILM_VIEW = v && { far: GFX.mode === 'desktop' ? v.far : GFX.mode === 'cb' ? Math.min(v.far, 150) : Math.min(v.far, 100) }; OCC.x = 1e9; },   /* 크롬북 150m · 휴대폰·저사양 100m(10-04 교사 '폰으로 보니 전체적으로 떨림') */ setTime: k => setTime(k), getTime: () => timeKey, lookOn: () => !!LOOK });   // FILM-1 · WORLD-LOOK: 세계 화풍이면 영상도 그 안개 그대로
 const TOP = createTop({ THREE, camera, renderer, scene, world, setCam: f => { CAM_OVR = f; }, setView: v => { FILM_VIEW = v && { far: GFX.mode === 'desktop' ? v.far : GFX.mode === 'cb' ? Math.min(v.far, 150) : Math.min(v.far, 100) }; OCC.x = 1e9; },
   getZones: () => MAP && MAP.zones, zoneAt: (x, y, z) => MAP && MAP.zoneAt(x, y, z), player: () => ({ x: P.x, y: P.y, z: P.z }), setYaw: v => { camYaw = v; } });
-MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL, film: FILM, top: TOP,
+MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL, film: FILM, top: TOP, look: o => setLook(o),
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
   pl: { P, ACT, CTRL, keys, touch: TOUCH, acts: ACTS, getYaw: () => camYaw, setYaw: v => { camYaw = v; },
     getFirst: () => camFirst, setFirst: v => { camFirst = !!v; }, getPitch: () => camPitch,   // WG-FPS(10-03): 게임이 1인칭으로 바꾸고 시점 기울기를 읽는다

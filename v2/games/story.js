@@ -154,8 +154,10 @@ export default async function start(map, params = {}) {
   function guide() {
     if (!cur || talk || endEl) return;
     const me = map.player.get(), r = nav.path([me.x, me.y, me.z], [cur.x, cur.y, cur.z], { maxExp: 400000 });
-    if (!r.ok) { map.hud.toast('여기서는 길을 찾지 못했어요 — 조금 움직여 보세요'); return; }
-    clearTrail(); trail = map.mk.trail(r.pts, { color: 0x3cc8ff, width: 0.45 }); trailT = TRAIL_T;
+    const W9 = 0.45 * Math.max(Math.min(SC, 1), 0.15);   // 작아지면 길도 가늘게
+    if (!r.ok) { if (Math.hypot(cur.x - me.x, cur.z - me.z) < 90) { clearTrail(); trail = map.mk.trail([[me.x, me.y, me.z], [cur.x, cur.y, cur.z]], { color: 0x3cc8ff, width: W9 }); trailT = TRAIL_T; return; }   // SANDBOX-2: 길격자가 없는 곳(하늘 마을) = 곧은 길
+      map.hud.toast('여기서는 길을 찾지 못했어요 — 조금 움직여 보세요'); return; }
+    clearTrail(); trail = map.mk.trail(r.pts, { color: 0x3cc8ff, width: W9 }); trailT = TRAIL_T;
   }
   const chapter = n => { S.ch = n; const C = D.chapters || []; map.hud.chip('st', '📖 ' + (C[n] || D.title)); if (n && C[n]) map.hud.banner(C[n], 2.4); map.sfx('go'); };
   map.hud.chip('st-h', '💡 길 안내 (H)', { onClick: guide });
@@ -176,7 +178,8 @@ export default async function start(map, params = {}) {
   //     emote: 이름|'me', icon, sec — 머리 위 그림 · use: id, label, goal — 그 물건 앞에서 E · circle: 'party', r — 내 앞에 둥글게 · tiny 판에선 친구도 작은 걸음
   //   모양 = 기본 도형 묶음(Group · 색마다 재질 하나 · MeshLambert — 새 조명 없음) · 이야기 동안 몇 개뿐이라 드로우콜 작음 · 멈추면 모두 치움
   const T3 = map.three, FX = new Map(), FXDISP = [], MATC = new Map(), FXROOT = new T3.Group(); map.add(FXROOT);
-  const fxMat = (c, o) => { const k = c + '|' + (o ? JSON.stringify(o) : ''); let m = MATC.get(k); if (!m) { m = new T3.MeshLambertMaterial({ color: c, ...(o || {}) }); MATC.set(k, m); FXDISP.push(m); } return m; };
+  let GRAD = null; const gradMap = () => { if (!GRAD) { const L = Array.isArray(D && D.toon) ? D.toon : [120, 185, 232, 255]; GRAD = new T3.DataTexture(new Uint8Array(L), L.length, 1, T3.RedFormat); GRAD.minFilter = GRAD.magFilter = T3.NearestFilter; GRAD.needsUpdate = true; FXDISP.push(GRAD); } return GRAD; };   // WORLD-LOOK: 만화 그림자 단계
+  const fxMat = (c, o) => { const k = c + '|' + (o ? JSON.stringify(o) : ''); let m = MATC.get(k); if (!m) { m = D && D.toon ? new T3.MeshToonMaterial({ color: c, gradientMap: gradMap(), ...(o || {}) }) : new T3.MeshLambertMaterial({ color: c, ...(o || {}) }); MATC.set(k, m); FXDISP.push(m); } return m; };
   const FG = { b: new T3.BoxGeometry(1, 1, 1), s: new T3.SphereGeometry(1, 14, 10), c: new T3.CylinderGeometry(1, 1, 1, 10), k: new T3.ConeGeometry(1, 1, 12) }; FXDISP.push(...Object.values(FG));
   const PT = (par, g, c, pos, sc, rot, o) => { const m = new T3.Mesh(FG[g], fxMat(c, o)); m.position.set(pos[0], pos[1], pos[2]); m.scale.set(sc[0], sc[1], sc[2]); if (rot) m.rotation.set(rot[0], rot[1], rot[2]); par.add(m); return m; };
   const pivot = (par, pos) => { const g = new T3.Group(); g.position.set(pos[0], pos[1], pos[2]); par.add(g); return g; };
@@ -294,7 +297,7 @@ export default async function start(map, params = {}) {
       pos[i * 3] = x + Math.cos(a) * r; pos[i * 3 + 1] = y + up; pos[i * 3 + 2] = z + Math.sin(a) * r;
       const sp = o.fall ? 0 : (o.speed || 0.4); vel[i * 3] = Math.cos(a) * sp * Math.random(); vel[i * 3 + 1] = o.fall ? -(0.12 + Math.random() * 0.2) : sp * (0.3 + Math.random()); vel[i * 3 + 2] = Math.sin(a) * sp * Math.random(); }
     const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.BufferAttribute(pos, 3));
-    const m = new T3.PointsMaterial({ color: o.color || 0xffe066, size: o.size || 0.03, transparent: true, opacity: 1, depthWrite: false });
+    const m = new T3.PointsMaterial({ color: o.color || 0xffe066, size: (o.size || 0.03) * 1.5, map: dotTex(), transparent: true, opacity: 1, depthWrite: false });   // 동그란 빛 알갱이(네모 점 → 둥근 점)
     const pt = new T3.Points(geo, m); FXROOT.add(pt); PUFF.push({ pt, vel, t: 0, life: o.life || 1.4, swirl: o.swirl || 0, cx: x, cz: z });
   }
   // 머리 위 그림(💢 ❓ ❤️ …) — 글자 그림판 스프라이트
@@ -390,7 +393,7 @@ export default async function start(map, params = {}) {
   }
   function fxStop() { for (const o of FX.values()) FXROOT.remove(o.g); FX.clear(); for (const p of PUFF) { FXROOT.remove(p.pt); p.pt.geometry.dispose(); p.pt.material.dispose(); } PUFF.length = 0;
     for (const e of EMO) { FXROOT.remove(e.sp); e.sp.material.map && e.sp.material.map.dispose(); e.sp.material.dispose(); } EMO.length = 0;
-    for (const im of GRASS) { FXROOT.remove(im); im.dispose(); } GRASS.length = 0; for (const d of FXDISP) d.dispose && d.dispose(); clearTimeout(physT); if (SC !== 1 || PHYS) map.player.scale(1); removeEventListener('keydown', bookKey, true); removeEventListener('keyup', bookKey, true); if (bookEl) { bookEl.remove(); bookEl = null; } removeEventListener('keydown', sbKey, true); if (discEl) { discEl.remove(); discEl = null; } RIDE = HOP = null; }
+    for (const im of GRASS) { FXROOT.remove(im); im.dispose(); } GRASS.length = 0; for (const d of FXDISP) d.dispose && d.dispose(); clearTimeout(physT); if (SC !== 1 || PHYS) map.player.scale(1); removeEventListener('keydown', bookKey, true); removeEventListener('keyup', bookKey, true); if (bookEl) { bookEl.remove(); bookEl = null; } removeEventListener('keydown', sbKey, true); if (discEl) { discEl.remove(); discEl = null; } if (howEl) { howEl.remove(); howEl = null; } RIDE = HOP = null; }
   // 이야기 칸 하나 실행(runSteps가 부름) — 기다릴 것이 있으면 Promise
   async function fxStep(st) {
     await worldStep(st);
@@ -402,7 +405,7 @@ export default async function start(map, params = {}) {
       if (st.wait !== false) await p; if (st.h != null) o.h = st.h; } }
     if (st.morph) { const o = FX.get(st.morph); if (o) { particles(o.x, o.y + 0.03 * o.s, o.z, { color: st.color || 0xfff4c2, n: 46, r: 0.06 * o.s * 3, speed: 0.35, size: 0.022, life: 1.1 }); map.sfx('ding');
       o.grow = 1; const k0 = performance.now(); await new Promise(r => setTimeout(r, 260)); void k0;
-      const n = fxMake(st.to, o.id, { x: o.x, y: o.y + (st.dy || 0), z: o.z, h: o.h }, { s: st.s || o.s, anim: st.anim || 'idle' }); if (n) n.grow = 0.05; } }
+      const n = fxMake(st.to, o.id, { x: o.x, y: o.y + (st.dy || 0), z: o.z, h: o.h }, { s: st.s || o.s, anim: st.anim || 'idle', color: st.toColor ?? st.color, fruit: st.fruit });   /* 바뀐 모양의 색·열매 색도 받음(사과 → 빨간 아기 뇨뇨 · 복숭아나무) */ if (n) n.grow = 0.05; } }
     if (st.powder) { const o = FX.get(st.powder), p = o ? { x: o.x, y: o.y + 0.12 * o.s, z: o.z } : whereOf(st.powder); if (p) { particles(p.x, p.y, p.z, { color: st.color || 0xffd54a, n: 70, r: 0.08, fall: true, size: 0.016, life: 1.8 }); map.sfx('tick'); await new Promise(r => setTimeout(r, 900)); } }
     if (st.glow) { for (const n of st.glow === 'party' ? [...PARTY, 'me'] : [].concat(st.glow)) { const p = whereOf(n === 'me' ? 'me' : 'feet:' + n); if (p) { const k9 = n === 'me' ? SC : actorScaleOf(n); particles(p.x, p.y + 0.4 * k9, p.z, { color: st.color || 0x9ef07a, n: 40, r: 0.4 * k9, swirl: 4, speed: 0.2 * k9, size: 0.07 * Math.sqrt(k9), life: 1.6 }); } } }
     if (st.shrink != null || st.grow) { const to = st.grow ? 1 : st.shrink; if (st.grow) { map.tone(330, 0, 1.1, 'sine', 0.12, 990); map.tone(660, 0.15, 1.0, 'triangle', 0.05, 1320); } else { map.tone(990, 0, 1.1, 'sine', 0.12, 260); map.tone(1320, 0.1, 0.9, 'triangle', 0.05, 330); } await new Promise(res => { shrinkA = { k: 0, sec: st.sec || 1.4, from: SC, to, done: res }; }); }
@@ -558,9 +561,9 @@ export default async function start(map, params = {}) {
     const kept = m => { for (let a = m; a && a !== g; a = a.parent) if (KS.has(a)) return true; return false; };
     g.traverse(m => { if (!m.isMesh || kept(m)) return; gone9.push(m); const q = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone(); q.applyMatrix4(M9.multiplyMatrices(inv, m.matrixWorld)); const L = by.get(m.material) || []; L.push(q); by.set(m.material, L); });
     for (const m of gone9) m.parent.remove(m);
-    for (const [mat, L] of by) { let n = 0; for (const q of L) n += q.attributes.position.count; const P = new Float32Array(n * 3), N = new Float32Array(n * 3); let o = 0;
-      for (const q of L) { P.set(q.attributes.position.array, o * 3); N.set(q.attributes.normal.array, o * 3); o += q.attributes.position.count; q.dispose(); }
-      const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.BufferAttribute(P, 3)); geo.setAttribute('normal', new T3.BufferAttribute(N, 3)); geo.computeBoundingSphere(); FXDISP.push(geo); g.add(new T3.Mesh(geo, mat)); }
+    for (const [mat, L] of by) { let n = 0; for (const q of L) n += q.attributes.position.count; const P = new Float32Array(n * 3), N = new Float32Array(n * 3), VC = mat.vertexColors ? new Float32Array(n * 3).fill(1) : null; let o = 0;   // 정점색 재질(세계 바닥 판)은 색도 합침 — 빠지면 까맣게 나옴
+      for (const q of L) { P.set(q.attributes.position.array, o * 3); N.set(q.attributes.normal.array, o * 3); if (VC && q.attributes.color) VC.set(q.attributes.color.array, o * 3); o += q.attributes.position.count; q.dispose(); }
+      const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.BufferAttribute(P, 3)); geo.setAttribute('normal', new T3.BufferAttribute(N, 3)); if (VC) geo.setAttribute('color', new T3.BufferAttribute(VC, 3)); geo.computeBoundingSphere(); FXDISP.push(geo); g.add(new T3.Mesh(geo, mat)); }
   }
   // 내 몸 = 모양(키위·체리·카피바라·뇨뇨) · 날기·달리기
   let BODY = null, PHYS = null, physT = 0;
@@ -585,7 +588,10 @@ export default async function start(map, params = {}) {
     + '#story-book li i{font-style:normal;font-weight:800;font-size:12px;margin-right:6px;opacity:.8}'
     + '#story-book .ft{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:2px solid #e3e8f0}#story-book .ft button{font:inherit;font-weight:800;border:0;border-radius:10px;padding:8px 14px;min-height:44px;cursor:pointer;background:#e3ebf7;color:#1d3557}'
     + '#story-book .ft button.go{background:#1d3557;color:#fff}#story-book .dots{flex:1;text-align:center;font-size:13px;color:#5a6b80}#story-book .tabs{display:flex;flex-wrap:wrap;gap:5px;padding:8px 14px 0}#story-book .tabs button{font:inherit;font-size:13px;border:2px solid #c9d8f0;background:#fff;border-radius:999px;padding:3px 10px;min-height:32px;cursor:pointer}#story-book .tabs button.on{background:#fff3bf;border-color:#1d3557;font-weight:800}'
-    + 'body.small #story-book .pg{padding:10px 12px}body.small #story-book h3{font-size:17px}body.small #story-book li{padding:6px 9px;font-size:13px}';
+    + '#story-book .hw{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;background:#f2f6ff;margin-bottom:8px}#story-book .hw .ic{font-size:34px;width:50px;text-align:center;flex:none;line-height:1}#story-book .hw b{display:block;font-size:17px;color:#1d3557}#story-book .hw span{font-size:14px;color:#33415c;line-height:1.5}'
+    + '#story-book kbd{display:inline-block;min-width:22px;padding:0 6px;margin:0 2px;border:2px solid #1d3557;border-bottom-width:4px;border-radius:7px;background:#fff;font:800 13px/20px sans-serif;text-align:center;color:#1d3557}'
+    + '#story-book .mt{margin:0 0 10px;padding:9px 12px;border-radius:12px;background:#fff6d6;border:2px solid #f2c94c;font-size:14px;line-height:1.5}#story-book .mt .br{display:block;height:10px;border-radius:99px;background:#efe3b5;margin:6px 0;overflow:hidden}#story-book .mt .br i{display:block;height:100%;background:linear-gradient(90deg,#ffd23c,#ff9f1a);border-radius:99px}#story-book .mt small{display:block;color:#6b5a1e;font-size:13px}'
+    + 'body.small #story-book .pg{padding:10px 12px}body.small #story-book h3{font-size:17px}body.small #story-book li{padding:6px 9px;font-size:13px}body.small #story-book .hw{padding:7px 9px;gap:9px}body.small #story-book .hw .ic{font-size:26px;width:38px}body.small #story-book .hw b{font-size:15px}body.small #story-book .hw span{font-size:13px}';
   function openBook(i = 0) { const B = D.book; if (!B || !B.pages || !B.pages.length) return Promise.resolve();
     if (!document.getElementById('story-book-css')) { const s9 = document.createElement('style'); s9.id = 'story-book-css'; s9.textContent = BCSS; document.head.appendChild(s9); }
     document.exitPointerLock?.(); map.player.freeze(true); bookI = Math.max(0, Math.min(B.pages.length - 1, +i || 0));
@@ -609,11 +615,12 @@ export default async function start(map, params = {}) {
     if (st.phys !== undefined) { const prev = PHYS; PHYS = st.phys; applyPhys(); clearTimeout(physT); if (st.phys && st.phys.sec) physT = setTimeout(() => { if (!dead) { PHYS = st.phys.after !== undefined ? st.phys.after : prev; applyPhys(); if (st.phys.endMsg) map.hud.toast(st.phys.endMsg, 2.5); } }, st.phys.sec * 1000); }
     if (st.solid) for (const b of st.solid) map.collider.add({ x0: b[0], y0: b[1], z0: b[2], x1: b[3], y1: b[4], z1: b[5] });
     if (st.arena !== undefined) map.arena.set(st.arena === 'school' ? 'school' : st.arena ? { rect: st.arena, msg: st.arenaMsg || '여기서는 더 갈 수 없어요' } : null);   // null = 경계 없음(하늘 위 — 놀이 경계는 높이 12 m 아래만 받음) · 'school' = 원래 학교 경계
-    if (st.wander) for (const id of [].concat(st.wander)) { const o = FX.get(id); if (o) o.wd = st.rect ? { r: st.rect, sp: st.speed || 0.6, tx: o.x, tz: o.z, wait: Math.random() * 1.5, y: st.fly ? o.y : null } : null; }
+    if (st.wander) for (const id of [].concat(st.wander)) { const o = FX.get(id); if (o && st.rect) o.fol = null; if (o) o.wd = st.rect ? { r: st.rect, sp: st.speed || 0.6, tx: o.x, tz: o.z, wait: Math.random() * 1.5, y: st.fly ? o.y : null } : null; }
     if (st.follow) [].concat(st.follow).forEach((id, k) => { const o = FX.get(id); if (o) { o.fol = st.off ? null : { d: (st.d || 1.4), sp: st.speed || 3.5, k }; if (o.fol) o.wd = null; } });
     if (st.rain) { const c = whereOf(st.rain.at || 'me', {}); if (c) for (let k = 0; k < (st.rain.puffs || 6); k++) { const a = Math.random() * 6.28, r = Math.random() * (st.rain.r || 4); particles(c.x + Math.cos(a) * r, c.y + (st.rain.h || 3), c.z + Math.sin(a) * r, { color: st.rain.color || 0x6ec6ff, n: st.rain.n || 40, r: 1.2, fall: true, size: st.rain.size || 0.08, life: 2.2 }); } }
     if (st.tone) for (const a of st.tone) map.tone(...a);
     if (st.book != null) await openBook(st.book === true ? 0 : st.book);
+    if (st.look !== undefined) setLookS(st.look);
   }
   // ---------- SANDBOX(10-07 교사 '깊이는 마법사 마을이 최소 기준 · E만 누르는 퀘스트 말고 장수풍뎅이처럼 보이는 모습 · 40분 고민했는데 3분이면 허무') ----------
   //   D.sandbox = { title, disc:[{k, t, h, mark, need, after, start:{use|at|near|skill, on, r, label}, steps}], acts:[{…같은 꼴 · 발견 아님}], skills:[{k, key, icon, name, need, color, anim, emote, tone, steps}], exit:{use|at, label} }
@@ -640,6 +647,17 @@ export default async function start(map, params = {}) {
     seed(g, R) { PT(g, 's', 0x8d6e63, [0, 0.06, 0], [0.06, 0.05, 0.09]); R.top = 0.12; },
     gift(g, R, st = {}) { PT(g, 'b', st.color || 0xff6fa8, [0, 0.12, 0], [0.24, 0.24, 0.24]); PT(g, 'b', 0xffd23c, [0, 0.12, 0], [0.26, 0.25, 0.05]); PT(g, 'b', 0xffd23c, [0, 0.12, 0], [0.05, 0.25, 0.26]); PT(g, 's', 0xffd23c, [0, 0.27, 0], [0.06, 0.04, 0.06]); R.top = 0.32; },
     rainbow(g, R) { [0xe53935, 0xff9800, 0xffeb3b, 0x4caf50, 0x2196f3, 0x7e57c2].forEach((c, k) => { const geo = new T3.TorusGeometry(4 - k * 0.32, 0.16, 6, 28, Math.PI); FXDISP.push(geo); const m = new T3.Mesh(geo, fxMat(c, { emissive: 0x222222 })); g.add(m); }); R.top = 4.2; },
+    ground(g, R, st = {}) {   // WORLD-LOOK: 세계 바닥 판(학교 땅을 덮음) — 정점색 얼룩(c1·c2) + 꽃점(dots)
+      const w = st.w || 10, d = st.d || 10, nx = Math.max(4, Math.round(w / (st.cell || 0.6))), nz = Math.max(4, Math.round(d / (st.cell || 0.6))), geo = new T3.PlaneGeometry(w, d, nx, nz); geo.rotateX(-Math.PI / 2); FXDISP.push(geo);
+      const P9 = geo.attributes.position, col = new Float32Array(P9.count * 3), a9 = new T3.Color(st.c1 || 0x7cc35a), b9 = new T3.Color(st.c2 || 0xa6d96a), c9 = new T3.Color(); let sd = 12345;
+      const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+      for (let i = 0; i < P9.count; i++) { const x = P9.getX(i), z = P9.getZ(i), n = 0.5 + 0.25 * Math.sin(x * 1.7 / (st.cell || 0.6) + z * 0.9) * Math.sin(z * 1.3 / (st.cell || 0.6) - x * 0.4) + (rnd() - 0.5) * 0.35; c9.copy(a9).lerp(b9, Math.max(0, Math.min(1, n))); col[i * 3] = c9.r; col[i * 3 + 1] = c9.g; col[i * 3 + 2] = c9.b; }
+      geo.setAttribute('color', new T3.BufferAttribute(col, 3)); g.add(new T3.Mesh(geo, fxMat(0xffffff, { vertexColors: true })));
+      if (!FG.d) { FG.d = new T3.CylinderGeometry(1, 1, 1, 6); FXDISP.push(FG.d); }   // 꽃점 = 육각 납작 판(삼각형 24 — 공 모양 280의 1/12)
+      const DC = st.dots || []; for (let k = 0; k < (st.ndots || 0); k++) { const r9 = (st.dotR || 0.08) * (0.7 + rnd() * 0.6); PT(g, 'd', DC[k % DC.length] || 0xffffff, [(rnd() - 0.5) * w * 0.96, 0.006, (rnd() - 0.5) * d * 0.96], [r9, r9 * 0.2, r9]); }
+      R.top = 0; },
+    tomato(g, R) { PT(g, 'c', 0x8d6e63, [0, 0.45, 0], [0.025, 0.9, 0.025]); for (let k = 0; k < 6; k++) { const a = k * 1.1, y = 0.2 + k * 0.12; PT(g, 's', 0x43a047, [Math.cos(a) * 0.14, y, Math.sin(a) * 0.14], [0.16, 0.03, 0.08], [0, -a, 0.3]); }
+      for (const [x, y, z, r] of [[0.1, 0.35, 0.05, 0.08], [-0.09, 0.55, -0.04, 0.09], [0.06, 0.72, -0.08, 0.07], [-0.07, 0.25, 0.08, 0.07]]) { PT(g, 's', 0xe53935, [x, y, z], [r, r * 0.9, r]); PT(g, 's', 0x2e7d32, [x, y + r * 0.85, z], [r * 0.5, r * 0.15, r * 0.5]); } R.top = 0.95; },
     bucket(g, R) { PT(g, 'c', 0x4fc3f7, [0, 0.12, 0], [0.14, 0.24, 0.14]); PT(g, 'c', 0x8fd3ff, [0, 0.235, 0], [0.12, 0.01, 0.12]); PT(g, 't', 0x546e7a, [0, 0.3, 0], [0.12, 0.12, 0.12], [0, 0, 0]); R.top = 0.36; },
   });
   let SB = null, RIDE = null, HOP = null, SKCD = 0, SKON = false, discEl = null;
@@ -654,21 +672,26 @@ export default async function start(map, params = {}) {
   const nearP = (T, r, dy) => { const me = map.player.get(); return Math.hypot(T.x - me.x, T.z - me.z) < r && Math.abs(T.y - me.y) < (dy || Math.max(1.2 * Math.max(SC, 0.3), r)); };
   function moveFx(o, b, sec, arc = 0, face = true) { return new Promise(res => { o.mv = { a: { x: o.x, y: o.y, z: o.z }, b, k: 0, sec, arc, face, done: res }; }); }
   function discover(k, quiet) { if (!k || FOUND.has(k)) return; FOUND.add(k); map.store.set('found.' + EP.id, [...FOUND]); const d = discAll().find(x => x.k === k); sbChip(); sbMarks();
-    if (!quiet && d) { const me = map.player.get(); particles(me.x, me.y + 1.1 * SC, me.z, { color: 0xffd66b, n: 70, r: 0.7 * SC, speed: 0.6 * SC, size: 0.09 * Math.sqrt(SC), life: 1.5 }); map.sfx('done'); map.hud.toast('📖 새 발견! ' + d.t + ' (' + nFound() + '/' + discAll().length + ')', 4); } }
+    if (!quiet && d) { const me = map.player.get(); particles(me.x, me.y + 1.1 * SC, me.z, { color: 0xffd66b, n: 70, r: 0.7 * SC, speed: 0.6 * SC, size: 0.09 * Math.sqrt(SC), life: 1.5 }); map.sfx('done');
+      [523, 659, 784, 1047].forEach((f, i) => map.tone(f, 0.08 + i * 0.11, i === 3 ? 0.5 : 0.16, 'triangle', 0.09));   // SANDBOX-2 발견 소리(도미솔도)
+      map.hud.banner('📖 새 발견! ' + d.t, 2.6); map.hud.toast('🔎 신기한 일 ' + nFound() + ' / ' + discAll().length + (MET ? ' · ' + D.sandbox.meter.icon + ' ' + D.sandbox.meter.name + '도 차올라요' : ''), 3.5); }
+    if (MET) meterAdd((D.sandbox.meter.feed && D.sandbox.meter.feed.disc) || 1); }
   function sbChip() { if (!D.sandbox || !SB) return; map.hud.chip('st-d', '🔎 신기한 일 ' + nFound() + '/' + discAll().length + ' (B)', { onClick: () => openDisc() }); }
   function sbMarks() { if (!SB) return; extra = discAll().filter(d => d.mark && !FOUND.has(d.k) && avail(d)).map(d => { const p = posOf(d.mark); return p && { x: p.x, z: p.z, color: '#ffd23c', label: '?' }; }).filter(Boolean); marks(); }
   function sbSkills() { const L = (D.sandbox && D.sandbox.skills) || []; L.forEach((sk, i) => map.hud.chip('st-k' + i, SKON && cond(sk.need) ? sk.icon + ' ' + sk.name + ' (' + sk.key.replace('Key', '') + ')' : null, SKON && cond(sk.need) ? { onClick: () => useSkill(sk) } : undefined)); }
   function openDisc() { if (!D.sandbox || talk || bookEl || discEl) return; if (!document.getElementById('story-book-css')) { const s9 = document.createElement('style'); s9.id = 'story-book-css'; s9.textContent = BCSS; document.head.appendChild(s9); }
     document.exitPointerLock?.(); map.player.freeze(true); const esc9 = x => String(x).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])), L = discAll();
     discEl = document.createElement('div'); discEl.id = 'story-book'; discEl.className = 'ttl-keep';
-    discEl.innerHTML = '<div class="bk"><div class="hd"><b>🔎 ' + esc9(D.sandbox.title || '신기한 일') + '</b><span>' + nFound() + ' / ' + L.length + '</span></div><div class="pg"><div class="lg">찾은 것은 ✅ · 아직 못 찾은 것은 ❓ 힌트(지도에 노란 ? 표시)</div><ul>'
+    discEl.innerHTML = '<div class="bk"><div class="hd"><b>🔎 ' + esc9(D.sandbox.title || '신기한 일') + '</b><span>' + nFound() + ' / ' + L.length + '</span></div><div class="pg">' + metHtml(esc9) + '<div class="lg">찾은 것은 ✅ · 아직 못 찾은 것은 ❓ 힌트(지도에 노란 ? 표시)</div><ul>'
       + L.map(d => '<li class="' + (FOUND.has(d.k) ? 'k' : avail(d) ? 'a' : 's') + '"><i>' + (FOUND.has(d.k) ? '✅' : avail(d) ? '❓' : '🔒') + '</i>' + esc9(FOUND.has(d.k) ? d.t : (avail(d) ? d.t.replace(/^(\S+)\s.*$/, '$1 ') + '— ' + d.h : '나중에 열려요 — ' + (d.lock || d.h))) + '</li>').join('')
-      + '</ul></div><div class="ft"><span class="dots">B 또는 ✕로 닫기</span><button data-b="x" class="go">닫기 ✓</button></div></div>';
-    discEl.addEventListener('click', e => { e.stopPropagation(); if (e.target === discEl || e.target.closest('[data-b]')) closeDisc(); }); document.body.appendChild(discEl); map.sfx('tick'); }
+      + '</ul></div><div class="ft">' + (D.sandbox.how ? '<button data-b="how">❓ 하는 법</button>' : '') + '<button data-b="reset" title="다음에 이 세계에 들어올 때 처음부터">🔄 처음부터</button><span class="dots">B · ✕로 닫기</span><button data-b="x" class="go">닫기 ✓</button></div></div>';
+    discEl.addEventListener('click', e => { e.stopPropagation(); const b = e.target.closest('[data-b]'); if (b && b.dataset.b === 'how') { closeDisc(); sbHow(); return; }
+      if (b && b.dataset.b === 'reset') { map.store.set('found.' + EP.id, []); map.store.set('meter.' + EP.id, null); map.hud.toast('🔄 다음에 이 세계에 들어올 때 처음부터 다시 찾을 수 있어요', 4); closeDisc(); return; }
+      if (e.target === discEl || b) closeDisc(); }); document.body.appendChild(discEl); map.sfx('tick'); }
   function closeDisc() { if (!discEl) return; discEl.remove(); discEl = null; map.player.freeze(false); }
   async function runDisc(d) { if (!SB || SB.busy || talk || bookEl || discEl) return; SB.busy = d.k || 'act'; sbArm(false);
     try { await runSteps(d.steps || [], false); } catch (e) { console.error('[이야기] 발견', d.k, e); }
-    if (gone()) return; SB.busy = null; objective(null); map.player.freeze(false); if (d.k && !d.act && !SB.cancel) discover(d.k); SB.cancel = false; sbSkills(); sbArm(true); }
+    if (gone()) return; SB.busy = null; objective(null); GK = ''; map.player.freeze(false); herdApply(); if (d.k && !d.act && !SB.cancel) discover(d.k); SB.cancel = false; sbSkills(); sbArm(true); }
   function sbArm(on) { if (!SB) return; for (const h of SB.hs) h.h.remove(); SB.hs = []; if (!on) return;
     const add = (d, s, label) => { const p = posOf(s.use || s.at); if (!p) return; const h = map.interact.add({ x: p.x, y: p.y, z: p.z, r: (s.r || 1.6) * RS(), label: label, use: () => { if (d.exit) sbExit(); else runDisc(d); } }); SB.hs.push({ h, d, id: s.use }); };
     for (const d of discAll()) if (!FOUND.has(d.k) && avail(d) && d.start && (d.start.use || d.start.at)) add(d, d.start, d.start.label || '🔎 살펴보기');
@@ -682,13 +705,19 @@ export default async function start(map, params = {}) {
     particles(px, me.y + 0.7 * SC, pz, { color: sk.color || 0xffffff, n: 44, r: 0.35 * r, speed: 0.35 * SC, size: 0.07 * Math.sqrt(SC), life: 1.1, swirl: sk.swirl || 0 });
     if (sk.tone) for (const a of sk.tone) map.tone(...a); else map.sfx('pick'); if (BODY) BODY.o.act = { k: sk.anim || 'cast', t: 0 }; if (sk.emote) emote('me', sk.emote, 1.4);
     for (const w of [...WAIT]) w(sk.k, px, pz, me.y);
+    const FD = MET && D.sandbox.meter.feed && D.sandbox.meter.feed.skills && D.sandbox.meter.feed.skills[sk.k];   // SANDBOX-2: 이 능력으로 게이지가 차는 것(무대 생물마다 한 번)
+    if (FD) { let best = null, bd = 1e9; for (const o of FX.values()) if (o.kind === FD.kind && !o.fed && o.id !== '@body') { const d9 = Math.hypot(o.x - px, o.z - pz); if (d9 < (FD.r || 1.4) * RS() && Math.abs(o.y - me.y) < 2 * Math.max(SC, 0.3) + (o.R.top || 0.5) * o.s && d9 < bd) { bd = d9; best = o; } }
+      if (best) { best.fed = true; emote(best.id, FD.icon || D.sandbox.meter.icon, 1.6); particles(best.x, best.y + (best.R.top || 0.4) * best.s, best.z, { color: 0xffe27a, n: 24, r: 0.25 * Math.max(best.s, SC), speed: 0.25 * Math.max(SC, 0.2), size: 0.05 * Math.sqrt(Math.max(SC, 0.1)), life: 1 }); meterAdd(FD.n || 1, FD.say); } }
+    const MM = SB && SB.mimic && D.sandbox.mimic && D.sandbox.mimic[sk.k];   // 무리가 나를 따라 함(동물 세계 — 카피바라는 서로 따라 해요)
+    if (MM) for (const o of FX.values()) if (o.fol && o.id !== '@body') { const a9 = MM.anim || 'hop'; o.anim = a9; if (MM.emote) emote(o.id, MM.emote, 1.3); if (MM.color) particles(o.x, o.y + 0.15 * o.s, o.z, { color: MM.color, n: 16, r: 0.3 * o.s, speed: 0.3, size: 0.05, life: 0.8 }); setTimeout(() => { if (o.anim === a9) o.anim = 'idle'; }, (MM.sec || 1.8) * 1000); }
     if (sk.affect) for (const o of FX.values()) if (o.kind === sk.affect.kind && Math.hypot(o.x - me.x, o.z - me.z) < (sk.affect.r || 4) * RS()) { o.anim = sk.affect.anim || 'dance'; if (sk.affect.come && !o.fol) moveFx(o, { x: me.x + (Math.random() - 0.5) * 2 * RS(), y: o.y, z: me.z + (Math.random() - 0.5) * 2 * RS() }, 1.2, 0.2).then(() => { o.anim = 'idle'; }); else setTimeout(() => { if (o.anim === (sk.affect.anim || 'dance')) o.anim = 'idle'; }, 3000); }
     if (SB && !SB.busy) { for (const d of discAll()) if (!FOUND.has(d.k) && avail(d) && d.start && d.start.skill === sk.k) { const p = posOf(d.start.on || d.start.at); if (!d.start.on && !d.start.at) { runDisc(d); return; } if (p && Math.hypot(p.x - px, p.z - pz) < r + (d.start.r || 0.5) * RS() && Math.abs(p.y - me.y) < 1.6 * Math.max(SC, 0.3) + (d.start.dy || 0)) { runDisc(d); return; } }
       if (sk.steps) runDisc({ act: true, steps: sk.steps }); }
   }
-  const sbKey = e => { if (!SKON || e.type !== 'keydown' || e.repeat || talk || bookEl) return; if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+  const sbKey = e => { if (howEl) { e.stopPropagation(); if (e.type === 'keydown' && !e.repeat && ['Enter', 'NumpadEnter', 'Space', 'KeyE', 'Escape'].includes(e.code)) { e.preventDefault(); closeHow(); } return; }
+    if (!SKON || e.type !== 'keydown' || e.repeat || talk || bookEl) return; if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
     if (e.code === 'KeyB' && D.sandbox && SB) { e.stopPropagation(); if (discEl) closeDisc(); else openDisc(); return; } if (discEl) { if (e.code === 'Escape') closeDisc(); return; }
-    const sk = ((D.sandbox && D.sandbox.skills) || []).find(s => s.key === e.code); if (sk) { e.stopPropagation(); useSkill(sk); } };
+    const sk = ((D.sandbox && D.sandbox.skills) || []).find(s => s.key === e.code && cond(s.need)); if (sk) { e.stopPropagation(); useSkill(sk); } };   // 같은 키를 쓰는 능력(키위 F 가위 · 체리 F 노래)은 지금 쓸 수 있는 것으로
   addEventListener('keydown', sbKey, true);
   function caught(o, c) { particles(o.x, o.y + 0.2 * Math.max(o.s, SC), o.z, { color: c.color || 0xfff4c2, n: 30, r: 0.2 * Math.max(o.s, SC) * 3, speed: 0.3 * Math.max(SC, 0.2), size: 0.05 * Math.sqrt(Math.max(SC, 0.1)), life: 0.9 }); map.sfx('pick');
     o.flee = null; o.wd = null; if (c.then === 'follow') o.fol = { d: (c.d || 0.9) * RS(), sp: 3.5 * Math.max(SC, 0.3), k: (SB ? SB.folK = (SB.folK || 0) + 1 : 1) }; else if (c.then === 'stay') { o.anim = 'hop'; } else { FXROOT.remove(o.g); FX.delete(o.id); } }
@@ -696,7 +725,13 @@ export default async function start(map, params = {}) {
     if (st.skills !== undefined) { SKON = !!st.skills; sbSkills(); }
     if (st.found) discover(st.found);
     if (st.cancel && SB) SB.cancel = true;
-    if (st.bodyPose !== undefined && BODY) BODY.pose = st.bodyPose;
+    if (st.bodyPose !== undefined && BODY) { BODY.pose = st.bodyPose; if (SB && SB.mimic) for (const o of FX.values()) if (o.fol && o.id !== '@body') o.anim = st.bodyPose || 'idle'; }   // 무리도 같이 잠
+    if (st.mimic !== undefined && SB) SB.mimic = !!st.mimic;
+    if (st.meter) meterAdd(st.meter);
+    if (st.film) { const me9 = map.player.get(), shots = st.film.filter(Boolean).map(s9 => s9.rel ? { ...s9, cam: { p: s9.cam.p.map(a => [me9.x + a[0], me9.y + a[1], me9.z + a[2]]), l: s9.cam.l.map(a => [me9.x + a[0], me9.y + a[1], me9.z + a[2]]) } } : s9); /* rel = 내 자리 기준 카메라 */ if (map.film && shots.length) { map.player.freeze(true); const pr = map.film.play(shots, { brand: D.title, keepTime: st.keepTime !== false, music: st.music, skipText: '넘기기 ⏭' }).catch(e => console.error('[이야기] 영상', e));
+      if (st.bg) FILMP = pr; else { await pr; if (!gone()) map.player.freeze(false); } } }   // bg = 영상이 도는 동안 다음 칸들(꽃이 피는 모습 등)이 같이 일어남 → filmWait로 끝을 기다림
+    if (st.filmWait && FILMP) { const pr = FILMP; FILMP = null; await pr; if (!gone()) map.player.freeze(false); }
+    if (st.herd !== undefined && SB) { SB.herd = st.herd === null ? [] : [...new Set([...(SB.herd || []), ...[].concat(st.herd)])]; herdApply(); }   // SANDBOX-2: 영상 장면(카메라·글·이름표·화음) — film.js
     if (st.ifFound) await runSteps(FOUND.has(st.ifFound) ? st.then || [] : st.else || [], false);
     if (st.seti) for (const [k, v] of Object.entries(st.seti)) VARS[k] = { i: v, label: String(v) };
     if (st.still) { const w = st.still; objective(w.goal || '가만히 기다려요', null); let lx = null, lz = null, t9 = 0; await until(() => { const me = map.player.get(); if (lx != null && Math.hypot(me.x - lx, me.z - lz) < 0.01 * Math.max(SC, 0.2)) t9 += 0.1; else t9 = 0; lx = me.x; lz = me.z; return t9 >= (w.sec || 3); }); objective(null); }
@@ -729,19 +764,107 @@ export default async function start(map, params = {}) {
       for (const p of r.path) { const b = posOf(p); if (!b) continue; await moveFx(o, b, r.seg || 1.6, r.arc || 0); if (gone()) return; } const end = RIDE; RIDE = null; map.player.freeze(false);
       if (r.off) { const b = posOf(r.off); if (b) map.player.teleport([b.x, b.y + 0.02, b.z]); } else map.player.teleport([end.o.x, end.o.y + end.dy, end.o.z]); } }
     if (st.hop) { const h = st.hop, T = posOf(h.to); if (T) { map.player.freeze(true); const me = map.player.get(); map.sfx('go'); await new Promise(res => { HOP = { a: { x: me.x, y: me.y, z: me.z }, b: T, k: 0, dur: h.sec || 1.0, hg: (h.h || 1.5) * Math.max(SC, 0.08), done: res }; }); map.player.freeze(false); } }
-    if (st.sandbox) { if (!D.sandbox) return; SB = { busy: null, hs: [], done: null, folK: 0 }; SKON = true; sbSkills(); sbChip(); sbMarks(); sbArm(true);
-      if (st.sandbox !== 'quiet') map.hud.toast('🔎 이제 자유롭게 둘러봐요! 신기한 일 ' + discAll().length + '가지 — B = 목록 · 지도의 노란 ? = 힌트', 6);
-      await new Promise(res => { SB.done = res; }); sbArm(false); for (const h of SB.hs) h.h.remove(); map.hud.chip('st-d', null); extra = []; marks(); SB = null; SKON = false; sbSkills(); }
+    if (st.sandbox) { if (!D.sandbox) return; SB = { busy: 'start', hs: [], done: null, folK: 0 }; SKON = true; sbSkills(); sbChip();
+      await metLoad();   // 게이지(지난번에 채운 만큼 · 이미 바뀐 세상은 조용히 다시)
+      if (D.sandbox.intro && st.sandbox !== 'quiet') await mechStep({ film: D.sandbox.intro });   // 들어갈 때 영상 한 바퀴(장소 이름표)
+      if (gone()) return; if (D.sandbox.how && st.sandbox !== 'quiet') await sbHow();
+      else if (st.sandbox !== 'quiet') map.hud.toast('🔎 이제 자유롭게 둘러봐요! 신기한 일 ' + discAll().length + '가지 — B = 목록 · 지도의 노란 ? = 힌트', 6);
+      if (gone()) return; SB.busy = null; GK = ''; sbMarks(); sbArm(true); map.hud.chip('st', '📖 자유 탐험');
+      await new Promise(res => { SB.done = res; }); sbArm(false); for (const h of SB.hs) h.h.remove(); map.hud.chip('st-d', null); map.hud.chip('st-m', null); extra = []; objective(null); SB = null; SKON = false; sbSkills(); }
   }
+  // ---------- SANDBOX-2(10-08 교사 기본값 '풍성 4 · 놀이 4 · 효과 3~4 · 직관성 높게') ----------
+  //   how = 하는 법 창(자유 탐험 시작 · B 목록 '❓ 하는 법') · 지금 할 일 줄(가장 가까운 ❓ — H 길 안내) · 발견 연출(배너·도미솔도)
+  //   meter = 세상이 바뀌는 게이지 {icon, name, max, hint, feed:{disc, skills:{능력:{kind, r, n, icon}}}, stages:[{at, t, steps, keep, found}]} — 단계마다 세상이 바뀜(영상 장면 film) · 지난번 것은 keep으로 조용히 다시
+  //   mimic = {능력: {anim, emote}} — SB.mimic(칸 { mimic: true })이면 따라오는 무리가 내 능력·자세를 따라 함
+  let howEl = null, howDone = null, MET = null, GK = '', gT = 0, FILMP = null;
+  function herdApply() { if (!SB || !SB.herd) return; SB.herd.forEach((id, k) => { const o = FX.get(id); if (o && !o.hold) { o.wd = null; if (!o.fol) o.fol = { d: D.sandbox.herdD || 0.7, sp: 3.2, k }; else o.fol.k = k; } }); }   // 무리 = 따라오는 친구들(발견이 끝날 때마다 다시 줄 세움)
+  function sbHow() { const H = D.sandbox && D.sandbox.how; if (!H || howEl) return Promise.resolve();
+    if (!document.getElementById('story-book-css')) { const s9 = document.createElement('style'); s9.id = 'story-book-css'; s9.textContent = BCSS; document.head.appendChild(s9); }
+    document.exitPointerLock?.(); map.player.freeze(true); const esc9 = x => String(x).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])), touch = document.body.classList.contains('touch');
+    const sks = ((D.sandbox.skills) || []).filter(s9 => cond(s9.need)).map(s9 => (touch ? '' : '<kbd>' + esc9(s9.key.replace('Key', '')) + '</kbd>') + esc9(s9.icon + ' ' + s9.name)).join(' · ');
+    const M = D.sandbox.meter, fill = t => esc9(t).replace('{skills}', sks + (touch ? ' (오른쪽 칩)' : '')).replace('{meter}', M ? esc9(M.icon + ' ' + M.name) : '').replace(/\[(\w+)\]/g, (m9, k) => touch ? '' : '<kbd>' + k + '</kbd>');
+    howEl = document.createElement('div'); howEl.id = 'story-book'; howEl.className = 'ttl-keep';
+    howEl.innerHTML = '<div class="bk"><div class="hd"><b>🔎 ' + esc9(H.title || D.sandbox.title || '자유 탐험') + '</b><span>이렇게 놀아요</span></div><div class="pg">'
+      + (H.lines || []).map(([ic, b, t]) => '<div class="hw"><div class="ic">' + esc9(ic) + '</div><div><b>' + fill(b) + '</b><span>' + fill(t) + '</span></div></div>').join('')
+      + (H.tip ? '<div class="lg" style="margin-top:4px">💡 ' + fill(H.tip) + '</div>' : '') + '</div><div class="ft"><span class="dots">' + (touch ? '' : 'Enter · Space') + '</span><button data-b="go" class="go">▶ 탐험 시작</button></div></div>';
+    howEl.addEventListener('click', e => { e.stopPropagation(); if (e.target.closest('[data-b]')) closeHow(); }); document.body.appendChild(howEl); map.sfx('tick');
+    return new Promise(res => { howDone = res; }); }
+  function closeHow() { if (!howEl) return; howEl.remove(); howEl = null; map.player.freeze(false); map.sfx('go'); const d = howDone; howDone = null; if (d) d(); }
+  function sbGoal() {   // 지금 할 일 줄 — 가장 가까운 ❓(바뀔 때만 다시 씀) · cur = H 길 안내 목적지
+    const me = map.player.get(); let best = null, bd = 1e9, free = null, lock = null;
+    for (const d of discAll()) { if (FOUND.has(d.k)) continue; if (!avail(d)) { if (!lock) lock = d; continue; } if (!d.mark) { if (!free) free = d; continue; } const p = posOf(d.mark); if (!p) continue; const dd = Math.hypot(p.x - me.x, p.z - me.z) + Math.abs(p.y - me.y) * 2; if (dd < bd) { bd = dd; best = { d, p }; } }
+    let key, text, t = null; const X = D.sandbox.exit;
+    const cut = (x, n) => { x = String(x).split(/ — /)[0]; return x.length > n ? x.slice(0, n - 1) + '…' : x; }, small = document.body.classList.contains('touch'), N9 = small ? 26 : 40;   // 휴대폰·태블릿 = 짧게(칩과 겹치지 않게)
+    if (best) { key = best.d.k; text = '🔎 ❓ ' + cut(best.d.h, N9) + (small ? '' : ' · H 길 안내'); t = best.p; }
+    else if (free) { key = '#' + free.k; text = '🔎 ' + cut(free.h, N9 + 8); }
+    else if (lock) { key = '!' + lock.k; text = '🔒 남은 ❓ — ' + cut(lock.lock || lock.h, N9); }
+    else { key = '@all'; text = '🎉 신기한 일을 모두 찾았어요! ' + ((X && X.label) || '나가는 문으로 가요'); t = X ? posOf(X.use || X.at) : null; }
+    if (MET && MET.v < D.sandbox.meter.max && (key === '@all' || key.startsWith('!'))) { key += '+m'; text += ' · ' + D.sandbox.meter.icon + ' ' + D.sandbox.meter.name + ' ' + metPct() + '%'; }
+    if (key === GK) return; GK = key; map.hud.goal(text); if (beam) { beam.remove(); beam = null; } cur = t ? { x: t.x, y: t.y ?? 0, z: t.z, label: '❓' } : null; marks(); }
+  const metPct = () => Math.min(100, Math.round(MET.v / D.sandbox.meter.max * 100));
+  function metHtml(esc9) { if (!MET) return ''; const M = D.sandbox.meter, S9 = M.stages || [], nx = S9.find((s9, i) => !MET.done.has(i));
+    return '<div class="mt"><b>' + esc9(M.icon + ' ' + M.name) + ' ' + metPct() + '%</b>' + (M.hint ? ' — ' + esc9(M.hint) : '') + '<span class="br"><i style="width:' + metPct() + '%"></i></span>'
+      + '<small>' + S9.map((s9, i) => (MET.done.has(i) ? '✅ ' + esc9(s9.t) : i === S9.length - 1 ? '❓ 가득 차면… 비밀!' : '○ ' + Math.round(s9.at / M.max * 100) + '% ' + esc9(s9.t))).join(' · ') + (nx ? '' : ' — 🎉 다 채웠어요!') + '</small></div>'; }
+  function metChip() { if (!MET) return; const M = D.sandbox.meter, k = Math.round(MET.v / M.max * 5); map.hud.chip('st-m', M.icon + ' ' + M.name + ' ' + '●'.repeat(k) + '○'.repeat(5 - k), { onClick: () => openDisc() }); }
+  function metSave() { if (MET) map.store.set('meter.' + EP.id, { v: MET.v, done: [...MET.done] }); }
+  async function metLoad() { const M = D.sandbox && D.sandbox.meter; if (!M) return; const s9 = map.store.get('meter.' + EP.id, null);
+    MET = { v: s9 && typeof s9.v === 'number' ? Math.min(M.max, s9.v) : Math.min(M.max, nFound() * ((M.feed && M.feed.disc) || 1)), done: new Set((s9 && s9.done) || []), q: [] };
+    for (let i = 0; i < (M.stages || []).length; i++) { const g9 = M.stages[i]; if (MET.done.has(i)) { if (g9.keep) await runSteps(g9.keep, false); } else if (MET.v >= g9.at) MET.q.push(i); }
+    metChip(); }
+  function meterAdd(n, msg) { if (!MET || !n) return; const M = D.sandbox.meter, v0 = MET.v; MET.v = Math.min(M.max, MET.v + n); if (MET.v === v0) return; metSave(); metChip();
+    if (msg) map.hud.toast(M.icon + ' ' + msg + ' — ' + M.name + ' ' + metPct() + '%', 2.2);
+    (M.stages || []).forEach((g9, i) => { if (MET.v >= g9.at && !MET.done.has(i) && !MET.q.includes(i)) MET.q.push(i); }); }
+  async function metRun(i) { const g9 = D.sandbox.meter.stages[i]; if (!g9) return; SB.busy = 'meter'; sbArm(false); GK = '';
+    try { await runSteps(g9.steps || [], false); if (FILMP) { const pr = FILMP; FILMP = null; await pr; } } catch (e) { console.error('[이야기] 게이지', i, e); }
+    if (gone()) return; herdApply(); MET.done.add(i); metSave(); SB.busy = null; objective(null); GK = ''; map.player.freeze(false); if (g9.found) discover(g9.found); sbSkills(); sbArm(true); }
+  // ---------- WORLD-LOOK(10-08 교사 '새 세계는 다른 프로그램 느낌이어도 됨 — 그래픽이 학교 메타버스에 갇힌 느낌') ----------
+  //   look 칸: 이름(D.looks[이름]) | 화풍 객체 | null → map.look(하늘·안개·빛·노출·먼 평면·화면 껍질 data-look) + 이야기 쪽: amb(떠다니는 알갱이 {color, n, r, size, rise, wind, opacity}) · minimap:false(학교 지도 숨김)
+  //   D.toon = 만화 그림자(무대 생물·소품 MeshToonMaterial) · 모양 ground(세계 바닥 판) · 자유 탐험의 ❓는 3D로도 떠 있음(지도가 없어도 보이게)
+  const LCSS = 'body[data-look] #loc,body[data-look] #timeChip,body[data-look] #fps,body[data-look] #mpChip{display:none!important}'
+    + 'body[data-look]::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:6}'
+    + 'body[data-look=bee]::after{background:radial-gradient(ellipse at center,rgba(255,236,170,0) 52%,rgba(255,178,64,.34) 100%)}'
+    + 'body[data-look=bee] .chip{background:rgba(110,62,8,.82);border:2px solid #ffd23c;color:#fff8e1;border-radius:14px}body[data-look=bee] #story-ui .sp{background:rgba(255,250,236,.97);border-color:#f2b233;color:#4a3410}body[data-look=bee] #story-talk .nm{color:#a0610a}body[data-look=bee] #story-talk .av{border-color:#f2b233}body[data-look=bee] #story-ui button{background:#d9860f}body[data-look=bee] #story-ui .ch button{background:#fffaf0;color:#6b4508;border-color:#f2b233}'
+    + 'body[data-look=bee] #story-book .bk{border-color:#a0610a;background:#fffbef}body[data-look=bee] #story-book .hd{background:linear-gradient(90deg,#a0610a,#e09a1c)}body[data-look=bee] #story-book .ft button.go{background:#a0610a}body[data-look=bee] #story-book .hw{background:#fff3d1}'
+    + 'body[data-look=fruit]::after{background:radial-gradient(ellipse at center,rgba(255,220,240,0) 60%,rgba(255,150,205,.26) 100%)}'
+    + 'body[data-look=fruit] .chip{background:rgba(236,72,153,.84);border:2px solid #fff;color:#fff;border-radius:18px}body[data-look=fruit] #story-ui .sp{background:rgba(255,255,255,.97);border-color:#ff8cc6;color:#5a2a48;border-radius:22px}body[data-look=fruit] #story-talk .nm{color:#d6337a}body[data-look=fruit] #story-talk .av{border-color:#ff8cc6;background:#fff0f7}body[data-look=fruit] #story-ui button{background:#ec4899;border-radius:14px}body[data-look=fruit] #story-ui .ch button{background:#fff;color:#a8235f;border-color:#ff8cc6}'
+    + 'body[data-look=fruit] #story-book .bk{border-color:#ec4899;background:#fffafd;border-radius:26px}body[data-look=fruit] #story-book .hd{background:linear-gradient(90deg,#ec4899,#8bd46a)}body[data-look=fruit] #story-book .ft button.go{background:#ec4899}body[data-look=fruit] #story-book .hw{background:#fff0f7}'
+    + 'body[data-look=dream]::after{background:radial-gradient(ellipse at center,rgba(240,225,255,0) 48%,rgba(186,160,255,.42) 100%)}'
+    + 'body[data-look=dream] .chip{background:rgba(96,78,160,.74);border:2px solid #efe6ff;color:#fff;border-radius:18px}body[data-look=dream] #story-ui .sp{background:rgba(250,246,255,.96);border-color:#b9a3f5;color:#3d2f63;border-radius:22px}body[data-look=dream] #story-talk .nm{color:#6b4fd0}body[data-look=dream] #story-talk .av{border-color:#b9a3f5;background:#f5f0ff}body[data-look=dream] #story-ui button{background:#7c5fe0;border-radius:14px}body[data-look=dream] #story-ui .ch button{background:#fff;color:#4d3a96;border-color:#b9a3f5}'
+    + 'body[data-look=dream] #story-book .bk{border-color:#7c5fe0;background:#fbf8ff;border-radius:26px}body[data-look=dream] #story-book .hd{background:linear-gradient(90deg,#7c5fe0,#f39ac7)}body[data-look=dream] #story-book .ft button.go{background:#7c5fe0}body[data-look=dream] #story-book .hw{background:#f3eeff}';
+  let AMB = null, LOOKC = null, qT = 0, QMAT = null, DOTT = null; const QS = new Map();
+  function setLookS(o) { if (typeof o === 'string') o = (D.looks || {})[o] || null;
+    if (!document.getElementById('story-look-css')) { const s9 = document.createElement('style'); s9.id = 'story-look-css'; s9.textContent = LCSS; document.head.appendChild(s9); }
+    LOOKC = o; map.look(o); if (AMB) { FXROOT.remove(AMB.pts); AMB = null; } if (o && o.amb) AMB = ambMake(o.amb);
+    if (o && o.minimap === false) map.minimap.hide(); else if (!o) map.minimap.show(); }
+  function dotTex() { if (!DOTT) { const c9 = document.createElement('canvas'); c9.width = c9.height = 64; const x = c9.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.45, 'rgba(255,255,255,.75)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); DOTT = new T3.CanvasTexture(c9); FXDISP.push(DOTT); } return DOTT; }
+  function ambMake(a) { const n = a.n || 120, R = a.r || 6, c = map.camera.position, pos = new Float32Array(n * 3), seed = new Float32Array(n);
+    for (let i = 0; i < n; i++) { pos[i * 3] = c.x + (Math.random() - 0.5) * 2 * R; pos[i * 3 + 1] = c.y + (Math.random() - 0.5) * R; pos[i * 3 + 2] = c.z + (Math.random() - 0.5) * 2 * R; seed[i] = Math.random() * 6.28; }
+    const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.BufferAttribute(pos, 3)); const mat = new T3.PointsMaterial({ color: a.color || 0xffffff, size: a.size || 0.1, map: dotTex(), transparent: true, opacity: a.opacity ?? 0.85, depthWrite: false, sizeAttenuation: true });
+    FXDISP.push(geo, mat); const pts = new T3.Points(geo, mat); pts.frustumCulled = false; FXROOT.add(pts); return { pts, R, n, seed, a, t: 0 }; }
+  function ambTick(dt) { const A = AMB; if (!A) return; const c = map.camera.position, P9 = A.pts.geometry.attributes.position, a = P9.array, R = A.R, w = A.a.wind || [0.12, 0], rise = A.a.rise ?? 0.04; A.t += dt;
+    for (let i = 0; i < A.n; i++) { const k = i * 3, sd = A.seed[i]; a[k] += (w[0] + Math.sin(A.t * 0.6 + sd) * 0.18) * R * 0.05 * dt; a[k + 1] += (rise + Math.sin(A.t * 0.9 + sd * 2) * 0.12) * R * 0.05 * dt; a[k + 2] += (w[1] + Math.cos(A.t * 0.5 + sd) * 0.18) * R * 0.05 * dt;
+      if (a[k] - c.x > R) a[k] -= 2 * R; else if (a[k] - c.x < -R) a[k] += 2 * R; if (a[k + 2] - c.z > R) a[k + 2] -= 2 * R; else if (a[k + 2] - c.z < -R) a[k + 2] += 2 * R; if (a[k + 1] - c.y > R * 0.5) a[k + 1] -= R; else if (a[k + 1] - c.y < -R * 0.5) a[k + 1] += R; }
+    P9.needsUpdate = true; }
+  function qMat() { if (!QMAT) { const c9 = document.createElement('canvas'); c9.width = c9.height = 96; const x = c9.getContext('2d'); x.beginPath(); x.arc(48, 48, 40, 0, 6.283); x.fillStyle = '#ffd23c'; x.fill(); x.lineWidth = 7; x.strokeStyle = '#7a4a00'; x.stroke();
+      x.fillStyle = '#5a3500'; x.font = '900 60px "Apple SD Gothic Neo","Malgun Gothic",sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('?', 48, 52); const tx = new T3.CanvasTexture(c9); QMAT = new T3.SpriteMaterial({ map: tx, transparent: true, depthWrite: false }); FXDISP.push(tx, QMAT); } return QMAT; }
+  function qTick(dt) {   // 자유 탐험 ❓를 그 자리 위에 띄움(지도를 안 봐도 보이게) — 바쁠 때(발견 하는 중)는 숨김
+    const want = []; if (SB && !SB.busy) for (const d of discAll()) if (d.mark && !FOUND.has(d.k) && avail(d)) want.push(d);
+    for (const [k, sp] of QS) if (!want.find(d => d.k === k)) { FXROOT.remove(sp); QS.delete(k); }
+    if (!want.length) return; qT += dt; const S9 = Math.max(SC, 0.08);
+    for (const d of want) { let sp = QS.get(d.k); if (!sp) { sp = new T3.Sprite(qMat()); sp.renderOrder = 5; FXROOT.add(sp); QS.set(d.k, sp); }
+      const o = typeof d.mark === 'string' && FX.get(d.mark), p = o ? { x: o.x, y: o.y + (o.R.top || 0.5) * o.s, z: o.z } : posOf(d.mark); if (!p) continue;
+      sp.position.set(p.x, p.y + 0.5 * S9 + Math.sin(qT * 2.6 + d.k.length) * 0.07 * S9, p.z); sp.scale.setScalar(0.42 * S9 * (LOOKC && LOOKC.qScale || 1)); } }
   function sbTick(dt) {
+    ambTick(dt); qTick(dt);
     if (SKCD > 0) SKCD -= dt;
+    if (SB && !SB.busy && !talk && !bookEl && !discEl && !howEl && !RIDE && !HOP) { if (MET && MET.q.length) { metRun(MET.q.shift()); return; } if ((gT -= dt) <= 0) { gT = 0.7; sbGoal(); } }
     if (SB) { for (const s of SB.hs) if (s.id && FX.has(s.id)) { const o = FX.get(s.id); s.h.hot.x = o.x; s.h.hot.z = o.z; s.h.hot.y = o.y; }
       if (!SB.busy && !talk && !bookEl && !discEl && (SB.nt = (SB.nt || 0) - dt) <= 0) { SB.nt = 0.15; for (const d of discAll()) if (!FOUND.has(d.k) && avail(d) && d.start && d.start.near) { const p = posOf(d.start.near); if (p && nearP(p, (d.start.r || 1.0) * RS(), d.start.dy)) { runDisc(d); break; } } } }
     if (RIDE) { const o = RIDE.o; map.player.teleport([o.x, o.y + RIDE.dy, o.z], { h: o.h }); }
     if (HOP) { HOP.k = Math.min(1, HOP.k + dt / HOP.dur); const k = HOP.k, a = HOP.a, b = HOP.b; map.player.teleport([a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k + Math.sin(Math.PI * k) * HOP.hg, a.z + (b.z - a.z) * k], { h: (Math.atan2(b.x - a.x, -(b.z - a.z)) * 180 / Math.PI + 360) % 360 });
       if (k >= 1) { const d = HOP.done; HOP = null; d(); } }
   }
-  const FXKEYS = ['bodyPose', 'cancel', 'ifFound', 'still', 'seti', 'skills', 'found', 'sayOne', 'spawn', 'fxScale', 'tpBy', 'carry', 'catch', 'seq', 'waitSkill', 'ride', 'hop', 'sandbox', 'setv', 'body', 'phys', 'solid', 'arena', 'wander', 'follow', 'rain', 'tone', 'book', 'fx', 'fxAnim', 'fxDel', 'hold', 'fxMove', 'morph', 'powder', 'glow', 'shrink', 'grow', 'grass', 'act', 'emote', 'circle', 'line', 'free', 'stay', 'time', 'fxShow', 'fxFace', 'banner', 'grassOff', 'dark', 'use', 'chase'];
+  const FXKEYS = ['look', 'film', 'filmWait', 'herd', 'meter', 'mimic', 'bodyPose', 'cancel', 'ifFound', 'still', 'seti', 'skills', 'found', 'sayOne', 'spawn', 'fxScale', 'tpBy', 'carry', 'catch', 'seq', 'waitSkill', 'ride', 'hop', 'sandbox', 'setv', 'body', 'phys', 'solid', 'arena', 'wander', 'follow', 'rain', 'tone', 'book', 'fx', 'fxAnim', 'fxDel', 'hold', 'fxMove', 'morph', 'powder', 'glow', 'shrink', 'grow', 'grass', 'act', 'emote', 'circle', 'line', 'free', 'stay', 'time', 'fxShow', 'fxFace', 'banner', 'grassOff', 'dark', 'use', 'chase'];
 
   // ---------- 시작 ----------
   if (LEG) map.player.teleport([Pme.x, Pme.y, Pme.z], { h: 270 });
@@ -997,8 +1120,11 @@ export default async function start(map, params = {}) {
     },
     stop() { dead = true; fxStop(); removeEventListener('keydown', onKey, true); removeEventListener('click', onClick, true); ui.remove(); talk = null; },   // 지점·표식·칩·목표·미니맵·사람·소품·그림·불·문·시간대는 범위 파사드가 정리
     // 시험용 읽기
-    get state() { return { ...S, T, talk: talk ? talk.el.querySelector('.nm').textContent : null, choices: talk ? talk.n : 0, goal: cur && cur.label, tgt: cur ? [cur.x, cur.y, cur.z] : null, sc: SC, fx: [...FX.keys()], sb: SB ? { busy: SB.busy, waitSkill: SB.waitSkill || null, seqNext: SB.seqNext || null, seqPos: SB.seqNext && FX.has(SB.seqNext) ? (o9 => [o9.x, o9.y, o9.z])(FX.get(SB.seqNext)) : null, found: nFound(), total: discAll().length, role: VARS.role ? VARS.role.i : null, left: discAll().filter(d => !FOUND.has(d.k) && avail(d)).map(d => d.k) } : null, end: !!endEl }; },
-    sbStart(k) { const d = discAll().find(x => x.k === k); if (d) runDisc(d); }, skill(k) { const sk = ((D.sandbox && D.sandbox.skills) || []).find(x => x.k === k); if (sk) { SKCD = 0; useSkill(sk); } }, sbExitNow() { if (SB && SB.done) SB.done(); }, sbAct(i) { const a = ((D.sandbox && D.sandbox.acts) || [])[i]; if (a) runDisc({ ...a, act: true }); }, sbReset() { FOUND.clear(); map.store.set('found.' + EP.id, []); },
+    get sbInfo() { if (!SB) return null; const P9 = t => { const p = posOf(t); return p ? [p.x, p.y, p.z] : null; };   // 시험용: 남은 발견마다 시작 방법·자리(플레이 봇이 걸어서 찾아감)
+      return discAll().filter(d => !FOUND.has(d.k)).map(d => ({ k: d.k, avail: avail(d), mark: d.mark != null, start: d.start ? { ...d.start, pos: P9(d.start.near ?? d.start.on ?? d.start.use ?? d.start.at) } : null })); },
+    get acts() { return ((D.sandbox && D.sandbox.acts) || []).map((a, i) => ({ i, avail: avail(a), label: a.start && a.start.label, pos: a.start ? (p => p && [p.x, p.y, p.z])(posOf(a.start.use || a.start.at)) : null })); },
+    get state() { return { ...S, T, met: MET ? { v: MET.v, done: [...MET.done], q: MET.q.slice() } : null, how: !!howEl, talk: talk ? talk.el.querySelector('.nm').textContent : null, choices: talk ? talk.n : 0, goal: cur && cur.label, tgt: cur ? [cur.x, cur.y, cur.z] : null, sc: SC, fx: [...FX.keys()], sb: SB ? { busy: SB.busy, waitSkill: SB.waitSkill || null, seqNext: SB.seqNext || null, seqPos: SB.seqNext && FX.has(SB.seqNext) ? (o9 => [o9.x, o9.y, o9.z])(FX.get(SB.seqNext)) : null, found: nFound(), total: discAll().length, role: VARS.role ? VARS.role.i : null, left: discAll().filter(d => !FOUND.has(d.k) && avail(d)).map(d => d.k) } : null, end: !!endEl }; },
+    sbStart(k) { const d = discAll().find(x => x.k === k); if (d) runDisc(d); }, skill(k) { const sk = ((D.sandbox && D.sandbox.skills) || []).find(x => x.k === k); if (sk) { SKCD = 0; useSkill(sk); } }, sbExitNow() { if (SB && SB.done) SB.done(); }, sbMeter(n) { meterAdd(n); }, sbAct(i) { const a = ((D.sandbox && D.sandbox.acts) || [])[i]; if (a) runDisc({ ...a, act: true }); }, sbReset() { FOUND.clear(); map.store.set('found.' + EP.id, []); },
     next(i = 0) { if (talk) talk.next(i); },
     get pos() { return { P4, P1, P6, T4, T1, TL, TG, Pme }; },
   };

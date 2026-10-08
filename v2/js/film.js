@@ -440,9 +440,9 @@ body.film-on>:not(#film):not(#scene):not(.yt-float){visibility:hidden!important}
     if (c.camP) { c.camP.getPoint(e, Vp); c.camL.getPoint(e, Vl); camera.position.copy(Vp); camera.lookAt(Vl); }
     else if (c.p1) { camera.position.set(c.p1[0], c.p1[1], c.p1[2]); camera.lookAt(c.l1[0], c.l1[1], c.l1[2]); }
     const fv = (s.fov || 50) * (camera.aspect < 1 ? Math.min(1.6, 1 / Math.sqrt(camera.aspect)) : 1); if (Math.abs(camera.fov - fv) > 0.01) { camera.fov = fv; camera.updateProjectionMatrix(); }   // 세로 화면 = 화각을 넓혀 옆이 덜 잘리게
-    { const nr = Math.max(0.3, Math.min(4, (camera.position.y + 1.5) * 0.05)), fr = Math.max(c.far0, camera.position.y * 3 + 200);   // 높은 샷 = 근평면을 밀어 깊이 정밀도 ↑(멀리서 바닥 무늬·선이 자글거리던 것)
+    { const nr = s.near != null ? s.near : Math.max(0.3, Math.min(4, (camera.position.y + 1.5) * 0.05)), fr = env.lookOn && env.lookOn() ? c.far0 : Math.max(c.far0, camera.position.y * 3 + 200);   // 높은 샷 = 근평면을 밀어 깊이 정밀도 ↑(멀리서 바닥 무늬·선이 자글거리던 것)
       if (Math.abs(camera.near - nr) > 0.02 || Math.abs(camera.far - fr) > 5) { camera.near = nr; camera.far = fr; camera.updateProjectionMatrix(); } }
-    if (scene.fog) { if (!c.fog) c.fog = [scene.fog.near, scene.fog.far]; const k9 = Math.max(1, camera.position.y / 45); scene.fog.near = 140 * k9; scene.fog.far = 420 * k9; }   // 높은 드론 샷이 안개에 바래지 않게(시간대가 바꾼 값 위에 매 프레임)
+    if (scene.fog && !(env.lookOn && env.lookOn())) { if (!c.fog) c.fog = [scene.fog.near, scene.fog.far]; const k9 = Math.max(1, camera.position.y / 45); scene.fog.near = 140 * k9; scene.fog.far = 420 * k9; }   // 높은 드론 샷이 안개에 바래지 않게(시간대가 바꾼 값 위에 매 프레임)
     camera.updateMatrixWorld();
     if (c.o.music !== false) music(c);
     for (const x of c.sfx) if (!x.done && c.st >= x.t) { x.done = true; SFX[x.k] && SFX[x.k](); }
