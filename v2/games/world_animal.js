@@ -363,10 +363,6 @@ STORY.sandbox = {
 {
   const SBX = STORY.sandbox, Y0 = -1.35;
   const TAGS = [['🏊 연못', -21.2, 16.6, 0.3], ['♨️ 온천', -30, 22, 0.6], ['🟤 진흙', -32, 11, 0.3], ['🧑‍🌾 사육사', -28, 24.5, 2.1], ['📸 사진기', -26, 26.5, 0.8], ['🌳 나무 그늘', -15.4, 26.6, 3.4], ['🏫 반 친구들', -11.6, 14.7, 1.9], ['🥕 당근', -33.2, 23.6, 0.7]].map(([t, x, z, dy]) => ({ t, p: [x, Y0 + dy, z] }));
-  SBX.intro = [
-    { dur: 5.5, fov: 52, chord: 'F', cam: { p: [[-27, 9.5, 41], [-13, 7.5, 37]], l: [[-25, Y0, 16], [-24, Y0, 16]] }, tags: TAGS, ui: [{ at: 0.5, kick: '🦫 동물원 놀이 시간', title: '신기한 일 17가지 ·\n무리를 키워요', pos: 'lower' }] },
-    { dur: 4, fov: 50, chord: 'C', cam: { p: [[-18.6, -0.3, 22], [-25, -0.3, 21.6]], l: [[-22, -1.0, 16], [-22, -1.0, 16]] }, ui: [{ at: 0.4, kick: '🦫 무리', title: '카피바라는 서로 따라 해요\n내가 하면 친구들도!', pos: 'lower' }] },
-  ];
   SBX.how = { title: '동물 세계 — 이렇게 놀아요', lines: [
     ['❓', '노란 ? 를 찾아가요', '화면 위 줄이 가장 가까운 신기한 일을 알려 줘요. [H] = 길 안내 · [B] = 목록'],
     ['🦫', '아기 카피바라의 능력', '{skills} — 꾸잉으로 친구를 부르고, 첨벙으로 장난쳐요'],
@@ -381,8 +377,7 @@ STORY.sandbox = {
         steps: [
           { emote: 'c4', icon: '❤️' }, { emote: 'c5', icon: '❤️' }, { fxMove: 'c4', to: 'me', side: -0.9, fwd: -0.6, sec: 1.4, arc: 0.15, wait: false }, { fxMove: 'c5', to: 'me', side: 0.9, fwd: -0.6, sec: 1.4, arc: 0.15 },
           { herd: ['mate', 'c4', 'c5'] },
-          { film: [{ dur: 4.5, fov: 50, chord: 'F', rel: true, cam: { p: [[3.2, 1.5, 3.6], [-3.2, 1.2, 3.8]], l: [[0, 0.2, 0], [0, 0.2, 0]] }, ui: [{ at: 0.4, kick: '🦫 무리 1단계', title: '마당 카피바라들이\n무리에 들어왔어요', pos: 'lower' }] }], bg: true },
-          { filmWait: true },
+          { banner: '🦫 무리 1단계 — 마당 카피바라들이 무리에 들어왔어요', bannerSec: 2.6 },
           { say: [['이야기', '마당의 카피바라 둘이 졸졸 따라오기 시작했어요. 카피바라는 무리 지어 사는 동물이라, 친구가 생기면 같이 다녀요.']] },
         ] },
       { at: 10, t: '무리가 나를 따라 해요', keep: [{ herd: ['mate', 'c4', 'c5', 'c1', 'c2', 'c3'] }, { mimic: true }],
@@ -396,12 +391,11 @@ STORY.sandbox = {
       { at: 15, t: '무리 대장', found: 'leader', keep: [{ time: 'sunset' }],
         steps: [
           { time: 'sunset' },
-          { film: [{ dur: 7, fov: 54, chord: 'C', rel: true, cam: { p: [[4.2, 1.2, 1.5], [0, 2.4, 5], [-4.2, 1.4, 1.8]], l: [[0, 0.25, 0], [0, 0.25, 0], [0, 0.25, 0]] }, ui: [{ at: 0.6, kick: '👑 무리 가득!', title: '모두가 믿고 따르는\n무리 대장', pos: 'lower' }] }], bg: true },
+          { banner: '👑 무리 가득! — 모두가 믿고 따르는 무리 대장', bannerSec: 2.6 },
           { emote: 'keeper', icon: '👏', sec: 4 }, { fxAnim: 'keeper', anim: 'hop' },
           { act: '유은', pose: 'cheer', faceTo: 'me' }, { act: '예지', pose: 'cheer', faceTo: 'me' }, { emote: '유은', icon: '👏' }, { emote: '예지', icon: '👏' }, { emote: '은규', icon: '😮' }, { emote: '인우', icon: '😮' },
           { fxAnim: 'c1', anim: 'hop' }, { fxAnim: 'c2', anim: 'hop' }, { fxAnim: 'c3', anim: 'hop' }, { fxAnim: 'c4', anim: 'hop' }, { fxAnim: 'c5', anim: 'hop' }, { fxAnim: 'mate', anim: 'hop' }, { sound: 'done' },
           { rain: { at: 'me', r: 1.2, n: 30, color: 0xffd23c, size: 0.07, h: 1.6, puffs: 5 } },
-          { filmWait: true },
           ...['c1', 'c2', 'c3', 'c4', 'c5', 'mate'].map(id => ({ fxAnim: id, anim: 'idle' })), { fxAnim: 'keeper', anim: 'idle' },
           { say: [
             ['사육사', '와, 무리가 모두 너를 따라다니는구나! 카피바라 무리는 믿을 수 있는 친구를 따라다녀.'],

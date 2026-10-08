@@ -366,10 +366,6 @@ STORY.sandbox = {
 {
   const SBX = STORY.sandbox;
   const TAGS = [['🏠 벌집 탑', 13.5, -71.6, 0.34], ['💧 연못', 15.6, -73.6, 0.06], ['🌻 해바라기', 11.8, -73.8, 0.66], ['🐜 개미굴', 11.6, -68.6, 0.1], ['🕸 거미줄', 15.8, -69.0, 0.34], ['🦋 나비', 14.8, -68.4, 0.16], ['🌸 큰 꽃문', 13.5, -66.0, 1.2]].map(([t, x, z, dy]) => ({ t, p: [x, G + dy, z] }));
-  SBX.intro = [
-    { dur: 5.5, near: 0.02, fov: 55, chord: 'C', cam: { p: [[15.9, G + 0.95, -67.2], [14.7, G + 0.55, -67.9]], l: [[13.5, G + 0.05, -71.0], [13.4, G + 0.08, -71.5]] }, tags: TAGS, ui: [{ at: 0.5, kick: '🐝 꿀벌 세계', title: '신기한 일 17가지를\n찾아봐요', pos: 'lower' }] },
-    { dur: 4.2, near: 0.01, fov: 52, chord: 'F', cam: { p: [[14.7, G + 0.26, -70.1], [12.3, G + 0.26, -70.4]], l: [[13.5, G + 0.12, -71.6], [13.5, G + 0.12, -71.6]] }, ui: [{ at: 0.4, kick: '🌸 꽃밭 게이지', title: '꽃에 꽃가루를 묻히면\n꽃밭이 살아나요', pos: 'lower' }] },
-  ];
   SBX.how = { title: '꿀벌 세계 — 이렇게 놀아요', lines: [
     ['❓', '노란 ? 를 찾아가요', '화면 위 줄이 가장 가까운 신기한 일을 알려 줘요. 가까이 가거나 능력을 써 봐요. [H] = 길 안내 · [B] = 목록'],
     ['🐝', '꿀벌의 능력', '{skills} · [Space] 누르면 붕 날아올라요'],
@@ -384,28 +380,25 @@ STORY.sandbox = {
     stages: [
       { at: 7, t: '새 꽃이 피어나요', keep: [...flowers(false), { fx: 'butterfly', id: 'bf2', at: Q(13.9, -73.0, 0.1), s: 0.8, anim: 'open', pop: false }, { wander: ['bf2'], rect: [13.2, -74.8, 15.0, -72.6], speed: 0.12 }],
         steps: [
-          { film: [{ dur: 6, near: 0.03, fov: 58, chord: 'F', cam: { p: [[13.5, G + 1.6, -66.8], [15.4, G + 1.25, -67.3]], l: [[13.4, G, -71.6], [13.7, G, -72.0]] }, ui: [{ at: 0.4, kick: '🌸 꽃밭 1단계', title: '꽃가루를 옮겼더니\n새 꽃이 피어나요!', pos: 'lower' }] }], bg: true },
+          { banner: '🌸 꽃밭 1단계 — 꽃가루를 옮겼더니 새 꽃이 피어나요!', bannerSec: 2.6 },
           { wait: 0.7 }, ...flowers(true),
           { fx: 'butterfly', id: 'bf2', at: Q(13.9, -73.0, 0.1), s: 0.8, anim: 'fly' }, { wander: ['bf2'], rect: [13.2, -74.8, 15.0, -72.6], speed: 0.12 },
-          { filmWait: true },
           { say: [['붕붕이', '우와, 새 꽃이 여덟 송이나 피었어! 나비들도 놀러 왔네. 꽃가루를 옮겨 주니까 꽃밭이 살아나는 거야.'], ['붕붕이', '새로 핀 꽃에도 꽃가루(F)를 묻혀 봐. 꽃밭이 더 좋아질 거야!']] },
         ] },
       { at: 11, t: '텃밭 채소에 열매가 열려요', keep: [...vegs(false), { spawn: { kind: 'bee', id: 'xb', n: 3, rect: [12.4, -74.6, 15.2, -72.6], y: G, dy: 0.16, s: 0.09, wander: true, speed: 0.25 } }],
         steps: [
-          { film: [{ dur: 5.5, near: 0.03, fov: 56, chord: 'G', cam: { p: [[13.6, G + 0.95, -71.2], [12.2, G + 0.8, -71.9]], l: [[13.6, G + 0.25, -75.0], [12.6, G + 0.25, -75.0]] }, ui: [{ at: 0.4, kick: '🍅 꽃밭 2단계', title: '텃밭 채소에\n열매가 주렁주렁!', pos: 'lower' }] }], bg: true },
+          { banner: '🍅 꽃밭 2단계 — 텃밭 채소에 열매가 주렁주렁!', bannerSec: 2.6 },
           { wait: 0.8 }, ...vegs(true), { spawn: { kind: 'bee', id: 'xb', n: 3, rect: [12.4, -74.6, 15.2, -72.6], y: G, dy: 0.16, s: 0.09, wander: true, speed: 0.25 } },
-          { filmWait: true },
           { say: [['여왕벌', '꽃가루가 꽃에서 꽃으로 옮겨지자 토마토에 열매가 열렸구나. 사람들이 먹는 채소도 꿀벌이 도와야 열린단다.'], ['{mate}', '우리 텃밭 토마토가 잘 자란 것도 꿀벌 덕분이었구나!']] },
         ] },
       { at: 16, t: '무지개 꿀', found: 'rainbowhoney', keep: [{ time: 'sunset' }, { fx: 'rainbow', id: 'rbw', at: HV, s: 0.09, h: 0, pop: false }],
         steps: [
           { time: 'sunset' },
-          { film: [{ dur: 7.5, near: 0.01, fov: 54, chord: 'C', cam: { p: [[14.7, G + 0.42, -70.3], [13.5, G + 0.6, -69.9], [12.3, G + 0.42, -70.5]], l: [[13.5, G + 0.2, -71.6], [13.5, G + 0.22, -71.6], [13.5, G + 0.2, -71.6]] }, ui: [{ at: 0.6, kick: '🌈 꽃밭 가득!', title: '꽃마다 다른 꿀이 모여\n무지개 꿀이 되었어요', pos: 'lower' }] }], bg: true },
+          { banner: '🌈 꽃밭 가득! — 꽃마다 다른 꿀이 모여 무지개 꿀이 되었어요', bannerSec: 2.6 },
           { wait: 0.8 }, { fx: 'rainbow', id: 'rbw', at: HV, s: 0.09, h: 0 }, { sound: 'done' },
           { fxAnim: 'w1', anim: 'waggle' }, { fxAnim: 'w2', anim: 'waggle' }, { fxAnim: 'w3', anim: 'waggle' }, { fxAnim: 'w4', anim: 'waggle' }, { emote: 'queen', icon: '😊', sec: 4 },
           { rain: { at: Q(13.5, -71.6, 0), r: 0.5, n: 26, color: 0xff6b6b, size: 0.03, h: 0.6, puffs: 3 } }, { wait: 0.4 }, { rain: { at: Q(13.5, -71.6, 0), r: 0.5, n: 26, color: 0xffd23c, size: 0.03, h: 0.6, puffs: 3 } }, { wait: 0.4 },
           { rain: { at: Q(13.5, -71.6, 0), r: 0.5, n: 26, color: 0x6ec6ff, size: 0.03, h: 0.6, puffs: 3 } }, { wait: 0.4 }, { rain: { at: Q(13.5, -71.6, 0), r: 0.5, n: 26, color: 0x9ef07a, size: 0.03, h: 0.6, puffs: 3 } },
-          { filmWait: true },
           { fxAnim: 'w1', anim: 'fly' }, { fxAnim: 'w2', anim: 'fly' }, { fxAnim: 'w3', anim: 'fly' }, { fxAnim: 'w4', anim: 'fly' }, { wander: ['w1', 'w2', 'w3', 'w4'], rect: [12.4, -71.2, 14.6, -69.6], speed: 0.25, fly: true },
           { say: [
             ['여왕벌', '꽃밭이 이렇게 가득 살아나다니! 너희가 옮긴 꽃가루 덕분에 꽃마다 다른 꿀이 모여서… 무지개 꿀이 되었단다.'],
@@ -418,7 +411,6 @@ STORY.sandbox = {
   const sun = SBX.disc.find(d => d.k === 'sunflower');
   sun.steps = [
     { banner: '🌻 해바라기 꼭대기! 텃밭이 한눈에 보여요', bannerSec: 2.6 }, { emote: 'me', icon: '😮' },
-    { film: [{ dur: 6.5, near: 0.02, fov: 60, chord: 'F', cam: { p: [[11.5, G + 1.0, -74.5], [12.7, G + 1.12, -74.7]], l: [[13.6, G + 0.05, -70.4], [13.9, G + 0.05, -70.9]] }, tags: TAGS, ui: [{ at: 0.4, kick: '🌻 해바라기 꼭대기', title: '꿀벌 눈으로 본\n우리 학교 텃밭', pos: 'lower' }] }] },
     { say: [['이야기', '해바라기 얼굴 가운데의 작은 점들은 하나하나가 아주 작은 꽃이에요. 꽃 수백 송이가 모여 해바라기 하나가 된 거예요!'], ['{mate}', '여기서 보니까 꽃이 어디 있는지 다 보여. 꿀벌들이 8자 춤으로 알려 주는 게 이런 거구나!']] },
   ];
 }

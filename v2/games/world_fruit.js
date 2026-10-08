@@ -440,10 +440,6 @@ STORY.sandbox = {
 {
   const SBX = STORY.sandbox;
   const TAGS = PLACES.map((p, i) => ({ t: PLN[i], p: [p[0], Y + 2.2, p[2]] }));
-  SBX.intro = [
-    { dur: 6, fov: 50, chord: 'C', cam: { p: [[-4, Y + 27, 52], [-4, Y + 21, 41]], l: [[-4, Y, 13], [-4, Y, 12]] }, tags: TAGS, ui: [{ at: 0.5, kick: '🍒 과일 세계', title: '우리 모둠 지도 그대로!\n신기한 일 17가지', pos: 'lower' }] },
-    { dur: 4.5, fov: 54, chord: 'Am', cam: { p: [[6, Y + 5, 25], [-1, Y + 4, 21]], l: [[-4, Y + 10, 14], [-4, Y + 17, 14]] }, ui: [{ at: 0.4, kick: '☁️ 파란 구름', title: '마을이 즐거울수록\n파란 구름이 짙어진대요…', pos: 'lower' }] },
-  ];
   SBX.how = { title: '과일 세계 — 이렇게 놀아요', lines: [
     ['❓', '노란 ? 를 찾아가요', '화면 위 줄이 가장 가까운 신기한 일을 알려 줘요. [H] = 길 안내 · [B] = 목록'],
     ['👗', '키위 ↔ 체리', '키위 집·체리 집 문 앞에서 옷을 갈아입어요. 지금 능력: {skills}'],
@@ -458,18 +454,16 @@ STORY.sandbox = {
     stages: [
       { at: 8, t: '파란 구름이 커져요', keep: [{ fxScale: 'blue', s: 2.3, rate: 60, sec: 0.01 }, { fx: 'puff', id: 'blue2', at: A(-0.5, 12, 26), s: 1.4, color: 0x5b8ff0, static: true, pop: false }],
         steps: [
-          { film: [{ dur: 5.5, fov: 56, chord: 'Am', cam: { p: [[2, Y + 3, 27], [-1, Y + 2.5, 22]], l: [[-4, Y + 15, 14], [-4, Y + 21, 14]] }, ui: [{ at: 0.4, kick: '☁️ 파란 구름 1단계', title: '파란 구름이\n점점 커져요!', pos: 'lower' }] }], bg: true },
+          { banner: '☁️ 파란 구름 1단계 — 파란 구름이 점점 커져요!', bannerSec: 2.6 },
           { wait: 0.9 }, { fxScale: 'blue', s: 2.3, rate: 0.9, sec: 0.1 }, { wait: 1.2 }, { fx: 'puff', id: 'blue2', at: A(-0.5, 12, 26), s: 1.4, color: 0x5b8ff0, static: true },
           { emote: 'n8', icon: '❓' }, { emote: 'n9', icon: '😮' }, { emote: 'n10', icon: '❓' },
-          { filmWait: true },
           { say: [['귤 뇨뇨', '있잖아 있잖아! 파란 구름이 점점 커지고 있어! 뇨뇨 왕님이 말한 옛날이야기 맞지?'], ['하얀 뇨뇨', '우리가 신나게 놀수록 구름이 짙어지는 것 같아… 계속 신나게 놀아 보자!']] },
         ] },
       { at: 12, t: '반짝이 비가 내려요', keep: [{ fx: 'puff', id: 'blue3', at: A(-7.5, 16, 25), s: 1.2, color: 0x3f6fd8, static: true, pop: false }],
         steps: [
-          { film: [{ dur: 6.5, fov: 56, chord: 'F', cam: { p: [[5, Y + 6, 25], [-11, Y + 5, 25]], l: [[-4, Y + 1.5, 14], [-4, Y + 2.5, 14]] }, ui: [{ at: 0.4, kick: '☁️ 파란 구름 2단계', title: '반짝이 비가 내리고\n뇨뇨들이 하늘을 봐요', pos: 'lower' }] }], bg: true },
+          { banner: '☁️ 파란 구름 2단계 — 반짝이 비가 내리고 뇨뇨들이 하늘을 봐요', bannerSec: 2.6 },
           { wait: 0.6 }, { fx: 'puff', id: 'blue3', at: A(-7.5, 16, 25), s: 1.2, color: 0x3f6fd8, static: true },
           ...rains(0xdff0ff, 26, 0.12), ...ring, { glow: ['t1', 't2', 't3', 't4'], color: 0xffe27a },
-          { filmWait: true },
           ...NY.map(n => ({ fxFace: n[0] })), { emote: 'n1', icon: '✨' }, { emote: 'n5', icon: '✨' },
           { say: [['뇨뇨 왕', '반짝이 비… 요정 비가 내리기 전엔 이렇게 반짝이가 먼저 내린다고 들었단다. 조금만 더 마을이 즐거워지면…!']] },
           ...back,
@@ -478,17 +472,14 @@ STORY.sandbox = {
         keep: [...BABY.map(([id, c, x, z]) => ({ fx: 'nyonyo', id, at: A(x, z), s: 0.55, color: c, pop: false })), { wander: BABY.map(b => b[0]), rect: RECT.f, speed: 0.7 }, { fx: 'rainbow', id: 'rbw', at: A(-4, 14), s: 1.6, h: 0, pop: false }],
         steps: [
           { time: 'sunset' },
-          { film: [
-            { dur: 4.5, fov: 52, chord: 'Am', cam: { p: [[-4, Y + 18, 45], [-4, Y + 14, 37]], l: [[-4, Y + 2, 14], [-4, Y + 2, 14]] }, ui: [{ at: 0.4, kick: '🌧 요정 비!', title: '파란 구름에서\n요정 비가 내려요', pos: 'lower' }] },
-            { dur: 5.5, fov: 54, chord: 'C', time: 'day', cam: { p: [[-11, Y + 3.2, 19], [-14, Y + 2.6, 21]], l: [[-19, Y + 1, 14], [-19, Y + 0.8, 15]] }, ui: [{ at: 0.6, kick: '🌱 새 뇨뇨', title: '과일이 아기 뇨뇨가\n되었어요!', pos: 'lower' }] },
-          ], bg: true },
+          { banner: '🌧 요정 비! — 파란 구름에서 요정 비가 내려요', bannerSec: 2.6 },
           { tone: [[220, 0, 2.5, 'sine', 0.04, 160]] }, ...rains(0x7ab8ff, 46, 0.1), { wait: 1.6 }, ...rains(0x9cc9ff, 40, 0.09), { wait: 1.6 },
           ...BABY.map(([id, c], i) => ({ fx: 'orange', id, at: 't' + (i + 1), dy: 2.4, s: 1.3 })),
           ...BABY.map(([id, , x, z]) => ({ fxMove: id, to: A(x, z), sec: 0.9, arc: 0.4, wait: false })), { wait: 1 },
           ...BABY.map(([id, c]) => ({ morph: id, to: 'nyonyo', s: 0.55, toColor: c })), { wait: 0.4 },
+          { time: 'day' }, { banner: '🌱 과일이 아기 뇨뇨가 되었어요!', bannerSec: 2.4 },
           ...BABY.map(([id]) => ({ fxAnim: id, anim: 'hop' })), { emote: 'nb1', icon: '🌱' }, { emote: 'nb2', icon: '🌱' }, { emote: 'nb3', icon: '🌱' },
           { fx: 'rainbow', id: 'rbw', at: A(-4, 14), s: 1.6, h: 0 }, { sound: 'done' },
-          { filmWait: true },
           ...NY.map(n => ({ fxAnim: n[0], anim: 'dance' })),
           { say: [
             ['뇨뇨 왕', '요정 비다! 정말로 요정 비가 다시 내렸어! 마을이 즐거우니 파란 구름이 대답해 준 거야.'],
@@ -502,7 +493,6 @@ STORY.sandbox = {
   const tw = SBX.disc.find(d => d.k === 'tower');
   tw.steps = [
     { banner: '🏰 성 지붕 위! 초록 구름 마을과 아래 정림초가 한눈에', bannerSec: 2.8 }, { glow: 'me', color: 0xffd23c },
-    { film: [{ dur: 7, fov: 56, chord: 'C', cam: { p: [[-4, Y + 11, -9.5], [-11, Y + 12.5, -6.5]], l: [[-4, Y, 15], [-4, Y, 17]] }, tags: TAGS, ui: [{ at: 0.4, kick: '🏰 성 지붕 위', title: '우리 모둠이 그린 지도랑\n똑같아요!', pos: 'lower' }] }] },
     { say: [['체리', '와, 여기서 보니까 우리 마을이 키위가 그린 지도랑 똑같아! 저 아래 정림초 운동장도 보여.']] },
   ];
 }
