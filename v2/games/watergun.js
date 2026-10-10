@@ -49,7 +49,8 @@ export default async function start(map, params = {}) {
   const THREE = map.three, Q = map.q, cam = map.camera;
   let dead = false, st = 'prep', mode = null, arenaKey = null, round = 0, T = 0, cd = 0, cdShown = -1, secShown = -1;
   let score = 0, tank = TANK, wet = 0, wetT = 9, slowT = 0, soakT = 0, emitAcc = 0, sprayT = 0, emptyT = 0, gurT = 0, inWater = 0, muted = false;
-  let best = map.store.get('best', null), last = null, goalT = 0;
+  let best = map.store.get('best', null), last = null, goalT = 0, goalBase = null, howEl = null, howKK = null;   // UX-2(10-10): goalBase = 지금 할 일(잠깐 알림이 끝나면 다시) · howEl = 하는 법 창
+  const seenHow = new Set();
   const cnt = { bal: 0, fire: 0, flow: 0, bot: 0, wet: 0 };
   const ROUND_S = Math.max(10, Math.min(600, +params.time || ROUND));
   const seed = params.seed != null && params.seed !== '' ? (isNaN(+params.seed) ? params.seed : +params.seed) : Date.now();
@@ -992,7 +993,24 @@ export default async function start(map, params = {}) {
   function netTeam() { const b = NM.ui && NM.ui.querySelector('[data-w="team"]'); if (b) b.click(); }
 
   // ---------- 한 판(혼자 연습) ----------
-  function goal(text, sec) { map.hud.goal(text); goalT = sec || 0; }
+  function goal(text, sec) { if (text === null) goalBase = null; map.hud.goal(text); goalT = sec || 0; }
+  // UX-2(10-10 · 5단계 '첫 10초'): 혼자 연습·봇과 팀 대결도 다른 놀이처럼 처음 한 번 '하는 법' 창(▶ 시작 · Enter) — 예전엔 과녁만 보이고 무엇을 어떻게 쏘는지 몰랐다
+  function howTo(m) {
+    seenHow.add(m); document.exitPointerLock?.();
+    if (!document.getElementById('wg-how-css')) { const c = document.createElement('style'); c.id = 'wg-how-css'; c.textContent = '.wg-how{position:fixed;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;background:rgba(10,20,40,.55);font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif}.wg-how .bx{width:min(560px,92vw);max-height:90vh;overflow:auto;box-sizing:border-box;padding:16px 18px;border-radius:18px;background:#f4fbff;color:#0b3a5c;border:3px solid #1e88c8;box-shadow:0 10px 30px rgba(0,0,0,.35)}.wg-how h3{margin:0 0 10px;font-size:22px}.wg-how .st{display:flex;gap:12px;align-items:center;margin:8px 0;padding:8px 10px;border-radius:12px;background:#e3f3ff;font-size:17px;line-height:1.4}.wg-how .st b.n{flex:none;width:46px;height:46px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 1px 4px rgba(0,0,0,.15)}.wg-how .tip{margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff3bf;font-size:15px;font-weight:700}.wg-how button{display:block;margin:12px 0 0 auto;font:inherit;font-size:18px;font-weight:900;border:0;border-radius:12px;padding:10px 22px;min-height:44px;background:#1e88c8;color:#fff;cursor:pointer}@media (max-height:500px){.wg-how .bx{padding:10px 12px}.wg-how h3{font-size:17px;margin-bottom:4px}.wg-how .st{font-size:14px;margin:5px 0;padding:5px 8px}.wg-how .st b.n{width:34px;height:34px;font-size:20px}.wg-how .tip{font-size:13px;margin-top:4px}.wg-how button{margin-top:6px}}'; document.head.appendChild(c); }
+    const shoot = coarse ? '💧 버튼을 누르고 있으면 물이 나가요 · 누른 채 끌면 조준' : '십자선으로 겨누고 <b>클릭</b>(또는 <b>F</b>)을 누르고 있으면 물이 나가요';
+    const st = (i, t) => '<div class="st"><b class="n">' + i + '</b><span>' + t + '</span></div>';
+    const html = m === 'solo' ? '<h3>🎯 혼자 연습 — 과녁 맞히기</h3>' + st('💦', shoot) + st('🎈', '🎈풍선 🔥불 🌸꽃 🤖로봇이 과녁이에요 — 맞히면 ⭐ 점수 · <b>3분</b> 동안 많이!') + st('💧', '물이 떨어지면 <b>파란 빛기둥</b>(미니맵 파란 동그라미)에서 채워요')
+        + '<div class="tip">💡 위를 보고 쏘면 멀리 날아가요 · 흰 고리 = 물이 떨어질 자리 · ' + (coarse ? '👁' : 'V') + ' = 1인칭</div>'
+      : '<h3>🔵⚪ 봇과 팀 대결</h3>' + st('🔵', '나는 <b>🔵 청팀</b>(파란 조끼) — <b>⚪ 백팀</b>(흰 조끼) 봇을 물로 흠뻑 적셔요') + st('💦', shoot) + st('🏁', '먼저 <b>' + tGoal + '번</b> 적신 팀이 이겨요 · 나도 흠뻑 젖으면 3초 뒤 우리 진지에서 다시')
+        + '<div class="tip">💧 물은 우리 진지(파란 빛기둥)에서 채워요 · ' + (coarse ? '📋 칩' : 'Tab') + ' = 점수판</div>';
+    howEl = document.createElement('div'); howEl.className = 'wg-how ttl-keep'; howEl.innerHTML = '<div class="bx">' + html + '<button type="button">▶ 시작!</button></div>';
+    for (const t of ['keydown', 'keyup']) howEl.addEventListener(t, e => e.stopPropagation());
+    document.body.appendChild(howEl);
+    return new Promise(res => { const go = () => { howClose(); res(); }, kk = howKK = e => { if (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter') { e.preventDefault(); e.stopPropagation(); go(); } };
+      howEl.querySelector('button').addEventListener('click', e => { e.stopPropagation(); go(); }); addEventListener('keydown', kk, true); });
+  }
+  function howClose() { if (howKK) { removeEventListener('keydown', howKK, true); howKK = null; } if (howEl) { howEl.remove(); howEl = null; } }
   function begin(r) {
     round = r; st = 'count'; cd = 3; cdShown = -1; T = ROUND_S; secShown = -1; score = 0; tank = TANK; wet = 0; wetT = 9; slowT = soakT = 0; inp.test = false; aimA = null;
     for (const k in cnt) cnt[k] = 0;
@@ -1035,6 +1053,7 @@ export default async function start(map, params = {}) {
     }
     if (m === 'net') { for (let k = 0; k < 30 && !MPX() && !dead; k++) await new Promise((r) => setTimeout(r, 200));   // ?mode=net — 방(lobby.js)이 다시 들어가는 동안 잠깐 기다림
       if (!MPX()) { map.hud.toast('👥 왼쪽 위 「함께하기」를 눌러 방에 들어가거나 🏠 내 방을 만들어요', 4); return menu(false); } mode = 'team'; return netEnter(); }
+    if (!seenHow.has(m)) { if (m === 'team') { tGoal = Math.max(1, Math.min(99, +params.goal || T_GOAL)); } await howTo(m); if (dead || map.gone) return; }
     mode = m;
     if (m === 'solo') { soloSetup(); begin(round + 1); }
     else { tGoal = Math.max(1, Math.min(99, +params.goal || T_GOAL)); tTime = Math.max(20, Math.min(900, +params.time || T_TIME)); teamSetup(ak); teamBegin(); }
@@ -1084,16 +1103,16 @@ export default async function start(map, params = {}) {
       if (st === 'count') { cd -= dt; const n = Math.ceil(cd);
         if (n !== cdShown) { cdShown = n; if (n > 0) { map.hud.banner(String(n), 1.2); sfx('tick'); } }
         if (cd <= 0) { st = 'play'; map.player.freeze(false); map.hud.banner(team ? '경기 시작!' : '물총 발사!', 1.0); sfx('go');
-          if (team) { const mt = ACT[ME].team; goal((coarse ? '💧 버튼' : '클릭·F') + '로 ' + TEAM_I[1 - mt] + ' ' + TEAM_N[1 - mt] + (NM.on ? '' : ' 봇') + '을 흠뻑 적셔요! 물은 우리 진지(' + (mt ? '흰' : '파란') + ' 빛기둥)에서', 7);
+          if (team) { const mt = ACT[ME].team; goalBase = '💦 ' + TEAM_I[1 - mt] + ' ' + TEAM_N[1 - mt] + '을 흠뻑 적셔요 · 물 = 우리 진지(' + (mt ? '흰' : '파란') + ' 빛기둥)'; goal((coarse ? '💧 버튼으로 ' : '클릭·F로 ') + TEAM_I[1 - mt] + ' ' + TEAM_N[1 - mt] + (NM.on ? '' : ' 봇') + '을 흠뻑 적셔요! 물은 우리 진지(' + (mt ? '흰' : '파란') + ' 빛기둥)에서', 7);
             map.hud.toast(TEAM_I[mt] + ' 우리 팀 = ' + (mt ? '흰' : '파란') + ' 조끼 · 먼저 ' + tGoal + '번 적시면 이겨요 · ' + (coarse ? '📋 칩' : 'Tab') + ' = 점수판', 5); }
-          else { goal(coarse ? '💧 과녁에 물을 쏴요! 💧 버튼 누른 채 끌면 조준' : '💧 과녁에 물을 쏴요! 십자선 = 조준 · 클릭·F 누르고 있기', 6);
+          else { goalBase = '🎯 🎈풍선 🔥불 🌸꽃 🤖로봇을 맞혀요 · 물 = 파란 빛기둥'; goal(coarse ? '💧 과녁에 물을 쏴요! 💧 버튼 누른 채 끌면 조준' : '💧 과녁에 물을 쏴요! 십자선 = 조준 · 클릭·F 누르고 있기', 6);
             map.hud.toast(coarse ? '🎈풍선 🔥불 🌸꽃 🤖로봇 — 위를 보면 멀리 · 흰 고리 = 물이 떨어질 자리 · 👁 = 1인칭' : '🎈풍선 🔥불 🌸꽃 🤖로봇 — 위를 보면 멀리 · 흰 고리 = 물이 떨어질 자리 · V = 1인칭', 5); } } }
       if (st === 'play') {
         if (NM.on && NM.D.m) T = (NM.D.m.t0 + NM.D.m.time * 1000 - sNow()) / 1000; else T -= dt;
         const s = Math.ceil(T); if (s !== secShown) { secShown = s; if (team) teamChip(); else timeChip(); if (s <= 10 && s > 0) sfx('tick'); }
         if (T <= 0) { T = 0; if (team) teamChip(); else timeChip(); if (team) finishTeam(); else finish(); }
       }
-      if (goalT > 0 && (goalT -= dt) <= 0) goal(null);
+      if (goalT > 0 && (goalT -= dt) <= 0) { map.hud.goal(goalBase); goalT = 0; }   // UX-2: 잠깐 알림이 끝나면 '지금 할 일'로
       // 몸 방향(물총 자리): 쏘는 동안 = 카메라가 보는 쪽(③) · 아니면 걷는 방향(움직임으로 추정 — main.js P.yaw와 같은 식)
       const mdx = me.x - lastX, mdz = me.z - lastZ; lastX = me.x; lastZ = me.z;
       const firing = st === 'play' && meAlive && (inp.key || inp.mouse || inp.pad || inp.test || inp.tap); inp.tap = false;
@@ -1217,7 +1236,7 @@ export default async function start(map, params = {}) {
         p.el.style.transform = 'translate(' + ((_v.x * 0.5 + 0.5) * innerWidth - 18).toFixed(0) + 'px,' + ((-_v.y * 0.5 + 0.5) * innerHeight - 12).toFixed(0) + 'px)'; p.el.style.opacity = Math.min(1, p.t * 2.5).toFixed(2); }
     },
     stop() {
-      dead = true;
+      dead = true; howClose();
       removeEventListener('keydown', onKD); removeEventListener('keyup', onKU); removeEventListener('mousedown', onMD); removeEventListener('mouseup', onMU); removeEventListener('blur', onBlur);
       if (NM.on) netLeave(); for (const t of TAGS) if (t) { t.material.map.dispose(); t.material.dispose(); }
       root.remove(); if (fireBtn) fireBtn.remove(); map.player.aim(null); map.player.shoulder(0);

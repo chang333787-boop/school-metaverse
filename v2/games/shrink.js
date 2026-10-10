@@ -184,6 +184,7 @@ export default async function start(map, params = {}) {
     own(map.interact.enable(() => true, false));   // 앉기·칠판 등 평소 지점 끔(작은 몸으로 앉으면 이상)
     const fin = map.findEntry((room.x0 + room.x1) / 2, (room.z0 + room.z1) / 2, 0, [room.x0, room.z0, room.x1, room.z1], 5);
     return { room, arena: arenaR, arenaMsg: '교실과 그 앞 복도에서만 놀아요', items, kind: 'crumb', books, pencils, need: items.length,
+      intro: { title: '🍪 교실 과자 모으기', body: '교실과 복도 곳곳에 **과자 부스러기 ' + items.length + '개**가 떨어져 있어요. 다 모으면 원래 크기로!\n\n📚 책 더미 → 의자 → 책상 · ✏️ 연필 다리로 건너가요\n부스러기는 닿기만 하면 주워요.\n\n떨어지면 R = 처음 자리 · 💡 오래 못 찾으면 H = 가까운 부스러기' },
       cps: [{ at: startAt, h: faceDoor, minY: -9, rect: null, name: '처음 자리' }],
       goal: () => '🍪 과자 부스러기 ' + R.got + '/' + R.items.length + ' 모으기',
       finale: { at: fin ? [fin.x, fin.y, fin.z] : [(room.x0 + room.x1) / 2, 0, (room.z0 + room.z1) / 2], look: (b9 => b9 ? [b9.x, b9.z] : null)(map.interact.list({ kind: 'board', zone: room.id })[0]),
@@ -514,8 +515,7 @@ export default async function start(map, params = {}) {
     marks(); goalLine();
     PL.scale(0.95, R.n === 1 ? PHYS1 : PHYS2); anim = { t: 0, dur: 1.2, from: 0.95, to: S, phys: R.n === 1 ? PHYS1 : PHYS2, done: () => {
       st = 'play'; PL.freeze(false); map.hud.banner('개미만큼 작아졌어요!', 1.6);
-      if (R.n === 1) map.hud.toast('📚 책 더미·✏️ 연필 다리로 올라가요 · 부스러기는 닿으면 주워요', 4);
-      else if (R.intro && !firstNote[R.n]) { firstNote[R.n] = true; map.note(R.intro.title, R.intro.body.replace(/\*\*/g, '')); } } };
+      if (R.intro && !firstNote[R.n]) { firstNote[R.n] = true; map.note(R.intro.title, R.intro.body.replace(/\*\*/g, '')); } } };
     map.sfx('go');
   }
   // 끝: 하얗게 → 바닥 빈 칸으로 옮겨 원래 크기로 커짐 → 세상이 바뀜 → 결과 창
