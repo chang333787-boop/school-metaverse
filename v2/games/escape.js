@@ -1,9 +1,9 @@
 // 학교 방탈출 '사라진 타임캡슐 열쇠'(G-ESCAPE 2판 · 09-27) — 행동 사전 엔진(§12) + 세상 바꾸기(§16) 위의 이야기 방탈출. 정본 = docs/map_api.md §14
 //   사용자 09-27 "방탈출 첫판은 그냥 쪽지인가? 너가 다 써줘봐" · "게임 상호작용하면 실제 변화도 생기게" → 방마다 물건을 쓰는 퍼즐 + 방이 눈에 띄게 바뀜 + 방 사이 단서 잇기.
 //   방(이야기 파일 순서대로 · 기본 다섯):
-//     uv        4학년 교실 — ⭐ 보관함 문이 열림 → 🔦 자외선 손전등 → 칠판에 비추면 불이 꺼지고 보라 글씨가 떠오름 → 🎈 풍선 수 세기 → 서랍장 자물쇠 → 서랍이 스르륵(🔑 + 🪞 거울)
+//     uv        4학년 교실 — ⭐ 보관함 문이 열림 → 🔦 자외선 손전등 → 칠판에 비추면 불이 꺼지고 보라 글씨가 떠오름 → 🎈 풍선 수 세기 → 서랍장 자물쇠 → 서랍이 스르륵(🔑 + 💠 거울)
 //     mix       과학실 — 칠판 실험 과제(색 순서) → 실험대에서 🔴🔵🟡 두 가지 섞기(플라스크 색이 바뀜) ×3 → 약품장 불 셋 → 문이 활짝(💡 전구 · 📒 색 순서 기록)
-//     projector 컴퓨터실 — 천장 프로젝터에 💡 전구 → 빛줄기·칠판 화면 → 벽 불 스위치(방이 어두워짐) → 🪞 빛줄기 속 고리에 거울 → 빛이 꺾여 벽에 거울 글씨 번호 → 화면 잠금(화면 초록 · 매달린 열쇠가 내려옴)
+//     projector 컴퓨터실 — 천장 프로젝터에 💡 전구 → 빛줄기·칠판 화면 → 벽 불 스위치(방이 어두워짐) → 💠 빛줄기 속 고리에 거울 → 빛이 꺾여 벽에 거울 글씨 번호 → 화면 잠금(화면 초록 · 매달린 열쇠가 내려옴)
 //     books     도서실 — 무지개 책장(책 순서 바꾸기 = 실제 책 색이 바뀜) → 옆 판이 열리고 사다리가 내려옴 → 올라가 🌍 지구본 돌리기 → 지도 ⭐ = 다음 방 문 앞 화분에 열쇠
 //     stealth   교무실 — 순찰 로봇(밤 = 장난감 유령) 피해 캡슐 조각 3 → 📒 과학실 색 순서대로 금고 번호 → 금고 문이 열림 → 마무리(4학년 선생님이 문 앞에서 만세)
 //   데이터 = v2/games/escape_story.js(글·방 순서 — 동적 import ?t=지금 · 고친 뒤 버스터 없이 새로고침만). 이야기·쪽지·힌트·선생님 말 = 이야기 파일 · 이 파일의 글자는 화면 안내(UI)뿐.
@@ -236,9 +236,10 @@ export default async function start(map, params = {}) {
   }
   // 칠판(그림판을 붙일 곳) — 없으면 벽 자리에 판
   function boardOf(m) {
-    const h = boardHot[m.z.id];
-    if (h && h.bx != null) { const n = [Math.sin(h.ry || 0), Math.cos(h.ry || 0)]; clear.push([h.x, h.z, 1.0]); return { paint: 'board:' + m.z.id, c: [h.bx, h.by, h.bz], n, stand: [h.x, h.y ?? m.y, h.z] }; }
+    const h = boardHot[m.z.id], see = (a, b) => { for (const t of [0.35, 0.7, 1]) clear.push([a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t, 0.8]); };   // QA-1(10-10): 서는 자리 → 칠판 사이는 비움(풍선이 칠판 숫자를 가리던 것)
+    if (h && h.bx != null) { const n = [Math.sin(h.ry || 0), Math.cos(h.ry || 0)]; clear.push([h.x, h.z, 1.0]); see([h.x, 0, h.z], [h.bx, 0, h.bz]); return { paint: 'board:' + m.z.id, c: [h.bx, h.by, h.bz], n, stand: [h.x, h.y ?? m.y, h.z] }; }
     const s = wallSpot(m, 1.8, 0.1, { front: 1.0 }), c = s.fr.w(0, 1.5, 0); const n = [Math.sin(s.fr.h * R2D), -Math.cos(s.fr.h * R2D)];
+    see(s.stand, c);
     return { paint: { x: c[0], y: c[1], z: c[2], w: 1.7, h: 1.1, face: s.fr.h }, c, n, stand: s.stand, bg: '#fdfbf2' };
   }
   const lineDraw = (lines, color, o = {}) => (ctx, Wd, Hd) => {   // 그림판 글(이모지는 캔버스 글꼴에 없을 수 있어 {seq}는 색 동그라미로 그린다)
@@ -296,7 +297,7 @@ export default async function start(map, params = {}) {
       const lockAt = f2.w(0, 0, D2 / 2 + 0.4);
       station(m, 'lock', lockAt, 1.0, '🔢 서랍 자물쇠', () => lockOpen({ title: '🔢 서랍 자물쇠', rule: T(m, 'rule', ''), code: m.code, ok: async () => {
         map.sfx('done'); for (const p of dr) anim(p, { oz: 0.38 }, 1.0);
-        give('mirror', '🪞', '손거울'); done(m, 'lock'); await say(m, 'drawer'); if (dead) return; solveRoom(m); } }));
+        give('mirror', '💠', '손거울'); done(m, 'lock'); await say(m, 'drawer'); if (dead) return; solveRoom(m); } }));
       // 🎈 풍선(세기)
       const cols = [0xff6b9d, 0x4fc3f7, 0xffd23c, 0x7bed9f, 0xa29bfe, 0xff9f43];
       let nb = 0; for (let k = 0; k < n; k++) { const p = openSpot(m, { mc: 0.7, r: 0.6 }); if (!p) continue; const b = W.spawn('balloon', { x: p[0], y: p[1] + 0.3, z: p[2] }, { color: cols[k % cols.length] }); if (b) { m.props.push(b); nb++; } }
@@ -413,10 +414,10 @@ export default async function start(map, params = {}) {
           if (!night && m.dark9) { m.dark9 = false; W.light(m.z.id, true); }
           await say(m, 'unlock'); if (dead) return; solveRoom(m); } }); });
       m.at.lock = ps;
-      station(m, 'mirror', ms, 1.2, '🪞 거울 걸기', async () => {
+      station(m, 'mirror', ms, 1.2, '💠 거울 걸기', async () => {
         if (m.done.has('mirror')) { map.hud.toast('벽에 비친 글씨를 봐요!'); return; }
         if (!m.done.has('projector')) { map.hud.toast('프로젝터를 먼저 켜야 빛이 와요', 3); return; }
-        if (!S.has('mirror')) { map.hud.toast(T(m, 'needMirror', '🪞'), 3); return; }
+        if (!S.has('mirror')) { map.hud.toast(T(m, 'needMirror', '💠'), 3); return; }
         S.take('mirror'); map.sfx('pick'); show(mir, true);
         beamSet(beam2, m.lensP, MIR, 0.12); beamSet(beam3, MIR, WP, 0.12);
         m.paints.push(W.paint({ x: WP[0], y: WP[1], z: WP[2], w: 1.3, h: 0.62, face: dirH(-wo.px, -wo.pz) }, { bg: 'rgba(255,248,214,0.95)', draw: lineDraw([m.code], '#b0306a', { mirror: true }) }));
@@ -718,10 +719,11 @@ export default async function start(map, params = {}) {
   // 다음 방 문 '열쇠로 열기'(바깥쪽)
   function keyDoor(m) {
     const o = m.main.s.out;
-    m.keyH = map.investigate.add({ x: o[0], y: o[1], z: o[2], r: 1.2, label: '🔑 열쇠로 열기', onUse: () => { if (!S.has(m.keyId)) { map.sfx('buzz'); map.hud.toast('🔒 ' + m.z.label + ' 열쇠가 있어야 해요'); return; } S.flag('r' + m.k + '_try', true); } });
+    m.keyH = map.investigate.add({ x: o[0], y: o[1], z: o[2], r: 1.2, label: '🔑 ' + m.z.label + ' 열쇠로 열기', onUse: () => { if (!S.has(m.keyId)) { map.sfx('buzz'); map.hud.toast('🔒 ' + m.z.label + ' 열쇠가 있어야 해요'); return; } S.flag('r' + m.k + '_try', true); } });
   }
   async function finish() {
     if (st === 'end') return; st = 'end'; setMark(null); stealthOff(); uiClose(); chips();
+    for (const h of HANDLES.splice(0)) { try { h.remove(); } catch (e) { /* */ } }   // QA-1(10-10): 성공 창 뒤에 'E 금고 자물쇠'가 남던 것
     map.hud.chip('esc-clue', null); map.hud.chip('esc-hint', null);
     const bestKey = BK + (night ? 'bestNight' : 'best'), best = map.store.get(bestKey, null), nb = best == null || TT < best;
     if (nb) map.store.set(bestKey, Math.floor(TT));
@@ -750,7 +752,7 @@ export default async function start(map, params = {}) {
   for (const m of rooms) reachFix(m);
   // ?room=n(교사 시연·시험): 앞 방에서 얻었을 물건을 가방에
   for (let k = 0; k < startRoom; k++) { const m = rooms[k];
-    if (m.puzzle === 'uv') give('mirror', '🪞', '손거울'); if (m.puzzle === 'mix') { give('bulb', '💡', '프로젝터 전구'); give('memo', '📒', '실험 기록 ' + m.seq.map(c => COL[c].e).join('→')); }
+    if (m.puzzle === 'uv') give('mirror', '💠', '손거울'); if (m.puzzle === 'mix') { give('bulb', '💡', '프로젝터 전구'); give('memo', '📒', '실험 기록 ' + m.seq.map(c => COL[c].e).join('→')); }
     cleanRoom(m); }
   if (night) { map.time('night'); map.lights(false); map.flashlight(true); }
   for (const m of rooms) if (m.k > 0) keyDoor(m);

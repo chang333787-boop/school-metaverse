@@ -1046,7 +1046,7 @@ export default async function start(map, params = {}) {
     if (dg) map.world.door(dg.id).open();
     const BT = spot(DG.x - 1.6, DG.z - 1.8, gyY, 'gym');
     objective('체육관으로 가서 불 켜기 단추 누르기', BT, '불 켜기 단추');
-    await new Promise(res => { let on = false; map.world.spawn('button', { x: BT.x, y: BT.y, z: BT.z }, { label: '🔘 체육관 불 켜기', onUse: () => { if (on) return; on = true; map.world.light('gym', true); map.hud.toast('불이 켜졌어요!'); res(); } });
+    await new Promise(res => { let on = false; map.world.spawn('button', { x: BT.x, y: BT.y, z: BT.z }, { label: '🔘 체육관 불 켜기', onUse: (pr) => { if (on) return; on = true; if (pr && pr.ih) { pr.ih.remove(); pr.ih = null; } map.world.light('gym', true); map.hud.toast('불이 켜졌어요!'); res(); } });
       map.trigger.add({ rect: [gy.x0, gy.z0, gy.x1, gy.z1], y0: gyY - 1, y1: gyY + 3 }, { enter: () => { if (!on) map.hud.toast(D.gymDark, 3); }, once: true }); }); if (gone()) return;
     await talkTo(TG, '체육선생님', '체육선생님께 말 걸기'); if (gone()) return;
     if (!await say(D.c4)) return;
@@ -1059,7 +1059,7 @@ export default async function start(map, params = {}) {
     await new Promise(res => {
       BX.forEach(b => { const p = map.prop.spawn('box', b.x, b.y, b.z, { h: 90 }); map.carry.pickable(p, { label: '✋ 상자 들기' }); });
       TX.forEach((t, i) => { tm[i] = map.mk.marker(t.x, t.y + 0.9, t.z, { color: 0x2ecc71 });
-        map.carry.target({ x: t.x, y: t.y, z: t.z, r: 1.3, accept: 'box', label: '📦 여기에 놓기', onPlace: () => { tm[i].remove(); placed++; map.hud.chip('st-c', '📦 ' + placed + '/3'); map.hud.goal(D.boxLeft + ' (' + placed + '/3)'); if (placed >= 3) res(); } }); });
+        map.carry.target({ x: t.x, y: t.y, z: t.z, r: 1.3, accept: 'box', label: '📦 여기에 놓기', onPlace: (p9) => { if (p9 && p9.pickH) p9.pickH.remove(); tm[i].remove(); placed++; map.hud.chip('st-c', '📦 ' + placed + '/3'); map.hud.goal(D.boxLeft + ' (' + placed + '/3)'); if (placed >= 3) res(); } }); });
       map.hud.chip('st-c', '📦 0/3'); objective(D.boxLeft + ' (0/3)', BX[1], '상자'); extra = TX.map(t => ({ x: t.x, z: t.z, color: '#2ecc71' })); marks();
     }); if (gone()) return;
     map.hud.chip('st-c', null); extra = []; objective(null);

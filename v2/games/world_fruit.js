@@ -349,7 +349,7 @@ STORY.sandbox = {
       { say: [['이야기', '폭신한 흙밭이에요. 여기에 씨앗을 심고 물을 주면 뭔가 자랄 것 같아요.']] },
       { carry: { id: 'sd', to: 'plot', goal: '🌰 상가의 씨앗을 흙밭으로', r: 1.4, del: true } },
       { fx: 'sprout', id: 'sp', at: A(-4, 34.2), s: 2 },
-      { carry: { id: 'bk', to: 'plot', goal: '🪣 시냇물 물동이를 흙밭으로', r: 1.4, del: true } },
+      { carry: { id: 'bk', to: 'plot', goal: '💧 시냇물 물동이를 흙밭으로', r: 1.4, del: true } },
       { rain: { at: A(-4, 34.2, 0), r: 1.2, n: 30, color: 0x6ec6ff, size: 0.08, h: 2.5, puffs: 4 } },
       { fxScale: 'sp', s: 4, sec: 1.2 }, { morph: 'sp', to: 'tree', s: 0.9, fruit: 0xff6b81 },
       { say: [['이야기', '쑥쑥! 구름 위에서 복숭아나무가 자랐어요. 과일 세계의 과일들도 이렇게 자랐겠지요?']] }] },

@@ -120,7 +120,7 @@ export function createEngine(H) {
         + 'box-shadow:0 8px 28px rgba(0,0,0,.35),inset 0 0 0 1px rgba(160,130,90,.35);font:16px/1.6 sans-serif;background-image:repeating-linear-gradient(transparent 0 27px,rgba(120,150,200,.18) 27px 28px)}',
       '.eng-note h3{margin:0 0 10px;font-size:19px}.eng-note p{margin:0;white-space:pre-line}',
       '.eng-note button{display:block;margin:16px auto 0;min-width:140px;min-height:44px;font-size:16px;border:0;border-radius:10px;background:#1d3557;color:#fff;cursor:pointer}',
-      '.eng-inv{position:fixed;left:10px;top:46px;z-index:20;display:none;gap:6px;pointer-events:none}',
+      '.eng-inv{position:fixed;left:10px;top:84px;z-index:20;display:none;gap:6px;pointer-events:none}body.mp-in .eng-inv{top:122px}',   // QA-1(10-10): 👥 함께하기 칩(46px)을 덮던 것 → 그 밑(방 안이면 😀 칩 밑)
       '.eng-inv span{width:34px;height:34px;border-radius:9px;background:rgba(29,53,87,.8);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}',
       'body.touch .eng-inv{top:calc(98px + env(safe-area-inset-top))}',
       '.eng-fade{position:fixed;inset:0;z-index:29;pointer-events:none;background:#000;opacity:0;transition:opacity .5s linear;display:none}',

@@ -5,12 +5,12 @@ import { buildWorld } from './world.js?v=154';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=62';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=63';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=26';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
 import { createTop } from './topview.js?v=9';   // TOP-1(10-04 교사 '탑뷰로 학교 보기'): 하늘에서 보기 — 지붕 벗기기(1·2층)·끌어 옮기기·확대·돌리기·방 이름·방위표·축척 · 게임은 map.top   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
-import { createActions } from './actions.js?v=2';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
+import { createActions } from './actions.js?v=3';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
 // TITLE-1: 오프닝을 켤지 — 게이트(?check=1)·검진(?health=1)·사진 대조(?shot)·게임 주소(?game·?tour=1)는 예전 그대로(오프닝 없음). index.html 로딩 막도 같은 규칙
@@ -685,7 +685,7 @@ function hotTick(dt) {
     if (d < h.r * h.r && d < bd && Math.abs(P.y - h.y) < 1.6) { bd = d; best = h; }
   }
   if (mapOpened && best !== mapOpened) { if (MAP && MAP.minimap.visible && !MAP.game.current) MAP.minimap.hide(); mapOpened = null; }   // ACTION-1: 안내도에서 멀어지면 연 지도를 닫는다
-  if (best !== hotNear || (best && best.label !== hotLab)) {   // ENGINE-1: 같은 지점이 이름을 바꾸면(숨기 ↔ 나오기) 안내도 다시
+  if (best !== hotNear || (best && best.label !== hotLab) || (!best && hintEl.style.display !== 'none')) {   // ENGINE-1: 같은 지점이 이름을 바꾸면(숨기 ↔ 나오기) 안내도 다시 · QA-1(10-10): act()가 hotNear만 비우면 'E …'가 화면에 남던 것(상자를 놓은 뒤·끝 화면)
     hotNear = best; hotLab = best && best.label;
     hintEl.style.display = best ? '' : 'none'; TOUCH.setNear(best);
     if (best) hintEl.textContent = (TOUCH.on ? '✋ ' : 'E  ') + (best.kind === 'board' ? ['칠판에 낙서하기', '더 그리기', '칠판 지우기'][best.stage || 0] : best.kind === 'sit' && ACT.sit ? '일어나기' : best.label);
@@ -1672,7 +1672,7 @@ body.small #mpWR .sum{font-size:13px}body.small #mpWR .low{display:none}
     MAP.on('gamestart', () => LOBBY.draw());   // UX-1: 들어가고 나올 때 👥 칩(노란 '…하는 중')을 바로
     MAP.on('gamestop', (ev) => { LOBBY.draw(); if (NET && ev && ev.id && ROOMS.some(q => q && q.id === ev.id) && !(ev.reason === 'replace')) setTimeout(() => wrShow(true), 300); const p = PENDG; PENDG = null; if (!p || (ev && ev.reason === 'replace') || Date.now() - p.t > 180000 || (TITLE && TITLE.phase !== 'off')) return; gatherTo(p.c, '📣 선생님 곁으로 왔어요!'); });   // UX-1: 경기 중에 받은 📣 = 놀이가 끝나면(3분 안) 선생님 곁으로   // ROOM-2: 방 놀이에서 나오면(끝·나가기) 🏠 대기실
     setInterval(() => { if (NET) MAP.minimap.setPeers(NET.peers()); }, 500);   // 미니맵에 같은 방 친구 점(이름)
-    const ACTS = { watergun: '💧 물총', watergun_vs: '💦 물총 대결', hideseek: '🙈 숨바꼭질 연습', hideseek_vs: '🙈 숨바꼭질', robots: '🤖 로봇인 척 연습', robots_vs: '🤖 로봇인 척', guide: '🧭 길잡이 연습', guide_vs: '🧭 길잡이', memo: '📝 메모장', memo_v3: '📝 메모장', story: '📖 이야기', newbook: '📖 신상책', robotpart: '📖 로봇 부품 소동', cricket: '📖 곤충 재판', world_bee: '🐝 꿀벌 세계', world_fruit: '🍒 과일 세계', world_animal: '🦫 동물 세계', escape: '🔐 방탈출', shrink: '🐜 개미', find_place: '📍 장소 찾기', tour: '🚌 견학' };
+    const ACTS = { watergun: '💧 물총', watergun_vs: '💦 물총 대결', hideseek: '🙈 숨바꼭질 연습', hideseek_vs: '🙈 숨바꼭질', robots: '🤖 로봇인 척 연습', robots_vs: '🤖 로봇인 척', guide: '🧭 길잡이 연습', guide_vs: '🧭 길잡이', memo: '📝 메모장', memo_v3: '📝 메모장', story: '📖 이야기', newbook: '📖 신상책', robotpart: '📖 로봇 부품 소동', cricket: '📖 곤충 재판', world_bee: '🐝 꿀벌 세계', world_fruit: '🍒 과일 세계', world_animal: '🐾 동물 세계', escape: '🔐 방탈출', shrink: '🐜 개미', find_place: '📍 장소 찾기', tour: '🚌 견학' };
     const RDY = '✅ 준비 완료', WATCH = '👀 진행(구경)', actNow = () => { const g = MAP.game.current; return window.SM_ACT || (g ? ACTS[g.id] || '🎮 놀이' : READY && LOBBY.room ? RDY : LOBBY.room && LOBBY.room.k && !meIn() ? WATCH : '🏫 자유 탐험'); };   // ROOM-3: 방장이 구경이면 '👀 진행(구경)'(친구 화면 구경석)   // READY-1: 대기실에서 준비 = 지금 하는 것 글
     setInterval(() => { if (!NET) return; NET.setAct(actNow()); }, 2000);   // 지금 하는 것 — 게임이 window.SM_ACT로 더 자세히(메모장 = 판 번호)
     // 방 신호(net.js ctl): 물총 친구 대결 대기실 초대 · 선생님 📣 모으기 · ✋ 멈춤

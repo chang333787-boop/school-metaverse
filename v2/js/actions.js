@@ -139,7 +139,7 @@ export function createActions(H) {
         armsIn(k, -1.35 * k + r * 0.08); K.armL.rotation.z += r * 0.1 * k - sh; K.armR.rotation.z -= r * 0.1 * k - sh; } },
     sanitize: { dur: 1.8, reach: 0.6, msg: '🧴 손소독제로 손을 비볐어요',
       pose(c, t, k) { const r = t > 0.5 ? Math.sin(t * 16) : 0; if (t < 0.5) { K.armR.rotation.x = -1.4 * k + Math.sin(t * 12) * 0.1; } else { armsIn(k, -1.25 * k + r * 0.08); K.armL.rotation.z += r * 0.1 * k; K.armR.rotation.z -= r * 0.1 * k; } } },
-    spray: { dur: 2.6, reach: 0.82, msg: '🪴 칙칙! 화분에 물을 뿌려 줬어요', prop: ['spray'],
+    spray: { dur: 2.6, reach: 0.82, msg: '🌱 칙칙! 화분에 물을 뿌려 줬어요', prop: ['spray'],
       tick(c, t) { for (const at of [0.6, 1.15, 1.7]) if (t >= at && c.last < at) { const tip = c.props[0].userData.tip; tip.getWorldPosition(_v2); const a = c.at, dx = a[0] - _v2.x, dy = a[1] - _v2.y, dz = a[2] - _v2.z, L = Math.hypot(dx, dy, dz) || 1;
           emit(22, _v2.x, _v2.y, _v2.z, dx / L, dy / L, dz / L, { speed: 1.8, spread: 0.22, life: 0.8, size: 0.025, grow: 0.14, g: 0.3, drag: 2.5, color: 0xf4fbff }); tone(2400, 0, 0.06, 'square', 0.02); }
         if (t >= 2.0 && c.last < 2.0) { const a = c.at; emit(8, a[0], a[1], a[2], 0, 0.8, 0, { speed: 0.6, spread: 0.7, life: 0.9, size: 0.03, g: -0.2, color: 0xfff27a }); } },
