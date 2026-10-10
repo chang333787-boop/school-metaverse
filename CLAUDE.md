@@ -31,7 +31,7 @@
 | 터치 UI·phone.css·휴대폰 배치·아이폰 사파리·떨림을 고칠 때 | `docs/systems/mobile.md` — 휴대폰·터치·아이폰 |
 | 이 놀이들(hideseek·robots·guide·blocks·watergun)을 고치거나 새 대결 놀이를 만들 때 | `docs/systems/games.md` — 놀이 — 숨바꼭질·로봇인 척·길잡이·블록·편의성 |
 | 이야기·상상 세계·방탈출(story.js·world_*.js·story_*.js·escape*)을 고치거나 새로 만들 때 | `docs/systems/stories.md` — 이야기·상상 세계·방탈출 (story.js 엔진) |
-| memo.js(이야기 판·세계 판·퀴즈·현실 방탈출·Firebase 판)를 고칠 때 · 교사가 "○○판대로 만들어" 할 때 | `docs/systems/memo.md` — 메타버스 메모장·세계 만들기 (생각 모으기) |
+| memo.js(이야기 판·세계 판·퀴즈·현실 방탈출·Firebase 판)를 고칠 때 · 교사가 "○○판대로 만들어"·"세계 n번 판에 고르기 올려줘" 할 때 | `docs/systems/memo.md` — 메타버스 메모장·세계 만들기 (생각 모으기) |
 | net.js·lobby.js·방 대기실·친구 대결·채팅·순위표(standings.js)를 고칠 때 | `docs/systems/multiplayer.md` — 함께하기 방·네트워크·채팅·순위표 |
 | 견학(tour.js·tour_data.js)·홍보판·오프닝/클로징 영상(film.js·tour_film.js)을 고칠 때 | `docs/systems/tour_promo.md` — 학교 견학·홍보판·영상(film) |
 | worldfx.js·actions.js·title.js·topview.js·registry 메뉴(폴더·싱글/멀티/생각)를 고칠 때 | `docs/systems/engine.md` — 엔진 — 사람 옮기기·세상 바꾸기·보이는 행동·오프닝·메뉴·하늘에서 보기 |

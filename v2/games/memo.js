@@ -48,6 +48,8 @@ const OLD = { memo: '📝', event: '⚡', mark: '🏁' };
 const STEMS = ['어느 날 아침', '쉬는 시간에', '점심시간에', '방과 후에', '그런데 갑자기', '그래서 우리는', '드디어'];   // 이야기 줄기 문장 — 우리 학교에서 일어나는 이야기(10-04 교사 '학교 이야기인데 웬 옛날 옛적에')
 const stemFor = (n) => n === 0 ? '예) 어느 날 아침, 우리 반 사물함에서 이상한 소리가 났어요' : n === 1 ? '예) 그런데 갑자기 도서관 책이 하나도 없어졌어요' : '예) 그래서 우리는 쉬는 시간에 단서를 찾으러 갔어요';   // 새 장면 자리표시(순서대로)
 const WC = [   // 세계 만들기 여섯 칸(4~6학년 — 질문 · 예시 · 줄기 문장)
+  // BIG-1(10-10 · 8단계 '생각 모으기 → 게임 2바퀴'): 맨 위 넓은 칸 = 이 세계의 제일 큰 문제(이야기의 큰 줄기 — 아이들은 칸마다 작은 것을 잘 쓰지만 세계 전체를 끌고 가는 하나가 없었다)
+  { k: 'wprob', e: '🌋', n: '제일 큰 문제', c: 0xe8590c, goal: 1, wide: true, q: '이 세계에서 제일 큰 문제는 뭐예요? 누가 곤란해요? 해결하면 세계가 어떻게 바뀌어요?', stems: ['이 세계의 제일 큰 문제는', '그래서', '해결하면'], ex: '이 세계의 제일 큰 문제는 무지개 다리가 끊어진 거예요. 그래서 구름 토끼들이 집에 못 가요. 해결하면 하늘 섬 축제가 다시 열려요.' },
   { k: 'wname', e: '🌍', n: '어떤 세계?', c: 0x339af0, goal: 1, q: '세계 이름과 한 줄 소개 — 어떤 분위기(색·날씨·소리·냄새)예요?', stems: ['이 세계의 이름은', '이곳은', '언제나'], ex: '이 세계의 이름은 「구름섬」이에요. 구름 위에 떠 있는 섬이고 늘 솜사탕 냄새가 나요.' },
   { k: 'wrule', e: '📜', n: '규칙', c: 0x845ef7, goal: 2, q: '이 세계에서만 되는 일·안 되는 일은? 어기면 어떻게 돼요?', stems: ['이 세계에서는', '하지만', '만약'], ex: '이 세계에서는 노래를 부르면 몸이 떠올라요. 하지만 거짓말을 하면 다시 떨어져요.' },
   { k: 'wpeop', e: '👫', n: '누가 살아?', c: 0xf76707, goal: 2, q: '어떤 존재가 살아요? 이름·모습·성격·하는 일은?', stems: ['이 세계에는', '모습은', '성격은'], ex: '이 세계에는 「구름 토끼」가 살아요. 귀가 무지개색이고 부끄러움을 많이 타요.' },
@@ -132,6 +134,11 @@ const STYLE = `
 #memo-ui .lane .cd{margin-bottom:12px}
 #memo-ui .lanes.wl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));min-height:0;align-items:start}
 #memo-ui .lanes.wl>.lane{min-width:0}
+#memo-ui .lanes.wl>.lane.wide{grid-column:1/-1;min-height:0}
+#memo-ui .lane.wide .wcds{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+#memo-ui .lane.wide .wcds>.cd{flex:1 1 260px;max-width:440px;margin:0 0 10px}
+#memo-ui .cd.vote{outline:2px dashed #f59f00;outline-offset:-2px;background:#fffbea}
+#memo-ui .cd .vt{display:inline-block;background:#f59f00;color:#fff;border-radius:6px;padding:0 6px;font-size:12px;margin-left:6px;vertical-align:1px}
 @media (min-width:1700px){#memo-ui .lanes.wl{grid-template-columns:repeat(6,minmax(0,1fr))}}
 @media (max-width:900px){#memo-ui .lanes.wl{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:560px){#memo-ui .lanes.wl{grid-template-columns:1fr}}
@@ -208,6 +215,7 @@ export default async function start(map, params = {}) {
   const toast = (s, t = 2.5) => map.hud.toast(s, t);
   const short = (s, n = 11) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n) + '…' : s; };
   const dedupe = (t) => { t = String(t || '').trim(); for (const st of STEMS.concat(...WC.map((x) => x.stems))) { const re = new RegExp('^(' + st + ')\\s+' + st + '(\\s|$)'); if (re.test(t)) t = t.replace(re, '$1$2'); } return t; };   // '처음 온 친구는 처음 온 친구는' → 한 번(SIM-1)
+  const iga = (s) => { const t = String(s || ''), c = t.charCodeAt(t.length - 1); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '이' : '가'; };   // 받침 있으면 '이'(선생님이) · 없으면 '가'(AI가)
   const keyOf = (s) => String(s || '').replace(/[.#$[\]/\s]/g, '').slice(0, 12) || '익명';
   const fpath = (id) => '/boards/' + board.id + '/flags/' + id;
   const newId = () => 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
@@ -498,8 +506,10 @@ export default async function start(map, params = {}) {
       if (a === 'like') {
         if (!canWrite()) return lockMsg();
         const k = keyOf(name), on = f.lk && f.lk[k];
+        const sib = !on && f.tag === 'vote' ? Object.entries(DATA).filter(([i9, x]) => i9 !== id && valid(x) && x.tag === 'vote' && x.k === f.k && x.lk && x.lk[k]) : [];   // BIG-1: 🙋 보기는 칸마다 하나만 — 다른 보기의 내 ❤️는 뺌
+        for (const [, x] of sib) { x.lk = { ...x.lk }; delete x.lk[k]; }
         f.lk = { ...(f.lk || {}) }; if (on) delete f.lk[k]; else f.lk[k] = true; syncNow();
-        try { await req(fpath(id) + '/lk/' + encodeURIComponent(k), on ? 'DELETE' : 'PUT', on ? undefined : true); } catch (er) { toast('저장하지 못했어요', 2); }
+        try { await Promise.all([req(fpath(id) + '/lk/' + encodeURIComponent(k), on ? 'DELETE' : 'PUT', on ? undefined : true), ...sib.map(([i9]) => req(fpath(i9) + '/lk/' + encodeURIComponent(k), 'DELETE'))]); } catch (er) { toast('저장하지 못했어요', 2); }
       } else if (a === 're') { if (openRe.has(id)) openRe.delete(id); else openRe.add(id); rerender(true); const inp = P.querySelector('.cd[data-id="' + window.CSS.escape(id) + '"] .ri input'); if (inp) inp.focus(); }
       else if (a === 'rs') sendRe(cd);
       else if (a === 'rd') { if (!confirm('이 댓글을 지울까요?')) return; try { await req(fpath(id) + '/re/' + encodeURIComponent(b.dataset.r), 'DELETE'); } catch (er) { toast('지우지 못했어요', 2); } }
@@ -916,7 +926,8 @@ export default async function start(map, params = {}) {
   function wcard(id, f, o = {}) {
     const C = wby()[f.k] || WC[0], lk = f.lk ? Object.keys(f.lk) : [], me = lk.includes(keyOf(name)), can = canWrite(), own = teacher || f.by === name;
     const re = f.re ? Object.entries(f.re).filter(([, r]) => r && r.tx).sort((a, b) => (a[1].t || 0) - (b[1].t || 0)) : [], showRe = o.re || openRe.has(id);
-    let h = '<div class="cd" data-id="' + esc(id) + '" style="--k:' + hex(C.c) + '"><div class="hd" style="cursor:default">' + esc(C.e) + ' ' + esc(C.n) + '<span class="by">✍️ ' + esc(f.by) + '</span></div>'
+    const vote = f.tag === 'vote';   // BIG-1: 🙋 보기 카드(Claude·선생님이 낸 보기 — 아이들이 ❤️로 골라요 · 칸마다 하나만)
+    let h = '<div class="cd' + (vote ? ' vote' : '') + '" data-id="' + esc(id) + '" style="--k:' + hex(C.c) + '"><div class="hd" style="cursor:default">' + esc(C.e) + ' ' + esc(C.n) + (vote ? '<b class="vt">🙋 고르기</b>' : '') + '<span class="by">' + (vote ? esc(f.by) + iga(f.by) + ' 낸 보기' : '✍️ ' + esc(f.by)) + '</span></div>'
       + '<div class="tx">' + esc(f.tx) + '</div>'
       + (f.why ? '<div class="sm" style="background:#f8f9fa;border-radius:8px;padding:4px 7px;margin-bottom:4px;white-space:pre-wrap">💡 ' + esc(f.why) + '</div>' : '')
       + (f.k === 'wplace' && f.loc ? '<div class="pl">📍 어디쯤: ' + esc(f.loc) + '</div>' : '')
@@ -925,7 +936,7 @@ export default async function start(map, params = {}) {
       h += '<div class="it" data-kid="' + esc(did) + '"><span>' + (T ? T.e : '🔎') + '</span><span class="t">' + (T ? '<b>' + T.n + '</b> ' : '') + esc(d.tx) + '<span class="sm"> · ' + esc(d.by) + '</span></span>'
         + (can && (teacher || d.by === name) ? '<button data-a="editi" title="자세히 고치기·지우기">✏️</button>' : '') + '</div>'; }
     if (can && !o.noAdd) h += '<div class="add"><button data-a="wd" title="이 카드를 더 자세히(모습·소리·하는 일·까닭)">＋ 자세히</button></div>';
-    h += '<div class="ft"><button data-a="like" class="' + (me ? 'on' : '') + '" title="좋아요(이 생각이 좋아요)">' + (me ? '❤️' : '🤍') + ' ' + (lk.length || '') + '</button><button data-a="re" title="댓글">💬 ' + (re.length || '') + '</button><span style="flex:1"></span>'
+    h += '<div class="ft"><button data-a="like" class="' + (me ? 'on' : '') + '" title="' + (vote ? '이 보기로 골라요(칸마다 하나)' : '좋아요(이 생각이 좋아요)') + '">' + (me ? '❤️' : '🤍') + ' ' + (vote ? (me ? '골랐어요 ' : '이걸로! ') : '') + (lk.length || '') + '</button><button data-a="re" title="댓글">💬 ' + (re.length || '') + '</button><span style="flex:1"></span>'
       + (can && own ? '<button data-a="edit" title="고치기">✏️</button>' : '') + '</div>';
     if (showRe) h += '<div class="res">' + (re.map(([rid, r]) => '<div>💬 <b>' + esc(r.by) + '</b> ' + esc(r.tx) + (teacher || r.by === name ? ' <button class="x" data-a="rd" data-r="' + esc(rid) + '" title="댓글 지우기">✕</button>' : '') + '</div>').join('') || '<div class="sm">아직 댓글이 없어요</div>')
       + (can ? '<div class="ri"><input maxlength="120" placeholder="댓글 달기 (Enter)"><button data-a="rs">보내기</button></div>' : '') + '</div>';
@@ -1085,8 +1096,9 @@ export default async function start(map, params = {}) {
     body.classList.toggle('mapmode', wmode === 'map');
     if (wmode === 'map') wmMount(body); else {
     body.innerHTML = '<div class="lanes wl">' + wcols().map((C) => { const L = A.filter(([, f]) => f.k === C.k).sort((a, b) => likes(b[1]) - likes(a[1]) || (a[1].t || 0) - (b[1].t || 0));   // wl = 칸 격자(가로로 굴리지 않아도 🎮 칸까지 보임 · 선생님이 더한 칸은 그 뒤)
-      return '<div class="lane" data-k="' + esc(C.k) + '" style="border-top:6px solid ' + hex(C.c) + '"><h4>' + esc(C.e) + ' ' + esc(C.n) + ' <span class="sm">' + L.length + '/' + C.goal + (L.length >= C.goal ? ' ✓' : '') + '</span></h4><div class="sm" style="margin:-4px 0 8px">' + esc(C.q) + '</div>'
-        + L.map(([id, f]) => wcard(id, f)).join('') + (can ? '<button class="sub" data-b="wcat:' + C.k + '" style="width:100%;border:1px dashed #9fb4d0;background:#fff">＋ ' + esc(C.e) + ' 쓰기</button>' : '') + '</div>'; }).join('') + '</div>';
+      const nk = L.filter(([, f]) => f.tag !== 'vote').length, nv = L.length - nk;   // BIG-1: 🙋 보기 카드는 아이 카드 수에 안 셈
+      return '<div class="lane' + (C.wide ? ' wide' : '') + '" data-k="' + esc(C.k) + '" style="border-top:6px solid ' + hex(C.c) + '"><h4>' + esc(C.e) + ' ' + esc(C.n) + ' <span class="sm">' + (nk || !L.some(([, f]) => f.tag === 'vote' && likes(f) > 0) ? nk + '/' + C.goal + (nk >= C.goal ? ' ✓' : '') : '') + (nv ? (nk ? ' · ' : '') + '🙋 고르기 ' + nv + '장 — ' + (L.some(([, f]) => f.tag === 'vote' && likes(f) > 0) ? '❤️ 많은 것으로 정해져요 ✓' : '❤️로 하나 골라요') : '') + '</span></h4><div class="sm" style="margin:-4px 0 8px">' + esc(C.q) + '</div>'
+        + (C.wide ? '<div class="wcds">' : '') + L.map(([id, f]) => wcard(id, f)).join('') + (C.wide ? '</div>' : '') + (can ? '<button class="sub" data-b="wcat:' + C.k + '" style="width:' + (C.wide ? 'auto;padding:6px 18px' : '100%') + ';border:1px dashed #9fb4d0;background:#fff">＋ ' + esc(C.e) + ' 쓰기</button>' : '') + '</div>'; }).join('') + '</div>';
     body.prepend(el('div', 'coach top', '<b>🧭 세계 코치</b> ' + coachChips(W.tips), body));   // 코치는 칸 위(빈 칸 칩·'다 모였어요'가 첫 화면에)
     body.scrollTop = sc[0]; body.scrollLeft = sc[1]; flashNow(body); }
     P.onclick = async (e) => {
@@ -1122,7 +1134,7 @@ export default async function start(map, params = {}) {
     const old = o.id ? DATA[o.id] : null; if (o.id && !old) { back = null; return; }
     if (old && !teacher && old.by !== name) { back = null; return toast('✍️ ' + old.by + '의 ' + (old.k === 'wd' ? '자세히' : '카드') + '예요 — 내가 쓴 것만 고칠 수 있어요', 3); }
     if (o.detail || (old && old.k === 'wd')) return wdform(o, old);   // ＋ 자세히(카드 밑 짧은 줄)
-    let cat = old ? old.k : o.cat || null, loc = old && old.loc || null;   // 새 세계 = 학교와 따로 — 깃발 없음 · 장소는 '어디쯤'
+    let cat = old ? old.k : o.cat || null, loc = old && old.loc || null, vt = !!(old && old.tag === 'vote');   // 새 세계 = 학교와 따로 — 깃발 없음 · 장소는 '어디쯤' · vt = 🙋 고르기 카드(선생님)
     if (!(panel && panel.id === 'memo-board')) { worldView(); }   // F·칩으로 열어도 세계 판이 뒤에(BOARD-BG)
     back = 'board';
     const P = open('memo-form');
@@ -1137,9 +1149,12 @@ export default async function start(map, params = {}) {
           + '<div class="mlbl">💡 왜 그래요? 어떻게 돼요? <span class="sm">(까닭 — 안 써도 돼요)</span></div><textarea id="mmWhy" maxlength="200" style="min-height:50px" placeholder="예) 왜냐하면 … · 그래서 … · 만약 … 하면 …"></textarea>';
         if (cat === 'wplace') h += '<div class="mlbl">📍 이 세계의 어디쯤 있어요? <span class="sm">(하나 골라요 — 세계 지도를 그릴 때 써요)</span></div><div class="chips">' + WLOC.map((x) => '<button data-loc="' + x + '" class="' + (loc === x ? 'on' : '') + '">' + x + '</button>').join('') + '</div>';
       } else h += '<div class="sm" style="margin-top:8px">위에서 칸을 골라요.</div>';
+      if (teacher && C) h += '<label class="mlbl" style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="mmVote"' + (vt ? ' checked' : '') + ' style="width:20px;height:20px"> 🙋 고르기 카드로 — 아이들이 ❤️로 하나 골라요 <span class="sm">(선생님)</span></label>';   // BIG-1
       h += '<div class="row">' + (old ? '<button class="warn" id="mmDel">🗑 지우기</button>' : '') + '<button class="sub" id="mmNo">취소</button><button id="mmOk"' + (C ? '' : ' disabled style="opacity:.45"') + '>💾 저장</button></div>';
       const keep = { tx: (P.querySelector('#mmTx') || {}).value, why: (P.querySelector('#mmWhy') || {}).value };
+      { const vb0 = P.querySelector('#mmVote'); if (vb0) vt = vb0.checked; }
       P.innerHTML = h;
+      { const vb = P.querySelector('#mmVote'); if (vb) vb.checked = vt; }   // 칸을 바꿔 다시 그려도 그대로
       const tx = P.querySelector('#mmTx'), wy = P.querySelector('#mmWhy');
       if (tx) { tx.value = keep.tx != null ? keep.tx : old ? old.tx || '' : ''; setTimeout(() => tx.focus(), 30); }
       if (wy) wy.value = keep.why != null ? keep.why : old ? old.why || '' : '';
@@ -1163,9 +1178,10 @@ export default async function start(map, params = {}) {
         const tx = ((P.querySelector('#mmTx') || {}).value || '').trim(), why = ((P.querySelector('#mmWhy') || {}).value || '').trim(), C9 = wby()[cat];
         if (!C9) return toast('어느 칸인지 골라요', 2); if (!tx) return toast('내용을 적어 주세요', 2);
         const f = { k: cat, tx: dedupe(tx).slice(0, 300), why: why ? why.slice(0, 200) : null, loc: cat === 'wplace' && loc ? loc : null };
+        if (teacher) { const vb = P.querySelector('#mmVote'); f.tag = vb && vb.checked ? 'vote' : null; }   // BIG-1: 선생님이 낸 보기
         try {
           if (old) { await req(fpath(o.id), 'PATCH', f); flashSoon(o.id); }
-          else { if (!f.why) delete f.why; if (!f.loc) delete f.loc; Object.assign(f, { by: name, t: { '.sv': 'timestamp' }, ord: Date.now() }); const nid = newId(); await req(fpath(nid), 'PUT', f); flashSoon(nid); }
+          else { if (!f.why) delete f.why; if (!f.loc) delete f.loc; if (!f.tag) delete f.tag; Object.assign(f, { by: name, t: { '.sv': 'timestamp' }, ord: Date.now() }); const nid = newId(); await req(fpath(nid), 'PUT', f); flashSoon(nid); }
           map.sfx('ding'); toast(old ? '✏️ 고쳤어요' : '＋ ' + C9.e + ' 카드를 붙였어요!', 2.2);
         } catch (er) { toast('저장하지 못했어요 — 인터넷을 확인해 주세요', 3); return; }
         done();
@@ -1260,10 +1276,13 @@ export default async function start(map, params = {}) {
     return s9.replace(/[「」『』"'“”.,!?~·…()]/g, ' ').split(/\s+/).map((w) => w.replace(JOSA, '')).filter((w) => w.length >= 2 && !STOP.has(w) && /[가-힣a-z]/i.test(w) && (nm.has(w) || !VERB.test(w)));
   };
   function wcoach() {
-    const A = wcards(), by = (k) => A.filter(([, f]) => f.k === k), tips = [];
+    const A0 = wcards(), A = A0.filter(([, f]) => f.tag !== 'vote'), V = A0.filter(([, f]) => f.tag === 'vote'), by = (k) => A.filter(([, f]) => f.k === k), tips = [];   // BIG-1: 🙋 보기는 아이 카드로 안 셈
     let sum = 0;
     const CS = wcols();   // 선생님이 고친·더한 칸까지(WORLD-2)
-    for (const C of CS) { const n = by(C.k).length; sum += Math.min(1, n / C.goal); tips.push({ ok: n >= C.goal, t: C.e + ' ' + C.n + ' ' + n + '/' + C.goal, b: n < C.goal ? 'wcat:' + C.k : null }); }
+    for (const C of CS) { const n = by(C.k).length, dec = V.some(([, f]) => f.k === C.k && likes(f) > 0), ok = n >= C.goal || dec;   // 보기를 ❤️로 골랐으면 그 칸은 정해진 것
+      sum += ok ? 1 : Math.min(1, n / C.goal); tips.push({ ok, t: C.e + ' ' + C.n + ' ' + n + '/' + C.goal + (dec ? ' · 🙋 골랐어요' : ''), b: ok ? null : 'wcat:' + C.k }); }
+    for (const C of CS) { const L = V.filter(([, f]) => f.k === C.k).sort((a, b) => likes(b[1]) - likes(a[1])); if (!L.length) continue; const n = likes(L[0][1]), tie = L.length > 1 && likes(L[1][1]) === n;
+      tips.push({ ok: n > 0 && !tie, t: '🙋 ' + C.e + ' ' + C.n + ' 고르기 ' + L.length + '장 — ' + (!n ? '❤️로 하나 골라요' : tie ? '❤️가 같아요(' + n + ') — 더 골라요' : '지금 1등: 「' + short(unstem(L[0][1]).replace(/^[^.]{0,16}제일 큰 문제는\s*/, ''), 16) + '」(❤️' + n + ')') }); }
     const pct = Math.round(sum / CS.length * 100);
     if (A.length) {
       // ＋ 자세히(wd)도 그 카드의 글 — 자세히를 단 카드는 '이름만'·'짧은 카드'에서 빠지고, 💡 까닭 자세히 = 까닭을 쓴 카드 · 할 일 이어짐에도 자세히 글을 봄(칸 수·목표·❤️ 순은 카드만)
@@ -1293,7 +1312,7 @@ export default async function start(map, params = {}) {
       const L = A.filter(([, f]) => f.k === C.k).sort((a, b) => likes(b[1]) - likes(a[1]) || (a[1].t || 0) - (b[1].t || 0));
       out.push('## ' + C.e + ' ' + C.n + (C.u || C.mod ? ' — ' + C.q : '') + (L.length ? '' : '  (아직 없음)'));   // 선생님이 고친·더한 칸은 질문도(무엇을 묻는 칸인지)
       for (const [id, f] of L) {
-        out.push('- ' + (likes(f) ? '(❤️' + likes(f) + ') ' : '') + String(f.tx).replace(/\n/g, ' ') + '  · ✍️ ' + f.by);
+        out.push('- ' + (f.tag === 'vote' ? '🙋 고르기 ' : '') + (likes(f) ? '(❤️' + likes(f) + ') ' : '') + String(f.tx).replace(/\n/g, ' ') + '  · ' + (f.tag === 'vote' ? f.by + iga(f.by) + ' 낸 보기' : '✍️ ' + f.by));
         if (f.why) out.push('  💡 ' + String(f.why).replace(/\n/g, ' '));
         if (f.k === 'wplace' && f.loc) out.push('  📍 어디쯤: ' + f.loc);
         if (pinned(f)) out.push('  🗺️ 지도: ' + mapArea(f.x, f.z) + ' (x ' + Math.round(f.x) + ', y ' + Math.round(f.z) + ' — 지도 1000×750)');
@@ -1316,6 +1335,8 @@ export default async function start(map, params = {}) {
       '- 이 세계를 imagine/<영문 이름>/ 에 「마법사 마을」처럼 새 페이지로 만들어 주세요(조작은 메타버스와 같게 · v3 「상상의 세계」 카드로).',
       '- 🌍 = 첫 화면·하늘·색·소리 · 📜 규칙 = 놀이 규칙(되는 일·안 되는 일·어기면) · 👫 = 마을 사람·생물(말 걸기) · 🏰 = 지역(📍 어디쯤 — 가운데·북·남·동·서·하늘·땅속·물속에 맞춰 세계 지도를 짠다 · 우리 학교와는 따로) · ✨ = 상호작용·마법·물건 · 🎮 = 퀘스트·도전(처음 할 일 → 해결 → 보상).',
       ...(CS.some((C) => C.u) ? ['- 선생님이 더한 칸(' + CS.filter((C) => C.u).map((C) => C.e + ' ' + C.n).join(' · ') + ')도 칸 질문에 맞게 세계에 넣기.'] : []),
+      '- 🌋 제일 큰 문제 = 이 세계 이야기의 큰 줄기(메인 퀘스트): 처음 온 친구가 그 문제를 알게 되고 → 🎮 할 일들이 그 문제를 푸는 길이 되고 → 해결하면 세계가 눈에 띄게 바뀌는 끝.',
+      '- 🙋 고르기 카드(Claude·선생님이 낸 보기) = 아이들이 ❤️로 고른 것(❤️ 가장 많은 보기)으로 만들기 · ❤️ 0이면 아직 안 고름 · 보기에 붙은 └ 자세히·💬 댓글도 아이들 생각.',
       '- └ 자세히(👀 모습 · 🔊 소리·말 · ⚙️ 하는 일 · 💡 까닭)는 그 카드를 만들 때 그대로 살리기.',
       '- 🗺️ 세계 지도가 있으면 그 배치대로(색 = 땅·물·산·길·모래·꽃 · 📍 꽂은 카드 자리 · 그림 파일) — 선 점들은 REST boards/<판>/flags 의 k:\'wdraw\'(tx·opt = 점마다 4글자 base36 x·y).',
       '- ❤️ 많은 생각부터 · 서로 부딪히면 ❤️ 많은 쪽 · 💬 댓글의 의견도 살피기 · 빈 칸은 Claude가 채우되 「Claude가 채운 것」 목록을 따로 알려 주기.',
