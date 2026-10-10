@@ -118,7 +118,10 @@ export default async function start(map, params = {}) {
         for (let o = e + 0.02; o < e + 0.5; o += 0.01) { const x = corrL.x + ax * sgn * o, z = corrL.z + az * sgn * o, y = map.q.floorY(x, z);
           const ok = free(x, y, z) && top(x, z, y + 0.2) < y + 0.03;
           if (ok && a0 == null) a0 = o; if (!ok && a0 != null) { if (o - a0 < 0.35 && o - a0 > 0.08) { const m = (a0 + o) / 2; gap = [corrL.x + ax * sgn * m, y, corrL.z + az * sgn * m]; } break; } } }
-      if (gap && map.q.blocked(gap[0], gap[2], gap[1])) addCrumb(gap[0], gap[1], gap[2], '복도 사물함 틈'); else warn('사물함 틈을 못 찾음');
+      if (gap && map.q.blocked(gap[0], gap[2], gap[1])) addCrumb(gap[0], gap[1], gap[2], '복도 사물함 틈');
+      else { let side = null;   // QA-1(10-10): 사물함 끝이 벽에 안 붙어 틈이 없으면 사물함 끝 바로 옆 바닥(부스러기 하나가 빠지던 것)
+        for (const sgn of [1, -1]) { if (side) break; const o = corrL.w / 2 + 0.1, x = corrL.x + ax * sgn * o, z = corrL.z + az * sgn * o, y = map.q.floorY(x, z); if (free(x, y, z) && top(x, z, y + 0.2) < y + 0.03) side = [x, y, z]; }
+        if (side) addCrumb(side[0], side[1], side[2], '복도 사물함 옆'); else warn('사물함 틈을 못 찾음'); }
     } else warn('복도 사물함 없음');
     // ② 교실: 의자 옆 책 더미 → 의자 → 책상 · 책상 → 연필 다리 → 교탁 → 연필 다리 → 창가 사물함 → 창턱
     const r1 = row(0), r2 = rowsX.length > 1 ? row(1) : [];
@@ -324,7 +327,7 @@ export default async function start(map, params = {}) {
     };
     const onCp = k => { if (k === 1) advance(1); else if (k === 2) advance(3); else if (k === 3) advance(5); };
     const fin = map.findEntry(xD - 0.9, zb - 0.8, 0, [room.x0, room.z0, room.x1, room.z1], 4);   // 원래 몸이 설 빈 칸(시연대 서쪽 통로)
-    return { room, arena: [room.x0 + 0.1, room.z0 + 0.1, room.x1 - 0.1, room.z1 - 0.1], arenaMsg: '과학실 안에서만 놀아요', items, kind: 'star', need: 0, cps, obj, onCp, tick: tick2,
+    return { room, arena: [room.x0 + 0.1, room.z0 + 0.1, room.x1 - 0.1, room.z1 - 0.1], arenaMsg: '과학실 안에서만 놀아요', items, kind: 'star', need: 0, cps, obj, onCp, tick: tick2, onFinish: () => { for (const k of streak) put(BX, k, 0, -50, 0, 0.001, 0.001, 0.001); },   // QA-1: 바람 줄이 커지는 장면·결과 창까지 공중에 멈춰 남던 것
       intro: { title: '🔬 과학실 대모험', body: '과학실 시연대 위에 **다시 커지는 물약**이 있대요!\n\n🧪 받침대 엘리베이터 → 🧲 자석 단추 → 📏 자 다리 → 🌀 선풍기 바람 → ✏️ 연필 다리 → 📕 책 비탈\n\n바닥으로 떨어져도 괜찮아요. 마지막 🚩 깃발에서 다시 시작해요.' },
       goal: () => (R.obj < obj.length ? obj[R.obj].text : '') + '  ⭐' + R.got + '/' + items.length,
       finale: { at: fin ? [fin.x, fin.y, fin.z] : [xD - 0.9, 0, zb - 0.8], look: [xD, zb],
@@ -452,6 +455,8 @@ export default async function start(map, params = {}) {
       intro: { title: '🍽 급식실 대탈출', body: '배식대 끝에 **우유 한 팩**이 있어요. 마시면 원래 크기로 돌아온대요!\n\n🔘 서랍 계단 → 🍽 오가는 식판 → 🥢 젓가락 다리 → 🥛 요구르트 징검다리 → 🍊 귤 + 🥄 숟가락 발사대\n\n떨어지면 마지막 🚩 깃발에서 다시 해요.' },
       goal: () => (R.obj < obj.length ? obj[R.obj].text : '') + '  ⭐' + R.got + '/' + items.length,
       finale: { at: fin ? [fin.x, fin.y, fin.z] : [room.x0 + 1.58, 0, rows[1] + 1.2], look: [milk.x, milk.z],
+        pre: () => { const k = map.npc.get('급식선생님') && map.pois({ src: 'door' }).find(d => d.zones && d.zones.includes('kitchen') && d.zones.includes(room.id));   // QA-1(10-10): 하얀 번쩍 동안 부엌 문 안쪽(급식실 쪽)으로 — 부엌 뒤로 11초 돌아오는 동안 결과 창이 먼저 떴다
+          const e = k && map.findEntry(k.x, k.z, 0, [room.x0, room.z0, room.x1, room.z1], 3); if (e) { own(() => map.npc.home('급식선생님')); map.npc.move('급식선생님', { x: e.x, y: e.y, z: e.z }); } },
         world: () => {
           const bal = [0xff6b9d, 0x4fc3f7, 0xffd23c, 0x7bed9f, 0xa29bfe]; for (let i = 0; i < 5; i++) { const b = spawn('balloon', { x: cols[0] - 0.6 + i * 0.3, z: rows[1] + 2.3, y: 0.2 }, { color: bal[i] }); if (b) b.move({ y: 1.2 + i * 0.25 }, { tween: 2.2 + i * 0.3 }); }
           spawn('banner', { x: cols[1], z: room.z0 + 1.2, y: 0 }, { text: '급식실 대탈출 성공!', h: 180, fg: '#1f8a4c' });
@@ -518,7 +523,7 @@ export default async function start(map, params = {}) {
     if (st !== 'play') return; st = 'finale'; PL.freeze(true); map.sfx('done'); map.hud.banner(R.n === 1 ? '🍪 다 모았어요!' : R.n === 2 ? '🧪 꿀꺽!' : '🥛 꿀꺽!', 1.4); map.hud.chip('sh-hint', null);
     const n = R.n, Tn = T, stars = R.kind === 'star' ? R.got : null;
     const fd = map.fade(1.3, '#fffbe8'); await wait(0.66); if (dead || map.gone) return;   // 하얗게 된 순간 바닥 빈 칸으로(평소 몸이 끼지 않는 곳)
-    { const f = R.finale; PL.teleport(f.at); if (Array.isArray(f.look)) PL.lookAt(f.look); map.minimap.zoom(null); map.minimap.setMarks([]); for (const P9 of [STAR, BEAM, CRUMB]) P9.m.visible = false; }   // 커지면 별·빛줄기는 치움(드로우콜 −2)
+    { const f = R.finale; PL.teleport(f.at); if (Array.isArray(f.look)) PL.lookAt(f.look); map.minimap.zoom(null); map.minimap.setMarks([]); for (const P9 of [STAR, BEAM, CRUMB]) P9.m.visible = false; if (R.onFinish) R.onFinish(); if (f.pre) { try { f.pre(); } catch (e) { console.error('[shrink] 끝 준비', e); } } }   // 커지면 별·빛줄기는 치움(드로우콜 −2)
     await fd; if (dead || map.gone) return;
     await new Promise(res => { anim = { t: 0, dur: 1.5, from: PL.scaled(), to: 1, phys: {}, done: () => { PL.scale(1); res(); } }; });   // 게임 시간으로 커짐(느린 기기에서도 다 커진 뒤에 다음)
     if (dead || map.gone) return;

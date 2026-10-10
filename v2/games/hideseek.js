@@ -896,7 +896,7 @@ body.small .hs-how button{margin-top:6px;font-size:16px;padding:8px 18px}
     let D0 = null;
     try {
       D0 = (await nreq('')) || {};
-      const P = D0.p || {}, m = D0.m, live = m && P[m.host] && Object.keys(P).length;
+      const P = D0.p || {}, m = D0.m, live = m && m.st !== 'end' && P[m.host] && Object.keys(P).length;   /* QA-1(10-10): 끝난 경기(st end)는 진행 중이 아님 — 앞 방 놀이 자료가 남아(새로고침한 친구의 옛 자리가 방장으로 넘겨받음) 다음 놀이가 '지금 ○○ 중'이라며 못 들어가던 것 */
       if (live && !/^hs/.test(m.arena || '')) { map.hud.toast((/^rb/.test(m.arena || '') ? '🤖 지금 이 방은 로봇인 척 중이에요' : /^gd/.test(m.arena || '') ? '🧭 지금 이 방은 길잡이 중이에요' : '💦 지금 이 방은 물총 친구 대결 중이에요') + ' — 끝나면 다시 와요', 4); NM.on = false; if (N && N.hide) N.hide(false); lobbyHide(); map.quit(); return; }
       const t1 = Date.now(), r = await nreq('/p/' + NM.pid, 'PUT', { n: NM.name, tm: 99, on: { '.sv': 'timestamp' } }), t2 = Date.now();
       NM.off = r.on - (t1 + t2) / 2;

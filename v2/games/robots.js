@@ -405,6 +405,7 @@ export default async function start(map, params = {}) {
   });
   function turnOf(id) { const p = (NM.D.p || {})[id]; if (!p || typeof p.tm !== 'number') return ''; if (p.tm === 99) return 'late'; if (p.tm % 1000 >= 100) return 'now'; return p.tm >= 1000 ? 'done' : ''; }
   const clock = () => (NETM ? sNow() : Date.now());
+  let pauseAt = 0, quitOpen = false;   // QA-1(10-10): 혼자 = 멈춤(P)·'그만할까요?' 창 동안 시계·로봇·반장 눈길 모두 멈춤(숨바꼭질과 같게)
   const o1 = {};
   let chipK = {}; const chip = (k, t, o) => { if (chipK[k] === t) return; chipK[k] = t; map.hud.chip(k, t, o); };
 
@@ -765,6 +766,9 @@ body.rb-top #tv-lb .lb:not(.mk){opacity:.6}
   // ---------- 매 프레임 ----------
   function tick(dt) {
     if (!R) return;
+    if (!NETM) { const hold = quitOpen || !!(window.__pause && window.__pause.on);   // 멈춘 동안은 아무것도 안 감 · 돌아오면 시계를 그만큼 밂(로봇 자리 = 시각의 함수라 그대로 이어짐)
+      if (hold) { if (!pauseAt) pauseAt = Date.now(); return; }
+      if (pauseAt) { R.t0 += Date.now() - pauseAt; pauseAt = 0; } }
     const t = (clock() - R.t0) / 1000 - cfg.count; tNow = t;
     const endAt = finT != null ? finT : playT, p = t < 0 ? 'count' : t < endAt ? 'play' : 'res';
     if (p !== phase) setPhase(p);
@@ -871,7 +875,8 @@ body.rb-top #tv-lb .lb:not(.mk){opacity:.6}
     const i = await map.hud.ask(head, ['🔄 다시 하기', role === 'guard' ? '🤖 스파이 해 보기' : '🕵️ 반장 해 보기', '🏠 그만하기']);
     if (dead) return; if (i === 0) soloRound(role); else if (i === 1) { const r2 = role === 'guard' ? 'spy' : 'guard'; if (!seenHow.has(r2)) { await howTo(r2, 2, goalOf(2), shotsOf(2), true); if (dead) return; } soloRound(r2); } else map.quit();
   }
-  async function askQuit() { const i = await map.hud.ask('로봇인 척을 그만할까요?', ['▶ 계속하기', '🏠 그만하기']); if (i === 1) map.quit(); }
+  async function askQuit() { if (quitOpen || document.querySelector('.hudAsk')) return;   // QA-1: Esc를 두 번 눌러도 창은 하나(두 창이 얼림 상태를 엇갈려 되돌려 계속 얼어 있던 것) · 결과 창 위에도 안 겹침
+    quitOpen = true; const i = await map.hud.ask('로봇인 척을 그만할까요?' + (NETM ? '' : '\n(고르는 동안 멈춰 있어요)'), ['▶ 계속하기', '🏠 그만하기']); quitOpen = false; if (i === 1) map.quit(); }
 
   // =====================================================================================
   // 👥 친구 대결 — Firebase match/c<번호>(물총·숨바꼭질과 같은 자리 · m.arena = 'rb' + 따라잡기 단계로 구별)
@@ -909,7 +914,7 @@ body.rb-top #tv-lb .lb:not(.mk){opacity:.6}
     let D0 = null;
     try {
       D0 = (await nreq('')) || {};
-      const P = D0.p || {}, m = D0.m, live = m && P[m.host] && Object.keys(P).length;
+      const P = D0.p || {}, m = D0.m, live = m && m.st !== 'end' && P[m.host] && Object.keys(P).length;   /* QA-1(10-10): 끝난 경기(st end)는 진행 중이 아님 — 앞 방 놀이 자료가 남아(새로고침한 친구의 옛 자리가 방장으로 넘겨받음) 다음 놀이가 '지금 ○○ 중'이라며 못 들어가던 것 */
       if (live && !isRB(m)) { map.hud.toast(busyMsg(m), 4); NM.on = false; if (N && N.hide) N.hide(false); lobbyHide(); map.quit(); return; }
       const t1 = Date.now(), r = await nreq('/p/' + NM.pid, 'PUT', { n: NM.name, tm: 99, on: { '.sv': 'timestamp' } }), t2 = Date.now();
       NM.off = r.on - (t1 + t2) / 2;

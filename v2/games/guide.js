@@ -314,7 +314,8 @@ body.small .gd-log{display:none!important}
       const D = DIRS[selD], fsz = fp(0.2);
       for (let k = 1; k <= 4; k++) { const c = fc[0] + D.dc * k, r = fc[1] + D.dr * k;
         if (!inGrid(c, r) || BLOCK.has(KEY(c, r))) { const pc = c - D.dc, pr = r - D.dr; g.strokeStyle = '#e03131'; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath();
-          if (D.dc) { const ex = Math.max(pc, c) * s; g.moveTo(ex, r * s + s * 0.12); g.lineTo(ex, r * s + s * 0.88); } else { const ey = Math.max(pr, r) * s; g.moveTo(c * s + s * 0.12, ey); g.lineTo(c * s + s * 0.88, ey); }
+          const in9 = -(D.dc || D.dr) * s * 0.07;   // QA-1: 앞 칸 쪽으로 조금 — 마을 끝 막대가 지도 테두리에 덮여 안 보이던 것
+          if (D.dc) { const ex = Math.max(pc, c) * s + in9; g.moveTo(ex, r * s + s * 0.12); g.lineTo(ex, r * s + s * 0.88); } else { const ey = Math.max(pr, r) * s + in9; g.moveTo(c * s + s * 0.12, ey); g.lineTo(c * s + s * 0.88, ey); }
           g.stroke(); g.lineCap = 'butt'; break; }
         const trap = !!(S && S.traps.some(q => q[0] === c && q[1] === r)), col = trap ? '#e03131' : '#1d3557';
         g.setLineDash([10, 7]); g.strokeStyle = col; g.lineWidth = 4; g.strokeRect(c * s + 4, r * s + 4, s - 8, s - 8); g.setLineDash([]);
@@ -486,7 +487,7 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
     } else if (e.k === 'got') {
       const S = TGOT[ti]; if (S.has(e.n)) return; S.add(e.n); TSC[ti].s += 100;
       if (S.size >= cfg.tre) { TSC[ti].done = Math.max(0, et); TSC[ti].s += Math.max(0, Math.round((cfg.play - et) * 2)); }
-      if (ti === MYTEAM) { score = TSC[ti].s; map.hud.banner('💎 보물 ' + S.size + '/' + cfg.tre + '!', 1.3); map.tone(988, 0, 0.1, 'sine', 0.08); map.tone(1318, 0.1, 0.18, 'sine', 0.08); if (S.size >= cfg.tre) map.tone(1568, 0.3, 0.3, 'sine', 0.08); }
+      if (ti === MYTEAM) { score = TSC[ti].s; if (S.size < cfg.tre) map.hud.banner('💎 보물 ' + S.size + '/' + cfg.tre + '!', 1.3); map.tone(988, 0, 0.1, 'sine', 0.08); map.tone(1318, 0.1, 0.18, 'sine', 0.08); if (S.size >= cfg.tre) map.tone(1568, 0.3, 0.3, 'sine', 0.08); }
       if (R.teams.every((tm, i) => TSC[i].done != null) && finT == null) finT = Math.max(0, et);
     } else if (e.k === 'trp') {
       const S = TTR[ti]; if (!S.has(e.n)) S.add(e.n); TSC[ti].s -= 20; if (ti === MYTEAM) { trapN++; score = TSC[ti].s; map.hud.banner('💥 함정! 한 칸 뒤로', 1.3); map.tone(330, 0, 0.25, 'sawtooth', 0.06); }
@@ -566,14 +567,14 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
     if ((mapT -= dt) <= 0 && (ME.role !== 'exp')) { mapT = 0.1; drawMap(); }
     if ((uiT -= dt) <= 0) { uiT = 0.2; const S = TSC[MYTEAM] || { s: 0 };
       chip('gd-time', p === 'count' ? '⏱ 준비 ' + Math.ceil(-t) : p === 'play' ? '⏱ ' + fmt(Math.max(0, cfg.play - t)) : '🏁 끝');
-      chip('gd-score', '💎 ' + GOT.size + '/' + cfg.tre + ' · 💥 ' + TR.size + ' · ' + S.s + '점');
+      chip('gd-score', '💎 ' + GOT.size + '/' + cfg.tre + ' · 💥 ' + trapN + ' · ' + S.s + '점');   // QA-1: 💥 = 밟은 횟수(−20씩 — 점수·결과 카드와 같게 · 예전 = 함정 종류 수라 −300인데 💥 1)
       const st = panel.querySelector('.st'); if (st) st.textContent = (p === 'count' ? '⏱ 준비 ' + Math.ceil(-t) : p === 'play' ? '⏱ ' + fmt(Math.max(0, cfg.play - t)) : '🏁 끝') + ' · 💎 ' + GOT.size + '/' + cfg.tre + ' · ' + S.s + '점'; coach(); }   // 끝나면 시계를 멈춤(GD-17)
     if (NETM && NM.on) { netSend(dt); hostRun(t, endAt); }
     else if (p === 'res' && t > endAt + cfg.end && !matchEnd) { matchEnd = true; soloEnd(); }
   }
   function setPhase(p) {
     const was = phase; phase = p; if (p !== 'count') howClose();
-    if (p === 'play') { panel.classList.remove('wait'); if (ME.role === 'exp') { map.player.freeze(false); map.hud.banner('🚶 출발!', 1.1); } else if (ME.role === 'guide') map.hud.banner('🧭 길을 알려 줘요!', 1.2); map.tone(784, 0, 0.14, 'square', 0.05); if (gbot) gbot.t = 0.4; }
+    if (p === 'play') { panel.classList.remove('wait'); if (ME.role === 'exp') { map.player.freeze(false); map.hud.banner('🚶 출발!', 1.1); } /* QA-1: 길잡이는 시작 배너 없음 — 지도 가운데(보물)를 1.2초 가렸다 · 위 '지금 할 일' 줄이 같은 말 */ map.tone(784, 0, 0.14, 'square', 0.05); if (gbot) gbot.t = 0.4; }
     else if (p === 'res') { panel.classList.add('done'); panel.classList.remove('wait'); selD = -1; paintBtns(); { const b = panel.querySelector('.hd .bot'); if (b) b.textContent = ''; } roundResult(was); }   // 끝 = 단추 흐리게 · 로봇 말 지움(GD-18)
   }
   // 나침반 띠: 카메라가 보는 방향(북 = −z)을 가운데로 — 15°마다 눈금
@@ -676,7 +677,7 @@ body.small .gd-how .bx{padding:10px 12px} body.small .gd-how h3{font-size:17px;m
     let D0 = null;
     try {
       D0 = (await nreq('')) || {};
-      const P = D0.p || {}, m = D0.m, live = m && P[m.host] && Object.keys(P).length;
+      const P = D0.p || {}, m = D0.m, live = m && m.st !== 'end' && P[m.host] && Object.keys(P).length;   /* QA-1(10-10): 끝난 경기(st end)는 진행 중이 아님 — 앞 방 놀이 자료가 남아(새로고침한 친구의 옛 자리가 방장으로 넘겨받음) 다음 놀이가 '지금 ○○ 중'이라며 못 들어가던 것 */
       if (live && !isGD(m)) { map.hud.toast(busyMsg(m), 4); NM.on = false; if (N && N.hide) N.hide(false); lobbyHide(); map.quit(); return; }
       const t1 = Date.now(), r = await nreq('/p/' + NM.pid, 'PUT', { n: NM.name, tm: 99, on: { '.sv': 'timestamp' } }), t2 = Date.now(); NM.off = r.on - (t1 + t2) / 2;
       if (!live) { const sq = ((m && m.seq) || 0) + 1; await nreq('/m', 'PUT', { st: 'lobby', host: NM.pid, arena: 'gd0', time: 0, goal: 0, seq: sq, t0: 0 }); ctlMatch(sq, 'globby'); }

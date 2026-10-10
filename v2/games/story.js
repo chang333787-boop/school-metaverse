@@ -309,9 +309,13 @@ export default async function start(map, params = {}) {
   }
   // 큰 풀숲(작아졌을 때) — 풀잎 = 원뿔 인스턴스 하나(드로우콜 1)
   const GRASS = [];
+  function grassMat() { let m = MATC.get('grass~'); if (m) return m;   // QA-1(10-10): 카메라 24 cm 안 풀잎은 안 그림 — 작아져 도망칠 때 풀잎 하나가 화면을 덮던 것
+    m = D && D.toon ? new T3.MeshToonMaterial({ color: 0xffffff, gradientMap: gradMap() }) : new T3.MeshLambertMaterial({ color: 0xffffff });
+    m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('void main() {', 'void main() {\n\tif (length(vViewPosition) < 0.24) discard;'); }; m.customProgramCacheKey = () => 'grassNear';
+    MATC.set('grass~', m); FXDISP.push(m); return m; }
   function grassAt(c, st) {
     const n = st.n || 60, r = st.r || 1.6, r0 = st.r0 || 0.25, hmin = st.hmin || 0.18, hmax = st.hmax || 0.5;
-    const im = new T3.InstancedMesh(FG.k, fxMat(0xffffff), n), M4 = new T3.Matrix4(), Q = new T3.Quaternion(), E = new T3.Euler(), V = new T3.Vector3(), S9 = new T3.Vector3(), C9 = new T3.Color();
+    const im = new T3.InstancedMesh(FG.k, grassMat(), n), M4 = new T3.Matrix4(), Q = new T3.Quaternion(), E = new T3.Euler(), V = new T3.Vector3(), S9 = new T3.Vector3(), C9 = new T3.Color();
     for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, rr = r0 + Math.sqrt(Math.random()) * (r - r0), x = c.x + Math.cos(a) * rr, z = c.z + Math.sin(a) * rr, h = hmin + Math.random() * (hmax - hmin);
       const gy = map.player.groundAt(x, z, c.y + 0.6); E.set((Math.random() - 0.5) * 0.35, Math.random() * 6, (Math.random() - 0.5) * 0.35); Q.setFromEuler(E);
       V.set(x, (gy != null && isFinite(gy) ? gy : c.y) + h / 2, z); S9.set(0.012 + Math.random() * 0.012, h, 0.004); M4.compose(V, Q, S9); im.setMatrixAt(i, M4); im.setColorAt(i, C9.setHSL(0.27 + Math.random() * 0.06, 0.55, 0.32 + Math.random() * 0.14)); }
@@ -893,9 +897,11 @@ export default async function start(map, params = {}) {
     const pts = (st.collect || []).map(place).filter(Boolean), need = Math.min(st.n || pts.length, pts.length); let got = 0;
     const left = pts.slice(), G9 = () => (st.goal || (st.item || '물건') + ' 모으기') + ' (' + got + '/' + need + ')';
     objective(G9(), left[0], st.item);   // 목표 표시 = 아직 안 주운 곳(하나 주우면 다음 곳으로)
+    const R9 = st.r || 1.6 * RS(), off = map.interact.enable(q => q.kind !== 'game' && pts.some(p => Math.hypot(q.x - p.x, q.z - p.z) < R9 + 1.2 && Math.abs((q.y || 0) - (p.y ?? 0)) < 2), false);   // QA-1(10-10): 줍는 동안 그 둘레 원래 지점(의자 앉기·칠판 낙서)은 끔 — E가 '의자에 앉기'로 잡혀 못 줍던 것(waitUse와 같게)
     await new Promise(res => pts.forEach(p => { const mkr = map.mk.marker(p.x, (p.y ?? 0) + 0.9, p.z, { color: 0xffc23c });
       const h = map.interact.add({ x: p.x, y: p.y ?? 0, z: p.z, r: st.r || 1.6 * RS(), label: (st.icon || '✨') + ' ' + (st.item || '줍기'), use: () => { if (talk) return; h.remove(); mkr.remove(); got++; map.sfx('ding');
         left.splice(left.indexOf(p), 1); if (got >= need) res(); else objective(G9(), left[0], st.item); } }); }));
+    off.remove();
   }
   function partyTick(dt) {
     if (!PARTY.length || partyHold || talk || (partyT -= dt) > 0) return; partyT = 0.2;
@@ -956,7 +962,7 @@ export default async function start(map, params = {}) {
         if (r && r.goto) { const j = top ? list.findIndex(x => x.label === r.goto) : -1; if (j >= 0) { i = j; continue; } return r; } }
       if (st.toast) map.hud.toast(st.toast, 3);
       if (st.wait) await new Promise(r => setTimeout(r, st.wait * 1000));
-      if (st.end) { S.done = true; map.hud.goal(null); objective(null); map.sfx('done'); ending(); return; }
+      if (st.end) { S.done = true; map.hud.goal(null); objective(null); map.sfx('done'); ending(st.end); return; }   // QA-1: 갈래(if·else) 안의 끝 칸도 그대로 — 신상책 끝 화면 제목·요약·비교 목록이 비던 것
     }
   }
 
@@ -1096,10 +1102,10 @@ export default async function start(map, params = {}) {
 
   // ---------- 끝 화면 ----------
   let endEl = null;
-  function ending() {
+  function ending(endSt) {
     map.hud.goal(null); document.exitPointerLock?.(); map.player.freeze(true);
     endEl = mk('div', 'sp'); endEl.id = 'story-end';
-    const E9 = LEG ? null : (D.steps.find(x => x.end) || {}).end || {};
+    const E9 = LEG ? null : endSt || (D.steps.find(x => x.end) || {}).end || {};
     mk('div', 'story-rb', null, endEl); mk('h2', '', LEG ? D.endTitle : E9.title || D.title, endEl); mk('div', 'b', fill(LEG ? D.endBody : E9.body || ''), endEl);
     if (!LEG && Array.isArray(E9.list) && E9.list.length) { mk('div', 'b', E9.listTitle || '', endEl).style.cssText = 'font-weight:800;margin-top:10px;text-align:left';
       const ul2 = mk('ul', '', null, endEl); ul2.style.cssText = 'text-align:left;max-height:34vh;overflow:auto;font-size:14px;line-height:1.5'; for (const t of E9.list) mk('li', '', t, ul2); }

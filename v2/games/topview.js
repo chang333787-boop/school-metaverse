@@ -14,8 +14,9 @@ export default async function start(map, params = {}) {
     if (nav) { const i = nav.snap(pt.x, pt.y, pt.z, 4); if (i >= 0) to = nav.pos(i); }
     if (!to) { const e = map.findEntry(pt.x, pt.z, pt.y); if (e) to = [e.x, e.y, e.z]; }
     if (!to) { map.hud.toast('거기는 내려갈 수 없어요 — 다른 곳을 눌러 보세요'); return; }
+    if (map.q.inSchool && !map.q.inSchool(to[0], to[2])) { map.hud.toast('🏫 학교 밖에는 내려갈 수 없어요 — 학교 안을 눌러 보세요'); return; }   // QA-1(10-10): 울타리 밖에 내려 다시 못 들어오던 것
     map.player.teleport(to); map.quit();
   };
-  map.top.enter({ floor: fl, top: params.top === '1', onExit: () => map.quit(), tapActions: [{ t: '🚶 여기로 내려가기', f: down }] });
+  map.top.enter({ floor: fl, top: params.top === '1', onExit: () => map.quit(), tapActions: [{ t: '🚶 여기로 내려가기', f: down, when: pt => !map.q.inSchool || map.q.inSchool(pt.x, pt.z) }] });
   return { stop() {} };
 }

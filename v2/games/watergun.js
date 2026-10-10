@@ -812,9 +812,10 @@ export default async function start(map, params = {}) {
       const P = D0.p || {}, n = [0, 0]; for (const id in P) if (P[id] && id !== NM.pid) n[P[id].tm ? 1 : 0]++;
       const t1 = Date.now(), r = await nreq('/p/' + NM.pid, 'PUT', { n: NM.name, tm: n[0] <= n[1] ? 0 : 1, on: { '.sv': 'timestamp' } }), t2 = Date.now();
       NM.off = r.on - (t1 + t2) / 2; NM.rtt = t2 - t1;
-      const m = D0.m, live = m && P[m.host] && Object.keys(P).length;
+      const m = D0.m, live = m && m.st !== 'end' && P[m.host] && Object.keys(P).length;   /* QA-1(10-10): 끝난 경기(st end)는 진행 중이 아님 — 앞 방 놀이 자료가 남아(새로고침한 친구의 옛 자리가 방장으로 넘겨받음) 다음 놀이가 '지금 ○○ 중'이라며 못 들어가던 것 */
       if (live && /^(hs|rb|gd)/.test(m.arena || '')) { map.hud.toast((/^rb/.test(m.arena || '') ? '🤖 지금 이 방은 로봇인 척 중이에요' : /^gd/.test(m.arena || '') ? '🧭 지금 이 방은 길잡이 중이에요' : '🙈 지금 이 방은 숨바꼭질 대작전 중이에요') + ' — 끝나면 다시 와요', 4); NM.on = false; if (N && N.hide) N.hide(false); return menu(false); }   // HS-2: 같은 방 경기 자리(match/c<번호>)를 숨바꼭질과 같이 씀
-      if (!live) { const sq = ((m && m.seq) || 0) + 1; await nreq('/m', 'PUT', { st: 'lobby', host: NM.pid, arena: (m && m.arena) || 'field', time: (m && m.time) || 180, goal: (m && m.goal) || T_GOAL, seq: sq, t0: 0 }); ctlMatch(sq, 'lobby'); }
+      if (!live) { const sq = ((m && m.seq) || 0) + 1, wg = !!m && /^(field|box)$/.test(m.arena || '');   /* QA-1(10-10): 앞 방 놀이(길잡이 gd0 등)의 경기장·시간을 물려받으면 친구들이 '지금 길잡이 중'으로 보고 메뉴로 튕겼다 — 물총 경기 값만 이어받음 */
+        await nreq('/m', 'PUT', { st: 'lobby', host: NM.pid, arena: wg ? m.arena : 'field', time: (wg && m.time) || 180, goal: (wg && m.goal) || T_GOAL, seq: sq, t0: 0 }); ctlMatch(sq, 'lobby'); }
       else if (m.st === 'end' || (m.st !== 'lobby' && sNow() > m.t0 + m.time * 1000 + 15000)) { /* 끝난 경기 — 대기실로 보이게만 */ }
     } catch (e) { map.hud.toast('😥 친구 대결에 들어가지 못했어요 — 인터넷·방을 확인해 주세요', 4); NM.on = false; if (N && N.hide) N.hide(false); return menu(false); }
     if (dead || !NM.on) return;
@@ -929,7 +930,7 @@ export default async function start(map, params = {}) {
   function netFinish(w) {
     const myT = ACT[ME].team, me = ACT[ME];
     let mvp = null; for (const a of ACT) if (!mvp || a.soaks > mvp.soaks) mvp = a;
-    NM.lastRes = { s: teamScore.slice(), w, myT, soaks: me.soaks, soaked: me.soaked, mvp: mvp && mvp.soaks ? (mvp.human ? '나' : mvp.name) + ' ' + mvp.soaks + '번' : '' };
+    NM.lastRes = { s: teamScore.slice(), w, myT, soaks: me.soaks, soaked: me.soaked, mvp: mvp && mvp.soaks ? (mvp.human ? '나' : mvp.name) + ' (' + mvp.soaks + '번 맞힘)' : '' };
     const rec = map.store.get('net', { games: 0, wins: 0 }) || { games: 0, wins: 0 }; rec.games++; if (w === myT) rec.wins++; map.store.set('net', rec);
     sfx('done'); if (w === myT) SND.bloom();
     map.hud.banner(w < 0 ? '🤝 비겼어요!' : w === myT ? '🎉 우리 팀 승리!' : '다음엔 꼭!', 2.2);
@@ -981,12 +982,13 @@ export default async function start(map, params = {}) {
       if (w === 'team') { const t = 1 - ACT[ME].team; if (ACT.filter((a) => a.team === t && (a.remote || a.human)).length >= 4) return map.hud.toast('그 팀은 꽉 찼어요(4명)', 2); await nreq('/p/' + NM.pid + '/tm', 'PUT', t); }
       else if (w.startsWith('arena-') && NM.host) await nreq('/m/arena', 'PUT', w.slice(6));
       else if (w.startsWith('time-') && NM.host) await nreq('/m/time', 'PUT', +w.slice(5));
-      else if (w === 'start' && NM.host) { await nreq('/ev', 'DELETE'); await nreq('/b', 'DELETE'); await nreq('/m', 'PATCH', { st: 'count', t0: Math.round(sNow() + 4000), seq: (m.seq || 0) + 1 }); ctlMatch((m.seq || 0) + 1, 'count'); }
+      else if (w === 'start' && NM.host) await hostGo();
       else if (w === 'leave') { menu(false); }
     } catch (er) { map.hud.toast('저장하지 못했어요 — 인터넷을 확인해 주세요', 2.5); }
   }
   // 시험용
-  function netStart() { const b = NM.ui && NM.ui.querySelector('[data-w="start"]'); if (b) b.click(); return !!b; }
+  async function hostGo() { const m = NM.D.m || {}; if (!NM.host || m.st === 'count' || m.st === 'play') return false;   /* 이미 시작한 판은 두 번 시작하지 않음 */ await nreq('/ev', 'DELETE'); await nreq('/b', 'DELETE'); await nreq('/m', 'PATCH', { st: 'count', t0: Math.round(sNow() + 4000), seq: (m.seq || 0) + 1 }); ctlMatch((m.seq || 0) + 1, 'count'); return true; }
+  function netStart() { if (!NM.on || !NM.host) return false; hostGo().catch(() => {}); return true; }   // QA-1(10-10): 방 놀이(🏠 대기실 ▶ 시작)는 물총 대기실에 ▶ 단추를 안 그리므로 단추를 누르는 대신 바로 시작 — 예전엔 '곧 3·2·1'에서 멈춰 영영 시작 안 됨
   function netTeam() { const b = NM.ui && NM.ui.querySelector('[data-w="team"]'); if (b) b.click(); }
 
   // ---------- 한 판(혼자 연습) ----------

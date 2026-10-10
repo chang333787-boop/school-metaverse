@@ -79,7 +79,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     if (caps) { scene.remove(caps); caps.geometry.dispose(); caps = null; }
     const B = world.allBoxes; if (!c9 || !B) return;
     const [bx0, bz0, bx1, bz1] = c9.box, y = c9.y, L = [];
-    for (const b of B) { if (b.y0 >= y || b.y1 <= y) continue; const x0 = Math.max(b.x0, bx0), x1 = Math.min(b.x1, bx1), z0 = Math.max(b.z0, bz0), z1 = Math.min(b.z1, bz1); if (x1 - x0 > 0.01 && z1 - z0 > 0.01) L.push([x0, x1, z0, z1]); }
+    for (const b of B) { if (b.y0 >= y || b.y1 <= y) continue; if (b.y0 > y - 0.5 && Math.min(b.x1 - b.x0, b.z1 - b.z0) > 1) continue;   /* QA-1: 자르는 높이 바로 밑에서 시작하는 넓은 판(현관 차양)은 뚜껑을 안 덮음 — 남색 판이 길을 가렸다 */ const x0 = Math.max(b.x0, bx0), x1 = Math.min(b.x1, bx1), z0 = Math.max(b.z0, bz0), z1 = Math.min(b.z1, bz1); if (x1 - x0 > 0.01 && z1 - z0 > 0.01) L.push([x0, x1, z0, z1]); }
     if (!L.length) return;
     const g = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), m = new THREE.InstancedMesh(g, capMat, L.length), M4 = new THREE.Matrix4();
     L.forEach(([x0, x1, z0, z1], k) => { M4.makeScale(x1 - x0, 1, z1 - z0).setPosition((x0 + x1) / 2, y - 0.004, (z0 + z1) / 2); m.setMatrixAt(k, M4); });

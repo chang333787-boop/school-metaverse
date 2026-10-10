@@ -182,7 +182,7 @@ export default async function start(map, params = {}) {
   const RC = new THREE.Raycaster(), V2 = new THREE.Vector2(), O = new THREE.Vector3(), Dv = new THREE.Vector3();
   const isObjCol = (c) => !!map.world.furn.idOf(c);   // 물건(가구·나무) 충돌 상자 — 물건은 삼각형으로 고른다
   // 부술 때 '퍽! ○○' 이름 — world.js objWrap·objScope의 kind마다(OBJ-2로 늘어난 것까지 · 빠지면 시작할 때 콘솔에 알림)
-  const KN = { desk: '책상', chair: '의자', shelf: '책장', locker: '사물함', cab: '수납장', board: '게시판', plant: '화분', tree: '나무', bush: '덤불', car: '자동차', goal: '골대', tv: 'TV', ac: '에어컨', fan: '선풍기', ext: '소화기', case: '진열장', cart: '책 수레', printer: '복합기', table: '탁자', beanbag: '빈백', cushion: '방석', purifier: '공기청정기',
+  const KN = { toy: '장난감', desk: '책상', chair: '의자', shelf: '책장', locker: '사물함', cab: '수납장', board: '게시판', plant: '화분', tree: '나무', bush: '덤불', car: '자동차', goal: '골대', tv: 'TV', ac: '에어컨', fan: '선풍기', ext: '소화기', case: '진열장', cart: '책 수레', printer: '복합기', table: '탁자', beanbag: '빈백', cushion: '방석', purifier: '공기청정기',
     monitor: '모니터', labtable: '실험대', umbrella: '우산꽂이', screen: '칸막이', sofa: '소파', bed: '침대', bench: '벤치', fountain: '음수대', fridge: '냉장고', sink: '개수대', bin: '쓰레기통', box: '상자', mat: '매트', trolley: '수레',
     counter: '배식대', cook: '조리 기구', stand: '보면대', banner: '배너', clock: '시계', aed: '심장충격기', bucket: '대야', cone: '라바콘', piano: '피아노', drum: '북', basket: '공 바구니', slide: '미끄럼틀', swing: '그네',
     climb: '오르기 틀', rocker: '흔들 말', post: '말뚝', seesaw: '시소', statue: '조각상', rack: '거치대' };

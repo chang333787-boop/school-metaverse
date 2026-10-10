@@ -123,6 +123,7 @@ export function createMinimap(ctx) {
     // 표식: 작은 지도 밖이면 가장자리에 붙여(방향만) 작게 · 다른 층이면 속 빈 점 + '2층' · blink = 깜빡임(완전히 사라지지는 않음)
     const on = S.ph % 2 === 0, e = 9 * d;
     g.textBaseline = 'middle'; g.textAlign = 'left'; g.font = `700 ${11 * d}px sans-serif`;
+    const LU = [], fh = 13 * d, hit = (x, y, w) => LU.some(u => x < u[0] + u[2] && x + w > u[0] && Math.abs(y - u[1]) < fh);   // QA-1(10-10): 이름표끼리 겹치면 왼쪽·위·아래로 비킴(가까운 미션 셋의 이름이 한 줄로 겹치던 것)
     for (const m of (S.peers.length ? S.peers.concat(S.marks) : S.marks)) {   // NET-2: 같은 방 친구 점(peers) + 게임 표식
       let X = (m.x - ox) * sc, Y = (m.z - oz) * sc, out = false;
       if (!S.big && (X < e || X > W - e || Y < e || Y > H - e)) { out = true; const dx = X - W / 2, dy = Y - H / 2, k = Math.min((W / 2 - e) / Math.max(Math.abs(dx), 1e-6), (H / 2 - e) / Math.max(Math.abs(dy), 1e-6)); X = W / 2 + dx * k; Y = H / 2 + dy * k; }
@@ -135,7 +136,9 @@ export function createMinimap(ctx) {
         g.lineTo(X + Math.cos(a + 2.4) * (r + 1 * d), Y + Math.sin(a + 2.4) * (r + 1 * d)); g.lineTo(X + Math.cos(a - 2.4) * (r + 1 * d), Y + Math.sin(a - 2.4) * (r + 1 * d)); g.closePath(); g.fillStyle = col; g.fill(); }
       g.globalAlpha = 1;
       const lab = m.label ? m.label + (other ? ' (' + m.floor + '층)' : '') : '';
-      if (lab) { const w = g.measureText(lab).width; let lx = X + r + 4 * d; if (lx + w > W - 2 * d) lx = X - r - 4 * d - w; const ly = Math.min(H - 8 * d, Math.max(8 * d, Y));
+      if (lab) { const w = g.measureText(lab).width, R0 = X + r + 4 * d, L0 = X - r - 4 * d - w, cy = v => Math.min(H - 8 * d, Math.max(8 * d, v));
+        const C9 = [[R0, Y], [L0, Y], [R0, Y - fh], [R0, Y + fh], [L0, Y - fh], [L0, Y + fh]].filter(c => c[0] >= 2 * d && c[0] + w <= W - 2 * d);
+        const pick = C9.find(c => !hit(c[0], cy(c[1]), w)) || C9[0] || [R0 + w > W - 2 * d ? L0 : R0, Y]; let lx = pick[0]; const ly = cy(pick[1]); LU.push([lx, ly, w]);
         g.lineWidth = 3 * d; g.strokeStyle = 'rgba(255,255,255,.92)'; g.strokeText(lab, lx, ly); g.fillStyle = '#1d3557'; g.fillText(lab, lx, ly); }
     }
     // 플레이어 화살표(카메라가 보는 쪽 · 방위 0 = 위)
