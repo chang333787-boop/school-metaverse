@@ -575,8 +575,30 @@ export function createWorldFx(H) {
     if (PADS.length) padTick(dt);
     if ((t10 += dt) >= 0.1) { t10 = 0; if (ACTORS.length) actorTick10(); if (DARKR.size || fxDark) darkCheck(); }
   }
+  // TOWN-1(10-12 마을 세계): 학교 상자 밖 세상을 잠시 끔 — 마을이 그 땅을 씀. 상자 밖에만 있는 청크 메시 숨김(밭·먼 산 · main.js가 다시 켜지 않음 userData.out/d.out)
+  //   · 그 칸의 충돌을 비움(배열은 main.js GRIDN과 같은 것 — 그 자리에서 비우고 되돌릴 때 다시 넣음) · 땅 높이 덮어쓰기(o.terrain(x, z) → 높이 | null) · 게임이 멈추면 원래대로(reset)
+  let OUTS = null;
+  function outsideOff() { const S9 = OUTS; if (!S9) return; OUTS = null;
+    for (const m of S9.meshes) { m.userData.out = false; m.visible = true; } for (const d of S9.dets) d.out = false;
+    for (const [a, sv] of S9.cells) a.push(...sv); if (world.setTerrainOver) world.setTerrainOver(null); }
+  function outside(o = {}) {
+    outsideOff();
+    const B = world.bounds || [], bx = B.map(p => p[0]), bz = B.map(p => p[1]), m = o.margin ?? 2;
+    const R = o.rect || [Math.min(...bx), Math.min(...bz), Math.max(...bx), Math.max(...bz)], X0 = R[0] - m, Z0 = R[1] - m, X1 = R[2] + m, Z1 = R[3] + m;
+    const away = bb => !!bb && (bb.max.x < X0 || bb.min.x > X1 || bb.max.z < Z0 || bb.min.z > Z1);
+    const S9 = OUTS = { meshes: [], dets: [], cells: [], rect: R };
+    const detM = new Set(world.details.map(d => d.mesh));
+    for (const ch of scene.children) { if (!(ch.isMesh || ch.isInstancedMesh) || !ch.geometry || detM.has(ch) || ch.userData.fx) continue;
+      const g = ch.geometry; if (!g.boundingBox) g.computeBoundingBox(); if (!ch.matrixAutoUpdate && away(g.boundingBox)) { ch.userData.out = true; ch.visible = false; S9.meshes.push(ch); } }
+    for (const d of world.details) if (away(d.box)) { d.out = true; d.mesh.visible = false; S9.dets.push(d); }
+    for (const [k, a] of world.grid) { const c = k.indexOf(':'), gx = +k.slice(0, c), gz = +k.slice(c + 1);
+      if ((gx + 1) * 8 < X0 || gx * 8 > X1 || (gz + 1) * 8 < Z0 || gz * 8 > Z1) { if (a.length) { S9.cells.push([a, a.slice()]); a.length = 0; } } }
+    if (o.terrain && world.setTerrainOver) world.setTerrainOver((x, z) => (x >= R[0] && x <= R[2] && z >= R[1] && z <= R[3]) ? null : o.terrain(x, z));
+    return { remove() { if (OUTS === S9) outsideOff(); }, rect: R, hidden: S9.meshes.length + S9.dets.length, cells: S9.cells.length };
+  }
   function reset() {
     GEN++;
+    outsideOff();
     for (const a of [...ACTORS]) { dropActor(a); } for (const [, st] of NST) st.actor = null;
     for (const id of [...NST.keys()]) showOrig(id); NST.clear();
     for (const [, g] of GEO) g.dispose(); GEO.clear(); if (SGN) { scene.remove(SGN.m); SGN.g.dispose(); SGN = null; }   // 재질은 월드 팻말 것(버리지 않음)
@@ -593,6 +615,6 @@ export function createWorldFx(H) {
   const solidN = () => { let n = 0; for (const [, pr] of PROPS) if (pr.cols && pr.cols.length) n++; for (const a of ACTORS) if (a.col) n++; return n; };
   const stats = () => ({ actors: ACTORS.length, hiddenNpc: [...NST.values()].filter(s => s.hidden).length, props: PROPS.size, furn: FURN.size, pools: POOLS.size, tweens: TW.length, winds: WINDS.length, pads: PADS.length, paints: PAINTS.size, darkRooms: DARKR.size, held: HELD.size, fxDark, doorActors: doorActors ? doorActors.length : 0 });
   Object.assign(world_, { spawn, move, remove, get: id => { const p = PROPS.get(id); return p ? (p.api || p.eng) : null; }, list: () => [...PROPS.values()].map(p => p.api || p.eng), kinds: [...Object.keys(KINDS).filter(k => k !== 'blade'), ...ENGK],
-    light, dark: () => [...DARKR], door, paint, water, wind: o => wind.add(o), pad: o => pad.add(o), furn });
+    light, dark: () => [...DARKR], door, paint, water, wind: o => wind.add(o), pad: o => pad.add(o), furn, outside });
   return { npc, world: world_, tick, reset, stats, solidN };
 }

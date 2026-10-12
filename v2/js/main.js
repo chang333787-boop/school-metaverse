@@ -1,11 +1,11 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { buildWorld } from './world.js?v=154';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=155';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=63';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=64';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=26';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -15,7 +15,7 @@ var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마�
 
 // TITLE-1: 오프닝을 켤지 — 게이트(?check=1)·검진(?health=1)·사진 대조(?shot)·게임 주소(?game·?tour=1)는 예전 그대로(오프닝 없음). index.html 로딩 막도 같은 규칙
 const QS0 = new URLSearchParams(location.search);
-const TITLE_ON = !QS0.get('shot') && !QS0.get('game') && QS0.get('tour') !== '1' && !location.search.includes('check=1') && !location.search.includes('health=1') && QS0.get('title') !== '0';
+const TITLE_ON = !QS0.get('shot') && !QS0.get('game') && !(QS0.get('town') && !window.SM_PROMO) && QS0.get('tour') !== '1' && !location.search.includes('check=1') && !location.search.includes('health=1') && QS0.get('title') !== '0';
 const bootP = (p, s) => { if (TITLE_ON && window.bootP) window.bootP(p, s); };   // 로딩 막대(index.html) — 진짜 단계: 모듈 받음 → 월드 짓기(지난 빌드 시간만큼 차오름) → 첫 프레임
 let FILM_VIEW = null;   // FILM-1: 영상 동안 디테일 거리·가림 컬링을 넓힘({far}) — 높은 드론 샷·지붕 벗긴 실내 샷에서 가구가 사라지지 않게
 let CAM_OVR = null;   // TITLE-1: 카메라 고리(오프닝 한 바퀴·날아오기) — step()이 평소 카메라를 정한 뒤 부른다(평소 자리 = 날아오기 목표)
@@ -1305,7 +1305,7 @@ function detailTick(dt, budget = Infinity) {
     OCC.gen = (OCC.gen || 0) + 1; OCC.x = cp.x; OCC.y = cp.y; OCC.z = cp.z; occW = true;
     for (const d of world.details) {
       const dx = cp.x - d.cx, dz = cp.z - d.cz;
-      d.on = dx * dx + dz * dz < (d.inside ? RI : R);   // d.on = 이 재계산 자리에서 그릴 후보(거리 안) — 절두체에 들어와 가림 판정을 받으면 그 결과로 덮어쓴다(d.pend = 판정을 기다리는 재계산 번호)
+      d.on = !d.out && dx * dx + dz * dz < (d.inside ? RI : R);   /* TOWN-1: d.out = 마을 세계가 숨긴 학교 밖 청크 */   // d.on = 이 재계산 자리에서 그릴 후보(거리 안) — 절두체에 들어와 가림 판정을 받으면 그 결과로 덮어쓴다(d.pend = 판정을 기다리는 재계산 번호)
       d.pend = d.on && d.inside && !OCC.off && !FILM_VIEW && d.box && d.bi != null ? OCC.gen : 0;   // 상자·건물 칸이 없는 항목(main.js가 넣는 필름 문 등)은 거리만
     }
   }
@@ -1327,7 +1327,7 @@ function detailTick(dt, budget = Infinity) {
     for (let i = g0; i < _pd.length; i++) { _pd[i].mesh.visible = true; OCC.defer = (OCC.defer || 0) + 1; } }   // 예산 넘김 — 남은 청크는 보이게 두고(pend 그대로) 다음 프레임에
   if (occW) { OCC.ms = performance.now() - t0; if (!prep) RB.occ[RB.oi++ % RB.occ.length] = OCC.ms; }
   if (!OCC.st) { OCC.st = []; scene.traverse(o => { if (o.userData.st) OCC.st.push(o); }); }
-  for (const m of OCC.st) m.visible = _fr.intersectsBox(m.geometry.boundingBox);
+  for (const m of OCC.st) m.visible = !m.userData.out && _fr.intersectsBox(m.geometry.boundingBox);   // TOWN-1: 마을 세계가 숨긴 학교 밖 청크는 그대로
 }
 
 // ---------- 지도 API(MAP-API-1 · 09-24) — 게임이 받는 지도 계약. 정본 docs/map_api.md ----------
@@ -1950,4 +1950,4 @@ window.SD2 = {
     occP95: { get: () => rbPct(RB.occ, RB.oi, 0.95), enumerable: true }, reset: { value: () => { RB.ci = RB.oi = 0; } } }),
 };
 // 게임 로더(MAP-API-1): ?game=이름 → v2/games/registry.js 허용 목록 → export default start(map) (사진 대조 모드에선 안 켠다)
-{ const QS = new URLSearchParams(location.search), GAME = QS.get('game') || (QS.get('tour') === '1' ? 'tour' : null); if (GAME && !SHOT) MAP.game.load(GAME, Object.fromEntries(new URLSearchParams(location.search))); }
+{ const QS = new URLSearchParams(location.search), GAME = QS.get('game') || (QS.get('tour') === '1' ? 'tour' : null) || (QS.get('town') && !window.SM_PROMO ? 'town' : null); /* TOWN-1: ?town=<마을 자료> = 마을 세계(홍보판엔 없음) */ if (GAME && !SHOT) MAP.game.load(GAME, Object.fromEntries(new URLSearchParams(location.search))); }

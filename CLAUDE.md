@@ -36,6 +36,7 @@
 | 견학(tour.js·tour_data.js)·홍보판·오프닝/클로징 영상(film.js·tour_film.js)을 고칠 때 | `docs/systems/tour_promo.md` — 학교 견학·홍보판·영상(film) |
 | worldfx.js·actions.js·title.js·topview.js·registry 메뉴(폴더·싱글/멀티/생각)를 고칠 때 | `docs/systems/engine.md` — 엔진 — 사람 옮기기·세상 바꾸기·보이는 행동·오프닝·메뉴·하늘에서 보기 |
 | 자동 해상도·입력·끊김·크롬북 렉을 다룰 때 | `docs/systems/perf.md` — 성능·입력·크롬북 |
+| 마을 세계 엔진(town.js · v2/towns/*.js) — 아이 매트 사진으로 마을 짓기 · 구역 채우기 · 생활 시설 요구 · "이 사진으로 마을 만들어 줘" | `docs/systems/town.md` — 엔진이지 마을이 아님(내용은 아이들 것 · 시험은 zz) |
 | 게임용 지도 API 정본(map.*) | `docs/map_api.md` |
 | 품질 숫자 척도(풍성·놀이·그래픽·효과·이야기·각색·완성도·직관성) | `docs/tasks/quality_scale.md` |
 | 새 이야기·에피소드 더하기 | `docs/tasks/new_episode.md` |
