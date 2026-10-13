@@ -1036,9 +1036,10 @@ export default async function start(map, params) {
         for (let i = 0; i < 8; i++) { const [fx, fz] = Q((R() - 0.5) * (rf.w - 2), (R() - 0.5) * (rf.d - 2)); TREES.flower.push({ x: fx, y: rf.y + 0.1, z: fz, s: 1.1, hex: PAL.flower[(R() * 4) | 0], ry: 0 }); } n9['옥상 정원'] = (n9['옥상 정원'] || 0) + 1; }
       if (A.st.has('solar') && rf.w > 6 && rf.d > 6) { const Q = LP(rf.cx, rf.cz, rf.ry); for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j += 2) { const [px, pz] = Q(i * 1.4, j * Math.min(1.6, rf.d / 4)); box(px, rf.y + 0.45, pz, 1.2, 0.07, 1.9, rf.ry, 0x2f4466, { top: 0x3a5a8a }); box(px, rf.y + 0.1, pz, 0.08, 0.35, 0.08, 0, 0x8a8f95); } n9['태양광 지붕'] = (n9['태양광 지붕'] || 0) + 1; } }
     for (const B9 of BLD) { if (B9.kind === 'green' || B9.kind === 'park' || B9.h < 4) continue; const A = areaAt(B9.cx, B9.cz); if (!A || !A.st.has('vines')) continue;
-      const F = FACES(B9).filter(f => !isFront(B9, f)); for (const f of F.slice(0, 2 + (R() < 0.5 ? 1 : 0))) { const n = Math.max(3, Math.round(f[2] / 2.2)), c0 = (R() - 0.5) * f[2] * 0.3;   // 덩굴: 벽 아래에서 올라가는 가는 줄기 여럿(높이 제각각) + 잎 덩이(벽 전체를 덮지 않음)
-        for (let q = 0; q < n; q++) { const u = c0 + (q - (n - 1) / 2) * f[2] * 0.62 / n + (R() - 0.5) * 0.5; if (Math.abs(u) > f[2] / 2 - 0.4) continue; const hh = B9.h * (0.25 + R() * 0.6), w9 = 0.45 + R() * 0.45, col = [0x3f8a3c, 0x4e9a43, 0x5aa54a, 0x2f7a3a][(R() * 4) | 0];
-          fbox(B9, f, u, 0, w9, hh, 0.06, col, { out: 0.04, D: true }); for (let lf = 0; lf < 3; lf++) fbox(B9, f, u + (R() - 0.5) * 0.9, hh * (0.35 + lf * 0.28), w9 + 0.5 + R() * 0.4, 0.45 + R() * 0.35, 0.1, col, { out: 0.09, D: true }); } }
+      const F = FACES(B9).filter(f => !isFront(B9, f)); for (const f of F.slice(0, 2 + (R() < 0.5 ? 1 : 0))) { const n = Math.max(2, Math.round(f[2] / 3.2));   // 덩굴: 벽을 타고 오르는 가는 줄기 + 줄기를 따라 둥근 잎 덩이(떨기나무 모양 · 바람에 흔들림) — 벽 전체를 덮지 않음
+        for (let q = 0; q < n; q++) { const u = (q - (n - 1) / 2) * f[2] * 0.7 / n + (R() - 0.5) * 0.8; if (Math.abs(u) > f[2] / 2 - 0.6) continue; const hh = B9.h * (0.3 + R() * 0.55);
+          fbox(B9, f, u, 0, 0.14, hh, 0.08, 0x5a4a2e, { out: 0.03, D: true }); const nx9 = f[0], nz9 = f[1], half9 = f[3];
+          for (let y9 = 0.8; y9 < hh; y9 += 0.9 + R() * 0.5) { const [lx, lz] = [nx9 ? nx9 * (half9 + 0.32) : u + (R() - 0.5) * 0.7, nz9 ? nz9 * (half9 + 0.32) : u + (R() - 0.5) * 0.7], [x, z] = L2W(B9, lx, lz); TREES.bush.push({ x, y: B9.y0 + y9 - 0.35, z, s: 0.42 + R() * 0.25, hex: [0x3f8a3c, 0x4e9a43, 0x5aa54a][(R() * 3) | 0], ry: R() * 6, kid: true }); } } }
       (A.n || (A.n = {}))['덩굴 벽'] = ((A.n || {})['덩굴 벽'] || 0) + 1; } }
   function drawZonePaper() {   // 🧱 매트 모습: 색종이 구역 그대로(얇은 종이 판)
     for (const zn of L.zones || []) { const sh = shapeOf(zn); if (!sh || sh.line) continue; const hex = COL[zn.c || (ZCOL[zn.k] || ['red'])[0]] ?? 0xe0453a;
@@ -1048,16 +1049,21 @@ export default async function start(map, params) {
       if (zn.type === 'forest') { L.nature.push({ id: '__z' + zn.id, k: 'forest', sub: 'mixed', rect: zn.rect, poly: zn.poly, gen: zn.id }); continue; } L.nature.push({ id: '__z' + zn.id, k: 'field', sub: t, rect: zn.rect, poly: zn.poly, gen: zn.id }); } }
   // 건물 둘레 땅(쓰임별 바닥 — AI가 채운 빈칸): 집 = 마당 잔디 + 디딤돌 길 · 가게·공공 = 앞마당 보도블록 + 주차장 칸 · 공장 = 콘크리트 마당
   function lot(B9) { const k = B9.kind; if (k === 'green' || k === 'park' || B9.terrace || k === 'play' || (k === 'school' && B9.w > 30)) return; /* 석축 단 위 집은 단이 마당 */ const R = B9.R, front = Math.max(0, Math.min(12, B9.gap ?? 4)), side = k === 'house' ? 2.6 : 4, back = k === 'house' ? 3 : 2.5;
-    const surf = k === 'house' ? 0x86c45f : k === 'factory' ? 0xbdbab2 : 0xd2cbbe, yo = k === 'house' ? 0.03 : 0.035, fl = B9.fl;
+    const surf = k === 'house' ? 0x7fbb58 : k === 'factory' ? 0xbdbab2 : 0xd2cbbe, yo = k === 'house' ? 0.03 : 0.035, fl = B9.fl;
     const ext = (a) => a === 'f' ? front : a === 'b' ? back : side, hw = B9.w / 2, hd = B9.d / 2;
     const lx0 = -hw - (fl[0] === -1 ? ext('f') : fl[0] === 1 ? ext('b') : ext('s')), lx1 = hw + (fl[0] === 1 ? ext('f') : fl[0] === -1 ? ext('b') : ext('s')), lz0 = -hd - (fl[1] === -1 ? ext('f') : fl[1] === 1 ? ext('b') : ext('s')), lz1 = hd + (fl[1] === 1 ? ext('f') : fl[1] === -1 ? ext('b') : ext('s'));
     { const C9 = [[lx0, lz0], [lx1, lz0], [lx1, lz1], [lx0, lz1]].map(([a, b]) => L2W(B9, a, b)), xs = C9.map(q => q[0]), zs = C9.map(q => q[1]); occAdd(Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)); }   // 앞마당·주차장 자리 차지(조경 나무가 비킴)
     const cell = 2, ok = (x, z) => !onRoad(x, z, 0.4) && !wAt(x, z) && !inSchool(x, z);
     for (let lz = lz0; lz < lz1 - 0.01; lz += cell) for (let lx = lx0; lx < lx1 - 0.01; lx += cell) { const ax = Math.min(lx + cell, lx1), az = Math.min(lz + cell, lz1), [x, z] = L2W(B9, (lx + ax) / 2, (lz + az) / 2); if (!ok(x, z)) continue;
       const Pc = [[lx, lz], [ax, lz], [ax, az], [lx, az]].map(([a, b]) => { const q = L2W(B9, a, b); return [q[0], ty(q[0], q[1]) + yo, q[1]]; }); quad(bucket(x, z), Pc[3], Pc[2], Pc[1], Pc[0], rgb(surf)); }
-    // 앞길(문 → 인도): 집 = 디딤돌 · 나머지 = 보도블록 넓게
-    const f = frontF(B9), half = f[3], fwL = [fl[0], fl[1]];
-    for (let t = half + 0.2; t < half + front - 0.2; t += 1.1) { const [x, z] = L2W(B9, fwL[0] * t, fwL[1] * t); if (!ok(x, z)) continue; box(x, ty(x, z) + 0.02, z, k === 'house' ? 0.9 : 3.2, 0.06, k === 'house' ? 0.7 : 1.1, B9.ry, k === 'house' ? 0xd9cfbb : 0xc9c2b4, { noSide: true }); }
+    // 앞길(문 → 인도 · 마당이 길까지 닿지 않으면 길까지 이어 감): 집 = 디딤돌 · 나머지 = 보도블록 넓게
+    const f = frontF(B9), half = f[3], fwL = [fl[0], fl[1]], gapR = Math.max(front, Math.min(40, B9.gap ?? front));
+    if (k === 'house' && LOOK === 'town' && !B9.hasPool) {   // 집 담장(낮은 블록 담 · 대문 자리는 비움) — 마당 테두리
+      const C4 = [[lx0, lz0], [lx1, lz0], [lx1, lz1], [lx0, lz1]], wallC = [0xe8e2d4, 0xd9cdb8, 0xc9c2b4, 0xb8674a][(R() * 4) | 0];
+      for (let e = 0; e < 4; e++) { const a = C4[e], b = C4[(e + 1) % 4], mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2, isF = (fl[0] && Math.sign(mx) === fl[0] && Math.abs(a[0] - b[0]) < 0.01) || (fl[1] && Math.sign(mz) === fl[1] && Math.abs(a[1] - b[1]) < 0.01);
+        const L9 = Math.hypot(b[0] - a[0], b[1] - a[1]), n9 = Math.max(1, Math.round(L9 / 2)); for (let q = 0; q < n9; q++) { const t0 = q / n9, t1 = (q + 1) / n9, cx9 = a[0] + (b[0] - a[0]) * (t0 + t1) / 2, cz9 = a[1] + (b[1] - a[1]) * (t0 + t1) / 2;
+          if (isF && Math.abs(fl[0] ? cz9 : cx9) < 1.6) continue; const [x, z] = L2W(B9, cx9, cz9); if (!ok(x, z)) continue; const alongX = Math.abs(b[1] - a[1]) < 0.01; box(x, ty(x, z), z, alongX ? L9 / n9 + 0.02 : 0.22, 0.95, alongX ? 0.22 : L9 / n9 + 0.02, B9.ry, wallC, { top: 0xbdb6a6 }); } } }
+    for (let t = half + 0.2; t < half + gapR + 0.4; t += 1.1) { const [x, z] = L2W(B9, fwL[0] * t, fwL[1] * t); if (!ok(x, z)) continue; box(x, ty(x, z) + 0.02, z, k === 'house' ? 0.9 : 3.2, 0.06, k === 'house' ? 0.7 : 1.1, B9.ry, k === 'house' ? 0xd9cfbb : 0xc9c2b4, { noSide: true }); }
     // 주차장(가게·공공·아파트·공장 — 앞마당 한쪽): 아스팔트 + 흰 칸 줄
     if (k !== 'house' && front > 7) { const sideSign = R() < 0.5 ? -1 : 1, along = fl[0] ? [0, 1] : [1, 0], span = (fl[0] ? B9.d : B9.w) / 2;
       for (let t = 1.25; t < span + side - 1.2; t += 2.5) for (const r of [0]) { void r; const base = half + front / 2; const [x, z] = L2W(B9, fwL[0] * base + along[0] * sideSign * t, fwL[1] * base + along[1] * sideSign * t); if (!ok(x, z)) continue;
@@ -1159,6 +1165,7 @@ export default async function start(map, params) {
     if (kind === 'hospital') {
       box(cx, y0, cz, w, h, d, ry, 0xf6f6f2); roofTop(B9, { deck: 0xd8dcdf }); for (let y = 1.2; y < h - 1.4; y += 3.3) box(cx, y0 + y, cz, w + 0.1, 1.4, d + 0.1, ry, 0xb9dcef, { B: gbucket(cx, cz) });   // 유리 띠
       entrance(B9, { w: 2.8, h: 2.6, hex: 0x7fb8d0, canopyHex: 0xe9edf0 }); const ff = frontF(B9), ch = Math.min(3.2, h * 0.3), cy9 = h - ch - 0.9;
+      if (B9.b.wing) { fbox(B9, ff, 0, cy9 + ch * 0.34, ch * 0.9, ch * 0.32, 0.12, 0x6fa8dc, { out: 0.05 }); return; }   // 병동(본관 옆 · 십자·구급차 없음 · 파란 띠)
       fbox(B9, ff, 0, cy9, ch * 0.32, ch, 0.15, 0xe0453a, { out: 0.05 }); fbox(B9, ff, 0, cy9 + ch * 0.34, ch, ch * 0.32, 0.15, 0xe0453a, { out: 0.05 });   // 빨간 십자
       box(cx, y0 + h + 0.25, cz, 3.8, 0.06, 1.2, ry, 0xe0453a); box(cx, y0 + h + 0.25, cz, 1.2, 0.07, 3.8, ry, 0xe0453a);
       const [vx, vz] = L2W(B9, B9.fl[0] * (w / 2 + 3.4) + (B9.fl[0] ? 0 : -w * 0.3), B9.fl[1] * (d / 2 + 3.4) + (B9.fl[1] ? 0 : -d * 0.3)); vehicle(vx, vz, B9.ry + (B9.fl[0] ? Math.PI / 2 : 0), 'amb'); return; }
@@ -1214,7 +1221,7 @@ export default async function start(map, params) {
   function prepPlaces() {
     PLACES = [];
     PLACES.push({ id: 'school', name: '우리 학교', en: 'Our School', kind: 'school', x: 16.5, z: 50, door: [16.5, 58], icon: '🏫', school: true });
-    for (const B9 of BLD) { if (!B9.gen && !B9.name && B9.kind === 'hospital') B9.name = '병원';   // 교사 10-13: 흰 블록 = 병원(이름표 없어도)
+    for (const B9 of BLD) { if (!B9.gen && !B9.name && B9.kind === 'hospital' && !B9.b.wing) B9.name = '병원';   // 교사 10-13: 흰 블록 = 병원(이름표 없어도)
       if (!B9.name && !B9.b.home) continue; const k = KIND[B9.kind] || {};
       PLACES.push({ id: B9.b.id, name: B9.name || (B9.b.home + '네 집'), en: B9.b.en || (B9.b.home ? B9.b.home + "'s House" : null), kind: B9.kind, x: B9.cx, z: B9.cz, door: B9.door, icon: k.emo || '🏠', sym: k.sym || '◆', ai: B9.b.ai || null, home: B9.b.home || null }); }
     for (const it of L.nature) { if (!it.name) continue; const sh = shapeOf(it); if (!sh) continue; const bb = bboxOf(sh); let cx = (bb[0] + bb[2]) / 2, cz = (bb[1] + bb[3]) / 2;
@@ -1569,7 +1576,8 @@ export default async function start(map, params) {
     const mk = (geo, mat, n) => { const m = new T3.InstancedMesh(geo, mat, n); m.instanceMatrix.setUsage(T3.DynamicDrawUsage); m.frustumCulled = false; m.userData.fx = 1; map.add(m); geos.push(geo); mats.push(mat); meshes.push(m); return m; };
     const boxG = (sx, sy, sz, x, y, z) => new T3.BoxGeometry(sx, sy, sz).translate(x, y, z), merge = (L9) => { const P = [], N = []; for (const g of L9) { const q = g.toNonIndexed(); P.push(...q.attributes.position.array); N.push(...q.attributes.normal.array); q.dispose(); g.dispose(); } const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(N, 3)); return g; };
     const edges = []; AD.forEach((e, i) => e.forEach(([j, len, big, hw]) => { if (j > i) edges.push([i, j, len, big, hw]); })); if (!edges.length) return null;
-    const NC = Math.min(46, Math.round(edges.reduce((a, e) => a + e[2], 0) / 160)), NB = 2, NP = Math.min(60, Math.round(edges.reduce((a, e) => a + e[2], 0) / 120));
+    const NC = 34, NB = 2, NP = 64;   // 수는 고정 · 내 둘레 250m에 모이게(멀어지면 가까운 길로 다시 — 어디서든 동네가 살아 있게)
+    const mid = edges.map(e => [(NO[e[0]][0] + NO[e[1]][0]) / 2, (NO[e[0]][1] + NO[e[1]][1]) / 2]);
     const carBody = mk(merge([boxG(1.85, 0.75, 4.2, 0, 0.55, 0), boxG(1.7, 0.62, 2.2, 0, 1.22, -0.2)]), new T3.MeshLambertMaterial({ color: 0xffffff }), NC);
     const carDark = mk(merge([boxG(1.72, 0.5, 2.0, 0, 1.2, -0.2), ...[[-0.9, 1.35], [0.9, 1.35], [-0.9, -1.35], [0.9, -1.35]].map(([x, z]) => boxG(0.3, 0.66, 0.66, x, 0.33, z))]), new T3.MeshLambertMaterial({ color: 0x2b313a }), NC);
     const busBody = mk(merge([boxG(2.5, 2.6, 10.5, 0, 1.75, 0)]), new T3.MeshLambertMaterial({ color: 0xffffff }), NB);
@@ -1586,11 +1594,14 @@ export default async function start(map, params) {
     const brTop = (x, z) => { for (const b of BRIDGES) if (x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1) return b.y1; return -1e9; };
     const next = (g) => { const L9 = AD[g.b].filter(([j, , big]) => j !== g.a && (!g.bigOnly || big)); let pick; if (L9.length) pick = L9[(R() * L9.length) | 0]; else pick = AD[g.b].find(([j]) => j === g.a) || AD[g.b][0];   // 막다른 곳 = 되돌아감
       if (!pick) return; g.a = g.b; g.b = pick[0]; g.len = pick[1]; g.big = pick[2]; g.hw = pick[3]; g.t = 0; };
-    let night = 0; const place = (g, m1, m2, k) => { const A = NO[g.a], B2 = NO[g.b], u = Math.min(1, g.t / Math.max(0.01, g.len)), dx = B2[0] - A[0], dz = B2[1] - A[1], l = Math.hypot(dx, dz) || 1, tx = dx / l, tz = dz / l, rx = -tz, rz = tx;   // 오른쪽(북 = −z · 동 = +x) = (−tz, tx) — 우리나라는 오른쪽 차로
+    let night = 0, rq = 0, ri9 = 0; const place = (g, m1, m2, k) => { const A = NO[g.a], B2 = NO[g.b], u = Math.min(1, g.t / Math.max(0.01, g.len)), dx = B2[0] - A[0], dz = B2[1] - A[1], l = Math.hypot(dx, dz) || 1, tx = dx / l, tz = dz / l, rx = -tz, rz = tx;   // 오른쪽(북 = −z · 동 = +x) = (−tz, tx) — 우리나라는 오른쪽 차로
       const off = g.type === 'p' ? g.side * (g.hw - (g.big ? 1.1 : 0.7)) : (g.big ? 3.2 : 1.6) * (g.type === 'bus' ? 1.05 : 1), x = A[0] + dx * u + rx * off, z = A[1] + dz * u + rz * off, yb = brTop(x, z), y = Math.max(ty(x, z) + (g.type === 'p' ? 0.16 : 0.07), yb > -1e8 ? yb + (g.type === 'p' && Math.abs(off) > g.hw - 2.4 ? 0.15 : 0) : -1e9);
       const h9 = Math.atan2(tx, tz); O3.position.set(x, y + (g.type === 'p' ? Math.abs(Math.sin(g.ph)) * 0.06 : 0), z); O3.rotation.set(0, h9, 0); O3.scale.set(1, 1, 1); O3.updateMatrix(); m1.setMatrixAt(g.i, O3.matrix); if (m2) m2.setMatrixAt(g.i, O3.matrix); if (k != null) { headL.setMatrixAt(k, O3.matrix); tailL.setMatrixAt(k, O3.matrix); } };
     return {
-      tick(dt) { dt = Math.min(dt, 0.1); for (const g of agents) { g.t += g.sp * dt; g.ph += dt * 7; if (g.t >= g.len) next(g); place(g, g.type === 'car' ? carBody : g.type === 'bus' ? busBody : pBody, g.type === 'car' ? carDark : g.type === 'bus' ? busDark : pHead, g.type === 'car' ? g.i : g.type === 'bus' ? NC + g.i : null); }
+      tick(dt) { dt = Math.min(dt, 0.1); if ((rq += dt) > 0.4) { rq = 0; const cp = map.camera.position; for (let k = 0; k < 6; k++) { const g = agents[ri9 = (ri9 + 1) % agents.length]; if (g.type === 'bus') continue; const A = NO[g.a];
+          if (Math.hypot(A[0] - cp.x, A[1] - cp.z) < 280) continue; const near = []; for (let e = 0; e < edges.length; e++) { const d = Math.hypot(mid[e][0] - cp.x, mid[e][1] - cp.z); if (d > 60 && d < 240) near.push(e); } if (!near.length) continue;   // 화면 밖(60m 너머)에서 나타나게
+          const e = edges[near[(R() * near.length) | 0]], fwd = R() < 0.5; g.a = fwd ? e[0] : e[1]; g.b = fwd ? e[1] : e[0]; g.len = e[2]; g.big = e[3]; g.hw = e[4]; g.t = R() * e[2]; } }
+        for (const g of agents) { g.t += g.sp * dt; g.ph += dt * 7; if (g.t >= g.len) next(g); place(g, g.type === 'car' ? carBody : g.type === 'bus' ? busBody : pBody, g.type === 'car' ? carDark : g.type === 'bus' ? busDark : pHead, g.type === 'car' ? g.i : g.type === 'bus' ? NC + g.i : null); }
         for (const m of meshes) m.instanceMatrix.needsUpdate = true; },
       night(v) { night = v; headL.visible = tailL.visible = v > 0; },
       dispose() { for (const m of meshes) map.remove(m); for (const g of geos) g.dispose(); for (const m of mats) m.dispose(); },
