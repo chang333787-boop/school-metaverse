@@ -631,6 +631,11 @@ export default async function start(map, params) {
   const PTX = [];   // 글자 판(이정표·팻말·이름표 돌) 텍스처·재질 — 다시 지을 때·끝낼 때 버림
   const LP = (x, z, ry) => (lx, lz) => [x + lx * Math.cos(ry) + lz * Math.sin(ry), z - lx * Math.sin(ry) + lz * Math.cos(ry)];   // 로컬 → 세계(앞 = 로컬 +z = (sin ry, cos ry))
   const col9 = (x, z, hx, hz, ry, y0, y1) => { const Q = LP(x, z, ry), C = [[-hx, -hz], [hx, -hz], [hx, hz], [-hx, hz]].map(([a, b]) => Q(a, b)), xs = C.map(p => p[0]), zs = C.map(p => p[1]); return { x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs), y0, y1 }; };
+  const dbx = (x, y, z, sx, sy, sz, ry, hex, o = {}) => box(x, y, z, sx, sy, sz, ry, hex, { ...o, B: dbucket(x, z) });   // 작은 부재 = 디테일 층(가까울 때만 · DETAIL-1과 같은 뜻)
+  function rock(x, y, z, ry, w, h, d, hex, R, o = {}) {   // 자연석: 앞면은 반듯(글씨판) · 옆·뒤는 울퉁불퉁 · 위는 둥긋 · 면마다 명암
+    const B = o.D ? dbucket(x, z) : bucket(x, z), Q = LP(x, z, ry), col = rgb(hex), F = [[-w / 2, d / 2], [w / 2, d / 2], [w / 2 + 0.08, d * 0.05], [w / 2 - 0.14, -d / 2 + 0.05], [w * 0.1, -d / 2 - 0.07], [-w / 2 + 0.12, -d / 2 + 0.02], [-w / 2 - 0.08, d * 0.12]];
+    const T = F.map(([a, b], i) => i < 2 ? [a, b] : [a * 0.84, b * 0.84]), H = F.map((_, i) => h * (i < 2 ? 1 : 0.86 + R() * 0.14)), V = (p9, yy) => { const [px, pz] = Q(p9[0], p9[1]); return [px, y + yy, pz]; }, C = V([0, -d * 0.1], h * 1.06);
+    for (let i = 0; i < F.length; i++) { const j = (i + 1) % F.length, k = 0.84 + R() * 0.14; quad(B, V(F[i], 0), V(F[j], 0), V(T[j], H[j]), V(T[i], H[i]), col.map(v => v * k), [0.8, 0.8, 1, 1]); const a = V(T[i], H[i]), b = V(T[j], H[j]); tri(B, a, b, C, nrm(a, b, C), col.map(v => v * (1.02 + R() * 0.06))); } }
   const nearSeg = (x, z, max = 1e9) => { let best = null; for (const sg of RSEG) { const r = segD(x, z, sg.a, sg.b); if (r[0] < max && (!best || r[0] < best.d)) best = { d: r[0], sg, t: r[1], p: [r[2], r[3]] }; } return best; };
   const FACEV = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
   function prepProps() {
@@ -665,29 +670,45 @@ export default async function start(map, params) {
     const tx = new T3.CanvasTexture(c); tx.colorSpace = T3.SRGBColorSpace; tx.anisotropy = 4; const asp = c.width / c.height; let ph = h, pw = h * asp; if (pw > maxW) { pw = maxW; ph = maxW / asp; }
     const mat = new T3.MeshLambertMaterial({ map: tx }), geo = new T3.PlaneGeometry(pw, ph); GEOS.push(geo); PTX.push(tx, mat);
     for (const sg of o.one ? [1] : [1, -1]) { const m = new T3.Mesh(geo, mat), off = (o.off || 0.045) * sg; m.position.set(cx + Math.sin(ry) * off, cy, cz + Math.cos(ry) * off); m.rotation.y = ry + (sg < 0 ? Math.PI : 0); m.updateMatrix(); m.matrixAutoUpdate = false; m.userData.fx = 1; group.add(m); } }
-  function signBoard(group, x, z, ry, t, o = {}) { const y = o.y0 ?? ty(x, z), Q = LP(x, z, ry), bw = o.w || 1.8, bh = o.h || 0.8, by = o.y || 1.1, bg = o.bg ?? 0xf6f4ee;
-    for (const s9 of o.one ? [0] : [-1, 1]) { const [px, pz] = Q(s9 * (bw / 2 - 0.15), -0.1); box(px, y, pz, 0.1, by + bh * 0.85, 0.1, ry, o.post ?? 0x7a5232); }
-    box(x, y + by, z, bw, bh, 0.08, ry, bg, { top: bg }); textPlane(group, t, x, y + by + bh / 2, z, ry, bw * 0.9, bh * 0.78, { bgc: o.bgc, fg: o.fg, off: 0.046 }); }
-  function bench2(x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry); box(x, y + 0.42, z, 1.8, 0.1, 0.5, ry, 0x9b6a3c); const [bx, bz] = Q(0, -0.22); box(bx, y + 0.52, bz, 1.8, 0.45, 0.08, ry, 0x9b6a3c); for (const s9 of [-0.75, 0.75]) { const [lx, lz] = Q(s9, 0); box(lx, y, lz, 0.1, 0.42, 0.4, ry, 0x55595e); } }
+  function signBoard(group, x, z, ry, t, o = {}) { const y = o.y0 ?? ty(x, z), Q = LP(x, z, ry), bw = o.w || 1.8, bh = o.h || 0.8, by = o.y || 1.1, bg = o.bg ?? 0xf6f4ee, fr = o.frame ?? 0x6b4a2f;
+    for (const s9 of o.one ? [0] : [-1, 1]) { const [px, pz] = Q(s9 * (bw / 2 - 0.15), -0.1), ph = by + bh * 0.85; box(px, y, pz, 0.1, ph, 0.1, ry, o.post ?? 0x7a5232); dbx(px, y + ph, pz, 0.14, 0.05, 0.14, ry, fr); dbx(px, y, pz, 0.18, 0.12, 0.18, ry, 0x8d8a80); }   // 기둥 · 기둥 머리 · 밑동 돌
+    box(x, y + by, z, bw, bh, 0.08, ry, bg, { top: bg });
+    for (const [u, v, sw, sh] of [[0, by + bh - 0.03, bw + 0.06, 0.06], [0, by - 0.03, bw + 0.06, 0.06], [-bw / 2, by, 0.06, bh], [bw / 2, by, 0.06, bh]]) { const [fx, fz] = Q(u, 0); dbx(fx, y + v, fz, sw, sh, 0.1, ry, fr); }   // 테두리
+    textPlane(group, t, x, y + by + bh / 2, z, ry, bw * 0.88, bh * 0.74, { bgc: o.bgc, fg: o.fg, off: 0.046 }); }
+  function bench2(x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry);
+    for (let i = 0; i < 3; i++) { const [sx, sz] = Q(0, -0.16 + i * 0.16); box(sx, y + 0.42, sz, 1.8, 0.06, 0.13, ry, 0x9b6a3c); }   // 앉는 널 셋
+    for (let i = 0; i < 2; i++) { const [bx, bz] = Q(0, -0.26); box(bx, y + 0.58 + i * 0.2, bz, 1.8, 0.13, 0.05, ry, 0x9b6a3c); }   // 등 널 둘
+    for (const s9 of [-0.82, 0.82]) { const [lx, lz] = Q(s9, 0); box(lx, y, lz, 0.08, 0.42, 0.46, ry, 0x4a4f57); dbx(lx, y + 0.6, lz, 0.07, 0.06, 0.42, ry, 0x4a4f57); const [px9, pz9] = Q(s9, -0.27); dbx(px9, y + 0.42, pz9, 0.06, 0.4, 0.06, ry, 0x4a4f57); } }   // 다리·팔걸이(무쇠)
   function tentCard(x, z, ry, hex) {   // 🧱 판 모습: 접어 세운 종이 카드(2.4 × 1.2cm · 높이 1.4cm)
     const y = ty(x, z) + 0.02, Q = LP(x, z, ry), B = bucket(x, z), w = 2.4 * S / 2, d = 1.2 * S / 2, h = 1.4 * S, V = (a, b, yy) => { const [px, pz] = Q(a, b); return [px, y + yy, pz]; }, wc = rgb(0xf6f4ee), kc = rgb(hex);
     quad(B, V(-w, d, 0), V(w, d, 0), V(w, 0, h), V(-w, 0, h), wc); quad(B, V(w, -d, 0), V(-w, -d, 0), V(-w, 0, h), V(w, 0, h), wc.map(v => v * 0.9));
     for (const [a, b, c9] of [[V(w, d, 0), V(w, -d, 0), V(w, 0, h)], [V(-w, -d, 0), V(-w, d, 0), V(-w, 0, h)]]) tri(B, a, b, c9, nrm(a, b, c9), kc); }
   function pavilion(x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry);
-    box(x, y - 0.3, z, 5.2, 0.65, 5.2, ry, 0xb9b4a8, { top: 0xc9c4b8 }); box(x, y + 0.35, z, 4.6, 0.25, 4.6, ry, 0xa8743f, { top: 0xb88350 });   // 돌 기단 · 마루
-    for (const [a, b] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) { const [px, pz] = Q(a, b); box(px, y + 0.6, pz, 0.26, 2.5, 0.26, ry, 0x8e3b2a); }   // 기둥
-    for (const [a, b, sx, sz] of [[0, -2, 4.26, 0.24], [0, 2, 4.26, 0.24], [-2, 0, 0.24, 4.26], [2, 0, 0.24, 4.26]]) { const [px, pz] = Q(a, b); box(px, y + 2.85, pz, sx, 0.3, sz, ry, 0x3f7a5a); }   // 도리(단청 초록)
-    for (const [a, b, sx, sz] of [[0, -2.1, 3.7, 0.1], [-2.1, 0, 0.1, 3.7], [2.1, 0, 0.1, 3.7]]) { const [px, pz] = Q(a, b); box(px, y + 1.0, pz, sx, 0.08, sz, ry, 0x7a4a2a); }   // 난간(앞은 트임)
-    hipRoof(x, y + 3.15, z, 5.0, 5.0, 1.9, ry, 0x4a535c); const [sx, sz] = Q(0, 2.95); box(sx, y, sz, 1.4, 0.3, 0.7, ry, 0xb9b4a8);   // 기와지붕 · 디딤돌
-    PCOL.push(col9(x, z, 2.6, 2.6, ry, y - 1, y + 0.35), col9(x, z, 2.3, 2.3, ry, y - 1, y + 0.6), col9(sx, sz, 0.7, 0.35, ry, y - 1, y + 0.3)); }
+    box(x, y - 0.3, z, 5.8, 0.55, 5.8, ry, 0xb3ad9f, { top: 0xbfb9ab }); box(x, y + 0.25, z, 5.2, 0.2, 5.2, ry, 0xc3bdaf, { top: 0xcdc7b9 });   // 두 단 기단(장대석)
+    for (let i = -2; i <= 2; i++) { const [lx, lz] = Q(i * 1.16, 2.62); dbx(lx, y + 0.25, lz, 0.03, 0.2, 0.04, ry, 0x9a9486); }   // 기단 돌 이음
+    box(x, y + 0.45, z, 4.6, 0.22, 4.6, ry, 0xa8743f, { top: 0xb88350 }); for (let i = -5; i <= 5; i++) { const [fx, fz] = Q(i * 0.42, 0); dbx(fx, y + 0.67, fz, 0.03, 0.006, 4.5, ry, 0x8a5a30, { noSide: true }); }   // 우물마루 · 널 이음
+    for (const [a, b] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) { const [px, pz] = Q(a, b); dbx(px, y + 0.45, pz, 0.42, 0.12, 0.42, ry, 0x9a9486); cyl(px, y + 0.57, pz, 0.15, 2.45, 0x8e3b2a, 10); dbx(px, y + 2.86, pz, 0.38, 0.2, 0.38, ry, 0x2f6fb0); }   // 주춧돌 · 둥근 기둥(주칠) · 주두(단청 파랑)
+    for (const [a, b, sx, sz] of [[0, -2, 4.3, 0.26], [0, 2, 4.3, 0.26], [-2, 0, 0.26, 4.3], [2, 0, 0.26, 4.3]]) { const [px, pz] = Q(a, b); box(px, y + 2.86, pz, sx, 0.32, sz, ry, 0x3f7a5a); dbx(px, y + 2.8, pz, sx * 0.99 + (sx < 1 ? 0.02 : 0), 0.07, sz * 0.99 + (sz < 1 ? 0.02 : 0), ry, 0xd9473b); dbx(px, y + 3.15, pz, sx + (sx < 1 ? 0.04 : 0), 0.06, sz + (sz < 1 ? 0.04 : 0), ry, 0xf2c230); }   // 창방(단청 초록) · 붉은 띠 · 금빛 띠
+    for (const [a, b, sx, sz] of [[0, -2.12, 3.7, 0.09], [-2.12, 0, 0.09, 3.7], [2.12, 0, 0.09, 3.7]]) { const [px, pz] = Q(a, b); dbx(px, y + 1.18, pz, sx, 0.08, sz, ry, 0x7a4a2a); dbx(px, y + 0.88, pz, sx, 0.05, sz, ry, 0x7a4a2a);
+      const n = 10; for (let k = 0; k < n; k++) { const t = -0.5 + (k + 0.5) / n, [bx, bz] = Q(a + (sx > 1 ? t * sx : 0), b + (sz > 1 ? t * sz : 0)); dbx(bx, y + 0.67, bz, 0.06, 0.51, 0.06, ry, 0x8a5a30); } }   // 계자 난간(살대) — 앞은 트임
+    box(x, y + 3.2, z, 4.9, 0.06, 4.9, ry, 0x6b4a2f, { bottom: true }); for (let i = -4; i <= 4; i++) { const [rx, rz] = Q(i * 0.6, 0); dbx(rx, y + 3.12, rz, 0.1, 0.08, 4.8, ry, 0x5a3c26); }   // 천장 · 서까래
+    hipRoof(x, y + 3.24, z, 5.4, 5.4, 0.55, ry, 0x3d464f); hipRoof(x, y + 3.62, z, 4.6, 4.6, 1.75, ry, 0x4a535c);   // 처마 겹(살짝 들린 느낌) · 기와지붕
+    const ap = y + 3.62 + 1.75; { const [tx9, tz9] = [x, z]; cyl(tx9, ap - 0.05, tz9, 0.16, 0.3, 0x2f343a, 8); cyl(tx9, ap + 0.25, tz9, 0.08, 0.22, 0x2f343a, 6); }   // 절병통
+    for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { const c0 = Q(a * 2.75, b * 2.75), B = bucket(x, z), col = rgb(0x2f343a); const p0 = [c0[0], y + 3.62 + 0.04, c0[1]], p1 = [x, ap + 0.04, z], [ox, oz] = Q(-b * 0.07, a * 0.07), [ox0, oz0] = Q(0, 0), dx = ox - ox0, dz = oz - oz0;
+      const r0 = [p0[0] - dx, p0[1] + 0.12, p0[2] - dz], r1 = [p0[0] + dx, p0[1] + 0.12, p0[2] + dz], r2 = [p1[0] + dx, p1[1] + 0.12, p1[2] + dz], r3 = [p1[0] - dx, p1[1] + 0.12, p1[2] - dz]; quad(B, r0, r1, r2, r3, col); quad(B, r3, r2, r1, r0, col); }   // 내림마루(검은 선 · 양면)
+    for (let i = 0; i < 2; i++) { const [sx, sz] = Q(0, 3.05 + i * 0.35); box(sx, y, sz, 1.6 - i * 0.2, 0.3 - i * 0.14, 0.4, ry, 0xb3ad9f); }   // 돌계단
+    PCOL.push(col9(x, z, 2.9, 2.9, ry, y - 1, y + 0.25), col9(x, z, 2.6, 2.6, ry, y - 1, y + 0.45), col9(x, z, 2.3, 2.3, ry, y - 1, y + 0.67)); }
   function scarecrow(x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry);
     box(x, y, z, 0.12, 2.1, 0.12, ry, 0x7a5232); box(x, y + 1.45, z, 1.7, 0.1, 0.1, ry, 0x7a5232); box(x, y + 0.95, z, 0.72, 0.62, 0.34, ry, 0x3f6fb5); box(x, y + 1.4, z, 1.5, 0.22, 0.3, ry, 0x4f7fc5);   // 막대 · 팔 · 저고리 · 소매
     for (const s9 of [-1, 1]) { const [hx, hz] = Q(s9 * 0.84, 0); box(hx, y + 1.22, hz, 0.2, 0.3, 0.2, ry, 0xe2c46a); }
     box(x, y + 1.62, z, 0.42, 0.4, 0.38, ry, 0xe8cf86); cyl(x, y + 2.02, z, 0.55, 0.06, 0xd9b25a, 10); cyl(x, y + 2.08, z, 0.26, 0.26, 0xcfa64e, 8);   // 짚 얼굴 · 밀짚모자
-    const [fx, fz] = Q(0, 0.2); box(fx, y + 1.72, fz, 0.26, 0.05, 0.02, ry, 0x3a2a1a); }
+    const [fx, fz] = Q(0, 0.2); dbx(fx, y + 1.7, fz, 0.24, 0.04, 0.02, ry, 0x3a2a1a); for (const s9 of [-1, 1]) { const [ex, ez] = Q(s9 * 0.1, 0.2); dbx(ex, y + 1.84, ez, 0.06, 0.06, 0.02, ry, 0x3a2a1a); const [cx9, cz9] = Q(s9 * 0.13, 0.2); dbx(cx9, y + 1.74, cz9, 0.07, 0.05, 0.015, ry, 0xf08fb2); }   // 웃는 입 · 눈 · 볼
+    box(x, y + 0.72, z, 0.62, 0.26, 0.3, ry, 0xe2c46a); dbx(x, y + 0.93, z, 0.76, 0.06, 0.36, ry, 0x8a5a30); for (let i = -2; i <= 2; i++) { const [tx9, tz9] = Q(i * 0.13, 0.17); dbx(tx9, y + 0.6, tz9, 0.05, 0.14, 0.02, ry, 0xd9b25a); } }   // 짚 치마 · 새끼줄 띠 · 짚 끝
   function greenhouse(x, z, ry) { const y = ty(x, z), L9 = 22, W9 = 7, H9 = 3.2, B = bucket(x, z), Q = LP(x, z, ry), seg = 8, film = rgb(0xe9f1ec), rib = rgb(0x8f989d), endc = rgb(0xdbe6de);
     const arc = (i, k = 1) => { const a = Math.PI * i / seg; return [-Math.cos(a) * W9 / 2 * k, Math.sin(a) * H9 * k]; }, V = (lx, lz, yy) => { const [px, pz] = Q(lx, lz); return [px, y + yy, pz]; };
-    for (let i = 0; i < seg; i++) { const [z0, y0] = arc(i), [z1, y1] = arc(i + 1); quad(B, V(-L9 / 2, z1, y1), V(L9 / 2, z1, y1), V(L9 / 2, z0, y0), V(-L9 / 2, z0, y0), film.map(v => v * (0.93 + 0.07 * Math.sin(Math.PI * (i + 0.5) / seg)))); }   // 비닐(반원 터널)
+    for (let i = 0; i < seg; i++) { const [z0, y0] = arc(i), [z1, y1] = arc(i + 1); const open = i === 0 || i === seg - 1; if (open) { const t = 0.55, za = z0 + (z1 - z0) * t, ya = y0 + (y1 - y0) * t; quad(B, V(-L9 / 2, z1, y1), V(L9 / 2, z1, y1), V(L9 / 2, za, ya), V(-L9 / 2, za, ya), film); const [rx, rz] = Q(0, za * 1.01); box(rx, y + ya - 0.12, rz, L9, 0.18, 0.18, ry, 0xd5ddd8); continue; }   // 옆 비닐을 말아 올림(안이 보이게)
+      quad(B, V(-L9 / 2, z1, y1), V(L9 / 2, z1, y1), V(L9 / 2, z0, y0), V(-L9 / 2, z0, y0), film.map(v => v * (0.93 + 0.07 * Math.sin(Math.PI * (i + 0.5) / seg)))); }   // 비닐(반원 터널)
+    box(x, y, z, L9 - 0.4, 0.05, W9 - 0.6, ry, 0x7a5a3a, { noSide: true }); for (const zz of [-2.1, 0, 2.1]) { const [cx9, cz9] = Q(0, zz); box(cx9, y + 0.05, cz9, L9 - 1.6, 0.18, 0.9, ry, 0x8a6440, { top: 0x8a6440 }); for (let k = -L9 / 2 + 1.4; k < L9 / 2 - 1; k += 0.9) { const [px, pz] = Q(k, zz); dbx(px, y + 0.23, pz, 0.5, 0.32, 0.5, ry + k, k % 1.8 < 0.9 ? 0x5f9a3f : 0x6aa84c); } }   // 흙 바닥 · 두둑 셋 · 작물
     for (let r = -L9 / 2 + 1.5; r < L9 / 2 - 1; r += 2.6) for (let i = 0; i < seg; i++) { const [z0, y0] = arc(i, 1.012), [z1, y1] = arc(i + 1, 1.012); quad(B, V(r - 0.06, z1, y1), V(r + 0.06, z1, y1), V(r + 0.06, z0, y0), V(r - 0.06, z0, y0), rib); }   // 철 골조
     for (const e of [-1, 1]) for (let i = 0; i < seg; i++) { const [z0, y0] = arc(i), [z1, y1] = arc(i + 1), a = V(e * L9 / 2, 0, 0), b = V(e * L9 / 2, z0, y0), c9 = V(e * L9 / 2, z1, y1); if (e > 0) tri(B, a, b, c9, nrm(a, b, c9), endc); else tri(B, a, c9, b, nrm(a, c9, b), endc); }   // 양 끝 막
     for (const e of [-1, 1]) { const [dx, dz] = Q(e * (L9 / 2 + 0.03), 0); box(dx, y, dz, 0.05, 2.0, 1.4, ry, 0x7f9a86); }   // 문
@@ -700,11 +721,19 @@ export default async function start(map, params) {
   function trailhead(group, x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry);
     for (const s9 of [-1, 1]) { const [px, pz] = Q(s9 * 1.5, 0); cyl(px, y, pz, 0.17, 2.9, 0x7a5232, 7); } box(x, y + 2.6, z, 3.4, 0.28, 0.28, ry, 0x6b4a2f);   // 통나무 문
     box(x, y + 1.9, z, 1.6, 0.5, 0.07, ry, 0x9b6a3c); textPlane(group, '등산로', x, y + 2.15, z, ry, 1.45, 0.38, { bgc: '#9b6a3c', fg: '#fff7e0', off: 0.04 });
-    for (let i = 0; i < 3; i++) { const [sx, sz] = Q(0, -1.2 - i * 0.9); box(sx, y, sz, 1.6, 0.16 * (i + 1), 0.8, ry, 0x9a9488); } }   // 돌계단(산 쪽으로)
+    for (let i = 0; i < 3; i++) { const [sx, sz] = Q(0, -1.2 - i * 0.9); box(sx, y, sz, 1.6, 0.16 * (i + 1), 0.8, ry, 0x9a9488); }   // 돌계단(산 쪽으로)
+    for (const s9 of [-1, 1]) { for (let k = 0; k < 4; k++) { const [fx, fz] = Q(s9 * 1.5, -0.9 - k * 1.3); cyl(fx, y, fz, 0.08, 0.75, 0x7a5232, 6); } const [rx, rz] = Q(s9 * 1.5, -2.85); dbx(rx, y + 0.62, rz, 0.05, 0.05, 3.9, ry, 0xd9c79a); }   // 밧줄 울타리
+    const [mx9, mz9] = Q(2.9, 0.3); signBoard(group, mx9, mz9, ry, '등산 안내도', { w: 1.6, h: 1.0, y: 0.7, bg: 0x2f6b3a, bgc: '#2f6b3a', fg: '#fff7e0' }); }
   function spring(group, x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry);
-    const [wx, wz] = Q(0, -0.55); box(wx, y, wz, 1.9, 1.25, 0.4, ry, 0x8d8a80, { top: 0x9a978c }); box(x, y, z, 1.3, 0.55, 0.8, ry, 0x9a978c, { top: 0x6fc3dc });   // 돌벽 · 돌확(물)
-    const [px, pz] = Q(0, -0.2); box(px, y + 0.9, pz, 0.09, 0.09, 0.32, ry, 0x8a8f95); const [sx, sz] = Q(1.5, 0.1); signBoard(group, sx, sz, ry, '약수터', { w: 1.0, h: 0.4, y: 1.0, one: true, bg: 0x9b6a3c, bgc: '#9b6a3c', fg: '#fff7e0' });
-    PCOL.push(col9(x, z, 0.95, 0.75, ry, y - 1, y + 0.55)); }
+    box(x, y, z, 3.4, 0.06, 2.8, ry, 0xb7b2a6, { top: 0xc4bfb3 }); for (let i = -2; i <= 2; i++) { const [lx, lz] = Q(i * 0.68, 0); dbx(lx, y + 0.06, lz, 0.025, 0.006, 2.7, ry, 0x9a9488, { noSide: true }); }   // 박석 바닥
+    const [wx, wz] = Q(0, -0.75); rock(wx, y + 0.06, wz, ry, 2.0, 1.35, 0.5, 0x8d8a80, rng0(hashS('sp' + x)));   // 돌벽(자연석)
+    box(x, y + 0.06, z, 1.3, 0.5, 0.8, ry, 0x9a978c, { top: 0x6fc3dc }); dbx(x, y + 0.5, z, 1.36, 0.08, 0.86, ry, 0x8a877c, { noSide: false });   // 돌확(물) · 테
+    const [px, pz] = Q(0, -0.42); dbx(px, y + 0.95, pz, 0.08, 0.08, 0.36, ry, 0x8a8f95); const [dx9, dz9] = Q(0, -0.23); dbx(dx9, y + 0.62, dz9, 0.04, 0.33, 0.04, ry, 0x9fd8e6);   // 대롱 · 떨어지는 물
+    for (const s9 of [-1, 1]) { const [cx9, cz9] = Q(s9 * 1.35, 0.55); box(cx9, y, cz9, 0.14, 2.35, 0.14, ry, 0x7a5232); const [bx, bz] = Q(s9 * 1.35, -0.95); box(bx, y, bz, 0.14, 2.35, 0.14, ry, 0x7a5232); }
+    { const [gx0, gz0] = Q(0, -0.2); gable(gx0, y + 2.35, gz0, 3.0, 1.9, 0.75, ry, 0x6b4a2f, { eave: 0.35, wall: 0x8a5a30 }); }   // 작은 맞배지붕
+    const [hx, hz] = Q(0, 0.55); dbx(hx, y + 1.85, hz, 2.7, 0.07, 0.07, ry, 0x7a5232); for (let i = -1; i <= 1; i++) { const [gx, gz] = Q(i * 0.5, 0.55); dbx(gx, y + 1.5, gz, 0.03, 0.35, 0.03, ry, 0x7a5232); cyl(gx, y + 1.36, gz, 0.11, 0.16, 0xe2c46a, 7); }   // 표주박 셋
+    const [sx, sz] = Q(1.9, 0.4); signBoard(group, sx, sz, ry, '약수터', { w: 1.0, h: 0.42, y: 1.0, one: true, bg: 0x9b6a3c, bgc: '#9b6a3c', fg: '#fff7e0' });
+    PCOL.push(col9(x, z, 0.7, 0.45, ry, y - 1, y + 0.56), col9(wx, wz, 1.0, 0.25, ry, y - 1, y + 1.4)); }
   function schoolSign(group, x, z, ry) { const y = ty(x, z); box(x, y, z, 0.09, 2.6, 0.09, 0, 0x8a8f95);
     box(x, y + 1.85, z, 0.95, 0.95, 0.06, ry, 0xe0453a); box(x, y + 1.92, z, 0.8, 0.8, 0.075, ry, 0xf2c230);   // 노란 판 + 빨간 테
     box(x, y + 1.35, z, 1.3, 0.38, 0.06, ry, 0xffffff); textPlane(group, '어린이 보호구역', x, y + 1.54, z, ry, 1.2, 0.3, { bgc: '#ffffff', fg: '#c0392b', off: 0.036 });
@@ -716,17 +745,25 @@ export default async function start(map, params) {
       box(cx, by - 0.18, cz, 1.7, 0.36, 0.06, br, 0x9b6a3c); const ex = x + dx * 1.8, ez = z + dz * 1.8, a = [ex, by + 0.26, ez], b = [ex, by - 0.26, ez], c9 = [x + dx * 2.15, by, z + dz * 2.15];
       tri(B, a, b, c9, nrm(a, b, c9), col); tri(B, a, c9, b, nrm(a, c9, b), col);   // 화살 끝
       textPlane(group, nm + (dist ? ' ' + dist + 'm' : ''), cx, by, cz, br, 1.6, 0.28, { bgc: '#9b6a3c', fg: '#fff7e0', off: 0.036 }); }); }
-  function fountain(x, z) { const y = ty(x, z); cyl(x, y, z, 1.8, 0.5, 0xbdb8ae, 14); cyl(x, y, z, 1.6, 0.52, 0x6fc3dc, 14); cyl(x, y, z, 0.22, 1.25, 0xd8d4ca, 8); cyl(x, y + 1.2, z, 0.6, 0.15, 0xd8d4ca, 10); cyl(x, y + 1.2, z, 0.5, 0.17, 0x9fd8e6, 10); PCOL.push(col9(x, z, 1.7, 1.7, 0, y - 1, y + 0.5)); }
+  function fountain(x, z) { const y = ty(x, z); cyl(x, y, z, 2.0, 0.55, 0xbdb8ae, 16, { top: 0xcfcac0 }); cyl(x, y, z, 1.75, 0.57, 0x6fc3dc, 16); cyl(x, y, z, 0.24, 1.3, 0xd8d4ca, 8); cyl(x, y + 1.25, z, 0.7, 0.16, 0xd8d4ca, 12); cyl(x, y + 1.25, z, 0.58, 0.18, 0x9fd8e6, 12);   // 돌 수반 · 물 · 기둥 · 윗 수반
+    cyl(x, y + 1.4, z, 0.07, 0.75, 0xe6f7fb, 6); cyl(x, y + 2.1, z, 0.16, 0.12, 0xe6f7fb, 8);   // 가운데 물줄기
+    for (let i = 0; i < 8; i++) { const a9 = i / 8 * 6.2832, r9 = 0.62; dbx(x + Math.cos(a9) * r9, y + 1.05, z + Math.sin(a9) * r9, 0.05, 0.25, 0.05, a9, 0xdff6f4); dbx(x + Math.cos(a9) * 1.2, y + 0.57, z + Math.sin(a9) * 1.2, 0.12, 0.03, 0.12, a9, 0xffffff, { noSide: true }); }   // 떨어지는 물 · 물보라
+    for (let i = 0; i < 4; i++) { const a9 = (i + 0.5) / 4 * 6.2832; bench2(x + Math.cos(a9) * 4.2, z + Math.sin(a9) * 4.2, Math.atan2(-Math.cos(a9), -Math.sin(a9))); }   // 둘레 벤치(분수 쪽)
+    PCOL.push(col9(x, z, 1.9, 1.9, 0, y - 1, y + 0.55)); }
   function flowerbed(x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry); box(x, y, z, 3, 0.35, 1.4, ry, 0xb9b2a4); box(x, y, z, 2.8, 0.37, 1.2, ry, 0x6a4a30);
     for (let i = 0; i < 12; i++) { const [fx, fz] = Q(-1.2 + (i % 6) * 0.48, i < 6 ? -0.3 : 0.3); TREES.flower.push({ x: fx, y: y + 0.36, z: fz, s: 1.2, hex: PAL.flower[i % 4], ry: 0 }); } }
   function statue(x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry); box(x, y, z, 1.3, 1.3, 1.3, ry, 0xbdb8ae, { top: 0xc9c4b8 }); box(x, y + 1.3, z, 0.55, 1.15, 0.38, ry, 0x8a6a3a); box(x, y + 2.45, z, 0.34, 0.34, 0.32, ry, 0x8a6a3a);
     for (const s9 of [-1, 1]) { const [ax, az] = Q(s9 * 0.36, 0); box(ax, y + 1.75, az, 0.16, 0.6, 0.18, ry, 0x7f6034); } PCOL.push(col9(x, z, 0.65, 0.65, ry, y - 1, y + 1.3)); }
   function toilet(group, x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry); box(x, y, z, 4.2, 2.7, 3.0, ry, 0xe8e2cf); gable(x, y + 2.7, z, 4.2, 3.0, 1.0, ry, 0x6b7480);
     for (const s9 of [-1, 1]) { const [dx, dz] = Q(s9 * 1.0, 1.52); box(dx, y, dz, 0.9, 2.0, 0.05, ry, s9 < 0 ? 0x3d74c9 : 0xe0453a); }   // 문 둘(파랑·빨강)
-    const [tx9, tz9] = Q(0, 1.5); box(tx9, y + 2.15, tz9, 1.6, 0.42, 0.05, ry, 0xffffff); textPlane(group, '화장실', tx9, y + 2.36, tz9, ry, 1.5, 0.34, { bgc: '#ffffff', off: 0.03, one: true }); PCOL.push(col9(x, z, 2.1, 1.5, ry, y - 1, y + 2.7)); }
+    const [tx9, tz9] = Q(0, 1.5); box(tx9, y + 2.15, tz9, 1.6, 0.42, 0.05, ry, 0xffffff); textPlane(group, '화장실', tx9, y + 2.36, tz9, ry, 1.5, 0.34, { bgc: '#ffffff', off: 0.03, one: true });
+    for (const s9 of [-1, 1]) { const [sx, sz] = Q(s9 * 2.11, 0); dbx(sx, y + 1.9, sz, 0.04, 0.45, 1.6, ry, GLASS, {}); const [ix, iz] = Q(s9 * 1.0, 1.55); dbx(ix, y + 1.7, iz, 0.32, 0.32, 0.02, ry, s9 < 0 ? 0x3d74c9 : 0xe0453a); }   // 높은 창 · 문 위 그림 표지
+    const [vx, vz] = Q(1.4, -0.9); dbx(vx, y + 3.1, vz, 0.2, 0.7, 0.2, ry, 0x8a8f95); const [stx, stz] = Q(0, 1.75); box(stx, y, stz, 3.2, 0.12, 0.5, ry, 0xc9c4b8); PCOL.push(col9(x, z, 2.1, 1.5, ry, y - 1, y + 2.7)); }   // 환기통 · 문 앞 디딤
   function parking(group, P) { const { x, z, w, d, ry } = P, y = ty(x, z), Q = LP(x, z, ry), R = rng0(hashS(P.id)); box(x, y + 0.03, z, w, 0.04, d, ry, 0x5f6368, { top: 0x62666b });
     const rows = d >= 11 ? [-d / 2 + 2.6, d / 2 - 2.6] : [0]; for (const rz of rows) { const n = Math.floor((w - 1) / 2.6); for (let i = 0; i <= n; i++) { const lx = -n * 1.3 + i * 2.6, [px, pz] = Q(lx, rz); box(px, y + 0.07, pz, 0.12, 0.01, 4.6, ry, 0xf2f1ea, { noSide: true });
+      if (i < n) { const [ws, wz9] = Q(lx + 1.3, rz + (rz > 0 ? 1.9 : rz < 0 ? -1.9 : -1.9)); dbx(ws, y + 0.07, wz9, 1.4, 0.12, 0.18, ry, 0xc9c4b8); }   // 차 멈춤 턱
       if (i < n && R() < 0.45) { const [cx, cz] = Q(lx + 1.3, rz); vehicle(cx, cz, ry + Math.PI / 2, 'car', [0x3d74c9, 0xe0453a, 0xf2f1ea, 0x3a3a3a, 0x9aa0a6][(R() * 5) | 0]); } } }
+    for (const [u, v] of [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]]) { const [kx, kz] = Q(u, v); dbx(kx, y + 0.07, kz, 0.3, 0.12, 0.3, ry, 0xe2ded4); }   // 모서리 연석
     const [sx, sz] = Q(-w / 2 + 0.6, d / 2 + 0.6); signBoard(group, sx, sz, ry, 'P', { w: 0.8, h: 0.8, y: 1.9, one: true, bg: 0x2f6fd0, bgc: '#2f6fd0', fg: '#ffffff', post: 0x8a8f95 }); }
   function footbridge(P) {   // 아이가 물 위에 놓은 다리(길이 없는 곳) — 가장 짧게 건너는 방향 · 나무 판 + 난간 · 걸어서 건넘
     let cx = P.x, cz = P.z; if (!wAt(cx, cz)) { let W = null; for (let d = 2; d <= 30 && !W; d += 2) for (let a = 0; a < 16 && !W; a++) { const x = cx + Math.cos(a / 16 * 6.2832) * d, z = cz + Math.sin(a / 16 * 6.2832) * d; if (wAt(x, z)) W = [x, z]; } if (!W) { PNOTE.push({ t: '「다리」 둘레 30m 안에 물이 없어 놓지 못했어요', at: [cx, cz] }); return; } [cx, cz] = W; }
@@ -739,6 +776,8 @@ export default async function start(map, params) {
     BRIDGES.push({ x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs), y1: top }); markBR(Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)); P.built = [a0, a1]; }
   function pier(P) { const [bx, bz, wx, wz] = P.deck, len = Math.hypot(wx - bx, wz - bz), ux = (wx - bx) / (len || 1), uz = (wz - bz) / (len || 1), mx = (bx + wx) / 2, mz = (bz + wz) / 2, ry = Math.atan2(-uz, ux), top = TY + 0.4;
     box(mx, top - 0.2, mz, len, 0.2, 1.6, ry, 0xa0784a, { top: 0xb88a56, bottom: true }); for (const [a, b] of [[0.3, 0.7], [0.3, -0.7], [len - 0.3, 0.7], [len - 0.3, -0.7]]) box(bx + ux * a - uz * b, top - 1.6, bz + uz * a + ux * b, 0.14, 1.4, 0.14, 0, 0x7a5232);
+    for (const sg of [-1, 1]) { for (let k = 0.4; k < len; k += 1.2) dbx(bx + ux * k - uz * 0.72 * sg, top, bz + uz * k + ux * 0.72 * sg, 0.08, 0.9, 0.08, ry, 0x7a5232); dbx(mx - uz * 0.72 * sg, top + 0.86, mz + ux * 0.72 * sg, len, 0.07, 0.08, ry, 0x7a5232); }   // 난간
+    { const sx = bx + ux * (len - 1.0), sz = bz + uz * (len - 1.0); dbx(sx, top, sz, 0.4, 0.4, 0.4, 0, 0x3d74c9); dbx(sx + ux * 0.6, top, sz + uz * 0.6, 0.35, 0.3, 0.25, ry, 0x8a5a30); }   // 낚시 의자 · 통
     const xs = [bx - uz * 0.8, bx + uz * 0.8, wx - uz * 0.8, wx + uz * 0.8], zs = [bz + ux * 0.8, bz - ux * 0.8, wz + ux * 0.8, wz - ux * 0.8]; BRIDGES.push({ x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs), y1: top }); markBR(Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)); }
   function clearAroundProps() {   // 숲·조경 나무가 아이 소품·이름표 돌·산책로를 덮지 않게(소품 자리 = 아이가 정한 것이 먼저)
     const C = []; for (const P of PROPS) { if (P.k === 'trail') { for (let i = 0; i < P.pts.length - 1; i++) for (const q of densify([P.pts[i], P.pts[i + 1]], 2)) C.push([q[0], q[1], P.w / 2 + 1.2]); continue; } if (P.k === 'bridge' || P.k === 'crosswalk' || P.k === 'tree') continue; C.push([P.x, P.z, P.k === 'parking' ? Math.max(P.w, P.d) / 2 + 2 : (PROPK[P.k].r || 1) + 2]); }
@@ -775,10 +814,15 @@ export default async function start(map, params) {
       const r = nearSeg(cx, cz, 200); if (r) { const dx = cx - r.p[0], dz = cz - r.p[1], l = Math.hypot(dx, dz) || 1; A.sx = r.p[0] + dx / l * (r.sg.hw + 3.2); A.sz = r.p[1] + dz / l * (r.sg.hw + 3.2); A.sry = Math.atan2(-dx / l, -dz / l); } else { A.sx = cx; A.sz = cz; A.sry = 0; }
       AREAS.push(A); } }
   const areaAt = (x, z) => AREAS.find(A => A.R.some(r => x >= r[0] && x < r[2] && z >= r[1] && z < r[3])) || null;
-  function areaStones(group) { for (const A of AREAS) { if (!A.t) continue; const x = A.sx, z = A.sz, ry = A.sry, y = ty(x, z), w = Math.min(4.2, 1.2 + A.t.length * 0.42);
-      box(x, y, z, w + 0.4, 0.25, 1.1, ry, 0x9a9488); box(x, y + 0.25, z, w, 1.05, 0.62, ry, 0x8d8578, { top: 0x9a9286 }); textPlane(group, A.t, x, y + 0.78, z, ry, w * 0.9, 0.55, { bgc: '#8d8578', fg: '#ffffff', off: 0.315 });
-      for (let i = 0; i < 6; i++) { const Q = LP(x, z, ry), [fx, fz] = Q(-w / 2 + (i + 0.5) * w / 6, 0.75); TREES.flower.push({ x: fx, y: y + 0.02, z: fz, s: 1.1, hex: PAL.flower[i % 4], ry: 0 }); }
-      PCOL.push(col9(x, z, w / 2 + 0.2, 0.55, ry, y - 1, y + 1.3)); } }
+  function areaStones(group) {   // 아이 이름표 = 자연석 표지석(반듯한 앞면에 연마한 글씨판 · 아이 글씨 그대로) + 돌 단 + 둘레 꽃·떨기나무
+    for (const A of AREAS) { if (!A.t) continue; const x = A.sx, z = A.sz, ry = A.sry, y = ty(x, z), w = Math.min(4.6, 1.4 + A.t.length * 0.42), Q = LP(x, z, ry), R = rng0(hashS(A.id));
+      box(x, y, z, w + 1.0, 0.22, 1.7, ry, 0xa8a294, { top: 0xb4ae9f });   // 돌 단
+      for (let i = 0; i < 14; i++) { const a9 = i / 14 * 6.2832, [px, pz] = Q(Math.cos(a9) * (w / 2 + 0.75), Math.sin(a9) * 1.05); dbx(px, y, pz, 0.32 + R() * 0.15, 0.16 + R() * 0.1, 0.28, ry + a9, 0x8f8a7e); }   // 둘레 냇돌
+      rock(x, y + 0.22, z, ry, w, 1.15, 0.7, 0x9d978b, R);
+      const [px, pz] = Q(0, 0.36); box(px, y + 0.42, pz, w * 0.84, 0.72, 0.04, ry, 0xd8d2c4, { top: 0xd8d2c4 }); textPlane(group, A.t, px, y + 0.78, pz, ry, w * 0.78, 0.5, { bgc: '#d8d2c4', fg: '#2f2b26', off: 0.024, one: true });   // 연마한 글씨판(새긴 글씨)
+      for (let i = 0; i < 10; i++) { const [fx, fz] = Q(-w / 2 - 0.2 + (i + 0.5) * (w + 0.4) / 10, 1.25); TREES.flower.push({ x: fx, y: y + 0.02, z: fz, s: 1.1, hex: PAL.flower[i % 4], ry: 0 }); }
+      for (const s9 of [-1, 1]) { const [bx, bz] = Q(s9 * (w / 2 + 0.95), 0.1); TREES.bush.push({ x: bx, y: y + 0.2, z: bz, s: 0.75, hex: 0x4e9a43, ry: R() * 6, kid: true }); }   // 양옆 떨기나무(둥글게 다듬은 — 학교 화단처럼)
+      PCOL.push(col9(x, z, w / 2 + 0.2, 0.45, ry, y - 1, y + 1.4)); } }
   function areaDeco() {   // 🏘 마을 모습: 이름표 낱말대로 건물·지붕 꾸밈(옥상 정원·덩굴 벽·태양광) — 기록은 그 칸 조경과 함께
     if (!AREAS.length) return; const R = rng0(hashS('area:' + LID));
     for (const rf of ROOFS) { const A = areaAt(rf.cx, rf.cz); if (!A) continue; const n9 = A.n || (A.n = {});
@@ -801,6 +845,7 @@ export default async function start(map, params) {
     const surf = k === 'house' ? 0x86c45f : k === 'factory' ? 0xbdbab2 : 0xd2cbbe, yo = k === 'house' ? 0.03 : 0.035, fl = B9.fl;
     const ext = (a) => a === 'f' ? front : a === 'b' ? back : side, hw = B9.w / 2, hd = B9.d / 2;
     const lx0 = -hw - (fl[0] === -1 ? ext('f') : fl[0] === 1 ? ext('b') : ext('s')), lx1 = hw + (fl[0] === 1 ? ext('f') : fl[0] === -1 ? ext('b') : ext('s')), lz0 = -hd - (fl[1] === -1 ? ext('f') : fl[1] === 1 ? ext('b') : ext('s')), lz1 = hd + (fl[1] === 1 ? ext('f') : fl[1] === -1 ? ext('b') : ext('s'));
+    { const C9 = [[lx0, lz0], [lx1, lz0], [lx1, lz1], [lx0, lz1]].map(([a, b]) => L2W(B9, a, b)), xs = C9.map(q => q[0]), zs = C9.map(q => q[1]); occAdd(Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)); }   // 앞마당·주차장 자리 차지(조경 나무가 비킴)
     const cell = 2, ok = (x, z) => !onRoad(x, z, 0.4) && !wAt(x, z) && !inSchool(x, z);
     for (let lz = lz0; lz < lz1 - 0.01; lz += cell) for (let lx = lx0; lx < lx1 - 0.01; lx += cell) { const ax = Math.min(lx + cell, lx1), az = Math.min(lz + cell, lz1), [x, z] = L2W(B9, (lx + ax) / 2, (lz + az) / 2); if (!ok(x, z)) continue;
       const Pc = [[lx, lz], [ax, lz], [ax, az], [lx, az]].map(([a, b]) => { const q = L2W(B9, a, b); return [q[0], ty(q[0], q[1]) + yo, q[1]]; }); quad(bucket(x, z), Pc[3], Pc[2], Pc[1], Pc[0], rgb(surf)); }
