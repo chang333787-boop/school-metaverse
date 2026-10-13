@@ -581,7 +581,7 @@ export function createWorldFx(H) {
   function outsideOff() { const S9 = OUTS; if (!S9) return; OUTS = null;
     for (const m of S9.meshes) { m.userData.out = false; m.visible = true; } for (const d of S9.dets) d.out = false;
     for (const [m, mat, cs] of S9.clips) { const cm = m.material; m.material = mat; m.castShadow = cs; if (cm !== mat && cm.dispose) cm.dispose(); }   // 잘라 그리던 재질을 원래대로
-    for (const [a, sv] of S9.cells) a.push(...sv); for (const [b, y1] of S9.opened) b.y1 = y1; if (world.setTerrainOver) world.setTerrainOver(null); }   // 연 막이를 원래 높이로
+    for (const [a, sv] of S9.cells) { a.length = 0; a.push(...sv); } for (const [b, y1] of S9.opened) b.y1 = y1; if (world.setTerrainOver) world.setTerrainOver(null); }   // 연 막이를 원래 높이로
   function outside(o = {}) {
     outsideOff();
     const B = world.bounds || [], bx = B.map(p => p[0]), bz = B.map(p => p[1]), m = o.margin ?? 2;
@@ -594,16 +594,18 @@ export function createWorldFx(H) {
     for (const d of world.details) if (away(d.box)) { d.out = true; d.mesh.visible = false; S9.dets.push(d); }
     // o.clip(마을 10-13): 상자에 걸친 메시(정문 밖 등굣길·텃밭 두둑·먼 바닥)는 상자 밖 부분만 잘라 그림(셰이더에서 버림 — 하늘에서 보기의 자르기와 따로) · 그 메시 그림자는 끔
     if (o.clip) { const CM = o.clip === true ? 0.6 : o.clip, cx0 = R[0] - CM, cz0 = R[1] - CM, cx1 = R[2] + CM, cz1 = R[3] + CM, cache = new Map(), done = new Set();
-      const clipOf = (mat) => { if (!mat || Array.isArray(mat)) return null; let c = cache.get(mat); if (c) return c; c = mat.clone(); const rect = new THREE.Vector4(cx0, cz0, cx1, cz1);
-        c.onBeforeCompile = (sh) => { sh.uniforms.uRect9 = { value: rect }; sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP9;').replace('#include <project_vertex>', '#include <project_vertex>\nvWP9 = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      const clipOf = (mat) => { if (!mat || Array.isArray(mat)) return null; let c = cache.get(mat); if (c) return c; c = mat.clone(); const rect = new THREE.Vector4(cx0, cz0, cx1, cz1), prev = mat.onBeforeCompile;   // 원래 셰이더 고침(바람·물·글자판 등)을 먼저 그대로 하고 그 위에 자르기만 덧붙임
+        c.onBeforeCompile = (sh, r) => { if (prev) prev.call(mat, sh, r); sh.uniforms.uRect9 = { value: rect }; sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP9;').replace('#include <project_vertex>', '#include <project_vertex>\nvWP9 = (modelMatrix * vec4(transformed, 1.0)).xyz;');
           sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP9;\nuniform vec4 uRect9;').replace('void main() {', 'void main() {\n\tif (vWP9.x < uRect9.x || vWP9.x > uRect9.z || vWP9.z < uRect9.y || vWP9.z > uRect9.w) discard;'); };
         c.customProgramCacheKey = () => 'clip9:' + (mat.customProgramCacheKey ? mat.customProgramCacheKey() : ''); cache.set(mat, c); return c; };
       const straddle = bb => !!bb && !away(bb) && (bb.min.x < cx0 || bb.max.x > cx1 || bb.min.z < cz0 || bb.max.z > cz1);
       const clipMesh = (m) => { if (done.has(m)) return; done.add(m); const c = clipOf(m.material); if (!c) return; S9.clips.push([m, m.material, m.castShadow]); m.material = c; m.castShadow = false; };
       for (const ch of scene.children) { if (!(ch.isMesh || ch.isInstancedMesh) || !ch.geometry || ch.userData.fx || ch.userData.out) continue; const g = ch.geometry; if (!g.boundingBox) g.computeBoundingBox(); const bb = g.boundingBox.clone().applyMatrix4(ch.matrixWorld); if (straddle(bb)) clipMesh(ch); }
       for (const d of world.details) if (!d.out && straddle(d.box)) clipMesh(d.mesh); }
+    const Cl = world.colliders, inR = i => { const b = Cl[i]; return b && b.x1 > X0 && b.x0 < X1 && b.z1 > Z0 && b.z0 < Z1; };
     for (const [k, a] of world.grid) { const c = k.indexOf(':'), gx = +k.slice(0, c), gz = +k.slice(c + 1);
-      if ((gx + 1) * 8 < X0 || gx * 8 > X1 || (gz + 1) * 8 < Z0 || gz * 8 > Z1) { if (a.length) { S9.cells.push([a, a.slice()]); a.length = 0; } } }
+      if ((gx + 1) * 8 < X0 || gx * 8 > X1 || (gz + 1) * 8 < Z0 || gz * 8 > Z1) { if (a.length) { S9.cells.push([a, a.slice()]); a.length = 0; } }
+      else if (gx * 8 < X0 || (gx + 1) * 8 > X1 || gz * 8 < Z0 || (gz + 1) * 8 > Z1) { const keep = a.filter(inR); if (keep.length !== a.length) { S9.cells.push([a, a.slice()]); a.length = 0; a.push(...keep); } } }   // 상자에 걸친 칸: 상자 밖에만 있는 충돌(숨긴 학교 바깥 물체)도 비움 — 보이지 않는 벽 없게(10-13 검사)
     // o.open(마을 10-13 · 정문으로 나가면 마을): 이 사각형에 걸친 '선 막이'(얇은 nc 상자 — 정문 선처럼 학교 밖으로 새지 않게 둔 것)를 잠시 바닥 아래로 내림 · 끝나면 되돌림(상자 수·번호 그대로 → 다른 놀이·게이트 영향 0)
     if (o.open) for (const [x0, z0, x1, z1] of o.open) for (const b of world.colliders) if (b.nc && b.x1 > x0 && b.x0 < x1 && b.z1 > z0 && b.z0 < z1 && Math.min(b.x1 - b.x0, b.z1 - b.z0) < 0.5 && b.y1 - b.y0 > 3) { S9.opened.push([b, b.y1]); b.y1 = b.y0 - 5; }
     if (o.terrain && world.setTerrainOver) world.setTerrainOver((x, z) => (x >= R[0] && x <= R[2] && z >= R[1] && z <= R[3]) ? null : o.terrain(x, z));
