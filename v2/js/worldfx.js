@@ -592,6 +592,10 @@ export function createWorldFx(H) {
     for (const ch of scene.children) { if (!(ch.isMesh || ch.isInstancedMesh) || !ch.geometry || detM.has(ch) || ch.userData.fx) continue;
       const g = ch.geometry; if (!g.boundingBox) g.computeBoundingBox(); if (!ch.matrixAutoUpdate && away(g.boundingBox)) { ch.userData.out = true; ch.visible = false; S9.meshes.push(ch); } }
     for (const d of world.details) if (away(d.box)) { d.out = true; d.mesh.visible = false; S9.dets.push(d); }
+    // o.hideBox(마을 10-14 교사 '비닐하우스 모양 이상'): 학교 맵 경계 안이지만 담 밖인 실제 주변(서쪽 큰 연동 비닐하우스·집·나무 줄)은 아이 마을이 대신함 — 그 상자에 가운데가 든 꾸밈(디테일 청크·떨어진 메시)을 숨김 · 땅·담은 그대로
+    if (o.hideBox) { const inHB = bb => { if (!bb) return false; const cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2; return o.hideBox.some(h => cx > h[0] && cx < h[2] && cz > h[1] && cz < h[3] && bb.min.x > h[0] - 4 && bb.max.x < h[2] + 4); };
+      for (const d of world.details) if (!d.out && inHB(d.box)) { d.out = true; d.mesh.visible = false; S9.dets.push(d); }
+      for (const ch of scene.children) { if (!(ch.isMesh || ch.isInstancedMesh) || !ch.geometry || detM.has(ch) || ch.userData.fx || ch.userData.out || ch.matrixAutoUpdate) continue; const g = ch.geometry; if (!g.boundingBox) g.computeBoundingBox(); if (inHB(g.boundingBox)) { ch.userData.out = true; ch.visible = false; S9.meshes.push(ch); } } }
     // o.clip(마을 10-13): 상자에 걸친 메시(정문 밖 등굣길·텃밭 두둑·먼 바닥)는 상자 밖 부분만 잘라 그림(셰이더에서 버림 — 하늘에서 보기의 자르기와 따로) · 그 메시 그림자는 끔
     if (o.clip) { const CM = o.clip === true ? 0.6 : o.clip, cx0 = R[0] - CM, cz0 = R[1] - CM, cx1 = R[2] + CM, cz1 = R[3] + CM, cache = new Map(), done = new Set();
       const clipOf = (mat) => { if (!mat || Array.isArray(mat)) return null; let c = cache.get(mat); if (c) return c; c = mat.clone(); const rect = new THREE.Vector4(cx0, cz0, cx1, cz1), prev = mat.onBeforeCompile;   // 원래 셰이더 고침(바람·물·글자판 등)을 먼저 그대로 하고 그 위에 자르기만 덧붙임

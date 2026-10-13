@@ -137,7 +137,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     S.pad.addEventListener('wheel', onWheel, { passive: false }); S.pad.addEventListener('contextmenu', e => e.preventDefault());
     addEventListener('keydown', onKey, true); addEventListener('keyup', onKeyUp, true); addEventListener('blur', onBlur);
     // 세상
-    cutOn(); applyCut();
+    if (o.cut !== false) { cutOn(); applyCut(); }   // TOWN-TOP: o.cut === false = 지붕 자르기 없음(모든 재질을 다시 짓는 0.35초 멈춤이 없음)
     setView && setView({ far: 420 });
     if (scene.fog) { scene.fog.near = 500; scene.fog.far = 1400; }
     setCam(ovr);
@@ -156,7 +156,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
     if (s.o.onLeave) try { s.o.onLeave(); } catch (e) { /* */ }
   }
   const floorY = f => f === 2 ? FH : 0;
-  function applyCut() { const c = floorCut(S.floor); cutSet(c); capsSet(c); }
+  function applyCut() { if (!mats) return; const c = floorCut(S.floor); cutSet(c); capsSet(c); }
   function setFloor(f) { if (!S || f === S.floor) return; if (f === 2 && !has2F()) { return; } S.floor = f; S.T.ty = floorY(f); applyCut(); closePop(); S.lbFloor = null; paintBar(); if (S.o.onFloor) S.o.onFloor(f); }
   const has2F = () => (getZones() || []).some(z => z.floor === 2);
   function rot(a) { if (S) S.T.yaw += a; }
