@@ -580,17 +580,28 @@ export function createWorldFx(H) {
   let OUTS = null;
   function outsideOff() { const S9 = OUTS; if (!S9) return; OUTS = null;
     for (const m of S9.meshes) { m.userData.out = false; m.visible = true; } for (const d of S9.dets) d.out = false;
+    for (const [m, mat, cs] of S9.clips) { const cm = m.material; m.material = mat; m.castShadow = cs; if (cm !== mat && cm.dispose) cm.dispose(); }   // 잘라 그리던 재질을 원래대로
     for (const [a, sv] of S9.cells) a.push(...sv); if (world.setTerrainOver) world.setTerrainOver(null); }
   function outside(o = {}) {
     outsideOff();
     const B = world.bounds || [], bx = B.map(p => p[0]), bz = B.map(p => p[1]), m = o.margin ?? 2;
     const R = o.rect || [Math.min(...bx), Math.min(...bz), Math.max(...bx), Math.max(...bz)], X0 = R[0] - m, Z0 = R[1] - m, X1 = R[2] + m, Z1 = R[3] + m;
     const away = bb => !!bb && (bb.max.x < X0 || bb.min.x > X1 || bb.max.z < Z0 || bb.min.z > Z1);
-    const S9 = OUTS = { meshes: [], dets: [], cells: [], rect: R };
+    const S9 = OUTS = { meshes: [], dets: [], cells: [], clips: [], rect: R };
     const detM = new Set(world.details.map(d => d.mesh));
     for (const ch of scene.children) { if (!(ch.isMesh || ch.isInstancedMesh) || !ch.geometry || detM.has(ch) || ch.userData.fx) continue;
       const g = ch.geometry; if (!g.boundingBox) g.computeBoundingBox(); if (!ch.matrixAutoUpdate && away(g.boundingBox)) { ch.userData.out = true; ch.visible = false; S9.meshes.push(ch); } }
     for (const d of world.details) if (away(d.box)) { d.out = true; d.mesh.visible = false; S9.dets.push(d); }
+    // o.clip(마을 10-13): 상자에 걸친 메시(정문 밖 등굣길·텃밭 두둑·먼 바닥)는 상자 밖 부분만 잘라 그림(셰이더에서 버림 — 하늘에서 보기의 자르기와 따로) · 그 메시 그림자는 끔
+    if (o.clip) { const CM = o.clip === true ? 0.6 : o.clip, cx0 = R[0] - CM, cz0 = R[1] - CM, cx1 = R[2] + CM, cz1 = R[3] + CM, cache = new Map(), done = new Set();
+      const clipOf = (mat) => { if (!mat || Array.isArray(mat)) return null; let c = cache.get(mat); if (c) return c; c = mat.clone(); const rect = new THREE.Vector4(cx0, cz0, cx1, cz1);
+        c.onBeforeCompile = (sh) => { sh.uniforms.uRect9 = { value: rect }; sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP9;').replace('#include <project_vertex>', '#include <project_vertex>\nvWP9 = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+          sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP9;\nuniform vec4 uRect9;').replace('void main() {', 'void main() {\n\tif (vWP9.x < uRect9.x || vWP9.x > uRect9.z || vWP9.z < uRect9.y || vWP9.z > uRect9.w) discard;'); };
+        c.customProgramCacheKey = () => 'clip9:' + (mat.customProgramCacheKey ? mat.customProgramCacheKey() : ''); cache.set(mat, c); return c; };
+      const straddle = bb => !!bb && !away(bb) && (bb.min.x < cx0 || bb.max.x > cx1 || bb.min.z < cz0 || bb.max.z > cz1);
+      const clipMesh = (m) => { if (done.has(m)) return; done.add(m); const c = clipOf(m.material); if (!c) return; S9.clips.push([m, m.material, m.castShadow]); m.material = c; m.castShadow = false; };
+      for (const ch of scene.children) { if (!(ch.isMesh || ch.isInstancedMesh) || !ch.geometry || ch.userData.fx || ch.userData.out) continue; const g = ch.geometry; if (!g.boundingBox) g.computeBoundingBox(); const bb = g.boundingBox.clone().applyMatrix4(ch.matrixWorld); if (straddle(bb)) clipMesh(ch); }
+      for (const d of world.details) if (!d.out && straddle(d.box)) clipMesh(d.mesh); }
     for (const [k, a] of world.grid) { const c = k.indexOf(':'), gx = +k.slice(0, c), gz = +k.slice(c + 1);
       if ((gx + 1) * 8 < X0 || gx * 8 > X1 || (gz + 1) * 8 < Z0 || gz * 8 > Z1) { if (a.length) { S9.cells.push([a, a.slice()]); a.length = 0; } } }
     if (o.terrain && world.setTerrainOver) world.setTerrainOver((x, z) => (x >= R[0] && x <= R[2] && z >= R[1] && z <= R[3]) ? null : o.terrain(x, z));

@@ -6,7 +6,7 @@
 import { createMinimap } from './minimap.js?v=13';
 import { createGamePicker } from './gamepick.js?v=16';
 import { createEngine } from './engine.js?v=14';
-import { createWorldFx } from './worldfx.js?v=14';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
+import { createWorldFx } from './worldfx.js?v=15';   // NPC-MOVE·WORLD-FX(found2 09-27): 사람 옮기기·소품·방 불·문·칠판 그림·바람 — 게임이 부를 때만(§16)   // ENGINE-1(09-27): 행동 사전(웅크리기·숨기·쪽지·파기·들기·이야기 상태·문 잠그기·쫓는 것) — 게임이 부를 때만 만든다
 // PERF-WIN: 숫자 키(윗줄·숫자 패드) → 1~9 · 아니면 0 — e.key는 한글 입력기가 켜져 있으면 'Process'라 e.code로 읽는다
 export const digitOf = e => { const m = /^(?:Digit|Numpad)([0-9])$/.exec(e.code || ''); return m ? +m[1] : 0; };
 export function createMapApi(host, NAV, META) {
@@ -578,7 +578,7 @@ export function createMapApi(host, NAV, META) {
         else if (stuck.t >= 1.5 && tSec - stuck.last > 2 && (pl.pBlocked || q.blockedAt)(P.x, P.z, P.y, P.bh)) { stuck.last = tSec; stuck.t = 0; if (stuckLog.length < 50) stuckLog.push([+P.x.toFixed(2), +P.y.toFixed(2), +P.z.toFixed(2), +tSec.toFixed(1)]); emit('stuck', { x: P.x, y: P.y, z: P.z }); } }
       else stuck.from = null; }
     if (arena.shape) {
-      const ok = inArena(P.x, P.z) && P.y > -4 && P.y < 12;
+      const ok = inArena(P.x, P.z) && P.y > (arena.shape.ymin ?? -4) && P.y < (arena.shape.ymax ?? 12);   // 높이 범위(기본 −4~12 = 지붕 막기 · 마을 뒷산은 ymax로 넓힘)
       if (ok) { arena.out = 0; if (P.ground && (arena.safeT += 0.1) >= 0.5) { arena.safeT = 0; arena.safe = [P.x, P.y, P.z]; } }
       else if ((arena.out += 0.1) > 0.25) { arena.out = 0; player.teleport(arena.safe || 'spawn:default'); hud.toast((arena.shape && arena.shape.msg) || '학교 밖으로는 나갈 수 없어요'); }   // 리뷰(SHRINK): {rect|poly, msg} — 놀이 칸 경계 알림을 게임이 고른다
     }
