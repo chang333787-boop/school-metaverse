@@ -161,11 +161,11 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
   const has2F = () => (getZones() || []).some(z => z.floor === 2);
   function rot(a) { if (S) S.T.yaw += a; }
   function zoom(k, at) {   // at = 그 화면 점 아래 땅을 고정(커서 쪽으로 확대)
-    if (!S) return; const d0 = S.T.d, d1 = clamp(d0 * k, D_MIN, D_MAX);
+    if (!S) return; const d0 = S.T.d, d1 = clamp(d0 * k, D_MIN, S.o.dMax || D_MAX);
     if (at) { const g = groundAt(at[0], at[1]); if (g) { const r = 1 - d1 / d0; S.T.tx += (g.x - S.T.tx) * r; S.T.tz += (g.z - S.T.tz) * r; clampT(); } }
     S.T.d = d1;
   }
-  const clampT = () => { S.T.tx = clamp(S.T.tx, BOUND[0], BOUND[2]); S.T.tz = clamp(S.T.tz, BOUND[1], BOUND[3]); };
+  const clampT = () => { const B = S.o.bound || BOUND; S.T.tx = clamp(S.T.tx, B[0], B[2]); S.T.tz = clamp(S.T.tz, B[1], B[3]); };   // TOWN-TOP: o.bound·o.dMax = 게임이 정한 넓은 땅(마을 전체)
   function paintBar() {
     if (!S) return;
     S.fb.forEach(([f, b]) => { b.classList.toggle('on', f === S.floor); if (f === 2) b.style.display = has2F() ? '' : 'none'; });
@@ -241,7 +241,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
   }
   function tap(sx, sy) {
     closePop(); const g = groundAt(sx, sy); if (!g) return;
-    const { zone, y } = zoneUnder(g), pt = { x: g.x, y, z: g.z, zone, sx, sy };   // RB-1: sx·sy = 누른 화면 자리(게임이 움직이는 것을 화면에서 고를 때)
+    const { zone, y } = S.o.zoneAt ? { zone: S.o.zoneAt(g.x, g.z), y: g.y } : zoneUnder(g), pt = { x: g.x, y, z: g.z, zone, sx, sy };   // TOWN-TOP: o.zoneAt = 게임이 그 자리 이름을 줌(o.zones = 이름표 목록)   // RB-1: sx·sy = 누른 화면 자리(게임이 움직이는 것을 화면에서 고를 때)
     if ((S.o.follow || S.o.pop === false) && !(S.o.tapActions && S.o.tapActions.length)) { if (S.o.onTap) S.o.onTap(pt); return; }   // 따라가기 = 톡 = 게임(그곳으로 걸어가기) · pop:false = 이름 창 없이 게임만
     const acts = (S.o.tapActions || []).filter(a => !a.when || a.when(pt));
     const d = el('div', null, esc(zone ? zone.label : '바깥') + (zone && zone.floor === 2 ? '<small>2층</small>' : ''), document.body); d.id = 'tv-pop';
@@ -274,8 +274,8 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
   const proj = (x, y, z) => { _v.set(x, y, z).project(camera); return _v.z > 1 || _v.z < -1 ? null : [(_v.x + 1) / 2 * innerWidth, (1 - _v.y) / 2 * innerHeight]; };
   function buildLabels() {
     S.LB.forEach(l => l.el.remove()); S.LB = [];
-    const f = S.floor, Z = (getZones() || []).filter(z => z.label && !z.extra && !/^z-/.test(z.id || '') && (f === 'roof' ? !z.indoor : f === 2 ? z.floor === 2 : z.floor === 1) && z.area >= 6);
-    const best = new Map(); for (const z of Z) { const c = best.get(z.label); if (!c || z.area > c.area) best.set(z.label, z); }
+    const f = S.floor, Z = (S.o.zones || getZones() || []).filter(z => z.label && !z.extra && !/^z-/.test(z.id || '') && (f === 'roof' ? !z.indoor : f === 2 ? z.floor === 2 : z.floor === 1) && z.area >= 6);
+    const best = new Map(); for (const z of Z) { const k = S.o.zones ? z.id : z.label, c = best.get(k); if (!c || z.area > c.area) best.set(k, z); }   // 게임 이름표(o.zones)는 같은 이름도 자리마다
     S.LB = [...best.values()].sort((a, b) => b.area - a.area).slice(0, 90).map(z => ({ z, el: el('div', 'lb' + (z.indoor ? '' : ' out'), esc(z.label), S.lb), w: 0, k: '' }));
     S.LB.forEach(l => { l.w = l.el.offsetWidth || 60; l.h = l.el.offsetHeight || 22; });
     S.lbFloor = f;
@@ -317,7 +317,7 @@ body.small #tv-help{max-width:calc(100vw - 150px);font-size:12px}
       const k9 = nice + 'm'; if (S.scK !== k9 + Math.round(nice * ppm)) { S.scK = k9 + Math.round(nice * ppm); S.sc.firstChild.textContent = k9; S.sc.lastChild.style.width = Math.round(nice * ppm) + 'px'; } }
   }
   const api = { enter, exit, floor: f => setFloor(f), get on() { return !!S; }, get state() { return S ? { floor: S.floor, x: S.C.tx, z: S.C.tz, d: S.C.d, yaw: S.C.yaw, p: S.C.p } : null },
-    look: (x, z, d) => { if (!S) return; S.T.tx = x; S.T.tz = z; if (d) S.T.d = clamp(d, D_MIN, D_MAX); clampT(); }, ground: (sx, sy) => S ? groundAt(sx, sy) : null,
+    look: (x, z, d) => { if (!S) return; S.T.tx = x; S.T.tz = z; if (d) S.T.d = clamp(d, D_MIN, S.o.dMax || D_MAX); clampT(); }, ground: (sx, sy) => S ? groundAt(sx, sy) : null,
     setTool: t => { if (!S) return; if (S.toolOn && S.tool && S.tool.cancel) S.tool.cancel(); S.toolOn = false; S.tool = t || null; closePop(); },
     marks: L => { if (!S) return; S.MK.forEach(m => m.el.remove()); S.MK = (L || []).map(m => ({ ...m, el: el('div', 'lb mk', esc(m.t), S.lb) })); },
     get camera() { return camera; }, vision: m => { if (S && S.vis) S.o.vision = m; } };
