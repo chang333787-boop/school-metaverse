@@ -581,13 +581,13 @@ export function createWorldFx(H) {
   function outsideOff() { const S9 = OUTS; if (!S9) return; OUTS = null;
     for (const m of S9.meshes) { m.userData.out = false; m.visible = true; } for (const d of S9.dets) d.out = false;
     for (const [m, mat, cs] of S9.clips) { const cm = m.material; m.material = mat; m.castShadow = cs; if (cm !== mat && cm.dispose) cm.dispose(); }   // 잘라 그리던 재질을 원래대로
-    for (const [a, sv] of S9.cells) a.push(...sv); if (world.setTerrainOver) world.setTerrainOver(null); }
+    for (const [a, sv] of S9.cells) a.push(...sv); for (const [b, y1] of S9.opened) b.y1 = y1; if (world.setTerrainOver) world.setTerrainOver(null); }   // 연 막이를 원래 높이로
   function outside(o = {}) {
     outsideOff();
     const B = world.bounds || [], bx = B.map(p => p[0]), bz = B.map(p => p[1]), m = o.margin ?? 2;
     const R = o.rect || [Math.min(...bx), Math.min(...bz), Math.max(...bx), Math.max(...bz)], X0 = R[0] - m, Z0 = R[1] - m, X1 = R[2] + m, Z1 = R[3] + m;
     const away = bb => !!bb && (bb.max.x < X0 || bb.min.x > X1 || bb.max.z < Z0 || bb.min.z > Z1);
-    const S9 = OUTS = { meshes: [], dets: [], cells: [], clips: [], rect: R };
+    const S9 = OUTS = { meshes: [], dets: [], cells: [], clips: [], opened: [], rect: R };
     const detM = new Set(world.details.map(d => d.mesh));
     for (const ch of scene.children) { if (!(ch.isMesh || ch.isInstancedMesh) || !ch.geometry || detM.has(ch) || ch.userData.fx) continue;
       const g = ch.geometry; if (!g.boundingBox) g.computeBoundingBox(); if (!ch.matrixAutoUpdate && away(g.boundingBox)) { ch.userData.out = true; ch.visible = false; S9.meshes.push(ch); } }
@@ -604,6 +604,8 @@ export function createWorldFx(H) {
       for (const d of world.details) if (!d.out && straddle(d.box)) clipMesh(d.mesh); }
     for (const [k, a] of world.grid) { const c = k.indexOf(':'), gx = +k.slice(0, c), gz = +k.slice(c + 1);
       if ((gx + 1) * 8 < X0 || gx * 8 > X1 || (gz + 1) * 8 < Z0 || gz * 8 > Z1) { if (a.length) { S9.cells.push([a, a.slice()]); a.length = 0; } } }
+    // o.open(마을 10-13 · 정문으로 나가면 마을): 이 사각형에 걸친 '선 막이'(얇은 nc 상자 — 정문 선처럼 학교 밖으로 새지 않게 둔 것)를 잠시 바닥 아래로 내림 · 끝나면 되돌림(상자 수·번호 그대로 → 다른 놀이·게이트 영향 0)
+    if (o.open) for (const [x0, z0, x1, z1] of o.open) for (const b of world.colliders) if (b.nc && b.x1 > x0 && b.x0 < x1 && b.z1 > z0 && b.z0 < z1 && Math.min(b.x1 - b.x0, b.z1 - b.z0) < 0.5 && b.y1 - b.y0 > 3) { S9.opened.push([b, b.y1]); b.y1 = b.y0 - 5; }
     if (o.terrain && world.setTerrainOver) world.setTerrainOver((x, z) => (x >= R[0] && x <= R[2] && z >= R[1] && z <= R[3]) ? null : o.terrain(x, z));
     return { remove() { if (OUTS === S9) outsideOff(); }, rect: R, hidden: S9.meshes.length + S9.dets.length, cells: S9.cells.length };
   }
