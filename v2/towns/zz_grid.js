@@ -34,5 +34,28 @@ export const TOWN = {
       ],
       nature: [{ id: 'rv', k: 'water', cells: ['바6', '마6', '라7', '다8', '나9', '나10'], name: '강', en: 'River' }],   // 강 = 칸 주소 차례(시험)
     },
+    kids: {   // 종이 소품·칸 이름표 시험(교사 10-13 인쇄지·아이 손글씨 이름표) — 아이들 마을이 아님 · 종류마다 하나씩
+      name: '소품·이름표 시험', en: 'Props & Labels Test', from: 'rules',
+      blocks: [
+        ...[[30, 32], [38, 32], [30, 42]].map(([x, y], i) => ({ id: 'ea' + i, x, y, w: 3, d: 1, h: 6, c: i % 2 ? 'orange' : 'red' })), { id: 'eg0', x: 44, y: 36, w: 3, d: 1, h: 6, c: 'green' }, { id: 'eg1', x: 37, y: 45, w: 1, d: 3, h: 6, c: 'green' },   // 나2 '자연친화 도시'(세운 아파트 사이 세운 초록 판)
+        ...[[6, 56], [18, 58], [8, 68]].map(([x, y], i) => ({ id: 'nh' + i, x, y, w: 3, d: 3, h: 3, c: 'red' })), { id: 'ng0', x: 15, y: 66, w: 3, d: 1, h: 6, c: 'green' },   // 다1 '자연 도시'(3cm 집 사이 세운 초록 판)
+        { id: 'un', x: 237, y: 62, w: 2, d: 2, h: 2, c: 'navy', name: '로봇 연구소' },   // 도감에 없는 이름(✨)
+      ],
+      props: [
+        { k: 'bridge', x: 137, y: 124 }, { k: 'bridge', x: 163, y: 101 }, { k: 'bridge', x: 188, y: 64 },   // 작은길 위 다리 둘(🧱) · 길 없는 곳 걷는 다리 하나
+        { k: 'streetlight', x: 53, y: 30 }, { k: 'signal', x: 53, y: 72 }, { k: 'busstop', x: 104, y: 40 }, { k: 'schoolzone', x: 127, y: 28 },
+        { k: 'pavilion', x: 60, y: 110 }, { k: 'bench', x: 66, y: 116 }, { k: 'scarecrow', x: 12, y: 135 }, { k: 'greenhouse', x: 37, y: 137, along: 'ew' }, { k: 'tiller', x: 20, y: 118 },
+        { k: 'trailhead', x: 15, y: 20 }, { k: 'spring', x: 6, y: 8 }, { k: 'firesign', x: 20, y: 8 }, { k: 'fishing', x: 190, y: 70 },
+        { k: 'signpost', x: 70, y: 54, to: ['강', '정자', '하늘 정원'] },
+        { k: 'card', name: '분수', x: 80, y: 104 }, { k: 'card', name: '동상', x: 62, y: 88 }, { k: 'card', name: '화장실', x: 70, y: 132 }, { k: 'card', name: '우주 정거장', x: 230, y: 132 }, { k: 'card', name: '카페', x: 232, y: 112 },
+        { k: 'crosswalk', x: 100, y: 60 }, { k: 'trail', pts: [[30, 80], [45, 85], [40, 97]] }, { k: 'parking', x: 112, y: 88, w: 5, d: 3 },
+      ],
+      areas: [
+        { id: 'ar1', cell: '나2', t: '자연친화 도시', style: ['rooftop', 'vines', 'woods', 'trail', 'flowers', 'bigtree'], ai: '아파트 3동 + 옥상 정원 + 덩굴 벽 + 단지 안 숲길·꽃길 + 초록 판 = 큰 나무' },
+        { id: 'ar2', cell: '다1', t: '자연 도시', style: ['woods', 'flowers', 'bigtree'] },
+        { id: 'ar3', cell: '라9', t: '시장 골목', style: ['flowers', 'solar'], fill: { k: 'work', type: 'shop', dens: 'dense' }, ai: '블록이 없는 칸이라 가게를 빽빽하게 + 지붕 태양광 + 꽃' },
+        { id: 'ar4', cell: '마10', t: '도토리 숲', style: ['woods', 'trail'] },
+      ],
+    },
   },
 };

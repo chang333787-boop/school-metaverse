@@ -20,6 +20,24 @@ const KIND = {
   park: { ko: '공원', en: 'Park', sym: '♣', emo: '🌳', g: 'nat' }, green: { ko: '자연', en: 'Nature', sym: '♣', emo: '🌳', g: 'nat' },
 };
 const NATK = { hill: { ko: '산', en: 'Hill' }, water: { ko: '물', en: 'Water' }, forest: { ko: '숲', en: 'Forest' }, rice: { ko: '논', en: 'Rice Field' }, farm: { ko: '밭', en: 'Farm' }, orchard: { ko: '과수원', en: 'Orchard' }, grass: { ko: '풀밭', en: 'Meadow' }, park: { ko: '공원', en: 'Park' }, sand: { ko: '모래밭', en: 'Sand' } };
+// 종이 소품 종류(PROPS-1 · 교사 10-13 인쇄지) · 빈 카드에 아이가 쓴 이름 → 종류 · 칸 이름표 꾸밈 낱말(AREA-1)
+const PROPK = {
+  streetlight: { ko: '가로등', en: 'Street Light', ic: '💡', side: true }, signal: { ko: '신호등', en: 'Traffic Light', ic: '🚦', side: true },
+  pavilion: { ko: '정자', en: 'Pavilion', ic: '⛱', place: true, r: 3.2 }, busstop: { ko: '버스 정류장', en: 'Bus Stop', ic: '🚏', side: true, place: true },
+  scarecrow: { ko: '허수아비', en: 'Scarecrow', ic: '🌾', r: 1 }, greenhouse: { ko: '비닐하우스', en: 'Greenhouse', ic: '🌱', place: true, r: 11 },
+  tiller: { ko: '경운기', en: 'Power Tiller', ic: '🚜', r: 2.4 }, bench: { ko: '벤치', en: 'Bench', ic: '💺', r: 1.2 },
+  schoolzone: { ko: '어린이 보호구역 표지', en: 'School Zone Sign', ic: '🚸', side: true }, trailhead: { ko: '등산로 입구', en: 'Trailhead', ic: '⛰', place: true, r: 2.2 },
+  spring: { ko: '약수터', en: 'Spring', ic: '⛲', place: true, r: 1.6 }, firesign: { ko: '산불 조심 팻말', en: 'Fire Warning Sign', ic: '🔥', r: 1.2 },
+  fishing: { ko: '낚시터', en: 'Fishing Spot', ic: '🎣', place: true, r: 1 }, signpost: { ko: '이정표', en: 'Signpost', ic: '➡', r: 1 },
+  card: { ko: '그림 카드', en: 'Picture Card', ic: '📍', place: true, r: 1.4 },
+  fountain: { ko: '분수', en: 'Fountain', ic: '⛲', place: true, r: 2.2 }, flowerbed: { ko: '꽃밭', en: 'Flower Bed', ic: '🌷', r: 1.8 }, tree: { ko: '나무', en: 'Tree', ic: '🌳', r: 2 },
+  statue: { ko: '동상', en: 'Statue', ic: '🗿', place: true, r: 1 }, toilet: { ko: '화장실', en: 'Restroom', ic: '🚻', place: true, r: 2.6 }, mailbox: { ko: '우체통', en: 'Mailbox', ic: '📮', r: 0.6 }, bin: { ko: '쓰레기통', en: 'Trash Bins', ic: '🚮', r: 0.8 },
+  crosswalk: { ko: '횡단보도', en: 'Crosswalk', ic: '🚶', flat: true }, bridge: { ko: '다리', en: 'Bridge', ic: '🌉', flat: true }, trail: { ko: '산책로', en: 'Walking Trail', ic: '👣', flat: true }, parking: { ko: '주차장', en: 'Parking Lot', ic: '🅿', flat: true, place: true },
+};
+const NAMEPROP = [[/가로등/, 'streetlight'], [/신호등/, 'signal'], [/정자|원두막/, 'pavilion'], [/정류장|버스/, 'busstop'], [/허수아비/, 'scarecrow'], [/비닐|하우스|온실/, 'greenhouse'], [/경운기|트랙터/, 'tiller'], [/벤치|의자/, 'bench'],
+  [/보호구역/, 'schoolzone'], [/등산/, 'trailhead'], [/약수/, 'spring'], [/산불/, 'firesign'], [/낚시/, 'fishing'], [/이정표/, 'signpost'], [/분수/, 'fountain'], [/꽃밭|화단|꽃/, 'flowerbed'], [/동상|조각|석상/, 'statue'],
+  [/화장실/, 'toilet'], [/우체통/, 'mailbox'], [/쓰레기|휴지통|분리수거/, 'bin'], [/나무/, 'tree'], [/주차/, 'parking'], [/횡단/, 'crosswalk'], [/산책|둘레길/, 'trail'], [/다리/, 'bridge']];
+const STYK = { rooftop: '옥상 정원', vines: '덩굴 벽', woods: '나무 숲', trail: '숲길', flowers: '꽃길', solar: '태양광 지붕', bigtree: '큰 나무' };
 // 계절 색(지금은 여름 — 봄·가을·겨울은 2단계에서 칩으로 · 색만 바꾸면 다시 지어짐)
 const SEASON = {
   summer: { grass: [0x7fb85a, 0x6aa84c], hill: 0x4f8f45, rock: 0x8c8a78, bank: 0xb9a77a, bed: 0x5f6f58, tree: [0x3f8a3c, 0x4e9a43, 0x5aa54a, 0x2f7a3a], pine: [0x2f6b3a, 0x376f3e], rice: 0x9cc95a, farm: 0x8a6440, crop: 0x5f9a3f, fruit: 0xe0453a, flower: [0xf6d23c, 0xf28bb0, 0xffffff, 0xb48cf0] },
@@ -75,7 +93,7 @@ export default async function start(map, params) {
   const rgb = (hex, k = 1) => { C3.setHex(hex); return [C3.r * k, C3.g * k, C3.b * k]; };
 
   // ───────── 판(layers): from + drop + 덧붙이기 ─────────
-  const ARR = ['nature', 'roads', 'blocks', 'labels', 'zones', 'fac'];
+  const ARR = ['nature', 'roads', 'blocks', 'labels', 'zones', 'fac', 'props', 'areas'];
   function resolve(lid, seen = new Set()) {
     const L = D.layers[lid]; if (!L || seen.has(lid)) return null; seen.add(lid);
     const B = L.from ? resolve(L.from, seen) : null, out = { id: lid, name: L.name || lid, en: L.en, note: L.note || null };
@@ -93,6 +111,13 @@ export default async function start(map, params) {
       for (let it = 0; it < 3; it++) { const Q = [pts[0]]; for (let i = 0; i < pts.length - 1; i++) { const p = pts[i], q = pts[i + 1]; Q.push([p[0] * 0.75 + q[0] * 0.25, p[1] * 0.75 + q[1] * 0.25], [p[0] * 0.25 + q[0] * 0.75, p[1] * 0.25 + q[1] * 0.75]); } Q.push(pts[pts.length - 1]); pts = Q; }
       const ext = (a, b) => { const dx = a[0] - b[0], dy = a[1] - b[1], l = Math.hypot(dx, dy) || 1; return [a[0] + dx / l * 14, a[1] + dy / l * 14]; };
       return { ...n, bent, line: { pts: [ext(pts[0], pts[1]), ...pts, ext(pts[pts.length - 1], pts[pts.length - 2])].map(p => [Math.max(0, Math.min(MSZ.w, p[0])), Math.max(0, Math.min(MSZ.h, p[1]))]), w: n.w || 6 } }; });
+    // 칸 이름표의 fill(블록 없는 칸을 이름표 말대로 채움) → 구역처럼 · 빈 카드에 건물 이름(소방서·카페…) → 2cm 블록처럼 그 건물(🧱 아이 것)
+    for (const a of out.areas) if (a.fill) out.zones.push({ id: 'af_' + (a.id || a.t), k: a.fill.k || 'live', type: a.fill.type, dens: a.fill.dens, cells: a.cells || (a.cell ? [a.cell] : []), note: a.t, area: a.id || a.t });
+    { const GC = { live: 'red', work: 'yellow', pub: 'navy', nat: 'green' }, keep = [];
+      for (const p of out.props) { const isCard = (p.k === 'card' || !PROPK[p.k]) && p.name && !NAMEPROP.some(([re]) => re.test(p.name)), k9 = isCard ? (NAMEKIND.find(([re]) => re.test(p.name)) || [])[1] : null;
+        if (!k9) { keep.push(p); continue; } let x = p.x, y = p.y; if (x == null && p.cell) { const R9 = cellRect(p.cell); if (R9) { x = (R9[0] + R9[2]) / 2; y = (R9[1] + R9[3]) / 2; } } if (x == null) continue;
+        out.blocks.push({ id: p.id || ('cb' + out.blocks.length), x, y, w: 2, d: 2, h: 2, c: k9 === 'hospital' ? 'white' : GC[(KIND[k9] || {}).g] || 'navy', name: p.name, en: p.en, card: true }); }
+      out.props = keep; }
     // 칸 주소로 적은 구역(cell · cells · part) → 칸 네모 — 색종이가 칸을 다 덮지 않아도 그 칸 전체가 구역(교사 10-13)
     out.zones = out.zones.flatMap(z => { if (z.rect || z.poly) return [z]; const C = z.cells || (z.cell ? [z.cell] : []); return C.map((c, i) => { const R = cellRect(c, z.part); return R ? { ...z, id: (z.id || 'z') + (C.length > 1 ? '_' + i : ''), rect: R, cellName: c } : null; }).filter(Boolean); });
     return out;
@@ -102,7 +127,7 @@ export default async function start(map, params) {
 
   // ───────── 자연환경 엔진: 높이 격자(5m) — 산(쌓은 높이 → 부드러운 봉우리) · 물(강·연못 바닥) · 다리 ─────────
   const G = 5, NX = Math.ceil((TX1 - TX0) / G) + 1, NZ = Math.ceil((TZ1 - TZ0) / G) + 1, NN = NX * NZ;
-  const HF = new Float32Array(NN), WD = new Float32Array(NN), WK = new Uint8Array(NN), NR = new Uint8Array(NN);   // 높이 · 물 깊이 · 물 종류(1 강 2 연못) · 길 위
+  const HF = new Float32Array(NN), WD = new Float32Array(NN), WK = new Uint8Array(NN), NR = new Uint8Array(NN), BRM = new Uint8Array(NN);   // 높이 · 물 깊이 · 물 종류(1 강 2 연못) · 길 위 · 다리 아래(물 울타리를 비움)
   const nx = i => TX0 + i * G, nz = j => TZ0 + j * G;
   const shapeOf = it => it.rect ? { rect: [X(it.rect[0]), Z(it.rect[1]), X(it.rect[2]), Z(it.rect[3])] } : it.poly ? { poly: it.poly.map(p => [X(p[0]), Z(p[1])]) } : it.line ? { line: it.line.pts.map(p => [X(p[0]), Z(p[1])]), w: (it.line.w || 2) * S } : null;
   const inShape = (sh, x, z) => sh.rect ? x >= Math.min(sh.rect[0], sh.rect[2]) && x <= Math.max(sh.rect[0], sh.rect[2]) && z >= Math.min(sh.rect[1], sh.rect[3]) && z <= Math.max(sh.rect[1], sh.rect[3]) : sh.poly ? inPoly(x, z, sh.poly) : false;
@@ -115,7 +140,7 @@ export default async function start(map, params) {
   const nodeRange = (bb, pad = 0) => [Math.max(0, Math.floor((bb[0] - pad - TX0) / G)), Math.max(0, Math.floor((bb[1] - pad - TZ0) / G)), Math.min(NX - 1, Math.ceil((bb[2] + pad - TX0) / G)), Math.min(NZ - 1, Math.ceil((bb[3] + pad - TZ0) / G))];
   let ROADS = [], RSEG = [];   // 길(세계 좌표) — 다리·물가·나무 피하기에도 씀
   function buildTerrain() {
-    HF.fill(0); WD.fill(0); WK.fill(0); NR.fill(0);
+    HF.fill(0); WD.fill(0); WK.fill(0); NR.fill(0); BRM.fill(0);
     // 산·언덕: 발자국 안 = 가장자리에서 안쪽으로 둥글게 솟는 봉우리(사인 돔 · 가운데가 가장 높음) + 능선 잡음 → 한 번 흐리게(산자락)
     const HL = new Float32Array(NN);
     for (const it of L.nature) { if (it.k !== 'hill') continue; const sh = shapeOf(it); if (!sh || sh.line) continue; const Hm = (it.h || 2) * S, [i0, j0, i1, j1] = nodeRange(bboxOf(sh));
@@ -231,23 +256,44 @@ export default async function start(map, params) {
         if (inSchool(x, z) || wAt(x, z)) continue; box(x, ty(x, z) + 0.02, z, FB.sw + 0.05, 0.14, FA.sw + 0.05, Math.atan2(-FA.tz, FA.tx), 0xc9c4b8, { top: 0xc9c4b8 });
         const kx = c.x + FA.px * sa * (cwA + 0.12) + FB.px * sb * (cwB + 0.12), kz = c.z + FA.pz * sa * (cwA + 0.12) + FB.pz * sb * (cwB + 0.12); box(kx, ty(kx, kz) + 0.05, kz, 0.3, 0.16, 0.3, 0, 0xe2ded4); } }
   }
-  function bridgesOn(s) {   // 다리: 물 위 구간 = 콘크리트 판 + 난간(충돌 = 판 윗면 · 계단처럼 올라섬) — 두 모습 모두
-    const { a, b } = s, L0 = Math.hypot(b[0] - a[0], b[1] - a[1]), tx = (b[0] - a[0]) / L0, tz = (b[1] - a[1]) / L0, px = -tz, pz = tx, n = Math.ceil(L0), R = []; let on = -1;
-    //   물이 있는 칸(wAt)이 길 폭 안에 있을 때만 다리 · 판 길이 = 물 깊이가 조금이라도 닿는 곳(보간 — 길 띠가 물가로 꺼지는 곳까지) + 1.5m
+  // ───────── 길 × 물 건너는 곳(교사 10-13 '다리를 어디에 놓을지는 아이들이 정함') ─────────
+  //   큰길 = 다리 저절로(✨ 처음 계획 '큰길 테이프가 강을 지나는 곳 = 다리') · 작은길 = 강가에서 끊김(막다른 길 · 줄무늬 차단봉 · 길 찾기도 끊김) — 아이가 '다리' 소품을 놓은 곳만 다리(🧱)
+  //   건너는 곳 = 길 폭 전체(가운데·양 가장자리)로 물 깊이가 닿는 구간 + 1.5m(물 칸이 실제로 있을 때만) · 길 띠는 이 구간을 정확히 잘라 냄
+  let XCROSS = [];
+  function wetRanges(s) { const { a, b } = s, L0 = Math.hypot(b[0] - a[0], b[1] - a[1]), tx = (b[0] - a[0]) / L0, tz = (b[1] - a[1]) / L0, px = -tz, pz = tx, n = Math.ceil(L0), R = []; let on = -1, hit = false;
     const wet = (x, z) => [0, s.hw, -s.hw].some(o => wdI(x + px * o, z + pz * o) > 0.02), water = (x, z) => [0, s.hw, -s.hw].some(o => wAt(x + px * o, z + pz * o) > 0);
-    let hit = false; for (let i = 0; i <= n; i++) { const t = i / n * L0, x = a[0] + tx * t, z = a[1] + tz * t, w = i < n && wet(x, z);
+    for (let i = 0; i <= n; i++) { const t = i / n * L0, x = a[0] + tx * t, z = a[1] + tz * t, w = i < n && wet(x, z);
       if (w && on < 0) { on = Math.max(0, t - 1.5); hit = false; } if (w && water(x, z)) hit = true;
-      if ((!w || i === n) && on >= 0) { const t1 = Math.min(L0, t + 1.5); if (hit) { bridge(s, on, t1, tx, tz, px, pz); R.push([on, t1]); } on = -1; } } return R; }
+      if ((!w || i === n) && on >= 0) { if (hit) R.push([on, Math.min(L0, t + 1.5)]); on = -1; } } return R; }
+  function prepCross() {
+    XCROSS = []; for (const s of RSEG) { const L0 = Math.hypot(s.b[0] - s.a[0], s.b[1] - s.a[1]); s.L0 = L0;
+      s.wr = wetRanges(s).map(([t0, t1]) => { const tm = (t0 + t1) / 2, X9 = { s, t0, t1, c: [s.a[0] + (s.b[0] - s.a[0]) * tm / L0, s.a[1] + (s.b[1] - s.a[1]) * tm / L0], br: s.r.big ? 'auto' : null }; XCROSS.push(X9); return X9; }); }
+    // 아이 '다리' 소품 → 가장 가까운 건너는 곳(그 길에서 떨어진 만큼 더해 셈 · 80m = 판 16cm 안 · road: '길 id'면 그 길만) · 없으면 놓은 자리 물에 걸친 나무다리(걷는 다리)
+    for (const P of PROPS) { if (P.k !== 'bridge') continue; let best = null, bd = 80;
+      for (const X9 of XCROSS) { if (X9.br === 'kid' || (P.road && X9.s.r.id !== P.road)) continue; const d = Math.hypot(X9.c[0] - P.x, X9.c[1] - P.z) + segD(P.x, P.z, X9.s.a, X9.s.b)[0]; if (d < bd) { bd = d; best = X9; } }
+      if (best) { best.br = 'kid'; best.prop = P; P.cross = best; } else P.foot = true; }
+  }
+  function bridgesOn(s) {   // 다리(건너는 곳마다 · 큰길 저절로 · 아이 다리) 또는 막다른 길 — 길 띠에서 잘라 낼 구간을 돌려줌
+    const { a, b } = s, L0 = Math.hypot(b[0] - a[0], b[1] - a[1]), tx = (b[0] - a[0]) / L0, tz = (b[1] - a[1]) / L0, px = -tz, pz = tx;
+    for (const X9 of s.wr || []) { if (X9.br) bridge(s, X9.t0, X9.t1, tx, tz, px, pz, X9.br === 'kid'); else deadEnd(s, X9, L0, tx, tz, px, pz); }
+    return (s.wr || []).map(X9 => [X9.t0, X9.t1]); }
+  function deadEnd(s, X9, L0, tx, tz, px, pz) {   // 다리 없는 길: 끊긴 끝마다 줄무늬 차단봉(빨강·하양) — "여기 길이 끊겼네, 다리가 있어야겠다"
+    const ry = Math.atan2(-pz, px), hw = s.hw;
+    for (const [t, sg] of [[X9.t0, -1], [X9.t1, 1]]) { if (t < 0.6 || t > L0 - 0.6) continue; const x = s.a[0] + tx * (t + sg * 0.7), z = s.a[1] + tz * (t + sg * 0.7), y = ty(x, z);
+      for (const o of [-(hw - 0.5), hw - 0.5]) box(x + px * o, y, z + pz * o, 0.14, 1.05, 0.14, 0, 0x5f666d);
+      const n = Math.max(2, Math.round((hw - 0.5) * 2 / 0.9)), L9 = (hw - 0.5) * 2 / n; for (let k = 0; k < n; k++) { const o = -(hw - 0.5) + L9 * (k + 0.5); box(x + px * o, y + 0.72, z + pz * o, L9, 0.24, 0.1, ry, k % 2 ? 0xf4f2ea : 0xe0453a); }
+      PCOL.push(col9(x, z, hw - 0.4, 0.15, ry, y - 1, y + 1.1)); } }
   const segX = (a, b, c, d) => { const r1 = [b[0] - a[0], b[1] - a[1]], r2 = [d[0] - c[0], d[1] - c[1]], den = r1[0] * r2[1] - r1[1] * r2[0]; if (Math.abs(den) < 1e-9) return null;
     const t = ((c[0] - a[0]) * r2[1] - (c[1] - a[1]) * r2[0]) / den, u = ((c[0] - a[0]) * r1[1] - (c[1] - a[1]) * r1[0]) / den; return t >= -0.001 && t <= 1.001 && u >= -0.001 && u <= 1.001 ? { t, u, x: a[0] + r1[0] * t, z: a[1] + r1[1] * t } : null; };
-  function bridge(s, t0, t1, tx, tz, px, pz) {
+  const markBR = (x0, z0, x1, z1) => { const [i0, j0, i1, j1] = nodeRange([x0, z0, x1, z1]); for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const x = nx(i), z = nz(j); if (x >= x0 - 0.5 && x <= x1 + 0.5 && z >= z0 - 0.5 && z <= z1 + 0.5) BRM[j * NX + i] = 1; } };
+  function bridge(s, t0, t1, tx, tz, px, pz, kid = false) {   // kid = 아이가 놓은 다리(손잡이·기둥 = 나무색 — 우리가 놓은 다리를 알아보게)
     const { a, hw } = s, len = t1 - t0, cx = a[0] + tx * (t0 + t1) / 2, cz = a[1] + tz * (t0 + t1) / 2, ry = Math.atan2(-tz, tx), top = TY + 0.32;
     box(cx, top - 0.5, cz, len, 0.5, hw * 2, ry, 0xb7b2a6, { top: 0x6a6e73, bottom: true });
     for (const sg of [-1, 1]) { const ox = cx + px * sg * (hw - 0.15), oz = cz + pz * sg * (hw - 0.15);
-      box(ox, top, oz, len, 0.95, 0.12, ry, 0xf4f2ea, { noSide: false }); box(ox, top + 0.95, oz, len + 0.1, 0.12, 0.22, ry, 0x7a8592);   // 난간 판 + 손잡이
-      for (let k = -len / 2 + 0.6; k <= len / 2 - 0.5; k += 2.4) box(ox + tx * k, top, oz + tz * k, 0.22, 1.07, 0.22, ry, 0x7a8592); }
+      box(ox, top, oz, len, 0.95, 0.12, ry, kid ? 0xf2e2c4 : 0xf4f2ea, { noSide: false }); box(ox, top + 0.95, oz, len + 0.1, 0.12, 0.22, ry, kid ? 0x9b6a3c : 0x7a8592);   // 난간 판 + 손잡이
+      for (let k = -len / 2 + 0.6; k <= len / 2 - 0.5; k += 2.4) box(ox + tx * k, top, oz + tz * k, 0.22, 1.07, 0.22, ry, kid ? 0x7a5232 : 0x7a8592); }
     const xs = [a[0] + tx * t0 + px * hw, a[0] + tx * t0 - px * hw, a[0] + tx * t1 + px * hw, a[0] + tx * t1 - px * hw], zs = [a[1] + tz * t0 + pz * hw, a[1] + tz * t0 - pz * hw, a[1] + tz * t1 + pz * hw, a[1] + tz * t1 - pz * hw];
-    BRIDGES.push({ x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs), y1: top });
+    BRIDGES.push({ x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs), y1: top }); markBR(Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs));
   }
 
   // ───────── 땅 메시(구역마다 하나 · 공유 정점 · 높이 기울기로 부드러운 음영) ─────────
@@ -418,7 +464,7 @@ export default async function start(map, params) {
         if (o.ac && R() < o.ac) fbox(B9, f, u + (k % 2 ? -1 : 1) * (ww / 2 + 0.55), y - 0.1, 0.78, 0.56, 0.46, 0xe7e9ea, { out: 0.01, D: true });
         if (o.flower && R() < o.flower) { fbox(B9, f, u, y - 0.42, ww * 0.95, 0.26, 0.34, 0x9a6a3c, { D: true }); fbox(B9, f, u, y - 0.16, ww * 0.85, 0.18, 0.26, [0xe0453a, 0xf2c230, 0xf08fb2, 0x7cc35a][(R() * 4) | 0], { out: 0.04, D: true }); } } } }
   // 평지붕 옥상: 바닥 · 난간벽 · 물탱크 · 실외기 · (태양광 · 안테나 · 계단실)
-  function roofTop(B9, o = {}) { const R = B9.R, { w, d, h, ry } = B9, top = B9.y0 + h; box(B9.cx, top, B9.cz, w, 0.22, d, ry, o.deck || 0xbfbab0, { top: o.deck || 0xbfbab0 });
+  function roofTop(B9, o = {}) { const R = B9.R, { w, d, h, ry } = B9, top = B9.y0 + h; box(B9.cx, top, B9.cz, w, 0.22, d, ry, o.deck || 0xbfbab0, { top: o.deck || 0xbfbab0 }); ROOFS.push({ cx: B9.cx, cz: B9.cz, w, d, ry, y: top + 0.22 });   // 평지붕 목록(이름표 꾸밈 — 옥상 정원·태양광)
     for (const f of FACES(B9)) fbox(B9, f, 0, h, f[2] + (f[0] ? 0.3 : 0), 0.7, 0.3, o.para || 0xe8e4da, { out: -0.3, top: 0xd3cec4 });
     const spot = (fx, fz) => L2W(B9, fx * (w / 2 - 1.6), fz * (d / 2 - 1.6)), y = top + 0.22;
     if (o.tank !== false && w > 6 && d > 6) { const [x, z] = spot(R() < 0.5 ? -0.6 : 0.6, R() < 0.5 ? -0.5 : 0.5); for (const [a, b] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) box(x + a, y, z + b, 0.15, 0.9, 0.15, 0, 0x8a8f95, { B: dbucket(x, z) }); cyl(x, y + 0.9, z, 0.95, 1.5, o.tankHex || [0x4f8fd0, 0xe8e6df, 0x6aa84c][(R() * 3) | 0], 10); }
@@ -510,6 +556,8 @@ export default async function start(map, params) {
   const ZFILL = [];   // 구역마다 채운 수(기록)
   function fillZones() {
     occ.clear(); ZFILL.length = 0;
+    for (const P of PROPS) { const r = P.k === 'parking' ? Math.max(P.w, P.d) / 2 + 1 : (PROPK[P.k].r || 1) + 1.5; if (!P.pts) occAdd(P.x - r, P.z - r, P.x + r, P.z + r); }   // 아이 소품 자리는 비켜 채움
+    for (const A of AREAS) occAdd(A.sx - 3, A.sz - 2, A.sx + 3, A.sz + 2);
     for (const B9 of BLD) { const xs = B9.corners.map(p => p[0]), zs = B9.corners.map(p => p[1]); occAdd(Math.min(...xs) - 2, Math.min(...zs) - 2, Math.max(...xs) + 2, Math.max(...zs) + 2); }
     for (const zn of L.zones || []) { const sh = shapeOf(zn); if (!sh || sh.line) continue; const R = rng0(hashS((zn.id || 'z') + ':' + LID)), dens = zn.dens || 'normal', rec = { id: zn.id, k: zn.k, note: zn.note || '', dens, n: {} };
       if (zn.k === 'green') { ZFILL.push(rec); continue; }   // 공원·들은 자연 그리기(drawZoneGreen)가
@@ -544,11 +592,19 @@ export default async function start(map, params) {
     for (let ci = 0; ci < XL.length - 1; ci++) for (let ri = 0; ri < YL.length - 1; ri++) {
       const x0 = X(XL[ci]), x1 = X(XL[ci + 1]), z0 = Z(YL[ri]), z1 = Z(YL[ri + 1]), inC = (x, z) => x >= x0 && x < x1 && z >= z0 && z < z1;
       if (inRect((x0 + x1) / 2, (z0 + z1) / 2)) continue;   // 학교 칸(가운데가 학교 상자 안)
-      const kids = BLD.filter(b => !b.gen && b.kind !== 'green' && inC(b.cx, b.cz)); if (!kids.length) continue;
+      const kids = BLD.filter(b => !b.gen && b.kind !== 'green' && inC(b.cx, b.cz)), A = areaAt((x0 + x1) / 2, (z0 + z1) / 2); if (!kids.length && !A) continue;   // 이름표 칸은 블록이 없어도 이름표대로
       const zn = (L.zones || []).find(q => { const sh = shapeOf(q); return sh && !sh.line && inShape(sh, (x0 + x1) / 2, (z0 + z1) / 2); });
       const grp = zn ? zn.k : (() => { const c = { live: 0, work: 0, pub: 0 }; for (const b of kids) c[(KIND[b.kind] || {}).g || 'pub']++; return Object.entries(c).sort((a, b) => b[1] - a[1])[0][0]; })();
       const R = rng0(hashS('land:' + ci + ':' + ri + ':' + LID)), n = { 나무: 0, '주차 칸': 0, 놀이터: 0, 벤치: 0 }, free = (x, z, r = 1.5) => !onRoad(x, z, 1.2) && !wAt(x, z) && !inSchool(x, z) && tH(x, z) < 4 && !occHit(x - r, z - r, x + r, z + r);
-      const near = (x, z, m) => kids.some(b => Math.hypot(x - b.cx, z - b.cz) < Math.max(b.w, b.d) / 2 + m);   // 블록 사이·둘레만(칸 전체를 숲으로 만들지 않음)
+      const woods = !!(A && A.st.has('woods')), near = (x, z, m) => woods || kids.some(b => Math.hypot(x - b.cx, z - b.cz) < Math.max(b.w, b.d) / 2 + m);   // 블록 사이·둘레만(칸 전체를 숲으로 만들지 않음) — 이름표 '숲'이면 칸 전체
+      if (A) { Object.assign(n, A.n || {});
+        if (A.st.has('trail')) { let pts = [[x0 + 14, z0 + 14], [x1 - 14, z0 + 14], [x1 - 14, z1 - 14], [x0 + 14, z1 - 14], [x0 + 14, z0 + 14]]; for (let it = 0; it < 2; it++) { const Q = [pts[0]]; for (let i = 0; i < pts.length - 1; i++) { const p = pts[i], q = pts[i + 1]; Q.push([p[0] * 0.75 + q[0] * 0.25, p[1] * 0.75 + q[1] * 0.25], [p[0] * 0.25 + q[0] * 0.75, p[1] * 0.25 + q[1] * 0.75]); } pts = Q; }   // 칸 안 둘레 숲길(모서리 둥글게)
+          let len = 0; const fl = A.st.has('flowers'), segs = densify(pts, 3).reduce((a9, p, i, arr) => (i && a9.push([arr[i - 1], p]), a9), []).filter(P9 => { const mx = (P9[0][0] + P9[1][0]) / 2, mz = (P9[0][1] + P9[1][1]) / 2; return !(onRoad(mx, mz, 1.5) || wAt(mx, mz) || occHit(mx - 1.2, mz - 1.2, mx + 1.2, mz + 1.2) || tH(mx, mz) > 4); });   // 빈 자리 조각을 먼저 고르고(제 자리끼리 막지 않게) 그다음 차지
+          for (const P9 of segs) { const mx = (P9[0][0] + P9[1][0]) / 2, mz = (P9[0][1] + P9[1][1]) / 2;
+            strip(P9[0], P9[1], 2.2, 0.05, 0xc9a77c, { step: 3 }); occAdd(mx - 1.4, mz - 1.4, mx + 1.4, mz + 1.4); len += Math.hypot(P9[1][0] - P9[0][0], P9[1][1] - P9[0][1]);
+            if (fl) { const F = [P9[1][1] - P9[0][1], P9[0][0] - P9[1][0]], l = Math.hypot(F[0], F[1]) || 1; for (const sg of [-1, 1]) if (R() < 0.7) TREES.flower.push({ x: mx + F[0] / l * 1.6 * sg, y: ty(mx, mz), z: mz + F[1] / l * 1.6 * sg, s: 1.1, hex: PAL.flower[(R() * 4) | 0], ry: 0 }); } }
+          n['숲길(m)'] = Math.round(len); }
+        if (A.st.has('flowers')) { let nf = 0; for (const b of kids) for (let k9 = 0; k9 < 16; k9++) { const a9 = k9 / 16 * 6.2832, rr = Math.max(b.w, b.d) / 2 + 1.6, x = b.cx + Math.cos(a9) * rr, z = b.cz + Math.sin(a9) * rr; if (R() < 0.6 && !onRoad(x, z, 0.5) && !wAt(x, z)) { TREES.flower.push({ x, y: ty(x, z), z, s: 1.1, hex: PAL.flower[(R() * 4) | 0], ry: 0 }); nf++; } } n['꽃'] = nf; } }
       // 주차장: 칸 안 길가(아파트·일하는 곳·공공)
       if (grp !== 'nat' && kids.some(b => b.kind === 'apt' || (KIND[b.kind] || {}).g !== 'live')) { let left = grp === 'live' ? 16 : 12;
         for (const sg9 of RSEG) { if (left <= 0) break; const F = segFrame(sg9); for (const side of [-1, 1]) for (let t = 4; t < F.L0 - 4 && left > 0; t += 2.6) { const off = sg9.hw + 4.6, x = sg9.a[0] + F.tx * t + F.px * side * off, z = sg9.a[1] + F.tz * t + F.pz * side * off;
@@ -562,11 +618,178 @@ export default async function start(map, params) {
           for (const sx of [1.5, 4.5]) box(px + sx, y, pz + 2, 0.14, 2.6, 0.14, 0, 0x5f6670); box(px + 3, y + 2.5, pz + 2, 3.3, 0.14, 0.14, 0, 0x5f6670); for (const sx of [2.3, 3.7]) box(px + sx, y + 0.5, pz + 2, 0.6, 0.08, 0.4, 0, 0x9b6a3c);   // 그네
           bench(px - 5.5, pz + 4.2, 0); bench(px + 5.5, pz - 4.2, Math.PI); n.놀이터++; n.벤치 += 2; } }
       // 나무(칸 안 빈자리)
-      const pT = grp === 'live' ? 0.5 : grp === 'work' ? 0.25 : 0.4;
+      const pT = woods ? 0.82 : grp === 'live' ? 0.5 : grp === 'work' ? 0.25 : 0.4;
       for (let z = z0 + 4; z < z1 - 2; z += 8) for (let x = x0 + 4; x < x1 - 2; x += 8) { const px = x + (R() - 0.5) * 5, pz = z + (R() - 0.5) * 5; if (R() > pT || !near(px, pz, 30) || !free(px, pz, 1.6)) continue; const sp = R() < 0.65 ? 'round' : R() < 0.5 ? 'poplar' : 'pine';
         TREES[sp].push({ x: px, y: ty(px, pz), z: pz, s: 0.7 + R() * 0.35, hex: treeHex(sp, R), ry: R() * 6 }); n.나무++; }
-      ZFILL.push({ id: 'land:' + cellOf((x0 + x1) / 2, (z0 + z1) / 2), k: 'land', cell: cellOf((x0 + x1) / 2, (z0 + z1) / 2), note: zn ? zn.note || '' : '', dens: '', n }); }
+      ZFILL.push({ id: 'land:' + cellOf((x0 + x1) / 2, (z0 + z1) / 2), k: 'land', cell: cellOf((x0 + x1) / 2, (z0 + z1) / 2), note: A ? '🔖 ' + A.t : zn ? zn.note || '' : '', dens: '', n }); }
   }
+  // ───────── 종이 소품(PROPS-1 · 교사 10-13 인쇄지 — 아이들이 오려 판에 놓음 · 소품마다 이름이 인쇄됨) ─────────
+  //   규칙 = 블록과 같음: 놓은 자리·개수 그대로(엔진이 더 넣지 않음) · 기록 = 🧱 아이 것 · 세우는 카드 = 실제 크기(가로등 6m · 정자 5m · 비닐하우스 22m) · 납작한 것 = 길·강·땅 위에
+  //   자료 layer.props = [{ id, k, x, y | cell, face?: 'n'|'s'|'e'|'w'(앞이 보는 쪽 — 없으면 가까운 길 쪽), along?: 'ns'|'ew'(긴 쪽 — 비닐하우스·주차장), name?(빈 카드에 아이가 쓴 이름), to?: ['장소', '장소'](이정표), pts?(산책로 띠), w?·d?(주차장 cm), road?(다리 — 길 id) }]
+  //   빈 카드(k 'card') = 아이가 쓴 이름으로 종류를 찾음(가로등·분수·화장실…) → 건물 이름이면 2cm 블록처럼 그 건물 · 모르는 말이면 이름 팻말로 어림(✨)
+  let PROPS = [], PNOTE = [], PCOL = [], AREAS = [], ROOFS = [];
+  const PTX = [];   // 글자 판(이정표·팻말·이름표 돌) 텍스처·재질 — 다시 지을 때·끝낼 때 버림
+  const LP = (x, z, ry) => (lx, lz) => [x + lx * Math.cos(ry) + lz * Math.sin(ry), z - lx * Math.sin(ry) + lz * Math.cos(ry)];   // 로컬 → 세계(앞 = 로컬 +z = (sin ry, cos ry))
+  const col9 = (x, z, hx, hz, ry, y0, y1) => { const Q = LP(x, z, ry), C = [[-hx, -hz], [hx, -hz], [hx, hz], [-hx, hz]].map(([a, b]) => Q(a, b)), xs = C.map(p => p[0]), zs = C.map(p => p[1]); return { x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs), y0, y1 }; };
+  const nearSeg = (x, z, max = 1e9) => { let best = null; for (const sg of RSEG) { const r = segD(x, z, sg.a, sg.b); if (r[0] < max && (!best || r[0] < best.d)) best = { d: r[0], sg, t: r[1], p: [r[2], r[3]] }; } return best; };
+  const FACEV = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
+  function prepProps() {
+    PROPS = []; PNOTE = []; const taken = [];
+    const facing = (P, f) => { const v = FACEV[f]; if (v) return Math.atan2(v[0], v[1]); const r = nearSeg(P.x, P.z, 90); return r ? Math.atan2(r.p[0] - P.x, r.p[1] - P.z) : 0; };
+    const bad = (x, z, r) => inSchool(x, z) || x < TX0 + 4 || x > TX1 - 4 || z < TZ0 + 4 || z > TZ1 - 4 || !!onRoad(x, z, r + 0.8) || wAt(x, z) > 0 || wdI(x, z) > 0.05 || BLD.some(b => Math.hypot(x - b.cx, z - b.cz) < Math.max(b.w, b.d) / 2 + r) || taken.some(o => Math.hypot(o[0] - x, o[1] - z) < o[2] + r);
+    const settle = (P, r) => { if (!bad(P.x, P.z, r)) return; const x0 = P.x, z0 = P.z; for (let d = 3; d <= 48; d += 3) for (let a = 0; a < 16; a++) { const x = x0 + Math.cos(a / 16 * 6.2832) * d, z = z0 + Math.sin(a / 16 * 6.2832) * d; if (!bad(x, z, r)) { P.x = x; P.z = z; if (d > 6) PNOTE.push({ t: '「' + P.label + '」은 길·물·건물과 겹쳐서 ' + Math.round(d) + 'm 옆에 세웠어요', at: [x, z] }); return; } } };
+    for (const p of L.props || []) {
+      let k = p.k; const nm = p.name || null; if (!PROPK[k] || k === 'card') k = (nm && (NAMEPROP.find(([re]) => re.test(nm)) || [])[1]) || 'card';
+      let mx = p.x, my = p.y; if (mx == null && p.cell) { const R9 = cellRect(p.cell); if (R9) { mx = (R9[0] + R9[2]) / 2; my = (R9[1] + R9[3]) / 2; } }
+      if (mx == null && !(p.pts && p.pts.length > 1)) continue;
+      const K = PROPK[k], P = { id: p.id || ('p' + PROPS.length), k, src: p, name: nm, en: p.en || null, label: nm || K.ko, x: mx != null ? X(mx) : X(p.pts[0][0]), z: my != null ? Z(my) : Z(p.pts[0][1]), to: p.to || null, road: p.road || null, card: p.k === 'card' || !PROPK[p.k], guess: k === 'card', ai: p.ai || null };
+      if (k === 'trail') { P.pts = (p.pts || [[mx - 4, my], [mx + 4, my]]).map(q => [X(q[0]), Z(q[1])]); P.w = p.w ? p.w * S : 2.4; PROPS.push(P); continue; }
+      if (k === 'crosswalk') { const r = nearSeg(P.x, P.z, 30); if (!r) { PNOTE.push({ t: '「횡단보도」 둘레 30m 안에 길이 없어 놓지 못했어요', at: [P.x, P.z] }); continue; } P.sg = r.sg; P.t = r.t * Math.hypot(r.sg.b[0] - r.sg.a[0], r.sg.b[1] - r.sg.a[1]); P.x = r.p[0]; P.z = r.p[1]; PROPS.push(P); continue; }
+      if (k === 'bridge') { PROPS.push(P); continue; }
+      if (k === 'fishing') {   // 물가 찾기(40m 안) → 팻말은 둑 위 · 나무 데크가 물로
+        let W = null; for (let d = 0; d <= 40 && !W; d += 2) for (let a = 0; a < 16 && !W; a++) { const x = P.x + Math.cos(a / 16 * 6.2832) * d, z = P.z + Math.sin(a / 16 * 6.2832) * d; if (wAt(x, z) > 0) W = [x, z]; }
+        if (W) { const dx = P.x - W[0], dz = P.z - W[1], l = Math.hypot(dx, dz) || 1, ux = dx / l, uz = dz / l; let bx = W[0], bz = W[1]; for (let t = 0; t < 40; t += 0.5) { bx = W[0] + ux * t; bz = W[1] + uz * t; if (wdI(bx, bz) < 0.04 && !wAt(bx, bz)) break; }
+          P.x = bx + ux * 2; P.z = bz + uz * 2; P.ry = Math.atan2(-ux, -uz); P.deck = [bx + ux * 0.5, bz + uz * 0.5, W[0] - ux * 1.5, W[1] - uz * 1.5]; }
+        else PNOTE.push({ t: '「낚시터」 둘레 40m 안에 물이 없어 팻말만 세웠어요', at: [P.x, P.z] }); }
+      if (K.side) { const r = nearSeg(P.x, P.z, 60); if (r) { /* 학교 칸 줄은 판 1cm가 실제보다 넓게 펴져서(학교 = 실제 크기) 넉넉히 */ const ax = r.sg.b[0] - r.sg.a[0], az = r.sg.b[1] - r.sg.a[1], L0 = Math.hypot(ax, az), sg = Math.sign((P.x - r.p[0]) * -az + (P.z - r.p[1]) * ax) || 1, nx9 = -az / L0 * sg, nz9 = ax / L0 * sg, sw = r.sg.r.big ? 2.2 : 1.4, off = k === 'busstop' ? r.sg.hw + 1.4 : r.sg.hw - sw * 0.35;
+          P.x = r.p[0] + nx9 * off; P.z = r.p[1] + nz9 * off; P.ry = Math.atan2(-nx9, -nz9); P.roadside = true; } }
+      if (k === 'parking') { P.w = (p.w || 5) * S; P.d = (p.d || 3) * S; }
+      if (!P.roadside && !P.deck) settle(P, k === 'parking' ? Math.max(P.w, P.d) / 2 : K.r || 1);
+      if (P.ry == null) { if (k === 'greenhouse' || k === 'parking') { const r = nearSeg(P.x, P.z, 120); P.ry = p.along === 'ew' ? 0 : p.along === 'ns' ? -Math.PI / 2 : r ? Math.atan2(-(r.sg.b[1] - r.sg.a[1]), r.sg.b[0] - r.sg.a[0]) : 0; } else P.ry = facing(P, p.face); }
+      taken.push([P.x, P.z, k === 'parking' ? Math.max(P.w, P.d) / 2 : K.r || 1]); PROPS.push(P); }
+  }
+  // 글자 판(캔버스 한 장 · 앞뒤 두 장) — 판 색과 같은 바탕이라 판에 그린 것처럼
+  function textPlane(group, t, cx, cy, cz, ry, maxW, h, o = {}) {
+    const c = document.createElement('canvas'), g = c.getContext('2d'), F = '800 56px sans-serif'; g.font = F; c.width = Math.min(1024, Math.ceil(g.measureText(t).width) + 36); c.height = 80;
+    g.fillStyle = o.bgc || '#f6f4ee'; g.fillRect(0, 0, c.width, c.height); g.font = F; g.fillStyle = o.fg || '#1d2b3a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, c.width / 2, 43, c.width - 16);
+    const tx = new T3.CanvasTexture(c); tx.colorSpace = T3.SRGBColorSpace; tx.anisotropy = 4; const asp = c.width / c.height; let ph = h, pw = h * asp; if (pw > maxW) { pw = maxW; ph = maxW / asp; }
+    const mat = new T3.MeshLambertMaterial({ map: tx }), geo = new T3.PlaneGeometry(pw, ph); GEOS.push(geo); PTX.push(tx, mat);
+    for (const sg of o.one ? [1] : [1, -1]) { const m = new T3.Mesh(geo, mat), off = (o.off || 0.045) * sg; m.position.set(cx + Math.sin(ry) * off, cy, cz + Math.cos(ry) * off); m.rotation.y = ry + (sg < 0 ? Math.PI : 0); m.updateMatrix(); m.matrixAutoUpdate = false; m.userData.fx = 1; group.add(m); } }
+  function signBoard(group, x, z, ry, t, o = {}) { const y = o.y0 ?? ty(x, z), Q = LP(x, z, ry), bw = o.w || 1.8, bh = o.h || 0.8, by = o.y || 1.1, bg = o.bg ?? 0xf6f4ee;
+    for (const s9 of o.one ? [0] : [-1, 1]) { const [px, pz] = Q(s9 * (bw / 2 - 0.15), -0.1); box(px, y, pz, 0.1, by + bh * 0.85, 0.1, ry, o.post ?? 0x7a5232); }
+    box(x, y + by, z, bw, bh, 0.08, ry, bg, { top: bg }); textPlane(group, t, x, y + by + bh / 2, z, ry, bw * 0.9, bh * 0.78, { bgc: o.bgc, fg: o.fg, off: 0.046 }); }
+  function bench2(x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry); box(x, y + 0.42, z, 1.8, 0.1, 0.5, ry, 0x9b6a3c); const [bx, bz] = Q(0, -0.22); box(bx, y + 0.52, bz, 1.8, 0.45, 0.08, ry, 0x9b6a3c); for (const s9 of [-0.75, 0.75]) { const [lx, lz] = Q(s9, 0); box(lx, y, lz, 0.1, 0.42, 0.4, ry, 0x55595e); } }
+  function tentCard(x, z, ry, hex) {   // 🧱 판 모습: 접어 세운 종이 카드(2.4 × 1.2cm · 높이 1.4cm)
+    const y = ty(x, z) + 0.02, Q = LP(x, z, ry), B = bucket(x, z), w = 2.4 * S / 2, d = 1.2 * S / 2, h = 1.4 * S, V = (a, b, yy) => { const [px, pz] = Q(a, b); return [px, y + yy, pz]; }, wc = rgb(0xf6f4ee), kc = rgb(hex);
+    quad(B, V(-w, d, 0), V(w, d, 0), V(w, 0, h), V(-w, 0, h), wc); quad(B, V(w, -d, 0), V(-w, -d, 0), V(-w, 0, h), V(w, 0, h), wc.map(v => v * 0.9));
+    for (const [a, b, c9] of [[V(w, d, 0), V(w, -d, 0), V(w, 0, h)], [V(-w, -d, 0), V(-w, d, 0), V(-w, 0, h)]]) tri(B, a, b, c9, nrm(a, b, c9), kc); }
+  function pavilion(x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry);
+    box(x, y - 0.3, z, 5.2, 0.65, 5.2, ry, 0xb9b4a8, { top: 0xc9c4b8 }); box(x, y + 0.35, z, 4.6, 0.25, 4.6, ry, 0xa8743f, { top: 0xb88350 });   // 돌 기단 · 마루
+    for (const [a, b] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) { const [px, pz] = Q(a, b); box(px, y + 0.6, pz, 0.26, 2.5, 0.26, ry, 0x8e3b2a); }   // 기둥
+    for (const [a, b, sx, sz] of [[0, -2, 4.26, 0.24], [0, 2, 4.26, 0.24], [-2, 0, 0.24, 4.26], [2, 0, 0.24, 4.26]]) { const [px, pz] = Q(a, b); box(px, y + 2.85, pz, sx, 0.3, sz, ry, 0x3f7a5a); }   // 도리(단청 초록)
+    for (const [a, b, sx, sz] of [[0, -2.1, 3.7, 0.1], [-2.1, 0, 0.1, 3.7], [2.1, 0, 0.1, 3.7]]) { const [px, pz] = Q(a, b); box(px, y + 1.0, pz, sx, 0.08, sz, ry, 0x7a4a2a); }   // 난간(앞은 트임)
+    hipRoof(x, y + 3.15, z, 5.0, 5.0, 1.9, ry, 0x4a535c); const [sx, sz] = Q(0, 2.95); box(sx, y, sz, 1.4, 0.3, 0.7, ry, 0xb9b4a8);   // 기와지붕 · 디딤돌
+    PCOL.push(col9(x, z, 2.6, 2.6, ry, y - 1, y + 0.35), col9(x, z, 2.3, 2.3, ry, y - 1, y + 0.6), col9(sx, sz, 0.7, 0.35, ry, y - 1, y + 0.3)); }
+  function scarecrow(x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry);
+    box(x, y, z, 0.12, 2.1, 0.12, ry, 0x7a5232); box(x, y + 1.45, z, 1.7, 0.1, 0.1, ry, 0x7a5232); box(x, y + 0.95, z, 0.72, 0.62, 0.34, ry, 0x3f6fb5); box(x, y + 1.4, z, 1.5, 0.22, 0.3, ry, 0x4f7fc5);   // 막대 · 팔 · 저고리 · 소매
+    for (const s9 of [-1, 1]) { const [hx, hz] = Q(s9 * 0.84, 0); box(hx, y + 1.22, hz, 0.2, 0.3, 0.2, ry, 0xe2c46a); }
+    box(x, y + 1.62, z, 0.42, 0.4, 0.38, ry, 0xe8cf86); cyl(x, y + 2.02, z, 0.55, 0.06, 0xd9b25a, 10); cyl(x, y + 2.08, z, 0.26, 0.26, 0xcfa64e, 8);   // 짚 얼굴 · 밀짚모자
+    const [fx, fz] = Q(0, 0.2); box(fx, y + 1.72, fz, 0.26, 0.05, 0.02, ry, 0x3a2a1a); }
+  function greenhouse(x, z, ry) { const y = ty(x, z), L9 = 22, W9 = 7, H9 = 3.2, B = bucket(x, z), Q = LP(x, z, ry), seg = 8, film = rgb(0xe9f1ec), rib = rgb(0x8f989d), endc = rgb(0xdbe6de);
+    const arc = (i, k = 1) => { const a = Math.PI * i / seg; return [-Math.cos(a) * W9 / 2 * k, Math.sin(a) * H9 * k]; }, V = (lx, lz, yy) => { const [px, pz] = Q(lx, lz); return [px, y + yy, pz]; };
+    for (let i = 0; i < seg; i++) { const [z0, y0] = arc(i), [z1, y1] = arc(i + 1); quad(B, V(-L9 / 2, z1, y1), V(L9 / 2, z1, y1), V(L9 / 2, z0, y0), V(-L9 / 2, z0, y0), film.map(v => v * (0.93 + 0.07 * Math.sin(Math.PI * (i + 0.5) / seg)))); }   // 비닐(반원 터널)
+    for (let r = -L9 / 2 + 1.5; r < L9 / 2 - 1; r += 2.6) for (let i = 0; i < seg; i++) { const [z0, y0] = arc(i, 1.012), [z1, y1] = arc(i + 1, 1.012); quad(B, V(r - 0.06, z1, y1), V(r + 0.06, z1, y1), V(r + 0.06, z0, y0), V(r - 0.06, z0, y0), rib); }   // 철 골조
+    for (const e of [-1, 1]) for (let i = 0; i < seg; i++) { const [z0, y0] = arc(i), [z1, y1] = arc(i + 1), a = V(e * L9 / 2, 0, 0), b = V(e * L9 / 2, z0, y0), c9 = V(e * L9 / 2, z1, y1); if (e > 0) tri(B, a, b, c9, nrm(a, b, c9), endc); else tri(B, a, c9, b, nrm(a, c9, b), endc); }   // 양 끝 막
+    for (const e of [-1, 1]) { const [dx, dz] = Q(e * (L9 / 2 + 0.03), 0); box(dx, y, dz, 0.05, 2.0, 1.4, ry, 0x7f9a86); }   // 문
+    PCOL.push(col9(x, z, L9 / 2, W9 / 2, ry, y - 1, y + H9)); }
+  function tiller(x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry);
+    const [ex, ez] = Q(0, 1.4); box(ex, y + 0.55, ez, 0.8, 0.6, 0.9, ry, 0x2f7fc1, { top: 0x3d8fd5 }); const [rx, rz] = Q(0, 1.95); box(rx, y + 0.6, rz, 0.5, 0.5, 0.2, ry, 0xd9dcdf);   // 엔진 · 라디에이터
+    for (const s9 of [-1, 1]) { const [wx, wz] = Q(s9 * 0.6, 1.3); box(wx, y, wz, 0.24, 0.78, 0.78, ry, 0x26282b); const [hx, hz] = Q(s9 * 0.35, 0.2); box(hx, y + 0.95, hz, 0.08, 0.08, 2.0, ry, 0x5f666d); }   // 앞바퀴 · 손잡이
+    const [tx9, tz9] = Q(0, -1.35); box(tx9, y + 0.42, tz9, 1.5, 0.45, 1.9, ry, 0x8a8f94, { top: 0x8a6440 }); for (const s9 of [-1, 1]) { const [wx, wz] = Q(s9 * 0.86, -1.45); box(wx, y, wz, 0.2, 0.6, 0.6, ry, 0x26282b); }   // 짐칸(흙) · 바퀴
+    PCOL.push(col9(x, z, 0.9, 2.1, ry, y - 1, y + 1.1)); }
+  function trailhead(group, x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry);
+    for (const s9 of [-1, 1]) { const [px, pz] = Q(s9 * 1.5, 0); cyl(px, y, pz, 0.17, 2.9, 0x7a5232, 7); } box(x, y + 2.6, z, 3.4, 0.28, 0.28, ry, 0x6b4a2f);   // 통나무 문
+    box(x, y + 1.9, z, 1.6, 0.5, 0.07, ry, 0x9b6a3c); textPlane(group, '등산로', x, y + 2.15, z, ry, 1.45, 0.38, { bgc: '#9b6a3c', fg: '#fff7e0', off: 0.04 });
+    for (let i = 0; i < 3; i++) { const [sx, sz] = Q(0, -1.2 - i * 0.9); box(sx, y, sz, 1.6, 0.16 * (i + 1), 0.8, ry, 0x9a9488); } }   // 돌계단(산 쪽으로)
+  function spring(group, x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry);
+    const [wx, wz] = Q(0, -0.55); box(wx, y, wz, 1.9, 1.25, 0.4, ry, 0x8d8a80, { top: 0x9a978c }); box(x, y, z, 1.3, 0.55, 0.8, ry, 0x9a978c, { top: 0x6fc3dc });   // 돌벽 · 돌확(물)
+    const [px, pz] = Q(0, -0.2); box(px, y + 0.9, pz, 0.09, 0.09, 0.32, ry, 0x8a8f95); const [sx, sz] = Q(1.5, 0.1); signBoard(group, sx, sz, ry, '약수터', { w: 1.0, h: 0.4, y: 1.0, one: true, bg: 0x9b6a3c, bgc: '#9b6a3c', fg: '#fff7e0' });
+    PCOL.push(col9(x, z, 0.95, 0.75, ry, y - 1, y + 0.55)); }
+  function schoolSign(group, x, z, ry) { const y = ty(x, z); box(x, y, z, 0.09, 2.6, 0.09, 0, 0x8a8f95);
+    box(x, y + 1.85, z, 0.95, 0.95, 0.06, ry, 0xe0453a); box(x, y + 1.92, z, 0.8, 0.8, 0.075, ry, 0xf2c230);   // 노란 판 + 빨간 테
+    box(x, y + 1.35, z, 1.3, 0.38, 0.06, ry, 0xffffff); textPlane(group, '어린이 보호구역', x, y + 1.54, z, ry, 1.2, 0.3, { bgc: '#ffffff', fg: '#c0392b', off: 0.036 });
+    textPlane(group, '어린이', x, y + 2.32, z, ry, 0.72, 0.3, { bgc: '#f2c230', fg: '#1d2b3a', off: 0.044 }); }
+  function signpost(group, P) { const { x, z } = P, y = ty(x, z), B = bucket(x, z); cyl(x, y, z, 0.09, 3.0, 0x7a5232, 7);
+    (P.to || []).slice(0, 4).forEach((nm, i) => { const pl = findPlace(nm); let dx, dz, dist = null;
+      if (pl) { dx = pl.x - x; dz = pl.z - z; dist = Math.max(10, Math.round(Math.hypot(dx, dz) / 10) * 10); } else { const r = nearSeg(x, z, 200); if (r) { dx = r.sg.b[0] - r.sg.a[0]; dz = r.sg.b[1] - r.sg.a[1]; if (i % 2) { dx = -dx; dz = -dz; } } else { dx = i % 2 ? -1 : 1; dz = 0; } P.miss = (P.miss || []).concat(nm); }
+      const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; const by = y + 2.55 - i * 0.48, br = Math.atan2(-dz, dx), cx = x + dx * 0.95, cz = z + dz * 0.95, col = rgb(0x9b6a3c);
+      box(cx, by - 0.18, cz, 1.7, 0.36, 0.06, br, 0x9b6a3c); const ex = x + dx * 1.8, ez = z + dz * 1.8, a = [ex, by + 0.26, ez], b = [ex, by - 0.26, ez], c9 = [x + dx * 2.15, by, z + dz * 2.15];
+      tri(B, a, b, c9, nrm(a, b, c9), col); tri(B, a, c9, b, nrm(a, c9, b), col);   // 화살 끝
+      textPlane(group, nm + (dist ? ' ' + dist + 'm' : ''), cx, by, cz, br, 1.6, 0.28, { bgc: '#9b6a3c', fg: '#fff7e0', off: 0.036 }); }); }
+  function fountain(x, z) { const y = ty(x, z); cyl(x, y, z, 1.8, 0.5, 0xbdb8ae, 14); cyl(x, y, z, 1.6, 0.52, 0x6fc3dc, 14); cyl(x, y, z, 0.22, 1.25, 0xd8d4ca, 8); cyl(x, y + 1.2, z, 0.6, 0.15, 0xd8d4ca, 10); cyl(x, y + 1.2, z, 0.5, 0.17, 0x9fd8e6, 10); PCOL.push(col9(x, z, 1.7, 1.7, 0, y - 1, y + 0.5)); }
+  function flowerbed(x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry); box(x, y, z, 3, 0.35, 1.4, ry, 0xb9b2a4); box(x, y, z, 2.8, 0.37, 1.2, ry, 0x6a4a30);
+    for (let i = 0; i < 12; i++) { const [fx, fz] = Q(-1.2 + (i % 6) * 0.48, i < 6 ? -0.3 : 0.3); TREES.flower.push({ x: fx, y: y + 0.36, z: fz, s: 1.2, hex: PAL.flower[i % 4], ry: 0 }); } }
+  function statue(x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry); box(x, y, z, 1.3, 1.3, 1.3, ry, 0xbdb8ae, { top: 0xc9c4b8 }); box(x, y + 1.3, z, 0.55, 1.15, 0.38, ry, 0x8a6a3a); box(x, y + 2.45, z, 0.34, 0.34, 0.32, ry, 0x8a6a3a);
+    for (const s9 of [-1, 1]) { const [ax, az] = Q(s9 * 0.36, 0); box(ax, y + 1.75, az, 0.16, 0.6, 0.18, ry, 0x7f6034); } PCOL.push(col9(x, z, 0.65, 0.65, ry, y - 1, y + 1.3)); }
+  function toilet(group, x, z, ry) { const y = ty(x, z), Q = LP(x, z, ry); box(x, y, z, 4.2, 2.7, 3.0, ry, 0xe8e2cf); gable(x, y + 2.7, z, 4.2, 3.0, 1.0, ry, 0x6b7480);
+    for (const s9 of [-1, 1]) { const [dx, dz] = Q(s9 * 1.0, 1.52); box(dx, y, dz, 0.9, 2.0, 0.05, ry, s9 < 0 ? 0x3d74c9 : 0xe0453a); }   // 문 둘(파랑·빨강)
+    const [tx9, tz9] = Q(0, 1.5); box(tx9, y + 2.15, tz9, 1.6, 0.42, 0.05, ry, 0xffffff); textPlane(group, '화장실', tx9, y + 2.36, tz9, ry, 1.5, 0.34, { bgc: '#ffffff', off: 0.03, one: true }); PCOL.push(col9(x, z, 2.1, 1.5, ry, y - 1, y + 2.7)); }
+  function parking(group, P) { const { x, z, w, d, ry } = P, y = ty(x, z), Q = LP(x, z, ry), R = rng0(hashS(P.id)); box(x, y + 0.03, z, w, 0.04, d, ry, 0x5f6368, { top: 0x62666b });
+    const rows = d >= 11 ? [-d / 2 + 2.6, d / 2 - 2.6] : [0]; for (const rz of rows) { const n = Math.floor((w - 1) / 2.6); for (let i = 0; i <= n; i++) { const lx = -n * 1.3 + i * 2.6, [px, pz] = Q(lx, rz); box(px, y + 0.07, pz, 0.12, 0.01, 4.6, ry, 0xf2f1ea, { noSide: true });
+      if (i < n && R() < 0.45) { const [cx, cz] = Q(lx + 1.3, rz); vehicle(cx, cz, ry + Math.PI / 2, 'car', [0x3d74c9, 0xe0453a, 0xf2f1ea, 0x3a3a3a, 0x9aa0a6][(R() * 5) | 0]); } } }
+    const [sx, sz] = Q(-w / 2 + 0.6, d / 2 + 0.6); signBoard(group, sx, sz, ry, 'P', { w: 0.8, h: 0.8, y: 1.9, one: true, bg: 0x2f6fd0, bgc: '#2f6fd0', fg: '#ffffff', post: 0x8a8f95 }); }
+  function footbridge(P) {   // 아이가 물 위에 놓은 다리(길이 없는 곳) — 가장 짧게 건너는 방향 · 나무 판 + 난간 · 걸어서 건넘
+    let cx = P.x, cz = P.z; if (!wAt(cx, cz)) { let W = null; for (let d = 2; d <= 30 && !W; d += 2) for (let a = 0; a < 16 && !W; a++) { const x = cx + Math.cos(a / 16 * 6.2832) * d, z = cz + Math.sin(a / 16 * 6.2832) * d; if (wAt(x, z)) W = [x, z]; } if (!W) { PNOTE.push({ t: '「다리」 둘레 30m 안에 물이 없어 놓지 못했어요', at: [cx, cz] }); return; } [cx, cz] = W; }
+    const dry = (x, z) => !wAt(x, z) && wdI(x, z) < 0.02, run = (ux, uz) => { for (let t = 0; t < 90; t += 0.5) if (dry(cx + ux * t, cz + uz * t)) return t; return null; };
+    let best = null; for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI, ux = Math.cos(a), uz = Math.sin(a), d1 = run(ux, uz), d2 = run(-ux, -uz); if (d1 != null && d2 != null && (!best || d1 + d2 < best.L)) best = { ux, uz, d1, d2, L: d1 + d2 }; }
+    if (!best) return; const { ux, uz } = best, a0 = [cx - ux * (best.d2 + 1.5), cz - uz * (best.d2 + 1.5)], a1 = [cx + ux * (best.d1 + 1.5), cz + uz * (best.d1 + 1.5)], mx = (a0[0] + a1[0]) / 2, mz = (a0[1] + a1[1]) / 2, len = best.L + 3, ry = Math.atan2(-uz, ux), top = TY + 0.42, px = -uz, pz = ux;
+    box(mx, top - 0.3, mz, len, 0.3, 2.4, ry, 0xa0784a, { top: 0xb88a56, bottom: true });
+    for (const sg of [-1, 1]) { const ox = mx + px * sg * 1.12, oz = mz + pz * sg * 1.12; box(ox, top + 0.9, oz, len, 0.1, 0.12, ry, 0x7a5232); for (let k = -len / 2 + 0.4; k <= len / 2 - 0.3; k += 1.8) box(ox + ux * k, top, oz + uz * k, 0.12, 0.95, 0.12, ry, 0x7a5232); }
+    const xs = [a0[0] + px * 1.2, a0[0] - px * 1.2, a1[0] + px * 1.2, a1[0] - px * 1.2], zs = [a0[1] + pz * 1.2, a0[1] - pz * 1.2, a1[1] + pz * 1.2, a1[1] - pz * 1.2];
+    BRIDGES.push({ x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs), y1: top }); markBR(Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)); P.built = [a0, a1]; }
+  function pier(P) { const [bx, bz, wx, wz] = P.deck, len = Math.hypot(wx - bx, wz - bz), ux = (wx - bx) / (len || 1), uz = (wz - bz) / (len || 1), mx = (bx + wx) / 2, mz = (bz + wz) / 2, ry = Math.atan2(-uz, ux), top = TY + 0.4;
+    box(mx, top - 0.2, mz, len, 0.2, 1.6, ry, 0xa0784a, { top: 0xb88a56, bottom: true }); for (const [a, b] of [[0.3, 0.7], [0.3, -0.7], [len - 0.3, 0.7], [len - 0.3, -0.7]]) box(bx + ux * a - uz * b, top - 1.6, bz + uz * a + ux * b, 0.14, 1.4, 0.14, 0, 0x7a5232);
+    const xs = [bx - uz * 0.8, bx + uz * 0.8, wx - uz * 0.8, wx + uz * 0.8], zs = [bz + ux * 0.8, bz - ux * 0.8, wz + ux * 0.8, wz - ux * 0.8]; BRIDGES.push({ x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs), y1: top }); markBR(Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)); }
+  function clearAroundProps() {   // 숲·조경 나무가 아이 소품·이름표 돌·산책로를 덮지 않게(소품 자리 = 아이가 정한 것이 먼저)
+    const C = []; for (const P of PROPS) { if (P.k === 'trail') { for (let i = 0; i < P.pts.length - 1; i++) for (const q of densify([P.pts[i], P.pts[i + 1]], 2)) C.push([q[0], q[1], P.w / 2 + 1.2]); continue; } if (P.k === 'bridge' || P.k === 'crosswalk' || P.k === 'tree') continue; C.push([P.x, P.z, P.k === 'parking' ? Math.max(P.w, P.d) / 2 + 2 : (PROPK[P.k].r || 1) + 2]); }
+    for (const A of AREAS) C.push([A.sx, A.sz, 3.5]); if (!C.length) return;
+    for (const sp of ['round', 'pine', 'poplar', 'bush', 'fruit']) TREES[sp] = TREES[sp].filter(t => { if (t.kid || t.y > ty(t.x, t.z) + 1) return true; const cr = c => c[2] + 2.3 * (t.s || 1); return !C.some(c => Math.abs(t.x - c[0]) < cr(c) && Math.abs(t.z - c[1]) < cr(c) && Math.hypot(t.x - c[0], t.z - c[1]) < cr(c)); }); }   // 수관 반지름(≈2.3 × 크기)까지 비킴
+  function drawProps(group) {
+    const mat = LOOK === 'mat';
+    for (const P of PROPS) { const { k, x, z } = P, ry = P.ry ?? 0, K = PROPK[k];
+      if (k === 'bridge') { if (P.foot) footbridge(P); continue; }   // 길 위 다리는 bridgesOn이(아이 다리 = 🧱)
+      if (k === 'crosswalk') { if (mat) { const F = segFrame(P.sg), y = ty(x, z); for (let i = -2; i <= 2; i++) box(x + F.tx * i * 1.2, y + 0.1, z + F.tz * i * 1.2, 0.6, 0.02, P.sg.hw * 1.6, Math.atan2(-F.tz, F.tx), 0xf6f4ee, { noSide: true }); } else zebra(P.sg, P.t); continue; }
+      if (k === 'trail') { for (let i = 0; i < P.pts.length - 1; i++) strip(P.pts[i], P.pts[i + 1], P.w, 0.05, mat ? 0x8fc46a : 0xc9a77c, { skip: (x9, z9) => wAt(x9, z9) > 0 || inSchool(x9, z9) || !!onRoad(x9, z9, 0), step: 3 }); continue; }
+      if (k === 'parking') { if (mat) box(x, ty(x, z) + 0.03, z, P.w, 0.04, P.d, ry, 0x9a9fa5, { noSide: true }); else parking(group, P); continue; }
+      if (mat) { tentCard(x, z, ry, { streetlight: 0xf2c230, signal: 0x3cc76a, busstop: 0x2f6fd0, schoolzone: 0xf2c230, firesign: 0xd33a2c, fishing: 0x2f6fd0, greenhouse: 0x8fd06a, scarecrow: 0xe2c46a, tiller: 0x2f7fc1 }[k] ?? 0x9b6a3c); if (P.deck) pier(P); continue; }
+      if (k === 'streetlight') streetlight(x, z, ry); else if (k === 'signal') signalPole(x, z, ry); else if (k === 'busstop') busstop(x, z, ry); else if (k === 'bench') bench2(x, z, ry);
+      else if (k === 'pavilion') pavilion(x, z, ry); else if (k === 'scarecrow') scarecrow(x, z, ry); else if (k === 'greenhouse') greenhouse(x, z, ry); else if (k === 'tiller') tiller(x, z, ry);
+      else if (k === 'schoolzone') schoolSign(group, x, z, ry); else if (k === 'trailhead') trailhead(group, x, z, ry); else if (k === 'spring') spring(group, x, z, ry);
+      else if (k === 'firesign') signBoard(group, x, z, ry, '산불 조심', { w: 1.9, h: 0.85, y: 1.0, bg: 0xd33a2c, bgc: '#d33a2c', fg: '#ffffff' });
+      else if (k === 'fishing') { signBoard(group, x, z, ry, '낚시터', { w: 1.4, h: 0.6, y: 1.1, bg: 0x2f6fd0, bgc: '#2f6fd0', fg: '#ffffff' }); if (P.deck) pier(P); }
+      else if (k === 'signpost') signpost(group, P); else if (k === 'fountain') fountain(x, z); else if (k === 'flowerbed') flowerbed(x, z, ry); else if (k === 'statue') statue(x, z, ry); else if (k === 'toilet') toilet(group, x, z, ry);
+      else if (k === 'tree') TREES.round.push({ x, y: ty(x, z), z, s: 1.25, hex: PAL.tree[1], ry: 0, kid: true });
+      else if (k === 'mailbox') { const y = ty(x, z); box(x, y, z, 0.5, 1.1, 0.45, ry, 0xe0453a, { top: 0xc0392b }); }
+      else if (k === 'bin') { const y = ty(x, z), Q = LP(x, z, ry); [[0x3f8a3c, -0.32], [0x2f6fd0, 0.32]].forEach(([c9, o]) => { const [bx, bz] = Q(o, 0); box(bx, y, bz, 0.55, 0.9, 0.5, ry, c9); }); }
+      else { signBoard(group, x, z, ry, P.label, { w: 3.0, h: 1.3, y: 0.8, bg: 0xfff7d6, bgc: '#fff7d6' }); const y = ty(x, z); box(x, y + 2.1, z, 3.2, 0.14, 0.14, ry, 0xf2c230); box(x, y + 0.66, z, 3.2, 0.14, 0.14, ry, 0xf2c230); }   // 모르는 그림 카드 = 아이가 쓴 이름 팻말(노란 테 · ✨)   // 모르는 그림 카드 = 아이가 쓴 이름 팻말(✨)
+    }
+  }
+  // ───────── 칸 이름표(AREA-1 · 교사 10-13 '큰 틀은 내가, 나머지는 아이들에게 자유도' — 아이 손글씨 이름표가 범례보다 먼저) ─────────
+  //   자료 layer.areas = [{ id, cell | cells, t: '자연친화 도시', en?, style: ['rooftop','vines','woods','trail','flowers','solar','bigtree'], fill?: { k, type, dens }, ai: '풀이 한 줄' }]
+  //   이름표의 말뜻 → 꾸밈 낱말(style)로 푸는 건 Claude가 자료에서(✨ ai에 풀이를 남김 — 아이들이 "이게 우리가 생각한 거 맞아?"를 확인·고침) · 엔진은 낱말대로 지음 · fill = 블록 없는 칸을 이 말대로 채움(구역처럼)
+  function prepAreas() {
+    AREAS = []; for (const a of L.areas || []) { const C = a.cells || (a.cell ? [a.cell] : []), R = C.map(c => cellRect(c)).filter(Boolean).map(r => [X(r[0]), Z(r[1]), X(r[2]), Z(r[3])]); if (!R.length) continue;
+      const st = new Set(a.style || []), cx = R.reduce((s9, r) => s9 + (r[0] + r[2]) / 2, 0) / R.length, cz = R.reduce((s9, r) => s9 + (r[1] + r[3]) / 2, 0) / R.length;
+      const A = { id: a.id || ('a' + AREAS.length), t: a.t || '', en: a.en || null, cells: C, R, st, cx, cz, ai: a.ai || null };
+      // 이름표 돌: 칸 안 · 가장 가까운 길가(길 폭 + 3m 안쪽)
+      const r = nearSeg(cx, cz, 200); if (r) { const dx = cx - r.p[0], dz = cz - r.p[1], l = Math.hypot(dx, dz) || 1; A.sx = r.p[0] + dx / l * (r.sg.hw + 3.2); A.sz = r.p[1] + dz / l * (r.sg.hw + 3.2); A.sry = Math.atan2(-dx / l, -dz / l); } else { A.sx = cx; A.sz = cz; A.sry = 0; }
+      AREAS.push(A); } }
+  const areaAt = (x, z) => AREAS.find(A => A.R.some(r => x >= r[0] && x < r[2] && z >= r[1] && z < r[3])) || null;
+  function areaStones(group) { for (const A of AREAS) { if (!A.t) continue; const x = A.sx, z = A.sz, ry = A.sry, y = ty(x, z), w = Math.min(4.2, 1.2 + A.t.length * 0.42);
+      box(x, y, z, w + 0.4, 0.25, 1.1, ry, 0x9a9488); box(x, y + 0.25, z, w, 1.05, 0.62, ry, 0x8d8578, { top: 0x9a9286 }); textPlane(group, A.t, x, y + 0.78, z, ry, w * 0.9, 0.55, { bgc: '#8d8578', fg: '#ffffff', off: 0.315 });
+      for (let i = 0; i < 6; i++) { const Q = LP(x, z, ry), [fx, fz] = Q(-w / 2 + (i + 0.5) * w / 6, 0.75); TREES.flower.push({ x: fx, y: y + 0.02, z: fz, s: 1.1, hex: PAL.flower[i % 4], ry: 0 }); }
+      PCOL.push(col9(x, z, w / 2 + 0.2, 0.55, ry, y - 1, y + 1.3)); } }
+  function areaDeco() {   // 🏘 마을 모습: 이름표 낱말대로 건물·지붕 꾸밈(옥상 정원·덩굴 벽·태양광) — 기록은 그 칸 조경과 함께
+    if (!AREAS.length) return; const R = rng0(hashS('area:' + LID));
+    for (const rf of ROOFS) { const A = areaAt(rf.cx, rf.cz); if (!A) continue; const n9 = A.n || (A.n = {});
+      if (A.st.has('rooftop') && Math.min(rf.w, rf.d) > 3.6 && rf.w * rf.d > 30) { box(rf.cx, rf.y, rf.cz, rf.w - 1.4, 0.1, rf.d - 1.4, rf.ry, 0x6fae4f, { top: 0x7cbd5a }); const Q = LP(rf.cx, rf.cz, rf.ry), nT = Math.max(2, Math.min(7, Math.round(rf.w * rf.d / 40)));
+        for (let i = 0; i < nT; i++) { const [tx9, tz9] = Q((R() - 0.5) * (rf.w - 3), (R() - 0.5) * (rf.d - 3)), sp = R() < 0.5 ? 'round' : 'bush'; TREES[sp].push({ x: tx9, y: rf.y + 0.1, z: tz9, s: sp === 'round' ? 0.42 + R() * 0.15 : 0.8, hex: treeHex('round', R), ry: R() * 6 }); }
+        for (let i = 0; i < 8; i++) { const [fx, fz] = Q((R() - 0.5) * (rf.w - 2), (R() - 0.5) * (rf.d - 2)); TREES.flower.push({ x: fx, y: rf.y + 0.1, z: fz, s: 1.1, hex: PAL.flower[(R() * 4) | 0], ry: 0 }); } n9['옥상 정원'] = (n9['옥상 정원'] || 0) + 1; }
+      if (A.st.has('solar') && rf.w > 6 && rf.d > 6) { const Q = LP(rf.cx, rf.cz, rf.ry); for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j += 2) { const [px, pz] = Q(i * 1.4, j * Math.min(1.6, rf.d / 4)); box(px, rf.y + 0.45, pz, 1.2, 0.07, 1.9, rf.ry, 0x2f4466, { top: 0x3a5a8a }); box(px, rf.y + 0.1, pz, 0.08, 0.35, 0.08, 0, 0x8a8f95); } n9['태양광 지붕'] = (n9['태양광 지붕'] || 0) + 1; } }
+    for (const B9 of BLD) { if (B9.kind === 'green' || B9.kind === 'park' || B9.h < 4) continue; const A = areaAt(B9.cx, B9.cz); if (!A || !A.st.has('vines')) continue;
+      const F = FACES(B9).filter(f => !isFront(B9, f)); for (const f of F.slice(0, 2 + (R() < 0.5 ? 1 : 0))) { const sw = f[2] * (0.35 + R() * 0.3), sh = B9.h * (0.45 + R() * 0.4), u = (R() - 0.5) * (f[2] - sw) * 0.8;
+        fbox(B9, f, u, 0, sw, sh, 0.12, 0x4e9a43, { out: 0.05 }); fbox(B9, f, u + sw * 0.2, sh * 0.15, sw * 0.5, sh * 0.6, 0.06, 0x5aa54a, { out: 0.17 }); }
+      (A.n || (A.n = {}))['덩굴 벽'] = ((A.n || {})['덩굴 벽'] || 0) + 1; } }
   function drawZonePaper() {   // 🧱 매트 모습: 색종이 구역 그대로(얇은 종이 판)
     for (const zn of L.zones || []) { const sh = shapeOf(zn); if (!sh || sh.line) continue; const hex = COL[zn.c || (ZCOL[zn.k] || ['red'])[0]] ?? 0xe0453a;
       C3.setHex(hex); C3.lerp(new T3.Color(0xffffff), 0.12); const ph = C3.getHex(); cellsIn(sh, 2.5, (cx, cz, s2) => { if (onRoad(cx, cz, 0)) return; flat(cx - s2, cz - s2, cx + s2, cz + s2, ty(cx, cz) + 0.07, ph); }); } }
@@ -601,6 +824,10 @@ export default async function start(map, params) {
     const { cx, cz, w, d, h, ry, y0, kind } = B9, col = COL[B9.b.c] ?? 0xcccccc, R = B9.R;
     lot(B9);
     const roofFlat = (hex = 0xcfccc4) => roofTop(B9, { deck: hex });
+    if (kind === 'green' && (h >= 16 || (areaAt(cx, cz) || { st: new Set() }).st.has('bigtree'))) {   // 세운 초록 판·큰 초록 = 큰 나무 덩어리(교사 10-13 '초록 판은 범례상 자연 — 큰 나무나 숲 덩어리') · ✨ 어림
+      B9.bigGreen = true; const s0 = Math.min(2.6, Math.max(1.5, h / 9)), long = Math.max(w, d), nB = Math.max(1, Math.round(long / 14)), alongX = w >= d;
+      for (let i = 0; i < nB; i++) { const t = nB > 1 ? i / (nB - 1) - 0.5 : 0, [bx, bz] = L2W(B9, alongX ? t * (w - 6) : 0, alongX ? 0 : t * (d - 6)); addTreeF('round', bx, bz, s0 * (0.9 + R() * 0.2), treeHex('round', R)); }
+      for (let i = 0; i < 3 + nB * 2; i++) { const [bx, bz] = L2W(B9, (R() - 0.5) * (w + 8), (R() - 0.5) * (d + 8)); if (!onRoad(bx, bz, 1) && !wAt(bx, bz)) addTreeF(R() < 0.5 ? 'round' : 'bush', bx, bz, 0.9 + R() * 0.5, treeHex('round', R)); } return; }
     if (kind === 'green') { const n = Math.max(1, Math.round(w * d / 45)); for (let i = 0; i < n; i++) { const sp = R() < 0.6 ? 'round' : 'pine'; addTreeF(sp, cx + (R() - 0.5) * w * 0.7, cz + (R() - 0.5) * d * 0.7, 0.8 + R() * 0.5, treeHex(sp, R)); }
       if (B9.b.h <= 1 && w * d > 120) box(cx, y0, cz, w, 0.1, d, ry, 0x8fd06a, { noSide: true }); return; }
     if (kind === 'park') { box(cx, y0, cz, w, 0.12, d, ry, 0x8fd06a); for (let i = 0; i < Math.max(2, w * d / 60); i++) addTreeF(R() < 0.7 ? 'round' : 'bush', cx + (R() - 0.5) * w * 0.8, cz + (R() - 0.5) * d * 0.8, 0.7 + R() * 0.3, treeHex('round', R)); bench(cx, cz, ry); return; }
@@ -687,19 +914,22 @@ export default async function start(map, params) {
     for (const it of L.nature) { if (!it.name) continue; const sh = shapeOf(it); if (!sh) continue; const bb = bboxOf(sh); let cx = (bb[0] + bb[2]) / 2, cz = (bb[1] + bb[3]) / 2;
       if (sh.line) { const P = sh.line, m = P[Math.floor(P.length / 2)]; cx = m[0]; cz = m[1]; }
       const kk = it.k === 'field' ? it.sub || 'grass' : it.k; PLACES.push({ id: it.id, name: it.name, en: it.en, kind: kk, x: cx, z: cz, door: [cx, cz], icon: { hill: '⛰', water: '💧', forest: '🌲', rice: '🌾', farm: '🌱', orchard: '🍎', park: '🌳', grass: '🌿', sand: '⛱' }[kk] || '🌿', sym: { hill: '⛰', water: '〰', forest: '♣', rice: 'ıı', farm: 'ㅛ', orchard: 'ⓞ', park: '♣', grass: '⺾' }[kk] || '◇', nat: true, ai: it.ai || null }); }
+    for (const P of PROPS) { const K = PROPK[P.k]; if (!K || !K.place || (P.k === 'card' && !P.name)) continue; PLACES.push({ id: P.id, name: P.label, en: P.en || K.en, kind: 'prop', x: P.x, z: P.z, door: [P.x, P.z], icon: K.ic, sym: K.ic, ai: P.guess ? '그림 카드 — 이름으로 어림' : null, prop: true }); }   // 아이 소품 중 갈 수 있는 곳(정자·약수터·주차장…)
+    for (const A of AREAS) if (A.t) PLACES.push({ id: A.id, name: A.t, en: A.en, kind: 'area', x: A.cx, z: A.cz, door: [A.sx, A.sz], icon: '🔖', sym: '🔖', area: true });   // 아이 이름표 칸
   }
   function buildGraph() {
     const nodes = [], key = (x, z) => Math.round(x * 2) + ':' + Math.round(z * 2), idx = new Map(), adj = [];
     const node = (x, z) => { const k = key(x, z); let i = idx.get(k); if (i == null) { i = nodes.length; nodes.push([x, z]); idx.set(k, i); adj.push([]); } return i; };
-    const cuts = RSEG.map(() => [0, 1]);
+    const cuts = RSEG.map(s => { const c = [0, 1]; for (const X9 of s.wr || []) if (!X9.br) c.push(X9.t0 / s.L0, X9.t1 / s.L0); return c; });   // 다리 없는 건너는 곳 = 끊긴 길
     RSEG.forEach((s, i) => RSEG.forEach((o, j) => { if (i >= j) return; const X9 = segX(s.a, s.b, o.a, o.b); if (X9) { cuts[i].push(X9.t); cuts[j].push(X9.u); }
       // T자(끝이 다른 길 위 — 테이프가 조금 짧거나 길어도 잇기)
       for (const [P, si, oj, Ls] of [[s.a, i, j, o], [s.b, i, j, o], [o.a, j, i, s], [o.b, j, i, s]]) { const r = segD(P[0], P[1], Ls.a, Ls.b); if (r[0] < Ls.hw + 3 && r[1] > 0.001 && r[1] < 0.999) cuts[oj].push(r[1]); } }));
-    RSEG.forEach((s, i) => { const T = [...new Set(cuts[i].map(t => Math.round(t * 1e4) / 1e4))].sort((a, b) => a - b); let prev = null;
+    RSEG.forEach((s, i) => { const T = [...new Set(cuts[i].map(t => Math.round(t * 1e4) / 1e4))].sort((a, b) => a - b); let prev = null, prevT = 0;
+      const gap = tm => (s.wr || []).some(X9 => !X9.br && tm * s.L0 > X9.t0 && tm * s.L0 < X9.t1);
       for (const t of T) { const x = s.a[0] + (s.b[0] - s.a[0]) * t, z = s.a[1] + (s.b[1] - s.a[1]) * t; let n = node(x, z);
         // 가까운 기존 마디에 붙이기(T자 끝점)
         for (let q = 0; q < nodes.length; q++) if (q !== n && Math.hypot(nodes[q][0] - x, nodes[q][1] - z) < Math.max(3, s.hw)) { n = q; break; }
-        if (prev != null && prev !== n) { const L9 = Math.hypot(nodes[n][0] - nodes[prev][0], nodes[n][1] - nodes[prev][1]); if (!crossesSchool(nodes[prev], nodes[n])) { adj[prev].push([n, L9]); adj[n].push([prev, L9]); } } prev = n; } });
+        if (prev != null && prev !== n && !gap((prevT + t) / 2)) { const L9 = Math.hypot(nodes[n][0] - nodes[prev][0], nodes[n][1] - nodes[prev][1]); if (!crossesSchool(nodes[prev], nodes[n])) { adj[prev].push([n, L9]); adj[n].push([prev, L9]); } } prev = n; prevT = t; } });
     GRAPH = { nodes, adj };
   }
   const crossesSchool = (a, b) => { for (let t = 0.1; t < 1; t += 0.2) if (inSchool(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)) return true; return false; };
@@ -748,27 +978,33 @@ export default async function start(map, params) {
   let ROOT = null, COLS = [], LABELS = [], STATS = null, mapDirty = true, bigOpen = false, routeNow = null;
   async function build() {
     if (ROOT) { map.remove(ROOT); ROOT.traverse(o => { if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } }); for (const g of GEOS) g.dispose(); GEOS.length = 0; } for (const h of COLS) h.remove(); COLS = []; LABELS = [];
-    BK.clear(); TBK.clear(); FBK.clear(); GBK.clear(); LB.clear(); DBK.clear(); for (const k in TREES) TREES[k].length = 0; BRIDGES.length = 0;
-    prepRoads(); buildTerrain(); prepBlocks(); L.nature = L.nature.filter(n => !n.gen); ZFILL.length = 0; if (LOOK === 'town') { drawZoneGreen(); fillZones(); } prepPlaces(); buildGraph();
+    BK.clear(); TBK.clear(); FBK.clear(); GBK.clear(); LB.clear(); DBK.clear(); for (const k in TREES) TREES[k].length = 0; BRIDGES.length = 0; for (const o of PTX) o.dispose(); PTX.length = 0; ROOFS = []; PCOL = [];
+    prepRoads(); buildTerrain(); prepBlocks(); prepProps(); prepCross(); prepAreas(); L.nature = L.nature.filter(n => !n.gen); ZFILL.length = 0; if (LOOK === 'town') { drawZoneGreen(); fillZones(); } prepPlaces(); buildGraph();
     ROOT = new T3.Group(); ROOT.userData.fx = 1;
     drawGround(ROOT); drawWater(ROOT); drawRoads(); drawNature();
     if (LOOK === 'mat') drawZonePaper();
     for (const B9 of BLD) { if (LOOK === 'mat') buildMat(B9); else buildTown(B9); }
-    if (LOOK === 'town') landscape();
+    if (LOOK === 'town') { areaDeco(); landscape(); }
     if (LOOK === 'town') { roadTrees(); drawFacilities(); }
+    drawProps(ROOT); areaStones(ROOT);   // 아이가 놓은 종이 소품 · 칸 이름표 돌(두 모습 모두)
     for (const [, b] of BK) { if (!b.p.length) continue; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(b.c, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(b.u, 2)); g.computeBoundingSphere(); GEOS.push(g); const m = new T3.Mesh(g, MAT.solid); m.matrixAutoUpdate = false; m.receiveShadow = true; ROOT.add(m); }
     DMESH = []; for (const [, b] of DBK) { if (!b.p.length) continue; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(b.c, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(b.u, 2)); g.computeBoundingSphere(); GEOS.push(g); const m = new T3.Mesh(g, MAT.solid); m.matrixAutoUpdate = false; m.userData.c = [b.cx, b.cz]; ROOT.add(m); DMESH.push(m); }
     for (const [, b] of LB) { if (!b.p.length) continue; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(b.c, 3)); g.computeBoundingSphere(); GEOS.push(g); const m = new T3.Mesh(g, MAT.lamp); m.matrixAutoUpdate = false; ROOT.add(m); }
     for (const [, b] of GBK) { if (!b.p.length) continue; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(b.c, 3)); g.computeBoundingSphere(); GEOS.push(g); const m = new T3.Mesh(g, MAT.glass); m.matrixAutoUpdate = false; ROOT.add(m); }
     for (const [, b] of FBK) { if (!b.p.length) continue; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(b.u, 2)); g.computeBoundingSphere(); GEOS.push(g); const m = new T3.Mesh(g, MAT[b.kind]); m.matrixAutoUpdate = false; m.receiveShadow = true; ROOT.add(m); }
-    drawTrees(ROOT); drawLabels(ROOT);
+    clearAroundProps(); drawTrees(ROOT); drawLabels(ROOT);
     map.add(ROOT);
     // 충돌: 건물(발자국 상자) · 물(칸 줄 — 다리 칸은 뺌) · 다리 판 · 나무 줄기
     for (const B9 of BLD) { if (B9.kind === 'green' || B9.kind === 'park') continue; const xs = B9.corners.map(p => p[0]), zs = B9.corners.map(p => p[1]); const top = B9.y0 + B9.h + (LOOK === 'town' && B9.kind === 'house' ? 2 : 0);
       COLS.push(map.collider.add({ x0: Math.min(...xs), x1: Math.max(...xs), y0: B9.y0 - 2, y1: Math.max(top, B9.y0 + 1.9), z0: Math.min(...zs), z1: Math.max(...zs) })); }
-    for (let j = 0; j < NZ - 1; j++) { let run = -1; for (let i = 0; i <= NX - 1; i++) { const k = j * NX + i, w = i < NX - 1 && (WK[k] || WK[k + 1] || WK[k + NX] || WK[k + NX + 1]) && !(NR[k] && NR[k + NX + 1]); const x = nx(i), z = nz(j);
+    // 물 울타리: 가로 줄 + 세로 줄(둘 다 물가에서 0.8m 안쪽) — 한 방향만이면 줄 사이 1.6m 틈으로 강을 걸어 건넘(다리 없는 길이 막다른 길이 되게) · 다리 아래만 열림
+    const wcell = (i, j) => { const k = j * NX + i; return (WK[k] || WK[k + 1] || WK[k + NX] || WK[k + NX + 1]) && !(BRM[k] && BRM[k + NX + 1]); };
+    for (let j = 0; j < NZ - 1; j++) { let run = -1; for (let i = 0; i <= NX - 1; i++) { const w = i < NX - 1 && wcell(i, j), z = nz(j);
       if (w && run < 0) run = i; if ((!w || i === NX - 1) && run >= 0) { COLS.push(map.collider.add({ x0: nx(run) + 0.8, x1: nx(i) - 0.8, y0: TY - 3, y1: TY + 1.75, z0: z + 0.8, z1: z + G - 0.8 })); run = -1; } } }
+    for (let i = 0; i < NX - 1; i++) { let run = -1; for (let j = 0; j <= NZ - 1; j++) { const w = j < NZ - 1 && wcell(i, j), x = nx(i);
+      if (w && run < 0) run = j; if ((!w || j === NZ - 1) && run >= 0) { if (j - run > 1) COLS.push(map.collider.add({ x0: x + 0.8, x1: x + G - 0.8, y0: TY - 3, y1: TY + 1.75, z0: nz(run) + 0.8, z1: nz(j) - 0.8 })); run = -1; } } }
     for (const br of BRIDGES) COLS.push(map.collider.add({ x0: br.x0, x1: br.x1, y0: br.y1 - 0.5, y1: br.y1, z0: br.z0, z1: br.z1 }));
+    for (const c of PCOL) COLS.push(map.collider.add(c));   // 소품(정자 마루·비닐하우스·경운기·분수…) · 이름표 돌
     for (const sp of ['round', 'pine', 'poplar']) for (const t of TREES[sp]) COLS.push(map.collider.add({ x0: t.x - 0.3 * t.s, x1: t.x + 0.3 * t.s, y0: t.y - 1, y1: t.y + 2.2 * t.s, z0: t.z - 0.3 * t.s, z1: t.z + 0.3 * t.s }));
     STATS = stats(); mapDirty = true;
   }
@@ -777,7 +1013,7 @@ export default async function start(map, params) {
       g.font = '800 44px sans-serif'; g.fillStyle = p.nat ? 'rgba(40,90,60,.88)' : 'rgba(29,53,87,.9)'; const r = 30; g.beginPath(); g.moveTo(r, 4); g.arcTo(w - 4, 4, w - 4, 68, r); g.arcTo(w - 4, 68, 4, 68, r); g.arcTo(4, 68, 4, 4, r); g.arcTo(4, 4, w - 4, 4, r); g.fill();
       g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, w / 2, 38);
       const tx = new T3.CanvasTexture(c); tx.colorSpace = T3.SRGBColorSpace; const sp = new T3.Sprite(new T3.SpriteMaterial({ map: tx, depthWrite: false })); const B9 = BLD.find(b => b.b.id === p.id);
-      const top = B9 ? B9.y0 + B9.h * (B9.kind === 'fire' ? 1.6 : 1) + 4 : ty(p.x, p.z) + (p.kind === 'hill' ? ((L.nature.find(n => n.id === p.id) || {}).h || 2) * S + 6 : 5);
+      const top = B9 ? B9.y0 + B9.h * (B9.kind === 'fire' ? 1.6 : 1) + 4 : p.prop ? ty(p.x, p.z) + 7.5 : ty(p.x, p.z) + (p.kind === 'hill' ? ((L.nature.find(n => n.id === p.id) || {}).h || 2) * S + 6 : 5);
       sp.position.set(p.x, top, p.z); sp.scale.set(w / 72 * 3.2, 3.2, 1); sp.userData.fx = 1; group.add(sp); LABELS.push(sp); }
   }
 
@@ -830,9 +1066,17 @@ export default async function start(map, params) {
     // 구역(색종이 — 용도 지역처럼 반투명)
     for (const zn of L.zones || []) { const sh = shapeOf(zn); if (!sh || sh.line) continue; ctx.save(); ctx.globalAlpha = 0.28; ctx.fillStyle = '#' + (COL[zn.c || (ZCOL[zn.k] || ['red'])[0]] ?? 0xe0453a).toString(16).padStart(6, '0');
       ctx.beginPath(); const pts = sh.rect ? [[sh.rect[0], sh.rect[1]], [sh.rect[2], sh.rect[1]], [sh.rect[2], sh.rect[3]], [sh.rect[0], sh.rect[3]]] : sh.poly; pts.forEach((q, i) => { const [a, b] = P(q[0], q[1]); if (i) ctx.lineTo(a, b); else ctx.moveTo(a, b); }); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 0.8; ctx.setLineDash([6, 4]); ctx.lineWidth = 1.5; ctx.strokeStyle = ctx.fillStyle; ctx.stroke(); ctx.restore(); }
+    // 아이 이름표 칸(점선 테두리 · 이름은 아래 장소 기호와 함께)
+    for (const A of AREAS) { ctx.save(); ctx.strokeStyle = 'rgba(106,61,154,.85)'; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.6; for (const r of A.R) { const [a, b] = P(r[0], r[1]), [c, d] = P(r[2], r[3]); ctx.strokeRect(a + 2, b + 2, c - a - 4, d - b - 4); } ctx.restore(); }
     // 길
     for (const s of RSEG) { const [a, b] = P(s.a[0], s.a[1]), [c, d] = P(s.b[0], s.b[1]); ctx.lineCap = 'round'; ctx.strokeStyle = '#8a8f95'; ctx.lineWidth = Math.max(1.6, s.hw * 2 * sc + 2); ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke();
       ctx.strokeStyle = '#f7f6f2'; ctx.lineWidth = Math.max(1, s.hw * 2 * sc - 1); ctx.stroke(); }
+    // 건너는 곳: 다리(큰길 저절로 = 회색 · 아이 다리 = 갈색) · 다리 없는 곳 = 물이 길을 끊음(파랑) · 아이 소품(걷는 다리·산책로·주차장)
+    for (const X9 of XCROSS) { const s9 = X9.s, f = t => [s9.a[0] + (s9.b[0] - s9.a[0]) * t / s9.L0, s9.a[1] + (s9.b[1] - s9.a[1]) * t / s9.L0], [a, b] = P(...f(X9.t0)), [c, d] = P(...f(X9.t1));
+      ctx.lineCap = 'butt'; ctx.lineWidth = Math.max(2, s9.hw * 2 * sc + (X9.br ? 3 : 2)); ctx.strokeStyle = X9.br === 'kid' ? '#8a5a36' : X9.br ? '#6b7178' : '#6fc3dc'; ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); }
+    for (const Pp of PROPS) { if (Pp.built) { const [a, b] = P(...Pp.built[0]), [c, d] = P(...Pp.built[1]); ctx.lineCap = 'butt'; ctx.strokeStyle = '#8a5a36'; ctx.lineWidth = Math.max(2, 2.4 * sc + 1); ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); }
+      if (Pp.k === 'trail') { ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#a77b4f'; ctx.lineWidth = Math.max(1.5, Pp.w * sc); ctx.beginPath(); Pp.pts.forEach((q, i) => { const [a, b] = P(q[0], q[1]); if (i) ctx.lineTo(a, b); else ctx.moveTo(a, b); }); ctx.stroke(); ctx.restore(); }
+      if (Pp.k === 'parking') { const [a, b] = P(Pp.x, Pp.z); ctx.save(); ctx.translate(a, b); ctx.rotate(-Pp.ry); ctx.fillStyle = '#8a8f95'; ctx.fillRect(-Pp.w * sc / 2, -Pp.d * sc / 2, Pp.w * sc, Pp.d * sc); ctx.rotate(Pp.ry); ctx.fillStyle = '#fff'; ctx.font = '900 ' + Math.max(9, Math.min(14, Pp.d * sc * 0.8)) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('P', 0, 1); ctx.restore(); } }
     // 학교(학교 지도 그대로 제자리에)
     { const [a, b] = P(SR[0], SR[1]); ctx.save(); ctx.beginPath(); ctx.rect(a, b, (SR[2] - SR[0]) * sc, (SR[3] - SR[1]) * sc); ctx.clip(); try { map.drawMap(ctx, { floor: 1, scale: sc, x0: x0, z0: z0, labels: false, player: false }); } catch (e) { /* */ } ctx.restore(); }
     // 건물(색 = 색 규칙 묶음 · 매트 색 그대로면 매트와 견주기 쉬움)
@@ -938,6 +1182,9 @@ export default async function start(map, params) {
     openP('<h3>📋 기록 — 누가 만든 것인가요?</h3><div class="sm">아이들이 정한 것과 Claude가 채운 것을 나눠 적어요(섞이지 않게)</div>'
       + sec('🧱 아이가 놓은 블록 ' + kids.length + '개', '<div class="ai" style="background:#eef5ea"><span>' + (cnt(byK) || '없음') + (kids.some(b => b.name) ? '<br>이름: ' + kids.filter(b => b.name).map(b => esc(b.name)).join(' · ') : '') + '</span></div>')
       + sec('🏘 Claude가 구역에 채운 건물 ' + BLD.filter(b => b.gen).length + '채', (ZFILL.length ? ZFILL.map(z => '<div class="ai" style="background:#eef2fb"><span>' + (z.k === 'land' ? esc(z.cell) + ' 칸(아이 블록 사이) — 조경: ' + (Object.entries(z.n).filter(([, v]) => v).map(([k, v]) => k + ' ' + v).join(' · ') || '없음') : esc(ZK[z.k] || z.k) + ' 구역(' + esc(DN[z.dens] || z.dens) + (z.note ? ' · 「' + esc(z.note) + '」' : '') + ') → ' + (z.land ? '블록이 있는 칸이라 건물은 더 넣지 않음(조경만)' : cnt(z.n) || (z.k === 'green' ? '공원·들로 꾸밈' : '채울 자리가 없었어요'))) + '</span></div>').join('') : '<div class="sm">구역(색종이)이 없어요</div>'))
+      + sec('🧱 아이가 놓은 종이 소품 ' + PROPS.length + '개', (() => { const c9 = {}; for (const P of PROPS) { const k9 = P.card ? '그림 카드 「' + P.label + '」' : PROPK[P.k].ko; c9[k9] = (c9[k9] || 0) + 1; } const kidBr = XCROSS.filter(X9 => X9.br === 'kid').length + PROPS.filter(P => P.built).length, autoBr = XCROSS.filter(X9 => X9.br === 'auto').length, cut = XCROSS.filter(X9 => !X9.br).length;
+          return '<div class="ai" style="background:#eef5ea"><span>' + (Object.entries(c9).map(([k9, v]) => esc(k9) + ' ' + v).join(' · ') || '없음') + '</span></div>' + (XCROSS.length || kidBr ? '<div class="ai" style="background:#eef5ea"><span>🌉 다리 — 아이가 놓은 다리 ' + kidBr + '곳 · 큰길에 저절로 ' + autoBr + '곳(✨) · 다리 없는 곳 ' + cut + '곳(길이 끊김 — 걸어 보면 막다른 길)</span></div>' : ''); })())
+      + (AREAS.length ? sec('🧱 아이가 쓴 칸 이름표 ' + AREAS.length + '장', AREAS.map(A => '<div class="ai" style="background:#f3eefa"><span>🔖 「' + esc(A.t) + '」 ' + esc(A.cells.join('·')) + '</span></div>').join('')) : '')
       + sec('🙋 아이가 요구해서 생긴 시설 ' + fac.length, fac.length ? fac.map(f => '<div class="ai" style="background:#fdf0f4"><span>' + esc(FACK[f.k] ? FACK[f.k].ko : f.k) + (f.rule ? ' — ' + esc(RULEK[f.rule] || f.rule) : ' — 정한 자리') + (f.by ? ' · 🙋 ' + esc(f.by) : '') + (f.why ? ' · 「' + esc(f.why) + '」' : '') + '</span></div>').join('') : '<div class="sm">아직 없어요 — 둘러보고 필요한 것을 말하면 생겨요(가로등·횡단보도·벤치…)</div>')
       + '<div class="row"><button class="sub" data-a="ai">✨ AI가 어림한 것 보기</button><button class="sub" data-a="x">닫기</button></div>');
     panel.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') closeP(); else if (b.dataset.a === 'ai') openAI(); };
@@ -946,6 +1193,12 @@ export default async function start(map, params) {
     const list = [...(D.ai || []).map(a => ({ t: a.t, at: a.at ? [X(a.at[0]), Z(a.at[1])] : null }))];
     for (const it of [...L.blocks, ...L.nature]) if (it.ai) { const p = PLACES.find(q => q.id === it.id); const sh = it.x != null ? null : shapeOf(it); const bb = sh ? bboxOf(sh) : null;
       list.push({ t: (it.name ? '「' + it.name + '」 ' : (KIND[kindOf(it)] || {}).ko ? '(' + (it.x != null ? (KIND[kindOf(it)] || {}).ko : '') + ') ' : '') + it.ai, at: p ? [p.x, p.z] : it.x != null ? [X(it.x), Z(it.y)] : bb ? [(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2] : null }); }
+    for (const A of AREAS) list.push({ t: '🔖 「' + A.t + '」(' + A.cells.join('·') + ') → ' + (A.ai || ([...A.st].map(k9 => STYK[k9] || k9).join(' · ') || '꾸밈 낱말 없음') + '(으)로 풀었어요'), at: [A.sx, A.sz] });   // 이름표 풀이(아이들이 "이게 우리가 생각한 거 맞아?" 확인·고침)
+    for (const P of PROPS) { if (P.guess) list.push({ t: '그림 카드 「' + P.label + '」 — 도감에 없는 말이라 이름 팻말로 세웠어요(모양은 어림)', at: [P.x, P.z] }); if (P.miss) list.push({ t: '이정표 「' + P.miss.join('·') + '」 — 마을에 그 이름의 장소가 없어 화살표 방향을 어림했어요', at: [P.x, P.z] }); if (P.ai) list.push({ t: '「' + P.label + '」 ' + P.ai, at: [P.x, P.z] }); }
+    for (const n9 of PNOTE) list.push(n9);
+    { const au = XCROSS.filter(X9 => X9.br === 'auto'); if (au.length) list.push({ t: '(큰길 다리 ' + au.length + '곳) 큰길이 강을 지나는 곳은 다리를 저절로 놓았어요 — 처음 계획 「큰길 테이프가 강을 지나는 곳 = 다리」 · 작은길은 아이가 다리를 놓아야 건너요', at: au[0].c }); }
+    for (const B9 of BLD) if (!B9.gen && B9.name && !B9.b.card && !NAMEKIND.some(([re]) => re.test(B9.name))) list.push({ t: '이름 「' + B9.name + '」은 도감에 없는 말이라 색 규칙(' + ((KIND[B9.kind] || {}).ko || B9.kind) + ')으로 지었어요', at: [B9.cx, B9.cz] });
+    { const bg = BLD.filter(b => b.bigGreen); if (bg.length) list.push({ t: '세운 초록 판·큰 초록 블록 ' + bg.length + '개는 큰 나무 덩어리로 읽었어요(초록 = 자연)', at: [bg[0].cx, bg[0].cz] }); }
     const RG = new Map(); for (const r of ROADS) if (r.ai) { const g = RG.get(r.ai) || { n: 0, big: 0, r }; g.n++; if (r.big) g.big++; RG.set(r.ai, g); }   // 길 어림(큰길·작은길 구분 등)은 같은 말끼리 한 줄로
     for (const [t, g] of RG) { const a = g.r.P[0], b = g.r.P[g.r.P.length - 1]; list.push({ t: '(' + (g.big === g.n ? '큰길' : g.big ? '길' : '작은길') + ' ' + g.n + '줄) ' + t, at: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }); }
     const auto = ['🏘 마을 모습의 건물 모양은 판의 색 규칙(빨강·주황 = 집 · 노랑 = 가게 · 파랑 = 공공 · 흰색 = 병원)과 이름표로 정했어요', '🚪 건물 앞문은 가장 가까운 길 쪽으로 정했어요', '⛰ 쌓은 높이를 둥근 언덕으로 바꿨어요(봉우리 모양은 AI가 정함)', ...(SCHOOLB ? ['🏫 학교 칸의 블록 ' + SCHOOLB + '개는 실제 학교 모델로 대신했어요(학교 칸 = 실제 크기 · 둘레 길은 담 바깥으로)'] : []), '🌳 숲·논밭 안의 나무·벼 줄 수는 AI가 정했어요', ...(L.nature.some(n => n.bent) ? ['〰 칸 주소로 적은 강이 대각선 칸을 지날 때는 길 교차로를 피해 조금 굽혀 흐르게 했어요(다리가 길마다 하나씩)'] : []), '👪 사는 사람 수는 집 1채 = ' + ({ house: 4, apt: 10, ...(D.pop || {}) }).house + '명 · 아파트 한 층 = ' + ({ house: 4, apt: 10, ...(D.pop || {}) }).apt + '명으로 어림했어요(선생님과 정하는 값)'];
@@ -997,7 +1250,7 @@ export default async function start(map, params) {
   map.hud.banner('🏘 ' + D.title, 2);
   window.SM_TOWN = { get data() { return D; }, get layer() { return LID; }, places: () => PLACES.map(p => ({ id: p.id, name: p.name, kind: p.kind, x: p.x, z: p.z, door: p.door })), find: q => findPlace(q), route: (q, from) => { const p = findPlace(q); if (!p) return { ok: false, reason: 'noplace' }; const me = map.player.get(); return route(from || [me.x, me.z], p.door); },
     ground: (x, z) => ty(x, z), get root() { return ROOT; }, get mats() { return MAT; }, toWorld: (mx, my) => [X(mx), Z(my)], toMat: (x, z) => [MXof(x), MYof(z)], stats: () => ({ ...STATS }), setLayer, setLook, show: q => { const p = findPlace(q); return p ? showRoute(p) : null; }, bus: q => { const p = findPlace(q); if (p) busTo(p); return !!p; }, cell: (x, z) => cellOf(x, z),
-    get counts() { return { bld: BLD.length, trees: Object.fromEntries(Object.entries(TREES).map(([k, v]) => [k, v.length])), cols: COLS.length, bridges: BRIDGES.length, nodes: GRAPH ? GRAPH.nodes.length : 0, regions: BK.size, hidden: OUT.hidden }; }, setLang: l => { LANG = l === 'en' ? 'en' : 'ko'; relabel(); } };
+    props: () => PROPS.map(P => ({ k: P.k, label: P.label, x: +P.x.toFixed(1), z: +P.z.toFixed(1), cell: cellOf(P.x, P.z), ry: +(P.ry || 0).toFixed(2), foot: !!P.foot, built: !!P.built, cross: P.cross ? P.cross.s.r.id : null })), areas: () => AREAS.map(A => ({ t: A.t, cells: A.cells, st: [...A.st], stone: [+A.sx.toFixed(1), +A.sz.toFixed(1)], n: A.n || {} })), get counts() { return { bld: BLD.length, trees: Object.fromEntries(Object.entries(TREES).map(([k, v]) => [k, v.length])), cols: COLS.length, bridges: BRIDGES.length, props: PROPS.length, areas: AREAS.length, cross: { auto: XCROSS.filter(X9 => X9.br === 'auto').length, kid: XCROSS.filter(X9 => X9.br === 'kid').length, cut: XCROSS.filter(X9 => !X9.br).length }, pcol: PCOL.length, nodes: GRAPH ? GRAPH.nodes.length : 0, regions: BK.size, hidden: OUT.hidden }; }, setLang: l => { LANG = l === 'en' ? 'en' : 'ko'; relabel(); } };
 
   // 지금 할 일 줄(가까운 장소 · 4번/초) · 물 흐름 · 나무 흔들림 · 자전거 · 작은 지도
   let near9 = '', tq = 0, mq = 0;
@@ -1015,7 +1268,7 @@ export default async function start(map, params) {
     },
     stop() { dead = true; clouds(true); removeEventListener('keydown', keyDn, true);
       { const me = map.player.get(); if (!inSchool(me.x, me.z)) { map.player.teleport([16.5, -1.3, 50]); map.player.lookAt([16.5, 0]); } }   /* 마을을 나가면 학교 정문 안으로(마을 땅이 사라지므로) */ closeP(); css.remove(); miniBox.remove(); if (trailH) trailH.remove(); if (bike) map.player.speed(1); if (bikeM) map.remove(bikeM);
-      if (ROOT) { map.remove(ROOT); ROOT.traverse(o => { if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } }); } for (const g of GEOS) g.dispose(); for (const m of MATS) m.dispose(); for (const t of TEX) t.dispose(); ripple.dispose();
+      if (ROOT) { map.remove(ROOT); ROOT.traverse(o => { if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } }); } for (const g of GEOS) g.dispose(); for (const m of MATS) m.dispose(); for (const t of TEX) t.dispose(); for (const o of PTX) o.dispose(); ripple.dispose();
       if (window.SM_TOWN) delete window.SM_TOWN; }
   };
 }
