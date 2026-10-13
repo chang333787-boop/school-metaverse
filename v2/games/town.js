@@ -42,6 +42,20 @@ export default async function start(map, params) {
   const X = mx => WCX + (mx - MCX) * S, Z = my => WCZ + (my - MCY) * S, MXof = x => MCX + (x - WCX) / S, MYof = z => MCY + (z - WCZ) / S;
   const TX0 = X(0), TZ0 = Z(0), TX1 = X(MSZ.w), TZ1 = Z(MSZ.h);
   const TY = -1.30;   // 마을 땅 높이(운동장 흙 -1.35보다 5cm 위 — 바깥 잔디 무늬 -1.362를 덮음 · 정문과 한 발 높이)
+  // 칸 주소(판 가장자리에 적은 그대로 — 아이들이 '내 집은 다3'처럼 말함) · 자료 grid = { cell: 30, cols: 'num', rows: 'hangul', order: 'rowcol' } · 없으면 10cm A1~
+  const GRD = { cell: 10, cols: 'alpha', rows: 'num', order: 'colrow', ...(D.grid || {}) }, HG = '가나다라마바사아자차카타파하';
+  const nameK = (i, kind) => kind === 'num' ? String(i + 1) : kind === 'hangul' ? (HG[i] || '?') : (i < 26 ? String.fromCharCode(65 + i) : 'A' + String.fromCharCode(65 + i - 26));
+  const colName = c => nameK(c, GRD.cols), rowName = r => nameK(r, GRD.rows);
+  // 선 자리(cm) — grid.xs·ys를 적으면 그 선으로(첫·끝 칸이 다른 판) · 없으면 cell 간격
+  const GXS = GRD.xs || Array.from({ length: Math.max(0, Math.ceil(MSZ.w / GRD.cell) - 1) }, (_, i) => (i + 1) * GRD.cell), GYS = GRD.ys || Array.from({ length: Math.max(0, Math.ceil(MSZ.h / GRD.cell) - 1) }, (_, i) => (i + 1) * GRD.cell);
+  const idxOf = (v, L9) => { let i = 0; while (i < L9.length && v >= L9[i]) i++; return i; };
+  const cellOf = (x, z) => { const mx = MXof(x), my = MYof(z), c = colName(idxOf(mx, GXS)), r = rowName(idxOf(my, GYS)); return GRD.order === 'rowcol' ? r + c : c + r; };   // 세계 → 격자 주소
+  // 칸 주소 → 칸 네모(매트 cm) — '다3'(rowcol) · 'C2'(colrow) · part = 'left'|'right'|'top'|'bottom' 반쪽(한 칸에 두 색)
+  const XLn = () => [0, ...GXS, MSZ.w], YLn = () => [0, ...GYS, MSZ.h];
+  const parseCell = (a) => { const t = String(a || '').trim(); let rp, cp; if (GRD.order === 'rowcol') { const m = t.match(/^(\D+)(\d+)$/); if (!m) return null; rp = m[1]; cp = m[2]; } else { const m = t.match(/^([A-Za-z]+)(\d+)$/); if (!m) return null; cp = m[1]; rp = m[2]; }
+    const ix = s9 => (s9.length === 1 && /[A-Za-z]/.test(s9) ? s9.toUpperCase().charCodeAt(0) - 65 : /^\d+$/.test(s9) ? +s9 - 1 : HG.indexOf(s9));
+    const c = GRD.cols === 'num' ? +cp - 1 : ix(cp), r = GRD.rows === 'num' ? +rp - 1 : ix(rp), XL = XLn(), YL = YLn(); if (c < 0 || r < 0 || c >= XL.length - 1 || r >= YL.length - 1) return null; return [XL[c], YL[r], XL[c + 1], YL[r + 1]]; };
+  const cellRect = (a, part) => { const R = parseCell(a); if (!R || !part) return R; const mx = (R[0] + R[2]) / 2, my = (R[1] + R[3]) / 2; return part === 'left' ? [R[0], R[1], mx, R[3]] : part === 'right' ? [mx, R[1], R[2], R[3]] : part === 'top' ? [R[0], R[1], R[2], my] : part === 'bottom' ? [R[0], my, R[2], R[3]] : R; };
   const inPoly = (x, z, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
   const inSchool = (x, z) => x >= SR[0] && x <= SR[2] && z >= SR[1] && z <= SR[3] && inPoly(x, z, SB);   // 울타리 안
   const inRect = (x, z) => x >= SR[0] && x <= SR[2] && z >= SR[1] && z <= SR[3];
@@ -63,6 +77,8 @@ export default async function start(map, params) {
     const drop = new Set(L.drop || []);
     for (const k of ARR) { const base = B ? B[k].filter(it => !drop.has(it.id)) : [], own = L[k] || [], ids = new Set(own.filter(o => o.id).map(o => o.id));
       out[k] = base.filter(it => !it.id || !ids.has(it.id)).concat(own); }
+    // 칸 주소로 적은 구역(cell · cells · part) → 칸 네모 — 색종이가 칸을 다 덮지 않아도 그 칸 전체가 구역(교사 10-13)
+    out.zones = out.zones.flatMap(z => { if (z.rect || z.poly) return [z]; const C = z.cells || (z.cell ? [z.cell] : []); return C.map((c, i) => { const R = cellRect(c, z.part); return R ? { ...z, id: (z.id || 'z') + (C.length > 1 ? '_' + i : ''), rect: R, cellName: c } : null; }).filter(Boolean); });
     return out;
   }
   const LAYERS = Object.keys(D.layers);
@@ -330,7 +346,11 @@ export default async function start(map, params) {
 
   // ───────── 블록 → 건물(두 겹: 🧱 매트 모습 = 블록 그대로 · 🏘 마을 모습 = 부품 조립) ─────────
   let LOOK = params.look === 'mat' ? 'mat' : 'town';
-  const kindOf = b => b.kind || (b.name && (NAMEKIND.find(([re]) => re.test(b.name)) || [])[1]) || (KIND_OF_COLOR[b.c] === 'house' && (b.h || 2) * S >= 14 ? 'apt' : KIND_OF_COLOR[b.c] === 'shop' && (b.h || 2) * S >= 16 ? 'office' : KIND_OF_COLOR[b.c] || 'house');
+  // 블록 모양 → 종류(교사 10-13 범례 · 1cm = 5m): 2cm 정육면체 = 집·작은 가게 · 3cm = 빌라·상가 · 4cm = 랜드마크 · 판 눕힘 = 낮고 넓은 건물(마트·공장) · 판을 끝으로 세움 = 아파트 한 동 · 옆으로 세움 = 길쭉한 5층
+  const kindOf = b => { if (b.kind) return b.kind; if (b.name) { const k9 = (NAMEKIND.find(([re]) => re.test(b.name)) || [])[1]; if (k9) return k9; }
+    const base = KIND_OF_COLOR[b.c] || 'house', h = (b.h || 2) * S, w = (b.w || 2) * S, d = (b.d || 2) * S, slender = Math.max(w, d) / Math.max(0.1, Math.min(w, d)) >= 2.5;
+    if (base === 'house') return h >= 20 || (h >= 14 && slender) ? 'apt' : 'house'; if (base === 'shop') return h >= 16 ? 'office' : 'shop'; return base; };
+  const isMark = b => (b.w || 0) >= 3.8 && (b.d || 0) >= 3.8 && (b.h || 0) >= 3.8;   // 4cm 정육면체 = 마을 자랑 랜드마크(노랑·빨강·파랑 셋)
   const BLD = [];   // {b, kind, cx, cz, w, d, h, ry, y0, front:[fx,fz], door:[x,z], name}
   function prepBlocks() {
     BLD.length = 0;
@@ -462,6 +482,7 @@ export default async function start(map, params) {
     for (const B9 of BLD) { const xs = B9.corners.map(p => p[0]), zs = B9.corners.map(p => p[1]); occAdd(Math.min(...xs) - 2, Math.min(...zs) - 2, Math.max(...xs) + 2, Math.max(...zs) + 2); }
     for (const zn of L.zones || []) { const sh = shapeOf(zn); if (!sh || sh.line) continue; const R = rng0(hashS((zn.id || 'z') + ':' + LID)), dens = zn.dens || 'normal', rec = { id: zn.id, k: zn.k, note: zn.note || '', dens, n: {} };
       if (zn.k === 'green') { ZFILL.push(rec); continue; }   // 공원·들은 자연 그리기(drawZoneGreen)가
+      if (BLD.some(b => !b.gen && b.kind !== 'green' && inShape(sh, b.cx, b.cz))) { rec.land = true; ZFILL.push(rec); continue; }   // 교사 10-13: 블록이 있는 칸 = 블록만(6동이면 6동) · 색종이는 조경 성격만
       const pickT = () => { const t = zn.type || (zn.k === 'work' ? 'shop' : 'mix'); if (t === 'mix') return R() < (dens === 'dense' ? 0.35 : dens === 'sparse' ? 0.05 : 0.18) ? 'apt' : 'house'; if (t === 'work' || t === 'shop') return dens === 'dense' && R() < 0.35 ? 'office' : 'shop'; return ZT[t] ? t : 'house'; };
       const rowsMax = dens === 'dense' ? 4 : dens === 'sparse' ? 1 : 2, skipP = dens === 'sparse' ? 0.38 : dens === 'dense' ? 0.02 : 0.1, gapK = dens === 'dense' ? 0.86 : dens === 'sparse' ? 1.35 : 1.0, hK = dens === 'dense' ? 1.25 : dens === 'sparse' ? 0.8 : 1;
       const cols = ZCOL[zn.k] || ['red'], put = (cx, cz, ry, T, bw, bd) => {
@@ -486,6 +507,35 @@ export default async function start(map, params) {
             depth0 += rowD + 4; } } }
       ZFILL.push(rec); }
   }
+  // 블록이 있는 칸의 조경(교사 10-13 '아파트 6동 했으면 조경이나 나머지는 상상으로'): 나무 · 주차장 · 놀이터 · 벤치 — 건물은 더 넣지 않음 · 기록 = 🏘 Claude 채움(조경)
+  function landscape() {
+    const XL = XLn(), YL = YLn();
+    for (let ci = 0; ci < XL.length - 1; ci++) for (let ri = 0; ri < YL.length - 1; ri++) {
+      const x0 = X(XL[ci]), x1 = X(XL[ci + 1]), z0 = Z(YL[ri]), z1 = Z(YL[ri + 1]), inC = (x, z) => x >= x0 && x < x1 && z >= z0 && z < z1;
+      if (inRect((x0 + x1) / 2, (z0 + z1) / 2)) continue;   // 학교 칸(가운데가 학교 상자 안)
+      const kids = BLD.filter(b => !b.gen && b.kind !== 'green' && inC(b.cx, b.cz)); if (!kids.length) continue;
+      const zn = (L.zones || []).find(q => { const sh = shapeOf(q); return sh && !sh.line && inShape(sh, (x0 + x1) / 2, (z0 + z1) / 2); });
+      const grp = zn ? zn.k : (() => { const c = { live: 0, work: 0, pub: 0 }; for (const b of kids) c[(KIND[b.kind] || {}).g || 'pub']++; return Object.entries(c).sort((a, b) => b[1] - a[1])[0][0]; })();
+      const R = rng0(hashS('land:' + ci + ':' + ri + ':' + LID)), n = { 나무: 0, '주차 칸': 0, 놀이터: 0, 벤치: 0 }, free = (x, z, r = 1.5) => !onRoad(x, z, 1.2) && !wAt(x, z) && !inSchool(x, z) && tH(x, z) < 4 && !occHit(x - r, z - r, x + r, z + r);
+      const near = (x, z, m) => kids.some(b => Math.hypot(x - b.cx, z - b.cz) < Math.max(b.w, b.d) / 2 + m);   // 블록 사이·둘레만(칸 전체를 숲으로 만들지 않음)
+      // 주차장: 칸 안 길가(아파트·일하는 곳·공공)
+      if (grp !== 'nat' && kids.some(b => b.kind === 'apt' || (KIND[b.kind] || {}).g !== 'live')) { let left = grp === 'live' ? 16 : 12;
+        for (const sg9 of RSEG) { if (left <= 0) break; const F = segFrame(sg9); for (const side of [-1, 1]) for (let t = 4; t < F.L0 - 4 && left > 0; t += 2.6) { const off = sg9.hw + 4.6, x = sg9.a[0] + F.tx * t + F.px * side * off, z = sg9.a[1] + F.tz * t + F.pz * side * off;
+          if (!inC(x, z) || !near(x, z, 45) || !free(x, z, 2.4)) continue; occAdd(x - 1.3, z - 2.6, x + 1.3, z + 2.6); const ry9 = Math.atan2(-F.tz, F.tx); box(x, ty(x, z) + 0.045, z, 2.5, 0.01, 5.0, ry9, 0x5f6368, { noSide: true }); box(x + F.tx * 1.25, ty(x, z) + 0.05, z + F.tz * 1.25, 0.12, 0.01, 4.4, ry9, 0xf2f1ea, { noSide: true });
+          if (R() < 0.45) vehicle(x, z, ry9 + Math.PI / 2, 'car', [0x3d74c9, 0xe0453a, 0xf2f1ea, 0x3a3a3a, 0x9aa0a6][(R() * 5) | 0]); n['주차 칸']++; left--; } } }
+      // 놀이터(사는 곳 · 블록 둘 이상): 칸 가운데 쪽 빈자리
+      if (grp === 'live' && kids.length >= 2) { const cx = kids.reduce((a, b) => a + b.cx, 0) / kids.length, cz = kids.reduce((a, b) => a + b.cz, 0) / kids.length; let spot = null;
+        for (let r = 0; r < 60 && !spot; r += 6) for (let a = 0; a < 6.28 && !spot; a += 0.7) { const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r; if (inC(x - 7, z - 6) && inC(x + 7, z + 6) && [[-6, -5], [6, -5], [-6, 5], [6, 5], [0, 0]].every(([a9, b9]) => free(x + a9, z + b9, 1))) spot = [x, z]; }
+        if (spot) { const [px, pz] = spot, y = ty(px, pz); occAdd(px - 7, pz - 6, px + 7, pz + 6); box(px, y + 0.03, pz, 12, 0.06, 10, 0, 0xe6d3a0, { noSide: true });   // 모래 바닥
+          box(px - 2.5, y, pz - 2, 0.9, 2.2, 0.9, 0, 0xe0453a); box(px - 2.5, y + 1.0, pz - 0.2, 0.7, 0.12, 3.2, -0.5, 0xf2c230); box(px - 2.5, y + 2.2, pz - 2, 1.2, 0.2, 1.2, 0, 0x3d74c9);   // 미끄럼틀
+          for (const sx of [1.5, 4.5]) box(px + sx, y, pz + 2, 0.14, 2.6, 0.14, 0, 0x5f6670); box(px + 3, y + 2.5, pz + 2, 3.3, 0.14, 0.14, 0, 0x5f6670); for (const sx of [2.3, 3.7]) box(px + sx, y + 0.5, pz + 2, 0.6, 0.08, 0.4, 0, 0x9b6a3c);   // 그네
+          bench(px - 5.5, pz + 4.2, 0); bench(px + 5.5, pz - 4.2, Math.PI); n.놀이터++; n.벤치 += 2; } }
+      // 나무(칸 안 빈자리)
+      const pT = grp === 'live' ? 0.5 : grp === 'work' ? 0.25 : 0.4;
+      for (let z = z0 + 4; z < z1 - 2; z += 8) for (let x = x0 + 4; x < x1 - 2; x += 8) { const px = x + (R() - 0.5) * 5, pz = z + (R() - 0.5) * 5; if (R() > pT || !near(px, pz, 30) || !free(px, pz, 1.6)) continue; const sp = R() < 0.65 ? 'round' : R() < 0.5 ? 'poplar' : 'pine';
+        TREES[sp].push({ x: px, y: ty(px, pz), z: pz, s: 0.7 + R() * 0.35, hex: treeHex(sp, R), ry: R() * 6 }); n.나무++; }
+      ZFILL.push({ id: 'land:' + cellOf((x0 + x1) / 2, (z0 + z1) / 2), k: 'land', cell: cellOf((x0 + x1) / 2, (z0 + z1) / 2), note: zn ? zn.note || '' : '', dens: '', n }); }
+  }
   function drawZonePaper() {   // 🧱 매트 모습: 색종이 구역 그대로(얇은 종이 판)
     for (const zn of L.zones || []) { const sh = shapeOf(zn); if (!sh || sh.line) continue; const hex = COL[zn.c || (ZCOL[zn.k] || ['red'])[0]] ?? 0xe0453a;
       C3.setHex(hex); C3.lerp(new T3.Color(0xffffff), 0.12); const ph = C3.getHex(); cellsIn(sh, 2.5, (cx, cz, s2) => { if (onRoad(cx, cz, 0)) return; flat(cx - s2, cz - s2, cx + s2, cz + s2, ty(cx, cz) + 0.07, ph); }); } }
@@ -508,8 +558,15 @@ export default async function start(map, params) {
         box(x, ty(x, z) + 0.045, z, fl[0] ? front - 1 : 2.5, 0.01, fl[0] ? 2.5 : front - 1, B9.ry, 0x5f6368, { noSide: true });
         const [lx9, lz9] = L2W(B9, fwL[0] * base + along[0] * sideSign * (t + 1.25), fwL[1] * base + along[1] * sideSign * (t + 1.25)); box(lx9, ty(lx9, lz9) + 0.05, lz9, fl[0] ? front - 1.6 : 0.12, 0.01, fl[0] ? 0.12 : front - 1.6, B9.ry, 0xf2f1ea, { noSide: true }); } }
   }
+  function markTop(B9) { const { cx, cz, h, y0 } = B9, col = COL[B9.b.c] ?? 0xcccccc, top = y0 + h + (B9.kind === 'house' ? 3 : 0.25);
+    cyl(cx, top, cz, 1.6, 1.2, 0xe8e4da, 10); cyl(cx, top + 1.2, cz, 0.45, 9, col, 8); cyl(cx, top + 10.2, cz, 0.9, 0.9, 0xf2c230, 10, { top: 0xfff3c4 }); box(cx + 1.0, top + 7.8, cz, 2.0, 1.2, 0.06, 0, col);   // 첨탑 + 금빛 공 + 깃발
+    for (const sg of [-1, 1]) box(cx, top + 0.6, cz, B9.w * 0.6, 0.25, 0.25, B9.ry + (sg > 0 ? 0 : Math.PI / 2), col); }
   function buildTown(B9) {
     const { cx, cz, w, d, h, ry, y0, kind } = B9, col = COL[B9.b.c] ?? 0xcccccc, R = B9.R = rng0(hashS((B9.b.id || '') + ':' + cx.toFixed(1)));
+    if (!B9.gen && isMark(B9.b) && kind !== 'green') { const k0 = B9.kind; buildTown2(B9); markTop({ ...B9, kind: k0 }); return; }
+    buildTown2(B9); }
+  function buildTown2(B9) {
+    const { cx, cz, w, d, h, ry, y0, kind } = B9, col = COL[B9.b.c] ?? 0xcccccc, R = B9.R;
     lot(B9);
     const roofFlat = (hex = 0xcfccc4) => roofTop(B9, { deck: hex });
     if (kind === 'green') { const n = Math.max(1, Math.round(w * d / 45)); for (let i = 0; i < n; i++) { const sp = R() < 0.6 ? 'round' : 'pine'; addTreeF(sp, cx + (R() - 0.5) * w * 0.7, cz + (R() - 0.5) * d * 0.7, 0.8 + R() * 0.5, treeHex(sp, R)); }
@@ -517,7 +574,7 @@ export default async function start(map, params) {
     if (kind === 'park') { box(cx, y0, cz, w, 0.12, d, ry, 0x8fd06a); for (let i = 0; i < Math.max(2, w * d / 60); i++) addTreeF(R() < 0.7 ? 'round' : 'bush', cx + (R() - 0.5) * w * 0.8, cz + (R() - 0.5) * d * 0.8, 0.7 + R() * 0.3, treeHex('round', R)); bench(cx, cz, ry); return; }
     if (kind === 'house') {
       const style = R(), wall = [0xf3ead8, 0xe9dcc4, 0xdfe6ea, 0xf2e0d6, 0xe8e2cf, 0xb8674a][(R() * 6) | 0];
-      if (style < 0.36 && h >= 7) {   // 다가구(평지붕 2~3층 · 벽돌·밝은 벽 · 옥상 = 블록 색 방수 칠 · 물탱크 · 바깥 계단)
+      if (h >= 12 || w * d > 150 || (style < 0.36 && h >= 7)) {   // 다가구·빌라(3cm 정육면체 · 눕힌 판 = 넓은 연립)(평지붕 2~3층 · 벽돌·밝은 벽 · 옥상 = 블록 색 방수 칠 · 물탱크 · 바깥 계단)
         box(cx, y0, cz, w * 0.94, h, d * 0.94, ry, wall); const B2 = { ...B9, w: w * 0.94, d: d * 0.94 }; B2.R = R;
         roofTop(B2, { deck: col, para: 0xefeae0, ac: 1 }); winRows(B2, { y0: 1.0, y1: h - 0.9, fh: 1.3, ww: 1.2, every: 3.0, ac: 0.35, flower: 0.18, sill: true, mull: true }); entrance(B2, { w: 1.2, h: 2.2, canopyHex: 0x6b7480 });
         const sf = FACES(B2)[R() < 0.5 ? 0 : 1]; for (let k = 0; k < Math.floor(h / 3.3); k++) fbox(B2, sf, (k % 2 ? 1 : -1) * 0.8, k * 3.3 + 2.9, 2.0, 0.18, 1.1, 0x9aa0a6);   // 바깥 계단참
@@ -592,7 +649,8 @@ export default async function start(map, params) {
   function prepPlaces() {
     PLACES = [];
     PLACES.push({ id: 'school', name: '우리 학교', en: 'Our School', kind: 'school', x: 16.5, z: 50, door: [16.5, 58], icon: '🏫', school: true });
-    for (const B9 of BLD) { if (!B9.name && !B9.b.home) continue; const k = KIND[B9.kind] || {};
+    for (const B9 of BLD) { if (!B9.gen && !B9.name && B9.kind === 'hospital') B9.name = '병원';   // 교사 10-13: 흰 블록 = 병원(이름표 없어도)
+      if (!B9.name && !B9.b.home) continue; const k = KIND[B9.kind] || {};
       PLACES.push({ id: B9.b.id, name: B9.name || (B9.b.home + '네 집'), en: B9.b.en || (B9.b.home ? B9.b.home + "'s House" : null), kind: B9.kind, x: B9.cx, z: B9.cz, door: B9.door, icon: k.emo || '🏠', sym: k.sym || '◆', ai: B9.b.ai || null, home: B9.b.home || null }); }
     for (const it of L.nature) { if (!it.name) continue; const sh = shapeOf(it); if (!sh) continue; const bb = bboxOf(sh); let cx = (bb[0] + bb[2]) / 2, cz = (bb[1] + bb[3]) / 2;
       if (sh.line) { const P = sh.line, m = P[Math.floor(P.length / 2)]; cx = m[0]; cz = m[1]; }
@@ -664,6 +722,7 @@ export default async function start(map, params) {
     drawGround(ROOT); drawWater(ROOT); drawRoads(); drawNature();
     if (LOOK === 'mat') drawZonePaper();
     for (const B9 of BLD) { if (LOOK === 'mat') buildMat(B9); else buildTown(B9); }
+    if (LOOK === 'town') landscape();
     if (LOOK === 'town') drawFacilities();
     for (const [, b] of BK) { if (!b.p.length) continue; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(b.c, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(b.u, 2)); g.computeBoundingSphere(); GEOS.push(g); const m = new T3.Mesh(g, MAT.solid); m.matrixAutoUpdate = false; m.receiveShadow = true; ROOT.add(m); }
     DMESH = []; for (const [, b] of DBK) { if (!b.p.length) continue; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(b.c, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(b.u, 2)); g.computeBoundingSphere(); GEOS.push(g); const m = new T3.Mesh(g, MAT.solid); m.matrixAutoUpdate = false; m.userData.c = [b.cx, b.cz]; ROOT.add(m); DMESH.push(m); }
@@ -776,14 +835,6 @@ export default async function start(map, params) {
       [['#6fc3dc', '물', 'Water'], ['#d6b56a', '언덕·산', 'Hills'], ['ıı', '논', 'Rice'], ['ㅛ', '밭', 'Farm'], ['♣', '숲·공원', 'Woods']].forEach(([c, ko, en], i) => { const y = ly + 32 + (items.length + i) * lh; if (c[0] === '#') { ctx.fillStyle = c; ctx.fillRect(lx + 10, y - 6, 16, 12); } else { ctx.fillStyle = '#2b5a3a'; ctx.font = '800 13px sans-serif'; ctx.fillText(c, lx + 12, y); }
         ctx.fillStyle = '#1d2b3a'; ctx.font = '700 12px sans-serif'; ctx.fillText(LANG === 'en' ? en : ko, lx + 34, y); }); }
   }
-  // 칸 주소(판 가장자리에 적은 그대로 — 아이들이 '내 집은 다3'처럼 말함) · 자료 grid = { cell: 30, cols: 'num', rows: 'hangul', order: 'rowcol' } · 없으면 10cm A1~
-  const GRD = { cell: 10, cols: 'alpha', rows: 'num', order: 'colrow', ...(D.grid || {}) }, HG = '가나다라마바사아자차카타파하';
-  const nameK = (i, kind) => kind === 'num' ? String(i + 1) : kind === 'hangul' ? (HG[i] || '?') : (i < 26 ? String.fromCharCode(65 + i) : 'A' + String.fromCharCode(65 + i - 26));
-  const colName = c => nameK(c, GRD.cols), rowName = r => nameK(r, GRD.rows);
-  // 선 자리(cm) — grid.xs·ys를 적으면 그 선으로(첫·끝 칸이 다른 판) · 없으면 cell 간격
-  const GXS = GRD.xs || Array.from({ length: Math.max(0, Math.ceil(MSZ.w / GRD.cell) - 1) }, (_, i) => (i + 1) * GRD.cell), GYS = GRD.ys || Array.from({ length: Math.max(0, Math.ceil(MSZ.h / GRD.cell) - 1) }, (_, i) => (i + 1) * GRD.cell);
-  const idxOf = (v, L9) => { let i = 0; while (i < L9.length && v >= L9[i]) i++; return i; };
-  const cellOf = (x, z) => { const mx = MXof(x), my = MYof(z), c = colName(idxOf(mx, GXS)), r = rowName(idxOf(my, GYS)); return GRD.order === 'rowcol' ? r + c : c + r; };   // 세계 → 격자 주소
   let GRID = !!params.plan;
   const miniSc = mini.width / (TX1 - TX0); let miniBg = null;
   function drawMini() { const g = mini.getContext('2d'); if (mapDirty || !miniBg) { drawTownMap(g, { x0: TX0, z0: TZ0, sc: miniSc, w: mini.width, h: mini.height }); miniBg = g.getImageData(0, 0, mini.width, mini.height); mapDirty = false; } else g.putImageData(miniBg, 0, 0);
@@ -854,7 +905,7 @@ export default async function start(map, params) {
     const fac = (L.fac || []), sec = (t, body) => '<div class="grp">' + t + '</div>' + body;
     openP('<h3>📋 기록 — 누가 만든 것인가요?</h3><div class="sm">아이들이 정한 것과 Claude가 채운 것을 나눠 적어요(섞이지 않게)</div>'
       + sec('🧱 아이가 놓은 블록 ' + kids.length + '개', '<div class="ai" style="background:#eef5ea"><span>' + (cnt(byK) || '없음') + (kids.some(b => b.name) ? '<br>이름: ' + kids.filter(b => b.name).map(b => esc(b.name)).join(' · ') : '') + '</span></div>')
-      + sec('🏘 Claude가 구역에 채운 건물 ' + BLD.filter(b => b.gen).length + '채', (ZFILL.length ? ZFILL.map(z => '<div class="ai" style="background:#eef2fb"><span>' + esc(ZK[z.k] || z.k) + ' 구역(' + esc(DN[z.dens] || z.dens) + (z.note ? ' · 「' + esc(z.note) + '」' : '') + ') → ' + (cnt(z.n) || (z.k === 'green' ? '공원·들로 꾸밈' : '채울 자리가 없었어요')) + '</span></div>').join('') : '<div class="sm">구역(색종이)이 없어요</div>'))
+      + sec('🏘 Claude가 구역에 채운 건물 ' + BLD.filter(b => b.gen).length + '채', (ZFILL.length ? ZFILL.map(z => '<div class="ai" style="background:#eef2fb"><span>' + (z.k === 'land' ? esc(z.cell) + ' 칸(아이 블록 사이) — 조경: ' + (Object.entries(z.n).filter(([, v]) => v).map(([k, v]) => k + ' ' + v).join(' · ') || '없음') : esc(ZK[z.k] || z.k) + ' 구역(' + esc(DN[z.dens] || z.dens) + (z.note ? ' · 「' + esc(z.note) + '」' : '') + ') → ' + (z.land ? '블록이 있는 칸이라 건물은 더 넣지 않음(조경만)' : cnt(z.n) || (z.k === 'green' ? '공원·들로 꾸밈' : '채울 자리가 없었어요'))) + '</span></div>').join('') : '<div class="sm">구역(색종이)이 없어요</div>'))
       + sec('🙋 아이가 요구해서 생긴 시설 ' + fac.length, fac.length ? fac.map(f => '<div class="ai" style="background:#fdf0f4"><span>' + esc(FACK[f.k] ? FACK[f.k].ko : f.k) + (f.rule ? ' — ' + esc(RULEK[f.rule] || f.rule) : ' — 정한 자리') + (f.by ? ' · 🙋 ' + esc(f.by) : '') + (f.why ? ' · 「' + esc(f.why) + '」' : '') + '</span></div>').join('') : '<div class="sm">아직 없어요 — 둘러보고 필요한 것을 말하면 생겨요(가로등·횡단보도·벤치…)</div>')
       + '<div class="row"><button class="sub" data-a="ai">✨ AI가 어림한 것 보기</button><button class="sub" data-a="x">닫기</button></div>');
     panel.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') closeP(); else if (b.dataset.a === 'ai') openAI(); };
