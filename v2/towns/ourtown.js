@@ -11,11 +11,16 @@ export const TOWN = {
   mat: { w: 250, h: 150 }, school: [100, 0, 125, 25],
   grid: { xs: [25, 50, 75, 100, 125, 150, 175, 200, 225], ys: [25, 50, 75, 100, 125], cols: 'num', rows: 'hangul', order: 'rowcol' },
   base: 'now', fillAround: true, life: true,
+  // 판 밖 산줄기(MTN-2 · ✨ AI가 정함): 주봉(약 330m) = 판 북서쪽 바깥 · 북쪽 능선은 동쪽으로 멀어지며 낮아짐 · 서쪽 능선은 남쪽으로 · 판 안 초록 칸은 이 산의 기슭
+  range: { peaks: [[-35, -50, 66, 95], [-80, 30, 46, 50], [40, -100, 50, 55], [130, -125, 42, 50]],
+    ridges: [{ pts: [[-35, -50, 62], [20, -82, 50], [80, -118, 46], [150, -130, 40], [230, -126, 32], [320, -118, 24]], w: 55 }, { pts: [[-35, -50, 62], [-72, 8, 50], [-90, 70, 42], [-84, 130, 32], [-100, 200, 24]], w: 55 }],
+    view: [3, 3], trail: [[13, 25], [7, 21], [15, 16], [8, 12], [12, 8], [5, 5]] },
   ai: [
     { t: '아이가 블록·종이를 놓지 않은 자리도 이름표와 둘레에 맞게 완성된 동네로 채웠어요(교사 10-13 — 건물·나무·길가 시설·차·사람)' },
     { t: '마6 파란 종이는 강이 시작되는 호수로 읽었어요(강은 호수에서 오른쪽 위로 흘러요 — 다8 이름표 「강→」)', at: [137.5, 112.5] },
     { t: '초록 종이 여섯 칸(가1~3 · 나1~3)은 뒷산으로 읽었어요 — 길이 지나는 곳은 골짜기로 낮게, 산 위 집은 평평한 터 위에(옹벽)', at: [37, 25] },
     { t: '노란 종이 세 칸(바1~3 「논밭」)은 다랑이 논과 밭으로 — 논두렁·물길·농로·농가는 AI가 채움', at: [37, 137] },
+    { t: '뒷산 산줄기(판 밖 북서쪽 · 주봉 약 330m)·능선·바위·숲, 산자락 등산로와 전망대는 AI가 정했어요(교사 「산지 느낌」)', at: [3, 3] },
   ],
   layers: {
     now: {
@@ -27,8 +32,8 @@ export const TOWN = {
       ],
       nature: [
         // 뒷산(초록 종이 여섯 칸 가1~3 · 나1~3) = 하나로 이어진 산 · 봉우리는 판 왼쪽 위(가1 · 약 75m) · 판 밖으로 계속 · 산을 지나는 길은 고갯길(옹벽)
-        { id: 'mt', k: 'hill', poly: [[-45, -45], [79, -45], [79, 18], [76, 40], [66, 53], [40, 55], [-45, 55]], peak: [12, 10], r: 82, h: 15, name: '뒷산', en: 'Back Mountain',
-          ai: '초록 종이 여섯 칸을 하나로 이어진 뒷산으로 — 봉우리 높이(약 75m)·모양은 AI가 정함 · 산을 지나는 길은 고개로 깎고 옹벽 · 산 위 집 자리는 평평하게 고름' },
+        { id: 'mt', k: 'hill', poly: [[-45, -45], [79, -45], [79, 18], [76, 40], [66, 53], [40, 55], [-45, 55]], peak: [8, 6], r: 74, h: 10, name: '뒷산', en: 'Back Mountain',
+          ai: '초록 종이 여섯 칸 = 뒷산 기슭(산자락) — 큰 산줄기는 판 밖 북서쪽(주봉 약 330m)에 세움(교사 10-13 「언덕 말고 산지 — 마을이 산 아래」) · 높이·능선·바위는 AI가 정함 · 산을 지나는 길은 고개로 깎고 옹벽 · 산 위 집 자리는 평평하게 고름' },
         // 호수(마6) → 강(라7 「계곡」 → 다8 「강→」 → 나9 → 나10) — 오른쪽 판 끝으로 흘러 나감
         { id: 'lake', k: 'water', poly: [[129, 106], [134, 103.5], [141, 104], [146, 107.5], [147, 113], [144.5, 119], [138, 121.5], [131.5, 120], [128, 115.5]], smooth: 3, name: '호수', en: 'Lake', ai: '마6 파란 종이를 호수로 읽었어요' },
         { id: 'river', k: 'water', line: { pts: [[137.5, 112.5], [137.5, 87.5], [162.5, 87.5], [175, 75], [187.5, 62.5], [200, 50], [212.5, 37.5], [237.5, 37.5], [250, 37.5]], w: 4.4 }, smooth: 3, name: '강', en: 'River',
@@ -127,10 +132,10 @@ export const TOWN = {
         { cell: '가8', t: '동물보호센터', style: ['pets'], ai: '동물보호센터 마당(울타리 · 강아지)' },
         { cell: '나4', t: '마을', style: ['flowers'], fill: { k: 'live', type: 'house', dens: 'normal' } },
         { cell: '나5', t: '자연친화 마을', style: ECO, fill: { k: 'live', type: 'house', dens: 'normal' }, ai: '자연친화 마을 — 집 사이 나무·꽃 · 옥상 정원 · 덩굴 벽' },
-        { cell: '나6', t: '학원가 아파트', fill: { k: 'live', type: 'apt', dens: 'sparse' }, ai: '학원가 — 남색 블록 다섯 = 학원(영어·수학·미술·피아노·태권도) · 둘레 아파트' },
-        { cell: '나8', t: '아파트', fill: { k: 'live', type: 'apt', dens: 'sparse' } },
+        { cell: '나6', t: '학원가 아파트', fill: { k: 'live', type: 'apt', dens: 'normal' }, ai: '학원가 — 남색 블록 다섯 = 학원(영어·수학·미술·피아노·태권도) · 둘레 아파트' },
+        { cell: '나8', t: '아파트', fill: { k: 'live', type: 'apt', dens: 'normal' } },
         { cell: '다2', t: '음식점들', fill: { k: 'work', type: 'shop', dens: 'normal' }, sign: 'food', ai: '노란 블록 아홉 = 음식점들(간판은 AI가 정함 — 분식·국수·치킨…)' },
-        { cell: '다5', t: '마트, 자연 건물', style: ['rooftop', 'vines'], fill: { k: 'work', type: 'shop', dens: 'sparse' }, ai: '마트 + 자연 건물(옥상 정원·덩굴 벽)' },
+        { cell: '다5', t: '마트, 자연 건물', style: ['rooftop', 'vines'], fill: { k: 'work', type: 'shop', dens: 'normal' }, ai: '마트 + 자연 건물(옥상 정원·덩굴 벽)' },
         { cell: '다9', t: '자연친화도시', style: [...ECO, 'bigtree'], fill: { k: 'live', type: 'apt', dens: 'sparse' }, ai: '세운 판 열네 개 = 높은 건물 숲(「큰건물」 이름표) · 초록 세운 판 = 큰 나무 · 옥상 정원·덩굴 벽' },
         { cell: '다10', t: '자연친화 도시', style: [...ECO, 'bigtree'], fill: { k: 'live', type: 'apt', dens: 'sparse' }, ai: '자연친화 도시 — 아파트 사이 숲 · 옥상 정원 · 덩굴 벽' },
         { cell: '라3', t: '아파트', fill: { k: 'live', type: 'apt', dens: 'normal' } },
@@ -147,17 +152,17 @@ export const TOWN = {
         { cell: '마10', t: '아파트', fill: { k: 'live', type: 'apt', dens: 'sparse' } },
         { cell: '라4', t: '놀이터', style: ['flowers'], ai: '초록 판 = 잔디 · 남색 블록 = 큰 정글짐' },
         { cell: '바10', t: '축구장', style: ['soccer'], ai: '축구장 — 잔디 경기장·골대·관중석(AI) · 남색 블록 = 클럽 하우스' },
-        { cell: '바4', t: '노인정', fill: { k: 'live', type: 'house', dens: 'sparse' } },
-        { cell: '바5', t: '행정복지 센터', fill: { k: 'work', type: 'office', dens: 'sparse' } },
-        { cell: '바8', t: '영화관', fill: { k: 'work', type: 'shop', dens: 'sparse' } },
+        { cell: '바4', t: '노인정', fill: { k: 'live', type: 'house', dens: 'normal' } },
+        { cell: '바5', t: '행정복지 센터', fill: { k: 'work', type: 'office', dens: 'normal' } },
+        { cell: '바8', t: '영화관', fill: { k: 'work', type: 'shop', dens: 'normal' } },
       ],
       // 이름표 없는 칸·이름이 건물에 붙은 칸 — 둘레에 맞게 AI가 채움(✨)
       fills: [
-        { cell: '가7', k: 'work', type: 'shop', dens: 'sparse', style: ['parking'] }, { cell: '나7', k: 'work', type: 'shop', dens: 'sparse' },
-        { cell: '다1', k: 'work', type: 'shop', dens: 'sparse' }, { cell: '다3', k: 'work', type: 'office', dens: 'sparse' }, { cell: '다6', k: 'work', type: 'shop', dens: 'normal' }, { cell: '다7', k: 'work', type: 'office', dens: 'sparse' },
-        { cell: '라1', k: 'work', type: 'shop', dens: 'normal' }, { cell: '라2', k: 'work', type: 'factory', dens: 'sparse' }, { cell: '라10', k: 'live', type: 'house', dens: 'sparse' },
-        { cell: '마3', k: 'work', type: 'office', dens: 'sparse' }, { cell: '마7', k: 'work', type: 'shop', dens: 'sparse', style: ['parking'] },
-        { cell: '바6', k: 'work', type: 'office', dens: 'sparse' }, { cell: '바7', k: 'work', type: 'factory', dens: 'sparse' }, { cell: '바9', k: 'work', type: 'factory', dens: 'sparse' },
+        { cell: '가7', k: 'work', type: 'shop', dens: 'normal', style: ['parking'] }, { cell: '나7', k: 'work', type: 'shop', dens: 'normal' },
+        { cell: '다1', k: 'work', type: 'shop', dens: 'normal' }, { cell: '다3', k: 'work', type: 'office', dens: 'normal' }, { cell: '다6', k: 'work', type: 'shop', dens: 'normal' }, { cell: '다7', k: 'work', type: 'office', dens: 'normal' },
+        { cell: '라1', k: 'work', type: 'shop', dens: 'normal' }, { cell: '라2', k: 'work', type: 'factory', dens: 'normal' }, { cell: '라10', k: 'live', type: 'house', dens: 'normal' },
+        { cell: '마3', k: 'work', type: 'office', dens: 'normal' }, { cell: '마7', k: 'work', type: 'shop', dens: 'normal', style: ['parking'] },
+        { cell: '바6', k: 'work', type: 'office', dens: 'normal' }, { cell: '바7', k: 'work', type: 'factory', dens: 'normal' }, { cell: '바9', k: 'work', type: 'factory', dens: 'normal' },
         { cell: '나9', k: 'green', type: 'park' }, { cell: '나10', k: 'green', type: 'park' }, { cell: '다8', k: 'green', type: 'park' }, { cell: '라7', k: 'green', type: 'park' }, { cell: '마6', k: 'green', type: 'park' },
       ],
       fac: [   // 완성된 도시의 길가 시설(교사 10-13 — AI가 채움 ✨ · 아이가 요구한 시설과 기록을 나눔)
