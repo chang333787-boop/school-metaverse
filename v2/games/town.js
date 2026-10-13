@@ -1753,19 +1753,23 @@ export default async function start(map, params) {
     if (GRAPH) GRAPH.adj.forEach((e, i) => e.forEach(([j, , big, hw]) => { if (j < i) return; const A = GRAPH.nodes[i], B = GRAPH.nodes[j]; if (segD(F[0], F[1], A, B)[0] > bd + hw) return;
       const dx = B[0] - A[0], dz = B[1] - A[1], l = Math.hypot(dx, dz) || 1, rx = -dz / l, rz = dx / l, off = hw - (big ? 1.0 : 0.6);
       for (let t = Math.min(2, l / 2); t < l - 1; t += 2) for (const sg of [-1, 1]) { const x = A[0] + dx * t / l + rx * off * sg, z = A[1] + dz * t / l + rz * off * sg, br = onBridge(x, z), d = Math.hypot(x - F[0], z - F[1]) - (o.bridge && br ? 40 : 0);
-        if (d >= bd || inSchool(x, z) || (!br && sdAt(x, z) < 1)) continue; const g = map.q.groundAt(x, z, ty(x, z) + 3); if (map.q.blocked(x, z, g)) continue; bd = d; best = [x, z]; } }));
+        if (d >= bd || inSchool(x, z) || (!br && sdAt(x, z) < 1)) continue; const g = map.q.groundAt(x, z, ty(x, z) + 3); if (map.q.blocked(x, z, g)) continue; bd = d; best = [x, z, dx / l, dz / l]; } }));   // [x, z, 길 방향]
     if (!best || bd > (o.far || 70)) { const q = freeNear(F[0], F[1]); if (q) best = q; }
     return best; }
   const riverLook = (line, at) => { let bi = 0, bd9 = 1e9; for (let i = 0; i < line.length - 1; i++) { const d = segD(at[0], at[1], line[i], line[i + 1])[0]; if (d < bd9) { bd9 = d; bi = i; } } const a = line[bi], b = line[bi + 1], r = segD(at[0], at[1], a, b), L9 = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [r[2] + (b[0] - a[0]) / L9 * 45, r[3] + (b[1] - a[1]) / L9 * 45]; };   // 다리 위 = 강 따라 내려다봄
+  const alongRiver = at => { if (!at[2] || !onBridge(at[0], at[1])) return null; const px = -at[3], pz = at[2]; let best = null, bv = 1e9; for (const sg of [-1, 1]) { let v = 0; for (const r of [12, 24, 36, 48]) v += sdAt(at[0] + px * sg * r, at[1] + pz * sg * r); if (v < bv) { bv = v; best = [at[0] + px * sg * 40, at[1] + pz * sg * 40]; } } return best; };   // 다리 위 = 다리(길)에 직각 · 물이 더 길게 이어지는 쪽
+  const bridgeMid = (x, z) => { let best = null, bd = 1e9; for (const b of BRIDGES) { if (!b.ax) continue; const [A, B] = b.ax, mx = (A[0] + B[0]) / 2, mz = (A[1] + B[1]) / 2, d = Math.hypot(mx - x, mz - z); if (d < bd) { const L9 = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1; bd = d; best = [mx, mz, (B[0] - A[0]) / L9, (B[1] - A[1]) / L9, (b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2]; } } return best; };   // 강 = 가장 가까운 다리 한가운데(인도·디딤 길)
   async function jumpTo(p) {   // p = { name, icon, x, z, F?(보러 갈 곳) · spot?(설 자리) · look?(볼 곳 또는 함수) · bridge?(다리 위 먼저) }
-    const at = p.spot || standSpot(p.F || p.door || [p.x, p.z], { bridge: p.bridge, far: p.nat ? 70 : 25 }); if (!at) { map.hud.toast('🚧 그 둘레에 설 곳이 없어요', 2); return; }
+    const at = p.spot || (p.spotF && p.spotF()) || standSpot(p.F || p.door || [p.x, p.z], { bridge: p.bridge, far: p.nat ? 70 : 25 }); if (!at) { map.hud.toast('🚧 그 둘레에 설 곳이 없어요', 2); return; }
     const f = map.fade(1.0, '#fffbe8'); await new Promise(r => setTimeout(r, 480)); if (dead) return;
-    const [x, z] = at, y = map.q.groundAt(x, z, ty(x, z) + 3), lk = typeof p.look === 'function' ? p.look(at) : p.look || [p.x, p.z]; map.player.teleport([x, y + 0.05, z]); if (Math.hypot(lk[0] - x, lk[1] - z) > 0.5) map.player.lookAt([lk[0], lk[1]]);
+    let lk = typeof p.look === 'function' ? p.look(at) : p.look || [p.x, p.z];
+    if (at[4] != null && lk) { const nx9 = -at[3], nz9 = at[2], o9 = (at[0] - at[4]) * nx9 + (at[1] - at[5]) * nz9; if (((lk[0] - at[0]) * nx9 + (lk[1] - at[1]) * nz9) * o9 < 0) { at[0] -= 2 * o9 * nx9; at[1] -= 2 * o9 * nz9; lk = typeof p.look === 'function' ? p.look(at) : lk; } }   // 다리: 바라보는 쪽 인도에 섬(카메라가 난간 너머로 가지 않게)
+    const [x, z] = at, y = map.q.groundAt(x, z, ty(x, z) + 3); map.player.teleport([x, y + 0.05, z]); if (Math.hypot(lk[0] - x, lk[1] - z) > 0.5) map.player.lookAt([lk[0], lk[1]]);
     if (trailH) { trailH.remove(); trailH = null; } routeNow = null; map.hud.toast('📍 ' + (p.icon ? p.icon + ' ' : '') + nameOf(p) + (p.here ? '' : ' 앞이에요'), 2.4); await f; }
   function jumpLists() {   // 큰 장소(학교·강·호수·논밭·뒷산·전망대·병원 거리·아이가 이름 붙인 건물·소품) + 아이 이름표 칸
     const big = [], seen = new Set(), add = q => { const k = q.name + '@' + cellOf(q.x, q.z); if (seen.has(k)) return; seen.add(k); big.push(q); };
     add({ id: 'j-school', name: '우리 학교', en: 'Our School', icon: '🏫', x: 16.5, z: 40, spot: [15.4, 74], look: [15.4, 40] });
-    for (const p of PLACES) if (p.nat) { const it = L.nature.find(n => n.id === p.id), sh = it && shapeOf(it); add(sh && sh.line ? { ...p, bridge: true, look: at => riverLook(sh.line, at) } : { ...p }); }
+    for (const p of PLACES) if (p.nat) { const it = L.nature.find(n => n.id === p.id), sh = it && shapeOf(it); add(sh && sh.line ? { ...p, bridge: true, spotF: () => bridgeMid(p.x, p.z), look: at => alongRiver(at) || riverLook(sh.line, at) } : { ...p }); }
     { const pd = (L.zones || []).filter(zn => zn.type === 'paddy' && zn.cell); if (pd.length) { const R9 = parseCell(pd[(pd.length / 2) | 0].cell); if (R9) { const x = X((R9[0] + R9[2]) / 2), z = Z((R9[1] + R9[3]) / 2); add({ id: 'j-paddy', name: '논밭', en: 'Rice Paddies', icon: '🌾', x, z }); } } }
     for (const p of PLACES) if (p.prop) add(/전망대/.test(p.name) ? { ...p, name: '뒷산 전망대', en: 'Mountain Lookout' } : { ...p });
     { const H9 = PLACES.filter(p => p.kind === 'hospital'); let hub = null, hn = 0; for (const p of H9) { const n = H9.filter(q => Math.hypot(q.x - p.x, q.z - p.z) < 75).length; if (n > hn && !CLINICS.includes(p.name)) { hn = n; hub = p; } } if (hub && hn >= 4) add({ ...hub, id: 'j-clinic', name: '병원 거리', en: 'Clinic Street', icon: '🏥' }); }
@@ -1849,7 +1853,7 @@ export default async function start(map, params) {
       zoneAt: (x, z) => { const p = placeNear(x, z, 15); return { label: p ? p.icon + ' ' + nameOf(p) : spotName(x, z) }; },
       tapActions: [{ t: '📍 여기로 가기', f: pt => { const p = here(pt); topOff(); jumpTo(p || { name: spotName(pt.x, pt.z), icon: '📍', x: pt.x, z: pt.z, F: [pt.x, pt.z], look: [pt.x, pt.z] }); } },
         { t: '🧭 길 안내', when: pt => !!here(pt), f: pt => { const p = here(pt); topOff(); showRoute(p); } }],
-      help: '🛰 하늘에서 본 우리 마을 — 끌기 = 옮기기 · 휠 = 확대 · 누르면 📍 여기로 가기 · Esc = 걸어 다니기', onExit: () => topOff() });
+      help: '🛰 끌기·휠로 둘러보기 · 누르면 📍 가기 · Esc 나가기', onExit: () => topOff() });
     const sc = ROOT && ROOT.parent; if (sc && sc.fog) { sc.fog.near = 4000; sc.fog.far = 9000; } }   // 하늘에서는 안개·먼 깊이 당기기 없이(나오면 되돌림)
   function topOff() { if (!topH) return; topH = false; map.top.exit(); clouds(true); map.player.freeze(false); HZU.uC0.value = 250; for (const s9 of LABELS) s9.visible = true; if (ROOT) ROOT.traverse(o => { if (o.userData.th) o.visible = true; }); near9 = ''; }
   function howTo(first) {
