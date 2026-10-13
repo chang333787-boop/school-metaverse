@@ -863,8 +863,14 @@ export default async function start(map, params) {
     for (const sg of [-1, 1]) box(cx, top + 0.6, cz, B9.w * 0.6, 0.25, 0.25, B9.ry + (sg > 0 ? 0 : Math.PI / 2), col); }
   function buildTown(B9) {
     const { cx, cz, w, d, h, ry, y0, kind } = B9, col = COL[B9.b.c] ?? 0xcccccc, R = B9.R = rng0(hashS((B9.b.id || '') + ':' + cx.toFixed(1)));
-    if (!B9.gen && isMark(B9.b) && kind !== 'green') { const k0 = B9.kind; buildTown2(B9); markTop({ ...B9, kind: k0 }); return; }
-    buildTown2(B9); }
+    if (!B9.gen && isMark(B9.b) && kind !== 'green') { const k0 = B9.kind; buildTown2(B9); markTop({ ...B9, kind: k0 }); trim(B9); return; }
+    buildTown2(B9); trim(B9); }
+  function trim(B9) {   // 모든 건물 공통 마감(학교 맵처럼): 돌 굽 띠(문·진열창·차고 자리는 비움) · 뒤 모서리 빗물받이(디테일 층)
+    const k = B9.kind; if (k === 'green' || k === 'park' || B9.h < 3 || B9.bigGreen) return;
+    for (const f of FACES(B9)) { const front = isFront(B9, f), L9 = f[2]; if (front && (k === 'shop' || k === 'office' || k === 'fire' || k === 'factory' || k === 'police' || k === 'hospital')) continue;
+      for (const [u0, u1] of front ? [[-L9 / 2, -1.7], [1.7, L9 / 2]] : [[-L9 / 2, L9 / 2]]) if (u1 - u0 > 0.4) fbox(B9, f, (u0 + u1) / 2, 0, u1 - u0, 0.42, 0.07, 0x9a958a, { top: 0xaaa597 }); }
+    const bk = [-B9.fl[0], -B9.fl[1]];
+    for (const s9 of [-1, 1]) { const lx = bk[0] ? bk[0] * (B9.w / 2 + 0.08) : s9 * (B9.w / 2 - 0.25), lz = bk[1] ? bk[1] * (B9.d / 2 + 0.08) : s9 * (B9.d / 2 - 0.25), [px, pz] = L2W(B9, lx, lz); dbx(px, B9.y0, pz, 0.11, B9.h - 0.1, 0.11, B9.ry, 0x8a8f95); } }
   function buildTown2(B9) {
     const { cx, cz, w, d, h, ry, y0, kind } = B9, col = COL[B9.b.c] ?? 0xcccccc, R = B9.R;
     lot(B9);
