@@ -39,7 +39,12 @@ export default async function start(map, params) {
   const MD = map.mapData(1), SB = MD.boundary, SBX = SB.map(p => p[0]), SBZ = SB.map(p => p[1]);
   const SR = [Math.min(...SBX), Math.min(...SBZ), Math.max(...SBX), Math.max(...SBZ)];   // 학교 상자(울타리 바깥 테두리)
   const MS = D.school || [110.5, 1, 139.5, 31], MCX = (MS[0] + MS[2]) / 2, MCY = (MS[1] + MS[3]) / 2, WCX = (SR[0] + SR[2]) / 2, WCZ = (SR[1] + SR[3]) / 2;
-  const X = mx => WCX + (mx - MCX) * S, Z = my => WCZ + (my - MCY) * S, MXof = x => MCX + (x - WCX) / S, MYof = z => MCY + (z - WCZ) / S;
+  // 학교 칸 = 실제 학교 담 상자(교사 10-13 '학교 모델은 줄이지 말고 · 마을 쪽 1:500은 그대로') — 칸 네 변을 담 상자에 맞추고, 칸 밖은 그 가장자리에서부터 정확히 1:500
+  //   (예전 = 가운데 맞춤 · 칸 125m < 학교 146m라 둘레 길이 학교를 파고듦) · school 칸이 판 가장자리에 붙으면(위쪽 0) 그쪽은 담에서 바로 끝
+  const pw = (v, a0, a1, b0, b1) => v < a0 ? b0 - (a0 - v) * S : v > a1 ? b1 + (v - a1) * S : b0 + (v - a0) / Math.max(1e-6, a1 - a0) * (b1 - b0);
+  const pwInv = (w, a0, a1, b0, b1) => w < b0 ? a0 - (b0 - w) / S : w > b1 ? a1 + (w - b1) / S : a0 + (w - b0) / Math.max(1e-6, b1 - b0) * (a1 - a0);
+  const X = mx => pw(mx, MS[0], MS[2], SR[0], SR[2]), Z = my => pw(my, MS[1], MS[3], SR[1], SR[3]), MXof = x => pwInv(x, MS[0], MS[2], SR[0], SR[2]), MYof = z => pwInv(z, MS[1], MS[3], SR[1], SR[3]); void MCX; void MCY; void WCX; void WCZ;
+  const inMatSchool = (mx, my) => mx > MS[0] && mx < MS[2] && my > MS[1] && my < MS[3];
   const TX0 = X(0), TZ0 = Z(0), TX1 = X(MSZ.w), TZ1 = Z(MSZ.h);
   const TY = -1.30;   // 마을 땅 높이(운동장 흙 -1.35보다 5cm 위 — 바깥 잔디 무늬 -1.362를 덮음 · 정문과 한 발 높이)
   // 칸 주소(판 가장자리에 적은 그대로 — 아이들이 '내 집은 다3'처럼 말함) · 자료 grid = { cell: 30, cols: 'num', rows: 'hangul', order: 'rowcol' } · 없으면 10cm A1~
@@ -179,7 +184,10 @@ export default async function start(map, params) {
 
   // ───────── 길: 테이프 → 차도(아스팔트) · 인도 · 가운데 선 · 건널목 · 물 위 = 다리 ─────────
   function prepRoads() {
-    ROADS = L.roads.map((r, ri) => ({ ...r, ri, P: (r.pts || [r.a, r.b]).map(p => [X(p[0]), Z(p[1])]), hw: (r.wm ? r.wm : (r.w || 2.4) * S) / 2, big: r.big != null ? !!r.big : (r.wm ? r.wm : (r.w || 2.4) * S) >= 18 }));
+    const edgeShift = (p, hw) => { const T9 = 1.2; let [x, z] = [X(p[0]), Z(p[1])]; if (p[1] >= MS[1] - T9 && p[1] <= MS[3] + T9) { if (Math.abs(p[0] - MS[0]) < T9) x = SR[0] - hw - 1; else if (Math.abs(p[0] - MS[2]) < T9) x = SR[2] + hw + 1; }
+      if (p[0] >= MS[0] - T9 && p[0] <= MS[2] + T9) { if (Math.abs(p[1] - MS[3]) < T9) z = SR[3] + hw + 1; else if (Math.abs(p[1] - MS[1]) < T9 && MS[1] > 0.5) z = SR[1] - hw - 1; } return [x, z]; };   // 학교 칸 변 위 = 담 바깥(학교를 파고들지 않게)
+    const onEdgeLine = (r) => { const P = r.pts || [r.a, r.b], T9 = 1.2; return P.length === 2 && ((Math.abs(P[0][0] - P[1][0]) < 0.5 && (Math.abs(P[0][0] - MS[0]) < T9 || Math.abs(P[0][0] - MS[2]) < T9)) || (Math.abs(P[0][1] - P[1][1]) < 0.5 && (Math.abs(P[0][1] - MS[3]) < T9 || (Math.abs(P[0][1] - MS[1]) < T9 && MS[1] > 0.5)))); };
+    ROADS = L.roads.map((r, ri) => ({ ...r, ri, P: (r.pts || [r.a, r.b]).map(p => onEdgeLine(r) ? (() => { const hw0 = (r.wm ? r.wm : (r.w || 2.4) * S) / 2, q = [p[0], p[1]], P2 = r.pts || [r.a, r.b], vert = Math.abs(P2[0][0] - P2[1][0]) < 0.5; if (vert) q[1] = MS[1] + 1; else q[0] = MS[0] + 1; const sh = edgeShift(q, hw0); return vert ? [sh[0], Z(p[1])] : [X(p[0]), sh[1]]; })() : [X(p[0]), Z(p[1])]), hw: (r.wm ? r.wm : (r.w || 2.4) * S) / 2, big: r.big != null ? !!r.big : (r.wm ? r.wm : (r.w || 2.4) * S) >= 18 }));
     RSEG = []; for (const r of ROADS) for (let i = 0; i < r.P.length - 1; i++) RSEG.push({ r, a: r.P[i], b: r.P[i + 1], hw: r.hw });
   }
   const onRoad = (x, z, pad = 0, except = null) => { for (const s of RSEG) if (s.r !== except && segD(x, z, s.a, s.b)[0] < s.hw + pad) return s; return null; };
@@ -351,10 +359,10 @@ export default async function start(map, params) {
     const base = KIND_OF_COLOR[b.c] || 'house', h = (b.h || 2) * S, w = (b.w || 2) * S, d = (b.d || 2) * S, slender = Math.max(w, d) / Math.max(0.1, Math.min(w, d)) >= 2.5;
     if (base === 'house') return h >= 20 || (h >= 14 && slender) ? 'apt' : 'house'; if (base === 'shop') return h >= 16 ? 'office' : 'shop'; return base; };
   const isMark = b => (b.w || 0) >= 3.8 && (b.d || 0) >= 3.8 && (b.h || 0) >= 3.8;   // 4cm 정육면체 = 마을 자랑 랜드마크(노랑·빨강·파랑 셋)
-  const BLD = [];   // {b, kind, cx, cz, w, d, h, ry, y0, front:[fx,fz], door:[x,z], name}
+  const BLD = []; let SCHOOLB = 0;   // {b, kind, cx, cz, w, d, h, ry, y0, front:[fx,fz], door:[x,z], name}
   function prepBlocks() {
     BLD.length = 0;
-    for (const b of L.blocks) { const cx = X(b.x), cz = Z(b.y); if (inSchool(cx, cz)) continue;
+    SCHOOLB = 0; for (const b of L.blocks) { const cx = X(b.x), cz = Z(b.y); if (inMatSchool(b.x, b.y) || inSchool(cx, cz)) { SCHOOLB++; continue; }   // 학교 칸 블록(이름표·남색 판) = 실제 학교 모델로 대신
       const w = (b.w || 2) * S, d = (b.d || 2) * S, h = (b.h || 2) * S, ry = -(b.rot || 0) * Math.PI / 180, c = Math.cos(ry), s = Math.sin(ry);
       const corners = [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]].map(([lx, lz]) => [cx + lx * c + lz * s, cz - lx * s + lz * c]);
       const y0 = Math.min(...corners.map(([x, z]) => ty(x, z))) + (b.z || 0) * S;
@@ -914,7 +922,7 @@ export default async function start(map, params) {
     const list = [...(D.ai || []).map(a => ({ t: a.t, at: a.at ? [X(a.at[0]), Z(a.at[1])] : null }))];
     for (const it of [...L.blocks, ...L.nature, ...L.roads]) if (it.ai) { const p = PLACES.find(q => q.id === it.id); const sh = it.x != null ? null : shapeOf(it); const bb = sh ? bboxOf(sh) : null;
       list.push({ t: (it.name ? '「' + it.name + '」 ' : (KIND[kindOf(it)] || {}).ko ? '(' + (it.x != null ? (KIND[kindOf(it)] || {}).ko : '') + ') ' : '') + it.ai, at: p ? [p.x, p.z] : it.x != null ? [X(it.x), Z(it.y)] : bb ? [(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2] : null }); }
-    const auto = ['🏘 마을 모습의 건물 모양은 판의 색 규칙(빨강·주황 = 집 · 노랑 = 가게 · 파랑 = 공공 · 흰색 = 병원)과 이름표로 정했어요', '🚪 건물 앞문은 가장 가까운 길 쪽으로 정했어요', '⛰ 쌓은 높이를 둥근 언덕으로 바꿨어요(봉우리 모양은 AI가 정함)', '🌳 숲·논밭 안의 나무·벼 줄 수는 AI가 정했어요', '👪 사는 사람 수는 집 1채 = ' + ({ house: 4, apt: 10, ...(D.pop || {}) }).house + '명 · 아파트 한 층 = ' + ({ house: 4, apt: 10, ...(D.pop || {}) }).apt + '명으로 어림했어요(선생님과 정하는 값)'];
+    const auto = ['🏘 마을 모습의 건물 모양은 판의 색 규칙(빨강·주황 = 집 · 노랑 = 가게 · 파랑 = 공공 · 흰색 = 병원)과 이름표로 정했어요', '🚪 건물 앞문은 가장 가까운 길 쪽으로 정했어요', '⛰ 쌓은 높이를 둥근 언덕으로 바꿨어요(봉우리 모양은 AI가 정함)', ...(SCHOOLB ? ['🏫 학교 칸의 블록 ' + SCHOOLB + '개는 실제 학교 모델로 대신했어요(학교 칸 = 실제 크기 · 둘레 길은 담 바깥으로)'] : []), '🌳 숲·논밭 안의 나무·벼 줄 수는 AI가 정했어요', '👪 사는 사람 수는 집 1채 = ' + ({ house: 4, apt: 10, ...(D.pop || {}) }).house + '명 · 아파트 한 층 = ' + ({ house: 4, apt: 10, ...(D.pop || {}) }).apt + '명으로 어림했어요(선생님과 정하는 값)'];
     const P9 = openP('<h3>✨ AI가 어림한 것 ' + (list.length + auto.length) + '</h3><div class="sm">판(진짜)과 다른 곳이 있나요? 찾으면 🙋 손을 들어 알려 줘요 — 판을 보고 고쳐요</div>' + list.map((a, i) => '<div class="ai"><span>✨ ' + esc(a.t) + '</span>' + (a.at ? '<button data-i="' + i + '">📍 가 보기</button>' : '') + '</div>').join('') + auto.map(t => '<div class="ai"><span>' + esc(t) + '</span></div>').join('') + '<div class="row"><button class="sub" data-a="x">닫기</button></div>');
     P9.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') return closeP(); const a = list[+b.dataset.i]; if (a && a.at) { closeP(); busTo({ name: '빈칸 자리', icon: '✨', x: a.at[0], z: a.at[1], door: [a.at[0] + 6, a.at[1] + 6] }); } };
   }

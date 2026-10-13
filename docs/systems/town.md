@@ -22,7 +22,7 @@
 6. 새 도안(다시 배치) = **새 판**으로(예전 판은 남김 — 판 바꾸기·📊 숫자 비교·나중에 타임랩스).
 
 ## 자료 형식(정본 = `v2/towns/zz_test.js`)
-좌표 = **판 cm**(왼쪽 위 0,0 · 오른쪽 x+ · 아래 y+ · 위 = 북) · 축척 `scale: 500`(1cm = 5m) · `mat: { w, h }` = 판 크기 cm · `school: [x0,y0,x1,y1]` = 판 위 학교 자리(실제 학교에 가운데 맞춤) · `grid: { xs: [선 cm…], ys: [선 cm…] | cell: cm, cols: 'num', rows: 'hangul', order: 'rowcol' }` = 판 가장자리 칸 주소('다3' — 없으면 10cm A1~) · 정본 = `v2/towns/zz_test.js`(엔진 기능 전부) · `zz_grid.js`(매트 바둑판 · 칸 선 자리 `grid.xs`·`ys` — 첫·끝 칸이 다를 때).
+좌표 = **판 cm**(왼쪽 위 0,0 · 오른쪽 x+ · 아래 y+ · 위 = 북) · 축척 `scale: 500`(1cm = 5m) · `mat: { w, h }` = 판 크기 cm · `school: [x0,y0,x1,y1]` = 판 위 학교 칸 — **칸 네 변을 실제 학교 담 상자(146×155m)에 맞추고 칸 밖은 그 가장자리부터 정확히 1:500**(교사 10-13 '학교 모델은 줄이지 말고 · 마을 쪽 1:500 그대로' — 학교 칸만 실제 크기 · 이웃 칸 크기 그대로) · **학교 칸 변 위의 길은 길 폭 절반 + 1m만큼 담 바깥으로** 밀어 학교를 파고들지 않음 · 학교 칸 안 블록(이름표·남색 판)은 짓지 않고 실제 학교 모델(✨ 어림에 적음) · `grid: { xs: [선 cm…], ys: [선 cm…] | cell: cm, cols: 'num', rows: 'hangul', order: 'rowcol' }` = 판 가장자리 칸 주소('다3' — 없으면 10cm A1~) · 정본 = `v2/towns/zz_test.js`(엔진 기능 전부) · `zz_grid.js`(매트 바둑판 · 칸 선 자리 `grid.xs`·`ys` — 첫·끝 칸이 다를 때).
 ```js
 export const TOWN = { id, title, en, scale: 500, mat: { w: 250, h: 140 }, school: [110.5, 1, 139.5, 31], base: 'now', ai: [{ t, at? }], pop?: { house: 4, apt: 10 },
   layers: { now: { name: '오늘', en, nature: [], roads: [], blocks: [], zones: [], fac: [], labels: [] },
