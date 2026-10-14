@@ -75,20 +75,26 @@ export default async function start(map, params) {
   const X = mx => pw(mx, MS[0], MS[2], SR[0], SR[2]), Z = my => pw(my, MS[1], MS[3], SR[1], SR[3]), MXof = x => pwInv(x, MS[0], MS[2], SR[0], SR[2]), MYof = z => pwInv(z, MS[1], MS[3], SR[1], SR[3]); void MCX; void MCY; void WCX; void WCZ;
   const inMatSchool = (mx, my) => mx > MS[0] && mx < MS[2] && my > MS[1] && my < MS[3];
   const TX0 = X(0), TZ0 = Z(0), TX1 = X(MSZ.w), TZ1 = Z(MSZ.h);
+  let EX0 = TX0, EZ0 = TZ0, EX1 = TX1, EZ1 = TZ1;   // 확장판 끝(둘레 칸 포함 — 아래 XE·YE가 정해지면 채움)
   const TY = -1.30;   // 마을 땅 높이(운동장 흙 -1.35보다 5cm 위 — 바깥 잔디 무늬 -1.362를 덮음 · 정문과 한 발 높이)
   // 칸 주소(판 가장자리에 적은 그대로 — 아이들이 '내 집은 다3'처럼 말함) · 자료 grid = { cell: 30, cols: 'num', rows: 'hangul', order: 'rowcol' } · 없으면 10cm A1~
-  const GRD = { cell: 10, cols: 'alpha', rows: 'num', order: 'colrow', ...(D.grid || {}) }, HG = '가나다라마바사아자차카타파하';
+  const GRD = { cell: 10, cols: 'alpha', rows: 'num', order: 'colrow', ...(D.grid || {}) }, HG = '가나다라마바사아자차카타파하', GP = GRD.pad || [0, 0, 0, 0];   // GP = 확장판 둘레(왼·위·오른·아래 칸 수 — 교사 10-14 판을 사방 2칸씩 넓힘 · 앞으로 지을 자리)
   const nameK = (i, kind) => kind === 'num' ? String(i + 1) : kind === 'hangul' ? (HG[i] || '?') : (i < 26 ? String.fromCharCode(65 + i) : 'A' + String.fromCharCode(65 + i - 26));
-  const colName = c => nameK(c, GRD.cols), rowName = r => nameK(r, GRD.rows);
+  const colName = c => nameK(c + GP[0], GRD.cols), rowName = r => nameK(r + GP[1], GRD.rows);   // c·r = 지금 판 칸 번호(0부터) → 확장판 주소
   // 선 자리(cm) — grid.xs·ys를 적으면 그 선으로(첫·끝 칸이 다른 판) · 없으면 cell 간격
   const GXS = GRD.xs || Array.from({ length: Math.max(0, Math.ceil(MSZ.w / GRD.cell) - 1) }, (_, i) => (i + 1) * GRD.cell), GYS = GRD.ys || Array.from({ length: Math.max(0, Math.ceil(MSZ.h / GRD.cell) - 1) }, (_, i) => (i + 1) * GRD.cell);
-  const idxOf = (v, L9) => { let i = 0; while (i < L9.length && v >= L9[i]) i++; return i; };
-  const cellOf = (x, z) => { const mx = MXof(x), my = MYof(z), c = colName(idxOf(mx, GXS)), r = rowName(idxOf(my, GYS)); return GRD.order === 'rowcol' ? r + c : c + r; };   // 세계 → 격자 주소
+  const cellOf = (x, z) => { const c = eIdx(MXof(x), XE), r = eIdx(MYof(z), YE); if (c == null || r == null) return LANG === 'en' ? 'out' : '판 밖'; const cn = nameK(c, GRD.cols), rn = nameK(r, GRD.rows); return GRD.order === 'rowcol' ? rn + cn : cn + rn; };   // 세계 → 확장판 주소(둘레 칸 포함)
   // 칸 주소 → 칸 네모(매트 cm) — '다3'(rowcol) · 'C2'(colrow) · part = 'left'|'right'|'top'|'bottom' 반쪽(한 칸에 두 색)
   const XLn = () => [0, ...GXS, MSZ.w], YLn = () => [0, ...GYS, MSZ.h];
+  const extL = (L, a, b) => [...Array.from({ length: a }, (_, i) => L[0] - (a - i) * (L[1] - L[0])), ...L, ...Array.from({ length: b }, (_, i) => L[L.length - 1] + (i + 1) * (L[L.length - 1] - L[L.length - 2]))];
+  const XE = extL(XLn(), GP[0], GP[2]), YE = extL(YLn(), GP[1], GP[3]);   // 확장판 선(매트 cm · 둘레 칸 = 가장자리 칸과 같은 폭)
+  const eIdx = (v, L9) => { if (!(v >= L9[0] && v < L9[L9.length - 1])) return null; let i = 0; while (i < L9.length - 2 && v >= L9[i + 1]) i++; return i; };   // 확장판 칸 번호(0부터)
+  EX0 = X(XE[0]); EZ0 = Z(YE[0]); EX1 = X(XE[XE.length - 1]); EZ1 = Z(YE[YE.length - 1]);
+  const inRing = (x, z) => { const mx = MXof(x), my = MYof(z); return mx < 0 || my < 0 || mx > MSZ.w || my > MSZ.h; };   // 지금 판 밖 = 확장판 둘레(앞으로 넓힐 곳)
+  const inExtM = (c, r) => c < GP[0] || r < GP[1] || c >= XE.length - 1 - GP[2] || r >= YE.length - 1 - GP[3];   // 확장판 번호 → 둘레(앞으로 넓힐 곳)인가
   const parseCell = (a) => { const t = String(a || '').trim(); let rp, cp; if (GRD.order === 'rowcol') { const m = t.match(/^(\D+)(\d+)$/); if (!m) return null; rp = m[1]; cp = m[2]; } else { const m = t.match(/^([A-Za-z]+)(\d+)$/); if (!m) return null; cp = m[1]; rp = m[2]; }
     const ix = s9 => (s9.length === 1 && /[A-Za-z]/.test(s9) ? s9.toUpperCase().charCodeAt(0) - 65 : /^\d+$/.test(s9) ? +s9 - 1 : HG.indexOf(s9));
-    const c = GRD.cols === 'num' ? +cp - 1 : ix(cp), r = GRD.rows === 'num' ? +rp - 1 : ix(rp), XL = XLn(), YL = YLn(); if (c < 0 || r < 0 || c >= XL.length - 1 || r >= YL.length - 1) return null; return [XL[c], YL[r], XL[c + 1], YL[r + 1]]; };
+    const c = GRD.cols === 'num' ? +cp - 1 : ix(cp), r = GRD.rows === 'num' ? +rp - 1 : ix(rp); if (!(c >= 0 && r >= 0 && c < XE.length - 1 && r < YE.length - 1)) return null; return [XE[c], YE[r], XE[c + 1], YE[r + 1]]; };   // 확장판 주소 → 매트 cm(둘레 칸은 판 밖 음수·넘침)
   const cellRect = (a, part) => { const R = parseCell(a); if (!R || !part) return R; const mx = (R[0] + R[2]) / 2, my = (R[1] + R[3]) / 2; return part === 'left' ? [R[0], R[1], mx, R[3]] : part === 'right' ? [mx, R[1], R[2], R[3]] : part === 'top' ? [R[0], R[1], R[2], my] : part === 'bottom' ? [R[0], my, R[2], R[3]] : R; };
   const inPoly = (x, z, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
   const inSchool = (x, z) => x >= SR[0] && x <= SR[2] && z >= SR[1] && z <= SR[3] && inPoly(x, z, SB);   // 울타리 안
@@ -597,9 +603,9 @@ export default async function start(map, params) {
           for (let k = 0; k < 24; k++) { const a9 = k / 24 * 6.28; dbx(x + Math.cos(a9) * FD * 0.3, y + 0.09, z + Math.sin(a9) * FD * 0.3, 0.9, 0.01, 0.15, -a9 + Math.PI / 2, 0xffffff, { noSide: true }); }
           for (const s9 of [-1, 1]) { const gx = x + s9 * FW * 0.92; ln(gx - s9 * FW * 0.25, z - FD * 0.45, gx - s9 * FW * 0.25, z + FD * 0.45); ln(gx, z - FD * 0.45, gx - s9 * FW * 0.25, z - FD * 0.45); ln(gx, z + FD * 0.45, gx - s9 * FW * 0.25, z + FD * 0.45);
             for (const b of [-3.6, 3.6]) box(gx, y, z + b, 0.14, 2.44, 0.14, 0, 0xffffff); box(gx, y + 2.4, z, 0.14, 0.14, 7.3, 0, 0xffffff); box(gx + s9 * 1.0, y + 1.2, z, 0.04, 2.4, 7.2, 0, 0xe8e8e8); }   // 페널티 박스 · 골대 · 그물
-          for (let k = 0; k < 4; k++) box(x, y + k * 0.5, z - FD - 2.5 - k * 0.9, FW * 1.2, 0.5, 1.0, 0, [0x3d74c9, 0xe0453a][k % 2], { top: 0xd8d4ca });   // 관중석
+          if (!pb) for (let k = 0; k < 4; k++) { box(x, y + k * 0.5, z - FD - 2.5 - k * 0.9, FW * 1.2, 0.5, 1.0, 0, [0x3d74c9, 0xe0453a][k % 2], { top: 0xd8d4ca }); PCOL.push({ x0: x - FW * 0.6, x1: x + FW * 0.6, y0: y - 1, y1: y + (k + 1) * 0.5, z0: z - FD - 3.0 - k * 0.9 - (k === 3 ? 0 : 0.9), z1: z - FD - 2.0 - k * 0.9 }); }   // 관중석(한 줄 = 한 계단 0.5m — 경기장 쪽에서 걸어 올라감) · 아이 운동장 블록(계단식 관람석)이 있으면 그것이 관중석(10-14 교사 '관람석 앞에서 계단으로') 
           for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const lx = x + a * (FW + 3), lz = z + b * (FD + 3); cyl(lx, y, lz, 0.25, 14, 0x9aa0a6, 8); box(lx, y + 14, lz, 2.2, 1.0, 0.6, Math.atan2(-a, -b), 0xfff3c4, { B: lbucket(lx, lz) }); }   // 조명탑
-          PCOL.push({ x0: x - FW * 0.6, x1: x + FW * 0.6, y0: y - 1, y1: y + 2, z0: z - FD - 6.5, z1: z - FD - 2 }); n9['축구장'] = 1; } }
+          n9['축구장'] = 1; } }
       if (A.st.has('parking')) { const big = kids.sort((a, b) => b.w * b.d - a.w * a.d)[0]; if (big) { const sp = spotIn(A, 14, 9, [big.door[0], big.door[1]], R); if (sp) { parking(group, { id: 'pk' + A.id, x: sp.x, z: sp.z, w: 26, d: 16, ry: 0 }); n9['주차장'] = 1; } } }
     } }
   function paddy(zn) {   // 다랑이 논(10-13 교사 '평평한 다랑이 · 논두렁·물길·농로 · 농가는 흩어'): 가운데 농로 + 물길 · 양쪽에 논배미(논두렁으로 나눔 · 가끔 밭) · 칸 모서리에 농가(✨)
@@ -636,6 +642,10 @@ export default async function start(map, params) {
       const m = new T3.Mesh(g, MAT.ground); m.matrixAutoUpdate = false; m.receiveShadow = false; m.userData.fx = 1; group.add(m); } }
   let COLS9 = [];
   // 판 밖 땅(SKIRT-1 · 10-13): 판 가장자리에서 들판·산이 그대로 이어짐(뒷산은 판 밖으로 계속 · 멀리 낮은 구릉) — 판 가장자리 칸은 땅 아래로 겹쳐 틈 없음 · 들어갈 수는 없음(마을 끝)
+  let SKG = null;
+  const skirtH = (x, z) => { const G9 = SKG; if (!G9) return 0; const { xs, zs, H } = G9, NXs = xs.length; const bs = (L9, v) => { let lo = 0, hi = L9.length - 2; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (L9[m] <= v) lo = m; else hi = m - 1; } return lo; };
+    const i = bs(xs, x), j = bs(zs, z), fx = Math.min(1, Math.max(0, (x - xs[i]) / (xs[i + 1] - xs[i]))), fz = Math.min(1, Math.max(0, (z - zs[j]) / (zs[j + 1] - zs[j]))), a = H[j * NXs + i], b = H[j * NXs + i + 1], c = H[(j + 1) * NXs + i], d = H[(j + 1) * NXs + i + 1];
+    return fx >= fz ? a + (b - a) * fx + (d - b) * fz : a + (d - c) * fx + (c - a) * fz; };   // 그린 두 삼각형(a·d·b / a·c·d) 그대로 — 둘레 칸(앞으로 넓힐 곳)을 걸을 때 산·들판 위에 꼭 맞게
   function drawSkirt(group) {   // 판 밖 땅(SKIRT-2): 판 가장자리에서 들판·산줄기가 이어짐 — 가까이 20m 칸 → 멀리 80m 칸(LOD) · 북서 산줄기는 1.6km · 남·동은 0.9km 낮은 구릉 · 먼 깊이 압축(HAZE-1)으로 하늘선까지 보임
     const SP = 20, axis = (lo, A0, A1, hi) => { const o = []; for (let v = A0, st = SP; v > lo; v -= st, st = Math.min(80, 20 + (A0 - v) * 0.06)) o.unshift(v); for (let v = A0 + SP; v < A1; v += SP) o.push(v); for (let v = A1, st = SP; v < hi + 1; v += st, st = Math.min(80, 20 + (v - A1) * 0.06)) o.push(v); return o; };
     const far = RANGE ? 1600 : 450, xs = axis(TX0 - far, TX0, TX1, TX1 + (RANGE ? 900 : 450)), zs = axis(TZ0 - far, TZ0, TZ1, TZ1 + (RANGE ? 900 : 450)), NXs = xs.length, NZs = zs.length, N9 = NXs * NZs;
@@ -648,6 +658,7 @@ export default async function start(map, params) {
       const edgeH = tH0(ex, ez); H[k] = edgeH + (far9 - edgeH) * ss(0, 45, dOut) - 0.05; }
     const idx = new Int32Array(N9).fill(-1); let n = 0; const P = [], U = [], I = []; for (let k = 0; k < N9; k++) if (!IN[k]) { idx[k] = n++; const i = k % NXs, j = (k / NXs) | 0; P.push(xs[i], TY + H[k], zs[j]); U.push(xs[i] / 6.5, zs[j] / 6.5); }
     for (let j = 0; j < NZs - 1; j++) for (let i = 0; i < NXs - 1; i++) { const a = j * NXs + i, b = a + 1, c = a + NXs, d = c + 1; if (IN[a] || IN[b] || IN[c] || IN[d]) continue; I.push(idx[a], idx[d], idx[b], idx[a], idx[c], idx[d]); }
+    SKG = { xs, zs, H };   // 판 밖 땅 격자(둘레 칸을 걸을 때 몸 높이 = skirtH)
     const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(U, 2)); g.setIndex(I); g.computeVertexNormals();
     // 색: 낮은 땅 = 풀 · 산 = 숲(짙은 소나무 띠 · 무리) · 가파른 비탈·높은 곳 = 바위(드러난 바위)
     const C = [], NA = g.attributes.normal;
@@ -1397,12 +1408,12 @@ export default async function start(map, params) {
       return; }
     if (kind === 'pitch') {   // 운동장 블록 = 계단식 관람석(지붕 · 파랑·빨강 의자) — 경기장은 땅 위 시설(areaFeatures soccer · 블록 옆) · ✨ 10-13 교사 '축구장이 무슨 건물이야'
       const P0 = B9.pitchAt, face = P0 ? Math.round(Math.atan2(P0[0] - cx, P0[1] - cz) / (Math.PI / 2)) * (Math.PI / 2) : ry, Q = LP(cx, cz, face), W9 = Math.max(w, d) * 0.9, D9 = 7, y = y0, cols = [];
-      box(cx, y, cz, W9, 0.3, D9 + 1, face, 0xbdb8ae, { top: 0xc9c4b8 }); cols.push(col9(cx, cz, W9 / 2, (D9 + 1) / 2, face, y - 1, y + 0.3));
+      box(cx, y, cz, W9, 0.3, D9 + 3, face, 0xbdb8ae, { top: 0xc9c4b8 }); cols.push(col9(cx, cz, W9 / 2, (D9 + 3) / 2, face, y - 1, y + 0.3));   // 받침 앞 1.5m = 첫 계단 앞 디딤(경기장에서 받침 → 계단으로 걸어 오름 · 10-14 교사 '앞에서 계단으로')
       for (let t9 = 0; t9 < 5; t9++) { const [tx9, tz9] = Q(0, D9 / 2 - 0.7 - t9 * 1.3), th = 0.3 + (t9 + 1) * 0.45; box(tx9, y, tz9, W9 - 0.06, th, 1.3 + (t9 < 4 ? 0.02 : 0), face, 0xd8d4ca, { top: 0xd2cec4 }); cols.push(col9(tx9, tz9, W9 / 2, 0.65, face, y - 1, y + th));
         for (let sx9 = -W9 / 2 + 0.6; sx9 < W9 / 2 - 0.4; sx9 += 0.75) { const [px, pz] = Q(sx9, D9 / 2 - 0.7 - t9 * 1.3 - 0.15); dbx(px, y + th, pz, 0.5, 0.36, 0.45, face, (t9 + Math.round(sx9 * 2)) % 3 ? 0x2f6fd0 : 0xe0453a); } }   // 의자 줄
       const topY = y + 0.3 + 5 * 0.45; for (const sx9 of [-W9 / 2 + 0.3, 0, W9 / 2 - 0.3]) { const [px, pz] = Q(sx9, -D9 / 2 + 0.2); box(px, topY, pz, 0.25, 2.6, 0.25, face, 0x8a8f95); }
       { const [rx, rz] = Q(0, -0.6); box(rx, topY + 2.6, rz, W9 + 0.6, 0.18, D9 + 0.8, face, 0xe8eaec, { top: 0x2f6fd0 }); }   // 지붕(파랑)
-      { const [sx, sz] = Q(0, D9 / 2 + 1.2); box(sx, y, sz, W9 * 0.5, 2.6, 2.0, face, 0xf2f1ea); B9.signAt = null; textPlane(null, B9.name || '운동장', sx + Math.sin(face) * 1.02, y + 2.0, sz + Math.cos(face) * 1.02, face, W9 * 0.45, 0.6, { one: true, bgc: '#2f6fd0', fg: '#ffffff', off: 0 }); cols.push(col9(sx, sz, W9 * 0.25, 1.0, face, y - 1, y + 2.6)); }   // 앞 매표·탈의실(작은 건물)
+      { const [sx, sz] = Q(0, D9 / 2 + 2.7); box(sx, y, sz, W9 * 0.5, 2.6, 2.0, face, 0xf2f1ea); B9.signAt = null; textPlane(null, B9.name || '운동장', sx + Math.sin(face) * 1.02, y + 2.0, sz + Math.cos(face) * 1.02, face, W9 * 0.45, 0.6, { one: true, bgc: '#2f6fd0', fg: '#ffffff', off: 0 }); cols.push(col9(sx, sz, W9 * 0.25, 1.0, face, y - 1, y + 2.6)); }   // 앞 매표·탈의실(작은 건물)
       B9.collide = cols; B9.signT = null; return; }
     if (kind === 'play') {   // 놀이터(아이 남색 블록 = 큰 정글짐 · ✨): 모래 마당 + 탑 정글짐(빨강 지붕) + 미끄럼틀 + 그네 + 시소 — 쉼터 벤치
       const Q = LP(cx, cz, ry), y = y0; box(cx, y, cz, w + 10, 0.08, d + 8, ry, 0xe6d3a0, { top: 0xead8a6 }); for (const s9 of [-1, 1]) { const [bx, bz] = Q(s9 * (w / 2 + 5.2), 0); box(bx, y, bz, 0.25, 0.3, d + 8, ry, 0x9b6a3c); } for (const s9 of [-1, 1]) { const [bx, bz] = Q(0, s9 * (d / 2 + 4.2)); box(bx, y, bz, w + 10.5, 0.3, 0.25, ry, 0x9b6a3c); }   // 모래 + 나무 테두리
@@ -1672,8 +1683,8 @@ export default async function start(map, params) {
     for (let u = 0; u < L9 - 0.01; u += 2) { const u1 = Math.min(L9, u + 2), P9 = [[u, -11.85], [u, 11.85], [u1, -11.85], [u1, 11.85]].map(([uu, vv]) => [ax9 + ux * uu + vx * vv, az9 + uz * uu + vz * vv]);
       map.collider.add({ x0: Math.min(...P9.map(q => q[0])), x1: Math.max(...P9.map(q => q[0])), z0: Math.min(...P9.map(q => q[1])), z1: Math.max(...P9.map(q => q[1])), y0: YF - 0.3, y1: YF + 6.2 }); }
     map.collider.add({ x0: -66.5, x1: -48.8, z0: 77.2, z1: 88.8, y0: YF - 0.3, y1: YF + 5.5 }); }   // 파랑 지붕 창고
-  const OUT = map.world.outside({ clip: 0.6, whole: 4, rect: SR.slice(), open: [[10, 54.5, 24, 56.5]],   /* 학교 칸(담 상자 + 남쪽 실제 주변) 밖만 마을 */ terrain: (x, z) => inSchool(x, z) ? null : (x < TX0 || x > TX1 || z < TZ0 || z > TZ1) ? TY : TY + tH(x, z) });
-  map.arena.set({ rect: [TX0 + 3, TZ0 + 3, TX1 - 3, TZ1 - 3], msg: '🏘 여기가 마을 끝이에요', ymin: TY - 6, ymax: TY + Math.max(12, (RANGE ? RANGE.max : 0) + 20, ...Object.values(D.layers).flatMap(l => (l.nature || []).filter(n => n.k === 'hill').map(n => (n.h || 2) * S * 1.2 + 12))) });   // 뒷산 꼭대기까지 오를 수 있게
+  const OUT = map.world.outside({ clip: 0.6, whole: 4, rect: SR.slice(), open: [[10, 54.5, 24, 56.5]],   /* 학교 칸(담 상자 + 남쪽 실제 주변) 밖만 마을 */ terrain: (x, z) => inSchool(x, z) ? null : (x < TX0 || x > TX1 || z < TZ0 || z > TZ1) ? TY + skirtH(x, z) : TY + tH(x, z) });
+  map.arena.set({ rect: [EX0 + 3, EZ0 + 3, EX1 - 3, EZ1 - 3], msg: GP.some(v => v) ? '🏘 여기가 판 끝이에요(둘레 칸 = 앞으로 넓힐 곳)' : '🏘 여기가 마을 끝이에요', ymin: TY - 6, ymax: TY + Math.max(12, (RANGE ? RANGE.max : 0) + 20, ...Object.values(D.layers).flatMap(l => (l.nature || []).filter(n => n.k === 'hill').map(n => (n.h || 2) * S * 1.2 + 12))) });   // 뒷산 꼭대기까지 오를 수 있게
   map.minimap.hide();
   await build(); if (map.gone) return {};
   if (!RANGE) { const P = [], C = [], N = [], R = rng0(77), n = 46, r0 = 286;   // 먼 산 능선(둘레 한 바퀴 · 안개 색에 가까운 푸른빛 — 멀리 갈수록 연하게)
@@ -1690,11 +1701,11 @@ export default async function start(map, params) {
   // ───────── 2D 마을 지도(지도 단원: 방위표 · 축척 막대 · 범례 · 기호 · 높낮이 색) — 작은 지도 + 큰 지도(M) ─────────
   const mini = document.createElement('canvas'), miniBox = document.createElement('div');
   miniBox.className = 'twn-mini ttl-keep'; miniBox.style.cssText = 'position:fixed;right:10px;top:46px;z-index:21;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.35);border:3px solid #fffdf6;cursor:pointer;background:#cfe6c0';
-  const MB = 15, MW = 264, MH = Math.round(MW * (TZ1 - TZ0) / (TX1 - TX0)); mini.width = MW + MB; mini.height = MH + MB; mini.style.cssText = 'display:block;width:' + mini.width + 'px;height:' + mini.height + 'px';   /* 위·왼쪽 MB = 칸 글자 띠(지도 칸 위에는 글자 없음) */ miniBox.appendChild(mini); document.body.appendChild(miniBox);
+  const MB = 15, MW = 264, MH = Math.round(MW * (EZ1 - EZ0) / (EX1 - EX0)); mini.width = MW + MB; mini.height = MH + MB; mini.style.cssText = 'display:block;width:' + mini.width + 'px;height:' + mini.height + 'px';   /* 위·왼쪽 MB = 칸 글자 띠(지도 칸 위에는 글자 없음) */ miniBox.appendChild(mini); document.body.appendChild(miniBox);
   miniBox.onclick = () => openBig();
   map.hud.anchor?.(() => ({ right: 10, top: 46, w: miniBox.offsetWidth || mini.width + 6, h: miniBox.offsetHeight || mini.height + 6 }));   // 칩(지도·바로 가기·자전거·메뉴)은 작은 지도 아래 — 예전엔 지도 뒤에 숨어 있었음
   const cellB = document.createElement('div'); cellB.className = 'twn-cellb ttl-keep'; cellB.style.cssText = 'position:fixed;top:46px;right:300px;z-index:21;background:#1d3557;color:#fff;font:900 30px/1 system-ui,-apple-system,"Malgun Gothic",sans-serif;padding:6px 14px 8px;border-radius:12px;border:3px solid #fffdf6;box-shadow:0 2px 10px rgba(0,0,0,.35);pointer-events:none;text-align:center;min-width:64px'; document.body.appendChild(cellB);   // 칸 주소 배지(교사 10-14 '칸별로 좌표 — 애들이 잘 찾게' · 패들렛 글 맨 앞에 칸 주소)
-  let cellNow = ''; const cellBadge = (x, z) => { const c = inSchool(x, z) ? '🏫' : cellOf(x, z); if (c !== cellNow) { cellNow = c; cellB.innerHTML = '<small style="display:block;font-size:12px;font-weight:700;opacity:.8;margin-bottom:2px">' + (LANG === 'en' ? 'cell' : '칸') + '</small>' + esc(c); } const r9 = miniBox.offsetWidth + 18; if (cellB.style.right !== r9 + 'px') cellB.style.right = r9 + 'px'; };
+  let cellNow = ''; const cellBadge = (x, z) => { const c = inSchool(x, z) ? '🏫' : cellOf(x, z), ring = inRing(x, z); if (c !== cellNow) { cellNow = c; cellB.innerHTML = '<small style="display:block;font-size:12px;font-weight:700;opacity:.8;margin-bottom:2px">' + (ring ? (LANG === 'en' ? 'to build' : '🌱 넓힐 곳') : (LANG === 'en' ? 'cell' : '칸')) + '</small>' + esc(c); cellB.style.background = ring ? '#4f6b52' : '#1d3557'; } const r9 = miniBox.offsetWidth + 18; if (cellB.style.right !== r9 + 'px') cellB.style.right = r9 + 'px'; };
   const SYM = { live: ['#e0453a', '사는 곳', 'Homes'], work: ['#f2c230', '일하는 곳', 'Work'], pub: ['#2f4a8a', '모두가 쓰는 곳', 'Public'], nat: ['#4f9e4a', '자연', 'Nature'] };
   function drawLegend(ctx, lx, ly) {   // 범례(큰 지도에서는 지도 옆 따로 — 뒷산 칸을 가리지 않게)
     const items = Object.values(SYM), lh = 20; ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fillRect(lx, ly, 178, lh * (items.length + 5) + 14); ctx.font = '800 13px ' + SFONT; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillStyle = '#1d2b3a'; ctx.fillText(LANG === 'en' ? 'Legend' : '범례', lx + 10, ly + 14);
@@ -1752,12 +1763,16 @@ export default async function start(map, params) {
       ctx.font = '800 12px ' + SFONT; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.9)'; const t = (p.ai ? '✨' : '') + nameOf(p), tw = ctx.measureText(t).width, ty9 = pz + (p.nat ? -6 : 13);
       if (free9(px - tw / 2 - 2, ty9, tw + 4, 14)) { ctx.strokeText(t, px, ty9); ctx.fillStyle = '#1d2b3a'; ctx.fillText(t, px, ty9); } }
     if (o.symbols) for (const lb of L.labels || []) { const [px, pz] = P(X(lb.x), Z(lb.y)), t = LANG === 'en' ? (lb.en || lb.t) : lb.t; ctx.font = '900 16px ' + SFONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(t, px, pz); ctx.fillStyle = '#2b5a3a'; ctx.fillText(t, px, pz); }
+    if (GP.some(v => v) && SKG) { const st = 25, lo = [207, 227, 180], hi = [185, 160, 106]; for (let z = EZ0; z < EZ1; z += st) for (let x = EX0; x < EX1; x += st) { const cx = x + st / 2, cz = z + st / 2; if (cx > TX0 && cx < TX1 && cz > TZ0 && cz < TZ1) continue;   // 둘레 칸 땅(판 밖 들판·뒷산 — 그린 땅 높이 그대로 색)
+        const t = Math.min(1, Math.max(0, (skirtH(cx, cz) - 4) / 140)), c9 = lo.map((v, i) => Math.round(v + (hi[i] - v) * t)), [px, pz] = P(x, z); ctx.fillStyle = 'rgb(' + c9.join(',') + ')'; ctx.fillRect(px, pz, st * sc + 0.7, st * sc + 0.7); } }
+    if (GP.some(v => v)) { const [ax, az] = P(TX0, TZ0), [bx, bz] = P(TX1, TZ1); ctx.save(); ctx.fillStyle = 'rgba(240,243,236,.66)'; ctx.fillRect(0, 0, w, az); ctx.fillRect(0, bz, w, h - bz); ctx.fillRect(0, az, ax, bz - az); ctx.fillRect(bx, az, w - bx, bz - az);   // 확장판 둘레(앞으로 넓힐 곳) = 흐리게
+      ctx.strokeStyle = 'rgba(29,53,87,.55)'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]); ctx.strokeRect(ax, az, bx - ax, bz - az); ctx.setLineDash([]); ctx.restore(); }   // 지금 판 테두리(점선)
     // 격자 주소(매트 10cm 칸 — 가로 A·B·C… · 세로 1·2·3… — '○○ 구역에 넣어 줘'가 정확한 자리로)
     if (o.grid) { ctx.save(); ctx.strokeStyle = 'rgba(40,60,90,.35)'; ctx.lineWidth = 1; ctx.font = '800 11px ' + SFONT; ctx.fillStyle = 'rgba(20,40,70,.85)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      const XL = [0, ...GXS, MSZ.w], YL = [0, ...GYS, MSZ.h], gc = Math.min(...XL.slice(1).map((v, i) => v - XL[i])); ctx.font = '900 ' + Math.min(18, Math.max(11, gc * S * sc * 0.28)) + 'px ' + SFONT;
+      const XL = XE, YL = YE, gc = Math.min(...XL.slice(1).map((v, i) => v - XL[i])); ctx.font = '900 ' + Math.min(18, Math.max(11, gc * S * sc * 0.28)) + 'px ' + SFONT;
       const gb = o.gridBand || 0, tb = gb ? -gb / 2 : 10, bb = gb ? h + gb / 2 : h - 10, lb = gb ? -gb / 2 : 12, rb = gb ? w + gb / 2 : w - 12; if (gb) { ctx.font = '900 13px ' + SFONT; ctx.fillStyle = '#ffffff'; }   // gridBand = 지도 바깥 띠에만 글자(교사 10-14)
-      XL.forEach((v, c) => { const [px] = P(X(v), 0); ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke(); if (c < XL.length - 1) { const [m] = P(X((v + XL[c + 1]) / 2), 0); if (gb) bandL.push([colName(c), m, tb], [colName(c), m, bb]); else { ctx.fillText(colName(c), m, tb); ctx.fillText(colName(c), m, bb); } } });
-      YL.forEach((v, r) => { const [, pz] = P(0, Z(v)); ctx.beginPath(); ctx.moveTo(0, pz); ctx.lineTo(w, pz); ctx.stroke(); if (r < YL.length - 1) { const [, m] = P(0, Z((v + YL[r + 1]) / 2)); if (gb) bandL.push([rowName(r), lb, m], [rowName(r), rb, m]); else { ctx.fillText(rowName(r), lb, m); ctx.fillText(rowName(r), rb, m); } } });
+      XL.forEach((v, c) => { const [px] = P(X(v), 0); ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke(); if (c < XL.length - 1) { const [m] = P(X((v + XL[c + 1]) / 2), 0); const t9 = nameK(c, GRD.cols); if (gb) bandL.push([t9, m, tb], [t9, m, bb]); else { ctx.fillText(t9, m, tb); ctx.fillText(t9, m, bb); } } });
+      YL.forEach((v, r) => { const [, pz] = P(0, Z(v)); ctx.beginPath(); ctx.moveTo(0, pz); ctx.lineTo(w, pz); ctx.stroke(); if (r < YL.length - 1) { const [, m] = P(0, Z((v + YL[r + 1]) / 2)); const t9 = nameK(r, GRD.rows); if (gb) bandL.push([t9, lb, m], [t9, rb, m]); else { ctx.fillText(t9, lb, m); ctx.fillText(t9, rb, m); } } });
       ctx.restore(); }
     // 길 안내 선
     const R9 = o.route; if (R9 && R9.pts) { ctx.strokeStyle = '#ff5a36'; ctx.lineWidth = 4; ctx.setLineDash([8, 6]); ctx.beginPath(); R9.pts.forEach((p, i) => { const [a, b] = P(p[0], p[1]); if (i) ctx.lineTo(a, b); else ctx.moveTo(a, b); }); ctx.stroke(); ctx.setLineDash([]); }
@@ -1768,14 +1783,14 @@ export default async function start(map, params) {
     if (o.gridBand) { ctx.restore(); ctx.font = '900 13px ' + SFONT; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; for (const [t9, lx, ly] of bandL) ctx.fillText(t9, lx, ly); }   // 칸 글자 = 띠에만(자르기 밖)
   }
   let GRID = !!params.plan;
-  const miniSc = MW / (TX1 - TX0); let miniBg = null;
-  function drawMini() { const g = mini.getContext('2d'); if (mapDirty || !miniBg) { g.fillStyle = '#1d3557'; g.fillRect(0, 0, mini.width, mini.height); g.save(); g.translate(MB, MB); g.beginPath(); g.rect(0, 0, MW, MH); g.clip(); drawTownMap(g, { x0: TX0, z0: TZ0, sc: miniSc, w: MW, h: MH }); g.restore();
-      { const XL = XLn(), YL = YLn(); g.font = '900 10px ' + SFONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff';   // 칸 글자(1~10 · 가~바)는 지도 바깥 띠에만
-        for (let i = 0; i < XL.length - 1; i++) g.fillText(colName(i), MB + (X((XL[i] + XL[i + 1]) / 2) - TX0) * miniSc, MB / 2 + 0.5); for (let j = 0; j < YL.length - 1; j++) g.fillText(rowName(j), MB / 2, MB + (Z((YL[j] + YL[j + 1]) / 2) - TZ0) * miniSc);
+  const miniSc = MW / (EX1 - EX0); let miniBg = null;
+  function drawMini() { const g = mini.getContext('2d'); if (mapDirty || !miniBg) { g.fillStyle = '#1d3557'; g.fillRect(0, 0, mini.width, mini.height); g.save(); g.translate(MB, MB); g.beginPath(); g.rect(0, 0, MW, MH); g.clip(); drawTownMap(g, { x0: EX0, z0: EZ0, sc: miniSc, w: MW, h: MH }); g.restore();
+      { const XL = XE, YL = YE; g.font = '900 ' + (XL.length > 12 ? 9 : 10) + 'px ' + SFONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff';   // 칸 글자(1~10 · 가~바)는 지도 바깥 띠에만
+        for (let i = 0; i < XL.length - 1; i++) { g.globalAlpha = i < GP[0] || i >= XL.length - 1 - GP[2] ? 0.55 : 1; g.fillText(nameK(i, GRD.cols), MB + (X((XL[i] + XL[i + 1]) / 2) - EX0) * miniSc, MB / 2 + 0.5); } for (let j = 0; j < YL.length - 1; j++) { g.globalAlpha = j < GP[1] || j >= YL.length - 1 - GP[3] ? 0.55 : 1; g.fillText(nameK(j, GRD.rows), MB / 2, MB + (Z((YL[j] + YL[j + 1]) / 2) - EZ0) * miniSc); } g.globalAlpha = 1;
         g.fillStyle = '#ff8a7a'; g.font = '900 9px ' + SFONT; g.fillText(LANG === 'en' ? 'N' : '북', MB / 2, MB / 2 + 0.5); }   // 북 = 띠 모퉁이(위 = 북)
       miniBg = g.getImageData(0, 0, mini.width, mini.height); mapDirty = false; } else g.putImageData(miniBg, 0, 0);
-    if (routeNow && routeNow.pts) { g.strokeStyle = '#ff5a36'; g.lineWidth = 2.5; g.beginPath(); routeNow.pts.forEach((p, i) => { const a = MB + (p[0] - TX0) * miniSc, b = MB + (p[1] - TZ0) * miniSc; if (i) g.lineTo(a, b); else g.moveTo(a, b); }); g.stroke(); }
-    const me = map.player.get(), px = MB + (me.x - TX0) * miniSc, pz = MB + (me.z - TZ0) * miniSc; g.fillStyle = '#2f6fd0'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(px, pz, 4.5, 0, 7); g.fill(); g.stroke(); }
+    if (routeNow && routeNow.pts) { g.strokeStyle = '#ff5a36'; g.lineWidth = 2.5; g.beginPath(); routeNow.pts.forEach((p, i) => { const a = MB + (p[0] - EX0) * miniSc, b = MB + (p[1] - EZ0) * miniSc; if (i) g.lineTo(a, b); else g.moveTo(a, b); }); g.stroke(); }
+    const me = map.player.get(), px = MB + (me.x - EX0) * miniSc, pz = MB + (me.z - EZ0) * miniSc; g.fillStyle = '#2f6fd0'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(px, pz, 4.5, 0, 7); g.fill(); g.stroke(); }
 
   // ───────── 화면(칩 · 창) ─────────
   const css = document.createElement('style'); css.textContent = `
@@ -1788,7 +1803,7 @@ export default async function start(map, params) {
 .twn-p table{border-collapse:collapse;margin-top:8px;font-size:14px}.twn-p td,.twn-p th{border-bottom:1px solid #dfe6da;padding:5px 10px;text-align:right}.twn-p td:first-child,.twn-p th:first-child{text-align:left}
 .twn-p .st{display:flex;gap:12px;align-items:center;margin:7px 0;padding:8px 10px;border-radius:12px;background:#eef5ea;font-size:16px;line-height:1.4}.twn-p .st b.n{flex:none;width:42px;height:42px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:24px}
 .twn-p .ai{background:#fff7d6;border-radius:10px;padding:7px 10px;margin:5px 0;font-size:14px;display:flex;gap:8px;align-items:center}.twn-p .ai span{flex:1}
-.twn-p .cg{display:grid;gap:4px;margin-top:6px}.twn-p .cg button{padding:3px 2px;min-height:46px;font-size:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15}.twn-p .cg small{font-size:10px;font-weight:600;color:#56606b;white-space:nowrap;overflow:hidden;max-width:100%}.twn-p .cg .sch{background:#ffe7a3}.twn-p .cg .here{outline:3px solid #e0453a}
+.twn-p .cg{display:grid;gap:4px;margin-top:6px}.twn-p .cg button{padding:3px 2px;min-height:46px;font-size:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15}.twn-p .cg small{font-size:10px;font-weight:600;color:#56606b;white-space:nowrap;overflow:hidden;max-width:100%}.twn-p .cg .sch{background:#ffe7a3}.twn-p .cg .ext{opacity:.5;background:#eef1ea;border-style:dashed}.twn-p .cg .here{outline:3px solid #e0453a}
 .twn-p .jp{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:6px}.twn-p .jp button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:1px;padding:6px 10px;font-size:14px;line-height:1.25}.twn-p .jp small{font-weight:600;color:#56606b;font-size:12px}
 .twn-p .mpop{position:absolute;z-index:2;transform:translate(-50%,calc(-100% - 10px));background:#fffdf6;border:2px solid #2b5a3a;border-radius:12px;padding:8px 10px;box-shadow:0 6px 18px rgba(0,0,0,.3);font-size:15px;font-weight:800;white-space:nowrap;display:flex;flex-direction:column;gap:6px;align-items:stretch}.twn-p .mpop div{display:flex;gap:6px}
 `; document.head.appendChild(css);
@@ -1799,11 +1814,11 @@ export default async function start(map, params) {
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function openBig() {
     const P9 = openP('<h3>' + (planMode ? '📐 읽은 도면 확인 — ' : '🗺 ') + esc(LANG === 'en' ? (D.en || D.title) : D.title) + ' — ' + esc(LANG === 'en' ? (L.en || L.name) : L.name) + '</h3>' + (planMode ? '<div class="sm" style="margin-bottom:6px">사진을 이렇게 읽었어요 — 판과 다른 곳(✨ AI가 채운 빈칸 포함)을 찾아 알려 주면 짓기 전에 고쳐요</div>' : '') + '<div style="display:flex;gap:8px;align-items:flex-start;justify-content:center"><canvas class="twn-leg" width="196" height="352" style="flex:none;border-radius:10px;background:#fffdf6"></canvas><canvas class="twn-big" style="display:block;max-width:calc(100% - 204px);border-radius:10px;cursor:crosshair"></canvas></div><div class="sm" style="margin-top:6px">지도를 누르면 📍 여기로 가기 · 장소 기호를 누르면 🧭 길 안내도 · ✨ = AI가 채운 빈칸 · 빨간 점선 = 길 안내 · 내 자리 격자: <b class="twn-cell"></b></div><div class="row"><button class="sub" data-a="g">' + (GRID ? '▦ 격자 주소 끄기' : '▦ 격자 주소 보기') + '</button><button class="sub" data-a="x">' + (planMode ? '▶ 이대로 걸어 보기' : '닫기(M)') + '</button></div>', true);
-    bigOpen = true; const MG = GRID ? 20 : 0, cv = P9.querySelector('canvas.twn-big'), lg = P9.querySelector('canvas.twn-leg'), W9 = Math.round(Math.min(860, innerWidth * 0.92 - 210 - 2 * MG, (innerHeight * 0.92 - 150 - 2 * MG) * (TX1 - TX0) / (TZ1 - TZ0))), sc = W9 / (TX1 - TX0), H9 = Math.round((TZ1 - TZ0) * sc); cv.width = W9 + 2 * MG; cv.height = H9 + 2 * MG;   // MG = 칸 주소 띠(지도 바깥)
+    bigOpen = true; const MG = GRID ? 20 : 0, cv = P9.querySelector('canvas.twn-big'), lg = P9.querySelector('canvas.twn-leg'), W9 = Math.round(Math.min(860, innerWidth * 0.92 - 210 - 2 * MG, (innerHeight * 0.92 - 150 - 2 * MG) * (EX1 - EX0) / (EZ1 - EZ0))), sc = W9 / (EX1 - EX0), H9 = Math.round((EZ1 - EZ0) * sc); cv.width = W9 + 2 * MG; cv.height = H9 + 2 * MG;   // MG = 칸 주소 띠(지도 바깥)
     { const g9 = lg.getContext('2d'); g9.clearRect(0, 0, lg.width, lg.height); drawLegend(g9, 6, 6); drawCompass(g9, 98, 250); drawScale(g9, 6, 294, sc, true); }   /* 방위표·축척도 지도 옆 칸에 */
-    const draw = () => { const c9 = cv.getContext('2d'); if (MG) { c9.fillStyle = '#1d3557'; c9.fillRect(0, 0, cv.width, cv.height); } c9.save(); c9.translate(MG, MG); drawTownMap(c9, { x0: TX0, z0: TZ0, sc, w: W9, h: H9, legend: false, symbols: true, me: true, route: routeNow, grid: GRID, gridBand: MG }); c9.restore(); const me = map.player.get(), ce = P9.querySelector('.twn-cell'); if (ce) ce.textContent = inSchool(me.x, me.z) ? '학교 안' : cellOf(me.x, me.z); }; draw();
+    const draw = () => { const c9 = cv.getContext('2d'); if (MG) { c9.fillStyle = '#1d3557'; c9.fillRect(0, 0, cv.width, cv.height); } c9.save(); c9.translate(MG, MG); drawTownMap(c9, { x0: EX0, z0: EZ0, sc, w: W9, h: H9, legend: false, symbols: true, me: true, route: routeNow, grid: GRID, gridBand: MG }); c9.restore(); const me = map.player.get(), ce = P9.querySelector('.twn-cell'); if (ce) ce.textContent = inSchool(me.x, me.z) ? '학교 안' : cellOf(me.x, me.z); }; draw();
     P9.querySelector('[data-a="g"]').onclick = () => { GRID = !GRID; openBig(); };
-    cv.onclick = e => { const r = cv.getBoundingClientRect(), x = TX0 + ((e.clientX - r.left) * (cv.width / r.width) - MG) / sc, z = TZ0 + ((e.clientY - r.top) * (cv.height / r.height) - MG) / sc; let best = null, bd = 18 / sc; for (const p of PLACES) { const d = Math.hypot(p.x - x, p.z - z); if (d < bd) { bd = d; best = p; } }
+    cv.onclick = e => { const r = cv.getBoundingClientRect(), x = EX0 + ((e.clientX - r.left) * (cv.width / r.width) - MG) / sc, z = EZ0 + ((e.clientY - r.top) * (cv.height / r.height) - MG) / sc; let best = null, bd = 18 / sc; for (const p of PLACES) { const d = Math.hypot(p.x - x, p.z - z); if (d < bd) { bd = d; best = p; } }
       P9.querySelector('.mpop')?.remove(); const bx = P9.querySelector('.bx'), br = bx.getBoundingClientRect(), pop = document.createElement('div'); pop.className = 'mpop'; pop.style.left = (e.clientX - br.left + bx.scrollLeft) + 'px'; pop.style.top = (e.clientY - br.top + bx.scrollTop) + 'px';   // 누른 자리 작은 창(교사 10-13 '큰 지도에서 누르면 여기로 가기')
       pop.innerHTML = '<span>' + (best ? esc(best.icon) + ' ' + esc(nameOf(best)) : '📍 ' + esc(spotName(x, z))) + '</span><div>' + (best ? '<button class="sub" data-m="r">🧭 길 안내</button>' : '') + '<button data-m="g">📍 여기로 가기</button></div>'; bx.style.position = 'relative'; bx.appendChild(pop);
       pop.onclick = ev => { ev.stopPropagation(); const m = ev.target.closest('button'); if (!m) return; if (m.dataset.m === 'r') { pop.remove(); showRoute(best); draw(); } else { closeP(); jumpTo(best || { name: spotName(x, z), icon: '📍', x, z, F: [x, z], look: [x, z] }); } }; };
@@ -1926,15 +1941,16 @@ export default async function start(map, params) {
     const areas = PLACES.filter(p => p.area).map(p => ({ ...p, F: p.door, look: [p.x, p.z] }));
     return { big, areas }; }
   function openJump() {
-    const XL = XLn(), YL = YLn(), nC = XL.length - 1, nR = YL.length - 1; let gridH = '<div class="grp">🔲 칸으로 가기 <small style="font-weight:600;color:#56606b">— 판 모양 그대로 · 누르면 그 칸 앞 길로</small></div><div class="cg" style="grid-template-columns:repeat(' + nC + ',1fr)">';
-    for (let r = 0; r < nR; r++) for (let c = 0; c < nC; c++) { const nm = GRD.order === 'rowcol' ? rowName(r) + colName(c) : colName(c) + rowName(r), x = X((XL[c] + XL[c + 1]) / 2), z = Z((YL[r] + YL[r + 1]) / 2), sch = inSchool(x, z) || (x > SR[0] && x < SR[2] && z > SR[1] && z < SR[3]), A = AREAS.find(a => a.t && a.cells && a.cells.includes(nm));
-      gridH += '<button class="sub' + (sch ? ' sch' : '') + (nm === cellNow ? ' here' : '') + '" data-cell="' + esc(nm) + '"><b>' + (sch ? '🏫 ' : '') + esc(nm) + '</b>' + (A && !sch ? '<small>' + esc(A.t.slice(0, 7)) + '</small>' : '') + '</button>'; }
+    const XL = XE, YL = YE, nC = XL.length - 1, nR = YL.length - 1, ext9 = GP.some(v => v); let gridH = '<div class="grp">🔲 칸으로 가기 <small style="font-weight:600;color:#56606b">— 판 모양 그대로 · 누르면 그 칸 앞 길로' + (ext9 ? ' · 흐린 칸 = 앞으로 넓힐 곳(가 볼 수 있어요)' : '') + '</small></div><div class="cg" style="grid-template-columns:repeat(' + nC + ',1fr)">';
+    for (let r = 0; r < nR; r++) for (let c = 0; c < nC; c++) { const cn = nameK(c, GRD.cols), rn = nameK(r, GRD.rows), nm = GRD.order === 'rowcol' ? rn + cn : cn + rn, x = X((XL[c] + XL[c + 1]) / 2), z = Z((YL[r] + YL[r + 1]) / 2), ring = inExtM(c, r), sch = !ring && (inSchool(x, z) || (x > SR[0] && x < SR[2] && z > SR[1] && z < SR[3])), A = !ring && AREAS.find(a => a.t && a.cells && a.cells.includes(nm));
+      gridH += '<button class="sub' + (sch ? ' sch' : '') + (ring ? ' ext' : '') + (nm === cellNow ? ' here' : '') + '" data-cell="' + esc(nm) + '"><b>' + (sch ? '🏫 ' : '') + esc(nm) + '</b>' + (A && !sch ? '<small>' + esc(A.t.slice(0, 7)) + '</small>' : '') + '</button>'; }
     gridH += '</div>';
     const { big, areas } = jumpLists(), all = [...big, ...areas], bt = (p, i) => '<button class="sub" data-j="' + i + '"><b>' + esc(p.icon || '📍') + ' ' + esc(nameOf(p)) + '</b>' + (p.school ? '' : '<small>' + esc(cellOf(p.x, p.z)) + '</small>') + '</button>';
     const P9 = openP('<h3>📍 바로 가기</h3><div class="sm">누르면 그곳 앞 길 위로 가서 그곳을 바라봐요 · 큰 지도(M)·🛰 하늘에서 보기에서 아무 데나 눌러도 갈 수 있어요</div>' + gridH + '<div class="grp">⭐ 큰 장소</div><div class="jp">' + big.map((p, i) => bt(p, i)).join('') + '</div><div class="grp">🔖 우리가 이름 붙인 칸 ' + areas.length + '</div><div class="jp">' + areas.map((p, i) => bt(p, big.length + i)).join('') + '</div><div class="row"><button class="sub" data-a="x">닫기(Esc)</button></div>', true);
     P9.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') return closeP(); if (b.dataset.cell) { closeP(); jumpCell(b.dataset.cell); return; } const p = all[+b.dataset.j]; if (!p) return; closeP(); jumpTo(p); }; }
   function jumpCell(nm) {   // 칸 주소로 가기(교사가 아이 글의 '다8'을 바로 찾아 확인) — 학교 칸 = 정문 앞 · 이름표 돌이 그 칸에 있으면 돌 앞 · 아니면 칸 가운데에서 가장 가까운 길
-    const R9 = parseCell(nm); if (!R9) return false; const x = X((R9[0] + R9[2]) / 2), z = Z((R9[1] + R9[3]) / 2); if (x > SR[0] && x < SR[2] && z > SR[1] && z < SR[3]) { jumpTo({ name: '우리 학교', icon: '🏫', x: 16.5, z: 40, spot: [15.4, 74], look: [15.4, 40] }); return true; }
+    const R9 = parseCell(nm); if (!R9) return false;
+    { const mx = (R9[0] + R9[2]) / 2, my = (R9[1] + R9[3]) / 2; if (mx < 0 || my < 0 || mx > MSZ.w || my > MSZ.h) { const x = X(mx), z = Z(my), sp = freeNear(x, z, 40) || [x, z]; jumpTo({ name: nm + ' 칸 · ' + (LANG === 'en' ? 'to build later' : '앞으로 넓힐 곳'), icon: '🌱', x, z, spot: sp, look: [(TX0 + TX1) / 2, (TZ0 + TZ1) / 2], here: true }); return true; } }   /* 확장판 둘레 칸(아직 길·건물 없음 — 판 밖 들판·숲·산 그대로) */ const x = X((R9[0] + R9[2]) / 2), z = Z((R9[1] + R9[3]) / 2); if (x > SR[0] && x < SR[2] && z > SR[1] && z < SR[3]) { jumpTo({ name: '우리 학교', icon: '🏫', x: 16.5, z: 40, spot: [15.4, 74], look: [15.4, 40] }); return true; }
     const A = AREAS.find(a => a.t && !a.noStone && a.cells && a.cells.includes(nm) && cellOf(a.sx, a.sz) === nm), pa = A && PLACES.find(p => p.area && p.id === A.id);
     if (pa) jumpTo({ ...pa, name: nm + ' · ' + pa.name, F: pa.door, look: [pa.x, pa.z] }); else jumpTo({ name: nm + ' 칸', icon: '🔲', x, z, F: [x, z], look: [x, z], far: 400 }); return true; }
   function placeNear(x, z, r) { let best = null, bd = r; for (const p of PLACES) { const d = Math.hypot(p.x - x, p.z - z) - (p.nat ? 20 : 0); if (d < bd) { bd = d; best = p; } } return best; }
@@ -2006,7 +2022,7 @@ export default async function start(map, params) {
     return Z9; }
   function topOn() { if (topH) return; topH = true; map.player.freeze(true); clouds(false); HZU.uC0.value = 1e6; for (const s9 of LABELS) s9.visible = false; closeP(); map.hud.goal(''); if (ROOT) ROOT.traverse(o => { if (o.userData.th) o.visible = false; });   // 위에서 안 보이는 창유리·가로등 머리는 숨김(그리기 줄임)
     const here = pt => placeNear(pt.x, pt.z, 15);
-    map.top.enter({ top: true, cut: false, at: [(TX0 + TX1) / 2, (TZ0 + TZ1) / 2], d: 860, dMax: 1150, bound: [TX0 - 80, TZ0 - 80, TX1 + 80, TZ1 + 80], floor: 'roof', floors: false, labels: true, zones: townZones(),
+    map.top.enter({ top: true, cut: false, at: [(TX0 + TX1) / 2, (TZ0 + TZ1) / 2], d: 860, dMax: 1150, bound: [EX0 - 80, EZ0 - 80, EX1 + 80, EZ1 + 80], floor: 'roof', floors: false, labels: true, zones: townZones(),
       zoneAt: (x, z) => { const p = placeNear(x, z, 15); return { label: p ? p.icon + ' ' + nameOf(p) : spotName(x, z) }; },
       tapActions: [{ t: '📍 여기로 가기', f: pt => { const p = here(pt); topOff(); jumpTo(p || { name: spotName(pt.x, pt.z), icon: '📍', x: pt.x, z: pt.z, F: [pt.x, pt.z], look: [pt.x, pt.z] }); } },
         { t: '🧭 길 안내', when: pt => !!here(pt), f: pt => { const p = here(pt); topOff(); showRoute(p); } }],
@@ -2261,7 +2277,7 @@ export default async function start(map, params) {
   }
 
   function placeWord(x, z) {   // 지금 자리 말(✨): 길이면 길 이름(큰길·강변길·학교 앞길·고갯길·동네 길) · 아니면 칸 이름표 · 산 · 강가 · 마을
-    const r = nearSeg(x, z, 30), A = areaAt(x, z), en = LANG === 'en';
+    const r = nearSeg(x, z, 30), A = areaAt(x, z), en = LANG === 'en'; if (inRing(x, z)) return skirtH(x, z) > 12 ? (en ? 'Mountains (to build later)' : '뒷산 쪽 · 넓힐 곳') : (en ? 'Fields (to build later)' : '들판 · 넓힐 곳');
     if (r && r.d < r.sg.hw + 2) { if (Math.hypot(x - (SR[0] + SR[2]) / 2, z - (SR[1] + SR[3]) / 2) < 160) return en ? 'School Road' : '학교 앞길'; if (MWALL.length && tH(x, z) > 4) return en ? 'Mountain Pass' : '고갯길'; if (sdAt(x, z) < FPW + 30) return en ? 'Riverside Road' : '강변길'; return r.sg.r.big ? (en ? 'Main Road' : '큰길') : (en ? 'Village Lane' : '동네 길'); }
     if (sdAt(x, z) < FPW + 2) return en ? 'Riverside' : '강가'; if (tH(x, z) > 12) return en ? 'Back Mountain' : '뒷산'; if (A && A.t) return A.t; return en ? 'Our Town' : '우리 마을'; }
   // 지금 할 일 줄(가까운 장소 · 4번/초) · 물 흐름 · 나무 흔들림 · 자전거 · 작은 지도
