@@ -1807,14 +1807,15 @@ export default async function start(map, params) {
 .twn-p .jp{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:6px}.twn-p .jp button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:1px;padding:6px 10px;font-size:14px;line-height:1.25}.twn-p .jp small{font-weight:600;color:#56606b;font-size:12px}
 .twn-p .mpop{position:absolute;z-index:2;transform:translate(-50%,calc(-100% - 10px));background:#fffdf6;border:2px solid #2b5a3a;border-radius:12px;padding:8px 10px;box-shadow:0 6px 18px rgba(0,0,0,.3);font-size:15px;font-weight:800;white-space:nowrap;display:flex;flex-direction:column;gap:6px;align-items:stretch}.twn-p .mpop div{display:flex;gap:6px}
 `; document.head.appendChild(css);
-  let panel = null, keyDn = null;
-  const closeP = () => { if (panel) { panel.remove(); panel = null; } bigOpen = false; };
-  function openP(html, wide) { closeP(); document.exitPointerLock?.(); panel = document.createElement('div'); panel.className = 'twn-p ttl-keep'; panel.innerHTML = '<div class="bx" style="' + (wide ? 'width:min(1100px,96vw)' : 'width:min(640px,94vw)') + '">' + html + '</div>';
+  let panel = null, keyDn = null, panelK = '', relock9 = false;
+  const relockNow = () => { if (!relock9) return; relock9 = false; const hint = () => { if (!dead && !document.pointerLockElement) map.hud.toast(LANG === 'en' ? '🖱 Click the screen (or Tab) to look around again' : '🖱 화면을 한 번 누르면(또는 Tab) 다시 둘러봐요', 2.2); }; const r = navigator.userActivation && navigator.userActivation.isActive && map.player.relock ? map.player.relock() : false; if (!r) hint(); else if (r.then) r.then(null, hint); };   // UX-1(10-14 교사 'J 누르면 멈췄던 것처럼 불편한 것')
+  const closeP = (keep) => { if (panel) { panel.remove(); panel = null; } bigOpen = false; panelK = ''; if (keep === true) return; if (!topH) { map.player.freeze(false); relockNow(); } };   // keep = 다른 창으로 바꿈·하늘에서 보기로(멈춤·잠금 그대로)
+  function openP(html, wide, kind) { const wasL = !!document.pointerLockElement; closeP(true); if (wasL) relock9 = true; panelK = kind || ''; document.exitPointerLock?.(); map.player.freeze(true); panel = document.createElement('div'); panel.className = 'twn-p ttl-keep'; panel.innerHTML = '<div class="bx" style="' + (wide ? 'width:min(1100px,96vw)' : 'width:min(640px,94vw)') + '">' + html + '</div>';
     panel.addEventListener('click', e => { if (e.target === panel) closeP(); }); for (const t of ['keydown', 'keyup']) panel.addEventListener(t, e => e.stopPropagation()); document.body.appendChild(panel); return panel; }
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function openBig() {
     const P9 = openP('<h3>' + (planMode ? '📐 읽은 도면 확인 — ' : '🗺 ') + esc(LANG === 'en' ? (D.en || D.title) : D.title) + ' — ' + esc(LANG === 'en' ? (L.en || L.name) : L.name) + '</h3>' + (planMode ? '<div class="sm" style="margin-bottom:6px">사진을 이렇게 읽었어요 — 판과 다른 곳(✨ AI가 채운 빈칸 포함)을 찾아 알려 주면 짓기 전에 고쳐요</div>' : '') + '<div style="display:flex;gap:8px;align-items:flex-start;justify-content:center"><canvas class="twn-leg" width="196" height="352" style="flex:none;border-radius:10px;background:#fffdf6"></canvas><canvas class="twn-big" style="display:block;max-width:calc(100% - 204px);border-radius:10px;cursor:crosshair"></canvas></div><div class="sm" style="margin-top:6px">지도를 누르면 📍 여기로 가기 · 장소 기호를 누르면 🧭 길 안내도 · ✨ = AI가 채운 빈칸 · 빨간 점선 = 길 안내 · 내 자리 격자: <b class="twn-cell"></b></div><div class="row"><button class="sub" data-a="g">' + (GRID ? '▦ 격자 주소 끄기' : '▦ 격자 주소 보기') + '</button><button class="sub" data-a="x">' + (planMode ? '▶ 이대로 걸어 보기' : '닫기(M)') + '</button></div>', true);
-    bigOpen = true; const MG = GRID ? 20 : 0, cv = P9.querySelector('canvas.twn-big'), lg = P9.querySelector('canvas.twn-leg'), W9 = Math.round(Math.min(860, innerWidth * 0.92 - 210 - 2 * MG, (innerHeight * 0.92 - 150 - 2 * MG) * (EX1 - EX0) / (EZ1 - EZ0))), sc = W9 / (EX1 - EX0), H9 = Math.round((EZ1 - EZ0) * sc); cv.width = W9 + 2 * MG; cv.height = H9 + 2 * MG;   // MG = 칸 주소 띠(지도 바깥)
+    panelK = 'M'; bigOpen = true; const MG = GRID ? 20 : 0, cv = P9.querySelector('canvas.twn-big'), lg = P9.querySelector('canvas.twn-leg'), W9 = Math.round(Math.min(860, innerWidth * 0.92 - 210 - 2 * MG, (innerHeight * 0.92 - 150 - 2 * MG) * (EX1 - EX0) / (EZ1 - EZ0))), sc = W9 / (EX1 - EX0), H9 = Math.round((EZ1 - EZ0) * sc); cv.width = W9 + 2 * MG; cv.height = H9 + 2 * MG;   // MG = 칸 주소 띠(지도 바깥)
     { const g9 = lg.getContext('2d'); g9.clearRect(0, 0, lg.width, lg.height); drawLegend(g9, 6, 6); drawCompass(g9, 98, 250); drawScale(g9, 6, 294, sc, true); }   /* 방위표·축척도 지도 옆 칸에 */
     const draw = () => { const c9 = cv.getContext('2d'); if (MG) { c9.fillStyle = '#1d3557'; c9.fillRect(0, 0, cv.width, cv.height); } c9.save(); c9.translate(MG, MG); drawTownMap(c9, { x0: EX0, z0: EZ0, sc, w: W9, h: H9, legend: false, symbols: true, me: true, route: routeNow, grid: GRID, gridBand: MG }); c9.restore(); const me = map.player.get(), ce = P9.querySelector('.twn-cell'); if (ce) ce.textContent = inSchool(me.x, me.z) ? '학교 안' : cellOf(me.x, me.z); }; draw();
     P9.querySelector('[data-a="g"]').onclick = () => { GRID = !GRID; openBig(); };
@@ -1903,7 +1904,7 @@ export default async function start(map, params) {
     const grp = { pub: [], work: [], live: [], nat: [] }; for (const p of PLACES) grp[p.nat ? 'nat' : (KIND[p.kind] || {}).g || 'pub'].push(p);
     const row = p => '<div><span>' + esc(p.icon) + ' ' + esc(nameOf(p)) + (p.school ? '' : ' <small style="color:#56606b">' + esc(cellOf(p.x, p.z)) + '</small>') + (p.ai ? ' <span title="AI가 채운 빈칸">✨</span>' : '') + '</span><button class="sub" data-r="' + esc(p.id) + '">🧭 길</button><button data-b="' + esc(p.id) + '">🚌 가기</button></div>';
     const P9 = openP('<h3>🔎 장소 찾기</h3><div class="sm">🧭 길 = 길을 따라 빨간 선 · 거리와 걸리는 시간 · 🚌 가기 = 버스를 타고 그 앞으로</div>' + [['pub', '🏛 모두가 쓰는 곳'], ['work', '🏪 일하는 곳'], ['live', '🏠 사는 곳'], ['nat', '🌳 자연']].filter(([k]) => grp[k].length).map(([k, t]) => '<div class="grp">' + t + '</div><div class="pl">' + grp[k].map(row).join('') + '</div>').join('') + '<div class="row"><button class="sub" data-a="x">닫기(F)</button></div>');
-    P9.onclick = async e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') return closeP(); const p = PLACES.find(q => q.id === (b.dataset.r || b.dataset.b)); if (!p) return; closeP();
+    panelK = 'F'; P9.onclick = async e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') return closeP(); const p = PLACES.find(q => q.id === (b.dataset.r || b.dataset.b)); if (!p) return; closeP();
       if (b.dataset.r) showRoute(p); else busTo(p); };
   }
   async function busTo(p) { const f = map.fade(1.1, '#fffbe8'); await new Promise(r => setTimeout(r, 520)); if (dead) return; const [x, z] = p.door, dx = p.x - x, dz = p.z - z; map.player.teleport([x, ty(x, z) + 0.05, z]); map.player.lookAt([p.x, p.z]); void dx; void dz; map.hud.toast('🚌 ' + nameOf(p) + ' 앞이에요', 2.4); if (trailH) { trailH.remove(); trailH = null; } routeNow = null; await f; }
@@ -1947,7 +1948,7 @@ export default async function start(map, params) {
     gridH += '</div>';
     const { big, areas } = jumpLists(), all = [...big, ...areas], bt = (p, i) => '<button class="sub" data-j="' + i + '"><b>' + esc(p.icon || '📍') + ' ' + esc(nameOf(p)) + '</b>' + (p.school ? '' : '<small>' + esc(cellOf(p.x, p.z)) + '</small>') + '</button>';
     const P9 = openP('<h3>📍 바로 가기</h3><div class="sm">누르면 그곳 앞 길 위로 가서 그곳을 바라봐요 · 큰 지도(M)·🛰 하늘에서 보기에서 아무 데나 눌러도 갈 수 있어요</div>' + gridH + '<div class="grp">⭐ 큰 장소</div><div class="jp">' + big.map((p, i) => bt(p, i)).join('') + '</div><div class="grp">🔖 우리가 이름 붙인 칸 ' + areas.length + '</div><div class="jp">' + areas.map((p, i) => bt(p, big.length + i)).join('') + '</div><div class="row"><button class="sub" data-a="x">닫기(Esc)</button></div>', true);
-    P9.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') return closeP(); if (b.dataset.cell) { closeP(); jumpCell(b.dataset.cell); return; } const p = all[+b.dataset.j]; if (!p) return; closeP(); jumpTo(p); }; }
+    panelK = 'J'; P9.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') return closeP(); if (b.dataset.cell) { closeP(); jumpCell(b.dataset.cell); return; } const p = all[+b.dataset.j]; if (!p) return; closeP(); jumpTo(p); }; }
   function jumpCell(nm) {   // 칸 주소로 가기(교사가 아이 글의 '다8'을 바로 찾아 확인) — 학교 칸 = 정문 앞 · 이름표 돌이 그 칸에 있으면 돌 앞 · 아니면 칸 가운데에서 가장 가까운 길
     const R9 = parseCell(nm); if (!R9) return false;
     { const mx = (R9[0] + R9[2]) / 2, my = (R9[1] + R9[3]) / 2; if (mx < 0 || my < 0 || mx > MSZ.w || my > MSZ.h) { const x = X(mx), z = Z(my), sp = freeNear(x, z, 40) || [x, z]; jumpTo({ name: nm + ' 칸 · ' + (LANG === 'en' ? 'to build later' : '앞으로 넓힐 곳'), icon: '🌱', x, z, spot: sp, look: [(TX0 + TX1) / 2, (TZ0 + TZ1) / 2], here: true }); return true; } }   /* 확장판 둘레 칸(아직 길·건물 없음 — 판 밖 들판·숲·산 그대로) */ const x = X((R9[0] + R9[2]) / 2), z = Z((R9[1] + R9[3]) / 2); if (x > SR[0] && x < SR[2] && z > SR[1] && z < SR[3]) { jumpTo({ name: '우리 학교', icon: '🏫', x: 16.5, z: 40, spot: [15.4, 74], look: [15.4, 40] }); return true; }
@@ -2006,8 +2007,8 @@ export default async function start(map, params) {
     const P9 = openP('<h3>☰ 마을 메뉴</h3>' + (LAYERS.length > 1 ? '<div class="grp">🗂 판(같은 땅의 다른 모습)</div><div class="row" style="justify-content:flex-start">' + LAYERS.map(l => '<button class="' + (l === LID ? '' : 'sub') + '" data-l="' + esc(l) + '">' + esc(D.layers[l].name || l) + '</button>').join('') + '</div>' : '')
       + '<div class="grp">살펴보기</div><div class="row" style="justify-content:flex-start"><button class="sub" data-a="num">📊 마을 숫자</button><button class="sub" data-a="rec">📋 기록(누가 만든 것?)</button><button class="sub" data-a="ai">✨ AI가 어림한 것</button><button class="sub" data-a="top">🛰 하늘에서 보기</button><button class="sub" data-a="lang">🌐 ' + (LANG === 'en' ? '한국어' : 'English') + '</button><button class="sub" data-a="how">❓ 하는 법</button></div>'
       + '<div class="row"><button class="sub" data-a="quit">🏫 마을 나가기</button><button class="sub" data-a="x">닫기</button></div>');
-    P9.onclick = e => { const b = e.target.closest('button'); if (!b) return; const a = b.dataset.a; if (b.dataset.l) { closeP(); setLayer(b.dataset.l); return; }
-      if (a === 'x') closeP(); else if (a === 'num') openNums(); else if (a === 'rec') openRec(); else if (a === 'ai') openAI(); else if (a === 'how') howTo(); else if (a === 'quit') { closeP(); map.quit(); } else if (a === 'top') { closeP(); topOn(); }
+    panelK = 'menu'; P9.onclick = e => { const b = e.target.closest('button'); if (!b) return; const a = b.dataset.a; if (b.dataset.l) { closeP(); setLayer(b.dataset.l); return; }
+      if (a === 'x') closeP(); else if (a === 'num') openNums(); else if (a === 'rec') openRec(); else if (a === 'ai') openAI(); else if (a === 'how') howTo(); else if (a === 'quit') { closeP(); map.quit(); } else if (a === 'top') { closeP(true); topOn(); }
       else if (a === 'lang') { LANG = LANG === 'en' ? 'ko' : 'en'; closeP(); relabel(); } };
   }
   function relabel() { for (const s of LABELS) { s.removeFromParent(); s.material.map.dispose(); s.material.dispose(); } LABELS = []; drawLabels(ROOT); mapDirty = true; chips(); }
@@ -2028,7 +2029,7 @@ export default async function start(map, params) {
         { t: '🧭 길 안내', when: pt => !!here(pt), f: pt => { const p = here(pt); topOff(); showRoute(p); } }],
       help: '🛰 끌기·휠로 둘러보기 · 누르면 📍 가기 · Esc 나가기', onExit: () => topOff() });
     const sc = ROOT && ROOT.parent; if (sc && sc.fog) { sc.fog.near = 4000; sc.fog.far = 9000; } }   // 하늘에서는 안개·먼 깊이 당기기 없이(나오면 되돌림)
-  function topOff() { if (!topH) return; topH = false; map.top.exit(); clouds(true); map.player.freeze(false); HZU.uC0.value = 250; if (ROOT) ROOT.traverse(o => { if (o.userData.th) o.visible = true; }); near9 = ''; }
+  function topOff() { if (!topH) return; topH = false; map.top.exit(); clouds(true); map.player.freeze(false); relockNow(); HZU.uC0.value = 250; if (ROOT) ROOT.traverse(o => { if (o.userData.th) o.visible = true; }); near9 = ''; }
   function howTo(first) {
     const st = (i, t) => '<div class="st"><b class="n">' + i + '</b><span>' + t + '</span></div>';
     const P9 = openP('<h3>🏘 ' + esc(D.title) + '에 온 걸 환영해요</h3>' + st('🚶', '<b>학교 정문(남쪽)</b>으로 나가면 우리가 판에 지은 마을이에요') + st('🗺', '<b>M</b> = 지도(방위표·축척·범례) · 오른쪽 위 작은 지도도 눌러 봐요') + st('📍', '<b>J</b> = 바로 가기(이름표 칸·학교·강·호수…) · 지도에서 아무 데나 눌러도 가요') + st('🔎', '<b>F</b> = 장소 이름으로 찾기 → 🧭 길 따라 빨간 선 · 몇 m, 몇 분 걸리는지') + st('🧱', '<b>Y</b> = 🧱 판 모습(블록 그대로) ↔ 🏘 마을 모습 · <b>B</b> = 🚲 자전거')
@@ -2086,7 +2087,9 @@ export default async function start(map, params) {
   }
   let bike = false; const BIKE = makeBike();   // 들어올 때 한 번 지어 둠(재질 미리 짓기 — 처음 탈 때 멈춤 없음)
   function setBike(on) { bike = on; map.player.speed(on ? 2 : 1); BIKE.set(on); chips(); map.hud.toast(on ? '🚲 자전거를 탔어요(빠르게) — B = 내리기' : '🚶 자전거에서 내렸어요', 2); }
-  async function setLook(l) { if (l === LOOK) return; LOOK = l; await build(); chips(); map.hud.banner(LOOK === 'mat' ? '🧱 판 모습' : '🏘 마을 모습', 1.4); }
+  let lookBusy = false;
+  async function setLook(l) { if (l === LOOK || lookBusy) return; lookBusy = true; map.hud.banner(l === 'mat' ? '🧱 판 모습으로 바꾸는 중…' : '🏘 마을 모습으로 짓는 중…', 30); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));   // 짓는 1~6초 동안 멈춘 것처럼 보이지 않게(UX-1) — 알림이 먼저 그려진 뒤 짓기
+    try { LOOK = l; await build(); chips(); } finally { lookBusy = false; } map.hud.banner(LOOK === 'mat' ? '🧱 판 모습' : '🏘 마을 모습', 1.4); }
   function chips() {
     map.hud.chip('twn-map', '🗺 지도 (M)', { onClick: () => bigOpen ? closeP() : openBig() });
     map.hud.chip('twn-jump', '📍 바로 가기 (J)', { onClick: () => openJump() });
@@ -2095,8 +2098,9 @@ export default async function start(map, params) {
     map.hud.chip('twn-bike', bike ? '🚲 자전거 탐 (B)' : '🚲 자전거 (B)', { onClick: () => setBike(!bike) });
     map.hud.chip('twn-menu', '☰ ' + (LAYERS.length > 1 ? '판: ' + nameOf(L) + ' · ' : '') + '메뉴', { onClick: () => openMenu() });
   }
-  keyDn = e => { if (dead || e.repeat || e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return; if (panel && !bigOpen) { if (e.code === 'Escape') { closeP(); e.preventDefault(); } return; }
-    if (e.code === 'KeyM') { e.stopImmediatePropagation(); bigOpen ? closeP() : openBig(); } else if (e.code === 'KeyF') { if (bigOpen) closeP(); openFind(); } else if (e.code === 'KeyJ') { if (bigOpen) closeP(); openJump(); } else if (e.code === 'KeyY') setLook(LOOK === 'mat' ? 'town' : 'mat'); else if (e.code === 'KeyB') setBike(!bike); else if (e.code === 'Escape' && bigOpen) closeP(); };
+  keyDn = e => { if (dead || e.repeat || e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return; const k = e.code, own = { KeyJ: 'J', KeyF: 'F', KeyM: 'M' }[k];
+    if (panel) { if (k === 'Escape' || (own && own === panelK)) { closeP(); e.preventDefault(); e.stopImmediatePropagation(); } else if (own) { e.stopImmediatePropagation(); own === 'J' ? openJump() : own === 'F' ? openFind() : openBig(); } return; }   // 창이 열려 있으면: 같은 키·Esc = 닫기 · 다른 창 키 = 그 창으로(UX-1)
+    if (topH) return; if (k === 'KeyM') { e.stopImmediatePropagation(); openBig(); } else if (k === 'KeyF') openFind(); else if (k === 'KeyJ') openJump(); else if (k === 'KeyY') setLook(LOOK === 'mat' ? 'town' : 'mat'); else if (k === 'KeyB') setBike(!bike); };
   addEventListener('keydown', keyDn, true);
 
   // 처음: 학교 정문 안쪽에서 남쪽(마을)을 보고 · 하는 법(이 탭에서 처음 한 번)
@@ -2283,6 +2287,7 @@ export default async function start(map, params) {
   // 지금 할 일 줄(가까운 장소 · 4번/초) · 물 흐름 · 나무 흔들림 · 자전거 · 작은 지도
   let near9 = '', tq = 0, mq = 0, wq = 0;
   const freeSpot9 = (x, z, y, rMax) => LIFE ? LIFE.freeSpot(x, z, y, rMax) : (() => { for (let r = 0.4; r <= rMax; r += 0.4) for (let a = 0; a < 16; a++) { const xx = x + Math.cos(a * 0.3927) * r, zz = z + Math.sin(a * 0.3927) * r; if (inSchool(xx, zz) || (!onBridge(xx, zz) && sdAt(xx, zz) < 1)) continue; const g9 = map.q.groundAt(xx, zz, y + 0.9); if (g9 > y - 1.0 && !map.q.blocked(xx, zz, g9)) return [xx, g9 + 0.02, zz]; } return null; })();
+  const LOCEL = document.getElementById('loc');
   map.on('teleport', () => { near9 = ''; tq = 1; if (!selfTp) tpArrive = 0.6; SN.t = 0; SN.x = 1e9; });   // 순간이동 뒤 칸 주소 칩을 곧바로 고침 · 도착 자리 차 확인(LIFE-3)
   // 안전장치(LIFE-3 · 교사 10-14): 이동 키를 누르는데 2초 넘게 0.25m도 못 가면 → 차가 6m 안이거나 · 몸이 충돌 상자 속이거나 · 8방향 중 6곳 넘게 막혔으면 가까운 빈 인도로 옮기고 기록(벽에 대고 걷기만 한 건 안 옮김)
   const SN = { x: 1e9, z: 0, t: 0, q: 0 }, STK_KEY = 'sm-town-stuck'; let STK = []; try { STK = JSON.parse(localStorage.getItem(STK_KEY) || '[]') || []; } catch (e) { STK = []; }
@@ -2304,7 +2309,7 @@ export default async function start(map, params) {
       if ((lodQ += dt) > 0.25) { lodQ = 0; lodTick(false); }
       if ((mq += dt) > 0.2) { mq = 0; drawMini(); const cp = map.camera.position; for (const m of DMESH) m.visible = Math.hypot(cp.x - m.userData.c[0], cp.z - m.userData.c[1]) < 45 + REG * 0.6; for (const s9 of LABELS) s9.visible = !topH && Math.hypot(cp.x - s9.position.x, cp.z - s9.position.z) < 45; }   // 이름 알약 = 45m 안에서만
       if (RING) { const cp = map.camera.position, tv = !!(map.top && map.top.on); RING.position.set(cp.x, TY, cp.z); RING.visible = !tv; if (tv && !cloudsOff.length && !topH) clouds(false); else if (!tv && cloudsOff.length && !topH) clouds(true); }
-      if ((tq += dt) > 0.25 && !topH) { tq = 0; cellBadge(me.x, me.z);
+      if ((tq += dt) > 0.25 && !topH) { tq = 0; cellBadge(me.x, me.z); if (LOCEL) LOCEL.style.visibility = inSchool(me.x, me.z) ? '' : 'hidden';   /* 왼쪽 위 학교 자리 칩은 학교 안에서만(마을에선 위 가운데 줄이 자리) */
         { const onBr = BRIDGES.some(b => me.x > b.x0 && me.x < b.x1 && me.z > b.z0 && me.z < b.z1), sd9 = onBr ? 9 : sdAt(me.x, me.z);   // 물: 물에 들어가 있으면 가까운 물가로 · 석축 앞에서 안내
           if (sd9 < -0.4) { let spot = null; for (let r = 2; r < 60 && !spot; r += 2) for (let a = 0; a < 16 && !spot; a++) { const x = me.x + Math.cos(a / 16 * 6.2832) * r, z = me.z + Math.sin(a / 16 * 6.2832) * r; if (sdAt(x, z) > 2 && !onRoad(x, z, 0) && x > TX0 + 4 && x < TX1 - 4 && z > TZ0 + 4 && z < TZ1 - 4) spot = [x, z]; }
             if (spot) { map.player.teleport([spot[0], ty(spot[0], spot[1]) + 0.2, spot[1]]); map.hud.toast('💧 물이 깊어요 — 다리로 건너요', 2.5); } }
@@ -2315,7 +2320,7 @@ export default async function start(map, params) {
         if (t !== near9) { near9 = t; map.hud.goal(t); } }
     },
     stop() { dead = true; clouds(true); removeEventListener('keydown', keyDn, true);
-      { const me = map.player.get(); if (!inSchool(me.x, me.z)) { map.player.teleport([16.5, -1.3, 50]); map.player.lookAt([16.5, 0]); } }   /* 마을을 나가면 학교 정문 안으로(마을 땅이 사라지므로) */ closeP(); css.remove(); map.hud.anchor?.(null); miniBox.remove(); cellB.remove(); if (trailH) trailH.remove(); if (bike) map.player.speed(1); BIKE.dispose();
+      { const me = map.player.get(); if (!inSchool(me.x, me.z)) { map.player.teleport([16.5, -1.3, 50]); map.player.lookAt([16.5, 0]); } }   /* 마을을 나가면 학교 정문 안으로(마을 땅이 사라지므로) */ closeP(true); map.player.freeze(false); if (LOCEL) LOCEL.style.visibility = ''; css.remove(); map.hud.anchor?.(null); miniBox.remove(); cellB.remove(); if (trailH) trailH.remove(); if (bike) map.player.speed(1); BIKE.dispose();
       if (LIFE) { LIFE.dispose(); LIFE = null; } if (ROOT) { map.remove(ROOT); ROOT.traverse(o => { if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } }); } for (const g of GEOS) g.dispose(); for (const m of MATS) m.dispose(); for (const t of TEX) t.dispose(); for (const o of PTX) o.dispose(); ripple.dispose();
       if (window.SM_TOWN) delete window.SM_TOWN; }
   };
