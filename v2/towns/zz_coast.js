@@ -20,10 +20,15 @@ export const TOWN = {
       nature: [
         { id: 'mt', k: 'hill', poly: [[-30, -30], [90, -30], [90, 30], [70, 80], [30, 90], [-30, 90]], peak: [10, 10], r: 70, h: 12, name: '뒷산', en: 'Back Mountain' },
         { id: 'sea', k: 'sea', poly: [[262, -40], [400, -40], [400, 92], [345, 96], [318, 84], [296, 62], [280, 38], [268, 14]], far: true, shore: 'beach', name: '바다', en: 'Sea' },
+        { id: 'ter', k: 'field', sub: 'terrace', poly: [[34, 28], [58, 24], [66, 44], [52, 58], [32, 50]], name: '계단식 밭' },
+        { id: 'herb', k: 'field', sub: 'herb', poly: [[20, 62], [40, 60], [42, 74], [22, 76]], name: '약초밭' },
+        { id: 'res', k: 'reservoir', poly: [[56, 106], [78, 104], [84, 116], [70, 124], [56, 118]], name: '저수지' },
+        { id: 'res2', k: 'reservoir', poly: [[4, 32], [20, 30], [28, 40], [24, 52], [8, 54]], name: '산 저수지' },   // 비탈(뒷산 남쪽) — 아래쪽만 둑
         { id: 'lake', k: 'water', poly: [[128, 128], [140, 124], [148, 130], [146, 140], [134, 142], [126, 136]], name: '호수' },
         { id: 'river', k: 'water', line: { pts: [[138, 128], [160, 112], [210, 108], [240, 96], [262, 82], [290, 74], [312, 76]], w: 4.4 }, name: '강' },
       ],
       props: [
+        { id: 'mu', k: 'mushroom', x: 40, y: 92 }, { id: 'fr', k: 'forestroad', pts: [[95, 62], [76, 52], [86, 40], [62, 30], [74, 18], [48, 12]] },
         { id: 'wf', k: 'wharf', x: 284, y: 48 }, { id: 'bt1', k: 'boat', x: 286, y: 47 }, { id: 'bt2', k: 'boat', x: 287, y: 49 }, { id: 'bt3', k: 'boat', x: 300, y: 30, small: true },
         { id: 'bw', k: 'breakwater', x: 276, y: 28 }, { id: 'lh', k: 'lighthouse', x: 268, y: 8 }, { id: 'rk', k: 'rocks', x: 271, y: 18 }, { id: 'ps', k: 'parasol', x: 296, y: 64 },
       ],
