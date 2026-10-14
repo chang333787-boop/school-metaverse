@@ -63,6 +63,40 @@ export default async function start(map, params) {
   let D = null; try { D = (await import(new URL('../towns/' + id + '.js?t=' + Date.now(), import.meta.url))).TOWN; } catch (e) { console.error('[마을] 자료를 읽지 못했어요', e); }
   if (!D || !D.layers) return bail('🏘 「' + id + '」 마을 자료가 없어요');
   if (map.gone) return {};
+  const css = document.createElement('style'); css.textContent = `
+.twn-p{position:fixed;inset:0;z-index:44;display:flex;align-items:center;justify-content:center;background:rgba(10,20,40,.5);font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif}
+.twn-p .bx{background:#fffdf6;color:#1d2b3a;border-radius:16px;border:3px solid #2b5a3a;box-shadow:0 10px 30px rgba(0,0,0,.35);max-width:94vw;max-height:92vh;overflow:auto;box-sizing:border-box;padding:14px 16px}
+.twn-p h3{margin:0 0 8px;font-size:20px}.twn-p .sm{font-size:13px;color:#56606b}.twn-p button{font:inherit;font-weight:800;border:0;border-radius:10px;padding:8px 14px;min-height:40px;background:#2b5a3a;color:#fff;cursor:pointer}
+.twn-p button.sub{background:#e7efe3;color:#1d2b3a}.twn-p .row{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
+.twn-p .pl{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px;margin-top:8px}.twn-p .pl>div{display:flex;align-items:center;gap:6px;background:#eef5ea;border-radius:10px;padding:6px 8px;font-size:14px;font-weight:700}
+.twn-p .pl>div span{flex:1}.twn-p .pl button{min-height:34px;padding:4px 9px;font-size:13px}.twn-p .grp{margin-top:10px;font-weight:900;font-size:14px}
+.twn-p table{border-collapse:collapse;margin-top:8px;font-size:14px}.twn-p td,.twn-p th{border-bottom:1px solid #dfe6da;padding:5px 10px;text-align:right}.twn-p td:first-child,.twn-p th:first-child{text-align:left}
+.twn-p .st{display:flex;gap:12px;align-items:center;margin:7px 0;padding:8px 10px;border-radius:12px;background:#eef5ea;font-size:16px;line-height:1.4}.twn-p .st b.n{flex:none;width:42px;height:42px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:24px}
+.twn-p .ai{background:#fff7d6;border-radius:10px;padding:7px 10px;margin:5px 0;font-size:14px;display:flex;gap:8px;align-items:center}.twn-p .ai span{flex:1}
+.twn-p .cg{display:grid;gap:4px;margin-top:6px}.twn-p .cg button{padding:3px 2px;min-height:46px;font-size:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15}.twn-p .cg small{font-size:10px;font-weight:600;color:#56606b;white-space:nowrap;overflow:hidden;max-width:100%}.twn-p .cg .sch{background:#ffe7a3}.twn-p .cg .ext{opacity:.5;background:#eef1ea;border-style:dashed}.twn-p .cg .here{outline:3px solid #e0453a}
+.twn-p .jp{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:6px}.twn-p .jp button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:1px;padding:6px 10px;font-size:14px;line-height:1.25}.twn-p .jp small{font-weight:600;color:#56606b;font-size:12px}
+.twn-p .mpop{position:absolute;z-index:2;transform:translate(-50%,calc(-100% - 10px));background:#fffdf6;border:2px solid #2b5a3a;border-radius:12px;padding:8px 10px;box-shadow:0 6px 18px rgba(0,0,0,.3);font-size:15px;font-weight:800;white-space:nowrap;display:flex;flex-direction:column;gap:6px;align-items:stretch}.twn-p .mpop div{display:flex;gap:6px}
+.twn-ld{transition:opacity .3s}.twn-ld.out{opacity:0;pointer-events:none}.twn-ld .bx{width:min(600px,94vw)}
+.twn-ld .ldb{height:14px;border-radius:8px;background:#e3eadf;overflow:hidden;margin:4px 0 6px}.twn-ld .ldb i{display:block;height:100%;transform-origin:0 50%;transform:scaleX(.02);transition:transform .35s ease-out;background:linear-gradient(90deg,#3f9b5a,#8bd36b);border-radius:8px}
+.twn-ld .ldt{display:flex;align-items:center;gap:8px;font-size:15px;color:#3b4a57;margin:2px 0 8px}.twn-ld .ldt .tx{flex:1}.twn-ld .ldt b{font-variant-numeric:tabular-nums}
+.twn-ld .sp{flex:none;width:16px;height:16px;border-radius:50%;border:3px solid #cfe0c8;border-top-color:#3f9b5a;animation:twnspin .8s linear infinite}@keyframes twnspin{to{transform:rotate(360deg)}}
+.twn-p button[disabled]{background:#a9b3ad;cursor:default}
+`; document.head.appendChild(css);
+  // ───────── 짓는 화면(LOAD-1 · 교사 10-15 '처음 들어가면 정문 나가기 전에 잠깐 멈춤 = 로딩 → 로딩 화면으로 · 하는 법도 같이'): ─────────
+  //   마을 짓기(크롬북 약 6.5초)를 단계로 나눠 단계마다 화면을 그림 → 진행 막대·지금 하는 일 · 빙글 표시는 화면 합성(짓는 중에도 돎)
+  //   이 탭에서 처음이면 하는 법을 같이 보여 주고 다 지으면 '▶ 마을로 나가기' 단추가 켜짐(누르는 횟수는 예전 하는 법 창과 같음) · 아니면 다 지으면 살짝 사라짐
+  const HOWTO_ST = () => { const st = (i, t) => '<div class="st"><b class="n">' + i + '</b><span>' + t + '</span></div>';
+    return st('🚶', '<b>학교 정문(남쪽)</b>으로 나가면 우리가 판에 지은 마을이에요') + st('🗺', '<b>M</b> = 지도(방위표·축척·범례) · 오른쪽 위 작은 지도도 눌러 봐요') + st('📍', '<b>J</b> = 바로 가기(이름표 칸·학교·강·호수…) · 지도에서 아무 데나 눌러도 가요') + st('🔎', '<b>F</b> = 장소 이름으로 찾기 → 🧭 길 따라 빨간 선 · 몇 m, 몇 분 걸리는지') + st('🧱', '<b>Y</b> = 🧱 판 모습(블록 그대로) ↔ 🏘 마을 모습 · <b>B</b> = 🚲 자전거')
+      + '<div class="st" style="background:#fff7d6"><b class="n">✨</b><span>AI가 사진에서 안 보여 채운 곳이 있어요 — ☰ 메뉴의 <b>✨ AI가 채운 빈칸</b>에서 판 사진과 견줘 봐요</span></div>'; };
+  const LD = (() => { let first = true; try { first = sessionStorage.getItem('sm.town.how') !== '1'; } catch (e) { /* */ }
+    const E9 = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])), el = document.createElement('div'); el.className = 'twn-p twn-ld';
+    el.innerHTML = '<div class="bx"><h3>🏘 ' + E9(D.title) + (first ? '에 온 걸 환영해요' : '') + '</h3><div class="ldb"><i></i></div><div class="ldt"><span class="sp"></span><span class="tx">마을을 짓기 시작해요</span><b>0%</b></div>'
+      + (first ? HOWTO_ST() + '<div class="row"><button data-a="x" disabled>🏗 마을 짓는 중…</button></div>' : '<div class="sm">조금만 기다려요 — 우리가 판에 지은 마을을 짓고 있어요</div>') + '</div>';
+    document.body.appendChild(el); map.player.freeze(true);
+    const bar = el.querySelector('.ldb i'), tx = el.querySelector('.tx'), pc = el.querySelector('.ldt b'), T0 = performance.now(), log = []; let lastT = T0, lastN = '';
+    const set = (p, t) => { bar.style.transform = 'scaleX(' + Math.max(0.02, Math.min(1, p)) + ')'; pc.textContent = Math.round(p * 100) + '%'; const now = performance.now(); if (lastN) log.push([lastN, Math.round(now - lastT)]); if (t) { tx.textContent = t; lastN = t; } lastT = now; };
+    return { el, first, log, set, total: () => Math.round(performance.now() - T0), step: async (p, t) => { set(p, t); await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0))); } };
+  })();
 
   // ───────── 좌표: 매트 cm ↔ 세계 m(학교 자리를 실제 학교에 맞춤) ─────────
   const S = (D.scale || 500) / 100, MSZ = D.mat || { w: 250, h: 140 };
@@ -577,14 +611,14 @@ export default async function start(map, params) {
   }
   // 물가(WATER-2): 석축 호안(물낯 아래 → 둔치 높이 · 매끈한 벽) + 둔치 덮개(매끈한 풀판) — 1.5m 칸 마칭 스퀘어로 물가 선을 그대로 따라감 · 벽 선 = 물 울타리
   let WALLSEG = [];
-  function drawBanks(group) {
+  async function drawBanks(group, S9) { let tY9 = performance.now(), nY9 = 0;   /* LOAD-1: 처음 짓기면 0.2초마다 한 번 화면을 그림 */
     WALLSEG = []; const WI = L.nature.filter(n => n.k === 'water').map(n => shapeOf(n)).filter(Boolean); if (!WI.length) return;
     const STP = 1.5, sdF = (x, z) => { let m = 1e9; for (const sh of WI) { const v = sdOf(sh, x, z); if (v < m) m = v; } return m; }, cache = new Map(), sdC = (i, j) => { const k = i + ':' + j; let v = cache.get(k); if (v == null) { v = sdF(i * STP, j * STP); cache.set(k, v); } return v; };
     const CB = new Map(), cb = (x, z) => { const k = Math.floor((x - TX0) / REG) + ':' + Math.floor((z - TZ0) / REG); let b = CB.get(k); if (!b) { b = { p: [], n: [], c: [], u: [] }; CB.set(k, b); } return b; };
     const cy = TY + CAPY, wb = TY + WLY - 0.4, wm = TY + WLY + 0.06, done = new Set(), stoneA = rgb(0xa8a295), stoneB = rgb(0x6f7766);
     const capV = (B9, x, z) => { B9.p.push(x, cy, z); B9.n.push(0, 1, 0); B9.c.push(...capColor(x, z)); B9.u.push(x / 6.5, z / 6.5); };
     for (const sh of WI) { const bb = bboxOf(sh), x0 = Math.floor((Math.max(TX0, bb[0] - FPW - 14)) / STP), x1 = Math.ceil(Math.min(TX1, bb[2] + FPW + 14) / STP), z0 = Math.floor(Math.max(TZ0, bb[1] - FPW - 14) / STP), z1 = Math.ceil(Math.min(TZ1, bb[3] + FPW + 14) / STP);
-      for (let j = z0; j < z1; j++) for (let i = x0; i < x1; i++) { const key = i + ':' + j; if (done.has(key)) continue; done.add(key);
+      for (let j = z0; j < z1; j++) for (let i = x0; i < x1; i++) { if (S9 && ++nY9 % 256 === 0 && performance.now() - tY9 > 200) { await S9(0.35 + 0.02 * Math.min(1, (j - z0) / Math.max(1, z1 - z0)), '🏞 강둑 쌓는 중'); tY9 = performance.now(); } const key = i + ':' + j; if (done.has(key)) continue; done.add(key);
         const V = [[i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]].map(([a, b]) => ({ x: a * STP, z: b * STP, s: sdC(a, b) })); const mn = Math.min(...V.map(v => v.s)), mx = Math.max(...V.map(v => v.s));
         if (mn > FPW + 1.5 || mx < 0) continue; const cx = (i + 0.5) * STP, cz = (j + 0.5) * STP; if (inSchool(cx, cz) || cx < TX0 || cx > TX1 || cz < TZ0 || cz > TZ1 || seaSd(cx, cz) < 30) continue;   /* SEA-3 모래사장에는 석축·둔치 없음 */
         const poly = [], cut = []; for (let e = 0; e < 4; e++) { const a = V[e], b = V[(e + 1) % 4]; if (a.s >= 0) poly.push([a.x, a.z]); if ((a.s >= 0) !== (b.s >= 0)) { const t = a.s / (a.s - b.s), q = [a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t]; poly.push(q); cut.push(q); } }
@@ -1723,27 +1757,27 @@ export default async function start(map, params) {
   for (const k in MAT) MATS.push(MAT[k]);
   let DMESH = [], RING = null;
   let ROOT = null, COLS = [], LABELS = [], STATS = null, mapDirty = true, bigOpen = false, routeNow = null;
-  async function build() {
+  async function build(o = {}) { const S9 = o.step || null;   /* LOAD-1: 처음 짓기만 단계마다 화면을 그림(진행 막대) */
     if (ROOT) { map.remove(ROOT); ROOT.traverse(o => { if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } }); for (const g of GEOS) g.dispose(); GEOS.length = 0; } for (const h of COLS) h.remove(); COLS = []; LABELS = [];
     BK.clear(); TBK.clear(); FBK.clear(); GBK.clear(); LB.clear(); DBK.clear(); GLOW.length = 0; BUSST.length = 0; for (const k in TREES) TREES[k].length = 0; BRIDGES.length = 0; for (const o of PTX) o.dispose(); PTX.length = 0; ROOFS = []; PCOL = []; LOTR = []; INFR = []; SQ = []; SMAT = null;
-    L.nature = L.nature.filter(n => !n.gen); prepRoads(); buildTerrain(); prepBlocks(); prepProps(); prepCross(); prepAreas(); ZFILL.length = 0; if (LOOK === 'town') { drawZoneGreen(); fillZones(); } assignSigns(); prepPlaces(); buildGraph();
-    ROOT = new T3.Group(); ROOT.userData.fx = 1;
-    COLS9 = []; ATAG = 'ground'; prepTints(); drawGround(ROOT); drawSkirt(ROOT); if (SEAS.length) { ATAG = 'sea'; drawSea(ROOT); } ATAG = 'water'; drawWater(ROOT); drawBanks(ROOT); ATAG = 'mroad'; drawMountainRoads(ROOT); ATAG = 'road'; drawRoads(); ATAG = 'nature'; drawNature();
+    if (S9) await S9(0.04, '⛰ 땅 고르는 중'); L.nature = L.nature.filter(n => !n.gen); prepRoads(); buildTerrain(); if (S9) await S9(0.16, '🧱 블록·소품 읽는 중'); prepBlocks(); prepProps(); prepCross(); prepAreas(); ZFILL.length = 0; if (S9) await S9(0.22, '✨ 빈 칸 채우는 중'); if (LOOK === 'town') { drawZoneGreen(); fillZones(); } assignSigns(); prepPlaces(); buildGraph();
+    if (S9) await S9(0.3, '🛣 땅·길·물 그리는 중'); ROOT = new T3.Group(); ROOT.userData.fx = 1;
+    COLS9 = []; ATAG = 'ground'; prepTints(); drawGround(ROOT); drawSkirt(ROOT); if (S9) await S9(0.33, '🌊 물 그리는 중'); if (SEAS.length) { ATAG = 'sea'; drawSea(ROOT); } ATAG = 'water'; drawWater(ROOT); if (S9) await S9(0.35, '🏞 강둑 쌓는 중'); await drawBanks(ROOT, S9); if (S9) await S9(0.36, '⛰ 고갯길 내는 중'); ATAG = 'mroad'; drawMountainRoads(ROOT); if (S9) await S9(0.37, '🛣 길 까는 중'); ATAG = 'road'; drawRoads(); if (S9) await S9(0.39, '🌾 논밭·숲 그리는 중'); ATAG = 'nature'; drawNature();
     if (LOOK === 'mat') drawZonePaper();
-    if (LOOK === 'town') { ATAG = 'areaF'; areaFeatures(ROOT); if (D.fillAround) { ATAG = 'infill'; infill(); assignSigns(); } }   // 이름표 꾸밈 자리 먼저 → 남는 빈 잔디를 동네로(✨)
-    BKB.clear(); BKF.clear(); FCB.clear(); for (const B9 of BLD) { if (LOOK === 'mat') { buildMat(B9); continue; } const lod = !['green', 'park', 'play', 'pitch'].includes(B9.kind) && !(B9.kind === 'school' && B9.w > 30); BLDMODE = lod; FACREC = []; try { buildTown(B9); } finally { BLDMODE = false; B9.facRec = FACREC; FACREC = null; } if (lod && !B9.bigGreen) farBox(B9); }
-    PLACES_EXTRA = []; if (LOOK === 'town') { ATAG = 'deco'; areaDeco(); ATAG = 'land'; landscape(); ATAG = 'river'; drawRiverside(); ATAG = 'range'; drawRangeExtras(ROOT); }
+    if (S9) await S9(0.44, '🏷 이름표 칸 꾸미는 중'); if (LOOK === 'town') { ATAG = 'areaF'; areaFeatures(ROOT); if (D.fillAround) { ATAG = 'infill'; infill(); assignSigns(); } }   // 이름표 꾸밈 자리 먼저 → 남는 빈 잔디를 동네로(✨)
+    if (S9) await S9(0.48, '🏠 집 짓는 중'); let nB9 = 0, tB9 = performance.now(); BKB.clear(); BKF.clear(); FCB.clear(); for (const B9 of BLD) { nB9++; if (S9 && performance.now() - tB9 > 220) { tB9 = performance.now(); await S9(0.48 + 0.24 * nB9 / BLD.length, '🏠 집 짓는 중 (' + nB9 + '/' + BLD.length + ')'); } if (LOOK === 'mat') { buildMat(B9); continue; } const lod = !['green', 'park', 'play', 'pitch'].includes(B9.kind) && !(B9.kind === 'school' && B9.w > 30); BLDMODE = lod; FACREC = []; try { buildTown(B9); } finally { BLDMODE = false; B9.facRec = FACREC; FACREC = null; } if (lod && !B9.bigGreen) farBox(B9); }
+    if (S9) await S9(0.72, '🌳 나무·가게·소품 놓는 중'); PLACES_EXTRA = []; if (LOOK === 'town') { ATAG = 'deco'; areaDeco(); ATAG = 'land'; landscape(); ATAG = 'river'; drawRiverside(); ATAG = 'range'; drawRangeExtras(ROOT); }
     if (LOOK === 'town') { ATAG = 'fac'; roadTrees(); drawFacilities(); }
     ATAG = 'props'; drawProps(ROOT); ATAG = 'stones'; areaStones(ROOT); if (LOOK === 'town') { ATAG = 'posts'; cellPosts(); }   // 아이가 놓은 종이 소품 · 칸 이름표 돌(두 모습 모두)
-    for (const [, b] of BK) { if (!b.p.length) continue; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(b.c, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(b.u, 2)); g.computeBoundingSphere(); GEOS.push(g); const m = new T3.Mesh(g, MAT.solid); m.matrixAutoUpdate = false; m.receiveShadow = false; ROOT.add(m); }
+    if (S9) await S9(0.84, '🎨 모양 합치는 중'); for (const [, b] of BK) { if (!b.p.length) continue; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(b.c, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(b.u, 2)); g.computeBoundingSphere(); GEOS.push(g); const m = new T3.Mesh(g, MAT.solid); m.matrixAutoUpdate = false; m.receiveShadow = false; ROOT.add(m); }
     DMESH = []; for (const [, b] of DBK) { if (!b.p.length) continue; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(b.c, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(b.u, 2)); g.computeBoundingSphere(); GEOS.push(g); const m = new T3.Mesh(g, MAT.solid); m.matrixAutoUpdate = false; m.userData.c = [b.cx, b.cz]; ROOT.add(m); DMESH.push(m); }
     for (const [, b] of LB) { if (!b.p.length) continue; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(b.c, 3)); g.computeBoundingSphere(); GEOS.push(g); const m = new T3.Mesh(g, MAT.lamp); m.matrixAutoUpdate = false; m.userData.th = 1; ROOT.add(m); }
     for (const [, b] of GBK) { if (!b.p.length) continue; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(b.c, 3)); g.computeBoundingSphere(); GEOS.push(g); const m = new T3.Mesh(g, MAT.glass); m.matrixAutoUpdate = false; m.userData.th = 1; ROOT.add(m); }
     for (const [, b] of FBK) { if (!b.p.length) continue; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(b.u, 2)); g.computeBoundingSphere(); GEOS.push(g); const m = new T3.Mesh(g, MAT[b.kind]); m.matrixAutoUpdate = false; m.receiveShadow = false; ROOT.add(m); }
     for (const p9 of PLACES_EXTRA) if (!PLACES.some(q => q.id === p9.id)) PLACES.push(p9);
-    clearAroundProps(); drawTrees(ROOT); drawLabels(ROOT); flushSigns(ROOT); drawGlow(ROOT); bldLod(ROOT);
+    if (S9) await S9(0.87, '🌲 나무 심는 중'); clearAroundProps(); drawTrees(ROOT); drawLabels(ROOT); flushSigns(ROOT); drawGlow(ROOT); bldLod(ROOT);
     map.add(ROOT);
-    if (LIFE) LIFE.dispose(); LIFE = LOOK === 'town' && D.life ? makeLife() : null; if (LIFE) LIFE.night(NIGHT9);
+    if (S9) await S9(0.9, '🚗 사람·차 나오는 중'); if (LIFE) LIFE.dispose(); LIFE = LOOK === 'town' && D.life ? makeLife() : null; if (LIFE) LIFE.night(NIGHT9); if (S9) await S9(0.93, '🧱 부딪힘 만드는 중');
     // 충돌: 건물(발자국 상자) · 물(칸 줄 — 다리 칸은 뺌) · 다리 판 · 나무 줄기
     for (const B9 of BLD) { if (B9.kind === 'green' || B9.kind === 'park' || B9.bigGreen) continue; if (B9.collide && LOOK === 'town') { for (const c of B9.collide) COLS.push(map.collider.add(lowNc(c))); continue; } if (B9.kind === 'play' && LOOK === 'town') continue; const xs = B9.corners.map(p => p[0]), zs = B9.corners.map(p => p[1]); const top = B9.y0 + B9.h + (LOOK === 'town' && B9.kind === 'house' ? 2 : 0);
       const y1c = Math.max(top, B9.y0 + 1.9); if (Math.abs(Math.sin(2 * B9.ry)) < 0.05) { COLS.push(map.collider.add({ x0: Math.min(...xs), x1: Math.max(...xs), y0: B9.y0 - 2, y1: y1c, z0: Math.min(...zs), z1: Math.max(...zs) })); continue; }
@@ -1763,7 +1797,7 @@ export default async function start(map, params) {
     for (const br of BRIDGES) COLS.push(map.collider.add({ x0: br.x0, x1: br.x1, y0: br.y1 - 0.5, y1: br.y1, z0: br.z0, z1: br.z1 }));
     for (const c of PCOL) COLS.push(map.collider.add(lowNc(c))); for (const c of COLS9) COLS.push(map.collider.add(lowNc(c)));   // … · 고갯길 옹벽   // 소품(정자 마루·비닐하우스·경운기·분수…) · 이름표 돌
     for (const sp of ['round', 'pine', 'poplar']) for (const t of TREES[sp]) COLS.push(map.collider.add({ x0: t.x - 0.3 * t.s, x1: t.x + 0.3 * t.s, y0: t.y - 1, y1: t.y + 2.2 * t.s, z0: t.z - 0.3 * t.s, z1: t.z + 0.3 * t.s }));
-    STATS = stats(); mapDirty = true; warmGPU();
+    if (S9) await S9(0.96, '✨ 마무리하는 중'); STATS = stats(); mapDirty = true; warmGPU();
   }
   function warmGPU() {   // PERF-WARM(교사 10-14 '렉 검사'): 처음 보일 때 GPU로 올리던 메시·텍스처·셰이더를 들어올 때 한 번에(4×4 화면에 모두 그림) — 걷다가·순간이동·원근 바꿈 때 끊김 없앰
     const R9 = window.SD2 && window.SD2.renderer, sc = ROOT && ROOT.parent; if (!R9 || !sc) return; const keep = [];
@@ -1798,7 +1832,7 @@ export default async function start(map, params) {
   const OUT = map.world.outside({ clip: 0.6, whole: 4, rect: SR.slice(), open: [[10, 54.5, 24, 56.5]],   /* 학교 칸(담 상자 + 남쪽 실제 주변) 밖만 마을 */ terrain: (x, z) => inSchool(x, z) ? null : (x < TX0 || x > TX1 || z < TZ0 || z > TZ1) ? TY + skirtH(x, z) : TY + tH(x, z) });
   map.arena.set({ rect: [EX0 + 3, EZ0 + 3, EX1 - 3, EZ1 - 3], msg: GP.some(v => v) ? '🏘 여기가 판 끝이에요(둘레 칸 = 앞으로 넓힐 곳)' : '🏘 여기가 마을 끝이에요', ymin: TY - 6, ymax: TY + Math.max(12, (RANGE ? RANGE.max : 0) + 20, ...Object.values(D.layers).flatMap(l => (l.nature || []).filter(n => n.k === 'hill').map(n => (n.h || 2) * S * 1.2 + 12))) });   // 뒷산 꼭대기까지 오를 수 있게
   map.minimap.hide();
-  await build(); if (map.gone) return {};
+  await build({ step: LD.step }); if (map.gone) { LD.el.remove(); css.remove(); map.player.freeze(false); return {}; }
   if (!RANGE) { const P = [], C = [], N = [], R = rng0(77), n = 46, r0 = 286;   // 먼 산 능선(둘레 한 바퀴 · 안개 색에 가까운 푸른빛 — 멀리 갈수록 연하게)
     for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, w = 0.16 + R() * 0.12, hgt = 16 + R() * 34 + (Math.sin(a * 3) + 1) * 6, back = R() < 0.5, rr = r0 + (back ? 8 : 0), col = back ? [0.62, 0.74, 0.78] : [0.5, 0.66, 0.62];
       const pts = 5; for (let k = 0; k < pts; k++) { const a0 = a - w + 2 * w * k / pts, a1 = a - w + 2 * w * (k + 1) / pts, h0 = hgt * Math.sin(Math.PI * k / pts) ** 0.8, h1 = hgt * Math.sin(Math.PI * (k + 1) / pts) ** 0.8;
@@ -1904,21 +1938,7 @@ export default async function start(map, params) {
     if (routeNow && routeNow.pts) { g.strokeStyle = '#ff5a36'; g.lineWidth = 2.5; g.beginPath(); routeNow.pts.forEach((p, i) => { const a = MB + (p[0] - EX0) * miniSc, b = MB + (p[1] - EZ0) * miniSc; if (i) g.lineTo(a, b); else g.moveTo(a, b); }); g.stroke(); }
     const me = map.player.get(), px = MB + (me.x - EX0) * miniSc, pz = MB + (me.z - EZ0) * miniSc; g.fillStyle = '#2f6fd0'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(px, pz, 4.5, 0, 7); g.fill(); g.stroke(); }
 
-  // ───────── 화면(칩 · 창) ─────────
-  const css = document.createElement('style'); css.textContent = `
-.twn-p{position:fixed;inset:0;z-index:44;display:flex;align-items:center;justify-content:center;background:rgba(10,20,40,.5);font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif}
-.twn-p .bx{background:#fffdf6;color:#1d2b3a;border-radius:16px;border:3px solid #2b5a3a;box-shadow:0 10px 30px rgba(0,0,0,.35);max-width:94vw;max-height:92vh;overflow:auto;box-sizing:border-box;padding:14px 16px}
-.twn-p h3{margin:0 0 8px;font-size:20px}.twn-p .sm{font-size:13px;color:#56606b}.twn-p button{font:inherit;font-weight:800;border:0;border-radius:10px;padding:8px 14px;min-height:40px;background:#2b5a3a;color:#fff;cursor:pointer}
-.twn-p button.sub{background:#e7efe3;color:#1d2b3a}.twn-p .row{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
-.twn-p .pl{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px;margin-top:8px}.twn-p .pl>div{display:flex;align-items:center;gap:6px;background:#eef5ea;border-radius:10px;padding:6px 8px;font-size:14px;font-weight:700}
-.twn-p .pl>div span{flex:1}.twn-p .pl button{min-height:34px;padding:4px 9px;font-size:13px}.twn-p .grp{margin-top:10px;font-weight:900;font-size:14px}
-.twn-p table{border-collapse:collapse;margin-top:8px;font-size:14px}.twn-p td,.twn-p th{border-bottom:1px solid #dfe6da;padding:5px 10px;text-align:right}.twn-p td:first-child,.twn-p th:first-child{text-align:left}
-.twn-p .st{display:flex;gap:12px;align-items:center;margin:7px 0;padding:8px 10px;border-radius:12px;background:#eef5ea;font-size:16px;line-height:1.4}.twn-p .st b.n{flex:none;width:42px;height:42px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:24px}
-.twn-p .ai{background:#fff7d6;border-radius:10px;padding:7px 10px;margin:5px 0;font-size:14px;display:flex;gap:8px;align-items:center}.twn-p .ai span{flex:1}
-.twn-p .cg{display:grid;gap:4px;margin-top:6px}.twn-p .cg button{padding:3px 2px;min-height:46px;font-size:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15}.twn-p .cg small{font-size:10px;font-weight:600;color:#56606b;white-space:nowrap;overflow:hidden;max-width:100%}.twn-p .cg .sch{background:#ffe7a3}.twn-p .cg .ext{opacity:.5;background:#eef1ea;border-style:dashed}.twn-p .cg .here{outline:3px solid #e0453a}
-.twn-p .jp{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:6px}.twn-p .jp button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:1px;padding:6px 10px;font-size:14px;line-height:1.25}.twn-p .jp small{font-weight:600;color:#56606b;font-size:12px}
-.twn-p .mpop{position:absolute;z-index:2;transform:translate(-50%,calc(-100% - 10px));background:#fffdf6;border:2px solid #2b5a3a;border-radius:12px;padding:8px 10px;box-shadow:0 6px 18px rgba(0,0,0,.3);font-size:15px;font-weight:800;white-space:nowrap;display:flex;flex-direction:column;gap:6px;align-items:stretch}.twn-p .mpop div{display:flex;gap:6px}
-`; document.head.appendChild(css);
+  // ───────── 화면(칩 · 창) ─────────   (CSS는 맨 앞 — 짓는 화면이 먼저 씀)
   let panel = null, keyDn = null, panelK = '', relock9 = false;
   const relockNow = () => { if (!relock9) return; relock9 = false; const hint = () => { if (!dead && !document.pointerLockElement) map.hud.toast(LANG === 'en' ? '🖱 Click the screen (or Tab) to look around again' : '🖱 화면을 한 번 누르면(또는 Tab) 다시 둘러봐요', 2.2); }; const r = navigator.userActivation && navigator.userActivation.isActive && map.player.relock ? map.player.relock() : false; if (!r) hint(); else if (r.then) r.then(null, hint); };   // UX-1(10-14 교사 'J 누르면 멈췄던 것처럼 불편한 것')
   const closeP = (keep) => { if (panel) { panel.remove(); panel = null; } bigOpen = false; panelK = ''; if (keep === true) return; if (!topH) { map.player.freeze(false); relockNow(); } };   // keep = 다른 창으로 바꿈·하늘에서 보기로(멈춤·잠금 그대로)
@@ -2145,9 +2165,7 @@ export default async function start(map, params) {
     const sc = ROOT && ROOT.parent; if (sc && sc.fog) { sc.fog.near = 4000; sc.fog.far = 9000; } }   // 하늘에서는 안개·먼 깊이 당기기 없이(나오면 되돌림)
   function topOff() { if (!topH) return; topH = false; map.top.exit(); clouds(true); map.player.freeze(false); relockNow(); HZU.uC0.value = 250; if (ROOT) ROOT.traverse(o => { if (o.userData.th) o.visible = true; }); near9 = ''; }
   function howTo(first) {
-    const st = (i, t) => '<div class="st"><b class="n">' + i + '</b><span>' + t + '</span></div>';
-    const P9 = openP('<h3>🏘 ' + esc(D.title) + '에 온 걸 환영해요</h3>' + st('🚶', '<b>학교 정문(남쪽)</b>으로 나가면 우리가 판에 지은 마을이에요') + st('🗺', '<b>M</b> = 지도(방위표·축척·범례) · 오른쪽 위 작은 지도도 눌러 봐요') + st('📍', '<b>J</b> = 바로 가기(이름표 칸·학교·강·호수…) · 지도에서 아무 데나 눌러도 가요') + st('🔎', '<b>F</b> = 장소 이름으로 찾기 → 🧭 길 따라 빨간 선 · 몇 m, 몇 분 걸리는지') + st('🧱', '<b>Y</b> = 🧱 판 모습(블록 그대로) ↔ 🏘 마을 모습 · <b>B</b> = 🚲 자전거')
-      + '<div class="st" style="background:#fff7d6"><b class="n">✨</b><span>AI가 사진에서 안 보여 채운 곳이 있어요 — ☰ 메뉴의 <b>✨ AI가 채운 빈칸</b>에서 판 사진과 견줘 봐요</span></div><div class="row"><button data-a="x">▶ 걸어 보기</button></div>');
+    const P9 = openP('<h3>🏘 ' + esc(D.title) + '에 온 걸 환영해요</h3>' + HOWTO_ST() + '<div class="row"><button data-a="x">▶ 걸어 보기</button></div>');
     P9.querySelector('[data-a="x"]').onclick = closeP;
   }
   // ───────── 🚲 자전거(BIKE-2 · 교사 10-14 '자전거 모션 개이상한데'): 내 아이(노란 모자)가 안장에 앉아 페달을 밟음 ─────────
@@ -2220,10 +2238,13 @@ export default async function start(map, params) {
   // 처음: 학교 정문 안쪽에서 남쪽(마을)을 보고 · 하는 법(이 탭에서 처음 한 번)
   map.player.teleport([15.4, -1.3, 50]); map.player.lookAt([15.4, 200]);   // 정문 대문은 가운데 약 3m만 열림(x 14~17) — 그 한가운데에서 시작해 곧장 걸어 나가게
   chips(); drawMini();
-  let seen = false; try { seen = sessionStorage.getItem('sm.town.how') === '1'; sessionStorage.setItem('sm.town.how', '1'); } catch (e) { /* */ }
-  if (planMode) openBig(); else if (!seen) howTo(true);
+  try { sessionStorage.setItem('sm.town.how', '1'); } catch (e) { /* */ }   // 하는 법은 이 탭에서 처음 한 번(짓는 화면 LD.first)
+  LD.set(1, '다 지었어요!'); LD.el.querySelector('.sp').style.display = 'none'; const LOADMS = { ms: LD.total(), steps: LD.log };   /* LOAD-1 끝: 처음이면 하는 법 그대로 + ▶ 단추(= 하는 법 창) · 아니면 살짝 사라짐 */
+  if (planMode) { LD.el.remove(); map.player.freeze(false); openBig(); }
+  else if (LD.first) { panel = LD.el; panelK = 'how'; const b9 = LD.el.querySelector('[data-a="x"]'); b9.disabled = false; b9.textContent = '▶ 마을로 나가기'; b9.onclick = () => closeP(); b9.focus?.(); }
+  else { LD.el.classList.add('out'); setTimeout(() => LD.el.remove(), 350); map.player.freeze(false); }
   map.hud.banner('🏘 ' + D.title, 2);
-  window.SM_TOWN = { get data() { return D; }, get layer() { return LID; }, places: () => PLACES.map(p => ({ id: p.id, name: p.name, kind: p.kind, x: p.x, z: p.z, door: p.door })), find: q => findPlace(q), route: (q, from) => { const p = findPlace(q); if (!p) return { ok: false, reason: 'noplace' }; const me = map.player.get(); return route(from || [me.x, me.z], p.door); },
+  window.SM_TOWN = { load: LOADMS, get data() { return D; }, get layer() { return LID; }, places: () => PLACES.map(p => ({ id: p.id, name: p.name, kind: p.kind, x: p.x, z: p.z, door: p.door })), find: q => findPlace(q), route: (q, from) => { const p = findPlace(q); if (!p) return { ok: false, reason: 'noplace' }; const me = map.player.get(); return route(from || [me.x, me.z], p.door); },
     ground: (x, z) => ty(x, z), sd: (x, z) => sdAt(x, z), onRoad: (x, z, p) => !!onRoad(x, z, p || 0), get root() { return ROOT; }, get mats() { return MAT; }, toWorld: (mx, my) => [X(mx), Z(my)], toMat: (x, z) => [MXof(x), MYof(z)], stats: () => ({ ...STATS }), setLayer, setLook, show: q => { const p = findPlace(q); return p ? showRoute(p) : null; }, bus: q => { const p = findPlace(q); if (p) busTo(p); return !!p; }, cell: (x, z) => cellOf(x, z),
     props: () => PROPS.map(P => ({ k: P.k, label: P.label, x: +P.x.toFixed(1), z: +P.z.toFixed(1), cell: cellOf(P.x, P.z), ry: +(P.ry || 0).toFixed(2), foot: !!P.foot, built: !!P.built, cross: P.cross ? P.cross.s.r.id : null })), areas: () => AREAS.map(A => ({ t: A.t, cells: A.cells, st: [...A.st], stone: [+A.sx.toFixed(1), +A.sz.toFixed(1)], n: A.n || {} })), get life() { return LIFE ? LIFE.counts : null; }, free: (x, z, y, r) => freeSpot9(x, z, y, r ?? 6), seaSd: (x, z) => seaSd(x, z), inLane: (x, z) => inLane(x, z), stuck: (clear) => { if (clear === 0) { STK = []; try { localStorage.removeItem(STK_KEY); } catch (e) { /* 없음 */ } } return STK.slice(); }, check: (o) => townCheck(o), jump: q => { const { big, areas } = jumpLists(), p = [...big, ...areas].find(x => x.name === q || nameOf(x) === q); if (p) jumpTo(p); return !!p; }, bike: on => setBike(!!on), jumpCell: nm => jumpCell(nm), posts: () => POSTS.slice(), get bikeState() { return BIKE.state; }, top: on => on ? topOn() : topOff(), get _B() { return BLD; }, get _L() { return LOTR; }, get counts() { return { bld: BLD.length, trees: Object.fromEntries(Object.entries(TREES).map(([k, v]) => [k, v.length])), cols: COLS.length, bridges: BRIDGES.length, props: PROPS.length, areas: AREAS.length, cross: { auto: XCROSS.filter(X9 => X9.br === 'auto').length, kid: XCROSS.filter(X9 => X9.br === 'kid').length, cut: XCROSS.filter(X9 => !X9.br).length }, pcol: PCOL.length, nodes: GRAPH ? GRAPH.nodes.length : 0, regions: BK.size, hidden: OUT.hidden }; }, setLang: l => { LANG = l === 'en' ? 'en' : 'ko'; relabel(); } };
 
