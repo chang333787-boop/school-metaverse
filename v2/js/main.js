@@ -1805,7 +1805,7 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
   let userLock = false;   // 잠금이 사용자 클릭으로 걸렸는지(게임이 스스로 풀 때와 구분)
   const hide = () => { pz.style.display = 'none'; };
   const busy = () => CTRL.frozen || TOP.on || (TITLE && TITLE.phase !== 'off')   // 오프닝·메뉴·날아오는 중 · 게임이 멈춘(쪽지·대화) 동안
-    || (MAP.picker && MAP.picker.panel) || document.querySelector('.eng-note,.hudAsk,.esc-lock,#tour-talk,#story-talk,#memo-ui .mp,.bk-panel,.lb-pop,.lb-big,.lb-ask,.wg-lobby');   // LOCK-2: 놀이 창이 잠금을 푼 것은 멈춤 창 없이
+    || (MAP.picker && MAP.picker.panel) || document.querySelector('.eng-note,.hudAsk,.esc-lock,#tour-talk,#story-talk,#memo-ui .mp,.bk-panel,.lb-pop,.lb-big,.lb-ask,.wg-lobby,.twn-p');   // LOCK-2: 놀이 창이 잠금을 푼 것은 멈춤 창 없이 · 마을 창(J 바로 가기·M 지도·F 찾기·☰ 메뉴·칸 버튼판 — 교사 10-14 'J 누를 때마다 잠깐 멈춤')
   document.addEventListener('pointerlockchange', () => {
     if (document.pointerLockElement === canvas) { userLock = true; CURSOR.on = false; hide(); return; }
     if (!userLock) return; userLock = false;
