@@ -1,7 +1,7 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { buildWorld } from './world.js?v=155';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=156';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
@@ -590,7 +590,9 @@ function camPose(hx, hy, hz, yaw, pch, CD, fov, aspect, dUse) {
   let want = Math.min(CD, hit - 0.3);
   if (want < 0.5) want = Math.max(0.1, Math.min(0.5, hit - 0.12));
   for (let k = 0; k < 60 && want > 0.5 && nearClip(hx + dx * want, hy + dy * want, hz + dz * want, -dx, -dy, -dz, fov, aspect, hy); k++) want = Math.max(0.5, want - 0.1);   // ④
-  const d = dUse ?? want, cx = hx + dx * d, cy = hy + dy * d, cz = hz + dz * d;
+  if (world.overAt) for (let k = 0; k < 40 && want > 0.5; k++) { const g = world.overAt(hx + dx * want, hz + dz * want); if (g == null || hy + dy * want > g + 0.4) break; want = Math.max(0.5, want - 0.2); }   // ⑤ MTN-5(10-14): 놀이가 덮어쓴 땅(마을 산비탈) 속으로 들어가지 않게 당김 — 학교 땅은 덮어쓴 땅이 없어 그대로
+  const d = dUse ?? want, cx = hx + dx * d, cz = hz + dz * d; let cy = hy + dy * d;
+  if (world.overAt) { const g = world.overAt(cx, cz); if (g != null && cy < g + 0.4) cy = g + 0.4; }   // 그래도 땅 밑이면 땅 위로
   const hw = 0.3 * Math.tan(fov * Math.PI / 360) * aspect + 0.08, rx = Math.cos(yaw), rz = -Math.sin(yaw);
   const r = camHit(cx, cy, cz, rx, 0, rz, hw), l = camHit(cx, cy, cz, -rx, 0, -rz, hw);
   CAMP.sh = (r < hw && l < hw) ? (r - l) / 2 : r < hw ? r - hw : l < hw ? hw - l : 0;

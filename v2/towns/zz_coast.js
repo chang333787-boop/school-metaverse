@@ -6,7 +6,7 @@ export const TOWN = {
   id: 'zz_coast', title: '바다·산지 시험', en: 'Coast Test', scale: 500,
   mat: { w: 350, h: 250 }, school: [150, 50, 175, 75],
   grid: { xs: [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325], ys: [25, 50, 75, 100, 125, 150, 175, 200, 225], cols: 'num', rows: 'hangul', order: 'rowcol' },
-  base: 'now', fillAround: true, life: true,
+  base: 'now', fillAround: true, life: true, hillHouses: true,   // 비탈 집터 시험(사는 곳 구역의 작은 집 = 석축 단)
   range: { peaks: [[-35, -50, 66, 95], [-80, 30, 46, 50]], ridges: [{ pts: [[-35, -50, 62], [20, -82, 50], [80, -118, 46]], w: 55 }, { pts: [[-35, -50, 62], [-72, 8, 50], [-90, 70, 42]], w: 55 }] },
   layers: {
     now: {
@@ -15,7 +15,7 @@ export const TOWN = {
         { id: 'B0', pts: [[100, 0], [100, 250]], w: 4.8, trees: true, ai: BIG }, { id: 'B1', pts: [[200, 25], [200, 250]], w: 4.8, trees: true, ai: BIG },
         { id: 'BH', pts: [[0, 100], [275, 100]], w: 4.8, trees: true, ai: BIG }, { id: 'BH2', pts: [[50, 175], [350, 175]], w: 4.8, trees: true, ai: BIG },
         { id: 'v0', pts: [[150, 75], [150, 250]], w: 2.4, ai: SMALL }, { id: 'v1', pts: [[250, 100], [250, 250]], w: 2.4, ai: SMALL }, { id: 'v2', pts: [[300, 100], [300, 175]], w: 2.4, ai: SMALL },
-        { id: 'h0', pts: [[100, 50], [250, 50]], w: 2.4, ai: SMALL }, { id: 'h1', pts: [[200, 25], [262, 25]], w: 2.4, ai: SMALL }, { id: 'h2', pts: [[100, 225], [350, 225]], w: 2.4, ai: SMALL },
+        { id: 'h0', pts: [[100, 50], [250, 50]], w: 2.4, ai: SMALL }, { id: 'm1', pts: [[18, 100], [18, 64], [12, 30]], w: 2.4, ai: SMALL }, { id: 'h1', pts: [[200, 25], [262, 25]], w: 2.4, ai: SMALL }, { id: 'h2', pts: [[100, 225], [350, 225]], w: 2.4, ai: SMALL },
       ],
       nature: [
         { id: 'mt', k: 'hill', poly: [[-30, -30], [90, -30], [90, 30], [70, 80], [30, 90], [-30, 90]], peak: [10, 10], r: 70, h: 12, name: '뒷산', en: 'Back Mountain' },
@@ -31,6 +31,7 @@ export const TOWN = {
       blocks: [
         { id: 'fm', x: 262, y: 56, w: 3, d: 2, h: 1, c: 'blue', name: '수산물 가게' }, { id: 'gs', x: 254, y: 40, w: 3, d: 2, h: 1, c: 'gray', name: '어구 창고' },
       ],
+      zones: [{ id: 'zh', k: 'live', rect: [0, 26, 30, 96], dens: 'normal', type: 'house', note: '산 비탈 마을(시험)' }],
       areas: [],
     },
   },

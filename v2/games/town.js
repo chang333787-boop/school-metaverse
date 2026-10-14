@@ -174,6 +174,7 @@ export default async function start(map, params) {
   const RCAP = new Float32Array(NN); let HILLS = [], MWALL = [], RDY = null;   // 고갯길 둔덕 높이(땅 격자 · 없으면 −1e9) · 산 목록 · 옹벽 자리
   // 산줄기(MTN-2 · 10-13 교사 '언덕 말고 산지 — 마을이 산 아래'): 자료 D.range = { peaks: [[mx, my, h, r]…], ridges: [{ pts: [[mx, my, h]…], w }] } (판 cm · h·r·w = cm) — 판 밖 큰 산덩어리 + 판 안까지 이어지는 산자락
   //   높이 = 봉우리 원뿔·능선(거리 모양 (1−u²)²)의 최댓값 × 골짜기 잡음(능선형) · 판 안 초록 칸은 이 산의 기슭
+  const HILLHOUSE = !!D.hillHouses;   // MTN-4 비탈 집터 — 판마다 켬(확장판부터 · 우리 마을은 아직 끔)
   const RANGE = (() => { const R9 = D.range; if (!R9) return null; const pk = (R9.peaks || []).map(([mx, my, h, r]) => [X(mx), Z(my), h * S, r * S]), rg = [];
     for (const r of R9.ridges || []) { const P = r.pts.map(([mx, my, h]) => [X(mx), Z(my), h * S]); for (let i = 0; i < P.length - 1; i++) rg.push([P[i], P[i + 1], (r.w || 50) * S]); }
     let bb = [1e9, 1e9, -1e9, -1e9]; for (const [x, z, , r] of pk) bb = [Math.min(bb[0], x - r), Math.min(bb[1], z - r), Math.max(bb[2], x + r), Math.max(bb[3], z + r)]; for (const [a, b, w] of rg) bb = [Math.min(bb[0], a[0] - w, b[0] - w), Math.min(bb[1], a[1] - w, b[1] - w), Math.max(bb[2], a[0] + w, b[0] + w), Math.max(bb[3], a[1] + w, b[1] + w)];
@@ -938,12 +939,15 @@ export default async function start(map, params) {
       const rowsMax = dens === 'dense' ? 4 : dens === 'sparse' ? 2 : 3, skipP = dens === 'sparse' ? 0.38 : dens === 'dense' ? 0.02 : 0.1, gapK = dens === 'dense' ? 0.86 : dens === 'sparse' ? 1.35 : 1.0, hK = dens === 'dense' ? 1.25 : dens === 'sparse' ? 0.8 : 1;
       const cols = (zn.ai || rec.around ? ZCOLG : ZCOL)[zn.k] || ZCOLG.live, put = (cx, cz, ry, T, bw, bd) => {
         const c = Math.cos(ry), s9 = Math.sin(ry), corners = [[-bw / 2, -bd / 2], [bw / 2, -bd / 2], [bw / 2, bd / 2], [-bw / 2, bd / 2]].map(([lx, lz]) => [cx + lx * c + lz * s9, cz - lx * s9 + lz * c]);
-        const xs = corners.map(p => p[0]), zs = corners.map(p => p[1]), x0 = Math.min(...xs) - 1.5, x1 = Math.max(...xs) + 1.5, z0 = Math.min(...zs) - 1.5, z1 = Math.max(...zs) + 1.5;
-        if (corners.some(([x, z]) => !inShape(sh, x, z) || onRoad(x, z, 1.0) || wAt(x, z) || sdAt(x, z) < FPW + 7 || seaSd(x, z) < 30 || inRect(x, z) || tH(x, z) > 3) || occHit(x0, z0, x1, z1)) return false;
-        { const hs = corners.map(([x, z]) => tH(x, z)), gs = corners.map(([x, z]) => ty(x, z)); if (Math.max(...hs) - Math.min(...hs) > 0.8 || Math.max(...gs) - Math.min(...gs) > 1.2) return false; }   /* 실제 땅(ty — 둑·길 깎기 포함)으로도 1.2m 넘게 기울면 안 지음(10-14 묻힘 1.9m) */   // 비탈(80cm 넘게 기운 자리)에는 짓지 않음 — 반쯤 묻히지 않게   // 강 둔치·둑 비탈에는 짓지 않음(물가에서 물러섬)
-        occAdd(x0, z0, x1, z1); const h = Math.min(60, (T.h[0] + R() * (T.h[1] - T.h[0])) * (T.kind === 'house' || T.kind === 'factory' ? 1 : hK)), y0 = Math.min(...corners.map(([x, z]) => ty(x, z)));
+        const hill9 = HILLHOUSE && zn.k === 'live' && T.kind === 'house', xs = corners.map(p => p[0]), zs = corners.map(p => p[1]);   /* MTN-4 비탈 집터(판마다 켬 hillHouses): 사는 곳 구역의 작은 집만 석축 단(최대 3m) 위에 */
+        let ter9 = null; if (hill9) { const C2 = [[-bw / 2 - 2, -bd / 2 - 2], [bw / 2 + 2, -bd / 2 - 2], [bw / 2 + 2, bd / 2 + 2], [-bw / 2 - 2, bd / 2 + 2], [0, 0]].map(([lx, lz]) => ty(cx + lx * c + lz * s9, cz - lx * s9 + lz * c)), lo9 = Math.min(...C2), hi9 = Math.max(...C2);
+          if (hi9 - lo9 > 3) return false; if (hi9 - lo9 > 0.45) { ter9 = { lo: lo9 - 0.35, hi: hi9 + 0.12 }; const st9 = bd / 2 + 2 + Math.ceil((ter9.hi - ter9.lo) / 0.3) * 0.35 + 0.6; if (onRoad(cx + s9 * st9, cz + c * st9, 0.2)) ter9 = 'far'; } }   /* 단 앞 계단 끝이 길에 닿으면 안 지음 */
+        if (ter9 === 'far') return false; const m9 = ter9 ? 3.4 : 1.5, x0 = Math.min(...xs) - m9, x1 = Math.max(...xs) + m9, z0 = Math.min(...zs) - m9, z1 = Math.max(...zs) + m9;   /* 석축 단(둘레 2m)끼리 안 닿게 */
+        if (corners.some(([x, z]) => !inShape(sh, x, z) || onRoad(x, z, ter9 ? 2.6 : 1.0) || wAt(x, z) || sdAt(x, z) < FPW + 7 || seaSd(x, z) < 30 || inRect(x, z) || (tH(x, z) > 3 && !hill9)) || occHit(x0, z0, x1, z1)) return false;
+        if (!hill9) { const hs = corners.map(([x, z]) => tH(x, z)), gs = corners.map(([x, z]) => ty(x, z)); if (Math.max(...hs) - Math.min(...hs) > 0.8 || Math.max(...gs) - Math.min(...gs) > 1.2) return false; }   /* 실제 땅(ty — 둑·길 깎기 포함)으로도 1.2m 넘게 기울면 안 지음(10-14 묻힘 1.9m) */   // 비탈(80cm 넘게 기운 자리)에는 짓지 않음 — 반쯤 묻히지 않게   // 강 둔치·둑 비탈에는 짓지 않음(물가에서 물러섬)
+        occAdd(x0, z0, x1, z1); const h = Math.min(60, (T.h[0] + R() * (T.h[1] - T.h[0])) * (T.kind === 'house' || T.kind === 'factory' ? 1 : hK)), y0 = ter9 ? ter9.hi : Math.min(...corners.map(([x, z]) => ty(x, z)));
         const fl = [0, 1], fw = [s9, c], half = bd / 2, door = [cx + fw[0] * (half + 2.5), cz + fw[1] * (half + 2.5)];
-        BLD.push({ b: { id: 'g' + (zn.id || 'z') + '_' + BLD.length, c: cols[(R() * cols.length) | 0], h: h / S, w: bw / S, d: bd / S }, kind: T.kind, cx, cz, w: bw, d: bd, h, ry, c, s: s9, y0, fl, fw, door, gap: put.gap || 0, name: null, corners, gen: zn.id || 'z' });
+        BLD.push({ b: { id: 'g' + (zn.id || 'z') + '_' + BLD.length, c: cols[(R() * cols.length) | 0], h: h / S, w: bw / S, d: bd / S }, kind: T.kind, cx, cz, w: bw, d: bd, h, ry, c, s: s9, y0, fl, fw, door, gap: put.gap || 0, name: null, corners, gen: zn.id || 'z', terrace: ter9 || null });
         rec.n[T.kind] = (rec.n[T.kind] || 0) + 1; return true; };
       // 길을 따라(양쪽) — 줄 1 = 길 앞 · 줄 2·3… = 뒤로(골목 4m)
       for (const sg9 of RSEG) { const { a, b, hw } = sg9, L0 = Math.hypot(b[0] - a[0], b[1] - a[1]), tx = (b[0] - a[0]) / L0, tz = (b[1] - a[1]) / L0, px = -tz, pz = tx;
