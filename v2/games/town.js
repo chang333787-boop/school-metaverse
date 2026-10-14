@@ -310,6 +310,7 @@ export default async function start(map, params) {
     RSEG = []; for (const r of ROADS) for (let i = 0; i < r.P.length - 1; i++) RSEG.push({ r, a: r.P[i], b: r.P[i + 1], hw: r.hw });
   }
   const onRoad = (x, z, pad = 0, except = null) => { for (const s of RSEG) if (s.r !== except && segD(x, z, s.a, s.b)[0] < s.hw + pad) return s; return null; };
+  const inLane = (x, z, pad = 0) => { for (const s of RSEG) if (segD(x, z, s.a, s.b)[0] < s.hw - (s.r.big ? 2.2 : 1.4) + pad) return true; return false; };   // 차도(인도 폭을 뺀 차 다니는 자리) · LIFE-3
   const BRIDGES = [];
   function drawRoads() {
     if (LOOK === 'mat') { for (const s of RSEG) { const cut = bridgesOn(s); strip(s.a, s.b, s.hw * 2, 0.08, 0xc8352e, { skip: (x, z) => inSchool(x, z), cut, step: 5 }); } return; }   // 🧱 매트 모습: 길 = 빨간 테이프 그대로
@@ -1008,6 +1009,7 @@ export default async function start(map, params) {
     for (const [, b] of RB) { const geo = new T3.BufferGeometry(); geo.setAttribute('position', new T3.Float32BufferAttribute(b.p, 3)); geo.setAttribute('normal', new T3.Float32BufferAttribute(b.n, 3)); geo.setAttribute('uv', new T3.Float32BufferAttribute(b.u, 2)); geo.computeBoundingSphere(); GEOS.push(geo);
       const m = new T3.Mesh(geo, mat); m.matrixAutoUpdate = false; m.userData.fx = 1; group.add(m); }
     SQ = []; applySignNight(); }
+  let selfTp = false, tpArrive = 0;   // LIFE-3: 내가 옮긴 순간이동(도착 검사 안 함) · 도착 뒤 차 확인 남은 시간
   let SMAT = null, NIGHT9 = 0, LIFE = null, GMAT = null, PBLOCK = new Set(); const applySignNight = () => { if (SMAT) SMAT.emissive.setHex(NIGHT9 >= 1 ? 0x8a8070 : NIGHT9 ? 0x3a3428 : 0x000000); if (GMAT) { GMAT.visible = NIGHT9 > 0; GMAT.opacity = NIGHT9 >= 1 ? 1 : 0.4; } };
   function drawGlow(group) {   // 밤 빛 웅덩이: 가운데 따뜻한 빛 → 가장자리 0(가산 혼합 — 검정은 더하지 않음) · 구역마다 한 메시 · 낮에는 숨김
     if (!GLOW.length) return; const RB = new Map(), SEG = 16, RINGS = [[0, 1], [0.35, 0.72], [0.7, 0.28], [1, 0]];   // 반지름 70% · 밝기 60% · 가장자리 부드럽게(링 넷 · 땅을 따라감 — 잔디에 걸쳐도 잘린 선 없음) — 10-13 QA
@@ -2075,7 +2077,7 @@ export default async function start(map, params) {
   map.hud.banner('🏘 ' + D.title, 2);
   window.SM_TOWN = { get data() { return D; }, get layer() { return LID; }, places: () => PLACES.map(p => ({ id: p.id, name: p.name, kind: p.kind, x: p.x, z: p.z, door: p.door })), find: q => findPlace(q), route: (q, from) => { const p = findPlace(q); if (!p) return { ok: false, reason: 'noplace' }; const me = map.player.get(); return route(from || [me.x, me.z], p.door); },
     ground: (x, z) => ty(x, z), sd: (x, z) => sdAt(x, z), onRoad: (x, z, p) => !!onRoad(x, z, p || 0), get root() { return ROOT; }, get mats() { return MAT; }, toWorld: (mx, my) => [X(mx), Z(my)], toMat: (x, z) => [MXof(x), MYof(z)], stats: () => ({ ...STATS }), setLayer, setLook, show: q => { const p = findPlace(q); return p ? showRoute(p) : null; }, bus: q => { const p = findPlace(q); if (p) busTo(p); return !!p; }, cell: (x, z) => cellOf(x, z),
-    props: () => PROPS.map(P => ({ k: P.k, label: P.label, x: +P.x.toFixed(1), z: +P.z.toFixed(1), cell: cellOf(P.x, P.z), ry: +(P.ry || 0).toFixed(2), foot: !!P.foot, built: !!P.built, cross: P.cross ? P.cross.s.r.id : null })), areas: () => AREAS.map(A => ({ t: A.t, cells: A.cells, st: [...A.st], stone: [+A.sx.toFixed(1), +A.sz.toFixed(1)], n: A.n || {} })), get life() { return LIFE ? LIFE.counts : null; }, check: (o) => townCheck(o), jump: q => { const { big, areas } = jumpLists(), p = [...big, ...areas].find(x => x.name === q || nameOf(x) === q); if (p) jumpTo(p); return !!p; }, bike: on => setBike(!!on), jumpCell: nm => jumpCell(nm), posts: () => POSTS.slice(), get bikeState() { return BIKE.state; }, top: on => on ? topOn() : topOff(), get _B() { return BLD; }, get _L() { return LOTR; }, get counts() { return { bld: BLD.length, trees: Object.fromEntries(Object.entries(TREES).map(([k, v]) => [k, v.length])), cols: COLS.length, bridges: BRIDGES.length, props: PROPS.length, areas: AREAS.length, cross: { auto: XCROSS.filter(X9 => X9.br === 'auto').length, kid: XCROSS.filter(X9 => X9.br === 'kid').length, cut: XCROSS.filter(X9 => !X9.br).length }, pcol: PCOL.length, nodes: GRAPH ? GRAPH.nodes.length : 0, regions: BK.size, hidden: OUT.hidden }; }, setLang: l => { LANG = l === 'en' ? 'en' : 'ko'; relabel(); } };
+    props: () => PROPS.map(P => ({ k: P.k, label: P.label, x: +P.x.toFixed(1), z: +P.z.toFixed(1), cell: cellOf(P.x, P.z), ry: +(P.ry || 0).toFixed(2), foot: !!P.foot, built: !!P.built, cross: P.cross ? P.cross.s.r.id : null })), areas: () => AREAS.map(A => ({ t: A.t, cells: A.cells, st: [...A.st], stone: [+A.sx.toFixed(1), +A.sz.toFixed(1)], n: A.n || {} })), get life() { return LIFE ? LIFE.counts : null; }, free: (x, z, y, r) => freeSpot9(x, z, y, r ?? 6), inLane: (x, z) => inLane(x, z), stuck: (clear) => { if (clear === 0) { STK = []; try { localStorage.removeItem(STK_KEY); } catch (e) { /* 없음 */ } } return STK.slice(); }, check: (o) => townCheck(o), jump: q => { const { big, areas } = jumpLists(), p = [...big, ...areas].find(x => x.name === q || nameOf(x) === q); if (p) jumpTo(p); return !!p; }, bike: on => setBike(!!on), jumpCell: nm => jumpCell(nm), posts: () => POSTS.slice(), get bikeState() { return BIKE.state; }, top: on => on ? topOn() : topOff(), get _B() { return BLD; }, get _L() { return LOTR; }, get counts() { return { bld: BLD.length, trees: Object.fromEntries(Object.entries(TREES).map(([k, v]) => [k, v.length])), cols: COLS.length, bridges: BRIDGES.length, props: PROPS.length, areas: AREAS.length, cross: { auto: XCROSS.filter(X9 => X9.br === 'auto').length, kid: XCROSS.filter(X9 => X9.br === 'kid').length, cut: XCROSS.filter(X9 => !X9.br).length }, pcol: PCOL.length, nodes: GRAPH ? GRAPH.nodes.length : 0, regions: BK.size, hidden: OUT.hidden }; }, setLang: l => { LANG = l === 'en' ? 'en' : 'ko'; relabel(); } };
 
   // ───────── 생활(LIFE-1 · 교사 10-13 '완성된 도시 — 차·버스·이름 없는 사람·밤 불빛'): 길 그래프를 따라 달리는 차·버스 + 인도를 걷는 사람 · 인스턴스로 그림(그리기 몇 번) ─────────
   //   이름 없는 사람만(실제 아이 이름 없음) · 차는 오른쪽 차로 · 버스는 큰길만 · 사람은 인도 · 끊긴 길(강)에서는 되돌아감 · 밤 = 전조등·미등
@@ -2159,10 +2161,34 @@ export default async function start(map, params) {
       else if (T9) { let s = T9.s, i = 1; for (; i < T9.pts.length; i++) { const l = Math.hypot(T9.pts[i][0] - T9.pts[i - 1][0], T9.pts[i][1] - T9.pts[i - 1][1]); if (s <= l || i === T9.pts.length - 1) { const u = l > 1e-6 ? Math.min(1, s / l) : 1, P = T9.pts[i - 1], Q = T9.pts[i]; hx = Q[0] - P[0]; hz = Q[1] - P[1]; const hl9 = Math.hypot(hx, hz) || 1; x = P[0] + (Q[0] - P[0]) * u - hz / hl9 * g.lat; z = P[1] + (Q[1] - P[1]) * u + hx / hl9 * g.lat; break; } s -= l; } }   /* 건너는 길에서도 비킴(오른쪽) */
       else { const A = NO[g.a], d = dirOf(g.a, g.b), off = g.type === 'p' ? g.side * (pOff(g.big, g.hw) + g.lat) : vLat(g, g.big); x = A[0] + d[0] * g.t - d[1] * off; z = A[1] + d[1] * g.t + d[0] * off; hx = d[0]; hz = d[1]; }
       const hl = Math.hypot(hx, hz); if (hl > 1e-6) { g.hx = hx / hl; g.hz = hz / hl; } g.x = x; g.z = z; }
+    // LIFE-3(교사 10-14 '차에 꼈는데 뭐야 이거'): 차가 앞으로 d m 간 자리·방향 — 지금 길 → 모퉁이 곡선(plan) → 다음 길(곡선 다음은 곧게)
+    const AH9 = [0, 0, 0, 0];
+    function aheadAt(g, d) { let T9 = g.tr, s0 = 0;
+      if (!T9) { const pl = g.plan; if (pl && pl.bz && g.t + d >= pl.u0) { T9 = pl; s0 = g.t + d - pl.u0; } else return onEdge(g.a, g.b, g.t + d, vLat(g, g.big)); }
+      else s0 = T9.s + d;
+      if (s0 <= T9.L) { const u = s0 / T9.L, a = (1 - u) * (1 - u), b = 2 * (1 - u) * u, c = u * u; AH9[0] = a * T9.p0[0] + b * T9.k[0] + c * T9.p1[0]; AH9[1] = a * T9.p0[1] + b * T9.k[1] + c * T9.p1[1];
+        const hx = 2 * (1 - u) * (T9.k[0] - T9.p0[0]) + 2 * u * (T9.p1[0] - T9.k[0]), hz = 2 * (1 - u) * (T9.k[1] - T9.p0[1]) + 2 * u * (T9.p1[1] - T9.k[1]), hl = Math.hypot(hx, hz) || 1; AH9[2] = hx / hl; AH9[3] = hz / hl; return AH9; }
+      return onEdge(T9.na, T9.nb, T9.nt + (s0 - T9.L), vLat(g, T9.nbig)); }
+    function onEdge(a, b, t, off) { const A = NO[a], B = NO[b], dx = B[0] - A[0], dz = B[1] - A[1], l = Math.hypot(dx, dz) || 1, ux = dx / l, uz = dz / l; AH9[0] = A[0] + ux * t - uz * off; AH9[1] = A[1] + uz * t + ux * off; AH9[2] = ux; AH9[3] = uz; return AH9; }   // 새 배열 없이(매 프레임)
+    // 차 몸(길이 half · 폭 w)을 rl만큼 넓혀 앞으로 0~D m 쓸어 봄 → 나에게 닿는 첫 거리(없으면 1e9) · 지금 이미 닿아 있는데 내가 차 뒤 절반이면 지나가게 둠(밀어내기가 처리)
+    function sweepMe(g, mx, mz, rl, D) { const w = (g.type === 'bus' ? 1.25 : 0.92) + rl, hl = g.half + rl; if ((mx - g.x) ** 2 + (mz - g.z) ** 2 > (D + hl + w) ** 2) return 1e9;
+      for (let d = 0; d <= D; d += 0.6) { const q = aheadAt(g, d), dx = mx - q[0], dz = mz - q[1], al = dx * q[2] + dz * q[3]; if (al < -hl || al > hl || Math.abs(dx * q[3] - dz * q[2]) >= w) continue; if (d === 0 && al < 0) return 1e9; return d; }
+      return 1e9; }
+    const carW = o => o.type === 'bus' ? 1.25 : 0.92;
+    const carOn = (x, z, y, pad) => { for (const o of VEH) { const dx = x - o.x, dz = z - o.z; if (dx * dx + dz * dz > 64) continue; if (y != null && Math.abs(y - (o.y ?? y)) > 2.2) continue; const al = dx * o.hx + dz * o.hz, lt = dx * o.hz - dz * o.hx; if (Math.abs(al) < o.half + pad && Math.abs(lt) < carW(o) + pad) return o; } return null; };
+    // 가장 가까운 빈 자리(인도 먼저 — 차도는 +1.5m로 침): 물·학교 안·차 둘레·큰 낙차(1m)·막힌 곳은 빼고
+    const inPath = (o, x, z, pad) => { const w = carW(o) + pad, hl = o.half + pad, D = o.v * 0.8 + 0.6; for (let d = 0; d <= D; d += 0.6) { const q = aheadAt(o, d), dx = x - q[0], dz = z - q[1], al = dx * q[2] + dz * q[3]; if (Math.abs(al) < hl && Math.abs(dx * q[3] - dz * q[2]) < w) return true; } return false; };   // 이 차가 0.8초 동안 갈 자리
+    function freeSpot(x, z, y, rMax, pad = 0.5, avoid = null) { let best = null, bs = 1e9;
+      for (let r = 0.4; r <= rMax && r < bs; r += 0.4) for (let a = 0; a < 16; a++) { const xx = x + Math.cos(a * 0.3927) * r, zz = z + Math.sin(a * 0.3927) * r;
+        if (inSchool(xx, zz) || (!onBridge(xx, zz) && sdAt(xx, zz) < 1) || carOn(xx, zz, y, pad) || (avoid && avoid.v > 0.3 && inPath(avoid, xx, zz, pad))) continue; const g9 = map.q.groundAt(xx, zz, y + 0.9); if (!(g9 > y - 1.0) || map.q.blocked(xx, zz, g9)) continue;
+        const sc = r + (inLane(xx, zz) ? 1.5 : 0); if (sc < bs) { bs = sc; best = [xx, g9 + 0.02, zz]; } }
+      return best; }
+    let pushes = 0, arrivals = 0, pushT = 0, ovl = 0, pnull = 0;
+    const moveTo = (q) => { selfTp = true; map.player.teleport(q); selfTp = false; };
     // 차 충돌 상자(내 둘레 차 6대만 · 움직이는 상자) — 몸이 차를 뚫고 지나가지 않게 · 카메라는 통과(nc)
     const DYN = { hs: [], cx: 1e9, cz: 1e9 }, NDYN = 6, NV9 = [];
     const dynAt = (px, pz) => { for (const h of DYN.hs) h.remove(); DYN.hs = []; DYN.cx = px; DYN.cz = pz; for (let k = 0; k < NDYN; k++) { const h = map.collider.add({ x0: px - 30, x1: px + 30, y0: -2e6, y1: -2e6 + 1, z0: pz - 30, z1: pz + 30, nc: true }); h.box.y0 = h.box.y1 = -2e6; DYN.hs.push(h); } };
-    let night = 0, rq = 0, ri9 = 0, honkG = 0, stopped = 0, honks = 0;
+    let night = 0, rq = 0, ri9 = 0, honkG = 0, stopped = 0, honks = 0, laneQ = 0, meLane = false;
     const place = (g, m1, m2, k) => { const y0 = ty(g.x, g.z), yb = brTop(g.x, g.z), y = Math.max(y0 + (g.type === 'p' ? 0.16 : 0.07), yb > -1e8 ? yb + (g.type === 'p' && !g.tr && Math.abs(pOff(g.big, g.hw)) > g.hw - 2.4 ? 0.15 : 0) : -1e9); g.y = y;
       O3.position.set(g.x, y + (g.type === 'p' && g.v > 0.2 ? Math.abs(Math.sin(g.ph)) * 0.06 : 0), g.z); O3.rotation.set(0, Math.atan2(g.hx, g.hz), 0); O3.scale.set(1, 1, 1); O3.updateMatrix(); m1.setMatrixAt(g.i, O3.matrix); if (m2) m2.setMatrixAt(g.i, O3.matrix); if (k != null) { headL.setMatrixAt(k, O3.matrix); tailL.setMatrixAt(k, O3.matrix); beam.setMatrixAt(k, O3.matrix); } };
     const limb = (m, B, px, py, a) => { _mL.makeRotationX(a); _mL.setPosition(px, py, 0); _mO.multiplyMatrices(B, _mL); m.setMatrixAt(g9i, _mO); }; let g9i = 0;
@@ -2175,7 +2201,8 @@ export default async function start(map, params) {
       let gap = 1e9, byMe = false; const hx = g.hx, hz = g.hz;
       if (g.ghost <= 0) for (const o of VEH) { if (o === g) continue; const dx = o.x - g.x, dz = o.z - g.z; if (dx * dx + dz * dz > 400) continue; const ah = dx * hx + dz * hz; if (ah <= 0) continue; const lt = Math.abs(dx * hz - dz * hx); if (lt < 1.6 + (o.type === 'bus' ? 0.3 : 0) + (Math.abs(o.hx * hz - o.hz * hx) > 0.5 ? o.half * 0.7 : 0)) gap = Math.min(gap, ah - g.half - (Math.abs(o.hx * hx + o.hz * hz) > 0.5 ? o.half : 1.0)); }
       for (const o of PPL) { const dx = o.x - g.x, dz = o.z - g.z; if (dx * dx + dz * dz > 196) continue; const ah = dx * hx + dz * hz; if (ah <= 0) continue; if (Math.abs(dx * hz - dz * hx) < 1.35) gap = Math.min(gap, ah - g.half - 0.4); }
-      { const dx = me.x - g.x, dz = me.z - g.z, ah = dx * hx + dz * hz; if (ah > 0 && ah < 16 && Math.abs(dx * hz - dz * hx) < 1.7 && Math.abs(me.y - (g.y ?? me.y)) < 2.5) { const gp = ah - g.half - 0.6; if (gp < gap) { gap = gp; byMe = true; } } }
+      { const dx = me.x - g.x, dz = me.z - g.z; if (dx * dx + dz * dz < 900 && Math.abs(me.y - (g.y ?? me.y)) < 2.5) { const D9 = Math.min(26, 4 + g.v + g.v * g.v / 14 + (meLane ? 6 : 0)), hit = sweepMe(g, me.x, me.z, meLane ? 0.86 : 0.36, D9);   // LIFE-3: 다음 1초 + 서는 거리 동안 차가 쓸고 갈 자리(모퉁이 돌기 포함)에 내가 있나 · 차도 위면 더 넓게·더 일찍
+        if (hit < 1e8) { const gp = hit - (meLane ? 1.6 : 0.35); if (gp < gap) { gap = gp; byMe = true; } } } }
       // 교차로 차례: 마디 10m 앞에서 차례를 받음(먼저 들어간 차가 나갈 때까지 정지선 앞에서 기다림 · 4초 넘으면 지나감)
       if (!g.tr && g.plan && g.len - g.t < 10 && g.lockN !== g.plan.node) { const n = g.plan.node, ow = LK[n], o = ow >= 0 ? agents[ow] : null;
         if (!o || o.lockN !== n || g.waitL > 4) { if (o && o.lockN === n) o.lockN = -1; unlock(g); LK[n] = g.id; g.lockN = n; } else { g.waitL += dt; gap = Math.min(gap, g.plan.u0 - g.t - 0.5); } }
@@ -2192,6 +2219,7 @@ export default async function start(map, params) {
       g.v += Math.max(-6 * dt, Math.min(2 * dt, tgt - g.v)); }
     return {
       tick(dt) { dt = Math.min(dt, 0.1); stopped = 0; if (honkG > 0) honkG -= dt; const me = map.player.pos();   // pos() = 같은 객체(매 프레임 새 객체 없음)
+        if ((laneQ -= dt) <= 0) { laneQ = 0.25; meLane = inLane(me.x, me.z, 0.3); }
         if ((rq += dt) > 0.4) { rq = 0; const cp = map.camera.position; for (let k = 0; k < 6; k++) { const g = agents[ri9 = (ri9 + 1) % agents.length]; if (g.type === 'bus') continue;
           if (Math.hypot(g.x - cp.x, g.z - cp.z) < 280) continue; const near = []; for (let e = 0; e < edges.length; e++) { const d = Math.hypot(mid[e][0] - cp.x, mid[e][1] - cp.z); if (d > 60 && d < 240) near.push(e); } if (!near.length) continue;   // 화면 밖(60m 너머)에서 나타나게
           const e = edges[near[(R() * near.length) | 0]], fwd = R() < 0.5; if (g.type === 'p' && PB.has((fwd ? e[0] : e[1]) + '>' + (fwd ? e[1] : e[0]) + ':' + g.side)) continue; const tt = R() * e[2], A = NO[fwd ? e[0] : e[1]], B = NO[fwd ? e[1] : e[0]], sx = A[0] + (B[0] - A[0]) * tt / e[2], sz = A[1] + (B[1] - A[1]) * tt / e[2];
@@ -2204,12 +2232,18 @@ export default async function start(map, params) {
           pose(g); draw(g); }
         // 차 충돌 상자: 내 둘레 14m 안 가까운 차부터 6대(몸이 차 안에 들어가 있으면 그 차는 비움 — 갇히지 않게)
         if (Math.hypot(me.x - DYN.cx, me.z - DYN.cz) > 8) dynAt(me.x, me.z); { const nv = NV9; nv.length = 0; for (const o of VEH) { const d2 = (o.x - me.x) ** 2 + (o.z - me.z) ** 2; if (d2 > 196) continue; let k = nv.length; while (k > 0 && (nv[k - 1].x - me.x) ** 2 + (nv[k - 1].z - me.z) ** 2 > d2) k--; nv.splice(k, 0, o); if (nv.length > NDYN) nv.length = NDYN; }   // 가까운 차 6대(다시 쓰는 배열)
-          for (let k = 0; k < NDYN; k++) { const h = DYN.hs[k], o = nv[k], bx = h && h.box; if (!bx) continue; if (!o) { bx.y0 = bx.y1 = -2e6; continue; } const ax = Math.abs(o.hx), az = Math.abs(o.hz), w9 = o.type === 'bus' ? 1.25 : 0.92, ex = (ax * o.half + az * w9) * (ax > 0.3 && az > 0.3 ? 0.8 : 1), ez = (az * o.half + ax * w9) * (ax > 0.3 && az > 0.3 ? 0.8 : 1);
-            if (Math.abs(me.x - o.x) < ex - 0.1 && Math.abs(me.z - o.z) < ez - 0.1) { bx.y0 = bx.y1 = -2e6; continue; } const sh9 = o.v > 0.3 ? 0.15 : 0; bx.x0 = o.x - ex + sh9; bx.x1 = o.x + ex - sh9; bx.z0 = o.z - ez + sh9; bx.z1 = o.z + ez - sh9;   /* 몸이 차 안에 들어가 있을 때만 비움(순간이동 등) · 달리는 차는 15cm 작게 */ bx.y0 = (o.y ?? 0) - 0.3; bx.y1 = (o.y ?? 0) + (o.type === 'bus' ? 2.9 : 1.55); } }
+          let hitO = null; for (let k = 0; k < NDYN; k++) { const h = DYN.hs[k], o = nv[k], bx = h && h.box; if (!bx) continue; if (!o) { bx.y0 = bx.y1 = -2e6; continue; } const ax = Math.abs(o.hx), az = Math.abs(o.hz), w9 = carW(o), ex = (ax * o.half + az * w9) * (ax > 0.3 && az > 0.3 ? 0.8 : 1), ez = (az * o.half + ax * w9) * (ax > 0.3 && az > 0.3 ? 0.8 : 1);
+            const sh9 = o.v > 0.3 ? 0.15 : 0, y0 = (o.y ?? 0) - 0.3, y1 = (o.y ?? 0) + (o.type === 'bus' ? 2.9 : 1.55);
+            if (Math.abs(me.x - o.x) < ex - sh9 + 0.28 && Math.abs(me.z - o.z) < ez - sh9 + 0.28 && y1 > me.y + 0.55 && y0 < me.y + 1.5) { bx.y0 = bx.y1 = -2e6; hitO = hitO || o; continue; }   /* 몸(반지름 0.26)이 이미 상자와 겹침 = 그 차 충돌은 끔(움직이는 상자는 막기만 하고 가두지 않음) */
+            bx.x0 = o.x - ex + sh9; bx.x1 = o.x + ex - sh9; bx.z0 = o.z - ez + sh9; bx.z1 = o.z + ez - sh9; bx.y0 = y0; bx.y1 = y1; }   /* 달리는 차는 15cm 작게 */
+          if (hitO) ovl++; if (hitO && (pushT -= dt) <= 0) { const q = freeSpot(me.x, me.z, me.y, 6, 0.45, hitO); if (q) { moveTo(q); pushes++; } else { pnull++; pushT = 0.2; } } }   /* 그 차가 곧 갈 자리도 피해서 */   // 가장 가까운 빈 쪽(인도 먼저)으로 밀어냄
+        // 순간이동·바로 가기·칸 가기로 내린 자리 둘레(1m)에 차가 있으면 빈 인도로
+        if (tpArrive > 0) { tpArrive -= dt; const p9 = map.player.pos(); if (carOn(p9.x, p9.z, p9.y, 1.0)) { tpArrive = 0; const q = freeSpot(p9.x, p9.z, p9.y, 14, 1.0); if (q) { moveTo(q); arrivals++; map.hud.toast('🚗 차가 있어서 옆 인도로 옮겼어요', 1.8); } } }
         for (const m of meshes) m.instanceMatrix.needsUpdate = true; },
       night(v) { night = v; headL.visible = tailL.visible = beam.visible = v > 0; },
+      carNear: (x, z, y, pad) => carOn(x, z, y, pad), freeSpot: (x, z, y, rMax) => freeSpot(x, z, y, rMax),
       dispose() { for (const h of DYN.hs) h.remove(); DYN.hs = []; for (const m of meshes) map.remove(m); for (const g of geos) g.dispose(); for (const m of mats) m.dispose(); },
-      get counts() { return { cars: NC, buses: NB, people: NP, stopped, honks, dyn: DYN.hs.map(h => [h.box.x0, h.box.x1, h.box.y0, h.box.y1, h.box.z0, h.box.z1].map(v => +v.toFixed(2))), dynC: [DYN.cx, DYN.cz], ppl: PPL.map(g => [+g.x.toFixed(2), +g.z.toFixed(2), g.tr ? 1 : 0, +g.hx.toFixed(2), +g.hz.toFixed(2), +g.v.toFixed(2), g.a, g.b, g.side]), veh: VEH.map(g => [+g.x.toFixed(1), +g.z.toFixed(1), +g.v.toFixed(1), +g.hx.toFixed(2), +g.hz.toFixed(2), +(g.y || 0).toFixed(2), g.tr ? 1 : 0, g.a, g.b, g.type]) }; } };
+      get counts() { return { cars: NC, buses: NB, people: NP, stopped, honks, pushes, arrivals, ovl, pnull, dyn: DYN.hs.map(h => [h.box.x0, h.box.x1, h.box.y0, h.box.y1, h.box.z0, h.box.z1].map(v => +v.toFixed(2))), dynC: [DYN.cx, DYN.cz], ppl: PPL.map(g => [+g.x.toFixed(2), +g.z.toFixed(2), g.tr ? 1 : 0, +g.hx.toFixed(2), +g.hz.toFixed(2), +g.v.toFixed(2), g.a, g.b, g.side]), veh: VEH.map(g => [+g.x.toFixed(1), +g.z.toFixed(1), +g.v.toFixed(1), +g.hx.toFixed(2), +g.hz.toFixed(2), +(g.y || 0).toFixed(2), g.tr ? 1 : 0, g.a, g.b, g.type, g.half]) }; } };
   }
 
   function placeWord(x, z) {   // 지금 자리 말(✨): 길이면 길 이름(큰길·강변길·학교 앞길·고갯길·동네 길) · 아니면 칸 이름표 · 산 · 강가 · 마을
@@ -2218,13 +2252,25 @@ export default async function start(map, params) {
     if (sdAt(x, z) < FPW + 2) return en ? 'Riverside' : '강가'; if (tH(x, z) > 12) return en ? 'Back Mountain' : '뒷산'; if (A && A.t) return A.t; return en ? 'Our Town' : '우리 마을'; }
   // 지금 할 일 줄(가까운 장소 · 4번/초) · 물 흐름 · 나무 흔들림 · 자전거 · 작은 지도
   let near9 = '', tq = 0, mq = 0, wq = 0;
-  map.on('teleport', () => { near9 = ''; tq = 1; });   // 순간이동 뒤 칸 주소 칩을 곧바로 고침
+  const freeSpot9 = (x, z, y, rMax) => LIFE ? LIFE.freeSpot(x, z, y, rMax) : (() => { for (let r = 0.4; r <= rMax; r += 0.4) for (let a = 0; a < 16; a++) { const xx = x + Math.cos(a * 0.3927) * r, zz = z + Math.sin(a * 0.3927) * r; if (inSchool(xx, zz) || (!onBridge(xx, zz) && sdAt(xx, zz) < 1)) continue; const g9 = map.q.groundAt(xx, zz, y + 0.9); if (g9 > y - 1.0 && !map.q.blocked(xx, zz, g9)) return [xx, g9 + 0.02, zz]; } return null; })();
+  map.on('teleport', () => { near9 = ''; tq = 1; if (!selfTp) tpArrive = 0.6; SN.t = 0; SN.x = 1e9; });   // 순간이동 뒤 칸 주소 칩을 곧바로 고침 · 도착 자리 차 확인(LIFE-3)
+  // 안전장치(LIFE-3 · 교사 10-14): 이동 키를 누르는데 2초 넘게 0.25m도 못 가면 → 차가 6m 안이거나 · 몸이 충돌 상자 속이거나 · 8방향 중 6곳 넘게 막혔으면 가까운 빈 인도로 옮기고 기록(벽에 대고 걷기만 한 건 안 옮김)
+  const SN = { x: 1e9, z: 0, t: 0, q: 0 }, STK_KEY = 'sm-town-stuck'; let STK = []; try { STK = JSON.parse(localStorage.getItem(STK_KEY) || '[]') || []; } catch (e) { STK = []; }
+  function unjam(me, why) { const q = freeSpot9(me.x, me.z, me.y, 10); const rec = { at: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16).replace('T', ' '), cell: inSchool(me.x, me.z) ? '학교' : cellOf(me.x, me.z), x: +me.x.toFixed(2), y: +me.y.toFixed(2), z: +me.z.toFixed(2), why, bike: !!bike, moved: !!q };
+    STK.push(rec); if (STK.length > 30) STK.splice(0, STK.length - 30); try { localStorage.setItem(STK_KEY, JSON.stringify(STK)); } catch (e) { /* 저장 못 해도 옮기기는 함 */ } map.player.logStuck?.(why);
+    if (q) { selfTp = true; map.player.teleport(q); selfTp = false; map.hud.toast('🧭 끼여서 옆 빈 자리로 옮겼어요', 2); } }
+  function snTick(dt, me) { if ((SN.q += dt) < 0.1) return; const el = SN.q; SN.q = 0;
+    if (!map.player.moving || panel || topH || inSchool(me.x, me.z)) { SN.x = 1e9; SN.t = 0; return; }   // 학교 안은 학교 끼임 기록(지도 API)이 맡음
+    if (Math.hypot(me.x - SN.x, me.z - SN.z) > 0.25) { SN.x = me.x; SN.z = me.z; SN.t = 0; return; }
+    if ((SN.t += el) < 2) return; SN.t = 0; SN.x = 1e9;
+    const car = LIFE && LIFE.carNear(me.x, me.z, me.y, 6), inside = map.q.blocked(me.x, me.z, me.y); let nb = 0; for (let a = 0; a < 8; a++) if (map.q.blocked(me.x + Math.cos(a * 0.7854) * 0.3, me.z + Math.sin(a * 0.7854) * 0.3, me.y)) nb++;
+    if (car || inside || nb >= 6) unjam(me, car ? 'car' : inside ? 'inside' : 'boxed'); }
   return {
     tick(dt) {
       { const me9 = map.player.pos(); UPL.value.set(me9.x, me9.y + 1.3, me9.z); }
       if (LIFE) LIFE.tick(dt); WT.value += dt; ripple.offset.y -= dt * 0.16; MAT.pond.map.offset.x += dt * 0.012; MAT.pond.map.offset.y += dt * 0.008;
       const me = map.player.pos();
-      BIKE.update(dt);
+      BIKE.update(dt); snTick(dt, me);
       if ((lodQ += dt) > 0.25) { lodQ = 0; lodTick(false); }
       if ((mq += dt) > 0.2) { mq = 0; drawMini(); const cp = map.camera.position; for (const m of DMESH) m.visible = Math.hypot(cp.x - m.userData.c[0], cp.z - m.userData.c[1]) < 45 + REG * 0.6; for (const s9 of LABELS) s9.visible = !topH && Math.hypot(cp.x - s9.position.x, cp.z - s9.position.z) < 45; }   // 이름 알약 = 45m 안에서만
       if (RING) { const cp = map.camera.position, tv = !!(map.top && map.top.on); RING.position.set(cp.x, TY, cp.z); RING.visible = !tv; if (tv && !cloudsOff.length && !topH) clouds(false); else if (!tv && cloudsOff.length && !topH) clouds(true); }

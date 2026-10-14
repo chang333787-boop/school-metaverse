@@ -191,6 +191,9 @@ export function createMapApi(host, NAV, META) {
     face(h) { setHeading(h); },
     lookAt(target) { const r = resolve(target); if (r) setHeading(Math.atan2(r.x - P.x, -(r.z - P.z)) / R2D); },
     unstick: () => unstick(),                                     // 끼였을 때 가장 가까운 걷는 칸으로(3m 안)
+    // LIFE-3(10-14 마을 '차에 꼈는데'): 지금 움직이려 하나(이동 키·조이스틱·자동 걷기 · 멈춤·앉기·행동 중이면 아님) · 끼임 기록에 지금 자리 남기기(SD2.map.stuckLog — 최대 50)
+    get moving() { if (CTRL.frozen || pl.ACT.anim || pl.ACT.sit) return false; if (CTRL.steer || (pl.touch && pl.touch.m > 0)) return true; if (pl.keys) for (const k of MOVE_KEYS) if (pl.keys.has(k)) return true; return false; },
+    logStuck(why) { if (stuckLog.length < 50) stuckLog.push([+P.x.toFixed(2), +P.y.toFixed(2), +P.z.toFixed(2), +tSec.toFixed(1), why || 'game']); },
     freeze(on2 = true) { CTRL.frozen = !!on2; },
     // GAME-WG(09-26): 몸만 방위 h°로 돌려 세운다(카메라는 그대로 — 물총 겨눔). null = 걷는 방향으로 돌아감. 게임이 멈추면 자동으로 null
     aim(h) { CTRL.face = h == null ? null : Math.atan2(Math.sin(h * R2D), -Math.cos(h * R2D)); },
