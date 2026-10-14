@@ -264,7 +264,8 @@ export function createMapApi(host, NAV, META) {
   // LAND-1: 휴대폰 가로(세로 공간이 아주 좁다 — 사파리 주소창·탭 줄)면 칩을 미니맵 왼쪽 · 목표 줄 아래에 가로 한 줄로, 글자는 짧게('📖 정림초 도감 1/15' → '📖 1/15')
   const shortChip = t => { t = String(t).trim(); if ([...t].length <= 8) return t; const p = t.split(/\s+/), n = t.match(/\d+\s*\/\s*\d+/); if (n) return p[0] + ' ' + n[0].replace(/\s+/g, ''); const w = [...(p[1] || '')]; return p[0] + (w.length ? ' ' + (w.length > 6 ? w.slice(0, 5).join('') + '…' : w.join('')) : ''); };
   const rowMode = () => small() && document.body.classList.contains('touch') && innerWidth > innerHeight;
-  const layoutChips = () => { const r = MM && MM.rect(), sm = small(), st = sm ? 30 : 34; let tot = 0; for (const [, c] of chips) tot += slot(c);
+  let chipAnchor = null;   // 게임이 제 지도를 그리면(마을 작은 지도) 칩은 그 아래로 — hud.anchor(() => ({right, top, w, h}))
+  const layoutChips = () => { const r = chipAnchor ? chipAnchor() : MM && MM.rect(), sm = small(), st = sm ? 30 : 34; let tot = 0; for (const [, c] of chips) tot += slot(c);
     if (rowMode()) { let x = r && !r.big ? r.right + r.w + 8 : 10; const y = 52;
       for (const [, c] of chips) { if (c.raw != null) c.el.textContent = shortChip(chipText(c.raw)); const h = slot(c);
         c.el.style.top = (y + (h === 44 ? Math.max(0, Math.round((44 - (c.el.offsetHeight || 26)) / 2)) : 0)) + 'px'; c.el.style.right = 'calc(' + x + 'px + env(safe-area-inset-right))'; x += (c.el.offsetWidth || 60) + 6; }
@@ -277,6 +278,7 @@ export function createMapApi(host, NAV, META) {
     toast: (text, sec = 2.2) => ui.toast(text, sec),
     banner(text, sec = 2.5) { if (!banEl) { banEl = el('left:50%;top:38%;transform:translate(-50%,-50%);font-size:30px;font-weight:700;padding:14px 28px;display:none;pointer-events:none'); banEl.id = 'hudBan'; } banEl.textContent = text; banEl.style.display = ''; banT = sec; return { remove() { banEl.style.display = 'none'; banT = 0; } }; },
     // opt.onClick(GAME-FIND-1): 칩을 누르면(터치·커서) — 키 안내 칩을 손가락으로도 쓰게
+    anchor(fn) { chipAnchor = typeof fn === 'function' ? fn : null; layoutChips(); },   // 칩 기준 자리(게임 지도 상자) · null = 학교 작은 지도
     chip(key, text, opt) { let c = chips.get(key); if (text == null) { if (c) { c.el.remove(); chips.delete(key); layoutChips(); } return null; }
       if (!c) { c = { el: el('right:10px;font-size:14px') }; c.el.classList.add('gchip'); chips.set(key, c); layoutChips(); } const was = c.raw; c.raw = text; c.el.textContent = rowMode() ? shortChip(chipText(text)) : chipText(text); if (rowMode() && was !== text) layoutChips();   // 가로 한 줄이면 글자 폭이 바뀔 때 다시 줄 세움
       if (opt && opt.onClick) { if (!c.tap) { c.tap = true; c.el.classList.add('gtap'); layoutChips(); } c.el.style.cursor = 'pointer'; c.el.onclick = e => { e.stopPropagation(); try { opt.onClick(); } catch (err) { console.error(err); } }; }
@@ -630,6 +632,7 @@ export function createMapApi(host, NAV, META) {
       hud: { toast: hud.toast, banner: (x, s) => { const h = hud.banner(x, s); if (track && !hudKeys.has('!banner')) { hudKeys.add('!banner'); t({ remove: () => { if (banEl) banEl.style.display = 'none'; banT = 0; } }); } return h; },
         chip: (k, x, o) => { const h = hud.chip(k, x, o); if (track && x != null && !hudKeys.has(k)) { hudKeys.add(k); t({ remove: () => { hud.chip(k, null); hudKeys.delete(k); } }); } return h; },
         goal: x => { const h = hud.goal(x); if (track && x != null && !hudKeys.has('!goal')) { hudKeys.add('!goal'); t({ remove: () => { hud.goal(null); hudKeys.delete('!goal'); } }); } return h; },
+        anchor: fn => { hud.anchor(fn); if (track && fn && !hudKeys.has('!anchor')) { hudKeys.add('!anchor'); t({ remove: () => { hud.anchor(null); hudKeys.delete('!anchor'); } }); } },   // 게임이 멈추면 칩 기준 자리도 학교 작은 지도로
         ask: (ti, ch) => hud.ask(ti, ch, h => t(h)) },
       // 미니맵(GAME-FIND-1): 범위 파사드에선 stop 때 자동으로 숨고 표식을 비운다(보이기·표식 정리 항목은 한 번만 쌓임)
       minimap: { show: o => { const h = minimap.show(o); if (track && !hudKeys.has('!mm')) { hudKeys.add('!mm'); t({ remove: () => { minimap.setMarks([]); minimap.hide(); hudKeys.delete('!mm'); } }); } return h; },
