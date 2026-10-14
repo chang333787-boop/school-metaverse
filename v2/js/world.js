@@ -11,6 +11,7 @@ const TRN = SCHOOL.terrain;
 // TOWN-1(10-12 마을 세계): 학교 상자 밖 땅 높이를 놀이(마을)가 덮어씀 — 산·언덕·강(자연환경 엔진) · null을 돌려주면 원래 땅 · 물리·놓기·길격자가 모두 이 함수를 본다
 let TOVER = null;
 export function setTerrainOver(f) { TOVER = typeof f === 'function' ? f : null; }
+export function overAt(x, z) { return TOVER ? TOVER(x, z) : null; }   // 놀이가 덮어쓴 땅 높이만(없으면 null) — 카메라가 마을 산비탈 속으로 들어가지 않게(CAM-5)
 export function terrainAt(x, z) {
   if (TOVER) { const v = TOVER(x, z); if (v != null) return v; }
   if (z < TRN.TERR_Z || (x < TRN.westX && z < TRN.westZ) || (x < TRN.gymSouthX && z < TRN.gymSouthZ)) return TRN.yard;   // GYM-2: 체육관 남면 길(대지가 계단 서쪽에서 gymSouthZ까지 나옴)
@@ -6696,7 +6697,7 @@ export function buildWorld(scene) {
     //   사람이 앉아 있는 의자·벤치·소파는 부수지 않는다(부수면 앉은 사람이 허공에 앉아 있고 교장 의자 등받이가 떠 있었다) — 빈 의자는 그대로 부서짐
     if ((o.kind === 'chair' || o.kind === 'bench' || o.kind === 'sofa' || o.kind === 'bed') && PEOPLE.some(p => p.pose === 'sit' && p.x > o.box[0] - 0.05 && p.x < o.box[3] + 0.05 && p.z > o.box[2] - 0.05 && p.z < o.box[5] + 0.05 && o.box[1] <= p.y + 0.1 && o.box[4] >= p.y + 0.3)) o.seated = true; }
   { const late = doors.filter(d => d.late); if (late.length) { const keep = doors.filter(d => !d.late); doors.length = 0; doors.push(...keep, ...late); } }   // GYM-2: 새 문은 끝 번호로(옛 문 번호 그대로)
-  return { busDoor, colliders, grid, zones, doors, allBoxes, hotspots, hideSpots, details, visRods, soft: softVols, TERR_Z, terrainAt, setTerrainOver, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh, tour: tourSpots, npcs: NPCN, lampMat,
+  return { busDoor, colliders, grid, zones, doors, allBoxes, hotspots, hideSpots, details, visRods, soft: softVols, TERR_Z, terrainAt, setTerrainOver, overAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh, tour: tourSpots, npcs: NPCN, lampMat,
     lego: on => { LEGO_U.value = on ? 1 : 0; }, get legoOn() { return LEGO_U.value > 0.5; },   // LEGO-2
     people: PEOPLE, objects: OBJS.filter(o => o.parts.length && !o.seated), personGeo, signMesh, detailMat: mat, signCanvas: t => signCanvas.get(t) || null, lampMesh };   // NPC-MOVE·WORLD-FX(found2): 사람 기록·대역 굽기·이름표 메시·형광등 메시(방마다 끄기)   // lampMat: G-ESCAPE 밤 '불 끄기'(main.js setDark — 형광등 색만 바꿈)
 }
