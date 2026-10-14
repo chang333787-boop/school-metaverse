@@ -65,6 +65,8 @@ export default async function start(map, params) {
   const S = (D.scale || 500) / 100, MSZ = D.mat || { w: 250, h: 140 };
   const MD = map.mapData(1), SB = MD.boundary, SBX = SB.map(p => p[0]), SBZ = SB.map(p => p[1]);
   const SR = [Math.min(...SBX), Math.min(...SBZ), Math.max(...SBX), Math.max(...SBZ)];   // 학교 상자(울타리 바깥 테두리)
+  // REAL-1(교사 10-14 '학교 옆 비닐하우스는 뭔 삭제를 해놨어'): 학교 둘레 고정된 실제 것(서쪽 담 밖 연동 비닐하우스 남끝 z 77 · 파랑 지붕 창고 z 77~89 · 남쪽 밭·등굣길·집 z ~96)까지 학교 칸 — 자르지도 숨기지도 않음 · 마을은 그 밖에서부터 1:500
+  SR[3] = Math.max(SR[3], 97);
   const MS = D.school || [110.5, 1, 139.5, 31], MCX = (MS[0] + MS[2]) / 2, MCY = (MS[1] + MS[3]) / 2, WCX = (SR[0] + SR[2]) / 2, WCZ = (SR[1] + SR[3]) / 2;
   // 학교 칸 = 실제 학교 담 상자(교사 10-13 '학교 모델은 줄이지 말고 · 마을 쪽 1:500은 그대로') — 칸 네 변을 담 상자에 맞추고, 칸 밖은 그 가장자리에서부터 정확히 1:500
   //   (예전 = 가운데 맞춤 · 칸 125m < 학교 146m라 둘레 길이 학교를 파고듦) · school 칸이 판 가장자리에 붙으면(위쪽 0) 그쪽은 담에서 바로 끝
@@ -252,7 +254,8 @@ export default async function start(map, params) {
   const nrm = (a, b, c) => { const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2]; const x = uy * vz - uz * vy, y = uz * vx - ux * vz, z = ux * vy - uy * vx, l = Math.hypot(x, y, z) || 1; return [x / l, y / l, z / l]; };
   let AUD = null;   // 감사 기록(SM_TOWN.check 때만): 축에 맞는 면 = [축, 방향, 평면 값, 범위 4, 색] · 서 있는 상자
   let ATAG = '';
-  const audQ = (a, b, c, d, n, col) => { const ax = Math.abs(n[1]) > 0.985 ? 1 : Math.abs(n[0]) > 0.999 ? 0 : Math.abs(n[2]) > 0.999 ? 2 : -1; if (ax < 0) return; const P = [a, b, c, d], o = [0, 1, 2].filter(i => i !== ax), lo = o.map(i => Math.min(...P.map(p => p[i]))), hi = o.map(i => Math.max(...P.map(p => p[i])));
+  const audQ = (a, b, c, d, n, col) => { const ax = Math.abs(n[1]) > 0.985 ? 1 : Math.abs(n[0]) > 0.999 ? 0 : Math.abs(n[2]) > 0.999 ? 2 : -1; if (ax < 0) return;
+    if (ax === 1 && d !== c && Math.abs(d[1] - (a[1] - (n[0] * (d[0] - a[0]) + n[2] * (d[2] - a[2])) / n[1])) > 0.003) { audQ(a, b, c, c, n, col); audQ(a, c, d, d, nrm(a, c, d), col); return; }   /* 꺾인 네모(땅을 따르는 판) = 두 삼각형을 따로 — 한 평면으로 어림하면 실제와 어긋남(10-14) */ const P = [a, b, c, d], o = [0, 1, 2].filter(i => i !== ax), lo = o.map(i => Math.min(...P.map(p => p[i]))), hi = o.map(i => Math.max(...P.map(p => p[i])));
     if ((hi[0] - lo[0]) * (hi[1] - lo[1]) < 0.01) return; AUD.F.push([ax, Math.sign(n[ax]), (a[ax] + b[ax] + c[ax] + d[ax]) / 4, lo[0], hi[0], lo[1], hi[1], (col[0] * 255 | 0) + ',' + (col[1] * 255 | 0) + ',' + (col[2] * 255 | 0), Math.max(...P.map(p => p[ax])) - Math.min(...P.map(p => p[ax])), ATAG,
       P.map(p => [p[o[0]], p[o[1]]]), ax === 1 ? [(a[0] + b[0] + c[0] + d[0]) / 4, (a[2] + b[2] + c[2] + d[2]) / 4, (a[1] + b[1] + c[1] + d[1]) / 4, -n[0] / n[1], -n[2] / n[1]] : null, AUD.dbg ? new Error().stack.split('\n').slice(3, 7).map(l => l.replace(/.*town\.js[^:]*:/, '').replace(')', '')).join('<') : null]); };   /* [10] = 면 모서리(다른 두 축) · [11] = 기운 바닥면의 평면(가운데 x·z·y + 기울기) — 겹친 자리에서 실제 높이로 견줌 */
   const quad = (B, a, b, c, d, col, shade = [1, 1, 1, 1]) => { const n = nrm(a, b, c); if (AUD) audQ(a, b, c, d, n, col); const k = i => col.map(v => v * shade[i]); tri(B, a, b, c, n, k(0), k(1), k(2)); tri(B, a, c, d, n, k(0), k(2), k(3)); };
@@ -659,7 +662,7 @@ export default async function start(map, params) {
       const sp = hh > 60 || R() < 0.45 ? 'pine' : 'round'; TREES[sp].push({ x: px, y: TY + hh, z: pz, s: 1.0 + R() * 0.7, hex: treeHex(sp, R), ry: R() * 6 }); } }
   function drawRangeExtras(group) {   // 산자락 등산로(지그재그 흙길 · 통나무 계단 턱) + 꼭대기 쪽 전망대(정자 + 안내판) — ✨ AI가 정함
     const R9 = D.range; if (!R9) return;
-    if (R9.trail) { const pts = R9.trail.map(([mx, my]) => [X(mx), Z(my)]); for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1]; strip(a, b, 1.8, 0.07, 0xb99a6e, { step: 2, skip: (x, z) => !!onRoad(x, z, 0.5) || inSchool(x, z) || inLot(x, z) });
+    if (R9.trail) { const pts = R9.trail.map(([mx, my]) => [X(mx), Z(my)]); for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1]; strip(a, b, 1.8, 0.07, 0xb99a6e, { step: 2, skip: (x, z) => !!onRoad(x, z, 0.5) || inSchool(x, z) || inLot(x, z, 2.2) });   /* 마당 둘레 2.2m(흙길 반폭 + 한 조각)도 비움 — 비탈에서 마당과 같은 평면 없게 */
         const L9 = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L9, uz = (b[1] - a[1]) / L9; for (let t = 2; t < L9 - 1; t += 3.2) { const x = a[0] + ux * t, z = a[1] + uz * t; if (onRoad(x, z, 0.6) || inLot(x, z)) continue; box(x, ty(x, z), z, 0.22, 0.18, 1.6, Math.atan2(-uz, ux) + Math.PI / 2, 0x7a5232); } }   // 통나무 턱
       const [sx, sz] = pts[0]; const r = nearSeg(sx, sz, 30); if (r) { const ry = Math.atan2(sx - r.p[0], sz - r.p[1]); signBoard(group, sx + Math.sin(ry) * 2.4, sz + Math.cos(ry) * 2.4, ry + Math.PI, '등산로 · 전망대', { w: 2.2, h: 0.62, y: 1.2, bg: 0x2f6b3a, bgc: '#2f6b3a', fg: '#fff7e0' }); } }
     if (R9.view) { const [vx, vz] = [X(R9.view[0]), Z(R9.view[1])], ry = Math.atan2(X(125) - vx, Z(75) - vz); pavilion(vx, vz, ry); const [bx, bz] = [vx + Math.sin(ry) * 4.6, vz + Math.cos(ry) * 4.6]; signBoard(group, bx, bz, ry, '전망대', { w: 1.4, h: 0.55, y: 1.0, bg: 0x2f6b3a, bgc: '#2f6b3a', fg: '#fff7e0' });
@@ -676,7 +679,7 @@ export default async function start(map, params) {
       const kids = BLD.filter(b => !b.gen && b.kind !== 'green' && b.cx >= x0 && b.cx < x1 && b.cz >= z0 && b.cz < z1); if (!kids.length && !(zn && zn.ai)) continue;
       const grp = zn ? zn.k : (() => { const c = { live: 0, work: 0, pub: 0 }; for (const b of kids) c[(KIND[b.kind] || {}).g || 'pub']++; return Object.entries(c).sort((a, b) => b[1] - a[1])[0][0]; })();
       const R = rng0(hashS('inf:' + ci + ':' + ri + ':' + LID)), n = { 작은집: 0, 작은가게: 0, 텃밭: 0, 마당: 0, 창고: 0, 농구장: 0 }; let cnt = 0;
-      const okSq = (x, z, hw, hd) => !occHit(x - hw, z - hd, x + hw, z + hd) && [[x - hw, z - hd], [x + hw, z - hd], [x + hw, z + hd], [x - hw, z + hd], [x, z]].every(([a, b]) => a > x0 + 2 && a < x1 - 2 && b > z0 + 2 && b < z1 - 2 && !onRoad(a, b, 1.5) && !wAt(a, b) && sdAt(a, b) > FPW + 6 && !inSchool(a, b) && Math.abs(tH(a, b) - tH(x, z)) < 1.2 && tH(a, b) < 4);
+      const okSq = (x, z, hw, hd) => !occHit(x - hw, z - hd, x + hw, z + hd) && [[x - hw, z - hd], [x + hw, z - hd], [x + hw, z + hd], [x - hw, z + hd], [x, z]].every(([a, b]) => a > x0 + 2 && a < x1 - 2 && b > z0 + 2 && b < z1 - 2 && !onRoad(a, b, 1.5) && !wAt(a, b) && sdAt(a, b) > FPW + 6 && !inSchool(a, b) && Math.abs(tH(a, b) - tH(x, z)) < 1.2 && Math.abs(ty(a, b) - ty(x, z)) < 0.75 && tH(a, b) < 4);   /* 실제 땅(ty)으로 모서리끼리 1.5m 안 — 비탈에 반쯤 묻힌 ✨ 가게 없게(10-14) */
       for (let z = z0 + 8; z < z1 - 6 && cnt < 9; z += 7) for (let x = x0 + 8; x < x1 - 6 && cnt < 9; x += 7) { const px = x + (R() - 0.5) * 3, pz = z + (R() - 0.5) * 3, r = nearSeg(px, pz, 60), dR = r ? r.d - r.sg.hw : 99;
         if (dR < 22) { const shop = grp !== 'live' || R() < 0.25, bw = shop ? 9 : 8, bd = shop ? 8 : 7; if (!okSq(px, pz, bw / 2 + 2, bd / 2 + 2)) continue; const ry = r ? Math.atan2(r.p[0] - px, r.p[1] - pz) : 0, ry4 = Math.round(ry / (Math.PI / 2)) * (Math.PI / 2);   // 길 쪽을 봄
           if (mkGen({ kind: shop ? 'shop' : 'house', cx: px, cz: pz, w: bw, d: bd, h: shop ? 4.6 + R() * 2.4 : 4.2 + R() * 2, ry: ry4, c: shop ? ['mtan', 'msand', 'mslate'][(R() * 3) | 0] : ['mred', 'mbrown', 'mslate', 'mor'][(R() * 4) | 0], gen: 'fill' })) { n[shop ? '작은가게' : '작은집']++; cnt++; } continue; }
@@ -697,7 +700,7 @@ export default async function start(map, params) {
       REC.push({ id: 'inf:' + ci + ':' + ri, k: 'land', cell: cellOf(cx, cz), note: '빈 잔디 채움', dens: '', n }); }
     for (const r of REC) if (Object.values(r.n).some(v => v)) ZFILL.push(r); }
   function drawRiverside() {   // 강 둔치: 산책길(양쪽) · 물가 갈대 · 강을 보는 벤치(✨ 완성된 동네) — 길·다리 밑·학교는 비움
-    for (const it of L.nature) { if (it.k !== 'water' || !it.line) continue; const sh = shapeOf(it), hw = sh.w / 2, fp = FPW, Q = densify(sh.line, 3), R = rng0(hashS('rs' + (it.id || ''))), ok = (x, z) => { const s9 = sdAt(x, z); return s9 > 0.9 && s9 < FPW - 0.8 && !onRoad(x, z, 1.5) && !inSchool(x, z) && x > TX0 + 2 && x < TX1 - 2 && z > TZ0 + 2 && z < TZ1 - 2; };
+    for (const it of L.nature) { if (it.k !== 'water' || !it.line) continue; const sh = shapeOf(it), hw = sh.w / 2, fp = FPW, Q = densify(sh.line, 3), R = rng0(hashS('rs' + (it.id || ''))), ok = (x, z) => { const s9 = sdAt(x, z); return s9 > 0.9 && s9 < FPW - 0.8 && !onRoad(x, z, 1.5) && !inSchool(x, z) && x > TX0 + 2 && x < TX1 - 2 && z > TZ0 + 2 && z < TZ1 - 2 && !occHit(x - 1.1, z - 1.1, x + 1.1, z + 1.1); };   /* 먼저 놓은 주차장·마당·건물 자리는 비킴(겹쳐 깔면 같은 평면 · 10-14) */
       for (const sg of [-1, 1]) { let prev = null;
         for (let i = 1; i < Q.length; i++) { const a = Q[i - 1], b = Q[i], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1, px = -dz / l * sg, pz = dx / l * sg, o = hw + fp * 0.55, p0 = [a[0] + px * o, a[1] + pz * o], p1 = [b[0] + px * o, b[1] + pz * o];
           if (ok((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2)) { strip(p0, p1, 2.0, 0.12, 0xd9ccb0, { step: 3 }); prev = p1; } else prev = null;
@@ -840,7 +843,7 @@ export default async function start(map, params) {
   function roadTrees() {   // 길의 기본 구성 가로수(road.trees — 교사 10-13 '큰길 = 넓게 · 인도·가로수 포함') — 아이가 요구한 시설(fac)과 따로 · 같은 길에 fac 가로수가 와도 겹쳐 심지 않음
     for (const s9 of RSEG) { if (!s9.r.trees) continue; const F = segFrame(s9);
       for (const sg of [-1, 1]) for (let t = 5.5 + (sg > 0 ? 5.5 : 0); t < F.L0 - 4; t += 11) { const off = s9.hw - F.sw * 0.35, x = s9.a[0] + F.tx * t + F.px * sg * off, z = s9.a[1] + F.tz * t + F.pz * sg * off;
-        if (inSchool(x, z) || wAt(x, z) || onRoad(x, z, -0.5, s9.r) || nearStone(x, z, 6)) continue; if (onBridge(x, z, 1.5)) continue; TREES.round.push({ x, y: ty(x, z), z, s: 0.62, hex: PAL.tree[((x * 7 + z) % 4 + 4) % 4 | 0], ry: x % 6 }); gpad(x, z, 1.4, 1.4, 0, 0.18, 0x8a6a4a); } } }
+        if (inSchool(x, z) || wAt(x, z) || onRoad(x, z, -0.5, s9.r) || nearStone(x, z, 6)) continue; if (onBridge(x, z, 4)) continue; TREES.round.push({ x, y: ty(x, z), z, s: 0.62, hex: PAL.tree[((x * 7 + z) % 4 + 4) % 4 | 0], ry: x % 6 }); gpad(x, z, 1.4, 1.4, 0, 0.18, 0x8a6a4a); } } }
   function drawFacilities() {
     const F9 = L.fac || [];
     for (const f of F9) {
@@ -890,7 +893,7 @@ export default async function start(map, params) {
         const c = Math.cos(ry), s9 = Math.sin(ry), corners = [[-bw / 2, -bd / 2], [bw / 2, -bd / 2], [bw / 2, bd / 2], [-bw / 2, bd / 2]].map(([lx, lz]) => [cx + lx * c + lz * s9, cz - lx * s9 + lz * c]);
         const xs = corners.map(p => p[0]), zs = corners.map(p => p[1]), x0 = Math.min(...xs) - 1.5, x1 = Math.max(...xs) + 1.5, z0 = Math.min(...zs) - 1.5, z1 = Math.max(...zs) + 1.5;
         if (corners.some(([x, z]) => !inShape(sh, x, z) || onRoad(x, z, 1.0) || wAt(x, z) || sdAt(x, z) < FPW + 7 || inRect(x, z) || tH(x, z) > 3) || occHit(x0, z0, x1, z1)) return false;
-        { const hs = corners.map(([x, z]) => tH(x, z)); if (Math.max(...hs) - Math.min(...hs) > 0.8) return false; }   // 비탈(80cm 넘게 기운 자리)에는 짓지 않음 — 반쯤 묻히지 않게   // 강 둔치·둑 비탈에는 짓지 않음(물가에서 물러섬)
+        { const hs = corners.map(([x, z]) => tH(x, z)), gs = corners.map(([x, z]) => ty(x, z)); if (Math.max(...hs) - Math.min(...hs) > 0.8 || Math.max(...gs) - Math.min(...gs) > 1.2) return false; }   /* 실제 땅(ty — 둑·길 깎기 포함)으로도 1.2m 넘게 기울면 안 지음(10-14 묻힘 1.9m) */   // 비탈(80cm 넘게 기운 자리)에는 짓지 않음 — 반쯤 묻히지 않게   // 강 둔치·둑 비탈에는 짓지 않음(물가에서 물러섬)
         occAdd(x0, z0, x1, z1); const h = Math.min(60, (T.h[0] + R() * (T.h[1] - T.h[0])) * (T.kind === 'house' || T.kind === 'factory' ? 1 : hK)), y0 = Math.min(...corners.map(([x, z]) => ty(x, z)));
         const fl = [0, 1], fw = [s9, c], half = bd / 2, door = [cx + fw[0] * (half + 2.5), cz + fw[1] * (half + 2.5)];
         BLD.push({ b: { id: 'g' + (zn.id || 'z') + '_' + BLD.length, c: cols[(R() * cols.length) | 0], h: h / S, w: bw / S, d: bd / S }, kind: T.kind, cx, cz, w: bw, d: bd, h, ry, c, s: s9, y0, fl, fw, door, gap: put.gap || 0, name: null, corners, gen: zn.id || 'z' });
@@ -933,7 +936,7 @@ export default async function start(map, params) {
         for (const sg9 of RSEG) { if (left <= 0) break; const F = segFrame(sg9), ry9 = Math.atan2(-F.tz, F.tx);
           for (const side of [-1, 1]) { const off = sg9.hw + 3.0, run = []; const flush = () => { if (run.length >= 3) { const t0 = run[0] - 1.3, t1 = run[run.length - 1] + 1.3, mt = (t0 + t1) / 2, L9 = t1 - t0, cx = sg9.a[0] + F.tx * mt + F.px * side * off, cz = sg9.a[1] + F.tz * mt + F.pz * side * off, y = ty(cx, cz);
                 gpad(cx, cz, L9, 5.2, ry9, 0.07, 0x63676c); const bx = cx + F.px * side * 2.75, bz = cz + F.pz * side * 2.75; box(bx, y, bz, L9, 0.18, 0.3, ry9, 0xd8d4ca);   // 아스팔트 · 뒤 연석
-                for (let q = 0; q <= run.length; q++) { const tl = run[0] - 1.3 + q * 2.6, lx = sg9.a[0] + F.tx * tl + F.px * side * (off + 0.4), lz = sg9.a[1] + F.tz * tl + F.pz * side * (off + 0.4); gpad(lx, lz, 0.12, 4.2, ry9, 0.095, 0xf2f1ea); }   // 칸 선
+                for (let q = 0; q <= run.length; q++) { const tl = run[0] - 1.3 + q * 2.6, lx = sg9.a[0] + F.tx * tl + F.px * side * (off + 0.4), lz = sg9.a[1] + F.tz * tl + F.pz * side * (off + 0.4); gpad(lx, lz, 0.12, 4.2, ry9, 0.12, 0xf2f1ea); }   // 칸 선(아스팔트 위 5cm — 굽은 땅에서 판 나눔이 달라도 같은 평면 없게)
                 for (const t of run) { if (R() < 0.55) { const x = sg9.a[0] + F.tx * t + F.px * side * off, z = sg9.a[1] + F.tz * t + F.pz * side * off; vehicle(x, z, ry9 + Math.PI / 2, 'car', [0x3d74c9, 0xe0453a, 0xf2f1ea, 0x3a3a3a, 0x9aa0a6][(R() * 5) | 0]); } }
                 n['주차 칸'] += run.length; left -= run.length; occAdd(cx - L9 / 2 - 1, cz - L9 / 2 - 1, cx + L9 / 2 + 1, cz + L9 / 2 + 1); } run.length = 0; };
             for (let t = 4; t < F.L0 - 4 && left > 0; t += 2.6) { const x = sg9.a[0] + F.tx * t + F.px * side * off, z = sg9.a[1] + F.tz * t + F.pz * side * off, ok9 = inC(x, z) && near(x, z, 45) && free(x, z, 2.6) && free(x + F.px * side * 1.5, z + F.pz * side * 1.5, 1.4);
@@ -1109,7 +1112,8 @@ export default async function start(map, params) {
     const [tx9, tz9] = Q(0, 1.5); box(tx9, y + 2.15, tz9, 1.6, 0.42, 0.05, ry, 0xffffff); textPlane(group, '화장실', tx9, y + 2.36, tz9, ry, 1.5, 0.34, { bgc: '#ffffff', off: 0.03, one: true });
     for (const s9 of [-1, 1]) { const [sx, sz] = Q(s9 * 2.11, 0); dbx(sx, y + 1.9, sz, 0.04, 0.45, 1.6, ry, GLASS, {}); const [ix, iz] = Q(s9 * 1.0, 1.55); dbx(ix, y + 1.7, iz, 0.32, 0.32, 0.02, ry, s9 < 0 ? 0x3d74c9 : 0xe0453a); }   // 높은 창 · 문 위 그림 표지
     const [vx, vz] = Q(1.4, -0.9); dbx(vx, y + 3.1, vz, 0.2, 0.7, 0.2, ry, 0x8a8f95); const [stx, stz] = Q(0, 1.75); box(stx, y, stz, 3.2, 0.12, 0.5, ry, 0xc9c4b8); PCOL.push(col9(x, z, 2.1, 1.5, ry, y - 1, y + 2.7)); }   // 환기통 · 문 앞 디딤
-  function parking(group, P) { const { x, z, w, d, ry } = P, y = ty(x, z), Q = LP(x, z, ry), R = rng0(hashS(P.id)); box(x, y + 0.03, z, w, 0.04, d, ry, 0x5f6368, { top: 0x62666b });
+  function parking(group, P) { const { x, z, w, d, ry } = P, y = ty(x, z), Q = LP(x, z, ry), R = rng0(hashS(P.id));
+    { const ex = Math.abs(Math.cos(ry)) * w / 2 + Math.abs(Math.sin(ry)) * d / 2, ez = Math.abs(Math.sin(ry)) * w / 2 + Math.abs(Math.cos(ry)) * d / 2; INFR.push([x - ex - 0.3, z - ez - 0.3, x + ex + 0.3, z + ez + 0.3]); }   /* 뒤에 까는 마당이 주차장 밑에 같은 높이로 깔리지 않게(10-14 학교 칸 넓힘 뒤 가7 같은 평면) */ box(x, y + 0.03, z, w, 0.04, d, ry, 0x5f6368, { top: 0x62666b });
     const rows = d >= 11 ? [-d / 2 + 2.6, d / 2 - 2.6] : [0]; for (const rz of rows) { const n = Math.floor((w - 1) / 2.6); for (let i = 0; i <= n; i++) { const lx = -n * 1.3 + i * 2.6, [px, pz] = Q(lx, rz); box(px, y + 0.07, pz, 0.12, 0.01, 4.6, ry, 0xf2f1ea, { noSide: true });
       if (i < n) { const [ws, wz9] = Q(lx + 1.3, rz + (rz > 0 ? 1.9 : rz < 0 ? -1.9 : -1.9)); dbx(ws, y + 0.07, wz9, 1.4, 0.12, 0.18, ry, 0xc9c4b8); }   // 차 멈춤 턱
       if (i < n && R() < 0.45) { const [cx, cz] = Q(lx + 1.3, rz); vehicle(cx, cz, ry + Math.PI / 2, 'car', [0x3d74c9, 0xe0453a, 0xf2f1ea, 0x3a3a3a, 0x9aa0a6][(R() * 5) | 0]); } } }
@@ -1217,8 +1221,9 @@ export default async function start(map, params) {
   // 건물 둘레 땅(쓰임별 바닥 — AI가 채운 빈칸): 집 = 마당 잔디 + 디딤돌 길 · 가게·공공 = 앞마당 보도블록 + 주차장 칸 · 공장 = 콘크리트 마당
   const VLV = [0.148, 0.165, 0.182, 0.199, 0.216, 0.26, 0.28, 0.32];   // 덩굴 잎 층(벽에서 m) — 창살 0.12 · 빗물관 0.135 · 창턱 0.24 · 꽃 0.30 · 꽃상자 0.34 앞면과 겹치지 않음
   const lowNc = c => c.nc || c.y1 - ty((c.x0 + c.x1) / 2, (c.z0 + c.z1) / 2) > 1.2 ? c : { ...c, nc: true };   // 허리 아래(1.2m) 담·턱·벤치·화단 = 몸만 막고 카메라는 통과(QA 10-13 '낮은 턱 뒤로 카메라가 숨음')
+  const LOWK = [0.18, 0.3, 0.35, 0.42];   // 건물 벽 둘레 낮은 턱 윗면(밑돌 y0 위) — 문 앞 계단 · 빌라 받침 · 진열창 턱 · 굽 띠
   let LOTR = [], INFR = [];   // INFR = 빈 잔디 채우기(포장 마당·농구장·텃밭) 자리 — 마당이 그 위에 깔리지 않게   // 깐 마당 자리(건물 좌표계 네모) — 이웃 마당 겹침 · 산길이 마당을 지나지 않게
-  const inLotOf = (L9, x, z, m = 0) => L9.some(q => { const dx = x - q.B9.cx, dz = z - q.B9.cz, lx = dx * q.B9.c - dz * q.B9.s, lz = dx * q.B9.s + dz * q.B9.c; return lx > q.lx0 - m && lx < q.lx1 + m && lz > q.lz0 - m && lz < q.lz1 + m; }), inLot = (x, z) => inLotOf(LOTR, x, z);
+  const inLotOf = (L9, x, z, m = 0) => L9.some(q => { const dx = x - q.B9.cx, dz = z - q.B9.cz, lx = dx * q.B9.c - dz * q.B9.s, lz = dx * q.B9.s + dz * q.B9.c; return lx > q.lx0 - m && lx < q.lx1 + m && lz > q.lz0 - m && lz < q.lz1 + m; }), inLot = (x, z, m = 0) => inLotOf(LOTR, x, z, m);
   function lot(B9) { if (B9.kind === 'pitch') return; const bm = BLDMODE; BLDMODE = false; try { lot0(B9); } finally { BLDMODE = bm; } }   // 마당·주차장 = 늘 보이는 판
   function lot0(B9) { const tg0 = ATAG; ATAG = 'lot:' + B9.kind; try { lot1(B9); } finally { ATAG = tg0; } }
   function lot1(B9) { const k = B9.kind; if (k === 'green' || k === 'park' || B9.terrace || k === 'play' || (k === 'school' && B9.w > 30)) return; /* 석축 단 위 집은 단이 마당 */ const R = B9.R, front = Math.max(0, Math.min(12, B9.gap ?? 4)), side = k === 'house' ? 2.6 : 4, back = k === 'house' ? 3 : 2.5;
@@ -1228,12 +1233,16 @@ export default async function start(map, params) {
     const prevL = LOTR.slice(); LOTR.push({ B9, lx0, lx1, lz0, lz1 });   // 먼저 깐 이웃 마당 자리는 다시 깔지 않음(겹친 마당 = 같은 평면)
     { const C9 = [[lx0, lz0], [lx1, lz0], [lx1, lz1], [lx0, lz1]].map(([a, b]) => L2W(B9, a, b)), xs = C9.map(q => q[0]), zs = C9.map(q => q[1]); occAdd(Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)); }   // 앞마당·주차장 자리 차지(조경 나무가 비킴)
     const cell = 2, ok = (x, z) => !onRoad(x, z, 0.4) && !wAt(x, z) && !inSchool(x, z) && !INFR.some(q => x > q[0] && x < q[2] && z > q[1] && z < q[3]);
+    const NB9 = BLD.filter(b => b.y0 != null && (b === B9 || Math.hypot(b.cx - B9.cx, b.cz - B9.cz) < Math.hypot(lx1 - lx0, lz1 - lz0) / 2 + Math.hypot(b.w, b.d) / 2 + 3));   // 이 마당에 걸칠 수 있는 건물(자기 + 이웃 — 그 건물 문 앞 계단·밑 띠·받침 위로 마당이 깔릴 때)
+    const lotV = (a, b) => { const q = L2W(B9, a, b); let h = ty(q[0], q[1]) + yo;   // 마당 꼭짓점 높이(건물 로컬 a·b) — 비탈에서 마당이 벽 둘레 낮은 턱 윗면(밑돌 위 18 계단 · 30 받침 · 35 진열창 턱 · 42 굽 띠)과 ±3cm면 4cm 위로(같은 평면 0 · 10-14)
+      for (const N9 of NB9) { const dx = q[0] - N9.cx, dz = q[1] - N9.cz, Lx = dx * N9.c - dz * N9.s, Lz = dx * N9.s + dz * N9.c; if (Math.abs(Lx) > N9.w / 2 + 2.6 || Math.abs(Lz) > N9.d / 2 + 2.6) continue;
+        for (const k of LOWK) if (Math.abs(h - (N9.y0 + k)) < 0.03) h = N9.y0 + k + 0.04; } return h; };
     const lotH = (x, z) => { const dx = x - B9.cx, dz = z - B9.cz, Lx = dx * B9.c - dz * B9.s, Lz = dx * B9.s + dz * B9.c; if (Lx < lx0 || Lx > lx1 || Lz < lz0 || Lz > lz1) return ty(x, z);   // 마당 바닥이 그 자리에서 실제로 그린 높이(−yo) — 앞길·주차장·칸 선이 꼭 그만큼 위(비탈·굽은 땅에서도)
       const i = Math.max(0, Math.min(Math.floor((Lx - lx0) / cell), Math.ceil((lx1 - lx0 - 0.01) / cell) - 1)), j = Math.max(0, Math.min(Math.floor((Lz - lz0) / cell), Math.ceil((lz1 - lz0 - 0.01) / cell) - 1)), a0 = lx0 + i * cell, a1 = Math.min(a0 + cell, lx1), b0 = lz0 + j * cell, b1 = Math.min(b0 + cell, lz1);
-      const H = (a, b) => { const q = L2W(B9, a, b); return ty(q[0], q[1]); }, u = (Lx - a0) / (a1 - a0), v = (Lz - b0) / (b1 - b0), h00 = H(a0, b0), h10 = H(a1, b0), h01 = H(a0, b1), h11 = H(a1, b1);
+      const H = (a, b) => lotV(a, b) - yo, u = (Lx - a0) / (a1 - a0), v = (Lz - b0) / (b1 - b0), h00 = H(a0, b0), h10 = H(a1, b0), h01 = H(a0, b1), h11 = H(a1, b1);
       return u + v <= 1 ? h00 + (h10 - h00) * u + (h01 - h00) * v : h11 + (h01 - h11) * (1 - u) + (h10 - h11) * (1 - v); };
     for (let lz = lz0; lz < lz1 - 0.01; lz += cell) for (let lx = lx0; lx < lx1 - 0.01; lx += cell) { const ax = Math.min(lx + cell, lx1), az = Math.min(lz + cell, lz1), [x, z] = L2W(B9, (lx + ax) / 2, (lz + az) / 2); if (!ok(x, z)) continue; if (Math.abs((lx + ax) / 2) < hw - 1 && Math.abs((lz + az) / 2) < hd - 1) continue; if (inLotOf(prevL, x, z)) continue;   /* 건물 밑 · 이웃 마당 자리 = 안 깖 */
-      const Pc = [[lx, lz], [ax, lz], [ax, az], [lx, az]].map(([a, b]) => { const q = L2W(B9, a, b); return [q[0], ty(q[0], q[1]) + yo, q[1]]; }); quad(bucket(x, z), Pc[3], Pc[2], Pc[1], Pc[0], rgb(surf)); }
+      const Pc = [[lx, lz], [ax, lz], [ax, az], [lx, az]].map(([a, b]) => { const q = L2W(B9, a, b); return [q[0], lotV(a, b), q[1]]; }); quad(bucket(x, z), Pc[3], Pc[2], Pc[1], Pc[0], rgb(surf)); }
     // 앞길(문 → 인도 · 마당이 길까지 닿지 않으면 길까지 이어 감): 집 = 디딤돌 · 나머지 = 보도블록 넓게
     const f = frontF(B9), half = f[3], fwL = [fl[0], fl[1]], gapR = Math.max(front, Math.min(40, B9.gap ?? front));
     if (k === 'house' && LOOK === 'town' && !B9.hasPool) {   // 집 담장(낮은 블록 담 · 대문 자리는 비움) — 마당 테두리
@@ -1254,7 +1263,7 @@ export default async function start(map, params) {
     if (k !== 'house' && front > 7) { const sideSign = R() < 0.5 ? -1 : 1, along = fl[0] ? [0, 1] : [1, 0], span = (fl[0] ? B9.d : B9.w) / 2;
       for (let t = 1.25; t < span + side - 1.2; t += 2.5) for (const r of [0]) { void r; const base = half + front / 2; const [x, z] = L2W(B9, fwL[0] * base + along[0] * sideSign * t, fwL[1] * base + along[1] * sideSign * t); if (!ok(x, z)) continue;
         gpad(x, z, fl[0] ? front - 1 : 2.5, fl[0] ? 2.5 : front - 1, B9.ry, 0.15, 0x5f6368, { yf: lotH });
-        const [lx9, lz9] = L2W(B9, fwL[0] * base + along[0] * sideSign * (t + 1.25), fwL[1] * base + along[1] * sideSign * (t + 1.25)); gpad(lx9, lz9, fl[0] ? front - 1.6 : 0.12, fl[0] ? 0.12 : front - 1.6, B9.ry, 0.18, 0xf2f1ea, { yf: lotH }); } }
+        const [lx9, lz9] = L2W(B9, fwL[0] * base + along[0] * sideSign * (t + 1.25), fwL[1] * base + along[1] * sideSign * (t + 1.25)); gpad(lx9, lz9, fl[0] ? front - 1.6 : 0.12, fl[0] ? 0.12 : front - 1.6, B9.ry, 0.2, 0xf2f1ea, { yf: lotH }); } }   /* 칸 선 = 주차 판 위 5cm(굽은 비탈에서 판 나눔이 달라도) */
   }
   function piloti(B2, PH, wall, R) {   // ART-1 빌라 1층 필로티(우리나라 다세대 — 기둥 + 주차 + 계단실 · 천장 = 몸 밑면)
     const { w, d } = B2, f = frontF(B2), y = B2.y0, alongX = !f[0];
@@ -1658,7 +1667,12 @@ export default async function start(map, params) {
   const polyArea = P => { let a = 0; for (let i = 0, j = P.length - 1; i < P.length; j = i++) a += (P[j][0] + P[i][0]) * (P[j][1] - P[i][1]); return Math.abs(a / 2); };
 
   // ───────── 세상 잇기: 학교 밖 끄기 + 땅 높이 · 경계 = 매트 넓이 ─────────
-  const OUT = map.world.outside({ clip: 0.6, open: [[10, 54.5, 24, 56.5]], hideBox: [[-92, -0.8, -50.9, 82]],   /* 학교 서쪽 담 밖 실제 비닐하우스·집·나무 줄(맵 경계 안) = 아이 마을이 대신 */ terrain: (x, z) => inSchool(x, z) ? null : (x < TX0 || x > TX1 || z < TZ0 || z > TZ1) ? TY : TY + tH(x, z) });
+  { const YF = -1.35;   // REAL-1: 학교 맵에서는 울타리 밖(못 닿음)이라 충돌이 없던 실제 것 — 마을에서는 걸어서 닿으니 몸을 막음(카메라도)
+    const [ax9, az9] = [-70, 3], [bx9, bz9] = [-65, 77], L9 = Math.hypot(bx9 - ax9, bz9 - az9), ux = (bx9 - ax9) / L9, uz = (bz9 - az9) / L9, vx = uz, vz = -ux;   // 서쪽 연동 비닐하우스(world.js FSW-2 · 폭 24 · 마루 6.1)
+    for (let u = 0; u < L9 - 0.01; u += 2) { const u1 = Math.min(L9, u + 2), P9 = [[u, -11.85], [u, 11.85], [u1, -11.85], [u1, 11.85]].map(([uu, vv]) => [ax9 + ux * uu + vx * vv, az9 + uz * uu + vz * vv]);
+      map.collider.add({ x0: Math.min(...P9.map(q => q[0])), x1: Math.max(...P9.map(q => q[0])), z0: Math.min(...P9.map(q => q[1])), z1: Math.max(...P9.map(q => q[1])), y0: YF - 0.3, y1: YF + 6.2 }); }
+    map.collider.add({ x0: -66.5, x1: -48.8, z0: 77.2, z1: 88.8, y0: YF - 0.3, y1: YF + 5.5 }); }   // 파랑 지붕 창고
+  const OUT = map.world.outside({ clip: 0.6, whole: 4, rect: SR.slice(), open: [[10, 54.5, 24, 56.5]],   /* 학교 칸(담 상자 + 남쪽 실제 주변) 밖만 마을 */ terrain: (x, z) => inSchool(x, z) ? null : (x < TX0 || x > TX1 || z < TZ0 || z > TZ1) ? TY : TY + tH(x, z) });
   map.arena.set({ rect: [TX0 + 3, TZ0 + 3, TX1 - 3, TZ1 - 3], msg: '🏘 여기가 마을 끝이에요', ymin: TY - 6, ymax: TY + Math.max(12, (RANGE ? RANGE.max : 0) + 20, ...Object.values(D.layers).flatMap(l => (l.nature || []).filter(n => n.k === 'hill').map(n => (n.h || 2) * S * 1.2 + 12))) });   // 뒷산 꼭대기까지 오를 수 있게
   map.minimap.hide();
   await build(); if (map.gone) return {};
@@ -1835,7 +1849,7 @@ export default async function start(map, params) {
     // ⑥ 걸어서 닿기(1m 격자 · 플레이어 규칙): 정문 밖에서 BFS → 물에 새는 곳 · 떨어지는 곳 · 걸을 수 있는데 못 가는 곳 · 들어가면 못 나오는 곳
     { const S9 = o.step || 1, x0 = TX0 + 3.5, z0 = TZ0 + 3.5, NXq = Math.floor((TX1 - 3.5 - x0) / S9), NZq = Math.floor((TZ1 - 3.5 - z0) / S9), N9 = NXq * NZq, Y = new Float32Array(N9).fill(NaN), Qa = new Int32Array(N9); let qh = 0, qt = 0;
       const X9 = i => x0 + (i % NXq) * S9, Z9 = i => z0 + ((i / NXq) | 0) * S9, onBr = (x, z) => BRIDGES.some(b => x > b.x0 - 0.3 && x < b.x1 + 0.3 && z > b.z0 - 0.3 && z < b.z1 + 0.3), leak = [], fall = [];
-      const si = Math.round((15.4 - x0) / S9) + Math.round((72 - z0) / S9) * NXq; Y[si] = gAt(X9(si), Z9(si), ty(X9(si), Z9(si)) + 0.3); Qa[qt++] = si;
+      const si = Math.round((15.4 - x0) / S9) + Math.round((SR[3] + 3 - z0) / S9) * NXq;   /* 학교 칸 바로 앞 길(등굣길 끝) */ Y[si] = gAt(X9(si), Z9(si), ty(X9(si), Z9(si)) + 0.3); Qa[qt++] = si;
       while (qh < qt) { const i = Qa[qh++], x = X9(i), z = Z9(i), y = Y[i], ix = i % NXq, iz = (i / NXq) | 0;
         for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const jx = ix + dx, jz = iz + dz; if (jx < 0 || jz < 0 || jx >= NXq || jz >= NZq) continue; const j = jz * NXq + jx; if (Y[j] === Y[j]) continue; const x2 = X9(j), z2 = Z9(j); if (inRect(x2, z2)) continue;
           if (bAt(x2, z2, y) || bAt((x + x2) / 2, (z + z2) / 2, y)) continue; const y2 = gAt(x2, z2, y); if (y2 < TY - 6) { if (fall.length < 30) fall.push([+x2.toFixed(0), +z2.toFixed(0)]); continue; }

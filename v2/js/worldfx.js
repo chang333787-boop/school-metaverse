@@ -602,7 +602,9 @@ export function createWorldFx(H) {
         c.onBeforeCompile = (sh, r) => { if (prev) prev.call(mat, sh, r); sh.uniforms.uRect9 = { value: rect }; sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP9;').replace('#include <project_vertex>', '#include <project_vertex>\nvWP9 = (modelMatrix * vec4(transformed, 1.0)).xyz;');
           sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP9;\nuniform vec4 uRect9;').replace('void main() {', 'void main() {\n\tif (vWP9.x < uRect9.x || vWP9.x > uRect9.z || vWP9.z < uRect9.y || vWP9.z > uRect9.w) discard;'); };
         c.customProgramCacheKey = () => 'clip9:' + (mat.customProgramCacheKey ? mat.customProgramCacheKey() : ''); cache.set(mat, c); return c; };
-      const straddle = bb => !!bb && !away(bb) && (bb.min.x < cx0 || bb.max.x > cx1 || bb.min.z < cz0 || bb.max.z > cz1);
+      const WH9 = o.whole || 0, over = bb => Math.max(cx0 - bb.min.x, bb.max.x - cx1, cz0 - bb.min.z, bb.max.z - cz1);
+      const whole = bb => WH9 > 0 && over(bb) < WH9 && bb.max.y - bb.min.y > 2.5 && Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) < 80;   // o.whole(REAL-1 10-14): 상자 밖으로 조금(< whole m)만 나온 키 큰 덩어리(나무·집 청크)는 자르지 않고 온전히(반쪽 나무 없게) · 납작한 땅·길은 그대로 자름
+      const straddle = bb => !!bb && !away(bb) && (bb.min.x < cx0 || bb.max.x > cx1 || bb.min.z < cz0 || bb.max.z > cz1) && !whole(bb);
       const clipMesh = (m) => { if (done.has(m)) return; done.add(m); const c = clipOf(m.material); if (!c) return; S9.clips.push([m, m.material, m.castShadow]); m.material = c; m.castShadow = false; };
       for (const ch of scene.children) { if (!(ch.isMesh || ch.isInstancedMesh) || !ch.geometry || ch.userData.fx || ch.userData.out) continue; const g = ch.geometry; if (!g.boundingBox) g.computeBoundingBox(); const bb = g.boundingBox.clone().applyMatrix4(ch.matrixWorld); if (straddle(bb)) clipMesh(ch); }
       for (const d of world.details) if (!d.out && straddle(d.box)) clipMesh(d.mesh); }
