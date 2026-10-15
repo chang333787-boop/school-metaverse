@@ -5,7 +5,7 @@
 const BIG = '판 이음매 자리라서 큰길(넓게 · 인도·가로수)로 어림했어요 — 테이프는 다 같은 굵기예요. "큰길은 여기"라고 바꿀 수 있어요';
 const SMALL = '좁은 동네 길로 어림했어요 — 테이프는 다 같은 굵기예요';
 const B = (cell, at, t, c, o = {}) => ({ cell, at, t, c, ...o });
-import { RING_BLOCKS, RING_AREAS, RING_FILLS, RING_NATURE } from './ourtown_ring.js?v=3';   // 10-15 확장 판 둘레 80칸(아이 판 · 패들렛)
+import { RING_BLOCKS, RING_AREAS, RING_FILLS, RING_NATURE, RING_PROPS, KID_REQ } from './ourtown_ring.js?v=3';   // 10-15 확장 판 둘레 80칸(아이 판 · 패들렛)
 const CELLR = cell => { const r = '가나다라마바사아자차'.indexOf(cell[0]), n = +cell.slice(1), x0 = (n - 3) * 25, y0 = (r - 2) * 25; return [x0, y0, x0 + 25, y0 + 25]; };   // 칸 → 판 cm 네모
 const SEA_KIDS = RING_BLOCKS.filter(b => b.kind === 'duckboat' || b.kind === 'parasol');
 // 해수욕장 물가 = 굽은 만(灣)(10-15 또래 '자로 잰 직선·직각 → 둥근 만 · 물가는 잔물결' · 패들렛 15 사진 = 굽은 모래사장 + 뒤 산 — 종이 칸 가12·가13·나12 모래 · 나13 바다는 그대로 덮음 ✨)
@@ -19,6 +19,8 @@ export const TOWN = {
   id: 'ourtown', title: '우리 마을', en: 'Our Town', scale: 500,
   mat: { x0: -50, y0: -50, w: 350, h: 250 }, school: [100, 0, 125, 25],   // 10-15 판 = 확장판 14×10 전체(옛 판 원점 그대로 · 둘레는 -50 ~ 300 · -50 ~ 200)
   grid: { xs: [-25, 0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275], ys: [-25, 0, 25, 50, 75, 100, 125, 150, 175], cols: 'num', rows: 'hangul', order: 'rowcol' },   // 10-15 둘레까지 아이들이 지음 → 판 전체가 칸(가~차 × 1~14) · 둘레 '앞으로 넓힐 곳' 없음
+  extras: RING_PROPS.filter(p => p.k === 'lifeguard' || p.k === 'mushroom'),   // 🙋 패들렛: 해수욕장 안전요원 망루·부표 줄(지원·인우) · 산 버섯 세 가지(유은)
+  req: [...KID_REQ.filter(r => ['weather', 'bump', 'bikegravity'].includes(r.k)).map(r => ({ k: r.k, by: r.by, why: r.why })), { k: 'swim', by: '지원·인우', why: '수영할 수 있는 바다 · 해수욕장' }, { k: 'mushroom', by: '유은', why: '산에 가끔 버섯(새송이 · 팽나무버섯 · 독우산광대버섯)' }],   // 🙋 아이가 요구한 기능(기록 화면)
   base: 'now', fillAround: true, life: true, yards: 'rpg', declutter: [0, 0, 250, 150],   // declutter = 겹친 블록 비켜 놓기는 둘레 판에서만(옛 판 10-13은 그대로)   // yards = 아이 집 마당을 우리반RPG 꾸미기에서 읽어 옴(10-15 교사 '꾸미기가 잘 되도록')
   // 판 밖 산줄기(MTN-2 · ✨ AI가 정함): 주봉(약 330m) = 판 북서쪽 바깥 · 북쪽 능선은 동쪽으로 멀어지며 낮아짐 · 서쪽 능선은 남쪽으로 · 판 안 초록 칸은 이 산의 기슭
   range: { peaks: [[-115, -115, 66, 95], [-125, 40, 46, 50], [40, -135, 50, 55], [130, -140, 42, 50]],   // 10-15 주봉을 둘레 밖 북서쪽으로(가1·가2 펜션·보호소는 기슭에) · 북쪽 능선은 바다 앞에서 끝남
@@ -194,7 +196,7 @@ export const TOWN = {
         ...RING_FILLS,
       ],
       fac: [   // 완성된 도시의 길가 시설(교사 10-13 — AI가 채움 ✨ · 아이가 요구한 시설과 기록을 나눔)
-        { k: 'streetlight', rule: 'allroads', ai: true }, { k: 'crosswalk', rule: 'crossings', ai: true }, { k: 'signal', rule: 'bigcross', ai: true },
+        { k: 'streetlight', rule: 'allroads', ai: true }, ...['crosswalk', 'signal', 'bikelane'].map(k => { const r = KID_REQ.find(q => q.k === k); return { k, rule: k === 'signal' ? 'bigcross' : r.rule, by: r.by, why: r.why }; }),   // 10-15 패들렛 🙋(신호등 = 큰길 교차로마다 · 차가 빨간불에 멈춤 — 또래 결정)
         { k: 'busstop', rule: 'bigroads', ai: true }, { k: 'bench', rule: 'parks', ai: true }, { k: 'schoolzone', rule: 'school', ai: true },
       ],
     },

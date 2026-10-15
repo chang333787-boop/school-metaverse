@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=156';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=73';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=74';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=26';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -185,7 +185,7 @@ const blob = (() => {
   m.renderOrder = 1; scene.add(m); return m;
 })();
 // 걷기·점프·앉기 동작: 이동 속도로 팔다리를 흔들고(반대쪽끼리), 공중이면 팔을 들고, 앉으면 무릎을 굽혀 의자 위에(몸을 앞으로 0.42·아래로 0.1)
-let kidPh = 0, kidX = P.x, kidZ = P.z, kidT = 0;
+let kidPh = 0, kidX = P.x, kidZ = P.z, kidT = 0, kidPoseWas = null;
 function kidTick(dt) {
   const v = Math.hypot(P.x - kidX, P.z - kidZ) / Math.max(dt, 1e-3) * (4.2 / PHY.walk); kidX = P.x; kidZ = P.z; kidT += dt;   // SHRINK-1: 작아지면 걷기 속도 기준으로(다리 흔들기 같게)
   const K = KID, sit = !!ACT.sit, air = !P.ground && !sit && !ACT.anim, mv = sit ? 0 : Math.min(1, v / 4.2), cr = CTRL.crouched && !sit;
@@ -206,6 +206,11 @@ function kidTick(dt) {
   else if (K.armR.rotation.z !== 0.12) K.armR.rotation.z = 0.12;   // 어깨 기본 벌림(kid.js arm)
   K.head.rotation.x = mv > 0.1 ? 0.04 : Math.sin(kidT * 1.7) * 0.03;                                   // 가만히 있으면 살짝 끄덕끄덕
   K.body.scale.y = 1 + (mv < 0.1 && !sit ? Math.sin(kidT * 2.2) * 0.008 : 0);                           // 숨쉬기
+  if (CTRL.pose !== kidPoseWas) { if (kidPoseWas === 'swim' || kidPoseWas === 'dizzy') { K.armL.rotation.z = -0.12; K.armR.rotation.z = 0.12; K.head.rotation.z = 0; K.rig.rotation.z = 0; } kidPoseWas = CTRL.pose; }
+  if (CTRL.pose === 'swim') { const s9 = Math.sin(kidT * 5.2), m9 = Math.min(1, mv * 2 + 0.35); K.rig.rotation.x = 0.35 * mv; K.armL.rotation.x = K.armR.rotation.x = -2.0 + s9 * 0.55 * m9; K.armL.rotation.z = -0.12 - (0.5 + s9 * 0.4) * m9; K.armR.rotation.z = 0.12 + (0.5 + s9 * 0.4) * m9;   // 헤엄(평영 팔 · 발차기 · 마을 바다 10-15)
+    K.legL.g.rotation.x = Math.sin(kidT * 7) * 0.4 * m9; K.legR.g.rotation.x = -Math.sin(kidT * 7) * 0.4 * m9; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 0.35; K.head.rotation.x = -0.15 * mv; }
+  else if (CTRL.pose === 'dizzy') { K.rig.position.set(0, K.sitY - 0.34, 0); K.rig.rotation.x = -0.22; K.legL.g.rotation.x = K.legR.g.rotation.x = -1.45; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 0.2;   // 엉덩방아 + 어지러움(차에 부딪힘 · 피·다침 없음 · 10-15 아이 패들렛)
+    K.armL.rotation.x = K.armR.rotation.x = 0.55; K.armL.rotation.z = -0.6; K.armR.rotation.z = 0.6; K.head.rotation.z = Math.sin(kidT * 5) * 0.2; K.head.rotation.x = 0.1 + Math.sin(kidT * 3.3) * 0.08; K.rig.rotation.z = Math.sin(kidT * 2.5) * 0.06; }
   ACTS.pose();                                                       // ACTION-1: 행동 자세(마시기·씻기·분무기…)를 기본 자세 위에
 }
 
