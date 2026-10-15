@@ -5,7 +5,7 @@
 const BIG = '판 이음매 자리라서 큰길(넓게 · 인도·가로수)로 어림했어요 — 테이프는 다 같은 굵기예요. "큰길은 여기"라고 바꿀 수 있어요';
 const SMALL = '좁은 동네 길로 어림했어요 — 테이프는 다 같은 굵기예요';
 const B = (cell, at, t, c, o = {}) => ({ cell, at, t, c, ...o });
-import { RING_BLOCKS, RING_AREAS, RING_FILLS, RING_NATURE, RING_PROPS, KID_REQ } from './ourtown_ring.js?v=6';   // 10-15 확장 판 둘레 80칸(아이 판 · 패들렛)
+import { RING_BLOCKS, RING_AREAS, RING_FILLS, RING_NATURE, RING_PROPS, KID_REQ } from './ourtown_ring.js?v=7';   // 10-15 확장 판 둘레 80칸(아이 판 · 패들렛)
 const CELLR = cell => { const r = '가나다라마바사아자차'.indexOf(cell[0]), n = +cell.slice(1), x0 = (n - 3) * 25, y0 = (r - 2) * 25; return [x0, y0, x0 + 25, y0 + 25]; };   // 칸 → 판 cm 네모
 const SEA_KIDS = RING_BLOCKS.filter(b => b.kind === 'duckboat' || b.kind === 'parasol');
 // 해수욕장 물가 = 굽은 만(灣)(10-15 또래 '자로 잰 직선·직각 → 둥근 만 · 물가는 잔물결' · 패들렛 15 사진 = 굽은 모래사장 + 뒤 산 — 종이 칸 가12·가13·나12 모래 · 나13 바다는 그대로 덮음 ✨)
@@ -218,6 +218,7 @@ export const TOWN = {
         { id: 'c_slide', k: 'landslide', ai: '가파른 산비탈 길 — 산사태 주의(교사 10-15 ✨)' },
         { id: 'c_park', k: 'parking', ai: '지역 문제 — 불법 주차 + 단속 CCTV 팻말(교사 10-15 ✨)' },
         { id: 'c_dump', k: 'dumping', ai: '지역 문제 — 쓰레기 무단 투기(바로 옆 분리수거장이 해결 · 교사 10-15 ✨)' },
+        { id: 'c_reclaim', k: 'reclaim', cell: '다13', ai: '교과서 간척 — 바다를 막아(방조제) 새로 만든 땅 · 논과 작은 산업 용지(✨ 빈칸 · 아이 갯벌 마13·바13은 그대로 · 또래 10-16)' },
         { id: 'c_noise', k: 'noisewall', ai: '지역 문제 — 큰길 소음 + 아파트 앞 방음벽(교사 10-15 ✨)' },
       ],
       fac: [   // 완성된 도시의 길가 시설(교사 10-13 — AI가 채움 ✨ · 아이가 요구한 시설과 기록을 나눔)
