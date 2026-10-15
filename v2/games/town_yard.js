@@ -97,7 +97,7 @@ export function createYards({ T3, map, onCollider, removeCollider, en }) {
       for (const x of [gx0, gx1]) pushPart(As, { k: 'box', s: [0.3, 1.3, 0.3], p: [x, y, Z1] }, IDN, hexRGB('#f4f1e8'));   // 대문 기둥
       r.cols.push({ x0: X0 - 0.3, x1: X0 + 0.3, z0: Z0, z1: Z1, y0: Yd.y - 1, y1: Yd.y + 0.8, nc: true }, { x0: X1 - 0.3, x1: X1 + 0.3, z0: Z0, z1: Z1, y0: Yd.y - 1, y1: Yd.y + 0.8, nc: true }, { x0: X0, x1: gx0 - 0.5, z0: Z1 - 0.3, z1: Z1 + 0.3, y0: Yd.y - 1, y1: Yd.y + 0.8, nc: true }, { x0: gx1 + 0.5, x1: X1, z0: Z1 - 0.3, z1: Z1 + 0.3, y0: Yd.y - 1, y1: Yd.y + 0.8, nc: true }); }
     for (const [A, mat] of [[Af, FLOOR], [As, MAT], [Ag, GLOW]]) { const m = meshOf(A, mat); if (m) { m.matrixAutoUpdate = false; m.updateMatrix(); grp.add(m); } }
-    Yd.grp = grp; Yd.anim = r.anim; Yd.cols = r.cols.map(c => onCollider(c)); Yd.src = data.ai ? 'ai' : 'rpg'; Yd.n = (data.decos || []).length; grp.visible = !hidden; map.add(grp); }
+    Yd.grp = grp; Yd.warm = 2; Yd.anim = r.anim; Yd.cols = r.cols.map(c => onCollider(c)); Yd.src = data.ai ? 'ai' : 'rpg'; Yd.n = (data.decos || []).length; grp.visible = !hidden; map.add(grp); }
   async function load(Yd, force) { if (Yd.busy || dead) return; Yd.busy = true; try {
       let data = null; if (!force && PRE[Yd.home] && !Yd.at) data = PRE[Yd.home]; else { const sids = await findSids(Y.map(q => q.home)), sid = sids[Yd.home]; data = sid ? await fetchYard(sid) : null; } if (dead) return;
       if (!data && Yd.data && !force) data = Yd.data; if (!data) data = DEFAULT_YARD; Yd.data = data; Yd.at = performance.now(); buildYard(Yd, data);
@@ -109,14 +109,16 @@ export function createYards({ T3, map, onCollider, removeCollider, en }) {
       await Promise.race([job, new Promise(r => setTimeout(r, Math.max(0, ms - (performance.now() - t0))))]); const out = {}; for (const h of homes) out[h] = PRE[h] || DEFAULT_YARD; return out; },
     set(list) { for (const Yd of Y) clearYard(Yd); Y.length = 0; for (const q of list) Y.push({ ...q, grp: null, cols: [], anim: [], data: null, at: 0, busy: false }); Y.forEach((Yd, i) => setTimeout(() => { if (!dead && Y.includes(Yd)) load(Yd); }, 400 + i * 220)); },   // 마을을 다 지은 뒤 한 마당씩(처음 짓기 시간에 안 넣음)
     hide(v) { hidden = !!v; for (const Yd of Y) if (Yd.grp) Yd.grp.visible = !hidden; },
+    wake() { vq = 1; },   // 순간이동 직후 = 이번 프레임에 보임 다시 정함
     tick(dt, me, cam) { if (hidden) return;
+      for (const Yd of Y) if (Yd.warm && Yd.grp) { if (Yd.warm === 2) { Yd.grp.visible = true; vq = 0; Yd.grp.traverse(o => { if (o.isMesh) o.frustumCulled = false; }); } else { Yd.grp.traverse(o => { if (o.isMesh) o.frustumCulled = true; }); vq = 1; } Yd.warm--; }   // 지은 뒤 한 프레임은 멀어도 그려 GPU에 올려 둠(10-15 또래 '순간이동하면 마당 장식이 2~5초 뒤에') — 다음 프레임부터 거리대로
       if ((vq += dt) > 0.4) { vq = 0; for (const Yd of Y) { if (!Yd.grp) continue; const [c0, r0, c1, r1] = Yd.ext, mx = Yd.ox + (c0 + c1) / 2 * CS, mz = Yd.oz + (r0 + r1) / 2 * CS; Yd.grp.visible = Math.hypot(cam.x - mx, cam.z - mz) < 260;
           if (Yd.at && me.x > Yd.ox + c0 * CS - 6 && me.x < Yd.ox + c1 * CS + 6 && me.z > Yd.oz - NORTH - 8 && me.z < Yd.oz + r1 * CS + 6 && performance.now() - Yd.at > 60000) load(Yd); } }   // 그 마당에 들어올 때 60초 지났으면 다시 읽기(범위 밖에 새로 놓은 것은 다음에 마을을 열 때)
       for (const Yd of Y) { if (!Yd.grp || !Yd.grp.visible) continue; for (const a of Yd.anim) { if (a.spin) { a.m.rotation.z -= dt * 1.2; continue; }
         if (a.wait > 0) { a.wait -= dt; continue; } const dx = a.tx - a.m.position.x, dz = a.tz - a.m.position.z, d = Math.hypot(dx, dz);
         if (d < 0.1) { const an = Math.random() * 6.2832, rr = Math.random() * a.r; a.tx = a.hx + Math.cos(an) * rr; a.tz = a.hz + Math.sin(an) * rr; a.wait = 1 + Math.random() * 3; continue; }
         const st = Math.min(d, dt * 0.55); a.m.position.x += dx / d * st; a.m.position.z += dz / d * st; a.m.rotation.y = Math.atan2(-dx, -dz); a.t += dt; a.m.position.y = Yd.y + 0.03 + Math.abs(Math.sin(a.t * 9)) * 0.03; } } },   // 동물 = 마당 안 천천히(머리 = -z)
-    info: () => Y.map(Yd => ({ home: Yd.home, src: Yd.src || null, n: Yd.n || 0, cols: (Yd.cols || []).length, anim: (Yd.anim || []).length, rect: [Yd.ox + Yd.ext[0] * CS, Yd.oz + Yd.ext[1] * CS, Yd.ox + Yd.ext[2] * CS, Yd.oz + Yd.ext[3] * CS].map(v => +v.toFixed(1)), ext: Yd.ext })),
+    info: () => Y.map(Yd => ({ home: Yd.home, src: Yd.src || null, n: Yd.n || 0, vis: !!(Yd.grp && Yd.grp.visible), busy: Yd.busy, cols: (Yd.cols || []).length, anim: (Yd.anim || []).length, rect: [Yd.ox + Yd.ext[0] * CS, Yd.oz + Yd.ext[1] * CS, Yd.ox + Yd.ext[2] * CS, Yd.oz + Yd.ext[3] * CS].map(v => +v.toFixed(1)), ext: Yd.ext })),
     reload: () => Promise.all(Y.map(Yd => load(Yd, true))),
     dispose() { dead = true; for (const Yd of Y) clearYard(Yd); Y.length = 0; for (const k in GEO) GEO[k].dispose(); MAT.dispose(); GLOW.dispose(); FLOOR.dispose(); },
   };
