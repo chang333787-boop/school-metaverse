@@ -3,12 +3,12 @@
 //   잼: 프레임 시간 p50·p95·p99·최대 · 33ms 넘는 프레임 수(구간마다 · 전체) · --gpu = 화면 맞춤(vsync)·프레임 상한을 끄고(실제 그리기 시간이 드러남)
 //   push 게이트: 전체 p95 < 33ms · 33ms 넘는 프레임 ≤ 1.5% (넘으면 그 꾸밈은 빼고 간다 — CLAUDE.md 'fps가 무너지면 기능을 빼고 간다')
 const { chromium } = require('playwright');
-const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002', GPU = process.argv.includes('--gpu');
+const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002', GPU = process.argv.includes('--gpu'), WX = (process.argv.find(a => a.startsWith('--wx=')) || '').slice(5);   // --wx=snow|rain = 비·눈 입자 켜고 잼(PLAUS 8)
 (async () => { const args = ['--use-gl=angle', '--disable-renderer-backgrounding', '--disable-background-timer-throttling']; if (GPU) args.push('--disable-gpu-vsync', '--disable-frame-rate-limit');
   const b = await chromium.launch({ args }); const ctx = await b.newContext({ viewport: { width: 1366, height: 768 }, deviceScaleFactor: 1, userAgent: 'Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' });
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message.slice(0, 200)));
   await p.goto('http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&dpr=1'); await p.waitForFunction(() => window.SM_TOWN, null, { timeout: 120000 }); await p.waitForTimeout(1200);
-  await p.evaluate(() => { const b = document.querySelector('.twn-p button'); if (b) b.click(); });
+  await p.evaluate(() => { const b = document.querySelector('.twn-p button'); if (b) b.click(); }); if (WX) await p.evaluate(w => SM_TOWN.weather && SM_TOWN.weather(w), WX);
   const cdp = await ctx.newCDPSession(p); await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
   const R = await p.evaluate(async () => { const M = SD2.map, sl = ms => new Promise(r => setTimeout(r, ms)), T = [], G = []; let phase = 'start', run = true, last = performance.now();
     { const RR = SD2.renderer, gl = RR.getContext(), ext = gl.getExtension('EXT_disjoint_timer_query_webgl2'), orig = RR.render.bind(RR), pend = []; if (ext) RR.render = (s9, c9) => { const q = gl.createQuery(), ph = phase; gl.beginQuery(ext.TIME_ELAPSED_EXT, q); orig(s9, c9); gl.endQuery(ext.TIME_ELAPSED_EXT); pend.push([q, ph]); for (let i = pend.length - 1; i >= 0; i--) { const [qq, p9] = pend[i]; if (gl.getQueryParameter(qq, gl.QUERY_RESULT_AVAILABLE)) { if (!gl.getParameter(ext.GPU_DISJOINT_EXT)) G.push([p9, gl.getQueryParameter(qq, gl.QUERY_RESULT) / 1e6]); gl.deleteQuery(qq); pend.splice(i, 1); } } }; }   // GPU 그리기 시간(이 컴퓨터 기준 — 꾸밈을 더할 때 늘어나는 양 비교용)
