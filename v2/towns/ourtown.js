@@ -5,7 +5,7 @@
 const BIG = '판 이음매 자리라서 큰길(넓게 · 인도·가로수)로 어림했어요 — 테이프는 다 같은 굵기예요. "큰길은 여기"라고 바꿀 수 있어요';
 const SMALL = '좁은 동네 길로 어림했어요 — 테이프는 다 같은 굵기예요';
 const B = (cell, at, t, c, o = {}) => ({ cell, at, t, c, ...o });
-import { RING_BLOCKS, RING_AREAS, RING_FILLS, RING_NATURE, RING_PROPS, KID_REQ } from './ourtown_ring.js?v=5';   // 10-15 확장 판 둘레 80칸(아이 판 · 패들렛)
+import { RING_BLOCKS, RING_AREAS, RING_FILLS, RING_NATURE, RING_PROPS, KID_REQ } from './ourtown_ring.js?v=6';   // 10-15 확장 판 둘레 80칸(아이 판 · 패들렛)
 const CELLR = cell => { const r = '가나다라마바사아자차'.indexOf(cell[0]), n = +cell.slice(1), x0 = (n - 3) * 25, y0 = (r - 2) * 25; return [x0, y0, x0 + 25, y0 + 25]; };   // 칸 → 판 cm 네모
 const SEA_KIDS = RING_BLOCKS.filter(b => b.kind === 'duckboat' || b.kind === 'parasol');
 // 해수욕장 물가 = 굽은 만(灣)(10-15 또래 '자로 잰 직선·직각 → 둥근 만 · 물가는 잔물결' · 패들렛 15 사진 = 굽은 모래사장 + 뒤 산 — 종이 칸 가12·가13·나12 모래 · 나13 바다는 그대로 덮음 ✨)
@@ -196,6 +196,18 @@ export const TOWN = {
         { cell: '라11', k: 'green', type: 'park' }, { cell: '라12', k: 'green', type: 'park' }, { cell: '마10', k: 'green', type: 'park' }, { cell: '바9', k: 'green', type: 'park' }, { cell: '사8', k: 'green', type: 'park' },
         // 10-15 둘레 카드 없는 칸·빈칸(✨ 색 약속 · 둘레 맞춤)
         ...RING_FILLS,
+      ],
+      // PLAUS 4 일(✨ 교사 10-15 '이 땅이라서 이런 일을 한다' · 교과서 4-2-3 특산물) — 빈칸·숲 채움 칸에만(아이 블록·카드 자리 X) · 엔진이 칸 안 알맞은 자리(비탈·길·물)를 찾음
+      works: [
+        { id: 'w_shiitake', k: 'shiitake', cell: '가3', ai: '산 특산물 — 숲 그늘에 참나무 원목을 세워 표고버섯을 길러요(교사 10-15 ✨ 고장 개연성)' },
+        { id: 'w_cabbage', k: 'cabbage', cell: '가4', ai: '산 특산물 — 높고 서늘한 산비탈 고랭지 배추밭(교사 10-15 ✨)' },
+        { id: 'w_potato', k: 'potato', cell: '나2', ai: '산 특산물 — 산비탈 감자밭(교사 10-15 ✨)' },
+        { id: 'w_lumber', k: 'lumber', cell: '라1', ai: '산 일 — 숲에서 베어 낸 나무를 모아 두는 목재 야적장(교사 10-15 ✨)' },
+        { id: 'w_bee', k: 'beehive', cell: '다1', ai: '산 특산물 — 숲 꽃에서 꿀을 모으는 양봉장(교사 10-15 ✨)' },
+        { id: 'w_ranch', k: 'pasture', cell: '나5', ai: '산 목장 — 풀밭에 한우·양을 길러요(교과서 산 지역 · 교사 10-15 ✨)' },
+        { id: 'w_salt', k: 'saltpan', cell: '라13', ai: '바다 특산물 — 갯벌 옆 바닷물을 말려 소금을 얻는 염전(교사 10-15 ✨)' },
+        { id: 'w_laver', k: 'seaweed', cell: '마14', ai: '바다 특산물 — 갯벌 앞바다 김 양식장(교사 10-15 ✨)' },
+        { id: 'w_oyster', k: 'oyster', cell: '다14', ai: '바다 특산물 — 굴 양식장(교사 10-15 ✨)' },
       ],
       fac: [   // 완성된 도시의 길가 시설(교사 10-13 — AI가 채움 ✨ · 아이가 요구한 시설과 기록을 나눔)
         { k: 'streetlight', rule: 'allroads', ai: true }, ...['crosswalk', 'signal', 'bikelane'].map(k => { const r = KID_REQ.find(q => q.k === k); return { k, rule: k === 'signal' ? 'bigcross' : r.rule, by: r.by, why: r.why }; }),   // 10-15 패들렛 🙋(신호등 = 큰길 교차로마다 · 차가 빨간불에 멈춤 — 또래 결정)
