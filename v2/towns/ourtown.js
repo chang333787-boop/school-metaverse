@@ -209,6 +209,17 @@ export const TOWN = {
         { id: 'w_laver', k: 'seaweed', cell: '마14', ai: '바다 특산물 — 갯벌 앞바다 김 양식장(교사 10-15 ✨)' },
         { id: 'w_oyster', k: 'oyster', cell: '다14', ai: '바다 특산물 — 굴 양식장(교사 10-15 ✨)' },
       ],
+      // PLAUS 9 바뀜(✨ 교사 10-15 · 교과서 4-2-3 ⑤ 개발과 보전 · 2단원 지역문제) — 엔진이 자리를 찾음 · 골프장은 '예정지' 놀이용 상황(찬성·반대 둘 다 · 정답 없음)
+      changes: [
+        { id: 'c_eco', k: 'ecobridge', ai: '산길이 숲을 둘로 나눈 곳에 동물이 건너는 생태 통로(교사 10-15 ✨)' },
+        { id: 'c_reed', k: 'reeds', ai: '강가 갈대 — 물을 맑게 하는 생태 하천(교사 10-15 ✨)' },
+        { id: 'c_rest', k: 'rest', cell: '다1', ai: '숲을 몇 해 쉬게 하는 자연 휴식년제(교사 10-15 ✨)' },
+        { id: 'c_golf', k: 'golf', cell: '가4', ai: '놀이용 상황 — 숲을 골프장으로 바꿀까? 찬성·반대 팻말(정답 없음 · 교사 10-15 ✨)' },
+        { id: 'c_slide', k: 'landslide', ai: '가파른 산비탈 길 — 산사태 주의(교사 10-15 ✨)' },
+        { id: 'c_park', k: 'parking', ai: '지역 문제 — 불법 주차 + 단속 CCTV 팻말(교사 10-15 ✨)' },
+        { id: 'c_dump', k: 'dumping', ai: '지역 문제 — 쓰레기 무단 투기(바로 옆 분리수거장이 해결 · 교사 10-15 ✨)' },
+        { id: 'c_noise', k: 'noisewall', ai: '지역 문제 — 큰길 소음 + 아파트 앞 방음벽(교사 10-15 ✨)' },
+      ],
       fac: [   // 완성된 도시의 길가 시설(교사 10-13 — AI가 채움 ✨ · 아이가 요구한 시설과 기록을 나눔)
         { k: 'streetlight', rule: 'allroads', ai: true }, ...['crosswalk', 'signal', 'bikelane'].map(k => { const r = KID_REQ.find(q => q.k === k); return { k, rule: k === 'signal' ? 'bigcross' : r.rule, by: r.by, why: r.why }; }),   // 10-15 패들렛 🙋(신호등 = 큰길 교차로마다 · 차가 빨간불에 멈춤 — 또래 결정)
         { k: 'busstop', rule: 'bigroads', ai: true }, { k: 'bench', rule: 'parks', ai: true }, { k: 'schoolzone', rule: 'school', ai: true },
