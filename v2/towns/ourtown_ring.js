@@ -52,7 +52,7 @@ export const RING_BLOCKS = [
   B('바2', [0.45, 0.48], 'pl', 'navy', { kind: 'aquarium', name: '대형 아쿠아리움', en: 'Aquarium', by: '유은', look: 'wave-roof', inside: 'aqua', room: ['수조 위 보트', '아치 수중 터널', '클리오네', '작은 동물 방'], pad: '33', ai: '정면 고래·상어 그림자 판(✨)', note: '패들렛 33 — 수조 위 보트 · 수중 터널 · 곤충·작은 동물 체험' }),
   B('사2', [0.48, 0.35], 'c2', 'navy', { kind: 'shop', name: '뷔페', en: 'Buffet', look: 'pink-buffet', pad: '34.1·34.2', note: '패들렛 34 사2 핑크 뷔페 — 분홍 줄무늬 차양 · 분홍 외관' }),
   // 오른쪽 둘레(13·14열)
-  B('마13', [0.18, 0.92], 'c3', 'skyblue', { kind: 'hut', name: '갯벌 쉼터', ai: '갯벌 카드 옆 하늘색 블록 = 갯벌 체험 쉼터' }),
+  B('마13', [0.18, 0.92], 'c3', 'skyblue', { kind: 'hut', name: '갯벌 쉼터', look: 'mud-shelter', ai: '갯벌 카드 옆 하늘색 블록 = 갯벌 체험 쉼터 · 겉 = 진흙 위 나무 데크 + 정자(✨ 이름의 쉼터대로 — 예전엔 공원 잔디 네모)' }),
   B('바14', [0.55, 0.40], null, 'red', { w: 3, d: 3, h: 3, home: '인우', name: '인우네 집', en: "Inu's House", look: 'black-steel-glass', note: '초록 c3 2 + 빨강 c3 1 + 초록 판 1 붙임 · 패들렛 39(가게 앞 사진 — 집 모양으로만, 간판 글 없음)' }),
   B('사13', [0.65, 0.62], null, 'skyblue', { w: 6, d: 3, h: 3, kind: 'shop', name: '초밥집', en: 'Sushi', look: 'dark-brick-metal-roof', pad: '32.1', ai: '문 앞 천 가림막(노렌 꼴 · 글 없음 ✨)' }),
   B('사14', [0.62, 0.42], 'c3', 'navy', { kind: 'shop', name: '마라탕', en: 'Malatang', look: 'pink-cream', pad: '38.1·38.2', ai: '입구 빨간 등 둘(✨)' }),
