@@ -7,7 +7,13 @@ const SMALL = '좁은 동네 길로 어림했어요 — 테이프는 다 같은 
 const B = (cell, at, t, c, o = {}) => ({ cell, at, t, c, ...o });
 import { RING_BLOCKS, RING_AREAS, RING_FILLS, RING_NATURE } from './ourtown_ring.js?v=1';   // 10-15 확장 판 둘레 80칸(아이 판 · 패들렛)
 const CELLR = cell => { const r = '가나다라마바사아자차'.indexOf(cell[0]), n = +cell.slice(1), x0 = (n - 3) * 25, y0 = (r - 2) * 25; return [x0, y0, x0 + 25, y0 + 25]; };   // 칸 → 판 cm 네모
-const SEA_KIDS = RING_BLOCKS.filter(b => b.kind === 'duckboat' || b.kind === 'parasol');   // 바다·모래 위 블록 = 오리배·파라솔(소품으로)
+const SEA_KIDS = RING_BLOCKS.filter(b => b.kind === 'duckboat' || b.kind === 'parasol');
+// 해수욕장 물가 = 굽은 만(灣)(10-15 또래 '자로 잰 직선·직각 → 둥근 만 · 물가는 잔물결' · 패들렛 15 사진 = 굽은 모래사장 + 뒤 산 — 종이 칸 가12·가13·나12 모래 · 나13 바다는 그대로 덮음 ✨)
+const curve = (C, n = 6) => { const out = []; for (let i = 0; i < C.length - 1; i++) { const p0 = C[Math.max(0, i - 1)], p1 = C[i], p2 = C[i + 1], p3 = C[Math.min(C.length - 1, i + 2)]; for (let k = 0; k < n; k++) { const t = k / n, t2 = t * t, t3 = t2 * t; out.push([0, 1].map(a => 0.5 * (2 * p1[a] + (-p0[a] + p2[a]) * t + (2 * p0[a] - 5 * p1[a] + 4 * p2[a] - p3[a]) * t2 + (-p0[a] + 3 * p1[a] - 3 * p2[a] + p3[a]) * t3))); } } out.push(C[C.length - 1]); return out; };   // 부드러운 곡선(Catmull-Rom)
+const BAY = curve([[276, -110], [275.5, -66], [272, -44], [264, -31], [255.5, -22], [251.5, -11], [254.5, -2.5], [264, 2.5], [273, 6.5], [276, 14], [276, 75]], 3).map(([x, y], i, A) => { if (i < 4 || i > A.length - 8) return [x, y]; const w = Math.sin(i * 1.7) * 0.35 + Math.sin(i * 0.63) * 0.25; return [x + w, y + w * 0.6]; });   // 물가 잔물결(±0.6cm = ±3m)
+const SEA_BAY = { ...RING_NATURE.find(n => n.k === 'sea'), poly: [[276, -110], [440, -110], [440, 75], ...BAY.slice().reverse()], ai: '보라 종이 칸 + 판 밖 바다(✨) · 물가는 굽은 만으로(또래 10-15)' };
+const SAND_BAY = { ...RING_NATURE.find(n => n.k === 'sand'), poly: [...curve([[227, -50], [225.5, -36], [226.5, -21], [230.5, -7], [239, 1.5], [251, 6.5], [262, 9.5], [271, 13]], 3), ...BAY.filter(([x, y]) => y > -50 && y < 13).slice().reverse().map(([x, y]) => [x + 2.5, y]), [276, -50]], soft: 7, ai: '노란 종이 = 모래사장 · 풀밭과 만나는 곳은 섞음(✨)' };
+const PARASOLS = [[236, -11, 3], [231, -29, 4], [243, -40, 3], [259, -45, 3], [247, -4, 2]].flatMap(([x, y, n], g) => Array.from({ length: n }, (_, k) => ({ id: 'pg' + g + '_' + k, k: 'parasol', x: x + Math.cos(k * 2.4 + g) * 1.1, y: y + Math.sin(k * 2.4 + g) * 1.1, ...(g === 0 && k === 0 ? { name: '파라솔', en: 'Parasols' } : { ai: '파라솔 몇 개씩 모여(✨ · 아이 블록 = 나12 파라솔)' }) })));   // 몇 개씩 모여 흩어진 파라솔   // 바다·모래 위 블록 = 오리배·파라솔(소품으로)
 const ECO = ['rooftop', 'vines', 'flowers', 'woods'];
 export const TOWN = {
   id: 'ourtown', title: '우리 마을', en: 'Our Town', scale: 500,
@@ -51,7 +57,7 @@ export const TOWN = {
         { id: 'canal', k: 'canal', line: { pts: [[131, 118.5], [131, 127.2], [3, 127.2]], w: 0.3 }, gate: true, name: '농수로', en: 'Irrigation Canal', ai: '논에 물이 와야 해서 호수(저수지)에서 길가를 따라 농수로를 냈어요 · 교사 10-15 · 바꾸고 싶으면 말해 주세요' },
         // 10-15 둘레 판 자연(🧱 종이 + ✨ 이어 붙임 — ourtown_ring.js): 초록 종이 열세 칸 = 뒷산 기슭 숲 · 진보라 = 바다(판 밖 수평선까지) · 노란 종이 = 해수욕장 모래 · 갈색 종이 = 갯벌 · 다12 연보라 = 연못
         ...RING_NATURE[0].cells.map(c => ({ id: 'rf' + c, k: 'forest', rect: CELLR(c), ai: RING_NATURE[0].ai })),
-        ...RING_NATURE.filter(n => ['sea', 'sand', 'mudflat'].includes(n.k) || n.id === 'apond'),
+        SEA_BAY, SAND_BAY, ...RING_NATURE.filter(n => n.k === 'mudflat' || n.id === 'apond'),
       ],
       zones: [
         { id: 'r1', k: 'green', type: 'paddy', cell: '아3', c: 'yellow', note: '논밭' }, { id: 'r2', k: 'green', type: 'paddy', cell: '아4', c: 'yellow', note: '논밭' }, { id: 'r3', k: 'green', type: 'paddy', cell: '아5', c: 'yellow', note: '논밭' },
@@ -136,7 +142,7 @@ export const TOWN = {
       ],
       props: [{ id: 'stone', k: 'bridge', cell: '라12', at: [0.45, 0.5], name: '돌다리', en: 'Stepping Stones', stones: true, along: 'ns' },
         // 10-15 바다·모래 위 아이 블록 = 오리배(가14 · 나13)·파라솔(나12) — 카드 「오리배」·「파라솔」(놀고 쉬는 곳) · 둘레 몇 개 더는 ✨
-        ...SEA_KIDS.flatMap((b, i) => { const n = b.kind === 'parasol' ? 3 : b.cell === '가14' ? 4 : 3, [x0, y0] = CELLR(b.cell); return Array.from({ length: n }, (_, k) => ({ id: 'sk' + i + '_' + k, k: b.kind === 'parasol' ? 'parasol' : 'duckboat', x: x0 + 25 * Math.min(0.9, Math.max(0.1, b.at[0] + (k ? ((k * 37) % 7 - 3) * 0.06 : 0))), y: y0 + 25 * Math.min(0.9, Math.max(0.1, b.at[1] + (k ? ((k * 53) % 5 - 2) * 0.07 : 0))), ...(k ? { ai: '아이 블록 둘레에 몇 개 더(✨)' } : { name: b.name, en: b.en }) })); })],   // 남색 정육면체를 강 위에 줄지어 놓고 분홍 쪽지 「돌다리」
+        ...PARASOLS, ...SEA_KIDS.filter(b => b.kind !== 'parasol').flatMap((b, i) => { const n = b.kind === 'parasol' ? 3 : b.cell === '가14' ? 4 : 3, [x0, y0] = CELLR(b.cell); return Array.from({ length: n }, (_, k) => ({ id: 'sk' + i + '_' + k, k: b.kind === 'parasol' ? 'parasol' : 'duckboat', x: x0 + 25 * Math.min(0.9, Math.max(0.1, b.at[0] + (k ? ((k * 37) % 7 - 3) * 0.06 : 0))), y: y0 + 25 * Math.min(0.9, Math.max(0.1, b.at[1] + (k ? ((k * 53) % 5 - 2) * 0.07 : 0))), ...(k ? { ai: '아이 블록 둘레에 몇 개 더(✨)' } : { name: b.name, en: b.en }) })); })],   // 남색 정육면체를 강 위에 줄지어 놓고 분홍 쪽지 「돌다리」
       // 아이 손글씨 이름표(칸마다) — t = 아이 글씨 그대로 · style·fill = Claude 풀이(✨)
       areas: [
         { cell: '다3', t: '산 집', style: [], ai: '뒷산 꼭대기 쪽 집 두 채 — 평평하게 고른 터 · 둘레는 산숲' },
