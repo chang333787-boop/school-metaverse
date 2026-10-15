@@ -7,7 +7,7 @@
 import { DECO3D, FALLBACK, floorOf, FLOWER_COL } from './town_deco.js?v=2';
 
 const DB = 'https://class-rpg-6f409-default-rtdb.asia-southeast1.firebasedatabase.app/classRPG_v3';
-const YW = 80, YD = 44, HOUSE = [44, 0, 50, 3], CS = 1.4, NORTH = 4.0;   // 마당 칸 수 · RPG 집 자리(열 44~49 · 행 0~2) · 1칸 = 1.4m · 집이 마당 위 경계 밖으로 나가는 깊이
+const YW = 80, YD = 44, HOUSE = [44, 0, 50, 3], CS = 1.4, NORTH = 7.0;   // 마당 칸 수 · RPG 집 자리(열 44~49 · 행 0~2) · 1칸 = 1.4m · 집이 마당 위 경계 밖으로 나가는 깊이(10-15 KIDHOUSE-2 4 → 7m — 집이 뒤로 깊어짐)
 // 장식 크기(또래 SPEC §9): A = 전부 ×1.4 · F = 바닥만 ×1.4(높이 그대로) · 나머지 = 그대로(칸 가운데)
 const SCALE = {}; for (const k of 'd_y9 d_y12 d_y19 d_y46 d_y47 d_y48 d_y64 d_y26 d_y38 d_y10 d_y20 d_y11 d_y17 d_y21 d_y27 d_y28 d_y66 d_y33 d_y34 d_y67'.split(' ')) SCALE[k] = 'A';
 for (const k of 'd_y1 d_y2 d_y7 d_y15 d_y16 d_y29 d_y41 d_y42 d_y43 d_y44 d_y45 d_y25 d_y35 d_y36 d_y31 d_y59 d_y30 d_y61 d_y65 d_y58 d_y60 d_y62 d_y63 d_y68 d_y49 d_y50 d_y51 d_y52 d_y70 d_y71 d_y72'.split(' ')) SCALE[k] = 'F';
