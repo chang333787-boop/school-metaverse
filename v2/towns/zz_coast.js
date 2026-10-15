@@ -6,7 +6,7 @@ export const TOWN = {
   id: 'zz_coast', title: '바다·산지 시험', en: 'Coast Test', scale: 500,
   mat: { w: 350, h: 250 }, school: [150, 50, 175, 75],
   grid: { xs: [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325], ys: [25, 50, 75, 100, 125, 150, 175, 200, 225], cols: 'num', rows: 'hangul', order: 'rowcol' },
-  base: 'now', fillAround: true, life: true,
+  base: 'now', fillAround: true, life: true, yards: 'rpg',   // 마당 시험 = RPG 시험 계정(이름 '시험')의 꾸미기
   range: { peaks: [[-35, -50, 66, 95], [-80, 30, 46, 50]], ridges: [{ pts: [[-35, -50, 62], [20, -82, 50], [80, -118, 46]], w: 55 }, { pts: [[-35, -50, 62], [-72, 8, 50], [-90, 70, 42]], w: 55 }] },
   layers: {
     now: {
@@ -29,6 +29,7 @@ export const TOWN = {
         { id: 'bw', k: 'breakwater', x: 276, y: 28 }, { id: 'lh', k: 'lighthouse', x: 268, y: 8 }, { id: 'rk', k: 'rocks', x: 271, y: 18 }, { id: 'ps', k: 'parasol', x: 296, y: 64 },
       ],
       blocks: [
+        { id: 'th', x: 225, y: 140, w: 3, d: 3, h: 3, c: 'red', home: '시험', name: '시험네 집', look: 'white-modern' },   // 마당 시험(RPG 시험 계정)
         { id: 'fm', x: 262, y: 56, w: 3, d: 2, h: 1, c: 'blue', name: '수산물 가게' }, { id: 'gs', x: 254, y: 40, w: 3, d: 2, h: 1, c: 'gray', name: '어구 창고' },
       ],
       areas: [],
