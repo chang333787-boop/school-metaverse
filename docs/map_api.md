@@ -75,7 +75,7 @@ SD2.map.stuckLog — 이동키를 누른 채 1.5초 못 움직이고 몸이 충�
 SD2.map.check() → {ok, zonesNoMeta, metaNoZone, dupIds, labelBad, extraBad, spawnsBad, poisBad, hotUnreachable, playBad, traps, outsidePct, noZoneInSchoolPct}
 SD2.map.game.load(id, params) / stop() / current   ·  SD2.camPose(…) (3인칭 카메라 식) · SD2.phys{groundAt,blockedAt,ceilAt,camHit} · SD2.CTRL{frozen,speed}
 // SHRINK-1(§12.12): map.player.scale(s, o)/scaled()/groundAt/blockedAt/pos()
-// ENGINE-1 행동 사전(§12): map.player.crouch/crouched/setCrouch/hidden/noise · map.see · map.hide · map.note · map.investigate · map.dig · map.prop · map.carry · map.story · map.door · map.chaser · map.fade(sec, color, mid?) · map.time   // fade의 mid = 화면이 다 덮인 동안 부르는 async 함수(끝날 때까지 덮인 채로 — 마을 집 안 들어가기 · 10-15)
+// ENGINE-1 행동 사전(§12): map.player.crouch/crouched/setCrouch/hidden/noise · map.see · map.hide · map.note · map.investigate · map.dig · map.prop · map.carry · map.story · map.door · map.chaser · map.fade(sec, color, mid?) · map.time   // world.terrainAt(x, z, hy)·overAt(x, z, hy) = 높이 힌트(묻는 몸·카메라 높이 — 놀이 땅이 굴 안·밖을 가름 · 마을 터널 10-15)   // fade의 mid = 화면이 다 덮인 동안 부르는 async 함수(끝날 때까지 덮인 채로 — 마을 집 안 들어가기 · 10-15)
 // G-ESCAPE(§12.13): map.lights(false|true) 불 끄기 · map.flashlight(true|false) 손전등 — 새 조명 없음 · 게임이 멈추면 원래대로
 // NPC-MOVE·WORLD-FX(§16 · found2 09-27): map.npc.list/get/find/hide/show/home/move/pose/checksum · map.world.spawn/move/remove/get/list/light/door/paint/water/wind/pad — 게임이 멈추면 전부 원래대로
 // G3-SHRINK2(§13.5): map.minimap.show({zoom:{r, rect, y}}) · minimap.zoom(z|null) · minimap.zoomed — 게임 네모 안 확대 지도(가구 윗면까지)

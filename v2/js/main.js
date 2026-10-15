@@ -1,11 +1,11 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { buildWorld } from './world.js?v=156';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
+import { buildWorld } from './world.js?v=157';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=76';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=77';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=26';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -214,7 +214,7 @@ function kidTick(dt) {
   ACTS.pose();                                                       // ACTION-1: 행동 자세(마시기·씻기·분무기…)를 기본 자세 위에
 }
 
-function terrainY(x, z) { return world.terrainAt(x, z); }   // 앞뜰·대지 yard / 운동장 field(LAYOUT-3 세 높이)
+function terrainY(x, z, hy) { return world.terrainAt(x, z, hy); }   // hy = 높이 힌트(마을 굴 안이면 굴 바닥 · 10-15)   // 앞뜰·대지 yard / 운동장 field(LAYOUT-3 세 높이)
 // PERF-WIN: 8m 격자 칸 찾기 = 숫자 열쇠(예전 gx+':'+gz 문자열을 부를 때마다 만들었다 — 점검 할당 1위권). world.grid(문자열 Map)는 그대로 두고
 //  같은 배열을 숫자 Map에 거울로 단다 — mapapi collider.add가 world.grid.set으로 새 칸을 만들면 거울도 따라간다(set을 감쌈). 칸 배열은 같은 객체라 push·splice도 그대로 보인다
 const GRIDN = new Map(), gkey = (gx, gz) => (gx + 2048) * 4096 + (gz + 2048);
@@ -225,7 +225,7 @@ world.cell = (gx, gz) => GRIDN.get(gkey(gx, gz));   // mapapi.ray·engine 시야
 let SEEN = new Uint32Array(8192), SEEN_G = 0;
 function seenGen() { if (SEEN.length < world.colliders.length) { SEEN = new Uint32Array(world.colliders.length * 2); SEEN_G = 0; } if (++SEEN_G > 4e9) { SEEN.fill(0); SEEN_G = 1; } return SEEN_G; }
 function groundAt(x, z, fromY) {
-  let g = terrainY(x, z);
+  let g = terrainY(x, z, fromY);
   const k0x = Math.floor((x-0.3)/8), k1x = Math.floor((x+0.3)/8), k0z = Math.floor((z-0.3)/8), k1z = Math.floor((z+0.3)/8), gen = seenGen(), C = world.colliders;
   for (let gx=k0x; gx<=k1x; gx++) for (let gz=k0z; gz<=k1z; gz++) {
     const cell = GRIDN.get(gkey(gx, gz)); if (!cell) continue;
@@ -284,7 +284,7 @@ function tinyAdd(c, T = PHY.T) {   // 게임이 작아진 뒤 더한 충돌(mapa
 }
 function tGen(T) { if (++T.gen > 4e9) { T.gen = 1; T.mark.fill(0); } return T.gen; }
 function tGround(x, z, fromY) {
-  const T = PHY.T, r = PHY.r, top = fromY + PHY.st, gen = tGen(T); let g = terrainY(x, z);
+  const T = PHY.T, r = PHY.r, top = fromY + PHY.st, gen = tGen(T); let g = terrainY(x, z, fromY);
   for (let gx = Math.floor((x - 0.3) / 8); gx <= Math.floor((x + 0.3) / 8); gx++) for (let gz = Math.floor((z - 0.3) / 8); gz <= Math.floor((z + 0.3) / 8); gz++) {
     const cell = T.grid.get(gkey(gx, gz)); if (!cell) continue;
     for (let k = 0; k < cell.length; k++) { const i = cell[k]; if (T.mark[i] === gen) continue; T.mark[i] = gen; const b = T.cols[i];
@@ -595,9 +595,9 @@ function camPose(hx, hy, hz, yaw, pch, CD, fov, aspect, dUse) {
   let want = Math.min(CD, hit - 0.3);
   if (want < 0.5) want = Math.max(0.1, Math.min(0.5, hit - 0.12));
   for (let k = 0; k < 60 && want > 0.5 && nearClip(hx + dx * want, hy + dy * want, hz + dz * want, -dx, -dy, -dz, fov, aspect, hy); k++) want = Math.max(0.5, want - 0.1);   // ④
-  if (world.overAt) for (let k = 0; k < 40 && want > 0.5; k++) { const g = world.overAt(hx + dx * want, hz + dz * want); if (g == null || hy + dy * want > g + 0.4) break; want = Math.max(0.5, want - 0.2); }   // ⑤ CAM-5(10-14 마을 산비탈): 놀이가 덮어쓴 땅 속으로 들어가 하늘이 비치지 않게 당김 — 학교 땅은 덮어쓴 땅이 없어 그대로
+  if (world.overAt) for (let k = 0; k < 40 && want > 0.5; k++) { const g = world.overAt(hx + dx * want, hz + dz * want, hy + dy * want); if (g == null || hy + dy * want > g + 0.4) break; want = Math.max(0.5, want - 0.2); }   // ⑤ CAM-5(10-14 마을 산비탈): 놀이가 덮어쓴 땅 속으로 들어가 하늘이 비치지 않게 당김 — 학교 땅은 덮어쓴 땅이 없어 그대로
   const d = dUse ?? want, cx = hx + dx * d, cz = hz + dz * d; let cy = hy + dy * d;
-  if (world.overAt) { const g = world.overAt(cx, cz); if (g != null && cy < g + 0.4) cy = g + 0.4; }   // 그래도 땅 밑이면 땅 위로
+  if (world.overAt) { const g = world.overAt(cx, cz, cy); if (g != null && cy < g + 0.4) cy = g + 0.4; }   // 그래도 땅 밑이면 땅 위로
   const hw = 0.3 * Math.tan(fov * Math.PI / 360) * aspect + 0.08, rx = Math.cos(yaw), rz = -Math.sin(yaw);
   const r = camHit(cx, cy, cz, rx, 0, rz, hw), l = camHit(cx, cy, cz, -rx, 0, -rz, hw);
   CAMP.sh = (r < hw && l < hw) ? (r - l) / 2 : r < hw ? r - hw : l < hw ? hw - l : 0;

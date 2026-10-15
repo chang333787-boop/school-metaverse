@@ -11,9 +11,9 @@ const TRN = SCHOOL.terrain;
 // TOWN-1(10-12 마을 세계): 학교 상자 밖 땅 높이를 놀이(마을)가 덮어씀 — 산·언덕·강(자연환경 엔진) · null을 돌려주면 원래 땅 · 물리·놓기·길격자가 모두 이 함수를 본다
 let TOVER = null;
 export function setTerrainOver(f) { TOVER = typeof f === 'function' ? f : null; }
-export function overAt(x, z) { return TOVER ? TOVER(x, z) : null; }   // 놀이가 덮어쓴 땅 높이만(없으면 null) — 카메라가 마을 산비탈 속으로 들어가지 않게(CAM-5)
-export function terrainAt(x, z) {
-  if (TOVER) { const v = TOVER(x, z); if (v != null) return v; }
+export function overAt(x, z, hy) { return TOVER ? TOVER(x, z, hy) : null; }   // 놀이가 덮어쓴 땅 높이만(없으면 null) — 카메라가 마을 산비탈 속으로 들어가지 않게(CAM-5)
+export function terrainAt(x, z, hy) {   // hy = 높이 힌트(묻는 몸·카메라 높이 — 놀이가 굴 안·밖을 가름 · TUNNEL-1 10-15) · 없으면 겉면
+  if (TOVER) { const v = TOVER(x, z, hy); if (v != null) return v; }
   if (z < TRN.TERR_Z || (x < TRN.westX && z < TRN.westZ) || (x < TRN.gymSouthX && z < TRN.gymSouthZ)) return TRN.yard;   // GYM-2: 체육관 남면 길(대지가 계단 서쪽에서 gymSouthZ까지 나옴)
   // 운동장 북서 모서리(영상 g_079~120): 대지 높이 앞마당(z < -10) → 흙 비탈(z -10 → -3)로 운동장까지 · 동쪽 끝 x -30~-27은 옆으로도 비탈(world.js 운동장 북서 모서리 블록과 같은 식)
   if (x >= TRN.westX && x < -27 && z < -3) { const t = Math.max(0, (x + 30) / 3) + Math.max(0, (z + 10) / 7); if (t < 1) return TRN.yard + (TRN.field - TRN.yard) * t; }

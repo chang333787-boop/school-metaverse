@@ -614,7 +614,7 @@ export function createWorldFx(H) {
       else if (gx * 8 < X0 || (gx + 1) * 8 > X1 || gz * 8 < Z0 || (gz + 1) * 8 > Z1) { const keep = a.filter(inR); if (keep.length !== a.length) { S9.cells.push([a, a.slice()]); a.length = 0; a.push(...keep); } } }   // 상자에 걸친 칸: 상자 밖에만 있는 충돌(숨긴 학교 바깥 물체)도 비움 — 보이지 않는 벽 없게(10-13 검사)
     // o.open(마을 10-13 · 정문으로 나가면 마을): 이 사각형에 걸친 '선 막이'(얇은 nc 상자 — 정문 선처럼 학교 밖으로 새지 않게 둔 것)를 잠시 바닥 아래로 내림 · 끝나면 되돌림(상자 수·번호 그대로 → 다른 놀이·게이트 영향 0)
     if (o.open) for (const [x0, z0, x1, z1] of o.open) for (const b of world.colliders) if (b.nc && b.x1 > x0 && b.x0 < x1 && b.z1 > z0 && b.z0 < z1 && Math.min(b.x1 - b.x0, b.z1 - b.z0) < 0.5 && b.y1 - b.y0 > 3) { S9.opened.push([b, b.y1]); b.y1 = b.y0 - 5; }
-    if (o.terrain && world.setTerrainOver) world.setTerrainOver((x, z) => (x >= R[0] && x <= R[2] && z >= R[1] && z <= R[3]) ? null : o.terrain(x, z));
+    if (o.terrain && world.setTerrainOver) world.setTerrainOver((x, z, hy) => (x >= R[0] && x <= R[2] && z >= R[1] && z <= R[3]) ? null : o.terrain(x, z, hy));   // hy = 높이 힌트(굴 · TUNNEL-1)
     return { remove() { if (OUTS === S9) outsideOff(); }, rect: R, hidden: S9.meshes.length + S9.dets.length, cells: S9.cells.length };
   }
   function reset() {
