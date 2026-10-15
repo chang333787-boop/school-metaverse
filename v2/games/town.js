@@ -387,6 +387,7 @@ export default async function start(map, params) {
 
   // ───────── 그리기 그릇: 150m 구역마다 정점색 삼각형 ─────────
   const REG = 150, BK = new Map(), OBJ = [], MATS = [], GEOS = [], TEX = [];
+  { const freeArr = function () { this.array = null; }; GEOS.push = function (...gs) { for (const g of gs) { if (!g || !g.attributes || (g.userData && g.userData.keep)) continue; try { if (!g.boundingSphere) g.computeBoundingSphere(); if (!g.boundingBox) g.computeBoundingBox(); } catch (e) { continue; } for (const k in g.attributes) { const a = g.attributes[k]; if (a.usage === T3.StaticDrawUsage && a.onUpload) a.onUpload(freeArr); } if (g.index && g.index.onUpload) g.index.onUpload(freeArr); } return Array.prototype.push.apply(this, gs); }; }   // PLAUS+ 6 크롬북(메모리): 마을 정적 지오메트리 = 경계 미리 셈 → GPU에 올라가면 JS 배열 비움(같은 그림 · 배열을 다시 읽는 곳 없음 — 몸·카메라 = 충돌 상자 · 땅 = 높이 함수) · 계속 고치는 것(비·눈 입자)은 userData.keep
   let BLDMODE = false; const BKB = new Map(), BKF = new Map();   // LOD-2: 건물 몸은 구역마다 가까운 판(BKB · 자세히) ↔ 먼 판(BKF · 상자 하나) — 길·마당·소품(BK)은 늘 그대로
   const bucket = (x, z) => { const M9 = BLDMODE ? BKB : BK, rx = Math.floor((x - TX0) / REG), rz = Math.floor((z - TZ0) / REG), k = rx + ':' + rz; let b = M9.get(k); if (!b) { b = { p: [], n: [], c: [], u: [] }; M9.set(k, b); } return b; };
   const fbk = (x, z) => { const rx = Math.floor((x - TX0) / REG), rz = Math.floor((z - TZ0) / REG), k = rx + ':' + rz; let b = BKF.get(k); if (!b) { b = { p: [], n: [], c: [], u: [] }; BKF.set(k, b); } return b; };
@@ -2539,7 +2540,7 @@ export default async function start(map, params) {
   let WX9 = 'clear', WXM = null;
   function makeWeather(group) { WXM = null; if (WX9 === 'clear' || LOOK !== 'town') return; const snow = WX9 === 'snow', N = snow ? 1200 : 700, B = 60, H = 36, P = new Float32Array(N * (snow ? 3 : 6)), R9 = rng0(77), seed = new Float32Array(N);
     for (let i = 0; i < N; i++) { const x = (R9() - 0.5) * B, y = R9() * H, z = (R9() - 0.5) * B; seed[i] = R9() * 6.28; if (snow) P.set([x, y, z], i * 3); else P.set([x, y, z, x - 0.05, y - 0.9, z], i * 6); }
-    const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); GEOS.push(g); let m;
+    const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); g.userData.keep = true; GEOS.push(g); let m;
     if (snow) { const mt = new T3.PointsMaterial({ color: 0xffffff, size: 0.3, sizeAttenuation: true, transparent: true, opacity: 0.92, depthWrite: false }); MATS.push(mt); m = new T3.Points(g, mt); } else { const mt = new T3.LineBasicMaterial({ color: 0xa8c4dc, transparent: true, opacity: 0.55, depthWrite: false }); MATS.push(mt); m = new T3.LineSegments(g, mt); }
     m.frustumCulled = false; m.userData.fx = 1; group.add(m); const A = g.attributes.position.array, O = [0, 0, 0];
     WXM = { m, tick(dt, cp) { if (Math.abs(cp.x - O[0]) > 400 || Math.abs(cp.z - O[2]) > 400) { O[0] = cp.x; O[1] = cp.y; O[2] = cp.z; } const vy = snow ? 1.4 : 22, st = snow ? 3 : 6;   // 카메라를 따라 상자를 옮김(점은 상자 안에서 감김)
