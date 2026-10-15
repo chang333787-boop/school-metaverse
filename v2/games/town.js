@@ -194,7 +194,7 @@ export default async function start(map, params) {
   let LID = D.layers[params.layer] ? params.layer : D.base && D.layers[D.base] ? D.base : LAYERS[0], L = resolve(LID);
 
   // ───────── 자연환경 엔진: 높이 격자(5m) — 산(쌓은 높이 → 부드러운 봉우리) · 물(강·연못 바닥) · 다리 ─────────
-  const G = 5, NX = Math.ceil((TX1 - TX0) / G) + 1, NZ = Math.ceil((TZ1 - TZ0) / G) + 1, NN = NX * NZ;
+  const G = 5, NX = Math.ceil((TX1 - TX0) / G) + 1, NZ = Math.ceil((TZ1 - TZ0) / G) + 1, NN = NX * NZ, BX1 = TX0 + (NX - 1) * G, BZ1 = TZ0 + (NZ - 1) * G;   // BX1·BZ1 = 땅 메시가 실제로 끝나는 곳(마지막 격자점 · TX1보다 조금 밖)
   const HF = new Float32Array(NN), WD = new Float32Array(NN), WK = new Uint8Array(NN), NR = new Uint8Array(NN), BRM = new Uint8Array(NN), GT = new Float32Array(NN * 3), GTW = new Float32Array(NN), FPK = new Uint8Array(NN), SDW = new Float32Array(NN);   // … · SDW = 물가까지 거리(물 안 −) — 강·호수 하나로(석축·둔치·물 울타리의 기준)
   const CAPY = -0.70, FPD = 0.78, WLY = -1.0, FPW = 10;
   // SEA-1(10-14 확장판 '오른쪽 위 = 바다'): 바다 = 물가가 석축이 아니라 모래·바위 비탈로 수평선까지 · SEA_H = 바닷물 높이(마을 땅 기준) · SSD = 바닷가까지 거리(땅 격자 · 바다 안 −)
@@ -212,6 +212,7 @@ export default async function start(map, params) {
     for (const r of R9.ridges || []) { const P = r.pts.map(([mx, my, h]) => [X(mx), Z(my), h * S]); for (let i = 0; i < P.length - 1; i++) rg.push([P[i], P[i + 1], (r.w || 50) * S]); }
     let bb = [1e9, 1e9, -1e9, -1e9]; for (const [x, z, , r] of pk) bb = [Math.min(bb[0], x - r), Math.min(bb[1], z - r), Math.max(bb[2], x + r), Math.max(bb[3], z + r)]; for (const [a, b, w] of rg) bb = [Math.min(bb[0], a[0] - w, b[0] - w), Math.min(bb[1], a[1] - w, b[1] - w), Math.max(bb[2], a[0] + w, b[0] + w), Math.max(bb[3], a[1] + w, b[1] + w)];
     return { pk, rg, bb, max: Math.max(0, ...pk.map(p => p[2]), ...rg.flatMap(g => [g[0][2], g[1][2]])) }; })();
+  const SUMMIT = RANGE && RANGE.pk.length ? RANGE.pk.reduce((a, p) => p[2] > a[2] ? p : a) : null;   // 가장 높은 봉우리 [x, z, 높이, 반지름] — 정상 등산로·놀이 경계
   function rangeAt(x, z) { const M = RANGE; if (!M || x < M.bb[0] || x > M.bb[2] || z < M.bb[1] || z > M.bb[3]) return 0; let h = 0;
     for (const [px, pz, H, r] of M.pk) { const u = Math.hypot(x - px, z - pz) / r; if (u < 1) { const k = 1 - u * u; h = Math.max(h, H * k * k); } }
     for (const [a, b, w] of M.rg) { const dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz, t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (L2 || 1))), u = Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t) / w; if (u < 1) { const k = 1 - u * u; h = Math.max(h, (a[2] + (b[2] - a[2]) * t) * k * k); } }
@@ -252,6 +253,9 @@ export default async function start(map, params) {
     for (const b of L.blocks) { if (b.x == null || b.c === 'green') continue; const cx = X(b.x), cz = Z(b.y), r0 = Math.max(b.w || 2, b.d || 2) * S / 2 + 5, r1 = r0 + 10, [i0, j0, i1, j1] = nodeRange([cx - r1, cz - r1, cx + r1, cz + r1]); let pad = 0, n9 = 0;
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (Math.hypot(nx(i) - cx, nz(j) - cz) < r0) { pad += HL[j * NX + i]; n9++; } if (!n9) continue; pad /= n9; if (pad < 1) continue;
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const d = Math.hypot(nx(i) - cx, nz(j) - cz); if (d >= r1) continue; const t = d <= r0 ? 0 : (d - r0) / (r1 - r0), k = j * NX + i; HL[k] = pad + (HL[k] - pad) * t * t * (3 - 2 * t); } }
+    if (D.range && D.range.view) { const cx = X(D.range.view[0]), cz = Z(D.range.view[1]), r0 = 7, r1 = 19, [i0, j0, i1, j1] = nodeRange([cx - r1, cz - r1, cx + r1, cz + r1]); let pad = 0, n9 = 0;   /* 10-15 아이 '전망대 밑으로 가면 끼여요': 전망대 자리도 평평하게 고름(가파른 비탈 ±3.7m 위에 그냥 놓여 앞은 뜨고 뒤는 묻혔음) */
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (Math.hypot(nx(i) - cx, nz(j) - cz) < r0) { pad += HL[j * NX + i]; n9++; }
+      if (n9) { pad /= n9; for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const d = Math.hypot(nx(i) - cx, nz(j) - cz); if (d >= r1) continue; const t = d <= r0 ? 0 : (d - r0) / (r1 - r0), k = j * NX + i; HL[k] = pad + (HL[k] - pad) * t * t * (3 - 2 * t); } } }
     // 산을 지나는 길 = 고갯길(MTN-1 · 10-13 교사 '산 높이 · 절개면에 옹벽'): 길 높이 = 산을 크게 흐린 높이의 절반(교차로에서 두 길이 같은 높이) · 길 둘레 8m는 길 높이로 깎거나 돋움
     //   깎은 면 = 옹벽(돌) + 그 위 풀 둔덕(덮개 · 땅 격자 톱니를 덮음) · 둔덕 너머는 산비탈 그대로
     RCAP.fill(-1e9); MWALL = []; { const HB = HL.slice(); for (let r = 0; r < 3; r++) blur(HB, 6); RDY = HB;
@@ -286,8 +290,8 @@ export default async function start(map, params) {
     return (a * (1 - fx) + b * fx) * (1 - fz) + (c * (1 - fx) + d * fx) * fz; };   // 물가까지 거리(땅 격자 보간)
   const tH = (x, z) => { let h = tH0(x, z); if (MWALL.length) { const u = (x - TX0) / G, v = (z - TZ0) / G; if (u >= 0 && v >= 0 && u < NX - 1 && v < NZ - 1) { const i = u | 0, j = v | 0, k = j * NX + i, a = RCAP[k], b = RCAP[k + 1], c = RCAP[k + NX], d = RCAP[k + NX + 1];   // 고갯길 둔덕 위(네 모서리가 모두 둔덕일 때)
       if (a > -1e8 && b > -1e8 && c > -1e8 && d > -1e8) { const fx = u - i, fz = v - j, rc = (a * (1 - fx) + b * fx) * (1 - fz) + (c * (1 - fx) + d * fx) * fz; if (rc > h) h = rc; } } } if (h > CAPY + 0.5) return h; const sd = sdAt(x, z); return sd > -0.3 && sd < FPW + 0.8 && !(SEAS.length && seaSd(x, z) < 30) ? Math.max(h, CAPY) : h; };   // 둔치에서는 덮개 높이(사람·나무·벤치가 덮개 위에)
-  const tH0 = (x, z) => { const u = (x - TX0) / G, v = (z - TZ0) / G; if (!(u >= 0 && v >= 0 && u < NX - 1 && v < NZ - 1)) return 0;
-    const i = u | 0, j = v | 0, fx = u - i, fz = v - j, k = j * NX + i, h00 = HF[k], h10 = HF[k + 1], h01 = HF[k + NX], h11 = HF[k + NX + 1];
+  const tH0 = (x, z) => { const u = (x - TX0) / G, v = (z - TZ0) / G; if (!(u >= 0 && v >= 0 && u <= NX - 1 && v <= NZ - 1)) return 0;   /* 마지막 격자점(끝 선)도 판 높이(예전엔 0) */
+    const i = Math.min(NX - 2, u | 0), j = Math.min(NZ - 2, v | 0), fx = u - i, fz = v - j, k = j * NX + i, h00 = HF[k], h10 = HF[k + 1], h01 = HF[k + NX], h11 = HF[k + NX + 1];
     return fx >= fz ? h00 + (h10 - h00) * fx + (h11 - h10) * fz : h00 + (h11 - h01) * fx + (h01 - h00) * fz; };
   const ty = (x, z) => TY + tH(x, z);
   const wdI = (x, z) => { const u = (x - TX0) / G, v = (z - TZ0) / G; if (!(u >= 0 && v >= 0 && u < NX - 1 && v < NZ - 1)) return 0;   // 물 깊이(땅 메시와 같은 삼각형 보간) — 다리 구간 잡기
@@ -716,13 +720,13 @@ export default async function start(map, params) {
     const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new T3.BufferAttribute(N, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(C, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(U, 2)); g.computeBoundingSphere(); GEOS.push(g);
     const m = new T3.Mesh(g, MAT.sea); m.matrixAutoUpdate = false; m.frustumCulled = false; m.userData.fx = 1; group.add(m); }
   function drawSkirt(group) {   // 판 밖 땅(SKIRT-2): 판 가장자리에서 들판·산줄기가 이어짐 — 가까이 20m 칸 → 멀리 80m 칸(LOD) · 북서 산줄기는 1.6km · 남·동은 0.9km 낮은 구릉 · 먼 깊이 압축(HAZE-1)으로 하늘선까지 보임
-    const SP = 20, axis = (lo, A0, A1, hi) => { const o = []; for (let v = A0, st = SP; v > lo; v -= st, st = Math.min(80, 20 + (A0 - v) * 0.06)) o.unshift(v); for (let v = A0 + SP; v < A1; v += SP) o.push(v); for (let v = A1, st = SP; v < hi + 1; v += st, st = Math.min(80, 20 + (v - A1) * 0.06)) o.push(v); return o; };
-    const far = RANGE ? 1600 : 450, xs = axis(TX0 - far, TX0, TX1, TX1 + (RANGE ? 900 : 450)), zs = axis(TZ0 - far, TZ0, TZ1, TZ1 + (RANGE ? 900 : 450)), NXs = xs.length, NZs = zs.length, N9 = NXs * NZs;
+    const SP = 20, FB = 60, axis = (lo, A0, A1, hi) => { const o = []; for (let v = A0 - FB; v <= A1 + FB + 0.01; v += G) o.push(v); for (let v = A0 - FB - SP, st = SP; v > lo; v -= st, st = Math.min(80, 20 + (A0 - FB - v) * 0.06)) o.unshift(v); for (let v = A1 + FB + SP, st = SP; v < hi + 1; v += st, st = Math.min(80, 20 + (v - A1 - FB) * 0.06)) o.push(v); return o; };   /* 10-15 아이 '흰 공간으로 들어가면 산 위로 순간이동': 판 둘레 60m 띠는 판 땅 격자와 같은 5m 자리 — 판 끝 줄이 판 땅 격자점 그대로(예전 20m라 판 끝 높이를 못 따라가 최대 10m 턱·틈) */
+    const far = RANGE ? 1600 : 450, xs = axis(TX0 - far, TX0, BX1, BX1 + (RANGE ? 900 : 450)), zs = axis(TZ0 - far, TZ0, BZ1, BZ1 + (RANGE ? 900 : 450)), NXs = xs.length, NZs = zs.length, N9 = NXs * NZs;
     const H = new Float32Array(N9), IN = new Uint8Array(N9), ss = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
     for (let j = 0; j < NZs; j++) for (let i = 0; i < NXs; i++) { const x = xs[i], z = zs[j], k = j * NXs + i;
-      if (x > TX0 + SP + 1 && x < TX1 - SP - 1 && z > TZ0 + SP + 1 && z < TZ1 - SP - 1) { IN[k] = 1; continue; }
-      const dx = Math.max(TX0 - x, 0, x - TX1), dz = Math.max(TZ0 - z, 0, z - TZ1), dOut = Math.hypot(dx, dz), ex = Math.min(TX1 - 0.5, Math.max(TX0 + 0.5, x)), ez = Math.min(TZ1 - 0.5, Math.max(TZ0 + 0.5, z));
-      if (dOut <= 0) { H[k] = tH0(x, z) - 0.3; continue; }
+      if (x > TX0 + 0.01 && x < BX1 - 0.01 && z > TZ0 + 0.01 && z < BZ1 - 0.01) { IN[k] = 1; continue; }   /* 판 안 = 판 땅 메시(겹치지 않음) */
+      const dx = Math.max(TX0 - x, 0, x - BX1), dz = Math.max(TZ0 - z, 0, z - BZ1), dOut = Math.hypot(dx, dz), ex = Math.min(BX1, Math.max(TX0, x)), ez = Math.min(BZ1, Math.max(TZ0, z));
+      if (dOut <= 0.01) { H[k] = tH0(x, z); continue; }   /* 판 끝 줄 = 판 땅 격자점 높이 그대로 */
       const mtn = hillAt(x, z), low = (vnoise(x / 160 + 3, z / 160) - 0.3) * (RANGE ? 55 : 9) * ss(120, 520, dOut), far9 = Math.max(mtn, Math.max(-0.2, low) + (vnoise(x / 47, z / 47) - 0.5) * 3 * ss(60, 200, dOut));   // 산 + 먼 구릉(남·동 30~50m)
       const edgeH = tH0(ex, ez); H[k] = edgeH + (far9 - edgeH) * ss(0, 45, dOut) - 0.05; if (SEAS.length) { const sd9 = seaSdRaw(x, z); if (sd9 < 32) H[k] = coastH(H[k], sd9, rockyAt(x, z)); } }
     const idx = new Int32Array(N9).fill(-1); let n = 0; const P = [], U = [], I = []; for (let k = 0; k < N9; k++) if (!IN[k]) { idx[k] = n++; const i = k % NXs, j = (k / NXs) | 0; P.push(xs[i], TY + H[k], zs[j]); U.push(xs[i] / 6.5, zs[j] / 6.5); }
@@ -733,7 +737,7 @@ export default async function start(map, params) {
     const C = [], NA = g.attributes.normal;
     for (let q = 0; q < n; q++) { const x = P[q * 3], h = P[q * 3 + 1] - TY, z = P[q * 3 + 2], ny = NA.getY(q); let c = hillCol(x, z, h); c = mtnColor(c, x, z, h, ny);
       if (SEAS.length) { const s9 = seaSdRaw(x, z); if (s9 < 26) { const t = s9 < 0 ? 1 : 1 - ssm(16, 26, s9), tgt = s9 < 1.5 ? SANDW : rockyAt(x, z) ? MC9.rock : SANDC; c = c.map((v, i) => v + (tgt[i] - v) * t); } }   // SEA-1 판 밖 모래사장
-      const dx = Math.max(TX0 - x, 0, x - TX1), dz = Math.max(TZ0 - z, 0, z - TZ1), dk = 1 - 0.08 * ss(100, 600, Math.hypot(dx, dz)); C.push(c[0] * dk, c[1] * dk, c[2] * dk); }
+      const dx = Math.max(TX0 - x, 0, x - BX1), dz = Math.max(TZ0 - z, 0, z - BZ1), dk = 1 - 0.08 * ss(100, 600, Math.hypot(dx, dz)); C.push(c[0] * dk, c[1] * dk, c[2] * dk); }
     g.setAttribute('color', new T3.Float32BufferAttribute(C, 3)); g.computeBoundingSphere(); GEOS.push(g);
     const m = new T3.Mesh(g, MAT.mtn); m.matrixAutoUpdate = false; m.receiveShadow = false; m.frustumCulled = false; m.userData.fx = 1; group.add(m);
     // 판 밖 나무(숲띠 · 산 쪽은 빽빽이 소나무) — 판 가장자리 25m 밖 ~ 320m(그 너머는 산 색이 숲)
@@ -747,7 +751,20 @@ export default async function start(map, params) {
         const L9 = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L9, uz = (b[1] - a[1]) / L9; for (let t = 2; t < L9 - 1; t += 3.2) { const x = a[0] + ux * t, z = a[1] + uz * t; if (onRoad(x, z, 0.6) || inLot(x, z)) continue; box(x, ty(x, z), z, 0.22, 0.18, 1.6, Math.atan2(-uz, ux) + Math.PI / 2, 0x7a5232); } }   // 통나무 턱
       const [sx, sz] = pts[0]; const r = nearSeg(sx, sz, 30); if (r) { const ry = Math.atan2(sx - r.p[0], sz - r.p[1]); signBoard(group, sx + Math.sin(ry) * 2.4, sz + Math.cos(ry) * 2.4, ry + Math.PI, '등산로 · 전망대', { w: 2.2, h: 0.62, y: 1.2, bg: 0x2f6b3a, bgc: '#2f6b3a', fg: '#fff7e0' }); } }
     if (R9.view) { const [vx, vz] = [X(R9.view[0]), Z(R9.view[1])], ry = Math.atan2(X(125) - vx, Z(75) - vz); pavilion(vx, vz, ry); const [bx, bz] = [vx + Math.sin(ry) * 4.6, vz + Math.cos(ry) * 4.6]; signBoard(group, bx, bz, ry, '전망대', { w: 1.4, h: 0.55, y: 1.0, bg: 0x2f6b3a, bgc: '#2f6b3a', fg: '#fff7e0' });
-      occAdd(vx - 4, vz - 4, vx + 4, vz + 4); PLACES_EXTRA.push({ id: 'viewpt', name: '전망대', en: 'Lookout', kind: 'prop', x: vx, z: vz, door: [vx, vz], icon: '⛰', sym: '⛰', ai: '뒷산 전망대(AI)', prop: true }); } }
+      occAdd(vx - 4, vz - 4, vx + 4, vz + 4); PLACES_EXTRA.push({ id: 'viewpt', name: '전망대', en: 'Lookout', kind: 'prop', x: vx, z: vz, door: [vx, vz], icon: '⛰', sym: '⛰', ai: '뒷산 전망대(AI)', prop: true }); }
+    // 정상 등산로(10-15 아이 '높은 산 위로 올라가고 싶은데 갈 수 있는 만큼이 정해져 있어요'): 전망대 → 가장 높은 봉우리까지 지그재그 흙길(통나무 턱) + 정상석 · 놀이 경계도 정상 둘레까지(SUMMIT · arena) — ✨ AI
+    if (R9.view && SUMMIT) { const A = [X(R9.view[0]), Z(R9.view[1])], B = [SUMMIT[0], SUMMIT[1]], L0 = Math.hypot(B[0] - A[0], B[1] - A[1]);
+      if (L0 > 60) { const ux = (B[0] - A[0]) / L0, uz = (B[1] - A[1]) / L0, px = -uz, pz = ux, n = Math.max(3, Math.round(L0 / 70)), P = [A];
+        for (let k = 1; k < n; k++) { const t = k / n, o = (k % 2 ? 1 : -1) * Math.min(45, L0 * 0.12); P.push([A[0] + (B[0] - A[0]) * t + px * o, A[1] + (B[1] - A[1]) * t + pz * o]); } P.push([B[0] - ux * 5, B[1] - uz * 5]);
+        const gAt = (x, z) => (x < TX0 || x > BX1 || z < TZ0 || z > BZ1) ? TY + skirtH(x, z) : ty(x, z);   /* 판 밖 = 둘레 땅(몸 높이와 같은 삼각형) */
+        for (let i = 0; i < P.length - 1; i++) { const a = P[i], b = P[i + 1]; strip(a, b, 1.8, 0.12, 0xb99a6e, { step: 2, yf: gAt, skip: (x, z) => !!onRoad(x, z, 0.5) || inSchool(x, z) });
+          const L9 = Math.hypot(b[0] - a[0], b[1] - a[1]), ux9 = (b[0] - a[0]) / L9, uz9 = (b[1] - a[1]) / L9; for (let t = 2; t < L9 - 1; t += 3.2) { const x = a[0] + ux9 * t, z = a[1] + uz9 * t; box(x, gAt(x, z), z, 0.22, 0.18, 1.6, Math.atan2(-uz9, ux9) + Math.PI / 2, 0x7a5232); } }   // 통나무 턱
+        const segD9 = (x, z) => { let m = 1e9; for (let i = 0; i < P.length - 1; i++) m = Math.min(m, segD(x, z, P[i], P[i + 1])[0]); return Math.min(m, Math.hypot(x - B[0], z - B[1]) - 4); };
+        for (const sp in TREES) { const a9 = TREES[sp]; let w = 0; for (const t of a9) if (segD9(t.x, t.z) > 2.8) a9[w++] = t; a9.length = w; }   /* 길·정상 위 나무 비킴 */
+        const ry = Math.atan2(-ux, -uz), gy = gAt(B[0], B[1]), Hm = Math.round((gy - TY) / 10) * 10; box(B[0], gy - 0.4, B[1], 0.9, 1.7, 0.5, ry, 0xb9b3a4, { top: 0xc9c3b4 });   /* 정상석 */
+        textPlane(group, '정상 ' + Hm + 'm', B[0], gy + 0.85, B[1], ry, 0.8, 0.5, { bgc: '#b9b3a4', fg: '#2b3a2f', off: 0.26 });   /* 정상석 앞면 글 */
+        PCOL.push(col9(B[0], B[1], 0.45, 0.25, ry, gy - 1, gy + 1.3));
+        PLACES_EXTRA.push({ id: 'summit', name: '뒷산 정상', en: 'Summit', kind: 'prop', x: B[0], z: B[1], door: [B[0] - ux * 7, B[1] - uz * 7], icon: '⛰', sym: '⛰', ai: '뒷산 정상 등산로(AI)', prop: true }); } } }
   let PLACES_EXTRA = [];
   // ───────── 빈 잔디 채우기(INFILL-1 · 10-13 QA '칸 안 빈 잔디가 너무 넓어요 — 완성된 도시') — 아이 블록 둘레 9m는 비움 · 차분한 색 · ✨ ─────────
   //   길가(22m 안) = 작은 집·가게(길을 봄) · 안쪽 = 텃밭 · 포장 마당(벤치·자전거 거치대·화단) · 창고 · 작은 농구장 — 칸마다 최대 9개 · 숲·논밭·공원·산 칸은 그대로
@@ -1829,8 +1846,9 @@ export default async function start(map, params) {
     for (let u = 0; u < L9 - 0.01; u += 2) { const u1 = Math.min(L9, u + 2), P9 = [[u, -11.85], [u, 11.85], [u1, -11.85], [u1, 11.85]].map(([uu, vv]) => [ax9 + ux * uu + vx * vv, az9 + uz * uu + vz * vv]);
       map.collider.add({ x0: Math.min(...P9.map(q => q[0])), x1: Math.max(...P9.map(q => q[0])), z0: Math.min(...P9.map(q => q[1])), z1: Math.max(...P9.map(q => q[1])), y0: YF - 0.3, y1: YF + 6.2 }); }
     map.collider.add({ x0: -66.5, x1: -48.8, z0: 77.2, z1: 88.8, y0: YF - 0.3, y1: YF + 5.5 }); }   // 파랑 지붕 창고
-  const OUT = map.world.outside({ clip: 0.6, whole: 4, rect: SR.slice(), open: [[10, 54.5, 24, 56.5]],   /* 학교 칸(담 상자 + 남쪽 실제 주변) 밖만 마을 */ terrain: (x, z) => inSchool(x, z) ? null : (x < TX0 || x > TX1 || z < TZ0 || z > TZ1) ? TY + skirtH(x, z) : TY + tH(x, z) });
-  map.arena.set({ rect: [EX0 + 3, EZ0 + 3, EX1 - 3, EZ1 - 3], msg: GP.some(v => v) ? '🏘 여기가 판 끝이에요(둘레 칸 = 앞으로 넓힐 곳)' : '🏘 여기가 마을 끝이에요', ymin: TY - 6, ymax: TY + Math.max(12, (RANGE ? RANGE.max : 0) + 20, ...Object.values(D.layers).flatMap(l => (l.nature || []).filter(n => n.k === 'hill').map(n => (n.h || 2) * S * 1.2 + 12))) });   // 뒷산 꼭대기까지 오를 수 있게
+  const OUT = map.world.outside({ clip: 0.6, whole: 4, rect: SR.slice(), open: [[10, 54.5, 24, 56.5]],   /* 학교 칸(담 상자 + 남쪽 실제 주변) 밖만 마을 */ terrain: (x, z) => inSchool(x, z) ? null : (x < TX0 || x > BX1 || z < TZ0 || z > BZ1) ? TY + skirtH(x, z) : TY + tH(x, z) });   /* 판 땅 메시 끝(BX1·BZ1)에서 둘레 땅으로 — 둘레 땅 판 쪽 줄 = 판 땅 격자점 그대로라 이음매 높이 같음 */
+  const AR9 = [EX0 + 3, EZ0 + 3, EX1 - 3, EZ1 - 3]; if (SUMMIT && D.range.view) { AR9[0] = Math.min(AR9[0], SUMMIT[0] - 70); AR9[1] = Math.min(AR9[1], SUMMIT[1] - 70); AR9[2] = Math.max(AR9[2], SUMMIT[0] + 70); AR9[3] = Math.max(AR9[3], SUMMIT[1] + 70); }   // 정상 둘레 70m까지 걸어 감(10-15 아이)
+  map.arena.set({ rect: AR9, msg: GP.some(v => v) ? '🏘 여기가 판 끝이에요(둘레 칸 = 앞으로 넓힐 곳)' : '🏘 여기가 마을 끝이에요', ymin: TY - 6, ymax: TY + Math.max(12, (RANGE ? RANGE.max : 0) + 20, ...Object.values(D.layers).flatMap(l => (l.nature || []).filter(n => n.k === 'hill').map(n => (n.h || 2) * S * 1.2 + 12))) });   // 뒷산 꼭대기까지 오를 수 있게
   map.minimap.hide();
   await build({ step: LD.step }); if (map.gone) { LD.el.remove(); css.remove(); map.player.freeze(false); return {}; }
   if (!RANGE) { const P = [], C = [], N = [], R = rng0(77), n = 46, r0 = 286;   // 먼 산 능선(둘레 한 바퀴 · 안개 색에 가까운 푸른빛 — 멀리 갈수록 연하게)
@@ -2172,7 +2190,7 @@ export default async function start(map, params) {
   //   예전 = 방향을 '도'로 넣어 자전거가 몸과 90° 틀어짐 · 걷는 몸 그대로. 이번: 내 몸은 숨기고 타는 아이를 그림(kid.js 색·치비 비례) · 진행 방향 = 움직인 방향(부드럽게 돎)
   //   바퀴·크랭크 = 굴러간 거리만큼(실제 빠르기와 맞음) · 다리 = 엉덩이→무릎→페달 두 마디(IK) · 손 = 핸들 · 비탈 = 앞뒤 바퀴 땅 높이로 숙임 · 돌 때 안쪽으로 살짝 기욺 · 높이는 부드럽게(턱에서 덜컹 없음)
   function makeBike() {
-    const C = { top: 0x5aa6e0, top2: 0x4a90cc, bot: 0x33456b, skin: 0xf7d6b5, hair: 0x5b3f2e, shoe: 0xf6f6f2, bag: 0xe45c46, bag2: 0xc44a37, eye: 0x2d2a33, cap: 0xf2c230, cap2: 0xe0ac1c, frame: 0x2f8fd0, dark: 0x2b2d31, grey: 0x9aa0a6, white: 0xf2f1ea };
+    const C = { top: 0x5aa6e0, top2: 0x4a90cc, bot: 0x33456b, skin: 0xf7d6b5, hair: 0x5b3f2e, shoe: 0xf6f6f2, bag: 0xe45c46, bag2: 0xc44a37, eye: 0x2d2a33, mouth: 0x9a4a42, blush: 0xf6b9a8, cap: 0xf2c230, cap2: 0xe0ac1c, frame: 0x2f8fd0, dark: 0x2b2d31, grey: 0x9aa0a6, white: 0xf2f1ea };
     const Y = new T3.Vector3(0, 1, 0), v9 = new T3.Vector3(), q9 = new T3.Quaternion(), col9b = new T3.Color(), mat = new T3.MeshLambertMaterial({ vertexColors: true }); MATS.push(mat);
     const bake = (L9) => { const P = [], N = [], Cc = []; for (const [g0, hex] of L9) { const g = g0.index ? g0.toNonIndexed() : g0; P.push(...g.attributes.position.array); N.push(...g.attributes.normal.array); col9b.setHex(hex); for (let i = 0; i < g.attributes.position.count; i++) Cc.push(col9b.r, col9b.g, col9b.b); if (g !== g0) g.dispose(); g0.dispose(); }
       const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(N, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(Cc, 3)); GEOS.push(g); return new T3.Mesh(g, mat); };
@@ -2194,7 +2212,9 @@ export default async function start(map, params) {
     const body = [[at(new T3.SphereGeometry(1, 12, 8), [0, HIPY + 0.02, HIPZ], [0.15, 0.09, 0.14]), C.bot], [at(new T3.CapsuleGeometry(0.15, 0.12, 3, 12), [0, HIPY + 0.2 * Math.cos(LEAN), HIPZ + 0.2 * Math.sin(LEAN)], [1, 1, 0.82], LEAN), C.top],
       [at(new T3.CapsuleGeometry(0.12, 0.12, 2, 10), [0, HIPY + 0.22 * Math.cos(LEAN) + 0.06, HIPZ + 0.22 * Math.sin(LEAN) - 0.19], [1.18, 1, 0.52], LEAN), C.bag], [at(new T3.SphereGeometry(1, 18, 12), HC, [0.278, 0.265, 0.26]), C.skin],
       [at(new T3.SphereGeometry(1, 12, 8), [0, HC[1] - 0.02, HC[2] - 0.03], [0.268, 0.2, 0.25]), C.hair], [at(new T3.SphereGeometry(1, 18, 7, 0, Math.PI * 2, 0, Math.PI * 0.5), [0, HC[1] + 0.035, HC[2] - 0.005], [0.278, 0.245, 0.27], -0.12), C.cap],
-      [at(new T3.CylinderGeometry(1, 1, 1, 14), [0, HC[1] + 0.075, HC[2] + 0.2], [0.19, 0.018, 0.13], 0.18), C.cap2], [at(new T3.SphereGeometry(1, 8, 6), [-0.088, HC[1] - 0.035, HC[2] + 0.235], [0.03, 0.046, 0.022]), C.eye], [at(new T3.SphereGeometry(1, 8, 6), [0.088, HC[1] - 0.035, HC[2] + 0.235], [0.03, 0.046, 0.022]), C.eye]];
+      [at(new T3.CylinderGeometry(1, 1, 1, 14), [0, HC[1] + 0.075, HC[2] + 0.2], [0.19, 0.018, 0.13], 0.18), C.cap2], [at(new T3.SphereGeometry(1, 8, 6), [-0.088, HC[1] - 0.035, HC[2] + 0.235], [0.03, 0.046, 0.022]), C.eye], [at(new T3.SphereGeometry(1, 8, 6), [0.088, HC[1] - 0.035, HC[2] + 0.235], [0.03, 0.046, 0.022]), C.eye],
+      [(() => { const g = new T3.TorusGeometry(1, 0.16, 5, 12, Math.PI); g.scale(0.036, 0.03, 0.02); g.rotateZ(Math.PI); return g.translate(0, HC[1] - 0.08, HC[2] + 0.235); })(), C.mouth],   /* 10-15 아이 '자전거 타면 입이 없어져요': 걷는 몸(kid.js)과 같은 웃는 입 · 볼 */
+      ...[-1, 1].map(sd => [(() => { const g = new T3.SphereGeometry(1, 8, 6); g.scale(0.04, 0.022, 0.012); g.rotateY(sd * 0.62); return g.translate(sd * 0.155, HC[1] - 0.075, HC[2] + 0.191); })(), C.blush])];
     for (const sd of [-1, 1]) { const s0 = [sd * 0.17, SH[1] - 0.03, SH[2]], g0 = [sd * GRIP, GY + 0.02, GZ - 0.01]; body.push([along(new T3.CapsuleGeometry(0.05, Math.hypot(g0[0] - s0[0], g0[1] - s0[1], g0[2] - s0[2]) - 0.1, 2, 8), s0, g0), C.top]); body.push([at(new T3.SphereGeometry(1, 8, 6), g0, [0.058, 0.06, 0.058]), C.skin]); }
     bk.add(bake(body));
     // 다리(허벅지 = 반바지 · 정강이 = 살 · 신발) — 매 프레임 IK
@@ -2286,7 +2306,7 @@ export default async function start(map, params) {
     const vLat = (g, big) => (big ? 3.2 : 1.6) * (g.type === 'bus' ? 1.05 : 1), pOff = (big, hw) => hw - (big ? 1.65 : 0.95), pOut = big => big ? 0.8 : 0.45;
     const agents = []; const add = (type, i9, bigOnly) => { let e = pickEdge(bigOnly), fwd = R() < 0.5; const sd0 = R() < 0.5 ? -1 : 1; if (type === 'p') for (let k = 0; k < 30 && PB.has((fwd ? e[0] : e[1]) + '>' + (fwd ? e[1] : e[0]) + ':' + sd0); k++) { e = pickEdge(false); fwd = R() < 0.5; }
       const vmax = type === 'p' ? 1.0 + R() * 0.5 : type === 'bus' ? 6.5 : 7 + R() * 3; agents.push({ id: agents.length, type, i: i9, a: fwd ? e[0] : e[1], b: fwd ? e[1] : e[0], len: e[2], hw: e[4], big: e[3], t: R() * e[2], vmax, v: vmax * 0.6, side: type === 'p' ? sd0 : 1, ph: R() * 6.28, bigOnly, half: type === 'bus' ? 5.3 : type === 'car' ? 2.15 : 0.25,
-        x: 0, z: 0, hx: 0, hz: 1, lat: 0, latT: 0, latK: 0, plan: null, tr: null, lockN: -1, waitL: 0, stuck: 0, stopP: 0, honk: 0, wait: 0, ghost: 0 }); };
+        x: 0, z: 0, hx: 0, hz: 1, lat: 0, latT: 0, latK: 0, plan: null, tr: null, lockN: -1, waitL: 0, waitA: 0, stuck: 0, stopP: 0, honk: 0, wait: 0, ghost: 0 }); };
     for (let i = 0; i < NC; i++) { add('car', i, false); C9.setHex(CARC[(R() * CARC.length) | 0]); carBody.setColorAt(i, C9); }
     for (let i = 0; i < NB; i++) { add('bus', i, true); C9.setHex(i ? 0x3cc76a : 0x2f6fd0); busBody.setColorAt(i, C9); }
     for (let i = 0; i < NP; i++) { add('p', i, false); C9.setHex(SHIRT[(R() * SHIRT.length) | 0]); pBody.setColorAt(i, C9); pArmL.setColorAt(i, C9); pArmR.setColorAt(i, C9); C9.setHex(SKIN[(R() * SKIN.length) | 0]); pHead.setColorAt(i, C9); C9.setHex(HAIR[(R() * HAIR.length) | 0]); pHair.setColorAt(i, C9); C9.setHex(PANTS[(R() * PANTS.length) | 0]); pLegL.setColorAt(i, C9); pLegR.setColorAt(i, C9); agents[agents.length - 1].sc = R() < 0.3 ? 0.74 : 0.94 + R() * 0.1; }   // 어린이 30% · 어른 키 조금씩
@@ -2357,7 +2377,7 @@ export default async function start(map, params) {
     // 차 충돌 상자(내 둘레 차 6대만 · 움직이는 상자) — 몸이 차를 뚫고 지나가지 않게 · 카메라는 통과(nc)
     const DYN = { hs: [], cx: 1e9, cz: 1e9 }, NDYN = 6, NV9 = [];
     const dynAt = (px, pz) => { for (const h of DYN.hs) h.remove(); DYN.hs = []; DYN.cx = px; DYN.cz = pz; for (let k = 0; k < NDYN; k++) { const h = map.collider.add({ x0: px - 30, x1: px + 30, y0: -2e6, y1: -2e6 + 1, z0: pz - 30, z1: pz + 30, nc: true }); h.box.y0 = h.box.y1 = -2e6; DYN.hs.push(h); } };
-    let night = 0, rq = 0, ri9 = 0, honkG = 0, stopped = 0, honks = 0, laneQ = 0, meLane = false;
+    let night = 0, rq = 0, ri9 = 0, honkG = 0, stopped = 0, ghosts = 0, honks = 0, laneQ = 0, meLane = false;
     const place = (g, m1, m2, k) => { const y0 = ty(g.x, g.z), yb = brTop(g.x, g.z), y = Math.max(y0 + (g.type === 'p' ? 0.16 : 0.07), yb > -1e8 ? yb + (g.type === 'p' && !g.tr && Math.abs(pOff(g.big, g.hw)) > g.hw - 2.4 ? 0.15 : 0) : -1e9); g.y = y;
       O3.position.set(g.x, y + (g.type === 'p' && g.v > 0.2 ? Math.abs(Math.sin(g.ph)) * 0.06 : 0), g.z); O3.rotation.set(0, Math.atan2(g.hx, g.hz), 0); O3.scale.set(1, 1, 1); O3.updateMatrix(); m1.setMatrixAt(g.i, O3.matrix); if (m2) m2.setMatrixAt(g.i, O3.matrix); if (k != null) { headL.setMatrixAt(k, O3.matrix); tailL.setMatrixAt(k, O3.matrix); beam.setMatrixAt(k, O3.matrix); } };
     const limb = (m, B, px, py, a) => { _mL.makeRotationX(a); _mL.setPosition(px, py, 0); _mO.multiplyMatrices(B, _mL); m.setMatrixAt(g9i, _mO); }; let g9i = 0;
@@ -2366,24 +2386,35 @@ export default async function start(map, params) {
       pBody.setMatrixAt(g.i, _mB); pHead.setMatrixAt(g.i, _mB); pHair.setMatrixAt(g.i, _mB); limb(pArmL, _mB, -0.21, 1.36, -sw * 0.8); limb(pArmR, _mB, 0.21, 1.36, sw * 0.8); limb(pLegL, _mB, -0.09, 0.86, sw); limb(pLegR, _mB, 0.09, 0.86, -sw); };
     const draw = g => g.type === 'p' ? placeP(g) : place(g, g.type === 'car' ? carBody : busBody, g.type === 'car' ? carDark : busDark, g.type === 'car' ? g.i : NC + g.i);
     for (const g of agents) { pose(g); draw(g); }
+    function arcBusy(g) { const pl = g.plan, d0 = Math.max(0, pl.u0 - g.t), d1 = d0 + (pl.L || 0) + 1.5, wg = carW(g);   // 돌 모퉁이 곡선 자리에 다른 차가 있나
+      for (const o of VEH) { if (o === g || (o.x - g.x) ** 2 + (o.z - g.z) ** 2 > (d1 + g.half + o.half + 3) ** 2) continue; const wo = carW(o), sp = o.half - wo;
+        for (let d = d0; d <= d1; d += 1.0) { const q = aheadAt(g, d); for (let k = -1; k <= 1; k++) { const px = o.x + o.hx * sp * k - q[0], pz = o.z + o.hz * sp * k - q[1]; if (Math.abs(px * q[2] + pz * q[3]) < g.half + wo && Math.abs(px * q[3] - pz * q[2]) < wg + wo) return true; } } }
+      return false; }
     function stepV(g, dt, me) {   // 차·버스: 앞을 보고 빠르기 정하기
       let gap = 1e9, byMe = false; const hx = g.hx, hz = g.hz;
       if (g.ghost <= 0) for (const o of VEH) { if (o === g) continue; const dx = o.x - g.x, dz = o.z - g.z; if (dx * dx + dz * dz > 400) continue; const ah = dx * hx + dz * hz; if (ah <= 0) continue; const lt = Math.abs(dx * hz - dz * hx); if (lt < 1.6 + (o.type === 'bus' ? 0.3 : 0) + (Math.abs(o.hx * hz - o.hz * hx) > 0.5 ? o.half * 0.7 : 0)) gap = Math.min(gap, ah - g.half - (Math.abs(o.hx * hx + o.hz * hz) > 0.5 ? o.half : 1.0)); }
+      if (g.ghost <= 0 && (g.tr || (g.plan && g.lockN === g.plan.node))) { const D9 = Math.min(18, 3 + g.v + g.v * g.v / 14), wg = carW(g);   /* 10-15 아이 '차끼리 부딪혀요': 교차로 차례를 받은 차(모퉁이를 도는 차)는 앞길(곡선)을 쓸어 보고 그 자리에 있는 차·버스 앞에서 섬(도는 차가 버스 꽁무니에 박히던 것) */
+        for (const o of VEH) { if (o === g || (o.plan && !o.tr && o.lockN !== o.plan.node && o.len - o.t < 12 && o.v < 0.5)) continue; const dx0 = o.x - g.x, dz0 = o.z - g.z; if (dx0 * dx0 + dz0 * dz0 > (D9 + g.half + o.half + 2) ** 2) continue; const wo = carW(o), sp = o.half - wo;   /* 정지선에서 차례를 기다리는 차는 뺌(교차로 차례가 맡음) */
+          const on9 = d => { const q = aheadAt(g, d); for (let k = -1; k <= 1; k++) { const px = o.x + o.hx * sp * k - q[0], pz = o.z + o.hz * sp * k - q[1]; if (Math.abs(px * q[2] + pz * q[3]) < g.half + wo && Math.abs(px * q[3] - pz * q[2]) < wg + wo - 0.1) return q; } return null; };
+          if (on9(0)) continue;   /* 이미 겹친 차끼리는 서로 서지 않음(멈춘 채 엉키지 않게 — 지나가며 풀림) */
+          let hit = 1e9; for (let d = 0.8; d <= D9; d += 0.8) { const q = on9(d); if (!q) continue; if (o.hx * q[2] + o.hz * q[3] < 0.5 && o.id < g.id) break; hit = d; break; }   /* 가로지르는 차끼리는 번호 작은 차가 먼저(둘 다 서서 엉키지 않게) */
+          if (hit < 1e8) gap = Math.min(gap, hit - 0.8); } }
       for (const o of PPL) { const dx = o.x - g.x, dz = o.z - g.z; if (dx * dx + dz * dz > 196) continue; const ah = dx * hx + dz * hz; if (ah <= 0) continue; if (Math.abs(dx * hz - dz * hx) < 1.35) gap = Math.min(gap, ah - g.half - 0.4); }
       { const dx = me.x - g.x, dz = me.z - g.z; if (dx * dx + dz * dz < 900 && Math.abs(me.y - (g.y ?? me.y)) < 2.5) { const D9 = Math.min(26, 4 + g.v + g.v * g.v / 14 + (meLane ? 6 : 0)), hit = sweepMe(g, me.x, me.z, meLane ? 0.86 : 0.36, D9);   // LIFE-3: 다음 1초 + 서는 거리 동안 차가 쓸고 갈 자리(모퉁이 돌기 포함)에 내가 있나 · 차도 위면 더 넓게·더 일찍
         if (hit < 1e8) { const gp = hit - (meLane ? 1.6 : 0.35); if (gp < gap) { gap = gp; byMe = true; } } } }
       // 교차로 차례: 마디 10m 앞에서 차례를 받음(먼저 들어간 차가 나갈 때까지 정지선 앞에서 기다림 · 4초 넘으면 지나감)
       if (!g.tr && g.plan && g.len - g.t < 10 && g.lockN !== g.plan.node) { const n = g.plan.node, ow = LK[n], o = ow >= 0 ? agents[ow] : null;
-        if (!o || o.lockN !== n || g.waitL > 4) { if (o && o.lockN === n) o.lockN = -1; unlock(g); LK[n] = g.id; g.lockN = n; } else { g.waitL += dt; gap = Math.min(gap, g.plan.u0 - g.t - 0.5); } }
+        if (g.type === 'bus' && (!o || o.lockN !== n) && g.waitA < 4 && arcBusy(g)) { g.waitA += dt; gap = Math.min(gap, g.plan.u0 - g.t - 0.5 - g.half); } else if (!o || o.lockN !== n || g.waitL > 4) { g.waitA = 0;   /* 버스는 크게 돌아서 모퉁이 곡선 자리가 비었을 때만 차례를 받음(정지선 차를 덮지 않게 · 4초 넘으면 그냥 받음 · 10-15) */ if (o && o.lockN === n) o.lockN = -1; unlock(g); LK[n] = g.id; g.lockN = n; } else { g.waitL += dt; gap = Math.min(gap, g.plan.u0 - g.t - 0.5 - g.half - (o.type === 'bus' ? 4 : 0)); } }   /* 정지선 = 차 앞코가 모퉁이 시작보다 뒤(도는 차 길을 막지 않게) · 버스가 돌 때는 4m 더 뒤(10-15) */
       const tgt = gap > 1e8 ? g.vmax : Math.max(0, Math.min(g.vmax, (gap - 1.2) * 1.4)); g.v += Math.max(-9 * dt, Math.min(3.5 * dt, tgt - g.v)); if (g.v < 0.05 && tgt < 0.05) g.v = 0;
-      if (g.v === 0) { stopped++; g.stuck += dt; if (byMe) { g.stopP += dt; if (g.stopP > 1.1 && g.honk <= 0 && honkG <= 0) { g.honk = 8; honkG = 2.5; honks++; map.sfx('honk'); } } else g.stopP = 0; if (g.stuck > 6 && !byMe) { g.ghost = 1.5; g.stuck = 0; } } else { g.stuck = 0; g.stopP = 0; }
+      if (g.v === 0) { stopped++; g.stuck += dt; if (byMe) { g.stopP += dt; if (g.stopP > 1.1 && g.honk <= 0 && honkG <= 0) { g.honk = 8; honkG = 2.5; honks++; map.sfx('honk'); } } else g.stopP = 0; if (g.stuck > 6 && !byMe) { g.ghost = 1.5; g.stuck = 0; ghosts++; } } else { g.stuck = 0; g.stopP = 0; }
       if (g.ghost > 0) g.ghost -= dt; if (g.honk > 0) g.honk -= dt; }
     function stepP(g, dt, me) {   // 사람: 비켜 가기 · 기다리기
-      let tgt = g.vmax, conflict = false; const hx = g.hx, hz = g.hz;
-      for (const o of PPL) { if (o === g) continue; const dx = o.x - g.x, dz = o.z - g.z; if (dx * dx + dz * dz > 9) continue; const ah = dx * hx + dz * hz; if (ah <= 0 || ah > 2.2) continue; if (Math.abs(dx * hz - dz * hx) > 0.65) continue;
+      let tgt = g.vmax, conflict = false; const hx = g.hx, hz = g.hz; if (g.ghP > 0) g.ghP -= dt;
+      if (!(g.ghP > 0)) for (const o of PPL) { if (o === g) continue; const dx = o.x - g.x, dz = o.z - g.z; if (dx * dx + dz * dz > 9) continue; const ah = dx * hx + dz * hz; if (ah <= 0 || ah > 2.2) continue; if (Math.abs(dx * hz - dz * hx) > 0.65) continue;
         if (o.hx * hx + o.hz * hz < -0.3) { conflict = true; g.latT = g.tr ? 0.55 * (g.tr.pts ? 1 : 0) : g.id < o.id ? pOut(g.big) : -0.2; if (ah < 0.8 && g.id > o.id && !g.tr) tgt = 0; } else tgt = Math.min(tgt, ah < 1.0 ? 0 : o.v); }   // 마주 옴 = 한 사람은 바깥쪽으로(가까우면 다른 사람은 잠깐 섬) · 같은 쪽 = 1m 띄우고 뒤따라 걸음
       if (!g.tr) { const dx = me.x - g.x, dz = me.z - g.z, ah = dx * hx + dz * hz, lt = Math.abs(dx * hz - dz * hx);
-        if (ah > 0 && ah < 2.6 && Math.abs(me.y - (g.y ?? me.y)) < 2) { if (lt < 0.95) { conflict = true; g.latT = pOut(g.big) * ((dx * -hz + dz * hx) * g.side > 0 ? -0.3 : 1); } if (lt < 0.55) { tgt = 0; g.wait += dt; if (g.wait > 2.5 && !g.plan) { g.wait = 0; setEdge(g, g.b, g.a, g.len, g.big, g.hw, Math.max(0.3, g.len - g.t), -g.side); } } else g.wait = 0; } }   // 나 = 비켜 감 · 막히면 서서 기다렸다 돌아감
+        if (ah > 0 && ah < 2.6 && Math.abs(me.y - (g.y ?? me.y)) < 2) { if (lt < 0.95) { conflict = true; g.latT = pOut(g.big) * ((dx * -hz + dz * hx) * g.side > 0 ? -0.3 : 1); } if (lt < 0.55) { tgt = 0; g.wait += dt; if (g.wait > 2.5) { g.wait = 0; g.plan = null; setEdge(g, g.b, g.a, g.len, g.big, g.hw, Math.max(0.3, g.len - g.t), -g.side); } } else g.wait = 0; } }   // 나 = 비켜 감 · 막히면 서서 기다렸다 돌아감
+      if (tgt < 0.05 && !(g.wait > 0)) { g.pw = (g.pw || 0) + dt; if (g.pw > 3.5) { g.pw = 0; if (g.tr) g.ghP = 2.5; else { g.plan = null; setEdge(g, g.b, g.a, g.len, g.big, g.hw, Math.max(0.3, g.len - g.t), -g.side); } } } else g.pw = 0;   /* 10-15 아이 '사람들이 줄지어서 멈춰 있어요': 사람끼리 서로 막혀(마주 보는 두 쌍 · 모퉁이) 3.5초 넘게 서 있으면 돌아서 감 · 모퉁이를 건너는 중이면 잠깐 비켜 지나감 */
       if (conflict) g.latK = 1.2; else if ((g.latK -= dt) <= 0) g.latT = 0; g.lat += Math.max(-1.2 * dt, Math.min(1.2 * dt, g.latT - g.lat));
       g.v += Math.max(-6 * dt, Math.min(2 * dt, tgt - g.v)); }
     return {
@@ -2412,11 +2443,11 @@ export default async function start(map, params) {
       night(v) { night = v; headL.visible = tailL.visible = beam.visible = v > 0; },
       carNear: (x, z, y, pad) => carOn(x, z, y, pad), freeSpot: (x, z, y, rMax) => freeSpot(x, z, y, rMax),
       dispose() { for (const h of DYN.hs) h.remove(); DYN.hs = []; for (const m of meshes) map.remove(m); for (const g of geos) g.dispose(); for (const m of mats) m.dispose(); },
-      get counts() { return { cars: NC, buses: NB, people: NP, stopped, honks, pushes, arrivals, ovl, pnull, dyn: DYN.hs.map(h => [h.box.x0, h.box.x1, h.box.y0, h.box.y1, h.box.z0, h.box.z1].map(v => +v.toFixed(2))), dynC: [DYN.cx, DYN.cz], ppl: PPL.map(g => [+g.x.toFixed(2), +g.z.toFixed(2), g.tr ? 1 : 0, +g.hx.toFixed(2), +g.hz.toFixed(2), +g.v.toFixed(2), g.a, g.b, g.side]), veh: VEH.map(g => [+g.x.toFixed(1), +g.z.toFixed(1), +g.v.toFixed(1), +g.hx.toFixed(2), +g.hz.toFixed(2), +(g.y || 0).toFixed(2), g.tr ? 1 : 0, g.a, g.b, g.type, g.half]) }; } };
+      get counts() { return { cars: NC, buses: NB, people: NP, stopped, ghosts, honks, pushes, arrivals, ovl, pnull, dyn: DYN.hs.map(h => [h.box.x0, h.box.x1, h.box.y0, h.box.y1, h.box.z0, h.box.z1].map(v => +v.toFixed(2))), dynC: [DYN.cx, DYN.cz], ppl: PPL.map(g => [+g.x.toFixed(2), +g.z.toFixed(2), g.tr ? 1 : 0, +g.hx.toFixed(2), +g.hz.toFixed(2), +g.v.toFixed(2), g.a, g.b, g.side]), veh: VEH.map(g => [+g.x.toFixed(1), +g.z.toFixed(1), +g.v.toFixed(1), +g.hx.toFixed(2), +g.hz.toFixed(2), +(g.y || 0).toFixed(2), g.tr ? 1 : 0, g.a, g.b, g.type, g.half]) }; } };
   }
 
   function placeWord(x, z) {   // 지금 자리 말(✨): 길이면 길 이름(큰길·강변길·학교 앞길·고갯길·동네 길) · 아니면 칸 이름표 · 산 · 강가 · 마을
-    const r = nearSeg(x, z, 30), A = areaAt(x, z), en = LANG === 'en'; if (inRing(x, z)) return skirtH(x, z) > 12 ? (en ? 'Mountains (to build later)' : '뒷산 쪽 · 넓힐 곳') : (en ? 'Fields (to build later)' : '들판 · 넓힐 곳');
+    const r = nearSeg(x, z, 30), A = areaAt(x, z), en = LANG === 'en'; if (SUMMIT && (x < EX0 || x > EX1 || z < EZ0 || z > EZ1)) return Math.hypot(x - SUMMIT[0], z - SUMMIT[1]) < 45 ? (en ? 'Summit' : '뒷산 정상') : (en ? 'Summit Trail' : '뒷산 등산로'); if (inRing(x, z)) return skirtH(x, z) > 12 ? (en ? 'Mountains (to build later)' : '뒷산 쪽 · 넓힐 곳') : (en ? 'Fields (to build later)' : '들판 · 넓힐 곳');
     if (r && r.d < r.sg.hw + 2) { if (Math.hypot(x - (SR[0] + SR[2]) / 2, z - (SR[1] + SR[3]) / 2) < 160) return en ? 'School Road' : '학교 앞길'; if (MWALL.length && tH(x, z) > 4) return en ? 'Mountain Pass' : '고갯길'; if (sdAt(x, z) < FPW + 30) return en ? 'Riverside Road' : '강변길'; return r.sg.r.big ? (en ? 'Main Road' : '큰길') : (en ? 'Village Lane' : '동네 길'); }
     if (sdAt(x, z) < FPW + 2) return en ? 'Riverside' : '강가'; if (tH(x, z) > 12) return en ? 'Back Mountain' : '뒷산'; if (A && A.t) return A.t; return en ? 'Our Town' : '우리 마을'; }
   // 지금 할 일 줄(가까운 장소 · 4번/초) · 물 흐름 · 나무 흔들림 · 자전거 · 작은 지도
