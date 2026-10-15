@@ -3666,6 +3666,19 @@ export default async function start(map, params) {
       if (!m) { g.tgt = null; return; } g.homeN = nodeNear(p.x, p.z); g.mktN = nodeNear(...(m.door || [m.x, m.z])); g.full = true; g.tgt = g.mktN; g.pc = PCOL9[p.makes] ?? 0xd8b483; g.cargo = p.makes; g.mkt = m.name; C9.setHex(g.pc); truckCargo.setColorAt(g.i, C9); truckCargo.instanceColor.needsUpdate = true; }
     const VEH = agents.filter(g => g.type !== 'p'), PPL = agents.filter(g => g.type === 'p'), LK = new Int32Array(NO.length).fill(-1);
     for (const g of VEH) if (g.type === 'truck') { pose(g); cargoFor(g); }   // 짐차 첫 짐(가까운 생산지)
+    // PLAUS+ 4 사람 2차(또래 10-16 · SIM-READY homes()와 같은 자료): 걷는 사람 = 그 자리 구역의 어린이/어른/어르신 비율로 역할을 뽑아 옷·키·빠르기 · 시골 어른 = 작업복 · 시내 어른 = 회사원 · 노을·밤 = 어린이 적게(집에) · 처음·다시 놓일 때마다
+    const DRESS = {}; for (const H of HOMES) { const r = DRESS[H.reg] || (DRESS[H.reg] = [0, 0, 0]); r[0] += H.kid; r[1] += H.adult; r[2] += H.old; }
+    const ROLEN = { kid: 0, adult: 0, old: 0 };
+    function dressFor(g) { const reg = regionOf(g.x, g.z), r = DRESS[reg] || [1, 3, 1], tot = (r[0] + r[1] + r[2]) || 1, u = R(), rur = !!RURAL[reg] && reg !== '관광', tm = (map.time && map.time()) || 'day', i = g.i;
+      let role = u < r[0] / tot ? 'kid' : u < (r[0] + r[1]) / tot ? 'adult' : 'old'; if (tm !== 'day' && role === 'kid' && R() < (tm === 'night' ? 0.9 : 0.6)) role = 'adult'; if (g.role) ROLEN[g.role]--; ROLEN[role]++;
+      let sh, pa, hair = HAIR[(R() * HAIR.length) | 0], sc = 0.96 + R() * 0.08, v = 1.0 + R() * 0.5;
+      if (role === 'kid') { sh = [0xe0453a, 0xf2c230, 0x3cc76a, 0x3d74c9, 0xf08fb2][(R() * 5) | 0]; pa = [0x3d5a8a, 0x24324a, 0x5a4a3a][(R() * 3) | 0]; sc = 0.72 + R() * 0.06; v = 1.1 + R() * 0.4; }
+      else if (role === 'old') { sh = [0x9a8a6a, 0x7a6a8a, 0xb8a07a, 0x6a7a6a][(R() * 4) | 0]; pa = [0x5a4a3a, 0x3b4a5c, 0x6b7a8a][(R() * 3) | 0]; hair = [0xd8d8d8, 0xbdbdbd, 0xe8e8e8][(R() * 3) | 0]; sc = 0.9 + R() * 0.06; v = 0.6 + R() * 0.3; }
+      else if (rur) { sh = [0x7a8a5a, 0xef8b33, 0x5a7a9a, 0xb8a07a][(R() * 4) | 0]; pa = [0x3b4a5c, 0x5a4a3a, 0x2f4a3a][(R() * 3) | 0]; }   // 시골 어른 = 작업복
+      else { sh = [0xffffff, 0x2b313a, 0x7fb8d0, 0xd8d4ca, 0xf08fb2][(R() * 5) | 0]; pa = [0x24324a, 0x2e2e33, 0x3b4a5c][(R() * 3) | 0]; }   // 시내 어른 = 회사원
+      g.role = role; g.sc = sc; g.vmax = v; C9.setHex(sh); pBody.setColorAt(i, C9); pArmL.setColorAt(i, C9); pArmR.setColorAt(i, C9); C9.setHex(pa); pLegL.setColorAt(i, C9); pLegR.setColorAt(i, C9); C9.setHex(hair); pHair.setColorAt(i, C9);
+      for (const m of [pBody, pArmL, pArmR, pLegL, pLegR, pHair]) if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+    for (const g of PPL) { pose(g); dressFor(g); }
     const SIGN = new Map(); for (const s9 of SIGS) { let bi = -1, bd = 2.5; for (let i = 0; i < NO.length; i++) { const d = Math.hypot(NO[i][0] - s9.x, NO[i][1] - s9.z); if (d < bd) { bd = d; bi = i; } } if (bi >= 0) SIGN.set(bi, s9); }   // SIGNAL-1 신호 교차로 마디
     const brTop = (x, z) => { for (const b of BRIDGES) if (x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1) return b.y1; return -1e9; };
     const unlock = g => { if (g.lockN >= 0 && LK[g.lockN] === g.id) LK[g.lockN] = -1; g.lockN = -1; g.waitL = 0; };
@@ -3785,7 +3798,7 @@ export default async function start(map, params) {
         if ((rq += dt) > 0.4) { rq = 0; const cp = map.camera.position; for (let k = 0; k < 6; k++) { const g = agents[ri9 = (ri9 + 1) % agents.length]; if (g.type === 'bus') continue;
           if (Math.hypot(g.x - cp.x, g.z - cp.z) < 280) continue; const near = []; for (let e = 0; e < edges.length; e++) { const d = Math.hypot(mid[e][0] - cp.x, mid[e][1] - cp.z); if (d > 60 && d < 240) near.push(e); } if (!near.length) continue;   // 화면 밖(60m 너머)에서 나타나게
           const e = edges[near[(R() * near.length) | 0]], fwd = R() < 0.5; if (g.type === 'p' && PB.has((fwd ? e[0] : e[1]) + '>' + (fwd ? e[1] : e[0]) + ':' + g.side)) continue; const tt = R() * e[2], A = NO[fwd ? e[0] : e[1]], B = NO[fwd ? e[1] : e[0]], sx = A[0] + (B[0] - A[0]) * tt / e[2], sz = A[1] + (B[1] - A[1]) * tt / e[2];
-          if (g.type !== 'p' && VEH.some(o => o !== g && Math.hypot(o.x - sx, o.z - sz) < 12)) continue; unlock(g); setEdge(g, fwd ? e[0] : e[1], fwd ? e[1] : e[0], e[2], e[3], e[4], tt, g.side); g.v = g.vmax * 0.6; g.lat = g.latT = 0; pose(g); if (g.type === 'truck') cargoFor(g); } }
+          if (g.type !== 'p' && VEH.some(o => o !== g && Math.hypot(o.x - sx, o.z - sz) < 12)) continue; unlock(g); setEdge(g, fwd ? e[0] : e[1], fwd ? e[1] : e[0], e[2], e[3], e[4], tt, g.side); g.v = g.vmax * 0.6; g.lat = g.latT = 0; pose(g); if (g.type === 'truck') cargoFor(g); else if (g.type === 'p') dressFor(g); } }
         for (const g of agents) { if (g.type === 'p') stepP(g, dt, me); else stepV(g, dt, me); }
         for (const g of agents) { const ds = g.v * dt; g.ph += dt * (g.type === 'p' ? 5.6 * g.v / (g.sc || 1) : 7 * Math.min(1, g.v / g.vmax));
           if (g.tr) { g.tr.s += ds; if (g.tr.s >= g.tr.L) endTr(g); }
@@ -3814,7 +3827,7 @@ export default async function start(map, params) {
       vis(v) { for (const m of meshes) m.visible = v && (m === headL || m === tailL || m === beam ? night > 0 : true); },   // INDOOR-1: 안에 들어가 있는 동안 숨김
       carNear: (x, z, y, pad) => carOn(x, z, y, pad), freeSpot: (x, z, y, rMax) => freeSpot(x, z, y, rMax),
       dispose() { for (const h of DYN.hs) h.remove(); DYN.hs = []; for (const m of meshes) map.remove(m); for (const g of geos) g.dispose(); for (const m of mats) m.dispose(); },
-      get counts() { return { cars: NC, buses: NB, people: NP, busStops, trucks: VEH.filter(g => g.type === 'truck').map(g => ({ c: g.cargo, m: g.mkt, full: !!g.full, x: Math.round(g.x), z: Math.round(g.z), tgt: g.tgt, v: +g.v.toFixed(1) })), stopped, ghosts, honks, pushes, arrivals, ovl, pnull, bumps, knocks, red: VEH.filter(g => g.red).length, redQ: VEH.filter(g => g.redQ).length, sigW: PPL.filter(g => g.sigW).length, dyn: DYN.hs.map(h => [h.box.x0, h.box.x1, h.box.y0, h.box.y1, h.box.z0, h.box.z1].map(v => +v.toFixed(2))), dynC: [DYN.cx, DYN.cz], ppl: PPL.map(g => [+g.x.toFixed(2), +g.z.toFixed(2), g.tr ? 1 : 0, +g.hx.toFixed(2), +g.hz.toFixed(2), +g.v.toFixed(2), g.a, g.b, g.side]), veh: VEH.map(g => [+g.x.toFixed(1), +g.z.toFixed(1), +g.v.toFixed(1), +g.hx.toFixed(2), +g.hz.toFixed(2), +(g.y || 0).toFixed(2), g.tr ? 1 : 0, g.a, g.b, g.type, g.half]) }; } };
+      get counts() { return { cars: NC, buses: NB, people: NP, roles: { ...ROLEN }, busStops, trucks: VEH.filter(g => g.type === 'truck').map(g => ({ c: g.cargo, m: g.mkt, full: !!g.full, x: Math.round(g.x), z: Math.round(g.z), tgt: g.tgt, v: +g.v.toFixed(1) })), stopped, ghosts, honks, pushes, arrivals, ovl, pnull, bumps, knocks, red: VEH.filter(g => g.red).length, redQ: VEH.filter(g => g.redQ).length, sigW: PPL.filter(g => g.sigW).length, dyn: DYN.hs.map(h => [h.box.x0, h.box.x1, h.box.y0, h.box.y1, h.box.z0, h.box.z1].map(v => +v.toFixed(2))), dynC: [DYN.cx, DYN.cz], ppl: PPL.map(g => [+g.x.toFixed(2), +g.z.toFixed(2), g.tr ? 1 : 0, +g.hx.toFixed(2), +g.hz.toFixed(2), +g.v.toFixed(2), g.a, g.b, g.side]), veh: VEH.map(g => [+g.x.toFixed(1), +g.z.toFixed(1), +g.v.toFixed(1), +g.hx.toFixed(2), +g.hz.toFixed(2), +(g.y || 0).toFixed(2), g.tr ? 1 : 0, g.a, g.b, g.type, g.half]) }; } };
   }
 
   function placeWord(x, z) {   // 지금 자리 말(✨): 길이면 길 이름(큰길·강변길·학교 앞길·고갯길·동네 길) · 아니면 칸 이름표 · 산 · 강가 · 마을
