@@ -225,6 +225,7 @@ export function createMapApi(host, NAV, META) {
   const interact = {
     // E키 지점 추가 — main.js hotTick·act가 그대로 처리(h.use가 있으면 그걸 부른다)
     add(o) { const h = { kind: o.kind || 'game', x: o.x, y: o.y ?? floorY(o.x, o.z), z: o.z, r: o.r ?? 1.2, label: o.label || '살펴보기', use: o.use, once: !!o.once, id: 'game:' + (o.owner || 'map') + ':' + (++gid) };
+      for (const k of ['yaw', 'seat', 'from', 'to', 'at', 'dur']) if (o[k] != null) h[k] = o[k];   // 'sit'(앉기 방향 yaw · 좌석 seat) · 'slide'(from → to) 같은 기본 행동을 게임 지점에서도(마을 벤치·미끄럼 · 10-15)
       HOT.push(h); addPoi({ id: h.id, label: h.label, x: h.x, y: h.y, z: h.z, r: h.r, zone: (zoneAt(h.x, h.y, h.z) || {}).id || null, tags: ['game'], stand: null, src: 'game', hot: h });
       return { hot: h, remove() { const i = HOT.indexOf(h); if (i >= 0) HOT.splice(i, 1); POI.delete(h.id); } }; },
     // 기존 지점 켜고 끄기: filter = kind 문자열 | (h) => bool
@@ -655,7 +656,7 @@ export function createMapApi(host, NAV, META) {
       tour: world.tour || [],   // TOUR-1(09-27): 견학 안내 선생님·안내판 자리(읽기 전용 — world.js가 사람·판을 놓은 곳) · 글은 games/tour_data.js
       // ENGINE-1(09-27) 행동 사전 — §12. 전부 게임이 멈추면(dispose → ENG.reset) 처음대로
       see: ENG.see, hide: ENG.hide, note: (t9, b9) => ENG.note(t9, b9), investigate: ENG.investigate, dig: ENG.dig, prop: ENG.prop, carry: ENG.carry,
-      story: ENG.story, door: ENG.door, chaser: ENG.chaser, fade: (s9, c9) => ENG.fade(s9, c9),
+      story: ENG.story, door: ENG.door, chaser: ENG.chaser, fade: (s9, c9, m9) => ENG.fade(s9, c9, m9),
       top: host.top ? { enter: o => { const T9 = host.top; t({ remove: () => T9.exit() }); return T9.enter(o); }, exit: () => host.top.exit(), floor: f => host.top.floor(f), look: (x, z, d) => host.top.look(x, z, d), ground: (sx, sy) => host.top.ground(sx, sy), setTool: t => host.top.setTool(t), marks: L => host.top.marks(L), vision: m => host.top.vision(m), get on() { return host.top.on; }, get state() { return host.top.state; } } : null,   // TOP-1(10-04): 하늘에서 보기(게임이 멈추면 저절로 나옴)
       lego: on => { if (!world.lego) return; world.lego(!!on); if (on) t({ remove: () => world.lego(false) }); },   // LEGO-2(10-04): 학교 전체 레고 무늬(블록 놀이) — 놀이가 멈추면 꺼짐
       film: host.film ? { play: (shots, o) => { const f = host.film; t({ remove: () => f.stop('stop') }); return f.play(shots, o); }, stop: k => host.film.stop(k), get on() { return host.film.on; } } : null,   // FILM-1(10-04): 오프닝·클로징 영상(게임이 멈추면 영상도 멈춤) — v2/js/film.js

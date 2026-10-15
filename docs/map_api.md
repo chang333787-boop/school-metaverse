@@ -58,7 +58,7 @@ map.q.groundAt / blocked / ceilAt / floorY(x,z,층) / ray(a,b,{ignoreNc,minH}) /
 map.q.rayHit(a,b,{skipDyn}) → {t, n:[x,y,z], dyn, ns, box}|null · q.overlap({x0..z1},{skipDyn}) → 상자|null · q.baseAt(x,z)   // BLOCK-1(§22): 맞은 면 방향 · 겹침 · 땅/1층 바닥(충돌 상자 없이)
 map.player.get() → {x,y,z,h,ground,zone} · teleport(대상,{h,floor}) · face(h) · lookAt(대상) · freeze(on) · speed(0.5~2.5 · 2.5 = 마을 자전거 내리막·자전거 도로) · input(사람이 누르는 이동만 — 키·조이스틱 · steer 뺌) · pose('swim'|'dizzy'|null)(몸 자세 덮어쓰기 — 헤엄 · 엉덩방아 어지러움 · 게임이 멈추면 풀림 · 10-15) · unstick()(3m 안 걷는 칸으로) · steer(dx,dz,속도,카메라따라)/steer(null)(GUIDE-1 자동 걷기 — 키·조이스틱이 먼저 · 게임이 멈추면 끔) · view('first'|'third')·first·pitchLow(라디안)·look(dx,dy)(WG-FPS 10-03 — 1인칭 전환·위로 보는 한계·터치 시점 · 게임이 멈추면 원래대로) · freeMouse(on)(FREE-MOUSE 10-03 — 포인터 잠금 없이 마우스 늘 보임 · 누른 채 끌기 = 시점 · 끌지 않은 톡(마우스·터치) = window 이벤트 `sm-click` {x, y, touch?} · 게임이 멈추면 끔)
 map.on(type,fn) → off · map.once(type,fn)       // 'zone'{prev,next}(10Hz·2표본 확정·경계 0.25m 머묾) · 'interact'{hot} · 'tick'{dt} · 'time' · 'teleport' · 'stuck'{x,y,z} · 'gamestart' · 'gamestop'
-map.interact.add({x,y,z,r,label,use(h),once}) → {remove} · interact.enable(kind|fn, on) · interact.list({kind,zone})
+map.interact.add({x,y,z,r,label,use(h),once, kind?, yaw?, seat?, from?, to?, at?, dur?}) → {remove} · interact.enable(kind|fn, on) · interact.list({kind,zone})   // kind 'sit'(yaw · seat{x,y,z,yaw} = 몸은 좌석 위 — seat 물건을 게임이 옮기면 몸도 따라감: 마을 그네) · 'slide'(from → to · yaw · dur 초) 같은 기본 행동을 게임 지점에서도(10-15)
 map.trigger.add({x,y,z,r} | {rect:[x0,z0,x1,z1],y0,y1}, {enter,exit,once}) → {remove}   // 10Hz — r ≥ 0.8 권장(달리기 7.5m/s)
 map.collider.add({x0,x1,y0,y1,z0,z1},{ns}) → {remove}   // 길격자엔 안 들어감 → nav.block을 같이
 map.arena.set('school' | {rect} | {poly} | null)        // 소프트 경계: 밖에 0.25초 넘게 있으면 마지막 안전 지점으로(게임 중 기본 'school') · {rect|poly, msg}면 그때 알림 = msg(기본 '학교 밖으로는 나갈 수 없어요')
@@ -75,7 +75,7 @@ SD2.map.stuckLog — 이동키를 누른 채 1.5초 못 움직이고 몸이 충�
 SD2.map.check() → {ok, zonesNoMeta, metaNoZone, dupIds, labelBad, extraBad, spawnsBad, poisBad, hotUnreachable, playBad, traps, outsidePct, noZoneInSchoolPct}
 SD2.map.game.load(id, params) / stop() / current   ·  SD2.camPose(…) (3인칭 카메라 식) · SD2.phys{groundAt,blockedAt,ceilAt,camHit} · SD2.CTRL{frozen,speed}
 // SHRINK-1(§12.12): map.player.scale(s, o)/scaled()/groundAt/blockedAt/pos()
-// ENGINE-1 행동 사전(§12): map.player.crouch/crouched/setCrouch/hidden/noise · map.see · map.hide · map.note · map.investigate · map.dig · map.prop · map.carry · map.story · map.door · map.chaser · map.fade · map.time
+// ENGINE-1 행동 사전(§12): map.player.crouch/crouched/setCrouch/hidden/noise · map.see · map.hide · map.note · map.investigate · map.dig · map.prop · map.carry · map.story · map.door · map.chaser · map.fade(sec, color, mid?) · map.time   // fade의 mid = 화면이 다 덮인 동안 부르는 async 함수(끝날 때까지 덮인 채로 — 마을 집 안 들어가기 · 10-15)
 // G-ESCAPE(§12.13): map.lights(false|true) 불 끄기 · map.flashlight(true|false) 손전등 — 새 조명 없음 · 게임이 멈추면 원래대로
 // NPC-MOVE·WORLD-FX(§16 · found2 09-27): map.npc.list/get/find/hide/show/home/move/pose/checksum · map.world.spawn/move/remove/get/list/light/door/paint/water/wind/pad — 게임이 멈추면 전부 원래대로
 // G3-SHRINK2(§13.5): map.minimap.show({zoom:{r, rect, y}}) · minimap.zoom(z|null) · minimap.zoomed — 게임 네모 안 확대 지도(가구 윗면까지)
