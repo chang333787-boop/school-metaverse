@@ -414,7 +414,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) keysC
 let camYaw = 0, camPitch = 0.3, camFirst = false;
 addEventListener('keydown', e => { if (e.code === 'KeyV' && !e.repeat) camFirst = !camFirst; });   // 1인칭 ↔ 3인칭(누르고 있어 자동 반복돼도 한 번만)
 const CAM_D = 6.3;
-let camD = CAM_D;
+let camD = CAM_D, camLift = 0;   // CAM-6(10-15 마을 산): 오르막·뒤가 높은 비탈에서 카메라를 들어 올리는 양(부드럽게)
 canvas.addEventListener('click', () => { if (!TOUCH.on && !CTRL.freeMouse) canvas.requestPointerLock(); });   // 터치 기기엔 포인터 잠금이 없다(드래그가 시점) · FREE-MOUSE면 잠그지 않음
 // 마우스 시점(PERF-WIN): 움직임을 모았다가 프레임마다 한 번 더한다(mouseApply — 이벤트 수·프레임 수와 무관하게 같은 양 · 느린 PC에서 여러 이벤트가 한 프레임에 몰려도 부드럽게). 감도는 예전 그대로(0.0026·0.0022 rad/px).
 //  튀는 값 버리기(물총 '위로 꺾임' 버그 — 크롬이 잠그는 순간·창 포커스 직후, 윈도에선 잠금 중에도 가끔 수백 px 한 번):
@@ -552,14 +552,17 @@ function step(dt) {
     camera.position.set(C.x0 + rx, C.y, C.z0 + rz);
     camera.lookAt(hx + rx, hy, hz + rz);
   } else {
-    const hx = SE ? SE.x : P.x, hy = (SE ? SE.y + 0.1 : P.y) + headH, hz = SE ? SE.z : P.z, pch = indoor ? Math.min(camPitch, 0.2) : camPitch, CD = indoor ? 3.3 : CAM_D;
+    const hx = SE ? SE.x : P.x, hy = (SE ? SE.y + 0.1 : P.y) + headH, hz = SE ? SE.z : P.z, CD = indoor ? 3.3 : CAM_D; let pch = indoor ? Math.min(camPitch, 0.2) : camPitch;
+    { let tgt = 0; if (world.overAt && !indoor && !SE && !camFirst) { const g0 = world.overAt(hx, hz, hy - headH); if (g0 != null) { const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), gA = world.overAt(hx + fx * 6, hz + fz * 6, hy), gB = world.overAt(hx - fx * CD, hz - fz * CD, hy);   // CAM-6(10-15 교사 '산 오를 때 카메라가 위로 잘 안 따라와'): 마을 땅(덮어쓴 땅)에서만
+          const up = gA != null ? Math.max(0, (gA - g0) / 6) : 0, need = gB != null ? Math.asin(Math.max(-1, Math.min(1, (gB + 1.4 - hy) / CD))) - pch : 0; tgt = Math.min(0.55, Math.max(up * 0.95, need, 0)); } }
+      camLift += (tgt - camLift) * Math.min(1, dt * 2.4); pch += camLift; }   // 앞이 오르막 = 비탈 위가 보이게 들어 올림 · 뒤가 높은 비탈 = 카메라가 땅에 박히지 않게 · 내려가면 천천히 원래대로
     const want = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect).want;
     camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);   // 당김은 즉시·복귀는 이징(지터 방지)
     const C = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect, camD);   // 실제 거리에서 옆벽 비키기
     camSh = Math.abs(C.sh) > Math.abs(camSh) || C.sh * camSh < 0 ? C.sh : camSh + (C.sh - camSh) * Math.min(1, dt * 8);   // 비키기는 즉시·돌아오기는 이징
     const sh9 = camSh + (CTRL.shoulder || 0), rx = Math.cos(camYaw) * sh9, rz = -Math.sin(camYaw) * sh9;   // GAME-WG: CTRL.shoulder = 어깨 너머 시점(게임이 바깥에서만 켬 — map.player.shoulder)
     camera.position.set(C.x0 + rx, C.y, C.z0 + rz);
-    camera.lookAt(hx + rx, hy, hz + rz);
+    camera.lookAt(hx + rx, hy + camLift * 2.2, hz + rz);   // CAM-6: 들어 올린 만큼 시선도 비탈 위로
   }
   if (CAM_OVR) CAM_OVR(dt);   // TITLE-1: 오프닝 카메라(평소 자리를 목표로 읽고 덮어쓴다)
   if (SHOT) applyShot();
