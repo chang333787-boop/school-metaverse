@@ -144,7 +144,7 @@ export const RING_FILLS = [
   { cell: '가13', k: 'green', type: 'beach' },
   { cell: '나6', k: 'work', type: 'office', dens: 'sparse' }, { cell: '나7', k: 'work', type: 'office', dens: 'sparse' }, { cell: '나8', k: 'live', type: 'house', dens: 'normal' },
   { cell: '마2', k: 'work', type: 'shop', dens: 'sparse' }, { cell: '바1', k: 'work', type: 'shop', dens: 'sparse' }, { cell: '바2', k: 'work', type: 'shop', dens: 'sparse', style: ['parking'] },
-  { cell: '사1', k: 'green', type: 'park', style: ['parking'], ai: '빈칸 — 아쿠아리움 주차장 + 잔디' }, { cell: '아1', k: 'green', type: 'park' }, { cell: '아2', k: 'green', type: 'park' },
+  { cell: '사1', k: 'green', type: 'park', style: ['parking'], ai: '빈칸 — 아쿠아리움 주차장 + 잔디' }, { cell: '아1', k: 'green', type: 'greenhouses', ai: '빈칸 — 논밭 옆 들이라 비닐하우스 단지로(교사 10-15 고장 개연성)' }, { cell: '아2', k: 'green', type: 'orchard', ai: '빈칸 — 논밭 옆 들이라 과수원으로(교사 10-15 고장 개연성)' },
   { cell: '다13', k: 'green', type: 'park', style: ['trail'], ai: '빈칸 — 해안 산책로·잔디 공원' }, { cell: '라13', k: 'green', type: 'park', ai: '빈칸 — 강 하구 둔치' },
   { cell: '자1', k: 'work', type: 'shop', dens: 'normal' }, { cell: '자2', k: 'live', type: 'apt', dens: 'dense' }, { cell: '자8', k: 'work', type: 'shop', dens: 'normal' },
   { cell: '차3', k: 'work', type: 'office', dens: 'sparse' }, { cell: '차4', k: 'live', type: 'house', dens: 'normal', ai: '빈칸 — 둘레 맞춰 주택가' }, { cell: '차5', k: 'green', type: 'park', ai: '빈칸 — 학교(자3) 옆 공원' },

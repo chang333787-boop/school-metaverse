@@ -7,7 +7,7 @@
 export const meta = { id: 'town', title: '마을 세계', api: 1 };
 
 // 매트 색(블록 색 이름 → 색) · 색 규칙(교사 10-12): 빨강·주황 = 사는 곳 · 노랑 = 일하는 곳 · 파랑(남색) = 모두가 쓰는 곳 · 흰색 = 병원 · 초록 = 자연
-const COL = { mred: 0xa9665a, mbrown: 0x8c6a55, mslate: 0x6f7d8a, mor: 0xb98a62, mtan: 0xc2a77c, msand: 0xb7ab92, red: 0xd9473b, orange: 0xef8b33, yellow: 0xf2c230, green: 0x4f9e4a, navy: 0x2f4a8a, blue: 0x3d74c9, white: 0xf2f1ea, black: 0x3a3a3a, brown: 0x8a5a36, pink: 0xf08fb2, purple: 0x8a5bd1, gray: 0x9a9fa5, sky: 0x8fd0f0 };
+const COL = { mred: 0xa9665a, mbrown: 0x8c6a55, mslate: 0x6f7d8a, mor: 0xb98a62, msea: 0x4f7fa8, mteal: 0x3f8580, mtan: 0xc2a77c, msand: 0xb7ab92, red: 0xd9473b, orange: 0xef8b33, yellow: 0xf2c230, green: 0x4f9e4a, navy: 0x2f4a8a, blue: 0x3d74c9, white: 0xf2f1ea, black: 0x3a3a3a, brown: 0x8a5a36, pink: 0xf08fb2, purple: 0x8a5bd1, gray: 0x9a9fa5, sky: 0x8fd0f0 };
 const KIND_OF_COLOR = { mred: 'house', mbrown: 'house', mslate: 'house', mor: 'house', mtan: 'shop', msand: 'shop', red: 'house', orange: 'house', pink: 'house', yellow: 'shop', navy: 'public', blue: 'public', purple: 'public', white: 'hospital', green: 'green', brown: 'house', gray: 'public', black: 'public' };
 const NAMEKIND = [[/수산|어시장|횟집|생선/, 'fishmarket'], [/어구|그물/, 'gearshed'], [/축구장|운동장|경기장/, 'pitch'], [/소방/, 'fire'], [/경찰|파출소|지구대/, 'police'], [/병원|보건|의원|약국/, 'hospital'], [/학교|초등|중학|고등|유치원/, 'school'], [/공장/, 'factory'], [/아파트|빌라/, 'apt'],
   [/도서관/, 'library'], [/우체국/, 'post'], [/공원|놀이터|쉼터/, 'park'], [/마트|가게|시장|상점|빵|편의점|슈퍼|카페|식당|문구|꽃집|가판/, 'shop'], [/회사|사무실|은행/, 'office'], [/시청|구청|주민|복지|센터|체육관|박물관|교회|성당|절/, 'public']];
@@ -571,7 +571,7 @@ export default async function start(map, params) {
     return c;
   }
   function prepTints() {   // 들 물감(공원·풀밭·모래) → 꼭짓점 · 가장자리는 부드럽게
-    GT.fill(0); GTW.fill(0); const HEX = { park: 0x8fd06a, grass: 0x9ccf72, sand: 0xe6d3a0, lawn: 0x86c95c };
+    GT.fill(0); GTW.fill(0); const HEX = { park: 0x8fd06a, grass: 0x9ccf72, sand: 0xe6d3a0, lawn: 0x86c95c, gh: 0xa9bf78 };
     for (const it of L.nature) { if (it.k !== 'field' && it.k !== 'sand') continue; const sub = it.k === 'sand' ? 'sand' : it.sub || 'grass'; if (!HEX[sub]) continue; const sh = shapeOf(it); if (!sh) continue; const col = rgb(HEX[sub]), [i0, j0, i1, j1] = nodeRange(bboxOf(sh), 2);
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const x = nx(i), z = nz(j), k = j * NX + i; if (!inShape(sh, x, z) || WK[k]) continue; const e = sh.rect ? edgeD(sh, x, z) : 3, w = it.soft ? Math.max(0, Math.min(1, (edgeD(sh, x, z) + (vnoise(x / 11, z / 11) - 0.5) * it.soft) / it.soft)) * 0.92 : Math.min(1, 0.35 + e / 4) * 0.85;   /* soft = 가장자리 섞는 너비(m · 들쭉날쭉 — 10-15 모래와 풀 경계) */ if (w > GTW[k]) { GTW[k] = w; GT[k * 3] = col[0]; GT[k * 3 + 1] = col[1]; GT[k * 3 + 2] = col[2]; } } } }
   function drawGround(group) {
@@ -704,6 +704,11 @@ export default async function start(map, params) {
       } else if (sub === 'terrace') {   // MTN-3 계단식 밭: 평평한 층 위에만 밭 결 + 등고선 따라 짧은 이랑 · 층 사이 둑(가파른 곳)은 풀 둑
         const R = rng0(sd); cellsIn(sh, 2.5, (cx, cz, s2) => { const sl = Math.abs(ty(cx + s2, cz) - ty(cx - s2, cz)) + Math.abs(ty(cx, cz + s2) - ty(cx, cz - s2)); gpad(cx, cz, s2 * 2, s2 * 2, 0, 0.04, sl > 0.8 ? (R() < 0.5 ? 0x6f9a46 : 0x7aa54f) : R() < 0.5 ? 0x8a6a45 : 0x7d6142); });   /* 층 = 흙 · 층 사이 둑 = 풀 둑(밭두렁 · 등고선 띠가 초록으로 보이게) */
         { const [bx0, bz0, bx1, bz1] = bboxOf(sh); for (let z = bz0 + 1.1; z < bz1; z += 2.2) for (let x = bx0 + 1.1; x < bx1; x += 2.2) { if (!inShape(sh, x, z)) continue; const gx = ty(x + 1, z) - ty(x - 1, z), gz = ty(x, z + 1) - ty(x, z - 1); if (Math.abs(gx) + Math.abs(gz) > 0.22 || onRoad(x, z, 0.6) || edgeD(sh, x, z) < 1.5) continue; const ry = Math.atan2(-gz, gx) + Math.PI / 2; dbx(x, ty(x, z) + 0.06, z, 1.6, 0.28, 0.42, ry, ((x + z) / 2.2 | 0) % 2 ? 0x5f9a3f : 0x6fae48); } }   /* 고른 격자(이랑끼리 안 겹침) · 등고선 방향 */
+      } else if (sub === 'gh') {   // PLAUS 3 비닐하우스 단지(✨ 들 빈칸): 긴 변 따라 22m 동을 줄줄이(사이 3.5m 고랑) · 길·물·비탈·학교·아이 소품 자리는 비움
+        const ry9 = along ? 0 : Math.PI / 2, hx9 = along ? 11.5 : 4, hz9 = along ? 4 : 11.5, A0 = along ? x0 : z0, A1 = along ? x1 : z1, B0 = along ? z0 : x0, B1 = along ? z1 : x1;
+        for (let b9 = B0 + 11; b9 <= B1 - 11; b9 += 10.5) for (let a9 = A0 + 18; a9 <= A1 - 18; a9 += 26) { const x = along ? a9 : b9, z = along ? b9 : a9, C4 = [[x - hx9, z - hz9], [x + hx9, z - hz9], [x + hx9, z + hz9], [x - hx9, z + hz9]];
+          if (C4.concat([[x, z]]).some(([a, b]) => !inShape(sh, a, b) || onRoad(a, b, 2) || wAt(a, b) || inSchool(a, b) || sdAt(a, b) < FPW + 5) || occHit(x - hx9, z - hz9, x + hx9, z + hz9)) continue;
+          const hs = C4.map(([a, b]) => ty(a, b)); if (Math.max(...hs) - Math.min(...hs) > 0.6) continue; greenhouse(x, z, ry9); occAdd(x - hx9, z - hz9, x + hx9, z + hz9); }
       } else if (sub === 'orchard') {
         cellsIn(sh, 2.5, (cx, cz, s2) => flat(cx - s2, cz - s2, cx + s2, cz + s2, ty(cx, cz) + 0.04, 0x9cc46a));
         const R = rng0(sd); for (let z = z0 + 3; z < z1 - 1; z += 5.5) for (let x = x0 + 3; x < x1 - 1; x += 5.5) { if (!inShape(sh, x, z)) continue;
@@ -1310,9 +1315,9 @@ export default async function start(map, params) {
         const xs = corners.map(p => p[0]), zs = corners.map(p => p[1]), x0 = Math.min(...xs) - 1.5, x1 = Math.max(...xs) + 1.5, z0 = Math.min(...zs) - 1.5, z1 = Math.max(...zs) + 1.5;
         if (corners.some(([x, z]) => !inShape(sh, x, z) || onRoad(x, z, 1.0) || wAt(x, z) || sdAt(x, z) < FPW + 7 || seaSd(x, z) < 30 || inRect(x, z) || tH(x, z) > 3) || occHit(x0, z0, x1, z1)) return false;
         { const hs = corners.map(([x, z]) => tH(x, z)), gs = corners.map(([x, z]) => ty(x, z)); if (Math.max(...hs) - Math.min(...hs) > 0.8 || Math.max(...gs) - Math.min(...gs) > 1.2) return false; }   /* 실제 땅(ty — 둑·길 깎기 포함)으로도 1.2m 넘게 기울면 안 지음(10-14 묻힘 1.9m) */   // 비탈(80cm 넘게 기운 자리)에는 짓지 않음 — 반쯤 묻히지 않게   // 강 둔치·둑 비탈에는 짓지 않음(물가에서 물러섬)
-        occAdd(x0, z0, x1, z1); const h = Math.min(rural ? (T.kind === 'factory' ? 8 : 10.5) : 60, (T.h[0] + R() * (T.h[1] - T.h[0])) * (T.kind === 'house' || T.kind === 'factory' ? 1 : hK)), y0 = Math.min(...corners.map(([x, z]) => ty(x, z)));
+        occAdd(x0, z0, x1, z1); const seaH = reg9 === '바다' && T.kind === 'house', h = Math.min(rural ? (T.kind === 'factory' ? 8 : seaH ? 6.2 : 10.5) : 60, (T.h[0] + R() * (T.h[1] - T.h[0])) * (T.kind === 'house' || T.kind === 'factory' ? 1 : hK)), y0 = Math.min(...corners.map(([x, z]) => ty(x, z)));
         const fl = [0, 1], fw = [s9, c], half = bd / 2, door = [cx + fw[0] * (half + 2.5), cz + fw[1] * (half + 2.5)];
-        BLD.push({ b: { id: 'g' + (zn.id || 'z') + '_' + BLD.length, c: cols[(R() * cols.length) | 0], h: h / S, w: bw / S, d: bd / S }, kind: T.kind, cx, cz, w: bw, d: bd, h, ry, c, s: s9, y0, fl, fw, door, gap: put.gap || 0, name: null, corners, gen: zn.id || 'z' });
+        BLD.push({ b: { id: 'g' + (zn.id || 'z') + '_' + BLD.length, c: seaH ? ['msea', 'mteal', 'mor', 'msea'][(R() * 4) | 0] : cols[(R() * cols.length) | 0], h: h / S, w: bw / S, d: bd / S }, kind: T.kind, cx, cz, w: bw, d: bd, h, ry, c, s: s9, y0, fl, fw, door, gap: put.gap || 0, name: null, corners, gen: zn.id || 'z' });
         rec.n[T.kind] = (rec.n[T.kind] || 0) + 1; return true; };
       // 길을 따라(양쪽) — 줄 1 = 길 앞 · 줄 2·3… = 뒤로(골목 4m)
       for (const sg9 of RSEG) { const { a, b, hw } = sg9, L0 = Math.hypot(b[0] - a[0], b[1] - a[1]), tx = (b[0] - a[0]) / L0, tz = (b[1] - a[1]) / L0, px = -tz, pz = tx;
@@ -1734,7 +1739,7 @@ export default async function start(map, params) {
     for (const zn of L.zones || []) { const sh = shapeOf(zn); if (!sh || sh.line) continue; const hex = COL[zn.c || (ZCOL[zn.k] || ['red'])[0]] ?? 0xe0453a;
       C3.setHex(hex); C3.lerp(new T3.Color(0xffffff), 0.12); const ph = C3.getHex(); cellsIn(sh, 2.5, (cx, cz, s2) => { if (onRoad(cx, cz, 0)) return; flat(cx - s2, cz - s2, cx + s2, cz + s2, ty(cx, cz) + 0.07, ph); }); } }
   function drawZoneGreen() {   // 초록 구역(공원·들) = 공원(잔디·산책길·나무) 또는 들(type 'field' — 밭)
-    for (const zn of L.zones || []) { if (zn.k !== 'green') continue; if (zn.type === 'paddy') { paddy(zn); continue; } const t = zn.type === 'field' ? 'farm' : zn.type === 'rice' ? 'rice' : zn.type === 'fields' ? (hashS(zn.id || '') % 2 ? 'rice' : 'farm') : zn.type === 'forest' ? null : 'park';
+    for (const zn of L.zones || []) { if (zn.k !== 'green') continue; if (zn.type === 'paddy') { paddy(zn); continue; } const t = zn.type === 'field' ? 'farm' : zn.type === 'orchard' ? 'orchard' : zn.type === 'greenhouses' ? 'gh' : zn.type === 'rice' ? 'rice' : zn.type === 'fields' ? (hashS(zn.id || '') % 2 ? 'rice' : 'farm') : zn.type === 'forest' ? null : 'park';
       if (zn.type === 'forest') { L.nature.push({ id: '__z' + zn.id, k: 'forest', sub: 'mixed', rect: zn.rect, poly: zn.poly, gen: zn.id }); continue; } if (zn.type === 'beach') { L.nature.push({ id: '__z' + zn.id, k: 'sand', rect: zn.rect, poly: zn.poly, gen: zn.id }); continue; }   /* 10-15 모래사장 칸 */ L.nature.push({ id: '__z' + zn.id, k: 'field', sub: t, rect: zn.rect, poly: zn.poly, gen: zn.id }); } }
   // 건물 둘레 땅(쓰임별 바닥 — AI가 채운 빈칸): 집 = 마당 잔디 + 디딤돌 길 · 가게·공공 = 앞마당 보도블록 + 주차장 칸 · 공장 = 콘크리트 마당
   const VLV = [0.148, 0.165, 0.182, 0.199, 0.216, 0.26, 0.28, 0.32];   // 덩굴 잎 층(벽에서 m) — 창살 0.12 · 빗물관 0.135 · 창턱 0.24 · 꽃 0.30 · 꽃상자 0.34 앞면과 겹치지 않음
@@ -1821,7 +1826,7 @@ export default async function start(map, params) {
     buildTown2(B9); trim(B9); }
   function trim(B9) { ATAG = 'trim:' + B9.kind;   // 모든 건물 공통 마감(학교 맵처럼): 돌 굽 띠(문·진열창·차고 자리는 비움) · 뒤 모서리 빗물받이(디테일 층) · 간판 글씨
     const k = B9.kind; if (k === 'green' || k === 'park' || B9.h < 3 || B9.bigGreen || B9.noTrim) return;
-    if (B9.signT && LOOK === 'town') { const f = frontF(B9), sa = B9.signAt || { y: Math.min(B9.h - 0.6, 4.4), w: Math.min(f[2] * 0.72, 9), h: 0.72, out: 0.1, bg: '#ffffff', fg: '#1d3557' }, [x, z] = L2W(B9, f[0] * (f[3] + sa.out), f[1] * (f[3] + sa.out));
+    if (B9.signT && !B9.signDone && LOOK === 'town') { const f = frontF(B9), sa = B9.signAt || { y: Math.min(B9.h - 0.6, 4.4), w: Math.min(f[2] * 0.72, 9), h: 0.72, out: 0.1, bg: '#ffffff', fg: '#1d3557' }, [x, z] = L2W(B9, f[0] * (f[3] + sa.out), f[1] * (f[3] + sa.out));
       if (!B9.signAt) { const [bx, bz] = L2W(B9, f[0] * (f[3] + 0.05), f[1] * (f[3] + 0.05)); box(bx, B9.y0 + sa.y - sa.h / 2 - 0.08, bz, Math.min(sa.w, 0.62 * sa.h * (B9.signT.length + 1)) + 0.4, sa.h + 0.16, 0.06, Math.atan2(B9.fw[0], B9.fw[1]), 0xffffff); }   // 글씨 바탕 판
       textPlane(null, B9.signT, x, B9.y0 + sa.y, z, Math.atan2(B9.fw[0], B9.fw[1]), sa.w, sa.h, { one: true, bgc: sa.bg, fg: sa.fg, off: 0 });
       if (k === 'shop' || k === 'office' || k === 'hospital' || k === 'cinema') { const [gx, gz] = L2W(B9, f[0] * (f[3] + 2.6), f[1] * (f[3] + 2.6)); GLOW.push([gx, ty(gx, gz), gz, Math.min(7, f[2] * 0.45), 0.7]); } }   // 가게 앞 밤빛
@@ -2204,7 +2209,7 @@ export default async function start(map, params) {
   const SVROOF = [0x8a3a2e, 0x4a525c, 0x2f6b3a, 0x2f4a8a, 0x6e757d, 0x7a4e2e], SVCTX = {   // 땅 맥락마다 고를 목록(색 짝 · 벽재 · 지붕 0 평 · 1 박공 · 2 모임 · 3 외쪽 · 4 옥상 정원)
     sea: { pal: [1, 4, 7, 0, 5], mat: [0, 5, 4], roof: [3, 0, 3, 4] }, mtn: { pal: [3, 8, 10, 11, 0], mat: [4, 3, 1], roof: [1, 1, 2] }, farm: { pal: [8, 3, 5, 2, 0], mat: [6, 4, 1], roof: [1, 1, 3] },
     road: { pal: [1, 2, 9, 11, 7, 0, 5, 6], mat: [2, 3, 5, 0, 1], roof: [0, 4, 0] }, none: { pal: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], mat: [0, 1, 2, 3, 4, 5], roof: [0, 1, 2, 3, 4] } };
-  function prepShopVars() { const FARM = L.nature.filter(n => n.k === 'field' && ['rice', 'farm', 'orchard', 'terrace'].includes(n.sub)).map(n => { const sh = shapeOf(n); return sh ? { sh, bb: bboxOf(sh) } : null; }).filter(Boolean), done = [];
+  function prepShopVars() { const FARM = L.nature.filter(n => n.k === 'field' && ['rice', 'farm', 'orchard', 'terrace', 'gh'].includes(n.sub)).map(n => { const sh = shapeOf(n); return sh ? { sh, bb: bboxOf(sh) } : null; }).filter(Boolean), done = [];
     for (const B9 of BLD) { B9.sv = null; if (B9.kind !== 'shop' || B9.b.look || B9.b.big || B9.b.part || LOOK !== 'town') continue; const { cx, cz } = B9, h0 = hashS((B9.b.id || '') + ':' + cx.toFixed(1) + ':' + cz.toFixed(1)) >>> 0;
       const r = nearSeg(cx, cz, 40), ctx = SEAS.length && seaSd(cx, cz) < 90 ? 'sea' : tH(cx, cz) > 5 ? 'mtn' : FARM.some(q => cx > q.bb[0] - 40 && cx < q.bb[2] + 40 && cz > q.bb[1] - 40 && cz < q.bb[3] + 40 && sdOf(q.sh, cx, cz) < 35) ? 'farm' : r && r.sg.r.big && r.d < r.sg.hw + 16 ? 'road' : 'none', C = SVCTX[ctx];
       let pi = h0 % C.pal.length, mi = (h0 >>> 4) % C.mat.length, ri = (h0 >>> 8) % C.roof.length; const V = () => ({ pal: C.pal[pi], mat: C.mat[mi], roof: C.roof[ri] });
@@ -2247,8 +2252,37 @@ export default async function start(map, params) {
     else if (/꽃/.test(ST)) { for (let k = 0; k < 4; k++) { const p = fp(fw * 0.22 + k * 0.62, 0.65); if (!free(p)) continue; const g9 = ty(p[0], p[2]) + 0.07; cyl(p[0], g9, p[2], 0.24, 0.42, [0x9aa0a6, 0x7a8592][k % 2], 8); for (let j = 0; j < 3; j++) TREES.flower.push({ x: p[0] + Math.cos(j * 2.1) * 0.1, y: g9 + 0.38, z: p[2] + Math.sin(j * 2.1) * 0.1, s: 1.3, hex: PAL.flower[(k + j) % 4], ry: j }); } }
     else if (/편의점|슈퍼/.test(ST)) { fbox(B9, ff, 0, sh - 0.08, gw, 0.12, 0.06, 0xffffff, { out: 0.17, L: true }); fbox(B9, ff, 0, sh - 0.2, gw, 0.12, 0.06, acc, { out: 0.17, L: true }); }   // 밝은 띠(밤에 빛)
     else if (FOOD) { const p = fp(gw * 0.36, 1.7), g9 = ty(p[0], p[2]) + 0.07, r9 = RYW(B9, ff); if (free(p)) { const Bc = bucket(p[0], p[2]), fx = Math.sin(r9), fz = Math.cos(r9), Q = (s9, y, o) => [p[0] + Math.cos(r9) * s9 + fx * o, g9 + y, p[2] - Math.sin(r9) * s9 + fz * o]; quad2(Bc, Q(-0.3, 0, 0.3), Q(0.3, 0, 0.3), Q(0.3, 0.9, 0.05), Q(-0.3, 0.9, 0.05), rgb(0x2f3a33), rgb(0x6b4a2f)); quad2(Bc, Q(-0.3, 0, -0.3), Q(0.3, 0, -0.3), Q(0.3, 0.9, -0.05), Q(-0.3, 0.9, -0.05), rgb(0x2f3a33), rgb(0x6b4a2f)); PCOL.push(col9(p[0], p[2], 0.32, 0.32, r9, g9 - 1, g9 + 0.9)); } }   // 메뉴 입간판(A자)
-    else if (/과일/.test(ST)) { for (let k = 0; k < 3; k++) { const p = fp(-gw * 0.3 + k * 0.85, 0.7); if (!free(p)) continue; const g9 = ty(p[0], p[2]) + 0.07; box(p[0], g9, p[2], 0.7, 0.42, 0.5, ry, 0xa8794a); box(p[0], g9 + 0.42, p[2], 0.6, 0.12, 0.42, ry, [0xe0453a, 0xf2c230, 0x7cc35a][k], { top: [0xe85a4a, 0xf6d24a, 0x8ad46a][k] }); PCOL.push(col9(p[0], p[2], 0.35, 0.25, ry, g9 - 1, g9 + 0.55)); } }   // 과일 상자
+    else if (/농기계/.test(ST)) { const p = fp(gw * 0.3, 2.6); if (free(p) && !onRoad(p[0], p[2], 2.2)) tiller(p[0], p[2], RYW(B9, ff)); }   // 농기계 수리 = 앞에 경운기(✨)
+    else if (/과일|직판장|청과/.test(ST)) { for (let k = 0; k < 3; k++) { const p = fp(-gw * 0.3 + k * 0.85, 0.7); if (!free(p)) continue; const g9 = ty(p[0], p[2]) + 0.07; box(p[0], g9, p[2], 0.7, 0.42, 0.5, ry, 0xa8794a); box(p[0], g9 + 0.42, p[2], 0.6, 0.12, 0.42, ry, [0xe0453a, 0xf2c230, 0x7cc35a][k], { top: [0xe85a4a, 0xf6d24a, 0x8ad46a][k] }); PCOL.push(col9(p[0], p[2], 0.35, 0.25, ry, g9 - 1, g9 + 0.55)); } }   // 과일 상자
   }
+  // PLAUS 3 산·들·바다 ✨ 창고(간판대로 · 도시 공장의 굴뚝·하역장 X): 골판 벽 + 금속 박공 + 큰 미닫이 문 + 간판 글씨대로 하나 더 — 미곡처리장 = 한쪽 사일로 + 건조탑 + 이음 관 · 정미소·방앗간 = 낮게 + 승강기 탑 + 왕겨 관·더미 · 농기계 창고 = 열린 큰 입구 + 경운기 · 냉동·얼음 창고 = 흰 벽 + 파란 띠 · 그 밖(농협 창고·목재 창고…) = 팔레트 위 포대·나무 더미 · 버섯 재배사 = 검은 차광 벽
+  function farmShed(B9) {
+    const { cx, cz, w, d, ry, y0 } = B9, ST = B9.signT || '', R9 = rng0(hashS((B9.b.id || '') + 'fs')), silo = /미곡/.test(ST), mill = /정미|방앗간/.test(ST), mach = /농기계/.test(ST), cold = /냉동|얼음/.test(ST), wood = /목재/.test(ST), mush = /버섯/.test(ST);
+    const ff = frontF(B9), fw = ff[2], dep = ff[0] ? w : d, r9 = RYW(B9, ff), sw = silo ? Math.min(13, fw * 0.36) : 0, Bq = bucket(cx, cz), [hx, hz] = L2W(B9, ff[0] ? 0 : -sw / 2, ff[0] ? -sw / 2 : 0);
+    const H = Math.min(B9.h, mill ? 5.2 : 6.4), B2 = { ...B9, cx: hx, cz: hz, w: ff[0] ? w : w - sw, d: ff[0] ? d - sw : d, h: H, wallH: H }, f2 = frontF(B2), fw2 = f2[2], rise = Math.min(2.4, Math.min(B2.w, B2.d) * 0.16);
+    const RC = [[0x3f7f8a, 0x356b74], [0xb5483a, 0x96392e], [0x4f7a3a, 0x41672f]][(R9() * 3) | 0], wall = cold ? 0xf2f4f6 : mush ? 0x4a4f48 : [0xc9cfc6, 0xd6d2c4, 0xc4ccd2][(R9() * 3) | 0], rc = cold ? [0x2f6fd0, 0x2a5fb4] : mush ? [0x2f332f, 0x262a26] : RC;
+    B9.h = H; B9.wallH = H; box(hx, y0, hz, B2.w, H, B2.d, ry, wall, { noSide: true }); facade(B2, 0, H, 'factory', { hex: wall, fh: H, bay: 3.2 }); gable(hx, y0 + H, hz, B2.w, B2.d, rise, ry, rc[0], { wall, eave: 0.3, seams: Math.round(Math.max(B2.w, B2.d) / 0.9), lineHex: rc[1] });
+    const dw = Math.min(6.5, fw2 * 0.42), dh = Math.min(4.4, H - 1.6), du = -fw2 * 0.12, free = (p, m) => !onRoad(p[0], p[2], m) && !wAt(p[0], p[2]);
+    if (mach) { fbox(B2, f2, du, 0, dw, dh, 0, 0x2b2f35, { quad: true, out: 0.03 }); for (const s9 of [-1, 1]) fbox(B2, f2, du + s9 * (dw / 2 + 0.1), 0, 0.2, dh, 0.2, 0x5f666d, { out: 0.02 }); fbox(B2, f2, du, dh, dw + 0.52, 0.22, 0.22, 0x5f666d, { out: 0.01 });   // 열린 큰 입구(어둠) + 틀
+      for (const s9 of [-1, 1]) { const p = FP(B2, f2, du + s9 * dw * 0.24, 0, 2.6); if (free(p, 2.2)) tiller(p[0], p[2], r9); } }   // 경운기 둘
+    else { fbox(B2, f2, du, 0, dw, dh, 0.12, cold ? 0xdfe3e6 : 0x7a8592, { out: 0.02 }); fbox(B2, f2, du + dw * 0.25, dh + 0.05, dw * 1.5, 0.16, 0.16, 0x5f666d, { out: 0.04 }); for (let k = 1; k < 4; k++) fbox(B2, f2, du - dw / 2 + k * dw / 4, 0.1, 0.06, dh - 0.2, 0.03, 0x5f666d, { out: 0.14 }); }   // 미닫이 문 + 레일 + 골
+    if (cold) fbox(B2, f2, 0, H - 1.3, fw2 - 0.12, 0.6, 0.04, 0x2f6fd0, { out: 0.02 });   // 파란 띠
+    if (silo) { const nS = Math.max(1, Math.min(3, Math.floor((dep - 2) / 7))), rS = Math.min(sw / 2 - 0.7, 2.9, (dep - 1.5) / nS / 2 - 0.4), Hs = 10, us = fw / 2 - sw / 2, tops = [];   // 사일로(둥근 통 + 고깔 + 띠 둘)
+      for (let k = 0; k < nS; k++) { const t = ((k + 0.5) / nS - 0.5) * dep * 0.92, [px, pz] = L2W(B9, ff[0] ? t : us, ff[0] ? us : t); cyl(px, y0 - 0.3, pz, rS, Hs + 0.3, 0xdfe3e6, 14, { top: 0xcfd4d8 }); for (const yb of [2.6, Hs - 1.2]) cyl(px, y0 + yb, pz, rS + 0.06, 0.22, 0x9aa3ab, 14); cone(Bq, px, y0 + Hs, pz, rS + 0.12, 1.1, 14, rgb(0xb8bec3)); tops.push([px, y0 + Hs + 0.9, pz]); }
+      const dc = -dep / 2 + 1.8, tu = fw / 2 - sw - 1.6, [tx, tz] = L2W(B9, ff[0] ? ff[0] * dc : tu, ff[0] ? tu : ff[1] * dc); box(tx, y0, tz, 2.6, 11.2, 2.6, ry, 0xb8bec3); box(tx, y0 + 11.2, tz, 3.0, 0.4, 3.0, ry, 0x8a9096);   // 건조탑(지붕을 뚫고)
+      for (const q of tops) rodQ(Bq, [tx, y0 + 10.7, tz], q, 0.16, rgb(0x8a9096)); }   // 이음 관
+    if (mill) { const eu = fw2 / 2 - 0.8, et = f2[3] - 0.8, Ht = H + rise + 2.5, [ex, ez] = L2W(B2, f2[0] ? f2[0] * et : eu, f2[0] ? eu : f2[1] * et); box(ex, y0, ez, 1.0, Ht, 1.0, ry, 0xd8d2c4); box(ex, y0 + Ht, ez, 1.3, 0.3, 1.3, ry, 0x8a9096);   // 승강기 탑
+      const p = FP(B2, f2, eu - 2.6, 0, 2.2); if (free(p, 1.4)) { const g9 = ty(p[0], p[2]); rodQ(Bq, [ex, y0 + Ht - 0.4, ez], [p[0], g9 + 2.4, p[2]], 0.14, rgb(0x9aa3ab)); cone(Bq, p[0], g9, p[2], 1.1, 0.8, 10, rgb(0xd8b46a)); PCOL.push(col9(p[0], p[2], 1.0, 1.0, r9, g9 - 1, g9 + 0.8)); } }   // 왕겨 관 + 왕겨 더미
+    if (!mill && !mach && !cold) for (let k = 0; k < 3; k++) { const p = FP(B2, f2, du + dw / 2 + 1.6 + k * 1.6, 0, 1.0); if (!free(p, 0.8)) continue; const g9 = ty(p[0], p[2]), n9 = 2 + (k % 2); box(p[0], g9, p[2], 1.3, 0.15, 1.1, r9, 0xa8794a);   // 팔레트 위 포대(목재 창고 = 나무 더미)
+      for (let j = 0; j < n9; j++) box(p[0], g9 + 0.15 + j * 0.42, p[2], 1.15 - j * 0.04, 0.42, 0.95 - j * 0.04, r9 + j * 0.04, wood ? 0x9a6a3c : 0xf2efe6, { top: wood ? 0xc8955a : 0xfaf8f2 }); PCOL.push(col9(p[0], p[2], 0.65, 0.55, r9, g9 - 1, g9 + 0.15 + n9 * 0.42)); }
+    if (silo || /농협/.test(ST)) { const p = FP(B2, f2, du, 0, 6.4), wx = Math.sin(r9), wz = Math.cos(r9); if (free(p, 3.6)) truck(p[0], p[2], Math.atan2(-wz, wx)); }   // 짐차(✨)
+    if (ST) { const len = Math.min(fw2 - 2, 0.5 * (ST.length + 1)), p = FP(B2, f2, 0, 0, 0.05); box(p[0], y0 + H - 1.15, p[2], len + 0.4, 0.8, 0.06, r9, 0xffffff); textPlane(null, ST, p[0], y0 + H - 0.75, p[2], r9, len, 0.62, { one: true, bgc: '#ffffff', fg: '#1d3557', off: 0.04 }); B9.signDone = true; }   // 간판(몸채 앞 가운데)
+    B9.collide = [col9(cx, cz, w / 2, d / 2, ry, y0 - 2, y0 + (silo ? 11.6 : H + rise))]; B9.noTrim = true; B9.drawnH = silo ? 11.6 : mill ? H + rise + 2.8 : H + rise; }
+  function seaYard(B9) {   // PLAUS 3 바다 마을 ✨ 집(셋 중 하나): 옆 마당에 주황·흰 부표 더미 + 초록 그물 무더기(어촌 느낌 — 집은 그대로)
+    const SF = FACES(B9).filter(f => f[0] * B9.fl[0] + f[1] * B9.fl[1] === 0), sf = SF[hashS((B9.b.id || '') + 'sy') % SF.length], u0 = -sf[2] * 0.15, pc = FP(B9, sf, u0 + 0.6, 0, 1.0); if (!pc || onRoad(pc[0], pc[2], 2.2) || wAt(pc[0], pc[2])) return;
+    const g9 = ty(pc[0], pc[2]), r9 = RYW(B9, sf); for (const [u, yy, k] of [[-0.65, 0, 0], [0, 0, 1], [0.65, 0, 2], [-0.32, 0.5, 3], [0.32, 0.5, 4]]) { const p = FP(B9, sf, u0 + u, 0, 1.0); cyl(p[0], g9 + yy, p[2], 0.3, 0.5, k % 3 ? 0xef7a2a : 0xf6f4ee, 8); }   // 부표 다섯
+    { const p = FP(B9, sf, u0 + 1.9, 0, 1.0); box(p[0], g9, p[2], 1.4, 0.55, 1.0, r9, 0x2f5a3a, { top: 0x3d6b46 }); box(p[0], g9 + 0.55, p[2], 0.9, 0.3, 0.7, r9 + 0.4, 0x3f7a4a); }   // 그물 무더기
+    PCOL.push(col9(pc[0], pc[2], 1.9, 0.6, r9, g9 - 1, g9 + 1.0)); }
   function buildTown2(B9) { ATAG = 'b:' + B9.kind;
     const { cx, cz, w, d, h, ry, y0, kind } = B9, R = B9.R; let col = COL[B9.b.c] ?? 0xcccccc;
     if (B9.b.part) { B9.collide = []; B9.noTrim = true; B9.drawnH = 0; return; }   // 여러 판이 한 건물(도시 상점 둥근 판 아홉 — 본 블록이 다 지음)
@@ -2265,6 +2299,7 @@ export default async function start(map, params) {
     if (B9.b.look && KIDLOOK[B9.b.look]) { kidHouse(B9); return; }
     if (B9.b.kind === 'aquadom') { aquadom(B9); return; }
     if (SB9) { SB9(B9); return; }   // SIG-1 가게 특색(겉모습 열쇠)   // 10-15 아14 「어항」(지원 패들렛 17 '동글동글한 어항')   // 10-15 아이 집 6채(패들렛 사진 느낌 · 상호·사람 없음)
+    if (kind === 'house' && B9.gen && regionOf(cx, cz) === '바다' && hashS((B9.b.id || '') + 'sea') % 3 === 0) seaYard(B9);   // PLAUS 3 어촌 마당
     if (kind === 'house') {
       const style = R(), LP9 = LOOKPAL[B9.b.look] || null, wall = LP9 ? LP9.wall : [0xf3ead8, 0xe9dcc4, 0xdfe6ea, 0xf2e0d6, 0xe8e2cf, 0xb8674a][(R() * 6) | 0]; if (LP9 && LP9.roof) col = LP9.roof;
       if (h >= 12 || w * d > 150 || (style < 0.36 && h >= 7)) {   // 다가구·빌라(3cm 정육면체 · 눕힌 판 = 넓은 연립)(평지붕 2~3층 · 벽돌·밝은 벽 · 옥상 = 블록 색 방수 칠 · 물탱크 · 바깥 계단)
@@ -2316,6 +2351,7 @@ export default async function start(map, params) {
         if (h > 6.5 && !mart && LOOK === 'town' && !RURAL[regionOf(B9.cx, B9.cz)] && (hashS((B9.b.id || '') + 'ac') % 100) < 55) { const t9 = ACAD[hashS((B9.b.id || '') + ':' + cx.toFixed(0)) % ACAD.length], bc = [0x2f6fd0, 0xe0453a, 0x2f9a5a, 0xef8b33][hashS(t9) % 4], sw9 = Math.min(fw * 0.62, 7.5); fbox(B9, ff, 0, hF + 0.3, sw9, 0.82, 0.08, bc, { out: 0.03 });
           const [ax, az] = L2W(B9, ff[0] * (ff[3] + 0.13), ff[1] * (ff[3] + 0.13)); textPlane(null, t9, ax, y0 + hF + 0.71, az, Math.atan2(B9.fw[0], B9.fw[1]), sw9 * 0.9, 0.6, { one: true, bgc: '#' + bc.toString(16).padStart(6, '0'), fg: '#ffffff', off: 0 }); SIGNAI++; } }   // 2층 학원 간판(✨ 흔한 낱말 — 실제 상호 없음)
       roofTop(B9, { ac: 2 + (R() * 2 | 0), tank: h > 6 }); return; }
+    if (kind === 'factory' && B9.gen && RURAL[regionOf(cx, cz)]) { farmShed(B9); return; }   // PLAUS 3 산·들·바다 창고
     if (kind === 'factory') { B9.drawnH = h * 0.92;
       box(cx, y0, cz, w, h * 0.7, d, ry, 0xcfd3d6, { noSide: true }); facade(B9, 0, h * 0.7, 'factory', { hex: 0xcfd3d6, fh: h * 0.7, bay: 3.2 }); const n = Math.max(2, Math.round((w >= d ? w : d) / 6));
       for (let k = 0; k < n; k++) { const t = -0.5 + (k + 0.5) / n, lx = w >= d ? t * w : 0, lz = w >= d ? 0 : t * d, [px, pz] = L2W(B9, lx, lz);
@@ -2412,7 +2448,7 @@ export default async function start(map, params) {
     const used = new Map(); SIGNAI = 0;
     for (const B9 of BLD) { B9.signT = null; const k = B9.kind; if (B9.b.sign || B9.name) { if (!['house', 'apt', 'green', 'park'].includes(k)) B9.signT = B9.b.sign || B9.name; continue; }
       const A = areaAt(B9.cx, B9.cz), pool = A && A.sign === 'food' && (k === 'shop' || k === 'house') ? 'food' : k === 'shop' ? 'shop' : k === 'office' ? 'office' : k === 'factory' ? 'factory' : null; if (!pool) continue;
-      { const rg = B9.gen && regionOf(B9.cx, B9.cz), RP = rg && SIGNREG[rg] && SIGNREG[rg][pool === 'food' ? 'shop' : pool]; if (RP) { const ck = cellOf(B9.cx, B9.cz) + ':' + rg; let u9 = used.get(ck); if (!u9) used.set(ck, u9 = new Set()); const free = RP.filter(n => !u9.has(n)), nm9 = (free.length ? free : RP)[hashS((B9.b.id || '') + 'rg') % (free.length || RP.length)]; u9.add(nm9); B9.signT = nm9; SIGNAI++; continue; } }   // PLAUS 3: 산·들·바다·관광의 🏘 = 그 동네 가게 목록
+      { const rg = B9.gen && regionOf(B9.cx, B9.cz), RP = rg && SIGNREG[rg] && SIGNREG[rg][pool === 'food' ? 'shop' : pool]; if (RP) { const ck = cellOf(B9.cx, B9.cz) + ':' + rg; let u9 = used.get(ck); if (!u9) used.set(ck, u9 = new Set()); const free = RP.filter(n => !u9.has(n)), first = pool === 'factory' && !used.has('first:' + rg), nm9 = first ? RP[0] : (free.length ? free : RP)[hashS((B9.b.id || '') + 'rg') % (free.length || RP.length)]; if (first) used.set('first:' + rg, true);   /* 그 구역 첫 창고 = 대표(들 미곡처리장 · 바다 냉동 창고 · 산 목재 창고) */ u9.add(nm9); B9.signT = nm9; SIGNAI++; if (rg === '바다' && k === 'shop') B9.kind = /횟집|수산물|매운탕/.test(nm9) ? 'fishmarket' : /어구|낚시/.test(nm9) ? 'gearshed' : k; continue; } }   // PLAUS 3: 산·들·바다·관광의 🏘 = 그 동네 가게 목록
       void 0; const cell = cellOf(B9.cx, B9.cz), L9 = SIGNPOOL[pool], u = used.get(cell + pool) || new Set(); let i = hashS((B9.b.id || '') + ':' + B9.cx.toFixed(0)) % L9.length; for (let t = 0; t < L9.length && u.has(i); t++) i = (i + 1) % L9.length; u.add(i); used.set(cell + pool, u);
       B9.signT = L9[i]; B9.signAI = true; SIGNAI++; if (pool === 'food' && k === 'house') B9.kind = 'shop'; } }
   let SIGNAI = 0;
@@ -2747,9 +2783,9 @@ export default async function start(map, params) {
       else { const pts = sh.rect ? [[sh.rect[0], sh.rect[1]], [sh.rect[2], sh.rect[1]], [sh.rect[2], sh.rect[3]], [sh.rect[0], sh.rect[3]]] : sh.poly; ctx.beginPath(); pts.forEach((q, i) => { const [a, b] = P(q[0], q[1]); if (i) ctx.lineTo(a, b); else ctx.moveTo(a, b); }); ctx.closePath(); ctx.fill(); ctx.lineWidth = 2; ctx.stroke(); } ctx.restore(); }
     // 들·숲 기호
     ctx.save(); for (const it of L.nature) { const sh = shapeOf(it); if (!sh || it.k === 'hill' || it.k === 'water') continue; const bb = bboxOf(sh), [a, b] = P(bb[0], bb[1]), [c, d] = P(bb[2], bb[3]);
-      const sub = it.k === 'forest' ? 'forest' : it.sub || 'grass'; ctx.fillStyle = { forest: 'rgba(60,130,70,.45)', rice: 'rgba(150,200,120,.55)', farm: 'rgba(170,130,90,.5)', orchard: 'rgba(160,210,110,.5)', park: 'rgba(120,200,110,.5)', grass: 'rgba(160,210,120,.45)' }[sub] || 'rgba(0,0,0,0)';
+      const sub = it.k === 'forest' ? 'forest' : it.sub || 'grass'; ctx.fillStyle = { forest: 'rgba(60,130,70,.45)', rice: 'rgba(150,200,120,.55)', farm: 'rgba(170,130,90,.5)', orchard: 'rgba(160,210,110,.5)', gh: 'rgba(214,226,214,.6)', park: 'rgba(120,200,110,.5)', grass: 'rgba(160,210,120,.45)' }[sub] || 'rgba(0,0,0,0)';
       ctx.fillRect(a, b, c - a, d - b); if (o.symbols && c - a > 18) { ctx.fillStyle = 'rgba(30,70,40,.85)'; ctx.font = '700 ' + Math.max(9, Math.min(16, sc * 9)) + 'px ' + SFONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        const s9 = { forest: '♣', rice: 'ıı', farm: 'ㅛ', orchard: 'ⓞ', park: '♣', grass: '⺾' }[sub] || ''; for (let y = b + 10; y < d - 4; y += 18) for (let x = a + 10; x < c - 4; x += 20) ctx.fillText(s9, x, y); } }
+        const s9 = { forest: '♣', rice: 'ıı', farm: 'ㅛ', orchard: 'ⓞ', gh: '⌒', park: '♣', grass: '⺾' }[sub] || ''; for (let y = b + 10; y < d - 4; y += 18) for (let x = a + 10; x < c - 4; x += 20) ctx.fillText(s9, x, y); } }
     ctx.restore();
     // 구역(색종이 — 용도 지역처럼 반투명)
     for (const zn of L.zones || []) { const sh = shapeOf(zn); if (!sh || sh.line) continue; ctx.save(); ctx.globalAlpha = 0.28; ctx.fillStyle = '#' + (COL[zn.c || (ZCOL[zn.k] || ['red'])[0]] ?? 0xe0453a).toString(16).padStart(6, '0');
