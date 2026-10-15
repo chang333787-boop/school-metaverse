@@ -5,7 +5,7 @@
 const BIG = '판 이음매 자리라서 큰길(넓게 · 인도·가로수)로 어림했어요 — 테이프는 다 같은 굵기예요. "큰길은 여기"라고 바꿀 수 있어요';
 const SMALL = '좁은 동네 길로 어림했어요 — 테이프는 다 같은 굵기예요';
 const B = (cell, at, t, c, o = {}) => ({ cell, at, t, c, ...o });
-import { RING_BLOCKS, RING_AREAS, RING_FILLS, RING_NATURE, RING_PROPS, KID_REQ } from './ourtown_ring.js?v=7';   // 10-15 확장 판 둘레 80칸(아이 판 · 패들렛)
+import { RING_BLOCKS, RING_AREAS, RING_FILLS, RING_NATURE, RING_PROPS, KID_REQ } from './ourtown_ring.js?v=8';   // 10-15 확장 판 둘레 80칸(아이 판 · 패들렛)
 const CELLR = cell => { const r = '가나다라마바사아자차'.indexOf(cell[0]), n = +cell.slice(1), x0 = (n - 3) * 25, y0 = (r - 2) * 25; return [x0, y0, x0 + 25, y0 + 25]; };   // 칸 → 판 cm 네모
 const SEA_KIDS = RING_BLOCKS.filter(b => b.kind === 'duckboat' || b.kind === 'parasol');
 // 해수욕장 물가 = 굽은 만(灣)(10-15 또래 '자로 잰 직선·직각 → 둥근 만 · 물가는 잔물결' · 패들렛 15 사진 = 굽은 모래사장 + 뒤 산 — 종이 칸 가12·가13·나12 모래 · 나13 바다는 그대로 덮음 ✨)
