@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=157';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=78';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=79';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=26';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -187,7 +187,7 @@ const blob = (() => {
 // 걷기·점프·앉기 동작: 이동 속도로 팔다리를 흔들고(반대쪽끼리), 공중이면 팔을 들고, 앉으면 무릎을 굽혀 의자 위에(몸을 앞으로 0.42·아래로 0.1)
 let kidPh = 0, kidX = P.x, kidZ = P.z, kidT = 0, kidPoseWas = null;
 function kidTick(dt) {
-  const v = Math.hypot(P.x - kidX, P.z - kidZ) / Math.max(dt, 1e-3) * (4.2 / PHY.walk); kidX = P.x; kidZ = P.z; kidT += dt;   // SHRINK-1: 작아지면 걷기 속도 기준으로(다리 흔들기 같게)
+  const v = CTRL.ride ? 0 : Math.hypot(P.x - kidX, P.z - kidZ) / Math.max(dt, 1e-3) * (4.2 / PHY.walk); kidX = P.x; kidZ = P.z; kidT += dt;   // SHRINK-1: 작아지면 걷기 속도 기준으로(다리 흔들기 같게)
   const K = KID, sit = !!ACT.sit, air = !P.ground && !sit && !ACT.anim, mv = sit ? 0 : Math.min(1, v / 4.2), cr = CTRL.crouched && !sit;
   if (v > 0.3 && !sit) kidPh += dt * (5.5 + v * 1.5);
   const sw = Math.sin(kidPh) * 0.7 * mv;

@@ -204,7 +204,10 @@ export function createMapApi(host, NAV, META) {
     get input() { if (pl.touch && pl.touch.m > 0) return true; if (pl.keys) for (const k of MOVE_KEYS) if (pl.keys.has(k)) return true; return false; },   // 사람이 누르는 이동(키·조이스틱만 — steer 빼고)
     pose(name) { CTRL.pose = name || null; },   // 몸 자세 덮어쓰기: 'swim'(헤엄) · 'dizzy'(엉덩방아 · 어지러움) · null = 원래대로(게임이 멈추면 풀림)
     jump(on = true) { CTRL.noJump = !on; },   // RB-1: false = 점프 막음(게임이 멈추면 풀림)
-    show(on = true) { CTRL.hideMe = !on; },   // RB-1: false = 내 캐릭터·발밑 그림자 숨김(게임이 내 몸을 다른 모양으로 그릴 때 · 멈추면 풀림)
+    show(on = true) { CTRL.hideMe = !on; },
+    held: code => !!(pl.keys && pl.keys.has(code)),   // BOAT-1(10-16): 지금 눌린 키(읽기만 — 배·탈것을 게임이 몰 때 · 몸은 freeze로 멈춰 둠)
+    stick: () => (pl.touch && pl.touch.m > 0 ? pl.touch : null),
+    ride(on = true) { CTRL.ride = !!on; },   // BOAT-1: 탈것에 탄 동안 몸이 옮겨져도 걷는 다리 동작 X(서 있는 자세) · 게임이 멈추면 풀림   // BOAT-1: 왼쪽 조이스틱 {mx, my(위 = +)} · 안 누르면 null(새 객체 없음)   // RB-1: false = 내 캐릭터·발밑 그림자 숨김(게임이 내 몸을 다른 모양으로 그릴 때 · 멈추면 풀림)
     run(on = true) { CTRL.noRun = !on; },   // HS-3: 달리기 막기(Shift·조이스틱 끝) — 게임이 멈추면 다시 됨
     // WG-FPS(10-03): 1인칭/3인칭('first'|'third') · 위로 보는 한계(라디안 · 기본 −0.2) · 시점 돌리기(터치 화면 px) — 게임이 멈추면 원래대로
     view(v) { if (S0.view == null) S0.view = pl.getFirst(); pl.setFirst(v === 'first'); },
@@ -539,7 +542,7 @@ export function createMapApi(host, NAV, META) {
     const res = new Set(), track = h => { if (dead && h && h.remove) { try { h.remove(); } catch (e) { console.error(e); } return h; } if (h && h.remove) { const r0 = h.remove; h.remove = function () { res.delete(h); return r0.apply(this, arguments); }; res.add(h); } return h; };
     const S = facadeApi(track, owner);
     S.dispose = () => { dead = true; for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); try { ENG.reset(); } catch (e) { console.error('[map] 엔진 정리 오류', e); } try { FX.reset(); } catch (e) { console.error('[map] 세상 바꾸기 정리 오류', e); }
-      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.pose = null; CTRL.noRun = false; CTRL.noJump = false; CTRL.hideMe = false; CTRL.face = null; CTRL.shoulder = 0; CTRL.steer = null; CTRL.pitchLo = null; if (CTRL.freeMouse !== FREE_DEF) { CTRL.freeMouse = FREE_DEF; helpFree(FREE_DEF); } if (S0.view != null) { pl.setFirst(S0.view); S0.view = null; } if (pl.acts) pl.acts.stop(true); if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
+      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.pose = null; CTRL.noRun = false; CTRL.noJump = false; CTRL.hideMe = false; CTRL.face = null; CTRL.shoulder = 0; CTRL.steer = null; CTRL.ride = false; CTRL.pitchLo = null; if (CTRL.freeMouse !== FREE_DEF) { CTRL.freeMouse = FREE_DEF; helpFree(FREE_DEF); } if (S0.view != null) { pl.setFirst(S0.view); S0.view = null; } if (pl.acts) pl.acts.stop(true); if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
     S.quit = () => { const c = game.current; if (c && c.scope === S) stopGame('quit'); };   // 게임이 스스로 끝낼 때(끝 화면 [그만하기])
     Object.defineProperty(S, 'tracked', { get: () => res.size });
     return S;
