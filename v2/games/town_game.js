@@ -40,6 +40,14 @@ export const SHOPS = [
 // 요리(C1 · 패들렛 56·63·64·66 🙋 유은·시아 — 재료 모으기 → 레시피북 → 불 조절 → 나눠 주기 · 탄 요리는 '윽!') · 독버섯은 재료가 아님(교사 10-16 (가) 못 땀)
 //   재료 값 ≈ 1천 원(흉내: 보통 아이 첫 요리 4~6분) · 버섯 볶음 = 딴 버섯 둘 + 버터(산에서 딴 것을 쓰는 요리)
 export const RECIPES = [['🥞', '팬케이크', 'Pancake', { '🌾': 1, '🥚': 1, '🥛': 1 }], ['🥘', '버섯 볶음', 'Fried mushrooms', { '🍄': 2, '🧈': 1 }], ['🍮', '푸딩', 'Pudding', { '🥚': 2, '🥛': 1, '🍁': 1 }], ['🍓🥞', '딸기 팬케이크', 'Strawberry pancake', { '🌾': 1, '🥚': 1, '🥛': 1, '🍓': 3 }]];
+// 오늘의 할 일(GAME-5 · 스타듀 '도움 요청 게시판' 결): 날마다 셋 = 벌기(일터·버섯) 하나 + 나누기(장터·가게·요리) 하나 + 둘러보기(정상·버스·배·징검다리·책) 하나 · 이 마을에 있는 것만(자리 = 그곳 칸)
+//   보상 = 돈(하나 300~800원 · 셋 다 하면 +500원 — 흉내 하루 벌이의 5~15%라 '덤') · 벌·기한 없음(다 못 해도 다음 날 새 셋)
+export const TASKS = {
+  work: ['{e} {n} 같이 하기', 'Help: {n}', 1, 400], mush: ['🍄 버섯 2개 따기', '🍄 Pick 2 mushrooms', 2, 300],
+  sell: ['🛒 장터에서 물건 3개 팔기', '🛒 Sell 3 things at a market', 3, 300], away: ['✨ 멀리서 온 물건을 장터에 팔기', '✨ Sell something from far away', 1, 400], buy: ['🥚 마트에서 요리 재료 사기', '🥚 Buy a cooking ingredient', 1, 200], cook: ['🍳 아이 집 부엌에서 요리 하나 만들기', '🍳 Cook a dish in a kitchen', 1, 600], share: ['🍽 이웃에게 요리 나눠 주기', '🍽 Share a dish with a neighbour', 1, 500], eat: ['🍜 식당에서 밥 먹어 보기', '🍜 Eat at a restaurant', 1, 300],
+  summit: ['⛰ 산꼭대기 도장 찍기', '⛰ Get the summit stamp', 1, 800], bus: ['🚌 버스 타고 다른 정류장 가기', '🚌 Ride a bus to another stop', 1, 300], boat: ['⛵ 배 타고 바다 나가 보기', '⛵ Take the boat out', 1, 500], stones: ['👣 징검다리 건너기', '👣 Cross the stepping stones', 1, 300], book: ['📖 도서관에서 책 읽기', '📖 Read at the library', 1, 300],
+};
+export const TASK_POOLS = [['work', 'mush'], ['sell', 'away', 'buy', 'cook', 'share', 'eat'], ['summit', 'bus', 'boat', 'stones', 'book']];
 export const shopOf = name => { if (/동물 카페|키즈 카페|보드게임 카페|꼬리 용품|반려/.test(name || '')) return null;   /* 놀이 카페·반려 용품 = 파는 가게 아님(뒷걸음 정규식은 옛 아이폰 사파리에서 깨져 함수로) */ for (const S of SHOPS) if (S[0].test(name || '')) return S; return null; };
 export const won = n => (n | 0).toLocaleString('ko-KR') + '원';
 export const itemName = (e, en) => { const I = ITEMS[e]; return I ? (en ? I[1] : I[0]) : e; };
@@ -90,6 +98,15 @@ export function createGame(id) {
     ate(e) { const neu = !S.ate[e]; S.ate[e] = (S.ate[e] || 0) + 1; dirty = true; return neu; },
     // 가게가 열렸나(시계 기준 · 시계를 멈춰도 그 시각 그대로)
     open: (h0, h1) => { const h = S.min / 60; return h0 === 0 && h1 === 24 ? true : h >= h0 && h < h1; },
+    // 오늘의 할 일: ctx = { 할일id: [자리 칸, 일 갈래?, 이모지, 이름] } (이 마을에 있는 것만) · 하루 첫 부름에 셋을 고름(날짜 씨앗 · 1일째 = 가까운 일터 + 장터 팔기 + 버스)
+    tasks(ctx, en) { if (S.tasks && S.tasks.day === S.day) return S.tasks.list; let r = (S.day * 2654435761 + 97) >>> 0; const rnd = () => (r = (r * 1103515245 + 12345) >>> 0) / 4294967296, list = [];
+      TASK_POOLS.forEach((P, pi) => { const av = []; for (const id of P) { const c = ctx[id]; if (!c) continue; if (id === 'work') for (const w of c) av.push(['work', w]); else av.push([id, c]); } if (!av.length) return; let pick = av[(rnd() * av.length) | 0];
+        if (S.day === 1) { const want = ['work', 'sell', 'bus'][pi]; pick = av.find(a => a[0] === want) || av[0]; }
+        const [id, c] = pick, T = TASKS[id], txt = (en ? T[1] : T[0]).replace('{e}', c[2] || '').replace('{n}', c[3] || ''); list.push({ id, ev: id === 'work' ? 'work:' + c[1] : id, t: txt, cell: c[0] || '', need: T[2], n: 0, rew: T[3], done: false }); });
+      S.tasks = { day: S.day, list, all: false }; dirty = true; return list; },
+    // 한 일 알리기 → 이번에 끝난 할 일들(보상은 여기서 줌 · 셋 다 끝나면 덤)
+    taskEv(ev, n = 1) { const T = S.tasks; if (!T || T.day !== S.day) return null; let out = null; for (const t of T.list) { if (t.done || t.ev !== ev) continue; t.n = Math.min(t.need, t.n + n); if (t.n >= t.need) { t.done = true; S.money += t.rew; S.earned += t.rew; S.tasksDone = (S.tasksDone || 0) + 1; (out = out || []).push(t); } }
+      if (out && !T.all && T.list.every(t => t.done)) { T.all = true; S.money += 500; S.earned += 500; out.all = true; } if (out) dirty = true; return out; },
     // 처음부터(가방·돈·도감·날짜 모두) — 가방 객체는 그대로 두고 비움(마을이 같은 객체를 들고 있음)
     reset() { const b = S.bag; for (const k of Object.keys(b)) delete b[k]; const f = fresh(); f.bag = b; for (const k of Object.keys(S)) delete S[k]; Object.assign(S, f); acc = 0; ph = phaseOf(S.min); dirty = true; G.flush(); emit('clock'); emit('phase'); },
   };
