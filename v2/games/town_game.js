@@ -116,7 +116,7 @@ export function createGame(id) {
     tasks(ctx, en) { if (S.tasks && S.tasks.day === S.day) return S.tasks.list; let r = (S.day * 2654435761 + 97) >>> 0; const rnd = () => (r = (r * 1103515245 + 12345) >>> 0) / 4294967296, list = [];
       TASK_POOLS.forEach((P, pi) => { const av = []; for (const id of P) { const c = ctx[id]; if (!c) continue; if (id === 'work') for (const w of c) av.push(['work', w]); else av.push([id, c]); } if (!av.length) return; let pick = av[(rnd() * av.length) | 0];
         if (S.day === 1) { const want = ['work', 'sell', 'bus'][pi]; pick = av.find(a => a[0] === want) || av[0]; }
-        const [id, c] = pick, T = TASKS[id], txt = (en ? T[1] : T[0]).replace('{e}', c[2] || '').replace('{n}', c[3] || ''); list.push({ id, ev: id === 'work' ? 'work:' + c[1] : id, t: txt, cell: c[0] || '', need: T[2], n: 0, rew: T[3], done: false }); });
+        const [id, c] = pick, T = TASKS[id], txt = (en ? T[1] : T[0]).replace('{e}', c[2] || '').replace('{n}', c[3] || ''); list.push({ id, ev: id === 'work' ? 'work:' + c[1] : id, t: txt, cell: c[0] || '', at: c.at || null, need: T[2], n: 0, rew: T[3], done: false });   /* at = 그 자리(🧭 길 안내 · GAME-5d) */ });
       S.tasks = { day: S.day, list, all: false }; dirty = true; return list; },
     // 한 일 알리기 → 이번에 끝난 할 일들(보상은 여기서 줌 · 셋 다 끝나면 덤)
     taskEv(ev, n = 1) { const T = S.tasks; if (!T || T.day !== S.day) return null; let out = null; for (const t of T.list) { if (t.done || t.ev !== ev) continue; t.n = Math.min(t.need, t.n + n); if (t.n >= t.need) { t.done = true; S.money += t.rew; S.earned += t.rew; S.tasksDone = (S.tasksDone || 0) + 1; if (S.today) { S.today.tasks++; S.today.earned += t.rew; } (out = out || []).push(t); } }
