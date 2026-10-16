@@ -23,7 +23,7 @@ export const ITEMS = {
   '🌾': ['밀가루', 'Flour', 'cook', 0], '🥚': ['달걀', 'Egg', 'cook', 0], '🧈': ['버터', 'Butter', 'cook', 0], '🍁': ['시럽', 'Syrup', 'cook', 0],
   '🥞': ['팬케이크', 'Pancake', 'dish', 0], '🥘': ['버섯 볶음', 'Fried mushrooms', 'dish', 0], '🍮': ['푸딩', 'Pudding', 'dish', 0], '🍓🥞': ['딸기 팬케이크', 'Strawberry pancake', 'dish', 0], '🌑': ['탄 요리', 'Burnt food', 'dish', 0], '🍲': ['감자 배추국', 'Potato-cabbage soup', 'dish', 0], '🍙': ['주먹밥', 'Rice ball', 'dish', 0],
   '🌱': ['심은 모', 'Rice seedlings planted', 'farm', 0], '🌲': ['심은 나무', 'Saplings planted', 'farm', 0],
-  '⛰': ['정상 도장', 'Summit stamp', 'stamp', 0], '🗼': ['등대 도장', 'Lighthouse stamp', 'stamp', 0], '👣': ['징검다리 도장', 'Stepping-stone stamp', 'stamp', 0], '📖': ['책 읽기 도장', 'Reading stamp', 'stamp', 0], '⛷': ['스키 도장', 'Ski stamp', 'stamp', 0], '🏅': ['요리사 도장', 'Cook stamp', 'stamp', 0], '🧺': ['꾸러미 도장', 'Bundle stamp', 'stamp', 0],
+  '⛰': ['정상 도장', 'Summit stamp', 'stamp', 0], '🗼': ['등대 도장', 'Lighthouse stamp', 'stamp', 0], '👣': ['징검다리 도장', 'Stepping-stone stamp', 'stamp', 0], '📖': ['책 읽기 도장', 'Reading stamp', 'stamp', 0], '⛷': ['스키 도장', 'Ski stamp', 'stamp', 0], '🏅': ['요리사 도장', 'Cook stamp', 'stamp', 0], '🧺': ['꾸러미 도장', 'Bundle stamp', 'stamp', 0], '🔭': ['별 보기 도장', 'Stargazing stamp', 'stamp', 0],
 };
 // 식당에서 먹는 것(가방에 넣지 않고 그 자리에서 · 도감 '먹어 본 음식')
 export const DISHES = { '🍣': ['초밥 한 접시', 'Sushi plate'], '🍜': ['마라탕 한 그릇', 'Malatang bowl'], '🦐': ['해산물 한 접시', 'Seafood plate'], '🍱': ['밥 한 상', 'Set meal'] };
@@ -47,10 +47,10 @@ export const RECIPES = [['🥞', '팬케이크', 'Pancake', { '🌾': 1, '🥚':
 export const TASKS = {
   work: ['{e} {n} 같이 하기', 'Help: {n}', 1, 400], mush: ['🍄 버섯 2개 따기', '🍄 Pick 2 mushrooms', 2, 300],
   sell: ['🛒 장터에서 물건 3개 팔기', '🛒 Sell 3 things at a market', 3, 300], away: ['✨ 멀리서 온 물건을 장터에 팔기', '✨ Sell something from far away', 1, 400], buy: ['🥚 마트에서 요리 재료 사기', '🥚 Buy a cooking ingredient', 1, 200], cook: ['🍳 아이 집 부엌에서 요리 하나 만들기', '🍳 Cook a dish in a kitchen', 1, 600], share: ['🍽 이웃에게 요리 나눠 주기', '🍽 Share a dish with a neighbour', 1, 500], eat: ['🍜 식당에서 밥 먹어 보기', '🍜 Eat at a restaurant', 1, 300],
-  summit: ['⛰ 산꼭대기 도장 찍기', '⛰ Get the summit stamp', 1, 800], bus: ['🚌 버스 타고 다른 정류장 가기', '🚌 Ride a bus to another stop', 1, 300], boat: ['⛵ 배 타고 바다 나가 보기', '⛵ Take the boat out', 1, 500], stones: ['👣 징검다리 건너기', '👣 Cross the stepping stones', 1, 300], book: ['📖 도서관에서 책 읽기', '📖 Read at the library', 1, 300],
+  summit: ['⛰ 산꼭대기 도장 찍기', '⛰ Get the summit stamp', 1, 800], bus: ['🚌 버스 타고 다른 정류장 가기', '🚌 Ride a bus to another stop', 1, 300], boat: ['⛵ 배 타고 바다 나가 보기', '⛵ Take the boat out', 1, 500], stones: ['👣 징검다리 건너기', '👣 Cross the stepping stones', 1, 300], book: ['📖 도서관에서 책 읽기', '📖 Read at the library', 1, 300], stars: ['🔭 밤(19시 뒤)에 산꼭대기에서 별 보기', '🔭 Stargaze on the summit at night (after 19:00)', 1, 500],
   bundle: ['🧺 계절 꾸러미에 물건 넣기 (I → 꾸러미)', '🧺 Put something in a bundle (I → Bundles)', 1, 300],
 };
-export const TASK_POOLS = [['work', 'mush'], ['sell', 'away', 'buy', 'cook', 'share', 'eat', 'bundle'], ['summit', 'bus', 'boat', 'stones', 'book']];
+export const TASK_POOLS = [['work', 'mush'], ['sell', 'away', 'buy', 'cook', 'share', 'eat', 'bundle'], ['summit', 'bus', 'boat', 'stones', 'book', 'stars']];
 export const shopOf = name => { if (/동물 카페|키즈 카페|보드게임 카페|꼬리 용품|반려/.test(name || '')) return null;   /* 놀이 카페·반려 용품 = 파는 가게 아님(뒷걸음 정규식은 옛 아이폰 사파리에서 깨져 함수로) */ for (const S of SHOPS) if (S[0].test(name || '')) return S; return null; };
 export const won = n => (n | 0).toLocaleString('ko-KR') + '원';
 export const itemName = (e, en) => { const I = ITEMS[e]; return I ? (en ? I[1] : I[0]) : e; };
