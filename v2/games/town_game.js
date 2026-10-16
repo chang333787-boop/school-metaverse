@@ -54,7 +54,7 @@ export const itemName = (e, en) => { const I = ITEMS[e]; return I ? (en ? I[1] :
 
 export function createGame(id) {
   const KEY = 'sm-town-game:' + id;
-  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, clock: true });
+  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, clock: true });
   let S = fresh();
   try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j && j.v === SAVE_V) { S = Object.assign(fresh(), j); for (const k of Object.keys(S.bag)) if (!(S.bag[k] > 0)) delete S.bag[k]; } } catch (e) { /* 저장 막힘·깨짐 = 새로 시작 */ }
   if (!(S.min >= 0 && S.min < DAY_END)) S.min = 7 * 60;
@@ -83,7 +83,9 @@ export function createGame(id) {
     // 잠 = 다음 날 아침 · 오늘 딴 자리는 다시 자람 · 바로 저장
     sleep() { S.day++; S.min = DAY_START; acc = 0; ph = phaseOf(S.min); S.picked = {}; S.uses = {}; S.tasks = null; dirty = true; G.flush(); emit('clock'); emit('phase'); emit('day'); },
     // 가방
-    add(e, n = 1) { S.bag[e] = (S.bag[e] || 0) + n; const neu = !S.dex[e]; if (neu) S.dex[e] = S.day; dirty = true; return neu; },
+    add(e, n = 1) { S.bag[e] = (S.bag[e] || 0) + n; const neu = G.found(e); dirty = true; return neu; },
+    // 도감 첫 기록(곳·때 = 놀이 쪽 stamp9 · town_dex.js 틀)
+    stamp9: null, found(k) { if (S.dex[k] != null) return false; S.dex[k] = G.stamp9 ? G.stamp9() : S.day; dirty = true; return true; },
     take(e, n = 1) { if ((S.bag[e] || 0) < n) return false; S.bag[e] -= n; if (S.bag[e] <= 0) delete S.bag[e]; dirty = true; return true; },
     count: e => S.bag[e] || 0,
     // 오늘 딴 자리(버섯 등 — 다음 날 다시 자람)
@@ -92,10 +94,12 @@ export function createGame(id) {
     // 돈(GAME-3 · 빚·벌 없음 — 모자라면 못 살 뿐)
     earn(n) { n = Math.round(n); S.money += n; S.earned += n; dirty = true; },
     spend(n) { if (S.money < n) return false; S.money -= n; dirty = true; return true; },
+    // 가 본 칸(도감 · 처음이면 true)
+    visit(c) { if (S.cells[c]) return false; S.cells[c] = S.day; dirty = true; return true; },
     // 하루에 몇 번(일터 3판 등 — 다음 날 다시)
     uses: k => S.uses[k] || 0,
     use(k) { S.uses[k] = (S.uses[k] || 0) + 1; dirty = true; return S.uses[k]; },
-    ate(e) { const neu = !S.ate[e]; S.ate[e] = (S.ate[e] || 0) + 1; dirty = true; return neu; },
+    ate(e) { const neu = !S.ate[e]; S.ate[e] = (S.ate[e] || 0) + 1; G.found('ate:' + e); dirty = true; return neu; },
     // 가게가 열렸나(시계 기준 · 시계를 멈춰도 그 시각 그대로)
     open: (h0, h1) => { const h = S.min / 60; return h0 === 0 && h1 === 24 ? true : h >= h0 && h < h1; },
     // 오늘의 할 일: ctx = { 할일id: [자리 칸, 일 갈래?, 이모지, 이름] } (이 마을에 있는 것만) · 하루 첫 부름에 셋을 고름(날짜 씨앗 · 1일째 = 가까운 일터 + 장터 팔기 + 버스)
