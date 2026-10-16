@@ -21,7 +21,7 @@ export const ITEMS = {
   '🧂': ['소금', 'Salt', 'food', 150, '바다'], '🐚': ['조개', 'Clam', 'food', 200, '바다'], '🌿': ['김', 'Laver', 'food', 250, '바다'], '🐟': ['물고기', 'Fish', 'food', 400, '바다'],
   '🥒': ['오이', 'Cucumber', 'food', 150, '강'], '🥕': ['당근', 'Carrot', 'food', 150, '들'], '🍅': ['방울토마토', 'Cherry tomato', 'food', 200, '들'], '🌽': ['옥수수', 'Corn', 'food', 200, '들'], '🍠': ['고구마', 'Sweet potato', 'food', 250, '들'], '🍞': ['빵', 'Bread', 'treat', 300, '시내'], '🍦': ['아이스크림', 'Ice cream', 'treat', 300, '관광'], '🥤': ['음료', 'Drink', 'treat', 0],
   '🌾': ['밀가루', 'Flour', 'cook', 0], '🥚': ['달걀', 'Egg', 'cook', 0], '🧈': ['버터', 'Butter', 'cook', 0], '🍁': ['시럽', 'Syrup', 'cook', 0],
-  '🥞': ['팬케이크', 'Pancake', 'dish', 0], '🥘': ['버섯 볶음', 'Fried mushrooms', 'dish', 0], '🍮': ['푸딩', 'Pudding', 'dish', 0], '🍓🥞': ['딸기 팬케이크', 'Strawberry pancake', 'dish', 0], '🌑': ['탄 요리', 'Burnt food', 'dish', 0], '🍲': ['감자 배추국', 'Potato-cabbage soup', 'dish', 0], '🍙': ['주먹밥', 'Rice ball', 'dish', 0],
+  '🥞': ['팬케이크', 'Pancake', 'dish', 0], '🥘': ['버섯 볶음', 'Fried mushrooms', 'dish', 0], '🍮': ['푸딩', 'Pudding', 'dish', 0], '🍓🥞': ['딸기 팬케이크', 'Strawberry pancake', 'dish', 0], '🌑': ['탄 요리', 'Burnt food', 'dish', 0], '🍲': ['감자 배추국', 'Potato-cabbage soup', 'dish', 0], '🍙': ['주먹밥', 'Rice ball', 'dish', 0], '🍿': ['팝콘', 'Popcorn', 'dish', 0],
   '🌱': ['심은 모', 'Rice seedlings planted', 'farm', 0], '🌲': ['심은 나무', 'Saplings planted', 'farm', 0],
   '⛰': ['정상 도장', 'Summit stamp', 'stamp', 0], '🗼': ['등대 도장', 'Lighthouse stamp', 'stamp', 0], '👣': ['징검다리 도장', 'Stepping-stone stamp', 'stamp', 0], '📖': ['책 읽기 도장', 'Reading stamp', 'stamp', 0], '⛷': ['스키 도장', 'Ski stamp', 'stamp', 0], '🏅': ['요리사 도장', 'Cook stamp', 'stamp', 0], '🧺': ['꾸러미 도장', 'Bundle stamp', 'stamp', 0], '🔭': ['별 보기 도장', 'Stargazing stamp', 'stamp', 0],
 };
@@ -41,7 +41,7 @@ export const SHOPS = [
 // 요리(C1 · 패들렛 56·63·64·66 🙋 유은·시아 — 재료 모으기 → 레시피북 → 불 조절 → 나눠 주기 · 탄 요리는 '윽!') · 독버섯은 재료가 아님(교사 10-16 (가) 못 땀)
 //   재료 값 ≈ 1천 원(흉내: 보통 아이 첫 요리 4~6분) · 버섯 볶음 = 딴 버섯 둘 + 버터(산에서 딴 것을 쓰는 요리)
 export const RECIPES = [['🥞', '팬케이크', 'Pancake', { '🌾': 1, '🥚': 1, '🥛': 1 }], ['🥘', '버섯 볶음', 'Fried mushrooms', { '🍄': 2, '🧈': 1 }], ['🍮', '푸딩', 'Pudding', { '🥚': 2, '🥛': 1, '🍁': 1 }], ['🍓🥞', '딸기 팬케이크', 'Strawberry pancake', { '🌾': 1, '🥚': 1, '🥛': 1, '🍓': 3 }],
-  ['🍲', '감자 배추국', 'Potato-cabbage soup', { '🥔': 2, '🥬': 1, '🧂': 1 }, 'summer'], ['🍙', '주먹밥', 'Rice ball', { '🍚': 2, '🧂': 1 }, 'autumn']];   // 다섯째 = 그 꾸러미를 채우면 생기는 요리법(GAME-7)
+  ['🍲', '감자 배추국', 'Potato-cabbage soup', { '🥔': 2, '🥬': 1, '🧂': 1 }, 'summer'], ['🍙', '주먹밥', 'Rice ball', { '🍚': 2, '🧂': 1 }, 'autumn'], ['🍿', '팝콘', 'Popcorn', { '🌽': 2, '🧈': 1 }, 'garden']];   // 다섯째 = 그 꾸러미를 채우면 생기는 요리법(GAME-7)
 // 오늘의 할 일(GAME-5 · 스타듀 '도움 요청 게시판' 결): 날마다 셋 = 벌기(일터·버섯) 하나 + 나누기(장터·가게·요리) 하나 + 둘러보기(정상·버스·배·징검다리·책) 하나 · 이 마을에 있는 것만(자리 = 그곳 칸)
 //   보상 = 돈(하나 300~800원 · 셋 다 하면 +500원 — 흉내 하루 벌이의 5~15%라 '덤') · 벌·기한 없음(다 못 해도 다음 날 새 셋)
 export const TASKS = {
