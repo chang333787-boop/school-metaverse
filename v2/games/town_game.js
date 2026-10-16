@@ -54,7 +54,7 @@ export const itemName = (e, en) => { const I = ITEMS[e]; return I ? (en ? I[1] :
 
 export function createGame(id) {
   const KEY = 'sm-town-game:' + id;
-  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, clock: true });
+  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, hearts: {}, clock: true });
   let S = fresh();
   try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j && j.v === SAVE_V) { S = Object.assign(fresh(), j); for (const k of Object.keys(S.bag)) if (!(S.bag[k] > 0)) delete S.bag[k]; } } catch (e) { /* 저장 막힘·깨짐 = 새로 시작 */ }
   if (!(S.min >= 0 && S.min < DAY_END)) S.min = 7 * 60;
@@ -96,6 +96,9 @@ export function createGame(id) {
     spend(n) { if (S.money < n) return false; S.money -= n; dirty = true; return true; },
     // 가 본 칸(도감 · 처음이면 true)
     visit(c) { if (S.cells[c]) return false; S.cells[c] = S.day; dirty = true; return true; },
+    // 이웃 마음(일꾼마다 점수 · ❤ = 3점마다 · 최대 5) — 올랐으면 새 ❤ 수를 돌려줌
+    heart(k, n) { const H = S.hearts || (S.hearts = {}), a = Math.min(5, ((H[k] || 0) / 3) | 0); H[k] = Math.min(15, (H[k] || 0) + n); dirty = true; const b = Math.min(5, (H[k] / 3) | 0); return b > a ? b : 0; },
+    hearts: k => Math.min(5, (((S.hearts || {})[k] || 0) / 3) | 0),
     // 하루에 몇 번(일터 3판 등 — 다음 날 다시)
     uses: k => S.uses[k] || 0,
     use(k) { S.uses[k] = (S.uses[k] || 0) + 1; dirty = true; return S.uses[k]; },
