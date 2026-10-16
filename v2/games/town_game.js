@@ -54,11 +54,11 @@ export const itemName = (e, en) => { const I = ITEMS[e]; return I ? (en ? I[1] :
 
 export function createGame(id) {
   const KEY = 'sm-town-game:' + id;
-  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, hearts: {}, clock: true });
+  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, hearts: {}, today: null, clock: true });
   let S = fresh();
   try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j && j.v === SAVE_V) { S = Object.assign(fresh(), j); for (const k of Object.keys(S.bag)) if (!(S.bag[k] > 0)) delete S.bag[k]; } } catch (e) { /* 저장 막힘·깨짐 = 새로 시작 */ }
   if (!(S.min >= 0 && S.min < DAY_END)) S.min = 7 * 60;
-  let dirty = false, since = 0, acc = 0, ph = phaseOf(S.min), on = null;
+  let dirty = false, since = 0, acc = 0, ph = phaseOf(S.min), on = null; const T0 = () => ({ earned: 0, got: {}, cells: 0, tasks: 0, cooked: 0, shared: 0, dex: 0 }); if (!S.today) S.today = T0();   // 오늘 한 일(하루 마무리 · 잠들면 비움)
   const emit = (t) => { if (on) on(t); };
   const G = {
     S,
@@ -81,21 +81,22 @@ export function createGame(id) {
     clockText(en) { const h = (S.min / 60) | 0, m = ((S.min % 60) / 10 | 0) * 10;   /* 10분 단위(스타듀처럼 — 칩 글이 1초마다 바뀌지 않게) */ return (en ? 'Day ' + S.day + ' ' : S.day + '일째 ') + (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; },
     setClock(onoff) { S.clock = !!onoff; dirty = true; emit('clock'); },
     // 잠 = 다음 날 아침 · 오늘 딴 자리는 다시 자람 · 바로 저장
-    sleep() { S.day++; S.min = DAY_START; acc = 0; ph = phaseOf(S.min); S.picked = {}; S.uses = {}; S.tasks = null; dirty = true; G.flush(); emit('clock'); emit('phase'); emit('day'); },
+    sleep() { G.lastDay = { day: S.day, ...S.today }; S.today = T0(); S.day++; S.min = DAY_START; acc = 0; ph = phaseOf(S.min); S.picked = {}; S.uses = {}; S.tasks = null; dirty = true; G.flush(); emit('clock'); emit('phase'); emit('day'); },   // lastDay = 하루 마무리 창이 읽음
+    lastDay: null, tally(k, n = 1) { if (!S.today) S.today = T0(); S.today[k] = (S.today[k] || 0) + n; dirty = true; },
     // 가방
-    add(e, n = 1) { S.bag[e] = (S.bag[e] || 0) + n; const neu = G.found(e); dirty = true; return neu; },
+    add(e, n = 1) { S.bag[e] = (S.bag[e] || 0) + n; const neu = G.found(e); if (S.today) S.today.got[e] = (S.today.got[e] || 0) + n; dirty = true; return neu; },
     // 도감 첫 기록(곳·때 = 놀이 쪽 stamp9 · town_dex.js 틀)
-    stamp9: null, found(k) { if (S.dex[k] != null) return false; S.dex[k] = G.stamp9 ? G.stamp9() : S.day; dirty = true; return true; },
+    stamp9: null, found(k) { if (S.dex[k] != null) return false; S.dex[k] = G.stamp9 ? G.stamp9() : S.day; if (S.today) S.today.dex++; dirty = true; return true; },
     take(e, n = 1) { if ((S.bag[e] || 0) < n) return false; S.bag[e] -= n; if (S.bag[e] <= 0) delete S.bag[e]; dirty = true; return true; },
     count: e => S.bag[e] || 0,
     // 오늘 딴 자리(버섯 등 — 다음 날 다시 자람)
     picked: k => S.picked[k] === S.day,
     pick(k) { S.picked[k] = S.day; dirty = true; },
     // 돈(GAME-3 · 빚·벌 없음 — 모자라면 못 살 뿐)
-    earn(n) { n = Math.round(n); S.money += n; S.earned += n; dirty = true; },
+    earn(n) { n = Math.round(n); S.money += n; S.earned += n; if (S.today) S.today.earned += n; dirty = true; },
     spend(n) { if (S.money < n) return false; S.money -= n; dirty = true; return true; },
     // 가 본 칸(도감 · 처음이면 true)
-    visit(c) { if (S.cells[c]) return false; S.cells[c] = S.day; dirty = true; return true; },
+    visit(c) { if (S.cells[c]) return false; S.cells[c] = S.day; if (S.today) S.today.cells++; dirty = true; return true; },
     // 이웃 마음(일꾼마다 점수 · ❤ = 3점마다 · 최대 5) — 올랐으면 새 ❤ 수를 돌려줌
     heart(k, n) { const H = S.hearts || (S.hearts = {}), a = Math.min(5, ((H[k] || 0) / 3) | 0); H[k] = Math.min(15, (H[k] || 0) + n); dirty = true; const b = Math.min(5, (H[k] / 3) | 0); return b > a ? b : 0; },
     hearts: k => Math.min(5, (((S.hearts || {})[k] || 0) / 3) | 0),
@@ -112,7 +113,7 @@ export function createGame(id) {
         const [id, c] = pick, T = TASKS[id], txt = (en ? T[1] : T[0]).replace('{e}', c[2] || '').replace('{n}', c[3] || ''); list.push({ id, ev: id === 'work' ? 'work:' + c[1] : id, t: txt, cell: c[0] || '', need: T[2], n: 0, rew: T[3], done: false }); });
       S.tasks = { day: S.day, list, all: false }; dirty = true; return list; },
     // 한 일 알리기 → 이번에 끝난 할 일들(보상은 여기서 줌 · 셋 다 끝나면 덤)
-    taskEv(ev, n = 1) { const T = S.tasks; if (!T || T.day !== S.day) return null; let out = null; for (const t of T.list) { if (t.done || t.ev !== ev) continue; t.n = Math.min(t.need, t.n + n); if (t.n >= t.need) { t.done = true; S.money += t.rew; S.earned += t.rew; S.tasksDone = (S.tasksDone || 0) + 1; (out = out || []).push(t); } }
+    taskEv(ev, n = 1) { const T = S.tasks; if (!T || T.day !== S.day) return null; let out = null; for (const t of T.list) { if (t.done || t.ev !== ev) continue; t.n = Math.min(t.need, t.n + n); if (t.n >= t.need) { t.done = true; S.money += t.rew; S.earned += t.rew; S.tasksDone = (S.tasksDone || 0) + 1; if (S.today) { S.today.tasks++; S.today.earned += t.rew; } (out = out || []).push(t); } }
       if (out && !T.all && T.list.every(t => t.done)) { T.all = true; S.money += 500; S.earned += 500; out.all = true; } if (out) dirty = true; return out; },
     // 처음부터(가방·돈·도감·날짜 모두) — 가방 객체는 그대로 두고 비움(마을이 같은 객체를 들고 있음)
     reset() { const b = S.bag; for (const k of Object.keys(b)) delete b[k]; const f = fresh(); f.bag = b; for (const k of Object.keys(S)) delete S[k]; Object.assign(S, f); acc = 0; ph = phaseOf(S.min); dirty = true; G.flush(); emit('clock'); emit('phase'); },
