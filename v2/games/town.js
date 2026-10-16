@@ -3629,8 +3629,9 @@ export default async function start(map, params) {
     else if (p.door) { let bd = 30; for (const q of BLD) { if (!q.b || ['green', 'park', 'play', 'pitch'].includes(q.kind)) continue; const d = Math.hypot(q.cx - p.x, q.cz - p.z); if (d < bd && inSpot(q)) { bd = d; B9 = q; } } }
     const e = B9 ? inSpot(B9) : p.door ? [p.door[0], p.door[1], p.door[0] - p.x, p.door[1] - p.z] : null; if (!e) return null; const l = Math.hypot(e[2], e[3]) || 1, ux = e[2] / l, uz = e[3] / l, g = map.q.groundAt(e[0], e[1], ty(e[0], e[1]) + 1.2);
     return { door: [e[0], e[1]], ux, uz, g, look: [e[0] - ux * 2, e[1] - uz * 2], B9 }; }
-  function doorFront(T) {   // 문 앞 4~6m(옆 ±3m까지) · 문과 높이 차 2m 안 · 막히지 않음 · 물·학교·걷기 경계 밖 X · 걸어서 문까지(곧은 거리 × 1.5 + 6 안)
-    for (const d of [5, 4, 6, 3, 7]) for (const s9 of [0, 1.5, -1.5, 3, -3]) { const x = T.door[0] + T.ux * d - T.uz * s9, z = T.door[1] + T.uz * d + T.ux * s9, g = map.q.groundAt(x, z, T.g + 1.2);
+  function doorFront(T) {   // 문 앞 4~6m(큰 건물은 크기만큼 · 옆 ±3m까지) · 문과 높이 차 2m 안 · 막히지 않음 · 물·학교·걷기 경계 밖 X · 걸어서 문까지(곧은 거리 × 1.5 + 6 안)
+    const B9 = T.B9, base = B9 ? Math.min(13, Math.max(5, Math.max(B9.w, B9.d) * 0.45, (B9.drawnH ?? B9.h) * 0.8)) : 5, DL = [...new Set([base, base - 1, base + 1, base - 2, base + 2, 4, 3].map(v => Math.round(v * 2) / 2).filter(v => v >= 3))];   /* 걷기 7/7: 큰 건물은 더 떨어져서(집 5m ~ 마트 13m — 화면에 벽만 차지 않게) */
+    for (const d of DL) for (const s9 of [0, 1.5, -1.5, 3, -3]) { const x = T.door[0] + T.ux * d - T.uz * s9, z = T.door[1] + T.uz * d + T.ux * s9, g = map.q.groundAt(x, z, T.g + 1.2);
       if (Math.abs(g - T.g) > 2 || blk9(x, z, g) || sdAt(x, z) < 1 || (SEAS.length && seaSd(x, z) < 3) || inSchool(x, z) || (typeof inWalk === 'function' && !inWalk(x, z))) continue;
       const L9 = walkLen([x, z], T.door, 1.8, 12), st = Math.abs(x - T.door[0]) + Math.abs(z - T.door[1]); if (L9 < 0 || L9 > st * 1.5 + 6) continue; return [x, z]; } return null; }
   function arriveSpot(p, old) {   // → [설 자리, 볼 곳(없으면 null)] · old = 예전 규칙(길가 인도만 · 점검 비교용)
