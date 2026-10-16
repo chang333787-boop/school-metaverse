@@ -20,6 +20,7 @@ export const ROOM_ITEMS = {
   kids: ['철골 정글짐', '미끄럼', '그물 다리', '네온', '계단', '공 풀', '쉼 탁자', '손님(이름 없음)'],
   board: ['1층 음식점', '2층 상점가', '3층 보드게임', '계단', '손님(이름 없음)'],
   home: ['침대', '책상', '소파', '창', '책장', '러그'],
+  tent: ['A자 텐트 천', '침낭 둘', '매단 랜턴', '배낭', '바닥 깔개', '물병'],
 };
 export const kidItem = (label, kid) => (kid || []).some(w => label === w || label.startsWith(w + '('));   // 🙋 = 자료 room 낱말과 같거나 '낱말(…)'
 export function createIndoor({ T3, map, onCollider, removeCollider, en }) {
@@ -86,7 +87,7 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en }) {
       put('b', bx, 0, bz, sx || 0.06, 0.12, sz ? sz - ins : 0.06, 0x8a6a4a); if (!o.noWains) put('b', wx, 0.12, wz, sx || 0.04, 0.78, sz ? sz - ins : 0.04, o.wains ?? 0xe2d4b8); }   // 걸레받이 6cm · 아래 벽판 4cm(옆벽 것은 모서리에서 6cm 들임)
     put('b', 0, H, 0, W + 0.4, 0.2, D + 0.4, o.ceil ?? 0xfbf8f0); col(-W / 2 - 1, W / 2 + 1, -D / 2 - 1, D / 2 + 1, -1.5, 0); col(-W / 2 - 1, W / 2 + 1, -D / 2 - 1, D / 2 + 1, H, H + 1);   // 천장 · 바닥 판(충돌) · 천장 판(충돌 — 카메라 실내 판정)
     const nx = Math.max(1, Math.round(W / 5)), nz = Math.max(1, Math.round(D / 5)); if (!o.noLights) for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) put('c', -W / 2 + (i + 0.5) * W / nx, H - 0.03, -D / 2 + (j + 0.5) * D / nz, 0.35, 0.03, 0, 0xfff6dc, 1);   // 천장 등(빛)
-    put('b', 0, 0, D / 2 - 0.06, 1.5, 2.3, 0.06, 0xe9e5dc); put('b', 0, 0, D / 2 - 0.1, 1.2, 2.15, 0.04, 0x7a4e2e); put('b', 0.42, 1.0, D / 2 - 0.14, 0.08, 0.08, 0.04, 0xd8b04a); put('b', 0, 0, D / 2 - 0.75, 1.4, 0.016, 0.9, 0x8a3a2e);   // 문틀 · 문 · 손잡이 · 문 앞 깔개
+    if (o.flap) { put('b', 0, 0, D / 2 - 0.06, 1.1, 1.75, 0.06, 0x2b2d31); put('b', -0.62, 0, D / 2 - 0.09, 0.16, 1.85, 0.04, o.flap); put('b', 0.62, 0, D / 2 - 0.09, 0.16, 1.85, 0.04, o.flap); } else { put('b', 0, 0, D / 2 - 0.06, 1.5, 2.3, 0.06, 0xe9e5dc); put('b', 0, 0, D / 2 - 0.1, 1.2, 2.15, 0.04, 0x7a4e2e); put('b', 0.42, 1.0, D / 2 - 0.14, 0.08, 0.08, 0.04, 0xd8b04a); put('b', 0, 0, D / 2 - 0.75, 1.4, 0.016, 0.9, 0x8a3a2e); }   // B3 텐트 = 걷어 올린 천 문(지퍼 자리 어둡게)   // 문틀 · 문 · 손잡이 · 문 앞 깔개
     for (const wy of o.winY || [1.0]) for (const s9 of [-1, 1]) { const n = Math.max(1, Math.floor(D / 4)); for (let k = 0; k < n; k++) { const z = -D / 2 + (k + 0.5) * D / n; put('b', s9 * (W / 2 - 0.04), wy, z, 0.04, 1.2, 1.3, 0xf7f6f2); put('b', s9 * (W / 2 - 0.065), wy + 0.05, z, 0.01, 1.1, 1.2, o.winC ?? 0xbfe3f5, 1); } }   // 옆 창(밖 = 하늘빛 판)
     const quadL = (a, b, c, d, hex, gl) => { const T = gl ? Ag : A, q = [a, b, c, d].map(v => [ox + v[0], oy + v[1], oz + v[2]]), n = nrm3(q[0], q[1], q[2]), m = [(q[0][0] + q[2][0]) / 2, (q[0][1] + q[2][1]) / 2, (q[0][2] + q[2][2]) / 2], toC = [ox - m[0], oy + H / 2 - m[1], oz - m[2]], flip = n[0] * toC[0] + n[1] * toC[1] + n[2] * toC[2] < 0, cl = rgb(hex);   // 방 안쪽을 보는 네모(비스듬한 천장)
       const L9 = flip ? [q[0], q[3], q[2], q[0], q[2], q[1]] : [q[0], q[1], q[2], q[0], q[2], q[3]], nn = flip ? n.map(v => -v) : n; for (const v of L9) { T.p.push(v[0], v[1], v[2]); T.n.push(nn[0], nn[1], nn[2]); T.c.push(cl[0], cl[1], cl[2]); } };
@@ -272,9 +273,16 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en }) {
     sitGuest(S, seats, 0, 1); sitGuest(S, seats, 5, 5); standGuest(S, ox - 4, oy + FH, oz - 3.3, Math.PI, 2); standGuest(S, ox + 1.8, oy + FH, oz + 0.5, -1.2, 6); sitGuest(S, seats, 8, 3); sitGuest(S, seats, 11, 7);   // 손님(1층 둘 · 2층 둘 · 3층 둘)
     return { S, W, D, H, seats, items: ROOM_ITEMS.board }; }
 
+  // ── B3 텐트(패들렛 58 — 캠핑장 텐트 안): A자 천(양옆 비스듬한 판 · 앞뒤 세모 벽 = 텐트 색) · 침낭 둘(파랑·빨강 · 눕기) · 매단 랜턴(빛 판) · 배낭 · 물병 · 깔개 ──
+  function roomTent(at, col) { const C = col || 0xef8b33, W = 3.8, D = 4.2, H = 2.5, S = shell(at, W, D, H, { wall: C, floor: 0x5f8f4e, floor2: 0x6b9a58, noWains: true, ceil: C, winY: [], noLights: true, flap: C }), P = S.put, Q = S.quadL;
+    for (const s9 of [-1, 1]) Q([s9 * (W / 2 - 0.02), 0.35, -D / 2 + 0.02], [s9 * (W / 2 - 0.02), 0.35, D / 2 - 0.02], [s9 * 0.05, H - 0.04, D / 2 - 0.02], [s9 * 0.05, H - 0.04, -D / 2 + 0.02], s9 > 0 ? C : ((((C >> 16) & 255) * 0.72 | 0) << 16) | ((((C >> 8) & 255) * 0.72 | 0) << 8) | ((C & 255) * 0.72 | 0));   // 비스듬한 천 두 장(한쪽은 같은 색 그늘 72%)
+    P('b', 0, H - 0.1, 0, 0.06, 0.06, D - 0.1, 0x6b4a2f); P('c', 0, H - 0.75, 0, 0.012, 0.62, 0, 0x2b2d31); P('c', 0, H - 1.0, 0, 0.13, 0.26, 0, 0xffe7a8, 1); P('c', 0, H - 0.74, 0, 0.15, 0.03, 0, 0x2b2d31);   // 마룻대 · 매단 랜턴(빛)
+    for (const [x, hc] of [[-0.85, 0x3d74c9], [0.85, 0xe0453a]]) { P('b', x, 0, -0.2, 0.82, 0.16, 2.0, hc); P('b', x, 0.16, -0.95, 0.7, 0.1, 0.38, 0xffffff); P('b', x, 0.16, 0.45, 0.8, 0.03, 0.7, (hc & 0xfefefe) >> 1); }   // 침낭 둘 + 베개 + 접힌 끝
+    P('b', 1.25, 0, 1.45, 0.5, 0.62, 0.32, 0x2f8a5a); P('b', 1.25, 0.62, 1.45, 0.42, 0.12, 0.28, 0x2a6a46); P('c', 0.75, 0, 1.55, 0.07, 0.3, 0, 0x7fb8d0); S.col(1.0, 1.5, 1.29, 1.61, -0.5, 0.74);   // 배낭(막힘) · 물병
+    return { S, W, D, H, seats: [], items: ROOM_ITEMS.tent, bed: { stand: [-0.1, 0, 0.6], top: [-0.85, 0.2, -0.2], yaw: Math.PI } }; }
   // ── 들어가기·나가기 ──
   const HOMES = { treehouse: roomCabin, 'blue-cottage': roomCottage, 'purple-townhouse': roomTownhouse, 'cream-suburban-fountain': roomSuburb };
-  function enter(o) { exit(); const at = o.at, made = o.kind === 'aqua' ? roomAqua(at) : o.kind === 'kids' ? roomKids(at) : o.kind === 'board' ? roomBoard(at) : HOMES[o.look] ? HOMES[o.look](at) : roomHome(at, null), S = made.S;
+  function enter(o) { exit(); const at = o.at, made = o.kind === 'aqua' ? roomAqua(at) : o.kind === 'kids' ? roomKids(at) : o.kind === 'board' ? roomBoard(at) : o.kind === 'tent' ? roomTent(at, o.col) : HOMES[o.look] ? HOMES[o.look](at) : roomHome(at, null), S = made.S;
     const grp = finish(S), cols = S.cols.map(c => onCollider(c)), hots = [], [ox, oy, oz] = at, D = made.D;
     hots.push(map.interact.add({ kind: 'game', x: ox, y: oy, z: oz + D / 2 - 0.9, r: 1.5, label: en ? '🚪 Go outside' : '🚪 밖으로 나가기', use: () => o.onExit && o.onExit() }));
     for (const s of made.seats || []) if (!s.taken) hots.push(map.interact.add({ kind: 'sit', x: s.stand[0], y: s.stand[1], z: s.stand[2], yaw: s.yaw, seat: { x: s.seat[0], y: s.seat[1], z: s.seat[2], yaw: s.yaw }, r: 0.9, label: en ? '💺 Sit' : '💺 앉기' }));
