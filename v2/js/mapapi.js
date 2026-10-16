@@ -202,7 +202,7 @@ export function createMapApi(host, NAV, META) {
     shoulder(m = 0) { CTRL.shoulder = Math.max(-1, Math.min(1, +m || 0)); },
     speed(k = 1) { CTRL.speed = Math.max(0.5, Math.min(2.5, k)); },   // 2.5 = 자전거 내리막·자전거 도로(마을 · 10-15)
     get input() { if (pl.touch && pl.touch.m > 0) return true; if (pl.keys) for (const k of MOVE_KEYS) if (pl.keys.has(k)) return true; return false; },   // 사람이 누르는 이동(키·조이스틱만 — steer 빼고)
-    pose(name) { CTRL.pose = name || null; },   // 몸 자세 덮어쓰기: 'swim'(헤엄) · 'dizzy'(엉덩방아 · 어지러움) · null = 원래대로(게임이 멈추면 풀림)
+    pose(name, o) { CTRL.pose = name || null; CTRL.poseY = (o && o.y) || 0; },   // 몸 자세 덮어쓰기: 'swim'(헤엄) · 'dizzy'(엉덩방아 · 어지러움) · null = 원래대로(게임이 멈추면 풀림)
     jump(on = true) { CTRL.noJump = !on; },   // RB-1: false = 점프 막음(게임이 멈추면 풀림)
     show(on = true) { CTRL.hideMe = !on; },
     held: code => !!(pl.keys && pl.keys.has(code)),   // BOAT-1(10-16): 지금 눌린 키(읽기만 — 배·탈것을 게임이 몰 때 · 몸은 freeze로 멈춰 둠)

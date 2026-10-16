@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=157';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=79';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=80';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=10';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=26';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -209,6 +209,7 @@ function kidTick(dt) {
   if (CTRL.pose !== kidPoseWas) { if (kidPoseWas === 'swim' || kidPoseWas === 'dizzy') { K.armL.rotation.z = -0.12; K.armR.rotation.z = 0.12; K.head.rotation.z = 0; K.rig.rotation.z = 0; } kidPoseWas = CTRL.pose; }
   if (CTRL.pose === 'swim') { const s9 = Math.sin(kidT * 5.2), m9 = Math.min(1, mv * 2 + 0.35); K.rig.rotation.x = 0.35 * mv; K.armL.rotation.x = K.armR.rotation.x = -2.0 + s9 * 0.55 * m9; K.armL.rotation.z = -0.12 - (0.5 + s9 * 0.4) * m9; K.armR.rotation.z = 0.12 + (0.5 + s9 * 0.4) * m9;   // 헤엄(평영 팔 · 발차기 · 마을 바다 10-15)
     K.legL.g.rotation.x = Math.sin(kidT * 7) * 0.4 * m9; K.legR.g.rotation.x = -Math.sin(kidT * 7) * 0.4 * m9; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 0.35; K.head.rotation.x = -0.15 * mv; }
+  else if (CTRL.pose === 'lie') { K.rig.position.set(0, 0.12 + (CTRL.poseY || 0), 0); K.rig.rotation.x = -1.5; K.legL.g.rotation.x = K.legR.g.rotation.x = 0; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 0; K.armL.rotation.x = K.armR.rotation.x = 0.12; K.head.rotation.x = -0.1; }   // B6 눕기(침대 · 마을 10-16 패들렛 64)
   else if (CTRL.pose === 'dizzy') { K.rig.position.set(0, K.sitY - 0.34, 0); K.rig.rotation.x = -0.22; K.legL.g.rotation.x = K.legR.g.rotation.x = -1.45; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 0.2;   // 엉덩방아 + 어지러움(차에 부딪힘 · 피·다침 없음 · 10-15 아이 패들렛)
     K.armL.rotation.x = K.armR.rotation.x = 0.55; K.armL.rotation.z = -0.6; K.armR.rotation.z = 0.6; K.head.rotation.z = Math.sin(kidT * 5) * 0.2; K.head.rotation.x = 0.1 + Math.sin(kidT * 3.3) * 0.08; K.rig.rotation.z = Math.sin(kidT * 2.5) * 0.06; }
   ACTS.pose();                                                       // ACTION-1: 행동 자세(마시기·씻기·분무기…)를 기본 자세 위에

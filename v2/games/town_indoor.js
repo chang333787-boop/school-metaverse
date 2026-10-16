@@ -128,7 +128,7 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en }) {
     P('b', -1.2, 2.75, 1.5, 0.02, H - 2.75, 0.02, 0x3a2a1a); P('b', -1.2, 2.75, 1.5, 0.28, 0.04, 0.28, 0x3a2a1a); P('b', -1.2, 2.45, 1.5, 0.22, 0.3, 0.22, 0xffd27a, 1);   // 매단 등불(빛)
     putF(S, 'd_i6', -2.0, -D / 2 + 0.25); colL(S, -2.0, -D / 2 + 0.25, 0.4, 0.22, -0.5, 1.2);   // 다락 밑 책장
     P('b', W / 2 - 0.45, 0, 2.3, 0.55, 0.5, 0.9, 0x8a5a34); P('b', W / 2 - 0.45, 0.5, 2.3, 0.58, 0.08, 0.93, 0x6b4a2f); colL(S, W / 2 - 0.45, 2.3, 0.3, 0.47, -0.5, 1.2); putF(S, 'd_i1', -W / 2 + 0.45, 2.7);   // 나무 상자 · 화분
-    return { S, W, D, H, seats, items: ROOM_ITEMS.treehouse }; }
+    return { S, W, D, H, seats, items: ROOM_ITEMS.treehouse, bed: { stand: [-0.5, T1, -D / 2 + 1.25], top: [-1.6, T1 + 0.18, -D / 2 + 1.25], yaw: Math.PI } }; }   // B6: 다락 이불 곁(눕기)
 
   // 하람(파란 시골집): 비스듬한 박공 천장 · 벽난로(돌) + 나무 난로(굴뚝 둘) · 흰 창틀 · 계단 → 지붕창 밑 다락방
   function roomCottage(at) { const W = 8.8, D = 7.6, HE = 3.0, HR = 5.0, S = shell(at, W, D, HR, { wall: 0xf4f1ea, wains: 0x2f5fb3, winY: [], noLights: true }), P = S.put, seats = [];
@@ -147,7 +147,7 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en }) {
     P('c', -1.7, 0, 0.75, 0.05, 0.55, 0, 0x7a5232); P('c16', -1.7, 0.55, 0.75, 0.32, 0.04, 0, 0xa8794a); P('s', -1.7, 0.67, 0.75, 0.1, 0.9, 0, 0xffffff); P('c16', -2.4, 0, 0.75, 1.3, 0.02, 0, 0xc2553a); P('c16', -2.4, 0, 0.75, 1.0, 0.026, 0, 0xf2c230);   // 찻주전자 탁자 · 둥근 깔개
     wwin(S, 'F', -2.4, 1.0, 1.0, 1.1); wwin(S, 'F', 2.4, 1.0, 1.0, 1.1); wwin(S, 'R', -0.2, 1.0, 1.1, 1.1);   // 흰 창틀 셋
     P('b', 0, 3.4, 1.8, 0.02, HR - 0.24 - 3.4, 0.02, 0x3a2a1a); P('s', 0, 3.3, 1.8, 0.2, 1, 0, 0xffe7a8, 1);   // 매단 등
-    return { S, W, D, H: HR, seats, items: ROOM_ITEMS['blue-cottage'] }; }
+    return { S, W, D, H: HR, seats, items: ROOM_ITEMS['blue-cottage'], cook: { stand: [W / 2 - 1.55, 0, 2.2] }, bed: { stand: [-0.55, 2.55, -D / 2 + 1.25], top: [-1.6, 2.55 + 0.36, -D / 2 + 1.25], yaw: Math.PI } }; }   // C1: 나무 난로 앞 · B6: 다락방 침대 곁
 
   // 예지(보라 타운하우스): 1층 거실·부엌 · 오른쪽 계단 → 2층 침실 · 발코니 문
   function roomTownhouse(at) { const W = 7.2, D = 8.0, FH = 3.2, H = 6.4, S = shell(at, W, D, H, { wall: 0xebe2f4, wains: 0x7a4fb8, winY: [] }), P = S.put, seats = [];
@@ -165,7 +165,7 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en }) {
     P('b', -W / 2 + 0.35, FH, 0.8, 0.6, 2.0, 1.2, 0xd9c8ec); P('b', -W / 2 + 0.655, FH + 0.1, 0.8, 0.01, 1.8, 0.02, 0x7a4fb8); for (const s9 of [-1, 1]) P('b', -W / 2 + 0.66, FH + 1.0, 0.8 + s9 * 0.08, 0.02, 0.12, 0.03, 0xd8b04a); colL(S, -W / 2 + 0.35, 0.8, 0.3, 0.6, FH - 0.2, FH + 2.0);   // 옷장
     putF(S, 'd_i15', -0.9, 0.4, 0, FH); wwin(S, 'F', -1.0, FH + 0.04, 1.4, 2.2, { fr: 0x7a4fb8, gl: 0xcfe8ff, sill: false }); P('b', -1.0, FH, D / 2 - 0.5, 1.2, 0.016, 0.6, 0x7a4fb8); putF(S, 'd_i1', 0.3, D / 2 - 0.4, 0, FH);   // 발코니 문(유리 두 짝) · 깔개 · 화분
     wwin(S, 'L', 1.2, FH + 1.0, 1.0, 1.2, { fr: 0xffffff }); wwin(S, 'B', -2.2, FH + 1.4, 0.9, 0.8, { fr: 0xffffff });   // 2층 창
-    return { S, W, D, H, seats, items: ROOM_ITEMS['purple-townhouse'] }; }
+    return { S, W, D, H, seats, items: ROOM_ITEMS['purple-townhouse'], cook: { stand: [0.8, 0, -D / 2 + 1.15] }, bed: { stand: [-2.2, FH, -D / 2 + 2.15], top: [-2.2, FH + 0.62, -D / 2 + 0.95], yaw: Math.PI } }; }   // C1: 화구 앞 · B6: 2층 침대 곁
 
   // 지원(크림 교외 집 · 카드 '침대·책상·방·주방'): 넓은 거실(소파·TV) · 열린 주방(조리대·냉장고·식탁) · 따로 방(침대·책상·옷장 · 장난감 카트)
   function roomSuburb(at) { const W = 12, D = 9.6, H = 3.2, S = shell(at, W, D, H, { wall: 0xf7f0e2, wains: 0xd9c4a0, winY: [] }), P = S.put, seats = [], wc = 0xf7f0e2;
@@ -184,21 +184,21 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en }) {
     putF(S, 'armchair', -2.4, 3.9, -Math.PI / 2); seatL(S, seats, -2.4, 3.9, 0, -Math.PI / 2, 0.8); colL(S, -2.4, 3.9, 0.38, 0.43, -0.5, 0.5); P('b', -3.7, 0, 2.0, 0.7, 0.42, 1.2, 0x7a5232); colL(S, -3.7, 2.0, 0.35, 0.6, -0.5, 0.42); putF(S, 'd_i16', -3.7, 2.0, Math.PI / 2);   // 안락의자 · 낮은 탁자 · 깔개
     putF(S, 'd_i12', 4.0, 0.03); colL(S, 4.0, -0.25, 0.75, 0.28, -0.5, 1.2); putF(S, 'd_i2', -1.2, 3.9); for (const [x, z] of [[5.5, 4.3], [-5.5, 4.3], [0.9, -0.2]]) putF(S, 'd_i1', x, z);   // 책장 · 램프 · 화분
     wwin(S, 'F', -3.5, 1.0, 1.4, 1.2); wwin(S, 'F', 3.5, 1.0, 1.4, 1.2); wwin(S, 'R', 2.4, 1.0, 1.6, 1.2); wwin(S, 'L', -2.4, 1.2, 1.0, 1.0);   // 거실·부엌 창
-    return { S, W, D, H, seats, items: ROOM_ITEMS['cream-suburban-fountain'] }; }
+    return { S, W, D, H, seats, items: ROOM_ITEMS['cream-suburban-fountain'], cook: { stand: [-0.4, 0, -D / 2 + 1.2] }, bed: { stand: [4.4, 0, -D / 2 + 2.2], top: [4.4, 0.62, -D / 2 + 0.95], yaw: Math.PI } }; }   // C1: 화구 앞 · B6: 방 침대 곁
 
   // ── 기본 방(모르는 집 모습 · ✨) ──
   function roomHome(at, decos) { const L = (decos && decos.length ? decos : DEFAULT_ROOM).filter(d => d && typeof d.id === 'string' && Number.isFinite(d.col) && Number.isFinite(d.row)), sz = d => SIZE[d.id] || [1, 1];
     let c0 = 1e9, c1 = -1e9, r1 = -1e9; for (const d of L) { const [w, h] = sz(d); c0 = Math.min(c0, d.col); c1 = Math.max(c1, d.col + w); r1 = Math.max(r1, d.row + h); } if (!L.length) { c0 = 0; c1 = 12; r1 = 6; }
     c0 -= 1; c1 += 1; r1 += 3; if (c1 - c0 < 12) { const e = (12 - (c1 - c0)) / 2; c0 -= Math.floor(e); c1 += Math.ceil(e); } if (r1 < 9) r1 = 9;   // 방 크기 = 꾸민 범위 + 둘레 한 칸 + 문 앞 세 줄(가장 작게 12 × 9칸)
-    const CS = INDOOR_CS, W = (c1 - c0) * CS, D = r1 * CS, H = 3.4, S = shell(at, W, D, H, {}), [ox, oy, oz] = at, X = c => ox - W / 2 + (c - c0) * CS, Z = r => oz - D / 2 + r * CS, seats = [];
+    const CS = INDOOR_CS, W = (c1 - c0) * CS, D = r1 * CS, H = 3.4, S = shell(at, W, D, H, {}), [ox, oy, oz] = at, X = c => ox - W / 2 + (c - c0) * CS, Z = r => oz - D / 2 + r * CS, seats = []; let bedA = null;
     for (const d of L) { const [w, h] = sz(d), cx = X(d.col + w / 2), cz = Z(d.row + h / 2);
       if (WALL_IDS[d.id]) { wallItem(d.id, (k, x, y, z, sx, sy, sz2, hex, gl, rx) => part(gl ? S.Ag : S.A, k, cx + x, oy + y, oz - D / 2 + 0.045 + z, sx, sy, sz2, hex, 0, rx || 0)); continue; }   // 뒷벽(아래 벽판 4cm + 0.5cm 앞)
       const zc = d.row === 0 ? Z(0) + Math.max(0.36, h * CS / 2) : cz; furniture(d.id, (k, x, y, z, sx, sy, sz2, hex, gl) => part(gl ? S.Ag : S.A, k, cx + x, oy + y, zc + z, sx, sy, sz2, hex));
       if (!FLAT[d.id]) S.cols.push({ x0: cx - w * CS * 0.45, x1: cx + w * CS * 0.45, z0: zc - h * CS * 0.45, z1: zc + h * CS * 0.45, y0: oy - 0.5, y1: oy + 1.2 });   // 가구 = 몸 막힘(위로 올라서지 않게 1.2m)
       if (d.id === 'd_i8') seatAt(seats, cx, zc + 0.08, oy, 0, 0.85);   // 소파 = 앞을 봄
       if (d.id === 'd_i14') seatAt(seats, cx, zc + 0.12, oy, 0, 0.85);
-      if (d.id === 'in_chair_front') seatAt(seats, cx, zc, oy, 0, 0.6); if (d.id === 'in_chair_back') seatAt(seats, cx, zc, oy, Math.PI, 0.6); }
-    return { S, W, D, H, seats, n: L.length, def: !(decos && decos.length), items: ROOM_ITEMS.home }; }
+      if (d.id === 'in_chair_front') seatAt(seats, cx, zc, oy, 0, 0.6); if (d.id === 'in_chair_back') seatAt(seats, cx, zc, oy, Math.PI, 0.6); if (d.id === 'd_i10' && !bedA) bedA = { abs: 1, stand: [cx, oy, zc + h * CS / 2 + 0.45], top: [cx, oy + 0.62, zc], yaw: Math.PI }; }   // B6: 침대 앞(눕기)
+    return { bed: bedA, S, W, D, H, seats, n: L.length, def: !(decos && decos.length), items: ROOM_ITEMS.home }; }
 
   // ── 아쿠아리움(🙋 33 유은: 수조 위 보트 · 머리 위 아치 수중 터널 · 클리오네 · 작은 동물 방) ──
   function roomAqua(at) { const W = 26, D = 18, H = 5.4, S = shell(at, W, D, H, { wall: 0x23405e, wains: 0x1c3550, floor: 0x3a4a5c, floor2: 0x34444f, ceil: 0x1d3048, winY: [] }), [ox, oy, oz] = at, P = (k, x, y, z, sx, sy, sz, hex, gl, rx) => part(gl ? S.Ag : S.A, k, ox + x, oy + y, oz + z, sx, sy, sz, hex, 0, rx || 0), anim = [];
@@ -278,6 +278,9 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en }) {
     const grp = finish(S), cols = S.cols.map(c => onCollider(c)), hots = [], [ox, oy, oz] = at, D = made.D;
     hots.push(map.interact.add({ kind: 'game', x: ox, y: oy, z: oz + D / 2 - 0.9, r: 1.5, label: en ? '🚪 Go outside' : '🚪 밖으로 나가기', use: () => o.onExit && o.onExit() }));
     for (const s of made.seats || []) if (!s.taken) hots.push(map.interact.add({ kind: 'sit', x: s.stand[0], y: s.stand[1], z: s.stand[2], yaw: s.yaw, seat: { x: s.seat[0], y: s.seat[1], z: s.seat[2], yaw: s.yaw }, r: 0.9, label: en ? '💺 Sit' : '💺 앉기' }));
+    const AB = (q, v) => q.abs ? v : [ox + v[0], oy + v[1], oz + v[2]];
+    if (made.cook && o.onCook) { const p = AB(made.cook, made.cook.stand); hots.push(map.interact.add({ kind: 'game', x: p[0], y: p[1], z: p[2], r: 1.3, label: en ? '🍳 Cook (recipe book)' : '🍳 요리하기 (레시피북)', use: () => o.onCook() })); }   // C1 부엌
+    if (made.bed && o.onBed) { const p = AB(made.bed, made.bed.stand), q = AB(made.bed, made.bed.top); hots.push(map.interact.add({ kind: 'game', x: p[0], y: p[1], z: p[2], r: 1.3, label: en ? '😴 Lie down' : '😴 눕기', use: () => o.onBed({ stand: p, top: q, yaw: made.bed.yaw || 0 }) })); }   // B6 침대
     for (const h of made.hot || []) hots.push(map.interact.add({ kind: h.kind, x: ox + h.at[0], y: oy + h.at[1], z: oz + h.at[2], r: 1.2, label: h.label, from: [ox + h.from[0], oy + h.from[1], oz + h.from[2]], to: [ox + h.to[0], oy + h.to[1], oz + h.to[2]], yaw: h.yaw, dur: h.dur }));
     cur = { o, grp, cols, hots, anim: made.anim || [], made, spawn: [ox, oy + 0.05, oz + D / 2 - 2.6] }; setNight(night); return cur; }
   function exit() { if (!cur) return null; const c = cur; cur = null; map.remove(c.grp); c.grp.traverse(m => { if (m.isMesh) m.geometry.dispose(); }); for (const h of c.cols) removeCollider(h); for (const h of c.hots) h.remove(); return c.o; }
