@@ -222,7 +222,7 @@ export const TOWN = {
         { id: 'c_noise', k: 'noisewall', ai: '지역 문제 — 큰길 소음 + 아파트 앞 방음벽(교사 10-15 ✨)' },
       ],
       fac: [   // 완성된 도시의 길가 시설(교사 10-13 — AI가 채움 ✨ · 아이가 요구한 시설과 기록을 나눔)
-        { k: 'streetlight', rule: 'allroads', ai: true }, ...['crosswalk', 'signal', 'bikelane'].map(k => { const r = KID_REQ.find(q => q.k === k); return { k, rule: k === 'signal' ? 'bigcross' : r.rule, by: r.by, why: r.why }; }),   // 10-15 패들렛 🙋(신호등 = 큰길 교차로마다 · 차가 빨간불에 멈춤 — 또래 결정)
+        { k: 'streetlight', rule: 'allroads', ai: true }, ...['crosswalk', 'signal', 'bikelane'].map(k => { const r = KID_REQ.find(q => q.k === k); return { k, rule: r.rule,   /* A3(패들렛 55 · 교사 10-16 'T자 포함 모든 갈림길'): 신호 = allcross(예전 bigcross) */ by: r.by, why: r.why }; }),   // 10-15 패들렛 🙋(신호등 = 큰길 교차로마다 · 차가 빨간불에 멈춤 — 또래 결정)
         { k: 'busstop', rule: 'bigroads', ai: true }, { k: 'bench', rule: 'parks', ai: true }, { k: 'schoolzone', rule: 'school', ai: true },
       ],
     },
