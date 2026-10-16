@@ -254,7 +254,7 @@ export function createMapApi(host, NAV, META) {
 
   // ---------- 7. 놀이 경계(소프트) — 밖에 0.25초 넘게 있으면 마지막 안전 지점으로 ----------
   const arena = { shape: null, out: 0, safe: null, safeT: 0 };
-  const inArena = (x, z) => { const s = arena.shape; if (!s) return true; if (s === 'school') return inSchool(x, z); if (s.rect) return x >= s.rect[0] && x <= s.rect[2] && z >= s.rect[1] && z <= s.rect[3];
+  const inArena = (x, z) => { const s = arena.shape; if (!s) return true; if (s === 'school') return inSchool(x, z); if (s.fn) return !!s.fn(x, z);   /* fn = 놀이가 정한 걷기 경계(마을 — 판 + 둘레 + 정상 등산로 띠 · 10-16) */ if (s.rect) return x >= s.rect[0] && x <= s.rect[2] && z >= s.rect[1] && z <= s.rect[3];
     if (s.poly) { let c = false; const p = s.poly; for (let i = 0, j = p.length - 1; i < p.length; j = i++) { if ((p[i][1] > z) !== (p[j][1] > z) && x < (p[j][0] - p[i][0]) * (z - p[i][1]) / (p[j][1] - p[i][1]) + p[i][0]) c = !c; } return c; } return true; };
   const arenaApi = { set(s) { arena.shape = s || null; arena.out = 0; arena.safe = null; return { remove() { if (arena.shape === s) arena.shape = null; } }; }, get: () => arena.shape };
 
@@ -590,7 +590,7 @@ export function createMapApi(host, NAV, META) {
     if (arena.shape) {
       const ok = inArena(P.x, P.z) && P.y > (arena.shape.ymin ?? -4) && P.y < (arena.shape.ymax ?? 12);   // 높이 범위(기본 −4~12 = 지붕 막기 · 마을 뒷산은 ymax로 넓힘)
       if (ok) { arena.out = 0; if (P.ground && (arena.safeT += 0.1) >= 0.5) { arena.safeT = 0; arena.safe = [P.x, P.y, P.z]; } }
-      else if ((arena.out += 0.1) > 0.25) { arena.out = 0; player.teleport(arena.safe || 'spawn:default'); hud.toast((arena.shape && arena.shape.msg) || '학교 밖으로는 나갈 수 없어요'); }   // 리뷰(SHRINK): {rect|poly, msg} — 놀이 칸 경계 알림을 게임이 고른다
+      else if ((arena.out += 0.1) > 0.25) { arena.out = 0; player.teleport(arena.safe || 'spawn:default'); hud.toast((arena.shape && (arena.shape.msgAt ? arena.shape.msgAt(P.x, P.z) : arena.shape.msg)) || '학교 밖으로는 나갈 수 없어요'); }   // 리뷰(SHRINK): {rect|poly, msg} — 놀이 칸 경계 알림을 게임이 고른다
     }
   }
 

@@ -5,7 +5,7 @@ import { buildWorld } from './world.js?v=157';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=77';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=78';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=26';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -421,6 +421,8 @@ canvas.addEventListener('click', () => { if (!TOUCH.on && !CTRL.freeMouse) canva
 //   ① 잠금/포커스 뒤 0.25초 안: 한 이벤트 |dx| > 200 또는 |dy| > 150이면 버림(잠그려고 클릭한 직후 그만큼 휙 돌리는 손은 없다)
 //   ② 그 밖: 이 이벤트가 담은 시간(지난 이벤트부터 · 프레임 간격 이상 · ≤120ms)에 비례한 문턱 — 사람 손 한계(가로 8px/ms · 세로 6px/ms ≈ 초당 8000px)를 넘으면 버림, 최소 300/200px(60fps에선 예전 물총 문턱과 같다).
 //      느린 프레임(크롬이 mousemove를 rAF에 맞춰 합쳐 보냄 — 20fps면 한 이벤트에 50ms치)에선 문턱이 400px로(6fps면 960px) 커져 진짜 빠른 휙 돌리기는 버리지 않는다(리뷰: 고정 문턱은 그걸 버려 시점이 걸렸다).
+let LOOKT = -1e9, camZ = 1;   // CAM-7(10-16 교사 '마우스로 카메라 이동이 제한적'): LOOKT = 마지막으로 손으로 위아래를 본 때(그 뒤 3초는 산 비탈 자동 들어 올림이 쉼) · camZ = 휠로 바꾼 카메라 거리 배율(마을 땅에서만 · 4~18m)
+canvas.addEventListener('wheel', e => { if (!world.overAt || camFirst) return; e.preventDefault(); camZ = Math.max(4 / CAM_D, Math.min(18 / CAM_D, camZ * Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * 0.004))); }, { passive: false });   // CAM-7: 휠·터치패드 두 손가락 = 카메라 거리(마을 땅에서만 4~18m · 학교는 그대로 — 휠을 쓰지 않음)
 const MOUSE = { dx: 0, dy: 0, t0: 0, fd: 16.7, fl: 0, te: 0, drop: 0 };   // fd = 지난 프레임 간격(ms · 루프가 적음 · ≤120) · te = 지난 이벤트 시각
 document.addEventListener('pointerlockchange', () => { MOUSE.t0 = performance.now(); MOUSE.dx = MOUSE.dy = 0; if (document.pointerLockElement !== canvas) keysClear(); });   // 잠금이 풀리면(Esc·창 전환) 누른 키도 비운다
 addEventListener('focus', () => { MOUSE.t0 = performance.now(); });
@@ -456,13 +458,13 @@ addEventListener('mousemove', e => {
   const mx = e.movementX || 0, my = e.movementY || 0, ax = Math.abs(mx), ay = Math.abs(my);
   const fresh = now - MOUSE.t0 < 250, lim = fresh ? 200 : Math.max(300, gap * 8), limY = fresh ? 150 : Math.max(200, gap * 6);
   if (ax > lim || ay > limY) { MOUSE.drop++; return; }
-  MOUSE.dx += mx; MOUSE.dy += my;
+  MOUSE.dx += mx; MOUSE.dy += my; if (my) LOOKT = now;
 });
 const TLOOK = { x: 0, y: 0 };   // 10-04 손가락 시점: 터치 신호마다 바로 돌리면(휴대폰은 신호 박자 ≠ 화면 박자) 프레임마다 도는 양이 들쭉날쭉 → 떨림·멀미 — 모았다가 프레임마다 부드럽게
 function mouseApply(dt = 1 / 60) {   // 루프(와 SD2.step) — 모은 움직임을 한 번에
   if (TLOOK.x || TLOOK.y) { const k = 1 - Math.exp(-Math.min(0.1, dt) * 40); let ax = TLOOK.x * k, ay = TLOOK.y * k;
     if (Math.abs(TLOOK.x - ax) < 0.4 && Math.abs(TLOOK.y - ay) < 0.4) { ax = TLOOK.x; ay = TLOOK.y; }
-    TLOOK.x -= ax; TLOOK.y -= ay; camYaw -= ax * 0.0058; camPitch = Math.max(CTRL.pitchLo ?? -0.2, Math.min(1.1, camPitch + ay * 0.0042)); }
+    TLOOK.x -= ax; TLOOK.y -= ay; camYaw -= ax * 0.0058; camPitch = Math.max(CTRL.pitchLo ?? -0.2, Math.min(1.1, camPitch + ay * 0.0042)); if (ay) LOOKT = performance.now(); }
   if (!MOUSE.dx && !MOUSE.dy) return;
   camYaw -= MOUSE.dx * 0.0026;
   camPitch = Math.max(CTRL.pitchLo ?? -0.2, Math.min(1.1, camPitch + MOUSE.dy * 0.0022));   // WG-FPS: 게임이 위로 보는 한계를 넓힐 수 있다(CTRL.pitchLo)
@@ -552,17 +554,19 @@ function step(dt) {
     camera.position.set(C.x0 + rx, C.y, C.z0 + rz);
     camera.lookAt(hx + rx, hy, hz + rz);
   } else {
-    const hx = SE ? SE.x : P.x, hy = (SE ? SE.y + 0.1 : P.y) + headH, hz = SE ? SE.z : P.z, CD = indoor ? 3.3 : CAM_D; let pch = indoor ? Math.min(camPitch, 0.2) : camPitch;
+    const hx = SE ? SE.x : P.x, hy = (SE ? SE.y + 0.1 : P.y) + headH, hz = SE ? SE.z : P.z, CD = indoor ? 3.3 : CAM_D * (world.overAt ? camZ : 1); let pch = indoor ? Math.min(camPitch, 0.2) : camPitch;
     { let tgt = 0; if (world.overAt && !indoor && !SE && !camFirst) { const g0 = world.overAt(hx, hz, hy - headH); if (g0 != null) { const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), gA = world.overAt(hx + fx * 6, hz + fz * 6, hy), gB = world.overAt(hx - fx * CD, hz - fz * CD, hy);   // CAM-6(10-15 교사 '산 오를 때 카메라가 위로 잘 안 따라와'): 마을 땅(덮어쓴 땅)에서만
-          const up = gA != null ? Math.max(0, (gA - g0) / 6) : 0, need = gB != null ? Math.asin(Math.max(-1, Math.min(1, (gB + 1.4 - hy) / CD))) - pch : 0; tgt = Math.min(0.55, Math.max(up * 0.95, need, 0)); } }
-      camLift += (tgt - camLift) * Math.min(1, dt * 2.4); pch += camLift; }   // 앞이 오르막 = 비탈 위가 보이게 들어 올림 · 뒤가 높은 비탈 = 카메라가 땅에 박히지 않게 · 내려가면 천천히 원래대로
+          const up = gA != null ? Math.max(0, (gA - g0) / 6) : 0, need = gB != null ? Math.asin(Math.max(-1, Math.min(1, (gB + 1.4 - hy) / CD))) - pch : 0; tgt = Math.min(0.55, Math.max(up * 0.95, camPitch < 0 ? 0 : need, 0)); } }   /* CAM-7: 올려다보는 중(손으로 위로)이면 '뒤 땅 피하기' 들어 올림 X — 땅은 camPose ⑤가 몸 쪽으로 당겨 피함 */
+      if (performance.now() - LOOKT > 3000) camLift += (tgt - camLift) * Math.min(1, dt * 2.4); pch += camLift; }   /* CAM-7: 손으로 위아래를 본 뒤 3초는 자동 들어 올림이 쉼(서로 싸우지 않게) */
+    let lookUp = 0; if (world.overAt && !indoor && pch < -0.12) { lookUp = -0.12 - pch; pch = -0.12; }   // CAM-7: 마을에서 −0.12보다 더 올려다보면 카메라는 그 높이에 두고 고개만 위로(머리 밑으로 돌아 땅에 막혀 당겨지면 하늘만 보임)   // 앞이 오르막 = 비탈 위가 보이게 들어 올림 · 뒤가 높은 비탈 = 카메라가 땅에 박히지 않게 · 내려가면 천천히 원래대로
     const want = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect).want;
     camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);   // 당김은 즉시·복귀는 이징(지터 방지)
     const C = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect, camD);   // 실제 거리에서 옆벽 비키기
     camSh = Math.abs(C.sh) > Math.abs(camSh) || C.sh * camSh < 0 ? C.sh : camSh + (C.sh - camSh) * Math.min(1, dt * 8);   // 비키기는 즉시·돌아오기는 이징
     const sh9 = camSh + (CTRL.shoulder || 0), rx = Math.cos(camYaw) * sh9, rz = -Math.sin(camYaw) * sh9;   // GAME-WG: CTRL.shoulder = 어깨 너머 시점(게임이 바깥에서만 켬 — map.player.shoulder)
     camera.position.set(C.x0 + rx, C.y, C.z0 + rz);
-    camera.lookAt(hx + rx, hy + camLift * 2.2, hz + rz);   // CAM-6: 들어 올린 만큼 시선도 비탈 위로
+    if (lookUp) { const cp = camera.position, tx = hx + rx - cp.x, ty9 = hy - cp.y, tz = hz + rz - cp.z, hd = Math.hypot(tx, tz) || 1, el = Math.atan2(ty9, hd) + lookUp; camera.lookAt(cp.x + tx / hd * Math.cos(el) * 10, cp.y + Math.sin(el) * 10, cp.z + tz / hd * Math.cos(el) * 10); }   // CAM-7: 고개 들기(머리 쪽 시선에서 lookUp만큼 위로)
+    else camera.lookAt(hx + rx, hy + camLift * 2.2, hz + rz);   // CAM-6: 들어 올린 만큼 시선도 비탈 위로
   }
   if (CAM_OVR) CAM_OVR(dt);   // TITLE-1: 오프닝 카메라(평소 자리를 목표로 읽고 덮어쓴다)
   if (SHOT) applyShot();
@@ -1349,7 +1353,7 @@ MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL, film: FILM, 
   q: { groundAt, blockedAt, ceilAt, segHit: camHit },
   pl: { P, ACT, CTRL, keys, touch: TOUCH, acts: ACTS, getYaw: () => camYaw, setYaw: v => { camYaw = v; },
     getFirst: () => camFirst, setFirst: v => { camFirst = !!v; }, getPitch: () => camPitch,   // WG-FPS(10-03): 게임이 1인칭으로 바꾸고 시점 기울기를 읽는다
-    look: (dx, dy) => { camYaw -= dx * 0.0058; camPitch = Math.max(CTRL.pitchLo ?? -0.2, Math.min(1.1, camPitch + dy * 0.0042)); },   /* 휴대폰 발사 버튼을 누른 채 끌기 = 시점 */
+    look: (dx, dy) => { camYaw -= dx * 0.0058; camPitch = Math.max(CTRL.pitchLo ?? -0.2, Math.min(1.1, camPitch + dy * 0.0042)); if (dy) LOOKT = performance.now(); },   /* 휴대폰 발사 버튼을 누른 채 끌기 = 시점 */
     setScale, tinyAdd: c => tinyAdd(c), pBlocked, pGround, scale: () => PHY.sc },   // SHRINK-1: 작아지기(map.player.scale)
   ui: { toast, hint: hintEl, tone, setTime: k => setTime(k), getTime: () => timeKey, dark: on => setDark(on), isDark: () => darkOn }, hot: HOT,
   // ENGINE-1: 행동 사전 고리 — 캐릭터(들기 자리)·문 잠그기(문짝 닫힌 채 — 충돌은 mapapi가)·터치(웅크리기 버튼)
