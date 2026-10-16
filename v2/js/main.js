@@ -6,7 +6,7 @@ import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.j
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
 import { createMapApi } from './mapapi.js?v=79';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
-import { createTouch, touchPrimary } from './touch.js?v=9';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
+import { createTouch, touchPrimary } from './touch.js?v=10';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=26';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
 import { createTop } from './topview.js?v=11';   // TOP-1(10-04 교사 '탑뷰로 학교 보기'): 하늘에서 보기 — 지붕 벗기기(1·2층)·끌어 옮기기·확대·돌리기·방 이름·방위표·축척 · 게임은 map.top   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
@@ -473,6 +473,7 @@ function mouseApply(dt = 1 / 60) {   // 루프(와 SD2.step) — 모은 움직�
 // TOUCH-1: 터치 조작(v2/js/touch.js) — 왼쪽 조이스틱 = 아날로그 이동(TOUCH.mx·my·m → physics) · 오른쪽 드래그 = 시점(마우스와 같은 부호, 휴대폰용 감도) · 점프/행동/시점 버튼
 const TOUCH = createTouch({ canvas,
   look: (dx, dy) => { TLOOK.x += dx; TLOOK.y += dy; },   // 프레임마다 mouseApply가 부드럽게 돌린다
+  zoom: k => { if (!world.overAt || camFirst) return; camZ = Math.max(4 / CAM_D, Math.min(18 / CAM_D, camZ * k)); },   // PINCH-1(10-16): 두 손가락 = 카메라 거리(마우스 휠 CAM-7과 같은 4~18m · 마을 땅에서만)
   act: () => { if (MAP?.closeModal()) return; if (hotNear) act(hotNear); else MAP?.idleAct(); }, view: () => { camFirst = !camFirst; },   // 리뷰(ENGINE-1): 쪽지가 떠 있으면 ✋ = 닫기(예전엔 같은 지점을 다시 눌러 쪽지를 또 열었다)
   onMode: on => { if (hotNear) hintEl.textContent = on ? hintEl.textContent.replace(/^E  /, '✋ ') : hintEl.textContent.replace(/^✋ /, 'E  ');   // 리뷰: 터치 ↔ 마우스(터치 화면 크롬북) 오갈 때
     if (MAP && MAP.minimap.visible) MAP.minimap.toggle(MAP.minimap.big); } });   // 미니맵 크기 다시(터치면 버튼 위까지만)

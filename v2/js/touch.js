@@ -77,7 +77,7 @@ export function createTouch(ctx) {
   }
   // 리뷰(09-26): 손가락 상태를 모두 푼다 — 창이 포커스를 잃거나 숨으면 touchend가 안 올 수 있다(알림·앱 전환 → 끝없이 걷던 문제)
   function reset() {
-    joyEnd(); T.lookId = -1; T.jump = false; T.jumpT = 0;   // (웅크리기 켬/끔은 손가락 상태가 아니라 그대로 둔다)
+    joyEnd(); T.lookId = -1; pinchId = -1; T.jump = false; T.jumpT = 0;   // (웅크리기 켬/끔은 손가락 상태가 아니라 그대로 둔다)
     bJump.classList.remove('dn'); bAct.classList.remove('dn'); bView.classList.remove('dn'); bCrouch.classList.remove('dn');
   }
   // 리뷰(09-26): 터치 화면 크롬북 — 한 번 터치한 뒤 다시 마우스·키보드를 쓰면 데스크톱 화면으로 돌아간다(포인터 잠금도 다시 된다).
@@ -87,7 +87,7 @@ export function createTouch(ctx) {
     ctx.onMode && ctx.onMode(false);
   }
   // ---------- 캔버스 손가락(조이스틱·시점) ----------
-  let jx0 = 0, jy0 = 0, lx = 0, ly = 0;
+  let jx0 = 0, jy0 = 0, lx = 0, ly = 0, pinchId = -1, px9 = 0, py9 = 0, pd0 = 0;   // PINCH-1: 시점 손가락 + 둘째 손가락 = 두 손가락 거리로 카메라 당기기(ctx.zoom)
   function joyAt(x, y) {   // 조이스틱 판 가운데 = 엄지 자리
     jx0 = x; jy0 = y;   // 리뷰(09-26): 화면 안으로 당기지 않는다 — 아래 가장자리를 누르면 당긴 만큼 이미 '밀린' 것이 되어 손대자마자 뒤로 달렸다(판은 조금 잘려 보여도 된다)
     joy.style.transform = 'translate(' + jx0 + 'px,' + jy0 + 'px)'; knob.style.transform = ''; joy.style.visibility = 'visible'; joyHint.style.display = 'none';
@@ -107,22 +107,25 @@ export function createTouch(ctx) {
     // 리뷰(09-26): 끝 이벤트를 잃은 손가락(화면에 더는 없는 id)은 버린다 — 안 그러면 조이스틱이 영영 '누른 채'
     if (T.joyId >= 0 || T.lookId >= 0) { let jOk = false, lOk = false;
       for (let i = 0; i < e.touches.length; i++) { const id = e.touches[i].identifier; if (id === T.joyId) jOk = true; if (id === T.lookId) lOk = true; }
-      if (T.joyId >= 0 && !jOk) joyEnd(); if (!lOk) T.lookId = -1; }
+      if (T.joyId >= 0 && !jOk) joyEnd(); if (!lOk) { T.lookId = -1; pinchId = -1; } }
     for (const t of e.changedTouches) {
       if (T.joyId < 0 && t.clientX < innerWidth * 0.45 && t.clientY > innerHeight * 0.3) { T.joyId = t.identifier; joyAt(t.clientX, t.clientY); joyMove(t.clientX, t.clientY); }
       else if (T.lookId < 0) { T.lookId = t.identifier; lx = t.clientX; ly = t.clientY; TAP.x = lx; TAP.y = ly; TAP.t = performance.now(); TAP.m = 0; }
+      else if (pinchId < 0 && ctx.zoom && !(t.clientX < innerWidth * 0.45 && t.clientY > innerHeight * 0.3)) { pinchId = t.identifier; px9 = t.clientX; py9 = t.clientY; pd0 = Math.hypot(px9 - lx, py9 - ly); TAP.m = 99; }   /* 둘째 손가락 = 당기기 시작(톡 아님 · 조이스틱 자리 손가락은 X · 버튼은 제 이벤트라 캔버스에 안 옴) */
     }
   }
   function onMove(e) {
     if (e.cancelable) e.preventDefault();
     for (const t of e.changedTouches) {
       if (t.identifier === T.joyId) joyMove(t.clientX, t.clientY);
-      else if (t.identifier === T.lookId) { TAP.m += Math.abs(t.clientX - lx) + Math.abs(t.clientY - ly); look(t.clientX - lx, t.clientY - ly); lx = t.clientX; ly = t.clientY; }
+      else if (t.identifier === T.lookId) { if (pinchId < 0) { TAP.m += Math.abs(t.clientX - lx) + Math.abs(t.clientY - ly); look(t.clientX - lx, t.clientY - ly); } lx = t.clientX; ly = t.clientY; }   // 당기는 동안은 시점 돌리기 쉼
+      else if (t.identifier === pinchId) { px9 = t.clientX; py9 = t.clientY; }
     }
+    if (pinchId >= 0) { const d = Math.hypot(px9 - lx, py9 - ly); if (pd0 > 20 && d > 20 && Math.abs(d - pd0) > 1) { ctx.zoom(pd0 / d); pd0 = d; } }   // 벌리면 가까이 · 오므리면 멀리
   }
   function onEnd(e) {
     if (e.cancelable) e.preventDefault();
-    for (const t of e.changedTouches) { if (t.identifier === T.joyId) joyEnd(); else if (t.identifier === T.lookId) { T.lookId = -1; if (e.type === 'touchend' && TAP.m < 10 && performance.now() - TAP.t < 400) dispatchEvent(new CustomEvent('sm-click', { detail: { x: t.clientX, y: t.clientY, touch: true } })); } }   // 톡 = sm-click(마우스 FREE-MOUSE와 같은 신호 — 메모장 깃발)
+    for (const t of e.changedTouches) { if (t.identifier === pinchId) { pinchId = -1; continue; } if (t.identifier === T.joyId) joyEnd(); else if (t.identifier === T.lookId) { T.lookId = -1; pinchId = -1; if (e.type === 'touchend' && TAP.m < 10 && performance.now() - TAP.t < 400) dispatchEvent(new CustomEvent('sm-click', { detail: { x: t.clientX, y: t.clientY, touch: true } })); } }   // 톡 = sm-click(마우스 FREE-MOUSE와 같은 신호 — 메모장 깃발)
   }
   const PF = { passive: false };
   canvas.addEventListener('touchstart', onStart, PF); canvas.addEventListener('touchmove', onMove, PF);
