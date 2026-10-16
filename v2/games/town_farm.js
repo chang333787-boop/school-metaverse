@@ -15,7 +15,7 @@ export const CROPS = {
   '🥬': ['배추', 'Cabbage', 3, 3, 0x6fb34f, 0xc8e69a, 0.36, 'leafy'],
   '🍠': ['고구마', 'Sweet potato', 3, 4, 0x4f8a3e, 0xa8456a, 0.26, 'root'],
 };
-// 계절마다 심는 씨앗(우리나라 학교 텃밭 어림 · ✨ 놀이용) · '지금' = 도감 기록과 같은 자료 계절(부르는 쪽이 넘김)
+// 계절마다 심는 씨앗(우리나라 학교 텃밭 어림 · ✨ 놀이용) · '지금' = 여름(놀이 계절 seaPlay — 부르는 쪽이 넘김)
 export const SEEDS = { spring: ['🥔', '🥕'], summer: ['🍅', '🥒', '🌽'], autumn: ['🥬', '🍠'], winter: [] };
 export const seedsOf = s => SEEDS[s] || SEEDS.autumn;
 

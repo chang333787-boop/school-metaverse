@@ -19,7 +19,7 @@ export const dexStamp = (day, cell, season, phase) => ({ d: day, c: cell || '', 
 // 기록 한 칸을 한 줄로('📍가5 · 🍂 가을 낮 · 3일째') — 옛 저장(날 숫자만)도 읽음
 export function dexLine(r, en) { if (r == null) return ''; if (typeof r === 'number') return en ? 'Day ' + r : r + '일째'; const S = SEA_N[r.s], P = PH_N[r.t]; return [r.c ? '📍' + r.c : '', (S ? S[en ? 1 : 0] : '') + (P ? ' ' + P[en ? 1 : 0] : ''), en ? 'Day ' + r.d : r.d + '일째'].filter(Boolean).join(' · '); }
 // 도감 책: 갈래마다 칸 목록 — 열쇠 = 물건 그림 · 먹어 본 음식 = 'ate:' + 그림 · 바다 친구 = '🐙'
-export function dexBook(S, ITEMS, DISHES, SKY) {   /* SKY = 별자리(town_sky.js · 산꼭대기가 있는 마을만) */ const IT = Object.keys(ITEMS), D = S.dex || {}, cat = c => IT.filter(e => c.includes(ITEMS[e][2]) && e !== '🌑'), slot = (k, icon, kind) => ({ k, icon, kind, got: D[k] != null, rec: D[k] ?? null, hint: DEX_HINT[kind === 'ate' ? 'ate' : icon] || ['', ''] });
+export function dexBook(S, ITEMS, DISHES, SKY, FISHL) {   /* SKY = 별자리(town_sky.js · 산꼭대기가 있는 마을만) · FISHL = 물고기(town_fish.js · 부두 낚시가 있는 마을만) */ const IT = Object.keys(ITEMS), D = S.dex || {}, cat = c => IT.filter(e => c.includes(ITEMS[e][2]) && e !== '🌑'), slot = (k, icon, kind) => ({ k, icon, kind, got: D[k] != null, rec: D[k] ?? null, hint: DEX_HINT[kind === 'ate' ? 'ate' : icon] || ['', ''] });
   const sec = [
     { id: 'food', t: ['🍽 먹거리·군것질', '🍽 Food & treats'], L: cat(['food', 'treat']).map(e => slot(e, e, 'item')) },
     { id: 'cook', t: ['🥚 재료·일한 보람', '🥚 Ingredients & work'], L: cat(['cook', 'farm']).map(e => slot(e, e, 'item')) },
@@ -28,5 +28,6 @@ export function dexBook(S, ITEMS, DISHES, SKY) {   /* SKY = 별자리(town_sky.j
     { id: 'stamp', t: ['🏅 도장', '🏅 Stamps'], L: cat(['stamp']).map(e => slot(e, e, 'item')) },
     { id: 'sea', t: ['🐙 만난 바다 친구', '🐙 Sea friends'], L: [slot('🐙', '🐙', 'item')] },
   ];
+  if (FISHL) sec.push({ id: 'fish', t: ['🎣 낚은 물고기', '🎣 Fish met'], L: FISHL.map(f => ({ k: 'fish:' + f.id, icon: f.icon, kind: 'fish', got: D['fish:' + f.id] != null, rec: D['fish:' + f.id] ?? null, hint: f.hint || ['', ''], name: f.t })) });   // GAME-11
   if (SKY) sec.push({ id: 'star', t: ['🌌 본 별자리', '🌌 Constellations'], L: SKY.map(st => ({ k: 'star:' + st.id, icon: st.icon, kind: 'star', got: D['star:' + st.id] != null, rec: D['star:' + st.id] ?? null, hint: st.hint || ['', ''], name: st.t })) });   // GAME-8
   let got = 0, tot = 0; for (const s of sec) for (const q of s.L) { tot++; if (q.got) got++; } return { sec, got, tot, pct: tot ? Math.round(got / tot * 100) : 0 }; }
