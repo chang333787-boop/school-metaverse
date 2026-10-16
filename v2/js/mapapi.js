@@ -275,14 +275,17 @@ export function createMapApi(host, NAV, META) {
   const shortChip = t => { t = String(t).trim(); if ([...t].length <= 8) return t; const p = t.split(/\s+/), n = t.match(/\d+\s*\/\s*\d+/); if (n) return p[0] + ' ' + n[0].replace(/\s+/g, ''); const w = [...(p[1] || '')]; return p[0] + (w.length ? ' ' + (w.length > 6 ? w.slice(0, 5).join('') + '…' : w.join('')) : ''); };
   const rowMode = () => small() && document.body.classList.contains('touch') && innerWidth > innerHeight;
   let chipAnchor = null;   // 게임이 제 지도를 그리면(마을 작은 지도) 칩은 그 아래로 — hud.anchor(() => ({right, top, w, h}))
-  const layoutChips = () => { const r = chipAnchor ? chipAnchor() : MM && MM.rect(), sm = small(), st = sm ? 30 : 34; let tot = 0; for (const [, c] of chips) tot += slot(c);
+  // 최적화 한 판(10-17): 글 쓰기 → 크기 읽기 → 자리 쓰기를 칩마다 번갈아 하던 것(칩 수만큼 레이아웃 — 휴대폰 가로에서 칩 글이 바뀔 때마다 1초 최대 sim 1.5 → 4.5ms) → 글(바뀐 것만) 한 번에 쓰기 · 크기 한 번에 읽기 · 자리 쓰기
+  const setTx = (el, t) => { if (el.textContent !== t) el.textContent = t; };
+  const layoutChips = () => { const r = chipAnchor ? chipAnchor() : MM && MM.rect(), sm = small(), st = sm ? 30 : 34, L = [...chips.values()]; let tot = 0; for (const c of L) tot += slot(c);
     if (rowMode()) { let x = r && !r.big ? r.right + r.w + 8 : 10; const y = 52;
-      for (const [, c] of chips) { if (c.raw != null) c.el.textContent = shortChip(chipText(c.raw)); const h = slot(c);
-        c.el.style.top = (y + (h === 44 ? Math.max(0, Math.round((44 - (c.el.offsetHeight || 26)) / 2)) : 0)) + 'px'; c.el.style.right = 'calc(' + x + 'px + env(safe-area-inset-right))'; x += (c.el.offsetWidth || 60) + 6; }
+      for (const c of L) if (c.raw != null) setTx(c.el, shortChip(chipText(c.raw))); const WH = L.map(c => [c.el.offsetWidth || 60, c.el.offsetHeight || 26]);
+      L.forEach((c, i) => { const h = slot(c); c.el.style.top = (y + (h === 44 ? Math.max(0, Math.round((44 - WH[i][1]) / 2)) : 0)) + 'px'; c.el.style.right = 'calc(' + x + 'px + env(safe-area-inset-right))'; x += WH[i][0] + 6; });
       return; }
     const side = r && (r.big || (document.body.classList.contains('touch') && r.top + r.h + 8 + tot > innerHeight - (sm ? 90 : 110)));   // 휴대폰 버튼 줄 위 = 아래 90px
     const top0 = r && !side ? r.top + r.h + (sm ? 6 : 8) : side && !r.big && document.body.classList.contains('touch') ? 56 : sm ? 8 : 44, right = side ? r.right + r.w + 8 : r ? r.right : 10; let k = 0;   // 터치 좁은 화면(미니맵 왼쪽 줄): 가운데 위 목표 줄(아래 ≈50px) 밑 56px부터
-    for (const [, c] of chips) { const h = slot(c); c.el.style.top = (top0 + k + (h === 44 ? Math.max(0, Math.round((44 - (c.el.offsetHeight || 26)) / 2)) : 0)) + 'px'; k += h - st; c.el.style.right = r && !side ? right + 'px' : 'calc(' + right + 'px + env(safe-area-inset-right))'; if (c.raw != null) c.el.textContent = chipText(c.raw); k += st; } };   // 미니맵 기준 자리는 이미 안전 여백을 품는다(rect = 화면 자리)
+    for (const c of L) if (c.raw != null) setTx(c.el, chipText(c.raw)); const HH = L.map(c => slot(c) === 44 ? c.el.offsetHeight || 26 : 0);
+    L.forEach((c, i) => { const h = slot(c); c.el.style.top = (top0 + k + (h === 44 ? Math.max(0, Math.round((44 - HH[i]) / 2)) : 0)) + 'px'; k += h - st; c.el.style.right = r && !side ? right + 'px' : 'calc(' + right + 'px + env(safe-area-inset-right))'; k += st; }); };   // 미니맵 기준 자리는 이미 안전 영역 안
   addEventListener('resize', () => layoutChips());
   const hud = {
     toast: (text, sec = 2.2) => ui.toast(text, sec),
@@ -628,7 +631,7 @@ export function createMapApi(host, NAV, META) {
 
   // ---------- 조립(무추적 MAP + scope마다 추적판) ----------
   function facadeApi(track, owner) {
-    const t = track || (h => h), hudKeys = new Set();
+    const t = track || (h => h), hudKeys = new Set(), addH = new WeakMap();   // addH = map.add로 넣은 것 → 정리 손잡이(remove가 함께 지움)
     return {
       version: 1, owner: owner || null,
       zones: Z, zone, zoneAt, zonesWhere, inZone, q: Q, poi, pois, resolve, findEntry,
@@ -651,7 +654,7 @@ export function createMapApi(host, NAV, META) {
         setPeers: m => minimap.setPeers(m), toggle: v => minimap.toggle(v), zoom: z => minimap.zoom(z), get zoomed() { return minimap.zoomed; }, get visible() { return minimap.visible; }, get big() { return minimap.big; }, get ms() { return minimap.ms; }, get marks() { return minimap.marks; }, get el() { return minimap.el; } },
       sfx: k => sfx(k),   // 짧은 합성 효과음: 'ding'(도착) · 'tick'(3·2·1) · 'go'(출발) · 'done'(끝) · 'pick'(줍기) · 'buzz'(시간 끝) · 'warm'(준비 — 소리 장치만 미리 만듦)
       mk: { marker: (x, y, z, o) => t(mk.marker(x, y, z, o)), trail: (p, o) => t(mk.trail(p, o)), many: (k, n, o) => t(mk.many(k, n, o)), add: obj => t(mk.add(obj)) },
-      add: obj => t(mk.add(obj)), remove: obj => scene.remove(obj),
+      add: obj => { const h = t(mk.add(obj)); addH.set(obj, h); return h; }, remove: obj => { const h = addH.get(obj); if (h) { addH.delete(obj); h.remove(); } else scene.remove(obj); if (obj && obj.children && obj.children.length && host.renderer && host.renderer.renderLists) host.renderer.renderLists.dispose(); },   /* three 그리기 목록(renderItems)이 지난 프레임에 그린 메시를 쥐고 → 그 부모 = 옛 마을 전체가 남던 것(힙 스냅숏 사슬) → 무리를 뺄 때 목록을 비움(다음 프레임에 새로) */   // 최적화 한 판(10-17): remove가 장면에서만 빼고 정리 목록에는 남겨 두던 것 → 다시 지을 때마다 옛 마을 전체(메시 2.5천 · 힙 +70MB)가 게임이 끝날 때까지 남던 것 — 정리 목록에서도 뺌
       nav: o => nav(o).then(NV => track ? { ...NV, block: x => t(NV.block(x)) } : NV), navSync,
       mapData, drawMap, coverage, rng, store: store('sm2.game.' + (owner || 'map') + '.'), play: META.PLAY, spawns: META.SPAWNS,
       three: THREE,
