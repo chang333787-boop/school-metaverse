@@ -5,6 +5,7 @@
 //   매 프레임 일 = 시계 더하기 몇 줄(새 객체 X · 알림은 문자열 하나)
 export const SAVE_V = 1;
 export const SPM = 0.7;   // 게임 1분 = 0.7초
+export const CAL_LEN = 7, CAL_SEQ = ['autumn', 'winter', 'spring', 'summer'];   // GAME-1d 달력: 한 계절 = 7일 · 첫 주 = 지금 모습 → 가을 → 겨울 → 봄 → 여름 → 가을 …
 export const DAY_START = 6 * 60, DAY_END = 24 * 60;
 // 하루 때(엔진 시간대 셋에 맞춤): 06~17 낮 · 17~19 노을 · 19~06 밤
 export const phaseOf = m => (m < 6 * 60 || m >= 19 * 60) ? 'night' : m >= 17 * 60 ? 'sunset' : 'day';
@@ -54,9 +55,9 @@ export const itemName = (e, en) => { const I = ITEMS[e]; return I ? (en ? I[1] :
 
 export function createGame(id) {
   const KEY = 'sm-town-game:' + id;
-  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, hearts: {}, today: null, clock: true });
+  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, hearts: {}, today: null, clock: true, cal: { d0: 1, on: true, s: 'now' } });
   let S = fresh();
-  try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j && j.v === SAVE_V) { S = Object.assign(fresh(), j); for (const k of Object.keys(S.bag)) if (!(S.bag[k] > 0)) delete S.bag[k]; } } catch (e) { /* 저장 막힘·깨짐 = 새로 시작 */ }
+  try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j && j.v === SAVE_V) { S = Object.assign(fresh(), j); if (!(j.cal && j.cal.d0 >= 1)) S.cal = { d0: S.day, on: true, s: 'now' };   /* 달력 없던 저장 = 오늘부터 첫 주 */ for (const k of Object.keys(S.bag)) if (!(S.bag[k] > 0)) delete S.bag[k]; } } catch (e) { /* 저장 막힘·깨짐 = 새로 시작 */ }
   if (!(S.min >= 0 && S.min < DAY_END)) S.min = 7 * 60;
   let dirty = false, since = 0, acc = 0, ph = phaseOf(S.min), on = null; const T0 = () => ({ earned: 0, got: {}, cells: 0, tasks: 0, cooked: 0, shared: 0, dex: 0 }); if (!S.today) S.today = T0();   // 오늘 한 일(하루 마무리 · 잠들면 비움)
   const emit = (t) => { if (on) on(t); };
@@ -82,6 +83,9 @@ export function createGame(id) {
     setClock(onoff) { S.clock = !!onoff; dirty = true; emit('clock'); },
     // 잠 = 다음 날 아침 · 오늘 딴 자리는 다시 자람 · 바로 저장
     sleep() { G.lastDay = { day: S.day, ...S.today }; S.today = T0(); S.day++; S.min = DAY_START; acc = 0; ph = phaseOf(S.min); S.picked = {}; S.uses = {}; S.tasks = null; dirty = true; G.flush(); emit('clock'); emit('phase'); emit('day'); },   // lastDay = 하루 마무리 창이 읽음
+    seasonAt(d) { const c = S.cal; if (!c.on) return c.s || 'now'; const n = Math.floor((d - c.d0) / CAL_LEN); return n <= 0 ? 'now' : CAL_SEQ[(n - 1) % CAL_SEQ.length]; },   // GAME-1d 그날의 계절(손으로 고른 동안은 그 계절)
+    season() { return G.seasonAt(S.day); }, calDay() { return ((S.day - S.cal.d0) % CAL_LEN + CAL_LEN) % CAL_LEN + 1; },
+    setCal(on, s) { if (on) S.cal.on = true; else { S.cal.on = false; S.cal.s = s; } dirty = true; },
     lastDay: null, tally(k, n = 1) { if (!S.today) S.today = T0(); S.today[k] = (S.today[k] || 0) + n; dirty = true; },
     // 가방
     add(e, n = 1) { S.bag[e] = (S.bag[e] || 0) + n; const neu = G.found(e); if (S.today) S.today.got[e] = (S.today.got[e] || 0) + n; dirty = true; return neu; },
