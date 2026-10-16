@@ -44,7 +44,7 @@ export const TOWN = {
       props: [
         { k: 'bridge', x: 137, y: 124 }, { k: 'bridge', x: 163, y: 101 }, { k: 'bridge', x: 188, y: 64 },   // 작은길 위 다리 둘(🧱) · 길 없는 곳 걷는 다리 하나
         { k: 'streetlight', x: 53, y: 30 }, { k: 'signal', x: 53, y: 72 }, { k: 'busstop', x: 104, y: 40 }, { k: 'schoolzone', x: 127, y: 28 },
-        { k: 'pavilion', x: 60, y: 110 }, { k: 'bench', x: 66, y: 116 }, { k: 'scarecrow', x: 12, y: 135 }, { k: 'greenhouse', x: 37, y: 137, along: 'ew' }, { k: 'tiller', x: 20, y: 118 },
+        { k: 'pavilion', x: 60, y: 110 }, { k: 'bench', x: 66, y: 116 }, { k: 'scarecrow', x: 12, y: 135 }, { k: 'greenhouse', x: 37, y: 137, along: 'ew' }, { k: 'tiller', x: 20, y: 118 }, { k: 'drone', x: 26, y: 126 },
         { k: 'trailhead', x: 15, y: 20 }, { k: 'spring', x: 6, y: 8 }, { k: 'firesign', x: 20, y: 8 }, { k: 'fishing', x: 190, y: 70 },
         { k: 'signpost', x: 70, y: 54, to: ['강', '정자', '하늘 정원'] },
         { k: 'card', name: '분수', x: 80, y: 104 }, { k: 'card', name: '동상', x: 62, y: 88 }, { k: 'card', name: '화장실', x: 70, y: 132 }, { k: 'card', name: '우주 정거장', x: 230, y: 132 }, { k: 'card', name: '카페', x: 232, y: 112 },
