@@ -106,7 +106,8 @@ export function createMapApi(host, NAV, META) {
   }
   const Q = {
     groundAt: q.groundAt, blocked: q.blockedAt, ceilAt: q.ceilAt, floorY, ray, rayHit, overlap, los: (a, b, o) => ray(a, b, o) === null, inSchool,
-    baseAt: (x, z) => world.baseAt(x, z),   // BLOCK-1: 땅·건물 1층 바닥 높이(충돌 상자 없이 — 블록을 땅 밑에 못 놓게)
+    baseAt: (x, z) => world.baseAt(x, z),
+    gardenBeds: () => (world.gardenBare || []).map(b => b.slice()),   // GAME-10: 학교 동쪽 텃밭의 아직 안 심은 두둑 [a, b, rz, 윗면 y](x a~b · 줄 z = rz) — 놀이가 작물을 심는 칸   // BLOCK-1: 땅·건물 1층 바닥 높이(충돌 상자 없이 — 블록을 땅 밑에 못 놓게)
     indoor: (x, y, z) => q.ceilAt(x, z, y + 1.6, y + 5.5) !== null,
     // 사람이 아닌 이동체(공 등)용 — 플레이어와 같은 축 분리 충돌(반지름 0.26)·오름 0.55
     moveBody(p, dx, dz) { if (!q.blockedAt(p.x + dx, p.z, p.y)) p.x += dx; if (!q.blockedAt(p.x, p.z + dz, p.y)) p.z += dz; const g = q.groundAt(p.x, p.z, p.y); if (g <= p.y + 0.55) p.y = g; return p; },

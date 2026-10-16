@@ -20,6 +20,7 @@ export function terrainAt(x, z, hy) {   // hy = 높이 힌트(묻는 몸·카메
   return TRN.field;
 }
 
+const GARDEN_BARE = [];   // GAME-10 마을 놀이 텃밭 칸 = 동쪽 넓힌 텃밭의 빈 두둑 [a, b, rz, 윗면 y](보이는 것은 그대로)
 export function buildWorld(scene) {
   const B = SCHOOL.building, FR = B.front;
   const FH = B.floorHeight, TR3 = SCHOOL.terrain, TERR_Z = TR3.TERR_Z;
@@ -5617,7 +5618,7 @@ export function buildWorld(scene) {
     // GARDEN-2: 동쪽 넓힌 텃밭 — 서쪽 두둑과 같은 줄(rz)을 비스듬한 끝 너머로 이어 동쪽 울타리 앞까지 · 북쪽은 울타리 앞 띠까지 더.
     //   작물은 가벼운 것만(감자·멀칭 새싹·콩 한 줄 — 한 화면 삼각형 예산) · 비스듬한 끝에서 1.2m 띄워 서쪽 두둑과 고랑 하나로 갈린다
     { const ZN = x => FZ(x) + 0.9, xN = z => { const ax = GP[2][0], az = GP[2][1], bz = ZN(EX); return ax + (z - az) * (EX - ax) / (bz - az); };   // 북쪽 끝선 z → x
-      const EPLAN = [['potato', 'bare'], ['bare', 'mulch'], ['bean', 'bare'], ['mulch', 'bare'], ['bare', 'potato'], ['mulch', 'bare']];   // bare = 아직 안 심은 검은 비닐 두둑 · 과학실 창밖으로 보여 작물은 절반만(한 화면 삼각형 15만 예산 — 다 심으면 +3.9k)
+      GARDEN_BARE.length = 0; const EPLAN = [['potato', 'bare'], ['bare', 'mulch'], ['bean', 'bare'], ['mulch', 'bare'], ['bare', 'potato'], ['mulch', 'bare']];   // bare = 아직 안 심은 검은 비닐 두둑 · 과학실 창밖으로 보여 작물은 절반만(한 화면 삼각형 15만 예산 — 다 심으면 +3.9k)
       for (let i = 2, k = 0; ; i++, k++) {
         const rz = GP[4][1] - 1.25 - i * 2.45; if (rz - 0.6 < ZN(EX) + 0.3) break;
         const a0 = Math.max(gxe(rz + 0.6) + 1.2, rz - 0.6 < GP[2][1] + 0.3 ? xN(rz - 0.9) + 0.3 : -1e9), b0 = EX - 0.8; if (b0 - a0 < 3) continue;
@@ -5625,7 +5626,7 @@ export function buildWorld(scene) {
         pl.forEach((kind, j) => { const a = a0 + j * (sl + 0.5), b = a + sl;
           addBox(b - a, 0.18, 1.2, VIN, (a + b) / 2, Y, rz);
           dBox(b - a - 0.3, 0.03, 0.8, 0x2b2c2f, (a + b) / 2, Y + 0.18, rz);
-          if (kind !== 'bare') crop(kind, a, b, rz); }); } }
+          if (kind !== 'bare') crop(kind, a, b, rz); else GARDEN_BARE.push([+a.toFixed(2), +b.toFixed(2), +rz.toFixed(2), +(Y + 0.18).toFixed(3)]); }); } }   /* GAME-10: 아직 안 심은 두둑 = 마을 놀이 텃밭 칸(map.q.gardenBeds) */
     // 휴경 마른 풀밭(서쪽 · 영상 v04 f_007~012 — 누렇게 마른 풀 + 드문드문 풀포기)
     { const fz0 = GP[0][1] + 0.2, fz1 = GP[4][1] - 0.2;
       patQuad('dirt', GP[0][0] + 0.2, FAL, fz0, fz1, Y + 0.02, false, 0xc9bf86);
@@ -6697,7 +6698,7 @@ export function buildWorld(scene) {
     //   사람이 앉아 있는 의자·벤치·소파는 부수지 않는다(부수면 앉은 사람이 허공에 앉아 있고 교장 의자 등받이가 떠 있었다) — 빈 의자는 그대로 부서짐
     if ((o.kind === 'chair' || o.kind === 'bench' || o.kind === 'sofa' || o.kind === 'bed') && PEOPLE.some(p => p.pose === 'sit' && p.x > o.box[0] - 0.05 && p.x < o.box[3] + 0.05 && p.z > o.box[2] - 0.05 && p.z < o.box[5] + 0.05 && o.box[1] <= p.y + 0.1 && o.box[4] >= p.y + 0.3)) o.seated = true; }
   { const late = doors.filter(d => d.late); if (late.length) { const keep = doors.filter(d => !d.late); doors.length = 0; doors.push(...keep, ...late); } }   // GYM-2: 새 문은 끝 번호로(옛 문 번호 그대로)
-  return { busDoor, colliders, grid, zones, doors, allBoxes, hotspots, hideSpots, details, visRods, soft: softVols, TERR_Z, terrainAt, setTerrainOver, overAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh, tour: tourSpots, npcs: NPCN, lampMat,
+  return { gardenBare: GARDEN_BARE, busDoor, colliders, grid, zones, doors, allBoxes, hotspots, hideSpots, details, visRods, soft: softVols, TERR_Z, terrainAt, setTerrainOver, overAt, baseAt, UPPER, bounds: SCHOOL.boundary, glassMesh, flag: flagMesh, tour: tourSpots, npcs: NPCN, lampMat,
     lego: on => { LEGO_U.value = on ? 1 : 0; }, get legoOn() { return LEGO_U.value > 0.5; },   // LEGO-2
     people: PEOPLE, objects: OBJS.filter(o => o.parts.length && !o.seated), personGeo, signMesh, detailMat: mat, signCanvas: t => signCanvas.get(t) || null, lampMesh };   // NPC-MOVE·WORLD-FX(found2): 사람 기록·대역 굽기·이름표 메시·형광등 메시(방마다 끄기)   // lampMat: G-ESCAPE 밤 '불 끄기'(main.js setDark — 형광등 색만 바꿈)
 }
