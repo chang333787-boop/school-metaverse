@@ -14,3 +14,8 @@
 - 고침(worldfx.js): 사람 숨기기 = 그 사람 정점만 첫 정점 한 점으로 모음(넓이 0 = 안 보임·그림자 없음) + 그 칸만 `addUpdateRange`(≈26KB) · 되돌리면 그 칸만 원본(checksum 같음) · `MST` = 숨은 사람 수(물건 부수기 'busy') · 물건 부수기·되살리기도 바뀐 칸만 · 걷는 대역은 팔다리 정점 칸만 매 프레임(예전 몸 전체) · 같은 자세로 돌아가면 새 지오메트리 없이 정점만 원래대로 · `npc.move` 옵션 `maxExp`·`quiet`(이야기 따라오는 친구 = 6000 — 24m 안 · 못 찾으면 조용히 옆으로).
 - 크롬북 판(cb): 배율 1배에서 시작(예전 1.25 — 여유면 자동 해상도가 올림) · MSAA 끔(?aa=1이면 켬). 사람 한 명 = 삼각형 732(대역 6명이어도 부담 작음).
 - 시험: 스크래치 kv/fxcheck.cjs(대역 → 원래 사람 정점 한 점 · 걷기·앉기·제자리 → checksum 같음) · kv/furncheck.cjs(물건 부수기 되살리기) · perf/A/play.cjs(신상책 끝까지 · 대화 50 · 오류 0) · kv/npcbench.cjs(전후 · CPU 쪽 차이 없음 — 그래픽 칩 쪽 고침).
+
+### 시험 크롬 = GPU(GPU-1 · 10-16 교사 'gpu 써야 할 때 좀 쓰라고')
+- 원인: `check.cjs`·`shot.cjs`·`shot2.cjs`·`mob2.cjs`가 크롬 옵션 없이 떠서 헤드리스 기본 = SwiftShader(CPU로 3D) → GPU 프로세스가 맥 CPU 860%까지(또래 ps 확인 · 맥이 뜨거워짐). 마을 하네스(town_check·town_portal·town_trap·town_tour)는 예전부터 `--use-gl=angle` = GPU(Apple Metal).
+- 고침: 네 파일 기본 = `['--use-gl=angle','--enable-gpu','--ignore-gpu-blocklist']`(맥 = ANGLE Metal · WebGL 장치 이름 'ANGLE Metal Renderer: Apple M5') · 예전 소프트웨어는 `SWGL=1`.
+- 잰 값(10-16): `check.cjs . --full` 중 GPU 프로세스 최고 CPU 17.5%(예전 860%) · 게이트 판정 그대로(v2 17/17 · 홍보판 16/17 = 1학년 닻 15.5만 예전부터) · 마을 투어는 원래 GPU라 p95 기준선 그대로(18~20ms).

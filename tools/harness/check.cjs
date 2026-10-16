@@ -7,7 +7,7 @@ const types = {'.js':'text/javascript','.html':'text/html','.css':'text/css','.p
 const srv = http.createServer((q, r) => { const p = path.join(root, decodeURIComponent(q.url.split('?')[0])); const u = q.url.split('?')[0]; fs.readFile(u.endsWith('/') ? path.join(p, 'index.html') : p, (e, d) => { if (e) { r.writeHead(404); r.end(); return; } r.writeHead(200, {'Content-Type': types[path.extname(u.endsWith('/') ? 'x.html' : p)] || 'application/octet-stream'}); r.end(d); }); });
 srv.listen(0, async () => {
   const port = srv.address().port;
-  const b = await chromium.launch({ args: process.env.SWGL ? ['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'] : [] });
+  const b = await chromium.launch({ args: process.env.SWGL ? ['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'] : ['--use-gl=angle','--enable-gpu','--ignore-gpu-blocklist'] });   /* GPU-1(교사 10-16 'gpu 써야 할 때 좀 쓰라고'): 기본 = GPU(맥 Metal · 윈도 D3D) · SWGL=1 = 예전 소프트웨어(SwiftShader — 맥 860% 열) */
   const pg = await b.newPage({ viewport: { width: 960, height: 540 } });
   const lines = [];
   pg.on('console', m => { const t = m.text(); lines.push(t); if (!/THREE\.|GPU stall|WebGL/.test(t)) console.log('[c]', t.slice(0, 400)); });
