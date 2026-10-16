@@ -22,7 +22,7 @@ export const ITEMS = {
   '🌾': ['밀가루', 'Flour', 'cook', 0], '🥚': ['달걀', 'Egg', 'cook', 0], '🧈': ['버터', 'Butter', 'cook', 0], '🍁': ['시럽', 'Syrup', 'cook', 0],
   '🥞': ['팬케이크', 'Pancake', 'dish', 0], '🥘': ['버섯 볶음', 'Fried mushrooms', 'dish', 0], '🍮': ['푸딩', 'Pudding', 'dish', 0], '🍓🥞': ['딸기 팬케이크', 'Strawberry pancake', 'dish', 0], '🌑': ['탄 요리', 'Burnt food', 'dish', 0],
   '🌱': ['심은 모', 'Rice seedlings planted', 'farm', 0], '🌲': ['심은 나무', 'Saplings planted', 'farm', 0],
-  '⛰': ['정상 도장', 'Summit stamp', 'stamp', 0], '🗼': ['등대 도장', 'Lighthouse stamp', 'stamp', 0], '👣': ['징검다리 도장', 'Stepping-stone stamp', 'stamp', 0], '📖': ['책 읽기 도장', 'Reading stamp', 'stamp', 0],
+  '⛰': ['정상 도장', 'Summit stamp', 'stamp', 0], '🗼': ['등대 도장', 'Lighthouse stamp', 'stamp', 0], '👣': ['징검다리 도장', 'Stepping-stone stamp', 'stamp', 0], '📖': ['책 읽기 도장', 'Reading stamp', 'stamp', 0], '⛷': ['스키 도장', 'Ski stamp', 'stamp', 0],
 };
 // 식당에서 먹는 것(가방에 넣지 않고 그 자리에서 · 도감 '먹어 본 음식')
 export const DISHES = { '🍣': ['초밥 한 접시', 'Sushi plate'], '🍜': ['마라탕 한 그릇', 'Malatang bowl'], '🦐': ['해산물 한 접시', 'Seafood plate'], '🍱': ['밥 한 상', 'Set meal'] };
