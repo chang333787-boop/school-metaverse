@@ -4040,7 +4040,7 @@ export default async function start(map, params) {
     //   수는 고정(차 34 · 버스 2 · 사람 64) — 서로 보기는 이 목록 안에서만(100명 · 매 프레임 새 객체 없음)
     const dirOf = (a, b) => { const A = NO[a], B = NO[b], dx = B[0] - A[0], dz = B[1] - A[1], l = Math.hypot(dx, dz) || 1; return [dx / l, dz / l]; };
     const vLat = (g, big) => (big ? 3.2 : 1.6) * (g.type === 'bus' ? 1.05 : 1), pOff = (big, hw) => hw - (big ? 1.65 : 0.95), pOut = big => big ? 0.8 : 0.45;
-    const agents = []; const add = (type, i9, bigOnly) => { let e = pickEdge(bigOnly), fwd = R() < 0.5; const sd0 = R() < 0.5 ? -1 : 1; if (type === 'p') for (let k = 0; k < 30 && PB.has((fwd ? e[0] : e[1]) + '>' + (fwd ? e[1] : e[0]) + ':' + sd0); k++) { e = pickEdge(false); fwd = R() < 0.5; }
+    const CFV = new T3.Vector3(); const agents = []; const add = (type, i9, bigOnly) => { let e = pickEdge(bigOnly), fwd = R() < 0.5; const sd0 = R() < 0.5 ? -1 : 1; if (type === 'p') for (let k = 0; k < 30 && PB.has((fwd ? e[0] : e[1]) + '>' + (fwd ? e[1] : e[0]) + ':' + sd0); k++) { e = pickEdge(false); fwd = R() < 0.5; }
       const vmax = type === 'p' ? 1.0 + R() * 0.5 : type === 'bus' ? 6.5 : type === 'truck' ? 5.5 + R() * 1.5 : 7 + R() * 3; agents.push({ id: agents.length, type, i: i9, a: fwd ? e[0] : e[1], b: fwd ? e[1] : e[0], len: e[2], hw: e[4], big: e[3], t: R() * e[2], vmax, v: vmax * 0.6, side: type === 'p' ? sd0 : 1, ph: R() * 6.28, bigOnly, half: type === 'bus' ? 5.3 : type === 'truck' ? 3.0 : type === 'car' ? 2.15 : 0.25,
         x: 0, z: 0, hx: 0, hz: 1, lat: 0, latT: 0, latK: 0, plan: null, tr: null, lockN: -1, waitL: 0, waitA: 0, stuck: 0, stopP: 0, honk: 0, wait: 0, ghost: 0, stun: 0, red: false, redQ: false }); };
     for (let i = 0; i < NC; i++) { add('car', i, false); C9.setHex(CARC[(R() * CARC.length) | 0]); carBody.setColorAt(i, C9); }
@@ -4176,7 +4176,7 @@ export default async function start(map, params) {
       if (g.v === 0) { stopped++; if (!g.redQ) g.stuck += dt; if (byMe) { g.stopP += dt; if (g.stopP > 1.1 && g.honk <= 0 && honkG <= 0) { g.honk = 8; honkG = 2.5; honks++; map.sfx('honk'); } } else g.stopP = 0; if (g.stuck > 6 && !byMe) { g.ghost = 1.5; g.stuck = 0; ghosts++; } } else { g.stuck = 0; g.stopP = 0; }
       if (g.ghost > 0) g.ghost -= dt; if (g.honk > 0) g.honk -= dt; }
     function stepP(g, dt, me) {   // 사람: 비켜 가기 · 기다리기
-      let tgt = g.vmax, conflict = false; const hx = g.hx, hz = g.hz; if (g.ghP > 0) g.ghP -= dt; if (g.gest > 0) { g.gest -= dt; tgt = 0; } g.sigW = false;
+      let tgt = g.vmax * (g.big && g.type !== 'bus' && Math.hypot(g.x - 16.5, g.z - 50) > 160 ? 1.3 : 1), conflict = false;   /* A5(패들렛 50 지원 '차가 너무 느려요'): 큰길 × 1.3 · 학교 둘레 160m 안·골목은 그대로(어린이 보호 구역 팻말) */ const hx = g.hx, hz = g.hz; if (g.ghP > 0) g.ghP -= dt; if (g.gest > 0) { g.gest -= dt; tgt = 0; } g.sigW = false;
       if (!g.tr && g.plan && g.plan.cross && g.t > g.plan.u0 - 0.6) { const s9 = SIGN.get(g.plan.na); if (s9) { const d1 = dirOf(g.a, g.b); if (sigSt(s9, sigAxis(s9, d1[0], d1[1])) !== 0) { g.sigW = true; tgt = 0; g.v = 0; g.t = Math.min(g.t, g.plan.u0 - 0.05); } } }   // SIGNAL-1: 보행 신호가 빨강이면 모퉁이에서 기다림
       if (!(g.ghP > 0)) for (const o of PPL) { if (o === g) continue; const dx = o.x - g.x, dz = o.z - g.z; if (dx * dx + dz * dz > 9) continue; const ah = dx * hx + dz * hz; if (ah <= 0 || ah > 2.2) continue; if (Math.abs(dx * hz - dz * hx) > 0.65) continue;
         if (o.hx * hx + o.hz * hz < -0.3) { conflict = true; g.latT = g.tr ? 0.55 * (g.tr.pts ? 1 : 0) : g.id < o.id ? pOut(g.big) : -0.2; if (ah < 0.8 && g.id > o.id && !g.tr) tgt = 0; } else tgt = Math.min(tgt, ah < 1.0 ? 0 : o.v); }   // 마주 옴 = 한 사람은 바깥쪽으로(가까우면 다른 사람은 잠깐 섬) · 같은 쪽 = 1m 띄우고 뒤따라 걸음
@@ -4188,9 +4188,10 @@ export default async function start(map, params) {
     return {
       tick(dt) { dt = Math.min(dt, 0.1); stopped = 0; if (honkG > 0) honkG -= dt; const me = map.player.pos();   // pos() = 같은 객체(매 프레임 새 객체 없음)
         if ((laneQ -= dt) <= 0) { laneQ = 0.25; meLane = inLane(me.x, me.z, 0.3); }
-        if ((rq += dt) > 0.4) { rq = 0; const cp = map.camera.position; for (let k = 0; k < 6; k++) { const g = agents[ri9 = (ri9 + 1) % agents.length]; if (g.type === 'bus') continue;
+        if ((rq += dt) > 0.4) { rq = 0; const cp = map.camera.position; map.camera.getWorldDirection(CFV); const cfl = Math.hypot(CFV.x, CFV.z) || 1, cfx = CFV.x / cfl, cfz = CFV.z / cfl; for (let k = 0; k < 6; k++) { const g = agents[ri9 = (ri9 + 1) % agents.length]; if (g.type === 'bus') continue;
           if (Math.hypot(g.x - cp.x, g.z - cp.z) < 280) continue; const near = []; for (let e = 0; e < edges.length; e++) { const d = Math.hypot(mid[e][0] - cp.x, mid[e][1] - cp.z); if (d > 60 && d < 240) near.push(e); } if (!near.length) continue;   // 화면 밖(60m 너머)에서 나타나게
           const e = edges[near[(R() * near.length) | 0]], fwd = R() < 0.5; if (g.type === 'p' && PB.has((fwd ? e[0] : e[1]) + '>' + (fwd ? e[1] : e[0]) + ':' + g.side)) continue; const tt = R() * e[2], A = NO[fwd ? e[0] : e[1]], B = NO[fwd ? e[1] : e[0]], sx = A[0] + (B[0] - A[0]) * tt / e[2], sz = A[1] + (B[1] - A[1]) * tt / e[2];
+          { const dxs = sx - cp.x, dzs = sz - cp.z, ds = Math.hypot(dxs, dzs); if (ds < 70 || Math.hypot(sx - me.x, sz - me.z) < 60 || (ds < 170 && (dxs * cfx + dzs * cfz) / ds > 0.5)) continue; }   /* A4(패들렛 60 지원 '앞차를 따라가면 새 차가 계속 앞에 생겨요'): 생기는 점 = 카메라 70m·나 60m 밖 · 170m 안이면 화면 앞쪽(시야 ±60°) X */
           if (g.type !== 'p' && VEH.some(o => o !== g && Math.hypot(o.x - sx, o.z - sz) < 12)) continue; unlock(g); setEdge(g, fwd ? e[0] : e[1], fwd ? e[1] : e[0], e[2], e[3], e[4], tt, g.side); g.v = g.vmax * 0.6; g.lat = g.latT = 0; pose(g); if (g.type === 'truck') cargoFor(g); else if (g.type === 'p') dressFor(g); } }
         for (const g of agents) { if (g.type === 'p') stepP(g, dt, me); else stepV(g, dt, me); }
         for (const g of agents) { const ds = g.v * dt; g.ph += dt * (g.type === 'p' ? 5.6 * g.v / (g.sc || 1) : 7 * Math.min(1, g.v / g.vmax));
