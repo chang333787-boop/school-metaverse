@@ -57,7 +57,7 @@ export const itemName = (e, en) => { const I = ITEMS[e]; return I ? (en ? I[1] :
 
 export function createGame(id) {
   const KEY = 'sm-town-game:' + id;
-  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, hearts: {}, today: null, clock: true, cal: { d0: 1, on: true, s: 'now' }, bundles: {}, unlock: {}, farm: [] });
+  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, hearts: {}, today: null, clock: true, cal: { d0: 1, on: true, s: 'now' }, bundles: {}, unlock: {}, farm: [], diary: [] });
   let S = fresh();
   try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j && j.v === SAVE_V) { S = Object.assign(fresh(), j); if (!(j.cal && j.cal.d0 >= 1)) S.cal = { d0: S.day, on: true, s: 'now' };   /* 달력 없던 저장 = 오늘부터 첫 주 */ for (const k of Object.keys(S.bag)) if (!(S.bag[k] > 0)) delete S.bag[k]; } } catch (e) { /* 저장 막힘·깨짐 = 새로 시작 */ }
   if (!(S.min >= 0 && S.min < DAY_END)) S.min = 7 * 60;
