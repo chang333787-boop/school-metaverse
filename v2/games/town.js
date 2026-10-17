@@ -24,7 +24,7 @@ import { createYards, YARD_SIZE, YARD_CS, YARD_NORTH, extentOf, DEFAULT_YARD } f
 import { createIndoor, ROOM_ITEMS, kidItem } from './town_indoor.js?v=9';
 import { placeParked, TRUCK } from './town_fire.js?v=1';   // FIRE-1 소방차(인스턴스 한 벌 · 출동용 makeFireTruck은 생활 팀이 town_fire.js에서 바로 부름)
 import { createGame, ITEMS, itemName, DISHES, shopOf, won, RECIPES, CAL_LEN, SHOPS } from './town_game.js?v=22';
-import { createStory } from './town_story.js?v=7';
+import { createStory } from './town_story.js?v=8';
 import { attachLook, lookHTML, bindLook } from '../js/look.js?v=1'; import { buildKid } from '../js/kid.js?v=5';   // LOOK-1 내 모습(학교와 같은 모듈 — 같은 주소라 한 벌) · 미리보기 아이
 import { startKeyText, stopKeyText } from '../js/keytext.js?v=1';
 import { createFriends } from './town_friends.js?v=1';   // TOGETHER-0 같은 방 친구를 마을에서(인스턴스 · 그리기 ≤ 11번)   // TOUCH-2 터치 키 글자 거르기(한 곳)

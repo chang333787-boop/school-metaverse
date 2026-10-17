@@ -1059,7 +1059,7 @@ function bakeShadows() {
 // 밤하늘 별(점 500개 · 안개 무시) + 밤엔 창 유리가 따뜻하게 빛난다(교실 불 켜진 느낌) — 빛(Light)은 추가하지 않는다
 const stars = (() => {
   const n = 500, pos = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) { const th = Math.random() * Math.PI * 2, ph = 0.08 + Math.random() * 0.5, R = 290;
+  for (let i = 0; i < n; i++) { const th = Math.random() * Math.PI * 2, ph = Math.asin(0.06 + Math.random() * 0.93), R = 290;   /* 하늘 전체에 고르게(넓이 기준) — 예전 = 지평선 위 5~33° 띠에만 있어 머리 위가 비었다(10-18) */
     pos[i*3] = Math.cos(th) * Math.cos(ph) * R; pos[i*3+1] = Math.sin(ph) * R; pos[i*3+2] = Math.sin(th) * Math.cos(ph) * R; }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const m = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xfff8e8, size: 1.7, sizeAttenuation: false, fog: false }));
@@ -1096,6 +1096,7 @@ const flagBase = world.flag ? Float32Array.from(world.flag.geometry.attributes.p
 let flagT = 0, flagAcc = 1, flagW = null;
 function skyTick(dt) {
   clouds.position.set(camera.position.x, 0, camera.position.z); clouds.rotation.y += dt * 0.004;
+  if (stars.visible) stars.position.set(camera.position.x, camera.position.y, camera.position.z);   // 별도 카메라를 따라감(10-18 사용자 '저게 별이야? 별이 왜 일부분만' — 학교 가운데 고정 290m 공이라 마을 산에서 보면 바깥에서 둥근 지붕처럼 보였다)
   skyDome.position.copy(camera.position);
   { const c = camera.position, BR = world.details.brect; let o = 1;   // GFX-3 리뷰: 카메라가 건물 칸 안(지붕 아래)이면 유리 반짝임 끔
     if (c.y < 9) for (let i = 0; i < BR.length; i++) { const r = BR[i]; if (c.x > r[0] && c.x < r[1] && c.z > r[2] && c.z < r[3]) { o = 0; break; } }
