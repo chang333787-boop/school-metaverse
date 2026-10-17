@@ -11,7 +11,7 @@ import { createTouch, touchPrimary } from './touch.js?v=10';   // TOUCH-1(09-26)
 import { createTitle } from './title.js?v=27';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
 import { createTop } from './topview.js?v=11';   // TOP-1(10-04 교사 '탑뷰로 학교 보기'): 하늘에서 보기 — 지붕 벗기기(1·2층)·끌어 옮기기·확대·돌리기·방 이름·방위표·축척 · 게임은 map.top   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
-import { createActions } from './actions.js?v=3';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
+import { createActions } from './actions.js?v=4';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
 // TITLE-1: 오프닝을 켤지 — 게이트(?check=1)·검진(?health=1)·사진 대조(?shot)·게임 주소(?game·?tour=1)는 예전 그대로(오프닝 없음). index.html 로딩 막도 같은 규칙
@@ -1524,20 +1524,34 @@ addEventListener('keydown', (e) => {   // T = 채팅 열기(방 안 · 다른 �
   if (e.code !== 'KeyT' || e.repeat || !chatUI || !NET) return; const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.isContentEditable)) return;
   if (document.body.classList.contains('title-on') || CTRL.frozen) return; e.preventDefault(); chatUI.open(true);
 });
-// 😀 이모지 인사(방 안에서만 · 정해진 그림 6개)
-let emoEl = null;
+// 😀 이모트(EMOTE-2 · 10-17 — 예전 NET-2 = 방 안에서만 · 그림 6개): 그림 열 · 혼자일 때도(학교·마을) 내 몸짓 · 방 안이면 친구에게 보냄 · 1.5초에 1번 · 홍보판 없음
+//   내 몸짓 = actions.js emo0~emo9(제자리 · 움직이면 멈춤 · 앉아 있거나 수영·스키·의자 자세면 몸짓 없이 그림만) · 친구 몸짓 = net.js 몸 변환 · 맞춤(2m·3초 같은 이모트) = onCombo
+let emoEl = null, emoT = -1e9;
+function doEmote(i) {
+  const now = performance.now(); if (now - emoT < 1500) return false; emoT = now;   // 1.5초에 1번(예전과 같은 상한)
+  if (!ACT.sit && !CTRL.pose && !(ACTS.cur && !/^emo|^five/.test(ACTS.cur))) ACTS.play('emo' + i);
+  if (NET) NET.emote(i); return true;
+}
+function emoCombo(f, i, kd) {   // EMOTE-2 맞춤: 두 화면이 각자 판정(받은 시각) — 효과는 내 화면에만
+  const mx = (P.x + f.x) / 2, mz = (P.z + f.z) / 2, my = Math.max(P.y, f.y) + 1.55, nm = String(f.label || '친구').slice(0, 8);
+  if (kd === 'five') { if (!ACT.sit && !CTRL.pose) ACTS.play('five', { at: [f.x, f.y + 1.2, f.z] }); setTimeout(() => { ACTS.emit(26, mx, my, mz, 0, 1, 0, { speed: 1.7, spread: 1, life: 0.9, size: 0.035, g: 2.5, color: 0xffd23c }); tone(1320, 0, 0.07, 'square', 0.06); tone(1760, 0.07, 0.09, 'square', 0.05); }, 380); toast('🙌 ' + nm + ' 친구와 하이파이브!', 2.4); }
+  else if (kd === 'dance') { if (!ACT.sit && !CTRL.pose) ACTS.play('emo9'); for (let k = 0; k < 6; k++) ACTS.note(mx + (Math.random() - 0.5), my - 0.3, mz + (Math.random() - 0.5)); toast('💃 ' + nm + ' 친구와 같이 춤!', 2.4); }
+  else { ACTS.emit(16, mx, my, mz, 0, 0.8, 0, { speed: 0.7, spread: 0.8, life: 1, size: 0.03, g: -0.2, color: 0xff7aa2 }); toast(i === 6 ? '🙇 ' + nm + ' 친구와 서로 꾸벅!' : '💞 ' + nm + ' 친구와 마음이 통했어요', 2.4); }
+}
 function emoChip(on) {
-  if (!on) { if (emoEl) emoEl.remove(); emoEl = null; return; } if (emoEl) return;
-  emoEl = document.createElement('div'); emoEl.id = 'mpEmo'; emoEl.className = 'chip'; emoEl.style.cssText = 'left:10px;top:84px;cursor:pointer;display:flex;gap:2px;align-items:center;padding:4px 6px;pointer-events:auto';
+  if (!on) { if (emoEl) { const bar = emoEl.querySelector('.emo-bar'); if (bar) bar.style.display = 'none'; emoEl.classList.remove('open'); } return; } if (emoEl) return;   // EMOTE-2: 방을 나가도 칩은 그대로(혼자 몸짓)
+  if (!document.getElementById('emo-css')) { const st = document.createElement('style'); st.id = 'emo-css'; st.textContent = '#mpEmo.open{z-index:44!important;align-items:flex-start!important}#mpEmo .emo-bar{flex-wrap:wrap;max-width:min(330px,calc(100vw - 70px))}#mpEmo .emo-bar span{font-size:22px;padding:2px 4px;cursor:pointer;border-radius:8px}#mpEmo .emo-bar span:hover{background:rgba(255,255,255,.18)}body.touch #mpEmo .emo-bar span{min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}'; document.head.appendChild(st); }
+  emoEl = document.createElement('div'); emoEl.id = 'mpEmo'; emoEl.className = 'chip'; emoEl.title = '몸짓·이모지(친구 방에 있으면 친구에게도 보여요)'; emoEl.style.cssText = 'left:10px;top:84px;cursor:pointer;display:flex;gap:2px;align-items:center;padding:4px 6px;pointer-events:auto';
   emoEl.innerHTML = '<span data-e="t" style="padding:2px 6px">😀</span><span class="emo-bar" style="display:none;gap:2px"></span>';
-  import('./net.js?v=11').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" style="font-size:22px;padding:2px 4px;cursor:pointer">' + x + '</span>').join(''); });
+  import('./net.js?v=12').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" title="' + M.EMOTE_T[i] + '" role="button" aria-label="' + M.EMOTE_T[i] + '">' + x + '</span>').join(''); });
   emoEl.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-e]'); if (!b) return; const bar = emoEl.querySelector('.emo-bar');
-    if (b.dataset.e === 't') { bar.style.display = bar.style.display === 'none' ? 'flex' : 'none'; return; } if (NET) NET.emote(+b.dataset.e); bar.style.display = 'none'; });
+    if (b.dataset.e === 't') { const op = bar.style.display === 'none'; bar.style.display = op ? 'flex' : 'none'; emoEl.classList.toggle('open', op); return; } if (doEmote(+b.dataset.e)) { bar.style.display = 'none'; emoEl.classList.remove('open'); } });   // 열린 동안 = 할 일 줄 등 위로(휴대폰 마을에서 둘째 줄이 가리던 것)
   document.body.appendChild(emoEl);
 }
+if (!window.SM_PROMO && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) emoChip(true);   // EMOTE-2: 혼자일 때도(학교·마을) · 홍보판·검사 화면 없음
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=11'), import('./lobby.js?v=17')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=12'), import('./lobby.js?v=18')]).then(([N, L]) => {
     // ROOM-1(10-05 교사 '멀티방을 게임으로 들어가는 게 아니라 멀티방을 만들고 그 안에서 모드를 정하는 게 직관적일까?'): 방 먼저 → 방을 만든 선생님이 👥 창 '🎮 다 같이 놀이'를 고르면 방 친구 모두 그 놀이 대기실로
     //   방 놀이 번호 = ctl/cmd d — 선생님 신호(📣·✋·▶·🎮)마다 지금 방 놀이를 같이 실음(cmd는 마지막 하나만 남으므로 — 늦게 들어온 친구·새로고침한 화면도 앎 · 규칙 그대로)
     //   ⚠️ 번호는 뒤에만 더한다(옛 화면과 어긋나지 않게) · 메뉴(오프닝·🎮)에는 registry room:true 놀이가 안 보임 — 혼자 연습 카드만
@@ -1548,7 +1562,7 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
     const LOBBY = L.createLobby({ chip, net: () => NET, toast: (m, t) => toast(m, t),
       rooms: window.SM_LESSON ? null : { list: () => ROOMS.map((q, i) => q && { i, t: q.t }).filter(Boolean), cur: () => ROOMG, inIt: () => { const g = MAP.game.current; return !!(g && ROOMS[ROOMG] && g.id === ROOMS[ROOMG].id); },
         count: (i) => inGame(i), pick: (i, q) => roomPick(i, q), start: (q) => roomStart(q), end: (q) => roomEnd(q), join: () => roomLaunch(ROOMS[ROOMG] && ROOMS[ROOMG].id), panel: () => wrShow(true), run: () => (ROOMRUN ? ROOMG : 0) },   // q = 조용히(👥 창이 창 안에 '보냈어요'를 씀)
-      join: (room) => { CTLK.join = Date.now(); CTLK.init = false; CTLK.m = CTLK.q = null; NET = N.createNet({ THREE, scene, room, kind: 'kid', onChange: () => LOBBY.draw(), onDenied: () => LOBBY.recheck(), onCtl, onChat: (m) => { if (chatUI) { if (m) chatUI.add(m); else chatUI.add('🧹 선생님이 채팅을 지웠어요', true); } } }); emoChip(true); chatOn(true); document.body.classList.add('mp-in'); if (!MAP.game.current && !MAP.minimap.visible) MAP.minimap.show(); },   // mp-in = 방 안(phone.css가 왼쪽 위 칩 줄 밑을 비킴 — :has 대신)
+      join: (room) => { CTLK.join = Date.now(); CTLK.init = false; CTLK.m = CTLK.q = null; NET = N.createNet({ THREE, scene, room, kind: 'kid', onCombo: emoCombo, onChange: () => LOBBY.draw(), onDenied: () => LOBBY.recheck(), onCtl, onChat: (m) => { if (chatUI) { if (m) chatUI.add(m); else chatUI.add('🧹 선생님이 채팅을 지웠어요', true); } } }); emoChip(true); chatOn(true); document.body.classList.add('mp-in'); if (!MAP.game.current && !MAP.minimap.visible) MAP.minimap.show(); },   // mp-in = 방 안(phone.css가 왼쪽 위 칩 줄 밑을 비킴 — :has 대신)
       leave: () => { if (NET) NET.leave(); NET = null; emoChip(false); chatOn(false); document.body.classList.remove('mp-in'); MAP.minimap.setPeers([]); holdOff(); holdChip(false); PENDG = null; },
       onGoTo: (p) => {   // 👥 칩에서 친구 이름 → 그 친구 곁으로(물총 경기 중엔 안 됨)
         if (!p) return; const g = MAP.game.current; if (g && /^watergun/.test(g.id) && g.handle && (g.handle.state === 'play' || g.handle.state === 'count')) return toast('경기 중에는 갈 수 없어요', 2);

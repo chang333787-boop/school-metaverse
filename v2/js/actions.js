@@ -188,6 +188,34 @@ export function createActions(H) {
       pose(c, t, k) { hip(0.75 * k); K.legL.knee.rotation.x += 0.4 * k; K.legR.knee.rotation.x += 0.4 * k; armsIn(k * 0.3, -0.9 * k + Math.sin(t * 10) * 0.1); K.head.rotation.x += 0.3 * k; } },
     reach: { dur: 1.0, reach: 0, msg: null,   // 배식대·반납대: 두 손을 앞으로 뻗었다가 거둠
       pose(c, t, k) { const f = Math.sin(Math.min(1, t / c.def.dur) * Math.PI); K.armL.rotation.x = K.armR.rotation.x = -1.1 - 0.45 * f; } },
+    // EMOTE-2(10-17): 이모트 몸짓 열(net.js EMOTES 순서 = emo0~emo9 · 제자리 · 말 없음 · 움직이면 멈춤) + 하이파이브(five — 친구 쪽으로 돌아 손 내밀기)
+    emo0: { dur: 1.8, reach: 0, msg: null,   // 👋 손 흔들기
+      pose(c, t, k) { K.armR.rotation.x = -2.75 * k + Math.sin(t * 7) * 0.12 * k; K.armR.rotation.z = 0.12 + (0.33 + Math.sin(t * 9) * 0.35) * k; K.head.rotation.z = Math.sin(t * 4) * 0.06 * k; } },
+    emo1: { dur: 1.6, reach: 0, msg: null,   // 😀 깔깔 — 어깨 들썩
+      pose(c, t, k) { K.rig.position.y += Math.abs(Math.sin(t * 12)) * 0.03 * k; K.head.rotation.x -= 0.16 * k; K.rig.rotation.z = Math.sin(t * 10) * 0.05 * k; K.armL.rotation.x = K.armR.rotation.x = 0.25 * k; } },
+    emo2: { dur: 1.6, reach: 0, msg: null,   // 👍 최고 — 오른손 앞으로 + 끄덕
+      pose(c, t, k) { K.armR.rotation.x = -1.45 * k; K.armR.rotation.z = 0.12 - 0.25 * k; K.head.rotation.x += Math.sin(t * 6) * 0.08 * k; } },
+    emo3: { dur: 2.0, reach: 0, msg: null,   // ❤️ 머리 위 하트 — 두 팔 올려 손 모으기
+      tick(c, t) { if (t >= 0.6 && c.last < 0.6) { _v2.set(0, 1.75, 0.05); K.rig.localToWorld(_v2); emit(10, _v2.x, _v2.y, _v2.z, 0, 0.7, 0, { speed: 0.5, spread: 0.6, life: 0.9, size: 0.03, g: -0.3, color: 0xff7aa2 }); } },
+      pose(c, t, k) { K.armL.rotation.x = K.armR.rotation.x = -2.85 * k; K.armL.rotation.z = -0.12 + 0.55 * k; K.armR.rotation.z = 0.12 - 0.55 * k; K.head.rotation.z = 0.12 * k; K.rig.rotation.z = Math.sin(t * 3) * 0.06 * k; } },
+    emo4: { dur: 1.4, reach: 0, msg: null,   // 😮 깜짝 — 뒤로 젖히며 두 손을 얼굴 옆으로
+      pose(c, t, k) { const j = Math.max(0, Math.sin(Math.min(1, t / 0.35) * Math.PI)); K.rig.position.y += j * 0.08; K.rig.rotation.x -= 0.16 * k; K.head.rotation.x -= 0.1 * k; armsIn(k * 0.6, -2.0 * k); } },
+    emo5: { dur: 1.8, reach: 0, msg: null,   // 🎉 만세 폴짝 + 반짝이
+      tick(c, t) { if (t >= 0.2 && c.last < 0.2) { _v2.set(0, 1.9, 0); K.rig.localToWorld(_v2); for (const col of [0xffd23c, 0x4fa3ff, 0xff6b8a, 0x5fcf6a]) emit(6, _v2.x, _v2.y, _v2.z, 0, 1, 0, { speed: 1.5, spread: 1, life: 1, size: 0.028, g: 3, drag: 1, color: col }); } },
+      pose(c, t, k) { K.rig.position.y += Math.max(0, Math.sin(t * 7.5)) * 0.22 * k; K.armL.rotation.x = K.armR.rotation.x = -2.9 * k; K.armL.rotation.z = -0.12 - 0.35 * k; K.armR.rotation.z = 0.12 + 0.35 * k; } },
+    emo6: { dur: 1.8, reach: 0, msg: null,   // 🙇 꾸벅 인사
+      pose(c, t, k) { const f = Math.sin(Math.min(1, t / 1.8) * Math.PI); hip(0.7 * f); K.head.rotation.x += 0.25 * f; K.armL.rotation.x = K.armR.rotation.x = 0.1 * f; } },
+    emo7: { dur: 1.8, reach: 0, msg: null,   // 👏 짝짝 박수
+      tick(c, t) { const n0 = Math.floor((c.last - 0.25) * 16 / (Math.PI * 2)), n1 = Math.floor((t - 0.25) * 16 / (Math.PI * 2)); if (t > 0.25 && t < 1.6 && n1 > n0) tone(1700, 0, 0.035, 'square', 0.04); },
+      pose(c, t, k) { const r = Math.max(0, Math.sin(t * 16)); armsIn(k * (0.75 - 0.25 * r), -1.3 * k); K.head.rotation.x -= 0.05 * k; } },
+    emo8: { dur: 1.8, reach: 0, msg: null,   // 🙋 저요! — 오른손 번쩍
+      pose(c, t, k) { K.armR.rotation.x = -3.0 * k + Math.sin(t * 8) * 0.05 * k; K.armR.rotation.z = 0.12 - 0.12 * k; K.head.rotation.x -= 0.1 * k; K.rig.position.y += Math.max(0, Math.sin(t * 5)) * 0.03 * k; } },
+    emo9: { dur: 2.6, reach: 0, msg: null,   // 💃 춤 — 엉덩이 흔들기·팔 번갈아·음표
+      tick(c, t) { if (t > 0.2 && t < 2.4 && Math.random() < 0.07) { _v2.set(0, 1.35, 0.15); K.rig.localToWorld(_v2); note(_v2.x, _v2.y, _v2.z); } },
+      pose(c, t, k) { const s9 = Math.sin(t * 6); K.rig.rotation.z = s9 * 0.14 * k; K.rig.rotation.y = Math.sin(t * 3) * 0.35 * k; K.rig.position.y += Math.abs(s9) * 0.05 * k;
+        K.armL.rotation.x = (-1.6 + s9 * 0.9) * k; K.armR.rotation.x = (-1.6 - s9 * 0.9) * k; K.armL.rotation.z = -0.12 - 0.3 * k; K.armR.rotation.z = 0.12 + 0.3 * k; K.legL.knee.rotation.x += Math.max(0, s9) * 0.35 * k; K.legR.knee.rotation.x += Math.max(0, -s9) * 0.35 * k; } },
+    five: { dur: 1.2, reach: 0, msg: null,   // 🙌 하이파이브(친구 쪽으로 돌아서) — 오른손 높이 앞으로 쭉
+      pose(c, t, k) { const push = Math.max(0, Math.sin(Math.min(1, t / 0.7) * Math.PI)); K.armR.rotation.x = (-2.35 + push * 0.25) * k; K.armR.rotation.z = 0.12 - 0.2 * k; K.rig.position.y += push * 0.05; K.head.rotation.x -= 0.08 * k; } },
     eat: { dur: Infinity, reach: 0, msg: null, sit: true, prop: ['spoon'],
       tick(c, t) { if (c.o.onEat) c.o.onEat(t); },
       pose(c, t, k) { const ph = (t % 1.6) / 1.6, up = ph < 0.5 ? sm(0.05, 0.45, ph) : 1 - sm(0.55, 0.95, ph);

@@ -7,7 +7,13 @@ import { lookCode, parseLook, lookColors } from './look.js?v=1';   // LOOK-1(10-
 const DB = 'https://class-rpg-6f409-default-rtdb.asia-southeast1.firebasedatabase.app';
 const PAL = [0xff6b6b, 0xffa94d, 0xffd43b, 0x69db7c, 0x38d9a9, 0x4dabf7, 0x748ffc, 0xda77f2, 0xf783ac, 0x20c997];
 const SKIN = 0xf1c9a0;
-export const EMOTES = ['👋', '😀', '👍', '❤️', '😮', '🎉'];
+import { checkChat } from './chatfilter.js?v=1';   // SAFE-1(10-17): 이름도 채팅과 같은 거르개(바꿔 쓰지 않고 못 씀)
+// EMOTE-2(10-17): 이모트 열(규칙 m.i < 10 그대로 · 모두 유니코드 6 이하 — 윈도 10에서 안 깨짐) · 뒤에만 더함(옛 화면은 6번부터 🎉로 보임)
+export const EMOTES = ['👋', '😀', '👍', '❤️', '😮', '🎉', '🙇', '👏', '🙋', '💃'];
+export const EMOTE_T = ['안녕', '좋아요', '최고', '고마워', '깜짝', '축하', '꾸벅', '박수', '저요', '춤'];
+//   친구 몸짓 = 몸 변환만(기울기·폴짝·흔들기 — 그리기 0 · 쓰기 0) · 둘이 2m 안에서 3초 안에 같은 이모트 = 맞춤(하이파이브·같이 춤 — 받은 시각으로 각자 화면에서 판정 → o.onCombo)
+const MO = ['sway', 'bounce', 'nod', 'sway', 'back', 'hop', 'bow', 'bounce', 'sway', 'dance'], MO_DUR = [1.8, 1.6, 1.6, 2.0, 1.4, 1.8, 1.8, 1.8, 1.8, 2.6];
+export const comboKind = (i) => (i === 0 || i === 2 || i === 7 ? 'five' : i === 5 || i === 9 ? 'dance' : 'heart');
 
 export function createNet(o) {
   const { THREE, scene, room, kind = 'kid', scale = 1 } = o;
@@ -17,7 +23,9 @@ export function createNet(o) {
   if (!id) { id = Math.random().toString(36).slice(2, 10); try { sessionStorage.setItem('mp.id', id); } catch (e) { /* */ } }
   let name = '';
   try { name = localStorage.getItem('mp.name') || ''; } catch (e) { /* */ }
-  if (!name) name = '친구' + Math.floor(10 + Math.random() * 90);
+  if (!name || !checkChat(name).ok) name = '친구' + Math.floor(10 + Math.random() * 90);   // SAFE-1: 예전에 저장된 이름도 거름
+  const MUTE = new Set(); try { for (const q of JSON.parse(sessionStorage.getItem('mp.mute') || '[]')) MUTE.add(String(q)); } catch (e) { /* */ }   // SAFE-1 🙈: 이 탭에서 나에게만 안 보이는 친구(말·이모지 · 친구는 모름)
+  let myE = null, meP = null;   // EMOTE-2: 내 마지막 이모트 {i, t} · 내 자리(맞춤 판정)
   const color = PAL[[...id].reduce((a, ch) => a + ch.charCodeAt(0), 0) % PAL.length];
   const others = new Map();
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
@@ -54,7 +62,7 @@ export function createNet(o) {
     ];
     return merge(parts);
   }
-  function avatar(k, hex) { const m = new THREE.Mesh(avatarGeo(k, hex), mat); m.scale.setScalar(scale); return m; }
+  function avatar(k, hex) { const m = new THREE.Mesh(avatarGeo(k, hex), mat); m.scale.setScalar(scale); m.rotation.order = 'YXZ'; return m; }   // EMOTE-2: 몸 기준 기울기
   function tag(text) {
     const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d');
     g.fillStyle = 'rgba(255,255,255,.92)'; g.beginPath(); g.roundRect(4, 6, 248, 52, 22); g.fill();
@@ -65,6 +73,27 @@ export function createNet(o) {
   function drop(pid) { const O = others.get(pid); if (!O) return; if (O.sb) { scene.remove(O.sb.s); if (O.sb.s.material.map) O.sb.s.material.map.dispose(); O.sb.s.material.dispose(); } scene.remove(O.mesh); O.mesh.geometry.dispose(); scene.remove(O.tag); O.tag.material.map.dispose(); O.tag.material.dispose(); if (O.em) { scene.remove(O.em.s); O.em.s.material.dispose(); } others.delete(pid); onChange(); }
   // 이모지(그림 6개 — 텍스처는 하나씩만 만들어 같이 씀) · 3초 동안 머리 위에서 살짝 떠오름
   const ETEX = [];
+  function combo(O, i) {   // EMOTE-2: 같은 이모트 맞춤 — 2m 안 · 3초 안 · 한 친구와 3초에 한 번
+    const now = performance.now(); if (!meP || O.away || MUTE.has(O.pid) || now - (O.comboT || 0) < 3000) return;
+    if (Math.hypot(O.x - meP.x, O.z - meP.z) > 2 || Math.abs(O.y - meP.y) > 1.5) return;
+    O.comboT = now; const kd = comboKind(i); if (kd === 'dance') O.mo = { i: 9, t: 0, dur: 3.2 };   // 같이 춤 = 친구 춤도 길게
+    if (o.onCombo) o.onCombo({ x: O.x, y: O.y, z: O.z, label: O.n }, i, kd);
+  }
+  function moTick(O, dt) {   // EMOTE-2: 친구 몸짓 — 통짜 몸 변환만(rotation 순서 YXZ = 몸 기준 기울기)
+    const M = O.mo; if (!M) return 0; M.t += dt; const t = M.t, d = M.dur;
+    if (t >= d) { O.mo = null; O.mesh.rotation.x = O.mesh.rotation.z = 0; return 0; }
+    const k = Math.min(1, t / 0.25, (d - t) / 0.25), s = Math.sin; let y = 0, rx = 0, rz = 0;
+    switch (MO[M.i] || 'bounce') {
+      case 'sway': rz = s(t * 7) * 0.1 * k; break;
+      case 'bounce': y = Math.abs(s(t * 11)) * 0.06 * k; break;
+      case 'nod': rx = s(t * 6) * 0.12 * k; break;
+      case 'back': rx = -0.2 * k; y = Math.max(0, s(Math.min(1, t / 0.35) * Math.PI)) * 0.08; break;
+      case 'hop': y = Math.max(0, s(t * 7.5)) * 0.22 * k; break;
+      case 'bow': rx = 0.55 * s(Math.min(1, t / d) * Math.PI); break;
+      case 'dance': rz = s(t * 6) * 0.16 * k; y = Math.abs(s(t * 6)) * 0.06 * k; O.mesh.rotation.y += s(t * 3) * 0.35 * k; break;
+    }
+    O.mesh.rotation.x = rx; O.mesh.rotation.z = rz; return y * scale;
+  }
   function emoteSprite(old, i) {
     i = Math.max(0, Math.min(EMOTES.length - 1, i | 0));
     if (!ETEX[i]) { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.font = '96px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(EMOTES[i], 64, 70); ETEX[i] = new THREE.CanvasTexture(c); ETEX[i].colorSpace = THREE.SRGBColorSpace; }
@@ -85,7 +114,7 @@ export function createNet(o) {
     if (!O) {
       if (others.size >= 40) return;
       const mesh = avatar(d.k || kind, PAL.includes(d.c) ? d.c : PAL[0]), tg = tag(d.n || '친구');
-      O = { a: '', k: d.k || kind, away: false, mesh, tag: tg, n: d.n || '친구', c: PAL.includes(d.c) ? d.c : PAL[0], x: d.x || 0, y: d.y || 0, z: d.z || 0, h: d.h || 0, tx: 0, ty: 0, tz: 0, th: 0, t: 0, seen: performance.now(), fxQ: d.fx ? d.fx.q : 0, mQ: d.m ? d.m.q : 0, em: null };
+      O = { pid, a: '', k: d.k || kind, away: false, mo: null, mesh, tag: tg, n: d.n || '친구', c: PAL.includes(d.c) ? d.c : PAL[0], x: d.x || 0, y: d.y || 0, z: d.z || 0, h: d.h || 0, tx: 0, ty: 0, tz: 0, th: 0, t: 0, seen: performance.now(), fxQ: d.fx ? d.fx.q : 0, mQ: d.m ? d.m.q : 0, em: null };
       scene.add(mesh, tg); others.set(pid, O); onChange();
     }
     for (const k of ['x', 'y', 'z']) if (typeof d[k] === 'number') O['t' + k] = d[k];
@@ -95,7 +124,7 @@ export function createNet(o) {
     if (d.n && d.n !== O.n) { O.n = d.n; scene.remove(O.tag); O.tag.material.map.dispose(); O.tag = tag(O.n); scene.add(O.tag); onChange(); }
     if (d.fx && d.fx.q !== O.fxQ) { O.fxQ = d.fx.q; if (o.onFx && O.seen) o.onFx(O, d.fx); }
     if (typeof d.a === 'string') O.a = d.a;
-    if (d.m && d.m.q !== O.mQ) { O.mQ = d.m.q; O.em = emoteSprite(O.em, d.m.i); }
+    if (d.m && d.m.q !== O.mQ) { O.mQ = d.m.q; if (!MUTE.has(pid)) { const i9 = Math.max(0, Math.min(EMOTES.length - 1, d.m.i | 0)); O.em = emoteSprite(O.em, i9); O.mo = { i: i9, t: 0, dur: MO_DUR[i9] || 1.6 }; O.mi = i9; O.mt = performance.now(); if (myE && myE.i === i9 && O.mt - myE.t < 3000) combo(O, i9); } }   // EMOTE-2 · SAFE-1 🙈
     O.seen = performance.now();
   }
   function onEvt(type, e) {
@@ -113,7 +142,7 @@ export function createNet(o) {
     const fresh = [];
     for (const cid in CHAT) { const m = CHAT[cid]; if (!m || chatSeen.has(cid) || typeof m.tx !== 'string') continue; chatSeen.add(cid); if (typeof m.t === 'number' && m.t < chatT0 + offset - 3000) continue; fresh.push(m); }
     fresh.sort((a, b) => (a.t || 0) - (b.t || 0));
-    for (const m of fresh) { if (m.by === id) selfB = bubble(selfB, m.tx); else { const O = others.get(m.by); if (O) O.sb = bubble(O.sb, m.tx); } if (o.onChat) o.onChat(m); }
+    for (const m of fresh) { if (MUTE.has(m.by)) continue; if (m.by === id) selfB = bubble(selfB, m.tx); else { const O = others.get(m.by); if (O) O.sb = bubble(O.sb, m.tx); } if (o.onChat) o.onChat(m); }   // SAFE-1 🙈: 숨긴 친구 말은 말풍선·대화창 모두 X
     if (!Object.keys(CHAT).length && o.onChat) o.onChat(null);   // 비움(선생님 🧹)
   }
   function bubble(old, tx) {
@@ -164,7 +193,7 @@ export function createNet(o) {
     get id() { return id; }, get name() { return name; }, get color() { return color; }, get away() { return away; }, get kindCode() { return myK(); },
     get count() { let n = 1; const now = Date.now() + offset; for (const O of others.values()) if (now - O.t < 20000) n++; return n; },
     get names() { const now = Date.now() + offset, a = []; for (const O of others.values()) if (now - O.t < 20000) a.push(O.n); return a; },
-    setName(v) { v = String(v || '').replace(/[<>]/g, '').trim().slice(0, 8); if (!v) return; name = v; try { localStorage.setItem('mp.name', v); } catch (e) { /* */ } if (joined) req('/players/' + id, 'PATCH', { n: v }); onChange(); },
+    setName(v) { v = String(v || '').replace(/[<>]/g, '').trim().slice(0, 8); if (!v || joined || !checkChat(v).ok) return false; /* SAFE-1: 거르개 · 방에 들어간 뒤(이름표가 친구들에게 보인 뒤)엔 못 바꿈 */ name = v; try { localStorage.setItem('mp.name', v); } catch (e) { /* */ } if (joined) req('/players/' + id, 'PATCH', { n: v }); onChange(); },
     fx(f) { fxQ++; if (joined) req('/players/' + id + '/fx', 'PUT', { q: fxQ, ...f }); },
     tick(dt, P) {
       if (dead || !P) return;
@@ -173,13 +202,13 @@ export function createNet(o) {
       const moved = Math.abs(P.x - last.x) + Math.abs(P.z - last.z) + Math.abs(P.y - last.y) > 0.05 || Math.abs(P.h - last.h) > 0.08;
       if ((moved && sendT <= 0 && (inRule(P) || !away)) || beatT <= 0) { send(P); sendT = 1 / 6; beatT = 3; }   // NET-OOB: 범위 밖이면 움직여도 3초마다 한 번(처음 나갈 때 한 번은 바로)
       const now = Date.now() + offset, k = Math.min(1, dt * 10);
-      emoteTick(selfE, dt, P.x, P.y - 0.25, P.z); bubbleTick(selfB, dt, P.x, P.y - 0.25, P.z);
+      meP = P; emoteTick(selfE, dt, P.x, P.y - 0.25, P.z); bubbleTick(selfB, dt, P.x, P.y - 0.25, P.z);
       for (const O of others.values()) {
         const stale = O.t && now - O.t > 20000; O.mesh.visible = O.tag.visible = !stale && !hidden && !O.away;
         if (O.away) { if (O.em) O.em.s.visible = false; if (O.sb) O.sb.s.visible = false; } else { emoteTick(O.em, dt, O.x, O.y, O.z); bubbleTick(O.sb, dt, O.x, O.y, O.z); }
         O.x += (O.tx - O.x) * k; O.y += (O.ty - O.y) * k; O.z += (O.tz - O.z) * k;
         let dh = O.th - O.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); O.h += dh * k;
-        O.mesh.position.set(O.x, O.y, O.z); O.mesh.rotation.y = O.h; O.tag.position.set(O.x, O.y + 2.05 * scale, O.z);
+        O.mesh.position.set(O.x, O.y, O.z); O.mesh.rotation.y = O.h; if (O.mo) O.mesh.position.y += moTick(O, dt); O.tag.position.set(O.x, O.y + 2.05 * scale, O.z);   // EMOTE-2 몸짓(도는 동안만)
       }
       if ((cleanT -= dt) <= 0) { cleanT = 30; for (const [pid, O] of others) if (O.t && now - O.t > 120000) { req('/players/' + pid, 'DELETE'); drop(pid); } }
     },
@@ -187,13 +216,16 @@ export function createNet(o) {
       const ids = Object.keys(CHAT).sort((a, b) => ((CHAT[a] || {}).t || 0) - ((CHAT[b] || {}).t || 0)); for (const old of ids.slice(0, Math.max(0, ids.length - 39))) req('/chat/' + old, 'DELETE');   // 40개만 남김
       return fetch(base + '/chat/' + cid + '.json', { method: 'PUT', body: JSON.stringify({ n: name, by: id, tx, t: { '.sv': 'timestamp' } }) }).then((r) => r.ok); },
     clearChat() { return req('/chat', 'DELETE'); },
-    get chat() { return Object.values(CHAT).filter((m) => m && typeof m.tx === 'string').sort((a, b) => (a.t || 0) - (b.t || 0)); },
+    get chat() { return Object.values(CHAT).filter((m) => m && typeof m.tx === 'string' && !MUTE.has(m.by)).sort((a, b) => (a.t || 0) - (b.t || 0)); },
     setAct(v) { v = String(v || '').slice(0, 20); if (v === act || !joined) return; act = v; req('/players/' + id + '/a', 'PUT', v); },   // 지금 하는 것(👥 창에서 선생님이 봄)
-    emote(i) { if (!joined) return; mQ++; req('/players/' + id + '/m', 'PUT', { q: mQ, i }); selfE = emoteSprite(selfE, i); },
-    peers() { const now = Date.now() + offset, a = []; if (!hidden) for (const O of others.values()) if (!(O.t && now - O.t > 20000) && !O.away) a.push({ x: O.x, y: O.y, z: O.z, act: O.a, label: O.n, color: '#' + O.c.toString(16).padStart(6, '0'), r: 4, floor: O.y > 2.5 ? 2 : 1 }); return a; },
+    emote(i) { i = Math.max(0, Math.min(EMOTES.length - 1, i | 0)); myE = { i, t: performance.now() }; if (!joined) return; mQ++; req('/players/' + id + '/m', 'PUT', { q: mQ, i }); selfE = emoteSprite(selfE, i);
+      for (const O of others.values()) if (O.mi === i && myE.t - (O.mt || -1e9) < 3000) combo(O, i); },   // EMOTE-2: 친구가 먼저 한 같은 이모트와 맞춤
+    mute(pid, on) { const O = others.get(pid); if (on) { MUTE.add(pid); if (O) { if (O.em) O.em.t = 0; if (O.sb) O.sb.t = 0; O.mo = null; O.mesh.rotation.x = O.mesh.rotation.z = 0; } } else MUTE.delete(pid); try { sessionStorage.setItem('mp.mute', JSON.stringify([...MUTE])); } catch (e) { /* */ } onChange(); },   // SAFE-1 🙈(이 탭에서 나에게만)
+    muted: (pid) => MUTE.has(pid),
+    peers() { const now = Date.now() + offset, a = []; if (!hidden) for (const O of others.values()) if (!(O.t && now - O.t > 20000) && !O.away) a.push({ id: O.pid, mu: MUTE.has(O.pid), x: O.x, y: O.y, z: O.z, act: O.a, label: O.n, color: '#' + O.c.toString(16).padStart(6, '0'), r: 4, floor: O.y > 2.5 ? 2 : 1 }); return a; },
     ctl(path, data) { return req('/ctl/' + path, 'PUT', data); },
     get ctlData() { return CTL; },
-    roster() { const now = Date.now() + offset, a = []; for (const [id, O] of others) if (!(O.t && now - O.t > 20000)) a.push({ id, label: O.n, act: O.a, color: O.c, k: O.k }); return a; },   // ROOM-2: 경기 중(hide)에도 같은 방 친구 명단
+    roster() { const now = Date.now() + offset, a = []; for (const [id, O] of others) if (!(O.t && now - O.t > 20000)) a.push({ id, label: O.n, act: O.a, color: O.c, k: O.k, mu: MUTE.has(id) }); return a; },   // ROOM-2: 경기 중(hide)에도 같은 방 친구 명단
     hide(on) { hidden = !!on; for (const O of others.values()) O.mesh.visible = O.tag.visible = !hidden && !O.away; },   // 물총 친구 대결 동안 걷기 몸 숨김(경기 몸이 대신)
     leave,
   };

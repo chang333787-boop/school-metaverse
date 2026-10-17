@@ -7,7 +7,8 @@
 //   STORY-2 「첫 마을 잔치」(10-17 · 설계 docs/systems/town_story.md): 장마다 act(막) · link(교과서 차시 id) · lamp(🏮 등불 하나 — 가방 물건) · 막 열림 = 앞 막 장 셋 + 막 끝 장(end)
 //     old: 1 = 예전 장(c3·c4·c5) — 막 자리만 표시하고 지금처럼 언제든 · need.place = 이 마을에 그 장소 이름이 있어야 열림(없는 장소 지어내지 않음 — 'place:이름'은 SM_TOWN.places()에서 찾음)
 //     새 친구 = 이사 온 아이(이름 없는 역할 · 교사 확인 전) — 지금은 그 자리 말풍선 한 줄만(st.fr) · 쪽지·말 = api.dialog 계약(없으면 openP 쪽지로)
-export const STORY_V = 2;
+//   2막(10-17): rain/clear(날씨 기다리기 — 이미 있는 예보·날씨 창) · blk(그 단계 동안 🚧 고갯길 차단봉 = api.marks) · plant(비탈 E로 어린 나무 — 마을에 남음) · have.any · sell.away(멀리서 온 물건) · work.k·n(일꾼 여럿) · 선생님 칸(장 = 차시 카드 · ▶ 바로 열기)
+export const STORY_V = 3;
 const WHO = { shiitake: ['표고 농장 일꾼', 'the shiitake farmer'], cabbage: ['배추밭 일꾼', 'the cabbage farmer'], potato: ['감자밭 일꾼', 'the potato farmer'], lumber: ['숲 가꾸는 일꾼', 'the forester'], beehive: ['양봉 일꾼', 'the beekeeper'], pasture: ['목장 일꾼', 'the rancher'], saltpan: ['염전 일꾼', 'the salt worker'], paddy: ['논 일꾼', 'the rice farmer'], strawberry: ['딸기 농장 일꾼', 'the strawberry farmer'], pear: ['배 과수원 일꾼', 'the pear grower'], fisher: ['부두 어부', 'the fisher'], clam: ['갯벌 일꾼', 'the clam digger'], stall: ['장터 상인', 'the market seller'], seaweed: ['김 양식 어부', 'the seaweed farmer'], oyster: ['굴 양식 어부', 'the oyster farmer'] };
 const T2 = (ko, en) => [ko, en];
 // STORY-2 막 이름 · 등불 수(프롤로그 1 + 1막 6 + 2막 5 + 3막 6 = 18 — 설계대로 · 2·3막 새 장은 다음 단계) · 새 친구(이름 없는 역할)
@@ -21,7 +22,7 @@ const DIR8 = [['d0', T2('⬆️ 북', '⬆️ North')], ['d1', T2('↗️ 북동
 //   from = 쪽지 보내는 역할(일꾼이 아닐 때) · st.fr = 단계가 끝날 때 새 친구가 그 자리에서 하는 말(말풍선) · act/link/lamp/end/old = STORY-2
 export const CHAPTERS = [
   // ── 프롤로그 ── 정문 밖 첫 쪽지 → 작은 도서관(정문에서 약 140m)에서 마을 수첩 · 새 친구 만나기 → 처음 보여 줄 곳 고르기(정답 없음) → 같이 가기
-  { id: 'p0', act: 0, icon: '📯', sea: null, link: ['4-4-04', '3-1-02'], lamp: 1, t: T2('어린이 도우미를 찾아요', 'Young helpers wanted'), learn: T2('주민 모집 공고 읽기 · 우리 마을의 여러 장소 알기 · 고른 까닭 말하기', 'Read a notice · get to know places in town · say why you chose'),
+  { id: 'p0', min: 10, act: 0, icon: '📯', sea: null, link: ['4-4-04', '3-1-02'], lamp: 1, t: T2('어린이 도우미를 찾아요', 'Young helpers wanted'), learn: T2('주민 모집 공고 읽기 · 우리 마을의 여러 장소 알기 · 고른 까닭 말하기', 'Read a notice · get to know places in town · say why you chose'),
     from: T2('행정복지센터 직원', 'a community centre worker'), need: { place: ['작은 도서관'] }, giver: null,
     steps: [
       { id: 'n', hint: NOTE_H, do: { type: 'note', icon: '📯', pages: [T2('📯 우리 마을 첫 잔치를 함께 준비할 어린이 도우미를 찾아요!', '📯 Wanted: young helpers to get ready for our town’s first festival!'), T2('마을이 다 지어졌지만, 동네 사람들은 아직 서로를 잘 몰라요. 동네마다 이웃을 만나 이어 주세요.', 'The town is built, but neighbours don’t know each other yet. Meet people in every part of town and connect them.'), T2('작은 도서관에 📓 마을 수첩을 두었어요. 거기서 시작해요!', 'A 📓 town notebook is waiting at the small library. Start there!')] } },
@@ -35,7 +36,7 @@ export const CHAPTERS = [
     ], gets: T2('🏮 등불 · 📓 마을 수첩 · 📜 이야기 도장', '🏮 Lantern · 📓 Town notebook · 📜 Story stamp'), pay: 0 },
 
   // ── 1막 「안녕, 이웃」 ── 1-1 읍내 길 알려 주기(방위 = 실제 자리로 판정)
-  { id: 'a1_1', act: 1, icon: '📍', sea: null, link: ['4-1-03', '4-1-04', '3-1-07'], lamp: 1, t: T2('길 잃은 새 친구', 'A friend who lost the way'), learn: T2('방위표 보고 방향 말하기 · 지도로 길 알려 주기 · 생활에 도움 주는 곳', 'Say directions with a compass rose · give directions with a map · places that help us'),
+  { id: 'a1_1', min: 15, act: 1, icon: '📍', sea: null, link: ['4-1-03', '4-1-04', '3-1-07'], lamp: 1, t: T2('길 잃은 새 친구', 'A friend who lost the way'), learn: T2('방위표 보고 방향 말하기 · 지도로 길 알려 주기 · 생활에 도움 주는 곳', 'Say directions with a compass rose · give directions with a map · places that help us'),
     from: FRIEND, need: { place: ['작은 도서관', '소방서', '우체국'] }, giver: null,
     steps: [
       { id: 'n', hint: NOTE_H, do: { type: 'note', icon: '🧒', pages: [T2('소방서랑 우체국이 어디 있는지 알려 줄래? 나는 지도를 잘 못 읽겠어.', 'Can you show me where the fire station and the post office are? I’m not good with maps.'), T2('도서관 앞에서 만나자!', 'Let’s meet in front of the library!')] } },
@@ -50,7 +51,7 @@ export const CHAPTERS = [
     ], gets: T2('🏮 등불 · 💰 수고비 200원 · 📜 이야기 도장', '🏮 Lantern · 💰 200 won thanks · 📜 Story stamp'), pay: 200 },
 
   // 1-2 = 예전 c1(첫 심부름) — 저장 열쇠 그대로(옛 저장 S.story.done.c1이 그대로 셈) · 글만 큰 줄거리로(이사 인사)
-  { id: 'c1', act: 1, icon: '🛒', sea: null, link: ['4-3-02', '4-3-04'], lamp: 1, t: T2('이사 인사 팬케이크', 'Moving-in pancakes'), learn: T2('꼭 필요한 것 고르기 · 두 가게 값 견주기 · 정해진 돈 안에서 사기 · 남은 돈 돌려드리기', 'Pick what you really need · compare two shops · stay within budget · give back the change'),
+  { id: 'c1', min: 15, act: 1, icon: '🛒', sea: null, link: ['4-3-02', '4-3-04'], lamp: 1, t: T2('이사 인사 팬케이크', 'Moving-in pancakes'), learn: T2('꼭 필요한 것 고르기 · 두 가게 값 견주기 · 정해진 돈 안에서 사기 · 남은 돈 돌려드리기', 'Pick what you really need · compare two shops · stay within budget · give back the change'),
     need: { shops: ['grocery'], kitchen: true }, giver: ['strawberry', 'pear', 'potato', 'cabbage', 'beehive', 'pasture', 'shiitake', 'saltpan', 'lumber', 'paddy', 'fisher', 'clam'],
     steps: [
       { id: 'n', hint: NOTE_H, do: { type: 'note', pages: [T2('새로 이사 온 아이가 이웃들에게 인사하고 싶대요. 이사 오면 이웃과 떡을 나누는 풍습이 있잖아요 — 이번엔 팬케이크로 해 볼까요?', 'The new kid wants to say hello to the neighbours. People often share rice cakes when they move in — how about pancakes this time?'), T2('심부름 돈 1,200원으로 재료를 사다 줄래요? 꼭 필요한 것만요!', 'Could you buy the ingredients with 1,200 won? Only what we really need!')], text: T2('팬케이크를 구워서 나눠 먹고 싶은데 재료가 없어요. 심부름 돈 1,200원으로 재료를 사다 줄래요? 꼭 필요한 것만요!', 'I want to bake pancakes to share, but I have no ingredients. Could you buy them with 1,200 won? Only what we really need!') } },
@@ -71,7 +72,7 @@ export const CHAPTERS = [
     ], gets: T2('🏮 등불 · ❤ 이웃 마음 · 💰 수고비 300원 · 📜 이야기 도장', '🏮 Lantern · ❤ Neighbour heart · 💰 300 won thanks · 📜 Story stamp'), pay: 300 },
 
   // 1-3 = 예전 c2(더운 날 밭일) — 저장 열쇠 그대로 · 들 동네 일꾼 먼저(order) · 논은 봄·가을만 일하므로 뺌
-  { id: 'c2', act: 1, icon: '☀️', sea: 'summer', link: ['4-6-05'], lamp: 1, t: T2('더운 날, 밭일 돕기', 'Helping out on a hot day'), learn: T2('더위를 피하는 때 고르기 · 물 챙기기 · 더위 안전 약속', 'Pick a cooler time · bring water · heat safety'),
+  { id: 'c2', min: 15, act: 1, icon: '☀️', sea: 'summer', link: ['4-6-05'], lamp: 1, t: T2('더운 날, 밭일 돕기', 'Helping out on a hot day'), learn: T2('더위를 피하는 때 고르기 · 물 챙기기 · 더위 안전 약속', 'Pick a cooler time · bring water · heat safety'),
     need: { shops: ['conv', 'cafe'] }, giver: ['strawberry', 'pear', 'potato', 'cabbage', 'beehive', 'pasture', 'saltpan', 'shiitake', 'lumber'], order: 1,
     steps: [
       { id: 'n', hint: NOTE_H, do: { type: 'note', pages: [T2('새로 온 친구랑 같이 일하러 와 줄래요? 동네 사람들과 얼굴도 익힐 겸요.', 'Will you come and work with the new kid? A good way to meet the neighbours.'), T2('그런데 요즘 낮에는 너무 더워요. 언제 하면 좋을지 먼저 생각해 봐요.', 'But it’s so hot in the day lately. First, think about when is best.')], text: T2('요즘 낮에는 너무 더워요. 일을 같이 해 줄래요? 언제 하면 좋을지 먼저 생각해 봐요.', 'It’s so hot in the day lately. Will you help me work? First, think about when is best.') } },
@@ -90,7 +91,7 @@ export const CHAPTERS = [
     ], gets: T2('🏮 등불 · ❤ 이웃 마음 · 💰 수고비 400원 · 📜 이야기 도장', '🏮 Lantern · ❤ Neighbour heart · 💰 400 won thanks · 📜 Story stamp'), pay: 400 },
 
   // 1-4 ⛰ 산 동네 — 고랭지 배추밭 일 거들기 → 까닭(서늘함) → 전망대 → 자연환경/인문환경 나누기
-  { id: 'a1_4', act: 1, icon: '⛰', sea: null, link: ['4-6-02', '4-6-03'], lamp: 1, t: T2('구름 아래 배추밭', 'The cabbage field under the clouds'), learn: T2('산이 많은 곳의 자연과 일 · 높을수록 서늘해요 · 자연환경과 인문환경 나누기', 'Life and work in the mountains · higher is cooler · natural and human environments'),
+  { id: 'a1_4', min: 20, act: 1, icon: '⛰', sea: null, link: ['4-6-02', '4-6-03'], lamp: 1, t: T2('구름 아래 배추밭', 'The cabbage field under the clouds'), learn: T2('산이 많은 곳의 자연과 일 · 높을수록 서늘해요 · 자연환경과 인문환경 나누기', 'Life and work in the mountains · higher is cooler · natural and human environments'),
     need: { place: ['고랭지 배추밭', '전망대'] }, giver: ['cabbage'], order: 1,
     steps: [
       { id: 'n', hint: NOTE_H, do: { type: 'note', pages: [T2('산 높은 곳 배추밭에 와 본 적 있어요? 새 친구랑 같이 와서 일 좀 거들어 줄래요?', 'Have you been up to the mountain cabbage field? Come with the new kid and lend a hand?'), T2('일이 끝나면 전망대에서 우리 마을을 내려다봐요!', 'After work, look down on our town from the lookout!')] } },
@@ -106,7 +107,7 @@ export const CHAPTERS = [
     ], gets: T2('🏮 등불 · ❤ 이웃 마음 · 💰 수고비 300원 · 📜 이야기 도장', '🏮 Lantern · ❤ Neighbour heart · 💰 300 won thanks · 📜 Story stamp'), pay: 300 },
 
   // 1-5 🦀 바다 동네 — 갯벌 쉼터 → 가만히 6초(게 그림은 다음 단계 · 지금은 배너) → 갯벌이 하는 일 → 맑은 날 염전
-  { id: 'a1_5', act: 1, icon: '🦀', sea: 'summer', link: ['4-6-06'], lamp: 1, t: T2('갯벌의 숨구멍', 'Breathing holes in the mudflat'), learn: T2('바다 마을의 자연과 일 · 갯벌이 하는 일 · 조용히 관찰하기', 'Life by the sea · what mudflats do · watching quietly'),
+  { id: 'a1_5', min: 20, act: 1, icon: '🦀', sea: 'summer', link: ['4-6-06'], lamp: 1, t: T2('갯벌의 숨구멍', 'Breathing holes in the mudflat'), learn: T2('바다 마을의 자연과 일 · 갯벌이 하는 일 · 조용히 관찰하기', 'Life by the sea · what mudflats do · watching quietly'),
     need: { place: ['갯벌 쉼터', '염전'] }, giver: ['saltpan', 'fisher'], order: 1,
     steps: [
       { id: 'n', hint: NOTE_H, do: { type: 'note', pages: [T2('물이 빠지면 갯벌에 작은 구멍이 잔뜩 생겨요. 새 친구랑 같이 보러 올래요?', 'When the tide goes out, tiny holes cover the mudflat. Come and see with the new kid?'), T2('발소리는 작게요! 가만히 있어야 보여요.', 'Keep your steps quiet! You only see them if you stay still.')] } },
@@ -123,7 +124,7 @@ export const CHAPTERS = [
     ], gets: T2('🏮 등불 · ❤ 이웃 마음 · 💰 수고비 300원 · 📜 이야기 도장', '🏮 Lantern · ❤ Neighbour heart · 💰 300 won thanks · 📜 Story stamp'), pay: 300 },
 
   // 1-6 💫 강 동네 · 1막 끝 — 여름밤 맑은 날 물가 반딧불이(GAME-18이 실제로 나올 때 셈) → 맑은 물 → 새 친구에게 마을 자랑
-  { id: 'a1_6', act: 1, end: 1, icon: '💫', sea: 'summer', link: ['4-5-07'], lamp: 1, t: T2('반딧불이 물가', 'Fireflies by the water'), learn: T2('반딧불이가 사는 곳 · 맑은 물 지키기 · 우리 마을 자랑거리 말하기', 'Where fireflies live · keeping water clean · telling what makes our town special'),
+  { id: 'a1_6', min: 15, act: 1, end: 1, icon: '💫', sea: 'summer', link: ['4-5-07'], lamp: 1, t: T2('반딧불이 물가', 'Fireflies by the water'), learn: T2('반딧불이가 사는 곳 · 맑은 물 지키기 · 우리 마을 자랑거리 말하기', 'Where fireflies live · keeping water clean · telling what makes our town special'),
     from: FRIEND, need: { place: ['생태 하천'] }, giver: null,
     steps: [
       { id: 'n', hint: NOTE_H, do: { type: 'note', icon: '🧒', pages: [T2('오늘 밤 같이 개울가에 가 볼래? 여름밤 물가엔 반짝이는 게 있대.', 'Want to go to the stream tonight? They say something sparkles by the water on summer nights.'), T2('나 여기 와서 아직 밤 산책은 못 해 봤어.', 'I haven’t had a night walk here yet.')] } },
@@ -135,8 +136,38 @@ export const CHAPTERS = [
       { id: 'line', slot: 'line', judge: 'none', hint: LINE_H(T2('새 친구에게 꼭 보여 주고 싶은 우리 마을 모습은?', 'What part of town do you most want to show your friend?'), T2('“우리 마을은 ~가 있어서 좋아” 꼴로 써 봐요', 'Try “Our town is great because it has …”')), todo: T2('✏ 새 친구에게 마을 자랑 한 줄', '✏ One line about our town for your friend'), do: { type: 'line', q: T2('새 친구에게 우리 마을 자랑을 한 줄로 들려줘요', 'Tell your friend one thing to love about our town') } },
     ], gets: T2('🏮 등불 · 📜 1막 이야기 도장', '🏮 Lantern · 📜 Act 1 story stamp'), pay: 200 },
 
-  // ── 2막 자리 ── 예전 c3(old — 지금처럼 언제든) · 2막 새 장(장날·두레·큰비·흙막이 나무)은 다음 단계
-  { id: 'c3', act: 2, old: 1, link: ['4-3-01'], lamp: 1, icon: '🍁', sea: 'autumn', t: T2('거둔 것, 팔까 나눌까', 'Sell or share the harvest?'), learn: T2('씨 뿌리고 기다리기 · 쓰임 정하기 · 장날 값', 'Plant and wait · decide how to use it · market-day prices'),
+  // ── 2막 「주고받기」 ── 2-1 장터로 간 바다 물건(지역 간 교류 · 그 동네에 없는 것이 반가움 — 이미 있는 '멀리서 온 물건 ×1.3' 규칙)
+  { id: 'a2_1', act: 2, icon: '🎪', sea: null, min: 20, link: ['4-3-06', '4-3-07', '4-3-08'], lamp: 1, t: T2('멀리서 온 물건', 'Goods from far away'), learn: T2('동네마다 나는 것이 달라요 · 없는 것을 주고받기 · 지역 간 교류', 'Each area makes different things · trading what others lack · exchange between areas'),
+    from: T2('장터 상인', 'a market seller'), need: { stall: true }, giver: null,
+    steps: [
+      { id: 'n', hint: NOTE_H, do: { type: 'note', icon: '🛒', pages: [T2('우리 장터엔 늘 이 동네에서 나는 물건만 있어요.', 'Our market only ever has things made around here.'), T2('다른 동네에서만 나는 물건이 오면 다들 무척 반가워해요. 하나 가져다줄래요?', 'Everyone loves it when something from another area arrives. Could you bring one?')] } },
+      { id: 'pick', slot: 'choose', todo: T2('🤔 산·들 장터가 반길 물건 둘', '🤔 Two things a hill or field market would love'), do: { type: 'choose', q: T2('산이나 들 동네 장터에서 가장 반가워할 물건 둘을 골라요', 'Pick the two things a hill or field market would be happiest to get'), opts: ['🧂', '🌿', '🥬', '🍄'], ans: ['🧂', '🌿'],
+        react: { '🥬': T2('배추는 산 동네 밭에서 나요 — 거기선 흔해요', 'Cabbage grows in the hills — it’s common there'), '🍄': T2('버섯은 산 숲에서 나요 — 거기선 흔해요', 'Mushrooms grow in the hill forests — common there') } },
+        hint: [T2('그 동네에서 나지 않는 것이 반가워요', 'Things that aren’t made there are the most welcome'), T2('둘 다 바다에서 나요', 'Both come from the sea'), 'show:ans'] },
+      { id: 'get', todo: T2('🧂 바다 물건 하나 구하기', '🧂 Get one thing from the sea'), do: { type: 'have', any: ['🧂', '🌿', '🐚', '🐟'], n: 1 },
+        hint: [T2('소금은 염전 일꾼, 물고기는 부두 어부를 도우면 생겨요 — 가방에 있는지 먼저 봐요', 'Help the salt worker or the fisher — check your bag first'), T2('바다 쪽 일터예요 — F(찾기)에 ‘염전’을 써 봐요', 'It’s by the sea — type “salt” in F (Find)'), 'show:path'] },
+      { id: 'sell', todo: T2('🎪 산·들 장터에서 바다 물건 팔기', '🎪 Sell it at a hill or field market'), do: { type: 'sell', away: 1, any: ['🧂', '🌿', '🐚', '🐟'], done: T2('🎪 멀리서 온 물건이라 더 반가워해요! (×1.3)', '🎪 Goods from far away are extra welcome! (×1.3)') }, fr: T2('바다 물건이 여기까지 왔네! 주고받으니까 다 같이 좋다.', 'Sea goods came all the way here! Trading makes everyone happy.'),
+        hint: [T2('바다 쪽 장터 말고, 산이나 들 쪽 장터로 가요', 'Not the seaside market — go to a market in the hills or fields'), 'dir', 'show:path'] },
+      { id: 'line', slot: 'line', judge: 'none', hint: LINE_H(T2('장터 사람들이 왜 반가워했을까요?', 'Why were the market people so glad?'), T2('“동네끼리 주고받으면 ~해서 좋아요” 꼴로 써 봐요', 'Try “Trading between areas is good because …”')), todo: T2('✏ 수첩: 동네끼리 주고받는 까닭', '✏ Notebook: why areas trade'), do: { type: 'line', q: T2('동네끼리 물건을 주고받으면 무엇이 좋을까요? 한 줄로 적어요', 'What’s good about areas trading things? Write one line') } },
+    ], gets: T2('🏮 등불 · 💰 수고비 300원 · 📜 이야기 도장', '🏮 Lantern · 💰 300 won thanks · 📜 Story stamp'), pay: 300 },
+
+  // 2-2 다 같이 벼 베기 — 두레(함께 일하기) · 논 일꾼 셋과 차례로(논 일은 봄·가을만 — 이미 있는 규칙)
+  { id: 'a2_2', act: 2, icon: '🌾', sea: 'autumn', min: 20, link: ['3-4-02', '4-3-05'], lamp: 1, t: T2('다 같이 벼 베기', 'Harvesting rice together'), learn: T2('함께 일하는 두레 · 힘을 모으면 좋은 점 · 만드는 일(생산)', 'Working together (dure) · why sharing work helps · making things (production)'),
+    need: {}, giver: ['paddy'], order: 1,
+    steps: [
+      { id: 'n', hint: NOTE_H, do: { type: 'note', pages: [T2('벼가 누렇게 익었어요! 혼자 베면 며칠이 걸려요.', 'The rice is golden and ripe! Cutting it alone would take days.'), T2('옛날부터 마을 사람들은 바쁜 철에 모여 함께 일했어요. 이렇게 함께 일하던 모임을 ‘두레’라고 해요. 같이 해 줄래요?', 'In busy seasons, villagers have long gathered to work together. That group is called a ‘dure’. Will you join in?')] } },
+      { id: 'first', slot: 'choose', judge: 'none', todo: T2('🤔 어느 논부터 도울까?', '🤔 Which paddy first?'), do: { type: 'choose', q: T2('어느 논부터 도울까요? (정답은 없어요 — 까닭을 떠올려 봐요)', 'Which paddy will you help first? (no right answer — think of a reason)'), opts: 'paddies', judge: 'none' },
+        hint: [T2('가까운 곳부터? 일손이 모자란 곳부터?', 'Closest first? Or where help is most needed?'), T2('고른 까닭을 마음속으로 한 번 말해 봐요', 'Say your reason to yourself once')] },
+      { id: 'work', todo: T2('🌾 논 일꾼 셋과 벼 베기', '🌾 Cut rice with three paddy workers'), do: { type: 'work', k: 'paddy', n: 3, done: T2('🌾 다 같이 하니 금방 끝났어요!', '🌾 Together, it was done in no time!') }, fr: T2('여럿이 하니까 진짜 금방이다!', 'With everyone helping, it went so fast!'),
+        hint: [T2('논 일은 가을(벼 베기)·봄(모내기)에만 해요 — 달력이 가을인지 봐요', 'Paddy work is only in autumn (harvest) and spring (planting) — check the calendar'), T2('날씨 창에서 가을로 바꾸거나, 달력이 가을이 될 때까지 기다려요', 'Switch to autumn in the weather window, or wait for autumn'), 'show:path'] },
+      { id: 'why', slot: 'choose', todo: T2('🤝 함께 일하면 좋은 점 둘', '🤝 Two good things about working together'), do: { type: 'choose', q: T2('여럿이 함께 일하면 무엇이 좋을까요? 둘을 골라요', 'What’s good about working together? Pick two'), opts: [['fast', T2('🏃 일이 빨리 끝나요', '🏃 The work gets done faster')], ['friend', T2('😊 서로 돕고 친해져요', '😊 We help each other and become friends')], ['mine', T2('🙅 혼자 다 가질 수 있어요', '🙅 I can keep everything for myself')], ['later', T2('😴 일을 미룰 수 있어요', '😴 We can put the work off')]], ans: ['fast', 'friend'],
+        react: { mine: T2('함께 일하면 거둔 것도 함께 나눠요', 'When we work together, we share what we harvest'), later: T2('함께하면 오히려 제때 끝낼 수 있어요', 'Working together helps us finish on time') } },
+        hint: [T2('오늘 벼 베기를 떠올려 봐요', 'Think about today’s rice harvest'), T2('하나는 시간, 하나는 사람 사이에 대한 것', 'One is about time, one is about people'), 'show:ans'] },
+      { id: 'line', slot: 'line', judge: 'none', hint: LINE_H(T2('함께 일할 때 어떤 기분이었나요?', 'How did it feel working together?'), T2('“함께 하니까 ~했어요” 꼴로 써 봐요', 'Try “Working together, I …”')), todo: T2('✏ 수첩: 함께 일해 본 느낌', '✏ Notebook: how working together felt'), do: { type: 'line', q: T2('다 같이 벼를 베어 본 느낌을 한 줄로 적어요', 'Write one line about harvesting rice together') } },
+    ], gets: T2('🏮 등불 · ❤ 이웃 마음 · 💰 수고비 300원 · 📜 이야기 도장', '🏮 Lantern · ❤ Neighbour heart · 💰 300 won thanks · 📜 Story stamp'), pay: 300 },
+
+  // 2-3 = 예전 c3(old — 지금처럼 언제든)
+  { id: 'c3', act: 2, old: 1, min: 25, link: ['4-3-01'], lamp: 1, icon: '🍁', sea: 'autumn', t: T2('거둔 것, 팔까 나눌까', 'Sell or share the harvest?'), learn: T2('씨 뿌리고 기다리기 · 쓰임 정하기 · 장날 값', 'Plant and wait · decide how to use it · market-day prices'),
     need: { farm: true }, giver: ['stall', 'potato', 'cabbage', 'pear', 'paddy', 'strawberry', 'beehive', 'pasture'],
     steps: [
       { id: 'n', hint: [T2('📜 쪽지는 Q(이야기)에서 다시 볼 수 있어요', '📜 Open the note again with Q (Stories)'), T2('쪽지를 읽고 ‘알겠어요’를 눌러요', 'Read the note and press “Okay!”')] , do: { type: 'note', text: T2('학교 텃밭에서 채소를 길러 보면 어때요? 다 자라면 어떻게 쓸지 같이 정해요.', 'Why not grow vegetables in the school garden? When they’re ready, let’s decide how to use them.') } },
@@ -150,8 +181,46 @@ export const CHAPTERS = [
       { id: 'why', slot: 'line', judge: 'none', hint: [T2('무엇을 보고 그렇게 했는지 떠올려 봐요', 'Think about what made you choose that'), T2('값·가까움·맛·날씨 가운데 하나를 써 봐요', 'Write about price, distance, taste or weather')], todo: T2('✏ 한 줄 돌아보기', '✏ One line to look back'), do: { type: 'line', q: T2('왜 그렇게 썼나요? 다시 한다면 어떻게 할지도 적어 봐요', 'Why did you choose that? What would you do next time?') } },
     ], gets: T2('🏮 등불 · ❤ 이웃 마음 · 📜 이야기 도장', '🏮 Lantern · ❤ Neighbour heart · 📜 Story stamp'), pay: 0 },
 
+  // 2-4 큰비 사흘(위기) — 비 → 고갯길 차단봉(🚧 · 길 안내가 그 마디를 피함) → 다른 길(축척 막대로 어림 · 셈 X) → 배추 나르기 → 비 그침(🌈 · 차단봉 걷힘) · blk = 차단봉이 서 있는 단계
+  { id: 'a2_4', act: 2, icon: '🌧', sea: 'summer', min: 25, link: ['4-1-07', '4-5-01', '4-5-03'], lamp: 1, t: T2('큰비 사흘', 'Three days of heavy rain'), learn: T2('큰비 때 산길 안전 · 지도로 다른 길 찾기 · 축척으로 거리 어림하기', 'Hill-road safety in heavy rain · finding another way on the map · estimating distance with the scale bar'),
+    need: { place: ['고랭지 배추밭', '마을회관'], slide: true }, giver: ['cabbage'], order: 1,
+    steps: [
+      { id: 'n', hint: NOTE_H, do: { type: 'note', pages: [T2('며칠 동안 큰비가 온대요. 비가 많이 오면 산길 비탈 흙이 무너질 수 있어서, 고갯길 한 곳을 잠시 막아 둬요.', 'Heavy rain is coming for a few days. Hill slopes can slide in heavy rain, so one part of the pass will be closed for a while.'), T2('그런데 잔치 때 쓸 배추를 마을회관에 가져다 둬야 해요. 비가 오면 같이 길을 찾아 줄래요?', 'But the festival cabbage has to go to the village hall. When it rains, will you help find a way?')] } },
+      { id: 'rain', todo: T2('🌧 비 오는 날 기다리기', '🌧 Wait for a rainy day'), do: { type: 'rain', done: T2('🌧 큰비가 와요 — 고갯길 한 곳을 잠시 막았어요 🚧', '🌧 Heavy rain — part of the pass is closed for now 🚧') },
+        hint: ['fc', T2('집 침대에서 자면 다음 날이 와요 — 날씨 창(오른쪽 위)에서 비로 바꿀 수도 있어요', 'Sleep in a bed to reach the next day — or set rain in the weather window (top right)'), T2('비가 오면 배추밭 아래 고갯길에 차단봉이 서요', 'When it rains, a barrier goes up on the pass below the cabbage field')] },
+      { id: 'safe', blk: 1, slot: 'choose', todo: T2('☔ 비 오는 날 산길 약속 둘', '☔ Two hill-road rules for rainy days'), do: { type: 'choose', q: T2('큰비가 올 때 산길에서 꼭 지킬 것 둘을 골라요', 'Pick two things to do on hill roads in heavy rain'), opts: [['in', T2('🚧 막아 둔 길로 들어가지 않기', '🚧 Never go into a closed road')], ['creek', T2('🌊 불어난 개울·계곡에 가까이 가지 않기', '🌊 Stay away from swollen streams and valleys')], ['slope', T2('⛰ 비탈 바로 아래에서 비 피하기', '⛰ Shelter right under a slope')], ['fast', T2('🏃 빨리 뛰어서 지나가기', '🏃 Run past quickly')]], ans: ['in', 'creek'],
+        react: { slope: T2('큰비엔 비탈 흙이 무너질 수 있어 비탈 아래가 위험해요', 'In heavy rain the slope can slide — right under it is dangerous'), fast: T2('젖은 길에서 뛰면 미끄러지기 쉬워요', 'Running on wet roads makes you slip') } },
+        hint: [T2('막힌 곳과 물에 대한 것', 'One is about closed places, one about water'), T2('비탈 아래·뛰기는 아니에요', 'Not under slopes, not running'), 'show:ans'] },
+      { id: 'see', blk: 1, todo: T2('🚧 막힌 고갯길 가 보기', '🚧 Go and see the closed pass'), do: { type: 'go', to: 'block', r: 16, done: T2('🚧 안전을 위해 잠시 쉬어요 — 여기는 지나갈 수 없어요', '🚧 Closed for safety — you can’t pass here') }, fr: T2('길이 막혔네… 잔치 배추는 어떡하지?', 'The road is closed… what about the festival cabbage?'),
+        hint: [T2('배추밭 아래 산길이에요', 'It’s the hill road below the cabbage field'), 'dir', 'show:path'] },
+      { id: 'map', blk: 1, slot: 'choose', todo: T2('🧭 다른 길은 얼마나 될까?', '🧭 How long is the other way?'), do: { type: 'choose', q: T2('큰 지도(M)에서 배추밭부터 마을회관까지 다른 길을 찾아봐요. 그 길은 모두 얼마쯤일까요? 축척 막대를 길에 대 보며 어림해요', 'On the big map (M), find another way from the cabbage field to the village hall. About how long is it? Lay the scale bar along it to estimate'), opts: 'lens', ans: 'len', one: 1 },
+        hint: [T2('큰 지도 축척 막대 하나가 몇 m인지 먼저 봐요 — 그 막대가 길에 몇 번 들어가나 세어 봐요', 'First check how many metres one scale bar is — then count how many bars fit along the road'), 'show:path', 'show:ans'] },
+      { id: 'get', blk: 1, todo: T2('🥬 배추밭 일 거들고 배추 받기', '🥬 Help at the cabbage field and get cabbage'), do: { type: 'have', need: { '🥬': 1 } },
+        hint: [T2('배추밭 일꾼을 도우면 배추가 생겨요 — 가방에 있는지 먼저 봐요', 'Help the cabbage farmer to get cabbage — check your bag first'), 'dir', 'show:path'] },
+      { id: 'carry', blk: 1, todo: T2('🥬 다른 길로 마을회관까지 나르기', '🥬 Carry it to the village hall the other way'), do: { type: 'go', to: 'place:마을회관', ref: 'giver', give: { '🥬': 1 }, r: 16, done: T2('🥬 잔치 배추가 마을회관에 도착했어요!', '🥬 The festival cabbage reached the village hall!') }, fr: T2('돌아오느라 힘들었지만, 해냈다!', 'The long way was tiring, but we did it!'),
+        hint: [T2('큰 지도(M)에서 찾은 다른 길로 가요', 'Take the other way you found on the big map (M)'), 'dir', 'show:path'] },
+      { id: 'clear', blk: 1, todo: T2('🌈 비가 그칠 때까지 기다리기', '🌈 Wait for the rain to stop'), do: { type: 'clear', done: T2('🌈 비가 그쳤어요 — 고갯길이 다시 열렸어요', '🌈 The rain stopped — the pass is open again') },
+        hint: ['fc', T2('집에서 자면 다음 날 날씨가 바뀌어요 — 날씨 창에서 맑음으로 바꿀 수도 있어요', 'Sleep to reach the next day’s weather — or set clear in the weather window'), T2('비가 그치면 하늘을 올려다봐요 🌈', 'When the rain stops, look up at the sky 🌈')] },
+      { id: 'line', slot: 'line', judge: 'none', hint: LINE_H(T2('길이 막혔을 때 어떻게 했는지 떠올려 봐요', 'Think about what you did when the road was closed'), T2('“길이 막혀서 ~했어요” 꼴로 써 봐요', 'Try “The road was closed, so I …”')), todo: T2('✏ 수첩: 길이 막혔을 때 한 일', '✏ Notebook: what you did when the road closed'), do: { type: 'line', q: T2('길이 막혔을 때 무엇을 보고 어떻게 했는지 한 줄로 적어요', 'Write one line about what you used and did when the road was closed') } },
+    ], gets: T2('🏮 등불 · ❤ 이웃 마음 · 💰 수고비 400원 · 📜 이야기 도장', '🏮 Lantern · ❤ Neighbour heart · 💰 400 won thanks · 📜 Story stamp'), pay: 400 },
+
+  // 2-5 흙을 붙잡는 나무(2막 끝) — 숲 일꾼 '어린 나무 심기' → 고갯길 비탈에 E로 심기(저장 S.sap · 계절마다 조금 큼)
+  { id: 'a2_5', act: 2, end: 1, icon: '🌳', sea: null, min: 20, link: ['4-5-04'], lamp: 1, t: T2('흙을 붙잡는 나무', 'Trees that hold the soil'), learn: T2('비탈 흙을 지키는 방법 · 나무뿌리가 하는 일 · 우리 손으로 마을 바꾸기', 'Ways to protect slopes · what tree roots do · changing our town with our own hands'),
+    need: { slide: true }, giver: ['lumber'], order: 1,
+    steps: [
+      { id: 'n', hint: NOTE_H, do: { type: 'note', pages: [T2('큰비에 고갯길 비탈 흙이 쓸려 내려갈 뻔했대요.', 'I heard the slope on the pass nearly washed away in the heavy rain.'), T2('나무뿌리는 흙을 꽉 붙잡아 줘요. 어린 나무 심는 법을 배워서 그 비탈에 심어 볼래요?', 'Tree roots hold the soil tight. Want to learn to plant saplings and plant some on that slope?')] } },
+      { id: 'why', slot: 'choose', todo: T2('🌳 비탈 흙을 지키는 방법 둘', '🌳 Two ways to protect a slope'), do: { type: 'choose', q: T2('비탈 흙이 쓸려 내려가지 않게 하는 방법 둘을 골라요', 'Pick two ways to stop a slope washing away'), opts: [['plant', T2('🌱 나무와 풀 심기', '🌱 Plant trees and grass')], ['drain', T2('💧 빗물이 한곳에 몰리지 않게 물길 내기', '💧 Make channels so rain doesn’t pile up in one place')], ['cut', T2('🌲 비탈 나무 베어 내기', '🌲 Cut down the trees on the slope')], ['pile', T2('⛰ 비탈 위에 흙 더 쌓기', '⛰ Pile more soil on top of the slope')]], ans: ['plant', 'drain'],
+        react: { cut: T2('나무를 베면 흙을 붙잡던 뿌리도 사라져요', 'Cutting trees removes the roots that hold the soil'), pile: T2('흙이 무거워져 오히려 무너지기 쉬워요', 'More soil makes it heavier and easier to slide') } },
+        hint: [T2('뿌리와 빗물을 떠올려 봐요', 'Think about roots and rainwater'), T2('베기·쌓기는 아니에요', 'Not cutting, not piling'), 'show:ans'] },
+      { id: 'learn', todo: T2('🌲 숲 일꾼에게 나무 심기 배우기', '🌲 Learn tree planting from the forester'), do: { type: 'work', done: T2('🌲 어린 나무 심는 법을 배웠어요 — 이제 비탈로!', '🌲 You learned to plant saplings — now to the slope!') },
+        hint: [T2('목재 야적장에 숲 가꾸는 일꾼이 있어요 — F(찾기)에 ‘목재’를 써 봐요', 'The forester is at the timber yard — type “timber” in F (Find)'), 'dir', 'show:path'] },
+      { id: 'plant', todo: T2('🌱 고갯길 비탈에 어린 나무 심기', '🌱 Plant saplings on the pass slope'), do: { type: 'plant', n: 3, done: T2('🌱 어린 나무 셋을 심었어요 — 뿌리가 자라면 흙을 붙잡아요', '🌱 You planted three saplings — their roots will hold the soil') }, fr: T2('계절이 지나면 얼마나 클까? 잔치 때도 보러 오자!', 'How big will they get by next season? Let’s check at the festival!'),
+        hint: [T2('큰비 때 차단봉이 섰던 그 고갯길이에요 — 비탈 앞에서 E', 'It’s the pass where the barrier stood — press E by the slope'), 'dir', 'show:path'] },
+      { id: 'line', slot: 'line', judge: 'none', hint: LINE_H(T2('나무가 자라면 비탈은 어떻게 될까요?', 'What will the slope be like when the trees grow?'), T2('“나무를 심어서 ~할 거예요” 꼴로 써 봐요', 'Try “We planted trees so that …”')), todo: T2('✏ 수첩: 나무를 심은 까닭', '✏ Notebook: why we planted trees'), do: { type: 'line', q: T2('비탈에 나무를 심은 까닭을 한 줄로 적어요', 'Write one line about why you planted trees on the slope') } },
+    ], gets: T2('🏮 등불 · ❤ 이웃 마음 · 📜 2막 이야기 도장', '🏮 Lantern · ❤ Neighbour heart · 📜 Act 2 story stamp'), pay: 200 },
+
   // ── 3막 자리 ── 예전 c4(old — 지금처럼 언제든) · 3막 새 장(잔치 자리 정하기·초대장·알리미·등불 걸기)은 다음 단계
-  { id: 'c4', act: 3, old: 1, lamp: 1, icon: '❄️', sea: 'winter', t: T2('눈 오는 날, 따뜻한 국', 'Warm soup on a snowy day'), learn: T2('눈길 안전 · 재료 모으기 계획 · 따뜻한 마음 나누기', 'Snowy-road safety · plan your ingredients · share warmth'),
+  { id: 'c4', min: 20, act: 3, old: 1, lamp: 1, icon: '❄️', sea: 'winter', t: T2('눈 오는 날, 따뜻한 국', 'Warm soup on a snowy day'), learn: T2('눈길 안전 · 재료 모으기 계획 · 따뜻한 마음 나누기', 'Snowy-road safety · plan your ingredients · share warmth'),
     need: { kitchen: true }, giver: ['potato', 'cabbage', 'saltpan', 'strawberry', 'pear', 'beehive', 'pasture', 'shiitake', 'lumber', 'paddy', 'fisher'],
     steps: [
       { id: 'n', hint: [T2('📜 쪽지는 Q(이야기)에서 다시 볼 수 있어요', '📜 Open the note again with Q (Stories)'), T2('쪽지를 읽고 ‘알겠어요’를 눌러요', 'Read the note and press “Okay!”')] , do: { type: 'note', text: T2('길이 미끄러워서 장 보러 가기가 무서워요. 감자 배추국을 끓여 줄래요? 요리법을 알려 줄게요.', 'The roads are slippery and I’m scared to go shopping. Could you make potato-cabbage soup? I’ll teach you the recipe.'), unlock: 'r:🍲' } },
@@ -166,7 +235,7 @@ export const CHAPTERS = [
     ], gets: T2('🏮 등불 · ❤ 이웃 마음 · 💰 수고비 400원 · 📜 이야기 도장', '🏮 Lantern · ❤ Neighbour heart · 💰 400 won thanks · 📜 Story stamp'), pay: 400 },
 
   // ── 에필로그 자리 ── 예전 c5(old · 이야기 둘 뒤 그대로) · 등불은 안 줌(18 = 프롤로그 + 세 막)
-  { id: 'c5', act: 9, old: 1, icon: '📜', sea: null, t: T2('한 해 고마움 쪽지', 'A year of thanks'), learn: T2('한 해 돌아보기 · 고마운 마음을 말로 전하기', 'Look back on the year · put thanks into words'),
+  { id: 'c5', min: 10, act: 9, old: 1, icon: '📜', sea: null, t: T2('한 해 고마움 쪽지', 'A year of thanks'), learn: T2('한 해 돌아보기 · 고마운 마음을 말로 전하기', 'Look back on the year · put thanks into words'),
     need: { after: 2 }, giver: null,
     steps: [
       { id: 'n', hint: [T2('📜 쪽지는 Q(이야기)에서 다시 볼 수 있어요', '📜 Open the note again with Q (Stories)'), T2('쪽지를 읽고 ‘알겠어요’를 눌러요', 'Read the note and press “Okay!”')] , do: { type: 'note', text: T2('한 해 동안 마을에서 만난 이웃들을 떠올려 봐요. 가장 고마웠던 이웃에게 쪽지를 전해요.', 'Think of the neighbours you met this year. Take a thank-you note to the one you’re most grateful to.') } },
@@ -198,18 +267,22 @@ export function createStory(api) {
   function actOpen(a) { if (a === 0 || a === 9) return true; const D = S().done; if (a === 1) { const p0 = CHAPTERS.find(c => c.act === 0); return !p0 || !!D[p0.id] || !placesOk(p0) || CHAPTERS.some(c => c.act === 1 && D[c.id]); } const P9 = CHAPTERS.filter(c => c.act === a - 1 && !c.old), e9 = P9.find(c => c.end); return P9.filter(c => D[c.id]).length >= 3 && !!(e9 && D[e9.id]); }
   const actOf = c => (c.act == null ? 1 : c.act), lampN = () => Object.keys(S().lamp || {}).length;
   function lockWhy(c) { const n = c.need || {}; if (n.after && Object.keys(S().done).length < n.after) return T2('이야기 둘 뒤에', 'after 2 stories'); if (!c.old && !actOpen(actOf(c)) && placesOk(c)) return actOf(c) === 1 ? T2('프롤로그 뒤에', 'after the prologue') : T2('앞 막 이야기 셋 + 막 끝 뒤에', 'after 3 stories and the act finale'); return T2('이 마을엔 없음', 'not in this town'); }
-  function can(c) { const n = c.need || {}; if (!placesOk(c)) return false; if (!c.old && !actOpen(actOf(c))) return false; if (n.shops && !n.shops.some(k => api.shops().some(s => s.kind === k))) return false; if (n.kitchen && !api.kitchens().length) return false; if (n.farm && !api.farm()) return false; if (n.after && Object.keys(S().done).length < n.after) return false; if (c.giver && !api.workers().some(w => c.giver.includes(w.k))) return false; return true; }
+  const slideOk = () => !!(api.marks && api.marks({ q: 1 }).slide);   /* 산사태 주의 자리(고갯길)가 이 마을에 있나 — 차단봉·심을 비탈 */
+  function can(c, force) { const n = c.need || {}; if (!placesOk(c)) return false; if (!force && !c.old && !actOpen(actOf(c))) return false; if (n.stall && !api.stalls().length) return false; if (n.slide && !slideOk()) return false; if (n.shops && !n.shops.some(k => api.shops().some(s => s.kind === k))) return false; if (n.kitchen && !api.kitchens().length) return false; if (n.farm && !api.farm()) return false; if (n.after && Object.keys(S().done).length < n.after) return false; if (c.giver && !api.workers().some(w => c.giver.includes(w.k))) return false; return true; }
   const near = (L9, me) => { let b = null, bd = 1e18; for (const q of L9) { const d = (q.x - me.x) ** 2 + (q.z - me.z) ** 2; if (d < bd) { bd = d; b = q; } } return b; };
   const giverW = () => { const v = S().v; if (!v.who) return null; return api.workers().find(w => w.k === v.who && w.cell === v.wcell) || near(api.workers().filter(w => w.k === v.who), api.me()); };
   // 지금 단계의 목적지(셋째 힌트 길 · 'dir' 힌트 방향)
   function target() { const st = step(); if (!st) return null; const d = st.do, me = api.me(), v = S().v;
     if (d.type === 'visit') { const left = d.kinds.filter(k => !(v.seen || {})[k]); return near(api.shops().filter(s => left.includes(s.kind)), me); }
     if (d.type === 'buy') { const k = v.cheap || null, L9 = api.shops().filter(s => Object.keys(d.need).every(e => (api.goods(s.kind) || []).some(g => g[0] === e))); return near(k ? L9.filter(s => s.kind === k).concat(L9.length ? [] : []) : L9, me) || near(L9, me); }
-    if (d.type === 'cook') return near(api.kitchens(), me); if (d.type === 'harvest') return api.farm(); if (d.type === 'sell') return near(api.stalls(), me);
-    if (d.type === 'have') { const e = Object.keys(d.need).find(e9 => GAME.count(e9) < d.need[e9]), k = { '🥔': 'potato', '🥬': 'cabbage', '🧂': 'saltpan' }[e]; const w = k && near(api.workers().filter(w9 => w9.k === k), me); return w ? { ...w, name: whoName(w.k, en()), icon: '🧑', door: [w.x, w.z] } : near(api.stalls(), me); }
+    if (d.type === 'cook') return near(api.kitchens(), me); if (d.type === 'harvest') return api.farm(); if (d.type === 'sell') return near(api.stalls().filter(q => !d.away || !q.reg || q.reg !== '바다'), me) || near(api.stalls(), me);
+    if ((d.type === 'go' && (d.to === 'block' || d.to === 'slope')) || d.type === 'plant') { const m = api.marks ? api.marks({ q: 1 }) : {}, p = d.type === 'plant' || d.to === 'slope' ? m.slope : m.block; return p ? { x: p[0], z: p[1], door: [p[0], p[1]], icon: d.type === 'plant' ? '🌱' : '🚧', name: d.type === 'plant' ? (en() ? 'the slope' : '고갯길 비탈') : (en() ? 'the closed pass' : '막힌 고갯길') } : null; }
+    if (d.type === 'work' && d.k && d.n) { const L9 = api.workers().filter(w => w.k === d.k && !(v.wk || []).includes(Math.round(w.x) + ',' + Math.round(w.z))), F9 = v.pick && L9.filter(w => w.cell === v.pick), w = near(F9 && F9.length ? F9 : L9, me); return w ? { x: w.x, z: w.z, door: [w.x, w.z], icon: '🧑', name: whoName(w.k, en()) } : null; }   /* 일꾼 여럿 — 고른 논 먼저 */
+    if (d.type === 'have') { const e = d.any ? (d.any.find(e9 => api.workers().some(w => w.k === { '🧂': 'saltpan', '🐟': 'fisher' }[e9])) || d.any[0]) : Object.keys(d.need).find(e9 => GAME.count(e9) < d.need[e9]), k = { '🥔': 'potato', '🥬': 'cabbage', '🧂': 'saltpan', '🐟': 'fisher' }[e]; const w = k && near(api.workers().filter(w9 => w9.k === k), me); return w ? { ...w, name: whoName(w.k, en()), icon: '🧑', door: [w.x, w.z] } : near(api.stalls(), me); }
     if ((d.type === 'give' && d.to === 'giver') || d.type === 'work' || (d.type === 'go' && d.to === 'giver')) { const w = giverW(); return w ? { x: w.x, z: w.z, door: [w.x, w.z], icon: '🧑', name: whoName(w.k, en()) } : null; }
     if (d.type === 'give') { const w = near(api.workers(), me); return w ? { x: w.x, z: w.z, door: [w.x, w.z], icon: '🧑', name: whoName(w.k, en()) } : null; }
     if (d.type === 'go' || d.type === 'watch' || d.type === 'ff') return v.at || null;   /* STORY-2 'place:이름' · 고른 곳(pick) */
+    if (d.type === 'choose' && d.opts === 'lens') { const w = giverW(), h = w && findP('마을회관', w); return h ? { ...h, icon: '🏛', name: h.name } : null; }   /* 둘째 힌트 = 차단봉을 피한 길(빨간 선) */
     return null; }
   // STORY-2 방위 고르기: from(지금 선 곳) → to(from에서 가장 가까운 그 이름) · 지도 위 = 북(−z) · 경계 6° 안이면 이웃 방위도 맞음
   function bearing(d) { const A9 = findP(d.from), B9 = A9 && findP(d.to, A9); if (!B9) return null; const dx = B9.x - A9.x, dz = B9.z - A9.z; return { a: ((Math.atan2(dx, -dz) * 180 / Math.PI) + 360) % 360, A9, B9 }; }
@@ -221,6 +294,7 @@ export function createStory(api) {
     if (h === 'dir') return dirLine(); if (h === 'sums') { const c = ch(), need = (c.steps.find(s => s.do.type === 'visit') || { do: { need: [] } }).do.need; return [...new Set(api.shops().map(s => s.kind))].filter(k => ['grocery', 'conv'].includes(k)).map(k => api.kindName(k) + ' ' + need.map(e => { const g = (api.goods(k) || []).find(q => q[0] === e); return g ? g[1] : '?'; }).join('+') + ' = ' + api.won(sumOf(k, need))).join(' · '); }
     if (h === 'spent') return (en() ? 'You spent ' : '쓴 돈 = ') + api.won(v.spent || 0); if (h === 'show:path') { const p = target(); if (p) api.route({ icon: p.icon || '📍', name: p.name || '', en: p.name || '', door: p.door || [p.x, p.z], arrive: '🎉 ' + (p.name || '') }); return en() ? '🧭 Follow the red line' : '🧭 빨간 선을 따라가요'; }
     if (h === 'show:ans') return en() ? '✨ The answer is glowing' : '✨ 답이 반짝여요';
+    if (h === 'fc') { if (!api.fc) return en() ? 'Check the weather chip (top right) for the forecast' : '오른쪽 위 날씨 칩을 눌러 일기예보를 봐요'; const N9 = en() ? ['Today', 'Tomorrow', 'In 2 days'] : ['오늘', '내일', '모레']; return '📅 ' + N9.map((t, i) => { const f = api.fc(i); return t + ' ' + f[0] + ' ' + (en() ? { 맑음: 'clear', '구름 조금': 'some clouds', 흐림: 'cloudy', 비: 'rain', 눈: 'snow' }[f[1]] || f[1] : f[1]); }).join(' · '); }   /* 이미 있는 일기예보(GAME-17) */
     if (h === 'dirhint') { const b = bearing(st.do); if (!b) return ''; const k = Math.floor(((b.a + 22.5) % 360) / 45), to = st.do.to, fr = st.do.from;
       if (k % 2 === 0) return en() ? to + ' is almost straight ' + (k === 0 || k === 4 ? 'up or down (north–south)' : 'left or right (east–west)') + ' from ' + fr + ' — which one?' : to + josa(to) + ' ' + fr + '에서 거의 곧게 ' + (k === 0 || k === 4 ? '위아래(북·남)' : '좌우(동·서)') + ' 쪽에 있어요 — 둘 가운데 어느 쪽일까요?';
       const up = k === 1 || k === 7; return en() ? to + ' is ' + (up ? 'north (up)' : 'south (down)') + ' of ' + fr + ' — east or west?' : to + josa(to) + ' ' + fr + '보다 ' + (up ? '위(북)' : '아래(남)') + '쪽이에요 — 동쪽일까요, 서쪽일까요?'; }
@@ -232,18 +306,21 @@ export function createStory(api) {
     if (st.if && !st.if.includes(s.v.pick)) { s.i++; return begin(); }
     if (d.type === 'buy') { s.v.spent = 0; s.v.got = {}; api.earn(d.budget); api.toast((en() ? '💰 Errand money ' : '💰 심부름 돈 ') + api.won(d.budget) + (en() ? ' received' : '을 받았어요'), 2.6); }
     if (d.type === 'visit') s.v.seen = {}; if (d.type === 'harvest') s.v.hv = 0;
-    if ((d.type === 'go' && d.to !== 'giver') || d.type === 'watch' || d.type === 'ff') { const nm = d.type === 'go' && d.to === 'pick' ? s.v.pick : String(d.to || d.at || '').replace(/^place:/, ''); s.v.at = nm ? findP(nm) : null; s.v.st = 0; s.v.lp = null; }   /* STORY-2: 목적지 = 단계 시작 때 한 번 찾음(내게서 가장 가까운 그 이름) */
+    if (((d.type === 'go' && d.to !== 'giver') || d.type === 'watch' || d.type === 'ff') && !/^(block|slope)$/.test(d.to || '')) { const nm = d.type === 'go' && d.to === 'pick' ? s.v.pick : String(d.to || d.at || '').replace(/^place:/, ''), ref = d.ref === 'giver' ? giverW() : null; s.v.at = nm ? findP(nm, ref || undefined) : null; s.v.st = 0; s.v.lp = null; }
+    if ((d.type === 'go' && /^(block|slope)$/.test(d.to || '')) || d.type === 'plant') s.v.at = null; if (d.type === 'work' && d.n) s.v.wk = [];   /* STORY-2: 목적지 = 단계 시작 때 한 번 찾음(내게서 가장 가까운 그 이름) */
     if (d.type === 'choose' && d.opts === 'shops' && [...new Set(api.shops().map(q => q.kind))].filter(k => ['grocery', 'conv'].includes(k)).length < 2) { s.i++; return begin(); }   /* 견줄 가게가 하나뿐이면 건너뜀 */
-    save(); api.task(); if (['note', 'choose', 'ask', 'line'].includes(d.type)) setTimeout(() => open(), 350); }
+    save(); sync(); api.task(); if (['note', 'choose', 'ask', 'line'].includes(d.type)) setTimeout(() => open(), 350); }
+  // STORY-2 마을에 남는 표시 맞추기(town.js api.marks — 바뀔 때만 일함): 🚧 = 지금 단계가 blk · 🌱 심기 E 자리 = 지금 단계가 plant · 쉬기·끝 = 둘 다 걷음
+  function sync() { if (!api.marks) return; const st = step(); api.marks({ block: !!(st && st.blk), slope: !!(st && st.do.type === 'plant') }); }
   // 새 친구(이사 온 아이 · 이름 없는 역할 · 교사 확인 전) = 그 자리 말풍선 한 줄 + 알림 — 따라다니기·새 모델 X
   function friendSay(t) { const me = api.me(), a = S().v.at, at = a && Math.hypot(a.x - me.x, a.z - me.z) < 40 ? a : me; api.bubble({ x: at.x + 1.2, y: me.y, z: at.z + 0.6, sc: 1 }, L(FRIEND) + ': ' + L(t)); api.toast('🧒 ' + L(FRIEND) + ': ' + L(t), 3.4); }
   function next(msg) { const s = S(), st = step(); if (msg) api.banner(msg, 2.8); if (st && st.fr) friendSay(st.fr); api.sfx('ding'); s.i++; begin(); }
   function finish() { const s = S(), c = ch(); if (!c) return; const nx = actOf(c) + 1, was = ACTS[nx] ? actOpen(nx) : true; s.done[c.id] = { d: GAME.S.day, star: !!s.v.star }; if (c.lamp && !s.lamp[c.id]) { s.lamp[c.id] = 1; api.add('🏮', 1); }   /* STORY-2 등불 = 장마다 처음 한 번 */
-    if (!was && actOpen(nx)) setTimeout(() => api.toast((en() ? '🎉 ' + L(ACTS[actOf(c)]).split(' · ')[0] + ' complete! Next: ' : '🎉 ' + L(ACTS[actOf(c)]).split(' · ')[0] + ' 끝! 다음 = ') + L(ACTS[nx]) + ' — 📖 Q', 4), 4200);   /* 막 끝 = 그 자리 알림(컷신 X) */ if (c.pay) api.earn(c.pay); api.add('📜', 1); const w = giverW(); if (w) api.heart(w, 2); s.cur = null; s.i = 0; s.v = {}; api.routeOff(); save(); api.task();
+    if (!was && actOpen(nx)) setTimeout(() => api.toast((en() ? '🎉 ' + L(ACTS[actOf(c)]).split(' · ')[0] + ' complete! Next: ' : '🎉 ' + L(ACTS[actOf(c)]).split(' · ')[0] + ' 끝! 다음 = ') + L(ACTS[nx]) + ' — 📖 Q', 4), 4200);   /* 막 끝 = 그 자리 알림(컷신 X) */ if (c.pay) api.earn(c.pay); api.add('📜', 1); const w = giverW(); if (w) api.heart(w, 2); s.cur = null; s.i = 0; s.v = {}; api.routeOff(); save(); sync(); api.task();
     api.banner('📜 ' + L(c.t) + (en() ? ' — chapter done! ' : ' — 이야기 끝! ') + L(c.gets) + (c.lamp ? ' · 🏮 ' + lampN() + '/' + LAMP_N : ''), 4); }
   // 장 시작(쪽지를 보내는 일꾼 = 이 마을에서 가장 가까운 그 갈래)
-  function start(id) { const c = CHAPTERS.find(q => q.id === id); if (!c || !can(c)) return false; const s = S(); s.cur = id; s.i = 0; s.v = {}; if (c.giver) { const W9 = api.workers(), k9 = c.order ? c.giver.find(k => W9.some(q => q.k === k)) : null, w = near(W9.filter(q => (k9 ? q.k === k9 : c.giver.includes(q.k))), api.me()); if (w) { s.v.who = w.k; s.v.wcell = w.cell; } } begin(); return true; }   /* order = 적힌 차례대로 먼저 있는 갈래(그 이야기 동네 일꾼) */
-  function pause() { const s = S(); s.paused = s.cur; s.pi = s.i; s.pv = s.v; s.cur = null; api.routeOff(); save(); api.task(); }
+  function start(id, force) { const c = CHAPTERS.find(q => q.id === id); if (!c || !can(c, force)) return false; const s = S(); s.cur = id; s.i = 0; s.v = {}; if (c.giver) { const W9 = api.workers(), k9 = c.order ? c.giver.find(k => W9.some(q => q.k === k)) : null, w = near(W9.filter(q => (k9 ? q.k === k9 : c.giver.includes(q.k))), api.me()); if (w) { s.v.who = w.k; s.v.wcell = w.cell; } } begin(); return true; }   /* order = 적힌 차례대로 먼저 있는 갈래(그 이야기 동네 일꾼) */
+  function pause() { const s = S(); s.paused = s.cur; s.pi = s.i; s.pv = s.v; s.cur = null; api.routeOff(); save(); sync(); api.task(); }
   function resume() { const s = S(); if (!s.paused) return; s.cur = s.paused; s.i = s.pi || 0; s.v = s.pv || {}; s.paused = null; begin(); }
   // ── 창(쪽지·고르기·셈·한 줄) ──
   let panelOn = false, pick = new Set(), dlgRes = null;
@@ -268,11 +345,15 @@ export function createStory(api) {
       const inp = P.querySelector('.twn-line'); setTimeout(() => inp && inp.focus(), 50); const go = () => { const t = String(inp.value || '').trim().slice(0, 30); if (!t) { inp.style.borderColor = '#e0453a'; return; } api.diary(ch().icon + ' ' + t); S().v.line = t; panelOn = false; api.closeP(); next(en() ? '✏ Saved in your diary' : '✏ 일기에 남겼어요'); };
       inp.addEventListener('keydown', e => { if (e.key === 'Enter') go(); }); P.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') { panelOn = false; api.closeP(); } else go(); }; return; }
     panelOn = false; list(); }
-  function optsOf(d) { if (d.opts === 'dirs') return DIR8; if (d.opts === 'names') return d.names.filter(([n]) => hasPlace(n)).map(([n, ic]) => [n, [ic + ' ' + n, ic + ' ' + n]]);   /* STORY-2: 여덟 방위 · 이 마을에 있는 장소 이름만 */
+  const fmtM = m => m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.max(100, Math.round(m / 100) * 100) + ' m';
+  function lensOf(d) { const v = S().v; if (v.lens) return v.lens; const w = giverW(), to = w && findP('마을회관', w), Lm = w && to && api.routeLen ? api.routeLen([w.x, w.z], to.door) : null; if (!Lm) return null; const R9 = [0.4, 1, 2.5].map(f => fmtM(Lm * f)), k = Math.round(Lm / 100) % 3; v.lens = [0, 1, 2].map(i => (i + k) % 3).map(i => ['l' + i, [R9[i], R9[i]]]); v.lenAns = 'l1'; return v.lens; }   /* 실제 다른 길 길이(차단봉을 피한 길) · 0.4배·2.5배와 섞음 — 막대를 세어 어림(셈 X) */
+  function optsOf(d) { if (d.opts === 'dirs') return DIR8; if (d.opts === 'lens') return lensOf(d) || [];
+    if (d.opts === 'paddies') { const seen = new Set(), out = []; for (const w of api.workers()) { if (w.k !== 'paddy' || seen.has(w.cell)) continue; seen.add(w.cell); out.push([w.cell, ['🌾 ' + w.cell + (en() ? ' paddy' : ' 칸 논'), '🌾 ' + w.cell + ' paddy']]); if (out.length >= 4) break; } return out; } if (d.opts === 'names') return d.names.filter(([n]) => hasPlace(n)).map(([n, ic]) => [n, [ic + ' ' + n, ic + ' ' + n]]);   /* STORY-2: 여덟 방위 · 이 마을에 있는 장소 이름만 */
     if (d.opts === 'shops') return [...new Set(api.shops().map(s => s.kind))].filter(k => ['grocery', 'conv'].includes(k)).map(k => [k, [api.kindName(k, false), api.kindName(k, true)]]);
     if (d.opts === 'hearts') { const W = api.workers(), seen = new Set(), out = []; for (const w of W) { const key = w.k; if (seen.has(key)) continue; seen.add(key); out.push([key, [whoName(key, false) + ' ' + '❤'.repeat(Math.max(1, api.hearts(w))), whoName(key, true)]]); if (out.length >= 6) break; } return out; }
     return d.opts.map(o => Array.isArray(o) ? o : [o, [o + ' ' + api.itemName(o, false), o + ' ' + api.itemName(o, true)]]); }
-  function ansOf(d) { if (d.ans === 'dir') { const b = bearing(d); if (!b) return []; const q = (b.a + 22.5) % 360, k = Math.floor(q / 45), off = q % 45, A9 = ['d' + k]; if (off < 6) A9.push('d' + ((k + 7) % 8)); if (off > 39) A9.push('d' + ((k + 1) % 8)); return A9; }
+  function ansOf(d) { if (d.ans === 'len') { lensOf(d); return S().v.lenAns ? [S().v.lenAns] : []; }
+    if (d.ans === 'dir') { const b = bearing(d); if (!b) return []; const q = (b.a + 22.5) % 360, k = Math.floor(q / 45), off = q % 45, A9 = ['d' + k]; if (off < 6) A9.push('d' + ((k + 7) % 8)); if (off > 39) A9.push('d' + ((k + 1) % 8)); return A9; }
     if (d.ans === 'cheap') { const need = ['🌾', '🥚', '🥛']; const ks = optsOf(d).map(o => o[0]); return [ks.reduce((a, k) => sumOf(k, need) < sumOf(a, need) ? k : a, ks[0])]; } return d.ans || []; }
   function drawChoose() { const st = step(), d = st.do, c = ch(), O = optsOf(d), A = ansOf(d), need = d.judge === 'none' || d.one ? 1 : A.length, showA = S().h >= 3 && d.judge !== 'none';
     const P = api.openP('<h3>' + c.icon + ' ' + esc(L(c.t)) + ' <span class="sm">' + (S().i + 1) + '/' + c.steps.length + '</span></h3><div style="font-size:17px;margin:6px 0">🤔 ' + esc(fill(L(d.q))) + (need > 1 ? ' <span class="sm">(' + need + (en() ? ' picks' : '개 고르기') + ')</span>' : '') + '</div><div class="row" style="flex-wrap:wrap;gap:10px;justify-content:flex-start;margin:10px 0 4px">'
@@ -293,13 +374,18 @@ export function createStory(api) {
       + (cur ? '<div style="background:#eef7ff;border-radius:12px;padding:10px 12px;margin-bottom:8px"><b>' + cur.icon + ' ' + esc(L(cur.t)) + '</b> · ' + (s.i + 1) + '/' + cur.steps.length + '<br>' + esc(todo()) + (s.h ? '<br><span class="sm">💡 ' + esc(hintText(s.h)) + '</span>' : '') + '<div class="row"><button class="pri" data-a="go">' + (en() ? 'Continue' : '계속하기') + '</button><button class="sub" data-a="h">💡 ' + (en() ? 'Hint' : '힌트') + '</button><button class="sub" data-a="p">⏸ ' + (en() ? 'Take a break' : '잠깐 쉬기') + '</button></div></div>' : '')
       + C.map(c => { const ok = can(c), dn = s.done[c.id], rec = c.sea && c.sea === sea, a = actOf(c), hd = a !== lastA ? '<div class="sm" style="margin-bottom:8px"><b>' + esc(L(ACTS[a] || '')) + '</b>' + (actOpen(a) ? '' : ' 🔒') + '</div>' : ''; lastA = a; return hd + '<div style="display:flex;gap:10px;align-items:center;border:2px solid ' + (rec ? '#f2c230' : '#e3e7ea') + ';border-radius:12px;padding:8px 10px;margin:6px 0;opacity:' + (ok ? 1 : 0.55) + '"><div style="font-size:28px">' + c.icon + '</div><div style="flex:1"><b>' + esc(L(c.t)) + '</b>' + (rec ? ' <span class="sm">' + (en() ? '· this season' : '· 지금 계절') + '</span>' : '') + (dn ? ' ✅' + (dn.star ? '★' : '') : '') + '<div class="sm">' + esc(L(c.learn)) + '</div></div>'
         + (ok && !cur ? '<button class="' + (dn ? 'sub' : 'pri') + '" data-c="' + c.id + '">' + (s.paused === c.id ? (en() ? 'Resume' : '이어 하기') : dn ? (en() ? 'Again' : '다시') : (en() ? 'Start' : '시작')) + '</button>' : ok ? '' : '<span class="sm">' + esc(L(lockWhy(c))) + '</span>') + '</div>'; }).join('')
+      + '<details class="cgd" style="margin-top:10px"><summary>' + (en() ? '📋 For teachers — chapters as lessons' : '📋 선생님용 — 장 = 차시 카드') + '</summary><div class="sm" style="margin-bottom:8px">' + (en() ? 'Open any chapter now (ignores act locks) and jump near where it starts.' : '막 잠금과 상관없이 그 장을 바로 열고, 시작하는 곳 가까이로 옮겨요.') + '</div>'
+        + C.map(c => '<div style="display:flex;gap:10px;align-items:center;border:2px solid #e3e7ea;border-radius:12px;padding:8px 10px;margin:6px 0"><div style="font-size:28px">' + c.icon + '</div><div style="flex:1"><b>' + esc(L(c.t)) + '</b> <span class="sm">· ' + esc(L(ACTS[actOf(c)] || '').split(' · ')[0]) + ' · ' + (en() ? 'about ' + (c.min || 15) + ' min' : '약 ' + (c.min || 15) + '분') + '</span><div class="sm">' + esc((c.link || []).join(' · ') || '—') + ' — ' + esc(L(c.learn)) + '</div></div>'
+          + (can(c, true) ? '<button class="sub" data-t="' + c.id + '">▶ ' + (en() ? 'Open now' : '이 장 바로 열기') + '</button>' : '<span class="sm">' + esc(L(T2('이 마을엔 없음', 'not in this town'))) + '</span>') + '</div>').join('') + '</details>'
       + '<div class="row"><button class="sub" data-a="x">' + (en() ? 'Close (Esc)' : '닫기(Esc)') + '</button></div>', true, 'story');
-    P.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') return api.closeP(); if (b.dataset.a === 'p') { api.closeP(); pause(); return; } if (b.dataset.a === 'h') { hintUp('ask'); api.closeP(); return; }
+    P.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') return api.closeP(); if (b.dataset.t) { api.closeP(); teach(b.dataset.t); return; } if (b.dataset.a === 'p') { api.closeP(); pause(); return; } if (b.dataset.a === 'h') { hintUp('ask'); api.closeP(); return; }
       if (b.dataset.a === 'go') { api.closeP(); if (['note', 'choose', 'ask', 'line'].includes(step().do.type)) open(); return; }
       if (b.dataset.c) { api.closeP(); if (S().paused === b.dataset.c) resume(); else start(b.dataset.c); } }; }
+  // 선생님 ▶ 바로 열기: 지금 장은 쉬어 두고(이어 하기 그대로) 그 장을 막 잠금 없이 시작 → 시작하는 곳 가까이로(쪽지 준 일꾼 · 필요한 장소 · 텃밭)
+  function teach(id) { const c = CHAPTERS.find(q => q.id === id); if (!c || !can(c, true)) return false; if (ch() && S().cur !== id) pause(); if (!start(id, true)) return false; const w = giverW(), pl = c.need && c.need.place && findP(c.need.place[0]), f = c.need && c.need.farm && api.farm(), at = w || pl || f; if (at && api.goNear) api.goNear(at.x, at.z, w ? whoName(w.k, en()) : at.name || ''); return true; }
   // 이야기 줄(할 일 줄 자리 · 단계가 바뀔 때만 글자를 바꿈)
   function todo() { const st = step(); if (!st) return ''; const v = S().v, d = st.do; let t = fill(L(st.todo || (en() ? '📜 Read the note' : '📜 쪽지 읽기')));
-    if (d.type === 'buy') t += (en() ? ' · left ' : ' · 남은 돈 ') + api.won(Math.max(0, d.budget - (v.spent || 0))); if (d.type === 'visit') t += ' (' + Object.keys(v.seen || {}).length + '/' + d.kinds.filter(k => api.shops().some(s => s.kind === k)).length + ')'; if (d.type === 'harvest') t += ' (' + (v.hv || 0) + '/' + d.n + ')'; return t; }
+    if (d.type === 'buy') t += (en() ? ' · left ' : ' · 남은 돈 ') + api.won(Math.max(0, d.budget - (v.spent || 0))); if (d.type === 'visit') t += ' (' + Object.keys(v.seen || {}).length + '/' + d.kinds.filter(k => api.shops().some(s => s.kind === k)).length + ')'; if (d.type === 'harvest') t += ' (' + (v.hv || 0) + '/' + d.n + ')'; if (d.type === 'work' && d.n) t += ' (' + (v.wk || []).length + '/' + d.n + ')'; return t; }
   // ── 이벤트(마을이 부름) ──
   function ev(type, o = {}) { const st = step(); if (!st) return; const d = st.do, s = S(), v = s.v;
     if (type === 'enter' && d.type === 'visit' && d.kinds.includes(o.kind)) { if (!(v.seen || (v.seen = {}))[o.kind]) { v.seen[o.kind] = 1; const G = api.goods(o.kind) || []; const all9 = d.need.every(e => G.some(q => q[0] === e)); api.banner('🏪 ' + o.name + ' — ' + d.need.map(e => { const g = G.find(q => q[0] === e); return e + ' ' + (g ? api.won(g[1]) : '—'); }).join(' · ') + (all9 ? (en() ? ' → all three ' : ' → 셋 다 사면 ') + api.won(sumOf(o.kind, d.need)) : ''), 5.5); s.t = 0;
@@ -308,16 +394,22 @@ export function createStory(api) {
     if (type === 'cook' && d.type === 'cook') { if (o.e === d.dish) next(en() ? '🍳 Done!' : '🍳 다 만들었어요!'); else if (o.e === '🌑') { s.tries++; api.banner(en() ? '🌑 Burnt — stop on green next time' : '🌑 탔어요 — 다음엔 초록 칸에서!', 3); hintUp('wrong'); } return; }
     if ((type === 'share' || type === 'gift') && d.type === 'give') { const okE = d.e === 'veg' ? VEG.includes(o.e) : o.e === d.e, w = o.w, okW = d.to !== 'giver' || (w && w.k === v.who); if (!okE) return;
       if (!okW) { api.toast(fill(en() ? 'This is for {who}!' : '이건 {who}에게 줄 거예요!'), 2.6); return; } if (d.change && v.budget != null && v.spent != null && v.budget > v.spent) { api.spend(v.budget - v.spent); setTimeout(() => api.toast((en() ? '💰 Gave back the change ' : '💰 거스름돈 ') + api.won(v.budget - v.spent) + (en() ? '' : '도 돌려드렸어요'), 2.8), 1200); } next(en() ? '😊 They’re so happy!' : '😊 이웃이 정말 기뻐해요!'); return; }
+    if (type === 'work' && d.type === 'work' && d.k && d.n) { if (o.k !== d.k) return; const key = Math.round(o.x || 0) + ',' + Math.round(o.z || 0), W9 = v.wk || (v.wk = []); if (o.x != null && W9.includes(key)) { api.toast(en() ? '🌾 Now help a different worker!' : '🌾 이번엔 다른 일꾼을 도와요!', 2.6); return; } W9.push(key); s.t = 0; api.task(); if (W9.length >= d.n) next(d.done ? L(d.done) : (en() ? '🌿 All done!' : '🌿 다 했어요!')); else { save(); api.toast('🌾 ' + W9.length + '/' + d.n + (en() ? ' — on to the next worker!' : ' — 다음 일꾼에게!'), 2.6); } return; }   /* 두레: 서로 다른 일꾼 n명(자리로 셈) */
+    if (type === 'plant' && d.type === 'plant') { next(L(d.done)); return; }
+    if (type === 'sell' && d.type === 'sell' && d.away) { if (!d.any.includes(o.e)) return; if (o.away) next(L(d.done)); else api.banner(en() ? '🛒 That’s made around here too, so the price stays the same — try a hill or field market' : '🛒 여기서도 나는 물건이라 값이 그대로예요 — 산이나 들 장터로 가져가 봐요', 3.4); return; }   /* 멀리서 온 물건 = 장터 규칙(awayOf) 그대로 */
     if (type === 'work' && d.type === 'work' && o.k === v.who) { const h = api.hour(), okH = !d.hours || d.hours.some(([a, b]) => h >= a && h < b), okW = !d.wx || wxNow() === d.wx;   /* STORY-2: hours 없음 = 아무 때나 · wx = 그 날씨만 */
       if (okH && okW) next(d.done ? L(d.done) : d.hours ? (en() ? '🌿 Done in the cool of the day!' : '🌿 시원할 때 잘 해냈어요!') : (en() ? '🌿 Thanks for the help!' : '🌿 일을 잘 거들었어요!')); else { s.tries++; api.banner(d.miss ? L(d.miss) : (en() ? '🥵 It’s too hot now! Rest in the shade and come back in the morning or evening' : '🥵 지금은 너무 더워요! 그늘에서 쉬었다가 아침이나 저녁에 와요'), 3.4); hintUp('wrong'); } return; }   /* 반응 = 배너(알림 칸은 바로 뒤 💡 힌트가 덮어 아이가 못 보던 것 — STORY-1부터) */
     if (type === 'harvest' && d.type === 'harvest') { v.hv = (v.hv || 0) + (o.n || 1); s.t = 0; api.task(); if (v.hv >= d.n) next(en() ? '🌱 Harvest done!' : '🌱 다 거뒀어요!'); else save(); return; }
     if (type === 'sell' && d.type === 'sell' && VEG.includes(o.e)) { if (d.jang && !api.jang()) { api.toast(en() ? '🎪 Not market day — prices are better on market day!' : '🎪 오늘은 장날이 아니에요 — 장날엔 값을 더 쳐줘요!', 3); return; } next(en() ? '🎪 Sold on market day!' : '🎪 장날에 잘 팔았어요!'); return; } }
   // 1초 tick: 힌트 시간 · 가졌는지·도착 판정(그 단계만)
   function tick() { const st = step(); if (!st) return; const s = S(), d = st.do; s.t++; if (s.t === 40 || s.t === 80 || s.t === 120) hintUp('time');
-    if (d.type === 'have' && Object.entries(d.need).every(([e, n]) => GAME.count(e) >= n)) next(en() ? '🧺 Got everything!' : '🧺 재료를 다 모았어요!');
+    if (d.type === 'have' && (d.any ? d.any.reduce((a, e) => a + GAME.count(e), 0) >= (d.n || 1) : Object.entries(d.need).every(([e, n]) => GAME.count(e) >= n))) next(en() ? '🧺 Got everything!' : '🧺 재료를 다 모았어요!');
+    else if (d.type === 'rain' || d.type === 'clear') { if (wxNow() === (d.type === 'rain' ? 'rain' : 'clear')) next(L(d.done)); }   /* 이미 있는 날씨(예보대로 · 날씨 창 = 선생님 시연) */
+    else if (d.type === 'go' && /^(block|slope)$/.test(d.to || '')) { const p = target(), me = api.me(); if (p && Math.hypot(p.x - me.x, p.z - me.z) < (d.r || 12)) next(L(d.done)); }
+    else if (d.type === 'go' && d.give && s.v.at) { const p = s.v.at, me = api.me(); if (Math.hypot(p.x - me.x, p.z - me.z) < (d.r || 12)) { const E9 = Object.entries(d.give); if (E9.every(([e, n]) => GAME.count(e) >= n)) { for (const [e, n] of E9) GAME.take(e, n); api.task(); next(L(d.done)); } else if (!s.v.miss) { s.v.miss = 1; api.toast(en() ? 'Bring it with you first!' : '먼저 챙겨 와요! ' + E9.map(([e]) => e).join(''), 2.6); } } }
     else if (d.type === 'go' && d.to !== 'giver') { const p = s.v.at, me = api.me(); if (p && Math.hypot(p.x - me.x, p.z - me.z) < (d.r || 12)) next(d.done ? L(d.done) : '📍 ' + p.name + (en() ? ' — you’re here!' : ' — 왔어요!')); }   /* STORY-2 'place:이름' · pick */
     else if (d.type === 'watch') { const p = s.v.at, me = api.me(); if (p && Math.hypot(p.x - me.x, p.z - me.z) < (d.r || 30)) { const lp = s.v.lp; s.v.st = lp && Math.hypot(me.x - lp[0], me.z - lp[1]) < 0.3 ? (s.v.st || 0) + 1 : 0; s.v.lp = [me.x, me.z]; if (s.v.st >= (d.still || 6)) next(L(d.done)); } else { s.v.st = 0; s.v.lp = null; } }   /* 가만히(1초마다 0.3m 안) still초 → 배너 · 게 그림은 다음 단계 */
     else if (d.type === 'ff') { if (ffNow()) next(L(d.done)); }   /* 반딧불이가 실제로 떠 있을 때(GAME-18 조건 = 여름·밤·맑음·민물가) */
     else if (d.type === 'go') { const w = giverW(), me = api.me(); if (w && Math.hypot(w.x - me.x, w.z - me.z) < (d.r || 4)) { api.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, L(d.say)); api.heart(w, 3); next(en() ? '💌 Note delivered!' : '💌 쪽지를 전했어요!'); } } }
-  return { start, pause, resume, open, list, ev, tick, todo, get on() { return !!ch(); }, get cur() { return S().cur; }, get step() { const st = step(); return st ? { id: st.id, type: st.do.type, i: S().i, h: S().h, v: { ...S().v } } : null; }, can: id => { const c = CHAPTERS.find(q => q.id === id); return !!(c && can(c)); }, hint: () => hintUp('ask'), target, lamps: () => lampN(), actOpen: a => actOpen(a), ans: () => { const st = step(); return st && st.do.type === 'choose' ? ansOf(st.do) : null; } };
+  return { start, pause, resume, open, list, ev, tick, todo, sync, teach, get on() { return !!ch(); }, get cur() { return S().cur; }, get step() { const st = step(); return st ? { id: st.id, type: st.do.type, i: S().i, h: S().h, v: { ...S().v } } : null; }, can: id => { const c = CHAPTERS.find(q => q.id === id); return !!(c && can(c)); }, hint: () => hintUp('ask'), target, lamps: () => lampN(), actOpen: a => actOpen(a), ans: () => { const st = step(); return st && st.do.type === 'choose' ? ansOf(st.do) : null; } };
 }
