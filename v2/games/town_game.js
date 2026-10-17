@@ -59,7 +59,8 @@ export function createGame(id) {
   const KEY = 'sm-town-game:' + id;
   const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, hearts: {}, today: null, clock: true, cal: { d0: 1, on: true, s: 'now' }, bundles: {}, unlock: {}, farm: [], diary: [], wx: { auto: true } });
   let S = fresh();
-  try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j && j.v === SAVE_V) { S = Object.assign(fresh(), j); if (!(j.cal && j.cal.d0 >= 1)) S.cal = { d0: S.day, on: true, s: 'now' };   /* 달력 없던 저장 = 오늘부터 첫 주 */ for (const k of Object.keys(S.bag)) if (!(S.bag[k] > 0)) delete S.bag[k]; } } catch (e) { /* 저장 막힘·깨짐 = 새로 시작 */ }
+  let raw9 = null; try { raw9 = localStorage.getItem(KEY); } catch (e) { /* 막힘 */ }
+  try { const j = JSON.parse(raw9 || 'null'); if (j && j.v !== SAVE_V) throw 0; if (j && j.v === SAVE_V) { S = Object.assign(fresh(), j); if (!(j.cal && j.cal.d0 >= 1)) S.cal = { d0: S.day, on: true, s: 'now' };   /* 달력 없던 저장 = 오늘부터 첫 주 */ for (const k of Object.keys(S.bag)) if (!(S.bag[k] > 0)) delete S.bag[k]; } } catch (e) { /* 저장 깨짐·판 번호 다름 = 새로 시작하되 옛 글은 따로 남김(SAVE-1 · 덮어써서 잃지 않게 · 되살리기 = sm-town-game-bak:<마을>) */ if (raw9) try { localStorage.setItem('sm-town-game-bak:' + id, raw9); } catch (e2) { /* 가득 참 */ } }
   if (!(S.min >= 0 && S.min < DAY_END)) S.min = 7 * 60;
   let dirty = false, since = 0, acc = 0, ph = phaseOf(S.min), on = null; const T0 = () => ({ earned: 0, got: {}, cells: 0, tasks: 0, cooked: 0, shared: 0, dex: 0 }); if (!S.today) S.today = T0();   // 오늘 한 일(하루 마무리 · 잠들면 비움)
   const emit = (t) => { if (on) on(t); };
