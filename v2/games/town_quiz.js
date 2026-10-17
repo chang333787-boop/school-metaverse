@@ -8,7 +8,7 @@
 //   하지 않는 것(학급 원칙 · 아이 건강): 연속 출석 벌 · 반 순위 · 뽑기 · 불안 알림 — 이 기기에서 나만 · 매 프레임 일 0(마을 1초 칸에서 sec 하나)
 //   문제 = 4학년 눈높이 · 사실만(게임이 보여 준 사실 · 마을 설정은 '우리 마을에서는') · 셈 X(교사 10-17 '수학 앱이 아니니까' — 수는 읽기만) · 영어 짝
 import { lv } from './town_skill.js?v=2';
-import { lowsOf, hm } from './town_shore.js?v=2';
+import { lowsOf, hm } from './town_shore.js?v=3';
 export const QUIZ_V = 1;
 const T2 = (ko, en) => [ko, en];
 // 갈래: 이름 · 맞히면 늘 솜씨 · 비었을 때 귀띔
@@ -221,7 +221,7 @@ export function createQuiz(A) {
   const drawSnips = (P9, L9) => L9.forEach((q, i) => { if (q && q.pts) { const cv = P9.querySelector('[data-snip="' + i + '"]'); if (cv) A.mapSnip(cv, q.pts); } });
   function saw(key) { if (!SAW[key]) return; onNew(sawLearn(S(), key)); }
   // 맞힘·틀림 반영(보상 · 배지) → 그 개념 기록
-  function settle(id, ok, day, prac) { const s = S(), r = answer(s, id, ok, day), D = dayRec(s, day); if (prac) D.p = (D.p || 0) + 1; else { D.n++; if (ok) D.ok++; } G.mark(); A.skUp(BANK[id].sk, ok && !prac ? 2 : 1);   /* 다시 풀기 = 솜씨 1 · 돈 X · 선물 셈 X */
+  function settle(id, ok, day, prac, m) { const s = S(), r = answer(s, id, ok, day), D = dayRec(s, day); if (prac) D.p = (D.p || 0) + 1; else { D.n++; if (ok) D.ok++; } G.mark(); if (A.rec) A.rec('q', { id, ok: ok ? 1 : 0, m: prac ? 'prac' : m || 'mid' });   /* REC-0 학급 기록 */ A.skUp(BANK[id].sk, ok && !prac ? 2 : 1);   /* 다시 풀기 = 솜씨 1 · 돈 X · 선물 셈 X */
     if (ok) { if (!prac) A.money(100); A.sfx('ding'); const p = document.createElement('div'); p.className = 'twn-pop'; p.textContent = '⭐ ' + stars(r); p.style.top = '36%'; document.body.appendChild(p); setTimeout(() => p.remove(), 1300); badge(day); } else A.sfx('tick');
     return r; }
   function badge(day) { const s = S(), Q = s.quiz || (s.quiz = {}), BG = Q.badge || (Q.badge = {}); for (const c of CAT_ORDER) { if (BG[c] || !catState(s, c).can) continue; BG[c] = day; G.mark(); const C = CATS[c]; setTimeout(() => { if (A.alive()) A.banner('🏅 ' + (en() ? C.t[1] + ' badge! You mastered everything you learned here' : C.t[0] + ' 배지를 받았어요! 배운 것을 모두 익혔어요'), 4); }, 1600); } }
@@ -247,7 +247,7 @@ export function createQuiz(A) {
     h += CUR.map((q, i) => '<div data-qb="' + i + '"><div class="st"><b class="n">' + (i + 1) + '</b><span>' + A.esc(L2(q.qt)) + '</span></div>' + (q.pts ? SNIP(i) : '') + '<div class="row" style="justify-content:flex-start">' + q.opts.map((o, j) => '<button class="sub" data-qz="' + i + '" data-o="' + j + '">' + A.esc(L2(o)) + '</button>').join('') + '</div><div class="sm" data-qx="' + i + '"></div></div>').join('');
     return h; }
   function recapBind(P9) { if (!CUR) return; drawSnips(P9, CUR); P9.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-qz]'); if (!b || !CUR) return; const i = +b.dataset.qz, j = +b.dataset.o, q = CUR[i]; if (!q || q.done) return; q.done = true;
-    const ok = j === q.a, r = settle(q.id, ok, curDay); for (const b2 of P9.querySelectorAll('[data-qz="' + i + '"]')) { const jj = +b2.dataset.o; if (jj === q.a) { b2.className = 'pri'; b2.textContent = '✔ ' + b2.textContent; } else { b2.disabled = true; if (jj === j) b2.textContent = '✖ ' + b2.textContent; } }
+    const ok = j === q.a, r = settle(q.id, ok, curDay, false, 'rec'); for (const b2 of P9.querySelectorAll('[data-qz="' + i + '"]')) { const jj = +b2.dataset.o; if (jj === q.a) { b2.className = 'pri'; b2.textContent = '✔ ' + b2.textContent; } else { b2.disabled = true; if (jj === j) b2.textContent = '✖ ' + b2.textContent; } }
     const x9 = P9.querySelector('[data-qx="' + i + '"]'), nm = L2(BANK[q.id].t); if (x9) x9.textContent = ok ? (en() ? 'Right! ' : '맞았어요! ') + nm + ' ' + stars(r) + ' — ' + L2(q.xt) : (en() ? 'Not quite. ' : '아쉬워요. ') + L2(q.xt) + (en() ? ' It’ll come back tomorrow.' : ' 내일 다시 나와요.');
     if (CUR.every(c => c.done)) gift(P9); }); }
   function gift(P9) { const s = S(), D = dayRec(s, curDay); if (D.g || D.n < 2 || D.ok < D.n) return; D.g = 1; const e = GIFTS[curDay % GIFTS.length]; A.give(e); G.mark();

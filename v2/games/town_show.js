@@ -197,8 +197,8 @@ export function createShow(o) {
     const fd = Math.min(ss(0, 0.4, t), 1 - ss(sc.d - 0.4, sc.d, t)); if (fd < 1 && !(sc.end && t > 1)) { g.globalAlpha = 1 - fd; g.fillStyle = C.pap; g.fillRect(0, 0, VW, VH); g.globalAlpha = 1; }   /* 장면 사이 = 종이색으로 잠깐 */
     let c = sc.cap[0]; for (const q of sc.cap) if (t >= q[0]) c = q; const ck = si + ':' + c[0]; if (ck !== S.ci) { S.ci = ck; S.cap.textContent = c[1][D.en ? 1 : 0]; if (o.say && !S.paused) o.say(S.cap.textContent); }
     const B = sc.beat || []; if (S.bsc !== si) { S.bsc = si; S.bi = 0; while (S.bi < B.length && B[S.bi][0] < t - 0.3) S.bi++; } if (!S.paused) while (S.bi < B.length && B[S.bi][0] <= t) { B[S.bi][1](o.tone); S.bi++; }
-    if (sc.end && !S.learned) { S.learned = true; o.learn(sh.learn); }
+    if (sc.end && !S.learned) { S.learned = true; o.learn(sh.learn); if (o.seen) o.seen(S.id); }   /* REC-0 끝까지 본 쇼 */
     if ((S.nb += 1) % 6 === 0 || S.T >= S.tot || S.paused) S.bar.style.width = (S.T / S.tot * 100).toFixed(1) + '%'; }
   return { open, close, halt: stop, get on() { return !!S; }, info: () => S ? { id: S.id, T: +S.T.toFixed(1), tot: S.tot, ended: S.ended, paused: S.paused, cap: S.cap.textContent } : null, seek: T => { if (S) { S.T = clamp(T, 0, S.tot); S.bsc = -1; frame(); } }, pause: v => { if (S) { S.paused = !!v; if (!S.paused) go(); btn(); } },
-    list: () => Object.keys(SHOWS).map(k => ({ id: k, d: total(SHOWS[k]), learn: SHOWS[k].learn })) };
+    list: () => Object.keys(SHOWS).map(k => ({ id: k, d: total(SHOWS[k]), learn: SHOWS[k].learn, t: SHOWS[k].t })) };
 }

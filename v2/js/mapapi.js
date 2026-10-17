@@ -470,7 +470,7 @@ export function createMapApi(host, NAV, META) {
   const minimap = { show: o => MM.show(o), hide: () => MM.hide(), setMarks: m => MM.setMarks(m), setPeers: m => MM.setPeers(m), toggle: v => MM.toggle(v), zoom: z => MM.zoom(z),
     get zoomed() { return MM.zoomed; }, get visible() { return MM.visible; }, get big() { return MM.big; }, get marks() { return MM.marks; }, get ms() { return MM.ms; }, get el() { return MM.el; } };
   // 효과음(GAME-FIND-1): main.js 합성음 도우미 tone(주파수, 시작초, 길이, 파형, 크기, 끝주파수)을 host.ui.tone으로 받아 쓴다(없으면 조용히). 파일 없음·짧게
-  const SFX = { ding: [[988, 0, 0.16, 'sine', 0.2], [1319, 0.1, 0.32, 'sine', 0.18]], tick: [[660, 0, 0.09, 'triangle', 0.14]], go: [[523, 0, 0.12, 'triangle', 0.2], [784, 0.11, 0.28, 'triangle', 0.2]],
+  const SFX = { ding: [[988, 0, 0.16, 'sine', 0.2], [1319, 0.1, 0.32, 'sine', 0.18]], tick: [[660, 0, 0.09, 'triangle', 0.06]], go: [[523, 0, 0.12, 'triangle', 0.2], [784, 0.11, 0.28, 'triangle', 0.2]],
     done: [[523, 0, 0.14, 'triangle', 0.2], [659, 0.13, 0.14, 'triangle', 0.2], [784, 0.26, 0.14, 'triangle', 0.2], [1047, 0.39, 0.45, 'triangle', 0.22]],
     pick: [[1175, 0, 0.09, 'sine', 0.16], [1568, 0.06, 0.18, 'sine', 0.15]], buzz: [[196, 0, 0.3, 'square', 0.05, 150]],
     honk: [[440, 0, 0.11, 'square', 0.035], [554, 0, 0.11, 'square', 0.03], [440, 0.15, 0.13, 'square', 0.035], [554, 0.15, 0.13, 'square', 0.03]],   // TOWN LIFE-2: 짧은 경적 '빵빵'(차 앞을 막고 서 있을 때 — 작게)

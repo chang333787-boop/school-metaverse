@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
 const ID = process.argv[2] || 'ourtown', PORT = process.argv[3] || '8002';
 (async () => { const b = await chromium.launch({ args: ['--use-gl=angle', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const p = await b.newPage({ viewport: { width: 1280, height: 720 } }); const errs = [], bad = [];
   p.on('pageerror', e => errs.push(e.message.slice(0, 200))); p.on('console', m => { if (m.type() === 'error' && !/favicon|404|ERR_|pointer lock/.test(m.text())) errs.push(m.text().slice(0, 200)); });
-  await p.goto('http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0'); await p.waitForFunction(() => window.SM_TOWN, null, { timeout: 120000 }); await p.waitForTimeout(800); await p.evaluate(() => { const G = SM_TOWN.game && SM_TOWN.game(); if (G) { G.S.min = 12 * 60; G.setClock(false); } });   // GAME-1·B5: 가게는 여는 시각이 있어 낮 12시로 맞추고 시계 멈춤(문 드나들기만 봄)
+  await p.goto('http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1');   /* INTUIT-1: B·J를 누르므로 모두 연 화면 */ await p.waitForFunction(() => window.SM_TOWN, null, { timeout: 120000 }); await p.waitForTimeout(800); await p.evaluate(() => { const G = SM_TOWN.game && SM_TOWN.game(); if (G) { G.S.min = 12 * 60; G.setClock(false); } });   // GAME-1·B5: 가게는 여는 시각이 있어 낮 12시로 맞추고 시계 멈춤(문 드나들기만 봄)
   await p.evaluate(() => { const b = document.querySelector('.twn-p button'); if (b) b.click(); }); await p.waitForTimeout(4000);
   const W = ms => p.waitForTimeout(ms), st = () => p.evaluate(() => SM_TOWN.indoor.state()), pos = () => p.evaluate(() => { const q = SD2.map.player.get(); return [q.x, q.y, q.z]; });
   const list = await p.evaluate(() => SM_TOWN.indoor.list()), arena0 = (await st()).arena; let n = 0;

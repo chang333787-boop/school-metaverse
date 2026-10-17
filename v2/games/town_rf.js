@@ -39,6 +39,6 @@ export function createRF(A) {
     c.ku = ev => { if (cur === c && (ev.code === 'KeyE' || ev.code === 'Space')) { c.mg.up(); ev.stopImmediatePropagation(); } };
     addEventListener('keydown', c.kd, true); addEventListener('keyup', c.ku, true); el.querySelector('.x').onclick = () => end(-1); }
   function end(ok) { const c = cur; if (!c) return; cur = null; removeEventListener('keydown', c.kd, true); removeEventListener('keyup', c.ku, true); if (c.mg) c.mg.dispose(); setTimeout(() => c.el.remove(), 250); A.map.player.freeze(false);
-    if (ok < 0) return; const D = RF_GAMES[c.k]; A.skUp(D.sk, ok >= 2 ? 3 : 1); if (ok >= 1 && A.stamp(D.stamp)) A.toast('📒 ' + (en() ? 'New stamp in your codex: ' : '도감에 새 도장: ') + D.stamp + ' ' + L(D.t), 3); }
+    if (ok < 0) return; const D = RF_GAMES[c.k]; if (A.rec) A.rec('play', { k: c.k, g: ok >= 3 ? 2 : ok >= 1 ? 1 : 0 });   /* REC-0 학급 기록(점수 0~3 → 놀이 틀 gradeOf와 같은 셋) */ A.skUp(D.sk, ok >= 2 ? 3 : 1); if (ok >= 1 && A.stamp(D.stamp)) A.toast('📒 ' + (en() ? 'New stamp in your codex: ' : '도감에 새 도장: ') + D.stamp + ' ' + L(D.t), 3); }
   return { init, tick(dt) { if (cur && cur.mg) cur.mg.tick(dt); }, dispose() { clear(); }, get on() { return !!cur; }, spots: () => ({ ...spots, bendA }), play, end };
 }
