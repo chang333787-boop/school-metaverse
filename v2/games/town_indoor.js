@@ -96,9 +96,9 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en }) {
   const nrm3 = (a, b, c) => { const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2], x = uy * vz - uz * vy, y = uz * vx - ux * vz, z = ux * vy - uy * vx, l = Math.hypot(x, y, z) || 1; return [x / l, y / l, z / l]; };
 
   function finish(S) { const grp = new T3.Group(); grp.userData.fx = 1; for (const [A, mat] of [[S.A, MAT], [S.Ag, GLOW]]) { const m = meshOf(A, mat); if (m) grp.add(m); } for (const m of S.extra || []) grp.add(m); map.add(grp); return grp; }
-  const seatAt = (seats, sx, sz, y, yaw, back) => seats.push({ seat: [sx, y, sz], yaw, stand: [sx - Math.sin(yaw) * back, y, sz - Math.cos(yaw) * back] });   // 좌석 + 그 뒤 서는 자리(yaw = 보는 쪽)
+  const seatAt = (seats, sx, sz, y, yaw, back) =>   /* back < 0 = 앞에 섬(벽에 붙은 소파 — FIX-IN1: 서는 자리가 벽 밖이라 E가 안 닿던 것) */ seats.push({ seat: [sx, y, sz], yaw, stand: [sx - Math.sin(yaw) * back, y, sz - Math.cos(yaw) * back] });   // 좌석 + 그 뒤 서는 자리(yaw = 보는 쪽)
   function sitGuest(S, seats, i, k) { const s = seats[i]; if (!s) return; s.taken = true; guest((k9, a, y, b, sx, sy, sz, hex, r9) => part(S.A, k9, a, y, b, sx, sy, sz, hex, r9 || 0), s.seat[0], s.seat[1], s.seat[2], s.yaw, k, true); }
-  const standGuest = (S, x, y, z, ry, k) => guest((k9, a, y9, b, sx, sy, sz, hex, r9) => part(S.A, k9, a, y9, b, sx, sy, sz, hex, r9 || 0), x, y, z, ry, k, false);
+  const standGuest = (S, x, y, z, ry, k) => ((S.gp || (S.gp = [])).push([x, z]), guest((k9, a, y9, b, sx, sy, sz, hex, r9) => part(S.A, k9, a, y9, b, sx, sy, sz, hex, r9 || 0), x, y, z, ry, k, false));   /* S.gp = 서 있는 손님 자리(들어가는 자리를 비킴) */
 
   // ── 집 안 도우미(로컬 = 방 가운데 · 문 = +z) ──
   const putF = (S, id, x, z, ry = 0, y = 0) => { const c = Math.cos(ry), s9 = Math.sin(ry); furniture(id, (k, lx, ly, lz, sx, sy, sz, hex, gl) => part(gl ? S.Ag : S.A, k, S.at[0] + x + lx * c + lz * s9, S.at[1] + y + ly, S.at[2] + z - lx * s9 + lz * c, sx, sy, sz, hex, ry)); };   // 가구(앞 = ry 쪽)
@@ -156,7 +156,7 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en }) {
     const XE = W / 2 - 1.25, SX0 = W / 2 - 1.15, SX1 = W / 2 - 0.08, ZL = D / 2 - 1.4, ZH = -D / 2 + 1.6;
     P('b', (XE - W / 2) / 2, FH - 0.15, 0, XE + W / 2, 0.15, D, 0xc49a66); S.col(-W / 2, XE, -D / 2, D / 2, FH - 0.15, FH); P('b', (XE + W / 2) / 2, FH - 0.15, (-D / 2 + ZH) / 2, W / 2 - XE, 0.15, ZH + D / 2, 0xc49a66); S.col(XE, W / 2, -D / 2, ZH, FH - 0.15, FH);   // 2층 마루 · 계단참
     stairsL(S, SX0, SX1, ZL, ZH, 0, FH, 12); railL(S, XE - 0.05, ZH, XE - 0.05, D / 2, FH, 0x7a4fb8); for (const [x, z] of [[-1.6, -2], [-1.6, 1.6], [0.8, 0]]) P('c', x, FH - 0.18, z, 0.3, 0.03, 0, 0xfff6dc, 1);   // 계단 · 2층 난간 · 1층 천장 등
-    putF(S, 'd_i8', -W / 2 + 0.6, 1.6, Math.PI / 2); seatL(S, seats, -W / 2 + 0.66, 1.6, 0, Math.PI / 2, 0.85); colL(S, -W / 2 + 0.6, 1.6, 0.4, 1.1, -0.5, 1.2); putF(S, 'd_i7', 1.7, 1.6, -Math.PI / 2); colL(S, 1.7, 1.6, 0.25, 0.75, -0.5, 1.2);   // 소파 · TV
+    putF(S, 'd_i8', -W / 2 + 0.6, 1.6, Math.PI / 2); seatL(S, seats, -W / 2 + 0.66, 1.6, 0, Math.PI / 2, -0.85); colL(S, -W / 2 + 0.6, 1.6, 0.4, 1.1, -0.5, 1.2); putF(S, 'd_i7', 1.7, 1.6, -Math.PI / 2); colL(S, 1.7, 1.6, 0.25, 0.75, -0.5, 1.2);   // 소파 · TV
     putF(S, 'd_i16', -0.8, 1.6, Math.PI / 2); P('b', -1.2, 0, 1.6, 0.6, 0.4, 1.0, 0x7a5232); colL(S, -1.2, 1.6, 0.3, 0.5, -0.5, 0.42); putF(S, 'd_i2', -W / 2 + 0.4, 3.0);   // 깔개 · 낮은 탁자 · 램프
     P('b', -W / 2 + 0.45, 0, -D / 2 + 0.4, 0.8, 1.9, 0.7, 0xf6f6f2); P('b', -W / 2 + 0.75, 0.9, -D / 2 + 0.76, 0.04, 0.6, 0.03, 0x9aa0a6); colL(S, -W / 2 + 0.45, -D / 2 + 0.4, 0.4, 0.35, -0.5, 1.9);   // 냉장고
     P('b', -0.5, 0, -D / 2 + 0.35, 4.2, 0.88, 0.62, 0xf2efe8); P('b', -0.5, 0.88, -D / 2 + 0.35, 4.24, 0.05, 0.66, 0x8a8f95); P('b', -1.2, 0.93, -D / 2 + 0.36, 0.6, 0.01, 0.4, 0x5f6670); P('c', -1.2, 0.93, -D / 2 + 0.12, 0.025, 0.3, 0, 0xc0c4c8); for (const [a, b] of [[-0.15, -0.13], [0.15, -0.13], [-0.15, 0.13], [0.15, 0.13]]) P('c16', 0.8 + a, 0.93, -D / 2 + 0.35 + b, 0.09, 0.01, 0, 0xe0453a, 1);   // 부엌 조리대 · 개수대 · 화구(빛)
@@ -314,11 +314,25 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en }) {
     if (made.cook && o.onCook) { const p = AB(made.cook, made.cook.stand); hots.push(map.interact.add({ kind: 'game', x: p[0], y: p[1], z: p[2], r: 1.3, label: en ? '🍳 Cook (recipe book)' : '🍳 요리하기 (레시피북)', use: () => o.onCook() })); }   // C1 부엌
     if (made.bed && o.onBed) { const p = AB(made.bed, made.bed.stand), q = AB(made.bed, made.bed.top); hots.push(map.interact.add({ kind: 'game', x: p[0], y: p[1], z: p[2], r: 1.3, label: en ? '😴 Lie down' : '😴 눕기', use: () => o.onBed({ stand: p, top: q, yaw: made.bed.yaw || 0 }) })); }   // B6 침대
     for (const h of made.hot || []) hots.push(map.interact.add({ kind: h.kind, x: ox + h.at[0], y: oy + h.at[1], z: oz + h.at[2], r: 1.2, label: h.label, from: [ox + h.from[0], oy + h.from[1], oz + h.from[2]], to: [ox + h.to[0], oy + h.to[1], oz + h.to[2]], yaw: h.yaw, dur: h.dur }));
-    cur = { o, grp, cols, hots, anim: made.anim || [], made, spawn: [ox, oy + 0.05, oz + D / 2 - 2.6] }; setNight(night); return cur; }
+    cur = { o, grp, cols, hots, anim: made.anim || [], made, S, spawn: spawnOf(S, made, at) }; setNight(night); return cur; }
+  // FIX-IN1(교사 10-17 '마트 들어가니까 바로 껴서 진행 못 해'): 들어가는 자리를 '문에서 1.6m 안쪽 가운데'로 박아 두던 것 → 마트·편의점 둘째 진열대·초밥 벨트·마라 탁자 충돌 안이었음
+  //   → 방마다 문 쪽부터 안쪽으로 훑어 몸(0.45m)이 비고 앞·뒤·좌·우 1m가 트인 첫 자리(서 있는 손님 0.8m 밖) · 위층(다락) 충돌은 몸 높이 밖이면 셈하지 않음
+  const solid = (S, oy, x, z, r) => S.cols.some(c => c.y1 > oy + 0.3 && c.y0 < oy + 1.7 && x + r > c.x0 && x - r < c.x1 && z + r > c.z0 && z - r < c.z1);
+  const roomy = (S, oy, x, z) => !solid(S, oy, x, z, 0.45) && [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([a, b]) => !solid(S, oy, x + a * 0.5, z + b * 0.5, 0.35) && !solid(S, oy, x + a, z + b, 0.35));
+  function spawnOf(S, made, at) { const [ox, oy, oz] = at, D = made.D, W = made.W || 6, G9 = S.gp || [];
+    for (let dz = 1.6; dz < D - 1; dz += 0.2) for (let i = 0; i <= 2 * Math.floor(W / 2 - 1); i++) { const dx = (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.5, x = ox + dx, z = oz + D / 2 - dz; if (roomy(S, oy, x, z) && !G9.some(([gx, gz]) => Math.hypot(gx - x, gz - z) < 0.8)) return [x, oy + 0.05, z]; }
+    for (let dz = 1.0; dz < D - 0.6; dz += 0.1) for (let dx = 0; dx < W / 2 - 0.5; dx += 0.1) for (const s9 of [1, -1]) { const x = ox + dx * s9, z = oz + D / 2 - dz; if (!solid(S, oy, x, z, 0.4)) return [x, oy + 0.05, z]; }   /* 넓은 자리가 없으면 몸만 들어가는 곳 */
+    return [ox, oy + 0.05, oz + D / 2 - 1.2]; }
+  // 검사(하네스 · 게이트): 들어가는 자리에서 0.2m 칸으로 몸(0.3m)이 갈 수 있는 곳을 채워 → 나가기·계산대·요리·앉기 E 자리에 닿는지(위층 = 셈 밖)
+  function check() { if (!cur) return null; const S = cur.S, [ox, oy, oz] = cur.o.at, W = cur.made.W || 6, D = cur.made.D, st = 0.2, NXr = Math.round(W / st), NZr = Math.round(D / st), seen = new Uint8Array(NXr * NZr), cx = i => ox - W / 2 + (i + 0.5) * st, cz = j => oz - D / 2 + (j + 0.5) * st;
+    const sp = cur.spawn, i0 = Math.floor((sp[0] - ox + W / 2) / st), j0 = Math.floor((sp[2] - oz + D / 2) / st), Q = []; let n = 0; if (i0 >= 0 && j0 >= 0 && i0 < NXr && j0 < NZr && !solid(S, oy, cx(i0), cz(j0), 0.3)) { seen[j0 * NXr + i0] = 1; Q.push(i0, j0); }
+    while (Q.length) { const j = Q.pop(), i = Q.pop(); n++; for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const i2 = i + a, j2 = j + b; if (i2 < 0 || j2 < 0 || i2 >= NXr || j2 >= NZr || seen[j2 * NXr + i2]) continue; seen[j2 * NXr + i2] = 1; if (!solid(S, oy, cx(i2), cz(j2), 0.3)) Q.push(i2, j2); else seen[j2 * NXr + i2] = 2; } }
+    const near = h => { for (let j = 0; j < NZr; j++) for (let i = 0; i < NXr; i++) if (seen[j * NXr + i] === 1 && Math.hypot(cx(i) - h.x, cz(j) - h.z) < h.r - 0.1) return true; return false; };
+    return { spawnFree: !solid(S, oy, sp[0], sp[2], 0.3), roomy: roomy(S, oy, sp[0], sp[2]), cells: n, hots: cur.hots.map(h => h.hot).map(h => ({ label: h.label, up: h.y > oy + 0.6, ok: h.y > oy + 0.6 ? null : near(h) })) }; }
   function exit() { if (!cur) return null; const c = cur; cur = null; map.remove(c.grp); c.grp.traverse(m => { if (m.isMesh) m.geometry.dispose(); }); for (const h of c.cols) removeCollider(h); for (const h of c.hots) h.remove(); return c.o; }
   function setNight(v) { night = !!v; MAT.emissive.setHex(night ? 0x2a2622 : 0x000000); }   // 밤 = 방 안 등이 켜진 것처럼 조금 밝게(새 빛 없음)
   return {
-    enter, exit, setNight, get active() { return cur ? cur.o : null }, get spawn() { return cur ? cur.spawn : null },
+    enter, exit, setNight, check, get active() { return cur ? cur.o : null }, get spawn() { return cur ? cur.spawn : null },
     get info() { return cur ? { kind: cur.o.kind, look: cur.o.look || null, items: (cur.made.items || []).map(t => (kidItem(t, cur.o.kid) ? '🙋 ' : '✨ ') + t), W: cur.made.W, D: cur.made.D, H: cur.made.H, cols: cur.cols.length, hots: cur.hots.length, seats: (cur.made.seats || []).filter(s => !s.taken).length, tris: cur.grp.children.reduce((s, m) => s + (m.geometry ? m.geometry.attributes.position.count / 3 : 0), 0), meshes: cur.grp.children.length, at: cur.o.at } : null },
     tick(dt) { if (!cur) return; for (const a of cur.anim) if (a.spin) a.m.rotation.y += dt * a.spin; },
     dispose() { exit(); for (const k in G) G[k].dispose(); MAT.dispose(); GLOW.dispose(); },
