@@ -1,0 +1,67 @@
+// 🚇 지하철(SUBWAY-1 · 사용자 10-17 'J를 줄일 거면 지하철 · 적절한 곳에 역 · 버스도 순간 이동이면 안 돼'): 승강장·열차·터널 = 마을 밖 하늘 높이 따로 떨어진 방 하나(처음 탈 때 지음 · 탈 때만 보임)
+//   타기 = 계단을 내려가요(어두워짐) → 승강장(역 이름판 · 노선도 · 스크린도어) → 열차가 들어와 섬 → 탐(열차 안 1인칭 · 창밖 터널 불빛이 지나감 · '이번 역은 ○○역입니다') → 내릴 역 승강장 → 계단 올라 그 역 입구 앞(마을이 옮김)
+//   건너뛰기 E = 한 번 빨리(5배) · 두 번 = 바로 나감 · 매 프레임 일 = 탈 때만(열차·불빛 띠 자리 몇 줄 · 새 객체 X) · 새 Light X(불빛 = 빛 재질)
+//   그리는 것 = 승강장 3덩어리(단단한 것 · 유리 · 빛) + 판 2 · 열차 2 · 터널 2 — 탈 때만 보이고 바깥 마을은 숨김(실내와 같은 결)
+export function createSubway(A) {
+  const { T3, map } = A, OX = A.at[0], OY = A.at[1], OZ = A.at[2], LINE = A.color, LC = new T3.Color(LINE).getHex();
+  const geos = [], mats = [], texs = [], cols = [];
+  let G = null, ROOM = null, TRAIN = null, TUN = null, LAMP = null, NAME = null, LMAP = null, R = null, CHIP = null;
+  const en = () => A.en();
+  // 상자 묶음 → 메시 하나(꼭짓점 색 · 배 모양과 같은 틀)
+  function pack(fn, mat) { const P = [], N = [], C = [], c9 = new T3.Color(); const B = (sx, sy, sz, hex, x, y, z) => { const g0 = new T3.BoxGeometry(sx, sy, sz), g = g0.toNonIndexed(); g0.dispose(); g.translate(x, y + sy / 2, z); P.push(...g.attributes.position.array); N.push(...g.attributes.normal.array); c9.setHex(hex); for (let i = 0; i < g.attributes.position.count; i++) C.push(c9.r, c9.g, c9.b); g.dispose(); };
+    fn(B); const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(N, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(C, 3)); geos.push(g); const m = new T3.Mesh(g, mat); m.userData.fx = 1; return m; }
+  const canvasPlane = (w, h, cw, ch) => { const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; const tx = new T3.CanvasTexture(cv); tx.colorSpace = T3.SRGBColorSpace; tx.anisotropy = 4; texs.push(tx); const m = new T3.MeshBasicMaterial({ map: tx }); mats.push(m); const pg = new T3.PlaneGeometry(w, h); geos.push(pg); const pl = new T3.Mesh(pg, m); pl.userData = { fx: 1, cv, tx }; return pl; };
+  function build() { if (G) return; const solid = new T3.MeshLambertMaterial({ vertexColors: true }), lamp = new T3.MeshBasicMaterial({ vertexColors: true }), glass = new T3.MeshBasicMaterial({ color: 0x9fd3ea, transparent: true, opacity: 0.26, depthWrite: false }); mats.push(solid, lamp, glass);
+    G = new T3.Group(); G.position.set(OX, OY, OZ); G.userData.fx = 1; G.visible = false;
+    // 승강장(z 0~5.9 = 기다리는 곳 · 5.9 = 스크린도어 · 6~11.5 = 선로)
+    ROOM = new T3.Group(); ROOM.add(pack(B => { B(52, 0.4, 8.4, 0xc9c4b8, 0, -0.4, 1.7); B(52, 0.02, 0.3, 0xf2c230, 0, 0, 5.3); B(52, 6.6, 0.3, 0xece6d6, 0, -1.6, -2.65); B(52, 0.3, 14.6, 0xd9d4c8, 0, 5.0, 4.4); for (const sx of [-1, 1]) B(0.3, 6.6, 14.6, 0xece6d6, sx * 26.15, -1.6, 4.4);
+      B(52, 0.3, 5.6, 0x55524c, 0, -1.6, 8.7); for (const rz of [7.75, 9.25]) B(52, 0.12, 0.12, 0x9aa3ad, 0, -1.3, rz); B(52, 6.6, 0.3, 0x6b6f75, 0, -1.6, 11.65);   /* 바닥 · 노란 선 · 벽 · 천장 · 선로 바닥 · 레일 · 터널 쪽 벽 */
+      B(52, 0.5, 0.2, 0x2b2420, 0, 2.4, 5.95); for (let x = -24; x <= 24; x += 4) B(0.25, 2.4, 0.25, 0x2b2420, x, 0, 5.95); for (const x of [-18, -6, 6, 18]) B(0.6, 5, 0.6, 0xd9d4c8, x, 0, 0.6); for (const x of [-12, 12]) { B(2.4, 0.45, 0.6, LC, x, 0, -1.7); B(2.4, 0.5, 0.12, LC, x, 0.45, -2.0); } }, solid));   /* 스크린도어 틀 · 기둥 · 의자 */
+    ROOM.add(pack(B => { for (let x = -22; x <= 22; x += 4) B(3.7, 2.35, 0.06, 0x9fd3ea, x, 0.02, 5.95); }, glass));
+    ROOM.add(pack(B => { for (let x = -21; x <= 21; x += 6) for (const z of [1.2, 4.4]) B(3, 0.06, 0.4, 0xfff6d8, x, 4.93, z); }, lamp));
+    NAME = canvasPlane(7.2, 1.6, 1024, 228); NAME.position.set(0, 3.3, -2.48); LMAP = canvasPlane(11, 1.5, 1408, 192); LMAP.position.set(13.5, 2.3, -2.48); const EXIT = canvasPlane(4.2, 0.8, 512, 96); EXIT.position.set(-15, 3.6, -2.48); ROOM.add(NAME, LMAP, EXIT);
+    { const g = EXIT.userData.cv.getContext('2d'); g.fillStyle = '#f2c230'; g.fillRect(0, 0, 512, 96); g.fillStyle = '#2b2420'; g.font = '800 52px ' + A.font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(en() ? '↑ Way out' : '↑ 나가는 곳', 256, 50); EXIT.userData.tx.needsUpdate = true; }
+    // 열차(가운데 z 8.5 · 바닥 = 승강장 높이 · 창 = 옆 띠 열림)
+    TRAIN = new T3.Group(); TRAIN.add(pack(B => { B(18, 0.3, 2.8, 0x8a8f96, 0, -0.3, 0); B(18, 0.8, 2.6, 0x3a3f47, 0, -1.1, 0); for (const sz of [-1, 1]) { B(18, 0.9, 0.1, 0xf4f1e8, 0, 0, sz * 1.35); B(18.02, 0.18, 0.14, LC, 0, 0.72, sz * 1.36); B(18, 0.42, 0.1, 0xf4f1e8, 0, 2.0, sz * 1.35); for (let x = -8.5; x <= 8.6; x += 1.7) B(0.16, 1.12, 0.12, 0xf4f1e8, x, 0.9, sz * 1.35); B(16, 0.45, 0.5, LC, 0, 0, sz * 1.0); B(16, 0.5, 0.1, LC, 0, 0.45, sz * 1.24); }
+      B(18, 0.25, 2.8, 0xd9dde2, 0, 2.42, 0); for (const sx of [-1, 1]) B(0.12, 2.67, 2.8, 0xf4f1e8, sx * 9.0, 0, 0); for (const x of [-6, -2, 2, 6]) B(0.06, 2.42, 0.06, 0xf2c230, x, 0, 0); }, solid));   /* 바닥 · 아래 · 옆벽 · 노선 색 띠 · 창 기둥 · 긴 의자 · 지붕 · 끝벽 · 손잡이 기둥 */
+    TRAIN.add(pack(B => { B(16, 0.04, 0.3, 0xfff6d8, 0, 2.38, 0); }, lamp)); TRAIN.position.set(0, 0, 8.5);
+    // 터널(탈 때만 · 열차 둘레 · 불빛 띠는 8m마다 — 옮겨서 지나가 보이게)
+    TUN = new T3.Group(); TUN.add(pack(B => { for (const z of [6.6, 10.4]) B(130, 6, 0.3, 0x7d8189, 0, -1.6, z); B(130, 0.3, 4.2, 0x5a5e66, 0, 3.2, 8.5); B(130, 0.3, 4.2, 0x4a4d54, 0, -1.6, 8.5); }, solid));
+    LAMP = pack(B => { for (let x = -64; x <= 64; x += 4) for (const z of [6.79, 10.21]) { B(1.4, 0.18, 0.06, 0xffe9a8, x, 1.45, z); B(0.35, 0.12, 0.06, 0xff8a3d, x + 2, 0.75, z); B(0.4, 4.6, 0.06, 0x3a3d42, x + 2, -1.3, z); } }, lamp);   /* 4m마다 불빛 · 주황 표시등 · 어두운 기둥 */ TUN.add(LAMP); TUN.visible = false;
+    G.add(ROOM, TRAIN, TUN); G.traverse(o => { o.castShadow = false; o.receiveShadow = false; }); map.add(G);
+    cols.push(map.collider.add({ x0: OX - 26, x1: OX + 26, y0: OY - 0.4, y1: OY, z0: OZ - 2.5, z1: OZ + 5.9 }), map.collider.add({ x0: OX - 8.9, x1: OX + 8.9, y0: OY - 0.4, y1: OY, z0: OZ + 7.2, z1: OZ + 9.8 })); }   // 승강장·열차 바닥(서 있는 곳만)
+  // 역 이름판(한 칸 앞뒤 역) · 노선도(지금 역 · 내릴 역)
+  function drawName(k, dir) { const S = R.S, g = NAME.userData.cv.getContext('2d'), W = 1024, H = 228; g.fillStyle = '#fffdf5'; g.fillRect(0, 0, W, H); g.fillStyle = LINE; g.fillRect(0, 0, W, 34); g.fillRect(0, H - 34, W, 34); g.fillStyle = '#2b2420'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '900 86px ' + A.font; g.fillText(S[k].name, W / 2, H / 2 + 2);
+    g.font = '700 34px ' + A.font; const pv = S[k - dir], nx = S[k + dir]; if (pv) { g.textAlign = 'left'; g.fillText('← ' + pv.name, 30, H / 2 + 4); } if (nx) { g.textAlign = 'right'; g.fillText(nx.name + ' →', W - 30, H / 2 + 4); } NAME.userData.tx.needsUpdate = true; }
+  function drawMap(k, j) { const S = R.S, g = LMAP.userData.cv.getContext('2d'), W = 1408, H = 192, n = S.length, x0 = 80, x1 = W - 80, X = i => x0 + (x1 - x0) * (n > 1 ? i / (n - 1) : 0.5); g.fillStyle = '#fffdf5'; g.fillRect(0, 0, W, H); g.strokeStyle = LINE; g.lineWidth = 14; g.lineCap = 'round'; g.beginPath(); g.moveTo(x0, 70); g.lineTo(x1, 70); g.stroke();
+    g.textAlign = 'center'; g.textBaseline = 'top'; for (let i = 0; i < n; i++) { const x = X(i), cur = i === k, dst = i === j; g.beginPath(); g.arc(x, 70, cur ? 22 : 15, 0, 7); g.fillStyle = cur ? '#e0453a' : '#ffffff'; g.fill(); g.lineWidth = 6; g.strokeStyle = dst && !cur ? '#e0453a' : LINE; g.stroke(); g.fillStyle = cur || dst ? '#2b2420' : '#56606b'; g.font = (cur || dst ? '900 ' : '700 ') + '27px ' + A.font; g.fillText(S[i].name, x, 102, Math.max(90, (x1 - x0) / Math.max(1, n - 1) - 8)); }
+    g.font = '800 26px ' + A.font; g.textAlign = 'left'; g.fillStyle = '#e0453a'; g.fillText(en() ? '● You are here' : '● 지금 여기', 18, 150); LMAP.userData.tx.needsUpdate = true; }
+  // 아래 알림 칩(버스와 같은 꼴)
+  function chip() { if (CHIP) return CHIP; const el = document.createElement('div'); el.className = 'twn-sub'; el.style.cssText = 'position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:47;display:flex;gap:10px;align-items:center;background:#2b2420;color:#fff8ea;border:2px solid ' + LINE + ';border-radius:999px;padding:6px 8px 6px 16px;font:800 15px/1.2 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif,SMEmoji;box-shadow:0 3px 0 rgba(0,0,0,.3);max-width:94vw';
+    el.innerHTML = '<span></span><button style="font:inherit;font-weight:800;border:0;border-radius:999px;padding:7px 14px;min-height:38px;background:#f2c230;color:#2b2420;cursor:pointer"></button>'; el.onclick = e => { if (e.target.closest('button')) skip(); }; document.body.appendChild(el); CHIP = el; return el; }
+  const say = t => { chip().firstChild.textContent = t; }, btn = t => { chip().lastChild.textContent = t; };
+  const wait = ms => new Promise(r => setTimeout(r, ms)), alive = r => R === r && !A.dead();
+  const putOn = (x, y, z, h) => { map.player.teleport([OX + x, OY + y + 0.02, OZ + z]); if (h != null) map.player.face(h); };
+  // 타기: S = 역 목록(노선 차례) · i = 탄 역 · j = 내릴 역
+  async function ride(S, i, j) { if (R) return; build(); const r = R = { S, i, j, k: i, dir: j > i ? 1 : -1, ph: 'down', t: 0, fast: 0, s: 0, v: 0, T: 1, first: map.player.first }; A.onStart();
+    say('🚇 ' + (en() ? 'Down the stairs to ' + S[i].name : S[i].name + ' 계단을 내려가요')); btn(en() ? 'Skip (E)' : '건너뛰기 (E)');
+    const f = map.fade(0.9, '#1d2b3a'); await wait(420); if (!alive(r)) return; A.town(false); G.visible = true; ROOM.visible = true; TUN.visible = false; TRAIN.position.x = -70; drawName(i, r.dir); drawMap(i, j); map.player.view('third'); map.player.show(true); map.player.freeze(true); putOn(0, 0, 4.2, 180); r.ph = 'in'; r.t = 0;
+    say('🚇 ' + (en() ? S[i].name + ' platform — the train is coming' : S[i].name + ' 승강장이에요. 열차가 들어와요')); await f; }
+  async function board(r) { r.ph = 'wait'; const f = map.fade(0.6, '#1d2b3a'); await wait(280); if (!alive(r)) return; ROOM.visible = false; TUN.visible = true; TRAIN.position.x = 0; map.player.view('first'); map.player.show(false); map.player.ride(true); putOn(-3, 0, 8.4, 135); segStart(r); await f; }   /* 긴 의자 앞 · 맞은편 창 쪽을 비스듬히(지나가는 불빛이 보이게) */
+  function segStart(r) { const a = r.S[r.k], b = r.S[r.k + r.dir], d = Math.hypot(b.x - a.x, b.z - a.z); r.T = Math.max(4, Math.min(8, d / 22)) / (r.fast ? 5 : 1); r.t = 0; r.ph = 'ride'; r.ann = 0; say('🚇 ' + (en() ? 'Next station: ' + b.name : '다음 역은 ' + b.name + '입니다')); }
+  async function arrive(r) { r.ph = 'out'; const S = r.S, j = r.j; say('🚇 ' + (en() ? S[j].name + '. Doors open on the right.' : '이번 역은 ' + S[j].name + '입니다. 내리실 문은 오른쪽입니다.')); await wait(r.fast ? 200 : 1300); if (!alive(r)) return;
+    let f = map.fade(0.7, '#1d2b3a'); await wait(330); if (!alive(r)) return; TUN.visible = false; ROOM.visible = true; TRAIN.position.x = 0; drawName(j, r.dir); drawMap(j, j); map.player.ride(false); map.player.view('third'); map.player.show(true); putOn(0, 0, 4.2, 180); say('🚇 ' + (en() ? S[j].name + ' — up the stairs to the street' : S[j].name + '이에요. 계단으로 올라가요')); await f;
+    await wait(r.fast ? 300 : 1700); if (!alive(r)) return; exitUp(r); }
+  async function exitUp(r) { if (r.ph === 'up') return; r.ph = 'up'; const f = map.fade(0.8, '#fffbe8'); await wait(380); if (!alive(r)) return; end(); A.onExit(r.j, r.first); await f; }
+  function end() { const r = R; R = null; if (G) G.visible = false; if (CHIP) { CHIP.remove(); CHIP = null; } map.player.ride(false); map.player.show(true); if (r) map.player.view(r.first ? 'first' : 'third'); A.town(true); A.onEnd(); }
+  function skip() { const r = R; if (!r || r.ph === 'up' || r.ph === 'down') return; if (!r.fast && r.ph !== 'out') { r.fast = 1; if (r.ph === 'ride') r.T = Math.max(0.6, (r.T - r.t) / 5) + r.t; btn(en() ? 'Get out now (E)' : '바로 나가기 (E)'); return; } exitUp(r); }   /* 한 번 = 빨리 · 두 번 = 바로 입구 밖 */
+  function abort() { const r = R; if (!r) return; end(); A.onExit(r.k, true); }   /* 다른 순간 이동이 끼어들면 = 지금 역 입구로 먼저 나옴(하늘 방에 남지 않게) */
+  function tick(dt) { const r = R; if (!r) return; r.t += dt;
+    if (r.ph === 'in') { const u = Math.min(1, r.t / (r.fast ? 0.8 : 3)), k = 1 - (1 - u) * (1 - u) * (1 - u); TRAIN.position.x = -70 * (1 - k); TRAIN.updateMatrixWorld(true); if (u >= 1 && r.t > (r.fast ? 0.9 : 3.6)) board(r); return; }
+    if (r.ph === 'ride') { const u = Math.min(1, r.t / r.T), v = 16 * Math.min(1, u / 0.22, (1 - u) / 0.22) * (r.fast ? 2.5 : 1); r.s += v * dt; LAMP.position.x = -(r.s % 4); LAMP.updateMatrixWorld(true);
+      if (!r.ann && u > 0.72) { r.ann = 1; const b = r.S[r.k + r.dir]; say('🚇 ' + (en() ? 'This station: ' + b.name : '이번 역은 ' + b.name + '입니다')); }
+      if (u >= 1) { r.k += r.dir; if (r.k === r.j) { arrive(r); return; } r.ph = 'stop'; r.t = 0; drawMap(r.k, r.j); } return; }
+    if (r.ph === 'stop' && r.t > (r.fast ? 0.15 : 1.5)) segStart(r); }
+  function dispose() { abort(); if (G) map.remove(G); for (const c of cols) c.remove(); cols.length = 0; for (const g of geos) g.dispose(); for (const m of mats) m.dispose(); for (const t of texs) t.dispose(); G = null; }
+  return { ride, skip, abort, tick, dispose, get on() { return !!R; }, get ph() { return R ? R.ph : null; } };
+}

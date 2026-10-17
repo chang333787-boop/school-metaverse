@@ -14,9 +14,9 @@ export const SHORE = [
 for (const b of SHORE) { b.icon = '🦀'; b.hint = b.sea.length === 4 ? ['썰물 때 갯벌에서 (언제나)', 'On the mudflat at low tide (all year)'] : ['썰물 때 갯벌에서 (봄~가을)', 'On the mudflat at low tide (spring to autumn)']; }
 export const shoreAt = (sea, k) => { const L = SHORE.filter(b => b.sea.includes(sea)); return L.length ? L[(k >>> 0) % L.length] : null; };
 
-// 물때(분 = 게임 시각 0~1440): 그날 첫 간조 = 날마다 50분씩 늦어짐(놀이용으로 05:00~14:00 사이를 돎 · 1일째 = 10:00)
+// 물때(분 = 게임 시각 0~1440): 그날 첫 간조 = 날마다 50분씩 늦어짐(1일째 = 10:00 · 한 주기 745분을 넘으면 앞 썰물로 이어짐)
 export const TIDE_P = 745, LOW_W = 94;
-export const lowAt = d => 300 + ((d * 50 + 250) % 540);
+export const lowAt = d => 300 + ((d * 50 + 250) % TIDE_P);   /* FIX-CX6(코덱스 점검): % 540이면 열흘쯤마다 간조가 거꾸로 뛰어 '날마다 50분 늦어짐'과 어긋남 → 한 물때 주기(745분)로 돌면 c와 c−745가 같은 물때라 끊김 없음 · 그날 낮(05:00~17:25)에 썰물이 늘 하나 이상 */
 export const tideLvl = (d, m) => (1 - Math.cos(2 * Math.PI * (m - lowAt(d)) / TIDE_P)) / 2;   // 0 = 가장 빠짐 · 1 = 가장 참
 export const isLow = (d, m) => { const x = ((m - lowAt(d)) % TIDE_P + TIDE_P) % TIDE_P; return x <= LOW_W || x >= TIDE_P - LOW_W; };
 export function lowsOf(d) { const c = lowAt(d), out = []; for (const k of [-1, 0, 1]) { const a = c + k * TIDE_P - LOW_W, b = c + k * TIDE_P + LOW_W; if (b > 360 && a < 1440) out.push([Math.max(360, a), Math.min(1440, b)]); } return out; }   // 그날(06~24시) 썰물 때

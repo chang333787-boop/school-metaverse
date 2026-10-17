@@ -35,7 +35,7 @@ export const PERKS = {
   farm: [[3, 'crop', 1, T2('거둘 때 하나 더', 'One more when you harvest')], [6, 'crop', 2, T2('거둘 때 둘 더', 'Two more when you harvest')], [10, 'badge', 1, T2('🌱 텃밭 지기 배지', '🌱 Garden keeper badge')]],
   look: [[2, 'near', 20, T2('작은 곤충을 더 멀리서(20m) 알아채요', 'Notice small insects from farther away (20 m)')], [4, 'parts', 1, T2('돋보기 창에 몸 부분 이름(머리·가슴·배)', 'Body part labels in the magnifier (head, thorax, abdomen)')], [6, 'ff', 200, T2('여름밤 반딧불이를 더 많이 봐요', 'See more fireflies on summer nights')], [10, 'badge', 1, T2('🔍 꼬마 박사 배지', '🔍 Little scientist badge')]],
   trade: [[3, 'price', 1.05, T2('장터에서 5% 더 받아요', 'Get 5% more at the market')], [6, 'price', 1.1, T2('장터에서 10% 더 받아요', 'Get 10% more at the market')], [10, 'badge', 1, T2('🛒 살림 고수 배지', '🛒 Market master badge')]],
-  explore: [[2, 'compass', 1, T2('작은 지도에도 🧭 방위표(동서남북)', '🧭 Compass rose on the mini-map too')], [4, 'scale', 1, T2('작은 지도에도 📏 축척 막대(실제 거리)', '📏 Scale bar on the mini-map too')], [6, 'fast', 1.08, T2('걸음이 조금 빨라져요', 'You walk a little faster')], [10, 'badge', 1, T2('🧭 마을 길잡이 배지', '🧭 Town guide badge')]],
+  explore: [[2, 'compass', 1, T2('🧭 방위표 — 작은 지도 + 나침반 띠에 8방위(북동·남동…)', '🧭 Compass rose on the mini-map + 8 directions on the compass strip')], [4, 'scale', 1, T2('작은 지도에도 📏 축척 막대(실제 거리)', '📏 Scale bar on the mini-map too')], [6, 'fast', 1.08, T2('걸음이 조금 빨라져요', 'You walk a little faster')], [10, 'badge', 1, T2('🧭 마을 길잡이 배지', '🧭 Town guide badge')]],
 };
 export function perk(S, k, kind, def) { let v = def; for (const [L, kd, val] of PERKS[k] || []) if (kd === kind && lv(S, k) >= L) v = val; return v; }
 // 지식 카드(레벨 3·5·8 · 생활·자연 상식 — 사실만)

@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
 import { attachLook, openLookPanel, parseLook, lookColors } from './look.js?v=1';
-import { SET, openSetPanel } from './settings.js?v=1';   // SET-1 설정·접근성(글씨·색 구분·소리 끄기·흔들림·읽어 주기 — body 꼬리표 · 홍보판 = 기본값)
+import { SET, openSetPanel } from './settings.js?v=2';   // SET-1 설정·접근성(글씨·색 구분·소리 끄기·흔들림·읽어 주기 — body 꼬리표 · 홍보판 = 기본값)
 import { afterRender, takePhoto, openPhotoPanel } from './photo.js?v=1';   // PHOTO-1 사진관(렌더 바로 뒤 한 번 잡기 · 이 기기 IndexedDB)   // LOOK-1 내 모습(모자·윗옷·바지·머리·피부 색 — 정점 색만 · 홍보판 = 기본)
 import { buildWorld } from './world.js?v=158';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
@@ -1548,7 +1548,7 @@ function emoChip(on) {
   if (!document.getElementById('emo-css')) { const st = document.createElement('style'); st.id = 'emo-css'; st.textContent = '#mpEmo.open{z-index:44!important;align-items:flex-start!important}#mpEmo .emo-bar{flex-wrap:wrap;max-width:min(330px,calc(100vw - 70px))}#mpEmo .emo-bar span{font-size:22px;padding:2px 4px;cursor:pointer;border-radius:8px}#mpEmo .emo-bar span:hover{background:rgba(255,255,255,.18)}body.touch #mpEmo .emo-bar span{min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}'; document.head.appendChild(st); }
   emoEl = document.createElement('div'); emoEl.id = 'mpEmo'; emoEl.className = 'chip'; emoEl.title = '몸짓·이모지(친구 방에 있으면 친구에게도 보여요)'; emoEl.style.cssText = 'left:10px;top:84px;cursor:pointer;display:flex;gap:2px;align-items:center;padding:4px 6px;pointer-events:auto';
   emoEl.innerHTML = '<span data-e="t" style="padding:2px 6px">😀</span><span class="emo-bar" style="display:none;gap:2px"></span>';
-  import('./net.js?v=13').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" title="' + M.EMOTE_T[i] + '" role="button" aria-label="' + M.EMOTE_T[i] + '">' + x + '</span>').join(''); });
+  import('./net.js?v=14').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" title="' + M.EMOTE_T[i] + '" role="button" aria-label="' + M.EMOTE_T[i] + '">' + x + '</span>').join(''); });
   emoEl.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-e]'); if (!b) return; const bar = emoEl.querySelector('.emo-bar');
     if (b.dataset.e === 't') { const op = bar.style.display === 'none'; bar.style.display = op ? 'flex' : 'none'; emoEl.classList.toggle('open', op); return; } if (doEmote(+b.dataset.e)) { bar.style.display = 'none'; emoEl.classList.remove('open'); } });   // 열린 동안 = 할 일 줄 등 위로(휴대폰 마을에서 둘째 줄이 가리던 것)
   document.body.appendChild(emoEl);
@@ -1556,7 +1556,7 @@ function emoChip(on) {
 if (!window.SM_PROMO && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) emoChip(true);   // EMOTE-2: 혼자일 때도(학교·마을) · 홍보판·검사 화면 없음
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=13'), import('./lobby.js?v=19')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=14'), import('./lobby.js?v=19')]).then(([N, L]) => {
     // ROOM-1(10-05 교사 '멀티방을 게임으로 들어가는 게 아니라 멀티방을 만들고 그 안에서 모드를 정하는 게 직관적일까?'): 방 먼저 → 방을 만든 선생님이 👥 창 '🎮 다 같이 놀이'를 고르면 방 친구 모두 그 놀이 대기실로
     //   방 놀이 번호 = ctl/cmd d — 선생님 신호(📣·✋·▶·🎮)마다 지금 방 놀이를 같이 실음(cmd는 마지막 하나만 남으므로 — 늦게 들어온 친구·새로고침한 화면도 앎 · 규칙 그대로)
     //   ⚠️ 번호는 뒤에만 더한다(옛 화면과 어긋나지 않게) · 메뉴(오프닝·🎮)에는 registry room:true 놀이가 안 보임 — 혼자 연습 카드만

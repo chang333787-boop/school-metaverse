@@ -208,7 +208,7 @@ export function createNet(o) {
   }
   const onLook = () => { if (joined && !dead && kind === 'kid') req('/players/' + id, 'PATCH', { k: myK() }); };   // LOOK-1: 모습을 바꾸면 옷 코드만 한 번
   addEventListener('sm-look', onLook);
-  const leave = () => { if (dead) return; dead = true; removeEventListener('sm-look', onLook); if (es) es.close(); req('/players/' + id, 'DELETE'); for (const pid of [...others.keys()]) drop(pid); if (selfE) { scene.remove(selfE.s); selfE.s.material.dispose(); } for (const t of ETEX) if (t) t.dispose(); };
+  const leave = () => { if (dead) return; dead = true; removeEventListener('sm-look', onLook); if (es) es.close(); req('/players/' + id, 'DELETE'); for (const pid of [...others.keys()]) drop(pid); if (selfE) { scene.remove(selfE.s); selfE.s.material.dispose(); } for (const t of ETEX) if (t) t.dispose(); removeEventListener('pagehide', leave); if (selfB) { scene.remove(selfB.s); if (selfB.s.material.map) selfB.s.material.map.dispose(); selfB.s.material.dispose(); selfB = null; } mat.dispose(); };   /* FIX-CX8(코덱스 점검): 방을 나갈 때 pagehide 리스너·내 말풍선·공유 재질도 치움(들고 나기를 되풀이하면 쌓이던 것) */
   addEventListener('pagehide', leave);
   let joined = false;
   return {
