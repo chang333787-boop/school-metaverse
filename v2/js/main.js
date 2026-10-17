@@ -8,7 +8,7 @@ import { buildWorld } from './world.js?v=158';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=85';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=86';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=11';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=28';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -429,6 +429,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) keysC
 let camYaw = 0, camPitch = 0.3, camFirst = false;
 addEventListener('keydown', e => { if (e.code === 'KeyV' && !e.repeat) camFirst = !camFirst; });   // 1인칭 ↔ 3인칭(누르고 있어 자동 반복돼도 한 번만)
 const CAM_D = 6.3;
+let roomLift = 0;   // INDOOR-CAM(10-17): 게임 방 안에서 뒤가 벽·선반이면 카메라를 위로 올리는 양(부드럽게)
 let camD = CAM_D, camLift = 0;   // CAM-6(10-15 마을 산): 오르막·뒤가 높은 비탈에서 카메라를 들어 올리는 양(부드럽게)
 canvas.addEventListener('click', () => { if (!TOUCH.on && !CTRL.freeMouse) canvas.requestPointerLock(); });   // 터치 기기엔 포인터 잠금이 없다(드래그가 시점) · FREE-MOUSE면 잠그지 않음
 // 마우스 시점(PERF-WIN): 움직임을 모았다가 프레임마다 한 번 더한다(mouseApply — 이벤트 수·프레임 수와 무관하게 같은 양 · 느린 PC에서 여러 이벤트가 한 프레임에 몰려도 부드럽게). 감도는 예전 그대로(0.0026·0.0022 rad/px).
@@ -571,11 +572,12 @@ function step(dt) {
     camera.lookAt(hx + rx, hy, hz + rz);
   } else {
     if (camBY === null || !POL9 || SE || CTRL.ride || ACT.anim || Math.abs(P.y - camBY) > 2.5) camBY = P.y; else { const tY = P.ground ? P.y : Math.min(P.y, camBY + (P.y - camBY) * 0.35); camBY += (tY - camBY) * (1 - Math.exp(-dt * (P.ground ? 10 : 4))); }   /* MOTION-1: 점프하면 화면 속 아이가 올라가 보이게 · 인도 턱에서 튀지 않게(순간이동·탈것·행동 = 바로) */
-    const hx = SE ? SE.x : P.x, hy = (SE ? SE.y + 0.1 : camBY) + headH, hz = SE ? SE.z : P.z, CD = indoor ? 3.3 : CAM_D * (world.overAt ? camZ : 1); let pch = indoor ? Math.min(camPitch, 0.2) : camPitch;
-    { let tgt = 0; if (world.overAt && !indoor && !SE && !camFirst) { const g0 = world.overAt(hx, hz, hy - headH); if (g0 != null) { const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), gA = world.overAt(hx + fx * 6, hz + fz * 6, hy), gB = world.overAt(hx - fx * CD, hz - fz * CD, hy);   // CAM-6(10-15 교사 '산 오를 때 카메라가 위로 잘 안 따라와'): 마을 땅(덮어쓴 땅)에서만
+    const RC = CTRL.room, hx = SE ? SE.x : P.x, hy = (SE ? SE.y + 0.1 : camBY) + headH, hz = SE ? SE.z : P.z, CD = RC ? RC.d * Math.max(0.8, Math.min(1.25, camZ)) : indoor ? 3.3 : CAM_D * (world.overAt ? camZ : 1); let pch = RC ? Math.min(camPitch, RC.p) : indoor ? Math.min(camPitch, 0.2) : camPitch;   /* INDOOR-CAM: RC = 게임이 지은 방(map.player.roomCam) — 방 크기 거리 · 조금 위에서 */
+    { let tgt = 0; if (world.overAt && !indoor && !RC && !SE && !camFirst) { const g0 = world.overAt(hx, hz, hy - headH); if (g0 != null) { const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), gA = world.overAt(hx + fx * 6, hz + fz * 6, hy), gB = world.overAt(hx - fx * CD, hz - fz * CD, hy);   // CAM-6(10-15 교사 '산 오를 때 카메라가 위로 잘 안 따라와'): 마을 땅(덮어쓴 땅)에서만
           const up = gA != null ? Math.max(0, (gA - g0) / 6) : 0, need = gB != null ? Math.asin(Math.max(-1, Math.min(1, (gB + 1.4 - hy) / CD))) - pch : 0; tgt = Math.min(0.55, Math.max(up * 0.95, camPitch < 0 ? 0 : need, 0)); } }   /* CAM-7: 올려다보는 중(손으로 위로)이면 '뒤 땅 피하기' 들어 올림 X — 땅은 camPose ⑤가 몸 쪽으로 당겨 피함 */
       if (performance.now() - LOOKT > 3000) camLift += (tgt - camLift) * Math.min(1, dt * 2.4); pch += camLift; }   /* CAM-7: 손으로 위아래를 본 뒤 3초는 자동 들어 올림이 쉼(서로 싸우지 않게) */
-    let lookUp = 0; if (world.overAt && !indoor && pch < -0.12) { lookUp = -0.12 - pch; pch = -0.12; }   // CAM-7: 마을에서 −0.12보다 더 올려다보면 카메라는 그 높이에 두고 고개만 위로(머리 밑으로 돌아 땅에 막혀 당겨지면 하늘만 보임)   // 앞이 오르막 = 비탈 위가 보이게 들어 올림 · 뒤가 높은 비탈 = 카메라가 땅에 박히지 않게 · 내려가면 천천히 원래대로
+    let lookUp = 0; if (world.overAt && !indoor && !RC && pch < -0.12) { lookUp = -0.12 - pch; pch = -0.12; }   // CAM-7: 마을에서 −0.12보다 더 올려다보면 카메라는 그 높이에 두고 고개만 위로(머리 밑으로 돌아 땅에 막혀 당겨지면 하늘만 보임)   // 앞이 오르막 = 비탈 위가 보이게 들어 올림 · 뒤가 높은 비탈 = 카메라가 땅에 박히지 않게 · 내려가면 천천히 원래대로
+    if (RC) { let best = 0, bd = -1; for (let k = 0; k < 8; k++) { const p9 = pch + k * 0.1; if (k && p9 > 1.05) break; const c9 = Math.cos(p9), h9 = Math.min(CD, camHit(hx, hy, hz, Math.sin(camYaw) * c9, Math.sin(p9), Math.cos(camYaw) * c9, CD) - 0.3); if (h9 > bd + 0.08) { bd = h9; best = k * 0.1; } if (h9 >= CD * 0.82) break; } roomLift += (best - roomLift) * Math.min(1, dt * (best > roomLift ? 5 : 2)); pch += roomLift; } else roomLift = 0;   // INDOOR-CAM(10-17 아이 '들어가면 화면 절반이 머리'): 방 안에서 뒤가 벽·선반이면 머리 쪽으로 당기지 않고 0.1씩 위로(천장까지 · 가장 멀리 물러설 수 있는 각)
     const want = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect).want;
     camD = want < camD ? want : camD + (want - camD) * Math.min(1, dt * 7);   // 당김은 즉시·복귀는 이징(지터 방지)
     const C = camPose(hx, hy, hz, camYaw, pch, CD, camera.fov, camera.aspect, camD);   // 실제 거리에서 옆벽 비키기
@@ -583,7 +585,7 @@ function step(dt) {
     const sh9 = camSh + (CTRL.shoulder || 0), rx = Math.cos(camYaw) * sh9, rz = -Math.sin(camYaw) * sh9;   // GAME-WG: CTRL.shoulder = 어깨 너머 시점(게임이 바깥에서만 켬 — map.player.shoulder)
     camera.position.set(C.x0 + rx, C.y, C.z0 + rz);
     if (lookUp) { const cp = camera.position, tx = hx + rx - cp.x, ty9 = hy - cp.y, tz = hz + rz - cp.z, hd = Math.hypot(tx, tz) || 1, el = Math.atan2(ty9, hd) + lookUp; camera.lookAt(cp.x + tx / hd * Math.cos(el) * 10, cp.y + Math.sin(el) * 10, cp.z + tz / hd * Math.cos(el) * 10); }   // CAM-7: 고개 들기(머리 쪽 시선에서 lookUp만큼 위로)
-    else camera.lookAt(hx + rx, hy + camLift * 2.2, hz + rz);   // CAM-6: 들어 올린 만큼 시선도 비탈 위로
+    else camera.lookAt(hx + rx, hy + camLift * 2.2 + roomLift * 1.4, hz + rz);   // CAM-6: 들어 올린 만큼 시선도 비탈 위로 · INDOOR-CAM: 방에서 올린 만큼 앞을 봄(바닥만 보이지 않게)
   }
   if (CAM_OVR) CAM_OVR(dt);   // TITLE-1: 오프닝 카메라(평소 자리를 목표로 읽고 덮어쓴다)
   if (SHOT) applyShot();
@@ -1546,7 +1548,7 @@ function emoChip(on) {
   if (!document.getElementById('emo-css')) { const st = document.createElement('style'); st.id = 'emo-css'; st.textContent = '#mpEmo.open{z-index:44!important;align-items:flex-start!important}#mpEmo .emo-bar{flex-wrap:wrap;max-width:min(330px,calc(100vw - 70px))}#mpEmo .emo-bar span{font-size:22px;padding:2px 4px;cursor:pointer;border-radius:8px}#mpEmo .emo-bar span:hover{background:rgba(255,255,255,.18)}body.touch #mpEmo .emo-bar span{min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}'; document.head.appendChild(st); }
   emoEl = document.createElement('div'); emoEl.id = 'mpEmo'; emoEl.className = 'chip'; emoEl.title = '몸짓·이모지(친구 방에 있으면 친구에게도 보여요)'; emoEl.style.cssText = 'left:10px;top:84px;cursor:pointer;display:flex;gap:2px;align-items:center;padding:4px 6px;pointer-events:auto';
   emoEl.innerHTML = '<span data-e="t" style="padding:2px 6px">😀</span><span class="emo-bar" style="display:none;gap:2px"></span>';
-  import('./net.js?v=12').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" title="' + M.EMOTE_T[i] + '" role="button" aria-label="' + M.EMOTE_T[i] + '">' + x + '</span>').join(''); });
+  import('./net.js?v=13').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" title="' + M.EMOTE_T[i] + '" role="button" aria-label="' + M.EMOTE_T[i] + '">' + x + '</span>').join(''); });
   emoEl.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-e]'); if (!b) return; const bar = emoEl.querySelector('.emo-bar');
     if (b.dataset.e === 't') { const op = bar.style.display === 'none'; bar.style.display = op ? 'flex' : 'none'; emoEl.classList.toggle('open', op); return; } if (doEmote(+b.dataset.e)) { bar.style.display = 'none'; emoEl.classList.remove('open'); } });   // 열린 동안 = 할 일 줄 등 위로(휴대폰 마을에서 둘째 줄이 가리던 것)
   document.body.appendChild(emoEl);
@@ -1554,7 +1556,7 @@ function emoChip(on) {
 if (!window.SM_PROMO && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) emoChip(true);   // EMOTE-2: 혼자일 때도(학교·마을) · 홍보판·검사 화면 없음
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=12'), import('./lobby.js?v=18')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=13'), import('./lobby.js?v=19')]).then(([N, L]) => {
     // ROOM-1(10-05 교사 '멀티방을 게임으로 들어가는 게 아니라 멀티방을 만들고 그 안에서 모드를 정하는 게 직관적일까?'): 방 먼저 → 방을 만든 선생님이 👥 창 '🎮 다 같이 놀이'를 고르면 방 친구 모두 그 놀이 대기실로
     //   방 놀이 번호 = ctl/cmd d — 선생님 신호(📣·✋·▶·🎮)마다 지금 방 놀이를 같이 실음(cmd는 마지막 하나만 남으므로 — 늦게 들어온 친구·새로고침한 화면도 앎 · 규칙 그대로)
     //   ⚠️ 번호는 뒤에만 더한다(옛 화면과 어긋나지 않게) · 메뉴(오프닝·🎮)에는 registry room:true 놀이가 안 보임 — 혼자 연습 카드만
@@ -1719,7 +1721,7 @@ body.small #mpWR .sum{font-size:13px}body.small #mpWR .low{display:none}
     MAP.on('gamestart', () => LOBBY.draw());   // UX-1: 들어가고 나올 때 👥 칩(노란 '…하는 중')을 바로
     MAP.on('gamestop', (ev) => { LOBBY.draw(); if (NET && ev && ev.id && ROOMS.some(q => q && q.id === ev.id) && !(ev.reason === 'replace')) setTimeout(() => wrShow(true), 300); const p = PENDG; PENDG = null; if (!p || (ev && ev.reason === 'replace') || Date.now() - p.t > 180000 || (TITLE && TITLE.phase !== 'off')) return; gatherTo(p.c, '📣 선생님 곁으로 왔어요!'); });   // UX-1: 경기 중에 받은 📣 = 놀이가 끝나면(3분 안) 선생님 곁으로   // ROOM-2: 방 놀이에서 나오면(끝·나가기) 🏠 대기실
     setInterval(() => { if (NET) MAP.minimap.setPeers(NET.peers()); }, 500);   // 미니맵에 같은 방 친구 점(이름)
-    const ACTS = { watergun: '💧 물총', watergun_vs: '💦 물총 대결', hideseek: '🙈 숨바꼭질 연습', hideseek_vs: '🙈 숨바꼭질', robots: '🤖 로봇인 척 연습', robots_vs: '🤖 로봇인 척', guide: '🧭 길잡이 연습', guide_vs: '🧭 길잡이', memo: '📝 메모장', memo_v3: '📝 메모장', story: '📖 이야기', newbook: '📖 신상책', robotpart: '📖 로봇 부품 소동', cricket: '📖 곤충 재판', world_bee: '🐝 꿀벌 세계', world_fruit: '🍒 과일 세계', world_animal: '🐾 동물 세계', escape: '🔐 방탈출', shrink: '🐜 개미', find_place: '📍 장소 찾기', tour: '🚌 견학' };
+    const ACTS = { town: '🏘 마을', watergun: '💧 물총', watergun_vs: '💦 물총 대결', hideseek: '🙈 숨바꼭질 연습', hideseek_vs: '🙈 숨바꼭질', robots: '🤖 로봇인 척 연습', robots_vs: '🤖 로봇인 척', guide: '🧭 길잡이 연습', guide_vs: '🧭 길잡이', memo: '📝 메모장', memo_v3: '📝 메모장', story: '📖 이야기', newbook: '📖 신상책', robotpart: '📖 로봇 부품 소동', cricket: '📖 곤충 재판', world_bee: '🐝 꿀벌 세계', world_fruit: '🍒 과일 세계', world_animal: '🐾 동물 세계', escape: '🔐 방탈출', shrink: '🐜 개미', find_place: '📍 장소 찾기', tour: '🚌 견학' };
     const RDY = '✅ 준비 완료', WATCH = '👀 진행(구경)', actNow = () => { const g = MAP.game.current; return window.SM_ACT || (g ? ACTS[g.id] || '🎮 놀이' : READY && LOBBY.room ? RDY : LOBBY.room && LOBBY.room.k && !meIn() ? WATCH : '🏫 자유 탐험'); };   // ROOM-3: 방장이 구경이면 '👀 진행(구경)'(친구 화면 구경석)   // READY-1: 대기실에서 준비 = 지금 하는 것 글
     setInterval(() => { if (!NET) return; NET.setAct(actNow()); }, 2000);   // 지금 하는 것 — 게임이 window.SM_ACT로 더 자세히(메모장 = 판 번호)
     // 방 신호(net.js ctl): 물총 친구 대결 대기실 초대 · 선생님 📣 모으기 · ✋ 멈춤

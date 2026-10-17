@@ -71,6 +71,7 @@ map.nav(opt) → Promise<Nav> (크롬북용 6ms씩 나눠 짓기·캐시) · map
 map.mapData(층) → {bounds, boundary, buildings, zones, landmarks, spawns} · map.drawMap(ctx2d, {floor,scale,x0,z0,labels,player,marks}) · map.coverage()
 map.rng(seed) (mulberry32) · map.store.get/set (localStorage 'sm2.game.<id>.' · 쓰기 2초마다 몰아서)
 map.gone(범위가 정리됐나 — await 뒤 확인) · map.camera(읽기 전용 — 겨눔) · map.tone(주파수, 시작초, 길이, 파형, 크기, 끝주파수) · map.player.aim(h|null)(몸만 돌림) · map.player.shoulder(m)(어깨 너머 시점) · map.on('action', {name, down}) ← SD2.map.press(name, down)   // GAME-WG §10
+map.player.roomCam({ d, p } | null)(게임이 지은 방 안 카메라 — 거리 d m · 위에서 보는 각 한계 p · 뒤가 벽·선반이면 머리 쪽으로 당기지 않고 위로 · null = 원래 · 게임이 멈추면 null)   // INDOOR-CAM(10-17 마을 실내)
 map.play = { field, ball, track:{c,a,b,half,gates}, redlight:{startZ,finish}, y }   // 운동장 놀이판(달리기·공·무궁화 신호등) — SCHOOL 운동장 사각형에서 계산, check()가 트랙·출발선이 전부 걷는 칸인지 본다
 SD2.map.stuckLog — 이동키를 누른 채 1.5초 못 움직이고 몸이 충돌 상자 속이던 자리(최대 50) · map.spawns
 SD2.map.check() → {ok, zonesNoMeta, metaNoZone, dupIds, labelBad, extraBad, spawnsBad, poisBad, hotUnreachable, playBad, traps, outsidePct, noZoneInSchoolPct}

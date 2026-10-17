@@ -189,7 +189,8 @@ export function createLobby(o) {
     anchor = a instanceof Element ? a : null;
     const N = net();
     if (cur) {
-      let others = N && N.peers ? N.peers() : [];
+      const frs = () => (N && N.friends ? N.friends() : N && N.peers ? N.peers() : []);   // TOGETHER-0: 👥 목록 = 모든 친구(다른 세계는 '📍 마을 다7' — 곁으로 X)
+      let others = frs();
       // ROOM-1(10-05 교사 '멀티방을 만들고 그 안에서 모드를 정하는 게 직관적일까?'): 방을 만든 선생님 = '🎮 다 같이 놀이'(누르면 방 친구 모두 그 놀이 대기실로) · 모두 = 지금 방 놀이 줄
       const RG = rooms ? rooms.list() : [], rgi = rooms ? rooms.cur() : 0, rgNow = RG.find(q => q.i === rgi), inIt = !!(rooms && rooms.inIt()), rgName = rgNow ? rgNow.t.replace(/\s*\(.*?\)/, '') : '';
       // UX-1(10-05 교사 편의성): 순서 = 지금 방 놀이(맨 위 — 아이는 노란 '▶ 같이 하기' 큰 단추) → 알림 줄 → (선생님) 다 같이 놀이·선생님 단추 → 친구 → 도움말 — 선생님 단추가 도움말 밑에 묻혀 스크롤해야 보이던 것
@@ -212,11 +213,11 @@ export function createLobby(o) {
       clearInterval(popT); popT = setInterval(() => {
         if (pop !== P || !P.isConnected) { clearInterval(popT); return; }
         if (rooms && (rooms.cur() !== rgi || rooms.inIt() !== inIt)) { const m = P.querySelector('.msg'), mt = m ? m.textContent : '', ok = !!(m && m.classList.contains('ok')); openList(anchor); if (mt) say(mt, 0, ok); return; }
-        others = N && N.peers ? N.peers() : []; const f = P.querySelector('.fr'); if (f) f.innerHTML = frHtml();
+        others = frs(); const f = P.querySelector('.fr'); if (f) f.innerHTML = frHtml();
         if (rooms && rgNow) { const c = P.querySelector('.cnt'); if (c) c.textContent = '· 들어온 친구 ' + rooms.count(rgi) + '/' + others.length; const s = P.querySelector('[data-l=rstart]'); if (s) s.textContent = '▶ 모두 시작 · ' + rooms.count(rgi) + '명 들어옴'; }
       }, 2000);
-      P.onclick = (e) => { e.stopPropagation(); const mu = e.target.closest('[data-mu]'); if (mu && N && N.mute) { const p9 = others[+mu.dataset.mu]; if (p9) { N.mute(p9.id, !p9.mu); others = N.peers(); const f = P.querySelector('.fr'); if (f) f.innerHTML = frHtml(); say(p9.mu ? '👀 ' + p9.label + ' 친구의 말·이모지가 다시 보여요' : '🙈 ' + p9.label + ' 친구의 말·이모지를 나에게만 숨겼어요 — 친구는 몰라요', 0, true); } return; }   /* SAFE-1 🙈 */
-        const g = e.target.closest('[data-go]'); if (g && onGoTo) { const p9 = others[+g.dataset.go]; closePop(); onGoTo(p9); return; }
+      P.onclick = (e) => { e.stopPropagation(); const mu = e.target.closest('[data-mu]'); if (mu && N && N.mute) { const p9 = others[+mu.dataset.mu]; if (p9) { N.mute(p9.id, !p9.mu); others = frs(); const f = P.querySelector('.fr'); if (f) f.innerHTML = frHtml(); say(p9.mu ? '👀 ' + p9.label + ' 친구의 말·이모지가 다시 보여요' : '🙈 ' + p9.label + ' 친구의 말·이모지를 나에게만 숨겼어요 — 친구는 몰라요', 0, true); } return; }   /* SAFE-1 🙈 */
+        const g = e.target.closest('[data-go]'); if (g && onGoTo) { const p9 = others[+g.dataset.go]; if (p9 && p9.here === false) { say('📍 ' + p9.label + ' 친구는 지금 다른 곳(' + p9.act + ')에 있어요 — 같은 곳에 가면 보여요'); return; } closePop(); onGoTo(p9); return; }
         // UX-1: 다 같이 놀이 고르기·▶ 모두 시작·⏹ 끝 = 창을 닫지 않고 다시 그려 '보냈어요'를 창 안에(메뉴 화면에선 toast가 안 보였다)
         const rg = e.target.closest('[data-rg]'); if (rg && rooms) { rooms.pick(+rg.dataset.rg, true); openList(anchor); say('✓ 보냈어요 — 친구들이 2초 뒤 대기실로 가요 · 다 모이면 ▶ 모두 시작', 0, true); return; }
         const b = e.target.closest('[data-l]'); if (!b) return; const a = b.dataset.l;

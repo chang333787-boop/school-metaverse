@@ -39,6 +39,7 @@
 | 마을 세계 엔진(town.js · v2/towns/*.js) — 아이 매트 사진으로 마을 짓기 · 구역 채우기 · 생활 시설 요구 · "이 사진으로 마을 만들어 줘" | `docs/systems/town.md` — 엔진이지 마을이 아님(내용은 아이들 것 · 시험은 zz) |
 | 마을 메인 스토리(town_story.js — 이웃 쪽지 장 다섯 · 힌트 세 단계 · 난도) | `docs/systems/town_story.md` — 퀘스트 틀 명세(2027 교과서 엔진)와 같은 꼴 |
 | 마을을 어떻게 키울지(발전 방향 50 · 큰 줄거리 「첫 마을 잔치」 · 선생님께 여쭤볼 것) | `docs/systems/town_roadmap.md` — 다섯 팀 보고를 합친 순서표(✅·🔨·⏭·❓) |
+| 마을 일을 시작할 때마다(사용자 10-17 '이상해 하면 다시 안 생기게') | `docs/systems/town_lessons.md` — 들은 말·문제·규칙·확인 · 새 지적은 그날 한 줄 · 하위 에이전트 지시문 첫 줄에도 |
 | 게임용 지도 API 정본(map.*) | `docs/map_api.md` |
 | 품질 숫자 척도(풍성·놀이·그래픽·효과·이야기·각색·완성도·직관성) | `docs/tasks/quality_scale.md` |
 | 새 이야기·에피소드 더하기 | `docs/tasks/new_episode.md` |

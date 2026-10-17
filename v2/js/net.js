@@ -13,6 +13,17 @@ export const EMOTES = ['👋', '😀', '👍', '❤️', '😮', '🎉', '🙇',
 export const EMOTE_T = ['안녕', '좋아요', '최고', '고마워', '깜짝', '축하', '꾸벅', '박수', '저요', '춤'];
 //   친구 몸짓 = 몸 변환만(기울기·폴짝·흔들기 — 그리기 0 · 쓰기 0) · 둘이 2m 안에서 3초 안에 같은 이모트 = 맞춤(하이파이브·같이 춤 — 받은 시각으로 각자 화면에서 판정 → o.onCombo)
 const MO = ['sway', 'bounce', 'nod', 'sway', 'back', 'hop', 'bow', 'bounce', 'sway', 'dance'], MO_DUR = [1.8, 1.6, 1.6, 2.0, 1.4, 1.8, 1.8, 1.8, 1.8, 2.6];
+// TOGETHER-0(10-17 #46 · DB 규칙 그대로): 친구가 마을에서 보이기 — 세계 = window.SM_WORLD({ w: 't:다7'(마을·칸) | 'i:12'(실내·건물), v: 'b' 자전거 · 'o' 배 · 'k' 스키 · 'z' 앉기, q 바뀐 번호 }) · 없으면 학교
+//   보내기: 마을·실내면 x·y·z ÷ SCL(4)(마을 −750~+875 → ±220 · 산 330m → 83 = 규칙 안) · h = 100 + 방향(옛 화면은 |h|>50 = '보이지 않는 곳'으로 숨김) · 활동 글 a 앞에 머리표('t:다7.b ' · 'i:12 ') — 학교면 머리표 없이 예전 그대로(방 놀이 글 비교가 옛 화면과 같게)
+//   받기: 머리표 없으면 학교 · 같은 세계 친구만 그림(마을 = 칸 상관없이 하나 · 실내 = 같은 건물만) · 다른 세계는 👥 목록에 '📍 마을 다7' · 앞질러 그리기(받은 두 자리로 속도 · 0.45초까지 · 10m 넘게 어긋나면 바로)
+//   보내기 예산: 움직이면 방 전체 초당 60번을 사람 수로 나눔(5명 = 1인 6번 · 30명 = 2번) · 가만히면 5초마다
+export const SCL = 4;
+const TAG_RX = /^(t:[^ .]{0,6}|i:[^ .]{1,8})(?:\.([bokz]))? /;
+export function parseAct(a) { const s = String(a || ''), m = TAG_RX.exec(s); if (!m) return { w: 's', cell: '', v: '', label: s }; const t = m[1][0] === 't'; return { w: t ? 't' : m[1], cell: t ? m[1].slice(2) : '', v: m[2] || '', label: s.slice(m[0].length) }; }
+const myW = () => { const W9 = typeof window !== 'undefined' && window.SM_WORLD; return W9 && W9.w ? W9 : null; };
+const wKey = (w) => (!w || w === 's' ? 's' : w[0] === 't' ? 't' : w);   // 같은 세계 열쇠(마을 = 하나 · 실내 = 건물마다)
+export const placeText = (q) => (q.w === 't' ? '📍 마을' + (q.cell ? ' ' + q.cell : '') : q.w && q.w.startsWith('i:') ? '🏠 마을 실내' : '🏫 학교');
+const fit20 = (s) => { let o9 = ''; for (const ch of String(s)) { if (o9.length + ch.length > 20) break; o9 += ch; } return o9; };   // 규칙 a ≤ 20(글자를 반으로 자르지 않음)
 export const comboKind = (i) => (i === 0 || i === 2 || i === 7 ? 'five' : i === 5 || i === 9 ? 'dance' : 'heart');
 
 export function createNet(o) {
@@ -30,7 +41,7 @@ export function createNet(o) {
   const others = new Map();
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   const _m = new THREE.Matrix4(), _c = new THREE.Color();
-  let es = null, dead = false, hidden = false, mQ = 0, CTL = {}, selfE = null, act = '', CHAT = {}, chatSeen = new Set(), chatT0 = Date.now(), selfB = null, offset = 0, sendT = 0, beatT = 0, cleanT = 8, fxQ = 0, denyT = -1e9, away = false, last = { x: 1e9, y: 0, z: 0, h: 0 }, onChange = o.onChange || (() => {});
+  let es = null, dead = false, hidden = false, mQ = 0, CTL = {}, selfE = null, act = '', CHAT = {}, chatSeen = new Set(), chatT0 = Date.now(), selfB = null, offset = 0, sendT = 0, beatT = 0, cleanT = 8, fxQ = 0, denyT = -1e9, away = false, actSent = '', wq = -1, ext = false, last = { x: 1e9, y: 0, z: 0, h: 0 }, onChange = o.onChange || (() => {});
 
   function merge(parts) {
     const P = [], N = [], C = [];
@@ -81,7 +92,7 @@ export function createNet(o) {
   }
   function moTick(O, dt) {   // EMOTE-2: 친구 몸짓 — 통짜 몸 변환만(rotation 순서 YXZ = 몸 기준 기울기)
     const M = O.mo; if (!M) return 0; M.t += dt; const t = M.t, d = M.dur;
-    if (t >= d) { O.mo = null; O.mesh.rotation.x = O.mesh.rotation.z = 0; return 0; }
+    if (t >= d) { O.mo = null; O.mesh.rotation.x = O.mesh.rotation.z = 0; O.mrx = O.mrz = O.mry = O.mdy = 0; return 0; }
     const k = Math.min(1, t / 0.25, (d - t) / 0.25), s = Math.sin; let y = 0, rx = 0, rz = 0;
     switch (MO[M.i] || 'bounce') {
       case 'sway': rz = s(t * 7) * 0.1 * k; break;
@@ -90,9 +101,9 @@ export function createNet(o) {
       case 'back': rx = -0.2 * k; y = Math.max(0, s(Math.min(1, t / 0.35) * Math.PI)) * 0.08; break;
       case 'hop': y = Math.max(0, s(t * 7.5)) * 0.22 * k; break;
       case 'bow': rx = 0.55 * s(Math.min(1, t / d) * Math.PI); break;
-      case 'dance': rz = s(t * 6) * 0.16 * k; y = Math.abs(s(t * 6)) * 0.06 * k; O.mesh.rotation.y += s(t * 3) * 0.35 * k; break;
+      case 'dance': rz = s(t * 6) * 0.16 * k; y = Math.abs(s(t * 6)) * 0.06 * k; O.mry = s(t * 3) * 0.35 * k; O.mesh.rotation.y += O.mry; break;
     }
-    O.mesh.rotation.x = rx; O.mesh.rotation.z = rz; return y * scale;
+    O.mesh.rotation.x = O.mrx = rx; O.mesh.rotation.z = O.mrz = rz; O.mdy = y * scale; return y * scale;   /* TOGETHER-0: 값도 남김(마을 그리개가 씀) */
   }
   function emoteSprite(old, i) {
     i = Math.max(0, Math.min(EMOTES.length - 1, i | 0));
@@ -107,6 +118,12 @@ export function createNet(o) {
     let q = root; for (let i = 0; i < p.length - 1; i++) { if (!q[p[i]] || typeof q[p[i]] !== 'object') { if (v === null) return root; q[p[i]] = {}; } q = q[p[i]]; }
     if (v === null) delete q[p[p.length - 1]]; else q[p[p.length - 1]] = v; return root;
   }
+  // TOGETHER-0: 받은 날 값(r*) → 내 세계 좌표(t*) · 마을·실내 = ×SCL · 방향 = h−100 · 머리표 없는데 |h|>50 = 보이지 않는 곳(NET-OOB) · 자리 소식이면 속도(앞질러 그리기)
+  function retarget(O, pos) { const f = O.w === 's' ? 1 : SCL, now = performance.now(), nx = O.rx * f, ny = O.ry * f, nz = O.rz * f;
+    if (pos) { const dtR = (now - O.rt) / 1000; if (O.rt && dtR > 0.05 && dtR < 2) { O.vx = Math.max(-12, Math.min(12, (nx - O.tx) / dtR)); O.vz = Math.max(-12, Math.min(12, (nz - O.tz) / dtR)); } else { O.vx = O.vz = 0; } O.rt = now; }
+    O.tx = nx; O.ty = ny; O.tz = nz;
+    if (O.w !== 's') { if (O.rh > 90 && O.rh < 110) { O.away = false; O.th = O.rh - 100; } else O.away = Math.abs(O.rh) > 50; }
+    else if (Math.abs(O.rh) > 50) O.away = true; else { O.away = false; O.th = O.rh; } }
   function upsert(pid, d) {
     if (pid === id) { if (d && typeof d.t === 'number') offset = d.t - Date.now(); return; }
     if (!d) { drop(pid); return; }
@@ -114,16 +131,17 @@ export function createNet(o) {
     if (!O) {
       if (others.size >= 40) return;
       const mesh = avatar(d.k || kind, PAL.includes(d.c) ? d.c : PAL[0]), tg = tag(d.n || '친구');
-      O = { pid, a: '', k: d.k || kind, away: false, mo: null, mesh, tag: tg, n: d.n || '친구', c: PAL.includes(d.c) ? d.c : PAL[0], x: d.x || 0, y: d.y || 0, z: d.z || 0, h: d.h || 0, tx: 0, ty: 0, tz: 0, th: 0, t: 0, seen: performance.now(), fxQ: d.fx ? d.fx.q : 0, mQ: d.m ? d.m.q : 0, em: null };
+      O = { pid, a: '', w: 's', cell: '', v: '', lbl: '', rx: 0, ry: 0, rz: 0, rh: 0, vx: 0, vz: 0, rt: 0, vis: false, mrx: 0, mrz: 0, mry: 0, mdy: 0, k: d.k || kind, away: false, mo: null, mesh, tag: tg, n: d.n || '친구', c: PAL.includes(d.c) ? d.c : PAL[0], x: d.x || 0, y: d.y || 0, z: d.z || 0, h: d.h || 0, tx: 0, ty: 0, tz: 0, th: 0, t: 0, seen: performance.now(), fxQ: d.fx ? d.fx.q : 0, mQ: d.m ? d.m.q : 0, em: null };
       scene.add(mesh, tg); others.set(pid, O); onChange();
     }
-    for (const k of ['x', 'y', 'z']) if (typeof d[k] === 'number') O['t' + k] = d[k];
-    if (typeof d.h === 'number') { if (Math.abs(d.h) > 50) O.away = true; else { O.away = false; O.th = d.h; } }   // NET-OOB: h 99 = 규칙 범위 밖(마을 먼 곳) — 숨김
+    if (typeof d.a === 'string' && d.a !== O.a) { O.a = d.a; const q9 = parseAct(d.a); O.w = q9.w; O.cell = q9.cell; O.v = q9.v; O.lbl = q9.label; retarget(O, false); }   // TOGETHER-0: 머리표 = 세계(먼저 읽어 같은 소식의 자리를 바로 풂)
+    let pos9 = false; for (const k of ['x', 'y', 'z']) if (typeof d[k] === 'number') { O['r' + k] = d[k]; pos9 = true; }
+    if (typeof d.h === 'number') O.rh = d.h;
+    if (pos9 || typeof d.h === 'number') retarget(O, pos9);   // NET-OOB(h 99)·마을(h 100+) 풀기는 retarget
     if (typeof d.k === 'string' && d.k !== O.k) { O.k = d.k; const g = avatarGeo(d.k, O.c); O.mesh.geometry.dispose(); O.mesh.geometry = g; }   // LOOK-1: 친구가 모습을 바꿈
     if (typeof d.t === 'number') O.t = d.t;
     if (d.n && d.n !== O.n) { O.n = d.n; scene.remove(O.tag); O.tag.material.map.dispose(); O.tag = tag(O.n); scene.add(O.tag); onChange(); }
     if (d.fx && d.fx.q !== O.fxQ) { O.fxQ = d.fx.q; if (o.onFx && O.seen) o.onFx(O, d.fx); }
-    if (typeof d.a === 'string') O.a = d.a;
     if (d.m && d.m.q !== O.mQ) { O.mQ = d.m.q; if (!MUTE.has(pid)) { const i9 = Math.max(0, Math.min(EMOTES.length - 1, d.m.i | 0)); O.em = emoteSprite(O.em, i9); O.mo = { i: i9, t: 0, dur: MO_DUR[i9] || 1.6 }; O.mi = i9; O.mt = performance.now(); if (myE && myE.i === i9 && O.mt - myE.t < 3000) combo(O, i9); } }   // EMOTE-2 · SAFE-1 🙈
     O.seen = performance.now();
   }
@@ -173,14 +191,18 @@ export function createNet(o) {
   const inRule = (P) => P.x > -499 && P.x < 499 && P.z > -499 && P.z < 499 && P.y > -99 && P.y < 199;   // NET-OOB: DB 규칙(x·z ±500 · y −100~200) 안
   const cl = (v, a) => +Math.max(-a, Math.min(a, v || 0)).toFixed(2);
   const myK = () => (kind === 'kid' ? lookCode() || 'kid' : kind);   // LOOK-1
-  function send(P, extra) {
-    if (!inRule(P)) { req('/players/' + id, 'PATCH', { h: 99, t: { '.sv': 'timestamp' } }); away = true; last.x = P.x; last.y = P.y; last.z = P.z; last.h = P.h; return; }   // NET-OOB: 위치는 안 보냄 · 살아 있음 + '보이지 않는 곳'만
+  const EP = { x: 0, y: 0, z: 0, h: 0 };   // TOGETHER-0: 보낼 값(마을·실내 = ÷SCL · h = 100 + 방향) — 매번 새 객체 X
+  const enc = (P) => { const W9 = myW(), f = W9 ? SCL : 1; EP.x = P.x / f; EP.y = P.y / f; EP.z = P.z / f; EP.h = W9 ? 100 + Math.atan2(Math.sin(P.h), Math.cos(P.h)) : P.h; return EP; };
+  const actNow = () => { const W9 = myW(); return fit20((W9 ? W9.w + (W9.v ? '.' + W9.v : '') + ' ' : '') + act); };
+  const actPut = () => { const a9 = actNow(); if (a9 === actSent || !joined) return; actSent = a9; req('/players/' + id + '/a', 'PUT', a9); };
+  function send(P0, extra) { const P = enc(P0);
+    if (!inRule(P)) { req('/players/' + id, 'PATCH', { h: 99, t: { '.sv': 'timestamp' } }); away = true; last.x = P0.x; last.y = P0.y; last.z = P0.z; last.h = P0.h; return; }   // NET-OOB: 위치는 안 보냄 · 살아 있음 + '보이지 않는 곳'만
     away = false; const d = { x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), h: +P.h.toFixed(2), t: { '.sv': 'timestamp' }, ...extra };
-    req('/players/' + id, 'PATCH', d); last.x = P.x; last.y = P.y; last.z = P.z; last.h = P.h;
+    req('/players/' + id, 'PATCH', d); last.x = P0.x; last.y = P0.y; last.z = P0.z; last.h = P0.h;
   }
-  function join(P) {
+  function join(P0) { const P = enc(P0); wq = myW() ? myW().q : -1;
     const ok = inRule(P); away = !ok;   // NET-OOB: 범위 밖에서 들어오면 자리는 범위 안으로 자르고 h 99(숨김)
-    req('/players/' + id, 'PUT', { n: name, c: color, k: myK(), x: cl(P.x, 498), y: +Math.max(-98, Math.min(198, P.y || 0)).toFixed(2), z: cl(P.z, 498), h: ok ? +(P.h || 0).toFixed(2) : 99, t: { '.sv': 'timestamp' } });
+    req('/players/' + id, 'PUT', { n: name, c: color, k: myK(), x: cl(P.x, 498), y: +Math.max(-98, Math.min(198, P.y || 0)).toFixed(2), z: cl(P.z, 498), h: ok ? +(P.h || 0).toFixed(2) : 99, a: actSent = actNow(), t: { '.sv': 'timestamp' } });
     es = new EventSource(base + '.json');
     es.addEventListener('put', (e) => onEvt('put', e)); es.addEventListener('patch', (e) => onEvt('patch', e));
   }
@@ -200,13 +222,15 @@ export function createNet(o) {
       if (!joined) { joined = true; join(P); }
       sendT -= dt; beatT -= dt;
       const moved = Math.abs(P.x - last.x) + Math.abs(P.z - last.z) + Math.abs(P.y - last.y) > 0.05 || Math.abs(P.h - last.h) > 0.08;
-      if ((moved && sendT <= 0 && (inRule(P) || !away)) || beatT <= 0) { send(P); sendT = 1 / 6; beatT = 3; }   // NET-OOB: 범위 밖이면 움직여도 3초마다 한 번(처음 나갈 때 한 번은 바로)
-      const now = Date.now() + offset, k = Math.min(1, dt * 10);
+      { const W9 = myW(), q9 = W9 ? W9.q : -1; if (q9 !== wq) { wq = q9; actPut(); sendT = 0; } }   // TOGETHER-0: 세계·탈것이 바뀌면 머리표를 바로 + 자리도 바로
+      if ((moved && sendT <= 0 && (inRule(enc(P)) || !away)) || beatT <= 0) { send(P); sendT = Math.max(1 / 6, (others.size + 1) / 60); beatT = 5; }   // TOGETHER-0 예산: 방 전체 초당 60번을 나눔 · 가만히면 5초 · NET-OOB: 범위 밖이면 움직여도 5초마다(처음 나갈 때 한 번은 바로)
+      const now = Date.now() + offset, k = Math.min(1, dt * 12), pn = performance.now(), mw = wKey(myW() ? myW().w : 's');
       meP = P; emoteTick(selfE, dt, P.x, P.y - 0.25, P.z); bubbleTick(selfB, dt, P.x, P.y - 0.25, P.z);
       for (const O of others.values()) {
-        const stale = O.t && now - O.t > 20000; O.mesh.visible = O.tag.visible = !stale && !hidden && !O.away;
-        if (O.away) { if (O.em) O.em.s.visible = false; if (O.sb) O.sb.s.visible = false; } else { emoteTick(O.em, dt, O.x, O.y, O.z); bubbleTick(O.sb, dt, O.x, O.y, O.z); }
-        O.x += (O.tx - O.x) * k; O.y += (O.ty - O.y) * k; O.z += (O.tz - O.z) * k;
+        const stale = O.t && now - O.t > 20000; O.vis = !stale && !hidden && !O.away && wKey(O.w) === mw; O.mesh.visible = O.tag.visible = O.vis && !ext;   // TOGETHER-0: 같은 세계만 · 마을(ext)은 마을 그리개가 그림
+        if (!O.vis) { if (O.em) O.em.s.visible = false; if (O.sb) O.sb.s.visible = false; } else { emoteTick(O.em, dt, O.x, O.y, O.z); bubbleTick(O.sb, dt, O.x, O.y, O.z); }
+        { const age = Math.min(0.45, (pn - O.rt) / 1000), gx = O.tx + O.vx * age, gz = O.tz + O.vz * age;   // NET-SMOOTH(걷기에도): 받은 두 자리의 속도로 앞질러 · 10m 넘게 어긋나면 바로
+          if (Math.abs(gx - O.x) + Math.abs(gz - O.z) > 10 || Math.abs(O.ty - O.y) > 6) { O.x = gx; O.y = O.ty; O.z = gz; } else { O.x += (gx - O.x) * k; O.y += (O.ty - O.y) * k; O.z += (gz - O.z) * k; } }
         let dh = O.th - O.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); O.h += dh * k;
         O.mesh.position.set(O.x, O.y, O.z); O.mesh.rotation.y = O.h; if (O.mo) O.mesh.position.y += moTick(O, dt); O.tag.position.set(O.x, O.y + 2.05 * scale, O.z);   // EMOTE-2 몸짓(도는 동안만)
       }
@@ -217,15 +241,20 @@ export function createNet(o) {
       return fetch(base + '/chat/' + cid + '.json', { method: 'PUT', body: JSON.stringify({ n: name, by: id, tx, t: { '.sv': 'timestamp' } }) }).then((r) => r.ok); },
     clearChat() { return req('/chat', 'DELETE'); },
     get chat() { return Object.values(CHAT).filter((m) => m && typeof m.tx === 'string' && !MUTE.has(m.by)).sort((a, b) => (a.t || 0) - (b.t || 0)); },
-    setAct(v) { v = String(v || '').slice(0, 20); if (v === act || !joined) return; act = v; req('/players/' + id + '/a', 'PUT', v); },   // 지금 하는 것(👥 창에서 선생님이 봄)
+    setAct(v) { act = String(v || '').slice(0, 20); actPut(); },   // 지금 하는 것(👥 창에서 선생님이 봄) · TOGETHER-0: 마을·실내면 앞에 머리표
     emote(i) { i = Math.max(0, Math.min(EMOTES.length - 1, i | 0)); myE = { i, t: performance.now() }; if (!joined) return; mQ++; req('/players/' + id + '/m', 'PUT', { q: mQ, i }); selfE = emoteSprite(selfE, i);
       for (const O of others.values()) if (O.mi === i && myE.t - (O.mt || -1e9) < 3000) combo(O, i); },   // EMOTE-2: 친구가 먼저 한 같은 이모트와 맞춤
     mute(pid, on) { const O = others.get(pid); if (on) { MUTE.add(pid); if (O) { if (O.em) O.em.t = 0; if (O.sb) O.sb.t = 0; O.mo = null; O.mesh.rotation.x = O.mesh.rotation.z = 0; } } else MUTE.delete(pid); try { sessionStorage.setItem('mp.mute', JSON.stringify([...MUTE])); } catch (e) { /* */ } onChange(); },   // SAFE-1 🙈(이 탭에서 나에게만)
     muted: (pid) => MUTE.has(pid),
-    peers() { const now = Date.now() + offset, a = []; if (!hidden) for (const O of others.values()) if (!(O.t && now - O.t > 20000) && !O.away) a.push({ id: O.pid, mu: MUTE.has(O.pid), x: O.x, y: O.y, z: O.z, act: O.a, label: O.n, color: '#' + O.c.toString(16).padStart(6, '0'), r: 4, floor: O.y > 2.5 ? 2 : 1 }); return a; },
+    peers() { const now = Date.now() + offset, a = [], mw = wKey(myW() ? myW().w : 's'); if (!hidden) for (const O of others.values()) if (!(O.t && now - O.t > 20000) && !O.away && wKey(O.w) === mw) a.push({ id: O.pid, mu: MUTE.has(O.pid), x: O.x, y: O.y, z: O.z, act: O.a, label: O.n, color: '#' + O.c.toString(16).padStart(6, '0'), r: 4, floor: O.y > 2.5 ? 2 : 1 }); return a; },
     ctl(path, data) { return req('/ctl/' + path, 'PUT', data); },
     get ctlData() { return CTL; },
-    roster() { const now = Date.now() + offset, a = []; for (const [id, O] of others) if (!(O.t && now - O.t > 20000)) a.push({ id, label: O.n, act: O.a, color: O.c, k: O.k, mu: MUTE.has(id) }); return a; },   // ROOM-2: 경기 중(hide)에도 같은 방 친구 명단
+    roster() { const now = Date.now() + offset, a = []; for (const [id, O] of others) if (!(O.t && now - O.t > 20000)) a.push({ id, label: O.n, act: O.w === 's' ? O.a : O.lbl, color: O.c, k: O.k, mu: MUTE.has(id), w: O.w, v: O.v, cell: O.cell }); return a; },   // TOGETHER-0: act = 머리표 뺀 글(방 놀이 비교)
+    // TOGETHER-0 👥 목록: 모든 친구(다른 세계는 '📍 마을 다7' · 곁으로 X)
+    friends() { const now = Date.now() + offset, a = [], mw = wKey(myW() ? myW().w : 's'); for (const O of others.values()) { if (O.t && now - O.t > 20000) continue; const here = wKey(O.w) === mw && !O.away; a.push({ id: O.pid, label: O.n, here, mu: MUTE.has(O.pid), x: O.x, y: O.y, z: O.z, color: '#' + O.c.toString(16).padStart(6, '0'), act: here ? (O.w === 's' ? O.a : O.lbl) : placeText(O) + (O.w === 's' && O.a ? ' · ' + O.a : '') }); } return a; },
+    ext(on) { ext = !!on; },   // 마을 그리개가 몸·이름표를 대신 그림(이모지·말풍선은 그대로)
+    each(fn) { for (const O of others.values()) if (O.vis) fn(O); },   // 같은 세계에 보이는 친구(읽기만 — 매 프레임 새 객체 X)
+    get sendEvery() { return Math.max(1 / 6, (others.size + 1) / 60); },   // ROOM-2: 경기 중(hide)에도 같은 방 친구 명단
     hide(on) { hidden = !!on; for (const O of others.values()) O.mesh.visible = O.tag.visible = !hidden && !O.away; },   // 물총 친구 대결 동안 걷기 몸 숨김(경기 몸이 대신)
     leave,
   };
