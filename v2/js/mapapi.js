@@ -172,7 +172,7 @@ export function createMapApi(host, NAV, META) {
   const setHeading = h => { pl.setYaw(-h * R2D); P.yaw = Math.atan2(Math.sin(h * R2D), -Math.cos(h * R2D)); };
   // FREE-MOUSE 기본(10-03 교사 'Esc로 마우스를 보이게 하는 건 정상이 아니다'): 평소·대부분 놀이 = 마우스 늘 보임 + 끌어서 둘러보기 · 조준 놀이(물총)만 freeMouse(false)로 잠금 · ?lock=1 = 예전처럼 잠금
   //   LOCK-2(10-04 교사 '마우스를 눌러야 화면이 돌아가는 건 불편 — 원래대로'): v2·v3 기본 = 포인터 잠금(움직이면 시점 · Tab = 마우스 보이기 · 창이 열리면 마우스가 보임) · 홍보판은 그대로 늘 보임(교사 '홍보용은 건들지 마') · ?free=1 = 늘 보임
-  const FREE_DEF = new URLSearchParams(location.search).get('free') === '1';   // 10-04 교사 '왜 홍보는 아직도 눌러야 카메라가 이동' → 홍보판도 예전 포인터 잠금(+ Tab = 마우스 보이기) · 휴대폰은 손가락 끌기 그대로
+  let FREE_DEF = new URLSearchParams(location.search).get('free') === '1'; try { if (!window.SM_PROMO && localStorage.getItem('sm-mouse') === 'drag') FREE_DEF = true; } catch (e) { /* 막힘 */ }   // MOUSE-1(사용자 10-17 '탭 눌러서 마우스 생기는 방식이 근본적으로 맞나'): 이 기기 고른 방식(마을 메뉴) · 홍보판은 늘 기본   // 10-04 교사 '왜 홍보는 아직도 눌러야 카메라가 이동' → 홍보판도 예전 포인터 잠금(+ Tab = 마우스 보이기) · 휴대폰은 손가락 끌기 그대로
   { const h = document.getElementById('help'); if (h && !/Tab/.test(h.textContent)) h.textContent = h.textContent.replace(/시점 마우스\(클릭\)/, '시점 마우스(클릭) · 마우스 보이기 Tab'); }   // 홍보판 index.html(고치지 않음)의 안내 줄에도
   function helpFree(on) {   // FREE-MOUSE: 아래 안내 줄도 '끌기'로(잠금이면 원래 글)
     const h = document.getElementById('help'); if (!h) return;
@@ -213,6 +213,7 @@ export function createMapApi(host, NAV, META) {
     // WG-FPS(10-03): 1인칭/3인칭('first'|'third') · 위로 보는 한계(라디안 · 기본 −0.2) · 시점 돌리기(터치 화면 px) — 게임이 멈추면 원래대로
     view(v) { if (S0.view == null) S0.view = pl.getFirst(); pl.setFirst(v === 'first'); },
     get first() { return pl.getFirst(); },
+    mouseMode(m) { if (m == null) return FREE_DEF ? 'drag' : 'lock'; if (window.SM_PROMO) return; FREE_DEF = m === 'drag'; try { localStorage.setItem('sm-mouse', FREE_DEF ? 'drag' : 'lock'); } catch (e) { /* 막힘 */ } player.freeMouse(FREE_DEF); },   // MOUSE-1: 'lock' = 움직이면 둘러보기(Tab = 마우스) · 'drag' = 마우스 늘 보임 + 끌어서 둘러보기 — 놀이 끝나면 이 값으로 돌아감
     freeMouse(on = true) { CTRL.freeMouse = !!on; if (on && document.pointerLockElement) document.exitPointerLock(); helpFree(!!on); },   // FREE-MOUSE(10-03): 마우스 늘 보임 · 끌어서 시점 · 톡 = 'sm-click' — 게임이 멈추면 끔
     pitchLow(lo) { CTRL.pitchLo = lo == null ? null : Math.max(-1.3, Math.min(-0.2, +lo)); },
     look(dx, dy) { pl.look(dx || 0, dy || 0); },
