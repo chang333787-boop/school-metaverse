@@ -3,7 +3,7 @@
 //   이야기 단계 이름 = 이야기 S.story.rec.st와 같게(c 장 · s 단계 · h 힌트 단계 · tr 틀린 수 · p 고른 것 · w 까닭 · l 불편해질 사람 · t 한 줄 · f 잰 값) — QUEST-2 기록을 같은 이름으로 한 곳에
 //   하루 = 실제 날짜(수업 한 번 = 하루 · 게임 하루는 12분이라 게임 날로 묶으면 14일이 수업 한두 번) · 최근 14일 · 갈래마다 하루 상한 · 글은 짧게 자름 · 전체가 80KB를 넘으면 오래된 날부터(보통 하루 3~4KB · 꽉 찬 하루 약 15KB)
 //   이름·sid·기기 번호 X — 화면엔 '이 기기'로만 · 매 프레임 일 0(일이 끝날 때 add 한 번 · 창은 열 때만 셈)
-import { CHAPTERS } from './town_story.js?v=9';
+import { CHAPTERS } from './town_story.js?v=10';
 import { BANK, DIR8 } from './town_quiz.js?v=4';
 export const REC_V = 1, REC_DAYS = 14, REC_MAX = 80 * 1024;
 const T2 = (ko, en) => [ko, en];
