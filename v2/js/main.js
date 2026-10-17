@@ -1,13 +1,14 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
+import { attachLook, openLookPanel, parseLook, lookColors } from './look.js?v=1';   // LOOK-1 내 모습(모자·윗옷·바지·머리·피부 색 — 정점 색만 · 홍보판 = 기본)
 import { buildWorld } from './world.js?v=158';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
 import { createMapApi } from './mapapi.js?v=84';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=10';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
-import { createTitle } from './title.js?v=26';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+import { createTitle } from './title.js?v=27';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
 import { createTop } from './topview.js?v=11';   // TOP-1(10-04 교사 '탑뷰로 학교 보기'): 하늘에서 보기 — 지붕 벗기기(1·2층)·끌어 옮기기·확대·돌리기·방 이름·방위표·축척 · 게임은 map.top   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
 import { createActions } from './actions.js?v=3';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
@@ -173,6 +174,7 @@ const P = { x: 12.4, y: world.terrainAt(12.4, -6) + 0.01, z: -6, vy: 0, yaw: 0, 
 // 부위마다 정점색을 구운 메시(한 재질) — 드로우콜 7. 앞 = +z(P.yaw 0 = +z로 걷는 방향). 키 ≈1.3m
 const pg = new THREE.Group();
 const KID = buildKid(THREE, 'b');
+attachLook(THREE, KID.rig);   // LOOK-1: 고른 모습으로 정점 색만 다시 칠함(이 기기 localStorage 'sm-look' · 홍보판 = 기본) — 매 프레임 일 0
 pg.add(KID.rig);
 scene.add(pg);
 KID.rig.traverse(o => { o.castShadow = false; });   // GFX-2: 그림자는 굽기만 하므로 캐릭터 그림자는 구운 자리에 멈춰 남는다 — 대신 발밑 둥근 그림자(아래 blob)
@@ -615,7 +617,7 @@ function camPose(hx, hy, hz, yaw, pch, CD, fov, aspect, dUse) {
   let want = Math.min(CD, hit - 0.3);
   if (want < 0.5) want = Math.max(0.1, Math.min(0.5, hit - 0.12));
   for (let k = 0; k < 60 && want > 0.5 && nearClip(hx + dx * want, hy + dy * want, hz + dz * want, -dx, -dy, -dz, fov, aspect, hy); k++) want = Math.max(0.5, want - 0.1);   // ④
-  if (world.overAt) for (let k = 0; k < 40 && want > 0.5; k++) { const g = world.overAt(hx + dx * want, hz + dz * want, hy + dy * want); if (g == null || hy + dy * want > g + 0.4) break; want = Math.max(0.5, want - 0.2); }   // ⑤ CAM-5(10-14 마을 산비탈): 놀이가 덮어쓴 땅 속으로 들어가 하늘이 비치지 않게 당김 — 학교 땅은 덮어쓴 땅이 없어 그대로
+  if (world.overAt) for (let k = 0; k < 40 && want > 0.5; k++) { let bad = false; for (let f = 0.4; f < 1.05; f += 0.2) { const w9 = want * f, g = world.overAt(hx + dx * w9, hz + dz * w9, hy + dy * w9); if (g != null && hy + dy * w9 < g + 0.4) { bad = true; break; } } if (!bad) break; want = Math.max(0.5, want - 0.2); }   /* CAM-8(10-17 아이 눈 혹평 캡처 — 산비탈에서 카메라와 머리 사이 솟은 땅이 아이를 가림): 끝 한 점이 아니라 사이 넷(0.4·0.6·0.8·1.0)을 봄 */   // ⑤ CAM-5(10-14 마을 산비탈): 놀이가 덮어쓴 땅 속으로 들어가 하늘이 비치지 않게 당김 — 학교 땅은 덮어쓴 땅이 없어 그대로
   const d = dUse ?? want, cx = hx + dx * d, cz = hz + dz * d; let cy = hy + dy * d;
   if (world.overAt) { const g = world.overAt(cx, cz, cy); if (g != null && cy < g + 0.4) cy = g + 0.4; }   // 그래도 땅 밑이면 땅 위로
   const hw = 0.3 * Math.tan(fov * Math.PI / 360) * aspect + 0.08, rx = Math.cos(yaw), rz = -Math.sin(yaw);
@@ -1528,14 +1530,14 @@ function emoChip(on) {
   if (!on) { if (emoEl) emoEl.remove(); emoEl = null; return; } if (emoEl) return;
   emoEl = document.createElement('div'); emoEl.id = 'mpEmo'; emoEl.className = 'chip'; emoEl.style.cssText = 'left:10px;top:84px;cursor:pointer;display:flex;gap:2px;align-items:center;padding:4px 6px;pointer-events:auto';
   emoEl.innerHTML = '<span data-e="t" style="padding:2px 6px">😀</span><span class="emo-bar" style="display:none;gap:2px"></span>';
-  import('./net.js?v=10').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" style="font-size:22px;padding:2px 4px;cursor:pointer">' + x + '</span>').join(''); });
+  import('./net.js?v=11').then((M) => { const bar = emoEl && emoEl.querySelector('.emo-bar'); if (!bar) return; bar.innerHTML = M.EMOTES.map((x, i) => '<span data-e="' + i + '" style="font-size:22px;padding:2px 4px;cursor:pointer">' + x + '</span>').join(''); });
   emoEl.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-e]'); if (!b) return; const bar = emoEl.querySelector('.emo-bar');
     if (b.dataset.e === 't') { bar.style.display = bar.style.display === 'none' ? 'flex' : 'none'; return; } if (NET) NET.emote(+b.dataset.e); bar.style.display = 'none'; });
   document.body.appendChild(emoEl);
 }
 if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' && !/[?&](check|health)=1/.test(location.search) && !new URLSearchParams(location.search).get('shot')) {
   const chip = document.createElement('div'); chip.id = 'mpChip'; chip.className = 'chip'; document.body.appendChild(chip);
-  Promise.all([import('./net.js?v=10'), import('./lobby.js?v=16')]).then(([N, L]) => {
+  Promise.all([import('./net.js?v=11'), import('./lobby.js?v=17')]).then(([N, L]) => {
     // ROOM-1(10-05 교사 '멀티방을 게임으로 들어가는 게 아니라 멀티방을 만들고 그 안에서 모드를 정하는 게 직관적일까?'): 방 먼저 → 방을 만든 선생님이 👥 창 '🎮 다 같이 놀이'를 고르면 방 친구 모두 그 놀이 대기실로
     //   방 놀이 번호 = ctl/cmd d — 선생님 신호(📣·✋·▶·🎮)마다 지금 방 놀이를 같이 실음(cmd는 마지막 하나만 남으므로 — 늦게 들어온 친구·새로고침한 화면도 앎 · 규칙 그대로)
     //   ⚠️ 번호는 뒤에만 더한다(옛 화면과 어긋나지 않게) · 메뉴(오프닝·🎮)에는 registry room:true 놀이가 안 보임 — 혼자 연습 카드만
@@ -1568,7 +1570,8 @@ if (!window.SM_PROMO && new URLSearchParams(location.search).get('mp') !== '0' &
       guide_vs: { i: '🧭', c: ['#219653', '#6fcf97'], r: '둘씩 한 팀 — 지도를 보고 길을 알려 줘요', m: '한 판 1분 · 팀 안에서 역할 바꾸기' } };
     const map9tone = (on) => { try { tone(on ? 880 : 520, 0, 0.12, 'sine', 0.08); if (on) tone(1320, 0.1, 0.16, 'sine', 0.07); } catch (e) { /* */ } };
     const hexOf = (c) => (typeof c === 'number' ? '#' + c.toString(16).padStart(6, '0') : /^#[0-9a-f]{6}$/i.test(c || '') ? c : '#4dabf7');
-    const avSvg = (hex) => '<svg class="av" viewBox="0 0 64 64" aria-hidden="true"><path d="M9 64q0-17 23-17t23 17z" fill="' + hex + '"/><circle cx="32" cy="31" r="16" fill="#f5cfa6"/><path d="M15 28a17 15 0 0 1 34 0z" fill="' + hex + '"/><rect x="30" y="24.5" width="22" height="5" rx="2.5" fill="' + hex + '"/><circle cx="26" cy="33" r="2.4" fill="#1d1530"/><circle cx="38" cy="33" r="2.4" fill="#1d1530"/><path d="M27 39.5q5 4 10 0" stroke="#1d1530" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="21.5" cy="37.5" r="2.6" fill="#ff8f8f" opacity=".5"/><circle cx="42.5" cy="37.5" r="2.6" fill="#ff8f8f" opacity=".5"/></svg>';
+    const avSvg = (hex, k) => { const L9 = parseLook(k), lc = L9 && lookColors(L9), cs = (h) => '#' + h.toString(16).padStart(6, '0'), top = lc ? cs(lc.top) : hex, cap = lc ? cs(lc.cap) : hex, skin = lc ? cs(lc.skin) : '#f5cfa6';   /* LOOK-1: 옷 코드가 있으면 윗옷·모자·피부 색 · 없으면 예전(친구 색) */
+      return '<svg class="av" viewBox="0 0 64 64" aria-hidden="true"><path d="M9 64q0-17 23-17t23 17z" fill="' + top + '"/><circle cx="32" cy="31" r="16" fill="' + skin + '"/><path d="M15 28a17 15 0 0 1 34 0z" fill="' + cap + '"/><rect x="30" y="24.5" width="22" height="5" rx="2.5" fill="' + cap + '"/><circle cx="26" cy="33" r="2.4" fill="#1d1530"/><circle cx="38" cy="33" r="2.4" fill="#1d1530"/><path d="M27 39.5q5 4 10 0" stroke="#1d1530" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="21.5" cy="37.5" r="2.6" fill="#ff8f8f" opacity=".5"/><circle cx="42.5" cy="37.5" r="2.6" fill="#ff8f8f" opacity=".5"/></svg>'; };
     function wrCss() { if (document.getElementById('wr-css')) return; const st = document.createElement('style'); st.id = 'wr-css'; st.textContent = `
 #mpWR{position:fixed;inset:0;z-index:45;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:radial-gradient(circle at 70% 20%,#2b5aa6,#152b55 70%);color:#1d3557;font:15px/1.4 "Apple SD Gothic Neo","Malgun Gothic",sans-serif;-webkit-text-size-adjust:100%}
 #mpWR button{font:inherit;cursor:pointer}
@@ -1649,7 +1652,7 @@ body.small #mpWR .sum{font-size:13px}body.small #mpWR .low{display:none}
     function wrDraw() { if (!WR || !NET || !LOBBY.room) return; const Rm = LOBBY.room, own = !!Rm.k, Rg = ROOMS[ROOMG], G = Rg && WRG[Rg.id], ros = NET.roster(), esc9 = (x) => String(x == null ? '' : x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       if (own && !ROOMRUN && OWNERID !== NET.id && wrAnn !== Rm.c && Date.now() - (CTLK.join || 0) > 2500) { wrAnn = Rm.c; LOBBY.teacher('game', null, true); }
       const run = !!(ROOMRUN && Rg), gName = (q) => q.t.replace(/^\S+\s+/, '').replace(/\s*\(.*?\)/, '');
-      const meP = { id: NET.id, label: NET.name, act: actNow(), color: hexOf(NET.color), me: true }, all = [meP].concat(ros.map(p => ({ ...p, color: hexOf(p.color) })));
+      const meP = { id: NET.id, label: NET.name, act: actNow(), color: hexOf(NET.color), k: NET.kindCode, me: true }, all = [meP].concat(ros.map(p => ({ ...p, color: hexOf(p.color) })));
       const host = all.find(p => p.id === (own ? NET.id : OWNERID)) || null, hostWatch = !!host && (host.me ? !meIn() : isWatch(host));
       const rest = all.filter(p => p !== host), order = (host && !hostWatch ? [host] : []).concat(rest.filter(p => p.me), rest.filter(p => !p.me));
       const need = all.filter(p => p !== host && (p.me || (inLobby(p) && !isWatch(p)))), rdN = need.filter(p => (p.me ? READY : isRdy(p))).length, allRdy = rdN >= need.length;   // 준비할 사람 = 대기실에 있는 방장 아닌 친구 + 나(다른 것 하는 친구는 안 기다림)
@@ -1659,7 +1662,7 @@ body.small #mpWR .sum{font-size:13px}body.small #mpWR .low{display:none}
         const st = run ? (inG ? '🎮 경기 중' : p.me ? '대기실' : '📍 ' + (p.act || '다른 곳')) : isH ? '' : rdy ? 'READY' : away ? '📍 ' + (p.act || '다른 곳') : '준비 중…';
         return '<div class="sl' + (p.me ? ' me' : '') + (rdy ? ' rdy' : '') + (inG ? ' ing' : '') + (away ? ' away' : '') + '">' + (isH ? '<span class="tg">👑 방장</span>' : '') + (p.me ? '<span class="tg me">나</span>' : '')
           + (p.me && isH && !run ? '<button class="mini" data-w="watch" title="이번 놀이는 구경만 해요">👀 구경만</button>' : '')
-          + avSvg(p.color) + '<div class="nm">' + esc9(p.label) + '</div><div class="st">' + esc9(st) + '</div></div>'; };
+          + avSvg(p.color, p.k) + '<div class="nm">' + esc9(p.label) + '</div><div class="st">' + esc9(st) + '</div></div>'; };
       const cells = order.slice(0, 8).map(slot); while (cells.length < 8) cells.push('<div class="sl empty">빈 자리</div>');
       const more = order.length > 8 ? ' · 자리가 꽉 차서 ' + (order.length - 8) + '명은 구경' : '';
       const side = (run
@@ -1822,17 +1825,17 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
   pz.style.cssText = 'position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(20,30,50,.45);font-family:inherit';
   pz.innerHTML = '<div style="background:#fffdf5;border:4px solid #1d3557;border-radius:18px;padding:18px 22px;min-width:240px;text-align:center;box-shadow:0 8px 0 #1d3557;color:#1d3557">'
     + '<div style="font-size:22px;font-weight:800;margin-bottom:12px">⏸ 잠깐 멈춤</div>'
-    + '<button data-a="go">▶ 계속하기</button><button data-a="menu">🏠 메뉴로</button><button data-a="pick">🎮 놀이 바꾸기</button>'
-    + '<div style="font-size:12px;color:#5a6a80;margin-top:8px">1·Enter 계속 · 2 메뉴 · 3 놀이 · P/Esc = 멈춤 창</div></div>';
+    + '<button data-a="go">▶ 계속하기</button><button data-a="menu">🏠 메뉴로</button><button data-a="pick">🎮 놀이 바꾸기</button><button data-a="look">🎨 내 모습</button>'
+    + '<div style="font-size:12px;color:#5a6a80;margin-top:8px">1·Enter 계속 · 2 메뉴 · 3 놀이 · 4 내 모습 · P/Esc = 멈춤 창</div></div>';   // LOOK-1: 4 = 🎨 내 모습
   pz.querySelectorAll('button').forEach(b => b.style.cssText = 'display:block;width:100%;min-height:46px;margin:8px 0 0;border:0;border-radius:12px;background:#ffd23f;color:#1d3557;font:inherit;font-size:17px;font-weight:700;cursor:pointer');
   if (window.SM_PROMO) {   // PROMO-1(09-29): 홍보판은 견학 하나만 — 놀이 바꾸기 없음 · 메뉴 = 처음 화면
-    pz.querySelector('[data-a=pick]').remove(); pz.querySelector('[data-a=menu]').textContent = '🏠 처음 화면으로';
+    pz.querySelector('[data-a=pick]').remove(); pz.querySelector('[data-a=look]').remove(); pz.querySelector('[data-a=menu]').textContent = '🏠 처음 화면으로';   // LOOK-1: 홍보판 = 늘 기본 모습(꾸미기 창 없음)
     pz.lastElementChild.lastElementChild.textContent = '1·Enter 계속 · 2 처음 화면 · P/Esc = 멈춤 창'; }
   document.body.appendChild(pz);
   let userLock = false;   // 잠금이 사용자 클릭으로 걸렸는지(게임이 스스로 풀 때와 구분)
   const hide = () => { pz.style.display = 'none'; };
   const busy = () => CTRL.frozen || TOP.on || (TITLE && TITLE.phase !== 'off')   // 오프닝·메뉴·날아오는 중 · 게임이 멈춘(쪽지·대화) 동안
-    || (MAP.picker && MAP.picker.panel) || document.querySelector('.eng-note,.hudAsk,.esc-lock,#tour-talk,#story-talk,#memo-ui .mp,.bk-panel,.lb-pop,.lb-big,.lb-ask,.wg-lobby,.twn-p');   // LOCK-2: 놀이 창이 잠금을 푼 것은 멈춤 창 없이 · 마을 창(J 바로 가기·M 지도·F 찾기·☰ 메뉴·칸 버튼판 — 교사 10-14 'J 누를 때마다 잠깐 멈춤')
+    || (MAP.picker && MAP.picker.panel) || document.querySelector('.eng-note,.hudAsk,.esc-lock,#tour-talk,#story-talk,#memo-ui .mp,.bk-panel,.lb-pop,.lb-big,.lb-ask,.wg-lobby,.twn-p,#lkPop');   // LOCK-2: 놀이 창이 잠금을 푼 것은 멈춤 창 없이 · 마을 창(J 바로 가기·M 지도·F 찾기·☰ 메뉴·칸 버튼판 — 교사 10-14 'J 누를 때마다 잠깐 멈춤')
   document.addEventListener('pointerlockchange', () => {
     if (document.pointerLockElement === canvas) { userLock = true; CURSOR.on = false; hide(); return; }
     if (!userLock) return; userLock = false;
@@ -1843,16 +1846,20 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
     const a = e.target.dataset && e.target.dataset.a; e.stopPropagation();
     if (a === 'menu') { hide(); if (TITLE) TITLE.backToMenu(); else location.href = location.pathname; return; }   // 게임 주소로 들어왔으면 오프닝(메뉴)이 있는 첫 화면으로
     if (a === 'pick') { hide(); MAP.picker && MAP.picker.open(); return; }
+    if (a === 'look') { hide(); lookOpen(); return; }   // LOOK-1: 🎨 내 모습
     hide(); if (!TOUCH.on && !CTRL.freeMouse) { try { const p9 = canvas.requestPointerLock(); if (p9 && p9.catch) p9.catch(() => {}); } catch (e) { /* 머리 없는 시험 브라우저 */ } }   // 계속하기 · 빈 곳 누름(마우스 늘 보임이면 잠그지 않음)
   });
   const show = () => { keys.clear(); pz.style.display = 'flex'; };
+  // LOOK-1 🎨 내 모습 창(⏸ 멈춤 창 4 · 오프닝 메뉴 머리 단추 = sm-look-open) — 창이 열린 동안 몸 멈춤(닫으면 원래대로) · 홍보판 없음
+  const lookOpen = () => { if (window.SM_PROMO || document.getElementById('lkPop')) return; keys.clear(); const fz0 = CTRL.frozen; CTRL.frozen = true; openLookPanel({ THREE, buildKid, onClose: () => { CTRL.frozen = fz0; } }); };
+  addEventListener('sm-look-open', lookOpen);
   // 단축키(09-28 사용자 "메뉴·게임 키도 버튼 할당"): P = 멈춤 창(잠금 중에도 — 잠금을 풀고 창) · G = 🎮 놀이 고르기 · 멈춤 창 안: Enter/Space/1 계속 · 2 메뉴로 · 3 놀이 바꾸기 · Esc 닫기
   addEventListener('keydown', e => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.isContentEditable)) return;
     const on = pz.style.display === 'flex';
     if (on) {
-      const a = { Enter: 'go', NumpadEnter: 'go', Space: 'go', Digit1: 'go', Digit2: 'menu', Digit3: 'pick', KeyP: 'go', Escape: 'close' }[e.code];
+      const a = { Enter: 'go', NumpadEnter: 'go', Space: 'go', Digit1: 'go', Digit2: 'menu', Digit3: 'pick', Digit4: 'look', KeyP: 'go', Escape: 'close' }[e.code];
       if (!a) return; e.preventDefault(); e.stopImmediatePropagation();
       if (a === 'close') hide(); else pz.querySelector('[data-a="' + a + '"]')?.click();
       return;

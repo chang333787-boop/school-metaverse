@@ -2,6 +2,8 @@
 //   방 = metaverse/rooms/<room>/players/<id> = { n 이름, c 색, k 모양, x, y, z, h, t 서버시각, fx? }
 //   보내기: 움직이면 초당 6번 · 가만히 있으면 3초마다 · 받기: 방 한 갈래(rooms/<room>)를 스트림 하나로 — players + ctl(선생님 신호·물총 대기실) · 20초 넘게 소식 없는 사람은 숨기고 2분 넘으면 지움
 //   NET-2(10-03): 이모지 인사(players/<id>/m = {q, i} — 정해진 그림만 · 3초 머리 위) · 미니맵 친구 점(peers()) · ctl = 방 신호(o.onCtl) — 연결 하나로 합침(무료 요금제 동시 연결 100)
+import { lookCode, parseLook, lookColors } from './look.js?v=1';   // LOOK-1(10-17): 내 모습 옷 코드 = players k('L' + 숫자 다섯 · 8자 이하 — 규칙 그대로) · 기본 모습이면 예전처럼 'kid'
+//   NET-OOB(10-17): DB 규칙 범위(x·z ±500 · y −100~200) 밖(마을 대부분)이면 위치를 보내지 않고 3초마다 {h: 99, t}만(= '보이지 않는 곳' 표시 — 받는 화면은 숨김) · 401(쓰기 거절) → onDenied(방 닫힘 확인)는 20초에 한 번만
 const DB = 'https://class-rpg-6f409-default-rtdb.asia-southeast1.firebasedatabase.app';
 const PAL = [0xff6b6b, 0xffa94d, 0xffd43b, 0x69db7c, 0x38d9a9, 0x4dabf7, 0x748ffc, 0xda77f2, 0xf783ac, 0x20c997];
 const SKIN = 0xf1c9a0;
@@ -20,7 +22,7 @@ export function createNet(o) {
   const others = new Map();
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   const _m = new THREE.Matrix4(), _c = new THREE.Color();
-  let es = null, dead = false, hidden = false, mQ = 0, CTL = {}, selfE = null, act = '', CHAT = {}, chatSeen = new Set(), chatT0 = Date.now(), selfB = null, offset = 0, sendT = 0, beatT = 0, cleanT = 8, fxQ = 0, last = { x: 1e9, y: 0, z: 0, h: 0 }, onChange = o.onChange || (() => {});
+  let es = null, dead = false, hidden = false, mQ = 0, CTL = {}, selfE = null, act = '', CHAT = {}, chatSeen = new Set(), chatT0 = Date.now(), selfB = null, offset = 0, sendT = 0, beatT = 0, cleanT = 8, fxQ = 0, denyT = -1e9, away = false, last = { x: 1e9, y: 0, z: 0, h: 0 }, onChange = o.onChange || (() => {});
 
   function merge(parts) {
     const P = [], N = [], C = [];
@@ -35,18 +37,24 @@ export function createNet(o) {
     g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
     return g;
   }
-  function avatar(k, hex) {
+  function avatarGeo(k, hex) {
+    const LK = parseLook(k), lc = LK ? lookColors(LK) : null;   // LOOK-1: 친구 옷 코드 → 윗옷·바지·피부·머리·모자 색
     const parts = k === 'wizard' ? [
       [new THREE.ConeGeometry(0.42, 1.15, 8), hex, 0, 0.58, 0], [new THREE.IcosahedronGeometry(0.26, 1), SKIN, 0, 1.32, 0],
       [new THREE.CylinderGeometry(0.42, 0.42, 0.05, 10), 0x2a1d4f, 0, 1.5, 0], [new THREE.ConeGeometry(0.24, 0.62, 8), 0x2a1d4f, 0, 1.82, -0.04],
       [new THREE.SphereGeometry(0.04, 5, 4), 0x1d1530, -0.09, 1.35, 0.23], [new THREE.SphereGeometry(0.04, 5, 4), 0x1d1530, 0.09, 1.35, 0.23],
+    ] : lc ? [
+      [new THREE.BoxGeometry(0.42, 0.5, 0.26), lc.top, 0, 0.75, 0], [new THREE.BoxGeometry(0.16, 0.5, 0.18), lc.bot, -0.11, 0.25, 0], [new THREE.BoxGeometry(0.16, 0.5, 0.18), lc.bot, 0.11, 0.25, 0],
+      [new THREE.IcosahedronGeometry(0.26, 1), lc.skin, 0, 1.24, 0], [new THREE.SphereGeometry(0.255, 8, 5), lc.hair, 0, 1.21, -0.05], [new THREE.SphereGeometry(0.28, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), lc.cap, 0, 1.3, 0],
+      [new THREE.BoxGeometry(0.3, 0.05, 0.2), lc.cap2, 0, 1.31, 0.24], [new THREE.SphereGeometry(0.035, 5, 4), 0x1d1530, -0.09, 1.26, 0.23], [new THREE.SphereGeometry(0.035, 5, 4), 0x1d1530, 0.09, 1.26, 0.23],
     ] : [
       [new THREE.BoxGeometry(0.42, 0.5, 0.26), hex, 0, 0.75, 0], [new THREE.BoxGeometry(0.16, 0.5, 0.18), 0x2b3a55, -0.11, 0.25, 0], [new THREE.BoxGeometry(0.16, 0.5, 0.18), 0x2b3a55, 0.11, 0.25, 0],
       [new THREE.IcosahedronGeometry(0.26, 1), SKIN, 0, 1.24, 0], [new THREE.SphereGeometry(0.28, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), hex, 0, 1.3, 0],
       [new THREE.BoxGeometry(0.3, 0.05, 0.2), hex, 0, 1.31, 0.24], [new THREE.SphereGeometry(0.035, 5, 4), 0x1d1530, -0.09, 1.26, 0.23], [new THREE.SphereGeometry(0.035, 5, 4), 0x1d1530, 0.09, 1.26, 0.23],
     ];
-    const m = new THREE.Mesh(merge(parts), mat); m.scale.setScalar(scale); return m;
+    return merge(parts);
   }
+  function avatar(k, hex) { const m = new THREE.Mesh(avatarGeo(k, hex), mat); m.scale.setScalar(scale); return m; }
   function tag(text) {
     const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d');
     g.fillStyle = 'rgba(255,255,255,.92)'; g.beginPath(); g.roundRect(4, 6, 248, 52, 22); g.fill();
@@ -77,10 +85,12 @@ export function createNet(o) {
     if (!O) {
       if (others.size >= 40) return;
       const mesh = avatar(d.k || kind, PAL.includes(d.c) ? d.c : PAL[0]), tg = tag(d.n || '친구');
-      O = { a: '', mesh, tag: tg, n: d.n || '친구', c: PAL.includes(d.c) ? d.c : PAL[0], x: d.x || 0, y: d.y || 0, z: d.z || 0, h: d.h || 0, tx: 0, ty: 0, tz: 0, th: 0, t: 0, seen: performance.now(), fxQ: d.fx ? d.fx.q : 0, mQ: d.m ? d.m.q : 0, em: null };
+      O = { a: '', k: d.k || kind, away: false, mesh, tag: tg, n: d.n || '친구', c: PAL.includes(d.c) ? d.c : PAL[0], x: d.x || 0, y: d.y || 0, z: d.z || 0, h: d.h || 0, tx: 0, ty: 0, tz: 0, th: 0, t: 0, seen: performance.now(), fxQ: d.fx ? d.fx.q : 0, mQ: d.m ? d.m.q : 0, em: null };
       scene.add(mesh, tg); others.set(pid, O); onChange();
     }
-    for (const k of ['x', 'y', 'z', 'h']) if (typeof d[k] === 'number') O['t' + k] = d[k];
+    for (const k of ['x', 'y', 'z']) if (typeof d[k] === 'number') O['t' + k] = d[k];
+    if (typeof d.h === 'number') { if (Math.abs(d.h) > 50) O.away = true; else { O.away = false; O.th = d.h; } }   // NET-OOB: h 99 = 규칙 범위 밖(마을 먼 곳) — 숨김
+    if (typeof d.k === 'string' && d.k !== O.k) { O.k = d.k; const g = avatarGeo(d.k, O.c); O.mesh.geometry.dispose(); O.mesh.geometry = g; }   // LOOK-1: 친구가 모습을 바꿈
     if (typeof d.t === 'number') O.t = d.t;
     if (d.n && d.n !== O.n) { O.n = d.n; scene.remove(O.tag); O.tag.material.map.dispose(); O.tag = tag(O.n); scene.add(O.tag); onChange(); }
     if (d.fx && d.fx.q !== O.fxQ) { O.fxQ = d.fx.q; if (o.onFx && O.seen) o.onFx(O, d.fx); }
@@ -130,21 +140,28 @@ export function createNet(o) {
       else upsert(path[0], data);
     } else upsert(path[0], { [path[1]]: data });
   }
-  function req(path, method, data) { return fetch(base + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data), keepalive: true }).then((r) => { if (r.status === 401 && o.onDenied && !dead) o.onDenied(); }).catch(() => {}); }   // 401 = 방이 닫힘·끝남(DB 규칙)
+  function req(path, method, data) { return fetch(base + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data), keepalive: true }).then((r) => { if (r.status === 401 && o.onDenied && !dead && Date.now() - denyT > 20000) { denyT = Date.now(); o.onDenied(); } }).catch(() => {}); }   // 401 = 방이 닫힘·끝남(DB 규칙) · NET-OOB: 확인은 20초에 한 번만(예전 = 거절마다 GET 2번)
+  const inRule = (P) => P.x > -499 && P.x < 499 && P.z > -499 && P.z < 499 && P.y > -99 && P.y < 199;   // NET-OOB: DB 규칙(x·z ±500 · y −100~200) 안
+  const cl = (v, a) => +Math.max(-a, Math.min(a, v || 0)).toFixed(2);
+  const myK = () => (kind === 'kid' ? lookCode() || 'kid' : kind);   // LOOK-1
   function send(P, extra) {
-    const d = { x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), h: +P.h.toFixed(2), t: { '.sv': 'timestamp' }, ...extra };
+    if (!inRule(P)) { req('/players/' + id, 'PATCH', { h: 99, t: { '.sv': 'timestamp' } }); away = true; last.x = P.x; last.y = P.y; last.z = P.z; last.h = P.h; return; }   // NET-OOB: 위치는 안 보냄 · 살아 있음 + '보이지 않는 곳'만
+    away = false; const d = { x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), h: +P.h.toFixed(2), t: { '.sv': 'timestamp' }, ...extra };
     req('/players/' + id, 'PATCH', d); last.x = P.x; last.y = P.y; last.z = P.z; last.h = P.h;
   }
   function join(P) {
-    req('/players/' + id, 'PUT', { n: name, c: color, k: kind, x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), h: +(P.h || 0).toFixed(2), t: { '.sv': 'timestamp' } });
+    const ok = inRule(P); away = !ok;   // NET-OOB: 범위 밖에서 들어오면 자리는 범위 안으로 자르고 h 99(숨김)
+    req('/players/' + id, 'PUT', { n: name, c: color, k: myK(), x: cl(P.x, 498), y: +Math.max(-98, Math.min(198, P.y || 0)).toFixed(2), z: cl(P.z, 498), h: ok ? +(P.h || 0).toFixed(2) : 99, t: { '.sv': 'timestamp' } });
     es = new EventSource(base + '.json');
     es.addEventListener('put', (e) => onEvt('put', e)); es.addEventListener('patch', (e) => onEvt('patch', e));
   }
-  const leave = () => { if (dead) return; dead = true; if (es) es.close(); req('/players/' + id, 'DELETE'); for (const pid of [...others.keys()]) drop(pid); if (selfE) { scene.remove(selfE.s); selfE.s.material.dispose(); } for (const t of ETEX) if (t) t.dispose(); };
+  const onLook = () => { if (joined && !dead && kind === 'kid') req('/players/' + id, 'PATCH', { k: myK() }); };   // LOOK-1: 모습을 바꾸면 옷 코드만 한 번
+  addEventListener('sm-look', onLook);
+  const leave = () => { if (dead) return; dead = true; removeEventListener('sm-look', onLook); if (es) es.close(); req('/players/' + id, 'DELETE'); for (const pid of [...others.keys()]) drop(pid); if (selfE) { scene.remove(selfE.s); selfE.s.material.dispose(); } for (const t of ETEX) if (t) t.dispose(); };
   addEventListener('pagehide', leave);
   let joined = false;
   return {
-    get id() { return id; }, get name() { return name; }, get color() { return color; },
+    get id() { return id; }, get name() { return name; }, get color() { return color; }, get away() { return away; }, get kindCode() { return myK(); },
     get count() { let n = 1; const now = Date.now() + offset; for (const O of others.values()) if (now - O.t < 20000) n++; return n; },
     get names() { const now = Date.now() + offset, a = []; for (const O of others.values()) if (now - O.t < 20000) a.push(O.n); return a; },
     setName(v) { v = String(v || '').replace(/[<>]/g, '').trim().slice(0, 8); if (!v) return; name = v; try { localStorage.setItem('mp.name', v); } catch (e) { /* */ } if (joined) req('/players/' + id, 'PATCH', { n: v }); onChange(); },
@@ -154,12 +171,12 @@ export function createNet(o) {
       if (!joined) { joined = true; join(P); }
       sendT -= dt; beatT -= dt;
       const moved = Math.abs(P.x - last.x) + Math.abs(P.z - last.z) + Math.abs(P.y - last.y) > 0.05 || Math.abs(P.h - last.h) > 0.08;
-      if ((moved && sendT <= 0) || beatT <= 0) { send(P); sendT = 1 / 6; beatT = 3; }
+      if ((moved && sendT <= 0 && (inRule(P) || !away)) || beatT <= 0) { send(P); sendT = 1 / 6; beatT = 3; }   // NET-OOB: 범위 밖이면 움직여도 3초마다 한 번(처음 나갈 때 한 번은 바로)
       const now = Date.now() + offset, k = Math.min(1, dt * 10);
       emoteTick(selfE, dt, P.x, P.y - 0.25, P.z); bubbleTick(selfB, dt, P.x, P.y - 0.25, P.z);
       for (const O of others.values()) {
-        const stale = O.t && now - O.t > 20000; O.mesh.visible = O.tag.visible = !stale && !hidden;
-        emoteTick(O.em, dt, O.x, O.y, O.z); bubbleTick(O.sb, dt, O.x, O.y, O.z);
+        const stale = O.t && now - O.t > 20000; O.mesh.visible = O.tag.visible = !stale && !hidden && !O.away;
+        if (O.away) { if (O.em) O.em.s.visible = false; if (O.sb) O.sb.s.visible = false; } else { emoteTick(O.em, dt, O.x, O.y, O.z); bubbleTick(O.sb, dt, O.x, O.y, O.z); }
         O.x += (O.tx - O.x) * k; O.y += (O.ty - O.y) * k; O.z += (O.tz - O.z) * k;
         let dh = O.th - O.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); O.h += dh * k;
         O.mesh.position.set(O.x, O.y, O.z); O.mesh.rotation.y = O.h; O.tag.position.set(O.x, O.y + 2.05 * scale, O.z);
@@ -173,11 +190,11 @@ export function createNet(o) {
     get chat() { return Object.values(CHAT).filter((m) => m && typeof m.tx === 'string').sort((a, b) => (a.t || 0) - (b.t || 0)); },
     setAct(v) { v = String(v || '').slice(0, 20); if (v === act || !joined) return; act = v; req('/players/' + id + '/a', 'PUT', v); },   // 지금 하는 것(👥 창에서 선생님이 봄)
     emote(i) { if (!joined) return; mQ++; req('/players/' + id + '/m', 'PUT', { q: mQ, i }); selfE = emoteSprite(selfE, i); },
-    peers() { const now = Date.now() + offset, a = []; if (!hidden) for (const O of others.values()) if (!(O.t && now - O.t > 20000)) a.push({ x: O.x, y: O.y, z: O.z, act: O.a, label: O.n, color: '#' + O.c.toString(16).padStart(6, '0'), r: 4, floor: O.y > 2.5 ? 2 : 1 }); return a; },
+    peers() { const now = Date.now() + offset, a = []; if (!hidden) for (const O of others.values()) if (!(O.t && now - O.t > 20000) && !O.away) a.push({ x: O.x, y: O.y, z: O.z, act: O.a, label: O.n, color: '#' + O.c.toString(16).padStart(6, '0'), r: 4, floor: O.y > 2.5 ? 2 : 1 }); return a; },
     ctl(path, data) { return req('/ctl/' + path, 'PUT', data); },
     get ctlData() { return CTL; },
-    roster() { const now = Date.now() + offset, a = []; for (const [id, O] of others) if (!(O.t && now - O.t > 20000)) a.push({ id, label: O.n, act: O.a, color: O.c }); return a; },   // ROOM-2: 경기 중(hide)에도 같은 방 친구 명단
-    hide(on) { hidden = !!on; for (const O of others.values()) O.mesh.visible = O.tag.visible = !hidden; },   // 물총 친구 대결 동안 걷기 몸 숨김(경기 몸이 대신)
+    roster() { const now = Date.now() + offset, a = []; for (const [id, O] of others) if (!(O.t && now - O.t > 20000)) a.push({ id, label: O.n, act: O.a, color: O.c, k: O.k }); return a; },   // ROOM-2: 경기 중(hide)에도 같은 방 친구 명단
+    hide(on) { hidden = !!on; for (const O of others.values()) O.mesh.visible = O.tag.visible = !hidden && !O.away; },   // 물총 친구 대결 동안 걷기 몸 숨김(경기 몸이 대신)
     leave,
   };
 }

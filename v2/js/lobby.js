@@ -45,6 +45,8 @@ body.touch .lb-pop button,body.touch .lb-big button{min-height:44px}
 const addCss = () => { for (const [id, tx] of [['lb-css', CSS], ['lb-css2', CSS2]]) if (!document.getElementById(id)) { const st = document.createElement('style'); st.id = id; st.textContent = tx; document.head.appendChild(st); } };
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const req = (path, method = 'GET', data) => fetch(DB + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data) }).then((r) => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)));
+// CLOSE-1(10-17 함께·표현 팀): 방 기록 치우기 — rooms/c<번호>(학교 '' · 마법사 마을 'w')의 채팅·신호. 규칙이 '살아 있는(안 닫힌) 방에만 쓰기'라 닫기(x) 전에 지움 · 실패해도 닫기는 그대로
+const wipeRoom = (c) => Promise.all(['', 'w'].flatMap((sf) => ['/chat', '/ctl'].map((pt) => req('/rooms/c' + c + sf + pt, 'DELETE').catch(() => null))));
 const rand = (n) => { const a = new Uint8Array(n); crypto.getRandomValues(a); return [...a].map((b) => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join(''); };
 const hash = async (pin) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('mv-memo:' + pin)))].map((b) => b.toString(16).padStart(2, '0')).join('');
 const ss = { get: (k) => { try { return sessionStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) { /* */ } } };
@@ -165,6 +167,7 @@ export function createLobby(o) {
       await req('/keys/' + rid, 'PUT', k);
       await req('/lobby/' + rid, 'PUT', { n: name, e, t: { '.sv': 'timestamp' } });
       await req('/codes/' + c, 'PUT', { r: rid, e, t: { '.sv': 'timestamp' } });
+      await wipeRoom(c);   // CLOSE-1: 같은 번호의 지난 방(닫지 않고 끝난 방)이 남긴 채팅·신호를 새 방이 열리자마자 치움
       closePop(); if (cur) out(); enter({ c, r: rid, n: name, e, k }); const M = net(); if (M) M.setName(kid || '선생님'); showBig();
       req('/lobby').then((L) => { for (const id in L || {}) if (!live(L[id])) req('/lobby/' + id, 'DELETE').catch(() => {}); }).catch(() => {});   // 끝난 방 치우기
     } catch (er) { say('방을 만들지 못했어요 — 인터넷을 확인해 주세요', 3); }
@@ -178,6 +181,7 @@ export function createLobby(o) {
   }
   async function shut() {
     if (!cur || !cur.k || !confirm('「' + cur.n + '」 방을 닫을까요? 들어와 있는 친구들이 모두 나가요.')) return;
+    await wipeRoom(cur.c);   // CLOSE-1: 닫은 뒤엔 쓰기가 막혀 못 지움 → 먼저(번호만 알면 지난 채팅을 읽던 것)
     try { await req('/lobby/' + cur.r + '/x/' + cur.k, 'PUT', true); } catch (e) { return toast('닫지 못했어요'); }
     out('🔒 방을 닫았어요');
   }

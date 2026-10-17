@@ -33,7 +33,7 @@ export const GAMES = {
   escape: { title: '학교 방탈출', folder: 'story', v: 6, desc: '[연습] 사라진 타임캡슐 열쇠 — 방마다 물건을 써서 수수께끼를 풀고, 마지막 교무실에선 순찰 로봇을 피해요(낮·밤) · 새 방탈출은 escape_episodes.js에 더해요', icon: '🔐', group: '모험', short: '[연습] 타임캡슐 열쇠 찾기 — 새 방탈출은 곧!', best: [{ k: 'best', u: 's', lbl: '최고' }, { k: 'bestNight', u: 's', lbl: '밤' }] },
   actions_demo: { title: '행동 사전 예시(개발용)', v: 3, dev: true },   // ENGINE-1: 엔진 동사를 한 번씩 — 글은 자리표시
   fx_demo: { title: '세상 바꾸기 예시(개발용)', v: 2, dev: true },
-  town: { title: '마을 세계', v: 131, dev: true, icon: '🏘', desc: '자료(v2/towns/<이름>.js) 한 장으로 학교 정문 밖에 마을이 서요 — 주소 ?town=<이름> 로만 열림(메뉴·홍보판에 없음)' },   // TOWN-1(10-12): 마을 세계 엔진(docs/systems/town.md)   // NPC-MOVE·WORLD-FX(found2 09-27 · §16): 사람 옮기기·소품·다리·바람·불·문·칠판 그림
+  town: { title: '마을 세계', v: 132, dev: true, icon: '🏘', desc: '자료(v2/towns/<이름>.js) 한 장으로 학교 정문 밖에 마을이 서요 — 주소 ?town=<이름> 로만 열림(메뉴·홍보판에 없음)' },   // TOWN-1(10-12): 마을 세계 엔진(docs/systems/town.md)   // NPC-MOVE·WORLD-FX(found2 09-27 · §16): 사람 옮기기·소품·다리·바람·불·문·칠판 그림
   story: { title: '이야기', folder: 'story', v: 21, desc: '[연습] 무지개 편지 — 4학년이 되어 1학년 동생의 그림을 찾고, 6학년 선배의 편지를 따라 함께 놀이 날을 준비해요(약 10분) · 새 이야기는 story_episodes.js에 더해요', icon: '📖', group: '이야기', short: '[연습] 무지개 편지 — 새 이야기는 곧!' },   // G3-STORY(09-27): 이야기 RPG · 글 = story_data.js
   newbook: { title: '신상책을 찾아라', v: 21, use: 'story', params: { set: 'newbook' }, lesson: 'story', cat: 'story', desc: '4학년 이야기 — ✨ AI가 빈칸을 채운 이야기 · ✏️ 우리 반이 쓴 이야기 그대로', icon: '📚', group: '이야기', short: '✨ AI가 채운 이야기 · ✏️ 우리 반 이야기' },
   robotpart: { title: '로봇 부품 소동', folder: 'story', v: 21, use: 'story', params: { set: 'robotpart' }, desc: '4학년 이야기(은규·지원·인우) — 방과 후 로봇코딩실에서 사라진 부품 · 똑같이 생긴 부품 두 개 · 다툼과 화해 · 부품을 끼우면 로봇이 깨어나요', icon: '🤖', group: '이야기', short: '사라진 부품 · 다툼과 화해 · 깨어나는 로봇' },
@@ -43,10 +43,10 @@ export const GAMES = {
   world_animal: { title: '동물 세계', folder: 'world', v: 21, use: 'story', params: { set: 'world_animal' }, desc: '세계 판 5번(시아·지원) — 운동장의 물약을 마시고 아기 카피바라로 · 동물병원 · 동물원 카피바라 존 · 규칙을 어기면 💥 · 반전 · 📖 세계 안내서', icon: '🐾', group: '상상', short: '아기 카피바라가 되어 동물원 신기한 일 16가지' },
   school2036: { title: '10년 뒤 학교', v: 1, lesson: 'story', cat: 'imagine', link: '../imagine/school2036/', icon: '🌱', group: '상상', short: '2036년, AI와 함께 자란 학교를 걸어 보기' },
   wizard: { title: '마법사 마을', v: 1, lesson: 'story', cat: 'imagine', link: '../imagine/wizard/', icon: '🧙', group: '상상', short: '용 키워 타기 · 구름 고래 · 날씨·변신 마법 — 신기한 일 16가지' },
-  blocks_solo: { title: '블록 놀이(혼자)', folder: 'make', v: 9, use: 'blocks', params: { solo: true }, desc: '🏠 나만의 판에서 혼자 블록을 쌓고 가구·나무를 부숴요 — 이 기기에 저장돼요', icon: '🧱', group: '놀이', short: '혼자 블록 쌓기 · 이 기기에 저장' },
-  blocks: { title: '블록 놀이(같이)', folder: 'make', v: 9, mp: 'together', desc: '같은 판 친구들과 학교 곳곳에 블록을 놓고 부숴요 — 책상·책장 같은 가구도 🔨로 통째로 퍽! 친구들 블록이 바로 보여요(선생님이 판 잠그기·비우기)', icon: '🧱', group: '놀이', short: '같은 판 친구와 블록 쌓기 · 가구 부수기' },
-  memo: { title: '메타버스 메모장', folder: 'think', v: 30, mp: 'together', desc: '우리 이야기를 장면으로 나눠 적고(인물·대사·물건 덧붙이기) 학교 곳곳에 장면 깃발을 꽂아요 — 같은 판 친구들 것이 바로 보여요', icon: '📝', group: '이야기', short: '장면 적고 학교에 장면 깃발 꽂기' },
-  memo_world: { title: '세계 만들기', folder: 'think', v: 30, use: 'memo', params: { kind: 'world' }, mp: 'together', desc: '우리가 상상한 새로운 세계를 함께 쌓아요 — 어떤 세계·규칙·사는 존재·장소(새 세계의 어디쯤)·신기한 것·할 일을 카드로 · 선생님이 정리해 Claude에게 넘기면 진짜 세계가 돼요', icon: '🌍', group: '상상', short: '새로운 세계를 함께 상상해 카드로 쌓기' },
-  world_v3: { title: '우리가 만드는 세계', v: 30, use: 'memo', params: { kind: 'world' }, mp: 'together', lesson: 'story', cat: 'imagine', desc: '새로운 세계를 함께 상상해요 — 세계·규칙·사는 존재·장소·신기한 것·할 일', icon: '🌍', group: '상상', short: '세계관을 함께 상상해 카드로 쌓기' },
-  memo_v3: { title: '메타버스 메모장', v: 30, mp: 'together', use: 'memo', lesson: 'story', cat: 'story', desc: '이야기를 장면으로 나눠 적고 학교 곳곳에 장면 깃발을 꽂아요', icon: '📝', group: '이야기', short: '장면 적고 학교에 장면 깃발 꽂기' },
+  blocks_solo: { title: '블록 놀이(혼자)', folder: 'make', v: 10, use: 'blocks', params: { solo: true }, desc: '🏠 나만의 판에서 혼자 블록을 쌓고 가구·나무를 부숴요 — 이 기기에 저장돼요', icon: '🧱', group: '놀이', short: '혼자 블록 쌓기 · 이 기기에 저장' },
+  blocks: { title: '블록 놀이(같이)', folder: 'make', v: 10, mp: 'together', desc: '같은 판 친구들과 학교 곳곳에 블록을 놓고 부숴요 — 책상·책장 같은 가구도 🔨로 통째로 퍽! 친구들 블록이 바로 보여요(선생님이 판 잠그기·비우기)', icon: '🧱', group: '놀이', short: '같은 판 친구와 블록 쌓기 · 가구 부수기' },
+  memo: { title: '메타버스 메모장', folder: 'think', v: 31, mp: 'together', desc: '우리 이야기를 장면으로 나눠 적고(인물·대사·물건 덧붙이기) 학교 곳곳에 장면 깃발을 꽂아요 — 같은 판 친구들 것이 바로 보여요', icon: '📝', group: '이야기', short: '장면 적고 학교에 장면 깃발 꽂기' },
+  memo_world: { title: '세계 만들기', folder: 'think', v: 31, use: 'memo', params: { kind: 'world' }, mp: 'together', desc: '우리가 상상한 새로운 세계를 함께 쌓아요 — 어떤 세계·규칙·사는 존재·장소(새 세계의 어디쯤)·신기한 것·할 일을 카드로 · 선생님이 정리해 Claude에게 넘기면 진짜 세계가 돼요', icon: '🌍', group: '상상', short: '새로운 세계를 함께 상상해 카드로 쌓기' },
+  world_v3: { title: '우리가 만드는 세계', v: 31, use: 'memo', params: { kind: 'world' }, mp: 'together', lesson: 'story', cat: 'imagine', desc: '새로운 세계를 함께 상상해요 — 세계·규칙·사는 존재·장소·신기한 것·할 일', icon: '🌍', group: '상상', short: '세계관을 함께 상상해 카드로 쌓기' },
+  memo_v3: { title: '메타버스 메모장', v: 31, mp: 'together', use: 'memo', lesson: 'story', cat: 'story', desc: '이야기를 장면으로 나눠 적고 학교 곳곳에 장면 깃발을 꽂아요', icon: '📝', group: '이야기', short: '장면 적고 학교에 장면 깃발 꽂기' },
 };
