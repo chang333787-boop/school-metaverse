@@ -5,6 +5,7 @@ export const DEX_V = 1;
 
 // 비었을 때 귀띔(어디쯤일까 — 장소 이름은 쓰지 않음 · 아이가 놓은 것만 있는 마을이라 '○○ 곁에서'로)
 export const DEX_HINT = {
+  '🍂': ['숲 바닥에서 줍기', 'Pick up on the forest floor'], '🌰': ['소나무 숲 바닥에서 줍기', 'Pick up under pine trees'], '⚪': ['숲 바닥에서 줍기', 'Pick up on the forest floor'], '🍃': ['🌸 봄 숲 바닥에서', 'On the forest floor in spring'], '🥗': ['🌲 숲 꾸러미를 채우면 요리법', 'Fill the forest bundle'],   // RES-1
   '🍓': ['딸기 하우스 일꾼 곁에서', 'Help at a strawberry greenhouse'], '🥔': ['감자밭 일꾼 곁에서', 'Help at a potato field'], '🍚': ['가을 논에서 벼 베기', 'Cut rice in autumn'], '🍐': ['배 과수원 일꾼 곁에서', 'Help at a pear orchard'], '🥬': ['배추밭 일꾼 곁에서', 'Help at a cabbage field'], '🥛': ['소 돌보기 돕기', 'Help feed the cows'],
   '🍄': ['숲 버섯 따기 · 표고 일꾼', 'Pick mushrooms in the woods'], '🍯': ['꿀벌 통 일꾼 곁에서', 'Help a beekeeper'], '🧂': ['소금밭 일꾼 곁에서', 'Help at a salt pan'], '🐚': ['갯벌 조개 캐기', 'Dig clams on the mudflat'], '🌿': ['배 타고 김 양식장 곁에서', 'From the boat, at a laver farm'], '🐟': ['부두 낚시 일꾼 곁에서', 'Fish at the pier'], '🥕': ['학교 텃밭에서 길러요', 'Grow it in the school garden'], '🍅': ['학교 텃밭에서 길러요', 'Grow it in the school garden'], '🌽': ['학교 텃밭에서 길러요', 'Grow it in the school garden'], '🍠': ['학교 텃밭에서 길러요', 'Grow it in the school garden'],
   '🥒': ['장터에서 주고받기', 'Trade at a market'], '🍞': ['빵집·카페에서 사기 · 장터 주고받기', 'Buy at a bakery or café'], '🍦': ['아이스크림 가게', 'Ice cream shop'], '🥤': ['카페·편의점', 'Café or convenience store'],
@@ -19,10 +20,11 @@ export const dexStamp = (day, cell, season, phase) => ({ d: day, c: cell || '', 
 // 기록 한 칸을 한 줄로('📍가5 · 🍂 가을 낮 · 3일째') — 옛 저장(날 숫자만)도 읽음
 export function dexLine(r, en) { if (r == null) return ''; if (typeof r === 'number') return en ? 'Day ' + r : r + '일째'; const S = SEA_N[r.s], P = PH_N[r.t]; return [r.c ? '📍' + r.c : '', (S ? S[en ? 1 : 0] : '') + (P ? ' ' + P[en ? 1 : 0] : ''), en ? 'Day ' + r.d : r.d + '일째'].filter(Boolean).join(' · '); }
 // 도감 책: 갈래마다 칸 목록 — 열쇠 = 물건 그림 · 먹어 본 음식 = 'ate:' + 그림 · 바다 친구 = '🐙'
-export function dexBook(S, ITEMS, DISHES, SKY, FISHL, BUGL) {   /* SKY = 별자리(town_sky.js · 산꼭대기가 있는 마을만) · FISHL = 물고기(town_fish.js · 부두 낚시가 있는 마을만) */ const IT = Object.keys(ITEMS), D = S.dex || {}, cat = c => IT.filter(e => c.includes(ITEMS[e][2]) && e !== '🌑'), slot = (k, icon, kind) => ({ k, icon, kind, got: D[k] != null, rec: D[k] ?? null, hint: DEX_HINT[kind === 'ate' ? 'ate' : icon] || ['', ''] });
+export function dexBook(S, ITEMS, DISHES, SKY, FISHL, BUGL, SHOREL) {   /* SKY = 별자리(town_sky.js · 산꼭대기가 있는 마을만) · FISHL = 물고기(town_fish.js · 부두 낚시가 있는 마을만) */ const IT = Object.keys(ITEMS), D = S.dex || {}, cat = c => IT.filter(e => c.includes(ITEMS[e][2]) && e !== '🌑'), slot = (k, icon, kind) => ({ k, icon, kind, got: D[k] != null, rec: D[k] ?? null, hint: DEX_HINT[kind === 'ate' ? 'ate' : icon] || ['', ''] });
   const sec = [
     { id: 'food', t: ['🍽 먹거리·군것질', '🍽 Food & treats'], L: cat(['food', 'treat']).map(e => slot(e, e, 'item')) },
     { id: 'cook', t: ['🥚 재료·일한 보람', '🥚 Ingredients & work'], L: cat(['cook', 'farm']).map(e => slot(e, e, 'item')) },
+    { id: 'wild', t: ['🌲 숲에서 주운 것', '🌲 Forest finds'], L: cat(['wild']).map(e => slot(e, e, 'item')) },   // RES-1
     { id: 'dish', t: ['🍳 만든 요리', '🍳 Dishes cooked'], L: cat(['dish']).map(e => slot(e, e, 'item')) },
     { id: 'ate', t: ['🍜 식당에서 먹어 본 음식', '🍜 Tasted at restaurants'], L: Object.keys(DISHES).map(e => slot('ate:' + e, e, 'ate')) },
     { id: 'stamp', t: ['🏅 도장', '🏅 Stamps'], L: cat(['stamp']).map(e => slot(e, e, 'item')) },
@@ -30,5 +32,6 @@ export function dexBook(S, ITEMS, DISHES, SKY, FISHL, BUGL) {   /* SKY = 별자�
   ];
   if (FISHL) sec.push({ id: 'fish', t: ['🎣 낚은 물고기', '🎣 Fish met'], L: FISHL.map(f => ({ k: 'fish:' + f.id, icon: f.icon, kind: 'fish', got: D['fish:' + f.id] != null, rec: D['fish:' + f.id] ?? null, hint: f.hint || ['', ''], name: f.t })) });   // GAME-11
   if (BUGL && BUGL.length) sec.push({ id: 'bug', t: ['🔍 관찰한 곤충', '🔍 Insects observed'], L: BUGL.map(b => ({ k: 'bug:' + b.id, icon: b.icon, kind: 'bug', got: D['bug:' + b.id] != null, rec: D['bug:' + b.id] ?? null, hint: b.hint || ['', ''], name: b.t })) });   /* GAME-19 · 이 마을에 사는 곳이 있는 곤충만 */
+  if (SHOREL && SHOREL.length) sec.push({ id: 'shore', t: ['🦀 갯벌 친구', '🦀 Mudflat friends'], L: SHOREL.map(b => ({ k: 'shore:' + b.id, icon: b.icon, kind: 'shore', got: D['shore:' + b.id] != null, rec: D['shore:' + b.id] ?? null, hint: b.hint || ['', ''], name: b.t })) });   /* SHORE-1 · 갯벌이 있는 마을만 */
   if (SKY) sec.push({ id: 'star', t: ['🌌 본 별자리', '🌌 Constellations'], L: SKY.map(st => ({ k: 'star:' + st.id, icon: st.icon, kind: 'star', got: D['star:' + st.id] != null, rec: D['star:' + st.id] ?? null, hint: st.hint || ['', ''], name: st.t })) });   // GAME-8
   let got = 0, tot = 0; for (const s of sec) for (const q of s.L) { tot++; if (q.got) got++; } return { sec, got, tot, pct: tot ? Math.round(got / tot * 100) : 0 }; }

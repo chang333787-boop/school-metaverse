@@ -166,6 +166,10 @@ body.touch.h-lb-pop .tbtn,body.touch.h-lb-pop #tJoyHint,
 body.touch.h-memo-board .tbtn,body.touch.h-memo-board #tJoyHint,body.touch.h-memo-form .tbtn,body.touch.h-memo-form #tJoyHint,body.touch.h-memo-pick .tbtn,body.touch.h-memo-pick #tJoyHint{visibility:hidden}
 body.small #mpEmo{top:calc(134px + env(safe-area-inset-top))!important;left:calc(8px + env(safe-area-inset-left))!important;min-width:44px;min-height:44px;box-sizing:border-box;justify-content:center}
 body.small #mpInvite{top:calc(8px + env(safe-area-inset-top))!important;font-size:13px!important}
+/* TOUCH-2(#15 휴대폰 화면 정리 · 10-17 아이 '지도 때문에 앞이 안 보여요' · 가로에서 위 단추 줄이 해·■ 칩과 겹침): 마을 + 터치 = 학교 칩(☀ 시간 · ■ 그만하기 · 📍 구역 · 👥 함께하기)은 숨김
+   — 마을은 ☰ 메뉴 안(바로 쓰기 줄 · 👥 함께하기 · 🏫 마을 나가기) · 방 안이면 👥는 보임 · 😀는 위로(가운데 위 목표 줄 밑) · :has X(body 꼬리표만) */
+body.touch.h-town #timeChip,body.touch.h-town #gpick,body.touch.h-town #loc,body.touch.h-town:not(.mp-in) #mpChip{display:none!important}
+body.small.touch.h-town:not(.mp-in) #mpEmo{top:calc(56px + env(safe-area-inset-top))!important}
 @media (max-height:500px){ .wg-lobby{padding:10px 12px!important;font-size:13px!important;max-height:94vh!important} }
 
 /* CHAT-1: 휴대폰 — 💬 칩은 😀 칩 옆 · 채팅 줄은 조이스틱 위 */

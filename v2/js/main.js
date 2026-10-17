@@ -1,14 +1,16 @@
 // v2 부트 — 헌법⑤⑥: 정수 해상도만 · AABB 충돌만 · 매초 예산 계측
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
-import { attachLook, openLookPanel, parseLook, lookColors } from './look.js?v=1';   // LOOK-1 내 모습(모자·윗옷·바지·머리·피부 색 — 정점 색만 · 홍보판 = 기본)
+import { attachLook, openLookPanel, parseLook, lookColors } from './look.js?v=1';
+import { SET, openSetPanel } from './settings.js?v=1';   // SET-1 설정·접근성(글씨·색 구분·소리 끄기·흔들림·읽어 주기 — body 꼬리표 · 홍보판 = 기본값)
+import { afterRender, takePhoto, openPhotoPanel } from './photo.js?v=1';   // PHOTO-1 사진관(렌더 바로 뒤 한 번 잡기 · 이 기기 IndexedDB)   // LOOK-1 내 모습(모자·윗옷·바지·머리·피부 색 — 정점 색만 · 홍보판 = 기본)
 import { buildWorld } from './world.js?v=158';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=84';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
-import { createTouch, touchPrimary } from './touch.js?v=10';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
-import { createTitle } from './title.js?v=27';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
+import { createMapApi } from './mapapi.js?v=85';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createTouch, touchPrimary } from './touch.js?v=11';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
+import { createTitle } from './title.js?v=28';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
 import { createTop } from './topview.js?v=11';   // TOP-1(10-04 교사 '탑뷰로 학교 보기'): 하늘에서 보기 — 지붕 벗기기(1·2층)·끌어 옮기기·확대·돌리기·방 이름·방위표·축척 · 게임은 map.top   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
 import { createActions } from './actions.js?v=4';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
@@ -740,6 +742,7 @@ let tray = null, milk = null, shoesIn = false, drumN = 0;
 // 소리(WebAudio — E키 누름이 사용자 제스처라 바로 재생 가능). 짧은 합성음만(파일 없음)
 let AC = null;   // (MOB-2 audioUnlock가 손가락으로 누를 때 먼저 만든다)
 function tone(freq, t0, dur, type = 'sine', vol = 0.25, drop = 0) {
+  if (SET.mute) return;   // SET-1: 모든 소리 끄기(효과음·행동·놀이 소리가 모두 이 길로)
   try {
     AC = AC || new (window.AudioContext || window.webkitAudioContext)();
     if (AC.state === 'suspended') AC.resume();   // GAME-FIND-1: ?game= 주소로 시작하면 첫 소리가 사용자 입력 전이라 멈춘 채 만들어진다 → 다음 소리 때 깨운다
@@ -1465,7 +1468,7 @@ function idle(fn, timeout = 1500) { return window.requestIdleCallback ? requestI
 // ---------- 루프 + 예산 계측(헌법⑥) ----------
 const clock = new THREE.Clock();
 const fpsBox = document.getElementById('fps');
-if (window.SM_PROMO && fpsBox && !/[?&]debug/.test(location.search)) fpsBox.style.display = 'none';   // FILM-3(10-05 기기 점검): 홍보판(학부모)엔 개발용 'fps · dc · sim' 칩을 안 보임 — ?debug면 보임
+if (fpsBox && !/[?&]debug/.test(location.search)) fpsBox.style.display = 'none';   // FILM-3(10-05 기기 점검): 홍보판(학부모)엔 개발용 'fps · dc · sim' 칩을 안 보임 — ?debug면 보임 · FIX-UI1(QA 10-17): 아이 화면(우리 학교용)도 같게 — 재기는 ?debug 또는 SD.perf()
 let acc = 0, n = 0, simMs = 0;
 // MP-1(10-03 교사 '동시 접속이 포인트 — 홍보는 멀티플레이와 상관없음') + LOBBY-1(같은 날 '선생님이 방 파고 코드로 들어오기 · 방 목록'): 주소만으로는 혼자 —
 //   👥 함께하기 칩 → 선생님이 연 방 고르기 + 번호 4자리(lobby.js) → 같은 방 친구들이 보인다 · 홍보판·게이트·사진 대조·?mp=0이면 칩도 없음
@@ -1806,6 +1809,7 @@ function loop(ts) {
   detailTick(dt, OCC_BUDGET);
   const tR0 = performance.now();
   renderer.render(scene, camera);
+  afterRender(canvas);   // PHOTO-1: 찍을 때만 그 한 번 2D로 옮김(평소엔 null 확인 하나 — preserveDrawingBuffer 없이)
   const tR1 = performance.now();
   acc += dt; n++;
   locT += dt;
@@ -1837,19 +1841,19 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
 {
   const pz = document.createElement('div'); pz.id = 'pause';
   pz.style.cssText = 'position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(20,30,50,.45);font-family:inherit';
-  pz.innerHTML = '<div style="background:#fffdf5;border:4px solid #1d3557;border-radius:18px;padding:18px 22px;min-width:240px;text-align:center;box-shadow:0 8px 0 #1d3557;color:#1d3557">'
+  pz.innerHTML = '<div style="background:#fffdf5;border:4px solid #1d3557;border-radius:18px;padding:18px 22px;min-width:240px;text-align:center;box-shadow:0 8px 0 #1d3557;color:#1d3557;max-height:calc(100vh - 24px);overflow:auto;box-sizing:border-box">'
     + '<div style="font-size:22px;font-weight:800;margin-bottom:12px">⏸ 잠깐 멈춤</div>'
-    + '<button data-a="go">▶ 계속하기</button><button data-a="menu">🏠 메뉴로</button><button data-a="pick">🎮 놀이 바꾸기</button><button data-a="look">🎨 내 모습</button>'
-    + '<div style="font-size:12px;color:#5a6a80;margin-top:8px">1·Enter 계속 · 2 메뉴 · 3 놀이 · 4 내 모습 · P/Esc = 멈춤 창</div></div>';   // LOOK-1: 4 = 🎨 내 모습
+    + '<button data-a="go">▶ 계속하기</button><button data-a="menu">🏠 메뉴로</button><button data-a="pick">🎮 놀이 바꾸기</button><button data-a="look">🎨 내 모습</button><button data-a="photo">📷 사진</button><button data-a="set">⚙ 설정</button>'
+    + '<div style="font-size:12px;color:#5a6a80;margin-top:8px">1·Enter 계속 · 2 메뉴 · 3 놀이 · 4 내 모습 · 5 사진 · 6 설정 · P/Esc = 멈춤 창</div></div>';   // LOOK-1: 4 = 🎨 내 모습
   pz.querySelectorAll('button').forEach(b => b.style.cssText = 'display:block;width:100%;min-height:46px;margin:8px 0 0;border:0;border-radius:12px;background:#ffd23f;color:#1d3557;font:inherit;font-size:17px;font-weight:700;cursor:pointer');
   if (window.SM_PROMO) {   // PROMO-1(09-29): 홍보판은 견학 하나만 — 놀이 바꾸기 없음 · 메뉴 = 처음 화면
-    pz.querySelector('[data-a=pick]').remove(); pz.querySelector('[data-a=look]').remove(); pz.querySelector('[data-a=menu]').textContent = '🏠 처음 화면으로';   // LOOK-1: 홍보판 = 늘 기본 모습(꾸미기 창 없음)
+    pz.querySelector('[data-a=pick]').remove(); pz.querySelector('[data-a=look]').remove(); pz.querySelector('[data-a=photo]').remove(); pz.querySelector('[data-a=set]').remove(); pz.querySelector('[data-a=menu]').textContent = '🏠 처음 화면으로';   // LOOK-1: 홍보판 = 늘 기본 모습(꾸미기 창 없음)
     pz.lastElementChild.lastElementChild.textContent = '1·Enter 계속 · 2 처음 화면 · P/Esc = 멈춤 창'; }
   document.body.appendChild(pz);
   let userLock = false;   // 잠금이 사용자 클릭으로 걸렸는지(게임이 스스로 풀 때와 구분)
   const hide = () => { pz.style.display = 'none'; };
   const busy = () => CTRL.frozen || TOP.on || (TITLE && TITLE.phase !== 'off')   // 오프닝·메뉴·날아오는 중 · 게임이 멈춘(쪽지·대화) 동안
-    || (MAP.picker && MAP.picker.panel) || document.querySelector('.eng-note,.hudAsk,.esc-lock,#tour-talk,#story-talk,#memo-ui .mp,.bk-panel,.lb-pop,.lb-big,.lb-ask,.wg-lobby,.twn-p,#lkPop');   // LOCK-2: 놀이 창이 잠금을 푼 것은 멈춤 창 없이 · 마을 창(J 바로 가기·M 지도·F 찾기·☰ 메뉴·칸 버튼판 — 교사 10-14 'J 누를 때마다 잠깐 멈춤')
+    || (MAP.picker && MAP.picker.panel) || document.querySelector('.eng-note,.hudAsk,.esc-lock,#tour-talk,#story-talk,#memo-ui .mp,.bk-panel,.lb-pop,.lb-big,.lb-ask,.wg-lobby,.twn-p,#lkPop,.st-pop,#phCd');   // LOCK-2: 놀이 창이 잠금을 푼 것은 멈춤 창 없이 · 마을 창(J 바로 가기·M 지도·F 찾기·☰ 메뉴·칸 버튼판 — 교사 10-14 'J 누를 때마다 잠깐 멈춤')
   document.addEventListener('pointerlockchange', () => {
     if (document.pointerLockElement === canvas) { userLock = true; CURSOR.on = false; hide(); return; }
     if (!userLock) return; userLock = false;
@@ -1861,19 +1865,24 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
     if (a === 'menu') { hide(); if (TITLE) TITLE.backToMenu(); else location.href = location.pathname; return; }   // 게임 주소로 들어왔으면 오프닝(메뉴)이 있는 첫 화면으로
     if (a === 'pick') { hide(); MAP.picker && MAP.picker.open(); return; }
     if (a === 'look') { hide(); lookOpen(); return; }   // LOOK-1: 🎨 내 모습
+    if (a === 'photo') { hide(); openPhotoPanel({ shoot: photoShoot }); return; }   // PHOTO-1: 📷 사진관(찍기 + 이 기기 앨범)
+    if (a === 'set') { hide(); setOpen(); return; }   // SET-1: ⚙ 설정
     hide(); if (!TOUCH.on && !CTRL.freeMouse) { try { const p9 = canvas.requestPointerLock(); if (p9 && p9.catch) p9.catch(() => {}); } catch (e) { /* 머리 없는 시험 브라우저 */ } }   // 계속하기 · 빈 곳 누름(마우스 늘 보임이면 잠그지 않음)
   });
   const show = () => { keys.clear(); pz.style.display = 'flex'; };
+  const photoShoot = () => takePhoto({ tone, net: () => NET, toast: (m, t) => toast(m, t), label: () => ((document.getElementById('loc') || {}).textContent || '').replace(/^\S+\s*/, '') });   // PHOTO-1: 학교 = 지금 구역 이름을 사진 밑에
   // LOOK-1 🎨 내 모습 창(⏸ 멈춤 창 4 · 오프닝 메뉴 머리 단추 = sm-look-open) — 창이 열린 동안 몸 멈춤(닫으면 원래대로) · 홍보판 없음
   const lookOpen = () => { if (window.SM_PROMO || document.getElementById('lkPop')) return; keys.clear(); const fz0 = CTRL.frozen; CTRL.frozen = true; openLookPanel({ THREE, buildKid, onClose: () => { CTRL.frozen = fz0; } }); };
   addEventListener('sm-look-open', lookOpen);
+  const setOpen = () => { if (window.SM_PROMO || document.getElementById('setPop')) return; keys.clear(); const fz0 = CTRL.frozen; CTRL.frozen = true; openSetPanel({ onClose: () => { CTRL.frozen = fz0; } }); };   // SET-1 ⚙(⏸ 멈춤 창 6 · 오프닝 메뉴 머리 ⚙ = sm-set-open)
+  addEventListener('sm-set-open', setOpen);
   // 단축키(09-28 사용자 "메뉴·게임 키도 버튼 할당"): P = 멈춤 창(잠금 중에도 — 잠금을 풀고 창) · G = 🎮 놀이 고르기 · 멈춤 창 안: Enter/Space/1 계속 · 2 메뉴로 · 3 놀이 바꾸기 · Esc 닫기
   addEventListener('keydown', e => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.isContentEditable)) return;
     const on = pz.style.display === 'flex';
     if (on) {
-      const a = { Enter: 'go', NumpadEnter: 'go', Space: 'go', Digit1: 'go', Digit2: 'menu', Digit3: 'pick', Digit4: 'look', KeyP: 'go', Escape: 'close' }[e.code];
+      const a = { Enter: 'go', NumpadEnter: 'go', Space: 'go', Digit1: 'go', Digit2: 'menu', Digit3: 'pick', Digit4: 'look', Digit5: 'photo', Digit6: 'set', KeyP: 'go', Escape: 'close' }[e.code];
       if (!a) return; e.preventDefault(); e.stopImmediatePropagation();
       if (a === 'close') hide(); else pz.querySelector('[data-a="' + a + '"]')?.click();
       return;

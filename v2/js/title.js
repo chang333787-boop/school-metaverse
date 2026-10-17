@@ -94,7 +94,7 @@ export function createTitle(h) {
     + '</section>'
     + '<section class="ttl-menu" aria-label="놀이 고르기">'
     +   '<header style="flex-wrap:wrap;row-gap:6px"><button class="ttl-back" type="button" aria-label="처음 화면">◀</button><div class="ttl-mlogo">' + cap(0.55) + '</div><h2 style="flex:1 1 8em;min-width:0">어떤 놀이를 할까요?</h2>'
-    +     (PROMO ? '' : '<button class="ttl-room ttl-look" type="button" title="모자·옷·머리 색 고르기" style="margin-left:auto;flex:0 0 auto;min-height:44px;white-space:nowrap">🎨 내 모습</button>')   /* LOOK-1: 놀이 고르기 전에 내 모습(터치·휴대폰도 닿는 자리) — 누르면 sm-look-open → main.js 창 · 홍보판 없음 */
+    +     (PROMO ? '' : '<button class="ttl-room ttl-look" type="button" title="모자·옷·머리 색 고르기" style="margin-left:auto;flex:0 0 auto;min-height:44px;white-space:nowrap">🎨 내 모습</button><button class="ttl-room ttl-set" type="button" title="설정 — 글씨 크기·색 구분·소리·흔들림·읽어 주기" aria-label="설정" style="flex:0 0 auto;min-height:44px;min-width:44px">⚙</button>')   /* LOOK-1: 놀이 고르기 전에 내 모습(터치·휴대폰도 닿는 자리) — 누르면 sm-look-open → main.js 창 · 홍보판 없음 */
     +     '<button class="ttl-room ttl-hmp" type="button" hidden style="' + (PROMO ? 'margin-left:auto;' : '') + 'flex:0 0 auto;min-height:44px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis"></button></header>'   // UX-1: 메뉴 화면의 👥(걷는 화면의 👥 칩은 메뉴에선 숨음) · 좁으면(세로 휴대폰) 단추가 다음 줄로
     +   '<div class="ttl-grid" role="list"></div>'
     +   '<div class="ttl-foot">← → ↑ ↓ 고르기 · Enter 시작 · 게임 중엔 🏠 메뉴로 돌아와요</div>'
@@ -198,6 +198,7 @@ export function createTitle(h) {
       const c2 = call && row.dataset.rm.split(',').includes(g); if ((c2 ? '1' : '0') !== row.dataset.call) { paintMP.re = true; filled = fill(true); filled.then(() => { paintMP.re = false; if (phase === 'menu' && cards[focusI]) cards[focusI].focus({ preventScroll: true }); }, () => { paintMP.re = false; }); } }
   }
   { const lk = root.querySelector('.ttl-look'); if (lk) lk.addEventListener('click', ev => { ev.stopPropagation(); blip(); dispatchEvent(new CustomEvent('sm-look-open')); }); }   // LOOK-1
+  { const st9 = root.querySelector('.ttl-set'); if (st9) st9.addEventListener('click', ev => { ev.stopPropagation(); blip(); dispatchEvent(new CustomEvent('sm-set-open')); }); }   // SET-1: 터치·휴대폰도 닿는 설정 자리
   hmp.addEventListener('click', ev => { ev.stopPropagation(); blip(); const M = window.SM_MP; if (!M) return; if (hmp.classList.contains('call') && M.joinGame) M.joinGame(); else M.open(hmp); });
   setInterval(() => { if (phase === 'menu') paintMP(); }, 2000);
 
@@ -208,7 +209,7 @@ export function createTitle(h) {
     if (phase === 'off') return;
     if (e.target && e.target.closest && e.target.closest('.ttl-keep input, .ttl-keep textarea')) return;   // 오프닝 위에 뜬 창(함께하기 번호·이름 · 🔒 비밀번호)의 입력칸 — 글자·Enter·Esc는 그 창 몫(창이 월드로는 막는다)
     if (phase === 'film') { e.stopImmediatePropagation(); if (e.type === 'keydown' && e.code === 'Escape') { e.preventDefault(); h.film.stop('skip'); } return; }   // FILM-1: 오프닝 영상 동안 Esc = 건너뛰기(나머지 키는 막음)
-    if (document.querySelector('.lb-pop,.lb-big,#lkPop')) { if (e.code !== 'Escape') e.stopImmediatePropagation(); return; }   /* LOOK-1: 🎨 내 모습 창도 같음(Esc = 그 창 닫기) */   // UX-1: 👥 창·📺 큰 번호가 떠 있으면 키는 그 창 몫 — Esc = 창 닫기(lobby.js 잡기 단계) · 뒤 카드를 Enter로 고르거나 폴더가 바뀌지 않게
+    if (document.querySelector('.lb-pop,.lb-big,#lkPop,.st-pop')) { if (e.code !== 'Escape') e.stopImmediatePropagation(); return; }   /* LOOK-1: 🎨 내 모습 창도 같음(Esc = 그 창 닫기) */   // UX-1: 👥 창·📺 큰 번호가 떠 있으면 키는 그 창 몫 — Esc = 창 닫기(lobby.js 잡기 단계) · 뒤 카드를 Enter로 고르거나 폴더가 바뀌지 않게
     e.stopImmediatePropagation(); if (e.type !== 'keydown') return;   // 제목·메뉴·날아오기 동안 키는 월드로 가지 않는다(WASD로 뒤에서 걷지 않게)
     heard = true;
     if (e.repeat && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); return; }

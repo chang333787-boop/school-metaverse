@@ -61,7 +61,8 @@ export function createTouch(ctx) {
   const bAct = mk('tAct', 'tbtn', '<i>✋</i><span>행동</span>');
   const bView = mk('tView', 'tbtn', '<i>👁</i>');
   const bCrouch = mk('tCrouch', 'tbtn', '<i>⬇</i><span>웅크리기</span>'); bCrouch.style.display = 'none';
-  mk('tRot', '', '<div>📱↻ 가로로 돌려 주세요</div><span style="font-size:14px;font-weight:400">가로 화면이 더 넓게 보여요</span>');
+  const rot = mk('tRot', '', '<div>📱↻ 가로로 돌려 주세요</div><span style="font-size:14px;font-weight:400">가로 화면이 더 넓게 보여요</span>');
+  if (!window.SM_PROMO) { let rotT = 0; const rotShow = () => { rot.style.visibility = ''; clearTimeout(rotT); rotT = setTimeout(() => { rot.style.visibility = 'hidden'; }, 5000); }; rotShow(); let wasP = innerHeight > innerWidth; addEventListener('resize', () => { const pt = innerHeight > innerWidth; if (pt && !wasP) rotShow(); wasP = pt; }); }   // TOUCH-2: 세로 안내는 5초만(화면 가운데를 늘 가리던 것) · 세로로 다시 돌리면 또 5초 · 홍보판 그대로
 
   // MOBUI-1(09-27): 휴대폰 판 = body.touch + body.small(짧은 변 ≤ 500 CSS px). 휴대폰 배치 CSS는 전부 v2/phone.css(body.small 아래)
   //   — 태블릿(iPad 1080×810)은 .touch만(칩·미니맵은 데스크톱 크기 그대로) · 데스크톱은 둘 다 없다(화면 변화 0)

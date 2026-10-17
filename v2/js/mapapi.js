@@ -201,7 +201,7 @@ export function createMapApi(host, NAV, META) {
     aim(h) { CTRL.face = h == null ? null : Math.atan2(Math.sin(h * R2D), -Math.cos(h * R2D)); },
     // GAME-WG: 3인칭 카메라를 오른쪽으로 m만큼 비켜 세움(어깨 너머 · -1~1 · 0 = 끔). 옆벽 검사는 하지 않으니 게임이 트인 곳에서만. 게임이 멈추면 0
     shoulder(m = 0) { CTRL.shoulder = Math.max(-1, Math.min(1, +m || 0)); },
-    speed(k = 1) { CTRL.speed = Math.max(0.5, Math.min(2.5, k)); },   // 2.5 = 자전거 내리막·자전거 도로(마을 · 10-15)
+    speed(k = 1) { CTRL.speed = Math.max(0.5, Math.min(3.6, k)); },   // 3.4 = 자전거 내리막·자전거 도로(마을 · 10-15 · FIX-BK1 10-17 자전거 ≈ 달리기의 1.8배 · 탈 땐 Shift 달리기 막음 → 가장 빠름 14.3m/s = 예전 자전거+Shift 18.8m/s보다 느림)
     get input() { if (pl.touch && pl.touch.m > 0) return true; if (pl.keys) for (const k of MOVE_KEYS) if (pl.keys.has(k)) return true; return false; },   // 사람이 누르는 이동(키·조이스틱만 — steer 빼고)
     pose(name, o) { CTRL.pose = name || null; CTRL.poseY = (o && o.y) || 0; },   // 몸 자세 덮어쓰기: 'swim'(헤엄) · 'dizzy'(엉덩방아 · 어지러움) · null = 원래대로(게임이 멈추면 풀림)
     jump(on = true) { CTRL.noJump = !on; },   // RB-1: false = 점프 막음(게임이 멈추면 풀림)
@@ -270,7 +270,7 @@ export function createMapApi(host, NAV, META) {
   // TOUCH-1: 터치 화면에서 미니맵 아래에 칩이 다 안 들어가면(오른쪽 아래 = 점프·행동 버튼 자리) 미니맵 왼쪽 줄로
   // MOBUI-1(09-27): 휴대폰(body.small)은 칩이 작아(phone.css) 줄 간격 30 · 미니맵이 없으면 오른쪽 위 8px부터 · 글자에서 키 안내 '(H)'를 뺀다(터치엔 키가 없다)
   const small = () => document.body.classList.contains('small');
-  const chipText = t => small() ? String(t).replace(/\s*\((?:[A-Z]|[A-Z]:[^)]*)\)\s*$/, '') : t;
+  const chipText = t => small() || (document.body.classList.contains('touch') && !window.SM_PROMO) ? String(t).replace(/\s*\((?:[A-Z]|[A-Z]:[^)]*)\)\s*$/, '') : t;   // TOUCH-2: 태블릿(터치·큰 화면)도 키 글자 X
   // MOBUI-1 리뷰: 터치(휴대폰·태블릿)에서 누르는 칩(.gtap — 💡 길 안내·🎫 도장·🔊 소리)은 44px 칸(가운데 정렬 + 투명 누름 자리 phone.css), 보기만 하는 칩은 30px(휴대폰) 칸 · 데스크톱은 34 그대로
   const slot = c => c.tap && document.body.classList.contains('touch') ? 44 : small() ? 30 : 34;
   // LAND-1: 휴대폰 가로(세로 공간이 아주 좁다 — 사파리 주소창·탭 줄)면 칩을 미니맵 왼쪽 · 목표 줄 아래에 가로 한 줄로, 글자는 짧게('📖 정림초 도감 1/15' → '📖 1/15')

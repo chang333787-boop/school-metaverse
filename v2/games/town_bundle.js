@@ -21,6 +21,7 @@ export const BUNDLES = [
   { id: 'autumn', icon: '🍁', t: ['가을 꾸러미', 'Autumn bundle'], need: { '🍐': 2, '🍚': 2, '🍄': 2 }, money: 1500, rew: { recipe: '🍙' }, rt: ['🍙 주먹밥 요리법', '🍙 Rice ball recipe'] },
   { id: 'winter', icon: '❄️', t: ['겨울 꾸러미', 'Winter bundle'], need: { '🌿': 2, '🐚': 2, '🍓': 2 }, money: 1500, rew: { top: 'snow' }, rt: ['❄️ 눈꽃 설탕 고명(꾸미기)', '❄️ Snow-sugar topping (decorate)'] },
   { id: 'garden', icon: '🏫', t: ['텃밭 꾸러미', 'Garden bundle'], need: { '🥕': 2, '🍅': 2, '🌽': 2, '🍠': 2 }, money: 1500, rew: { recipe: '🍿' }, rt: ['🍿 팝콘 요리법', '🍿 Popcorn recipe'] },   // GAME-10b 학교 텃밭(봄·여름·가을에 걸쳐)
+  { id: 'forest', icon: '🌲', t: ['숲 꾸러미', 'Forest bundle'], need: { '🍂': 3, '🌰': 2, '⚪': 2 }, money: 1200, rew: { recipe: '🥗' }, rt: ['🥗 산나물 무침 요리법', '🥗 Wild greens recipe'] },   // RES-1 숲 바닥 줍기(아이 판에 숲이 있는 마을만 — 못 구하면 꾸러미에서 빠짐)
   { id: 'cook', icon: '🍳', t: ['요리 꾸러미', 'Cooking bundle'], need: { '🥞': 1, '🥘': 1, '🍮': 1 }, money: 2000, rew: { stamp: '🏅' }, rt: ['🏅 요리사 도장', '🏅 Cook stamp'] },
 ];
 export const ALL_STAMP = '🧺';   // 보이는 꾸러미를 다 채우면

@@ -114,9 +114,9 @@ export default async function start(map, params = {}) {
       const el = mk('div', 'sp'); el.id = 'story-talk';
       if (!LEG) who = fill(String(who));   // WORLD-FX: '{mate}' = 같이 온 친구
       mk('div', 'av', WHO[who] || '💬', el); const bd = mk('div', 'bd', null, el);
-      mk('div', 'nm', who === ME ? '나 (' + who + ')' : who, bd); mk('div', 'tx', fill(text), bd);
+      mk('div', 'nm', who === ME ? '나 (' + who + ')' : who, bd); mk('div', 'tx', fill(text), bd); if (window.SM_SET) window.SM_SET.speak((who === ME ? '' : who + '. ') + fill(text));   // SET-1 읽어 주기(켜 두었고 한국어 목소리가 있을 때만 · import 금지 규칙이라 전역으로)
       const t = { el, openedAt: performance.now(), n: choices ? choices.length : 0 };
-      t.next = i => { if (talk !== t) return; talk = null; el.remove(); map.player.freeze(false); map.sfx('tick'); res(i); };
+      t.next = i => { if (talk !== t) return; talk = null; if (window.SM_SET) window.SM_SET.hush(); el.remove(); map.player.freeze(false); map.sfx('tick'); res(i); };
       let first;
       if (choices) { const ch = mk('div', 'ch', null, bd); choices.forEach((c, i) => { const b = mk('button', '', (i + 1) + '. ' + c, ch); b.addEventListener('click', e => { e.stopPropagation(); t.next(i); }); if (!i) first = b; }); }
       else { const rw = mk('div', 'rw', null, bd); first = mk('button', '', '다음 ▶', rw); first.addEventListener('click', e => { e.stopPropagation(); t.next(0); }); }
