@@ -186,19 +186,25 @@ const blob = (() => {
 })();
 // 걷기·점프·앉기 동작: 이동 속도로 팔다리를 흔들고(반대쪽끼리), 공중이면 팔을 들고, 앉으면 무릎을 굽혀 의자 위에(몸을 앞으로 0.42·아래로 0.1)
 let kidPh = 0, kidX = P.x, kidZ = P.z, kidT = 0, kidPoseWas = null;
+// MOTION-1(사용자 10-17 '모션 · 완성도 있는 인디게임 수준' · 모션 점검): 몸 돌리기 각속도 제한 + 돌 때 기울기 · 걸음 = 이동 거리(미끄러짐 0.61 → 0.44) · 멈출 때 다리 풀림 · 들썩 박자 · 공중 자세(오름/떨어짐) · 착지 찌그러짐 · 카메라 세로 완충 — 매 프레임 비용 0(숫자만) · 홍보판(SM_PROMO)은 예전 그대로
+let POL9 = null, faceY = 0, faceD = 0, leanS = 0, mvS = 0, camBY = null, airVy = 0, wasAir = false, landT = 9, landK = 0;
 function kidTick(dt) {
   const v = CTRL.ride ? 0 : Math.hypot(P.x - kidX, P.z - kidZ) / Math.max(dt, 1e-3) * (4.2 / PHY.walk); kidX = P.x; kidZ = P.z; kidT += dt;   // SHRINK-1: 작아지면 걷기 속도 기준으로(다리 흔들기 같게)
   const K = KID, sit = !!ACT.sit, air = !P.ground && !sit && !ACT.anim, mv = sit ? 0 : Math.min(1, v / 4.2), cr = CTRL.crouched && !sit;
-  if (v > 0.3 && !sit) kidPh += dt * (5.5 + v * 1.5);
-  const sw = Math.sin(kidPh) * 0.7 * mv;
-  K.rig.position.set(0, sit ? K.sitY : cr ? -0.17 : Math.abs(Math.sin(kidPh)) * 0.04 * mv, sit && !ACT.sit.seat ? 0.42 : 0);   // ACTION-1: 좌석 앉기는 pg가 이미 좌석 위   // sitY = 의자 앉는 판(0.46)에 엉덩이 · ENGINE-1 웅크림 = 0.17 낮게
-  K.rig.rotation.x = cr ? 0.28 : 0;   // 웅크리면 몸을 앞으로 숙인다
+  if (POL9 === null) POL9 = !window.SM_PROMO;
+  if (POL9) { mvS += (mv - mvS) * (1 - Math.exp(-dt * 12)); if (v > 0.3 && !sit) kidPh += v * dt / (0.35 + 0.09 * v) * Math.PI; if (air) airVy = P.vy; else if (wasAir) { landT = 0; landK = Math.min(1, Math.max(0, -airVy - 2) / 9); } wasAir = air; landT += dt; }
+  else if (v > 0.3 && !sit) kidPh += dt * (5.5 + v * 1.5);
+  const A9 = POL9 ? 0.45 + 0.4 * Math.min(1, Math.max(0, (v - 1) / 6.5)) : 0.7, mv9 = POL9 ? mvS : mv, sw = Math.sin(kidPh) * A9 * mv9, run9 = POL9 ? Math.min(1, Math.max(0, (v - 5) / 2.5)) : 0;
+  K.rig.position.set(0, sit ? K.sitY : cr ? -0.17 : (POL9 ? (run9 > 0.5 ? Math.abs(Math.sin(kidPh)) * 0.06 : Math.abs(Math.cos(kidPh)) * 0.04) : Math.abs(Math.sin(kidPh)) * 0.04) * mv9, sit && !ACT.sit.seat ? 0.42 : 0);   /* MOTION-1: 걷기 = 다리 모일 때 높음(|cos|) · 뛰기 = |sin| 0.06 */   // ACTION-1: 좌석 앉기는 pg가 이미 좌석 위   // sitY = 의자 앉는 판(0.46)에 엉덩이 · ENGINE-1 웅크림 = 0.17 낮게
+  K.rig.rotation.x = cr ? 0.28 : POL9 ? 0.18 * run9 * mv9 : 0;   // 웅크리면 몸을 앞으로 숙인다 · MOTION-1 뛰면 앞으로 숙임
   if (sit) { K.legL.g.rotation.x = K.legR.g.rotation.x = -1.5; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 1.5; K.armL.rotation.x = K.armR.rotation.x = -0.85; }
   else if (cr) { K.legL.g.rotation.x = -1.25 + sw * 0.35; K.legR.g.rotation.x = -1.25 - sw * 0.35; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 2.0;   // ENGINE-1 웅크리기(무릎 굽힘 — 발은 땅에)
     K.armL.rotation.x = -0.9 - sw * 0.3; K.armR.rotation.x = -0.9 + sw * 0.3; }
-  else if (air) { K.legL.g.rotation.x = -0.5; K.legR.g.rotation.x = 0.25; K.legL.knee.rotation.x = 0.7; K.legR.knee.rotation.x = 0.3; K.armL.rotation.x = K.armR.rotation.x = -2.5; }
-  else { K.legL.g.rotation.x = sw; K.legR.g.rotation.x = -sw; K.legL.knee.rotation.x = Math.max(0, sw) * 0.9; K.legR.knee.rotation.x = Math.max(0, -sw) * 0.9;
-    K.armL.rotation.x = -sw * 0.85; K.armR.rotation.x = sw * 0.85; }
+  else if (air) { if (POL9) { const u9 = Math.max(-1, Math.min(1, P.vy / PHY.jv));   /* MOTION-1: 오를 때 = 팔 위로·무릎 굽힘 · 떨어질 때 = 팔 옆으로 벌리고 다리 뻗음 */
+      K.legL.g.rotation.x = -0.5 * Math.max(0, u9) - 0.1; K.legR.g.rotation.x = 0.25 * Math.max(0, u9) + 0.05; K.legL.knee.rotation.x = 0.2 + 0.5 * Math.max(0, u9); K.legR.knee.rotation.x = 0.1 + 0.2 * Math.max(0, u9); K.armL.rotation.x = K.armR.rotation.x = -2.5 * Math.max(0.25, u9) - 0.3 * Math.max(0, -u9); K.armL.rotation.z = -0.12 - 0.8 * Math.max(0, -u9); K.armR.rotation.z = 0.12 + 0.8 * Math.max(0, -u9); }
+    else { K.legL.g.rotation.x = -0.5; K.legR.g.rotation.x = 0.25; K.legL.knee.rotation.x = 0.7; K.legR.knee.rotation.x = 0.3; K.armL.rotation.x = K.armR.rotation.x = -2.5; } }
+  else { K.legL.g.rotation.x = sw; K.legR.g.rotation.x = -sw; K.legL.knee.rotation.x = Math.max(0, sw) * 0.9 + 0.3 * run9 * mv9; K.legR.knee.rotation.x = Math.max(0, -sw) * 0.9 + 0.3 * run9 * mv9;
+    K.armL.rotation.x = -sw * 0.85 * (1 + 0.1 * run9); K.armR.rotation.x = sw * 0.85 * (1 + 0.1 * run9); if (POL9 && K.armL.rotation.z !== -0.12 && !CTRL.pose) K.armL.rotation.z = -0.12; }
   if ((tray || CTRL.hold) && !sit) K.armL.rotation.x = K.armR.rotation.x = -1.1;                    // 식판 받쳐 들기 · ENGINE-1 물건 들기(map.carry)
   if (CTRL.pose === 'dig') { const d9 = Math.sin(kidT * 11); K.armL.rotation.x = K.armR.rotation.x = -1.3 + d9 * 0.6; K.rig.rotation.x = 0.35 + d9 * 0.08; }   // ENGINE-1 파기(map.dig)
   if (milk && !sit && !tray) K.armR.rotation.x = -0.7;                                               // 우유 들기
@@ -206,6 +212,8 @@ function kidTick(dt) {
   else if (K.armR.rotation.z !== 0.12) K.armR.rotation.z = 0.12;   // 어깨 기본 벌림(kid.js arm)
   K.head.rotation.x = mv > 0.1 ? 0.04 : Math.sin(kidT * 1.7) * 0.03;                                   // 가만히 있으면 살짝 끄덕끄덕
   K.body.scale.y = 1 + (mv < 0.1 && !sit ? Math.sin(kidT * 2.2) * 0.008 : 0);                           // 숨쉬기
+  if (POL9) { const sq = landT < 0.6 && !sit ? landK * Math.exp(-14 * landT) * Math.cos(20 * landT) : 0; K.body.scale.x = K.body.scale.z = 1 + 0.1 * sq; K.body.scale.y -= 0.16 * sq; if (sq > 0.05 && !air) { K.legL.knee.rotation.x += 0.6 * sq; K.legR.knee.rotation.x += 0.6 * sq; }   /* MOTION-1 착지 찌그러짐(감쇠 용수철) */
+    if (!CTRL.pose && !sit) { leanS += (Math.max(-0.2, Math.min(0.2, -faceD / Math.max(dt, 1e-3) * 0.018 * mv9)) - leanS) * (1 - Math.exp(-dt * 10)); K.rig.rotation.z = leanS; } }   /* MOTION-1 돌 때 도는 쪽으로 기울기 */
   if (CTRL.pose !== kidPoseWas) { if (kidPoseWas === 'swim' || kidPoseWas === 'dizzy' || kidPoseWas === 'ski') { K.armL.rotation.z = -0.12; K.armR.rotation.z = 0.12; K.head.rotation.z = 0; K.rig.rotation.z = 0; } kidPoseWas = CTRL.pose; }
   if (CTRL.pose === 'swim') { const s9 = Math.sin(kidT * 5.2), m9 = Math.min(1, mv * 2 + 0.35); K.rig.rotation.x = 0.35 * mv; K.armL.rotation.x = K.armR.rotation.x = -2.0 + s9 * 0.55 * m9; K.armL.rotation.z = -0.12 - (0.5 + s9 * 0.4) * m9; K.armR.rotation.z = 0.12 + (0.5 + s9 * 0.4) * m9;   // 헤엄(평영 팔 · 발차기 · 마을 바다 10-15)
     K.legL.g.rotation.x = Math.sin(kidT * 7) * 0.4 * m9; K.legR.g.rotation.x = -Math.sin(kidT * 7) * 0.4 * m9; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 0.35; K.head.rotation.x = -0.15 * mv; }
@@ -521,7 +529,7 @@ function step(dt) {
   ACTS.tick(dt);   // ACTION-1: 한 발 옮기기·시간·물줄기·알갱이·버스 문(쉬는 동안은 버스 문 거리 재기뿐)
   const SE = ACT.sit && ACT.sit.seat;   // ACTION-1: 좌석 앉기(식탁·버스) — 몸은 서는 칸(P) 대신 좌석 위에 그린다(일어나면 서는 칸에서 바로 걷는다)
   pg.position.set(SE ? SE.x : P.x, SE ? SE.y : P.y, SE ? SE.z : P.z);
-  pg.rotation.y = SE ? SE.yaw : CTRL.face ?? P.yaw;   // GAME-WG(09-26): 게임이 몸 방향을 잠깐 잡을 수 있다(물총 겨눔 — map.player.aim) · 없으면 걷는 방향
+  { const tY9 = SE ? SE.yaw : CTRL.face ?? P.yaw; if (POL9 && !SE && CTRL.face == null && !CTRL.ride && !ACT.anim) { let d = tY9 - faceY; d = Math.atan2(Math.sin(d), Math.cos(d)); const m = dt * 13; faceD = Math.abs(d) < m ? d : Math.sign(d) * m; faceY += faceD; } else { faceY = tY9; faceD = 0; } pg.rotation.y = faceY; }   /* MOTION-1: 판정용 P.yaw는 그대로 · 보이는 몸만 180°를 0.24초에 */   // GAME-WG(09-26): 게임이 몸 방향을 잠깐 잡을 수 있다(물총 겨눔 — map.player.aim) · 없으면 걷는 방향
   kidTick(dt);
   // CAM-2(09-24): 사용자 "복도가 좁은 것 같다" — 실측 복도는 2.5m(게임 2.7m)로 좁지 않았다. 원인은 카메라:
   //  6.3m 뒤·17° 위에서 내려다보면 실내에선 천장(3.24m) 밑에 붙어 위에서 내려다보고, 화각 48°는 휴대폰 광각보다 훨씬 좁다.
@@ -558,7 +566,8 @@ function step(dt) {
     camera.position.set(C.x0 + rx, C.y, C.z0 + rz);
     camera.lookAt(hx + rx, hy, hz + rz);
   } else {
-    const hx = SE ? SE.x : P.x, hy = (SE ? SE.y + 0.1 : P.y) + headH, hz = SE ? SE.z : P.z, CD = indoor ? 3.3 : CAM_D * (world.overAt ? camZ : 1); let pch = indoor ? Math.min(camPitch, 0.2) : camPitch;
+    if (camBY === null || !POL9 || SE || CTRL.ride || ACT.anim || Math.abs(P.y - camBY) > 2.5) camBY = P.y; else { const tY = P.ground ? P.y : Math.min(P.y, camBY + (P.y - camBY) * 0.35); camBY += (tY - camBY) * (1 - Math.exp(-dt * (P.ground ? 10 : 4))); }   /* MOTION-1: 점프하면 화면 속 아이가 올라가 보이게 · 인도 턱에서 튀지 않게(순간이동·탈것·행동 = 바로) */
+    const hx = SE ? SE.x : P.x, hy = (SE ? SE.y + 0.1 : camBY) + headH, hz = SE ? SE.z : P.z, CD = indoor ? 3.3 : CAM_D * (world.overAt ? camZ : 1); let pch = indoor ? Math.min(camPitch, 0.2) : camPitch;
     { let tgt = 0; if (world.overAt && !indoor && !SE && !camFirst) { const g0 = world.overAt(hx, hz, hy - headH); if (g0 != null) { const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), gA = world.overAt(hx + fx * 6, hz + fz * 6, hy), gB = world.overAt(hx - fx * CD, hz - fz * CD, hy);   // CAM-6(10-15 교사 '산 오를 때 카메라가 위로 잘 안 따라와'): 마을 땅(덮어쓴 땅)에서만
           const up = gA != null ? Math.max(0, (gA - g0) / 6) : 0, need = gB != null ? Math.asin(Math.max(-1, Math.min(1, (gB + 1.4 - hy) / CD))) - pch : 0; tgt = Math.min(0.55, Math.max(up * 0.95, camPitch < 0 ? 0 : need, 0)); } }   /* CAM-7: 올려다보는 중(손으로 위로)이면 '뒤 땅 피하기' 들어 올림 X — 땅은 camPose ⑤가 몸 쪽으로 당겨 피함 */
       if (performance.now() - LOOKT > 3000) camLift += (tgt - camLift) * Math.min(1, dt * 2.4); pch += camLift; }   /* CAM-7: 손으로 위아래를 본 뒤 3초는 자동 들어 올림이 쉼(서로 싸우지 않게) */

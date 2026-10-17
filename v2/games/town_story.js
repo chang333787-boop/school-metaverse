@@ -9,7 +9,7 @@ const WHO = { shiitake: ['표고 농장 일꾼', 'the shiitake farmer'], cabbage
 const T2 = (ko, en) => [ko, en];
 // ── 장 자료 ── sea = 어울리는 계절(그때 '추천' 표시 · 다른 계절에도 할 수 있음) · giver = 쪽지를 보내는 일꾼 갈래(이 마을에 있는 것 가운데 가장 가까운) · need = 이 마을에 있어야 하는 것
 export const CHAPTERS = [
-  { id: 'c1', icon: '🛒', sea: 'spring', t: T2('첫 심부름 — 팬케이크 재료', 'First errand — pancake ingredients'), learn: T2('꼭 필요한 것 고르기 · 두 가게 값 견주기 · 정해진 돈 안에서 사기 · 거스름돈', 'Pick what you really need · compare two shops · stay within budget · count the change'),
+  { id: 'c1', icon: '🛒', sea: 'spring', t: T2('첫 심부름 — 팬케이크 재료', 'First errand — pancake ingredients'), learn: T2('꼭 필요한 것 고르기 · 두 가게 값 견주기 · 정해진 돈 안에서 사기 · 남은 돈 돌려드리기', 'Pick what you really need · compare two shops · stay within budget · give back the change'),
     need: { shops: ['grocery'], kitchen: true }, giver: ['strawberry', 'pear', 'potato', 'cabbage', 'beehive', 'pasture', 'shiitake', 'saltpan', 'lumber', 'paddy', 'fisher', 'clam'],
     steps: [
       { id: 'n', hint: [T2('📜 쪽지는 Q(이야기)에서 다시 볼 수 있어요', '📜 Open the note again with Q (Stories)'), T2('쪽지를 읽고 ‘알겠어요’를 눌러요', 'Read the note and press “Okay!”')] , do: { type: 'note', text: T2('팬케이크를 구워서 나눠 먹고 싶은데 재료가 없어요. 심부름 돈 1,200원으로 재료를 사다 줄래요? 꼭 필요한 것만요!', 'I want to bake pancakes to share, but I have no ingredients. Could you buy them with 1,200 won? Only what we really need!') } },
@@ -22,7 +22,6 @@ export const CHAPTERS = [
         hint: [T2('가게마다 세 값을 더해 봐요', 'Add the three prices for each shop'), 'sums', 'show:ans'] },
       { id: 'buy', todo: T2('🛒 1,200원 안에서 세 재료 사기', '🛒 Buy the three within 1,200 won'), do: { type: 'buy', need: { '🌾': 1, '🥚': 1, '🥛': 1 }, budget: 1200 },
         hint: [T2('더 싼 가게에서 사면 돈이 남아요', 'Buy at the cheaper shop and money is left over'), 'dir', 'show:path'] },
-      { id: 'change', slot: 'word', todo: T2('🧮 거스름돈 셈하기', '🧮 Work out the change'), do: { type: 'ask', q: 'change' }, hint: [T2('쓴 돈을 모두 더해서 1,200원에서 빼요', 'Add what you spent and take it from 1,200'), 'spent', 'show:ans'] },
       { id: 'cook', todo: T2('🍳 아이 집 부엌에서 팬케이크 굽기', '🍳 Bake pancakes in a home kitchen'), do: { type: 'cook', dish: '🥞' },
         hint: [T2('부엌은 집 안에 있어요 — 집 문 앞 빛나는 동그라미에서 E', 'Kitchens are inside homes — press E on the glowing circle by a door'), T2('🍳 요리하기 → 팬케이크 → 초록 칸에서 멈춰요', '🍳 Cook → Pancake → stop on green'), 'show:path'] },
       { id: 'give', todo: T2('🍽 {who}에게 팬케이크 나눠 주기', '🍽 Share a pancake with {who}'), do: { type: 'give', e: '🥞', to: 'giver', change: true },
