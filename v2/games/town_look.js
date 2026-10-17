@@ -1,0 +1,211 @@
+// 🎨 마을 빛·물·바람(ART-2 · 사용자 10-17 '실사의 아름다움을 너의 능력으로 최대한' · '크롬북에서 돌아가게'): 사진을 붙이지 않고 로우폴리 결 그대로
+//   아름다움은 빛의 방향(낮은 해·역광) · 색 온도(해 = 따뜻 · 그늘 = 푸름) · 대기 원근(멀수록 하늘빛) · 물의 결(하늘 비침·해 길·물가 물결) · 바람(갈대 물결)에서
+//   새 Light X · 후처리 X · 매 프레임 새 객체 X(uniform 몇 개만) · 텍스처 = 잡음 한 장(128) · lite(크롬북·저사양·휴대폰) = 갈대 수·거리·물결 세부 줄임
+//   글로우·플레어·반짝이 입자 X — 해 원반은 작고 가장자리만 부드럽게 · 물 반짝임은 해 쪽 길 하나
+const C = (h) => h;   // 표 읽기 쉽게(16진 = sRGB)
+// 하루 빛 표(게임 분 · 0~1440) — H 지평선 · Z 하늘 꼭대기 · G 해 쪽 산란 · D 원반 색 · dk 원반 세기 · el 원반 높이(도 · null = 빛 방향 그대로)
+//   hs·hg·hi = 반구광(그늘 색 = 푸른 쪽) · sc·si = 해(달)빛 · ex 노출 · cl 구름 · fo 물가 물결 밝기 · sh 하늘 비침 세기
+//   시간대(낮 06~17 · 노을 17~19 · 밤 19~06)의 해 자리와 맞물림 — 해 자리는 학교 시간대가 정하고(그림자 굽기 그대로) 여기서는 색만 이어 바꿈
+const KEYS = [
+  { m: 0, H: C(0x1f2d47), Z: C(0x08101f), G: C(0x3a4c70), D: C(0xeef2f8), dk: 0.95, el: 10, az: 60, hs: C(0x5a73a0), hg: C(0x3d4658), hi: 1.25, sc: C(0xa8bcda), si: 0.9, ex: 1.15, cl: C(0x33405a), fo: 0.22, sh: 0.5 },
+  { m: 300, H: C(0x24324d), Z: C(0x0a1324), G: C(0x3a4c70), D: C(0xeef2f8), dk: 0.85, el: 8, az: 140, hs: C(0x5a73a0), hg: C(0x3d4658), hi: 1.25, sc: C(0xa8bcda), si: 0.9, ex: 1.15, cl: C(0x3a4660), fo: 0.24, sh: 0.5 },
+  { m: 330, H: C(0x2c3854), Z: C(0x0d1628), G: C(0x3a4c70), D: C(0xeef2f8), dk: 0.0, el: 12, az: 155, hs: C(0x5a73a0), hg: C(0x3d4658), hi: 1.25, sc: C(0xa8bcda), si: 0.9, ex: 1.15, cl: C(0x3a4660), fo: 0.24, sh: 0.5 },
+  { m: 345, H: C(0x7a6f8c), Z: C(0x1f2d50), G: C(0xd9876a), D: C(0xeef2f8), dk: 0.0, el: -4, az: 15, hs: C(0x6a7aa6), hg: C(0x4a4f60), hi: 1.3, sc: C(0xb4bcd6), si: 0.9, ex: 1.15, cl: C(0x8a7f98), fo: 0.35, sh: 0.55 },
+  { m: 362, H: C(0xd9a89a), Z: C(0x4f6fa8), G: C(0xf0a070), D: C(0xfff0d6), dk: 0, el: 0, az: 15, hs: C(0x9fb0d6), hg: C(0xb8ac9e), hi: 1.5, sc: C(0xffc898), si: 2.3, ex: 1.1, cl: C(0xe8c4b8), fo: 0.6, sh: 0.55 },
+  { m: 375, H: C(0xeec6aa), Z: C(0x6f97cf), G: C(0xffa868), D: C(0xfff0d6), dk: 1, el: 2, az: 15, hs: C(0xb9c6e2), hg: C(0xd2c6b8), hi: 1.6, sc: C(0xffd2a0), si: 2.55, ex: 1.08, cl: C(0xffd9c4), fo: 0.8, sh: 0.5 },
+  { m: 450, H: C(0xd9e6ee), Z: C(0x78ace4), G: C(0xf2d4a8), D: C(0xfff4de), dk: 1, el: 8, az: 22, hs: C(0xbfd3ef), hg: C(0xd9d1c4), hi: 1.7, sc: C(0xffeccc), si: 2.95, ex: 1.06, cl: C(0xfff6ee), fo: 0.95, sh: 0.42 },
+  { m: 600, H: C(0xd0e7f5), Z: C(0x5a9de0), G: C(0xfff3dc), D: C(0xfffbf0), dk: 1, el: 48, az: 55, hs: C(0xbad4f2), hg: C(0xd9d3c6), hi: 1.75, sc: C(0xfff0cf), si: 3.1, ex: 1.05, cl: C(0xffffff), fo: 1.0, sh: 0.34 },
+  { m: 930, H: C(0xd8e6ee), Z: C(0x62a1dc), G: C(0xffecd0), D: C(0xfff8ea), dk: 1, el: 38, az: 125, hs: C(0xbcd3ee), hg: C(0xd9d1c2), hi: 1.72, sc: C(0xffeac4), si: 3.05, ex: 1.05, cl: C(0xfffaf2), fo: 1.0, sh: 0.36 },
+  { m: 1020, H: C(0xecd8bc), Z: C(0x6c93d0), G: C(0xffb468), D: C(0xfff1cc), dk: 1, el: 19, az: 160, hs: C(0xd8c8d8), hg: C(0xd2bca4), hi: 1.5, sc: C(0xffc888), si: 2.8, ex: 1.08, cl: C(0xffe6cc), fo: 0.9, sh: 0.48 },
+  { m: 1095, H: C(0xe2b0a2), Z: C(0x5870b0), G: C(0xff8a3c), D: C(0xffdc98), dk: 1, el: 5, hs: C(0xe0b8b8), hg: C(0xcca890), hi: 1.48, sc: C(0xffb46e), si: 2.8, ex: 1.12, cl: C(0xf6b4a0), fo: 0.8, sh: 0.6 },
+  { m: 1140, H: C(0x535a82), Z: C(0x1b2649), G: C(0xb8665a), D: C(0xeef2f8), dk: 0.0, el: -2, az: 163, hs: C(0x5f76a4), hg: C(0x41495c), hi: 1.25, sc: C(0xa8bcda), si: 0.9, ex: 1.15, cl: C(0x5a5a78), fo: 0.32, sh: 0.55 },
+  { m: 1170, H: C(0x3a4466), Z: C(0x121b38), G: C(0x6a5068), D: C(0xeef2f8), dk: 0.0, el: -6, az: 163, hs: C(0x5a73a0), hg: C(0x3d4658), hi: 1.25, sc: C(0xa8bcda), si: 0.9, ex: 1.15, cl: C(0x3c4662), fo: 0.24, sh: 0.5 },
+  { m: 1200, H: C(0x2a3756), Z: C(0x0e1730), G: C(0x3a4c70), D: C(0xeef2f8), dk: 0.0, el: 6, az: 20, hs: C(0x5a73a0), hg: C(0x3d4658), hi: 1.25, sc: C(0xa8bcda), si: 0.9, ex: 1.15, cl: C(0x3c4662), fo: 0.24, sh: 0.5 },
+  { m: 1230, H: C(0x22314b), Z: C(0x0a1222), G: C(0x3a4c70), D: C(0xeef2f8), dk: 0.9, el: 6, az: 20, hs: C(0x5a73a0), hg: C(0x3d4658), hi: 1.25, sc: C(0xa8bcda), si: 0.9, ex: 1.15, cl: C(0x33405a), fo: 0.22, sh: 0.5 },
+  { m: 1440 },
+];
+KEYS[KEYS.length - 1] = { ...KEYS[0], m: 1440 };   // 원반 방위 az(도 · 동 = 0 · 남 = 90 · null = 빛 방위) — 해는 동쪽 바다에서 떠 남쪽을 지나 서쪽으로(물 위 해 길·산란이 따라감) · 밤 달은 동쪽 바다 위로 떠서 남쪽으로(달빛 길이 바다에 보이게 · 달빛 세기는 약해 그늘 방향 차이는 눈에 안 띔)
+// 비·눈 = 흐린 하늘(해 원반·산란 끔 · 빛을 고르게) — 표 위에 덮어 섞음
+const OVC = { rain: { H: 0xb4bcc4, Z: 0x8e98a4, k: 0.85, si: 0.55, hi: 1.12 }, snow: { H: 0xdfe4ea, Z: 0xb9c2cc, k: 0.8, si: 0.6, hi: 1.12 } };
+
+// 공용 셰이더 조각: 하늘빛(지평선 → 꼭대기) + 해 쪽 산란 — 물·펄·하늘이 같은 식을 씀
+export const SKYF = `
+#ifndef SKYF_A
+#define SKYF_A
+uniform vec3 uSkyH_a; uniform vec3 uSkyZ_a; uniform vec3 uGlow_a; uniform vec3 uSunW_a; uniform vec3 uSunC_a; uniform float uT_a; uniform sampler2D uNz_a;
+float p5_a(float x) { float x2 = x * x; return x2 * x2 * x; }
+vec3 skyFog_a(vec3 d) { float h = clamp(d.y, 0.0, 1.0); vec3 c = mix(uSkyH_a, uSkyZ_a, (sqrt(h) + h * (1.6 - 0.6 * h)) * 0.5); float s = max(dot(d, uSunW_a), 0.0); return c + uGlow_a * (p5_a(s) * (0.3 + 0.7 * (1.0 - smoothstep(0.0, 0.5, h))) * 0.5); }
+vec3 skyCol_a(vec3 d) { float s = max(dot(d, uSunW_a), 0.0), s8 = s * s; s8 *= s8; s8 *= s8; float s32 = s8 * s8; s32 *= s32; return skyFog_a(d) + uGlow_a * s32 * s8 * 0.35; }
+vec3 skyFogL_a(vec3 d) { return mix(uSkyH_a, uSkyZ_a, clamp(d.y * 1.4, 0.0, 1.0)); }
+vec3 skyRef_a(vec3 d, float s) { return mix(uSkyH_a, uSkyZ_a, smoothstep(0.0, 0.6, d.y)) + uGlow_a * p5_a(s) * 0.45; }
+float p256_a(float x) { x *= x; x *= x; x *= x; x *= x; x *= x; x *= x; x *= x; return x * x; }
+#endif
+`;
+// 물 조각(바다·밀물): 물결 기울기(멀수록 0 — 깜빡임 X) → 하늘 비침(프레넬) + 해 길 · 물가 물결 줄(DEP)
+const WATERF = `
+{ vec3 toC = cameraPosition - vWP_a; float dist = length(toC); vec3 V = toC / dist; float fd = 1.0 - smoothstep(30.0, 230.0, dist);
+  vec2 q = vWP_a.xz; float t = uT_a;
+  vec2 g = vec2(cos(q.x * 0.19 + q.y * 0.11 + t * 0.85), cos(q.y * 0.23 - q.x * 0.08 + t * 1.05)) * 0.085;
+#ifndef LITE_A
+  g += vec2(cos(q.x * 0.61 - q.y * 0.43 - t * 1.6), cos(q.y * 0.67 + q.x * 0.39 + t * 1.8)) * 0.045 * fd;
+#endif
+  vec3 N = normalize(vec3(-g.x * fd, 1.0, -g.y * fd)); float ndv = clamp(dot(N, V), 0.0, 1.0);
+  float F = 0.04 + 0.96 * p5_a(1.0 - ndv); vec3 R = reflect(-V, N); R.y = abs(R.y); float sd = max(dot(R, uSunW_a), 0.0), s16 = sd * sd; s16 *= s16; s16 *= s16; s16 *= s16;
+  outgoingLight = mix(outgoingLight, mix(skyRef_a(R, sd), uSkyZ_a, 0.3), F * uRefl_a);
+  outgoingLight += uSunC_a * (p256_a(sd) * 1.6 + s16 * sd * sd * sd * sd * 0.07) * (0.4 + 0.6 * fd);
+#ifdef DEP_A
+  if (vDep_a < 1.3) { float sh = 1.0 - smoothstep(0.05, 1.3, vDep_a); float nz = texture2D(uNz_a, q / 64.0).r;
+    float w = smoothstep(0.86, 0.985, sin(vDep_a * 6.5 + t * 0.75 + nz * 9.0)) * sh; outgoingLight = mix(outgoingLight, uFoam_a, w * 0.5 * fd); }
+#endif
+}
+`;
+// 펄 조각(갯벌): 갯골 = 잡음의 같은 높이 선(구불구불) · 고인 물 = 잡음 꼭대기 · 젖은 펄 = 옅은 하늘 비침 + 넓은 해 윤기 · 물 = 하늘 거울 + 좁은 해 빛
+const MUDF = `
+{ vec2 q = vWP_a.xz; float wt = vWt_a;
+#ifndef LITE_A
+  vec2 wq = vec2(texture2D(uNz_a, q / 300.0).r, texture2D(uNz_a, q / 300.0 + 0.5).r) - 0.5; float n = texture2D(uNz_a, q / 150.0 + wq * 0.3).r;
+  float n2 = texture2D(uNz_a, q / 37.0 + 0.27).r; float m = n + (n2 - 0.5) * 0.16; float aw = fwidth(m);
+  float d5 = abs(m - 0.5), cr = 1.0 - smoothstep(0.011, 0.02 + aw * 1.2, d5), bank = (1.0 - smoothstep(0.02, 0.07 + aw * 2.0, d5)) * (1.0 - cr);
+  float pool = smoothstep(0.69, 0.705 + aw, n2) * smoothstep(0.38, 0.62, n);
+  float wat = max(cr, pool) * wt;
+#else
+  float n = texture2D(uNz_a, q / 150.0).r, aw = fwidth(n), d5 = abs(n - 0.5), wat = (1.0 - smoothstep(0.011, 0.02 + aw * 1.2, d5)) * wt, bank = 0.0;
+#endif
+  outgoingLight *= mix(1.0, (0.86 + 0.26 * n) * (1.0 - 0.24 * bank), wt) * (1.0 - 0.2 * wat);
+  outgoingLight = mix(outgoingLight, vMSky_a, vMF_a * mix((0.2 + 0.32 * bank) * wt * uWetK_a, 0.9, wat));
+  outgoingLight += uSunC_a * vMSh_a * 0.16 * wt * uWetK_a * (0.6 + 0.8 * bank);
+  if (wat > 0.01) { vec3 V = normalize(cameraPosition - vWP_a); float sd = max(dot(vec3(-V.x, V.y, -V.z), uSunW_a), 0.0); outgoingLight += uSunC_a * p256_a(sd) * 1.4 * wat; }   /* 좁은 해 빛 = 물(갯골·웅덩이)에서만 */
+}
+`;
+// 펄 바탕: 가장자리는 둘레 땅과 같은 풀 무늬(이음매 X) → 안쪽은 무늬 대신 잔 물결 자국(잡음)
+const MUDMAP = `
+{ float wm = smoothstep(0.05, 0.5, vWet_a);
+#ifdef USE_MAP
+  vec4 tx = texture2D(map, vMapUv); diffuseColor *= mix(tx, vec4(1.0), wm);
+#endif
+#ifndef LITE_A
+  float r1 = texture2D(uNz_a, vWP_a.xz / 6.0).r * 0.7 + texture2D(uNz_a, vWP_a.xz * vec2(0.9, 0.35) + 0.3).r * 0.3; diffuseColor.rgb *= 1.0 + (r1 - 0.5) * 0.3 * wm;
+#endif
+}
+`;
+// 갈대 바람: 들판을 지나가는 바람 물결(세계 자리 기준 — 포기마다 같은 쪽으로) + 잔 떨림 · 높을수록 크게
+const REEDV = `
+vec4 mvPosition = vec4(transformed, 1.0);
+#ifdef USE_INSTANCING
+mvPosition = instanceMatrix * mvPosition;
+#endif
+{ float hb = clamp(transformed.y / 1.9, 0.0, 1.0); hb *= hb; vec2 ip = vec2(instanceMatrix[3][0], instanceMatrix[3][2]);
+  float wv = dot(ip, vec2(0.11, 0.06)) - uT_a * 1.5; float gust = 0.5 + 0.5 * sin(wv) * sin(wv * 0.37 + 1.3);
+  float sw = (gust * 0.85 + 0.15 + sin(uT_a * 2.3 + ip.x * 0.9 + ip.y * 0.5 + transformed.y * 1.7) * 0.12) * hb * uWind_a;
+  mvPosition.x += sw * 0.42; mvPosition.z += sw * 0.24; mvPosition.y -= sw * sw * 0.18; }
+mvPosition = modelViewMatrix * mvPosition;
+gl_Position = projectionMatrix * mvPosition;
+`;
+
+export function createLook({ T3, map, lite, tideLvl, TEX, MATS, scene, game, phase, wx, inb, season }) {
+  const gameMin = () => (game && game() ? game().min : 600);
+  const OFF = new Set(((typeof location !== 'undefined' && new URLSearchParams(location.search).get('artoff')) || '').split(','));   // 시험용: ?artoff=sky,gnd,fog,water,mud,reed,gust — 하나씩 빼고 GPU 몫 재기
+  const LITE = !!lite, CA = new T3.Color(), CB = new T3.Color(), V3 = new T3.Vector3();
+  const U = { uSkyH_a: { value: new T3.Color(0xd0e7f5) }, uSkyZ_a: { value: new T3.Color(0x5a9de0) }, uGlow_a: { value: new T3.Color(0x000000) }, uSunW_a: { value: new T3.Vector3(0.4, 0.7, 0.3).normalize() }, uSunC_a: { value: new T3.Color(0xffffff) },
+    uT_a: { value: 0 }, uNz_a: { value: null }, uRefl_a: { value: 0.6 }, uFoam_a: { value: new T3.Color(0xffffff) }, uWetK_a: { value: 1 }, uWind_a: { value: 1 }, uDisc_a: { value: new T3.Color(0xffffff) }, uDiscK_a: { value: 1 }, uDiscW_a: { value: new T3.Vector3(0, 1, 0) } };
+  // 잡음 한 장(128 · 이음매 없음 · 부드러운 값 잡음 4겹) — 갯골·물결 어긋냄·땅 얼룩이 같이 씀
+  { const N = 128, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), im = g.createImageData(N, N), F = new Float32Array(N * N); let sd = 9127; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+    for (const [P, A] of [[4, 1], [8, 0.5], [16, 0.25], [32, 0.12]]) { const L = new Float32Array(P * P); for (let i = 0; i < L.length; i++) L[i] = rnd(); const sm = t => t * t * (3 - 2 * t);
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const fx = x / N * P, fy = y / N * P, ix = Math.floor(fx), iy = Math.floor(fy), tx = sm(fx - ix), ty = sm(fy - iy), a = L[iy % P * P + ix % P], b = L[iy % P * P + (ix + 1) % P], c2 = L[(iy + 1) % P * P + ix % P], d = L[(iy + 1) % P * P + (ix + 1) % P];
+        F[y * N + x] += A * (a + (b - a) * tx + (c2 - a) * ty + (a - b - c2 + d) * tx * ty); } }
+    let lo = 1e9, hi = -1e9; for (const v of F) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    for (let i = 0; i < N * N; i++) { const v = Math.round((F[i] - lo) / (hi - lo) * 255); im.data[i * 4] = im.data[i * 4 + 1] = im.data[i * 4 + 2] = v; im.data[i * 4 + 3] = 255; }
+    g.putImageData(im, 0, 0); const t = new T3.CanvasTexture(c); t.wrapS = t.wrapT = T3.RepeatWrapping; t.colorSpace = T3.NoColorSpace; TEX.push(t); U.uNz_a.value = t; }
+  const defs = (sh, dep) => { const d = (LITE ? '#define LITE_A\n' : '') + (dep ? '#define DEP_A\n' : ''); sh.fragmentShader = d + sh.fragmentShader; };
+  const vwp = (sh, extra) => { sh.vertexShader = 'varying vec3 vWP_a;\n' + (extra || '') + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vWP_a = (modelMatrix * vec4(transformed, 1.0)).xyz;'); };
+  const chain = (m, f, key) => { const pv = m.onBeforeCompile, k0 = m.customProgramCacheKey ? m.customProgramCacheKey() : ''; m.onBeforeCompile = sh => { if (pv) pv(sh); f(sh); }; m.customProgramCacheKey = () => k0 + ':' + key + (LITE ? 'L' : ''); m.needsUpdate = true; return m; };
+  const waterPatch = dep => sh => { Object.assign(sh.uniforms, U);
+    vwp(sh, dep ? 'attribute float dep_a;\nvarying float vDep_a;\n' : ''); if (dep) sh.vertexShader = sh.vertexShader.replace('vWP_a = (', 'vDep_a = dep_a; vWP_a = (');
+    sh.fragmentShader = 'varying vec3 vWP_a;\nuniform float uRefl_a;\nuniform vec3 uFoam_a;\n' + (dep ? 'varying float vDep_a;\n' : '') + SKYF + sh.fragmentShader.replace('#include <envmap_fragment>', WATERF + '#include <envmap_fragment>'); defs(sh, dep); };
+  // 땅 얼룩(들·숲·모래): 세계 자리 잡음 두 겹으로 풀빛을 노랑 ↔ 푸른 초록으로 조금씩(넓은 들판의 바둑판 같은 되풀이 무늬가 덜 보이게)
+  function ground(m) { if (OFF.has('gnd') || LITE) return m; return chain(m, sh => { Object.assign(sh.uniforms, U); vwp(sh, '');
+    sh.fragmentShader = 'varying vec3 vWP_a;\n' + SKYF + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n{ float g1 = texture2D(uNz_a, vWP_a.xz / 52.0).r;' + (LITE ? ' float gv = g1;' : ' float gv = g1 * 0.72 + texture2D(uNz_a, vWP_a.xz / 9.0 + 0.43).r * 0.28;') + ' diffuseColor.rgb *= mix(vec3(0.9, 0.95, 1.03), vec3(1.08, 1.04, 0.88), gv); }'); }, 'gnd2'); }
+  // 바다 재질(물낯 · 깊이 속성 dep_a) — town.js의 MAT.sea(안개 압축 그대로)에 덧붙임
+  function water(m) { SEA = m; if (OFF.has('water')) return m; return chain(m, waterPatch(true), 'water2'); }
+  // 밀물 물낯(town_shore) = 같은 물 · 깊이 속성 없음(물가 줄 없음)
+  function tide(sea, hazeOf) { const m = new T3.MeshLambertMaterial({ vertexColors: true, map: sea.map }); if (hazeOf) hazeOf(m, true); chain(m, waterPatch(false), 'tide2'); MATS.push(m); TIDE = m; return m; }
+  let TIDE = null, MUDM = null, SEA = null;
+  // 갯벌 재질: 땅 메시와 같은 정점(색·위치 공유 · 같은 평면 겹침 없음 — 그 칸 삼각형만 이 메시로) + 젖음 속성 wet_a
+  function mudMat(hazeOf, map9) { if (MUDM) return MUDM; const m = new T3.MeshLambertMaterial({ vertexColors: true, map: map9 || null }); if (hazeOf) hazeOf(m, true);
+    chain(m, sh => { Object.assign(sh.uniforms, U); vwp(sh, 'attribute float wet_a;\nvarying float vWet_a;\nvarying float vWt_a;\nvarying vec3 vMSky_a;\nvarying float vMF_a;\nvarying float vMSh_a;\n' + SKYF); sh.vertexShader = sh.vertexShader.replace('vWP_a = (', 'vWet_a = wet_a; vWt_a = smoothstep(0.08, 0.55, wet_a); vWP_a = (').replace('#include <project_vertex>', '#include <project_vertex>\n { vec3 V = normalize(cameraPosition - vWP_a), R = vec3(-V.x, V.y, -V.z); float sd = max(dot(R, uSunW_a), 0.0), s8 = sd * sd; s8 *= s8; s8 *= s8; vMF_a = 0.04 + 0.96 * p5_a(1.0 - clamp(V.y, 0.0, 1.0)); vMSky_a = skyRef_a(R, sd); vMSh_a = s8 * sd; }');
+      sh.fragmentShader = 'varying vec3 vWP_a;\nvarying float vWet_a;\nvarying float vWt_a;\nvarying vec3 vMSky_a;\nvarying float vMF_a;\nvarying float vMSh_a;\nuniform float uWetK_a;\n' + SKYF + sh.fragmentShader.replace('#include <map_fragment>', MUDMAP).replace('#include <envmap_fragment>', MUDF + '#include <envmap_fragment>'); defs(sh, false); }, 'mud2');
+    MATS.push(m); MUDM = m; return m; }
+  function mud(g, group) { const me = new T3.Mesh(g, mudMat()); me.matrixAutoUpdate = false; me.userData.fx = 1; group.add(me); return me; }
+
+  // ───────── 갈대(인스턴스 한 벌 · 그리기 1번) ─────────
+  let REED = null, REEDG = null, REEDC = null, REEDM = null;
+  function reedGeo() { const P = [], Cc = [], N = [], R = (() => { let s = 77; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
+    const put = (p, n, c) => { P.push(p[0], p[1], p[2]); N.push(n[0], n[1], n[2]); Cc.push(c[0], c[1], c[2]); };
+    const blade = (a, r, h, w, lean, tip, base) => { const cx = Math.cos(a) * r, cz = Math.sin(a) * r, ox = Math.cos(a) * lean, oz = Math.sin(a) * lean, px = -Math.sin(a) * w, pz = Math.cos(a) * w, n = [Math.cos(a) * 0.4, 0.5, Math.sin(a) * 0.4];
+      const m0 = [cx + ox * 0.35, h * 0.55, cz + oz * 0.35], top = [cx + ox, h, cz + oz], mid = base.map((v, i) => v + (tip[i] - v) * 0.55);
+      put([cx - px, 0, cz - pz], n, base); put([cx + px, 0, cz + pz], n, base); put([m0[0] + px * 0.6, m0[1], m0[2] + pz * 0.6], n, mid);
+      put([cx - px, 0, cz - pz], n, base); put([m0[0] + px * 0.6, m0[1], m0[2] + pz * 0.6], n, mid); put([m0[0] - px * 0.6, m0[1], m0[2] - pz * 0.6], n, mid);
+      put([m0[0] - px * 0.6, m0[1], m0[2] - pz * 0.6], n, mid); put([m0[0] + px * 0.6, m0[1], m0[2] + pz * 0.6], n, mid); put(top, n, tip); };
+    const plume = (a, r, h, col) => { const cx = Math.cos(a) * r * 1.4, cz = Math.sin(a) * r * 1.4, y0 = h, y1 = h + 0.42, y2 = h + 0.2, n = [0, 0.3, 1];
+      for (const [ux, uz] of [[1, 0], [0, 1]]) { const w = 0.07; put([cx, y0, cz], n, col); put([cx + ux * w, y2, cz + uz * w], n, col); put([cx, y1, cz], n, col); put([cx, y0, cz], n, col); put([cx, y1, cz], n, col); put([cx - ux * w, y2, cz - uz * w], n, col); }
+      const st = [0.42, 0.4, 0.3]; put([cx - 0.012, h - 0.5, cz], n, st); put([cx + 0.012, h - 0.5, cz], n, st); put([cx, y0, cz], n, st); };
+    const nb = LITE ? 6 : 9; for (let i = 0; i < nb; i++) { const a = i / nb * 6.2832 + R() * 0.5, h = 1.15 + R() * 0.7; blade(a, 0.05 + R() * 0.12, h, 0.028, 0.18 + R() * 0.25, [1, 1, 1], [0.55, 0.55, 0.55]); }
+    for (let i = 0; i < 3; i++) plume(i * 2.1 + R(), 0.08, 1.55 + R() * 0.3, [1, 1, 1]);
+    const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(N, 3)); const col = new T3.Float32BufferAttribute(Cc, 3); g.setAttribute('color', col);
+    g.userData.gray = Float32Array.from(Cc); g.userData.plume = P.length / 3 - 3 * 15; return g; }
+  // 계절 색: 잎(여름 초록 → 가을 황금 → 겨울 볏짚) · 이삭(어린 자줏빛 → 은빛 담황)
+  const SEAC = { spring: [0x8fb35f, 0xb3a49a], summer: [0x7fa653, 0xbba59a], autumn: [0xc4a065, 0xe8dcc2], winter: [0xc6b597, 0xddd3c1], now: [0x7fa653, 0xbba59a] };
+  function reedColor(sz) { if (!REEDG) return; const g = REEDG, src = g.userData.gray, A = g.attributes.color.array, [lc, pc] = SEAC[sz] || SEAC.summer, n = A.length / 3, p0 = g.userData.plume; CA.setHex(lc); CB.setHex(pc);
+    for (let i = 0; i < n; i++) { const c = i >= p0 && (i - p0) % 15 < 12 ? CB : CA, v = src[i * 3]; A[i * 3] = c.r * v; A[i * 3 + 1] = c.g * v; A[i * 3 + 2] = c.b * v; } g.attributes.color.needsUpdate = true; REEDC = sz; }
+  function reeds(list, group) { if (REED) { REED.parent && REED.parent.remove(REED); REED.dispose(); REED = null; } if (!list.length || OFF.has('reed')) return null;
+    if (!REEDG) REEDG = reedGeo();
+    if (!REEDM) { REEDM = new T3.MeshLambertMaterial({ vertexColors: true, side: T3.DoubleSide }); REEDM.onBeforeCompile = sh => { Object.assign(sh.uniforms, U); sh.vertexShader = 'uniform float uT_a;\nuniform float uWind_a;\n' + sh.vertexShader.replace('#include <project_vertex>', REEDV); }; REEDM.customProgramCacheKey = () => 'reed2'; MATS.push(REEDM); } const mat = REEDM;
+    const n = Math.min(list.length, LITE ? 320 : 1300); if (list.length > n) list = list.slice().sort((a, b) => (b[5] || 0) - (a[5] || 0)).slice(0, n);   /* 넘치면 무리 한가운데(잡음 높은 곳)부터 — 고르게 솎으면 듬성듬성 한 포기씩이 됨 */
+    const m = new T3.InstancedMesh(REEDG, mat, n), M4 = new T3.Matrix4(), Q = new T3.Quaternion(), S = new T3.Vector3(), Y = new T3.Vector3(0, 1, 0);
+    let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (let i = 0; i < n; i++) { const [x, y, z, s, r] = list[i]; Q.setFromAxisAngle(Y, r); S.set(s, s * (0.85 + (i % 5) * 0.06), s); V3.set(x, y - 0.05, z); M4.compose(V3, Q, S); m.setMatrixAt(i, M4); x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+    m.instanceMatrix.needsUpdate = true; m.computeBoundingSphere(); m.matrixAutoUpdate = false; m.castShadow = m.receiveShadow = false; m.userData.fx = 1; m.userData.box = [x0, z0, x1, z1]; group.add(m); REED = m; reedColor(season ? season() : 'summer'); return m; }
+
+  // ───────── 하늘(학교 하늘 돔 대신 · 마을에 있는 동안만) ─────────
+  let SKY = null, OLD = null, CLD = null, HEMI = null, SUN = null;
+  function findSky() { const sc = scene(); if (!sc) return; for (const o of sc.children) { if (!OLD && o.isMesh && o.renderOrder === -1 && o.geometry && o.geometry.type === 'SphereGeometry' && o.material && o.material.vertexColors && o.material.depthWrite === false) OLD = o; if (!HEMI && o.isHemisphereLight) HEMI = o; if (!SUN && o.isDirectionalLight) SUN = o;
+      if (!CLD && o.isMesh && o.material && o.material.vertexColors && o !== OLD && o.geometry) { const g = o.geometry; if (!g.boundingBox) g.computeBoundingBox(); const bb = g.boundingBox; if (bb && bb.min.y > 40 && bb.max.x - bb.min.x > 150 && bb.max.y < 200) CLD = o; } } }
+  function skyOn() { if (SKY || OFF.has('sky')) return; findSky(); const g = new T3.SphereGeometry(280, 48, 24), mat = new T3.ShaderMaterial({ uniforms: U, side: T3.BackSide, depthWrite: false, fog: false, toneMapped: false,
+      vertexShader: SKYF + 'varying vec3 vD_a;\nvarying vec3 vC_a;\nvoid main() { vD_a = position; vC_a = ' + (LITE ? 'skyCol_a' : 'skyFog_a') + '(normalize(position)); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: SKYF + 'uniform vec3 uDisc_a; uniform float uDiscK_a; uniform vec3 uDiscW_a;\nvarying vec3 vD_a;\nvarying vec3 vC_a;\nvoid main() { vec3 d = normalize(vD_a); vec3 c = vC_a; float s = dot(d, uDiscW_a);' + (LITE ? '' : ' float s0 = max(dot(d, uSunW_a), 0.0), s8 = s0 * s0; s8 *= s8; s8 *= s8; float s32 = s8 * s8; s32 *= s32; c += uGlow_a * s32 * s8 * 0.35; float sh = max(s, 0.0); sh *= sh; sh *= sh; sh *= sh; sh *= sh; sh *= sh; sh *= sh; sh *= sh; c += uGlow_a * sh * 0.5 * uDiscK_a;') + '\n c = mix(c, uDisc_a, smoothstep(0.99955, 0.99975, s) * uDiscK_a * smoothstep(-0.01, 0.01, d.y)); gl_FragColor = vec4(c, 1.0);\n #include <colorspace_fragment>\n}' });
+    SKY = new T3.Mesh(g, mat); SKY.frustumCulled = false; SKY.renderOrder = -1; SKY.matrixAutoUpdate = true; SKY.userData.fx = 1; map.add(SKY); if (OLD) OLD.visible = false; MATS.push(mat); }
+  function skyOff() { if (OLD) OLD.visible = true; if (SKY) { map.remove(SKY); SKY.geometry.dispose(); SKY = null; } }
+
+  // ───────── 하루 빛 이어 바꾸기(0.5초마다 · 시간대가 바뀐 그 자리에서도 바로) ─────────
+  let lastM = -1, lastW = '', lastP = '', lastI = false, PH = 'day', acc = 0;
+  const mixHex = (a, b, t, out) => { CA.setHex(a); CB.setHex(b); return out.copy(CA).lerp(CB, t); };
+  function sample(m) { let i = 0; while (i < KEYS.length - 2 && KEYS[i + 1].m <= m) i++; const A = KEYS[i], B = KEYS[i + 1], t0 = (m - A.m) / Math.max(1, B.m - A.m), t = t0 * t0 * (3 - 2 * t0); return [A, B, t]; }
+  function apply(force) { const sc = scene(); if (!sc) return; const m = gameMin ? gameMin() : 600, w = wx ? wx() : 'clear', ph = phase ? phase() : 'day';
+    const inside = !!(inb && inb()); if (!force && Math.abs(m - lastM) < 0.5 && w === lastW && ph === lastP && inside === lastI) return; lastM = m; lastW = w; lastP = ph; lastI = inside; PH = ph;
+    { const S9 = game && game(); if (S9 && tideLvl) { const L = tideLvl(S9.day, S9.min); U.uWetK_a.value = 0.72 + 0.28 * Math.min(1, L / 0.35); } } if (!HEMI || !SUN) findSky();
+    const [A, B, t] = sample(m), o = OVC[w], ok = o ? o.k : 0;
+    mixHex(A.H, B.H, t, U.uSkyH_a.value); mixHex(A.Z, B.Z, t, U.uSkyZ_a.value); mixHex(A.G, B.G, t, U.uGlow_a.value); mixHex(A.D, B.D, t, U.uDisc_a.value);
+    if (o) { const lum = U.uSkyH_a.value.r * 0.3 + U.uSkyH_a.value.g * 0.6 + U.uSkyH_a.value.b * 0.1, dim = Math.min(1, lum * 1.6 + 0.08); U.uSkyH_a.value.lerp(CA.setHex(o.H).multiplyScalar(dim), ok); U.uSkyZ_a.value.lerp(CA.setHex(o.Z).multiplyScalar(dim), ok); U.uGlow_a.value.multiplyScalar(1 - ok); }
+    U.uDiscK_a.value = (A.dk + (B.dk - A.dk) * t) * (1 - ok);
+    // 원반 = 빛 방향의 방위 · 높이는 표(해 뜰 녘·질 녘에 낮게) — 빛 그늘 방향은 시간대 해 자리 그대로
+    if (SUN) { V3.copy(SUN.position).normalize(); const azL = Math.atan2(V3.z, V3.x) * 57.3, elL = Math.asin(Math.max(-1, Math.min(1, V3.y))), ea = A.el == null ? elL * 57.3 : A.el, eb = B.el == null ? elL * 57.3 : B.el, el = (ea + (eb - ea) * t) / 57.3, aa = A.az == null ? azL : A.az, ab = B.az == null ? azL : B.az, az = (aa + (ab - aa) * t) / 57.3;
+      U.uDiscW_a.value.set(Math.cos(az) * Math.cos(el), Math.sin(el), Math.sin(az) * Math.cos(el)); U.uSunW_a.value.copy(U.uDiscW_a.value); if (U.uSunW_a.value.y < 0.02) { U.uSunW_a.value.y = 0.02; U.uSunW_a.value.normalize(); } }
+    const si = (A.si + (B.si - A.si) * t) * (o ? 1 - ok + ok * o.si : 1), hi = (A.hi + (B.hi - A.hi) * t) * (o ? 1 - ok + ok * o.hi : 1);
+    mixHex(A.sc, B.sc, t, U.uSunC_a.value); U.uSunC_a.value.multiplyScalar(si * 0.32 * (1 - ok * 0.9));
+    U.uRefl_a.value = A.sh + (B.sh - A.sh) * t;
+    if (SEA) { const dn = Math.max(0, Math.min(1, ((A.si + (B.si - A.si) * t) - 0.9) / 1.4)); SEA.color.setHex(0x7484a4).lerp(CA.setHex(0xffffff), dn); if (TIDE) TIDE.color.copy(SEA.color); }   /* 물 바탕 = 밤엔 어둡게 · 노을빛은 해 색이 이미 칠하므로 덧칠 X(갈색으로 탁해지던 것) */ U.uFoam_a.value.setScalar((A.fo + (B.fo - A.fo) * t) * (o ? 0.8 : 1)); if (U.uFoam_a.value.r < 0.5) U.uFoam_a.value.multiply(CA.setHex(0xa8bcda));
+    if (!inside) {
+      if (HEMI) { mixHex(A.hs, B.hs, t, HEMI.color); mixHex(A.hg, B.hg, t, HEMI.groundColor); HEMI.intensity = hi; if (o) HEMI.color.lerp(CA.setHex(0xd4d8dc), ok * 0.7); }
+      if (SUN) { mixHex(A.sc, B.sc, t, SUN.color); SUN.intensity = si; if (o) SUN.color.lerp(CA.setHex(0xe8ecf0), ok); }
+      if (sc.fog) { sc.fog.color.copy(U.uSkyH_a.value); } if (sc.background && sc.background.isColor) sc.background.copy(U.uSkyH_a.value);
+      const R9 = window.SD2 && SD2.renderer; if (R9) R9.toneMappingExposure = A.ex + (B.ex - A.ex) * t;
+      if (CLD && CLD.visible) { mixHex(A.cl, B.cl, t, CLD.material.color); if (o) CLD.material.color.lerp(CA.setHex(0xc8ced6), ok); } }
+  }
+  function tick(dt) { U.uT_a.value += dt; if (U.uT_a.value > 3600) U.uT_a.value -= 3600; if (SKY) { const cp = map.camera.position; SKY.position.copy(cp); }
+    if (REED) { const b = REED.userData.box, cp = map.camera.position, dx = Math.max(b[0] - cp.x, 0, cp.x - b[2]), dz = Math.max(b[1] - cp.z, 0, cp.z - b[3]); REED.visible = dx * dx + dz * dz < (LITE ? 150 : 230) ** 2; }
+    if ((acc += dt) > 0.5) { acc = 0; apply(false); if (season && REEDG && season() !== REEDC) reedColor(season()); } }
+  function setPhase() { apply(true); }
+  function dispose() { skyOff(); if (REED) { REED.parent && REED.parent.remove(REED); REED.dispose(); REED = null; } if (REEDG) { REEDG.dispose(); REEDG = null; } }
+  return { U, off: k => OFF.has(k), fogFn: () => (OFF.has('fog') ? 'uSkyH_a' : LITE ? 'skyFogL_a(fd9)' : 'skyFog_a(normalize(fd9))'), ground, water, tide, mudMat, mud, reeds, skyOn, skyOff, tick, phase: setPhase, apply, dispose, get lite() { return LITE; }, get tideMat() { return TIDE; },
+    reedAt: i => { if (!REED || i >= REED.count) return null; const M4 = new T3.Matrix4(); REED.getMatrixAt(i, M4); return [+M4.elements[12].toFixed(1), +M4.elements[14].toFixed(1)]; },
+    info: () => ({ sky: !!SKY, old: !!OLD, reeds: REED ? REED.count : 0, reedVis: REED ? REED.visible : false, mud: !!MUDM, ph: PH, m: lastM, sunW: U.uSunW_a.value.toArray().map(v => +v.toFixed(2)), exp: window.SD2 && +SD2.renderer.toneMappingExposure.toFixed(2) }) };
+}

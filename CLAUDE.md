@@ -42,6 +42,7 @@
 | 마을 일을 시작할 때마다(사용자 10-17 '이상해 하면 다시 안 생기게') | `docs/systems/town_lessons.md` — 들은 말·문제·규칙·확인 · 새 지적은 그날 한 줄 · 하위 에이전트 지시문 첫 줄에도 |
 | 마을 장소가 하는 일·직업 체험·서브퀘스트·쇼·집 특색(장소 카드·마을 여권·소방관 출동 등) | `docs/systems/town_living.md` — LIVING-1 설계안(사용자 10-17 '너가 생각하는 최선으로 ㄱ') |
 | 거점(어린이 도우미 본부)·교류·지역 문제·지리 퀘스트 · 교사 차시 지도 | `docs/systems/town_quests.md` — QUEST-2 설계(교육적 평가 · 배운 것을 '써야' 풀리는 퀘스트) |
+| town.js를 쪼갤 때(모듈 일곱 · 공용 상태 TS 먼저 · 옮기는 차례 · 같은지 확인) | `docs/systems/town_split.md` — 설계안(10-17 · 팀이 적을 때 옮김) |
 | 게임용 지도 API 정본(map.*) | `docs/map_api.md` |
 | 품질 숫자 척도(풍성·놀이·그래픽·효과·이야기·각색·완성도·직관성) | `docs/tasks/quality_scale.md` |
 | 새 이야기·에피소드 더하기 | `docs/tasks/new_episode.md` |

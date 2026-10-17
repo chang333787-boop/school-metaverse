@@ -218,6 +218,7 @@ export function createMapApi(host, NAV, META) {
     pitchLow(lo) { CTRL.pitchLo = lo == null ? null : Math.max(-1.3, Math.min(-0.2, +lo)); },
     roomCam(o) { CTRL.room = o ? { d: Math.max(2.5, Math.min(6, +o.d || 3.6)), p: Math.max(0.2, Math.min(0.8, +o.p || 0.5)) } : null; },   // INDOOR-CAM(10-17): 게임이 지은 방 안 카메라(거리 d m · 위에서 보는 각 한계 p) — 뒤가 벽이면 위로 올라감 · null = 원래(학교 실내 3.3m) · 게임이 멈추면 null
     look(dx, dy) { pl.look(dx || 0, dy || 0); },
+    get pitch() { return pl.getPitch(); }, setPitch(v) { if (Number.isFinite(v)) pl.look(0, (v - pl.getPitch()) / 0.0042); },   // SUBWAY-1(10-17 '열차 안 카메라가 기울어'): 탈것이 시점을 수평으로(0.3 = 수평) · 내릴 때 되돌림
     // GUIDE-1(09-30): 자동 걷기 — steer(dx, dz, 속도 m/s, 카메라 따라 돌기) · steer(null) = 끔. 키·조이스틱이 있으면 그쪽이 먼저. 게임이 멈추면 자동으로 끔
     steer(dx, dz, v = 4.2, cam = true) { if (dx == null) { CTRL.steer = null; return; } const L = Math.hypot(dx, dz); if (L < 1e-6) { CTRL.steer = null; return; }
       const st = CTRL.steer || (CTRL._st || (CTRL._st = {})); st.x = dx / L; st.z = dz / L; st.v = Math.max(0.5, Math.min(7.5, v)); st.cam = !!cam; CTRL.steer = st; },
