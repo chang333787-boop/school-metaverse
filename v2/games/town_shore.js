@@ -2,6 +2,7 @@
 //   물때 = 실제 결(하루에 밀물·썰물이 두 번씩 · 한 바퀴 약 12시간 25분 · 날마다 약 50분씩 늦어짐) · 썰물(간조 앞뒤 약 1시간 반) 동안만 갯벌이 드러남 → 바다 친구·조개 캐기
 //   밀물 = 갯벌 위로 물낯 한 장이 올라옴(1초마다 높이만 바꿈 · 썰물엔 숨김) · 갯벌 가까이 있을 때만 '물이 들어와요' 알림 · 물때 칩은 갯벌 가까이 갔을 때만
 //   바다 친구 = 우리나라 갯벌에서 흔히 보는 것 — 실제 사실만(지어낸 이야기 X) · 겨울엔 게·망둥어가 굴 속에서 지내서 고둥·갯지렁이만
+import { photoHtml } from './town_places.js?v=1';   // LIVING-1 실제 사진(창 안에서만 · 출처 한 줄)
 export const SHORE_V = 1;
 const ALL = ['spring', 'summer', 'autumn', 'winter'], WARM = ['spring', 'summer', 'autumn'];
 export const SHORE = [
@@ -83,7 +84,7 @@ export function createShore(A) {
       else if (dr === 'snail') sp.position.x = s.x + Math.sin(t * 0.12) * 0.4;
       else if (dr === 'worm') sp.scale.x = s.sc * (0.85 + 0.15 * Math.sin(t * 3)); } }
   function look(s) { const b = s.b; if (!b || A.panel()) return; const e = en(), neu = A.GAME.found('shore:' + b.id); A.skUp('look', neu ? 3 : 1);
-    const P9 = A.openP('<h3>🔍 ' + A.esc(b.t[e ? 1 : 0]) + '</h3><div class="st"><canvas class="twn-shore" width="200" height="200" style="flex:none;width:150px;height:150px"></canvas><div>' + A.esc(b.line[e ? 1 : 0]) + '<div class="sm">' + A.esc(b.hint[e ? 1 : 0]) + (e ? ' · we only look, then let it be' : ' · 잡지 않고 보기만 해요') + '</div>' + (neu ? '<div class="sm"><b>📖 ' + (e ? 'New in your codex!' : '도감에 새로 적었어요!') + '</b></div>' : '') + '</div></div><div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>', false, 'shore');
+    const P9 = A.openP('<h3>🔍 ' + A.esc(b.t[e ? 1 : 0]) + '</h3>' + (/crab|fiddler/.test(b.draw) ? photoHtml('suncheon', e) : '') + '<div class="st"><canvas class="twn-shore" width="200" height="200" style="flex:none;width:150px;height:150px"></canvas><div>' + A.esc(b.line[e ? 1 : 0]) + '<div class="sm">' + A.esc(b.hint[e ? 1 : 0]) + (e ? ' · we only look, then let it be' : ' · 잡지 않고 보기만 해요') + '</div>' + (neu ? '<div class="sm"><b>📖 ' + (e ? 'New in your codex!' : '도감에 새로 적었어요!') + '</b></div>' : '') + '</div></div><div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>', false, 'shore');
     drawShore(P9.querySelector('.twn-shore'), b, true); P9.onclick = ev => { const bt = ev.target.closest('button'); if (bt && bt.dataset.a === 'x') A.closeP(); }; A.map.sfx && A.map.sfx(neu ? 'ding' : 'tick'); if (neu) A.bagShow(); }
   // 다음 썰물(지금 썰물이면 끝나는 시각) — 칩·알림·조개 캐기 안내가 같이 씀
   function nextLow() { const d = S().day, m = S().min, e = en(); for (const [a, b] of lowsOf(d)) { if (m >= a && m < b) return '~' + hm(b); if (a > m) return hm(a); } return e ? 'tomorrow ' + hm(Math.max(360, lowAt(d + 1) - LOW_W)) : '내일 ' + hm(Math.max(360, lowAt(d + 1) - LOW_W)); }

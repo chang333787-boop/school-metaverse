@@ -1,6 +1,7 @@
 // 마을 상태 교차 시험(STATE-X · 10-17 '마트 들어가자 끼임 · 방 안에서 J · 그네 타면 매 프레임 tick 오류'): node tools/harness/town_state.cjs [마을=ourtown] [포트=8002] [--only=상태,상태] [--act=동작,동작]
 //   '어떤 상태인데 다른 기능이 그 상태를 모른 채 끼어드는' 버그를 한꺼번에 — 한 페이지에서 상태 만들기 → 동작 → 확인 → 원래대로(Esc · 방 나가기 · 정문 앞으로)
 //   상태: 밖(기준) · 가게 안 · 집 안 · 벤치 앉음 · 그네 앉음 · 자전거(가게 문 앞) · 배 · 일터 놀이 창(PLAY) · 가방 창(가게 문 앞) · 누움(집 침대 · 조금만 누워 있기)
+//         · 집배원 체험 중(LIVING-1 · 우체국에서 시작 → 밖) · 소방차 타는 중(LIVING-1 · 확인 전에 '건너뛰기' 단추 = 아이가 내리는 길)
 //   동작: J(창 → 칸 단추) · 칸 가기(창 없이 SM_TOWN.jumpCell — 교사 확인용 길) · F(창 → 🚌 가기) · M(큰 지도 → 누른 자리 📍 가기) · B · Y(판 모습 ↔ 마을 모습) · 하늘에서 보기(SM_TOWN.top → Esc) · I · E · 이어 하기 저장(lastSave) · 잠(SM_TOWN.sleep) · 날씨(비 → 맑음)
 //   확인(창이 남아 있으면 Esc로 닫고): 8방향 0.4초씩 — 하나라도 0.3m 넘게(배처럼 느린 탈것은 W 1.5초 한 번 더) · 밖인데 마을 숨김 X · 안인데 바깥 보임 X · 밖인데 방 남음 X ·
 //         J·칸 가기·F·M은 밖(기준)에서 같은 동작으로 도착한 자리와 25m 안(배 위처럼 '왔어요' 하고 제자리로 되돌아가는 것) · indoor.on과 몸 자리(안 = 방 상자 안 · 밖 = 땅에서 8m 안) · 판 모습 그대로 X · 저장한 이어 하기 자리가 방 높이 X · 오류 0 · '[map] 게임 tick 오류' 0(찍히면 게임이 멈춤 → 다시 열고 다음 조합)
@@ -8,9 +9,9 @@
 const { chromium } = require('playwright');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const arg = k => { const a = process.argv.find(s => s.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3).split(',') : null; };
-const STATES = arg('only') || ['out', 'shop', 'home', 'bench', 'swing', 'bike', 'boat', 'play', 'bag', 'lie'];
+const STATES = arg('only') || ['out', 'shop', 'home', 'bench', 'swing', 'bike', 'boat', 'play', 'bag', 'lie', 'post', 'ride'];
 const ACTS = arg('act') || ['J', 'Jc', 'F', 'M', 'B', 'Y', 'top', 'I', 'E', 'save', 'sleep', 'weather'];
-const KO = { out: '밖', shop: '가게 안', home: '집 안', bench: '벤치', swing: '그네', bike: '자전거', boat: '배', play: '놀이 창', bag: '가방 창', lie: '누움', J: 'J 바로 가기', Jc: '칸 가기(창 없이 jumpCell)', F: 'F 찾기→버스', M: 'M 큰 지도→가기', B: 'B 자전거', Y: 'Y 판 모습', top: '하늘에서 보기', I: 'I 가방', E: 'E', save: '이어 하기 저장', sleep: '잠', weather: '날씨 비→맑음' };
+const KO = { out: '밖', shop: '가게 안', home: '집 안', bench: '벤치', swing: '그네', bike: '자전거', boat: '배', play: '놀이 창', bag: '가방 창', lie: '누움', post: '집배원 체험', ride: '소방차 탐', J: 'J 바로 가기', Jc: '칸 가기(창 없이 jumpCell)', F: 'F 찾기→버스', M: 'M 큰 지도→가기', B: 'B 자전거', Y: 'Y 판 모습', top: '하늘에서 보기', I: 'I 가방', E: 'E', save: '이어 하기 저장', sleep: '잠', weather: '날씨 비→맑음' };
 const URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0';
 (async () => { const T0 = Date.now(); const b = await chromium.launch({ args: ['--use-gl=angle', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const p = await b.newPage({ viewport: { width: 1280, height: 720 } }); const errs = [];
   p.on('pageerror', e => errs.push(e.message.slice(0, 200))); p.on('console', m => { const t = m.text(); if ((m.type() === 'error' && !/favicon|404|ERR_|pointer lock/.test(t)) || /게임 tick 오류/.test(t)) errs.push(t.slice(0, 200)); });
@@ -47,6 +48,11 @@ const URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0';
     lie: async () => { if (!ctx.bed) return { skip: '침대 있는 집 없음' }; const r = await enterRoom(ctx.bed.id); if (!r.ok) return r; const bd = await ev(() => __TS.hots(/눕기/)[0] || null); if (!bd) return { ok: false, why: '눕기 E 없음' };
       await ev(h => { SD2.map.player.teleport([h.x, h.y + 0.05, h.z]); }, bd); await W8(450); await p.keyboard.press('KeyE'); await W8(600); const rest = await ev(() => { const b9 = document.querySelector('.twn-p [data-a="rest"]'); if (b9) b9.click(); return !!b9; }); await W8(300);
       return { ok: rest && await ev(() => SD2.CTRL.pose === 'lie' && !document.querySelector('.twn-p')), why: rest ? '누운 자세 아님' : '침대 창 안 열림(가까운 E: ' + (await ev(() => SD2.near())) + ')' }; },
+    post: async () => { const po = await ev(() => { const q = SM_TOWN.indoor.list().find(q => q.kind === 'post'); return q ? q.id : null; }); if (!po) return { skip: '우체국 없음' }; const r = await enterRoom(po); if (!r.ok) return r;
+      await ev(() => { const G = SM_TOWN.game().S; if (G.jobs) delete G.jobs.post; SM_TOWN.jobs().startJob('post'); }); await W8(500); for (let i = 0; i < 2; i++) if (await openP()) { await p.keyboard.press('Escape'); await W8(250); }
+      await ev(async () => { SM_TOWN.indoor.exit(); for (let i = 0; i < 40 && (SM_TOWN.indoor.on || SM_TOWN.indoor.busy); i++) await __TS.sl(100); }); await W8(300); return { ok: await ev(() => SM_TOWN.jobs().active === 'post'), why: '집배원 체험이 안 켜짐' }; },
+    ride: async () => { const ok = await ev(() => { const S = SM_TOWN, G = S.game().S; if (G.jobs) delete G.jobs.fire; const st = S.places().find(q => /소방서/.test(q.name)); if (!st) return null; __TS.tp(st.door[0], st.door[1] + 10); return S.jobs().dbg.rideNow(); }); if (ok === null) return { skip: '소방서 없음' };
+      await W8(700); return { ok: await ev(() => SM_TOWN.jobs().riding), why: '소방차 안 탐' }; },
   };
   async function sitOn(h) { if (!h) return { skip: '자리 없음' }; await ev(h => { SD2.map.player.teleport([h.x, h.y + 0.05, h.z]); }, h); await W8(450); const nr = await ev(() => SD2.near()); await p.keyboard.press('KeyE'); await W8(500); return { ok: await ev(() => !!(SD2.ACT.sit && SD2.ACT.sit.seat)), why: 'E로 안 앉음(가까운 E: ' + nr + ')' }; }
   const openP = () => ev(() => !!document.querySelector('.twn-p'));
@@ -69,6 +75,7 @@ const URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0';
   // 확인: 덮개·짓기 기다림 → 창 Esc → 상태 맞춤 → 8방향
   async function check(r) { try { await p.waitForFunction(() => !SM_TOWN.indoor.busy && !SM_TOWN.cal().busy, null, { timeout: 6000 }); } catch (e) { r.bad.push('덮개/짓기 6초+'); }
     r.after = await ev(() => __TS.snap()); for (let i = 0; i < 4; i++) { const o = await ev(() => ({ p: !!document.querySelector('.twn-p'), pl: !!document.querySelector('.twn-play'), top: SM_TOWN.indoor.state().top })); if (!o.p && !o.pl && !o.top) break; r.esc = (r.esc || 0) + 1; await p.keyboard.press('Escape'); await W8(300); }
+    if (await ev(() => !!(SM_TOWN.jobs && SM_TOWN.jobs().riding))) { r.note.push('소방차 → 건너뛰기'); await ev(() => { const b9 = document.querySelector('[data-a="skip"]'); if (b9) b9.click(); }); await W8(1500); if (await ev(() => SM_TOWN.jobs().riding)) r.bad.push('건너뛰기로 못 내림'); }
     const s = await ev(() => __TS.snap()); r.snap = s; const st = s.st;
     if (r.esc >= 4) r.bad.push('Esc 4번에도 창 남음');
     if (!st.on && !st.top && !st.rootVis) r.bad.push('밖인데 마을 숨김');
@@ -85,6 +92,7 @@ const URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0';
   async function restore() { if (!await ev(() => !!window.SM_TOWN)) return false;
     for (let i = 0; i < 4; i++) { const o = await ev(() => ({ p: !!document.querySelector('.twn-p'), pl: !!document.querySelector('.twn-play'), top: SM_TOWN.indoor.state().top })); if (!o.p && !o.pl && !o.top) break; await p.keyboard.press('Escape'); await W8(250); }
     return ev(async () => { const S = SM_TOWN, T = __TS, out = []; for (let i = 0; i < 60 && (S.indoor.busy || S.cal().busy); i++) await T.sl(100);
+      if (S.jobs) { S.jobs().abort(); const G = S.game().S; G.jobs = G.jobs || {}; G.jobs.fireNo = G.day; }   /* LIVING-1: 체험 멈춤 · 그날 불 제안 X(무작위 창이 다른 조합에 끼지 않게 — 불은 '소방차 탐' 상태로) */
       if (S.indoor.state().top) S.top(false); if (S.indoor.on) { S.indoor.exit(); for (let i = 0; i < 40 && (S.indoor.on || S.indoor.busy); i++) await T.sl(100); }
       if (S.boat().on) S.boatGo(false); if (S.indoor.state().bike) S.bike(false); if (S.wx().WX9 !== 'clear') S.weather('clear'); if (S.dkd().look !== 'town') await S.setLook('town'); S.pathOff && S.pathOff();
       if (document.querySelector('.twn-p')) { const x9 = document.querySelector('.twn-p [data-a="x"]'); if (x9) x9.click(); if (document.querySelector('.twn-p')) out.push('복구 때 창이 안 닫힘'); } S.game().S.min = 11 * 60; T.tp(15.4, 74); SD2.map.player.lookAt([15.4, 200]); await T.sl(250);
