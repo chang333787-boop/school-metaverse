@@ -5,6 +5,7 @@ export const DEX_V = 1;
 
 // 비었을 때 귀띔(어디쯤일까 — 장소 이름은 쓰지 않음 · 아이가 놓은 것만 있는 마을이라 '○○ 곁에서'로)
 export const DEX_HINT = {
+  '🏰': ['해수욕장 모래밭에서', 'On the beach sand'], '🏊': ['해수욕장 물속에서 누워 뜨기', 'Float on your back in the swimming area'], '🌬️': ['해변에서 연 날리기', 'Fly a kite on the beach'],   // SEA-1
   '🍂': ['숲 바닥에서 줍기', 'Pick up on the forest floor'], '🌰': ['소나무 숲 바닥에서 줍기', 'Pick up under pine trees'], '⚪': ['숲 바닥에서 줍기', 'Pick up on the forest floor'], '🍃': ['🌸 봄 숲 바닥에서', 'On the forest floor in spring'], '🥗': ['🌲 숲 꾸러미를 채우면 요리법', 'Fill the forest bundle'],   // RES-1
   '🍓': ['딸기 하우스 일꾼 곁에서', 'Help at a strawberry greenhouse'], '🥔': ['감자밭 일꾼 곁에서', 'Help at a potato field'], '🍚': ['가을 논에서 벼 베기', 'Cut rice in autumn'], '🍐': ['배 과수원 일꾼 곁에서', 'Help at a pear orchard'], '🥬': ['배추밭 일꾼 곁에서', 'Help at a cabbage field'], '🥛': ['소 돌보기 돕기', 'Help feed the cows'],
   '🍄': ['숲 버섯 따기 · 표고 일꾼', 'Pick mushrooms in the woods'], '🍯': ['꿀벌 통 일꾼 곁에서', 'Help a beekeeper'], '🧂': ['소금밭 일꾼 곁에서', 'Help at a salt pan'], '🐚': ['갯벌 조개 캐기', 'Dig clams on the mudflat'], '🌿': ['배 타고 김 양식장 곁에서', 'From the boat, at a laver farm'], '🐟': ['부두 낚시 일꾼 곁에서', 'Fish at the pier'], '🥕': ['학교 텃밭에서 길러요', 'Grow it in the school garden'], '🍅': ['학교 텃밭에서 길러요', 'Grow it in the school garden'], '🌽': ['학교 텃밭에서 길러요', 'Grow it in the school garden'], '🍠': ['학교 텃밭에서 길러요', 'Grow it in the school garden'],
