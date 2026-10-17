@@ -303,7 +303,7 @@ export default async function start(map, params = {}) {
   // 머리 위 그림(💢 ❓ ❤️ …) — 글자 그림판 스프라이트
   const EMO = [];
   function emote(who, icon, sec = 2.5) {
-    const cv = document.createElement('canvas'); cv.width = cv.height = 96; const c2 = cv.getContext('2d'); c2.font = '72px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText(icon, 48, 54);
+    const cv = document.createElement('canvas'); cv.width = cv.height = 96; const c2 = cv.getContext('2d'); c2.font = '72px SMEmoji,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText(icon, 48, 54);
     const tex = new T3.CanvasTexture(cv); tex.colorSpace = T3.SRGBColorSpace; const sp = new T3.Sprite(new T3.SpriteMaterial({ map: tex, depthTest: false, transparent: true })); sp.renderOrder = 10; FXROOT.add(sp);
     EMO.push({ sp, who, t: 0, life: sec });
   }
@@ -339,7 +339,7 @@ export default async function start(map, params = {}) {
   function fxTick(dt) {
     sbTick(dt);
     if (BODY) { const me = map.player.get(), o = BODY.o, d = Math.hypot(me.x - BODY.lx, me.z - BODY.lz), gy = map.player.groundAt(me.x, me.z, me.y + 0.05), air = gy != null && isFinite(gy) && me.y - gy > 0.08 * Math.max(SC, 0.2);
-      o.x = me.x; o.y = me.y; o.z = me.z; o.h = me.h; o.s = BODY.base * SC; o.anim = BODY.pose && d < 0.0005 ? BODY.pose : air && o.R.wings ? 'fly' : d > 0.0005 ? 'walk' : 'idle';   // pose = 내 몸 자세(잠) — 움직이면 풀림 BODY.lx = me.x; BODY.lz = me.z;
+      o.x = me.x; o.y = me.y; o.z = me.z; o.h = me.h; o.s = BODY.base * SC; o.anim = BODY.pose && d < 0.0005 ? BODY.pose : air && o.R.wings ? 'fly' : d > 0.0005 ? 'walk' : 'idle';   /* pose = 내 몸 자세(잠) — 움직이면 풀림 */ BODY.lx = me.x; BODY.lz = me.z;   // FIX-MID(10-17 글 검사기): 97c2095부터 이 두 줄이 주석 속이라 한 번 움직이면 서 있어도 '걷기'·잠 자세 안 나옴
       if (o.R.wingHide) o.R.wings.forEach((w, k) => { w.visible = air; w.rotation.y = (k ? -1 : 1) * (0.35 + Math.sin(o.t * 12) * 0.35); });
       if (o.act) { o.act.t += dt; const t9 = o.act.t, R9 = o.R; if (o.act.k === 'swing' && R9.tool) { R9.tool.rotation.z = Math.sin(t9 * 22) * 0.7; if (R9.arms) R9.arms[0].rotation.x = -1.2; } else if (o.act.k === 'sing' && R9.arms) R9.arms.forEach((a, k) => { a.rotation.x = -2.3 + Math.sin(t9 * 10 + k) * 0.2; }); else if (R9.arms) R9.arms[1].rotation.x = -1.4; else if (R9.head) R9.head.rotation.x = -0.45;
         if (t9 > 0.8) { o.act = null; if (R9.tool) R9.tool.rotation.z = 0; if (R9.arms) R9.arms.forEach(a => { a.rotation.x = 0; }); if (R9.head) R9.head.rotation.x = 0; } } }

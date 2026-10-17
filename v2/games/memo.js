@@ -999,7 +999,7 @@ export default async function start(map, params = {}) {
       const dz = WM.drag && WM.drag.id === id ? WM.drag : null; if (!pinned(f) && !dz) continue;
       const C = wby()[f.k] || WC[0], x = dz ? dz.x : f.x, z = dz ? dz.z : f.z, sel = WM.sel === id;
       g.beginPath(); g.arc(x, z, 22, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill(); g.lineWidth = sel ? 7 : 4; g.strokeStyle = sel ? '#ffd23c' : hex(C.c); g.stroke();
-      g.font = '24px "Apple Color Emoji","Segoe UI Emoji",system-ui,sans-serif'; g.fillStyle = '#000'; g.fillText(C.e, x, z + 1);
+      g.font = '24px SMEmoji,"Apple Color Emoji","Segoe UI Emoji",system-ui,sans-serif'; g.fillStyle = '#000'; g.fillText(C.e, x, z + 1);
       const t = short(wnm(f).replace(/[「」]/g, ''), 9); g.font = '800 19px system-ui,"Malgun Gothic",sans-serif'; const tw = g.measureText(t).width + 14;
       g.fillStyle = 'rgba(255,255,255,.93)'; g.fillRect(x - tw / 2, z + 26, tw, 26); g.fillStyle = '#1d3557'; g.fillText(t, x, z + 39); }
   }

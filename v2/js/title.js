@@ -113,7 +113,7 @@ export function createTitle(h) {
   let FOLD = null, REGF = null;  // FOLDER-1(10-04 교사 '폴더형식으로'): v2 = 폴더(registry FOLDERS) → 그 안의 카드 · ◀/Esc = 폴더로
   const GORDER = Object.keys(GROUPS);
   // MODE-1: 맨 위 갈래 셋 — 놀이마다 갈래 = 방 놀이·함께 놀이(생각 모으기 폴더 밖) → 멀티 · 생각 모으기 폴더 → 생각 · 나머지 → 싱글
-  const MODES = [{ k: 'solo', title: '싱글플레이', icon: '🧍', group: '탐험', short: '혼자 학교를 탐험하고 · 로봇과 연습하고 · 이야기 속 주인공이 돼요' },
+  const MODES = [{ k: 'solo', title: '싱글플레이', icon: '👤', group: '탐험', short: '혼자 학교를 탐험하고 · 로봇과 연습하고 · 이야기 속 주인공이 돼요' },
     { k: 'multi', title: '멀티플레이', icon: '👥', group: '대결', short: '친구와 방을 만들어 같이 놀아요 — 물총 · 숨바꼭질 · 로봇인 척 · 길잡이 · 블록' },
     { k: 'think', title: '생각 모으기', icon: '💡', group: '상상', short: '이야기 장면 · 새로운 세계를 친구들과 함께 적어요' }];
   let MODE = null, pendPick = null;   // pendPick = 방 없이 방 놀이 카드를 눌렀을 때 — 방에 들어가면(방장이면) 그 놀이를 골라 둠
@@ -148,7 +148,7 @@ export function createTitle(h) {
       if (MODE === 'solo' && FOLD && !list.length) { FOLD = null; return fill(true); } }
     const hd = root.querySelector('.ttl-menu h2'); if (hd && LESSON) hd.textContent = LCAT ? (LCATS.find(c => c.cat === LCAT) || {}).title + ' — 무엇을 할까요?' : '어디로 가 볼까요?';
     else if (hd && REGF && !PROMO) { const F9 = REGF.find(f => f.k === FOLD) || {}, M9 = MODES.find(m => m.k === MODE);
-      hd.textContent = !MODE ? '어떻게 놀까요?' : MODE === 'solo' && FOLD ? '🧍 싱글 · ' + (F9.icon || '') + ' ' + (FOLD === 'vs' ? '대결 연습' : F9.title || '') + ' — 무엇을 할까요?' : M9.icon + ' ' + M9.title + (MODE === 'multi' ? ' — 친구와 같이 놀아요' : MODE === 'think' ? ' — 함께 적어요' : ' — 어떤 놀이를 할까요?'); }
+      hd.textContent = !MODE ? '어떻게 놀까요?' : MODE === 'solo' && FOLD ? '👤 싱글 · ' + (F9.icon || '') + ' ' + (FOLD === 'vs' ? '대결 연습' : F9.title || '') + ' — 무엇을 할까요?' : M9.icon + ' ' + M9.title + (MODE === 'multi' ? ' — 친구와 같이 놀아요' : MODE === 'think' ? ' — 함께 적어요' : ' — 어떤 놀이를 할까요?'); }
     const gi = e => { const k = GORDER.indexOf(e.group); return k < 0 ? GORDER.length : k; };
     if (!list.some(e => e.fold || e.mode || e.roomc)) list = list.map((e, i) => ({ e, i })).sort((a, b) => gi(a.e) - gi(b.e) || a.i - b.i).map(o => o.e);   // 폴더 카드는 FOLDERS 순서 그대로   // 무리(탐험·대결·모험·이야기·놀이)끼리 — 무리 안은 registry 순서
     const TOG = LESSON || !REGF ? list.filter(e => e.mp === 'together') : [], split = !FOLD && TOG.length > 0 && TOG.length < list.length;   // MODE-1: v2는 갈래(싱글·멀티·생각)가 나누므로 두 칸·방 줄은 v3만   // MP-MENU(10-03 교사 '싱글·멀티가 구분돼 있어?'): 🙋 혼자 하기 / 👥 친구와 함께 두 칸 · 폴더 안은 나누지 않고 카드의 '👥 함께' 표 + 위 한 줄(방 들어가기)

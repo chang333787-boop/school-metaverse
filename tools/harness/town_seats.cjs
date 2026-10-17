@@ -15,6 +15,7 @@ const URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0';
   let boots = 0;
   async function boot() { boots++; await p.goto(URL); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.life && SM_TOWN.game, null, { timeout: 180000 }); await W8(1500);
     await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button'); if (b9) b9.click(); }); await p.keyboard.press('Escape'); await W8(300);
+    await ev(() => { const G = SM_TOWN.game && SM_TOWN.game(); if (G && G.setClock) G.setClock(false); });   /* 시계 멈춤(10-17): 209곳을 도는 10분 넘게 시계가 가면 24:00 하루 마무리 창이 몸을 멈춰 156곳째부터 모두 '갇힘'(전 코드도 같음) */
     return ev((KINDS) => { const K = { '💺 벤치에 앉기': 'bench', '💺 Sit on the bench': 'bench', '💺 정자 마루에 앉기': 'pav', '💺 Sit on the pavilion': 'pav', '🎠 그네 타기': 'swing', '🎠 Ride the swing': 'swing', '🎢 미끄럼 타기': 'slide', '🎢 Ride the slide': 'slide' };
       window.__SEATS = SD2.map.interact.list().filter(h => (h.kind === 'sit' || h.kind === 'slide') && K[h.label] && KINDS.includes(K[h.label]));   /* 학교 안 의자·미끄럼틀(이름이 다름)은 뺌 */
       return { n: __SEATS.length, sits: SM_TOWN.sits ? (({ n, kinds, swings, slides }) => ({ n, kinds, swings, slides }))(SM_TOWN.sits()) : null, list: __SEATS.map((h, i) => ({ i, kind: K[h.label], x: +h.x.toFixed(1), z: +h.z.toFixed(1), cell: SM_TOWN.cell(h.x, h.z) })) }; }, KINDS); }
