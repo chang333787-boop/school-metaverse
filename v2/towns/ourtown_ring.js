@@ -53,7 +53,7 @@ export const RING_BLOCKS = [
   B('사2', [0.48, 0.35], 'c2', 'navy', { kind: 'shop', name: '뷔페', en: 'Buffet', look: 'pink-buffet', pad: '34.1·34.2', note: '패들렛 34 사2 핑크 뷔페 — 분홍 줄무늬 차양 · 분홍 외관' }),
   // 오른쪽 둘레(13·14열)
   B('마13', [0.18, 0.92], 'c3', 'skyblue', { kind: 'hut', name: '갯벌 쉼터', look: 'mud-shelter', ai: '갯벌 카드 옆 하늘색 블록 = 갯벌 체험 쉼터 · 겉 = 진흙 위 나무 데크 + 정자(✨ 이름의 쉼터대로 — 예전엔 공원 잔디 네모)' }),
-  B('바14', [0.55, 0.40], null, 'red', { w: 3, d: 3, h: 3, home: '인우', name: '인우네 집', en: "Inu's House", look: 'black-steel-glass', note: '초록 c3 2 + 빨강 c3 1 + 초록 판 1 붙임 · 패들렛 39(가게 앞 사진 — 집 모양으로만, 간판 글 없음)' }),
+  B('바14', [0.55, 0.40], null, 'red', { w: 3, d: 3, h: 3, home: '인우', name: '인우네 집', en: "Inu's House", enter: true, look: 'black-steel-glass', note: '초록 c3 2 + 빨강 c3 1 + 초록 판 1 붙임 · 패들렛 39(가게 앞 사진 — 집 모양으로만, 간판 글 없음)' }),
   B('사13', [0.65, 0.62], null, 'skyblue', { w: 6, d: 3, h: 3, kind: 'shop', name: '초밥집', en: 'Sushi', look: 'dark-brick-metal-roof', pad: '32.1', ai: '문 앞 천 가림막(노렌 꼴 · 글 없음 ✨)' }),
   B('사14', [0.62, 0.42], 'c3', 'navy', { kind: 'shop', name: '마라탕', en: 'Malatang', look: 'pink-cream', pad: '38.1·38.2', ai: '입구 빨간 등 둘(✨)' }),
   B('아13', [0.62, 0.38], 'pl', 'red', { rot: -30, kind: 'pension', name: '펜션', en: 'Pension', look: 'white-pension-lights', by: '지원', pad: '27.2', note: '카드 칸 글씨 아12 → 판 아13 · 패들렛 27 좀 화려한 거' }),
@@ -70,7 +70,7 @@ export const RING_BLOCKS = [
   B('자8', [0.66, 0.22], 'c2', 'skyblue', { kind: 'shop', ai: '카드 없는 하늘색 = 작은 가게' }),
   B('자9', [0.32, 0.20], null, 'red', { w: 3, d: 3, h: 3, home: '지원', name: '지원이네 집', en: "Jiwon's House", enter: true, look: 'cream-suburban-fountain', room: ['침대', '책상', '방', '주방'], note: '빨강·주황 판 ㅁ자 쌓음 · 카드: 침대·책상 · 마리오(카트?) · 방·주방' }),
   ...[[0.30, 0.40, 90], [0.30, 0.60, 90], [0.45, 0.72, 0], [0.62, 0.72, 0], [0.72, 0.55, 90], [0.72, 0.35, 90]].map(([u, v, r]) => B('자9', [u, v], 'pl', 'green', { rot: r, fence: true })),
-  B('자10', [0.45, 0.15], null, 'red', { w: 3, d: 3, h: 3, home: '시아', name: '시아네 집', en: "Sia's House", look: 'white-modern' }),
+  B('자10', [0.45, 0.15], null, 'red', { w: 3, d: 3, h: 3, home: '시아', name: '시아네 집', en: "Sia's House", enter: true, look: 'white-modern' }),
   ...[[0.33, 0.28, 90], [0.33, 0.48, 90], [0.45, 0.58, 0], [0.60, 0.58, 0], [0.66, 0.42, 90], [0.66, 0.24, 90]].map(([u, v, r]) => B('자10', [u, v], 'pl', 'green', { rot: r, fence: true })),
   B('자10', [0.17, 0.65], 'pl', 'green', { rot: 30 }),
   B('자11', [0.66, 0.47], null, 'red', { w: 3, d: 2, h: 2, look: 'half-timber', note: '패들렛 47 — 유럽 옛 마을' }),

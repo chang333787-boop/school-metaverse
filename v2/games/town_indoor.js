@@ -17,6 +17,8 @@ export const ROOM_ITEMS = {
   'blue-cottage': ['벽난로', '나무 난로(굴뚝 둘)', '흰 창틀', '지붕창 밑 다락방', '비스듬한 천장', '안락의자', '찻주전자 탁자', '책장', '그릇장', '매단 등'],
   'purple-townhouse': ['1층 거실·부엌', '2층 침실', '계단', '발코니 문', '소파·TV', '식탁', '침대', '책상', '옷장'],
   'cream-suburban-fountain': ['침대', '책상', '방(따로 방)', '주방', '넓은 거실', '소파·TV', '식탁', '냉장고', '옷장', '장난감 카트(카드의 「카트?」 · 이름 없이)', '책장'],
+  'white-modern': ['하얀 벽 · 나무 천장', '세로 나무 살 벽', '검은 판 TV 벽', '큰 통창', '부엌 섬 · 높은 의자', '떠 있는 나무 계단', '유리 난간', '2층 침실', '책상', '옥상 테라스 유리문'],
+  'black-steel-glass': ['검은 철골 기둥', '나무 살 벽', '유리 통창', '검은 틀 창', '부엌 섬 · 높은 의자', '나무 계단', '철 난간', '2층 침실', '책상', '테라스 유리문'],
   aqua: ['수조 위 보트', '아치 수중 터널', '클리오네', '작은 동물 방', '벽 수조', '물고기 떼', '손님(이름 없음)'],
   kids: ['철골 정글짐', '미끄럼', '그물 다리', '네온', '계단', '공 풀', '쉼 탁자', '손님(이름 없음)'],
   board: ['1층 음식점', '2층 상점가', '3층 보드게임', '계단', '손님(이름 없음)'],
@@ -281,6 +283,25 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en, look }) 
       if (d.id === 'in_chair_front') seatAt(seats, cx, zc, oy, 0, 0.6); if (d.id === 'in_chair_back') seatAt(seats, cx, zc, oy, Math.PI, 0.6); if (d.id === 'd_i10' && !bedA) bedA = { abs: 1, stand: [cx, oy, zc + h * CS / 2 + 0.45], top: [cx, oy + 0.62, zc], yaw: Math.PI }; }   // B6: 침대 앞(눕기)
     return { bed: bedA, S, W, D, H, seats, n: L.length, def: !(decos && decos.length), items: ROOM_ITEMS.home }; }
 
+  // 시아(하얀 현대 주택 · 🙋 41.1 겉모습: 하얀 상자 · 나무 천장 · 깊은 상자 창 · 검은 판 · 세로 나무 살 · 옥상 유리 난간) / 인우(검은 철골·나무·유리) — 사용자 10-18 '시아 집 실내 만들어 줘 · 얘만 없냐 왜' · 카드 = '사는 곳'뿐 → 겉모습과 어울리는 방(✨)
+  function roomModern(at, dark) { const W = 7.6, D = 8.0, FH = 3.3, H = 6.6, BK = 0x2b2d30, OAK = dark ? 0x8a6440 : 0xc9a272, S = shell(at, W, D, H, { wall: dark ? 0xece7df : 0xf7f6f2, wains: dark ? BK : 0xdcd8cf, winY: [], ft: ['wood', 1.0, dark ? 0xb48e66 : 0xe6cfaa] }), P = S.put, seats = [];
+    const XE = W / 2 - 1.25, SX0 = W / 2 - 1.15, SX1 = W / 2 - 0.08, ZL = D / 2 - 1.4, ZH = -D / 2 + 1.6;
+    P('b', (XE - W / 2) / 2, FH - 0.15, 0, XE + W / 2, 0.15, D, OAK); S.col(-W / 2, XE, -D / 2, D / 2, FH - 0.15, FH); P('b', (XE + W / 2) / 2, FH - 0.15, (-D / 2 + ZH) / 2, W / 2 - XE, 0.15, ZH + D / 2, OAK); S.col(XE, W / 2, -D / 2, ZH, FH - 0.15, FH);   // 2층 마루(밑 = 나무 천장) · 계단참
+    stairsL(S, SX0, SX1, ZL, ZH, 0, FH, 12, OAK, dark ? 0x7a5636 : 0xb89060); railL(S, XE - 0.05, ZH, XE - 0.05, D / 2, FH, dark ? BK : 0xbfe3f5);   // 떠 있는 나무 계단 · 2층 난간(시아 = 유리 · 인우 = 철)
+    for (let i = 0; i < 9; i++) P('b', -W / 2 + 0.08, 0.02, -D / 2 + 1.0 + i * 0.24, 0.05, FH - 0.24, 0.09, OAK);   // 세로 나무 살 벽(1층 왼쪽 뒤)
+    if (dark) for (const [x, z] of [[-W / 2 + 0.5, -0.3], [1.95, -2.6]]) { P('b', x, 0, z, 0.18, FH - 0.15, 0.18, BK); colL(S, x, z, 0.1, 0.1, -0.5, FH - 0.15); }   // 인우: 검은 철골 기둥 둘(다니는 길 밖 — 가운데 두면 들어서자마자 뒤로 막힘 · 실내 하네스)
+    for (const [x, z] of [[-1.6, 1.8], [0.4, 1.8]]) { P('b', x, FH - 0.185, z, 0.56, 0.03, 0.56, 0xe9ecef); P('b', x, FH - 0.197, z, 0.5, 0.012, 0.5, 0xf8fbff, 1); }   // 1층 네모 천장등(빛 · 나무 천장 밑)
+    P('b', 2.08, 0.25, 1.6, 0.06, 2.0, 2.4, BK); putF(S, 'd_i7', 1.7, 1.6, -Math.PI / 2); colL(S, 1.7, 1.6, 0.25, 0.75, -0.5, 1.2);   // 검은 판 벽 + TV
+    putF(S, 'd_i8', -1.5, 1.6, Math.PI / 2); seatL(S, seats, -1.44, 1.6, 0, Math.PI / 2, -0.85); colL(S, -1.5, 1.6, 0.4, 1.1, -0.5, 1.2); putF(S, 'd_i16', 0.1, 1.6, Math.PI / 2); P('b', 0.1, 0, 1.6, 0.55, 0.36, 0.9, dark ? BK : 0xffffff); colL(S, 0.1, 1.6, 0.28, 0.45, -0.5, 0.38);   // 소파(TV를 봄) · 깔개 · 낮은 탁자
+    wwin(S, 'L', 1.7, 0.35, 2.2, 2.5, { fr: BK, sun: true, sill: false }); wwin(S, 'F', -2.2, 0.9, 1.3, 1.6, { fr: BK, sun: true });   // 큰 통창 · 앞 깊은 창(검은 틀)
+    P('b', -W / 2 + 0.45, 0, -D / 2 + 0.4, 0.8, 1.95, 0.7, dark ? 0x3a3d42 : 0xf2f2ee); P('b', -W / 2 + 0.75, 0.9, -D / 2 + 0.76, 0.04, 0.6, 0.03, 0x9aa0a6); colL(S, -W / 2 + 0.45, -D / 2 + 0.4, 0.4, 0.35, -0.5, 1.95);   // 냉장고
+    P('b', 0.2, 0, -D / 2 + 0.35, 3.4, 0.88, 0.62, dark ? 0x3a3d42 : 0xf7f6f2); P('b', 0.2, 0.88, -D / 2 + 0.35, 3.44, 0.05, 0.66, BK); P('b', -0.4, 0.93, -D / 2 + 0.36, 0.6, 0.01, 0.4, 0x5f6670); for (const [a, b] of [[-0.15, -0.13], [0.15, -0.13], [-0.15, 0.13], [0.15, 0.13]]) P('c16', 1.1 + a, 0.93, -D / 2 + 0.35 + b, 0.09, 0.01, 0, 0xe0453a, 1); colL(S, 0.2, -D / 2 + 0.35, 1.72, 0.33, -0.5, 0.93);   // 뒤 조리대(검은 윗판) · 개수대 · 화구(빛)
+    P('b', -0.6, 0, -1.4, 2.0, 0.86, 0.8, dark ? OAK : 0xffffff); P('b', -0.6, 0.86, -1.4, 2.06, 0.05, 0.86, BK); colL(S, -0.6, -1.4, 1.03, 0.43, -0.5, 0.91); for (const x of [-1.2, 0]) { P('c', x, 0, -0.62, 0.17, 0.66, 0, BK); P('c', x, 0.66, -0.62, 0.2, 0.05, 0, OAK); seatL(S, seats, x, -0.5, 0, Math.PI, 0.5); }   // 부엌 섬 · 높은 의자 둘
+    for (const x of [-1.0, -0.2]) { P('b', x, 2.49, -1.4, 0.015, FH - 0.15 - 2.49, 0.015, BK); P('k', x, 2.25, -1.4, 0.16, 0.26, 0, BK); P('c', x, 2.245, -1.4, 0.13, 0.01, 0, 0xffe2a8, 1); pool(S, x, 0.915, -1.4, 0.6, 0.2); } putF(S, 'd_i1', -W / 2 + 0.4, 3.2); putF(S, 'd_i1', 1.2, D / 2 - 0.4);   // 섬 위 매단 등 둘 · 화분
+    putF(S, 'd_i10', -2.2, -D / 2 + 0.95, 0, FH); colL(S, -2.2, -D / 2 + 0.95, 0.72, 0.8, FH - 0.2, FH + 1.2); putF(S, 'd_i5', 0.4, -D / 2 + 0.4, 0, FH); colL(S, 0.4, -D / 2 + 0.4, 0.72, 0.33, FH - 0.2, FH + 1.2); putF(S, 'in_chair_back', 0.4, -D / 2 + 1.15, 0, FH); seatL(S, seats, 0.4, -D / 2 + 1.15, FH, Math.PI, 0.6);   // 2층 침대 · 책상 · 의자
+    putF(S, 'deco_bookshelf', -W / 2 + 0.3, 1.0, Math.PI / 2, FH); colL(S, -W / 2 + 0.3, 1.0, 0.3, 0.6, FH - 0.2, FH + 2.0); putF(S, 'd_i15', -0.9, 0.6, 0, FH);   // 책장 · 깔개
+    wwin(S, 'F', -1.0, FH + 0.04, 1.8, 2.3, { fr: BK, gl: 0xcfe8ff, sill: false }); P('b', -1.0, FH, D / 2 - 0.5, 1.6, 0.016, 0.6, OAK); wwin(S, 'L', 1.6, FH + 0.9, 1.4, 1.4, { fr: BK }); wwin(S, 'B', -2.2, FH + 1.4, 1.2, 0.8, { fr: BK });   // 옥상 테라스 유리문 · 2층 창
+    return { S, W, D, H, seats, items: ROOM_ITEMS[dark ? 'black-steel-glass' : 'white-modern'], cook: { stand: [1.1, 0, -D / 2 + 1.15] }, bed: { stand: [-2.2, FH, -D / 2 + 2.15], top: [-2.2, FH + 0.62, -D / 2 + 0.95], yaw: Math.PI }, cam: { d: 3.6, p: 0.55 } }; }
   // ── 아쿠아리움(🙋 33 유은: 수조 위 보트 · 머리 위 아치 수중 터널 · 클리오네 · 작은 동물 방) ──
   function roomAqua(at, name) { const W = 26, D = 18, H = 5.4, S = shell(at, W, D, H, { wall: 0x23405e, wains: 0x1c3550, floor: 0x3a4a5c, floor2: 0x34444f, ceil: 0x1d3048, winY: [] }), [ox, oy, oz] = at, P = (k, x, y, z, sx, sy, sz, hex, gl, rx) => part(gl ? S.Ag : S.A, k, ox + x, oy + y, oz + z, sx, sy, sz, hex, 0, rx || 0), anim = [];
     for (const s9 of [-1, 1]) for (let k = 0; k < 3; k++) { const z = -D / 2 + 3 + k * 5.5, tx = s9 * (W / 2 - 0.75); P('b', tx, 0, z, 1.2, 0.6, 4.2, 0x2b3a4a); P('b', tx, 0.6, z, 1.1, 3.4, 4.0, 0x2f8fc8, 1); S.col(tx - 0.6, tx + 0.6, z - 2.1, z + 2.1, -0.5, 4.0);
@@ -722,7 +743,7 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en, look }) 
       const done = () => grp.traverse(o => { if (o.isInstancedMesh) o.dispose(); else if (o.isMesh) o.geometry.dispose(); }); R.compileAsync(grp, SD.camera, SD.scene).then(done, done); };
     idle(step); }
   // ── 들어가기·나가기 ──
-  const HOMES = { treehouse: roomCabin, 'blue-cottage': roomCottage, 'purple-townhouse': roomTownhouse, 'cream-suburban-fountain': roomSuburb };
+  const HOMES = { treehouse: roomCabin, 'blue-cottage': roomCottage, 'purple-townhouse': roomTownhouse, 'cream-suburban-fountain': roomSuburb, 'white-modern': at => roomModern(at, false), 'black-steel-glass': at => roomModern(at, true) };
   function enter(o) { exit(); const t0 = performance.now(); if (TX && TX.n) { TX.g.clearRect(0, 0, 1024, 512); TX.x = TX.y = TX.rh = TX.n = 0; }   /* 글씨 그림 한 장을 이 방 것으로 다시 */
     const at = o.at, made = o.kind === 'lib' ? roomLib(at, o.name, o.hub, o.mapImg) : o.kind === 'post' ? roomPost(at, o.name) : o.kind === 'fire' ? roomFire(at, o.name) : o.kind === 'aqua' ? roomAqua(at, o.name) : o.kind === 'kids' ? roomKids(at, o.name) : o.kind === 'board' ? roomBoard(at, o.name) : o.kind === 'tent' ? roomTent(at, o.col) : o.kind === 'shop' ? roomShop(at, o.shop, o.name) : HOMES[o.look] ? HOMES[o.look](at) : roomHome(at, null), S = made.S;
     if (o.onCard) { const [cx, cz] = made.cardAt || [1.7, made.D / 2 - 1.0]; S.put('b', cx, 0, cz, 0.06, 1.07, 0.06, 0x6b4a2f); sign(S, en ? 'About this place' : '이곳 알아보기', cx, 1.22, cz, Math.PI, 0.56, 0.24, { bg: '#3b6fb6', fr: 0x6b4a2f }); colL(S, cx, cz, 0.18, 0.18, -0.5, 1.1); made.card = { stand: [cx, 0, cz - 0.75] }; }   /* LIVING-1 장소 카드 안내판(문 옆 · 나갈 때 보임) */
