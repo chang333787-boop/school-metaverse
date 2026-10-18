@@ -5,7 +5,7 @@
 //   솜씨 perk 'zone'(zw 1~1.25) = 쉬워지는 쪽으로(시간 · 초록 폭 · 삽질 수 · 벌레 느리게)
 //   화면 = DOM + CSS(놀이 창이 열린 동안만 · 마을 tick이 부르는 tick(dt) 하나 — 따로 rAF X) · 입력 = down()/up()(E·스페이스·큰 단추) + key(코드, 반복)(화살표·WASD·숫자) + 누르기·끌기(마우스·터치)
 export const MG_V = 3;
-const KIND = { fisher: 'line', seaweed: 'line', oyster: 'line', strawberry: 'ripe', shiitake: 'ripe', saltpan: 'salt', beehive: 'comb', potato: 'dig', clam: 'dig', cabbage: 'sort', pear: 'cover', lumber: 'order', pasture: 'feed' };
+const KIND = { tuho: 'toss', fisher: 'line', seaweed: 'line', oyster: 'line', strawberry: 'ripe', shiitake: 'ripe', saltpan: 'salt', beehive: 'comb', potato: 'dig', clam: 'dig', cabbage: 'sort', pear: 'cover', lumber: 'order', pasture: 'feed' };
 export const mgKind = (k, sea) => (k === 'paddy' ? (sea === 'autumn' ? 'cut' : 'plant') : KIND[k] || 'bar');   /* 논 = 봄 모내기 · 가을 벼 베기 */
 // 놀이 창 첫 줄 = 할 일(아이 눈 2차 '말풍선과 창 첫 줄이 같은 문장' — 말풍선은 일꾼의 말 · 창 첫 줄은 내가 할 일)
 const TASK = { plant: ['못줄 눈금에 맞춰 모를 심어요', 'Plant seedlings on the marks of the guide rope'], cut: ['콤바인으로 벼를 남김없이 베요', 'Cut all the rice with the combine'], fisher: ['물고기가 물면 줄을 버티며 끌어올려요', 'When a fish bites, hold the line and reel it in'], seaweed: ['김이 붙은 줄을 끌어올려요', 'Pull up the ropes with laver'], oyster: ['굴이 달린 줄을 끌어올려요', 'Pull up the ropes with oysters'],
@@ -420,7 +420,40 @@ function mkGate(c) { const T = 24 * c.zw, IN = 0.11, FL = 0.12, LO = 0.5, HI = 0
       draw(); if (W.every(w => w >= LO && w <= HI) && !G[0] && !G[1] && !G[2]) { c.say(c.T('세 논에 물이 알맞게 찼어요', 'All three paddies are just right')); c.finish(over ? 2 : 3); return; } if (TB.tick(dt)) end(); },
     dispose() { const g9 = c.mg.querySelector('.gt'); if (g9) g9.removeEventListener('pointerdown', pdT); } }; }
 
-const MK = { bar: mkBar, line: mkLine, ripe: mkRipe, plant: mkPlant, cut: mkCut, salt: mkSalt, comb: mkComb, dig: mkDig, sort: mkSort, cover: mkCover, order: mkOrder, feed: mkFeed, lens: mkLens, bend: mkBend, still: mkStill, gate: mkGate };
+// ⑰ 투호(TOSS-1 · 사용자 10-18 '투호 놀이도 저 막대 방식이야? · 퀘스트·놀이에 특색 좀'): 화살 다섯 개를 던져 항아리에 — 끌어서(또는 ←→ 힘 · ↑↓ 각도) 겨누면 처음 몇 뼘만 점선 · 놓으면(E) 포물선 · 바람(깃발) · 항아리 입에 들면 쏙 · 테두리에 맞으면 튕겨 나옴 · 던질 때마다 항아리 자리·바람이 조금씩 바뀜(뒤로 갈수록 멀고 바람 셈)
+function mkToss(c) {
+  c.mg.innerHTML = '<canvas width="440" height="220" style="width:100%;max-width:440px;display:block;margin:0 auto;touch-action:none;border-radius:10px;background:#eaf3ff;cursor:crosshair"></canvas>';
+  const cv = c.mg.querySelector('canvas'), g = cv.getContext('2d'), W = 440, GY = 196, GR = 520, HX = 52, HY = 150, N = 5;
+  let n = 0, hits = 0, ph = 'aim', drag = null, ang = 0.9, pw = 0.55, A = null, pot = null, wind = 0, wait = 0, rim = false, prevY = 0;
+  const newPot = () => { pot = { x: 255 + Math.random() * 95 + n * 14, w: 28 * Math.min(1.5, c.zw) }; wind = (Math.random() - 0.5) * (n < 2 ? 30 : 90); };
+  newPot(); c.say(c.T('끌어서 겨누고 놓으면 던져요(←→ 힘 · ↑↓ 각도 · E 던지기) — 깃발이 바람 쪽!', 'Drag to aim, release to throw (←→ power · ↑↓ angle · E throw) — the flag shows the wind!'));
+  const vel = () => 250 + pw * 330, launch = () => { if (ph !== 'aim') return; const v = vel(); A = { x: HX, y: HY, vx: Math.cos(ang) * v, vy: -Math.sin(ang) * v }; prevY = HY; rim = false; ph = 'fly'; c.snd('pop'); };
+  const potTop = GY - 44;
+  const P = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * 220 / r.height]; };
+  const pd = e => { if (ph !== 'aim') return; e.preventDefault(); drag = P(e); cv.setPointerCapture && cv.setPointerCapture(e.pointerId); };
+  const pm = e => { if (!drag || ph !== 'aim') return; const [x, y] = P(e), dx = drag[0] - x, dy = y - drag[1], L = Math.hypot(dx, dy); if (L < 6) return; ang = Math.max(0.25, Math.min(1.35, Math.atan2(dy, Math.max(1, dx)))); pw = Math.max(0.05, Math.min(1, L / 140)); };
+  const pu = () => { if (drag && ph === 'aim') { drag = null; launch(); } drag = null; };
+  cv.addEventListener('pointerdown', pd); cv.addEventListener('pointermove', pm); cv.addEventListener('pointerup', pu); cv.addEventListener('pointercancel', pu);
+  function draw() { g.clearRect(0, 0, W, 220); g.fillStyle = '#cfe6b8'; g.fillRect(0, GY, W, 24); g.strokeStyle = '#8fb06f'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, GY); g.lineTo(W, GY); g.stroke();
+    g.strokeStyle = '#6b4a2f'; g.lineWidth = 3; g.beginPath(); g.moveTo(W - 24, GY); g.lineTo(W - 24, GY - 70); g.stroke(); const f0 = Math.max(-1, Math.min(1, wind / 45)), fl = Math.abs(f0) < 0.3 ? (f0 < 0 ? -0.3 : 0.3) : f0; g.fillStyle = '#2b2420'; g.font = '700 12px sans-serif'; g.textAlign = 'center'; g.fillText(Math.abs(wind) < 12 ? c.T('바람 약함', 'light wind') : (wind > 0 ? c.T('바람 →', 'wind →') : c.T('← 바람', '← wind')), W - 24, GY - 76); g.fillStyle = '#e0453a'; g.beginPath(); g.moveTo(W - 24, GY - 70); g.lineTo(W - 24 + 26 * fl, GY - 63); g.lineTo(W - 24, GY - 56); g.closePath(); g.fill();   // 바람 깃발
+    g.fillStyle = '#2f6fd0'; g.beginPath(); g.arc(HX - 14, HY - 24, 9, 0, 7); g.fill(); g.fillRect(HX - 20, HY - 15, 12, 30); g.strokeStyle = '#2f6fd0'; g.lineWidth = 4; g.beginPath(); g.moveTo(HX - 14, HY - 8); g.lineTo(HX, HY); g.moveTo(HX - 16, HY + 15); g.lineTo(HX - 22, GY); g.moveTo(HX - 12, HY + 15); g.lineTo(HX - 6, GY); g.stroke();   // 던지는 아이(이름 없는 모양)
+    const px = pot.x, hw = pot.w / 2; g.fillStyle = '#5d6f86'; g.beginPath(); g.ellipse(px, GY - 18, hw + 14, 20, 0, 0, 7); g.fill(); g.fillRect(px - hw - 3, potTop, pot.w + 6, 16); g.fillStyle = '#2b2420'; g.fillRect(px - hw, potTop, pot.w, 4); g.strokeStyle = '#c9a24a'; g.lineWidth = 2; g.strokeRect(px - hw - 3, potTop, pot.w + 6, 16);   // 항아리
+    if (ph === 'aim') { const v = vel(); let x = HX, y = HY, vx = Math.cos(ang) * v, vy = -Math.sin(ang) * v; g.fillStyle = '#2b2420'; for (let i = 0; i < 9; i++) { for (let k = 0; k < 4; k++) { vy += GR * 0.01; vx += wind * 0.01; x += vx * 0.01; y += vy * 0.01; } g.beginPath(); g.arc(x, y, 2.2, 0, 7); g.fill(); } }   // 처음 몇 뼘만 점선(끝까지 보여 주지 않음)
+    const ax = A ? A.x : HX, ay = A ? A.y : HY, an = A ? Math.atan2(A.vy, A.vx) : -ang; g.save(); g.translate(ax, ay); g.rotate(an); g.strokeStyle = '#7a5232'; g.lineWidth = 3; g.beginPath(); g.moveTo(-22, 0); g.lineTo(10, 0); g.stroke(); g.fillStyle = '#e0453a'; g.beginPath(); g.moveTo(10, -4); g.lineTo(16, 0); g.lineTo(10, 4); g.fill(); g.fillStyle = '#f6efe3'; g.fillRect(-24, -4, 6, 8); g.restore();   // 화살
+    g.fillStyle = '#2b2420'; g.font = '800 15px sans-serif'; g.textAlign = 'left'; g.fillText(c.T('화살 ', 'Arrow ') + Math.min(N, n + 1) + '/' + N + '  ·  ' + c.T('쏙 ', 'In ') + hits, 10, 22); }
+  const next = () => { n++; if (n >= N) { c.finish(hits >= 4 ? 3 : hits >= 3 ? 2 : hits >= 1 ? 1 : 0); return; } A = null; ph = 'aim'; newPot(); if (n === 2) c.say(c.T('이제 바람이 세져요 — 깃발을 봐요!', 'The wind is picking up — watch the flag!')); };
+  draw();
+  return { go: c.T('던지기!', 'Throw!'), extra: () => hits,
+    down() { launch(); },
+    key(code) { if (ph !== 'aim') return false; if (code === 'ArrowUp') ang = Math.min(1.35, ang + 0.04); else if (code === 'ArrowDown') ang = Math.max(0.25, ang - 0.04); else if (code === 'ArrowRight') pw = Math.min(1, pw + 0.04); else if (code === 'ArrowLeft') pw = Math.max(0.05, pw - 0.04); else return false; return true; },
+    tick(dt) { if (ph === 'fly' && A) { A.vy += GR * dt; A.vx += wind * dt; A.x += A.vx * dt; A.y += A.vy * dt; const hw = pot.w / 2;
+        if (prevY < potTop && A.y >= potTop) { const d = Math.abs(A.x - pot.x); if (d < hw - 2) { hits++; ph = 'wait'; wait = 0.9; A.y = potTop + 6; c.snd('ding'); c.say(c.T('쏙! 들어갔어요', 'Plop! It went in')); } else if (d < hw + 5 && !rim) { rim = true; A.vy = -Math.abs(A.vy) * 0.35; A.vx = -A.vx * 0.3; c.snd('tick'); c.say(c.T('땡! 항아리 입에 맞고 튕겼어요', 'Clink! It bounced off the rim')); } }
+        prevY = A.y; if (ph === 'fly' && (A.y >= GY - 2 || A.x > W + 10 || A.x < -10)) { ph = 'wait'; wait = 0.8; if (!rim) c.say(A.x < pot.x ? c.T('조금 짧았어요 — 더 세게?', 'A bit short — more power?') : c.T('조금 멀었어요 — 덜 세게?', 'A bit long — less power?')); } }
+      else if (ph === 'wait' && (wait -= dt) <= 0) next(); draw(); },
+    dispose() { cv.removeEventListener('pointerdown', pd); cv.removeEventListener('pointermove', pm); cv.removeEventListener('pointerup', pu); cv.removeEventListener('pointercancel', pu); } };
+}
+
+const MK = { toss: mkToss, bar: mkBar, line: mkLine, ripe: mkRipe, plant: mkPlant, cut: mkCut, salt: mkSalt, comb: mkComb, dig: mkDig, sort: mkSort, cover: mkCover, order: mkOrder, feed: mkFeed, lens: mkLens, bend: mkBend, still: mkStill, gate: mkGate };
 // 놀이 하나 열기: o = { root(.pb — 안에 .mg · .msg · .go가 있어야 함), k(일 갈래), en, zw(솜씨 초록 칸 배수), sea, sfx(k), tone(...), grade(false = 결과 말 없이 바로 끝 — 요리·징검다리), onEnd(점수 0~3) }
 export function createMini(kind, o) { css();
   const c = { root: o.root, mg: o.root.querySelector('.mg'), msgEl: o.root.querySelector('.msg'), go: o.root.querySelector('.go'), en: !!o.en, zw: Math.max(1, o.zw || 1), k: o.k, sea: o.sea, done: false };
@@ -432,7 +465,7 @@ export function createMini(kind, o) { css();
   if (c.go && !g.go) c.go.style.display = 'none';   /* 손으로 하는 놀이(끌기·나누기) = 큰 단추 없음 */
   if (c.go && g.go) { c.go.textContent = g.go; c.go.addEventListener('pointerdown', pd); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) c.go.addEventListener(ev, pu); }
   return { kind,
-    get ok() { return score; }, get done() { return c.done; },
+    get ok() { return score; }, get done() { return c.done; }, get extra() { return g.extra ? g.extra() : null; },
     down() { if (!c.done) g.down(); }, up() { if (!c.done && g.up) g.up(); }, key(code, rep) { return !c.done && g.key ? !!g.key(code, rep) : false; },
     tick(dt) { if (dt > 0.1) dt = 0.1; if (!c.done) { g.tick(dt); return; } if (endT >= 0 && (endT -= dt) <= 0) { endT = -1; o.onEnd(score); } },
     dispose() { c.done = true; endT = -1; if (g.dispose) g.dispose(); if (c.go) { c.go.removeEventListener('pointerdown', pd); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) c.go.removeEventListener(ev, pu); } } };
