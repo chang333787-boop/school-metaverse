@@ -1,6 +1,6 @@
 // 마을 첫 화면·진행 열림 시험(INTUIT-1 · 사용자 10-18 '동물의 숲은 이야기만 따라가도 되는데 우리 게임은 직관이 부족'): node tools/harness/town_hud.cjs [마을=ourtown] [포트=8002] [--shots=폴더] [--count]
 //   첫 화면에 보이는 HUD(칩·작은 지도·칸 배지·가방·할 일 줄·나침반 띠·키 안내·위 가운데 줄)를 세고 글을 적음 — 데스크톱 1366×768 · 휴대폰 세로 390×844 → 가로 844×390(터치)
-//   --count = 세기만(옛 판과 견주기) · 그 밖: 잠긴 키(M·B·I·F·J·Y)는 창을 안 엶 · unlock(키) = 그 칩만 늘고 살며시 나타남 · 이야기 안전망(1막 장 하나 끝 → 1막 키)
+//   --count = 세기만(옛 판과 견주기) · 그 밖: 잠긴 키(M·B·I·F·J·Y)는 창을 안 엶 · unlock(키) = 그 칩만 늘고 살며시 나타남 · 이야기 안전망(다음 막에 들어서면 앞 막 키)
 //   · 선생님(sm.t) = 모두 열림 · 예전 저장(hud 칸 없음) = 모두 열림 · ?all=1은 town_state.cjs가 씀
 const { chromium, devices } = require('playwright');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
@@ -37,9 +37,9 @@ const toastT = p => p.evaluate(() => { const t = document.getElementById('toast'
           ok(/M/.test(await p.evaluate(() => document.querySelector('.twn-keys').textContent)), '키 안내 줄에 M이 더해짐');
           await p.evaluate(() => { const S = SM_TOWN.game().S; S.story = S.story || {}; S.story.cur = null; S.story.done = { ...(S.story.done || {}), p0: 1, a1_1: 1 }; }); await p.waitForTimeout(2300);
           const on = await p.evaluate(() => ({ mini: SM_TOWN.hud.on('mini'), find: SM_TOWN.hud.on('find'), wx: SM_TOWN.hud.on('wx'), bike: SM_TOWN.hud.on('bike'), bus: SM_TOWN.hud.on('bus') }));
-          ok(on.mini && on.find && on.wx && !on.bike && !on.bus, '안전망: 1막 장 하나 끝 = 1막 키만(작은 지도·장소·날씨) ' + JSON.stringify(on)); await shot(p, 'desk_act1');
+          ok(!on.bike && !on.bus, '안전망: 1막 장 하나 끝 = 다음 막 키는 안 열림(1막 키는 1막 안 소개가 하나씩 · PLAYTHRU-1 10-18) ' + JSON.stringify(on)); await shot(p, 'desk_act1');
           await p.evaluate(() => { const S = SM_TOWN.game().S; S.story.cur = 'c1'; S.story.i = Math.max(0, ['n', 'pick', 'bike'].indexOf('bike')); }); await p.waitForTimeout(2300);
-          ok(await p.evaluate(() => SM_TOWN.hud.on('bike') && !SM_TOWN.hud.on('bag')), '안전망: 자전거 단계가 되면 자전거만'); await p.evaluate(() => { const S = SM_TOWN.game().S; S.story.cur = null; S.story.i = 0; }); await p.waitForTimeout(400);
+          ok(await p.evaluate(() => SM_TOWN.hud.on('bike') && !SM_TOWN.hud.on('bag') && SM_TOWN.hud.on('mini') && SM_TOWN.hud.on('find') && SM_TOWN.hud.on('wx')), '안전망: 2막(자전거 단계)에 들어서면 1막 키(작은 지도·장소·날씨)가 다 열리고 2막은 자전거만'); await p.evaluate(() => { const S = SM_TOWN.game().S; S.story.cur = null; S.story.i = 0; }); await p.waitForTimeout(400);
           await p.evaluate(() => { sessionStorage.setItem('sm.t', '1'); dispatchEvent(new CustomEvent('sm-teacher')); }); await p.waitForTimeout(400); ok(await p.evaluate(() => SM_TOWN.hud.all() && SM_TOWN.hud.on('bus')), '선생님 = 모두 열림'); { const t = await tabs(); ok(/여권/.test(t || '') && /솜씨/.test(t || ''), '모두 열림 = 수첩 탭 모두'); } R.teach = (await p.evaluate(HUD)).length; await shot(p, 'desk_teacher');
           ok(!(await p.evaluate(() => SM_TOWN.hud.saved().all)), '선생님 열림은 저장하지 않음'); }
         ok(!errs.length, '오류 0 ' + errs.join(' | ')); }

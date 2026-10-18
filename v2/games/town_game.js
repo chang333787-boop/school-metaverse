@@ -63,7 +63,7 @@ export function createGame(id) {
   let raw9 = null; try { raw9 = localStorage.getItem(KEY); } catch (e) { /* 막힘 */ }
   try { const j = JSON.parse(raw9 || 'null'); if (j && j.v !== SAVE_V) throw 0; if (j && j.v === SAVE_V) { const F9 = fresh(), T9 = Object.assign(fresh(), j); for (const k of Object.keys(F9)) { const f = F9[k], t = T9[k]; if (f && typeof f === 'object' ? (!t || typeof t !== 'object' || Array.isArray(t) !== Array.isArray(f)) : typeof f === 'number' && !Number.isFinite(t)) T9[k] = f; }   /* FIX-CX5(코덱스 점검): 칸 모양이 틀린 저장(bag = null 등)을 먼저 바로잡고 나서 씀 — 예전엔 S에 먼저 넣고 오류가 나 깨진 채 남았음 */ S = T9; if (!(j.cal && j.cal.d0 >= 1)) S.cal = { d0: S.day, on: true, s: 'now' };   /* 달력 없던 저장 = 오늘부터 첫 주 */ for (const k of Object.keys(S.bag)) if (!(S.bag[k] > 0)) delete S.bag[k]; } } catch (e) { /* 저장 깨짐·판 번호 다름 = 새로 시작하되 옛 글은 따로 남김(SAVE-1 · 덮어써서 잃지 않게 · 되살리기 = sm-town-game-bak:<마을>) */ if (raw9) try { localStorage.setItem('sm-town-game-bak:' + id, raw9); } catch (e2) { /* 가득 참 */ } }
   if (!(S.min >= 0 && S.min < DAY_END)) S.min = 7 * 60;
-  let dirty = false, since = 0, acc = 0, ph = phaseOf(S.min), on = null; const T0 = () => ({ earned: 0, got: {}, cells: 0, tasks: 0, cooked: 0, shared: 0, dex: 0 }); if (!S.today) S.today = T0();   // 오늘 한 일(하루 마무리 · 잠들면 비움)
+  let dirty = false, since = 0, acc = 0, ph = phaseOf(S.min), on = null; const T0 = () => ({ earned: 0, got: {}, cells: 0, tasks: 0, cooked: 0, shared: 0, dex: 0 }); if (!S.today || typeof S.today !== 'object') S.today = T0(); else for (const [k, v] of Object.entries(T0())) if (typeof S.today[k] !== typeof v) S.today[k] = v;   /* FIX-CX7(코덱스 10-18): today:{}처럼 빠진 칸 */   // 오늘 한 일(하루 마무리 · 잠들면 비움)
   const emit = (t) => { if (on) on(t); };
   const G = {
     S,

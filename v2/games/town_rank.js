@@ -124,7 +124,7 @@ export function createRank(api) {
     if (m.kind === 'stn' && !api.hasSub()) v.alt = 'bus';
     if (m.kind === 'dir') v.T = pickDir();
     if (m.kind === 'ride') v.need = rides().map(q => q[0]);
-    if (m.kind === 'newdish') v.c0 = Object.keys(GAME.S.cooked || {});
+    if (m.kind === 'newdish') { v.c0 = Object.keys(GAME.S.cooked || {}); const left = api.recipes().filter(r => !v.c0.includes(r[0])).length; for (let i = left; i < m.n; i++) v.s.push('old' + i); }   /* FIX-CX10: 처음 만들 요리가 n보다 적으면 이미 만든 것으로 채워 셈(못 끝내는 미션 X) */
     if (m.kind === 'cheap') v.seen = {};
     if (m.kind === 'rot') v.last = {};
     if (m.kind === 'made') v.m = [];
@@ -175,7 +175,7 @@ export function createRank(api) {
       if (v.s.length > n0) step(); else if (m.kind === 'dexnight' && !api.night()) api.toast('🤔 ' + (en() ? 'That was in the daytime — this one counts only at night' : '낮에 찾은 것이에요. 이 미션은 밤에 찾은 것만 세요'), 3); return; }
     if (m.kind === 'dir' && v.T) { const me = api.me(); if (api.region(me.x, me.z) === v.T.r) { v.c = 1; api.routeOff(); step(); return; } c.t9 = (c.t9 || 0) + 1; if ((c.t9 === 60 || c.t9 === 120) && v.h < 3) { v.h++; api.toast('💡 ' + hintText(v.h), 4); api.task(); } return; }
     if (m.kind === 'rot') { const F = (GAME.S.farm || []).map(p => (p && p.c) || ''); if (!FP) { FP = F; return; } let up = false;
-      for (let i = 0; i < F.length; i++) { const a = FP[i] || '', b = F[i]; if (a && !b) v.last[i] = a; else if (b && b !== a && v.last[i]) { if (v.last[i] !== b) { v.c++; up = true; } else api.toast('🤔 ' + (en() ? 'Same crop again in that bed — try a different one' : '같은 칸에 또 ' + b + '을(를) 심었어요. 다른 작물로 바꿔 봐요'), 3); delete v.last[i]; } }
+      for (let i = 0; i < F.length; i++) { const a = FP[i] || '', b = F[i]; if (a && !b) v.last[i] = a; else if (b && b !== a && (v.last[i] || a)) { if (!v.last[i]) v.last[i] = a; if (v.last[i] !== b) { v.c++; up = true; } else api.toast('🤔 ' + (en() ? 'Same crop again in that bed — try a different one' : '같은 칸에 또 ' + b + '을(를) 심었어요. 다른 작물로 바꿔 봐요'), 3); delete v.last[i]; } }
       FP = F; if (up) step(); } }
   function hintText(i) { const c = C(), m = mis(); if (!m) return ''; const h = m.hint[i - 1], v = c.v; if (!h) return '';
     if (h.live && v.T) { const me = api.me(), p = v.T, k = dirK(me, p), d = Math.max(50, Math.round(dist(me, p) / 50) * 50); return en() ? 'From here it’s ' + L(DIR8[k]) + ', about ' + d + ' m' : '지금 자리에서는 ' + L(DIR8[k]) + '쪽으로 ' + d + 'm쯤이에요'; }
@@ -184,7 +184,7 @@ export function createRank(api) {
   // ── 시작·끝 ──
   function start(k) { const lv = tierOf(k); if (!lv) return false; const c0 = C(); if (c0 && c0.k === k && c0.lv === lv) { c0.off = false; save(); api.task(); open(); return true; }
     if (!can(k, lv)) { api.toast(en() ? 'This mission can’t be done in this town yet' : '이 마을에서는 아직 할 수 없는 미션이에요', 3); return false; }
-    S().cur = { k, lv, v: init(k, lv), off: false }; DX = null; FP = null; hintT = 0; save(); if (api.rec) api.rec('rank', { k, L: lv, s: 'start' }); api.task(); open(); return true; }   /* REC-0 학급 기록 */
+    S().cur = { k, lv, v: init(k, lv), off: false }; DX = null; FP = null; hintT = 0; save(); if (api.rec) api.rec('rank', { k, L: lv, s: 'start' }); { const [a9, n9] = count(); if (a9 >= n9) { api.toast(en() ? '🏅 You’ve already done all of this — counted!' : '🏅 이미 다 해 봤어요 — 그대로 인정해요!', 3); finish(); return true; } } api.task(); open(); return true; }   /* REC-0 학급 기록 */
   function finish() { const c = C(); if (!c) return; const m = mis(), R = S(), k = c.k, lv = c.lv, v = c.v, first = !RANK_LV.some(t => R.done[k + ':' + t]);
     R.done[k + ':' + lv] = GAME.S.day; R.cur = null; if (!R.title) R.title = k + ':' + lv; save(); if (api.rec) api.rec('rank', { k, L: lv, s: 'done', h: v.h, done: 1 }); api.routeOff(); api.skUp(k, 4); api.learn(m.use || []); api.sfx('done'); api.task();
     const e = en(), did = fill(L(m.did), { r: v.T ? regN(v.T.r) : '' }), gain = [];
