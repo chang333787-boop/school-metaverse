@@ -14,9 +14,10 @@
 | 차례 | 패치 | 상태(10-19 밤) | 합칠 때 주의 |
 |---|---|---|---|
 | 1 | `music1.patch` 배경 음악 6곡(town_music.js · 하네스 31/31) | ✅ 끝 · 60903bb에 바로 붙음 확인 | 레벨업 팡파르 동안 `MUS.duck(초)` 한 줄 잇기 · CLAUDE.md 색인에 town_music.md |
-| 2 | `tools1.patch` 도구 띠(물뿌리개·삽·낚싯대·돋보기·빗자루 · actions.js hold + dig·cast·peer·sweep · 물총 조준 빌림) | ⏸ 97%에서 멈춤 — 보고 확인 | **엔진**(main.js·mapapi·actions) 바꿈 → v2·v3 `main.js?v=`·`mapapi.js?v=` 올림 · 홍보판 게이트 |
-| 3 | `wild1.patch` 야생동물(서식지·계절·달아남·가만히 있기·손님 도감식 실루엣·관찰 별점) | ⏸ 멈춤 — 보고 확인 | 도감 칸(town_dex) · 성능 frames.worst 전후 |
-| 4 | `road1.patch` 길 위 사건(자전거 고리 코스·도움 요청·날아온 지도 조각) | ⏸ 멈춤 — 보고 확인 | 이름 없는 1학년 동생(새 사람) = 교사 확인 사항 |
+| 2 | `wild1.patch` → 차례 바꿈: 야생동물이 가장 완성돼 둘째로 · 아래 표의 3번 줄 참고 | | |
+| 3 | `tools1.patch` 도구 띠(물뿌리개·삽·낚싯대·돋보기·빗자루 · actions.js hold + dig·cast·peer·sweep · 물총 조준 빌림) | ⏸ **반쯤**: 엔진(actions hold·holdUse·toolTip · 소품 넷·몸짓 넷 · mapapi hold/holding) + `town_tools.js`(다섯 도구·포물선 물뿌리개·구덩이·지렁이·낚시·빗자루) + chem `fireAt`·`fireDouse`·worm + treasure `near`·`shovel` = **문법만 확인** · **안 한 것**: town.js 연결(import·setEntries·tick·keyDn 1~5·F·keysLine·☰ 🧰·bugLook 돋보기·도감 민물고기·stop) · 하네스 town_tools.cjs · 문서 · 시험 0 → 메인이 잇고 시험해야 함 | **엔진**(main.js·mapapi·actions) 바꿈 → v2·v3 `main.js?v=`·`mapapi.js?v=` 올림 · 홍보판 게이트 |
+| 2' | `wild1.patch` 야생동물(서식지·계절·달아남·가만히 있기·손님 도감식 실루엣·관찰 별점) | ✅ 거의 끝: 아홉 종(다람쥐·고라니·왜가리·수달·청둥오리·흰뺨검둥오리·참개구리·백로·솔부엉이) · 첫 만남 ★ · 관찰 별 · 칭호 · 쪼그려 3초 = 다가옴(동물 곁 C) · `town_wild.cjs` 63/63 · 게이트 17/17 · frames.worst 47→38ms · **안 한 것**: 문서 town_wild.md · 마지막 변경 뒤 town_state·town_chem 다시 · **엔진**(engine.js·main.js·mapapi) 바꿈 → main.js 캐시 · 교사 확인 사실 둘('겨울에 남는 왜가리도 많아요' · '흰뺨검둥오리 = 텃새') | 도감 칸(town_dex) · 성능 frames.worst 전후 |
+| 4 | `road1.patch`(줍기·동생은 고치거나 빼고 합침) 길 위 사건(자전거 고리 코스·도움 요청·날아온 지도 조각) | ⏸ **반쯤**: `town_road.js` 고리 코스 넷(길 위·막힘 0 · 자전거 기록·금은동 도장) ✅ · 날아온 종이 → 보물 지도 조각 ✅ · 모자 잡기 ✅ · **안 됨**: 떨어진 것 줍기(E 눌러도 0/3 · 원인 모름) · 동생 데려다주기(시험 못 돎) · 문서 · 회귀 시험 0 · 연결 = town.js·town_worker·town_treasure·town_rec·town_game·town_dex 작은 수정 함께 | 이름 없는 1학년 동생(새 사람) = 교사 확인 사항 |
 
 **합치는 법**(10-18~19에 굳힌 것)
 - 새 worktree `$SP/mNN`를 main HEAD에서 만들고 `git -c rerere.enabled=false apply -3 <패치>`로 붙여요. 충돌은 손으로 풀어요(양쪽이 다른 줄을 더했으면 둘 다 남김). union 스크립트는 쓰지 않아요.
