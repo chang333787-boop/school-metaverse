@@ -8,7 +8,7 @@ import { buildWorld } from './world.js?v=158';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=89';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=90';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=11';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=29';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -654,9 +654,8 @@ function physics(dt) {
   const L = Math.hypot(mx, mz), ox = P.x, oz = P.z;
   if (L > 0) {
     mx /= L; mz /= L;
-    const sp = sp2, nx = P.x + mx * sp * dt, nz = P.z + mz * sp * dt;
-    if (!pBlocked(nx, P.z, P.y, P.bh)) P.x = nx;
-    if (!pBlocked(P.x, nz, P.y, P.bh)) P.z = nz;
+    const sp = sp2, stp = Math.max(1, Math.ceil(sp * dt / 0.3)), sx = mx * sp * dt / stp, sz = mz * sp * dt / stp;   // SUB-STEP(10-19 자전거 21m/s): 한 장면에 0.3m보다 많이 가면 잘게 나눠 막힘을 봄(얇은 벽·울타리 뚫림 X) · 걷기는 한 번
+    for (let s9 = 0; s9 < stp; s9++) { const nx = P.x + sx; if (!pBlocked(nx, P.z, P.y, P.bh)) P.x = nx; const nz = P.z + sz; if (!pBlocked(P.x, nz, P.y, P.bh)) P.z = nz; }
     P.yaw = Math.atan2(mx, mz);
   }
   P.spd = Math.hypot(P.x - ox, P.z - oz) / Math.max(dt, 1e-4);   // ENGINE-1: 소리 판정(map.player.noise)

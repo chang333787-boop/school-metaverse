@@ -201,7 +201,7 @@ export function createMapApi(host, NAV, META) {
     aim(h) { CTRL.face = h == null ? null : Math.atan2(Math.sin(h * R2D), -Math.cos(h * R2D)); },
     // GAME-WG: 3인칭 카메라를 오른쪽으로 m만큼 비켜 세움(어깨 너머 · -1~1 · 0 = 끔). 옆벽 검사는 하지 않으니 게임이 트인 곳에서만. 게임이 멈추면 0
     shoulder(m = 0) { CTRL.shoulder = Math.max(-1, Math.min(1, +m || 0)); },
-    speed(k = 1) { CTRL.speed = Math.max(0.5, Math.min(3.6, k)); },   // 3.4 = 자전거 내리막·자전거 도로(마을 · 10-15 · FIX-BK1 10-17 자전거 ≈ 달리기의 1.8배 · 탈 땐 Shift 달리기 막음 → 가장 빠름 14.3m/s = 예전 자전거+Shift 18.8m/s보다 느림)
+    speed(k = 1) { CTRL.speed = Math.max(0.5, Math.min(6, k)); },   // BIKE-11(10-19): 상한 3.6 → 6(자전거 5 · 내리막 5.3) · 빠를 땐 main.js가 잘게 나눠 막힘을 봄 ·   // 3.4 = 자전거 내리막·자전거 도로(마을 · 10-15 · FIX-BK1 10-17 자전거 ≈ 달리기의 1.8배 · 탈 땐 Shift 달리기 막음 → 가장 빠름 14.3m/s = 예전 자전거+Shift 18.8m/s보다 느림)
     get input() { if (pl.touch && pl.touch.m > 0) return true; if (pl.keys) for (const k of MOVE_KEYS) if (pl.keys.has(k)) return true; return false; },   // 사람이 누르는 이동(키·조이스틱만 — steer 빼고)
     pose(name, o) { CTRL.pose = name || null; CTRL.poseY = (o && o.y) || 0; },   // 몸 자세 덮어쓰기: 'swim'(헤엄) · 'dizzy'(엉덩방아 · 어지러움) · null = 원래대로(게임이 멈추면 풀림)
     jump(on = true) { CTRL.noJump = !on; },   // RB-1: false = 점프 막음(게임이 멈추면 풀림)
