@@ -83,6 +83,8 @@ export function createGame(id) {
     get phase() { return ph; },
     // 바깥(학교 시간 단추 등)에서 시간대를 바꾸면 시계도 그 때로
     syncPhase(k) { if (!PHASE_AT[k] || phaseOf(S.min) === k) return false; S.min = PHASE_AT[k]; ph = k; acc = 0; dirty = true; emit('clock'); return true; },
+    // QUEST-3 기다리기(같은 날 앞으로만 · 낮 12시처럼 시간대 안의 한 시각): 지난 시각이면 그대로
+    waitMin(m) { if (!(m > S.min && m < DAY_END)) return false; S.min = m; acc = 0; const p = phaseOf(S.min); dirty = true; emit('clock'); if (p !== ph) { ph = p; emit('phase'); } return true; },
     clockText(en) { const h = (S.min / 60) | 0, m = ((S.min % 60) / 10 | 0) * 10;   /* 10분 단위(스타듀처럼 — 칩 글이 1초마다 바뀌지 않게) */ return (en ? 'Day ' + S.day + ' ' : S.day + '일째 ') + (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; },
     setClock(onoff) { S.clock = !!onoff; dirty = true; emit('clock'); },
     // 잠 = 다음 날 아침 · 오늘 딴 자리는 다시 자람 · 바로 저장

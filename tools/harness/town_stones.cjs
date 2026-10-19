@@ -20,7 +20,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
         ok(r.d < 1.6, tag + ' — 건너편 도착(남은 ' + r.d.toFixed(1) + 'm)'); ok(maxJ < 1.5, tag + ' — 순간이동 없음(0.2초 최대 ' + maxJ.toFixed(2) + 'm)'); ok(minY > B.y1 - 0.6, tag + ' — 물에 안 빠짐(가장 낮은 y ' + minY.toFixed(2) + ' · 돌 윗면 ' + B.y1 + ')');
         if (i === 0) ok(pass ? !/징검다리를 다 건넜/.test(ban + r.ban) : /징검다리를 다 건넜/.test(ban + r.ban), tag + (pass ? ' — 같은 날 다시 = 배너 X' : ' — 배너 \'징검다리를 다 건넜어요\''));
       } }
-    ok(await p.evaluate(() => !!(SM_TOWN.game.S && SM_TOWN.game.S.dex && Object.keys(SM_TOWN.game.S.dex).some(k => k.includes('👣'))) || /👣/.test((document.querySelector('.twn-bag') || {}).textContent || '')), '👣 도장(가방·도감)');
+    ok(await p.evaluate(() => { const G = typeof SM_TOWN.game === 'function' ? SM_TOWN.game() : SM_TOWN.game, S9 = G && G.S; return !!(S9 && ((S9.bag && S9.bag['👣'] > 0) || (S9.dex && Object.keys(S9.dex).some(k => k.includes('👣'))))); }), '👣 도장(가방·도감)');   /* 가방 칩을 숨긴 뒤(HUD-3)엔 저장에서 봄 */
     ok(!errs.length, '페이지 오류 0' + (errs.length ? ' — ' + errs.join(' | ') : ''));
   } finally { await b.close(); }
   console.log(fails.length ? 'FAIL ' + fails.length : 'PASS'); process.exit(fails.length ? 1 : 0); })();
