@@ -14,6 +14,17 @@ for (const k of 'd_y1 d_y2 d_y7 d_y15 d_y16 d_y29 d_y41 d_y42 d_y43 d_y44 d_y45 
 let C9 = null; const HC = new Map(); const hexRGB = h => { let v = HC.get(h); if (v) return v; const n = typeof h === 'number' ? h : parseInt(String(h).replace('#', ''), 16); C9.setHex(n); v = [C9.r, C9.g, C9.b]; HC.set(h, v); return v; };   // 마을과 같은 색 공간(sRGB 글자 → 작업 공간)
 const getJSON = async (path, ms = 8000) => { const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms); try { const r = await fetch(DB + path, { signal: ac.signal, cache: 'no-store' }); if (!r.ok) return null; return await r.json(); } catch (e) { return null; } finally { clearTimeout(t); } };
 const sizeOf = id => { const R = DECO3D[id] || FALLBACK; return [R.w || 1, R.h || 1]; };
+// DOOR-4(사용자 10-19 '뭔가 가려서 못 들어가는 거면 그 주변 기물들은 센스 있게 앞으로 잘 빼 줘'): 앞문 앞(열 45~48 · 행 3~5 = 폭 4.2m · 깊이 4.2m)을 막는 키 큰 장식(분수·나무·화분 — 몸이 걸리는 것)은
+//   같은 열 그대로 앞(남쪽)으로 빈 칸까지 밂 → 앞이 다 차 있으면 문길 옆(왼쪽·오른쪽)으로 · 낮은 것(꽃·돌길·깔개)과 걷는 동물은 그대로 · 아이 자료는 읽기만(바뀐 자리는 마을 그림에서만)
+const KEEP9 = [45, 3, 49, 6];
+const tallOf = id => { const R = DECO3D[id] || FALLBACK; if (R.anim === 'walk') return false; let t = 0; for (const p of R.parts || []) { if (p.spin) continue; const h = p.k === 'sph' ? (p.s[1] ?? p.s[0]) : p.k === 'box' ? p.s[1] : p.k === 'cyl' ? p.s[2] : p.s[1]; t = Math.max(t, p.p[1] + h); } return t * (SCALE[id] === 'A' ? CS : 1) > 0.8; };
+export function clearDoor(decos) { const hit = (c, r, w, h, R) => c < R[2] && c + w > R[0] && r < R[3] && r + h > R[1], occ = new Set(), cells = (c, r, w, h) => { const o = []; for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) o.push((c + i) + '_' + (r + j)); return o; }, mv = [];
+  for (const d of decos) { const [w, h] = sizeOf(d.id); if (hit(d.col, d.row, w, h, KEEP9) && tallOf(d.id)) mv.push(d); else if (tallOf(d.id)) for (const k of cells(d.col, d.row, w, h)) occ.add(k); }
+  if (!mv.length) return decos; const free = (c, r, w, h) => c >= 0 && r >= 0 && c + w <= YW && r + h <= YD && !hit(c, r, w, h, KEEP9) && !hit(c, r, w, h, HOUSE) && cells(c, r, w, h).every(k => !occ.has(k)), out = decos.filter(d => !mv.includes(d));
+  for (const d of mv.sort((a, b) => a.row - b.row)) { const [w, h] = sizeOf(d.id); let at = null; for (let r = KEEP9[3]; r <= KEEP9[3] + 10 && !at; r++) if (free(d.col, r, w, h)) at = [d.col, r];
+    for (let k = 0; k < 8 && !at; k++) for (const c of [KEEP9[0] - w - k, KEEP9[2] + k]) if (!at && free(c, Math.max(d.row, KEEP9[1]), w, h)) at = [c, Math.max(d.row, KEEP9[1])];
+    if (!at) continue; for (const k of cells(at[0], at[1], w, h)) occ.add(k); out.push({ ...d, col: at[0], row: at[1], moved: 1 }); }   // 둘 데가 없으면 그 장식만 뺌(문이 먼저)
+  return out; }
 // 아이가 쓴 범위(칸) = 장식 ∪ 바닥 ∪ 집 자리 + 2칸
 export function extentOf(data) { let c0 = HOUSE[0], r0 = HOUSE[1], c1 = HOUSE[2], r1 = HOUSE[3];
   for (const d of (data && data.decos) || []) { const [w, h] = sizeOf(d.id); c0 = Math.min(c0, d.col); r0 = Math.min(r0, d.row); c1 = Math.max(c1, d.col + w); r1 = Math.max(r1, d.row + h); }
@@ -24,7 +35,7 @@ export const DEFAULT_YARD = (() => { const decos = [], floor = {}; for (let r = 
   for (const [c, r] of [[40, 6], [52, 6], [40, 13], [52, 13]]) decos.push({ id: 'd_y1', col: c, row: r }, { id: 'd_y2', col: c + 1, row: r }, { id: 'd_y1', col: c + 2, row: r });
   for (const [c, r] of [[34, 7], [58, 7], [34, 17], [58, 17]]) decos.push({ id: 'd_y9', col: c, row: r }); decos.push({ id: 'd_y10', col: 46, row: 19 }, { id: 'd_y5', col: 43, row: 21 }, { id: 'd_y5', col: 49, row: 21 }); return { decos, floor, ai: true }; })();
 
-export function createYards({ T3, map, onCollider, removeCollider, en, animals }) {
+export function createYards({ T3, map, onCollider, removeCollider, en, animals, onBuilt }) {
   if (!C9) C9 = new T3.Color();
   const MAT = new T3.MeshLambertMaterial({ vertexColors: true }), GLOW = new T3.MeshBasicMaterial({ vertexColors: true }), FLOOR = new T3.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   const Y = [];   // { home, ox, oz, y, ext, grp, cols, anim, data, at, busy, src }
@@ -43,7 +54,7 @@ export function createYards({ T3, map, onCollider, removeCollider, en, animals }
     const [deco, floor] = await Promise.all([getJSON('/students/' + sid + '/houseDecorations.json'), getJSON('/students/' + sid + '/yardFloor.json')]);
     if (deco == null && floor == null) return null;
     const L = (Array.isArray(deco) ? deco : deco && typeof deco === 'object' ? Object.values(deco) : []).filter(d => d && d.area === 'yard' && (d.sp == null || d.sp === 1) && typeof d.id === 'string' && Number.isFinite(d.col) && Number.isFinite(d.row));
-    const F = floor && typeof floor === 'object' ? floor : {}; if (!L.length && !Object.keys(F).length) return null; return { decos: L, floor: F };
+    const F = floor && typeof floor === 'object' ? floor : {}; if (!L.length && !Object.keys(F).length) return null; return { decos: clearDoor(L), floor: F };   /* DOOR-4 */
   }
 
   // ── 부품 → 삼각형(로컬 = 장식 가운데 땅 · x 동 · z 남) ──
@@ -100,7 +111,7 @@ export function createYards({ T3, map, onCollider, removeCollider, en, animals }
       for (const x of [gx0, gx1]) pushPart(As, { k: 'box', s: [0.3, 1.3, 0.3], p: [x, y, Z1] }, IDN, hexRGB('#f4f1e8'));   // 대문 기둥
       r.cols.push({ x0: X0 - 0.3, x1: X0 + 0.3, z0: Z0, z1: Z1, y0: Yd.y - 1, y1: Yd.y + 0.8, nc: true }, { x0: X1 - 0.3, x1: X1 + 0.3, z0: Z0, z1: Z1, y0: Yd.y - 1, y1: Yd.y + 0.8, nc: true }, { x0: X0, x1: gx0 - 0.5, z0: Z1 - 0.3, z1: Z1 + 0.3, y0: Yd.y - 1, y1: Yd.y + 0.8, nc: true }, { x0: gx1 + 0.5, x1: X1, z0: Z1 - 0.3, z1: Z1 + 0.3, y0: Yd.y - 1, y1: Yd.y + 0.8, nc: true }); }
     for (const [A, mat] of [[Af, FLOOR], [As, MAT], [Ag, GLOW]]) { const m = meshOf(A, mat); if (m) { m.matrixAutoUpdate = false; m.updateMatrix(); grp.add(m); } }
-    Yd.grp = grp; Yd.warm = 2; Yd.anim = r.anim; Yd.cols = r.cols.map(c => onCollider(c)); Yd.src = data.ai ? 'ai' : 'rpg'; Yd.n = (data.decos || []).length; grp.visible = !hidden; map.add(grp); }
+    Yd.grp = grp; Yd.warm = 2; Yd.anim = r.anim; Yd.cols = r.cols.map(c => onCollider(c)); Yd.src = data.ai ? 'ai' : 'rpg'; Yd.n = (data.decos || []).length; grp.visible = !hidden; map.add(grp); if (onBuilt) onBuilt([Yd.ox + Yd.ext[0] * CS, Yd.oz - NORTH, Yd.ox + Yd.ext[2] * CS, Yd.oz + Yd.ext[3] * CS]); }   /* DOOR-4: 마당 충돌이 생긴 뒤 그 둘레 문 E 다시 잡기 */
   async function load(Yd, force) { if (Yd.busy || dead) return; Yd.busy = true; try {
       let data = null; if (!force && PRE[Yd.home] && !Yd.at) data = PRE[Yd.home]; else { const sids = await findSids(Y.map(q => q.home)), sid = sids[Yd.home]; data = sid ? await fetchYard(sid) : null; } if (dead) return;
       if (!data && Yd.data && !force) data = Yd.data; if (!data) data = DEFAULT_YARD; Yd.data = data; Yd.at = performance.now(); buildYard(Yd, data);
