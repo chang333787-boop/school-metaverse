@@ -8,7 +8,7 @@ import { buildWorld } from './world.js?v=158';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=88';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=89';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=11';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=29';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -663,6 +663,7 @@ function physics(dt) {
   if (TOUCH.jumpT > 0) TOUCH.jumpT -= dt;
   if ((keys.has('Space') || TOUCH.jump || TOUCH.jumpT > 0) && P.ground && !CTRL.frozen && !CTRL.held && !cr && !CTRL.noJump) { P.vy = PHY.jv; P.ground = false; TOUCH.jumpT = 0; }   // RB-1: CTRL.noJump = 게임이 점프를 막음(로봇인 척)
   P.vy -= PHY.g * dt;
+  if (CTRL.glide > 0 && P.vy < -CTRL.glide) P.vy = -CTRL.glide;   // UMB-1 우산 활공: 떨어지는 빠르기 상한(게임이 켬)
   const y0 = P.y;
   P.y += P.vy * dt;
   // PHYS-2 머리 부딪힘: 올라가다 머리(발+1.5)가 위쪽 물체 밑면에 닿으면 멈춘다(예전엔 천장을 뚫고 올라갔다)

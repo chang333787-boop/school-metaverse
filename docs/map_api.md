@@ -752,6 +752,7 @@ map.top.exit() · floor(f) · look(x, z, d) · ground(sx, sy) → 땅 점 · on 
 - `map.player.invisible(on)`(엔진 · HS-1): 내 몸 38% 비침 + `see(…, 'player')`가 1.3m 밖이면 false(술래 chaser가 놓침 → search) · 소리(noise)는 그대로 · 게임이 멈추면 꺼짐.
 - **RB-1(로봇인 척 CCTV 반장 · `v2/games/robots.js`)**: `me: false`('나' 표시 없음 — 내 몸이 경기와 상관없을 때) · `pop: false`(톡해도 이름 창 없이 `onTap(pt)`만 — `pt.sx`·`pt.sy` = 누른 화면 자리 → 움직이는 것을 `map.camera`로 투영해 고름) · `floors: false`(층 단추 없음) · `helpTop: px`(도움말을 목표 줄 밑으로).
 - 몸 고리(RB-1): `map.player.jump(false)` = 점프 막음 · `map.player.show(false)` = 내 캐릭터·발밑 그림자 숨김(게임이 내 몸을 다른 모양으로 그릴 때 — 1인칭·벽 앞 가까운 카메라에서는 게임도 안 그리게) · 게임이 멈추면 풀림. 설계·밸런스는 CLAUDE.md '로봇인 척'.
+- 떨어지는 빠르기(UMB-1 · 10-19): `map.player.glide(v)` = 떨어지는 빠르기 상한 m/s(우산 활공 · 0 = 끔 · 게임이 멈추면 풀림) · `map.player.vy` = 지금 오르내리는 빠르기(읽기만 — 착지 판정은 이것으로. `get().ground`는 떨어지는 동안에도 true일 수 있음)
 
 ## 18. 오프닝 화면 · 놀이 고르기(TITLE-1 · 09-27) — `v2/js/title.js` + 모양 `v2/title.css`
 
