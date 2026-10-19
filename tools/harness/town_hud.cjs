@@ -25,7 +25,7 @@ const toastT = p => p.evaluate(() => { const t = document.getElementById('toast'
     { const ctx = await b.newContext({ viewport: { width: 1366, height: 768 } }), { p, errs } = await boot(ctx, URL); R.desk = await p.evaluate(HUD); await shot(p, 'desk_first'); console.log('데스크톱 첫 화면 ' + R.desk.length + '개'); for (const t of R.desk) console.log('   ' + t);
       if (!COUNT) { const has = await p.evaluate(() => !!(SM_TOWN.hud)); ok(has, 'SM_TOWN.hud 있음');
         if (has) { ok(!(await p.evaluate(() => SM_TOWN.hud.all())), '새 아이 = 진행 열림(모두 열림 아님)'); ok(R.desk.filter(t => /gchip/.test(t)).length === 1, '칩 = ☰ 메뉴 하나');
-          for (const k of ['KeyM', 'KeyB', 'KeyI', 'KeyF', 'KeyJ', 'KeyY']) { await p.keyboard.press(k); await p.waitForTimeout(350); const pn = await p.evaluate(() => !!document.querySelector('.twn-p')); ok(!pn, k + ' 잠김 = 창 안 열림'); if (pn) await p.keyboard.press('Escape'); }
+          for (const k of ['KeyM', 'KeyB', 'KeyI', 'KeyF', 'KeyY']) { await p.keyboard.press(k); await p.waitForTimeout(350); const pn = await p.evaluate(() => !!document.querySelector('.twn-p')); ok(!pn, k + ' 잠김 = 창 안 열림'); if (pn) await p.keyboard.press('Escape'); }
           ok(/이야기를 따라가면/.test(await toastT(p)), '잠긴 키 = 짧은 알림');
           ok(await p.evaluate(() => ['pass', 'jobs', 'rank'].every(k => SM_TOWN.hud.keys().includes(k))), '열림 키에 여권·직업 체험·승급 미션');
           const tabs = async () => { await p.keyboard.press('KeyQ'); await p.waitForTimeout(500); const t = await p.evaluate(() => { const e = document.querySelector('.twn-p .nb-tabs'); return e ? e.textContent : null; }); await p.keyboard.press('Escape'); await p.waitForTimeout(300); return t; };
@@ -37,7 +37,7 @@ const toastT = p => p.evaluate(() => { const t = document.getElementById('toast'
           ok(/M/.test(await p.evaluate(() => document.querySelector('.twn-keys').textContent)), '키 안내 줄에 M이 더해짐');
           await p.evaluate(() => { const S = SM_TOWN.game().S; S.story = S.story || {}; S.story.cur = null; S.story.done = { ...(S.story.done || {}), p0: 1, a1_1: 1 }; }); await p.waitForTimeout(2300);
           const on = await p.evaluate(() => ({ mini: SM_TOWN.hud.on('mini'), find: SM_TOWN.hud.on('find'), wx: SM_TOWN.hud.on('wx'), bike: SM_TOWN.hud.on('bike'), bus: SM_TOWN.hud.on('bus') }));
-          ok(!on.bike && !on.bus, '안전망: 1막 장 하나 끝 = 다음 막 키는 안 열림(1막 키는 1막 안 소개가 하나씩 · PLAYTHRU-1 10-18) ' + JSON.stringify(on)); await shot(p, 'desk_act1');
+          ok(on.bike && !on.bus, '안전망: 1막 장 하나 끝 = 다음 막 키는 안 열림 · 자전거는 프롤로그 뒤 열림(BIKE-10 10-19) ' + JSON.stringify(on)); await shot(p, 'desk_act1');
           await p.evaluate(() => { const S = SM_TOWN.game().S; S.story.cur = 'c1'; S.story.i = Math.max(0, ['n', 'pick', 'bike'].indexOf('bike')); }); await p.waitForTimeout(2300);
           ok(await p.evaluate(() => SM_TOWN.hud.on('bike') && !SM_TOWN.hud.on('bag') && SM_TOWN.hud.on('mini') && SM_TOWN.hud.on('find') && SM_TOWN.hud.on('wx')), '안전망: 2막(자전거 단계)에 들어서면 1막 키(작은 지도·장소·날씨)가 다 열리고 2막은 자전거만'); await p.evaluate(() => { const S = SM_TOWN.game().S; S.story.cur = null; S.story.i = 0; }); await p.waitForTimeout(400);
           await p.evaluate(() => { sessionStorage.setItem('sm.t', '1'); dispatchEvent(new CustomEvent('sm-teacher')); }); await p.waitForTimeout(400); ok(await p.evaluate(() => SM_TOWN.hud.all() && SM_TOWN.hud.on('bus')), '선생님 = 모두 열림'); { const t = await tabs(); ok(/여권/.test(t || '') && /솜씨/.test(t || ''), '모두 열림 = 수첩 탭 모두'); } R.teach = (await p.evaluate(HUD)).length; await shot(p, 'desk_teacher');
