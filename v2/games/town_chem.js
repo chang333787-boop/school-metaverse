@@ -4,6 +4,7 @@
 //   그림 둘(그리기 +2 이하 · 새 Light X): 점 풀(김·물방울·물보라·홀씨 64점 — 셰이더가 시간 WT·내 자리 UPL 유니폼으로 움직임) · 둥근 판 인스턴스(웅덩이·녹은 물·논 얼음 판·불꽃·재·민들레)
 //   연못 얼음 = 기존 연못 재질에 얼음 값 하나(그리기 0) · 지어내지 않음 = 논·연못·캠핑장·공원이 없는 마을이면 그 규칙은 꺼짐
 //   저장 = GAME.S.chem(알아낸 규칙·웅덩이 물기·얼음·모닥불·녹은 물·민들레 씨) · 몸 젖음은 저장 X(세션)
+import { LAWS, PAIRS, AT, ORDER } from './town_laws.js?v=1';   // LAWS-1 실험 표(가방 물건 × 자리)
 export const CHEM_V = 1;
 // 요소 표: [그림, 한, 영]
 export const ELEM = { water: ['💧', '물', 'Water'], fire: ['🔥', '불', 'Fire'], wind: ['🌬', '바람', 'Wind'], cold: ['❄️', '추위', 'Cold'], sun: ['☀️', '햇빛', 'Sunlight'] };
@@ -52,10 +53,10 @@ const SPLASH_R = 0.8;   // 첨벙 트리거 반지름(10Hz · 달리기 7.5m/s =
 //   grass() 공원·풀밭 모양 · inShape · sdOf · bboxOf · okGround(x, z) · walk(x, z) · snowmen() · snowDraw() · rng(열쇠) · cell(x, z) · openP · closeP · esc · nb(탭)
 export function createChem(A) {
   const T3 = A.T3, map = A.map, S = () => A.GAME.S, en = () => A.lang() === 'en', tx = a => a[en() ? 1 : 0];
-  const fresh = () => ({ v: CHEM_V, found: {}, w: 0, ice: { f: 0, mode: 1 }, fire: { d: 0, out: {}, dryM: 999 }, ring: {}, sp: [], seeds: [], blown: {} });
+  const fresh = () => ({ v: CHEM_V, found: {}, w: 0, ice: { f: 0, mode: 1 }, fire: { d: 0, out: {}, dryM: 999 }, ring: {}, sp: [], seeds: [], blown: {}, lf: {}, pr: {}, rack: [], plant: [], dei: [], nudge: {} });   /* lf~nudge = LAWS-1 실험(새 칸은 C()가 저절로 채움) */
   const C = () => { const s = S(); let c = s.chem; if (!c || typeof c !== 'object' || c.v !== CHEM_V) c = s.chem = fresh(); for (const [k, v] of Object.entries(fresh())) if (typeof c[k] !== typeof v || Array.isArray(c[k]) !== Array.isArray(v)) c[k] = v; return c; };
   const M4 = new T3.Matrix4(), Q4 = new T3.Quaternion(), V4 = new T3.Vector3(), S4 = new T3.Vector3(), E4 = new T3.Euler(), C4 = new T3.Color(), Z4 = new T3.Matrix4().makeScale(0, 0, 0);
-  let on = false, PT = null, DM = null, UDIM = { value: 1 }, BG = new Map(), FI = [], BOOK = null;
+  let on = false, PT = null, DM = null, UDIM = { value: 1 }, BG = new Map(), FI = [], BOOK = null, lastE = null;
   let lastT = 0, lastM = -1, lastD = -1, cost = { n: 0, sum: 0, max: 0 }, sec0 = false, pend = false, errN = 0, buildMs = 0;
   const ok = () => on && A.on();
   const now = () => A.WT.value;
@@ -288,8 +289,93 @@ export function createChem(A) {
       set: o => { const c = C(); if (o.blown === null) c.blown = {}; if (o.seedsDue) for (const r of c.seeds) r.d = S().day; },
       api: { blow: i => { const s = SPOT[i | 0]; if (s) blow(s); return !!s; }, wind: d => windOf(d ?? S().day) } }; }
 
+  // ───────── LAWS-1 🧪 실험: 가방 물건 × 그 자리(물·바다·불·햇볕·추위·눈·흙·바람) — 표 = town_laws.js · 가방(I) 칸 밑 단추 · 그 자리에서 몸으로 일어남 ─────────
+  //   그림 = 그림 글자 판(스프라이트) 다섯까지(하는 중 하나 + 널어 둔 것 넷) · 움직임은 실험하는 몇 초 동안만 rAF · 둥근 판 = 섞인 물빛·제설 자국·싹
+  //   뜨고 가라앉기는 처음 넣는 물건마다 '뜰까? 가라앉을까?'를 먼저 고름(예상 → 관찰) · 알아낸 것 = 수첩 🔬 → 🧪 해 본 실험(과학·사회 카드)
+  function mkLaws() { const SPR = []; let RUN = null, raf = 0, L0 = -1;
+    const E9 = e => [...e][0], nm = e => (A.item ? A.item(e) : e), DOME = { cloud: 0, dei: 1, sprout: 7 }, FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    function spr(i) { let o = SPR[i]; if (!o) { const cv = document.createElement('canvas'); cv.width = cv.height = 96; const tex = new T3.CanvasTexture(cv); tex.colorSpace = T3.SRGBColorSpace; const mat = new T3.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }); A.own(mat); const sp = new T3.Sprite(mat); sp.renderOrder = 7; sp.userData.fx = 1; sp.visible = false; o = SPR[i] = { sp, cv, tex, mat, e: '' }; } if (!o.sp.parent) A.root().add(o.sp); return o; }
+    function sprSet(o, e, sc) { if (o.e !== e) { o.e = e; const g = o.cv.getContext('2d'), ch = [...e]; g.clearRect(0, 0, 96, 96); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '70px ' + FONT; g.fillText(ch[0], 48, 52); if (ch.length > 1) { g.font = '34px ' + FONT; g.fillText(ch.slice(1).join(''), 76, 22); } o.tex.needsUpdate = true; }
+      o.sp.scale.set(sc || 0.75, sc || 0.75, 1); o.mat.opacity = 1; o.mat.color.setScalar(UDIM.value); o.sp.visible = true; }
+    // 지금 선 자리에서 되는 것(가방을 열 때 한 번 · 1초 칸 알림) — 앞 1.4~3.4m 물 · 3.2m 안 켜진 모닥불 · 앞 1.3m 땅(햇볕·눈·추위·흙·바람)
+    function ctx() { const out = {}; if (!ok() || A.inb() || A.ride() || A.bike() || A.swim()) return out; const me = map.player.get(), a = (me.h || 0) * Math.PI / 180, sn = Math.sin(a), cs = Math.cos(a);
+      for (const d of [1.4, 2.4, 3.4]) { const x = me.x + sn * d, z = me.z - cs * d, w = A.water(x, z); if (w) { let q = { x, z, y: w.y }; for (const d2 of [3.4, 2.8]) { if (d2 <= d) break; const x2 = me.x + sn * d2, z2 = me.z - cs * d2, w2 = A.water(x2, z2); if (w2) { q = { x: x2, z: z2, y: w2.y }; break; } } out[w.sea ? 'sea' : 'water'] = q; break; } }   /* 놓는 자리 = 물 안에서 될수록 먼 곳(내 몸에 가리지 않게) */
+      const f = nearFire(me.x, me.z, 3.2); if (f) out.fire = f;
+      const fx = me.x + sn * 2.2, fz = me.z - cs * 2.2, gy = A.gy(fx, fz);   /* 앞 2.2m(내 몸에 가리지 않게) */
+      if (!out.water && !out.sea && Math.abs(gy - me.y) < 0.8 && !A.blk(fx, fz, gy + 0.5) && !A.water(fx, fz)) { const P = { x: fx, z: fz, y: gy }, E = lastE, sea = A.sea(), T = A.tempAt ? A.tempAt(fx, gy, fz) : A.temp0();
+        if (E && E.sun0 && !eaves(fx, fz)) out.sun = P; if (sea === 'winter' || A.wx() === 'snow') out.snow = P; if (T < 0) out.cold = P; if (A.okGround(fx, fz)) out.soil = P; out.wind = P; }
+      return out; }
+    const pairOf = (e, at) => PAIRS.find(p => p[0] === at && p[1] === e);
+    function btns(e, cx) { if (!cx) return ''; return ORDER.filter(at => cx[at] && pairOf(e, at)).slice(0, 2).map(at => '<br><button class="sub" data-law="' + e + '" data-at="' + at + '" style="min-height:30px;padding:3px 7px;margin-top:3px">' + AT[at][0] + ' ' + (en() ? AT[at][2] : AT[at][1]) + '</button>').join(''); }
+    function run(e, at) { const P = pairOf(e, at), cx = ctx()[at]; if (!P || !ok()) return; if (!cx) { map.hud.toast(en() ? 'Not here — face the spot and try again' : '여기선 안 돼요 — 그 자리를 보고 다시 해 봐요', 2.4); return; }
+      if ((P[3] === 'float' || P[3] === 'sink') && !C().pr[e]) { const P9 = A.openP('<h3>' + AT[at][0] + ' ' + A.esc(E9(e) + ' ' + nm(e)) + '</h3><div class="sm">' + (en() ? 'Guess first — what will happen in the water?' : '먼저 예상해 봐요 — 물에 넣으면 어떻게 될까요?') + '</div><div class="row"><button data-g="float">🛟 ' + (en() ? 'It will float' : '둥실 뜰 것 같아') + '</button><button data-g="sink">⚓ ' + (en() ? 'It will sink' : '꼬르륵 가라앉을 것 같아') + '</button></div>', false, 'law');
+        P9.onclick = ev => { const b = ev.target.closest('button'); if (!b || !b.dataset.g) return; C().pr[e] = b.dataset.g; A.GAME.mark(); A.closeP(); go(e, at, P, cx, b.dataset.g); }; return; }
+      go(e, at, P, cx, null); }
+    const KEEP = { float: 1, close: 1, heat: 1, keep: 1 }, CLOUD = e => (e === '🥛' ? 0xf4f4ee : e === '🌾' ? 0xece2c8 : 0xc98a3a);
+    const DUR = { float: 3.2, close: 3.4, sink: 2.4, dissolve: 2.2, mix: 2.6, swim: 2.6, roast: 6, flare: 1.6, heat: 3.2, melt: 2.2, dry: 0.8, freeze: 0.8, deice: 1.6, sprout: 1.4, compost: 1.4, fly: 4.2, keep: 1.6 };
+    function go(e, at, P, cx, guess) { const [, , law, act, out, n] = P; if (RUN) return false; if (!KEEP[act] && !A.bagTake(e)) return false; const me = map.player.get(), o = spr(0);
+      let tx9 = cx.x, ty9 = (cx.y ?? A.gy(cx.x, cx.z)) + (at === 'water' || at === 'sea' ? 0.12 : 0.28), tz9 = cx.z;
+      if (at === 'fire') { const dx = me.x - cx.x, dz = me.z - cx.z, d = Math.hypot(dx, dz) || 1, r = act === 'flare' ? 0.05 : 0.6; tx9 = cx.x - dz / d * r; tz9 = cx.z + dx / d * r; ty9 = cx.y + 0.3; }   /* 불 옆(나와 불을 잇는 줄의 옆 — 내 몸에 가리지 않게) */
+      sprSet(o, e); o.sp.position.set(me.x, me.y + 1.1, me.z);
+      RUN = { e, at, law, act, out, n, guess, o, t0: performance.now(), x0: me.x, y0: me.y + 1.1, z0: me.z, x: tx9, y: ty9, z: tz9, W: act === 'fly' ? windOf(S().day) : null, dur: DUR[act] || 2, swap: false, fx: 0 };
+      if (act === 'mix') put(L0 + DOME.cloud, tx9, ty9 - 0.1, tz9, 0.2, 0.004, 0.2, CLOUD(e));
+      raf = requestAnimationFrame(step); return true; }
+    function step() { raf = 0; const R = RUN; if (!R || !ok()) { if (R) R.o.sp.visible = false; RUN = null; return; } const t = (performance.now() - R.t0) / 1000, sp = R.o.sp, p = sp.position, k0 = Math.min(1, t / 0.5), u = Math.max(0, t - 0.5), a = R.act;
+      if (t < 0.5) p.set(R.x0 + (R.x - R.x0) * k0, R.y0 + (R.y - R.y0) * k0 + Math.sin(k0 * Math.PI) * 0.6, R.z0 + (R.z - R.z0) * k0);   /* 손에서 그 자리로 포물선 */
+      else { p.set(R.x, R.y, R.z);
+        if (a === 'float' || a === 'close') { p.y += Math.sin(u * 3.2) * 0.05; if (a === 'close') sp.scale.x = 0.75 * Math.max(0.62, 1 - u * 0.25); }
+        else if (a === 'sink') { p.y -= Math.min(1, u / 1.6) * 0.9; R.o.mat.opacity = Math.max(0, 1 - u / 1.8); if (++R.fx % 9 === 0) emit(0, R.x + (Math.random() - 0.5) * 0.2, R.y - 0.05, R.z + (Math.random() - 0.5) * 0.2, 0, 0.6, 0, 0.7, 0.12, 0.5, false, 0); }   /* 물방울 거품 */
+        else if (a === 'dissolve' || a === 'melt' || a === 'compost' || a === 'sprout') { const q = Math.max(0, 1 - u / 1.4); sp.scale.set(0.75 * q + 0.01, 0.75 * q + 0.01, 1); if (a === 'compost' || a === 'sprout') p.y -= (1 - q) * 0.25; if (a === 'melt' && ++R.fx % 7 === 0) emit(1, R.x, R.y, R.z, 0, -0.3, 0, 0.5, 0.08, 0.9, false, 0); }
+        else if (a === 'mix') { R.o.mat.opacity = Math.max(0, 1 - u / 1.2); const r = 0.2 + Math.min(1, u / 2) * 1.1; put(L0 + DOME.cloud, R.x, R.y - 0.1, R.z, r, 0.004, r, CLOUD(R.e)); flush(); }
+        else if (a === 'swim') { const dx = R.x - R.x0, dz = R.z - R.z0, d = Math.hypot(dx, dz) || 1; p.x += dx / d * u * 1.4; p.z += dz / d * u * 1.4; p.y -= u * 0.25; R.o.mat.opacity = Math.max(0, 1 - u / 2); }
+        else if (a === 'roast' || a === 'heat') { if (++R.fx % 20 === 0) emit(0, R.x, R.y + 0.2, R.z, 0, 0.5, 0, 1.4, 0.3, 0.35, false, 0); if (a === 'roast' && !R.swap && u > 4) { R.swap = true; sprSet(R.o, R.out); steamAt(R.x, R.y + 0.2, R.z, 3, false, 0.3); } }
+        else if (a === 'flare') { if (!R.fx) { R.fx = 1; steamAt(R.x, R.y + 0.4, R.z, 14, true, 0.6); if (map.tone) map.tone(180, 0, 0.5, 'sawtooth', 0.05, 60); } const q = Math.max(0.01, 0.75 - u * 0.7); sp.scale.set(q, q, 1); }
+        else if (a === 'fly' && R.W) { const d = u * 3.2; p.x += R.W.x * d; p.z += R.W.z * d; p.y += Math.sin(Math.min(1, u / 3.6) * Math.PI) * 2.2; R.o.mat.opacity = Math.max(0, 1 - Math.max(0, u - 2.8)); } }
+      if (t >= R.dur + 0.5) { done(R); return; } raf = requestAnimationFrame(step); }
+    function done(R) { RUN = null; const c = C(), a = R.act, en9 = en(); R.o.sp.visible = false; if (a === 'mix') { put(L0 + DOME.cloud, 0, 0, 0); flush(); }
+      const it = E9(R.e) + ' ' + nm(R.e); let msg = '';
+      if (a === 'float') msg = en9 ? it + ' floated — fished it back out' : it + ' 둥실 떴어요 — 건져 올렸어요';
+      else if (a === 'close') msg = en9 ? 'The wet pine cone closed its scales — fished it out' : '젖은 솔방울이 비늘을 오므렸어요 — 건져 올렸어요';
+      else if (a === 'sink') msg = R.law === 'release' ? (en9 ? 'The clam sank and burrowed into the sand' : '조개가 가라앉아 모래 속으로 숨었어요') : (en9 ? it + ' sank — glub glub' : it + ' 꼬르륵 가라앉았어요');
+      else if (a === 'dissolve') msg = en9 ? 'The salt melted away out of sight' : '소금이 스르르 녹아 안 보여요';
+      else if (a === 'mix') msg = R.e === '🌾' ? (en9 ? 'The flour drifted and settled — it did not dissolve' : '밀가루는 녹지 않고 떠다니다 가라앉았어요') : (en9 ? it + ' spread into the water' : it + ' 물에 퍼져 섞였어요');
+      else if (a === 'swim') msg = en9 ? 'The fish swam away' : '물고기가 헤엄쳐 갔어요';
+      else if (a === 'roast') { A.bagAdd(R.out, 1); msg = en9 ? 'Roasted! ' + E9(R.out) + ' ' + nm(R.out) + ' (bag)' : '구웠어요! ' + E9(R.out) + ' ' + nm(R.out) + ' (가방)'; }
+      else if (a === 'flare') msg = en9 ? 'Whoosh — the fire grew bigger' : '화르륵 — 불이 커졌어요';
+      else if (a === 'heat') msg = en9 ? 'The pebble got warm — and stays warm a long time' : '조약돌이 따끈해졌어요 — 한참 동안 따뜻해요';
+      else if (a === 'melt') msg = en9 ? it + ' melted away' : it + ' 녹아 버렸어요';
+      else if (a === 'dry' || a === 'freeze') { if (c.rack.length >= 4) { const old = c.rack.shift(); A.bagAdd(old[0], 1); } c.rack.push([R.e, R.out, a, +R.x.toFixed(2), +R.y.toFixed(2), +R.z.toFixed(2), 0]); A.GAME.mark(); rackDraw(); msg = a === 'dry' ? (en9 ? 'Laid out in the sun — about 30 sunny minutes (game clock) to dry' : '햇볕에 널었어요 — 맑은 낮 30분(놀이 시계)이면 말라요') : (en9 ? 'Left in the cold — about 20 minutes below 0℃ to freeze' : '추운 곳에 두었어요 — 0℃ 아래 20분이면 얼어요'); }
+      else if (a === 'deice') { c.dei.push([+R.x.toFixed(2), +R.y.toFixed(2), +R.z.toFixed(2), S().day]); if (c.dei.length > 6) c.dei.shift(); A.GAME.mark(); deiDraw(); flush(); steamAt(R.x, R.y, R.z, 2, false, 0.6); msg = en9 ? 'The snow melted where the salt fell' : '소금을 뿌린 자리 눈이 녹았어요'; }
+      else if (a === 'sprout') { c.plant.push([R.e, R.n || 2, +R.x.toFixed(2), +R.y.toFixed(2), +R.z.toFixed(2), S().day + 3]); if (c.plant.length > 6) c.plant.shift(); A.GAME.mark(); plantDraw(); flush(); msg = en9 ? 'Planted — come back in three days' : '심었어요 — 사흘 뒤에 와 봐요'; }
+      else if (a === 'compost') msg = en9 ? 'Buried in the soil' : '흙에 묻었어요';
+      else if (a === 'fly') msg = en9 ? 'The wind carried it ' + tx(DIR8[R.W ? R.W.k : 0]) : '바람이 ' + tx(DIR8[R.W ? R.W.k : 0]) + '쪽으로 데려갔어요';
+      else if (a === 'keep') msg = R.law === 'hardy' ? (en9 ? 'The cabbage does not mind the cold at all' : '배추는 추위에도 끄떡없어요') : (en9 ? 'It does not melt in the cold' : '추운 데선 안 녹아요');
+      if (R.guess) { const real = a === 'float' || a === 'close' ? 'float' : 'sink'; msg += R.guess === real ? (en9 ? ' · your guess was right ✔' : ' · 예상이 맞았어요 ✔') : (en9 ? ' · not what you guessed — why? (Notebook → Experiments)' : ' · 예상과 달랐어요 — 왜일까요? (수첩 → 실험)'); }
+      map.sfx && map.sfx(a === 'sink' || a === 'dissolve' ? 'pop' : 'tick'); map.hud.toast(AT[R.at][0] + ' ' + msg, 3.4); if (a !== 'dry' && a !== 'freeze' && a !== 'sprout') found(R.law, R.e, a); }   /* 널기·얼리기·심기는 다 된 때 알아냄 */
+    function found(law, e, act) { const c = C(), L = LAWS[law]; if (!L) return; const me = map.player.pos(), was = c.lf[law]; if (!was) c.lf[law] = { d: S().day, at: A.cell(me.x, me.z), it: {} }; const F = c.lf[law]; if (!F.it[e]) F.it[e] = act; A.GAME.mark(); if (BOOK) BOOK.tab();
+      if (!was) setTimeout(() => { if (ok()) { map.hud.toast('💡 ' + (en() ? 'Found out: ' : '알아냈어요: ') + tx(L.tip) + (en() ? ' (Notebook → Rules)' : ' (수첩 → 규칙 칸)'), 4.6); map.sfx && map.sfx('ding'); } }, 3600); }
+    // 널어 둔 것(말리기·얼리기) · 제설 자국 · 싹 — 바뀔 때만 그림
+    function rackDraw() { const R9 = C().rack; for (let k = 0; k < 4; k++) { const r = R9[k]; if (!r) { if (SPR[1 + k]) SPR[1 + k].sp.visible = false; continue; } const o = spr(1 + k); sprSet(o, r[0], 0.45); o.sp.position.set(r[3], r[4], r[5]); } }
+    function deiDraw() { const D9 = C().dei; for (let k = 0; k < 6; k++) { const d = D9[k]; if (!d) { put(L0 + DOME.dei + k, 0, 0, 0); continue; } put(L0 + DOME.dei + k, d[0], d[1] - 0.2, d[2], 1.1, 0.004, 1.1, 0x6b6258, k); } }
+    function plantDraw() { const P9 = C().plant, d0 = S().day; for (let k = 0; k < 6; k++) { const p = P9[k]; if (!p) { put(L0 + DOME.sprout + k, 0, 0, 0); continue; } const g = Math.max(0.15, Math.min(1, 1 - (p[5] - d0) / 3)); put(L0 + DOME.sprout + k, p[2], p[3] - 0.25, p[4], 0.12 + 0.22 * g, 0.1 + 0.3 * g, 0.12 + 0.22 * g, 0x5c9a48, k); } }
+    const NUDGE = { water: ['물가예요 — 가방(I)을 열면 물건을 물에 넣어 볼 수 있어요', 'By the water — open your bag (I) and try putting things in'], sea: ['바닷가예요 — 가방(I)을 열면 물건을 바닷물에 넣어 볼 수 있어요', 'By the sea — open your bag (I) and try putting things in'], fire: ['모닥불 곁이에요 — 가방(I)에서 굽거나 땔감을 넣어 볼 수 있어요', 'By the fire — open your bag (I) to roast food or add twigs'], sun: ['햇볕이 좋아요 — 가방(I)에서 먹거리를 널어 말려 볼 수 있어요', 'Sunny — open your bag (I) to lay food out to dry'], snow: ['눈 쌓인 땅이에요 — 가방(I)에서 물건을 눈 위에 둬 볼 수 있어요', 'Snowy ground — open your bag (I) and try things on the snow'] };
+    function sec(E, dm) { lastE = E; const c = C(), en9 = en(); for (const o of SPR) if (o && o.sp.visible) o.mat.color.setScalar(UDIM.value);
+      let ch = false; for (let k = c.rack.length - 1; k >= 0; k--) { const r = c.rack[k], need = r[2] === 'dry' ? 30 : 20;
+        if (r[2] === 'dry') { if (E.rain) { if (r[6] > 0) { r[6] = Math.max(0, r[6] - dm * 2); ch = true; if (!c.nudge.wet && Math.hypot(r[3] - E.me.x, r[5] - E.me.z) < 40) { c.nudge.wet = 1; map.hud.toast(en9 ? '🌧 Rain! The things you laid out are getting wet again' : '🌧 비가 와요! 널어 둔 것이 다시 젖어요', 3); } } } else if (E.sun0 && !eaves(r[3], r[5])) { r[6] += dm; ch = ch || dm > 0; } }
+        else { const T = A.tempAt ? A.tempAt(r[3], r[4], r[5]) : E.T0; if (T < 0) { r[6] += dm; ch = ch || dm > 0; } else if (r[6] > 0) { r[6] = Math.max(0, r[6] - dm); ch = ch || dm > 0; } }
+        if (r[6] >= need) { c.rack.splice(k, 1); A.bagAdd(r[1], 1); map.hud.toast((r[2] === 'dry' ? '☀️ ' : '🧊 ') + (en9 ? E9(r[1]) + ' ' + nm(r[1]) + ' is ready — put in your bag' : E9(r[1]) + ' ' + nm(r[1]) + ' 다 됐어요 — 가방에 넣었어요'), 3.2); found(r[2] === 'dry' ? 'dry' : 'freeze', r[0], r[2]); ch = true; } }
+      if (ch) { A.GAME.mark(); rackDraw(); }
+      for (let k = c.plant.length - 1; k >= 0; k--) { const p = c.plant[k]; if (S().day >= p[5] && Math.hypot(p[2] - E.me.x, p[4] - E.me.z) < 8) { c.plant.splice(k, 1); A.bagAdd(p[0], p[1]); A.GAME.mark(); plantDraw(); map.hud.toast('🌱 ' + (en9 ? 'It grew! Dug up ' + E9(p[0]) + ' ×' + p[1] : '자랐어요! ' + E9(p[0]) + ' ' + nm(p[0]) + ' ' + p[1] + '개를 캤어요'), 3.4); found('tuber', p[0], 'sprout'); } }
+      if (!E.paused && !RUN) { const cx = ctx(); for (const at of ['water', 'sea', 'fire', 'sun', 'snow']) { if (!cx[at] || c.nudge[at] || !PAIRS.some(q => q[0] === at && A.bagHas(q[1]) > 0)) continue; c.nudge[at] = 1; A.GAME.mark(); map.hud.toast('💡 ' + tx(NUDGE[at]), 4); break; } } }   /* 처음 그 자리에 왔고 해 볼 물건이 가방에 있으면 한 번 */
+    function day() { const c = C(), d = S().day; c.dei = c.dei.filter(q => q[3] === d); deiDraw(); plantDraw(); }
+    return { id: 'laws', slots: n => { L0 = n; return n + 13; }, reset: () => { rackDraw(); deiDraw(); plantDraw(); }, sec, day,
+      clear: () => { if (raf) cancelAnimationFrame(raf); raf = 0; RUN = null; for (const o of SPR) if (o) { if (o.sp.parent) o.sp.parent.remove(o.sp); o.tex.dispose(); } SPR.length = 0; },
+      info: o => { const c = C(); o.laws = Object.keys(c.lf); o.lawN = Object.keys(LAWS).length; o.rack = c.rack.map(r => [r[0], r[2], r[6]]); o.plant = c.plant.map(p => [p[0], p[5]]); o.running = !!RUN; },
+      set: o => { const c = C(); if (o.rackDone) for (const r of c.rack) r[6] = 99; if (o.plantDue) for (const p of c.plant) p[5] = S().day; if (o.laws === null) { c.lf = {}; c.pr = {}; c.nudge = {}; } },
+      api: { lawCtx: () => ctx(), lawBtns: (e, cx) => btns(e, cx), lawRun: (e, at) => run(e, at), lawGo: (e, at, guess) => { const P = pairOf(e, at), cx = ctx()[at]; return !!(P && cx && go(e, at, P, cx, guess || null)); }, lawPairs: () => PAIRS.map(p => p.slice(0, 4)) } }; }
+
   // ───────── 수첩 🔬 규칙 칸(규칙 도감) — 처음 알아낸 뒤에 탭이 생김 · 카드 = 해 본 것 → 본 것 → 까닭 → 4학년 과학 단원 · 빈칸 = ❔ + 때·곳 귀띔 · 점수·순위 X ─────────
-  const WORDS = [['증발', '물이 수증기가 되어 공기 속으로 날아가는 것', 'Evaporation', 'water turning into vapour and drifting into the air'], ['수증기', '물이 바뀐 기체 — 눈에 안 보여요', 'Water vapour', 'water as a gas — you cannot see it']];   /* 낱말 상자(새 낱말 둘까지) */
+  const WORDS = [['증발', '물이 수증기가 되어 공기 속으로 날아가는 것', 'Evaporation', 'water turning into vapour and drifting into the air'], ['수증기', '물이 바뀐 기체 — 눈에 안 보여요', 'Water vapour', 'water as a gas — you cannot see it'], ['용해', '소금처럼 물에 녹아 골고루 섞이는 것', 'Dissolving', 'mixing evenly into water like salt'], ['분해자', '죽은 생물을 잘게 부숴 흙으로 돌려보내는 생물(지렁이·곰팡이)', 'Decomposer', 'living things that break dead plants into soil']];   /* 낱말 상자(새 낱말 둘까지) */
   const HOW = { sun: ['햇볕에 말림', 'dried in the sun'], fire: ['모닥불 곁에서 말림', 'dried by the fire'], slip: ['언 논에 올라섬', 'stepped on the frozen paddy'], pond: ['언 연못을 봄', 'saw the frozen pond'], kid: ['물을 부어 끔', 'poured water on it'], rain: ['비가 불을 끔', 'the rain put it out'], ring: ['모닥불 곁을 지켜봄', 'watched by the fire'], snowman: ['눈사람을 불 곁에 세움', 'built a snowman by the fire'], wind: ['홀씨를 붊', 'blew the seeds'] };
   function bookOpen() { const c = C(), E9 = en(), found = RULES.filter(r => c.found[r.id]).length, D = d => (E9 ? 'Day ' + d : d + '일째');
     let h = '<h3>🔬 ' + (E9 ? 'Rules I found' : '알아낸 규칙') + ' · ' + found + ' / ' + RULES.length + '</h3><div class="sm">' + (E9 ? 'How the world changes — found out with your own body' : '세상이 어떻게 바뀌는지 몸으로 알아낸 것이 모여요') + '</div>';
@@ -301,13 +387,17 @@ export function createChem(A) {
         + '<b>' + (E9 ? 'Saw' : '본 것') + '</b> ' + A.esc(tx(r.saw)) + '<br>'
         + '<b>' + (E9 ? 'Why' : '까닭') + '</b> ' + A.esc(tx(r.why)) + (f2 ? '<br><b>' + (E9 ? 'Also' : '더') + '</b> ' + A.esc(tx(r.tip2)) : '') + '<br>'
         + '📚 ' + A.esc((E9 ? 'Grade 4 science · ' : '4학년 과학 · ') + tx(r.unit)) + '</div>'; }
+    { const LK = Object.keys(LAWS), nF = LK.filter(k => c.lf[k]).length, ACT = { float: ['떴어요', 'floated'], close: ['오므렸어요', 'closed'], sink: ['가라앉았어요', 'sank'], dissolve: ['녹았어요', 'dissolved'], mix: ['퍼졌어요', 'spread'], swim: ['헤엄쳐 갔어요', 'swam off'], roast: ['구워졌어요', 'roasted'], flare: ['불을 키웠어요', 'fed the fire'], heat: ['따끈해졌어요', 'got warm'], melt: ['녹았어요', 'melted'], dry: ['말랐어요', 'dried'], freeze: ['얼었어요', 'froze'], deice: ['눈을 녹였어요', 'melted snow'], sprout: ['싹이 났어요', 'sprouted'], compost: ['흙이 됐어요', 'became soil'], fly: ['날아갔어요', 'flew off'], keep: ['그대로예요', 'stayed the same'] };   /* LAWS-1 해 본 실험 */
+      h += '<h3 style="margin-top:12px">🧪 ' + (E9 ? 'Experiments' : '해 본 실험') + ' · ' + nF + ' / ' + LK.length + '</h3><div class="sm">' + (E9 ? 'Put things from your bag (I) into water, fire, sun, cold, snow, soil or wind' : '가방(I) 물건을 물·바다·불·햇볕·추위·눈·흙·바람에 놓아 봐요 — 과학과 사회가 같이 보여요') + '</div>';
+      for (const k of LK) { const L = LAWS[k], f = c.lf[k]; if (!f) { h += '<div class="grp" style="opacity:.6">❔ ' + (E9 ? 'Not yet' : '아직 몰라요') + '</div><div class="sm">' + (E9 ? 'Try: ' : '해 볼 곳: ') + A.esc(tx(L.hint)) + '</div>'; continue; }
+        h += '<div class="grp">' + L.ic + ' ' + A.esc(tx(L.t)) + '</div><div class="sm"><b>' + (E9 ? 'Tried' : '해 본 것') + '</b> ' + A.esc(Object.entries(f.it).map(([e9, a9]) => [...e9][0] + ' ' + (ACT[a9] ? tx(ACT[a9]) : '')).join(' · ')) + '<br><b>' + (E9 ? 'Why' : '까닭') + '</b> ' + A.esc(tx(L.why)) + '<br>📚 ' + A.esc(L.s.map(s9 => E9 ? (s9 === '과학' ? 'Science' : 'Social studies') : s9).join(' · ') + ' — ' + tx(L.u)) + '</div>'; } }
     h += '<div class="grp">📦 ' + (E9 ? 'Word box' : '낱말 상자') + '</div><div class="sm">' + WORDS.map(w => '<b>' + A.esc(E9 ? w[2] : w[0]) + '</b> ' + A.esc(E9 ? w[3] : w[1])).join('<br>') + '</div>'
       + '<div class="sm" style="opacity:.7">' + (E9 ? 'For teachers: unit names follow the 2015 curriculum — check the 2022 achievement standards' : '선생님께: 단원 이름은 2015 개정 기준이에요. 2022 개정 성취기준 원문은 확인이 필요해요.') + '</div>'
       + '<div class="row"><button class="sub" data-a="x">' + (E9 ? 'Close' : '닫기') + '</button></div>';
     const P9 = A.openP(h, false, 'chem'); P9.onclick = e => { const b = e.target.closest('button'); if (b && b.dataset.a === 'x') A.closeP(); }; return P9; }
   BOOK = { open: bookOpen, tab: () => A.nb(['chem', '🔬', '규칙', 'Rules', () => bookOpen()]) };
 
-  const RS = [mkDry(), mkPuddle(), mkIce(), mkFire(), mkMelt(), mkSeed()];   /* 규칙 차례(1초 칸에서 이 차례로 돎) */
+  const RS = [mkDry(), mkPuddle(), mkIce(), mkFire(), mkMelt(), mkSeed(), mkLaws()];   /* 규칙 차례(1초 칸에서 이 차례로 돎) */
 
   // ───────── 짓기(setEntries마다 · 실제 짓기는 첫 1초 칸) ─────────
   //   setEntries는 표시만(pend) — 첫 짓기는 마을의 아래쪽 선언보다 먼저 돎 → 그때 마을 함수를 부르면 TDZ로 마을이 통째로 멈춤(10-19 실측)
@@ -321,7 +411,7 @@ export function createChem(A) {
     put(0, 0, -500, 0, 0.001, 0.001, 0.001, 0xffffff); DM.mesh.visible = true; PT.mesh.visible = true; PT.until = now() + 1;   /* 첫 그리기 = 셰이더를 짓는 동안 미리 한 번(첫 비에 멈춤 X) — 다음 1초 칸에서 숨김 */
     for (const R of RS) if (R.hots) R.hots();
     lastT = performance.now(); lastM = S().min; lastD = S().day; sec0 = true;
-    if (BOOK && Object.keys(C().found).length) BOOK.tab();
+    if (BOOK && (Object.keys(C().found).length || Object.keys(C().lf).length)) BOOK.tab();
     if (window.SM_TOWN) window.SM_TOWN.chem = API; buildMs = performance.now() - tb; }
 
   // ───────── 1초 칸(마을이 부름) · 새 날(잠 → 아침 · 날 바뀜을 봄) ─────────

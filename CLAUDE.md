@@ -45,7 +45,7 @@
 | v4 계정(총관리자·관리자·선생님·학생 · 학교 코드 + 개인 핀)을 만들거나 고칠 때 | `docs/systems/town_accounts.md` — ACCT-1(v4만 · 이름은 서버에 X · DB 규칙은 교사 결정) |
 | 마을 함께하기(같은 방 친구 · 세상 시계·날씨·계절 · 각자 진행 · 선물·두레 · 선생님 칸)를 만들거나 고칠 때 | `docs/systems/town_together.md` — TOGETHER-1 규칙(협동 게임 실패 열 가지 → 우리 규칙 · 세상은 방 하나 · 진행은 각자) |
 | 마을이 4학년에게 직관적인지 · 화면 칩·처음 30분 흐름·다음 목표 표시를 고칠 때 | `docs/systems/town_intuit.md` — INTUIT-1 이야기가 등뼈(동물의 숲 견줌 · HUD 진행 열림 · 세상 안 목표 표시 · 한 번에 한 동작) |
-| 화학 규칙(물·불·바람·추위·햇빛 × 물건 · 규칙 도감)·보물 지도(기호·방위·축척·등고선)를 고칠 때 | `docs/systems/town_chem.md` · `docs/systems/town_treasure.md` |
+| 화학 규칙(물·불·바람·추위·햇빛 × 물건 · 규칙 도감)·🧪 실험 표(가방 물건 × 자리 = 자연법칙 · 과학+사회 · `town_laws.js`에 줄만 더함)·보물 지도(기호·방위·축척·등고선)를 고칠 때 | `docs/systems/town_chem.md`(§10 LAWS-1) · `docs/systems/town_treasure.md` |
 | 마을 퀘스트를 만들거나 고칠 때(배움 다섯 칸 · 방문만 단계 줄이기 · 주차 새 흐름 · 공용 도구) | `docs/systems/town_quest_audit.md` — 10-18 감사(27장 181단계 · 방문만 72%) |
 | 마을 자유도(야숨식 화학 규칙·결과로 판정·활공·바람)·장소별 미니 체험(스키·공 놀이 엔진·일 놀이 난이도 사다리)을 지을 때 | `docs/systems/town_freedom.md` · `docs/systems/town_minis.md` — 10-18 조사(차례 표 · 1~3위 설계) |
 | 마을 땅 결을 사진 보고 올릴 때(논·밭·강·염전·모래사장·숲 가장자리·보도 · 갯벌 ART-2와 같은 길) | `docs/systems/town_art3.md` — ART-3 설계안(사진은 참고만 · 실사 텍스처 X · 곳마다 그리기 +1) |

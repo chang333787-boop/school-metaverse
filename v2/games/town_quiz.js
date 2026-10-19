@@ -216,6 +216,7 @@ export function createQuiz(A) {
   function onNew(neu) { if (!neu) return; G.mark(); const Q = S().quiz || (S().quiz = {}); if (Q.tip) return; Q.tip = 1; setTimeout(() => { if (A.alive()) A.toast(en() ? '⭐ What you learn goes into your notebook (I → ⭐ Learning). It comes back as a bonus question at midday and bedtime.' : '⭐ 배운 것은 수첩(I → ⭐ 배움)에 모여요. 낮과 잠들 때 보너스 문제로 다시 나와요.', 5); }, 3500); }
   const scan = () => onNew(scanLearn(S()));
   // 문제 한 장 다 채우기: 지도 조각 문제는 장소 둘을 이 마을에서 골라 채움(못 고르면 그 개념의 글 문제로)
+  const LA9 = [], derun = q => { if (!q) return q; if (q.opts && q.opts.length === 3) { const n9 = LA9.length; if (n9 >= 2 && LA9[n9 - 1] === q.a && LA9[n9 - 2] === q.a) { const b = (q.a + 1 + (hs(q.id) & 1)) % 3, o = q.opts.slice(); [o[q.a], o[b]] = [o[b], o[q.a]]; q = { ...q, opts: o, a: b }; } } LA9.push(q.a); if (LA9.length > 6) LA9.shift(); return q; };   /* QZ-2(사용자 10-19 '정답 다다다 왜 이렇게 많아'): 같은 자리 정답이 세 번 잇따르지 않게 — 셋째는 다른 자리로 바꿔 끼움 */
   const full = (id, day, noMap) => { const s = S(); let q = qOf(id, s.learn[id], day, noMap); if (q && q.map) q = (A.mapSnip && dirQ(q, A.places(), day)) || qOf(id, s.learn[id], day, true); return q; };
   const SNIP = i => '<canvas data-snip="' + i + '" width="400" height="250" style="display:block;width:min(400px,100%);height:auto;margin:6px 0;border:3px solid #2b2420;border-radius:12px;background:#e9efe2"></canvas>';
   const drawSnips = (P9, L9) => L9.forEach((q, i) => { if (q && q.pts) { const cv = P9.querySelector('[data-snip="' + i + '"]'); if (cv) A.mapSnip(cv, q.pts); } });
@@ -230,7 +231,7 @@ export function createQuiz(A) {
     if (A.busy() || A.map.player.moving) { calm = 0; return; } const w = A.near(9, k => !!ROLE[k]); if (!w) { calm = 0; return; } if (++calm < 2) return; calm = 0;
     const id = pickQ(s, s.day, 3, 'mid').find(i => qOf(i, s.learn[i], s.day, true)); if (!id) return; ask(w, id); }   /* 지도 조각 문제는 창에서만 */
   async function ask(w, id) { asking = true; const s = S(), day = s.day, D = dayRec(s, day), Q = s.quiz, who = L2(ROLE[w.k]), icon = A.icon(w.k); D.m = 2; G.mark();
-    try { const q = qOf(id, s.learn[id], day, true), first = !Q.mid1; Q.mid1 = 1; { const me = A.map.player.pos(), a = Math.atan2(w.x - me.x, w.z - me.z) - 0.7; A.face(me.x + Math.sin(a) * 6, me.z + Math.cos(a) * 6); }   /* 일꾼을 정면에 두면 내 몸이 가림 → 옆으로 비껴 서서 일꾼이 화면에 보이게(말하는 이는 몸이 보이게) */ A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, en() ? 'Quick question!' : '잠깐! 문제 하나!');
+    try { const q = derun(qOf(id, s.learn[id], day, true)), first = !Q.mid1; Q.mid1 = 1; { const me = A.map.player.pos(), a = Math.atan2(w.x - me.x, w.z - me.z) - 0.7; A.face(me.x + Math.sin(a) * 6, me.z + Math.cos(a) * 6); }   /* 일꾼을 정면에 두면 내 몸이 가림 → 옆으로 비껴 서서 일꾼이 화면에 보이게(말하는 이는 몸이 보이게) */ A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, en() ? 'Quick question!' : '잠깐! 문제 하나!');
       const pages = (first ? [en() ? 'Hold on! Here’s a bonus question from what you’ve learned. Get it right for a ⭐ learning star!' : '잠깐요! 지금까지 배운 것에서 보너스 문제 하나 낼게요. 맞히면 ⭐ 배움 별을 받아요!'] : []).concat(L2(q.qt));
       const k = await A.dialog({ who, icon, cap: en() ? '⭐ Bonus question' : '⭐ 보너스 문제', text: pages, choices: q.opts.map((o, i) => ['o' + i, L2(o)]) });
       if (!A.alive() || k == null) return;
@@ -243,7 +244,7 @@ export function createQuiz(A) {
     const lnew = Object.values(s.learn || {}).filter(r => r.d === day).length, n = Math.max(0, 2 - D.n), ids = n ? pickQ(s, day, n, 'rec') : [];   /* 하루 = 두 문제(낮에 풀었으면 하나만) */
     let h = '<div class="grp">⭐ ' + (en() ? 'Bonus questions' : '보너스 문제') + '</div>' + (lnew ? '<div class="sm">' + (en() ? 'You learned ' + lnew + ' new thing' + (lnew > 1 ? 's' : '') + ' today.' : '오늘 새로 배운 것이 ' + lnew + '개 있어요.') + '</div>' : '');
     if (!ids.length) return (lnew || D.n) ? h + '<div class="sm">' + (D.n ? (en() ? 'You’ve answered today’s question. See you tomorrow!' : '오늘 문제는 다 풀었어요. 내일 또 만나요!') : (en() ? 'They’ll come back as bonus questions from tomorrow.' : '내일부터 보너스 문제로 나와요.')) + '</div>' : '';
-    CUR = ids.map(id => ({ ...full(id, day), done: false }));
+    CUR = ids.map(id => ({ ...derun(full(id, day)), done: false }));
     h += CUR.map((q, i) => '<div data-qb="' + i + '"><div class="st"><b class="n">' + (i + 1) + '</b><span>' + A.esc(L2(q.qt)) + '</span></div>' + (q.pts ? SNIP(i) : '') + '<div class="row" style="justify-content:flex-start">' + q.opts.map((o, j) => '<button class="sub" data-qz="' + i + '" data-o="' + j + '">' + A.esc(L2(o)) + '</button>').join('') + '</div><div class="sm" data-qx="' + i + '"></div></div>').join('');
     return h; }
   function recapBind(P9) { if (!CUR) return; drawSnips(P9, CUR); P9.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-qz]'); if (!b || !CUR) return; const i = +b.dataset.qz, j = +b.dataset.o, q = CUR[i]; if (!q || q.done) return; q.done = true;
@@ -274,7 +275,7 @@ export function createQuiz(A) {
     const P9 = A.openP(h, false, 'learn'); P9.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') A.closeP(); else if (b.dataset.a === 'prac') practice(); }; return P9; }
   // 수첩 '다시 풀기'(하루 PRAC_N번 · 차례인 것만 · 돈 X): 문제 한 장 → 고르면 해설 → 다음 문제 / 배움 별로
   function practice() { const s = S(), e = en(), day = s.day, left = PRAC_N - (dayRec(s, day).p || 0), id = left > 0 ? pickQ(s, day, 1, 'prac')[0] : null; if (!id) return open();
-    const q = full(id, day), nm = L2(BANK[id].t);
+    const q = derun(full(id, day)), nm = L2(BANK[id].t);
     const h = '<h3>⭐ ' + (e ? 'Review' : '다시 풀기') + '</h3><div class="sm">' + A.esc(nm) + ' ' + stars(s.learn[id]) + '</div><div class="st"><b class="n">?</b><span>' + A.esc(L2(q.qt)) + '</span></div>' + (q.pts ? SNIP(0) : '') + '<div class="row" style="justify-content:flex-start">' + q.opts.map((o, j) => '<button class="sub" data-o="' + j + '">' + A.esc(L2(o)) + '</button>').join('') + '</div><div class="sm" data-qx="p"></div><div class="row"><button class="sub" data-a="back">' + (e ? 'Back to stars' : '배움 별로') + '</button></div>';
     const P9 = A.openP(h, false, 'learn'); drawSnips(P9, [q]); let done = false;
     P9.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'back') return open(); if (b.dataset.a === 'next') return practice(); if (b.dataset.o == null || done) return; done = true;

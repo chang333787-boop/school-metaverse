@@ -47,7 +47,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     // ⑦ 겨울 텃밭
     await ev(() => SM_TOWN.storyOff()); await ev(() => SM_TOWN.rules.season('winter')); await W8(9000); await worst(); await ev(() => { SM_TOWN.game().S.farm = []; });
     await ev(() => SM_TOWN.rules.farmUse(0)); await W8(500); ok(!(await ev(() => !!document.querySelector('.twn-p [data-c]'))) && /겨울/.test(await toast()), '⑦ 이야기 없는 겨울 = 심기 X + 언제 한 줄: ' + (await toast()).slice(0, 40)); await close();
-    await ev(() => SM_TOWN.storyAt('c3', 1)); await W8(400); await close(); await worst(); await ev(() => SM_TOWN.rules.farmUse(0)); await W8(500); ok(await ev(() => !!document.querySelector('.twn-p [data-c="🥬"]')), '⑦ 이야기 거두기 단계 = 겨울에도 배추를 심을 수 있음'); await close();
+    await ev(() => SM_TOWN.storyAt('c3', 1)); await W8(400); await close(); await worst(); ok(await ev(() => (SM_TOWN.game().S.farm || []).some(P => P && P.g >= 3)), '⑦ 이야기 거두기 단계 = 반 친구들이 심어 둔 두둑이 겨울에도 다 자라 있음(FARM-3)');
+    await ev(() => { SM_TOWN.game().S.farm = []; SM_TOWN.storyAt('c3', 2); }); await W8(400); await close(); await worst(); await ev(() => SM_TOWN.rules.farmUse(0)); await W8(500); ok(await ev(() => !!document.querySelector('.twn-p [data-c="🥬"]')), '⑦ 이야기 심기 단계 = 겨울에도 배추를 심을 수 있음'); await close();
     // ⑧ 여름 논
     await ev(() => SM_TOWN.storyOff()); await ev(() => SM_TOWN.rules.season('summer')); await W8(9000); await worst();
     await ev(() => SM_TOWN.rules.work('paddy')); await W8(400); ok(!(await ev(() => SM_TOWN.rules.play())) && /봄|가을/.test(await toast()), '⑧ 이야기 없는 여름 논 = 언제 한 줄: ' + (await toast()).slice(0, 40));
