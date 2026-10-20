@@ -1,0 +1,17 @@
+{
+  "name": "sm-rooms",
+  "private": true,
+  "type": "module",
+  "description": "학교 메타버스 실시간 방 서버 시험판(Cloudflare Workers + Durable Objects)",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy",
+    "bots": "node bots.mjs ws://127.0.0.1:8787 test 30"
+  },
+  "devDependencies": {
+    "wrangler": "^4.151.2"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
+  }
+}

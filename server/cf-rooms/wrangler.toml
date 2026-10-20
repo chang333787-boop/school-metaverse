@@ -1,0 +1,22 @@
+# 학교 메타버스 실시간 방 서버 시험판(NET-CF 1단계) — 무료 요금제용
+name = "sm-rooms"
+main = "src/index.js"
+compatibility_date = "2025-10-01"
+workers_dev = true
+
+# 방 하나 = Durable Object 하나
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+# 무료 요금제의 Durable Objects는 SQLite 저장 방식만 됨 → new_sqlite_classes
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
+
+[vars]
+# 방 하나의 하루(UTC) 메시지 상한. 들어오는 웹소켓 메시지는 20개 = 요청 1건이라
+# 150만 개 = 7만 5천 건 = 무료 하루 10만 건의 75%. 넘으면 '오늘은 꽉 찼어요'로 닫음.
+DAY_MSG_MAX = "1500000"
+# Worker 한 isolate가 최근 10분에 받아 주는 방 이름 수(대략 막기)
+ROOMS_MAX = "50"

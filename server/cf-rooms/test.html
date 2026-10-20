@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>방 서버 시험</title>
+<style>
+  :root {
+    --bg: #f6f1e7; --panel: #fffaf0; --ink: #2b2a27; --sub: #6b655a; --line: #cfc5b3;
+    --grid: #e7dfcf; --me: #c4462f; --other: #2f6f9f; --warn: #b5651d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1d1c1a; --panel: #262420; --ink: #ece6da; --sub: #a59d8f; --line: #4a463f;
+      --grid: #2f2c27; --me: #e2735c; --other: #6fa8d6; --warn: #e0a15a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1d1c1a; --panel: #262420; --ink: #ece6da; --sub: #a59d8f; --line: #4a463f;
+    --grid: #2f2c27; --me: #e2735c; --other: #6fa8d6; --warn: #e0a15a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; margin: 0 0 12px; }
+  form { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-bottom: 12px; }
+  label { display: flex; flex-direction: column; font-size: 13px; color: var(--sub); gap: 2px; }
+  input { font: inherit; color: var(--ink); background: var(--panel); border: 2px solid var(--line); border-radius: 4px; padding: 6px 8px; min-width: 0; }
+  #srv { width: 260px; max-width: 100%; }
+  #room, #nick { width: 110px; }
+  button { font: inherit; font-weight: 600; color: var(--panel); background: var(--ink); border: 0; border-radius: 4px; padding: 8px 14px; cursor: pointer; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+  .stat { background: var(--panel); border: 2px solid var(--line); border-radius: 4px; padding: 6px 8px; }
+  .stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 12px; color: var(--sub); }
+  .stat.warn b { color: var(--warn); }
+  #msg { min-height: 1.45em; color: var(--sub); margin-bottom: 8px; }
+  canvas { display: block; width: 100%; aspect-ratio: 1; background: var(--panel); border: 2px solid var(--line); border-radius: 4px; touch-action: none; }
+  .help { color: var(--sub); font-size: 13px; margin-top: 8px; }
+  @media (max-width: 520px) { .stats { grid-template-columns: repeat(2, 1fr); } #srv { width: 100%; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>방 서버 시험</h1>
+  <form id="f">
+    <label>서버 <input id="srv" spellcheck="false"></label>
+    <label>방 이름 <input id="room" maxlength="8" spellcheck="false"></label>
+    <label>내 이름 <input id="nick" maxlength="12"></label>
+    <button id="go">들어가기</button>
+  </form>
+  <div class="stats">
+    <div class="stat"><b id="rtt">-</b><span>지연(ms)</span></div>
+    <div class="stat" id="gapBox"><b id="gap">-</b><span>끊김: 최근 5초 최대 간격(ms)</span></div>
+    <div class="stat"><b id="gapAll">-</b><span>지금까지 최대 간격(ms)</span></div>
+    <div class="stat"><b id="cnt">-</b><span>방 사람 수</span></div>
+  </div>
+  <div id="msg">방 이름을 넣고 들어가요.</div>
+  <canvas id="cv" width="720" height="720"></canvas>
+  <p class="help">방향키나 WASD로 움직여요. 화면을 누르고 있으면 그쪽으로 가요. 빈 동그라미는 서버가 돌려준 내 자리예요.</p>
+</main>
+<script>
+(() => {
+  'use strict';
+  const INTERP_MS = 100;          // 남의 점은 100ms 늦게 그림(보간)
+  const SEND_HZ = 15;             // 내 자리 보내기
+  const SPEED = 5;                // 초당 5m
+  const VIEW = 25;                // 화면 반지름 25m
+  const HITCH_MS = 150;
+
+  const $ = (id) => document.getElementById(id);
+  const q = new URLSearchParams(location.search);
+  $('srv').value = q.get('s') || 'ws://127.0.0.1:8787';
+  $('room').value = q.get('r') || 'test';
+  $('nick').value = q.get('n') || '나';
+  const myId = 'u' + Math.random().toString(36).slice(2, 8);
+
+  let ws = null, joined = false;
+  const me = { x: 0, z: 0, h: 0, sentX: NaN, sentZ: NaN, sentH: NaN, lastSend: 0 };
+  const people = new Map();       // id → {n, buf:[{t,x,z,h}]}
+  let echo = null;                // 서버가 돌려준 내 자리
+  let off = NaN;                  // 서버 시각 - 내 시각(어림)
+  const rtts = [];
+  let lastSnapAt = 0, gapAll = 0;
+  const gaps = [];                // [시각, 간격]
+
+  function say(t) { $('msg').textContent = t; }
+  function serverNow() { return performance.now() + (Number.isFinite(off) ? off : 0); }
+
+  function connect() {
+    if (ws) { try { ws.close(); } catch (e) { /* 이미 닫힘 */ } }
+    people.clear(); echo = null; joined = false; off = NaN; rtts.length = 0; gaps.length = 0; gapAll = 0; lastSnapAt = 0;
+    const url = $('srv').value.replace(/\/+$/, '') + '/room/' + $('room').value.trim();
+    say('들어가는 중…');
+    try { ws = new WebSocket(url); } catch (e) { say('주소가 이상해요: ' + e.message); return; }
+    ws.onopen = () => ws.send(JSON.stringify({ t: 'j', id: myId, n: $('nick').value.trim() || '나' }));
+    ws.onmessage = (ev) => onMsg(JSON.parse(ev.data));
+    ws.onclose = (ev) => { joined = false; say('연결이 끊겼어요(코드 ' + ev.code + '). 다시 들어가기를 눌러요.'); };
+    ws.onerror = () => say('서버에 닿지 않아요. 주소와 서버가 켜져 있는지 봐요.');
+  }
+
+  function addSample(id, t, x, z, h) {
+    let p = people.get(id);
+    if (!p) { p = { n: id, buf: [] }; people.set(id, p); }
+    const b = p.buf, last = b[b.length - 1];
+    // 오래 서 있다 움직이면 그 앞 50ms까지는 제자리에 있던 것으로(옛 자리에서 미끄러지지 않게)
+    if (last && t - last.t > 200) b.push({ t: t - 50, x: last.x, z: last.z, h: last.h });
+    b.push({ t, x, z, h });
+    if (b.length > 30) b.splice(0, b.length - 30);
+  }
+
+  function onMsg(d) {
+    const now = performance.now();
+    if (d.t === 's') {
+      // 시계 맞추기: 늦게 온 건 서서히, 빨리 온 건 바로 따라감
+      const o = d.ts - now;
+      if (!Number.isFinite(off) || o > off) off = o; else off += (o - off) * 0.02;
+      if (lastSnapAt && now - lastSnapAt < 1000) {
+        const g = now - lastSnapAt;
+        gaps.push([now, g]); if (g > gapAll) gapAll = g;
+      }
+      lastSnapAt = now;
+      for (const [id, x, , z, h] of d.P) {
+        if (id === myId) { echo = { x, z }; continue; }
+        addSample(id, d.ts, x, z, h);
+      }
+    } else if (d.t === 'w') {
+      joined = true;
+      off = d.ts - now;
+      for (const [id, n] of d.L) if (id !== myId) people.set(id, { n, buf: [] });
+      for (const [id, x, , z, h] of d.P) if (id !== myId) addSample(id, d.ts - 1000, x, z, h);
+      say('들어왔어요. 방 "' + $('room').value.trim() + '"');
+      sendPos(true);
+    } else if (d.t === 'j') {
+      const p = people.get(d.id); if (p) p.n = d.n; else if (d.id !== myId) people.set(d.id, { n: d.n, buf: [] });
+    } else if (d.t === 'l') {
+      people.delete(d.id);
+    } else if (d.t === 'pong') {
+      rtts.push(now - d.c); if (rtts.length > 20) rtts.shift();
+    } else if (d.t === 'full') {
+      say(d.m);
+    }
+  }
+
+  function sendPos(force) {
+    if (!ws || ws.readyState !== 1 || !joined) return;
+    const now = performance.now();
+    if (!force && now - me.lastSend < 1000 / SEND_HZ) return;
+    if (!force && me.x === me.sentX && me.z === me.sentZ && me.h === me.sentH) return;
+    me.lastSend = now; me.sentX = me.x; me.sentZ = me.z; me.sentH = me.h;
+    ws.send(JSON.stringify({ t: 'p', x: me.x, y: 0, z: me.z, h: me.h, s: 1 }));
+  }
+
+  setInterval(() => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'ping', c: performance.now() })); }, 1000);
+
+  // 입력
+  const keys = new Set();
+  addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    keys.add(e.key.toLowerCase());
+    if (e.key.startsWith('Arrow')) e.preventDefault();
+  });
+  addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
+  addEventListener('blur', () => keys.clear());
+  const cv = $('cv'), cx = cv.getContext('2d');
+  let touch = null;
+  function toWorld(e) {
+    const r = cv.getBoundingClientRect();
+    return { x: ((e.clientX - r.left) / r.width * 2 - 1) * VIEW, z: ((e.clientY - r.top) / r.height * 2 - 1) * VIEW };
+  }
+  cv.addEventListener('pointerdown', (e) => { touch = toWorld(e); cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', (e) => { if (touch) touch = toWorld(e); });
+  cv.addEventListener('pointerup', () => { touch = null; });
+  cv.addEventListener('pointercancel', () => { touch = null; });
+
+  $('f').addEventListener('submit', (e) => { e.preventDefault(); connect(); });
+
+  // 보간용 자리 구하기
+  function lerpAngle(a, b, t) { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * t; }
+  function sampleAt(buf, t) {
+    if (!buf.length) return null;
+    if (t <= buf[0].t) return buf[0];
+    for (let i = buf.length - 1; i > 0; i--) {
+      const a = buf[i - 1], b = buf[i];
+      if (t >= a.t && t <= b.t) {
+        const k = (t - a.t) / Math.max(1, b.t - a.t);
+        return { x: a.x + (b.x - a.x) * k, z: a.z + (b.z - a.z) * k, h: lerpAngle(a.h, b.h, k) };
+      }
+    }
+    return buf[buf.length - 1];  // 새 소식이 없으면 마지막 자리에 멈춤(앞질러 짐작하지 않음)
+  }
+
+  function med(a) { if (!a.length) return NaN; const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; }
+
+  let lastFrame = performance.now(), lastHud = 0, colors = null, colorsAt = 0;
+  function frame(now) {
+    const dt = Math.min(0.1, (now - lastFrame) / 1000); lastFrame = now;
+    // 예측: 내 점은 서버를 기다리지 않고 바로 움직임
+    let mx = 0, mz = 0;
+    if (keys.has('arrowleft') || keys.has('a')) mx -= 1;
+    if (keys.has('arrowright') || keys.has('d')) mx += 1;
+    if (keys.has('arrowup') || keys.has('w')) mz -= 1;
+    if (keys.has('arrowdown') || keys.has('s')) mz += 1;
+    if (touch) { mx = touch.x - me.x; mz = touch.z - me.z; if (Math.hypot(mx, mz) < 0.3) mx = mz = 0; }
+    const len = Math.hypot(mx, mz);
+    if (len > 0) {
+      me.x = Math.max(-VIEW, Math.min(VIEW, me.x + mx / len * SPEED * dt));
+      me.z = Math.max(-VIEW, Math.min(VIEW, me.z + mz / len * SPEED * dt));
+      me.h = Math.atan2(mz, mx);
+    }
+    sendPos(false);
+
+    // 그리기
+    const W = cv.width, S = W / (VIEW * 2);
+    if (!colors || now - colorsAt > 1000) {
+      const css = getComputedStyle(document.documentElement);
+      colors = {}; colorsAt = now;
+      for (const v of ['--panel', '--grid', '--me', '--other', '--ink']) colors[v] = css.getPropertyValue(v).trim();
+    }
+    const col = (v) => colors[v];
+    cx.fillStyle = col('--panel'); cx.fillRect(0, 0, W, W);
+    cx.strokeStyle = col('--grid'); cx.lineWidth = 1;
+    for (let m = -VIEW; m <= VIEW; m += 5) {
+      const p = (m + VIEW) * S;
+      cx.beginPath(); cx.moveTo(p, 0); cx.lineTo(p, W); cx.moveTo(0, p); cx.lineTo(W, p); cx.stroke();
+    }
+    const px = (v) => (v + VIEW) * S;
+    function dot(x, z, h, fill, label) {
+      cx.fillStyle = fill; cx.beginPath(); cx.arc(px(x), px(z), 9, 0, Math.PI * 2); cx.fill();
+      cx.strokeStyle = fill; cx.lineWidth = 3; cx.beginPath();
+      cx.moveTo(px(x), px(z)); cx.lineTo(px(x) + Math.cos(h) * 16, px(z) + Math.sin(h) * 16); cx.stroke();
+      if (label) { cx.fillStyle = col('--ink'); cx.font = '13px system-ui, sans-serif'; cx.textAlign = 'center'; cx.fillText(label, px(x), px(z) - 14); }
+    }
+    const rt = serverNow() - INTERP_MS;
+    for (const p of people.values()) {
+      const s = sampleAt(p.buf, rt);
+      if (s) dot(s.x, s.z, s.h, col('--other'), p.n);
+    }
+    if (echo) {
+      cx.strokeStyle = col('--me'); cx.lineWidth = 2;
+      cx.beginPath(); cx.arc(px(echo.x), px(echo.z), 12, 0, Math.PI * 2); cx.stroke();
+    }
+    dot(me.x, me.z, me.h, col('--me'), $('nick').value.trim() || '나');
+
+    // 숫자는 4번에 1번만 고침
+    if (now - lastHud > 250) {
+      lastHud = now;
+      while (gaps.length && now - gaps[0][0] > 5000) gaps.shift();
+      let g5 = 0; for (const [, g] of gaps) if (g > g5) g5 = g;
+      const r = med(rtts);
+      $('rtt').textContent = Number.isFinite(r) ? Math.round(r) : '-';
+      $('gap').textContent = gaps.length ? Math.round(g5) : '-';
+      $('gapBox').classList.toggle('warn', g5 > HITCH_MS);
+      $('gapAll').textContent = gapAll ? Math.round(gapAll) : '-';
+      $('cnt').textContent = joined ? people.size + 1 : '-';
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  if (q.get('auto') === '1') connect();
+})();
+</script>
+</body>
+</html>
