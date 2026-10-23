@@ -4,13 +4,13 @@
 //   끝 = 결과 3단계 + '💡 알고 있었나요?' 사실 한 줄(사실만) · 점수 0~3 = 옛 보상 표 그대로 · 실패도 경험치 1(마을 쪽) · 셈 X · 한 판 15~25초
 //   솜씨 perk 'zone'(zw 1~1.25) = 쉬워지는 쪽으로(시간 · 초록 폭 · 삽질 수 · 벌레 느리게)
 //   화면 = DOM + CSS(놀이 창이 열린 동안만 · 마을 tick이 부르는 tick(dt) 하나 — 따로 rAF X) · 입력 = down()/up()(E·스페이스·큰 단추) + key(코드, 반복)(화살표·WASD·숫자) + 누르기·끌기(마우스·터치)
-import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2';   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
+import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2'; import { mkSalt } from './town_salt.js?v=1';   /* SALT-2 염전 꼬임 넷 */   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
 export const MG_V = 3;
 const KIND = { tuho: 'toss', fisher: 'tug', rod: 'tug', seaweed: 'line', oyster: 'line', strawberry: 'ripe', shiitake: 'ripe', saltpan: 'salt', beehive: 'comb', potato: 'dig', clam: 'dig', cabbage: 'sort', pear: 'cover', lumber: 'order', pasture: 'feed' };
 export const mgKind = (k, sea) => (k === 'paddy' ? (sea === 'autumn' ? 'cut' : 'plant') : KIND[k] || 'bar');   /* 논 = 봄 모내기 · 가을 벼 베기 */
 // 놀이 창 첫 줄 = 할 일(아이 눈 2차 '말풍선과 창 첫 줄이 같은 문장' — 말풍선은 일꾼의 말 · 창 첫 줄은 내가 할 일)
 const TASK = { plant: ['못줄 눈금에 맞춰 모를 심어요', 'Plant seedlings on the marks of the guide rope'], cut: ['콤바인으로 벼를 남김없이 베요', 'Cut all the rice with the combine'], fisher: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], rod: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], seaweed: ['김이 붙은 줄을 끌어올려요', 'Pull up the ropes with laver'], oyster: ['굴이 달린 줄을 끌어올려요', 'Pull up the ropes with oysters'],
-  strawberry: ['빨갛게 익은 딸기만 따요', 'Pick only the red, ripe strawberries'], shiitake: ['갓이 알맞게 핀 표고만 따요', 'Pick only shiitake with caps just right'], saltpan: ['구름이 오기 전에 소금을 모아요', 'Gather the salt before the cloud comes'], beehive: ['연기를 살살 피우고 꿀이 익은 칸만 떠요', 'Smoke gently, then take only the ripe honey cells'],
+  strawberry: ['빨갛게 익은 딸기만 따요', 'Pick only the red, ripe strawberries'], shiitake: ['갓이 알맞게 핀 표고만 따요', 'Pick only shiitake with caps just right'], saltpan: ['바닷물에서 소금을 얻어요', 'Get salt from seawater'], beehive: ['연기를 살살 피우고 꿀이 익은 칸만 떠요', 'Smoke gently, then take only the ripe honey cells'],
   potato: ['줄기 둘레를 파서 감자를 캐요', 'Dig around the stems for potatoes'], clam: ['작은 구멍 둘 밑을 파서 조개를 캐요', 'Dig under pairs of tiny holes for clams'], cabbage: ['배추를 크기대로 세 상자에 나눠 담아요', 'Sort the cabbages into three boxes by size'], pear: ['벌레가 오기 전에 배마다 봉지를 씌워요', 'Bag every pear before the caterpillars come'],
   lumber: ['차례대로 어린 나무를 심고 물을 줘요', 'Plant the saplings in order and water them'], pasture: ['동물마다 알맞은 먹이를 줘요', 'Give each animal the right food'], cook: ['주문 쪽지대로 재료를 넣고, 알맞게 익으면 접시에 담아요', 'Follow the order note: add ingredients, then plate it when it’s just right'], stones: ['돌을 하나씩 콩콩 건너요', 'Hop across the stones one by one'], tuho: ['화살을 던져 항아리에 넣어요', 'Toss arrows into the pot'] };
 export const taskOf = (kind, k, en) => { const t = TASK[kind === 'plant' || kind === 'cut' ? kind : k]; return t ? (en ? 'To do: ' : '할 일: ') + t[en ? 1 : 0] : ''; };
@@ -324,22 +324,7 @@ function mkCut(c) { const C9 = 6, R9 = 4, N = C9 * R9, T = 22 * c.zw; let cur = 
   return { go: '', key(code, rep) { const d = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1, ArrowUp: -C9, KeyW: -C9, ArrowDown: C9, KeyS: C9 }[code]; if (d == null) return false; if (rep) return true; const j = cur + d; if (j >= 0 && j < N) go(j); return true; }, down() {},
     tick(dt) { if (TB.tick(dt) && !stuck) c.finish(score()); }, dispose() { gd.removeEventListener('pointerdown', pd); removeEventListener('pointermove', pm); removeEventListener('pointerup', pu); } }; }
 
-// ⑥ 소금 모으기(염전): 대파(밀대)를 왼쪽으로 밀어 소금을 더미로 — 구름이 오기 전에(비가 오면 녹음) · 끌기·화살표 · 왼쪽으로 밀 때만 소금이 따라옴
-function mkSalt(c) { const N = 14, T = 22 * c.zw, S = []; let rx = 0.55, ry = 0.5, got = 0, t = 0;
-  c.mg.innerHTML = '<div class="sp"><i class="pile">🧂 <b>0</b></i><i class="cl">☁️</i><i class="rk"></i></div>'; const sp = c.mg.querySelector('.sp'), rk = sp.querySelector('.rk'), cl = sp.querySelector('.cl'), pb = sp.querySelector('.pile b');
-  for (let i = 0; i < N; i++) { const e = document.createElement('i'); e.className = 'sd'; sp.appendChild(e); S.push({ x: 0.3 + Math.random() * 0.66, y: 0.1 + Math.random() * 0.8, e, on: true }); }
-  const put = s => { s.e.style.left = (s.x * 100).toFixed(1) + '%'; s.e.style.top = (s.y * 100).toFixed(1) + '%'; }; S.forEach(put);
-  const rake = () => { rk.style.left = (rx * 100).toFixed(1) + '%'; rk.style.top = (ry * 100).toFixed(1) + '%'; }; rake();
-  const move = (nx, ny) => { nx = Math.max(0.05, Math.min(0.98, nx)); ny = Math.max(0.12, Math.min(0.88, ny));
-    if (nx < rx) for (const s of S) { if (!s.on || Math.abs(s.y - ry) > 0.16 || s.x > rx + 0.02 || s.x < nx - 0.03) continue; s.x = nx - 0.02; if (s.x < 0.15) { s.on = false; got++; s.e.className = 'sd in'; pb.textContent = got; c.snd('tick'); if (got >= N) { c.say(c.T('소금을 다 모았어요!', 'All the salt is in!')); c.finish(3); } } put(s); }   /* 왼쪽으로 밀 때만 대파 앞 소금이 함께 감 */
-    rx = nx; ry = ny; rake(); };
-  let drag = false; const xy = e => { const r = sp.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
-  const pd = e => { e.preventDefault(); drag = true; const [x, y] = xy(e); move(Math.max(x, 0.05), y); }, pm = e => { if (drag) { const [x, y] = xy(e); move(x, y); } }, pu = () => { drag = false; };
-  sp.addEventListener('pointerdown', pd); addEventListener('pointermove', pm); addEventListener('pointerup', pu);
-  c.say(c.T('대파를 잡고 왼쪽으로 쭉 밀어 소금을 더미로 — 구름이 오기 전에! (끌거나 화살표)', 'Grab the rake and push salt left into the pile — before the cloud comes! (drag · arrows)'));
-  return { go: '', down() {}, key(code) { const d = { ArrowLeft: [-0.035, 0], KeyA: [-0.035, 0], ArrowRight: [0.05, 0], KeyD: [0.05, 0], ArrowUp: [0, -0.06], KeyW: [0, -0.06], ArrowDown: [0, 0.06], KeyS: [0, 0.06] }[code]; if (!d) return false; move(rx + d[0], ry + d[1]); return true; },
-    tick(dt) { t += dt; cl.style.left = (88 - (t / T) * 74).toFixed(1) + '%'; if (t >= T) { c.say(c.T('후두둑 비가 와요 — 남은 소금은 녹아요', 'Rain! The salt left out melts away')); const f = got / N; c.finish(f >= 0.9 ? 3 : f >= 0.6 ? 2 : f >= 0.3 ? 1 : 0); } },
-    dispose() { sp.removeEventListener('pointerdown', pd); removeEventListener('pointermove', pm); removeEventListener('pointerup', pu); } }; }
+// ⑥ 소금 = town_salt.js(SALT-2 꼬임 넷 · 천일염·자염·토판염·꽃소금)
 
 // ⑦ 꿀 뜨기: ① 훈연기를 꾹 눌러 연기를 살살(초록 칸에서 떼기 — 너무 많으면 '살살') ② 밀랍 뚜껑이 덮인 칸(다 익은 꿀)만 고르기 · 덜 익은 꿀·애벌레 방은 그대로
 function mkComb(c) { const C9 = 6, N = 24, T = 16 * c.zw; let ph = 'smoke', sm = 0, smT = 0, hold = false, smOk = 0, right = 0, wrong = 0, G = null, TB = null; const kinds = [];

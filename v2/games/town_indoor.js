@@ -539,7 +539,7 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en, look }) 
     { const x = -2.7, z = hd - 1.5; stable(S, x, z, 0.8, 0.6, 0xc89a5a, 0.85); for (let i = 0; i < 6; i++) I(S, 'c', x - 0.12, 0.85 + i * 0.018, z, 0.2, 0.012, 0.2, 0xd0d4d8); for (const dz of [-0.06, 0.06]) P('b', x + 0.24, 0.86, z + dz, 0.03, 0.02, 0.36, 0xc0c4c8); sign(S, '쟁반 · 집게', x, 1.18, z - 0.24, 0, 0.6, 0.16, { bg: '#fffaf0', fg: '#6b4428', fr: 0xb5793a }); P('b', x, 0.85, z - 0.24, 0.025, 0.21, 0.025, 0x8a5a34); }   // 쟁반·집게(빵집 첫 자리)
     for (const [x, z] of [[-2.4, 2.4], [2.4, 2.4]]) P('c', x, H - 0.03, z, 0.3, 0.03, 0, 0xfff1d0, 1);   // 둥근 천장등
     gst(-1.1, 0.0, Math.PI, 3);
-    return { S, W, D, H, seats, counter: { stand: [hw - 2.5, 0, 1.0] }, cam: { d: 3.8, p: 0.55 } }; }
+    return { S, W, D, H, seats, counter: { stand: [hw - 2.5, 0, 1.0] }, bake: { stand: [0, 0, -hd + 1.75] }, cam: { d: 3.8, p: 0.55 } }; }   /* BAKE-1 화덕 앞(아궁이 앞 0.8m · 진열 탁자 앞) */
 
   // 아이스크림: 분홍·민트 · 분홍 바둑 바닥 · 줄무늬 벽지 · 뒤 = 통 열둘 진열장(맛 이름 칩) / 왼 앞 = 큰 콘 / 둥근 탁자 둘 + 유리공 등
   function shopIce(at, name, rnd) { const W = 8.4, D = 8.4, H = 3.2, hw = W / 2, hd = D / 2, [ox, oy, oz] = at, seats = [], S = shopShell(at, 'icecream', W, D, H, { ft: ['checker', 1.0, 0xffd3e1], wt: [['stripe', 0.9, 0xffe4ee, 0.9, H]], wains: 0x8fd8c0 }), P = S.put;
@@ -752,6 +752,7 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en, look }) 
     for (const s of made.seats || []) if (!s.taken) hots.push(map.interact.add({ kind: 'sit', x: s.stand[0], y: s.stand[1], z: s.stand[2], yaw: s.yaw, seat: { x: s.seat[0], y: s.seat[1], z: s.seat[2], yaw: s.yaw }, r: 0.9, label: en ? '💺 Sit' : '💺 앉기' }));
     const AB = (q, v) => q.abs ? v : [ox + v[0], oy + v[1], oz + v[2]];
     if (made.counter && o.onShop) { const p = AB(made.counter, made.counter.stand); hots.push(map.interact.add({ kind: 'game', x: p[0], y: p[1], z: p[2], r: 1.3, label: en ? '🛒 Counter (buy)' : '🛒 계산대 (사기)', use: () => o.onShop() })); }   // B5 계산대
+    if (made.bake && o.onBake) { const p = AB(made.bake, made.bake.stand); hots.push(map.interact.add({ kind: 'game', x: p[0], y: p[1], z: p[2], r: 1.3, label: en ? '🍞 Help bake (oven)' : '🍞 빵 굽기 거들기 (화덕)', use: () => o.onBake() })); }   // BAKE-1 제빵(town_bake.js)
     if (made.cook && o.onCook) { const p = AB(made.cook, made.cook.stand); hots.push(map.interact.add({ kind: 'game', x: p[0], y: p[1], z: p[2], r: 1.3, label: en ? '🍳 Cook (recipe book)' : '🍳 요리하기 (레시피북)', use: () => o.onCook() })); }   // C1 부엌
     if (made.bed && o.onBed) { const p = AB(made.bed, made.bed.stand), q = AB(made.bed, made.bed.top); hots.push(map.interact.add({ kind: 'game', x: p[0], y: p[1], z: p[2], r: 1.3, label: en ? '😴 Lie down' : '😴 눕기', use: () => o.onBed({ stand: p, top: q, yaw: made.bed.yaw || 0 }) })); }   // B6 침대
     for (const h of made.hub || []) { const p = AB(h, h.stand); hots.push(map.interact.add({ kind: 'game', x: p[0], y: p[1], z: p[2], r: 1.3, label: h.k === 'map' ? (en ? '🗺 Town map board' : '🗺 마을 지도 판') : (en ? '📌 Request board' : '📌 의뢰 게시판'), use: () => o.onHub && o.onHub(h.k) })); }   // QUEST-2 본부: 방이 made.hub = [{ k: 'board' | 'map', stand: [x, y, z] }]를 주면 E 둘(창 = town_story.js hub)
