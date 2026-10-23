@@ -5,7 +5,7 @@
 //     · 벌집 틀 살피기 · 쇠스랑으로 건초 떠서 던지기(떴을 때만 건초 뭉치) · 손 흔들기(장터) · 드론 조종 · 물속 팔 젓기 · 잔치 손 흔들기 · 걷기(무릎 굽힘 · 나중 쓸 자리) — 모두 숨쉬기 · 눈 깜빡임
 //   연장 = 손에 든 것(괭이·도끼·고무래·쇠스랑·낚싯대·벌집 틀·조종기)과 땅에 둔 것(바구니·그루터기·건초 더미) — 한 모양에 모두 있고 그 사람 것만 보임(나머지는 점 하나로 접힘)
 //   보이는 것만 바뀜: 충돌 상자(PCOL)·E 자리 높이는 town.js 그대로 · 새 Light X · 재질 하나(사람마다 색 = 팔레트 uniform 번호)
-export const WK_ACT = { stand: 0, walk: 1, pick: 2, hoe: 3, rake: 4, reach: 5, fish: 6, hold: 7, swim: 8, fork: 9, wave: 10, pilot: 11, cheer: 12 };   // 셰이더와 같은 번호
+export const WK_ACT = { stand: 0, walk: 1, pick: 2, hoe: 3, rake: 4, reach: 5, fish: 6, hold: 7, swim: 8, fork: 9, wave: 10, pilot: 11, cheer: 12, nod: 13, hop: 14 };   /* NB-1 받아 들고 끄덕 · 깡충(좋아하는 선물) */   // 셰이더와 같은 번호
 const TOOL = { none: 0, hoe: 1, axe: 2, rake: 3, fork: 4, rod: 5, frame: 6, pad: 7, basket: 8 };
 const ROLE = { farmer: ['hoe', 'hoe'], picker: ['pick', 'basket'], bee: ['hold', 'frame'], ranch: ['fork', 'fork'], wood: ['hoe', 'axe'], pilot: ['pilot', 'pad'], salt: ['rake', 'rake'], shop: ['wave', 'none'], fisher: ['fish', 'rod'], reach: ['reach', 'basket'], guest: ['stand', 'none'], swim: ['swim', 'none'] };   // 역할 → [동작, 연장]
 const CROP = { strawberry: 0xe8434a, potato: 0xb98b5a, cabbage: 0x9bd46e, shiitake: 0x8a5a3a, paddy: 0x7cc35a, pear: 0xe8d06a };   // 바구니 속 색
@@ -59,6 +59,8 @@ const VS_POSE = `
       float u = fract(t * 0.4), k1 = smoothstep(0.0, 0.25, u), k2 = smoothstep(0.32, 0.55, u), k3 = smoothstep(0.58, 0.7, u), k4 = smoothstep(0.75, 1.0, u);
       aL = wk4(-1.3, -1.12, -1.7, -1.95, -1.3, k1, k2, k3, k4); aR = aL; pit = wk4(0.2, 0.4, 0.1, 0.08, 0.2, k1, k2, k3, k4); cr = wk4(0.1, 0.3, 0.0, 0.0, 0.1, k1, k2, k3, k4); tw = wk4(0.3, 0.3, 0.2, -0.45, 0.3, k1, k2, k3, k4);
       zL = -0.38; zR = 0.38; hN = -0.3 * pit; lL = -0.12; lR = 0.1; load = smoothstep(0.15, 0.25, u) * (1.0 - smoothstep(0.62, 0.68, u)); }
+    else if (act > 12.5) {   /* NB-1 선물 받기: 두 손을 앞으로 모아 받아 들고 고개 끄덕(13) · 좋아하면 깡충(14) */
+      float u = uT * 6.0; aL = -1.05; aR = -1.05; zL = -0.32; zR = 0.32; pit = 0.06; hN = act < 13.5 ? 0.26 * max(0.0, sin(u)) : -0.12; if (act > 13.5) { bob = 0.15 * max(0.0, sin(u * 1.4)); kL = 0.25 * max(0.0, -sin(u * 1.4)); kR = kL; } }
     else if (act > 11.5) {   /* 잔치: 오른손 들어 계속 흔들며 몸 들썩 */
       aR = -2.5 + 0.35 * sin(t * 2.4); zR = 0.15 * sin(t * 4.8); aL = -0.25; zL = 0.12; bob = 0.02 * abs(sin(t * 2.4)); hT = 0.25 * sin(t * 0.4); lean = 0.05 * sin(t * 1.2); }
     else {   /* 드론 조종: 조종기 들고 하늘 보며 고개 따라감 */
@@ -138,9 +140,9 @@ export function makeWorkerMesh(T3, L, RL) {
   const N = L.length, g = bakeWorker(T3), PAL = [], pi = hex => { let i = PAL.indexOf(hex); if (i < 0) { i = PAL.length; PAL.push(hex); } return i; };
   HAIR.forEach(pi); SKIN.forEach(pi);   // 머리색 = 0~3(16 아래 — 셈 칸) · 피부 = 4~7
   const PH = new Float32Array(N * 4), PA = new Float32Array(N * 4);   // 사람마다 원본 — 인스턴스 칸에는 카메라 가까운 사람만 차례로 옮겨 씀(near)
-  L.forEach((w, i) => { const R0 = RL[w.role] || {}, R1 = ROLE[w.role] || ROLE.guest, S9 = R0.sh || [0x7fb8d0];
+  L.forEach((w, i) => { const R0 = RL[w.role] || {}, R1 = ROLE[w.role] || ROLE.guest, S9 = R0.sh || [0x7fb8d0], c9 = w.ch != null ? w.ch : i;   /* NB-0: 대표 몸 = 이웃 열쇠 해시(ch)로 옷·피부·머리 색 — 새로고침·다시 짓기에도 늘 같은 얼굴 */
     PH[i * 4] = w.ph || 0; PH[i * 4 + 1] = WK_ACT[R1[0]]; PH[i * 4 + 2] = TOOL[R1[1]]; PH[i * 4 + 3] = R0.hat == null ? 0 : (R0.hs || 1);
-    PA[i * 4] = pi(S9[i % S9.length]); PA[i * 4 + 1] = pi(R0.pa ?? 0x3b4a5c); PA[i * 4 + 2] = pi(R0.hat ?? 0xe8d38a) + 64 * pi(CROP[w.k] ?? 0x9bd46e); PA[i * 4 + 3] = (4 + (i * 5 + 1) % SKIN.length) * 16 + (i * 7 + 2) % HAIR.length; });
+    PA[i * 4] = pi(S9[c9 % S9.length]); PA[i * 4 + 1] = pi(R0.pa ?? 0x3b4a5c); PA[i * 4 + 2] = pi(R0.hat ?? 0xe8d38a) + 64 * pi(CROP[w.k] ?? 0x9bd46e); PA[i * 4 + 3] = (4 + (c9 * 5 + 1) % SKIN.length) * 16 + (c9 * 7 + 2) % HAIR.length; });
   const PH0 = PH.slice(), aPh = PH.slice(), aPal = PA.slice(), at = new T3.InstancedBufferAttribute(aPh, 4), ap = new T3.InstancedBufferAttribute(aPal, 4); at.setUsage(T3.DynamicDrawUsage); ap.setUsage(T3.DynamicDrawUsage); g.setAttribute('aPh', at); g.setAttribute('aPal', ap); g.userData.keep = true;   // keep = 칸을 다시 채우므로 배열을 비우지 않음(town.js GEOS)
   const U = { value: 0 }, UP = { value: Array.from({ length: 40 }, (_, k) => new T3.Color(PAL[k] ?? 0xffffff)) };   // 팔레트 40칸(역할 옷 색을 다 넣어도 30 안팎)
   const mat = new T3.MeshLambertMaterial({ vertexColors: true, emissive: 0x16110c });   // 옅은 자체광 = 주인공처럼 그늘이 탁하지 않게
@@ -161,7 +163,8 @@ export function makeWorkerMesh(T3, L, RL) {
       for (let j = 0; j < K; j++) { const i = ORD[j]; SLOT[i] = j; m.setMatrixAt(j, MX[i]); for (let q = 0; q < 4; q++) { aPh[j * 4 + q] = PH[i * 4 + q]; aPal[j * 4 + q] = PA[i * 4 + q]; } }
       m.count = K; m.instanceMatrix.needsUpdate = true; at.needsUpdate = true; ap.needsUpdate = true; },
     act(i, a, tool) { const v9 = typeof a === 'number' ? a : WK_ACT[a], t9 = tool == null ? PH[i * 4 + 2] : typeof tool === 'number' ? tool : TOOL[tool]; if (v9 == null || (PH[i * 4 + 1] === v9 && PH[i * 4 + 2] === t9)) return; PH[i * 4 + 1] = v9; PH[i * 4 + 2] = t9; const j = SLOT[i]; if (j >= 0) { aPh[j * 4 + 1] = v9; aPh[j * 4 + 2] = t9; at.needsUpdate = true; } },   // 동작(·연장) 바꾸기 — 잔치 · 걷기 등 놀이 팀 자리
-    reset(i) { this.act(i, PH0[i * 4 + 1], PH0[i * 4 + 2]); },   // 역할 동작·연장으로 되돌림
+    reset(i) { this.act(i, PH0[i * 4 + 1], PH0[i * 4 + 2]); },
+    toolOf: i => PH[i * 4 + 2], palOf: i => [PA[i * 4], PA[i * 4 + 1], PA[i * 4 + 2], PA[i * 4 + 3]],   /* NB-1 지금 연장 · 색 칸(시험: 같은 이웃 = 같은 색) */   // 역할 동작·연장으로 되돌림
     hat(i, on) { const v = on ? PH0[i * 4 + 3] : 0; if (PH[i * 4 + 3] === v) return; PH[i * 4 + 3] = v; const j = SLOT[i]; if (j >= 0) { aPh[j * 4 + 3] = v; at.needsUpdate = true; } },   // WAKE-1b 모자 벗기기·씌우기(바람에 날아간 모자 — 크기 0 = 셰이더가 접음)
     vis(i, on) { if (!on === !!hid[i]) return; hid[i] = on ? 0 : 1; dirty = true; },   // 계절 문(워터파크 손님) 숨김 — 다음 near()에서 칸 다시 채움
     dispose() { g.dispose(); mat.dispose(); } };

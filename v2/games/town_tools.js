@@ -245,7 +245,7 @@ export function createTools(A) {
     P.onclick = ev => { const b = ev.target.closest('button'); if (!b || b.disabled) return; A.closeP(); if (b.dataset.a === 'bag') { G.use('tool:fish'); A.bagAdd('🐟', 1, 'rod'); A.skUp('work', 1, 'rod'); A.rec('fish-bag'); } else release(); }; }
   function release() { const e = en(), G = A.GAME, n = G.use('tool:rel'); if (n <= 4) A.skUp('look', 2, 'rod:release'); const ch = A.chem(); if (ch && ch.lawFound) ch.lawFound('release', '🐟', 'swim'); A.rec('release');
     setTimeout(() => { if (!dead && !A.busy()) map.player.act('emo3'); }, 120);   // 머리 위 하트
-    if (n === 1) { const me = map.player.pos(); let w = null, bd = 400; for (const q of A.workers() || []) { if (q.k !== 'fisher') continue; const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < bd) { bd = d; w = q; } } if (w) { const up = G.heart('nb:fisher:' + A.cell(w.x, w.z), 1, 'rod'); if (up) A.heartUp(up, w); } }
+    if (n === 1) { const me = map.player.pos(); let w = null, bd = 400; for (const q of A.workers() || []) { if (q.k !== 'fisher' || q.rep === false) continue; const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < bd) { bd = d; w = q; } } if (w) { const up = G.heart(w.hk || 'nb:fisher:' + A.cell(w.x, w.z), 1, 'rod');   /* NB-0 일터 열쇠 */ if (up) A.heartUp(up, w); } }
     toast(e ? '💧 You let the fish go — it will grow and lay eggs' : '💧 물고기를 놓아줬어요 — 다시 자라 알을 낳아요', 2.8); }
 
   // ───────── 🔍 돋보기 ─────────
@@ -272,8 +272,8 @@ export function createTools(A) {
       A.skUp('work', 1, 'sweep'); tone(988, 0.05, 0.08, 'triangle', 0.04); tone(1319, 0.13, 0.1, 'triangle', 0.04);
       const what = p.mode === 'leaf' ? (e ? 'leaves' : '낙엽을') : p.mode === 'snow' ? (e ? 'snow' : '눈을') : (e ? 'litter' : '쓰레기를');
       toast(e ? '🧹 Swept up the ' + what + '! Today you cleaned ' + t.clean.n + (t.clean.n > 1 ? ' spots' : ' spot') + ' in town' : '🧹 ' + what + ' 쓸었어요! 오늘 마을을 ' + t.clean.n + '곳 깨끗이 했어요', 2.8);
-      const me = map.player.pos(); let w = null, bd = 40; for (const q of A.workers() || []) { if (!q.k) continue; const dd = Math.hypot(q.x - me.x, q.z - me.z); if (dd < bd) { bd = dd; w = q; } }
-      if (w) { const hk = 'nb:' + w.k + ':' + A.cell(w.x, w.z); if (A.GAME.uses('swh:' + hk) < 1) { A.GAME.use('swh:' + hk); const up = A.GAME.heart(hk, 1, 'sweep'); A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, e ? 'So clean now. Thank you!' : '깨끗해졌네요. 고마워요!'); if (up) setTimeout(() => { if (!dead) A.heartUp(up, w); }, 1200); } } } }); void mode; }
+      const me = map.player.pos(); let w = null, bd = 40; for (const q of A.workers() || []) { if (!q.k || q.rep === false) continue; const dd = Math.hypot(q.x - me.x, q.z - me.z); if (dd < bd) { bd = dd; w = q; } }
+      if (w) { const hk = w.hk || 'nb:' + w.k + ':' + A.cell(w.x, w.z); if (A.GAME.uses('swh:' + hk) < 1) { A.GAME.use('swh:' + hk); const up = A.GAME.heart(hk, 1, 'sweep'); A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, e ? 'So clean now. Thank you!' : '깨끗해졌네요. 고마워요!'); if (up) setTimeout(() => { if (!dead) A.heartUp(up, w); }, 1200); } } } }); void mode; }
   // 빗자루 빌리는 곳: 마을회관·경로당 문 옆(기대 세운 빗자루 + 쪽지 E) — 새 사람 X
   let STANDS = [];
   function stands() { for (const h of STANDH) h.remove(); STANDH = []; STANDS = []; const bl = map.q.blocked || map.q.blockedAt;
