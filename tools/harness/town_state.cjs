@@ -175,6 +175,21 @@ const URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
     await hsl('hs_bed', async () => { const r = await enterRoom(HM.id); if (!r.ok) return { skip: '우리 집 못 들어감(' + r.why + ')' }; const bd = await ev(() => __TS.hots(/눕기/)[0] || null); if (!bd) return { skip: '우리 집 침대 E 없음' }; await ev(h => { SD2.map.player.teleport([h.x, h.y + 0.05, h.z]); }, bd); await W8(450); await p.keyboard.press('KeyE'); await W8(600); const rest = await ev(() => { const b9 = document.querySelector('.twn-p [data-a="rest"]'); if (b9) b9.click(); return !!b9; }); await W8(400); return rest ? { ok: true, bed: bd } : { skip: '침대 창 안 열림' }; },
       async (b0, a1, su) => { const on = await ev(() => SM_TOWN.indoor.on), d = d2(a1, [su.bed.x, 0, su.bed.z]); return !on ? '방 밖으로 나감' : d > 2 ? '침대 곁이 아님(' + d.toFixed(1) + 'm)' : null; });
     await hsl('hs_mp', async () => { await ev(() => document.body.classList.add('mp-in')); return { ok: true }; }, async (b0, a1) => d2(b0, a1) > 1 ? '그 자리가 아님(' + d2(b0, a1).toFixed(1) + 'm 옮김)' : null); }
+  // SIM-1 전선 × 창(단계 4 조각 1 · town_phase4.md): 비 띠 가장자리를 드나들어 내 칸 날씨(WX9)가 바뀌어도 열린 창(날씨 창 · 가방 창)이 닫히지 않음 · 손 고정이면 전선 꺼짐
+  Object.assign(KO, { fx_wx: '날씨 창', fx_bag: '가방 창', fx: '전선 드나듦' });
+  { const fxl = async (key, open) => { const r = { s: key, a: 'fx', bad: [], note: [] }, e0 = errs.length;
+      try { if (!await ev(() => !!window.SM_TOWN)) await boot(); await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); });
+        const E = await ev(() => { const S = SM_TOWN, G9 = S.game(), G = G9.S, F = S.sim && S.sim.F; if (!F) return null; G.wx = { auto: true }; let d = null; for (let k = 2; k < 120; k++) { const kd = S.sim.kind(k); if (kd[0] !== 'rain') continue; const P = F.day(k, kd[0], kd[1]); if (!P.shadow) { d = k; break; } } if (!d) return null; G.day = d; G9.setClock(false);
+          const x0 = 16.5, z0 = 70; let hIn = null; for (let h = 6; h < 24; h += 0.02) if (F.rainUV(F.uOf(x0), F.vOf(z0), x0, z0, h) > 0.6) { hIn = h; break; } if (hIn == null) return null; G.min = Math.round(hIn * 60) + 30; F.bands(G.min); const j = Math.floor(F.vOf(z0)); return { d, xa: F.xOf(F.BAND[j * 2]), xb: F.xOf(F.BAND[j * 2 + 1]) }; });
+        if (!E) { r.skip = '전선 날 없음'; res.push(r); return; } const inX = (E.xa + E.xb) / 2, outX = E.xb + 70;
+        await ev(x => __TS.tp(x, 70), inX); await W8(7000); await open(); await W8(400); const k0 = await ev(() => SM_TOWN.sim.panel()); if (!k0) r.bad.push('창이 안 열림');
+        let fl = 0, w0 = await ev(() => SM_TOWN.sim.front().WX9); for (const x of [outX, inX]) { await ev(x9 => __TS.tp(x9, 70), x); await W8(6800); const s9 = await ev(() => ({ pk: SM_TOWN.sim.panel(), wx: SM_TOWN.sim.front().WX9 })); if (s9.wx !== w0) { fl++; w0 = s9.wx; } if (k0 && s9.pk !== k0) r.bad.push('날씨가 ' + s9.wx + '로 바뀌며 창 닫힘'); }
+        if (fl < 2) r.bad.push('전선을 못 드나듦(바뀜 ' + fl + ')'); r.note.push('WX9 바뀜 ' + fl);
+        await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); SM_TOWN.game().setClock(true); }); }
+      catch (e) { r.bad.push('하네스 예외: ' + e.message.split('\n')[0].slice(0, 120)); }
+      const E9 = errs.slice(e0); if (E9.length) r.bad.push('오류 ' + E9.length); let rs = null; try { rs = await restore(); } catch (e) { rs = false; } if (rs === false) await boot(); res.push(r); process.stderr.write((r.bad.length ? '✗ ' : '✓ ') + KO[key] + ' × ' + KO.fx + (r.bad.length ? ' → ' + r.bad.join(' · ') : '') + '\n'); };
+    await fxl('fx_wx', () => ev(() => SM_TOWN.sim.openWx()));
+    await fxl('fx_bag', async () => { await p.keyboard.press('KeyI'); }); }
   const ran = res.filter(r => !r.skip), bad = ran.filter(r => r.bad.length), skipped = res.filter(r => r.skip);
   const grid = {}; for (const r of res) { (grid[KO[r.s] || r.s] = grid[KO[r.s] || r.s] || {})[KO[r.a] || r.a] = r.skip ? '-' : r.bad.length ? '✗' : '✓'; }
   console.log(JSON.stringify({ town: ID, combos: ran.length, skipped: skipped.length, bad: bad.length, boots, sec: Math.round((Date.now() - T0) / 1000), picked: { shop: ctx.shop && ctx.shop.name, home: ctx.home && ctx.home.name, bed: ctx.bed && ctx.bed.name, bench: !!ctx.bench, swing: !!ctx.swing, boat: !!ctx.boat, workers: ctx.work.length, cell: ctx.cell },

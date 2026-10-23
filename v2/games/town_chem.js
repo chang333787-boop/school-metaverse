@@ -258,7 +258,7 @@ export function createChem(A) {
   // ───────── 규칙 6: 민들레 홀씨 → 바람 쪽 → 사흘 뒤 꽃(봄·여름 · 공원 풀밭) ─────────
   //   하루 바람 하나(WIND-1 전 임시 · 마을 id + 날 씨앗 · 여덟 방위) · E '후~' = 허리 굽힘 → 홀씨 스무 점이 바람 쪽으로 · 씨가 앉을 흙(빈 땅)을 찾아 저장 · 사흘 뒤 아침 한 줄 + 꽃 다섯
   const DIR8 = [['북', 'north'], ['북동', 'north-east'], ['동', 'east'], ['남동', 'south-east'], ['남', 'south'], ['남서', 'south-west'], ['서', 'west'], ['북서', 'north-west']];
-  const windOf = day => { const R = A.rng('chem-wind:' + A.id + ':' + day); const k = Math.floor(R() * 8) % 8, a = k * Math.PI / 4 + (R() - 0.5) * 0.3; return { k, a, x: Math.sin(a), z: -Math.cos(a) }; };   /* 방위 0 = 북 = −z */
+  const windOf = day => { if (A.westDay && A.westDay(day)) { const R9 = A.rng('chem-wind-w:' + A.id + ':' + day), a9 = Math.PI / 2 + (R9() - 0.5) * 0.3; return { k: 2, a: a9, x: Math.sin(a9), z: -Math.cos(a9) }; }   /* SIM-1: 비 오는 날 = 서풍(동쪽으로 붊 · 비 띠와 같은 쪽) */ const R = A.rng('chem-wind:' + A.id + ':' + day); const k = Math.floor(R() * 8) % 8, a = k * Math.PI / 4 + (R() - 0.5) * 0.3; return { k, a, x: Math.sin(a), z: -Math.cos(a) }; };   /* 방위 0 = 북 = −z */
   function mkSeed() { const SPOT = [], FLW = []; let fl0 = -1, flk = '';
     const inSea = s => s === 'spring' || s === 'summer';
     function init() { SPOT.length = 0; const R = A.rng('chem-dd:' + A.id), cand = [];   /* 자리 = 공원·풀밭 안 빈 땅(나무·길·물 X · 둘레 30m가 마을 안) · 여덟 곳 · 서로 25m 넘게 · 한 곳에 홀씨 셋 */
@@ -399,7 +399,7 @@ export function createChem(A) {
       + '<div class="sm" style="opacity:.7">' + (E9 ? 'For teachers: unit names follow the 2015 curriculum — check the 2022 achievement standards' : '선생님께: 단원 이름은 2015 개정 기준이에요. 2022 개정 성취기준 원문은 확인이 필요해요.') + '</div>'
       + '<div class="row"><button class="sub" data-a="x">' + (E9 ? 'Close' : '닫기') + '</button></div>';
     const P9 = A.openP(h, false, 'chem'); P9.onclick = e => { const b = e.target.closest('button'); if (b && b.dataset.a === 'x') A.closeP(); }; return P9; }
-  BOOK = { open: bookOpen, tab: () => A.nb(['chem', '🔬', '규칙', 'Rules', () => bookOpen()]) };
+  BOOK = { open: bookOpen, tab: () => A.nb(['chem', '🔬', '규칙', 'Rules', () => bookOpen(), 1]) };
 
   const RS = [mkDry(), mkPuddle(), mkIce(), mkFire(), mkMelt(), mkSeed(), mkLaws()];   /* 규칙 차례(1초 칸에서 이 차례로 돎) */
 
