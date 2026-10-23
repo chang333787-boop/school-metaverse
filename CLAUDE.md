@@ -54,6 +54,7 @@
 | town.js를 쪼갤 때(모듈 일곱 · 공용 상태 TS 먼저 · 옮기는 차례 · 같은지 확인) | `docs/systems/town_split.md` — 설계안(10-17 · 팀이 적을 때 옮김) |
 | 마을 배경 음악(town_music.js · 곡 여섯 · 때·날씨·실내·놀이 · duck) | `docs/systems/town_music.md` |
 | 마을 도구 띠(town_tools.js · 1~5 물뿌리개·삽·낚싯대·돋보기·빗자루 · F 쓰기 · 실험 표 잇기) | `docs/systems/town_tools.md` |
+| 마을 길 위 사건(town_road.js · 자전거 고리 코스 · 모자 잡기 · 떨어진 것 줍기 · 날아온 지도 조각) | `docs/systems/town_road.md` |
 | 마을 야생동물(town_wild.js · 아홉 종 · 서식지·계절·달아남·관찰 별) | `docs/systems/town_wild.md` |
 | **밤샘 차례표(10-24 · A~H 39줄)** · 단계 1 설계(하루 한 바퀴 + 내 집) · 직업 놀이 엔진 설계(JOBS-2 · 양몰이·장구·부엌·낚시…) · 단계 2 표시 걷기·길 묻기 · 단계 3 기억하는 이웃·돈 쓸 곳 | `docs/systems/town_night_queue.md` · `docs/systems/town_phase1.md` · `docs/systems/town_jobs2.md` · `docs/systems/town_phase2.md` · `docs/systems/town_phase3.md` |
 | 게임용 지도 API 정본(map.*) | `docs/map_api.md` |

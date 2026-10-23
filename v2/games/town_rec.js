@@ -8,7 +8,7 @@ import { BANK, DIR8 } from './town_quiz.js?v=5';
 export const REC_V = 1, REC_DAYS = 14, REC_MAX = 80 * 1024;
 const T2 = (ko, en) => [ko, en];
 // 갈래: 하루 상한 · 이름(선생님 보기)
-export const KINDS = { st: [80, T2('이야기 단계', 'Story steps')], cd: [30, T2('끝낸 장', 'Chapters finished')], q: [60, T2('보너스 문제', 'Bonus questions')], help: [60, T2('일꾼 곁 거들기', 'Helping workers')], job: [20, T2('직업 체험', 'Job experience')], show: [20, T2('쇼', 'Shows')], rank: [30, T2('승급 미션', 'Rank missions')], play: [60, T2('강·들 놀이', 'River and field play')], tmap: [30, T2('보물 지도', 'Treasure maps')] };
+export const KINDS = { st: [80, T2('이야기 단계', 'Story steps')], cd: [30, T2('끝낸 장', 'Chapters finished')], q: [60, T2('보너스 문제', 'Bonus questions')], help: [60, T2('일꾼 곁 거들기', 'Helping workers')], job: [20, T2('직업 체험', 'Job experience')], show: [20, T2('쇼', 'Shows')], rank: [30, T2('승급 미션', 'Rank missions')], play: [60, T2('강·들 놀이', 'River and field play')], tmap: [30, T2('보물 지도', 'Treasure maps')], road: [40, T2('길 위 사건', 'On the road')] };
 const cut = (v, n) => (v == null ? undefined : String(v).slice(0, n));
 // 한 건 다듬기(글 길이·고른 것 수 제한 · 빈 칸 빼기) — 아이 이름·sid는 애초에 받지 않음
 export function tidy(k, o) { const r = {};

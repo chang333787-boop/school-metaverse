@@ -162,6 +162,7 @@ export function makeWorkerMesh(T3, L, RL) {
       m.count = K; m.instanceMatrix.needsUpdate = true; at.needsUpdate = true; ap.needsUpdate = true; },
     act(i, a, tool) { const v9 = typeof a === 'number' ? a : WK_ACT[a], t9 = tool == null ? PH[i * 4 + 2] : typeof tool === 'number' ? tool : TOOL[tool]; if (v9 == null || (PH[i * 4 + 1] === v9 && PH[i * 4 + 2] === t9)) return; PH[i * 4 + 1] = v9; PH[i * 4 + 2] = t9; const j = SLOT[i]; if (j >= 0) { aPh[j * 4 + 1] = v9; aPh[j * 4 + 2] = t9; at.needsUpdate = true; } },   // 동작(·연장) 바꾸기 — 잔치 · 걷기 등 놀이 팀 자리
     reset(i) { this.act(i, PH0[i * 4 + 1], PH0[i * 4 + 2]); },   // 역할 동작·연장으로 되돌림
+    hat(i, on) { const v = on ? PH0[i * 4 + 3] : 0; if (PH[i * 4 + 3] === v) return; PH[i * 4 + 3] = v; const j = SLOT[i]; if (j >= 0) { aPh[j * 4 + 3] = v; at.needsUpdate = true; } },   // WAKE-1b 모자 벗기기·씌우기(바람에 날아간 모자 — 크기 0 = 셰이더가 접음)
     vis(i, on) { if (!on === !!hid[i]) return; hid[i] = on ? 0 : 1; dirty = true; },   // 계절 문(워터파크 손님) 숨김 — 다음 near()에서 칸 다시 채움
     dispose() { g.dispose(); mat.dispose(); } };
 }
