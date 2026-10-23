@@ -1,4 +1,4 @@
-// 마을 첫 화면·진행 열림 시험(INTUIT-1 · 사용자 10-18 '동물의 숲은 이야기만 따라가도 되는데 우리 게임은 직관이 부족'): node tools/harness/town_hud.cjs [마을=ourtown] [포트=8002] [--shots=폴더] [--count]
+// 마을 첫 화면·진행 열림 시험(INTUIT-1 · 사용자 10-18 '동물의 숲은 이야기만 따라가도 되는데 우리 게임은 직관이 부족'): node tools/harness/town_hud.cjs [마을=ourtown] [포트=8002] [--shots=폴더] [--count [--min=10]]
 //   첫 화면에 보이는 HUD(칩·작은 지도·칸 배지·가방·할 일 줄·나침반 띠·키 안내·위 가운데 줄)를 세고 글을 적음 — 데스크톱 1366×768 · 휴대폰 세로 390×844 → 가로 844×390(터치)
 //   --count = 세기만(옛 판과 견주기) · 그 밖: 잠긴 키(M·B·I·F·J·Y)는 창을 안 엶 · unlock(키) = 그 칩만 늘고 살며시 나타남 · 이야기 안전망(다음 막에 들어서면 앞 막 키)
 //   · 선생님(sm.t) = 모두 열림 · 예전 저장(hud 칸 없음) = 모두 열림 · ?all=1은 town_state.cjs가 씀
@@ -19,6 +19,19 @@ async function boot(ctx, url, touch) { const p = await ctx.newPage(), errs = [];
   if (touch) await p.touchscreen.tap(200, 300); await p.waitForTimeout(2600); return { p, errs }; }
 const shot = async (p, n) => { if (SHOTS) await p.screenshot({ path: SHOTS + '/' + n + '.png' }); };
 const toastT = p => p.evaluate(() => { const t = document.getElementById('toast'); return t && t.getClientRects().length ? t.textContent : ''; });
+// --count 봇(PHASE2 조각 0): 모두 열린 저장으로 MIN분 걷기(W 누른 채 · 6초마다 A/D 돌기) · 2.5분마다 잠(아침 알림 몰림) · #toast·#hudBan 글을 지켜봄
+//   알림 = 새 글이 뜬 수 · 덮어씀 = 앞 알림이 보인 지 1.8초 안에 다른 글로 바뀜(읽기 전에 사라짐) · 분당 = 알림÷분
+const MIN = +(arg('min') || 10);
+async function bot(p, R) { await p.evaluate(() => { const L = window.__TL = []; const watch = (id, k) => { let el = document.getElementById(id), last = '', t0 = 0; const look = () => { el = el || document.getElementById(id); if (!el) return; const vis = el.style.display !== 'none' && !!el.getClientRects().length, tx = vis ? el.textContent : ''; if (tx && tx !== last) { const now = performance.now(); if (last && now - t0 < 1800) L.push({ k, t: now, tx, over: last }); else L.push({ k, t: now, tx }); last = tx; t0 = now; } else if (!tx) last = ''; }; setInterval(look, 100); }; watch('toast', 'toast'); watch('hudBan', 'ban'); });
+  const T0 = Date.now(), ms = MIN * 60000; let slept = 0; await p.keyboard.down('KeyW');
+  while (Date.now() - T0 < ms) { const k = Math.random() < 0.5 ? 'KeyA' : 'KeyD'; await p.keyboard.down(k); await p.waitForTimeout(300 + Math.random() * 900); await p.keyboard.up(k); await p.waitForTimeout(5000);
+    if (Date.now() - T0 > (slept + 1) * 150000) { slept++; await p.keyboard.up('KeyW'); await p.evaluate(() => SM_TOWN.sleep()); await p.waitForTimeout(3200); for (let i = 0; i < 4; i++) { await p.evaluate(() => { const b = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button'); if (b) b.click(); }); await p.keyboard.press('Escape'); await p.waitForTimeout(250); } await p.keyboard.down('KeyW'); }
+    if (await p.evaluate(() => !!document.querySelector('.twn-p'))) { await p.keyboard.press('Escape'); } }
+  await p.keyboard.up('KeyW'); const L = await p.evaluate(() => window.__TL), T = L.filter(q => q.k === 'toast'), B = L.filter(q => q.k === 'ban'), O = L.filter(q => q.over);
+  R.bot = { min: MIN, toast: T.length, ban: B.length, over: O.length, perMin: +((T.length + B.length) / MIN).toFixed(2), sleeps: slept };
+  console.log('\n봇 ' + MIN + '분(잠 ' + slept + '번): 알림 ' + T.length + ' · 배너 ' + B.length + ' · 분당 ' + R.bot.perMin + ' · 덮어써진 것 ' + O.length);
+  const seen = new Set(); for (const q of O) { const k9 = q.over.slice(0, 50) + ' → ' + q.tx.slice(0, 40); if (seen.has(k9)) continue; seen.add(k9); if (seen.size <= 20) console.log('   덮어씀: ' + k9); }
+  const cnt = {}; for (const q of [...T, ...B]) { const k9 = q.tx.replace(/[0-9]+/g, '#').slice(0, 26); cnt[k9] = (cnt[k9] || 0) + 1; } console.log('   자주 뜬 글: ' + Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, n]) => n + '× ' + k).join(' | ')); }
 (async () => { const T0 = Date.now(), b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const R = {};
   try {
     // ① 데스크톱 첫 화면(빈 기기 = 새 아이)
@@ -45,9 +58,10 @@ const toastT = p => p.evaluate(() => { const t = document.getElementById('toast'
         ok(!errs.length, '오류 0 ' + errs.join(' | ')); }
       await ctx.close(); }
     // ② 예전 저장(hud 칸 없음) = 모두 열림
-    if (!COUNT) { const ctx = await b.newContext({ viewport: { width: 1366, height: 768 } }); await ctx.addInitScript(id => { if (!sessionStorage.getItem('zz.seed')) { localStorage.setItem('sm-town-game:' + id, JSON.stringify({ v: 1, day: 3, min: 600, bag: { '🍓': 2 }, money: 300 })); sessionStorage.setItem('zz.seed', '1'); } }, ID);
-      const { p, errs } = await boot(ctx, URL); const s = await p.evaluate(() => ({ all: SM_TOWN.hud.all(), saved: SM_TOWN.hud.saved() })); ok(s.all && s.saved.all === 1, '예전 저장 = 모두 열림 ' + JSON.stringify(s.saved)); R.old = await p.evaluate(HUD); await shot(p, 'desk_oldsave'); console.log('예전 저장 첫 화면 ' + R.old.length + '개'); for (const t of R.old) console.log('   ' + t);
-      ok(!R.old.some(t => /바로 가기 \(J\)|장소 \(F\)|모습 \(Y\)|^#mpChip/.test(t)), '모두 열려도 J·F·Y·함께하기는 칩 X'); ok(!errs.length, '오류 0 ' + errs.join(' | ')); await ctx.close(); }
+    { const ctx = await b.newContext({ viewport: { width: 1366, height: 768 } }); await ctx.addInitScript(id => { if (!sessionStorage.getItem('zz.seed')) { localStorage.setItem('sm-town-game:' + id, JSON.stringify({ v: 1, day: 3, min: 600, bag: { '🍓': 2 }, money: 300 })); sessionStorage.setItem('zz.seed', '1'); } }, ID);
+      const { p, errs } = await boot(ctx, URL); const s = await p.evaluate(() => ({ all: SM_TOWN.hud.all(), saved: SM_TOWN.hud.saved() })); if (!COUNT) ok(s.all && s.saved.all === 1, '예전 저장 = 모두 열림 ' + JSON.stringify(s.saved)); await p.waitForTimeout(2500); R.old = await p.evaluate(HUD); await shot(p, 'desk_oldsave'); console.log('예전 저장(모두 열림 · 3막과 같은 칩) 첫 화면 ' + R.old.length + '개'); for (const t of R.old) console.log('   ' + t);
+      if (!COUNT) ok(!R.old.some(t => /바로 가기 \(J\)|장소 \(F\)|모습 \(Y\)|^#mpChip/.test(t)), '모두 열려도 J·F·Y·함께하기는 칩 X'); ok(!errs.length, '오류 0 ' + errs.join(' | '));
+      if (COUNT) await bot(p, R); await ctx.close(); }
     // ③ 휴대폰 세로 → 가로(터치)
     { const ctx = await b.newContext({ ...devices['iPhone 13'], deviceScaleFactor: 1 }), { p, errs } = await boot(ctx, URL, true); R.ph = await p.evaluate(HUD); await shot(p, 'phone_first'); console.log('휴대폰 세로 첫 화면 ' + R.ph.length + '개'); for (const t of R.ph) console.log('   ' + t);
       await p.setViewportSize({ width: 844, height: 390 }); await p.waitForTimeout(1500); R.phL = await p.evaluate(HUD); await shot(p, 'phone_land'); console.log('휴대폰 가로 첫 화면 ' + R.phL.length + '개');
@@ -55,5 +69,5 @@ const toastT = p => p.evaluate(() => { const t = document.getElementById('toast'
         ok(R.phU.some(t => /gchip.*🗺/.test(t)), '터치: 작은 지도를 열면 🗺 칩'); ok(/새로 생겼어요/.test(await toastT(p)), '여럿을 한꺼번에 열면 한 줄 알림'); }
       ok(!errs.length, '오류 0 ' + errs.join(' | ')); await ctx.close(); }
   } finally { await b.close(); }
-  console.log('\n요약: 데스크톱 ' + R.desk.length + ' · 휴대폰 세로 ' + R.ph.length + ' · 가로 ' + R.phL.length + (R.old ? ' · 예전 저장 ' + R.old.length : '') + ' · ' + Math.round((Date.now() - T0) / 1000) + '초' + (COUNT ? '' : ' · 실패 ' + fails.length));
+  console.log('\n요약: 데스크톱 ' + R.desk.length + ' · 휴대폰 세로 ' + R.ph.length + ' · 가로 ' + R.phL.length + (R.old ? ' · 예전 저장 ' + R.old.length : '') + (R.bot ? ' · 봇 분당 ' + R.bot.perMin + ' · 덮어씀 ' + R.bot.over : '') + ' · ' + Math.round((Date.now() - T0) / 1000) + '초' + (COUNT ? '' : ' · 실패 ' + fails.length));
   process.exit(fails.length ? 1 : 0); })().catch(e => { console.error(e); process.exit(2); });

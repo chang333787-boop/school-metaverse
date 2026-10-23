@@ -3,12 +3,12 @@
 //   이야기 단계 이름 = 이야기 S.story.rec.st와 같게(c 장 · s 단계 · h 힌트 단계 · tr 틀린 수 · p 고른 것 · w 까닭 · l 불편해질 사람 · t 한 줄 · f 잰 값) — QUEST-2 기록을 같은 이름으로 한 곳에
 //   하루 = 실제 날짜(수업 한 번 = 하루 · 게임 하루는 12분이라 게임 날로 묶으면 14일이 수업 한두 번) · 최근 14일 · 갈래마다 하루 상한 · 글은 짧게 자름 · 전체가 80KB를 넘으면 오래된 날부터(보통 하루 3~4KB · 꽉 찬 하루 약 15KB)
 //   이름·sid·기기 번호 X — 화면엔 '이 기기'로만 · 매 프레임 일 0(일이 끝날 때 add 한 번 · 창은 열 때만 셈)
-import { CHAPTERS } from './town_story.js?v=21';
+import { CHAPTERS } from './town_story.js?v=22';
 import { BANK, DIR8 } from './town_quiz.js?v=7';
 export const REC_V = 1, REC_DAYS = 14, REC_MAX = 80 * 1024;
 const T2 = (ko, en) => [ko, en];
 // 갈래: 하루 상한 · 이름(선생님 보기)
-export const KINDS = { st: [80, T2('이야기 단계', 'Story steps')], cd: [30, T2('끝낸 장', 'Chapters finished')], q: [60, T2('보너스 문제', 'Bonus questions')], help: [60, T2('일꾼 곁 거들기', 'Helping workers')], job: [20, T2('직업 체험', 'Job experience')], show: [20, T2('쇼', 'Shows')], rank: [30, T2('승급 미션', 'Rank missions')], play: [60, T2('강·들 놀이', 'River and field play')], tmap: [30, T2('보물 지도', 'Treasure maps')], road: [40, T2('길 위 사건', 'On the road')] };
+export const KINDS = { st: [80, T2('이야기 단계', 'Story steps')], way: [60, T2('길 찾기 도움(헤맴 그물)', 'Way-finding help')], cd: [30, T2('끝낸 장', 'Chapters finished')], q: [60, T2('보너스 문제', 'Bonus questions')], help: [60, T2('일꾼 곁 거들기', 'Helping workers')], job: [20, T2('직업 체험', 'Job experience')], show: [20, T2('쇼', 'Shows')], rank: [30, T2('승급 미션', 'Rank missions')], play: [60, T2('강·들 놀이', 'River and field play')], tmap: [30, T2('보물 지도', 'Treasure maps')], road: [40, T2('길 위 사건', 'On the road')] };
 const cut = (v, n) => (v == null ? undefined : String(v).slice(0, n));
 // 한 건 다듬기(글 길이·고른 것 수 제한 · 빈 칸 빼기) — 아이 이름·sid는 애초에 받지 않음
 export function tidy(k, o) { const r = {};

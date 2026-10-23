@@ -39,7 +39,7 @@ const NOHELP = new Set(['swim', 'guest']);
 export function createRoad(A) {
   const T3 = A.T3, map = A.map, en = () => A.lang() === 'en', L = t => (Array.isArray(t) ? t[en() ? 1 : 0] : String(t)), esc = t => A.esc(t);
   const S = () => { const g = A.GAME.S; let s = g.road; if (!s || typeof s !== 'object' || s.v !== RD_V) s = g.road = { v: RD_V, ring: {}, hk: {}, n: 0 }; if (!s.ring || typeof s.ring !== 'object') s.ring = {}; if (!s.hk || typeof s.hk !== 'object') s.hk = {}; return s; };
-  const mark = () => A.GAME.mark(), toast = (t, s) => map.hud.toast(t, s), banner = (t, s) => map.hud.banner(t, s), sfx = k => map.sfx && map.sfx(k), tone = (...a) => map.tone && map.tone(...a);
+  const mark = () => A.GAME.mark(), toast = (t, s, lv) => (A.say ? A.say(t, s, lv) : map.hud.toast(t, s)), banner = (t, s) => map.hud.banner(t, s), sfx = k => map.sfx && map.sfx(k), tone = (...a) => map.tone && map.tone(...a);
   const O = new T3.Object3D(), C9 = new T3.Color();   /* 스크래치(매 프레임 새 객체 X) */
   let CS = [], built = false, buildMs = 0, NEAR = [], RING = null, RGEO = null, RMAT = null, ringKey = '', RACE = null;
   let REQ = null, ACT = null, PAPER = null, goalT = null, q4 = 0, lastMin = -1, movMin = 40, movP = 0, lx = 1e9, lz = 1e9, fx = 1e9, fz = 1e9;
@@ -132,7 +132,7 @@ export function createRoad(A) {
   function hotOff(w, off) { const h = A.wkHot(w); if (!h) return; if (off) { if (h.rdOff == null) { h.rdOff = !!h.off; h.off = true; } } else if (h.rdOff != null) { h.off = h.rdOff; delete h.rdOff; } }
   function reqStart(i, w, kind, plan) { const e = en(); REQ = { i, w, kind, plan, t: 0, bq: 0 }; const M = A.wkMesh(); if (M) M.act(i, 'wave', 0); hotOff(w, true);
     REQ.h = map.interact.add({ kind: 'game', x: w.x, z: w.z, y: w.g, r: 3.2, label: '🙋 ' + (e ? 'Help the ' + who(w) + ' worker' : who(w) + ' 일꾼 도와드리기'), use: () => offer() });
-    A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, e ? 'Excuse me! Can you help?' : '저기요! 잠깐 도와줄래요?'); sfx('tick'); toast('🙋 ' + (e ? 'A worker is waving at you!' : '저기 일꾼이 손을 들었어요!'), 2.4); goalT = null; }
+    A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, e ? 'Excuse me! Can you help?' : '저기요! 잠깐 도와줄래요?'); sfx('tick'); toast('🙋 ' + (e ? 'A worker is waving at you!' : '저기 일꾼이 손을 들었어요!'), 2.4, 1); goalT = null; }
   function reqEnd(quiet) { if (!REQ) return; const r = REQ; REQ = null; if (r.h) r.h.remove(); const M = A.wkMesh(); if (M) M.reset(r.i); hotOff(r.w, false); if (!quiet && !A.panelOpen()) toast('🙋 ' + (en() ? 'Maybe next time!' : '다음에 도와드려요!'), 2); goalT = null; }
   function limitOf() { return 75; }
   function taskLine(r) { const e = en(); if (r.kind === 'hat') return e ? 'Catch the hat the wind blew away and bring it back.' : '바람에 날아간 모자를 잡아서 가져다드려요.';
@@ -156,7 +156,7 @@ export function createRoad(A) {
       A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, L(L9));
       banner('🙋 ' + (e ? 'You helped!' + (hOk ? ' ❤+1' : '') + (pay ? (hOk ? ' and' : '') + ' 100 won' : '') : '도와드렸어요!' + (hOk ? ' ❤+1' : '') + (pay ? (hOk ? ', ' : ' ') + '100원을 받았어요' : '')) + (pay ? '' : (e ? ' (today\'s share is done)' : ' (오늘 받을 몫은 끝)')), 3);
       const f = a.kind === 'hat' ? windFact() : L(a.plan.crop[4]);
-      setTimeout(() => toast('💡 ' + f, 4.6), 1500); }
+      setTimeout(() => toast('💡 ' + f, 4.6, 1), 1500); }
     else { A.GAME.use('road:help'); mark(); if (Math.hypot(map.player.pos().x - w.x, map.player.pos().z - w.z) < 45) A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, L(T2('괜찮아요, 다음에 또 부탁해요!', 'That is OK, maybe next time!')));
       toast('⏱ ' + (why === 'time' ? (e ? 'Time is up. Next time for sure!' : '시간이 다 됐어요. 다음엔 꼭!') : (e ? 'The favour stopped. Next time for sure!' : '부탁을 멈췄어요. 다음엔 꼭!')), 3.6); }
     A.rec('road', { k: a.kind, ok: ok ? 1 : 0, t: Math.round(a.el) }); movMin = 0; goalT = null; }
