@@ -20,9 +20,11 @@ export function levelOf(xp) { let L = 1, x = xp || 0; while (L < MAXL && x >= NE
 // 하루에 같은 갈래 n번째 받을 때 몫(1~8번 = 그대로 · 9~16 = 반 · 그 뒤 = 0 — 다른 놀이로)
 const DAYCUT = n => (n <= 8 ? 1 : n <= 16 ? 0.5 : 0);
 // 경험치 주기 → { k, L0, L1, xp } (레벨이 올랐으면 L1 > L0)
-export function gain(S, k, n, day) { if (!SKILLS[k] || !(n > 0)) return null; const SK = S.skill || (S.skill = {}), SD = S.skillDay && S.skillDay.d === day ? S.skillDay : (S.skillDay = { d: day });
-  SD[k] = (SD[k] || 0) + 1; const m = DAYCUT(SD[k]); if (!m) return { k, L0: levelOf(SK[k]).L, L1: levelOf(SK[k]).L, xp: 0, cut: true };
-  const L0 = levelOf(SK[k]).L; SK[k] = (SK[k] || 0) + Math.max(1, Math.round(n * m)); return { k, L0, L1: levelOf(SK[k]).L, xp: Math.max(1, Math.round(n * m)) }; }
+//   REW-1: src = 출처 꼬리표 · door = 보상 문(town_game.js rwCheck · 같은 출처 하루 n번 · 실제 날짜 총량) — DAYCUT은 안전망으로 그대로
+export function gain(S, k, n, day, src, door) { if (!SKILLS[k] || !(n > 0)) return null; const SK = S.skill || (S.skill = {}), SD = S.skillDay && S.skillDay.d === day ? S.skillDay : (S.skillDay = { d: day });
+  SD[k] = (SD[k] || 0) + 1; const m = DAYCUT(SD[k]), L00 = levelOf(SK[k]).L; if (!m) return { k, L0: L00, L1: L00, xp: 0, cut: true };
+  let x = Math.max(1, Math.round(n * m)); if (door) x = door('xp', src, x, k); if (!(x > 0)) { SD[k]--; return { k, L0: L00, L1: L00, xp: 0, cut: true }; }   /* 막힌 출처는 그 갈래의 하루 몫(DAYCUT)을 먹지 않음 */
+  SK[k] = (SK[k] || 0) + x; return { k, L0: L00, L1: levelOf(SK[k]).L, xp: x }; }
 export const lv = (S, k) => levelOf((S.skill || {})[k]).L;
 export const total = S => SK_ORDER.reduce((a, k) => a + lv(S, k), 0);
 // 칭호(솜씨 레벨 합 6~60)

@@ -59,9 +59,30 @@ export const shopOf = name => { if (/동물 카페|키즈 카페|보드게임 �
 export const won = n => (n | 0).toLocaleString('ko-KR') + '원';
 export const itemName = (e, en) => { const I = ITEMS[e]; return I ? (en ? I[1] : I[0]) : e; };
 
+// REW-1 보상 하루 한도(사용자 10-20 '곤충 하나 관찰하니까 관찰 레벨 무한 복사 · 되풀이 또 요소 없어?' · docs/systems/town_reward_cap.md): 생김(일·줍기·관찰·보상)은 모두 이 문 하나를 지남
+//   부르는 쪽 = src 꼬리표만('갈래:자리' · 예 'job:pasture' · 'bug:ant' · 'ev:bus') · 'mv:'(장터 팔기·되돌리기·교환·요리 바꾸기)와 'story'(이야기 보상 · 장마다 한 번)는 한도 밖
+//   ① 같은 출처 = 게임 하루 n번(솜씨 RW_XP · 물건·돈 RW_GEN) ② 하트 = 이웃마다 하루 +3 ③ 실제 날짜(YYYYMMDD) 하루 생김 총량 = 게임 하루 몫의 3배(잠 되풀이 구멍)
+export const RW_XP = { job: 6, bus: 3, book: 1, stars: 1, summit: 1, boat: 2, stones: 3, metro: 3, sell: 8, buy: 6, away: 4, bundle: 6, mush: 8, farm: 6, cook: 8, quiz: 2, cell: 1, bug: 2, wild: 2, shore: 2, fish: 2, worm: 2, sweep: 6, flower: 6 };   /* 꼬리표 갈래(앞 ':' 전) → 하루 몇 번 · 없는 갈래 = 3 */
+export const RW_XP_DEF = 3, RW_GEN = { job: 6 }, RW_HEART = 3;   /* 일 물건 = 일 갈래마다 하루 6판(칸 수만큼 늘던 구멍) */
+export const RW_DAY = { v: 20000, x: 48, h: 3 }, RW_RD = 3;   /* 게임 하루 몫: 생김 가치(원 · 물건은 파는 값 · 값 없는 것 100) · 솜씨 갈래마다 경험치 · 이웃마다 하트 → 실제 날짜 하루 = ×3 */
+export const rdNow = () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
+const rwVal = e => { const I = ITEMS[e]; return !I ? 100 : I[2] === 'stamp' ? 0 : Math.max(100, I[3] || 0); };
+const RWW = new Set();
+// 문: kind = 'bag'(k = 물건) · 'money' · 'xp'(k = 솜씨 갈래) · 'heart'(k = 이웃) → 줄 수 있는 양(0 = 막힘) · rwCheck.last = 'day' | 'rd' | ''
+export function rwCheck(S, kind, src, n, k, day) { rwCheck.last = ''; if (!(n > 0) || rwCheck.off) return n;
+  if (!src) { if (!RWW.has(kind + k)) { RWW.add(kind + k); console.warn('REW-1: 꼬리표 없는 보상 — ' + kind + ' ' + k); } src = '?:' + kind + ':' + k; }
+  const fam = String(src).split(':')[0]; if (fam === 'mv' || fam === 'story') return n;
+  const d0 = day != null ? day : S.day, rd = rdNow(); let R = S.rw; if (!R || typeof R !== 'object') R = S.rw = {}; if (R.d !== d0 || !R.c) { R.d = d0; R.c = {}; } if (R.rd !== rd || !R.r) { R.rd = rd; R.r = { v: 0, x: {}, h: {}, said: {} }; }
+  const C = R.c, Q = R.r, lim = kind === 'xp' ? (RW_XP[fam] != null ? RW_XP[fam] : fam === '?' ? 16 : RW_XP_DEF) : kind === 'heart' ? null : RW_GEN[fam];
+  if (lim != null) { const ck = kind[0] + '|' + src; if ((C[ck] || 0) >= lim) { rwCheck.last = 'day'; return 0; } C[ck] = (C[ck] || 0) + 1; }
+  if (kind === 'heart') { const ck = 'h|' + k, a = Math.min(n, RW_HEART - (C[ck] || 0), RW_DAY.h * RW_RD - (Q.h[k] || 0)); if (a <= 0) { rwCheck.last = (C[ck] || 0) >= RW_HEART ? 'day' : 'rd'; return 0; } C[ck] = (C[ck] || 0) + a; Q.h[k] = (Q.h[k] || 0) + a; if (a < n) rwCheck.last = 'day'; return a; }
+  if (kind === 'xp') { const a = Math.min(n, RW_DAY.x * RW_RD - (Q.x[k] || 0)); if (a <= 0) { rwCheck.last = 'rd'; return 0; } Q.x[k] = (Q.x[k] || 0) + a; if (a < n) rwCheck.last = 'rd'; return a; }
+  const u = kind === 'bag' ? rwVal(k) : 1; if (!u) return n; const left = RW_DAY.v * RW_RD - Q.v, a = Math.max(0, Math.min(n, Math.floor(left / u))); if (a < n) rwCheck.last = 'rd'; Q.v += a * u; return a; }
+rwCheck.off = false; rwCheck.last = '';
+
 export function createGame(id) {
   const KEY = 'sm-town-game:' + id;
-  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, hearts: {}, today: null, clock: true, cal: { d0: 1, on: true, s: 'now' }, bundles: {}, unlock: {}, farm: [], diary: [], wx: { auto: true }, bought: {}, res: {}, home: { v: 1, id: null, h: '', x: 0, z: 0, pots: [null, null], met: 0 }, yday: null });   /* HOME-1 우리 집(고른 집 · 해시 · 화분 둘 · 첫 만남) · yday = 어제 한 일(잠들 때 S.today를 남김) */   // bought = 가게에서 산 수(FIX-EC1 · 되팔기 값)
+  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, hearts: {}, today: null, clock: true, cal: { d0: 1, on: true, s: 'now' }, bundles: {}, unlock: {}, farm: [], diary: [], wx: { auto: true }, bought: {}, res: {}, rw: {}, home: { v: 1, id: null, h: '', x: 0, z: 0, pots: [null, null], met: 0 }, yday: null });   /* HOME-1 우리 집(고른 집 · 해시 · 화분 둘 · 첫 만남) · yday = 어제 한 일(잠들 때 S.today를 남김) */   // bought = 가게에서 산 수(FIX-EC1 · 되팔기 값)
   let S = fresh();
   let raw9 = null; try { raw9 = localStorage.getItem(KEY); } catch (e) { /* 막힘 */ }
   try { const j = JSON.parse(raw9 || 'null'); if (j && j.v !== SAVE_V) throw 0; if (j && j.v === SAVE_V) { const F9 = fresh(), T9 = Object.assign(fresh(), j); for (const k of Object.keys(F9)) { const f = F9[k], t = T9[k]; if (f && typeof f === 'object' ? (!t || typeof t !== 'object' || Array.isArray(t) !== Array.isArray(f)) : typeof f === 'number' && !Number.isFinite(t)) T9[k] = f; }   /* FIX-CX5(코덱스 점검): 칸 모양이 틀린 저장(bag = null 등)을 먼저 바로잡고 나서 씀 — 예전엔 S에 먼저 넣고 오류가 나 깨진 채 남았음 */ S = T9; if (!(j.cal && j.cal.d0 >= 1)) S.cal = { d0: S.day, on: true, s: 'now' };   /* 달력 없던 저장 = 오늘부터 첫 주 */ for (const k of Object.keys(S.bag)) if (!(S.bag[k] > 0)) delete S.bag[k]; } } catch (e) { /* 저장 깨짐·판 번호 다름 = 새로 시작하되 옛 글은 따로 남김(SAVE-1 · 덮어써서 잃지 않게 · 되살리기 = sm-town-game-bak:<마을>) */ if (raw9) try { localStorage.setItem('sm-town-game-bak:' + id, raw9); } catch (e2) { /* 가득 참 */ } }
@@ -97,7 +118,10 @@ export function createGame(id) {
     setCal(on, s) { if (on) S.cal.on = true; else { S.cal.on = false; S.cal.s = s; } dirty = true; },
     lastDay: null, tally(k, n = 1) { if (!S.today) S.today = T0(); S.today[k] = (S.today[k] || 0) + n; dirty = true; },
     // 가방
-    add(e, n = 1) { S.bag[e] = (S.bag[e] || 0) + n; const neu = G.found(e); if (S.today) S.today.got[e] = (S.today.got[e] || 0) + n; dirty = true; return neu; },
+    /* REW-1 문(부를 때만 · 실제 날짜 상한에 처음 닿으면 'cap' 알림 한 번) */ rw(kind, src, n, k) { const a = rwCheck(S, kind, src, n, k); if (rwCheck.last) { dirty = true; if (rwCheck.last === 'rd' && S.rw.r && !S.rw.r.said[kind]) { S.rw.r.said[kind] = 1; emit('cap'); } } else if (a > 0 && n > 0) dirty = true; return a; },
+    rwLeft(kind, src) { const R = S.rw, fam = String(src).split(':')[0], lim = kind === 'xp' ? (RW_XP[fam] != null ? RW_XP[fam] : RW_XP_DEF) : RW_GEN[fam]; if (lim == null || rwCheck.off) return 99; const c = R && R.d === S.day && R.c ? R.c[kind[0] + '|' + src] || 0 : 0; return lim - c; },
+    rwOff(v) { rwCheck.off = !!v; },   /* 시험 손잡이(town_cap.cjs · 한도 없이 잰 하루와 견줌) */
+    lastN: 0, add(e, n = 1, src) { n = G.rw('bag', src, n, e); G.lastN = n; if (!(n > 0)) return false; S.bag[e] = (S.bag[e] || 0) + n; const neu = G.found(e); if (S.today) S.today.got[e] = (S.today.got[e] || 0) + n; dirty = true; return neu; },
     // 도감 첫 기록(곳·때 = 놀이 쪽 stamp9 · town_dex.js 틀)
     stamp9: null, found(k) { if (S.dex[k] != null) return false; S.dex[k] = G.stamp9 ? G.stamp9() : S.day; if (S.today) S.today.dex++; dirty = true; return true; },
     take(e, n = 1) { if ((S.bag[e] || 0) < n) return false; S.bag[e] -= n; if (S.bag[e] <= 0) delete S.bag[e]; const B8 = S.bought; if (B8 && B8[e]) { const r = Math.max(0, Math.min(B8[e] - n, S.bag[e] || 0)); if (r) B8[e] = r; else delete B8[e]; } dirty = true; return true; },   /* FIX-EC1: 쓰면(요리·선물·꾸러미) 가게에서 산 것부터 — 장터는 따로 셈 */
@@ -106,12 +130,12 @@ export function createGame(id) {
     picked: k => S.picked[k] === S.day,
     pick(k) { S.picked[k] = S.day; dirty = true; },
     // 돈(GAME-3 · 빚·벌 없음 — 모자라면 못 살 뿐)
-    earn(n) { n = Math.round(n); S.money += n; S.earned += n; if (S.today) S.today.earned += n; dirty = true; },
+    earn(n, src) { n = Math.round(n); if (n > 0) n = G.rw('money', src, n); if (!n) return 0; S.money += n; S.earned += n; if (S.today) S.today.earned += n; dirty = true; return n; },
     spend(n) { if (S.money < n) return false; S.money -= n; dirty = true; return true; },
     // 가 본 칸(도감 · 처음이면 true)
     visit(c) { if (S.cells[c]) return false; S.cells[c] = S.day; if (S.today) S.today.cells++; dirty = true; return true; },
     // 이웃 마음(일꾼마다 점수 · ❤ = 3점마다 · 최대 5) — 올랐으면 새 ❤ 수를 돌려줌
-    heart(k, n) { const H = S.hearts || (S.hearts = {}), a = Math.min(5, ((H[k] || 0) / 3) | 0); H[k] = Math.min(15, (H[k] || 0) + n); dirty = true; const b = Math.min(5, (H[k] / 3) | 0); return b > a ? b : 0; },
+    heart(k, n, src) { n = G.rw('heart', src, n, k); if (!(n > 0)) return 0; const H = S.hearts || (S.hearts = {}), a = Math.min(5, ((H[k] || 0) / 3) | 0); H[k] = Math.min(15, (H[k] || 0) + n); dirty = true; const b = Math.min(5, (H[k] / 3) | 0); return b > a ? b : 0; },
     hearts: k => Math.min(5, (((S.hearts || {})[k] || 0) / 3) | 0),
     // 하루에 몇 번(일터 3판 등 — 다음 날 다시)
     uses: k => S.uses[k] || 0,
@@ -126,8 +150,8 @@ export function createGame(id) {
         const [id, c] = pick, T = TASKS[id], txt = (en ? T[1] : T[0]).replace('{e}', c[2] || '').replace('{n}', c[3] || ''); list.push({ id, why: c.why || null, ev: id === 'work' ? 'work:' + c[1] : id, t: txt, cell: c[0] || '', at: c.at || null, need: T[2], n: 0, rew: T[3], done: false });   /* at = 그 자리(🧭 길 안내 · GAME-5d) */ });
       S.tasks = { day: S.day, list, all: false }; dirty = true; return list; },
     // 한 일 알리기 → 이번에 끝난 할 일들(보상은 여기서 줌 · 셋 다 끝나면 덤)
-    taskEv(ev, n = 1) { const T = S.tasks; if (!T || T.day !== S.day) return null; let out = null; for (const t of T.list) { if (t.done || t.ev !== ev) continue; t.n = Math.min(t.need, t.n + n); if (t.n >= t.need) { t.done = true; S.money += t.rew; S.earned += t.rew; S.tasksDone = (S.tasksDone || 0) + 1; if (S.today) { S.today.tasks++; S.today.earned += t.rew; } (out = out || []).push(t); } }
-      if (out && !T.all && T.list.every(t => t.done)) { T.all = true; S.money += 500; S.earned += 500; out.all = true; } if (out) dirty = true; return out; },
+    taskEv(ev, n = 1) { const T = S.tasks; if (!T || T.day !== S.day) return null; let out = null; for (const t of T.list) { if (t.done || t.ev !== ev) continue; t.n = Math.min(t.need, t.n + n); if (t.n >= t.need) { t.done = true; const r9 = G.rw('money', 'task:' + t.id, t.rew); S.money += r9; S.earned += r9; S.tasksDone = (S.tasksDone || 0) + 1; if (S.today) { S.today.tasks++; S.today.earned += r9; } (out = out || []).push(t); } }
+      if (out && !T.all && T.list.every(t => t.done)) { T.all = true; const r9 = G.rw('money', 'task:all', 500); S.money += r9; S.earned += r9; out.all = true; } if (out) dirty = true; return out; },
     // 처음부터(가방·돈·도감·날짜 모두) — 가방 객체는 그대로 두고 비움(마을이 같은 객체를 들고 있음)
     reset() { const b = S.bag; for (const k of Object.keys(b)) delete b[k]; const f = fresh(); f.bag = b; for (const k of Object.keys(S)) delete S[k]; Object.assign(S, f); acc = 0; ph = phaseOf(S.min); dirty = true; G.flush(); emit('clock'); emit('phase'); },
   };

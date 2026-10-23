@@ -83,7 +83,7 @@ export function createShore(A) {
       else if (dr === 'skipper') sp.position.y = s.y0 + Math.pow(Math.max(0, Math.sin(t * 1.6)), 6) * 0.35;
       else if (dr === 'snail') sp.position.x = s.x + Math.sin(t * 0.12) * 0.4;
       else if (dr === 'worm') sp.scale.x = s.sc * (0.85 + 0.15 * Math.sin(t * 3)); } }
-  function look(s) { const b = s.b; if (!b || A.panel()) return; const e = en(), neu = A.GAME.found('shore:' + b.id); A.skUp('look', neu ? 3 : 1);
+  function look(s) { const b = s.b; if (!b || A.panel()) return; const e = en(), neu = A.GAME.found('shore:' + b.id); A.skUp('look', neu ? 3 : 1, 'shore:' + b.id);
     const P9 = A.openP('<h3>🔍 ' + A.esc(b.t[e ? 1 : 0]) + '</h3>' + (/crab|fiddler/.test(b.draw) ? photoHtml('suncheon', e) : '') + '<div class="st"><canvas class="twn-shore" width="200" height="200" style="flex:none;width:150px;height:150px"></canvas><div>' + A.esc(b.line[e ? 1 : 0]) + '<div class="sm">' + A.esc(b.hint[e ? 1 : 0]) + (e ? ' · we only look, then let it be' : ' · 잡지 않고 보기만 해요') + '</div>' + (neu ? '<div class="sm"><b>📖 ' + (e ? 'New in your codex!' : '도감에 새로 적었어요!') + '</b></div>' : '') + '</div></div><div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>', false, 'shore');
     drawShore(P9.querySelector('.twn-shore'), b, true); P9.onclick = ev => { const bt = ev.target.closest('button'); if (bt && bt.dataset.a === 'x') A.closeP(); }; A.map.sfx && A.map.sfx(neu ? 'ding' : 'tick'); if (neu) A.bagShow(); }
   // 다음 썰물(지금 썰물이면 끝나는 시각) — 칩·알림·조개 캐기 안내가 같이 씀

@@ -153,12 +153,12 @@ export function createTools(A) {
     if ((wetQ -= dt) <= 0) { wetQ = 0.4; wetAdd(x, T.y, z); }
     const bi = bedAt(x, z); if (bi >= 0) { if (ACC.bed[bi] === -1) return; ACC.bed[bi] = (ACC.bed[bi] || 0) + dt; if (ACC.bed[bi] < 0.9) return; ACC.bed[bi] = -1; const st = A.farm.st(bi);
       if (st === 'water') { A.farm.use(bi); A.rec('can-bed'); } else if (st === 'empty') toast(en9 ? '🌱 Plant seeds first (E), then water' : '🌱 먼저 씨앗을 심어요 (E) — 그다음 물을 줘요', 2.4); else if (st === 'grow') toast(en9 ? '🌱 Already watered today — it grows while you sleep' : '🌱 오늘은 물을 줬어요 — 자는 동안 자라요', 2.4); else if (st === 'ripe') toast(en9 ? '🧺 It is ripe — harvest it with E' : '🧺 다 자랐어요 — E로 거둬요', 2.4); return; }
-    const ch = A.chem(), fi = ch && ch.fireAt ? ch.fireAt(x, z, 1.0) : -1; if (fi >= 0) { if (ACC.fi !== fi) { ACC.fi = fi; ACC.fire = 0; } ACC.fire += dt; if ((hissT -= dt) <= 0) { hissT = 0.3; tone(2300, 0, 0.25, 'sawtooth', 0.012, 900); } if (ACC.fire >= 1.1) { ACC.fire = 0; if (ch.fireDouse(fi)) { A.rec('can-fire'); A.skUp('look', 1); } } return; }
+    const ch = A.chem(), fi = ch && ch.fireAt ? ch.fireAt(x, z, 1.0) : -1; if (fi >= 0) { if (ACC.fi !== fi) { ACC.fi = fi; ACC.fire = 0; } ACC.fire += dt; if ((hissT -= dt) <= 0) { hissT = 0.3; tone(2300, 0, 0.25, 'sawtooth', 0.012, 900); } if (ACC.fire >= 1.1) { ACC.fire = 0; if (ch.fireDouse(fi)) { A.rec('can-fire'); A.skUp('look', 1, 'fire'); } } return; }
     const f = flowerAt(x, z, 0.8); if (f) { const k = Math.round(f.x * 2) + ':' + Math.round(f.z * 2); if (ACC.flk !== k) { ACC.flk = k; ACC.fl = 0; } if (ACC.fl < 0) return; ACC.fl += dt; if (ACC.fl < 0.8) return; ACC.fl = -1; const B = t.bloom, b = B[k];
       if (b && b.w === day()) { toast(en9 ? '🌷 You watered this flower today — come back tomorrow' : '🌷 이 꽃은 오늘 물을 줬어요 — 내일 또 줘요', 2.2); return; }
       B[k] = { x: +f.x.toFixed(2), y: +f.y.toFixed(2), z: +f.z.toFixed(2), c: Math.min(9, ((b && b.c) || 0) + 1), w: day() }; const ks = Object.keys(B); if (ks.length > 20) { ks.sort((a9, b9) => B[a9].w - B[b9].w); delete B[ks[0]]; } mark(); dirty = true;
-      A.skUp('farm', 1); A.rec('can-flower'); toast(en9 ? '🌷 Watered the flowers — one more will bloom tomorrow' : '🌷 꽃에 물을 줬어요 — 내일 한 송이 더 피어요', 2.6); return; }
-    const p = potAt(x, z); if (p) { const k = Math.round(p[0]) + ':' + Math.round(p[2]); if (ACC.potk !== k) { ACC.potk = k; ACC.pot = 0; } if (ACC.pot < 0) return; ACC.pot += dt; if (ACC.pot < 0.8) return; ACC.pot = -1; if (t.n['pot:' + k] === day()) return; t.n['pot:' + k] = day(); mark(); A.skUp('farm', 1); toast(en9 ? '🪴 Watered the pot plant' : '🌱 화분에 물을 줬어요', 2); } }
+      A.skUp('farm', 1, 'flower'); A.rec('can-flower'); toast(en9 ? '🌷 Watered the flowers — one more will bloom tomorrow' : '🌷 꽃에 물을 줬어요 — 내일 한 송이 더 피어요', 2.6); return; }
+    const p = potAt(x, z); if (p) { const k = Math.round(p[0]) + ':' + Math.round(p[2]); if (ACC.potk !== k) { ACC.potk = k; ACC.pot = 0; } if (ACC.pot < 0) return; ACC.pot += dt; if (ACC.pot < 0.8) return; ACC.pot = -1; if (t.n['pot:' + k] === day()) return; t.n['pot:' + k] = day(); mark(); A.skUp('farm', 1, 'pot:' + k); toast(en9 ? '🪴 Watered the pot plant' : '🌱 화분에 물을 줬어요', 2); } }
   function dropTick(dt) { if (!pAlive) { if (DROP && DROP.visible) DROP.visible = false; return; } let n = 0;
     for (let i = 0; i < PMAX; i++) { const k = kind[i]; if (!k) continue; if ((life[i] -= dt) <= 0) { kind[i] = 0; pAlive--; if (k === 1 && Math.random() < 0.35) splash(px[i], py[i], pz[i], 1); continue; }
       vy[i] -= GV * dt; px[i] += vx[i] * dt; py[i] += vy[i] * dt; pz[i] += vz[i] * dt;
@@ -195,14 +195,14 @@ export function createTools(A) {
     if (t.holes.some(h => h[4] === day() && Math.hypot(h[0] - x, h[1] - z) < 0.7)) { toast(en9 ? '⛏ You already dug here' : '⛏ 여기는 벌써 팠어요', 1.8); return; }
     map.player.act('dig', { at: [x, y, z], msg: null, midAt: 1.55, color: snow ? 0xf4f8fb : 0x6b4a2e, color2: snow ? 0xdde6ec : 0x8a6a48, onMid: () => digDone(x, y, z, snow) }); }
   function digDone(x, y, z, snow) { const t = S(), en9 = en(); t.holes.push([+x.toFixed(2), +z.toFixed(2), +y.toFixed(2), snow ? 's' : 'd', day()]); while (t.holes.length > HMAX) t.holes.shift(); mark(); dirty = true; holeDraw(); A.rec(snow ? 'dig-snow' : 'dig');
-    if (snow) { const n = A.GAME.use('tool:snow'); if (n <= 6) A.skUp('work', 1); toast(n === 1 ? (en9 ? '⛄ Cleared the snow — the path is less slippery now' : '⛄ 눈을 치웠어요 — 길이 덜 미끄러워요') : (en9 ? '⛄ Cleared the snow' : '⛄ 눈을 치웠어요'), 2.2); return; }
+    if (snow) { const n = A.GAME.use('tool:snow'); if (n <= 6) A.skUp('work', 1, 'snow'); toast(n === 1 ? (en9 ? '⛄ Cleared the snow — the path is less slippery now' : '⛄ 눈을 치웠어요 — 길이 덜 미끄러워요') : (en9 ? '⛄ Cleared the snow' : '⛄ 눈을 치웠어요'), 2.2); return; }
     const n = A.GAME.use('tool:dig'), R = Math.random(), farmy = A.fieldNear(x, z); let got = null;
     if (!t.n.worm && n >= 2) got = 'worm';   // 처음엔 둘째 삽질에 꼭 지렁이(첫 만남 = 관찰 카드)
     else if (farmy && R < 0.35 && A.GAME.uses('tool:pot') < 3) got = 'potato'; else if (R < 0.55 && A.GAME.uses('tool:peb') < 3) got = 'pebble'; else if (R < 0.78) got = 'worm';
-    if (got === 'potato') { A.GAME.use('tool:pot'); A.bagAdd('🥔', 1); A.skUp('farm', 1); toast(en9 ? '🥔 A potato! It grew under the soil near the field' : '🥔 감자가 나왔어요! 밭 둘레 흙 속에서 자랐어요', 2.4); return; }
-    if (got === 'pebble') { A.GAME.use('tool:peb'); A.bagAdd('⚪', 1); A.skUp('look', 1); toast(en9 ? '⚪ A pebble — water and time wore it round' : '⚪ 조약돌이 나왔어요 — 물과 세월에 닳아 동글동글해요', 2.4); return; }
+    if (got === 'potato') { A.GAME.use('tool:pot'); A.bagAdd('🥔', 1, 'dig:potato'); A.skUp('farm', 1, 'dig:potato'); toast(en9 ? '🥔 A potato! It grew under the soil near the field' : '🥔 감자가 나왔어요! 밭 둘레 흙 속에서 자랐어요', 2.4); return; }
+    if (got === 'pebble') { A.GAME.use('tool:peb'); A.bagAdd('⚪', 1, 'dig:pebble'); A.skUp('look', 1, 'dig:pebble'); toast(en9 ? '⚪ A pebble — water and time wore it round' : '⚪ 조약돌이 나왔어요 — 물과 세월에 닳아 동글동글해요', 2.4); return; }
     if (got === 'worm') { wormShow(x, y, z); const first = !t.n.worm; t.n.worm = (t.n.worm || 0) + 1; mark(); const ch = A.chem(); if (ch && ch.lawFound) ch.lawFound('compost', '⛏', 'worm');
-      if (first) { A.skUp('look', 3); setTimeout(() => { if (!dead) wormCard(); }, 1400); } else { A.skUp('look', 1); toast(en9 ? '🐛 A wriggly earthworm — a decomposer that makes soil rich. We covered it back up' : '🐛 지렁이가 꿈틀 — 흙을 기름지게 하는 분해자예요. 다시 흙에 덮어 줬어요', 3); } return; }
+      if (first) { A.skUp('look', 3, 'worm'); setTimeout(() => { if (!dead) wormCard(); }, 1400); } else { A.skUp('look', 1, 'worm'); toast(en9 ? '🐛 A wriggly earthworm — a decomposer that makes soil rich. We covered it back up' : '🐛 지렁이가 꿈틀 — 흙을 기름지게 하는 분해자예요. 다시 흙에 덮어 줬어요', 3); } return; }
     toast(L(NOTHING[n % NOTHING.length]), 2.2); }
   function wormCard() { if (A.busy()) { setTimeout(() => { if (!dead) wormCard(); }, 1500); return; } const e = en();
     const P = A.openP('<h3>🔍 ' + (e ? 'Observation card — decomposer' : '관찰 카드 — 분해자') + '</h3><div class="st"><b class="n">🐛</b><span>' + (e ? 'You found an earthworm!' : '지렁이를 찾았어요!') + '</span></div>'
@@ -231,23 +231,23 @@ export function createTools(A) {
     if (F.ph === 'bite') { F.bt += dt; if (F.bt > 1.0) { F.h.reel(false); F.ph = 'miss'; tchSync(); toast(e ? '💨 It got away — press as soon as the float dips' : '💨 놓쳤어요 — 찌가 쏙 들어가면 바로 눌러요', 2.4); A.rec('miss'); } } }
   function pop(txt) { const p = document.createElement('div'); p.className = 'twn-pop'; p.style.color = '#ffe36b'; p.textContent = txt; document.body.appendChild(p); setTimeout(() => p.remove(), 1300); }
   function catchShow(sea) { const e = en(), G = A.GAME, fish = sea ? A.fishPick(A.season(), G.S.dex, G.S.day * 7 + G.uses('tool:catch')) : FRESH[(Math.random() * FRESH.length) | 0]; if (!fish) return; G.use('tool:catch');
-    const neu = G.found('fish:' + fish.id); A.skUp('look', neu ? 3 : 1); A.rec('catch', { id: fish.id }); const full = G.uses('tool:fish') >= 2;
+    const neu = G.found('fish:' + fish.id); A.skUp('look', neu ? 3 : 1, 'fish:' + fish.id); A.rec('catch', { id: fish.id }); const full = G.uses('tool:fish') >= 2;
     const P = A.openP('<h3>🎣 ' + (e ? 'You caught a fish!' : '물고기를 낚았어요!') + '</h3><div style="display:flex;gap:14px;align-items:center;margin:6px 0"><div style="font-size:54px;line-height:1">🐟</div><div><b style="font-size:18px">' + esc(L(fish.t)) + '</b><div class="sm">' + esc(L(fish.line)) + '</div></div></div>'
       + (neu ? '<div class="sm">' + (e ? 'Added to the codex: 🎣 Fish met.' : '도감 「🎣 낚은 물고기」에 넣었어요.') + '</div>' : '')
       + '<div class="sm">' + (e ? 'Let it go and it grows up to lay eggs. In breeding season people agree not to fish.' : '놓아주면 다시 자라 알을 낳아요. 알 낳는 때(금어기)엔 잡지 않기로 약속해요.') + '</div>'
       + '<div class="row"><button data-a="rel">💧 ' + (e ? 'Let it go' : '놓아주기') + '</button><button class="sub" data-a="bag"' + (full ? ' disabled' : '') + '>🎒 ' + (e ? 'Into the bag' : '가방에 넣기') + '</button></div>'
       + (full ? '<div class="sm">' + (e ? 'Today’s share for the bag (2) is full — new share tomorrow at 6:00' : '오늘 가방 몫(두 마리)은 다 찼어요 — 내일 아침 6시에 다시') + '</div>' : ''), false, 'tool');
-    P.onclick = ev => { const b = ev.target.closest('button'); if (!b || b.disabled) return; A.closeP(); if (b.dataset.a === 'bag') { G.use('tool:fish'); A.bagAdd('🐟', 1); A.skUp('work', 1); A.rec('fish-bag'); } else release(); }; }
-  function release() { const e = en(), G = A.GAME, n = G.use('tool:rel'); if (n <= 4) A.skUp('look', 2); const ch = A.chem(); if (ch && ch.lawFound) ch.lawFound('release', '🐟', 'swim'); A.rec('release');
+    P.onclick = ev => { const b = ev.target.closest('button'); if (!b || b.disabled) return; A.closeP(); if (b.dataset.a === 'bag') { G.use('tool:fish'); A.bagAdd('🐟', 1, 'rod'); A.skUp('work', 1, 'rod'); A.rec('fish-bag'); } else release(); }; }
+  function release() { const e = en(), G = A.GAME, n = G.use('tool:rel'); if (n <= 4) A.skUp('look', 2, 'rod:release'); const ch = A.chem(); if (ch && ch.lawFound) ch.lawFound('release', '🐟', 'swim'); A.rec('release');
     setTimeout(() => { if (!dead && !A.busy()) map.player.act('emo3'); }, 120);   // 머리 위 하트
-    if (n === 1) { const me = map.player.pos(); let w = null, bd = 400; for (const q of A.workers() || []) { if (q.k !== 'fisher') continue; const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < bd) { bd = d; w = q; } } if (w) { const up = G.heart('nb:fisher:' + A.cell(w.x, w.z), 1); if (up) A.heartUp(up, w); } }
+    if (n === 1) { const me = map.player.pos(); let w = null, bd = 400; for (const q of A.workers() || []) { if (q.k !== 'fisher') continue; const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < bd) { bd = d; w = q; } } if (w) { const up = G.heart('nb:fisher:' + A.cell(w.x, w.z), 1, 'rod'); if (up) A.heartUp(up, w); } }
     toast(e ? '💧 You let the fish go — it will grow and lay eggs' : '💧 물고기를 놓아줬어요 — 다시 자라 알을 낳아요', 2.8); }
 
   // ───────── 🔍 돋보기 ─────────
   function useLens() { const e = en(), t = S(); let x = T.x, y = T.y, z = T.z; const me = map.player.pos(), L9 = T.lock ? lensAt(x, z, me) : null;
     const h = map.player.act('peer', { at: [x, y, z], msg: null, midAt: 1.35, onMid: () => {
       if (L9 && L9.kind === 'bug') { A.bugLook(L9.s); A.rec('lens-bug'); return; }
-      const kd = L9 ? L9.kind : 'soil', d = day(), first = t.n['l:' + kd] !== d; t.n['l:' + kd] = d; mark(); if (first) A.skUp('look', 1); A.rec('lens-' + kd);
+      const kd = L9 ? L9.kind : 'soil', d = day(), first = t.n['l:' + kd] !== d; t.n['l:' + kd] = d; mark(); if (first) A.skUp('look', 1, 'lens:' + kd); A.rec('lens-' + kd);
       if (kd === 'mush') toast(L(LOOKF.mush) + (L9.m.poison ? L(LOOKF.poison) : ''), 4); else toast(L(LOOKF[kd]), 4); } });
     void h; void e; }
 
@@ -264,11 +264,11 @@ export function createTools(A) {
     map.player.act('sweep', { at: [T.x, T.y, T.z], msg: null, colors: cols, midAt: 1.7, onMid: () => {
       if (!p) { if (Math.random() < 0.5) toast(e ? '🧹 Nothing to sweep here — look for leaves, snow or litter' : '🧹 여긴 쓸 것이 없어요 — 낙엽·눈·쓰레기를 찾아봐요', 2.2); return; }
       t.sw.k[p.k] = 1; const i = PILES.indexOf(p); if (i >= 0) PILES.splice(i, 1); dirty = true; const d = day(); if (t.clean.d !== d) { t.clean.d = d; t.clean.n = 0; } t.clean.n++; t.clean.all = (t.clean.all || 0) + 1; mark(); A.rec('sweep', { m: p.mode });
-      A.skUp('work', 1); tone(988, 0.05, 0.08, 'triangle', 0.04); tone(1319, 0.13, 0.1, 'triangle', 0.04);
+      A.skUp('work', 1, 'sweep'); tone(988, 0.05, 0.08, 'triangle', 0.04); tone(1319, 0.13, 0.1, 'triangle', 0.04);
       const what = p.mode === 'leaf' ? (e ? 'leaves' : '낙엽을') : p.mode === 'snow' ? (e ? 'snow' : '눈을') : (e ? 'litter' : '쓰레기를');
       toast(e ? '🧹 Swept up the ' + what + '! Today you cleaned ' + t.clean.n + (t.clean.n > 1 ? ' spots' : ' spot') + ' in town' : '🧹 ' + what + ' 쓸었어요! 오늘 마을을 ' + t.clean.n + '곳 깨끗이 했어요', 2.8);
       const me = map.player.pos(); let w = null, bd = 40; for (const q of A.workers() || []) { if (!q.k) continue; const dd = Math.hypot(q.x - me.x, q.z - me.z); if (dd < bd) { bd = dd; w = q; } }
-      if (w) { const hk = 'nb:' + w.k + ':' + A.cell(w.x, w.z); if (A.GAME.uses('swh:' + hk) < 1) { A.GAME.use('swh:' + hk); const up = A.GAME.heart(hk, 1); A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, e ? 'So clean now. Thank you!' : '깨끗해졌네요. 고마워요!'); if (up) setTimeout(() => { if (!dead) A.heartUp(up, w); }, 1200); } } } }); void mode; }
+      if (w) { const hk = 'nb:' + w.k + ':' + A.cell(w.x, w.z); if (A.GAME.uses('swh:' + hk) < 1) { A.GAME.use('swh:' + hk); const up = A.GAME.heart(hk, 1, 'sweep'); A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, e ? 'So clean now. Thank you!' : '깨끗해졌네요. 고마워요!'); if (up) setTimeout(() => { if (!dead) A.heartUp(up, w); }, 1200); } } } }); void mode; }
   // 빗자루 빌리는 곳: 마을회관·경로당 문 옆(기대 세운 빗자루 + 쪽지 E) — 새 사람 X
   let STANDS = [];
   function stands() { for (const h of STANDH) h.remove(); STANDH = []; STANDS = []; const bl = map.q.blocked || map.q.blockedAt;

@@ -53,7 +53,7 @@ export function createRes(A) {
   // 줍기: 기존 몸짓(허리 굽히기) → 0.95초 뒤 가방(+팝) · 그 자리 숨김 · 다시 나는 날 저장 · 솜씨(탐험)
   function pick(s) { if (!s || busy || !avail(s)) return; const W = WILD[s.k], en = A.lang() === 'en', day = S().day, n = 1 + (s.k === 'twig' && S().resRain === day ? 1 : 0); busy = true;
     R()[s.id] = day + W.days; A.GAME.mark(); if (H) H.hot.off = true; cur = null; dirty = true; try { A.map.player.act('shoes', { at: [s.x, s.y, s.z], reach: 0.5 }); } catch (e) { /* 몸짓 없음 — 그대로 */ }
-    setTimeout(() => { busy = false; if (!A.alive()) return; draw(s); s.m.instanceMatrix.needsUpdate = true; A.got(W.e, n); A.skUp('explore', 1); A.tev('wild'); A.map.sfx && A.map.sfx('pick');
+    setTimeout(() => { busy = false; if (!A.alive()) return; draw(s); s.m.instanceMatrix.needsUpdate = true; A.got(W.e, n, 'res:' + s.k); A.skUp('explore', 1, 'res:' + s.k); A.tev('wild'); A.map.sfx && A.map.sfx('pick');
       A.map.hud.toast(W.e + ' ' + W.t[en ? 1 : 0] + (n > 1 ? ' ×' + n + (en ? ' (after the rain!)' : ' (비 온 뒤라 더!)') : '') + ' — ' + W.fact[en ? 1 : 0], 3); }, 950); }
   // 0.25초마다(마을 tick): 1m 넘게 움직였거나 바뀐 것이 있을 때만 · 내 칸 3×3에서 가장 가까운 '지금 주울 수 있는' 자리로 E 지점을 옮김
   function tick(dt) { if (!H || !SP.length) return; if ((q += dt) < 0.25) return; q = 0;

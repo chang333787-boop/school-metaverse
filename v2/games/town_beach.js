@@ -53,7 +53,7 @@ export function createBeach(A) {
   function build() { const me = A.map.player.get(), a = (me.h || 0) * Math.PI / 180, x = me.x + Math.sin(a) * 1.8, z = me.z - Math.cos(a) * 1.8, y = A.gy(x, z), s9 = sh(), e = en();
     if (!s9 || A.sdOf(s9, x, z) > -0.5 || y < A.SEAY() + 0.3 || A.blk(x, z, y + 0.5) || Math.abs(y - me.y) > 0.8) { A.map.hud.toast(e ? '🏰 Not enough room — try open sand' : '🏰 여기는 자리가 좁아요 — 넓은 모래밭에서 해 봐요', 2.6); return; }
     const L9 = S().castles || (S().castles = []); L9.push([+x.toFixed(2), +y.toFixed(2), +z.toFixed(2), +(-a).toFixed(3)]); if (L9.length > 4) L9.shift(); grow = L9.length - 1; growT = 0; A.GAME.mark(); draw(); A.map.sfx && A.map.sfx('ding');
-    const first = A.stamp('🏰'); A.skUp('explore', first ? 3 : 1); A.tev('beach'); A.map.hud.banner('🏰 ' + (e ? 'Sandcastle built!' : '모래성 완성!') + (first ? (e ? ' Sandcastle stamp' : ' 모래성 도장') : ''), 2.4);
+    const first = A.stamp('🏰'); A.skUp('explore', first ? 3 : 1, 'beach:castle'); A.tev('beach'); A.map.hud.banner('🏰 ' + (e ? 'Sandcastle built!' : '모래성 완성!') + (first ? (e ? ' Sandcastle stamp' : ' 모래성 도장') : ''), 2.4);
     setTimeout(() => { if (A.alive()) A.map.hud.toast('💡 ' + L(BEACH_T.castleFact), 5); }, 2500); }
   // 새 날(잠든 사이): 모래성은 파도에 씻겨 감
   function day() { const L9 = S().castles; if (!L9 || !L9.length) return; S().castles = []; A.GAME.mark(); draw(); setTimeout(() => { if (A.alive()) A.map.hud.toast(en() ? '🌊 The waves washed the sandcastles away overnight' : '🌊 밤사이 파도에 모래성이 씻겨 갔어요', 3); }, 3200); }
@@ -65,7 +65,7 @@ export function createBeach(A) {
   function fly(nt) { const me = A.map.player.pos(), W = A.swim(), sea = W ? W.g.reduce((o, v, i) => { if (v === 1) { o[0] += W.x0 + ((i % W.nx) + 0.5) * 2; o[1] += W.z0 + (((i / W.nx) | 0) + 0.5) * 2; o[2]++; } return o; }, [0, 0, 0]) : [0, 0, 0], gx = sea[2] ? me.x - sea[0] / sea[2] : 1, gz = sea[2] ? me.z - sea[1] / sea[2] : 0, gl = Math.hypot(gx, gz) || 1, s9 = nt ? -1 : 1;   /* 땅 쪽 = 헤엄치는 곳(바다) 가운데에서 내 자리 쪽(모래밭은 물가에서 멀어 바다 거리 기울기가 0일 수 있음) — 연을 띄울 때 한 번만 셈 */   /* 땅 쪽 = 바다에서 멀어지는 쪽 · 낮 = 연이 땅 쪽으로 · 밤 = 바다 쪽으로 */
     if (!KT) { KT = kiteTex(T3); KS = new T3.Sprite(new T3.SpriteMaterial({ map: KT, transparent: true, depthWrite: false })); KS.scale.set(1.6, 2.4, 1); KS.userData.fx = 1; KLG = new T3.BufferGeometry(); KLG.setAttribute('position', new T3.BufferAttribute(new Float32Array(6), 3)); KL = new T3.Line(KLG, new T3.LineBasicMaterial({ color: 0xf6f4ee })); KL.frustumCulled = false; KL.userData.fx = 1; }
     A.map.add(KS); A.map.add(KL); KS.visible = KL.visible = true; kite = { t: 0, dx: gx / gl * s9, dz: gz / gl * s9, nt }; A.map.player.lookAt([me.x + kite.dx * 20, me.z + kite.dz * 20]);   /* 연이 나는 쪽(바람이 불어 가는 쪽)을 보게 */
-    A.map.sfx && A.map.sfx('ding'); A.map.hud.banner('🌬️ ' + (en() ? 'Up it goes — the kite flies with the wind!' : '연이 바람을 타고 날아올라요!'), 2.6); const first = A.stamp('🌬️'); A.skUp('look', first ? 3 : 1); A.tev('beach');
+    A.map.sfx && A.map.sfx('ding'); A.map.hud.banner('🌬️ ' + (en() ? 'Up it goes — the kite flies with the wind!' : '연이 바람을 타고 날아올라요!'), 2.6); const first = A.stamp('🌬️'); A.skUp('look', first ? 3 : 1, 'beach:kite'); A.tev('beach');
     setTimeout(() => { if (A.alive()) A.map.hud.toast('💡 ' + L(BEACH_T.windFact[nt]), 5.5); }, 2800); }
   function kiteEnd() { if (KS && KS.parent) KS.parent.remove(KS); if (KL && KL.parent) KL.parent.remove(KL); kite = null; }
   // ── 누워 뜨기(생존수영) ──
@@ -80,7 +80,7 @@ export function createBeach(A) {
   function floatEnd(stop) { const f = fl; if (!f) return; fl = null; removeEventListener('keydown', f.kd, true); removeEventListener('keyup', f.ku, true); if (FEL) { FEL.remove(); FEL = null; } A.map.player.pose(null); A.map.player.freeze(false); const e = en();
     if (stop) { A.map.hud.toast(e ? 'See you next time!' : '다음에 또 해요!', 2); return; } const good = f.ok / Math.max(1, f.n) >= 0.65;
     if (!good) { A.map.sfx && A.map.sfx('pop'); A.map.hud.toast(e ? '🏊 Almost — relax and try again (E)' : '🏊 아까워요 — 힘을 빼고 다시 해 봐요 (E)', 3); return; }
-    const first = A.stamp('🏊'); A.skUp('explore', first ? 3 : 1); A.tev('beach'); A.map.sfx && A.map.sfx('done'); A.map.hud.banner('🏊 ' + (e ? 'You floated calmly!' : '가만히 잘 떴어요!') + (first ? (e ? ' Survival-swimming stamp' : ' 생존수영 도장') : ''), 2.6);
+    const first = A.stamp('🏊'); A.skUp('explore', first ? 3 : 1, 'beach:swim'); A.tev('beach'); A.map.sfx && A.map.sfx('done'); A.map.hud.banner('🏊 ' + (e ? 'You floated calmly!' : '가만히 잘 떴어요!') + (first ? (e ? ' Survival-swimming stamp' : ' 생존수영 도장') : ''), 2.6);
     setTimeout(() => { if (A.alive()) A.map.hud.toast('💡 ' + L(BEACH_T.floatFact[(S().day || 0) % 2]), 6); }, 2800); }
   // 매 프레임(하는 동안만): 모래성 솟기 0.6초 · 연(줄·흔들림) · 누워 뜨기 균형 · 0.5초마다 물속이면 '누워 뜨기' E를 내 자리로
   function tick(dt) { if (!on) return;

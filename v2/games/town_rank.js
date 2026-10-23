@@ -186,7 +186,7 @@ export function createRank(api) {
     if (!can(k, lv)) { api.toast(en() ? 'This mission can’t be done in this town yet' : '이 마을에서는 아직 할 수 없는 미션이에요', 3); return false; }
     S().cur = { k, lv, v: init(k, lv), off: false }; DX = null; FP = null; hintT = 0; save(); if (api.rec) api.rec('rank', { k, L: lv, s: 'start' }); { const [a9, n9] = count(); if (a9 >= n9) { api.toast(en() ? '🏅 You’ve already done all of this — counted!' : '🏅 이미 다 해 봤어요 — 그대로 인정해요!', 3); finish(); return true; } } api.task(); open(); return true; }   /* REC-0 학급 기록 */
   function finish() { const c = C(); if (!c) return; const m = mis(), R = S(), k = c.k, lv = c.lv, v = c.v, first = !RANK_LV.some(t => R.done[k + ':' + t]);
-    R.done[k + ':' + lv] = GAME.S.day; R.cur = null; if (!R.title) R.title = k + ':' + lv; save(); if (api.rec) api.rec('rank', { k, L: lv, s: 'done', h: v.h, done: 1 }); api.routeOff(); api.skUp(k, 4); api.learn(m.use || []); api.sfx('done'); api.task();
+    R.done[k + ':' + lv] = GAME.S.day; R.cur = null; if (!R.title) R.title = k + ':' + lv; save(); if (api.rec) api.rec('rank', { k, L: lv, s: 'done', h: v.h, done: 1 }); api.routeOff(); api.skUp(k, 4, 'rank:' + k); api.learn(m.use || []); api.sfx('done'); api.task();
     const e = en(), did = fill(L(m.did), { r: v.T ? regN(v.T.r) : '' }), gain = [];
     gain.push(['🏷', e ? 'New title “' + L(m.name) + '”. Pick it in Skills.' : '칭호 「' + L(m.name) + '」가 생겼어요. 솜씨 창에서 고를 수 있어요.']);
     if (first) gain.push(['🚲', e ? 'A ' + L(RCOL[k][1]).toLowerCase() + ' bike colour is unlocked.' : '자전거 ' + L(RCOL[k][1]) + '이 생겼어요.']);

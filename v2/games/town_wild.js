@@ -272,7 +272,7 @@ export function createWild(A) {
     if (k === 'hop') { if ((m.n = (m.n || 1) - 1) > 0) { const dx = m.x1 - m.x0, dz = m.z1 - m.z0; go(s, 'hop', s.x + dx, s.z + dz, 0.42); m.n = 1; s.md = 4; return; } s.md = 0; go(s, 'sink', s.x, s.z, 0.35); return; }
     if (k === 'sink') { gone(s, s.w.flee === 'dive' ? 40 : 25); return; } }
   // E 살펴보기 → 카드(그림 + 생김새 + 사는 곳·먹이·겨울나기·지키는 법) · 처음 = 도감 칸 + 관찰 솜씨
-  function look(s) { if (!s || s.st > 1 || A.busy()) return; const w = s.w, e9 = en(), L = e9 ? 1 : 0, neu = A.GAME.found('wild:' + w.id); { const k9 = 'wl:' + w.id; if (neu) { A.GAME.pick(k9); A.skUp('look', 3); } else if (!A.GAME.picked(k9)) { A.GAME.pick(k9); A.skUp('look', 1); } }   /* FIX-LK1 결: 같은 동물 다시 보기 = 솜씨 하루 한 번 */ s.st = 1; s.calm = 4;
+  function look(s) { if (!s || s.st > 1 || A.busy()) return; const w = s.w, e9 = en(), L = e9 ? 1 : 0, neu = A.GAME.found('wild:' + w.id); { const k9 = 'wl:' + w.id; if (neu) { A.GAME.pick(k9); A.skUp('look', 3, 'wild:' + w.id); } else if (!A.GAME.picked(k9)) { A.GAME.pick(k9); A.skUp('look', 1, 'wild:' + w.id); } }   /* FIX-LK1 결: 같은 동물 다시 보기 = 솜씨 하루 한 번 */ s.st = 1; s.calm = 4;
     const W9 = ST(), key = w.id + ':' + s.j, add = W9.k[key] !== S().day; let cnt = W9.n[w.id] || 0; const lv0 = lvOf(cnt); if (add) { W9.k[key] = S().day; cnt = W9.n[w.id] = cnt + 1; A.GAME.mark(); }
     const lv = lvOf(cnt); let neuT = false; if (lv === 2 && lv0 < 2 && !W9.title && WILD.filter(q => SP.some(z => z.w === q)).every(q => lvOf(W9.n[q.id] || 0) >= 2)) { W9.title = S().day; neuT = true; A.GAME.mark(); }
     const row = (k, t) => '<div style="margin-top:6px"><b>' + k + '</b> ' + A.esc(t[L]) + '</div>', stars = lv ? '⭐'.repeat(lv) + ' ' : '';
