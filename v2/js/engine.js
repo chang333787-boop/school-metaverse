@@ -51,7 +51,7 @@ export function createEngine(H) {
   // ---------- 1. 웅크리기 · 소리 · 시야 ----------
   const player = {
     // 게임이 이 판에서 웅크리기를 쓰게 한다(기본 끔 — 게임 없음 = 게이트 영향 0). 키보드 C·Ctrl 누르고 있기 · 터치 ⬇ 버튼(켬/끔)
-    crouch(on = true) { CTRL.crouchOK = !!on; touch.setCrouchBtn(!!on); if (!on) CTRL.crouchForce = null; ctrlGuard(!!on); },
+    crouch(on = true, o) { CTRL.crouchOK = !!on; CTRL.crouchNoCtrl = !!(on && o && o.noCtrl); touch.setCrouchBtn(!!on); if (!on) CTRL.crouchForce = null; ctrlGuard(!!on && !CTRL.crouchNoCtrl); },   /* WILD-1: o.noCtrl = C 키·터치만(Ctrl 웅크리기 X → Ctrl+W 탭 닫힘 걱정이 없어 떠나기 확인 창도 안 붙임 · 마을 야생동물 곁) */
     crouched: () => !!CTRL.crouched,
     // SHRINK-1(09-27): 몸 크기 s(0.05~1 · 1 = 원래). 물리(반지름·키·오름·점프·걷기·중력)·카메라(거리·근평면)가 비례하고, 작은 몸은 가구 '보이는 윗면'(책상·의자 좌판·교탁·사물함·창턱)을 딛는다.
     //   o = { speed: 걷기 배율(기본 √s), jump: 점프 정점 m(기본 0.97·s), gravity: 중력 배율(기본 √s), far } · 게임이 멈추면 1로(끼면 unstick). 길격자·도달성·검진은 늘 원래 몸
@@ -690,7 +690,7 @@ export function createEngine(H) {
     if (G0) { for (const k in G0) G0[k].dispose(); G0 = null; }
     ST.flags.clear(); ST.inv.length = 0; ST.chapter = null; ST.lis.clear(); invDraw();
     if (H.getScale && H.getScale() !== 1) { H.setScale(1); if (!CTRL.crouched && q.blockedAt(P.x, P.z, P.y)) H.unstick(); }   // SHRINK-1: 원래 크기로 — 책상 위·밑이면(평소 몸엔 NS 상자 속) 가까운 걷는 칸으로
-    if (CTRL.crouchOK || CTRL.crouched) { const was = CTRL.crouched; CTRL.crouchOK = false; CTRL.crouchForce = null; CTRL.crouched = false; P.bh = 1.5; touch.setCrouchBtn(false); if (was && q.blockedAt(P.x, P.z, P.y)) H.unstick(); }
+    if (CTRL.crouchOK || CTRL.crouched) { const was = CTRL.crouched; CTRL.crouchOK = false; CTRL.crouchNoCtrl = false; CTRL.crouchForce = null; CTRL.crouched = false; P.bh = 1.5; touch.setCrouchBtn(false); if (was && q.blockedAt(P.x, P.z, P.y)) H.unstick(); }
     for (const el of [vig, invEl, fadeEl]) if (el) el.remove(); vig = invEl = fadeEl = null; if (css) { css.remove(); css = null; }
     setInvis(false);   // HS-1
     dirtN = 0;

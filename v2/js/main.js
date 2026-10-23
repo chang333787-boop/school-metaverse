@@ -8,7 +8,7 @@ import { buildWorld } from './world.js?v=158';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=90';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=91';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=11';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=29';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -511,7 +511,7 @@ if (world.busDoor) ACTS.busDoor(world.busDoor);
 const CROUCH_H = 0.8;
 // 웅크리기 입력: C·Ctrl 누르고 있기(키보드) · 터치 ⬇ 버튼(누를 때마다 켜고 끔 — 두 엄지가 조이스틱·시점에 있으니) · crouchForce
 function crouchTick() {
-  const want = CTRL.crouchOK && !ACT.sit && !ACT.anim && (CTRL.crouchForce ?? (keys.has('KeyC') || keys.has('ControlLeft') || keys.has('ControlRight') || !!TOUCH.crouch));
+  const want = CTRL.crouchOK && !ACT.sit && !ACT.anim && (CTRL.crouchForce ?? (keys.has('KeyC') || (!CTRL.crouchNoCtrl && (keys.has('ControlLeft') || keys.has('ControlRight'))) || !!TOUCH.crouch));
   if (want && !CTRL.crouched) { CTRL.crouched = true; P.bh = CROUCH_H * PHY.sc; }
   else if (!want && CTRL.crouched) {   // 일어서기: 머리 위(발 +0.55 ~ +1.5)가 막혀 있으면 웅크린 채(책상·미끄럼틀 밑)
     if (!pBlocked(P.x, P.z, P.y, PHY.h)) { CTRL.crouched = false; P.bh = PHY.h; } }   // 리뷰(ENGINE-1): 게임이 웅크리기를 꺼도(crouch(false)) 머리 위가 막혀 있으면 빠져나올 때까지 웅크린 채 — 예전엔 낮은 곳 밑에서 일어서며 몸이 상자 안에 끼었다(게임이 멈출 땐 engine.reset이 unstick)

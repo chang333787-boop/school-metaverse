@@ -52,6 +52,9 @@
 | 마을 자유도(야숨식 화학 규칙·결과로 판정·활공·바람)·장소별 미니 체험(스키·공 놀이 엔진·일 놀이 난이도 사다리)을 지을 때 | `docs/systems/town_freedom.md` · `docs/systems/town_minis.md` — 10-18 조사(차례 표 · 1~3위 설계) |
 | 마을 땅 결을 사진 보고 올릴 때(논·밭·강·염전·모래사장·숲 가장자리·보도 · 갯벌 ART-2와 같은 길) | `docs/systems/town_art3.md` — ART-3 설계안(사진은 참고만 · 실사 텍스처 X · 곳마다 그리기 +1) |
 | town.js를 쪼갤 때(모듈 일곱 · 공용 상태 TS 먼저 · 옮기는 차례 · 같은지 확인) | `docs/systems/town_split.md` — 설계안(10-17 · 팀이 적을 때 옮김) |
+| 마을 배경 음악(town_music.js · 곡 여섯 · 때·날씨·실내·놀이 · duck) | `docs/systems/town_music.md` |
+| 마을 야생동물(town_wild.js · 아홉 종 · 서식지·계절·달아남·관찰 별) | `docs/systems/town_wild.md` |
+| **밤샘 차례표(10-24 · A~H 39줄)** · 단계 1 설계(하루 한 바퀴 + 내 집) · 직업 놀이 엔진 설계(JOBS-2 · 양몰이·장구·부엌·낚시…) | `docs/systems/town_night_queue.md` · `docs/systems/town_phase1.md` · `docs/systems/town_jobs2.md` |
 | 게임용 지도 API 정본(map.*) | `docs/map_api.md` |
 | 품질 숫자 척도(풍성·놀이·그래픽·효과·이야기·각색·완성도·직관성) | `docs/tasks/quality_scale.md` |
 | 새 이야기·에피소드 더하기 | `docs/tasks/new_episode.md` |
