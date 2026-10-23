@@ -224,9 +224,15 @@ export function createMapApi(host, NAV, META) {
     // GUIDE-1(09-30): 자동 걷기 — steer(dx, dz, 속도 m/s, 카메라 따라 돌기) · steer(null) = 끔. 키·조이스틱이 있으면 그쪽이 먼저. 게임이 멈추면 자동으로 끔
     steer(dx, dz, v = 4.2, cam = true) { if (dx == null) { CTRL.steer = null; return; } const L = Math.hypot(dx, dz); if (L < 1e-6) { CTRL.steer = null; return; }
       const st = CTRL.steer || (CTRL._st || (CTRL._st = {})); st.x = dx / L; st.z = dz / L; st.v = Math.max(0.5, Math.min(7.5, v)); st.cam = !!cam; CTRL.steer = st; },
-    // ACTION-1(09-28): 보이는 행동 — act('drink'|'wash'|'sanitize'|'spray'|'water'|'mic'|'drum'|'sing'|'write'|'erase'|'point'|'look'|'salute'|'read'|'scribble'|'press'|'shoes'|'reach', { at:[x,y,z], ats, msg, onMid, midAt, onEnd }) → { done, stop() } · 게임이 멈추면 멈춘다. 정본 docs/map_api.md §19
+    // ACTION-1(09-28): 보이는 행동 — act('drink'|'wash'|'sanitize'|'spray'|'water'|'mic'|'drum'|'sing'|'write'|'erase'|'point'|'look'|'salute'|'read'|'scribble'|'press'|'shoes'|'reach'|'dig'|'cast'|'peer'|'sweep', { at:[x,y,z], ats, msg, onMid, midAt, onEnd }) → { done, stop() } · 게임이 멈추면 멈춘다. 정본 docs/map_api.md §19
     act(name, o = {}) { return pl.acts ? pl.acts.play(name, o) : null; },
     get acting() { return pl.acts ? pl.acts.cur : null; },
+    // TOOL-1(10-19): 늘 드는 소품 — hold('can'|'shovel'|'rod'|'lens'|'broom'|… | null) → 됐나 · 걸을 때도 오른손에 · 1인칭·탈것·헤엄·앉기·다른 소품 행동 중엔 엔진이 숨김 · 게임이 멈추면 풀림
+    //   holdUse(true) = 겨눠 쓰는 자세(물뿌리개 기울이기 — 걸어도 됨) · toolTip() = 든 도구 끝 세계 자리 {x,y,z,ok}(같은 객체) · 도구 몸짓 = act('dig'|'cast'|'peer'|'sweep') — cast 손잡이에 dip()·reel(ok)·landed
+    hold(name) { return pl.acts && pl.acts.hold ? pl.acts.hold(name || null) : false; },
+    get holding() { return pl.acts && pl.acts.hold ? pl.acts.holding : null; },
+    holdUse(on = true) { if (pl.acts && pl.acts.holdUse) pl.acts.holdUse(on); },
+    toolTip() { return pl.acts && pl.acts.toolTip ? pl.acts.toolTip() : null; },
   };
 
   // ---------- 6. 상호작용·트리거·동적 충돌 ----------
@@ -552,7 +558,7 @@ export function createMapApi(host, NAV, META) {
     const res = new Set(), track = h => { if (dead && h && h.remove) { try { h.remove(); } catch (e) { console.error(e); } return h; } if (h && h.remove) { const r0 = h.remove; h.remove = function () { res.delete(h); return r0.apply(this, arguments); }; res.add(h); } return h; };
     const S = facadeApi(track, owner);
     S.dispose = () => { dead = true; for (const h of [...res].reverse()) { try { h.remove(); } catch (e) { console.error(e); } } res.clear(); try { ENG.reset(); } catch (e) { console.error('[map] 엔진 정리 오류', e); } try { FX.reset(); } catch (e) { console.error('[map] 세상 바꾸기 정리 오류', e); }
-      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.pose = null; CTRL.noRun = false; CTRL.noJump = false; CTRL.glide = 0; CTRL.hideMe = false; CTRL.face = null; CTRL.shoulder = 0; CTRL.room = null; CTRL.steer = null; CTRL.ride = false; CTRL.pitchLo = null; if (CTRL.freeMouse !== FREE_DEF) { CTRL.freeMouse = FREE_DEF; helpFree(FREE_DEF); } if (S0.view != null) { pl.setFirst(S0.view); S0.view = null; } if (pl.acts) pl.acts.stop(true); if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
+      for (const [k9, c9] of navCache) if (c9.dirty) navCache.delete(k9); /* WORLD-FX: 게임 소품·잠긴 문이 있는 동안 지은 길격자는 버린다(다음 게임에 막힌 칸이 남지 않게) */ CTRL.frozen = false; CTRL.speed = 1; CTRL.pose = null; CTRL.noRun = false; CTRL.noJump = false; CTRL.glide = 0; CTRL.hideMe = false; CTRL.face = null; CTRL.shoulder = 0; CTRL.room = null; CTRL.steer = null; CTRL.ride = false; CTRL.pitchLo = null; if (CTRL.freeMouse !== FREE_DEF) { CTRL.freeMouse = FREE_DEF; helpFree(FREE_DEF); } if (S0.view != null) { pl.setFirst(S0.view); S0.view = null; } if (pl.acts) { pl.acts.stop(true); if (pl.acts.hold) pl.acts.hold(null); } if (arena.shape) arena.shape = null; S.gone = true; };   // gone: 게임이 await 뒤 '이미 멈췄나' 확인(로드 중 그만하기)
     S.quit = () => { const c = game.current; if (c && c.scope === S) stopGame('quit'); };   // 게임이 스스로 끝낼 때(끝 화면 [그만하기])
     Object.defineProperty(S, 'tracked', { get: () => res.size });
     return S;

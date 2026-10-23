@@ -8,12 +8,12 @@ import { buildWorld } from './world.js?v=158';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=91';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=92';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=11';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=29';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
 import { createTop } from './topview.js?v=11';   // TOP-1(10-04 교사 '탑뷰로 학교 보기'): 하늘에서 보기 — 지붕 벗기기(1·2층)·끌어 옮기기·확대·돌리기·방 이름·방위표·축척 · 게임은 map.top   // FILM-1(10-04 교사 '교회 오프닝 영상처럼'): 3D 학교 드론 샷 + 인포그래픽 + 유튜브 조각 — 오프닝(홍보판 ▶)·클로징(견학 완주)
-import { createActions } from './actions.js?v=4';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
+import { createActions } from './actions.js?v=5';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
 // TITLE-1: 오프닝을 켤지 — 게이트(?check=1)·검진(?health=1)·사진 대조(?shot)·게임 주소(?game·?tour=1)는 예전 그대로(오프닝 없음). index.html 로딩 막도 같은 규칙
@@ -501,7 +501,7 @@ const CTRL = { frozen: false, speed: 1 };   // MAP-API-1: 게임이 멈춤(입�
 //   peek(숨는 자리 틈새 시점 {x,y,z,yaw,fov}) · hot(강제 상호작용 지점 — 숨은 동안 '나오기') · hold(물건 들기 팔) · pose('dig') · noiseT(뛰어내림 소리 남는 시간)
 Object.assign(CTRL, { wave: 0, crouchOK: false, crouched: false, crouchForce: null, peek: null, hot: null, hold: false, pose: null, noiseT: 0 });
 // ACTION-1(09-28): 보이는 행동 — act()·map.player.act가 부른다(쉬는 동안 비용 0 · 버스 문만 거리 재기). 신발 기본 = 운동화(파랑) — 신발장에서 실내화(흰색)로
-const ACTS = createActions({ THREE, scene, camera, KID, pg, P, ACT, blocked: (x, z, y) => pBlocked(x, z, y, P.bh), groundAt: (x, z, y) => pGround(x, z, y), toast: m => toast(m), tone: (...a) => tone(...a) });
+const ACTS = createActions({ THREE, scene, camera, KID, pg, P, ACT, blocked: (x, z, y) => pBlocked(x, z, y, P.bh), groundAt: (x, z, y) => pGround(x, z, y), toast: m => toast(m), tone: (...a) => tone(...a), CTRL });   // TOOL-1: CTRL = 든 소품 숨김(탈것·자세·물건 들기)
 const SHOE_OUT = 0x4f7fd0;
 KID.setShoe(SHOE_OUT);
 if (world.busDoor) ACTS.busDoor(world.busDoor);

@@ -4,8 +4,9 @@
 //   ⑤ 끝나면 원래 자세 · 알림 글은 동작 뒤에 짧게. 움직이면(키·조이스틱·점프) 바로 멈춘다(앉아 먹기는 일어날 때).
 //   비용: 쉬는 동안 0(메시 숨김 · 매 프레임 일 없음) · 도는 동안 드로우콜 ≤ 소품 2~3 + 물줄기 1 + 알갱이 1 + 음표 1 · 새 조명 없음 · 매 프레임 new 없음(스크래치 재사용)
 //   버스 접이문(BUS-1)도 여기서 연다(다가가면 열림 — 통행은 막지 않는다, 학교 문과 같은 규칙).
+//   TOOL-1(10-19 사용자 '실제로 도구를 사용해서 뭔가를 하는 게 0개네'): hold(이름) = 오른손에 늘 드는 소품(걸을 때도) · 도구 몸짓 dig·cast·peer·sweep · holdUse = 물뿌리개 기울여 붓는 자세
 export function createActions(H) {
-  const { THREE, scene, camera, KID, pg, P, ACT, blocked, groundAt, toast, tone } = H;
+  const { THREE, scene, camera, KID, pg, P, ACT, blocked, groundAt, toast, tone } = H, C9 = H.CTRL || {};
   const K = KID, R2 = Math.PI * 2;
   const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _c = new THREE.Color();
   const sm = (a, b, t) => { const x = Math.max(0, Math.min(1, (t - a) / (b - a))); return x * x * (3 - 2 * x); };
@@ -36,13 +37,55 @@ export function createActions(H) {
     pen: () => { const g = new THREE.Group(); g.add(part('cyl', 0x2a5ab8, [0, -0.03, 0.02], [0.01, 0.12, 0.01], [0.4, 0, 0])); return g; },
     eraser: () => { const g = new THREE.Group(); g.add(part('box', 0x6a4a32, [0, -0.02, 0.02], [0.1, 0.04, 0.05]), part('box', 0x3a3d44, [0, -0.045, 0.02], [0.1, 0.02, 0.05])); return g; },
     spoon: () => { const g = new THREE.Group(); g.add(part('cyl', 0xcfd4d8, [0, -0.06, 0.02], [0.007, 0.12, 0.007]), part('sph', 0xcfd4d8, [0, -0.125, 0.02], [0.02, 0.008, 0.028])); return g; },
+    // TOOL-1 도구 넷(원점 = 쥐는 자리 · 일하는 끝 = −y · userData.tip = 끝) — 부재는 모두 3cm 이상 · 겹치는 판은 두께를 달리해 같은 면이 없게
+    shovel: () => { const g = new THREE.Group();   // 삽: 나무 자루(가운데를 쥠) + D 손잡이 + 쇠 고리 + 날(넓은 판 + 뾰족한 끝)
+      g.add(part('cyl', 0x9a6b3e, [0, -0.02, 0], [0.017, 0.64, 0.017]), part('box', 0x7a5230, [0, 0.31, 0], [0.11, 0.035, 0.036]), part('cyl', 0x6f7780, [0, -0.36, 0], [0.026, 0.07, 0.026]),
+        part('box', 0xa3acb4, [0, -0.47, 0.006], [0.17, 0.17, 0.034]), part('box', 0x98a1aa, [0, -0.555, 0.006], [0.12, 0.12, 0.03], [0, 0, Math.PI / 4]));
+      const tip = new THREE.Object3D(); tip.position.set(0, -0.62, 0); g.add(tip); g.userData.tip = tip; return g; },
+    rod: () => { const g = new THREE.Group();   // 낚싯대: 코르크 손잡이 + 릴 + 대 둘(끝으로 갈수록 가늘게 보이게 색만 다름) + 찌(빨강·흰 — 걸을 땐 릴 옆에 걸어 둠)
+      g.add(part('cyl', 0xc99a5e, [0, -0.02, 0], [0.022, 0.2, 0.022]), part('cyl', 0x2a5ab8, [0, -0.47, 0], [0.016, 0.7, 0.016]), part('cyl', 0x4a7ad8, [0, -1.07, 0], [0.015, 0.5, 0.015]),
+        part('cyl', 0x3a3d44, [0.05, -0.06, 0.02], [0.04, 0.032, 0.04], [0, 0, Math.PI / 2]));
+      const bob = new THREE.Group(); bob.add(part('sph', 0xe2412f, [0, 0, 0], [0.036, 0.036, 0.036]), part('cyl', 0xf6f6f2, [0, 0.042, 0], [0.016, 0.04, 0.016]));
+      bob.position.set(0.03, -0.24, 0.03); g.add(bob); g.userData.bob = bob; g.userData.hook = [0.03, -0.24, 0.03];
+      const tip = new THREE.Object3D(); tip.position.set(0, -1.32, 0); g.add(tip); g.userData.tip = tip; return g; },
+    lens: () => { const g = new THREE.Group();   // 돋보기: 손잡이 + 둥근 테 + 유리(반투명)
+      if (!G.torus) G.torus = new THREE.TorusGeometry(0.065, 0.016, 6, 16);
+      const ring = new THREE.Mesh(G.torus, lam(0x3a3d44)); ring.position.set(0, -0.19, 0); g.add(part('cyl', 0x7a4a2a, [0, -0.06, 0], [0.017, 0.13, 0.017]), ring);
+      if (!G.glass) G.glass = new THREE.MeshBasicMaterial({ color: 0xcfeeff, transparent: true, opacity: 0.45, depthWrite: false });
+      const gl = new THREE.Mesh(G.cyl, G.glass); gl.position.set(0, -0.19, 0); gl.scale.set(0.058, 0.03, 0.058); gl.rotation.x = Math.PI / 2; g.add(gl);
+      const tip = new THREE.Object3D(); tip.position.set(0, -0.19, 0); g.add(tip); g.userData.tip = tip; return g; },
+    broom: () => { const g = new THREE.Group();   // 빗자루(수수비 결): 대 + 빨간 묶음 띠 + 솔 판 + 솔 끝(넓게 퍼짐)
+      g.add(part('cyl', 0xb08850, [0, -0.08, 0], [0.017, 0.76, 0.017]), part('box', 0xc8443a, [0, -0.48, 0], [0.09, 0.05, 0.045]),
+        part('box', 0xe2c46a, [0, -0.6, 0], [0.2, 0.2, 0.04]), part('box', 0xd2b058, [0, -0.72, 0], [0.24, 0.05, 0.035]));
+      const tip = new THREE.Object3D(); tip.position.set(0, -0.74, 0); g.add(tip); g.userData.tip = tip; return g; },
   };
   const PCACHE = new Map();
-  function prop(name, where) { let p = PCACHE.get(name); if (!p) { p = PROPS[name](); PCACHE.set(name, p); }
+  function propGet(name) { let p = PCACHE.get(name); if (!p) { p = PROPS[name](); PCACHE.set(name, p); } return p; }
+  function prop(name, where) { const p = propGet(name);
     const par = where === 'L' ? K.armL : where === 'body' || where === 'rhand' ? K.rig : K.armR;
     if (where === 'body') p.position.set(0, 0.6, 0.27); else if (where === 'rhand') p.position.set(0.2, 0.4, 0.2); else p.position.set(0, -0.26, 0.02);
-    p.scale.setScalar(where === 'body' || where === 'rhand' ? 1.25 : name === 'spoon' || name === 'pen' ? 1.2 : 1.45); p.rotation.x = 0;   // 치비 비율 — 소품은 조금 크게(멀리서도 알아보게)
+    p.scale.setScalar(where === 'body' || where === 'rhand' ? 1.25 : name === 'spoon' || name === 'pen' ? 1.2 : 1.45); p.rotation.x = 0; p.rotation.y = p.rotation.z = 0;   // 치비 비율 — 소품은 조금 크게(멀리서도 알아보게) · TOOL-1: 든 자리에서 온 소품은 y·z 돌림도 0
     par.add(p); p.visible = true; return p; }
+  // ---------- 늘 드는 소품(TOOL-1): 오른팔 좌표 · p 자리 · r 돌림 · s 크기 · arm = 들고 걸을 때 오른팔 앞으로(흔들기는 30%) · use = holdUse 자세 ----------
+  //   숨김은 엔진이 정함(매 프레임 비교 몇 개 · 새 객체 X): 1인칭·몸 숨김(pg가 숨으면 함께) · 탈것(CTRL.ride) · 몸 자세 덮어쓰기(CTRL.pose — 헤엄·스키·의자·눕기·엉덩방아·파기) · 앉기·미끄럼 · 물건 들기(CTRL.hold) · 다른 소품을 쓰는 행동 중
+  const HOLD = {
+    can: { p: [0, -0.41, 0.04], r: [0.15, 0, 0], s: 1.1, arm: -0.15, use: { p: [0, -0.33, 0.1], r: [1.75, 0, 0], arm: -1.15 } },
+    shovel: { p: [0, -0.27, 0.035], r: [0.9, 0, 0.12], s: 0.9, arm: -0.2 },
+    rod: { p: [0, -0.26, 0.03], r: [-1.85, 0, 0.06], s: 0.95, arm: -0.4 },
+    lens: { p: [0, -0.27, 0.04], r: [-1.2, 0, 0], s: 1.1, arm: -0.3 },
+    broom: { p: [0, -0.27, 0.035], r: [0.85, 0, 0.12], s: 0.9, arm: -0.2 },
+  };
+  let held = null, heldP = null, holdU = false;
+  function holdPlace() { const p = heldP, h = HOLD[held]; if (!p || !h) return; const u = holdU && h.use ? h.use : h; K.armR.add(p); p.position.set(u.p[0], u.p[1], u.p[2]); p.rotation.set(u.r[0], u.r[1], u.r[2]); p.scale.setScalar(h.s); p.visible = true; }
+  function toolUse(name) { const p = propGet(name), h = HOLD[name]; K.armR.add(p); p.position.set(h.p[0], h.p[1], h.p[2]); p.rotation.set(h.r[0], h.r[1], h.r[2]); p.scale.setScalar(h.s); p.visible = true; return p; }   // 도구 몸짓 = 든 자리에서 시작(자세가 돌림을 바꿈)
+  function hold(name) { const n = name && PROPS[name] && HOLD[name] ? name : null; if (n === held) return !!n;
+    if (cur && heldP && cur.props.includes(heldP)) stop(true);   // 쓰던 도구를 내려놓으면 그 몸짓도 멈춤
+    if (heldP && heldP.parent) heldP.parent.remove(heldP); held = n; heldP = n ? propGet(n) : null; holdU = false; if (heldP) holdPlace(); return !!n; }
+  function holdUse(on) { const v = !!on && !!held && !!(HOLD[held] || {}).use; if (v === holdU) return; holdU = v; if (heldP && !(cur && cur.props.includes(heldP))) holdPlace(); }
+  function holdTick() { const p = heldP; if (!p) return; const c = cur, v = !C9.ride && !C9.pose && !ACT.sit && !ACT.anim && !C9.hold && (!c || c.props.includes(p)); if (p.visible !== v) p.visible = v; }
+  function holdPose() { const h = HOLD[held]; if (holdU && h.use) { K.armR.rotation.x = h.use.arm; K.armR.rotation.z = 0.04; K.armL.rotation.x = -0.35; } else K.armR.rotation.x = K.armR.rotation.x * 0.3 + h.arm; }
+  const TIPV = { x: 0, y: 0, z: 0, ok: false };   // toolTip() 돌려줌(같은 객체 — 곧바로 읽기)
+  function toolTip() { const p = heldP, t = p && p.userData.tip; TIPV.ok = !!(t && p.visible && pg.visible); if (t) { t.getWorldPosition(_v); TIPV.x = _v.x; TIPV.y = _v.y; TIPV.z = _v.z; } return TIPV; }
   // ---------- 알갱이(물방울·안개·거품·반짝이 — 인스턴스 하나) · 음표(인스턴스 하나 · 카메라를 봄) ----------
   const CAP = 160, DOT = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9, depthWrite: false }), CAP);
   DOT.frustumCulled = false; DOT.count = 0; DOT.visible = false; DOT.renderOrder = 2; scene.add(DOT);
@@ -124,6 +167,19 @@ export function createActions(H) {
     K.rig.rotation.x += a; K.legL.g.rotation.x -= a; K.legR.g.rotation.x -= a;
     K.rig.position.z -= 0.34 * Math.sin(a); K.rig.position.y -= 0.34 * (1 - Math.cos(a)); };
   const armsIn = (k, x) => { K.armL.rotation.x = K.armR.rotation.x = x; K.armL.rotation.z = -0.12 + 0.62 * k; K.armR.rotation.z = 0.12 - 0.62 * k; };
+  // ---------- 낚싯줄(TOOL-1 cast — 선 하나 · 던진 동안만 보임) · 찌는 낚싯대에서 떼어 세상에 띄웠다가 끝나면 릴 옆으로 ----------
+  let LINE = null, bobRod = null;
+  function lineSet(a, b) { if (!LINE) { LINE = new THREE.Line(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3)), new THREE.LineBasicMaterial({ color: 0xf6f6ee })); LINE.frustumCulled = false; scene.add(LINE); }
+    const A9 = LINE.geometry.attributes.position; A9.setXYZ(0, a.x, a.y, a.z); A9.setXYZ(1, b.x, b.y, b.z); A9.needsUpdate = true; LINE.visible = true; }
+  function bobHome() { if (LINE) LINE.visible = false; const r = bobRod; bobRod = null; if (!r) return; const U = r.userData; r.add(U.bob); U.bob.position.set(U.hook[0], U.hook[1], U.hook[2]); U.bob.scale.setScalar(1); }
+  function castTick(c, t) { const rod = c.props[0], a = c.at; if (!rod || !a) return; const U = rod.userData, B = U.bob.position, dt = t - c.last;
+    if (c.fly < 0 && t >= 0.5 && c.reelT < 0) { U.tip.getWorldPosition(_v2); c.b0 = [_v2.x, _v2.y, _v2.z]; scene.add(U.bob); U.bob.scale.setScalar(1); bobRod = rod; B.set(_v2.x, _v2.y, _v2.z); c.fly = 0; tone(700, 0, 0.12, 'triangle', 0.05, 1400); }   // 휙
+    if (c.fly >= 0 && !c.landed && c.reelT < 0) { c.fly = Math.min(1, c.fly + dt / 0.55); const u = c.fly; B.set(c.b0[0] + (a[0] - c.b0[0]) * u, c.b0[1] + (a[1] - c.b0[1]) * u + 2.8 * u * (1 - u), c.b0[2] + (a[2] - c.b0[2]) * u);
+      if (u >= 1) { c.landed = true; emit(10, a[0], a[1] + 0.02, a[2], 0, 1, 0, { speed: 1.2, spread: 0.6, life: 0.5, size: 0.025, color: 0xbfe6ff }); tone(420, 0, 0.1, 'sine', 0.07, 200); } }   // 퐁
+    else if (c.landed && c.reelT < 0) { let y = a[1] + Math.sin(t * 2.4) * 0.012; if (c.dipT > 0) { c.dipT -= dt; y -= 0.09 * Math.sin(Math.max(0, c.dipT) / 0.45 * Math.PI); } B.set(a[0], y, a[2]); }   // 둥둥 · 쏙
+    if (c.reelT >= 0) { if (c.reelT === 0) c.r0 = [B.x, B.y, B.z]; c.reelT += dt; const u = Math.min(1, c.reelT / 0.4); U.tip.getWorldPosition(_v2);
+      if (c.fly >= 0) B.set(c.r0[0] + (_v2.x - c.r0[0]) * u, c.r0[1] + (_v2.y - c.r0[1]) * u + 0.6 * u * (1 - u), c.r0[2] + (_v2.z - c.r0[2]) * u); if (c.reelT > 0.7) c.fin = true; }
+    if (c.fly >= 0) { U.tip.getWorldPosition(_v2); lineSet(_v2, B); } }
   const D = {
     drink: { dur: 2.4, reach: 0.6, side: 0.13, msg: '💧 시원하게 물을 마셨어요',
       start(c) { const a = c.at, fx = -c.fwd[0], fz = -c.fwd[1];   // 꼭지에서 위로 솟아 마시는 쪽으로 휘는 포물선(아이 의견 "아래에서 물이 나와야")
@@ -216,6 +272,31 @@ export function createActions(H) {
         K.armL.rotation.x = (-1.6 + s9 * 0.9) * k; K.armR.rotation.x = (-1.6 - s9 * 0.9) * k; K.armL.rotation.z = -0.12 - 0.3 * k; K.armR.rotation.z = 0.12 + 0.3 * k; K.legL.knee.rotation.x += Math.max(0, s9) * 0.35 * k; K.legR.knee.rotation.x += Math.max(0, -s9) * 0.35 * k; } },
     five: { dur: 1.2, reach: 0, msg: null,   // 🙌 하이파이브(친구 쪽으로 돌아서) — 오른손 높이 앞으로 쭉
       pose(c, t, k) { const push = Math.max(0, Math.sin(Math.min(1, t / 0.7) * Math.PI)); K.armR.rotation.x = (-2.35 + push * 0.25) * k; K.armR.rotation.z = 0.12 - 0.2 * k; K.rig.position.y += push * 0.05; K.head.rotation.x -= 0.08 * k; } },
+    // TOOL-1 도구 몸짓(든 도구를 그대로 씀 — def.tool) · 알림 글 없음(게임이 결과를 말함) · o.at = 대상 자리
+    dig: { dur: 2.3, reach: 0.95, msg: null, tool: 'shovel',   // 삽질 두 번(흙 알갱이 — o.color 겉흙 · o.color2 속흙 · 눈이면 흰색)
+      tick(c, t) { for (const at of [0.7, 1.5]) if (t >= at && c.last < at && c.at) { const a = c.at; emit(14, a[0], a[1] + 0.04, a[2], 0, 1, 0, { speed: 1.7, spread: 0.6, life: 0.75, size: 0.04, color: c.o.color ?? 0x6b4a2e });
+          emit(6, a[0], a[1] + 0.04, a[2], 0, 1, 0, { speed: 1.2, spread: 0.8, life: 0.6, size: 0.03, color: c.o.color2 ?? 0x8a6a48 }); tone(140, 0, 0.12, 'triangle', 0.1, 90); } },
+      pose(c, t, k) { const u = (t - 0.3) / 0.8, ph = u < 0 ? 0 : u % 1, live = u >= 0 && u < 2, lift = live ? (ph < 0.5 ? sm(0, 0.5, ph) : 1 - sm(0.5, 0.62, ph)) : 0;
+        hip((0.3 + 0.1 * (1 - lift)) * k); K.armR.rotation.x = (-0.85 + 0.45 * lift) * k; K.armL.rotation.x = (-1.05 + 0.35 * lift) * k; K.armL.rotation.z = -0.12 + 0.35 * k; K.armR.rotation.z = 0.12 - 0.1 * k;
+        const p = c.props[0]; if (p) p.rotation.set(0.15 - 0.5 * lift, 0, 0.1); } },
+    cast: { dur: Infinity, reach: 0, msg: null, tool: 'rod',   // 낚싯대 던지기 → 찌가 o.at(물 위)에 떠 있음 → 게임이 dip()(입질 · 찌가 쏙) · reel(잡았나) → 찌가 돌아오면 끝 · 움직이면 거둠
+      start(c) { c.fly = -1; c.dipT = 0; c.reelT = -1; c.landed = false; },
+      tick(c, t) { castTick(c, t); },
+      end() { bobHome(); },
+      pose(c, t, k) { let a = t < 0.32 ? -0.4 - 2.3 * sm(0, 0.32, t) : t < 0.6 ? -2.7 + 1.7 * sm(0.32, 0.6, t) : -1.0 + Math.sin(t * 1.3) * 0.03;
+        if (c.reelT >= 0) a -= 0.7 * Math.sin(Math.min(1, c.reelT / 0.5) * Math.PI); else if (c.dipT > 0) a -= 0.08;
+        K.armR.rotation.x = a; K.armR.rotation.z = 0.06; K.armL.rotation.x = -0.75 * k; K.armL.rotation.z = -0.12 + 0.3 * k; const p = c.props[0]; if (p) p.rotation.set(-1.0, 0, 0.04); },
+      ctl: c => ({ get landed() { return !!c.landed; },
+        dip() { if (!c.landed || c.reelT >= 0) return false; c.dipT = 0.45; const a = c.at; emit(8, a[0], a[1] + 0.02, a[2], 0, 1, 0, { speed: 0.9, spread: 0.5, life: 0.45, size: 0.022, color: 0xbfe6ff }); tone(980, 0, 0.08, 'sine', 0.08, 620); return true; },
+        reel(ok) { if (c.reelT >= 0) return false; c.reelT = 0; if (ok && c.landed) { const a = c.at; emit(16, a[0], a[1] + 0.03, a[2], 0, 1, 0, { speed: 1.6, spread: 0.6, life: 0.6, size: 0.03, color: 0xbfe6ff }); }
+          tone(ok ? 660 : 300, 0, 0.12, 'triangle', 0.06, ok ? 1200 : 200); return true; } }) },
+    peer: { dur: 2.4, reach: 0.65, msg: null, tool: 'lens',   // 허리 숙여 돋보기로 들여다보기 · 1.25초에 대상 위 반짝
+      tick(c, t) { if (t >= 1.25 && c.last < 1.25 && c.at) { const a = c.at; emit(9, a[0], a[1] + 0.12, a[2], 0, 0.7, 0, { speed: 0.5, spread: 0.7, life: 0.9, size: 0.024, g: -0.2, color: 0xfff27a }); tone(1568, 0, 0.1, 'sine', 0.05); tone(2093, 0.1, 0.12, 'sine', 0.04); } },
+      pose(c, t, k) { hip(0.55 * k); K.head.rotation.x += 0.32 * k; K.armR.rotation.x = (-1.05 + Math.sin(t * 1.7) * 0.05) * k; K.armR.rotation.z = 0.12 - 0.22 * k; K.armL.rotation.x = -0.3 * k; const p = c.props[0]; if (p) p.rotation.set(-0.9, 0, 0); } },
+    sweep: { dur: 2.6, reach: 0.85, msg: null, tool: 'broom',   // 좌우로 쓸기 · 한 번 쓸 때마다 알갱이(o.colors — 낙엽·눈·먼지)
+      tick(c, t) { const W = 6.5, n0 = Math.floor(c.last * W / Math.PI), n1 = Math.floor(t * W / Math.PI); if (t > 0.3 && t < 2.3 && n1 > n0) { const tip = c.props[0] && c.props[0].userData.tip; if (tip) { tip.getWorldPosition(_v2); const cols = c.o.colors || [0xb8a888];
+          emit(8, _v2.x, _v2.y + 0.03, _v2.z, 0, 0.6, 0, { speed: 1.3, spread: 0.9, life: 0.8, size: 0.035, g: 5, drag: 1.5, color: cols[n1 % cols.length] }); } tone(1500, 0, 0.12, 'sawtooth', 0.012, 700); } },
+      pose(c, t, k) { const s9 = Math.sin(t * 6.5); hip(0.22 * k); K.rig.rotation.y = s9 * 0.38 * k; K.armR.rotation.x = -0.7 * k; K.armL.rotation.x = -0.95 * k; K.armL.rotation.z = -0.12 + 0.3 * k; const p = c.props[0]; if (p) p.rotation.set(0.1, 0, s9 * 0.3); } },
     eat: { dur: Infinity, reach: 0, msg: null, sit: true, prop: ['spoon'],
       tick(c, t) { if (c.o.onEat) c.o.onEat(t); },
       pose(c, t, k) { const ph = (t % 1.6) / 1.6, up = ph < 0.5 ? sm(0.05, 0.45, ph) : 1 - sm(0.55, 0.95, ph);
@@ -226,9 +307,9 @@ export function createActions(H) {
   function handPos(out) { K.armL.updateWorldMatrix(true, false); K.armR.updateWorldMatrix(false, false); _v.set(0, -0.26, 0.04); K.armL.localToWorld(_v); out.set(0, -0.26, 0.04); K.armR.localToWorld(out); out.add(_v).multiplyScalar(0.5); return out; }
   function stop(silent) {
     const c = cur; if (!c) return; cur = null;
-    for (const p of c.props) if (p.parent) p.parent.remove(p);
+    for (const p of c.props) if (p.parent && p !== heldP) p.parent.remove(p);   // TOOL-1: 든 도구는 손으로 돌아감(아래 holdPlace)
     streamOn = false; streamKill = true; if (c.def.end) c.def.end(c);
-    restore();
+    restore(); if (heldP) holdPlace();
     const msg = c.o.msg !== undefined ? c.o.msg : c.def.msg; if (!silent && msg && c.t > c.def.dur * 0.55) toast(msg);
     if (c.o.onEnd) try { c.o.onEnd(c.t >= c.def.dur) } catch (e) { console.error(e); }
   }
@@ -249,12 +330,15 @@ export function createActions(H) {
           if (Math.hypot(tx - P.x, tz - P.z) < 0.05) break;
           if (!blocked(tx, tz, P.y)) { c.from = [P.x, P.z]; c.to = [tx, tz]; const gx = at[0] - tx, gz = at[2] - tz; P.yaw = Math.atan2(gx, gz); const g9 = Math.hypot(gx, gz) || 1; c.fwd = [gx / g9, gz / g9]; break; } } } }
     for (const p of def.prop || []) { const [n9, w9] = p.split('@'); c.props.push(prop(n9, w9)); }
+    if (def.tool) c.props.push(toolUse(def.tool));   // TOOL-1: 도구 몸짓 = 든 도구 그대로(안 들었어도 그 동안만 손에)
     cur = c; if (def.start) def.start(c);
-    return { get done() { return cur !== c; }, stop: () => { if (cur === c) stop(); } };
+    const hd = { get done() { return cur !== c; }, stop: () => { if (cur === c) stop(); } };
+    if (def.ctl) Object.defineProperties(hd, Object.getOwnPropertyDescriptors(def.ctl(c)));   // TOOL-1 cast: dip()·reel(ok)·landed
+    return hd;
   }
   // 매 프레임(main.js step — 물리 뒤 · 캐릭터 위치 전): 한 발 옮기기 · 시간 · 효과
   function tick(dt) {
-    busTick(dt); farTick(); fxTick(dt); streamTick(dt); wetTick(dt);
+    busTick(dt); farTick(); fxTick(dt); streamTick(dt); wetTick(dt); holdTick();
     const c = cur; if (!c) return;
     if (c.def.sit && !ACT.sit) { stop(); return; }
     c.last = c.t; c.t += dt;
@@ -262,10 +346,11 @@ export function createActions(H) {
     else if (c.from) { P.x = c.to[0]; P.z = c.to[1]; c.from = null; }
     if (c.o.onMid && c.t >= (c.o.midAt ?? c.def.dur * 0.55) && c.last < (c.o.midAt ?? c.def.dur * 0.55)) { try { c.o.onMid(c) } catch (e) { console.error(e); } }
     if (c.def.tick) c.def.tick(c, c.t);
-    if (c.t >= c.def.dur) stop();
+    if (c.t >= c.def.dur || c.fin) stop();
   }
   // kidTick 끝에서: 기본 자세 위에 덮어쓰기
-  function pose() { const c = cur; if (!c || !c.def.pose) return; const dur = c.def.dur, k = dur === Infinity ? sm(0, 0.3, c.t) : sm(0, 0.3, c.t) * (1 - sm(dur - 0.3, dur, c.t)); c.def.pose(c, c.t, k); }
+  function pose() { const c = cur; if (!c && heldP && heldP.visible) holdPose(); if (!c || !c.def.pose) return; const dur = c.def.dur, k = dur === Infinity ? sm(0, 0.3, c.t) : sm(0, 0.3, c.t) * (1 - sm(dur - 0.3, dur, c.t)); c.def.pose(c, c.t, k); }
   return { play, stop, tick, pose, emit, note, micStand, busDoor, get cur() { return cur ? cur.name : null; }, get busy() { return !!cur && !cur.def.sit; }, defs: D,
-    stats: () => ({ cur: cur && cur.name, dots: pAlive, notes: nAlive, stream: !!stream, bus: bus ? +bus.open.toFixed(2) : null, mics: MICS.length }) };
+    hold, holdUse, toolTip, get holding() { return held; }, get holdShown() { return !!(heldP && heldP.visible && pg.visible); },   // TOOL-1
+    stats: () => ({ cur: cur && cur.name, dots: pAlive, notes: nAlive, stream: !!stream, bus: bus ? +bus.open.toFixed(2) : null, mics: MICS.length, held, holdU, line: !!(LINE && LINE.visible) }) };
 }
