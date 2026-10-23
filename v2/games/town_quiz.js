@@ -254,13 +254,17 @@ export function createQuiz(A) {
   function gift(P9) { const s = S(), D = dayRec(s, curDay); if (D.g || D.n < 2 || D.ok < D.n) return; D.g = 1; const e = GIFTS[curDay % GIFTS.length]; A.give(e); G.mark();
     const el = document.createElement('div'); el.className = 'st'; el.innerHTML = '<b class="n">🎁</b><span>' + A.esc(en() ? 'Both bonus questions right! A morning gift is in your bag: ' + A.item(e) : '보너스 문제를 다 맞혔어요! 아침 선물이 가방에 들어왔어요: ' + A.item(e)) + '</span>'; const at = P9.querySelector('[data-qx="' + (CUR.length - 1) + '"]'); if (at) at.after(el); }
   // 내일은(창 끝 한 줄): 장날 > 썰물 > 텃밭 · + 다시 나올 보너스 문제
-  function tomorrow() { const s = S(), e = en(), J = A.jang(), parts = [];
-    if (J && J.on) parts.push(e ? 'Tomorrow is market day — markets pay more.' : '내일은 장날이에요. 장터 값이 더 좋아요.');
-    else if (A.shore()) { const lw = lowsOf(s.day)[0]; if (lw) parts.push(e ? 'The tide goes out around ' + hm(lw[0]) + ' — visit the mudflat friends.' : '내일은 ' + hm(lw[0]) + '쯤 물이 빠져요. 갯벌 친구를 만나러 가요.'); }
-    else if (A.farm()) parts.push(e ? 'Your garden vegetables will have grown.' : '내일은 텃밭 채소가 더 자라 있어요.');
-    const due = dueList(s, s.day).length; if (due) parts.push(e ? due + ' learned card' + (due > 1 ? 's' : '') + ' will come back as bonus questions.' : '배운 것 ' + due + '개가 보너스 문제로 다시 나와요.');
-    if (!parts.length) parts.push(e ? 'Find something new in town tomorrow!' : '내일도 마을에서 새로운 것을 찾아봐요.');
-    return '<div class="st"><b class="n">🌅</b><span>' + A.esc(parts.join(' ')) + '</span></div>'; }
+  function tomorrow(T) { const s = S(), e = en(), d1 = ((T && T.day) || s.day) + 1, J = A.jang(), F = A.farmNext ? A.farmNext(T) : null, parts = [], keys = []; let mine = null;   /* PHASE1 조각 2: 잠들기 전에 부르니 하루를 밂(d1 = 내일) · 맨 앞 = 오늘 내가 한 일 */
+    if (T && T.farmW > 0 && F && (F.wp + F.wf) > 0) mine = ['💧', F.wp && F.wf ? (e ? 'You watered a pot and the garden today. Shall we see how much they grew tomorrow morning?' : '오늘 물 준 화분과 텃밭, 내일 아침에 얼마나 자랐는지 볼까요?') : F.wp ? (e ? 'You watered our pot today. Shall we check it tomorrow morning?' : '오늘 물 준 화분, 내일 아침에 볼까요?') : (e ? 'You watered the garden today. Shall we check it tomorrow morning?' : '오늘 물 준 텃밭, 내일 아침에 볼까요?'), 'grow'];
+    else if (T && T.gift > 0) mine = ['🎁', e ? 'You gave a present today. Will that neighbour greet you more warmly tomorrow?' : '오늘 선물을 받은 이웃은 내일 나를 더 반가워할까요?', ''];
+    else if (T && T.shared > 0) mine = ['🍽', e ? 'You shared a dish today. What will that neighbour say tomorrow?' : '오늘 요리를 나눠 받은 이웃은 내일 뭐라고 할까요?', ''];
+    else if (T && T.sold > 0) mine = ['🛒', e ? 'Remember today’s prices and compare them with tomorrow’s.' : '오늘 판 값을 기억했다가 내일 값과 견줘 봐요.', ''];
+    if (J && J.at && J.at(d1)) { parts.push(e ? 'Tomorrow is market day — markets pay more.' : '내일은 장날이에요. 장터 값이 더 좋아요.'); keys.push('jang'); }
+    else if (A.shore()) { parts.push(e ? 'Will the tide go out earlier or later tomorrow than today? Go and compare.' : '내일은 오늘보다 언제쯤 물이 빠질까요? 갯벌에 가서 견줘 봐요.'); keys.push('tide'); }
+    else if (F && F.farm > 0 && !(mine && mine[2] === 'grow')) { parts.push(e ? 'Your garden vegetables will have grown tomorrow morning.' : '내일 아침엔 텃밭 채소가 더 자라 있어요.'); keys.push('farm'); }
+    const due = dueList(s, d1).length; if (due) parts.push(e ? due + ' learned card' + (due > 1 ? 's' : '') + ' will come back as bonus questions.' : '배운 것 ' + due + '개가 보너스 문제로 다시 나와요.');
+    if (!parts.length && !mine) parts.push(e ? 'Find something new in town tomorrow!' : '내일도 마을에서 새로운 것을 찾아봐요.');
+    return (mine ? '<div class="st" data-tm="' + mine[2] + '"><b class="n">' + mine[0] + '</b><span>' + A.esc(mine[1]) + '</span></div>' : '') + (parts.length ? '<div class="st" data-tm="' + keys.join(',') + '"><b class="n">🌅</b><span>' + A.esc(parts.join(' ')) + '</span></div>' : ''); }
   // 내 수첩 ⭐ 배움 탭
   function open() { scan(); const s = S(), e = en(), L = s.learn || {}, BG = (s.quiz && s.quiz.badge) || {}; let n = 0, m = 0; for (const id in L) if (BANK[id]) { n++; if (starOf(L[id]) >= 3) m++; }
     const due = dueList(s, s.day).length, pct = n ? Math.round(m / n * 100) : 0;

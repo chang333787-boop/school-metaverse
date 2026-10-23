@@ -61,12 +61,12 @@ export const itemName = (e, en) => { const I = ITEMS[e]; return I ? (en ? I[1] :
 
 export function createGame(id) {
   const KEY = 'sm-town-game:' + id;
-  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, hearts: {}, today: null, clock: true, cal: { d0: 1, on: true, s: 'now' }, bundles: {}, unlock: {}, farm: [], diary: [], wx: { auto: true }, bought: {}, res: {} });   // bought = 가게에서 산 수(FIX-EC1 · 되팔기 값)
+  const fresh = () => ({ v: SAVE_V, day: 1, min: 7 * 60, bag: {}, money: 0, earned: 0, dex: {}, ate: {}, cooked: {}, shared: 0, picked: {}, uses: {}, tasks: null, cells: {}, album: [], fridge: {}, hearts: {}, today: null, clock: true, cal: { d0: 1, on: true, s: 'now' }, bundles: {}, unlock: {}, farm: [], diary: [], wx: { auto: true }, bought: {}, res: {}, home: { v: 1, id: null, h: '', x: 0, z: 0, pots: [null, null], met: 0 }, yday: null });   /* HOME-1 우리 집(고른 집 · 해시 · 화분 둘 · 첫 만남) · yday = 어제 한 일(잠들 때 S.today를 남김) */   // bought = 가게에서 산 수(FIX-EC1 · 되팔기 값)
   let S = fresh();
   let raw9 = null; try { raw9 = localStorage.getItem(KEY); } catch (e) { /* 막힘 */ }
   try { const j = JSON.parse(raw9 || 'null'); if (j && j.v !== SAVE_V) throw 0; if (j && j.v === SAVE_V) { const F9 = fresh(), T9 = Object.assign(fresh(), j); for (const k of Object.keys(F9)) { const f = F9[k], t = T9[k]; if (f && typeof f === 'object' ? (!t || typeof t !== 'object' || Array.isArray(t) !== Array.isArray(f)) : typeof f === 'number' && !Number.isFinite(t)) T9[k] = f; }   /* FIX-CX5(코덱스 점검): 칸 모양이 틀린 저장(bag = null 등)을 먼저 바로잡고 나서 씀 — 예전엔 S에 먼저 넣고 오류가 나 깨진 채 남았음 */ S = T9; if (!(j.cal && j.cal.d0 >= 1)) S.cal = { d0: S.day, on: true, s: 'now' };   /* 달력 없던 저장 = 오늘부터 첫 주 */ for (const k of Object.keys(S.bag)) if (!(S.bag[k] > 0)) delete S.bag[k]; } } catch (e) { /* 저장 깨짐·판 번호 다름 = 새로 시작하되 옛 글은 따로 남김(SAVE-1 · 덮어써서 잃지 않게 · 되살리기 = sm-town-game-bak:<마을>) */ if (raw9) try { localStorage.setItem('sm-town-game-bak:' + id, raw9); } catch (e2) { /* 가득 참 */ } }
   if (!(S.min >= 0 && S.min < DAY_END)) S.min = 7 * 60;
-  let dirty = false, since = 0, acc = 0, ph = phaseOf(S.min), on = null; const T0 = () => ({ earned: 0, got: {}, cells: 0, tasks: 0, cooked: 0, shared: 0, dex: 0 }); if (!S.today || typeof S.today !== 'object') S.today = T0(); else for (const [k, v] of Object.entries(T0())) if (typeof S.today[k] !== typeof v) S.today[k] = v;   /* FIX-CX7(코덱스 10-18): today:{}처럼 빠진 칸 */   // 오늘 한 일(하루 마무리 · 잠들면 비움)
+  let dirty = false, since = 0, acc = 0, ph = phaseOf(S.min), on = null; const T0 = () => ({ earned: 0, got: {}, cells: 0, tasks: 0, cooked: 0, shared: 0, dex: 0, gift: 0, farmW: 0, sold: 0, rainW: 0 });   /* PHASE1 조각 2: 선물 · 물 준 칸 · 판 수 · 비 온 날 물 준 칸 */ if (!S.today || typeof S.today !== 'object') S.today = T0(); else for (const [k, v] of Object.entries(T0())) if (typeof S.today[k] !== typeof v) S.today[k] = v;   /* FIX-CX7(코덱스 10-18): today:{}처럼 빠진 칸 */   // 오늘 한 일(하루 마무리 · 잠들면 비움)
   const emit = (t) => { if (on) on(t); };
   const G = {
     S,
@@ -91,7 +91,7 @@ export function createGame(id) {
     clockText(en) { const h = (S.min / 60) | 0, m = ((S.min % 60) / 10 | 0) * 10;   /* 10분 단위(스타듀처럼 — 칩 글이 1초마다 바뀌지 않게) */ return (en ? 'Day ' + S.day + ' ' : S.day + '일째 ') + (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; },
     setClock(onoff) { S.clock = !!onoff; dirty = true; emit('clock'); },
     // 잠 = 다음 날 아침 · 오늘 딴 자리는 다시 자람 · 바로 저장
-    sleep() { G.lastDay = { day: S.day, ...S.today }; S.today = T0(); S.day++; S.min = DAY_START; acc = 0; ph = phaseOf(S.min); S.picked = {}; S.uses = {}; S.tasks = null; dirty = true; G.flush(); emit('clock'); emit('phase'); emit('day'); },   // lastDay = 하루 마무리 창이 읽음
+    sleep() { G.lastDay = { day: S.day, ...S.today }; S.yday = G.lastDay; S.today = T0(); S.day++; S.min = DAY_START; acc = 0; ph = phaseOf(S.min); S.picked = {}; S.uses = {}; S.tasks = null; dirty = true; G.flush(); emit('clock'); emit('phase'); emit('day'); },   // lastDay = 하루 마무리 창이 읽음
     seasonAt(d) { const c = S.cal; if (!c.on) return c.s || 'now'; const n = Math.floor((d - c.d0) / CAL_LEN); return n <= 0 ? 'now' : CAL_SEQ[(n - 1) % CAL_SEQ.length]; },   // GAME-1d 그날의 계절(손으로 고른 동안은 그 계절)
     season() { return G.seasonAt(S.day); }, calDay() { return ((S.day - S.cal.d0) % CAL_LEN + CAL_LEN) % CAL_LEN + 1; },
     setCal(on, s) { if (on) S.cal.on = true; else { S.cal.on = false; S.cal.s = s; } dirty = true; },
