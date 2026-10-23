@@ -19,16 +19,17 @@ const pad = (n) => String(n).padStart(2, '0');
 export function savePhoto(p) { const d = new Date(p.t), a = document.createElement('a'), u = URL.createObjectURL(p.b); a.href = u; a.download = '우리학교_사진_' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + '.jpg'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); }
 const CSS = 'body.ph-on>*:not(#scene):not(#phCd):not(#phFlash):not(script):not(style){visibility:hidden!important}#phCd{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;pointer-events:none;font:900 min(34vw,190px)/1 system-ui,sans-serif;color:#fff;text-shadow:0 6px 0 #1d3557,0 0 30px rgba(0,0,0,.35)}#phCd small{position:absolute;bottom:12%;font-size:20px;text-shadow:0 2px 0 #1d3557}#phFlash{position:fixed;inset:0;z-index:91;background:#fff;pointer-events:none;opacity:.85;transition:opacity .45s}';
 function addCss() { if (document.getElementById('ph-css')) return; const st = document.createElement('style'); st.id = 'ph-css'; st.textContent = CSS; document.head.appendChild(st); }
-// 찍기: o = { tone(f,t0,dur,type,vol), net(), toast(msg,sec), label(), en, onDone(rec) } → Promise(rec | null)
+// 찍기: o = { tone(f,t0,dur,type,vol), net(), toast(msg,sec), label(), en, onDone(rec), cd(세는 수 · 기본 [3,2,1]), onFrame(canvas)(찍는 그 프레임 한 번 · 렌더 바로 뒤) } → Promise(rec | null)
 export function takePhoto(o = {}) {
   if (busy || window.SM_PROMO) return Promise.resolve(null); busy = true; addCss(); document.exitPointerLock?.();
-  const N = o.net && o.net(); try { if (N && N.say && !(N.ctlData && N.ctlData.chat && N.ctlData.chat.off)) N.say('📷 3초 뒤 찍어요!'); } catch (e) { /* */ }   // 방 친구들이 포즈를 잡게(이미 있는 채팅 길)
+  const CD = Array.isArray(o.cd) ? o.cd : [3, 2, 1];   /* PHOTO-2 사진 기자: cd = [] = 셔터를 누른 그 다음 프레임(동물은 기다려 주지 않음) */
+  const N = CD.length && o.net && o.net(); try { if (N && N.say && !(N.ctlData && N.ctlData.chat && N.ctlData.chat.off)) N.say('📷 3초 뒤 찍어요!'); } catch (e) { /* */ }   // 방 친구들이 포즈를 잡게(이미 있는 채팅 길)
   document.body.classList.add('ph-on'); const cd = document.createElement('div'); cd.id = 'phCd'; document.body.appendChild(cd);
   const T = o.tone || (() => {}), sl = (ms) => new Promise((r) => setTimeout(r, ms));
   return (async () => {
-    for (const n of [3, 2, 1]) { cd.innerHTML = n + '<small>' + (o.en ? 'Strike a pose! 😀 = emotes' : '포즈! 😀 이모트도 돼요') + '</small>'; T(n === 1 ? 880 : 660, 0, 0.09, 'triangle', 0.12); await sl(1000); }
+    for (const n of CD) { cd.innerHTML = n + '<small>' + (o.en ? 'Strike a pose! 😀 = emotes' : '포즈! 😀 이모트도 돼요') + '</small>'; T(n === 1 ? 880 : 660, 0, 0.09, 'triangle', 0.12); await sl(1000); }
     cd.remove();
-    const blob = await new Promise((res) => { shotQ = (cv) => { const t0 = performance.now(); try { const w = cv.width, h = cv.height, port = h > w, ow = port ? H9 : W9, oh = port ? W9 : H9, sc = Math.max(ow / w, oh / h), sw = ow / sc, sh = oh / sc;   // 가운데를 꽉 채워 자름(가로 320×180 · 세로 180×320)
+    const blob = await new Promise((res) => { shotQ = (cv) => { const t0 = performance.now(); if (o.onFrame) { try { o.onFrame(cv); } catch (e) { console.warn('photo onFrame', e); } } try { const w = cv.width, h = cv.height, port = h > w, ow = port ? H9 : W9, oh = port ? W9 : H9, sc = Math.max(ow / w, oh / h), sw = ow / sc, sh = oh / sc;   // 가운데를 꽉 채워 자름(가로 320×180 · 세로 180×320)
           const c2 = document.createElement('canvas'); c2.width = ow; c2.height = oh; const g = c2.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(cv, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, ow, oh); lastShot.ms = +(performance.now() - t0).toFixed(2);
           c2.toBlob((b) => res(b), 'image/jpeg', 0.72); } catch (e) { lastShot.ms = +(performance.now() - t0).toFixed(2); res(null); } }; });
     document.body.classList.remove('ph-on');

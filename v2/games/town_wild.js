@@ -159,15 +159,19 @@ const BG = { bigTree: ['#e7efd8', '#9cbf7a'], tree: ['#e7efd8', '#9cbf7a'], edge
 // ── 마을 쪽이 넘기는 것(A): map · T3 · GAME · id · ANM(town_anim) · root() · on() 마을 모습인가 · inb() 실내 · lang() · sea() 놀이 계절 · night() 0·0.5·1 · hour() · busy() 창·놀이·잠 · ride() 탈것·배·헤엄 · bike()
 //   bounds() → [x0, z0, x1, z1] · bushes() 떨기나무 · wAt(x, z) 물 갈래(1 강 · 2 연못 · 3 바다) · sdAt 물가까지 거리(물 안 −) · waterY(갈래) · region(x, z) · treeNear(x, z, r) · trees() → [{ x, z, s }] · forests() 숲·산 모양 · rice() 논 모양
 //   inShape · sdOf · bboxOf · okLand(x, z) 걸을 수 있는 마른 땅 · gy(x, z) 땅 높이 · rng(씨앗) · enth · openP · closeP · esc · skUp · bagShow · touch() · alive()
+// PHOTO-2 사진 기자(docs/systems/town_jobs2.md 「다음 다섯」): 그림 크기(종마다 · 처음 지을 때) · 행동 이름(셔터 때 한 번 읽음)
+const WSZ = {};
+export const HAB_NAME = (w, reed, L) => reed ? (L ? 'reedy water' : '갈대 있는 물가') : HABN[w.hab][L];
 export function createWild(A) {
   const T3 = A.T3, SP = [], ACT = [], MOV = [], MESH = {}, LAND = {}, HH = [], MAXA = 12, M4 = new T3.Matrix4(), Q4 = new T3.Quaternion(), E4 = new T3.Euler(0, 0, 0, 'YXZ'), V4 = new T3.Vector3(), S4 = new T3.Vector3();
+  const VP = new T3.Vector3(), SHOT = [];   /* PHOTO-2 셔터 스크래치(찍을 때만 씀) */
   let RI = [], stillT = 0, comeDay = -1, on = false, near = false, q = 0, crouchOn = false, toldDay = -1, fleeDay = -1, buildMs = 0, secMs = 0, secMax = 0, lastAct = '', picN = {};
   const S = () => A.GAME.S, en = () => A.lang() === 'en', now = () => performance.now() / 1000;
   const timeOk = w => { const n9 = A.night(), h = A.hour(); return w.time === 'any' ? true : w.time === 'day' ? n9 < 1 : (n9 > 0 || h < 7 || h >= 19); };
   const avail = w => w.sea.includes(A.sea()) && timeOk(w), lvOf = c => c >= 30 ? 2 : c >= 10 ? 1 : 0, ST = () => { const W9 = S().wild; return W9 && typeof W9 === 'object' && W9.n && W9.k ? W9 : (S().wild = { n: {}, k: {} }); };   /* 관찰 별: 10번 ⭐ · 30번 ⭐⭐(같은 자리 한 마리는 하루 한 번만 셈) */
   // 그림 메시(종마다 하나 · 처음 나올 때) — 원점에 두고 인스턴스 행렬로만 옮김 · 움직이니 화면 밖 자르기 끔(12마리 안 · 작은 메시)
   function meshOf(w) { const n = SP.filter(s => s.w === w).length; let h = MESH[w.id]; if (h && h.n >= n) return h; if (h) { if (h.m.parent) h.m.parent.remove(h.m); h.dispose(); }   /* 자리 수가 늘면(다른 판) 새로 */
-    if (!A.ANM.has(w.id)) A.ANM.def(w.id, buildGeo(T3, w.id)); h = A.ANM.mesh(w.id, Math.max(1, n)); h.m.frustumCulled = false; h.m.matrixAutoUpdate = false; h.m.userData.fx = 1; h.m.count = 0; h.m.visible = false; MESH[w.id] = h; return h; }
+    if (!A.ANM.has(w.id)) { const G9 = buildGeo(T3, w.id); WSZ[w.id] = G9.size; A.ANM.def(w.id, G9); }   /* PHOTO-2: 그림 키(셔터 때 투영 상자) */ h = A.ANM.mesh(w.id, Math.max(1, n)); h.m.frustumCulled = false; h.m.matrixAutoUpdate = false; h.m.userData.fx = 1; h.m.count = 0; h.m.visible = false; MESH[w.id] = h; return h; }
   function put(s) { const h = MESH[s.w.id]; if (!h || s.i < 0) return; E4.set(s.rx, s.ry, 0); M4.compose(V4.set(s.x, s.y, s.z), Q4.setFromEuler(E4), S4.setScalar(s.w.sc * (s.vis ?? 1))); h.m.setMatrixAt(s.i, M4); h.m.instanceMatrix.needsUpdate = true; h.mode(s.i, s.md); }
   // 짓기 때(마을 모습일 때마다 · setEntries): 서식지마다 자리 고르기(같은 씨앗 = 같은 자리) — 서식지가 없으면 그 종은 자리 0(안 나옴)
   function init() { const t0 = performance.now(); clear(); if (!A.on()) return; on = true; RI = A.rice(); const R = A.rng('wild:' + A.id), mix = a => { for (let i = a.length - 1; i > 0; i--) { const j = (R() * (i + 1)) | 0; const t9 = a[i]; a[i] = a[j]; a[j] = t9; } return a; };
@@ -289,8 +293,19 @@ export function createWild(A) {
   function pic(w, sil) { const k9 = w.id + (sil ? ':s' : ''); if (picN[k9]) return picN[k9]; const c = document.createElement('canvas'); c.width = 84; c.height = 60; drawWild(c, w, sil ? { sil: '#4b4f55' } : {}); return (picN[k9] = '<img src="' + c.toDataURL() + '" alt="" style="height:36px;width:auto;display:inline-block">'); }
   const dexList = () => { const N9 = ST().n, e9 = en(), L9 = WILD.filter(w => SP.some(s => s.w === w)).map(w => { const c = N9[w.id] || 0, lv = lvOf(c); return { id: w.id, icon: pic(w), sil: pic(w, true), t: w.t, hint: w.hint, extra: '★ ' + (lv ? '⭐'.repeat(lv) + ' ' : '') + (e9 ? c + ' looks' : c + '번') }; });   /* 못 만난 칸 = 실루엣 + 때·곳 · 만난 칸 = ★ 스티커 + 관찰 별 */
     L9.title = ST().title ? ['들판 관찰가', 'Field watcher'] : null; return L9; };
+  // PHOTO-2 셔터(찍는 그 한 번만 · 매 프레임 X): 나온 동물(12마리 안)마다 투영 상자 → 화면 안 · 눈에서 가리는 상자 없음 → { 종 · 행동 · 화면 키 비율 · 거리 · 갈대 }
+  //   행동 = 지금 하는 움직임 그대로(엔진이 저절로 만든 것): 날아오름 · 물에 뛰어듦 · 나무 타기 · 달아남 · 다가옴 · 걷기·헤엄 · 두리번(고개 듦) · 쉬기(풀 뜯기·기다리기)
+  function actOf(s) { const k = s.mv.k, w = s.w; if (k === 'fly') return 'fly'; if (k === 'jump' || k === 'sink' || (k === 'hop' && w.flee === 'hop')) return 'dive'; if (k === 'up' || (k === 'run' && s.mv.nx === 'up')) return 'climb';
+    if (k === 'come') return 'come'; if (k === 'run') return 'run'; if (k === 'walk') return w.float ? 'swim' : 'walk'; if (s.st === 1 || s.md === 2) return 'alert'; return 'rest'; }
+  function shot(cam, eye) { SHOT.length = 0; if (!on || !cam) return SHOT;
+    for (const s of ACT) { if (s.st === 3 || (s.vis ?? 1) < 0.45) continue; const w = s.w, sz = WSZ[w.id], h = (sz ? sz[1] : 0.5) * w.sc;
+      VP.set(s.x, s.y + h * 0.5, s.z).project(cam); if (VP.z > 1 || VP.z < -1 || Math.abs(VP.x) > 0.92 || Math.abs(VP.y) > 0.92) continue; const cx = VP.x, cy = VP.y;
+      VP.set(s.x, s.y + h, s.z).project(cam); const ty = VP.y; VP.set(s.x, s.y, s.z).project(cam); const fr = Math.abs(ty - VP.y) / 2, d = eye ? Math.hypot(s.x - eye[0], s.z - eye[2]) : s.d;
+      if (eye && A.los && !A.los(eye, [s.x, s.y + h * 0.6, s.z])) continue;   /* 벽·집에 가려진 동물은 안 셈(눈 = 내 머리) */
+      SHOT.push({ id: w.id, act: actOf(s), fr: +fr.toFixed(3), d: +d.toFixed(1), cx: +cx.toFixed(2), cy: +cy.toFixed(2), reed: s.reed, j: s.j }); }
+    SHOT.sort((a, b) => b.fr - a.fr); return SHOT; }
   function dispose() { clear(); for (const k in MESH) MESH[k].dispose(); for (const k in MESH) delete MESH[k]; }
-  return { init, sec, tick, dispose, dexList, look, get on() { return on; },
+  return { init, sec, tick, dispose, dexList, look, shot, actOf: j => SP[j] ? actOf(SP[j]) : null, get on() { return on; }, get near() { return crouchOn; }, can: id => { const w = wildById(id); return !!w && w.sea.includes(A.sea()) && SP.some(s => s.w === w); },
     info: () => ({ on, n: SP.length, act: ACT.length, mov: MOV.length, near, crouch: crouchOn, still: +stillT.toFixed(1), stars: { ...ST().n }, title: ST().title || null, buildMs, secMs: +secMs.toFixed(3), secMax: +secMax.toFixed(3), mesh: Object.fromEntries(Object.entries(MESH).map(([k, h]) => [k, { count: h.m.count, vis: h.m.visible, tri: buildTri(k) }])),
       spots: SP.map((s, j) => ({ j, id: s.w.id, hab: s.w.hab, x: +s.x.toFixed(1), z: +s.z.toFixed(1), y: +s.y.toFixed(2), ry: +s.ry.toFixed(2), hx: +s.hx.toFixed(1), hz: +s.hz.toFixed(1), st: s.st, act: s.act, md: s.md, mv: s.mv.k, reed: s.reed, i: s.i, d: +s.d.toFixed(1), ok: avail(s.w) })) }),
     hot: () => HH.map(o => ({ off: o.h.hot.off, x: +o.h.hot.x.toFixed(1), z: +o.h.hot.z.toFixed(1), label: o.h.hot.label, id: o.s ? o.s.w.id : null })),

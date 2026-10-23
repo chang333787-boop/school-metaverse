@@ -57,7 +57,7 @@
 | 마을 길 위 사건(town_road.js · 자전거 고리 코스 · 모자 잡기 · 떨어진 것 줍기 · 날아온 지도 조각) | `docs/systems/town_road.md` |
 | 마을 보상 하루 한도(rwCheck 한 문 · 출처마다 하루 n번 · 실제 날짜 총량 · 전수표) — 새 보상은 src 꼬리표로 이 문만 | `docs/systems/town_reward_cap.md` |
 | 마을 야생동물(town_wild.js · 아홉 종 · 서식지·계절·달아남·관찰 별) | `docs/systems/town_wild.md` |
-| **밤샘 차례표(10-24 · A~H 39줄)** · 단계 1 설계(하루 한 바퀴 + 내 집) · 직업 놀이 엔진 설계(JOBS-2 · 양몰이·장구·부엌·낚시…) · 단계 2 표시 걷기·길 묻기 · 단계 3 기억하는 이웃·돈 쓸 곳 | `docs/systems/town_night_queue.md` · `docs/systems/town_phase1.md` · `docs/systems/town_jobs2.md` · `docs/systems/town_phase2.md` · `docs/systems/town_phase3.md` |
+| **밤샘 차례표(10-24 · A~H 39줄)** · 단계 1 설계(하루 한 바퀴 + 내 집) · 직업 놀이 엔진 설계(JOBS-2 · 양몰이·장구·부엌·낚시…) · 단계 2 표시 걷기·길 묻기 · 단계 3 기억하는 이웃·돈 쓸 곳 | `docs/systems/town_night_queue.md` · `docs/systems/town_phase1.md` · `docs/systems/town_jobs2.md` · `docs/systems/town_phase2.md` · `docs/systems/town_phase3.md` · `docs/systems/town_phase4.md`(엔진 여덟) · `docs/systems/town_explore.md`(탐험·특수 지형) |
 | 게임용 지도 API 정본(map.*) | `docs/map_api.md` |
 | 품질 숫자 척도(풍성·놀이·그래픽·효과·이야기·각색·완성도·직관성) | `docs/tasks/quality_scale.md` |
 | 새 이야기·에피소드 더하기 | `docs/tasks/new_episode.md` |

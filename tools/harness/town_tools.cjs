@@ -53,7 +53,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       if (!W) ok(false, '물가 자리 못 찾음'); else { await tp(W.x, W.z); await faceTo(W.wx, W.wz); await holdK('rod'); await aim(W.wx, W.wz); I = await info(); ok(I.shown === 'rod' && I.aim.ok, '3 = 낚싯대 · 고리가 물 위');
         await useF(); await W8(300); I = await info(); ok(!!I.fish, '던짐(' + (I.fish && I.fish.ph) + ')');
         for (let i = 0; i < 20 && I.fish && I.fish.ph === 'fly'; i++) { await W8(200); I = await info(); } await ev(() => SM_TOWN.tools.bite()); await W8(400); I = await info(); ok(I.fish && I.fish.ph === 'bite', '찌가 쏙(입질) — ' + (I.fish && I.fish.ph));
-        await useF(); await W8(1300); const pn = await panel(); ok(/낚았|caught/.test(pn), '바로 누르면 잡음 — ' + pn.slice(0, 30));
+        await useF(); await W8(1100); { const pl = await ev(() => SM_TOWN.rules.play()); ok(!!pl && pl.k === 'rod', '누르면 줄다리기 창(FISH-2 · 일 놀이와 같은 줄 당기기) — ' + JSON.stringify(pl)); if (pl) await ev(() => SM_TOWN.rules.playEnd(3)); await W8(1000); }   /* 줄다리기 자체는 town_fish.cjs 봇이 함 */
+        const pn = await panel(); ok(/낚았|caught/.test(pn), '줄다리기로 낚으면 잡음 — ' + pn.slice(0, 30));
         await ev(() => { const b9 = document.querySelector('.twn-p [data-a="rel"]'); if (b9) b9.click(); }); await W8(900); const t9 = await toast(); ok(/놓아줬|let the fish go/.test(t9), '놓아주기 한 줄 — ' + t9.slice(0, 30)); ok((await ev(() => SM_TOWN.toolRec())).release >= 1, '기록 release');
         ok(await ev(() => !!(__G.S.chem && __G.S.chem.lf && __G.S.chem.lf.release) || (SM_TOWN.chem.info().laws || []).includes('release')), '실험 표: 놓아주기(release) 알아냄');
         const dex = await ev(() => Object.keys(__G.S.dex || {}).filter(k => k.startsWith('fish:'))); ok(dex.length >= 1, '도감 🎣 낚은 물고기 ' + dex.join(',')); await aim(null); } }

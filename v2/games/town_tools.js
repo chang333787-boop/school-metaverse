@@ -7,12 +7,13 @@
 //   렉: 매 프레임 = 고리 따라가기 + 물방울(살아 있을 때만) + 찌 시계 · 겨눔 = 0.1초 · 숨김·받기·쓸 자리·젖은 자국 = 0.25초 · 새 Light X · 매 프레임 new X
 //     그리기 = 고리 1 + 물방울 1 + 덩이 1 + 조각 1 + 구덩이 1 + 젖은 자국 1(있을 때만) — 바뀔 때만 setMatrixAt
 //   지어내지 않음(사실만: 지렁이·분해자 · 금어기·놓아주기 · 바닷물 · 꽃의 암술·수술) · 새 사람 X(빗자루 = 마을회관 앞 쪽지 · 낚싯대 = 부두 어부 일꾼) · 홍보판(SM_PROMO) X
+import { fishAt, FISH_FACT } from './town_fish.js?v=2';   /* FISH-2: 바다 = 물때·계절로 걸리는 고기(가까운 얕은 물) */
 export const TOOLS_V = 1;
 export const TOOL_ORDER = ['can', 'shovel', 'rod', 'lens', 'broom'];
 export const TOOL = {
   can: { ic: '💧', t: ['물뿌리개', 'Watering can'], how: ['텃밭·꽃·모닥불을 겨눠 누르고 있으면 물을 뿌려요', 'Aim at the garden, flowers or a campfire and hold to pour'], get: ['처음부터 있어요', 'You have it from the start'] },
   shovel: { ic: '⛏', t: ['삽', 'Shovel'], how: ['흙이나 풀밭을 겨눠 쓰면 땅을 파요. 무엇이 나올까요?', 'Aim at soil or grass to dig. What will you find?'], get: ['처음부터 있어요', 'You have it from the start'] },
-  rod: { ic: '🎣', t: ['낚싯대', 'Fishing rod'], how: ['물 위를 겨눠 던져요. 찌가 쏙 들어가면 바로 눌러요!', 'Aim at the water and cast. When the float dips, press right away!'], get: ['부두 어부께 받아요', 'Get it from the pier fisher'] },
+  rod: { ic: '🎣', t: ['낚싯대', 'Fishing rod'], how: ['물 위를 겨눠 던져요. 찌가 쏙 들어가면 눌러요. 걸리면 물고기 반대쪽으로 끌어요', 'Aim at the water and cast. When the float dips, press. Then pull the opposite way to the fish'], get: ['부두 어부께 받아요', 'Get it from the pier fisher'] },
   lens: { ic: '🔍', t: ['돋보기', 'Magnifier'], how: ['곤충·꽃·버섯·돌을 겨눠 들여다봐요. 잡지 않고 보기만 해요', 'Aim at insects, flowers, mushrooms or stones to look closely. Just look, never catch'], get: ['곤충을 처음 관찰하면 생겨요', 'Comes after your first insect watch'] },
   broom: { ic: '🧹', t: ['빗자루', 'Broom'], how: ['낙엽·눈·쓰레기를 겨눠 쓸어요. 마을이 깨끗해져요', 'Aim at leaves, snow or litter and sweep. The town gets clean'], get: ['마을회관이나 경로당 앞에서 빌려요', 'Borrow it at a village hall or senior center'] },
 };
@@ -221,16 +222,20 @@ export function createTools(A) {
   function useRod() { const e = en(); let at = null; if (T.ok) at = [T.x, T.y + 0.02, T.z];
     if (!at) { const me = map.player.pos(); _f.set(0, 0, -1).applyQuaternion(map.camera.quaternion); const fl = Math.hypot(_f.x, _f.z) || 1; for (let d = 2.4; d <= 9 && !at; d += 0.5) { const x = me.x + _f.x / fl * d, z = me.z + _f.z / fl * d, w = water(x, z); if (w) at = [x, w.y + 0.02, z]; } }
     if (!at) { toast(e ? '🎣 Face the water and cast — the ring must be on the water' : '🎣 물가에서 물을 보고 던져요 — 고리가 물 위에 있어야 해요', 2.6); return; }
-    const w = water(at[0], at[2]); const h = map.player.act('cast', { at, msg: null }); if (!h) return; FS = { h, ph: 'fly', t: 0, bite: 2 + Math.random() * 4, bt: 0, sea: !!(w && w.sea), at }; A.rec('cast'); tchSync(); }
+    const w = water(at[0], at[2]), sea = !!(w && w.sea), G = A.GAME; let fish = null, why = '';
+    if (sea) { const r = fishAt(A.season(), A.low(), 'near', 'worm', G.S.dex, G.S.day * 7 + G.uses('tool:catch')); fish = r.f; why = r.why; } else fish = A.night() ? FRESH[2] : FRESH[(Math.random() * 2) | 0];   /* 메기 = 밤에 움직임(사실) · 낮 = 붕어·피라미 */
+    const h = map.player.act('cast', { at, msg: null }); if (!h) return; FS = { h, ph: 'fly', t: 0, bite: fish ? 2 + Math.random() * 4 : 7, bt: 0, sea, at, fish, why }; A.rec('cast'); tchSync(); }
   function fishStop() { if (FS && FS.h && !FS.h.done) FS.h.stop(); FS = null; tchSync(); }
-  function fishPress() { const F = FS, e = en(); if (!F) return; if (F.ph === 'bite') { F.h.reel(true); F.ph = 'got'; tchSync(); setTimeout(() => { if (!dead) catchShow(F.sea); }, 650); return; }
+  function fishPress() { const F = FS, e = en(); if (!F) return; if (F.ph === 'bite') { F.h.reel(true); F.ph = 'got'; tchSync(); setTimeout(() => { if (!dead) tugGo(F.fish); }, 650); return; }
     if (F.ph === 'fly' || F.ph === 'wait') { F.h.reel(false); F.ph = 'early'; toast(e ? '🎣 Too early — wait until the float dips' : '🎣 너무 일찍 당겼어요 — 찌가 쏙 들어갈 때 눌러요', 2.4); } }
   function fishTick(dt) { const F = FS, e = en(); if (F.h.done) { if (F.ph === 'wait' || F.ph === 'fly' || F.ph === 'bite') toast(e ? '🎣 You reeled in the line' : '🎣 낚싯줄을 거뒀어요', 1.6); FS = null; tchSync(); return; }
     if (F.ph === 'fly') { if (F.h.landed) { F.ph = 'wait'; F.t = 0; } return; }
-    if (F.ph === 'wait') { F.t += dt; if (F.t >= F.bite) { F.h.dip(); F.ph = 'bite'; F.bt = 0; tchSync(); pop(e ? '❗ Now!' : '❗ 지금!'); tone(1175, 0, 0.08, 'square', 0.04); tone(1568, 0.08, 0.1, 'square', 0.04); } return; }
-    if (F.ph === 'bite') { F.bt += dt; if (F.bt > 1.0) { F.h.reel(false); F.ph = 'miss'; tchSync(); toast(e ? '💨 It got away — press as soon as the float dips' : '💨 놓쳤어요 — 찌가 쏙 들어가면 바로 눌러요', 2.4); A.rec('miss'); } } }
+    if (F.ph === 'wait') { F.t += dt; if (F.t >= F.bite && !F.fish) { F.h.reel(false); F.ph = 'none'; tchSync(); toast('🎣 ' + L(FISH_FACT[F.why || 'low']), 4); A.rec('nobite'); return; } if (F.t >= F.bite) { F.h.dip(); F.ph = 'bite'; F.bt = 0; tchSync(); pop(e ? '❗ Now!' : '❗ 지금!'); tone(1175, 0, 0.08, 'square', 0.04); tone(1568, 0.08, 0.1, 'square', 0.04); } return; }
+    if (F.ph === 'bite') { F.bt += dt; if (F.bt > 2.5) { F.h.reel(false); F.ph = 'miss'; tchSync(); toast(e ? '💨 It got away — press as soon as the float dips' : '💨 놓쳤어요 — 찌가 쏙 들어가면 바로 눌러요', 2.4); A.rec('miss'); } } }
   function pop(txt) { const p = document.createElement('div'); p.className = 'twn-pop'; p.style.color = '#ffe36b'; p.textContent = txt; document.body.appendChild(p); setTimeout(() => p.remove(), 1300); }
-  function catchShow(sea) { const e = en(), G = A.GAME, fish = sea ? A.fishPick(A.season(), G.S.dex, G.S.day * 7 + G.uses('tool:catch')) : FRESH[(Math.random() * FRESH.length) | 0]; if (!fish) return; G.use('tool:catch');
+  /* FISH-2: 찌가 쏙 → 누르면 일 놀이와 같은 줄다리기 한 마리(town.js tug → town_minigame.js mkTug) → 낚으면 놓아주기·가방 */
+  function tugGo(fish) { if (!fish) return; const e = en(); const ok = A.tug(fish, res => { if (dead) return; if (res > 0) { A.rec('tug-ok'); catchShow(fish); } else if (res === 0) { A.rec('tug-miss'); toast(e ? '💨 It got away — pull the opposite way to the fish' : '💨 물고기가 달아났어요 — 물고기 반대쪽으로 끌어요', 2.6); } }); if (!ok) catchShow(fish); }
+  function catchShow(fish) { const e = en(), G = A.GAME; if (!fish) return; G.use('tool:catch');
     const neu = G.found('fish:' + fish.id); A.skUp('look', neu ? 3 : 1, 'fish:' + fish.id); A.rec('catch', { id: fish.id }); const full = G.uses('tool:fish') >= 2;
     const P = A.openP('<h3>🎣 ' + (e ? 'You caught a fish!' : '물고기를 낚았어요!') + '</h3><div style="display:flex;gap:14px;align-items:center;margin:6px 0"><div style="font-size:54px;line-height:1">🐟</div><div><b style="font-size:18px">' + esc(L(fish.t)) + '</b><div class="sm">' + esc(L(fish.line)) + '</div></div></div>'
       + (neu ? '<div class="sm">' + (e ? 'Added to the codex: 🎣 Fish met.' : '도감 「🎣 낚은 물고기」에 넣었어요.') + '</div>' : '')

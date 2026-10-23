@@ -117,7 +117,7 @@ const INST = {
   pad: { w: 'triangle', a: 0.18, d: 1.4, s: 0.75, r: 0.35, lv: 0.75 } };
 const PART = { lead: 0.16, bass: 0.2, ch1: 0.075, ch2: 0.075 };
 const DCH = { k: 'dk', s: 'dk', r: 'dk', b: 'dk', g: 'dk', h: 'dh', o: 'dh', z: 'dh', d: 'dh', w: 'dh' };
-const DLV = { k: 0.32, s: 0.16, r: 0.1, h: 0.055, o: 0.045, z: 0.05, b: 0.28, g: 0.16, d: 0.12, w: 0.035 };
+const DLV = { k: 0.32, s: 0.16, r: 0.1, h: 0.055, o: 0.045, z: 0.05, b: 0.28, g: 0.16, d: 0.12, w: 0.035, G: 0.4, D: 0.3 };   /* G·D = 장구 놀이(playBars · hit)의 큰 쿵·덕 */
 
 // ───────── 곡 → 마디별 사건(처음 쓸 때 한 번 · 바퀴 짝·홀 따로) ─────────
 function parseMel(str, n) { const bars = str ? str.split('|') : [], out = [], bad = [];
@@ -201,6 +201,7 @@ function engine(ac) {
     else if (k === 'h') { noise('highpass', 7600, 0.7); env(0.001, 0.018); } else if (k === 'o') { noise('highpass', 7000, 0.6); env(0.002, 0.11); } else if (k === 'z') { noise('bandpass', 5600, 1.3); env(0.012, 0.03); }
     else if (k === 'b') { tone(96, 58, 0.18); noise('lowpass', 400, 0.7); env(0.004, 0.13); } else if (k === 'g') { tone(185, 128, 0.1); env(0.003, 0.09); } else if (k === 'd') { noise('bandpass', 2700, 1.6); env(0.001, 0.03); }
     else if (k === 'w') { tone(1320, 0, 0); tone(1987, 0, 0); env(0.001, 0.05); }
+    else if (k === 'G') { tone(150, 92, 0.14); noise('lowpass', 320, 0.8); env(0.003, 0.17); } else if (k === 'D') { noise('bandpass', 2300, 1.3); tone(560, 0, 0, 'triangle'); env(0.001, 0.05); }   /* 장구: 쿵 = 왼쪽 면(낮고 울림) · 덕 = 오른쪽 면(채로 딱) */
     g.connect(D.bus[ch]); for (const s of src) { if (s.buffer) s.start(t, Math.random() * 0.5); else s.start(t); s.stop(t1 + 0.02); } keep({ g, src, t0: t, t1 }); }
   // 16분 한 칸 = 그 칸 사건을 예약하고 앞으로(마디 첫 칸 = 선율 악기 정함 · 부분이 끝나면 다음 부분 · 곡 끝 = loopTo로)
   E.step = (D, fire) => {
@@ -215,32 +216,53 @@ function engine(ac) {
   E.fadeOut = (D, now, T0) => { try { D.fade.gain.setTargetAtTime(0, now, 0.33); D.send.gain.setTargetAtTime(0, now, 0.33); } catch (e) { /* */ } for (const c in D.last) for (const vv of D.last[c]) cut(vv, Math.max(now, T0 - 0.1));
     D.drop = T0 + 0.5; };
   E.sweep = (now) => { for (let i = E.decks.length - 1; i >= 0; i--) { const D = E.decks[i]; if (D.drop && now > D.drop) { E.decks.splice(i, 1); try { D.fade.disconnect(); D.send.disconnect(); for (const k in D.bus) D.bus[k].disconnect(); } catch (e) { /* */ } } } };
+  // 장구 놀이 덱(JANGGU-1): 곡 없이 칸만 · 갈래 = 장구 쿵(dk 둘) · 장구 덕(dh) · 반주 북(ab) · 반주 피리(lead) · 반주 받침(bass) = 6 이하
+  E.jdeck = (T0) => { const fade = ac.createGain(), send = ac.createGain(), lead = ac.createGain(); fade.connect(E.inp); send.gain.value = 0.06; send.connect(E.dl); lead.connect(fade); lead.connect(send); fade.gain.value = JLV;
+    const D = { song: JSONG, opt: {}, sd: 0.1, t: T0, last: {}, bus: { lead, bass: fade, dk: fade, dh: pan(0.14, fade), ab: pan(-0.12, fade) }, fade, send, jg: 1 }; E.decks.push(D); return D; };
+  E.jstop = (D, now) => { if (!D || D.stopped) return; D.stopped = 1; for (const c in D.last) for (const vv of D.last[c]) cut(vv, now); try { D.fade.gain.cancelScheduledValues(now); D.fade.gain.setTargetAtTime(0, now, 0.03); D.send.gain.setTargetAtTime(0, now, 0.03); } catch (e) { /* */ } D.drop = Math.min(D.drop || 1e9, now + 0.35); };
+  E.drum = drum; E.note = note;
   return E; }
+
+// ───────── 장구 칸 예약기(JANGGU-1 · docs/systems/town_jobs2.md 「리듬·장구·버스킹」) ─────────
+//   cells = 칸마다 'k' 쿵 · 'd' 덕 · 'D' 덩(두 면 같이) · '-' 쉼 · sub = 한 박에 칸 몇(1 · 2 · 셋잇단 3) — 칸 길이 = 60 / bpm / sub(4/4 16분 칸에 끼우지 않음)
+//   반주(acc) = 박마다 북 · 장단 첫 박 받침 · 박마다 피리 한 음(G 5음 음계) — 아이가 짠 차례가 반주 위에서 그대로 들림
+const JSONG = { id: 'janggu', poly: { dk: 1, dh: 1, ab: 1, lead: 1, bass: 1 } }, JLV = 2.2;
+const JMEL = [[74, 76, 74, 71], [71, 69, 67, 69]], JMEL3 = [[74, 71, 69], [71, 69, 67]];
+export function jCells(cells) { const out = []; for (const c of String(cells)) { if (c === ' ' || c === '|') continue; out.push(c === 'k' || c === 'd' || c === 'D' ? c : '-'); } return out; }
+function jSched(E, D, cells, bpm, o, T0) { const sub = o.sub || 1, cd = 60 / bpm / sub, reps = Math.max(1, o.reps || 1), C = jCells(cells), beats = Math.max(1, Math.round(C.length / sub)), mel = beats % 3 === 0 && beats % 4 ? JMEL3 : JMEL;
+  let t = T0, n = 0, a = 0; const n0 = E.n;
+  for (let r = 0; r < reps; r++) for (let i = 0; i < C.length; i++, t += cd) { const c = C[i];
+    if (c === 'k' || c === 'D') { E.drum(D, 'dk', 'G', t, c === 'D' ? 1.05 : 1); n++; } if (c === 'd' || c === 'D') { E.drum(D, 'dh', 'D', t, 1); n++; }
+    if (o.acc && i % sub === 0) { const b = i / sub, M = mel[r % 2]; E.drum(D, 'ab', 'b', t, b === 0 ? 0.55 : 0.3); E.note(D, 'lead', 'flute', M[b % M.length], t, cd * sub * 0.9, 0.1); a += 2;
+      if (b === 0) { E.note(D, 'bass', 'sub', r % 2 ? 50 : 43, t, cd * C.length * 0.95, 0.16); a++; } } }
+  return { n, acc: a, notes: E.n - n0, len: C.length * reps, cd, end: t }; }
 
 // ───────── 마을에서 쓰는 것 ─────────
 //   o.state() → { night, wx, ins, play, sleep, fest, reg } (0.4초마다 한 번 · 읽기만) · o.muted() → 설정 '모든 소리 끄기'
 export function createMusic(o = {}) {
   const W9 = typeof window !== 'undefined' ? window : {}, promo = !!W9.SM_PROMO, KEY = promo ? 'twn-music-p' : 'twn-music', LOOK = 1.0, TICK = 400;
   let on = !promo; try { const s = localStorage.getItem(KEY); if (s === '0') on = false; else if (s === '1') on = true; } catch (e) { /* 저장 막힘 = 기본값 */ }
-  let E = null, D = null, tm = 0, dead = false, mood = '', pend = '', pendN = 0, st = {}, lvl = -1, sw = 0, first = true; const memo = {};
+  let E = null, D = null, tm = 0, dead = false, mood = '', pend = '', pendN = 0, st = {}, lvl = -1, sw = 0, first = true, held = false, HD = null, JN = 0, JP = 0; const memo = {};   /* held = 장구 창(배경 곡 멈춤) · HD = 칠 때 소리 덱 · JN·JP = 장구 소리·연주 수(시험) */
   const muted = () => !!(o.muted && o.muted());
-  function init() { if (E || dead || !on || muted() || document.hidden) return;
+  function init() { if (!on) return; boot(); }
+  function boot() { if (E) return true; if (dead || muted() || document.hidden) return false;
     try { const AC = W9.AudioContext || W9.webkitAudioContext; if (!AC) return; let ac; try { ac = new AC({ latencyHint: 'playback' }); } catch (e) { ac = new AC(); }   // 'playback' = 버퍼를 크게(크롬북 CPU ↓)
-      E = engine(ac); E.inp.gain.value = 0; if (ac.state === 'suspended') ac.resume(); } catch (e) { E = null; return; }
-    mood = ''; lvl = -1; first = true; run(); }
+      E = engine(ac); E.inp.gain.value = 0; if (ac.state === 'suspended') ac.resume(); } catch (e) { E = null; return false; }
+    mood = ''; lvl = -1; first = true; HD = null; run(); return true; }
   function run() { if (!tm && E) { tm = setInterval(pump, TICK); pump(); } }
   function halt() { if (tm) { clearInterval(tm); tm = 0; } }
-  function off(fast) { halt(); if (!E) return; const e = E; E = null; D = null; mood = ''; try { const n = e.ac.currentTime; e.inp.gain.cancelScheduledValues(n); e.inp.gain.setTargetAtTime(0, n, 0.1); } catch (x) { /* */ }
+  function off(fast) { halt(); if (!E) return; const e = E; E = null; D = null; HD = null; mood = ''; try { const n = e.ac.currentTime; e.inp.gain.cancelScheduledValues(n); e.inp.gain.setTargetAtTime(0, n, 0.1); } catch (x) { /* */ }
     setTimeout(() => { try { e.ac.close(); } catch (x) { /* 이미 닫힘 */ } }, fast ? 0 : 600); }
   function go(m, now) { const [sid, opt] = MOODS[m]; mood = m; sw++;
     if (D && D.song.id === sid) { D.opt = opt || {}; return; }   // 해 질 녘 ↔ 눈 = 같은 곡, 결만(다음 마디부터)
     const T0 = D ? Math.max(now + LOOK, D.t) : now + 0.12;
     if (D) { memo[D.song.id] = D.fi; E.fadeOut(D, now, T0); }
     D = E.deck(sid, opt, T0, memo[sid] || 0); D.fade.gain.setValueAtTime(0, T0); D.fade.gain.linearRampToValueAtTime(1, T0 + (first ? 2 : 1)); first = false; }
-  function mix(now) { const k = (MLV[mood] || 1) * (st.ins ? 0.5 : 1) * (st.sleep ? 0.3 : 1), f = st.ins ? 1500 : mood === 'rain' ? 4200 : 15000;
+  function mix(now) { const k = held ? 1 : (MLV[mood] || 1) * (st.ins ? 0.5 : 1) * (st.sleep ? 0.3 : 1), f = held ? 15000 : st.ins ? 1500 : mood === 'rain' ? 4200 : 15000;
     if (k !== lvl) { lvl = k; E.inp.gain.setTargetAtTime(BASE * k, now, 0.4); } if (f !== E.f) { E.f = f; E.lp.frequency.setTargetAtTime(f, now, 0.35); } }
   function pump() { if (!E || dead) return; const ac = E.ac; if (ac.state !== 'running') return; const now = ac.currentTime, p0 = performance.now();
     try { st = (o.state && o.state()) || {}; } catch (e) { st = {}; }
+    if (held || !on) { mix(now); E.sweep(now); if (!held && !on && !E.decks.some(q => q.jg && !(q.drop < now))) off(); return; }   /* 장구 창 = 배경 곡 X(장구 덱만) · 음악을 꺼 둔 채 장구만 쳤으면 다 울린 뒤 닫음 */
     const want = moodOf(st); if (want !== pend) { pend = want; pendN = 0; } if (want !== mood && (++pendN >= 3 || !D)) go(want, now);   // 0.8초 넘게 그대로일 때만 바꿈(문 앞 들락날락에 흔들리지 않게)
     mix(now); E.sweep(now); if (!D) return;
     if (D.song.lead === 'region') D.leadNext = REGL[st.reg] || 'pluck';
@@ -256,9 +278,20 @@ export function createMusic(o = {}) {
   return {
     on: () => on,
     duck(sec = 1.2) { if (!E || lvl < 0) return; const n = E.ac.currentTime, g = E.inp.gain; try { g.cancelScheduledValues(n); g.setTargetAtTime(BASE * lvl * 0.35, n, 0.05); g.setTargetAtTime(BASE * lvl, n + sec, 0.4); } catch (e) { /* */ } },   /* 팡파르·큰 보상 소리 동안 잠깐 작게(부르는 쪽이 고름) */
-    set(v) { v = !!v; if (v !== on) { on = v; try { localStorage.setItem(KEY, v ? '1' : '0'); } catch (e) { /* 저장 막힘 = 이 탭에서만 */ } } if (v) wake(); else off(); return on; },
+    set(v) { v = !!v; if (v !== on) { on = v; try { localStorage.setItem(KEY, v ? '1' : '0'); } catch (e) { /* 저장 막힘 = 이 탭에서만 */ } } if (v) wake(); else if (!held) off(); else if (D) { E.fadeOut(D, E.ac.currentTime, E.ac.currentTime + 0.15); D = null; mood = ''; } return on; },
+    // JANGGU-1 장구 놀이: hold(true) = 배경 곡 멈춤(줄이기 X · 지금 마디 끊고 1초 안에 조용) · hold(false) = 떠날 때 부분부터 다시(1초 커짐) · 음악을 꺼 두어도 장구 소리는 남(모든 소리 끄기만 X)
+    hold(v) { v = !!v; if (v === held) return held; held = v; if (!E) { if (v) boot(); return held; } const now = E.ac.currentTime;
+      if (v) { if (D) { memo[D.song.id] = D.fi; E.fadeOut(D, now, now + 0.15); D = null; } mood = ''; pend = ''; pendN = 0; }
+      else { if (HD) { E.jstop(HD, now + 1.2); HD = null; } pendN = 0; if (on && E.ac.state === 'running') pump(); }
+      return held; },
+    hit(c) { if (!boot()) return 0; const ac = E.ac; if (ac.state !== 'running') { try { ac.resume(); } catch (e) { /* */ } } const t = ac.currentTime + 0.02;
+      for (const q of E.decks) if (q.jg && q !== HD) E.jstop(q, t); if (!HD || HD.stopped) HD = E.jdeck(t); let n = 0; if (c === 'k' || c === 'D') { E.drum(HD, 'dk', 'G', t, 1); n++; } if (c === 'd' || c === 'D') { E.drum(HD, 'dh', 'D', t, 1); n++; } JN += n; run(); return n; },   /* 한 번 친 소리(바로 · 박 맞춤은 playBars가) */
+    playBars(cells, bpm = 80, o = {}) { if (!boot()) return null; const ac = E.ac; if (ac.state !== 'running') { try { ac.resume(); } catch (e) { /* */ } }
+      const now = ac.currentTime, T0 = now + (o.lead != null ? o.lead : 0.2); for (const q of E.decks) if (q.jg) E.jstop(q, T0 - 0.02); HD = null; const J = E.jdeck(T0), r = jSched(E, J, cells, bpm, o, T0); J.drop = r.end + 1.6; JN += r.n; JP++; run();
+      const wall = performance.now() + (T0 - now) * 1000;
+      return { n: r.n, acc: r.acc, notes: r.notes, len: r.len, cellMs: r.cd * 1000, t0: wall, endMs: wall + (r.end - T0) * 1000, stop: () => { if (E && E.decks.includes(J)) E.jstop(J, E.ac.currentTime); } }; },
     info: () => ({ on, promo, muted: muted(), ctx: E ? E.ac.state : null, mood, song: D ? D.song.id : null, title: D ? D.song.name : null, section: D ? D.sec.name : null, bar: D ? D.bi + 1 : 0, loop: D ? D.loop : 0, lead: D ? D.lead : null,
-      indoor: !!st.ins, level: E ? +(BASE * Math.max(0, lvl)).toFixed(3) : 0, filter: E ? E.f : 0, notes: E ? E.n : 0, voicesMax: E ? E.vmax : 0, switches: sw, decks: E ? E.decks.length : 0, pumpMs: E && E.pc ? +(E.pt / E.pc).toFixed(3) : 0 }),
+      held, jg: JN, jgPlays: JP, indoor: !!st.ins, level: E ? +(BASE * Math.max(0, lvl)).toFixed(3) : 0, filter: E ? E.f : 0, notes: E ? E.n : 0, voicesMax: E ? E.vmax : 0, switches: sw, decks: E ? E.decks.length : 0, pumpMs: E && E.pc ? +(E.pt / E.pc).toFixed(3) : 0 }),
     dispose() { dead = true; for (const k of EVS) removeEventListener(k, wake, { capture: true }); document.removeEventListener('visibilitychange', vis); removeEventListener('sm-set', onSet); off(); } };
 }
 

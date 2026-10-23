@@ -30,10 +30,10 @@ export const total = S => SK_ORDER.reduce((a, k) => a + lv(S, k), 0);
 // 칭호(솜씨 레벨 합 6~60)
 export const TITLES = [[6, T2('🌱 새싹 주민', '🌱 Sprout')], [12, T2('🙂 꼬마 일꾼', '🙂 Little helper')], [20, T2('🤝 마을 도우미', '🤝 Town helper')], [30, T2('🌟 마을 솜씨꾼', '🌟 Town all-rounder')], [42, T2('🏡 마을 지킴이', '🏡 Town keeper')], [56, T2('👑 우리 마을 박사', '👑 Town expert')]];
 export const titleOf = S => { const t = total(S); let r = TITLES[0][1]; for (const [n, tt] of TITLES) if (t >= n) r = tt; return r; };
-// 능력(레벨에 닿으면 · 놀이가 읽음) — 값 = 그 레벨 이상이면 적용
+// 능력(레벨에 닿으면 · 놀이가 읽음) — 값 = 그 레벨 이상이면 적용 · 요리 'zone' = 바쁜 부엌의 여유 시간 배수(알맞음 폭 4.5초 × 값 · 도구 = 두꺼운 냄비 · KITCHEN-1 · 타이밍 칸 아님)
 export const PERKS = {
   work: [[2, 'zone', 1.12, T2('타이밍 초록 칸이 조금 넓어져요', 'The green timing zone gets a bit wider')], [4, 'zone', 1.25, T2('초록 칸이 더 넓어져요', 'Even wider green zone')], [6, 'plays', 4, T2('일터마다 하루 4판까지', 'Up to 4 rounds per workplace a day')], [8, 'heart', 2, T2('거들면 이웃 마음이 더 쌓여요', 'Helping grows hearts faster')], [10, 'badge', 1, T2('🌾 마을 일손 배지', '🌾 Town helper badge')]],
-  cook: [[2, 'zone', 1.15, T2('불 조절 초록 칸이 넓어져요', 'Wider green zone when cooking')], [4, 'zone', 1.3, T2('초록 칸이 더 넓어져요', 'Even wider green zone')], [7, 'extra', 0.3, T2('가끔 한 그릇 더(30%)', 'Sometimes one extra serving (30%)')], [10, 'badge', 1, T2('🍳 꼬마 요리사 배지', '🍳 Little chef badge')]],
+  cook: [[2, 'zone', 1.15, T2('알맞게 익은 채로 기다려 주는 여유 시간이 조금 길어져요', 'Food stays “just right” a little longer')], [4, 'zone', 1.3, T2('두꺼운 바닥 냄비를 받아요 — 잘 안 타서 여유 시간이 더 길어요', 'You get a thick-bottomed pot — less burning, more time')], [7, 'extra', 0.3, T2('가끔 한 그릇 더(30%)', 'Sometimes one extra serving (30%)')], [10, 'badge', 1, T2('🍳 꼬마 요리사 배지', '🍳 Little chef badge')]],
   farm: [[3, 'crop', 1, T2('거둘 때 하나 더', 'One more when you harvest')], [6, 'crop', 2, T2('거둘 때 둘 더', 'Two more when you harvest')], [10, 'badge', 1, T2('🌱 텃밭 지기 배지', '🌱 Garden keeper badge')]],
   look: [[2, 'near', 20, T2('작은 곤충을 더 멀리서(20m) 알아채요', 'Notice small insects from farther away (20 m)')], [4, 'parts', 1, T2('돋보기 창에 몸 부분 이름(머리·가슴·배)', 'Body part labels in the magnifier (head, thorax, abdomen)')], [6, 'ff', 200, T2('여름밤 반딧불이를 더 많이 봐요', 'See more fireflies on summer nights')], [10, 'badge', 1, T2('🔍 꼬마 박사 배지', '🔍 Little scientist badge')]],
   trade: [[3, 'price', 1.05, T2('장터에서 5% 더 받아요', 'Get 5% more at the market')], [6, 'price', 1.1, T2('장터에서 10% 더 받아요', 'Get 10% more at the market')], [10, 'badge', 1, T2('🛒 살림 고수 배지', '🛒 Market master badge')]],
