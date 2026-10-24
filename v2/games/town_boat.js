@@ -3,6 +3,7 @@
 //   바닷길 = 선착장 앞 바다에 부표 4~6(✨ — 아이 판 바다·양식장·해수욕장 피함) · 노란 부표를 차례로 지나면 반짝 · 끝 = 이웃(어부) 한 줄 · 탐험 솜씨
 //   밤 등대 = 마을에 등대가 있을 때만(없으면 X) · MeshBasic 빛살(새 Light X · 인스턴스 하나 = 그리기 +1 · 밤에만) · 등대의 쓰임 한 줄(사실)
 //   매 프레임 = 배를 탄 동안 노·박자 막대 · 밤엔 빛살 돌리기(등대 수만큼 setMatrixAt) — 새 객체 X
+//   구조 배(ISLE-1) = 썰물섬에 갇히거나 바닷길이 잠길 때만 한 척(그리기 +1 · 그 동안만) · 헤엄 X — 배가 데리러 와서 바닷가 앞까지
 export const BOAT_V = 1;
 const BEAT = 0.7, WIN = 0.2, FAST = 0.3;   // 박자: 노 두 번 사이 0.7초가 알맞음 · ±0.2초 = 잘 맞음 · 0.3초보다 빠르면 연타
 export const ROW_T = { good: ['좋아요! 영차', 'Nice stroke!'], ok: ['조금 더 박자에 맞춰요', 'Try to keep the beat'], fast: ['천천히 크게 저어요 — 왼쪽·오른쪽을 번갈아', 'Slow, big strokes — left, right, left'], same: ['왼쪽·오른쪽을 번갈아 저어요', 'Alternate left and right'] };
@@ -71,6 +72,7 @@ export function createBoatX(A) {
   // 매 프레임(마을 tick): 빛살 돌리기(밤 · 보일 때) · 부표(다음 것 까딱 · 지나면 반짝) · 박자 단추 숨기기(창·놀이 동안)
   let sq = 0;
   function tick(dt) { const t = now(), B = A.boat();
+    if (RS) rsStep(dt);
     if (BEAM && BEAM.visible) spin(dt);
     if (BUOY && CRS.length && BUOY.parent) { if (B.on && next < CRS.length) { const [x, z] = CRS[next]; if (Math.hypot(B.x - x, B.z - z) < 10) { pulse = next; pulseT = 0; next++; paint(); A.map.sfx && A.map.sfx('ding'); if (next >= CRS.length) finish(); else A.map.hud.toast('✨ ' + next + '/' + CRS.length + (en() ? ' — next yellow buoy!' : ' — 다음 노란 부표로!'), 1.6); } }
       if (pulse >= 0) { pulseT += dt; drawBuoy(pulse, t); if (pulseT > 0.6) { pulse = -1; drawBuoy(next - 1, t); } } if (next < CRS.length) drawBuoy(next, t); BUOY.instanceMatrix.needsUpdate = true; }
@@ -79,6 +81,24 @@ export function createBoatX(A) {
   // 1초마다: 밤이면 빛살 켬 · 등대 가까이(400m) 처음 밤 = 등대의 쓰임 한 줄
   function sec() { if (!BEAM) return; const v = A.night() >= 1 && !A.inb(); if (BEAM.visible !== v) BEAM.visible = v; if (!v) return; const me = A.map.player.pos(), day = A.GAME.S.day;
     if (bTold !== day && BEAM.userData.L.some(([x, z]) => Math.hypot(x - me.x, z - me.z) < 400)) { bTold = day; A.map.hud.toast(en() ? '🗼 The lighthouse beam sweeps the sea — it shows boats where the coast and dangerous rocks are at night' : '🗼 등대 불빛이 빙글빙글 — 밤바다의 배에게 바닷가와 위험한 바위가 어디인지 알려 줘요', 4); } }
-  function dispose() { hudOn(false); clear(); for (const o of [BUG, BUM, BG, BM]) if (o) o.dispose(); if (OAR) { OAR.geometry.dispose(); OAR.material.dispose(); if (OAR.parent) OAR.parent.remove(OAR); } BUOY = BEAM = OAR = null; }
-  return { init, row, step, bump, onBoat, tick, dispose, get rv() { return rv; }, get course() { return { n: CRS.length, next, pts: CRS.map(p => [+p[0].toFixed(1), +p[1].toFixed(1)]) }; }, get beam() { return BEAM ? { n: BEAM.count, vis: BEAM.visible } : null; } };
+  // ── 구조 배(ISLE-1 · 썰물섬에 갇히거나 바닷길이 잠길 때 · town_xp.js가 부름) ──
+  //   o = { path: [[x, z], …](처음 = 먼바다 · board = 태우는 자리 번호 · 끝 = 바닷가 앞 물) · land: [x, y, z](내리는 뭍) · onBoard() · onEnd() }
+  //   오는 동안 = 아이는 그 자리에서 기다림(몸 멈춤) · 태우는 자리에서 한 번 배 위로(배 타기와 같음) · 가는 동안 = 고물에 서서 감(매 프레임 배 따라 · 새 객체 X) · 바닷가 앞에서 뭍으로 한 번 내림(선착장 내리기와 같음)
+  let RS = null, RSG = null, RSM = null, RSGeo = null;
+  function rsMesh() { if (RSG) return RSG; const P = [], N = [], C = [], add = (sx, sy, sz, x, y, z, v) => { const g0 = new T3.BoxGeometry(sx, sy, sz), g = g0.toNonIndexed(); g0.dispose(); g.translate(x, y + sy / 2, z); P.push(...g.attributes.position.array); N.push(...g.attributes.normal.array); for (let i = 0; i < g.attributes.position.count; i++) C.push(v[0], v[1], v[2]); g.dispose(); };
+    add(2.0, 0.8, 4.2, 0, -0.35, -0.2, [0.96, 0.95, 0.92]); add(2.04, 0.18, 4.24, 0, 0.21, -0.2, [0.93, 0.42, 0.13]); add(1.84, 0.04, 4.0, 0, 0.45, -0.2, [0.69, 0.54, 0.37]);   /* 흰 몸통 · 주황 띠(구조 배) · 갑판 */
+    add(1.2, 0.9, 1.0, 0, 0.49, 0.8, [0.94, 0.93, 0.9]); add(1.4, 0.1, 1.2, 0, 1.39, 0.8, [0.93, 0.42, 0.13]); add(0.9, 0.34, 0.04, 0, 0.92, 1.32, [0.5, 0.78, 0.88]); add(0.5, 0.5, 0.06, 0, 0.32, 1.86, [0.93, 0.42, 0.13]);   /* 조타실 · 주황 지붕 · 앞유리 · 뱃머리 주황 판 */
+    RSGeo = new T3.BufferGeometry(); RSGeo.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); RSGeo.setAttribute('normal', new T3.Float32BufferAttribute(N, 3)); RSGeo.setAttribute('color', new T3.Float32BufferAttribute(C, 3)); RSGeo.computeBoundingSphere();
+    RSM = new T3.MeshLambertMaterial({ vertexColors: true }); RSG = new T3.Mesh(RSGeo, RSM); RSG.userData.fx = 1; RSG.matrixAutoUpdate = false; RSG.visible = false; return RSG; }
+  function rsPlace() { const R = RS, ck = Math.sin(R.t * 1.6) * 0.1; RSG.position.set(R.x, A.SEAY() + 0.15 + ck, R.z); RSG.rotation.set(Math.sin(R.t * 1.2) * 0.03, R.h, Math.sin(R.t * 1.05) * 0.04); RSG.updateMatrix(); RSG.updateMatrixWorld(true); return ck; }
+  function rescue(o) { if (RS || !o || !o.path || o.path.length < 2) return false; rsMesh(); if (!RSG.parent) A.root().add(RSG); const [x, z] = o.path[0], [x1, z1] = o.path[1]; RS = { o, i: 0, x, z, h: Math.atan2(x1 - x, z1 - z), t: 0, on: false }; RSG.visible = true; rsPlace(); A.map.player.freeze(true); return true; }
+  function rsStep(dt) { const R = RS; if (!R) return; R.t += dt; const P = R.o.path, tg = P[R.i + 1], sp = R.on ? 8 : 9, dx = tg[0] - R.x, dz = tg[1] - R.z, d = Math.hypot(dx, dz);
+    let dh = Math.atan2(dx, dz) - R.h; while (dh > Math.PI) dh -= 6.2832; while (dh < -Math.PI) dh += 6.2832; R.h += dh * Math.min(1, dt * 2.5);
+    if (d <= sp * dt + 0.05) { R.x = tg[0]; R.z = tg[1]; R.i++;
+      if (R.i === (R.o.board | 0) && !R.on) { R.on = true; A.map.player.ride(true); if (R.o.onBoard) R.o.onBoard(); }
+      if (R.i >= P.length - 1) { const L = R.o.land, on9 = R.on; RS = null; RSG.visible = false; A.map.player.ride(false); A.map.player.aim(null); if (on9 && L) A.map.player.teleport([L[0], L[1], L[2]]); if (!A.busy()) A.map.player.freeze(false); if (R.o.onEnd) R.o.onEnd(on9); return; } }
+    else { R.x += dx / d * sp * dt; R.z += dz / d * sp * dt; }
+    const ck = rsPlace(); if (R.on) { A.map.player.freeze(true); A.map.player.teleport([R.x - Math.sin(R.h) * 1.4, A.SEAY() + 0.64 + ck, R.z - Math.cos(R.h) * 1.4]); A.map.player.aim(Math.atan2(Math.sin(R.h), -Math.cos(R.h)) * 57.29578); } }
+  function dispose() { hudOn(false); clear(); for (const o of [BUG, BUM, BG, BM, RSGeo, RSM]) if (o) o.dispose(); if (RSG && RSG.parent) RSG.parent.remove(RSG); RS = null; RSG = RSGeo = RSM = null; if (OAR) { OAR.geometry.dispose(); OAR.material.dispose(); if (OAR.parent) OAR.parent.remove(OAR); } BUOY = BEAM = OAR = null; }
+  return { init, row, step, bump, onBoat, tick, dispose, rescue, get rescuing() { return RS ? { i: RS.i, n: RS.o.path.length, on: RS.on, x: +RS.x.toFixed(1), z: +RS.z.toFixed(1) } : null; }, get rv() { return rv; }, get course() { return { n: CRS.length, next, pts: CRS.map(p => [+p[0].toFixed(1), +p[1].toFixed(1)]) }; }, get beam() { return BEAM ? { n: BEAM.count, vis: BEAM.visible } : null; } };
 }

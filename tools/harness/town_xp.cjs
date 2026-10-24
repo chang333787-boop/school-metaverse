@@ -30,7 +30,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       const E = X9.edges(), g9 = E.find(e => e.k === 'gorge'), c9 = E.find(e => e.k === 'crater');
       out.gIn = line([g9.gx + 2, g9.gz0 - 30], [g9.gx + 2, g9.gz0 + 70]); out.cIn = line([c9.cx, c9.cz - 130], [c9.cx, c9.cz]);
       // 땅 판 둘레(섞임 끝) — 판 밖 땅과 높이 차
-      let ring = 0; for (const e of E) { const [x0, z0, x1, z1] = e.foot; for (let t = 0; t <= 1; t += 0.02) for (const [x, z] of [[x0 + 0.3, z0 + (z1 - z0) * t], [x1 - 0.3, z0 + (z1 - z0) * t], [x0 + (x1 - x0) * t, z0 + 0.3], [x0 + (x1 - x0) * t, z1 - 0.3]]) { const b9 = -1.30 + X9.base(x, z), d = Math.abs(M.q.groundAt(x, z, b9 + 0.6) - b9); if (d > ring) { ring = d; out.ringAt = [+x.toFixed(1), +z.toFixed(1), e.k]; } } } out.ring = +ring.toFixed(3);
+      let ring = 0; for (const e of E.filter(q => q.k !== 'isle')) {   /* 썰물섬(ISLE-1)은 섞는 땅 판이 아님 — town_isle.cjs가 따로 봄 */ const [x0, z0, x1, z1] = e.foot; for (let t = 0; t <= 1; t += 0.02) for (const [x, z] of [[x0 + 0.3, z0 + (z1 - z0) * t], [x1 - 0.3, z0 + (z1 - z0) * t], [x0 + (x1 - x0) * t, z0 + 0.3], [x0 + (x1 - x0) * t, z1 - 0.3]]) { const b9 = -1.30 + X9.base(x, z), d = Math.abs(M.q.groundAt(x, z, b9 + 0.6) - b9); if (d > ring) { ring = d; out.ringAt = [+x.toFixed(1), +z.toFixed(1), e.k]; } } } out.ring = +ring.toFixed(3);
       out.walkG = SM_TOWN.boatWhy(g9.gx + 2, g9.gz0 + 30).walk; out.walkC = SM_TOWN.boatWhy(c9.cx, c9.cz).walk; return out; });
     ok(R.gIn.mx < 0.55, '판 끝 → 층층골 바닥 한 걸음 높이 차 < 0.55m (가장 큰 ' + R.gIn.mx + ' @ ' + R.gIn.at + ')');
     ok(R.cIn.mx < 0.55, '판 끝 → 까망봉 분화구 바닥(터진 쪽) 한 걸음 높이 차 < 0.55m (가장 큰 ' + R.cIn.mx + ' @ ' + R.cIn.at + ')');
