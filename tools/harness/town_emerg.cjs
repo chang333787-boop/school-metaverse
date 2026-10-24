@@ -5,6 +5,7 @@
 //   ④ 결과: 다음 날 아침 소식 한 줄 · 보호자 곁에서 노는 아이(가까울 때) · 그다음다음 날 사라짐
 //   ⑤ 🚑 119 넘어진 이웃(비): 둘레 보기(카메라 왼쪽·오른쪽) → 말 걸기 → 신고 창(112 = 안내 · 119 → 자리(틀리면 늦어짐) → 무슨 일) → 찬 물병 E → 발목 곁 E 꾹 → 가방 E → 구급차가 와서 섬 → 끝 창 → '미끄럼 주의' 판 이틀
 //   ⑥ 더위(여름 한낮): 그늘로 부축(이웃이 뒤따라옴) → 물 → 부채 꾹 → '무더위 쉼터' 판 · ⑦ 아무도 안 오면 5분 뒤 기관이 해결(흔적 X) · ⑧ 잠 = 사건 멈춤 · 그리기 +4 이하 · 오류 0
+//   ⑨ 🌲 산불 조심 감시(SMOKE-1): 비·눈 X · 바람 센 날 ↑ · 위 가운데 줄 = 바람 방위 + 연기 쪽(거리 X) · 바람을 거슬러 가면 가까워짐 · 60m 빛기둥 · 이웃 고르기 · 물 붓기 꾹 · 119 칸 · 판·아침 소식 · 아무도 안 가면 감시원
 const { chromium } = require('playwright');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
@@ -85,6 +86,36 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     // ⑦ 아무도 안 옴 · ⑧ 잠
     await ev(() => { SM_TOWN.rules.wx('clear'); SM_TOWN.game().S.min = 11 * 60; }); await tp(me0[0], me0[1]); await W8(800); await E('spawn', 'lost'); const nlog = (await I()).S.log.length; await E('late'); await W8(1500); H = await I(); ok(!H.ev && H.S.log[0].ok === 0 && H.S.log.length === nlog + 1, '아무도 안 오면 경찰관이 해결(흔적 X)');
     await E('spawn', 'lost'); await ev(() => SM_TOWN.sleep()); await W8(2500); await closeAll(); ok(!(await I()).ev, '잠 = 사건 멈춤');
+    // ⑨ 🌲 산불 조심 감시(SMOKE-1): 생김 조건(비·눈 X · 바람 센 날 ↑) · 바람 방위 줄(거리 X) · 거슬러 가면 가까워짐 · 60m 빛기둥 · 고르기 · 꾹 · 119 칸 · 판·소식 · 아무도 안 가면 감시원
+    { const Wt = await ev(() => { const R = SM_TOWN.emerg().dbg; return [R.w('smoke', { wx: 'rain', sea: 'spring', windy: true }), R.w('smoke', { wx: 'snow', sea: 'winter', windy: true }), R.w('smoke', { wx: 'clear', sea: 'spring', windy: true }), R.w('smoke', { wx: 'clear', sea: 'spring', windy: false }), R.w('smoke', { wx: 'clear', sea: 'summer', windy: false })]; });
+      ok(Wt[0] === 0 && Wt[1] === 0 && Wt[2] > Wt[3] && Wt[3] > Wt[4], '산불 감시 무게: 비·눈 0 · 바람 센 날 ↑ · 봄 > 여름 (' + Wt.map(v => +v.toFixed(2)).join(' · ') + ')');
+      const dS = await ev(() => SM_TOWN.game().S.day); await ev(() => SM_TOWN.rules.wx('rain')); let rainSm = 0; for (let k = 0; k < 12; k++) { await ev(d => { SM_TOWN.game().S.day = d; }, dS + k); const pl = await E('plan'); if (pl.some(q => q.k === 'smoke')) rainSm++; }
+      await ev(d => { SM_TOWN.game().S.day = d; }, dS); ok(rainSm === 0, '비 오는 날 열이틀 = 산불 감시 칸 0'); ok(!(await E('spawn', 'smoke')), '비 오는 날 = 산불 감시 안 생김');
+      await ev(() => { SM_TOWN.rules.wx('clear'); SM_TOWN.game().S.min = 11 * 60; }); await noPlan();
+      const nS = await E('sites'); ok(nS > 0, '산·숲 가장자리 밭가 자리 ' + nS + '곳'); const Wd = await E('wind'); let got = false;
+      for (let t = 0; t < 14 && !got && nS; t++) { const s = await E('site', Math.floor(t * nS / 14)); const px = s[0] + Wd.x * 200, pz = s[1] + Wd.z * 200; await tp(px, pz); await W8(500); if (await E('spawn', 'smoke')) got = true; }
+      ok(got, '🌲 산불 감시 생김(바람 아래쪽 200m에서)'); if (!got) throw new Error('산불 감시 안 생김 ' + JSON.stringify((await I()).dbg.slice(-4)));
+      await W8(900); let Sm = await I(); g = await goalTx(); ok(/바람은 .+쪽에서 불어와요/.test(g) && /연기는 .+쪽/.test(g) && !/\d+m/.test(g), '위 가운데 줄 = 바람 방위 + 연기 쪽 방위(거리 X) 「' + g + '」');
+      ok(!Sm.ev.mk && Sm.ev.smk, '처음엔 빛기둥 X · 하늘에 연기'); ok(Sm.ev.al > 0, '연기 시작 자리 = 바람이 불어오는 쪽(al ' + Sm.ev.al + ')'); await shot('em_smoke_far');
+      const cS = await calls(); await E('vis', false); const cS0 = await calls(); await E('vis', true); ok(cS - cS0 <= 4, '산불 감시 그리기 +' + (cS - cS0));
+      const meS = await ev(() => { const m = SD2.map.player.pos(); return [m.x, m.z]; }), d0s = Math.hypot(Sm.ev.x - meS[0], Sm.ev.z - meS[1]); await tp(meS[0] - Sm.ev.W.x * 30, meS[1] - Sm.ev.W.z * 30); await W8(700);
+      const meS2 = await ev(() => { const m = SD2.map.player.pos(); return [m.x, m.z]; }), d1s = Math.hypot(Sm.ev.x - meS2[0], Sm.ev.z - meS2[1]); ok(d1s < d0s - 10, '바람을 거슬러 30m = 연기 자리가 가까워짐(' + Math.round(d0s) + ' → ' + Math.round(d1s) + 'm)');
+      for (let k = 0; k < 30; k++) { const m = await ev(() => { const m9 = SD2.map.player.pos(); return [m9.x, m9.z]; }), dx = Sm.ev.x - m[0], dz = Sm.ev.z - m[1], l = Math.hypot(dx, dz); if (l < 45) break; await tp(m[0] + dx / l * 20, m[1] + dz / l * 20); await W8(450); }
+      await W8(1300); Sm = await I(); g = await goalTx(); ok(Sm.ev.mk && /\d+m/.test(g), '60m 안 = 주황 빛기둥 · 거리 「' + g + '」');
+      await E('near'); for (let i = 0; i < 8; i++) { await W8(400); if ((await I()).ev.st !== 'call') break; } Sm = await I(); ok(Sm.ev.st === 'talk', '도착 = 이웃 곁 불씨 · 말 걸기'); await shot('em_smoke_scene');
+      ok(await tpH('이웃에게 말 걸기'), '이웃 E'); await dlgClick('다 타면'); Sm = await I(); ok(Sm.ev.tries === 1 && Sm.ev.hots.some(l => /다시 말 걸기/.test(l)), '틀린 말 = 이웃이 그대로 · 힌트 · 다시 말 걸기 E');
+      ok(await tpH('다시 말 걸기'), '다시 말 걸기 E'); await dlgClick('바람이 세요'); await dlgClick(); Sm = await I(); ok(Sm.ev.st === 'hold', '바람 센 날 불씨 = 이웃이 "몰랐어요, 바로 끌게요" → 물 붓기 꾹');
+      await tp(Sm.ev.x + 0.8, Sm.ev.z + 0.8); await W8(300); await p.keyboard.down('KeyE'); await W8(2600); await p.keyboard.up('KeyE'); await W8(500); Sm = await I(); P = await panel(); ok(Sm.ev.st === 'phone' && Sm.ev.out && P && P.k === 'emcall', '물 붓기 꾹 2초 = 불씨 꺼짐 → 119 신고 창');
+      await dial(['1', '1', '9', '📞']); await W8(300); P = await panel(); ok(/어디세요/.test(P.t), '119 = 칸 묻기(지도)');
+      { const B = await ev(() => [...document.querySelectorAll('.twn-p button[data-at]')].map(b9 => b9.textContent)), ri2 = B.findIndex(t => t.startsWith(Sm.ev.cell)); await ev(i => document.querySelector('.twn-p button[data-at="' + i + '"]').click(), ri2); await W8(300); }
+      const xp0 = await ev(() => SM_TOWN.skills().xp.explore || 0); await ev(() => { const o = [...document.querySelectorAll('.twn-p button[data-w]')].find(b9 => /불씨/.test(b9.textContent)); if (o) o.click(); }); await W8(400);
+      for (let i = 0; i < 12; i++) { await W8(400); if (await ev(() => { const P9 = document.querySelector('.twn-p'); return P9 && P9.dataset.k === 'emend'; })) break; } P = await panel(); ok(P && P.k === 'emend' && /배운 것/.test(P.t) && /바람/.test(P.t) && /119/.test(P.t), '끝 창(오늘 배운 것 둘)'); await shot('em_smoke_end'); await closeAll();
+      for (let i = 0; i < 8; i++) { await W8(400); if (!(await I()).ev) break; } Sm = await I(); const xp1 = await ev(() => SM_TOWN.skills().xp.explore || 0);
+      ok(!Sm.ev && Sm.S.log[0].k === 'smoke' && Sm.S.log[0].sign === 'fire' && Sm.marks >= 1, '「산불 조심」 판이 그 자리에(흔적 ' + Sm.marks + ')'); ok(xp1 > xp0, '솜씨 +' + (xp1 - xp0) + '(꼬리표 emerg:smoke)');
+      const dN = await ev(() => SM_TOWN.game().S.day); await ev(d => { SM_TOWN.game().S.day = d + 1; }, dN); await noPlan(); const nwS = await ev(d => SM_TOWN.emerg().news(d), dN + 1); ok(nwS.some(q => q.k === 'smoke' && /산불/.test(q.t[0])), '다음 날 아침 소식 「' + ((nwS.find(q => q.k === 'smoke') || { t: ['-'] }).t[0]) + '」');
+      await W8(1500); ok((await I()).marks >= 1, '다음 날에도 판'); await tp(Sm.S.log[0].x + 5, Sm.S.log[0].z + 3); await W8(1200); await shot('em_smoke_sign');
+      await tp(meS[0], meS[1]); await W8(600); if (await E('spawn', 'smoke')) { const nl = (await I()).S.log.length; await E('late'); await W8(1500); Sm = await I(); ok(!Sm.ev && Sm.S.log[0].k === 'smoke' && Sm.S.log[0].ok === 0 && Sm.S.log.length === Math.min(10, nl + 1), '아무도 안 가면 산불 감시원이 끔(흔적 X)'); } else console.log('    (두 번째 산불 감시 자리 없음 — 늦음 시험 건너뜀)');
+      await ev(d => { SM_TOWN.game().S.day = d; }, dN); await noPlan(); }
     // 불도 엔진이 때를 정함
     await ev(() => { const G = SM_TOWN.game().S; G.min = 11 * 60; G.jobs = G.jobs || {}; delete G.jobs.fireNo; delete G.jobs.fireDay; G.emerg.d = G.day; G.emerg.plan = [{ k: 'fire', at: G.min, until: G.min + 200, st: 0 }]; SM_TOWN.emerg().dbg.walk(100); }); await tp(me0[0], me0[1]); let fz = null; for (let i = 0; i < 10 && !fz; i++) { await W8(500); fz = await ev(() => SM_TOWN.jobs().fire); } await closeAll();
     ok(!!fz, '그날 칸이 불이면 엔진이 불 사건을 띄움'); await ev(() => SM_TOWN.jobs().abort());
