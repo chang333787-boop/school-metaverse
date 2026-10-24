@@ -4,10 +4,10 @@
 
 ## 지금 상태(10-25 01:3x · main = 0fcb70e · 주간 54% · 멈춤선 80%(75% 알림 · 78% 새 일 멈춤 · 사용자 10-24 18:05 'ㄱㄱ'))
 - 10-24 밤 세션이 올린 것: a8fbd9e 진행 손실 막기·table1b·J 두 단추·보물 지도 단추 · 3e3172e 일 시간(HOURS-1) · 9421124 까망봉·층층골 + 벤치 보상 창 · a675ada 행정복지센터 고장 신고(확정 5) · dfe684f 산불 감시(이어서 ②) · 706cf53 썰물섬(이어서 ①) · 0fcb70e 첫 30분 손맛 다섯(이어서 ④)
-- 확정 차례 1~5 ✅ · 이어서 ①②④ ✅ · ③ 🔨
-- **기다리는 패치 — 맨 먼저 합치기**: `scratchpad/bldg1.patch` = 이어서 ③ 빈 건물(경찰서·병원·동물보호센터에 이미 있는 놀이·창구 잇기 · 새 파일 town_bldg.js · 하네스 town_bldg.cjs). 지난 세션의 팀이 짓는 중이었어요 — 파일이 없으면 10분쯤 뒤 다시 보고, 30분 넘게 없으면 그 일을 새 팀으로 다시 맡겨요.
-  - scratchpad = /private/tmp/claude-501/-Users-dobuk-Projects-school-metaverse/52a18de9-e78e-4006-be4f-f54f6909d405/scratchpad
-  - 합치기 폴더 = 그 안 `m1`(detached · `git fetch && git checkout --detach origin/main`으로 새로 맞춘 뒤 `git apply -3`)
+- 확정 차례 1~5 ✅ · 이어서 ①②③④ ✅
+- 이어서 ③ 빈 건물 ✅(BLDG-1 · 경찰서·병원·동물보호센터 · 자전거 등록 스티커는 아직) · 기다리는 패치 없음
+  - scratchpad = /private/tmp/claude-501/-Users-dobuk-Projects-school-metaverse/52a18de9-e78e-4006-be4f-f54f6909d405/scratchpad · 합치기 폴더 = 그 안 `m1`(detached · `git fetch && git checkout --detach origin/main` 뒤 `git add` → `git apply -3`)
+  - town_indoor.cjs는 고침 전에도 몇 번째 방부터 몸이 안 움직여 실패(시험 쪽 문제로 보임 · 확인할 것)
 - 다음(이어서 남은 것): ⑤ 땅 결 숲·보도 한 종류(town_art3.md) → ⑥ 높은 곳 보기 + 숨은 놀람(town_explore.md 30) → ⑦ 칸 키트 넓히기(학교 둘레 → 시내) → ⑧ 은행·우체국 창구(town_fix.js 창구 꼴) → ⑨ 밀물 구조·길 잃은 동물(town_emerg 사건 표 10·12) → ⑩ 스키 기문(town_explore.md 34)
 - 그다음 미룬 것(사용자 10-24 18:05 차례): 도전 사다리·내 최고 기록 → 모든 동작 반응 넓히기 → 빈 건물·직업 나머지 → 가벼운 재미(꾸미기·선물 · 친구 거래·서버 규칙 X) → 탐험 체력(scratchpad 옛 a063b03f…/patches/day_stam.patch + 실패 고치기) → 이웃 일과·먹이·물 연쇄
 - 남은 작은 것: town_state 배 칸 '배 E로 안 탐'(고침 전에도 같음 · 하네스 쪽인지 먼저 확인) · 갈아탄 정류장 카메라(재현 시험부터) · 앉기 시험 22번째 타이밍 · 썰물섬 위 알림 셋이 한꺼번에 · 섬 겨울색 X · 도장·지갑 연출 그림 켠 캡처 X · 강·연못 물 재질 밤에 납작한 파랑
