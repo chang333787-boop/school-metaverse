@@ -123,6 +123,9 @@ const RULES = [
   R(/수산물|직판장/, 'shop', T2('바다에서 잡거나 기른 수산물을 사고파는 시장이에요.', 'A market for caught and farmed seafood.'), T2('싱싱한 바다 먹거리를 가까이에서 사요.', 'We buy fresh seafood nearby.'), ['merchant', 'fisher']),
   R(/약초/, 'shop', T2('산에서 나는 약초와 나물을 사고파는 시장이에요.', 'A market for mountain herbs and greens.'), T2('산에서 나는 먹거리를 사고팔아요.', 'Mountain foods are bought and sold.'), ['merchant']),
   R(/편의점/, 'shop', T2('간단한 먹을거리와 생활용품을 파는 작은 가게예요. 밤에도 열어요.', 'A small shop for snacks and everyday items, open at night too.'), T2('필요한 것을 가까이에서 바로 살 수 있어요.', 'We can buy what we need right nearby.'), ['clerk', 'owner']),
+  R(/꼬리|반려/, 'shop', T2('반려동물에게 필요한 먹이와 용품을 팔아요.', 'Sells food and supplies for pets.'), T2('반려동물을 잘 돌보도록 도와요.', 'Helps us look after pets well.'), ['clerk']),   /* BLDG-1 이상해 ②: 「꼬리 용품 상점」(마8)에 '상점'이 들어 있어 아래 마트 규칙이 먼저 맞던 것 → 마트보다 앞으로('용품'만으로는 산지 용품 상점이 걸려 뺌) */
+  R(/도시 상점/, 'shop', T2('옷, 모자, 키링, 인형 같은 물건을 골라 사는 가게예요.', 'A shop for clothes, hats, key rings and soft toys.'), T2('필요한 옷이나 선물을 가까이에서 골라요.', 'We can choose clothes or presents nearby.'), ['clerk', 'owner']),   /* BLDG-1 이상해 ③: 아이 카드(패들렛 26) = 옷·키링·모자·인형 */
+  R(/산지 식품|산지 용품|버섯 상점|약초 상점/, 'shop', T2('산에서 나는 버섯, 약초, 산나물 같은 특산물을 파는 가게예요.', 'A shop for mountain goods such as mushrooms, herbs and wild greens.'), T2('산 마을에서 기르고 딴 것을 가까이에서 사요.', 'We can buy what mountain villages grow and gather.'), ['merchant', 'clerk']),   /* BLDG-1 이상해 ④: 아이 카드 = 버섯 상점 2 · 약초 상점 4 · 산에서 자라는 특산물 */
   R(/마트|상점|슈퍼/, 'shop', T2('먹을거리와 생활용품을 한곳에서 사고파는 가게예요.', 'A shop for food and household goods in one place.'), T2('필요한 물건을 한 번에 살 수 있어요.', 'We can buy what we need in one trip.'), ['clerk', 'owner']),
   R(/빵/, 'shop', T2('빵과 과자를 굽고 팔아요.', 'Bakes and sells bread and treats.'), T2('갓 구운 빵을 가까이에서 사요.', 'We buy fresh bread nearby.'), ['baker', 'clerk']),
   R(/키즈 ?카페/, 'rest', T2('어린이가 안전하게 뛰어놀 수 있는 실내 놀이터예요.', 'An indoor playground where children can play safely.'), T2('날씨와 상관없이 몸을 움직이며 놀아요.', 'Children can play actively in any weather.'), ['clerk']),
@@ -130,7 +133,6 @@ const RULES = [
   R(/동물 ?카페/, 'rest', T2('동물을 보며 쉬어 가는 곳이에요. 동물이 싫어하는 행동은 하지 않아요.', 'A café to rest and watch animals. We don’t do things animals dislike.'), T2('동물을 아끼는 마음을 배워요.', 'We learn to care for animals.'), ['animalcare', 'clerk']),
   R(/카페/, 'shop', T2('음료와 간식을 만들어 팔고, 앉아서 쉬어 가는 곳이에요.', 'Makes drinks and snacks and offers a place to sit and rest.'), T2('이웃과 만나 이야기 나누는 쉼터가 돼요.', 'A place to meet neighbours and talk.'), ['barista', 'owner']),
   R(/아이스크림|베라/, 'shop', T2('여러 맛 아이스크림을 골라 사 먹는 가게예요.', 'A shop to choose and buy ice cream in many flavours.'), T2('더운 날 시원한 간식을 먹어요.', 'A cool treat on hot days.'), ['clerk']),
-  R(/꼬리|반려|용품/, 'shop', T2('반려동물에게 필요한 먹이와 용품을 팔아요.', 'Sells food and supplies for pets.'), T2('반려동물을 잘 돌보도록 도와요.', 'Helps us look after pets well.'), ['clerk']),
   R(/식당|음식|집$|햄버거|뷔페|샤브|초밥|마라탕|국수/, 'shop', T2('음식을 만들어 손님에게 대접해요.', 'Cooks food and serves customers.'), T2('여러 지역의 음식을 맛볼 수 있어요.', 'We can taste many kinds of food.'), ['cook', 'server']),
   R(/영화관/, 'rest', T2('큰 화면과 큰 소리로 영화를 보는 곳이에요.', 'Watch films on a big screen with big sound.'), T2('이야기를 함께 보며 쉬고 즐겨요.', 'We rest and enjoy stories together.'), ['usher']),
   R(/사우나/, 'rest', T2('따뜻한 물과 증기로 몸을 씻고 쉬는 곳이에요.', 'Wash and relax with warm water and steam.'), T2('피곤한 몸을 쉬게 해요.', 'Helps tired bodies rest.'), ['clerk']),
@@ -163,7 +165,8 @@ const GEN = { shop: [T2('필요한 물건을 사고파는 가게예요.', 'A sho
 // 카드 자료: name(아이 판 이름) · kind(마을 건물 갈래) → { g, does, help, jobs, act } · 학교·집·칸 이름표는 null(카드 없음)
 //   칸 이름표(area) = 아이가 칸 하나를 그 이름으로 붙인 곳 → 이름이 시설 규칙에 맞을 때만(쉼·자연 일반 규칙 X — '자연친화 마을' 같은 동네 이름은 카드 없음)
 export function placeInfo(name, kind) { const n = String(name || ''); if (!n || kind === 'school' || kind === 'house' || kind === 'apt' || /집$/.test(n) && kind !== 'shop' && !/음식|국수|중국/.test(n)) return null;
-  for (const r of RULES) if (r.re.test(n)) return kind === 'area' && r.g === 'rest' ? null : { g: r.g, does: r.does, help: r.help, jobs: r.jobs, act: r.act };
+  const nm = kind === 'aquadom' ? '수족관' : n;   /* BLDG-1 이상해 ①: 아이 판 「어항」(아14) = 둥근 수족관 탑(kind aquadom · 패들렛 17 '동글동글한 어항') — 이름만 보면 '어항(漁港) = 고깃배 항구' 규칙이 먼저 맞던 것 */
+  for (const r of RULES) if (r.re.test(nm)) return kind === 'area' && r.g === 'rest' ? null : { g: r.g, does: r.does, help: r.help, jobs: r.jobs, act: r.act };
   if (kind === 'area') return null; const g = KINDR[kind]; if (!g) return null; const G9 = GEN[g]; return { g, does: G9[0], help: G9[1], jobs: G9[2], act: null }; }
 
 // 직업 그림(SVG · 64×64): 머리 모양으로 남녀(f = 긴 머리 묶음) · 피부 세 가지 · 모자 꼴·색 · 옷 색 — 장소마다 번갈아 고르게

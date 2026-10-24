@@ -28,14 +28,17 @@ export const ITEMS = {
   '✉': ['엽서', 'Postcard', 'farm', 0],   /* HEAL-1 사진 모드에서 찍은 엽서(팔지 않음 · 우체통에 넣으면 빠짐) */
   '🌱': ['심은 모', 'Rice seedlings planted', 'farm', 0], '🌲': ['심은 나무', 'Saplings planted', 'farm', 0], '🧶': ['양털 한 뭉치', 'Bundle of wool', 'farm', 0],   // HERD-1 양몰이를 잘한 판(일한 보람 · 팔지 않음)
   '⛰': ['정상 도장', 'Summit stamp', 'stamp', 0], '🗼': ['등대 도장', 'Lighthouse stamp', 'stamp', 0], '👣': ['징검다리 도장', 'Stepping-stone stamp', 'stamp', 0], '📖': ['책 읽기 도장', 'Reading stamp', 'stamp', 0], '⛷': ['스키 도장', 'Ski stamp', 'stamp', 0], '🏅': ['요리사 도장', 'Cook stamp', 'stamp', 0], '🧺': ['꾸러미 도장', 'Bundle stamp', 'stamp', 0], '🔭': ['별 보기 도장', 'Stargazing stamp', 'stamp', 0], '⛄': ['눈사람 도장', 'Snowman stamp', 'stamp', 0], '🏰': ['모래성 도장', 'Sandcastle stamp', 'stamp', 0], '🏊': ['생존수영 도장', 'Survival-swimming stamp', 'stamp', 0], '🌬️': ['바닷바람 도장', 'Sea-breeze stamp', 'stamp', 0], '🌈': ['무지개 도장', 'Rainbow stamp', 'stamp', 0], '💫': ['반딧불이 도장', 'Firefly stamp', 'stamp', 0], '📜': ['이야기 도장', 'Story stamp', 'stamp', 0], '🏮': ['잔치 등불', 'Festival lantern', 'stamp', 0], '🔬': ['물 맑기 도장', 'Clean-stream stamp', 'stamp', 0], '🌀': ['물굽이 도장', 'River-bend stamp', 'stamp', 0], '🐸': ['논 생물 도장', 'Paddy-life stamp', 'stamp', 0], '💧': ['물꼬 도장', 'Paddy-gate stamp', 'stamp', 0],
+  '👕': ['티셔츠', 'T-shirt', 'goods', 0], '🧢': ['모자', 'Cap', 'goods', 0], '🔑': ['키링', 'Key ring', 'goods', 0], '🧸': ['곰 인형', 'Teddy bear', 'goods', 0], '🧩': ['칠교 조각', 'Tangram set', 'goods', 0], '🔳': ['고누 판', 'Gonu board', 'goods', 0],   /* goods = 가게에서 산 물건(팔지 않음 · 돈 쓸 곳) — 도시 상점(BLDG-1) · 보드게임 카페 2층 놀이 도구 가게(TABLE-1 · 사면 우리 집에서 혼자 칠교·고누) */
   '🥇': ['고리 코스 금 도장', 'Ring course gold stamp', 'stamp', 0], '🥈': ['고리 코스 은 도장', 'Ring course silver stamp', 'stamp', 0], '🥉': ['고리 코스 동 도장', 'Ring course bronze stamp', 'stamp', 0],   // WAKE-1b 자전거 고리 코스(town_road.js · 메달마다 처음 한 번)
 };
 // 식당에서 먹는 것(가방에 넣지 않고 그 자리에서 · 도감 '먹어 본 음식')
-export const DISHES = { '🍣': ['초밥 한 접시', 'Sushi plate'], '🍜': ['마라탕 한 그릇', 'Malatang bowl'], '🦐': ['해산물 한 접시', 'Seafood plate'], '🍱': ['밥 한 상', 'Set meal'] };
+export const DISHES = { '🍣': ['초밥 한 접시', 'Sushi plate'], '🍜': ['마라탕 한 그릇', 'Malatang bowl'], '🦐': ['해산물 한 접시', 'Seafood plate'], '🍱': ['밥 한 상', 'Set meal'], '🥪': ['샌드위치 한 접시', 'Sandwich plate'] };   /* 🥪 = 보드게임 카페 1층 음식점(TABLE-1) */
 // 가게(아이가 놓은 이름 있는 가게만 — 이름으로 갈래를 앎 · 없는 가게는 만들지 않음): [이름 규칙, 갈래, 여는 시각, 닫는 시각, 파는 것 [물건, 값, 먹기?]]
 export const SHOPS = [
   [/편의점/, 'conv', 0, 24, [['🥚', 250], ['🥛', 400], ['🌾', 600], ['🍁', 500], ['🥤', 1200]]],
-  [/마트|슈퍼|모두의 상점|식품|도시 상점/, 'grocery', 8, 22, [['🥚', 200], ['🥛', 350], ['🌾', 500], ['🧈', 500], ['🍁', 400]]],
+  [/도시 상점/, 'gift', 10, 21, [['👕', 3000], ['🧢', 2500], ['🔑', 1500], ['🧸', 4000]]],   /* BLDG-1 이상해 ③: 아이 카드(패들렛 26) 옷·키링·모자·인형 = 기념품(되팔지 않음 · 돈 쓸 곳) — 예전엔 식품 마트 방 */
+  [/산지 식품|산지 용품/, 'mtn', 8, 19, [['🍄', 400], ['🍃', 300], ['🍯', 900]]],   /* BLDG-1 이상해 ④: 아이 카드 버섯 상점 2 · 약초 상점 4 · 산 특산물 → 버섯 · 산나물(약초 가게 진열) · 꿀 — 파는 값의 두 배 안팎(사서 되팔면 손해) */
+  [/마트|슈퍼|모두의 상점|식품/, 'grocery', 8, 22, [['🥚', 200], ['🥛', 350], ['🌾', 500], ['🧈', 500], ['🍁', 400]]],
   [/빵/, 'bakery', 7, 20, [['🍞', 1200]]],
   [/아이스크림/, 'icecream', 10, 21, [['🍦', 1000]]],
   [/초밥/, 'sushi', 11, 21, [['🍣', 4000, 1]]],
@@ -71,7 +74,7 @@ export const itemName = (e, en) => { const I = ITEMS[e]; return I ? (en ? I[1] :
 //   부르는 쪽 = src 꼬리표만('갈래:자리' · 예 'job:pasture' · 'bug:ant' · 'ev:bus') · 'mv:'(장터 팔기·되돌리기·교환·요리 바꾸기)와 'story'(이야기 보상 · 장마다 한 번)는 한도 밖
 //   ① 같은 출처 = 게임 하루 n번(솜씨 RW_XP · 물건·돈 RW_GEN) ② 하트 = 이웃마다 하루 +3 ③ 실제 날짜(YYYYMMDD) 하루 생김 총량 = 게임 하루 몫의 3배(잠 되풀이 구멍)
 export const RW_XP = { job: 6, bus: 3, book: 1, stars: 1, summit: 1, boat: 2, stones: 3, metro: 3, sell: 8, buy: 6, away: 4, bundle: 6, mush: 8, farm: 6, cook: 8, quiz: 2, cell: 1, bug: 2, wild: 2, shore: 2, fish: 2, worm: 2, sweep: 6, flower: 6, photo: 1 };   /* 꼬리표 갈래(앞 ':' 전) → 하루 몇 번 · 없는 갈래 = 3 */
-export const RW_XP_DEF = 3, RW_GEN = { job: 6, bake: 2, photo: 1, card: 2 }, RW_HEART = 3;   /* PHOTO-2: 사진 기사 = 같은 동물 하루 한 번(기사료·솜씨) */   /* HEAL-1 엽서 하트 = 꼬리 없는 출처 'card' 하루 둘(이웃마다 따로 세지 않음) */   /* 일 물건 = 일 갈래마다 하루 6판(칸 수만큼 늘던 구멍) · 제빵 빵 = 하루 두 판(BAKE-1) */
+export const RW_XP_DEF = 3, RW_GEN = { job: 6, bake: 2, photo: 1, table: 1, card: 2 }, RW_HEART = 3;   /* TABLE-1: 판 놀이 고수를 이기면 손님이 사 주는 음료 = 하루 한 잔(table:drink) */   /* PHOTO-2: 사진 기사 = 같은 동물 하루 한 번(기사료·솜씨) */   /* HEAL-1 엽서 하트 = 꼬리 없는 출처 'card' 하루 둘(이웃마다 따로 세지 않음) */   /* 일 물건 = 일 갈래마다 하루 6판(칸 수만큼 늘던 구멍) · 제빵 빵 = 하루 두 판(BAKE-1) */
 export const RW_DAY = { v: 20000, x: 48, h: 3 }, RW_RD = 3;   /* 게임 하루 몫: 생김 가치(원 · 물건은 파는 값 · 값 없는 것 100) · 솜씨 갈래마다 경험치 · 이웃마다 하트 → 실제 날짜 하루 = ×3 */
 export const rdNow = () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
 const rwVal = e => { const I = ITEMS[e]; return !I ? 100 : I[2] === 'stamp' ? 0 : Math.max(100, I[3] || 0); };
