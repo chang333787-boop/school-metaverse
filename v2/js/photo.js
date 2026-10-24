@@ -12,14 +12,15 @@ function idb() { return new Promise((res, rej) => { try { const r = indexedDB.op
 const tx = (d, mode, fn) => new Promise((res, rej) => { const t = d.transaction(ST, mode), s = t.objectStore(ST); let out; Promise.resolve(fn(s)).then((v) => { out = v; }); t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); });
 const req = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 export async function listPhotos() { try { const d = await idb(); const L = await tx(d, 'readonly', (s) => req(s.getAll())); d.close(); return (L || []).sort((a, b) => b.t - a.t); } catch (e) { return []; } }
-async function addPhoto(rec) { const d = await idb(); await tx(d, 'readwrite', async (s) => { s.add(rec); const keys = await req(s.getAllKeys()); keys.sort((a, b) => a - b); for (const k of keys.slice(0, Math.max(0, keys.length - MAX))) s.delete(k); }); d.close(); }
+async function addPhoto(rec) { const d = await idb(); await tx(d, 'readwrite', async (s) => { const r9 = s.add(rec); r9.onsuccess = () => { rec.id = r9.result; };   /* HEAL-1 엽서가 사진 번호를 기억 */ const keys = await req(s.getAllKeys()); keys.sort((a, b) => a - b); for (const k of keys.slice(0, Math.max(0, keys.length - MAX))) s.delete(k); }); d.close(); }
 export async function delPhoto(id) { try { const d = await idb(); await tx(d, 'readwrite', (s) => { s.delete(id); }); d.close(); } catch (e) { /* */ } }
 export async function countPhotos() { try { const d = await idb(); const n = await tx(d, 'readonly', (s) => req(s.count())); d.close(); return n || 0; } catch (e) { return 0; } }
 const pad = (n) => String(n).padStart(2, '0');
 export function savePhoto(p) { const d = new Date(p.t), a = document.createElement('a'), u = URL.createObjectURL(p.b); a.href = u; a.download = '우리학교_사진_' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + '.jpg'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); }
-const CSS = 'body.ph-on>*:not(#scene):not(#phCd):not(#phFlash):not(script):not(style){visibility:hidden!important}#phCd{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;pointer-events:none;font:900 min(34vw,190px)/1 system-ui,sans-serif;color:#fff;text-shadow:0 6px 0 #1d3557,0 0 30px rgba(0,0,0,.35)}#phCd small{position:absolute;bottom:12%;font-size:20px;text-shadow:0 2px 0 #1d3557}#phFlash{position:fixed;inset:0;z-index:91;background:#fff;pointer-events:none;opacity:.85;transition:opacity .45s}';
+const CSS = 'body.ph-on>*:not(#scene):not(#phCd):not(#phFlash):not(#phHint):not(script):not(style){visibility:hidden!important}#phCd{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;pointer-events:none;font:900 min(34vw,190px)/1 system-ui,sans-serif;color:#fff;text-shadow:0 6px 0 #1d3557,0 0 30px rgba(0,0,0,.35)}#phCd small{position:absolute;bottom:12%;font-size:20px;text-shadow:0 2px 0 #1d3557}#phFlash{position:fixed;inset:0;z-index:91;background:#fff;pointer-events:none;opacity:.85;transition:opacity .45s}';
+export function photoCss() { addCss(); }   /* HEAL-1 마을 사진 모드: 들어가자마자 화면 표시 숨김(첫 찰칵 전에도) */
 function addCss() { if (document.getElementById('ph-css')) return; const st = document.createElement('style'); st.id = 'ph-css'; st.textContent = CSS; document.head.appendChild(st); }
-// 찍기: o = { tone(f,t0,dur,type,vol), net(), toast(msg,sec), label(), en, onDone(rec), cd(세는 수 · 기본 [3,2,1]), onFrame(canvas)(찍는 그 프레임 한 번 · 렌더 바로 뒤) } → Promise(rec | null)
+// 찍기: o = { tone(f,t0,dur,type,vol), net(), toast(msg,sec), label(), en, onDone(rec), cd(세는 수 · 기본 [3,2,1]), onFrame(canvas)(찍는 그 프레임 한 번 · 렌더 바로 뒤) · keep(찍은 뒤 ph-on 그대로 — 마을 사진 모드) } → Promise(rec | null)
 export function takePhoto(o = {}) {
   if (busy || window.SM_PROMO) return Promise.resolve(null); busy = true; addCss(); document.exitPointerLock?.();
   const CD = Array.isArray(o.cd) ? o.cd : [3, 2, 1];   /* PHOTO-2 사진 기자: cd = [] = 셔터를 누른 그 다음 프레임(동물은 기다려 주지 않음) */
@@ -32,7 +33,7 @@ export function takePhoto(o = {}) {
     const blob = await new Promise((res) => { shotQ = (cv) => { const t0 = performance.now(); if (o.onFrame) { try { o.onFrame(cv); } catch (e) { console.warn('photo onFrame', e); } } try { const w = cv.width, h = cv.height, port = h > w, ow = port ? H9 : W9, oh = port ? W9 : H9, sc = Math.max(ow / w, oh / h), sw = ow / sc, sh = oh / sc;   // 가운데를 꽉 채워 자름(가로 320×180 · 세로 180×320)
           const c2 = document.createElement('canvas'); c2.width = ow; c2.height = oh; const g = c2.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(cv, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, ow, oh); lastShot.ms = +(performance.now() - t0).toFixed(2);
           c2.toBlob((b) => res(b), 'image/jpeg', 0.72); } catch (e) { lastShot.ms = +(performance.now() - t0).toFixed(2); res(null); } }; });
-    document.body.classList.remove('ph-on');
+    if (!o.keep) document.body.classList.remove('ph-on');   /* HEAL-1 사진 모드(keep) = 찍은 뒤에도 화면 표시 숨김 그대로 */
     const fl = document.createElement('div'); fl.id = 'phFlash'; document.body.appendChild(fl); requestAnimationFrame(() => { fl.style.opacity = '0'; }); setTimeout(() => fl.remove(), 600);
     T(1600, 0, 0.05, 'square', 0.05); T(1200, 0.05, 0.08, 'square', 0.04);
     if (!blob) { busy = false; if (o.toast) o.toast(o.en ? '📷 Could not take a photo here' : '📷 여기서는 사진을 못 찍었어요', 2.4); return null; }
@@ -40,7 +41,7 @@ export function takePhoto(o = {}) {
     try { await addPhoto(rec); } catch (e) { busy = false; if (o.toast) o.toast(o.en ? '📷 Could not save (storage blocked)' : '📷 이 기기에 저장하지 못했어요', 2.4); return null; }
     lastShot.kb = +(blob.size / 1024).toFixed(1); lastShot.n++; busy = false;
     if (o.toast) o.toast(o.en ? '📷 Snap! Saved in this device’s album' : '📷 찰칵! 이 기기 앨범에 남았어요', 2.4); if (o.onDone) o.onDone(rec); return rec;
-  })().finally(() => { busy = false; document.body.classList.remove('ph-on'); const c9 = document.getElementById('phCd'); if (c9) c9.remove(); });
+  })().finally(() => { busy = false; if (!o.keep) document.body.classList.remove('ph-on'); const c9 = document.getElementById('phCd'); if (c9) c9.remove(); });
 }
 // 앨범 칸 채우기(마을 앨범 '마을 사진' · 학교 사진 창) — el = 빈 .bagg · 새로 채울 때 지난 그림 주소는 돌려줌
 export async function fillAlbum(el, o = {}) {

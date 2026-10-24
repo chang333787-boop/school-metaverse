@@ -13,7 +13,7 @@ export const GIFT_OF = { shiitake: '🍄', cabbage: '🥬', potato: '🥔', lumb
 // 어제 이웃과 한 일 무게(하나만 남김): 하트 단계가 오름 > 요리를 받음 > 선물을 받음
 export const NB_RANK = { up: 3, dish: 2, gift: 1 };
 
-/* c = { en, day, S(GAME.S), pots, farm, plotState, CROPS, crop(e), item(e), rainY, yday, gift:{e,who}|null, pol, fruitAt, sapY, jang:{on,left,at}, wx:{ic,nm}, seaNext:string|null, board:[이름…], twig, mush, tide:{t,at}|null, wild:[{t,place,at}], farmAt, nbAt, nWk } */
+/* c = { en, day, S(GAME.S), pots, farm, plotState, CROPS, crop(e), item(e), rainY, yday, gift:{e,who}|null, pol, fruitAt, sapY, jang:{on,left,at}, wx:{ic,nm}, seaNext:string|null, board:[이름…], twig, mush, tide:{t,at}|null, wild:[{t,place,at}], farmAt, nbAt, nWk, card:{ko,en,at}|null } */
 export function newsMake(c) {
   const en = !!c.en, d = c.day | 0, N = c.S.news && typeof c.S.news === 'object' ? c.S.news : {}, last = N.last && typeof N.last === 'object' ? N.last : {}, prevT = {};
   for (const L of Array.isArray(N.lines) ? N.lines : []) if (L && L.k) prevT[L.k] = L.t;
@@ -48,6 +48,7 @@ export function newsMake(c) {
   const L1 = pick(one), L2 = pick(two.filter(L => !L1 || L.k !== L1.k)), lines = [];
   if (d <= 3) { const L = L1 || L2; if (L) lines.push(L); } else { if (L1) lines.push(L1); if (L2) lines.push(L2); if (!L1) { const L3 = pick(two.filter(L => L !== L2)); if (L3 && L3 !== L2) lines.push(L3); } }
   // 소문(이웃 말풍선 · 그 자리에 실제로 있는 것만)
+  if (c.card && c.card.at) add(rum, 'card', c.card.ko, c.card.en, { at: c.card.at });   /* HEAL-1 어제 넣은 엽서(받은 이웃이 일터에 붙임 · 글 = 엽서에 실제로 담긴 조각만) */
   if (c.jang && c.jang.on && c.jang.at) add(rum, 'jang', '오늘 장날이라 장터에 손님이 많대', 'It’s market day — lots of shoppers at the market', { at: c.jang.at });
   if (c.tide && c.tide.t) add(rum, 'tide', '어제는 갯벌 물이 ' + c.tide.t + '쯤 빠졌대. 오늘은 언제쯤일까?', 'Yesterday the tide went out around ' + c.tide.t + '. When today?', { at: c.tide.at });
   if (c.pol && c.fruitAt) add(rum, 'pol', '과수원 꿀벌들이 바쁘대. 열매가 잘 맺힌대', 'The orchard bees are busy — the fruit is setting well', { at: c.fruitAt });

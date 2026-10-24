@@ -47,7 +47,7 @@ export const WILD = [
     care: ['새끼를 데리고 다닐 때는 쫓아가지 않고 길을 비켜 줘요. 먹이는 주지 않아요.', 'When it leads its ducklings, give them room and don’t chase. No feeding.'] },
   { id: 'frog', emo: '🐸', t: ['참개구리', 'Black-spotted pond frog'], ga: ['가', ''], hab: 'paddyEdge', reed: 1, sea: WARM, time: 'any', flee: 'hop', sc: 2.8, cap: 6, bird: 2,
     look: ['초록·갈색 몸에 검은 무늬가 있고, 등 가운데에 연한 줄이 있어요.', 'Green-brown with black spots and a pale stripe down the middle of the back.'],
-    live: ['논, 연못, 물가 풀숲에 살아요. 알 → 올챙이 → 개구리로 자라요.', 'Lives in rice fields, ponds and grassy banks. Egg → tadpole → frog.'],
+    live: ['논, 연못, 물가 풀숲에 살아요. 알 → 올챙이 → 개구리로 자라요. 늦봄과 여름밤에 우는 것은 수컷이에요. 짝을 부르는 소리예요.', 'Lives in rice fields, ponds and grassy banks. Egg → tadpole → frog. On late-spring and summer nights the males call to find a mate.'],
     food: ['곤충, 거미, 지렁이 같은 작은 동물을 혀로 잡아먹어요.', 'Insects, spiders and worms, caught with its tongue.'],
     win: ['겨울에는 땅속이나 물 밑 진흙 속에서 겨울잠을 자요.', 'It hibernates underground or in mud under water.'],
     care: ['개구리 피부는 얇고 약해요. 만지지 않고 눈으로만 봐요.', 'Frog skin is thin and delicate — look with your eyes only.'] },
@@ -309,6 +309,7 @@ export function createWild(A) {
     info: () => ({ on, n: SP.length, act: ACT.length, mov: MOV.length, near, crouch: crouchOn, still: +stillT.toFixed(1), stars: { ...ST().n }, title: ST().title || null, buildMs, secMs: +secMs.toFixed(3), secMax: +secMax.toFixed(3), mesh: Object.fromEntries(Object.entries(MESH).map(([k, h]) => [k, { count: h.m.count, vis: h.m.visible, tri: buildTri(k) }])),
       spots: SP.map((s, j) => ({ j, id: s.w.id, hab: s.w.hab, x: +s.x.toFixed(1), z: +s.z.toFixed(1), y: +s.y.toFixed(2), ry: +s.ry.toFixed(2), hx: +s.hx.toFixed(1), hz: +s.hz.toFixed(1), st: s.st, act: s.act, md: s.md, mv: s.mv.k, reed: s.reed, i: s.i, d: +s.d.toFixed(1), ok: avail(s.w) })) }),
     hot: () => HH.map(o => ({ off: o.h.hot.off, x: +o.h.hot.x.toFixed(1), z: +o.h.hot.z.toFixed(1), label: o.h.hot.label, id: o.s ? o.s.w.id : null })),
+    spots: id => SP.filter(s => s.w.id === id).map(s => [s.hx, s.hz]),   /* HEAL-1 소리 자리(읽기만 · 짓기 뒤 한 번) */
     vis: v => { for (const k in MESH) MESH[k].m.visible = !!v && MESH[k].m.count > 0; },   /* 시험: 그리기 수 견주기 */
     lookAt: j => look(SP[j]), reset: () => { for (const s of SP) { const m9 = MOV.indexOf(s); if (m9 >= 0) MOV.splice(m9, 1); s.mv.k = ''; home(s); } lastAct = '-'; sec(); } };
   function buildTri(k) { const A9 = MESH[k] && MESH[k].m.geometry.attributes.position; return A9 ? A9.count / 3 : 0; }

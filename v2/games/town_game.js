@@ -25,6 +25,7 @@ export const ITEMS = {
   '🥞': ['팬케이크', 'Pancake', 'dish', 0], '🥘': ['버섯 볶음', 'Fried mushrooms', 'dish', 0], '🍮': ['푸딩', 'Pudding', 'dish', 0], '🍓🥞': ['딸기 팬케이크', 'Strawberry pancake', 'dish', 0], '🌑': ['탄 요리', 'Burnt food', 'dish', 0], '🍲': ['감자 배추국', 'Potato-cabbage soup', 'dish', 0], '🍙': ['주먹밥', 'Rice ball', 'dish', 0], '🍿': ['팝콘', 'Popcorn', 'dish', 0], '🥗': ['산나물 무침', 'Seasoned wild greens', 'dish', 0],
   '🍠♨': ['군고구마', 'Roasted sweet potato', 'dish', 0], '🥔♨': ['구운 감자', 'Roasted potato', 'dish', 0], '🌽♨': ['구운 옥수수', 'Roasted corn', 'dish', 0], '🍄♨': ['버섯구이', 'Grilled mushroom', 'dish', 0], '🐟♨': ['생선구이', 'Grilled fish', 'dish', 0], '🍞♨': ['토스트', 'Toast', 'dish', 0],   // LAWS-1 모닥불에 구운 것(town_laws.js)
   '🐟☀': ['말린 생선', 'Dried fish', 'dish', 0], '🍠☀': ['고구마 말랭이', 'Dried sweet potato', 'dish', 0], '🍄☀': ['말린 버섯', 'Dried mushroom', 'dish', 0], '🍃☀': ['묵나물', 'Dried wild greens', 'dish', 0], '🥛❄': ['우유 얼음', 'Milk ice', 'dish', 0], '🍓❄': ['언 딸기', 'Frozen strawberry', 'dish', 0], '🥤❄': ['살얼음 음료', 'Slushy drink', 'dish', 0],   // LAWS-1 햇볕에 말린 것 · 추위에 언 것
+  '✉': ['엽서', 'Postcard', 'farm', 0],   /* HEAL-1 사진 모드에서 찍은 엽서(팔지 않음 · 우체통에 넣으면 빠짐) */
   '🌱': ['심은 모', 'Rice seedlings planted', 'farm', 0], '🌲': ['심은 나무', 'Saplings planted', 'farm', 0], '🧶': ['양털 한 뭉치', 'Bundle of wool', 'farm', 0],   // HERD-1 양몰이를 잘한 판(일한 보람 · 팔지 않음)
   '⛰': ['정상 도장', 'Summit stamp', 'stamp', 0], '🗼': ['등대 도장', 'Lighthouse stamp', 'stamp', 0], '👣': ['징검다리 도장', 'Stepping-stone stamp', 'stamp', 0], '📖': ['책 읽기 도장', 'Reading stamp', 'stamp', 0], '⛷': ['스키 도장', 'Ski stamp', 'stamp', 0], '🏅': ['요리사 도장', 'Cook stamp', 'stamp', 0], '🧺': ['꾸러미 도장', 'Bundle stamp', 'stamp', 0], '🔭': ['별 보기 도장', 'Stargazing stamp', 'stamp', 0], '⛄': ['눈사람 도장', 'Snowman stamp', 'stamp', 0], '🏰': ['모래성 도장', 'Sandcastle stamp', 'stamp', 0], '🏊': ['생존수영 도장', 'Survival-swimming stamp', 'stamp', 0], '🌬️': ['바닷바람 도장', 'Sea-breeze stamp', 'stamp', 0], '🌈': ['무지개 도장', 'Rainbow stamp', 'stamp', 0], '💫': ['반딧불이 도장', 'Firefly stamp', 'stamp', 0], '📜': ['이야기 도장', 'Story stamp', 'stamp', 0], '🏮': ['잔치 등불', 'Festival lantern', 'stamp', 0], '🔬': ['물 맑기 도장', 'Clean-stream stamp', 'stamp', 0], '🌀': ['물굽이 도장', 'River-bend stamp', 'stamp', 0], '🐸': ['논 생물 도장', 'Paddy-life stamp', 'stamp', 0], '💧': ['물꼬 도장', 'Paddy-gate stamp', 'stamp', 0],
   '🥇': ['고리 코스 금 도장', 'Ring course gold stamp', 'stamp', 0], '🥈': ['고리 코스 은 도장', 'Ring course silver stamp', 'stamp', 0], '🥉': ['고리 코스 동 도장', 'Ring course bronze stamp', 'stamp', 0],   // WAKE-1b 자전거 고리 코스(town_road.js · 메달마다 처음 한 번)
@@ -47,12 +48,19 @@ export const SHOPS = [
 export const RECIPES = [['🥞', '팬케이크', 'Pancake', { '🌾': 1, '🥚': 1, '🥛': 1 }], ['🥘', '버섯 볶음', 'Fried mushrooms', { '🍄': 2, '🧈': 1 }], ['🍮', '푸딩', 'Pudding', { '🥚': 2, '🥛': 1, '🍁': 1 }], ['🍓🥞', '딸기 팬케이크', 'Strawberry pancake', { '🌾': 1, '🥚': 1, '🥛': 1, '🍓': 3 }],
   ['🍲', '감자 배추국', 'Potato-cabbage soup', { '🥔': 2, '🥬': 1, '🧂': 1 }, 'summer'], ['🍙', '주먹밥', 'Rice ball', { '🍚': 2, '🧂': 1 }, 'autumn'], ['🍿', '팝콘', 'Popcorn', { '🌽': 2, '🧈': 1 }, 'garden'], ['🥗', '산나물 무침', 'Seasoned wild greens', { '🍃': 2, '🧂': 1 }, 'forest']];   // 다섯째 = 그 꾸러미를 채우면 생기는 요리법(GAME-7)
 // 오늘의 할 일(GAME-5 · 스타듀 '도움 요청 게시판' 결): 날마다 셋 = 벌기(일터·버섯) 하나 + 나누기(장터·가게·요리) 하나 + 둘러보기(정상·버스·배·징검다리·책) 하나 · 이 마을에 있는 것만(자리 = 그곳 칸)
-//   보상 = 돈(하나 300~800원 · 셋 다 하면 +500원 — 흉내 하루 벌이의 5~15%라 '덤') · 벌·기한 없음(다 못 해도 다음 날 새 셋)
+//   보상 = 돈(하나 300~800원) · 셋 다 해도 덤 돈은 없음(HEAL-1 · 이웃 말 한 줄) · 벌·기한 없음(다 못 해도 다음 날 새 셋)
 export const TASKS = {
   work: ['{e} {n} 같이 하기', 'Help: {n}', 1, 400], mush: ['🍄 버섯 2개 따기', '🍄 Pick 2 mushrooms', 2, 300], farm: ['🌱 학교 텃밭 돌보기 (심기·물 주기·거두기)', '🌱 Tend the school garden (plant · water · harvest)', 1, 300],
   sell: ['🛒 장터에서 물건 3개 팔기', '🛒 Sell 3 things at a market', 3, 300], away: ['✨ 멀리서 온 물건을 장터에 팔기', '✨ Sell something from far away', 1, 400], buy: ['🥚 마트에서 요리 재료 사기', '🥚 Buy a cooking ingredient', 1, 200], cook: ['🍳 아이 집 부엌에서 요리 하나 만들기', '🍳 Cook a dish in a kitchen', 1, 600], share: ['🍽 이웃에게 요리 나눠 주기', '🍽 Share a dish with a neighbour', 1, 500], eat: ['🍜 식당에서 밥 먹어 보기', '🍜 Eat at a restaurant', 1, 300],
   summit: ['⛰ 산꼭대기 도장 찍기', '⛰ Get the summit stamp', 1, 800], bus: ['🚌 버스 타고 다른 정류장 가기', '🚌 Ride a bus to another stop', 1, 300], boat: ['⛵ 배 타고 바다 나가 보기', '⛵ Take the boat out', 1, 500], stones: ['👣 징검다리 건너기', '👣 Cross the stepping stones', 1, 300], book: ['📖 도서관에서 책 읽기', '📖 Read at the library', 1, 300], stars: ['🔭 밤(19시 뒤)에 산꼭대기에서 별 보기', '🔭 Stargaze on the summit at night (after 19:00)', 1, 500],
   bundle: ['🧺 계절 꾸러미에 물건 넣기 (I → 꾸러미)', '🧺 Put something in a bundle (I → Bundles)', 1, 300],
+};
+// HEAL-1 ① 한 일은 지난 말로(docs/systems/town_heal.md · 할 일 창에서 ⬜/✅·(n/need) 대신 글이 바뀜)
+export const TASK_TP = {
+  work: ['{e} {n}, 같이 했어요', 'Helped: {n}'], mush: ['🍄 버섯 2개를 땄어요', '🍄 Picked 2 mushrooms'], farm: ['🌱 학교 텃밭을 돌봤어요', '🌱 Tended the school garden'],
+  sell: ['🛒 장터에서 물건 3개를 팔았어요', '🛒 Sold 3 things at a market'], away: ['✨ 멀리서 온 물건을 장터에 팔았어요', '✨ Sold something from far away'], buy: ['🥚 마트에서 요리 재료를 샀어요', '🥚 Bought a cooking ingredient'], cook: ['🍳 아이 집 부엌에서 요리를 만들었어요', '🍳 Cooked a dish in a kitchen'], share: ['🍽 이웃에게 요리를 나눠 줬어요', '🍽 Shared a dish with a neighbour'], eat: ['🍜 식당에서 밥을 먹어 봤어요', '🍜 Ate at a restaurant'],
+  summit: ['⛰ 산꼭대기 도장을 찍었어요', '⛰ Got the summit stamp'], bus: ['🚌 버스 타고 다른 정류장에 갔어요', '🚌 Rode a bus to another stop'], boat: ['⛵ 배 타고 바다에 나가 봤어요', '⛵ Took the boat out'], stones: ['👣 징검다리를 건넜어요', '👣 Crossed the stepping stones'], book: ['📖 도서관에서 책을 읽었어요', '📖 Read at the library'], stars: ['🔭 밤 산꼭대기에서 별을 봤어요', '🔭 Stargazed on the summit'],
+  bundle: ['🧺 계절 꾸러미에 물건을 넣었어요', '🧺 Put something in a bundle'],
 };
 export const TASK_POOLS = [['work', 'mush', 'farm'], ['sell', 'away', 'buy', 'cook', 'share', 'eat', 'bundle'], ['summit', 'bus', 'boat', 'stones', 'book', 'stars']];
 export const shopOf = name => { if (/동물 카페|키즈 카페|보드게임 카페|꼬리 용품|반려/.test(name || '')) return null;   /* 놀이 카페·반려 용품 = 파는 가게 아님(뒷걸음 정규식은 옛 아이폰 사파리에서 깨져 함수로) */ for (const S of SHOPS) if (S[0].test(name || '')) return S; return null; };
@@ -63,7 +71,7 @@ export const itemName = (e, en) => { const I = ITEMS[e]; return I ? (en ? I[1] :
 //   부르는 쪽 = src 꼬리표만('갈래:자리' · 예 'job:pasture' · 'bug:ant' · 'ev:bus') · 'mv:'(장터 팔기·되돌리기·교환·요리 바꾸기)와 'story'(이야기 보상 · 장마다 한 번)는 한도 밖
 //   ① 같은 출처 = 게임 하루 n번(솜씨 RW_XP · 물건·돈 RW_GEN) ② 하트 = 이웃마다 하루 +3 ③ 실제 날짜(YYYYMMDD) 하루 생김 총량 = 게임 하루 몫의 3배(잠 되풀이 구멍)
 export const RW_XP = { job: 6, bus: 3, book: 1, stars: 1, summit: 1, boat: 2, stones: 3, metro: 3, sell: 8, buy: 6, away: 4, bundle: 6, mush: 8, farm: 6, cook: 8, quiz: 2, cell: 1, bug: 2, wild: 2, shore: 2, fish: 2, worm: 2, sweep: 6, flower: 6, photo: 1 };   /* 꼬리표 갈래(앞 ':' 전) → 하루 몇 번 · 없는 갈래 = 3 */
-export const RW_XP_DEF = 3, RW_GEN = { job: 6, bake: 2, photo: 1 }, RW_HEART = 3;   /* PHOTO-2: 사진 기사 = 같은 동물 하루 한 번(기사료·솜씨) */   /* 일 물건 = 일 갈래마다 하루 6판(칸 수만큼 늘던 구멍) · 제빵 빵 = 하루 두 판(BAKE-1) */
+export const RW_XP_DEF = 3, RW_GEN = { job: 6, bake: 2, photo: 1, card: 2 }, RW_HEART = 3;   /* PHOTO-2: 사진 기사 = 같은 동물 하루 한 번(기사료·솜씨) */   /* HEAL-1 엽서 하트 = 꼬리 없는 출처 'card' 하루 둘(이웃마다 따로 세지 않음) */   /* 일 물건 = 일 갈래마다 하루 6판(칸 수만큼 늘던 구멍) · 제빵 빵 = 하루 두 판(BAKE-1) */
 export const RW_DAY = { v: 20000, x: 48, h: 3 }, RW_RD = 3;   /* 게임 하루 몫: 생김 가치(원 · 물건은 파는 값 · 값 없는 것 100) · 솜씨 갈래마다 경험치 · 이웃마다 하트 → 실제 날짜 하루 = ×3 */
 export const rdNow = () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
 const rwVal = e => { const I = ITEMS[e]; return !I ? 100 : I[2] === 'stamp' ? 0 : Math.max(100, I[3] || 0); };
@@ -73,7 +81,7 @@ export function rwCheck(S, kind, src, n, k, day) { rwCheck.last = ''; if (!(n > 
   if (!src) { if (!RWW.has(kind + k)) { RWW.add(kind + k); console.warn('REW-1: 꼬리표 없는 보상 — ' + kind + ' ' + k); } src = '?:' + kind + ':' + k; }
   const fam = String(src).split(':')[0]; if (fam === 'mv' || fam === 'story') return n;
   const d0 = day != null ? day : S.day, rd = rdNow(); let R = S.rw; if (!R || typeof R !== 'object') R = S.rw = {}; if (R.d !== d0 || !R.c) { R.d = d0; R.c = {}; } if (R.rd !== rd || !R.r) { R.rd = rd; R.r = { v: 0, x: {}, h: {}, said: {} }; }
-  const C = R.c, Q = R.r, lim = kind === 'xp' ? (RW_XP[fam] != null ? RW_XP[fam] : fam === '?' ? 16 : RW_XP_DEF) : kind === 'heart' ? null : RW_GEN[fam];
+  const C = R.c, Q = R.r, lim = kind === 'xp' ? (RW_XP[fam] != null ? RW_XP[fam] : fam === '?' ? 16 : RW_XP_DEF) : kind === 'heart' ? (fam === 'card' ? RW_GEN.card : null) : RW_GEN[fam];   /* HEAL-1: 하트는 이웃마다 셈 · 엽서(card)만 출처 한도도 */
   if (lim != null) { const ck = kind[0] + '|' + src; if ((C[ck] || 0) >= lim) { rwCheck.last = 'day'; return 0; } C[ck] = (C[ck] || 0) + 1; }
   if (kind === 'heart') { const ck = 'h|' + k, H0 = (S.hearts || {})[k] || 0, L0 = Math.min(5, (H0 / 3) | 0), HD = S.hd && typeof S.hd === 'object' ? S.hd : (S.hd = {}), top = HD[k] === d0 ? L0 * 3 + 2 - H0 : 99;   /* NB-0 하루 한 단계까지(PHASE3): 오늘 이미 단계가 올랐으면 다음 단계 문턱 바로 밑(단계×3+2)에서 멈춤 */
     const a = Math.min(n, RW_HEART - (C[ck] || 0), RW_DAY.h * RW_RD - (Q.h[k] || 0), top); if (a <= 0) { rwCheck.last = top <= 0 || (C[ck] || 0) >= RW_HEART ? 'day' : 'rd'; return 0; } C[ck] = (C[ck] || 0) + a; Q.h[k] = (Q.h[k] || 0) + a; if (Math.min(5, ((H0 + a) / 3) | 0) > L0) HD[k] = d0; if (a < n) rwCheck.last = 'day'; return a; }
@@ -148,11 +156,11 @@ export function createGame(id) {
     tasks(ctx, en) { if (S.tasks && S.tasks.day === S.day) return S.tasks.list; let r = (S.day * 2654435761 + 97) >>> 0; const rnd = () => (r = (r * 1103515245 + 12345) >>> 0) / 4294967296, list = [];
       TASK_POOLS.forEach((P, pi) => { const av = []; for (const id of P) { const c = ctx[id]; if (!c) continue; if (id === 'work') for (const w of c) av.push(['work', w]); else av.push([id, c]); } if (!av.length) return; const hot = av.filter(a => a[1] && a[1].why && !a[1].why.soft); let pick = av[(rnd() * av.length) | 0]; if (hot.length && rnd() < 0.8) pick = hot[(rnd() * hot.length) | 0];   /* BOARD-D: 그날 상황(장날·비·텃밭·맑은 밤·논 철)이 있는 줄을 먼저(다섯에 넷) */
         if (S.day === 1) { const want = ['work', 'sell', 'bus'][pi]; pick = av.find(a => a[0] === want) || av[0]; }
-        const [id, c] = pick, T = TASKS[id], txt = (en ? T[1] : T[0]).replace('{e}', c[2] || '').replace('{n}', c[3] || ''); list.push({ id, why: c.why || null, ev: id === 'work' ? 'work:' + c[1] : id, t: txt, cell: c[0] || '', at: c.at || null, need: T[2], n: 0, rew: T[3], done: false });   /* at = 그 자리(🧭 길 안내 · GAME-5d) */ });
+        const [id, c] = pick, T = TASKS[id], txt = (en ? T[1] : T[0]).replace('{e}', c[2] || '').replace('{n}', c[3] || ''); const P9 = TASK_TP[id], tp = P9 ? (en ? P9[1] : P9[0]).replace('{e}', c[2] || '').replace('{n}', c[3] || '') : txt; list.push({ id, why: c.why || null, ev: id === 'work' ? 'work:' + c[1] : id, t: txt, tp, cell: c[0] || '', at: c.at || null, need: T[2], n: 0, rew: T[3], done: false });   /* at = 그 자리(🧭 길 안내 · GAME-5d) */ });
       S.tasks = { day: S.day, list, all: false }; dirty = true; return list; },
     // 한 일 알리기 → 이번에 끝난 할 일들(보상은 여기서 줌 · 셋 다 끝나면 덤)
     taskEv(ev, n = 1) { const T = S.tasks; if (!T || T.day !== S.day) return null; let out = null; for (const t of T.list) { if (t.done || t.ev !== ev) continue; t.n = Math.min(t.need, t.n + n); if (t.n >= t.need) { t.done = true; const r9 = G.rw('money', 'task:' + t.id, t.rew); S.money += r9; S.earned += r9; S.tasksDone = (S.tasksDone || 0) + 1; if (S.today) { S.today.tasks++; S.today.earned += r9; } (out = out || []).push(t); } }
-      if (out && !T.all && T.list.every(t => t.done)) { T.all = true; const r9 = G.rw('money', 'task:all', 500); S.money += r9; S.earned += r9; out.all = true; } if (out) dirty = true; return out; },
+      if (out && !T.all && T.list.every(t => t.done)) { T.all = true; out.all = true; }   /* HEAL-1: 셋 다 = 덤 돈 X(숙제처럼 읽힘) · 마을이 이웃 말 한 줄만 */ if (out) dirty = true; return out; },
     // 처음부터(가방·돈·도감·날짜 모두) — 가방 객체는 그대로 두고 비움(마을이 같은 객체를 들고 있음)
     reset() { const b = S.bag; for (const k of Object.keys(b)) delete b[k]; const f = fresh(); f.bag = b; for (const k of Object.keys(S)) delete S[k]; Object.assign(S, f); acc = 0; ph = phaseOf(S.min); dirty = true; G.flush(); emit('clock'); emit('phase'); },
   };
