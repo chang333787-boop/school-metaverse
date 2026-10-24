@@ -4,7 +4,7 @@
 //   규칙 카드 = 한 문장 + 그림 한 장(처음 한 번 · 판 안 '규칙' 단추) · 저장 = 놀이마다 { lv, best(별 · 안에서만), good, fail, w, n } · 보상 = 문(rwCheck) 하나 — 꼬리표 table:*
 //   노인정·경로당·마을회관도 같은 틀(open(놀이, { who })) · 상품 보드게임(상표·판 그림) X — 모두 전통·공용 규칙 · 셈 X(윷은 칸을 세며 옮김 · 점수판·순위 X)
 //   위 = 순수 함수(판 규칙·AI · node 시험 tools/harness/town_table.cjs) · 아래 = 화면 createTable(A)
-import { ITEMS } from './town_game.js?v=37';   // 짝 맞추기 '나는 것 ↔ 나는 곳'(물건표 한 곳)
+import { ITEMS } from './town_game.js?v=38';   // 짝 맞추기 '나는 것 ↔ 나는 곳'(물건표 한 곳)
 import { JOBS, PG, jobSvg } from './town_places.js?v=2';   // 짝 맞추기 '일하는 사람 ↔ 일터'(장소 카드와 같은 표 · 같은 그림)
 export const TABLE_V = 1;
 const T2 = (ko, en) => [ko, en];
@@ -306,12 +306,12 @@ export function createTable(A) {
     if (C.st.n >= OMN) { finish({ win: false, draw: true, st: 1, head: e ? 'The board is full — a draw.' : '판이 꽉 찼어요. 비겼어요.' }); return; } omokTurn(); }
 
   // ───── 윷놀이 ─────
-  function yutSticks(g, x, y, w, h, up, t, done) { const sw = w * 0.17, sh = h * 0.78; for (let k = 0; k < 4; k++) { const cx = x + w * (0.14 + k * 0.24), cy = y + h * 0.5 - (done ? 0 : Math.sin(Math.min(1, t) * Math.PI) * h * 0.55), rot = done ? (k - 1.5) * 0.08 : t * 9 + k * 0.9;
+  function yutSticks(g, x, y, w, h, up, t, done) { const sw = w * 0.17, sh = h * 0.78; for (let k = 0; k < 4; k++) { const cx = x + w * (0.14 + k * 0.24), cy = y + h * 0.5 - (done ? 0 : Math.sin(Math.min(1, t) * Math.PI) * h * 0.4), rot = done ? (k - 1.5) * 0.08 : t * 9 + k * 0.9;
       g.save(); g.translate(cx, cy); g.rotate(rot); const face = done ? up[k] : ((t * 6 + k) | 0) % 2 === 0; g.fillStyle = face ? '#f3dfb0' : '#a8743f'; g.strokeStyle = INK; g.lineWidth = 2; g.beginPath(); if (g.roundRect) g.roundRect(-sw / 2, -sh / 2, sw, sh, sw / 2); else g.rect(-sw / 2, -sh / 2, sw, sh); g.fill(); g.stroke();
       if (!face) { g.strokeStyle = 'rgba(43,38,34,.55)'; g.lineWidth = 1.6; for (const yy of [-0.25, 0, 0.25]) { g.beginPath(); g.moveTo(-sw * 0.22, yy * sh - sw * 0.2); g.lineTo(sw * 0.22, yy * sh + sw * 0.2); g.moveTo(sw * 0.22, yy * sh - sw * 0.2); g.lineTo(-sw * 0.22, yy * sh + sw * 0.2); g.stroke(); } } g.restore(); } }
   // 윷 창 자리: 넓은 창 = 판 왼쪽 · 윷가락 오른쪽 / 좁은 창(휴대폰 세로) = 판 위 · 윷가락·칸 수·대기 말 아래(글이 너무 작아지지 않게)
-  const YLAY = { land: { W: 600, H: 380, bx: 22, by: 26, s: 300, tn: [368, 30], st: [368, 44, 210, 150], rs: [473, 236], bar: [378, 250, 190], hn: [473, 280], cp: [372, 288], tr: [368, 340, 368] },
-    port: { W: 380, H: 610, bx: 40, by: 14, s: 300, tn: [18, 362], st: [14, 372, 196, 128], rs: [112, 534], bar: [222, 470, 140], hn: [292, 500], cp: [220, 380], tr: [18, 566, 594] } };
+  const YLAY = { land: { W: 600, H: 380, bx: 22, by: 26, s: 300, tn: [368, 26], st: [368, 66, 210, 136], rs: [473, 236], bar: [378, 250, 190], hn: [473, 280], cp: [372, 288], tr: [368, 340, 368] },
+    port: { W: 380, H: 626, bx: 40, by: 14, s: 300, tn: [222, 372], st: [14, 404, 180, 116], rs: [104, 556], bar: [222, 470, 140], hn: [292, 500], cp: [220, 386], tr: [18, 584, 610] } };   /* 세로 = 차례 글은 오른쪽 위(윷가락이 날아도 안 가림) · 윷가락은 왼쪽(날 때 판·글 밖) */
   function yutOpen() { const first = (GS('yut').n | 0) % 2; C.st = yutStart(first); C.pend = []; C.can = true; C.sel = 0; C.fx = null; C.res = null; C.hov = -1; C.charge = 0;
     const Y = C.yl = Math.min(innerWidth * 0.94, 640) - 42 < 480 ? YLAY.port : YLAY.land; openPanel('<canvas class="tb-cv"></canvas>', Y.W, Y.H, yutDraw); const e = en();
     const pick = ev => { const [x, y] = ptr(C.cv, ev, Y.W, Y.H); for (let i = 0; i < C.pend.length; i++) { const cx = Y.cp[0] + i * 52; if (x > cx && x < cx + 46 && y > Y.cp[1] - 2 && y < Y.cp[1] + 34) return { chip: i }; } const ch = C.st.turn === 0 ? yutChoices(C.st, 0) : []; let best = null, bd = 26;

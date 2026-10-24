@@ -105,7 +105,7 @@ export function createGame(id) {
     S,
     on(fn) { on = fn; },
     mark() { dirty = true; },
-    flush() { if (!dirty) return; dirty = false; since = 0; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* 가득 참·막힘 — 놀이는 그대로 */ } },
+    flush() { if (!dirty) return true; since = 0; try { localStorage.setItem(KEY, JSON.stringify(S)); dirty = false; return true; } catch (e) { return false; } },   /* SAVE-2(코덱스 10-24): 성공한 뒤에만 dirty = false — 가득 참·막힘이면 2초 뒤 다시 시도 · 놀이는 그대로 */
     // 매 프레임: 저장 2초 상한 + 시계(paused = 창·놀이·실내 문 덮개 동안)
     tick(dt, paused) {
       since += dt; if (dirty && since >= 2) G.flush();

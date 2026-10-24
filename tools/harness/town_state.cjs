@@ -24,7 +24,7 @@ const URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
   p.on('pageerror', e => errs.push(e.message.slice(0, 200))); p.on('console', m => { const t = m.text(); if ((m.type() === 'error' && !/favicon|404|ERR_|pointer lock/.test(t)) || /게임 tick 오류/.test(t)) errs.push(t.slice(0, 200)); });
   const W8 = ms => p.waitForTimeout(ms), ev = (f, a) => p.evaluate(f, a), pos = () => ev(() => { const m = SD2.map.player.get(); return [m.x, m.y, m.z]; });
   // 페이지 안 도우미(다시 열 때마다 다시 심음)
-  const helpers = () => ev(() => { window.__TS = {
+  const helpers = () => ev(() => { if (window.SD2 && !SD2.map.player.__fz) { const M9 = SD2.map.player, f9 = M9.freeze.bind(M9); window.__FZ = []; M9.freeze = v => { if (v !== false) { window.__FZ.push((new Error().stack || '').split('\n').slice(2, 6).map(s => s.trim().replace(/^at /, '').replace(/ \(.*\)$/, '')).join('<')); if (window.__FZ.length > 6) window.__FZ.shift(); } return f9(v); }; M9.__fz = 1; }   /* 갇힘 때 마지막으로 멈춤을 건 자리(진단) */ window.__TS = {
     sl: ms => new Promise(r => setTimeout(r, ms)),
     tp(x, z, y) { const M = SD2.map, g = M.q.groundAt(x, z, (y ?? SM_TOWN.ground(x, z)) + 2); M.player.teleport([x, g + 0.05, z]); },
     hots: re => SD2.map.interact.list().filter(h => !h.off && re.test(h.label)).map(h => ({ label: h.label, x: h.x, y: h.y, z: h.z, r: h.r, kind: h.kind })),
@@ -147,7 +147,7 @@ const URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
     if (r.saved && r.saved.y - r.saved.gnd > 6) r.bad.push('이어 하기 자리가 공중(방 높이)');
     const mv = []; let best = 0; for (const ks of DIRS) { const d = await hold(ks, 400); mv.push(+d.toFixed(2)); best = Math.max(best, d); if (d > 0.3) break; }
     if (best <= 0.3) { const d = Math.max(await hold(['KeyW'], 1500), await hold(['KeyS'], 1500)); mv.push('long ' + d.toFixed(2)); best = Math.max(best, d); if (best > 0.3) r.note.push('0.4초엔 못 움직이고 1.5초엔 움직임'); }
-    r.mv = mv; r.best = +best.toFixed(2); if (best <= 0.3) r.bad.push('갇힘(8방향 ' + mv.join('/') + ' · frozen=' + (await ev(() => !!SD2.CTRL.frozen)) + ')'); }
+    r.mv = mv; r.best = +best.toFixed(2); if (best <= 0.3) r.bad.push('갇힘(8방향 ' + mv.join('/') + ' · frozen=' + (await ev(() => !!SD2.CTRL.frozen)) + ' · 멈춤 건 곳 ' + (await ev(() => (window.__FZ || []).slice(-2).join(' / '))) + ')'); }
   async function restore() { if (!await ev(() => !!window.SM_TOWN)) return false;
     for (let i = 0; i < 4; i++) { const o = await ev(() => ({ p: !!document.querySelector('.twn-p'), pl: !!document.querySelector('.twn-play'), top: SM_TOWN.indoor.state().top })); if (!o.p && !o.pl && !o.top) break; await p.keyboard.press('Escape'); await W8(250); }
     return ev(async () => { const S = SM_TOWN, T = __TS, out = []; for (let i = 0; i < 60 && (S.indoor.busy || S.cal().busy); i++) await T.sl(100);
