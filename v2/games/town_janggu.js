@@ -43,7 +43,7 @@ export function createJanggu(A) {
 
   // ───────── 선생님 자리(짓기 때 한 번) ─────────
   function pickTeacher() { const WK = A.workers() || [], P = (A.places() || []).filter(p => p.kind === 'park' || /광장|공원/.test(p.name || '')); let best = -1, bs = 1e18;
-    WK.forEach((w, i) => { if (!w.k || w.role === 'swim' || w.role === 'guest' || w.gate) return; let d = 1e6; for (const p of P) d = Math.min(d, Math.hypot(p.x - w.x, p.z - w.z)); const sc = (w.k === 'stall' ? 0 : 150) + (P.length ? d : 0); if (sc < bs) { bs = sc; best = i; } });
+    WK.forEach((w, i) => { if (!w.k || w.role === 'swim' || w.role === 'guest' || w.gate) return; let open9 = 0; for (let a = 0; a < 12; a++) { const ang = a * Math.PI / 6; if (A.okSpot(w.x + Math.sin(ang) * 2.6, w.z + Math.cos(ang) * 2.6)) open9++; } if (open9 < 8) return;   /* FIX-JG1(사용자 10-24 '장구 선생님 못 찾겠네'): 몸이 벽에 묻히거나 둘레가 막힌 일꾼은 X — 둘레 12방향 가운데 8 이상 트인 곳만 */ let d = 1e6; for (const p of P) d = Math.min(d, Math.hypot(p.x - w.x, p.z - w.z)); const sc = (w.k === 'stall' ? 0 : 150) + (P.length ? d : 0); if (sc < bs) { bs = sc; best = i; } });
     return best; }
   function hotSpot(w) { const hx = w.hx ?? null, hz = w.hz ?? null, f = w.ry || 0; let pick = null, pd = 1e9;
     for (const r of [2.6, 3.2, 3.9]) for (let a = 0; a < 12; a++) { const ang = f + a * Math.PI / 6, x = w.x + Math.sin(ang) * r, z = w.z + Math.cos(ang) * r; if (!A.okSpot(x, z)) continue; if (hx != null && Math.hypot(x - hx, z - hz) < 3.6) continue;
@@ -164,5 +164,5 @@ export function createJanggu(A) {
   const info = () => { const s = S(); return { on: !!TW, teacher: TW && { i: TI, x: +TW.x.toFixed(1), z: +TW.z.toFixed(1), g: +TW.g.toFixed(2), k: TW.k, role: TW.role, cell: A.cell(TW.x, TW.z) }, hot: HOT && { x: +HOT.hot.x.toFixed(1), z: +HOT.hot.z.toFixed(1), y: +HOT.hot.y.toFixed(2), label: HOT.hot.label },
     open: !!(W && W.el.isConnected), mode: W ? W.mode : null, S: JSON.parse(JSON.stringify(s)), R: R && { si: R.si, pat: R.pat && R.pat.join(''), mine: R.mine.join(','), cur: R.cur, demo: R.demo, bad: R.bad.slice(), done: R.done, s: R.s, up: R.up || null, tries: R.tries, replays: R.replays },
     busk: BK && { why: BK.why, aud: BK.aud.slice() }, plays: DBG.plays, cheer: DBG.cheer, last: DBG.last, canBusk: canBusk() }; };
-  return { init, tick, sec, dispose, open, busk, canBusk, info, get active() { return !!(W || BK); }, STG, dbg: { hit, submit, erase, stage: n => { const s = S(); s.lv = Math.max(0, Math.min(STG.length - 1, n)); s.good = 0; s.top = false; mark(); }, place: (x, z) => placeWhy(x, z) } };
+  return { init, tick, sec, dispose, open, busk, canBusk, info, spot: () => (HOT && HOT.hot && TW ? { x: HOT.hot.x, z: HOT.hot.z, tx: TW.x, tz: TW.z } : null), get active() { return !!(W || BK); }, STG, dbg: { hit, submit, erase, stage: n => { const s = S(); s.lv = Math.max(0, Math.min(STG.length - 1, n)); s.good = 0; s.top = false; mark(); }, place: (x, z) => placeWhy(x, z) } };
 }
