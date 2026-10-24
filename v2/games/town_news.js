@@ -31,6 +31,7 @@ export function newsMake(c) {
   if (c.S.spend && c.S.spend.can === 2) add(one, 'can', '🔧 고친 물뿌리개가 문 앞에 와 있어요. 넓은 꼭지를 달았대요', '🔧 The fixed watering can is at our door — with a wide rose', { mine: 1, at: 'home' });   /* SPEND-1 맡긴 다음 아침 */
   if (c.gift) add(one, 'gift', '🎁 ' + c.gift.who + ' 일꾼이 문 앞에 ' + c.item(c.gift.e) + josa(c.item(c.gift.e), '을', '를') + ' 두고 갔어요', '🎁 The ' + c.gift.who + ' worker left ' + c.item(c.gift.e) + ' at our door', { mine: 1, at: 'gift' });
   if (c.pol) add(one, 'pol', '🐝 어제 돌본 꿀벌 덕분에 오늘 배·딸기가 잘 맺혀요', '🐝 Thanks to the bees you helped, pears and strawberries set well today', { mine: 1, at: c.fruitAt || null, ck: { pol: 1 } });
+  for (const q of c.em || []) add(one, 'em:' + q.k, q.t[0], q.t[1], { mine: 1, at: q.at || null });   /* EMERG-1 어제 긴급 출동 결과(내가 한 일 · 세상에 남은 흔적 자리) */
   if (c.sapY > 0) add(one, 'sap', '🌲 어제 심은 어린나무가 그 자리에 잘 서 있어요', '🌲 The sapling you planted yesterday is standing well', { mine: 1, ck: { sap: c.sapY } });
   if (Y && Y.sold > 0) add(one, 'sold', '🛒 어제 장터에서 물건을 ' + Y.sold + '개 팔았어요', '🛒 You sold ' + Y.sold + ' thing(s) at the market yesterday', { mine: 1 });
   if (Y && Y.shared > 0 && !c.gift) add(one, 'shared', '🍽 어제 이웃에게 요리를 ' + Y.shared + '번 나눠 줬어요', '🍽 You shared food with neighbours ' + Y.shared + ' time(s) yesterday', { mine: 1 });
