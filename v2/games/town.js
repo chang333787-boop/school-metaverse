@@ -3086,7 +3086,7 @@ body.small .twn-dlg .face{width:56px;height:56px;font-size:32px}body.small .twn-
     if (!FLG) { if (FLQ.i < SIMF.N) { for (let n9 = 0; n9 < 3 && FLQ.i < SIMF.N; n9++) { const k = FLQ.i++; if (!SIMF.MT[k]) continue; const c = k % SIMF.nC, r = (k / SIMF.nC) | 0; let bx = 0, bz = 0, bh = -1e9; for (let a = 0; a < 5; a++) for (let b = 0; b < 5; b++) { const x = SIMF.xOf(c + 0.1 + a * 0.2), z = SIMF.zOf(r + 0.1 + b * 0.2), hh = tH(x, z); if (hh > bh && !wAt(x, z) && !onRoad(x, z, 1)) { bh = hh; bx = x; bz = z; } } if (bh > -1e8) FLQ.best.push([bx, bh, bz]); } return; }
       const pick = []; for (const s of FLQ.best.sort((p, q) => q[1] - p[1])) { if (pick.length >= 3) break; if (pick.every(q => Math.hypot(q[0] - s[0], q[2] - s[2]) > 150)) pick.push([s[0], ty(s[0], s[2]), s[2]]); }
       for (const [dx, dz] of [[-6, 5], [6, 5], [-8, 9], [8, 9]]) { const x = 16.5 + dx, z = 58 + dz; if (!onRoad(x, z, 0.6) && !wAt(x, z) && !inSchool(x, z)) { pick.push([x, ty(x, z), z]); break; } }
-      if (!pick.length) { FLQ.i = 0; FLQ.best.length = 0; return; } FLG = makeFlags(T3, pick, ROOT); FLQ.d = -1; }
+      if (!pick.length) { FLQ.i = 0; FLQ.best.length = 0; return; } FLG = makeFlags(T3, pick, ROOT); FLG.col = pick.map(([x, y, z]) => map.collider.add({ x0: x - 0.15, x1: x + 0.15, z0: z - 0.15, z1: z + 0.15, y0: y, y1: y + 6, nc: true }));   /* 깃발 기둥 = 몸이 못 뚫음(카메라는 그대로) */ FLQ.d = -1; }
     if (FLG.m.parent !== ROOT) { if (FLG.m.parent) FLG.m.parent.remove(FLG.m); ROOT.add(FLG.m); }
     if (FLQ.d !== GAME.S.day) { FLQ.d = GAME.S.day; const W = CHEM ? CHEM.api.wind(GAME.S.day) : null; FLG.wind(W || (wxAuto() && fcW(0) === 'rain' ? { x: 1, z: 0 } : { x: 0.7, z: 0.7 })); } }
   SIMF.on(1, 'front', frontSec); SIMF.on(2, 'life', lifeSec); SIMF.on(3, 'flag', flagSec);
@@ -6342,7 +6342,7 @@ body.small .twn-dlg .face{width:56px;height:56px;font-size:32px}body.small .twn-
       if (RD) { RD.dispose(); RD = null; }   /* WAKE-1b */
       if (JG) { JG.dispose(); JG = null; }   /* JANGGU-1 */
       if (CHEM) { CHEM.dispose(); CHEM = null; }   /* CHEM-1 */
-      if (WLD) { WLD.dispose(); WLD = null; }   /* WILD-1 */
+      if (WLD) { WLD.dispose(); WLD = null; }   /* WILD-1 */ if (FLG && FLG.col) { for (const h9 of FLG.col) h9.remove(); FLG.col = null; }   /* 풍향 깃발 기둥 충돌 */
       PRESS.dispose();   /* PHOTO-2 칩 */
       if (NBR) { NBR.dispose(); NBR = null; }   /* NB-1 */
       { const me = map.player.get(); if (!inSchool(me.x, me.z)) { map.player.teleport([16.5, -1.3, 50]); map.player.lookAt([16.5, 0]); } }   /* 마을을 나가면 학교 정문 안으로(마을 땅이 사라지므로) */ closeP(true); map.player.freeze(false); if (LOCEL) LOCEL.style.visibility = ''; if (TCHIP) TCHIP.style.display = ''; css.remove(); HUDCSS.remove(); if (KEYEL) KEYEL.remove(); removeEventListener('sm-teacher', hudRefresh); for (const c9 of ['h-hudl', 'h-ultg', 'h-keys']) document.body.classList.remove(c9);   /* INTUIT-1 */ map.hud.anchor?.(null); miniBox.remove(); cellB.remove(); if (trailH) trailH.remove(); if (bike) map.player.speed(1); BIKE.dispose();
