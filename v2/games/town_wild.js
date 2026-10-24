@@ -63,8 +63,14 @@ export const WILD = [
     food: ['밤에 나방, 딱정벌레 같은 큰 곤충을 잡아먹어요.', 'At night it catches big insects such as moths and beetles.'],
     win: ['여름 철새예요. 봄에 남쪽에서 와서 새끼를 기르고, 가을에 다시 남쪽으로 가요.', 'A summer visitor: it comes from the south in spring, raises chicks and leaves in autumn.'],
     care: ['천연기념물이에요. 둥지가 있는 오래된 큰 나무를 베지 않고 지켜요.', 'It is a natural monument in Korea. We protect the old trees it nests in.'] },
+  { id: 'sparrow', emo: '', t: ['참새', 'Tree sparrow'], ga: ['가', ''], hab: 'street', sea: ALL, time: 'day', flee: 'fly', sc: 2.2, cap: 999, come: 1, bird: 1, kit: 1,   /* CELLKIT-1 '새 떼' — 자리 = 칸 키트가 고른 마을 길가(그날 키트가 켠 칸만 나옴) */
+    look: ['작고 통통한 갈색 새예요. 머리는 밤색이고, 흰 뺨에 검은 점이 있어요.', 'A small, plump brown bird with a chestnut cap and a black spot on each white cheek.'],
+    live: ['사람이 사는 마을 둘레에 살아요. 처마 밑이나 담 틈에 둥지를 지어요.', 'Lives around towns and villages and nests under eaves or in gaps in walls.'],
+    food: ['풀씨와 낟알을 먹고, 새끼를 기를 때는 곤충을 잡아 먹여요.', 'Eats seeds and grain, and feeds insects to its chicks.'],
+    win: ['우리나라에서 일 년 내내 사는 텃새예요. 겨울에는 여럿이 무리 지어 다녀요.', 'It lives in Korea all year round. In winter sparrows move about in flocks.'],
+    care: ['뛰어가면 놀라 한꺼번에 날아올라요. 멀리서 가만히 지켜봐요.', 'Run at them and the whole flock takes off — watch quietly from a distance.'] },
 ];
-const HABN = { tree: ['산 숲 나무 곁', 'by trees in the hill woods'], edge: ['산 숲 가장자리 풀밭', 'grass at the edge of the hill woods'], river: ['강가', 'the riverbank'], water: ['강·연못 물 위', 'on rivers and ponds'], pond: ['연못 물 위', 'on a pond'], paddyEdge: ['논 가장자리', 'the edge of a rice field'], paddyIn: ['논 한가운데', 'out in a rice field'], bigTree: ['마을의 오래된 큰 나무', 'an old, big tree in the village'] };
+const HABN = { tree: ['산 숲 나무 곁', 'by trees in the hill woods'], edge: ['산 숲 가장자리 풀밭', 'grass at the edge of the hill woods'], river: ['강가', 'the riverbank'], water: ['강·연못 물 위', 'on rivers and ponds'], pond: ['연못 물 위', 'on a pond'], paddyEdge: ['논 가장자리', 'the edge of a rice field'], paddyIn: ['논 한가운데', 'out in a rice field'], bigTree: ['마을의 오래된 큰 나무', 'an old, big tree in the village'], street: ['마을 길가·처마 밑', 'town streets and eaves'] };
 const SEAN = { spring: ['봄', 'spring'], summer: ['여름', 'summer'], autumn: ['가을', 'autumn'], winter: ['겨울', 'winter'] }, TIMEN = { day: ['낮', 'daytime'], night: ['밤·새벽', 'night and dawn'], any: ['', ''] };
 for (const w of WILD) { const s = w.sea.length === 4 ? ['일 년 내내', 'all year'] : w.sea.length === 3 ? ['봄~가을', 'spring to autumn'] : [SEAN[w.sea[0]][0], SEAN[w.sea[0]][1]], tm = TIMEN[w.time];
   const pl = w.reed ? [HABN[w.hab][0] + ', 갈대 있는 물가', HABN[w.hab][1] + ' or reedy water'] : HABN[w.hab];   /* 못 만난 칸 귀띔 = 때 · 곳(예: 봄~가을 밤 · 강가) */
@@ -111,6 +117,12 @@ const MODELS = {
   egret: heronLike({ body: 0xf4f4ef, neck: 0xf4f4ef, head: 0xf7f7f3, plume: null, bill: 0xe4c038, leg: 0x2a2a2a, wing: 0xefefe9, tip: 0xe2e2dc }),
   mallard: duckLike({ body: 0xb9b5ad, breast: 0x7a4a34, tail: 0xeeeeea, curl: 0x1e1e1e, head: 0x1f6b3c, ring: 0xf2f2ee, bill: 0xe2c23e, wing: 0x8a8479, spec: 0x3c4fb5 }),
   spotbill: duckLike({ body: 0x6f5b45, breast: 0x7d6850, tail: 0x3e3226, head: 0xd9cfba, crown: 0x3a2e22, bill: 0x26221e, tip: 0xe8c43a, wing: 0x5e4c3a, spec: 0x2e8a7a }),
+  sparrow: { bird: 1, piv: { 1: [0, 0.09, 0.04], 2: [0, 0.07, -0.05], 3: [0.032, 0.085, 0], 4: [-0.032, 0.085, 0], 5: [0.015, 0.03, 0], 6: [-0.015, 0.03, 0] }, P: [   /* 참새(CELLKIT-1 · 밤색 머리 · 흰 뺨 검은 점 · 검은 턱) */
+    E(0, 0x8a6440, 0, 0.065, -0.005, 0.035, 0.032, 0.055, -0.15), E(0, 0xd8ccb8, 0, 0.056, 0.012, 0.03, 0.026, 0.042),
+    E(1, 0x7a4a2a, 0, 0.1, 0.04, 0.027, 0.026, 0.03), E(1, 0xf0ece0, 0, 0.092, 0.047, 0.026, 0.017, 0.024), CN(1, 0x2a2a2a, 0, 0.094, 0.072, 0.008, 0.008, 0.022), B(1, 0x1a1a1a, 0, 0.081, 0.054, 0.014, 0.01, 0.008),
+    B(2, 0x5a4030, 0, 0.07, -0.075, 0.03, 0.008, 0.05, 0.25),
+    ...LR((s, k) => [B(1, 0x111111, s * 0.021, 0.103, 0.055, 0.005, 0.005, 0.005), B(1, 0x1a1a1a, s * 0.026, 0.09, 0.042, 0.004, 0.008, 0.008),
+      B(3 + k, 0x7a5636, s * 0.1, 0.085, -0.01, 0.14, 0.008, 0.06), B(3 + k, 0x3e2a1c, s * 0.15, 0.085, -0.02, 0.05, 0.01, 0.05), B(5 + k, 0xb08a6a, s * 0.015, 0.016, 0, 0.005, 0.03, 0.005), B(5 + k, 0xb08a6a, s * 0.015, 0.002, 0.008, 0.012, 0.004, 0.018)]) ] },
   owl: { bird: 1, piv: { 1: [0, 0.17, 0], 2: [0, 0.07, -0.04], 3: [0.055, 0.15, 0], 4: [-0.055, 0.15, 0], 5: [0.025, 0.03, 0], 6: [-0.025, 0.03, 0] }, P: [   /* 솔부엉이(앉은 모습 · 부위 7 = 앉은 가지 — 날 때 숨김) */
     E(0, 0x5a4330, 0, 0.11, -0.005, 0.062, 0.095, 0.058, 0.12), E(0, 0xe8dfcf, 0, 0.1, 0.022, 0.048, 0.075, 0.042, 0.12),
     ...[[0.016, 0.125], [-0.016, 0.125], [0, 0.095], [0.02, 0.07], [-0.02, 0.07]].map(([x, y]) => B(0, 0x7a5a3c, x, y, 0.06, 0.008, 0.024, 0.006, 0.12)),
@@ -154,7 +166,7 @@ export function drawWild(cv, w, o = {}) { const M = MODELS[w.id], g = cv.getCont
   polys.sort((a, b) => a.d - b.d); g.lineJoin = 'round';
   for (const P of polys) { g.beginPath(); P.P.forEach(([u, v], i) => { const X = ox + u * k, Y = oy - v * k; if (i) g.lineTo(X, Y); else g.moveTo(X, Y); }); g.closePath(); g.fillStyle = o.sil ? o.sil : shade(P.h, P.far ? 0.78 : 1); g.fill(); if (!o.sil) { g.strokeStyle = 'rgba(40,30,20,.35)'; g.lineWidth = Math.max(1, W / 220); g.stroke(); } }   /* sil = 못 만난 칸 실루엣(한 색) */
   if (w.float && o.bg) { g.fillStyle = 'rgba(120,170,200,.55)'; g.fillRect(0, gy, W, H - gy); } }
-const BG = { bigTree: ['#e7efd8', '#9cbf7a'], tree: ['#e7efd8', '#9cbf7a'], edge: ['#e7efd8', '#b7cf8a'], river: ['#e2eef2', '#9cc4d4'], water: ['#e2eef2', '#7fb0c8'], pond: ['#e2eef2', '#7fb0c8'], paddyEdge: ['#eef2da', '#a9c46e'], paddyIn: ['#eef2da', '#a9c46e'] };
+const BG = { bigTree: ['#e7efd8', '#9cbf7a'], tree: ['#e7efd8', '#9cbf7a'], edge: ['#e7efd8', '#b7cf8a'], river: ['#e2eef2', '#9cc4d4'], water: ['#e2eef2', '#7fb0c8'], pond: ['#e2eef2', '#7fb0c8'], paddyEdge: ['#eef2da', '#a9c46e'], paddyIn: ['#eef2da', '#a9c46e'], street: ['#eef0ea', '#c9c4b8'] };
 
 // ── 마을 쪽이 넘기는 것(A): map · T3 · GAME · id · ANM(town_anim) · root() · on() 마을 모습인가 · inb() 실내 · lang() · sea() 놀이 계절 · night() 0·0.5·1 · hour() · busy() 창·놀이·잠 · ride() 탈것·배·헤엄 · bike()
 //   bounds() → [x0, z0, x1, z1] · bushes() 떨기나무 · wAt(x, z) 물 갈래(1 강 · 2 연못 · 3 바다) · sdAt 물가까지 거리(물 안 −) · waterY(갈래) · region(x, z) · treeNear(x, z, r) · trees() → [{ x, z, s }] · forests() 숲·산 모양 · rice() 논 모양
@@ -177,7 +189,7 @@ export function createWild(A) {
   function init() { const t0 = performance.now(); clear(); if (!A.on()) return; on = true; RI = A.rice(); const R = A.rng('wild:' + A.id), mix = a => { for (let i = a.length - 1; i > 0; i--) { const j = (R() * (i + 1)) | 0; const t9 = a[i]; a[i] = a[j]; a[j] = t9; } return a; };
     const [bx0, bz0, bx1, bz1] = A.bounds(), FO = A.forests(), inFo = (x, z) => FO.some(sh => A.inShape(sh, x, z));
     const woods = mix(A.trees().filter(t => A.region(t.x, t.z) === '산' || inFo(t.x, t.z))), BU = A.bushes(), bushy = (x, z) => BU.some(b => Math.abs(b.x - x) < 2.4 && Math.abs(b.z - z) < 2.4);   /* 덤불 속에 숨지 않게 */
-    const C = { tree: [], edge: [], river: [], water: [], pond: [], paddyEdge: [], paddyIn: [], reed: [], bigTree: [] };
+    const C = { tree: [], edge: [], river: [], water: [], pond: [], paddyEdge: [], paddyIn: [], reed: [], bigTree: [], street: A.kitBirds ? A.kitBirds() : [] };   /* street = 칸 키트 참새 자리(무리 = 칸마다 둘~셋 · 키트가 이미 간격을 둠) */
     for (const t of mix(A.bigTrees().slice())) { if (C.bigTree.length >= 40) break; const s9 = t.s || 1, ph = (s9 >= 1.45 ? 1.6 : 1.2) * s9, a = R() * 6.283, x = t.x + Math.cos(a) * 0.5, z = t.z + Math.sin(a) * 0.5, gx = t.x + Math.cos(a) * 2.6, gz = t.z + Math.sin(a) * 2.6;   /* 솔부엉이 = 큰 나무 아래 가지(잎 덩어리 밑 · 줄기를 등지고) */
       if (A.region(t.x, t.z) === '시내' || !A.okLand(gx, gz)) continue; const g = A.gy(t.x, t.z); C.bigTree.push({ x, z, y: g + ph, gy: g, ry: Math.atan2(Math.cos(a), Math.sin(a)) }); }
     for (const [rx, rz] of mix(A.reeds().slice())) { if (C.reed.length >= 40) break; let dw = null; for (const [dx, dz] of [[1, 0], [0, 1], [-1, 0], [0, -1], [0.7071, 0.7071], [-0.7071, 0.7071], [0.7071, -0.7071], [-0.7071, -0.7071]]) if (A.wAt(rx + dx * 1.8, rz + dz * 1.8)) { dw = [dx, dz]; break; }   /* 개구리 = 갈대 무리 곁 물가(뭍 쪽으로 한 걸음) */
@@ -193,14 +205,15 @@ export function createWild(A) {
       if (sd > -1.4 && sd < -0.4) { let dw = null, bd = sd; for (const [dx, dz] of DIR) { const s2 = A.sdOf(sh, px + dx * 2, pz + dz * 2); if (s2 < bd) { bd = s2; dw = [dx, dz]; } } if (dw) C.paddyEdge.push({ x: px, z: pz, dw }); }
       else if (sd < -4) C.paddyIn.push({ x: px, z: pz }); } }
     for (const k in C) mix(C[k]);
-    const GAP = { chipmunk: 30, waterdeer: 45, heron: 35, otter: 45, mallard: 28, spotbill: 22, frog: 22, egret: 30, owl: 40 };
+    const GAP = { chipmunk: 30, waterdeer: 45, heron: 35, otter: 45, mallard: 28, spotbill: 22, frog: 22, egret: 30, owl: 40, sparrow: 1 };
     const zip = (a, b) => { const o = []; for (let i = 0; i < Math.max(a.length, b.length); i++) { if (i < b.length) o.push(b[i]); if (i < a.length) o.push(a[i]); } return o; };   /* 개구리 = 갈대 물가와 논 가장자리를 번갈아 */
     for (const w of WILD) { const pool = w.id === 'otter' ? C.river.filter(c => !['읍내', '시내'].includes(c.rg)) : w.hab === 'water' ? C.water : w.reed ? zip(C[w.hab], C.reed) : C[w.hab]; LAND[w.id] = pool.slice(0, 60);   /* 수달 = 맑은 강(마을 한가운데·시내 강가 X) · 날아가 앉을 곳 = 같은 서식지 후보 */
+      if (w.kit) { for (const c of pool) SP.push(spot(w, c)); continue; }   /* CELLKIT-1: 키트 자리는 그대로(무리라 8m 간격 규칙 X) */
       let n = 0; for (const c of pool) { if (n >= w.cap) break; if (SP.some(s => (s.w === w && Math.hypot(s.hx - c.x, s.hz - c.z) < GAP[w.id]) || Math.hypot(s.hx - c.x, s.hz - c.z) < 8)) continue; SP.push(spot(w, c)); n++; } }
     for (let i = 0; i < MAXA; i++) { const h = A.map.interact.add({ kind: 'game', x: 0, z: 0, y: -999, r: 4, label: '', use: () => { const s = HH[i] && HH[i].s; if (s) look(s); } }); h.hot.off = true; A.enth.push(h); HH.push({ h, s: null }); }
     const root = A.root(); for (const w of WILD) if (SP.some(s => s.w === w)) { const h = meshOf(w); if (root && h.m.parent !== root) root.add(h.m); }
     buildMs = Math.round(performance.now() - t0); lastAct = ''; }
-  function spot(w, c) { const y = c.y ?? (w.float ? A.waterY(c.wk || 1) : A.gy(c.x, c.z)); return { j: SP.length, w, hx: c.x, hz: c.z, hy: y, gy: c.gy ?? y, ry0: c.ry, reed: !!c.reed, wk: c.wk || 0, dw: c.dw || null, tr: c.tr || null, x: c.x, z: c.z, y, ry: c.ry ?? Math.atan2(c.dw ? c.dw[0] : Math.cos(c.x), c.dw ? c.dw[1] : Math.sin(c.z)), rx: 0, md: 0, st: 0, until: 0, act: false, i: -1, hh: -1, d: 1e9, calm: 0, vis: 1, mv: { k: '', t: 0, T: 1, x0: 0, z0: 0, y0: 0, x1: 0, z1: 0, y1: 0, ys: new Float32Array(7), nx: '' } }; }
+  function spot(w, c) { const y = c.y ?? (w.float ? A.waterY(c.wk || 1) : A.gy(c.x, c.z)); return { j: SP.length, w, kc: c.kc || '', hx: c.x, hz: c.z, hy: y, gy: c.gy ?? y, ry0: c.ry, reed: !!c.reed, wk: c.wk || 0, dw: c.dw || null, tr: c.tr || null, x: c.x, z: c.z, y, ry: c.ry ?? Math.atan2(c.dw ? c.dw[0] : Math.cos(c.x), c.dw ? c.dw[1] : Math.sin(c.z)), rx: 0, md: 0, st: 0, until: 0, act: false, i: -1, hh: -1, d: 1e9, calm: 0, vis: 1, mv: { k: '', t: 0, T: 1, x0: 0, z0: 0, y0: 0, x1: 0, z1: 0, y1: 0, ys: new Float32Array(7), nx: '' } }; }
   function clear() { for (const s of SP) s.act = false; SP.length = 0; ACT.length = 0; MOV.length = 0; for (const k in MESH) { const h = MESH[k]; h.m.count = 0; h.m.visible = false; if (h.m.parent) h.m.parent.remove(h.m); } for (const o of HH) o.h.remove(); HH.length = 0; on = false; near = false; if (crouchOn) { crouchOn = false; try { A.map.player.crouch(false); } catch (e) { /* 이미 나감 */ } } }
   // 종마다 인스턴스 자리 다시 매김(나온 동물이 바뀔 때만)
   function pack(w) { const h = MESH[w.id]; if (!h) return; let n = 0; for (const s of ACT) if (s.w === w) { s.i = n++; put(s); } h.m.count = n; h.m.visible = n > 0; }
@@ -211,7 +224,7 @@ export function createWild(A) {
     for (; j < HH.length; j++) { HH[j].s = null; HH[j].h.hot.off = true; } }
   // 1초 칸: 계절·때·거리로 나올 동물 고르기(가까운 12마리) · E 자리 · 쪼그리기 켜고 끄기 · 처음 본 종 알림
   function sec() { if (!on || !SP.length) return; const t0 = performance.now(), me = A.map.player.pos(), t = now(), inb = !!A.inb();
-    for (const s of SP) { if (s.st === 3 && t >= s.until) { home(s); } s.d = Math.hypot(s.x - me.x, s.z - me.z); s.ok = !inb && s.st !== 3 && avail(s.w) && s.d < (s.act ? 90 : 80); }
+    for (const s of SP) { if (s.st === 3 && t >= s.until) { home(s); } s.d = Math.hypot(s.x - me.x, s.z - me.z); s.ok = !inb && s.st !== 3 && avail(s.w) && s.d < (s.act ? 90 : 80) && (!s.kc || !A.kitOn || A.kitOn(s.kc, 'birds')); }   /* CELLKIT-1: 참새 = 그날 키트가 그 칸에 '새 떼'를 켰을 때만 */
     for (let i = ACT.length - 1; i >= 0; i--) { const s = ACT[i]; if (!s.ok) { s.act = false; ACT.splice(i, 1); const m9 = MOV.indexOf(s); if (m9 >= 0) MOV.splice(m9, 1); if (s.st !== 3) home(s); } }
     if (ACT.length < MAXA) { const C9 = SP.filter(s => s.ok && !s.act).sort((a, b) => a.d - b.d); for (const s of C9) { if (ACT.length >= MAXA) break; s.act = true; if (s.st !== 3) home(s); ACT.push(s); } }
     let key = ''; for (const s of ACT) key += s.j + ','; if (key !== lastAct) { lastAct = key; const seen = new Set(); for (const s of ACT) seen.add(s.w); for (const w of WILD) if (MESH[w.id] && (seen.has(w) || MESH[w.id].m.count)) pack(w); }
@@ -305,7 +318,7 @@ export function createWild(A) {
       SHOT.push({ id: w.id, act: actOf(s), fr: +fr.toFixed(3), d: +d.toFixed(1), cx: +cx.toFixed(2), cy: +cy.toFixed(2), reed: s.reed, j: s.j }); }
     SHOT.sort((a, b) => b.fr - a.fr); return SHOT; }
   function dispose() { clear(); for (const k in MESH) MESH[k].dispose(); for (const k in MESH) delete MESH[k]; }
-  return { init, sec, tick, dispose, dexList, look, shot, actOf: j => SP[j] ? actOf(SP[j]) : null, get on() { return on; }, get near() { return crouchOn; }, can: id => { const w = wildById(id); return !!w && w.sea.includes(A.sea()) && SP.some(s => s.w === w); },
+  return { init, sec, tick, dispose, dexList, look, shot, spots: () => SP.map(s => [s.w.id, Math.round(s.hx), Math.round(s.hz), s.kc]), actOf: j => SP[j] ? actOf(SP[j]) : null, get on() { return on; }, get near() { return crouchOn; }, can: id => { const w = wildById(id); return !!w && w.sea.includes(A.sea()) && SP.some(s => s.w === w); },
     info: () => ({ on, n: SP.length, act: ACT.length, mov: MOV.length, near, crouch: crouchOn, still: +stillT.toFixed(1), stars: { ...ST().n }, title: ST().title || null, buildMs, secMs: +secMs.toFixed(3), secMax: +secMax.toFixed(3), mesh: Object.fromEntries(Object.entries(MESH).map(([k, h]) => [k, { count: h.m.count, vis: h.m.visible, tri: buildTri(k) }])),
       spots: SP.map((s, j) => ({ j, id: s.w.id, hab: s.w.hab, x: +s.x.toFixed(1), z: +s.z.toFixed(1), y: +s.y.toFixed(2), ry: +s.ry.toFixed(2), hx: +s.hx.toFixed(1), hz: +s.hz.toFixed(1), st: s.st, act: s.act, md: s.md, mv: s.mv.k, reed: s.reed, i: s.i, d: +s.d.toFixed(1), ok: avail(s.w) })) }),
     hot: () => HH.map(o => ({ off: o.h.hot.off, x: +o.h.hot.x.toFixed(1), z: +o.h.hot.z.toFixed(1), label: o.h.hot.label, id: o.s ? o.s.w.id : null })),

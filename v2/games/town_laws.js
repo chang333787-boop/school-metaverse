@@ -43,7 +43,7 @@ export const PAIRS = [
   ['sea', '🧂', 'seasalt', 'dissolve'], ['sea', '🐟', 'release', 'swim'], ['sea', '🐚', 'release', 'sink'], ['sea', '🍂', 'float', 'float'], ['sea', '⚪', 'sink', 'sink'], ['sea', '🧈', 'oil', 'float'], ['sea', '🌰', 'cone', 'close'], ['sea', '🥔', 'sink', 'sink'],
   ['fire', '🍠', 'roast', 'roast', '🍠♨'], ['fire', '🥔', 'roast', 'roast', '🥔♨'], ['fire', '🌽', 'roast', 'roast', '🌽♨'], ['fire', '🍄', 'roast', 'roast', '🍄♨'], ['fire', '🐟', 'roast', 'roast', '🐟♨'], ['fire', '🍞', 'roast', 'roast', '🍞♨'],
   ['fire', '🍂', 'fuel', 'flare'], ['fire', '🌰', 'fuel', 'flare'], ['fire', '⚪', 'ondol', 'heat'], ['fire', '🧈', 'melt', 'melt'], ['fire', '🍦', 'melt', 'melt'],
-  ['sun', '🐟', 'dry', 'dry', '🐟☀'], ['sun', '🍠', 'dry', 'dry', '🍠☀'], ['sun', '🍄', 'dry', 'dry', '🍄☀'], ['sun', '🍃', 'dry', 'dry', '🍃☀'], ['sun', '🍦', 'melt', 'melt'],
+  ['sun', '🐟', 'dry', 'dry', '🐟☀'], ['sun', '🍠', 'dry', 'dry', '🍠☀'], ['sun', '🍄', 'dry', 'dry', '🍄☀'], ['sun', '🍃', 'dry', 'dry', '🍃☀'], ['sun', '🍦', 'melt', 'melt'], ['sun', '🥤❄', 'melt', 'melt'],
   ['cold', '🥛', 'freeze', 'freeze', '🥛❄'], ['cold', '🍓', 'freeze', 'freeze', '🍓❄'], ['cold', '🥤', 'freeze', 'freeze', '🥤❄'], ['cold', '🥬', 'hardy', 'keep'], ['cold', '🍦', 'freeze', 'keep'],
   ['snow', '🧂', 'deice', 'deice'], ['snow', '🥤', 'freeze', 'freeze', '🥤❄'],
   ['soil', '🥔', 'tuber', 'sprout', '🥔', 3], ['soil', '🍠', 'tuber', 'sprout', '🍠', 2], ['soil', '🍂', 'compost', 'compost'],

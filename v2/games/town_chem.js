@@ -4,7 +4,7 @@
 //   그림 둘(그리기 +2 이하 · 새 Light X): 점 풀(김·물방울·물보라·홀씨 64점 — 셰이더가 시간 WT·내 자리 UPL 유니폼으로 움직임) · 둥근 판 인스턴스(웅덩이·녹은 물·논 얼음 판·불꽃·재·민들레)
 //   연못 얼음 = 기존 연못 재질에 얼음 값 하나(그리기 0) · 지어내지 않음 = 논·연못·캠핑장·공원이 없는 마을이면 그 규칙은 꺼짐
 //   저장 = GAME.S.chem(알아낸 규칙·웅덩이 물기·얼음·모닥불·녹은 물·민들레 씨) · 몸 젖음은 저장 X(세션)
-import { LAWS, PAIRS, AT, ORDER } from './town_laws.js?v=3';   // LAWS-1 실험 표(가방 물건 × 자리)
+import { LAWS, PAIRS, AT, ORDER } from './town_laws.js?v=4';   // LAWS-1 실험 표(가방 물건 × 자리)
 export const CHEM_V = 1;
 // 요소 표: [그림, 한, 영]
 export const ELEM = { water: ['💧', '물', 'Water'], fire: ['🔥', '불', 'Fire'], wind: ['🌬', '바람', 'Wind'], cold: ['❄️', '추위', 'Cold'], sun: ['☀️', '햇빛', 'Sunlight'] };
@@ -145,7 +145,9 @@ export function createChem(A) {
           const Ls = L0 / Math.max(1, Math.ceil(L0 / 5)), T0 = Math.floor(t / Ls) * Ls; let ym = -1e9; for (const T of [T0, T0 + Ls]) for (const q of [-half - 0.1, half + 0.1]) ym = Math.max(ym, A.rty(a[0] + ux * T + px * (o * sg + q), a[1] + uz * T + pz * (o * sg + q)));   /* 높이 = 인도 판(5m 조각 네 귀) 가장 높은 곳 위 */
           cand.push({ x, z, y: ym + 0.14, ry: Math.atan2(ux, uz), rw: Math.max(0.35, Math.min(0.85, half)), rl: Math.max(0.35, Math.min(0.85, half)) + 0.5 + R() * 0.5, sc: R() * (low ? 1.6 : 1) * (1 + 2.5 * Math.exp(-dG / 260)) }); } }
       cand.sort((p, q) => q.sc - p.sc);
-      for (const c of cand) { if (PD.length >= 40) break; if (PD.some(p => Math.abs(p.x - c.x) < 14 && Math.abs(p.z - c.z) < 14)) continue; c.th = R() * 0.55; c.sz = -1; c.dq = -1; c.sp = 0; PD.push(c); } }
+      for (const c of cand) { if (PD.length >= 40) break; if (PD.some(p => Math.abs(p.x - c.x) < 14 && Math.abs(p.z - c.z) < 14)) continue; c.th = R() * 0.55; c.sz = -1; c.dq = -1; c.sp = 0; PD.push(c); }
+      const PF = A.pdPref ? A.pdPref() : null; if (PF && PF.size) { const has = new Set(PD.map(p => A.cell(p.x, p.z))), R2 = A.rng('chem-pd2:' + A.id);   /* CELLKIT-1: 칸 키트가 웅덩이를 고를 수 있는 칸마다 하나(처음 40자리는 그대로 · 그 뒤에 더함) */
+        for (const c of cand) { const k = A.cell(c.x, c.z); if (!PF.has(k) || has.has(k) || PD.some(p => Math.abs(p.x - c.x) < 14 && Math.abs(p.z - c.z) < 14)) continue; has.add(k); c.th = R2() * 0.3; c.sz = -1; c.dq = -1; c.sp = 0; PD.push(c); } } }
     const splashAt = (x, y, z) => { for (let i = 0; i < 14; i++) { const a = Math.random() * 6.283, v = 1.0 + Math.random() * 1.3; emit(2, x + Math.cos(a) * 0.2, y + 0.04, z + Math.sin(a) * 0.2, Math.cos(a) * v, 2.0 + Math.random() * 1.6, Math.sin(a) * v, 0.6 + Math.random() * 0.25, 0.1, 0.95, false, 0); } };
     function splash(p) { if (!ok() || p.sz <= 0 || A.inb()) return; const t = now(); if (t - (p.t9 || 0) < 0.5) return; p.t9 = t; const me = map.player.pos(); splashAt(me.x, p.y, me.z); p.sp = 1;
       if (map.tone) { map.tone(620, 0, 0.12, 'sine', 0.1, 190); map.tone(1300, 0.03, 0.09, 'triangle', 0.05, 420); } if (!C().spl) { C().spl = 1; A.GAME.mark(); map.hud.toast(en() ? '🌧 Splash! Puddles form after rain' : '🌧 첨벙! 비가 온 뒤라 웅덩이가 생겼어요', 2.4); } }
@@ -272,11 +274,12 @@ export function createChem(A) {
         else { put(i + 2, 0, 0, 0); put(i + 3, 0, 0, 0); } }); }
     function blow(s) { if (!ok() || s.st !== 'h') return; const c = C(), day = S().day; c.blown[SPOT.indexOf(s)] = day; A.GAME.mark(); s.hot.hot.off = true;
       try { map.player.act('shoes', { at: [s.x, s.y, s.z] }); } catch (e) { /* 몸짓 없음 */ }
-      setTimeout(() => { if (!ok()) return; const W = windOf(day); s.st = '?'; spotDraw(s, A.sea()); flush();
+      setTimeout(() => { if (!ok()) return; s.st = '?'; spotDraw(s, A.sea()); flush(); fly(s, day); }, 900); }
+    function fly(s, day) { const c = C(), W = windOf(day);   /* CELLKIT-1: 홀씨 날리기·앉기·알림 = 공원 민들레와 보도 틈 민들레(blowAt)가 같이 씀 */
         for (let i = 0; i < 20; i++) { const [px, pz, py] = s.pf[i % 3], v = 2.4 + Math.random() * 1.2, sp = (Math.random() - 0.5) * 0.5, cx = W.x * Math.cos(sp) - W.z * Math.sin(sp), cz = W.x * Math.sin(sp) + W.z * Math.cos(sp); emit(3, px + (Math.random() - 0.5) * 0.2, py + 0.42, pz + (Math.random() - 0.5) * 0.2, cx * v, 0.25 + Math.random() * 0.35, cz * v, 5 + Math.random() * 1.5, 0.13, 0.95, false, i * 0.05); }
         let land = null; for (const sp of [0, 0.3, -0.3, 0.6, -0.6, 0.9, -0.9]) { for (const R of [22, 16, 28, 12, 34, 8]) { const a = W.a + sp, x = s.x + Math.sin(a) * R, z = s.z - Math.cos(a) * R; if (A.okGround(x, z) && !A.inSchool(x, z) && [[6, 0], [-6, 0], [0, 6], [0, -6]].every(([u, v]) => A.walk(x + u, z + v))) { land = [x, z, R]; break; } } if (land) break; }   /* 바람 쪽 흙(빈 땅 · 마을 안)에 앉음 */
         if (land) { c.seeds.push({ x: +land[0].toFixed(1), z: +land[1].toFixed(1), d: day + 3, k: W.k, r: land[2] }); if (c.seeds.length > 6) c.seeds.shift(); A.GAME.mark(); }
-        const dw = tx(DIR8[W.k]); map.hud.toast(land ? (en() ? '🌬 The wind blows ' + dw + ' — the seeds fly that way. Look over there in three days' : '🌬 바람이 ' + dw + '쪽으로 불어 홀씨가 날아가요 — 사흘 뒤에 그쪽을 살펴봐요') : (en() ? '🌬 The wind blows ' + dw + ' — the seeds flew over water or road with no soil to land on. Try again when the wind changes' : '🌬 바람이 ' + dw + '쪽으로 불어 홀씨가 흙이 없는 곳(물·길)으로 날아갔어요 — 바람이 바뀐 날 또 불어 봐요'), 3.6); }, 900); }
+        const dw = tx(DIR8[W.k]); map.hud.toast(land ? (en() ? '🌬 The wind blows ' + dw + ' — the seeds fly that way. Look over there in three days' : '🌬 바람이 ' + dw + '쪽으로 불어 홀씨가 날아가요 — 사흘 뒤에 그쪽을 살펴봐요') : (en() ? '🌬 The wind blows ' + dw + ' — the seeds flew over water or road with no soil to land on. Try again when the wind changes' : '🌬 바람이 ' + dw + '쪽으로 불어 홀씨가 흙이 없는 곳(물·길)으로 날아갔어요 — 바람이 바뀐 날 또 불어 봐요'), 3.6); }
     function flowerDraw(sea) { const c = C(), key = c.seeds.map(r => r.x + ':' + r.d).join('|') + ':' + S().day + ':' + (sea === 'winter'); if (flk === key) return; flk = key; FLW.length = 0;   /* 꽃 = 씨가 앉은 둘레 2.5m에 다섯 송이(빈 땅만) · 겨울엔 쉼 */
       for (let n = 0; n < 6; n++) { const r = c.seeds[n], base = fl0 + n * 20, bloom = r && S().day >= r.d && sea !== 'winter', R = A.rng('chem-fl:' + (r ? r.x + ':' + r.z : n));
         for (let k = 0; k < 5; k++) { const i = base + k * 4; let x = 0, z = 0, y = 0, good = false; if (bloom) { x = r.x + (R() - 0.5) * 5; z = r.z + (R() - 0.5) * 5; good = A.okGround(x, z); y = A.gy(x, z); }
@@ -289,7 +292,8 @@ export function createChem(A) {
       hots: () => { for (const s of SPOT) { s.hot = A.map.interact.add({ kind: 'game', x: s.x, z: s.z, y: s.y, r: 1.7, label: ' ', use: () => blow(s) }); s.hot.hot.off = true; A.enth.push(s.hot); } },
       info: o => { const c = C(); o.spots = SPOT.map(s => ({ x: +s.x.toFixed(1), z: +s.z.toFixed(1), st: s.st })); o.seeds = c.seeds.slice(); o.flowers = FLW.length; o.wind = windOf(S().day).k; },
       set: o => { const c = C(); if (o.blown === null) c.blown = {}; if (o.seedsDue) for (const r of c.seeds) r.d = S().day; },
-      api: { blow: i => { const s = SPOT[i | 0]; if (s) blow(s); return !!s; }, wind: d => windOf(d ?? S().day) } }; }
+      api: { blow: i => { const s = SPOT[i | 0]; if (s) blow(s); return !!s; }, wind: d => windOf(d ?? S().day),
+        blowAt: (x, y, z) => { if (!ok()) return false; const s = { x, z, y, pf: [[x, z, y], [x + 0.05, z + 0.03, y], [x - 0.04, z + 0.05, y]] }; setTimeout(() => { if (ok()) fly(s, S().day); }, 900); return true; } } }; }   /* CELLKIT-1 보도 틈 민들레(그림은 칸 키트가 그림) */
 
   // ───────── LAWS-1 🧪 실험: 가방 물건 × 그 자리(물·바다·불·햇볕·추위·눈·흙·바람) — 표 = town_laws.js · 가방(I) 칸 밑 단추 · 그 자리에서 몸으로 일어남 ─────────
   //   그림 = 그림 글자 판(스프라이트) 다섯까지(하는 중 하나 + 널어 둔 것 넷) · 움직임은 실험하는 몇 초 동안만 rAF · 둥근 판 = 섞인 물빛·제설 자국·싹
@@ -401,7 +405,11 @@ export function createChem(A) {
     const P9 = A.openP(h, false, 'chem'); P9.onclick = e => { const b = e.target.closest('button'); if (b && b.dataset.a === 'x') A.closeP(); }; return P9; }
   BOOK = { open: bookOpen, tab: () => A.nb(['chem', '🔬', '규칙', 'Rules', () => bookOpen(), 1]) };
 
-  const RS = [mkDry(), mkPuddle(), mkIce(), mkFire(), mkMelt(), mkSeed(), mkLaws()];   /* 규칙 차례(1초 칸에서 이 차례로 돎) */
+  // ───────── CELLKIT-1 칸 키트 칸(지렁이·개미·나방·얼음·민들레·우편함·분필 — 둥근 판 192칸을 빌려 줌 · 그리기 +0) ─────────
+  function mkKit() { const NK = 192; let k0 = -1, g9 = 0;
+    return { id: 'kit', slots: n => { k0 = n; return n + NK; }, reset: () => { g9++; }, sec: () => {},
+      api: { kitReady: () => on && k0 >= 0 && !!DM, kitGen: () => g9, kitPut: (i, ...a) => { if (k0 >= 0 && i >= 0 && i < NK) put(k0 + i, ...a); }, kitFlush: () => flush(), kitEmit: (...a) => { if (!PT) return; emit(...a); } } }; }
+  const RS = [mkDry(), mkPuddle(), mkIce(), mkFire(), mkMelt(), mkSeed(), mkLaws(), mkKit()];   /* 규칙 차례(1초 칸에서 이 차례로 돎) */
 
   // ───────── 짓기(setEntries마다 · 실제 짓기는 첫 1초 칸) ─────────
   //   setEntries는 표시만(pend) — 첫 짓기는 마을의 아래쪽 선언보다 먼저 돎 → 그때 마을 함수를 부르면 TDZ로 마을이 통째로 멈춤(10-19 실측)

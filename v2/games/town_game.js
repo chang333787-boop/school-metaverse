@@ -73,7 +73,7 @@ export const itemName = (e, en) => { const I = ITEMS[e]; return I ? (en ? I[1] :
 // REW-1 보상 하루 한도(사용자 10-20 '곤충 하나 관찰하니까 관찰 레벨 무한 복사 · 되풀이 또 요소 없어?' · docs/systems/town_reward_cap.md): 생김(일·줍기·관찰·보상)은 모두 이 문 하나를 지남
 //   부르는 쪽 = src 꼬리표만('갈래:자리' · 예 'job:pasture' · 'bug:ant' · 'ev:bus') · 'mv:'(장터 팔기·되돌리기·교환·요리 바꾸기)와 'story'(이야기 보상 · 장마다 한 번)는 한도 밖
 //   ① 같은 출처 = 게임 하루 n번(솜씨 RW_XP · 물건·돈 RW_GEN) ② 하트 = 이웃마다 하루 +3 ③ 실제 날짜(YYYYMMDD) 하루 생김 총량 = 게임 하루 몫의 3배(잠 되풀이 구멍)
-export const RW_XP = { job: 6, bus: 3, book: 1, stars: 1, summit: 1, boat: 2, stones: 3, metro: 3, sell: 8, buy: 6, away: 4, bundle: 6, mush: 8, farm: 6, cook: 8, quiz: 2, cell: 1, bug: 2, wild: 2, shore: 2, fish: 2, worm: 2, sweep: 6, flower: 6, photo: 1 };   /* 꼬리표 갈래(앞 ':' 전) → 하루 몇 번 · 없는 갈래 = 3 */
+export const RW_XP = { job: 6, bus: 3, book: 1, stars: 1, summit: 1, boat: 2, stones: 3, metro: 3, sell: 8, buy: 6, away: 4, bundle: 6, mush: 8, farm: 6, cook: 8, quiz: 2, cell: 1, bug: 2, wild: 2, shore: 2, fish: 2, worm: 2, sweep: 6, flower: 6, photo: 1, kit: 2 };   /* CELLKIT-1 칸 키트 = 줄마다(kit:<줄>) 하루 두 번 */   /* 꼬리표 갈래(앞 ':' 전) → 하루 몇 번 · 없는 갈래 = 3 */
 export const RW_XP_DEF = 3, RW_GEN = { job: 6, bake: 2, photo: 1, table: 1, card: 2 }, RW_HEART = 3;   /* TABLE-1: 판 놀이 고수를 이기면 손님이 사 주는 음료 = 하루 한 잔(table:drink) */   /* PHOTO-2: 사진 기사 = 같은 동물 하루 한 번(기사료·솜씨) */   /* HEAL-1 엽서 하트 = 꼬리 없는 출처 'card' 하루 둘(이웃마다 따로 세지 않음) */   /* 일 물건 = 일 갈래마다 하루 6판(칸 수만큼 늘던 구멍) · 제빵 빵 = 하루 두 판(BAKE-1) */
 export const RW_DAY = { v: 20000, x: 48, h: 3 }, RW_RD = 3;   /* 게임 하루 몫: 생김 가치(원 · 물건은 파는 값 · 값 없는 것 100) · 솜씨 갈래마다 경험치 · 이웃마다 하트 → 실제 날짜 하루 = ×3 */
 export const rdNow = () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };

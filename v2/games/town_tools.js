@@ -273,8 +273,8 @@ export function createTools(A) {
 
   // ───────── 🧹 빗자루: 쓸 자리(24m 칸마다 그날 정해짐 · 가을 = 낙엽 · 겨울·눈 = 눈 · 그 밖 = 길가 쓰레기 몇 곳) ─────────
   const swMode = () => { const s = A.season(), w = A.wx(); return s === 'winter' || w === 'snow' ? 'snow' : s === 'autumn' ? 'leaf' : 'litter'; };
-  function cellPiles(cx, cz, d, mode) { const key = d + ':' + mode + ':' + cx + ':' + cz; let L9 = PCACHE.get(key); if (L9) return L9; L9 = []; PCACHE.set(key, L9); const R = A.rng('tsw:' + A.id + ':' + key), p = mode === 'litter' ? 0.16 : 0.5; if (R() > p) return L9;
-    const n = mode === 'litter' ? 1 : R() < 0.4 ? 2 : 1; for (let i = 0; i < 10 && L9.length < n; i++) { const x = cx * CELL + 2 + R() * (CELL - 4), z = cz * CELL + 2 + R() * (CELL - 4); if (A.inSchool(x, z)) continue; if (!(A.side(x, z) || (mode !== 'litter' && A.okGround(x, z)))) continue;
+  function cellPiles(cx, cz, d, mode) { const key = d + ':' + mode + ':' + cx + ':' + cz; let L9 = PCACHE.get(key); if (L9) return L9; L9 = []; PCACHE.set(key, L9); const R = A.rng('tsw:' + A.id + ':' + key), kit = mode !== 'litter' && !!(A.kitPile && A.kitPile(cx * CELL + CELL / 2, cz * CELL + CELL / 2)), p = kit ? 0.9 : mode === 'litter' ? 0.16 : 0.5; if (R() > p) return L9;   /* CELLKIT-1: 칸 키트가 '골목 쓸기'를 고른 칸 = 낙엽·눈 더미가 더 자주·둘 */
+    const n = kit ? 2 : mode === 'litter' ? 1 : R() < 0.4 ? 2 : 1; for (let i = 0; i < 10 && L9.length < n; i++) { const x = cx * CELL + 2 + R() * (CELL - 4), z = cz * CELL + 2 + R() * (CELL - 4); if (A.inSchool(x, z)) continue; if (!(A.side(x, z) || (mode !== 'litter' && A.okGround(x, z)))) continue;
       L9.push({ k: cx + ':' + cz + ':' + L9.length, x: +x.toFixed(2), z: +z.toFixed(2), y: A.gy(x, z), r: R(), mode }); } return L9; }
   function pilesSync(force) { const me = map.player.pos(), cx = Math.floor(me.x / CELL), cz = Math.floor(me.z / CELL), d = day(), mode = swMode(), t = S(); if (t.sw.d !== d) { t.sw = { d, k: {} }; mark(); }
     const sig = cx + ':' + cz + ':' + d + ':' + mode; if (!force && sig === center) return; center = sig; if (mode !== lastMode || d !== lastDay) { PCACHE.clear(); lastMode = mode; lastDay = d; }

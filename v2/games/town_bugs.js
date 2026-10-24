@@ -10,7 +10,7 @@ export const BUGS = [
   { id: 'cicada', hab: 'tree', sea: 'summer', time: 'day', draw: 'cicada', c: ['#4b5a3a', '#cfe3e8'], t: ['참매미', 'Robust cicada'], line: ['나무에서 "맴맴" — 우는 것은 수컷이에요', '"Maem-maem" from the trees — only the males sing'] },
   { id: 'rhino', hab: 'tree', sea: 'summer', time: 'night', draw: 'beetle', c: ['#5a3420', '#2a160c'], t: ['장수풍뎅이', 'Rhinoceros beetle'], line: ['수컷 머리에 긴 뿔 — 밤에 참나무 진을 먹으러 와요', 'The male has a long horn — comes at night to drink oak sap'] },
   { id: 'strider', hab: 'water', sea: 'summer', time: 'day', draw: 'strider', c: ['#5a4a3a', '#2a2018'], t: ['소금쟁이', 'Water strider'], line: ['긴 다리로 물 위를 미끄러지듯 걸어요', 'Glides across the water on long legs'] },
-  { id: 'scarlet', hab: 'water', sea: 'autumn', time: 'day', draw: 'dragonfly', c: ['#e0402e', '#cfe6f0'], t: ['고추잠자리', 'Scarlet skimmer'], line: ['수컷은 몸이 고추처럼 빨개요 — 물가에서 작은 벌레를 잡아먹어요', 'Males are red like chili peppers — they catch small insects by the water'] },
+  { id: 'scarlet', hab: 'water', hab2: 'open', sea: 'autumn', time: 'day', draw: 'dragonfly', c: ['#e0402e', '#cfe6f0'], t: ['고추잠자리', 'Scarlet skimmer'], line: ['수컷은 몸이 고추처럼 빨개요 — 물가에서 작은 벌레를 잡아먹어요', 'Males are red like chili peppers — they catch small insects by the water'] },
   { id: 'grasshopper', hab: 'field', sea: 'autumn', time: 'day', draw: 'hopper', c: ['#7fae3a', '#4d7a22'], t: ['벼메뚜기', 'Rice grasshopper'], line: ['논·풀밭에 살아요 — 긴 뒷다리로 폴짝 뛰어요', 'Lives in rice fields and grass — jumps with long back legs'] },
   { id: 'cricket', hab: 'field', sea: 'autumn', time: 'night', draw: 'cricket', c: ['#3a2a1e', '#1e140c'], t: ['왕귀뚜라미', 'Field cricket'], line: ['가을밤 "귀뚤귀뚤" — 수컷이 날개를 비벼 소리를 내요', '"Chirp chirp" on autumn nights — males rub their wings to sing'] },
   { id: 'mantisegg', hab: 'tree', sea: 'winter', time: 'any', draw: 'ootheca', c: ['#d8c49a', '#8a6a40'], t: ['사마귀 알집', 'Mantis egg case'], line: ['나뭇가지에 붙은 거품 같은 집 — 봄이 되면 새끼 사마귀가 나와요', 'A foamy case on a twig — baby mantises come out in spring'] },
@@ -22,8 +22,8 @@ const TIMEK = { day: [' 낮', ' day'], night: [' 밤', ' night'], any: ['', ''] 
 for (const b of BUGS) { b.icon = '🔍'; b.hint = [SEAK[b.sea][0] + TIMEK[b.time][0] + ' ' + HAB[b.hab][0], SEAK[b.sea][1] + TIMEK[b.time][1] + ', ' + HAB[b.hab][1]]; }   // 도감 빈 칸 귀띔
 export const HABITATS = Object.keys(HAB);
 export const habName = (h, en) => HAB[h] ? HAB[h][en ? 1 : 0] : h;
-// 지금(계절·때) 이 사는 곳에 나오는 곤충 — 여럿이면 자리 번호로 고름(자리마다 다른 친구)
-export function bugAt(hab, sea, night, k) { const L = BUGS.filter(b => b.hab === hab && b.sea === sea && (b.time === 'any' || (b.time === 'night') === !!night)); return L.length ? L[(k >>> 0) % L.length] : null; }
+// 지금(계절·때) 이 사는 곳에 나오는 곤충 — 여럿이면 자리 번호로 고름(자리마다 다른 친구) · hab2 = 둘째 사는 곳(CELLKIT-1 '넓은 곳' open = 가을 공터 위 고추잠자리 — 도감 귀띔은 hab 그대로)
+export function bugAt(hab, sea, night, k) { const L = BUGS.filter(b => (b.hab === hab || b.hab2 === hab) && b.sea === sea && (b.time === 'any' || (b.time === 'night') === !!night)); return L.length ? L[(k >>> 0) % L.length] : null; }
 
 // 그림: 128×128 캔버스(가운데 = 몸) · 위에서 본 모습(나비·잠자리 날개 펼침) — 단순한 낮은 다각형 느낌(실사 X)
 export function drawBug(cv, b) { const g = cv.getContext('2d'), W = cv.width, k = W / 128; g.clearRect(0, 0, W, W); g.save(); g.scale(k, k); g.translate(64, 64); g.lineJoin = 'round'; g.lineCap = 'round';
