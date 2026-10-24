@@ -68,6 +68,7 @@ export function createJobs(A) {
   function stamp(p) { const P9 = passS(), k = keyOf(p); if (!infoOf(p) || P9.v[k]) return false; P9.v[k] = S().day; A.GAME.mark(); const g = infoOf(p).g, st = groupStat()[g]; if (A.passOn && !A.passOn()) return true;   /* INTUIT-1: 여권을 배우기 전 = 도장만 조용히 모음(알림 X) */
     if (st.t && st.v >= st.t && !P9.b[g]) { P9.b[g] = S().day; A.banner(PG[g][0] + ' ' + PG[g][1 + L()] + (en() ? ' — every stamp collected!' : ' 도장을 다 모았어요!'), 3.2); A.sfx('ding'); }
     else A.toast((en() ? '🛂 New stamp: ' : '🛂 여권 도장: ') + A.nameOf(p) + ' (' + PG[g][1 + L()] + ')', 2.4);
+    if (A.feel) A.feel('stamp', A.nameOf(p));   /* FEEL-1 쿵 + 도장 찍힘 */
     const all = groupStat(); if (!P9.b.all && PG_ORDER.every(g9 => !all[g9].t || all[g9].v >= all[g9].t)) { P9.b.all = S().day; A.banner(en() ? '🛂 Town passport complete!' : '🛂 마을 여권을 다 채웠어요!', 3.6); }
     return true; }
   // 할 수 있는 것(있는 것만 단추): 직업 체험 · 들어가기 · 사기
