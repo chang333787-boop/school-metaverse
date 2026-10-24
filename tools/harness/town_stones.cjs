@@ -1,6 +1,6 @@
 // 징검다리 걸어서 건너기 시험(STONES-2 · 사용자 10-18 '징검다리 퀘스트 왜 이래' · '깨면 존나 빠르게 다다다다'): node tools/harness/town_stones.cjs [마을=ourtown] [포트=8002]
 //   돌다리마다 한쪽 둔치에 세우고 W로 걸어 건넘 → 건너편 도착 · 물에 안 빠짐 · '징검다리를 다 건넜어요' 배너 · 👣 도장 · 순간이동 없음 · 다시 건너도 같은 날 보상 X
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] || 'ourtown', PORT = process.argv[3] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
 (async () => { const b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] });

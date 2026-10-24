@@ -3,7 +3,7 @@
 //   덜 익음·알맞음·탐 = 접시 그림·가방·요리 셈이 서로 다름 · 다섯째 판이 첫 판과 꼬임·조건 하나 이상 다름 · 잘한 판 셋 = 다음 꼬임(재료 둘 차례) · 차례가 틀리면 자국
 //   하루 한도(job:kitchen 6판 → 일곱째는 솜씨 0) · 이야기 '요리' 단계 = 첫 꼬임·조건 끔·끝내기만 통과 · 페이지 오류 0
 //   브라우저는 brun.sh 한 자리로 돌림(동시에 하나)
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const path = require('path'), fs = require('fs');
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null; if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });

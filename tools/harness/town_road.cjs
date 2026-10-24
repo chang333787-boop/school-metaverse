@@ -5,7 +5,7 @@
 //   ④ 도움 요청 둘(모자·줍기) — 손 듦 → E → 창 '할 일:' → 도와드릴게요 → 해내기(걸어서 · E) → ❤ · 100원 · 일 솜씨 +2 / 시간 끝 = 실패(벌 X) / 다음에 = 그냥 끝
 //   ④+ 하루 한도 — 같은 이웃 ❤ 하루 한 번 · 100원·솜씨 하루 넷 · 고리 코스 탐험 솜씨 = 코스마다 하루 한 번
 //   ⑤ 움직이다 보면 저절로 손 듦(놀이 시계) · ⑥ 바람에 날아온 종이 → E = 보물 지도 조각(take) · 페이지 오류 0
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };

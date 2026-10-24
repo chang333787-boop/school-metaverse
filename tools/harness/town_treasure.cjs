@@ -6,7 +6,7 @@
 //   ⑤ E 꾹 = 파기 → 상자 · 도감 칸(tmap:갈래) · 찾은 수 · 칭호(단계 처음) · 보상 창
 //   ⑥ 같은 날 두 번 X — 게시판 E = '내일' · 새 지도 X / 다음 날 = 새 지도
 //   ⑦ ★★ 걸음 재기(기준 장소 문 앞 → 카드 📏) · ★★★ 높이 재기(카드 ⛰)
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] || 'ourtown', PORT = process.argv[3] || '8002', LVMAX = +(process.argv[4] || 3), URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
 (async () => { const b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] });

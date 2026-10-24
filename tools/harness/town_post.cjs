@@ -3,7 +3,7 @@
 //   ② 길 막힘 0: 우체국 → 우편함, 우편함 → 다음 우편함(가장 짧은 차례) 빨간 선을 0.5m마다 짚어 몸이 못 지나가는 곳 5m 연속 0(town_route 규칙)
 //   ③ 걸어서(빨간 선을 따라 몸을 옮김) · 자전거로(B) 우편함 E → 배달 · 끝 창 = 지도에 내가 달린 길(파랑) + 첫 꼬임만 가장 짧은 길(옅게) + 내 최고와만 견줌
 //   ④ 등기(꼬임 2): 낮 = 바로 건넴 · 밤 = 첫 E 안내 · 둘째 E 우체국에 맡김(막히지 않음) · 오류 0
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };

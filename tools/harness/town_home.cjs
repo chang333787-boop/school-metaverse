@@ -4,7 +4,7 @@
 //   ③ 잠: 밖 → 우리 집 현관(3m 안) · 0.4초 뒤에도 그 자리 / 우리 집 침대(창 '자고 다음 날') → 하루 마무리가 잠들기 전에 → 침대 곁 · 0.4초 뒤 그대로 · 안 멈춤 / 지하철 안 = 그 자리(우리 집 X)
 //   ④ 내일 기대 적중: 화분 심고 물 → 잠들기 전 창의 '내일' 줄(data-tm) → 다음 날 상태와 견줌(grow · jang · farm)
 //   ⑤ 페이지 오류 0
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };

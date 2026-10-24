@@ -4,7 +4,7 @@
 //   ③ 할 일 알림(버스·책·별 등) 200번 → 솜씨가 늘다 멈춤 ④ 잠 → 일 → 잠 30번 → 실제 날짜 총량(게임 하루 몫 × 3) 안
 //   ⑤ 평소 하루(봇이 E 자리·일터를 고르게 한 번씩) = 한도를 끈 하루와 견줘 ±15% 안 · 페이지 오류 0
 //   브라우저는 brun.sh 한 자리로 돌림(동시에 하나)
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
 (async () => { const T0 = Date.now(), b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const errs = [];

@@ -3,14 +3,14 @@
 //   썰물·밀물에 같은 자리(방파제 끝 · 갯지렁이)에서 다른 고기 · 꼬임 사다리(잘한 판 셋 → 다음 꼬임 · 판 뒤 한 줄) · 도감 = 낚은 것만 · 하루 한도(일터 셋 = 연습 판 · 도구 가방 둘)
 //   도구 낚싯대(3)도 찌가 쏙 → 누르면 같은 줄다리기 → 낚았어요 → 놓아주기(실험 release) · 페이지 오류 0 · 캡처 = scratchpad/fish_shots
 //   --before = 지금 화면만 찍고 끝(갈아 끼우기 전 확인용) · 브라우저는 brun.sh 한 자리로 돌림(동시에 하나)
-const { chromium } = require('playwright');
+const { chromium, RENDER } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const SHOT = process.env.FISH_SHOTS || '/private/tmp/claude-501/-Users-dobuk-Projects-school-metaverse/3596a208-fd90-4cd5-b160-00ac62075cec/scratchpad/fish_shots';
 const BEFORE = process.argv.includes('--before');
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
 (async () => { const T0 = Date.now(), b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const errs = [];
   try { const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage(); p.on('pageerror', e => errs.push(e.message.slice(0, 200))); p.on('console', m => { const t = m.text(); if ((m.type() === 'error' && !/favicon|404|ERR_|pointer lock|WebGL|GPU stall/.test(t)) || /게임 tick 오류/.test(t)) errs.push(t.slice(0, 200)); });
-    const W8 = ms => p.waitForTimeout(ms), ev = (f, a) => p.evaluate(f, a), shot = n => p.screenshot({ path: SHOT + '/' + n + '.png' });
+    const W8 = ms => p.waitForTimeout(ms), ev = (f, a) => p.evaluate(f, a), shot = async n => { if (RENDER) await p.screenshot({ path: SHOT + '/' + n + '.png' }); };   /* FAST-1: 그리기 끔이면 사진 건너뜀(--render면 찍음) */
     const panel = () => ev(() => { const P = document.querySelector('.twn-p'); return P && P.getClientRects().length ? P.textContent.slice(0, 120) : ''; });
     const closeP = () => ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button.sub') || document.querySelector('.twn-p button'); if (b9) b9.click(); });
     const toast = () => ev(() => { const t = document.getElementById('toast'); return t && t.getClientRects().length ? t.textContent : ''; });

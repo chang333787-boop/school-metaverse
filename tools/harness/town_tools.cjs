@@ -2,7 +2,7 @@
 //   도구 다섯을 하나씩 들고(숫자 키) F로 써서 결과가 세상·상태에 남는지: 물뿌리개 = 물 줄어듦·물방울·젖은 자국·모닥불 꺼짐(규칙 fire) · 삽 = 구덩이·지렁이(실험 compost)
 //   낚싯대 = 찌·입질·놓아주기(실험 release) · 돋보기 = 곤충 관찰이 돋보기를 줌 · 흙 들여다보기 · 빗자루 = 쓸 자리가 사라지고 '오늘 깨끗이 한 곳'이 늚 · ☰ 메뉴 🧰 · 키 안내 · 페이지 오류 0
 //   브라우저는 brun.sh 한 자리로 돌림(동시에 하나)
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
 (async () => { const T0 = Date.now(), b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const errs = [];

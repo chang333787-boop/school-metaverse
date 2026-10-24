@@ -2,7 +2,7 @@
 //   ① 빵집 안 화덕 앞 E(걸어서 닿음) → 반죽 판(진짜 끌기 + 단추) → 부풀 자리 → 판 60초 안 · 창 닫힘 · 안 멈춤
 //   ② 기다리는 중 E = 지금 모습 · 게임 60분 뒤(밖) = 알림 한 번 · 굽기(빛깔 → 꺼내기) → 결과 빵 그림 · 🍞 +2 · 규칙 칸 yeast · 문(rwCheck) 꼬리표
 //   ③ 찬 곳 = 납작 + 덜 구움 · 굽다 창을 닫으면 그때 꺼냄(멈춤 X) · 하루 빵 몫(두 판) 뒤 = 연습 · 꼬임 사다리(잘한 판 셋 → 계절 따라 → 내일 아침 빵 반죽 둘) · 오류 0
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };

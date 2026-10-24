@@ -6,7 +6,7 @@
 //   ⑤ 말하는 때: 4m 안 · 걷기 빠르기 이하 · 하루 한 이웃 한 번 · 말풍선 하나(떠 있으면 기다림)
 //   ⑥ 몸: 선물 순간(끄덕·깡충) · ❤3 바구니 곁 선물 · ❤1 손 인사 — 캡처 · 페이지 오류 0
 //   브라우저는 brun.sh 한 자리로 돌림(동시에 하나)
-const { chromium } = require('playwright');
+const { chromium, RENDER } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const path = require('path'), fs = require('fs');
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const SHOT = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || path.join('/private/tmp/claude-501/-Users-dobuk-Projects-school-metaverse/3596a208-fd90-4cd5-b160-00ac62075cec/scratchpad', 'nb_shots');
@@ -97,17 +97,17 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       const pickRep = () => { const N = SM_TOWN.nb(), R = N.reps().filter(r => N.likes(r.k).length), r = R[0] || N.reps()[0]; if (!r) return null; const ry = r.ry || 0, px = r.x + 2.6 * Math.sin(ry), pz = r.z + 2.6 * Math.cos(ry); return { hk: r.hk, k: r.k, x: r.x, z: r.z, g: r.g, px, pz, py: SM_TOWN.ground(px, pz) }; };
       const q = await go(pickRep);
       if (q) { const g = await ev(o => { const N = SM_TOWN.nb(), G = SM_TOWN.game(), S = G.S, e = N.likes(o.k)[0]; S.uses = {}; S.rw = {}; S.bag[e] = (S.bag[e] || 0) + 1; const h0 = S.hearts[o.hk] || 0; SM_TOWN.rules.gift(e); return { e, h0, h1: S.hearts[o.hk] || 0, g: (S.nbt[o.hk] || {}).g }; }, q); await W8(500);
-        try { await p.screenshot({ path: path.join(SHOT, 'nb_gift.png') }); } catch (e) { /* 캡처 실패 */ }
+        if (RENDER) try { await p.screenshot({ path: path.join(SHOT, 'nb_gift.png') }); } catch (e) { /* 캡처 실패 */ }
         ok(g.h1 > g.h0 && g.g === g.e, '좋아하는 선물(' + g.e + ') = 하트 ' + g.h0 + ' → ' + g.h1 + ' · 받은 선물 기억');
         const no = await ev(o => { const N = SM_TOWN.nb(), S = SM_TOWN.game().S, r = N.reps().find(x => x.hk === o.hk); S.uses = {}; const e = r.no; S.bag[e] = 1; const h0 = S.hearts[o.hk]; SM_TOWN.rules.gift(e); return { e, kept: S.bag[e] === 1, same: S.hearts[o.hk] === h0 }; }, q);
         ok(no.kept && no.same, '싫어하는 것(' + no.e + ') = 돌려줌 · 하트 그대로');
         await W8(2600);
         await ev(o => { const N = SM_TOWN.nb(), S = SM_TOWN.game().S; S.hearts[o.hk] = 9; N.basketSync(); }, q); await W8(500);
         const nb3 = await ev(() => SM_TOWN.nb().baskets);
-        try { await p.screenshot({ path: path.join(SHOT, 'nb_basket.png') }); } catch (e) { /* 캡처 실패 */ }
+        if (RENDER) try { await p.screenshot({ path: path.join(SHOT, 'nb_basket.png') }); } catch (e) { /* 캡처 실패 */ }
         ok(nb3 >= 1, '❤3 바구니 곁 선물 ' + nb3 + '곳');
         const wv = await ev(o => { const N = SM_TOWN.nb(), S = SM_TOWN.game().S; S.hearts[o.hk] = 3; S.nbt[o.hk].wv = 0; S.nbt[o.hk].day = 0; const me = { x: o.px, y: o.g, z: o.pz }; const a = (S.nbt[o.hk] || {}).wv; N.sec(me); N.sec({ x: o.x + 1.6, y: o.g, z: o.z + 1.2 }); N.sec({ x: o.x + 1.6, y: o.g, z: o.z + 1.2 }); return { a, b: S.nbt[o.hk].wv, day: S.day }; }, q);
-        await W8(600); try { await p.screenshot({ path: path.join(SHOT, 'nb_wave.png') }); } catch (e) { /* 캡처 실패 */ }
+        await W8(600); if (RENDER) try { await p.screenshot({ path: path.join(SHOT, 'nb_wave.png') }); } catch (e) { /* 캡처 실패 */ }
         ok(wv.b === wv.day, '❤1 2.5m 안 = 그날 처음 손 인사'); }
       else ok(false, '선물 줄 이웃 없음'); }
     ok(!errs.length, '페이지 오류 0' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));

@@ -4,7 +4,7 @@
 //   방 검사(SM_TOWN.indoor.check — 있으면): 들어간 자리에서 몸이 갈 수 있는 칸으로 나가기·계산대·요리·앉기 E 자리에 닿는지(위층 = 셈 밖)
 //   마지막: 문 쪽(뒤)으로 걸어가 E로 나가지는지
 //   게이트: 못 움직인 방향 0 · 몸이 상자 안 0 · 닿지 않는 E 자리 0 · 못 나간 방 0
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002', ALL = process.argv.includes('--all');
 (async () => { const b = await chromium.launch({ args: ['--use-gl=angle', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const p = await b.newPage({ viewport: { width: 1280, height: 720 } }); const errs = [];
   p.on('pageerror', e => errs.push(e.message.slice(0, 200))); p.on('console', m => { if (m.type() === 'error' && !/favicon|404|ERR_|pointer lock|CORS|firebasedatabase|Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 200)); });

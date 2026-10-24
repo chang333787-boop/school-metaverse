@@ -4,7 +4,7 @@
 //      엉뚱한 쪽 걷기 → 시간이 쌓임 · 목표 쪽으로 20m 넘게 다가가면 처음부터 · 1초 칸 ≤ 1ms
 //   ③ 화면 글: 도감·여권·가방·큰 지도에 '%'·'n / N' 0 · ④ J 제한: 안 가 본 칸 순간이동 0(길 보기) · 가 본 칸·학교는 그대로
 //   모두 열린 예전 저장(선생님 X = 순간이동 제한이 걸리는 아이)으로 봄
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null;
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };

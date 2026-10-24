@@ -1,6 +1,6 @@
 // 길 안내 빨간 선 시험(ROUTE-2 · 이야기 팀 10-18 '2-1 빨간 선이 마트 뒤에서 건물을 뚫고 문으로'): node tools/harness/town_route.cjs [마을=ourtown] [포트=8002]
 //   장소 문 → 다른 장소 문 길(guide route)을 0.5m마다 짚어 몸이 못 지나가는 곳(map.q.blocked · 양옆 0.6m도 막힘 = 뚫음)이 2m 넘게 이어지면 셈 · 양 끝 1.5m(문 자리)는 뺌 · 0이어야 통과
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] || 'ourtown', PORT = process.argv[3] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 (async () => { const b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); let bad = 0;
   try { const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage(), errs = []; p.on('pageerror', e => errs.push(e.message.slice(0, 160)));

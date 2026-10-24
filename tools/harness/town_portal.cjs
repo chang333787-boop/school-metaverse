@@ -1,7 +1,7 @@
 // 마을 포탈(들어가 볼 수 있는 곳) 자동 시험(INDOOR-1 · 또래 10-15 '드나들 때 규칙 버그 안 생기게'): node tools/harness/town_portal.cjs [마을=ourtown] [포트=8002]
 //   곳마다 3번: ① 들어가기(E 연타 + 들어가기 두 번 = 한 번만 · 덮개 중 J·B) → 나오기 ② 자전거 탄 채 들어가기 → 나오기(자전거 그대로) ③ 들어가서 바로 가기(순간이동) → 다시 들어가서 하늘에서 보기
 //   끝 상태 = OUT · 방 메시 0 · 바깥 보임 · (나오기) 문 앞 1.5~4.5m · 탈것 원래대로 · 높이 한계 원래대로 + 맨 끝에 방 안에서 모습 바꾸기(Y) · 게이트 = 어긋남 0
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] || 'ourtown', PORT = process.argv[3] || '8002';
 (async () => { const b = await chromium.launch({ args: ['--use-gl=angle', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const p = await b.newPage({ viewport: { width: 1280, height: 720 } }); const errs = [], bad = [];
   p.on('pageerror', e => errs.push(e.message.slice(0, 200))); p.on('console', m => { if (m.type() === 'error' && !/favicon|404|ERR_|pointer lock/.test(m.text())) errs.push(m.text().slice(0, 200)); });

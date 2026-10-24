@@ -2,7 +2,7 @@
 //   가장 나쁜 날 = 일터·선물 하루 몫 다 씀(GAME.uses → 99) · 돈 0 · 밤 23시(가게 닫힘 · 시계 멈춤) · 비 — 그래도 이야기 단계는 나아가야 함(docs/systems/town_rules.md 원칙 ①)
 //   ① 1-2 목장 같이 일하기 ② 모자란 물건(감자)이 나는 일터 ③ 이야기 없음 = 연습 판(받는 것 없음) ④ 심부름 사기(닫힌 마트 · 돈 0) ⑤ 가게 둘러보기(닫힌 마트에 들어감)
 //   ⑥ 심부름 선물(하루 하나 다 씀) ⑦ 겨울 텃밭(이야기 = 배추 · 아니면 언제·어떻게 한 줄) ⑧ 여름 논(이야기 = 모내기) ⑨ 저녁·밤까지 쉬기(앞으로만 · 날짜 그대로)
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };

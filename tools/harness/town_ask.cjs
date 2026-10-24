@@ -4,7 +4,7 @@
 //   ② 들은 대로 걸어서 닿나: 일꾼 → (말한 랜드마크) → 목적지 몸 걷기 길이(walkLen) ÷ 걸음 4.2m/s ≤ 3분 · 선 없이 닿으면 반기기·탐험 솜씨·일기 한 줄
 //   ③ 모이는 곳(학교 앞·장터·강가)마다: 둘레 40m 안 걷는 사람 · 소문(그 곳 일꾼이나 지나는 사람이 40m 안에서 말함) · 아침 소식의 소문 자리 · 길 위 부탁 자리
 //   ④ 흔적 지도: 심기·친해지기·동물 만나기 뒤 그 칸에 그림 · J 칸 지도 '내 흔적' → 그 칸 누르기 = 일지 세 줄 · '가기'로만 순간이동(하루 5번 문) · %·'n 칸 중' 0 · 오류 0
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null;
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };

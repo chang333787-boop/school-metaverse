@@ -1,6 +1,6 @@
 // 날마다 바뀌는 의뢰판 시험(BOARD-D · 차례표 7줄 · docs/systems/town_phase1.md): node tools/harness/town_board.cjs [마을=ourtown] [포트=8002]
 //   그날 상황(장날·비·맑은 밤)이 있으면 그 줄이 먼저 · 줄마다 까닭 한 줄 · 날마다 다름(열흘에 서로 다른 할 일 ≥ 6) · 할 일 창 = 받는 것 먼저 · 빈 게시판 = 오늘 할 일 단추 · 오류 0
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
 (async () => { const T0 = Date.now(), b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const errs = [];

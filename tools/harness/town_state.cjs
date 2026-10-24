@@ -8,7 +8,7 @@
 //   끝에 하나 더: 가게 안에서 저장 → 다시 열기 → '📍 이어 하기' 단추 → 같은 확인
 //   --story(STATE-X2 · 10-18 사용자 '퀘스트 하다가 날씨 바꾸니까 게임에 문제 · 문제 생기는 경우 모두 조사'): 상태 = 이야기 단계 갈래마다 하나(쪽지·가기·고르기·한 줄·같이 일하기·심기·지켜보기·계절·비·갬·밤 + 본부 의뢰) · 동작 = 날씨(맑음·비·눈·예보대로 — 날씨 창 단추로) · 잠 · 시간 3시간 건너뛰기 · 계절(날씨 창) · 언어(메뉴 English ↔ 한국어) · 설정 창 열고 닫기 · 새로고침 뒤 이어 하기 · E · J · I
 //     이야기 확인: 장이 사라짐 · 다른 장 · 단계가 되돌아감 · 저절로 넘어감(그 단계가 기다리던 것 — 비 단계에 비 등 — 은 됨) · 할 일 줄이 지금 단계와 다름 · 대화창이 남음 + 위 확인 전부
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const arg = k => { const a = process.argv.find(s => s.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3).split(',') : null; };
 const STORY = process.argv.includes('--story'), ST_T = ['note', 'go', 'choose', 'line', 'work', 'plant', 'watch', 'season', 'rain', 'clear', 'night', 'count'];   /* QUEST-3 count = 소화전 길 차 세기(세는 중) */

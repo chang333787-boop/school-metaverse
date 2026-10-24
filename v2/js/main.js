@@ -18,6 +18,9 @@ var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마�
 
 // TITLE-1: 오프닝을 켤지 — 게이트(?check=1)·검진(?health=1)·사진 대조(?shot)·게임 주소(?game·?tour=1)는 예전 그대로(오프닝 없음). index.html 로딩 막도 같은 규칙
 const QS0 = new URLSearchParams(location.search);
+// FAST-1(10-24 교사 '진도가 느린데 어쩔 수 없는 거야?'): 그리기 끄기 시험 모드 — 주소 ?norender=1 또는 시작 전 window.SM_NORENDER = 1(하네스 tools/harness/pw.cjs가 넣음 · 새로고침에도 남음)
+//   3D 그리기(renderer.render·compile)만 빈 함수로 바꾸고 시뮬레이션·물리·HUD·DOM·SM_TOWN·SD2·rAF 루프·dt는 그대로 · 캔버스는 아주 작게 · 정하는 곳은 여기 한 번 · norender가 없는 게임 주소는 예전과 똑같이 돈다 · docs/systems/town_gates.md
+const NORENDER = QS0.get('norender') === '1' || window.SM_NORENDER === 1;
 const TITLE_ON = !QS0.get('shot') && !QS0.get('game') && !(QS0.get('town') && !window.SM_PROMO) && QS0.get('tour') !== '1' && !location.search.includes('check=1') && !location.search.includes('health=1') && QS0.get('title') !== '0';
 const bootP = (p, s) => { if (TITLE_ON && window.bootP) window.bootP(p, s); };   // 로딩 막대(index.html) — 진짜 단계: 모듈 받음 → 월드 짓기(지난 빌드 시간만큼 차오름) → 첫 프레임
 let FILM_VIEW = null;   // FILM-1: 영상 동안 디테일 거리·가림 컬링을 넓힘({far}) — 높은 드론 샷·지붕 벗긴 실내 샷에서 가구가 사라지지 않게
@@ -59,7 +62,18 @@ const GFX = (() => { const q = new URLSearchParams(location.search), hq = q.get(
   const adapt = !hq && !fix && q.get('adapt') !== '0' && !/[?&](check|health)=1/.test(location.search) && !q.get('shot');
   const aaQ = q.get('aa'), aa = aaQ === '1' ? true : aaQ === '0' ? false : !low && !cros;   // STORY-PERF(10-06): 크롬북도 MSAA 끔(약한 내장 그래픽 — 4배 표본·풀기 대역폭이 프레임을 먹는다 · ?aa=1이면 켬)   // 10-04 교사 '폰으로 하면 계속 떨리고 멀미': 휴대폰도 MSAA(타일 GPU라 싸다 — 가장자리 지글거림이 걸을 때 떨림으로 보였다) · 저사양만 끔
   return { mode: low ? 'low' : mobile ? 'mobile' : cros ? 'cb' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, mobile || low ? 1 : 0.6), ios, shadow: low ? 0 : mobile || cros ? 1024 : 2048, adapt, aa, dev }; })();
+if (NORENDER) { const p = Math.min(0.25, 64 / Math.max(64, innerWidth)); Object.assign(GFX, { dpr: p, cap: p, start: p, floor: p, adapt: false, aa: false, norender: true }); }   // FAST-1: 그리는 판 ≈ 가로 64px(1280 창 = 배율 0.05) · 자동 해상도·MSAA 끔 · 판 갈래(mode)·그림자 값은 그대로(그걸 보고 정하는 게임 규칙이 같게)
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: GFX.aa, powerPreference: 'high-performance' });
+if (NORENDER) {   // FAST-1: 그리기만 건너뜀 — three render가 하던 장면·카메라 행렬 갱신은 그대로 해 둔다(레이·투영·말풍선 자리·getWorldPosition이 그리는 판과 같게) · 셰이더 짓기(compile)도 건너뜀
+  //   '올림'만 흉내: 카메라 안에 드는 메시(three와 같은 보임·층·절두체 검사)는 GPU에 올린 것처럼 onUploadCallback·onAfterRender를 부른다 → 마을이 올린 뒤 비우는 정적 배열(GEOS·armFree)이 그리는 판과 같은 때 비워짐(힙이 같고 '비운 배열 읽기' 버그도 같이 드러남)
+  const fr = new THREE.Frustum(), pm = new THREE.Matrix4(), upv = new WeakMap();
+  const up = (a) => { if (!a) return; const t = a.isInterleavedBufferAttribute ? a.data : a, v = upv.get(t); if (v === undefined || v < t.version) { upv.set(t, t.version); t.onUploadCallback(); } };
+  let S9 = null, C9 = null; const vis = (o) => { if (!(o.isMesh || o.isLine || o.isPoints) || !o.geometry || !o.material || o.material.visible === false || !o.layers.test(C9.layers) || (o.frustumCulled && !fr.intersectsObject(o))) return;
+    const g = o.geometry; for (const k in g.attributes) up(g.attributes[k]); up(g.index); if (o.isInstancedMesh) { up(o.instanceMatrix); up(o.instanceColor); } o.onAfterRender(renderer, S9, C9, g, o.material, null); };   /* 매 프레임 새 함수 X */
+  renderer.render = (s, c) => { if (s && s.matrixWorldAutoUpdate === true) s.updateMatrixWorld(); if (c && c.parent === null && c.matrixWorldAutoUpdate === true) c.updateMatrixWorld(); if (!s || !c) return;
+    pm.multiplyMatrices(c.projectionMatrix, c.matrixWorldInverse); fr.setFromProjectionMatrix(pm); S9 = s; C9 = c; s.traverseVisible(vis); };
+  renderer.compile = () => new Set(); renderer.compileAsync = (s) => Promise.resolve(s);
+}
 // PERF-WIN: 셰이더 오류 검사(getShaderInfoLog·getProgramInfoLog)는 컴파일이 끝날 때까지 주 스레드를 세운다(점검 실측 300~800ms) — 배포판은 끄고 ?debug=1·?check=1에서만 켠다
 renderer.debug.checkShaderErrors = /[?&](debug|check)=1/.test(location.search);
 // MOB-2 그래픽 끊김(WebGL 컨텍스트 잃음): 아이폰은 메모리가 모자라면(영상 재생·다른 앱) 3D 화면을 통째로 잃어 검게 멈춘다 → 알리고 다시 불러온다(도장은 저장돼 있음)
@@ -1454,6 +1468,7 @@ function adaptTick(ts) {
 //  병렬 컴파일 확장(KHR_parallel_shader_compile)이 있으면 GPU 쪽이 따로 짓고, 셰이더 오류 검사를 껐으니 처음 그릴 때 주 스레드가 서지 않는다.
 //  mapapi가 게임을 시작한 뒤에도 부른다(host.prewarm). 지은 수 = SD2.timing.prewarm
 function prewarm() {
+  if (NORENDER) return 0;   // FAST-1: 그리기 끔 = 지을 셰이더 없음(재질마다 대역 메시를 만들지 않음)
   const P9 = renderer.properties, tmp = new THREE.Scene(), mats = []; let k = 0;
   scene.traverse(o => { if (!(o.isMesh || o.isPoints) || !o.material || Array.isArray(o.material)) return; const m = o.material; if (P9.get(m).currentProgram) return; mats.push(m);
     let p; if (o.isInstancedMesh) { p = new THREE.InstancedMesh(o.geometry, m, 1); if (o.instanceColor) p.setColorAt(0, _pwC); } else p = o.isPoints ? new THREE.Points(o.geometry, m) : new THREE.Mesh(o.geometry, m);

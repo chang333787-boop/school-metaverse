@@ -4,7 +4,7 @@
 //                                         → (미끄럼) SD2.ACT.anim이 생기는지 · 끝나면 끝 자리(to) 곁인지
 //   → 8방향 0.4초씩 하나라도 0.3m 넘게 · 오류 0 · '[map] 게임 tick 오류' 0(찍히면 게임이 멈추고 몸이 학교로 감 → 앉은 것도 풀림 — 또래 swing.cjs의 seated=false가 이것)
 //   게이트: 못 앉음 0 · 앉았다 풀림 0 · E로 못 일어남 0 · 미끄럼 안 탐 0 · 갇힘 0 · 오류 0
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const opt = (k, d) => { const a = process.argv.find(s => s.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const NMAX = +opt('n', 1e9), SEC = +opt('sec', 3), KINDS = opt('kind', 'bench,pav,swing,slide').split(','), CELLS = opt('cells', '') ? opt('cells', '').split(',') : null;

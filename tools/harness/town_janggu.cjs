@@ -3,7 +3,7 @@
 //   ② 칸 짜기: 틀린 차례 = 빨간 칸(통과 X) → 고치면 통과 · 아이 장단을 반주와 함께 두 번 연주(소리 수 · 반주 수) · 판 뒤 '됐어요 … 다음엔' 한 줄
 //   ③ 잘한 판 셋 = 다음 꼬임(덩) · ←+→ 거의 같이 = 덩 · ↓ = 덩 · ④ 셋잇단(한 박 셋) 칸 길이 = 60/bpm/3 · 긴 장단 12칸 · ⑤ 솜씨 하루 한도
 //   ⑥ 창 닫으면 배경 곡 다시 · ⑦ 내 장단 짓기 → 저장 → 버스킹: 보이는 일꾼 손뼉(cheer) · 돈 하루 한 번 · ⑧ 병원·집 앞 = 이웃이 싫어하는 말 · ☰ 메뉴 단추 · 페이지 오류 0
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };

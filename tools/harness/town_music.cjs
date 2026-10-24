@@ -3,7 +3,7 @@
 //   ② 마을: 첫 키 누름 뒤 켜짐 · 낮 → 해 질 녘 → 밤 → 비 → 맑음 바뀔 때 곡이 바뀜(≈2초) · 실내 = 작게·먹먹하게(곡은 그대로) · 놀이 = 빠른 곡 · 동시 소리 6 이하
 //   ③ 탭 숨김 = 멈춤(예약 0) → 다시 보임 = 이어서 · ☰ 메뉴 '음악 끄기' = 꺼짐 + 이 기기에 기억(새로 열어도 꺼짐) → '음악 켜기' · 마을 나가기 = 소리 장치 닫힘 · 페이지 오류 0
 //   읽는 것 = SM_TOWN.music(읽기 전용 · town_music.js info)
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const BASEU = 'http://127.0.0.1:' + PORT, URL = BASEU + '/v2/?town=' + ID + '&adapt=0';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };

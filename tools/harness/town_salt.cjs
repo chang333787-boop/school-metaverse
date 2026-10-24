@@ -2,13 +2,13 @@
 //   꼬임 넷(천일염·자염·토판염·꽃소금) = 손동작이 서로 다름 · 막대(zone·mk·bar·pgb) 0 · 봇 한 판 60초 안 · 판 뒤 한 줄
 //   사다리(잘한 판 셋 → 다음 꼬임) · 세상 조건(지금 비 = 졸이기 · 어제 큰비 = 꽃소금) · 소금물 창고에 들이기 판단 · 만든 소금 → 장터 공급(S.sim.salt) · 페이지 오류 0
 //   캡처 = scratchpad/econ_shots · 브라우저는 brun.sh 한 자리로
-const { chromium } = require('playwright');
+const { chromium, RENDER } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const SHOT = process.env.ECON_SHOTS || '/private/tmp/claude-501/-Users-dobuk-Projects-school-metaverse/3596a208-fd90-4cd5-b160-00ac62075cec/scratchpad/econ_shots';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
 (async () => { const T0 = Date.now(), b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const errs = [];
   try { const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage(); p.on('pageerror', e => errs.push(e.message.slice(0, 200))); p.on('console', m => { const t = m.text(); if ((m.type() === 'error' && !/favicon|404|ERR_|pointer lock|WebGL|GPU stall/.test(t)) || /게임 tick 오류/.test(t)) errs.push(t.slice(0, 200)); });
-    const W8 = ms => p.waitForTimeout(ms), ev = (f, a) => p.evaluate(f, a), shot = n => p.screenshot({ path: SHOT + '/' + n + '.png' });
+    const W8 = ms => p.waitForTimeout(ms), ev = (f, a) => p.evaluate(f, a), shot = async n => { if (RENDER) await p.screenshot({ path: SHOT + '/' + n + '.png' }); };   /* FAST-1: 그리기 끔이면 사진 건너뜀(--render면 찍음) */
     const closeP = () => ev(() => { for (let k = 0; k < 3; k++) { const P = document.querySelector('.twn-p'); if (!P) return; const b9 = P.querySelector('[data-a="x"]') || P.querySelector('button.sub') || P.querySelector('button'); if (b9) b9.click(); else return; } });
     await p.goto(URL); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.salt && SM_TOWN.game && SM_TOWN.rules && window.SD2, null, { timeout: 240000 }); await W8(1500);
     await closeP(); await p.keyboard.press('Escape'); await W8(500);

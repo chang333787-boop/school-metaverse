@@ -4,7 +4,7 @@
 //     ③ 넓은 꼭지 뒤 한 번에 물 준 두둑 ≥ 2 ④ 튼튼한 씨앗으로 심은 두둑을 거두면 하나 더 ⑤ 하루 벌이가 고리 덤(튼튼한 씨앗 몫)을 빼고 견줘 ±15% 안
 //     ⑥ 아침마다(심은 게 자란 날) 1분 안에 '자라 있음' 표시(칠판 첫 줄 · 화분 모형) ⑦ 맡긴 날 = 물뿌리개 없음 · 다음 아침 문 앞 ⑧ 페이지 오류 0
 //   실제 날짜 한도(REW-1 rd)는 봇이 하루마다 비움(= 수업 하루에 게임 하루 · 시험 손잡이) · 브라우저는 한 번에 하나
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
 (async () => { const T0 = Date.now(), b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const errs = [];

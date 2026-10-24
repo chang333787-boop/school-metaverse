@@ -2,7 +2,7 @@
 //   첫 화면에 보이는 HUD(칩·작은 지도·칸 배지·가방·할 일 줄·나침반 띠·키 안내·위 가운데 줄)를 세고 글을 적음 — 데스크톱 1366×768 · 휴대폰 세로 390×844 → 가로 844×390(터치)
 //   --count = 세기만(옛 판과 견주기) · 그 밖: 잠긴 키(M·B·I·F·J·Y)는 창을 안 엶 · unlock(키) = 그 칩만 늘고 살며시 나타남 · 이야기 안전망(다음 막에 들어서면 앞 막 키)
 //   · 선생님(sm.t) = 모두 열림 · 예전 저장(hud 칸 없음) = 모두 열림 · ?all=1은 town_state.cjs가 씀
-const { chromium, devices } = require('playwright');
+const { chromium, devices } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const arg = k => { const a = process.argv.find(s => s.startsWith('--' + k)); return a ? (a.includes('=') ? a.slice(a.indexOf('=') + 1) : true) : null; };
 const SHOTS = arg('shots'), COUNT = !!arg('count'), URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0';

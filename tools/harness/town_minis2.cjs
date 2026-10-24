@@ -3,13 +3,13 @@
 //   김(5×5 발장): 마우스 끌기 봇(줄마다 왼쪽 → 오른쪽)으로 첫 장 고르게 · 키보드만(화살표 + E 꾹)으로 끝까지 · 한 곳에 붓기만 해도(덩어리) 세 장 뒤 끝남
 //   굴: 마우스로 고리 끌어 재고 굴 끌어 나누기 · 키보드만(E 재기 · ← →) · 일부러 틀리게 골라도 흔들리고 끝까지 감
 //   끝 = 결과 말 + '💡 알고 있었나요?' · 페이지 오류 0 · 캡처 = MINIS2_SHOTS(기본 scratchpad/minis2)
-const { chromium } = require('playwright');
+const { chromium, RENDER } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const SHOT = process.env.MINIS2_SHOTS || '/private/tmp/claude-501/-Users-dobuk-Projects-school-metaverse/a87e1302-73de-487f-8543-e35d62007edd/scratchpad/minis2';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
 (async () => { const T0 = Date.now(), b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const errs = [];
   try { const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage(); p.on('pageerror', e => errs.push(e.message.slice(0, 200))); p.on('console', m => { const t = m.text(); if ((m.type() === 'error' && !/favicon|404|ERR_|pointer lock|WebGL|GPU stall/.test(t)) || /게임 tick 오류|모르는 놀이 갈래/.test(t)) errs.push(t.slice(0, 200)); });
-    const W8 = ms => p.waitForTimeout(ms), ev = (f, a) => p.evaluate(f, a), shot = n => p.screenshot({ path: SHOT + '/' + n + '.png' });
+    const W8 = ms => p.waitForTimeout(ms), ev = (f, a) => p.evaluate(f, a), shot = async n => { if (RENDER) await p.screenshot({ path: SHOT + '/' + n + '.png' }); };   /* FAST-1: 그리기 끔이면 사진 건너뜀(--render면 찍음) */
     const panel = () => ev(() => { const P = document.querySelector('.twn-p'); return P && P.getClientRects().length ? P.textContent.slice(0, 120) : ''; });
     const closeP = () => ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button.sub') || document.querySelector('.twn-p button'); if (b9) b9.click(); });
     await p.goto(URL); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && SM_TOWN.rules && window.SD2, null, { timeout: 240000 }); await W8(1500);

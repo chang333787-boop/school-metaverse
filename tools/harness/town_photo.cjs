@@ -2,7 +2,7 @@
 //   동물 곁으로 가서 K(📷 기사 사진) → 기사 쪽지(담긴 것 · 알아 두기 · 다음에 해 볼 것) · 쉬는 모습과 놀라 달아나는 모습 = 다른 말 · 행동 아홉 갈래 글이 모두 다름
 //   · 작은 도서관 소식지 편집장 E → 기사 내기 = 기사료·솜씨 · 같은 동물 같은 날 다시 = 막힘(문 rwCheck 'photo:<동물>') · 다음 날 = 다시 실림 · 앨범 '내 기사' · 셔터 비용 ms · 페이지 오류 0
 //   브라우저는 한 자리로 돌림(brun.sh · 맥 과열 X)
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8);
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };

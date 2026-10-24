@@ -2,7 +2,7 @@
 //   차도 한가운데 · 교차로 모퉁이(돌고 있는 차 앞) · 옆에서 차가 쓸고 옴 · 차 위로 순간이동 · 앞에서 들이받기 · 옆구리 들이받기 · 주차 칸 옆 길가
 //   걸어서 + 자전거로 각각 회수만큼. 매 판 끝에 8방향으로 0.6초씩 걸어 보고 어느 쪽으로도 0.3m 못 가면 '갇힘'.
 //   게이트: 갇힘 0 · 몸이 차 상자 안에 남은 프레임 0 · 안전장치(2초 못 움직임 → 옮김)가 차 때문에 쓰인 횟수는 따로 보여 줌
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const N = +((process.argv.find(a => a.startsWith('--n=')) || '--n=3').slice(4));   // 기본 3 = 7가지 × 걸어서·자전거 × 3 = 42판
 (async () => { const b = await chromium.launch({ args: ['--use-gl=angle', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const p = await b.newPage({ viewport: { width: 1280, height: 720 } }); const errs = [];

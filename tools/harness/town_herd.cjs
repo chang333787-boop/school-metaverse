@@ -1,7 +1,7 @@
 // 양몰이 시험(HERD-1 · 설계 docs/systems/town_jobs2.md「짓는 조각 2」): node tools/harness/town_herd.cjs [마을=ourtown] [포트=8002] [--n=맑음판수,비판수] [--shots=폴더]
 //   봇 = 사람처럼 '걸어서' 몬다(map.player.steer 4.2m/s · 뛰기 X · 순간이동 X): 문에서 가장 먼 양과 그 곁(3.5m) = 이번 무리 → 무리 뒤(문 반대쪽)에 서서 문 쪽으로 걸어 밂 · 무리를 가로지르지 않고 둘레로 돎 · 우리 옆이면 모서리 밖으로 먼저
 //   확인: 1단계(꼬임 1) 60초 안 성공 ≥ 90%(맑음·비) · 양이 차도에 0 · 오류 0 · 판 뒤 문 닫힘·우리 안 양 충돌 · 비 = 처마 밑에서 시작 · 첫 양 반응 10초 안 · (덤) 2단계 개 판 한 번 · 아이 눈 캡처
-const { chromium } = require('playwright'); const fs = require('fs'), path = require('path');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */ const fs = require('fs'), path = require('path');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const arg = k => { const a = process.argv.find(s => s.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : null; };
 const NN = (arg('n') || '6,5').split(',').map(Number), SHOTS = arg('shots'), PERF = process.argv.includes('--perf');   /* --perf = 크롬북 CPU 4배 느리게: 목장 곁 판 없음 ↔ 판 하는 중(봇) 프레임 p95·그리기 수 견줌(판만 · 다른 시험 건너뜀) */

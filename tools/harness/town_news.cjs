@@ -4,7 +4,7 @@
 //   ③ 2일째: 비 오는 날 화분에 물 → 아침 '빗물로 넉넉했어요'(우와 ①) · 3일째 아무것도 안 함 → 빈 날 0
 //   ④ 봇 3일(차례표 8줄 측정): 아침마다 고를 거리(할 일 · 소문 · 화분 · 선물 — 동사·칸이 다른 것) ≥ 3 · 어제와 다른 것 ≥ 2 · 빈 날 0 · 숫자를 결과로
 //   ⑤ 해 질 녘: 종 + 배너 한 줄 · 문 앞 등 · 페이지 오류 0
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };

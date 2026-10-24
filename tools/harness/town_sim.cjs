@@ -3,7 +3,7 @@
 //   ② 씨앗 고정 10일(+60일 참고): 비 오는 날 산이 먼저 젖는 비율 ≥95% · 30분 한 판에서 비 칸(안개 거리 260m 안)을 보는 비율 ≥80%(정문 · 날 1~10 시작)
 //   ③ 살아 있는 판: 산에만 비(내 자리 맑음 · 커튼 보임) · 띠 안 = WX9 비 · 커튼 숨김 · 띠 밖으로 걸어 나오면 빗소리 줄고 젖은 땅 경계 · 경계에서 1분 흔들어도 WX9 바뀜 ≤3
 //   ④ 날씨 창을 연 채 띠를 드나들어도 창 닫힘 0 · 손 고정(비 단추) = 전선 꺼짐(마을 전체 한 날씨) · 무지개(해 반대편 · 하루 한 번) · 우산 일꾼 · 풍향 깃발 · 페이지 오류 0
-const { chromium } = require('playwright');
+const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
