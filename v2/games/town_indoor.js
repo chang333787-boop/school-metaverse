@@ -28,6 +28,9 @@ export const ROOM_ITEMS = {
   lib: ['분류 번호 책장 여섯(300·400·500·600·800·900)', '대출대·반납 수레', '그림책 자리(빈백)', '읽는 탁자', '큰 마을 지도 탁자', '의뢰 게시판', '여권 도장대', '새 친구 자리'],
   post: ['창구 셋(번호 빛판)', '편지 나누는 칸', '우편 가방', '소포 선반', '빨간 우체통', '편지 쓰는 탁자'],
   fire: ['소방차', '안전모·방화복 걸이', '소방봉', '호스 감개', '출동 무전 책상', '119 간판'],
+  police: ['민원 창구 · 경찰관(이름 없음)', '112 간판', '칭찬 게시판(112 연습 · 도운 일)', '기다리는 의자', '마을 지도 판'],   /* BLDG-1(town_bldg.js) */
+  clinic: ['접수대 · 간호사(이름 없음)', '기다리는 의자 줄', '진료실 커튼', '키 재는 막대', '응급 처치 판', '약 선반'],
+  shelter: ['강아지 칸 셋(울타리 · 물그릇 · 밥그릇)', '고양이 쉼터 탑 · 고양이 둘', '사료 선반', '동물보호사(이름 없음)', '새 가족을 기다려요 판'],
 };
 export const kidItem = (label, kid) => (kid || []).some(w => label === w || label.startsWith(w + '('));   // 🙋 = 자료 room 낱말과 같거나 '낱말(…)'
 export function createIndoor({ T3, map, onCollider, removeCollider, en, look }) {
@@ -807,9 +810,12 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en, look }) 
       const done = () => grp.traverse(o => { if (o.isInstancedMesh) o.dispose(); else if (o.isMesh) o.geometry.dispose(); }); R.compileAsync(grp, SD.camera, SD.scene).then(done, done); };
     idle(step); }
   // ── 들어가기·나가기 ──
+  // BLDG-1(town_bldg.js): 경찰서·병원·보호센터 방은 바깥 모듈이 이 부품으로 짓습니다(o.room(at, KIT) → made · 꼴은 다른 방과 같음)
+  const KIT = { shell, sign, mainSign, standGuest, sitGuest, stable, chair, stool, rtable, wwin, panelL, strip, plant, colL, seatL, PR, I, cs, WB, pend, rndOf, guest, part: (S, k, x, y, z, sx, sy, sz, hex, gl, ry, rx) => part(gl ? S.Ag : S.A, k, S.at[0] + x, S.at[1] + y, S.at[2] + z, sx, sy, sz, hex, ry || 0, rx || 0), parts: fn => buildParts(fn), en };
+  function buildParts(fn) { const A = newA(), Ag = newA(), grp = new T3.Group(); fn((k, x, y, z, sx, sy, sz, hex, gl, ry, rx) => part(gl ? Ag : A, k, x, y, z, sx, sy, sz, hex, ry || 0, rx || 0)); for (const [B, m] of [[A, MAT], [Ag, GLOW]]) { const ms = meshOf(B, m); if (ms) { ms.matrixAutoUpdate = true; grp.add(ms); } } grp.userData.fx = 1; return grp; }
   const HOMES = { treehouse: roomCabin, 'blue-cottage': roomCottage, 'purple-townhouse': roomTownhouse, 'cream-suburban-fountain': roomSuburb, 'white-modern': at => roomModern(at, false), 'black-steel-glass': at => roomModern(at, true) };
   function enter(o) { exit(); const t0 = performance.now(); if (TX && TX.n) { TX.g.clearRect(0, 0, 1024, 512); TX.x = TX.y = TX.rh = TX.n = 0; }   /* 글씨 그림 한 장을 이 방 것으로 다시 */
-    const at = o.at, made = o.kind === 'lib' ? roomLib(at, o.name, o.hub, o.mapImg) : o.kind === 'post' ? roomPost(at, o.name) : o.kind === 'fire' ? roomFire(at, o.name) : o.kind === 'aqua' ? roomAqua(at, o.name) : o.kind === 'kids' ? roomKids(at, o.name) : o.kind === 'board' ? roomBoard(at, o.name, o) : o.kind === 'tent' ? roomTent(at, o.col) : o.kind === 'shop' ? roomShop(at, o.shop, o.name) : HOMES[o.look] ? HOMES[o.look](at) : roomHome(at, null), S = made.S;
+    const at = o.at, made = o.room ? o.room(at, KIT) : o.kind === 'lib' ? roomLib(at, o.name, o.hub, o.mapImg) : o.kind === 'post' ? roomPost(at, o.name) : o.kind === 'fire' ? roomFire(at, o.name) : o.kind === 'aqua' ? roomAqua(at, o.name) : o.kind === 'kids' ? roomKids(at, o.name) : o.kind === 'board' ? roomBoard(at, o.name, o) : o.kind === 'tent' ? roomTent(at, o.col) : o.kind === 'shop' ? roomShop(at, o.shop, o.name) : HOMES[o.look] ? HOMES[o.look](at) : roomHome(at, null), S = made.S;
     if (o.onCard) { const [cx, cz] = made.cardAt || [1.7, made.D / 2 - 1.0]; S.put('b', cx, 0, cz, 0.06, 1.07, 0.06, 0x6b4a2f); sign(S, en ? 'About this place' : '이곳 알아보기', cx, 1.22, cz, Math.PI, 0.56, 0.24, { bg: '#3b6fb6', fr: 0x6b4a2f }); colL(S, cx, cz, 0.18, 0.18, -0.5, 1.1); made.card = { stand: [cx, 0, cz - 0.75] }; }   /* LIVING-1 장소 카드 안내판(문 옆 · 나갈 때 보임) */
     if (o.deco) try { o.deco(S, made, { put: S.put, pic: (...a) => pic(S, ...a), col: S.col }); } catch (e) { console.warn('[실내] deco', e); }   /* TABLE-1 우리 집 놀이 선반 등 — 방에 더 짓고 made.extra로 E를 더함(합친 판에 들어감 · 그리기 +0) */
     const grp = finish(S); if (TX && TX.n) TX.t.needsUpdate = true; const cols = S.cols.map(c => onCollider(c)), hots = [], [ox, oy, oz] = at, D = made.D;
@@ -846,7 +852,7 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en, look }) 
     enter, exit, setNight, check, get active() { return cur ? cur.o : null },
     get hub() { return cur && cur.made.hubAt || null }, get room() { return cur ? { kind: cur.o.kind, name: cur.o.name, at: cur.o.at, W: cur.made.W, D: cur.made.D, shelves: cur.made.shelves || null, visitor: cur.made.visitor || null } : null },   // LIVING-1 본부 자리(줄거리 팀 api.hub) · 직업 체험이 읽는 방 자리(절대)
     addHot(h) { if (!cur) return null; const r = map.interact.add(h); cur.hots.push(r); return r; },   // 이 방에서만 사는 E 자리(나가면 같이 치움)
-    buildParts(fn) { const A = newA(), Ag = newA(), grp = new T3.Group(); fn((k, x, y, z, sx, sy, sz, hex, gl, ry, rx) => part(gl ? Ag : A, k, x, y, z, sx, sy, sz, hex, ry || 0, rx || 0)); for (const [B, m] of [[A, MAT], [Ag, GLOW]]) { const ms = meshOf(B, m); if (ms) { ms.matrixAutoUpdate = true; grp.add(ms); } } grp.userData.fx = 1; return grp; }, truckParts,   /* 방 밖 소품도 같은 재질로 합쳐 짓기(소방차 — 부른 쪽이 치움) */
+    buildParts, truckParts,   /* 방 밖 소품도 같은 재질로 합쳐 짓기(소방차 — 부른 쪽이 치움) */
     get spawn() { return cur ? cur.spawn : null },
     get info() { return cur ? { kind: cur.o.kind, look: cur.o.look || null, items: (cur.made.items || []).map(t => (kidItem(t, cur.o.kid) ? '🙋 ' : '✨ ') + t), W: cur.made.W, D: cur.made.D, H: cur.made.H, cols: cur.cols.length, hots: cur.hots.length, seats: (cur.made.seats || []).filter(s => !s.taken).length, tris: cur.grp.children.reduce((s, m) => s + (m.geometry ? (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3 * (m.isInstancedMesh ? m.count : 1) : 0), 0), meshes: cur.grp.children.length, ms: +(cur.ms || 0).toFixed(1), parts: cur.grp.children.map(m => (m.isInstancedMesh ? 'i' + Object.keys(IG).find(k => IG[k] === m.geometry) : m.material === MAT ? 'mat' : m.material === GLOW ? 'glow' : m.material === WINM ? 'win' : m.material === BEAMM ? m.userData.beam : TX && m.material === TX.m ? 'txt' : 'tex') + ':' + Math.round((m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3 * (m.isInstancedMesh ? m.count : 1))), at: cur.o.at } : null },
     tick(dt) { if (!WARM && (warmT += dt) > 2.5) warm(); if (!cur) return; for (const a of cur.anim) if (a.spin) a.m.rotation.y += dt * a.spin; },
