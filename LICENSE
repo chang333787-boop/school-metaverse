@@ -1,0 +1,27 @@
+Copyright (c) 2026 chang333787-boop (https://github.com/chang333787-boop)
+All rights reserved.
+
+[한국어]
+이 저장소의 코드·글·그림·소리·지도 자료는 저작권자의 것이며, 오픈소스 라이선스로 공개한 것이 아닙니다.
+저장소가 공개되어 있는 것은 수업과 보기를 위해서일 뿐입니다.
+
+- 허용: GitHub 이용 약관이 허용하는 범위에서 GitHub 안에서 보기, 배포된 사이트에서 이용하기
+- 금지(저작권자의 서면 허락 없이): 복제, 내려받아 다른 곳에 올리기, 고쳐서 쓰기(2차적 저작물),
+  배포, 다른 서비스·교재·제품에 넣기, 상업적 이용, AI 학습 자료로 쓰기
+- 허락이 필요하면 GitHub(chang333787-boop)로 먼저 연락해 주세요.
+
+예외: lib/three.module.min.js 는 three.js(MIT 라이선스 · Copyright 2010-2024 Three.js Authors)이며
+그 라이선스를 따릅니다. 그 밖에 따로 라이선스가 적힌 외부 파일도 각자의 라이선스를 따릅니다.
+
+[English]
+All code, text, graphics, audio and map data in this repository are proprietary and are NOT released
+under an open-source license. The repository is public for classroom use and viewing only.
+
+- Permitted: viewing on GitHub to the extent required by the GitHub Terms of Service, and using the
+  deployed site.
+- Prohibited without prior written permission from the copyright holder: copying, re-hosting,
+  modifying or creating derivative works, redistributing, including in other services, course
+  materials or products, commercial use, and use as AI training data.
+
+Exception: lib/three.module.min.js is three.js (MIT License, Copyright 2010-2024 Three.js Authors)
+and remains under its own license, as do any other third-party files that carry their own license.
