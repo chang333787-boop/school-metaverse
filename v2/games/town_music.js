@@ -106,7 +106,8 @@ const BASE = 0.32;   // 전체 크기 — 낮 곡 RMS ≈ -29dB(꼭대기 ≈ -1
 // ───────── 악기(합성 — 소리 하나 = 발진기 1~2 + 크기 봉투) ─────────
 //   w = 파형(배음 표) · a 올라감 · d 줄어듦(시간 상수) · s 남는 크기 · r 놓음 · fm = [비율, 깊이, 줄어듦](전자 피아노·종) · vib = [빠르기, 센트, 늦춤] · bend = 반음(스틸 드럼 첫 출렁)
 const WAVES = { soft: [1, 0.42, 0.22, 0.12, 0.07, 0.04, 0.02], flute: [1, 0.22, 0.07, 0.03], ocar: [1, 0.06, 0.1, 0.02], mar: [1, 0, 0, 0.3, 0, 0, 0, 0, 0, 0.06],
-  steel: [1, 0.55, 0.12, 0.28, 0.06], round: [1, 0.32, 0.12, 0.05], piano: [1, 0.55, 0.28, 0.18, 0.09, 0.07, 0.03, 0.02], bass: [1, 0.45, 0.16, 0.07, 0.03] };
+  steel: [1, 0.55, 0.12, 0.28, 0.06], round: [1, 0.32, 0.12, 0.05], piano: [1, 0.55, 0.28, 0.18, 0.09, 0.07, 0.03, 0.02], bass: [1, 0.45, 0.16, 0.07, 0.03],
+  voice: [1, 0.62, 0.42, 0.24, 0.12, 0.07, 0.04], choir: [1, 0.3, 0.2, 0.08, 0.04] };   /* RHY-1 목소리 흉내(아 소리 결 · 덱 낮은 거름이 거친 배음을 깎음) */
 const INST = {
   pluck: { w: 'soft', a: 0.004, d: 0.18, s: 0.3, r: 0.07, lv: 1 }, epiano: { w: 'sine', fm: [1, 1.4, 0.3], a: 0.003, d: 0.5, s: 0.35, r: 0.15, lv: 1.05 },
   flute: { w: 'flute', a: 0.035, d: 0.6, s: 0.8, r: 0.06, vib: [5.2, 14, 0.12], lv: 0.85 }, ocarina: { w: 'ocar', a: 0.025, d: 0.5, s: 0.75, r: 0.05, vib: [5.8, 10, 0.1], lv: 0.9 },
@@ -114,10 +115,11 @@ const INST = {
   glock: { w: 'sine', fm: [4, 0.9, 0.12], a: 0.002, d: 0.35, s: 0, r: 0.1, lv: 0.75 }, bell: { w: 'sine', fm: [3.5, 2, 0.5], a: 0.002, d: 0.9, s: 0, r: 0.4, lv: 0.85 },
   piano: { w: 'piano', a: 0.003, d: 0.45, s: 0.12, r: 0.2, lv: 0.85 }, bass: { w: 'bass', a: 0.005, d: 0.25, s: 0.55, r: 0.05, lv: 1 },
   sub: { w: 'round', a: 0.02, d: 0.9, s: 0.6, r: 0.15, lv: 0.85 }, keys: { w: 'piano', a: 0.004, d: 0.2, s: 0.25, r: 0.06, lv: 1 },
-  pad: { w: 'triangle', a: 0.18, d: 1.4, s: 0.75, r: 0.35, lv: 0.75 } };
+  pad: { w: 'triangle', a: 0.18, d: 1.4, s: 0.75, r: 0.35, lv: 0.75 },
+  voice: { w: 'voice', a: 0.06, d: 0.9, s: 0.82, r: 0.12, vib: [5.3, 20, 0.16], bend: -0.5, lv: 0.85 }, choir: { w: 'choir', a: 0.09, d: 1.2, s: 0.8, r: 0.16, vib: [4.8, 12, 0.2], lv: 0.8 }, shout: { w: 'voice', a: 0.03, d: 0.35, s: 0.55, r: 0.1, bend: -3, lv: 0.9 } };   /* RHY-1 메기는 소리 · 받는 소리 · 「어이—」 */
 const PART = { lead: 0.16, bass: 0.2, ch1: 0.075, ch2: 0.075 };
 const DCH = { k: 'dk', s: 'dk', r: 'dk', b: 'dk', g: 'dk', h: 'dh', o: 'dh', z: 'dh', d: 'dh', w: 'dh' };
-const DLV = { k: 0.32, s: 0.16, r: 0.1, h: 0.055, o: 0.045, z: 0.05, b: 0.28, g: 0.16, d: 0.12, w: 0.035, G: 0.4, D: 0.3 };   /* G·D = 장구 놀이(playBars · hit)의 큰 쿵·덕 */
+const DLV = { k: 0.32, s: 0.16, r: 0.1, h: 0.055, o: 0.045, z: 0.05, b: 0.28, g: 0.16, d: 0.12, w: 0.035, G: 0.4, D: 0.3, P: 0.22 };   /* P = 모 꽂는 첨벙(RHY-1) */   /* G·D = 장구 놀이(playBars · hit)의 큰 쿵·덕 */
 
 // ───────── 곡 → 마디별 사건(처음 쓸 때 한 번 · 바퀴 짝·홀 따로) ─────────
 function parseMel(str, n) { const bars = str ? str.split('|') : [], out = [], bad = [];
@@ -192,7 +194,7 @@ function engine(ac) {
     const pk = v * I.lv; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(pk, t + I.a); g.gain.setTargetAtTime(pk * I.s, t + I.a, I.d);
     let t1; if (I.s === 0) t1 = t + I.a + Math.min(4, I.d * 5); else { const rel = t + Math.max(I.a + 0.02, dur * 0.92); g.gain.setTargetAtTime(0, rel, I.r); t1 = rel + I.r * 5; }
     o1.connect(g); g.connect(D.bus[ch]); for (const s of src) { s.start(t); s.stop(t1 + 0.02); } keep({ g, src, t0: t, t1 }); }
-  function drum(D, ch, k, t, v) {
+  function drum(D, ch, k, t, v, p = 0) {
     const g = ac.createGain(), src = [], keep = slot(D, ch, t); let t1 = t + 0.3;
     const noise = (type, f, q) => { const n = ac.createBufferSource(), fl = ac.createBiquadFilter(); n.buffer = NZ; fl.type = type; fl.frequency.value = f; fl.Q.value = q; n.connect(fl); fl.connect(g); src.push(n); };
     const tone = (f0, f1, dt, type) => { const o = ac.createOscillator(); if (type) o.type = type; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dt); o.connect(g); src.push(o); };
@@ -201,6 +203,7 @@ function engine(ac) {
     else if (k === 'h') { noise('highpass', 7600, 0.7); env(0.001, 0.018); } else if (k === 'o') { noise('highpass', 7000, 0.6); env(0.002, 0.11); } else if (k === 'z') { noise('bandpass', 5600, 1.3); env(0.012, 0.03); }
     else if (k === 'b') { tone(96, 58, 0.18); noise('lowpass', 400, 0.7); env(0.004, 0.13); } else if (k === 'g') { tone(185, 128, 0.1); env(0.003, 0.09); } else if (k === 'd') { noise('bandpass', 2700, 1.6); env(0.001, 0.03); }
     else if (k === 'w') { tone(1320, 0, 0); tone(1987, 0, 0); env(0.001, 0.05); }
+    else if (k === 'P') { const f = 330 * Math.pow(2, p / 12); tone(f, f * 1.7, 0.07); noise('bandpass', 1100 + p * 60, 1.1); env(0.002, 0.055); }   /* 첨벙: 물방울처럼 올라가는 짧은 소리 + 물 튀는 잡음 · p = 콤보마다 반음 */
     else if (k === 'G') { tone(150, 92, 0.14); noise('lowpass', 320, 0.8); env(0.003, 0.17); } else if (k === 'D') { noise('bandpass', 2300, 1.3); tone(560, 0, 0, 'triangle'); env(0.001, 0.05); }   /* 장구: 쿵 = 왼쪽 면(낮고 울림) · 덕 = 오른쪽 면(채로 딱) */
     g.connect(D.bus[ch]); for (const s of src) { if (s.buffer) s.start(t, Math.random() * 0.5); else s.start(t); s.stop(t1 + 0.02); } keep({ g, src, t0: t, t1 }); }
   // 16분 한 칸 = 그 칸 사건을 예약하고 앞으로(마디 첫 칸 = 선율 악기 정함 · 부분이 끝나면 다음 부분 · 곡 끝 = loopTo로)
@@ -219,6 +222,9 @@ function engine(ac) {
   // 장구 놀이 덱(JANGGU-1): 곡 없이 칸만 · 갈래 = 장구 쿵(dk 둘) · 장구 덕(dh) · 반주 북(ab) · 반주 피리(lead) · 반주 받침(bass) = 6 이하
   E.jdeck = (T0) => { const fade = ac.createGain(), send = ac.createGain(), lead = ac.createGain(); fade.connect(E.inp); send.gain.value = 0.06; send.connect(E.dl); lead.connect(fade); lead.connect(send); fade.gain.value = JLV;
     const D = { song: JSONG, opt: {}, sd: 0.1, t: T0, last: {}, bus: { lead, bass: fade, dk: fade, dh: pan(0.14, fade), ab: pan(-0.12, fade) }, fade, send, jg: 1 }; E.decks.push(D); return D; };
+  // 노동요 덱(RHY-1): 메기는 소리(lead) · 받는 소리 둘(r1·r2) · 장구 쿵(dk) · 첨벙(sp) = 5 · 낮은 거름 하나(목소리가 귀에 거슬리지 않게)
+  E.rdeck = (T0) => { const fade = ac.createGain(), send = ac.createGain(), lp = ac.createBiquadFilter(), lead = ac.createGain(); lp.type = 'lowpass'; lp.frequency.value = 2600; lp.Q.value = 0.4; lp.connect(fade); fade.connect(E.inp); send.gain.value = 0.07; send.connect(E.dl); lead.connect(lp); lead.connect(send); fade.gain.value = JLV;
+    const D = { song: RSONG, opt: {}, sd: 0.1, t: T0, last: {}, bus: { lead, r1: pan(-0.16, lp), r2: pan(0.2, lp), dk: fade, sp: pan(-0.05, fade) }, fade, send, jg: 1 }; E.decks.push(D); return D; };
   E.jstop = (D, now) => { if (!D || D.stopped) return; D.stopped = 1; for (const c in D.last) for (const vv of D.last[c]) cut(vv, now); try { D.fade.gain.cancelScheduledValues(now); D.fade.gain.setTargetAtTime(0, now, 0.03); D.send.gain.setTargetAtTime(0, now, 0.03); } catch (e) { /* */ } D.drop = Math.min(D.drop || 1e9, now + 0.35); };
   E.drum = drum; E.note = note;
   return E; }
@@ -226,7 +232,7 @@ function engine(ac) {
 // ───────── 장구 칸 예약기(JANGGU-1 · docs/systems/town_jobs2.md 「리듬·장구·버스킹」) ─────────
 //   cells = 칸마다 'k' 쿵 · 'd' 덕 · 'D' 덩(두 면 같이) · '-' 쉼 · sub = 한 박에 칸 몇(1 · 2 · 셋잇단 3) — 칸 길이 = 60 / bpm / sub(4/4 16분 칸에 끼우지 않음)
 //   반주(acc) = 박마다 북 · 장단 첫 박 받침 · 박마다 피리 한 음(G 5음 음계) — 아이가 짠 차례가 반주 위에서 그대로 들림
-const JSONG = { id: 'janggu', poly: { dk: 1, dh: 1, ab: 1, lead: 1, bass: 1 } }, JLV = 2.2;
+const JSONG = { id: 'janggu', poly: { dk: 1, dh: 1, ab: 1, lead: 1, bass: 1 } }, JLV = 2.2, RSONG = { id: 'rhy', poly: { lead: 1, r1: 1, r2: 1, dk: 1, sp: 1 } };
 const JMEL = [[74, 76, 74, 71], [71, 69, 67, 69]], JMEL3 = [[74, 71, 69], [71, 69, 67]];
 export function jCells(cells) { const out = []; for (const c of String(cells)) { if (c === ' ' || c === '|') continue; out.push(c === 'k' || c === 'd' || c === 'D' ? c : '-'); } return out; }
 function jSched(E, D, cells, bpm, o, T0) { const sub = o.sub || 1, cd = 60 / bpm / sub, reps = Math.max(1, o.reps || 1), C = jCells(cells), beats = Math.max(1, Math.round(C.length / sub)), mel = beats % 3 === 0 && beats % 4 ? JMEL3 : JMEL;
@@ -290,6 +296,14 @@ export function createMusic(o = {}) {
       const now = ac.currentTime, T0 = now + (o.lead != null ? o.lead : 0.2); for (const q of E.decks) if (q.jg) E.jstop(q, T0 - 0.02); HD = null; const J = E.jdeck(T0), r = jSched(E, J, cells, bpm, o, T0); J.drop = r.end + 1.6; JN += r.n; JP++; run();
       const wall = performance.now() + (T0 - now) * 1000;
       return { n: r.n, acc: r.acc, notes: r.notes, len: r.len, cellMs: r.cd * 1000, t0: wall, endMs: wall + (r.end - T0) * 1000, stop: () => { if (E && E.decks.includes(J)) E.jstop(J, E.ac.currentTime); } }; },
+    // RHY-1 노동요(town_rhy.js가 짠 사건 [{ t(초), ch, i(악기), m, l } | { t, ch, d(북), v, p }]): 배경 곡은 부르는 쪽이 hold(true) · 0.2초마다 다음 1초 분량만 예약(한꺼번에 X)
+    //   돌려줌 = { ac, t0(소리 시계 · 첫 사건 자리), lat(출력 지연 0~0.3초), hit(반음) = 지금 첨벙, stop() } · 소리 장치가 아직 깨어 있지 않으면 null(부르는 쪽 = 소리 없이 몸짓만)
+    playEv(evs, o = {}) { if (!boot()) return null; const ac = E.ac; if (ac.state !== 'running') { try { ac.resume(); } catch (e) { /* */ } return null; }
+      const now = ac.currentTime, T0 = now + (o.lead != null ? o.lead : 0.3); for (const q of E.decks) if (q.jg) E.jstop(q, T0 - 0.02); HD = null; const R = E.rdeck(T0), Q = evs.slice().sort((a, b) => a.t - b.t), end = Q.length ? Q[Q.length - 1].t : 0; let k = 0, iv = 0;
+      const feed = () => { if (!E || E.ac !== ac || R.stopped) { clearInterval(iv); return; } const lim = ac.currentTime + 1.0 - T0; while (k < Q.length && Q[k].t < lim) { const e = Q[k++]; if (e.d) E.drum(R, e.ch, e.d, T0 + e.t, e.v, e.p || 0); else E.note(R, e.ch, e.i, e.m, T0 + e.t, e.l, e.v); } if (k >= Q.length) { clearInterval(iv); iv = 0; R.drop = T0 + end + 2; } };
+      iv = setInterval(feed, 200); feed(); JP++; run();
+      const lat = Math.max(0, Math.min(0.3, +(ac.outputLatency || ac.baseLatency || 0) || 0));
+      return { ac, t0: T0, lat, n: Q.length, hit: (p = 0) => { if (!E || E.ac !== ac || R.stopped) return; E.drum(R, 'sp', 'P', ac.currentTime + 0.005, 1, p); JN++; }, stop: () => { if (iv) clearInterval(iv); iv = 0; if (E && E.ac === ac && !R.stopped) E.jstop(R, ac.currentTime); } }; },
     info: () => ({ on, promo, muted: muted(), ctx: E ? E.ac.state : null, mood, song: D ? D.song.id : null, title: D ? D.song.name : null, section: D ? D.sec.name : null, bar: D ? D.bi + 1 : 0, loop: D ? D.loop : 0, lead: D ? D.lead : null,
       held, jg: JN, jgPlays: JP, indoor: !!st.ins, level: E ? +(BASE * Math.max(0, lvl)).toFixed(3) : 0, filter: E ? E.f : 0, notes: E ? E.n : 0, voicesMax: E ? E.vmax : 0, switches: sw, decks: E ? E.decks.length : 0, pumpMs: E && E.pc ? +(E.pt / E.pc).toFixed(3) : 0 }),
     dispose() { dead = true; for (const k of EVS) removeEventListener(k, wake, { capture: true }); document.removeEventListener('visibilitychange', vis); removeEventListener('sm-set', onSet); off(); } };
@@ -305,6 +319,11 @@ export async function renderMood(m = 'day', sec = 30, o = {}) {
   while (D.t < sec) E.step(D, true);
   const buf = await ac.startRendering(); return { buf, notes: E.n, voicesMax: E.vmax };
 }
+// RHY-1 노동요 들어 보기(오프라인): evs = town_rhy.js rhyEvents · splash = [초…](첨벙 · 콤보 반음은 차례대로) → { buf, notes, voicesMax }
+export async function renderEv(evs, sec, o = {}) { const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext, sr = o.sr || 44100, ac = new OAC(2, Math.ceil(sr * sec), sr), E = engine(ac); E.inp.gain.value = BASE;
+  const R = E.rdeck(0.05); for (const e of evs) { if (e.t > sec) continue; if (e.d) E.drum(R, e.ch, e.d, 0.05 + e.t, e.v, e.p || 0); else E.note(R, e.ch, e.i, e.m, 0.05 + e.t, e.l, e.v); }
+  (o.splash || []).forEach((t, i) => { if (t < sec) E.drum(R, 'sp', 'P', 0.05 + t, 1, Math.min(6, i % 7)); });
+  const buf = await ac.startRendering(); return { buf, notes: E.n, voicesMax: E.vmax }; }
 export function toWav(buf) { const ch = buf.numberOfChannels, n = buf.length, sr = buf.sampleRate, out = new DataView(new ArrayBuffer(44 + n * ch * 2)), w = (p, s) => { for (let i = 0; i < s.length; i++) out.setUint8(p + i, s.charCodeAt(i)); };
   w(0, 'RIFF'); out.setUint32(4, 36 + n * ch * 2, true); w(8, 'WAVE'); w(12, 'fmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, ch, true); out.setUint32(24, sr, true); out.setUint32(28, sr * ch * 2, true); out.setUint16(32, ch * 2, true); out.setUint16(34, 16, true); w(36, 'data'); out.setUint32(40, n * ch * 2, true);
   const C = []; for (let c = 0; c < ch; c++) C.push(buf.getChannelData(c)); let p = 44; for (let i = 0; i < n; i++) for (let c = 0; c < ch; c++) { const x = Math.max(-1, Math.min(1, C[c][i])); out.setInt16(p, x < 0 ? x * 0x8000 : x * 0x7fff, true); p += 2; }

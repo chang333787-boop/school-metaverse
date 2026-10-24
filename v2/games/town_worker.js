@@ -5,7 +5,7 @@
 //     · 벌집 틀 살피기 · 쇠스랑으로 건초 떠서 던지기(떴을 때만 건초 뭉치) · 손 흔들기(장터) · 드론 조종 · 물속 팔 젓기 · 잔치 손 흔들기 · 걷기(무릎 굽힘 · 나중 쓸 자리) — 모두 숨쉬기 · 눈 깜빡임
 //   연장 = 손에 든 것(괭이·도끼·고무래·쇠스랑·낚싯대·벌집 틀·조종기)과 땅에 둔 것(바구니·그루터기·건초 더미) — 한 모양에 모두 있고 그 사람 것만 보임(나머지는 점 하나로 접힘)
 //   보이는 것만 바뀜: 충돌 상자(PCOL)·E 자리 높이는 town.js 그대로 · 새 Light X · 재질 하나(사람마다 색 = 팔레트 uniform 번호)
-export const WK_ACT = { stand: 0, walk: 1, pick: 2, hoe: 3, rake: 4, reach: 5, fish: 6, hold: 7, swim: 8, fork: 9, wave: 10, pilot: 11, cheer: 12, nod: 13, hop: 14, point: 15 };   /* ASK-1 길 가리키기(오른팔을 어깨 높이로 앞으로) */   /* NB-1 받아 들고 끄덕 · 깡충(좋아하는 선물) */   // 셰이더와 같은 번호
+export const WK_ACT = { stand: 0, walk: 1, pick: 2, hoe: 3, rake: 4, reach: 5, fish: 6, hold: 7, swim: 8, fork: 9, wave: 10, pilot: 11, cheer: 12, nod: 13, hop: 14, point: 15, rhy: 16 };   /* ASK-1 길 가리키기(오른팔을 어깨 높이로 앞으로) */   /* RHY-1 모내기(위상 = CPU · pose()) */   /* NB-1 받아 들고 끄덕 · 깡충(좋아하는 선물) */   // 셰이더와 같은 번호
 const TOOL = { none: 0, hoe: 1, axe: 2, rake: 3, fork: 4, rod: 5, frame: 6, pad: 7, basket: 8 };
 const ROLE = { farmer: ['hoe', 'hoe'], picker: ['pick', 'basket'], bee: ['hold', 'frame'], ranch: ['fork', 'fork'], wood: ['hoe', 'axe'], pilot: ['pilot', 'pad'], salt: ['rake', 'rake'], shop: ['wave', 'none'], fisher: ['fish', 'rod'], reach: ['reach', 'basket'], guest: ['stand', 'none'], swim: ['swim', 'none'] };   // 역할 → [동작, 연장]
 const CROP = { strawberry: 0xe8434a, potato: 0xb98b5a, cabbage: 0x9bd46e, shiitake: 0x8a5a3a, paddy: 0x7cc35a, pear: 0xe8d06a };   // 바구니 속 색
@@ -59,6 +59,13 @@ const VS_POSE = `
       float u = fract(t * 0.4), k1 = smoothstep(0.0, 0.25, u), k2 = smoothstep(0.32, 0.55, u), k3 = smoothstep(0.58, 0.7, u), k4 = smoothstep(0.75, 1.0, u);
       aL = wk4(-1.3, -1.12, -1.7, -1.95, -1.3, k1, k2, k3, k4); aR = aL; pit = wk4(0.2, 0.4, 0.1, 0.08, 0.2, k1, k2, k3, k4); cr = wk4(0.1, 0.3, 0.0, 0.0, 0.1, k1, k2, k3, k4); tw = wk4(0.3, 0.3, 0.2, -0.45, 0.3, k1, k2, k3, k4);
       zL = -0.38; zR = 0.38; hN = -0.3 * pit; lL = -0.12; lR = 0.1; load = smoothstep(0.15, 0.25, u) * (1.0 - smoothstep(0.62, 0.68, u)); }
+    else if (act > 15.5) {   /* RHY-1 모내기(16)(town_rhy.js가 위상을 aPh.x에): 소수 = 손 들기 L · 정수 % 16 = 물에 넣기 D · 정수 / 16 = 꼬리표(1 기다려 · 2 두 손 · 4 줄 위로 · 8 못줄 잡기) */
+      float cc = floor(ph), Lr = clamp(fract(ph) / 0.98, 0.0, 1.0), Dp = mod(cc, 16.0) / 15.0, Fg = floor(cc / 16.0), wt = mod(Fg, 2.0), two = mod(floor(Fg / 2.0), 2.0), ovr = mod(floor(Fg / 4.0), 2.0), rope = floor(Fg / 8.0);
+      pit = 0.78 - 0.22 * Lr + 0.1 * Dp; cr = 0.22; lL = -0.14; lR = 0.12; hN = -0.2 + 0.25 * Lr; aR = mix(mix(-pit - 0.5, -pit - 1.5, Lr), -pit - 0.2, Dp); zR = -0.12; aL = -pit - 1.0; zL = -0.28;   /* 허리 굽혀 · 오른손 = 모 꽂는 손 · 왼손 = 모춤 쥠 */
+      if (two > 0.5) { aL = aR; zL = 0.12; }
+      if (wt > 0.5) { pit = 0.12; cr = 0.0; aR = -pit - 1.5; zR = -0.3; aL = -0.3; zL = 0.1; hN = -0.05; }   /* 손바닥 펴 '기다려' */
+      if (rope > 0.5) { pit = 0.1; cr = 0.05; aL = -pit - 0.85; aR = aL; zL = -0.3; zR = 0.3; hN = 0.05; }   /* 못줄 잡기 */
+      if (ovr > 0.5) { pit = -0.05; cr = 0.0; aL = -2.9; aR = -2.9; zL = 0.15; zR = -0.15; hN = -0.3; } }   /* 못줄을 머리 위로(쉼 박) */
     else if (act > 14.5) {   /* ASK-1 길 가리키기(15): 오른팔을 어깨 높이로 몸 앞(= 가리키는 쪽)에 쭉 · 왼팔은 내림 · 고개는 그쪽 · 몸은 숨쉬기만 */
       aR = -1.5 + 0.03 * sin(t * 1.3); zR = -0.05; aL = 0.06; zL = 0.1; hN = -0.04; hT = 0.0; pit = -0.02; lL = -0.04; lR = 0.04; }
     else if (act > 12.5) {   /* NB-1 선물 받기: 두 손을 앞으로 모아 받아 들고 고개 끄덕(13) · 좋아하면 깡충(14) */
@@ -166,6 +173,7 @@ export function makeWorkerMesh(T3, L, RL) {
       m.count = K; m.instanceMatrix.needsUpdate = true; at.needsUpdate = true; ap.needsUpdate = true; },
     act(i, a, tool) { const v9 = typeof a === 'number' ? a : WK_ACT[a], t9 = tool == null ? PH[i * 4 + 2] : typeof tool === 'number' ? tool : TOOL[tool]; if (v9 == null || (PH[i * 4 + 1] === v9 && PH[i * 4 + 2] === t9)) return; PH[i * 4 + 1] = v9; PH[i * 4 + 2] = t9; const j = SLOT[i]; if (j >= 0) { aPh[j * 4 + 1] = v9; aPh[j * 4 + 2] = t9; at.needsUpdate = true; } },   // 동작(·연장) 바꾸기 — 잔치 · 걷기 등 놀이 팀 자리
     reset(i) { this.act(i, PH0[i * 4 + 1], PH0[i * 4 + 2]); },
+    pose(i, v) { const v9 = v == null ? PH0[i * 4] : v; if (PH[i * 4] === v9) return; PH[i * 4] = v9; const j = SLOT[i]; if (j >= 0) { aPh[j * 4] = v9; at.needsUpdate = true; } },   // RHY-1 위상 덮어쓰기(동작 16) · null = 원래 박자
     actOf: i => PH[i * 4 + 1],   /* ASK-1 지금 몸짓(가리키기를 되돌릴 때 다른 몸짓이 들어왔나) */
     toolOf: i => PH[i * 4 + 2], palOf: i => [PA[i * 4], PA[i * 4 + 1], PA[i * 4 + 2], PA[i * 4 + 3]],   /* NB-1 지금 연장 · 색 칸(시험: 같은 이웃 = 같은 색) */   // 역할 동작·연장으로 되돌림
     hat(i, on) { const v = on ? PH0[i * 4 + 3] : 0; if (PH[i * 4 + 3] === v) return; PH[i * 4 + 3] = v; const j = SLOT[i]; if (j >= 0) { aPh[j * 4 + 3] = v; at.needsUpdate = true; } },   // WAKE-1b 모자 벗기기·씌우기(바람에 날아간 모자 — 크기 0 = 셰이더가 접음)
