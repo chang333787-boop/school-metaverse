@@ -407,8 +407,10 @@ export function createChem(A) {
   //   setEntries는 표시만(pend) — 첫 짓기는 마을의 아래쪽 선언보다 먼저 돎 → 그때 마을 함수를 부르면 TDZ로 마을이 통째로 멈춤(10-19 실측)
   function clear() { for (const R of RS) if (R.clear) R.clear(); if (PT && PT.mesh.parent) PT.mesh.parent.remove(PT.mesh); if (DM && DM.mesh.parent) DM.mesh.parent.remove(DM.mesh); on = false; }
   function init() { clear(); pend = true; if (window.SM_TOWN) window.SM_TOWN.chem = API; }
-  function build() { pend = false; if (!A.on()) return; on = true; C(); const tb = performance.now();
-    eavesInit(); fireInit(); for (const R of RS) if (R.init) R.init();
+  function build() { if (!A.on()) { pend = false; return; } const tb = performance.now();   /* OPT-24: 짓기를 1초 칸 셋에 나눔(처마·모닥불 → 규칙 자리 → 그리기) — 한 번에 9ms(크롬북 35ms)라 순간이동 첫 프레임이 튐 */
+    if (pend === true) { C(); eavesInit(); fireInit(); pend = 2; buildMs = performance.now() - tb; return; }
+    if (pend === 2) { for (const R of RS) if (R.init) R.init(); pend = 3; buildMs += performance.now() - tb; return; }
+    pend = false; on = true;
     let n = 0; for (const R of RS) if (R.slots) n = R.slots(n);
     mkPoints(); mkDome(Math.max(1, n)); for (let i = 0; i < DM.cap; i++) { DM.mesh.setMatrixAt(i, Z4); DM.vis[i] = 0; } for (const R of RS) if (R.reset) R.reset();
     const root = A.root(); root.add(PT.mesh); root.add(DM.mesh);
@@ -416,7 +418,7 @@ export function createChem(A) {
     for (const R of RS) if (R.hots) R.hots();
     lastT = performance.now(); lastM = S().min; lastD = S().day; sec0 = true;
     if (BOOK && (Object.keys(C().found).length || Object.keys(C().lf).length)) BOOK.tab();
-    if (window.SM_TOWN) window.SM_TOWN.chem = API; buildMs = performance.now() - tb; }
+    if (window.SM_TOWN) window.SM_TOWN.chem = API; buildMs += performance.now() - tb; }
 
   // ───────── 1초 칸(마을이 부름) · 새 날(잠 → 아침 · 날 바뀜을 봄) ─────────
   function sec() { if (pend) { try { build(); } catch (e) { on = false; console.error('[chem] 짓기 실패 — 화학 규칙만 끔', e); } return; } if (!ok()) return; try { sec1(); } catch (e) { console.error('[chem] 1초 칸 오류', e); if (++errN > 3) { on = false; console.error('[chem] 오류가 잦아 화학 규칙을 끔'); } } }
@@ -434,7 +436,7 @@ export function createChem(A) {
 
   // ───────── 시험·디버그(SM_TOWN.chem) ─────────
   const API = {
-    get on() { return ok(); }, get pend() { return pend; }, get book() { return !!BOOK; },
+    get on() { return ok(); }, get pend() { return !!pend; }, get book() { return !!BOOK; },
     info: () => { const c = C(), o = { on: ok(), fires: FI.map(f => ({ x: +f.x.toFixed(1), z: +f.z.toFixed(1), out: c.fire.out[f.n] || '', warmed: f.warmed, ring: (c.ring[f.n] || {}).s || '' })), found: Object.keys(c.found), pts: PT ? { vis: PT.mesh.visible, left: +(PT.until - now()).toFixed(2) } : null, dome: DM ? { vis: DM.mesh.visible, cap: DM.cap } : null, buildMs: +buildMs.toFixed(1), cost: { n: cost.n, avg: cost.n ? +(cost.sum / cost.n).toFixed(3) : 0, max: +cost.max.toFixed(3) } }; for (const R of RS) if (R.info) R.info(o); return o; },
     set: o => { const c = C(); if (o.found === null) c.found = {}; for (const R of RS) if (R.set) R.set(o); A.GAME.mark(); sec(); return API.info(); },
     eaves: (x, z) => eaves(x, z), vis: v => { if (PT) PT.mesh.visible = !!v && now() < PT.until; if (DM) { if (v) { DM.dirty = true; flush(); } else DM.mesh.visible = false; } return { pt: !!(PT && PT.mesh.visible), dm: !!(DM && DM.mesh.visible) }; },
