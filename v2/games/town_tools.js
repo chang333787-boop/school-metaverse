@@ -83,6 +83,7 @@ export function createTools(A) {
     if (force && RING) RING.position.set(T.x, T.y + 0.05, T.z); }
   // 붙는 대상: 삽 = 보물 흙더미 · 빗자루 = 쓸 자리 · 돋보기 = 곤충·버섯·꽃·돌 · 물뿌리개 = 텃밭·모닥불·꽃·화분(고리가 그 위면 노랑만 — 자리는 그대로)
   function snap(k, x, z, me) {
+    if (k === 'shovel' || k === 'broom') { const xp = A.xp && A.xp(), f = xp && xp.near(x, z, k); if (f) return [f.x, f.y, f.z, 'fos', f.id]; }   /* EXPLORE-1 층층골 흙더미·돌판(그 도구 차례일 때만) */
     if (k === 'shovel') { const t = A.trs(), c = t && t.near && t.near(x, z); if (c) return [c.x, c.y, c.z, 'trs']; return null; }
     if (k === 'broom') { let b = null, bd = 1.4; for (const p of PILES) { const d = Math.hypot(p.x - x, p.z - z); if (d < bd) { bd = d; b = p; } } return b ? [b.x, b.y, b.z, 'pile', b.k] : null; }
     if (k === 'lens') { const L9 = lensAt(x, z, me); return L9 ? [L9.x, L9.y, L9.z, L9.kind, L9.key] : null; }
@@ -92,11 +93,12 @@ export function createTools(A) {
   function flowerGrid() { if (FGRID.size) return; for (const f of A.flowers() || []) { const k = Math.floor(f.x / 8) + ':' + Math.floor(f.z / 8); let a = FGRID.get(k); if (!a) FGRID.set(k, a = []); a.push(f); } FGRID.set('_', []); }   // 꽃 자리 8m 칸(처음 한 번 · 짓기마다 다시)
   function flowerAt(x, z, r) { flowerGrid(); let b = null, bd = r; const gx = Math.floor(x / 8), gz = Math.floor(z / 8); for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const a = FGRID.get((gx + i) + ':' + (gz + j)); if (a) for (const f of a) { const d = Math.hypot(f.x - x, f.z - z); if (d < bd) { bd = d; b = f; } } } return b; }
   let POTS = null; function potAt(x, z) { if (!POTS) POTS = (map.interact.list({ kind: 'pot' }) || []).map(h => (h.at ? [h.at[0], h.at[1], h.at[2]] : [h.x, h.y, h.z])); for (const p of POTS) if (Math.hypot(p[0] - x, p[2] - z) < 1.0) return p; return null; }
-  function lensAt(x, z, me) { let b = null, bd = 1.7;
+  function lensAt(x, z, me) { let b = null, bd = 1.7; { const xp = A.xp && A.xp(), f = xp && xp.near(x, z, 'lens'); if (f) return { x: f.x, y: f.y, z: f.z, kind: 'fos', key: f.id }; }   /* EXPLORE-1 드러난 돌판 */
     for (const s of A.bugs() || []) { if (!s.b || !s.spr || !s.spr.visible) continue; const p = s.spr.position, d = Math.min(Math.hypot(p.x - x, p.z - z), Math.hypot(p.x - me.x, p.z - me.z) < 2.6 ? Math.hypot(p.x - x, p.z - z) * 0.6 : 9); if (d < bd) { bd = d; b = { x: p.x, y: p.y, z: p.z, kind: 'bug', s, key: 'bug' }; } }
     if (b) return b; bd = 1.4; for (const m of A.mush() || []) { const d = Math.hypot(m.x - x, m.z - z); if (d < bd) { bd = d; b = { x: m.x, y: A.gy(m.x, m.z, me.y + 1) + 0.1, z: m.z, kind: 'mush', m, key: 'mush' }; } }
     if (b) return b; const f = flowerAt(x, z, 1.0); if (f) return { x: f.x, y: f.y + 0.3, z: f.z, kind: 'flower', key: 'flower' };
     const R9 = A.res(); if (R9 && R9.spots) { bd = 1.4; for (const s of R9.spots()) { if (s.k !== 'stone' || !s.on) continue; const d = Math.hypot(s.x - x, s.z - z); if (d < bd) { bd = d; b = { x: s.x, y: s.y + 0.05, z: s.z, kind: 'stone', key: 'stone' }; } } }
+    if (!b) { const xp = A.xp && A.xp(), c = xp && xp.lensAt(x, z); if (c) return c; }   /* EXPLORE-1 까망봉 송이·현무암 */
     return b; }
 
   // ───────── 숨김·보이기(0.25초) — 실내·자전거·배·버스·지하철·헤엄·쉬기·우산·스키·놀이·직업 체험 중엔 내려 둠(저장된 cur는 그대로) ─────────
@@ -134,7 +136,8 @@ export function createTools(A) {
     useOnce(); return true; }
   function stopPour() { pressing = false; burstT = 0; map.player.holdUse(false); }
   function useOnce() { const k = cur(), act = map.player.acting; if (!k) return; if (k === 'rod' && FS) { fishPress(); return; } if (act && /^(dig|cast|peer|sweep|reach)$/.test(act)) return;
-    aimCalc(true); if (k === 'shovel') useShovel(); else if (k === 'rod') useRod(); else if (k === 'lens') useLens(); else if (k === 'broom') useBroom(); }
+    aimCalc(true); if (!T.lock && k !== 'rod' && k !== 'can') { const xp = A.xp && A.xp(), h9 = xp && xp.hint(T.x, T.z, k); if (h9) { toast(h9, 2.8); return; } }   /* EXPLORE-1 흙더미 곁인데 차례가 아닌 도구 = 다음 할 일 한 줄 */
+    if (k === 'shovel') useShovel(); else if (k === 'rod') useRod(); else if (k === 'lens') useLens(); else if (k === 'broom') useBroom(); }
 
   // ───────── 💧 물뿌리개: 포물선 물방울(watergun.js 풀 결) · 고리 자리 판정 · 물통 ─────────
   const kind = new Uint8Array(PMAX), px = new Float32Array(PMAX), py = new Float32Array(PMAX), pz = new Float32Array(PMAX), vx = new Float32Array(PMAX), vy = new Float32Array(PMAX), vz = new Float32Array(PMAX), life = new Float32Array(PMAX), psz = new Float32Array(PMAX);
@@ -204,6 +207,7 @@ export function createTools(A) {
 
   // ───────── ⛏ 삽 ─────────
   function useShovel() { const x = T.x, z = T.z, y = T.y, en9 = en(), t = S();
+    if (T.lock === 'fos') { const id = T.k; map.player.act('dig', { at: [x, y, z], msg: null, midAt: 1.55, color: 0x8a7458, color2: 0xa8957a, onMid: () => { const xp = A.xp(); if (xp && xp.use('shovel', id)) A.rec('dig-fos'); } }); return; }   /* EXPLORE-1 층층골 흙더미(무엇이 나올지 자리마다 정해짐 · 무작위 X) */
     if (T.lock === 'trs') { map.player.act('dig', { at: [x, y, z], msg: null, midAt: 1.55, onMid: () => { const tr = A.trs(); if (tr && tr.shovel && tr.shovel()) { A.rec('dig-trs'); } } }); return; }
     if (A.inSchool(x, z)) { toast(en9 ? '🏫 We do not dig at school — dig in the town soil' : '🏫 학교 땅은 파지 않아요 — 마을 흙에서 파요', 2.4); return; }
     if (water(x, z)) { toast(en9 ? '💧 You cannot dig in water' : '💧 물에서는 팔 수 없어요', 2); return; }
@@ -267,6 +271,7 @@ export function createTools(A) {
   function useLens() { const e = en(), t = S(); let x = T.x, y = T.y, z = T.z; const me = map.player.pos(), L9 = T.lock ? lensAt(x, z, me) : null;
     const h = map.player.act('peer', { at: [x, y, z], msg: null, midAt: 1.35, onMid: () => {
       if (L9 && L9.kind === 'bug') { A.bugLook(L9.s); A.rec('lens-bug'); return; }
+      if (L9 && (L9.kind === 'fos' || L9.kind === 'xrock')) { const xp = A.xp(); if (xp) xp.use('lens', L9.key); A.rec('lens-' + L9.kind); return; }   /* EXPLORE-1 화석 돌판 · 까망봉 돌 */
       const kd = L9 ? L9.kind : 'soil', d = day(), first = t.n['l:' + kd] !== d; t.n['l:' + kd] = d; mark(); if (first) A.skUp('look', 1, 'lens:' + kd); A.rec('lens-' + kd);
       if (kd === 'mush') toast(L(LOOKF.mush) + (L9.m.poison ? L(LOOKF.poison) : ''), 4); else toast(L(LOOKF[kd]), 4); } });
     void h; void e; }
@@ -279,7 +284,8 @@ export function createTools(A) {
   function pilesSync(force) { const me = map.player.pos(), cx = Math.floor(me.x / CELL), cz = Math.floor(me.z / CELL), d = day(), mode = swMode(), t = S(); if (t.sw.d !== d) { t.sw = { d, k: {} }; mark(); }
     const sig = cx + ':' + cz + ':' + d + ':' + mode; if (!force && sig === center) return; center = sig; if (mode !== lastMode || d !== lastDay) { PCACHE.clear(); lastMode = mode; lastDay = d; }
     PILES.length = 0; if (A.on()) for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) for (const p of cellPiles(cx + i, cz + j, d, mode)) if (!t.sw.k[p.k]) PILES.push(p); dirty = true; }
-  function useBroom() { const e = en(), t = S(), p = T.lock === 'pile' ? PILES.find(q => q.k === T.k) : null, mode = swMode();
+  function useBroom() { if (T.lock === 'fos') { const id = T.k; map.player.act('sweep', { at: [T.x, T.y, T.z], msg: null, colors: [0xd2c6b0, 0xb8a888], midAt: 1.7, onMid: () => { const xp = A.xp(); if (xp && xp.use('broom', id)) A.rec('sweep-fos'); } }); return; }   /* EXPLORE-1 돌판 쓸기 */
+    const e = en(), t = S(), p = T.lock === 'pile' ? PILES.find(q => q.k === T.k) : null, mode = swMode();
     const cols = !p ? [0xb8a888, 0xa89878] : p.mode === 'leaf' ? [0xd8762a, 0xc8452e, 0xe8b23a] : p.mode === 'snow' ? [0xf4f8fb, 0xe2ebf2] : [0xf4f4ee, 0xd8d0c0, 0xc8443a];
     map.player.act('sweep', { at: [T.x, T.y, T.z], msg: null, colors: cols, midAt: 1.7, onMid: () => {
       if (!p) { if (Math.random() < 0.5) toast(e ? '🧹 Nothing to sweep here — look for leaves, snow or litter' : '🧹 여긴 쓸 것이 없어요 — 낙엽·눈·쓰레기를 찾아봐요', 2.2); return; }

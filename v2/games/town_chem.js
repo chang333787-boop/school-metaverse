@@ -4,7 +4,7 @@
 //   그림 둘(그리기 +2 이하 · 새 Light X): 점 풀(김·물방울·물보라·홀씨 64점 — 셰이더가 시간 WT·내 자리 UPL 유니폼으로 움직임) · 둥근 판 인스턴스(웅덩이·녹은 물·논 얼음 판·불꽃·재·민들레)
 //   연못 얼음 = 기존 연못 재질에 얼음 값 하나(그리기 0) · 지어내지 않음 = 논·연못·캠핑장·공원이 없는 마을이면 그 규칙은 꺼짐
 //   저장 = GAME.S.chem(알아낸 규칙·웅덩이 물기·얼음·모닥불·녹은 물·민들레 씨) · 몸 젖음은 저장 X(세션)
-import { LAWS, PAIRS, AT, ORDER } from './town_laws.js?v=4';   // LAWS-1 실험 표(가방 물건 × 자리)
+import { LAWS, PAIRS, AT, ORDER } from './town_laws.js?v=5';   // LAWS-1 실험 표(가방 물건 × 자리)
 export const CHEM_V = 1;
 // 요소 표: [그림, 한, 영]
 export const ELEM = { water: ['💧', '물', 'Water'], fire: ['🔥', '불', 'Fire'], wind: ['🌬', '바람', 'Wind'], cold: ['❄️', '추위', 'Cold'], sun: ['☀️', '햇빛', 'Sunlight'] };

@@ -39,6 +39,7 @@ export const LAWS = {
 export const PAIRS = [
   ['water', '🍂', 'float', 'float'], ['water', '🍃', 'float', 'float'], ['water', '🍄', 'float', 'float'], ['water', '🥬', 'float', 'float'], ['water', '🍓', 'float', 'float'], ['water', '🥒', 'float', 'float'], ['water', '🍞', 'float', 'float'],
   ['water', '⚪', 'sink', 'sink'], ['water', '🥔', 'sink', 'sink'], ['water', '🥕', 'sink', 'sink'], ['water', '🍠', 'sink', 'sink'], ['water', '🍯', 'sink', 'sink'], ['water', '🥚', 'egg', 'sink'],
+  ['water', '⚫', 'sink', 'sink'],   // EXPLORE-1 까망봉 송이 · 현무암 — 구멍이 많아도 물에 가라앉아요(속돌은 넣지 않음 · 사실이 섞일 위험)
   ['water', '🧂', 'dissolve', 'dissolve'], ['water', '🥛', 'mix', 'mix'], ['water', '🌾', 'mix', 'mix'], ['water', '🍁', 'mix', 'mix'], ['water', '🧈', 'oil', 'float'], ['water', '🐟', 'release', 'swim'], ['water', '🌰', 'cone', 'close'],
   ['sea', '🧂', 'seasalt', 'dissolve'], ['sea', '🐟', 'release', 'swim'], ['sea', '🐚', 'release', 'sink'], ['sea', '🍂', 'float', 'float'], ['sea', '⚪', 'sink', 'sink'], ['sea', '🧈', 'oil', 'float'], ['sea', '🌰', 'cone', 'close'], ['sea', '🥔', 'sink', 'sink'],
   ['fire', '🍠', 'roast', 'roast', '🍠♨'], ['fire', '🥔', 'roast', 'roast', '🥔♨'], ['fire', '🌽', 'roast', 'roast', '🌽♨'], ['fire', '🍄', 'roast', 'roast', '🍄♨'], ['fire', '🐟', 'roast', 'roast', '🐟♨'], ['fire', '🍞', 'roast', 'roast', '🍞♨'],
