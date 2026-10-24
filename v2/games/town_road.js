@@ -112,10 +112,10 @@ export function createRoad(A) {
 
   // ───────── ② 길에서 도움 요청 ─────────
   const W = () => A.workers() || [];
-  const okWorker = w => w && w.k && A.playk(w.k) && w.k !== 'stall' && !w.gate && !w.party && !NOHELP.has(w.role) && !A.water(w.x, w.z);
+  const atHub = w => !!(A.hub && A.hub(w.x, w.z)), okWorker = w => w && w.k && A.playk(w.k) && (w.k !== 'stall' || atHub(w)) && !w.gate && !w.party && !NOHELP.has(w.role) && !A.water(w.x, w.z);
   function camFwd() { const e9 = map.camera.matrixWorld.elements, cl = Math.hypot(e9[8], e9[10]) || 1; return [-e9[8] / cl, -e9[10] / cl]; }
   function helpTry(me, force, fi) { const cf = camFwd(), WK = W(); let bi = -1, bd = 1e9;
-    for (let i = 0; i < WK.length; i++) { const w = WK[i]; if (!okWorker(w)) continue; if (fi != null && i !== fi) continue; const dx = w.x - me.x, dz = w.z - me.z, d = Math.hypot(dx, dz); if (fi == null && (d < 14 || d > 70 || Math.abs(w.g - me.y) > 6)) continue; const fr = d > 0.1 ? (dx * cf[0] + dz * cf[1]) / d : 1; if (fi == null && fr < 0.25) continue; const sc = d - fr * 20; if (sc < bd) { bd = sc; bi = i; } }
+    for (let i = 0; i < WK.length; i++) { const w = WK[i]; if (!okWorker(w)) continue; if (fi != null && i !== fi) continue; const dx = w.x - me.x, dz = w.z - me.z, d = Math.hypot(dx, dz); if (fi == null && (d < 14 || d > 70 || Math.abs(w.g - me.y) > 6)) continue; const fr = d > 0.1 ? (dx * cf[0] + dz * cf[1]) / d : 1; if (fi == null && fr < 0.25) continue; const sc = d - fr * 20 - (atHub(w) ? 25 : 0); if (sc < bd) { bd = sc; bi = i; } }   /* HUB-1: 모이는 곳(학교 앞·장터·강가 40m 안) 일꾼이 먼저 · 장터 상인은 모이는 곳에서만 */
     if (bi < 0) return false; const w = WK[bi], s = S(), order = force ? [force] : HK.slice().sort((a, b) => (s.hk[a] || 0) - (s.hk[b] || 0) || HK.indexOf(a) - HK.indexOf(b));
     for (const k of order) { const plan = PLAN[k](w, me); if (plan) { reqStart(bi, w, k, plan); return true; } DBG.push(k + ' 못 함 @' + Math.round(w.x) + ',' + Math.round(w.z)); if (DBG.length > 30) DBG.shift(); } return false; }
   /* 그 자리 위가 트였나(지붕·차광막·처마 밑 X) + (nb = 둘레 1m 넷도 막히지 않음) */

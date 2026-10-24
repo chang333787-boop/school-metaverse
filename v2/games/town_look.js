@@ -88,6 +88,93 @@ const MUDMAP = `
 #endif
 }
 `;
+// ───────── ART-3 땅 결(10-24 · town_art3.md): 논·밭·강·둔치 — 판은 이미 따로 그려지므로 재질에 조각만 덧붙임(그리기 +0) ─────────
+//   계절 무게 uSea_a = (봄, 여름, 가을, 겨울) · 비 uRain_a(0~1 · 천천히 젖고 마름) · vAc_a = 줄 건너는 축(0 = x · 1 = z) · vRUv_a = 원래 uv(줄 자리 · 물 흐름 길이)
+//   숫자 출처(일반 공개 사진을 보기만 · 사진은 넣지 않음): 모 줄 간격 30cm 안팎 · 그루터기 포기 30×15cm 격자 · 물 댄 논 = 흙탕 바탕에 하늘이 비침 · 자갈 둔치 = 회백 돌 + 물가 1m 안 젖은 띠
+const PADDYF = `
+{ vec2 q = vWP_a.xz; vec3 toC = cameraPosition - vWP_a; float dist = length(toC); vec3 V = toC / dist; float fd = 1.0 - smoothstep(25.0, 90.0, dist), t = uT_a;
+  float ph = fract(vRUv_a.x * 4.0), rd = abs(ph - 0.5) * 2.0, sp = uSea_a.x, su = uSea_a.y, au = uSea_a.z, wi = uSea_a.w;
+  vec2 ax = vAc_a > 0.5 ? vec2(0.0, 1.0) : vec2(1.0, 0.0); float sa = dot(uSunW_a.xz, ax) * sign(ph - 0.5);
+  float row = 1.0 - smoothstep(0.26, 0.62, rd); outgoingLight *= 1.0 - (su + au) * row * (0.08 + 0.16 * max(0.0, -sa));   /* 벼 줄 곁 그늘(해 반대쪽이 더 어둡게) = 줄 결 */
+  if (sp > 0.01) { vec2 g = vec2(cos(q.x * 0.9 + q.y * 0.5 + t * 1.3), cos(q.y * 1.1 - q.x * 0.4 + t * 1.6)) * 0.03;
+#ifndef LITE_A
+    g += vec2(cos(q.x * 2.7 - q.y * 1.9 - t * 2.4), cos(q.y * 2.9 + q.x * 1.7 + t * 2.1)) * 0.015 * fd;
+#endif
+    vec3 N = normalize(vec3(-g.x * fd, 1.0, -g.y * fd)); float ndv = clamp(dot(N, V), 0.0, 1.0), F = 0.06 + 0.94 * p5_a(1.0 - ndv); vec3 R = reflect(-V, N); R.y = abs(R.y); float sd = max(dot(R, uSunW_a), 0.0);
+    vec3 wc = mix(outgoingLight * vec3(0.6, 0.58, 0.48), skyRef_a(R, sd), clamp(F + 0.16, 0.0, 0.72)) + uSunC_a * p256_a(sd) * 1.2;   /* 흙탕 물 바닥 + 하늘 비침 + 좁은 해 빛 */
+    outgoingLight = mix(outgoingLight, wc, sp * smoothstep(0.2, 0.34, rd)); }
+  if (au > 0.01) { float wv = dot(q, vec2(0.11, 0.06)) - t * 1.5, gust = 0.5 + 0.5 * sin(wv) * sin(wv * 0.37 + 1.3), nz = texture2D(uNz_a, q / 3.0).r, lu = dot(outgoingLight, vec3(0.3, 0.59, 0.11));
+    outgoingLight = mix(outgoingLight, lu * vec3(1.95, 1.45, 0.42), au * 0.85) * (1.0 + au * ((gust - 0.5) * 0.3 * uWind_a + (nz - 0.5) * 0.1 * fd)); }   /* 줄 사이도 누런 이삭 · 갈대와 같은 바람 물결이 이삭 위로 지나감 */
+#ifndef LITE_A
+  if (wi > 0.01) { vec2 cl = vec2(ph * 1.6 / 0.4, vRUv_a.y * 8.0 / 0.3), ci = floor(cl), jr = vec2(fract(sin(dot(ci, vec2(12.9898, 78.233))) * 43758.5), fract(sin(dot(ci, vec2(39.35, 11.13))) * 24634.6)), f = (fract(cl) - 0.3 - 0.4 * jr) * vec2(0.4, 0.3);
+    float aw = fwidth(cl.y), dt9 = (1.0 - smoothstep(0.035, 0.06, length(f))) * (1.0 - smoothstep(0.25, 0.5, aw)) * step(0.22, jr.x * 0.6 + jr.y * 0.4);
+    outgoingLight = mix(outgoingLight, outgoingLight * vec3(0.78, 0.66, 0.46), wi * dt9 * 0.7); }   /* 겨울 그루터기 점(포기 줄 40×30cm 언저리 · 조금씩 어긋나고 군데군데 빔 · 멀면 사라짐) */
+#endif
+}
+`;
+const FARMF = `
+{ float ph = fract(vRUv_a.x * 4.0), s = ph - 0.5, h = 0.5 + 0.5 * cos(6.2832 * s), na = sin(6.2832 * s); vec2 ax = vAc_a > 0.5 ? vec2(0.0, 1.0) : vec2(1.0, 0.0); float sa = dot(uSunW_a.xz, ax);
+  float k = 1.0 - smoothstep(0.25, 0.6, fwidth(vRUv_a.x * 4.0)); outgoingLight *= 1.0 + (na * sa * 0.5 - (1.0 - h) * 0.14) * k;   /* 이랑 비탈: 해 쪽 밝게 · 반대쪽·고랑 어둡게(멀면 고르게 — 깜빡임 X) */
+  if (uRain_a > 0.01) { float fur = 1.0 - h; outgoingLight *= 1.0 - uRain_a * (0.08 + 0.16 * fur);   /* 젖은 흙(바탕 어둡게는 땅과 같은 젖음 조각 wetChain이 · 여기선 고랑에 고인 물기만 더) */
+#ifndef LITE_A
+    vec3 V = normalize(cameraPosition - vWP_a); float F = 0.04 + 0.96 * p5_a(1.0 - clamp(V.y, 0.0, 1.0)); outgoingLight = mix(outgoingLight, skyRef_a(vec3(-V.x, V.y, -V.z), 0.0), F * 0.3 * uRain_a * (0.4 + 0.6 * fur));
+#endif
+  } }
+`;
+const RIVF = `
+{ vec2 uv = vRUv_a; float t = uT_a; vec3 toC = cameraPosition - vWP_a; float dist = length(toC); vec3 V = toC / dist; float fd = 1.0 - smoothstep(30.0, 160.0, dist);
+  float al = uv.y * 7.0, e = abs(uv.x / 1.2 - 0.5) * 2.0, s1 = texture2D(uNz_a, vec2(uv.x * 0.9, al / 26.0 - t * 0.06)).r;
+#ifndef LITE_A
+  s1 = s1 * 0.6 + texture2D(uNz_a, vec2(uv.x * 2.1 + 0.3, al / 11.0 - t * 0.13)).r * 0.4;
+#endif
+  float streak = smoothstep(0.52, 0.7, s1) * (1.0 - 0.6 * e), rz = smoothstep(0.64, 0.74, texture2D(uNz_a, vec2(al / 160.0, 0.71)).r) * (1.0 - 0.5 * e), wf = rz * smoothstep(0.6, 0.78, texture2D(uNz_a, vec2(uv.x * 3.1 + al * 0.013, al / 2.2 - t * 0.5)).r) * (0.5 + 0.5 * fd);
+  vec2 g = vec2((s1 - 0.5) * 0.14, cos(al * 0.9 - t * 2.0) * 0.04) * fd; vec3 N = normalize(vec3(g.x, 1.0, g.y)); float ndv = clamp(dot(N, V), 0.0, 1.0), F = 0.04 + 0.96 * p5_a(1.0 - ndv); vec3 R = reflect(-V, N); R.y = abs(R.y); float sd = max(dot(R, uSunW_a), 0.0);
+  outgoingLight = mix(outgoingLight, skyRef_a(R, sd), F * uRefl_a * 0.8) * (1.0 + streak * 0.14);   /* 하늘 비침 + 흐름 따라 길게 흘러가는 물살 결 */
+  outgoingLight = mix(outgoingLight, uFoam_a, wf * 0.45) + uSunC_a * p256_a(sd) * fd;   /* 여울 흰 물결(강 따라 군데군데 · 자리는 그대로, 물결만 흐름) + 좁은 해 빛 */
+}
+`;
+const BANKF = `
+{ vec2 q = vWP_a.xz; float s = vSd_a, nz = texture2D(uNz_a, q / 9.0).r;
+  float gz = (1.0 - smoothstep(1.2, 4.2, s + (nz - 0.5) * 3.0)) * (1.0 - 0.75 * uSea_a.w), wb = 1.0 - smoothstep(0.25, 1.1, s + (nz - 0.5) * 0.6);
+#ifndef LITE_A
+  vec2 cq = q / 0.24, ci = floor(cq); vec2 jr = vec2(fract(sin(dot(ci, vec2(12.9898, 78.233))) * 43758.5), fract(sin(dot(ci, vec2(39.35, 11.13))) * 24634.6));
+  float d9 = length(fract(cq) - 0.3 - 0.4 * jr), st = 1.0 - smoothstep(0.26, 0.42, d9), p1 = texture2D(uNz_a, q / 7.0 + 0.61).r, pk = 1.0 - smoothstep(0.25, 0.7, fwidth(cq.x)), peb = mix(0.5, mix(0.15, 0.55 + 0.45 * jr.x, st), pk);   /* 잔돌 = 24cm 칸마다 자리·밝기가 다른 돌 하나(되풀이 무늬 X · 멀면 고르게) */
+#else
+  float p1 = nz, peb = 0.5;
+#endif
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.6, 0.58, 0.53) * (0.82 + 0.22 * p1) * (0.78 + 0.4 * peb), gz) * (1.0 - 0.3 * wb);   /* 자갈 둔치(회백 돌 · 큰 얼룩 + 잔돌 점) · 물가 젖은 띠 */
+}
+`;
+// 염전(ART-3 b): 소금판 칸 = 얕은 물 거울(하늘 비침 · 아주 잔 물결 · 좁은 해 빛 = 맑은 낮에만 반짝) · 소금 꽃 = 18cm 칸마다 흰 결정 하나(흰 소금 칸은 빽빽 · 물 칸은 드문드문) — vColor 밝기로 소금 칸을 가림
+const SALTF = `
+{ vec2 q = vWP_a.xz; vec3 toC = cameraPosition - vWP_a; float dist = length(toC); vec3 V = toC / dist; float fd = 1.0 - smoothstep(20.0, 80.0, dist), t = uT_a, sl = smoothstep(0.78, 0.88, vColor.r), wat = 1.0 - 0.85 * sl;
+  vec2 g = vec2(cos(q.x * 1.3 + q.y * 0.4 + t * 0.9), cos(q.y * 1.1 - q.x * 0.3 - t * 1.1)) * 0.012 * fd; vec3 N = normalize(vec3(g.x, 1.0, g.y)); float ndv = clamp(dot(N, V), 0.0, 1.0), F = 0.04 + 0.96 * p5_a(1.0 - ndv); vec3 R = reflect(-V, N); R.y = abs(R.y); float sd = max(dot(R, uSunW_a), 0.0);
+  outgoingLight = mix(outgoingLight, skyRef_a(R, sd), clamp(F + 0.22, 0.0, 0.7) * wat) + uSunC_a * p256_a(sd) * 1.3 * wat;
+#ifndef LITE_A
+  vec2 cq = q / 0.18, ci = floor(cq), jr = vec2(fract(sin(dot(ci, vec2(12.9898, 78.233))) * 43758.5), fract(sin(dot(ci, vec2(39.35, 11.13))) * 24634.6));
+  float fl = (1.0 - smoothstep(0.1 + 0.12 * jr.y, 0.18 + 0.14 * jr.y, length(fract(cq) - 0.3 - 0.4 * jr))) * step(jr.x, 0.18 + 0.6 * sl) * (1.0 - smoothstep(0.3, 0.7, fwidth(cq.x)));
+  outgoingLight = mix(outgoingLight, vec3(0.5 + 0.42 * clamp(uSunC_a.g, 0.0, 1.2)), fl * 0.75);
+#endif
+}
+`;
+// 모래사장(ART-3 b): 마른 모래 = 바람 결(구불구불 잔 줄 · 멀면 고르게) · 물가 = 젖은 모래 띠(물때 따라 · 썰물이면 넓게) + 옅은 하늘 윤기 · 파도 거품 줄(밀려왔다 물러남) — 둘레 땅과 같은 재질 위에 vSw_a(모래 무게)만큼만
+const SANDF = `
+{ vec2 q = vWP_a.xz; float sw = vSw_a, s = vSsd_a, t = uT_a; vec3 toC = cameraPosition - vWP_a; float dist = length(toC); vec3 V = toC / dist; float fd = 1.0 - smoothstep(25.0, 110.0, dist), nz = texture2D(uNz_a, q / 23.0).r;
+  float tf = clamp((uWetK_a - 0.72) / 0.28, 0.0, 1.0), ww = 1.2 + 3.2 * (1.0 - tf), wb = (1.0 - smoothstep(ww - 0.25, ww + 0.35, s + (nz - 0.5) * 1.6)) * sw;
+#ifndef LITE_A
+  float ph = dot(q, vec2(0.83, 0.55)) / 0.9 + (texture2D(uNz_a, q / 31.0 + 0.2).r - 0.5) * 9.0, aw = fwidth(ph), rp = sin(ph * 6.2832) * (1.0 - smoothstep(0.25, 0.6, aw));
+  outgoingLight *= 1.0 + rp * 0.08 * sw * (1.0 - wb);
+#endif
+  outgoingLight *= 1.0 - vec3(0.13, 0.15, 0.17) * wb; outgoingLight = mix(outgoingLight, skyRef_a(vec3(-V.x, V.y, -V.z), 0.0), (0.04 + 0.96 * p5_a(1.0 - clamp(V.y, 0.0, 1.0))) * 0.35 * wb);
+  float e = 0.5 + 1.1 * (0.5 + 0.5 * sin(t * 0.55 + dot(q, vec2(0.021, 0.013)) + nz * 3.0)), fo = (1.0 - smoothstep(0.05, 0.22 + 0.2 * (1.0 - fd), abs(s - e))) * sw * (0.55 + 0.45 * fd);
+  outgoingLight = mix(outgoingLight, uFoam_a, fo * 0.6 * step(0.0, s)); }   /* 거품 줄 = 물가 0.5~1.6m 사이를 오감(자리마다 조금씩 늦게) */
+`;
+// 모래 바탕: 땅 풀결 그림(초록 획) 대신 모래 알갱이 얼룩 — 모래 무게만큼(둘레 땅과 이음매 X)
+const SANDMAP = `
+#ifdef USE_MAP
+{ vec4 tx = texture2D(map, vMapUv); float g9 = texture2D(uNz_a, vWP_a.xz / 5.3 + 0.17).r * 0.6 + texture2D(uNz_a, vWP_a.xz / 7.7 + 0.43).r * 0.4; diffuseColor *= mix(tx, vec4(vec3(0.93 + 0.12 * g9), 1.0), vSw_a); }
+#endif
+`;
 // 갈대 바람: 들판을 지나가는 바람 물결(세계 자리 기준 — 포기마다 같은 쪽으로) + 잔 떨림 · 높을수록 크게
 const REEDV = `
 vec4 mvPosition = vec4(transformed, 1.0);
@@ -102,12 +189,12 @@ mvPosition = modelViewMatrix * mvPosition;
 gl_Position = projectionMatrix * mvPosition;
 `;
 
-export function createLook({ T3, map, lite, tideLvl, TEX, MATS, scene, game, phase, wx, inb, season }) {
+export function createLook({ T3, map, lite, tideLvl, TEX, MATS, scene, game, phase, wx, inb, season, wet }) {
   const gameMin = () => (game && game() ? game().min : 600);
-  const OFF = new Set(((typeof location !== 'undefined' && new URLSearchParams(location.search).get('artoff')) || '').split(','));   // 시험용: ?artoff=sky,gnd,fog,water,mud,reed,gust — 하나씩 빼고 GPU 몫 재기
+  const OFF = new Set(((typeof location !== 'undefined' && new URLSearchParams(location.search).get('artoff')) || '').split(','));   // 시험용: ?artoff=sky,gnd,fog,water,mud,reed,gust,paddy,field,river,saltpan,sand — 하나씩 빼고 GPU 몫 재기(ART-3 paddy·field·river·saltpan·sand = 끄면 예전 그대로)
   const LITE = !!lite, CA = new T3.Color(), CB = new T3.Color(), V3 = new T3.Vector3();
   const U = { uSkyH_a: { value: new T3.Color(0xd0e7f5) }, uSkyZ_a: { value: new T3.Color(0x5a9de0) }, uGlow_a: { value: new T3.Color(0x000000) }, uSunW_a: { value: new T3.Vector3(0.4, 0.7, 0.3).normalize() }, uSunC_a: { value: new T3.Color(0xffffff) },
-    uT_a: { value: 0 }, uNz_a: { value: null }, uRefl_a: { value: 0.6 }, uFoam_a: { value: new T3.Color(0xffffff) }, uWetK_a: { value: 1 }, uWind_a: { value: 1 }, uDisc_a: { value: new T3.Color(0xffffff) }, uDiscK_a: { value: 1 }, uDiscW_a: { value: new T3.Vector3(0, 1, 0) } };
+    uT_a: { value: 0 }, uNz_a: { value: null }, uRefl_a: { value: 0.6 }, uFoam_a: { value: new T3.Color(0xffffff) }, uWetK_a: { value: 1 }, uWind_a: { value: 1 }, uDisc_a: { value: new T3.Color(0xffffff) }, uDiscK_a: { value: 1 }, uDiscW_a: { value: new T3.Vector3(0, 1, 0) }, uSea_a: { value: new T3.Vector4(0, 1, 0, 0) }, uRain_a: { value: 0 } };   // ART-3 계절 무게 · 비(젖은 흙)
   // 잡음 한 장(128 · 이음매 없음 · 부드러운 값 잡음 4겹) — 갯골·물결 어긋냄·땅 얼룩이 같이 씀
   { const N = 128, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), im = g.createImageData(N, N), F = new Float32Array(N * N); let sd = 9127; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
     for (const [P, A] of [[4, 1], [8, 0.5], [16, 0.25], [32, 0.12]]) { const L = new Float32Array(P * P); for (let i = 0; i < L.length; i++) L[i] = rnd(); const sm = t => t * t * (3 - 2 * t);
@@ -125,6 +212,15 @@ export function createLook({ T3, map, lite, tideLvl, TEX, MATS, scene, game, pha
   // 땅 얼룩(들·숲·모래): 세계 자리 잡음 두 겹으로 풀빛을 노랑 ↔ 푸른 초록으로 조금씩(넓은 들판의 바둑판 같은 되풀이 무늬가 덜 보이게)
   function ground(m) { if (OFF.has('gnd') || LITE) return m; return chain(m, sh => { Object.assign(sh.uniforms, U); vwp(sh, '');
     sh.fragmentShader = 'varying vec3 vWP_a;\n' + SKYF + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n{ float g1 = texture2D(uNz_a, vWP_a.xz / 52.0).r;' + (LITE ? ' float gv = g1;' : ' float gv = g1 * 0.72 + texture2D(uNz_a, vWP_a.xz / 9.0 + 0.43).r * 0.28;') + ' diffuseColor.rgb *= mix(vec3(0.9, 0.95, 1.03), vec3(1.08, 1.04, 0.88), gv); }'); }, 'gnd2'); }
+  // ART-3 땅 결 조각 잇기: vWP_a가 이미 있는 재질(땅 얼룩 뒤의 둔치)에도 겹쳐 선언하지 않게 · at = 넣을 자리(빛 계산 뒤 envmap · 바탕색 alphamap)
+  const art3 = (key, ck, F, o) => m => { if (OFF.has(key)) return m; return chain(m, sh => { Object.assign(sh.uniforms, U);
+    const hv = sh.vertexShader.includes('varying vec3 vWP_a;'), hf = sh.fragmentShader.includes('varying vec3 vWP_a;'), dv = 'varying vec2 vRUv_a;\n' + (o.ac ? 'varying float vAc_a;\n' : '') + (o.sd ? 'varying float vSd_a;\n' : '') + (o.sand ? 'varying float vSw_a;\nvarying float vSsd_a;\n' : '');
+    sh.vertexShader = dv + (o.ac ? 'attribute float ac_a;\n' : '') + (o.sd ? 'attribute float sd_a;\n' : '') + (o.sand ? 'attribute float sw_a;\nattribute float ssd_a;\n' : '') + (hv ? '' : 'varying vec3 vWP_a;\n') + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vRUv_a = uv;' + (o.ac ? ' vAc_a = ac_a;' : '') + (o.sd ? ' vSd_a = sd_a;' : '') + (o.sand ? ' vSw_a = sw_a; vSsd_a = ssd_a;' : '') + (hv ? '' : ' vWP_a = (modelMatrix * vec4(transformed, 1.0)).xyz;'));
+    const at = o.base ? '#include <alphamap_fragment>' : '#include <envmap_fragment>';
+    if (o.map) sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', o.map);
+    sh.fragmentShader = dv + (hf ? '' : 'varying vec3 vWP_a;\n') + 'uniform vec4 uSea_a;\nuniform float uRain_a;\nuniform float uWind_a;\nuniform vec3 uFoam_a;\nuniform float uRefl_a;\nuniform float uWetK_a;\n' + SKYF + sh.fragmentShader.replace(at, F + at); defs(sh, false); }, ck); };
+  const salt = art3('saltpan', 'salt3', SALTF, {}), sand = art3('sand', 'sand3', SANDF, { sand: true, map: SANDMAP }), paddy = art3('paddy', 'paddy3', PADDYF, { ac: true }), field = art3('field', 'field3', FARMF, { ac: true }), river = art3('river', 'river3', RIVF, {}), bank = art3('river', 'bank3', BANKF, { sd: true, base: true });   // ?artoff=paddy · field · river(강 물낯 + 둔치 같이)
+  const SEAW = { spring: [1, 0, 0, 0], summer: [0, 1, 0, 0], autumn: [0, 0, 1, 0], winter: [0, 0, 0, 1] };
   // 바다 재질(물낯 · 깊이 속성 dep_a) — town.js의 MAT.sea(안개 압축 그대로)에 덧붙임
   function water(m) { SEA = m; if (OFF.has('water')) return m; return chain(m, waterPatch(true), 'water2'); }
   // 밀물 물낯(town_shore) = 같은 물 · 깊이 속성 없음(물가 줄 없음)
@@ -202,10 +298,11 @@ export function createLook({ T3, map, lite, tideLvl, TEX, MATS, scene, game, pha
   }
   function tick(dt) { U.uT_a.value += dt; if (U.uT_a.value > 3600) U.uT_a.value -= 3600; if (SKY) { const cp = map.camera.position; SKY.position.copy(cp); }
     if (REED) { const b = REED.userData.box, cp = map.camera.position, dx = Math.max(b[0] - cp.x, 0, cp.x - b[2]), dz = Math.max(b[1] - cp.z, 0, cp.z - b[3]); REED.visible = dx * dx + dz * dz < (LITE ? 150 : 230) ** 2; }
-    if ((acc += dt) > 0.5) { acc = 0; apply(false); if (season && REEDG && season() !== REEDC) reedColor(season()); } }
+    if ((acc += dt) > 0.5) { acc = 0; apply(false); if (season && REEDG && season() !== REEDC) reedColor(season());
+      { const w4 = SEAW[season ? season() : 'summer'] || SEAW.summer; U.uSea_a.value.set(w4[0], w4[1], w4[2], w4[3]); const rt = wet ? Math.min(1, wet()) : wx && wx() === 'rain' ? 1 : 0; U.uRain_a.value += (rt - U.uRain_a.value) * (rt > U.uRain_a.value ? 0.12 : 0.03); } } }   /* ART-3 계절 무게 · 비 오면 몇 초에 걸쳐 젖고 그치면 1분쯤에 걸쳐 마름 */
   function setPhase() { apply(true); }
   function dispose() { skyOff(); if (REED) { REED.parent && REED.parent.remove(REED); REED.dispose(); REED = null; } if (REEDG) { REEDG.dispose(); REEDG = null; } }
-  return { U, off: k => OFF.has(k), fogFn: () => (OFF.has('fog') ? 'uSkyH_a' : LITE ? 'skyFogL_a(fd9)' : 'skyFog_a(normalize(fd9))'), ground, water, tide, mudMat, mud, reeds, skyOn, skyOff, tick, phase: setPhase, apply, dispose, get lite() { return LITE; }, get tideMat() { return TIDE; },
+  return { U, off: k => OFF.has(k), fogFn: () => (OFF.has('fog') ? 'uSkyH_a' : LITE ? 'skyFogL_a(fd9)' : 'skyFog_a(normalize(fd9))'), ground, water, tide, mudMat, mud, reeds, paddy, field, river, bank, salt, sand, skyOn, skyOff, tick, phase: setPhase, apply, dispose, get lite() { return LITE; }, get tideMat() { return TIDE; },
     reedAt: i => { if (!REED || i >= REED.count) return null; const M4 = new T3.Matrix4(); REED.getMatrixAt(i, M4); return [+M4.elements[12].toFixed(1), +M4.elements[14].toFixed(1)]; },
     info: () => ({ sky: !!SKY, old: !!OLD, reeds: REED ? REED.count : 0, reedVis: REED ? REED.visible : false, mud: !!MUDM, ph: PH, m: lastM, sunW: U.uSunW_a.value.toArray().map(v => +v.toFixed(2)), exp: window.SD2 && +SD2.renderer.toneMappingExposure.toFixed(2) }) };
 }
