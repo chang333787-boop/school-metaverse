@@ -1,0 +1,21 @@
+// 🕖 일 시간 시험(HOURS-1 · 사용자 10-24 '상인들이 영업 시간이 아니거나 일하는 시간이 아닌데도 진행되는 경우가 꽤 있네'): node tools/harness/town_hours.cjs [마을=ourtown] [포트=8002]
+//   일꾼·상인 E(같이 해요 · 장터)를 때마다(06:30 · 10:00 · 20:30) 모두 눌러 봄 → 시간 밖 = 일 창·놀이·양몰이·모내기가 열리지 않음(쉬는 중 한 줄) · 낮 = 열림 · 이름표도 쉬는 중 · 우체국·도서관 체험 밤 = 안 열림 · 오류 0
+const { chromium } = require('playwright');
+const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
+const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
+(async () => { const b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] });
+  try { const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage(), errs = []; p.on('pageerror', e => errs.push(e.message.slice(0, 160)));
+    const ev = (f, a) => p.evaluate(f, a), W8 = ms => p.waitForTimeout(ms);
+    await p.goto('http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1'); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && window.SD2 && SM_TOWN.routePts, null, { timeout: 240000 }); await W8(2500);
+    const shut = async () => { for (let i = 0; i < 6; i++) { const any = await ev(() => { const P = document.querySelector('.twn-play .x, .twn-play [data-a="x"]'); if (P) { P.click(); return 1; } const Q = document.querySelector('.twn-p [data-a="x"]'); if (Q) { Q.click(); return 1; } const H = SM_TOWN.herd && SM_TOWN.herd(); if (H && H.busy && H.stop) { H.stop(); return 1; } return document.querySelector('.twn-p,.twn-play,.twn-dlg') ? 2 : 0; }); if (!any) break; if (any === 2) await p.keyboard.press('Escape'); await W8(250); } };
+    await shut(); await ev(() => { const G = SM_TOWN.game().S; G.story = G.story || {}; G.story.done = Object.assign(G.story.done || {}, { p0: 1, a1_1: 1 }); });
+    const tryAll = async min => { await ev(m => { const G = SM_TOWN.game().S; G.clock = true; G.min = m - 1; SM_TOWN.game().mark(); }, min); await W8(1800);   /* 시계가 m을 지나가며 이름표를 고침(30분마다) */
+      const H = await ev(() => SD2.map.interact.list().filter(h => !h.off && /같이 해요|장터 \(|쉬는 중/.test(h.label)).map(h => ({ x: h.x, z: h.z, l: h.label }))); const out = { n: H.length, open: [], rest: 0, lbl: 0 };
+      for (const h of H) { const r = await ev(h9 => { const h = SD2.map.interact.list().find(q => Math.abs(q.x - h9.x) < 0.01 && Math.abs(q.z - h9.z) < 0.01); if (!h) return 'x'; try { h.use(); } catch (e) { return 'err ' + e.message; } const H2 = SM_TOWN.herd && SM_TOWN.herd(), R2 = SM_TOWN.rhy && SM_TOWN.rhy(); return document.querySelector('.twn-play') ? 'play' : document.querySelector('.twn-p') ? 'panel' : H2 && H2.busy ? 'herd' : R2 && R2.busy ? 'rhy' : 'none'; }, h); if (r !== 'none') out.open.push(r + ' ' + h.l.slice(0, 14)); else out.rest++; await shut(); }
+      out.lbl = (await ev(() => SD2.map.interact.list().filter(h => !h.off && /쉬는 중/.test(h.label)).length)); return out; };
+    for (const [m, want] of [[20 * 60 + 30, 'shut'], [6 * 60 + 30, 'shut'], [10 * 60, 'open']]) { const R = await tryAll(m); const hh = Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0');
+      if (want === 'shut') { const op = R.open.filter(t => !/징검|stones/.test(t) && !(m < 7 * 60 && /낚시/.test(t)));   /* 부두 낚시 = 06:00부터 */ ok(R.n >= 8 && op.length === 0, hh + ' 시간 밖 E 열림 0 (일꾼 ' + R.n + ' · 쉬는 중 ' + R.rest + (op.length ? ' · 열림: ' + op.slice(0, 4).join(' / ') : '') + ')'); ok(R.lbl >= R.n - R.open.length - 3, hh + ' 이름표 = 쉬는 중 ' + R.lbl + '/' + R.n); }
+      else ok(R.open.length >= R.n * 0.6, hh + ' 낮 = 일 열림 ' + R.open.length + '/' + R.n + ' (닫힘 ' + R.rest + ')'); }
+    { await ev(() => { SM_TOWN.game().S.min = 21 * 60; }); const r = await ev(() => { const J = SM_TOWN.jobs && SM_TOWN.jobs(); if (!J || !J.startJob) return 'nojob'; J.startJob('post'); return J.active ? 'on' : 'off'; }); ok(r !== 'on', '21:00 우체국 체험 = 안 열림 (' + r + ')'); await shut(); }
+    ok(!errs.length, '페이지 오류 0 ' + errs.join(' | '));
+  } catch (e) { fails.push('예외 ' + e.message); console.log('  ✗ 예외 ' + e.message); } await b.close(); console.log(fails.length ? 'FAIL ' + fails.length : 'PASS'); process.exit(fails.length ? 1 : 0); })();
