@@ -44,6 +44,8 @@ export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     if (url.pathname === '/' || url.pathname === '/health') return text('sm-rooms 살아 있어요', 200);
+    const sv = url.pathname.match(/^\/(save|load|drop)\/([^/]+)\/(\d{1,2})$/);
+    if (sv) return saveRoute(req, env, sv[1], sv[2], +sv[3]);
     const m = url.pathname.match(/^\/room\/([^/]+)$/);
     if (!m) return text('없는 주소예요', 404);
     if (!originOk(req.headers.get('Origin'))) return text('허락되지 않은 곳이에요', 403);
@@ -273,5 +275,59 @@ export class Room extends DurableObject {
       try { w.serializeAttachment({ id: i.id, n: i.n, p: this.pos.get(i.id) || null }); } catch (e) { /* 닫히는 중 */ }
     }
     this.flush();
+  }
+}
+
+/* ───────── 이어 하기 저장(SAVE-CF · 최종 차례 8 · 사용자 10-24 '크롬북 ↔ 컴퓨터실 이어 하기') ─────────
+   POST /save/<반코드>/<번호>  {pin, data}  → {ok, at}        · 핀이 다르면 403 · 5번 틀리면 1분 잠금 423 · 너무 크면 413 · 오늘 꽉 차면 429
+   POST /load/<반코드>/<번호>  {pin}        → {ok, at, data} · 없으면 {ok, none:1}
+   POST /drop/<반코드>/<번호>  {pin}        → 내 저장 지우기(핀이 맞을 때)
+   - 반 코드 하나 = Durable Object 하나(SQLite 표 한 개) · 번호 1~40 · 핀은 소금(반 코드·번호·PEPPER) + SHA-256 해시만 둠
+   - 이름은 받지도 두지도 않음(저장 JSON에서 이름 칸을 빼고 받음 · 아래 NAME_KEYS) · 핀은 주소에 넣지 않음(본문)
+   - 무료 한도: 반 하나 하루 저장 2만 번 · 저장 하나 256KB */
+const SAVE_MAX = 256 * 1024, SAVE_DAY_MAX = 20000, CLASS_RX = /^[A-Za-z0-9]{4,8}$/;
+function cors(req) { const o = req.headers.get('Origin') || ''; return { 'access-control-allow-origin': originOk(o) ? o : ORIGIN_OK, 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'content-type', 'vary': 'Origin' }; }
+function json(req, obj, status = 200) { return new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...cors(req) } }); }
+async function saveRoute(req, env, kind, code, num) {
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(req) });
+  if (!originOk(req.headers.get('Origin'))) return text('허락되지 않은 곳이에요', 403);
+  if (req.method !== 'POST') return json(req, { ok: false, m: 'POST로 보내요' }, 405);
+  if (!CLASS_RX.test(code) || !(num >= 1 && num <= 40)) return json(req, { ok: false, m: '반 코드는 영문·숫자 4~8자 · 번호는 1~40' }, 400);
+  const body = await req.text(); if (body.length > SAVE_MAX + 200) return json(req, { ok: false, m: '저장이 너무 커요' }, 413);
+  const stub = env.SAVES.get(env.SAVES.idFromName(code.toLowerCase()));
+  const r = await stub.fetch('https://saves/' + kind + '/' + code.toLowerCase() + '/' + num, { method: 'POST', body });
+  const out = await r.text(); return new Response(out, { status: r.status, headers: { 'content-type': 'application/json; charset=utf-8', ...cors(req) } });
+}
+async function pinHash(pepper, code, num, pin) { const b = new TextEncoder().encode((pepper || 'sm-town') + '|' + code + '|' + num + '|' + pin); const h = await crypto.subtle.digest('SHA-256', b); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+const NAME_KEYS = new Set(['name', 'nick', 'realName']);
+function noNames(v, d = 0) { if (d > 12 || !v || typeof v !== 'object') return v; if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) v[i] = noNames(v[i], d + 1); return v; } for (const k of Object.keys(v)) { if (NAME_KEYS.has(k) && typeof v[k] === 'string') delete v[k]; else v[k] = noNames(v[k], d + 1); } return v; }
+
+export class Saves extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env); this.env = env; this.sql = ctx.storage.sql;
+    this.sql.exec('CREATE TABLE IF NOT EXISTS s (num INTEGER PRIMARY KEY, pin TEXT, data TEXT, at INTEGER, fails INTEGER DEFAULT 0, lock INTEGER DEFAULT 0)');
+    this.sql.exec('CREATE TABLE IF NOT EXISTS d (day TEXT PRIMARY KEY, c INTEGER)');
+  }
+  async fetch(req) {
+    const [, kind, code, n] = new URL(req.url).pathname.split('/'), num = +n, now = Date.now();
+    let d; try { d = JSON.parse(await req.text()); } catch (e) { return Response.json({ ok: false, m: '읽을 수 없는 저장' }, { status: 400 }); }
+    const pin = String((d && d.pin) || ''); if (!/^\d{4}$/.test(pin)) return Response.json({ ok: false, m: '비밀번호는 숫자 네 자리' }, { status: 400 });
+    const row = this.sql.exec('SELECT pin, data, at, fails, lock FROM s WHERE num = ?', num).toArray()[0];
+    const h = await pinHash(this.env.PEPPER, code, num, pin);
+    if (row) {
+      if (row.lock > now) return Response.json({ ok: false, m: '잠깐 잠겼어요. 1분 뒤에 다시 해요', lock: 1 }, { status: 423 });
+      if (row.pin !== h) { const f = (row.fails || 0) + 1; this.sql.exec('UPDATE s SET fails = ?, lock = ? WHERE num = ?', f >= 5 ? 0 : f, f >= 5 ? now + 60000 : 0, num); return Response.json({ ok: false, m: '비밀번호가 달라요', bad: 1 }, { status: 403 }); }
+      if (row.fails) this.sql.exec('UPDATE s SET fails = 0 WHERE num = ?', num);
+    }
+    if (kind === 'drop') { if (row) this.sql.exec('DELETE FROM s WHERE num = ?', num); return Response.json({ ok: true, dropped: row ? 1 : 0 }); }   /* 내 저장 지우기(핀이 맞을 때 · 시험 판 zz 치우기) */
+    if (kind === 'load') return Response.json(row && row.data ? { ok: true, at: row.at, data: JSON.parse(row.data) } : { ok: true, none: 1 });
+    const day = new Date(now).toISOString().slice(0, 10), c = (this.sql.exec('SELECT c FROM d WHERE day = ?', day).toArray()[0] || { c: 0 }).c;
+    if (c >= SAVE_DAY_MAX) return Response.json({ ok: false, m: '오늘은 저장이 꽉 찼어요. 이 기기에는 남아 있어요', full: 1 }, { status: 429 });
+    if (!d.data || typeof d.data !== 'object' || Array.isArray(d.data)) return Response.json({ ok: false, m: '저장할 것이 없어요' }, { status: 400 });
+    const data = JSON.stringify(noNames(d.data)); if (data.length > SAVE_MAX) return Response.json({ ok: false, m: '저장이 너무 커요' }, { status: 413 });
+    this.sql.exec('INSERT INTO s (num, pin, data, at, fails, lock) VALUES (?, ?, ?, ?, 0, 0) ON CONFLICT(num) DO UPDATE SET data = excluded.data, at = excluded.at', num, h, data, now);
+    this.sql.exec('INSERT INTO d (day, c) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET c = c + 1', day);
+    if (Math.random() < 0.02) this.sql.exec('DELETE FROM d WHERE day < ?', new Date(now - 7 * 86400000).toISOString().slice(0, 10));
+    return Response.json({ ok: true, at: now });
   }
 }

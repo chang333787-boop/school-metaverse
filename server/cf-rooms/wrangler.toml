@@ -10,9 +10,18 @@ name = "ROOMS"
 class_name = "Room"
 
 # 무료 요금제의 Durable Objects는 SQLite 저장 방식만 됨 → new_sqlite_classes
+[[durable_objects.bindings]]
+name = "SAVES"
+class_name = "Saves"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Room"]
+
+# 이어 하기 저장(SAVE-CF · 10-24) — 반 코드 하나 = Saves 하나(SQLite 표)
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Saves"]
 
 [vars]
 # 방 하나의 하루(UTC) 메시지 상한. 들어오는 웹소켓 메시지는 20개 = 요청 1건이라

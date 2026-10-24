@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><title>net cf 시험</title>
+<script type="importmap">{ "imports": { "three": "../../lib/three.module.min.js" } }</script>
+<script>
+// NET-CF2 시험 쪽: Firebase(EventSource·fetch)를 가짜로 두고 친구 하나(?peer=id)가 있다고 알려 줌 → 자리는 진짜 방 서버(?cf=)로만 오감
+const Q = new URLSearchParams(location.search); sessionStorage.setItem('mp.id', Q.get('me'));
+window.fetch = async () => new Response('null', { status: 200 });
+window.EventSource = class { constructor() { setTimeout(() => this.l.put && this.l.put({ data: JSON.stringify({ path: '/', data: { players: { [Q.get('peer')]: { n: '친구', c: 0xff8844, k: 'kid', x: 0, y: 0, z: 0, h: 0, a: '', t: Date.now() } } } }) }), 50); this.l = {}; } addEventListener(k, f) { this.l[k] = f; } close() {} };
+</script>
+<script type="module">
+import * as THREE from 'three'; import { createNet } from '../../v2/js/net.js';
+const scene = new THREE.Scene(), Q = new URLSearchParams(location.search), N = createNet({ THREE, scene, room: 'zzcf' + Q.get('r') });
+const P = { x: 0, y: 0, z: 0, h: 0 }; let last = performance.now(), t = 0; window.LOG = [];
+window.N = N; window.move = Q.get('move') === '1';
+function f() { const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now; t += dt; if (window.move) { P.x = Math.sin(t * 0.8) * 20; P.z = Math.cos(t * 0.8) * 20; P.h = t; }
+  N.tick(dt, P); let o = null; N.each(O => { o = O; }); if (o) window.LOG.push([Date.now(), o.x, o.z]); else window.LOG.push([Date.now(), NaN, NaN]); if (window.LOG.length > 3000) window.LOG.shift(); requestAnimationFrame(f); }
+requestAnimationFrame(f);
+</script>

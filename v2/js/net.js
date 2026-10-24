@@ -5,6 +5,11 @@
 import { lookCode, parseLook, lookColors } from './look.js?v=1';   // LOOK-1(10-17): 내 모습 옷 코드 = players k('L' + 숫자 다섯 · 8자 이하 — 규칙 그대로) · 기본 모습이면 예전처럼 'kid'
 //   NET-OOB(10-17): DB 규칙 범위(x·z ±500 · y −100~200) 밖(마을 대부분)이면 위치를 보내지 않고 3초마다 {h: 99, t}만(= '보이지 않는 곳' 표시 — 받는 화면은 숨김) · 401(쓰기 거절) → onDenied(방 닫힘 확인)는 20초에 한 번만
 const DB = 'https://class-rpg-6f409-default-rtdb.asia-southeast1.firebasedatabase.app';
+// NET-CF2(최종 차례 8 · 사용자 10-24 '함께하기 실시간'): 자리·방향만 Cloudflare 방 서버(웹소켓 · server/cf-rooms)로 — 방 번호·대기실·이름·채팅·선생님 칸은 Firebase 그대로
+//   움직일 때만 초당 10번 · 받은 자리는 100ms 늦게 두 자리 사이를 섞어 그림(보간) · 내 몸은 늘 바로(예측) · 서버엔 이름을 보내지 않음 · 끊기면 예전 Firebase 길로 저절로
+//   ?cf=off = 끔 · ?cf=http://127.0.0.1:포트 = 로컬 wrangler dev · 홍보판(SM_PROMO)은 끔
+const CF_WS = (() => { try { if (window.SM_PROMO) return ''; const q = new URLSearchParams(location.search).get('cf'); if (q === 'off') return ''; if (q && /^https?:\/\/(127\.0\.0\.1|localhost)(:\d{1,5})?$/.test(q)) return q.replace(/^http/, 'ws'); return 'wss://sm-rooms.sm-rooms.workers.dev'; } catch (e) { return ''; } })();
+const wsRoomOf = r => { let h = 5381; for (const ch of String(r)) h = ((h * 33) ^ ch.charCodeAt(0)) >>> 0; return ('m' + h.toString(36) + 'xxxx').slice(0, 8); };   // 방 서버 이름 = 영문·숫자 4~8자
 const PAL = [0xff6b6b, 0xffa94d, 0xffd43b, 0x69db7c, 0x38d9a9, 0x4dabf7, 0x748ffc, 0xda77f2, 0xf783ac, 0x20c997];
 const SKIN = 0xf1c9a0;
 import { checkChat } from './chatfilter.js?v=1';   // SAFE-1(10-17): 이름도 채팅과 같은 거르개(바꿔 쓰지 않고 못 씀)
@@ -41,6 +46,7 @@ export function createNet(o) {
   const others = new Map();
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   const _m = new THREE.Matrix4(), _c = new THREE.Color();
+  let ws = null, wsOk = false, wsBack = 1, wsOff = null, wsSendT = 0, wsGone = false, wsN = 0;   /* NET-CF2 */
   let es = null, dead = false, hidden = false, mQ = 0, CTL = {}, selfE = null, act = '', CHAT = {}, chatSeen = new Set(), chatT0 = Date.now(), selfB = null, offset = 0, sendT = 0, beatT = 0, cleanT = 8, fxQ = 0, denyT = -1e9, away = false, actSent = '', wq = -1, ext = false, last = { x: 1e9, y: 0, z: 0, h: 0 }, onChange = o.onChange || (() => {});
 
   function merge(parts) {
@@ -131,7 +137,7 @@ export function createNet(o) {
     if (!O) {
       if (others.size >= 40) return;
       const mesh = avatar(d.k || kind, PAL.includes(d.c) ? d.c : PAL[0]), tg = tag(d.n || '친구');
-      O = { pid, a: '', w: 's', cell: '', v: '', lbl: '', rx: 0, ry: 0, rz: 0, rh: 0, vx: 0, vz: 0, rt: 0, vis: false, mrx: 0, mrz: 0, mry: 0, mdy: 0, k: d.k || kind, away: false, mo: null, mesh, tag: tg, n: d.n || '친구', c: PAL.includes(d.c) ? d.c : PAL[0], x: d.x || 0, y: d.y || 0, z: d.z || 0, h: d.h || 0, tx: 0, ty: 0, tz: 0, th: 0, t: 0, seen: performance.now(), fxQ: d.fx ? d.fx.q : 0, mQ: d.m ? d.m.q : 0, em: null };
+      O = { pid, a: '', w: 's', cell: '', v: '', lbl: '', rx: 0, ry: 0, rz: 0, rh: 0, vx: 0, vz: 0, rt: 0, vis: false, mrx: 0, mrz: 0, mry: 0, mdy: 0, k: d.k || kind, away: false, mo: null, mesh, tag: tg, n: d.n || '친구', c: PAL.includes(d.c) ? d.c : PAL[0], x: d.x || 0, y: d.y || 0, z: d.z || 0, h: d.h || 0, tx: 0, ty: 0, tz: 0, th: 0, t: 0, seen: performance.now(), fxQ: d.fx ? d.fx.q : 0, mQ: d.m ? d.m.q : 0, em: null, B: new Float64Array(24), Bn: 0, Bh: 0, wsAt: 0 };   /* NET-CF2 B = 받은 자리 여섯 [ts,x,y,z] 고리 */
       scene.add(mesh, tg); others.set(pid, O); onChange();
     }
     if (typeof d.a === 'string' && d.a !== O.a) { O.a = d.a; const q9 = parseAct(d.a); O.w = q9.w; O.cell = q9.cell; O.v = q9.v; O.lbl = q9.label; retarget(O, false); }   // TOGETHER-0: 머리표 = 세계(먼저 읽어 같은 소식의 자리를 바로 풂)
@@ -206,12 +212,20 @@ export function createNet(o) {
     es = new EventSource(base + '.json');
     es.addEventListener('put', (e) => onEvt('put', e)); es.addEventListener('patch', (e) => onEvt('patch', e));
   }
+  // NET-CF2 웹소켓: 들어올 때 이름 없이 id만 · 's'·'w' 자리 묶음 → 그 친구 O(Firebase로 이미 아는 친구만) · 끊기면 2·4·8…30초 뒤 다시
+  function wsPos(p, ts) { const O = others.get(p[0]); if (!O || p[0] === id) return; O.rx = p[1]; O.ry = p[2]; O.rz = p[3]; O.rh = p[4]; retarget(O, true); const k = O.Bh * 4; O.B[k] = ts; O.B[k + 1] = O.tx; O.B[k + 2] = O.ty; O.B[k + 3] = O.tz; O.Bh = (O.Bh + 1) % 6; if (O.Bn < 6) O.Bn++; O.wsAt = performance.now(); O.t = Date.now() + offset; }
+  function wsOpen() { if (!CF_WS || dead || wsGone || ws) return; try { ws = new WebSocket(CF_WS + '/room/' + wsRoomOf(room)); } catch (e) { ws = null; return; }
+    ws.onopen = () => { try { ws.send(JSON.stringify({ t: 'j', id, n: '' })); } catch (e) { return; } wsOk = true; wsBack = 1; };
+    ws.onmessage = (ev) => { let d; try { d = JSON.parse(ev.data); } catch (e) { return; } if (d.t === 's' || d.t === 'w') { const est = d.ts - Date.now(); wsOff = wsOff == null ? est : wsOff + (est - wsOff) * 0.05; if (Array.isArray(d.P)) for (const p of d.P) if (Array.isArray(p)) wsPos(p, d.ts); } else if (d.t === 'full') wsGone = true; };
+    ws.onclose = () => { ws = null; wsOk = false; if (!dead && !wsGone) setTimeout(wsOpen, Math.min(30, (wsBack *= 2)) * 1000); };
+    ws.onerror = () => { /* onclose가 다시 엶 */ }; }
   const onLook = () => { if (joined && !dead && kind === 'kid') req('/players/' + id, 'PATCH', { k: myK() }); };   // LOOK-1: 모습을 바꾸면 옷 코드만 한 번
   addEventListener('sm-look', onLook);
-  const leave = () => { if (dead) return; dead = true; removeEventListener('sm-look', onLook); if (es) es.close(); req('/players/' + id, 'DELETE'); for (const pid of [...others.keys()]) drop(pid); if (selfE) { scene.remove(selfE.s); selfE.s.material.dispose(); } for (const t of ETEX) if (t) t.dispose(); removeEventListener('pagehide', leave); if (selfB) { scene.remove(selfB.s); if (selfB.s.material.map) selfB.s.material.map.dispose(); selfB.s.material.dispose(); selfB = null; } mat.dispose(); };   /* FIX-CX8(코덱스 점검): 방을 나갈 때 pagehide 리스너·내 말풍선·공유 재질도 치움(들고 나기를 되풀이하면 쌓이던 것) */
+  const leave = () => { if (dead) return; dead = true; if (ws) { try { ws.close(); } catch (e) { /* */ } ws = null; } removeEventListener('sm-look', onLook); if (es) es.close(); req('/players/' + id, 'DELETE'); for (const pid of [...others.keys()]) drop(pid); if (selfE) { scene.remove(selfE.s); selfE.s.material.dispose(); } for (const t of ETEX) if (t) t.dispose(); removeEventListener('pagehide', leave); if (selfB) { scene.remove(selfB.s); if (selfB.s.material.map) selfB.s.material.map.dispose(); selfB.s.material.dispose(); selfB = null; } mat.dispose(); };   /* FIX-CX8(코덱스 점검): 방을 나갈 때 pagehide 리스너·내 말풍선·공유 재질도 치움(들고 나기를 되풀이하면 쌓이던 것) */
   addEventListener('pagehide', leave);
   let joined = false;
   return {
+    get cf() { return { on: !!CF_WS, ok: wsOk, gone: wsGone, sent: wsN, off: wsOff == null ? null : Math.round(wsOff), room: CF_WS ? wsRoomOf(room) : '' }; },   /* NET-CF2 시험 */
     get id() { return id; }, get name() { return name; }, get color() { return color; }, get away() { return away; }, get kindCode() { return myK(); },
     get count() { let n = 1; const now = Date.now() + offset; for (const O of others.values()) if (now - O.t < 20000) n++; return n; },
     get names() { const now = Date.now() + offset, a = []; for (const O of others.values()) if (now - O.t < 20000) a.push(O.n); return a; },
@@ -219,17 +233,21 @@ export function createNet(o) {
     fx(f) { fxQ++; if (joined) req('/players/' + id + '/fx', 'PUT', { q: fxQ, ...f }); },
     tick(dt, P) {
       if (dead || !P) return;
-      if (!joined) { joined = true; join(P); }
+      if (!joined) { joined = true; join(P); wsOpen(); }
       sendT -= dt; beatT -= dt;
       const moved = Math.abs(P.x - last.x) + Math.abs(P.z - last.z) + Math.abs(P.y - last.y) > 0.05 || Math.abs(P.h - last.h) > 0.08;
       { const W9 = myW(), q9 = W9 ? W9.q : -1; if (q9 !== wq) { wq = q9; actPut(); sendT = 0; } }   // TOGETHER-0: 세계·탈것이 바뀌면 머리표를 바로 + 자리도 바로
-      if ((moved && sendT <= 0 && (inRule(enc(P)) || !away)) || beatT <= 0) { send(P); sendT = Math.max(1 / 6, (others.size + 1) / 60); beatT = 5; }   // TOGETHER-0 예산: 방 전체 초당 60번을 나눔 · 가만히면 5초 · NET-OOB: 범위 밖이면 움직여도 5초마다(처음 나갈 때 한 번은 바로)
+      wsSendT -= dt; if (wsOk && moved && wsSendT <= 0) { const E9 = enc(P); if (inRule(E9)) { wsSendT = 0.1; wsN++; try { ws.send('{"t":"p","x":' + E9.x.toFixed(2) + ',"y":' + E9.y.toFixed(2) + ',"z":' + E9.z.toFixed(2) + ',"h":' + E9.h.toFixed(2) + ',"s":0}'); } catch (e) { /* 닫히는 중 */ } } }   /* NET-CF2: 움직일 때만 초당 10번(문자열로 바로 — 새 객체 X) */
+      if ((moved && sendT <= 0 && !wsOk && (inRule(enc(P)) || !away)) || beatT <= 0 || (wsOk && moved && away)) { send(P); sendT = Math.max(1 / 6, (others.size + 1) / 60); beatT = 5; }   // TOGETHER-0 예산: 방 전체 초당 60번을 나눔 · 가만히면 5초 · NET-OOB · NET-CF2: 웹소켓이 열려 있으면 Firebase는 5초 박동(늦게 온 친구·끊김 대비)만   // TOGETHER-0 예산: 방 전체 초당 60번을 나눔 · 가만히면 5초 · NET-OOB: 범위 밖이면 움직여도 5초마다(처음 나갈 때 한 번은 바로)
       const now = Date.now() + offset, k = Math.min(1, dt * 12), pn = performance.now(), mw = wKey(myW() ? myW().w : 's');
       meP = P; emoteTick(selfE, dt, P.x, P.y - 0.25, P.z); bubbleTick(selfB, dt, P.x, P.y - 0.25, P.z);
       for (const O of others.values()) {
         const stale = O.t && now - O.t > 20000; O.vis = !stale && !hidden && !O.away && wKey(O.w) === mw; O.mesh.visible = O.tag.visible = O.vis && !ext;   // TOGETHER-0: 같은 세계만 · 마을(ext)은 마을 그리개가 그림
         if (!O.vis) { if (O.em) O.em.s.visible = false; if (O.sb) O.sb.s.visible = false; } else { emoteTick(O.em, dt, O.x, O.y, O.z); bubbleTick(O.sb, dt, O.x, O.y, O.z); }
-        { const age = Math.min(0.45, (pn - O.rt) / 1000), gx = O.tx + O.vx * age, gz = O.tz + O.vz * age;   // NET-SMOOTH(걷기에도): 받은 두 자리의 속도로 앞질러 · 10m 넘게 어긋나면 바로
+        if (O.Bn >= 2 && pn - O.wsAt < 1000 && wsOff != null) { const rt = Date.now() + wsOff - 100, B = O.B, n = O.Bn, h0 = (O.Bh - n + 6) % 6; let a = -1;   /* NET-CF2 보간: 서버 시각 100ms 전 자리 = 앞뒤 두 자리 사이 */
+          for (let i = 0; i < n - 1; i++) { const k = ((h0 + i) % 6) * 4, k2 = ((h0 + i + 1) % 6) * 4; if (B[k] <= rt && rt <= B[k2]) { a = k; const u = (rt - B[k]) / Math.max(1, B[k2] - B[k]); O.x = B[k + 1] + (B[k2 + 1] - B[k + 1]) * u; O.y = B[k + 2] + (B[k2 + 2] - B[k + 2]) * u; O.z = B[k + 3] + (B[k2 + 3] - B[k + 3]) * u; break; } }
+          if (a < 0) { const kL = ((O.Bh + 5) % 6) * 4, kF = h0 * 4; if (rt < B[kF]) { O.x = B[kF + 1]; O.y = B[kF + 2]; O.z = B[kF + 3]; } else { O.x += (B[kL + 1] - O.x) * k; O.y += (B[kL + 2] - O.y) * k; O.z += (B[kL + 3] - O.z) * k; } } }
+        else { const age = Math.min(0.45, (pn - O.rt) / 1000), gx = O.tx + O.vx * age, gz = O.tz + O.vz * age;   // NET-SMOOTH(걷기에도): 받은 두 자리의 속도로 앞질러 · 10m 넘게 어긋나면 바로
           if (Math.abs(gx - O.x) + Math.abs(gz - O.z) > 10 || Math.abs(O.ty - O.y) > 6) { O.x = gx; O.y = O.ty; O.z = gz; } else { O.x += (gx - O.x) * k; O.y += (O.ty - O.y) * k; O.z += (gz - O.z) * k; } }
         let dh = O.th - O.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); O.h += dh * k;
         O.mesh.position.set(O.x, O.y, O.z); O.mesh.rotation.y = O.h; if (O.mo) O.mesh.position.y += moTick(O, dt); O.tag.position.set(O.x, O.y + 2.05 * scale, O.z);   // EMOTE-2 몸짓(도는 동안만)
