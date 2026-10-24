@@ -45,6 +45,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       await aim(null); I = await info(); ok(I.holes >= 1, '판 자리에 구덩이가 남음(오늘 ' + I.holes + ' · 시도 ' + tries + ')'); ok(I.worm > worm0, '지렁이가 나옴(' + I.worm + ')');
       await W8(1800); { const pn = await panel(); if (/분해자|decomposer/.test(pn)) ok(true, '처음 지렁이 = 관찰 카드(분해자)'); if (pn) await closeP(); }
       ok((await ev(() => SM_TOWN.chem.info().laws || [])).includes('compost') || (await ev(() => { const S = __G.S; return !!(S.chem && S.chem.lf && S.chem.lf.compost); })), '실험 표: 흙으로 돌아가요(compost) 알아냄');
+      await ev(() => { const G = SM_TOWN.game().S; (G.quiz || (G.quiz = {})).tip = 1; }); await W8(3000);   /* '⭐ 배운 것은 수첩에' 첫 안내 알림이 학교 땅 알림을 덮지 않게 */
       const sch = await ev(() => { const r = SM_TOWN.schRect(); return r ? [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2] : null; }); if (sch) { const h0 = (await info()).holes; await tp(sch[0], sch[1]); await aim(sch[0] + 1.2, sch[1]); await useF(); await W8(600); const t9 = await toast(); ok(/학교 땅|school/.test(t9) && (await info()).holes === h0, '학교 땅은 안 팜 — ' + t9.slice(0, 30)); await aim(null); } }
     // ── 🎣 낚싯대: 부두 어부께 받기(없으면 손잡이) → 던지기 → 입질 → 당김 → 놓아주기(실험 release) ──
     { console.log('🎣 낚싯대');
@@ -75,6 +76,11 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       P0 = await ev(() => SM_TOWN.tools.piles()); if (!P0.length) { for (const f of await ev(() => SM_TOWN.fields())) { await tp(f.x, f.z); await W8(400); P0 = await ev(() => SM_TOWN.tools.piles()); if (P0.length) break; } }
       if (!P0.length) ok(false, '쓸 자리 없음'); else { const q = P0[0], c0 = (await info()).clean.n || 0; await tp(q.x - 1.3, q.z); await faceTo(q.x, q.z); await holdK('broom'); await aim(q.x, q.z); I = await info(); ok(I.shown === 'broom' && I.aim.lock === 'pile', '5 = 빗자루 · 고리가 쓸 자리에 붙음(' + q.mode + ')');
         await useF(); await W8(2300); I = await info(); const left = (await ev(() => SM_TOWN.tools.piles())).some(r => r.k === q.k); ok(!left, '쓴 자리가 사라짐'); ok((I.clean.n || 0) > c0, '오늘 깨끗이 한 곳 ' + c0 + ' → ' + I.clean.n); await aim(null); } }
+    // ── 💧 넓은 꼭지(SPEND-1 · town_phase3.md): 물줄기 셋 → 한 번에 젖는 두둑 ≥ 2 ──
+    { console.log('💧 넓은 꼭지'); await settle(); const F = await ev(() => { const S = __G.S, d = S.day, B = SM_TOWN.farm().map(f => f.bed); if (B.length < 2) return null; S.farm = B.map(() => ({ c: '🍅', d: d - 1, g: 0, w: -1 })); SM_TOWN.farmDraw(); if (!S.spend || S.spend.v !== 1) S.spend = { v: 1, can: 0, d: 0, seed: 0, used: 0, bonus: 0, at: '' }; S.spend.can = 3; SM_TOWN.tools.sync(); return B; });
+      if (!F) console.log('    (두둑이 둘보다 적음)'); else { let best = null; for (const b of F) for (const x of [b[0] + 0.5, (b[0] + b[1]) / 2, b[1] - 0.5]) { const n = F.filter(c => { const px = Math.max(c[0] + 0.3, Math.min(c[1] - 0.3, x)), d = Math.hypot(px - x, c[2] - b[2]); return d < 0.9 || (d > 0.9 && d < 2.9); }).length; if (!best || n > best[0]) best = [n, x, b[2]]; }
+        await tp(best[1] + 2.6, best[2]); await faceTo(best[1], best[2]); await holdK('can'); await ev(() => SM_TOWN.tools.tank(100)); await aim(best[1], best[2]); await p.keyboard.down('KeyF'); await W8(1700); I = await info(); await p.keyboard.up('KeyF'); await W8(300); await aim(null);
+        ok(I.wide && I.sides.length === 2, '넓은 꼭지 = 물줄기 셋(옆 ' + I.sides.length + ')'); ok(I.pourN >= 2, '한 번 누름에 젖은 두둑 ' + I.pourN + ' (≥2)'); await ev(() => { __G.S.spend.can = 0; __G.S.farm = []; SM_TOWN.farmDraw(); SM_TOWN.tools.sync(); }); } }
     // ── 숨김: 자전거 타면 내려 둠 · 다시 내리면 손에 ──
     { await holdK('shovel'); await p.keyboard.press('KeyB'); await W8(900); I = await info(); ok(!I.shown && I.cur === 'shovel', '자전거 = 도구를 내려 둠(고른 건 기억)'); await p.keyboard.press('KeyB'); await W8(900); I = await info(); ok(I.shown === 'shovel', '내리면 다시 손에'); await p.keyboard.press('Digit2'); await W8(300); }
     // ── 비용: tick 한 번(도구 든 채) ──

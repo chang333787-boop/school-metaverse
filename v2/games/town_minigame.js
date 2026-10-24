@@ -1,18 +1,18 @@
 // 🎮 일꾼 곁 거들기 놀이(PLAY-2 틀 다섯 → PLAY-3 '그 일의 진짜 동작 + 배울 거리 하나' · 사용자 10-17 '미니게임들 좋은데 너무 다 비슷한 방식 · 창의성 · 교육을 잃어서는 안 된다'): 놀이 코드와 떼어 둔 규칙·화면
 //   일마다 손이 하는 일이 다름: 모내기 = 못줄 눈금에 꾹꾹 심기 · 벼 베기 = 콤바인 길 한 붓 그리기 · 소금 = 대파로 밀어 모으기(구름 오기 전) · 꿀 = 연기 살살 → 밀랍 뚜껑 덮인 칸 고르기 · 감자 = 줄기 둘레 파기 · 조개 = 작은 숨구멍 둘 밑 파기
-//     배추 = 크기대로 상자에 나누기 · 배 = 벌레 오기 전에 봉지 씌우기 · 어린 나무 = 심는 차례 + 물 알맞게 · 목장 = 동물마다 알맞은 먹이 · 낚시 = 줄 당기기(물고기 반대쪽으로 끌기 · FISH-2) · 김·굴 = 줄 버티기 · 딸기·표고 = 익은 것 고르기 · 요리 = 🍳 바쁜 부엌(주문·끌기·불 세기·뚜껑) · 징검다리 = 막대(옛 그대로 · 놀이 창은 안 씀)
+//     배추 = 크기대로 상자에 나누기 · 배 = 벌레 오기 전에 봉지 씌우기 · 어린 나무 = 심는 차례 + 물 알맞게 · 목장 = 동물마다 알맞은 먹이 · 낚시 = 줄 당기기(물고기 반대쪽으로 끌기 · FISH-2) · 김 = 발장에 끌며 고르게 펴기 · 굴 = 고리 자로 크기 재서 나누기 · 딸기·표고 = 익은 것 고르기 · 요리 = 🍳 바쁜 부엌(주문·끌기·불 세기·뚜껑) · 타이밍 막대는 10-24에 모두 걷어 냄(징검다리는 걸어서 건넘)
 //   끝 = 결과 3단계 + '💡 알고 있었나요?' 사실 한 줄(사실만) · 점수 0~3 = 옛 보상 표 그대로 · 실패도 경험치 1(마을 쪽) · 셈 X · 한 판 15~25초
 //   솜씨 perk 'zone'(zw 1~1.25) = 쉬워지는 쪽으로(시간 · 초록 폭 · 삽질 수 · 벌레 느리게)
 //   화면 = DOM + CSS(놀이 창이 열린 동안만 · 마을 tick이 부르는 tick(dt) 하나 — 따로 rAF X) · 입력 = down()/up()(E·스페이스·큰 단추) + key(코드, 반복)(화살표·WASD·숫자) + 누르기·끌기(마우스·터치)
 import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2'; import { mkSalt } from './town_salt.js?v=1';   /* SALT-2 염전 꼬임 넷 */   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
 export const MG_V = 3;
-const KIND = { tuho: 'toss', fisher: 'tug', rod: 'tug', seaweed: 'line', oyster: 'line', strawberry: 'ripe', shiitake: 'ripe', saltpan: 'salt', beehive: 'comb', potato: 'dig', clam: 'dig', cabbage: 'sort', pear: 'cover', lumber: 'order', pasture: 'feed' };
-export const mgKind = (k, sea) => (k === 'paddy' ? (sea === 'autumn' ? 'cut' : 'plant') : KIND[k] || 'bar');   /* 논 = 봄 모내기 · 가을 벼 베기 */
+const KIND = { tuho: 'toss', fisher: 'tug', rod: 'tug', seaweed: 'spread', oyster: 'gauge', strawberry: 'ripe', shiitake: 'ripe', saltpan: 'salt', beehive: 'comb', potato: 'dig', clam: 'dig', cabbage: 'sort', pear: 'cover', lumber: 'order', pasture: 'feed' };
+export const mgKind = (k, sea) => (k === 'paddy' ? (sea === 'autumn' ? 'cut' : 'plant') : KIND[k] || 'ripe');   /* 논 = 봄 모내기 · 가을 벼 베기 */
 // 놀이 창 첫 줄 = 할 일(아이 눈 2차 '말풍선과 창 첫 줄이 같은 문장' — 말풍선은 일꾼의 말 · 창 첫 줄은 내가 할 일)
-const TASK = { plant: ['못줄 눈금에 맞춰 모를 심어요', 'Plant seedlings on the marks of the guide rope'], cut: ['콤바인으로 벼를 남김없이 베요', 'Cut all the rice with the combine'], fisher: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], rod: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], seaweed: ['김이 붙은 줄을 끌어올려요', 'Pull up the ropes with laver'], oyster: ['굴이 달린 줄을 끌어올려요', 'Pull up the ropes with oysters'],
+const TASK = { plant: ['못줄 눈금에 맞춰 모를 심어요', 'Plant seedlings on the marks of the guide rope'], cut: ['콤바인으로 벼를 남김없이 베요', 'Cut all the rice with the combine'], fisher: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], rod: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], seaweed: ['김 반죽을 발장에 고르게 펴요', 'Spread the laver evenly on the mat'], oyster: ['고리 자로 굴 크기를 재서 나눠요', 'Measure the oysters with the ring and sort them'],
   strawberry: ['빨갛게 익은 딸기만 따요', 'Pick only the red, ripe strawberries'], shiitake: ['갓이 알맞게 핀 표고만 따요', 'Pick only shiitake with caps just right'], saltpan: ['바닷물에서 소금을 얻어요', 'Get salt from seawater'], beehive: ['연기를 살살 피우고 꿀이 익은 칸만 떠요', 'Smoke gently, then take only the ripe honey cells'],
   potato: ['줄기 둘레를 파서 감자를 캐요', 'Dig around the stems for potatoes'], clam: ['작은 구멍 둘 밑을 파서 조개를 캐요', 'Dig under pairs of tiny holes for clams'], cabbage: ['배추를 크기대로 세 상자에 나눠 담아요', 'Sort the cabbages into three boxes by size'], pear: ['벌레가 오기 전에 배마다 봉지를 씌워요', 'Bag every pear before the caterpillars come'],
-  lumber: ['차례대로 어린 나무를 심고 물을 줘요', 'Plant the saplings in order and water them'], pasture: ['동물마다 알맞은 먹이를 줘요', 'Give each animal the right food'], cook: ['주문 쪽지대로 재료를 넣고, 알맞게 익으면 접시에 담아요', 'Follow the order note: add ingredients, then plate it when it’s just right'], stones: ['돌을 하나씩 콩콩 건너요', 'Hop across the stones one by one'], tuho: ['화살을 던져 항아리에 넣어요', 'Toss arrows into the pot'] };
+  lumber: ['차례대로 어린 나무를 심고 물을 줘요', 'Plant the saplings in order and water them'], pasture: ['동물마다 알맞은 먹이를 줘요', 'Give each animal the right food'], cook: ['주문 쪽지대로 재료를 넣고, 알맞게 익으면 접시에 담아요', 'Follow the order note: add ingredients, then plate it when it’s just right'], tuho: ['화살을 던져 항아리에 넣어요', 'Toss arrows into the pot'] };
 export const taskOf = (kind, k, en) => { const t = TASK[kind === 'plant' || kind === 'cut' ? kind : k]; return t ? (en ? 'To do: ' : '할 일: ') + t[en ? 1 : 0] : ''; };
 export const gradeOf = ok => (ok >= 3 ? 2 : ok >= 1 ? 1 : 0);
 const GRADE_T = [['아쉬워요! 다음엔 더 잘할 수 있어요', 'So close! You’ll get it next time'], ['잘했어요!', 'Well done!'], ['아주 잘했어요!', 'Excellent!']];
@@ -30,8 +30,8 @@ const FACT = {
   lumber: ['나무를 심고 흙을 꾹꾹 밟아 주면 뿌리와 흙 사이 빈틈이 없어져 뿌리가 잘 내려요', 'Treading the soil after planting removes air gaps so roots settle well'],
   pasture: ['소와 양은 풀을 먹는 초식 동물이에요 — 초콜릿은 개에게 위험해요', 'Cows and sheep are herbivores — and chocolate is dangerous for dogs'],
   fisher: ['물고기는 아가미로 물에 녹은 산소를 마셔요', 'Fish breathe oxygen dissolved in water through their gills'],
-  seaweed: ['김은 차가운 겨울 바다에서 잘 자라요', 'Laver grows best in the cold winter sea'],
-  oyster: ['굴은 물을 빨아들여 그 속의 작은 먹이를 걸러 먹어요', 'Oysters filter tiny food out of the water they draw in'],
+  seaweed: ['김은 바다에 김발을 세워 길러요. 옛날에는 뜬 김을 발장에 얇게 펴서 햇볕과 바람에 말렸어요', 'Laver is grown on nets set up in the sea. Long ago, people spread it thin on bamboo mats to dry in the sun and wind'],
+  oyster: ['굴은 바위나 양식 줄에 붙어 자라요. 작은 굴은 바다에 두어 더 자라게 해요', 'Oysters grow attached to rocks or farm ropes. Small ones are left in the sea to grow bigger'],
   strawberry: ['딸기 겉의 작은 점 하나하나가 씨앗이에요', 'Each tiny dot on a strawberry is a seed'],
   shiitake: ['표고는 참나무 같은 나무 토막(원목)에서 자라는 버섯이에요', 'Shiitake grow on logs of trees like oak'],
   stream: ['물속에 사는 작은 생물을 보면 물이 얼마나 맑은지 알 수 있어요. 강도래 애벌레와 버들치가 살면 아주 맑은 물이에요', 'Small water creatures tell you how clean water is. Stonefly larvae and minnows mean very clean water'],
@@ -51,10 +51,6 @@ const CSS = `
 .twn-play .dots i{width:14px;height:14px;border-radius:7px;background:#e7efe3;border:2px solid #c9d6c4}
 .twn-play .dots i.g{background:#7fd06a;border-color:#2b5a3a}
 .twn-play .dots i.m{background:#f6d3cf;border-color:#e0453a}
-.twn-play .wt{height:40px;background:linear-gradient(#cdeefa,#8fd4ff)}
-.twn-play .wt .fl{position:absolute;left:50%;top:9px;width:16px;height:22px;margin-left:-8px;border-radius:8px;background:linear-gradient(#e0453a 50%,#fffdf6 50%);border:2px solid #1d2b3a;will-change:transform}
-.twn-play .wt .cue{position:absolute;left:50%;top:6px;margin-left:16px;font-size:20px;line-height:1;color:#e0453a;opacity:0;transition:opacity .1s}
-.twn-play .wt.on .cue{opacity:1}
 .twn-play .pgb{height:10px}
 .twn-play .pg{position:absolute;left:0;top:0;bottom:0;width:100%;background:#2b5a3a;transform-origin:0 50%;transform:scaleX(0)}
 .twn-play .rg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
@@ -133,6 +129,23 @@ const CSS = `
 .twn-play .tgb{height:14px}.twn-play .tgb::before{content:'';position:absolute;left:84%;top:0;bottom:0;right:0;background:#f6d3cf}.twn-play .tgb .tgf{position:absolute;left:0;top:0;bottom:0;width:100%;background:#7fd06a;transform-origin:0 50%;transform:scaleX(0)}.twn-play .tgb.hi .tgf{background:#e0453a}.twn-play .tgb.md .tgf{background:#f2c84b}
 .twn-play .mg.fpick .tug,.twn-play .mg.fpick .tgb,.twn-play .mg.fpick .tlab,.twn-play .mg.fpick .pgb,.twn-play .mg.fpick .tlr{display:none}
 .twn-play .tlab{display:flex;justify-content:space-between;font-size:11px;color:#56606b;margin:-3px 2px 0}
+.twn-play .spr{display:flex;gap:12px;align-items:center;justify-content:center}
+.twn-play .mat{position:relative;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);width:min(200px,56vw);aspect-ratio:1;border:4px solid #8a6a44;border-radius:4px;background:repeating-linear-gradient(90deg,#d8bf86 0 6px,#bfa064 6px 8px);touch-action:none;cursor:crosshair}
+.twn-play .mat i{display:block;transition:background-color .15s}.twn-play .mat i.t{background:rgba(47,62,40,.35)}.twn-play .mat i.g{background:#2f3e28}.twn-play .mat i.k{background:#1f2a1b}.twn-play .mat i.l{background:#10160d;box-shadow:inset 0 0 0 3px #4a5c3e;border-radius:35%}
+.twn-play .mat i.x{outline:3px dashed #e0453a;outline-offset:-4px}
+.twn-play .mat .scp{position:absolute;left:0;top:0;width:20%;height:20%;box-sizing:border-box;border:3px solid #fffdf6;border-radius:50%;box-shadow:0 0 0 2px #1d2b3a;pointer-events:none;transition:transform .08s}.twn-play .mat.on .scp{background:rgba(47,62,40,.55)}
+.twn-play .bowl{flex:none;display:flex;align-items:center;justify-content:center;width:58px;height:58px;border-radius:50%;background:#efe6cf;border:4px solid #8a6a44}.twn-play .bowl .bw{width:46px;height:46px;border-radius:50%;background:#2f3e28;transition:transform .2s}
+.twn-play .oys{position:relative;height:170px;border-radius:12px;background:#7fc3ea;box-shadow:inset 0 22px 0 #cdeefa;overflow:hidden;touch-action:none}
+.twn-play .oys .rp{position:absolute;left:0;right:0;top:20px;height:3px;background:#b08a5e}.twn-play .oys .dl{position:absolute;left:50%;top:22px;width:2px;height:34px;margin-left:-1px;background:#b08a5e;transition:opacity .2s}
+.twn-play .oys .zl,.twn-play .oys .zr{position:absolute;top:23px;bottom:0;width:21%;font-style:normal}.twn-play .oys .zl{left:0;background:rgba(36,98,160,.35);border-right:2px dashed #fffdf6}.twn-play .oys .zr{right:0;background:#d9b27a;border-left:3px solid #9c7650}
+.twn-play .oys .zl em,.twn-play .oys .zr em{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:12px;font-weight:800;font-style:normal;color:#1d2b3a}
+.twn-play .oys .bk{position:absolute;left:8%;right:8%;bottom:24px;display:flex;flex-wrap:wrap-reverse;justify-content:center;gap:2px}.twn-play .oys .bk b{width:22px;height:15px;border-radius:58% 42% 55% 45%/50% 60% 40% 50%;background:#b9b2a3;box-shadow:inset 0 -3px 0 #8f887a;opacity:0;transform:scale(.4);transition:opacity .25s,transform .25s}.twn-play .oys .bk b.on{opacity:1;transform:scale(1)}
+.twn-play .oys .oy{position:absolute;left:50%;top:44%;width:64px;height:46px;margin:-23px 0 0 -32px;transition:left .45s,top .45s,opacity .45s;cursor:grab;touch-action:none}.twn-play .oys .oy.drag{transition:none}.twn-play .oys .oy.dn{top:12%;opacity:0;transition:none}.twn-play .oys .oy.gl,.twn-play .oys .oy.gr{top:72%;opacity:0}.twn-play .oys .oy.no{animation:twn-mg-shake .35s}
+.twn-play .oys .oy.up{z-index:3}.twn-play .oys .sh{display:block;width:100%;height:100%;border-radius:58% 42% 55% 45%/50% 60% 40% 50%;background:repeating-radial-gradient(ellipse at 30% 35%,#cfc8b8 0 4px,#aaa293 4px 7px);box-shadow:inset 0 -6px 0 #857e70,0 0 0 2px #6f685c;transition:transform .3s}
+.twn-play .oys .rg2{position:absolute;left:50%;top:84%;width:64px;height:64px;margin:-40px 0 0 -40px;border:8px solid #e3b23c;border-radius:50%;box-shadow:0 0 0 2px #1d2b3a,inset 0 0 0 2px #1d2b3a;transition:left .35s,top .35s,transform .35s;cursor:grab;touch-action:none;z-index:2}
+.twn-play .oys .rg2::after{content:'';position:absolute;left:50%;top:100%;width:8px;height:26px;margin:6px 0 0 -4px;border-radius:4px;background:#8a6a44}.twn-play .oys .rg2.drag{transition:none}.twn-play .oys .rg2.stop,.twn-play .oys .rg2.pass{pointer-events:none}.twn-play .oys .rg2.pass{transform:translateY(50px)}.twn-play .oys .rg2.stop{animation:twn-mg-bump .3s}
+@keyframes twn-mg-bump{40%{transform:translateY(5px)}}
+.twn-play .olr button{flex:1;min-height:46px;font-size:15px;touch-action:none}
 .twn-play .tlr button{flex:1;min-height:46px;font-size:15px;touch-action:none}.twn-play .tlr button.on{background:#2b5a3a;color:#fffdf6}
 `;
 function css() { if (document.getElementById('twn-mg-css')) return; const s = document.createElement('style'); s.id = 'twn-mg-css'; s.textContent = CSS; document.head.appendChild(s); }
@@ -140,47 +153,87 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const setCls = (el, c) => { if (el.className !== c) el.className = c; };
 const pop = (el, c) => { el.classList.remove(c); void el.offsetWidth; el.classList.add(c); };   // 일이 생길 때만(매 프레임 X)
 
-// ① 막대(옛 그대로): 빨간 막대가 초록 칸에 올 때 누르기 세 번 → 맞힌 수 = 점수
-function mkBar(c) {
-  c.mg.innerHTML = '<div class="bar"><i class="zone"></i><i class="mk"></i></div>';
-  const z9 = c.mg.querySelector('.zone'), mk = c.mg.querySelector('.mk'), zw = c.zw; let zone = rnd(0.35, 0.65), sp = rnd(0.9, 1.4), t = 0, pos = 0.5, round = 0, ok = 0;
-  const place = () => { z9.style.width = (18 * zw) + '%'; z9.style.left = (zone * 100 - 9 * zw) + '%'; }; place();
-  c.say(c.T('빨간 막대가 초록 칸에 오면 E!', 'Press E when the red bar is in the green!'));
-  return { go: c.T('지금!', 'Now!'),
-    down() { const good = Math.abs(pos - zone) < 0.09 * zw; round++; if (good) ok++; c.snd(good ? 'tick' : 'pop'); c.say((good ? c.T('좋아요! ', 'Nice! ') : c.T('아깝다! ', 'Almost! ')) + round + '/3'); zone = rnd(0.25, 0.75); sp = rnd(0.9, 1.5); place(); if (round >= 3) c.finish(ok); },
-    tick(dt) { t += dt * sp; pos = 0.5 + 0.5 * Math.sin(t * 2.2); mk.style.left = (pos * 100) + '%'; } };
+// ① 김 펴기(SPREAD-1 · 10-24 옛 막대 정리 · 타이밍 막대 X): 떠 온 김 반죽 한 그릇을 네모 발장(5×5) 위에 끌면서 부어 고르게 펴기 — 세 장
+//   반죽은 한 그릇(넉넉하지만 정해진 양)이라 한 곳에 오래 부으면 덩어리, 안 지나간 곳은 구멍 · 옆 칸과 두께 차이가 크면 흘러 퍼짐 · 다 덮이거나 그릇이 비거나 시간이 다 되면 그 장을 봄
+//   기준(서툰 아이 흉내 2000판 · scratchpad sim): 줄마다 끌기 4~7칸/초 = ★ 98~100% · 키보드 3칸/초 = 100% · 아무렇게나 문지르기 = 11% · 가만히 한 곳 = 0% · 장당 4.7~8.3초
+//   입력 = 발장 위를 누른 채 끌기(마우스·터치) · 화살표·WASD로 국자 옮기기 + E·스페이스·큰 단추 꾹 = 붓기 · 솜씨(zw) = 구멍·덩어리 기준이 너그러워지고 시간이 늘어남
+function mkSpread(c) {
+  const C9 = 5, N = 25, zw = c.zw, CAP = N * 1.4, RATE = 5, LO = 0.3 / zw, HI = 2.2 * zw, BAD = 3 + Math.round((zw - 1) * 8), TS = 12 * zw, NS = 3;
+  c.mg.innerHTML = '<div class="spr"><div class="mat">' + '<i></i>'.repeat(N) + '<b class="scp"></b></div><div class="bowl"><i class="bw"></i></div></div><div class="dots">' + '<i></i>'.repeat(NS) + '</div>';
+  const mat = c.mg.querySelector('.mat'), B = mat.querySelectorAll('i'), scp = mat.querySelector('.scp'), bw = c.mg.querySelector('.bw'), dots = c.mg.querySelectorAll('.dots i');
+  const h = new Float32Array(N), d9 = new Float32Array(N), bk = new Int8Array(N);
+  let ph = 'spread', cur = 0, pour = false, kpour = false, ppour = false, left = CAP, st = 0, jt = 0, sheet = 0, good = 0, lumpSaid = false, lastBw = -1, lastL = -1, rect = null, settle = 0;
+  const CL = ['', 't', 'g', 'k', 'l'];   /* 빈 칸 · 얇음(구멍) · 알맞음 · 두꺼움 · 덩어리 */
+  const paint = i => { const v = h[i], b = v < 0.05 ? 0 : v < LO ? 1 : v <= HI * 0.8 ? 2 : v <= HI ? 3 : 4; if (b !== bk[i]) { bk[i] = b; B[i].className = CL[b]; } };
+  const flow = (i, j, k) => { const d = h[i] - h[j], a = (d < 0 ? -d : d) - 0.8; if (a > 0) { const f = d < 0 ? -k * a : k * a; d9[i] -= f; d9[j] += f; } };
+  const moveTo = i => { if (i === cur) return; cur = i; scp.style.transform = 'translate(' + (cur % C9) * 100 + '%,' + ((cur / C9) | 0) * 100 + '%)'; };
+  const setPour = () => { const on = (kpour || ppour) && ph === 'spread' && left > 0; if (on !== pour) { pour = on; mat.classList.toggle('on', on); } };
+  const fresh = () => { ph = 'spread'; h.fill(0); bk.fill(0); for (const b of B) b.className = ''; left = CAP; st = 0; settle = 0; lumpSaid = false; lastBw = -1; cur = 0; scp.style.transform = 'translate(0,0)'; mat.dataset.ph = 'spread'; setPour();
+    c.say(sheet === 0 ? c.T('발장 위를 끌면서 반죽을 부어요. 빈 곳도 덩어리도 없게! (끌기 · 화살표 + E 꾹)', 'Drag across the mat to pour the laver. No holes, no lumps! (drag · arrows + hold E)') : c.T('새 발장이에요. 다시 고르게 펴요', 'A fresh mat. Spread it evenly again')); };
+  const judge = () => { ph = 'judge'; setPour(); mat.dataset.ph = 'judge'; let holes = 0, lumps = 0; for (let i = 0; i < N; i++) { if (h[i] < LO) { holes++; B[i].classList.add('x'); } else if (h[i] > HI) { lumps++; B[i].classList.add('x'); } }
+    const ok = holes + lumps <= BAD; if (ok) good++; dots[sheet].className = ok ? 'g' : 'm'; sheet++; c.snd(ok ? 'ding' : 'pop');
+    c.say(ok ? c.T('고르게 폈어요! 햇볕에 잘 마르겠어요', 'Nice and even! It will dry well in the sun') : holes && lumps ? c.T('한 곳에 몰려서 덩어리와 구멍이 생겼어요. 끌면서 고르게 부어요', 'It piled up in one place: lumps and holes. Keep moving as you pour') : holes >= lumps ? c.T('구멍이 났어요. 빈 칸도 지나가며 부어요', 'There are holes. Pour over the empty squares too') : c.T('덩어리가 졌어요. 한 곳에 오래 붓지 말고 끌면서 부어요', 'Lumps! Keep moving instead of pouring in one spot'));
+    jt = 1.2; };
+  const cellAt = e => { if (!rect) rect = mat.getBoundingClientRect(); const x = Math.max(0, Math.min(C9 - 1, ((e.clientX - rect.left) / rect.width * C9) | 0)), y = Math.max(0, Math.min(C9 - 1, ((e.clientY - rect.top) / rect.height * C9) | 0)); return y * C9 + x; };
+  const pd = e => { if (ph !== 'spread') return; e.preventDefault(); rect = mat.getBoundingClientRect(); ppour = true; moveTo(cellAt(e)); setPour(); if (mat.setPointerCapture) try { mat.setPointerCapture(e.pointerId); } catch (er) { /* 옛 브라우저 */ } };
+  const pm = e => { if (ppour) moveTo(cellAt(e)); }, pu = () => { ppour = false; rect = null; setPour(); };
+  mat.addEventListener('pointerdown', pd); mat.addEventListener('pointermove', pm); mat.addEventListener('pointerup', pu); mat.addEventListener('pointercancel', pu);
+  fresh();
+  return { go: c.T('붓기 (꾹)', 'Pour (hold)'),
+    down() { kpour = true; setPour(); }, up() { kpour = false; setPour(); },
+    key(code) { const mv = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1, ArrowUp: -C9, KeyW: -C9, ArrowDown: C9, KeyS: C9 }[code]; if (!mv) return false; if (ph !== 'spread') return true; const n = cur + mv; if (n < 0 || n >= N || (Math.abs(mv) === 1 && ((n / C9) | 0) !== ((cur / C9) | 0))) return true; moveTo(n); return true; },
+    tick(dt) {
+      if (ph === 'judge') { if ((jt -= dt) <= 0) { if (sheet >= NS) { ph = 'end'; c.finish(good); } else fresh(); } return; }
+      if (ph !== 'spread') return; st += dt;
+      if (pour) { const a = Math.min(left, RATE * (ppour ? 1 : 0.75) * dt);   /* 키보드 국자는 조금 느리게 부음(칸을 옮기는 손이 느림) */ h[cur] += a; left -= a; if (left <= 0) setPour(); if (h[cur] > HI && !lumpSaid) { lumpSaid = true; c.snd('pop'); c.say(c.T('여기는 너무 두꺼워요. 끌면서 부어요', 'Too thick here. Keep moving as you pour')); } }
+      { d9.fill(0); const k = 1.5 * dt; for (let i = 0; i < N; i++) { const x = i % C9; if (x < C9 - 1) flow(i, i + 1, k); if (i < N - C9) flow(i, i + C9, k); } for (let i = 0; i < N; i++) { h[i] += d9[i]; paint(i); } }   /* 옆 칸과 두께 차이가 크면(0.8 넘게) 그만큼 흘러 퍼짐 — 가만히 부으면 가운데만 봉긋(칸 스물다섯 · 미리 만든 배열) */
+      { const f = Math.round(left / CAP * 20) / 20; if (f !== lastBw) { lastBw = f; bw.style.transform = 'scale(' + f.toFixed(2) + ')'; } const l2 = Math.round(left / CAP * 10); if (l2 !== lastL) { lastL = l2; mat.dataset.l = l2; } }   /* 그릇 속 반죽(바뀔 때만) · 시험 봇이 읽는 남은 양 */
+      { let cov = left <= 0; if (!cov) { cov = true; for (let i = 0; i < N; i++) if (h[i] < LO) { cov = false; break; } } if (cov) { if ((settle += dt) > 0.4) judge(); } else { settle = 0; if (st > TS) judge(); } } },   /* 다 덮였거나 그릇이 비면 0.4초 뒤 봄 */
+    dispose() { mat.removeEventListener('pointerdown', pd); mat.removeEventListener('pointermove', pm); mat.removeEventListener('pointerup', pu); mat.removeEventListener('pointercancel', pu); } };
 }
 
-// ② 줄 버티기(낚시·김발·굴 줄): 기다렸다 신호에 E(낚시 = 찌가 쏙 · 김발·굴 = 물결이 잔잔해질 때) → E를 꾹 눌렀다 뗐다 빨간 막대(줄 당김)를 초록 칸에 → 다 올리면 하나 · 세 번
-function mkLine(c) {
-  const fish = c.k === 'fisher', zw = c.zw;
-  c.mg.innerHTML = '<div class="bar wt"><i class="fl"></i><b class="cue">!</b></div><div class="bar tn dim"><i class="zone"></i><i class="mk"></i></div><div class="bar pgb dim"><i class="pg"></i></div><div class="dots"><i></i><i></i><i></i></div>';
-  const wt = c.mg.querySelector('.wt'), fl = c.mg.querySelector('.fl'), tn = c.mg.querySelector('.tn'), z9 = tn.querySelector('.zone'), mk = tn.querySelector('.mk'), pgb = c.mg.querySelector('.pgb'), pg = c.mg.querySelector('.pg'), dots = c.mg.querySelectorAll('.dots i');
-  const HW = 0.14 * zw;   /* 초록 칸 반폭(솜씨가 늘면 넓어짐) */ z9.style.width = (HW * 200) + '%';
-  const W_TXT = fish ? c.T('찌를 보다가 쏙 들어가면 E!', 'Watch the float — press E when it dips!') : c.T('물결이 셀 땐 기다리고, 잔잔해지면 E!', 'Wait while the waves are big — press E when it calms!');
-  const R_TXT = c.T('E를 꾹 눌렀다 뗐다 — 빨간 막대를 초록 칸에!', 'Hold and release E — keep the red bar in the green!');
-  let ph = 'wait', tw = 0, t = 0, tt = 0, hold = false, ten = 0.45, prog = 0, tight = 0, round = 0, ok = 0, gap = 0, ph0 = rnd(0, 6), early = 0;
-  const wait = () => { ph = 'wait'; tw = fish ? rnd(1.3, 3.0) : rnd(1.4, 2.6); setCls(wt, 'bar wt'); setCls(tn, 'bar tn dim'); setCls(pgb, 'bar pgb dim'); c.say(W_TXT); };
-  const endRound = got => { dots[round].className = got ? 'g' : 'm'; round++; if (got) ok++; c.snd(got ? 'ding' : 'pop'); hold = false; if (round >= 3) { c.finish(ok); return; } ph = 'gap'; gap = 0.8; };
-  wait();
-  return { go: c.T('당기기 (꾹)', 'Reel (hold)'),
-    down() { if (ph === 'wait') { early++; tw = fish ? rnd(1.2, 2.2) : rnd(1.0, 1.8); c.snd('pop'); c.say(fish ? c.T('너무 일찍! 물고기가 놀랐어요 — 찌가 쏙 들어갈 때까지', 'Too early! The fish got startled — wait for the dip') : c.T('물결이 셀 땐 줄이 무거워요 — 잔잔해질 때까지', 'The waves make it heavy — wait till it calms')); return; }
-      if (ph === 'bite') { ph = 'reel'; hold = true; ten = 0.45; prog = 0; tight = 0; tt = 0; setCls(wt, 'bar wt dim'); setCls(tn, 'bar tn'); setCls(pgb, 'bar pgb'); c.snd('tick'); c.say(R_TXT); return; }
-      if (ph === 'reel') hold = true; },
-    up() { hold = false; },
+// ② 굴 크기 재기(GAUGE-1 · 10-24 옛 막대 정리 · 타이밍 막대 X): 줄에 달린 굴이 하나씩 올라오면 고리 자를 대 봄 — 쏙 지나가면 아직 작은 굴(바다로 돌려보냄 ◀) · 턱 걸리면 다 큰 굴(바구니 ▶)
+//   크기가 비슷해 보이는 굴이 섞여 있어 재 봐야 앎 · 잘못 고르면 그 굴이 잠깐 흔들리고 다시 고름(벌 X · 처음에 맞힌 수 = 점수) · 바구니에 큰 굴이 쌓임
+//   입력 = 고리를 끌어 굴에 대기 · 굴을 누르면 고리가 날아가 잼 · 굴을 왼쪽·오른쪽으로 끌기 · ◀ ▶ 단추 · E·스페이스·↑↓ = 재기 · ← → A D = 고르기 · 솜씨(zw) = 크기 차이가 커지고 시간이 늘어남
+function mkGauge(c) {
+  const N = 6, zw = c.zw, T = 26 * zw, OYS = [];
+  { const big = [1, 1, 1, 0, 0, 0]; for (let i = N - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0, q = big[i]; big[i] = big[j]; big[j] = q; }
+    const g = 0.06 * (zw - 1); for (let i = 0; i < N; i++) { const near = i % 2 === 0; OYS.push({ big: !!big[i], s: big[i] ? (near ? rnd(1.12, 1.18) : rnd(1.24, 1.34)) + g : (near ? rnd(0.8, 0.86) : rnd(0.64, 0.74)) - g }); } }   /* 반은 크기가 비슷해 보임(재 봐야 앎) */
+  c.mg.innerHTML = '<div class="oys"><i class="rp"></i><i class="zl"><em>' + c.T('바다', 'Sea') + '</em></i><i class="zr"><span class="bk">' + '<b></b>'.repeat(3) + '</span><em>' + c.T('바구니', 'Basket') + '</em></i><i class="dl"></i>'
+    + '<div class="oy"><i class="sh"></i></div><i class="rg2"></i></div><div class="row olr"><button class="sub ol">◀ ' + c.T('바다로', 'To the sea') + '</button><button class="sub or">' + c.T('바구니로', 'To the basket') + ' ▶</button></div>';
+  const q = s9 => c.mg.querySelector(s9), box = q('.oys'), oy = q('.oy'), sh = q('.sh'), ring = q('.rg2'), dl = q('.dl'), bL = q('.ol'), bR = q('.or'), BK = box.querySelectorAll('.bk b');
+  let i = 0, ok = 0, put = 0, inBk = 0, cur = OYS[0], ph = 'look', tRing = 0, tNext = 0, t = 0, measured = false, dragR = false, dragO = false, x0 = 0, y0 = 0, rect = null;
+  const setOy = (lf, cl) => { oy.className = 'oy' + (cl ? ' ' + cl : ''); oy.style.left = lf + '%'; };
+  const ringHome = () => { ring.className = 'rg2'; ring.style.left = '50%'; ring.style.top = '84%'; };
+  const show = () => { cur = OYS[i]; measured = false; ph = 'look'; box.dataset.ph = 'look'; box.dataset.i = i; delete box.dataset.m; sh.style.transform = 'scale(' + cur.s.toFixed(2) + ')'; setOy(50, 'dn'); void oy.offsetWidth; setOy(50, ''); dl.style.opacity = '1'; ringHome();
+    c.say(i === 0 ? c.T('고리를 굴에 대 봐요. 쏙 지나가면 작은 굴, 턱 걸리면 큰 굴이에요 (끌기 · E로 재기)', 'Hold the ring to the oyster. Slips over = small, gets stuck = big (drag · E to measure)') : c.T('다음 굴이 올라왔어요. 고리를 대 봐요', 'Here comes the next oyster. Try the ring')); };
+  const measure = () => { if (ph !== 'look' || c.done) return; ph = 'meas'; box.dataset.ph = 'meas'; measured = true; ring.className = 'rg2'; ring.style.left = '50%'; ring.style.top = '44%'; tRing = 0.4; c.snd('tick'); };
+  const ringResult = () => { if (cur.big) { ring.className = 'rg2 stop'; oy.classList.add('up'); c.say(c.T('턱 걸려요! 다 큰 굴이에요. 바구니로 ▶', 'It gets stuck! A grown oyster. To the basket ▶')); box.dataset.m = 'big'; }
+    else { ring.className = 'rg2 pass'; c.say(c.T('쏙 지나가요! 아직 작은 굴이에요. 바다로 ◀', 'It slips over! Still small. Back to the sea ◀')); box.dataset.m = 'small'; } ph = 'look'; box.dataset.ph = 'look'; c.snd('pick'); tRing = -1; };
+  const sort = side => { if (c.done || (ph !== 'look' && ph !== 'meas')) return; if (ph === 'meas') ringResult(); const good = (side === 1) === cur.big;
+    if (!good) { cur.tries = (cur.tries | 0) + 1; setOy(50, measured && cur.big ? 'up' : ''); pop(oy, 'no'); c.snd('pop'); c.say(measured ? (cur.big ? c.T('고리에 걸렸던 굴이에요. 다 컸으니 바구니로 ▶', 'The ring got stuck on this one. It is grown, so basket ▶') : c.T('고리가 지나갔던 굴이에요. 작은 굴은 더 자라게 바다로 ◀', 'The ring slipped over this one. Small oysters go back to grow ◀')) : c.T('눈으로는 헷갈려요. 고리를 대 보고 골라요', 'Hard to tell by eye. Try the ring first')); return; }
+    if (!cur.tries) ok++; put++; ph = 'out'; box.dataset.ph = 'out'; setOy(side ? 89 : 11, side ? 'gr' : 'gl'); dl.style.opacity = '0'; ringHome(); c.snd(side ? 'pick' : 'tick');
+    if (side && inBk < BK.length) BK[inBk++].className = 'on';
+    c.say(side ? c.T('큰 굴을 바구니에 담았어요', 'A big oyster in the basket') : c.T('작은 굴은 바다로 퐁! 더 자라렴', 'Plop! Back to the sea to grow')); tNext = 0.7; };
+  const score = () => (ok >= 6 ? 3 : ok >= 4 ? 2 : ok >= 2 ? 1 : 0);
+  const frac = e => { if (!rect) rect = box.getBoundingClientRect(); return [(e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height]; };
+  const pdR = e => { if (ph !== 'look') return; e.preventDefault(); e.stopPropagation(); rect = box.getBoundingClientRect(); dragR = true; ring.className = 'rg2 drag'; if (ring.setPointerCapture) try { ring.setPointerCapture(e.pointerId); } catch (er) { /* 옛 브라우저 */ } };
+  const pdO = e => { if (ph !== 'look') return; e.preventDefault(); rect = box.getBoundingClientRect(); dragO = true; x0 = e.clientX; y0 = e.clientY; oy.classList.add('drag'); if (measured) ringHome(); if (oy.setPointerCapture) try { oy.setPointerCapture(e.pointerId); } catch (er) { /* 옛 브라우저 */ } };
+  const pm = e => { if (dragR) { const [x, y] = frac(e); ring.style.left = (Math.max(0.05, Math.min(0.95, x)) * 100).toFixed(1) + '%'; ring.style.top = (Math.max(0.1, Math.min(0.95, y)) * 100).toFixed(1) + '%'; }
+    else if (dragO) { const dx = (e.clientX - x0) / rect.width; oy.style.left = (50 + Math.max(-40, Math.min(40, dx * 100))).toFixed(1) + '%'; } };
+  const pu = e => { if (dragR) { dragR = false; const [x, y] = frac(e); rect = null; if (Math.hypot(x - 0.5, (y - 0.44) * 0.6) < 0.16) measure(); else ringHome(); return; }
+    if (dragO) { dragO = false; oy.classList.remove('drag'); const px = e.clientX - x0, dx = px / rect.width, dy = e.clientY - y0; rect = null; if (dx < -0.2) sort(0); else if (dx > 0.2) sort(1); else { setOy(50, ''); if (Math.abs(px) < 8 && Math.abs(dy) < 8) measure(); } } };
+  const pdL = e => { e.preventDefault(); sort(0); }, pdRt = e => { e.preventDefault(); sort(1); };
+  ring.addEventListener('pointerdown', pdR); oy.addEventListener('pointerdown', pdO); addEventListener('pointermove', pm); addEventListener('pointerup', pu); bL.addEventListener('pointerdown', pdL); bR.addEventListener('pointerdown', pdRt);
+  show();
+  return { go: c.T('고리 대기', 'Use the ring'),
+    down() { measure(); },
+    key(code, rep) { if (rep) return /^(Arrow|Key[WASD])/.test(code); if (code === 'ArrowLeft' || code === 'KeyA') { sort(0); return true; } if (code === 'ArrowRight' || code === 'KeyD') { sort(1); return true; } if (code === 'ArrowUp' || code === 'KeyW' || code === 'ArrowDown' || code === 'KeyS') { measure(); return true; } return false; },
     tick(dt) { t += dt;
-      if (ph === 'wait' || ph === 'bite') { const big = !fish && ph === 'wait', y = ph === 'bite' && fish ? 10 : Math.sin(t * (big ? 5.5 : 2.6)) * (big ? 7 : 2); fl.style.transform = 'translateY(' + y.toFixed(1) + 'px)';
-        if (ph === 'wait' && (tw -= dt) <= 0) { ph = 'bite'; tw = (fish ? 0.9 : 1.3) * zw; setCls(wt, 'bar wt on'); c.snd('tick'); c.say(fish ? c.T('쏙! 지금 E!', 'A bite! Press E now!') : c.T('잔잔해요! 지금 E!', 'Calm now! Press E!')); }
-        else if (ph === 'bite' && (tw -= dt) <= 0) { setCls(wt, 'bar wt'); c.say(fish ? c.T('놓쳤어요! 다음 물고기를 기다려요', 'Missed it! Wait for the next one') : c.T('물결이 다시 세졌어요 — 다음 줄', 'The waves are back — next rope')); endRound(false); }
-        return; }
-      if (ph === 'gap') { if ((gap -= dt) <= 0) wait(); return; }
-      tt += dt; const pull = fish ? 0.4 * Math.sin(1.9 * tt + ph0) + 0.25 * Math.sin(3.7 * tt + ph0 * 2) : -0.12 + 0.12 * Math.sin(1.3 * tt + ph0);   /* 낚시 = 물고기가 이리저리 당김 · 김발·굴 = 무거운 줄이 아래로 */
-      ten = Math.min(1, Math.max(0, ten + ((hold ? 0.62 : -0.7) + pull) * dt)); const cen = fish ? 0.55 + 0.12 * Math.sin(0.8 * tt + ph0) : 0.55, inn = Math.abs(ten - cen) < HW;
-      prog = Math.min(1, Math.max(0, prog + (inn ? 0.34 : -0.1) * dt));
-      if (ten >= 0.985) { if ((tight += dt) > 0.35) { tight = 0; prog = Math.max(0, prog - 0.25); ten = 0.6; c.snd('buzz'); c.say(c.T('줄이 너무 팽팽해요! 살살 — 손을 떼 봐요', 'Too tight! Ease off — let go a little')); } } else tight = 0;
-      z9.style.left = ((cen - HW) * 100) + '%'; mk.style.left = (ten * 100) + '%'; pg.style.transform = 'scaleX(' + prog.toFixed(3) + ')';
-      if (prog >= 1) { c.say(fish ? c.T('낚았어요! ', 'Caught one! ') + (round + 1) + '/3' : c.T('줄을 다 올렸어요! ', 'Rope lifted! ') + (round + 1) + '/3'); endRound(true); }
-      else if (tt > 8) { c.say(fish ? c.T('물고기가 줄을 풀고 갔어요 — 다음엔 초록 칸에 오래', 'It slipped away — stay in the green longer') : c.T('줄이 무거워요 — 다음 줄로', 'Too heavy — on to the next rope')); endRound(false); } } };
+      if (tRing > 0 && (tRing -= dt) <= 0) ringResult();
+      if (ph === 'out' && (tNext -= dt) <= 0) { i++; if (i >= N) { ph = 'end'; box.dataset.ph = 'end'; c.finish(score()); return; } show(); }
+      if (t > T && ph !== 'end') { ph = 'end'; box.dataset.ph = 'end'; c.say(c.T('배가 돌아갈 시간이에요', 'Time to head back')); c.finish(score()); } },
+    dispose() { ring.removeEventListener('pointerdown', pdR); oy.removeEventListener('pointerdown', pdO); removeEventListener('pointermove', pm); removeEventListener('pointerup', pu); bL.removeEventListener('pointerdown', pdL); bR.removeEventListener('pointerdown', pdRt); } };
 }
 
 // ②-1 줄 당기기 낚시(FISH-2 · 차례표 12줄 · town_jobs2.md 「🎣 줄 낚시」 · 타이밍 막대 X): 고르기(물때·자리·미끼) → 찌를 보며 기다림 → 걸리면 물고기가 당기는 반대쪽으로 끌기(← → · 물 위 끌기 · 단추)
@@ -718,14 +771,15 @@ function mkKitchen(c) {
     dispose() { tray.removeEventListener('pointerdown', pdTray); stv.removeEventListener('pointerdown', pdStove); pls.removeEventListener('pointerdown', pdPl); if (moreB) moreB.removeEventListener('pointerdown', pdMore); unhook(); if (gh) gh.remove(); gh = null; drag = null; } };
 }
 
-const MK = { toss: mkToss, bar: mkBar, line: mkLine, tug: mkTug, ripe: mkRipe, plant: mkPlant, cut: mkCut, salt: mkSalt, comb: mkComb, dig: mkDig, sort: mkSort, cover: mkCover, order: mkOrder, feed: mkFeed, lens: mkLens, bend: mkBend, still: mkStill, gate: mkGate, kitchen: mkKitchen };
+const MK = { toss: mkToss, spread: mkSpread, gauge: mkGauge, tug: mkTug, ripe: mkRipe, plant: mkPlant, cut: mkCut, salt: mkSalt, comb: mkComb, dig: mkDig, sort: mkSort, cover: mkCover, order: mkOrder, feed: mkFeed, lens: mkLens, bend: mkBend, still: mkStill, gate: mkGate, kitchen: mkKitchen };
 // 놀이 하나 열기: o = { root(.pb — 안에 .mg · .msg · .go가 있어야 함), k(일 갈래), en, zw(솜씨 배수 = 초록 칸·시간 · 부엌은 여유 시간), sea, x(놀이별 자료), sfx(k), tone(...), grade(false = 결과 말 없이 바로 끝 — 부엌·투호), onEnd(점수 0~3) }
 export function createMini(kind, o) { css();
   const c = { root: o.root, mg: o.root.querySelector('.mg'), msgEl: o.root.querySelector('.msg'), go: o.root.querySelector('.go'), en: !!o.en, zw: Math.max(1, o.zw || 1), k: o.k, sea: o.sea, x: o.x || null, done: false };   /* x = 놀이별 자료(부엌: 요리법·사다리·손님·날씨 · KITCHEN-1) */
   c.T = (ko, e2) => (c.en ? e2 : ko); c.say = s => { if (c.msgEl && c.msgEl.textContent !== s) c.msgEl.textContent = s; }; c.snd = k => { if (o.sfx) o.sfx(k); }; c.tone = (...a) => { if (o.tone) o.tone(...a); };
   let endT = -1, score = 0;
   c.finish = ok => { if (c.done) return; c.done = true; score = Math.max(0, Math.min(3, ok | 0)); if (o.grade === false) { endT = 0; return; } c.root.classList.add('mg-end'); const f9 = FACT[kind === 'plant' || kind === 'cut' ? kind : c.k], tl = g.tail ? g.tail() : ''; c.say(gradeText(score, c.en) + (tl ? ' ' + tl : f9 ? (c.en ? ' 💡 Did you know? ' : ' 💡 알고 있었나요? ') + f9[c.en ? 1 : 0] : '')); c.snd(score >= 3 ? 'done' : score ? 'ding' : 'buzz'); endT = f9 || tl ? 3.2 : 0.8; };   /* PLAY-3: 끝 = 결과 + 사실 한 줄(3.2초) */
-  const g = (MK[kind] || mkBar)(c);
+  if (!MK[kind]) console.warn('[town_minigame] 모르는 놀이 갈래 → 익은 것 고르기로:', kind, o.k);   /* 옛 기본값 mkBar(타이밍 막대)는 10-24에 지움 */
+  const g = (MK[kind] || mkRipe)(c);
   const pd = e => { e.preventDefault(); if (!c.done) g.down(); }, pu = () => { if (g.up) g.up(); };
   if (c.go && !g.go) c.go.style.display = 'none';   /* 손으로 하는 놀이(끌기·나누기) = 큰 단추 없음 */
   if (c.go && g.go) { c.go.textContent = g.go; c.go.addEventListener('pointerdown', pd); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) c.go.addEventListener(ev, pu); }

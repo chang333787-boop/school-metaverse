@@ -46,7 +46,7 @@ export function createTools(A) {
   let FS = null, FILL = null, OVL = null, WORM = null, PICK = 0, dirty = true, center = null, lastMode = '', lastDay = -1, tchBtn = null, BAR = null, CSS = null, FAUCH = [], FAUOFF = null, RIVH = null, STANDH = [], seaTold = -1;
   const PEND = [], PILES = [], PCACHE = new Map(), FGRID = new Map();
   // ── 저장(GAME.S.tools) — 예전 저장에도 물뿌리개·삽은 있음 ──
-  const S = () => { const s = A.GAME.S; let t = s.tools; if (!t || typeof t !== 'object' || Array.isArray(t)) t = s.tools = {}; if (!t.have || typeof t.have !== 'object') t.have = {}; t.have.can = 1; t.have.shovel = 1;
+  const S = () => { const s = A.GAME.S; let t = s.tools; if (!t || typeof t !== 'object' || Array.isArray(t)) t = s.tools = {}; if (!t.have || typeof t.have !== 'object') t.have = {}; t.have.can = A.canAway && A.canAway() ? 0 : 1; t.have.shovel = 1;   /* SPEND-1: 맡긴 날 = 물뿌리개 없음 */
     if (!(t.tank >= 0)) t.tank = TANK; if (!Array.isArray(t.holes)) t.holes = []; if (!t.bloom || typeof t.bloom !== 'object') t.bloom = {}; if (!t.sw || typeof t.sw !== 'object') t.sw = { d: 0, k: {} }; if (!t.clean || typeof t.clean !== 'object') t.clean = { d: 0, n: 0, all: 0 };
     if (!t.n || typeof t.n !== 'object') t.n = {}; if (t.cur && !t.have[t.cur]) t.cur = null; return t; };
   const mark = () => A.GAME.mark(), day = () => A.GAME.S.day | 0, toast = (t, s) => map.hud.toast(t, s), tone = (...a) => { if (map.tone) map.tone(...a); };
@@ -105,7 +105,7 @@ export function createTools(A) {
   function showSync() { const k = cur(), want = k && A.on() && !hiddenWhy() ? k : null; if (want !== shownK) { shownK = want; map.player.hold(want); if (!want) stopPour(); } }
 
   // ───────── 들기·내려놓기 · 띠 ─────────
-  function hold(k) { const t = S(); if (k && !t.have[k]) { toast('🔒 ' + L(TOOL[k].t) + (en() ? ' — not yet. ' : ' — 아직 없어요. ') + L(TOOL[k].get), 2.8); return false; }
+  function hold(k) { const t = S(); if (k === 'can' && !t.have.can) { toast(en() ? '🔧 The watering can is being fixed — it comes to our door tomorrow morning' : '🔧 물뿌리개를 맡겼어요. 내일 아침 우리 집 앞에 와요', 2.8); return false; } if (k && !t.have[k]) { toast('🔒 ' + L(TOOL[k].t) + (en() ? ' — not yet. ' : ' — 아직 없어요. ') + L(TOOL[k].get), 2.8); return false; }
     const nk = k && t.cur !== k ? k : null; if (nk === t.cur) return true; stopPour(); if (FS) fishStop(); t.cur = nk; mark(); showSync(); aimCalc(true); barSync(); tchSync(); A.keysLine(); PICK = 0;
     if (nk) { tone(880, 0, 0.06, 'triangle', 0.05); tone(1320, 0.06, 0.08, 'triangle', 0.04); if (!t.n['h:' + nk]) { t.n['h:' + nk] = 1; toast(TOOL[nk].ic + ' ' + L(TOOL[nk].how) + (A.tch() ? (en() ? ' (🧰 Use)' : ' (🧰 쓰기)') : (en() ? ' (click or F)' : ' (클릭 또는 F)')), 4); } }
     else tone(520, 0, 0.06, 'triangle', 0.04); return true; }
@@ -130,7 +130,7 @@ export function createTools(A) {
   function press(on, src) {
     if (!on) { if (pressing && (!src || pressing === src || src === 'all')) { pressing = false; } return false; }
     if (!cur() || !A.on()) return false; const why = hiddenWhy(); if (why) { if (HIDE[why]) toast(L(HIDE[why]), 2); return true; } if (A.busy()) return false;
-    if (cur() === 'can') { if (FILL) return true; pressing = src || 'k'; return true; }
+    if (cur() === 'can') { if (FILL) return true; if (!pressing) { ACM.clear(); POURB.clear(); pourN = 0; sideQ = 0; } pressing = src || 'k'; return true; }
     useOnce(); return true; }
   function stopPour() { pressing = false; burstT = 0; map.player.holdUse(false); }
   function useOnce() { const k = cur(), act = map.player.acting; if (!k) return; if (k === 'rod' && FS) { fishPress(); return; } if (act && /^(dig|cast|peer|sweep|reach)$/.test(act)) return;
@@ -138,28 +138,43 @@ export function createTools(A) {
 
   // ───────── 💧 물뿌리개: 포물선 물방울(watergun.js 풀 결) · 고리 자리 판정 · 물통 ─────────
   const kind = new Uint8Array(PMAX), px = new Float32Array(PMAX), py = new Float32Array(PMAX), pz = new Float32Array(PMAX), vx = new Float32Array(PMAX), vy = new Float32Array(PMAX), vz = new Float32Array(PMAX), life = new Float32Array(PMAX), psz = new Float32Array(PMAX);
-  let pNext = 0, pAlive = 0, emitAcc = 0;
+  let pNext = 0, pAlive = 0;
   function spawn(k, x, y, z, ux, uy, uz, lt, size) { for (let n = 0; n < PMAX; n++) { const i = (pNext + n) % PMAX; if (kind[i]) continue; kind[i] = k; px[i] = x; py[i] = y; pz[i] = z; vx[i] = ux; vy[i] = uy; vz[i] = uz; life[i] = lt; psz[i] = size; pNext = (i + 1) % PMAX; pAlive++; return i; } return -1; }
   function splash(x, y, z, n) { for (let k = 0; k < n; k++) { const a = Math.random() * 6.283, s = 0.5 + Math.random() * 0.6; spawn(3, x, y + 0.03, z, Math.cos(a) * s, 1.1 + Math.random() * 0.8, Math.sin(a) * s, 0.3 + Math.random() * 0.15, 0.025); } }
+  /* SPEND-1 넓은 꼭지(설계 town_phase3.md): 물줄기 셋 = 가운데(고리) + 옆 둘(곁 두둑·화분 · 없으면 고리 양옆 1.1m) · 옆 자리는 0.15초마다 다시 고름 · 물통 쓰는 양은 그대로 */
+  const SIDE = [{ x: 0, y: 0, z: 0, on: false }, { x: 0, y: 0, z: 0, on: false }], EA = [0, 0, 0]; let sideQ = 0;
+  const wideOn = () => !!(A.wide && A.wide());
+  function sideCalc(me) { SIDE[0].on = SIDE[1].on = false; if (!wideOn()) return; const B = A.farm.beds() || [], c = [], bi0 = bedAt(T.x, T.z);
+    for (let i = 0; i < B.length; i++) { if (i === bi0) continue; const b = B[i], px = Math.max(b[0] + 0.3, Math.min(b[1] - 0.3, T.x)), d = Math.hypot(px - T.x, b[2] - T.z); if (d > 0.9 && d < 2.9) c.push([d, px, b[2]]); }
+    for (const p of A.homePots ? A.homePots() : []) { const d = Math.hypot(p[0] - T.x, p[2] - T.z); if (d > 0.5 && d < 2.6) c.push([d, p[0], p[2]]); }
+    c.sort((a, b) => a[0] - b[0]); const h = Math.atan2(T.x - me.x, T.z - me.z), ux = Math.cos(h), uz = -Math.sin(h);   /* 고리 방향에 수직(옆) */
+    for (let k = 0; k < 2; k++) { const s = SIDE[k], q = c[k]; if (q) { s.x = q[1]; s.z = q[2]; } else { const sg = k ? -1 : 1; s.x = T.x + ux * 1.1 * sg; s.z = T.z + uz * 1.1 * sg; } s.y = surfY(s.x, s.z, me.y); s.on = true; } }
+  function stream(j, nx, ny, nz, tx, ty, tz, rate, dt) { const dx = tx - nx, dz = tz - nz, dh = Math.hypot(dx, dz), h = ty - ny, a = 0.35, ca = Math.cos(a), den = 2 * ca * ca * (dh * Math.tan(a) - h);   // 발사각 20° 고정 → 그 자리까지 닿는 빠르기(포물선)
+    let v = den > 1e-3 ? Math.sqrt(GV * dh * dh / den) : 2; v = Math.max(1.2, Math.min(7.5, v)); const ux = dh > 0.05 ? dx / dh : 0, uz = dh > 0.05 ? dz / dh : 0, tl = Math.max(0.12, Math.min(1.6, dh > 0.05 ? dh / (v * ca) : 0.4));
+    EA[j] += rate * dt; while (EA[j] >= 1) { EA[j] -= 1; const jt = 0.18; spawn(1, nx, ny, nz, ux * v * ca + (Math.random() - 0.5) * jt, v * Math.sin(a) + (Math.random() - 0.5) * jt, uz * v * ca + (Math.random() - 0.5) * jt, tl * (0.94 + Math.random() * 0.12), 0.034); } }
   function pourTick(dt) { const t = S(), me = map.player.pos();
     if (t.tank <= 0) { map.player.holdUse(false); if ((emptyT -= dt) <= 0) { emptyT = 2.5; tone(220, 0, 0.14, 'triangle', 0.07, 180); toast(en() ? '💧 The can is empty — fill it at a tap or a riverbank (E)' : '💧 물이 다 떨어졌어요 — 수돗가나 강가에서 E로 채워요', 2.6); } return; }
     map.player.holdUse(true); const tip = map.player.toolTip(); let nx, ny, nz; if (tip && tip.ok) { nx = tip.x; ny = tip.y; nz = tip.z; } else { const h = Math.atan2(T.x - me.x, T.z - me.z); nx = me.x + Math.sin(h) * 0.45; ny = me.y + 0.62; nz = me.z + Math.cos(h) * 0.45; }
-    const dx = T.x - nx, dz = T.z - nz, dh = Math.hypot(dx, dz), h = T.y - ny, a = 0.35, ca = Math.cos(a), den = 2 * ca * ca * (dh * Math.tan(a) - h);   // 발사각 20° 고정 → 고리까지 닿는 빠르기(포물선)
-    let v = den > 1e-3 ? Math.sqrt(GV * dh * dh / den) : 2; v = Math.max(1.2, Math.min(7.5, v)); const ux = dh > 0.05 ? dx / dh : 0, uz = dh > 0.05 ? dz / dh : 0, tl = Math.max(0.12, Math.min(1.6, dh > 0.05 ? dh / (v * ca) : 0.4));
-    t.tank = Math.max(0, t.tank - USE * dt); emitAcc += RATE * dt; while (emitAcc >= 1) { emitAcc -= 1; const j = 0.18; spawn(1, nx, ny, nz, ux * v * ca + (Math.random() - 0.5) * j, v * Math.sin(a) + (Math.random() - 0.5) * j, uz * v * ca + (Math.random() - 0.5) * j, tl * (0.94 + Math.random() * 0.12), 0.034); }
+    if ((sideQ -= dt) <= 0) { sideQ = 0.15; sideCalc(me); }
+    t.tank = Math.max(0, t.tank - USE * dt); const w3 = SIDE[0].on; stream(0, nx, ny, nz, T.x, T.y, T.z, w3 ? RATE * 0.5 : RATE, dt); if (w3) for (let k = 0; k < 2; k++) { const s = SIDE[k]; if (s.on) stream(k + 1, nx, ny, nz, s.x, s.y, s.z, RATE * 0.25, dt); }
     if ((sprayT -= dt) <= 0) { sprayT = 0.14; tone(1300 + Math.random() * 400, 0, 0.05, 'triangle', 0.012, 700); }   // 쏴아(작게 — lessons E '소리는 배경')
     aimHold = 0.6; map.player.aim(Math.atan2(T.x - me.x, -(T.z - me.z)) * 180 / Math.PI);
     pourHit(dt); }
-  function pourHit(dt) { const t = S(), x = T.x, z = T.z, en9 = en(); if (water(x, z) && T.lock !== 'bed') return;   // 물 위 = 아무 일 없음
-    if ((wetQ -= dt) <= 0) { wetQ = 0.4; wetAdd(x, T.y, z); }
-    const bi = bedAt(x, z); if (bi >= 0) { if (ACC.bed[bi] === -1) return; ACC.bed[bi] = (ACC.bed[bi] || 0) + dt; if (ACC.bed[bi] < 0.9) return; ACC.bed[bi] = -1; const st = A.farm.st(bi);
-      if (st === 'water') { A.farm.use(bi); A.rec('can-bed'); } else if (st === 'empty') toast(en9 ? '🌱 Plant seeds first (E), then water' : '🌱 먼저 씨앗을 심어요 (E) — 그다음 물을 줘요', 2.4); else if (st === 'grow') toast(en9 ? '🌱 Already watered today — it grows while you sleep' : '🌱 오늘은 물을 줬어요 — 자는 동안 자라요', 2.4); else if (st === 'ripe') toast(en9 ? '🧺 It is ripe — harvest it with E' : '🧺 다 자랐어요 — E로 거둬요', 2.4); return; }
-    const ch = A.chem(), fi = ch && ch.fireAt ? ch.fireAt(x, z, 1.0) : -1; if (fi >= 0) { if (ACC.fi !== fi) { ACC.fi = fi; ACC.fire = 0; } ACC.fire += dt; if ((hissT -= dt) <= 0) { hissT = 0.3; tone(2300, 0, 0.25, 'sawtooth', 0.012, 900); } if (ACC.fire >= 1.1) { ACC.fire = 0; if (ch.fireDouse(fi)) { A.rec('can-fire'); A.skUp('look', 1, 'fire'); } } return; }
-    const f = flowerAt(x, z, 0.8); if (f) { const k = Math.round(f.x * 2) + ':' + Math.round(f.z * 2); if (ACC.flk !== k) { ACC.flk = k; ACC.fl = 0; } if (ACC.fl < 0) return; ACC.fl += dt; if (ACC.fl < 0.8) return; ACC.fl = -1; const B = t.bloom, b = B[k];
-      if (b && b.w === day()) { toast(en9 ? '🌷 You watered this flower today — come back tomorrow' : '🌷 이 꽃은 오늘 물을 줬어요 — 내일 또 줘요', 2.2); return; }
+  /* 젖는 자리 판정 = 물줄기마다(가운데 + 옆 둘) · 쌓임 = 자리마다(날이 바뀌거나 새로 누르면 처음부터 — 예전엔 한 번 물 준 두둑은 그 탭이 닫힐 때까지 다시 안 젖던 것) */
+  const ACM = new Map(); let acmD = -1, pourN = 0, pourMax = 0; const POURB = new Set();
+  const acc = (k, dt, need) => { const v = ACM.get(k) || 0; if (v < 0) return false; const n = v + dt; if (n >= need) { ACM.set(k, -1); return true; } ACM.set(k, n); return false; };
+  function pourHit(dt) { if (acmD !== day()) { acmD = day(); ACM.clear(); } const wet = (wetQ -= dt) <= 0; if (wet) wetQ = 0.4; hitAt(T.x, T.z, T.y, dt, true, wet); if (SIDE[0].on) for (const s of SIDE) if (s.on) hitAt(s.x, s.z, s.y, dt, false, wet); }
+  function hitAt(x, z, y, dt, main, wet) { const t = S(), en9 = en(); if (water(x, z) && !(main && T.lock === 'bed')) return;   // 물 위 = 아무 일 없음
+    if (wet) wetAdd(x, y, z);
+    const bi = bedAt(x, z); if (bi >= 0) { if (!acc('b' + bi, dt, 0.9)) return; const st = A.farm.st(bi);
+      if (st === 'water') { A.farm.use(bi); A.rec('can-bed'); if (!POURB.has(bi)) { POURB.add(bi); pourN = POURB.size; pourMax = Math.max(pourMax, pourN); } } else if (!main) return; else if (st === 'empty') toast(en9 ? '🌱 Plant seeds first (E), then water' : '🌱 먼저 씨앗을 심어요 (E) — 그다음 물을 줘요', 2.4); else if (st === 'grow') toast(en9 ? '🌱 Already watered today — it grows while you sleep' : '🌱 오늘은 물을 줬어요 — 자는 동안 자라요', 2.4); else if (st === 'ripe') toast(en9 ? '🧺 It is ripe — harvest it with E' : '🧺 다 자랐어요 — E로 거둬요', 2.4); return; }
+    if (A.homePots) for (const q of A.homePots()) { if (Math.hypot(q[0] - x, q[2] - z) > 0.7) continue; if (acc('h' + q[3], dt, 0.8)) A.potWater(q[3]); return; }   /* 우리 집 화분 = 손으로 E 물 주기와 같은 일 */
+    if (main) { const ch = A.chem(), fi = ch && ch.fireAt ? ch.fireAt(x, z, 1.0) : -1; if (fi >= 0) { if (ACC.fi !== fi) { ACC.fi = fi; ACC.fire = 0; } ACC.fire += dt; if ((hissT -= dt) <= 0) { hissT = 0.3; tone(2300, 0, 0.25, 'sawtooth', 0.012, 900); } if (ACC.fire >= 1.1) { ACC.fire = 0; if (ch.fireDouse(fi)) { A.rec('can-fire'); A.skUp('look', 1, 'fire'); } } return; } }
+    const f = flowerAt(x, z, 0.8); if (f) { const k = Math.round(f.x * 2) + ':' + Math.round(f.z * 2); if (!acc('f' + k, dt, 0.8)) return; const B = t.bloom, b = B[k];
+      if (b && b.w === day()) { if (main) toast(en9 ? '🌷 You watered this flower today — come back tomorrow' : '🌷 이 꽃은 오늘 물을 줬어요 — 내일 또 줘요', 2.2); return; }
       B[k] = { x: +f.x.toFixed(2), y: +f.y.toFixed(2), z: +f.z.toFixed(2), c: Math.min(9, ((b && b.c) || 0) + 1), w: day() }; const ks = Object.keys(B); if (ks.length > 20) { ks.sort((a9, b9) => B[a9].w - B[b9].w); delete B[ks[0]]; } mark(); dirty = true;
       A.skUp('farm', 1, 'flower'); A.rec('can-flower'); toast(en9 ? '🌷 Watered the flowers — one more will bloom tomorrow' : '🌷 꽃에 물을 줬어요 — 내일 한 송이 더 피어요', 2.6); return; }
-    const p = potAt(x, z); if (p) { const k = Math.round(p[0]) + ':' + Math.round(p[2]); if (ACC.potk !== k) { ACC.potk = k; ACC.pot = 0; } if (ACC.pot < 0) return; ACC.pot += dt; if (ACC.pot < 0.8) return; ACC.pot = -1; if (t.n['pot:' + k] === day()) return; t.n['pot:' + k] = day(); mark(); A.skUp('farm', 1, 'pot:' + k); toast(en9 ? '🌱 Watered the pot plant' : '🌱 화분에 물을 줬어요', 2); } }
+    const p = potAt(x, z); if (p) { const k = Math.round(p[0]) + ':' + Math.round(p[2]); if (!acc('p' + k, dt, 0.8)) return; if (t.n['pot:' + k] === day()) return; t.n['pot:' + k] = day(); mark(); A.skUp('farm', 1, 'pot:' + k); toast(en9 ? '🌱 Watered the pot plant' : '🌱 화분에 물을 줬어요', 2); } }
   function dropTick(dt) { if (!pAlive) { if (DROP && DROP.visible) DROP.visible = false; return; } let n = 0;
     for (let i = 0; i < PMAX; i++) { const k = kind[i]; if (!k) continue; if ((life[i] -= dt) <= 0) { kind[i] = 0; pAlive--; if (k === 1 && Math.random() < 0.35) splash(px[i], py[i], pz[i], 1); continue; }
       vy[i] -= GV * dt; px[i] += vx[i] * dt; py[i] += vy[i] * dt; pz[i] += vz[i] * dt;
@@ -351,7 +366,7 @@ export function createTools(A) {
   const API = {
     info: () => { const t = S(); return { have: Object.keys(t.have).filter(k => t.have[k]), cur: t.cur, shown: shownK, engine: map.player.holding, tank: +t.tank.toFixed(1), pressing: !!pressing, aim: { x: +T.x.toFixed(2), y: +T.y.toFixed(2), z: +T.z.toFixed(2), ok: T.ok, lock: T.lock, k: T.k }, ring: !!(RING && RING.visible),
       fish: FS ? { ph: FS.ph, t: +FS.t.toFixed(2), bite: +FS.bite.toFixed(2) } : null, fill: !!FILL, holes: t.holes.filter(h => h[4] === day()).length, piles: PILES.length, mode: swMode(), clean: { ...t.clean }, bloom: Object.keys(t.bloom).length, worm: t.n.worm || 0, drops: pAlive, bar: !!(BAR && BAR.classList.contains('on')), touch: !!(tchBtn && tchBtn.style.display !== 'none'),
-      faucets: FAUCH.length, faucetOn: FAUCH.filter(h => !h.hot.off).length, river: !!(RIVH && !RIVH.hot.off), stands: STANDS.length, pend: PEND.slice(), ovl: !!OVL, wet: WM.filter(w => w.on).length }; },
+      faucets: FAUCH.length, faucetOn: FAUCH.filter(h => !h.hot.off).length, river: !!(RIVH && !RIVH.hot.off), stands: STANDS.length, pend: PEND.slice(), ovl: !!OVL, wet: WM.filter(w => w.on).length, wide: wideOn(), sides: SIDE.filter(q => q.on).map(q => [+q.x.toFixed(2), +q.z.toFixed(2)]), pourN, pourMax }; },   /* SPEND-1: 이번 누름에 젖은 두둑 수 · 가장 많이 */
     hold: k => hold(k), give: k => got(k), aim: (x, z) => { if (x == null) OVR.on = false; else { OVR.on = true; OVR.x = x; OVR.z = z; } aimCalc(true); return { ...T }; }, press: (on, src) => press(on, src || 'k'), use: () => press(true, 'k'),
     bite: () => { if (FS && FS.ph === 'wait') FS.bite = FS.t; else if (FS && FS.ph === 'fly') FS.bite = 0; return !!FS; }, piles: () => PILES.map(p => ({ k: p.k, x: p.x, z: p.z, y: +p.y.toFixed(2), mode: p.mode })), stands: () => STANDS.map(s => ({ x: +s.x.toFixed(1), z: +s.z.toFixed(1) })),
     tank: v => { S().tank = Math.max(0, Math.min(TANK, v)); tankSync(); fillSync(); }, faucets: () => FAUCH.map(h => ({ x: +h.hot.x.toFixed(2), z: +h.hot.z.toFixed(2), y: +h.hot.y.toFixed(2), off: h.hot.off, src: !!h.src })), sync: () => { showSync(); fillSync(); barSync(); tchSync(); pilesSync(true); drawAll(); },
