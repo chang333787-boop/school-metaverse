@@ -4,19 +4,13 @@
 
 **⚠️ 10-25 11:50 — 예약 세션(11:01)이 권한 창에서 멈춰 있어 원래 메인 세션(52a18de9)이 다시 맡았어요. 예약 세션이 나중에 풀리면 코드는 고치지 말고 끝내요(겹침 X).**
 
-## 지금 상태(10-25 01:3x · main = 0fcb70e · 주간 54% · 멈춤선 80%(75% 알림 · 78% 새 일 멈춤 · 사용자 10-24 18:05 'ㄱㄱ'))
-- 10-24 밤 세션이 올린 것: a8fbd9e 진행 손실 막기·table1b·J 두 단추·보물 지도 단추 · 3e3172e 일 시간(HOURS-1) · 9421124 까망봉·층층골 + 벤치 보상 창 · a675ada 행정복지센터 고장 신고(확정 5) · dfe684f 산불 감시(이어서 ②) · 706cf53 썰물섬(이어서 ①) · 0fcb70e 첫 30분 손맛 다섯(이어서 ④)
-- 확정 차례 1~5 ✅ · 이어서 ①②③④ ✅
-- 이어서 ③ 빈 건물 ✅(BLDG-1 · 경찰서·병원·동물보호센터 · 자전거 등록 스티커는 아직) · 기다리는 패치 없음
-  - scratchpad = /private/tmp/claude-501/-Users-dobuk-Projects-school-metaverse/52a18de9-e78e-4006-be4f-f54f6909d405/scratchpad · 합치기 폴더 = 그 안 `m1`(detached · `git fetch && git checkout --detach origin/main` 뒤 `git add` → `git apply -3`)
-  - town_indoor.cjs는 고침 전에도 몇 번째 방부터 몸이 안 움직여 실패(시험 쪽 문제로 보임 · 확인할 것)
-- 다음(이어서 남은 것): ⑤ 땅 결 숲·보도 한 종류(town_art3.md) → ⑥ 높은 곳 보기 + 숨은 놀람(town_explore.md 30) → ⑦ 칸 키트 넓히기(학교 둘레 → 시내) → ⑧ 은행·우체국 창구(town_fix.js 창구 꼴) → ⑨ 밀물 구조·길 잃은 동물(town_emerg 사건 표 10·12) → ⑩ 스키 기문(town_explore.md 34)
-- 그다음 미룬 것(사용자 10-24 18:05 차례): 도전 사다리·내 최고 기록 → 모든 동작 반응 넓히기 → 빈 건물·직업 나머지 → 가벼운 재미(꾸미기·선물 · 친구 거래·서버 규칙 X) → 탐험 체력(scratchpad 옛 a063b03f…/patches/day_stam.patch + 실패 고치기) → 이웃 일과·먹이·물 연쇄
-- 10-25 낮(원래 세션이 다시 맡은 뒤) 올린 것: d5ff0e7 배 칸 시험 · 8c3d4d2 버스 갈아타기 카메라(FIX-BUS9 · town_busx) · d94d47b 땅 결 숲·보도(이어서 ⑤) · 3c99926 높은 곳 보기·숨은 놀람 열셋(이어서 ⑥) · 팀 짓는 중: ⑦ 칸 키트 넓히기(scratchpad/kit2.patch) · ⑧ 은행·우체국(scratchpad/bank1.patch)
-- 긴 묶음(10-25 낮): town_cap 통과 · town_state --story = '승급 미션 × 날씨 창 → 비'에서 한 번 몸 멈춤(멈춤 건 곳 rank start 창 + lvReward 창) — 그 칸만 다시 돌리면 통과 · 드문 타이밍(보상 창이 끼어듦) · 다음에 lvReward가 다른 창이 막 닫힌 1초 안이면 미루게 보기 · 소방차 탐 칸은 시험 쪽에서 '안 탐'(skip)
-- 남은 작은 것: town_state 배 칸 '배 E로 안 탐'(고침 전에도 같음 · 하네스 쪽인지 먼저 확인) · 갈아탄 정류장 카메라(재현 시험부터) · 앉기 시험 22번째 타이밍 · 썰물섬 위 알림 셋이 한꺼번에 · 섬 겨울색 = 문제 아님(마을도 맑은 겨울엔 땅이 하얗지 않음 · 눈 온 날만) · 도장·지갑 연출 그림 켠 캡처 X · 강·연못 물 재질 밤에 납작한 파랑
-- 새 시험(이 세션): town_save(node) · town_jq · town_hours · town_xp · town_isle · town_fix · town_feel · town_xpshot(그림 켬 캡처 · V 배열만 바꿔 씀)
-- 일하는 꼴(이 세션에서 잘 된 것): 팀 둘을 파일이 안 겹치게 동시에 · 팀 끝 → m1에서 apply -3 → 캐시(바뀐 모듈 ?v= · 그 모듈을 부르는 모듈도 · registry town v) → gm.sh로 check·홍보판·그 기능 → 필요하면 town_xpshot 캡처 한 번 → push → 채팅 보고
+## 지금 상태(10-25 밤 · main = b6deb8a · 주간 67% · 멈춤선 80%(75% 알림 · 78% 새 일 멈춤))
+- **방향(정본) = docs/systems/town_achieve.md 네 기둥**(계획하는 하루 · 알아내야 열리는 길 · 몸으로 자라는 능력 · 내 결과가 남는 마을) · 새 넓이(새 건물·새 놀이)는 멈춤 · 메모리 feedback-productive-struggle(E 누르기·막대 X · 시간 비용 · 본 것만 근거)
+- 10-25 올린 것(이어서 ①~⑩ · 미룬 것 모두 · 사용자 요청): 썰물섬 · 산불 · 빈 건물(경찰서·병원·보호센터·은행·우체국·영화관·공장·노인정·박물관) · 손맛·E 반응 전수 · 땅 결 · 숨은 놀람 · 칸 키트 시내 · 밀물·강아지 · 스키 기문 · 도전 사다리 · 마당·선물 · 이웃 일과(출퇴근·점심·장보기·정자) · 물 변화 · 공장 → 장터 · 레벨 보상 칩 · 아이 눈 고침 · 탐험 체력(1c11649) · 하루 한 바퀴(c53e7ff) · 발견 길잡이 + 멀리서 단서(b6deb8a)
+- **팀이 짓는 중(패치가 scratchpad에 생기면 합침)**: case1.patch(사건 수첩 엔진 + 흐려진 강) · fire5.patch(소방 다섯 겹 + docs/systems/town_depth.md 깊이 감사) · why1.patch(왜 있어? 감사 docs/systems/town_why.md + 상호작용 10~15)
+  - scratchpad = /private/tmp/claude-501/-Users-dobuk-Projects-school-metaverse/52a18de9-e78e-4006-be4f-f54f6909d405/scratchpad · 합치기 폴더 m1·m2·m3(detached · `git fetch && git checkout --detach origin/main` → `git add` → `git apply -3`) · 캐시 = `python3 scratchpad/bump.py <폴더> <바뀐 모듈.js…>`(부르는 모듈까지 거슬러 올리고 registry +1 · main.js·mapapi 고치면 v2·v3 index main.js?v= · main.js mapapi?v=도)
+- **다음 차례**: 🌀 태풍이 온다(7일 한 판 · town_achieve.md 표) → 나의 길(여섯 길 · 길이 자라면 마을이 바뀜) → 가방·부탁(먹으면 힘 · 이웃 부탁이 물건 · 쓸 곳 한 줄 · 꾸러미 = 마을이 바뀜) → 막대 놀이 바꾸기(깊이 감사 표 ⑥) → 도전 모드 → (나중) 남은 건물 · 바다 4칸
+- 남은 작은 것: 자전거 21m/s 모퉁이 [-336,472] 2.8초(town_stam F · 예전과 같은 움직임) · town_state 전체는 30분 한도 넘음(gm.sh alarm 1800 → 나눠 돌리기) · 휴대폰 세로 영화관 시간표 왼쪽 두 줄이 할 일 칩 뒤
 
 ## 일하는 법(사용자 말 + 코덱스 §4 · 꼭 지킴)
 - **주간 80%에서 멈춰요(78% 새 일 멈춤). 75%에서 알려요.** 줄마다 실제로 쓴 %를 `town_week_1024.md` '실제' 칸에 적어요. 표는 바닥선이라 끝내도 68%까지 '이어서'를 계속해요.
