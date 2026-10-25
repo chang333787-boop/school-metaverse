@@ -17,7 +17,7 @@ const CSS = `.twn-p .fx-ch{display:grid;gap:8px;margin:6px 0}.twn-p .fx-ch butto
 // 마을 쪽이 넘기는 것(A): map · T3 · GAME · on() · lang() · esc · openP(h, wide, kind) · closeP() · panelOpen() · say(t, s) · sfx(k)
 //   busy() · away() · open() 사건이 열렸나 · emOn() 긴급 사건 중 · storyHall() 지금 이야기 단계가 행정복지센터 · halls() [{x, z, door, name}]
 //   sideSpot(rnd, cx, cz, r0, r1) 인도 자리 {x, z, y, ux, uz, px, pz, w} · okSpot(x, z) · inSchool(x, z) · cell(x, z) · place(x, z) · home() 문 자리
-//   guide(to, info) · mapSnip(cv, pts) · skUp(k, n, src) · rec(k, o) · buildParts(fn) · gy(x, z)
+//   guide(to, info) · mapSnip(cv, pts) · skUp(k, n, src) · rec(k, o) · buildParts(fn) · gy(x, z) · caseDesk(h) 사건 보고서를 낼 때면 그 창(CASE-1 · 낸 것 = true)
 export function createFix(A) {
   const T3 = A.T3, map = A.map, en = () => A.lang() === 'en', L = t => (Array.isArray(t) ? t[en() ? 1 : 0] : String(t)), esc = t => A.esc(t);
   const S = () => { const g = A.GAME.S; let s = g.fix; if (!s || typeof s !== 'object' || s.v !== FX_V) s = g.fix = { v: FX_V, d: -1, cur: null, log: [], n: 0 }; if (!Array.isArray(s.log)) s.log = []; return s; };
@@ -99,6 +99,7 @@ export function createFix(A) {
     g.position.set(s9.cx, A.gy(s9.cx, s9.cz), s9.cz); g.rotation.y = s9.ry; g.userData.fx = 1; map.add(g); CLERK = { h: want, g }; }
   function counter(h) { if (A.panelOpen() || A.busy()) return; const e = en();
     if (!openNow()) { toast('🌙 ' + (e ? 'Closed now. Opens at 09:00' : '지금은 문 닫았어요 · 09:00에 열어요'), 2.6); return; }
+    if (A.caseDesk && A.caseDesk(h)) return;   /* CASE-1 사건 보고서(town_case.js)를 낼 때 = 그쪽 창 */
     const q = S().cur, D = day();
     if (!q || !q.seen || phase(q, D) !== 'broken') { toast('🏛 ' + (e ? 'Clerk: “If you see something broken in town, come and tell us.”' : '직원: "동네에서 망가진 곳을 보면 와서 알려 줘요."'), 3); return; }
     if (q.rep) { toast('🏛 ' + (e ? 'Clerk: “We have it. It will be fixed tomorrow morning.”' : '직원: "접수했어요. 내일 아침에 고쳐요."'), 3); return; }

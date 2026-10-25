@@ -21,7 +21,7 @@ async function open(b, q, errs) { const p = await (await b.newContext({ viewport
       const day = async w => { await ev(w9 => SM_TOWN.rules.wx(w9), w); await W8(1300); await ev(() => SM_TOWN.game().sleep()); await W8(1800); await shut(); await at(11 * 60); };
       const WT = () => ev(() => SM_TOWN.water());
       return { ev, W8, shut, at, day, WT }; };
-    let H = mk(p); await H.shut(); await H.ev(() => { const G = SM_TOWN.game().S; G.story = G.story || {}; G.story.done = Object.assign(G.story.done || {}, { p0: 1, a1_1: 1 }); SM_TOWN.rules.season('summer'); }); await H.W8(8000);
+    let H = mk(p); await H.shut(); await H.ev(() => { const G = SM_TOWN.game().S; G.story = G.story || {}; G.story.done = Object.assign(G.story.done || {}, { p0: 1, a1_1: 1 }); SM_TOWN.rules.season('summer'); if (SM_TOWN.case && SM_TOWN.case()) SM_TOWN.case().dbg.off(true); }); await H.W8(8000);   /* CASE-1 흐려진 강(비 사흘 뒤 흙탕을 붙듦)은 끄고 물 높이 셈만 */
     // 같은 자리 셋(강가 · 논 · 보도) — 자료에서 찾음
     const V = await H.ev(() => { const out = {}, T = SM_TOWN, sd = (x, z) => T.sd(x, z);
       { const P = (T.places ? T.places() : []).filter(q => q.kind === 'water'); P.forEach((q, i9) => { let best = null; for (let a = 0; a < 24 && !best; a++) for (let r = 8; r < 90 && !best; r += 4) { const x = q.x + Math.cos(a * 0.2618) * r, z = q.z + Math.sin(a * 0.2618) * r; if (sd(x, z) > -3) continue;   /* 물 안 한 점 → 바깥으로 나가며 물가(석축)와 둔치 자리 */

@@ -57,8 +57,9 @@ export function createDay(A) {
     const G = new Map(); for (const q of A.shops()) { if (!(q.h1 < 24)) continue; const a = G.get(q.h1) || []; a.push(q); G.set(q.h1, a); }
     for (const [h, a] of G) { const nm = a.map(q => q.name), s9 = nm.length > 1 ? (e ? nm[0] + ' +' + (nm.length - 1) : nm[0] + ' 외 ' + (nm.length - 1) + '곳') : nm[0]; put(h * 60, 'shop' + h, '🏪', T2(s9 + ' 닫음', s9 + ' closes'), T2('가게 문 닫음: ' + nm.join(', '), 'Shops close: ' + nm.join(', ')), plc('🏪', a[0].name, a[0].door)); }
     for (const q of A.offices()) put(q.h1 * 60, 'off:' + q.name, q.ic, T2(q.name + ' 닫음', q.name + ' closes'), T2(q.name + ' 창구가 문을 닫아요', 'The ' + q.name + ' counter closes'), plc(q.ic, q.name, q.door));
+    { const c = A.caseDue && A.caseDue(d); if (c) put(c.m, 'case', c.ic, c.s, c.t, c.p); }   /* CASE-1 사건 기한(마지막 날 18:00) */
     out.sort((a, b) => a.m - b.m); return out; }
-  function list() { const d = day(), k = d + ':' + A.wx() + ':' + (A.seenIsle() ? 1 : 0) + ':' + ((((S().bldg || {}).cinema) || {}).seen === d ? 1 : 0) + ':' + LANG0(); if (LC && LC.k === k) return LC.L; LC = { k, L: build(d) }; log('list ' + k + ' ' + LC.L.length); return LC.L; }
+  function list() { const d = day(), k = d + ':' + A.wx() + ':' + (A.seenIsle() ? 1 : 0) + ':' + ((((S().bldg || {}).cinema) || {}).seen === d ? 1 : 0) + ':' + LANG0() + ':' + (A.caseKey ? A.caseKey() : ''); if (LC && LC.k === k) return LC.L; LC = { k, L: build(d) }; log('list ' + k + ' ' + LC.L.length); return LC.L; }
   const LANG0 = () => (en() ? 'en' : 'ko');
   const ahead = n => { const m = now(), seen = new Set(), o = []; for (const q of list()) { if (q.m <= m || seen.has(q.g)) continue; seen.add(q.g); o.push(q); if (o.length >= n) break; } return o; };
   function lineToday() { const L9 = ahead(A.touch() ? 1 : 3); if (!L9.length) return en() ? '⏰ No more times today — sleep starts a new day' : '⏰ 오늘 남은 때가 없어요. 자면 새 하루예요'; return '⏰ ' + L9.map(q => hm(q.m) + ' ' + L(q.s)).join(' · '); }
@@ -103,6 +104,7 @@ export function createDay(A) {
     if (T.nb && T.nb.d === d0 && hm9 && A.giftOk(T.nb)) add('gift', '🎁', T2('답례', 'Thank-you gift'), T2('오늘 마음을 나눈 이웃이 우리 집 문 앞에 답례를 둬요', 'The neighbour you were kind to leaves a thank-you gift at our door'), plc('🏠', e ? 'our house' : '우리 집', hm9));
     { const f = (s.bldg || {}).factory; if (f && f.made === d0) { const to = A.facDest(f.ln, f.door || null), ln = f.ln === 'jelly' ? T2('젤리 케이크', 'jelly cake') : T2('감자', 'potato'); if (to) add('fac', '🚚', T2('공장 상자', 'Factory boxes'), T2('오늘 공장에서 만든 ' + ln[0] + ' 상자가 ' + to.name + '에 들어와요', 'The ' + ln[1] + ' boxes made at the factory today arrive at ' + to.name), plc('🚚', to.name, to.at)); } }
     { const q = s.fix && s.fix.cur; if (q && q.rep === d0) add('fix', '🔧', T2('고친 자리', 'Repair'), T2('신고한 ' + (q.cell ? q.cell + ' 칸 ' : '') + '보도블록이 고쳐져요', 'The paving you reported ' + (q.cell ? 'in ' + q.cell + ' ' : '') + 'gets fixed'), plc('🔧', q.cell || '', [q.x, q.z])); }
+    { const c = A.caseWait && A.caseWait(d0, pre); if (c) add('case', c.ic, c.s, c.t, c.p); }   /* CASE-1 사건 수첩(town_case.js) — 기한·흙막이 */
     for (const o of out) o.mine = 1;
     // 세상 일
     const W = [];
