@@ -6,6 +6,8 @@
 //   ⑤ 🚑 119 넘어진 이웃(비): 둘레 보기(카메라 왼쪽·오른쪽) → 말 걸기 → 신고 창(112 = 안내 · 119 → 자리(틀리면 늦어짐) → 무슨 일) → 찬 물병 E → 발목 곁 E 꾹 → 가방 E → 구급차가 와서 섬 → 끝 창 → '미끄럼 주의' 판 이틀
 //   ⑥ 더위(여름 한낮): 그늘로 부축(이웃이 뒤따라옴) → 물 → 부채 꾹 → '무더위 쉼터' 판 · ⑦ 아무도 안 오면 5분 뒤 기관이 해결(흔적 X) · ⑧ 잠 = 사건 멈춤 · 그리기 +4 이하 · 오류 0
 //   ⑨ 🌲 산불 조심 감시(SMOKE-1): 비·눈 X · 바람 센 날 ↑ · 위 가운데 줄 = 바람 방위 + 연기 쪽(거리 X) · 바람을 거슬러 가면 가까워짐 · 60m 빛기둥 · 이웃 고르기 · 물 붓기 꾹 · 119 칸 · 판·아침 소식 · 아무도 안 가면 감시원
+//   ⑩ 🌊 밀물 갯벌 알리기(TIDE-1): 들물 앞에만 · 해양경찰관 → 물때표 창 읽기 · 이웃 고르기 · 함께 걸어 나오기 · 판·소식 · 물이 차면 해양경찰이 배로
+//   ⑪ 🐶 길 잃은 강아지(PET-1): 비 오는 날만 · 털·목줄 색 + 방위 단서 · 다른 목줄 집 강아지 = E X · 다가가기 고르기 · 따라오게 걷기 · 보호센터 마당 · 다음 날 보호센터 방
 const { chromium } = require('playwright');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
@@ -116,6 +118,66 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       await W8(1500); ok((await I()).marks >= 1, '다음 날에도 판'); await tp(Sm.S.log[0].x + 5, Sm.S.log[0].z + 3); await W8(1200); await shot('em_smoke_sign');
       await tp(meS[0], meS[1]); await W8(600); if (await E('spawn', 'smoke')) { const nl = (await I()).S.log.length; await E('late'); await W8(1500); Sm = await I(); ok(!Sm.ev && Sm.S.log[0].k === 'smoke' && Sm.S.log[0].ok === 0 && Sm.S.log.length === Math.min(10, nl + 1), '아무도 안 가면 산불 감시원이 끔(흔적 X)'); } else console.log('    (두 번째 산불 감시 자리 없음 — 늦음 시험 건너뜀)');
       await ev(d => { SM_TOWN.game().S.day = d; }, dN); await noPlan(); }
+    // ⑩ 🌊 밀물 갯벌 알리기(TIDE-1): 들물 앞에만 · 해양경찰관 E → 물때표 → 이웃 둘(창 읽기 · 고르기 · 틀리면 다시) → 함께 걸어 나오기(뒤따라옴 · 자전거 = 멈춤) → 끝 창 · 판 · 솜씨 · 아침 소식 · 물이 차면 해양경찰이 배로
+    const myPos = () => ev(() => { const m9 = SD2.map.player.pos(); return [m9.x, m9.z]; });
+    const walkTo = async (to, live, step) => { let mg = 0, bk = false; for (let k = 0; k < 400; k++) { const m = await myPos(), dx = to[0] - m[0], dz = to[1] - m[1], l = Math.hypot(dx, dz); if (l < 0.6) break; const u = Math.min(1, 0.8 / l); await tp(m[0] + dx * u, m[1] + dz * u); await W8(250); const q = await I(); if (!q.ev || !live(q.ev)) break; if (q.ev.fol) for (const f of q.ev.fol) mg = Math.max(mg, Math.hypot(m[0] - f[0], m[1] - f[1])); if (step && !bk && k === 6) { bk = true; await step(); } } return mg; };
+    const walkPts = async (pts, live, step) => { let mg = 0; if (!pts) return mg; for (let k = 1; k < pts.length; k++) { const q0 = await I(); if (!q0.ev || !live(q0.ev)) break; mg = Math.max(mg, await walkTo(pts[k], live, k === 2 ? step : null)); } return mg; };
+    const bikeChk = async (re) => { await p.keyboard.press('KeyB'); await W8(1600); const qb = await I(), gb = await goalTx(); ok(qb.ev && qb.ev.stop && /자전거/.test(gb), '자전거 = 따라오던 몸이 멈춤 「' + gb + '」'); await p.keyboard.press('KeyB'); await W8(700); void re; };
+    if (!(await E('can', 'tide'))) console.log('    (이 마을엔 갯벌이 없음 — 밀물 시험 건너뜀)'); else {
+      await E('end', false); await ev(() => SM_TOWN.rules.wx('clear')); const Tm = await E('tideT'); await noPlan(); ok(Tm && Tm.rem >= 100 && Tm.rem <= 120, '썰물이 끝나기 ' + (Tm && Tm.rem) + '분 전으로(' + (Tm && Tm.d) + '일째)');
+      const wh = await ev(d => SM_TOWN.emerg().dbg.when('tide', d, 570, 1060), Tm.d); ok(wh != null && wh >= 570 && wh <= 1060, '사건 표 = 그날 들물 앞 칸에만 생김(' + wh + '분)');
+      { const R9 = await ev(() => { const R = SM_TOWN.emerg().dbg; return [R.w('tide', { wx: 'clear', sea: 'summer' }), R.w('tide', { wx: 'clear', sea: 'winter' }), R.w('tide', { wx: 'rain', sea: 'summer' })]; }); ok(R9[0] > R9[1] && R9[0] > R9[2], '밀물 갯벌 무게: 여름 ↑ · 겨울·비 ↓ (' + R9.map(v => +v.toFixed(2)).join(' · ') + ')'); }
+      const sps = await ev(() => SM_TOWN.shore().spots()); ok(sps.length > 0, '갯벌 관찰 자리 ' + sps.length + '곳'); await tp(sps[0].x, sps[0].z); await W8(900);
+      const gotT = await E('spawn', 'tide'); ok(gotT, '🌊 밀물 갯벌 알리기 생김'); if (!gotT) throw new Error('밀물 안 생김 ' + JSON.stringify((await I()).dbg.slice(-4))); await W8(900);
+      let Td = await I(); g = await goalTx(); ok(/칸/.test(g) && /\d+m/.test(g) && Td.ev.mk, '빛기둥 · 위 가운데 줄 = 칸·방향·거리 「' + g + '」'); await shot('em_tide_call');
+      await E('near'); for (let i = 0; i < 8; i++) { await W8(400); if ((await I()).ev.st !== 'call') break; } Td = await I(); ok(Td.ev.st === 'brief', '도착 = 해양경찰관(높은 곳) · 갯벌 이웃 둘');
+      { const cA = await calls(); await E('vis', false); const cB = await calls(); await E('vis', true); ok(cA - cB <= 4, '밀물 사건 몸 그리기 +' + (cA - cB)); }
+      ok(await tpH('해양경찰관과'), '해양경찰관 E'); await dlgClick(); Td = await I(); ok(Td.ev.st === 'tell' && Td.ev.hots.filter(l => /물때표 보여/.test(l)).length === 2, '물때표 받음 → 이웃 둘에게 보여 주기 E 둘');
+      g = await goalTx(); ok(/물이 들어오기까지 약 \d+초/.test(g), '위 가운데 줄 = 남은 초 「' + g + '」'); await shot('em_tide_tell');
+      ok(await tpH('물때표 보여'), '첫 이웃 E'); P = await panel(); ok(P && P.k === 'emtide' && /오늘 썰물/.test(P.t) && /지금/.test(P.t), '물때표 창(오늘 썰물 칸 · 지금 시각)'); await shot('em_tide_table');
+      await ev(() => document.querySelector('.twn-p button[data-o="2"]').click()); await W8(300); ok(/가장 많이 빠진/.test(((await panel()) || {}).t || ''), '틀린 시각(간조) = 까닭');
+      await ev(() => document.querySelector('.twn-p button[data-o="1"]').click()); await W8(500); Td = await I(); ok(Td.ev.told === 1 && Td.ev.fol && Td.ev.fol.length === 1 && !(await panel()), '썰물 끝 시각 = 알림 · 이웃이 따라오기 시작');
+      ok(await tpH('물때표 보여'), '둘째 이웃 E'); await dlgClick('조금 더'); Td = await I(); ok(Td.ev.tries >= 2 && Td.ev.hots.some(l => /다시 보여/.test(l)) && Td.ev.st === 'tell', '“조금 더 캐도 돼요” = 이웃이 그대로 · 힌트 · 다시 E');
+      ok(await tpH('다시 보여'), '다시 E'); await dlgClick('부터 물이 들어와요'); Td = await I(); ok(Td.ev.st === 'walk' && Td.ev.told === 2 && Td.ev.fol.length === 2, '물때표 시각으로 알림 = 둘 다 따라옴 → 높은 곳까지 걷기');
+      const xpT0 = await ev(() => SM_TOWN.skills().xp.explore || 0);
+      const mgT = await walkTo([Td.ev.x, Td.ev.z], q => q.k === 'tide' && q.st === 'walk', () => bikeChk()); await W8(2000); Td = await I(); ok(mgT < 13, '걷는 동안 이웃 둘이 뒤따라옴(가장 벌어짐 ' + mgT.toFixed(1) + 'm)');
+      for (let i = 0; i < 12; i++) { if (await ev(() => { const P9 = document.querySelector('.twn-p'); return P9 && P9.dataset.k === 'emend'; })) break; await W8(500); } P = await panel(); ok(P && P.k === 'emend' && /물때표/.test(P.t) && /119/.test(P.t), '모두 나옴 = 끝 창(오늘 배운 것 셋)'); await shot('em_tide_end'); await closeAll();
+      for (let i = 0; i < 8; i++) { await W8(400); if (!(await I()).ev) break; } Td = await I(); const xpT1 = await ev(() => SM_TOWN.skills().xp.explore || 0);
+      ok(!Td.ev && Td.S.log[0].k === 'tide' && Td.S.log[0].ok === 1 && Td.S.log[0].sign === 'tide' && Td.marks >= 1, '「물때표를 보고 들어가요」 판(흔적 ' + Td.marks + ')'); ok(xpT1 > xpT0, '솜씨 +' + (xpT1 - xpT0) + '(꼬리표 emerg:tide)');
+      ok(await ev(() => !!(SM_TOWN.game().S.learn || {})['safe:tide']), '배운 개념 safe:tide');
+      { const dT = await ev(() => SM_TOWN.game().S.day); const nwT = await ev(d => SM_TOWN.emerg().news(d), dT + 1); ok(nwT.some(q => q.k === 'tide' && /물때표/.test(q.t[0])), '다음 날 아침 소식 「' + ((nwT.find(q => q.k === 'tide') || { t: ['-'] }).t[0]) + '」'); }
+      // 물이 차면 해양경찰이 배로(흔적 X)
+      await E('tideT'); await noPlan(); await tp(sps[0].x, sps[0].z); await W8(600); if (await E('spawn', 'tide')) { const nl = (await I()).S.log.length; await E('tideEnd'); await W8(1600); Td = await I(); ok(!Td.ev && Td.S.log[0].k === 'tide' && Td.S.log[0].ok === 0 && Td.S.log.length === Math.min(10, nl + 1), '물이 차면 해양경찰이 배로 데려옴(흔적 X · 벌 X)'); } else console.log('    (두 번째 밀물 자리 없음 — 늦음 시험 건너뜀)');
+      await noPlan(); }
+    // ⑪ 🐶 길 잃은 강아지(PET-1): 비 오는 날만 · 신고한 이웃 E → 털·목줄 색 + 방위 → 처마 밑 강아지(다른 목줄 집 강아지 = E X) → 다가가기 고르기 → 따라오게 걷기(자전거 = 멈춤) → 보호센터 마당 → 다음 날 보호센터 방에 그 강아지
+    if (!(await E('can', 'pet'))) console.log('    (이 마을엔 동물보호센터가 없음 — 강아지 시험 건너뜀)'); else {
+      await E('end', false); const Wp = await ev(() => { const R = SM_TOWN.emerg().dbg; return [R.w('pet', { wx: 'clear' }), R.w('pet', { wx: 'rain' }), R.w('pet', { wx: 'snow' })]; }); ok(Wp[0] === 0 && Wp[1] > 0 && Wp[2] === 0, '길 잃은 강아지 무게 = 비 오는 날만 (' + Wp.join(' · ') + ')');
+      await ev(() => { SM_TOWN.rules.wx('clear'); SM_TOWN.game().S.min = 11 * 60; }); await noPlan(); ok(!(await E('spawn', 'pet')), '맑은 날 = 안 생김');
+      await ev(() => SM_TOWN.rules.wx('rain')); await noPlan(); const SHp = await E('shelter'); ok(!!SHp, '동물보호센터 = ' + (SHp && SHp.name));
+      let gotP = false; for (const [ox, oz] of [[110, 0], [-110, 0], [0, 110], [0, -110], [160, 70], [-160, -70], [70, -160], [-70, 160], [220, 0], [0, 220]]) { await tp(SHp.door[0] + ox, SHp.door[1] + oz); await W8(500); if (await E('spawn', 'pet')) { gotP = true; break; } }
+      ok(gotP, '🐶 길 잃은 강아지 생김(비)'); if (!gotP) throw new Error('강아지 안 생김 ' + JSON.stringify((await I()).dbg.slice(-4))); await W8(900);
+      let Pt = await I(); g = await goalTx(); ok(Pt.ev.mk && /칸/.test(g), '빛기둥(신고한 이웃) · 위 가운데 줄 「' + g + '」');
+      await E('near'); for (let i = 0; i < 8; i++) { await W8(400); if ((await I()).ev.st !== 'call') break; } Pt = await I(); ok(Pt.ev.st === 'brief', '도착 = 신고한 이웃 · 처마 밑 강아지' + (Pt.ev.dc ? ' · 다른 목줄 집 강아지와 주인' : '')); await shot('em_pet_scene');
+      { const cA = await calls(); await E('vis', false); const cB = await calls(); await E('vis', true); ok(cA - cB <= 4, '강아지 사건 몸 그리기 +' + (cA - cB)); }
+      ok(await tpH('신고한 이웃과'), '신고한 이웃 E'); await dlgClick(); Pt = await I(); g = await goalTx(); ok(Pt.ev.st === 'find' && /목줄/.test(g) && /처마 밑/.test(g) && !/\d+m/.test(g), '단서 = 털·목줄 색 · 방위(거리 X) 「' + g + '」');
+      ok(!Pt.ev.hots.some(l => /강아지에게/.test(l)), '멀리선 강아지 E 없음(스스로 찾기)');
+      if (Pt.ev.dc) { await tp(Pt.ev.dc[2] + 1.5, Pt.ev.dc[3] + 1.5); await W8(1600); ok(!(await I()).ev.hots.some(l => /강아지에게/.test(l)), '다른 목줄 집 강아지 곁 = E 없음(주인이 알려 줌)'); }
+      await tp(Pt.ev.dog[0] + 2.5, Pt.ev.dog[1] + 2); await W8(1600); Pt = await I(); ok(Pt.ev.hots.some(l => /강아지에게/.test(l)), '처마 밑 강아지 7m 안 = 다가가기 E');
+      ok(await tpH('강아지에게'), '강아지 E'); P = await panel(); ok(P && P.k === 'empet', '다가가기 창(고르기 셋)');
+      await ev(() => document.querySelector('.twn-p button[data-o="2"]').click()); await W8(300); ok(/놀라서/.test(((await panel()) || {}).t || ''), '뛰어가 안기 = 까닭(놀라요)');
+      await ev(() => document.querySelector('.twn-p button[data-o="1"]').click()); await W8(400); ok(/인식표/.test(((await panel()) || {}).t || ''), '천천히 다가가기 = 꼬리 · 동물등록 인식표');
+      await ev(() => document.querySelector('.twn-p button[data-a="go"]').click()); await W8(700); Pt = await I(); ok(Pt.ev.st === 'walk' && Pt.ev.fol && Pt.ev.fol.length === 1, '강아지가 따라오기 시작 · 보호센터까지 빨간 선');
+      const lk0 = await ev(() => SM_TOWN.skills().xp.look || 0), ptsP = await ev(() => SM_TOWN.routePts());
+      const mgP = await walkPts(ptsP, q => q.k === 'pet' && q.st === 'walk', () => bikeChk()); if ((await I()).ev && (await I()).ev.st === 'walk') { const q = await I(); await walkTo(q.ev.car, q9 => q9.k === 'pet' && q9.st === 'walk'); }
+      await W8(2000); ok(mgP < 13, '걷는 동안 강아지가 뒤따라옴(가장 벌어짐 ' + mgP.toFixed(1) + 'm)');
+      for (let i = 0; i < 12; i++) { if (await ev(() => { const P9 = document.querySelector('.twn-p'); return P9 && P9.dataset.k === 'emend'; })) break; await W8(500); } P = await panel(); ok(P && P.k === 'emend' && /동물보호센터/.test(P.t) && /동물등록/.test(P.t), '보호센터 마당 = 끝 창(오늘 배운 것 셋)'); await shot('em_pet_end'); await closeAll();
+      for (let i = 0; i < 8; i++) { await W8(400); if (!(await I()).ev) break; } Pt = await I(); const L1 = Pt.S.log[0], lk1 = await ev(() => SM_TOWN.skills().xp.look || 0);
+      ok(!Pt.ev && L1.k === 'pet' && L1.ok === 1 && L1.pc != null && L1.cc != null, '기록 = 강아지 털·목줄 색'); ok(lk1 > lk0, '관찰 솜씨 +' + (lk1 - lk0) + '(꼬리표 emerg:pet)');
+      const dP = await ev(() => SM_TOWN.game().S.day); await ev(d => { const G = SM_TOWN.game().S; G.day = d + 1; G.min = 11 * 60; }, dP); await noPlan(); const nwP = await ev(d => SM_TOWN.emerg().news(d), dP + 1); ok(nwP.some(q => q.k === 'pet' && /보호센터/.test(q.t[0])), '다음 날 아침 소식 「' + ((nwP.find(q => q.k === 'pet') || { t: ['-'] }).t[0]) + '」');
+      { const Ls = await ev(() => SM_TOWN.indoor.list().filter(q => q.kind === 'shelter')); if (Ls.length) { await closeAll(); await ev(id => SM_TOWN.indoor.enter(id), Ls[0].id); let inn = false; try { await p.waitForFunction(() => SM_TOWN.indoor.on && !SM_TOWN.indoor.busy, null, { timeout: 8000 }); inn = true; } catch (e9) { void e9; } await W8(500);
+        const BS = inn ? await ev(() => SM_TOWN.bldg().info().s.shelter) : null; ok(inn && BS && BS.pet && /^pet:/.test(BS.pet), '다음 날 보호센터 방에 그 강아지(' + (BS && BS.pet) + ')'); await shot('em_pet_room');
+        if (inn) { await ev(() => SM_TOWN.indoor.exit()); for (let i = 0; i < 20; i++) { await W8(200); if (!await ev(() => SM_TOWN.indoor.on)) break; } } } else console.log('    (보호센터 방이 없음 — 방 시험 건너뜀)'); }
+      await ev(d => { SM_TOWN.game().S.day = d; }, dP); await noPlan(); await ev(() => SM_TOWN.rules.wx('clear')); }
     // 불도 엔진이 때를 정함
     await ev(() => { const G = SM_TOWN.game().S; G.min = 11 * 60; G.jobs = G.jobs || {}; delete G.jobs.fireNo; delete G.jobs.fireDay; G.emerg.d = G.day; G.emerg.plan = [{ k: 'fire', at: G.min, until: G.min + 200, st: 0 }]; SM_TOWN.emerg().dbg.walk(100); }); await tp(me0[0], me0[1]); let fz = null; for (let i = 0; i < 10 && !fz; i++) { await W8(500); fz = await ev(() => SM_TOWN.jobs().fire); } await closeAll();
     ok(!!fz, '그날 칸이 불이면 엔진이 불 사건을 띄움'); await ev(() => SM_TOWN.jobs().abort());
