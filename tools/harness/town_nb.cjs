@@ -80,6 +80,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       ok(r.h2 > 5, '이야기 보상은 한도 밖(' + r.h2 + ')'); }
     // ── ⑤ 말하는 때(sec) ──
     console.log('⑤ 말하는 때');
+    /* ③·④에서 잠을 여럿 자 날이 30일 넘게 흐르면 태풍 판(town_typhoon.js · 7일째 = 태풍 날 = 집 안에서 지켜보기 창)이 걸려 A.busy() → 말 0이던 것(10-26) — 태풍 날엔 이웃이 말하지 않는 게 맞음 · 이 칸은 보통 날을 봄 → 판을 닫고(바로 다시 안 생기게) 창도 닫음 */
+    await ev(() => { const S = SM_TOWN.game().S, t = S.typh; if (t && typeof t === 'object') { t.st = ''; t.n = Math.max(1, t.n | 0); t.last = S.day + 30; } SM_TOWN.game().mark(); }); await close();
     { await W8(3600); const r = await ev(() => { const N = SM_TOWN.nb(), S = SM_TOWN.game().S, R = N.reps(), a = R[0], b = R[1] || R[0]; for (const q of [a, b]) { S.hearts[q.hk] = 6; S.nbt[q.hk] = { day: 0, wv: S.day, said: {} }; } N.deed('summit', a.x + 1, a.z); N.deed('summit', b.x + 1, b.z); S.day++; S.nbt[a.hk].wv = S.day; S.nbt[b.hk].wv = S.day;
         const at = (q, d) => ({ x: q.x + d, y: q.g, z: q.z }), n0 = N.said; const out = {};
         N.sec(at(a, 5)); N.sec(at(a, 5)); out.far = N.said - n0;   /* 5m = 말 X */
