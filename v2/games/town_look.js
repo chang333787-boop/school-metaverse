@@ -175,6 +175,63 @@ const SANDMAP = `
 { vec4 tx = texture2D(map, vMapUv); float g9 = texture2D(uNz_a, vWP_a.xz / 5.3 + 0.17).r * 0.6 + texture2D(uNz_a, vWP_a.xz / 7.7 + 0.43).r * 0.4; diffuseColor *= mix(tx, vec4(vec3(0.93 + 0.12 * g9), 1.0), vSw_a); }
 #endif
 `;
+// ───────── ART-3 c(10-25 · town_art3.md 6·7번): 숲·산 가장자리 · 보도·시내 길 ─────────
+//   숲 = 땅 메시 그대로(그리기 +0) · 꼭짓점 속성 fw_a = (숲 무게 0~1, 6 − 흙길 가장자리까지 거리 m · 속성이 없으면 0 = 결 없음) · vNy_a = 땅 기울기(바위 노두)
+//   숫자 출처(일반 공개 사진을 보기만 · 사진은 넣지 않음): 낙엽 한 장 10~15cm(23cm 칸에 하나 남짓) · 길섶 풀 띠 1~2m · 바위 노두 = 1m 안팎 면이 꺾인 회색 돌 + 이끼 얼룩 · 우듬지 그늘 = 2~7m 얼룩 사이로 햇빛 조각
+//   보도 = 길 판을 묶음 하나로(그리기 +1) · pd_a = (길 방향 x, z, 종류 1 = 보도블록 · 2 = 아스팔트) · 보도블록 40×20cm 엇갈려 쌓기 · 줄눈 1.2cm
+const FORB = `
+{ vec2 q = vWP_a.xz; float fd = 1.0 - smoothstep(70.0, 170.0, distance(cameraPosition, vWP_a)), fw = vFw_a.x * fd, td = mix(6.0, 6.0 - vFw_a.y, fd), au = uSea_a.z, wi = uSea_a.w;   /* 멀리서는 우듬지가 보이는 숲 초록 그대로(산이 갈색이 되지 않게) */
+  float n1 = texture2D(uNz_a, q / 13.0).r, n2 = texture2D(uNz_a, q / 3.7 + 0.29).r, lu = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)), sn = smoothstep(0.42, 0.62, lu);   /* sn = 눈 덮인 땅(밝은 흰빛)은 덜 덮음 */
+  float eb = smoothstep(0.03, 0.16, fw) * (1.0 - smoothstep(0.3, 0.6, fw)), vg = max(1.0 - smoothstep(0.4, 2.6, td + (n2 - 0.5) * 1.2), eb * 0.8) * (1.0 - sn);   /* 길섶 풀 = 흙길 가장자리 2m 안 + 숲 가장자리 띠 */
+  if (vg > 0.01) { vec3 gc = mix(mix(vec3(0.30, 0.46, 0.10), vec3(0.42, 0.50, 0.12), n1), vec3(0.58, 0.48, 0.22), au * 0.8); gc = mix(gc, vec3(0.50, 0.44, 0.32), wi);
+    float bl = texture2D(uNz_a, vec2(q.x * 1.9 + q.y * 0.4, q.y * 0.33 - q.x * 0.21)).r; diffuseColor.rgb = mix(diffuseColor.rgb, gc * (0.8 + 0.42 * bl), vg * 0.75); }   /* 한쪽으로 길게 늘인 잡음 = 키 큰 풀 결 */
+  if (fw > 0.01) { float k = smoothstep(0.06, 0.55, fw) * (1.0 - 0.7 * sn), pa = smoothstep(0.3, 0.7, n1 + (fw - 0.5) * 0.6);
+    vec3 lt = mix(vec3(0.24, 0.17, 0.08), vec3(0.36, 0.26, 0.12), n2); lt = mix(lt, mix(vec3(0.46, 0.20, 0.05), vec3(0.58, 0.40, 0.08), n2), au); vec3 ms = vec3(0.13, 0.24, 0.06) * (0.8 + 0.4 * n1);
+    diffuseColor.rgb = mix(diffuseColor.rgb, mix(ms, lt, mix(pa, 0.85, au)), k * (0.58 + 0.32 * pa));   /* 숲 바닥 = 낙엽 무더기 · 이끼 얼룩(가을엔 거의 다 낙엽) */
+#ifndef LITE_A
+    vec2 cq = q / 0.23, ci = floor(cq), jr = vec2(fract(sin(dot(ci, vec2(12.9898, 78.233))) * 43758.5), fract(sin(dot(ci, vec2(39.35, 11.13))) * 24634.6));
+    float lf = (1.0 - smoothstep(0.16, 0.24, length((fract(cq) - 0.3 - 0.4 * jr) * vec2(1.0, 1.6)))) * step(jr.x, 0.35 + 0.45 * au) * (1.0 - smoothstep(0.25, 0.6, fwidth(cq.x)));
+    vec3 lc = jr.y < 0.5 ? vec3(0.42, 0.28, 0.10) : vec3(0.30, 0.20, 0.09); lc = mix(lc, jr.y < 0.33 ? vec3(0.62, 0.16, 0.05) : jr.y < 0.66 ? vec3(0.78, 0.55, 0.10) : vec3(0.52, 0.30, 0.08), au);
+    diffuseColor.rgb = mix(diffuseColor.rgb, lc, lf * k * 0.8);   /* 낙엽 한 장씩(23cm 칸마다 자리·색이 다름 · 가을엔 빨강·노랑 · 멀면 사라짐) */
+#endif
+    float rn = texture2D(uNz_a, q / 17.0 + 0.61).r + (1.0 - vNy_a) * 0.7 + (n2 - 0.5) * 0.1, aw9 = fwidth(rn), fi = smoothstep(0.35, 0.6, fw), rk = smoothstep(0.8, 0.815 + aw9, rn) * fi;   /* 바위 노두 = 숲 안 군데군데(3~5m 덩이) + 가파른 비탈 */
+    diffuseColor.rgb *= 1.0 - 0.38 * smoothstep(0.735, 0.79, rn) * (1.0 - rk) * fi;   /* 바위 둘레 = 이끼 낀 그늘진 흙(바위가 땅에서 솟은 듯) */
+    if (rk > 0.01) {
+#ifndef LITE_A
+      vec2 rc = q / 0.8 + (vec2(n1, texture2D(uNz_a, q / 4.3 + 0.13).r) - 0.5) * 2.2; rc.x += rc.y * 0.5; vec2 ri = floor(rc), rf = fract(rc), id = ri * 2.0 + step(rf.y, rf.x);
+      float h9 = fract(sin(dot(id, vec2(27.17, 61.31))) * 43758.5), fe = 1.0 - smoothstep(0.0, 0.04 + fwidth(rf.x) * 1.5, min(min(rf.x, rf.y), abs(rf.x - rf.y))), tone = 0.66 + 0.5 * h9 - 0.3 * fe * (1.0 - smoothstep(0.1, 0.3, fwidth(rc.x)));   /* 비튼 기운 격자 삼각형마다 다른 밝기 = 꺾인 돌 면(바둑판처럼 안 보이게 잡음으로 비틂) · 면 경계 = 금 */
+#else
+      float tone = 0.85 + 0.2 * n2;
+#endif
+      vec3 rcol = mix(vec3(0.40, 0.39, 0.35), vec3(0.47, 0.45, 0.40), n1) * tone; rcol = mix(rcol, vec3(0.38, 0.42, 0.22), smoothstep(0.62, 0.7, n2) * 0.45 * (1.0 - wi));
+      diffuseColor.rgb = mix(diffuseColor.rgb, rcol, rk * (1.0 - 0.6 * sn)); } } }
+`;
+const FORL = `
+{ float fw = vFw_a.x;
+  if (fw > 0.2) { vec2 q = vWP_a.xz; float k = smoothstep(0.2, 0.7, fw) * (1.0 - 0.55 * uSea_a.w);   /* 겨울 = 잎 진 숲이라 그늘 옅게 */
+#ifndef LITE_A
+    vec2 dr = vec2(uT_a * 0.07, uT_a * 0.045) * uWind_a; float c1 = texture2D(uNz_a, (q + dr) / 7.5).r * 0.65 + texture2D(uNz_a, (q - dr * 1.6) / 2.9 + 0.5).r * 0.35;
+    float dk = smoothstep(0.3, 0.8, uSunC_a.g), sh = mix(0.68, mix(0.82, 1.1, dk), smoothstep(0.6, 0.68, c1));   /* 우듬지 그늘 + 잎 사이로 드는 햇빛 조각(바람 따라 천천히 · 밤·흐린 날엔 옅게) */
+#else
+    float sh = 0.8;
+#endif
+    outgoingLight *= mix(1.0, sh, k); } }
+`;
+const PAVEF = `
+{ vec2 q = vWP_a.xz; float up = smoothstep(0.55, 0.75, vNy_a), sw = 1.0 - step(1.5, vPd_a.z), t = uT_a; vec3 toC = cameraPosition - vWP_a; float dist = length(toC); vec3 V = toC / dist;
+  vec2 ax = vPd_a.xy / max(1e-4, length(vPd_a.xy)), lc = vec2(dot(q, ax), dot(q, vec2(-ax.y, ax.x))) / vec2(0.4, 0.2); lc.x += 0.5 * mod(floor(lc.y), 2.0);   /* 보도블록 40×20cm 엇갈려 쌓기(길 방향을 따라) */
+  vec2 bi = floor(lc), bf = fract(lc), fw2 = fwidth(lc); float kf = up * sw * (1.0 - smoothstep(0.1, 0.32, max(fw2.x, fw2.y)));   /* 멀면(블록이 몇 픽셀 안 됨) 줄눈·얼룩이 사라짐 = 깜빡임 X */
+  if (kf > 0.01) { vec2 e = min(bf, 1.0 - bf), jw = vec2(0.03, 0.06); float jt = max(1.0 - smoothstep(jw.x - fw2.x, jw.x + fw2.x, e.x), 1.0 - smoothstep(jw.y - fw2.y, jw.y + fw2.y, e.y)), h9 = fract(sin(dot(bi, vec2(12.9898, 78.233))) * 43758.5);
+    outgoingLight *= mix(1.0, (0.93 + 0.12 * h9) * (1.0 - 0.3 * jt), kf); }
+  if (uRain_a > 0.01) { float wt = uRain_a * up, n = texture2D(uNz_a, q / 9.0).r * 0.7 + texture2D(uNz_a, q / 2.6 + 0.37).r * 0.3, aw = fwidth(n), th = 0.73 - 0.08 * uRain_a, pd = smoothstep(th, th + 0.025 + aw, n) * wt;   /* 빗물 웅덩이 = 잡음 꼭대기(조금 낮은 자리) · 비가 이어지면 조금 넓게 */
+    outgoingLight *= 1.0 - wt * (0.16 + 0.1 * (1.0 - sw)); float F = 0.04 + 0.96 * p5_a(1.0 - clamp(V.y, 0.0, 1.0)); vec3 N = vec3(0.0, 1.0, 0.0);   /* 젖은 바닥(아스팔트가 더 짙게) */
+#ifndef LITE_A
+    if (pd > 0.01) { vec2 cq = q / 0.55, ci = floor(cq), jr = vec2(fract(sin(dot(ci, vec2(12.9898, 78.233))) * 43758.5), fract(sin(dot(ci, vec2(39.35, 11.13))) * 24634.6)), dv = fract(cq) - 0.3 - 0.4 * jr; float ph = fract(t * 0.8 + jr.x), d = length(dv) * 0.55, r = ph * 0.22;
+      float rg = (1.0 - smoothstep(0.0, 0.012 + fwidth(d), abs(d - r))) * (1.0 - ph) * step(0.3, uRain_a) * (1.0 - smoothstep(10.0, 30.0, dist)); N = normalize(vec3(dv.x * rg * 0.6, 1.0, dv.y * rg * 0.6)); }   /* 빗방울 동그라미(웅덩이 안 · 0.55m 칸마다 하나 · 퍼지며 옅어짐 · 가까이만) */
+#endif
+    vec3 R = reflect(-V, N); R.y = abs(R.y); float sd = max(dot(R, uSunW_a), 0.0);
+    outgoingLight = mix(outgoingLight, skyRef_a(R, sd), clamp(F * 0.25 * wt + pd * (F * 0.7 + 0.28), 0.0, 0.85)) + uSunC_a * p256_a(sd) * pd * 0.8; } }   /* 웅덩이 = 하늘 거울 + 좁은 해 빛 */
+`;
 // 갈대 바람: 들판을 지나가는 바람 물결(세계 자리 기준 — 포기마다 같은 쪽으로) + 잔 떨림 · 높을수록 크게
 const REEDV = `
 vec4 mvPosition = vec4(transformed, 1.0);
@@ -191,7 +248,7 @@ gl_Position = projectionMatrix * mvPosition;
 
 export function createLook({ T3, map, lite, tideLvl, TEX, MATS, scene, game, phase, wx, inb, season, wet }) {
   const gameMin = () => (game && game() ? game().min : 600);
-  const OFF = new Set(((typeof location !== 'undefined' && new URLSearchParams(location.search).get('artoff')) || '').split(','));   // 시험용: ?artoff=sky,gnd,fog,water,mud,reed,gust,paddy,field,river,saltpan,sand — 하나씩 빼고 GPU 몫 재기(ART-3 paddy·field·river·saltpan·sand = 끄면 예전 그대로)
+  const OFF = new Set(((typeof location !== 'undefined' && new URLSearchParams(location.search).get('artoff')) || '').split(','));   // 시험용: ?artoff=sky,gnd,fog,water,mud,reed,gust,paddy,field,river,saltpan,sand — 하나씩 빼고 GPU 몫 재기(ART-3 paddy·field·river·saltpan·sand·forest·pave = 끄면 예전 그대로)
   const LITE = !!lite, CA = new T3.Color(), CB = new T3.Color(), V3 = new T3.Vector3();
   const U = { uSkyH_a: { value: new T3.Color(0xd0e7f5) }, uSkyZ_a: { value: new T3.Color(0x5a9de0) }, uGlow_a: { value: new T3.Color(0x000000) }, uSunW_a: { value: new T3.Vector3(0.4, 0.7, 0.3).normalize() }, uSunC_a: { value: new T3.Color(0xffffff) },
     uT_a: { value: 0 }, uNz_a: { value: null }, uRefl_a: { value: 0.6 }, uFoam_a: { value: new T3.Color(0xffffff) }, uWetK_a: { value: 1 }, uWind_a: { value: 1 }, uDisc_a: { value: new T3.Color(0xffffff) }, uDiscK_a: { value: 1 }, uDiscW_a: { value: new T3.Vector3(0, 1, 0) }, uSea_a: { value: new T3.Vector4(0, 1, 0, 0) }, uRain_a: { value: 0 } };   // ART-3 계절 무게 · 비(젖은 흙)
@@ -214,11 +271,13 @@ export function createLook({ T3, map, lite, tideLvl, TEX, MATS, scene, game, pha
     sh.fragmentShader = 'varying vec3 vWP_a;\n' + SKYF + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n{ float g1 = texture2D(uNz_a, vWP_a.xz / 52.0).r;' + (LITE ? ' float gv = g1;' : ' float gv = g1 * 0.72 + texture2D(uNz_a, vWP_a.xz / 9.0 + 0.43).r * 0.28;') + ' diffuseColor.rgb *= mix(vec3(0.9, 0.95, 1.03), vec3(1.08, 1.04, 0.88), gv); }'); }, 'gnd2'); }
   // ART-3 땅 결 조각 잇기: vWP_a가 이미 있는 재질(땅 얼룩 뒤의 둔치)에도 겹쳐 선언하지 않게 · at = 넣을 자리(빛 계산 뒤 envmap · 바탕색 alphamap)
   const art3 = (key, ck, F, o) => m => { if (OFF.has(key)) return m; return chain(m, sh => { Object.assign(sh.uniforms, U);
-    const hv = sh.vertexShader.includes('varying vec3 vWP_a;'), hf = sh.fragmentShader.includes('varying vec3 vWP_a;'), dv = 'varying vec2 vRUv_a;\n' + (o.ac ? 'varying float vAc_a;\n' : '') + (o.sd ? 'varying float vSd_a;\n' : '') + (o.sand ? 'varying float vSw_a;\nvarying float vSsd_a;\n' : '');
-    sh.vertexShader = dv + (o.ac ? 'attribute float ac_a;\n' : '') + (o.sd ? 'attribute float sd_a;\n' : '') + (o.sand ? 'attribute float sw_a;\nattribute float ssd_a;\n' : '') + (hv ? '' : 'varying vec3 vWP_a;\n') + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vRUv_a = uv;' + (o.ac ? ' vAc_a = ac_a;' : '') + (o.sd ? ' vSd_a = sd_a;' : '') + (o.sand ? ' vSw_a = sw_a; vSsd_a = ssd_a;' : '') + (hv ? '' : ' vWP_a = (modelMatrix * vec4(transformed, 1.0)).xyz;'));
+    const hv = sh.vertexShader.includes('varying vec3 vWP_a;'), hf = sh.fragmentShader.includes('varying vec3 vWP_a;'), dv = 'varying vec2 vRUv_a;\n' + (o.ac ? 'varying float vAc_a;\n' : '') + (o.sd ? 'varying float vSd_a;\n' : '') + (o.sand ? 'varying float vSw_a;\nvarying float vSsd_a;\n' : '') + (o.fw ? 'varying vec2 vFw_a;\n' : '') + (o.pd ? 'varying vec3 vPd_a;\n' : '') + (o.fw || o.pd ? 'varying float vNy_a;\n' : '');
+    sh.vertexShader = dv + (o.ac ? 'attribute float ac_a;\n' : '') + (o.sd ? 'attribute float sd_a;\n' : '') + (o.sand ? 'attribute float sw_a;\nattribute float ssd_a;\n' : '') + (o.fw ? 'attribute vec2 fw_a;\n' : '') + (o.pd ? 'attribute vec3 pd_a;\n' : '') + (hv ? '' : 'varying vec3 vWP_a;\n') + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vRUv_a = uv;' + (o.ac ? ' vAc_a = ac_a;' : '') + (o.sd ? ' vSd_a = sd_a;' : '') + (o.sand ? ' vSw_a = sw_a; vSsd_a = ssd_a;' : '') + (o.fw ? ' vFw_a = fw_a;' : '') + (o.pd ? ' vPd_a = pd_a;' : '') + (o.fw || o.pd ? ' vNy_a = normal.y;' : '') + (hv ? '' : ' vWP_a = (modelMatrix * vec4(transformed, 1.0)).xyz;'));
     const at = o.base ? '#include <alphamap_fragment>' : '#include <envmap_fragment>';
+    if (o.pre) sh.fragmentShader = sh.fragmentShader.replace('#include <alphamap_fragment>', o.pre + '#include <alphamap_fragment>');   /* ART-3 c: 바탕색 조각(빛 계산 전)과 빛 조각(F)을 함께 */
     if (o.map) sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', o.map);
     sh.fragmentShader = dv + (hf ? '' : 'varying vec3 vWP_a;\n') + 'uniform vec4 uSea_a;\nuniform float uRain_a;\nuniform float uWind_a;\nuniform vec3 uFoam_a;\nuniform float uRefl_a;\nuniform float uWetK_a;\n' + SKYF + sh.fragmentShader.replace(at, F + at); defs(sh, false); }, ck); };
+  const forest = art3('forest', 'forest3', FORL, { fw: true, pre: FORB }), pave = art3('pave', 'pave3', PAVEF, { pd: true });   // ART-3 c: ?artoff=forest(숲 바닥·바위 노두·길섶 풀) · pave(보도블록 줄눈·빗물 웅덩이)
   const salt = art3('saltpan', 'salt3', SALTF, {}), sand = art3('sand', 'sand3', SANDF, { sand: true, map: SANDMAP }), paddy = art3('paddy', 'paddy3', PADDYF, { ac: true }), field = art3('field', 'field3', FARMF, { ac: true }), river = art3('river', 'river3', RIVF, {}), bank = art3('river', 'bank3', BANKF, { sd: true, base: true });   // ?artoff=paddy · field · river(강 물낯 + 둔치 같이)
   const SEAW = { spring: [1, 0, 0, 0], summer: [0, 1, 0, 0], autumn: [0, 0, 1, 0], winter: [0, 0, 0, 1] };
   // 바다 재질(물낯 · 깊이 속성 dep_a) — town.js의 MAT.sea(안개 압축 그대로)에 덧붙임
@@ -302,7 +361,7 @@ export function createLook({ T3, map, lite, tideLvl, TEX, MATS, scene, game, pha
       { const w4 = SEAW[season ? season() : 'summer'] || SEAW.summer; U.uSea_a.value.set(w4[0], w4[1], w4[2], w4[3]); const rt = wet ? Math.min(1, wet()) : wx && wx() === 'rain' ? 1 : 0; U.uRain_a.value += (rt - U.uRain_a.value) * (rt > U.uRain_a.value ? 0.12 : 0.03); } } }   /* ART-3 계절 무게 · 비 오면 몇 초에 걸쳐 젖고 그치면 1분쯤에 걸쳐 마름 */
   function setPhase() { apply(true); }
   function dispose() { skyOff(); if (REED) { REED.parent && REED.parent.remove(REED); REED.dispose(); REED = null; } if (REEDG) { REEDG.dispose(); REEDG = null; } }
-  return { U, off: k => OFF.has(k), fogFn: () => (OFF.has('fog') ? 'uSkyH_a' : LITE ? 'skyFogL_a(fd9)' : 'skyFog_a(normalize(fd9))'), ground, water, tide, mudMat, mud, reeds, paddy, field, river, bank, salt, sand, skyOn, skyOff, tick, phase: setPhase, apply, dispose, get lite() { return LITE; }, get tideMat() { return TIDE; },
+  return { U, off: k => OFF.has(k), fogFn: () => (OFF.has('fog') ? 'uSkyH_a' : LITE ? 'skyFogL_a(fd9)' : 'skyFog_a(normalize(fd9))'), ground, water, tide, mudMat, mud, reeds, paddy, field, river, bank, salt, sand, forest, pave, skyOn, skyOff, tick, phase: setPhase, apply, dispose, get lite() { return LITE; }, get tideMat() { return TIDE; },
     reedAt: i => { if (!REED || i >= REED.count) return null; const M4 = new T3.Matrix4(); REED.getMatrixAt(i, M4); return [+M4.elements[12].toFixed(1), +M4.elements[14].toFixed(1)]; },
     info: () => ({ sky: !!SKY, old: !!OLD, reeds: REED ? REED.count : 0, reedVis: REED ? REED.visible : false, mud: !!MUDM, ph: PH, m: lastM, sunW: U.uSunW_a.value.toArray().map(v => +v.toFixed(2)), exp: window.SD2 && +SD2.renderer.toneMappingExposure.toFixed(2) }) };
 }
