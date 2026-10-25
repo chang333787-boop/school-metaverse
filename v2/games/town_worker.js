@@ -5,8 +5,8 @@
 //     · 벌집 틀 살피기 · 쇠스랑으로 건초 떠서 던지기(떴을 때만 건초 뭉치) · 손 흔들기(장터) · 드론 조종 · 물속 팔 젓기 · 잔치 손 흔들기 · 걷기(무릎 굽힘 · 나중 쓸 자리) — 모두 숨쉬기 · 눈 깜빡임
 //   연장 = 손에 든 것(괭이·도끼·고무래·쇠스랑·낚싯대·벌집 틀·조종기)과 땅에 둔 것(바구니·그루터기·건초 더미) — 한 모양에 모두 있고 그 사람 것만 보임(나머지는 점 하나로 접힘)
 //   보이는 것만 바뀜: 충돌 상자(PCOL)·E 자리 높이는 town.js 그대로 · 새 Light X · 재질 하나(사람마다 색 = 팔레트 uniform 번호)
-export const WK_ACT = { stand: 0, walk: 1, pick: 2, hoe: 3, rake: 4, reach: 5, fish: 6, hold: 7, swim: 8, fork: 9, wave: 10, pilot: 11, cheer: 12, nod: 13, hop: 14, point: 15, rhy: 16 };   /* ASK-1 길 가리키기(오른팔을 어깨 높이로 앞으로) */   /* RHY-1 모내기(위상 = CPU · pose()) */   /* NB-1 받아 들고 끄덕 · 깡충(좋아하는 선물) */   // 셰이더와 같은 번호
-const TOOL = { none: 0, hoe: 1, axe: 2, rake: 3, fork: 4, rod: 5, frame: 6, pad: 7, basket: 8 };
+export const WK_ACT = { stand: 0, walk: 1, pick: 2, hoe: 3, rake: 4, reach: 5, fish: 6, hold: 7, swim: 8, fork: 9, wave: 10, pilot: 11, cheer: 12, nod: 13, hop: 14, point: 15, rhy: 16, sit: 17, sitg: 18 };   /* ROUTINE-2 걸터앉기(벤치·정자 마루) · 땅에 앉기(밭가 새참) */   /* ASK-1 길 가리키기(오른팔을 어깨 높이로 앞으로) */   /* RHY-1 모내기(위상 = CPU · pose()) */   /* NB-1 받아 들고 끄덕 · 깡충(좋아하는 선물) */   // 셰이더와 같은 번호
+const TOOL = { none: 0, hoe: 1, axe: 2, rake: 3, fork: 4, rod: 5, frame: 6, pad: 7, basket: 8, lunch: 9, lunchg: 10, carry: 11 };   /* ROUTINE-2 도시락(무릎 위 9 · 땅 옆 10) · 장바구니(손에 듦 11 = 부위 28) */
 const ROLE = { farmer: ['hoe', 'hoe'], picker: ['pick', 'basket'], bee: ['hold', 'frame'], ranch: ['fork', 'fork'], wood: ['hoe', 'axe'], pilot: ['pilot', 'pad'], salt: ['rake', 'rake'], shop: ['wave', 'none'], fisher: ['fish', 'rod'], reach: ['reach', 'basket'], guest: ['stand', 'none'], swim: ['swim', 'none'] };   // 역할 → [동작, 연장]
 const CROP = { strawberry: 0xe8434a, potato: 0xb98b5a, cabbage: 0x9bd46e, shiitake: 0x8a5a3a, paddy: 0x7cc35a, pear: 0xe8d06a };   // 바구니 속 색
 const HAIR = [0x2a2522, 0x3a2a1e, 0x5b3f2e, 0x8f8a84], SKIN = [0xf2cfa8, 0xe8c09a, 0xd9ab84, 0xc8956a];
@@ -36,7 +36,8 @@ const VS_POSE = `
       lean = 0.035 * sin(t * 0.5); hT = 0.5 * sin(t * 0.21) * smoothstep(0.2, 0.8, sin(t * 0.13)); hN = 0.05 * sin(t * 0.37); aL = 0.06 * sin(t * 0.6); aR = -aL; zL = 0.1 + 0.02 * br; zR = -zL; lL = -0.04; lR = 0.04;
       if (act > 9.5) { float s = wkPulse(fract(t / 9.0), 0.0, 0.07, 0.3, 0.37); aR = mix(aR, -2.75, s); zR = mix(zR, 0.2 + 0.32 * sin(t * 13.0), s); hT *= 1.0 - s; hN -= 0.08 * s; } }
     else if (act < 1.5) {   /* 걷기(무릎은 다리가 앞으로 갈 때 굽힘) */
-      float w = t * 7.0, s = sin(w); lL = 0.4 * s; lR = -lL; kL = 0.7 * max(0.0, -cos(w)); kR = 0.7 * max(0.0, cos(w)); aL = -0.45 * s; aR = -aL; bob = 0.03 * abs(cos(w)); pit = 0.05; }
+      float w = t * 7.0, s = sin(w); lL = 0.4 * s; lR = -lL; kL = 0.7 * max(0.0, -cos(w)); kR = 0.7 * max(0.0, cos(w)); aL = -0.45 * s; aR = -aL; bob = 0.03 * abs(cos(w)); pit = 0.05;
+      if (tool > 10.5) { aR = -0.1 + 0.06 * s; zR = -0.22; } }   /* ROUTINE-2 장바구니 든 팔 = 조금만 흔듦(바구니가 다리 바깥에) */
     else if (act < 2.5) {   /* 쪼그려 따기: 두 손 번갈아 · 14초마다 일어나 기지개 */
       float s = wkPulse(fract(t / 14.0), 0.0, 0.05, 0.13, 0.19), c = t * 1.5, kl = 0.5 + 0.5 * sin(c), kr = 0.5 + 0.5 * sin(c + 3.1416);
       cr = 1.0 - s; pit = mix(0.75, -0.12, s); aL = mix(-pit - 0.5 - 0.6 * kl, -2.8, s); aR = mix(-pit - 0.5 - 0.6 * kr, -2.8, s); zL = mix(-0.18, 0.35, s); zR = -zL; tw = 0.15 * sin(c * 0.37) * (1.0 - s); hN = mix(0.05, -0.3, s); }   /* 손 = 무릎 앞 땅 쪽으로 번갈아 뻗음 */
@@ -59,6 +60,10 @@ const VS_POSE = `
       float u = fract(t * 0.4), k1 = smoothstep(0.0, 0.25, u), k2 = smoothstep(0.32, 0.55, u), k3 = smoothstep(0.58, 0.7, u), k4 = smoothstep(0.75, 1.0, u);
       aL = wk4(-1.3, -1.12, -1.7, -1.95, -1.3, k1, k2, k3, k4); aR = aL; pit = wk4(0.2, 0.4, 0.1, 0.08, 0.2, k1, k2, k3, k4); cr = wk4(0.1, 0.3, 0.0, 0.0, 0.1, k1, k2, k3, k4); tw = wk4(0.3, 0.3, 0.2, -0.45, 0.3, k1, k2, k3, k4);
       zL = -0.38; zR = 0.38; hN = -0.3 * pit; lL = -0.12; lR = 0.1; load = smoothstep(0.15, 0.25, u) * (1.0 - smoothstep(0.62, 0.68, u)); }
+    else if (act > 16.5) {   /* ROUTINE-2 앉기: 17 = 걸터앉기(엉덩이 = 놓은 자리 + 0.48 · 허벅지 앞으로 · 정강이 아래로) · 18 = 땅에 앉기(무릎 세우고) — 도시락(연장 9·10)이면 4초마다 오른손을 입 쪽으로 · 아니면 이야기하듯 고개를 돌림 */
+      float g = step(17.5, act), e = step(8.5, tool) * (1.0 - step(10.5, tool)), s = wkPulse(fract(t / 4.0), 0.0, 0.15, 0.35, 0.5) * e;
+      lL = mix(-1.35, -2.0, g); lR = lL; kL = mix(1.35, 0.94, g); kR = kL; bob = mix(-0.28, -0.66, g); pit = mix(-0.04, -0.14, g); lean = 0.02 * sin(t * 0.4);
+      aL = mix(-0.5, -0.75, g); aR = mix(aL, -1.5, s); zL = -0.1; zR = 0.1; hN = mix(0.08, 0.28 - 0.18 * s, e); hT = (1.0 - e) * 0.45 * sin(t * 0.23) * smoothstep(0.1, 0.6, sin(t * 0.11)); }
     else if (act > 15.5) {   /* RHY-1 모내기(16)(town_rhy.js가 위상을 aPh.x에): 소수 = 손 들기 L · 정수 % 16 = 물에 넣기 D · 정수 / 16 = 꼬리표(1 기다려 · 2 두 손 · 4 줄 위로 · 8 못줄 잡기) */
       float cc = floor(ph), Lr = clamp(fract(ph) / 0.98, 0.0, 1.0), Dp = mod(cc, 16.0) / 15.0, Fg = floor(cc / 16.0), wt = mod(Fg, 2.0), two = mod(floor(Fg / 2.0), 2.0), ovr = mod(floor(Fg / 4.0), 2.0), rope = floor(Fg / 8.0);
       pit = 0.78 - 0.22 * Lr + 0.1 * Dp; cr = 0.22; lL = -0.14; lR = 0.12; hN = -0.2 + 0.25 * Lr; aR = mix(mix(-pit - 0.5, -pit - 1.5, Lr), -pit - 0.2, Dp); zR = -0.12; aL = -pit - 1.0; zL = -0.28;   /* 허리 굽혀 · 오른손 = 모 꽂는 손 · 왼손 = 모춤 쥠 */
@@ -75,7 +80,7 @@ const VS_POSE = `
     else {   /* 드론 조종: 조종기 들고 하늘 보며 고개 따라감 */
       aL = -1.0 + 0.03 * sin(t * 3.0); aR = aL; zL = -0.38; zR = 0.38; hN = -0.38; hT = 0.4 * sin(t * 0.35); tw = 0.12 * sin(t * 0.35); lL = -0.05; lR = 0.05; }
     if (cr > 0.0) { bob -= 0.35 * (1.0 - cos(1.2 * cr)) + 0.35 * (1.0 - cos(0.6 * cr)); fwd -= 0.35 * (sin(1.2 * cr) - sin(0.6 * cr)); }   /* 쪼그리면 엉덩이가 뒤·아래로(발은 제자리) */
-    bool hide = false; if (part > 19.5) hide = abs((part > 28.5 && part < 29.5 ? 4.0 : part > 29.5 ? part - 30.0 : part - 20.0) - tool) > 0.5 || part > 28.5 && part < 29.5 && load < 0.01; else if (part > 5.5 && part < 7.5) hide = aPh.w < 0.01;   /* 남의 연장 · 모자 없는 사람 · 빈 쇠스랑 = 점 하나로 접음 */
+    bool hide = false; if (part > 19.5) hide = abs((part > 27.5 && part < 28.5 ? 11.0 : part > 28.5 && part < 29.5 ? 4.0 : part > 29.5 ? part - 30.0 : part - 20.0) - tool) > 0.5 || part > 28.5 && part < 29.5 && load < 0.01; else if (part > 5.5 && part < 7.5) hide = aPh.w < 0.01;   /* 남의 연장 · 모자 없는 사람 · 빈 쇠스랑 = 점 하나로 접음 */
     if (hide) { wP = vec3(0.0); wN = vec3(0.0, 1.0, 0.0); }
     else if (part < 29.5) { mat3 R = mat3(1.0); vec3 q = wP;
       if (part > 3.5 && part < 5.5 || part > 10.5 && part < 12.5) { bool lf = part < 4.5 || part < 11.5 && part > 10.5; vec3 H = vec3(lf ? 0.095 : -0.095, ${F(HIP)}, 0.0); mat3 Rt = wkX((lf ? lL : lR) - 1.2 * cr);
@@ -136,9 +141,12 @@ function bakeWorker(T3) {
   { const b = 1.35, d = dir(b), T = at(d, 2.3), a0 = -0.72, L0 = [0, -Math.cos(a0), Math.sin(a0)], E = ofs(T, L0, 2.3); rod(at(d, -0.15), T, 0.016, 25, 0x3a4a5a); rod(at(d, -0.15), at(d, 0.25), 0.026, 25, 0xc8693a); rod(T, E, 0.005, 25, 0xf4f1e8); add(SPHT, E, [0.045, 0.06, 0.045], null, 25, 0, 0xe8434a); }   // 5 낚싯대 + 줄(늘 자세에서 곧장 아래) + 찌
   { const a0 = -0.98; add(BOX, wo(a0, 0.215, 0.1, 0.05), [0.42, 0.26, 0.025], [-a0, 0, 0], 26, 0, 0xe8b840); add(BOX, wo(a0, 0.215, 0.24, 0.05), [0.52, 0.035, 0.045], [-a0, 0, 0], 26, 0, WOOD); for (const x of [0.02, 0.41]) add(BOX, wo(a0, x, 0.1, 0.05), [0.03, 0.27, 0.035], [-a0, 0, 0], 26, 0, WOOD); }   // 6 벌집 틀(두 손 사이)
   { const a0 = -1.0; add(BOX, wo(a0, 0.215, 0.03, 0.05), [0.22, 0.05, 0.13], [-a0, 0, 0], 27, 0, 0x3a3f4a); for (const x of [0.15, 0.28]) rod(wo(a0, x, 0.05, 0.0), wo(a0, x, 0.2, -0.04), 0.008, 27, 0x2b2d33); }   // 7 조종기(안테나 둘)
+  { const B = [G[0] - 0.07, G[1] - 0.2, 0.03]; add(BASK, B, [0.62, 0.75, 0.62], null, 28, 0, 0xb07a3c); add(CYL, [B[0], B[1] + 0.085, B[2]], [0.13, 0.02, 0.13], null, 28, 0, 0x8a5a2c); rod([G[0], G[1] + 0.02, G[2]], [B[0] + 0.1, B[1] + 0.09, B[2]], 0.01, 28, 0x8a5a2c); rod([G[0], G[1] + 0.02, G[2]], [B[0] - 0.1, B[1] + 0.09, B[2]], 0.01, 28, 0x8a5a2c);   /* ROUTINE-2 장바구니(손에 듦 · 부위 28 = 연장 11) — 손잡이 둘 + 대파·사과·무 머리 */
+    add(SPHT, [B[0] + 0.04, B[1] + 0.1, B[2] + 0.03], [0.05, 0.045, 0.05], null, 28, 0, 0xe8434a); add(SPHT, [B[0] - 0.04, B[1] + 0.1, B[2] - 0.02], [0.05, 0.04, 0.05], null, 28, 0, 0xf2efe2); rod([B[0] - 0.02, B[1] + 0.06, B[2] + 0.04], [B[0] - 0.05, B[1] + 0.3, B[2] + 0.06], 0.014, 28, 0x5ea845); }
   // ── 땅에 둔 것(30 + 번호 · 몸을 따라 움직이지 않음) ──
   add(CYL, [0, 0.15, 1.1], [0.25, 0.3, 0.25], null, 32, 0, 0x8a5a36); add(CYL, [0, 0.305, 1.1], [0.225, 0.012, 0.225], null, 32, 0, 0xe0c08a); add(CYL, [0.0, 0.36, 1.1], [0.085, 0.12, 0.085], null, 32, 0, 0xc8a070);   // 도끼 = 그루터기 + 쪼갤 통나무(날이 닿는 높이)
   add(SPHS, [0.55, 0.04, 1.25], [0.5, 0.32, 0.45], null, 34, 0, 0xe2c25c); add(SPHS, [0.4, 0.24, 1.2], [0.26, 0.16, 0.24], null, 34, 0, 0xecd27a);   // 쇠스랑 = 건초 더미(갈래가 닿는 자리)
+  for (const [pt, P] of [[39, [0, 0.585, 0.2]], [40, [0.36, 0.03, 0.22]]]) { add(BOX, P, [0.24, 0.06, 0.16], null, pt, 0, 0xd9604a); add(BOX, [P[0], P[1] + 0.034, P[2]], [0.22, 0.012, 0.14], null, pt, 0, 0xf6f1e4); add(SPHT, [P[0] - 0.05, P[1] + 0.045, P[2]], [0.04, 0.02, 0.04], null, pt, 0, 0x7cc35a); }   /* ROUTINE-2 도시락(39 = 무릎 위 · 40 = 땅에 앉은 몸 왼쪽 옆) — 빨간 통 · 흰 밥 · 나물 */
   add(BASK, [0.44, 0.11, 0.32], W1, null, 38, 0, 0xb07a3c); add(CYL, [0.44, 0.215, 0.32], [0.212, 0.03, 0.212], null, 38, 0, 0x8a5a2c); add(CYL, [0.44, 0.19, 0.32], [0.19, 0.02, 0.19], null, 38, 6, [0.75, 0.75, 0.75]);   // 바구니(따기 · 배)
   for (const [x, z, s] of [[0.4, 0.29, 0.075], [0.49, 0.34, 0.07], [0.41, 0.38, 0.065]]) add(SPHT, [x, 0.2, z], [s, s * 0.9, s], null, 38, 6, W1);   // 바구니 속 = 그 일터 열매 색
   const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(col, 3)); g.setAttribute('aPS', new T3.Float32BufferAttribute(ps, 2)); g.setIndex(idx);
