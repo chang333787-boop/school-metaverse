@@ -11,6 +11,7 @@ import { FINDS } from './town_xp.js?v=5';
 import { WILD, drawWild } from './town_wild.js?v=9';
 import { ladRows } from './town_lad.js?v=2';
 import { getLook, setLook, PALS } from '../js/look.js?v=1';
+import { chalSteps } from './town_orient.js?v=2';   /* CHAL-1 도전 모드로 찾아간 날 · ORIENT-1 길찾기 시험 코스 */
 export const PATH_V = 1;
 const T2 = (ko, en) => [ko, en];
 const NW = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉', '열'];
@@ -40,7 +41,7 @@ export const PATHS = {
   rec: { ic: '📷', t: T2('기록가', 'Recorder'), how: T2('사진 기사 내기, 요리 사진, 엽서, 노인정에서 옛 땅이름 듣기', 'Photo stories, dish photos, postcards, old place names at the seniors’ hall'),
     signs: [{ need: 3, at: 'post', pic: '📰', t: T2('우체국 벽 마을 소식지에 내 기록이 실려요', 'My records appear in the town newsletter at the post office'), past: T2('우체국 벽 마을 소식지에 내 기록이 실렸어요', 'My records are in the newsletter at the post office'), go: T2('소식지 보러 가기', 'See the newsletter') },
       { need: 8, at: 'elder', pic: '🪧', t: T2('노인정 앞에 내가 들은 옛 땅이름 팻말이 서요', 'A sign of the old place names I heard stands by the seniors’ hall'), past: T2('노인정 앞에 내가 들은 땅이름 팻말이 섰어요', 'My place-name sign stands by the seniors’ hall'), go: T2('팻말 보러 가기', 'See the sign') }] },
-  chal: { ic: '🏅', t: T2('도전가', 'Challenger'), how: T2('일 놀이 도전 칸 오르기, 판 놀이, 스키 기문 코스, 자전거 고리 코스', 'Climb work-game steps, board games, ski gate courses, the bike ring course'),
+  chal: { ic: '🏅', t: T2('도전가', 'Challenger'), how: T2('일 놀이 도전 칸 오르기, 판 놀이, 스키 기문 코스, 자전거 고리 코스, 길찾기 시험, 도전 모드로 찾아가기(하루 한 번)', 'Climb work-game steps, board games, ski gate courses, the bike ring course, orienteering, finding places in challenge mode (once a day)'),
     signs: [{ need: 3, at: 'stall', pic: '📋', t: T2('장터에 내 최고 기록판이 서요', 'My best-records board stands at the market'), past: T2('장터에 내 최고 기록판이 섰어요', 'My best-records board stands at the market'), go: T2('기록판 보러 가기', 'See the board') },
       { need: 8, at: 'ski', pic: '⛷', t: T2('스키장 아래에 내 최고 기록판이 서요', 'My best-runs board stands at the bottom of the ski slope'), past: T2('스키장 아래에 내 최고 기록판이 섰어요', 'My ski board stands at the bottom of the slope'), go: T2('스키 기록판 보러 가기', 'See the ski board') }] },
 };
@@ -59,7 +60,7 @@ export function stepsOf(S) { S = S || {}; const xp = S.xp && typeof S.xp === 'ob
   const pr = S.press && typeof S.press === 'object' ? S.press : {};
   const rec = arr(pr.news).length * 2 + Math.min(5, arr(pr.list).length) + Math.min(4, arr(S.album).length) + arr((bd.elder || {}).got).length + ((S.dex || {})['✉'] != null ? 1 : 0);
   const sk = xp.ski && typeof xp.ski === 'object' ? xp.ski : {}, mg = S.lad && S.lad.mg && typeof S.lad.mg === 'object' ? S.lad.mg : {}, tg = S.tbl && S.tbl.g && typeof S.tbl.g === 'object' ? S.tbl.g : {};
-  const chal = ['c1', 'c2', 'c3'].filter(c => sk[c] && sk[c].best != null).length + keys(mg).reduce((a, k) => a + ((mg[k] && mg[k].best && mg[k].best.lv) | 0), 0) + keys(tg).reduce((a, k) => a + ((tg[k] && tg[k].lv) | 0) + ((tg[k] && tg[k].w) > 0 ? 1 : 0), 0) + ['🥇', '🥈', '🥉'].filter(e => has(S, e)).length;
+  const chal = ['c1', 'c2', 'c3'].filter(c => sk[c] && sk[c].best != null).length + keys(mg).reduce((a, k) => a + ((mg[k] && mg[k].best && mg[k].best.lv) | 0), 0) + keys(tg).reduce((a, k) => a + ((tg[k] && tg[k].lv) | 0) + ((tg[k] && tg[k].w) > 0 ? 1 : 0), 0) + ['🥇', '🥈', '🥉'].filter(e => has(S, e)).length + chalSteps(S);
   return { explore, look, nb, help, rec, chal }; }
 export const reachedOf = (k, n) => PATHS[k].signs.filter(s => n >= s.need).length;
 

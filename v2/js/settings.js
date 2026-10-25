@@ -4,9 +4,9 @@
 //   매 프레임 일 0 — 모양은 body 꼬리표 + CSS, 소리는 부르는 쪽이 SET.mute를 봄(main.js tone · 마을 자연 소리), 색은 그릴 때 SET.cb를 봄(마을 지도)
 const promo = () => !!(typeof window !== 'undefined' && window.SM_PROMO);
 const RM = (() => { try { return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } })();
-const DEF = { fs: 0, cb: false, mute: false, calm: RM, read: false, comp: true };   // comp = 🧭 나침반 띠(NAV-1 · 마을 화면 위)
+const DEF = { fs: 0, cb: false, mute: false, calm: RM, read: false, comp: true, chal: false };   // chal = 🏅 도전 모드(CHAL-1 · 마을만 · 빨간 선·거리 줄 X) · comp = 🧭 나침반 띠(NAV-1 · 마을 화면 위)
 const KEY = 'sm-set';
-const clean = (o) => ({ fs: [0, 1, 2].includes(o && o.fs) ? o.fs : 0, cb: !!(o && o.cb), mute: !!(o && o.mute), calm: o && typeof o.calm === 'boolean' ? o.calm : RM, read: !!(o && o.read), comp: !(o && o.comp === false) });
+const clean = (o) => ({ fs: [0, 1, 2].includes(o && o.fs) ? o.fs : 0, cb: !!(o && o.cb), mute: !!(o && o.mute), calm: o && typeof o.calm === 'boolean' ? o.calm : RM, read: !!(o && o.read), comp: !(o && o.comp === false), chal: !!(o && o.chal) });
 function load() { if (promo()) return { ...DEF }; try { return clean(JSON.parse(localStorage.getItem(KEY) || 'null') || DEF); } catch (e) { return { ...DEF }; } }
 export const SET = load();
 // 색 구분 돕기 팔레트(Okabe–Ito — 빨강·초록 대신 주황·청록·파랑 + 무늬)
@@ -47,7 +47,7 @@ if (typeof window !== 'undefined') window.SM_SET = { get set() { return { ...SET
 // ── 창 내용(마을 = openP 안 · 학교 = openSetPanel) — 기존 클래스(.grp .row .sub .sm)만 ──
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const tg = (k, v, on, label) => '<button type="button" class="' + (on ? '' : 'sub') + '" data-st="' + k + '" data-v="' + v + '" aria-pressed="' + on + '">' + esc(label) + '</button>';
-export function setHTML(en) { const L = (ko, e9) => (en ? e9 : ko), ko = !!koVoice(), ss = hasSS();
+export function setHTML(en, o9) { const town = !!(o9 && o9.town), L = (ko, e9) => (en ? e9 : ko), ko = !!koVoice(), ss = hasSS();
   return '<h3>⚙ ' + L('설정', 'Settings') + '</h3>'
     + '<div class="grp">🔤 ' + L('글씨 크기', 'Text size') + '</div><div class="row st-tg" style="justify-content:flex-start">' + [L('보통', 'Normal'), L('크게', 'Large'), L('아주 크게', 'Larger')].map((t, i) => tg('fs', i, SET.fs === i, t)).join('') + '</div>'
     + '<div class="grp">🎨 ' + L('색 구분 돕기', 'Colour help') + '</div><div class="row st-tg" style="justify-content:flex-start">' + tg('cb', 1, SET.cb, L('켜기', 'On')) + tg('cb', 0, !SET.cb, L('끄기', 'Off')) + '</div><div class="sm">' + L('빨강·초록 대신 주황·청록·파랑과 무늬로 — 지도 범례·일 놀이 막대·도감·요리 재료', 'Orange, teal and blue with patterns instead of red and green — map, timing bar, codex, recipes') + '</div>'
@@ -55,14 +55,15 @@ export function setHTML(en) { const L = (ko, e9) => (en ? e9 : ko), ko = !!koVoi
     + '<div class="grp">🌀 ' + L('흔들림 줄이기', 'Reduce motion') + '</div><div class="row st-tg" style="justify-content:flex-start">' + tg('calm', 1, SET.calm, L('켜기', 'On')) + tg('calm', 0, !SET.calm, L('끄기', 'Off')) + '</div><div class="sm">' + L('창이 튀어나오기·얼굴 흔들기·배 출렁임을 줄여요', 'Less bouncing windows, wobbling faces and boat rocking') + (RM ? L(' · 이 기기는 처음부터 켬', ' · on by default on this device') : '') + '</div>'
     + '<div class="grp">📢 ' + L('읽어 주기', 'Read aloud') + '</div><div class="row st-tg" style="justify-content:flex-start">' + tg('read', 1, SET.read, L('켜기', 'On')) + tg('read', 0, !SET.read, L('끄기', 'Off')) + '</div><div class="sm">' + (!ss ? L('이 브라우저는 읽어 주기를 못 해요', 'This browser cannot read aloud') : ko ? L('대화창 글을 소리 내어 읽어요(소리 끄기면 안 읽어요)', 'Reads dialogue aloud (not when sound is off)') : L('이 기기에 한국어 목소리가 없어요 — 켜 두면 목소리가 생길 때 읽어요', 'No Korean voice on this device yet')) + '</div>'
     + '<div class="grp">🧭 ' + L('나침반 띠 (마을 화면 위 · 동서남북과 갈 곳)', 'Compass strip (town · directions and your goal)') + '</div><div class="row st-tg" style="justify-content:flex-start">' + tg('comp', 1, SET.comp, L('켜기', 'On')) + tg('comp', 0, !SET.comp, L('끄기', 'Off')) + '</div>'
+    + (town ? '<div class="grp">🏅 ' + L('도전 모드 (마을 · 빨간 선 없이 찾아가기)', 'Challenge mode (town · find places without the red line)') + '</div><div class="row st-tg" style="justify-content:flex-start">' + tg('chal', 1, SET.chal, L('켜기', 'On')) + tg('chal', 0, !SET.chal, L('끄기', 'Off')) + '</div><div class="sm">' + L('켜면 빨간 선과 거리 숫자가 없어지고, 길 안내 단추가 「지도 펴기」가 돼요. 이웃 말과 지도로 찾아가면 나의 길 도전가 걸음이 하루 하나 늘어요.', 'No red line or distance numbers; the guide button opens the map. Finding a place this way adds one Challenger step a day.') + '</div>' : '')
     + '<div class="sm" style="margin-top:6px">' + L('이 기기에 기억해요', 'Saved on this device') + '</div>'
     + '<div class="row"><button type="button" class="sub" data-st="reset">↺ ' + L('처음 설정', 'Defaults') + '</button><button type="button" data-st="x">' + L('다 됐어요', 'Done') + '</button></div>'; }
 export function bindSet(root, o = {}) {
   root.addEventListener('click', (e) => { const b = e.target.closest('button[data-st]'); if (!b || !root.contains(b)) return; e.stopPropagation(); const k = b.dataset.st;
     if (k === 'x') { if (o.onClose) o.onClose(); return; }
-    if (k === 'reset') setSet({ fs: 0, cb: false, mute: false, calm: RM, read: false, comp: true }); else setSet({ [k]: k === 'fs' ? +b.dataset.v : b.dataset.v === '1' });
+    if (k === 'reset') setSet({ fs: 0, cb: false, mute: false, calm: RM, read: false, comp: true, chal: false }); else setSet({ [k]: k === 'fs' ? +b.dataset.v : b.dataset.v === '1' });
     if (k === 'read' && SET.read) speak(o.en ? '읽어 주기를 켰어요' : '읽어 주기를 켰어요');
-    if (o.redraw) o.redraw(); else { const box = root.classList.contains('st-box') ? root : root.querySelector('.bx'); if (box) { const sc = box.scrollTop; box.innerHTML = setHTML(o.en); box.scrollTop = sc; } } });
+    if (o.redraw) o.redraw(); else { const box = root.classList.contains('st-box') ? root : root.querySelector('.bx'); if (box) { const sc = box.scrollTop; box.innerHTML = setHTML(o.en, o); box.scrollTop = sc; } } });
 }
 // 학교 쪽 작은 창(⏸ 멈춤 창과 같은 결 — 크림 바탕 · 남색 테 · 노란 단추) · 사진관 창도 같이 씀
 export function schoolPop(id, html, onClose) { const old = document.getElementById(id); if (old) old.remove(); document.exitPointerLock?.();
