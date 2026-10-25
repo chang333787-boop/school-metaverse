@@ -10,6 +10,7 @@ const ID = process.argv[2] || 'ourtown', PORT = process.argv[3] || '8002', SH = 
   const go = async (x, z, lx, lz) => { await ev(([x, z, lx, lz]) => { const M = SD2.map; M.player.teleport([x, M.q.groundAt(x, z, SM_TOWN.ground(x, z) + 3) + 0.05, z]); M.player.lookAt([lx, lz]); }, [x, z, lx, lz]); await W8(2500); };
   const V = [['isle_shore', 790, -372, 970, -476], ['isle_cairn', 960, -468, 975, -478], ['isle_back', 940, -470, 800, -378]];
   await ev(async () => { const T = await import('/v2/games/town_shore.js'); const d = SM_TOWN.game().S.day; let m = T.lowAt(d); while (m < 7 * 60) m += 745; while (m > 17 * 60) m -= 745; window.__LOWMIN = Math.round(m); }); console.log('low', await ev(() => window.__LOWMIN));
+  if (process.env.SEASON) { await ev(s9 => SM_TOWN.rules.season(s9), process.env.SEASON); await W8(20000); }
   for (const ph of ['day', 'night']) { await ev(ph => { SM_TOWN.game().S.min = ph === 'day' ? (window.__LOWMIN || 10 * 60) : 21 * 60; if (SD2.map.time) SD2.map.time(ph === 'day' ? 'day' : 'night'); }, ph); await W8(800);
     for (const [n, x, z, lx, lz] of V) { await go(x, z, lx, lz); const c = await calls(); await p.screenshot({ path: SH + '/' + ph + '_' + n + '.png' }); console.log(ph, n, 'calls', c); } }
   console.log('errs', errs.length, errs.join(' | ')); await b.close(); })();
