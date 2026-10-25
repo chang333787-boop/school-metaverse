@@ -9,7 +9,7 @@
 //     · 화석은 가져오지 않음(사실 — 진열장 = 찾은 자리를 본뜬 모형 + 찾은 곳 이름표 · 가방의 조약돌·송이 돌만 기증) · 글자 판(캔버스)에는 이모지 X
 import { FINDS } from './town_xp.js?v=5';
 import { WILD, drawWild } from './town_wild.js?v=9';
-import { ladRows } from './town_lad.js?v=1';
+import { ladRows } from './town_lad.js?v=2';
 import { getLook, setLook, PALS } from '../js/look.js?v=1';
 export const PATH_V = 1;
 const T2 = (ko, en) => [ko, en];

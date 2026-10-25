@@ -11,20 +11,20 @@ export const LADP = {
   ripe: { v: [0, 3.4, 2.5, 1.8], t: (k, a) => (k === 'shiitake' ? ['활짝 핀 표고가 ' + a[0] + '빨리 시들어요', 'Open shiitake wilt ' + a[1] + 'fast'] : ['익은 딸기가 ' + a[0] + '빨리 물러요', 'Ripe strawberries go soft ' + a[1] + 'fast']) },   /* 익은 뒤 무르기까지 초 */
   plant: { v: [1, 0.85, 0.72, 0.62], t: (k, a) => ['해가 ' + a[0] + '일찍 져요. 시간이 짧아요', 'The sun sets ' + a[1] + 'early — less time'] },   /* 시간 배수 */
   cut: { v: [1, 0.85, 0.72, 0.62], t: (k, a) => ['비구름이 ' + a[0] + '빨리 와요. 시간이 짧아요', 'Rain clouds come ' + a[1] + 'soon — less time'] },
-  comb: { v: [1, 0.8, 0.65, 0.52], t: (k, a) => ['벌이 ' + a[0] + '예민한 날이에요. 연기 칸이 좁아요', 'The bees are ' + a[1] + 'jumpy — the smoke zone is narrow'] },   /* 초록 칸 폭 배수 */
+  comb: { v: [2, 3, 4, 5], t: (k, a, lv) => [['', ''], ['벌통 문이 있어요. 문 앞은 피해요', 'The hive has a door. Keep away from it'], ['바람이 도중에 바뀌어요. 깃발을 다시 봐요', 'The wind changes halfway. Check the flag again'], ['벌이 아주 많고 바람도 바뀌어요', 'Lots of bees, and the wind changes too']][lv - 1] },   /* JUDGE-1 벌 무리 수(2칸 = 벌통 문 · 3칸 = 여덟 자리 + 바람 바뀜) */
   dig: { v: [0, 1, 2, 3], t: (k, a) => (k === 'clam' ? ['갯벌이 ' + a[0] + '질척해요. 삽질 수가 줄어요', 'The mud is ' + a[1] + 'sticky — fewer digs'] : ['흙이 ' + a[0] + '단단해요. 삽질 수가 줄어요', 'The soil is ' + a[1] + 'hard — fewer digs']) },   /* 줄어드는 삽질 수 */
   sort: { v: [0, 0.3, 0.5, 0.65], t: (k, a) => ['크기가 ' + a[0] + '비슷한 배추가 섞여요', 'Cabbages of ' + a[1] + 'similar size are mixed in'] },   /* 크기를 가운데로 당기는 정도 */
   cover: { v: [1, 1.2, 1.4, 1.6], t: (k, a) => ['벌레가 ' + a[0] + '빨리 기어 와요', 'Caterpillars crawl ' + a[1] + 'fast'] },   /* 벌레 빠르기 배수 */
-  order: { v: [1, 0.8, 0.65, 0.52], t: (k, a) => ['흙이 ' + a[0] + '말랐어요. 물을 알맞게 주기 어려워요', 'The soil is ' + a[1] + 'dry — watering just right is harder'] },   /* 물 초록 칸 폭 배수 */
+  order: { v: [1, 2, 3, 4], t: (k, a, lv) => [['', ''], ['깊이 그림이 서로 비슷해요', 'The depth pictures look more alike'], ['겉흙과 속흙이 달라요. 속흙을 봐요', 'Surface soil and inside soil differ. Look inside'], ['나무가 세 그루예요. 속흙도 봐요', 'Three trees today. Look at the inside soil too']][lv - 1] },   /* JUDGE-1 칸 = 판단이 어려워지는 차례 */
   feed: { v: [1, 0.85, 0.72, 0.62], t: (k, a) => ['동물들이 ' + a[0] + '배고파요. 시간이 짧아요', 'The animals are ' + a[1] + 'hungry — less time'] },
-  spread: { v: [1, 0.93, 0.87, 0.82], t: (k, a) => ['김 반죽이 ' + a[0] + '모자라요. 아껴서 고르게 펴요', 'There is ' + a[1] + 'less laver mix — spread it carefully'] },   /* 그릇 양 배수 */
+  spread: { v: [0, 2, 3, 4], t: (k, a, lv) => [['', ''], ['두꺼운 곳이 있어요. 덜어서 얇은 곳에 부어요', 'Some spots are thick. Scoop from them into thin spots'], ['반죽이 딱 맞아요. 흐린 날엔 처마 밑에 말려요', 'Just enough mix. On cloudy days dry it under the eaves'], ['두께 차이가 잘 안 보여요. 잘 봐요', 'The thickness is hard to tell apart. Look closely']][lv - 1] },   /* JUDGE-1 두꺼운 칸 수(덜어 써야 함) */
   gauge: { v: [1, 0.85, 0.72, 0.62], t: (k, a) => ['배가 ' + a[0] + '일찍 돌아가요. 시간이 짧아요', 'The boat heads back ' + a[1] + 'early — less time'] },
 };
 const FISHT = { 2: ['큰 고기가 와요. 미끼를 골라요', 'Big fish come — pick a bait'], 3: ['물때를 보고 자리도 골라요', 'Check the tide and pick a spot too'], 4: ['바람이 줄을 한쪽으로 밀어요', 'The wind pushes the line to one side'] };
 export const ladVal = (kind, lv) => { const P = LADP[kind]; return P ? P.v[Math.max(1, Math.min(4, lv | 0 || 1)) - 1] : null; };
 // 창 위 한 줄: '도전 2칸: 익은 딸기가 조금 빨리 물러요' · 1칸 = '도전 1칸'
 export function ladText(kind, k, lv, en) { lv = Math.max(1, Math.min(4, lv | 0 || 1)); const head = en ? 'Challenge step ' + lv : '도전 ' + lv + '칸';
-  if (lv === 1) return head; let t = null; if (kind === 'tug') t = FISHT[lv]; else if (LADP[kind]) t = LADP[kind].t(k, A4[lv - 1]); return t ? head + ': ' + t[en ? 1 : 0] : head; }
+  if (lv === 1) return head; let t = null; if (kind === 'tug') t = FISHT[lv]; else if (LADP[kind]) t = LADP[kind].t(k, A4[lv - 1], lv); return t ? head + ': ' + t[en ? 1 : 0] : head; }
 // 기록 이름: [놀이 이름, 모은 것, 단위]
 const RECN = { strawberry: ['딸기 따기', 'Strawberries', '딸기', '개'], shiitake: ['표고 따기', 'Shiitake', '표고', '송이'], cabbage: ['배추 거두기', 'Cabbages sorted right', '맞게 담은 배추', '포기'], potato: ['감자 캐기', 'Potatoes', '감자', '개'], clam: ['조개 캐기', 'Clams', '조개', '개'],
   beehive: ['꿀 뜨기', 'Honey cells', '꿀 칸', '칸'], pear: ['배 봉지 씌우기', 'Pears bagged', '봉지 씌운 배', '개'], lumber: ['어린 나무 심기', 'Trees planted well', '잘 심은 나무', '그루'], plant: ['모내기', 'Seedlings on the mark', '눈금에 심은 모', '포기'], cut: ['벼 베기', 'Squares cut', '벤 칸', '칸'],

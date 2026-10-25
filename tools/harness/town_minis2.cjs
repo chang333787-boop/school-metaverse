@@ -1,6 +1,6 @@
 // 🌿🐚 김 펴기·굴 크기 재기 시험(10-24 옛 막대 정리 · docs/systems/town_jobs2.md 「옛 막대 정리」): node tools/harness/town_minis2.cjs [마을=ourtown] [포트=8002]
 //   배 위 양식장 E(김 펴서 말리기 · 굴 크기 재기)를 그대로 불러 놀이 창을 엶 → 타이밍 막대(zone·mk) 0 · 창 첫 줄 = 할 일
-//   김(5×5 발장): 마우스 끌기 봇(줄마다 왼쪽 → 오른쪽)으로 첫 장 고르게 · 키보드만(화살표 + E 꾹)으로 끝까지 · 한 곳에 붓기만 해도(덩어리) 세 장 뒤 끝남
+//   김(5×5 발장): 창이 열리는지만(10-25 JUDGE-1 판단 놀이로 바뀜 · 판단 시험 = town_judge.cjs)
 //   굴: 마우스로 고리 끌어 재고 굴 끌어 나누기 · 키보드만(E 재기 · ← →) · 일부러 틀리게 골라도 흔들리고 끝까지 감
 //   끝 = 결과 말 + '💡 알고 있었나요?' · 페이지 오류 0 · 캡처 = MINIS2_SHOTS(기본 scratchpad/minis2)
 const { chromium, RENDER } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
@@ -27,39 +27,9 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     const closePlay = async () => { for (let i = 0; i < 30; i++) { if (!(await ev(() => !!document.querySelector('.twn-play')))) break; await W8(300); } await W8(500); await ready(); };
     const factOk = (m, tag) => ok(/알고 있었나요|Did you know/.test(m), tag + ' 끝 = 결과 + 사실 한 줄 — ' + m.slice(0, 110));
 
-    // ── 김 펴기 ──
-    const snake = () => { const o = []; for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) o.push(y * 5 + (y % 2 ? 4 - x : x)); return o; };
-    const SN = snake();
-    const sheetWait = async () => { for (let i = 0; i < 60; i++) { const s = await st('.mat'); if (!s || s.end || s.ph === 'spread') return s; await W8(150); } return null; };
-    const waitJudge = async () => { for (let i = 0; i < 100; i++) { const s = await st('.mat'); if (!s || s.ph !== 'spread') return s; await W8(100); } return null; };
-    console.log('🌿 김 펴기 — 마우스 끌기');
-    let t0 = Date.now(); await open('seaweed');
-    { let first = -1;
-      for (let sh = 0; sh < 3; sh++) { const R = await ev(() => { const r = document.querySelector('.twn-play .mat').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
-        const cen = i => [R.x + ((i % 5) + 0.5) * R.w / 5, R.y + (((i / 5) | 0) + 0.5) * R.h / 5];
-        await p.mouse.move(...cen(0)); await p.mouse.down(); if (first < 0) first = Date.now() - t0;
-        for (let pass = 0; pass < 3; pass++) { const L = pass % 2 ? SN.slice().reverse() : SN; for (const c of L) { await p.mouse.move(...cen(c), { steps: 2 }); await W8(pass ? 50 : 120); } const s = await st('.mat'); if (!s || s.ph !== 'spread' || !s.l) break; if (sh === 0 && pass === 0) await shot('seaweed_1_spread'); }
-        await p.mouse.up(); const sj = await waitJudge(); if (sh === 0) { await W8(200); await shot('seaweed_2_judge'); console.log('    첫 장: ' + (sj && sj.msg)); }
-        const s2 = await sheetWait(); if (!s2 || s2.end) break; }
-      const r = await waitEnd('.mat', 20); console.log('    장마다: ' + r.dots + ' · ' + (r.ms / 1000 + (Date.now() - t0 - r.ms) / 1000).toFixed(1) + '초');
-      ok(first >= 0 && first < 10000, '첫 동작까지 ' + (first / 1000).toFixed(1) + '초(10초 안)'); ok(r.dots && r.dots[0] === 'g', '마우스 봇 첫 장 = 고르게(★) — ' + r.dots); ok(/잘했어요|Well done|Excellent/.test(r.msg), '결과 = 잘했어요'); factOk(r.msg, '김'); await shot('seaweed_3_end');
-      ok((Date.now() - t0) < 32000, '한 판 ' + ((Date.now() - t0) / 1000).toFixed(1) + '초'); }
-    await closePlay();
-    console.log('⌨ 김 펴기 — 키보드만(화살표 + E 꾹)');
-    await open('seaweed'); await W8(300);
-    for (let sh = 0; sh < 3; sh++) { await p.keyboard.down('KeyE');
-      for (let pass = 0; pass < 3; pass++) { const L = pass % 2 ? SN.slice().reverse() : SN; let prev = L[0];
-        for (let n = 1; n < L.length; n++) { const c = L[n], d = c - prev; const key = d === 1 ? 'ArrowRight' : d === -1 ? 'ArrowLeft' : d === 5 ? 'ArrowDown' : 'ArrowUp'; await W8(pass ? 50 : 105); await p.keyboard.press(key); prev = c; }
-        const s = await st('.mat'); if (!s || s.ph !== 'spread' || !s.l) break; await W8(pass ? 50 : 105); }
-      await p.keyboard.up('KeyE'); await waitJudge(); const s2 = await sheetWait(); if (!s2 || s2.end) break; }
-    { const r = await waitEnd('.mat', 20); console.log('    장마다: ' + r.dots); ok(r.end && /g/.test(r.dots), '키보드만으로 끝까지 · 고른 장 하나 이상 — ' + r.dots); factOk(r.msg, '김(키보드)'); await shot('seaweed_4_keys'); }
-    await closePlay();
-    console.log('🙃 김 펴기 — 한 곳에만 붓기(덩어리) · 그다음엔 손 놓기');
-    await open('seaweed'); await W8(300);
-    { const R = await ev(() => { const r = document.querySelector('.twn-play .mat').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }); await p.mouse.move(R.x, R.y); await p.mouse.down(); await waitJudge(); await p.mouse.up(); await W8(200); await shot('seaweed_5_lump');
-      const s1 = await st('.mat'); console.log('    한 곳 붓기: ' + s1.msg + ' · 칸 ' + (await ev(() => [...document.querySelectorAll('.twn-play .mat i')].map(e => e.className.replace(' x', '*') || '_').join(' ')))); ok(/덩어리|구멍|Lump|hole/i.test(s1.msg), '틀린 장 = 까닭 한 줄(덩어리·구멍)');
-      const r = await waitEnd('.mat', 40); ok(r.end && !/g/.test(r.dots), '잘못 해도(덩어리·손 놓기) 세 장 뒤 끝남 — ' + r.dots); ok(/아쉬워요|So close/.test(r.msg), '결과 = 아쉬워요(벌 없음)'); factOk(r.msg, '김(틀림)'); }
-    await closePlay();
+    // ── 김 펴기 ── JUDGE-1(10-25)에 붓기 꾹(끌기) → 고르게 펴기 판단(한 숟갈씩 · 두꺼운 곳 덜기 · 하늘 보고 말리기)으로 바뀜 — 판단 시험은 town_judge.cjs · 여기서는 배 위 E로 창이 열리는지만
+    console.log('🌿 김 펴기 — 배 위 E로 열림(판단 시험 = town_judge.cjs)');
+    await open('seaweed'); await shot('seaweed_1_open'); await ev(() => SM_TOWN.rules.playEnd(0)); await closePlay();
 
     // ── 굴 크기 재기 ──
     const oyR = () => ev(() => { const B = document.querySelector('.twn-play .oys').getBoundingClientRect(), o = document.querySelector('.twn-play .oy').getBoundingClientRect(), r = document.querySelector('.twn-play .rg2').getBoundingClientRect(); return { B: { x: B.left, y: B.top, w: B.width }, o: [o.left + o.width / 2, o.top + o.height / 2], r: [r.left + r.width / 2, r.top + r.height / 2] }; });
