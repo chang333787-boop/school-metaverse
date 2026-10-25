@@ -160,10 +160,10 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       await E('near'); for (let i = 0; i < 8; i++) { await W8(400); if ((await I()).ev.st !== 'call') break; } Pt = await I(); ok(Pt.ev.st === 'brief', '도착 = 신고한 이웃 · 처마 밑 강아지' + (Pt.ev.dc ? ' · 다른 목줄 집 강아지와 주인' : '')); await shot('em_pet_scene');
       { const cA = await calls(); await E('vis', false); const cB = await calls(); await E('vis', true); ok(cA - cB <= 4, '강아지 사건 몸 그리기 +' + (cA - cB)); }
       ok(await tpH('신고한 이웃과'), '신고한 이웃 E'); await dlgClick(); Pt = await I(); g = await goalTx(); ok(Pt.ev.st === 'find' && /목줄/.test(g) && /처마 밑/.test(g) && !/\d+m/.test(g), '단서 = 털·목줄 색 · 방위(거리 X) 「' + g + '」');
-      ok(!Pt.ev.hots.some(l => /강아지에게/.test(l)), '멀리선 강아지 E 없음(스스로 찾기)');
-      if (Pt.ev.dc) { await tp(Pt.ev.dc[2] + 1.5, Pt.ev.dc[3] + 1.5); await W8(1600); ok(!(await I()).ev.hots.some(l => /강아지에게/.test(l)), '다른 목줄 집 강아지 곁 = E 없음(주인이 알려 줌)'); }
-      await tp(Pt.ev.dog[0] + 2.5, Pt.ev.dog[1] + 2); await W8(1600); Pt = await I(); ok(Pt.ev.hots.some(l => /강아지에게/.test(l)), '처마 밑 강아지 7m 안 = 다가가기 E');
-      ok(await tpH('강아지에게'), '강아지 E'); P = await panel(); ok(P && P.k === 'empet', '다가가기 창(고르기 셋)');
+      ok(!Pt.ev.hots.some(l => /강아지에게 천천히/.test(l)), '멀리선 강아지 E 없음(스스로 찾기)');
+      if (Pt.ev.dc) { await tp(Pt.ev.dc[2] + 1.5, Pt.ev.dc[3] + 1.5); await W8(1600); ok(!(await I()).ev.hots.some(l => /강아지에게 천천히/.test(l)), '다른 목줄 집 강아지 곁 = E 없음(주인이 알려 줌)'); }
+      await tp(Pt.ev.dog[0] + 2.5, Pt.ev.dog[1] + 2); await W8(1600); Pt = await I(); ok(Pt.ev.hots.some(l => /강아지에게 천천히/.test(l)), '처마 밑 강아지 7m 안 = 다가가기 E');
+      ok(await tpH('강아지에게 천천히'), '강아지 E'); P = await panel(); ok(P && P.k === 'empet', '다가가기 창(고르기 셋)');
       await ev(() => document.querySelector('.twn-p button[data-o="2"]').click()); await W8(300); ok(/놀라서/.test(((await panel()) || {}).t || ''), '뛰어가 안기 = 까닭(놀라요)');
       await ev(() => document.querySelector('.twn-p button[data-o="1"]').click()); await W8(400); ok(/인식표/.test(((await panel()) || {}).t || ''), '천천히 다가가기 = 꼬리 · 동물등록 인식표');
       await ev(() => document.querySelector('.twn-p button[data-a="go"]').click()); await W8(700); Pt = await I(); ok(Pt.ev.st === 'walk' && Pt.ev.fol && Pt.ev.fol.length === 1, '강아지가 따라오기 시작 · 보호센터까지 빨간 선');
