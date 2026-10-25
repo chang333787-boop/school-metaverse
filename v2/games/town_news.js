@@ -13,7 +13,7 @@ export const GIFT_OF = { shiitake: '🍄', cabbage: '🥬', potato: '🥔', lumb
 // 어제 이웃과 한 일 무게(하나만 남김): 하트 단계가 오름 > 요리를 받음 > 선물을 받음
 export const NB_RANK = { like: 4, up: 3, dish: 2, gift: 1 };   /* COZY-1: 좋아하는 것을 받은 이웃 = 다음 아침 답례가 먼저 */
 
-/* c = { en, day, S(GAME.S), pots, farm, plotState, CROPS, crop(e), item(e), rainY, yday, gift:{e,who}|null, pol, fruitAt, sapY, jang:{on,left,at}, wx:{ic,nm}, seaNext:string|null, board:[이름…], twig, mush, tide:{t,at}|null, wild:[{t,place,at}], farmAt, nbAt, nWk, card:{ko,en,at}|null, surp:{ko,en,at}|null, fx:[{k,t,at,two}], fac:[{k,t,at}] } */
+/* c = { en, day, S(GAME.S), pots, farm, plotState, CROPS, crop(e), item(e), rainY, yday, gift:{e,who}|null, pol, fruitAt, sapY, jang:{on,left,at}, wx:{ic,nm}, seaNext:string|null, board:[이름…], twig, mush, tide:{t,at}|null, wild:[{t,place,at}], farmAt, nbAt, nWk, card:{ko,en,at}|null, surp:{ko,en,at}|null, disc:{id,ko,en,at,card}|null, fx:[{k,t,at,two}], fac:[{k,t,at}] } */
 export function newsMake(c) {
   const en = !!c.en, d = c.day | 0, N = c.S.news && typeof c.S.news === 'object' ? c.S.news : {}, last = N.last && typeof N.last === 'object' ? N.last : {}, prevT = {};
   for (const L of Array.isArray(N.lines) ? N.lines : []) if (L && L.k) prevT[L.k] = L.t;
@@ -48,13 +48,15 @@ export function newsMake(c) {
   if (c.wx && WXT[c.wx.nm]) add(two, 'wx', c.wx.ic + ' 오늘은 ' + WXT[c.wx.nm][0], c.wx.ic + ' Today is ' + WXT[c.wx.nm][1], { ck: { wx: c.wx.nm } });
   if (c.mush) add(two, 'mush', '🍄 숲의 버섯이 다시 자랐어요', '🍄 The mushrooms in the woods grew back', { ck: { mush: 1 } });
   for (const q of c.fx || []) if (q.two) add(two, 'fx:' + q.k, q.t[0], q.t[1], { at: q.at || null });   /* FIX-1 오늘 새로 생긴 고장(칸만) */
+  if (c.disc && c.disc.card) add(two, 'disc:' + c.disc.id, c.disc.card[0], c.disc.card[1], { at: c.disc.at || null, ck: { disc: c.disc.id } });   /* DISC-1 안 해 본 곳 한 줄(오늘만 줄 맨 뒤 — 다른 소식이 없는 날 칠판에) */
   // 같은 갈래 이틀 연속 X — 내가 한 일 줄은 글이 다르면 됨 · 모두 걸리면 첫 것
   const fresh = L => last[L.k] !== d - 1 || (L.mine && prevT[L.k] !== L.t);
   const pick = A => A.find(fresh) || A[0] || null;
   const L1 = pick(one), L2 = pick(two.filter(L => !L1 || L.k !== L1.k)), lines = [];
   if (d <= 3) { const L = L1 || L2; if (L) lines.push(L); } else { if (L1) lines.push(L1); if (L2) lines.push(L2); if (!L1) { const L3 = pick(two.filter(L => L !== L2)); if (L3 && L3 !== L2) lines.push(L3); } }
   // 소문(이웃 말풍선 · 그 자리에 실제로 있는 것만)
-  if (c.surp && c.surp.at) add(rum, 'surp', c.surp.ko, c.surp.en, { at: c.surp.at });   /* SURP-1 첫 놀람을 이끄는 소문 한 줄(아무것도 못 찾은 동안만 · 맨 앞) */
+  if (c.disc && c.disc.at) add(rum, 'disc:' + c.disc.id, c.disc.ko, c.disc.en, { at: c.disc.at });   /* DISC-1 안 해 본 것 하나(town_disc.js · 맨 앞 — 이웃이 먼저 말을 검 · 갈래 = 줄마다 따로라 날마다 다른 것이 이어서 나옴) */
+  if (c.surp && c.surp.at && !(c.disc && c.disc.id === 'surp')) add(rum, 'surp', c.surp.ko, c.surp.en, { at: c.surp.at });   /* SURP-1 첫 놀람을 이끄는 소문 한 줄(아무것도 못 찾은 동안만 · 맨 앞) */
   if (c.card && c.card.at) add(rum, 'card', c.card.ko, c.card.en, { at: c.card.at });   /* HEAL-1 어제 넣은 엽서(받은 이웃이 일터에 붙임 · 글 = 엽서에 실제로 담긴 조각만) */
   if (c.jang && c.jang.on && c.jang.at) add(rum, 'jang', '오늘 장날이라 장터에 손님이 많대', 'It’s market day — lots of shoppers at the market', { at: c.jang.at });
   if (c.tide && c.tide.t) add(rum, 'tide', '어제는 갯벌 물이 ' + c.tide.t + '쯤 빠졌대. 오늘은 언제쯤일까?', 'Yesterday the tide went out around ' + c.tide.t + '. When today?', { at: c.tide.at });
