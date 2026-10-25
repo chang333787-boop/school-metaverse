@@ -30,6 +30,11 @@ export const TOWN = {
   edges: [{ k: 'gorge', id: 'cheung', at: [225, 200], name: '층층골', en: 'Layer Gorge', ai: '✨ 사용자 승인 10-18 · 교사 확인 — 판 남동쪽 밖 지층 절벽·폭포·화석 골짜기' },
     { k: 'crater', id: 'kkam', at: [25, 200], name: '까망봉', en: 'Kkamang Cone', ai: '✨ 사용자 승인 10-18 · 교사 확인 — 판 남서쪽 밖 쉬는 작은 화산(말굽꼴 분화구)' },
     { k: 'tidebar', id: 'sseol', at: [307, -78], from: [268, -55], name: '썰물섬', en: 'Ebb-Tide Isle', ai: '✨ 사용자 승인 10-18 · 교사 확인 — 해수욕장 북쪽 끝 앞바다(판 밖) 작은 섬 · 썰물 때만 드러나는 모래 바닷길' }],   // at = 섬 가운데 · from = 바닷가 들머리(걷기 경계 안 모래 · 여기서 섬 쪽 첫 물가가 바닷길 시작)   // ✨ 교사 10-15: 전망대 = 되살린 산 위 등산로 끝(동쪽 마을·바다가 트인 곳 · 예전엔 큰길 깎은 바닥)
+  // ✨ STAM-1 탐험 체력(사용자 10-24 '젤다 기력처럼 · 얼마나 했을 때 어디까지 갈 수 있나' · 정본 docs/systems/town_stam.md): 아이 판에 없는 자리라 AI가 채움 — 자리는 엔진이 땅을 보고 정함(헤엄 = 물가에서 (k−0.4)×30m · 오르기 = (k−0.4)×5m)
+  //   아이 판에 바다 바위·산 바위가 나오면 그 자리로 옮겨요 · swim.ang = 바다 쪽에서 돌린 각(도) · climb.at = 기준점(view 전망대 · 숫자 = 등산로 높이 m · summit 정상)
+  stam: { ai: '✨ AI가 채운 빈칸(교사 확인 전 · 10-24)', swim: [{ id: 'R1', k: 3, ang: 0, kind: 'raft' }, { id: 'R2', k: 5, ang: -40, kind: 'rock' }, { id: 'R3', k: 7, ang: -75, kind: 'beacon' }],
+    climb: [{ id: 'C1', k: 4, at: 'view', kind: 'rope', w: 8, d: 7 }, { id: 'C2', k: 6, at: 150, tiers: 2, w: 11, d: 9, bases: [-2.75, 2.75], slope: 9 }, { id: 'C3', k: 8, at: 'summit', kind: 'chain', w: 14, d: 9, flat: true, r0: 20 }],
+    pads: [{ id: 'P1', at: 'view', coach: true }, { id: 'P2', at: 'summit', coach: true, r0: 14 }, { id: 'P3', at: 'rock', rock: 'C3' }] },
   ai: [
     { t: '아이가 블록·종이를 놓지 않은 자리도 이름표와 둘레에 맞게 완성된 동네로 채웠어요(교사 10-13 — 건물·나무·길가 시설·차·사람)' },
     { t: '사8 파란 종이는 강이 시작되는 호수로 읽었어요(강은 호수에서 오른쪽 위로 흘러요 — 마10 이름표 「강→」)', at: [137.5, 112.5] },

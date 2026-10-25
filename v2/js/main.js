@@ -8,7 +8,7 @@ import { buildWorld } from './world.js?v=158';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=93';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=94';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=11';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=29';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -231,8 +231,8 @@ function kidTick(dt) {
   K.head.rotation.x = mv > 0.1 ? 0.04 : Math.sin(kidT * 1.7) * 0.03;                                   // 가만히 있으면 살짝 끄덕끄덕
   K.body.scale.y = 1 + (mv < 0.1 && !sit ? Math.sin(kidT * 2.2) * 0.008 : 0);                           // 숨쉬기
   if (POL9) { const sq = landT < 0.6 && !sit ? landK * Math.exp(-14 * landT) * Math.cos(20 * landT) : 0; K.body.scale.x = K.body.scale.z = 1 + 0.1 * sq; K.body.scale.y -= 0.16 * sq; if (sq > 0.05 && !air) { K.legL.knee.rotation.x += 0.6 * sq; K.legR.knee.rotation.x += 0.6 * sq; }   /* MOTION-1 착지 찌그러짐(감쇠 용수철) */
-    if (!CTRL.pose && !sit) { leanS += (Math.max(-0.2, Math.min(0.2, -faceD / Math.max(dt, 1e-3) * 0.018 * mv9)) - leanS) * (1 - Math.exp(-dt * 10)); K.rig.rotation.z = leanS; } }   /* MOTION-1 돌 때 도는 쪽으로 기울기 */
-  if (CTRL.pose !== kidPoseWas) { if (kidPoseWas === 'swim' || kidPoseWas === 'dizzy' || kidPoseWas === 'ski' || kidPoseWas === 'plant') { K.armL.rotation.z = -0.12; K.armR.rotation.z = 0.12; K.head.rotation.z = 0; K.rig.rotation.z = 0; K.legL.g.rotation.z = K.legR.g.rotation.z = 0; } kidPoseWas = CTRL.pose; }
+    if (!CTRL.pose && !sit) { leanS += (Math.max(-(CTRL.leanMax || 0.2), Math.min(CTRL.leanMax || 0.2, -faceD / Math.max(dt, 1e-3) * 0.018 * mv9)) - leanS) * (1 - Math.exp(-dt * 10)); K.rig.rotation.z = leanS; } }   /* MOTION-1 돌 때 도는 쪽으로 기울기 */
+  if (CTRL.pose !== kidPoseWas) { if (kidPoseWas === 'swim' || kidPoseWas === 'dizzy' || kidPoseWas === 'ski' || kidPoseWas === 'plant' || kidPoseWas === 'climb' || kidPoseWas === 'para') { K.armL.rotation.z = -0.12; K.armR.rotation.z = 0.12; K.head.rotation.z = 0; K.rig.rotation.z = 0; K.legL.g.rotation.z = K.legR.g.rotation.z = 0; } kidPoseWas = CTRL.pose; }
   if (CTRL.pose === 'swim') { const s9 = Math.sin(kidT * 5.2), m9 = Math.min(1, mv * 2 + 0.35); K.rig.rotation.x = 0.35 * mv; K.armL.rotation.x = K.armR.rotation.x = -2.0 + s9 * 0.55 * m9; K.armL.rotation.z = -0.12 - (0.5 + s9 * 0.4) * m9; K.armR.rotation.z = 0.12 + (0.5 + s9 * 0.4) * m9;   // 헤엄(평영 팔 · 발차기 · 마을 바다 10-15)
     K.legL.g.rotation.x = Math.sin(kidT * 7) * 0.4 * m9; K.legR.g.rotation.x = -Math.sin(kidT * 7) * 0.4 * m9; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 0.35; K.head.rotation.x = -0.15 * mv; }
   else if (CTRL.pose === 'chair') { K.rig.position.set(0, K.sitY, 0); K.legL.g.rotation.x = K.legR.g.rotation.x = -1.5; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 1.45 + Math.sin(kidT * 2) * 0.08; K.armL.rotation.x = K.armR.rotation.x = -0.55; }   // B4 리프트 의자(다리 대롱대롱)
@@ -244,6 +244,8 @@ function kidTick(dt) {
     K.armR.rotation.x = -lean9 - 0.45 - 1.05 * L9 + (0.85 + 1.05 * L9) * D9; K.armL.rotation.x = -lean9 - 0.95; K.armL.rotation.z = -0.3; K.head.rotation.x = -0.25 + 0.15 * L9; }
   else if (CTRL.pose === 'dizzy') { K.rig.position.set(0, K.sitY - 0.34, 0); K.rig.rotation.x = -0.22; K.legL.g.rotation.x = K.legR.g.rotation.x = -1.45; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 0.2;   // 엉덩방아 + 어지러움(차에 부딪힘 · 피·다침 없음 · 10-15 아이 패들렛)
     K.armL.rotation.x = K.armR.rotation.x = 0.55; K.armL.rotation.z = -0.6; K.armR.rotation.z = 0.6; K.head.rotation.z = Math.sin(kidT * 5) * 0.2; K.head.rotation.x = 0.1 + Math.sin(kidT * 3.3) * 0.08; K.rig.rotation.z = Math.sin(kidT * 2.5) * 0.06; }
+  else if (CTRL.pose === 'climb') { const c9 = Math.sin(kidT * 6.5) * Math.min(1, Math.abs(CTRL.poseY || 0) * 1.4); K.rig.rotation.x = -0.08; K.armL.rotation.x = -2.6 + c9 * 0.45; K.armR.rotation.x = -2.6 - c9 * 0.45; K.armL.rotation.z = -0.25; K.armR.rotation.z = 0.25; K.legL.g.rotation.x = -0.55 - c9 * 0.4; K.legR.g.rotation.x = -0.55 + c9 * 0.4; K.legL.knee.rotation.x = 0.9 + c9 * 0.3; K.legR.knee.rotation.x = 0.9 - c9 * 0.3; K.head.rotation.x = -0.25; }   /* STAM-1 오르기(손발 번갈아 · poseY = 오르는 빠르기 — 0이면 매달려 멈춤) */
+  else if (CTRL.pose === 'para') { K.rig.position.set(0, 0.05, 0); K.rig.rotation.x = 0.12; K.legL.g.rotation.x = K.legR.g.rotation.x = -1.2; K.legL.knee.rotation.x = K.legR.knee.rotation.x = 1.1; K.armL.rotation.x = K.armR.rotation.x = -2.2; K.armL.rotation.z = -0.55; K.armR.rotation.z = 0.55; K.rig.rotation.z = (CTRL.poseY || 0) * 0.3; }   /* STAM-1 패러글라이더(하네스에 앉아 두 손으로 줄 · poseY = 도는 쪽 기울기) */
   ACTS.pose();                                                       // ACTION-1: 행동 자세(마시기·씻기·분무기…)를 기본 자세 위에
 }
 
@@ -651,6 +653,8 @@ function camPose(hx, hy, hz, yaw, pch, CD, fov, aspect, dUse) {
 let camSh = 0;
 function physics(dt) {
   crouchTick();
+  if (CTRL.pin) { const q9 = CTRL.pin, ox = P.x, oz = P.z; P.x = q9.x; P.y = q9.y; P.z = q9.z; P.vy = 0; P.ground = !!q9.g; if (q9.yaw != null) P.yaw = q9.yaw; P.spd = Math.hypot(P.x - ox, P.z - oz) / Math.max(dt, 1e-4);   /* STAM-1 몸 붙들기(오르기·누워 떠밀림·구조 배·패러 비행 = 게임이 자리를 정함 · 중력·걷기 X · 매 프레임 작은 걸음이라 순간이동 아님) */
+    if (q9.cam != null && !CTRL.frozen) { let d = q9.cam - camYaw; d = Math.atan2(Math.sin(d), Math.cos(d)); camYaw += d * Math.min(1, dt * 1.6); } return; }
   const cr = CTRL.crouched, sp = (cr ? PHY.crawl : (keys.has('ShiftLeft') || keys.has('ShiftRight')) && !CTRL.noRun ? PHY.run : PHY.walk) * CTRL.speed;   // HS-3: 오른쪽 Shift도 달리기(방향키 + 오른손) · CTRL.noRun = 게임이 달리기를 막음(숨바꼭질 힘)   // ENGINE-1: 웅크리면 느리게(달리기 없음) · SHRINK-1 PHY = 몸 크기 판
   let mx = 0, mz = 0;
   if (keys.has('KeyW') || keys.has('ArrowUp')) { mx -= Math.sin(camYaw); mz -= Math.cos(camYaw); }
@@ -672,6 +676,7 @@ function physics(dt) {
   const L = Math.hypot(mx, mz), ox = P.x, oz = P.z;
   if (L > 0) {
     mx /= L; mz /= L;
+    if (CTRL.turnMax) { const a9 = Math.atan2(mx, mz), b9 = CTRL._dir ?? a9, lim = CTRL.turnMax * dt; let d9 = Math.atan2(Math.sin(a9 - b9), Math.cos(a9 - b9)); if (d9 > lim) d9 = lim; else if (d9 < -lim) d9 = -lim; const c9 = b9 + d9; CTRL._dir = c9; mx = Math.sin(c9); mz = Math.cos(c9); } else CTRL._dir = null;   /* STAM-1 자전거 꺾기: 빠를수록 도는 빠르기 상한(rad/s · 게임이 정함 · null = 그대로) */
     const sp = sp2, stp = Math.max(1, Math.ceil(sp * dt / 0.3)), sx = mx * sp * dt / stp, sz = mz * sp * dt / stp;   // SUB-STEP(10-19 자전거 21m/s): 한 장면에 0.3m보다 많이 가면 잘게 나눠 막힘을 봄(얇은 벽·울타리 뚫림 X) · 걷기는 한 번
     for (let s9 = 0; s9 < stp; s9++) { const nx = P.x + sx; if (!pBlocked(nx, P.z, P.y, P.bh)) P.x = nx; const nz = P.z + sz; if (!pBlocked(P.x, nz, P.y, P.bh)) P.z = nz; }
     P.yaw = Math.atan2(mx, mz);
