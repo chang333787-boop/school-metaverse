@@ -108,7 +108,7 @@ export function createNb(A) {
       wild: [at + '근처에서 ' + nm + '{을} 처음 만났', 'met a ' + nm + ' for the first time near ' + D.c], summit: [at + '산꼭대기에 올랐', 'climbed to the summit near ' + D.c], stones: [at + '징검다리를 건넜', 'crossed the stepping stones at ' + D.c],
       book: [at + '도서관에서 책을 읽었', 'read a book at the library at ' + D.c], stars: [at + '산꼭대기에서 별을 봤', 'watched the stars from the summit near ' + D.c], boat: [at + '앞바다에 배를 타고 나갔', 'took a boat out near ' + D.c],
       sell: [at + '장터에서 물건을 팔았', 'sold things at the market at ' + D.c], cook: [at + '부엌에서 요리를 만들었', 'cooked a dish at ' + D.c], mush: [at + '숲에서 버섯을 땄', 'picked mushrooms in the woods at ' + D.c],
-      eat: [at + '식당에서 밥을 먹었', 'ate at a restaurant at ' + D.c], beach: [at + '바닷가에서 놀았', 'played on the beach at ' + D.c], work: [wn + ' 일을 거들었', 'helped ' + wn] };
+      eat: [at + '식당에서 밥을 먹었', 'ate at a restaurant at ' + D.c], beach: [at + '바닷가에서 놀았', 'played on the beach at ' + D.c], deco: [at + '우리 집 마당에 ' + nm + '{을} 놓았', 'put ' + nm + ' in the yard of our house at ' + D.c], work: [wn + ' 일을 거들었', 'helped ' + wn] };
     const k = K[D.t] || K[String(D.t).split(':')[0]] || [at + '일을 했', 'did something at ' + D.c]; return k[e9 ? 1 : 0]; }
   const WHEN = (n, e9) => e9 ? (n <= 0 ? 'earlier today' : n === 1 ? 'yesterday' : n === 2 ? 'the day before yesterday' : 'a few days ago') : (n <= 0 ? '아까' : n === 1 ? '어제' : n === 2 ? '그저께' : '며칠 전');
   function memLine(D, how, hk, e9) { const n = S().day - D.d, w9 = WHEN(n, e9);
@@ -134,7 +134,7 @@ export function createNb(A) {
   function talk(near) { const hk = near.hk, T = nbt(hk), day = S().day, e9 = en(); if (T.day === day) return null;
     const C = choose(near); let t;
     if (C) { const [D, how] = C; T.said[D.i] = 1; t = say('mem', hk, { m: memLine(D, how, hk, e9) }); LOG.push([hk, D.i, how, day]); if (LOG.length > 400) LOG.shift(); SAID++; }
-    else { const rg = A.region(near.x, near.z) || '', lk = (A.likes(near.k) || []).filter(e => { const r9 = A.itemReg(e); return r9 && r9 !== rg; }); if (lk.length && hashS(hk + ':' + day) % 2 === 0) { const e = lk[hashS(hk + ':tip') % lk.length]; t = say('tip', hk, { t: fillT((e9 ? 'We don’t get ' + A.itemName(e, e9) + ' around here.' : '우리 동네엔 ' + A.itemName(e, e9) + '{이} 안 나요.'), {}, e9) }); }
+    else { const rg = A.region(near.x, near.z) || '', lk = (A.likes(near.k) || []).filter(e => { const r9 = A.itemReg(e); return r9 && r9 !== rg; }); if (lk.length && hashS(hk + ':' + day) % 2 === 0) { const e = lk[hashS(hk + ':tip') % lk.length]; if (A.heard) A.heard(hk, 'l', e);   /* COZY-1 귀띔 = 선물 창에 '이 이웃이 한 말'로 남음 */ t = say('tip', hk, { t: fillT((e9 ? 'We don’t get ' + A.itemName(e, e9) + ' around here.' : '우리 동네엔 ' + A.itemName(e, e9) + '{이} 안 나요.'), {}, e9) }); }
       else { const wl = A.wline(near.k); t = wl ? wl[e9 ? 1 : 0] : say(A.calDay() === 7 ? 'rest' : 'greet', hk); } }
     T.day = day; A.GAME.mark(); A.bubble({ x: near.x, y: near.g, z: near.z, sc: 1 }, t); return t; }
   // ── ❤3 바구니 곁 선물(인스턴스 메시 하나 · 이웃마다 바구니 하나 + 선물 세 알) ──

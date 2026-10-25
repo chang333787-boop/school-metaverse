@@ -11,7 +11,7 @@ const josa = (w, a, b) => { const c = (w || '').charCodeAt((w || '').length - 1)
 // 문 앞 선물 = 그 일꾼이 하는 일에서 나는 것 하나(뽑기 X · 정해짐)
 export const GIFT_OF = { shiitake: '🍄', cabbage: '🥬', potato: '🥔', lumber: '🌰', beehive: '🍯', pasture: '🥛', saltpan: '🧂', paddy: '🍚', strawberry: '🍓', pear: '🍐', fisher: '🐟', clam: '🐚', seaweed: '🌿', oyster: '🐚' };
 // 어제 이웃과 한 일 무게(하나만 남김): 하트 단계가 오름 > 요리를 받음 > 선물을 받음
-export const NB_RANK = { up: 3, dish: 2, gift: 1 };
+export const NB_RANK = { like: 4, up: 3, dish: 2, gift: 1 };   /* COZY-1: 좋아하는 것을 받은 이웃 = 다음 아침 답례가 먼저 */
 
 /* c = { en, day, S(GAME.S), pots, farm, plotState, CROPS, crop(e), item(e), rainY, yday, gift:{e,who}|null, pol, fruitAt, sapY, jang:{on,left,at}, wx:{ic,nm}, seaNext:string|null, board:[이름…], twig, mush, tide:{t,at}|null, wild:[{t,place,at}], farmAt, nbAt, nWk, card:{ko,en,at}|null, surp:{ko,en,at}|null, fx:[{k,t,at,two}] } */
 export function newsMake(c) {
@@ -30,7 +30,8 @@ export function newsMake(c) {
   else if (pots.some(o => st(o.P) === 'water' && o.P.d < d)) add(one, 'potdry', '🌱 화분이 그대로예요. 어제는 물을 못 받았어요', '🌱 The pot stayed the same — it got no water yesterday', { at: 'home', ck: { pot: 'water' } });
   { const F = gw(c.farm, c.farmGrew).filter(o => o.up && o.P.w === d - 1); if (F.length) { const r = F.find(o => st(o.P) === 'ripe'), P = (r || F[0]).P; add(one, 'farm', r ? '🧺 학교 텃밭 ' + nm(P) + josa(nm(P), '이', '가') + ' 다 자랐어요' : P.g <= 1 ? '🌱 어제 ' + (P.d === d - 1 ? '심은' : '돌본') + ' 학교 텃밭 ' + nm(P) + '에 싹이 났어요' : '🌱 어제 돌본 학교 텃밭 ' + nm(P) + josa(nm(P), '이', '가') + ' 쑥 자랐어요', r ? '🧺 The ' + nm(P) + ' in the school garden is fully grown' : P.g <= 1 ? '🌱 The school-garden ' + nm(P) + ' has sprouted' : '🌱 The school-garden ' + nm(P) + ' you tended grew taller', { mine: 1, at: c.farmAt || null, ck: { farm: r ? 'ripe' : 'grow', c: P.c } }); } }
   if (c.S.spend && c.S.spend.can === 2) add(one, 'can', '🔧 고친 물뿌리개가 문 앞에 와 있어요. 넓은 꼭지를 달았대요', '🔧 The fixed watering can is at our door — with a wide rose', { mine: 1, at: 'home' });   /* SPEND-1 맡긴 다음 아침 */
-  if (c.gift) add(one, 'gift', '🎁 ' + c.gift.who + ' 일꾼이 문 앞에 ' + c.item(c.gift.e) + josa(c.item(c.gift.e), '을', '를') + ' 두고 갔어요', '🎁 The ' + c.gift.who + ' worker left ' + c.item(c.gift.e) + ' at our door', { mine: 1, at: 'gift' });
+  if (c.gift && c.gift.why === 'like' && c.gift.g) add(one, 'gift', '🎁 어제 ' + c.item(c.gift.g) + josa(c.item(c.gift.g), '을', '를') + ' 받은 ' + c.gift.who + ' 일꾼이 답례로 ' + c.item(c.gift.e) + josa(c.item(c.gift.e), '을', '를') + ' 두고 갔어요', '🎁 The ' + c.gift.who + ' worker you gave ' + c.item(c.gift.g) + ' left ' + c.item(c.gift.e) + ' at our door to say thanks', { mine: 1, at: 'gift' });   /* COZY-1 답례 */
+  else if (c.gift) add(one, 'gift', '🎁 ' + c.gift.who + ' 일꾼이 문 앞에 ' + c.item(c.gift.e) + josa(c.item(c.gift.e), '을', '를') + ' 두고 갔어요', '🎁 The ' + c.gift.who + ' worker left ' + c.item(c.gift.e) + ' at our door', { mine: 1, at: 'gift' });
   if (c.pol) add(one, 'pol', '🐝 어제 돌본 꿀벌 덕분에 오늘 배·딸기가 잘 맺혀요', '🐝 Thanks to the bees you helped, pears and strawberries set well today', { mine: 1, at: c.fruitAt || null, ck: { pol: 1 } });
   for (const q of c.em || []) add(one, 'em:' + q.k, q.t[0], q.t[1], { mine: 1, at: q.at || null });   /* EMERG-1 어제 긴급 출동 결과(내가 한 일 · 세상에 남은 흔적 자리) */
   if (c.sapY > 0) add(one, 'sap', '🌲 어제 심은 어린나무가 그 자리에 잘 서 있어요', '🌲 The sapling you planted yesterday is standing well', { mine: 1, ck: { sap: c.sapY } });
@@ -56,7 +57,7 @@ export function newsMake(c) {
   if (c.jang && c.jang.on && c.jang.at) add(rum, 'jang', '오늘 장날이라 장터에 손님이 많대', 'It’s market day — lots of shoppers at the market', { at: c.jang.at });
   if (c.tide && c.tide.t) add(rum, 'tide', '어제는 갯벌 물이 ' + c.tide.t + '쯤 빠졌대. 오늘은 언제쯤일까?', 'Yesterday the tide went out around ' + c.tide.t + '. When today?', { at: c.tide.at });
   if (c.pol && c.fruitAt) add(rum, 'pol', '과수원 꿀벌들이 바쁘대. 열매가 잘 맺힌대', 'The orchard bees are busy — the fruit is setting well', { at: c.fruitAt });
-  if (Y && Y.nb && c.nbAt) add(rum, 'nb', '어제 누가 ' + Y.nb.who + ' 일꾼한테 ' + (Y.nb.why === 'dish' ? '요리를 나눠 줬대' : Y.nb.why === 'gift' ? '선물을 줬대' : '일을 도와줬대'), 'Someone ' + (Y.nb.why === 'dish' ? 'shared food with' : Y.nb.why === 'gift' ? 'gave a present to' : 'helped') + ' the ' + Y.nb.who + ' worker yesterday', { at: c.nbAt });
+  if (Y && Y.nb && c.nbAt) add(rum, 'nb', '어제 누가 ' + Y.nb.who + ' 일꾼한테 ' + (Y.nb.why === 'dish' ? '요리를 나눠 줬대' : Y.nb.why === 'gift' || Y.nb.why === 'like' ? '선물을 줬대' : '일을 도와줬대'), 'Someone ' + (Y.nb.why === 'dish' ? 'shared food with' : Y.nb.why === 'gift' || Y.nb.why === 'like' ? 'gave a present to' : 'helped') + ' the ' + Y.nb.who + ' worker yesterday', { at: c.nbAt });
   if (c.farmAt && (c.farm || []).some(P => P && P.c && c.CROPS[P.c] && st(P) === 'ripe')) add(rum, 'ripe', '학교 텃밭에 다 익은 게 있대', 'Something is ripe in the school garden', { at: c.farmAt });
   for (const w of c.wild || []) add(rum, 'wild:' + w.id, w.place + ' 근처에 ' + w.t + josa(w.t, '이', '가') + ' 자주 온대', 'A ' + w.t + ' often comes near ' + w.place, { at: w.at });
   if (c.twig && c.twigAt) add(rum, 'twig', '비 온 다음 날이라 숲 바닥에 마른 가지가 많대', 'After rain the forest floor has lots of dry twigs', { at: c.twigAt });
