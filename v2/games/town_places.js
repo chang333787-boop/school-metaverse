@@ -1,5 +1,5 @@
 // 🛂 장소 카드 자료(LIVING-1 · 사용자 10-17 '천연기념물 보호소처럼 이름만 있고 아무 역할 안 하는 곳' · '무엇을 하는 곳인지 · 어떤 도움 · 관련 직업'): 놀이 코드와 떼어 둔 자료표(town_skill.js·town_shore.js와 같은 결)
-//   이름(아이 판 그대로) → 갈래 일곱(행정·안전·건강·배움·일터·가게·쉼) · 하는 일 한 줄 · 우리에게 주는 도움 한 줄 · 일하는 사람(직업 2~4 · 하는 일 한 줄) · 사진 자리(비워 둠 — 사진 일감이 채움)
+//   이름(아이 판 그대로) → 갈래 일곱(행정·안전·건강·배움(문화)·일터·가게·쉼) · 하는 일 한 줄 · 우리에게 주는 도움 한 줄 · 일하는 사람(직업 2~4 · 하는 일 한 줄) · 사진 자리(비워 둠 — 사진 일감이 채움)
 //   사실만 · 이름에 맞는 일반 역할만(아이 판 장소 뜻을 바꾸지 않음) · 셈 X · 직업 그림 = 남녀 고르게(장소마다 번갈아) · 이모지는 갈래 머리에 하나
 export const PLACES_V = 1;
 const T2 = (ko, en) => [ko, en];
@@ -9,7 +9,7 @@ export const PG = {
   admin: ['🏛', '행정·공공', 'Public services', '#3b6fb6'],
   safe: ['🚨', '안전·보호', 'Safety', '#c8433b'],
   health: ['🏥', '건강', 'Health', '#2f9a8a'],
-  learn: ['📚', '배움', 'Learning', '#7d5bb8'],
+  learn: ['📚', '배움·문화', 'Learning and culture', '#7d5bb8'],   /* KIDEYE-2(10-25 아이 눈 '영화관이 왜 쉼·자연이에요?'): 사회 교과서 '문화 시설'(도서관·박물관·영화관) 갈래 — 새 갈래 X · 이름만 넓힘 */
   work: ['🏭', '일터', 'Workplaces', '#b86f2b'],
   shop: ['🛒', '가게', 'Shops', '#d6912a'],
   rest: ['🌳', '쉼·자연', 'Rest and nature', '#3f8f4e'],
@@ -134,7 +134,7 @@ const RULES = [
   R(/카페/, 'shop', T2('음료와 간식을 만들어 팔고, 앉아서 쉬어 가는 곳이에요.', 'Makes drinks and snacks and offers a place to sit and rest.'), T2('이웃과 만나 이야기 나누는 쉼터가 돼요.', 'A place to meet neighbours and talk.'), ['barista', 'owner']),
   R(/아이스크림|베라/, 'shop', T2('여러 맛 아이스크림을 골라 사 먹는 가게예요.', 'A shop to choose and buy ice cream in many flavours.'), T2('더운 날 시원한 간식을 먹어요.', 'A cool treat on hot days.'), ['clerk']),
   R(/식당|음식|집$|햄버거|뷔페|샤브|초밥|마라탕|국수/, 'shop', T2('음식을 만들어 손님에게 대접해요.', 'Cooks food and serves customers.'), T2('여러 지역의 음식을 맛볼 수 있어요.', 'We can taste many kinds of food.'), ['cook', 'server']),
-  R(/영화관/, 'rest', T2('큰 화면과 큰 소리로 영화를 보는 곳이에요.', 'Watch films on a big screen with big sound.'), T2('이야기를 함께 보며 쉬고 즐겨요.', 'We rest and enjoy stories together.'), ['usher']),
+  R(/영화관/, 'learn', T2('큰 화면과 큰 소리로 영화를 보는 곳이에요.', 'Watch films on a big screen with big sound.'), T2('이야기를 함께 보며 쉬고 즐겨요.', 'We rest and enjoy stories together.'), ['usher']),
   R(/사우나/, 'rest', T2('따뜻한 물과 증기로 몸을 씻고 쉬는 곳이에요.', 'Wash and relax with warm water and steam.'), T2('피곤한 몸을 쉬게 해요.', 'Helps tired bodies rest.'), ['clerk']),
   R(/펜션|풀빌라|숙소/, 'rest', T2('여행 온 사람들이 묵어 가는 숙소예요.', 'Lodgings where travellers stay.'), T2('멀리서 온 손님이 편히 쉬어 가요.', 'Visitors from far away can rest comfortably.'), ['host']),
   R(/캠핑장 ?관리/, 'rest', T2('캠핑장 이용을 안내하고, 불과 물을 안전하게 쓰는지 살펴요.', 'Guides campers and checks fire and water are used safely.'), T2('캠핑을 안전하게 즐겨요.', 'Camping is safe and fun.'), ['ranger']),
@@ -159,7 +159,7 @@ const RULES = [
   R(/숲|산$|뒷산/, 'rest', T2('나무가 우거진 곳이에요. 맑은 공기를 만들고 동물이 살아요.', 'A wooded place that makes clean air and is home to animals.'), T2('쉬고 걸으며 자연을 느껴요.', 'We rest, walk and feel nature.'), []),
 ];
 // 이름으로 못 찾으면 갈래(kind)로
-const KINDR = { shop: 'shop', hospital: 'health', police: 'safe', fire: 'safe', post: 'admin', office: 'admin', public: 'admin', factory: 'work', fishmarket: 'shop', cinema: 'rest', play: 'rest', pitch: 'rest', park: 'rest', hill: 'rest', water: 'rest', forest: 'rest', sea: 'rest', sand: 'rest', mudflat: 'rest', canal: 'work', rice: 'work', farm: 'work', orchard: 'work', grass: 'rest' };
+const KINDR = { shop: 'shop', hospital: 'health', police: 'safe', fire: 'safe', post: 'admin', office: 'admin', public: 'admin', factory: 'work', fishmarket: 'shop', cinema: 'learn', play: 'rest', pitch: 'rest', park: 'rest', hill: 'rest', water: 'rest', forest: 'rest', sea: 'rest', sand: 'rest', mudflat: 'rest', canal: 'work', rice: 'work', farm: 'work', orchard: 'work', grass: 'rest' };
 const GEN = { shop: [T2('필요한 물건을 사고파는 가게예요.', 'A shop where things are bought and sold.'), T2('마을 사람들이 필요한 것을 가까이에서 구해요.', 'Neighbours get what they need nearby.'), ['clerk', 'owner']], health: [T2('아픈 사람을 돌보는 곳이에요.', 'A place that cares for sick people.'), T2('아플 때 도움을 받아요.', 'We get help when we are sick.'), ['doctor', 'nurse']], safe: [T2('마을의 안전을 지키는 곳이에요.', 'A place that keeps the town safe.'), T2('위험할 때 도움을 받아요.', 'We get help in danger.'), ['police']], admin: [T2('마을 사람 모두를 위한 공공 기관이에요.', 'A public office for everyone in town.'), T2('생활에 필요한 일을 도와줘요.', 'Helps with everyday needs.'), ['civil']], work: [T2('사람들이 일하며 무언가를 만들거나 거두는 곳이에요.', 'A place where people work to make or harvest things.'), T2('우리가 쓰고 먹는 것이 여기서 나와요.', 'Things we use and eat come from here.'), ['farmer']], rest: [T2('쉬고 노는 곳이에요.', 'A place to rest and play.'), T2('몸과 마음이 쉬어요.', 'Body and mind can rest.'), []], learn: [T2('보고 들으며 배우는 곳이에요.', 'A place to learn by seeing and listening.'), T2('새로운 것을 알게 돼요.', 'We learn new things.'), ['docent']] };
 
 // 카드 자료: name(아이 판 이름) · kind(마을 건물 갈래) → { g, does, help, jobs, act } · 학교·집·칸 이름표는 null(카드 없음)

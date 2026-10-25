@@ -4,7 +4,7 @@
 //   하루 = 실제 날짜(수업 한 번 = 하루 · 게임 하루는 12분이라 게임 날로 묶으면 14일이 수업 한두 번) · 최근 14일 · 갈래마다 하루 상한 · 글은 짧게 자름 · 전체가 80KB를 넘으면 오래된 날부터(보통 하루 3~4KB · 꽉 찬 하루 약 15KB)
 //   이름·sid·기기 번호 X — 화면엔 '이 기기'로만 · 매 프레임 일 0(일이 끝날 때 add 한 번 · 창은 열 때만 셈)
 import { CHAPTERS } from './town_story.js?v=24';
-import { BANK, DIR8 } from './town_quiz.js?v=11';
+import { BANK, DIR8 } from './town_quiz.js?v=12';
 export const REC_V = 1, REC_DAYS = 14, REC_MAX = 80 * 1024;
 const T2 = (ko, en) => [ko, en];
 // 갈래: 하루 상한 · 이름(선생님 보기)

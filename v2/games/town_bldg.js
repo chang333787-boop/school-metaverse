@@ -72,7 +72,7 @@ const FILMS = [
   { t: T2('별 보는 밤', 'A Night of Stars'), bg: '#1c2a4a', sc: [T2('불빛이 적은 곳일수록 별이 많이 보여요.', 'The fewer lights around, the more stars you can see.'), T2('북두칠성의 국자 끝 두 별을 이어 쭉 가면 북극성이 있어요.', 'Follow the two end stars of the Big Dipper’s cup to find the North Star.'), T2('북극성은 밤새 거의 움직이지 않아 북쪽을 알려 줘요.', 'The North Star hardly moves all night, so it shows which way is north.')] },
 ];
 const SHOWS = [[0, 600, 680], [1, 690, 790], [2, 780, 880], [0, 870, 950], [1, 960, 1060], [2, 1050, 1150], [0, 1140, 1220]];
-const TICKET = 500, ROWS = ['가', '나', '다', '라', '마'], ROWZ = [-3.6, -2.3, -1.0, 0.3, 1.6], COLX = c => -2.5 + (c - 1);   /* 영화 표 값(소포와 같은 결) · 줄 가(화면 앞)~마 · 번호 1~6 */
+const TICKET = 500, ROWS = ['가', '나', '다', '라', '마'], ROWZ = [-4.5, -3.2, -1.9, -0.6, 0.7], COLX = c => -2.5 + (c - 1);   /* 영화 표 값(소포와 같은 결) · 줄 가(화면 앞)~마 · 번호 1~6 */
 const hm = m => String((m / 60) | 0).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 // 🏭 만드는 차례(일 다섯 · 1번 자리부터) — [일, 까닭(틀리게 고르면)]
 const LINES = {
@@ -251,36 +251,36 @@ export function createBldg(A) {
   const seatOf = (D, i) => ROWS[hashS('sr:' + D + ':' + i) % 5] + (1 + hashS('sc:' + D + ':' + i) % 6);
   const seatAt9 = sq => { const r = ROWS.indexOf(String(sq)[0]), c = +String(sq).slice(1); return r < 0 || !(c >= 1 && c <= 6) ? null : [COLX(c), ROWZ[r]]; };
   const seatHot = sq => { const p = seatAt9(sq); return p ? { k: 'bd:seat', stand: [p[0], 0, p[1] + 0.65], r: 0.85, label: '🎫 ' + (en() ? 'My seat ' + sq + ' — sit and watch' : '내 자리 ' + sq + ' — 앉아서 보기') } : null; };
-  // 영화관(12×12): 뒤 = 큰 화면(캔버스 · 쉴 때 = 오늘 상영 시간표 · 상영 때 = 영화 장면) · 의자 다섯 줄(가 = 화면 앞 ~ 마) × 여섯(번호) · 줄 글자 = 왼벽 · 번호 = 의자 등 · 왼쪽 앞 = 매표소(직원)
-  function roomCinema(at, K, name) { const W = 12, D = 12, H = 4.0, hw = W / 2, hd = D / 2, [ox, oy, oz] = at, seats = [], dummy = [], red = 0xb5483a, wl = 0x4a3f5c;
+  // 영화관(12×14 · KIDEYE-2 10-25: 12 깊이면 들어간 자리 뒤 3m가 모자라 카메라가 천장 구석에서 내려다봐 시간표 윗줄이 위 칸 뒤로 · 머리가 화면 아래를 덮음 → 2m 깊게 · 의자 0.9m 화면 쪽 · 들어가는 자리 문에서 3.9m · 낮게 보는 카메라): 뒤 = 큰 화면(캔버스 · 쉴 때 = 오늘 상영 시간표 · 상영 때 = 영화 장면) · 의자 다섯 줄(가 = 화면 앞 ~ 마) × 여섯(번호) · 줄 글자 = 왼벽 · 번호 = 의자 등 · 왼쪽 앞 = 매표소(직원)
+  function roomCinema(at, K, name) { const W = 12, D = 14, H = 4.0, hw = W / 2, hd = D / 2, [ox, oy, oz] = at, seats = [], dummy = [], red = 0xb5483a, wl = 0x4a3f5c;
     const S9 = K.shell(at, W, D, H, { wall: wl, wains: 0x2b2433, winY: [], noLights: true, ft: ['tile', 1.0, 0x9a5a5a] }), P = S9.put; S9.ac = K.cs(0x6a3a6a);
     K.mainSign(S9, name, -2.8, 3.3, hd - 0.02, Math.PI, { bg: '#6a3a6a' });
     for (let r = 0; r < 5; r++) K.sign(S9, ROWS[r], -hw + 0.02, 1.25, ROWZ[r], Math.PI / 2, 0.36, 0.36, { bg: '#f2c230', fg: '#2b2420', fr: false });   /* 줄 글자(왼벽 · 지도 위 칸 글자처럼) */
     { const x = -4.3, z = 3.4; P('b', x, 0, z, 0.6, 1.0, 2.0, 0xf6f4ee); P('b', x + 0.306, 0.1, z, 0.012, 0.5, 1.9, 0x6a3a6a); P('b', x, 1.0, z, 0.66, 0.04, 2.06, 0xd8dce0); K.colL(S9, x, z, 0.33, 1.0, -0.5, 1.1);   /* 매표소 탁자 */
       P('b', x - 0.05, 1.04, z + 0.6, 0.3, 0.3, 0.42, 0x2b2d31); P('b', x - 0.022, 1.08, z + 0.6, 0.012, 0.22, 0.36, 0x9fd8c0, 1);   /* 화면(빛) */
       K.sign(S9, en() ? 'Tickets' : '매표소', -hw + 0.02, 2.3, z, Math.PI / 2, 1.2, 0.3, { bg: '#6a3a6a', fr: 0xf6f4ee }); K.standGuest(S9, ox - 5.2, oy, oz + z, Math.PI / 2, 3); }   /* 영화관 직원(이름 없음) */
-    P('b', 0, 0.75, -hd + 0.02, 6.6, 2.9, 0.04, 0x1c1c22);   /* 화면 틀 */
-    const board = boardMesh(K, S9, 0, 2.2, -hd + 0.046, 0, 6.4, 2.7);
+    P('b', 0, 0.7, -hd + 0.02, 5.9, 2.6, 0.04, 0x1c1c22);   /* 화면 틀(KIDEYE-2: 윗변 3.3m — 들어가자마자 시간표 윗줄까지 보이게) */
+    const board = boardMesh(K, S9, 0, 2.0, -hd + 0.046, 0, 5.7, 2.4);
     for (let r = 0; r < 5; r++) for (let c = 1; c <= 6; c++) { const x = COLX(c), z = ROWZ[r]; K.chair(S9, dummy, x, z, Math.PI, red); K.sign(S9, String(c), x, 0.78, z + 0.226, 0, 0.2, 0.16, { bg: '#2b2420', fg: '#f6f4ee', fr: false }); }   /* 의자 서른(앉기 E는 표에 적힌 자리 하나만) · 번호 = 의자 등 */
     FILMS.forEach((f, i) => P('b', hw - 0.02, 1.2, -2.2 + i * 1.6, 0.04, 1.3, 0.9, parseInt(f.bg.slice(1), 16)));   /* 영화 포스터 판(오른벽 · 글 X) */
     for (const x of [-3, 3]) for (const z of [-2, 2]) K.panelL(S9, x, z, 0.5);
     const ex = [{ k: 'bd:ticket', stand: [-3.4, 0, 3.4], r: 1.2, label: '🎬 ' + (en() ? 'Ticket desk — read the timetable' : '매표소 — 상영 시간표 보기') }], tk = S().cinema.tk;
     if (tk && tk.d === day() && S().cinema.seen !== day()) { const h = seatHot(tk.seat); if (h) ex.push(h); }
-    return { S: S9, W, D, H, seats, items: ['큰 화면(쉴 때 = 상영 시간표)', '의자 다섯 줄 × 여섯(줄 글자 · 의자 번호)', '매표소 · 영화관 직원(이름 없음)', '영화 포스터 판'], board, extra: ex, cam: { d: 3.8, p: 0.55 } }; }
-  // 공장(13×9): 뒤 = 긴 줄(컨베이어) · 일하는 자리 다섯(번호 판 · 위생모 쓴 직원 다섯 · 이름 없음) · 줄 끝 = 깔판(오늘 만든 상자가 쌓임) · 오른벽 = '오늘 만든 것' 판
-  function roomFactory(at, K, name) { const W = 13, D = 9, H = 4.2, hw = W / 2, hd = D / 2, [ox, oy, oz] = at, seats = [], zc = -1.4, gry = 0x5a7a8a, kd = /젤리|케이크/.test(name) ? 'jelly' : 'farm', pc = kd === 'jelly' ? 0xf08fb2 : 0xc8945a;
+    return { S: S9, W, D, H, seats, items: ['큰 화면(쉴 때 = 상영 시간표)', '의자 다섯 줄 × 여섯(줄 글자 · 의자 번호)', '매표소 · 영화관 직원(이름 없음)', '영화 포스터 판'], board, extra: ex, spz: 3.9, cam: { d: 3.2, p: innerHeight > innerWidth ? 0.2 : 0.3 } }; }   /* 세로 화면(휴대폰) = 위 칸(방 안내·할 일 줄)이 더 길게 내려와 조금 더 낮게 봄 */
+  // 공장(13×10 · KIDEYE-2: 9 깊이면 들어간 자리 뒤가 모자라 카메라가 줄 앞에 붙어 내려다봄 · 이름판·자리 번호가 위 칸 뒤 → 1m 깊게 · 판 낮게): 뒤 = 긴 줄(컨베이어) · 일하는 자리 다섯(번호 판 · 위생모 쓴 직원 다섯 · 이름 없음) · 줄 끝 = 깔판(오늘 만든 상자가 쌓임) · 오른벽 = '오늘 만든 것' 판
+  function roomFactory(at, K, name) { const W = 13, D = 10, H = 4.2, hw = W / 2, hd = D / 2, [ox, oy, oz] = at, seats = [], zc = -1.4, gry = 0x5a7a8a, kd = /젤리|케이크/.test(name) ? 'jelly' : 'farm', pc = kd === 'jelly' ? 0xf08fb2 : 0xc8945a;
     const S9 = K.shell(at, W, D, H, { wall: 0xe8ecef, wains: gry, winY: [], noLights: true, ft: ['tile', 1.0, 0xd0d4d8] }), P = S9.put; S9.ac = K.cs(gry);
     P('b', 0, 0, zc, 10.4, 0.76, 0.9, 0x6b7680); P('b', 0, 0.76, zc, 10.3, 0.03, 0.72, 0x2b2d31); K.colL(S9, 0, zc, 5.2, 0.45, -0.5, 0.9);   /* 긴 줄(몸 · 띠) */
     for (let i = 0; i < 12; i++) K.I(S9, 'b', -4.6 + i * 0.84, 0.79, zc, 0.22, 0.14, 0.22, i % 3 === 2 ? 0xd9b27a : pc);   /* 줄 위 물건 */
-    for (let i = 0; i < 5; i++) { const x = -4 + i * 2; K.standGuest(S9, ox + x, oy, oz + zc - 0.95, 0, i + 1); P('c16', x, 1.6, zc - 0.95, 0.18, 0.1, 0, 0xffffff); K.sign(S9, String(i + 1), x, 2.5, -hd + 0.02, 0, 0.4, 0.4, { bg: '#5a7a8a', fr: 0xf6f4ee }); }   /* 직원 다섯(위생모) · 자리 번호 */
-    K.mainSign(S9, name, 0, 3.45, -hd + 0.02, 0, { bg: '#5a7a8a' });
+    for (let i = 0; i < 5; i++) { const x = -4 + i * 2; K.standGuest(S9, ox + x, oy, oz + zc - 0.95, 0, i + 1); P('c16', x, 1.6, zc - 0.95, 0.18, 0.1, 0, 0xffffff); K.sign(S9, String(i + 1), x, 2.2, -hd + 0.02, 0, 0.4, 0.4, { bg: '#5a7a8a', fr: 0xf6f4ee }); }   /* 직원 다섯(위생모) · 자리 번호 */
+    K.mainSign(S9, name, 0, 2.95, -hd + 0.02, 0, { bg: '#5a7a8a' });
     P('b', 5.75, 0, zc, 0.9, 0.12, 0.9, 0x9a7a4a); K.colL(S9, 5.75, zc, 0.45, 0.45, -0.5, 1.0);   /* 깔판 */
     const prod = K.parts(put => { for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) for (let c = 0; c < 2; c++) { const x = ox + 5.55 + a * 0.4, z = oz + zc - 0.2 + b * 0.4, y = oy + 0.12 + c * 0.31; put('b', x, y, z, 0.36, 0.3, 0.36, 0xc8945a); put('b', x, y + 0.302, z, 0.06, 0.006, 0.37, 0xd9b27a); } }); prod.visible = S().factory.made === day(); (S9.extra || (S9.extra = [])).push(prod);   /* 오늘 만든 상자 여덟(테이프 · 줄을 돌리면 보임) */
     { const bz = 1.6; P('b', hw - 0.02, 0.88, bz, 0.04, 1.58, 2.48, 0x8a6a4a); } const board = boardMesh(K, S9, hw - 0.046, 1.67, 1.6, -Math.PI / 2, 2.4, 1.5);
     K.sign(S9, en() ? 'Wear a hat and wash your hands' : '위생모를 쓰고 손을 씻어요', -hw + 0.02, 2.2, 1.2, Math.PI / 2, 2.6, 0.3, { bg: '#5a7a8a', fr: 0xf6f4ee });
     K.wwin(S9, 'F', -3.6, 0.9, 1.8, 1.3, { sun: true }); K.wwin(S9, 'F', 3.6, 0.9, 1.8, 1.3, { sun: true }); for (const x of [-4, 0, 4]) for (const z of [-2.4, 1.4]) K.panelL(S9, x, z);
     return { S: S9, W, D, H, seats, items: ['긴 줄(컨베이어)', '일하는 자리 다섯 · 위생모 쓴 직원(이름 없음)', '자리 번호 판', '깔판(오늘 만든 상자)', '오늘 만든 것 판'], board, prod, line: kd,
-      extra: [{ k: 'bd:line', stand: [0, 0, zc + 1.45], r: 1.3, label: '🏭 ' + L(TIP.factory) }, { k: 'bd:board', stand: [hw - 1.0, 0, 1.6], r: 1.2, label: '📋 ' + (en() ? 'Read the board' : '오늘 만든 것 판 보기') }], cam: { d: 3.8, p: 0.55 } }; }
+      extra: [{ k: 'bd:line', stand: [0, 0, zc + 1.45], r: 1.3, label: '🏭 ' + L(TIP.factory) }, { k: 'bd:board', stand: [hw - 1.0, 0, 1.6], r: 1.2, label: '📋 ' + (en() ? 'Read the board' : '오늘 만든 것 판 보기') }], spz: 3.4, cam: { d: 3.2, p: innerHeight > innerWidth ? 0.22 : 0.35 } }; }   /* 세로 화면 = 영화관과 같은 까닭으로 조금 낮게 */
   // 노인정·경로당(10×8): 뒤 = '땅이름 이야기' 판 · 그 곁에 이야기해 주는 어르신(이름 없음 · 흰머리 · 지팡이) · 오른쪽 = 고누 탁자(앉은 어르신) · 왼벽 = 쉬는 의자
   function roomElder(at, K, name) { const W = 10, D = 8, H = 3.2, hw = W / 2, hd = D / 2, [ox, oy, oz] = at, seats = [], sE = [], dummy = [], br = 0x9a6a3c;
     const S9 = K.shell(at, W, D, H, { wall: 0xf3ead8, wains: br, winY: [], noLights: true }), P = S9.put; S9.ac = K.cs(0x7a5a3a);

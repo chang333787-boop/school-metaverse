@@ -3,7 +3,7 @@
 //   아이 집(유은·하람·예지·지원) = 그 집 겉모습과 어울리는 방(교사 10-15 'RPG 안 따라가도 된다') — 카드·패들렛에 적힌 것(자료 room = 🙋)을 먼저 · 나머지 ✨(ROOM_ITEMS = 기록 화면 목록) · 모르는 모습 = 기본 방
 //   아쿠아리움(🙋 33 유은) · 키즈 카페(🙋 28.1 지원) · 보드게임 카페(카드 1층 음식점 · 2층 상점가 · 3층 보드게임) = 사진·카드대로 + 이름 없는 손님 몇(새 실제 인물 X)
 //   새 조명 없음(빛 = 빛나는 판) · 재질 둘(조명 받는 것 · 빛나는 것) · 매 프레임 일 = 물고기 떼 돌기뿐 · 앉기(E) = 좌석(seat) 앉기 · 미끄럼(E) = 미끄럼 타기(main.js 기본 행동)
-import { LIB_CATS } from './town_places.js?v=2';   // LIVING-1 도서관 책장 분류(사서 체험과 같은 표)
+import { LIB_CATS } from './town_places.js?v=3';   // LIVING-1 도서관 책장 분류(사서 체험과 같은 표)
 export const INDOOR_CS = 0.8;
 const WALL_IDS = { d_i4: 1, in_w_curtain: 1, in_w_window2: 1, in_w_clock: 1, in_w_board: 1, in_w_shelf: 1, in_w_bookshelf: 1 };   // RPG 벽걸이(뒷벽)
 const SIZE = { d_i5: [2, 1], d_i6: [1, 2], d_i7: [2, 1], d_i8: [3, 1], d_i9: [2, 2], d_i10: [2, 2], d_i11: [3, 1], d_i12: [2, 2], d_i13: [1, 2], d_i14: [1, 2], d_i15: [2, 2], d_i16: [3, 2], in_w_window2: [2, 1], in_w_board: [2, 1], in_table_long: [4, 2], deco_bookshelf: [2, 2] };

@@ -21,10 +21,10 @@ const KIND = {
   park: { ko: '공원', en: 'Park', sym: '♣', emo: '🌳', g: 'nat' }, pitch: { ko: '운동장', en: 'Sports Field', sym: '⚽', emo: '⚽', g: 'pub' },   // 운동장 = 땅 위 시설(블록 = 관람석) green: { ko: '자연', en: 'Nature', sym: '♣', emo: '🌳', g: 'nat' },
 };
 import { createYards, YARD_SIZE, YARD_CS, YARD_NORTH, extentOf, DEFAULT_YARD } from './town_yard.js?v=7';   // YARD-1 아이 집 마당 = 우리반RPG 꾸미기(10-15)
-import { createIndoor, ROOM_ITEMS, kidItem } from './town_indoor.js?v=16';
+import { createIndoor, ROOM_ITEMS, kidItem } from './town_indoor.js?v=17';
 import { placeParked, TRUCK } from './town_fire.js?v=1';   // FIRE-1 소방차(인스턴스 한 벌 · 출동용 makeFireTruck은 생활 팀이 town_fire.js에서 바로 부름)
-import { createJobs, JOBK } from './town_jobs.js?v=14';
-import { createBake } from './town_bake.js?v=1'; import { createTable, GAMES as TBG, LV_NAME as TBLV } from './town_table.js?v=6';   /* TABLE-1 판 놀이 틀(보드게임 카페 · 사방치기) */   // BAKE-1 🍞 제빵(빵집 화덕 앞 · 반죽 치대기 + 부풀 자리 → 판 밖 발효 → 굽기)   // LIVING-1 장소 카드 · 마을 여권 · 직업 체험 셋(소방관·집배원·사서)
+import { createJobs, JOBK } from './town_jobs.js?v=15';
+import { createBake } from './town_bake.js?v=1'; import { createTable, GAMES as TBG, LV_NAME as TBLV } from './town_table.js?v=7';   /* TABLE-1 판 놀이 틀(보드게임 카페 · 사방치기) */   // BAKE-1 🍞 제빵(빵집 화덕 앞 · 반죽 치대기 + 부풀 자리 → 판 밖 발효 → 굽기)   // LIVING-1 장소 카드 · 마을 여권 · 직업 체험 셋(소방관·집배원·사서)
 import { createGame, ITEMS, itemName, DISHES, shopOf, won, RECIPES, CAL_LEN, SHOPS, RW_GEN } from './town_game.js?v=42';
 import { createStory, CHAPTERS, VEG, parkSim, parkSlot } from './town_story.js?v=24';
 import { attachLook, lookHTML, bindLook } from '../js/look.js?v=1'; import { buildKid } from '../js/kid.js?v=5';   // LOOK-1 내 모습(학교와 같은 모듈 — 같은 주소라 한 벌) · 미리보기 아이
@@ -42,18 +42,18 @@ import { createMini, mgKind, gradeOf, taskOf, kitAfter, kitUpText, kitGuests, ki
 import { createRank, bikeLook, bikeDeco, RCOL } from './town_rank.js?v=4';   // RANK-1 솜씨 승급 미션(3·6·9레벨 · 해 보기 · 막지 않음 · 배지·칭호·자전거 꾸미기)
 import { createBeach } from './town_beach.js?v=2';   // SEA-1 해수욕장 놀이(누워 뜨기 · 모래성 · 바닷바람 연)
 import { createRF, RF_GAMES } from './town_rf.js?v=4';   // RIVER-1·FIELD-1 강·들에서 할 일 넷
-import { createQuiz } from './town_quiz.js?v=11';   // QUIZ-1 배움 별 + 보너스 문제(간격 반복)
-import { createRec } from './town_rec.js?v=10'; import { teacherPin } from '../js/lobby.js?v=19';   // REC-0 학급 기록 준비(이 기기 안 · 선생님 비밀번호 창은 main.js와 같은 ?v= 한 벌)
+import { createQuiz } from './town_quiz.js?v=12';   // QUIZ-1 배움 별 + 보너스 문제(간격 반복)
+import { createRec } from './town_rec.js?v=11'; import { teacherPin } from '../js/lobby.js?v=19';   // REC-0 학급 기록 준비(이 기기 안 · 선생님 비밀번호 창은 main.js와 같은 ?v= 한 벌)
 import { createBoatX } from './town_boat.js?v=3'; import { createPollen } from './town_pollen.js?v=1';   // BOAT-2 노 젓기·바닷길 부표·밤 등대 · POLLEN-1 꽃가루받이
-import { createRes, wildOf } from './town_res.js?v=2'; import { createShore, SHORE as SHOREL, tideLvl, isLow, lowAt, hm as hm9 } from './town_shore.js?v=4'; import { createXp } from './town_xp.js?v=4';   /* EXPLORE-1 판 밖 탐험 땅(층층골·까망봉) */ import { newsMake, GIFT_OF, NB_RANK } from './town_news.js?v=9';   // RES-1 숲 바닥 줍기(자원 자리 틀) · SHORE-1 갯벌 물때·바다 친구   // PLAY-2 일꾼 곁 거들기 놀이 틀 다섯(막대·줄 버티기·익은 것 고르기·장단·벌 피해서)
+import { createRes, wildOf } from './town_res.js?v=2'; import { createShore, SHORE as SHOREL, tideLvl, isLow, lowAt, hm as hm9 } from './town_shore.js?v=5'; import { createXp } from './town_xp.js?v=5';   /* EXPLORE-1 판 밖 탐험 땅(층층골·까망봉) */ import { newsMake, GIFT_OF, NB_RANK } from './town_news.js?v=9';   // RES-1 숲 바닥 줍기(자원 자리 틀) · SHORE-1 갯벌 물때·바다 친구   // PLAY-2 일꾼 곁 거들기 놀이 틀 다섯(막대·줄 버티기·익은 것 고르기·장단·벌 피해서)
 import { createTreasure } from './town_treasure.js?v=5';   // TREASURE-1 🗺 보물 지도(기호·방위·축척·등고선 · 하루 하나)
 import { planBusLines, makeBusLines, busPlan, busLeg } from './town_bus.js?v=1';   // BUSLINE-1 마을버스 번호 노선(학교 앞 환승 · 노선 위에만 정류장)
-import { createEmerg } from './town_emerg.js?v=4'; import { createFix } from './town_fix.js?v=1'; import { createBldg, bldgKind } from './town_bldg.js?v=5';   /* BLDG-1 경찰서·병원·보호센터 안 할 일 */   /* FIX-1 동네 고칠 곳 신고(행정복지센터 → 다음 날 고침) */   /* EMERG-1 긴급 출동 엔진(112 길 잃은 어린이 · 119 넘어진 이웃 · 불의 때 — docs/systems/town_emergency.md) */ import { createRoad } from './town_road.js?v=4'; import { createAsk } from './town_ask.js?v=1';   // WAKE-1b 길 위 사건(자전거 고리 코스 · 길에서 도움 요청 · 바람에 날아온 지도 조각 — docs/systems/town_road.md)
+import { createEmerg } from './town_emerg.js?v=5'; import { createFix } from './town_fix.js?v=1'; import { createBldg, bldgKind } from './town_bldg.js?v=6';   /* BLDG-1 경찰서·병원·보호센터 안 할 일 */   /* FIX-1 동네 고칠 곳 신고(행정복지센터 → 다음 날 고침) */   /* EMERG-1 긴급 출동 엔진(112 길 잃은 어린이 · 119 넘어진 이웃 · 불의 때 — docs/systems/town_emergency.md) */ import { createRoad } from './town_road.js?v=4'; import { createAsk } from './town_ask.js?v=1';   // WAKE-1b 길 위 사건(자전거 고리 코스 · 길에서 도움 요청 · 바람에 날아온 지도 조각 — docs/systems/town_road.md)
 import { createJanggu } from './town_janggu.js?v=2';   /* JANGGU-1 장구 장단 놀이(짜기와 주고받기 · 버스킹 1차 — docs/systems/town_jobs2.md) */
 import { createChem } from './town_chem.js?v=11'; import { createCellKit } from './town_cellkit.js?v=3';   /* CELLKIT-1 칸 키트(칸마다 할 일 셋 이상 — docs/systems/town_cells.md) */ import { createTools, FRESH as FRESHF } from './town_tools.js?v=9'; import { createSpend } from './town_spend.js?v=1'; import { createCozy } from './town_cozy.js?v=2'; import { createRoutine } from './town_routine.js?v=3';   /* ROUTINE-1 이웃 하루 일과 · 먹이·물 연쇄 */   /* COZY-1 내 집 꾸미기 · 선물 귀띔 */   /* SPEND-1·SEED-1 돈 쓸 곳(넓은 꼭지 · 튼튼한 씨앗 · 10-24 중심 고리) */   /* TOOL-1 도구 띠(물뿌리개·삽·낚싯대·돋보기·빗자루 · docs/systems/town_tools.md) */   // CHEM-1 화학 규칙(요소 × 물건 · 규칙 도감 · docs/systems/town_chem.md)
 import { createWild, WILD as WILDL } from './town_wild.js?v=9'; import { createPress } from './town_photo.js?v=4'; import { createNb, DEED_TEV, fillT as nbFillT } from './town_nb.js?v=2';   /* NB-1·2 기억하는 이웃(말투 넷 · 행적과 소식) */   // WILD-1 야생동물(서식지·계절·때 · 다가가면 달아남 · E 살펴보기 → 도감)
 import { simFill, supOf, demOf, mkK, lumpsOf, whyOf } from './town_market.js?v=1';   /* MKT-2 장터 값(공급 × 수요 · 바구니 · 칠판 · 상인 까닭) */
-import { createMusic } from './town_music.js?v=4'; import { createFeel } from './town_feel.js?v=4'; import { createSurp } from './town_surp.js?v=2'; import { createSki } from './town_ski.js?v=1';   /* SLALOM-1 스키 기문 코스 */   /* SURP-1 높은 곳 보기 + 숨은 작은 놀람 */   /* FEEL-1 첫 30분 동작 다섯 손맛(소리 + 작은 연출) */   // WAKE-1a 🎵 배경 음악(곡 여섯 · WebAudio 합성 · docs/systems/town_music.md)
+import { createMusic } from './town_music.js?v=4'; import { createFeel } from './town_feel.js?v=4'; import { createSurp } from './town_surp.js?v=3'; import { createSki } from './town_ski.js?v=1';   /* SLALOM-1 스키 기문 코스 */   /* SURP-1 높은 곳 보기 + 숨은 작은 놀람 */   /* FEEL-1 첫 30분 동작 다섯 손맛(소리 + 작은 연출) */   // WAKE-1a 🎵 배경 음악(곡 여섯 · WebAudio 합성 · docs/systems/town_music.md)
 import { healCurves, litFrac, ambLayers, AMB_LAYERS, ANIMAL_JOB, jobName, cardName, cardThanks, cardRumor, cardColor, CARD_DAY, CARD_KEEP, CARD_STAMP } from './town_heal.js?v=1';   // HEAL-1 힐링 묶음(불빛 곡선 · 소리 층 · 엽서 글 — docs/systems/town_heal.md)
 import { createSubway } from './town_subway.js?v=3';   // SUBWAY-1 승강장·열차·터널
 import { createLook, SKYF as SKYF9 } from './town_look.js?v=4';

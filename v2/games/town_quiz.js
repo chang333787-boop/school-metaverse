@@ -8,7 +8,7 @@
 //   하지 않는 것(학급 원칙 · 아이 건강): 연속 출석 벌 · 반 순위 · 뽑기 · 불안 알림 — 이 기기에서 나만 · 매 프레임 일 0(마을 1초 칸에서 sec 하나)
 //   문제 = 4학년 눈높이 · 사실만(게임이 보여 준 사실 · 마을 설정은 '우리 마을에서는') · 셈 X(교사 10-17 '수학 앱이 아니니까' — 수는 읽기만) · 영어 짝
 import { lv } from './town_skill.js?v=5';
-import { lowsOf, hm } from './town_shore.js?v=4';
+import { lowsOf, hm } from './town_shore.js?v=5';
 export const QUIZ_V = 1;
 const T2 = (ko, en) => [ko, en];
 // 갈래: 이름 · 맞히면 늘 솜씨 · 비었을 때 귀띔

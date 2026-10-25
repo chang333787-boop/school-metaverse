@@ -13,7 +13,7 @@
 //     섬에서 잠기면 = 「다음 썰물까지 기다리기」(같은 날만 · 함께하기 방 X) 또는 「배 부르기」(town_boat 구조 배) · 헤엄 X · 물에 빠짐 X
 //     섬 = 돌탑에 내 돌 하나 얹기(S.xp.cairn = 날 · 다음에 와도 보임) · 바위 웅덩이(물이 빠졌을 때만 · town_shore 바다 친구 표) · 바닷새 바위 10m 안 X
 //     저장 S.xp.cairn · il(섬에 닿은 날) · ib(걸어서 돌아온 날) · 보상 = 솜씨만(rwCheck 꼬리표 'xp:isle') · 그리기 = 섬 판 1 + 바닷길 판 1(+ 내 돌 1 · 구조 배는 그 동안만)
-import { tideLvl, lowAt, lowsOf, LOW_W, TIDE_P, hm, shoreAt, drawShore } from './town_shore.js?v=4';
+import { tideLvl, lowAt, lowsOf, LOW_W, TIDE_P, hm, shoreAt, drawShore } from './town_shore.js?v=5';
 export const XP_V = 1;
 const T2 = (a, b) => [a, b];
 // 띠(위 → 아래) · lo = 이 띠가 시작하는 높이(골 바닥 쪽 판 밖 땅 위 m)

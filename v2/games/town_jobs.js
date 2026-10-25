@@ -3,7 +3,7 @@
 //   🚒 소방관 = 마을 사건(하루 한 번쯤 · 고름) → 소방차 타고 가는 모습(건너뛰기 됨) → 물줄기 겨누기 → 사다리 꾹(고양이) → 주민 안내(몸 있는 이웃) → 소화기 순서 · 불꽃·연기 = 사건 동안만 인스턴스(새 Light X)
 //   📮 집배원 = 편지 다섯 통 → 주소(칸 이름 + 받는 곳) 읽고 지도 판에서 칸 고르기 → 빨간 선 따라 배달 · 📚 사서 = 돌아온 책을 분류 번호 책장으로 끌어 꽂기 → 손님 부탁(책장 찾아가기)
 //   제복 = 모자·윗옷 색만(LOOK 정점 색 · 저장 X · 끝나면 되돌림) · 무서운 장면·다치는 사람 X · 셈 X · 이모지는 창 제목 앞에 하나
-import { PG, PG_ORDER, JOBS, placeInfo, jobSvg, jobRow, photoKey, photoHtml, PHOTO_CSS, LIB_CATS, LIB_BOOKS, LIB_ASKS } from './town_places.js?v=2';
+import { PG, PG_ORDER, JOBS, placeInfo, jobSvg, jobRow, photoKey, photoHtml, PHOTO_CSS, LIB_CATS, LIB_BOOKS, LIB_ASKS } from './town_places.js?v=3';
 import { getLook, setLook } from '../js/look.js?v=1';
 import { makeFireTruck, FIRE_STATIONS, parked } from './town_fire.js?v=1';   // 출동 소방차 = 아트 팀 FIRE-1(앞 = +x · 길이 7.2 · 폭 2.4) · 소방서 앞에 서 있던 차는 출동하는 동안 숨김
 export const JOBS_V = 1;
