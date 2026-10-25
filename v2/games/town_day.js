@@ -29,6 +29,7 @@ const CSS = `.twn-day{cursor:pointer;position:fixed;left:10px;top:132px;z-index:
 //     farm() { at, plots } | null · pots() [] · home() [x, z] | null · facDest(ln, door) · ladRows() [{ key, name, best }]
 //   typh(d1) 태풍 판 한 줄 | null(TYPH-1 · 없어도 됨) · bagWait(d0, pre) · bagDue(d) · bagKey()(BAG-2 town_bag.js · 없어도 됨)
 //   pathRow(d) 하루 마무리 '나의 길' 줄 [k, ic, 제목, 글] | null · pathWait() 내일 기다리는 표지판 { ic, s, t, p } | null(PATH-1 · 없어도 됨)
+//   bunRow(d) '오늘 바뀐 것' 꾸러미로 바뀐 마을 줄 | null · bunWait(d0, pre) 내일 아침 바뀌는 곳 { ic, s, t, p } | null(BUNDLE-2 · 없어도 됨)
 //   날: wx() 오늘 날씨 · fc(i) 예보(오늘 = 0) · auto() 예보대로 · jang(d) · season(d) · seaName(s) [ko, en]
 export function createDay(A) {
   const en = () => A.lang() === 'en', L = t => (Array.isArray(t) ? t[en() ? 1 : 0] : String(t)), esc = t => A.esc(t);
@@ -93,6 +94,7 @@ export function createDay(A) {
     if (sn) { const cur = snapNow(), up = SK_ORDER.filter(k => (cur.sk[k] | 0) > (sn.sk[k] | 0)).map(k => SKILLS[k].icon + ' ' + L(SKILLS[k].t) + ' ' + cur.sk[k]); if (up.length) out.push(['sk', '🌟', e ? 'Skill level up' : '솜씨 레벨', esc(up.join(', '))]);
       let rows = []; try { rows = A.ladRows() || []; } catch (x) { rows = []; } const nb = rows.filter(r => r.best && (sn.bs || {})[r.key] !== r.best).map(r => r.name); if (nb.length) out.push(['best', '🏅', e ? 'New personal best' : '새 내 최고', esc(nb.join(', '))]); }
     { const r = A.pathRow && A.pathRow(d); if (r) out.push(r); }   /* PATH-1 오늘 나의 길 걸음(town_path.js) */
+    { const r = A.bunRow && A.bunRow(d); if (r) out.push(r); }   /* BUNDLE-2 꾸러미로 바뀐 마을(town_bundle2.js) */
     return out; }
   //   내일 기다리는 것: 내가 한 일 → 세상 일 · 셋까지 · pre = 잠들기 전(내일 = d + 1) · 아니면 이미 그 아침(자정 잠)
   function waits(T, pre) { const s = S(), e = en(), d0 = T.day | 0, d1 = d0 + 1, fi = pre ? 1 : 0, out = [], add = (k, ic, s9, t, p) => out.push({ k, ic, s: s9, t, p: p || null, mine: 0 });
@@ -108,6 +110,7 @@ export function createDay(A) {
     if (T.nb && T.nb.d === d0 && hm9 && A.giftOk(T.nb)) add('gift', '🎁', T2('답례', 'Thank-you gift'), T2('오늘 마음을 나눈 이웃이 우리 집 문 앞에 답례를 둬요', 'The neighbour you were kind to leaves a thank-you gift at our door'), plc('🏠', e ? 'our house' : '우리 집', hm9));
     { const f = (s.bldg || {}).factory; if (f && f.made === d0) { const to = A.facDest(f.ln, f.door || null), ln = f.ln === 'jelly' ? T2('젤리 케이크', 'jelly cake') : T2('감자', 'potato'); if (to) add('fac', '🚚', T2('공장 상자', 'Factory boxes'), T2('오늘 공장에서 만든 ' + ln[0] + ' 상자가 ' + to.name + '에 들어와요', 'The ' + ln[1] + ' boxes made at the factory today arrive at ' + to.name), plc('🚚', to.name, to.at)); } }
     { const q = s.fix && s.fix.cur; if (q && q.rep === d0) add('fix', '🔧', T2('고친 자리', 'Repair'), T2('신고한 ' + (q.cell ? q.cell + ' 칸 ' : '') + '보도블록이 고쳐져요', 'The paving you reported ' + (q.cell ? 'in ' + q.cell + ' ' : '') + 'gets fixed'), plc('🔧', q.cell || '', [q.x, q.z])); }
+    { const q = A.bunWait && A.bunWait(d0, pre); if (q) add('bun2', q.ic, q.s, q.t, q.p); }   /* BUNDLE-2 오늘 채운 꾸러미 = 내일 아침 바뀌는 곳 */
     { const q = A.pathWait && A.pathWait(); if (q) add('path', q.ic, q.s, q.t, q.p); }   /* PATH-1 다음 표지판까지 얼마 안 남은 길(town_path.js) */
     { const c = A.caseWait && A.caseWait(d0, pre); if (c) add('case', c.ic, c.s, c.t, c.p); }   /* CASE-1 사건 수첩(town_case.js) — 기한·흙막이 */
     { const c = A.bagWait && A.bagWait(d0, pre); if (c) add(c.k, c.ic, c.s, c.t, c.p); }   /* BAG-2 도시락 챙기기(어제 못 닿은 체력 목표가 한 칸 위) */

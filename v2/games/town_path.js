@@ -32,7 +32,7 @@ export const PATHS = {
   look: { ic: '🔍', t: T2('관찰가', 'Observer'), how: T2('곤충·물고기·바다 친구·별·동물을 도감에, 화석 찾기, 실험 규칙 알아내기, 박물관 옛 물건 알아보기', 'Insects, fish, shore life, stars and animals in the guide, fossils, experiment rules, old things at the museum'),
     signs: [{ need: 4, at: 'museum', pic: '🏺', t: T2('박물관에 내가 찾은 것 진열장이 생겨요', 'A showcase of my finds opens at the museum'), past: T2('박물관에 내가 찾은 것 진열장이 생겼어요', 'The museum has a showcase of my finds'), go: T2('박물관 가기', 'Go to the museum') },
       { need: 10, at: 'museum', pic: '📋', t: T2('학예사가 내 관찰 기록을 판에 붙이고 들려줘요', 'The curator pins up my observations and talks about them'), past: T2('학예사가 내 관찰 기록을 판에 붙였어요', 'The curator pinned up my observations'), go: T2('박물관 가기', 'Go to the museum') }] },
-  nb: { ic: '🤝', t: T2('이웃', 'Neighbour'), how: T2('일꾼 곁에서 거들어 마음 쌓기, 요리 나눠 주기, 선물하기', 'Help workers and grow hearts, share dishes, give presents'),
+  nb: { ic: '🤝', t: T2('이웃', 'Neighbour'), how: T2('일꾼 곁에서 거들어 마음 쌓기, 요리 나눠 주기, 선물하기, 꾸러미를 채워 마을 바꾸기', 'Help workers and grow hearts, share dishes, give presents, fill bundles to change the town'),
     signs: [{ need: 3, at: 'pav', pic: '🟫', t: T2('정자에 내 방석이 놓여요', 'My cushion is set out at the pavilion'), past: T2('정자에 내 방석이 놓였어요', 'My cushion is at the pavilion'), go: T2('정자 가기', 'Go to the pavilion') },
       { need: 8, at: 'pav', pic: '🍲', t: T2('정자 앞에 잔치 상이 차려지고 초대장이 와요', 'A feast table and an invitation appear at the pavilion'), past: T2('정자 앞에 잔치 상이 차려졌어요', 'A feast table is set at the pavilion'), go: T2('정자 가기', 'Go to the pavilion') }] },
   help: { ic: '🚨', t: T2('마을 도우미', 'Town helper'), how: T2('긴급 출동, 고칠 곳 신고, 사건 수첩 풀기, 태풍 준비, 경찰서 신고 연습과 응급 처치, 보호센터 밥 주기', 'Emergencies, reporting repairs, solving cases, typhoon prep, police-call practice and first aid, feeding shelter animals'),
@@ -40,7 +40,7 @@ export const PATHS = {
       { need: 8, at: 'hall', pic: '👕', t: T2('게시판 옆에 도우미 조끼가 걸려요(입어 볼 수 있어요)', 'A helper vest hangs by the board (you can wear it)'), past: T2('게시판 옆에 도우미 조끼가 걸렸어요', 'A helper vest hangs by the board'), go: T2('조끼 보러 가기', 'See the vest') }] },
   rec: { ic: '📷', t: T2('기록가', 'Recorder'), how: T2('사진 기사 내기, 요리 사진, 엽서, 노인정에서 옛 땅이름 듣기', 'Photo stories, dish photos, postcards, old place names at the seniors’ hall'),
     signs: [{ need: 3, at: 'post', pic: '📰', t: T2('우체국 벽 마을 소식지에 내 기록이 실려요', 'My records appear in the town newsletter at the post office'), past: T2('우체국 벽 마을 소식지에 내 기록이 실렸어요', 'My records are in the newsletter at the post office'), go: T2('소식지 보러 가기', 'See the newsletter') },
-      { need: 8, at: 'elder', pic: '🪧', t: T2('노인정 앞에 내가 들은 옛 땅이름 팻말이 서요', 'A sign of the old place names I heard stands by the seniors’ hall'), past: T2('노인정 앞에 내가 들은 땅이름 팻말이 섰어요', 'My place-name sign stands by the seniors’ hall'), go: T2('팻말 보러 가기', 'See the sign') }] },
+      { need: 8, at: 'elder', pic: '📌', t: T2('노인정 앞에 내가 들은 옛 땅이름 팻말이 서요', 'A sign of the old place names I heard stands by the seniors’ hall'), past: T2('노인정 앞에 내가 들은 땅이름 팻말이 섰어요', 'My place-name sign stands by the seniors’ hall'), go: T2('팻말 보러 가기', 'See the sign') }] },
   chal: { ic: '🏅', t: T2('도전가', 'Challenger'), how: T2('일 놀이 도전 칸 오르기, 판 놀이, 스키 기문 코스, 자전거 고리 코스, 길찾기 시험, 도전 모드로 찾아가기(하루 한 번)', 'Climb work-game steps, board games, ski gate courses, the bike ring course, orienteering, finding places in challenge mode (once a day)'),
     signs: [{ need: 3, at: 'stall', pic: '📋', t: T2('장터에 내 최고 기록판이 서요', 'My best-records board stands at the market'), past: T2('장터에 내 최고 기록판이 섰어요', 'My best-records board stands at the market'), go: T2('기록판 보러 가기', 'See the board') },
       { need: 8, at: 'ski', pic: '⛷', t: T2('스키장 아래에 내 최고 기록판이 서요', 'My best-runs board stands at the bottom of the ski slope'), past: T2('스키장 아래에 내 최고 기록판이 섰어요', 'My ski board stands at the bottom of the slope'), go: T2('스키 기록판 보러 가기', 'See the ski board') }] },
@@ -53,7 +53,7 @@ export function stepsOf(S) { S = S || {}; const xp = S.xp && typeof S.xp === 'ob
   const chem = S.chem && typeof S.chem === 'object' ? S.chem : {}, don = P.don && typeof P.don === 'object' ? P.don : {};
   const look = keys(S.dex).filter(k => /^(bug|fish|shore|star|wild):/.test(k)).length + keys(xp.fos).length + (xp.q ? 1 : 0) + keys(chem.found).length + keys((bd.museum || {}).got).length + (has(S, '🔭') ? 1 : 0) + Math.min(3, keys(don).reduce((a, k) => a + (don[k] | 0), 0));
   const H = S.hearts && typeof S.hearts === 'object' ? S.hearts : {};
-  const nb = keys(H).reduce((a, k) => a + Math.min(5, ((H[k] || 0) / 3) | 0), 0) + Math.min(5, S.shared | 0) + Math.min(5, arr(S.deeds).filter(q => q && q.t === 'gift').length);
+  const nb = keys(H).reduce((a, k) => a + Math.min(5, ((H[k] || 0) / 3) | 0), 0) + Math.min(5, S.shared | 0) + Math.min(5, arr(S.deeds).filter(q => q && q.t === 'gift').length) + keys(S.bun2 && S.bun2.on).length;   /* BUNDLE-2 꾸러미로 바뀐 곳마다 한 걸음 */
   const em = S.emerg && typeof S.emerg === 'object' ? S.emerg : {}, fx = S.fix && typeof S.fix === 'object' ? S.fix : {}, cs = S.case && typeof S.case === 'object' ? S.case : {}, ty = S.typh && typeof S.typh === 'object' ? S.typh : {};
   const help = arr(em.log).filter(q => q && q.ok).length * 2 + fixN(fx) + keys(cs.done).length * 2 + arr(ty.reqs).filter(q => q && q.st === 'done').length
     + ((bd.police || {}).d112 ? 1 : 0) + ((bd.clinic || {}).dfa ? 1 : 0) + Math.min(3, (bd.shelter || {}).n | 0);
@@ -97,10 +97,10 @@ export function createPath(A) {
   const fwRy = fw => Math.atan2(fw[0], fw[1]);
   /* 자리 고르기: 기준점 둘레 반지름 r0~r0+3 · 16 방향 · okSpot */
   function near(cx, cz, r0, pref) { const A9 = pref != null ? [pref, pref + 0.4, pref - 0.4, pref + 0.8, pref - 0.8] : []; for (let i = 0; i < 16; i++) A9.push(i / 16 * Math.PI * 2);
-    for (const r of [r0, r0 + 1.5, r0 + 3]) for (const a of A9) { const x = cx + Math.sin(a) * r, z = cz + Math.cos(a) * r; if (A.okSpot(x, z)) return [x, z]; } return null; }
+    for (const r of [r0, r0 + 1.5, r0 + 3]) for (const a of A9) { const x = cx + Math.sin(a) * r, z = cz + Math.cos(a) * r; if (A.okSpot(x, z) && !(A.avoid && A.avoid(x, z))) return [x, z]; } return null; }   /* avoid = 꾸러미로 생긴 물건 곁(BUNDLE-2) */
   /* 건물 문 옆(옆으로 3m · 문 앞 0.6m) · 판은 바깥을 봄 */
   function byDoor(B9, side) { if (!B9 || !B9.door) return null; const fw = B9.fw || [0, 1], sx = -fw[1], sz = fw[0];
-    for (const s of [side, -side, side * 1.6, -side * 1.6, side * 2.3]) { const x = B9.door[0] + sx * 3 * s - fw[0] * 0.6, z = B9.door[1] + sz * 3 * s - fw[1] * 0.6; if (A.okSpot(x, z)) return { x, z, ry: fwRy(fw) }; }
+    for (const s of [side, -side, side * 1.6, -side * 1.6, side * 2.3]) { const x = B9.door[0] + sx * 3 * s - fw[0] * 0.6, z = B9.door[1] + sz * 3 * s - fw[1] * 0.6; if (A.okSpot(x, z) && !(A.avoid && A.avoid(x, z))) return { x, z, ry: fwRy(fw) }; }
     return { x: B9.door[0] + sx * 3 * side, z: B9.door[1] + sz * 3 * side, ry: fwRy(fw) }; }
   const faceTo = (x, z, tx, tz) => Math.atan2(tx - x, tz - z);
 
@@ -226,10 +226,11 @@ export function createPath(A) {
   function open() { const e = en(), s = S(), st = steps(true);
     const rows = P_ORDER.map(k => { const R = PATHS[k], got = s.got[k] | 0, sg = R.signs[got], R9 = reachedOf(k, st[k]);
       const nx = sg ? (got < R9 ? (e ? 'You reached the next sign. It opens on a new day: ' : '다음 표지판에 닿았어요. 새 하루에 열려요: ') + L(sg.t) : (e ? 'Next sign: ' : '다음 표지판: ') + L(sg.t)) : (e ? 'You passed both signs on this path. They stay in town.' : '이 길의 표지판 둘을 다 지났어요. 바뀐 것은 마을에 그대로 있어요.');
-      const past = R.signs.slice(0, got).map((q, i) => '<button class="sub" data-pk="' + k + '" data-pi="' + i + '">' + esc(q.pic + ' ' + L(q.past)) + ' 🧭</button>').join('');
+      const past = R.signs.slice(0, got).map((q, i) => '<button class="sub" data-pk="' + k + '" data-pi="' + i + '">' + esc(q.pic + ' ' + L(q.past)) + ' 🧭</button>').join('')
+        + (k === 'nb' && A.tales ? A.tales().map(q => '<button class="sub" data-tale="' + esc(q.k) + '">' + esc('💬 ' + q.who + (e ? '’s story' : '의 사연')) + '</button>').join('') : '');   /* BUNDLE-2 들은 이웃 사연(다시 읽기) */
       return '<div class="pth-row" style="--pc:' + PCOL[k] + '" data-path="' + k + '"><h4>' + R.ic + ' ' + esc(L(R.t)) + (e ? ' path' : ' 길') + '</h4>' + pathSvg(k, st[k]) + '<div class="pth-nx">' + esc(nx) + '</div><div class="pth-how">' + esc((e ? 'Steps come from: ' : '걸음이 되는 것: ') + L(R.how)) + '</div>' + (past ? '<div class="pth-past">' + past + '</div>' : '') + '</div>'; }).join('');
     const h = '<h3>🛤 ' + (e ? 'My paths' : '나의 길') + '</h3><div class="sm">' + esc(e ? 'Each path grows from what you do in town. Pass a sign and something in town changes.' : '마을에서 한 일이 길마다 발자국이 돼요. 표지판을 지나면 마을에 무언가 생겨요.') + '</div>' + rows + '<div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>';
-    const W = A.openP(h, false, 'path'); W.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.pk) { const p = where(b.dataset.pk, +b.dataset.pi); A.closeP(); if (p) A.route(p); return; } if (b.dataset.a === 'x') A.closeP(); }; log('open'); return W; }
+    const W = A.openP(h, false, 'path'); W.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.pk) { const p = where(b.dataset.pk, +b.dataset.pi); A.closeP(); if (p) A.route(p); return; } if (b.dataset.tale && A.tale) { A.tale(b.dataset.tale); return; } if (b.dataset.a === 'x') A.closeP(); }; log('open'); return W; }
 
   // ───────── 하루 마무리 손잡이(town_day.js) ─────────
   function todaySteps(d) { const s = S(), st = steps(true), ds = s.ds && s.ds.d === d ? s.ds : s.ds && s.ds.prev && s.ds.prev.d === d ? s.ds.prev : null; if (!ds) return []; return P_ORDER.map(k => [k, Math.max(0, st[k] - (ds.s[k] | 0))]).filter(q => q[1] > 0).sort((a, b) => b[1] - a[1]); }
