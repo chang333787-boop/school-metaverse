@@ -13,14 +13,15 @@ export const GIFT_OF = { shiitake: '🍄', cabbage: '🥬', potato: '🥔', lumb
 // 어제 이웃과 한 일 무게(하나만 남김): 하트 단계가 오름 > 요리를 받음 > 선물을 받음
 export const NB_RANK = { like: 4, up: 3, dish: 2, gift: 1 };   /* COZY-1: 좋아하는 것을 받은 이웃 = 다음 아침 답례가 먼저 */
 
-/* c = { en, day, S(GAME.S), pots, farm, plotState, CROPS, crop(e), item(e), rainY, yday, gift:{e,who}|null, pol, fruitAt, sapY, jang:{on,left,at}, wx:{ic,nm}, seaNext:string|null, board:[이름…], twig, mush, tide:{t,at}|null, wild:[{t,place,at}], farmAt, nbAt, nWk, card:{ko,en,at}|null, surp:{ko,en,at}|null, fx:[{k,t,at,two}] } */
+/* c = { en, day, S(GAME.S), pots, farm, plotState, CROPS, crop(e), item(e), rainY, yday, gift:{e,who}|null, pol, fruitAt, sapY, jang:{on,left,at}, wx:{ic,nm}, seaNext:string|null, board:[이름…], twig, mush, tide:{t,at}|null, wild:[{t,place,at}], farmAt, nbAt, nWk, card:{ko,en,at}|null, surp:{ko,en,at}|null, fx:[{k,t,at,two}], fac:[{k,t,at}] } */
 export function newsMake(c) {
   const en = !!c.en, d = c.day | 0, N = c.S.news && typeof c.S.news === 'object' ? c.S.news : {}, last = N.last && typeof N.last === 'object' ? N.last : {}, prevT = {};
   for (const L of Array.isArray(N.lines) ? N.lines : []) if (L && L.k) prevT[L.k] = L.t;
   const Y = c.yday && c.yday.day === d - 1 ? c.yday : null, one = [], two = [], rum = [];
   const add = (A, k, ko, e9, o) => A.push(Object.assign({ k, t: en ? e9 : ko }, o || {}));
   // ① 어제 내가 한 일의 결과
-  for (const q of c.fx || []) if (!q.two) add(one, 'fx:' + q.k, q.t[0], q.t[1], { mine: 1, at: q.at || null });   /* FIX-1 어제 알린 고장을 고침(맨 앞 = 내가 한 일의 결과가 바로 보이게) */
+  for (const q of c.fx || []) if (!q.two) add(one, 'fx:' + q.k, q.t[0], q.t[1], { mine: 1, at: q.at || null });
+  for (const q of c.fac || []) add(one, 'fac:' + q.k, '🚚 ' + q.t[0], '🚚 ' + q.t[1], { mine: 1, at: q.at || null });   /* BLDG-3b 어제 공장에서 만든 상자가 가게·장터에 들어옴(생산 → 유통) */   /* FIX-1 어제 알린 고장을 고침(맨 앞 = 내가 한 일의 결과가 바로 보이게) */
   const nm = P => c.crop(P.c), st = P => c.plotState(P, d), gw = (A, G9) => (A || []).map((P, i) => ({ P, up: !!(G9 && G9[i]) })).filter(o => o.P && o.P.c && c.CROPS[o.P.c]);
   const pots = gw(c.pots, c.potGrew), potW = pots.filter(o => o.P.w === d - 1 && o.up), potR = pots.filter(o => o.up);   /* up = 밤사이 실제로 한 날 자람(마을이 자라기 전·뒤를 견줘 넘김) */
   if (potW.length && Y && Y.rainW > 0 && c.rainY) add(one, 'rainw', '🌧 빗물로 넉넉했어요. 물을 안 줘도 똑같이 자랐을 거예요', '🌧 The rain was enough. The pot would have grown without watering', { mine: 1, at: 'home', ck: { pot: 'up' } });

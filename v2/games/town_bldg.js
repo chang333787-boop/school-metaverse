@@ -79,6 +79,8 @@ const LINES = {
   jelly: { p: T2('젤리 케이크', 'jelly cake'), ic: '🍰', st: [T2('밀가루·달걀·우유 섞기', 'Mix flour, eggs and milk'), T2('틀에 붓고 굽기', 'Pour into tins and bake'), T2('딸기 젤리 얹기', 'Put strawberry jelly on top'), T2('모양·무게 검사하기', 'Check shape and weight'), T2('상자에 담기', 'Pack into boxes')] },
   farm: { p: T2('밭에서 온 감자', 'potatoes from the fields'), ic: '🥔', st: [T2('흙 씻어 내기', 'Wash off the soil'), T2('크기·흠 고르기', 'Sort by size and marks'), T2('무게 달기', 'Weigh'), T2('상자에 담기', 'Pack into boxes'), T2('트럭에 싣기', 'Load onto the truck')] },
 };
+// 🚚 BLDG-3b 만든 다음 날 가게·장터에 들어오는 것(생산 → 유통 → 소비) · 값 = 그 가게 보통 값(젤리 케이크 = 빵집 빵 값 · 감자 = 산지 가게처럼 파는 값의 두 배 → 사서 되팔면 손해) · 셋까지
+export const FAC_GOOD = { jelly: { e: '🍰', v: 1200 }, farm: { e: '🥔', v: 300 } }, FAC_N = 3;
 const WHY_DIV = [[1, T2('같은 시간에 더 많이, 고르게 만들 수 있어요', 'More can be made in the same time, and more evenly')], [0, T2('일하는 사람이 필요 없어져요', 'No workers are needed any more')], [0, T2('만든 물건이 저절로 가게에 가요', 'The products go to the shops by themselves')]];
 // 👵 옛 땅이름(전국에 흔한 이름의 뜻 · 이 마을의 역사로 쓰지 않음) — [이름, 맞는 뜻, 틀린 뜻 둘]
 const OLDN = [
@@ -132,7 +134,7 @@ export function createBldg(A) {
     if (k === 'police') { if (s.d112) lines.push(['★', e ? '112 helper: practised ' + (s.n112 | 0) + ' time(s)' : '112 어린이 도우미 · 연습 ' + (s.n112 | 0) + '번']); const n = helped('lost'); if (n) lines.push(['♥', e ? 'Helped ' + n + ' lost child(ren) find family' : '길 잃은 아이 ' + n + '명을 가족에게']); if ((s.thx || []).length) lines.push(['✉', e ? 'Thank-you notes from families: ' + s.thx.length : '아이 가족이 보낸 고맙다는 쪽지 ' + s.thx.length + '장']); if (!lines.length) lines.push(['·', e ? 'Practise 112 calls at the counter.' : '창구에서 112 신고를 연습해요.']); }
     else if (k === 'clinic') { if (s.dfa) { lines.push(['✓', e ? 'Twisted ankle: keep still, cool, raise' : '발목을 삐면: 움직이지 않기, 차갑게, 높이']); lines.push(['✓', e ? 'Heat sickness: shade, water, fan' : '더위를 먹으면: 그늘, 물, 부채질']); } const n = (s.hi || []).length; if (n) lines.push(['♥', e ? 'Neighbours who got better and said thanks: ' + n : '나아서 고맙다고 한 이웃 ' + n + '명']); if (!lines.length) lines.push(['·', e ? 'Learn first aid with the nurse.' : '간호사 선생님께 응급 처치를 배워요.']); }
     else if (k === 'bank') { const H9 = (s.hist || []).slice(-3); for (const r of H9) lines.push([r[1] === 'in' ? '+' : r[1] === 'out' ? '−' : '★', dayT(r[0]) + '  ' + kindT(r[1]) + ' ' + A.won(r[2]) + '  →  ' + A.won(r[3])]); lines.unshift(['■', (e ? 'In the bankbook: ' : '통장에 있는 돈: ') + A.won(s.bal | 0)]); if (!H9.length) lines.push(['·', e ? 'Save at the counter and a line is written here.' : '창구에서 저금하면 여기에 한 줄씩 적혀요.']); }
-    else if (k === 'factory') { const LN = LINES[CUR.made.line] || LINES.farm; lines.push([s.made === D ? '✓' : '·', s.made === D ? (e ? 'Today: 8 boxes of ' + L(LN.p) : '오늘 만든 ' + L(LN.p) + ' 상자 8개') : (e ? 'The line is waiting for today' : '오늘 줄은 아직 쉬고 있어요')]); lines.push(['■', (e ? 'Steps: ' : '차례: ') + LN.st.map(t => L(t).split(' ')[0]).join(' → ')]); if (s.n) lines.push(['★', e ? 'Visits: ' + s.n : '견학한 날 ' + s.n + '번']); }
+    else if (k === 'factory') { const LN = LINES[CUR.made.line] || LINES.farm; lines.push([s.made === D ? '✓' : '·', s.made === D ? (e ? 'Today: 8 boxes of ' + L(LN.p) : '오늘 만든 ' + L(LN.p) + ' 상자 8개') : (e ? 'The line is waiting for today' : '오늘 줄은 아직 쉬고 있어요')]); lines.push(['■', (e ? 'Steps: ' : '차례: ') + LN.st.map(t => L(t).split(' ')[0]).join(' → ')]); { const q = facDeliv(); if (q) lines.push(['🚚', e ? 'Boxes went to: ' + q.to : '상자가 간 곳: ' + q.to]); } if (s.n) lines.push(['★', e ? 'Visits: ' + s.n : '견학한 날 ' + s.n + '번']); }
     else if (k === 'elder') { const G9 = (s.got || []).slice(-4); for (const nm of G9) { const q = OLDN.concat([OUR_N]).find(o => L(o[0]).split(' ')[0] === nm); if (q) lines.push(['·', nm + ' = ' + L(q[1])]); } if (!G9.length) lines.push(['·', e ? 'Hear old place names from the elder.' : '어르신께 옛 땅이름을 들어요.']); }
     else if (k === 'museum') { const G9 = Object.keys(s.got || {}).map(Number).filter(i => MUSE[i]); lines.push(['■', (e ? 'Found out: ' : '알아본 것: ') + G9.length + '/' + MUSE.length]); for (const i of G9.slice(0, 3)) lines.push(['✓', L(MUSE[i][0]) + ' → ' + L(MUSE[i][3])]); }
     else { lines.push(['♥', e ? 'Dogs 3 and cats 2 are waiting' : '강아지 셋, 고양이 둘이 기다려요']); lines.push([s.fed === D ? '✓' : '·', s.fed === D ? (e ? 'Fed today. Thank you!' : '오늘 밥을 먹었어요. 고마워요!') : (e ? 'Not fed yet today' : '오늘 아직 밥을 못 먹었어요')]); if (s.n) lines.push(['★', e ? 'Meals you gave: ' + s.n : '내가 준 밥 ' + s.n + '번']); }
@@ -161,7 +163,7 @@ export function createBldg(A) {
     for (const s9 of [-1, 1]) { P('k', s9 * 0.06, 0.47, 0.27, 0.045, 0.09, 0, hex); P('b', s9 * 0.05, 0.4, 0.365, 0.03, 0.03, 0.02, 0x2b2b2b); } P('b', 0, 0.3, -0.25, 0.04, 0.3, 0.04, hex, -0.3); }   /* 고양이(뾰족 귀 · 선 꼬리) */
   const bowl = (K, S9, x, z, c) => K.part(S9, 'c16', x, 0.012, z, 0.13, 0.055, 0, c);
 
-  function build(k, at, K, B9) { left(); const name = (B9 && B9.name) || '', made = k === 'police' ? roomPolice(at, K, name) : k === 'clinic' ? roomClinic(at, K, name) : k === 'bank' ? (bankInt(), roomBank(at, K, name)) : k === 'cinema' ? roomCinema(at, K, name) : k === 'factory' ? roomFactory(at, K, name) : k === 'elder' ? roomElder(at, K, name) : k === 'museum' ? roomMuseum(at, K, name) : roomShelter(at, K, name); CUR = { k, at, name, made, board: made.board || null, food: made.food || null, prod: made.prod || null, stars: made.stars || null, play: null }; boardDraw(); log('build ' + k); return made; }
+  function build(k, at, K, B9) { left(); const name = (B9 && B9.name) || '', made = k === 'police' ? roomPolice(at, K, name) : k === 'clinic' ? roomClinic(at, K, name) : k === 'bank' ? (bankInt(), roomBank(at, K, name)) : k === 'cinema' ? roomCinema(at, K, name) : k === 'factory' ? roomFactory(at, K, name) : k === 'elder' ? roomElder(at, K, name) : k === 'museum' ? roomMuseum(at, K, name) : roomShelter(at, K, name); CUR = { k, at, name, door: B9 && B9.door ? [+B9.door[0], +B9.door[1]] : null, made, board: made.board || null, food: made.food || null, prod: made.prod || null, stars: made.stars || null, play: null }; boardDraw(); log('build ' + k); return made; }
   function roomPolice(at, K, name) { const W = 11, D = 9, H = 3.4, hw = W / 2, hd = D / 2, [ox, oy, oz] = at, seats = [], navy = 0x2b3a5c;
     const S9 = K.shell(at, W, D, H, { wall: 0xf1f3f6, wains: navy, winY: [], noLights: true, ft: ['tile', 1.0, 0xe9edf2] }), P = S9.put; S9.ac = K.cs(navy);
     { const cx = -1.0, zc = -hd + 1.5; P('b', cx, 0, zc, 4.4, 1.0, 0.6, 0xf6f4ee); P('b', cx, 0.1, zc + 0.306, 4.3, 0.5, 0.012, 0x3d5a8a); P('b', cx, 1.0, zc, 4.46, 0.04, 0.66, 0xd8dce0); K.colL(S9, cx, zc, 2.23, 0.33, -0.5, 1.1);   // 민원 창구 탁자
@@ -413,7 +415,7 @@ export function createBldg(A) {
         if (CUR && CUR.box) CUR.box.visible = true; sfx('ding'); reward('post', 'explore', 2); A.rec('bldg', { k: 'post', ev: 'send', e: it, cell: nb.cell, mis }); st = 4; paint(); } };
     log('post'); }
   // 1초마다(town.js): 어제 넘게 보낸 소포 = 아침에 한 줄 · 받는 이웃 10m 안에 가면 말풍선 + 하트(문 bldg:post)
-  function sec() { const s = S().post, D = day(), L9 = (s.box || []).filter(q => q && !q.ok && q.d < D); if (!L9.length) return; const e = en();
+  function sec() { facSec(); const s = S().post, D = day(), L9 = (s.box || []).filter(q => q && !q.ok && q.d < D); if (!L9.length) return; const e = en();
     if (s.told !== D && !A.panelOpen()) { s.told = D; mark(); const q = L9[0]; toast('📦 ' + (e ? 'Your parcel reached ' + q.who + ' in cell ' + q.cell + '. Go and say hello!' : '보낸 소포가 ' + q.cell + ' 칸 ' + q.who + '께 닿았어요. 가서 인사해 봐요.'), 4); return; }
     const me = A.me(); if (!me) return;
     for (const q of L9) { if (Math.hypot(me.x - q.x, me.z - q.z) > 10 || Math.abs(me.y - q.g) > 4) continue; q.ok = D; mark(); A.bubble({ x: q.x, y: q.g, z: q.z, sc: 1 }, e ? 'Got your parcel. Thank you!' : '소포 잘 받았어요. 고마워요!'); A.heartTo(q.to, 1, 'bldg:post'); sfx('ding');
@@ -464,6 +466,19 @@ export function createBldg(A) {
       if (now9() < sh[2]) A.GAME.waitMin(sh[2]); s.seen = D; mark(); reward('cinema', 'explore', 2); A.rec('bldg', { k: 'cinema', ev: 'watch', i: tk.i }); if (CUR) CUR.play = null; boardDraw(); A.closeP();
       toast('🎬 ' + (e ? 'The film is over. It is ' + hm(now9()) + ' now — the end time on your ticket.' : '영화가 끝났어요. 지금 ' + hm(now9()) + ' — 표에 적힌 끝나는 시각이에요.'), 3.6); };
     log('play ' + tk.i); }
+  // 🚚 BLDG-3b 공장 → 가게·장터: 만든 다음 날(사흘 안) 아침 = 상자가 트럭에 실려 가게(젤리 케이크 → 빵집·가게)·장터(감자 → 장터)에 들어옴 · 갈 곳은 마을 쪽(A.facDest)이 판 이름으로 고름 · 그 창에 '우리가 만든 것' 한 칸 · 보상 X(솜씨는 공장에서 받음)
+  const facNow = () => { const q = S().factory.dl; return q && !q.none && day() - q.d <= 1 ? q : null; };   /* 들어온 날 + 다음 날까지 진열 */
+  function facDeliv() { const s = S().factory, D = day(); if (!(s.made > 0) || s.made >= D || D - s.made > 3 || (s.dl && s.dl.m === s.made)) return facNow();
+    const ln = LINES[s.ln] ? s.ln : 'farm', G = FAC_GOOD[ln], to = A.facDest ? A.facDest(ln, s.door || null) : null;
+    s.dl = to ? { m: s.made, d: D, ln, e: G.e, v: G.v, kind: to.kind, key: to.key, to: to.name, at: to.at || null, nm: s.nm || '', left: FAC_N } : { m: s.made, d: D, none: 1 }; mark();
+    if (to) { if (A.diary) A.diary('🏭', facLine(s.dl, false)); A.rec('bldg', { k: 'factory', ev: 'deliv', line: ln, to: to.kind }); log('deliv ' + ln + ' ' + to.name); }
+    return facNow(); }
+  function facLine(q, e) { const n = Math.max(1, q.d - q.m), p = LINES[q.ln].p, nm = q.nm || (e ? 'the factory' : '공장'), ago = n => e ? (n === 1 ? 'yesterday' : n + ' days ago') : (n === 1 ? '어제' : n === 2 ? '그저께' : '사흘 전');
+    return e ? 'The boxes of ' + L(p) + ' made at ' + nm + ' ' + ago(n) + ' came to ' + q.to + ' by truck' : ago(n) + ' ' + nm + '에서 만든 ' + p[0] + ' 상자가 트럭에 실려 ' + q.to + '에 들어왔어요'; }
+  function facSec() { const q = facDeliv(); if (!q || q.d !== day() || q.told === q.d || A.panelOpen()) return; q.told = q.d; mark(); toast('🚚 ' + facLine(q, en()), 4); }   /* 아침 한 번 = 한 줄(창이 닫혀 있을 때) */
+  function facNews(d) { const q = facDeliv(); return q && q.d === d ? [{ k: q.ln, t: [facLine(q, false), facLine(q, true)], at: q.at }] : []; }
+  function facAt(kind, key) { const q = facDeliv(); return q && q.kind === kind && q.key === key ? { e: q.e, v: q.v, left: q.left | 0, nm: q.nm, ln: q.ln, ago: ago(Math.max(1, day() - q.m)) } : null; }
+  function facTake(kind, key) { const q = facNow(); if (!q || q.kind !== kind || q.key !== key || !(q.left > 0)) return false; q.left--; mark(); A.rec('bldg', { k: 'factory', ev: 'buy', line: q.ln }); return true; }
   // 🏭 공장: 일 다섯을 1번 자리부터 차례로 → 분업 물음 → 줄 끝 깔판에 오늘 만든 상자
   function factory() { const s = S().factory, e = en(), D = day(), kd = (CUR && CUR.made.line) || 'farm', LN = LINES[kd];
     if (s.made === D) { toast('🏭 ' + (e ? 'Factory worker: “The line has run today. Come and watch again tomorrow!”' : '공장 직원: "오늘 줄은 벌써 돌았어요. 내일 또 견학 와요!"'), 3); return; }
@@ -479,7 +494,7 @@ export function createBldg(A) {
     W9.P.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') { A.closeP(); return; }
       if (b.dataset.j != null) { const j = +b.dataset.j; if (j === got.length) { got.push(j); sfx('pop'); if (got.length === 5) st = 1; W9.paint(draw()); return; }
         mis++; sfx('tick'); W9.msg(got.length ? (e ? 'Factory worker: “Not yet. Place ' + (got.length + 1) + ' gets what comes out of “' + L(LN.st[got.length - 1]) + '”. What happens next?”' : '공장 직원: "아직 일러요. ' + (got.length + 1) + '번 자리는 「' + L(LN.st[got.length - 1]) + '」을 마친 것을 받아요. 그다음은 무엇일까요?"') : (e ? 'Factory worker: “Place 1 comes first. Start with the raw materials.”' : '공장 직원: "1번 자리가 맨 처음이에요. 원료를 다루는 일부터 해요."')); return; }
-      if (b.dataset.v != null) { if (+b.dataset.v === 1) { st = 2; s.made = D; s.n = (s.n | 0) + 1; mark(); if (CUR && CUR.prod) CUR.prod.visible = true; sfx('ding'); reward('factory', 'work', 2); A.rec('bldg', { k: 'factory', ev: 'line', line: kd, mis }); boardDraw(); W9.paint(draw()); return; }
+      if (b.dataset.v != null) { if (+b.dataset.v === 1) { st = 2; s.made = D; s.n = (s.n | 0) + 1; s.ln = kd; s.nm = (CUR && CUR.name) || ''; s.door = (CUR && CUR.door) || null; mark(); if (CUR && CUR.prod) CUR.prod.visible = true; sfx('ding'); reward('factory', 'work', 2); A.rec('bldg', { k: 'factory', ev: 'line', line: kd, mis }); boardDraw(); W9.paint(draw()); return; }
         mis++; sfx('tick'); W9.msg(e ? 'Factory worker: “Think again. If five people each do one job at the same time, what happens?”' : '공장 직원: "다시 생각해 봐요. 다섯 사람이 같은 때에 저마다 한 가지를 하면 어떻게 될까요?"'); } };
     log('line ' + kd); }
   // 👵 노인정·경로당: 옛 땅이름 셋 + '돌다리' 낱말 뜻 → 벽 판에 들은 이름
@@ -521,7 +536,7 @@ export function createBldg(A) {
     const P = A.openP('<h3>📋 ' + esc(CUR.name) + '</h3><div class="pc-tx">' + body + '</div><div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>', false, 'bdboard'); P.onclick = ev => { if (ev.target.closest('button')) A.closeP(); }; }
 
   function dispose() { left(); if (css) { css.remove(); css = null; } }
-  return { tip, canIn, opts, left, dispose, open, sec, pend: () => { const b = (A.GAME.S.bldg || {}).post; return !!(b && Array.isArray(b.box) && b.box.some(q => q && !q.ok)); },
+  return { tip, canIn, opts, left, dispose, open, sec, facNews, facAt, facTake, facPend: () => { const f = ((A.GAME.S.bldg || {}).factory) || {}; return f.made > 0 && !(f.dl && f.dl.m === f.made); }, pend: () => { const b = (A.GAME.S.bldg || {}).post; return !!(b && Array.isArray(b.box) && b.box.some(q => q && !q.ok)); },
     info: () => ({ cur: CUR ? { k: CUR.k, name: CUR.name, food: CUR.food ? CUR.food.visible : null, prod: CUR.prod ? CUR.prod.visible : null, stars: CUR.stars ? CUR.stars.map(g => g.visible) : null, play: CUR.play, line: CUR.made.line || null, box: CUR.box ? CUR.box.visible : null, nb: !!(CUR.made && CUR.made.nb), at: CUR.at, extra: (CUR.made.extra || []).map(h => ({ k: h.k, label: h.label, at: [CUR.at[0] + h.stand[0], CUR.at[1] + h.stand[1], CUR.at[2] + h.stand[2]] })) } : null, s: JSON.parse(JSON.stringify(S())), dbg: DBG.slice() }),
-    dbg: { use: kk => use(kk), sec: () => sec(), int: () => bankInt(), board: () => (CUR && CUR.board ? CUR.board.c.toDataURL().length : 0) } };
+    dbg: { use: kk => use(kk), sec: () => sec(), fac: () => facDeliv(), int: () => bankInt(), board: () => (CUR && CUR.board ? CUR.board.c.toDataURL().length : 0) } };
 }

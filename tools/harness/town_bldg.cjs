@@ -4,7 +4,7 @@
 //   ⑤ 방 E 자리 모두 닿음(indoor.check) · 문 E로 나가기 · 페이지 오류 0
 //   ⑥ 은행(BANK-1): 문 이름표·J「저금」· 넣기(지갑 −·통장 +·한 줄)·반 넣기·꺼내기 · 살림 솜씨 하루 한 번 · 통장 판 · 7일 뒤 이자 한 줄 · 17:00 문 닫음
 //   ⑦ 우체국: 창구 E = 물건 → 이웃 → 지도 보고 주소 칸(틀림 = 힌트) → 소포 값 → 저울 위 상자 · 같은 날 다시 = 한 줄 · 다음 날 아침 한 줄 → 받는 이웃 곁 = 말풍선 + 하트 · 20:00 창구 닫음(방은 들어감)
-//   ⑧ BLDG-3: 영화관(시간표 · 쪽지 시각 견주기 · 표 −500 · 자리 E · 기다리기 = 시작 시각 · 다 보면 = 끝나는 시각 · 21:30 닫음) · 공장(차례 다섯 · 힌트 · 분업 물음 · 깔판 상자 · 젤리 공장 줄) · 노인정(땅이름 넷 · 힌트 · 판 · 고누 창) · 박물관(옛 물건 쓰임 → 오늘날 · 금빛 표 · 솜씨 하루 한 번) · 곤충 박물관 X
+//   ⑧ BLDG-3: 영화관(시간표 · 쪽지 시각 견주기 · 표 −500 · 자리 E · 기다리기 = 시작 시각 · 다 보면 = 끝나는 시각 · 21:30 닫음) · 공장(차례 다섯 · 힌트 · 분업 물음 · 깔판 상자 · 젤리 공장 줄 · 다음 날 상자 → 가게·장터 '우리가 만든 것' 사기 · 아침 소식·일기) · 노인정(땅이름 넷 · 힌트 · 판 · 고누 창) · 박물관(옛 물건 쓰임 → 오늘날 · 금빛 표 · 솜씨 하루 한 번) · 곤충 박물관 X
 const { chromium } = require('./pw.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null;
@@ -153,6 +153,30 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       await ev(() => document.querySelector('.twn-p button[data-v="0"]').click()); await W8(200); ok(/다시 생각/.test(((await panel()) || {}).t || ''), '틀린 답 = 다시');
       await ev(() => document.querySelector('.twn-p button[data-v="1"]').click()); await W8(300); P = await panel(); I = await BI(); ok(P && /깔판/.test(P.t) && /분업/.test(P.t), '끝 = 상자 · 트럭 · 낱말 상자(분업·원료)'); ok(I.cur.prod === true && I.s.factory.made === I.s.factory.made && (await xp('work')) > wk3, '깔판에 오늘 만든 상자 · 일솜씨 +'); await closeAll();
       await E('bd:line', () => said('벌써 돌았어요')); ok(await waitSaid('벌써 돌았어요') && !(await panel()), '다시 E = 「오늘 줄은 벌써 돌았어요」'); await leave(); ok(await enter(fa), '다시 들어감'); ok((await BI()).cur.prod === true, '다시 들어가도 상자 그대로'); await leave();
+      // 🚚 BLDG-3b 공장 → 다음 날 가게·장터에 우리 물건(생산 → 유통 → 소비)
+      { const f0 = (await BI()).s.factory, kd0 = f0.ln, D5 = await ev(() => SM_TOWN.game().S.day); ok(f0.made === D5 && ['jelly', 'farm'].includes(kd0) && Array.isArray(f0.door) && !f0.dl, '만든 날 기록 = 줄 ' + kd0 + ' · 공장 문 자리 · 아직 안 감');
+        ok(!(await ev(() => SM_TOWN.bldg().facNews(SM_TOWN.game().S.day).length)), '만든 날 = 아직 가게에 없음');
+        const dest = async () => { const q = (await BI()).s.factory.dl; return q; };
+        const openTo = async q => { await closeAll(); if (q.kind === 'mk') { const i = await ev(k => SM_TOWN.mk.stalls().findIndex(w => (w.mk || '') + '@' + Math.round(w.x) + ',' + Math.round(w.z) === k), q.key); if (i < 0) return null; await ev(i => SM_TOWN.mk.open(i), i); } else await ev(nm => SM_TOWN.rules.shop(nm), q.to); await W8(300); return panel(); };
+        const flow = async (kd, nm9) => { await closeAll(); await ev(() => { const G = SM_TOWN.game().S; G.day += 1; G.min = 11 * 60; G.money = 5000; }); let said9 = await waitSaid('들어왔어요'); if (!said9) { console.log('    (창: ' + JSON.stringify(await panel()).slice(0, 120) + ')'); await closeAll(); said9 = await waitSaid('들어왔어요'); await W8(1500); const t9 = await ev(() => { const q = SM_TOWN.game().S.bldg.factory.dl, t = document.getElementById('toast'); return { told: q && q.told === SM_TOWN.game().S.day, t: t ? t.textContent.slice(0, 80) : '' }; }); console.log('    (한 줄 늦음: ' + JSON.stringify(t9) + ')'); said9 = t9.told; }
+          const q = await dest(), G9 = { jelly: ['🍰', 1200, 'shop', '젤리 케이크'], farm: ['🥔', 300, 'mk', '감자'] }[kd]; ok(said9, nm9 + ' 다음 날 = 「… 상자가 트럭에 실려 … 들어왔어요」 한 줄');
+          ok(q && q.ln === kd && q.e === G9[0] && q.left === 3 && q.to && (q.kind === G9[2] || (kd === 'farm' && q.kind === 'shop')), nm9 + ' 상자 → ' + (q && q.to) + '(' + (q && q.kind) + ') · 셋');
+          const nw = await ev(() => SM_TOWN.bldg().facNews(SM_TOWN.game().S.day)); ok(nw.length === 1 && /어제 .*에서 만든 .* 상자가 트럭에 실려 .*에 들어왔어요/.test(nw[0].t[0]), '아침 소식 줄 「' + (nw[0] ? nw[0].t[0] : '-') + '」');
+          ok(await ev(() => (SM_TOWN.game().S.diary || []).some(d => d.e === '🏭' && /들어왔어요/.test(d.t || ''))), '일기장 한 줄(🏭)');
+          let P = await openTo(q); ok(P && /우리가 만든 것/.test(P.t) && new RegExp(G9[3]).test(P.t) && /\(3\)/.test(P.t), q.to + ' 창 = 「우리가 만든 것」 ' + G9[3] + ' 한 칸(3)');
+          const b0 = await ev(e => SM_TOWN.game().S.bag[e] | 0, G9[0]), xp0 = await ev(() => JSON.stringify(SM_TOWN.skills().xp || {}));
+          await ev(() => document.querySelector('.twn-p button[data-fac]').click()); await W8(300); P = await panel();
+          const G1 = await ev(e => { const G = SM_TOWN.game().S; return { m: G.money, b: G.bag[e] | 0, left: G.bldg.factory.dl.left }; }, G9[0]);
+          ok(G1.m === 5000 - G9[1] && G1.b === b0 + 1 && G1.left === 2 && P && /\(2\)/.test(P.t), '사기 = 돈 −' + G9[1] + ' · 가방 +1 · 남은 것 2');
+          ok((await ev(() => JSON.stringify(SM_TOWN.skills().xp || {}))) === xp0, '산 것 = 솜씨·보상 그대로');
+          await closeAll(); return q; };
+        const q1 = await flow(kd0, (await BI()).s.factory.nm || '공장');
+        const other = kd0 === 'jelly' ? 'farm' : 'jelly', fo = b3('factory').find(q => (/젤리|케이크/.test(q.name) ? 'jelly' : 'farm') === other);
+        if (fo) { ok(await enter(fo), fo.name + ' 들어감(다른 줄)'); await ev(() => { SM_TOWN.game().S.min = 11 * 60; }); await E('bd:line', async () => ((await panel()) || {}).k === 'bdline');
+          for (const j of [0, 1, 2, 3, 4]) { await ev(j => document.querySelector('.twn-p button[data-j="' + j + '"]').click(), j); await W8(120); } await ev(() => document.querySelector('.twn-p button[data-v="1"]').click()); await W8(300); await closeAll(); await leave();
+          const q2 = await flow(other, fo.name); ok(q2 && q1 && q2.key !== q1.key, '젤리 케이크 = 가게 · 감자 = 장터(다른 곳 · ' + q1.to + ' / ' + (q2 && q2.to) + ')'); }
+        await ev(() => { SM_TOWN.game().S.day += 2; }); ok(!(await ev(() => SM_TOWN.bldg().facNews(SM_TOWN.game().S.day).length)) && !(await ev(() => { const q = SM_TOWN.game().S.bldg.factory.dl; return SM_TOWN.bldg().facAt(q.kind, q.key); })), '이틀 뒤 = 진열 끝(소식·칸 없음)');
+        await ev(() => { const G = SM_TOWN.game().S; G.min = 11 * 60; }); }
       // 👵 노인정·경로당
       const el = b3('elder')[0]; ok(await enter(el), el.name + ' 들어감'); I = await BI(); ok(I.cur && I.cur.k === 'elder' && ['bd:elder', 'bd:gonu', 'bd:board'].every(k => I.cur.extra.some(q => q.k === k)), '노인정 방 · E = 땅이름 · 고누 · 판'); await checkRoom(el.name);
       const ex4 = await xp('explore'); await E('bd:elder', async () => ((await panel()) || {}).k === 'bdelder'); P = await panel(); ok(P && /1\/4/.test(P.t) && /「/.test(P.t), 'E = 땅이름 창(1/4)');
