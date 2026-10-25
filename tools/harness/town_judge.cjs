@@ -2,6 +2,7 @@
 //   꿀 뜨기·어린 나무 심기·김 펴기 = 꾹·초록 칸 대신 세상(바람·흙·하늘)을 보고 고르는 놀이(v2/games/town_minigame.js mkComb·mkOrder·mkSpread)
 //   셋마다: ① 막대·꾹 없음(zone·pg·mk 0 · 큰 꾹 단추 숨김 · E를 오래 눌러도 짧게 누른 것과 같은 판정) ② 맞는 판단만 = 점수 3·끝 ③ 틀린 판단 = 기다림(시간 비용 · 남은 시간이 그만큼 줆) · 나무는 다음 날 시듦 → 되살리기
 //   ④ 잘한 판 뒤 사다리 칸 오름 + 칸이 오르면 판단이 어려워짐(꿀 = 벌통 문·여덟 자리·바람 바뀜 · 나무 = 세 그루 · 김 = 두꺼운 칸·숟갈 여유 0) ⑤ 날씨가 답을 바꿈(김 말리기 · 나무 물 양) ⑥ 페이지 오류 0
+//   ⑦ 🚣 배 노 젓기(JUDGE-2 · town_boat.js): 박자 막대 X · ←→ 박자로 눌러도·연타해도 빨라지지 않음 · 물때 한가운데 = 물살 셈 · 물이 멈출 즈음 = 거의 0 · 기슭 가까이 = 약함 · 손 놓으면 물살 쪽으로 떠밀림 · 힘껏(Shift) = 빨라짐 + 팔 힘이 줄다 지침
 //   브라우저 하나 · 그리기 끔(pw.cjs) · b2.sh 자리로
 const { chromium, RENDER } = require('./pw.cjs');
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
@@ -97,6 +98,32 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
         await sheetPerfect(false); const d1 = await until(q => q.ph === 'dry', 3000); ok(d1 && d1.ph === 'dry' && d1.good === 1, '덜어 와서 고르게 = 첫 장 좋음'); await dryRun(false); await ev(() => __clean()); }
       await ev(() => SM_TOWN.rules.wx('clear')); await W8(400); }
 
+
+    // ── 🚣 배 노 젓기(JUDGE-2) ──
+    { const hb = await ev(() => { const h = SD2.map.interact.list().find(q => /^⛵ 배 타기|^⛵ Board/.test(q.label)); return h ? [h.x, h.z] : null; });
+      if (!hb) console.log('🚣 이 마을엔 배가 없음 — 건너뜀'); else { console.log('🚣 배 노 젓기 — 물때·바람 보고 방향·힘');
+        await ev(() => __clean()); await ev(([x, z]) => { const M = SD2.map; M.player.teleport([x, M.q.groundAt(x, z, SM_TOWN.ground(x, z) + 2) + 0.05, z]); }, hb); await W8(600); await ev(() => SM_TOWN.boatGo(true)); await W8(700);
+        const BX = () => ev(() => { const X = SM_TOWN.boatx(); return { rv: X.rv, cur: X.cur }; }), BO = () => ev(() => SM_TOWN.boat());
+        ok((await BO()).on, '배 탐'); const hudT = await ev(() => { const h = document.querySelector('.twn-row'); return h ? { bar: h.querySelectorAll('.bt,.mk,.ok').length, t: (h.querySelector('.rl') || {}).textContent || '', b: (h.querySelector('button') || {}).textContent || '' } : null; });
+        ok(hudT && hudT.bar === 0 && /물때/.test(hudT.t) && /힘껏/.test(hudT.b), '박자 막대 X · 물때 줄 「' + (hudT && hudT.t) + '」 · 단추 「' + (hudT && hudT.b) + '」');
+        for (let i = 0; i < 6; i++) { await p.keyboard.press(i % 2 ? 'ArrowRight' : 'ArrowLeft'); await W8(700); } const r1 = (await BX()).rv; for (let i = 0; i < 16; i++) { await p.keyboard.press(i % 2 ? 'ArrowRight' : 'ArrowLeft'); await W8(60); } const r2 = (await BX()).rv;
+        ok(r1 === 0 && r2 === 0, '←→ 박자(0.7초)로 눌러도 · 연타해도 노 빠르기 0(' + r1 + ' · ' + r2 + ') — 박자 판정 X');
+        const tideAt = k => ev(k9 => { const G = SM_TOWN.game().S, P = 745, lo = 300 + ((G.day * 50 + 250) % P); for (const c of [lo + k9 * P / 4, lo + k9 * P / 4 + P, lo + k9 * P / 4 - P]) if (c >= 400 && c <= 1380) { G.min = Math.round(c); return G.min; } G.day++; return null; }, k);
+        let tm = await tideAt(1); for (let i = 0; i < 4 && tm == null; i++) tm = await tideAt(1);
+        const far = await ev(() => { const B = SM_TOWN.boat(), X = SM_TOWN.boatx(), sd = SM_TOWN.seaSd || null; void sd; const c = X.curAt(B.x, B.z); return { c, x: B.x, z: B.z }; });
+        ok(far.c.fl === 1 && far.c.sp > 0.2, '물때 한가운데(밀물 · ' + tm + '분) = 물살 ' + far.c.sp.toFixed(2) + 'm/초 · 기슭 배수 ' + far.c.f.toFixed(2));
+        const ebb = await (async () => { await tideAt(3); return ev(() => { const B = SM_TOWN.boat(); return SM_TOWN.boatx().curAt(B.x, B.z); }); })(); ok(ebb.fl === -1 && Math.abs(ebb.x + far.c.x) < 0.05 && Math.abs(ebb.z + far.c.z) < 0.05, '썰물 = 같은 자리에서 반대로 흐름');
+        await tideAt(0); const sl = await ev(() => { const B = SM_TOWN.boat(); return SM_TOWN.boatx().curAt(B.x, B.z); }); ok(sl.fl === 0 && sl.sp < 0.3, '물이 다 빠질 즈음 = 물살 거의 멈춤(' + sl.sp.toFixed(2) + ')');
+        await tideAt(1);
+        // 먼바다 쪽으로 저어 나감(W 4초) → 손 놓고 떠밀림 재기
+        await p.keyboard.down('KeyW'); await W8(4000); await p.keyboard.up('KeyW'); for (let i = 0; i < 30 && (await BO()).v > 0.3; i++) await W8(200);
+        const b0 = await BO(), c0 = await ev(() => { const B = SM_TOWN.boat(); return SM_TOWN.boatx().curAt(B.x, B.z); }); await W8(2500); const b1 = await BO(), mv = (b1.x - b0.x) * c0.x + (b1.z - b0.z) * c0.z;
+        ok(mv > c0.sp * 2.5 * 0.5 || c0.sp < 0.3, '손 놓으면 물살 쪽으로 떠밀림(' + mv.toFixed(2) + 'm / 물살 ' + c0.sp.toFixed(2) + 'm/초 · 기슭 배수 ' + c0.f.toFixed(2) + ')');
+        ok(c0.f > far.c.f + 0.3, '기슭에서 멀수록 물살 셈(선착장 곁 ' + far.c.f.toFixed(2) + '배 · 저어 나간 곳 ' + c0.f.toFixed(2) + '배) → 거슬러 갈 땐 기슭 가까이');
+        // 힘껏 = 빨라짐 + 팔 힘이 줄다 지침
+        await p.keyboard.down('KeyW'); await p.keyboard.down('ShiftLeft'); await W8(1500); const h1 = await BX(); await W8(5600); const h2 = await BX(); await p.keyboard.up('ShiftLeft'); await W8(600); const h3 = await BX(); await p.keyboard.up('KeyW');
+        ok(h1.rv > 1.5 && h1.cur.arm < 6, '힘껏(W + Shift) = 노 빠르기 +' + h1.rv.toFixed(1) + ' · 팔 힘 ' + h1.cur.arm); ok(h2.cur.tired > 0 || h3.cur.tired > 0, '6초 넘게 힘껏 = 팔이 지침(잠깐 느려짐 · ' + h2.cur.tired + ')'); ok(h3.rv < h1.rv, '지친 동안 = 힘껏이 안 됨(' + h3.rv.toFixed(2) + ')');
+        await ev(() => SM_TOWN.boatGo(false)); await W8(500); ok(!(await BO()).on && !(await ev(() => !!document.querySelector('.twn-row'))), '배에서 내림 = 물때 줄 치움'); } }
     // 다른 길(사다리 하네스와 같은 끝내기 손잡이)도 그대로
     ok(!errs.length, '페이지 오류 0' + (errs.length ? ' · ' + errs.slice(0, 4).join(' / ') : ''));
   } catch (e) { fails.push('예외 ' + e.message); console.log('  ✗ 예외 ' + e.stack); } finally { await b.close(); }

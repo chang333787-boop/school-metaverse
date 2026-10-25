@@ -6,6 +6,7 @@
 //   ⑤ 중급(S 눈쟁기 키) · 상급(둘째 슬로프 E · W 웅크리기) 봇 완주 · 리프트 단추로 꼭대기까지
 //   ⑥ 휴대폰 폭(390 세로 · 844×390 가로) — 눈쟁기·웅크리기 단추가 점프·행동·시점 단추·작은 지도를 가리지 않음 · 화면 안 · 가림 비율 · 누르면 눈쟁기
 //   ⑦ 여름 = 기문 안 보임 · E = '겨울에만' 한 줄(창 X) · 수첩 🎿 스키 기록 탭(초 숫자는 여기에만) · 페이지 오류 0
+//   ⑧ 출발 준비(JUDGE-2): 때·날씨 → 눈(아침 단단 · 한낮 알맞음 · 맑은 오후 무름) · 기온 → 맞는 왁스 · 고를 때까지 출발 X(Esc = 다시 엶) · 안 맞는 왁스 = 같은 봇이 더 늦음(시간 비용) · 가로 바람 = 손 놓아도 옆으로 밀림 · 결과 창 왁스 한 줄
 const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) */
 const pos9 = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos9[0] || 'ourtown', PORT = pos9[1] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
@@ -27,10 +28,11 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       window.__skB = setInterval(() => { const R = C.dbg.run(); if (!R) return; const c = C.dbg.courses().find(q => q.id === R.c), s = SM_TOWN.skr(), I = C.inp; if (!I) return; if (m === 'straight') { I.turn = 0; return; }
         const g = c.g[R.k]; if (!g) { I.turn = 0; I.pl = false; I.tu = false; return; } const v = Math.max(1, s.v), d = g.o - s.lat, need = Math.abs(d) - (c.w / 2 - 0.7), tt = Math.max(0.05, (g.a - s.a) / v), vl = 4.2 * 8 / (v + 4);
         I.turn = Math.abs(d) > 0.25 ? Math.sign(d) : 0; I.pl = !!c.pl && need > vl * tt * 0.8; const g2 = c.g[R.k + 1]; I.tu = !!c.tu && !I.pl && need <= 0 && (!g2 || Math.abs(g2.o - s.lat) < c.w / 2 - 0.5); }, 16); }, mode);
-    const POP = new Set(), popOff = async () => { const t = await panel(); if (t && (await run())) { POP.add(t.replace(/\s+/g, ' ').slice(0, 40)); await closeAll(); } };   /* 판 도중 다른 창(레벨업 등) = 판이 멈춤 → 닫으면 이어 탐 */
+    const wax = (bad) => ev(b9 => { const P9 = SM_TOWN.skiC().dbg.prep(); if (!P9 || P9.ph !== 'prep') return null; const k = b9 ? (P9.ok === 'cold' ? 'warm' : 'cold') : P9.ok, el = document.querySelector('.twn-p button[data-wax="' + k + '"]'); if (el) el.click(); return el ? k : null; }, !!bad);   /* JUDGE-2 출발 준비 창 = 맞는(또는 일부러 틀린) 왁스 */
+    const POP = new Set(), popOff = async () => { const t = await panel(); const r = t && (await run()); if (r && r.ph === 'prep') { await wax(false); return; } if (r) { POP.add(t.replace(/\s+/g, ' ').slice(0, 40)); await closeAll(); } };   /* 판 도중 다른 창(레벨업 등) = 판이 멈춤 → 닫으면 이어 탐 */
     const waitRun = async (ms = 40000) => { const t0 = Date.now(); let last = null; while (Date.now() - t0 < ms) { await popOff(); const r = await run(); if (r) last = r; else if (last) return last; await W8(100); } return last; };
-    const start = async ci => { await closeAll(); await ev(ci => SM_TOWN.skiC().dbg.go(ci), ci); await W8(150); return run(); };
-    return { ev, W8, panel, closeAll, boot, K, at, tp, run, skr, bot, waitRun, start, popOff, POP }; };
+    const start = async (ci, bad) => { await closeAll(); await ev(ci => SM_TOWN.skiC().dbg.go(ci), ci); await W8(250); await wax(bad); await W8(100); return run(); };
+    return { ev, W8, panel, closeAll, boot, K, at, tp, run, skr, bot, waitRun, start, popOff, POP, wax }; };
   try { const p = await page([1280, 720]), X = kit(p), { ev, W8, panel, closeAll } = X; await X.boot();
     const S = await X.K(); console.log('  스키장 Ls ' + S.Ls + ' · 둘째 슬로프 ' + S.oB + ' · 리프트 ' + S.oL);
     // ① 출발 창
@@ -39,7 +41,9 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       ok(/기문 코스/.test(t) && /초급/.test(t) && /🔒\s*중급/.test(t), '꼭대기 E = 출발 창(초급 열림 · 중급 잠김): ' + t.slice(0, 90)); ok(/빨강·파랑 깃발/.test(t), '처음 한 번 = 하는 법 세 줄');
       ok(vis0.gates && /c1/.test(vis0.shown), '겨울 · 가까이 = 기문 인스턴스 보임(' + vis0.shown + ')');
       await ev(() => document.querySelector('.twn-p button[data-lock]').click()); await W8(300); ok(!!(await panel()), '잠긴 코스 = 창 그대로 + 한 줄');
-      await ev(() => document.querySelector('.twn-p button[data-c="0"]').click()); await W8(300); const r = await X.run(); ok(r && r.c === 'c1' && r.ph === 'count', '초급 누름 = 3·2·1 뒤 출발(' + JSON.stringify(r) + ')'); }
+      await ev(() => document.querySelector('.twn-p button[data-c="0"]').click()); await W8(300); const r0 = await X.run(), tp9 = await panel(); ok(r0 && r0.c === 'c1' && r0.ph === 'prep' && /기온/.test(tp9) && /왁스/.test(tp9), '초급 누름 = 출발 준비 창(눈·기온·바람 → 왁스): ' + tp9.replace(/\s+/g, ' ').slice(0, 90));
+      await p.keyboard.press('Escape'); await W8(900); const r1 = await X.run(); ok(r1 && r1.ph === 'prep' && /왁스/.test(await panel()), 'Esc로 닫아도 = 고를 때까지 출발 X(창 다시 엶)');
+      await X.wax(false); await W8(200); const r = await X.run(); ok(r && r.c === 'c1' && r.ph === 'count', '왁스 고름 = 3·2·1 뒤 출발(' + JSON.stringify(r) + ')'); }
     // ② 곧게만 = 놓침
     console.log('② 곧게만 내려가기');
     { await X.bot('straight'); const r = await X.waitRun(); await W8(500); const t = await panel(), st = await ev(() => SM_TOWN.skiC().dbg.st());
@@ -60,6 +64,15 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       await ev(() => { const S9 = SM_TOWN.game().S.xp.ski; S9.c1.best += 4; S9.ghost.c1 = S9.ghost.c1.slice(0, 20); }); const b1 = (await ev(() => SM_TOWN.game().S.xp.ski.c1.best)), x3 = await xp();
       await X.start(0); await X.bot('bot'); await X.waitRun(); await W8(500); const t3 = await panel(), st3 = await ev(() => SM_TOWN.skiC().dbg.st()), x4 = await xp();
       ok(st3.c1.best < b1 && /새 내 기록/.test(t3), '느린 옛 기록 → 새 최고로 갱신(' + b1 + ' → ' + st3.c1.best + ')'); ok(st3.ghost.c1.length > 20, '그림자도 새 판으로 바뀜(' + st3.ghost.c1.length / 2 + '칸)'); ok(x4 - x3 === 1 && x2 === x1, '최고를 깨면 +1 · 못 깨면 0(' + (x2 - x1) + '·' + (x4 - x3) + ')'); await closeAll(); }
+    // ⑧ 출발 준비 판단
+    console.log('⑧ 출발 준비 — 눈·기온·바람 → 왁스');
+    { const day = (m, w) => ev(([m, w]) => { SM_TOWN.game().S.min = m; SM_TOWN.rules.wx(w); return SM_TOWN.skiC().dbg.today(); }, [m, w]);
+      const a = await day(9 * 60, 'clear'), b9 = await day(12 * 60, 'clear'), c = await day(15 * 60, 'clear'), d = await day(15 * 60, 'snow');
+      ok(a.snow === 'hard' && a.tC <= -6 && a.wax === 'cold', '아침 = 밤새 얼어 단단 · 영하 ' + (-a.tC) + '도 → 파란 왁스'); ok(b9.snow === 'mid' && b9.wax === 'cold', '한낮 = 알맞음 · ' + b9.tC + '도 → 파란 왁스'); ok(c.snow === 'soft' && c.tC >= 1 && c.wax === 'warm', '맑은 오후 = 녹아 무름 · 영상 ' + c.tC + '도 → 빨간 왁스'); ok(d.snow === 'mid', '눈 오는 오후 = 녹지 않음(알맞음)');
+      await day(15 * 60, 'clear'); await ev(() => SM_TOWN.skiC().dbg.windSet(0, 0, 0)); const T = []; for (const bad of [false, true, false]) { const r0 = await X.start(0, bad); await ev(() => SM_TOWN.skiC().dbg.windSet(0, 0, 0)); await X.bot('bot'); const r = await X.waitRun(); await W8(500); const t9 = await panel(); T.push({ bad, t: r && r.t, pass: r && r.pass, line: /왁스가 오늘 눈과 (잘 맞았|맞지 않아)/.test(t9) ? RegExp.$1 : '' }); void r0; await closeAll(); }
+      console.log('    ' + JSON.stringify(T)); ok(T[1].t > T[0].t + 0.4 && T[1].t > T[2].t + 0.4, '안 맞는 왁스 = 같은 봇이 더 늦음(' + T[0].t + '·' + T[2].t + ' → ' + T[1].t + '초)'); ok(T[0].line === '잘 맞았' && T[1].line === '맞지 않아', '결과 창 = 왁스 한 줄(맞음 · 안 맞음)');
+      await X.start(0); await ev(() => SM_TOWN.skiC().dbg.windSet(0.6, 0, 0.6)); await X.bot('straight'); for (let i = 0; i < 40; i++) { const r = await X.run(); if (r && r.ph === 'go' && r.t > 0.4) break; await W8(100); } const l0 = (await X.skr()).lat; await W8(1500); const l1 = (await X.skr()).lat; const vis = await ev(() => SM_TOWN.skiC().dbg.wind());
+      ok(l1 - l0 > 0.5, '가로 바람 = 손 놓아도 옆으로 밀림(' + l0.toFixed(2) + ' → ' + l1.toFixed(2) + ' · 바람 ' + vis.lat + ')'); await X.waitRun(); await W8(500); await closeAll(); await ev(() => SM_TOWN.game().S.min = 10 * 60); }
     // ④ 잠 다섯 번
     console.log('④ 잠 연타');
     { const x0 = await xp(); for (let i = 0; i < 5; i++) await ev(() => { const G = SM_TOWN.game(); G.S.day++; }); await X.start(0); await X.bot('bot'); await X.waitRun(); await W8(500); await closeAll(); const x1 = await xp(), rw = await ev(() => JSON.stringify(SM_TOWN.game().S.rw || {}));

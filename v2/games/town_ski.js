@@ -10,6 +10,11 @@
 //   그리기: 기문 막대 = 인스턴스 한 벌(겨울 · 160m 안 · +1) · 다음 기문 노란 테(탈 때만 +1) · 그림자 사람(탈 때만 +1) · 새 Light X · 매 프레임 = 탈 때 비교 몇 줄 · 흔들리는 깃발만 행렬 다시 씀
 //   저장 GAME.S.xp.ski = { c1: { best, last, n }, c2, c3, ghost: { c1: [a×10, lat×10, …] (0.1초마다) } } · 학급 기록 REC.add('ski', { c, t, g, n })
 //   홍보판(SM_PROMO)에서는 마을 쪽이 이 모듈을 만들지 않음(예전 스키 그대로)
+//   출발 준비(JUDGE-2 · 10-26 '꾹은 탈것 조작이라 남김 · 대신 판단 하나 더'): 출발 전 창 하나 = 오늘 눈(때 → 단단함·알맞음·무름) + 기온 + 바람을 보고 왁스 고르기
+//     눈: 아침(11시 전) = 밤새 얼어 단단하고 반들반들 · 한낮 = 알맞음 · 오후(13시 반부터 · 맑은 날) = 햇볕에 녹아 무르고 무거움 · 눈 오는 날은 녹지 않음 · 비 오는 날은 늘 무름
+//     왁스: 파란 = 영하 1도보다 추운 날의 단단한 눈 · 빨간 = 0도 가까운 날의 물기 있는 눈(실제 스키 왁스는 통에 맞는 기온이 적혀 있음) · 안 맞으면 덜 미끄러짐(빨라지기 ×0.75 · 최고 −1.5) = 내 기록이 늦어짐(시간 비용 · 벌 X)
+//     눈 결: 단단한 눈 = 눈쟁기가 덜 먹힘(초당 −2.5 · 날이 미끄러져 돌기도 덜) → 일찍 눈쟁기 · 무른 눈 = 무거워 덜 빨라짐(×0.9) · 눈쟁기가 잘 먹힘(−5.5)
+//     바람: 슬로프를 가로지르는 바람 = 몸이 옆으로 밀림(바람 센 날 초당 0.6m · 보통 0.2m) → 기문보다 바람 불어오는 쪽을 겨눔 · 깃발 막대가 바람 쪽으로 기울어 보임 · 맞바람 = 최고 −0.8 · 뒷바람 = +0.8
 export const SKI_V = 1;
 const T2 = (ko, en) => [ko, en];
 // 코스: b = 슬로프(0 본 · 1 둘째) · n 기문 수 · w 막대 사이 · amp 좌우 엇갈림 · pat 엇갈림 꼴(작은 값 = 곧은 구간 · 웅크리기 자리) · need 열리는 조건 · pl 눈쟁기 · tu 웅크리기
@@ -34,12 +39,16 @@ export function createSki(A) {
   const T3 = A.T3, map = A.map, en = () => A.lang() === 'en', L = t => (Array.isArray(t) ? t[en() ? 1 : 0] : String(t)), esc = t => A.esc(t);
   const O = new T3.Object3D(), CLR = new T3.Color(), CW = new T3.Color(0xffffff);
   let CS = [], M = null, RING = null, GH = null, GMAT = null, MAT = null, GEOS = [], SHOWK = '', dead = false, R = null, TB = null;
-  const IN = { turn: 0, pl: false, tu: false }, TBS = { pl: false, tu: false };
+  const IN = { turn: 0, pl: false, tu: false }, TBS = { pl: false, tu: false }, WN = { lat: 0, al: 0, k: 0 };   /* 오늘 바람(슬로프 기준 · 가로 lat · 세로 al(+ = 뒷바람)) — 짓기·출발 때 한 번 읽음 */
+  // 오늘 눈·기온·바람(출발 준비 창과 물리가 같이 씀 · 같은 날 같은 때 = 같은 값)
+  function today() { const G = A.GAME.S, m = G.min | 0, wx = A.wx ? A.wx() : 'clear', R9 = rng('ski-day:' + A.seed() + ':' + G.day), snow = wx === 'rain' ? 'soft' : m < 660 ? 'hard' : m >= 810 && wx === 'clear' ? 'soft' : 'mid';
+    const tC = snow === 'hard' ? -9 + Math.floor(R9() * 4) : snow === 'soft' ? 1 + Math.floor(R9() * 2) : -4 + Math.floor(R9() * 2); return { snow, tC, wax: tC <= -1 ? 'cold' : 'warm', wx }; }
+  function windRead() { const S9 = A.ski(), W = A.wind ? A.wind() : null; WN.lat = WN.al = 0; WN.k = 0; if (!S9 || !W || !Number.isFinite(W.x)) return; const k = A.windy && A.windy() ? 0.6 : 0.2; WN.k = k; WN.lat = (W.x * S9.px + W.z * S9.pz) * k; WN.al = (W.x * S9.ux + W.z * S9.uz) * (k > 0.3 ? 0.8 : 0.3); }
   const ST = () => { const S = A.GAME.S, X = S.xp || (S.xp = {}); return X.ski || (X.ski = {}); };
   const rec = id => ST()[id] || null;
   const open = c => !c.need || !!(rec(c.need) && rec(c.need).best != null);
   // ── 코스 짓기(짓기 때 한 번 · 마을마다 같은 씨앗) ──
-  function build() { const S9 = A.ski(); CS = []; SHOWK = ''; if (!S9) return; const r9 = rng('ski-gates:' + A.seed());
+  function build() { const S9 = A.ski(); CS = []; SHOWK = ''; if (!S9) return; windRead(); const r9 = rng('ski-gates:' + A.seed());
     for (const d of CO) { const b = d.b && S9.oB ? 1 : 0, o0 = b ? S9.oB : 0, hw = (b ? 6 : 8) - 1.2, Ls = S9.Ls, g = [];
       for (let i = 0; i < d.n; i++) { const a = 10 + i * (Ls - 16) / (d.n - 1), lim = hw - d.w / 2 + 0.6; let o = d.pat[i] * d.amp + (r9() - 0.5) * 0.6; o = Math.max(-lim, Math.min(lim, o)); g.push({ a, o: o0 + o, st: 0, wob: 0 }); }
       CS.push({ ...d, b, o0, hw, g, i0: 0 }); }
@@ -56,7 +65,7 @@ export function createSki(A) {
     GH = new T3.Mesh(geo([[0.42, 0.55, 0.3, 0, 0.92, 0], [0.3, 0.3, 0.3, 0, 1.36, 0], [0.14, 0.6, 0.14, -0.1, 0.4, 0.04], [0.14, 0.6, 0.14, 0.1, 0.4, 0.04], [0.09, 0.03, 1.4, -0.13, 0.02, 0.1], [0.09, 0.03, 1.4, 0.13, 0.02, 0.1]]), GMAT); GH.visible = false; GH.userData.fx = 1; map.add(GH); }
   const gateCol = (c, i) => { const s = c.g[i].st; CLR.setHex(s < 0 ? MISS : i % 2 ? BLUE : RED); if (s > 0) CLR.lerp(CW, 0.5); return CLR; };
   function poleSet(c, i, show) { const S9 = A.ski(), G = c.g[i], th = Math.atan2(-S9.pz, S9.px), w9 = G.wob > 0 ? Math.sin(G.wob * 22) * 0.28 * G.wob : 0;
-    for (let s = 0; s < 2; s++) { const k = c.i0 + i * 2 + s, o = G.o + (s ? 1 : -1) * c.w / 2, [x, z] = A.skiAt(G.a, o); O.position.set(x, A.ty(x, z) - 0.08, z); O.rotation.set(0, th + (s ? Math.PI : 0), w9); O.scale.setScalar(show ? 1 : 0); O.updateMatrix(); M.setMatrixAt(k, O.matrix); M.setColorAt(k, gateCol(c, i)); } }
+    for (let s = 0; s < 2; s++) { const k = c.i0 + i * 2 + s, o = G.o + (s ? 1 : -1) * c.w / 2, [x, z] = A.skiAt(G.a, o); O.position.set(x, A.ty(x, z) - 0.08, z); O.rotation.set(0, th + (s ? Math.PI : 0), w9 + (s ? 1 : -1) * WN.lat * 0.18);   /* 바람에 기운 막대(둘 다 바람 가는 쪽 · 둘째 막대는 반 바퀴 돌아 있어 부호 반대) */ O.scale.setScalar(show ? 1 : 0); O.updateMatrix(); M.setMatrixAt(k, O.matrix); M.setColorAt(k, gateCol(c, i)); } }
   function showSet(key, list) { if (key === SHOWK) return; SHOWK = key; for (const c of CS) for (let i = 0; i < c.g.length; i++) poleSet(c, i, list.includes(c)); M.instanceMatrix.needsUpdate = true; if (M.instanceColor) M.instanceColor.needsUpdate = true; }
   function ringAt(c, i) { if (!c || i >= c.g.length) { RING.visible = false; return; } const G = c.g[i]; for (let s = 0; s < 2; s++) { const [x, z] = A.skiAt(G.a, G.o + (s ? 1 : -1) * c.w / 2); O.position.set(x, A.ty(x, z) + 1.62, z); O.rotation.set(0, 0, 0); O.scale.setScalar(1); O.updateMatrix(); RING.setMatrixAt(s, O.matrix); } RING.instanceMatrix.needsUpdate = true; RING.visible = true; }
   // ── 매 프레임(마을 skiTick이 부름 · 보일 때만 · 새 객체 X) ──
@@ -67,18 +76,30 @@ export function createSki(A) {
     if (dirty) { M.instanceMatrix.needsUpdate = true; if (M.instanceColor) M.instanceColor.needsUpdate = true; } }
   // ── 한 판 ──
   function begin(ci) { const c = CS[ci]; if (!c) return null; for (const C of CS) for (const G of C.g) { G.st = 0; G.wob = 0; } SHOWK = '';
-    const gh = (ST().ghost || {})[c.id]; R = { c, ph: 'count', cd: 1.9, t: 0, k: 0, pass: 0, miss: 0, samp: [], sT: 0, gh: gh && gh.length >= 4 ? gh : null, gAhead: null, said: false, cdS: 9, fin: 0, pl: false, tu: false, plT: 0, tuT: 0 };
-    meshes(); ringAt(c, 0); A.goal(L(T2('🎿 ' + c.nm[0] + ' 기문 — 준비…', '🎿 ' + c.nm[1] + ' gates — ready…'))); tbOn(c);
+    const gh = (ST().ghost || {})[c.id]; windRead(); const D = today(); R = { c, ph: 'prep', cd: 1.9, t: 0, k: 0, pass: 0, miss: 0, samp: [], sT: 0, gh: gh && gh.length >= 4 ? gh : null, gAhead: null, said: false, cdS: 9, fin: 0, pl: false, tu: false, plT: 0, tuT: 0, day: D, wax: null, reT: 0 };
+    meshes(); SHOWK = ''; ringAt(c, 0); A.goal(L(T2('🎿 ' + c.nm[0] + ' 기문 — 출발 준비', '🎿 ' + c.nm[1] + ' gates — getting ready'))); prep();
     return { a: 3, lat: c.o0 }; }
+  // 출발 준비 창(JUDGE-2): 눈 · 기온 · 바람(본 것) → 왁스 고르기(보기 차례는 날마다 섞임) · 고르면 3·2·1
+  function prep() { if (!R || R.ph !== 'prep') return; const D = R.day, c = R.c;
+    const snowT = { hard: T2('밤새 얼어 단단하고 반들반들해요. 스키가 잘 미끄러지고, 멈추기는 어려워요.', 'It froze overnight — hard and shiny. Skis glide easily, but stopping is harder.'), mid: T2('알맞게 단단해요.', 'Nicely firm.'), soft: T2('햇볕에 녹아 무르고 물기가 있어요. 발이 푹 들어가요.', 'Softened by the sun — wet and slushy. Your boots sink in.') }[D.snow];
+    const wl = Math.abs(WN.lat), windT = WN.k > 0.3 && wl > 0.15 ? T2('바람이 세게 슬로프를 가로질러 불어요. 깃발 막대가 기울어 있어요.', 'A strong wind blows across the slope. The flag poles are leaning.') : WN.k > 0.3 ? T2('바람이 세게 불지만 슬로프를 따라 불어요.', 'The wind is strong but blows along the slope.') : T2('바람이 약해요.', 'The wind is light.');
+    const W2 = [['cold', T2('파란 왁스 — 영하 1도보다 추운 날, 단단한 눈', 'Blue wax — colder than −1°C, hard snow'), '#cfe3fb'], ['warm', T2('빨간 왁스 — 0도 가까운 날, 물기 있는 눈', 'Red wax — near 0°C, wet snow'), '#fbd6cf']].sort((a, b) => hashS(a[0] + A.GAME.S.day) - hashS(b[0] + A.GAME.S.day));
+    const P9 = A.openP('<h3>' + esc(L(T2('🎿 출발 준비 — ' + c.nm[0], '🎿 Getting ready — ' + c.nm[1]))) + '</h3>'
+      + '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:6px 0;font-size:15px;line-height:1.4"><b>' + esc(L(T2('눈', 'Snow'))) + '</b><span>' + esc(L(snowT)) + '</span><b>' + esc(L(T2('기온', 'Temp'))) + '</b><span>' + esc((D.tC < 0 ? (en() ? '−' : '영하 ') + (-D.tC) : (en() ? '' : '영상 ') + D.tC) + (en() ? '°C' : '도')) + '</span><b>' + esc(L(T2('바람', 'Wind'))) + '</b><span>' + esc(L(windT)) + '</span></div>'
+      + '<div class="sm">' + esc(L(T2('스키 바닥에 바를 왁스를 골라요. 왁스 통에 맞는 기온이 적혀 있어요.', 'Pick the wax for the bottom of your skis. Each tin shows the temperature it suits.'))) + '</div>'
+      + '<div style="display:grid;gap:8px;margin-top:8px">' + W2.map(w => '<button data-wax="' + w[0] + '" class="sub" style="text-align:left;min-height:48px;background:' + w[2] + ';color:#2b2420">' + esc(L(w[1])) + '</button>').join('') + '</div>', false, 'skiprep');
+    P9.addEventListener('click', e => { const b = e.target.closest && e.target.closest('button[data-wax]'); if (!b || !R || R.ph !== 'prep') return; R.wax = b.dataset.wax; R.ph = 'count'; A.closeP(); A.tone(R.wax === D.wax ? 880 : 523, 0, 0.12, 'triangle', 0.05); A.goal(L(T2('🎿 ' + c.nm[0] + ' 기문 — 준비…', '🎿 ' + c.nm[1] + ' gates — ready…'))); tbOn(c); }); }
   const goalRun = () => { const c = R.c, g9 = L(T2('🎿 기문 ' + R.k + '/' + c.g.length, '🎿 Gate ' + R.k + '/' + c.g.length)), h = A.touch() ? ''   /* 휴대폰 = 줄이 잘리지 않게 수만(단추에 글이 있음) */
     : L(T2(' · A/D 좌우', ' · A/D steer')) + (c.pl ? L(T2(' · S 꾹 = 눈쟁기', ' · hold S = plough')) : '') + (c.tu ? L(T2(' · W 꾹 = 웅크리기', ' · hold W = tuck')) : ''); A.goal(g9 + h); };
   // 물리(설계 §4.2): 옆 빠르기 = 4.2 × 8 ÷ (v + 4)(느릴수록 날카롭게) · 눈쟁기 = 초당 −4(최저 3) · 웅크리기 = 최고 13 · 가속 +1 · 돌기 × 0.6
   function step(dt, SK, inp) { if (!R) return 'end'; const c = R.c, S9 = A.ski(); const I = API.inp || inp;
+    if (R.ph === 'prep') { SK.sl = 0; if ((R.reT += dt) > 0.4) { R.reT = 0; prep(); } return ''; }   /* 준비 창을 Esc로 닫으면 다시 엶(고를 때까지 출발 X) */
     if (R.ph === 'count') { R.cd -= dt; const n9 = Math.ceil(R.cd / 0.63); if (n9 !== R.cdS && n9 > 0) { R.cdS = n9; A.tone(523, 0, 0.12, 'triangle', 0.05); A.goal('🎿 ' + n9 + '…'); } if (R.cd <= 0) { R.ph = 'go'; A.tone(1047, 0, 0.22, 'triangle', 0.06); goalRun(); } SK.sl = 0; return ''; }
     if (R.ph === 'go') { R.t += dt; const turn = Math.max(-1, Math.min(1, I.turn || 0)), pl = !!(c.pl && (I.pl || TBS.pl)), tu = !!(c.tu && (I.tu || TBS.tu)) && !pl; R.pl = pl; R.tu = tu; if (pl) R.plT += dt; if (tu) R.tuT += dt;
-      if (pl) SK.v = SK.v > 3 ? Math.max(3, SK.v - 4 * dt) : Math.min(3, SK.v + 2 * dt);
-      else { const top = tu ? 13 : 10; SK.v += (3.2 - Math.abs(turn) * 1.2 + (tu ? 1 : 0)) * dt; if (SK.v > top) SK.v = Math.max(top, SK.v - 3 * dt); }
-      const vl = 4.2 * 8 / (SK.v + 4) * (tu ? 0.6 : 1), lat0 = SK.lat, a0 = SK.a; SK.sl = turn * vl; SK.lat = Math.max(c.o0 - c.hw, Math.min(c.o0 + c.hw, SK.lat + turn * vl * dt)); SK.a += SK.v * dt;
+      const sn = R.day.snow, wxOk = R.wax === R.day.wax, brk = sn === 'hard' ? 2.5 : sn === 'soft' ? 5.5 : 4, acc = (wxOk ? 1 : 0.75) * (sn === 'soft' ? 0.9 : 1), topK = (wxOk ? 0 : -1.5) + WN.al;   /* JUDGE-2 왁스·눈 결·바람 */
+      if (pl) SK.v = SK.v > 3 ? Math.max(3, SK.v - brk * dt) : Math.min(3, SK.v + 2 * dt);
+      else { const top = (tu ? 13 : 10) + topK; SK.v += (3.2 - Math.abs(turn) * 1.2 + (tu ? 1 : 0)) * acc * dt; if (SK.v > top) SK.v = Math.max(top, SK.v - 3 * dt); }
+      const vl = 4.2 * 8 / (SK.v + 4) * (tu ? 0.6 : 1) * (sn === 'hard' ? 0.85 : 1), lat0 = SK.lat, a0 = SK.a; SK.sl = turn * vl + WN.lat; SK.lat = Math.max(c.o0 - c.hw, Math.min(c.o0 + c.hw, SK.lat + (turn * vl + WN.lat) * dt)); SK.a += SK.v * dt;
       while (R.k < c.g.length && SK.a >= c.g[R.k].a) { const G = c.g[R.k], f = (G.a - a0) / Math.max(1e-4, SK.a - a0), la = lat0 + (SK.lat - lat0) * f, ok = Math.abs(la - G.o) <= c.w / 2;
         if (ok) { G.st = 1; G.wob = 1; R.pass++; A.tone(NOTE[Math.min(NOTE.length - 1, R.pass - 1)], 0, 0.16, 'triangle', 0.06); }
         else { G.st = -1; R.miss++; A.tone(262, 0, 0.18, 'sine', 0.04, 196); A.say(L(T2('🚩 깃발 하나를 놓쳤어요 — 다음 깃발로!', '🚩 Missed a gate — on to the next one!')), 1.6); }
@@ -102,11 +123,11 @@ export function createSki(A) {
   function tbOff() { if (TB) for (const b of TB) b.remove(); TB = null; TBS.pl = TBS.tu = false; if (CRV) { CRV[0].style.visibility = CRV[1]; CRV = null; } }
   // ── 끝 ──
   function stopRun() { tbOff(); if (RING) RING.visible = false; if (GH) GH.visible = false; SHOWK = ''; }
-  function abort() { if (!R) return; R = null; stopRun(); }
+  function abort() { if (!R) return; const pr = R.ph === 'prep'; R = null; stopRun(); if (pr) A.closeP(); }
   function done() { if (!R) return; const r = R, c = r.c, N = c.g.length, all = r.pass === N && r.fin > 0, t = Math.round(r.fin * 10) / 10, S = ST(), P = S[c.id] || (S[c.id] = { best: null, last: null, n: 0 }), prev = P.best, wasOpen = CS.map(open);
     R = null; stopRun(); P.n = (P.n || 0) + 1; let isBest = false;
     if (all) { P.last = t; if (prev == null || t < prev - 0.05) { isBest = true; P.best = t; (S.ghost || (S.ghost = {}))[c.id] = r.samp.slice(); } }
-    A.GAME.mark(); A.rec('ski', { c: c.id, t: all ? t : null, g: r.pass, n: N });
+    A.GAME.mark(); A.rec('ski', { c: c.id, t: all ? t : null, g: r.pass, n: N, wax: r.wax, snow: r.day.snow });
     const nowOpen = CS.map(open), neu = CS.find((C, i) => nowOpen[i] && !wasOpen[i]);
     const fact = FACT[P.n % 2 ? CS.indexOf(c) : 3 + ((P.n >> 1) % 2)];   /* 코스마다 그 동작 사실 · 짝수 판엔 왁스·산지 관광 */
     const d = prev != null && all ? Math.round((prev - t) * 10) / 10 : null;
@@ -117,8 +138,9 @@ export function createSki(A) {
       : isBest ? L(T2('내 최고보다 ' + d.toFixed(1) + '초 빨라요. 새 내 기록!', d.toFixed(1) + 's faster than your best. New record!'))
       : L(T2('내 최고보다 ' + (-d).toFixed(1) + '초 늦었어요. 그림자를 따라가 봐요.', (-d).toFixed(1) + 's slower than your best. Try following your shadow.'));
     const up = neu ? L(T2('🔓 ' + neu.nm[0] + ' 코스가 열렸어요', '🔓 ' + neu.nm[1] + ' course is open')) + ' — ' + (neu.tu ? L(T2('W 꾹 = 웅크리기(빠르게) · 둘째 슬로프 꼭대기에서 출발', 'hold W = tuck · starts at the top of the second slope')) : L(T2('S 꾹 = 눈쟁기(느리게)', 'hold S = plough (slow down)'))) : '';
-    const nx = all && neu && neu.b === c.b ? CS.indexOf(neu) : -1;
-    const P9 = A.openP('<h3>' + esc(head) + '</h3><div style="font-size:30px;font-weight:900;margin:6px 0">' + esc(big) + '</div><div>' + esc(line) + '</div>' + (up ? '<div style="margin-top:6px;font-weight:700">' + esc(up) + '</div>' : '')
+    const nx = all && neu && neu.b === c.b ? CS.indexOf(neu) : -1, wOk = r.wax === r.day.wax;
+    const waxL = wOk ? L(T2('왁스가 오늘 눈과 잘 맞았어요.', 'Your wax suited today’s snow.')) + (r.day.snow === 'hard' && c.pl ? ' ' + L(T2('단단한 눈에서는 눈쟁기가 덜 먹혀요 — 깃발 앞에서 일찍 시작해요.', 'On hard snow the plough grips less — start it early before a gate.')) : '') : L(T2('왁스가 오늘 눈과 맞지 않아 덜 미끄러졌어요. 다음엔 기온을 보고 골라요.', 'The wax didn’t suit today’s snow, so you glided less. Next time, check the temperature.'));
+    const P9 = A.openP('<h3>' + esc(head) + '</h3><div style="font-size:30px;font-weight:900;margin:6px 0">' + esc(big) + '</div><div>' + esc(line) + '</div>' + (up ? '<div style="margin-top:6px;font-weight:700">' + esc(up) + '</div>' : '') + '<div style="margin-top:6px">' + esc(waxL) + '</div>'
       + '<div class="sm" style="margin-top:8px">💡 ' + esc(L(fact)) + '</div><div class="row" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">'
       + (nx >= 0 ? '<button data-a="go" data-c="' + nx + '">' + esc(L(T2('바로 ' + neu.nm[0] + ' 타기', 'Try ' + neu.nm[1] + ' now'))) + '</button>' : '')
       + '<button data-a="again" data-c="' + CS.indexOf(c) + '">' + esc(L(T2('🚡 리프트 타고 또 하기', '🚡 Lift up and go again'))) + '</button><button data-a="x" class="sub">' + esc(L(T2('그만', 'Done'))) + '</button></div>', false, 'skirun');
@@ -148,6 +170,7 @@ export function createSki(A) {
   function dispose() { dead = true; tbOff(); for (const m of [M, RING, GH]) if (m) { if (m.parent) m.parent.remove(m); } for (const g of GEOS) g.dispose(); GEOS = []; for (const m of [MAT, GMAT, RING && RING.material]) if (m) m.dispose(); M = RING = GH = null; R = null; }
   const API = { build, tick, begin, step, done, abort, menu, has, openRec, dispose, pose, inp: null, running: () => !!R,
     dbg: { courses: () => CS.map(c => ({ id: c.id, b: c.b, o0: c.o0, hw: c.hw, w: c.w, pl: c.pl, tu: c.tu, open: open(c), g: c.g.map(G => ({ a: +G.a.toFixed(2), o: +G.o.toFixed(2), st: G.st })) })),
+      prep: () => (R ? { ph: R.ph, ok: R.day.wax, snow: R.day.snow, tC: R.day.tC, wax: R.wax, wind: { ...WN } } : null), wind: () => ({ ...WN }), today: () => today(), windSet: (lat, al, k) => { WN.lat = lat; WN.al = al || 0; WN.k = k == null ? 0.6 : k; SHOWK = ''; },
       run: () => (R ? { c: R.c.id, ph: R.ph, t: +R.t.toFixed(2), k: R.k, pass: R.pass, miss: R.miss, ghost: !!R.gh, ghV: !!(GH && GH.visible), pl: R.pl, tu: R.tu, plT: +R.plT.toFixed(2), tuT: +R.tuT.toFixed(2) } : null),
       vis: () => ({ gates: !!(M && M.visible), ring: !!(RING && RING.visible), ghost: !!(GH && GH.visible), shown: SHOWK, tb: TB ? TB.map(b => b.dataset.k) : [] }), st: () => JSON.parse(JSON.stringify(ST())), tbs: TBS, go: ci => A.start(ci) } };
   return API;
