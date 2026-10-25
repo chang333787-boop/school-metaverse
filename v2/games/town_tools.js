@@ -304,7 +304,7 @@ export function createTools(A) {
       const H9 = map.interact.add({ kind: 'game', x: at[0], z: at[1], y, r: 1.6, label: en() ? '🧹 Borrow the broom' : '🧹 빗자루 빌리기', use: () => broomTake(p) }); STANDH.push(H9); A.enth.push(H9); }
     standSync(); dirty = true; }
   function standSync() { const off = !!S().have.broom; for (const h of STANDH) if (h.hot.off !== off) h.hot.off = off; }
-  function broomTake(p) { if (S().have.broom) return; const e = en(); toast((e ? '📝 A note by the door: "Anyone who cleans the town may use it." — ' : '📝 문 옆 쪽지: "마을을 깨끗이 해 줄 분은 마음껏 쓰세요" — ') + esc(p.name || ''), 3.6); got('broom'); standSync(); dirty = true; }
+  function broomTake(p) { const e = en(); if (S().have.broom) { toast(e ? '🧹 You already have a broom — press 5 to hold it' : '🧹 빗자루는 벌써 있어요 — 5를 눌러 들어요', 2.4); return; }   /* FEEL-2: 예전엔 아무 말 없이 끝 */ toast((e ? '📝 A note by the door: "Anyone who cleans the town may use it." — ' : '📝 문 옆 쪽지: "마을을 깨끗이 해 줄 분은 마음껏 쓰세요" — ') + esc(p.name || ''), 3.6); got('broom'); standSync(); dirty = true; }
 
   // ───────── 덩이·조각 그리기(바뀔 때만): 쓸 자리 · 구덩이 흙 · 꽃 한 송이 더 · 기대 선 빗자루 ─────────
   const LEAFC = [0xd8762a, 0xc8452e, 0xe8b23a, 0x9a6a3a], FLC = [0xf28bb0, 0xf6d23c, 0xb48cf0, 0xff8a5c, 0xffffff];
