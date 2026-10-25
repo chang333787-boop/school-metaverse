@@ -9,7 +9,7 @@ const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] 
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
 (async () => { const T0 = Date.now(), b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const errs = [];
   try { const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage(); p.on('pageerror', e => errs.push(e.message.slice(0, 200))); p.on('console', m => { const t = m.text(); if ((m.type() === 'error' && !/favicon|404|ERR_|pointer lock|WebGL|GPU stall/.test(t)) || /게임 tick 오류/.test(t)) errs.push(t.slice(0, 200)); if (/REW-1: 꼬리표 없는/.test(t)) console.log('    ⚠ ' + t); });
-    const W8 = ms => p.waitForTimeout(ms), ev = (f, a) => p.evaluate(f, a);
+    const W8 = ms => p.waitForTimeout(ms), ev = (f, a) => p.evaluate(f, a); await p.addInitScript(() => { window.__SURP_OFF = 1; });   /* 숨은 놀람(SURP-1 · 하루 한 번 · 가만히 몇 초)은 이 시험의 되풀이에 섞이지 않게 끔 — 놀람 한도는 town_surp.cjs가 봄 */
     await p.goto(URL); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && SM_TOWN.rules && SM_TOWN.rw && window.SD2, null, { timeout: 240000 }); await W8(1500);
     await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button'); if (b9) b9.click(); }); await p.keyboard.press('Escape'); await W8(800);
     // 잼 틀(페이지 안): 값표는 게임 모듈에서 그대로 읽음(같은 주소 = 같은 모듈)
@@ -48,11 +48,11 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     for (let i = 0; i < H.length; i++) {
       await ev(i9 => { __C.fresh(false); window.__s0 = __C.snap(); const h = __C.hots()[i9]; window.__h = h; if (h) __C.at(h); }, i);
       for (let r = 0; r < 8; r++) { await ev(() => { const h = __h; if (!h) return; __C.at(h); try { h.use(); } catch (e) { /* 아래 pageerror */ } __C.clean(); }); await W8(40); }
-      await W8(1100); await ev(() => __C.clean()); await esc(); await ev(() => { window.__s8 = __C.snap(); });
+      await W8(1100); await ev(() => __C.clean()); await esc(); await ev(() => { window.__s8 = __C.snap(); const R9 = SM_TOWN.game().S.rw; window.__c8 = JSON.stringify((R9 && R9.c) || {}); });
       await ev(() => { const h = __h; if (!h) return; for (let r = 0; r < 192; r++) { __C.at(h); try { h.use(); } catch (e) { /* 아래 */ } __C.clean(); } });
       await W8(1100); await ev(() => __C.clean()); await esc();
-      const g = await ev(() => ({ a: __C.diff(__s0, __s8), z: __C.diff(__s8, __C.snap()) }));
-      const more = g.z.v + g.z.xpT + g.z.hMax; if (more > 0) grow.push(H[i] + ' (+가치 ' + g.z.v + ' · +솜씨 ' + g.z.xpT + ' · +하트 ' + g.z.hMax + ')'); else nOk++;
+      const g = await ev(() => { const c0 = JSON.parse(__c8 || '{}'), R9 = SM_TOWN.game().S.rw, c1 = (R9 && R9.c) || {}, src = Object.keys(c1).filter(k => (c1[k] || 0) > (c0[k] || 0)).map(k => k + '+' + ((c1[k] || 0) - (c0[k] || 0))); return { a: __C.diff(__s0, __s8), z: __C.diff(__s8, __C.snap()), src }; });
+      const more = g.z.v + g.z.xpT + g.z.hMax; if (more > 0) grow.push(H[i] + ' (+가치 ' + g.z.v + ' · +솜씨 ' + g.z.xpT + ' · +하트 ' + g.z.hMax + ' · 출처 ' + (g.src.join(',') || '?') + ')'); else nOk++;
       const tot = g.a.v + g.z.v; if (tot > worst.g) worst = { g: tot, l: H[i], xp: g.a.xpT + g.z.xpT }; }
     ok(!grow.length, 'E 자리 ' + H.length + '곳 — 9번째 뒤로 더 생기지 않음 ' + nOk + '곳' + (grow.length ? ' · 늘어난 곳: ' + grow.slice(0, 6).join(' / ') : ''));
     console.log('    가장 많이 생긴 자리: ' + (worst.l || '-') + ' 가치 ' + worst.g + ' · 솜씨 ' + (worst.xp || 0));

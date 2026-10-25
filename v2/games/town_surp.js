@@ -144,7 +144,7 @@ export function createSurp(A) {
     VIEW.txt = ex ? 'To the ' + DIR8[k][1] + ': ' + M.t[1] : DIR8[k][0] + '쪽에 ' + M.t[0]; el.textContent = VIEW.txt; el.style.display = ''; SEEN.m = best; }
 
   // ───────── 1초 칸 ─────────
-  function sec() { if (!A.on()) { viewOff(); return; } const me = map.player.pos(), busy = A.busy(); const mv = ME.ok ? Math.hypot(me.x - ME.x, me.z - ME.z) : 0; ME.x = me.x; ME.z = me.z; ME.ok = true;
+  function sec() { if (!A.on() || window.__SURP_OFF) { viewOff(); return; }   /* 시험 손잡이: 보상 한도 시험(town_cap)이 E 자리를 되풀이하는 동안 하루 한 번 놀람이 섞여 '9번째 뒤로 또 생김'으로 잡히지 않게 */ const me = map.player.pos(), busy = A.busy(); const mv = ME.ok ? Math.hypot(me.x - ME.x, me.z - ME.z) : 0; ME.x = me.x; ME.z = me.z; ME.ok = true;
     const sat = !!A.sitting(); ST.sit = sat ? ST.sit + 1 : 0; ST.still = !busy && mv < 0.25 && !map.player.input ? ST.still + 1 : 0; ST.walk = !busy && mv > 0.8 && !sat ? ST.walk + 1 : 0;
     if (compT > 0 && (compT -= 1) <= 0 && !VIEW.on) A.comp(false);
     if (!VIEW.on && !busy && A.high() && ST.still >= 2) viewOn(me); else if (VIEW.on && (busy || Math.hypot(me.x - VIEW.x, me.z - VIEW.z) > 4)) viewOff();
