@@ -5,6 +5,7 @@
 //     money 💰 돈 받기 = 동전 '짤랑'(같은 순간 다른 소리 — 팔기 ding·단계 ding — 가 나면 그 소리만) + 지갑 줄 숫자가 올라감(얼마에서 얼마로)
 //     plant 🌱 텃밭 심기 = 흙 '톡톡' + 흙 부스러기 몇 개 — 예전엔 거의 안 들리는 tick
 //     water 💧 텃밭 손 물 주기(E) = 물 '똑' + 물방울 몇 개 — 예전엔 없는 소리 이름('pop')이라 조용했음
+//     best  🏅 일 놀이 새 내 최고(LADDER-2 · town_lad.js) = 오르는 세 음(작게) + 그 줄이 한 번 밝아지고 살짝 커졌다 제자리(0.7초)
 //   규칙(town_lessons E '소리는 배경' · G 'AI 슬롭 X'): 소리 0.2초 안팎 · 작게 · 낮게 · 빨리 되풀이하면 작아지다 건너뜀(1.2초 안 · 다섯 번째부터 X) · 설정 '소리 끄기'면 아예 안 부름
 //     연출 = 그 자리 0.3~0.9초 · DOM은 transform·opacity만(Web Animations) · 3D는 작은 상자 열 개 한 메시(살아 있을 때만 보임 · 그리기 +1) · 새 Light X · 매 프레임 new X(살아 있는 조각이 없으면 바로 돌아감)
 //   map.sfx·map.tone을 감싸서 셈(시험 town_feel.cjs) — 'pop'은 학교 효과음 표에 없어 조용하던 것(틀린 답·물 주기) → 여기서 작고 낮은 소리로 채움
@@ -12,7 +13,7 @@ const CSS = '.twn-feel-hi{position:fixed;z-index:46;pointer-events:none;border:3
   + '.twn-feel-st{position:fixed;left:50%;top:27%;z-index:48;pointer-events:none;margin-left:-62px;width:124px;height:124px;box-sizing:border-box;border:5px solid #c8443a;border-radius:50%;color:#c8443a;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font:900 15px/1.2 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;background:rgba(255,248,234,.9);opacity:0}'
   + '.twn-feel-st b{font-size:30px;line-height:1.1}.twn-feel-st span{max-width:104px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
   + '.twn-feel-wl{position:fixed;left:50%;top:calc(44% + 50px);z-index:47;pointer-events:none;transform:translateX(-50%);padding:4px 14px;border:2px solid #2b2420;border-radius:10px;background:#fff8ea;box-shadow:0 3px 0 #2b2420;color:#2b2420;font:900 18px system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;white-space:nowrap;opacity:0}';
-const KINDS = ['step', 'stamp', 'money', 'plant', 'water'];
+const KINDS = ['step', 'stamp', 'money', 'plant', 'water', 'best'];
 const GAP = 1200, VOLS = [1, 0.6, 0.4, 0.3];   /* 1.2초 안에 또 = 작게(0.6 · 0.4 · 0.3) · 다섯 번째부터 건너뜀 */
 const PN = 10;   /* 흙·물 조각 수(한 메시) */
 
@@ -32,6 +33,7 @@ export function createFeel(A) {
     money: [[1976, 0, 0.06, 'sine', 0.06], [2637, 0.05, 0.12, 'sine', 0.05]],   /* 짤랑(높지만 아주 작게 · 짧게) */
     plant: [[196, 0, 0.08, 'triangle', 0.08, 150], [262, 0.08, 0.08, 'triangle', 0.06, 200]],   /* 톡톡(흙 두드림) */
     water: [[880, 0, 0.07, 'sine', 0.05, 560], [1175, 0.08, 0.09, 'sine', 0.04, 700]],   /* 똑 똑(물방울) */
+    best: [[784, 0, 0.1, 'triangle', 0.08], [988, 0.09, 0.1, 'triangle', 0.08], [1319, 0.18, 0.22, 'sine', 0.09]],   /* 솔·시·미(오르는 세 음 · 팡파르보다 작게) */
   };
   // ── DOM(한 번 만들어 돌려 씀) ──
   let css = null, HI = null, ST = null, WL = null, wlTm = 0, alive = true;
@@ -60,9 +62,13 @@ export function createFeel(A) {
   function draw(dt) { const M = PM; let n = 0; for (let i = 0; i < PN; i++) { if (PL[i] <= 0) continue; PL[i] -= dt; if (PL[i] <= 0) { pAlive--; continue; } const j = i * 3; PV[j + 1] -= 6 * dt; PX[j] += PV[j] * dt; PX[j + 1] += PV[j + 1] * dt; PX[j + 2] += PV[j + 2] * dt;
       const s = 0.07 * Math.min(1, PL[i] / 0.3); M.setMatrixAt(i, _m.compose(_p.set(PX[j], PX[j + 1], PX[j + 2]), _q, _s.set(s, s, s))); n++; } for (let i = 0; i < PN; i++) if (PL[i] <= 0) M.setMatrixAt(i, _m.makeScale(0, 0, 0));
     M.instanceMatrix.needsUpdate = true; if (!n) { M.visible = false; pAlive = 0; } }
+  // 🏅 새 내 최고: 끝 창의 기록 줄(el)을 덮고 한 번 밝아짐 + 그 줄이 살짝 커졌다 제자리(넘침 X)
+  function best(el) { const v = gate('best'); if (v) play(SOUND.best, v, 'best'); if (!el || !el.getBoundingClientRect) return; ui(); setTimeout(() => { if (!alive || !el.isConnected) return; const r = el.getBoundingClientRect(); if (r.width < 4) return;
+    HI.style.left = (r.left - 4) + 'px'; HI.style.top = (r.top - 4) + 'px'; HI.style.width = (r.width + 8) + 'px'; HI.style.height = (r.height + 8) + 'px'; G.best.fx++;
+    ani(HI, [{ opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 0 }], 800); ani(el, [{ transform: 'scale(1)' }, { transform: 'scale(1.06)', offset: 0.3 }, { transform: 'scale(1)' }], 700); }, 60); }
   function farm(k, x, y, z) { const v = gate(k); if (v) play(SOUND[k], v, k); if (x == null) return; G[k].fx++; puff(x, y, z, k === 'water' ? [0x8fd8ff, 0xcfeeff, 0x6cc0f0] : [0x6b4a2e, 0x8a6440, 0x5a3c24], k === 'water' ? 0.8 : 1); }
   return {
-    step, stamp, money, farm, puff, sfx: k => map.sfx(k),   /* puff = SURP-1 놀람(게 웅덩이 물·소금꽃)이 같은 알갱이를 다시 씀 */   /* sfx = 시험이 마을 소리 길(감싼 map.sfx)을 부를 때 */
+    step, stamp, money, farm, puff, best, sfx: k => map.sfx(k),   /* puff = SURP-1 놀람(게 웅덩이 물·소금꽃)이 같은 알갱이를 다시 씀 */   /* sfx = 시험이 마을 소리 길(감싼 map.sfx)을 부를 때 */
     tick(dt) { if (!pAlive || !PM) return; draw(Math.min(dt, 0.1)); },
     info: () => ({ snd: { ...SND }, g: JSON.parse(JSON.stringify(G)), puff: { alive: pAlive, vis: !!(PM && PM.visible) }, dom: { hi: HI ? +getComputedStyle(HI).opacity : -1, st: ST ? +getComputedStyle(ST).opacity : -1, wl: WL ? +getComputedStyle(WL).opacity : -1, wlT: WL ? WL.textContent : '' } }),
     dispose() { alive = false; clearInterval(wlTm); map.sfx = sfx0; map.tone = tone0; for (const e of [css, HI, ST, WL]) if (e) e.remove(); if (PM) { map.remove(PM); PM.geometry.dispose(); PM.material.dispose(); PM.dispose(); PM = null; } },
