@@ -241,7 +241,7 @@ export function createXp(A) {
     add(e.signB[0], e.signB[1], gy(e.signB[0], e.signB[1]) + 1.2, 2.4, ex ? '🌊 Tide · the way back' : '🌊 물때 · 돌아가는 길', () => e.open ? tidePanel() : strandOpen(true));
     const [px, pz, cx9, cz9] = e.pool, qx = px - cx9 * 1.6, qz = pz - cz9 * 1.6; add(qx, qz, gy(qx, qz) + 0.4, 2.4, ex ? '🔍 Look into the rock pool' : '🔍 바위 웅덩이 살펴보기', () => poolLook()); }
   // 1초에 다섯 번: 바닷길 높이(물때) · 잠기는 순간(바닷길 위 = 구조 배 · 섬 = 기다리기·배 부르기) · 열리는 순간 알림 · 1초마다 위 가운데 줄
-  let HI = false, iq = 0, isec = 0, lastOpen = null, toldOpen = '', toldRise = '', strTold = '', backArm = false;
+  let HI = false, iq = 0, isec = 0, lastOpen = null, toldOpen = '', toldRise = '', strTold = '', backArm = false, arrT9 = -1e9;
   const winKey = () => { const g = A.GAME.S, x = ((g.min - lowAt(g.day)) % TIDE_P + TIDE_P) % TIDE_P; return g.day + ':' + Math.round(x <= LOW_W ? g.min - x : g.min + TIDE_P - x); };
   function isleTick(dt) { const e = ISL; if (!e.barM || (iq += dt) < 0.2) return; const dq = iq; iq = 0; if (!A.on()) return; const g = A.GAME.S, lv = tideLvl(g.day, g.min), open = lv <= IZ.LV0, me = map.player.pos(), wh = isleWhere(e, me.x, me.z);
     if (lastOpen === true && !open && wh === 'bar' && !RIDE && !e.hold) { e.hold = true; callBoat('bar'); }   /* 바닷길 위에서 잠김 = 길은 그대로 두고 구조 배가 옴(물에 빠짐 X) */
@@ -249,9 +249,9 @@ export function createXp(A) {
     if (lastOpen === false && open && toldOpen !== winKey() && (wh || Math.hypot(me.x - e.S[0], me.z - e.S[1]) < 260)) { toldOpen = winKey(); toast(en() ? '🏝 The tide is going out and the sea path is showing! Walk to Ebb-Tide Isle (until ' + hm(g.min + remSec() / 0.7) + ')' : '🏝 물이 빠지며 바닷길이 드러나요! 썰물섬까지 걸어가 봐요 (~' + hm(g.min + remSec() / 0.7) + ')', 4); tone(660, 0, 0.08, 'triangle', 0.05); }
     lastOpen = open; if ((isec += dq) >= 1) { isec = 0; isleSec(e, me, wh, open); } }
   function isleSec(e, me, wh, open) { const g = A.GAME.S, X9 = S(), d = day(), ex = en(), x = ((g.min - lowAt(g.day)) % TIDE_P + TIDE_P) % TIDE_P, rising = open && x <= LOW_W, rs = Math.max(1, remSec()), k = winKey();
-    if (wh === 'isle' && !RIDE) { if (X9.il !== d) { X9.il = d; mark(); A.skUp('explore', 2, 'xp:isle'); map.hud.banner(ex ? '🏝 You walked to Ebb-Tide Isle!' : '🏝 썰물섬에 걸어서 왔어요!', 2.2); tone(784, 0, 0.08, 'triangle', 0.05); tone(1047, 0.1, 0.1, 'triangle', 0.05); } backArm = true; }
+    if (wh === 'isle' && !RIDE) { if (X9.il !== d) { X9.il = d; mark(); A.skUp('explore', 2, 'xp:isle'); map.hud.banner(ex ? '🏝 You walked to Ebb-Tide Isle!' : '🏝 썰물섬에 걸어서 왔어요!', 2.2); arrT9 = performance.now(); tone(784, 0, 0.08, 'triangle', 0.05); tone(1047, 0.1, 0.1, 'triangle', 0.05); } backArm = true; }
     if (backArm && wh === 'shore' && !RIDE) { backArm = false; if (X9.ib !== d) { X9.ib = d; mark(); A.skUp('explore', 2, 'xp:isle'); } toast(ex ? '🏖 Back on the beach before the tide came in — you read the tide well' : '🏖 밀물 전에 걸어서 돌아왔어요 — 물때를 잘 봤어요', 3.4); tone(988, 0, 0.1, 'triangle', 0.05); }
-    if (rising && (wh === 'isle' || wh === 'bar') && toldRise !== k && !RIDE) { toldRise = k; toast(ex ? '🌊 The tide is coming in — head back now' : '🌊 물이 들어오기 시작했어요 — 지금 돌아가요', 3.6); if (map.sfx) map.sfx('buzz'); }
+    if (rising && (wh === 'isle' || wh === 'bar') && toldRise !== k && !RIDE && performance.now() - arrT9 > 2600) {   /* 섬에 닿은 배너가 사라진 뒤에(알림 셋이 한꺼번에 겹치던 것) */ toldRise = k; toast(ex ? '🌊 The tide is coming in — head back now' : '🌊 물이 들어오기 시작했어요 — 지금 돌아가요', 3.6); if (map.sfx) map.sfx('buzz'); }
     if (!open && wh === 'isle' && !RIDE && strTold !== k) { if (strandOpen(false)) strTold = k; }
     if (RIDE) return; HI = (wh === 'isle' || wh === 'bar') && (rising || !open);
     GOAL = wh === 'isle' || wh === 'bar' ? (open ? (rising ? (ex ? '🌊 The tide is coming in — go back now · sea path closes in about ' + rs + ' s' : '🌊 물이 들어와요 — 지금 돌아가요 · 바닷길이 잠기기까지 약 ' + rs + '초') : (ex ? '🏝 Ebb-Tide Isle · sea path open for about ' + rs + ' s' : '🏝 썰물섬 · 바닷길이 잠기기까지 약 ' + rs + '초')) : (ex ? '🏝 The sea path is under water — E at the landing sign: wait or call a boat' : '🏝 바닷길이 잠겼어요 — 나루 팻말에서 E: 기다리기 · 배 부르기'))
