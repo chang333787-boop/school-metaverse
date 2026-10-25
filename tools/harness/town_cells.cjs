@@ -1,6 +1,6 @@
 // 칸 키트 시험(CELLKIT-1 · docs/systems/town_cells.md §6) — Node만(브라우저 X): node tools/harness/town_cells.cjs [마을=ourtown] [--can=게임에서 받은 자리 표.json] [--v]
 //   ourtown.js 자료 + v2/games/town_cellkit.js 순수 함수로 칸마다 하루 여덟 판(계절 4 × 맑음·비) + 밤 넷을 돌림
-//   PASS: 낮 모든 뭍 칸 ≥3 · 갈래 ≥2 · 밤 ≥2 · 이웃과 키트가 통째로 같은 쌍 ≤5% · 한 판에 한 줄이 키트 칸의 1/3 넘지 않음 · 금지 낱말 0 · 윈도10에서 깨지는 이모지 0
+//   PASS: 낮 모든 뭍 칸 ≥3 · 갈래 ≥2 · 밤 ≥3 · 보이는 것(도구로만 하는 free 빼고 · 게임 실측과 같은 셈) 모든 판 ≥2 · 이웃과 키트가 통째로 같은 쌍 ≤5% · 한 판에 한 줄이 키트 칸의 1/3 넘지 않음 · 금지 낱말 0 · 윈도10에서 깨지는 이모지 0
 //   바다 칸(배로만 가는 곳)은 문서 §7 5번 '남음' — 셋이 안 되면 따로 적음(실패로 세지 않음)
 //   --can = SM_TOWN.kit.can()을 저장한 표({ 칸: [줄 id…] }) — 게임에서 실제 자리를 찾은 줄만 쓰고 다시 셈
 const path = require('path'), fs = require('fs');
@@ -20,21 +20,24 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
   const hist = o => { const h = {}; for (const v of Object.values(o)) { const b = v >= 3 ? '3+' : String(v); h[b] = (h[b] || 0) + 1; } return h; };
   console.log('전(이미 있는 것 · 낮 여덟 판 중 가장 적은 수): ' + JSON.stringify(hist(before)) + ' · 0~1개 칸 ' + Object.values(before).filter(v => v <= 1).length);
   // 후: 판마다 키트
-  const after = {}, famMin = {}, nightMin = {}, sea5 = new Set(), byCond = {}, useMax = {};
+  const after = {}, famMin = {}, nightMin = {}, sea5 = new Set(), byCond = {}, useMax = {}, vis = {};
   for (const E0 of K.CONDS) { const E = { ...E0, day: 1 }, P = {}, use = {};
     for (const n of names) { if (!land(n)) continue; const s = SIG[n], H = K.haveOf(s), on = H.filter(q => q.on(E)), kit = K.choose(s, E, canOf(n), H), tot = on.length + kit.length, fam = new Set([...on.map(q => q.f), ...kit.map(id => K.LINE[id].f)]).size;
-      P[n] = kit; for (const id of kit) use[id] = (use[id] || 0) + 1;
+      P[n] = kit; for (const id of kit) use[id] = (use[id] || 0) + 1; (vis[E.k] || (vis[E.k] = {}))[n] = on.filter(q => !q.free).length + kit.length;
       if (E.night) nightMin[n] = Math.min(nightMin[n] ?? 99, tot); else { after[n] = Math.min(after[n] ?? 99, tot); famMin[n] = Math.min(famMin[n] ?? 9, fam); } }
     byCond[E.k] = P; const nk = Object.values(P).filter(a => a.length).length, top = Object.entries(use).sort((a, b) => b[1] - a[1])[0];
     if (!E.night) useMax[E.k] = top ? [top[0], top[1], nk] : null; }
-  for (const n of Object.keys(after)) if (seaOnly(n) && (after[n] < 3 || famMin[n] < 2 || nightMin[n] < 2)) sea5.add(n);
+  for (const n of Object.keys(after)) if (seaOnly(n) && (after[n] < 3 || famMin[n] < 2 || nightMin[n] < 3)) sea5.add(n);
   const landN = Object.keys(after).filter(n => !sea5.has(n));
   console.log('후(낮 여덟 판 중 가장 적은 수): ' + JSON.stringify(hist(after)) + ' · 0~1개 칸 ' + Object.values(after).filter(v => v <= 1).length);
   console.log('1. 칸마다 셋 이상');
-  const low = landN.filter(n => after[n] < 3), one = landN.filter(n => famMin[n] < 2), nlow = landN.filter(n => nightMin[n] < 2);
+  const low = landN.filter(n => after[n] < 3), one = landN.filter(n => famMin[n] < 2), nlow = landN.filter(n => nightMin[n] < 3);
   ok(!low.length, '낮 여덟 판 모든 뭍 칸 ≥3 (' + landN.length + '칸' + (low.length ? ' · 모자람 ' + low.map(n => n + ':' + after[n]).join(' ') : '') + ')');
   ok(!one.length, '갈래 둘 이상' + (one.length ? ' · 하나뿐 ' + one.join(' ') : ''));
-  ok(!nlow.length, '밤 넷 판 모든 뭍 칸 ≥2' + (nlow.length ? ' · 모자람 ' + nlow.map(n => n + ':' + nightMin[n]).join(' ') : ''));
+  ok(!nlow.length, '밤 넷 판 모든 뭍 칸 ≥3' + (nlow.length ? ' · 모자람 ' + nlow.map(n => n + ':' + nightMin[n]).join(' ') : ''));
+  const vlow = []; for (const [k, V9] of Object.entries(vis)) for (const n of landN) if (V9[n] < 2) vlow.push(k.replace(/ /g, '') + ':' + n + ':' + V9[n]);
+  ok(!vlow.length, '보이는 것(free 빼고) 열두 판 모든 뭍 칸 ≥2' + (vlow.length ? ' · 모자람 ' + vlow.slice(0, 30).join(' ') + (vlow.length > 30 ? ' …' + vlow.length : '') : ''));
+  console.log('  판마다 보이는 것 0~1 칸(뭍 · 바다 남음 빼고): ' + Object.entries(vis).map(([k, V9]) => k + ' ' + landN.filter(n => V9[n] <= 1).length).join(' · '));
   if (sea5.size) console.log('  · 남음(문서 §7 5번 바다 줄 · 바다·모래사장 칸): ' + [...sea5].map(n => n + ':' + after[n] + '/밤' + nightMin[n]).join(' '));
   console.log('2. 같은 틀 복사 막기');
   const nb = n => { const s = SIG[n]; return names.filter(m => { const q = SIG[m]; return Math.abs(q.r - s.r) + Math.abs(q.c - s.c) === 1; }); };

@@ -19,6 +19,10 @@ export const LINES = [
   { id: 'ant', f: '생', gen: 1, t: ['개미 줄', 'Ant trail'], need: s => s.road && s.landy, on: E => SUN(E) && DAY(E) && E.s !== 3 },
   { id: 'dfly', f: '생', gen: 1, t: ['가을 잠자리', 'Autumn dragonflies'], need: s => s.landy, on: E => SUN(E) && DAY(E) && E.s === 2 },
   { id: 'moth', f: '생', gen: 1, t: ['가로등 나방', 'Moths at the lamp'], need: s => s.road && s.landy, on: E => E.night && SUN(E) && E.s !== 3 },
+  { id: 'cat', f: '생', gen: 1, t: ['처마 밑 고양이', 'Cat under the eaves'], need: s => s.bld && s.road && s.landy, on: E => E.night || E.rain },   /* 이어서 ⑦ 시내 줄: 밤·비 오는 날 처마 밑에서 쉬는 길고양이 */
+  { id: 'smoth', f: '생', t: ['간판 불빛 나방', 'Moths at the shop sign'], need: s => s.shop && s.landy, on: E => E.night && SUN(E) && E.s !== 3 },
+  { id: 'cricket', f: '생', gen: 1, t: ['풀벌레 소리', 'Crickets chirping'], need: s => s.road && (s.landy || s.fh >= 50) && s.sea < 50, on: E => E.night && SUN(E) && (E.s === 1 || E.s === 2) },   /* 소리가 단서(가까이 가면 뚝 그침) */
+  { id: 'frog', f: '생', t: ['봄밤 개구리 울음', 'Frogs calling on a spring night'], need: s => s.landy && s.road && (/green|paddy|field|park/.test(s.zs) || s.water > 0 || /공원|논|하우스|과수원|농촌|간척지|염전/.test(s.g)), on: E => E.night && E.s <= 1 },
   { id: 'flower', f: '생', t: ['화단 곤충', 'Flower-bed insects'], need: s => s.flw && s.landy, on: E => SUN(E) && E.s !== 2 && (DAY(E) || E.s === 3) },
   { id: 'pollen', f: '생', later: 5, t: ['꽃가루 돋보기', 'Pollen with a lens'], need: s => /과수원|하우스/.test(s.g), on: E => SUN(E) && E.s <= 1 },
   { id: 'fish', f: '생', later: 5, t: ['물고기 뜀·갈매기', 'Jumping fish · gulls'], need: s => s.sea >= 5, on: () => true },
@@ -27,6 +31,9 @@ export const LINES = [
   { id: 'ice', f: '손', gen: 1, t: ['그늘 얼음', 'Ice in the shade'], need: s => s.shopNear && s.landy, on: E => SUN(E) && DAY(E) && E.s !== 3 },
   { id: 'seed', f: '손', gen: 1, t: ['보도 틈 민들레', 'Pavement dandelion'], need: s => s.road && s.landy, on: E => SUN(E) && DAY(E) && E.s <= 1 },
   { id: 'sweep', f: '손', gen: 1, t: ['골목 쓸기', 'Sweep the lane'], need: s => s.road && s.landy, on: E => E.s >= 2 },
+  { id: 'drip', f: '손', gen: 1, t: ['처마 낙숫물', 'Rain dripping from the eaves'], need: s => s.bld && s.road && s.landy, on: E => E.rain },
+  { id: 'icep', f: '손', gen: 1, t: ['웅덩이 살얼음', 'Thin ice on a puddle'], need: s => s.road && s.landy, on: E => E.s === 3 && DAY(E) && SUN(E) },   /* 처마 고드름은 4~5m 위라 눈에 안 띔(실측 사진) → 발밑 살얼음 */
+  { id: 'box', f: '손', t: ['건물 뒤 빈 상자 묶기', 'Tie up the boxes behind the building'], need: s => (s.shop || s.g === '상가·공공') && s.bld && s.landy, on: SUN },
   { id: 'recycle', f: '손', t: ['분리수거', 'Sorting recycling'], need: s => s.live && s.landy, on: () => true },
   { id: 'shadow', f: '손', t: ['그림자 막대', 'Shadow of the lamp post'], need: s => /공원|아파트/.test(s.g) && s.road, on: E => SUN(E) && DAY(E) },
   { id: 'wind', f: '손', t: ['바람 읽기', 'Reading the wind'], need: s => s.g === '공장', on: () => true },
@@ -35,12 +42,13 @@ export const LINES = [
   { id: 'mail', f: '사', gen: 1, t: ['우편함 배달', 'Mail to the right box'], need: s => s.bld && s.sea < 50, on: () => true },
   { id: 'cross', f: '사', gen: 1, t: ['횡단보도', 'Crossing'], need: s => s.nroad >= 2 && s.landy, on: () => true },
   { id: 'busk', f: '사', gen: 1, later: 'busk', t: ['버스킹 붐빔', 'Busking crowd'], need: s => s.road && s.landy && !s.live, on: E => SUN(E) && DAY(E) },
+  { id: 'board', f: '사', gen: 1, t: ['주민 게시판', 'Neighbourhood notice board'], need: s => s.live && s.road && s.landy, on: () => true },
   { id: 'counter', f: '사', later: 'counter', t: ['창구', 'Counter'], need: s => s.card, on: DAY },
   { id: 'farmboat', f: '사', later: 5, t: ['양식장 배', 'Fish-farm boat'], need: s => s.sea > 95, on: () => true },
 ];
 export const LINE = Object.fromEntries(LINES.map(l => [l.id, l]));
 // 흔한 줄 차례(갈래마다 · 돌림 기준)
-const GEN = { 생: ['tree', 'bud', 'birds', 'worm', 'snail', 'ant', 'dfly', 'moth'], 손: ['puddle', 'rainflow', 'ice', 'seed', 'sweep'], 사: ['mail', 'cross', 'busk'] };
+const GEN = { 생: ['tree', 'bud', 'birds', 'worm', 'snail', 'ant', 'dfly', 'moth', 'cat', 'cricket'], 손: ['puddle', 'rainflow', 'ice', 'seed', 'sweep', 'drip', 'icep'], 사: ['mail', 'cross', 'busk', 'board'] };
 
 // ───────── 칸 주소(town.js cellOf와 같은 규칙: 확장판 선 = 판 가장자리 + grid 선 · 행 한글 · 열 숫자 · rowcol) ─────────
 export function gridOf(D) { const g = D.grid || {}, m = D.mat, XE = [m.x0, ...(g.xs || []), m.x0 + m.w], YE = [m.y0, ...(g.ys || []), m.y0 + m.h];
@@ -94,9 +102,10 @@ function gyeol(v) { const P = k => v.land[k] || 0, z = v.zs, a = v.ar, n = v.nam
   if (/park/.test(z) || /산책로|쉼터|동물 쉬는|놀이터|공원|축구장/.test(a)) return '공원·풀밭'; if (/factory/.test(z) || /공장/.test(n)) return '공장'; if (/농촌/.test(a)) return '농촌 마을';
   if (/live:apt|live:mix|아파트/.test(z + a)) return '아파트'; if (/live:house|네 집|빌라|마을|^집/.test(z + ' ' + a + ' ' + n) || /home/.test(n)) return '주택가'; return '상가·공공'; }
 
-// ───────── 이미 있는 것(자료로 어림 · 갈래와 켜지는 때) — 산·강·논·바다는 이미 셋 이상이라 키트를 안 붙이는 근거 ─────────
+// ───────── 이미 있는 것(자료로 어림 · 갈래와 켜지는 때) — 셋 이상 + 보이는 것 VMIN 이상이면 키트를 안 붙이는 근거(산·논은 대개 여기서 끝) ─────────
 //   어디서나 되는 것(웅덩이 첨벙·빗자루·삽·바람·버스킹·별 보기)은 칸을 가르지 못해 세지 않음(설계 §0)
-export function haveOf(s) { const it = [], add = (t, f, on) => it.push({ t, f, on: on || (() => true) }), wk = E => !E.night, P = k => s.land[k] || 0;
+//   free = 그 칸 어디서나 도구로 하는 것(숲 줍기·낚시·물 실험·나뭇잎 배·모래성·헤엄·꽃밭 물 주기) — 세상에 보이는 단서(E·움직이는 것)가 없어 '보이는 것' VMIN에는 안 셈(게임 실측 SM_TOWN.cells와 맞춤 · 이어서 ⑦)
+export function haveOf(s) { const it = [], add = (t, f, on, free) => it.push({ t, f, on: on || (() => true), free: !!free }), wk = E => !E.night, P = k => s.land[k] || 0;
   if (s.school) return [{ t: '학교 안 놀이', f: '사', on: () => true }, { t: '텃밭', f: '손', on: () => true }, { t: '학교 친구', f: '생', on: () => true }];
   for (const k of s.works) add('일:' + k, '사', wk);
   if (!s.works.length) { if (/paddy/.test(s.zs)) add('일:논', '사', wk); else if (/greenhouses/.test(s.zs)) add('일:딸기', '사', wk); else if (/orchard/.test(s.zs)) add('일:배', '사', wk); }   /* 논·하우스·과수원 일꾼(칸 없는 works 자료) */
@@ -104,29 +113,30 @@ export function haveOf(s) { const it = [], add = (t, f, on) => it.push({ t, f, o
   if (/home/.test(s.named)) add('아이 집', '사');
   if (/paddy/.test(s.zs)) add('논 생물·물 대기', '손', E => E.s === 0 || E.s === 2);
   if (s.mush) add('버섯', '손', E => E.s !== 3);
-  if (s.fh >= 50) { add('숲 줍기', '손'); add('다람쥐', '생', E => wk(E) && E.s !== 3); }
-  if (P('river') >= 10) add('왜가리', '생', wk); if (s.water >= 10 || P('pond') > 0) add('오리', '생', wk);
-  if (s.water >= 10 || P('pond') > 0 || (s.sea >= 5 && s.sea <= 95)) { add('낚시', '손'); add('물 실험', '손'); }
-  if (P('river') >= 20) add('나뭇잎 배', '손', E => E.s !== 3);
+  if (s.fh >= 50) { add('숲 줍기', '손', null, 1); add('다람쥐', '생', E => wk(E) && E.s !== 3); }
+  if (P('river') >= 10) add('왜가리', '생', wk, 1); if (s.water >= 10 || P('pond') > 0) add('오리', '생', wk, 1);   /* 물새는 물가 몇 자리에만 앉아 칸에 따라 없음(실측 라12 0) → 보이는 것으로 세지 않음 */
+  if (s.water >= 10 || P('pond') > 0 || (s.sea >= 5 && s.sea <= 95)) { add('낚시', '손', null, 1); add('물 실험', '손', null, 1); }
+  if (P('river') >= 20) add('나뭇잎 배', '손', E => E.s !== 3, 1);
   if (s.sea > 95) add('배·부표', '손');
-  if (s.sea > 0 && P('sand') > 10) { add('모래성·연', '손', E => wk(E) && !E.rain); add('헤엄', '손', E => wk(E) && !E.rain && E.s === 1); }
+  if (s.sea > 0 && P('sand') > 10) { add('모래성·연', '손', E => wk(E) && !E.rain, 1); add('헤엄', '손', E => wk(E) && !E.rain && E.s === 1, 1); }
   if (P('mudflat') >= 50) add('갯벌 관찰', '생');
   if (/green:park/.test(s.zs)) add('민들레', '손', E => !E.rain && wk(E) && E.s <= 1);
-  if (/flowers/.test(s.ar)) add('꽃밭 물 주기', '손');
+  if (/flowers/.test(s.ar)) add('꽃밭 물 주기', '손', null, 1);
   return it; }
 
 // ───────── 고르기(순수) — 칸 하나 · 그날 E · can(줄) = 게임에선 실제 자리를 찾았나(Node = 늘 참) ─────────
 const hashS = s => { let h = 2166136261; for (const ch of String(s)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
-//   차례: ① 이미 있는 것 중 그날 켜진 것을 셈 ② 갈래마다 '모자라면'(합 < 3 또는 갈래 하나뿐) 하나 — 결 전용 줄 먼저, 흔한 줄은 (행 + k × 열 + 날) 번째(이웃 넷과 늘 다름) ③ 그래도 셋이 안 되면 다른 줄로 채움
-export function choose(s, E, can, have) { const H = (have || haveOf(s)).filter(q => q.on(E)), fam = new Set(H.map(q => q.f)); let t = H.length; const out = [];
-  if (t >= 3 && fam.size >= 2) return out;
+//   차례: ① 이미 있는 것 중 그날 켜진 것을 셈 ② 갈래마다 '모자라면'(합 < 3 또는 보이는 것 < VMIN 또는 갈래 하나뿐) 하나 — 결 전용 줄 먼저, 흔한 줄은 (행 + k × 열 + 날) 번째(이웃 넷과 늘 다름) ③ 그래도 모자라면 다른 줄로 채움
+export const VMIN = 3;
+export function choose(s, E, can, have) { const H = (have || haveOf(s)).filter(q => q.on(E)), fam = new Set(H.map(q => q.f)); let t = H.length, v = H.filter(q => !q.free).length; const out = [];
+  if (t >= 3 && v >= VMIN && fam.size >= 2) return out;
   const ok = l => !l.later && l.need(s) && l.on(E) && (!can || can(l.id));
   const pick = f => { const L9 = LINES.filter(l => l.f === f && ok(l) && !out.includes(l.id)); if (!L9.length) return null; const sp = L9.filter(l => !l.gen);
     if (sp.length) return sp[sp.length > 1 ? hashS(s.n + ':' + (E.day || 0)) % sp.length : 0].id;
     const G9 = L9.sort((a, b) => GEN[f].indexOf(a.id) - GEN[f].indexOf(b.id)), m = G9.length; return G9[(s.r + (m === 2 ? 1 : 2) * (s.c + 1) + (E.day || 0)) % m].id; };
   const off = (s.r + 2 * (s.c + 1) + (E.day || 0)) % 3, ord = [FAMS[off], FAMS[(off + 1) % 3], FAMS[(off + 2) % 3]];   /* 칸마다 먼저 채우는 갈래를 돌림 → 이웃과 겹침·한 줄 쏠림을 줄임 */
-  for (const f of ord) if (fam.size < 2 && !fam.has(f)) { const id = pick(f); if (id) { out.push(id); t++; fam.add(f); } }
-  for (const f of [ord[0], ord[1], ord[0], ord[2], ord[1], ord[2]]) { if (t >= 3) break; const id = pick(f); if (id) { out.push(id); t++; fam.add(f); } }
+  for (const f of ord) if (fam.size < 2 && !fam.has(f)) { const id = pick(f); if (id) { out.push(id); t++; v++; fam.add(f); } }
+  for (const f of [ord[0], ord[1], ord[0], ord[2], ord[1], ord[2]]) { if (t >= 3 && v >= VMIN) break; const id = pick(f); if (id) { out.push(id); t++; v++; fam.add(f); } }
   return out; }
 // 하루 판 여덟(계절 4 × 맑음·비) + 밤 넷
 export const CONDS = [...[0, 1, 2, 3].flatMap(s => [{ s, rain: false, night: false, k: SEAS[s] + ' 맑음 낮' }, { s, rain: true, night: false, k: SEAS[s] + ' 비 낮' }]), ...[0, 1, 2, 3].map(s => ({ s, rain: false, night: true, k: SEAS[s] + ' 맑음 밤' }))];
@@ -153,6 +163,20 @@ const TX = {
   wind: { e: T2('🌬 공장 김으로 바람 읽기', '🌬 Read the wind from the factory steam') },
   echo: { e: T2('📣 "야호!" 외쳐 보기', '📣 Shout "Yaho!"'), done: T2('소리가 맞은편 산에 부딪혀 되돌아왔어요 — 메아리예요. 멀리서 부딪힐수록 늦게 들려요.', 'Your voice bounced off the hills and came back — an echo. The farther away it bounces, the later you hear it.') },
   mail: { e: T2('📮 우편함 살펴보기', '📮 Check the mailbox'), e2: T2('📮 편지 넣기', '📮 Put the letter in') },
+  cat: { e: T2('🐈 고양이 가만히 지켜보기', '🐈 Quietly watch the cat'), hint: T2('처마 밑에서 고양이가 꼬리를 살랑거려요', 'A cat is flicking its tail under the eaves'),
+    done: T2('고양이는 어두운 곳에서도 잘 봐요. 눈 안쪽에 빛을 되비추는 막이 있어서, 밤에 불빛을 받으면 눈이 반짝여 보여요. 길고양이는 손을 내밀지 말고 멀리서 지켜봐요.', 'Cats see well in the dark. A layer at the back of the eye reflects light, so their eyes seem to shine at night. Don’t reach out to a street cat — watch it from a distance.'),
+    done2: T2('고양이는 털이 젖는 것을 싫어해서, 비 오는 날엔 처마 밑처럼 비가 안 닿는 곳에서 쉬어요. 길고양이는 손을 내밀지 말고 멀리서 지켜봐요.', 'Cats don’t like wet fur, so on rainy days they rest where the rain can’t reach, like under the eaves. Don’t reach out to a street cat — watch it from a distance.') },
+  cricket: { e: T2('🎵 풀벌레 소리에 귀 기울이기', '🎵 Listen to the crickets'), hint: T2('풀숲에서 귀뚤귀뚤 소리가 나요', 'A chirping sound comes from the grass'), done: T2('귀뚜라미는 양 날개를 비벼서 소리를 내요. 수컷이 짝을 부르는 소리이고, 날이 따뜻할수록 더 빠르게 울어요. 가까이 다가가면 놀라서 뚝 그쳐요.', 'Crickets chirp by rubbing their wings together. It is the males calling for a mate, and they chirp faster when it is warmer. Get close and they suddenly go quiet.') },
+  frog: { e: T2('🐸 개구리 울음주머니 살펴보기', '🐸 Look at the frog’s vocal sac'), hint: T2('풀밭 쪽에서 개굴개굴 소리가 들려요', 'Croaking comes from the grass'), done: T2('개구리는 목 아래 울음주머니를 풍선처럼 부풀려 큰 소리를 내요. 봄밤에 우는 것은 수컷이 짝을 부르는 소리예요.', 'A frog puffs up the sac under its throat like a balloon to make a loud call. On spring nights it is the males calling for a mate.') },
+  smoth: { e: T2('🔍 간판 불빛 나방 살펴보기', '🔍 Look at the moths by the shop sign'), hint: T2('가게 간판 불빛 둘레에 나방이 맴돌아요', 'Moths are circling the lit shop sign'), done: T2('가게 간판 불빛에 나방이 모였어요. 나방 같은 밤 곤충은 밝은 빛 쪽으로 날아드는 성질이 있어서, 불이 켜진 곳에 많이 모여요.', 'Moths gathered at the lit sign. Night insects like moths fly toward bright light, so many gather wherever lights are on.') },
+  drip: { e: T2('💧 처마 끝 낙숫물 보기', '💧 Watch the drips from the eaves'), hint: T2('처마 끝에서 빗방울이 똑똑 떨어져요', 'Raindrops are dripping from the edge of the roof'), done: T2('지붕에 떨어진 빗물이 기울기를 따라 모여 처마 끝에서 떨어져요 — 낙숫물이에요. 처마 밑은 비가 덜 닿아서 잠깐 비를 피할 수 있어요.', 'Rain on the roof runs down the slope and drips from the edge — that is why a line of drops falls there. Under the eaves the rain hardly reaches, so you can shelter for a moment.') },
+  icep: { e: T2('👟 살얼음 살짝 밟아 보기', '👟 Step lightly on the thin ice'), hint: T2('보도 웅덩이가 하얗게 얼어 있어요', 'A puddle on the pavement has frozen white'), done: T2('밤사이 기온이 0도 아래로 내려가 웅덩이 물이 겉부터 얼었어요. 얼음은 물보다 가벼워 위에 뜨기 때문에, 물은 위에서부터 얼어요. 얼음 낀 길은 미끄러우니 천천히 걸어요.', 'Overnight it dropped below 0°C and the puddle froze from the top. Ice is lighter than water and floats, so water freezes from the top down. Icy paths are slippery — walk slowly.') },
+  box: { e: T2('📦 빈 상자 모아 포개 묶기', '📦 Stack and tie the empty boxes'), hint: T2('건물 뒤에 빈 종이 상자가 흩어져 있어요', 'Empty cardboard boxes are scattered behind the building'), done: T2('상자는 테이프와 붙은 송장을 떼고 납작하게 접어 묶어 내놓아요. 부피가 줄어 수거차에 많이 실을 수 있고, 다시 종이로 만들기도 쉬워요.', 'Peel off the tape and labels, flatten the boxes and tie them up. They take less space in the collection truck and are easier to make into new paper.') },
+  board: { e: T2('📋 주민 게시판 읽기', '📋 Read the notice board'), hint: T2('게시판에 새 안내문이 붙어 있어요', 'A new notice is pinned on the board'),
+    done: [T2('안내문: "재활용품은 정해진 요일에 종류별로 나눠 내놓아요." 함께 사는 곳은 이런 약속을 게시판으로 나눠요.', 'Notice: "Put recycling out by type on the set day." People who live together share rules like this on the board.'),
+      T2('안내문: "물탱크 청소로 낮에 잠깐 물이 나오지 않아요." 미리 알리면 이웃이 물을 받아 두고 기다릴 수 있어요.', 'Notice: "The water tank is being cleaned, so the water will be off for a while today." Telling people early lets neighbours store water and wait.'),
+      T2('안내문: "밤늦게는 뛰거나 큰 소리를 내지 않아요." 벽과 바닥을 나눠 쓰는 이웃을 배려하는 약속이에요.', 'Notice: "No running or loud noise late at night." It is a promise to care for the neighbours who share our walls and floors.'),
+      T2('안내문: "눈이 오면 집 앞 길은 함께 쓸어요." 내 집 앞을 쓸면 모두가 덜 미끄러운 길을 걸어요.', 'Notice: "When it snows, let’s sweep the path in front of our homes." If everyone sweeps their part, the whole street is less slippery.')] },
   cross: { ok: T2('초록불이 켜졌어요. 그래도 왼쪽·오른쪽을 한 번 보고 건너요.', 'The light is green. Still, look left and right once before you cross.'), red: T2('빨간불이에요. 초록불을 기다려요.', 'The light is red. Wait for green.') },
 };
 const DIR8K = ['북', '북동', '동', '남동', '남', '남서', '서', '북서'], DIR8E = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
@@ -162,10 +186,11 @@ const RC_ITEMS = [[T2('신문지', 'Newspaper'), 0, T2('종이는 물에 젖지 
   [T2('빈 통조림 캔', 'Empty tin can'), 2, T2('캔은 헹궈서 넣어요', 'Rinse cans first')], [T2('빈 음료 캔', 'Empty drink can'), 2, T2('캔은 찌그러뜨리면 자리를 덜 차지해요', 'Squashed cans take less space')],
   [T2('빈 유리병', 'Empty glass bottle'), 3, T2('유리병은 깨지지 않게 살살 넣어요', 'Put glass bottles in gently so they don’t break')], [T2('빈 잼 병', 'Empty jam jar'), 3, T2('병뚜껑은 따로 모아요', 'Keep lids separate')]];
 const RC_BINS = [[T2('종이', 'Paper'), '#2f6fd0'], [T2('플라스틱', 'Plastic'), '#c99a10'], [T2('캔', 'Cans'), '#6f777d'], [T2('유리', 'Glass'), '#2f9a55']];
-const NS = { bud: 0, worm: 5, snail: 6, ant: 12, moth: 4, ice: 4, seed: 4, recycle: 5, shadow: 3, wind: 0, echo: 0, mail: 3, cross: 0, _m: 4, _mt: 3 };   // 줄마다 쓰는 둥근 판 칸 수(키트가 그리는 줄만)
+const NS = { bud: 0, worm: 5, snail: 6, ant: 12, moth: 4, ice: 4, seed: 4, recycle: 5, shadow: 3, wind: 0, echo: 0, mail: 3, cross: 0, _m: 4, _mt: 3, cat: 8, cricket: 2, frog: 4, smoth: 4, drip: 4, icep: 4, box: 4, board: 6 };   /* 줄마다 쓰는 둥근 판 칸 수(키트가 그리는 줄만) */
 export function createCellKit(A) {
   const en = () => A.lang() === 'en', tx = a => a[en() ? 1 : 0], map = A.map, S = () => A.GAME.S;
-  const ST = () => { let c = S().ck; if (!c || typeof c !== 'object' || c.v !== CK_V) c = S().ck = { v: CK_V }; for (const k of ['wm', 'sd', 'ic', 'rc', 'mu', 'n', 'hint', 'ml0']) if (!c[k] || typeof c[k] !== 'object') c[k] = {}; return c; };
+  const ST = () => { let c = S().ck; if (!c || typeof c !== 'object' || c.v !== CK_V) c = S().ck = { v: CK_V }; for (const k of ['wm', 'sd', 'ic', 'rc', 'mu', 'n', 'hint', 'ml0', 'bx', 'ip']) if (!c[k] || typeof c[k] !== 'object') c[k] = {}; return c; };
+  let NT = false, SUNY = false;   /* 0.5초 칸에서 한 번 셈(밤 · 맑은 낮 해) — 0.1초 그리기에서 새 객체 X */
   let on = false, off = false, SIG = {}, G = null, CEL = {}, BYRC = {}, TODAY = new Map(), tkey = '', gen = -1, buildMs = 0, secMs = 0, secMax = 0, forced = null, SHM = null, steamQ = 0;
   const SIGC = new WeakMap(), INST = new Map(), NK = 192, SLOT = new Uint8Array(NK), WANT = new Set(), M4 = A.T3 ? new A.T3.Matrix4() : null, Q4 = A.T3 ? new A.T3.Quaternion() : null, V4 = A.T3 ? new A.T3.Vector3() : null, S4 = A.T3 ? new A.T3.Vector3() : null, E4 = A.T3 ? new A.T3.Euler() : null;
   const pickBy = (a, k) => a.length ? a[pickH(k) % a.length] : null;
@@ -228,15 +253,32 @@ export function createCellKit(A) {
       case 'wind': { for (const B9 of C9.fac) { const ex = B9.door[0], ez = B9.door[1]; if (stand(ex, ez) || !(map.q.blocked || map.q.blockedAt)(ex, ez, A.gy(ex, ez) + 0.6)) return { x: ex, z: ez, sx: B9.cx, sy: (B9.y0 ?? A.gy(B9.cx, B9.cz)) + (B9.drawnH ?? B9.h ?? 8) + 0.4, sz: B9.cz }; } return null; }
       case 'echo': { const [x0, z0, x1, z1] = C9.box; let best = null, bh = -1e9; for (let i = 1; i < 7; i++) for (let j = 1; j < 7; j++) { const x = x0 + (x1 - x0) * i / 7, z = z0 + (z1 - z0) * j / 7, g = A.gy(x, z); if (g > bh && A.walk(x, z) && !(map.q.blocked || map.q.blockedAt)(x, z, g + 0.6)) { bh = g; best = { x, z }; } } return best; }
       case 'mail': { const L9 = C9.bl.filter(B9 => /house|apt|shop|office/.test(B9.kind || '') || B9.name); for (let i = 0; i < L9.length; i++) { const m = mailAt(L9[(H(6) + i) % L9.length]); if (m) return m; } return null; }
+      case 'cricket': case 'frog': { const v = openPt(); if (!v) return null; const o = id === 'frog' ? 1.6 : -1.6, x = v.x + (v.ux || 0) * o, z = v.z + (v.uz || 0) * o; return stand(x, z) ? { x, z, ry: pickH(n + id) % 628 / 100 } : { x: v.x, z: v.z, ry: 0 }; }   /* 길가 풀밭(참새 자리에서 길 따라 1.6m) */
+      case 'cat': case 'drip': { const d0 = id === 'cat' ? [0.65, 0.85] : [1.0], L9 = bldsBy(C9, n + id, B9 => B9.h >= 2.5 && (id === 'cat' || lowB(B9)));
+        for (const B9 of L9) { const F = faceOf(B9), tw = F.tw - 0.4; for (const sd of [1.6, -1.6, 2.4, -2.4, 0.9, -0.9]) { if (Math.abs(sd) > tw) continue; for (const o of d0) { const hx = F.fx + F.nx * o + F.tx * sd, hz = F.fz + F.nz * o + F.tz * sd; if (!free(hx, hz) || !eav(B9, hx, hz)) continue;
+          const eo = id === 'cat' ? 1.9 : -0.45, ex = hx + F.nx * eo, ez = hz + F.nz * eo; if (!(stand(ex, ez) || free(ex, ez))) continue;
+          return { x: hx, z: hz, ex, ez, ry: Math.atan2(F.nx, F.nz) + (sd > 0 ? 0.7 : -0.7), top: gy(F.fx + F.nx * 0.5, F.fz + F.nz * 0.5) + (B9.wallH ?? B9.h), col: [0xd9a066, 0x6f6a66, 0x2e2a28, 0xe8e2d8][pickH(n + 'cc') % 4] }; } } } return null; }   /* 고양이 = 벽 곁 0.65m(처마 밑) · E는 처마 밖 1.9m(가까이 X) · 낙숫물 = 처마 끝 1.0m에 떨어지고 E는 처마 밑(비를 피하며 봄) */
+      case 'icep': { const L9 = C9.side; for (let i = 0; i < Math.min(10, L9.length); i++) { const p = L9[(H(9) + i) % L9.length]; for (const e9 of [0.3, -0.3, 0]) { const x = p.x + p.px * e9, z = p.z + p.pz * e9; if (sideOk(x, z) && !okG(x, z) && sideOk(x + p.ux * 0.4, z + p.uz * 0.4) && sideOk(x - p.ux * 0.4, z - p.uz * 0.4)) return { x, z, ry: Math.atan2(p.ux, p.uz) }; } } return null; }   /* 보도 위(앞뒤 0.4m도 보도) */
+      case 'smoth': { for (const B9 of bldsBy(C9, n + id, B9 => A.shop(B9) && B9.h >= 2.5)) { const F = faceOf(B9), ex = F.fx + F.nx * 2.0, ez = F.fz + F.nz * 2.0; if (!(stand(ex, ez) || free(ex, ez))) continue;
+          return { x: F.fx + F.nx * 0.45, z: F.fz + F.nz * 0.45, hx: F.fx + F.nx * 0.45, hz: F.fz + F.nz * 0.45, hy: gy(F.fx + F.nx * 0.5, F.fz + F.nz * 0.5) + Math.min(3.3, B9.h - 0.4), ex, ez }; } return null; }   /* 간판 높이 = 앞면 밖 땅 + 3.3m 안 */
+      case 'box': { for (const B9 of bldsBy(C9, n + id, B9 => B9.h >= 2.5 && (A.shop(B9) || /shop|office/.test(B9.kind || '')))) { const F = faceOf(B9);
+          for (const [ux, uz] of [[-F.nx, -F.nz], [F.tx, F.tz], [-F.tx, -F.tz]]) { const e9 = edgeT(B9, ux, uz) + 0.7, bx = B9.cx + ux * e9, bz = B9.cz + uz * e9, ex = bx + ux * 1.2, ez = bz + uz * 1.2; if (free(bx, bz) && (stand(ex, ez) || free(ex, ez))) return { x: bx, z: bz, ex, ez, ry: Math.atan2(ux, uz) }; } } return null; }   /* 가게 뒤(없으면 옆) 벽 곁 0.7m = 뒷골목 */
+      case 'board': { for (const B9 of bldsBy(C9, n + id, B9 => /house|apt/.test(B9.kind || '') || !!B9.home)) { const F = faceOf(B9); for (const sd of [3.2, -3.2, 4.2, -4.2]) { if (Math.abs(sd) > F.tw + 1.5) continue; const x = F.fx + F.nx * 1.3 + F.tx * sd, z = F.fz + F.nz * 1.3 + F.tz * sd, ex = x + F.nx * 1.3, ez = z + F.nz * 1.3;
+          if (free(x, z) && free(x + F.tx * 0.6, z + F.tz * 0.6) && free(x - F.tx * 0.6, z - F.tz * 0.6) && (stand(ex, ez) || free(ex, ez))) return { x, z, ex, ez, ry: Math.atan2(F.nx, F.nz), tx: F.tx, tz: F.tz }; } } return null; }   /* 집·아파트 앞 마당 가장자리(문 앞을 가리지 않게 3m 옆) */
       case 'cross': { for (const s9 of C9.sg) { const t0 = s9.t[0], hwA = s9.hw[0], hwB = s9.hw[1]; for (const [a, b] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) { const x = s9.x - t0[1] * (hwA - 0.7) * a + t0[0] * (hwB - 0.7) * b, z = s9.z + t0[0] * (hwA - 0.7) * a + t0[1] * (hwB - 0.7) * b; if (stand(x, z) || free(x, z)) return { x, z, s9 }; } } return null; }
     } return null; }
   // 처마 밑(chem eaves와 같은 규칙: 건물 상자 밖 1.1m 안 · 키 2.5m 넘는 건물) — 짓기 때는 chem이 아직 없어 건물로 직접 셈
   function eav(B9, x, z) { if (!(B9.h >= 2.5) || !(B9.w > 0) || !(B9.d > 0)) return false; const c = Math.cos(B9.ry || 0), s9 = Math.sin(B9.ry || 0), dx = x - B9.cx, dz = z - B9.cz, lx = Math.abs(dx * c - dz * s9), lz = Math.abs(dx * s9 + dz * c); return lx < B9.w / 2 + 1.1 && lz < B9.d / 2 + 1.1 && (lx > B9.w / 2 || lz > B9.d / 2); }
+  // 건물 상자 가운데에서 방향 (ux, uz)로 벽까지 거리(eav와 같은 돌림) · 앞면(fw) 가운데 점·접선·앞면 반폭
+  function edgeT(B9, ux, uz) { const c = Math.cos(B9.ry || 0), s9 = Math.sin(B9.ry || 0), lx = Math.abs(ux * c - uz * s9), lz = Math.abs(ux * s9 + uz * c); return Math.min(lx > 1e-4 ? B9.w / 2 / lx : 1e9, lz > 1e-4 ? B9.d / 2 / lz : 1e9); }
+  function faceOf(B9) { let nx = B9.fw ? B9.fw[0] : B9.door[0] - B9.cx, nz = B9.fw ? B9.fw[1] : B9.door[1] - B9.cz; const l = Math.hypot(nx, nz) || 1; nx /= l; nz /= l; const t = edgeT(B9, nx, nz); return { nx, nz, tx: -nz, tz: nx, fx: B9.cx + nx * t, fz: B9.cz + nz * t, tw: edgeT(B9, -nz, nx) }; }
+  const lowB = B9 => B9.h <= 6.5 && (/house|shop/.test(B9.kind || '') || !!B9.home);   /* 처마가 있는 낮은 집·가게 */
+  const bldsBy = (C9, k, f) => C9.bl.filter(f).sort((a, b) => pickH(k + a.cx) - pickH(k + b.cx)).slice(0, 8);
   // 우편함 자리 = 건물 문 옆 2m 안팎(넓은 출입문 앞을 가리지 않게 · 걸어서 설 수 있는 곳)
   function mailAt(B9) { const dx = B9.door[0] - B9.cx, dz = B9.door[1] - B9.cz, dl = Math.hypot(dx, dz) || 1, nx = dx / dl, nz = dz / dl; const bl = map.q.blocked || map.q.blockedAt;
     for (const sd of [2.0, -2.0, 2.6, -2.6, 1.5, -1.5]) { const x = B9.door[0] + nx * 0.35 - nz * sd, z = B9.door[1] + nz * 0.35 + nx * sd, y = A.gy(x, z); if (bl(x, z, y + 0.6)) continue; const sx = x + nx * 1.1, sz = z + nz * 1.1; if (bl(sx, sz, A.gy(sx, sz) + 0.6)) continue; return { x, z, ry: Math.atan2(nx, nz), sx, sz }; } return null; }
   // E 서는 자리(줄마다)
-  function ePos(id, sp) { if (!sp) return null; switch (id) { case 'bud': return [sp.ex, sp.ez]; case 'ant': return [(sp.x + sp.bx) / 2, (sp.z + sp.bz) / 2]; case 'recycle': return [sp.fx, sp.fz]; case 'mail': case '_mt': return [sp.sx, sp.sz];
+  function ePos(id, sp) { if (!sp) return null; switch (id) { case 'bud': return [sp.ex, sp.ez]; case 'ant': return [(sp.x + sp.bx) / 2, (sp.z + sp.bz) / 2]; case 'recycle': return [sp.fx, sp.fz]; case 'mail': case '_mt': return [sp.sx, sp.sz]; case 'cat': case 'drip': case 'smoth': case 'box': case 'board': return [sp.ex, sp.ez];
     case 'moth': case 'shadow': { for (const [dx, dz] of [[1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]]) if (stand(sp.x + dx, sp.z + dz)) return [sp.x + dx, sp.z + dz]; return [sp.x + 1.2, sp.z]; } default: return [sp.x, sp.z]; } }
 
   // ───────── 켜진 줄 = 인스턴스(가까운 칸만 · 들어올 때 E 자리·둥근 판 칸을 받고 나갈 때 돌려줌) ─────────
@@ -260,6 +302,13 @@ export function createCellKit(A) {
       case 'echo': mkHot(I, e(TX.echo.e), 2.4); break;
       case 'mail': if (!(c.ml0 && c.ml0.d === day && c.ml0.from === n)) mkHot(I, e(TX.mail.e), 1.8); break;
       case '_mt': if (!sp.done) mkHot(I, e(TX.mail.e2), 1.8); break;
+      case 'cat': I.peek = 0; mkHot(I, e(TX.cat.e), 2.0); break;
+      case 'cricket': case 'frog': I.q = 0; I.ct = 0; mkHot(I, e(TX[id].e), 2.0); break;
+      case 'smoth': mkHot(I, e(TX.smoth.e), 2.4); break;
+      case 'drip': mkHot(I, e(TX.drip.e), 1.9); break;
+      case 'icep': I.st = c.ip[n] === day ? 'crack' : 'ice'; mkHot(I, e(TX.icep.e), 1.8); break;
+      case 'box': I.st = c.bx[n] === day ? 'done' : 'pile'; if (I.st === 'pile') mkHot(I, e(TX.box.e), 2.0); break;
+      case 'board': mkHot(I, e(TX.board.e), 2.0); break;
     } return I; }
   function drop(I) { release(I); hotOff(I); INST.delete(I.k); }
   function clearInst() { for (const I of [...INST.values()]) drop(I); if (SHM) SHM.m.visible = false; }
@@ -278,6 +327,16 @@ export function createCellKit(A) {
       case 'recycle': { if (I.st !== 'pile') { for (let j = 0; j < 5; j++) put(b + j, 0); break; } const cx = sp.x + (sp.fx - sp.x) * 0.55, cz = sp.z + (sp.fz - sp.z) * 0.55, y = gy(cx, cz), ux = Math.sin(sp.ry), uz = Math.cos(sp.ry);
         [[-0.55, 0.12, 0xc8a070, 0.17, 0.15, 0.13, true], [-0.22, -0.1, 0xe8e4d8, 0.18, 0.03, 0.13, true], [0.08, 0.12, 0xbfe0f0, 0.05, 0.23, 0.05, false], [0.3, -0.06, 0xb8bec4, 0.05, 0.12, 0.05, false], [0.55, 0.1, 0x4f9a5a, 0.05, 0.25, 0.05, false]].forEach(([u, v, hx, a, h, c9, sq], j) => put(b + j, cx + ux * u + uz * v, y + 0.004, cz + uz * u - ux * v, a, h, c9, hx, sp.ry + j, sq)); break; }
       case 'shadow': { const m = ST().sh; for (let j = 0; j < 3; j++) { const q = m && m.d === day && m.n === I.n ? m.m[j] : null; if (q) put(b + j, q[1], gy(q[1], q[2]) + 0.012, q[2], 0.09, 0.006, 0.09, 0xf4f4ee); else put(b + j, 0); } break; }
+      case 'cat': catAt(I); break;
+      case 'cricket': case 'frog': singAt(I); break;
+      case 'smoth': mothAt(I); break;
+      case 'drip': dripAt(I); break;
+      case 'icep': icepAt(I); break;
+      case 'box': boxAt(I); break;
+      case 'board': { const y = gy(sp.x, sp.z), fx = Math.sin(sp.ry), fz = Math.cos(sp.ry), k = pickH(I.n + day) % 3;
+        put(b, sp.x + sp.tx * 0.5, y, sp.z + sp.tz * 0.5, 0.04, 0.95, 0.04, 0x6b5a48, sp.ry); put(b + 1, sp.x - sp.tx * 0.5, y, sp.z - sp.tz * 0.5, 0.04, 0.95, 0.04, 0x6b5a48, sp.ry);
+        put(b + 2, sp.x, y + 0.62, sp.z, 0.6, 0.62, 0.035, 0x8a6f52, sp.ry); put(b + 3, sp.x + fx * 0.012, y + 0.66, sp.z + fz * 0.012, 0.52, 0.52, 0.03, 0xd9cdb4, sp.ry);
+        [[-0.2, 0xf6f2e8], [0.17, k === 0 ? 0xf3e6a0 : k === 1 ? 0xcfe3f2 : 0xf2d9d0]].forEach(([u, hx], j) => put(b + 4 + j, sp.x + sp.tx * u + fx * 0.03, y + 0.72, sp.z + sp.tz * u + fz * 0.03, 0.13, 0.3, 0.012, hx, sp.ry)); break; }   /* 기둥 둘 + 둥근 머리 판 + 코르크 + 안내문 둘(날마다 하나 색이 바뀜) */
       case 'mail': case '_mt': { const y = gy(sp.x, sp.z), up = I.id === '_mt' && !!sp.done, px = Math.cos(sp.ry) * 0.17, pz = -Math.sin(sp.ry) * 0.17;
         put(b, sp.x, y, sp.z, 0.035, 0.95, 0.035, 0x5f666d); put(b + 1, sp.x, y + 0.88, sp.z, 0.15, 0.24, 0.19, 0x2f6fb0, sp.ry, true);   /* 집 우편함 = 파랑(길가 빨간 우체통 HEAL-1과 헷갈리지 않게) */ put(b + 2, sp.x + px, y + (up ? 1.04 : 0.92), sp.z + pz, 0.012, up ? 0.17 : 0.07, 0.05, 0xf2c230, sp.ry, true); break; }
     } }
@@ -291,6 +350,34 @@ export function createCellKit(A) {
   function mothAt(I) { const s = I.sp, b = I.sl; for (let j = 0; j < 4; j++) { const a = I.t * 2.2 + j * 1.571, r = 0.35 + 0.08 * Math.sin(I.t * 3 + j); put(b + j, s.hx + Math.cos(a) * r, s.hy - 0.28 + 0.12 * Math.sin(I.t * 4 + j * 2), s.hz + Math.sin(a) * r, 0.06, 0.01, 0.04, 0xe8dcc0, -a); } }
   function iceAt(I) { const s = I.sp, b = I.sl; if (I.st !== 'run' && I.st !== 'melted') { for (let j = 0; j < 4; j++) put(b + j, 0); return; } const t = I.t, ks = Math.max(0, 1 - t / 18), kh = Math.max(0, 1 - t / 70);
     for (const [j, x, z, k] of [[0, s.sx, s.sz, ks], [1, s.hx, s.hz, kh]]) { const y = gy(x, z); if (k > 0.04) put(b + j, x, y + 0.004, z, 0.1 * k + 0.02, 0.14 * k + 0.01, 0.1 * k + 0.02, 0xe6f5fc, 0.5, true, 0.3); else put(b + j, 0); const w = 0.1 + 0.2 * (1 - k); put(b + 2 + j, x, y + 0.003, z, w, 0.004, w * 0.9, 0x86a2b8, 0.2, true); } }
+
+  // 고양이(웅크린 몸 · 머리 위아래 반구 · 귀 둘 · 꼬리 · 눈 둘 — 밤엔 불빛을 되비춰 반짝) · peek = E 뒤 고개를 들어 이쪽을 봄
+  function catAt(I) { const s = I.sp, b = I.sl, x = s.x, z = s.z, y = gy(x, z), col = s.col, me = map.player.pos(), look = I.d < 6 || I.peek > 0, ry = s.ry, hy = ry + (look ? Math.atan2(me.x - x, me.z - z) - ry : Math.sin(I.t * 0.4) * 0.4) * 0.7, fx = Math.sin(ry), fz = Math.cos(ry), hfx = Math.sin(hy), hfz = Math.cos(hy), px = fz, pz = -fx, hpx = hfz, hpz = -hfx, sw = Math.sin(I.t * (I.peek > 0 ? 4 : 1.6)), nt = NT;
+    const hx = x + fx * 0.15, hz = z + fz * 0.15, hh = y + 0.17;
+    put(b, x - fx * 0.04, y, z - fz * 0.04, 0.12, 0.16, 0.22, col, ry); put(b + 1, hx, hh, hz, 0.08, 0.075, 0.075, col, hy); put(b + 2, hx, hh, hz, 0.08, 0.055, 0.075, col, Math.PI - hy, false, 0, Math.PI);
+    for (const k of [1, -1]) put(b + (k > 0 ? 3 : 4), hx + hpx * 0.045 * k, hh + 0.05, hz + hpz * 0.045 * k, 0.024, 0.05, 0.016, col, hy);
+    put(b + 5, x - fx * 0.2 + px * 0.06 * sw, y + 0.012, z - fz * 0.2 + pz * 0.06 * sw, 0.022, 0.026, 0.15, col, ry + 1.3 + sw * 0.35);
+    for (const k of [1, -1]) put(b + (k > 0 ? 6 : 7), hx + hfx * 0.068 + hpx * 0.028 * k, hh + 0.02, hz + hfz * 0.068 + hpz * 0.028 * k, 0.012, 0.012, 0.01, nt ? 0xc8e86a : 0x2a2a20, hy, false, nt ? 0.9 : 0); }
+  // 풀벌레(풀 밑 작은 몸) · 개구리(몸 + 눈 둘 + 울 때 부푸는 울음주머니) — 소리는 tick에서(14m 안 · 가까울수록 크게 · 2m 안에 들면 뚝 그침)
+  function singAt(I) { const s = I.sp, b = I.sl, y = gy(s.x, s.z), fx = Math.sin(s.ry), fz = Math.cos(s.ry);
+    if (I.id === 'cricket') { put(b, s.x, y + 0.004, s.z, 0.016, 0.014, 0.04, 0x3a2a1e, s.ry); put(b + 1, s.x + fx * 0.05, y + 0.012, s.z + fz * 0.05, 0.004, 0.004, 0.05, 0x5a4632, s.ry + 0.3, true); return; }
+    const pf = I.q > 0 ? 0 : Math.max(0, Math.sin(I.t * 5.5)); put(b, s.x, y, s.z, 0.055, 0.045, 0.07, 0x5f9a3a, s.ry);
+    for (const k of [1, -1]) put(b + (k > 0 ? 1 : 2), s.x + fx * 0.04 + fz * 0.025 * k, y + 0.04, s.z + fz * 0.04 - fx * 0.025 * k, 0.014, 0.014, 0.014, 0x3f6a26, s.ry);
+    if (pf > 0.05) put(b + 3, s.x + fx * 0.06, y + 0.018, s.z + fz * 0.06, 0.02 + 0.02 * pf, 0.02 + 0.018 * pf, 0.02 + 0.02 * pf, 0xe8e4c8, s.ry); else put(b + 3, 0); }
+  function singTick(I, el) { if (I.q > 0) { I.q -= el; return; } if (I.d < 2) { if (I.ct >= 0) { I.ct = -1; I.q = 4; } return; } if (I.d > 14 || !map.tone || A.busy() || A.inb()) return; const v = 0.035 * (1 - I.d / 14) + 0.004;
+    if ((I.ct = Math.max(0, I.ct) + el) < (I.id === 'cricket' ? 0.8 : 1.3)) return; I.ct = 0;
+    if (I.id === 'cricket') for (let k = 0; k < 3; k++) map.tone(4200, k * 0.07, 0.04, 'sine', v); else for (let k = 0; k < 2; k++) map.tone(520, k * 0.16, 0.11, 'triangle', v * 1.4, -160); }
+  // 낙숫물(처마 끝에서 떨어지는 물방울 셋 + 땅에 젖은 자국) · 땅에 닿을 때 작은 소리(가까울 때만)
+  function dripAt(I, snd) { const s = I.sp, b = I.sl, g0 = gy(s.x, s.z), H = Math.max(1, s.top - g0), T0 = Math.sqrt(2 * H / 9.8), T = T0 + 0.25;
+    for (let j = 0; j < 3; j++) { const u = (I.t + j * T / 3) % T, h = s.top - 4.9 * u * u, ox = (j - 1) * 0.35, x = s.x + Math.cos(s.ry) * ox, z = s.z - Math.sin(s.ry) * ox; if (h > g0) put(b + j, x, h, z, 0.022, 0.05, 0.022, 0x9cc4dc, 0, false, 0.35); else { put(b + j, 0); if (snd && I.d < 7 && map.tone && u - T0 < 0.1) map.tone(1400 + j * 160, 0, 0.05, 'sine', 0.02); } }
+    put(b + 3, s.x, g0 + 0.004, s.z, 0.55, 0.004, 0.16, 0x6f8fa4, s.ry + Math.PI / 2, true); }
+  // 웅덩이 살얼음(바닥 네모 둘 · 조금 빛남) → 밟으면 금 두 줄(오늘)
+  function icepAt(I) { const s = I.sp, b = I.sl, y = gy(s.x, s.z); put(b, s.x, y + 0.006, s.z, 0.42, 0.01, 0.3, 0xcfe3ec, s.ry, true, 0.25); put(b + 1, s.x + 0.05, y + 0.008, s.z - 0.03, 0.28, 0.01, 0.18, 0xeaf5fa, s.ry + 0.3, true, 0.35);
+    if (I.st === 'crack') { put(b + 2, s.x, y + 0.01, s.z, 0.014, 0.01, 0.26, 0x6f8a9a, s.ry + 0.6, true); put(b + 3, s.x + 0.06, y + 0.01, s.z + 0.04, 0.012, 0.01, 0.17, 0x6f8a9a, s.ry - 0.5, true); } else { put(b + 2, 0); put(b + 3, 0); } }
+  // 빈 상자 셋(아무렇게나 쌓임) → 접어 묶은 한 묶음(오늘)
+  function boxAt(I) { const s = I.sp, b = I.sl, y = gy(s.x, s.z), ux = Math.sin(s.ry), uz = Math.cos(s.ry), px = uz, pz = -ux, k = I.st === 'fold' ? Math.min(1, I.mt / 1.4) : I.st === 'done' ? 1 : 0;
+    [[-0.45, 0.15, 0.3, 0.24, 0.5], [0.4, -0.1, 0.34, 0.26, -0.7], [0.05, 0.35, 0.28, 0.22, 1.3]].forEach(([u, v, a, c9, r], j) => { const ex = s.x + (px * u + ux * v) * (1 - k), ez = s.z + (pz * u + uz * v) * (1 - k); put(b + j, ex, y + 0.012 + 0.035 * j * k, ez, a + (0.32 - a) * k, 0.01, c9 + (0.24 - c9) * k, j === 1 ? 0xb88a58 : 0xc8a070, s.ry + r * (1 - k), true); });
+    if (k >= 1) put(b + 3, s.x, y + 0.02, s.z, 0.025, 0.1, 0.27, 0xf2efe6, s.ry); else put(b + 3, 0); }   /* 바닥에 흩어진 납작 상자 셋 → 한자리에 포개짐(1.4초) → 흰 끈 */
 
   // ───────── 해 · 그림자(가로등 기둥 6.2m · 방위 0 = 북 = −z · 해는 아침 동 → 한낮 남 → 저녁 서) ─────────
   function sunNow() { const h = A.min() / 60; if (h < 6.6 || h > 17.8) return null; const az = (90 + (h - 6) * 15) * Math.PI / 180, mx = [53, 76, 53, 30][Math.max(0, SEAS.indexOf(A.season()))], el = Math.max(8, mx * Math.sin(Math.PI * (h - 6) / 12)) * Math.PI / 180;
@@ -325,6 +412,13 @@ export function createCellKit(A) {
         setTimeout(() => { if (on) toast(e(TX.echo.done), 4.5); }, 2600); reward('echo', 'explore'); break; }
       case 'mail': mailTake(I); break;
       case '_mt': mailGive(I); break;
+      case 'cricket': case 'frog': act('shoes', [sp.x, gy(sp.x, sp.z), sp.z]); I.q = 4; toast(e(TX[I.id].done), 5); reward(I.id); hotOff(I); break;
+      case 'cat': act('shoes', [sp.x, gy(sp.x, sp.z), sp.z]); I.peek = 4; toast(e(cond().night ? TX.cat.done : TX.cat.done2), 5); reward('cat'); hotOff(I); break;
+      case 'smoth': act('look'); toast(e(TX.smoth.done), 4.5); reward('smoth'); hotOff(I); break;
+      case 'drip': act('look'); toast(e(TX.drip.done), 4.5); reward('drip', 'explore'); hotOff(I); break;
+      case 'icep': { const c9 = ST(); act('shoes', [sp.x, gy(sp.x, sp.z), sp.z]); if (I.st !== 'crack') { I.st = 'crack'; c9.ip[I.n] = day; A.GAME.mark(); I.dr = false; if (map.tone) for (let k = 0; k < 3; k++) map.tone(240 - k * 30, 0.05 + k * 0.06, 0.05, 'square', 0.025); } toast(e(TX.icep.done), 5); reward('icep', 'explore'); hotOff(I); break; }
+      case 'box': if (I.st !== 'pile') return; act('reach', [sp.x, gy(sp.x, sp.z) + 0.2, sp.z]); I.st = 'fold'; I.mt = 0; hotOff(I); break;
+      case 'board': { act('look'); const k = cond().s === 3 ? 3 : pickH(I.n + day) % 3; toast(e(TX.board.done[k]), 5); reward('board', 'explore'); hotOff(I); break; }
     } }
   // 지렁이: 손에 올려 흙으로(1.6초 · 순간이동 X — 꿈틀대며 옮겨짐) → 흙 둔덕(오늘) → 다음 날부터 닷새 꽃 한 송이(_m)
   function wormDone(I) { const c = ST(), sp = I.sp; c.wm[I.n] = { d: S().day, x: +sp.tx.toFixed(2), z: +sp.tz.toFixed(2) }; A.GAME.mark(); I.st = 'saved'; for (let j = 0; j < 4; j++) put(I.sl + j, 0); toast(tx(TX.worm.done), 4.5); reward('worm'); }
@@ -362,7 +456,7 @@ export function createCellKit(A) {
 
   // ───────── 0.5초 칸(마을이 부름) ─────────
   const DROP = [];
-  function sec() { if (!on) return; const t0 = performance.now(), c9 = CH(), day = S().day; if (c9 && c9.kitGen() !== gen) { gen = c9.kitGen(); for (const I of INST.values()) I.dr = false; }
+  function sec() { if (!on) return; const t0 = performance.now(), c9 = CH(), day = S().day, E9 = cond(); NT = !!E9.night; SUNY = !E9.rain && !!sunNow(); if (c9 && c9.kitGen() !== gen) { gen = c9.kitGen(); for (const I of INST.values()) I.dr = false; }
     WANT.clear(); const me = map.player.pos();
     if (!off && A.on() && !A.inb()) { const C0 = CEL[A.cell(me.x, me.z)], c = ST(); if (C0) for (let a = C0.r - 1; a <= C0.r + 1; a++) for (let b = C0.c - 1; b <= C0.c + 1; b++) { const C9 = BYRC[a + ',' + b]; if (!C9 || !C9.s || C9.s.school) continue; full(C9);
       for (const id of today(C9.n)) if (NS[id] != null && C9.sp[id]) WANT.add(C9.n + ':' + id); const wm = c.wm[C9.n]; if (wm && day >= wm.d && day <= wm.d + 5) WANT.add(C9.n + ':_m'); if (c.ml0 && c.ml0.d === day && c.ml0.to === C9.n) WANT.add(C9.n + ':_mt'); } }
@@ -386,6 +480,12 @@ export function createCellKit(A) {
         case 'moth': mothAt(I); fl = true; break;
         case 'ice': if (I.st === 'run' || I.st === 'melted') { iceAt(I); fl = true; if (I.st === 'run' && I.t >= 24) { I.st = 'melted'; ST().ic[I.n] = S().day; A.GAME.mark(); if (I.d < 40) toast(tx(TX.ice.done), 5.5); reward('ice'); } } break;
         case 'cross': if (I.d < 10) crossTick(I, el); break;
+        case 'cat': if (I.peek > 0) I.peek = Math.max(0, I.peek - el); catAt(I); fl = true; break;
+        case 'cricket': singTick(I, el); break;
+        case 'frog': singTick(I, el); singAt(I); fl = true; break;
+        case 'smoth': mothAt(I); fl = true; break;
+        case 'drip': dripAt(I, true); fl = true; break;
+        case 'box': if (I.st === 'fold') { I.mt += el; boxAt(I); fl = true; if (I.mt >= 1.4) { I.st = 'done'; ST().bx[I.n] = S().day; A.GAME.mark(); boxAt(I); toast(tx(TX.box.done), 5); reward('box', 'work'); } } break;
       } }
     if (fl) c9.kitFlush(); }
   // 횡단보도: 빨간불에 연석 곁(2.6m)에서 기다렸다가 초록불이 켜지면 = 보행 신호 소리 + 한 줄(하루 처음 솜씨) · 빨간불에 차도로 들어서면 한 번 알림
