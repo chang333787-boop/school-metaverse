@@ -72,6 +72,7 @@ const FILMS = [
   { t: T2('별 보는 밤', 'A Night of Stars'), bg: '#1c2a4a', sc: [T2('불빛이 적은 곳일수록 별이 많이 보여요.', 'The fewer lights around, the more stars you can see.'), T2('북두칠성의 국자 끝 두 별을 이어 쭉 가면 북극성이 있어요.', 'Follow the two end stars of the Big Dipper’s cup to find the North Star.'), T2('북극성은 밤새 거의 움직이지 않아 북쪽을 알려 줘요.', 'The North Star hardly moves all night, so it shows which way is north.')] },
 ];
 const SHOWS = [[0, 600, 680], [1, 690, 790], [2, 780, 880], [0, 870, 950], [1, 960, 1060], [2, 1050, 1150], [0, 1140, 1220]];
+export const BD_SHOWS = SHOWS.map(q => ({ s: q[1], e: q[2], t: FILMS[q[0]].t }));   /* DAY-2 오늘 시간표 줄(town_day.js)이 읽음 */
 const TICKET = 500, ROWS = ['가', '나', '다', '라', '마'], ROWZ = [-4.5, -3.2, -1.9, -0.6, 0.7], COLX = c => -2.5 + (c - 1);   /* 영화 표 값(소포와 같은 결) · 줄 가(화면 앞)~마 · 번호 1~6 */
 const hm = m => String((m / 60) | 0).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 // 🏭 만드는 차례(일 다섯 · 1번 자리부터) — [일, 까닭(틀리게 고르면)]
