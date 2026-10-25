@@ -62,7 +62,7 @@ export function createFeel(A) {
     M.instanceMatrix.needsUpdate = true; if (!n) { M.visible = false; pAlive = 0; } }
   function farm(k, x, y, z) { const v = gate(k); if (v) play(SOUND[k], v, k); if (x == null) return; G[k].fx++; puff(x, y, z, k === 'water' ? [0x8fd8ff, 0xcfeeff, 0x6cc0f0] : [0x6b4a2e, 0x8a6440, 0x5a3c24], k === 'water' ? 0.8 : 1); }
   return {
-    step, stamp, money, farm, sfx: k => map.sfx(k),   /* sfx = 시험이 마을 소리 길(감싼 map.sfx)을 부를 때 */
+    step, stamp, money, farm, puff, sfx: k => map.sfx(k),   /* puff = SURP-1 놀람(게 웅덩이 물·소금꽃)이 같은 알갱이를 다시 씀 */   /* sfx = 시험이 마을 소리 길(감싼 map.sfx)을 부를 때 */
     tick(dt) { if (!pAlive || !PM) return; draw(Math.min(dt, 0.1)); },
     info: () => ({ snd: { ...SND }, g: JSON.parse(JSON.stringify(G)), puff: { alive: pAlive, vis: !!(PM && PM.visible) }, dom: { hi: HI ? +getComputedStyle(HI).opacity : -1, st: ST ? +getComputedStyle(ST).opacity : -1, wl: WL ? +getComputedStyle(WL).opacity : -1, wlT: WL ? WL.textContent : '' } }),
     dispose() { alive = false; clearInterval(wlTm); map.sfx = sfx0; map.tone = tone0; for (const e of [css, HI, ST, WL]) if (e) e.remove(); if (PM) { map.remove(PM); PM.geometry.dispose(); PM.material.dispose(); PM.dispose(); PM = null; } },

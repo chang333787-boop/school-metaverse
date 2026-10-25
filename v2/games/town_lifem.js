@@ -30,6 +30,7 @@ export function createBirds(T3) {
       if (!ok) { F.on = false; F.wait = 20; m.visible = false; return; }   /* 밤·비가 되면 바로 접음(먼 하늘이라 눈에 띄지 않음) */
       F.t += dt; const u = F.t / F.T; if (u >= 1) { F.on = false; F.wait = 15 + (F.n % 4) * 8; m.visible = false; return; }
       m.position.set(F.sx + (F.ex - F.sx) * u, F.y + Math.sin(F.t * 0.4) * 3, F.sz + (F.ez - F.sz) * u); m.rotation.set(0, Math.atan2(F.ex - F.sx, F.ez - F.sz), 0); m.visible = true; },
+    go() { if (!F.on) F.wait = 0; },   /* SURP-1 물가 새 떼: 쉬는 중이면 다음 장면에 바로 한 번 지나감(밤·비면 tick이 그대로 안 띄움) */
     info: () => ({ on: F.on, x: Math.round(m.position.x), y: Math.round(m.position.y), z: Math.round(m.position.z), n: F.n }),
     dispose() { g.dispose(); mat.dispose(); } };
 }
