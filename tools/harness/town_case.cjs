@@ -1,4 +1,6 @@
-// 📒 사건 수첩 시험(CASE-1 · v2/games/town_case.js · 첫 사건 '흐려진 강'): node tools/harness/town_case.cjs [마을=ourtown] [포트=8002] [--shots=폴더]
+// 📒 사건 수첩 시험(CASE-1 · v2/games/town_case.js · 첫 사건 '흐려진 강' · 둘째 사건 '사라진 장터 저울'): node tools/harness/town_case.cjs [마을=ourtown] [포트=8002] [--shots=폴더] [--only=river|scale]
+//   ⚖️ ⑧ 장날 아침(어제 바람 약함) 저절로 · 기한 이틀 · 단서 여섯(바닥 자국 방위 · 정류장 시간표 · 정자 이웃 저녁 · 옆 가게 이웃 오후 + 본 것을 보여 줘야 생각남 · 맡긴 곳 장부 9~18시 · 날씨 창 바람)
+//      틀린 까닭 = 분실물 '아니었어요' + 90분 · 맞는 까닭 = 선반 · 상인에게 본 것 둘(생각 = 되물음 · 간 곳 근거 없음 = 하나 더) · 다음 날 고친 저울 + '정확해요' 판 + 소식 · 늦음 = 다음 장날 임시 저울 → 그다음 날 돌아옴
 //   ① 비 사흘 → 그다음 아침 저절로 사건(물 높이 +1) · 칩·위 가운데 줄 '기한 사흘' · 단서 자리엔 빨간 선 X
 //   ② 단서 다섯(장소·사람·때가 다름): 정류장 안내판 · 장터 상인(아침 8~10시만 · 오후엔 '아침에 와요') · 공사장 울타리 안 흙더미 · 날씨 창 비 기록 · 물 떠 보기(물가 세 곳 · 물에서 멀면 못 뜸)
 //   ③ 틀린 가설 → 확인 자리만 빨간 선 → '아니었어요' + 시각 90분 · 기한 줄어듦 ④ 맞는 가설 → 맞았어요 → 창구(09~18시) 보고서: '들은 생각'을 넣으면 직원이 되물음 → 본 것 둘 = 접수
@@ -6,6 +8,7 @@
 //   ⑥ 기한 넘김 판: 사흘 넘게 안 냄 → 늦음 → 비 오는 날 논 한 칸 흙탕(하루) → 다음 날 흙막이 · 벌 X ⑦ 휴대폰 390 수첩 창(가로 넘침 X) ⑧ 페이지 오류 0
 const { chromium } = require('./pw.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
+const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7) || null;   /* --only=river · --only=scale = 한 사건만 */
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 if (SHOTS) require('fs').mkdirSync(SHOTS, { recursive: true });
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
@@ -13,7 +16,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
   try { const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage(), errs = []; p.on('pageerror', e => errs.push(e.message.slice(0, 160))); p.on('console', m => { const t = m.text(); if ((m.type() === 'error' && !/favicon|404|ERR_|pointer lock|WebGL|GPU stall/.test(t)) || /게임 tick 오류|꼬리표 없는 보상/.test(t)) errs.push(t.slice(0, 160)); });
     const ev = (f, a) => p.evaluate(f, a), W8 = ms => p.waitForTimeout(ms);
     const panel = () => ev(() => { const P = document.querySelector('.twn-p'); return P ? { k: P.dataset.k || '', t: P.innerText.slice(0, 900) } : null; });
-    const closeAll = async () => { for (let i = 0; i < 6; i++) { if (!await ev(() => !!document.querySelector('.twn-p'))) break; await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); }); await W8(250); if (await ev(() => !!document.querySelector('.twn-p'))) { await p.keyboard.press('Escape'); await W8(250); } } };
+    const closeAll = async () => { for (let i = 0; i < 4 && (await ev(() => !!document.querySelector('.twn-dlg'))); i++) { await p.keyboard.press('Escape'); await W8(300); }   /* 이야기 대화(저절로 열리는 다음 장)가 E를 먹지 않게 */
+      for (let i = 0; i < 6; i++) { if (!await ev(() => !!document.querySelector('.twn-p'))) break; await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); }); await W8(250); if (await ev(() => !!document.querySelector('.twn-p'))) { await p.keyboard.press('Escape'); await W8(250); } } };
     const I = () => ev(() => SM_TOWN.case().info()), C = (k, a) => ev(([k, a]) => SM_TOWN.case().dbg[k](a), [k, a]);
     const tp = (x, z) => ev(([x, z]) => { const M = SD2.map; M.player.teleport([x, M.q.groundAt(x, z, SM_TOWN.ground(x, z) + 2) + 0.05, z]); }, [x, z]);
     const tpE = async (x, z, done) => { for (let k = 0; k < 6; k++) { await closeAll(); await tp(x + 0.2, z + 0.2); for (let w = 0; w < 20; w++) { await W8(300); if (await ev(() => [...document.querySelectorAll('div')].some(d => /^(E  |✋ )/.test(d.textContent) && d.style.display !== 'none' && !d.children.length))) break; } await W8(300); await p.keyboard.press('KeyE'); await W8(800); if (!done || await done()) return true; await W8(700); } return false; };   /* 순간이동 직후 E 자리 잡힘이 늦는 때가 있어 여섯 번까지 */
@@ -27,6 +31,9 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await p.goto(URL); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && window.SD2 && SM_TOWN.case && SM_TOWN.case() && SM_TOWN.fix && SM_TOWN.fix() && SM_TOWN.routePts, null, { timeout: 240000 }); await W8(2500); await closeAll();
     await ev(() => { const G = SM_TOWN.game().S; G.story = G.story || {}; G.story.done = Object.assign(G.story.done || {}, { p0: 1, a1_1: 1 }); SM_TOWN.rules.season('summer'); SM_TOWN.case().dbg.clear(); }); await calm();
     const R0 = await ev(() => SM_TOWN.schRect()); await tp((R0[0] + R0[2]) / 2, R0[3] + 30); await W8(800);
+    let r = null, P = null;
+    const pickK = async ks => { for (const k of ks) await ev(k => document.querySelector('.twn-p [data-k="' + k + '"]').click(), k); await W8(200); await ev(() => document.querySelector('.twn-p [data-a="go"]').click()); await W8(400); return panel(); };
+    if (!ONLY || ONLY === 'river') {
     // ① 비 사흘 → 저절로
     for (let k = 0; k < 3; k++) { await at(9 * 60); await ev(() => SM_TOWN.rules.wx('rain')); await W8(1300); ok(!(await I()).cur, (k + 1) + '일째 비 = 아직 사건 X'); await sleep(); }
     await ev(() => SM_TOWN.rules.wx('clear')); await at(7 * 60); let i0 = null; for (let i = 0; i < 12; i++) { await W8(500); i0 = await I(); if (i0.cur) break; }
@@ -39,7 +46,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     const SP = [PL.site, PL.drain, PL.sign, PL.market, PL.farmer, PL.trail, PL.far], noLine = async () => { const rp = await route(); if (!rp || !rp.length) return true; const e9 = rp[rp.length - 1]; return !SP.some(q => Math.hypot(e9[0] - q.x, e9[1] - q.z) < 8); };
     ok(await noLine(), '처음 = 단서 자리에 빨간 선 X');
     // ② 단서
-    let r = await tpE(PL.sign.x, PL.sign.z, async () => ((await panel()) || {}).k === 'caseclue'); let P = await panel(); ok(r && /안내판/.test(P.t) && /본 것/.test(P.t), '🚏 정류장 안내판 = 본 것 (' + PL.sign.cell + ')'); await shot('case_sign', [PL.sign.x + (PL.sign.sx - PL.sign.x) * 2.2, PL.sign.z + (PL.sign.sz - PL.sign.z) * 2.2], [PL.sign.x, PL.sign.z]);
+    r = await tpE(PL.sign.x, PL.sign.z, async () => ((await panel()) || {}).k === 'caseclue'); P = await panel(); ok(r && /안내판/.test(P.t) && /본 것/.test(P.t), '🚏 정류장 안내판 = 본 것 (' + PL.sign.cell + ')'); await shot('case_sign', [PL.sign.x + (PL.sign.sx - PL.sign.x) * 2.2, PL.sign.z + (PL.sign.sz - PL.sign.z) * 2.2], [PL.sign.x, PL.sign.z]);
     await at(14 * 60); r = await tpE(PL.market.x, PL.market.z, async () => (await I()).dbg.some(t => /^talk market false/.test(t))); ok(r && !(await I()).cur.clues.market, '🗣 장터 상인 오후 2시 = 「아침 8~10시에 다시 와 줘요」 · 단서 X');
     await at(8 * 60 + 30); await W8(1500); r = await tpE(PL.market.x, PL.market.z, async () => ((await panel()) || {}).k === 'caseclue'); P = await panel(); ok(r && /들은 생각/.test(P.t) && /트럭/.test(P.t) && (await I()).cur.clues.market, '🗣 장터 상인 아침 8:30 = 들은 생각 (' + PL.mkCell + ')');
     if (!(await I()).cur.clues.market) { console.log('    state ' + JSON.stringify(await ev(() => ({ cls: document.body.className, dlg: !!document.querySelector('.twn-dlg'), play: !!document.querySelector('.twn-play'), hint: [...document.querySelectorAll('div')].filter(d => /^(E  |✋ )/.test(d.textContent) && !d.children.length).map(d => d.textContent + '|' + d.style.display), ctrl: !!(SD2.CTRL && SD2.CTRL.hot), min: SM_TOWN.game().S.min })))); await W8(1500); const hint = await ev(() => [...document.querySelectorAll('div')].filter(d => /^(E  |✋ )/.test(d.textContent) && d.offsetParent).map(d => d.textContent).slice(0, 3)); await p.keyboard.press('KeyE'); await W8(800); console.log('    hint ' + JSON.stringify(hint) + ' after ' + JSON.stringify((await I()).dbg) + ' P ' + JSON.stringify(await panel())); }
@@ -72,7 +79,6 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     // 창구
     const H0 = (await ev(() => SM_TOWN.fix().info())).halls[0]; await at(8 * 60); r = await tpE(H0.at[0], H0.at[1], () => said('09:00')); ok(r && !(await panel()), '창구 08:00 = 문 닫음 한 줄');
     await at(11 * 60); r = await tpE(H0.at[0], H0.at[1], async () => ((await panel()) || {}).k === 'caserep'); ok(r, '창구 11:00 = 사건 보고서 창');
-    const pickK = async ks => { for (const k of ks) await ev(k => document.querySelector('.twn-p [data-k="' + k + '"]').click(), k); await W8(200); await ev(() => document.querySelector('.twn-p [data-a="go"]').click()); await W8(400); return panel(); };
     P = await pickK(['market', 'sample']); ok(/상인의 생각/.test(P.t) && (await I()).cur.st === 'open', '「들은 생각」을 근거로 내면 = 직원이 되물음');
     P = await pickK(['site']); ok(/받았어요/.test(P.t) && /토사/.test(P.t) && /흙막이/.test(P.t) && (await I()).cur.st === 'ok', '본 것 둘(물빛·흙더미) = 접수 + 낱말 둘'); await closeAll();
     // ⑤ 하루 마무리 · 다음 날
@@ -99,6 +105,91 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await p.setViewportSize({ width: 390, height: 844 }); await W8(800); await ev(() => SM_TOWN.case().notebook()); await W8(500);
     const ph = await ev(() => { const P9 = document.querySelector('.twn-p'), r9 = P9 && P9.getBoundingClientRect(); return P9 ? { w: Math.round(r9.width), l: Math.round(r9.left), r: Math.round(r9.right), sw: document.documentElement.scrollWidth, cols: getComputedStyle(P9.querySelector('.cs-g')).gridTemplateColumns } : null; });
     ok(ph && ph.l >= 0 && ph.r <= 390 && ph.sw <= 390 && !/ /.test(ph.cols.trim()), '휴대폰 390 수첩 창 (폭 ' + (ph && ph.w) + ' · 한 줄 칸 · 가로 넘침 X)'); if (SHOTS) await p.screenshot({ path: SHOTS + '/case_notebook_390.png' }); await closeAll(); await p.setViewportSize({ width: 1280, height: 720 });
+    } /* 흐려진 강 끝 */
+    // ───────── ⚖️ 사라진 장터 저울(SCALE-1) ─────────
+    if (!ONLY || ONLY === 'scale') {
+    console.log('  — ⚖️ 사라진 장터 저울');
+    await closeAll(); await ev(() => { SM_TOWN.case().dbg.clear(); SM_TOWN.rules.wx('clear'); if (SM_TOWN.typhoon) { SM_TOWN.typhoon.info(); if (SM_TOWN.game().S.typh && SM_TOWN.game().S.typh.st) SM_TOWN.typhoon.dbg.finish(); } const t9 = SM_TOWN.game().S.typh; if (t9 && !t9.st) { t9.n = Math.max(1, t9.n | 0); t9.last = 1e6; } }); await calm();   /* 태풍 판(7일째부터 저절로)이 장날과 겹치지 않게 */
+    // ⑧ 장날 아침(어제 바람 약함) = 저절로
+    const dJ = await ev(() => { const D0 = SM_TOWN.game().S.day; for (let d = D0 + 2; d < D0 + 80; d++) if (d % 5 === 0 && !SM_TOWN.case().dbg.windy(d - 1)) return d; return -1; });
+    await ev(d => { const G = SM_TOWN.game().S; G.day = d - 1; SM_TOWN.game().mark(); }, dJ); await at(9 * 60); await W8(1300); ok(!(await I()).cur, '장날 전날(' + (dJ - 1) + '일째) = 아직 사건 X'); await sleep();
+    await ev(() => SM_TOWN.rules.wx('clear')); await at(7 * 60); let j0 = null; for (let i = 0; i < 12; i++) { await W8(500); j0 = await I(); if (j0.cur) break; }
+    ok(j0.cur && j0.cur.id === 'scale' && j0.cur.d0 === dJ && (await ev(() => SM_TOWN.case().dbg.ctx().jang.on)), '장날(' + dJ + '일째) 아침 = 「사라진 장터 저울」 저절로');
+    if (!j0.cur || j0.cur.id !== 'scale') throw new Error('저울 사건이 안 생김 ' + JSON.stringify(j0.dbg) + ' ' + JSON.stringify(await ev(() => [SM_TOWN.case().dbg.ctx(), SM_TOWN.case().dbg.gate(), document.querySelector('.twn-p') && document.querySelector('.twn-p').dataset.k, document.body.className])));
+    const Q = j0.cur.pl; console.log('    자리: 장터 ' + Q.mkCell + ' · 맡긴 곳 ' + Q.fix.name + ' ' + Q.fix.cell + '(' + Q.fix.kind + ') · 분실물 ' + Q.lost.name + ' ' + Q.lost.cell + ' · 정류장 ' + Q.bus.cell + ' · 정자 ' + Q.pav.cell + ' · 방위 ' + Q.dir);
+    ok(/사라진 장터 저울 · 기한 이틀/.test(j0.line) && /기한 이틀/.test(j0.chip), '칩·위 가운데 줄 = 「' + j0.line + '」');
+    ok(j0.meshes.sc_track === 1 && j0.meshes.sc_bus === 2 && j0.meshes.sc_book === 1 && !j0.meshes.sc_scale, '소품 그리기: 바닥 자국 1 · 시간표 2 · 장부 탁자 1 · 저울 X');
+    ok((await ev(d => SM_TOWN.case().news(d), dJ)).some(q => /저울이 없어졌대요/.test(q.t[0])), '아침 소식 = 「저울이 없어졌대요」');
+    const SQ = [Q.track, Q.bus, Q.fix, Q.pav, Q.nb, Q.mk, Q.roll, Q.lost], noLineS = async () => { const rp = await route(); if (!rp || !rp.length) return true; const e9 = rp[rp.length - 1]; return !SQ.some(q => Math.hypot(e9[0] - q.x, e9[1] - q.z) < 8); };
+    ok(await noLineS(), '처음 = 단서 자리에 빨간 선 X');
+    /* 그리기 켬이면 순간이동 뒤 E 자리 잡힘이 더 늦음 → 안내 글이 그 자리 이름일 때까지 기다렸다가 E(앞 자리 E를 누르지 않게) */
+    const tpL = async (x, z, lab, done) => { for (let k = 0; k < 6; k++) { await closeAll(); await tp(x + 0.2, z + 0.2); for (let w = 0; w < 40; w++) { await W8(300); if (await ev(l => [...document.querySelectorAll('div')].some(d => /^(E  |✋ )/.test(d.textContent) && d.textContent.includes(l) && d.style.display !== 'none' && !d.children.length), lab)) break; } await W8(300); if (process.env.DBGE) console.log('    E전 ' + lab + ' ' + JSON.stringify(await ev(() => ({ p: !!document.querySelector('.twn-p'), dlg: !!document.querySelector('.twn-dlg'), cls: document.body.className, hint: [...document.querySelectorAll('div')].filter(d => /^(E  |✋ )/.test(d.textContent) && !d.children.length).map(d => d.textContent + '|' + d.style.display), dbg: SM_TOWN.case().info().dbg.slice(-2) })))); await p.keyboard.press('KeyE'); await W8(800); if (process.env.DBGE) console.log('    E뒤 ' + JSON.stringify(await panel()) + ' ' + (await ev(() => document.getElementById('toast').textContent))); if (!done || await done()) return true; await W8(700); } return false; };
+    const clueP = async (x, z, lab) => tpL(x, z, lab, async () => ((await panel()) || {}).k === 'caseclue');
+    // 옆 가게 이웃: 오전 = 오후에 와요 · 본 것 없음 = 모르겠어요 · 시간표만 보여 줌 = 모르겠어요 · 바닥 자국을 보여 줌 = 생각남
+    await at(10 * 60); r = await tpL(Q.nb.x, Q.nb.z, '저울 이야기 묻기', () => said('오후 1~6시')); ok(r && !(await I()).cur.clues.nbr, '🗣 옆 가게 이웃 오전 10시 = 「오후 1~6시에 다시 와 줘요」');
+    await at(14 * 60); r = await tpL(Q.nb.x, Q.nb.z, '저울 이야기 묻기', () => said('모르겠어요')); ok(r && !(await I()).cur.clues.nbr && !(await panel()), '🗣 옆 가게 이웃(본 것 없음) = 「글쎄요, 잘 모르겠어요」 · 단서 X');
+    r = await clueP(Q.bus.x, Q.bus.z, '버스 시간표'); P = await panel(); ok(r && /시간표/.test(P.t) && /6시 10분/.test(P.t) && /본 것/.test(P.t), '🚏 정류장 시간표 = 본 것 (' + Q.bus.cell + ')');
+    if (SHOTS) { const by = Q.bus.ry != null ? Q.bus.ry : Math.atan2(Q.bus.sx - Q.bus.x, Q.bus.sz - Q.bus.z); await shot('scale_bus', [Q.bus.x + Math.sin(by) * 3.4 + Math.cos(by) * 1.2, Q.bus.z + Math.cos(by) * 3.4 - Math.sin(by) * 1.2], [Q.bus.x, Q.bus.z]); }
+    await at(14 * 60 + 10); r = await tpL(Q.nb.x, Q.nb.z, '저울 이야기 묻기', async () => ((await panel()) || {}).k === 'casenbr'); ok(r && (await ev(() => document.querySelectorAll('.twn-p [data-f]').length)) === 1, '🗣 옆 가게 이웃(본 것 하나) = 「무엇을 보여 줄까요?」 창');
+    await ev(() => document.querySelector('.twn-p [data-f="bus"]').click()); await W8(400); P = await panel(); ok(P && /잘 모르겠어요/.test(P.t) && !(await I()).cur.clues.nbr, '  시간표를 보여 주면 = 「그걸 봐도 잘 모르겠어요」 · 단서 X'); await closeAll();
+    r = await clueP(Q.track.x, Q.track.z, '판매대 바닥'); P = await panel(); ok(r && /바퀴 자국/.test(P.t) && /받침 자국/.test(P.t) && new RegExp(['북', '북동', '동', '남동', '남', '남서', '서', '북서'][Q.dir] + '쪽').test(P.t), '👣 판매대 바닥 = 받침 자국 + 바퀴 자국 방위 (본 것)');
+    if (SHOTS) await shot('scale_market', [Q.track.x - Q.track.ux * 3.5 + Q.track.uz * 2.5, Q.track.z - Q.track.uz * 3.5 - Q.track.ux * 2.5], [Q.track.x + Q.track.ux * 2, Q.track.z + Q.track.uz * 2]);
+    await at(14 * 60 + 20); r = await tpL(Q.nb.x, Q.nb.z, '저울 이야기 묻기', async () => ((await panel()) || {}).k === 'casenbr'); await ev(() => document.querySelector('.twn-p [data-f="track"]').click()); await W8(600); P = await panel();
+    ok(r && P && P.k === 'caseclue' && /제 수레/.test(P.t) && /들은 생각/.test(P.t) && (await I()).cur.clues.nbr, '  바닥 자국을 보여 주면 = 「그 바퀴 자국은 제 수레예요」 (들은 생각)');
+    // 정자 이웃(맑은 저녁 6~8시만)
+    r = await tpL(Q.pav.x, Q.pav.z, '어제 저녁 이야기', () => said('저녁 6~8시')); ok(r && !(await I()).cur.clues.wit, '🗣 정자 이웃 오후 2시 = 「맑은 날 저녁 6~8시에 모여요」');
+    await ev(() => SM_TOWN.rules.wx('clear')); await tp(Q.pav.x + 1, Q.pav.z + 1); await at(19 * 60 + 20); for (let k = 0; k < 120; k++) { await W8(1000); if ((await ev(() => SM_TOWN.routine().info().list.filter(o => o.st === 'pav').length)) >= 1) break; }   /* 이웃이 일을 마치고 정자로 걸어옴(ROUTINE-2) */
+    r = await tpL(Q.pav.x, Q.pav.z, '어제 저녁 이야기', async () => !!(await I()).cur.clues.wit); P = await panel(); ok(r && P && /마지막 버스/.test(P.t) && /들은 생각/.test(P.t), '🗣 정자 이웃 저녁 7:20(정자에 앉음) = 들은 생각 (' + Q.pav.cell + ')');
+    if (!(await I()).cur.clues.wit) console.log('    정자 ' + JSON.stringify({ dbg: (await I()).dbg.slice(-6), toast: await ev(() => document.getElementById('toast').textContent), wx: await ev(() => SM_TOWN.case().dbg.ctx().wx), pav: await ev(() => SM_TOWN.routine().ev().pv), me: await ev(() => SD2.map.player.pos()), st: await ev(() => SM_TOWN.routine().info().list.filter(o => o.ev.pv >= 0).map(o => [o.i, o.st])), near: await ev(() => { const m = SD2.map.player.pos(); return SD2.map.interact.list().filter(h => Math.hypot(h.x - m.x, h.z - m.z) < 5).map(h => [h.label, +Math.hypot(h.x - m.x, h.z - m.z).toFixed(1), !!h.off, +h.y.toFixed(2), +m.y.toFixed(2)]); }) }));
+    // 맡긴 곳 장부(9~18시)
+    await sleep(); await calm(); await at(8 * 60); r = await tpL(Q.fix.x, Q.fix.z, '장부 보기', () => said('9시~18시')); ok(r && !(await I()).cur.clues.book, '📒 ' + Q.fix.name + ' 08:00 = 「문을 닫았어요」');
+    await at(10 * 60); r = await clueP(Q.fix.x, Q.fix.z, '장부 보기'); P = await panel(); ok(r && /장부/.test(P.t) && /5시 50분/.test(P.t) && /본 것/.test(P.t), '📒 ' + Q.fix.name + ' 장부 10:00 = 본 것 (' + Q.fix.cell + ')');
+    if (SHOTS) { const fl = Math.hypot(Q.fix.x - Q.fix.dx, Q.fix.z - Q.fix.dz) || 1, fu = [(Q.fix.x - Q.fix.dx) / fl, (Q.fix.z - Q.fix.dz) / fl]; await shot('scale_fix', [Q.fix.x + fu[0] * 3 + fu[1] * 1.5, Q.fix.z + fu[1] * 3 - fu[0] * 1.5], [Q.fix.x, Q.fix.z]); }
+    await closeAll(); await ev(() => SM_TOWN.openWx()); await W8(500); P = await panel(); ok(P && P.k === 'wx' && /바람 약함/.test(P.t) && (await I()).cur.clues.calm, '🌤 날씨 창 = 어제 바람 약함 (본 것)'); await closeAll();
+    const kS = Object.keys((await I()).cur.clues); ok(['track', 'bus', 'wit', 'nbr', 'book', 'calm'].every(k => kS.includes(k)), '단서 여섯: ' + kS.join(' · ') + ' (장터 바닥 · 정류장 · 정자 저녁 · 옆 가게 오후 · 맡긴 곳 · 날씨 창)'); ok(await noLineS(), '단서를 다 모아도 빨간 선 X');
+    await ev(() => SM_TOWN.case().notebook()); await W8(400); ok(await ev(() => { const c = document.querySelectorAll('.twn-p .cs-c'); return c.length === 2 && /바퀴 자국/.test(c[0].innerText) && /제 수레/.test(c[1].innerText) && /마지막 버스를 기다리는데/.test(c[1].innerText) && !/제 수레/.test(c[0].innerText); }), '수첩 = 본 것 칸 · 들은 생각 칸이 나뉨');
+    if (SHOTS) await p.screenshot({ path: SHOTS + '/scale_notebook.png' });
+    // 틀린 까닭(누가 가져감) → 분실물 = 아니었어요 + 90분
+    await ev(() => document.querySelector('.twn-p [data-a="h"]').click()); await W8(400); ok((await ev(() => [...document.querySelectorAll('.twn-p [data-h]')].map(b => b.dataset.h).sort().join())) === 'fix,took,wind', '까닭 셋 고르기(바람 · 누가 · 고치러)');
+    await ev(() => document.querySelector('.twn-p [data-h="took"]').click()); await W8(800); { const rp = await route(), e9 = rp && rp[rp.length - 1]; ok(e9 && Math.hypot(e9[0] - Q.lost.x, e9[1] - Q.lost.z) < 8, '「누가 가져갔어요」 = 확인 자리(' + Q.lost.name + ' 분실물)에만 빨간 선'); }
+    const u0 = await ev(() => SM_TOWN.game().S.min), lf0 = (await I()).due - (await I()).now;
+    r = await tpL(Q.lost.x, Q.lost.z, '분실물 장부', async () => ((await panel()) || {}).k === 'casechk'); P = await panel(); const u1 = await ev(() => SM_TOWN.game().S.min), lf1 = (await I()).due - (await I()).now;
+    ok(r && /아니었어요/.test(P.t) && /90분/.test(P.t) && /분실물/.test(P.t), '분실물 장부 = 「누가 모르고 가져간 것은 아니었어요」'); ok(u1 - u0 >= 90 && lf0 - lf1 >= 90, '틀린 까닭 = 시각 +' + (u1 - u0) + '분 · 기한 ' + (lf0 - lf1) + '분 줄어듦 (벌·점수 X)');
+    // 맞는 까닭(고치러 맡김) → 선반 = 맞았어요
+    if (!(await panel())) { await ev(() => SM_TOWN.case().notebook()); await W8(400); }
+    await ev(() => document.querySelector('.twn-p [data-a="h"]').click()); await W8(400); ok(await ev(() => document.querySelector('.twn-p [data-h="took"]').disabled), '고른 적 있는 까닭 = 「아니었어요」로 막힘');
+    await ev(() => document.querySelector('.twn-p [data-h="fix"]').click()); await W8(800); { const rp = await route(), e9 = rp && rp[rp.length - 1]; ok(e9 && Math.hypot(e9[0] - Q.fix.x, e9[1] - Q.fix.z) < 8, '「고치러 맡겼어요」 = 확인 자리(맡긴 곳)에 빨간 선'); }
+    r = await tpL(Q.fix.x, Q.fix.z, '저울 선반', async () => ((await panel()) || {}).k === 'casechk'); P = await panel(); ok(r && /맞았어요/.test(P.t) && /선반/.test(P.t) && /상인/.test(P.t), '맡긴 곳 선반 = 「맞았어요」 → 상인에게 알리기'); await closeAll();
+    // 상인에게 보고(본 것 둘)
+    await at(19 * 60 + 20); r = await tpL(Q.mk.x, Q.mk.z, '상인에게 알려 주기', () => said('아침 8시~저녁 7시')); ok(r && !(await panel()), '상인 저녁 7:20 = 「아침 8시~저녁 7시에 장터에 있어요」');
+    await at(15 * 60); r = await tpL(Q.mk.x, Q.mk.z, '상인에게 알려 주기', async () => ((await panel()) || {}).k === 'caserep'); ok(r, '상인 15:00 = 「근거를 두 가지 보여 줘요」 창');
+    P = await pickK(['bus', 'calm']); ok(/저울이 간 곳/.test(P.t) && (await I()).cur.st === 'open', '시간표·날씨만 = 「저울이 간 곳을 보여 주는 것도」');
+    P = await pickK(['wit', 'track']); ok(/정자 이웃의 생각/.test(P.t) && (await I()).cur.st === 'open', '「들은 생각」을 근거로 내면 = 상인이 되물음');
+    P = await pickK(['book']); ok(/상인이 알았어요/.test(P.t) && /계량/.test(P.t) && /눈금/.test(P.t) && /누가 가져간 줄/.test(P.t) && (await I()).cur.st === 'ok', '본 것 둘(바닥 자국·장부) = 오해가 풀림 + 낱말 둘(계량 · 눈금)'); await closeAll();
+    // 다음 날 결과
+    const dRS = await ev(() => SM_TOWN.game().S.day); const rcS = await sleep(); ok(rcS && /저울이 돌아/.test(rcS.t), '하루 마무리 「내일 기다리는 것」 = 「장터에 고친 저울이 돌아와요」');
+    await at(9 * 60); let j2 = null; for (let i = 0; i < 8; i++) { await W8(500); j2 = await I(); if (j2.cur && j2.cur.st === 'fixed') break; }
+    ok(j2.cur.st === 'fixed' && j2.cur.fixD === dRS + 1 && !j2.meshes.sc_track && j2.meshes.sc_scale >= 2, '다음 날 = 장터에 고친 저울 + 「정확해요」 판 (바닥 자국 X · 그리기 ' + j2.meshes.sc_scale + ')');
+    const nwS = await ev(d => SM_TOWN.case().news(d), dRS + 1); ok(nwS.some(q => /돌아왔어요/.test(q.t[0]) && /서로 고맙다고/.test(q.t[0])), '아침 소식 「' + ((nwS[0] || { t: ['-'] }).t[0]) + '」');
+    { const N9 = await ev(() => SM_TOWN.news()), L9 = (N9 && N9.lines) || [], on9 = L9.some(L => L.k === 'fx:case:scale'), mine9 = L9.find(L => L.mine);   /* 소식판 = '내가 한 일' 줄 하나(town_news.js) — 다른 내 일 결과가 먼저면 그 줄 */
+      ok(on9 || (mine9 && /^fx:/.test(mine9.k)), '소식판 줄에 실림' + (on9 ? '' : ' (오늘 내 일 줄 = ' + (mine9 && mine9.k) + ')')); }
+    await ev(() => SM_TOWN.case().notebook()); await W8(400); P = await panel(); ok(/정확해요/.test(P.t) && /상인: /.test(P.t) && /옆 가게 이웃: /.test(P.t) && /손해/.test(P.t), '결과 = 본 것(돌아온 저울 · 정확해요 판) + 생각 둘(상인 · 옆 가게 이웃) + 공정한 거래 한 줄'); await closeAll();
+    await at(10 * 60); r = await tpL(Q.mk.x, Q.mk.z, '상인과 이야기하기', async () => (await I()).dbg.some(t => /^talkS mk/.test(t))); ok(r, '결과 날 상인 E = 고맙다는 한마디');
+    if (SHOTS) await shot('scale_fixed', [Q.track.x - Math.sin(Q.track.fy) * 3.2 + Math.cos(Q.track.fy) * 0.8, Q.track.z - Math.cos(Q.track.fy) * 3.2 - Math.sin(Q.track.fy) * 0.8], [Q.track.x, Q.track.z]);
+    // 늦은 판: 이틀 넘김 → 다음 장날 임시 저울(하루) → 그다음 날 저울이 돌아옴 · 벌 X
+    await ev(() => SM_TOWN.case().dbg.plan('scale')); await W8(600); const dS = await ev(() => SM_TOWN.game().S.day);
+    { await at(10 * 60); const rc9 = await sleep(); ok(rc9 && /사라진 장터 저울: 내일이 마지막 날/.test(rc9.t), '하루 마무리(사건 첫날) = 「사라진 장터 저울: 내일이 마지막 날이에요」'); }
+    await at(10 * 60); await sleep(); await at(9 * 60); await W8(1500); let j3 = await I(); ok(j3.cur && j3.cur.st === 'late' && j3.cur.late === dS + 2, '이틀 넘김 = 늦음 (' + (j3.cur && j3.cur.st) + ')');
+    const nJ = await ev(d => { for (let k = d; k < d + 6; k++) if (k % 5 === 0) return k; return -1; }, dS + 2);
+    if (nJ > dS + 2) { await ev(d => { const G = SM_TOWN.game().S; G.day = d - 1; SM_TOWN.game().mark(); }, nJ); await at(20 * 60); await sleep(); }
+    await at(9 * 60); for (let i = 0; i < 8; i++) { await W8(500); j3 = await I(); if (j3.cur && j3.cur.mudD) break; }
+    ok(j3.cur.mudD === nJ && j3.meshes.sc_scale >= 1 && (await ev(() => SM_TOWN.case().dbg.ctx().jang.on)), '늦음 → 다음 장날(' + nJ + '일째) 상인이 임시 저울 (그리기 ' + j3.meshes.sc_scale + ')');
+    ok((await ev(d => SM_TOWN.case().news(d), nJ)).some(q => /임시 저울/.test(q.t[0])), '아침 소식 = 「임시 저울로 팔아요 · 줄이 길어요」');
+    if (SHOTS) await shot('scale_slow', [Q.track.x - Math.sin(Q.track.fy) * 3.2, Q.track.z - Math.cos(Q.track.fy) * 3.2], [Q.track.x, Q.track.z]);
+    await ev(() => SM_TOWN.case().notebook()); await W8(300); P = await panel(); ok(/임시 저울/.test(P.t) && /다음엔 더 빨리/.test(P.t), '수첩 = 「다음엔 더 빨리 알려 줘요」(벌 X)'); await closeAll();
+    await sleep(); await at(9 * 60); let j4 = null; for (let i = 0; i < 8; i++) { await W8(500); j4 = await I(); if (j4.cur && j4.cur.st === 'lateFix') break; } ok(j4.cur.st === 'lateFix' && j4.meshes.sc_scale >= 2 && !j4.meshes.sc_track, '그다음 날 = 고친 저울이 돌아옴');
+    ok((await ev(d => SM_TOWN.case().news(d), nJ + 1)).some(q => /다음엔 더 빨리/.test(q.t[0])), '아침 소식 = 「고친 저울이 돌아왔어요 · 다음엔 더 빨리」');
+    }
     const txt = await ev(() => document.body.innerText); ok(!/undefined|NaN/.test(txt), '화면 글에 undefined·NaN 0');
     ok(!errs.length, '페이지 오류 0' + (errs.length ? ' — ' + errs.join(' | ') : ''));
   } catch (e) { fails.push('예외 ' + e.message); console.log('  ✗ 예외 ' + e.message); try { console.log('    info ' + JSON.stringify(await p.evaluate(() => SM_TOWN.case().info())).slice(0, 1500)); } catch (e2) { /* 페이지 없음 */ } } finally { await b.close(); }
