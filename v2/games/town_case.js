@@ -27,13 +27,19 @@ export const CASES = {
       { k: 'site', t: T2('공사장 흙이 빗물에 쓸려 왔어요', 'Soil from the building site washed in with the rain'), chk: 'trail', ok: 1 }],
     sup: ['sample', 'site', 'sign', 'trail'], next: 'siteRoad' },
   // 다음 사건(표 줄만 · 아직 안 지음 · docs/systems/town_case.md §5)
-  typhoon: { ready: false, icon: '🌀', t: T2('태풍 사흘 전', 'Three days before the typhoon'), days: 3, when: c => !!(c.front && c.front.typhoon) },
+  // 🌀 태풍 — 안전한 대피 길(TYPH-1 · ext = 다른 모듈이 몰고 감: town_typhoon.js가 이 줄의 단서·까닭·근거를 씀 · 이 엔진의 plan은 건너뜀)
+  //   단서 = 예보·안내문(본 것) · 이웃 소문 셋(들은 생각) · 내가 걸어 본 길(본 것 · 몸으로 · 강가 낮은 곳 X · 가파른 비탈 = 체력) → 까닭(어느 길) → 어르신께 알림(근거 = 본 것만)
+  typhoon: { ready: true, ext: 'typhoon', icon: '🧭', t: T2('태풍 — 안전한 대피 길', 'Typhoon — the safe way to the shelter'), days: 3, when: () => false,
+    q: T2('노인정 어르신들이 대피소까지 갈 안전한 길을 찾아요.', 'Find a safe way to the shelter for the elders.'),
+    clues: ['ty_fc', 'ty_hall', 'ty_fast', 'ty_hill', 'ty_last', 'ty_walk'],
+    hyps: [{ k: 'walk', t: T2('내가 걸어 본 길', 'The way I walked'), ok: 1 }, { k: 'river', t: T2('강을 따라가는 강변길', 'The riverside path') }, { k: 'hill', t: T2('산비탈 지름길', 'The steep hill shortcut') }],
+    sup: ['ty_walk'] },
   scale: { ready: false, icon: '⚖️', t: T2('사라진 장터 저울', 'The missing market scale'), days: 2, when: c => !!(c.jang && c.jang.left === 1) },
   siteRoad: { ready: false, icon: '🚧', t: T2('공사장 길 안전', 'Safe road by the building site'), days: 3, seed: 'river', when: () => false },
 };
 
 // 단서 글(본 것 = 내가 직접 본·잰 것 · 들은 생각 = 이웃이 한 말)
-const CL = {
+export const CL = {
   sample: { f: 'fact', ic: '💧', t: T2('물을 세 군데 떠 보니 공사장 가까운 물이 가장 흐리고, 먼 호숫가 물은 맑았어요.', 'I took water from three places: it was muddiest near the site and clear on the far shore.') },
   site: { f: 'fact', ic: '⛏', t: T2('공사장 울타리 안 흙더미에 덮개가 없고, 빗물 고랑이 물 쪽으로 나 있었어요.', 'Inside the fence the soil heaps had no cover, and rain channels ran toward the water.') },
   drain: { f: 'fact', ic: '🏭', t: T2('공장 배수구에서 나오는 물은 맑았어요.', 'The water from the factory drain was clear.') },
@@ -42,6 +48,12 @@ const CL = {
   market: { f: 'idea', ic: '🗣', t: T2('장터 상인: "새벽마다 흙 실은 트럭이 호수 쪽 길로 가더라고요. 그 흙 때문일지도 몰라요."', 'Market seller: "Trucks full of soil go up the lake road every morning. Maybe it is that soil."') },
   farmer: { f: 'idea', ic: '🗣', t: T2('논 일꾼: "공장에서 물을 흘려보내서 그런 것 같아요."', 'Rice farmer: "I think the factory is letting water out."') },
   trail: { f: 'fact', ic: '🔎', t: T2('흙물이 공사장 고랑을 따라 호수로 흘러들고 있었어요.', 'Muddy water was running from the site channels into the lake.') },
+  ty_fc: { f: 'fact', ic: '📻', who: T2('라디오 일기 예보', 'Radio forecast'), t: T2('비가 많이 오면 강물이 불어나요.', 'Heavy rain makes the river rise.') },
+  ty_hall: { f: 'fact', ic: '🏛', who: T2('행정복지센터 안내문', 'Community centre notice'), t: T2('강물이 불면 강가 낮은 길이 잠길 수 있어요. 대피소는 높은 곳에 있어요.', 'When the river rises, low riverside paths can flood. The shelter is on high ground.') },
+  ty_fast: { f: 'idea', ic: '🗣', who: T2('지나가던 이웃', 'A passing neighbour'), t: T2('대피할 땐 강변길이 제일 빠르대.', 'They say the riverside path is the fastest way to the shelter.') },
+  ty_hill: { f: 'idea', ic: '🗣', who: T2('장터 손님', 'A shopper at the market'), t: T2('산비탈 지름길로 가면 금방이래.', 'They say the steep hill shortcut gets you there fast.') },
+  ty_last: { f: 'idea', ic: '🗣', who: T2('정자에 앉은 이웃', 'A neighbour at the pavilion'), t: T2('지난번 태풍 땐 별일 없었으니 이번에도 괜찮을 거래.', 'Nothing happened last time, so they think it will be fine again.') },
+  ty_walk: { f: 'fact', ic: '🧭', who: T2('내가 걸어 본 것', 'What I walked'), t: T2('내가 직접 걸어 보니 강가 낮은 곳과 가파른 비탈을 안 지나요.', 'I walked it myself: no low riverside ground, no steep slope.') },
   far: { f: 'fact', ic: '💧', t: T2('비는 똑같이 왔는데 먼 호숫가 물은 맑았어요.', 'The same rain fell, but the far shore was clear.') },
 };
 // 단서를 찾을 실마리(빨간 선 X · 칸·방위·랜드마크 말만) — 처음 · 이웃에게 들은 뒤
@@ -130,7 +142,7 @@ export function createCase(A) {
   function plan(force) { const s = S(), D = day(); if (s.cur) return null; if (!force && s.d === D) return null;
     if (!force) { if (!A.open() || A.busy() || A.away() || (A.GAME.S.min | 0) < 6 * 60 + 30) return null; if (A.emOn() || A.storyBusy()) { s.d = D; mark(); log('skip ' + D); return null; } }
     s.d = D; mark(); const c = ctx();
-    for (const id of Object.keys(CASES)) { const R = CASES[id]; if (!R.ready || (s.done[id] && !force) || !PLACE[id]) continue; if (!force && !R.when(c)) continue;
+    for (const id of Object.keys(CASES)) { const R = CASES[id]; if (!R.ready || R.ext || (s.done[id] && !force) || !PLACE[id]) continue;   /* ext = 다른 모듈이 몰고 가는 줄(TYPH-1) */ if (!force && !R.when(c)) continue;
       const pl = PLACE[id](); if (!pl) { log('noPlace ' + id); continue; }
       s.cur = { id, d0: D, st: 'open', pl, clues: {}, samples: [], leads: ['start'], hyp: '', tried: [], wrong: 0, chk: 0, rep: null, repTry: 0, fixD: 0, late: 0, mudD: 0, said: 0 }; mark(); log('plan ' + id + ' ' + D); A.rec('case', { id, ev: 'start', d: D });
       announce(); return s.cur; }

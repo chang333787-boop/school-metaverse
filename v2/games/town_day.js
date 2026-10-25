@@ -27,6 +27,7 @@ const CSS = `.twn-day{cursor:pointer;position:fixed;left:10px;top:132px;z-index:
 //   자리: isle() 썰물섬 장소 | null · seenIsle() · shore() [x, z] | null · cinema() { name, door } | null · shows [{ s, e, t:[ko,en] }] · stall() [x, z] | null
 //     shops() [{ name, h1, door }] · offices() [{ ic, name, h1, door }] · pav() [x, z] | null · star() [x, z] | null · mush() [x, z] | null
 //     farm() { at, plots } | null · pots() [] · home() [x, z] | null · facDest(ln, door) · ladRows() [{ key, name, best }]
+//   typh(d1) 태풍 판 한 줄 | null(TYPH-1 · 없어도 됨)
 //   날: wx() 오늘 날씨 · fc(i) 예보(오늘 = 0) · auto() 예보대로 · jang(d) · season(d) · seaName(s) [ko, en]
 export function createDay(A) {
   const en = () => A.lang() === 'en', L = t => (Array.isArray(t) ? t[en() ? 1 : 0] : String(t)), esc = t => A.esc(t);
@@ -108,6 +109,7 @@ export function createDay(A) {
     for (const o of out) o.mine = 1;
     // 세상 일
     const W = [];
+    { const q = A.typh ? A.typh(d1) : null; if (q) W.push(q); }   /* TYPH-1 태풍 판(태풍까지 n일 · 내일 태풍 · 태풍 뒤 아침) = 세상 일 맨 앞 */
     if (A.stall() && A.jang(d1)) W.push({ k: 'jang', ic: '🎪', s: T2('장날', 'Market day'), t: T2('장날이에요. 장터 값이 더 좋아요', 'Market day — the market pays more'), p: plc('🛒', e ? 'market' : '장터', A.stall()) });
     const fw = A.auto() ? A.fc(fi) : null;
     if (fw === 'rain') W.push({ k: 'wx', ic: '🌧', s: T2('비 예보', 'Rain'), t: T2('비 예보예요. 숲 그늘에 버섯이 돋고 강물이 불어요', 'Rain is forecast. Mushrooms come up in the shady woods and the river rises'), p: plc('🍄', e ? 'mushrooms' : '버섯', A.mush()) });
