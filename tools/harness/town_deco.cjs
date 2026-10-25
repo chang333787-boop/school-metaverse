@@ -63,6 +63,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       const pk = await ev(e => { const S = SM_TOWN.game().S, b0 = S.bag[e] || 0; SM_TOWN.cozy().giftPick(); return { got: (S.bag[e] || 0) - b0, gone: !S.home.gift, rec: SM_TOWN.cozy().info().rec }; }, N1 && N1.g ? N1.g.e : ''); ok(pk.got === 1 && pk.gone && pk.rec['pick:like'] === 1, '답례 줍기 = 가방 +1 · 하루 하나');
       // ⑤ 싫어하는 선물 → 귀띔
       console.log('⑤ 싫어하는 선물 → 귀띔 · 선물 창');
+      await ev(() => { SM_TOWN.game().S.min = 10 * 60; }); await W8(1500);   /* 이웃 일과(ROUTINE-1): 잠 뒤 6시엔 일꾼이 아직 집 — 일하는 때로 */
       await go(); const g3 = await ev(o => { const S = SM_TOWN.game().S; S.uses = {}; S.bag[o.no] = 1; const h0 = S.hearts[o.hk] || 0; SM_TOWN.rules.gift(o.no); return { kept: S.bag[o.no] === 1, same: (S.hearts[o.hk] || 0) === h0, n: ((S.nbk || {})[o.hk] || {}).n }; }, pick);
       ok(g3.kept && g3.same && g3.n === pick.no, '싫어하는 것(' + pick.no + ') = 돌려받음 · 하트 그대로 · 들은 말로 남음'); await W8(2400);
       const tip = await ev(() => SM_TOWN.cozy().info().tip); console.log('  귀띔 ' + JSON.stringify(tip)); ok(tip && tip.no === pick.no && tip.like && tip.like !== pick.no && pick.likes.includes(tip.like), '1.9초 뒤 대신 반가운 것 귀띔(' + (tip && tip.like) + ')');
