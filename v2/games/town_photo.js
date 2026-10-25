@@ -3,7 +3,7 @@
 //   셔터 = 이미 있는 📷 사진 찍기(photo.js takePhoto)를 그대로 · 세는 수 없이 바로 · 그 한 프레임에서만 화면 안 동물·행동을 셈(wild.shot · 투영 상자 · 매 프레임 X)
 //   점수 = 별 대신 '무엇이 담겼나' 말(가까이 · 행동 · 둘이 함께 · 때·날씨) + 판 뒤 '다음에 해 볼 것' 한 줄 · 개인 순위 X · 앨범 = 찍은 기사만(빈칸 X)
 //   배울 거리 = 동물 행동 사실 한 줄 + 지키는 법(멀리서 보기 · 먹이 주지 않기) · 보상 = 문(rwCheck) 꼬리표 'photo:<동물>'(같은 동물 하루 한 번)
-import { WILD, wildById, HAB_NAME } from './town_wild.js?v=7';
+import { WILD, wildById, HAB_NAME } from './town_wild.js?v=8';
 export const PHOTO_V = 1;
 const T2 = (ko, en) => [ko, en];
 // 행동: 짧은 이름(담긴 것) · 관형 말(기사 제목) — 쉬기는 종마다 다름

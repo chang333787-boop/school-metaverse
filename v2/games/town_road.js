@@ -112,7 +112,7 @@ export function createRoad(A) {
 
   // ───────── ② 길에서 도움 요청 ─────────
   const W = () => A.workers() || [];
-  const atHub = w => !!(A.hub && A.hub(w.x, w.z)), okWorker = w => w && w.k && A.playk(w.k) && (w.k !== 'stall' || atHub(w)) && !w.gate && !w.party && !NOHELP.has(w.role) && !A.water(w.x, w.z);
+  const atHub = w => !!(A.hub && A.hub(w.x, w.z)), okWorker = w => w && w.k && A.playk(w.k) && (w.k !== 'stall' || atHub(w)) && !w.gate && !w.party && !w.out9 && !NOHELP.has(w.role) && !A.water(w.x, w.z);
   function camFwd() { const e9 = map.camera.matrixWorld.elements, cl = Math.hypot(e9[8], e9[10]) || 1; return [-e9[8] / cl, -e9[10] / cl]; }
   function helpTry(me, force, fi) { const cf = camFwd(), WK = W(); let bi = -1, bd = 1e9;
     for (let i = 0; i < WK.length; i++) { const w = WK[i]; if (!okWorker(w)) continue; if (fi != null && i !== fi) continue; const dx = w.x - me.x, dz = w.z - me.z, d = Math.hypot(dx, dz); if (fi == null && (d < 14 || d > 70 || Math.abs(w.g - me.y) > 6)) continue; const fr = d > 0.1 ? (dx * cf[0] + dz * cf[1]) / d : 1; if (fi == null && fr < 0.25) continue; const sc = d - fr * 20 - (atHub(w) ? 25 : 0); if (sc < bd) { bd = sc; bi = i; } }   /* HUB-1: 모이는 곳(학교 앞·장터·강가 40m 안) 일꾼이 먼저 · 장터 상인은 모이는 곳에서만 */

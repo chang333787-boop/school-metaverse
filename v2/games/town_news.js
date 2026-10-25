@@ -38,6 +38,7 @@ export function newsMake(c) {
   if (Y && Y.sold > 0) add(one, 'sold', '🛒 어제 장터에서 물건을 ' + Y.sold + '개 팔았어요', '🛒 You sold ' + Y.sold + ' thing(s) at the market yesterday', { mine: 1 });
   if (Y && Y.shared > 0 && !c.gift) add(one, 'shared', '🍽 어제 이웃에게 요리를 ' + Y.shared + '번 나눠 줬어요', '🍽 You shared food with neighbours ' + Y.shared + ' time(s) yesterday', { mine: 1 });
   // ② 오늘만
+  if (c.chain && c.chain.t) add(two, 'chain:' + c.chain.k, c.chain.t[0], c.chain.t[1], { at: c.chain.at || null, ck: { chain: c.chain.k } });   /* ROUTINE-1 먹이·물 연쇄(비 사흘 → 개구리·왜가리 · 비 없는 닷새 → 물새 줄어듦 · town_routine.js) — 오늘만 줄 맨 앞 */
   if (c.jang && c.jang.on) add(two, 'jang', '🎪 오늘은 장날이에요. 장터 값이 더 좋아요', '🎪 Market day today — the market pays more', { at: c.jang.at || null, ck: { jang: 1 } });
   if (c.seaNext) add(two, 'sea', '📅 내일부터 ' + c.seaNext + josa(c.seaNext, '이에요', '예요'), '📅 ' + c.seaNext + ' starts tomorrow', { ck: { sea: 1 } });
   if (c.board && c.board.length) add(two, 'board', '📌 본부 게시판에 새 의뢰가 붙었어요', '📌 New requests on the HQ board', { ck: { board: 1 } });

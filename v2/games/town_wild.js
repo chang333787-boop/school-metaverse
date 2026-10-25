@@ -176,11 +176,14 @@ const WSZ = {};
 export const HAB_NAME = (w, reed, L) => reed ? (L ? 'reedy water' : '갈대 있는 물가') : HABN[w.hab][L];
 export function createWild(A) {
   const T3 = A.T3, SP = [], ACT = [], MOV = [], MESH = {}, LAND = {}, HH = [], MAXA = 12, M4 = new T3.Matrix4(), Q4 = new T3.Quaternion(), E4 = new T3.Euler(0, 0, 0, 'YXZ'), V4 = new T3.Vector3(), S4 = new T3.Vector3();
+  const NREG = {};   /* ROUTINE-1 종마다 보통 자리 수 */
   const VP = new T3.Vector3(), SHOT = [];   /* PHOTO-2 셔터 스크래치(찍을 때만 씀) */
   let RI = [], stillT = 0, comeDay = -1, on = false, near = false, q = 0, crouchOn = false, toldDay = -1, fleeDay = -1, buildMs = 0, secMs = 0, secMax = 0, lastAct = '', picN = {};
   const S = () => A.GAME.S, en = () => A.lang() === 'en', now = () => performance.now() / 1000;
   const timeOk = w => { const n9 = A.night(), h = A.hour(); return w.time === 'any' ? true : w.time === 'day' ? n9 < 1 : (n9 > 0 || h < 7 || h >= 19); };
   const avail = w => w.sea.includes(A.sea()) && timeOk(w), lvOf = c => c >= 30 ? 2 : c >= 10 ? 1 : 0, ST = () => { const W9 = S().wild; return W9 && typeof W9 === 'object' && W9.n && W9.k ? W9 : (S().wild = { n: {}, k: {} }); };   /* 관찰 별: 10번 ⭐ · 30번 ⭐⭐(같은 자리 한 마리는 하루 한 번만 셈) */
+  const fcOk = (s, F) => s.fc ? !!(F && F.paddy) : !F || F.f[s.w.id] == null || !(s.r >= 0) || s.r < Math.max(1, Math.round((NREG[s.w.id] || 0) * F.f[s.w.id]));   /* ROUTINE-1: 그날 날씨 연쇄가 정한 수만(F = A.fc() · 없으면 예전 그대로 · 논 왜가리 = 비 사흘 뒤만) */
+  const fcN = () => { const F = A.fc ? A.fc() : null, o = {}; for (const k in NREG) o[k] = SP.filter(s => s.w.id === k && !s.fc && fcOk(s, F)).length; o.heronPaddy = SP.filter(s => s.fc && fcOk(s, F)).length; return o; };
   // 그림 메시(종마다 하나 · 처음 나올 때) — 원점에 두고 인스턴스 행렬로만 옮김 · 움직이니 화면 밖 자르기 끔(12마리 안 · 작은 메시)
   function meshOf(w) { const n = SP.filter(s => s.w === w).length; let h = MESH[w.id]; if (h && h.n >= n) return h; if (h) { if (h.m.parent) h.m.parent.remove(h.m); h.dispose(); }   /* 자리 수가 늘면(다른 판) 새로 */
     if (!A.ANM.has(w.id)) { const G9 = buildGeo(T3, w.id); WSZ[w.id] = G9.size; A.ANM.def(w.id, G9); }   /* PHOTO-2: 그림 키(셔터 때 투영 상자) */ h = A.ANM.mesh(w.id, Math.max(1, n)); h.m.frustumCulled = false; h.m.matrixAutoUpdate = false; h.m.userData.fx = 1; h.m.count = 0; h.m.visible = false; MESH[w.id] = h; return h; }
@@ -210,6 +213,8 @@ export function createWild(A) {
     for (const w of WILD) { const pool = w.id === 'otter' ? C.river.filter(c => !['읍내', '시내'].includes(c.rg)) : w.hab === 'water' ? C.water : w.reed ? zip(C[w.hab], C.reed) : C[w.hab]; LAND[w.id] = pool.slice(0, 60);   /* 수달 = 맑은 강(마을 한가운데·시내 강가 X) · 날아가 앉을 곳 = 같은 서식지 후보 */
       if (w.kit) { for (const c of pool) SP.push(spot(w, c)); continue; }   /* CELLKIT-1: 키트 자리는 그대로(무리라 8m 간격 규칙 X) */
       let n = 0; for (const c of pool) { if (n >= w.cap) break; if (SP.some(s => (s.w === w && Math.hypot(s.hx - c.x, s.hz - c.z) < GAP[w.id]) || Math.hypot(s.hx - c.x, s.hz - c.z) < 8)) continue; SP.push(spot(w, c)); n++; } }
+    { const hw = wildById('heron'); if (hw && A.fc) { let n9 = 0; for (const c of C.paddyIn) { if (n9 >= 2) break; if (SP.some(s => Math.hypot(s.hx - c.x, s.hz - c.z) < (s.w === hw ? 20 : 8))) continue; const s = spot(hw, c); s.fc = 1; SP.push(s); n9++; } } }   /* ROUTINE-1 먹이·물 연쇄: 비 사흘 뒤에만 논 한가운데로 먹이를 찾으러 오는 왜가리 둘(town_routine.js CHAIN) */
+    for (const k in NREG) delete NREG[k]; for (const s of SP) { if (s.w.kit || s.fc) continue; s.r = NREG[s.w.id] = (NREG[s.w.id] ?? -1) + 1; } for (const k in NREG) NREG[k]++;   /* 종마다 자리 차례(그날 나올 수 = 앞에서 n곳) */
     for (let i = 0; i < MAXA; i++) { const h = A.map.interact.add({ kind: 'game', x: 0, z: 0, y: -999, r: 4, label: '', use: () => { const s = HH[i] && HH[i].s; if (s) look(s); } }); h.hot.off = true; A.enth.push(h); HH.push({ h, s: null }); }
     const root = A.root(); for (const w of WILD) if (SP.some(s => s.w === w)) { const h = meshOf(w); if (root && h.m.parent !== root) root.add(h.m); }
     buildMs = Math.round(performance.now() - t0); lastAct = ''; }
@@ -223,14 +228,14 @@ export function createWild(A) {
   function hand() { const e9 = en(); let j = 0; for (const s of ACT) { if (j >= HH.length) break; if (s.st > 1) continue; const o = HH[j++], h = o.h.hot, w = s.w; o.s = s; h.x = s.x; h.z = s.z; h.y = w.float ? s.y + 0.6 : w.perch ? s.gy + 0.1 : s.y + 0.1; const lb = e9 ? 'Look at the ' + w.t[1].toLowerCase() : (w.emo ? w.emo + ' ' : '') + w.t[0] + ' 살펴보기'; if (h.label !== lb) h.label = lb; h.off = !!A.inb(); }
     for (; j < HH.length; j++) { HH[j].s = null; HH[j].h.hot.off = true; } }
   // 1초 칸: 계절·때·거리로 나올 동물 고르기(가까운 12마리) · E 자리 · 쪼그리기 켜고 끄기 · 처음 본 종 알림
-  function sec() { if (!on || !SP.length) return; const t0 = performance.now(), me = A.map.player.pos(), t = now(), inb = !!A.inb();
-    for (const s of SP) { if (s.st === 3 && t >= s.until) { home(s); } s.d = Math.hypot(s.x - me.x, s.z - me.z); s.ok = !inb && s.st !== 3 && avail(s.w) && s.d < (s.act ? 90 : 80) && (!s.kc || !A.kitOn || A.kitOn(s.kc, 'birds')); }   /* CELLKIT-1: 참새 = 그날 키트가 그 칸에 '새 떼'를 켰을 때만 */
+  function sec() { if (!on || !SP.length) return; const t0 = performance.now(), me = A.map.player.pos(), t = now(), inb = !!A.inb(); const F9 = A.fc ? A.fc() : null;
+    for (const s of SP) { if (s.st === 3 && t >= s.until) { home(s); } s.d = Math.hypot(s.x - me.x, s.z - me.z); s.ok = !inb && s.st !== 3 && avail(s.w) && s.d < (s.act ? 90 : 80) && (!s.kc || !A.kitOn || A.kitOn(s.kc, 'birds')) && fcOk(s, F9); }   /* CELLKIT-1: 참새 = 그날 키트가 그 칸에 '새 떼'를 켰을 때만 */
     for (let i = ACT.length - 1; i >= 0; i--) { const s = ACT[i]; if (!s.ok) { s.act = false; ACT.splice(i, 1); const m9 = MOV.indexOf(s); if (m9 >= 0) MOV.splice(m9, 1); if (s.st !== 3) home(s); } }
     if (ACT.length < MAXA) { const C9 = SP.filter(s => s.ok && !s.act).sort((a, b) => a.d - b.d); for (const s of C9) { if (ACT.length >= MAXA) break; s.act = true; if (s.st !== 3) home(s); ACT.push(s); } }
     let key = ''; for (const s of ACT) key += s.j + ','; if (key !== lastAct) { lastAct = key; const seen = new Set(); for (const s of ACT) seen.add(s.w); for (const w of WILD) if (MESH[w.id] && (seen.has(w) || MESH[w.id].m.count)) pack(w); }
     // 가만히 있는 동물: 이따금 고개 들기·두리번 · 몇 걸음 걷기(한 마리씩 · 짧게)
     let nd = 1e9, ns = null; for (const s of ACT) { if (s.d < nd) { nd = s.d; ns = s; } if (s.st === 0 && !s.mv.k) { const r = Math.random(); if (r < 0.18) { s.md = s.md === 0 ? 2 : 0; put(s); } else if (r < 0.26 && MOV.length < 3 && s.d > 9) wander(s); } }
-    hand(); near = nd < 22;
+    hand(); near = nd < 22; if (A.fcSaw) for (const s of ACT) if (s.fc && s.d < 30 && s.st < 2) { A.fcSaw(); break; }   /* ROUTINE-1 논에 온 왜가리를 가까이서 봄(도감 한 줄) */
     const want = nd < (crouchOn ? 36 : 30) && !inb && !A.bike() && !A.ride();   /* 30m 안에서 켜고 36m 밖에서 끔(경계에서 단추가 깜빡이지 않게) */ if (want !== crouchOn) { crouchOn = want; try { A.map.player.crouch(want, { noCtrl: true }); } catch (e) { /* 지도 API 없음 */ } }
     if (ns && nd < 18 && ns.st < 2 && !S().dex['wild:' + ns.w.id] && toldDay !== S().day && !A.busy()) { toldDay = S().day; const w = ns.w, e9 = en(); (A.say || ((t9, s9) => A.map.hud.toast(t9, s9)))(e9 ? (w.emo ? w.emo + ' ' : '') + 'A ' + w.t[1].toLowerCase() + ' is nearby — ' + (A.touch() ? 'tap ⬇ to crouch' : 'hold C to crouch') + ', creep up and press E' : (w.emo ? w.emo + ' ' : '') + w.t[0] + w.ga[0] + ' 있어요 — ' + (A.touch() ? '⬇ 단추로 쪼그려 앉아' : 'C를 누른 채') + ' 살금살금 다가가 E로 살펴봐요', 4, 1); }
     const ms = performance.now() - t0; secMs = ms; if (ms > secMax) secMax = ms; }
@@ -324,6 +329,7 @@ export function createWild(A) {
     hot: () => HH.map(o => ({ off: o.h.hot.off, x: +o.h.hot.x.toFixed(1), z: +o.h.hot.z.toFixed(1), label: o.h.hot.label, id: o.s ? o.s.w.id : null })),
     spots: id => SP.filter(s => s.w.id === id).map(s => [s.hx, s.hz]),   /* HEAL-1 소리 자리(읽기만 · 짓기 뒤 한 번) */
     vis: v => { for (const k in MESH) MESH[k].m.visible = !!v && MESH[k].m.count > 0; },   /* 시험: 그리기 수 견주기 */
+    fcN, fcAt: () => { const s = SP.find(q => q.fc); return s ? [s.hx, s.hz] : null; }, fcSpots: () => SP.filter(s => s.fc).map(s => ({ j: s.j, x: s.hx, z: s.hz, act: s.act })),   /* ROUTINE-1 먹이·물 연쇄(시험 · 소식판 자리) */
     lookAt: j => look(SP[j]), reset: () => { for (const s of SP) { const m9 = MOV.indexOf(s); if (m9 >= 0) MOV.splice(m9, 1); s.mv.k = ''; home(s); } lastAct = '-'; sec(); } };
   function buildTri(k) { const A9 = MESH[k] && MESH[k].m.geometry.attributes.position; return A9 ? A9.count / 3 : 0; }
 }

@@ -90,7 +90,7 @@ export function createCozy(A) {
     talk(me, false); }
   function talk(me, force) { const Y = H(); if (!Y) return null; const L9 = Y.yard.filter(Boolean); if (!L9.length || (!force && (Y.yc === day() || A.bubbleBusy()))) return null;
     let who = null, o = null; const h = A.home(), c0 = h && h.door ? h.door : [me.x, me.z], g = A.ped(c0[0], c0[1], 28);   /* 집 앞 길을 지나는 어른(대문에서 28m 안 · 길가 보도) */ if (g) { who = 'ped'; o = { x: g.x, y: me.y, z: g.z, sc: g.sc || 1 }; g.gest = 3.4; }
-    else { let b = null, bd = 18; for (const w of A.workers() || []) { if (w.rep === false || w.party) continue; const d = Math.hypot(w.x - me.x, w.z - me.z); if (d < bd && Math.abs((w.g || 0) - me.y) < 4) { bd = d; b = w; } } if (b) { who = 'worker'; o = { x: b.x, y: b.g, z: b.z, sc: 1 }; } }
+    else { let b = null, bd = 18; for (const w of A.workers() || []) { if (w.rep === false || w.party || w.out9) continue; const d = Math.hypot(w.x - me.x, w.z - me.z); if (d < bd && Math.abs((w.g || 0) - me.y) < 4) { bd = d; b = w; } } if (b) { who = 'worker'; o = { x: b.x, y: b.g, z: b.z, sc: 1 }; } }
     if (!o) return null;   /* 말하는 이는 몸이 있어야(몸 없으면 다음 1초에 다시) */
     const e = Y.ylast && L9.includes(Y.ylast) && Y.ysay !== Y.ylast ? Y.ylast : L9[hs(day() + ':yard') % L9.length], t = L(DECO[e].say);
     A.bubble(o, t); Y.yc = day(); Y.ysay = e; G().mark(); LASTSAY = { t, who, e, d: day() }; rec('talk'); return LASTSAY; }
