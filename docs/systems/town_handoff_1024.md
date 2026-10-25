@@ -12,6 +12,8 @@
   - town_indoor.cjs는 고침 전에도 몇 번째 방부터 몸이 안 움직여 실패(시험 쪽 문제로 보임 · 확인할 것)
 - 다음(이어서 남은 것): ⑤ 땅 결 숲·보도 한 종류(town_art3.md) → ⑥ 높은 곳 보기 + 숨은 놀람(town_explore.md 30) → ⑦ 칸 키트 넓히기(학교 둘레 → 시내) → ⑧ 은행·우체국 창구(town_fix.js 창구 꼴) → ⑨ 밀물 구조·길 잃은 동물(town_emerg 사건 표 10·12) → ⑩ 스키 기문(town_explore.md 34)
 - 그다음 미룬 것(사용자 10-24 18:05 차례): 도전 사다리·내 최고 기록 → 모든 동작 반응 넓히기 → 빈 건물·직업 나머지 → 가벼운 재미(꾸미기·선물 · 친구 거래·서버 규칙 X) → 탐험 체력(scratchpad 옛 a063b03f…/patches/day_stam.patch + 실패 고치기) → 이웃 일과·먹이·물 연쇄
+- 10-25 낮(원래 세션이 다시 맡은 뒤) 올린 것: d5ff0e7 배 칸 시험 · 8c3d4d2 버스 갈아타기 카메라(FIX-BUS9 · town_busx) · d94d47b 땅 결 숲·보도(이어서 ⑤) · 3c99926 높은 곳 보기·숨은 놀람 열셋(이어서 ⑥) · 팀 짓는 중: ⑦ 칸 키트 넓히기(scratchpad/kit2.patch) · ⑧ 은행·우체국(scratchpad/bank1.patch)
+- 긴 묶음(10-25 낮): town_cap 통과 · town_state --story = '승급 미션 × 날씨 창 → 비'에서 한 번 몸 멈춤(멈춤 건 곳 rank start 창 + lvReward 창) — 그 칸만 다시 돌리면 통과 · 드문 타이밍(보상 창이 끼어듦) · 다음에 lvReward가 다른 창이 막 닫힌 1초 안이면 미루게 보기 · 소방차 탐 칸은 시험 쪽에서 '안 탐'(skip)
 - 남은 작은 것: town_state 배 칸 '배 E로 안 탐'(고침 전에도 같음 · 하네스 쪽인지 먼저 확인) · 갈아탄 정류장 카메라(재현 시험부터) · 앉기 시험 22번째 타이밍 · 썰물섬 위 알림 셋이 한꺼번에 · 섬 겨울색 X · 도장·지갑 연출 그림 켠 캡처 X · 강·연못 물 재질 밤에 납작한 파랑
 - 새 시험(이 세션): town_save(node) · town_jq · town_hours · town_xp · town_isle · town_fix · town_feel · town_xpshot(그림 켬 캡처 · V 배열만 바꿔 씀)
 - 일하는 꼴(이 세션에서 잘 된 것): 팀 둘을 파일이 안 겹치게 동시에 · 팀 끝 → m1에서 apply -3 → 캐시(바뀐 모듈 ?v= · 그 모듈을 부르는 모듈도 · registry town v) → gm.sh로 check·홍보판·그 기능 → 필요하면 town_xpshot 캡처 한 번 → push → 채팅 보고
