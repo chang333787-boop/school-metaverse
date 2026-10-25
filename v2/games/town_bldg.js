@@ -123,7 +123,7 @@ export function createBldg(A) {
   function tip(k) { return TIP[k] ? L(TIP[k]) : ''; }
   function canIn(k, B9) { if (!BD_HRS[k] || open(k)) return true; const nm = (B9 && B9.name) || '', H = BD_HRS[k]; toast('🌙 ' + (en() ? nm + ' is closed now. It opens at ' + hh(H[0]) + '.' : nm + '은 지금 문을 닫았어요. ' + hh(H[0]) + '에 열어요.'), 3); return false; }
   function opts(B9, k) { if (!TIP[k]) return {}; if (k === 'post') return { deco: (S9, made) => postDeco(S9, made, B9), onExtra: kk => use(kk) }; return { room: (at, K) => build(k, at, K, B9), onExtra: kk => use(kk) }; }
-  function left() { if (!CUR) return; if (CUR.board) { CUR.board.m.material.map.dispose(); CUR.board.m.material.dispose(); } CUR = null; }   /* 방 모양(geometry)은 town_indoor exit()이 치움 · 캔버스 재질만 여기서 */
+  function left() { if (A.why) A.why().roomLeft(); if (!CUR) return; if (CUR.board) { CUR.board.m.material.map.dispose(); CUR.board.m.material.dispose(); } CUR = null; }   /* 방 모양(geometry)은 town_indoor exit()이 치움 · 캔버스 재질만 여기서 */
 
   // ───────── 벽 판(캔버스 한 장 · 글이 바뀌면 다시 그림) ─────────
   function boardMesh(K, S9, x, y, z, ry, w, h) { const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512 * h / w); const tx = new T3.CanvasTexture(c); tx.colorSpace = T3.SRGBColorSpace; tx.anisotropy = 2;
@@ -193,21 +193,21 @@ export function createBldg(A) {
     const board = boardMesh(K, S9, hw - 0.046, 1.67, 1.7, -Math.PI / 2, 2.4, 1.5);
     const hi = pending('hurt', S().clinic.hi); let nb = null; if (hi) { const nx = 2.6, nz = 2.0; K.standGuest(S9, ox + nx, oy, oz + nz, Math.PI, 2); nb = { q: hi, at: [ox + nx, oy, oz + nz] }; }   // 나은 이웃(이름 없는 역할 · 기다리는 의자 곁에 섬)
     K.wwin(S9, 'F', -3.3, 0.9, 1.8, 1.3, { sun: true }); K.wwin(S9, 'F', 3.3, 0.9, 1.8, 1.3, { sun: true }); for (const x of [-2.6, 0, 2.6]) for (const z of [-1.6, 1.6]) K.panelL(S9, x, z);
-    const ex = [{ k: 'bd:aid', stand: [-2.6, 0, -hd + 2.25], r: 1.3, label: '🩹 ' + L(TIP.clinic) }, { k: 'bd:board', stand: [hw - 1.0, 0, 1.7], r: 1.1, label: '📋 ' + (en() ? 'Read the first aid board' : '응급 처치 판 보기') }];
+    const ex = [...(A.why ? [{ k: 'why:ht', stand: [-hw + 0.8, 0, -1.6], r: 0.9, label: '📏 ' + (en() ? 'Measure my height' : '키 재 보기') }] : []), { k: 'bd:aid', stand: [-2.6, 0, -hd + 2.25], r: 1.3, label: '🩹 ' + L(TIP.clinic) }, { k: 'bd:board', stand: [hw - 1.0, 0, 1.7], r: 1.1, label: '📋 ' + (en() ? 'Read the first aid board' : '응급 처치 판 보기') }];
     if (nb) ex.push({ k: 'bd:hi', stand: [2.6, 0, 1.2], r: 1.1, label: '🙂 ' + (en() ? 'Say hello to the neighbour who got better' : '나은 이웃에게 인사') });
     return { S: S9, W, D, H, seats, items: ['접수대 · 간호사(이름 없음)', '기다리는 의자 줄', '진료실 커튼', '키 재는 막대', '응급 처치 판', '약 선반'], board, nb, extra: ex, cam: { d: 3.8, p: 0.55 } }; }
   function roomShelter(at, K, name) { const W = 12, D = 10, H = 3.4, hw = W / 2, hd = D / 2, seats = [], grn = 0x5cbf73, [ox, oy, oz] = at;
     const S9 = K.shell(at, W, D, H, { wall: 0xf6f0e4, wains: grn, winY: [], noLights: true, ft: ['wood', 1.0, 0xf2e2c8] }), P = S9.put; S9.ac = K.cs(grn);
-    const pens = [-2.7, 0, 2.7], z0 = -hd, z1 = -hd + 2.4, DOG = [0xc8a070, 0xf2ede0, 0x3a3a3a], bowls = [];
+    const pens = [-2.7, 0, 2.7], z0 = -hd, z1 = -hd + 2.4, DOG = [0xc8a070, 0xf2ede0, 0x3a3a3a], bowls = [];   const WY = A.why ? A.why() : null;   /* WHY-1(town_why.js) 강아지·고양이 = 움직이는 몸(쓰다듬기·공·산책) — 없으면 예전 정적 몸 */
     for (let i = 0; i < 3; i++) { const cx = pens[i], x0 = cx - 1.35, x1 = cx + 1.35; P('b', cx, 0.006, (z0 + z1) / 2, 2.66, 0.02, 2.36, 0x9ccf7a);   // 칸 바닥 깔개
       P('b', cx, 0.62, z1, 2.7, 0.06, 0.06, 0xf6f4ee); P('b', cx, 0.3, z1 + 0.003, 2.7, 0.06, 0.05, 0xf6f4ee); for (let k = i ? 1 : 0; k <= 6; k++) P('b', x0 + k * 0.45, 0, z1, 0.05, 0.7, 0.05, 0xe9e5dc);   // 앞 울타리(문살 · 이웃 칸과 같은 기둥은 한 번만)
       for (const xs of [x0, x1]) { if (i && xs === x0) continue; P('b', xs, 0, (z0 + z1) / 2 - 0.03, 0.06, 0.66, 2.34, 0xe9e5dc); }   // 칸막이(위 = 울타리 위 가로대보다 낮게 · 앞 끝은 기둥 뒤에서 멈춤 — 같은 평면 X)
-      K.colL(S9, cx, (z0 + z1) / 2, 1.38, 1.24, -0.5, 0.75); dog(K, S9, cx - 0.35, z0 + 1.2, 0, 0.5 - i * 0.5, DOG[i]);
+      K.colL(S9, cx, (z0 + z1) / 2, 1.38, 1.24, -0.5, 0.75); if (!WY) dog(K, S9, cx - 0.35, z0 + 1.2, 0, 0.5 - i * 0.5, DOG[i]);
       bowl(K, S9, cx + 0.55, z1 - 0.35, 0x3d74c9); K.part(S9, 'c16', cx + 0.55, 0.06, z1 - 0.35, 0.11, 0.008, 0, 0x6fc3dc); bowl(K, S9, cx + 0.95, z1 - 0.35, 0xe0453a); bowls.push([cx + 0.95, z1 - 0.35, 'd']);   // 물그릇(물) · 밥그릇
       K.sign(S9, [en() ? 'Bori' : '보리', en() ? 'Kongi' : '콩이', en() ? 'Duri' : '두리'][i], cx, 1.15, z1 + 0.04, 0, 0.7, 0.24, { bg: '#5cbf73', fr: 0xf6f4ee }); P('b', cx, 0.7, z1 + 0.04, 0.03, 0.33, 0.03, 0x8a6a4a); }   // 칸 이름표(동물 이름 = 보호소가 지어 준 이름 · 사람 이름 X)
     { const q = emLog().find(q9 => q9 && q9.k === 'pet' && q9.ok && q9.d < day() && day() - q9.d <= 4); if (q) { const px = 1.8, pz = 1.0, ry = -2.4, [cx9, cz9] = LP(px, pz, ry)(0, 0.25); P('b', px, 0.006, pz, 1.2, 0.02, 0.9, 0xe8d5b0); dog(K, S9, px, pz, 0.026, ry, q.pc || 0xc8a070); K.part(S9, 'b', cx9, 0.386, cz9, 0.3, 0.07, 0.09, q.cc || 0xe0453a, 0, ry, 0); bowl(K, S9, px + 0.75, pz + 0.15, 0x3d74c9); S().shelter.pet = keyOf(q); } }   /* PET-1(town_emerg.js pet): 비 오는 날 데려온 강아지 = 다음 날부터 나흘 · 같은 털·목줄 색 · 담요 · 물그릇 */
     { const tx = -hw + 1.0, tz = 1.4; P('b', tx, 0, tz, 0.9, 0.06, 0.9, 0xc8a070); P('c', tx, 0.06, tz, 0.1, 1.1, 0, 0xd9c7a5); P('b', tx, 0.6, tz, 0.7, 0.05, 0.7, 0xc8a070); P('b', tx, 1.16, tz, 0.8, 0.06, 0.8, 0xc8a070); K.colL(S9, tx, tz, 0.48, 0.48, -0.5, 1.25);   // 고양이 쉼터 탑
-      cat(K, S9, tx, tz, 1.22, 0.8, 0x7a7a7a); cat(K, S9, tx + 0.05, tz - 0.05, 0.65, -0.6, 0xef9b4a); bowl(K, S9, tx + 0.9, tz - 0.3, 0xf2c230); bowls.push([tx + 0.9, tz - 0.3, 'c']); K.sign(S9, en() ? 'Cats' : '고양이', tx, 1.9, tz, Math.PI / 2, 0.8, 0.24, { bg: '#ef8b33', fr: 0xf6f4ee, two: true }); P('b', tx, 1.22, tz, 0.03, 0.56, 0.03, 0x8a6a4a); }
+      if (!WY) { cat(K, S9, tx, tz, 1.22, 0.8, 0x7a7a7a); cat(K, S9, tx + 0.05, tz - 0.05, 0.65, -0.6, 0xef9b4a); } bowl(K, S9, tx + 0.9, tz - 0.3, 0xf2c230); bowls.push([tx + 0.9, tz - 0.3, 'c']); K.sign(S9, en() ? 'Cats' : '고양이', tx, 1.9, tz, Math.PI / 2, 0.8, 0.24, { bg: '#ef8b33', fr: 0xf6f4ee, two: true }); P('b', tx, 1.22, tz, 0.03, 0.56, 0.03, 0x8a6a4a); }
     { const x = hw - 0.3, z = 0.6; P('b', x, 0, z, 0.5, 1.6, 2.2, 0xb07d4a); for (const y of [0.55, 1.1]) P('b', x - 0.26, y, z, 0.02, 0.03, 2.1, 0x8a5a34);   // 사료 선반(포대 · 통)
       for (let i = 0; i < 3; i++) { K.I(S9, 'b', x - 0.05, 0.02, z - 0.7 + i * 0.7, 0.36, 0.48, 0.3, [0xd9473b, 0x3d74c9, 0xd9473b][i]); K.I(S9, 'b', x - 0.05, 0.58, z - 0.7 + i * 0.7, 0.32, 0.4, 0.28, [0xf2c230, 0x3cc76a, 0xf2c230][i]); } K.colL(S9, x, z, 0.27, 1.12, -0.5, 1.6);
       K.sign(S9, en() ? 'Pet food' : '사료', x - 0.27, 1.9, z, -Math.PI / 2, 1.0, 0.3, { bg: '#5cbf73', fr: 0x8a6a4a }); K.standGuest(S9, ox + x - 1.2, oy, oz + z + 1.5, -Math.PI / 2, 6); }   // 동물보호사(이름 없음)
@@ -216,9 +216,10 @@ export function createBldg(A) {
     const board = boardMesh(K, S9, -hw + 0.046, 1.67, 2.6, Math.PI / 2, 2.4, 1.5);
     const food = K.parts(put => { for (const [bx, bz, t] of bowls) { put('c16', ox + bx, oy + 0.067, oz + bz, 0.108, 0.014, 0, t === 'c' ? 0xb07d4a : 0x8a5a34); for (let k = 0; k < 4; k++) put('s', ox + bx + Math.cos(k * 1.6) * 0.05, oy + 0.084, oz + bz + Math.sin(k * 1.6) * 0.05, 0.025, 0.6, 0, t === 'c' ? 0xc8945a : 0x9a6a3c); } });   // 밥(그릇 속 사료 · 밥을 주면 보임)
     food.visible = S().shelter.fed === day(); S9.extra = S9.extra || []; S9.extra.push(food);
+    const wyx = WY ? WY.shelterRoom(K, S9, { pens, z0, z1, tower: [-hw + 1.0, 1.4], at }) : [];
     K.wwin(S9, 'F', -3.6, 0.9, 1.8, 1.3, { sun: true }); K.wwin(S9, 'F', 3.6, 0.9, 1.8, 1.3, { sun: true }); for (const x of [-3, 0, 3]) for (const z of [-1.4, 2.0]) K.panelL(S9, x, z);
     return { S: S9, W, D, H, seats, items: ['강아지 칸 셋(울타리 · 물그릇 · 밥그릇)', '고양이 쉼터 탑 · 고양이 둘', '사료 선반', '동물보호사(이름 없음)', '새 가족을 기다려요 판'], board, food, dogs: pens.map(cx => [ox + cx - 0.35, oy, oz + z0 + 1.2]),
-      extra: [{ k: 'bd:feed', stand: [hw - 1.2, 0, 0.6], r: 1.3, label: '🥣 ' + (en() ? 'Feed the animals (once a day)' : '동물 밥 주기 (하루 한 번)') }, { k: 'bd:board', stand: [-hw + 1.0, 0, 2.6], r: 1.1, label: '📋 ' + (en() ? 'Read the board' : '알림판 보기') }], cam: { d: 3.8, p: 0.55 } }; }
+      extra: [...wyx, { k: 'bd:feed', stand: [hw - 1.2, 0, 0.6], r: 1.3, label: '🥣 ' + (en() ? 'Feed the animals (once a day)' : '동물 밥 주기 (하루 한 번)') }, { k: 'bd:board', stand: [-hw + 1.0, 0, 2.6], r: 1.1, label: '📋 ' + (en() ? 'Read the board' : '알림판 보기') }], cam: { d: 3.8, p: 0.55 } }; }
 
   // 은행(11×9): 뒤 = 예금 창구 둘(번호 빛판 · 은행원 둘) · 왼쪽 뒤 = 번호표 기계 · 왼벽 = 기다리는 의자 · 오른벽 = '내 통장' 판(캔버스) · 오른쪽 앞 = 현금 지급기(소품)
   function roomBank(at, K, name) { const W = 11, D = 9, H = 3.4, hw = W / 2, hd = D / 2, [ox, oy, oz] = at, seats = [], grn = 0x2f6d5a;
@@ -238,7 +239,7 @@ export function createBldg(A) {
       K.sign(S9, en() ? 'Cash machine' : '현금 지급기', x - 0.262, 1.75, z, -Math.PI / 2, 0.66, 0.2, { bg: '#2f6d5a', fr: false }); }
     K.wwin(S9, 'F', -3.3, 0.9, 1.8, 1.3, { sun: true }); K.wwin(S9, 'F', 2.6, 0.9, 1.8, 1.3, { sun: true }); for (const x of [-2.6, 0, 2.6]) for (const z of [-1.6, 1.6]) K.panelL(S9, x, z);
     return { S: S9, W, D, H, seats, items: ['예금 창구 둘 · 은행원(이름 없음)', '번호표 기계', '기다리는 의자', '내 통장 판', '현금 지급기(소품)'], board,
-      extra: [{ k: 'bd:bank', stand: [-1.75, 0, -hd + 2.35], r: 1.3, label: '🏦 ' + L(TIP.bank) }, { k: 'bd:board', stand: [hw - 1.0, 0, -0.6], r: 1.2, label: '📒 ' + (en() ? 'Read my bankbook board' : '내 통장 판 보기') }], cam: { d: 3.8, p: 0.55 } }; }
+      extra: [{ k: 'bd:bank', stand: [-1.75, 0, -hd + 2.35], r: 1.3, label: '🏦 ' + L(TIP.bank) }, { k: 'bd:board', stand: [hw - 1.0, 0, -0.6], r: 1.2, label: '📒 ' + (en() ? 'Read my bankbook board' : '내 통장 판 보기') }, ...(A.why ? [{ k: 'why:tk', stand: [-4.4, 0, -hd + 0.95], r: 0.9, label: '🎫 ' + (en() ? 'Take a number' : '번호표 뽑기') }, { k: 'why:atm', stand: [hw - 1.05, 0, 2.7], r: 0.9, label: '🏧 ' + (en() ? 'Cash machine' : '현금 지급기') }] : [])], cam: { d: 3.8, p: 0.55 } }; }
 
   // 우체국(town_indoor.js 방 그대로): 1번 창구(직원 앞) = 소포 접수 E · 보낸 날엔 저울 위에 소포 상자(합친 부품 1 · 다음 날 아침 닿으면 사라짐)
   function postDeco(S9, made, B9) { left(); const [ox, oy, oz] = S9.at, x = -2.98, z = -2.525, D = day(), s = S().post;
@@ -312,7 +313,7 @@ export function createBldg(A) {
     return { S: S9, W, D, H, seats, items: ['받침대 넷(맷돌 · 다듬잇돌과 방망이 · 지게 · 호롱)', '알아본 표(금빛)', '학예사(이름 없음)', '내가 알아본 옛 물건 판'], board, stars, extra: ex, cam: { d: 3.8, p: 0.55 } }; }
 
   // ───────── E ─────────
-  function use(kk) { if (!CUR || A.panelOpen()) return; if (kk === 'bd:112') return police(); if (kk === 'bd:aid') return clinic(); if (kk === 'bd:hi') return greet(); if (kk === 'bd:feed') return feed(); if (kk === 'bd:bank') return bank(); if (kk === 'bd:post') return post(); if (kk === 'bd:board') return readBoard(); if (kk === 'bd:ticket') return cinema(); if (kk === 'bd:seat') return seatUse(); if (kk === 'bd:line') return factory(); if (kk === 'bd:elder') return elder(); if (kk === 'bd:gonu') return gonu(); if (/^bd:mu\d$/.test(kk)) return museum(+kk.slice(5)); }
+  function use(kk) { if (!CUR || A.panelOpen()) return; if (/^why:/.test(kk)) return A.why && A.why().use(kk); if (kk === 'bd:112') return police(); if (kk === 'bd:aid') return clinic(); if (kk === 'bd:hi') return greet(); if (kk === 'bd:feed') return feed(); if (kk === 'bd:bank') return bank(); if (kk === 'bd:post') return post(); if (kk === 'bd:board') return readBoard(); if (kk === 'bd:ticket') return cinema(); if (kk === 'bd:seat') return seatUse(); if (kk === 'bd:line') return factory(); if (kk === 'bd:elder') return elder(); if (kk === 'bd:gonu') return gonu(); if (/^bd:mu\d$/.test(kk)) return museum(+kk.slice(5)); }
   const pick = (L9, n, seed) => L9.map((x, i) => [hashS(seed + ':' + i), x]).sort((a, b) => a[0] - b[0]).slice(0, n).map(q => q[1]);
   const shuf = (L9, seed) => L9.map((x, i) => [hashS(seed + ':' + L(x[1] || x)), x, i]).sort((a, b) => a[0] - b[0]);
   const wordBox = k => '<div class="bd-wd">' + WORDS[k].map(w => '<div>📖 <b>' + esc(L(w[0])) + '</b> = ' + esc(L(w[1])) + '</div>').join('') + '</div>';

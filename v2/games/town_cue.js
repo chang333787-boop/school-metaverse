@@ -12,7 +12,7 @@
 //     그리기: 몸 1(인스턴스 하나 · town_worker.js) · 김 1(인스턴스 하나) · 간판 2(영화관만) · 입간판·이정표·리본 = 보일 때만 하나씩(100~130m 컷)
 //   지킴: 이웃 = 이름 없는 몸 · 판타지 X · 실제 상표 X · 소리는 배경(작게 · 가까이서만)
 import { makeWorkerMesh } from './town_worker.js?v=6';
-import { BD_HRS, POST_HRS, bldgKind } from './town_bldg.js?v=6';
+import { BD_HRS, POST_HRS, bldgKind } from './town_bldg.js?v=7';
 
 export const CUE_V = 1;
 const T2 = (a, b) => [a, b];
