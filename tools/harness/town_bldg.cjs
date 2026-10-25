@@ -4,6 +4,7 @@
 //   ⑤ 방 E 자리 모두 닿음(indoor.check) · 문 E로 나가기 · 페이지 오류 0
 //   ⑥ 은행(BANK-1): 문 이름표·J「저금」· 넣기(지갑 −·통장 +·한 줄)·반 넣기·꺼내기 · 살림 솜씨 하루 한 번 · 통장 판 · 7일 뒤 이자 한 줄 · 17:00 문 닫음
 //   ⑦ 우체국: 창구 E = 물건 → 이웃 → 지도 보고 주소 칸(틀림 = 힌트) → 소포 값 → 저울 위 상자 · 같은 날 다시 = 한 줄 · 다음 날 아침 한 줄 → 받는 이웃 곁 = 말풍선 + 하트 · 20:00 창구 닫음(방은 들어감)
+//   ⑧ BLDG-3: 영화관(시간표 · 쪽지 시각 견주기 · 표 −500 · 자리 E · 기다리기 = 시작 시각 · 다 보면 = 끝나는 시각 · 21:30 닫음) · 공장(차례 다섯 · 힌트 · 분업 물음 · 깔판 상자 · 젤리 공장 줄) · 노인정(땅이름 넷 · 힌트 · 판 · 고누 창) · 박물관(옛 물건 쓰임 → 오늘날 · 금빛 표 · 솜씨 하루 한 번) · 곤충 박물관 X
 const { chromium } = require('./pw.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null;
@@ -117,6 +118,61 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       const h1 = await ev(k => (SM_TOWN.game().S.hearts || {})[k] || 0, q0.to); ok(okd && h1 > h0, '받는 이웃 곁(10m) = 인사 · 하트 ' + h0 + ' → ' + h1); ok(await waitSaid('고맙대요'), '「… 소포를 받고 고맙대요 ❤」 한 줄');
       ok(await enter(po), '다음 날 우체국'); ok((await BI()).cur.box === false, '닿은 뒤 = 저울 위 빔');
       await ev(() => { SM_TOWN.game().S.min = 20 * 60; }); await E('bd:post', () => said('창구는 지금 문을')); ok(await waitSaid('창구는 지금 문을') && !(await panel()), '20:00 = 방은 들어가고 창구 E만 「문을 닫았어요」'); await leave(); await ev(() => { SM_TOWN.game().S.min = 11 * 60; }); }
+    // ⑧ BLDG-3 영화관 · 공장 · 노인정·경로당 · 박물관
+    { const L3 = await ev(() => SM_TOWN.indoor.list().filter(q => ['cinema', 'factory', 'elder', 'museum'].includes(q.kind))), b3 = k => L3.filter(q => q.kind === k); console.log('    BLDG-3 들어갈 곳: ' + L3.map(q => q.name + '(' + q.kind + ')').join(' · '));
+      ok(b3('cinema').length >= 1 && b3('factory').length >= 1 && b3('elder').length >= 1 && b3('museum').length >= 1, '영화관 ' + b3('cinema').length + ' · 공장 ' + b3('factory').length + ' · 노인정·경로당 ' + b3('elder').length + ' · 박물관 ' + b3('museum').length + ' 곳이 들어감');
+      ok(!L3.some(q => /곤충/.test(q.name)), '곤충 박물관은 들어가지 않음(쇼가 따로)');
+      const labs3 = await ev(() => SD2.map.interact.list().map(h => h.label).filter(t => /들어가기 — /.test(t || '')));
+      ok(labs3.some(t => /영화관 · 상영 시간표/.test(t)) && labs3.some(t => /공장 · 만드는 차례 견학/.test(t)) && labs3.some(t => /(노인정|경로당) · 옛 땅이름 듣기/.test(t)) && labs3.some(t => /박물관 · 옛 물건 알아보기/.test(t)), '문 E 이름표에 할 일 넷');
+      for (const [q, re] of [['시간표', '영화관'], ['견학', '공장'], ['땅이름', '노인정|경로당'], ['옛 물건', '박물관']]) { await closeAll(); await p.keyboard.press('KeyJ'); await W8(700); const r = await ev(q => { const i = document.querySelector('.twn-p .jq'); if (!i) return null; i.value = q; i.dispatchEvent(new Event('input')); const jr = document.querySelector('.twn-p .jr'); return jr ? jr.innerText : ''; }, q); ok(r && new RegExp(re).test(r), 'J 검색 「' + q + '」 → ' + (r || '-').split('\n').slice(0, 2).join(' ')); }
+      await closeAll();
+      // 🎬 영화관
+      const cn = b3('cinema')[0]; await ev(() => { const G = SM_TOWN.game().S; G.min = 13 * 60 + 20; G.money = 3000; }); const D3 = await ev(() => SM_TOWN.game().S.day);
+      ok(await enter(cn), cn.name + ' 들어감'); I = await BI(); ok(I.cur && I.cur.k === 'cinema' && I.cur.extra.some(q => q.k === 'bd:ticket') && !I.cur.extra.some(q => q.k === 'bd:seat'), '영화관 방 · E = 매표소 · 표 없으면 자리 E 없음'); await checkRoom('영화관');
+      ok((await ev(() => SM_TOWN.bldg().dbg.board())) > 1000, '큰 화면(캔버스) = 오늘 상영 시간표');
+      const ex3 = await xp('explore'); await E('bd:ticket', async () => ((await panel()) || {}).k === 'bdcine'); P = await panel(); ok(P && /집에서 온 쪽지/.test(P.t) && /지금 시각: 1[34]:\d\d/.test(P.t) && /할 일/.test(P.t), 'E = 상영 시간표 창(쪽지 · 지금 시각 · 할 일)');
+      const T3 = await ev(() => { const t = document.querySelector('.twn-p .bd-sit').textContent, m = t.match(/(\d\d):(\d\d)까지/), lim = m ? +m[1] * 60 + +m[2] : 9999, rows = [...document.querySelectorAll('.twn-p table.bd-pb tr')].slice(1).map(tr => [...tr.children].map(td => td.textContent)), mm = s => +s.slice(0, 2) * 60 + +s.slice(3); return { lim, ends: rows.map(r => mm(r[2])), starts: rows.map(r => mm(r[1])) }; });
+      const wr = T3.ends.findIndex(v => v > T3.lim), rt = T3.ends.findIndex(v => v <= T3.lim); ok(wr >= 0 && rt >= 0 && T3.starts.every(v => v > 13 * 60 + 20), '시간표 ' + T3.starts.length + '줄(모두 13:20 뒤) · 쪽지 ' + T3.lim + '분 · 맞는 줄 ' + rt + ' · 늦는 줄 ' + wr);
+      await ev(j => document.querySelector('.twn-p button[data-s="' + j + '"]').click(), wr); await W8(200); ok(/늦어요/.test(((await panel()) || {}).t || '') && (await ev(() => SM_TOWN.game().S.money)) === 3000, '늦게 끝나는 영화 = 끝나는 시각 견주기 힌트(돈 그대로)');
+      await ev(j => document.querySelector('.twn-p button[data-s="' + j + '"]').click(), rt); await W8(300); P = await panel(); const tk = await ev(() => SM_TOWN.game().S.bldg.cinema.tk);
+      ok(tk && tk.d === D3 && /^[가나다라마][1-6]$/.test(tk.seat) && (await ev(() => SM_TOWN.game().S.money)) === 2500, '표 = 돈 −500 · 자리 ' + (tk && tk.seat)); ok(P && /줄 글자/.test(P.t) && /상영/.test(P.t) && /시간표/.test(P.t), '표 창 = 자리 찾는 법(지도 칸 주소) + 낱말 상자'); await closeAll();
+      I = await BI(); ok(I.cur.extra.some(q => q.k === 'bd:seat'), '표를 사면 그 자리에 E가 생김'); await checkRoom('영화관(자리 E)');
+      await E('bd:seat', async () => ((await panel()) || {}).k === 'bdseat'); P = await panel(); ok(P && /기다릴까요/.test(P.t), '자리 E(시작 전) = 시작 시각까지 기다리기');
+      await ev(() => document.querySelector('.twn-p button[data-w]').click()); await W8(400); P = await panel(); const sh = T3.starts[rt]; ok(P && P.k === 'bdfilm' && (await ev(() => SM_TOWN.game().S.min)) === sh, '기다리면 시계 = 시작 시각 · 영화 장면 창'); ok((await BI()).cur.play != null, '화면 = 영화 장면');
+      for (let i = 0; i < 3; i++) { await ev(() => document.querySelector('.twn-p button[data-n]').click()); await W8(250); }
+      const mn = await ev(() => SM_TOWN.game().S.min); ok(!(await panel()) && mn === T3.ends[rt] && (await ev(() => SM_TOWN.game().S.bldg.cinema.seen)) === D3, '다 보면 시계 = 끝나는 시각(' + mn + ') · 본 날 기록'); ok(await waitSaid('영화가 끝났어요'), '「영화가 끝났어요 · 지금 …」 한 줄'); ok((await xp('explore')) > ex3, '탐험 솜씨 +');
+      await E('bd:ticket', () => said('벌써 영화를')); ok(await waitSaid('벌써 영화를') && !(await panel()), '같은 날 다시 매표소 = 「오늘은 벌써 영화를 봤어요」'); await leave();
+      await ev(() => { SM_TOWN.game().S.min = 21 * 60 + 30; }); await ev(id => SM_TOWN.indoor.enter(id), cn.id); await W8(1500); ok(!(await ev(() => SM_TOWN.indoor.on)) && await waitSaid('문을 닫았어요'), '21:30 영화관 = 문 닫음(안 들어감)'); await ev(() => { SM_TOWN.game().S.min = 11 * 60; });
+      // 🏭 공장
+      for (const fc of b3('factory')) { ok(await enter(fc), fc.name + ' 들어감'); I = await BI(); ok(I.cur && I.cur.k === 'factory' && I.cur.line === (/젤리|케이크/.test(fc.name) ? 'jelly' : 'farm'), fc.name + ' 줄 = ' + I.cur.line); await leave(); }
+      const fa = b3('factory')[0]; ok(await enter(fa), fa.name + ' 들어감'); I = await BI(); ok(I.cur.prod === false && I.cur.extra.some(q => q.k === 'bd:line'), '공장 방 · 깔판 빔 · E = 만드는 차례 견학'); await checkRoom('공장');
+      const wk3 = await xp('work'); await E('bd:line', async () => ((await panel()) || {}).k === 'bdline'); P = await panel(); ok(P && /할 일/.test(P.t) && /0\/5/.test(P.t), 'E = 차례 창(0/5)');
+      await ev(() => document.querySelector('.twn-p button[data-j="3"]').click()); await W8(200); ok(/맨 처음/.test(((await panel()) || {}).t || ''), '처음에 뒤 일 = 「1번 자리가 맨 처음」 힌트');
+      for (const j of [0, 1]) { await ev(j => document.querySelector('.twn-p button[data-j="' + j + '"]').click(), j); await W8(150); } await ev(() => document.querySelector('.twn-p button[data-j="4"]').click()); await W8(200); ok(/아직 일러요/.test(((await panel()) || {}).t || ''), '건너뛰면 = 앞 일을 짚는 힌트');
+      for (const j of [2, 3, 4]) { await ev(j => document.querySelector('.twn-p button[data-j="' + j + '"]').click(), j); await W8(150); } P = await panel(); ok(/무엇이 좋을까요/.test(P.t), '다섯 다 = 분업 물음');
+      await ev(() => document.querySelector('.twn-p button[data-v="0"]').click()); await W8(200); ok(/다시 생각/.test(((await panel()) || {}).t || ''), '틀린 답 = 다시');
+      await ev(() => document.querySelector('.twn-p button[data-v="1"]').click()); await W8(300); P = await panel(); I = await BI(); ok(P && /깔판/.test(P.t) && /분업/.test(P.t), '끝 = 상자 · 트럭 · 낱말 상자(분업·원료)'); ok(I.cur.prod === true && I.s.factory.made === I.s.factory.made && (await xp('work')) > wk3, '깔판에 오늘 만든 상자 · 일솜씨 +'); await closeAll();
+      await E('bd:line', () => said('벌써 돌았어요')); ok(await waitSaid('벌써 돌았어요') && !(await panel()), '다시 E = 「오늘 줄은 벌써 돌았어요」'); await leave(); ok(await enter(fa), '다시 들어감'); ok((await BI()).cur.prod === true, '다시 들어가도 상자 그대로'); await leave();
+      // 👵 노인정·경로당
+      const el = b3('elder')[0]; ok(await enter(el), el.name + ' 들어감'); I = await BI(); ok(I.cur && I.cur.k === 'elder' && ['bd:elder', 'bd:gonu', 'bd:board'].every(k => I.cur.extra.some(q => q.k === k)), '노인정 방 · E = 땅이름 · 고누 · 판'); await checkRoom(el.name);
+      const ex4 = await xp('explore'); await E('bd:elder', async () => ((await panel()) || {}).k === 'bdelder'); P = await panel(); ok(P && /1\/4/.test(P.t) && /「/.test(P.t), 'E = 땅이름 창(1/4)');
+      await ev(() => document.querySelector('.twn-p button[data-o="0"]').click()); await W8(200); ok(/떼어 보렴|뜻이란다|마을이라는/.test(((await panel()) || {}).t || ''), '틀린 뜻 = 낱말을 떼어 보는 힌트');
+      for (let i = 0; i < 4; i++) { await ev(() => document.querySelector('.twn-p button[data-o="1"]').click()); await W8(220); } P = await panel(); I = await BI(); ok(P && /팻말/.test(P.t) && /지명/.test(P.t) && /유래/.test(P.t), '끝 = 어르신 말 + 낱말 상자(지명·유래)');
+      ok((I.s.elder.got || []).length >= 4 && (I.s.elder.got || []).includes('돌다리') && (await xp('explore')) > ex4, '들은 이름 ' + (I.s.elder.got || []).join('·') + ' · 탐험 솜씨 +'); await closeAll();
+      await E('bd:board', async () => ((await panel()) || {}).k === 'bdboard'); P = await panel(); ok(P && /돌다리/.test(P.t) && / = /.test(P.t), '땅이름 이야기 판 = 들은 이름과 뜻'); await closeAll();
+      await E('bd:elder', () => said('다 했단다')); ok(await waitSaid('다 했단다'), '같은 날 다시 = 「오늘 이야기는 다 했단다」');
+      await E('bd:gonu', async () => ((await panel()) || {}).k === 'table'); P = await panel(); ok(P && P.k === 'table' && /고누/.test(P.t), '고누 탁자 E = 판 놀이 창(우물고누) 「' + ((P && P.t) || '-').split('\n')[0] + '」'); await closeAll(); await leave();
+      // 🏺 박물관
+      const mu = b3('museum')[0]; ok(await enter(mu), mu.name + ' 들어감'); I = await BI(); ok(I.cur && I.cur.k === 'museum' && I.cur.stars && I.cur.stars.every(v => !v) && [0, 1, 2, 3].every(i => I.cur.extra.some(q => q.k === 'bd:mu' + i)), '박물관 방 · 받침대 넷 E · 금빛 표 없음'); await checkRoom('박물관');
+      const lk3 = await xp('look'); await E('bd:mu0', async () => ((await panel()) || {}).k === 'bdmu'); P = await panel(); ok(P && /맷돌/.test(P.t) && /1\/2/.test(P.t), 'E = 맷돌 창(1/2 쓰임)');
+      await ev(() => document.querySelector('.twn-p button[data-o="0"]').click()); await W8(200); ok(/생김새/.test(((await panel()) || {}).t || ''), '틀린 답 = 생김새 힌트');
+      await ev(() => document.querySelector('.twn-p button[data-o="1"]').click()); await W8(200); ok(/2\/2/.test(((await panel()) || {}).t || ''), '맞으면 = 오늘날 물음(2/2)');
+      await ev(() => document.querySelector('.twn-p button[data-o="1"]').click()); await W8(300); P = await panel(); I = await BI(); ok(P && /믹서기/.test(P.t) && I.cur.stars[0] === true && (await xp('look')) > lk3, '끝 = 한 줄 · 받침대에 금빛 표 · 관찰 솜씨 +'); await closeAll();
+      const lk4 = await xp('look'); await E('bd:mu3', async () => ((await panel()) || {}).k === 'bdmu'); for (let i = 0; i < 2; i++) { await ev(() => document.querySelector('.twn-p button[data-o="1"]').click()); await W8(220); } I = await BI(); ok(I.cur.stars[3] === true && (await xp('look')) === lk4, '둘째 물건 = 금빛 표 · 솜씨는 하루 한 번'); await closeAll();
+      await E('bd:board', async () => ((await panel()) || {}).k === 'bdboard'); P = await panel(); ok(P && /2\/4/.test(P.t) && /전등/.test(P.t), '옛 물건 판 = 2/4 · 오늘날'); await closeAll(); await leave(); ok(await enter(mu), '다시 들어감'); I = await BI(); ok(I.cur.stars[0] && I.cur.stars[3] && !I.cur.stars[1], '다시 들어가도 금빛 표 그대로'); await leave();
+      // 새 곳 모두: 들어감 · E 닿음
+      { const bad = []; for (const q of L3) { if (!(await enter(q))) { bad.push(q.name + ' 못 들어감'); continue; } const c = await ev(() => SM_TOWN.indoor.check()), nh = (c.hots || []).filter(h => h.ok === false).map(h => h.label); if (!c.spawnFree || nh.length) bad.push(q.name + ' ' + (c.spawnFree ? '' : '들어간 자리 막힘 ') + nh.join('/')); await leave(); }
+        ok(!bad.length, 'BLDG-3 ' + L3.length + '곳 모두 들어감 · E 닿음' + (bad.length ? ' — ' + bad.join(' | ') : '')); } }
     if (SHOTS) { const seen = {}; for (const q of L) { if (seen[q.kind]) continue; seen[q.kind] = 1; await enter(q); const R9 = await ev(() => SM_TOWN.indoor.room); if (q.kind === 'shelter') await ev(() => { const G = SM_TOWN.game().S; G.bldg.shelter.fed = G.day; }); if (q.kind === 'shelter') { await leave(); await enter(q); }
       await tpA([R9.at[0], R9.at[1], R9.at[2] + R9.D / 2 - 1.6]); await ev(a => SD2.map.player.lookAt([a[0], a[2] - 60]), R9.at); await W8(1800); await p.screenshot({ path: SHOTS + '/bldg_' + q.kind + '.png' });
       await tpA([R9.at[0] - R9.W / 2 + 1.6, R9.at[1], R9.at[2] + 0.5]); await ev(a => SD2.map.player.lookAt([a[0] + 60, a[2] - 10]), R9.at); await W8(1500); await p.screenshot({ path: SHOTS + '/bldg_' + q.kind + '_r.png' }); await leave(); } }
