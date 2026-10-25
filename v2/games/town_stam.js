@@ -6,7 +6,7 @@
 //     · swimming() · bike() · setBike(v) · busy() · night() · skUp · diary(t) · bubble(w, t) · workers() · stick() · umbOpen() · umbClose()
 export const STAM_SW = 30, STAM_CL = 5, STAM_RUN = 10;   // 칸당 능력(헤엄 m · 오르기 m · 비탈 달리기 m)
 const SWIM_SP = 2.3, CLIMB_SP = { chain: 0.9, rope: 0.8 }, FLOAT_SP = 0.6, BOAT_IN = 6, BOAT_OUT = 8, SLIDE_SP = 1.5, PUSH_SP = 0.8;
-const INK = '#2f7d4a', EMPTY = '#d9d5cc', LOW = '#e0782a';   // 종이 교과서 결 초록 잉크 · 빈 칸 연회색 · 1칸 아래 주황
+const INK = '#2f7d4a', EMPTY = '#d9d5cc', LOW = '#e0782a', XINK = '#c4862a', XEMPTY = '#efe2c4';   /* BAG-2 먹어서 늘어난 한 칸 = 도시락 빛(밤색 노랑) */   // 종이 교과서 결 초록 잉크 · 빈 칸 연회색 · 1칸 아래 주황
 const T2 = (ko, en) => [ko, en];
 const TXT = {
   swim1: T2('숨이 차면 누워서 떠요 — 이렇게요', 'If you run out of breath, float on your back — like this'),
@@ -47,6 +47,8 @@ export function createStam(A) {
   const ST = { v: 3, mode: null, rest: 0, full: 0, lx: 0, ly: 0, lz: 0, has: false, last: null, runLock: false, sayT: 0, anim: 0, animK: 0, said1: 0 };
   let G = null;   // 지은 자료(헤엄 길·발판·오르기 길·도장)
   const nNow = () => Math.min(MAXN, Math.max(3, S().n | 0));
+  /* BAG-2 먹으면 힘(town_bag.js): 먹은 것 = 숨 한 칸 더(xk · 땅에 있을 때만 바뀜 — 물속·벽에서 갑자기 줄지 않게) · 숨 돌아오는 빠르기(fk) · 사다리 칸(s.n)은 그대로 */
+  const xNow = () => Math.max(0, Math.min(1, (A.extra ? A.extra() : 0) | 0)), cap = () => nNow() + (ST.xk | 0), fk = () => Math.max(1, Math.min(2, A.fast ? A.fast() || 1 : 1));
   // ───────── 헤엄 길(prep — 짓기 전 땅 단계 · prepSwim 끝에서 한 번) ─────────
   function prep(W) { if (ST.mode) end('rebuild'); if (ST.wing) wingShow(false); G = null; if (!CFG || !W || !CFG.swim) return;   /* 다시 짓기(계절·판 모습) = 붙든 몸 먼저 풂 */ const SEAY = A.SEAY(), cs = 2;
     let bx = 0, bz = 0, bn = 0; for (let j = 0; j < W.nz; j++) for (let i = 0; i < W.nx; i++) if (W.g[j * W.nx + i] === 1) { bx += W.x0 + (i + 0.5) * cs; bz += W.z0 + (j + 0.5) * cs; bn++; } if (!bn) return; bx /= bn; bz /= bn;
@@ -224,12 +226,12 @@ export function createStam(A) {
   // ───────── 바퀴(64px 캔버스 Sprite 하나 · 1/16칸 바뀔 때만 · 초당 10번까지) ─────────
   let WH = null; const WV = new T3.Vector3(), WR = new T3.Vector3();
   function wheel() { if (WH) return WH; const c = document.createElement('canvas'); c.width = c.height = 64; const tx = new T3.CanvasTexture(c); tx.colorSpace = T3.SRGBColorSpace; const m = new T3.SpriteMaterial({ map: tx, depthTest: false, transparent: true }); const s = new T3.Sprite(m); s.scale.set(0.42, 0.42, 1); s.renderOrder = 9; s.visible = false; map.add(s); WH = { s, c, g: c.getContext('2d'), tx, key: '', t: 0, hide: 0 }; return WH; }
-  function wheelDraw(now) { const W9 = wheel(), n = nNow(), q = Math.round(Math.max(0, Math.min(n, ST.v)) * 16) / 16, ak = ST.anim > 0 ? Math.round(ST.anim * 20) : 0, key = n + ':' + q + ':' + ak; if (key === W9.key || now - W9.t < 100) return; W9.key = key; W9.t = now;
+  function wheelDraw(now) { const W9 = wheel(), n = cap(), nb = nNow(), q = Math.round(Math.max(0, Math.min(n, ST.v)) * 16) / 16, ak = ST.anim > 0 ? Math.round(ST.anim * 20) : 0, key = n + ':' + q + ':' + ak; if (key === W9.key || now - W9.t < 100) return; W9.key = key; W9.t = now;
     const g = W9.g; g.clearRect(0, 0, 64, 64); const gap = 0.16, a0 = -Math.PI / 2, seg = Math.PI * 2 / n, low = q < 1;
-    for (let i = 0; i < n; i++) { let s0 = a0 + i * seg + gap / 2, s1 = a0 + (i + 1) * seg - gap / 2; if (ST.anim > 0 && i === ST.animK) s1 = s0 + (s1 - s0) * (1 - ST.anim); g.lineCap = 'butt'; g.lineWidth = 9; g.strokeStyle = EMPTY; g.beginPath(); g.arc(32, 32, 24, s0, s1); g.stroke();
-      const f = Math.max(0, Math.min(1, q - i)); if (f > 0) { g.strokeStyle = low ? LOW : INK; g.beginPath(); g.arc(32, 32, 24, s0, s0 + (s1 - s0) * f); g.stroke(); } }
+    for (let i = 0; i < n; i++) { let s0 = a0 + i * seg + gap / 2, s1 = a0 + (i + 1) * seg - gap / 2; if (ST.anim > 0 && i === ST.animK) s1 = s0 + (s1 - s0) * (1 - ST.anim); g.lineCap = 'butt'; g.lineWidth = 9; g.strokeStyle = i >= nb ? XEMPTY : EMPTY; g.beginPath(); g.arc(32, 32, 24, s0, s1); g.stroke();
+      const f = Math.max(0, Math.min(1, q - i)); if (f > 0) { g.strokeStyle = low ? LOW : i >= nb ? XINK : INK; g.beginPath(); g.arc(32, 32, 24, s0, s0 + (s1 - s0) * f); g.stroke(); } }
     g.lineWidth = 2; g.strokeStyle = 'rgba(40,52,44,.55)'; g.beginPath(); g.arc(32, 32, 30, 0, Math.PI * 2); g.stroke(); W9.tx.needsUpdate = true; }
-  function wheelTick(dt, me, now) { const W9 = wheel(), act = !!ST.mode || ST.running || ST.anim > 0, full = ST.v >= nNow() - 1e-3; if (act || !full) W9.hide = 1.0; else W9.hide -= dt; const on = W9.hide > 0 && !A.busy() && !A.away(); W9.s.visible = on; if (!on) return;
+  function wheelTick(dt, me, now) { const W9 = wheel(), act = !!ST.mode || ST.running || ST.anim > 0, full = ST.v >= cap() - 1e-3; if (act || !full) W9.hide = Math.max(W9.hide, 1.0); else W9.hide -= dt; const on = W9.hide > 0 && !A.busy() && !A.away(); W9.s.visible = on; if (!on) return;
     const cam = map.camera; WR.set(1, 0, 0).applyQuaternion(cam.quaternion); WV.set(me.x + WR.x * 0.55, me.y + 1.95, me.z + WR.z * 0.55); W9.s.position.copy(WV); wheelDraw(now); }
   // ───────── 상태 바꾸기 ─────────
   const say = (t, s) => A.say(L(t), s || 2.6), sayOnce = (k, t, s) => { const T = S().tip; if (T[k] === day()) return; T[k] = day(); A.GAME.mark(); say(t, s); };
@@ -241,13 +243,13 @@ export function createStam(A) {
   function sec(me) { if (!G) return; void me; if ((ST.sq = (ST.sq || 0) + 1) % 5 === 0) sockAim(); }
   // ───────── 매 프레임 ─────────
   const keyUp = () => map.player.held('KeyW') || map.player.held('ArrowUp') || ((map.player.stick() || {}).my > 0.35), keyDn = () => map.player.held('KeyS') || map.player.held('ArrowDown') || ((map.player.stick() || {}).my < -0.35);
-  function tick(dt, me) { if (ST.snap) { ST.snap = 0; const g9 = map.q.groundAt(me.x, me.z, me.y); if (me.y - g9 > 0.6) map.player.teleport([me.x, g9 + 0.05, me.z]); } if (!G || !CFG) { if (WH) WH.s.visible = false; return; } const now = performance.now(); if (!ST.has) { ST.has = true; ST.lx = me.x; ST.ly = me.y; ST.lz = me.z; ST.v = nNow(); }
+  function tick(dt, me) { if (ST.snap) { ST.snap = 0; const g9 = map.q.groundAt(me.x, me.z, me.y); if (me.y - g9 > 0.6) map.player.teleport([me.x, g9 + 0.05, me.z]); } if (!G || !CFG) { if (WH) WH.s.visible = false; return; } const now = performance.now(); if (!ST.has) { ST.has = true; ST.lx = me.x; ST.ly = me.y; ST.lz = me.z; ST.xk = xNow(); ST.v = cap(); }
     const busy = A.busy(); if (ST.anim > 0) { ST.anim = Math.max(0, ST.anim - dt / 0.8); }
     const dx = me.x - ST.lx, dz = me.z - ST.lz, dy = me.y - ST.ly, dl = Math.hypot(dx, dz), jump = dl > 3 || Math.abs(dy) > 6; ST.lx = me.x; ST.ly = me.y; ST.lz = me.z; bikeTick(dt, me, dx, dz, jump ? 0 : dl);
     if (ST.mode && !busy) modeTick(dt, me, now); else if (ST.mode && busy) { if (ST.pin) map.player.pin(ST.pin); }
     else if (!busy) { const sw = A.swimming();
       if (sw && !jump) { drain(dl / STAM_SW); ST.lastSwim = now; if (!s9().tip.swim) firstSwim(); const ci = cellAt(me.x, me.z); if (ci === 2) pushStart(me); else if (ST.v <= 0) floatStart(me); }
-      else if (!sw) { trackRest(me); climbIdle(dt, me); if (!jump) paraIdle(dt, me, dx, dz, dl); runTick(dt, me, dy, dl, jump); const rest = Math.abs(map.player.vy) < 0.05 && !ST.running; if (rest) { ST.rest += dt; if (ST.rest > 1.0) ST.v = Math.min(nNow(), ST.v + nNow() / 3.0 * dt); } else ST.rest = 0; }
+      else if (!sw) { if (!ST.mode) { const x9 = xNow(); if (x9 !== ST.xk) { ST.xk = x9; if (ST.v > cap()) ST.v = cap(); } } trackRest(me); climbIdle(dt, me); if (!jump) paraIdle(dt, me, dx, dz, dl); runTick(dt, me, dy, dl, jump); const rest = Math.abs(map.player.vy) < 0.05 && !ST.running; if (rest) { ST.rest += dt; if (ST.rest > 1.0 / fk()) ST.v = Math.min(cap(), ST.v + cap() / 3.0 * fk() * dt); } else ST.rest = 0; }
       stampTick(dt, me); }
     wheelTick(dt, me, now); }
   const s9 = () => S();
@@ -305,11 +307,11 @@ export function createStam(A) {
   // ───────── 비탈 달리기(사다리 밖 · 다 쓰면 걷기) ─────────
   function runTick(dt, me, dy, dl, jump) { const st = map.player.stick(), run = !A.bike() && map.player.input && ((map.player.held('ShiftLeft') || map.player.held('ShiftRight')) || (st && st.m >= 0.92)); ST.running = !!run && !ST.runLock; void me;
     if (ST.running && !jump && dy > 0 && dl > 1e-3 && dy / dl > 0.1 && Math.abs(map.player.vy) < 0.05) { drain(dy / STAM_RUN); if (ST.v <= 0 && !ST.runLock) { ST.runLock = true; ST.running = false; map.player.run(false); say(TXT.run0, 2.4); map.sfx && map.sfx('pop'); } }
-    if (ST.runLock && ST.v >= nNow() - 1e-3) { ST.runLock = false; if (!A.bike()) map.player.run(true); } }
+    if (ST.runLock && ST.v >= cap() - 1e-3) { ST.runLock = false; if (!A.bike()) map.player.run(true); } }
   // ───────── 도장(그 단계 칸을 끝까지 다 써야 닿는 자리 · 1초 서 있으면 꾹) ─────────
   function stampTick(dt, me) { const s = S(); for (const q of G.stamps) { if (s.got[q.id]) continue; if (Math.hypot(q.cx - me.x, q.cz - me.z) > q.r || Math.abs(me.y - q.y) > 1.3) { q.t = 0; continue; } q.t = (q.t || 0) + dt; if (q.t < 1.0) continue; q.t = 0; award(q); } }
   function award(q) { const s = S(), n0 = nNow(); s.got[q.id] = day(); s.n = Math.min(MAXN, Math.max(n0, q.k + 1)); A.GAME.mark(); map.sfx && map.sfx('ding');
-    if (s.n > n0) { ST.anim = 1; ST.animK = s.n - 1; ST.v = s.n; say(TXT.grow, 3.2); } A.skUp('explore', 1, 'stam:' + q.id); A.diary(L(DIARY[q.id] || DIARY.R1)); }
+    if (s.n > n0) { ST.anim = 1; ST.animK = s.n - 1; ST.v = cap(); say(TXT.grow, 3.2); } A.skUp('explore', 1, 'stam:' + q.id); A.diary(L(DIARY[q.id] || DIARY.R1)); }
   // ───────── 자전거 꺾기(손맛 · 사다리 밖): 빠를수록 도는 빠르기 상한(8m/s 아래 260°/s → 21m/s 170°/s) · 탈 때만 기울기 ±0.35 · 세게 돌면 뒷바퀴 흙먼지 ─────────
   const BK = { on: false, v: 0, h: null, w: 0, q: 0, off: true }, DUST = []; let DM = null; const DQ = new T3.Object3D();   /* off = 돌기 상한 끔(기본 · 설계 §2-7 '교차로 봇이 실패하면 상한을 끄고 기울기만' — 10-25 다시 잰 교차로 40곳 가운데 상한 켬 6곳이 모퉁이에 1~3초 붙음 · 끔 0곳) */
   function bikeTick(dt, me, dx, dz, dl) { const on = A.bike(); if (on !== BK.on) { BK.on = on; map.player.leanMax(on ? 0.35 : null); if (!on) map.player.turnMax(null); BK.h = null; BK.w = 0; } if (DUST.length) dustTick(dt); if (!on) return;
@@ -320,8 +322,8 @@ export function createStam(A) {
     if (DUST.length >= 6) DUST.shift(); DUST.push({ x, y, z, t: 0 }); }
   function dustTick(dt) { let n = 0; for (let i = DUST.length - 1; i >= 0; i--) { const d = DUST[i]; d.t += dt; if (d.t > 0.6) { DUST.splice(i, 1); continue; } } for (const d of DUST) { const k = d.t / 0.6, sc = (0.5 + k * 1.2) * (1 - k * k); DQ.position.set(d.x, d.y + k * 0.5, d.z); DQ.scale.setScalar(Math.max(0.01, sc)); DQ.updateMatrix(); DM.setMatrixAt(n++, DQ.matrix); } DM.count = n; DM.instanceMatrix.needsUpdate = true; DM.visible = n > 0; }
   // ───────── 바깥에서 부르는 것 ─────────
-  function onTp() { if (ST.mode) { end('tp'); } ST.has = false; ST.v = nNow(); }
-  function reset() { if (ST.mode) end('reset'); ST.has = false; ST.v = nNow(); if (ST.runLock) { ST.runLock = false; map.player.run(true); } }
+  function onTp() { if (ST.mode) { end('tp'); } ST.has = false; ST.v = cap(); }
+  function reset() { if (ST.mode) end('reset'); ST.has = false; ST.v = cap(); if (ST.runLock) { ST.runLock = false; map.player.run(true); } }
   function dispose() { removeEventListener('keydown', onKey, true); removeEventListener('pointerdown', onKey, true); if (WH) { map.remove(WH.s); WH.tx.dispose(); WH.s.material.dispose(); WH = null; } if (BOATM) { map.remove(BOATM); BOATM = null; } if (WING) { map.remove(WING.grp); map.remove(WING.sh); WING = null; } if (DM) { map.remove(DM); DM = null; } if (BK.on) { map.player.turnMax(null); map.player.leanMax(null); } if (ST.mode) end('dispose'); }
   function graph() { if (!G) return null; return { pads: G.pads.map(P => ({ id: P.id, k: P.k, kind: P.kind, x: +P.x.toFixed(1), z: +P.z.toFixed(1), size: P.size, need: P.need, ex: +P.ex.toFixed(1), ez: +P.ez.toFixed(1), tE: P.tE, hd: P.hd, hw: P.hw, ux: P.ux, uz: P.uz })), climbs: G.climbs.map(r => ({ id: r.id, k: r.k, kind: r.kind, bx: +r.bx.toFixed(2), bz: +r.bz.toFixed(2), y0: +r.y0.toFixed(2), y1: +r.y1.toFixed(2), h: +(r.y1 - r.y0).toFixed(2), nx: r.nx, nz: r.nz, tx: +r.tx.toFixed(2), tz: +r.tz.toFixed(2) })), stamps: G.stamps.map(q => ({ id: q.id, k: q.k, x: +q.x.toFixed(1), z: +q.z.toFixed(1), y: +q.y.toFixed(2) })), rocks: (G.rocks || []).map(r => ({ ...r })), cdb: G.cdb || null, anchors: (CFG.climb || []).map(c => [c.id, anchorOf(c.at)]), band: [+G.bx.toFixed(1), +G.bz.toFixed(1), +G.ox.toFixed(3), +G.oz.toFixed(3)], cs: G.CS.map(c => ({ id: c.id, dx: +c.dx.toFixed(3), dz: +c.dz.toFixed(3), Lm: c.Lm, t0: c.t0 })), miss: G.miss || [], shore: shoreNear(G.bx, G.bz), guard: G.guard, land: G.guard ? [G.guard[0] + Math.sin(G.guard[2]) * 4.5, G.guard[1] + Math.cos(G.guard[2]) * 4.5] : null, launch: (G.launch || []).map(p => ({ id: p.id, x: p.x, z: p.z, y: p.y, strips: p.strips.map(s => ({ a: s.a, cx: s.cx, cz: s.cz, y: s.y, len: s.len })) })), people: { guard: !!GUARD, coach: COACH.length } }; }
   function simFlight(padId, si, wk, strong, plan) { const pd = (G.launch || []).find(q => q.id === padId), st = pd && pd.strips[si]; if (!st) return null; const a = wk == null ? null : wk / 8 * 6.2832, k9 = strong ? PG.strong : PG.drift, W = a == null ? { x: 0, z: 0 } : { x: Math.sin(a) * k9, z: -Math.cos(a) * k9 }, open = a == null ? true : -(st.dx * Math.sin(a) + st.dz * -Math.cos(a)) >= -1e-3;   /* 시험 E: 같은 걸음 함수(paraStep·avoidUpd)로 몸 없이 날려 봄 · wk = 바람이 불어 가는 8방위(0 = 북) */
@@ -332,8 +334,8 @@ export function createStam(A) {
   const pairs = () => G ? G.pairs() : null;
   const dbg = (x, z) => { if (!G) return null; const R = G.GRID, i = Math.floor((x - R.x0) / R.cs), j = Math.floor((z - R.z0) / R.cs), k = j * R.nx + i; return [R.g[k], +R.gn[k].toFixed(2), +G.f0At(x, z).toFixed(1), +A.SEAY().toFixed(2)]; };
   return { prep, build, people, tick, sec, onTp, reset, dispose, graph, swimF, dbg, pairs, cellAt: (x, z) => G ? cellAt(x, z) : 0,
-    state: () => ({ n: nNow(), v: +ST.v.toFixed(3), mode: ST.mode, got: { ...S().got }, para: S().para, fail: JSON.parse(JSON.stringify(S().fail)), running: !!ST.running, runLock: ST.runLock, last: ST.last && ST.last.id, rs: ST.rs ? ST.rs.ph : null, drop: ST.lastDrop || null, why: ST.why || null, first: ST.first || null, wheel: !!(WH && WH.s.visible) }),
-    set: n => { const s = S(); s.n = Math.min(MAXN, Math.max(3, n | 0)); ST.v = s.n; A.GAME.mark(); }, fill: v => { ST.v = v == null ? nNow() : v; },
+    state: () => ({ n: nNow(), x: ST.xk | 0, cap: cap(), fast: fk(), v: +ST.v.toFixed(3), mode: ST.mode, got: { ...S().got }, para: S().para, fail: JSON.parse(JSON.stringify(S().fail)), running: !!ST.running, runLock: ST.runLock, last: ST.last && ST.last.id, rs: ST.rs ? ST.rs.ph : null, drop: ST.lastDrop || null, why: ST.why || null, first: ST.first || null, wheel: !!(WH && WH.s.visible) }),
+    set: n => { const s = S(); s.n = Math.min(MAXN, Math.max(3, n | 0)); ST.v = cap(); A.GAME.mark(); }, fill: v => { if (v == null && !ST.mode && !A.swimming()) ST.xk = xNow(); ST.v = v == null ? cap() : v; }, show: s9 => { const W9 = wheel(); W9.hide = Math.max(W9.hide, s9 || 2); W9.key = ''; },
     bikeTurn: on => { BK.off = !on; if (!on) map.player.turnMax(null); }, bikeInfo: () => ({ on: BK.on, v: +BK.v.toFixed(1), w: +(BK.w * 180 / Math.PI).toFixed(0), off: BK.off, dust: DUST.length }),
     canBike: () => !ST.mode, noUmb: () => !!ST.mode || !!ST.strip, entries, walkable: (x, z) => A.inWalk(x, z) && !A.wAt(x, z), gNat: (x, z) => A.gNat(x, z), badAt: (x, z) => G ? bad(x, z) : null, simFlight: (padId, si, w, strong, plan) => simFlight(padId, si, w, strong, plan), last: () => ST.lastLand || null, busyBody: () => !!ST.mode, air: () => ST.mode === 'para', get mode() { return ST.mode; } };
 }
