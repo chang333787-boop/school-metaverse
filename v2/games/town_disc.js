@@ -193,7 +193,7 @@ body.small .twn-pc{top:auto;bottom:150px;width:min(250px,64vw);padding:6px 8px 8
   function tailOf(r) { const M = spots(); for (const id of r.next || []) if (M[id] && !tried(id)) return DISC_BY[id]; return null; }
   function tail(r) { const d9 = D(), d = day(); if (d9.tl[r.id] === d) return; const t = tailOf(r); if (!t || !r.nx) return; d9.tl[r.id] = d; mark(); const s = spots()[t.id], line = (en() ? 'Next time: ' : '다음엔 ') + L(r.nx); heard(t.id, [ '다음엔 ' + r.nx[0], 'Next time: ' + r.nx[1] ], s ? s.at : null);
     const bx = A.panel() && A.panel().querySelector('.bx'); if (bx && !bx.querySelector('.disc-tail')) { const el = document.createElement('div'); el.className = 'sm disc-tail'; el.style.cssText = 'margin-top:8px;padding-top:6px;border-top:2px dashed #c9b27a;color:#7a5a2a;font-weight:700'; el.textContent = '👂 ' + line; bx.appendChild(el); try { el.scrollIntoView({ block: 'nearest' }); } catch (e9) { /* 옛 브라우저 */ } }
-    else A.say('👂 ' + line, 4.5); }
+    else setTimeout(() => { if (A.on()) A.say('👂 ' + line, 4.5); }, 4000); }   /* 창이 막 닫히며 뜬 그 일의 끝 한 줄('영화가 끝났어요' 등)을 덮지 않게 4초 뒤 */
   // ───────── 1초 칸 ─────────
   function sec(me) { if (!A.on()) return; const s9 = S(), d = day(), d9 = D();
     if (!V9) { V9 = {}; for (const r of DISC) V9[r.id] = vOf(r, s9); }
