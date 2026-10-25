@@ -16,6 +16,9 @@ export const CHAIN = {
       t: ['☀️ 비 없는 날이 닷새 이어져 개울물이 줄었어요. 물새들이 물 많은 곳으로 옮겨 가 조금만 보여요', '☀️ Five days without rain left the streams low. Water birds moved to wetter places, so only a few are here'] }
   ]
 };
+// WATER-1 물 높이(하루 한 번 · 아침): 비 n일 → 물이 n/3만큼 불어남(사흘이면 다) · 비 없는 날 셋째부터 닷새까지 → 줄어듦 · 어제 비 = 길 웅덩이가 하루 더 남음
+//   lv −1(가뭄) ~ 0(보통) ~ +1(비 뒤) · 높이는 town_look.js WLV(+0.14m · −0.24m · 둔치 덮개 −0.70 아래 · 석축 밑 −1.4 위) · 색·자갈·논 갈라짐도 이 값 하나로
+export function waterOf(kind, n) { const lv = kind === 'rain' ? Math.min(1, n / 3) : kind === 'clear' ? -Math.max(0, Math.min(1, (n - 2) / 3)) : 0; return { lv: Math.round(lv * 1000) / 1000, pud: kind === 'rain' && n >= 1 ? 1 : 0 }; }
 // 어제까지 이어진 날씨 줄(비 n일 · 비 없는 날 n일) — W = {날: 'rain'|'clear'|'snow'} · fb(k) = 기록 없는 날 예보
 export function streakOf(W, d, fb) { let kind = '', n = 0;
   for (let k = d - 1; k >= Math.max(1, d - 8); k--) { const w = W[k] || (fb ? fb(k) : null); if (!w) break; const t = w === 'rain' ? 'rain' : w === 'clear' ? 'clear' : 'x'; if (t === 'x') break; if (!kind) kind = t; if (t !== kind) break; n++; }
@@ -81,7 +84,8 @@ export function createRoutine(A) {
     const t = (e9 ? 'Food chain: ' : '먹이 사슬: ') + P.join(' → ') + (seen('frog') && seen('heron') ? '' : ' → …');
     const s = c.saw && seen('heron') ? (e9 ? ' (day ' + c.saw + ': you saw herons feeding in the rice field after three days of rain)' : ' (' + c.saw + '일째: 비 사흘 뒤 논에 먹이를 찾으러 온 왜가리를 봤어요)') : '';
     return t + s; }
-  return { sec, tick, fc, news, saw, dexLine, outAt, rec,
+  function water() { const c = today(), W = waterOf(c.kind || '', c.n || 0); W.d = c.d; return W; }   /* WATER-1 그날 물 높이(아침 한 번 셈 · today()가 날마다 한 번) */
+  return { sec, tick, fc, news, saw, dexLine, outAt, rec, water,
     info: () => ({ n: L.length, mv: MV.length, nGo, nCome, nSnap, nWait, tickMs: +tickMs.toFixed(3), tickMax: +tickMax.toFixed(3), chain: { ...C(), w: { ...C().w } },
       list: L.map(o => ({ i: o.w.i, k: o.k, st: o.st, nd: !!(o.w.party || A.need(o.w) || A.herd(o.w)), cs: (HO[o.k] || A.hrs(o.k))[0] * 60 - walkMin(o) - o.sg, la: (HO[o.k] || A.hrs(o.k))[1] * 60 + o.sg2, mx: o.st === 'go' || o.st === 'come' ? +(o.x0 + (o.x1 - o.x0) * Math.min(1, o.t / (o.Lw || 1))).toFixed(2) : null, mz: o.st === 'go' || o.st === 'come' ? +(o.z0 + (o.z1 - o.z0) * Math.min(1, o.t / (o.Lw || 1))).toFixed(2) : null, hold: o.hold, x: +o.w.x.toFixed(1), z: +o.w.z.toFixed(1), off: !!(o.hot && o.hot.off), out: !!o.w.out9, hm: o.hm === undefined ? null : o.hm ? { x: +o.hm.x.toFixed(1), z: +o.hm.z.toFixed(1), door: o.hm.door } : 0, hrs: A.hrs(o.k) })) }),
     homes: () => { for (const o of L) homeOf(o); return L.filter(o => o.hm).length; }, reset: () => { key = ''; }, hrsTest: (k, v) => { if (v) HO[k] = v; else delete HO[k]; } };

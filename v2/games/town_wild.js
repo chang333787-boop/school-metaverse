@@ -187,7 +187,7 @@ export function createWild(A) {
   // 그림 메시(종마다 하나 · 처음 나올 때) — 원점에 두고 인스턴스 행렬로만 옮김 · 움직이니 화면 밖 자르기 끔(12마리 안 · 작은 메시)
   function meshOf(w) { const n = SP.filter(s => s.w === w).length; let h = MESH[w.id]; if (h && h.n >= n) return h; if (h) { if (h.m.parent) h.m.parent.remove(h.m); h.dispose(); }   /* 자리 수가 늘면(다른 판) 새로 */
     if (!A.ANM.has(w.id)) { const G9 = buildGeo(T3, w.id); WSZ[w.id] = G9.size; A.ANM.def(w.id, G9); }   /* PHOTO-2: 그림 키(셔터 때 투영 상자) */ h = A.ANM.mesh(w.id, Math.max(1, n)); h.m.frustumCulled = false; h.m.matrixAutoUpdate = false; h.m.userData.fx = 1; h.m.count = 0; h.m.visible = false; MESH[w.id] = h; return h; }
-  function put(s) { const h = MESH[s.w.id]; if (!h || s.i < 0) return; E4.set(s.rx, s.ry, 0); M4.compose(V4.set(s.x, s.y, s.z), Q4.setFromEuler(E4), S4.setScalar(s.w.sc * (s.vis ?? 1))); h.m.setMatrixAt(s.i, M4); h.m.instanceMatrix.needsUpdate = true; h.mode(s.i, s.md); }
+  function put(s) { const h = MESH[s.w.id]; if (!h || s.i < 0) return; E4.set(s.rx, s.ry, 0); M4.compose(V4.set(s.x, s.y + (s.w.float && A.wdy ? A.wdy() : 0), s.z), Q4.setFromEuler(E4), S4.setScalar(s.w.sc * (s.vis ?? 1))); h.m.setMatrixAt(s.i, M4); h.m.instanceMatrix.needsUpdate = true; h.mode(s.i, s.md); }
   // 짓기 때(마을 모습일 때마다 · setEntries): 서식지마다 자리 고르기(같은 씨앗 = 같은 자리) — 서식지가 없으면 그 종은 자리 0(안 나옴)
   function init() { const t0 = performance.now(); clear(); if (!A.on()) return; on = true; RI = A.rice(); const R = A.rng('wild:' + A.id), mix = a => { for (let i = a.length - 1; i > 0; i--) { const j = (R() * (i + 1)) | 0; const t9 = a[i]; a[i] = a[j]; a[j] = t9; } return a; };
     const [bx0, bz0, bx1, bz1] = A.bounds(), FO = A.forests(), inFo = (x, z) => FO.some(sh => A.inShape(sh, x, z));
@@ -330,6 +330,7 @@ export function createWild(A) {
     spots: id => SP.filter(s => s.w.id === id).map(s => [s.hx, s.hz]),   /* HEAL-1 소리 자리(읽기만 · 짓기 뒤 한 번) */
     vis: v => { for (const k in MESH) MESH[k].m.visible = !!v && MESH[k].m.count > 0; },   /* 시험: 그리기 수 견주기 */
     fcN, fcAt: () => { const s = SP.find(q => q.fc); return s ? [s.hx, s.hz] : null; }, fcSpots: () => SP.filter(s => s.fc).map(s => ({ j: s.j, x: s.hx, z: s.hz, act: s.act })),   /* ROUTINE-1 먹이·물 연쇄(시험 · 소식판 자리) */
+    rewater: () => { for (const s of SP) if (s.w.float) put(s); },   /* WATER-1 물 높이가 바뀐 아침 = 물에 뜬 새를 새 물낯에 */
     lookAt: j => look(SP[j]), reset: () => { for (const s of SP) { const m9 = MOV.indexOf(s); if (m9 >= 0) MOV.splice(m9, 1); s.mv.k = ''; home(s); } lastAct = '-'; sec(); } };
   function buildTri(k) { const A9 = MESH[k] && MESH[k].m.geometry.attributes.position; return A9 ? A9.count / 3 : 0; }
 }
