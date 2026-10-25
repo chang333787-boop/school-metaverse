@@ -2,6 +2,8 @@
 //   ① 문 이름표·J 검색에 할 일(112 · 응급 · 밥) ② 경찰서: 도운 아이 가족 인사(대화 → 게시판) · 112 연습(틀린 번호 → 되물음 · 상황 셋 · 위치) · 솜씨 · 하루 한 번
 //   ③ 병원·보건소: 나은 이웃 몸 + 인사 · 응급 처치 문제 셋(틀림 → 다시) · 20:00 = 문 닫음(안 들어감) ④ 보호센터: 밥 주기(초콜릿·틀린 사료 → 까닭) → 밥그릇 참 · 다시 E = 오늘 벌써 · 다시 들어가도 참 · 다음 날 빔
 //   ⑤ 방 E 자리 모두 닿음(indoor.check) · 문 E로 나가기 · 페이지 오류 0
+//   ⑥ 은행(BANK-1): 문 이름표·J「저금」· 넣기(지갑 −·통장 +·한 줄)·반 넣기·꺼내기 · 살림 솜씨 하루 한 번 · 통장 판 · 7일 뒤 이자 한 줄 · 17:00 문 닫음
+//   ⑦ 우체국: 창구 E = 물건 → 이웃 → 지도 보고 주소 칸(틀림 = 힌트) → 소포 값 → 저울 위 상자 · 같은 날 다시 = 한 줄 · 다음 날 아침 한 줄 → 받는 이웃 곁 = 말풍선 + 하트 · 20:00 창구 닫음(방은 들어감)
 const { chromium } = require('./pw.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null;
@@ -75,6 +77,46 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await E('bd:feed', () => said('벌써 밥을')); ok(await waitSaid('벌써 밥을') && !(await panel()), '다시 E = 「오늘은 벌써 밥을 먹었어요」 (창 X)');
     await leave(); ok(await enter(sh), '다시 들어감'); ok((await BI()).cur.food === true, '다시 들어가도 밥그릇 참'); await leave();
     await ev(() => { SM_TOWN.game().S.day += 1; }); ok(await enter(sh), '다음 날 들어감'); ok((await BI()).cur.food === false, '다음 날 = 밥그릇 빔(또 줄 수 있음)'); await leave();
+    // ⑥ 은행
+    { const LB = await ev(() => SM_TOWN.indoor.list().filter(q => q.kind === 'bank')); ok(LB.length >= 1, '은행 ' + LB.length + '곳이 들어감(' + LB.map(q => q.name).join(' · ') + ')');
+      const labs2 = await ev(() => SD2.map.interact.list().map(h => h.label).filter(t => /들어가기 — /.test(t || '')));
+      ok(labs2.some(t => /은행 · 저금하기/.test(t)) && labs2.some(t => /우체국 · 소포 보내기/.test(t)), '문 E 이름표 「은행 · 저금하기」 · 「우체국 · 소포 보내기」');
+      for (const [q, re] of [['저금', '은행'], ['소포', '우체국']]) { await closeAll(); await p.keyboard.press('KeyJ'); await W8(700); const r = await ev(q => { const i = document.querySelector('.twn-p .jq'); if (!i) return null; i.value = q; i.dispatchEvent(new Event('input')); const jr = document.querySelector('.twn-p .jr'); return jr ? jr.innerText : ''; }, q); ok(r && new RegExp(re).test(r), 'J 검색 「' + q + '」 → ' + (r || '-').split('\n').slice(0, 2).join(' ')); }
+      await closeAll(); await ev(() => { const G = SM_TOWN.game().S; G.min = 11 * 60; G.money = 5000; }); const bk = LB[0];
+      ok(await enter(bk), bk.name + ' 들어감'); I = await BI(); ok(I.cur && I.cur.k === 'bank' && I.cur.extra.some(q => q.k === 'bd:bank') && I.cur.extra.some(q => q.k === 'bd:board'), '은행 방 · E = 저금하기 · 내 통장 판'); await checkRoom('은행');
+      const tr0 = await xp('trade'); await E('bd:bank', async () => ((await panel()) || {}).k === 'bdbank'); P = await panel(); ok(P && /저금하기/.test(P.t) && /아직 적힌 줄/.test(P.t) && /이자/.test(P.t), 'E = 저금 창(지갑·통장 막대 · 빈 통장 · 낱말 상자)');
+      const mb = () => ev(() => [SM_TOWN.game().S.money, (SM_TOWN.game().S.bldg.bank || {}).bal | 0, ((SM_TOWN.game().S.bldg.bank || {}).hist || []).length]);
+      await ev(() => document.querySelector('.twn-p button[data-d="1000"]').click()); await W8(250); let M = await mb(); ok(M[0] === 4000 && M[1] === 1000 && M[2] === 1, '1,000원 넣기 = 지갑 5,000 → 4,000 · 통장 1,000 · 한 줄 (' + M.join(',') + ')');
+      P = await panel(); ok(/넣음/.test(P.t) && /1,000원을 넣고/.test(P.t), '창 안 통장 표에 「넣음」 줄 · 은행원 한 줄'); const tr1 = await xp('trade'); ok(tr1 > tr0, '살림 솜씨 + (' + tr0 + ' → ' + tr1 + ')');
+      await ev(() => document.querySelector('.twn-p button[data-d="half"]').click()); await W8(250); M = await mb(); ok(M[0] === 2000 && M[1] === 3000, '반 넣기 = 지갑 2,000 · 통장 3,000 (' + M.join(',') + ')'); ok((await xp('trade')) === tr1, '같은 날 또 넣어도 솜씨 그대로(하루 한 번)');
+      const ea0 = await ev(() => SM_TOWN.game().S.earned); await ev(() => document.querySelector('.twn-p button[data-w="1000"]').click()); await W8(250); M = await mb(); ok(M[0] === 3000 && M[1] === 2000 && M[2] === 3, '1,000원 꺼내기 = 지갑 3,000 · 통장 2,000 (' + M.join(',') + ')');
+      ok((await ev(() => SM_TOWN.game().S.earned)) === ea0, '꺼내기는 번 돈으로 셈하지 않음(옮김)'); await closeAll();
+      ok((await ev(() => SM_TOWN.bldg().dbg.board())) > 1000, '벽 「내 통장」 판(캔버스) 그림');
+      await E('bd:board', async () => ((await panel()) || {}).k === 'bdboard'); P = await panel(); ok(P && /통장에 있는 돈/.test(P.t) && /꺼냄/.test(P.t), '통장 판 보기 = 남은 돈 · 줄'); await closeAll(); await leave();
+      await ev(() => { const G = SM_TOWN.game().S; G.bldg.bank.wk = G.day - 7; }); ok(await enter(bk), '7일 뒤 다시 들어감'); M = await mb(); const H9 = await ev(() => SM_TOWN.game().S.bldg.bank.hist.slice(-1)[0]);
+      ok(M[1] === 2040 && H9 && H9[1] === 'int' && H9[2] === 40, '이자 한 줄(통장 2,000 → 2,040 · 100원에 2원꼴) ' + JSON.stringify(H9)); ok(await waitSaid('이자'), '「이자 … 통장에 붙었어요」 한 줄'); await leave();
+      await ev(() => { SM_TOWN.game().S.min = 17 * 60; }); await ev(id => SM_TOWN.indoor.enter(id), bk.id); await W8(1500); ok(!(await ev(() => SM_TOWN.indoor.on)) && await waitSaid('문을 닫았어요'), '17:00 은행 = 「문을 닫았어요 · 09:00에 열어요」 (안 들어감)'); await ev(() => { SM_TOWN.game().S.min = 11 * 60; }); }
+    // ⑦ 우체국
+    { const LP = await ev(() => SM_TOWN.indoor.list().filter(q => q.kind === 'post')); ok(LP.length >= 1, '우체국 ' + LP.length + '곳이 들어감'); const po = LP[0];
+      await ev(() => { const G = SM_TOWN.game().S; G.min = 11 * 60; G.money = 3000; G.bag['🍓'] = 3; }); const D1 = await ev(() => SM_TOWN.game().S.day);
+      ok(await enter(po), po.name + ' 들어감'); I = await BI(); ok(I.cur && I.cur.k === 'post' && I.cur.extra.some(q => q.k === 'bd:post') && I.cur.box === false, '우체국 방 · 1번 창구 E = 소포 보내기 · 저울 위 빔'); await checkRoom('우체국');
+      const ex2 = await xp('explore'); await E('bd:post', async () => ((await panel()) || {}).k === 'bdpost'); P = await panel(); ok(P && /무엇을 보낼까요/.test(P.t) && /딸기/.test(P.t), 'E = 소포 창(1/4 물건 · 가방 딸기)');
+      await ev(() => document.querySelector('.twn-p button[data-e="🍓"]').click()); await W8(200); P = await panel(); const nbN = await ev(() => document.querySelectorAll('.twn-p button[data-n]').length); ok(/누구에게/.test(P.t) && nbN >= 2, '2/4 받을 이웃 ' + nbN + '명(일꾼 역할 · ' + P.t.split('\n').filter(t => /일꾼/.test(t)).slice(0, 3).join(' / ') + ')');
+      await ev(() => document.querySelector('.twn-p button[data-n="0"]').click()); await W8(300); P = await panel(); const cvH = await ev(() => { const c = document.querySelector('.twn-p canvas.bd-map'); return c ? c.height : 0; }); ok(/주소를 써요/.test(P.t) && cvH > 100, '3/4 주소 = 창 안 지도(칸 글자 · 빨간 점) + 칸 고르기');
+      const want = ((await BI()).dbg.filter(t => /^addr /.test(t)).pop() || '').slice(5), cs = await ev(() => [...document.querySelectorAll('.twn-p button[data-c]')].map(b9 => b9.dataset.c)); ok(want && cs.includes(want) && cs.length >= 2, '칸 보기 ' + cs.join('·') + ' (맞는 칸 ' + want + ')');
+      const bad = cs.find(c => c !== want); if (bad) { await ev(c => document.querySelector('.twn-p button[data-c="' + c + '"]').click(), bad); await W8(200); ok(/빨간 점에서/.test(((await panel()) || {}).t || ''), '틀린 칸 = 지도 읽는 힌트'); }
+      await ev(c => document.querySelector('.twn-p button[data-c="' + c + '"]').click(), want); await W8(250); P = await panel(); ok(P && /소포 값/.test(P.t) && new RegExp(want + ' 칸').test(P.t), '4/4 = 보내는 물건 · 받는 사람 · 주소 칸 · 소포 값');
+      await ev(() => document.querySelector('.twn-p button[data-p]').click()); await W8(300); P = await panel(); const G1 = await ev(() => { const G = SM_TOWN.game().S; return { m: G.money, b: G.bag['🍓'] | 0, box: (G.bldg.post.box || []).slice() }; });
+      ok(G1.m === 2500 && G1.b === 2 && G1.box.length === 1 && G1.box[0].cell === want && G1.box[0].d === D1, '보냄 = 돈 −500 · 딸기 −1 · 소포 한 개(' + want + ' 칸)'); ok(P && /내일/.test(P.t) && /주소/.test(P.t) && /우편/.test(P.t), '끝 = 내일 닿는다는 말 + 낱말 상자(주소·우편)');
+      I = await BI(); ok(I.cur.box === true, '저울 위에 소포 상자가 보임'); ok((await xp('explore')) > ex2, '탐험 솜씨 +'); await closeAll();
+      await E('bd:post', () => said('벌써 받았어요')); ok(await waitSaid('벌써 받았어요') && !(await panel()), '같은 날 다시 E = 「오늘 소포는 벌써 받았어요」 (창 X)');
+      await leave(); ok(await enter(po), '다시 들어감'); ok((await BI()).cur.box === true, '다시 들어가도 상자 그대로'); await leave();
+      const q0 = G1.box[0], h0 = await ev(k => (SM_TOWN.game().S.hearts || {})[k] || 0, q0.to);
+      await ev(() => { SM_TOWN.game().S.day += 1; }); ok(await waitSaid('닿았어요'), '다음 날 = 「보낸 소포가 ' + want + ' 칸 … 닿았어요」 한 줄');
+      await tpA([q0.x + 2.5, q0.g, q0.z + 2.5]); let okd = false; for (let i = 0; i < 12 && !okd; i++) { await W8(300); okd = !!(await ev(() => (SM_TOWN.game().S.bldg.post.box || [])[0].ok)); }
+      const h1 = await ev(k => (SM_TOWN.game().S.hearts || {})[k] || 0, q0.to); ok(okd && h1 > h0, '받는 이웃 곁(10m) = 인사 · 하트 ' + h0 + ' → ' + h1); ok(await waitSaid('고맙대요'), '「… 소포를 받고 고맙대요 ❤」 한 줄');
+      ok(await enter(po), '다음 날 우체국'); ok((await BI()).cur.box === false, '닿은 뒤 = 저울 위 빔');
+      await ev(() => { SM_TOWN.game().S.min = 20 * 60; }); await E('bd:post', () => said('창구는 지금 문을')); ok(await waitSaid('창구는 지금 문을') && !(await panel()), '20:00 = 방은 들어가고 창구 E만 「문을 닫았어요」'); await leave(); await ev(() => { SM_TOWN.game().S.min = 11 * 60; }); }
     if (SHOTS) { const seen = {}; for (const q of L) { if (seen[q.kind]) continue; seen[q.kind] = 1; await enter(q); const R9 = await ev(() => SM_TOWN.indoor.room); if (q.kind === 'shelter') await ev(() => { const G = SM_TOWN.game().S; G.bldg.shelter.fed = G.day; }); if (q.kind === 'shelter') { await leave(); await enter(q); }
       await tpA([R9.at[0], R9.at[1], R9.at[2] + R9.D / 2 - 1.6]); await ev(a => SD2.map.player.lookAt([a[0], a[2] - 60]), R9.at); await W8(1800); await p.screenshot({ path: SHOTS + '/bldg_' + q.kind + '.png' });
       await tpA([R9.at[0] - R9.W / 2 + 1.6, R9.at[1], R9.at[2] + 0.5]); await ev(a => SD2.map.player.lookAt([a[0] + 60, a[2] - 10]), R9.at); await W8(1500); await p.screenshot({ path: SHOTS + '/bldg_' + q.kind + '_r.png' }); await leave(); } }
