@@ -11,7 +11,7 @@
 //   렉: 매 프레임 = 보이는 것만(몸 넷까지 자리 · 김 덩이 · 전구 무늬 밀기 · 리본 흔들기) · 새 객체 X(스크래치) · 1초 칸에서 거리 컷·누가 보일지 고름 · 새 Light X(빛 = MeshBasicMaterial)
 //     그리기: 몸 1(인스턴스 하나 · town_worker.js) · 김 1(인스턴스 하나) · 간판 2(영화관만) · 입간판·이정표·리본 = 보일 때만 하나씩(100~130m 컷)
 //   지킴: 이웃 = 이름 없는 몸 · 판타지 X · 실제 상표 X · 소리는 배경(작게 · 가까이서만)
-import { makeWorkerMesh } from './town_worker.js?v=6';
+import { makeWorkerMesh } from './town_worker.js?v=7';
 import { BD_HRS, POST_HRS, bldgKind } from './town_bldg.js?v=9';
 
 export const CUE_V = 1;

@@ -69,6 +69,7 @@ export function srcOf(k, o) { o = o || {};
   if (k === 'night') return o.k === 'mkt' ? 'food' : o.k === 'patrol' ? 'safe' : null;
   if (k === 'janggu') return o.s != null ? 'show' : null;
   if (k === 'busk') return 'show';
+  if (k === 'season') return o.ev === 'done' && BR[o.b] ? o.b : null;   /* SEASON-1 계절 행사를 다 하면 그 행사 갈래(설날 = 손님맞이 · 대보름 = 안전 · 단오 = 공연 · 추석·김장 = 음식) */
   if (k === 'table') return o.ph === 'end' ? 'show' : null;
   if (k === 'case') return o.ev === 'fixed' ? 'safe' : null;
   if (k === 'fix') return o.ev === 'rep' ? 'safe' : null;

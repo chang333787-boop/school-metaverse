@@ -160,7 +160,7 @@ export function makeWorkerMesh(T3, L, RL) {
   L.forEach((w, i) => { const R0 = RL[w.role] || {}, R1 = ROLE[w.role] || ROLE.guest, S9 = R0.sh || [0x7fb8d0], c9 = w.ch != null ? w.ch : i;   /* NB-0: 대표 몸 = 이웃 열쇠 해시(ch)로 옷·피부·머리 색 — 새로고침·다시 짓기에도 늘 같은 얼굴 */
     PH[i * 4] = w.ph || 0; PH[i * 4 + 1] = WK_ACT[R1[0]]; PH[i * 4 + 2] = TOOL[R1[1]]; PH[i * 4 + 3] = R0.hat == null ? 0 : (R0.hs || 1);
     PA[i * 4] = pi(S9[c9 % S9.length]); PA[i * 4 + 1] = pi(R0.pa ?? 0x3b4a5c); PA[i * 4 + 2] = pi(R0.hat ?? 0xe8d38a) + 64 * pi(CROP[w.k] ?? 0x9bd46e); PA[i * 4 + 3] = (4 + (c9 * 5 + 1) % SKIN.length) * 16 + (c9 * 7 + 2) % HAIR.length; });
-  const PH0 = PH.slice(), aPh = PH.slice(), aPal = PA.slice(), at = new T3.InstancedBufferAttribute(aPh, 4), ap = new T3.InstancedBufferAttribute(aPal, 4); at.setUsage(T3.DynamicDrawUsage); ap.setUsage(T3.DynamicDrawUsage); g.setAttribute('aPh', at); g.setAttribute('aPal', ap); g.userData.keep = true;   // keep = 칸을 다시 채우므로 배열을 비우지 않음(town.js GEOS)
+  const PA0 = PA.slice(), PH0 = PH.slice(), aPh = PH.slice(), aPal = PA.slice(), at = new T3.InstancedBufferAttribute(aPh, 4), ap = new T3.InstancedBufferAttribute(aPal, 4); at.setUsage(T3.DynamicDrawUsage); ap.setUsage(T3.DynamicDrawUsage); g.setAttribute('aPh', at); g.setAttribute('aPal', ap); g.userData.keep = true;   // keep = 칸을 다시 채우므로 배열을 비우지 않음(town.js GEOS)
   const U = { value: 0 }, UP = { value: Array.from({ length: 40 }, (_, k) => new T3.Color(PAL[k] ?? 0xffffff)) };   // 팔레트 40칸(역할 옷 색을 다 넣어도 30 안팎)
   const mat = new T3.MeshLambertMaterial({ vertexColors: true, emissive: 0x16110c });   // 옅은 자체광 = 주인공처럼 그늘이 탁하지 않게
   mat.onBeforeCompile = sh => { sh.uniforms.uT = U; sh.uniforms.uPal = UP; sh.vertexShader = VS_HEAD + sh.vertexShader.replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>' + VS_POSE).replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed = wP;').replace('#include <color_vertex>', '#include <color_vertex>' + VS_COL); };
@@ -185,6 +185,9 @@ export function makeWorkerMesh(T3, L, RL) {
     actOf: i => PH[i * 4 + 1],   /* ASK-1 지금 몸짓(가리키기를 되돌릴 때 다른 몸짓이 들어왔나) */
     toolOf: i => PH[i * 4 + 2], palOf: i => [PA[i * 4], PA[i * 4 + 1], PA[i * 4 + 2], PA[i * 4 + 3]],   /* NB-1 지금 연장 · 색 칸(시험: 같은 이웃 = 같은 색) */   // 역할 동작·연장으로 되돌림
     hat(i, on) { const v = on ? PH0[i * 4 + 3] : 0; if (PH[i * 4 + 3] === v) return; PH[i * 4 + 3] = v; const j = SLOT[i]; if (j >= 0) { aPh[j * 4 + 3] = v; at.needsUpdate = true; } },   // WAKE-1b 모자 벗기기·씌우기(바람에 날아간 모자 — 크기 0 = 셰이더가 접음)
+    dress(i, d) { const o = i * 4, pk = hex => { let k = PAL.indexOf(hex); if (k < 0) { if (PAL.length >= 40) return -1; k = PAL.length; PAL.push(hex); UP.value[k].setHex(hex); } return k; };   /* SEASON-1 옷 색 바꾸기(한복 · 방화복) [윗옷, 아래옷, 머리색 칸?] · null = 원래 옷 */
+      let a = PA0[o], b = PA0[o + 1], c = PA0[o + 3]; if (d) { a = pk(d[0]); b = pk(d[1]); if (a < 0 || b < 0) return; if (d[2] != null) c = PA0[o + 3] - (PA0[o + 3] % 16) + d[2]; }
+      if (PA[o] === a && PA[o + 1] === b && PA[o + 3] === c) return; PA[o] = a; PA[o + 1] = b; PA[o + 3] = c; const j = SLOT[i]; if (j >= 0) { aPal[j * 4] = a; aPal[j * 4 + 1] = b; aPal[j * 4 + 3] = c; ap.needsUpdate = true; } },
     vis(i, on) { if (!on === !!hid[i]) return; hid[i] = on ? 0 : 1; dirty = true; },   // 계절 문(워터파크 손님) 숨김 — 다음 near()에서 칸 다시 채움
     dispose() { g.dispose(); mat.dispose(); } };
 }
