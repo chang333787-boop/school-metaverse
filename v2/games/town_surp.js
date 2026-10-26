@@ -46,7 +46,7 @@ const SURP = [
   { id: 'windglide', ic: '💨', land: '화산', at: [{ k: 'crater', r: 100 }, { re: /전망대|정상/, r: 60 }], when: { wind: 1 }, how: 'umb', n: 8, fx: 'none', sk: 'explore',
     t: T2('바람을 타고 멀리', 'Carried by the wind'), fact: T2('바람 센 날 펼친 우산은 바람 부는 쪽으로 밀려요. 놀이에서만! 진짜로 하면 다쳐요', 'On a windy day an open umbrella is pushed the way the wind blows. Only in the game! It is dangerous for real'),
     log: T2('바람 센 날 높은 곳에서 우산을 펴고 뛰니 바람 쪽으로 멀리 밀려갔어요', 'On a windy day, jumped with the umbrella and drifted far with the wind') },
-  { id: 'mist', ic: '🌫', land: '들', at: { re: /^호수$|연못/, r: 48 }, when: { m: [360, 540], rainY: 1, wx: '!rain' }, how: 'walk', fx: 'mist', sk: 'look',
+  { id: 'mist', ic: '🌫', land: '들', at: { re: /^호수$|연못/, r: 62 }, /* 호수 물 반지름이 45m 안팎 — 48이면 걸을 수 있는 둘레가 3m 띠뿐이라 62(물가 길 15m 띠) */ when: { m: [360, 540], rainY: 1, wx: '!rain' }, how: 'walk', fx: 'mist', sk: 'look',
     t: T2('물안개', 'Morning mist'), fact: T2('비 온 다음 날 아침엔 밤새 식은 공기 위로 물이 김을 올려 안개가 껴요', 'The morning after rain, the water sends up vapour into the cool night air and mist forms'),
     log: T2('비 온 다음 날 아침 물가를 걷는데 물 위로 안개가 피어올랐어요', 'Walking by the water the morning after rain, mist rose off the water') },
   { id: 'frogs', ic: '🐸', land: '들', at: { re: /농수로|논/, r: 40 }, when: { night: 1, sea: ['spring', 'summer'] }, how: 'still', n: 4, fx: 'frogs', sk: 'look',

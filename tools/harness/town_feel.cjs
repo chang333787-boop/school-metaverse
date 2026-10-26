@@ -84,7 +84,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       ok(r.pop === 1 && r.tone === 2, "마을 map.sfx('pop') = 낮은 두 음 (예전엔 소리 0)"); }
 
     // ── 7. 설정 '소리 끄기' = 부름 0(연출은 그대로) ──
-    await W8(1500); { const r = await ev(async () => { const M = await import('/v2/js/settings.js?v=2'), was = M.SET.mute; M.setSet({ mute: true }); const a = SM_TOWN.feel().info(); SM_TOWN.feel().stamp('시험'); const z = SM_TOWN.feel().info(); M.setSet({ mute: was }); return { d: (z.snd.tone - a.snd.tone) + (z.snd.sfx - a.snd.sfx), muted: z.snd.muted - a.snd.muted, fx: z.g.stamp.fx - a.g.stamp.fx }; });
+    await W8(1500); { const r = await ev(async () => { const M = await import(performance.getEntriesByType('resource').map(q => q.name).find(n => /\/v2\/js\/settings\.js/.test(n)) || '/v2/js/settings.js'), was = M.SET.mute; M.setSet({ mute: true }); const a = SM_TOWN.feel().info(); SM_TOWN.feel().stamp('시험'); const z = SM_TOWN.feel().info(); M.setSet({ mute: was }); return { d: (z.snd.tone - a.snd.tone) + (z.snd.sfx - a.snd.sfx), muted: z.snd.muted - a.snd.muted, fx: z.g.stamp.fx - a.g.stamp.fx }; });
       ok(r.d === 0 && r.muted === 1 && r.fx === 1, '소리 끄기 = 소리 부름 0 · 도장 연출은 그대로'); }
 
     // ── 8. 그리기·화면 ──
