@@ -4,6 +4,7 @@
 //   유비식 X: 아이콘·물음표·'몇 칸 중'·% 0 — 찾는 길은 세상 단서(움직임·소리·비) · 지어내지 않음: 새 건물·명소·실명 인물 0 · 판타지 X
 //   이 파일 위쪽(자료·규칙·고르기)은 순수 함수 — Node 하네스(tools/harness/town_cells.cjs)와 게임이 같은 함수를 씀
 export const CK_V = 1;
+import { seaLinesOf } from './town_sea4.js?v=1';   /* SEA4-1 바다·모래사장 칸 할 거리(같은 줄을 haveOf에 셈) */
 const HG = '가나다라마바사아자차카타파하';
 export const FAMS = ['생', '손', '사'];
 export const SEAS = ['spring', 'summer', 'autumn', 'winter'];
@@ -122,6 +123,7 @@ export function haveOf(s) { const it = [], add = (t, f, on, free) => it.push({ t
   if (P('mudflat') >= 50) add('갯벌 관찰', '생');
   if (/green:park/.test(s.zs)) add('민들레', '손', E => !E.rain && wk(E) && E.s <= 1);
   if (/flowers/.test(s.ar)) add('꽃밭 물 주기', '손', null, 1);
+  for (const l of seaLinesOf(s)) add(l.t[0], l.f, l.on(s));   /* SEA4-1 게·물때선·물때 표·구명조끼·갈매기·떠다니는 것·항로 표지(town_sea4.js) */
   return it; }
 
 // ───────── 고르기(순수) — 칸 하나 · 그날 E · can(줄) = 게임에선 실제 자리를 찾았나(Node = 늘 참) ─────────
@@ -510,7 +512,7 @@ export function createCellKit(A) {
   const api = { get on() { return on && !off; }, isOn: (n, id) => isOn(n, id), today: n => { const C9 = CEL[n]; if (C9) full(C9); return today(n).slice(); }, cond: () => cond(),
     info: () => ({ on, off, buildMs, left: QUE.length, secMs: +secMs.toFixed(3), secMax: +secMax.toFixed(3), cells: Object.keys(CEL).length, slots: SLOT.reduce((a, b) => a + b, 0), shadow: SHM ? SHM.m.count : 0, inst: [...INST.values()].map(I => ({ k: I.k, st: I.st, d: +I.d.toFixed(1), sl: I.sl, hot: !!I.h, ex: +I.ex.toFixed(1), ez: +I.ez.toFixed(1) })) }),
     can: () => { allFull(); const o = {}; for (const C9 of Object.values(CEL)) if (C9.can.size) o[C9.n] = [...C9.can]; return o; }, spot: (n, id) => CEL[n] && (full(CEL[n]), CEL[n].sp[id]) ? { ...CEL[n].sp[id], e: ePos(id, CEL[n].sp[id]) } : null,
-    box: n => CEL[n] && CEL[n].box.slice(), audit, off: v => { off = !!v; tkey = ''; TODAY.clear(); if (off) clearInst(); sec(); return off; },
+    box: n => CEL[n] && CEL[n].box.slice(), list: () => Object.values(CEL).map(C9 => ({ n: C9.n, box: C9.box, s: C9.s })), audit,   /* SEA4-1 칸 서명·네모(town_sea4.js) */ off: v => { off = !!v; tkey = ''; TODAY.clear(); if (off) clearInst(); sec(); return off; },
     force: E => { forced = E ? { s: E.s | 0, rain: !!E.rain, night: !!E.night, day: E.day ?? S().day } : null; tkey = ''; TODAY.clear(); sec(); return cond(); },
     use: k => { const I = INST.get(k); if (I) use(I); return !!I; }, sec: () => sec(), tick: dt => tick(dt), sun: () => sunNow(), st: () => ST() };
   return { init, sec, tick, dispose, isOn, bugSpots, birdSpots, pdCells, api };

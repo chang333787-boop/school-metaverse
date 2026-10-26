@@ -1,7 +1,7 @@
 // 칸 키트 시험(CELLKIT-1 · docs/systems/town_cells.md §6) — Node만(브라우저 X): node tools/harness/town_cells.cjs [마을=ourtown] [--can=게임에서 받은 자리 표.json] [--v]
 //   ourtown.js 자료 + v2/games/town_cellkit.js 순수 함수로 칸마다 하루 여덟 판(계절 4 × 맑음·비) + 밤 넷을 돌림
 //   PASS: 낮 모든 뭍 칸 ≥3 · 갈래 ≥2 · 밤 ≥3 · 보이는 것(도구로만 하는 free 빼고 · 게임 실측과 같은 셈) 모든 판 ≥2 · 이웃과 키트가 통째로 같은 쌍 ≤5% · 한 판에 한 줄이 키트 칸의 1/3 넘지 않음 · 금지 낱말 0 · 윈도10에서 깨지는 이모지 0
-//   바다 칸(배로만 가는 곳)은 문서 §7 5번 '남음' — 셋이 안 되면 따로 적음(실패로 세지 않음)
+//   바다 칸(배로만 가는 곳)은 문서 §7 5번 '남음' — 밤 셋이 안 되면 따로 적음(실패로 세지 않음) · SEA4-1: 바다·모래사장 칸도 낮 ≥3 · 갈래 ≥2는 실패로 셈
 //   --can = SM_TOWN.kit.can()을 저장한 표({ 칸: [줄 id…] }) — 게임에서 실제 자리를 찾은 줄만 쓰고 다시 셈
 const path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '../..');
@@ -38,6 +38,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
   const vlow = []; for (const [k, V9] of Object.entries(vis)) for (const n of landN) if (V9[n] < 2) vlow.push(k.replace(/ /g, '') + ':' + n + ':' + V9[n]);
   ok(!vlow.length, '보이는 것(free 빼고) 열두 판 모든 뭍 칸 ≥2' + (vlow.length ? ' · 모자람 ' + vlow.slice(0, 30).join(' ') + (vlow.length > 30 ? ' …' + vlow.length : '') : ''));
   console.log('  판마다 보이는 것 0~1 칸(뭍 · 바다 남음 빼고): ' + Object.entries(vis).map(([k, V9]) => k + ' ' + landN.filter(n => V9[n] <= 1).length).join(' · '));
+  { const SEAN = Object.keys(after).filter(seaOnly), slow = SEAN.filter(n => after[n] < 3 || famMin[n] < 2); ok(!slow.length, 'SEA4-1 바다·모래사장 칸 낮 여덟 판 ≥3 · 갈래 ≥2 (' + SEAN.length + '칸' + (slow.length ? ' · 모자람 ' + slow.map(n => n + ':' + after[n] + '/갈래' + famMin[n]).join(' ') : '') + ')'); }
   if (sea5.size) console.log('  · 남음(문서 §7 5번 바다 줄 · 바다·모래사장 칸): ' + [...sea5].map(n => n + ':' + after[n] + '/밤' + nightMin[n]).join(' '));
   console.log('2. 같은 틀 복사 막기');
   const nb = n => { const s = SIG[n]; return names.filter(m => { const q = SIG[m]; return Math.abs(q.r - s.r) + Math.abs(q.c - s.c) === 1; }); };
