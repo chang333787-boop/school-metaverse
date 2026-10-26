@@ -32,7 +32,12 @@ const CSS = `.twn-p .bd-pad{display:grid;grid-template-columns:repeat(3,64px);ga
 .twn-p .bd-bar{display:grid;grid-template-columns:76px 1fr auto;gap:8px;align-items:center;margin:4px 0;font-size:15px}.twn-p .bd-bar i{display:block;height:18px;border:2px solid var(--ink,#2b2420);border-radius:4px;min-width:2px}
 .twn-p .bd-pb{width:100%;border-collapse:collapse;font-size:14px;margin:6px 0;background:#fff}.twn-p .bd-pb td,.twn-p .bd-pb th{border:1px solid #c9b27a;padding:3px 6px;text-align:right}.twn-p .bd-pb td:first-child,.twn-p .bd-pb th:first-child,.twn-p .bd-pb td:nth-child(2){text-align:left}
 .twn-p .bd-two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0}.twn-p .bd-two button{min-height:48px;font-size:15px}
-.twn-p canvas.bd-map{display:block;width:100%;max-width:340px;margin:6px auto;border-radius:8px;cursor:pointer}`;
+.twn-p canvas.bd-map{display:block;width:100%;max-width:340px;margin:6px auto;border-radius:8px;cursor:pointer}
+.twn-p .bd-cmp{display:grid;grid-template-columns:repeat(3,64px);gap:6px;justify-content:center;margin:6px 0}.twn-p .bd-cmp button{min-height:44px;font-size:15px;padding:0}.twn-p .bd-cmp i{display:flex;align-items:center;justify-content:center;font:900 13px/1 sans-serif;color:#8a8f99;font-style:normal}
+.twn-p .bd-wl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0}.twn-p .bd-wl button{min-height:86px;padding:6px 4px;font-size:14px;line-height:1.3}.twn-p .bd-wl b{display:block;width:54px;height:32px;margin:0 auto 6px;border:2px solid #2b2420;border-radius:6px}
+.twn-p .bd-env{background:#fffdf5;border:2px solid #c9b27a;border-radius:6px;padding:10px 14px;margin:6px 0;font-size:15px;line-height:1.7;position:relative}.twn-p .bd-env .wet{filter:blur(3px);color:#6a7c94;background:#c9d6e6;border-radius:6px}
+.twn-p .bd-ph{max-width:260px;margin:6px auto;background:#1c2128;border-radius:18px;padding:12px}.twn-p .bd-ph div{background:#f2f4f7;border-radius:10px;padding:8px 10px;font-size:14px;line-height:1.5}.twn-p .bd-ph small{display:block;color:#c0c6cc;margin-bottom:6px}
+.twn-p canvas.bd-bill{display:block;width:100%;max-width:320px;margin:6px auto}.twn-p .bd-rule{font-size:13px;background:#eef6f1;border:2px solid #2f6d5a;border-radius:8px;padding:6px 10px;margin:6px 0}`;
 
 // 112 연습 상황(실제 신고 번호 규칙만 · 무섭게 쓰지 않음)
 const SIT = [
@@ -100,6 +105,34 @@ const MUSE = [
 ];
 const MUX = [-3.6, -1.2, 1.2, 3.6], MUZ = -1.4;   /* 박물관 받침대 자리 */
 
+// ───────── DEPTH-1 창구 손님(깊이 표 ③ 대상 · 사용자 10-25 '열 번째에도 다르게') ─────────
+//   판마다 다른 사람이 찾아옴(이름 없는 역할 · 몸 있음): 경찰서 = 길 묻는 관광객·잃은 지갑·자전거 등록 · 병원 = 넘어진 아이 보호자·벌에 쏘인 이웃·더위 먹은 할아버지 보호자
+//     은행 = 찢어진 돈을 가져온 어린이·통장 잃은 어르신·이상한 문자를 받은 이웃 · 우체국 = 주소가 틀린 편지·비에 젖은 편지·소포 싸기 · 박물관 = 생김새·오늘날·쓰임으로 묻는 손님
+//   같은 갈래도 사정(v)이 달라 답이 바뀜(벌 쏘임 = 침이 보이면 긁어 빼기 · 숨이 차면 119) → 답을 외워 풀 수 없음 · 판단 = 그 창 안에서 본 것(지도·봉투·지폐·가져온 것·받침대)
+//   고르기 = 날짜 씨앗 + 어제 손님과 다른 갈래 + 최근 두 손님과 다른 손님 · 틀리면 벌·점수 X — 손님이 까닭을 들어 되물음 + 10분이 지남 · 보상 = 그 건물 하루 한 번 문(reward) 그대로
+export const VTYPE = { police: ['tour', 'wallet', 'bike'], clinic: ['kid', 'bee', 'heat'], bank: ['bill', 'lost', 'sms'], post: ['addr', 'wet', 'pack'], museum: ['shape', 'today', 'use'] };
+const VNUM = { tour: 3, wallet: 4, bike: 3, kid: 2, bee: 3, heat: 2, bill: 3, lost: 2, sms: 3, addr: 3, wet: 2, pack: 3, shape: 4, today: 4, use: 4 };   /* 갈래마다 사정 수 */
+const VAT = { police: [1.7, -1.75], clinic: [-0.9, -1.85], bank: [1.75, -1.8], post: [0.4, 0.4], museum: [2.6, 2.0] };   /* 손님이 서는 자리(로컬 · 방 쪽을 봄) · E = 그 앞 0.85m */
+const VWHO = { tour: T2('길 묻는 관광객', 'A tourist asking the way'), wallet: T2('지갑을 잃은 손님', 'Someone who lost a wallet'), bike: T2('자전거 등록하러 온 어린이', 'A child registering a bike'),
+  kid: T2('넘어진 아이와 보호자', 'A parent with a child who fell'), bee: T2('벌에 쏘인 이웃', 'A neighbour stung by a bee'), heat: T2('할아버지를 모시고 온 보호자', 'Someone who brought their grandpa'),
+  bill: T2('찢어진 돈을 가져온 어린이', 'A child with a torn banknote'), lost: T2('통장을 잃은 어르신', 'An elder who lost a bankbook'), sms: T2('이상한 문자를 받은 이웃', 'A neighbour with a strange text'),
+  addr: T2('잘못 온 편지를 가져온 이웃', 'A neighbour with a misdelivered letter'), wet: T2('비에 젖은 편지를 가져온 집배원', 'A mail carrier with a rain-soaked letter'), pack: T2('소포를 싸러 온 손님', 'Someone wrapping a parcel'),
+  shape: T2('다른 나라에서 온 손님', 'A visitor from another country'), today: T2('손주와 온 할아버지', 'A grandpa with his grandchild'), use: T2('견학 온 어린이', 'A child on a school visit') };
+/* 몸 모양: [손님 꼴(k%3 = 0 → 어린이 키), 흰머리, 지팡이, 배낭, 곁에 선 어린이 꼴(-1 = 없음), 의자에 앉은 사람 꼴(-1 = 없음)] */
+const VLOOK = { tour: [2, 0, 0, 1, -1, -1], wallet: [5, 0, 0, 0, -1, -1], bike: [3, 0, 0, 0, -1, -1], kid: [4, 0, 0, 0, 0, -1], bee: [7, 0, 0, 0, -1, -1], heat: [5, 0, 0, 0, -1, 1],
+  bill: [9, 0, 0, 0, -1, -1], lost: [4, 1, 1, 0, -1, -1], sms: [8, 0, 0, 0, -1, -1], addr: [2, 0, 0, 0, -1, -1], wet: [1, 0, 0, 1, -1, -1], pack: [6, 0, 0, 0, -1, -1], shape: [7, 0, 0, 1, -1, -1], today: [1, 1, 1, 0, 3, -1], use: [3, 0, 0, 1, -1, -1] };
+const DIR8K = [T2('북', 'north'), T2('북동', 'north-east'), T2('동', 'east'), T2('남동', 'south-east'), T2('남', 'south'), T2('남서', 'south-west'), T2('서', 'west'), T2('북서', 'north-west')];
+const WCOL = [[T2('빨간색', 'red'), '#d9473b'], [T2('파란색', 'blue'), '#3d74c9'], [T2('갈색', 'brown'), '#8a5a34'], [T2('초록색', 'green'), '#3c9a5a']];
+const WIN = [T2('교통카드', 'a bus card'), T2('도서관 카드', 'a library card'), T2('집 열쇠', 'a house key'), T2('머리끈', 'a hair tie')];
+const BEE = [T2('쏘인 곳에 까만 침이 박혀 보여요. 조금 부었어요. 숨은 편하게 쉬어요.', 'A black stinger is stuck in the skin. It is a little swollen. Breathing is easy.'),
+  T2('침은 보이지 않아요. 쏘인 곳이 빨갛게 부었어요. 숨은 편하게 쉬어요.', 'No stinger can be seen. It is red and swollen. Breathing is easy.'),
+  T2('숨쉬기가 힘들다고 해요. 입술과 얼굴이 부어올라요.', 'They say it is hard to breathe. The lips and face are swelling up.')];
+const BEEC = [T2('카드처럼 납작한 것으로 침을 긁어 빼고 차갑게 대요', 'Scrape the stinger out with something flat like a card, then cool it'), T2('차가운 것을 대고 지켜봐요', 'Put something cold on it and keep watching'), T2('바로 119에 알려요', 'Call 119 straight away'), T2('손가락으로 침을 꽉 집어 빼요', 'Pinch the stinger out with fingers')];
+const BEEW = [T2('침이 안 보이는데 긁으면 더 아프기만 할 것 같아요.', 'There is no stinger to see. Scraping would only hurt more.'), T2('숨쉬기가 너무 힘들대요. 차갑게 대는 것보다 더 급한 것 같아요.', 'It is so hard to breathe. This seems more urgent than cooling it.'), T2('숨은 편하게 쉬어요. 여기서 먼저 해 줄 수 있는 게 있지 않을까요?', 'Breathing is easy. Isn’t there something we can do here first?'), T2('손가락으로 꽉 집으면 침 속 독이 더 들어간대요.', 'Pinching it pushes more venom in, they say.')];
+const MCLUE = { shape: [T2('둥근 돌 두 개가 포개져 있고, 위 돌에 구멍과 손잡이가 있었어요', 'two round stones on top of each other, with a hole and a handle on the top one'), T2('납작하고 긴 돌 위에 나무 방망이 두 개가 있었어요', 'a long flat stone with two wooden bats on it'), T2('나무로 짠 틀에 어깨끈 두 개가 달려 있었어요', 'a wooden frame with two shoulder straps'), T2('작은 그릇 위에 심지가 꽂혀 있었어요', 'a small bowl with a wick sticking out')],
+  today: [T2('요즘 믹서기가 하는 일을 옛날에 하던 물건', 'the thing that did a blender’s job long ago'), T2('요즘 다리미가 하는 일을 옛날에 하던 물건', 'the thing that did an iron’s job long ago'), T2('요즘 수레나 트럭이 하는 일을 옛날에 하던 물건', 'the thing that did a cart’s or truck’s job long ago'), T2('요즘 전등이 하는 일을 옛날에 하던 물건', 'the thing that did an electric light’s job long ago')],
+  use: [T2('곡식을 넣고 손잡이를 돌려 가루로 만든 물건', 'the thing you put grain in and turned by the handle to make flour'), T2('빨래한 옷감을 두드려 구김을 편 물건', 'the thing for beating washed cloth smooth'), T2('무거운 짐을 등에 지고 나른 물건', 'the thing for carrying heavy loads on your back'), T2('밤에 기름을 태워 방을 밝힌 물건', 'the thing that burned oil to light a room at night')] };
+
 // 마을 쪽이 넘기는 것(A): GAME · T3 · lang() · esc · openP(h, wide, kind) · closeP() · panelOpen() · say(t, s) · sfx(k) · dialog(o) · bubble(o, t) · skUp(k, n, src) · rec(k, o) · open(h0, h1)
 //   은행·우체국(BANK-1): money() · pay(v) · refund(v) · won(v) · bag() · items · itemName(e) · take(e) · nbs() · heartTo(hk, n, src) · me() · mapGrid(cv, pts) · parts(fn)
 //   BLDG-3: addHot(h)(방 안 E 하나 더 · 나가면 같이 치움) · table(놀이, { who })(town_table.js 판 놀이 창) · 시계 = GAME.waitMin(분)
@@ -122,7 +155,7 @@ export function createBldg(A) {
   // ───────── 바깥(town.js) 연결 ─────────
   function tip(k) { return TIP[k] ? L(TIP[k]) : ''; }
   function canIn(k, B9) { if (!BD_HRS[k] || open(k)) return true; const nm = (B9 && B9.name) || '', H = BD_HRS[k]; toast('🌙 ' + (en() ? nm + ' is closed now. It opens at ' + hh(H[0]) + '.' : nm + '은 지금 문을 닫았어요. ' + hh(H[0]) + '에 열어요.'), 3); return false; }
-  function opts(B9, k) { if (!TIP[k]) return {}; if (k === 'post') return { deco: (S9, made) => postDeco(S9, made, B9), onExtra: kk => use(kk) }; return { room: (at, K) => build(k, at, K, B9), onExtra: kk => use(kk) }; }
+  function opts(B9, k) { if (!TIP[k]) return {}; if (k === 'post') return { deco: (S9, made, X9) => postDeco(S9, made, B9, X9 && X9.K), onExtra: kk => use(kk) }; return { room: (at, K) => build(k, at, K, B9), onExtra: kk => use(kk) }; }
   function left() { if (A.why) A.why().roomLeft(); if (!CUR) return; if (CUR.board) { CUR.board.m.material.map.dispose(); CUR.board.m.material.dispose(); } CUR = null; }   /* 방 모양(geometry)은 town_indoor exit()이 치움 · 캔버스 재질만 여기서 */
 
   // ───────── 벽 판(캔버스 한 장 · 글이 바뀌면 다시 그림) ─────────
@@ -164,7 +197,7 @@ export function createBldg(A) {
     for (const s9 of [-1, 1]) { P('k', s9 * 0.06, 0.47, 0.27, 0.045, 0.09, 0, hex); P('b', s9 * 0.05, 0.4, 0.365, 0.03, 0.03, 0.02, 0x2b2b2b); } P('b', 0, 0.3, -0.25, 0.04, 0.3, 0.04, hex, -0.3); }   /* 고양이(뾰족 귀 · 선 꼬리) */
   const bowl = (K, S9, x, z, c) => K.part(S9, 'c16', x, 0.012, z, 0.13, 0.055, 0, c);
 
-  function build(k, at, K, B9) { left(); const name = (B9 && B9.name) || '', made = k === 'police' ? roomPolice(at, K, name) : k === 'clinic' ? roomClinic(at, K, name) : k === 'bank' ? (bankInt(), roomBank(at, K, name)) : k === 'cinema' ? roomCinema(at, K, name) : k === 'factory' ? roomFactory(at, K, name) : k === 'elder' ? roomElder(at, K, name) : k === 'museum' ? roomMuseum(at, K, name) : roomShelter(at, K, name); CUR = { k, at, name, door: B9 && B9.door ? [+B9.door[0], +B9.door[1]] : null, made, board: made.board || null, food: made.food || null, prod: made.prod || null, stars: made.stars || null, play: null }; boardDraw(); log('build ' + k); return made; }
+  function build(k, at, K, B9) { left(); const name = (B9 && B9.name) || '', made = k === 'police' ? roomPolice(at, K, name) : k === 'clinic' ? roomClinic(at, K, name) : k === 'bank' ? (bankInt(), roomBank(at, K, name)) : k === 'cinema' ? roomCinema(at, K, name) : k === 'factory' ? roomFactory(at, K, name) : k === 'elder' ? roomElder(at, K, name) : k === 'museum' ? roomMuseum(at, K, name) : roomShelter(at, K, name); CUR = { k, at, name, door: B9 && B9.door ? [+B9.door[0], +B9.door[1]] : null, made, board: made.board || null, food: made.food || null, prod: made.prod || null, stars: made.stars || null, play: null }; boardDraw(); visPlace(k, made, K); log('build ' + k); return made; }
   function roomPolice(at, K, name) { const W = 11, D = 9, H = 3.4, hw = W / 2, hd = D / 2, [ox, oy, oz] = at, seats = [], navy = 0x2b3a5c;
     const S9 = K.shell(at, W, D, H, { wall: 0xf1f3f6, wains: navy, winY: [], noLights: true, ft: ['tile', 1.0, 0xe9edf2] }), P = S9.put; S9.ac = K.cs(navy);
     { const cx = -1.0, zc = -hd + 1.5; P('b', cx, 0, zc, 4.4, 1.0, 0.6, 0xf6f4ee); P('b', cx, 0.1, zc + 0.306, 4.3, 0.5, 0.012, 0x3d5a8a); P('b', cx, 1.0, zc, 4.46, 0.04, 0.66, 0xd8dce0); K.colL(S9, cx, zc, 2.23, 0.33, -0.5, 1.1);   // 민원 창구 탁자
@@ -242,11 +275,11 @@ export function createBldg(A) {
       extra: [{ k: 'bd:bank', stand: [-1.75, 0, -hd + 2.35], r: 1.3, label: '🏦 ' + L(TIP.bank) }, { k: 'bd:board', stand: [hw - 1.0, 0, -0.6], r: 1.2, label: '📒 ' + (en() ? 'Read my bankbook board' : '내 통장 판 보기') }, ...(A.why ? [{ k: 'why:tk', stand: [-4.4, 0, -hd + 0.95], r: 0.9, label: '🎫 ' + (en() ? 'Take a number' : '번호표 뽑기') }, { k: 'why:atm', stand: [hw - 1.05, 0, 2.7], r: 0.9, label: '🏧 ' + (en() ? 'Cash machine' : '현금 지급기') }] : [])], cam: { d: 3.8, p: 0.55 } }; }
 
   // 우체국(town_indoor.js 방 그대로): 1번 창구(직원 앞) = 소포 접수 E · 보낸 날엔 저울 위에 소포 상자(합친 부품 1 · 다음 날 아침 닿으면 사라짐)
-  function postDeco(S9, made, B9) { left(); const [ox, oy, oz] = S9.at, x = -2.98, z = -2.525, D = day(), s = S().post;
+  function postDeco(S9, made, B9, K) { left(); const [ox, oy, oz] = S9.at, x = -2.98, z = -2.525, D = day(), s = S().post;
     const box = A.parts(put => { put('b', ox + x, oy + 1.10, oz + z, 0.26, 0.2, 0.22, 0xc8945a); put('b', ox + x, oy + 1.30, oz + z, 0.06, 0.012, 0.23, 0xd9b27a); put('b', ox + x, oy + 1.15, oz + z + 0.112, 0.14, 0.08, 0.004, 0xffffff); });   /* 상자 · 테이프 · 주소 쪽지(앞면 2mm 앞 — 같은 면 X) */
     box.visible = (s.box || []).some(q => q.d === D && !q.ok); (S9.extra || (S9.extra = [])).push(box);
     (made.extra || (made.extra = [])).push({ k: 'bd:post', stand: [-3.33, 0, -1.55], r: 1.2, label: '📦 ' + L(TIP.post) });
-    CUR = { k: 'post', at: S9.at, name: (B9 && B9.name) || '', made, board: null, box, door: B9 && B9.door ? B9.door.slice(0, 2) : null }; log('build post'); }
+    CUR = { k: 'post', at: S9.at, name: (B9 && B9.name) || '', made, board: null, box, door: B9 && B9.door ? B9.door.slice(0, 2) : null }; made.S = made.S || S9; visPlace('post', made, K); log('build post'); }   /* K = town_indoor 부품(deco 셋째 칸 · 창구 손님 몸) */
 
 
   // ───────── BLDG-3 방(로컬 = 방 가운데 · 문 = 앞벽 +z) ─────────
@@ -313,7 +346,7 @@ export function createBldg(A) {
     return { S: S9, W, D, H, seats, items: ['받침대 넷(맷돌 · 다듬잇돌과 방망이 · 지게 · 호롱)', '알아본 표(금빛)', '학예사(이름 없음)', '내가 알아본 옛 물건 판'], board, stars, extra: ex, cam: { d: 3.8, p: 0.55 } }; }
 
   // ───────── E ─────────
-  function use(kk) { if (!CUR || A.panelOpen()) return; if (/^why:/.test(kk)) return A.why && A.why().use(kk); if (/^pth:/.test(kk)) return A.pathUse && A.pathUse(kk); if (kk === 'bd:112') return police(); if (kk === 'bd:aid') return clinic(); if (kk === 'bd:hi') return greet(); if (kk === 'bd:feed') return feed(); if (kk === 'bd:bank') return bank(); if (kk === 'bd:post') return post(); if (kk === 'bd:board') return readBoard(); if (kk === 'bd:ticket') return cinema(); if (kk === 'bd:seat') return seatUse(); if (kk === 'bd:line') return factory(); if (kk === 'bd:elder') return elder(); if (kk === 'bd:gonu') return gonu(); if (/^bd:mu\d$/.test(kk)) return museum(+kk.slice(5)); }
+  function use(kk) { if (!CUR || A.panelOpen()) return; if (/^why:/.test(kk)) return A.why && A.why().use(kk); if (/^pth:/.test(kk)) return A.pathUse && A.pathUse(kk); if (kk === 'bd:vis') return visOpen(); if (kk === 'bd:112') return police(); if (kk === 'bd:aid') return clinic(); if (kk === 'bd:hi') return greet(); if (kk === 'bd:feed') return feed(); if (kk === 'bd:bank') return bank(); if (kk === 'bd:post') return post(); if (kk === 'bd:board') return readBoard(); if (kk === 'bd:ticket') return cinema(); if (kk === 'bd:seat') return seatUse(); if (kk === 'bd:line') return factory(); if (kk === 'bd:elder') return elder(); if (kk === 'bd:gonu') return gonu(); if (/^bd:mu\d$/.test(kk)) return museum(+kk.slice(5)); }
   const pick = (L9, n, seed) => L9.map((x, i) => [hashS(seed + ':' + i), x]).sort((a, b) => a[0] - b[0]).slice(0, n).map(q => q[1]);
   const shuf = (L9, seed) => L9.map((x, i) => [hashS(seed + ':' + L(x[1] || x)), x, i]).sort((a, b) => a[0] - b[0]);
   const wordBox = k => '<div class="bd-wd">' + WORDS[k].map(w => '<div>📖 <b>' + esc(L(w[0])) + '</b> = ' + esc(L(w[1])) + '</div>').join('') + '</div>';
@@ -527,6 +560,130 @@ export function createBldg(A) {
       mis++; sfx('tick'); W9.msg(e ? 'Curator: “Look closely at its shape. What could it hold, turn or carry?”' : '학예사: "생김새를 잘 봐요. 무엇을 담거나, 돌리거나, 나를 수 있을까요?"'); };
     log('museum ' + k); }
 
+  // ───────── DEPTH-1 창구 손님 ─────────
+  const hasB = w => { const c = String(w).trim().slice(-1).charCodeAt(0) - 0xac00; return c >= 0 && c < 11172 && c % 28 !== 0; };   /* 받침 있음 → 이에요·이·은 */
+  const ieyo = w => w + (hasB(w) ? '이에요' : '예요'), iga = w => w + (hasB(w) ? '이' : '가'), eun = w => w + (hasB(w) ? '은' : '는');
+  const uniqNb = () => { const seen = new Set(); return (A.nbs() || []).filter(q => q && q.hk && q.cell && !seen.has(q.hk) && seen.add(q.hk)); };
+  const tourList = () => { const dr = CUR && CUR.door; if (!dr) return []; const off = q => { const a = Math.atan2(q.x - dr[0], -(q.z - dr[1])) / (Math.PI / 4); return Math.abs(a - Math.round(a)) * 45; };   /* 방위 가운데에서 벗어난 각(도) */
+    const L9 = uniqNb().filter(q => Math.hypot(q.x - dr[0], q.z - dr[1]) >= 45).sort((a, b) => (a.hk < b.hk ? -1 : 1)), C9 = L9.filter(q => off(q) <= 14); return C9.length >= 2 ? C9 : L9; };   /* 두 방위 사이에 걸친 곳(애매한 답)은 빼고 */
+  const cellList = () => { const out = [], cells = new Set(); for (const q of nbPick(day()).all) { if (cells.has(q.cell)) continue; cells.add(q.cell); out.push(q); } return out; };   /* 우체국 곁 이웃(칸이 서로 다른 것만) */
+  const visOk = (k, t) => (t === 'tour' ? tourList().length > 0 : t === 'addr' || t === 'wet' ? cellList().length >= 3 : true);
+  function visPick(k, D) { const s = S()[k], T9 = VTYPE[k]; if (!T9) return null; if (s.vt && s.vt.d === D) return s.vt;
+    const H9 = Array.isArray(s.vh) ? s.vh : [], lastT = H9.length ? String(H9[H9.length - 1]).split(':')[0] : '';
+    let types = T9.filter(t => t !== lastT && visOk(k, t)); if (!types.length) types = T9.filter(t => visOk(k, t)); if (!types.length) return null;
+    const cand = []; for (const t of types) for (let v = 0; v < VNUM[t]; v++) { const id = t + ':' + v; if (!H9.slice(-2).includes(id)) cand.push(id); }
+    if (!cand.length) return null; const id = cand.map(q => [hashS('vis:' + k + ':' + D + ':' + q), q]).sort((a, b) => a[0] - b[0])[0][1];
+    s.vt = { d: D, id, p: hashS('vp:' + k + ':' + D) % 997 }; s.vh = H9.concat([id]).slice(-6); mark(); return s.vt; }   /* 오늘 손님 = 들어갈 때 한 번 정함(같은 날은 같은 손님) */
+  function visPlace(k, made, K) { if (!VTYPE[k] || !K || !CUR || !made || !made.S) return; const D = day(), s = S()[k]; let vt = null; try { vt = visPick(k, D); } catch (x9) { vt = null; } CUR.vis = vt; if (!vt) return; if (s.vok === D) { CUR.visGone = true; return; }   /* 오늘 손님은 도와드린 뒤 돌아감 */
+    const S9 = made.S, [ox, oy, oz] = S9.at, [lx, lz] = VAT[k], t = vt.id.split(':')[0], Lk = VLOOK[t], ad = Lk[0] % 3 ? 1 : 0.75;
+    K.standGuest(S9, ox + lx, oy, oz + lz, 0, Lk[0]);
+    if (Lk[1]) K.part(S9, 's', lx, 1.54 * ad, lz, 0.163 * ad, 0.75, 0, 0xdcdcdc);   /* 흰머리(머리카락 공보다 조금 큼) */
+    if (Lk[2]) K.part(S9, 'b', lx + 0.3, 0, lz + 0.14, 0.03, 0.86 * ad, 0.03, 0x6b4a2f);   /* 지팡이 */
+    if (Lk[3]) K.part(S9, 'b', lx, 0.86 * ad, lz - 0.23, 0.28 * ad, 0.36 * ad, 0.12, [0x3d74c9, 0xe0453a, 0x3c9a5a][vt.p % 3]);   /* 배낭(등에 닿음) */
+    if (Lk[4] >= 0) K.standGuest(S9, ox + lx + 0.55, oy, oz + lz + 0.1, 0, Lk[4]);   /* 곁에 선 어린이 */
+    if (Lk[5] >= 0 && made.seats && made.seats.length && K.sitGuest) K.sitGuest(S9, made.seats, 0, Lk[5]);   /* 기다리는 의자에 앉은 할아버지 */
+    CUR.visAt = [ox + lx, oy + 1.7 * ad, oz + lz];
+    (made.extra || (made.extra = [])).push({ k: 'bd:vis', stand: [lx, 0, lz + 0.85], r: 1.0, label: '🙋 ' + (en() ? 'Visitor: ' : '찾아온 손님 — ') + L(VWHO[t]) }); log('vis ' + k + ' ' + vt.id); }
+  const billDraw = (cv, n) => { const g = cv.getContext('2d'), W = cv.width, H = cv.height, x0 = 16, y0 = 14, w = W - 32, h = H - 28, cw = w / 5, chh = h / 4, kept = (c, r) => c * 4 + r < n;
+    g.fillStyle = '#f6f9fc'; g.fillRect(0, 0, W, H); g.setLineDash([5, 4]); g.strokeStyle = '#8a8f99'; g.lineWidth = 1.5; g.strokeRect(x0, y0, w, h); g.setLineDash([]);
+    for (let c = 0; c < 5; c++) for (let r = 0; r < 4; r++) if (kept(c, r)) { g.fillStyle = (c + r) % 2 ? '#bfe0c4' : '#b3d8b9'; g.fillRect(x0 + c * cw, y0 + r * chh, cw + 0.5, chh + 0.5); }
+    g.strokeStyle = 'rgba(43,36,32,.25)'; g.lineWidth = 1; for (let c = 1; c < 5; c++) { g.beginPath(); g.moveTo(x0 + c * cw, y0); g.lineTo(x0 + c * cw, y0 + h); g.stroke(); } for (let r = 1; r < 4; r++) { g.beginPath(); g.moveTo(x0, y0 + r * chh); g.lineTo(x0 + w, y0 + r * chh); g.stroke(); }
+    g.fillStyle = '#2f6d5a'; g.font = '900 22px ' + FONT; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(en() ? '1,000' : '천 원', x0 + 10, y0 + chh * 0.6); g.font = '700 12px ' + FONT; g.fillStyle = '#5a6a60'; g.fillText(en() ? 'dotted line = whole note' : '점선 = 원래 크기', x0 + 6, y0 + h - 10); };
+  const bikeSvg = (fr, st, lk, v) => { const F = v === 1 ? '<g transform="translate(121 88) rotate(-76)"><rect x="-26" y="-7" width="52" height="14" rx="3" fill="#2b2420"/><text x="0" y="4" font-size="10" fill="#fff" text-anchor="middle">' + fr + '</text></g>' : v === 2 ? '<rect x="104" y="128" width="52" height="14" rx="3" fill="#2b2420"/><text x="130" y="139" font-size="10" fill="#fff" text-anchor="middle">' + fr + '</text>' : '<g transform="translate(165 90) rotate(-34)"><rect x="-26" y="-7" width="52" height="14" rx="3" fill="#2b2420"/><text x="0" y="4" font-size="10" fill="#fff" text-anchor="middle">' + fr + '</text></g>';
+    return '<svg viewBox="0 0 300 160" style="width:100%;max-width:320px;display:block;margin:6px auto;background:#f6f9fc;border-radius:8px" aria-hidden="true"><circle cx="70" cy="115" r="34" fill="none" stroke="#2b2420" stroke-width="5"/><circle cx="222" cy="115" r="34" fill="none" stroke="#2b2420" stroke-width="5"/>'
+      + '<path d="M70 115 L130 118 L115 55 L200 60 L130 118 M70 115 L115 55 M200 60 L222 115" stroke="#3d74c9" stroke-width="6" fill="none" stroke-linejoin="round"/><rect x="100" y="44" width="32" height="9" rx="4" fill="#2b2420"/><path d="M200 60 L196 44 L212 40" stroke="#2b2420" stroke-width="5" fill="none"/>'
+      + '<rect x="206" y="44" width="52" height="30" fill="#d9b27a" stroke="#8a5a34" stroke-width="2"/><rect x="217" y="51" width="30" height="16" fill="#fff" stroke="#e0453a" stroke-width="2"/><text x="232" y="63" font-size="11" text-anchor="middle">' + st + '</text>'
+      + '<rect x="40" y="128" width="40" height="18" rx="5" fill="#f2c230" stroke="#2b2420" stroke-width="2"/><text x="60" y="141" font-size="11" text-anchor="middle">' + lk + '</text>' + F + '</svg>'; };
+  function visCase(k, vt) { const e = en(), [t, v0] = vt.id.split(':'), v = +v0, p = vt.p | 0, sp = (ko, e9) => (e ? e9 : ko), O = (ok, h, w) => ({ ok: ok ? 1 : 0, h, w: w || '' });
+    const C = { t, v, who: L(VWHO[t]), ask: '', view: '', after: null, ch: [], thx: '', sk: { police: 'explore', clinic: 'work', bank: 'trade', post: 'explore', museum: 'look' }[k] };
+    if (t === 'tour') { const L9 = tourList(), q = L9.length ? L9[(p + v * 7) % L9.length] : null, dr = CUR && CUR.door; if (!q || !dr) return null; const a = Math.atan2(q.x - dr[0], -(q.z - dr[1])), di = ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
+      C.ask = sp('관광객: "' + q.who + ' 계신 곳에 가 보고 싶어요. 지도로 보면 여기서 어느 쪽이에요?"', 'Tourist: “I want to visit the ' + q.who + '. On the map, which way is it from here?”');
+      C.view = '<canvas class="bd-map" width="340" height="220"></canvas><div class="sm">' + esc(sp('빨간 점 = 가고 싶은 곳 · 노란 점 = 여기 · 위가 북쪽', 'Red dot = where they want to go · yellow dot = here · up is north')) + '</div>';
+      C.after = P => { const cv = P.querySelector('canvas.bd-map'); if (cv) try { A.mapGrid(cv, [{ x: q.x, z: q.z, label: q.icon, main: true }, { x: dr[0], z: dr[1], label: e ? 'Here' : '여기' }]); } catch (x9) { /* 지도 없음 */ } };
+      C.cmp = true; C.ch = DIR8K.map((d, j) => O(j === di, esc(L(d)), sp('관광객: "' + L(d) + '쪽이요? 노란 점에서 빨간 점을 보면 그쪽이 아닌 것 같아요. 지도는 위가 북쪽이지요?"', 'Tourist: “' + L(d) + '? From the yellow dot the red dot doesn’t look that way. Up is north, right?”')));
+      C.thx = sp('관광객: "' + L(DIR8K[di]) + '쪽이군요! 지도 보는 법도 알았어요. 고마워요!"', 'Tourist: “' + L(DIR8K[di]) + ', then! Thank you!”'); C.ans = di; }
+    else if (t === 'wallet') { const c0 = v % 4, i0 = (p + v) % 4, c1 = (c0 + 1 + (p % 3)) % 4, i1 = (i0 + 1 + ((p >> 2) % 3)) % 4, cn = j => L(WCOL[j][0]), it = j => L(WIN[j]);
+      C.ask = sp('손님: "지갑을 잃어버렸어요. 쪽지에 적어 왔어요. 주운 물건 상자에 제 것이 있을까요?"', 'Visitor: “I lost my wallet. I wrote it down. Is mine in the lost-and-found box?”');
+      C.view = '<div class="bd-sit">' + esc(sp('손님 쪽지 — 색: ' + cn(c0) + ' · 안에 든 것: ' + it(i0), 'Note — colour: ' + cn(c0) + ' · inside: ' + it(i0))) + '</div><div class="sm">' + esc(sp('주운 물건 상자', 'Lost-and-found box')) + '</div>'; C.grid = true;
+      const card = (c, i) => '<b style="background:' + WCOL[c][1] + '"></b>' + esc(sp('안에: ', 'Inside: ') + it(i));
+      C.ch = [O(1, card(c0, i0)), O(0, card(c0, i1), sp('손님: "색은 맞는데 안에 든 것이 달라요. 제 지갑엔 ' + iga(it(i0)) + ' 들어 있어요."', 'Visitor: “The colour is right, but mine has ' + it(i0) + ' inside.”')), O(0, card(c1, i0), sp('손님: "안에 든 것은 같은데, 제 지갑은 ' + ieyo(cn(c0)) + '."', 'Visitor: “Same thing inside, but mine is ' + cn(c0) + '.”'))];
+      C.thx = sp('손님: "맞아요, 제 지갑이에요! 색도 안에 든 것도 꼼꼼히 봐 줘서 고마워요."', 'Visitor: “That’s mine! Thank you for checking so carefully.”'); }
+    else if (t === 'bike') { const fr = 'KB' + (1000 + (p * 7 + v * 131) % 9000), st = String(10 + (p * 3 + v) % 89), lk = String(1000 + (p * 13 + v * 77) % 9000).slice(-4);
+      C.ask = sp('어린이: "자전거를 잃어버렸을 때 찾을 수 있게 번호를 적어 내래요. 어떤 번호를 적어요?"', 'Child: “They want a number so they can find my bike if it gets lost. Which number do I write?”');
+      C.view = bikeSvg(fr, st, lk, v) + '<div class="sm">' + esc(sp('자전거에 보이는 번호 셋', 'Three numbers on the bike')) + '</div>';
+      C.ch = [O(1, esc(fr)), O(0, esc(st), sp('어린이: "그건 바구니에 붙인 스티커예요. 스티커는 떼어지면 없어지잖아요. 떼어지지 않는 번호가 있을까요?"', 'Child: “That’s a sticker on the basket. Stickers can come off. Is there a number that can’t?”')), O(0, esc(lk), sp('어린이: "앗, 그건 자물쇠 번호예요! 자물쇠 번호는 남에게 알려 주면 안 되잖아요."', 'Child: “Oh, that’s my lock code! I shouldn’t tell anyone that.”'))];
+      C.thx = sp('어린이: "자전거 몸에 새긴 번호구나! 이건 떼어지지도 않고 자전거마다 달라요. 고마워요!"', 'Child: “The number stamped on the frame! It never comes off and every bike has its own. Thanks!”'); }
+    else if (t === 'kid') { C.ask = sp('보호자: "아이가 놀이터에서 넘어져 무릎이 살짝 까졌어요. 무엇부터 해 줄까요?"', 'Parent: “My child fell at the playground and scraped a knee a little. What do we do first?”');
+      C.view = '<div class="bd-sit">' + esc(v ? sp('아이 무릎: 집에서 깨끗한 물로 씻고 왔어요. 흙은 없어요.', 'Knee: already washed with clean water at home. No dirt.') : sp('아이 무릎: 흙과 모래가 묻어 있어요.', 'Knee: there is dirt and sand on it.')) + '</div>';
+      C.ch = [O(!v, esc(sp('깨끗한 물로 흙을 씻어 내요', 'Wash the dirt off with clean water')), sp('보호자: "벌써 깨끗이 씻고 왔어요. 그다음은요?"', 'Parent: “We already washed it. What next?”')), O(v, esc(sp('깨끗한 밴드로 덮어요', 'Cover it with a clean plaster')), sp('보호자: "흙이 묻은 채로 덮으면 흙이 안에 갇힐 것 같아요. 먼저 무엇을 할까요?"', 'Parent: “If we cover it with dirt on, the dirt gets trapped. What first?”')), O(0, esc(sp('침을 발라 줘요', 'Put spit on it')), sp('보호자: "입 안에는 세균이 많대요. 다른 방법은요?"', 'Parent: “Mouths are full of germs, they say. Another way?”'))];
+      C.thx = v ? sp('보호자: "깨끗한 밴드로 덮었어요. 고마워요!"', 'Parent: “Covered with a clean plaster. Thank you!”') : sp('보호자: "흙부터 씻어 내야 덧나지 않는군요. 씻고 밴드를 붙일게요. 고마워요!"', 'Parent: “Wash the dirt off first so it doesn’t get worse. Thank you!”'); }
+    else if (t === 'bee') { C.ask = sp('이웃: "밭일하다 벌에 쏘였어요. 어떻게 하면 좋을까요?"', 'Neighbour: “A bee stung me in the field. What should I do?”'); C.view = '<div class="bd-sit">' + esc(L(BEE[v])) + '</div>';
+      const why = j => (j === 3 ? BEEW[3] : v === 2 ? BEEW[1] : j === 0 ? BEEW[0] : j === 2 ? BEEW[2] : T2('침이 아직 박혀 있어요. 침부터 빼야 하지 않을까요?', 'The stinger is still in. Shouldn’t it come out first?'));
+      C.ch = BEEC.map((q, j) => O(j === v, esc(L(q)), sp('이웃: "', 'Neighbour: “') + L(why(j)) + sp('"', '”')));
+      C.thx = v === 2 ? sp('간호사 선생님: "숨이 차거나 얼굴이 부으면 몸 전체가 놀란 거예요. 바로 119에 알린 게 맞아요."', 'Nurse: “Trouble breathing or a swelling face means the whole body is reacting. Calling 119 straight away was right.”') : sp('이웃: "한결 나아요. 고마워요!"', 'Neighbour: “That feels much better. Thank you!”'); }
+    else if (t === 'heat') { C.ask = sp('보호자: "할아버지가 더운 밭에서 오셔서 어지럽대요. 의자에 앉아 계세요."', 'Carer: “Grandpa came in from a hot field and feels dizzy. He is sitting on the chair.”');
+      C.view = '<div class="bd-sit">' + esc(v ? sp('할아버지: 불러도 대답이 흐려요. 어리둥절해하세요.', 'Grandpa: he answers only faintly and seems confused.') : sp('할아버지: 말을 또렷하게 하세요. 얼굴이 빨갛고 땀을 많이 흘려요.', 'Grandpa: he speaks clearly. His face is red and he is sweating a lot.')) + '</div>';
+      C.ch = [O(!v, esc(sp('시원한 곳에서 물을 조금씩 드려요', 'Cool place, and sips of water')), sp('보호자: "대답도 흐린데 물을 드려도 될까요? 사레들릴 것 같아요."', 'Carer: “He can hardly answer. Is water safe? He might choke.”')), O(v, esc(sp('물은 드리지 말고 바로 119에 알려요', 'No water, call 119 straight away')), sp('보호자: "말씀은 또렷하게 하세요. 여기서 먼저 식혀 드릴 수 있지 않을까요?"', 'Carer: “He speaks clearly. Can’t we cool him down here first?”')), O(0, esc(sp('뜨거운 차를 드려요', 'Give him hot tea')), sp('보호자: "더위를 먹었는데 뜨거운 차는 몸을 더 덥힐 것 같아요."', 'Carer: “He has heat sickness. Hot tea would warm him up even more.”'))];
+      C.thx = v ? sp('간호사 선생님: "정신이 흐리면 아무것도 먹이지 않고 119를 기다려요. 잘 골랐어요."', 'Nurse: “If someone is not fully awake, give nothing and wait for 119. Good choice.”') : sp('보호자: "그늘에서 물을 조금씩 드시니 한결 나아지셨어요. 고마워요!"', 'Carer: “Shade and sips of water, and he is much better. Thank you!”'); }
+    else if (t === 'bill') { const n = [16, 9, 3][v] + (p % 4); C.ans = n;
+      C.ask = sp('어린이: "돼지 저금통에서 꺼낸 천 원이 찢어졌어요. 이것도 저금할 수 있어요?"', 'Child: “The 1,000-won note from my piggy bank is torn. Can I still save it?”');
+      C.view = '<canvas class="bd-bill" width="320" height="150"></canvas><div class="bd-rule">' + esc(sp('은행 안내판 — 찢어진 돈 바꾸기: 남은 부분이 4분의 3 넘으면 전부 · 5분의 2 넘으면 반 · 그보다 적으면 못 바꿔요', 'Bank notice — torn notes: more than 3/4 left = full value · more than 2/5 left = half · less = cannot be changed')) + '</div>';
+      C.after = P => { const cv = P.querySelector('canvas.bd-bill'); if (cv) billDraw(cv, n); };
+      const re = sp('어린이: "음… 남은 칸이 안내판 글과 맞아요? 점선 칸과 다시 견줘 봐 줄래요?"', 'Child: “Hmm… does what is left match the notice? Compare it with the dotted outline again?”');
+      C.ch = [O(v === 0, esc(sp('천 원 그대로 넣어요', 'Save the full 1,000 won')), re), O(v === 1, esc(sp('반값(오백 원)만 넣어요', 'Save half (500 won)')), re), O(v === 2, esc(sp('바꿀 수 없어요', 'It cannot be changed')), re)];
+      C.thx = [sp('어린이: "거의 다 남아서 천 원 그대로래요. 저금했어요!"', 'Child: “Almost all of it is left, so it counts in full!”'), sp('어린이: "반쯤 남아서 반값이구나. 다음엔 돈을 아껴 다룰래요."', 'Child: “About half is left, so half value. I will be more careful.”'), sp('어린이: "조금밖에 안 남아서 못 바꾸는구나. 다음엔 지갑에 잘 넣을래요."', 'Child: “So little is left it can’t be changed. I’ll keep notes in a wallet.”')][v]; }
+    else if (t === 'lost') { C.ask = sp('어르신: "통장을 잃어버렸어요. 어떻게 해야 하지요?"', 'Elder: “I have lost my bankbook. What should I do?”');
+      C.view = '<div class="bd-sit">' + esc(sp('어르신이 가져온 것: 지갑 · 도장' + (v ? '' : ' · 신분증'), 'The elder brought: wallet · seal' + (v ? '' : ' · ID card'))) + '</div>';
+      C.ch = [O(!v, esc(sp('잃은 통장을 못 쓰게 먼저 신고하고, 신분증으로 새 통장을 만들어요', 'Report the lost bankbook first so nobody can use it, then make a new one with the ID card')), sp('어르신: "어머, 오늘은 신분증을 안 가져왔는데요?"', 'Elder: “Oh dear, I didn’t bring my ID card today.”')),
+        O(v, esc(sp('잃은 통장을 못 쓰게 먼저 신고하고, 신분증을 가지고 다시 오시라고 해요', 'Report it first, then ask them to come back with an ID card')), sp('어르신: "신분증은 여기 가져왔어요. 오늘 바로 만들 수 없을까요?"', 'Elder: “I have my ID card right here. Can’t we do it today?”')),
+        O(0, esc(sp('통장이 없어도 돈을 그냥 내드려요', 'Just hand over the money without a bankbook')), sp('어르신: "아무것도 안 보고 돈을 주면, 다른 사람이 제 돈을 가져갈 수도 있겠네요?"', 'Elder: “If you hand money out without checking, someone else could take mine, couldn’t they?”'))];
+      C.thx = v ? sp('어르신: "신고부터 해 두니 마음이 놓여요. 내일 신분증 가지고 올게요."', 'Elder: “I feel better now it is reported. I’ll bring my ID card tomorrow.”') : sp('어르신: "신고하고 새 통장까지 만들었어요. 고마워요!"', 'Elder: “Reported and a new bankbook already. Thank you!”'); }
+    else if (t === 'sms') { const M9 = [[sp('모르는 번호', 'Unknown number'), sp('엄마, 나야. 휴대폰이 고장 나서 친구 폰으로 보내. 급하니까 이 통장으로 돈 좀 보내 줘.', 'Mum, it’s me. My phone broke so I’m using a friend’s. It’s urgent, please send money to this account.'), sp('돈을 보내 달래요', 'it asks for money')],
+        [sp('은행이라고 적힌 번호', 'A number that says “bank”'), sp('통장 확인이 필요합니다. 통장 비밀번호를 답장으로 보내 주세요.', 'We need to check your account. Reply with your PIN.'), sp('비밀번호를 보내 달래요', 'it asks for the PIN')],
+        [sp('모르는 번호', 'Unknown number'), sp('택배 주소가 잘못됐어요. 아래 주소를 눌러 고쳐 주세요. http://tb-check.example', 'Your parcel address is wrong. Tap the link below to fix it. http://tb-check.example'), sp('주소를 눌러 달래요', 'it asks you to tap a link')]][v];
+      C.ask = sp('이웃: "이런 문자가 왔어요. 어떻게 할까요?"', 'Neighbour: “I got this text. What should I do?”');
+      C.view = '<div class="bd-ph"><small>' + esc(M9[0]) + '</small><div>' + esc(M9[1]) + '</div></div>';
+      const re = sp('이웃: "이 문자는 ' + M9[2] + '. 다시 읽어 봐 줄래요?"', 'Neighbour: “This one says ' + M9[2] + '. Could you read it again?”');
+      C.ch = [O(v === 0, esc(sp('돈을 보내지 말고, 가족의 원래 번호로 직접 전화해 물어봐요', 'Don’t send money. Call the family member on their usual number')), re), O(v === 1, esc(sp('비밀번호는 아무에게도 알려 주지 않아요. 답장하지 말고 은행 창구에 알려요', 'Never give a PIN to anyone. Don’t reply, tell the bank counter')), re), O(v === 2, esc(sp('주소를 누르지 말고 문자를 지워요', 'Don’t tap the link. Delete the text')), re), O(0, esc(sp('문자가 시키는 대로 해요', 'Do what the text says')), sp('이웃: "정말 그래도 될까요? 누가 보냈는지 확실하지 않은 문자예요."', 'Neighbour: “Is that really OK? I can’t be sure who sent it.”'))];
+      C.thx = sp('은행원: "잘 골랐어요. 급하다고 재촉하는 문자일수록 한 번 멈추고 확인해요."', 'Bank clerk: “Good choice. The more a text rushes you, the more you should stop and check.”'); }
+    else if (t === 'addr' || t === 'wet') { const L9 = cellList(), n9 = L9.length, qi = (p + v) % n9, q = L9[qi], w2 = L9[(qi + 1 + (p % (n9 - 1))) % n9], o3 = L9.find(x => x !== q && x !== w2);   /* 1 + p%(n−1) = 1~n−1 칸 건너 → 늘 다른 이웃 */
+      if (t === 'addr') { C.ask = sp('이웃: "이 편지가 우리 집에 잘못 왔어요. 봉투 칸이 틀렸나 봐요. 받는 분은 지도에서 어느 칸에 계세요?"', 'Neighbour: “This letter came to my house by mistake. The cell on it must be wrong. Which cell is the person in?”');
+        C.view = '<div class="bd-env">' + esc(sp('받는 사람: ', 'To: ') + q.icon + ' ' + q.who) + '<br>' + esc(sp('주소: ' + w2.cell + ' 칸', 'Address: cell ' + w2.cell)) + '</div><canvas class="bd-map" width="340" height="220"></canvas><div class="sm">' + esc(sp('빨간 점 = 받는 분이 일하는 곳', 'Red dot = where the person works')) + '</div>';
+        C.after = P => { const cv = P.querySelector('canvas.bd-map'); C.hit = null; if (cv) try { C.hit = A.mapGrid(cv, [{ x: q.x, z: q.z, label: q.icon, main: true }]); } catch (x9) { C.hit = null; } };
+        C.ch = [O(1, esc(sp(q.cell + ' 칸', 'Cell ' + q.cell)), ''), O(0, esc(sp(w2.cell + ' 칸', 'Cell ' + w2.cell)), sp('이웃: "봉투에 적힌 칸이 그래서 우리 집에 잘못 왔어요. 빨간 점을 봐 줄래요?"', 'Neighbour: “That’s the cell on the envelope, which is why it came to me. Look at the red dot?”')), O(0, esc(sp(o3.cell + ' 칸', 'Cell ' + o3.cell)), sp('이웃: "빨간 점에서 위로 곧장 가면 글자, 왼쪽으로 곧장 가면 숫자예요."', 'Neighbour: “From the red dot, straight up is the letter and straight left is the number.”'))];
+        C.cells = [q.cell, w2.cell, o3.cell]; C.thx = sp('이웃: "' + q.cell + ' 칸이군요! 편지 나누는 칸에 바로 넣어 둘게요. 고마워요!"', 'Neighbour: “Cell ' + q.cell + '! I’ll put it in the sorting rack. Thanks!”'); }
+      else { const to = esc(sp('받는 곳: ', 'To: ') + q.icon + ' ' + q.who + ' · ' + q.cell + sp(' 칸', '')), fr = esc(sp('보내는 곳: ', 'From: ') + w2.icon + ' ' + w2.who + ' · ' + w2.cell + sp(' 칸', ''));
+        C.ask = sp('집배원: "비에 젖어 글씨가 번진 편지가 있어요. 어떻게 할까요?"', 'Mail carrier: “The rain smudged the writing on this letter. What do we do?”');
+        C.view = '<div class="bd-env">' + (v ? to + '<br><span class="wet">' + fr + '</span>' : '<span class="wet">' + to + '</span><br>' + fr) + '</div>';
+        C.ch = [O(v, esc(sp('받는 곳으로 보내요', 'Send it to the address on it')), sp('집배원: "받는 곳 글씨가 번져서 안 보여요. 어디로 보내지요?"', 'Mail carrier: “The “to” address is smudged. Where would we send it?”')), O(!v, esc(sp('보낸 사람에게 돌려보내요', 'Return it to the sender')), sp('집배원: "받는 곳은 또렷하게 보이는데요? 돌려보낼 까닭이 있을까요?"', 'Mail carrier: “The “to” address is clear. Why send it back?”')), O(0, esc(sp('아무 집 우편함에 넣어요', 'Put it in any letterbox')), sp('집배원: "아무 집에 넣으면 받는 분이 영영 못 받아요."', 'Mail carrier: “Then the right person would never get it.”'))];
+        C.thx = v ? sp('집배원: "받는 곳이 보이니 그대로 갖다드릴게요."', 'Mail carrier: “The address is clear, so I’ll deliver it.”') : sp('집배원: "보낸 분 주소는 보이니 돌려보내 다시 쓰시게 할게요."', 'Mail carrier: “The sender’s address is clear, so it goes back to be rewritten.”'); } }
+    else if (t === 'pack') { const IT9 = [sp('유리병에 든 꿀', 'Honey in a glass jar'), sp('털장갑 한 켤레', 'A pair of woolly gloves'), sp('얼린 생선', 'Frozen fish')], W9 = [[null, sp('꿀은 상하지 않아요. 유리병이 깨지지 않게 하는 게 먼저 아닐까요?', 'Honey doesn’t go off. Isn’t keeping the glass safe more important?'), sp('봉투에 그냥 넣으면 유리병이 부딪혀 깨질 것 같아요.', 'In a plain envelope the glass jar could knock and break.')], [sp('장갑은 깨지지 않아요. 너무 크게 싸면 소포만 커져요.', 'Gloves don’t break. Too much wrapping just makes it bigger.'), sp('장갑은 녹거나 상하지 않아요.', 'Gloves don’t melt or go off.'), null], [sp('깨지진 않지만 가는 동안 녹아서 상할 것 같아요.', 'It won’t break, but it could thaw and go off on the way.'), null, sp('봉투에 넣으면 가는 동안 녹아서 상할 것 같아요.', 'In an envelope it would thaw and go off.')]][v];
+      C.ask = sp('손님: "이걸 소포로 보내려는데 어떻게 쌀까요?"', 'Visitor: “I want to send this. How should I wrap it?”'); C.view = '<div class="bd-sit">' + esc(sp('보낼 것: ', 'To send: ') + IT9[v]) + '</div>';
+      const P3 = [sp("뽁뽁이로 싸고 '깨지기 쉬움' 표시를 붙여요", "Wrap it in bubble wrap and add a 'fragile' label"), sp('얼음팩과 함께 스티로폼 상자에 담아요', 'Pack it with ice packs in a foam box'), sp('종이 봉투에 그냥 담아요', 'Just put it in a paper envelope')], OK3 = [0, 2, 1][v];
+      C.ch = P3.map((h, j) => O(j === OK3, esc(h), W9[j] ? sp('손님: "', 'Visitor: “') + W9[j] + sp('"', '”') : ''));
+      C.thx = sp('우체국 직원: "보낼 물건을 보고 싸는 방법을 고르니 받는 분이 멀쩡하게 받겠어요."', 'Post clerk: “You chose the wrapping by looking at the item. It will arrive safely.”'); }
+    else { const i = v % 4, cl = L(MCLUE[t][i]); C.ask = t === 'shape' ? sp('손님: "아까 전시실에서 ' + cl + '. 그 물건 이름이 뭐예요?"', 'Visitor: “In the hall I saw ' + cl + '. What is it called?”') : t === 'today' ? sp('할아버지: "' + cl + ', 손주에게 알려 주고 싶은데 이름이 뭐였더라?"', 'Grandpa: “' + cl + ' — I want to tell my grandchild. What was it called?”') : sp('어린이: "' + iga(cl) + ' 뭐예요?"', 'Child: “What is ' + cl + '?”');
+      C.view = '<div class="sm">' + esc(sp('받침대 넷을 둘러보고 골라요.', 'Look around the four stands, then choose.')) + '</div>';
+      C.ch = MUSE.map((m, j) => O(j === i, esc(L(m[0])), sp('손님: "' + eun(L(m[0])) + ' 제가 말한 것과 달라요. 받침대를 한 번 둘러봐 줄래요?"', 'Visitor: “The ' + L(m[0]) + ' isn’t what I meant. Could you look at the stands again?”')));
+      C.thx = sp('손님: "아, ' + L(MUSE[i][0]) + '! 고마워요." 학예사: "옛날 사람들은 이것으로 ' + L(MUSE[i][1]).replace(/요$/, '요.') + '"', 'Visitor: “Ah, the ' + L(MUSE[i][0]) + '! Thank you.” Curator: “Long ago it ' + L(MUSE[i][1]).toLowerCase() + '.”'); }
+    return C; }
+  function visOpen() { const k = CUR && CUR.k, vt = CUR && CUR.vis; if (!vt) return; const s = S()[k], e = en(), D = day();
+    if (s.vok === D) { if (CUR.visAt) A.bubble({ x: CUR.visAt[0], y: CUR.visAt[1], z: CUR.visAt[2], sc: 1 }, e ? 'Thank you again!' : '다시 한번 고마워요!'); return; }
+    const C = visCase(k, vt); if (!C) { toast('🙋 ' + (e ? 'The visitor has gone home.' : '손님이 돌아갔어요.'), 2.4); return; }
+    let mis = 0, done = false, said = ''; const ORD = C.ch.map((q, j) => [hashS('vo:' + vt.id + ':' + D + ':' + j), j]).sort((a, b) => a[0] - b[0]).map(q => q[1]); CUR.visC = C;
+    const body = () => { if (done) return '<div class="bd-sit">✓ ' + C.ch.filter(q => q.ok).map(q => q.h).join('') + '</div><div class="pc-tx">' + esc(C.thx) + '</div>'; let h = '<div class="sm">' + esc(C.ask) + '</div>' + C.view;
+      if (C.cmp) h += '<div class="bd-cmp">' + [7, 0, 1, 6, -1, 2, 5, 4, 3].map(j => (j < 0 ? '<i>' + (e ? 'N ↑' : '북 ↑') + '</i>' : '<button class="sub" data-v="' + j + '">' + C.ch[j].h + '</button>')).join('') + '</div>';
+      else h += '<div class="' + (C.grid ? 'bd-wl' : 'bd-ch') + '">' + ORD.map(j => '<button class="sub" data-v="' + j + '">' + C.ch[j].h + '</button>').join('') + '</div>';
+      return h + '<div class="sm" data-m>' + esc(said) + '</div>'; };
+    const draw = () => '<h3>🙋 ' + esc(C.who) + '</h3>' + body() + '<div class="row"><button class="' + (done ? '' : 'sub') + '" data-a="x">' + (done ? (e ? 'OK' : '좋아요') : (e ? 'Close' : '닫기')) + '</button></div>';
+    const P = A.openP(draw(), false, 'bdvis'), paint = () => { const bx = P.querySelector('.bx'); (bx || P).innerHTML = draw(); if (!done && C.after) C.after(P); }; if (C.after) C.after(P);
+    const pickV = j => { const q = C.ch[j]; if (!q || done) return;
+      if (q.ok) { done = true; s.vok = D; s.vn = (s.vn | 0) + 1; mark(); sfx('ding'); reward(k, C.sk, 2); A.rec('bldg', { k, ev: 'vis', id: vt.id, mis }); if (CUR && CUR.visAt) A.bubble({ x: CUR.visAt[0], y: CUR.visAt[1], z: CUR.visAt[2], sc: 1 }, e ? 'Thank you!' : '고마워요!'); paint(); return; }
+      mis++; sfx('tick'); const m9 = now9() + 10; if (A.GAME.waitMin) A.GAME.waitMin(m9); said = q.w + (e ? ' (10 minutes passed)' : ' (10분이 지났어요)'); CUR.visMis = mis; paint(); };
+    P.onclick = ev => { const cv = ev.target.closest && ev.target.closest('canvas.bd-map'); if (cv && typeof C.hit === 'function' && C.cells && !done) { const r = cv.getBoundingClientRect(), c = C.hit((ev.clientX - r.left) * cv.width / r.width, (ev.clientY - r.top) * cv.height / r.height), j = c ? C.cells.indexOf(c) : -1; if (j >= 0) pickV(j); return; }
+      const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') { A.closeP(); return; } if (b.dataset.v != null) pickV(+b.dataset.v); };
+    log('vis open ' + vt.id); }
+
   function readBoard() { const e = en(), k = CUR.k, s = S()[k], D = day(); let body = '';
     if (k === 'police') { const n = helped('lost'); body = (s.d112 ? (e ? '★ 112 helper: practised ' + (s.n112 | 0) + ' time(s).' : '★ 112 어린이 도우미: 연습 ' + (s.n112 | 0) + '번') : (e ? 'Practise 112 calls at the counter to get your name here.' : '창구에서 112 신고 연습을 하면 여기에 붙어요.')) + '<br>' + (n ? (e ? '♥ Lost children you helped home: ' + n : '♥ 가족에게 데려다준 길 잃은 아이: ' + n + '명') : (e ? 'When a 112 call comes, help a lost child find family.' : '112 출동이 오면 길 잃은 아이의 가족을 찾아 줘요.')); }
     else if (k === 'clinic') body = (s.dfa ? (e ? '✓ Twisted ankle: keep still, cool it, raise it.<br>✓ Heat sickness: shade, water if awake, fan.' : '✓ 발목을 삐면: 움직이지 않기, 차갑게, 높이 올리기<br>✓ 더위를 먹으면: 그늘로, 정신이 또렷하면 물, 부채질') : (e ? 'Learn first aid with the nurse to fill this board.' : '간호사 선생님께 응급 처치를 배우면 이 판이 채워져요.')) + ((s.hi || []).length ? '<br>' + (e ? '♥ Neighbours who said thanks: ' : '♥ 고맙다고 한 이웃: ') + s.hi.length : '');
@@ -539,6 +696,6 @@ export function createBldg(A) {
 
   function dispose() { left(); if (css) { css.remove(); css = null; } }
   return { tip, canIn, opts, left, dispose, open, sec, facNews, facAt, facTake, facPend: () => { const f = ((A.GAME.S.bldg || {}).factory) || {}; return f.made > 0 && !(f.dl && f.dl.m === f.made); }, pend: () => { const b = (A.GAME.S.bldg || {}).post; return !!(b && Array.isArray(b.box) && b.box.some(q => q && !q.ok)); },
-    info: () => ({ cur: CUR ? { k: CUR.k, name: CUR.name, food: CUR.food ? CUR.food.visible : null, prod: CUR.prod ? CUR.prod.visible : null, stars: CUR.stars ? CUR.stars.map(g => g.visible) : null, play: CUR.play, line: CUR.made.line || null, box: CUR.box ? CUR.box.visible : null, nb: !!(CUR.made && CUR.made.nb), at: CUR.at, extra: (CUR.made.extra || []).map(h => ({ k: h.k, label: h.label, at: [CUR.at[0] + h.stand[0], CUR.at[1] + h.stand[1], CUR.at[2] + h.stand[2]] })) } : null, s: JSON.parse(JSON.stringify(S())), dbg: DBG.slice() }),
-    dbg: { use: kk => use(kk), sec: () => sec(), fac: () => facDeliv(), int: () => bankInt(), board: () => (CUR && CUR.board ? CUR.board.c.toDataURL().length : 0) } };
+    info: () => ({ cur: CUR ? { k: CUR.k, name: CUR.name, food: CUR.food ? CUR.food.visible : null, prod: CUR.prod ? CUR.prod.visible : null, stars: CUR.stars ? CUR.stars.map(g => g.visible) : null, play: CUR.play, line: CUR.made.line || null, box: CUR.box ? CUR.box.visible : null, nb: !!(CUR.made && CUR.made.nb), at: CUR.at, vis: CUR.vis ? { id: CUR.vis.id, d: CUR.vis.d, gone: !!CUR.visGone, mis: CUR.visMis | 0, ans: CUR.visC ? CUR.visC.ch.findIndex(q => q.ok) : -1 } : null, extra: (CUR.made.extra || []).map(h => ({ k: h.k, label: h.label, at: [CUR.at[0] + h.stand[0], CUR.at[1] + h.stand[1], CUR.at[2] + h.stand[2]] })) } : null, s: JSON.parse(JSON.stringify(S())), dbg: DBG.slice() }),
+    dbg: { use: kk => use(kk), vpick: (k, d) => visPick(k, d == null ? day() : d), vcase: () => { const C = CUR && CUR.vis ? visCase(CUR.k, CUR.vis) : null; return C ? { t: C.t, v: C.v, ans: C.ch.findIndex(q => q.ok), n: C.ch.length, cmp: !!C.cmp, cells: C.cells || null, who: C.who } : null; }, sec: () => sec(), fac: () => facDeliv(), int: () => bankInt(), board: () => (CUR && CUR.board ? CUR.board.c.toDataURL().length : 0) } };
 }

@@ -9,7 +9,8 @@ const A4 = [['', ''], ['조금 ', 'a little '], ['더 ', 'even '], ['아주 ', '
 /* 놀이 갈래(mgKind)마다: v = 칸 1~4 값(놀이 틀이 읽음) · t(k, lv) = 그 칸의 조건 한 줄 [ko, en] */
 export const LADP = {
   ripe: { v: [0, 3.4, 2.5, 1.8], t: (k, a) => (k === 'shiitake' ? ['활짝 핀 표고가 ' + a[0] + '빨리 시들어요', 'Open shiitake wilt ' + a[1] + 'fast'] : ['익은 딸기가 ' + a[0] + '빨리 물러요', 'Ripe strawberries go soft ' + a[1] + 'fast']) },   /* 익은 뒤 무르기까지 초 */
-  plant: { v: [1, 0.85, 0.72, 0.62], t: (k, a) => ['해가 ' + a[0] + '일찍 져요. 시간이 짧아요', 'The sun sets ' + a[1] + 'early — less time'] },   /* 시간 배수 */
+  plant: { v: [1, 2, 3, 4], t: (k, a, lv) => [['', ''], ['둑 눈금이 촘촘해요. 못줄 빨간 표 사이와 견줘요', 'The bank marks are finer. Compare with the red marks on the rope'], ['양쪽 둑 눈금이 서로 달라요. 줄도 넷이에요', 'The two banks have different marks. Four rows today'], ['도중에 논물이 바뀌어요. 다시 봐요', 'The water changes halfway. Look again']][lv - 1] },   /* DEPTH-1 칸 = 판단이 어려워지는 차례(눈금 꾹·시간 배수 X) */
+  toss: { v: [0, 1, 2, 3], t: (k, a, lv) => [['', ''], ['살랑 바람이 불어요. 깃발을 봐요', 'A light wind. Watch the flag'], ['바람이 세요. 낮게 던져도 밀려요', 'Strong wind. Even low throws drift'], ['항아리가 멀리 있어요. 바람을 등에 업어요', 'The pot is far. Use the wind at your back']][lv - 1] },   /* DEPTH-1 투호 = 바람 세기·항아리 거리 */
   cut: { v: [1, 0.85, 0.72, 0.62], t: (k, a) => ['비구름이 ' + a[0] + '빨리 와요. 시간이 짧아요', 'Rain clouds come ' + a[1] + 'soon — less time'] },
   comb: { v: [2, 3, 4, 5], t: (k, a, lv) => [['', ''], ['벌통 문이 있어요. 문 앞은 피해요', 'The hive has a door. Keep away from it'], ['바람이 도중에 바뀌어요. 깃발을 다시 봐요', 'The wind changes halfway. Check the flag again'], ['벌이 아주 많고 바람도 바뀌어요', 'Lots of bees, and the wind changes too']][lv - 1] },   /* JUDGE-1 벌 무리 수(2칸 = 벌통 문 · 3칸 = 여덟 자리 + 바람 바뀜) */
   dig: { v: [0, 1, 2, 3], t: (k, a) => (k === 'clam' ? ['갯벌이 ' + a[0] + '질척해요. 삽질 수가 줄어요', 'The mud is ' + a[1] + 'sticky — fewer digs'] : ['흙이 ' + a[0] + '단단해요. 삽질 수가 줄어요', 'The soil is ' + a[1] + 'hard — fewer digs']) },   /* 줄어드는 삽질 수 */
@@ -30,7 +31,7 @@ export function ladText(kind, k, lv, en) { lv = Math.max(1, Math.min(MAXL(kind),
   if (lv === 1) return head; let t = null; if (kind === 'tug') t = FISHT[lv]; else if (kind === 'fire') t = FIRET[lv]; else if (LADP[kind]) t = LADP[kind].t(k, A4[lv - 1], lv); return t ? head + ': ' + t[en ? 1 : 0] : head; }
 // 기록 이름: [놀이 이름, 모은 것, 단위]
 const RECN = { strawberry: ['딸기 따기', 'Strawberries', '딸기', '개'], shiitake: ['표고 따기', 'Shiitake', '표고', '송이'], cabbage: ['배추 거두기', 'Cabbages sorted right', '맞게 담은 배추', '포기'], potato: ['감자 캐기', 'Potatoes', '감자', '개'], clam: ['조개 캐기', 'Clams', '조개', '개'],
-  beehive: ['꿀 뜨기', 'Honey cells', '꿀 칸', '칸'], pear: ['배 봉지 씌우기', 'Pears bagged', '봉지 씌운 배', '개'], lumber: ['어린 나무 심기', 'Trees planted well', '잘 심은 나무', '그루'], plant: ['모내기', 'Seedlings on the mark', '눈금에 심은 모', '포기'], cut: ['벼 베기', 'Squares cut', '벤 칸', '칸'],
+  beehive: ['꿀 뜨기', 'Honey cells', '꿀 칸', '칸'], pear: ['배 봉지 씌우기', 'Pears bagged', '봉지 씌운 배', '개'], lumber: ['어린 나무 심기', 'Trees planted well', '잘 심은 나무', '그루'], plant: ['모내기', 'Seedlings in straight rows', '곧은 줄에 심은 모', '포기'], tuho: ['투호', 'Arrows in the pot', '항아리에 넣은 화살', '개'], cut: ['벼 베기', 'Squares cut', '벤 칸', '칸'],
   seaweed: ['김 펴기', 'Even laver sheets', '고르게 편 김', '장'], oyster: ['굴 크기 재기', 'Oysters sorted right', '바르게 나눈 굴', '개'], pasture: ['먹이 나눠 주기', 'Right feeds', '알맞게 준 먹이', '번'], fisher: ['부두 낚시', 'Fish', '물고기', '마리'], saltpan: ['소금 모으기', 'Salt piles', '모은 소금', '무더기'], cook: ['바쁜 부엌', 'Dishes just right', '알맞게 만든 요리', '그릇'], fire: ['소방 출동', 'Fire calls', '꺼 낸 불꽃', '개'] };
 export const ladName = (key, en) => { const R = RECN[key]; return R ? R[en ? 1 : 0] : key; };
 const GW = [['아쉬움', 'close'], ['잘함', 'well done'], ['아주 잘함', 'excellent']];

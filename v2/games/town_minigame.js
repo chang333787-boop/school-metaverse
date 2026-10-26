@@ -4,15 +4,15 @@
 //   끝 = 결과 3단계 + '💡 알고 있었나요?' 사실 한 줄(사실만) · 점수 0~3 = 옛 보상 표 그대로 · 실패도 경험치 1(마을 쪽) · 셈 X · 한 판 15~25초
 //   솜씨 perk 'zone'(zw 1~1.25) = 쉬워지는 쪽으로(시간 · 초록 폭 · 삽질 수 · 벌레 느리게)
 //   화면 = DOM + CSS(놀이 창이 열린 동안만 · 마을 tick이 부르는 tick(dt) 하나 — 따로 rAF X) · 입력 = down()/up()(E·스페이스·큰 단추) + key(코드, 반복)(화살표·WASD·숫자) + 누르기·끌기(마우스·터치)
-import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2'; import { mkSalt } from './town_salt.js?v=1'; import { ladVal } from './town_lad.js?v=3';   /* LADDER-2 도전 칸마다 조건 값 */   /* SALT-2 염전 꼬임 넷 */   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
+import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2'; import { mkSalt } from './town_salt.js?v=1'; import { ladVal } from './town_lad.js?v=4';   /* LADDER-2 도전 칸마다 조건 값 */   /* SALT-2 염전 꼬임 넷 */   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
 export const MG_V = 3;
 const KIND = { tuho: 'toss', fisher: 'tug', rod: 'tug', seaweed: 'spread', oyster: 'gauge', strawberry: 'ripe', shiitake: 'ripe', saltpan: 'salt', beehive: 'comb', potato: 'dig', clam: 'dig', cabbage: 'sort', pear: 'cover', lumber: 'order', pasture: 'feed' };
 export const mgKind = (k, sea) => (k === 'paddy' ? (sea === 'autumn' ? 'cut' : 'plant') : KIND[k] || 'ripe');   /* 논 = 봄 모내기 · 가을 벼 베기 */
 // 놀이 창 첫 줄 = 할 일(아이 눈 2차 '말풍선과 창 첫 줄이 같은 문장' — 말풍선은 일꾼의 말 · 창 첫 줄은 내가 할 일)
-const TASK = { plant: ['못줄 눈금에 맞춰 모를 심어요', 'Plant seedlings on the marks of the guide rope'], cut: ['콤바인으로 벼를 남김없이 베요', 'Cut all the rice with the combine'], fisher: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], rod: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], seaweed: ['얇은 곳에 반죽을 더해 고르게 펴고, 하늘을 보고 말려요', 'Add mix to thin spots to even it out, then dry it by the weather'], oyster: ['고리 자로 굴 크기를 재서 나눠요', 'Measure the oysters with the ring and sort them'],
+const TASK = { plant: ['물 높이를 보고, 못줄 말뚝을 옮겨 줄 맞춰 모를 심어요', 'Check the water, then move the rope stakes to plant straight rows'], cut: ['콤바인으로 벼를 남김없이 베요', 'Cut all the rice with the combine'], fisher: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], rod: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], seaweed: ['얇은 곳에 반죽을 더해 고르게 펴고, 하늘을 보고 말려요', 'Add mix to thin spots to even it out, then dry it by the weather'], oyster: ['고리 자로 굴 크기를 재서 나눠요', 'Measure the oysters with the ring and sort them'],
   strawberry: ['빨갛게 익은 딸기만 따요', 'Pick only the red, ripe strawberries'], shiitake: ['갓이 알맞게 핀 표고만 따요', 'Pick only shiitake with caps just right'], saltpan: ['바닷물에서 소금을 얻어요', 'Get salt from seawater'], beehive: ['바람을 보고 설 자리를 골라 연기를 피우고, 뚜껑 덮인 칸만 떠요', 'Read the wind, pick where to puff smoke, then take only the capped cells'],
   potato: ['줄기 둘레를 파서 감자를 캐요', 'Dig around the stems for potatoes'], clam: ['작은 구멍 둘 밑을 파서 조개를 캐요', 'Dig under pairs of tiny holes for clams'], cabbage: ['배추를 크기대로 세 상자에 나눠 담아요', 'Sort the cabbages into three boxes by size'], pear: ['벌레가 오기 전에 배마다 봉지를 씌워요', 'Bag every pear before the caterpillars come'],
-  lumber: ['흙을 보고 알맞은 깊이와 물로 어린 나무를 심어요', 'Read the soil and plant saplings at the right depth with the right water'], pasture: ['동물마다 알맞은 먹이를 줘요', 'Give each animal the right food'], cook: ['주문 쪽지대로 재료를 넣고, 알맞게 익으면 접시에 담아요', 'Follow the order note: add ingredients, then plate it when it’s just right'], tuho: ['화살을 던져 항아리에 넣어요', 'Toss arrows into the pot'] };
+  lumber: ['흙을 보고 알맞은 깊이와 물로 어린 나무를 심어요', 'Read the soil and plant saplings at the right depth with the right water'], pasture: ['동물마다 알맞은 먹이를 줘요', 'Give each animal the right food'], cook: ['주문 쪽지대로 재료를 넣고, 알맞게 익으면 접시에 담아요', 'Follow the order note: add ingredients, then plate it when it’s just right'], tuho: ['항아리 거리와 바람 깃발을 보고 설 자리와 높이를 골라 던져요', 'Read the pot distance and the wind flag, then pick where to stand and how high to throw'] };
 export const taskOf = (kind, k, en) => { const t = TASK[kind === 'plant' || kind === 'cut' ? kind : k]; return t ? (en ? 'To do: ' : '할 일: ') + t[en ? 1 : 0] : ''; };
 export const gradeOf = ok => (ok >= 3 ? 2 : ok >= 1 ? 1 : 0);
 const GRADE_T = [['아쉬워요! 다음엔 더 잘할 수 있어요', 'So close! You’ll get it next time'], ['잘했어요!', 'Well done!'], ['아주 잘했어요!', 'Excellent!']];
@@ -402,15 +402,79 @@ function gridCtl(gd, cols, n, onPick, o = {}) { const B = gd.querySelectorAll('.
     dispose() { gd.removeEventListener('pointerdown', pd); removeEventListener('pointermove', pm); removeEventListener('pointerup', pu); } }; }
 const timeBar = (c, T) => { c.mg.insertAdjacentHTML('beforeend', '<div class="bar tmb"><i class="tm"></i></div>'); const tm = c.mg.querySelector('.tm'); let left = T; return { tick(dt) { left -= dt; tm.style.transform = 'scaleX(' + Math.max(0, left / T).toFixed(3) + ')'; return left <= 0; }, get left() { return left; } }; };
 
-// ④ 모내기(봄 논): 못줄의 빨간 눈금 자리에 모를 꾹꾹 — 눈금 자리 = 고른 간격(잘 자람) · 눈금 밖 = 비뚤(감점) · 두 줄 열 포기
-function mkPlant(c) { const C9 = 10, N = 20, MARK = i => (i % C9) % 2 === 1, T = 20 * c.zw * (c.lp || 1); let good = 0, bad = 0;
-  c.mg.innerHTML = '<div class="rope">' + '<i></i>'.repeat(C9) + '</div>' + gridHTML(C9, N, 'paddy') + '<div class="rope">' + '<i></i>'.repeat(C9) + '</div>';
-  c.mg.querySelectorAll('.rope i').forEach((e, i) => { if (i % 2 === 1) e.className = 'k'; });   /* 못줄 눈금(빨강) = 두 칸마다 */
-  const gd = c.mg.querySelector('.gd'), TB = timeBar(c, T), st = new Array(N).fill(0);
-  const plant = i => { if (c.done || st[i]) return; if (MARK(i)) { st[i] = 1; good++; G.B[i].className = 'gc on'; G.B[i].textContent = '🌱'; c.snd('pick'); c.say(c.T('꾹! 고른 간격 ', 'Planted evenly ') + good + '/10'); if (good >= 10) c.finish(bad <= 1 ? 3 : bad <= 3 ? 2 : 1); }
-    else { st[i] = 2; bad++; G.B[i].className = 'gc off'; G.B[i].textContent = '🌱'; c.snd('pop'); c.say(c.T('삐뚤어요 — 빨간 눈금 바로 밑에 심어요', 'Off the mark — plant right under the red marks')); } G.mark(); }, G = gridCtl(gd, C9, N, plant, { sel: 1 });
-  c.say(c.T('못줄의 빨간 눈금 바로 밑에 모를 꾹꾹 (누르거나 화살표와 E)', 'Plant under each red mark on the rope (tap · arrows+E)'));
-  return { go: c.T('꾹 심기', 'Plant'), cnt: () => good, down() { plant(G.sel); }, key: code => G.key(code), tick(dt) { if (TB.tick(dt)) { const s = good - bad; c.finish(s >= 9 ? 3 : s >= 6 ? 2 : s >= 3 ? 1 : 0); } }, dispose: () => G.dispose() }; }
+// ④ 모내기(봄 논 · DEPTH-1 10-26 눈금 꾹 → 줄 맞춰 심을 자리 고르기 · 사용자 10-25 '막대·꾹 X · 적지 않은 스트레스'): 창 놀이 쪽만(봄 논 RHY 노동요는 그대로)
+//   ① 물 높이: 논 단면(흙 · 물 · 발)을 보고 고름 — 발등이 잠길 만큼 얕게 = 그대로 심기 · 흙이 드러남 = 물 대기 · 발목 위까지 깊음 = 물꼬 열어 물 빼기
+//     맞으면 물이 알맞아질 때까지 잠깐(시간) · 틀린 손질 = 더 나빠져 기다림 · 물이 안 맞는데 그대로 심음 = 이번 판에 심은 줄이 내일 뜬 모·마른 모로 남음
+//   ② 못줄 옮기기: 양쪽 논둑 눈금 말뚝을 하나씩 눌러 못줄을 걺 → 그 줄을 따라 모가 심어짐(못줄 빨간 표 = 모 사이 간격)
+//     줄 사이 = 모 사이와 같게(가로세로 고르게 → 바람·햇빛이 고루) · 양쪽을 같은 만큼 옮겨야 곧은 줄 · 다르면 비뚤어진 줄 · 좁으면 포기가 붙고 넓으면 빈 곳
+//   틀린 줄은 그대로 논에 남음(지금 창에도 비뚤게 보이고 c.x.mem[일터]에 남아 다음 날 이 논에 오면 먼저 「고쳐 심기」 = 그 줄 자리에 못줄을 바로 걸면 곧게 바뀜)
+//   사다리 = 1 굵은 눈금(한 칸 = 줄 사이) · 2 촘촘한 눈금(두 칸 = 줄 사이 · 못줄 빨간 표와 견줘야) · 3 왼쪽 굵은·오른쪽 촘촘(양쪽 칸 수가 다름) + 넉 줄 · 4 + 도중에 물꼬가 열려 물이 빠짐(다시 보고 고름)
+//   점수 = 곧게 심은 줄 · 시간 45초(솜씨 = 늚) · 입력 = 말뚝·단추 누르기 · ← → 둑 바꾸기 · ↑ ↓ 말뚝 고르기 · E·스페이스 = 이 말뚝(누르는 시간은 판정에 안 씀) · 1~3 = 물 손질
+const WAT_P = [['물 대기', 'Let water in'], ['그대로 심기', 'Plant as it is'], ['물꼬 열어 물 빼기', 'Open the sluice to drain']];
+const WLV = { dry: 0, ok: 1, deep: 2 };
+const watSvg = lv => { const wy = [62, 50, 30][lv]; return '<svg viewBox="0 0 220 90" width="220" height="90" aria-hidden="true"><rect x="0" y="0" width="220" height="90" fill="#eaf3ff"/>'
+  + (lv ? '<rect x="0" y="' + wy + '" width="220" height="' + (64 - wy) + '" fill="#7fb8e0" opacity=".85"/>' : '<ellipse cx="60" cy="63" rx="22" ry="3" fill="#7fb8e0"/><ellipse cx="160" cy="63" rx="16" ry="3" fill="#7fb8e0"/>')
+  + '<rect x="0" y="64" width="220" height="26" fill="#7a5a3a"/><path d="M96 64 L96 18 L112 18 L114 52 L134 56 L136 64 Z" fill="#f2cfa8" stroke="#2b2420" stroke-width="2"/>'
+  + '<line x1="140" y1="52" x2="150" y2="52" stroke="#2b2420" stroke-width="1.5"/><text x="152" y="55" font-size="10" fill="#2b2420">발등</text><line x1="118" y1="36" x2="150" y2="36" stroke="#2b2420" stroke-width="1.5"/><text x="152" y="39" font-size="10" fill="#2b2420">발목</text>'
+  + '<path d="M40 64 L40 40 M36 46 L40 40 L44 46 M180 64 L180 42 M176 48 L180 42 L184 48" stroke="#4f7a34" stroke-width="2.4" fill="none"/></svg>'; };   /* 논 단면: 흙 · 물 · 발(발등·발목 선) · 어린 모 둘 */
+function mkPlant(c) { const X = jx(c), lv = c.lv, M = X.mem && typeof X.mem === 'object' ? X.mem : null, KEY = String(X.key || 'w:paddy'), DAY = X.day | 0;
+  const R0 = M && M[KEY] && typeof M[KEY] === 'object' && Array.isArray(M[KEY].w) ? M[KEY] : { d: DAY, w: [] }, old = R0.d < DAY ? R0.w.slice(0, 2) : [], keep = R0.d < DAY ? [] : R0.w.slice();
+  const NR = lv >= 3 ? 4 : 3, RS = 34, Y0 = 26, CW = 420, CH = Y0 + RS * (old.length + NR) + 24, FX0 = 44, FX1 = 376;
+  const fine = s => (lv === 2 || (lv >= 3 && s === 1));   /* 촘촘한 눈금(반 칸) 쪽 */
+  const step = s => (fine(s) ? RS / 2 : RS), NMK = s => Math.floor((CH - Y0 - 8) / step(s)) + 1, mkY = (s, j) => Y0 + j * step(s);
+  const Q = old.map(why => ({ rv: 1, why })); for (let i = 0; i < NR; i++) Q.push({ rv: 0 });
+  const rows = Q.map((q, i) => ({ i: i + 1, rv: q.rv, why: q.why, yl: null, yr: null, ok: false, bad: q.rv ? q.why : null }));
+  for (const r of rows) if (r.rv) { const t = Y0 + r.i * RS; r.yl = r.why === 'near' ? t - RS / 2 : r.why === 'far' ? t + RS / 2 : r.why === 'crook' ? t - RS / 2 : t; r.yr = r.why === 'near' ? t - RS / 2 : r.why === 'far' ? t + RS / 2 : r.why === 'crook' ? t + RS / 2 : t; r.wl = r.why === 'water'; }   /* 어제 남은 줄 = 그 꼴 그대로 보임 */
+  let water = old.includes('water') ? 'dry' : (['dry', 'deep', 'ok'][(Math.random() * 3) | 0]), wOk = false, wBad = false, ph = 'water', qi = 0, side = 0, cur = [0, 0], pick = [null, null], lock = 0, nx = null, miss = 0, gt = 0, revived = 0, newBad = 0, turned = false, wsel = 1;
+  const sick = [];
+  c.mg.innerHTML = '<div class="pdw"><div class="pdx"></div><div class="pdf" style="position:relative;max-width:' + CW + 'px;margin:0 auto"><canvas width="' + CW + '" height="' + CH + '" style="width:100%;display:block;border-radius:8px"></canvas><div class="pdk"></div></div></div>';
+  const W9 = c.mg.querySelector('.pdx'), cv = c.mg.querySelector('canvas'), g = cv.getContext('2d'), KB = c.mg.querySelector('.pdk'), TB = timeBar(c, 45 * c.zw);
+  function drawRow(yl, yr, col, wl) { for (let x = FX0 + RS / 2; x < FX1; x += RS) { const u = (x - FX0) / (FX1 - FX0), y = yl + (yr - yl) * u; g.strokeStyle = wl ? '#a8a070' : col; g.lineWidth = 2.4; g.beginPath(); g.moveTo(x, y + 5); g.lineTo(x - 4, y - 5); g.moveTo(x, y + 5); g.lineTo(x, y - 7); g.moveTo(x, y + 5); g.lineTo(x + 4, y - 5); g.stroke(); } }
+  function draw() { g.fillStyle = '#6b8f4a'; g.fillRect(0, 0, CW, CH); g.fillStyle = water === 'dry' ? '#9a8a6a' : water === 'deep' ? '#4f8fc0' : '#7fb0c8'; g.fillRect(FX0 - 8, 6, FX1 - FX0 + 16, CH - 12);   /* 논둑(초록) · 논(물 높이마다 빛깔) */
+    for (const s of [0, 1]) { const x = s ? FX1 + 14 : FX0 - 22; g.fillStyle = '#c8a070'; g.fillRect(x - 3, Y0 - 6, 14, CH - Y0); for (let j = 0; j < NMK(s); j++) { const y = mkY(s, j); g.fillStyle = '#2b2420'; g.fillRect(x - 3, y - 1, fine(s) && j % 2 ? 8 : 14, 2); } }   /* 둑 눈금 자 */
+    drawRow(Y0, Y0, '#3f8a2a'); for (const r of rows) if (r.yl != null && r.yr != null) drawRow(r.yl, r.yr, r.ok || r.rv && !r.bad ? '#3f8a2a' : r.rv ? '#8f9a4a' : '#b8862a', r.wl);
+    const r = rows[qi]; if (ph === 'rope' && r) { const L9 = pick[0] != null ? mkY(0, pick[0]) : null, R9 = pick[1] != null ? mkY(1, pick[1]) : null;
+      if (L9 != null && R9 != null) { g.strokeStyle = '#f6f4ee'; g.lineWidth = 2; g.beginPath(); g.moveTo(FX0 - 12, L9); g.lineTo(FX1 + 12, R9); g.stroke(); }
+      for (const s of [0, 1]) { const x = s ? FX1 + 17 : FX0 - 19, y = mkY(s, pick[s] != null ? pick[s] : cur[s]); g.fillStyle = pick[s] != null ? '#e0453a' : 'rgba(224,69,58,.45)'; g.beginPath(); g.arc(x, y, 6, 0, 6.2832); g.fill(); if (side === s && pick[s] == null) { g.strokeStyle = '#fff'; g.lineWidth = 2; g.stroke(); } } }
+    g.strokeStyle = '#e0453a'; g.lineWidth = 2; g.beginPath(); g.moveTo(FX0, 12); g.lineTo(FX1, 12); g.stroke(); g.fillStyle = '#e0453a'; for (let x = FX0 + RS / 2; x < FX1; x += RS) g.fillRect(x - 1.5, 8, 3, 8);   /* 위 = 못줄 견본(빨간 표 사이 = 모 사이) */
+    g.fillStyle = '#fff'; g.font = '700 11px sans-serif'; g.textAlign = 'center'; g.fillText(c.T('못줄 빨간 표 사이 = 모 사이', 'Red marks on the rope = space between plants'), CW / 2, CH - 6); }
+  const keysHTML = () => { let h = ''; for (const s of [0, 1]) for (let j = 1; j < NMK(s); j++) h += '<button class="pmk" data-s="' + s + '" data-j="' + j + '" style="position:absolute;' + (s ? 'right' : 'left') + ':0;top:' + (100 * (mkY(s, j) - 9) / CH).toFixed(2) + '%;width:9%;height:' + (100 * 18 / CH).toFixed(2) + '%;min-height:0;padding:0;opacity:0;cursor:pointer" aria-label="' + (s ? c.T('오른쪽', 'right') : c.T('왼쪽', 'left')) + ' ' + j + '"></button>'; KB.innerHTML = h; };
+  const showWater = again => { ph = 'water'; wsel = 1; W9.innerHTML = '<div class="row" style="justify-content:center">' + watSvg(WLV[water]) + '</div><div class="bx3 pick">' + WAT_P.map((t, j) => '<button data-w="' + j + '"><small>' + (j + 1) + '. ' + c.T(t[0], t[1]) + '</small></button>').join('') + '</div>'; markW();
+    c.say(again ? c.T('어? 논물이 달라졌어요. 단면을 다시 보고 골라요', 'Hm? The water has changed. Look at the cut-away again and choose') : c.T('모를 심기 전에 논물 높이를 봐요. 발등이 잠길 만큼 얕게가 알맞아요', 'Before planting, check the water. Just over the top of the foot is right')); draw(); };
+  const markW = () => W9.querySelectorAll('.pick button').forEach((b, i) => b.classList.toggle('sel', i === wsel));
+  const toRope = () => { ph = 'rope'; side = 0; pick = [null, null]; const r = rows[qi]; const tY = Y0 + r.i * RS; cur = [Math.max(1, Math.round((tY - RS) / step(0) - Y0 / step(0))), Math.max(1, Math.round((tY - RS) / step(1) - Y0 / step(1)))];
+    W9.innerHTML = '<div class="sm" style="text-align:center">' + (r.rv ? c.T('어제 남은 줄 고쳐 심기 — 그 줄 자리에 못줄을 바로 걸어요', 'Fix yesterday’s row — hang the rope straight at that row') : c.T('줄 ', 'Row ') + (rows.filter(q => !q.rv).indexOf(r) + 1) + '/' + NR + c.T(' — 왼쪽·오른쪽 둑 말뚝을 하나씩 눌러 못줄을 걸어요', ' — tap a stake on the left and right banks to hang the rope')) + '</div>'; keysHTML(); draw();
+    if (r.rv) c.say(r.why === 'water' ? c.T('어제 물이 안 맞아 모가 떴어요. 뜬 줄 자리에 다시 심어요', 'Yesterday the water was wrong and the seedlings floated. Replant that row') : c.T('어제 비뚤게 심은 줄이 남아 있어요. 다시 곧게 심어요', 'Yesterday’s crooked row is still there. Plant it straight again'));
+    else if (qi === old.length) c.say(lv === 1 ? c.T('둑 눈금 한 칸 = 줄 사이. 양쪽 말뚝을 똑같이 옮겨요', 'One mark on the bank = one row gap. Move both stakes the same') : c.T('못줄 빨간 표 사이만큼 아래로, 양쪽 둑을 똑같이 옮겨요', 'Move down by the gap between the red marks, the same on both banks')); };
+  const pickW = j => { if (ph !== 'water' || c.done || lock > 0) return; wsel = j; markW(); const need = water === 'dry' ? 0 : water === 'deep' ? 2 : 1;
+    if (j === need) { c.snd('ding'); wOk = true; if (need === 1) { c.say(c.T('발등이 잠길 만큼이에요. 그대로 심어요', 'Just over the foot. Plant as it is')); lock = 0.6; } else { c.say(need === 0 ? c.T('물을 댔어요. 물이 알맞게 찰 때까지 잠깐…', 'Water is coming in. Wait until it is just right…') : c.T('물꼬를 열었어요. 물이 알맞게 빠질 때까지 잠깐…', 'The sluice is open. Wait until enough has drained…')); lock = 2.0; water = 'ok'; } nx = 'rope'; return; }
+    miss++; c.snd('pop');
+    if (j === 1) { wBad = true; c.say(water === 'dry' ? c.T('흙이 드러난 채로 심었어요. 모 뿌리가 마를 거예요. 내일 이 논을 봐요', 'Planted with the soil showing. The roots will dry out. Check this paddy tomorrow') : c.T('물이 너무 깊은 채로 심었어요. 어린 모가 물에 잠겨 떠오를 거예요. 내일 이 논을 봐요', 'Planted in water that is too deep. The young seedlings will float up. Check this paddy tomorrow')); lock = 1.0; nx = 'rope'; return; }
+    water = j === 0 ? 'deep' : 'dry'; lock = 2.6 / c.zw; nx = 'water';
+    c.say(j === 0 ? c.T('물이 더 깊어졌어요. 다시 빼느라 기다려요…', 'Now it is even deeper. Waiting while it drains again…') : c.T('물이 다 빠져 흙이 드러났어요. 다시 대느라 기다려요…', 'All the water drained and the soil shows. Waiting while it fills again…')); draw(); };
+  const plantRow = () => { const r = rows[qi], tY = Y0 + r.i * RS, yl = mkY(0, pick[0]), yr = mkY(1, pick[1]); r.yl = yl; r.yr = yr; r.wl = wBad; KB.innerHTML = '';
+    const dl = Math.round(yl - tY), dr = Math.round(yr - tY), why = dl !== dr ? 'crook' : dl < 0 ? 'near' : dl > 0 ? 'far' : (wBad ? 'water' : null);
+    if (!why) { r.ok = true; r.bad = null; gt++; if (r.rv) revived++; c.snd('pick'); c.say(r.rv ? c.T('곧게 다시 심었어요!', 'Planted straight again!') : c.T('곧은 줄! 줄 사이와 모 사이가 같아요', 'A straight row! Row gap and plant gap match')); lock = 0.9; }
+    else { r.ok = false; r.bad = why; miss++; c.snd('pop'); if (r.rv) sick.push(why); else { sick.push(why); newBad++; } lock = 1.6 / c.zw;
+      c.say((why === 'crook' ? c.T('양쪽 말뚝을 다르게 옮겨서 줄이 비뚤어졌어요', 'The stakes moved by different amounts, so the row is crooked') : why === 'near' ? c.T('줄 사이가 모 사이보다 좁아요. 포기끼리 붙어 바람이 안 통해요', 'The rows are closer than the plants. They crowd and air cannot pass') : why === 'far' ? c.T('줄 사이가 모 사이보다 넓어요. 논에 빈 곳이 생겨요', 'The rows are wider apart than the plants. Space is wasted') : c.T('줄은 곧은데 논물이 안 맞았어요', 'The row is straight but the water was wrong')) + (r.rv ? c.T('. 아직 고쳐지지 않았어요', '. It is still not fixed') : c.T('. 이 줄은 내일도 논에 남아요', '. This row will still be there tomorrow'))); }
+    ph = 'wait'; nx = 'next'; draw(); };
+  const stake = (s, j) => { if (ph !== 'rope' || c.done || lock > 0) return; if (j < 1 || j >= NMK(s)) return; pick[s] = j; cur[s] = j; side = pick[0] == null ? 0 : pick[1] == null ? 1 : s; c.snd('tick'); draw(); if (pick[0] != null && pick[1] != null) plantRow(); };
+  const nextRow = () => { qi++; if (qi >= rows.length) { end(); return; } if (lv >= 4 && !turned && qi - old.length === 2) { turned = true; water = 'dry'; wOk = false; wBad = false; showWater(true); return; } toRope(); };
+  const pd = e => { const b = e.target.closest('[data-w],.pmk'); if (!b) return; e.preventDefault(); if (b.dataset.w != null) pickW(+b.dataset.w); else stake(+b.dataset.s, +b.dataset.j); };
+  const pdc = e => { if (ph !== 'rope') return; const r9 = cv.getBoundingClientRect(), x = (e.clientX - r9.left) * CW / r9.width, y = (e.clientY - r9.top) * CH / r9.height; const s = x < CW / 2 ? 0 : 1; if (Math.abs(x - (s ? FX1 + 17 : FX0 - 19)) > 34) return; e.preventDefault(); stake(s, Math.round((y - Y0) / step(s))); };   /* 말뚝 둘레를 눌러도 가장 가까운 눈금 */
+  c.mg.addEventListener('pointerdown', pd); cv.addEventListener('pointerdown', pdc);
+  const score = () => { const n = rows.length; return gt === n && miss <= 1 ? 3 : gt * 2 >= n ? 2 : gt >= 1 ? 1 : 0; };
+  const end = () => { ph = 'end'; if (M) { M[KEY] = { d: DAY, w: keep.concat(sick).slice(-2) }; if (X.mark) X.mark(); } c.finish(score()); };
+  showWater(false); if (old.length) c.say(c.T('어제 심은 줄 ' + old.length + '개가 고르지 않게 남았어요. 물을 보고, 먼저 고쳐 심어요', old.length + ' row(s) from yesterday are uneven. Check the water, then fix them first'));
+  return { cnt: () => gt * Math.round((FX1 - FX0) / RS),
+    tail: () => (newBad ? c.T('💡 고르지 않은 줄 ' + newBad + '개는 내일도 논에 남아요. 다시 와서 고쳐 심어요', '💡 ' + newBad + ' uneven row(s) will still be there tomorrow. Come back to fix them') : revived ? c.T('💡 어제 줄 ' + revived + '개를 곧게 고쳤어요. 줄 사이와 모 사이가 같으면 바람·햇빛이 고루 들어요', '💡 You fixed ' + revived + ' row(s). Equal gaps let wind and sunlight reach every plant') : ''),
+    down() { if (ph === 'water') pickW(wsel); else if (ph === 'rope') stake(side, cur[side]); },
+    key(code, rep) { if (ph === 'water') { const d = /^Digit([1-3])$/.exec(code); if (d) { if (!rep) pickW(+d[1] - 1); return true; } const m = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1 }[code]; if (m) { wsel = (wsel + m + 3) % 3; markW(); return true; } return false; }
+      if (ph !== 'rope') return false; if (code === 'ArrowLeft' || code === 'KeyA') { side = 0; draw(); return true; } if (code === 'ArrowRight' || code === 'KeyD') { side = 1; draw(); return true; }
+      const m = { ArrowUp: -1, KeyW: -1, ArrowDown: 1, KeyS: 1 }[code]; if (m) { cur[side] = Math.max(1, Math.min(NMK(side) - 1, cur[side] + m)); draw(); return true; } return false; },
+    tick(dt) { if (TB.tick(dt) && ph !== 'end') { end(); return; } if (lock > 0 && (lock -= dt) <= 0) { lock = 0; const n9 = nx; nx = null; if (n9 === 'rope') toRope(); else if (n9 === 'water') showWater(false); else if (n9 === 'next') nextRow(); } },
+    get dbg() { const r = rows[qi]; return { ph, qi, n: rows.length, lv, water, wOk, wBad, rv: !!(r && r.rv), why: r && r.why, side, pick: pick.slice(), cur: cur.slice(), want: r ? [Math.round(r.i * RS / step(0)), Math.round(r.i * RS / step(1))] : null, nmk: [NMK(0), NMK(1)], fine: [fine(0), fine(1)], rows: rows.map(q => ({ i: q.i, rv: q.rv, ok: q.ok, bad: q.bad })), gt, revived, miss, sick: sick.slice(), old: old.slice(), keep: keep.slice(), lock: +Math.max(0, lock).toFixed(2), left: +TB.left.toFixed(2), turned, key: KEY, day: DAY }; },
+    dispose() { c.mg.removeEventListener('pointerdown', pd); cv.removeEventListener('pointerdown', pdc); } }; }
 
 // ⑤ 벼 베기(가을 논): 콤바인 길 그리기 — 벤 곳은 다시 못 지나감(한 붓 그리기) · 끌기·누르기(옆 칸)·화살표 · 빈틈없이 다 베면 아주 잘함
 function mkCut(c) { const C9 = 6, R9 = 4, N = C9 * R9, T = 22 * c.zw * (c.lp || 1); let cur = 0, cut = 1, stuck = false;
@@ -697,38 +761,57 @@ function mkGate(c) { const T = 24 * c.zw, IN = 0.11, FL = 0.12, LO = 0.5, HI = 0
       draw(); if (W.every(w => w >= LO && w <= HI) && !G[0] && !G[1] && !G[2]) { c.say(c.T('세 논에 물이 알맞게 찼어요', 'All three paddies are just right')); c.finish(over ? 2 : 3); return; } if (TB.tick(dt)) end(); },
     dispose() { const g9 = c.mg.querySelector('.gt'); if (g9) g9.removeEventListener('pointerdown', pdT); } }; }
 
-// ⑰ 투호(TOSS-1 · 사용자 10-18 '투호 놀이도 저 막대 방식이야? · 퀘스트·놀이에 특색 좀'): 화살 다섯 개를 던져 항아리에 — 끌어서(또는 ←→ 힘 · ↑↓ 각도) 겨누면 처음 몇 뼘만 점선 · 놓으면(E) 포물선 · 바람(깃발) · 항아리 입에 들면 쏙 · 테두리에 맞으면 튕겨 나옴 · 던질 때마다 항아리 자리·바람이 조금씩 바뀜(뒤로 갈수록 멀고 바람 셈)
-function mkToss(c) {
-  c.mg.innerHTML = '<canvas width="440" height="220" style="width:100%;max-width:440px;display:block;margin:0 auto;touch-action:none;border-radius:10px;background:#eaf3ff;cursor:crosshair"></canvas>';
-  const cv = c.mg.querySelector('canvas'), g = cv.getContext('2d'), W = 440, GY = 196, GR = 520, HX = 52, HY = 150, N = 5;
-  let n = 0, hits = 0, ph = 'aim', drag = null, ang = 0.9, pw = 0.55, A = null, pot = null, wind = 0, wait = 0, rim = false, prevY = 0;
-  const newPot = () => { pot = { x: 255 + Math.random() * 95 + n * 14, w: 28 * Math.min(1.5, c.zw) }; wind = (Math.random() - 0.5) * (n < 2 ? 30 : 90); };
-  newPot(); c.say(c.T('끌어서 겨누고 놓으면 던져요(←→ 힘 · ↑↓ 각도 · E 던지기) — 깃발이 바람 쪽!', 'Drag to aim, release to throw (←→ power · ↑↓ angle · E throw) — the flag shows the wind!'));
-  const vel = () => 250 + pw * 330, launch = () => { if (ph !== 'aim') return; const v = vel(); A = { x: HX, y: HY, vx: Math.cos(ang) * v, vy: -Math.sin(ang) * v }; prevY = HY; rim = false; ph = 'fly'; c.snd('pop'); };
-  const potTop = GY - 44;
-  const P = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * 220 / r.height]; };
-  const pd = e => { if (ph !== 'aim') return; e.preventDefault(); drag = P(e); cv.setPointerCapture && cv.setPointerCapture(e.pointerId); };
-  const pm = e => { if (!drag || ph !== 'aim') return; const [x, y] = P(e), dx = drag[0] - x, dy = y - drag[1], L = Math.hypot(dx, dy); if (L < 6) return; ang = Math.max(0.25, Math.min(1.35, Math.atan2(dy, Math.max(1, dx)))); pw = Math.max(0.05, Math.min(1, L / 140)); };
-  const pu = () => { if (drag && ph === 'aim') { drag = null; launch(); } drag = null; };
-  cv.addEventListener('pointerdown', pd); cv.addEventListener('pointermove', pm); cv.addEventListener('pointerup', pu); cv.addEventListener('pointercancel', pu);
-  function draw() { g.clearRect(0, 0, W, 220); g.fillStyle = '#cfe6b8'; g.fillRect(0, GY, W, 24); g.strokeStyle = '#8fb06f'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, GY); g.lineTo(W, GY); g.stroke();
-    g.strokeStyle = '#6b4a2f'; g.lineWidth = 3; g.beginPath(); g.moveTo(W - 24, GY); g.lineTo(W - 24, GY - 70); g.stroke(); const f0 = Math.max(-1, Math.min(1, wind / 45)), fl = Math.abs(f0) < 0.3 ? (f0 < 0 ? -0.3 : 0.3) : f0; g.fillStyle = '#2b2420'; g.font = '700 12px sans-serif'; g.textAlign = 'center'; g.fillText(Math.abs(wind) < 12 ? c.T('바람 약함', 'light wind') : (wind > 0 ? c.T('바람 →', 'wind →') : c.T('← 바람', '← wind')), W - 24, GY - 76); g.fillStyle = '#e0453a'; g.beginPath(); g.moveTo(W - 24, GY - 70); g.lineTo(W - 24 + 26 * fl, GY - 63); g.lineTo(W - 24, GY - 56); g.closePath(); g.fill();   // 바람 깃발
-    g.fillStyle = '#2f6fd0'; g.beginPath(); g.arc(HX - 14, HY - 24, 9, 0, 7); g.fill(); g.fillRect(HX - 20, HY - 15, 12, 30); g.strokeStyle = '#2f6fd0'; g.lineWidth = 4; g.beginPath(); g.moveTo(HX - 14, HY - 8); g.lineTo(HX, HY); g.moveTo(HX - 16, HY + 15); g.lineTo(HX - 22, GY); g.moveTo(HX - 12, HY + 15); g.lineTo(HX - 6, GY); g.stroke();   // 던지는 아이(이름 없는 모양)
-    const px = pot.x, hw = pot.w / 2; g.fillStyle = '#5d6f86'; g.beginPath(); g.ellipse(px, GY - 18, hw + 14, 20, 0, 0, 7); g.fill(); g.fillRect(px - hw - 3, potTop, pot.w + 6, 16); g.fillStyle = '#2b2420'; g.fillRect(px - hw, potTop, pot.w, 4); g.strokeStyle = '#c9a24a'; g.lineWidth = 2; g.strokeRect(px - hw - 3, potTop, pot.w + 6, 16);   // 항아리
-    if (ph === 'aim') { const v = vel(); let x = HX, y = HY, vx = Math.cos(ang) * v, vy = -Math.sin(ang) * v; g.fillStyle = '#2b2420'; for (let i = 0; i < 9; i++) { for (let k = 0; k < 4; k++) { vy += GR * 0.01; vx += wind * 0.01; x += vx * 0.01; y += vy * 0.01; } g.beginPath(); g.arc(x, y, 2.2, 0, 7); g.fill(); } }   // 처음 몇 뼘만 점선(끝까지 보여 주지 않음)
-    const ax = A ? A.x : HX, ay = A ? A.y : HY, an = A ? Math.atan2(A.vy, A.vx) : -ang; g.save(); g.translate(ax, ay); g.rotate(an); g.strokeStyle = '#7a5232'; g.lineWidth = 3; g.beginPath(); g.moveTo(-22, 0); g.lineTo(10, 0); g.stroke(); g.fillStyle = '#e0453a'; g.beginPath(); g.moveTo(10, -4); g.lineTo(16, 0); g.lineTo(10, 4); g.fill(); g.fillStyle = '#f6efe3'; g.fillRect(-24, -4, 6, 8); g.restore();   // 화살
+// ⑰ 투호(TOSS-2 · DEPTH-1 10-26 끌어 겨누기·힘 막대 → 바람과 거리 판단 · 사용자 10-25 '막대 X · 적지 않은 스트레스'): 화살 다섯 개 · 팔 힘은 늘 같음(한 번 던지면 4걸음쯤)
+//   보는 것 = 땅의 걸음 눈금(던지는 줄에서 항아리까지 몇 걸음) + 바람 깃발(처짐 = 잔잔 · 반쯤 = 살랑 · 쭉 펴져 펄럭 = 셈 · 날리는 쪽 = 바람이 가는 쪽)
+//   고르는 것 = 설 자리(한 걸음 뒤 · 제자리 · 한 걸음 앞) + 높이(낮게 · 높게) — 높이 던진 화살은 오래 날아 바람을 그만큼 타고(등 뒤 바람 = 더 멀리 · 맞바람 = 짧게) · 낮게 던진 화살은 바람을 덜 탐(셀 때만 한 걸음)
+//   결과는 정해진 물리대로(운 X) · 빗나간 화살은 떨어진 자리에 그대로 누워 있음(다음 판단의 근거) · 주우러 다녀오는 동안 시간이 흐름(시간 비용 · 40초)
+//   사다리 = 1 바람 없음(거리만) · 2 살랑 바람(높이 던지면 한 걸음) · 3 센 바람(높이 = 두 걸음 · 낮게도 한 걸음) · 4 + 항아리가 멀리(6걸음 · 바람을 등에 업어야 닿음)
+//   입력 = 자리·높이 단추 · ← → 자리 · 1 = 낮게 · 2 = 높게 · E·스페이스 = 고른 높이로 던지기(누르는 시간은 판정에 안 씀)
+const STEP3 = [['한 걸음 뒤', 'Step back'], ['제자리', 'Stay'], ['한 걸음 앞', 'Step forward']];
+function mkToss(c) { const lv = c.lv, N = 5, W = 440, H = 220, GY = 190, LX = 74, SPX = 38, R0 = 4;
+  c.mg.innerHTML = '<canvas width="' + W + '" height="' + H + '" style="width:100%;max-width:440px;display:block;margin:0 auto;border-radius:10px;background:#eaf3ff"></canvas><div class="bx3 pick ts"></div><div class="bx3 pick th"></div>';
+  const cv = c.mg.querySelector('canvas'), g = cv.getContext('2d'), BS = c.mg.querySelector('.ts'), BH = c.mg.querySelector('.th'), TB = timeBar(c, 40 * c.zw);
+  BS.innerHTML = STEP3.map((t, j) => '<button data-st="' + (j - 1) + '"><small>' + c.T(t[0], t[1]) + '</small></button>').join(''); BH.innerHTML = [['낮게 던지기', 'Throw low'], ['높게 던지기', 'Throw high']].map((t, j) => '<button data-h="' + j + '"><small>' + (j + 1) + '. ' + c.T(t[0], t[1]) + '</small></button>').join('');
+  let n = 0, hits = 0, ph = 'aim', s = 0, hsel = 0, P = 4, w = 0, A = null, lock = 0, last = '', miss = 0; const lying = [];
+  const wlOf = w9 => (lv >= 3 && Math.abs(w9) >= 2 ? Math.sign(w9) : 0), land = (s9, h9) => s9 + R0 + (h9 ? w : wlOf(w));
+  const sols = () => { const o = []; for (const s9 of [-1, 0, 1]) for (const h9 of [0, 1]) if (land(s9, h9) === P) o.push(s9 + ',' + h9); return o; };
+  const newRound = () => { const PS = lv >= 4 ? [3, 4, 5, 6] : [3, 4, 5], WS = lv === 1 ? [0] : lv === 2 ? [-1, 0, 1] : [-2, -1, 0, 1, 2];
+    for (let k = 0; k < 40; k++) { P = PS[(Math.random() * PS.length) | 0]; w = WS[(Math.random() * WS.length) | 0]; if (lv >= 4 && n === 0 && k < 30 && P < 6) continue; if (sols().length && P + ':' + w !== last) break; }
+    last = P + ':' + w; s = 0; ph = 'aim'; markB(); draw(); };
+  const markB = () => { BS.querySelectorAll('button').forEach(b => b.classList.toggle('sel', +b.dataset.st === s)); BH.querySelectorAll('button').forEach(b => b.classList.toggle('sel', +b.dataset.h === hsel)); };
+  const flagF = () => (w === 0 ? 0.25 : Math.abs(w) === 1 ? 0.6 : 1) * (w < 0 ? -1 : 1);
+  function draw() { g.clearRect(0, 0, W, H); g.fillStyle = '#cfe6b8'; g.fillRect(0, GY, W, H - GY); g.strokeStyle = '#8fb06f'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, GY); g.lineTo(W, GY); g.stroke();
+    g.strokeStyle = '#2b2420'; g.lineWidth = 3; g.beginPath(); g.moveTo(LX, GY - 6); g.lineTo(LX, GY + 14); g.stroke();   /* 던지는 줄 */
+    g.fillStyle = '#2b2420'; g.font = '800 11px sans-serif'; g.textAlign = 'center'; for (let k = 1; k <= 7; k++) { const x = LX + k * SPX; g.fillRect(x - 1, GY + 2, 2, 7); g.fillText(String(k), x, GY + 22); }   /* 걸음 눈금 */
+    for (const q of lying) { g.save(); g.translate(q, GY - 3); g.rotate(0.12); g.strokeStyle = '#7a5232'; g.lineWidth = 3; g.beginPath(); g.moveTo(-14, 0); g.lineTo(10, 0); g.stroke(); g.fillStyle = '#e0453a'; g.beginPath(); g.moveTo(10, -3); g.lineTo(15, 0); g.lineTo(10, 3); g.fill(); g.restore(); }   /* 빗나가 누운 화살 */
+    const px = LX + P * SPX, pw = 26; g.fillStyle = '#5d6f86'; g.beginPath(); g.ellipse(px, GY - 18, pw / 2 + 12, 19, 0, 0, 6.2832); g.fill(); g.fillRect(px - pw / 2 - 3, GY - 46, pw + 6, 14); g.fillStyle = '#2b2420'; g.fillRect(px - pw / 2, GY - 46, pw, 4); g.strokeStyle = '#c9a24a'; g.lineWidth = 2; g.strokeRect(px - pw / 2 - 3, GY - 46, pw + 6, 14);   /* 항아리 */
+    const fx = W - 30, f = flagF(); g.strokeStyle = '#6b4a2f'; g.lineWidth = 3; g.beginPath(); g.moveTo(fx, GY); g.lineTo(fx, GY - 86); g.stroke(); g.fillStyle = '#e0453a'; g.beginPath(); const ang = (1 - Math.abs(f)) * 1.25, dx = Math.cos(ang) * 30 * Math.sign(f), dy = Math.sin(ang) * 30;
+    g.moveTo(fx, GY - 86); g.lineTo(fx + dx, GY - 86 + dy + 4); g.lineTo(fx + dx * 0.92, GY - 86 + dy + 13); g.lineTo(fx, GY - 72); g.closePath(); g.fill(); if (Math.abs(w) >= 2) { g.strokeStyle = '#2b2420'; g.lineWidth = 1.5; for (const k of [0, 1, 2]) { g.beginPath(); g.moveTo(fx - 24 * Math.sign(f), GY - 96 + k * 8); g.lineTo(fx - 10 * Math.sign(f), GY - 96 + k * 8); g.stroke(); } }   /* 바람 깃발(처짐·반·쭉 + 센 바람 줄) */
+    g.font = '700 11px sans-serif'; g.fillStyle = '#2b2420'; g.fillText(w === 0 ? c.T('잔잔', 'calm') : (Math.abs(w) >= 2 ? c.T('세게 ', 'strong ') : c.T('살랑 ', 'light ')) + (w > 0 ? '→' : '←'), fx - 4, GY - 100);
+    const tx = LX + s * SPX - 12; g.fillStyle = '#2f6fd0'; g.beginPath(); g.arc(tx, GY - 56, 8, 0, 6.2832); g.fill(); g.fillRect(tx - 6, GY - 48, 12, 26); g.strokeStyle = '#2f6fd0'; g.lineWidth = 4; g.beginPath(); g.moveTo(tx - 3, GY - 22); g.lineTo(tx - 7, GY); g.moveTo(tx + 3, GY - 22); g.lineTo(tx + 7, GY); g.moveTo(tx + 5, GY - 42); g.lineTo(tx + 14, GY - 50); g.stroke();   /* 던지는 아이(이름 없는 모양) */
+    if (A) { const u = Math.min(1, A.t / A.T), x = A.x0 + (A.x1 - A.x0) * u, y = A.y0 + (A.y1 - A.y0) * u - 4 * A.pk * u * (1 - u), an = Math.atan2((A.y1 - A.y0) - 4 * A.pk * (1 - 2 * u), A.x1 - A.x0);
+      g.save(); g.translate(x, y); g.rotate(an); g.strokeStyle = '#7a5232'; g.lineWidth = 3; g.beginPath(); g.moveTo(-18, 0); g.lineTo(10, 0); g.stroke(); g.fillStyle = '#e0453a'; g.beginPath(); g.moveTo(10, -4); g.lineTo(16, 0); g.lineTo(10, 4); g.fill(); g.restore(); }
     g.fillStyle = '#2b2420'; g.font = '800 15px sans-serif'; g.textAlign = 'left'; g.fillText(c.T('화살 ', 'Arrow ') + Math.min(N, n + 1) + '/' + N + '  ·  ' + c.T('쏙 ', 'In ') + hits, 10, 22); }
-  const next = () => { n++; if (n >= N) { c.finish(hits >= 4 ? 3 : hits >= 3 ? 2 : hits >= 1 ? 1 : 0); return; } A = null; ph = 'aim'; newPot(); if (n === 2) c.say(c.T('이제 바람이 세져요 — 깃발을 봐요!', 'The wind is picking up — watch the flag!')); };
-  draw();
-  return { go: c.T('던지기!', 'Throw!'), extra: () => hits,
-    down() { launch(); },
-    key(code) { if (ph !== 'aim') return false; if (code === 'ArrowUp') ang = Math.min(1.35, ang + 0.04); else if (code === 'ArrowDown') ang = Math.max(0.25, ang - 0.04); else if (code === 'ArrowRight') pw = Math.min(1, pw + 0.04); else if (code === 'ArrowLeft') pw = Math.max(0.05, pw - 0.04); else return false; return true; },
-    tick(dt) { if (ph === 'fly' && A) { A.vy += GR * dt; A.vx += wind * dt; A.x += A.vx * dt; A.y += A.vy * dt; const hw = pot.w / 2;
-        if (prevY < potTop && A.y >= potTop) { const d = Math.abs(A.x - pot.x); if (d < hw - 2) { hits++; ph = 'wait'; wait = 0.9; A.y = potTop + 6; c.snd('ding'); c.say(c.T('쏙! 들어갔어요', 'Plop! It went in')); } else if (d < hw + 5 && !rim) { rim = true; A.vy = -Math.abs(A.vy) * 0.35; A.vx = -A.vx * 0.3; c.snd('tick'); c.say(c.T('땡! 항아리 입에 맞고 튕겼어요', 'Clink! It bounced off the rim')); } }
-        prevY = A.y; if (ph === 'fly' && (A.y >= GY - 2 || A.x > W + 10 || A.x < -10)) { ph = 'wait'; wait = 0.8; if (!rim) c.say(A.x < pot.x ? c.T('조금 짧았어요 — 더 세게?', 'A bit short — more power?') : c.T('조금 멀었어요 — 덜 세게?', 'A bit long — less power?')); } }
-      else if (ph === 'wait' && (wait -= dt) <= 0) next(); draw(); },
-    dispose() { cv.removeEventListener('pointerdown', pd); cv.removeEventListener('pointermove', pm); cv.removeEventListener('pointerup', pu); cv.removeEventListener('pointercancel', pu); } };
-}
+  const setStep = s9 => { if (ph !== 'aim' || c.done) return; s = Math.max(-1, Math.min(1, s9)); c.snd('tick'); markB(); draw(); };
+  const throwH = h9 => { if (ph !== 'aim' || c.done || lock > 0) return; hsel = h9; markB(); const L9 = land(s, h9), ok = L9 === P, x0 = LX + s * SPX, x1 = LX + L9 * SPX;
+    A = { x0, y0: GY - 50, x1, y1: ok ? GY - 40 : GY - 3, t: 0, T: h9 ? 1.1 : 0.7, pk: h9 ? 120 : 34, ok, d: L9 - P, h: h9 }; ph = 'fly'; c.snd('pop'); };
+  const after = () => { const q = A; A = null; n++;
+    if (q.ok) { hits++; c.snd('ding'); c.say(c.T('쏙! 들어갔어요', 'Plop! It went in')); lock = 0.8; }
+    else { miss++; lying.push(q.x1); c.snd('tick'); const why = q.h && w ? c.T('높이 던진 화살은 오래 날아서 바람을 그만큼 타요', 'A high throw stays up longer and rides the wind more') : !q.h && w && !wlOf(w) ? c.T('낮게 던진 화살은 바람을 거의 안 타요', 'A low throw hardly feels the wind') : !q.h && wlOf(w) ? c.T('바람이 세면 낮게 던져도 조금 밀려요', 'In a strong wind even a low throw is pushed a little') : c.T('바람이 없으니 서는 자리가 거리를 정해요', 'With no wind, where you stand decides the distance');
+      c.say((q.d < 0 ? c.T('짧았어요(항아리보다 ', 'Short (') + (-q.d) + c.T('걸음 앞) — ', ' step(s) before the pot) — ') : c.T('멀었어요(항아리보다 ', 'Long (') + q.d + c.T('걸음 뒤) — ', ' step(s) past the pot) — ')) + why + c.T('. 화살을 주우러 다녀와요…', '. Go and fetch the arrow…')); lock = 2.2 / c.zw; }
+    ph = 'wait'; draw(); };
+  const pd = e => { const b = e.target.closest('[data-st],[data-h]'); if (!b) return; e.preventDefault(); if (b.dataset.st != null) setStep(+b.dataset.st); else throwH(+b.dataset.h); };
+  c.mg.addEventListener('pointerdown', pd);
+  const score = () => (hits >= 4 ? 3 : hits >= 3 ? 2 : hits >= 1 ? 1 : 0);
+  newRound(); c.say(lv === 1 ? c.T('팔 힘은 늘 같아서 화살이 4걸음쯤 날아가요. 항아리가 몇 걸음에 있는지 보고 설 자리를 골라요', 'Your throw always flies about 4 steps. Count the steps to the pot and pick where to stand') : c.T('걸음 눈금과 깃발을 보고 설 자리와 높이를 골라요', 'Read the step marks and the flag, then pick where to stand and how high'));
+  return { extra: () => hits, cnt: () => hits,
+    down() { throwH(hsel); },
+    key(code, rep) { if (ph !== 'aim') return false; const d = /^Digit([12])$/.exec(code); if (d) { if (!rep) throwH(+d[1] - 1); return true; } if (code === 'ArrowLeft' || code === 'KeyA') { setStep(s - 1); return true; } if (code === 'ArrowRight' || code === 'KeyD') { setStep(s + 1); return true; } if (code === 'ArrowUp' || code === 'KeyW') { hsel = 1; markB(); return true; } if (code === 'ArrowDown' || code === 'KeyS') { hsel = 0; markB(); return true; } return false; },
+    tick(dt) { if (TB.tick(dt)) { ph = 'end'; c.finish(score()); return; }
+      if (ph === 'fly' && A) { A.t += dt; if (A.t >= A.T) after(); draw(); return; }
+      if (lock > 0 && (lock -= dt) <= 0) { lock = 0; if (ph === 'wait') { if (n >= N) { ph = 'end'; c.finish(score()); return; } newRound(); if (n === 1 && lv >= 2) c.say(c.T('깃발이 바뀌었어요. 다시 봐요', 'The flag has changed. Look again')); } } },
+    get dbg() { return { ph, P, w, wl: wlOf(w), s, hsel, sols: sols(), n, hits, miss, lying: lying.length, lock: +Math.max(0, lock).toFixed(2), left: +TB.left.toFixed(2), lv }; },
+    dispose() { c.mg.removeEventListener('pointerdown', pd); } }; }
 
 // ⑱ 🍳 바쁜 부엌(KITCHEN-1 · 사용자 10-20 '다 빨간 막대잖아요' · '실제 게임 방식으로' · 설계 docs/systems/town_jobs2.md 「다음 다섯 — 🍳 바쁜 부엌」): 주문 쪽지 → 재료를 냄비로 끌기 → 불 세기·뚜껑 → 알맞게 익으면 접시로 끌기
 //   익힘 = 넓은 폭(알맞음 4.5초 · 솜씨 = 여유 시간이 늚) · 꺼낸 결과(덜 익음·알맞음·탐)가 접시 그림에 남음 · 때 맞춰 누르기·막대 X

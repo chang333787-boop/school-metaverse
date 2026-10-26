@@ -99,6 +99,50 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       await ev(() => SM_TOWN.rules.wx('clear')); await W8(400); }
 
 
+    // ── 🎯 투호(DEPTH-1 · 끌어 겨누기·힘 막대 → 바람과 거리 판단) ──
+    { console.log('🎯 투호 — 걸음 눈금·깃발 보고 설 자리·높이');
+      const openT = lv => ev(lv9 => { __clean(); const S = __G.S; S.min = 11 * 60; if (!S.lad) S.lad = {}; if (!S.lad.mg) S.lad.mg = {}; S.lad.mg.tuho = { lv: lv9, z: 0, n: 0, best: null, last: null }; window.__K = 'tuho'; SM_TOWN.playK('tuho');
+        const d = SM_TOWN.mgDbg(); if (!d) return null; const el = [...document.querySelectorAll('.twn-play')].pop(), go = el && el.querySelector('.go'); return { dbg: d, bars: el.querySelectorAll('.zone,.pg,.mk,.bar:not(.tmb)').length, goHidden: !go || go.style.display === 'none', lab: (el.querySelector('.mglad') || {}).textContent || '', head: (el.querySelector('small') || {}).textContent || '' }; }, lv);
+      const aim = () => until(q => q.ph === 'aim' && q.lock === 0, 9000);
+      const throwRight = async () => { const d = await aim(); if (!d || d.ph !== 'aim') return null; const [s9, h9] = d.sols[0].split(',').map(Number); await tap('.ts [data-st="' + s9 + '"]'); await tap('.th [data-h="' + h9 + '"]'); return d; };
+      let o = await openT(1); if (common('tuho', o)) { const d0 = o.dbg; ok(/도전 1칸/.test(o.lab) && d0.w === 0 && d0.sols.length >= 1 && d0.sols.every(q => +q.split(',')[0] === d0.P - 4), '1칸 = 바람 없음 · 답 = 항아리 걸음 − 4(항아리 ' + d0.P + '걸음 → ' + d0.sols.join(' / ') + ')');
+        await shot('toss_1_aim'); await W8(400); const s9 = +d0.sols[0].split(',')[0]; await tap('.ts [data-st="' + s9 + '"]'); await p.keyboard.down('KeyE'); await W8(1500); await p.keyboard.up('KeyE');
+        let d1 = await until(q => q.n >= 1, 4000); ok(d1 && d1.n === 1 && d1.hits === 1, 'E를 1.5초 꾹 = 한 번 던진 것과 같음(화살 ' + (d1 && d1.n) + ' · 쏙 ' + (d1 && d1.hits) + ')');
+        d1 = await aim(); const bad = [-1, 0, 1].find(q => q !== d1.P - 4); const l0 = d1.left; await tap('.ts [data-st="' + bad + '"]'); await tap('.th [data-h="0"]'); const d2 = await until(q => q.n >= 2, 4000);
+        ok(d2 && d2.miss === 1 && d2.lying === 1 && d2.lock > 1.5, '틀린 자리(' + bad + ' · 항아리 ' + d1.P + '걸음) = 빗나간 화살이 그 자리에 남음 · 주우러 가는 동안 ' + (d2 && d2.lock) + '초 · 「' + (await msg()).slice(0, 44) + '」');
+        const d3 = await aim(); ok(d3 && l0 - d3.left >= 2.0 * 0.8 && d3.lying === 1, '시간 비용(남은 시간 ' + l0.toFixed(1) + ' → ' + (d3 && d3.left.toFixed(1)) + ') · 누운 화살 그대로 ' + (d3 && d3.lying));
+        await shot('toss_2_miss'); for (let i = 0; i < 3; i++) await throwRight(); const e = await waitEnd(); ok(e && e.g === 3, '다섯 가운데 넷 = 점수 ' + (e && e.g)); }
+      o = await openT(1); if (o && o.dbg) { const tr = []; for (let i = 0; i < 5; i++) { const r9 = await throwRight(); tr.push(r9 ? r9.P + ":" + r9.sols[0] : "x"); } const e = await waitEnd(); if (!e || e.g !== 3) console.log("    (던짐 " + tr.join(" ") + " · " + JSON.stringify(await D()) + ")"); ok(e && e.g === 3, '맞는 판단만 = 점수 ' + (e && e.g)); ok((await lvOf('tuho')) === 2, '잘한 판 뒤 투호 사다리 2칸'); }
+      o = await openT(3); if (o && o.dbg) { ok(/도전 3칸: /.test(o.lab), '3칸 한 줄 「' + o.lab + '」'); const seen = new Set(); let hiLo = 0;
+        for (let i = 0; i < 5; i++) { const d = await aim(); if (!d || d.ph !== 'aim') break; seen.add(d.P + ':' + d.w); if (d.w !== 0) hiLo++; await throwRight(); }
+        const e = await waitEnd(); ok(e && e.g === 3 && seen.size >= 3, '판마다 항아리·바람이 다름(' + [...seen].join(' ') + ') · 바람 분 판 ' + hiLo + ' · 점수 ' + (e && e.g)); }
+      o = await openT(4); if (o && o.dbg) { ok(o.dbg.P === 6 && o.dbg.sols.every(q => q.startsWith('1,') || q === '0,1'), '4칸 첫 화살 = 항아리 6걸음 · 바람을 등에 업어야 닿음(' + o.dbg.sols.join(' / ') + ' · 바람 ' + o.dbg.w + ')'); await shot('toss_3_far'); }
+      await ev(() => __clean()); await W8(400); }
+
+    // ── 🌱 모내기(DEPTH-1 · 눈금 꾹 → 물 높이·못줄 자리 판단 · 틀린 줄은 다음 날 남음) ──
+    if (await ev(() => SM_TOWN.workers().some(w => w[4] === 'paddy'))) { console.log('🌱 모내기 — 물 높이·못줄 말뚝');
+      const openP = (lv, keepMem) => ev(([lv9, km]) => { __clean(); const S = __G.S; S.uses = {}; S.rw = {}; S.min = 11 * 60; SM_TOWN.rules.season('spring'); if (!km) S.mgj = {}; if (!S.lad) S.lad = {}; if (!S.lad.mg) S.lad.mg = {}; S.lad.mg.plant = { lv: lv9, z: 0, n: 0, best: null, last: null }; window.__K = 'plant';
+        if (!SM_TOWN.play('paddy')) return null; const d = SM_TOWN.mgDbg(); if (!d) return null; const el = [...document.querySelectorAll('.twn-play')].pop(), go = el && el.querySelector('.go'); return { dbg: d, bars: el.querySelectorAll('.zone,.pg,.mk,.rope').length, goHidden: !go || go.style.display === 'none', lab: (el.querySelector('.mglad') || {}).textContent || '', head: (el.querySelector('small') || {}).textContent || '' }; }, [lv, !!keepMem]);
+      const needW = d => (d.water === 'dry' ? 0 : d.water === 'deep' ? 2 : 1);
+      const water = async () => { const d = await until(q => q.ph === 'water' && q.lock === 0, 9000); if (!d || d.ph !== 'water') return d; await tap('[data-w="' + needW(d) + '"]'); return until(q => q.ph === 'rope', 6000); };
+      const row = async (dl, dr) => { const d = await until(q => (q.ph === 'rope' || q.ph === 'water') && q.lock === 0, 9000); if (!d) return null; if (d.ph === 'water') { await water(); return row(dl, dr); } await tap('.pmk[data-s="0"][data-j="' + (d.want[0] + (dl || 0)) + '"]'); await tap('.pmk[data-s="1"][data-j="' + (d.want[1] + (dr || 0)) + '"]'); return d; };
+      const runP = async plan => { await water(); for (let i = 0; i < 9; i++) { const d = await D(); if (!d || d.ph === 'end') break; const r = await row(...(plan[i] || [0, 0])); if (!r) break; if (await ended()) break; } return waitEnd(15000); };
+      let o = await openP(1); if (common('paddy', o)) { const d0 = o.dbg; ok(o.bars === 0 && /물 높이/.test(o.head) && d0.ph === 'water' && d0.n === 3 && !d0.fine[0] && !d0.fine[1], '1칸 = 물 높이 먼저 · 줄 셋 · 굵은 눈금 · 「' + o.head + '」');
+        await shot('plant_1_water');
+        if (d0.water !== 'ok') { const bad = d0.water === 'dry' ? 2 : 0; const l0 = d0.left; await tap('[data-w="' + bad + '"]'); await W8(150); const d1 = await D(); ok(d1.ph === 'water' && d1.lock > 2 && d1.water !== 'ok' && d1.miss === 1, '틀린 물 손질(' + d0.water + ' → ' + d1.water + ') = 더 나빠져 기다림 ' + d1.lock + '초'); const d2 = await until(q => q.lock === 0, 6000); ok(l0 - d2.left >= 1.6, '남은 시간이 줆(' + l0.toFixed(1) + ' → ' + d2.left.toFixed(1) + ')'); }
+        const w9 = await water(); ok(w9 && w9.ph === 'rope' && w9.wOk, '물 높이를 맞게 고름 → 못줄 걸기'); await shot('plant_2_rope');
+        const e = await runP([[0, 0], [0, 0], [0, 0]]); ok(e && e.g === 3, '곧은 줄 셋 = 점수 ' + (e && e.g)); ok((await lvOf('plant')) === 2, '잘한 판 뒤 모내기 사다리 2칸'); }
+      o = await openP(2); if (o && o.dbg) { ok(o.dbg.fine[0] && o.dbg.fine[1] && /도전 2칸: /.test(o.lab), '2칸 = 촘촘한 눈금(두 칸 = 줄 사이) · 「' + o.lab + '」'); await water(); const r = await row(0, 0); ok(r && r.want[0] === 2, '첫 줄 = 눈금 두 칸(' + (r && r.want.join(',')) + ')'); await ev(() => __clean()); }
+      o = await openP(3); if (o && o.dbg) { ok(o.dbg.n === 4 && !o.dbg.fine[0] && o.dbg.fine[1], '3칸 = 줄 넷 · 왼쪽 굵은·오른쪽 촘촘(양쪽 칸 수가 다름)');
+        await water(); await row(0, 1); await W8(200); let d = await D(); ok(d.rows[0].bad === 'crook' && !d.rows[0].ok, '양쪽을 다르게 옮김 = 비뚤어진 줄이 논에 남음 · 「' + (await msg()).slice(0, 40) + '」');
+        await row(-1, -2); await W8(200); d = await D(); ok(d.rows[1].bad === 'near', '줄 사이가 좁음 = 붙은 줄로 남음'); await shot('plant_3_crook');
+        for (let i = 0; i < 2; i++) await row(0, 0); const e = await waitEnd(15000); const mem = await ev(() => JSON.parse(JSON.stringify(__G.S.mgj || {}))), K9 = Object.keys(mem).find(k9 => /paddy/.test(k9));
+        ok(e && e.g === 2 && K9 && mem[K9].w.join() === 'crook,near', '끝(점수 ' + (e && e.g) + ') · 일터 기억에 남은 줄 ' + (K9 ? mem[K9].w.join(',') : '-'));
+        await ev(() => { __G.S.day += 1; }); o = await openP(1, true); d = o && o.dbg; ok(d && d.old.join() === 'crook,near' && d.rows[0].rv && d.rows[1].rv && d.n === 5, '다음 날 = 어제 남은 줄 둘이 먼저(고쳐 심기) · 줄 ' + (d && d.n)); await shot('plant_4_fix');
+        const e2 = await runP([[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]); const d9 = await ev(() => JSON.parse(JSON.stringify(__G.S.mgj || {}))); ok(e2 && e2.g === 3 && d9[K9] && !d9[K9].w.length, '고쳐 심음 = 점수 ' + (e2 && e2.g) + ' · 남은 줄 ' + JSON.stringify(d9[K9] && d9[K9].w)); }
+      o = await openP(4); if (o && o.dbg) { await water(); await row(0, 0); await row(0, 0); const d = await until(q => q.ph === 'water' || q.qi >= 3, 9000); ok(d && d.turned && d.ph === 'water' && d.water === 'dry', '4칸 = 둘째 줄 뒤 물꼬가 열려 논물이 빠짐 → 다시 보고 고름'); await ev(() => __clean()); }
+      await ev(() => __clean()); await W8(400); }
+
     // ── 🚣 배 노 젓기(JUDGE-2) ──
     { const hb = await ev(() => { const h = SD2.map.interact.list().find(q => /^⛵ 배 타기|^⛵ Board/.test(q.label)); return h ? [h.x, h.z] : null; });
       if (!hb) console.log('🚣 이 마을엔 배가 없음 — 건너뜀'); else { console.log('🚣 배 노 젓기 — 물때·바람 보고 방향·힘');
