@@ -7,10 +7,13 @@
 //      점심 12:00~13:00 = 열에 여섯이 일터 곁 빈 벤치(18m 안)에 걸터앉거나 일터 가장자리 땅에 앉아 도시락 · 그동안 E = '점심 먹는 중 · 13:00에 다시 일해요' 한 줄
 //      장 보러 가기 = 하루 둘 · 14:30~15:30에 일을 일찍 마치고 230m 안 가게 문·장터 판매대 앞까지 길(인도 쪽)로 걸어가 4초 안 → 장바구니를 들고 집으로
 //      정자에 모이기 = 맑은 날 18:00~20:00 · 정자 곁 이웃 셋이 일을 마친 뒤 마루에 걸터앉아 이야기(이름 없는 이웃 · 날씨·농사·장날) · 비·눈 = 안 모임 · 밤에도 그 몸만 보임
+//   ROUTINE-3 저녁·밤 갈래(NIGHT-1 · 10-26 사용자 '시간에 따른 사람들의 행동 변화' · 사람 수 그대로 · 밤에도 그 몸만 보임):
+//      🚶 저녁 산책 = 맑은 날 19:05~20:40 · 하루 셋 · 집 앞 → 길가 → 조금 더 → 길가 → 집(한 바퀴) · 🏋 밤 운동 = 맑은 날 20:00~21:40 · 운동 쉼터 320m 안 이웃 둘 · 팔 뻗기·손뼉
+//      🛍 퇴근길 장보기 = 하루 둘 · 일을 마치면 집 대신 가게 → 장바구니 들고 집(밤이 되어도 그 몸만 보임) · 비·눈 오는 밤 = 산책·운동 없음(일찍 들어감 · 거리 사람 몫은 town_night.js)
 //   ② 먹이·물 연쇄(CHAIN 한 줄 = 조건 → 다음 날 수): 비 사흘 → 논물이 불어 개구리가 늘고 왜가리가 논까지 먹으러 옴 · 비 없는 날 닷새 → 개울물이 줄어 물새가 줄어듦
 //      날씨 기록(하루 하나) → 아침마다 한 번 셈 → town_wild.js가 종마다 나올 자리 수만 바꿈(A.fc) · 아침 소식판 한 줄 + 처음 바뀐 아침 알림 한 줄 · 도감 '먹이 사슬' 한 줄(본 것만)
 //      잡아먹는 장면 X — '먹으러 온다'까지만 · 사실만(개구리는 물 고인 논·웅덩이에 모이고, 왜가리는 개구리·물고기를 먹으러 물 많은 곳에 옴)
-export const ROUTINE_V = 2;
+export const ROUTINE_V = 3;
 export const CHAIN = {
   base: { frog: 0.67, heron: 0.8, egret: 0.75, spotbill: 1 },   /* 보통 날 = 자리의 이만큼만 나옴(늘고 줄 몫을 남김) */
   rows: [
@@ -33,9 +36,9 @@ export function createRoutine(A) {
   let key = '', lastMin = -1, lastDay = -1, DOORS = null, nGo = 0, nCome = 0, nSnap = 0, nWait = 0, tickMs = 0, tickMax = 0;
   const S = () => A.GAME.S, M = () => A.mesh(), HO = {};   /* HO = 시험만(일 시간 바꿔 보기) */
   // ROUTINE-2 갈래 셋(점심 · 장 보러 가기 · 정자에 모이기) — 사람 수는 그대로 · 있는 일꾼의 하루에만
-  const PV = [], SEATN = new Map(), EVS = { lunGo: 1, lun: 1, lunBack: 1, shopGo: 1, shopIn: 1, shopHome: 1, pavCome: 1, pav: 1, pavGo: 1 };
+  const PV = [], SEATN = new Map(), EVS = { lunGo: 1, lun: 1, lunBack: 1, shopGo: 1, shopIn: 1, shopHome: 1, pavCome: 1, pav: 1, pavGo: 1, eveGo: 1, eve: 1, gymGo: 1, gym: 1, gymBack: 1 };
   const NOLUN = { stall: 1, cook: 1, stones: 1 }, BENCHONLY = { paddy: 1, fisher: 1, saltpan: 1 }, NOSHOP = { stall: 1, cook: 1, stones: 1 }, NOPAV = { cook: 1, stones: 1 };
-  let NVA = new Uint8Array(0), nvN = 0, dayEv = -1, nLun = 0, nShop = 0, nPav = 0, nTalk = 0;
+  let NVA = new Uint8Array(0), nvN = 0, dayEv = -1, nLun = 0, nShop = 0, nPav = 0, nTalk = 0, nEve = 0, nGym = 0, nEsh = 0;
   const hsh = (a, b) => { let h = Math.imul(a + 1, 73856093) ^ Math.imul(b + 7, 19349663); h = Math.imul(h ^ (h >>> 13), 0x5bd1e995); return ((h ^ (h >>> 15)) >>> 0) / 4294967296; };   /* 날·사람마다 늘 같은 0~1 */
   // ── ① 일과 ──
   function build() { lunOffAll(); L.length = 0; MV.length = 0; DOORS = null; const H = A.hots() || [];
@@ -76,6 +79,7 @@ export function createRoutine(A) {
   function sec() { if (!A.on()) return; const k9 = keyOf(); if (k9 !== key) { key = k9; build(); } if (!L.length) { chainSec(); return; }
     const G = S(), m = G.min, jump = lastMin < 0 || G.day !== lastDay || Math.abs(m - lastMin) > 4; lastMin = m; lastDay = G.day; if (G.day !== dayEv) evDay(G.day);
     let hb = 3; for (const o of L) { if (o.hm === undefined && hb > 0) { hb--; homeOf(o); } if (evSec(o, m, jump)) continue; const want = wantIn(o, m);
+      if (o.st === 'in' && !want && o.eshD === G.day && o.shopD !== G.day && o.tgt && m >= 17 * 60 && m < 20 * 60 && !(o.w.party || A.need(o.w) || A.herd(o.w)) && !nearBusy(o)) { nEsh++; shopStart(o, jump); continue; }   /* ROUTINE-3 퇴근길 장보기 */
       if (o.st === 'in' && !want) { if (!jump && canWalk(o)) { const h = homeOf(o); walk(o, 'go', o.w.x, o.w.z, h.x, h.z); nGo++; } else if (!jump && A.night() < 1 && camD(o) < 40) nWait++; else { setOut(o); nSnap++; } }   /* 걸어갈 길이 없는데 눈앞(40m 안)이면 그 자리에서 '쉬는 중'으로 기다렸다가 멀어지면 들어감(눈앞에서 사라지지 않게) */
       else if (o.st === 'out' && want) { if (!jump && canWalk(o) && !(o.w.party || A.need(o.w) || A.herd(o.w))) { const h = homeOf(o); walk(o, 'come', h.x, h.z, o.w.x, o.w.z); nCome++; } else { setIn(o); nSnap++; } }
       else if (o.st === 'go' && want) setIn(o);
@@ -98,7 +102,9 @@ export function createRoutine(A) {
     else if (st === 'lunGo') lunSit(o);
     else if (st === 'shopGo') { unMove(o); o.st = 'shopIn'; o.tm = 4; o.w.out9 = 1; }   /* 가게 안 = 4초 숨김 → 바구니를 들고 나옴 */
     else if (st === 'pavCome') pavSit(o);
-    else if (st === 'pavGo') stand(o, h, 'none'); }
+    else if (st === 'pavGo') stand(o, h, 'none');
+    else if (st === 'eveGo' || st === 'gymBack') setOut(o);
+    else if (st === 'gymGo') gymAt(o); }
   const outAt = (x, z) => { for (const o of L) if (o.st !== 'in' && Math.abs(o.w.x - x) < 1 && Math.abs(o.w.z - z) < 1) return true; return false; };
   // ── ROUTINE-2 갈래 셋 ──
   function seatTake(o, s) { seatFree(o); if (!s) return; o.seat = s; const q = SEATN.get(s); if (q) { q.n++; return; } SEATN.set(s, { n: 1, h: A.map.interact.enable(h9 => h9.kind === 'sit' && h9.seat === s.seat, false) }); }   /* 이웃이 앉은 자리 = 내 '앉기' E를 끔(둘이 앉아도 한 번만 · 다 일어나면 되돌림) */
@@ -116,7 +122,8 @@ export function createRoutine(A) {
   // 날마다(아침 한 번): 점심 먹는 일꾼(열에 여섯쯤) · 장 보러 가는 이웃 둘(오후 14:30~15:30 떠남)
   function evDay(d) { dayEv = d; const C = [];
     for (const o of L) { o.lunD = !NOLUN[o.k] && hsh(d, o.w.i * 3 + 1) < 0.6 ? d : -1; o.lun = null; if (o.tgt && homeOf(o)) C.push(o); }   /* 집 자리가 있는 이웃만(바구니를 들고 들어갈 문·길가) */
-    C.sort((a, b) => hsh(d, a.w.i * 5 + 2) - hsh(d, b.w.i * 5 + 2)); for (const o of C.slice(0, 2)) { o.shopPick = d; o.ts = 14 * 60 + 30 + Math.floor(hsh(d, o.w.i * 7 + 3) * 60); } }
+    C.sort((a, b) => hsh(d, a.w.i * 5 + 2) - hsh(d, b.w.i * 5 + 2)); for (const o of C.slice(0, 2)) { o.shopPick = d; o.ts = 14 * 60 + 30 + Math.floor(hsh(d, o.w.i * 7 + 3) * 60); }
+    eveDay(d, C.slice(2)); }
   const meD = o => { const p = A.me(); return p ? Math.hypot(p.x - o.w.x, p.z - o.w.z) : 1e9; };
   const nearBusy = o => A.busy() && meD(o) < 12;   /* 내가 그 일꾼과 놀이·창을 하는 중이면 그 자리에 둠 */
   function evSec(o, m, jump) { const w = o.w, d = S().day, nd = !!(w.party || A.need(w) || A.herd(w));
@@ -129,6 +136,7 @@ export function createRoutine(A) {
         if (o.st === 'shopIn') { if (--o.tm <= 0) shopHome(o); }
         else if (camAt(o.cx, o.cz) > 140 || (o.hold && camAt(o.cx, o.cz) > 30)) setOut(o);   /* 멀어지면(또는 길가에서 기다리다) 들어감 */
         return true; }
+      if (c === 'e' || c === 'g') return eveSec(o, m, jump, nd);
       const P = o.pv.P, sp = P.sp[o.pv.j], stay = !nd && A.wx() === 'clear' && m >= 18 * 60 && m < 20 * 60 + o.sg2;
       if (o.st === 'pavGo') { if (jump || (o.hold && camAt(o.cx, o.cz) > 30) || camAt(o.cx, o.cz) > 140) setOut(o); return true; }
       if (!stay) { if (!jump && o.st === 'pav' && P.ap && canWalk2(o.cx, o.cz)) { seatFree(o); walkP(o, 'pavGo', [[sp.sx, sp.sz], [P.ap.x, P.ap.z]]); o.w.out9 = 2; } else { setOut(o); if (jump) nSnap++; } return true; }
@@ -136,8 +144,33 @@ export function createRoutine(A) {
     if (nd) return false;
     if (o.st === 'in' && o.lunD === d && m >= 12 * 60 + (o.sg % 4) * 3 && m < 12 * 60 + 40 && !nearBusy(o) && lunStart(o, jump)) return true;
     if (o.st === 'in' && o.shopPick === d && o.shopD !== d && m >= o.ts && m < o.ts + 90 && !nearBusy(o)) { shopStart(o, jump); return true; }
+    if (o.st === 'out' && o.eveD === d && A.wx() === 'clear' && m >= o.eveT && m < o.eveT + 25) { eveStart(o, jump); return true; }   /* ROUTINE-3 저녁 산책 */
+    if (o.st === 'out' && o.gymD === d && o.gym && A.wx() === 'clear' && m >= o.gymT && m < o.gymT + 25) { gymStart(o, jump); return true; }   /* ROUTINE-3 밤 운동 */
     if (o.st === 'out' && o.pv && o.pvD !== d && !(o.pv.P.cool > 0) && A.wx() === 'clear' && m >= 18 * 60 + o.sg * 2 && m < 19 * 60 + 50) {   /* 걸어오는 이웃은 3초씩 사이를 두고 하나씩 */ pavStart(o, jump); return true; }
     return false; }
+  // ── ROUTINE-3 저녁·밤 갈래 ──
+  //   날마다(아침 한 번): 퇴근길 장보기 둘(낮 장보기와 다른 이웃 · 일이 17시 뒤에 끝나는 이웃) · 저녁 산책 셋(정자 이웃 X · 집 자리가 있는 이웃) · 밤 운동 둘(운동 쉼터가 집에서 320m 안)
+  function eveDay(d, C2) { for (const o of L) { o.eshD = -1; o.eveD = -1; o.gymD = -1; o.gym = null; }
+    for (const o of C2.filter(q => (HO[q.k] || A.hrs(q.k))[1] >= 17).slice(0, 2)) o.eshD = d;
+    const E = L.filter(o => !o.pv && !NOPAV[o.k] && !o.w.gate && o.eshD !== d && o.shopPick !== d && homeOf(o)).sort((a, b) => hsh(d, a.w.i * 11 + 5) - hsh(d, b.w.i * 11 + 5));
+    const GY = (A.gyms && A.gyms()) || [], EG = L.filter(o => !NOPAV[o.k] && !o.w.gate && o.eshD !== d && o.shopPick !== d && homeOf(o)).sort((a, b) => hsh(d, a.w.i * 11 + 5) - hsh(d, b.w.i * 11 + 5)); let ng = 0; for (const o of EG) { if (ng >= 2) break;   /* 정자 이웃도 운동은 감(정자 20:00에 끝남 → 20:15부터) */ const h = homeOf(o); if (!h) continue; let b = null, bd = 320; for (const g of GY) { const dd = Math.hypot(g[0] - h.x, g[1] - h.z); if (dd < bd) { bd = dd; b = g; } } if (!b) continue; o.gymD = d; o.gym = b; o.gymT = 20 * 60 + 15 + Math.floor(hsh(d, o.w.i * 17 + 3) * 40); o.gymE = 21 * 60 + 25 + (o.sg % 4) * 4; ng++; }   /* 운동 쉼터 곁 이웃 먼저 */
+    for (const o of E.filter(q => q.gymD !== d).slice(0, 3)) { o.eveD = d; o.eveT = 19 * 60 + 5 + Math.floor(hsh(d, o.w.i * 13 + 7) * 50); o.eveE = o.eveT + 40; } }
+  function far(x0, z0, R0, ex, ez) { for (const r of [14, 20, 26]) for (let a = 0; a < 12; a++) { const x = x0 + Math.cos(a * 0.5236) * r, z = z0 + Math.sin(a * 0.5236) * r; if (Math.hypot(x - ex, z - ez) < 10 || !A.onRoad(x, z, 0.6) || !clear(x0, z0, x, z)) continue; return { x, z }; } return null; }
+  function evePath(o) { const h = homeOf(o); if (!h) return null; const p1 = h.door ? roadNear(h.x, h.z, h.x, h.z, 32) : h; if (!p1) return [[h.x, h.z]]; const p2 = far(p1.x, p1.z, 26, h.x, h.z); const P = [[h.x, h.z]]; if (p1 !== h) P.push([p1.x, p1.z]); if (p2) P.push([p2.x, p2.z], [p1.x, p1.z]); if (p1 !== h) P.push([h.x, h.z]); return P; }
+  function eveStart(o, jump) { o.eveD = -1; const P = evePath(o); if (!P) return; nEve++; hotOff(o); nvSet(o, 1); o.eP = P;
+    if (!jump && P.length > 1 && canWalk2(P[0][0], P[0][1])) { walkP(o, 'eveGo', P); o.w.out9 = 2; } else eveHold(o, P[Math.min(1, P.length - 1)]); }
+  function eveHold(o, q) { const h = M(), w = o.w; unMove(o); o.st = 'eve'; o.hold = 1; o.cx = q[0]; o.cz = q[1]; w.out9 = 2; nvSet(o, 1); if (h) { h.set(w.i, q[0], A.ty(q[0], q[1]) + 0.02, q[1], o.ry || w.ry); h.act(w.i, 'stand', 'none'); } }   /* 산책 중 멈춰 선 몸(카메라가 멀 때 · 걷기 자리가 없을 때) */
+  function gymStart(o, jump) { o.gymD = -1; const g = o.gym, h0 = homeOf(o); if (!g || !h0) return; nGym++; hotOff(o); nvSet(o, 1); const sp = A.gymSpot ? A.gymSpot(g, o.w.i) : { x: g[0] + 1.5, z: g[1] }; o.gS = sp;
+    const R = !jump && canWalk2(h0.x, h0.z) ? A.route([h0.x, h0.z], [sp.x, sp.z]) : null; if (R && R.ok && R.pts.length > 1 && R.len < 400) { walkP(o, 'gymGo', side(R.pts), 'none', true); o.w.out9 = 2; } else gymAt(o); }
+  function gymAt(o) { const h = M(), w = o.w, q = o.gS; unMove(o); o.st = 'gym'; o.hold = 0; o.tm = 0; o.cx = q.x; o.cz = q.z; w.out9 = 2; nvSet(o, 1); if (h) { h.set(w.i, q.x, A.ty(q.x, q.z) + 0.02, q.z, q.ry ?? w.ry); h.act(w.i, 'reach', 'none'); } }
+  function eveSec(o, m, jump, nd) { const st = o.st, wet = A.wx() !== 'clear';
+    if (nd || jump) { setOut(o); return false; }
+    if (st === 'eve') { if (m >= o.eveE || wet) { setOut(o); return true; } if (o.eP && o.eP.length > 2 && canWalk2(o.cx, o.cz) && camAt(o.cx, o.cz) < 60) { const P = o.eP.slice(1); o.eP = null; walkP(o, 'eveGo', P); o.w.out9 = 2; } return true; }
+    if (st === 'eveGo') { if (wet || camAt(o.cx, o.cz) > 140) setOut(o); return true; }
+    if (st === 'gym') { const h = M(); if (m >= o.gymE || wet) { const h0 = homeOf(o), R = h0 && canWalk2(o.cx, o.cz) && !wet ? A.route([o.cx, o.cz], [h0.x, h0.z]) : null; if (R && R.ok && R.pts.length > 1) { walkP(o, 'gymBack', side(R.pts), 'none', true); o.w.out9 = 2; } else setOut(o); return true; }
+      if (h && ++o.tm % 4 === 0) h.act(o.w.i, (o.tm / 4) % 2 ? 'cheer' : 'reach', 'none'); return true; }   /* 4초마다 팔 뻗기 ↔ 손뼉(체조) */
+    if (st === 'gymGo' || st === 'gymBack') { if (camAt(o.cx, o.cz) > 140) { if (st === 'gymGo') gymAt(o); else setOut(o); } return true; }
+    return true; }
   // ① 점심(12:00~13:00): 일터 곁 18m 안 빈 벤치(곧장 걸어 닿는 것)에 걸터앉아 도시락 · 없으면 일터 가장자리 2~3m 땅에 앉음(논·부두·염전 일꾼은 벤치만) · 그동안 E = 점심 한 줄
   function lunSpot(o) { const w = o.w, SI = A.sits() || []; let b = null, bd = 18;
     for (const s of SI) { if (s.kind !== 'bench' || SEATN.has(s)) continue; const d = Math.hypot(s.stand[0] - w.x, s.stand[1] - w.z); if (d < bd && clear(w.x, w.z, s.stand[0], s.stand[1])) { bd = d; b = s; } }
@@ -164,8 +197,8 @@ export function createRoutine(A) {
       if (q.sd) { q[0] = (q[0] + a2[0]) / 2; q[1] = (q[1] + a2[1]) / 2; } else out.push(a2); b2.sd = 1; out.push(b2); }
     const e = P[P.length - 1], q = out[out.length - 1]; if (q[0] !== e[0] || q[1] !== e[1]) out.push([e[0], e[1]]); return out.length > 1 ? out : [P[0], e]; }
   function shopStart(o, jump) { const w = o.w; o.shopD = S().day; nShop++; if (jump || !canWalk2(w.x, w.z) || !homeOf(o)) { setOut(o); nSnap++; return; }
-    const R = A.route([w.x, w.z], o.tgt); if (!R || !R.ok || R.len > 380 || R.pts.length < 2) { setOut(o); return; } hotOff(o); walkP(o, 'shopGo', side(R.pts), 'none', true); w.out9 = 2; }
-  function shopHome(o) { const h9 = homeOf(o); if (!h9 || camAt(o.cx, o.cz) > 90) { setOut(o); return; } const R = A.route(o.tgt, [h9.x, h9.z]); if (!R || !R.ok || R.pts.length < 2) { setOut(o); return; } walkP(o, 'shopHome', side(R.pts), 'carry', true); o.w.out9 = 2; }
+    const R = A.route([w.x, w.z], o.tgt); if (!R || !R.ok || R.len > 380 || R.pts.length < 2) { setOut(o); return; } hotOff(o); walkP(o, 'shopGo', side(R.pts), 'none', true); w.out9 = 2; if (o.eshD === S().day) nvSet(o, 1); }
+  function shopHome(o) { const h9 = homeOf(o); if (!h9 || camAt(o.cx, o.cz) > 90) { setOut(o); return; } const R = A.route(o.tgt, [h9.x, h9.z]); if (!R || !R.ok || R.pts.length < 2) { setOut(o); return; } walkP(o, 'shopHome', side(R.pts), 'carry', true); o.w.out9 = 2; if (o.eshD === S().day) nvSet(o, 1); }
   // ③ 정자에 모이기(맑은 날 18:00~20:00): 정자 곁 이웃 셋이 일을 마친 뒤 하나씩 와서 마루에 걸터앉아 이야기 · 비·눈 오면 안 모이고 오는 중에 오면 흩어짐 · 밤에도 그 몸만 보임
   //   말풍선 = 이름 없는 이웃의 하루 이야기(날씨·농사·장날 · 지금 상태로 고름) · 내가 16m 안에 있을 때만 6초에 한 줄(말풍선 하나를 같이 씀)
   function pavStart(o, jump) { const P = o.pv.P, sp = P.sp[o.pv.j]; o.pvD = S().day; nPav++; if (P.ap === undefined) P.ap = roadNear(P.x, P.z, P.sp[0].sx, P.sp[0].sz, 32) || openNear(P.sp[0].sx, P.sp[0].sz) || null;   /* 길이 멀면 18~24m 밖 빈 땅(곧장 걸어 닿는 곳)에서 걸어옴 */
@@ -199,7 +232,7 @@ export function createRoutine(A) {
   function water() { const c = today(), W = waterOf(c.kind || '', c.n || 0); W.d = c.d; return W; }   /* WATER-1 그날 물 높이(아침 한 번 셈 · today()가 날마다 한 번) */
   const r1 = v => +(+v).toFixed(1), evOf = o => ({ lun: o.lunD === S().day ? (o.lun ? { x: r1(o.lun.x), z: r1(o.lun.z), bench: o.lun.bench, le: o.le, lb: o.lb } : 'wait') : null, hot: o.lh ? o.lh.hot.label : null, shop: o.shopPick === S().day ? { ts: o.ts, tgt: o.tgt && o.tgt.map(r1), done: o.shopD === S().day } : null, pv: o.pv ? PV.indexOf(o.pv.P) : -1, pvD: o.pvD, nv: o.w.i != null && !!NVA[o.w.i], out9: o.w.out9, act: M() && M().actOf ? M().actOf(o.w.i) : null, tool: M() && M().toolOf ? M().toolOf(o.w.i) : null });
   return { sec, tick, fc, news, saw, dexLine, outAt, rec, water, nightN: () => nvN, nightVis: i => !!NVA[i],   /* ROUTINE-2 town.js 일꾼 몸 보이기(밤 = 정자에 모인 몸만) */
-    ev: () => ({ nLun, nShop, nPav, nTalk, nightN: nvN, busy: !!A.busy(), bubFree: !!A.bubFree(), pv: PV.map(P => ({ k: P.k, x: r1(P.x), z: r1(P.z), ap: P.ap ? [r1(P.ap.x), r1(P.ap.z)] : P.ap, sp: P.sp.map(q => [r1(q.x), r1(q.z), r1(q.y)]), who: L.filter(o => o.pv && o.pv.P === P).map(o => o.w.i) })), seats: SEATN.size,
+    ev: () => ({ nLun, nShop, nPav, nTalk, nEve, nGym, nEsh, eve: L.filter(o => o.eveD === S().day || o.gymD === S().day || o.eshD === S().day || /^(eve|gym)/.test(o.st)).map(o => ({ i: o.w.i, k: o.k, st: o.st, eveT: o.eveD === S().day ? o.eveT : null, gymT: o.gymD === S().day ? o.gymT : null, esh: o.eshD === S().day, x: r1(o.cx), z: r1(o.cz), nv: o.w.i != null && !!NVA[o.w.i] })), nightN: nvN, busy: !!A.busy(), bubFree: !!A.bubFree(), pv: PV.map(P => ({ k: P.k, x: r1(P.x), z: r1(P.z), ap: P.ap ? [r1(P.ap.x), r1(P.ap.z)] : P.ap, sp: P.sp.map(q => [r1(q.x), r1(q.z), r1(q.y)]), who: L.filter(o => o.pv && o.pv.P === P).map(o => o.w.i) })), seats: SEATN.size,
       shoppers: L.filter(o => o.shopPick === S().day).map(o => o.w.i), cand: L.filter(o => o.tgt).map(o => ({ i: o.w.i, k: o.k, d: Math.round(Math.hypot(o.tgt[0] - o.w.x, o.tgt[1] - o.w.z)), hm: !!homeOf(o) })), lines: talkLines() }),
     evTest: { shop: (i, ts) => { const o = L.find(q => q.w.i === i); if (!o || !o.tgt) return false; o.shopPick = S().day; o.shopD = -1; o.ts = ts; return true; }, lun: (i, on) => { const o = L.find(q => q.w.i === i); if (!o) return false; o.lunD = on === false ? -1 : S().day; o.lun = null; return true; }, pvReset: () => { for (const o of L) o.pvD = -1; }, path: i => { const o = L.find(q => q.w.i === i); return o && o.P ? o.P.map(q => [r1(q[0]), r1(q[1])]) : null; } },
     info: () => ({ n: L.length, mv: MV.length, nGo, nCome, nSnap, nWait, tickMs: +tickMs.toFixed(3), tickMax: +tickMax.toFixed(3), chain: { ...C(), w: { ...C().w } },

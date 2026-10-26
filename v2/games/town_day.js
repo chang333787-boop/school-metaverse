@@ -27,6 +27,7 @@ const CSS = `.twn-day{cursor:pointer;position:fixed;left:10px;top:132px;z-index:
 //   자리: isle() 썰물섬 장소 | null · seenIsle() · shore() [x, z] | null · cinema() { name, door } | null · shows [{ s, e, t:[ko,en] }] · stall() [x, z] | null
 //     shops() [{ name, h1, door }] · offices() [{ ic, name, h1, door }] · pav() [x, z] | null · star() [x, z] | null · mush() [x, z] | null
 //     farm() { at, plots } | null · pots() [] · home() [x, z] | null · facDest(ln, door) · ladRows() [{ key, name, best }]
+//   nightRows(d) 밤·이른 아침 때 [{ m, g, ic, s, t, p }] · nightKey()(NIGHT-1 town_night.js · 없어도 됨)
 //   typh(d1) 태풍 판 한 줄 | null(TYPH-1 · 없어도 됨) · bagWait(d0, pre) · bagDue(d) · bagKey()(BAG-2 town_bag.js · 없어도 됨)
 //   pathRow(d) 하루 마무리 '나의 길' 줄 [k, ic, 제목, 글] | null · pathWait() 내일 기다리는 표지판 { ic, s, t, p } | null(PATH-1 · 없어도 됨)
 //   bunRow(d) '오늘 바뀐 것' 꾸러미로 바뀐 마을 줄 | null · bunWait(d0, pre) 내일 아침 바뀌는 곳 { ic, s, t, p } | null(BUNDLE-2 · 없어도 됨)
@@ -60,10 +61,11 @@ export function createDay(A) {
     const G = new Map(); for (const q of A.shops()) { if (!(q.h1 < 24)) continue; const a = G.get(q.h1) || []; a.push(q); G.set(q.h1, a); }
     for (const [h, a] of G) { const nm = a.map(q => q.name), s9 = nm.length > 1 ? (e ? nm[0] + ' +' + (nm.length - 1) : nm[0] + ' 외 ' + (nm.length - 1) + '곳') : nm[0]; put(h * 60, 'shop' + h, '🏪', T2(s9 + ' 닫음', s9 + ' closes'), T2('가게 문 닫음: ' + nm.join(', '), 'Shops close: ' + nm.join(', ')), plc('🏪', a[0].name, a[0].door)); }
     for (const q of A.offices()) put(q.h1 * 60, 'off:' + q.name, q.ic, T2(q.name + ' 닫음', q.name + ' closes'), T2(q.name + ' 창구가 문을 닫아요', 'The ' + q.name + ' counter closes'), plc(q.ic, q.name, q.door));
+    if (A.nightRows) for (const c of A.nightRows(d) || []) put(c.m, c.g, c.ic, c.s, c.t, c.p);   /* NIGHT-1 야시장·밤 낚시·밤 순찰·아침 경매(town_night.js) */
     { const c = A.caseDue && A.caseDue(d); if (c) put(c.m, 'case', c.ic, c.s, c.t, c.p); }   /* CASE-1 사건 기한(마지막 날 18:00) */
     { const c = A.bagDue && A.bagDue(d); if (c) put(c.m, 'req', c.ic, c.s, c.t, c.p); }   /* BAG-2 이웃 부탁 마감(18:00) */
     out.sort((a, b) => a.m - b.m); return out; }
-  function list() { const d = day(), k = d + ':' + A.wx() + ':' + (A.seenIsle() ? 1 : 0) + ':' + ((((S().bldg || {}).cinema) || {}).seen === d ? 1 : 0) + ':' + LANG0() + ':' + (A.caseKey ? A.caseKey() : '') + ':' + (A.bagKey ? A.bagKey() : ''); if (LC && LC.k === k) return LC.L; LC = { k, L: build(d) }; log('list ' + k + ' ' + LC.L.length); return LC.L; }
+  function list() { const d = day(), k = d + ':' + A.wx() + ':' + (A.seenIsle() ? 1 : 0) + ':' + ((((S().bldg || {}).cinema) || {}).seen === d ? 1 : 0) + ':' + LANG0() + ':' + (A.caseKey ? A.caseKey() : '') + ':' + (A.bagKey ? A.bagKey() : '') + ':' + (A.nightKey ? A.nightKey() : ''); if (LC && LC.k === k) return LC.L; LC = { k, L: build(d) }; log('list ' + k + ' ' + LC.L.length); return LC.L; }
   const LANG0 = () => (en() ? 'en' : 'ko');
   const ahead = n => { const m = now(), seen = new Set(), o = []; for (const q of list()) { if (q.m <= m || seen.has(q.g)) continue; seen.add(q.g); o.push(q); if (o.length >= n) break; } return o; };
   function lineToday() { const L9 = ahead(A.touch() ? 1 : 3); if (!L9.length) return en() ? '⏰ No more times today — sleep starts a new day' : '⏰ 오늘 남은 때가 없어요. 자면 새 하루예요'; return '⏰ ' + L9.map(q => hm(q.m) + ' ' + L(q.s)).join(' · '); }

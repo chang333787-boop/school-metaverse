@@ -812,7 +812,8 @@ export function createIndoor({ T3, map, onCollider, removeCollider, en, look }) 
     idle(step); }
   // ── 들어가기·나가기 ──
   // BLDG-1(town_bldg.js): 경찰서·병원·보호센터 방은 바깥 모듈이 이 부품으로 짓습니다(o.room(at, KIT) → made · 꼴은 다른 방과 같음)
-  const KIT = { shell, sign, mainSign, standGuest, sitGuest, stable, chair, stool, rtable, wwin, panelL, strip, plant, colL, seatL, PR, I, cs, WB, pend, rndOf, guest, part: (S, k, x, y, z, sx, sy, sz, hex, gl, ry, rx) => part(gl ? S.Ag : S.A, k, S.at[0] + x, S.at[1] + y, S.at[2] + z, sx, sy, sz, hex, ry || 0, rx || 0), parts: fn => buildParts(fn), en };
+  const KIT = { shell, sign, mainSign, standGuest, sitGuest, stable, chair, stool, rtable, wwin, panelL, strip, plant, colL, seatL, PR, I, cs, WB, pend, rndOf, guest, part: (S, k, x, y, z, sx, sy, sz, hex, gl, ry, rx) => part(gl ? S.Ag : S.A, k, S.at[0] + x, S.at[1] + y, S.at[2] + z, sx, sy, sz, hex, ry || 0, rx || 0), parts: fn => buildParts(fn), en,
+    crate, bread, basket, fridgeRun, gondola, cart, sack, putF, planks, tFloor, tWall, pool, shopRoom: (at, kind, name) => roomShop(at, kind, name) };   /* ENTER-1(town_enter.js) 갈래별 가게·집 방이 같은 부품으로 지음 · 기존 가게 방(마트·편의점·빵집·카페·아이스크림)은 shopRoom 그대로 */
   function buildParts(fn) { const A = newA(), Ag = newA(), grp = new T3.Group(); fn((k, x, y, z, sx, sy, sz, hex, gl, ry, rx) => part(gl ? Ag : A, k, x, y, z, sx, sy, sz, hex, ry || 0, rx || 0)); for (const [B, m] of [[A, MAT], [Ag, GLOW]]) { const ms = meshOf(B, m); if (ms) { ms.matrixAutoUpdate = true; grp.add(ms); } } grp.userData.fx = 1; return grp; }
   const HOMES = { treehouse: roomCabin, 'blue-cottage': roomCottage, 'purple-townhouse': roomTownhouse, 'cream-suburban-fountain': roomSuburb, 'white-modern': at => roomModern(at, false), 'black-steel-glass': at => roomModern(at, true) };
   function enter(o) { exit(); const t0 = performance.now(); if (TX && TX.n) { TX.g.clearRect(0, 0, 1024, 512); TX.x = TX.y = TX.rh = TX.n = 0; }   /* 글씨 그림 한 장을 이 방 것으로 다시 */
