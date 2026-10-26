@@ -38,8 +38,9 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await W8(900);
     // ── 소금물 창고에 들이기 판단(구름이 반쯤 오면 단추) ──
     console.log('🏠 소금물 창고'); await setL({ lv: 1, nw: 0 }); await ev(() => SM_TOWN.rules.work('saltpan')); await W8(600);
+    await ev(() => { const d = SM_TOWN.salt.dbg(); if (d && d.sit) { d.sit('come', 1); d.wait(); } });   /* DEPTH-2: 천일염 = 지켜보기 판단 → 먹구름 한 칸 + 한 시간 기다림 = 비 → 창고 단추 */
     { let st = null; for (let i = 0; i < 160; i++) { if (await ev(() => !!document.querySelector('.twn-p'))) await closeP(); st = await ev(() => SM_TOWN.salt.now() && SM_TOWN.salt.now().st); if (!st || st.asked) break; await W8(200); }
-      const vis = await ev(() => { const b9 = document.querySelector('.twn-play .sst'); return !!b9 && b9.style.display !== 'none'; }); ok(st && st.asked && vis, '구름이 반쯤 오면 「소금물 창고에 들이기」 단추가 보임'); await shot('salt_store');
+      const vis = await ev(() => { const b9 = document.querySelector('.twn-play .sst'); return !!b9 && b9.style.display !== 'none'; }); ok(st && st.asked && vis, '먹구름이 닿아 비가 오면 「소금물 창고에 들이기」 단추가 보임'); await shot('salt_store');
       await ev(() => { const b9 = document.querySelector('.twn-play .sst'); if (b9) b9.click(); }); await W8(4500); const L = await ev(() => SM_TOWN.salt.lad()); ok((L.brine | 0) >= 1, '창고에 들인 판이 기록됨(' + L.brine + ')'); }
     await W8(600);
     // ── 세상 조건 ──

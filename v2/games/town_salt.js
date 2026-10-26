@@ -1,6 +1,6 @@
 // 🧂 염전 일 놀이(SALT-2 · 단계 4 「28 사다리·소금」 · docs/systems/town_phase4.md · 꼬임 넷 · 단계마다 손동작이 다름 · 타이밍 막대 X) — town_minigame.js가 kind 'salt'로 부름(놀이 틀 c 그대로)
 //   c.x = { lv(이번 판 단계 1~4), good(맑고 바람 센 날), soon(비가 올 것 같은 날), rain(지금 비), after(점수, 결과) → 판 뒤 한 줄 }
-//   1 천일염 = 대파로 밀어 모으기 + 구름이 오면 '소금물 창고에 들이기' 판단 · 2 자염 = 달걀이 뜨는 통 고르기 → 불 세기 → 하얀 알갱이가 보이면 불 빼기(끝 판단 한 번)
+//   1 천일염 = 하늘 조짐(깃발·구름) 보고 거둘 때 판단(DEPTH-2 · c.x = town.js judgeX 바람·비 + 위 값 · c.h9 = 상황 고르기) → 대파로 밀어 모으기 · 비가 오면 '소금물 창고에 들이기' · 2 자염 = 달걀이 뜨는 통 고르기 → 불 세기 → 하얀 알갱이가 보이면 불 빼기(끝 판단 한 번)
 //   3 토판염 = 흙바닥 꾹꾹 다지기 → 살살 긁기(빠르면 흙이 섞임) · 4 꽃소금 = 저어 녹이기(돌리기) → 천에 기울여 붓기(거르기) → 하얀 테가 보이면 걷기
 //   배울 거리 = 혼합물의 분리(녹이기·거르기·증발) · 물의 상태 변화(물이 수증기로 날아감) — 사실만 · 셈 X · 판 하나 15~40초
 const SCSS = `
@@ -39,6 +39,8 @@ const SCSS = `
 .twn-play .s2 .pn.cry .cr{opacity:1}
 .twn-play .s2 .ov{position:absolute;right:6%;top:22px;font-size:12px;font-weight:900;font-style:normal;color:#b0412e;opacity:0}
 .twn-play .s2 .ov.on{opacity:1}
+.twn-play .sp .fg9{position:absolute;left:50%;top:2px;transform:translateX(-50%);font-style:normal;line-height:0}.twn-play .sp .cl{transition:left .5s;line-height:0}.twn-play .sp .cl.far{opacity:.8}
+.twn-play .sp .gst{position:absolute;right:6px;bottom:4px;font-size:11px;font-weight:900;color:#2b2420;background:rgba(255,253,246,.85);padding:0 6px;border-radius:6px}.twn-play .sp.g0 .sd{transform:scale(.5)}.twn-play .sp.g1 .sd{transform:scale(.75)}
 `;
 const scss = () => { if (document.getElementById('twn-salt-css')) return; const s = document.createElement('style'); s.id = 'twn-salt-css'; s.textContent = SCSS; document.head.appendChild(s); };
 export const SALT_FACT = {
@@ -51,27 +53,51 @@ export function mkSalt(c) { const X = c.x || {}, lv = Math.max(1, Math.min(4, (X
   let tl = ''; const fin = c.finish; c.finish = ok => { if (c.done) return; const ex = g.extra ? g.extra() : {}; tl = X.after ? X.after(ok, ex) || '' : ''; if (!tl) { const f = SALT_FACT[lv]; tl = '💡 ' + f[c.en ? 1 : 0]; } fin(ok); };
   g.tail = () => tl; return g; }
 const dragXY = (el, e) => { const r = el.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
-// 1 천일염: 대파로 왼쪽 더미까지 밀기 · 구름이 다가오면(반쯤) '소금물 창고에 들이기' 단추 = 더 모을지 들일지 판단 · 맑고 바람 센 날 = 소금이 많고 구름이 늦게 옴
-function saltSun(c, X) { const N = X.good ? 18 : 14, T = (X.rain ? 12 : X.soon ? 16 : 22) * c.zw, S = []; let rx = 0.55, ry = 0.5, got = 0, t = 0, stored = false, asked = false, auto = false;
-  c.mg.innerHTML = '<div class="sp"><i class="pile">🧂 <b>0</b></i><i class="cl">☁️</i><i class="rk"></i></div><div class="s2r"><button class="sub sst" data-a="store" style="display:none">' + c.T('🏠 소금물 창고에 들이기', '🏠 Bring the brine into the shed') + '</button></div>';
-  const sp = c.mg.querySelector('.sp'), rk = sp.querySelector('.rk'), cl = sp.querySelector('.cl'), pb = sp.querySelector('.pile b'), stB = c.mg.querySelector('.sst');
-  for (let i = 0; i < N; i++) { const e = document.createElement('i'); e.className = 'sd'; sp.appendChild(e); S.push({ x: 0.3 + Math.random() * 0.66, y: 0.1 + Math.random() * 0.8, e, on: true }); }
+// 1 천일염(DEPTH-2 · 구름 오기 전 반쯤에 단추 → 하늘 조짐 보고 언제 걷을지 판단): ① 지켜보기 = 한 번 누를 때마다 한 시간(시간 X · 차례) — 알갱이가 자람(작음 → 자라는 중 → 굵게 영금)
+//   하늘 조짐 = 옆에서 본 깃발(천이 날리는 쪽 = 바람이 가는 쪽) + 구름 · 갈래 셋: 맑음(구름 없음) · 먹구름이 바람 불어오는 쪽(한 시간마다 한 칸 다가옴 · 결정지에 닿으면 비) · 구름이 바람 가는 쪽(멀어짐)
+//   일찍 걷으면 덜 영근 소금(양이 적음 · 알갱이가 잚) · 늦으면 비에 녹음(소금물이라도 창고에 들이기) · 알맞게 = 비 오기 한 시간 전 또는 굵게 영근 뒤
+//   ② 거두기 = 대파로 왼쪽 더미까지 밀기(예전 손동작) · 세상 조건: 지금 비·흐린 예보 = 먹구름 · 맑고 바람 센 날 = 맑음·멀어짐 · 그 밖엔 씨앗(바로 앞 판·어제와 다른 갈래)
+const SALT_G = [['알갱이가 아직 작아요', 'The grains are still tiny'], ['알갱이가 자라는 중이에요', 'The grains are growing'], ['알갱이가 굵게 영글었어요', 'The grains are big and ready']];
+function saltSun(c, X) { const H = c.h9 || {}, sp9 = H.sitPick || ((x, t, o) => ({ s: o[(Math.random() * o.length) | 0], n: 0 }));
+  const opts = X.rain ? ['come1'] : X.soon ? ['come1', 'come2'] : X.good ? ['clear', 'away'] : ['clear', 'away', 'come1', 'come2'], P0 = sp9(X, 'salt', opts);   /* come1·2 = 먹구름이 한·두 칸 떨어짐 · 지금 비 = 바로 옆 */
+  let sid = P0.s, sit = sid.slice(0, 4) === 'come' ? 'come' : sid, d = sid === 'come1' ? 1 : sid === 'come2' ? 2 : sit === 'away' ? 1 : 9;
+  const wr = X.wind != null ? ((X.wind | 0) % 8 + 8) % 8 : -1, WR = wr >= 1 && wr <= 3 ? true : wr >= 5 ? false : Math.random() < 0.5;   /* 천이 오른쪽 = 바람이 동쪽으로(왼쪽에서 불어옴) */
+  let side = sit === 'come' ? (WR ? 'L' : 'R') : (WR ? 'R' : 'L'), best = sit === 'come' ? d - 1 : 2;
+  const S = []; let rx = 0.55, ry = 0.5, got = 0, t = 0, tr = 0, stored = false, asked = false, auto = false, at = 0, ph = 'watch', h = 0, g = 0, N = 0, cap = 3, why = '';
+  c.mg.innerHTML = '<div class="sp g0"><i class="pile">🧂 <b>0</b></i><i class="cl">' + (H.cloudSvg ? H.cloudSvg(true, 58) : '☁️') + '</i><i class="fg9">' + (H.flagSide ? H.flagSide(WR) : '') + '</i><b class="gst"></b><i class="rk" style="display:none"></i></div>'
+    + '<div class="s2r"><button class="sub" data-a="wait">' + c.T('⏳ 한 시간 더 말리기', '⏳ Dry one more hour') + '</button><button data-a="take">' + c.T('🧂 지금 거두기', '🧂 Gather now') + '</button><button class="sub sst" data-a="store" style="display:none">' + c.T('🏠 소금물 창고에 들이기', '🏠 Bring the brine into the shed') + '</button></div>';
+  const sp = c.mg.querySelector('.sp'), rk = sp.querySelector('.rk'), cl = sp.querySelector('.cl'), pb = sp.querySelector('.pile b'), gs = sp.querySelector('.gst'), stB = c.mg.querySelector('.sst'), wB = c.mg.querySelector('[data-a="wait"]'), tB = c.mg.querySelector('[data-a="take"]');
+  for (let i = 0; i < 18; i++) { const e = document.createElement('i'); e.className = 'sd'; sp.appendChild(e); S.push({ x: 0.3 + Math.random() * 0.66, y: 0.24 + Math.random() * 0.66, e, on: true }); }
   const put = s => { s.e.style.left = (s.x * 100).toFixed(1) + '%'; s.e.style.top = (s.y * 100).toFixed(1) + '%'; }; S.forEach(put);
-  const rake = () => { rk.style.left = (rx * 100).toFixed(1) + '%'; rk.style.top = (ry * 100).toFixed(1) + '%'; }; rake();
-  const move = (nx, ny) => { if (c.done) return; nx = Math.max(0.05, Math.min(0.98, nx)); ny = Math.max(0.12, Math.min(0.88, ny));
-    if (nx < rx) for (const s of S) { if (!s.on || Math.abs(s.y - ry) > 0.16 || s.x > rx + 0.02 || s.x < nx - 0.03) continue; s.x = nx - 0.02; if (s.x < 0.15) { s.on = false; got++; s.e.className = 'sd in'; pb.textContent = got; c.snd('tick'); if (got >= N) { c.say(c.T('소금을 다 모았어요!', 'All the salt is in!')); c.finish(3); } } put(s); }   /* 왼쪽으로 밀 때만 대파 앞 소금이 함께 감 */
+  const sky = () => { const x = sit === 'clear' || d >= 3 ? -40 : d <= 0 ? 45 : side === 'L' ? [45, 20, 4][d] : [45, 70, 86][d]; cl.style.left = x + '%'; cl.style.display = x < -10 ? 'none' : ''; cl.classList.toggle('far', sit === 'away'); sp.className = 'sp g' + g; gs.textContent = c.T(SALT_G[g][0], SALT_G[g][1]); };
+  const rake = () => { rk.style.left = (rx * 100).toFixed(1) + '%'; rk.style.top = (ry * 100).toFixed(1) + '%'; };
+  const toRake = () => { ph = 'rake'; tr = 0; wB.style.display = tB.style.display = 'none'; N = [7, 11, 16][g] + (X.good ? 2 : 0); for (let i = N; i < S.length; i++) { S[i].on = false; S[i].e.remove(); } S.length = N; rk.style.display = ''; rake(); };
+  const take = () => { if (c.done || ph !== 'watch') return; const early = h < best; cap = early ? 2 : 3; why = early ? 'early' : ''; c.snd('ding'); toRake();
+    c.say(early ? c.T('아직 덜 영글었어요. 소금이 적고 알갱이가 잘아요. 대파로 왼쪽으로 밀어 모아요', 'Not ready yet: less salt, tiny grains. Push it left with the rake') : g < 2 ? c.T('비 오기 전에 거둬요! 대파로 왼쪽으로 쭉 밀어 모아요', 'Gather before the rain! Push it left with the rake') : c.T('굵게 영근 소금! 대파로 왼쪽으로 쭉 밀어 모아요', 'Big ready grains! Push them left with the rake')); };
+  const rainNow = () => { ph = 'rain'; asked = true; why = 'rain'; d = 0; sky(); wB.style.display = tB.style.display = 'none'; stB.style.display = ''; for (const s of S) s.e.className = 'sd in'; c.snd('buzz');
+    c.say(c.T('후두둑! 비가 와서 결정지 소금이 녹았어요. 소금물이라도 창고에 들여요', 'Rain! The salt in the pan melted. Bring the brine into the shed at least')); };
+  const wait = () => { if (c.done || ph !== 'watch') return; h++; g = Math.min(2, g + 1); if (sit === 'come') d--; else if (sit === 'away') d++; c.snd('tick'); sky();
+    if (sit === 'come' && d <= 0) { rainNow(); return; }
+    if (h >= 3) { c.say(c.T('해가 기울어요. 이제 거둬요', 'The sun is going down. Time to gather')); take(); return; }
+    c.say(c.T(SALT_G[g][0], SALT_G[g][1]) + '. ' + (sit === 'come' ? c.T('먹구름이 한 칸 다가왔어요', 'The dark cloud came closer') : sit === 'away' ? c.T('구름이 멀어져요', 'The cloud is moving away') : c.T('하늘이 맑아요', 'The sky is clear'))); };
+  const move = (nx, ny) => { if (c.done || ph !== 'rake') return; nx = Math.max(0.05, Math.min(0.98, nx)); ny = Math.max(0.12, Math.min(0.88, ny));
+    if (nx < rx) for (const s of S) { if (!s.on || Math.abs(s.y - ry) > 0.16 || s.x > rx + 0.02 || s.x < nx - 0.03) continue; s.x = nx - 0.02; if (s.x < 0.15) { s.on = false; got++; s.e.className = 'sd in'; pb.textContent = got; c.snd('tick'); if (got >= N) { c.say(c.T('소금을 다 모았어요!', 'All the salt is in!')); c.finish(cap); } } put(s); }   /* 왼쪽으로 밀 때만 대파 앞 소금이 함께 감 */
     rx = nx; ry = ny; rake(); };
-  const store = () => { if (c.done || stored) return; stored = true; c.snd('ding'); const f = got / N; c.say(c.T('소금물을 창고에 들였어요. 비가 와도 묽어지지 않아요', 'The brine is in the shed — rain can’t thin it now')); c.finish(Math.min(3, (f >= 0.6 ? 2 : f >= 0.3 ? 1 : 0) + 1)); };
-  let drag = false; const pd = e => { e.preventDefault(); drag = true; const [x, y] = dragXY(sp, e); move(Math.max(x, 0.05), y); }, pm = e => { if (drag) { const [x, y] = dragXY(sp, e); move(x, y); } }, pu = () => { drag = false; }, sb = e => { e.preventDefault(); store(); };
-  sp.addEventListener('pointerdown', pd); addEventListener('pointermove', pm); addEventListener('pointerup', pu); stB.addEventListener('click', sb);
-  c.say(c.T('대파를 잡고 왼쪽으로 쭉 밀어 소금을 더미로 모아요 (끌거나 화살표)', 'Grab the rake and push the salt left into the pile (drag · arrows)'));
-  return { go: '', hand: 'push', down() {}, key(code) { if (code === 'KeyE' || code === 'Enter') { if (asked) { store(); return true; } return false; } const d = { ArrowLeft: [-0.035, 0], KeyA: [-0.035, 0], ArrowRight: [0.05, 0], KeyD: [0.05, 0], ArrowUp: [0, -0.06], KeyW: [0, -0.06], ArrowDown: [0, 0.06], KeyS: [0, 0.06] }[code]; if (!d) return false; move(rx + d[0], ry + d[1]); return true; },
-    extra: () => ({ lv: 1, stored, got, N }), dbg: { auto: () => { auto = true; }, get st() { return { lv: 1, got, N, stored, asked, t, T }; }, store: () => store() },
-    tick(dt) { t += dt; cl.style.left = (88 - (t / T) * 74).toFixed(1) + '%';
-      if (!asked && t > T * 0.5) { asked = true; stB.style.display = ''; c.say(c.T('구름이 다가와요. 더 모을까요, 소금물을 창고에 들일까요?', 'A cloud is coming. Keep raking, or bring the brine into the shed?')); }
-      if (auto && !c.done) { const s = S.find(q => q.on); if (s) { if (Math.abs(ry - s.y) > 0.05 || rx < s.x + 0.02) move(Math.min(0.98, s.x + 0.04), s.y); else move(rx - 0.05, ry); } if (asked && got / N >= 0.6) store(); }
-      if (t >= T && !c.done) { c.say(c.T('후두둑 비가 와요. 남은 소금은 녹고 소금물은 묽어져요', 'Rain! The salt left out melts and the brine gets thin')); const f = got / N; c.finish(f >= 0.9 ? 3 : f >= 0.6 ? 2 : f >= 0.3 ? 1 : 0); } },
-    dispose() { sp.removeEventListener('pointerdown', pd); removeEventListener('pointermove', pm); removeEventListener('pointerup', pu); stB.removeEventListener('click', sb); } }; }
+  const store = () => { if (c.done || stored || ph !== 'rain') return; stored = true; c.snd('ding'); c.say(c.T('소금물을 창고에 들였어요. 비가 와도 묽어지지 않아요', 'The brine is in the shed — rain can’t thin it now')); c.finish(1); };
+  let drag = false; const pd = e => { if (ph !== 'rake') return; e.preventDefault(); drag = true; const [x, y] = dragXY(sp, e); move(Math.max(x, 0.05), y); }, pm = e => { if (drag) { const [x, y] = dragXY(sp, e); move(x, y); } }, pu = () => { drag = false; };
+  const ck = e => { const b = e.target.closest('[data-a]'); if (!b) return; e.preventDefault(); if (b.dataset.a === 'wait') wait(); else if (b.dataset.a === 'take') take(); else if (b.dataset.a === 'store') store(); };
+  sp.addEventListener('pointerdown', pd); addEventListener('pointermove', pm); addEventListener('pointerup', pu); c.mg.addEventListener('click', ck); sky();
+  c.say(P0.n === 0 ? c.T('깃발과 구름을 봐요. 소금은 기다릴수록 굵어지지만 비가 오면 녹아요. 기다릴지 거둘지 골라요', 'Read the flag and the clouds. Salt grows bigger the longer you wait, but rain melts it. Wait or gather?')
+    : c.T('하늘을 보고, 한 시간 더 말릴지 지금 거둘지 골라요', 'Look at the sky: dry one more hour, or gather now?'));
+  return { go: '', hand: 'push', down() {}, key(code) { if (ph === 'watch') { if (code === 'Digit1') { wait(); return true; } if (code === 'Digit2' || code === 'KeyE' || code === 'Enter') { take(); return true; } return false; } if (code === 'KeyE' || code === 'Enter') { if (ph === 'rain') { store(); return true; } return false; } const dd = { ArrowLeft: [-0.035, 0], KeyA: [-0.035, 0], ArrowRight: [0.05, 0], KeyD: [0.05, 0], ArrowUp: [0, -0.06], KeyW: [0, -0.06], ArrowDown: [0, 0.06], KeyS: [0, 0.06] }[code]; if (!dd) return false; move(rx + dd[0], ry + dd[1]); return true; },
+    extra: () => ({ lv: 1, stored, got, N, why, sit }),
+    dbg: { auto: () => { auto = true; }, get st() { return { lv: 1, ph, sit, sid, side, wr: WR, d, h, g, best, got, N, cap, stored, asked, why, t, n: P0.n }; }, store: () => store(), wait: () => wait(), take: () => take(),
+      sit: (s, d9) => { if (ph !== 'watch' || h) return false; sit = s; d = s === 'come' ? d9 | 0 || 2 : s === 'away' ? 1 : 9; sid = s === 'come' ? 'come' + d : s; side = s === 'come' ? (WR ? 'L' : 'R') : (WR ? 'R' : 'L'); best = s === 'come' ? d - 1 : 2; sky(); return true; } },
+    tick(dt) { t += dt; if (ph === 'rake') tr += dt;
+      if (auto && !c.done) { if (ph === 'watch') { if ((at += dt) > 0.4) { at = 0; if (h < best) wait(); else take(); } } else if (ph === 'rain') store(); else if (ph === 'rake') { const s = S.find(q => q.on); if (s) { if (Math.abs(ry - s.y) > 0.05 || rx < s.x + 0.02) move(Math.min(0.98, s.x + 0.04), s.y); else move(rx - 0.05, ry); } } }
+      if (ph === 'rake' && tr >= 26 * c.zw && !c.done) { const f = got / N; c.say(c.T('해가 져요. 오늘은 여기까지 모아요', 'The sun is setting. That is all for today')); c.finish(Math.max(0, cap - (f >= 0.9 ? 0 : f >= 0.6 ? 1 : f >= 0.3 ? 2 : 3))); }
+      if (ph !== 'rake' && t > 60 && !c.done) c.finish(ph === 'rain' ? 0 : 1); },
+    dispose() { sp.removeEventListener('pointerdown', pd); removeEventListener('pointermove', pm); removeEventListener('pointerup', pu); c.mg.removeEventListener('click', ck); } }; }
 // 2 자염(진한 소금물 졸이기): ① 달걀이 뜨는 통 고르기(진하기) ② 불 세기(약·중·센) ③ 하얀 알갱이가 보이면 불 빼기 — 너무 일찍 빼면 '아직', 다 졸면 바닥에 눌음 · 센 불 = 빨리 졸지만 알갱이가 잘아짐
 function saltBoil(c, X) { const ord = [0, 1, 2].sort(() => Math.random() - 0.5), RATE = [0, 0.06, 0.1, 0.18], CRY = 0.35; let ph = 'egg', wrong = 0, eggOK = false, fire = 0, fmax = 0, wl = 1, t = 0, cryS = false, auto = false, at = 0;
   c.mg.innerHTML = '<div class="s2"><div class="jars">' + ord.map((k, i) => '<button class="jr" data-j="' + i + '" style="left:' + (6 + i * 32) + '%"><i style="bottom:' + [4, 38, 74][k] + 'px"></i></button>').join('') + '</div><div class="pot" style="display:none"><i class="wl"></i><i class="cr"></i></div><div class="fl3" style="display:none"><i></i><i></i><i></i></div></div>'

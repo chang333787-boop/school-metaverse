@@ -1,17 +1,17 @@
 // 🎮 일꾼 곁 거들기 놀이(PLAY-2 틀 다섯 → PLAY-3 '그 일의 진짜 동작 + 배울 거리 하나' · 사용자 10-17 '미니게임들 좋은데 너무 다 비슷한 방식 · 창의성 · 교육을 잃어서는 안 된다'): 놀이 코드와 떼어 둔 규칙·화면
 //   일마다 손이 하는 일이 다름: 모내기 = 못줄 눈금에 꾹꾹 심기 · 벼 베기 = 콤바인 길 한 붓 그리기 · 소금 = 대파로 밀어 모으기(구름 오기 전) · 꿀 = 깃발 보고 바람 등진 자리 → 벌 피해 밀랍 뚜껑 칸 고르기(JUDGE-1) · 감자 = 줄기 둘레 파기 · 조개 = 작은 숨구멍 둘 밑 파기
-//     배추 = 크기대로 상자에 나누기 · 배 = 벌레 오기 전에 봉지 씌우기 · 어린 나무 = 심는 차례 + 깊이 그림 + 흙 보고 물 양(틀리면 다음 날 시듦 · JUDGE-1) · 목장 = 동물마다 알맞은 먹이 · 낚시 = 줄 당기기(물고기 반대쪽으로 끌기 · FISH-2) · 김 = 얇은 곳에 한 숟갈·두꺼운 곳 덜기 + 하늘 보고 말릴 자리(JUDGE-1) · 굴 = 고리 자로 크기 재서 나누기 · 딸기·표고 = 익은 것 고르기 · 요리 = 🍳 바쁜 부엌(주문·끌기·불 세기·뚜껑) · 타이밍 막대는 10-24에 모두 걷어 냄(징검다리는 걸어서 건넘)
+//     배추 = 주문 쪽지 크기만 베기 · 배 = 깃발·숲 보고 벌레 오는 쪽 나무부터 봉지(DEPTH-2) · 어린 나무 = 심는 차례 + 깊이 그림 + 흙 보고 물 양(틀리면 다음 날 시듦 · JUDGE-1) · 목장 = 동물마다 알맞은 먹이 · 낚시 = 줄 당기기(물고기 반대쪽으로 끌기 · FISH-2) · 김 = 얇은 곳에 한 숟갈·두꺼운 곳 덜기 + 하늘 보고 말릴 자리(JUDGE-1) · 굴 = 고리 자로 크기 재서 나누기 · 딸기·표고 = 주문 쪽지·젖은 땅 보고 익은 정도 고르기(DEPTH-2) · 요리 = 🍳 바쁜 부엌(주문·끌기·불 세기·뚜껑) · 타이밍 막대는 10-24에 모두 걷어 냄(징검다리는 걸어서 건넘)
 //   끝 = 결과 3단계 + '💡 알고 있었나요?' 사실 한 줄(사실만) · 점수 0~3 = 옛 보상 표 그대로 · 실패도 경험치 1(마을 쪽) · 셈 X · 한 판 15~25초
 //   솜씨 perk 'zone'(zw 1~1.25) = 쉬워지는 쪽으로(시간 · 초록 폭 · 삽질 수 · 벌레 느리게)
 //   화면 = DOM + CSS(놀이 창이 열린 동안만 · 마을 tick이 부르는 tick(dt) 하나 — 따로 rAF X) · 입력 = down()/up()(E·스페이스·큰 단추) + key(코드, 반복)(화살표·WASD·숫자) + 누르기·끌기(마우스·터치)
-import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2'; import { mkSalt } from './town_salt.js?v=1'; import { ladVal } from './town_lad.js?v=4';   /* LADDER-2 도전 칸마다 조건 값 */   /* SALT-2 염전 꼬임 넷 */   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
+import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2'; import { mkSalt } from './town_salt.js?v=2'; import { ladVal } from './town_lad.js?v=5';   /* LADDER-2 도전 칸마다 조건 값 */   /* SALT-2 염전 꼬임 넷 */   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
 export const MG_V = 3;
 const KIND = { tuho: 'toss', fisher: 'tug', rod: 'tug', seaweed: 'spread', oyster: 'gauge', strawberry: 'ripe', shiitake: 'ripe', saltpan: 'salt', beehive: 'comb', potato: 'dig', clam: 'dig', cabbage: 'sort', pear: 'cover', lumber: 'order', pasture: 'feed' };
 export const mgKind = (k, sea) => (k === 'paddy' ? (sea === 'autumn' ? 'cut' : 'plant') : KIND[k] || 'ripe');   /* 논 = 봄 모내기 · 가을 벼 베기 */
 // 놀이 창 첫 줄 = 할 일(아이 눈 2차 '말풍선과 창 첫 줄이 같은 문장' — 말풍선은 일꾼의 말 · 창 첫 줄은 내가 할 일)
-const TASK = { plant: ['물 높이를 보고, 못줄 말뚝을 옮겨 줄 맞춰 모를 심어요', 'Check the water, then move the rope stakes to plant straight rows'], cut: ['콤바인으로 벼를 남김없이 베요', 'Cut all the rice with the combine'], fisher: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], rod: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], seaweed: ['얇은 곳에 반죽을 더해 고르게 펴고, 하늘을 보고 말려요', 'Add mix to thin spots to even it out, then dry it by the weather'], oyster: ['고리 자로 굴 크기를 재서 나눠요', 'Measure the oysters with the ring and sort them'],
-  strawberry: ['빨갛게 익은 딸기만 따요', 'Pick only the red, ripe strawberries'], shiitake: ['갓이 알맞게 핀 표고만 따요', 'Pick only shiitake with caps just right'], saltpan: ['바닷물에서 소금을 얻어요', 'Get salt from seawater'], beehive: ['바람을 보고 설 자리를 골라 연기를 피우고, 뚜껑 덮인 칸만 떠요', 'Read the wind, pick where to puff smoke, then take only the capped cells'],
-  potato: ['줄기 둘레를 파서 감자를 캐요', 'Dig around the stems for potatoes'], clam: ['작은 구멍 둘 밑을 파서 조개를 캐요', 'Dig under pairs of tiny holes for clams'], cabbage: ['배추를 크기대로 세 상자에 나눠 담아요', 'Sort the cabbages into three boxes by size'], pear: ['벌레가 오기 전에 배마다 봉지를 씌워요', 'Bag every pear before the caterpillars come'],
+const TASK = { plant: ['물 높이를 보고, 못줄 말뚝을 옮겨 줄 맞춰 모를 심어요', 'Check the water, then move the rope stakes to plant straight rows'], cut: ['깃발과 비구름을 보고, 구름 쪽 줄부터 콤바인으로 벼를 베요', 'Read the flag and the rain cloud, then cut the rows on the cloud side first'], fisher: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], rod: ['물고기가 당기는 반대쪽으로 줄을 끌어 올려요', 'Pull the line the opposite way to the fish and bring it up'], seaweed: ['얇은 곳에 반죽을 더해 고르게 펴고, 하늘을 보고 말려요', 'Add mix to thin spots to even it out, then dry it by the weather'], oyster: ['고리 자로 굴 크기를 재서 나눠요', 'Measure the oysters with the ring and sort them'],
+  strawberry: ['주문 쪽지를 보고, 주문에 맞게 익은 딸기를 따요', 'Read the order note and pick berries as ripe as it asks'], shiitake: ['주문 쪽지를 보고, 주문에 맞게 핀 표고를 따요', 'Read the order note and pick caps as open as it asks'], saltpan: ['바닷물에서 소금을 얻어요', 'Get salt from seawater'], beehive: ['바람을 보고 설 자리를 골라 연기를 피우고, 뚜껑 덮인 칸만 떠요', 'Read the wind, pick where to puff smoke, then take only the capped cells'],
+  potato: ['줄기 둘레를 파서 감자를 캐요', 'Dig around the stems for potatoes'], clam: ['작은 구멍 둘 밑을 파서 조개를 캐요', 'Dig under pairs of tiny holes for clams'], cabbage: ['주문 쪽지를 보고, 주문한 크기의 배추만 베어요', 'Read the order note and cut only cabbages of the ordered size'], pear: ['깃발과 숲을 보고, 벌레가 오는 쪽 나무부터 봉지를 씌워요', 'Read the flag and the woods, then bag the trees on the bugs’ side first'],
   lumber: ['흙을 보고 알맞은 깊이와 물로 어린 나무를 심어요', 'Read the soil and plant saplings at the right depth with the right water'], pasture: ['동물마다 알맞은 먹이를 줘요', 'Give each animal the right food'], cook: ['주문 쪽지대로 재료를 넣고, 알맞게 익으면 접시에 담아요', 'Follow the order note: add ingredients, then plate it when it’s just right'], tuho: ['항아리 거리와 바람 깃발을 보고 설 자리와 높이를 골라 던져요', 'Read the pot distance and the wind flag, then pick where to stand and how high to throw'] };
 export const taskOf = (kind, k, en) => { const t = TASK[kind === 'plant' || kind === 'cut' ? kind : k]; return t ? (en ? 'To do: ' : '할 일: ') + t[en ? 1 : 0] : ''; };
 export const gradeOf = ok => (ok >= 3 ? 2 : ok >= 1 ? 1 : 0);
@@ -38,10 +38,6 @@ const FACT = {
   bend: ['강이 굽은 곳 바깥쪽은 물이 빨라 강가를 깎고, 안쪽은 물이 느려 모래와 자갈이 쌓여요', 'On a river bend the fast outer side wears the bank away, and the slow inner side piles up sand and gravel'],
   paddylife: ['논은 물이 고인 습지라서 개구리, 우렁이, 미꾸라지 같은 많은 생물의 집이 돼요', 'A rice paddy is a wetland — home to frogs, snails, loaches and more'],
   terrace: ['다랑이 논은 산비탈을 계단처럼 깎아 만든 논이에요. 위 논의 물꼬를 열면 물이 아래 논으로 차례로 흘러요', 'Terraced paddies are cut into hillsides like steps. Opening the upper gate lets water flow down paddy by paddy'],
-};
-const RIPE = {
-  strawberry: ['s', '🍓', ['빨갛게 다 익은 딸기만 눌러요 — 하얗고 초록인 딸기는 더 기다려요', 'Tap only fully red strawberries — pale green ones need more time'], ['아직 안 익었어요 — 초록빛이 남았어요', 'Not ripe yet — it’s still greenish'], ['조금만 더 — 끝까지 빨개지면 따요', 'Almost — wait till it’s red all over'], ['너무 익어 물렀어요. 빨개지면 바로 따요', 'Too ripe, it went soft. Pick as soon as it turns red']],
-  shiitake: ['m', '🍄', ['갓이 넓게 핀 표고만 눌러요 — 작은 봉오리는 더 자라요', 'Tap only shiitake with open caps — tiny buttons need to grow'], ['아직 작아요 — 갓이 더 펴질 때까지', 'Too small — wait till the cap opens'], ['조금만 더 — 갓이 넓게 펴지면 따요', 'Almost — wait till the cap spreads wide'], ['너무 오래 둬서 시들었어요. 갓이 펴지면 바로 따요', 'Left too long, it wilted. Pick as soon as the cap opens']],
 };
 const CSS = `
 .twn-play .mg{display:flex;flex-direction:column;gap:6px;user-select:none;-webkit-user-select:none;touch-action:manipulation}
@@ -172,7 +168,33 @@ const CSS = `
 .twn-play .bx3.dp button{padding:4px;min-height:0;background:#cfe9f6}.twn-play .bx3.dp svg{display:block;margin:0 auto;width:auto;height:92px}.twn-play .bx3.pick button small{font-weight:800}
 .twn-play .bx3.wt .cups{display:flex;gap:3px;justify-content:center;align-items:flex-end;height:24px}.twn-play .bx3.wt .cups i{width:14px;height:20px;border:2px solid #2b2420;border-top:none;border-radius:0 0 4px 4px;background:linear-gradient(transparent 30%,#6fb3e0 30%)}.twn-play .bx3.wt .cups em{font-style:normal;font-size:14px;color:#56606b}
 `;
-function css() { if (document.getElementById('twn-mg-css')) return; const s = document.createElement('style'); s.id = 'twn-mg-css'; s.textContent = CSS; document.head.appendChild(s); }
+/* DEPTH-2 농사 놀이 상황 겹: 주문 쪽지 · 젖은 땅 · 배추 밭 · 과수원(위에서 본 그림) · 논과 구름 */
+const CSS2 = `
+.twn-play .ordn{display:flex;align-items:center;gap:8px;margin:0 auto 6px;max-width:440px;padding:4px 10px;background:#fffbe8;border:2px solid #2b2420;border-radius:4px;box-shadow:2px 2px 0 #2b2420;font-size:13px;font-weight:800;color:#2b2420;text-align:left}
+.twn-play .ordn .rg.smp{display:inline-block;flex:none}.twn-play .ordn .rg.smp .rt{display:inline-block;min-height:0;width:38px;height:38px;line-height:34px;font-size:24px;border-radius:8px;text-align:center}
+.twn-play .ordn .crt.cs{flex:none;margin:0}
+.twn-play .rsit{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 5px;font-size:12px;font-weight:800;color:#2b2420}
+.twn-play .rg[data-c=m] .o .rf{transform:scale(1.32);filter:sepia(1) saturate(1.05) hue-rotate(-18deg) brightness(.66)}
+.twn-play .rg.wet{padding:6px;border-radius:12px;background:#6b5338}.twn-play .rg.wet .rt{background:#d8e2dc;border-color:#7fb8e0}
+.twn-play .gd.cabf .gc{min-height:54px;background:#b99a6c;border-color:#8a6a44}.twn-play .gd.cabf .gc i{font-style:normal;line-height:1;display:inline-block}.twn-play .gd.cabf .gc.sel{border-color:#2b5a3a;box-shadow:inset 0 0 0 2px #2b5a3a}.twn-play .gd.cabf .gc.cut{background:#9c7d56}.twn-play .gd.cabf .gc.cut i{opacity:.15}
+.twn-play .cbx{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:12px;font-weight:800;color:#2b2420}.twn-play .cbx b{display:inline-flex;gap:3px;vertical-align:middle}
+.twn-play .cbx .obx i{display:inline-block;width:16px;height:16px;border:2px solid #9c7650;border-radius:3px;background:#fffdf6}.twn-play .cbx .obx i.on{background:#7cbf5a}
+.twn-play .orc{position:relative;height:160px;border-radius:12px;background:#cfe6b0;overflow:hidden;touch-action:none}
+.twn-play .orc .fr9{position:absolute;top:0;bottom:0;width:8%;background:repeating-linear-gradient(180deg,#3f7a3a 0 14px,#2f5f2c 14px 26px)}.twn-play .orc .fr9.l{left:0}.twn-play .orc .fr9.r{right:0}
+.twn-play .orc .fl9w{position:absolute;left:50%;top:4px;transform:translateX(-50%)}
+.twn-play .orc .ot{position:absolute;top:64%;width:50px;height:50px;margin:-25px 0 0 -25px;padding:0;min-height:0;border-radius:50%;background:#5f9a3e;border:3px solid #3f6f2a;box-shadow:none;font-size:13px;line-height:1;color:#1d2b3a}
+.twn-play .orc .ot span{display:block;word-break:break-all;padding:0 4px}.twn-play .orc .ot.em{background:#8fb872;border-style:dashed}
+.twn-play .orc .ot.bag{background:#efe1c4;border-color:#c9b28a}.twn-play .orc .ot.bag span{opacity:.25}.twn-play .orc .ot.eat{background:#9a7a4a;border-color:#6b5230}.twn-play .orc .ot.eat span{filter:grayscale(1) brightness(.7)}
+.twn-play .orc .ot.sel{outline:3px solid #1d2b3a;outline-offset:2px}
+.twn-play .orc .bug9{position:absolute;top:84%;font-size:20px;font-style:normal;transform:translate(-50%,-50%);transition:left .6s,opacity .3s;opacity:0}.twn-play .orc .bug9.on{opacity:1}
+.twn-play .orc .fr9 b{position:absolute;left:0;right:0;top:4px;text-align:center;font-size:11px;font-weight:900;color:#fffdf6}
+@media (max-width:480px){.twn-play .orc .ot{width:40px;height:40px;margin:-20px 0 0 -20px;font-size:11px}}
+.twn-play .cutw{position:relative;padding:40px 52px 40px 52px;border-radius:12px;background:#dfe9d4}
+.twn-play .cutw .fl9w{position:absolute;left:4px;top:2px}
+.twn-play .cutw .ccl{position:absolute;line-height:0}.twn-play .cutw .ccl.n{left:50%;top:-4px;transform:translateX(-50%)}.twn-play .cutw .ccl.s{left:50%;bottom:-2px;transform:translateX(-50%)}.twn-play .cutw .ccl.w{left:-2px;top:50%;transform:translateY(-50%)}.twn-play .cutw .ccl.e{right:-2px;top:50%;transform:translateY(-50%)}
+.twn-play .gd.rice .gc.edge{border:2px dashed #8a6a44}.twn-play .gd.rice .gc.edge.sel{border:2px solid #1d2b3a}.twn-play .gd.rice .gc.wetr{background:#9fb4b8}.twn-play .gd.rice .gc.cwet{background:#8f9ea2}
+`;
+function css() { if (document.getElementById('twn-mg-css')) return; const s = document.createElement('style'); s.id = 'twn-mg-css'; s.textContent = CSS + CSS2; document.head.appendChild(s); }
 const rnd = (a, b) => a + Math.random() * (b - a);
 const setCls = (el, c) => { if (el.className !== c) el.className = c; };
 const pop = (el, c) => { el.classList.remove(c); void el.offsetWidth; el.classList.add(c); };   // 일이 생길 때만(매 프레임 X)
@@ -364,29 +386,87 @@ function mkTug(c) {
       for (const [el, H] of [[bL, HL], [bR, HR]]) { el.removeEventListener('pointerdown', H[0]); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) el.removeEventListener(ev, H[1]); } goVis(true); } };
 }
 
-// ③ 익은 것만 고르기(딸기·배·표고·배추): 아홉 칸에 익은 것·덜 익은 것이 섞여 나옴(덜 익은 것은 시간이 지나면 익음) → 익은 것만 누르기 · 덜 익은 걸 누르면 '아직 안 익었어요'(관찰) · 딴 수 − 잘못 누른 수로 점수
+// ── DEPTH-2 농사 놀이 상황 겹(10-26 · docs/systems/town_depth.md 합 2 줄 · 사용자 10-25 '깊이가 한 칸인 것이 너무 많다'): 딸기·표고 · 배추 · 배 · 벼 베기 · 소금(town_salt.js) ──
+//   상황 = 세상 상태 먼저(c.x = town.js judgeX: 바람 방향 · 지금 비 · 어제 비 · 날 · 계절 c.sea) + 판 씨앗 · 같은 일터에서 바로 앞 판·어제와 같은 갈래는 다시 고름(c.x.mem[일터:꼬리])
+//   단서는 창 안에 보이게(주문 쪽지 · 젖은 땅 · 깃발 · 숲 · 구름) · 틀리면 세상 쪽 결과(다른 바구니 · 벌레 먹은 배 · 젖은 벼 · 덜 영근 소금) · 벌·점수 깎는 말 X · 시간·막대 누르기 X
+const forcedSit = tag => (typeof window !== 'undefined' && window.__SIT && window.__SIT[tag] != null ? String(window.__SIT[tag]) : null);   /* 시험(town_farm.cjs)만 갈래를 정함 */
+export function sitPick(X, tag, opts) { X = X || {}; const F = forcedSit(tag), M = X.mem && typeof X.mem === 'object' ? X.mem : null, K = String(X.key || 'w') + ':' + tag, D = X.day | 0;
+  const R = M && M[K] && typeof M[K] === 'object' && !Array.isArray(M[K]) ? M[K] : null, last = R ? R.s : null, yd = R ? (R.d < D ? R.s : R.y) : null, n = R ? R.n | 0 : 0;
+  let s; if (F != null && opts.includes(F)) s = F; else { let L = opts.filter(q => q !== last && q !== yd); if (!L.length) L = opts.filter(q => q !== last); if (!L.length) L = opts.slice(); s = L[(Math.random() * L.length) | 0]; }
+  if (M) { M[K] = { d: D, s, y: yd, n: n + 1 }; if (X.mark) X.mark(); } return { s, n, last, yd }; }
+/* 바람으로 정해지는 상황: 오늘 바람(k = 바람이 가는 쪽 0 북 ~ 7 북서) ±2 안에서 갈래를 고름(바람은 하루 안에도 조금씩 흔들림) · 바로 앞 판과 같은 갈래는 피함 */
+function windPick(X, tag, outOf) { const k0 = X.wind != null ? ((X.wind | 0) % 8 + 8) % 8 : (Math.random() * 8) | 0, C = {};
+  for (const j of [0, 1, -1, 2, -2]) { const k = (k0 + j + 8) % 8, o = outOf(k); if (!(o in C)) C[o] = k; }
+  const F = forcedSit(tag); if (F != null && !(F in C)) for (let k = 0; k < 8; k++) if (outOf(k) === F) { C[F] = k; break; }
+  const r = sitPick(X, tag, Object.keys(C)); return { k: C[r.s], s: r.s, n: r.n }; }
+const hs9 = s => { let h = 7; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h >>> 0; };
+/* 위에서 본 깃발(꿀 뜨기와 같은 약속): 가운데 점 = 깃대 · 빨간 천이 날리는 쪽 = 바람이 가는 쪽 · 위 = 북 */
+const flagTop = (k, en, sz) => '<svg class="fl9" viewBox="-22 -22 44 44" width="' + sz + '" height="' + sz + '" aria-hidden="true"><circle r="20" fill="#fffdf6" stroke="#2b2420" stroke-width="1.5"/><text y="-12" text-anchor="middle" font-size="8" font-weight="900" fill="#b0412e">' + (en ? 'N' : '북') + '</text>'
+  + '<g transform="rotate(' + (k * 45) + ')"><path d="M-4 -1 Q-6 -8 -2 -10 Q2 -12 0 -17 Q5 -11 4 -1 Z" fill="#e0453a" stroke="#2b2420" stroke-width="1"/></g><circle r="2.6" fill="#2b2420"/></svg>';
+/* 옆에서 본 깃발(소금): 천이 오른쪽(r) 또는 왼쪽으로 날림 */
+const flagSide = r => '<svg viewBox="0 0 40 44" width="34" height="38" aria-hidden="true"><line x1="20" y1="4" x2="20" y2="44" stroke="#2b2420" stroke-width="2.4"/><path d="' + (r ? 'M20 5 Q28 3 36 8 Q30 12 37 16 Q28 18 20 15 Z' : 'M20 5 Q12 3 4 8 Q10 12 3 16 Q12 18 20 15 Z') + '" fill="#e0453a" stroke="#2b2420" stroke-width="1"/></svg>';
+const cloudSvg = (dark, w) => '<svg viewBox="0 0 60 42" width="' + w + '" height="' + Math.round(w * 0.7) + '" aria-hidden="true"><path d="M12 30 Q2 30 4 21 Q6 13 15 15 Q18 4 30 6 Q40 2 45 13 Q57 12 56 22 Q56 30 47 30 Z" fill="' + (dark ? '#6f7b86' : '#fbfcfd') + '" stroke="#2b2420" stroke-width="1.6"/>'
+  + (dark ? '<path d="M18 32 l-3 8 M29 32 l-3 8 M40 32 l-3 8" stroke="#4f8fc0" stroke-width="2.2" stroke-linecap="round"/>' : '') + '</svg>';
+const sunSvg = '<svg viewBox="0 0 30 30" width="26" height="26" aria-hidden="true"><circle cx="15" cy="15" r="7" fill="#f6c544" stroke="#2b2420" stroke-width="1.4"/><path d="M15 2v4M15 24v4M2 15h4M24 15h4M6 6l3 3M21 21l3 3M24 6l-3 3M9 21l-3 3" stroke="#e3a62a" stroke-width="2" stroke-linecap="round"/></svg>';
+const puddleSvg = '<svg viewBox="0 0 40 30" width="34" height="26" aria-hidden="true"><rect x="0" y="16" width="40" height="14" fill="#6b5338"/><ellipse cx="14" cy="20" rx="9" ry="2.6" fill="#7fb8e0"/><ellipse cx="31" cy="24" rx="6" ry="2" fill="#7fb8e0"/><path d="M10 4 q-3 5 0 7 q3 -2 0 -7 M24 2 q-3 5 0 7 q3 -2 0 -7" fill="#4f8fc0"/></svg>';
+
+// ③ 익은 것 고르기(딸기·표고 · DEPTH-2): 주문 쪽지가 판마다 달라 '고를 것'이 바뀜 — 딸기 = 잼 가게(아주 익어 무른 것) · 장터(알맞게 다 익은 것) · 먼 도시로 보낼 상자(조금 덜 익은 것)
+//   표고 = 식당 국물용(활짝 핀 것) · 장터(알맞게 핀 것) · 먼 도시(덜 핀 것) · 날씨 = 어제·오늘 비 → 젖은 땅 + 무른 것(활짝 핀 것)이 섞이고 빨리 무름 · 맑은 날 = 보송한 땅
+//   주문과 다른 것을 따면 그 열매에 맞는 다른 바구니로 감(주문 상자는 덜 참 · 까닭 한 줄) · 초록(덜 자란 것)은 어느 주문에도 X · 끝 = 주문 상자 · 다른 바구니 수 + 그 주문의 사실 한 줄
+const RIPE = {
+  strawberry: ['s', '🍓', ['빨갛게 다 익은 딸기만 눌러요 — 하얗고 초록인 딸기는 더 기다려요', 'Tap only fully red strawberries — pale green ones need more time'], ['아직 초록이에요. 어느 주문에도 못 내요', 'Still green. No order wants it'], ['조금만 더 — 끝까지 빨개지면 따요', 'Almost — wait till it’s red all over'], ['너무 익어 물렀어요. 빨개지면 바로 따요', 'Too ripe, it went soft. Pick as soon as it turns red']],
+  shiitake: ['m', '🍄', ['갓이 넓게 핀 표고만 눌러요 — 작은 봉오리는 더 자라요', 'Tap only shiitake with open caps — tiny buttons need to grow'], ['아직 작은 봉오리예요. 어느 주문에도 못 내요', 'Still a tiny button. No order wants it'], ['조금만 더 — 갓이 넓게 펴지면 따요', 'Almost — wait till the cap spreads wide'], ['너무 오래 둬서 시들었어요. 갓이 펴지면 바로 따요', 'Left too long, it wilted. Pick as soon as the cap opens']],
+};
+const RIPE_ORD = {
+  strawberry: { jam: ['o', ['잼 가게', 'Jam shop'], ['아주 익어 무른 딸기', 'very ripe, soft berries']], mkt: ['r', ['장터', 'Market'], ['알맞게 다 익은 딸기', 'just-ripe berries']], far: ['h', ['먼 도시로 보낼 상자', 'Box for a far city'], ['조금 덜 익은 딸기', 'slightly under-ripe berries']] },
+  shiitake: { soup: ['o', ['식당 국물용', 'Soup kitchen'], ['갓이 활짝 핀 표고', 'wide-open caps']], mkt: ['r', ['장터', 'Market'], ['갓이 알맞게 핀 표고', 'caps open just right']], far: ['h', ['먼 도시로 보낼 상자', 'Box for a far city'], ['갓이 덜 핀 표고', 'caps still a little closed']] } };
+const RIPE_BK = { s: { o: ['잼 바구니', 'the jam basket'], r: ['장터 바구니', 'the market basket'], h: ['먼 곳 상자', 'the far-city box'] }, m: { o: ['식당 바구니', 'the soup basket'], r: ['장터 바구니', 'the market basket'], h: ['먼 곳 상자', 'the far-city box'] } };
+/* 주문과 다른 것을 딴 까닭(사실만) — [열매][주문][딴 것] */
+const RIPE_WHY = {
+  s: { far: { r: ['다 익은 딸기는 먼 길을 가는 동안 물러져요', 'Fully ripe berries go soft on a long trip'], o: ['무른 딸기는 멀리 못 보내요', 'Soft berries cannot travel far'] },
+    mkt: { h: ['아직 덜 익었어요. 장터 손님은 다 익은 딸기를 사요', 'Not ripe yet. Market shoppers want ripe ones'], o: ['무른 딸기는 장터에 못 내요', 'Soft berries cannot go to market'] },
+    jam: { h: ['덜 익은 딸기로 잼을 만들면 시어요', 'Under-ripe berries make sour jam'], r: ['오늘 잼 가게는 아주 익은 것을 원해요. 이 딸기는 장터에 알맞아요', 'The jam shop wants very ripe ones today. This one suits the market'] } },
+  m: { far: { r: ['갓이 다 핀 표고는 먼 길에 금방 상해요', 'Open caps spoil fast on a long trip'], o: ['활짝 핀 표고는 멀리 못 보내요', 'Wide-open caps cannot travel far'] },
+    mkt: { h: ['갓이 아직 덜 폈어요. 장터에선 알맞게 핀 것을 사요', 'The cap is still closed. The market wants caps open just right'], o: ['너무 활짝 폈어요. 장터에 내기엔 늦었어요', 'Too wide open for the market'] },
+    soup: { h: ['덜 핀 표고는 먼 곳에 보낼 상자에 알맞아요', 'Closed caps suit the far-city box'], r: ['오늘 식당은 활짝 핀 것을 원해요', 'The kitchen wants wide-open caps today'] } } };
+const RIPE_FACT = {
+  s: { jam: ['잼은 아주 익은 딸기로 만들어도 맛있어요. 무른 딸기도 버리지 않고 써요', 'Very ripe berries make good jam, so soft ones are not wasted'], mkt: ['장터에 낼 딸기는 다 익었을 때 따서 바로 팔아요', 'Market berries are picked fully ripe and sold right away'], far: ['먼 곳에 보낼 딸기는 조금 덜 익었을 때 따요. 가는 동안 빛깔이 더 들어요', 'Berries for far places are picked a little early. They colour up on the way'], wet: ['비 온 다음 날은 딸기가 물러지기 쉬워요', 'After rain, strawberries go soft easily'] },
+  m: { soup: ['활짝 핀 표고는 국물을 우리기에 좋아요', 'Wide-open shiitake are good for soup stock'], mkt: ['갓이 알맞게 핀 표고가 장터에서 잘 팔려요', 'Caps open just right sell well at the market'], far: ['갓이 덜 핀 표고는 단단해서 오래가요', 'Shiitake with closed caps are firm and keep longer'], wet: ['비가 오면 표고가 빨리 자라 갓이 금방 펴요', 'Rain makes shiitake grow fast, so the caps open quickly'] } };
 function mkRipe(c) {
-  const R = RIPE[c.k] || RIPE.strawberry, T = 15 * c.zw, N = 9, RT = c.lp || 0;   /* LADDER-2: RT = 익은 뒤 무르기까지 초(1칸 = 무르지 않음) */
-  let h = '<div class="rg" data-c="' + R[0] + '">'; for (let i = 0; i < N; i++) h += '<button class="rt u" data-i="' + i + '"><span class="rf">' + R[1] + '</span><em>' + (i + 1) + '</em></button>'; h += '</div><div class="bar tmb"><i class="tm"></i></div>';
-  c.mg.innerHTML = h; const rg = c.mg.querySelector('.rg'), B = rg.querySelectorAll('.rt'), tm = c.mg.querySelector('.tm'), st = new Array(N).fill('u'), age = new Array(N).fill(0);
+  const R = RIPE[c.k] || RIPE.strawberry, X = jx(c), CK = R[0] === 'm' ? 'm' : 's', OD = RIPE_ORD[c.k] || RIPE_ORD.strawberry, T = 18 * c.zw, N = 9, RT = c.lp || 0;   /* LADDER-2: RT = 익은 뒤 무르기까지 초(1칸 = 무르지 않음) */
+  const wet = !!(X.rainY || X.rain), P0 = sitPick(X, 'ord', Object.keys(OD)), ORD = P0.s, O = OD[ORD], WANT = O[0], first = P0.n === 0;
+  const SOFT = RT ? (wet ? RT * 0.6 : RT) : (wet ? 3.2 : WANT === 'o' ? 4.5 : 0), OL = WANT === 'o' ? 3 : 1.6;   /* 젖은 날 = 빨리 무름 · 무른 것이 주문이면 조금 오래 남음 */
+  const smp = s => '<span class="rg smp" data-c="' + R[0] + '"><span class="rt ' + s + '"><span class="rf">' + R[1] + '</span></span></span>';
+  let h = '<div class="ordn">' + smp(WANT) + '<span>📝 ' + c.T('주문', 'Order') + ' — ' + c.T(O[1][0], O[1][1]) + ': ' + c.T(O[2][0], O[2][1]) + '</span></div>'
+    + '<div class="rsit">' + (wet ? puddleSvg : sunSvg) + '<span>' + (wet ? (X.rain ? c.T('비가 와요. 땅이 젖었어요', 'It is raining. The ground is wet') : c.T('어제 비가 왔어요. 땅이 젖었어요', 'It rained yesterday. The ground is wet')) : c.T('맑은 날이에요. 땅이 보송해요', 'A dry, sunny day')) + '</span></div>';
+  h += '<div class="rg' + (wet ? ' wet' : '') + '" data-c="' + R[0] + '">'; for (let i = 0; i < N; i++) h += '<button class="rt u" data-i="' + i + '"><span class="rf">' + R[1] + '</span><em>' + (i + 1) + '</em></button>'; h += '</div><div class="bar tmb"><i class="tm"></i></div>';
+  c.mg.innerHTML = h; const rg = c.mg.querySelector('.rg:not(.smp)'), B = rg.querySelectorAll('.rt'), tm = c.mg.querySelector('.tm'), st = new Array(N).fill('u'), age = new Array(N).fill(0), BK = { o: 0, r: 0, h: 0 };
   let sel = 4, left = T, rip = 0, none = 0, P = 0, M = 0;
   const draw = i => setCls(B[i], 'rt ' + st[i] + (i === sel ? ' sel' : ''));
-  const grow = (a, b, amin) => { let k = -1, n = 0; for (let i = 0; i < N; i++) if (st[i] === a && age[i] >= amin) { n++; if (Math.random() * n < 1) k = i; } if (k >= 0) { st[k] = b; age[k] = 0; draw(k); } return k; };   // a 단계 가운데 하나를 골라 b로(따로 배열 X)
-  { const idx = [0, 1, 2, 3, 4, 5, 6, 7, 8]; for (let i = N - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0, q = idx[i]; idx[i] = idx[j]; idx[j] = q; } for (let i = 0; i < 3; i++) { st[idx[i]] = 'r'; st[idx[i + 3]] = 'h'; } age.fill(1); for (let i = 0; i < N; i++) draw(i); }
-  const pick = i => { if (c.done || i < 0 || i >= N) return; if (sel !== i) { const o = sel; sel = i; draw(o); } if (st[i] === 'r') { st[i] = 'e'; age[i] = 0; P++; draw(i); c.snd('pick'); c.say(c.T('똑! ', 'Pick! ') + P + c.T('개 땄어요', ' picked')); }
-    else if (st[i] === 'u' || st[i] === 'h') { M++; draw(i); pop(B[i], 'no'); c.snd('pop'); c.say(R[st[i] === 'h' ? 4 : 3][c.en ? 1 : 0]); }
-    else if (st[i] === 'o') { draw(i); pop(B[i], 'no'); c.snd('pop'); c.say(R[5][c.en ? 1 : 0]); } };   /* 무른 것 = 틀림 셈 X(한 줄만) */
-  const onPd = e => { const b = e.target.closest('.rt'); if (!b) return; e.preventDefault(); pick(+b.dataset.i); }; rg.addEventListener('pointerdown', onPd);
+  const grow = (a, b, amin) => { let k = -1, n = 0; for (let i = 0; i < N; i++) if (st[i] === a && age[i] >= amin) { n++; if (Math.random() * n < 1) k = i; } if (k >= 0) { st[k] = b; age[k] = 0; draw(k); } return k; };   /* a 단계 가운데 하나를 골라 b로(따로 배열 X) */
+  { const base = wet ? ['o', 'o', 'r', 'r', 'h', 'h', 'u', 'u', 'u'] : WANT === 'o' ? ['o', 'r', 'r', 'r', 'h', 'h', 'u', 'u', 'u'] : ['r', 'r', 'r', 'h', 'h', 'h', 'u', 'u', 'u']; shuf(base); for (let i = 0; i < N; i++) { st[i] = base[i]; age[i] = 1; draw(i); } }
+  const pick = i => { if (c.done || i < 0 || i >= N) return; if (sel !== i) { const o = sel; sel = i; draw(o); } const s = st[i]; if (s === 'e') return;
+    if (s === 'u') { M++; draw(i); pop(B[i], 'no'); c.snd('pop'); c.say(R[3][c.en ? 1 : 0]); return; }   /* 초록 = 어느 주문에도 X(관찰 한 줄) */
+    st[i] = 'e'; age[i] = 0; draw(i);
+    if (s === WANT) { P++; c.snd('pick'); c.say(c.T('똑! 주문 상자에 ' + P + '개', 'Pick! ' + P + ' in the order box')); return; }
+    BK[s]++; c.snd('pop'); pop(B[i], 'no'); const w = RIPE_WHY[CK][ORD] && RIPE_WHY[CK][ORD][s], b = RIPE_BK[CK][s];
+    c.say((w ? w[c.en ? 1 : 0] + '. ' : '') + (c.en ? 'It goes to ' + b[1] + '.' : b[0] + '로 가요')); };   /* 주문과 다른 것 = 그 열매에 맞는 바구니로(버리지 않음 · 주문 상자만 덜 참) */
+  const onPd = e => { const b = e.target.closest('.rt'); if (!b || !rg.contains(b)) return; e.preventDefault(); pick(+b.dataset.i); }; rg.addEventListener('pointerdown', onPd);
   if (c.go) c.go.style.display = 'none';   /* 칸을 바로 누름(큰 단추 없음) · 키보드 = 숫자 1~9 또는 화살표 + E */
-  c.say(R[2][c.en ? 1 : 0]);
+  c.say(first ? c.T('쪽지를 봐요. 주문에 맞는 것만 주문 상자에 담겨요. 다른 것은 다른 바구니로 가요', 'Read the note. Only what the order asks for goes in the order box. Others go to other baskets')
+    : wet ? c.T('땅이 젖었어요. 무른 것이 섞여 있어요. 쪽지를 보고 골라요', 'The ground is wet and some are soft. Check the note and choose') : c.T('오늘 주문은 무엇일까요? 쪽지를 보고 골라요', 'What is today’s order? Check the note and choose'));
+  const other = () => BK.o + BK.r + BK.h;
   return { go: '', cnt: () => P,
+    tail: () => { const f = RIPE_FACT[CK][wet && WANT !== 'o' ? 'wet' : ORD] || RIPE_FACT[CK][ORD]; return '💡 ' + c.T('주문 상자 ' + P + '개' + (other() ? ', 다른 바구니 ' + other() + '개' : '') + '. ', P + ' in the order box' + (other() ? ', ' + other() + ' in other baskets' : '') + '. ') + f[c.en ? 1 : 0]; },
     down() { pick(sel); },
     key(code, rep) { const d = /^(Digit|Numpad)([1-9])$/.exec(code); if (d) { if (!rep) pick(+d[2] - 1); return true; }
       const mv = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1, ArrowUp: -3, KeyW: -3, ArrowDown: 3, KeyS: 3 }[code]; if (!mv) return false; const n = sel + mv; if (n < 0 || n >= N || (Math.abs(mv) === 1 && ((n / 3) | 0) !== ((sel / 3) | 0))) return true; const o = sel; sel = n; draw(o); draw(n); return true; },
-    tick(dt) { left -= dt; tm.style.transform = 'scaleX(' + Math.max(0, left / T).toFixed(3) + ')'; let nr = 0;
-      for (let i = 0; i < N; i++) { age[i] += dt; if (st[i] === 'e' && age[i] > 1.4) { st[i] = 'u'; age[i] = 0; draw(i); } else if (st[i] === 'r') { if (RT && age[i] > RT) { st[i] = 'o'; age[i] = 0; draw(i); } else nr++; } else if (st[i] === 'o' && age[i] > 0.9) { st[i] = 'u'; age[i] = 0; draw(i); } }   /* LADDER-2: 익은 채 오래 두면 무름(짙어졌다가 0.9초 뒤 새 열매 자리) */
-      if ((rip += dt) > 1.25) { rip = 0; grow('h', 'r', 0.6); grow('u', 'h', 0.8); } if (nr) none = 0; else if ((none += dt) > 0.4) { none = 0; if (grow('h', 'r', 0) < 0) grow('u', 'r', 0); }
-      if (left <= 0) { const s = P - M; c.finish(s >= 8 ? 3 : s >= 5 ? 2 : s >= 2 ? 1 : 0); } },
+    tick(dt) { left -= dt; tm.style.transform = 'scaleX(' + Math.max(0, left / T).toFixed(3) + ')'; let nw = 0;
+      for (let i = 0; i < N; i++) { age[i] += dt; if (st[i] === 'e' && age[i] > 1.4) { st[i] = 'u'; age[i] = 0; draw(i); } else if (st[i] === 'r' && SOFT && age[i] > SOFT) { st[i] = 'o'; age[i] = 0; draw(i); } else if (st[i] === 'o' && age[i] > OL) { st[i] = 'u'; age[i] = 0; draw(i); } if (st[i] === WANT) nw++; }   /* 익은 채 오래 두면 무름 · 무른 것은 떨어지고 새 열매 자리 */
+      if ((rip += dt) > 1.25) { rip = 0; grow('h', 'r', 0.6); grow('u', 'h', 0.8); }
+      if (nw) none = 0; else if ((none += dt) > 0.4) { none = 0; if (WANT === 'h') grow('u', 'h', 0); else if (WANT === 'r') { if (grow('h', 'r', 0) < 0) grow('u', 'r', 0); } else if (grow('r', 'o', 0) < 0) grow('h', 'o', 0); }   /* 주문에 맞는 것이 늘 하나는 생김 */
+      if (left <= 0) { const s = P - M; c.finish(s >= 6 ? 3 : s >= 4 ? 2 : s >= 2 ? 1 : 0); } },
+    get dbg() { return { ord: ORD, want: WANT, wet, st: st.slice(), P, M, bk: { ...BK }, soft: SOFT, n: P0.n, first, pick: i => pick(i) }; },
     dispose() { rg.removeEventListener('pointerdown', onPd); } };
 }
 
@@ -476,21 +556,48 @@ function mkPlant(c) { const X = jx(c), lv = c.lv, M = X.mem && typeof X.mem === 
     get dbg() { const r = rows[qi]; return { ph, qi, n: rows.length, lv, water, wOk, wBad, rv: !!(r && r.rv), why: r && r.why, side, pick: pick.slice(), cur: cur.slice(), want: r ? [Math.round(r.i * RS / step(0)), Math.round(r.i * RS / step(1))] : null, nmk: [NMK(0), NMK(1)], fine: [fine(0), fine(1)], rows: rows.map(q => ({ i: q.i, rv: q.rv, ok: q.ok, bad: q.bad })), gt, revived, miss, sick: sick.slice(), old: old.slice(), keep: keep.slice(), lock: +Math.max(0, lock).toFixed(2), left: +TB.left.toFixed(2), turned, key: KEY, day: DAY }; },
     dispose() { c.mg.removeEventListener('pointerdown', pd); cv.removeEventListener('pointerdown', pdc); } }; }
 
-// ⑤ 벼 베기(가을 논): 콤바인 길 그리기 — 벤 곳은 다시 못 지나감(한 붓 그리기) · 끌기·누르기(옆 칸)·화살표 · 빈틈없이 다 베면 아주 잘함
-function mkCut(c) { const C9 = 6, R9 = 4, N = C9 * R9, T = 22 * c.zw * (c.lp || 1); let cur = 0, cut = 1, stuck = false;
-  c.mg.innerHTML = gridHTML(C9, N, 'rice'); const gd = c.mg.querySelector('.gd'), B = gd.querySelectorAll('.gc'), st = new Array(N).fill(0), TB = timeBar(c, T); st[0] = 1;
-  const draw = () => { for (let i = 0; i < N; i++) { const cl = 'gc ' + (i === cur ? 'cb' : st[i] ? 'cutd' : 'ripe'); if (B[i].className !== cl) { B[i].className = cl; B[i].textContent = i === cur ? '🚜' : st[i] ? '' : '🌾'; } } };
+// ⑤ 벼 베기(가을 논 · DEPTH-2 · 콤바인 한 붓 그리기 + 비구름 쪽 보고 차례): 논 위에서 본 그림(위 = 북) · 비구름이 바람을 타고 한쪽에서 옴(깃발 = 바람이 가는 쪽 · 구름은 반대쪽 = 바람이 불어오는 쪽)
+//   ① 콤바인이 들어갈 가장자리 칸을 고름 ② 벤 곳은 다시 못 지나감 · 벤 칸 수만큼 비가 구름 쪽 줄부터 한 줄씩 내려옴(시간 X · 벤 만큼) → 아직 안 벤 벼가 젖음(젖은 벼 = 베기 어렵고 따로 말려야 함)
+//   구름 쪽 줄부터 줄을 따라 왕복하면 다 마른 채 벰 · 구름이 북·남이면 가로줄, 동·서면 세로줄 · 사다리 = 1 넉넉 · 2 조금 빨리 · 3 구름 둘(하나는 멀어지는 흰 구름 · 깃발로 가림) · 4 + 비가 바로 따라옴
+const SIDE4 = ['N', 'E', 'S', 'W'], SIDEN = { N: ['북', 'north'], E: ['동', 'east'], S: ['남', 'south'], W: ['서', 'west'] };
+function mkCut(c) { const X = jx(c), lv = c.lv, C9 = 6, R9 = 4, N = C9 * R9, T = 45 * c.zw;
+  const WP = windPick(X, 'cut', k => SIDE4[((k + 4) % 8) >> 1]), CS = WP.s, KC = { N: 4, E: 6, S: 0, W: 2 }[CS], OPP = { N: 'S', S: 'N', E: 'W', W: 'E' }[CS];   /* 구름 쪽 = 바람이 불어오는 쪽 · 깃발은 그 반대로 날림 */
+  const rowLines = CS === 'N' || CS === 'S', L = rowLines ? C9 : R9, G = [L, L >> 1, 0, 0][lv - 1], SL = [2, 1, 1, 0][lv - 1], wetNow = !!X.rain;
+  const lineOf = i => { const x = i % C9, y = (i / C9) | 0; return CS === 'N' ? y : CS === 'S' ? R9 - 1 - y : CS === 'W' ? x : C9 - 1 - x; };
+  const edge = i => { const x = i % C9, y = (i / C9) | 0; return x === 0 || y === 0 || x === C9 - 1 || y === R9 - 1; };
+  const st = new Uint8Array(N); let ph = 'enter', cur = -1, sel = 0, cut = 0, dpt = 0, stuck = false, warned = false, hold = 0;   /* st: 0 벼 · 1 마른 채 벰 · 2 젖은 벼 · 3 젖은 채 벰 */
+  const cl = (s, dark) => '<i class="ccl ' + s.toLowerCase() + (dark ? ' dk' : ' wh') + '">' + cloudSvg(dark, 54) + '</i>';
+  c.mg.innerHTML = '<div class="cutw"><span class="fl9w">' + flagTop(KC, c.en, 40) + '</span>' + cl(CS, true) + (lv >= 3 ? cl(OPP, false) : '') + gridHTML(C9, N, 'rice') + '</div>';
+  const gd = c.mg.querySelector('.gd'), B = gd.querySelectorAll('.gc'), TB = timeBar(c, T);
+  const draw = () => { for (let i = 0; i < N; i++) { const s = st[i], cl9 = 'gc ' + (i === cur ? 'cb' : s === 1 ? 'cutd' : s === 3 ? 'cwet' : s === 2 ? 'wetr' : 'ripe') + (ph === 'enter' && edge(i) ? ' edge' : '') + (ph === 'enter' && i === sel ? ' sel' : ''), tx9 = i === cur ? '🚜' : s === 0 || s === 2 ? '🌾' : ''; if (B[i].className !== cl9) B[i].className = cl9; if (B[i].textContent !== tx9) B[i].textContent = tx9; } };
   const adj = (a, b) => (Math.abs(a - b) === 1 && ((a / C9) | 0) === ((b / C9) | 0)) || Math.abs(a - b) === C9;
-  const free = i => [i - 1, i + 1, i - C9, i + C9].some(j => j >= 0 && j < N && adj(i, j) && !st[j]);
-  const go = i => { if (c.done || stuck) return; if (i === cur || !adj(i, cur)) return; if (st[i]) { c.say(c.T('이미 벤 곳은 못 지나가요 — 길을 미리 생각해요', 'You can’t go over cut rows — plan your path')); c.snd('pop'); return; }
-    st[i] = 1; cur = i; cut++; c.snd('tick'); draw(); c.say(c.T('싹싹 — ', 'Swish — ') + cut + '/' + N); if (cut >= N) return c.finish(3); if (!free(cur)) { stuck = true; c.say(c.T('길이 막혔어요! 한 줄씩 왕복하면 빈틈이 없어요', 'Boxed in! Going back and forth row by row leaves no gaps')); setTimeout(() => c.finish(score()), 900); } };
-  const score = () => (cut >= N ? 3 : cut / N >= 0.75 ? 2 : cut / N >= 0.45 ? 1 : 0);
+  const free = i => [i - 1, i + 1, i - C9, i + C9].some(j => j >= 0 && j < N && adj(i, j) && (st[j] === 0 || st[j] === 2));
+  const dry = () => { let n = 0; for (let i = 0; i < N; i++) if (st[i] === 1) n++; return n; }, wetN = () => { let n = 0; for (let i = 0; i < N; i++) if (st[i] >= 2) n++; return n; };
+  const rain = () => { const d2 = Math.max(wetNow ? 1 : 0, cut >= G ? Math.floor((cut - G) / (L + SL)) : 0); if (d2 <= dpt) return; dpt = d2; let hit = 0;
+    for (let i = 0; i < N; i++) if (st[i] === 0 && lineOf(i) < dpt) { st[i] = 2; hit++; }
+    if (hit) { c.snd('pop'); hold = 1.8; c.say(c.T('비가 ' + SIDEN[CS][0] + '쪽 줄부터 내려요. 안 벤 벼가 젖었어요', 'Rain is falling from the ' + SIDEN[CS][1] + ' rows. Uncut rice got wet')); } };
+  const score = () => { const d = dry(); return d >= N ? 3 : d / N >= 0.75 ? 2 : d / N >= 0.45 ? 1 : 0; };
+  const cutAt = i => { st[i] = st[i] === 2 ? 3 : 1; cut++; };
+  const enter = i => { if (c.done || ph !== 'enter' || i < 0 || i >= N) return; if (!edge(i)) { sel = i; draw(); c.snd('pop'); c.say(c.T('콤바인은 논 가장자리 칸으로 들어가요', 'The combine enters from an edge square')); return; }
+    ph = 'cut'; cur = i; cutAt(i); c.snd('tick'); rain(); draw(); c.say(c.T('줄을 따라 왕복하며 베어요. 벤 곳은 다시 못 지나가요', 'Go back and forth along the rows. You cannot cross cut ground')); };
+  const go = i => { if (c.done || stuck || ph !== 'cut') return; if (i === cur || !adj(i, cur)) return; if (st[i] === 1 || st[i] === 3) { c.say(c.T('이미 벤 곳은 못 지나가요 — 길을 미리 생각해요', 'You can’t go over cut rows — plan your path')); c.snd('pop'); return; }
+    const w9 = st[i] === 2; cutAt(i); cur = i; c.snd('tick'); rain(); draw();
+    if (w9 && !warned && hold <= 0) { warned = true; hold = 1.6; c.say(c.T('젖은 벼예요. 베기 어렵고 따로 말려야 해요', 'This rice is wet. It is hard to cut and must be dried')); } else if (!w9 && hold <= 0) c.say(c.T('싹싹 — ', 'Swish — ') + cut + '/' + N);   /* 비 알림은 1.8초 남김 */
+    if (cut >= N) return c.finish(score()); if (!free(cur)) { stuck = true; c.say(c.T('길이 막혔어요! 한 줄씩 왕복하면 빈틈이 없어요', 'Boxed in! Going back and forth row by row leaves no gaps')); setTimeout(() => c.finish(score()), 900); } };
   let drag = false; const at = e => { const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest && el.closest('.gc'); return b && gd.contains(b) ? +b.dataset.i : -1; };
-  const pd = e => { const i = at(e); if (i < 0) return; e.preventDefault(); drag = true; go(i); }, pm = e => { if (drag) { const i = at(e); if (i >= 0) go(i); } }, pu = () => { drag = false; };
-  gd.addEventListener('pointerdown', pd); addEventListener('pointermove', pm); addEventListener('pointerup', pu); draw();
-  c.say(c.T('콤바인을 끌어 벼를 다 베어요 — 벤 곳은 다시 못 지나가요 (끌거나 화살표)', 'Drag the combine to cut every square — no going over cut ground (drag · arrows)'));
-  return { go: '', cnt: () => cut, key(code, rep) { const d = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1, ArrowUp: -C9, KeyW: -C9, ArrowDown: C9, KeyS: C9 }[code]; if (d == null) return false; if (rep) return true; const j = cur + d; if (j >= 0 && j < N) go(j); return true; }, down() {},
-    tick(dt) { if (TB.tick(dt) && !stuck) c.finish(score()); }, dispose() { gd.removeEventListener('pointerdown', pd); removeEventListener('pointermove', pm); removeEventListener('pointerup', pu); } }; }
+  const pd = e => { const i = at(e); if (i < 0) return; e.preventDefault(); if (ph === 'enter') { enter(i); return; } drag = true; go(i); }, pm = e => { if (drag) { const i = at(e); if (i >= 0) go(i); } }, pu = () => { drag = false; };
+  gd.addEventListener('pointerdown', pd); addEventListener('pointermove', pm); addEventListener('pointerup', pu); if (wetNow) rain(); draw();
+  c.say(wetNow ? c.T('비가 오기 시작했어요. 구름 쪽 첫 줄은 벌써 젖었어요. 들어갈 가장자리 칸을 골라요', 'Rain has started. The first row on the cloud side is already wet. Pick an edge square to enter')
+    : WP.n === 0 || lv === 1 ? c.T('깃발과 먹구름을 봐요. 비는 먹구름 쪽 줄부터 내려요. 그쪽 가장자리로 들어가 줄을 따라 베어요', 'Read the flag and the dark cloud. Rain falls from the cloud side first. Enter on that side and cut along the rows')
+    : lv >= 3 ? c.T('구름이 둘이에요. 깃발을 보고 다가오는 구름을 찾아 들어갈 칸을 골라요', 'Two clouds. Use the flag to find the one coming, then pick where to enter') : c.T('비구름이 어느 쪽에서 오나요? 들어갈 가장자리 칸을 골라요', 'Where is the rain cloud coming from? Pick an edge square to enter'));
+  return { go: '', cnt: () => dry(),
+    tail: () => (wetN() ? c.T('💡 젖은 벼 ' + wetN() + '칸은 따로 말려야 해요. 비구름이 오는 쪽 줄부터 베면 마른 채 거둘 수 있어요', '💡 ' + wetN() + ' wet square(s) must be dried. Cut the rows on the rain-cloud side first') : ''),
+    down() { if (ph === 'enter') enter(sel); },
+    key(code, rep) { const d = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1, ArrowUp: -C9, KeyW: -C9, ArrowDown: C9, KeyS: C9 }[code]; if (d == null) return false; if (rep) return true;
+      if (ph === 'enter') { const j = sel + d; if (j >= 0 && j < N && (Math.abs(d) !== 1 || ((j / C9) | 0) === ((sel / C9) | 0))) { sel = j; draw(); } return true; } const j = cur + d; if (j >= 0 && j < N) go(j); return true; },
+    tick(dt) { if (hold > 0) hold -= dt; if (TB.tick(dt) && !stuck && !c.done) c.finish(score()); },
+    get dbg() { return { ph, cs: CS, k: KC, rows: rowLines, L, G, SL, cur, cut, dpt, st: Array.from(st), dry: dry(), wet: wetN(), n: WP.n, lines: [...Array(N).keys()].map(lineOf), enter: i => enter(i), go: i => go(i) }; },
+    dispose() { gd.removeEventListener('pointerdown', pd); removeEventListener('pointermove', pm); removeEventListener('pointerup', pu); } }; }
 
 // ⑥ 소금 = town_salt.js(SALT-2 꼬임 넷 · 천일염·자염·토판염·꽃소금)
 
@@ -567,34 +674,62 @@ function mkDig(c) { const clam = c.k === 'clam', C9 = 7, N = 28, ND = (clam ? 8 
   c.say(clam ? c.T('작은 숨구멍 두 개 밑에 조개가 숨어요 — 큰 구멍 하나는 게 구멍! 삽질 ' + ND + '번', 'Clams hide under pairs of tiny holes — one big hole is a crab’s! ' + ND + ' digs') : c.T('감자는 줄기 밑 둘레 땅속에 달려요 — 줄기 둘레를 파요. 삽질 ' + ND + '번', 'Potatoes grow underground around the stem — dig around 🌿! ' + ND + ' digs'));
   return { go: c.T('여기 파기', 'Dig here'), cnt: () => found, down() { dig(G.sel); }, key: code => G.key(code), tick() {}, dispose: () => G.dispose() }; }
 
-// ⑨ 배추 나누기: 하나씩 나오는 배추를 크기대로 작은·중간·큰 상자에(끌어다 놓기 · 상자 누르기 · ←↓→ · 1·2·3) — 눈으로 견주기(셈 X)
-function mkSort(c) { const N = 8, T = 20 * c.zw, SQ = 1 - (c.lp || 0), SZ = [[0.6, 0.76], [0.92, 1.06], [1.26, 1.42]].map(q => q.map(v => 1 + (v - 1) * SQ));   /* LADDER-2: 칸이 오를수록 크기가 가운데로 모임(비슷한 배추) */ let i = 0, ok = 0, cur = 0, sc = 1;
-  c.mg.innerHTML = '<div class="cab"><i class="cb">🥬</i><b class="cn"></b></div><div class="bx3 srt">' + [[0.8, 34, 26, 15, c.T('작은 상자', 'Small')], [1, 50, 38, 22, c.T('중간 상자', 'Medium')], [1.3, 68, 52, 31, c.T('큰 상자', 'Large')]].map((q, n) => '<button data-b="' + n + '" style="flex:' + q[0] + '"><span class="crt" style="width:' + q[1] + 'px;height:' + q[2] + 'px"><i style="font-size:' + q[3] + 'px">🥬</i></span>' + q[4] + '</button>').join('') + '</div>';   /* 아이 눈 2차 '상자 셋 크기가 비슷해 보여요': 상자 폭·나무 상자 그림 크기를 다르게(작은 상자 = 큰 상자의 반쯤) */
-  const cb = c.mg.querySelector('.cb'), cn = c.mg.querySelector('.cn'), bx = c.mg.querySelector('.bx3'), TB = timeBar(c, T);
-  const show = () => { cur = (Math.random() * 3) | 0; const [a, b] = SZ[cur]; sc = a + Math.random() * (b - a); cb.style.transform = 'scale(' + sc.toFixed(2) + ')'; cn.textContent = (i + 1) + '/' + N; };
-  const put = b => { if (c.done) return; const good = b === cur; if (good) { ok++; c.snd('tick'); c.say(c.T('맞아요! ', 'Right! ') + ok + '/' + N); } else { c.snd('pop'); c.say(c.T('크기를 다시 견줘 봐요 — 상자 그림과 나란히', 'Compare sizes again — next to the box pictures')); } i++; if (i >= N) c.finish(ok >= N ? 3 : ok >= 6 ? 2 : ok >= 4 ? 1 : 0); else show(); };
-  let dragB = false; const pdC = e => { e.preventDefault(); dragB = true; cb.classList.add('dr'); }, pu = e => { if (!dragB) return; dragB = false; cb.classList.remove('dr'); const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest && el.closest('[data-b]'); if (b && bx.contains(b)) put(+b.dataset.b); };
-  const pdB = e => { const b = e.target.closest('[data-b]'); if (!b) return; e.preventDefault(); put(+b.dataset.b); };
-  cb.addEventListener('pointerdown', pdC); addEventListener('pointerup', pu); bx.addEventListener('pointerdown', pdB); show();
-  c.say(c.T('배추를 크기대로 상자에 — 끌어다 놓거나 상자를 눌러요 (←↓→)', 'Sort each cabbage by size — drag it or tap a box (←↓→)'));
-  return { go: '', cnt: () => ok, down() {}, key(code, rep) { if (rep) return /^(Arrow|Digit|Key[ASD])/.test(code); const b = { ArrowLeft: 0, Digit1: 0, KeyA: 0, ArrowDown: 1, Digit2: 1, KeyS: 1, ArrowRight: 2, Digit3: 2, KeyD: 2 }[code]; if (b == null) return false; put(b); return true; }, tick(dt) { if (TB.tick(dt)) c.finish(ok >= 7 ? 2 : ok >= 4 ? 1 : 0); }, dispose() { cb.removeEventListener('pointerdown', pdC); removeEventListener('pointerup', pu); bx.removeEventListener('pointerdown', pdB); } }; }
+// ⑨ 배추 거두기(DEPTH-2 · 크기대로 나누기 → 주문 보고 밭에서 고르기): 주문 쪽지(동네 가게 = 작은 배추 · 학교 급식실 = 중간 · 김장하는 집 = 큰 배추 · 김장은 가을·겨울만)마다 벨 배추가 다름
+//   밭 열두 포기(크기 셋이 섞임 · 크기 차이가 눈에 보임 · 사다리 = 크기가 비슷해짐) → 주문 크기만 눌러 주문 상자 네 칸을 채움 · 다른 크기 = 장터 바구니로(주문 상자는 안 참 · 까닭 한 줄) · 끌기·누르기·화살표 + E
+const CAB_ORD = { shop: [0, ['동네 가게', 'Corner shop'], ['작은 배추 네 포기. 식구가 적은 집이 사 가요', 'Four small cabbages, for small families']], lunch: [1, ['학교 급식실', 'School kitchen'], ['중간 배추 네 포기. 크기가 고르면 한꺼번에 손질해요', 'Four medium cabbages. Even sizes are prepared together']], kim: [2, ['김장하는 집', 'Kimchi-making family'], ['큰 배추 네 포기. 속이 꽉 찬 것', 'Four big cabbages with full hearts']] };
+const CAB_FACT = { shop: ['작은 배추는 식구가 적은 집에서 남기지 않고 먹기 좋아요', 'Small cabbages suit small families, with nothing left over'], lunch: ['크기가 고른 배추는 한꺼번에 씻고 썰기 좋아요', 'Cabbages of even size are easy to wash and cut together'], kim: ['김장은 늦가을에 해요. 속이 꽉 찬 큰 배추가 김치 담그기에 좋아요', 'Kimchi is made in late autumn. Big cabbages with full hearts are best for it'] };
+function mkSort(c) { const X = jx(c), C9 = 4, N = 12, NQ = 4, T = 30 * c.zw, SQ = 1 - (c.lp || 0), SZ = [[0.6, 0.74], [0.94, 1.06], [1.28, 1.42]].map(q => q.map(v => 1 + (v - 1) * SQ));   /* LADDER-2: 칸이 오를수록 크기가 가운데로 모임(비슷한 배추) */
+  const opts = c.sea === 'autumn' || c.sea === 'winter' ? ['shop', 'lunch', 'kim'] : ['shop', 'lunch'], P0 = sitPick(X, 'ord', opts), ORD = P0.s, O = CAB_ORD[ORD], W = O[0];
+  const sz = shuf([0, 1, 2].flatMap(s => Array(s === W ? 5 : s === (W + 1) % 3 ? 4 : 3).fill(s))), sc = sz.map(s => SZ[s][0] + Math.random() * (SZ[s][1] - SZ[s][0])), got = new Uint8Array(N); let ok = 0, miss = 0;   /* 주문 크기 다섯 · 나머지 넷·셋 */
+  const mid = (SZ[W][0] + SZ[W][1]) / 2;
+  c.mg.innerHTML = '<div class="ordn"><span class="crt cs" style="width:' + Math.round(40 * mid) + 'px;height:' + Math.round(30 * mid) + 'px"><i style="font-size:' + Math.round(24 * mid) + 'px">🥬</i></span><span>📝 ' + c.T('주문', 'Order') + ' — ' + c.T(O[1][0], O[1][1]) + ': ' + c.T(O[2][0], O[2][1]) + '</span></div>'
+    + gridHTML(C9, N, 'cabf') + '<div class="cbx"><span class="obx">' + c.T('주문 상자', 'Order box') + ' <b>' + '<i></i>'.repeat(NQ) + '</b></span><span class="mbx">' + c.T('장터 바구니', 'Market basket') + ' <b>0</b></span></div>';
+  const gd = c.mg.querySelector('.gd'), OB = c.mg.querySelectorAll('.obx i'), MB = c.mg.querySelector('.mbx b'), TB = timeBar(c, T);
+  const put = i => { if (c.done || i < 0 || i >= N || got[i]) return; got[i] = 1; G.B[i].className = 'gc cut'; G.mark();
+    if (sz[i] === W) { if (OB[ok]) OB[ok].className = 'on'; ok++; c.snd('tick'); c.say(c.T('주문에 맞아요! 주문 상자 ' + ok + '/' + NQ, 'Right size! Order box ' + ok + '/' + NQ)); if (ok >= NQ) c.finish(score()); return; }
+    miss++; MB.textContent = miss; c.snd('pop'); pop(G.B[i], 'no');
+    c.say((sz[i] > W ? c.T('주문보다 큰 배추예요', 'Bigger than the order') : c.T('주문보다 작은 배추예요', 'Smaller than the order')) + (sz[i] === 0 ? c.T('. 작은 배추는 밭에 두면 더 자라요', '. A small one would keep growing in the field') : '') + c.T('. 장터 바구니로 가요', '. It goes to the market basket')); };
+  const G = gridCtl(gd, C9, N, i => put(i)); for (let i = 0; i < N; i++) G.B[i].innerHTML = '<i style="font-size:' + Math.round(30 * sc[i]) + 'px">🥬</i>'; G.mark();
+  const score = () => (ok >= NQ ? (miss === 0 ? 3 : miss <= 2 ? 2 : 1) : ok >= 2 ? 1 : 0);
+  c.say(P0.n === 0 ? c.T('쪽지 그림과 크기를 견줘요. 주문 크기만 눌러 베어요', 'Compare with the picture on the note. Tap only the ordered size to cut it') : c.T('오늘 주문은 어떤 크기일까요? 쪽지를 봐요', 'Which size is today’s order? Check the note'));
+  return { go: c.T('이 배추 베기', 'Cut this one'), cnt: () => ok, down() { put(G.sel); }, key: code => G.key(code),
+    tail: () => '💡 ' + (miss ? c.T('장터 바구니로 간 배추 ' + miss + '포기. ', miss + ' went to the market basket. ') : '') + CAB_FACT[ORD][c.en ? 1 : 0],
+    tick(dt) { if (TB.tick(dt)) c.finish(score()); },
+    get dbg() { return { ord: ORD, want: W, sz: sz.slice(), got: Array.from(got), ok, miss, n: P0.n, pick: i => put(i) }; },
+    dispose() { G.dispose(); } }; }
 
-// ⑩ 배 봉지 씌우기: 벌레가 기어 오기 전에 배마다 봉지를 — 봉지 씌운 배는 안전(누르기 · 화살표+E) · 벌레는 천천히(솜씨 = 더 천천히)
-function mkCover(c) { const N = 6, P = [], W = []; let bag = 0, lost = 0, t = 0;
-  c.mg.innerHTML = '<div class="tree"><i class="br"></i></div>'; const tr = c.mg.querySelector('.tree');
-  for (let i = 0; i < N; i++) { const e = document.createElement('button'); e.className = 'pr'; e.textContent = '🍐'; e.dataset.i = i; e.style.left = (8 + i * 15) + '%'; e.style.top = (i % 2 ? 52 : 30) + '%'; tr.appendChild(e); P.push({ e, st: 0, x: 0.08 + i * 0.15 + 0.04, y: (i % 2 ? 0.52 : 0.3) + 0.1 }); }
-  for (let k = 0; k < 3; k++) { const e = document.createElement('i'); e.className = 'wm'; e.textContent = '🐛'; tr.appendChild(e); const w = { e, x: k === 1 ? 0.97 : 0.03, y: 0.15 + k * 0.33, tg: -1, wait: 1.5 + k * 2.5 }; e.style.left = (w.x * 100) + '%'; e.style.top = (w.y * 100) + '%'; W.push(w); }
-  let sel = 0; const mark = () => P.forEach((p, i) => p.e.classList.toggle('sel', i === sel)); mark();
-  const cover = i => { const p = P[i]; if (c.done || p.st) return; p.st = 1; bag++; p.e.classList.add('bag'); c.snd('pick'); c.say(c.T('봉지 쏙! ', 'Bagged! ') + bag + '/' + N); check(); };
-  const check = () => { if (bag + lost >= N) c.finish(bag >= N ? 3 : bag >= 4 ? 2 : bag >= 2 ? 1 : 0); };
-  const pd = e => { const b = e.target.closest('.pr'); if (!b) return; e.preventDefault(); sel = +b.dataset.i; mark(); cover(sel); }; tr.addEventListener('pointerdown', pd);
-  c.say(c.T('벌레가 오기 전에 배마다 봉지를 씌워요 (누르거나 화살표와 E)', 'Bag every pear before the caterpillars get there (tap · ←→+E)'));
-  return { go: c.T('봉지 씌우기', 'Bag it'), cnt: () => bag, down() { cover(sel); }, key(code) { const d = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1 }[code]; if (!d) return false; sel = Math.max(0, Math.min(N - 1, sel + d)); mark(); return true; },
-    tick(dt) { t += dt; const sp = 0.055 / c.zw * (c.lp || 1);   /* LADDER-2 벌레 빠르기 */
-      for (const w of W) { if ((w.wait -= dt) > 0) continue; if (w.tg < 0 || P[w.tg].st) { let bd = 9; w.tg = -1; P.forEach((p, i) => { if (p.st) return; const d = Math.hypot(p.x - w.x, p.y - w.y); if (d < bd) { bd = d; w.tg = i; } }); if (w.tg < 0) { w.e.style.opacity = '0'; continue; } }
-        const p = P[w.tg], dx = p.x - w.x, dy = p.y - w.y, d = Math.hypot(dx, dy); if (d < 0.03) { p.st = 2; lost++; p.e.classList.add('eat'); c.snd('pop'); c.say(c.T('앗, 벌레가 먼저 왔어요 — 다음 배를 지켜요', 'Oops, a caterpillar got there first — protect the next one')); w.wait = 1.2; w.tg = -1; check(); continue; }
-        w.x += dx / d * sp * dt; w.y += dy / d * sp * dt; w.e.style.left = (w.x * 100).toFixed(1) + '%'; w.e.style.top = (w.y * 100).toFixed(1) + '%'; }
-      if (t > 25 && !c.done) c.finish(bag >= N ? 3 : bag >= 4 ? 2 : bag >= 2 ? 1 : 0); }, dispose() { tr.removeEventListener('pointerdown', pd); } }; }
+// ⑩ 배 봉지 씌우기(DEPTH-2 · 벌레 경주 → 벌레가 오는 쪽을 보고 차례 정하기): 과수원 한 줄(위에서 본 그림 · 위 = 북)에서 봉지를 씌울 나무를 하나씩 고름(한 번 = 한 그루 · 시간 X)
+//   나방은 바람을 타고 바람이 불어오는 쪽에서 날아옴(깃발 = 바람이 가는 쪽) · 바람이 나무 줄을 가로질러(북·남으로) 불면 숲 가장자리 쪽에서 먼저 넘어옴(숲 = 일터마다 정해진 쪽)
+//   한 그루 씌울 때마다 벌레가 들어온 쪽에서 한 그루씩 다가옴 → 봉지 없는 배나무에 닿으면 그 나무 배는 벌레 먹음(세상 쪽 결과) · 열매 없는 나무에 봉지 = 한 번을 씀
+//   사다리 = 1 다섯 그루(여유 한 번) · 2 여섯 그루 + 열매 없는 나무 · 3 벌레가 바로 옴(여유 0) · 4 일곱 그루 · 열매 없는 나무 둘
+function mkCover(c) { const X = jx(c), lv = c.lv, NT = lv >= 4 ? 7 : lv >= 2 ? 6 : 5, NE = lv >= 4 ? 2 : lv >= 2 ? 1 : 0, D = lv >= 3 ? 1 : 2, T = 40 * c.zw;
+  const FS = hs9(String(X.key || c.k)) % 2 ? 'R' : 'L', outOf = k => (k >= 1 && k <= 3 ? 'L' : k >= 5 ? 'R' : 'F');   /* 바람이 동쪽으로(1~3) = 서쪽(왼쪽)에서 옴 · 서쪽으로 = 오른쪽에서 · 북·남으로 = 숲 쪽에서 */
+  const WP = windPick(X, 'cov', outOf), K = WP.k, TY = WP.s, ENT = TY === 'F' ? FS : TY, dist = i => (ENT === 'L' ? i : NT - 1 - i);
+  const fruit = new Array(NT).fill(1), np = []; { const o = shuf([...Array(NT).keys()]).slice(0, NE); for (const i of o) fruit[i] = 0; } for (let i = 0; i < NT; i++) np.push(fruit[i] ? 2 + (Math.random() < 0.5 ? 1 : 0) : 0);
+  const bag = new Uint8Array(NT), eat = new Uint8Array(NT); let turn = 0, sel = ENT === 'L' ? NT - 1 : 0, nb = 0, ate = 0;   /* 고르개는 일부러 반대쪽 끝에서 시작(답을 짚어 주지 않음) */
+  const tx = i => 10 + i * (80 / (NT - 1));
+  let h = '<div class="orc"><i class="fr9 ' + FS.toLowerCase() + '"><b>' + c.T('숲', 'Woods') + '</b></i><span class="fl9w">' + flagTop(K, c.en, 44) + '</span>';
+  for (let i = 0; i < NT; i++) h += '<button class="ot' + (fruit[i] ? '' : ' em') + '" data-i="' + i + '" style="left:' + tx(i).toFixed(1) + '%"><span>' + (fruit[i] ? '🍐'.repeat(np[i]) : '') + '</span></button>';
+  c.mg.innerHTML = h + '<i class="bug9" style="left:' + (ENT === 'L' ? 1 : 99) + '%">🐛</i></div>';
+  const OR = c.mg.querySelector('.orc'), TB9 = OR.querySelectorAll('.ot'), BG = OR.querySelector('.bug9'), TB = timeBar(c, T);
+  const draw = () => { for (let i = 0; i < NT; i++) setCls(TB9[i], 'ot' + (fruit[i] ? '' : ' em') + (bag[i] ? ' bag' : '') + (eat[i] ? ' eat' : '') + (i === sel ? ' sel' : '')); };
+  const left9 = () => fruit.reduce((s, f, i) => s + (f && !bag[i] && !eat[i] ? 1 : 0), 0), NF = fruit.reduce((s, f) => s + f, 0);
+  const score = () => { const sv = NF - ate; return sv >= NF ? 3 : sv >= NF - 1 ? 2 : sv >= 1 ? 1 : 0; };
+  const advance = () => { const fr = turn - D; let hit = 0; for (let i = 0; i < NT; i++) if (dist(i) <= fr && fruit[i] && !bag[i] && !eat[i]) { eat[i] = 1; ate++; hit++; }
+    if (fr >= 0) { const j = ENT === 'L' ? Math.min(NT - 1, fr) : Math.max(0, NT - 1 - fr); BG.classList.add('on'); BG.style.left = tx(j).toFixed(1) + '%'; }   /* 벌레는 들어온 뒤에야 보임(먼저 보이면 답을 짚어 줌) */
+    draw(); if (hit) { c.snd('pop'); c.say(c.T('앗, 벌레가 먼저 닿았어요. 봉지 없는 배를 갉아 먹어요', 'Oh no, the bugs got there first and are eating the unbagged pears')); } return hit; };
+  const bagTree = i => { if (c.done || i < 0 || i >= NT) return; sel = i; if (bag[i] || eat[i]) { draw(); c.say(bag[i] ? c.T('이미 봉지를 씌웠어요', 'Already bagged') : c.T('벌레가 먼저 닿은 나무예요', 'The bugs already reached this tree')); return; }
+    turn++; if (!fruit[i]) { bag[i] = 1; c.snd('pop'); c.say(c.T('열매가 없는 나무예요. 봉지 한 번을 썼어요', 'No fruit on this tree. That bag was wasted')); }
+    else { bag[i] = 1; nb += np[i]; c.snd('pick'); c.say(c.T('봉지 쏙! ', 'Bagged! ') + c.T('지킨 나무 ', 'Trees safe ') + bag.reduce((s, b, q) => s + (b && fruit[q] ? 1 : 0), 0) + '/' + NF); }
+    advance(); if (!left9()) setTimeout(() => c.finish(score()), 700); };
+  const pd = e => { const b = e.target.closest('.ot'); if (!b) return; e.preventDefault(); bagTree(+b.dataset.i); }; OR.addEventListener('pointerdown', pd); draw();
+  c.say(lv === 1 || WP.n === 0 ? c.T('깃발을 봐요. 나방은 바람이 불어오는 쪽에서 와요. 바람이 북·남으로 불면 숲 쪽에서 와요. 그쪽 나무부터 씌워요', 'Read the flag. Moths come from where the wind blows from. If it blows north or south, they come from the woods. Bag that side first')
+    : c.T('깃발과 숲을 보고, 어느 나무부터 씌울지 골라요', 'Check the flag and the woods, then choose which tree to bag first'));
+  return { go: c.T('봉지 씌우기', 'Bag it'), cnt: () => nb, down() { bagTree(sel); }, key(code) { const d = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1 }[code]; if (!d) return false; sel = Math.max(0, Math.min(NT - 1, sel + d)); draw(); return true; },
+    tail: () => (ate ? c.T('💡 벌레 먹은 배나무 ' + ate + '그루. 벌레가 오는 쪽 나무부터 씌우면 지킬 수 있어요', '💡 ' + ate + ' tree(s) got bugs. Bag the side the bugs come from first') : ''),
+    tick(dt) { if (TB.tick(dt) && !c.done) { for (let i = 0; i < NT; i++) if (fruit[i] && !bag[i] && !eat[i]) { eat[i] = 1; ate++; } draw(); c.finish(score()); } },
+    get dbg() { return { ty: TY, ent: ENT, fs: FS, k: K, D, fruit: fruit.slice(), bag: Array.from(bag), eat: Array.from(eat), turn, ate, n: WP.n, order: [...Array(NT).keys()].filter(i => fruit[i]).sort((a, b) => dist(a) - dist(b)), bagT: i => bagTree(i) }; },
+    dispose() { OR.removeEventListener('pointerdown', pd); } }; }
 
 // ⑪ 어린 나무 심기(JUDGE-1 · 10-25 물 꾹 → 흙 보고 판단): 심는 차례(구덩이 → 묘목 세우기 → 흙 덮고 밟기 → 물) 안에 판단 둘
 //   ① 묘목 세우기 = 깊이 그림 셋 가운데 고름(뿌리 목 = 뿌리와 줄기가 만나는 곳이 땅 높이와 같게 · 얕으면 뿌리가 드러나 마름 · 깊으면 줄기가 흙에 묻혀 썩음)
@@ -1007,6 +1142,7 @@ const MK = { toss: mkToss, spread: mkSpread, gauge: mkGauge, tug: mkTug, ripe: m
 //   lv(LADDER-2 도전 칸 1~4 · 조건 값 = town_lad.js LADP) · onRec(점수, 모은 수) → { lines: [내 최고 줄 · 다음 판 줄], neu } | null(끝 창에 덧붙임) · onBest(줄 요소) = 새 내 최고 연출 }
 export function createMini(kind, o) { css();
   const c = { root: o.root, mg: o.root.querySelector('.mg'), msgEl: o.root.querySelector('.msg'), go: o.root.querySelector('.go'), en: !!o.en, zw: Math.max(1, o.zw || 1), k: o.k, sea: o.sea, x: o.x || null, done: false, lv: Math.max(1, Math.min(4, o.lv | 0 || 1)) }; c.lp = ladVal(kind, c.lv);   /* LADDER-2 lp = 이 칸의 조건 값(없는 놀이 = null → 놀이 틀은 1칸 값으로) */   /* x = 놀이별 자료(부엌: 요리법·사다리·손님·날씨 · KITCHEN-1) */
+  c.h9 = { sitPick, flagSide, cloudSvg };   /* DEPTH-2 소금(town_salt.js)이 쓰는 상황 고르기·그림 */
   c.T = (ko, e2) => (c.en ? e2 : ko); c.say = s => { if (c.msgEl && c.msgEl.textContent !== s) c.msgEl.textContent = s; }; c.snd = k => { if (o.sfx) o.sfx(k); }; c.tone = (...a) => { if (o.tone) o.tone(...a); };
   let endT = -1, score = 0, cntT = -1, recR = null;
   c.finish = ok => { if (c.done) return; c.done = true; score = Math.max(0, Math.min(3, ok | 0)); if (o.grade === false) { endT = 0; return; } c.root.classList.add('mg-end'); const f9 = FACT[kind === 'plant' || kind === 'cut' ? kind : c.k], tl = g.tail ? g.tail() : ''; c.say(gradeText(score, c.en) + (tl ? ' ' + tl : f9 ? (c.en ? ' 💡 Did you know? ' : ' 💡 알고 있었나요? ') + f9[c.en ? 1 : 0] : '')); c.snd(score >= 3 ? 'done' : score ? 'ding' : 'buzz'); endT = f9 || tl ? 3.2 : 0.8;   /* PLAY-3: 끝 = 결과 + 사실 한 줄(3.2초) */

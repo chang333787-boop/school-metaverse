@@ -5,7 +5,7 @@
 //   제복 = 모자·윗옷 색만(LOOK 정점 색 · 저장 X · 끝나면 되돌림) · 무서운 장면·다치는 사람 X · 셈 X · 이모지는 창 제목 앞에 하나
 import { PG, PG_ORDER, JOBS, placeInfo, jobSvg, jobRow, photoKey, photoHtml, PHOTO_CSS, LIB_CATS, LIB_BOOKS, LIB_ASKS } from './town_places.js?v=3';
 import { getLook, setLook } from '../js/look.js?v=1';
-import { makeFireTruck, FIRE_STATIONS, parked } from './town_fire.js?v=1'; import { SIT, HTYPE, typeOf, CAUSE, CAUSE_ORDER, METHOD, METHOD_OK, METHOD_WHY, METHOD_NO, TARGET, STOP_ITEM, STOP_Q, QPOOL, FLV, TASK, firePlan, rnd } from './town_fire5.js?v=1'; import { ladOf, ladAfter, recLines } from './town_lad.js?v=3';   /* FIRE-5 판 짜기 · 소방 도전 칸(도전 사다리 꼴) */   // 출동 소방차 = 아트 팀 FIRE-1(앞 = +x · 길이 7.2 · 폭 2.4) · 소방서 앞에 서 있던 차는 출동하는 동안 숨김
+import { makeFireTruck, FIRE_STATIONS, parked } from './town_fire.js?v=1'; import { SIT, HTYPE, typeOf, CAUSE, CAUSE_ORDER, METHOD, METHOD_OK, METHOD_WHY, METHOD_NO, TARGET, STOP_ITEM, STOP_Q, QPOOL, FLV, TASK, firePlan, rnd } from './town_fire5.js?v=1'; import { ladOf, ladAfter, recLines } from './town_lad.js?v=4';   /* FIRE-5 판 짜기 · 소방 도전 칸(도전 사다리 꼴) */   // 출동 소방차 = 아트 팀 FIRE-1(앞 = +x · 길이 7.2 · 폭 2.4) · 소방서 앞에 서 있던 차는 출동하는 동안 숨김
 export const JOBS_V = 1;
 const T2 = (ko, en) => [ko, en];
 // 직업 체험 셋: [아이콘, 이름, 영어, 장소 글, 모자 색 칸, 윗옷 색 칸(look.js PALS 번호), 솜씨, 배운 것]
