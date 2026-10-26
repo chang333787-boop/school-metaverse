@@ -4,6 +4,9 @@
 //      성공 = 그 이웃 ❤(하루 한 번) · 100원 · 일 솜씨 +2(하루 넷까지) · 실패·그만둠 = 벌 X('다음엔 꼭!') · 하는 동안 위 가운데 줄 = 할 일 + 남은 시간
 //   ③ 바람에 날아온 보물 지도 조각 — 바람 센 날 종이 한 장이 날아와 앞에 떨어짐 → E = town_treasure.js take()(큰 지도가 열린 뒤 · 그날 지도를 아직 안 받았을 때 · 하루 한 번)
 //   렉: 매 프레임 = 진행 중인 것만(다음 고리 하나와의 평면 거리 · 굴러가는 모자 · 나는 종이) · 생기기·끝 판정 = 1초 칸(sec) · 새 Light X · 매 프레임 새 객체 X
+//   DEPTH-3(docs/systems/town_depth.md 길 위 사건 줄): ④ 길 막힘 — 자전거로 한 번 완주한 코스는 판마다(날 × 몇 번째 판) 고리 사이 한 곳이 공사·행사로 막힘(막힘 자리·갈래·폭이 판마다 다름 · 바로 앞 판과 같은 것 X)
+//     막힘 = 자전거 도로 + 인도를 덮는 울타리(몸이 못 지나감) · 돌아갈 길 = 차도 쪽(짧지만 차가 다님 → 멈춰 서서 차를 먼저 보냄 · 시간이 감) 또는 인도 바깥 풀밭 쪽(조금 멂 · 안전)
+//     벌 X — 끝 알림에 '무엇이 늦었나' 한 줄 · 금메달 뒤엔 막힘이 더 넓어짐 · 내 기록 = 최고 + 지난 다섯 판(지난 판보다 몇 초) · 막힘 판 최고 따로(town_lad.js 기록판은 읽기만 — 이 파일 S.ring에)
 //   그리기: 고리 = 인스턴스 하나(가까운 코스만) · 사건 중에만 모자(+2)·주울 것(+1)·종이(+1) · 정본 문서 docs/systems/town_road.md
 export const RD_V = 1;
 const T2 = (ko, en) => [ko, en];
@@ -30,6 +33,10 @@ const CROPK = { potato: ['🥔', T2('감자', 'potatoes'), 0xb98b5a, 0.22, T2('�
   shiitake: ['🍄', T2('표고버섯', 'shiitake'), 0x8a5a3a, 0.18, T2('표고버섯은 참나무 통나무에서 길러요.', 'Shiitake mushrooms are grown on oak logs.')] };
 const CROP0 = ['🍎', T2('사과', 'apples'), 0xd8402e, 0.2, T2('사과는 가을에 빨갛게 익어요.', 'Apples turn red and ripe in autumn.')];
 const NOHELP = new Set(['swim', 'guest']);
+// 길 막힘(DEPTH-3): 갈래 = 공사 · 행사 — 울타리 색 · 안 소품 · 팻말 글
+const BLK = { work: { e: '🚧', t: T2('자전거 도로 공사', 'Bike lane roadworks'), sign: T2('공사 중 · 자전거 도로 막힘', 'Roadworks · bike lane closed'), c: [0xef8b33, 0xf6f4ee] },
+  fair: { e: '🎪', t: T2('장터 행사', 'Street fair'), sign: T2('장터 행사 · 자전거 도로 막힘', 'Street fair · bike lane closed'), c: [0x3d74c9, 0xf6f4ee] } };
+const BL = 6, BNB = 64;   /* 막힘 길이(m · 길 따라) · 울타리·소품 인스턴스 수 */
 
 // 마을 쪽이 넘기는 것(A): map · T3 · GAME · on() · lang() · esc · openP(h, wide, kind) · closeP() · busy() 창·놀이 · away() 실내·버스·지하철·배·잠 · bike() · bikeOn() 자전거가 열렸나 · night() · story() 이야기 진행 중 · rideFast() 버스 등
 //   lanes() [구간, 안쪽, 바깥쪽] · roads() RSEG · crossPts() 교차로 [[x, z]] · inSchool · water(x, z) · onBridge(x, z, m) · blocked(x, z, y) · gy(x, z) 서는 높이 · okSpot(x, z) 서는 빈 땅(차도·물·마당·막힘 X) · inLane(x, z) 차도
@@ -44,6 +51,7 @@ export function createRoad(A) {
   let CS = [], built = false, buildMs = 0, NEAR = [], RING = null, RGEO = null, RMAT = null, ringKey = '', RACE = null;
   let REQ = null, ACT = null, PAPER = null, goalT = null, q4 = 0, lastMin = -1, movMin = 40, movP = 0, lx = 1e9, lz = 1e9, fx = 1e9, fz = 1e9;
   let HAT = null, HATG = [], ITEM = null, PAP = null, PAPT = null, PAPG = null;
+  let BK = null, BKM = null, BKC = null, BKS = null, BKT = null;   /* DEPTH-3 길 막힘: 지금 지은 막힘 · 울타리 인스턴스 · 고깔 인스턴스 · 팻말 · 팻말 그림 */
   const DBG = [];
 
   // ───────── ① 고리 코스 짓기(처음 1초 칸에서 한 번 · 자전거 도로 줄 → 1m 점 → 몸이 막히는 곳에서 끊음 → 36m마다 고리) ─────────
@@ -88,25 +96,76 @@ export function createRoad(A) {
       const col = i === c.rings.length - 1 ? RCOL.end : on ? (i === RACE.i ? RCOL.next : RCOL.rest) : i === 0 ? RCOL.start : RCOL.rest; M.setColorAt(n, C9.setHex(col)); n++; }); }
     M.count = n; M.visible = n > 0; M.instanceMatrix.needsUpdate = true; if (M.instanceColor) M.instanceColor.needsUpdate = true; }
   function nearSec(me) { const want = A.bikeOn() && !A.away() ? CS.filter(c => Math.hypot(me.x - c.cx, me.z - c.cz) < c.rad + 230) : []; if (RACE && !want.includes(RACE.c)) want.push(RACE.c);
-    const same = want.length === NEAR.length && want.every((c, i) => c === NEAR[i]); if (!same) { for (const c of want) if (!NEAR.includes(c)) c.ps = 1; NEAR = want; } paint(); }
+    const same = want.length === NEAR.length && want.every((c, i) => c === NEAR[i]); if (!same) { for (const c of want) if (!NEAR.includes(c)) c.ps = 1; NEAR = want; } paint(); blkSync(me); }
+
+  // ───────── ④ 길 막힘(DEPTH-3) ─────────
+  //   판 = 그 코스를 자전거로 몇 번째 달리나(S.ring[id].n) · 씨앗 = 날 × 코스 × 판 · 자리 = 고리 j와 j+1 사이 가운데 · 폭 w = 자전거 도로 옆 인도까지(금메달 뒤 더 넓게)
+  //   l = 길 오른쪽(인도 쪽)으로 m · 0 = 자전거 도로 가운데 · 음수 = 차도 쪽 · a = 가는 쪽으로 m
+  const lOf = (B, x, z) => (x - B.x) * B.nx + (z - B.z) * B.nz, aOf = (B, x, z) => (x - B.x) * B.dx + (z - B.z) * B.dz;
+  function pIdx(c, r) { const P = c.path; let bi = 0, bd = 1e9; for (let i = 0; i < P.x.length; i++) { const d = (P.x[i] - r.x) * (P.x[i] - r.x) + (P.z[i] - r.z) * (P.z[i] - r.z); if (d < bd) { bd = d; bi = i; } } return bi; }
+  function blkPlan(c, n) { const Q = S().ring[c.id]; if (!Q || !(Q.m >= 1) || c.rings.length < 6) return null; if (n == null) n = Q.n | 0;   /* 한 번은 막힘 없이 완주한 코스만 */
+    const key = A.GAME.S.day + ':' + n; if (c.blkP && c.blkP.key === key) return c.blkP.p; const gold = Q.m >= 3, P = c.path, E9 = (map.interact.list ? map.interact.list() : []).filter(h => !h.off);
+    let plan = null; for (let salt = 0; salt < 4 && !plan; salt++) { const R9 = rng('blk:' + c.id + ':' + key + ':' + salt); if (salt === 0 && R9() < 0.18) { plan = { none: 1 }; break; }   /* 판 다섯에 하나쯤은 막힘 없음 */
+      const kind = R9() < 0.5 ? 'work' : 'fair', J = []; for (let j = 1; j < c.rings.length - 2; j++) J.push(j); for (let i = J.length - 1; i > 0; i--) { const k = Math.floor(R9() * (i + 1)); [J[i], J[k]] = [J[k], J[i]]; }
+      const w = Math.round(((gold ? 4.4 : 3.4) + R9() * (gold ? 1.6 : 1.0)) * 10) / 10;
+      for (const j of J) { const i0 = pIdx(c, c.rings[j]), i1 = pIdx(c, c.rings[j + 1]), im = Math.round((i0 + i1) / 2); if (im < 4 || im > P.x.length - 5) continue;
+        let dx = P.x[im + 3] - P.x[im - 3], dz = P.z[im + 3] - P.z[im - 3]; const dl = Math.hypot(dx, dz) || 1; dx /= dl; dz /= dl; const nx = -dz, nz = dx, x = P.x[im], z = P.z[im], y = A.gy(x, z); if (!Number.isFinite(y)) continue;
+        const sig = kind + ':' + j, Lp = Q.lp || ''; if (sig === Lp) continue;   /* 바로 앞 판과 같은 자리·갈래 X */
+        let okB = true; for (let a = -9; a <= 9 && okB; a += 1.5) for (const l of [w + 0.9, w + 1.8, w + 2.6]) { const px = x + dx * a + nx * l, pz = z + dz * a + nz * l, gy = A.gy(px, pz); if (!A.okSpot(px, pz) || !Number.isFinite(gy) || Math.abs(gy - y) > 0.7) { okB = false; break; } }   /* 바깥으로 돌아갈 풀밭·빈 땅 */
+        for (let a = -BL / 2; a <= BL / 2 && okB; a += 1) for (let l = 1.6; l <= w; l += 0.8) { const px = x + dx * a + nx * l, pz = z + dz * a + nz * l; if (A.blocked(px, pz, A.gy(px, pz) + 0.6)) okB = false; }   /* 막힘 안이 비어 있음(건물·나무 X) */
+        if (okB && E9.some(h => Math.abs(aOf({ x, z, dx, dz }, h.x, h.z)) < BL / 2 + 3 && lOf({ x, z, nx, nz }, h.x, h.z) > -3 && lOf({ x, z, nx, nz }, h.x, h.z) < w + 3)) okB = false;   /* 다른 E 자리를 덮지 않음 */
+        if (!okB) continue; plan = { kind, j, w, x, z, y, dx, dz, nx, nz, sig }; break; } }
+    c.blkP = { key, p: plan && !plan.none ? plan : null }; return c.blkP.p; }
+  function blkSync(me) { const c = RACE ? RACE.c : NEAR.find(q => Math.hypot(me.x - q.cx, me.z - q.cz) < q.rad + 120) || null, p = c ? blkPlan(c) : null;
+    if (BK && (!p || BK.c !== c || BK.p !== p)) blkOff(); if (p && !BK) blkOn(c, p); }
+  function blkOn(c, p) { const k9 = BLK[p.kind]; if (!BKM) { BKM = new T3.InstancedMesh(new T3.BoxGeometry(1, 1, 1), new T3.MeshLambertMaterial({ color: 0xffffff, flatShading: true }), BNB); BKM.setColorAt(0, C9.setHex(0xffffff)); BKM.userData.fx = 1; BKM.frustumCulled = false; BKM.matrixAutoUpdate = false;
+      BKC = new T3.InstancedMesh(new T3.ConeGeometry(0.22, 0.6, 8), new T3.MeshLambertMaterial({ color: 0xffffff, flatShading: true }), 8); BKC.setColorAt(0, C9.setHex(0xffffff)); BKC.userData.fx = 1; BKC.frustumCulled = false; BKC.matrixAutoUpdate = false; }
+    const root = A.root(); for (const m of [BKM, BKC]) if (!m.parent && root) root.add(m);
+    const yaw = Math.atan2(p.dx, p.dz), at = (a, l, h) => [p.x + p.dx * a + p.nx * l, p.y + (h || 0), p.z + p.dz * a + p.nz * l], cols = [];
+    let n = 0; const put = (a, l, y, sx, sy, sz, hex, ry = 0) => { if (n >= BNB) return; const q = at(a, l, y); O.position.set(q[0], q[1], q[2]); O.rotation.set(0, yaw + ry, 0); O.scale.set(sx, sy, sz); O.updateMatrix(); BKM.setMatrixAt(n, O.matrix); BKM.setColorAt(n, C9.setHex(hex)); n++; };
+    const l0 = -1.0, l1 = p.w, a0 = -BL / 2, a1 = BL / 2;
+    for (const a of [a0, a1]) for (let l = l0 + 0.5; l < l1 + 0.01; l += 1) { const ll = Math.min(l, l1 - 0.5); put(a, ll, 0.02, 0.12, 0.98, 0.98, 0x8a8f99); put(a, ll, 0.55, 0.13, 0.22, 0.96, k9.c[0]); put(a, ll, 0.8, 0.13, 0.18, 0.96, k9.c[1]); }   /* 앞·뒤 울타리(길을 가로질러) */
+    for (const l of [l0, l1]) for (let a = a0 + 0.5; a < a1 + 0.01; a += 1) { put(a, l, 0.02, 0.98, 0.98, 0.12, 0x8a8f99); put(a, l, 0.55, 0.96, 0.22, 0.13, k9.c[0]); put(a, l, 0.8, 0.96, 0.18, 0.13, k9.c[1]); }   /* 차도 쪽 · 바깥쪽 울타리 */
+    if (p.kind === 'work') { put(0, (l0 + l1) / 2, 0, 2.2, 0.5, Math.max(1, p.w - 0.8), 0xb98b5a); put(-1.2, (l0 + l1) / 2, 0.02, 1.4, 0.06, 1.2, 0x4d4743); }   /* 파낸 흙더미 · 덮개 판 */
+    else for (const [a, l, cc] of [[-1.4, (l0 + l1) / 2 - 0.4, 0x3d74c9], [1.4, (l0 + l1) / 2 + 0.3, 0xe0453a]]) { put(a, l, 2.25, 2.3, 0.12, 2.0, cc); for (const [da, dl] of [[-1, -0.85], [1, -0.85], [-1, 0.85], [1, 0.85]]) put(a + da, l + dl, 0, 0.06, 2.25, 0.06, 0xd8dce0); put(a, l, 0, 1.6, 0.75, 0.6, 0xf6f4ee); }   /* 천막 둘(지붕 · 기둥 넷 · 판매대) */
+    for (const l of [0.4, 2.4]) put(-BL / 2 - 0.2, l, 0, 0.07, 1.1, 0.07, 0x8a8f99);   /* 팻말 기둥 둘(팻말이 떠 있지 않게) */
+    BKM.count = n; BKM.instanceMatrix.needsUpdate = true; if (BKM.instanceColor) BKM.instanceColor.needsUpdate = true; BKM.visible = true;
+    let m = 0; for (const [a, l] of [[a0 - 2.2, 0], [a0 - 2.2, 1.2], [a0 - 1.2, -0.6], [a1 + 1.6, 0.4]]) { const q = at(a, l, 0.3); O.position.set(q[0], q[1], q[2]); O.rotation.set(0, 0, 0); O.scale.set(1, 1, 1); O.updateMatrix(); BKC.setMatrixAt(m, O.matrix); BKC.setColorAt(m, C9.setHex(k9.c[0])); m++; }   /* 앞 고깔(멀리서도 보임) */
+    BKC.count = m; BKC.instanceMatrix.needsUpdate = true; if (BKC.instanceColor) BKC.instanceColor.needsUpdate = true; BKC.visible = true;
+    for (const [aa, ab, la, lb] of [[a0 - 0.12, a0 + 0.12, l0, l1], [a1 - 0.12, a1 + 0.12, l0, l1], [a0, a1, l0 - 0.12, l0 + 0.12], [a0, a1, l1 - 0.12, l1 + 0.12]]) { const len = Math.max(ab - aa, lb - la), st = 0.45; for (let u = 0; u <= len + 0.01; u += st) { const a = ab - aa > lb - la ? aa + Math.min(u, ab - aa) : (aa + ab) / 2, l = ab - aa > lb - la ? (la + lb) / 2 : la + Math.min(u, lb - la), q = at(a, l, 0);
+      const h9 = map.collider && map.collider.add ? map.collider.add({ x0: q[0] - 0.3, x1: q[0] + 0.3, z0: q[2] - 0.3, z1: q[2] + 0.3, y0: p.y - 0.6, y1: p.y + 1.0 }) : null; if (h9) cols.push(h9); } }   /* 몸 막이 = 울타리 따라 0.6m 상자 */
+    blkSign(p, k9); BK = { c, p, cols, kind: p.kind }; }
+  function blkSign(p, k9) { if (!BKS) { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 160; BKT = new T3.CanvasTexture(cv); BKT.colorSpace = T3.SRGBColorSpace; BKS = new T3.Mesh(new T3.PlaneGeometry(2.4, 0.75), new T3.MeshLambertMaterial({ map: BKT, side: T3.DoubleSide })); BKS.userData.fx = 1; BKS.userData.cv = cv; }
+    const cv = BKS.userData.cv, g = cv.getContext('2d'); g.fillStyle = '#' + k9.c[0].toString(16).padStart(6, '0'); g.fillRect(0, 0, 512, 160); g.fillStyle = '#ffffff'; g.fillRect(10, 10, 492, 140); g.fillStyle = '#2b2420'; g.font = '900 44px "Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif'; g.textAlign = 'center'; g.fillText(L(k9.sign), 256, 72);
+    g.font = '800 34px "Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif'; g.fillText(en() ? 'Find a way round' : '돌아갈 길을 찾아요', 256, 124); BKT.needsUpdate = true;   /* 어느 쪽인지는 쓰지 않음(차도·인도를 보고 고름) */
+    const q = [p.x - p.dx * (BL / 2 + 0.2) + p.nx * 1.4, p.y + 1.45, p.z - p.dz * (BL / 2 + 0.2) + p.nz * 1.4]; BKS.position.set(q[0], q[1], q[2]); BKS.rotation.set(0, Math.atan2(-p.dx, -p.dz), 0); BKS.updateMatrix(); BKS.matrixAutoUpdate = false; const root = A.root(); if (root && BKS.parent !== root) root.add(BKS); BKS.visible = true; }
+  function blkOff() { if (!BK) return; for (const h of BK.cols) if (h && h.remove) h.remove(); BK = null; for (const m of [BKM, BKC, BKS]) if (m) m.visible = false; }
+  // 달리는 동안: 막힘 앞뒤 4.5m 안에서 차도 쪽(l < −1.5)으로 나가면 = 멈춰 차를 먼저 보냄(3초 · 한 판 한 번) · 바깥쪽(l > w)으로 돌면 = 인도·풀밭으로 돌아감
+  function blkFrame(dt, me) { const R = RACE; if (!R || !BK || BK.c !== R.c) return; const p = BK.p, a = aOf(p, me.x, me.z), l = lOf(p, me.x, me.z);
+    if (R.hold > 0) { R.hold -= dt; if (R.hold <= 0) { if (A.busy()) { R.hold = 0.1; return; } map.player.freeze(false);   /* 창이 떠 있으면 창이 닫힌 뒤에 */ toast('🚗 ' + (en() ? 'The cars have passed. Go on carefully.' : '차가 지나갔어요. 조심해서 가요.'), 2); } return; }
+    if (Math.abs(a) < BL / 2 + 1.5) { if (!R.rd && l < -1.5) { R.rd = true; R.hold = 3; map.player.freeze(true); tone(392, 0, 0.18, 'square', 0.05); tone(392, 0.25, 0.18, 'square', 0.05); toast('🚗 ' + (en() ? 'This is the road — cars drive here! Stop and let them pass.' : '여기는 차가 다니는 차도예요! 멈춰서 차를 먼저 보내요.'), 3); }
+      else if (!R.sw && l > p.w + 0.2) R.sw = true; } }
 
   // 고리 지나기: 평면(고리 자리 · 가는 쪽)을 뒤 → 앞으로 넘고, 넘은 자리가 고리 안(옆 2.1m · 높이)이면 지남
   const sOf = (r, me) => (me.x - r.x) * r.dx + (me.z - r.z) * r.dz;
   const inRing = (r, me) => Math.abs(-(me.x - r.x) * r.dz + (me.z - r.z) * r.dx) < LAT && Math.abs(me.y + 0.9 - r.y) < 2.4;
   function startCheck(me) { for (const c of NEAR) { const r = c.rings[0], s = sOf(r, me); if (c.ps < 0 && s >= 0 && s < 4 && inRing(r, me)) { c.ps = s; raceStart(c, me); return; } c.ps = s; } }
-  function raceStart(c, me) { const bk = !!A.bike(); RACE = { c, i: 1, t: 0, bike: bk, lx: me.x, lz: me.z, ps: sOf(c.rings[1], me), walk: 0, off: false }; ding(0); paint(); goalT = null;
+  function raceStart(c, me) { const bk = !!A.bike(); RACE = { c, i: 1, t: 0, bike: bk, lx: me.x, lz: me.z, ps: sOf(c.rings[1], me), walk: 0, off: false, blk: BK && BK.c === c ? BK.p : null, rd: false, sw: false, hold: 0 }; ding(0); paint(); goalT = null;
     toast(bk ? '🚲 ' + (en() ? 'Go! Ride through the yellow rings' : '출발! 노란 고리를 차례로 지나요') : '🚶 ' + (en() ? 'Practice run. Records count only on the bike (B)' : '연습이에요. 기록은 자전거(B)로만 남아요'), 2.2); }
   function ding(i) { const f = NOTES[Math.min(i, NOTES.length - 1)]; tone(f, 0, 0.16, 'triangle', 0.12); tone(f / 2, 0, 0.12, 'sine', 0.05); }
-  function raceFrame(dt, me) { const R = RACE, c = R.c; if (!A.busy()) R.t += dt; const jp = Math.abs(me.x - R.lx) + Math.abs(me.z - R.lz); R.lx = me.x; R.lz = me.z; if (jp > 30) { raceEnd(true); return; } if (R.bike && !A.bike()) R.walk += jp;   /* 자전거에서 내려(차에 부딪혀도) 걸은 거리 — 20m 넘으면 연습 */
+  function raceFrame(dt, me) { const R = RACE, c = R.c; if (!A.busy()) R.t += dt; if (BK) blkFrame(dt, me); const jp = Math.abs(me.x - R.lx) + Math.abs(me.z - R.lz); R.lx = me.x; R.lz = me.z; if (jp > 30) { raceEnd(true); return; } if (R.bike && !A.bike()) R.walk += jp;   /* 자전거에서 내려(차에 부딪혀도) 걸은 거리 — 20m 넘으면 연습 */
     const r = c.rings[R.i], s = sOf(r, me); if (R.ps < 0 && s >= 0 && s < 4 && inRing(r, me)) { ding(R.i); R.i++; if (R.i >= c.rings.length) { finish(); return; } R.ps = sOf(c.rings[R.i], me); paint(); goalT = null; return; } R.ps = s; }
   function raceSec(me) { const R = RACE, c = R.c; if (R.bike && !A.bike()) { if (!R.off) { R.off = true; setTimeout(() => { if (RACE === R && R.bike && !A.bike()) toast('🚲 ' + (en() ? 'Press B to get back on and keep going!' : 'B를 눌러 다시 타고 이어 달려요!'), 2.6); }, 2600); } if (R.walk > 20) { R.bike = false; toast('🚶 ' + (en() ? 'You walked off the bike: this run is practice now (no record)' : '자전거에서 내려 걸었어요. 이번 판은 연습이에요(기록 X)'), 2.8); } } else if (A.bike()) R.off = false;
     const r = c.rings[R.i]; if (A.away() || R.t > c.par * 4 + 40 || Math.hypot(me.x - r.x, me.z - r.z) > 130) raceEnd(false); }
-  function raceEnd(jump) { if (!RACE) return; RACE = null; paint(); goalT = null; toast('⏱ ' + (jump ? (en() ? 'Ring course stopped (you moved away)' : '고리 코스를 멈췄어요(다른 곳으로 옮겼어요)') : (en() ? 'Ring course stopped. Next time for sure!' : '고리 코스를 멈췄어요. 다음엔 꼭!')), 2.4); }
-  function finish() { const R = RACE, c = R.c, t = Math.round(R.t * 10) / 10, e = en(); RACE = null; c.ps = 1; paint(); goalT = null; tone(1046.5, 0.12, 0.25, 'triangle', 0.12); tone(1318.5, 0.24, 0.25, 'triangle', 0.12); tone(1568, 0.36, 0.4, 'triangle', 0.12);
-    if (!R.bike) { banner('🏁 ' + (e ? 'Practice done: ' + t + ' s. Records count only on the bike (B)' : '연습 완주 ' + t + '초! 기록은 자전거(B)로만 남아요'), 3.2); A.rec('road', { k: 'ring', id: c.id, t, m: 0 }); return; }
-    const s = S(), Q = s.ring[c.id] || (s.ring[c.id] = { b: 0, m: 0, n: 0 }), best = !Q.b || t < Q.b, m = t <= c.gold ? 3 : t <= c.silver ? 2 : 1; Q.n++; if (best) Q.b = t; if (m > Q.m) Q.m = m;
-    const st = !A.bagHas(MED[m].e); if (st) A.bagAdd(MED[m].e); const xk = 'rd:ring:' + c.id; if (!A.GAME.picked(xk)) { A.GAME.pick(xk); A.skUp('explore', 2); }   /* 탐험 솜씨 = 코스마다 하루 한 번(같은 코스 되풀이로 무한히 X) */ A.rec('road', { k: 'ring', id: c.id, t, m }); mark(); A.GAME.flush && A.GAME.flush();
-    banner('🏁 ' + (e ? 'Finished in ' + t + ' s ' + MED[m].e + (best ? ' New best!' : ' (best ' + Q.b + ' s)') : t + '초에 완주 ' + MED[m].e + (best ? ' 내 최고 기록!' : ' (내 최고 ' + Q.b + '초)')), 3.4);
+  function raceEnd(jump) { if (!RACE) return; if (RACE.hold > 0 && !A.busy()) map.player.freeze(false); RACE = null; paint(); goalT = null; toast('⏱ ' + (jump ? (en() ? 'Ring course stopped (you moved away)' : '고리 코스를 멈췄어요(다른 곳으로 옮겼어요)') : (en() ? 'Ring course stopped. Next time for sure!' : '고리 코스를 멈췄어요. 다음엔 꼭!')), 2.4); }
+  function finish() { const R = RACE, c = R.c, t = Math.round(R.t * 10) / 10, e = en(); if (R.hold > 0 && !A.busy()) map.player.freeze(false); RACE = null; c.ps = 1; paint(); goalT = null;
+    const bl = R.blk, why = bl ? (R.rd ? (e ? ' You went round by the road and had to stop for cars.' : ' 차도로 돌아가느라 멈춰 서서 기다렸어요.') : R.sw ? (e ? ' You went round the outside, off the road — a safe choice.' : ' 막힌 곳을 차도 말고 바깥쪽으로 돌아갔어요 — 안전하게 골랐어요.') : '') : '';   /* '무엇이 늦었나' 한 줄 */ tone(1046.5, 0.12, 0.25, 'triangle', 0.12); tone(1318.5, 0.24, 0.25, 'triangle', 0.12); tone(1568, 0.36, 0.4, 'triangle', 0.12);
+    if (!R.bike) { banner('🏁 ' + (e ? 'Practice done: ' + t + ' s. Records count only on the bike (B)' : '연습 완주 ' + t + '초! 기록은 자전거(B)로만 남아요') + why, 3.4); A.rec('road', { k: 'ring', id: c.id, t, m: 0 }); return; }
+    const s = S(), Q = s.ring[c.id] || (s.ring[c.id] = { b: 0, m: 0, n: 0 }), ex = bl ? Math.round((2 * (bl.w + 1.6)) / 22 * 10) / 10 : 0, best = !Q.b || t < Q.b, m = t <= c.gold + ex ? 3 : t <= c.silver + ex ? 2 : 1, H9 = Array.isArray(Q.h) ? Q.h : (Q.h = []), prev = H9.length ? H9[H9.length - 1].t : null;   /* 막힘 판 = 돌아가는 거리만큼 메달 시간 넉넉히 */
+    Q.n++; if (best) Q.b = t; if (m > Q.m) Q.m = m; H9.push({ t, d: A.GAME.S.day, k: bl ? bl.kind : '', rd: R.rd ? 1 : 0 }); while (H9.length > 5) H9.shift(); if (bl) { Q.lp = bl.sig; if (!Q.bx || t < Q.bx) Q.bx = t; } c.blkP = null;   /* 다음 판 = 새 막힘 */
+    const st = !A.bagHas(MED[m].e); if (st) A.bagAdd(MED[m].e, 'rd:medal'); const xk = 'rd:ring:' + c.id; if (!A.GAME.picked(xk)) { A.GAME.pick(xk); A.skUp('explore', 2, 'rd:ring'); }   /* REW-1 꼬리표(예전엔 없어 '꼬리표 없는 보상' 경고) */   /* 탐험 솜씨 = 코스마다 하루 한 번(같은 코스 되풀이로 무한히 X) */ A.rec('road', { k: 'ring', id: c.id, t, m }); mark(); A.GAME.flush && A.GAME.flush();
+    const dv = prev != null ? Math.round((prev - t) * 10) / 10 : null, vs = dv == null ? '' : dv > 0 ? (e ? ' · ' + dv + ' s faster than last time' : ' · 지난 판보다 ' + dv + '초 빨라요') : dv < 0 ? (e ? ' · ' + (-dv) + ' s slower than last time' : ' · 지난 판보다 ' + (-dv) + '초 늦어요') : '';
+    banner('🏁 ' + (e ? 'Finished in ' + t + ' s ' + MED[m].e + (best ? ' New best!' : ' (best ' + Q.b + ' s)') : t + '초에 완주 ' + MED[m].e + (best ? ' 내 최고 기록!' : ' (내 최고 ' + Q.b + '초)')) + vs + why, 4.2);
     const nx = m < 3 ? (e ? 'Next: ' + MED[m + 1].e + ' within ' + (m === 1 ? c.silver : c.gold) + ' s' : '다음 ' + MED[m + 1].e + ' = ' + (m === 1 ? c.silver : c.gold) + '초 안') : '';
     setTimeout(() => { if (!RACE) toast((st ? MED[m].e + ' ' + (e ? L(MED[m].t) + ' ring stamp in your bag! ' : '고리 코스 ' + L(MED[m].t) + ' 도장이 가방에 들어갔어요. ') : '') + (nx ? nx + '. ' : '') + '💡 ' + L(RFACT[(s.n++) % RFACT.length]), 4.6); mark(); }, 1600); }
 
@@ -151,7 +210,7 @@ export function createRoad(A) {
   function actEnd(ok, why) { const a = ACT; if (!a) return; ACT = null; const w = a.w, e = en(), M = A.wkMesh(); if (M) { M.reset(a.i); if (M.hat) M.hat(a.i, true); } hotOff(w, false);
     if (a.h) a.h.remove(); if (a.hs) for (const h of a.hs) h.remove(); if (HAT) HAT.visible = false; if (ITEM) ITEM.visible = false;
     const s = S(); if (ok) { s.hk[a.kind] = (s.hk[a.kind] || 0) + 1; const hk9 = 'rd:h:' + w.k + ':' + Math.round(w.x) + ':' + Math.round(w.z), hOk = !A.GAME.picked(hk9), pay = A.GAME.uses('road:pay') < 4;   /* 하루 한도: 그 이웃 ❤ = 하루 한 번 · 100원·일 솜씨 = 하루 넷(되풀이로 무한히 오르지 않게 · FIX-LK1과 같은 길) */
-      if (hOk) { A.GAME.pick(hk9); A.heart(w, 1); } if (pay) { A.GAME.use('road:pay'); A.money(100); A.skUp('work', 2); } A.GAME.use('road:help'); mark(); A.GAME.flush && A.GAME.flush(); sfx('ding');
+      if (hOk) { A.GAME.pick(hk9); A.heart(w, 1, 'rd:' + a.kind); } if (pay) { A.GAME.use('road:pay'); A.money(100, 'rd:' + a.kind); A.skUp('work', 2, 'rd:' + a.kind); }   /* REW-1 꼬리표(모자·줍기 따로 = 하루 셋씩 · 이 파일 한도 넷이 먼저) */ A.GAME.use('road:help'); mark(); A.GAME.flush && A.GAME.flush(); sfx('ding');
       const L9 = a.kind === 'hat' ? T2('고마워요! 바람이 참 세네요.', 'Thank you! What a wind!') : a.kind === 'pick' ? T2('고마워요! 덕분에 금방 끝났어요.', 'Thank you! That was quick!') : T2('고마워요!', 'Thank you!');
       A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, L(L9));
       banner('🙋 ' + (e ? 'You helped!' + (hOk ? ' ❤+1' : '') + (pay ? (hOk ? ' and' : '') + ' 100 won' : '') : '도와드렸어요!' + (hOk ? ' ❤+1' : '') + (pay ? (hOk ? ', ' : ' ') + '100원을 받았어요' : '')) + (pay ? '' : (e ? ' (today\'s share is done)' : ' (오늘 받을 몫은 끝)')), 3);
@@ -196,7 +255,7 @@ export function createRoad(A) {
 
   // ───────── 위 가운데 줄(0.25초 칸에서만 글을 다시 씀) ─────────
   function goalNow(me) { const e = en();
-    if (RACE) { const R = RACE; return '🚲 ' + (e ? 'Ring ' : '고리 ') + Math.min(R.i, R.c.rings.length) + '/' + R.c.rings.length + '  ⏱ ' + R.t.toFixed(1) + (e ? ' s' : '초') + (R.bike ? '' : (e ? ' (practice)' : ' (연습)')); }
+    if (RACE) { const R = RACE, bl = R.blk && BK && BK.c === R.c ? BK.p : null, ab = bl ? aOf(bl, me.x, me.z) : 99; return '🚲 ' + (e ? 'Ring ' : '고리 ') + Math.min(R.i, R.c.rings.length) + '/' + R.c.rings.length + '  ⏱ ' + R.t.toFixed(1) + (e ? ' s' : '초') + (R.bike ? '' : (e ? ' (practice)' : ' (연습)')) + (bl && ab > -45 && ab < 0 ? '  ' + BLK[bl.kind].e + ' ' + (e ? 'Closed ahead — choose a way round' : '앞이 막혔어요 — 돌아갈 길을 골라요') : ''); }
     if (ACT) { const a = ACT, left = mmss(a.lim - a.el), w = a.w, dw = Math.round(Math.hypot(me.x - w.x, me.z - w.z));
       if (a.kind === 'hat') return a.carry ? '👒 ' + (e ? 'Bring the hat back to the worker (' + dw + ' m)' : '모자를 이웃께 가져다드려요 (' + dw + 'm)') + '  ⏱ ' + left : '👒 ' + (e ? 'Catch the rolling hat (E) ' : '굴러가는 모자를 잡아요 (E) ') + Math.round(Math.hypot(me.x - a.hx, me.z - a.hz)) + 'm  ⏱ ' + left;
       if (a.kind === 'pick') { const C = a.plan.crop, n = [0, 1, 2].filter(i => a.got & (1 << i)).length; if (n === 3) return C[0] + ' ' + (e ? 'Bring them back to the worker (' + dw + ' m)' : '이웃께 가져다드려요 (' + dw + 'm)') + '  ⏱ ' + left;
@@ -206,7 +265,7 @@ export function createRoad(A) {
     if (REQ) { const w = REQ.w, d = Math.round(Math.hypot(me.x - w.x, me.z - w.z)); return '🙋 ' + (e ? 'The ' + who(w) + ' worker is waving. Go and press E (' + d + ' m)' : who(w) + ' 일꾼이 손을 들었어요. 가서 E (' + d + 'm)'); }
     if (PAPER && PAPER.fly <= 0) { const d = Math.round(Math.hypot(me.x - PAPER.x, me.z - PAPER.z)); if (d < 50) return '🗺 ' + (e ? 'Pick up the paper that blew in (E) ' : '날아온 종이를 주워 봐요 (E) ') + d + 'm'; }
     if (!A.routeBusy()) for (const c of NEAR) { const r = c.rings[0], s = sOf(r, me), lat = Math.abs(-(me.x - r.x) * r.dz + (me.z - r.z) * r.dx); if (s < -1 && s > -45 && lat < 14) { const Q = S().ring[c.id];
-      return '🚲 ' + (e ? 'Ring course: ride through the green ring to start. ' + MED[3].e + ' within ' + c.gold + ' s' : '고리 코스: 초록 고리를 자전거로 지나면 시작해요. ' + MED[3].e + ' ' + c.gold + '초 안') + (Q && Q.b ? (e ? ' (best ' + Q.b + ' s ' : ' (내 최고 ' + Q.b + '초 ') + (MED[Q.m] ? MED[Q.m].e : '') + ')' : ''); } }
+      const bp = c.blkP && c.blkP.p; return '🚲 ' + (e ? 'Ring course: ride through the green ring to start. ' + MED[3].e + ' within ' + c.gold + ' s' : '고리 코스: 초록 고리를 자전거로 지나면 시작해요. ' + MED[3].e + ' ' + c.gold + '초 안') + (Q && Q.b ? (e ? ' (best ' + Q.b + ' s ' : ' (내 최고 ' + Q.b + '초 ') + (MED[Q.m] ? MED[Q.m].e : '') + ')' : '') + (bp ? ' · ' + BLK[bp.kind].e + ' ' + (e ? 'Today: ' + L(BLK[bp.kind].t) + ' after ring ' + (bp.j + 1) : '오늘 ' + (bp.j + 1) + '번 고리 뒤 ' + L(BLK[bp.kind].t)) : ''); } }
     return null; }
 
   // ───────── 매 프레임 · 1초 칸 ─────────
@@ -232,22 +291,27 @@ export function createRoad(A) {
     if (movP >= 50 && !A.GAME.uses('road:paper')) { if (!paperTry(me)) movP -= 15; } }
 
   // ───────── 짓기 · 치우기 ─────────
-  function abort() { if (RACE) { RACE = null; } if (ACT) { const a = ACT; ACT = null; const M = A.wkMesh(); if (M) { M.reset(a.i); if (M.hat) M.hat(a.i, true); } hotOff(a.w, false); if (a.h) a.h.remove(); if (a.hs) for (const h of a.hs) h.remove(); }
+  function abort() { if (RACE) { if (RACE.hold > 0 && !A.busy()) map.player.freeze(false); RACE = null; } blkOff(); if (ACT) { const a = ACT; ACT = null; const M = A.wkMesh(); if (M) { M.reset(a.i); if (M.hat) M.hat(a.i, true); } hotOff(a.w, false); if (a.h) a.h.remove(); if (a.hs) for (const h of a.hs) h.remove(); }
     if (REQ) reqEnd(true); if (PAPER) paperGone(); if (HAT) HAT.visible = false; if (ITEM) ITEM.visible = false; goalT = null; }
   // 셰이더 미리 짜기: 고리·모자·주울 것·종이를 처음 보일 때 새로 짜면 그 프레임이 늘어짐(town_check frames.worst +5~10ms) → 들어올 때 한 번(마을 warmGPU는 이 모듈 짓기 전에 돎)
   function warm() { const R9 = window.SD2 && window.SD2.renderer, root = A.root(), sc = root && root.parent; ringMesh(); if (root && !RING.parent) root.add(RING); if (!ITEM) itemBuild(); if (!PAP) papMake(); if (!HAT) hatBuild(0xe8d38a);
     if (!R9 || !R9.compile || !sc) return; try { for (const o of [RING, ITEM, PAP, HAT]) R9.compile(o, map.camera, sc); } catch (e) { /* 옛 three */ } }
-  function init() { abort(); NEAR = []; ringKey = ''; built = false; CS = []; BQ = null; if (RING && RING.parent) RING.parent.remove(RING); if (RING) RING.visible = false; lastMin = -1; lx = lz = 1e9; warm(); }
+  function init() { abort(); NEAR = []; ringKey = ''; built = false; CS = []; BQ = null; for (const m of [BKM, BKC, BKS]) if (m && m.parent) m.parent.remove(m); if (RING && RING.parent) RING.parent.remove(RING); if (RING) RING.visible = false; lastMin = -1; lx = lz = 1e9; warm(); }
   function dispose() { abort(); if (RING) { if (RING.parent) RING.parent.remove(RING); RGEO.dispose(); RMAT.dispose(); RING.dispose(); RING = null; }
     if (HAT) { map.remove(HAT); for (const m of HATG) { m.geometry.dispose(); m.material.dispose(); } HAT = null; HATG = []; } if (ITEM) { map.remove(ITEM); ITEM.geometry.dispose(); ITEM.material.dispose(); ITEM.dispose(); ITEM = null; }
-    if (PAP) { map.remove(PAP); PAPG.dispose(); PAPT.dispose(); PAP.material.dispose(); PAP = null; } }
+    if (PAP) { map.remove(PAP); PAPG.dispose(); PAPT.dispose(); PAP.material.dispose(); PAP = null; }
+    for (const m of [BKM, BKC, BKS]) if (m) { if (m.parent) m.parent.remove(m); m.geometry.dispose(); m.material.dispose(); if (m.dispose && m.isInstancedMesh) m.dispose(); } if (BKT) BKT.dispose(); BKM = BKC = BKS = BKT = null; }
   // 시험(town_road.cjs)·문서용: 읽기 + 사건 바로 만들기
   function audit() { const out = []; for (const c of CS) { let blk = 0, off = 0, wet = 0, sch = 0, n = 0; const P = c.path; for (let i = 0; i < P.x.length; i++) { const x = P.x[i], z = P.z[i], y = A.gy(x, z); n++; if (A.blocked(x, z, y + 0.6)) blk++; if (!A.onLane(x, z)) off++; if (A.water(x, z)) wet++; if (A.inSchool(x, z)) sch++; }
       let clr = 0; for (const r of c.rings) if (!ringClear(r.x, r.z, r.y - RY, r.dx, r.dz)) clr++; out.push({ id: c.id, n, blk, off, wet, sch, ringBlk: clr }); } return out; }
   return { init, tick, sec, dispose, abort, get goal() { return goalT; }, get active() { return !!(RACE || ACT || REQ); },
     info: () => ({ built, buildMs, courses: CS.map(c => ({ id: c.id, k: c.k, n: c.rings.length, L: Math.round(c.L), gold: c.gold, silver: c.silver, place: c.place, cell: c.cell, rings: c.rings.map(r => [+r.x.toFixed(1), +r.y.toFixed(2), +r.z.toFixed(1), +r.dx.toFixed(3), +r.dz.toFixed(3)]) })), near: NEAR.map(c => c.k), drawn: RING ? RING.count : 0, ringVis: !!(RING && RING.visible),
       race: RACE && { k: RACE.c.k, i: RACE.i, t: +RACE.t.toFixed(1), bike: RACE.bike }, req: REQ && { kind: REQ.kind, i: REQ.i, t: REQ.t, x: REQ.w.x, z: REQ.w.z, g: REQ.w.g }, act: ACT && { kind: ACT.kind, el: +ACT.el.toFixed(1), lim: ACT.lim, carry: ACT.carry, got: ACT.got, hat: ACT.kind === 'hat' ? [+ACT.hx.toFixed(1), +ACT.hz.toFixed(1)] : null, fly: ACT.fly, sp: ACT.kind === 'pick' ? ACT.plan.sp.map(p => [+p[0].toFixed(1), +p[2].toFixed(1)]) : null, wx: ACT.w.x, wz: ACT.w.z, wg: ACT.w.g, i: ACT.i },
-      paper: PAPER && { x: +PAPER.x.toFixed(1), z: +PAPER.z.toFixed(1), fly: PAPER.fly > 0, h: !!PAPER.h }, S: JSON.parse(JSON.stringify(S())), uses: { help: A.GAME.uses('road:help'), paper: A.GAME.uses('road:paper') }, mov: [movMin, movP], goal: goalT, dbg: DBG.slice() }),
+      paper: PAPER && { x: +PAPER.x.toFixed(1), z: +PAPER.z.toFixed(1), fly: PAPER.fly > 0, h: !!PAPER.h }, blk: BK ? { id: BK.c.id, kind: BK.p.kind, j: BK.p.j, w: BK.p.w, x: +BK.p.x.toFixed(1), z: +BK.p.z.toFixed(1), y: +BK.p.y.toFixed(2), d: [BK.p.dx, BK.p.dz], n: [BK.p.nx, BK.p.nz], cols: BK.cols.length } : null,
+      raceBlk: RACE ? { rd: !!RACE.rd, sw: !!RACE.sw, hold: +(RACE.hold || 0).toFixed(1), blk: !!RACE.blk } : null, S: JSON.parse(JSON.stringify(S())), uses: { help: A.GAME.uses('road:help'), paper: A.GAME.uses('road:paper') }, mov: [movMin, movP], goal: goalT, dbg: DBG.slice() }),
     audit, dbg: { help: (kind, wi) => { const me = map.player.pos(); if (RACE || ACT || REQ) return false; return helpTry(me, kind, wi); }, offer: () => offer(), accept: () => { if (REQ) actStart(); return !!ACT; }, left: s => { if (ACT) ACT.el = Math.max(0, ACT.lim - s); }, paper: () => paperTry(map.player.pos(), true), fin: (k, t) => { const c = CS[k]; if (!c || RACE) return false; RACE = { c, i: c.rings.length, t, bike: true, lx: 0, lz: 0, ps: 0, walk: 0, off: false }; finish(); return true; },   /* 시험: 자전거 완주 하나를 바로(솜씨 하루 한도 확인) */ paperOk: () => paperOk(), build: () => { if (!built) build(true); nearSec(map.player.pos()); return CS.length; },
+      plan: (k, n) => { const c = CS[k]; if (!c) return null; c.blkP = null; const p = blkPlan(c, n); c.blkP = null; return p ? p.kind + ':' + p.j + ':' + p.w : null; }, sync: () => { blkSync(map.player.pos()); return !!BK; },
+      race: (k, i) => { const c = CS[k]; if (!c || RACE) return false; const me = map.player.pos(); RACE = { c, i: i || 1, t: 0, bike: true, lx: me.x, lz: me.z, ps: -1, walk: 0, off: false, blk: BK && BK.c === c ? BK.p : null, rd: false, sw: false, hold: 0 }; return true; }, finishNow: () => { if (!RACE) return false; finish(); return true; },
+      blkPts: () => { if (!BK) return null; const p = BK.p, at = (a, l) => [+(p.x + p.dx * a + p.nx * l).toFixed(2), +(p.z + p.dz * a + p.nz * l).toFixed(2)]; return { before: at(-BL / 2 - 4, 0), after: at(BL / 2 + 4, 0), mid: at(0, 0), fence: at(-BL / 2, 1), road: at(0, -2.4), out: at(0, p.w + 1.4), y: p.y }; },
       path: (k, st = 3) => { const c = CS[k]; if (!c) return null; const o = []; for (let i = 0; i < c.path.x.length; i += st) o.push([+c.path.x[i].toFixed(1), +c.path.z[i].toFixed(1)]); return o; }, mov: (m, p) => { movMin = m; if (p != null) movP = p; } } };
 }

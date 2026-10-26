@@ -121,7 +121,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     // ⑧ BLDG-3 영화관 · 공장 · 노인정·경로당 · 박물관
     { const L3 = await ev(() => SM_TOWN.indoor.list().filter(q => ['cinema', 'factory', 'elder', 'museum'].includes(q.kind))), b3 = k => L3.filter(q => q.kind === k); console.log('    BLDG-3 들어갈 곳: ' + L3.map(q => q.name + '(' + q.kind + ')').join(' · '));
       ok(b3('cinema').length >= 1 && b3('factory').length >= 1 && b3('elder').length >= 1 && b3('museum').length >= 1, '영화관 ' + b3('cinema').length + ' · 공장 ' + b3('factory').length + ' · 노인정·경로당 ' + b3('elder').length + ' · 박물관 ' + b3('museum').length + ' 곳이 들어감');
-      ok(!L3.some(q => /곤충/.test(q.name)), '곤충 박물관은 들어가지 않음(쇼가 따로)');
+      ok(!L3.some(q => /곤충/.test(q.name)) && (await ev(() => SM_TOWN.indoor.list().filter(q => /곤충/.test(q.name)).every(q => q.kind === 'insect'))), '곤충 박물관은 옛 물건 방이 아님(DEPTH-3 쇼 본 것 찾기 방 · town_depth3.cjs)');
       const labs3 = await ev(() => SD2.map.interact.list().map(h => h.label).filter(t => /들어가기 — /.test(t || '')));
       ok(labs3.some(t => /영화관 · 상영 시간표/.test(t)) && labs3.some(t => /공장 · 만드는 차례 견학/.test(t)) && labs3.some(t => /(노인정|경로당) · 옛 땅이름 듣기/.test(t)) && labs3.some(t => /박물관 · 옛 물건 알아보기/.test(t)), '문 E 이름표에 할 일 넷');
       for (const [q, re] of [['시간표', '영화관'], ['견학', '공장'], ['땅이름', '노인정|경로당'], ['옛 물건', '박물관']]) { await closeAll(); await p.keyboard.press('KeyJ'); await W8(700); const r = await ev(q => { const i = document.querySelector('.twn-p .jq'); if (!i) return null; i.value = q; i.dispatchEvent(new Event('input')); const jr = document.querySelector('.twn-p .jr'); return jr ? jr.innerText : ''; }, q); ok(r && new RegExp(re).test(r), 'J 검색 「' + q + '」 → ' + (r || '-').split('\n').slice(0, 2).join(' ')); }
