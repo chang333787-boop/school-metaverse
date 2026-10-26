@@ -23,8 +23,8 @@ const KIND = {
 import { createYards, YARD_SIZE, YARD_CS, YARD_NORTH, extentOf, DEFAULT_YARD } from './town_yard.js?v=7';   // YARD-1 아이 집 마당 = 우리반RPG 꾸미기(10-15)
 import { createIndoor, ROOM_ITEMS, kidItem } from './town_indoor.js?v=20';
 import { placeParked, TRUCK } from './town_fire.js?v=1';   // FIRE-1 소방차(인스턴스 한 벌 · 출동용 makeFireTruck은 생활 팀이 town_fire.js에서 바로 부름)
-import { createJobs, JOBK } from './town_jobs.js?v=19';
-import { createBake } from './town_bake.js?v=1'; import { createTable, GAMES as TBG, LV_NAME as TBLV } from './town_table.js?v=8';   /* TABLE-1 판 놀이 틀(보드게임 카페 · 사방치기) */   // BAKE-1 🍞 제빵(빵집 화덕 앞 · 반죽 치대기 + 부풀 자리 → 판 밖 발효 → 굽기)   // LIVING-1 장소 카드 · 마을 여권 · 직업 체험 셋(소방관·집배원·사서)
+import { createJobs, JOBK } from './town_jobs.js?v=20';
+import { createBake } from './town_bake.js?v=2'; import { createTable, GAMES as TBG, LV_NAME as TBLV } from './town_table.js?v=8';   /* TABLE-1 판 놀이 틀(보드게임 카페 · 사방치기) */   // BAKE-1 🍞 제빵(빵집 화덕 앞 · 반죽 치대기 + 부풀 자리 → 판 밖 발효 → 굽기)   // LIVING-1 장소 카드 · 마을 여권 · 직업 체험 셋(소방관·집배원·사서)
 import { createGame, ITEMS, itemName, DISHES, shopOf, won, RECIPES, CAL_LEN, SHOPS, RW_GEN } from './town_game.js?v=43';
 import { createStory, CHAPTERS, VEG, parkSim, parkSlot } from './town_story.js?v=25';
 import { attachLook, lookHTML, bindLook } from '../js/look.js?v=1'; import { buildKid } from '../js/kid.js?v=5';   // LOOK-1 내 모습(학교와 같은 모듈 — 같은 주소라 한 벌) · 미리보기 아이
@@ -38,7 +38,7 @@ import { createSim, makeFrontView, makeFlags, makeUmbrellas, wetChain } from './
 import { createShow, showFor } from './town_show.js?v=3'; import { createShowFind, SF_HRS } from './town_showfind.js?v=2'; import { createOutcrop } from './town_outcrop.js?v=2';   /* DEPTH-3 쇼 뒤 본 것 찾기 */
 import { propGeos, createBirds } from './town_lifem.js?v=2';
 import { SKILLS, SK_ORDER, levelOf, gain, perk, titleOf, PERKS, cardsOf, MAXL } from './town_skill.js?v=5';
-import { createMini, mgKind, gradeOf, taskOf, kitAfter, kitUpText, kitGuests, kitGuestName } from './town_minigame.js?v=13'; import { ladLv, ladAfter, ladText, recLines, ladRows } from './town_lad.js?v=6';   /* LADDER-2 일 놀이 도전 칸 + 내 최고 */
+import { createMini, mgKind, gradeOf, taskOf, kitAfter, kitUpText, kitGuests, kitGuestName } from './town_minigame.js?v=14'; import { ladLv, ladAfter, ladText, recLines, ladRows } from './town_lad.js?v=6';   /* LADDER-2 일 놀이 도전 칸 + 내 최고 */
 import { createRank, bikeLook, bikeDeco, RCOL } from './town_rank.js?v=4';   // RANK-1 솜씨 승급 미션(3·6·9레벨 · 해 보기 · 막지 않음 · 배지·칭호·자전거 꾸미기)
 import { createBeach } from './town_beach.js?v=2';   // SEA-1 해수욕장 놀이(누워 뜨기 · 모래성 · 바닷바람 연)
 import { createRF, RF_GAMES } from './town_rf.js?v=4';   // RIVER-1·FIELD-1 강·들에서 할 일 넷
@@ -3919,7 +3919,9 @@ body.small .twn-dlg .face{width:56px;height:56px;font-size:32px}body.small .twn-
     GAME.add('🌱', n, src); const g = GAME.lastN > 0 ? GAME.lastN : 0; bagShow(); if (g) bagPop('🌱', g); return g ? (en ? '+🌱×' + g + '.' : '가방에 🌱×' + g + ' 넣었어요.') : (en ? 'Today’s share is done.' : '오늘 받을 몫은 끝이에요.'); }
   const BAKE = createBake({ map, get GAME() { return GAME; }, en: () => LANG === 'en', esc: t => esc(t), openP: (h, w, k) => openP(h, w, k), closeP: k => closeP(k), toast: (t, s9) => map.hud.toast(t, s9), sfx: k => map.sfx && map.sfx(k), rec: (k, o) => REC.add(k, o), handShow: e9 => handShow(e9),
     busy: () => !!(PLAY || RHY.busy || panel || DLG || BOAT.on || SKR.mode || LIE || topH || (INB && INB.busy) || JOBS.active), inBake: () => !!(INB && INB.B9 && /빵|제과/.test(INB.B9.name || '')), season: () => (SEAS9 !== 'now' ? SEAS9 : 'summer'),
-    bagAdd: (e9, n, s9) => { GAME.add(e9, n, s9); const g9 = GAME.lastN | 0; if (g9 > 0) { bagShow(); bagPop(e9, g9); } return g9 > 0 ? g9 : 0; }, skUp: (k, n, s9) => skUp(k, n, s9), law: (law, e9, act) => { try { if (CHEM && CHEM.api && CHEM.api.lawFound) CHEM.api.lawFound(law, e9, act); } catch (x9) { /* 화학 꺼짐 */ } } });   /* BAKE-1: 보상 = 문(rwCheck) 하나로만(bake:bread · bake) */
+    bagAdd: (e9, n, s9) => { GAME.add(e9, n, s9); const g9 = GAME.lastN | 0; if (g9 > 0) { bagShow(); bagPop(e9, g9); } return g9 > 0 ? g9 : 0; }, skUp: (k, n, s9) => skUp(k, n, s9), law: (law, e9, act) => { try { if (CHEM && CHEM.api && CHEM.api.lawFound) CHEM.api.lawFound(law, e9, act); } catch (x9) { /* 화학 꺼짐 */ } },
+    guests: () => kitGuests(WKP.map(q => q.k).filter(Boolean)), guestName: k9 => kitGuestName(k9, LANG === 'en'), bagHas: e9 => BAG[e9] || 0, bagTake: e9 => { const ok9 = GAME.take(e9, 1); if (ok9) bagShow(); return ok9; },
+    thank: k9 => { const w9 = WKP.find(q => q.k === k9); if (!w9) return 0; const hk9 = hkOf(w9); if (!hk9) return 0; const hp9 = () => (GAME.S.hearts || {})[hk9] || 0, h0 = hp9(), up = GAME.heart(hk9, 1, 'bake:ord'); if (up) heartUp(up, w9); return hp9() > h0 ? 1 : 0; } });   /* DEPTH-4 주문 손님 = 마을 일꾼 역할 · 맞으면 마음 +1(문 rwCheck 'bake:ord') */   /* BAKE-1: 보상 = 문(rwCheck) 하나로만(bake:bread · bake) */
   // TABLE-1 🎲 판 놀이(town_table.js · docs/systems/town_buildings.md §4·§5): 보드게임 카페 3층 탁자 다섯 · 1층 계산대 먹어 보기 · 2층 놀이 도구 가게 · 카페 앞마당 사방치기 · 우리 집 놀이 선반 — 판 = DOM 캔버스(3D 0) · 보상 = 문(rwCheck) 하나(table:drink)
   let TBLL = null, HOPQ = 0, HOPQ9 = 0, HOPI9 = null; const TBL = createTable({ map, T3, get GAME() { return GAME; }, en: () => LANG === 'en', esc: t => esc(t), openP: (h, w, k) => openP(h, w, k), closeP: () => closeP(), toast: (t, s9) => map.hud.toast(t, s9), banner: (t, s9) => map.hud.banner(t, s9), sfx: k => map.sfx && map.sfx(k), tone: (...a) => { if (map.tone) map.tone(...a); }, rec: (k, o) => REC.add(k, o),
     busy: () => !!(PLAY || panel || DLG || BOAT.on || SKR.mode || LIE || topH || (INB && INB.busy) || JOBS.active || HERD.busy || bike || SLEEP9),

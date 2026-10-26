@@ -924,8 +924,10 @@ function mkToss(c) { const lv = c.lv, N = 5, W = 440, H = 220, GY = 190, LX = 74
   const wlOf = w9 => (lv >= 3 && Math.abs(w9) >= 2 ? Math.sign(w9) : 0), land = (s9, h9) => s9 + R0 + (h9 ? w : wlOf(w));
   const blk = (s9, h9) => h9 === 1 && s9 === br;
   const sols = () => { const o = []; for (const s9 of [-1, 0, 1]) for (const h9 of [0, 1]) if (!blk(s9, h9) && land(s9, h9) === P) o.push(s9 + ',' + h9); return o; };
-  const newRound = () => { const PS = lv >= 4 ? [3, 4, 5, 6] : [3, 4, 5], WS = lv === 1 ? [0] : lv === 2 ? [-1, 0, 1] : [-2, -1, 0, 1, 2];
-    for (let k = 0; k < 40; k++) { P = PS[(Math.random() * PS.length) | 0]; w = WS[(Math.random() * WS.length) | 0]; if (lv >= 5) br = [-1, 0, 1][(Math.random() * 3) | 0]; if (lv >= 4 && n === 0 && k < 30 && P < 6) continue; if (lv >= 5 && k < 30 && land(br, 1) !== P) continue; if (sols().length && P + ':' + w !== last) break; }
+  const newRound = () => { const PS = lv >= 4 ? [3, 4, 5, 6] : [3, 4, 5], WS = lv === 1 ? [0] : lv === 2 ? [-1, 0, 1] : [-2, -1, 0, 1, 2], BR = lv >= 5 ? [-1, 0, 1] : [-9];
+    /* DEPTH-4: 무작위 40번 뽑기 → 되는 조합 전부를 세고 그 가운데서 고름(4칸 첫 화살 = 6걸음이 30번 안에 안 나오면 아무 조합이던 흔들림 · 명인 칸 가지 조건은 60판에 한 번꼴이라 더 잦았음) · 조건은 엄한 것부터 하나씩 풂 */
+    const can = tier => { const o = []; for (const P9 of PS) for (const w9 of WS) for (const b9 of BR) { P = P9; w = w9; br = b9; if (!sols().length) continue; if (tier < 3 && P9 + ':' + w9 === last) continue; if (tier < 2 && lv >= 5 && land(b9, 1) !== P9) continue; if (tier < 1 && lv >= 4 && n === 0 && P9 < 6) continue; o.push([P9, w9, b9]); } return o; };
+    let all = []; for (let t9 = 0; t9 < 4 && !all.length; t9++) all = can(t9); const pk = all.length ? all[(Math.random() * all.length) | 0] : [PS[0], 0, BR[0]]; [P, w, br] = pk;
     last = P + ':' + w; s = 0; ph = 'aim'; markB(); draw(); };
   const markB = () => { BS.querySelectorAll('button').forEach(b => b.classList.toggle('sel', +b.dataset.st === s)); BH.querySelectorAll('button').forEach(b => b.classList.toggle('sel', +b.dataset.h === hsel)); };
   const flagF = () => (w === 0 ? 0.25 : Math.abs(w) === 1 ? 0.6 : 1) * (w < 0 ? -1 : 1);
