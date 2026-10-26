@@ -7,11 +7,11 @@
 //     걸음 수 자체는 저장하지 않음(늘 기록에서 다시 셈 — 기록이 바뀌면 그대로 따라감)
 //   지킴: 판타지·전투 X · 순위·남과 비교 X(기록판 = 내 최고만) · 실명 X(이웃 = 하는 일) · 학생 작품 X · 빈 칭찬 X(무엇을 했는지만) · 새 Light X · 매 프레임 일 0(1초 칸 sec · 걸음 셈 3초마다)
 //     · 화석은 가져오지 않음(사실 — 진열장 = 찾은 자리를 본뜬 모형 + 찾은 곳 이름표 · 가방의 조약돌·송이 돌만 기증) · 글자 판(캔버스)에는 이모지 X
-import { FINDS } from './town_xp.js?v=5';
+import { FINDS } from './town_xp.js?v=6';
 import { WILD, drawWild } from './town_wild.js?v=9';
 import { ladRows } from './town_lad.js?v=3';
 import { getLook, setLook, PALS } from '../js/look.js?v=1';
-import { chalSteps } from './town_orient.js?v=2';   /* CHAL-1 도전 모드로 찾아간 날 · ORIENT-1 길찾기 시험 코스 */
+import { chalSteps } from './town_orient.js?v=3';   /* CHAL-1 도전 모드로 찾아간 날 · ORIENT-1 길찾기 시험 코스 */
 export const PATH_V = 1;
 const T2 = (ko, en) => [ko, en];
 const NW = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉', '열'];
@@ -49,11 +49,12 @@ export const P_ORDER = ['explore', 'look', 'nb', 'help', 'rec', 'chal'];
 
 // ───────── 걸음 셈(순수 · 저장 S만 읽음 — 시험이 그대로 부름) ─────────
 export function stepsOf(S) { S = S || {}; const xp = S.xp && typeof S.xp === 'object' ? S.xp : {}, bd = S.bldg && typeof S.bldg === 'object' ? S.bldg : {}, P = S.path && typeof S.path === 'object' ? S.path : {};
-  const explore = Math.floor(keys(S.cells).length / 5) + ['⛰', '🗼', '👣'].filter(e => has(S, e)).length + (xp.il ? 1 : 0) + (xp.cairn ? 1 : 0) + (xp.sc ? 1 : 0) + (keys(xp.fos).length ? 1 : 0) + keys(xp.surp).length;
+  const rgP = S.regen && S.regen.pd && typeof S.regen.pd === 'object' ? S.regen.pd : {}, rgN = k => keys(rgP).filter(d => rgP[d] === k).length;   /* REGEN-1 표본·변주·잃은 물건·응용 물음 = 그날 처음 하나만 한 걸음 */
+  const explore = Math.floor(keys(S.cells).length / 5) + ['⛰', '🗼', '👣'].filter(e => has(S, e)).length + (xp.il ? 1 : 0) + (xp.cairn ? 1 : 0) + (xp.sc ? 1 : 0) + (keys(xp.fos).length ? 1 : 0) + keys(xp.surp).length + rgN('explore');
   const chem = S.chem && typeof S.chem === 'object' ? S.chem : {}, don = P.don && typeof P.don === 'object' ? P.don : {};
-  const look = keys(S.dex).filter(k => /^(bug|fish|shore|star|wild):/.test(k)).length + keys(xp.fos).length + (xp.q ? 1 : 0) + keys(chem.found).length + keys((bd.museum || {}).got).length + (has(S, '🔭') ? 1 : 0) + Math.min(3, keys(don).reduce((a, k) => a + (don[k] | 0), 0));
+  const look = keys(S.dex).filter(k => /^(bug|fish|shore|star|wild):/.test(k)).length + keys(xp.fos).length + (xp.q ? 1 : 0) + keys(chem.found).length + keys((bd.museum || {}).got).length + (has(S, '🔭') ? 1 : 0) + Math.min(3, keys(don).reduce((a, k) => a + (don[k] | 0), 0)) + rgN('look');
   const H = S.hearts && typeof S.hearts === 'object' ? S.hearts : {};
-  const nb = keys(H).reduce((a, k) => a + Math.min(5, ((H[k] || 0) / 3) | 0), 0) + Math.min(5, S.shared | 0) + Math.min(5, arr(S.deeds).filter(q => q && q.t === 'gift').length) + keys(S.bun2 && S.bun2.on).length;   /* BUNDLE-2 꾸러미로 바뀐 곳마다 한 걸음 */
+  const nb = keys(H).reduce((a, k) => a + Math.min(5, ((H[k] || 0) / 3) | 0), 0) + Math.min(5, S.shared | 0) + Math.min(5, arr(S.deeds).filter(q => q && q.t === 'gift').length) + keys(S.bun2 && S.bun2.on).length + rgN('nb');   /* BUNDLE-2 꾸러미로 바뀐 곳마다 한 걸음 */
   const em = S.emerg && typeof S.emerg === 'object' ? S.emerg : {}, fx = S.fix && typeof S.fix === 'object' ? S.fix : {}, cs = S.case && typeof S.case === 'object' ? S.case : {}, ty = S.typh && typeof S.typh === 'object' ? S.typh : {};
   const help = arr(em.log).filter(q => q && q.ok).length * 2 + fixN(fx) + keys(cs.done).length * 2 + arr(ty.reqs).filter(q => q && q.st === 'done').length
     + ((bd.police || {}).d112 ? 1 : 0) + ((bd.clinic || {}).dfa ? 1 : 0) + Math.min(3, (bd.shelter || {}).n | 0);

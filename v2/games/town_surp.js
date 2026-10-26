@@ -116,7 +116,7 @@ export function createSurp(A) {
 
   // ───────── 효과(이미 있는 것만) ─────────
   function fxRun(q) { const R = q.row, me = map.player.pos();
-    if (R.fx === 'echo') { for (let k = 1; k <= 3; k++) { const v = 0.05 / k; tone(2093, 0.32 * k, 0.12, 'sine', v); tone(2637, 0.32 * k + 0.05, 0.14, 'sine', v * 0.8); } }   /* 세 번 점점 작게 */
+    if (R.fx === 'echo') { const sn = A.wx() === 'snow' ? 0.4 : 1; for (let k = 1; k <= 3; k++) { const v = 0.05 * sn / k;   /* 눈 오는 날 = 눈이 소리를 빨아들여 작게(REGEN-1) */ tone(2093, 0.32 * k, 0.12, 'sine', v); tone(2637, 0.32 * k + 0.05, 0.14, 'sine', v * 0.8); } }   /* 세 번 점점 작게 */
     else if (R.fx === 'west' || R.fx === 'east') { compT = 20; A.comp(true); tone(523, 0, 0.3, 'sine', 0.04); tone(659, 0.25, 0.4, 'sine', 0.035); }
     else if (R.fx === 'knock') { for (let r = 0; r < 2; r++) for (let k = 0; k < 6; k++) tone(1150 - k * 20, r * 1.1 + k * 0.075, 0.03, 'square', 0.022); }
     else if (R.fx === 'view') { tone(784, 0, 0.12, 'triangle', 0.04); tone(1047, 0.12, 0.2, 'triangle', 0.035); }
@@ -133,7 +133,8 @@ export function createSurp(A) {
     if (M.t >= M.T) { fg.near = M.n0; fg.far = M.f0; MIST = null; } }
 
   function fire(q) { const R = q.row, X = S(), d = day(); if (X.surpD[R.id] === d) return false; const first = !X.surp[R.id]; X.surpD[R.id] = d; if (first) X.surp[R.id] = [d, min(), A.sea(), A.wx(), q.nm]; mark(); fxRun(q);
-    map.hud.banner(R.ic + ' ' + L(R.t), 2.6); A.say(L(R.fact), 5); A.skUp(R.sk || 'look', first ? 3 : 1, 'xp:surp'); FIRE.length = 0; return true; }
+    const V = !first && A.rg && A.rg() ? A.rg().surpAgain(R.id) : null;   /* REGEN-1 같은 곳 다른 때 = 변주 한 줄(하루 한 번 · town_regen.js SVAR) */
+    map.hud.banner(R.ic + ' ' + (V ? V.ban : L(R.t)), 2.6); A.say(V ? V.fact : L(R.fact), 5); A.skUp(R.sk || 'look', first ? 3 : V ? 2 : 1, 'xp:surp'); FIRE.length = 0; return true; }
 
   // ───────── 높은 곳 보기 ─────────
   function lineEl() { if (VIEW.el) return VIEW.el; const el = document.createElement('div'); el.className = 'twn-view ttl-keep'; el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--compB, 84px) + 6px);z-index:21;pointer-events:none;background:#fff8ea;color:#2b2420;border:2px solid #2b2420;border-radius:10px;box-shadow:0 2px 0 rgba(0,0,0,.25);padding:3px 10px;font:800 13px/1.3 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif,SMEmoji;white-space:nowrap;display:none'; document.body.appendChild(el); return (VIEW.el = el); }
@@ -163,6 +164,7 @@ export function createSurp(A) {
     const rows = L9.map(([id, v]) => { const R = SURP.find(q => q.id === id), sw = SEAW[v[2]] || SEAW.summer, tw = timeW(v[1] | 0), wx9 = v[3] === 'rain' ? (ex ? ', rain' : ' · 비') : v[3] === 'snow' ? (ex ? ', snow' : ' · 눈') : '';
       return '<div class="st"><b class="n">' + R.ic + '</b><span><b>' + esc(ex ? sw[1] + ' ' + tw[1] + wx9 + (v[4] ? ', ' + stripNum(v[4]) : '') : sw[0] + ' ' + tw[0] + wx9 + (v[4] ? ' · ' + stripNum(v[4]) : '')) + '</b><br>' + esc(L(R.log)) + '</span></div>'; }).join('');
     const P = A.openP('<h3>👀 ' + (ex ? 'Wonder diary' : '놀람 일지') + '</h3><div class="sm">' + (ex ? 'Little things you happened to see around town, in the order you saw them.' : '마을에서 우연히 본 것을 본 차례대로 적었어요.') + '</div>' + (rows || '<div class="sm">' + (ex ? 'Nothing written yet.' : '아직 적은 것이 없어요.') + '</div>')
+      + (A.rg && A.rg() && A.rg().surpRows().length ? '<div class="grp">' + (ex ? 'Seen again' : '다시 본 것') + '</div>' + A.rg().surpRows().map(([V9, v9]) => '<div class="st"><b class="n">🔁</b><span><b>' + esc(ex ? V9.n[1] + ', ' + v9.t[1] : V9.n[0] + ' · ' + v9.t[0]) + '</b><br>' + esc(L(v9.fact)) + '</span></div>').join('') : '')   /* REGEN-1 변주 */
       + '<div class="row"><button class="sub" data-a="x">' + (ex ? 'Close' : '닫기') + '</button></div>', false, 'surp');
     P.onclick = ev9 => { const b = ev9.target.closest('button'); if (b && b.dataset.a === 'x') A.closeP(); }; return P; }
 
