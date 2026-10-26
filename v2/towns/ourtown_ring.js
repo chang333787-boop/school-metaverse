@@ -125,14 +125,14 @@ export const RING_AREAS = [
   { cell: '자7', t: '수산물 시장', card: '일하는 곳', items: ['수산물 상점 4', '바다 특산물 6'], fill: { k: 'work', type: 'shop', dens: 'normal' }, ai: '가게 수 = 카드 개수대로(수산물 4 · 바다 특산물 6)' },
   { cell: '자9', t: '지원 집', card: '사는 곳', items: ['침대·책상', '마리오(카트?)', '방·주방'] },
   { cell: '자10', t: '시아 집', card: '사는 곳' },
-  { cell: '자11', t: '집', card: '사는 곳', style: ['half-timber'], fill: { k: 'live', type: 'house', dens: 'normal' }, ai: '유럽 옛 마을 골목(패들렛 47 마을 차11/자11)' },
+  { cell: '자11', t: '집', hood: '유럽 옛 마을', card: '사는 곳', style: ['half-timber'], fill: { k: 'live', type: 'house', dens: 'normal' }, ai: '유럽 옛 마을 골목(패들렛 47 마을 차11/자11)' },   /* hood = 아이가 패들렛 47에 쓴 동네 이름(REGION-1 · 카드 글 '집'은 그대로) */
   { cell: '자12', t: '키즈 카페', card: '놀고 쉬는 곳' },
   { cell: '자13', t: '샤브샤브', card: '그 밖에' },
   { cell: '자14', t: '카페', card: '그 밖에' },
   { cell: '차2', t: '', card: '일하는 곳', fill: { k: 'work', type: 'shop', dens: 'normal' }, ai: '카드 이름 칸 빈칸(교사 확인) — 가게 줄 ✨' },
   { cell: '차8', t: '마트', card: '일하는 곳', fill: { k: 'work', type: 'shop', dens: 'normal' }, style: ['parking'] },
   { cell: '차9', t: '베라', card: '일하는 곳', ai: '아이스크림 가게(상표 이름 대신)' },
-  { cell: '차11', t: '집', card: '사는 곳', style: ['half-timber'], fill: { k: 'live', type: 'house', dens: 'normal' } },
+  { cell: '차11', t: '집', hood: '유럽 옛 마을', card: '사는 곳', style: ['half-timber'], fill: { k: 'live', type: 'house', dens: 'normal' } },
   { cell: '차12', t: '빵집', card: '그 밖에' },
   { cell: '차13', t: '상점', card: '모두가 쓰는 곳', ai: '도시 상점(패들렛 26 옷·키링·모자·인형)' },
 ];

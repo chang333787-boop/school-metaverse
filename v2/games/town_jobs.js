@@ -82,6 +82,7 @@ export function createJobs(A) {
     return out; }
   function openCard(p, fromIn) { const I9 = infoOf(p); if (!I9) return; const e = en(), l = L(), G9 = PG[I9.g], neu = stamp(p), pk = photoKey(p.name), jr = jobRow(p.name, I9.jobs), ac = acts(p, I9), st = groupStat()[I9.g];
     const h = '<h3 style="background:' + G9[3] + '">' + G9[0] + ' ' + esc(A.nameOf(p)) + ' <small style="font-size:13px;opacity:.9">' + esc(G9[1 + l]) + ' · ' + esc(A.cellOf(p.x, p.z)) + '</small></h3>' + (pk ? photoHtml(pk, e) : '')
+      + (A.regLine && A.regLine(p.x, p.z) ? '<div class="sm" style="margin:2px 0 4px">' + (e ? 'Neighborhood: ' : '동네: ') + esc(A.regLine(p.x, p.z)) + '</div>' : '')   /* REGION-1 구역 이름 한 줄 */
       + '<div class="grp">' + (e ? 'What happens here' : '무엇을 하는 곳') + '</div><div class="pc-tx">' + esc(I9.does[l]) + '</div>'
       + '<div class="grp">' + (e ? 'How it helps us' : '우리에게 주는 도움') + '</div><div class="pc-tx">' + esc(I9.help[l]) + '</div>'
       + (jr.length ? '<div class="grp">' + (e ? 'People who work here' : '여기서 일하는 사람') + '</div><div class="pc-jobs">' + jr.map(j => '<div>' + jobSvg(j.k, j.f, j.skin) + '<span><b>' + esc(JOBS[j.k][0][l]) + '</b><br>' + esc(JOBS[j.k][1][l]) + '</span></div>').join('') + '</div>' : '')
