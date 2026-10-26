@@ -389,7 +389,7 @@ export function createNight(A) {
   /* ② 길 사람: 때·날씨마다 거리에 보이는 사람 몫(LIFE pvF) · 저녁에 모이는 곳(야시장·강변 쉼터 — LIFE eveHubs) — 사람 수는 그대로(보이는 몫만) */
   function pedF(m, w9) { if (m >= 375 && m < 1020) return -1; if (m < 375) return w9 ? 0.15 : 0.35; if (m < 1140) return w9 ? 0.55 : 0.9; if (m < 1260) return w9 ? 0.18 : 0.72; if (m < 1380) return w9 ? 0.08 : 0.45; return w9 ? 0.05 : 0.15; }
   function lifeSec(m, w9) { const Lf = A.life && A.life(); if (!Lf) return; const f = pedF(m, w9); if (Math.abs(f - pv9) > 0.005 && Lf.pvF) { pv9 = f; Lf.pvF(f); }
-    const hubs = []; if (!w9 && SITE.mkt && open('mkt', m)) hubs.push({ k: 'nmkt', nm: T2('야시장', 'the night market'), x: SITE.mkt.x, z: SITE.mkt.z }); if (!w9 && m >= 1110 && m < 1290) for (const p of PL()) { if (/산책|쉼터|공원|둔치|강변/.test(p.name || '') && !A.inSchool(p.x, p.z) && hubs.length < 3) hubs.push({ k: 'neve', nm: T2(p.name, p.en || p.name), x: p.x, z: p.z }); }
+    const hubs = []; if (!w9 && SITE.mkt && open('mkt', m)) hubs.push({ k: 'nmkt', nm: T2('야시장', 'the night market'), x: SITE.mkt.x, z: SITE.mkt.z, r: 40 });   /* r = 서성이는 둘레(m · FIX-3 장보는 이웃이 노점 곁에 모이게 · 쉼터 = 60 그대로) */ if (!w9 && m >= 1110 && m < 1290) for (const p of PL()) { if (/산책|쉼터|공원|둔치|강변/.test(p.name || '') && !A.inSchool(p.x, p.z) && hubs.length < 3) hubs.push({ k: 'neve', nm: T2(p.name, p.en || p.name), x: p.x, z: p.z }); }
     const key = hubs.map(q => q.k + Math.round(q.x)).join(','); if (key !== hub9 && Lf.eveHubs) { hub9 = key; Lf.eveHubs(hubs); log('hubs ' + key); } }
   function tick(dt) { if (dead) return; if ((acc += dt) >= 1) { acc = 0; try { sec(); } catch (e) { console.warn('[밤] sec', e); } } }
 

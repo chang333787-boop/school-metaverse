@@ -8,7 +8,7 @@ import { buildWorld } from './world.js?v=158';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=96';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=97';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=11';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=29';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -345,6 +345,13 @@ function tBlocked(x, z, y, h) {
       if (x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r && b.y1 > st && b.y0 < y + h) return true; } }
   return false;
 }
+// FIX-3(10-27) 비켜 가기: 한 축이 막히면 다른 축으로 0.1m 비켜서 그 축을 다시 봄 — 담 밖으로 튀어나온 기둥 모서리·비스듬한 담(계단 상자)에 몸이 걸려 서던 것
+//   양쪽 다 막히면(정면 벽) 그대로 · 비켜 가는 쪽 = 다른 축 입력 쪽 먼저 · 한 번에 막힌 축 걸음만큼(최대 0.1m)
+function slipStep(bX, bZ, sx, sz) {
+  const E = 0.1, h = P.bh;
+  if (bZ && Math.abs(sz) > 1e-5) { const d = Math.min(E, Math.abs(sz)), nz = P.z + sz; for (const s of sx > 1e-5 ? [1, -1] : sx < -1e-5 ? [-1, 1] : [1, -1]) { if (bX && s === Math.sign(sx)) continue; if (!pBlocked(P.x + s * E, nz, P.y, h) && !pBlocked(P.x + s * d, P.z, P.y, h)) { P.x += s * d; return; } } }
+  if (bX && Math.abs(sx) > 1e-5) { const d = Math.min(E, Math.abs(sx)), nx = P.x + sx; for (const s of sz > 1e-5 ? [1, -1] : sz < -1e-5 ? [-1, 1] : [1, -1]) { if (bZ && s === Math.sign(sz)) continue; if (!pBlocked(nx, P.z + s * E, P.y, h) && !pBlocked(P.x, P.z + s * d, P.y, h)) { P.z += s * d; return; } } }
+}
 // 플레이어 물리가 부르는 판(평소 = 위 함수 그대로)
 const pGround = (x, z, fromY) => PHY.T ? tGround(x, z, fromY) : groundAt(x, z, fromY);
 const pCeil = (x, z, h0, h1) => PHY.T ? tCeil(x, z, h0, h1) : ceilAt(x, z, h0, h1);
@@ -678,7 +685,8 @@ function physics(dt) {
     mx /= L; mz /= L;
     if (CTRL.turnMax) { const a9 = Math.atan2(mx, mz), b9 = CTRL._dir ?? a9, lim = CTRL.turnMax * dt; let d9 = Math.atan2(Math.sin(a9 - b9), Math.cos(a9 - b9)); if (d9 > lim) d9 = lim; else if (d9 < -lim) d9 = -lim; const c9 = b9 + d9; CTRL._dir = c9; mx = Math.sin(c9); mz = Math.cos(c9); } else CTRL._dir = null;   /* STAM-1 자전거 꺾기: 빠를수록 도는 빠르기 상한(rad/s · 게임이 정함 · null = 그대로) */
     const sp = sp2, stp = Math.max(1, Math.ceil(sp * dt / 0.3)), sx = mx * sp * dt / stp, sz = mz * sp * dt / stp;   // SUB-STEP(10-19 자전거 21m/s): 한 장면에 0.3m보다 많이 가면 잘게 나눠 막힘을 봄(얇은 벽·울타리 뚫림 X) · 걷기는 한 번
-    for (let s9 = 0; s9 < stp; s9++) { const nx = P.x + sx; if (!pBlocked(nx, P.z, P.y, P.bh)) P.x = nx; const nz = P.z + sz; if (!pBlocked(P.x, nz, P.y, P.bh)) P.z = nz; }
+    for (let s9 = 0; s9 < stp; s9++) { const nx = P.x + sx; let bX = pBlocked(nx, P.z, P.y, P.bh); if (!bX) P.x = nx; const nz = P.z + sz; let bZ = pBlocked(P.x, nz, P.y, P.bh); if (!bZ) P.z = nz;
+      if (CTRL.slip && (bX || bZ)) slipStep(bX, bZ, sx, sz); }   /* FIX-3 비켜 가기(마을만 · 막힌 때만 부름 — 평소 프레임 일 0) */
     P.yaw = Math.atan2(mx, mz);
   }
   P.spd = Math.hypot(P.x - ox, P.z - oz) / Math.max(dt, 1e-4);   // ENGINE-1: 소리 판정(map.player.noise)
