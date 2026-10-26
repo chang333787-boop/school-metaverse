@@ -9,7 +9,7 @@
 //     · 화석은 가져오지 않음(사실 — 진열장 = 찾은 자리를 본뜬 모형 + 찾은 곳 이름표 · 가방의 조약돌·송이 돌만 기증) · 글자 판(캔버스)에는 이모지 X
 import { FINDS } from './town_xp.js?v=8';
 import { WILD, drawWild } from './town_wild.js?v=9';
-import { ladRows } from './town_lad.js?v=5';
+import { ladRows, ladM5 } from './town_lad.js?v=6';
 import { getLook, setLook, PALS } from '../js/look.js?v=1';
 import { chalSteps } from './town_orient.js?v=3';   /* CHAL-1 도전 모드로 찾아간 날 · ORIENT-1 길찾기 시험 코스 */
 export const PATH_V = 1;
@@ -206,10 +206,11 @@ export function createPath(A) {
     return at ? { icon: PATHS[k].ic, name: L(PATHS[k].t) + (en() ? ' path' : ' 길'), door: [at[0], at[1]] } : null; }
   function pass(k, back) { const s = S(), i = s.got[k] | 0, R = PATHS[k], sg = R.signs[i]; if (!sg) return false; s.got[k] = i + 1; if (back) s.od = day(); mark(); build(k, i);
     const e = en(), head = R.ic + ' ' + (back ? (e ? 'The path you walked: ' : '어제까지 걸은 길: ') : '') + L(R.t) + (e ? ' path sign — ' : ' 길 표지판: ') + L(sg.past);
-    A.banner(head, 4.2); A.sfx('done'); A.rec('path', { ev: 'sign', k, i, back: !!back }); if (A.diary) A.diary(L(R.t) + (e ? ' path: ' : ' 길: ') + L(sg.past));
+    A.banner(head, 4.2); A.sfx('done'); A.rec('path', { ev: 'sign', k, i, back: !!back });
+    if (k === 'chal' && i === 1) { ladM5(G(), 1); mark(); A.say(e ? '🏅 Master steps are open in work games. Finish step 4 excellently and the next game is a master step.' : '🏅 일 놀이에 명인 칸이 열렸어요. 도전 4칸을 아주 잘 해내면 다음 판이 명인 칸이에요.', 4.2, 1); }   /* HARD-1 도전가 둘째 표지판 = 명인 칸 열림(town_lad.js M5) */ if (A.diary) A.diary(L(R.t) + (e ? ' path: ' : ' 길: ') + L(sg.past));
     const p = where(k, i); chipK = k + ':' + i; chipT = performance.now(); A.chip('twn-path', R.ic + ' ' + L(sg.go), p ? { onClick: () => { A.chip('twn-path', null); chipK = ''; A.route(p); log('go ' + k + i); } } : undefined);
     log('pass ' + k + i + (back ? ' back' : '')); return true; }
-  function sec(force) { if (dead || !A.on()) return; const s = S(), st = steps(force); if (!BOOT) { BOOT = {}; for (const k of P_ORDER) BOOT[k] = reachedOf(k, st[k]); vestOn = !!s.vest; if (vestOn) { try { setLook({ ...getLook(), top: 2 }, { noSave: true }); } catch (x) { /* 모습 없음 */ } } buildAll(); log('boot ' + JSON.stringify(BOOT)); }
+  function sec(force) { if (dead || !A.on()) return; const s = S(), st = steps(force); if (!BOOT) { BOOT = {}; for (const k of P_ORDER) BOOT[k] = reachedOf(k, st[k]); if ((s.got.chal | 0) >= 2 && !ladM5(G())) { ladM5(G(), 1); mark(); } vestOn = !!s.vest; if (vestOn) { try { setLook({ ...getLook(), top: 2 }, { noSave: true }); } catch (x) { /* 모습 없음 */ } } buildAll(); log('boot ' + JSON.stringify(BOOT)); }
     const ds = s.ds; if (!ds || ds.d !== day()) { s.ds = { d: day(), s: { ...st }, prev: ds && ds.d === day() - 1 ? { d: ds.d, s: ds.s } : null }; mark(); }
     if (chipK && performance.now() - chipT > 90000) { A.chip('twn-path', null); chipK = ''; }
     if (!A.busy() && !A.panel()) for (const k of P_ORDER) { const got = s.got[k] | 0, R = reachedOf(k, st[k]); if (got >= R) continue; const back = got < BOOT[k]; if (back && s.od === day()) continue; if (pass(k, back)) break; }

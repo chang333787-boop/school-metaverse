@@ -4,7 +4,7 @@
 //   끝 = 결과 3단계 + '💡 알고 있었나요?' 사실 한 줄(사실만) · 점수 0~3 = 옛 보상 표 그대로 · 실패도 경험치 1(마을 쪽) · 셈 X · 한 판 15~25초
 //   솜씨 perk 'zone'(zw 1~1.25) = 쉬워지는 쪽으로(시간 · 초록 폭 · 삽질 수 · 벌레 느리게)
 //   화면 = DOM + CSS(놀이 창이 열린 동안만 · 마을 tick이 부르는 tick(dt) 하나 — 따로 rAF X) · 입력 = down()/up()(E·스페이스·큰 단추) + key(코드, 반복)(화살표·WASD·숫자) + 누르기·끌기(마우스·터치)
-import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2'; import { mkSalt } from './town_salt.js?v=2'; import { ladVal } from './town_lad.js?v=5';   /* LADDER-2 도전 칸마다 조건 값 */   /* SALT-2 염전 꼬임 넷 */   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
+import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2'; import { mkSalt } from './town_salt.js?v=2'; import { ladVal, LADP } from './town_lad.js?v=6';   /* LADDER-2 도전 칸마다 조건 값 */   /* SALT-2 염전 꼬임 넷 */   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
 export const MG_V = 3;
 const KIND = { tuho: 'toss', fisher: 'tug', rod: 'tug', seaweed: 'spread', oyster: 'gauge', strawberry: 'ripe', shiitake: 'ripe', saltpan: 'salt', beehive: 'comb', potato: 'dig', clam: 'dig', cabbage: 'sort', pear: 'cover', lumber: 'order', pasture: 'feed' };
 export const mgKind = (k, sea) => (k === 'paddy' ? (sea === 'autumn' ? 'cut' : 'plant') : KIND[k] || 'ripe');   /* 논 = 봄 모내기 · 가을 벼 베기 */
@@ -215,7 +215,7 @@ const SKYN = { clear: ['오늘 하늘: 맑음', 'Sky: clear'], cloud: ['오늘 �
 //   입력 = 칸 누르기 · 화살표 + E·스페이스(한 숟갈) · Enter(다 폈어요) · 말리기 = 단추 · 1~3 · ← → + E
 const DRY3 = [['마당 건조대', 'Yard drying rack'], ['처마 밑', 'Under the eaves'], ['창고 안', 'Inside the shed']];
 function mkSpread(c) {
-  const C9 = 5, N = 25, X = jx(c), lv = c.lv, TK = c.lp == null ? 0 : c.lp | 0, SLK = [2, 1, 0, 0][lv - 1], BAD = c.zw > 1.1 ? 1 : 0, NS = 3, sky = skyOf(X);
+  const C9 = 5, N = 25, X = jx(c), lv = c.lv, TK = c.lp == null ? 0 : c.lp | 0, SLK = [2, 1, 0, 0, 0][lv - 1], BAD = c.zw > 1.1 ? 1 : 0, NS = 3; let sky = skyOf(X);   /* HARD-1 명인 칸 = 장마다 하늘이 바뀜(말릴 곳을 다시 판단) */
   c.mg.innerHTML = '<div class="sky ' + sky + '"><i></i><b>' + c.T(SKYN[sky][0], SKYN[sky][1]) + '</b></div><div class="spr"><div class="mat mat2' + (lv >= 4 ? ' sub' : '') + '">' + '<i></i>'.repeat(N) + '<b class="scp"></b></div><div class="spn"><b class="bn">0</b><small>' + c.T('숟갈', 'spoons') + '</small></div></div><div class="dots">' + '<i></i>'.repeat(NS) + '</div>'
     + '<div class="row dry3">' + DRY3.map((d, i) => '<button class="sub" data-d="' + i + '">' + (i + 1) + '. ' + c.T(d[0], d[1]) + '</button>').join('') + '</div><div class="row spd"><button class="sub dn">' + c.T('다 폈어요', 'Done') + '</button></div>';
   const TB = timeBar(c, 40 * c.zw);
@@ -225,7 +225,8 @@ function mkSpread(c) {
   const paint = () => { for (let i = 0; i < N; i++) { const q = CL[h[i]]; if (B[i].className !== q) B[i].className = q; } bn.textContent = String(bowl); };
   const moveTo = i => { cur = i; scp.style.transform = 'translate(' + (i % C9) * 100 + '%,' + ((i / C9) | 0) * 100 + '%)'; };
   const markD = () => { dry.querySelectorAll('button').forEach((b, i) => b.classList.toggle('sel', i === dsel)); };
-  const fresh = () => { ph = 'spread'; h.fill(2); const idx = shuf([...Array(N).keys()]), nh = 2 + (Math.random() < 0.5 ? 1 : 0), nt = 3 + ((Math.random() * 2) | 0); let p = 0, need = 0;
+  const reSky = () => { const o = ['clear', 'cloud', 'rain'].filter(q => q !== sky); sky = o[(Math.random() * o.length) | 0]; const e9 = c.mg.querySelector('.sky'); if (e9) { e9.className = 'sky ' + sky; const b9 = e9.querySelector('b'); if (b9) b9.textContent = c.T(SKYN[sky][0], SKYN[sky][1]); } };
+  const fresh = () => { ph = 'spread'; if (lv >= 5 && sheet > 0) reSky(); h.fill(2); const idx = shuf([...Array(N).keys()]), nh = 2 + (Math.random() < 0.5 ? 1 : 0), nt = 3 + ((Math.random() * 2) | 0); let p = 0, need = 0;
     for (let k = 0; k < nh; k++) { h[idx[p++]] = 0; need += 2; } for (let k = 0; k < nt; k++) { h[idx[p++]] = 1; need += 1; } for (let k = 0; k < TK; k++) h[idx[p++]] = 3;
     bowl = Math.max(0, need - TK + SLK); paint(); moveTo(12); dry.style.display = 'none'; spd.style.display = ''; mat.dataset.ph = 'spread';
     c.say(sheet > 0 ? c.T('새 발장이에요. 두께를 잘 봐요', 'A fresh mat. Look at the thickness') : TK ? c.T('얇은 곳·구멍엔 한 숟갈씩 붓고, 두꺼운 곳은 눌러서 덜어 와요', 'Add a spoon to thin spots and holes. Tap thick spots to scoop some back') : c.T('얇은 곳과 구멍을 눌러 한 숟갈씩 부어요. 구멍은 두 숟갈이에요', 'Tap thin spots and holes to add a spoon. Holes need two')); };
@@ -500,7 +501,7 @@ const watSvg = lv => { const wy = [62, 50, 30][lv]; return '<svg viewBox="0 0 22
 function mkPlant(c) { const X = jx(c), lv = c.lv, M = X.mem && typeof X.mem === 'object' ? X.mem : null, KEY = String(X.key || 'w:paddy'), DAY = X.day | 0;
   const R0 = M && M[KEY] && typeof M[KEY] === 'object' && Array.isArray(M[KEY].w) ? M[KEY] : { d: DAY, w: [] }, old = R0.d < DAY ? R0.w.slice(0, 2) : [], keep = R0.d < DAY ? [] : R0.w.slice();
   const NR = lv >= 3 ? 4 : 3, RS = 34, Y0 = 26, CW = 420, CH = Y0 + RS * (old.length + NR) + 24, FX0 = 44, FX1 = 376;
-  const fine = s => (lv === 2 || (lv >= 3 && s === 1));   /* 촘촘한 눈금(반 칸) 쪽 */
+  let fs = 1; const fine = s => (lv === 2 || (lv >= 3 && s === fs));   /* 촘촘한 눈금(반 칸) 쪽 · HARD-1 명인 칸 = 줄마다 바뀜(fs) */
   const step = s => (fine(s) ? RS / 2 : RS), NMK = s => Math.floor((CH - Y0 - 8) / step(s)) + 1, mkY = (s, j) => Y0 + j * step(s);
   const Q = old.map(why => ({ rv: 1, why })); for (let i = 0; i < NR; i++) Q.push({ rv: 0 });
   const rows = Q.map((q, i) => ({ i: i + 1, rv: q.rv, why: q.why, yl: null, yr: null, ok: false, bad: q.rv ? q.why : null }));
@@ -522,7 +523,7 @@ function mkPlant(c) { const X = jx(c), lv = c.lv, M = X.mem && typeof X.mem === 
   const showWater = again => { ph = 'water'; wsel = 1; W9.innerHTML = '<div class="row" style="justify-content:center">' + watSvg(WLV[water]) + '</div><div class="bx3 pick">' + WAT_P.map((t, j) => '<button data-w="' + j + '"><small>' + (j + 1) + '. ' + c.T(t[0], t[1]) + '</small></button>').join('') + '</div>'; markW();
     c.say(again ? c.T('어? 논물이 달라졌어요. 단면을 다시 보고 골라요', 'Hm? The water has changed. Look at the cut-away again and choose') : c.T('모를 심기 전에 논물 높이를 봐요. 발등이 잠길 만큼 얕게가 알맞아요', 'Before planting, check the water. Just over the top of the foot is right')); draw(); };
   const markW = () => W9.querySelectorAll('.pick button').forEach((b, i) => b.classList.toggle('sel', i === wsel));
-  const toRope = () => { ph = 'rope'; side = 0; pick = [null, null]; const r = rows[qi]; const tY = Y0 + r.i * RS; cur = [Math.max(1, Math.round((tY - RS) / step(0) - Y0 / step(0))), Math.max(1, Math.round((tY - RS) / step(1) - Y0 / step(1)))];
+  const toRope = () => { ph = 'rope'; side = 0; pick = [null, null]; if (lv >= 5) fs = Math.random() < 0.5 ? 0 : 1; const r = rows[qi]; const tY = Y0 + r.i * RS; cur = [Math.max(1, Math.round((tY - RS) / step(0) - Y0 / step(0))), Math.max(1, Math.round((tY - RS) / step(1) - Y0 / step(1)))];
     W9.innerHTML = '<div class="sm" style="text-align:center">' + (r.rv ? c.T('어제 남은 줄 고쳐 심기 — 그 줄 자리에 못줄을 바로 걸어요', 'Fix yesterday’s row — hang the rope straight at that row') : c.T('줄 ', 'Row ') + (rows.filter(q => !q.rv).indexOf(r) + 1) + '/' + NR + c.T(' — 왼쪽·오른쪽 둑 말뚝을 하나씩 눌러 못줄을 걸어요', ' — tap a stake on the left and right banks to hang the rope')) + '</div>'; keysHTML(); draw();
     if (r.rv) c.say(r.why === 'water' ? c.T('어제 물이 안 맞아 모가 떴어요. 뜬 줄 자리에 다시 심어요', 'Yesterday the water was wrong and the seedlings floated. Replant that row') : c.T('어제 비뚤게 심은 줄이 남아 있어요. 다시 곧게 심어요', 'Yesterday’s crooked row is still there. Plant it straight again'));
     else if (qi === old.length) c.say(lv === 1 ? c.T('둑 눈금 한 칸 = 줄 사이. 양쪽 말뚝을 똑같이 옮겨요', 'One mark on the bank = one row gap. Move both stakes the same') : c.T('못줄 빨간 표 사이만큼 아래로, 양쪽 둑을 똑같이 옮겨요', 'Move down by the gap between the red marks, the same on both banks')); };
@@ -562,28 +563,28 @@ function mkPlant(c) { const X = jx(c), lv = c.lv, M = X.mem && typeof X.mem === 
 const SIDE4 = ['N', 'E', 'S', 'W'], SIDEN = { N: ['북', 'north'], E: ['동', 'east'], S: ['남', 'south'], W: ['서', 'west'] };
 function mkCut(c) { const X = jx(c), lv = c.lv, C9 = 6, R9 = 4, N = C9 * R9, T = 45 * c.zw;
   const WP = windPick(X, 'cut', k => SIDE4[((k + 4) % 8) >> 1]), CS = WP.s, KC = { N: 4, E: 6, S: 0, W: 2 }[CS], OPP = { N: 'S', S: 'N', E: 'W', W: 'E' }[CS];   /* 구름 쪽 = 바람이 불어오는 쪽 · 깃발은 그 반대로 날림 */
-  const rowLines = CS === 'N' || CS === 'S', L = rowLines ? C9 : R9, G = [L, L >> 1, 0, 0][lv - 1], SL = [2, 1, 1, 0][lv - 1], wetNow = !!X.rain;
+  const rowLines = CS === 'N' || CS === 'S', L = rowLines ? C9 : R9, G = [L, L >> 1, 0, 0, 0][lv - 1], SL = [2, 1, 1, 0, 0][lv - 1], wetNow = !!X.rain, PRE = lv >= 5 ? [0, C9 - 1, N - C9, N - 1][(Math.random() * 4) | 0] : -1, NT = N - (PRE >= 0 ? 1 : 0);   /* HARD-1 명인 칸 = 모퉁이 한 칸은 손으로 미리 벰(st 4 · 지나갈 수 없음 · 길을 다시 짬) */
   const lineOf = i => { const x = i % C9, y = (i / C9) | 0; return CS === 'N' ? y : CS === 'S' ? R9 - 1 - y : CS === 'W' ? x : C9 - 1 - x; };
   const edge = i => { const x = i % C9, y = (i / C9) | 0; return x === 0 || y === 0 || x === C9 - 1 || y === R9 - 1; };
-  const st = new Uint8Array(N); let ph = 'enter', cur = -1, sel = 0, cut = 0, dpt = 0, stuck = false, warned = false, hold = 0;   /* st: 0 벼 · 1 마른 채 벰 · 2 젖은 벼 · 3 젖은 채 벰 */
+  const st = new Uint8Array(N); if (PRE >= 0) st[PRE] = 4; let ph = 'enter', cur = -1, sel = 0, cut = 0, dpt = 0, stuck = false, warned = false, hold = 0;   /* st: 0 벼 · 1 마른 채 벰 · 2 젖은 벼 · 3 젖은 채 벰 */
   const cl = (s, dark) => '<i class="ccl ' + s.toLowerCase() + (dark ? ' dk' : ' wh') + '">' + cloudSvg(dark, 54) + '</i>';
   c.mg.innerHTML = '<div class="cutw"><span class="fl9w">' + flagTop(KC, c.en, 40) + '</span>' + cl(CS, true) + (lv >= 3 ? cl(OPP, false) : '') + gridHTML(C9, N, 'rice') + '</div>';
   const gd = c.mg.querySelector('.gd'), B = gd.querySelectorAll('.gc'), TB = timeBar(c, T);
-  const draw = () => { for (let i = 0; i < N; i++) { const s = st[i], cl9 = 'gc ' + (i === cur ? 'cb' : s === 1 ? 'cutd' : s === 3 ? 'cwet' : s === 2 ? 'wetr' : 'ripe') + (ph === 'enter' && edge(i) ? ' edge' : '') + (ph === 'enter' && i === sel ? ' sel' : ''), tx9 = i === cur ? '🚜' : s === 0 || s === 2 ? '🌾' : ''; if (B[i].className !== cl9) B[i].className = cl9; if (B[i].textContent !== tx9) B[i].textContent = tx9; } };
+  const draw = () => { for (let i = 0; i < N; i++) { const s = st[i], cl9 = 'gc ' + (i === cur ? 'cb' : s === 1 || s === 4 ? 'cutd' : s === 3 ? 'cwet' : s === 2 ? 'wetr' : 'ripe') + (ph === 'enter' && edge(i) ? ' edge' : '') + (ph === 'enter' && i === sel ? ' sel' : ''), tx9 = i === cur ? '🚜' : s === 0 || s === 2 ? '🌾' : ''; if (B[i].className !== cl9) B[i].className = cl9; if (B[i].textContent !== tx9) B[i].textContent = tx9; } };
   const adj = (a, b) => (Math.abs(a - b) === 1 && ((a / C9) | 0) === ((b / C9) | 0)) || Math.abs(a - b) === C9;
   const free = i => [i - 1, i + 1, i - C9, i + C9].some(j => j >= 0 && j < N && adj(i, j) && (st[j] === 0 || st[j] === 2));
   const dry = () => { let n = 0; for (let i = 0; i < N; i++) if (st[i] === 1) n++; return n; }, wetN = () => { let n = 0; for (let i = 0; i < N; i++) if (st[i] >= 2) n++; return n; };
   const rain = () => { const d2 = Math.max(wetNow ? 1 : 0, cut >= G ? Math.floor((cut - G) / (L + SL)) : 0); if (d2 <= dpt) return; dpt = d2; let hit = 0;
     for (let i = 0; i < N; i++) if (st[i] === 0 && lineOf(i) < dpt) { st[i] = 2; hit++; }
     if (hit) { c.snd('pop'); hold = 1.8; c.say(c.T('비가 ' + SIDEN[CS][0] + '쪽 줄부터 내려요. 안 벤 벼가 젖었어요', 'Rain is falling from the ' + SIDEN[CS][1] + ' rows. Uncut rice got wet')); } };
-  const score = () => { const d = dry(); return d >= N ? 3 : d / N >= 0.75 ? 2 : d / N >= 0.45 ? 1 : 0; };
+  const score = () => { const d = dry(); return d >= NT ? 3 : d / NT >= 0.75 ? 2 : d / NT >= 0.45 ? 1 : 0; };
   const cutAt = i => { st[i] = st[i] === 2 ? 3 : 1; cut++; };
-  const enter = i => { if (c.done || ph !== 'enter' || i < 0 || i >= N) return; if (!edge(i)) { sel = i; draw(); c.snd('pop'); c.say(c.T('콤바인은 논 가장자리 칸으로 들어가요', 'The combine enters from an edge square')); return; }
+  const enter = i => { if (c.done || ph !== 'enter' || i < 0 || i >= N) return; if (i === PRE) { sel = i; draw(); c.snd('pop'); c.say(c.T('그 칸은 손으로 미리 베었어요. 옆 칸으로 들어가요', 'That square was already cut by hand. Enter next to it')); return; } if (!edge(i)) { sel = i; draw(); c.snd('pop'); c.say(c.T('콤바인은 논 가장자리 칸으로 들어가요', 'The combine enters from an edge square')); return; }
     ph = 'cut'; cur = i; cutAt(i); c.snd('tick'); rain(); draw(); c.say(c.T('줄을 따라 왕복하며 베어요. 벤 곳은 다시 못 지나가요', 'Go back and forth along the rows. You cannot cross cut ground')); };
-  const go = i => { if (c.done || stuck || ph !== 'cut') return; if (i === cur || !adj(i, cur)) return; if (st[i] === 1 || st[i] === 3) { c.say(c.T('이미 벤 곳은 못 지나가요 — 길을 미리 생각해요', 'You can’t go over cut rows — plan your path')); c.snd('pop'); return; }
+  const go = i => { if (c.done || stuck || ph !== 'cut') return; if (i === cur || !adj(i, cur)) return; if (st[i] === 1 || st[i] === 3 || st[i] === 4) { c.say(c.T('이미 벤 곳은 못 지나가요 — 길을 미리 생각해요', 'You can’t go over cut rows — plan your path')); c.snd('pop'); return; }
     const w9 = st[i] === 2; cutAt(i); cur = i; c.snd('tick'); rain(); draw();
     if (w9 && !warned && hold <= 0) { warned = true; hold = 1.6; c.say(c.T('젖은 벼예요. 베기 어렵고 따로 말려야 해요', 'This rice is wet. It is hard to cut and must be dried')); } else if (!w9 && hold <= 0) c.say(c.T('싹싹 — ', 'Swish — ') + cut + '/' + N);   /* 비 알림은 1.8초 남김 */
-    if (cut >= N) return c.finish(score()); if (!free(cur)) { stuck = true; c.say(c.T('길이 막혔어요! 한 줄씩 왕복하면 빈틈이 없어요', 'Boxed in! Going back and forth row by row leaves no gaps')); setTimeout(() => c.finish(score()), 900); } };
+    if (cut >= NT) return c.finish(score()); if (!free(cur)) { stuck = true; c.say(c.T('길이 막혔어요! 한 줄씩 왕복하면 빈틈이 없어요', 'Boxed in! Going back and forth row by row leaves no gaps')); setTimeout(() => c.finish(score()), 900); } };
   let drag = false; const at = e => { const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest && el.closest('.gc'); return b && gd.contains(b) ? +b.dataset.i : -1; };
   const pd = e => { const i = at(e); if (i < 0) return; e.preventDefault(); if (ph === 'enter') { enter(i); return; } drag = true; go(i); }, pm = e => { if (drag) { const i = at(e); if (i >= 0) go(i); } }, pu = () => { drag = false; };
   gd.addEventListener('pointerdown', pd); addEventListener('pointermove', pm); addEventListener('pointerup', pu); if (wetNow) rain(); draw();
@@ -596,7 +597,7 @@ function mkCut(c) { const X = jx(c), lv = c.lv, C9 = 6, R9 = 4, N = C9 * R9, T =
     key(code, rep) { const d = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1, ArrowUp: -C9, KeyW: -C9, ArrowDown: C9, KeyS: C9 }[code]; if (d == null) return false; if (rep) return true;
       if (ph === 'enter') { const j = sel + d; if (j >= 0 && j < N && (Math.abs(d) !== 1 || ((j / C9) | 0) === ((sel / C9) | 0))) { sel = j; draw(); } return true; } const j = cur + d; if (j >= 0 && j < N) go(j); return true; },
     tick(dt) { if (hold > 0) hold -= dt; if (TB.tick(dt) && !stuck && !c.done) c.finish(score()); },
-    get dbg() { return { ph, cs: CS, k: KC, rows: rowLines, L, G, SL, cur, cut, dpt, st: Array.from(st), dry: dry(), wet: wetN(), n: WP.n, lines: [...Array(N).keys()].map(lineOf), enter: i => enter(i), go: i => go(i) }; },
+    get dbg() { return { ph, cs: CS, k: KC, rows: rowLines, L, G, SL, pre: PRE, nt: NT, cur, cut, dpt, st: Array.from(st), dry: dry(), wet: wetN(), n: WP.n, lines: [...Array(N).keys()].map(lineOf), enter: i => enter(i), go: i => go(i) }; },
     dispose() { gd.removeEventListener('pointerdown', pd); removeEventListener('pointermove', pm); removeEventListener('pointerup', pu); } }; }
 
 // ⑥ 소금 = town_salt.js(SALT-2 꼬임 넷 · 천일염·자염·토판염·꽃소금)
@@ -606,19 +607,20 @@ function mkCut(c) { const X = jx(c), lv = c.lv, C9 = 6, R9 = 4, N = C9 * R9, T =
 //   ② 벌이 차분해지면 밀랍 뚜껑 덮인 칸만 뜸 — 벌이 잔뜩 모인 칸(꿈틀거리는 점)은 피함(벌은 몇 초마다 옆 칸으로 옮겨 감) · 벌 칸·덜 익은 칸·애벌레 방 = 잠깐 손이 멈춤
 //   사다리 = 벌 무리 수(2~5) · 2칸부터 벌통 문 · 3칸부터 여덟 자리 + 도중에 바람이 바뀜(다시 서기) · 같은 날도 판마다 바람이 조금 흔들리고 칸·벌 자리가 다름 · 정해진 시간 안에 뚜껑 칸을 다 뜨면 끝
 //   입력 = 자리·칸 누르기 · ← → 자리 돌리기(↑ 북 · ↓ 남) + E·스페이스 · 칸 = 화살표 + E(누르는 시간은 판정에 안 씀)
-function mkComb(c) { const C9 = 6, N = 24, X = jx(c), lv = c.lv, NB = Math.max(1, c.lp == null ? 2 : c.lp | 0), MV = [3.2, 2.8, 2.4, 2.0][lv - 1] * c.zw, SP = lv >= 3 ? [0, 1, 2, 3, 4, 5, 6, 7] : [0, 2, 4, 6];
+function mkComb(c) { const C9 = 6, N = 24, X = jx(c), lv = c.lv, NB = Math.max(1, c.lp == null ? 2 : c.lp | 0), MV = [3.2, 2.8, 2.4, 2.0, 2.0][lv - 1] * c.zw, SP = lv >= 3 ? [0, 1, 2, 3, 4, 5, 6, 7] : [0, 2, 4, 6];
   const kinds = shuf(Array.from({ length: N }, (_, i) => (i % 3 === 0 ? 'cap' : i % 3 === 1 ? 'open' : 'brood'))), NC = N / 3, got = new Uint8Array(N), bees = [];
-  let ph = 'stand', wr = 0, up = 4, door = -1, sel = 0, lock = 0, right = 0, err = 0, mvT = MV, turned = false, G = null, nx = null;
+  let ph = 'stand', wr = 0, up = 4, door = -1, door2 = -1, sel = 0, lock = 0, right = 0, err = 0, mvT = MV, turned = false, G = null, nx = null;
   c.mg.innerHTML = '<div class="cbw"></div>'; const W9 = c.mg.querySelector('.cbw'), TB = timeBar(c, 34 * c.zw);
   const setWind = k => { wr = ((k % 8) + 8) % 8; if (lv < 3) wr = (Math.round(wr / 2) * 2) % 8; up = (wr + 4) % 8; };   /* 1·2칸 = 네 방위로 맞춤(자리가 넷) · 깃발 = 위에서 본 깃대(점) + 바람이 가는 쪽으로 날리는 천 */
-  const okSpot = s => s !== door && d8(s, up) <= (lv >= 3 ? 1 : 0);
-  const pickDoor = () => { if (lv < 2) { door = -1; return; } if (lv >= 3 && up % 2 === 0 && Math.random() < 0.4) { door = up; return; } const o = [0, 2, 4, 6].filter(q => q !== up); door = o[(Math.random() * o.length) | 0]; };   /* 3칸부터 바람이 오는 쪽에 문이 있으면 비스듬히 서야 함 */
-  setWind((X.wind != null ? X.wind | 0 : (Math.random() * 8) | 0) + ((Math.random() * 3) | 0) - 1); pickDoor();   /* 오늘 바람 + 판마다 조금 흔들림 */
+  const okSpot = s => s !== door && s !== door2 && d8(s, up) <= (lv >= 3 ? 1 : 0);
+  const pickDoor = () => { if (lv < 2) { door = -1; return; } if (lv >= 3 && up % 2 === 0 && Math.random() < 0.4) { door = up; return; } const o = [0, 2, 4, 6].filter(q => q !== up); door = o[(Math.random() * o.length) | 0]; };
+  const pickDoor2 = () => { if (lv < 5) return; const o = [0, 2, 4, 6].filter(q => q !== door && q !== up); door2 = o[(Math.random() * o.length) | 0]; };   /* HARD-1 명인 칸 = 문 둘(바람이 바뀌어도 둘 다 피함 · 문은 네 방위에만 있어 바람 쪽 자리 하나는 늘 남음) */   /* 3칸부터 바람이 오는 쪽에 문이 있으면 비스듬히 서야 함 */
+  setWind((X.wind != null ? X.wind | 0 : (Math.random() * 8) | 0) + ((Math.random() * 3) | 0) - 1); pickDoor(); pickDoor2();   /* 오늘 바람 + 판마다 조금 흔들림 */
   const pos = (k, r) => [50 + Math.sin(k * Math.PI / 4) * r, 50 - Math.cos(k * Math.PI / 4) * r];
-  const doorCss = () => (door < 0 ? 'display:none' : door === 0 ? 'left:30%;top:-6px;width:40%;height:6px' : door === 2 ? 'right:-6px;top:30%;width:6px;height:40%' : door === 4 ? 'left:30%;bottom:-6px;width:40%;height:6px' : 'left:-6px;top:30%;width:6px;height:40%');
+  const doorCss = (d9 = door) => (d9 < 0 ? 'display:none' : d9 === 0 ? 'left:30%;top:-6px;width:40%;height:6px' : d9 === 2 ? 'right:-6px;top:30%;width:6px;height:40%' : d9 === 4 ? 'left:30%;bottom:-6px;width:40%;height:6px' : 'left:-6px;top:30%;width:6px;height:40%');
   const markS = () => { W9.querySelectorAll('.spot').forEach(b => b.classList.toggle('sel', +b.dataset.p === SP[sel])); };
   const stand = () => { ph = 'stand'; if (G) { G.dispose(); G = null; } sel = 0;
-    let h9 = '<div class="hv"><i class="hive"><i class="hdoor" style="' + doorCss() + '"></i></i><i class="pole"></i><i class="flag" style="transform:rotate(' + (wr * 45 - 90) + 'deg)"><i></i></i><i class="puff"></i>';
+    let h9 = '<div class="hv"><i class="hive"><i class="hdoor" style="' + doorCss() + '"></i>' + (door2 >= 0 ? '<i class="hdoor" style="' + doorCss(door2) + '"></i>' : '') + '</i><i class="pole"></i><i class="flag" style="transform:rotate(' + (wr * 45 - 90) + 'deg)"><i></i></i><i class="puff"></i>';
     for (const s of SP) { const [x, y] = pos(s, 40); h9 += '<button class="spot" data-p="' + s + '" style="left:' + x.toFixed(1) + '%;top:' + y.toFixed(1) + '%">' + DIR8[s][c.en ? 1 : 0] + '</button>'; }
     W9.innerHTML = h9 + '</div>'; markS(); };
   const choose = s => { if (ph !== 'stand' || c.done || lock > 0) return; sel = Math.max(0, SP.indexOf(s)); markS();
@@ -626,7 +628,7 @@ function mkComb(c) { const C9 = 6, N = 24, X = jx(c), lv = c.lv, NB = Math.max(1
     pf.style.transition = 'none'; pf.style.left = x + '%'; pf.style.top = y + '%'; pf.style.opacity = '1'; void pf.offsetWidth; pf.style.transition = ''; pf.style.left = (x + Math.sin(v) * 44) + '%'; pf.style.top = (y - Math.cos(v) * 44) + '%'; pf.style.opacity = '0';
     if (okSpot(s)) { c.snd('ding'); lock = 1.1; nx = 'comb'; c.say(c.T('바람을 등지고 섰어요. 연기가 바람을 타고 벌통으로 가요. 벌이 차분해져요', 'Your back is to the wind. The smoke rides the wind into the hive. The bees calm down')); return; }
     err++; c.snd('pop'); lock = 3.2 / c.zw; hv.classList.add('bz');
-    c.say(s === door ? c.T('벌통 문 앞이에요. 벌이 드나드는 길을 막아 벌이 놀랐어요. 가라앉을 때까지 기다려요…', 'That is the hive door. You blocked the bees’ path and they got upset. Wait for them to settle…')
+    c.say(s === door || s === door2 ? c.T('벌통 문 앞이에요. 벌이 드나드는 길을 막아 벌이 놀랐어요. 가라앉을 때까지 기다려요…', 'That is the hive door. You blocked the bees’ path and they got upset. Wait for them to settle…')
       : d8(s, wr) <= 1 ? c.T('바람이 벌통 쪽에서 나에게 불어요. 연기가 벌통에서 멀어졌어요. 벌이 가라앉을 때까지 기다려요…', 'The wind blows from the hive to you, so the smoke went away from it. Wait for the bees to settle…')
       : c.T('연기가 바람에 옆으로 비껴갔어요. 벌이 가라앉을 때까지 기다려요…', 'The wind pushed the smoke off to the side. Wait for the bees to settle…')); };
   const free = pref => { const o = []; for (let i = 0; i < N; i++) if (!got[i] && !bees.includes(i) && (!pref || kinds[i] === 'cap')) o.push(i); return o; };
@@ -657,7 +659,7 @@ function mkComb(c) { const C9 = 6, N = 24, X = jx(c), lv = c.lv, NB = Math.max(1
       if (lock > 0 && (lock -= dt) <= 0) { lock = 0; const hv = W9.querySelector('.hive.bz'); if (hv) hv.classList.remove('bz');
         if (nx === 'comb') { nx = null; toComb(); } else if (nx === 'stand') { nx = null; stand(); } else if (ph === 'stand') c.say(c.T('벌이 가라앉았어요. 깃발을 보고 다시 골라요', 'The bees settled. Check the flag and pick again')); else if (ph === 'comb') c.say(c.T('다시 골라요', 'Pick again')); }
       if (ph === 'comb' && (mvT -= dt) <= 0) { mvT = MV * (0.8 + Math.random() * 0.4); moveBees(); } },
-    get dbg() { return { ph, wind: wr, up, door, spots: SP.slice(), ok: SP.filter(okSpot), kinds: kinds.slice(), bees: bees.slice(), got: Array.from(got), lock: +lock.toFixed(2), right, err, NC, lv, NB, turned, left: +TB.left.toFixed(2) }; },
+    get dbg() { return { ph, wind: wr, up, door, door2, spots: SP.slice(), ok: SP.filter(okSpot), kinds: kinds.slice(), bees: bees.slice(), got: Array.from(got), lock: +lock.toFixed(2), right, err, NC, lv, NB, turned, left: +TB.left.toFixed(2) }; },
     dispose() { c.mg.removeEventListener('pointerdown', pd); if (G) G.dispose(); } }; }
 
 // ⑧ 캐기(감자 = 줄기 둘레 · 조개 = 작은 숨구멍 두 개 밑): 단서를 보고 흙 파기 — 삽질 수가 정해져 있음(찾기)
@@ -706,17 +708,19 @@ function mkCover(c) { const X = jx(c), lv = c.lv, NT = lv >= 4 ? 7 : lv >= 2 ? 6
   const FS = hs9(String(X.key || c.k)) % 2 ? 'R' : 'L', outOf = k => (k >= 1 && k <= 3 ? 'L' : k >= 5 ? 'R' : 'F');   /* 바람이 동쪽으로(1~3) = 서쪽(왼쪽)에서 옴 · 서쪽으로 = 오른쪽에서 · 북·남으로 = 숲 쪽에서 */
   const WP = windPick(X, 'cov', outOf), K = WP.k, TY = WP.s, ENT = TY === 'F' ? FS : TY, dist = i => (ENT === 'L' ? i : NT - 1 - i);
   const fruit = new Array(NT).fill(1), np = []; { const o = shuf([...Array(NT).keys()]).slice(0, NE); for (const i of o) fruit[i] = 0; } for (let i = 0; i < NT; i++) np.push(fruit[i] ? 2 + (Math.random() < 0.5 ? 1 : 0) : 0);
-  const bag = new Uint8Array(NT), eat = new Uint8Array(NT); let turn = 0, sel = ENT === 'L' ? NT - 1 : 0, nb = 0, ate = 0;   /* 고르개는 일부러 반대쪽 끝에서 시작(답을 짚어 주지 않음) */
+  const bag = new Uint8Array(NT), eat = new Uint8Array(NT); let turn = 0, sel = ENT === 'L' ? NT - 1 : 0, nb = 0, ate = 0, t0 = -1;   /* t0 = HARD-1 명인 칸 바람이 바뀐 차례(앞 벌레는 멈추고 반대쪽에서 새로 옴) */   /* 고르개는 일부러 반대쪽 끝에서 시작(답을 짚어 주지 않음) */
   const tx = i => 10 + i * (80 / (NT - 1));
   let h = '<div class="orc"><i class="fr9 ' + FS.toLowerCase() + '"><b>' + c.T('숲', 'Woods') + '</b></i><span class="fl9w">' + flagTop(K, c.en, 44) + '</span>';
   for (let i = 0; i < NT; i++) h += '<button class="ot' + (fruit[i] ? '' : ' em') + '" data-i="' + i + '" style="left:' + tx(i).toFixed(1) + '%"><span>' + (fruit[i] ? '🍐'.repeat(np[i]) : '') + '</span></button>';
-  c.mg.innerHTML = h + '<i class="bug9" style="left:' + (ENT === 'L' ? 1 : 99) + '%">🐛</i></div>';
-  const OR = c.mg.querySelector('.orc'), TB9 = OR.querySelectorAll('.ot'), BG = OR.querySelector('.bug9'), TB = timeBar(c, T);
+  c.mg.innerHTML = h + '<i class="bug9" style="left:' + (ENT === 'L' ? 1 : 99) + '%">🐛</i>' + (lv >= 5 ? '<i class="bug9 b2" style="left:' + (ENT === 'L' ? 99 : 1) + '%">🐛</i>' : '') + '</div>';
+  const OR = c.mg.querySelector('.orc'), TB9 = OR.querySelectorAll('.ot'), BG = OR.querySelector('.bug9'), BG2 = OR.querySelector('.bug9.b2'), TB = timeBar(c, T);
   const draw = () => { for (let i = 0; i < NT; i++) setCls(TB9[i], 'ot' + (fruit[i] ? '' : ' em') + (bag[i] ? ' bag' : '') + (eat[i] ? ' eat' : '') + (i === sel ? ' sel' : '')); };
   const left9 = () => fruit.reduce((s, f, i) => s + (f && !bag[i] && !eat[i] ? 1 : 0), 0), NF = fruit.reduce((s, f) => s + f, 0);
   const score = () => { const sv = NF - ate; return sv >= NF ? 3 : sv >= NF - 1 ? 2 : sv >= 1 ? 1 : 0; };
-  const advance = () => { const fr = turn - D; let hit = 0; for (let i = 0; i < NT; i++) if (dist(i) <= fr && fruit[i] && !bag[i] && !eat[i]) { eat[i] = 1; ate++; hit++; }
+  const advance = () => { const fr = t0 >= 0 ? t0 - D : turn - D, frB = t0 >= 0 ? turn - t0 - D : -1; let hit = 0; for (let i = 0; i < NT; i++) if ((dist(i) <= fr || NT - 1 - dist(i) <= frB) && fruit[i] && !bag[i] && !eat[i]) { eat[i] = 1; ate++; hit++; }
+    if (BG2 && frB >= 0) { const j = ENT === 'L' ? Math.max(0, NT - 1 - frB) : Math.min(NT - 1, frB); BG2.classList.add('on'); BG2.style.left = tx(j).toFixed(1) + '%'; }
     if (fr >= 0) { const j = ENT === 'L' ? Math.min(NT - 1, fr) : Math.max(0, NT - 1 - fr); BG.classList.add('on'); BG.style.left = tx(j).toFixed(1) + '%'; }   /* 벌레는 들어온 뒤에야 보임(먼저 보이면 답을 짚어 줌) */
+    if (lv >= 5 && t0 < 0 && turn >= 2 && left9()) { t0 = turn; const fw = OR.querySelector('.fl9w'); if (fw) fw.innerHTML = flagTop(ENT === 'L' ? 6 : 2, c.en, 44); draw(); c.snd('pop'); c.say(c.T('바람이 바뀌었어요! 깃발을 다시 봐요. 이제 벌레가 반대쪽에서도 와요', 'The wind changed! Check the flag again. Now bugs come from the other side too')); return hit; }
     draw(); if (hit) { c.snd('pop'); c.say(c.T('앗, 벌레가 먼저 닿았어요. 봉지 없는 배를 갉아 먹어요', 'Oh no, the bugs got there first and are eating the unbagged pears')); } return hit; };
   const bagTree = i => { if (c.done || i < 0 || i >= NT) return; sel = i; if (bag[i] || eat[i]) { draw(); c.say(bag[i] ? c.T('이미 봉지를 씌웠어요', 'Already bagged') : c.T('벌레가 먼저 닿은 나무예요', 'The bugs already reached this tree')); return; }
     turn++; if (!fruit[i]) { bag[i] = 1; c.snd('pop'); c.say(c.T('열매가 없는 나무예요. 봉지 한 번을 썼어요', 'No fruit on this tree. That bag was wasted')); }
@@ -728,7 +732,7 @@ function mkCover(c) { const X = jx(c), lv = c.lv, NT = lv >= 4 ? 7 : lv >= 2 ? 6
   return { go: c.T('봉지 씌우기', 'Bag it'), cnt: () => nb, down() { bagTree(sel); }, key(code) { const d = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1 }[code]; if (!d) return false; sel = Math.max(0, Math.min(NT - 1, sel + d)); draw(); return true; },
     tail: () => (ate ? c.T('💡 벌레 먹은 배나무 ' + ate + '그루. 벌레가 오는 쪽 나무부터 씌우면 지킬 수 있어요', '💡 ' + ate + ' tree(s) got bugs. Bag the side the bugs come from first') : ''),
     tick(dt) { if (TB.tick(dt) && !c.done) { for (let i = 0; i < NT; i++) if (fruit[i] && !bag[i] && !eat[i]) { eat[i] = 1; ate++; } draw(); c.finish(score()); } },
-    get dbg() { return { ty: TY, ent: ENT, fs: FS, k: K, D, fruit: fruit.slice(), bag: Array.from(bag), eat: Array.from(eat), turn, ate, n: WP.n, order: [...Array(NT).keys()].filter(i => fruit[i]).sort((a, b) => dist(a) - dist(b)), bagT: i => bagTree(i) }; },
+    get dbg() { return { ty: TY, ent: ENT, fs: FS, k: K, D, t0, fruit: fruit.slice(), bag: Array.from(bag), eat: Array.from(eat), turn, ate, n: WP.n, order: [...Array(NT).keys()].filter(i => fruit[i]).sort((a, b) => dist(a) - dist(b)), bagT: i => bagTree(i) }; },
     dispose() { OR.removeEventListener('pointerdown', pd); } }; }
 
 // ⑪ 어린 나무 심기(JUDGE-1 · 10-25 물 꾹 → 흙 보고 판단): 심는 차례(구덩이 → 묘목 세우기 → 흙 덮고 밟기 → 물) 안에 판단 둘
@@ -744,7 +748,7 @@ const WAT3 = [['주지 않기', 'No water'], ['한 컵', 'One cup'], ['두 컵',
 const depthSvg = o => { const g = 34, y = g + o; return '<svg viewBox="0 0 60 64" width="60" height="64" aria-hidden="true"><rect x="0" y="' + g + '" width="60" height="30" fill="#a07a52"/><line x1="0" y1="' + g + '" x2="60" y2="' + g + '" stroke="#4a3322" stroke-width="2"/>'
   + '<path d="M30 ' + y + ' L20 ' + (y + 13) + ' M30 ' + y + ' L30 ' + (y + 16) + ' M30 ' + y + ' L40 ' + (y + 13) + ' M25 ' + (y + 7) + ' L18 ' + (y + 9) + ' M35 ' + (y + 7) + ' L42 ' + (y + 9) + '" stroke="#5a3a1e" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
   + '<line x1="30" y1="' + y + '" x2="30" y2="' + (y - 22) + '" stroke="#4f7a34" stroke-width="3"/><ellipse cx="24" cy="' + (y - 21) + '" rx="6" ry="3.5" fill="#6fae4a"/><ellipse cx="36" cy="' + (y - 24) + '" rx="6" ry="3.5" fill="#6fae4a"/><rect x="25" y="' + (y - 2) + '" width="10" height="4" rx="2" fill="#7a3f1a"/></svg>'; };   /* 단면 그림: 땅 선 · 뿌리 목(갈색 마디) · 뿌리 · 줄기 */
-function mkOrder(c) { const X = jx(c), lv = c.lv, M = X.mem && typeof X.mem === 'object' ? X.mem : null, KEY = String(X.key || c.k || 'lumber'), DAY = X.day | 0, D = [10, 7, 6, 5][lv - 1], NT = lv >= 4 ? 3 : 2, rain = !!(X.rain || X.snow);
+function mkOrder(c) { const X = jx(c), lv = c.lv, M = X.mem && typeof X.mem === 'object' ? X.mem : null, KEY = String(X.key || c.k || 'lumber'), DAY = X.day | 0, D = [10, 7, 6, 5, 5][lv - 1], NT = lv >= 4 ? 3 : 2, rain = !!(X.rain || X.snow);
   const R0 = M && M[KEY] && typeof M[KEY] === 'object' && Array.isArray(M[KEY].w) ? M[KEY] : { d: DAY, w: [] }, old = R0.d < DAY ? R0.w.slice(0, 3) : [], keep = R0.d < DAY ? [] : R0.w.slice();   /* old = 어제까지 잘못 심은 나무(오늘 시들어 보임) · keep = 오늘 잘못 심은 것(내일 보임) */
   const Q = old.map(why => ({ rv: 1, why })); for (let i = 0; i < NT; i++) Q.push({ rv: 0 });
   const wts = X.rain || X.rainY || X.snow ? [0.15, 0.35, 0.5] : X.windy && !X.cloudy ? [0.5, 0.35, 0.15] : [0.34, 0.33, 0.33];
@@ -754,7 +758,7 @@ function mkOrder(c) { const X = jx(c), lv = c.lv, M = X.mem && typeof X.mem === 
   c.mg.innerHTML = '<div class="trw"></div><div class="dots">' + '<i></i>'.repeat(Q.length) + '</div>'; const W9 = c.mg.querySelector('.trw'), dots = c.mg.querySelectorAll('.dots i');
   const scn = () => W9.querySelector('.scn');
   const setS = s => { const e = scn(); if (e) e.className = 'scn tr2 ' + skyOf(X) + ' s' + s + (lv >= 3 && s >= 3 ? ' fhon' : ''); };
-  const scene = () => '<div class="scn tr2 ' + skyOf(X) + ' s0"><i class="sun"></i><b class="wxl">' + c.T(SKYN[skyOf(X)][0], SKYN[skyOf(X)][1]) + '</b><i class="gr" style="background:' + SOILC[cur.sf] + '"></i><i class="pit" style="background:' + SOILC[cur.m] + '"></i><i class="sap' + (cur.rv ? ' wl' : '') + '">🌱</i><i class="mound" style="background:' + SOILC[cur.sf] + '"></i><i class="fh" style="background:' + SOILC[cur.m] + '"></i><i class="drop">💧</i></div>';
+  const scene = () => '<div class="scn tr2 ' + skyOf(X) + ' s0"><i class="sun"></i><b class="wxl">' + c.T(SKYN[skyOf(X)][0], SKYN[skyOf(X)][1]) + '</b><i class="gr" style="background:' + SOILC[cur.sf] + '"></i><i class="pit" style="background:' + SOILC[cur.m] + '"></i><i class="sap' + (cur.rv ? ' wl' : '') + '">🌱</i><i class="mound" style="background:' + SOILC[cur.sf] + '"></i><i class="fh" style="background:' + SOILC[cur.m] + '"></i><i class="drop">💧</i></div>' + (cur.wd != null ? '<div class="sm wdl" style="text-align:center;font-weight:800;margin:4px 0">' + (cur.wd ? c.T('🌬 이 자리: 바람이 센 언덕', '🌬 This spot: a windy slope') : c.T('🌳 이 자리: 담 옆, 바람이 잔잔해요', '🌳 This spot: by a wall, the wind is calm')) + '</div>' : '');   /* HARD-1 명인 칸 = 자리마다 바람(받침대 판단) */
   const markP = () => { const P = W9.querySelectorAll('.pick button'); P.forEach((b, i) => b.classList.toggle('sel', i === sel)); };
   const showDepth = () => { ph = 'depth'; sel = 1; const cr = W9.querySelector('.crd'); if (cr) cr.style.display = 'none';
     W9.insertAdjacentHTML('beforeend', '<div class="bx3 dp pick">' + cur.dOrd.map((o, j) => '<button data-q="' + o + '"><small>' + (j + 1) + '</small>' + depthSvg(o * D) + '</button>').join('') + '</div>'); markP();
@@ -763,7 +767,15 @@ function mkOrder(c) { const X = jx(c), lv = c.lv, M = X.mem && typeof X.mem === 
   const showWater = () => { ph = 'water'; sel = 1; const cr = W9.querySelector('.crd'); if (cr) cr.style.display = 'none'; setS(3);
     W9.insertAdjacentHTML('beforeend', '<div class="bx3 wt pick">' + [0, 1, 2].map(n => '<button data-w="' + n + '">' + cups(n) + '<small>' + (n + 1) + '. ' + c.T(WAT3[n][0], WAT3[n][1]) + '</small></button>').join('') + '</div>'); markP();
     c.say(cur.rv ? c.T('어제 심은 나무가 시들었어요. 흙을 보고 물을 알맞게 줘요', 'A tree planted yesterday has wilted. Look at the soil and water it just right') : lv >= 3 ? c.T('물을 얼마나 줄까요? 겉흙 말고 속흙(손가락 구멍)을 봐요', 'How much water? Look at the soil inside the finger hole, not the surface') : c.T('물을 얼마나 줄까요? 흙 색을 봐요', 'How much water? Look at the soil colour')); };
-  const build = () => { cur = Q[qi]; st = 0; sel = 0; cur.dOrd = shuf([-1, 0, 1]);
+  const showStake = () => { ph = 'stake'; sel = 0; const cr = W9.querySelector('.crd'); if (cr) cr.style.display = 'none';
+    W9.insertAdjacentHTML('beforeend', '<div class="bx3 sk pick">' + [['받침대 세우고 묶기', 'Add a stake and tie it'], ['그냥 두기', 'Leave it as it is']].map((t, j) => '<button data-k="' + j + '"><small>' + (j + 1) + '. ' + c.T(t[0], t[1]) + '</small></button>').join('') + '</div>'); markP();
+    c.say(cur.rv ? c.T('어제 심은 나무가 바람에 흔들려 시들었어요. 이 자리 바람을 보고 다시 골라요', 'A tree planted yesterday shook in the wind and wilted. Check the wind here and choose again') : c.T('이 자리는 바람이 어떤가요? 받침대가 필요할까요?', 'How windy is this spot? Does it need a stake?')); };
+  const pickStake = k => { if (ph !== 'stake' || c.done) return; const P = W9.querySelector('.sk'); if (P) P.remove(); const ok = (k === 0) === !!cur.wd;
+    if (ok) { c.snd('ding'); c.say(cur.wd ? c.T('받침대에 묶었어요. 바람에 흔들려도 뿌리가 자리를 잡아요', 'Tied to a stake. Even in the wind the roots can settle') : c.T('바람이 잔잔한 곳이라 받침대 없이 둬요. 줄기가 조금씩 흔들려야 튼튼해져요', 'The wind is calm here, so no stake. A little sway makes the trunk stronger')); if (cur.rv) { const s9 = W9.querySelector('.sap'); if (s9) s9.classList.remove('wl'); } }
+    else { c.snd('pop'); if (cur.wd) { if (!cur.rv) cur.bad = cur.bad || 'stake'; c.say(c.T('바람 센 언덕이라 어린 나무가 흔들려 뿌리가 들떠요', 'On a windy slope the young tree shakes and its roots lift') + (cur.rv ? c.T('. 아직 시든 채예요', '. It is still wilted') : c.T('. 내일 이 나무를 봐요', '. Check this tree tomorrow'))); } else { miss++; c.say(c.T('바람이 잔잔한 곳엔 받침대가 없어도 돼요. 받침대는 바람 센 곳에 아껴 써요', 'A calm spot does not need a stake. Save stakes for windy spots')); } }
+    treeDone(cur.rv ? ok : !!cur.wok && !cur.bad); };
+  const build = () => { cur = Q[qi]; st = 0; sel = 0; cur.dOrd = shuf([-1, 0, 1]); cur.wd = lv >= 5 && !cur.rv ? Math.random() < 0.5 : null;
+    if (cur.rv && cur.why === 'stake') { cur.wd = true; cur.m = 1; cur.sf = 1; W9.innerHTML = scene(); setS(4); showStake(); return; }   /* 어제 받침대 없이 둔 바람 센 자리 나무 = 받침대부터 */
     if (cur.rv) { cur.m = cur.why === 'wet' ? 2 : cur.why === 'dry' ? 0 : pickM(); if (rain && cur.m === 0) cur.m = 1; cur.sf = cur.m; W9.innerHTML = scene(); setS(3); if (cur.why === 'wet' || cur.why === 'dry') showWater(); else showDepth(); return; }   /* 시든 나무: 물 탓 = 흙이 아직 그대로(젖음·마름) */
     cur.m = pickM(); cur.sf = lv >= 3 && Math.random() < 0.65 ? (cur.m === 0 ? 2 : cur.m === 2 ? 0 : Math.random() < 0.5 ? 0 : 2) : cur.m;   /* 3칸부터 겉흙과 속흙이 다름(살짝 온 비 = 겉만 젖음 · 볕 = 겉만 마름) */
     const ord = shuf([0, 1, 2, 3]); W9.innerHTML = scene() + '<div class="row crd">' + ord.map((i, j) => '<button class="sub" data-s="' + i + '">' + (j + 1) + '. ' + TREE4[i][0] + ' ' + c.T(TREE4[i][1][0], TREE4[i][1][1]) + '</button>').join('') + '</div>'; ph = 'order';
@@ -779,24 +791,25 @@ function mkOrder(c) { const X = jx(c), lv = c.lv, M = X.mem && typeof X.mem === 
     else { c.snd('pop'); if (!cur.rv) cur.bad = cur.bad || (n > need ? 'wet' : 'dry');
       c.say((n > need ? (cur.m === 2 ? c.T('흙이 이미 젖어 있었어요', 'The soil was already wet') : rain ? c.T('비가 오고 있어서 물이 더 들어가요', 'It is raining, so more water is coming') : c.T('물이 많았어요', 'That was too much water')) + c.T('. 물이 너무 많으면 뿌리가 숨을 못 쉬어요', '. Too much water and the roots cannot breathe') : (cur.m === 0 ? c.T('흙이 말라 있었어요', 'The soil was dry') : c.T('물이 모자랐어요', 'That was not enough water')) + c.T('. 물이 모자라면 뿌리가 말라요', '. Without enough water the roots dry out'))
         + (cur.rv ? c.T('. 아직 시든 채예요', '. It is still wilted') : c.T('. 내일 이 나무를 봐요', '. Check this tree tomorrow'))); }
+    if (cur.wd != null && !cur.rv) { cur.wok = ok; ph = 'pre'; nxT = 1.5; return; }   /* 명인 칸: 물 다음 = 받침대 판단 */
     treeDone(cur.rv ? ok : ok && !cur.bad); };
   const pick = i => { if (c.done || ph !== 'order' || lock > 0) return; const b = W9.querySelector('[data-s="' + i + '"]'); if (!b || b.disabled) return;
     if (i !== st) { miss++; lock = 1.2; pop(b, 'no'); c.snd('pop'); c.say(c.T(WHY4[Math.min(2, st)][0], WHY4[Math.min(2, st)][1])); return; }
     b.disabled = true; c.snd('tick'); if (i === 1) { showDepth(); return; } if (i === 3) { showWater(); return; }
     st++; setS(st); c.say(st === 1 ? (lv >= 3 ? c.T('구덩이를 팠어요. 속흙 색을 봐 둬요. 겉흙과 다를 수 있어요', 'Hole dug. Note the colour of the soil inside. It can differ from the surface') : c.T('구덩이를 팠어요. 다음은?', 'Hole dug. What is next?')) : c.T('좋아요! 다음은?', 'Good! What is next?')); };
-  const pd = e => { const b = e.target.closest('[data-s],[data-q],[data-w]'); if (!b) return; e.preventDefault(); if (b.dataset.s != null) pick(+b.dataset.s); else if (b.dataset.q != null) pickDepth(+b.dataset.q); else pickWater(+b.dataset.w); };
+  const pd = e => { const b = e.target.closest('[data-s],[data-q],[data-w],[data-k]'); if (!b) return; e.preventDefault(); if (b.dataset.s != null) pick(+b.dataset.s); else if (b.dataset.q != null) pickDepth(+b.dataset.q); else if (b.dataset.k != null) pickStake(+b.dataset.k); else pickWater(+b.dataset.w); };
   c.mg.addEventListener('pointerdown', pd);
   const score = () => { const n = Q.length; return gt === n && miss <= 1 ? 3 : gt * 2 >= n ? 2 : gt >= 1 ? 1 : 0; };
   const end = () => { ph = 'end'; if (M) { M[KEY] = { d: DAY, w: keep.concat(sick).slice(-3) }; if (X.mark) X.mark(); } c.finish(score()); };
   build(); if (old.length) c.say(c.T('어제 심은 나무 ' + old.length + '그루가 시들었어요. 먼저 돌봐요', old.length + ' tree(s) planted yesterday have wilted. Care for them first'));
-  const pickSel = () => { const b = W9.querySelectorAll('.pick button')[sel]; if (!b) return; if (ph === 'depth') pickDepth(+b.dataset.q); else if (ph === 'water') pickWater(+b.dataset.w); };
+  const pickSel = () => { const b = W9.querySelectorAll('.pick button')[sel]; if (!b) return; if (ph === 'depth') pickDepth(+b.dataset.q); else if (ph === 'water') pickWater(+b.dataset.w); else if (ph === 'stake') pickStake(+b.dataset.k); };
   return { cnt: () => gt,
     tail: () => (newBad ? c.T('💡 잘못 심은 나무 ' + newBad + '그루는 내일 시들어 있을 거예요. 다시 와서 돌봐요', '💡 ' + newBad + ' tree(s) planted wrong will look wilted tomorrow. Come back to care for them') : revived ? c.T('💡 시든 나무 ' + revived + '그루를 되살렸어요. 뿌리 목은 땅 높이, 물은 흙을 보고 줘요', '💡 You revived ' + revived + ' wilted tree(s). Root collar at ground level, water by the soil') : ''),
-    down() { if (ph === 'depth' || ph === 'water') pickSel(); },
-    key(code, rep) { if (ph === 'depth' || ph === 'water') { const d = /^Digit([1-3])$/.exec(code); if (d) { if (!rep) { sel = +d[1] - 1; pickSel(); } return true; } const m = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1 }[code]; if (m) { sel = (sel + m + 3) % 3; markP(); return true; } return false; }
+    down() { if (ph === 'depth' || ph === 'water' || ph === 'stake') pickSel(); },
+    key(code, rep) { if (ph === 'depth' || ph === 'water' || ph === 'stake') { const nb = ph === 'stake' ? 2 : 3, d = /^Digit([1-3])$/.exec(code); if (d) { if (!rep && +d[1] <= nb) { sel = +d[1] - 1; pickSel(); } return true; } const m = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1 }[code]; if (m) { sel = (sel + m + nb) % nb; markP(); return true; } return false; }
       const d = /^Digit([1-4])$/.exec(code); if (!d || ph !== 'order') return false; if (rep) return true; const b = W9.querySelectorAll('.crd button')[+d[1] - 1]; if (b && !b.disabled) pick(+b.dataset.s); return true; },
-    tick(dt) { if (lock > 0) lock -= dt; if (ph === 'wait' && (nxT -= dt) <= 0) { qi++; if (qi >= Q.length) end(); else build(); } },
-    get dbg() { return { ph, qi, n: Q.length, rv: !!(cur && cur.rv), why: cur && cur.why, m: cur ? cur.m : -1, sf: cur ? cur.sf : -1, need: cur ? needOf(cur.m) : -1, dOrd: cur ? cur.dOrd.slice() : [], st, cards: [...W9.querySelectorAll('.crd button')].map(b => +b.dataset.s), gt, revived, sick: sick.slice(), keep: keep.slice(), old: old.slice(), lock: +Math.max(0, lock).toFixed(2), miss, lv, rain, key: KEY, day: DAY }; },
+    tick(dt) { if (lock > 0) lock -= dt; if (ph === 'pre' && (nxT -= dt) <= 0) showStake(); else if (ph === 'wait' && (nxT -= dt) <= 0) { qi++; if (qi >= Q.length) end(); else build(); } },
+    get dbg() { return { ph, qi, n: Q.length, rv: !!(cur && cur.rv), why: cur && cur.why, m: cur ? cur.m : -1, sf: cur ? cur.sf : -1, need: cur ? needOf(cur.m) : -1, dOrd: cur ? cur.dOrd.slice() : [], wd: cur ? cur.wd : null, st, cards: [...W9.querySelectorAll('.crd button')].map(b => +b.dataset.s), gt, revived, sick: sick.slice(), keep: keep.slice(), old: old.slice(), lock: +Math.max(0, lock).toFixed(2), miss, lv, rain, key: KEY, day: DAY }; },
     dispose() { c.mg.removeEventListener('pointerdown', pd); } }; }
 
 // ⑫ 먹이 나눠 주기(목장): 하나씩 나오는 먹이를 알맞은 동물에게(끌어다 놓기 · 누르기 · 1~4) — 소·양 = 풀·건초(초식) · 개 = 고기 · 초콜릿 = 아무에게도 X(개에게 위험)
@@ -907,11 +920,12 @@ function mkToss(c) { const lv = c.lv, N = 5, W = 440, H = 220, GY = 190, LX = 74
   c.mg.innerHTML = '<canvas width="' + W + '" height="' + H + '" style="width:100%;max-width:440px;display:block;margin:0 auto;border-radius:10px;background:#eaf3ff"></canvas><div class="bx3 pick ts"></div><div class="bx3 pick th"></div>';
   const cv = c.mg.querySelector('canvas'), g = cv.getContext('2d'), BS = c.mg.querySelector('.ts'), BH = c.mg.querySelector('.th'), TB = timeBar(c, 40 * c.zw);
   BS.innerHTML = STEP3.map((t, j) => '<button data-st="' + (j - 1) + '"><small>' + c.T(t[0], t[1]) + '</small></button>').join(''); BH.innerHTML = [['낮게 던지기', 'Throw low'], ['높게 던지기', 'Throw high']].map((t, j) => '<button data-h="' + j + '"><small>' + (j + 1) + '. ' + c.T(t[0], t[1]) + '</small></button>').join('');
-  let n = 0, hits = 0, ph = 'aim', s = 0, hsel = 0, P = 4, w = 0, A = null, lock = 0, last = '', miss = 0; const lying = [];
+  let n = 0, hits = 0, ph = 'aim', s = 0, hsel = 0, P = 4, w = 0, A = null, lock = 0, last = '', miss = 0, br = -9; const lying = [];   /* br = HARD-1 명인 칸 낮은 나뭇가지가 드리운 설 자리(그 밑에선 높게 던지면 가지에 걸림) */
   const wlOf = w9 => (lv >= 3 && Math.abs(w9) >= 2 ? Math.sign(w9) : 0), land = (s9, h9) => s9 + R0 + (h9 ? w : wlOf(w));
-  const sols = () => { const o = []; for (const s9 of [-1, 0, 1]) for (const h9 of [0, 1]) if (land(s9, h9) === P) o.push(s9 + ',' + h9); return o; };
+  const blk = (s9, h9) => h9 === 1 && s9 === br;
+  const sols = () => { const o = []; for (const s9 of [-1, 0, 1]) for (const h9 of [0, 1]) if (!blk(s9, h9) && land(s9, h9) === P) o.push(s9 + ',' + h9); return o; };
   const newRound = () => { const PS = lv >= 4 ? [3, 4, 5, 6] : [3, 4, 5], WS = lv === 1 ? [0] : lv === 2 ? [-1, 0, 1] : [-2, -1, 0, 1, 2];
-    for (let k = 0; k < 40; k++) { P = PS[(Math.random() * PS.length) | 0]; w = WS[(Math.random() * WS.length) | 0]; if (lv >= 4 && n === 0 && k < 30 && P < 6) continue; if (sols().length && P + ':' + w !== last) break; }
+    for (let k = 0; k < 40; k++) { P = PS[(Math.random() * PS.length) | 0]; w = WS[(Math.random() * WS.length) | 0]; if (lv >= 5) br = [-1, 0, 1][(Math.random() * 3) | 0]; if (lv >= 4 && n === 0 && k < 30 && P < 6) continue; if (lv >= 5 && k < 30 && land(br, 1) !== P) continue; if (sols().length && P + ':' + w !== last) break; }
     last = P + ':' + w; s = 0; ph = 'aim'; markB(); draw(); };
   const markB = () => { BS.querySelectorAll('button').forEach(b => b.classList.toggle('sel', +b.dataset.st === s)); BH.querySelectorAll('button').forEach(b => b.classList.toggle('sel', +b.dataset.h === hsel)); };
   const flagF = () => (w === 0 ? 0.25 : Math.abs(w) === 1 ? 0.6 : 1) * (w < 0 ? -1 : 1);
@@ -920,6 +934,7 @@ function mkToss(c) { const lv = c.lv, N = 5, W = 440, H = 220, GY = 190, LX = 74
     g.fillStyle = '#2b2420'; g.font = '800 11px sans-serif'; g.textAlign = 'center'; for (let k = 1; k <= 7; k++) { const x = LX + k * SPX; g.fillRect(x - 1, GY + 2, 2, 7); g.fillText(String(k), x, GY + 22); }   /* 걸음 눈금 */
     for (const q of lying) { g.save(); g.translate(q, GY - 3); g.rotate(0.12); g.strokeStyle = '#7a5232'; g.lineWidth = 3; g.beginPath(); g.moveTo(-14, 0); g.lineTo(10, 0); g.stroke(); g.fillStyle = '#e0453a'; g.beginPath(); g.moveTo(10, -3); g.lineTo(15, 0); g.lineTo(10, 3); g.fill(); g.restore(); }   /* 빗나가 누운 화살 */
     const px = LX + P * SPX, pw = 26; g.fillStyle = '#5d6f86'; g.beginPath(); g.ellipse(px, GY - 18, pw / 2 + 12, 19, 0, 0, 6.2832); g.fill(); g.fillRect(px - pw / 2 - 3, GY - 46, pw + 6, 14); g.fillStyle = '#2b2420'; g.fillRect(px - pw / 2, GY - 46, pw, 4); g.strokeStyle = '#c9a24a'; g.lineWidth = 2; g.strokeRect(px - pw / 2 - 3, GY - 46, pw + 6, 14);   /* 항아리 */
+    if (br > -9) { const bx = LX + br * SPX - 12; g.strokeStyle = '#6b4a2f'; g.lineWidth = 5; g.beginPath(); g.moveTo(bx + 46, 0); g.lineTo(bx - 14, GY - 84); g.stroke(); g.fillStyle = '#5f9a3e'; for (const [ox, oy] of [[-14, -84], [2, -96], [16, -112], [-4, -106]]) { g.beginPath(); g.ellipse(bx + ox, GY + oy, 11, 6, 0.4, 0, 6.2832); g.fill(); } }   /* 낮게 드리운 나뭇가지(위에서 내려옴) */
     const fx = W - 30, f = flagF(); g.strokeStyle = '#6b4a2f'; g.lineWidth = 3; g.beginPath(); g.moveTo(fx, GY); g.lineTo(fx, GY - 86); g.stroke(); g.fillStyle = '#e0453a'; g.beginPath(); const ang = (1 - Math.abs(f)) * 1.25, dx = Math.cos(ang) * 30 * Math.sign(f), dy = Math.sin(ang) * 30;
     g.moveTo(fx, GY - 86); g.lineTo(fx + dx, GY - 86 + dy + 4); g.lineTo(fx + dx * 0.92, GY - 86 + dy + 13); g.lineTo(fx, GY - 72); g.closePath(); g.fill(); if (Math.abs(w) >= 2) { g.strokeStyle = '#2b2420'; g.lineWidth = 1.5; for (const k of [0, 1, 2]) { g.beginPath(); g.moveTo(fx - 24 * Math.sign(f), GY - 96 + k * 8); g.lineTo(fx - 10 * Math.sign(f), GY - 96 + k * 8); g.stroke(); } }   /* 바람 깃발(처짐·반·쭉 + 센 바람 줄) */
     g.font = '700 11px sans-serif'; g.fillStyle = '#2b2420'; g.fillText(w === 0 ? c.T('잔잔', 'calm') : (Math.abs(w) >= 2 ? c.T('세게 ', 'strong ') : c.T('살랑 ', 'light ')) + (w > 0 ? '→' : '←'), fx - 4, GY - 100);
@@ -928,10 +943,11 @@ function mkToss(c) { const lv = c.lv, N = 5, W = 440, H = 220, GY = 190, LX = 74
       g.save(); g.translate(x, y); g.rotate(an); g.strokeStyle = '#7a5232'; g.lineWidth = 3; g.beginPath(); g.moveTo(-18, 0); g.lineTo(10, 0); g.stroke(); g.fillStyle = '#e0453a'; g.beginPath(); g.moveTo(10, -4); g.lineTo(16, 0); g.lineTo(10, 4); g.fill(); g.restore(); }
     g.fillStyle = '#2b2420'; g.font = '800 15px sans-serif'; g.textAlign = 'left'; g.fillText(c.T('화살 ', 'Arrow ') + Math.min(N, n + 1) + '/' + N + '  ·  ' + c.T('쏙 ', 'In ') + hits, 10, 22); }
   const setStep = s9 => { if (ph !== 'aim' || c.done) return; s = Math.max(-1, Math.min(1, s9)); c.snd('tick'); markB(); draw(); };
-  const throwH = h9 => { if (ph !== 'aim' || c.done || lock > 0) return; hsel = h9; markB(); const L9 = land(s, h9), ok = L9 === P, x0 = LX + s * SPX, x1 = LX + L9 * SPX;
-    A = { x0, y0: GY - 50, x1, y1: ok ? GY - 40 : GY - 3, t: 0, T: h9 ? 1.1 : 0.7, pk: h9 ? 120 : 34, ok, d: L9 - P, h: h9 }; ph = 'fly'; c.snd('pop'); };
+  const throwH = h9 => { if (ph !== 'aim' || c.done || lock > 0) return; hsel = h9; markB(); const bk = blk(s, h9), L9 = land(s, h9), ok = !bk && L9 === P, x0 = LX + s * SPX, x1 = bk ? x0 + SPX * 0.6 : LX + L9 * SPX;
+    A = { x0, y0: GY - 50, x1, y1: ok ? GY - 40 : GY - 3, t: 0, T: bk ? 0.5 : h9 ? 1.1 : 0.7, pk: bk ? 50 : h9 ? 120 : 34, ok, d: L9 - P, h: h9, bk }; ph = 'fly'; c.snd('pop'); };
   const after = () => { const q = A; A = null; n++;
     if (q.ok) { hits++; c.snd('ding'); c.say(c.T('쏙! 들어갔어요', 'Plop! It went in')); lock = 0.8; }
+    else if (q.bk) { miss++; lying.push(q.x1); c.snd('tick'); c.say(c.T('높게 던진 화살이 나뭇가지에 걸려 떨어졌어요. 가지 밑에서는 낮게 던지거나 자리를 옮겨요. 화살을 주우러 다녀와요…', 'The high throw hit the branch and dropped. Under the branch, throw low or move. Go and fetch the arrow…')); lock = 2.2 / c.zw; }
     else { miss++; lying.push(q.x1); c.snd('tick'); const why = q.h && w ? c.T('높이 던진 화살은 오래 날아서 바람을 그만큼 타요', 'A high throw stays up longer and rides the wind more') : !q.h && w && !wlOf(w) ? c.T('낮게 던진 화살은 바람을 거의 안 타요', 'A low throw hardly feels the wind') : !q.h && wlOf(w) ? c.T('바람이 세면 낮게 던져도 조금 밀려요', 'In a strong wind even a low throw is pushed a little') : c.T('바람이 없으니 서는 자리가 거리를 정해요', 'With no wind, where you stand decides the distance');
       c.say((q.d < 0 ? c.T('짧았어요(항아리보다 ', 'Short (') + (-q.d) + c.T('걸음 앞) — ', ' step(s) before the pot) — ') : c.T('멀었어요(항아리보다 ', 'Long (') + q.d + c.T('걸음 뒤) — ', ' step(s) past the pot) — ')) + why + c.T('. 화살을 주우러 다녀와요…', '. Go and fetch the arrow…')); lock = 2.2 / c.zw; }
     ph = 'wait'; draw(); };
@@ -945,7 +961,7 @@ function mkToss(c) { const lv = c.lv, N = 5, W = 440, H = 220, GY = 190, LX = 74
     tick(dt) { if (TB.tick(dt)) { ph = 'end'; c.finish(score()); return; }
       if (ph === 'fly' && A) { A.t += dt; if (A.t >= A.T) after(); draw(); return; }
       if (lock > 0 && (lock -= dt) <= 0) { lock = 0; if (ph === 'wait') { if (n >= N) { ph = 'end'; c.finish(score()); return; } newRound(); if (n === 1 && lv >= 2) c.say(c.T('깃발이 바뀌었어요. 다시 봐요', 'The flag has changed. Look again')); } } },
-    get dbg() { return { ph, P, w, wl: wlOf(w), s, hsel, sols: sols(), n, hits, miss, lying: lying.length, lock: +Math.max(0, lock).toFixed(2), left: +TB.left.toFixed(2), lv }; },
+    get dbg() { return { ph, P, w, wl: wlOf(w), br, s, hsel, sols: sols(), n, hits, miss, lying: lying.length, lock: +Math.max(0, lock).toFixed(2), left: +TB.left.toFixed(2), lv }; },
     dispose() { c.mg.removeEventListener('pointerdown', pd); } }; }
 
 // ⑱ 🍳 바쁜 부엌(KITCHEN-1 · 사용자 10-20 '다 빨간 막대잖아요' · '실제 게임 방식으로' · 설계 docs/systems/town_jobs2.md 「다음 다섯 — 🍳 바쁜 부엌」): 주문 쪽지 → 재료를 냄비로 끌기 → 불 세기·뚜껑 → 알맞게 익으면 접시로 끌기
@@ -1141,7 +1157,7 @@ const MK = { toss: mkToss, spread: mkSpread, gauge: mkGauge, tug: mkTug, ripe: m
 // 놀이 하나 열기: o = { root(.pb — 안에 .mg · .msg · .go가 있어야 함), k(일 갈래), en, zw(솜씨 배수 = 초록 칸·시간 · 부엌은 여유 시간), sea, x(놀이별 자료), sfx(k), tone(...), grade(false = 결과 말 없이 바로 끝 — 부엌·투호), onEnd(점수 0~3),
 //   lv(LADDER-2 도전 칸 1~4 · 조건 값 = town_lad.js LADP) · onRec(점수, 모은 수) → { lines: [내 최고 줄 · 다음 판 줄], neu } | null(끝 창에 덧붙임) · onBest(줄 요소) = 새 내 최고 연출 }
 export function createMini(kind, o) { css();
-  const c = { root: o.root, mg: o.root.querySelector('.mg'), msgEl: o.root.querySelector('.msg'), go: o.root.querySelector('.go'), en: !!o.en, zw: Math.max(1, o.zw || 1), k: o.k, sea: o.sea, x: o.x || null, done: false, lv: Math.max(1, Math.min(4, o.lv | 0 || 1)) }; c.lp = ladVal(kind, c.lv);   /* LADDER-2 lp = 이 칸의 조건 값(없는 놀이 = null → 놀이 틀은 1칸 값으로) */   /* x = 놀이별 자료(부엌: 요리법·사다리·손님·날씨 · KITCHEN-1) */
+  const c = { root: o.root, mg: o.root.querySelector('.mg'), msgEl: o.root.querySelector('.msg'), go: o.root.querySelector('.go'), en: !!o.en, zw: Math.max(1, o.zw || 1), k: o.k, sea: o.sea, x: o.x || null, done: false, lv: Math.max(1, Math.min(LADP[kind] && LADP[kind].v.length >= 5 ? 5 : 4, o.lv | 0 || 1)) }; c.lp = ladVal(kind, c.lv);   /* HARD-1 명인 칸(5) = 다섯째 값이 있는 갈래만 */   /* LADDER-2 lp = 이 칸의 조건 값(없는 놀이 = null → 놀이 틀은 1칸 값으로) */   /* x = 놀이별 자료(부엌: 요리법·사다리·손님·날씨 · KITCHEN-1) */
   c.h9 = { sitPick, flagSide, cloudSvg };   /* DEPTH-2 소금(town_salt.js)이 쓰는 상황 고르기·그림 */
   c.T = (ko, e2) => (c.en ? e2 : ko); c.say = s => { if (c.msgEl && c.msgEl.textContent !== s) c.msgEl.textContent = s; }; c.snd = k => { if (o.sfx) o.sfx(k); }; c.tone = (...a) => { if (o.tone) o.tone(...a); };
   let endT = -1, score = 0, cntT = -1, recR = null;
