@@ -21,14 +21,17 @@ export const LADP = {
   gauge: { v: [1, 0.85, 0.72, 0.62], t: (k, a) => ['배가 ' + a[0] + '일찍 돌아가요. 시간이 짧아요', 'The boat heads back ' + a[1] + 'early — less time'] },
 };
 const FISHT = { 2: ['큰 고기가 와요. 미끼를 골라요', 'Big fish come — pick a bait'], 3: ['물때를 보고 자리도 골라요', 'Check the tide and pick a spot too'], 4: ['바람이 줄을 한쪽으로 밀어요', 'The wind pushes the line to one side'] };
+/* FIRE-5: 소방 출동은 칸 다섯(소화기 → 호스 → 사다리차 → 두 곳 → 반장) · 다른 놀이는 넷 */
+const MAXL = k => (k === 'fire' ? 5 : 4);
+const FIRET = { 2: ['호스로 불을 꺼요', 'Use the hose'], 3: ['사다리차로 높은 곳을 구해요', 'Rescue up high with the ladder truck'], 4: ['두 곳에 동시에 불이 나요', 'Fire in two places at once'], 5: ['반장이 되어 대원 둘에게 일을 맡겨요', 'Lead the crew — give two firefighters their jobs'] };
 export const ladVal = (kind, lv) => { const P = LADP[kind]; return P ? P.v[Math.max(1, Math.min(4, lv | 0 || 1)) - 1] : null; };
 // 창 위 한 줄: '도전 2칸: 익은 딸기가 조금 빨리 물러요' · 1칸 = '도전 1칸'
-export function ladText(kind, k, lv, en) { lv = Math.max(1, Math.min(4, lv | 0 || 1)); const head = en ? 'Challenge step ' + lv : '도전 ' + lv + '칸';
-  if (lv === 1) return head; let t = null; if (kind === 'tug') t = FISHT[lv]; else if (LADP[kind]) t = LADP[kind].t(k, A4[lv - 1], lv); return t ? head + ': ' + t[en ? 1 : 0] : head; }
+export function ladText(kind, k, lv, en) { lv = Math.max(1, Math.min(MAXL(kind), lv | 0 || 1)); const head = en ? 'Challenge step ' + lv : '도전 ' + lv + '칸';
+  if (lv === 1) return head; let t = null; if (kind === 'tug') t = FISHT[lv]; else if (kind === 'fire') t = FIRET[lv]; else if (LADP[kind]) t = LADP[kind].t(k, A4[lv - 1], lv); return t ? head + ': ' + t[en ? 1 : 0] : head; }
 // 기록 이름: [놀이 이름, 모은 것, 단위]
 const RECN = { strawberry: ['딸기 따기', 'Strawberries', '딸기', '개'], shiitake: ['표고 따기', 'Shiitake', '표고', '송이'], cabbage: ['배추 거두기', 'Cabbages sorted right', '맞게 담은 배추', '포기'], potato: ['감자 캐기', 'Potatoes', '감자', '개'], clam: ['조개 캐기', 'Clams', '조개', '개'],
   beehive: ['꿀 뜨기', 'Honey cells', '꿀 칸', '칸'], pear: ['배 봉지 씌우기', 'Pears bagged', '봉지 씌운 배', '개'], lumber: ['어린 나무 심기', 'Trees planted well', '잘 심은 나무', '그루'], plant: ['모내기', 'Seedlings on the mark', '눈금에 심은 모', '포기'], cut: ['벼 베기', 'Squares cut', '벤 칸', '칸'],
-  seaweed: ['김 펴기', 'Even laver sheets', '고르게 편 김', '장'], oyster: ['굴 크기 재기', 'Oysters sorted right', '바르게 나눈 굴', '개'], pasture: ['먹이 나눠 주기', 'Right feeds', '알맞게 준 먹이', '번'], fisher: ['부두 낚시', 'Fish', '물고기', '마리'], saltpan: ['소금 모으기', 'Salt piles', '모은 소금', '무더기'], cook: ['바쁜 부엌', 'Dishes just right', '알맞게 만든 요리', '그릇'] };
+  seaweed: ['김 펴기', 'Even laver sheets', '고르게 편 김', '장'], oyster: ['굴 크기 재기', 'Oysters sorted right', '바르게 나눈 굴', '개'], pasture: ['먹이 나눠 주기', 'Right feeds', '알맞게 준 먹이', '번'], fisher: ['부두 낚시', 'Fish', '물고기', '마리'], saltpan: ['소금 모으기', 'Salt piles', '모은 소금', '무더기'], cook: ['바쁜 부엌', 'Dishes just right', '알맞게 만든 요리', '그릇'], fire: ['소방 출동', 'Fire calls', '꺼 낸 불꽃', '개'] };
 export const ladName = (key, en) => { const R = RECN[key]; return R ? R[en ? 1 : 0] : key; };
 const GW = [['아쉬움', 'close'], ['잘함', 'well done'], ['아주 잘함', 'excellent']];
 const g3 = s => (s >= 3 ? 2 : s >= 1 ? 1 : 0);
@@ -37,13 +40,13 @@ export function recSay(key, r, en) { if (!r) return ''; const R = RECN[key], hea
   if (r.n > 0 && R) return en ? head + ', ' + r.n + ' ' + R[1].toLowerCase() : head + ', ' + R[2] + ' ' + r.n + R[3]; return head + ', ' + GW[g3(r.g)][en ? 1 : 0]; }
 const rkey = r => (r ? (r.lv | 0) * 1000 + Math.min(3, r.g | 0) * 100 + Math.min(99, r.n | 0) : -1);
 export function ladRoot(S) { let L0 = S.lad; if (!L0 || typeof L0 !== 'object' || Array.isArray(L0)) L0 = S.lad = {}; let M = L0.mg; if (!M || typeof M !== 'object' || Array.isArray(M)) M = L0.mg = {}; return M; }
-export function ladOf(S, key) { const M = ladRoot(S); let L = M[key]; if (!L || typeof L !== 'object') L = M[key] = { lv: 1, z: 0, n: 0, best: null, last: null }; if (!(L.lv >= 1 && L.lv <= 4)) L.lv = 1; return L; }
+export function ladOf(S, key) { const M = ladRoot(S); let L = M[key]; if (!L || typeof L !== 'object') L = M[key] = { lv: 1, z: 0, n: 0, best: null, last: null }; if (!(L.lv >= 1 && L.lv <= MAXL(key))) L.lv = 1; return L; }
 export const ladLv = (S, key) => ladOf(S, key).lv;
 /* 판 끝: o = { lv(이번 판 칸), g(점수 0~3), n(모은 수 · 모르면 -1), own(칸은 다른 사다리 것 · 기록만) } → { neu(새 최고 · 앞 기록을 넘음), first(첫 기록), best, last, next(다음 칸 · 바뀔 때만), down } */
-export function ladAfter(S, key, o) { const L = ladOf(S, key), lv = Math.max(1, Math.min(4, o.lv | 0 || 1)), g = Math.max(0, Math.min(3, o.g | 0)), n = Math.max(0, o.n | 0), cur = { lv, g, n };
+export function ladAfter(S, key, o) { const L = ladOf(S, key), lv = Math.max(1, Math.min(MAXL(key), o.lv | 0 || 1)), g = Math.max(0, Math.min(3, o.g | 0)), n = Math.max(0, o.n | 0), cur = { lv, g, n };
   L.n = (L.n | 0) + 1; L.last = cur; let neu = false, first = false; if (g >= 1 && rkey(cur) > rkey(L.best)) { if (L.best) neu = true; else first = true; L.best = { ...cur }; }
   let next = 0, down = false;
-  if (o.own) L.lv = lv; else if (lv === L.lv) { if (g >= 2) { L.z = 0; if (L.lv < 4) { L.lv++; next = L.lv; } } else if (g === 0) { L.z = (L.z | 0) + 1; if (L.z >= 2 && L.lv > 1) { L.lv--; L.z = 0; next = L.lv; down = true; } } else L.z = 0; }
+  if (o.own) L.lv = lv; else if (lv === L.lv) { if (g >= 2) { L.z = 0; if (L.lv < MAXL(key)) { L.lv++; next = L.lv; } } else if (g === 0) { L.z = (L.z | 0) + 1; if (L.z >= 2 && L.lv > 1) { L.lv--; L.z = 0; next = L.lv; down = true; } } else L.z = 0; }
   return { neu, first, best: L.best, last: cur, next, down, lv: L.lv }; }
 /* 끝 창 두 줄: 내 최고 · (칸이 바뀌면) 다음 판 */
 export function recLines(key, kind, k, R, en) { const b = recSay(key, R.best, en), a = [];
