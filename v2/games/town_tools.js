@@ -1,6 +1,6 @@
 // 🧰 도구 띠(TOOL-1 · 사용자 10-19 "실제로 도구를 사용해서 뭔가를 하는 게 0개네" · "도파민이 안 나와") — 설계 docs/systems/town_tools.md
 //   손에 도구를 늘 들고 다니다가 겨눈 곳(땅 위 흰 고리)에 바로 씀 · 세상이 그 자리에서 바뀜(물 자국·구덩이·쓸린 자리·찌) · 쓸 때마다 소리 + 보상 연출(town.js skUp·bagPop 그대로)
-//   1~5 = 들기/내려놓기 · 클릭·F = 쓰기 · 터치 = 🧰 쓰기 단추 하나(들었을 때만) · ☰ 메뉴 '🧰 도구' = 띠를 펼쳐 고르기
+//   1~5(망원경을 받으면 6) = 들기/내려놓기 · 클릭·F = 쓰기 · 터치 = 🧰 쓰기 단추 하나(들었을 때만) · ☰ 메뉴 '🧰 도구' = 띠를 펼쳐 고르기
 //   물뿌리개(코디 10-19 '메타버스 물총 조준 결'): 누르는 동안 계속 뿌림 · 꼭지에서 포물선 물줄기 · 떨어질 자리 = 흰 고리(텃밭·모닥불·꽃은 고리가 닿은 자리로 판정) · 물통이 비면 수돗가·강가에서 E
 //     물방울 풀·포물선 각 = watergun.js(물총 놀이)에서 옮겨 씀(그 파일은 그대로) · 조준 연결부 = map.player.aim·shoulder(공용)
 //   엔진 = map.player.hold·holdUse·toolTip·act('dig'|'cast'|'peer'|'sweep') — 정본 docs/map_api.md §19
@@ -9,12 +9,13 @@
 //   지어내지 않음(사실만: 지렁이·분해자 · 금어기·놓아주기 · 바닷물 · 꽃의 암술·수술) · 새 사람 X(빗자루 = 마을회관 앞 쪽지 · 낚싯대 = 부두 어부 일꾼) · 홍보판(SM_PROMO) X
 import { fishAt, FISH_FACT } from './town_fish.js?v=2';   /* FISH-2: 바다 = 물때·계절로 걸리는 고기(가까운 얕은 물) */
 export const TOOLS_V = 1;
-export const TOOL_ORDER = ['can', 'shovel', 'rod', 'lens', 'broom'];
+export const TOOL_ORDER = ['can', 'shovel', 'rod', 'lens', 'broom', 'scope'];   /* REWARD-1: 6 = 망원경(관찰 2레벨 보상) */
 export const TOOL = {
   can: { ic: '💧', t: ['물뿌리개', 'Watering can'], how: ['텃밭·꽃·모닥불을 겨눠 누르고 있으면 물을 뿌려요', 'Aim at the garden, flowers or a campfire and hold to pour'], get: ['처음부터 있어요', 'You have it from the start'] },
   shovel: { ic: '⛏', t: ['삽', 'Shovel'], how: ['흙이나 풀밭을 겨눠 쓰면 땅을 파요. 무엇이 나올까요?', 'Aim at soil or grass to dig. What will you find?'], get: ['처음부터 있어요', 'You have it from the start'] },
   rod: { ic: '🎣', t: ['낚싯대', 'Fishing rod'], how: ['물 위를 겨눠 던져요. 찌가 쏙 들어가면 눌러요. 걸리면 물고기 반대쪽으로 끌어요', 'Aim at the water and cast. When the float dips, press. Then pull the opposite way to the fish'], get: ['부두 어부께 받아요', 'Get it from the pier fisher'] },
   lens: { ic: '🔍', t: ['돋보기', 'Magnifier'], how: ['곤충·꽃·버섯·돌을 겨눠 들여다봐요. 잡지 않고 보기만 해요', 'Aim at insects, flowers, mushrooms or stones to look closely. Just look, never catch'], get: ['곤충을 처음 관찰하면 생겨요', 'Comes after your first insect watch'] },
+  scope: { ic: '🔭', t: ['망원경', 'Spyglass'], how: ['들고 누르면 멀리 당겨 봐요. 가운데 보이는 곳 이름과 거리를 알려 줘요. 한 번 더 누르면 그만', 'Press to zoom far. It tells you the name and distance of the place in the middle. Press again to stop'], get: ['관찰 솜씨 2레벨 보상', 'Nature-watching level 2 reward'] },
   broom: { ic: '🧹', t: ['빗자루', 'Broom'], how: ['낙엽·눈·쓰레기를 겨눠 쓸어요. 마을이 깨끗해져요', 'Aim at leaves, snow or litter and sweep. The town gets clean'], get: ['마을회관이나 경로당 앞에서 빌려요', 'Borrow it at a village hall or senior center'] },
 };
 // 민물고기(강·연못에서 낚싯대로 · 사실만) — 도감 「🎣 낚은 물고기」에 바다 물고기(town_fish.js)와 같이 들어감
@@ -33,7 +34,7 @@ const LOOKF = {
   soil: ['🌱 흙 속에 모래 알갱이와 잘게 부서진 잎 조각이 섞여 있어요', '🌱 The soil is a mix of sand grains and tiny bits of broken leaves'],
 };
 const NOTHING = [['⛏ 흙만 나왔어요 — 다른 곳도 파 봐요', '⛏ Just soil — try digging somewhere else'], ['⛏ 흙만 나왔어요 — 겉흙이 검은 건 썩은 잎이 섞여서예요', '⛏ Just soil — topsoil is dark because rotten leaves are mixed in']];
-const RANGE = { can: [0.9, 3.6], shovel: [0.9, 2.4], rod: [2.4, 9], lens: [0.6, 2.4], broom: [0.8, 2.4] };   // 고리 거리(내 앞 m) — 아래를 보면 가까이 · 위를 보면 멀리
+const RANGE = { can: [0.9, 3.6], shovel: [0.9, 2.4], rod: [2.4, 9], lens: [0.6, 2.4], broom: [0.8, 2.4], scope: [0.9, 2], rod2: [2.4, 14] };   // 고리 거리(내 앞 m) — 아래를 보면 가까이 · 위를 보면 멀리
 const TANK = 100, USE = 12, RATE = 34, GV = 9.8, PMAX = 140, MMAX = 10, HMAX = 8, CELL = 24;
 const HIDE = { bike: ['🚲 자전거에서 내려서 써요 (B)', '🚲 Get off the bike to use it (B)'], in: ['🏠 밖에서 써요', '🏠 Use it outside'], boat: ['⛵ 배에서 내려서 써요', '⛵ Get off the boat first'], swim: ['🌊 물 밖에서 써요', '🌊 Get out of the water first'] };
 
@@ -47,10 +48,11 @@ export function createTools(A) {
   const PEND = [], PILES = [], PCACHE = new Map(), FGRID = new Map();
   // ── 저장(GAME.S.tools) — 예전 저장에도 물뿌리개·삽은 있음 ──
   const S = () => { const s = A.GAME.S; let t = s.tools; if (!t || typeof t !== 'object' || Array.isArray(t)) t = s.tools = {}; if (!t.have || typeof t.have !== 'object') t.have = {}; t.have.can = A.canAway && A.canAway() ? 0 : 1; t.have.shovel = 1;   /* SPEND-1: 맡긴 날 = 물뿌리개 없음 */
-    if (!(t.tank >= 0)) t.tank = TANK; if (!Array.isArray(t.holes)) t.holes = []; if (!t.bloom || typeof t.bloom !== 'object') t.bloom = {}; if (!t.sw || typeof t.sw !== 'object') t.sw = { d: 0, k: {} }; if (!t.clean || typeof t.clean !== 'object') t.clean = { d: 0, n: 0, all: 0 };
+    if (!(t.tank >= 0)) t.tank = TANK * (A.gear && A.gear('tank') ? 2 : 1); if (!Array.isArray(t.holes)) t.holes = []; if (!t.bloom || typeof t.bloom !== 'object') t.bloom = {}; if (!t.sw || typeof t.sw !== 'object') t.sw = { d: 0, k: {} }; if (!t.clean || typeof t.clean !== 'object') t.clean = { d: 0, n: 0, all: 0 };
     if (!t.n || typeof t.n !== 'object') t.n = {}; if (t.cur && !t.have[t.cur]) t.cur = null; return t; };
   const mark = () => A.GAME.mark(), day = () => A.GAME.S.day | 0, toast = (t, s) => map.hud.toast(t, s), tone = (...a) => { if (map.tone) map.tone(...a); };
   const cur = () => S().cur || null;
+  const gear = id => !!(A.gear && A.gear(id)), tankMax = () => TANK * (gear('tank') ? 2 : 1), rng = k => (k === 'rod' && gear('rod2') ? RANGE.rod2 : RANGE[k]);   /* REWARD-1 큰 물통 · 튼튼한 낚싯대 · 넓은 빗자루 */
 
   // ───────── 그림(처음 쓸 때 한 번 짓기 · map.add = 게임이 멈추면 치움) ─────────
   let RING = null, DROP = null, MOUND = null, BITS = null, HOLE = null, WET = null, WORMM = null; const MATS = [], GEOS = [];
@@ -69,7 +71,7 @@ export function createTools(A) {
   // ───────── 겨눔(0.1초): 카메라 광선이 내 발 높이에 닿는 곳 → 도구 거리로 자름 → 벽이면 그 앞 → 대상이 가까우면 붙음(노란 고리) ─────────
   const water = (x, z) => A.water(x, z);
   function surfY(x, z, yh) { const w = water(x, z); const g = A.gy(x, z, yh + 1.6); return w && w.y > g - 0.3 ? Math.max(w.y, g) : g; }
-  function aimCalc(force) { const k = cur(); if (!k) return; const me = map.player.pos(), cam = map.camera, R = RANGE[k]; _f.set(0, 0, -1).applyQuaternion(cam.quaternion); const fl = Math.hypot(_f.x, _f.z) || 1, hx = _f.x / fl, hz = _f.z / fl;
+  function aimCalc(force) { const k = cur(); if (!k) return; const me = map.player.pos(), cam = map.camera, R = rng(k); _f.set(0, 0, -1).applyQuaternion(cam.quaternion); const fl = Math.hypot(_f.x, _f.z) || 1, hx = _f.x / fl, hz = _f.z / fl;
     let x, z;
     if (OVR.on) { x = OVR.x; z = OVR.z; }
     else { const o = cam.position; let d = R[1]; if (_f.y < -0.02) { const s = (me.y - o.y) / _f.y; if (s > 0) d = (o.x + _f.x * s - me.x) * hx + (o.z + _f.z * s - me.z) * hz; }
@@ -85,7 +87,7 @@ export function createTools(A) {
   function snap(k, x, z, me) {
     if (k === 'shovel' || k === 'broom') { const xp = A.xp && A.xp(), f = xp && xp.near(x, z, k); if (f) return [f.x, f.y, f.z, 'fos', f.id]; }   /* EXPLORE-1 층층골 흙더미·돌판(그 도구 차례일 때만) */
     if (k === 'shovel') { const t = A.trs(), c = t && t.near && t.near(x, z); if (c) return [c.x, c.y, c.z, 'trs']; return null; }
-    if (k === 'broom') { let b = null, bd = 1.4; for (const p of PILES) { const d = Math.hypot(p.x - x, p.z - z); if (d < bd) { bd = d; b = p; } } return b ? [b.x, b.y, b.z, 'pile', b.k] : null; }
+    if (k === 'broom') { let b = null, bd = gear('broom2') ? 2.2 : 1.4; for (const p of PILES) { const d = Math.hypot(p.x - x, p.z - z); if (d < bd) { bd = d; b = p; } } return b ? [b.x, b.y, b.z, 'pile', b.k] : null; }
     if (k === 'lens') { const L9 = lensAt(x, z, me); return L9 ? [L9.x, L9.y, L9.z, L9.kind, L9.key] : null; }
     if (k === 'can') { const y = surfY(x, z, me.y); if (bedAt(x, z) >= 0) return [x, y, z, 'bed']; const ch = A.chem(); if (ch && ch.fireAt && ch.fireAt(x, z, 1.0) >= 0) return [x, y, z, 'fire']; if (flowerAt(x, z, 0.8)) return [x, y, z, 'flower']; if (potAt(x, z)) return [x, y, z, 'pot']; }
     return null; }
@@ -114,7 +116,7 @@ export function createTools(A) {
   function barSync() { if (!BAR) return; const t = S(), k = cur(), on = !!(A.on() && (shownK || PICK > 0)); BAR.classList.toggle('on', on); if (!on) return;
     for (const b of BAR.children) { const k9 = b.dataset.t; b.classList.toggle('cur', k9 === k); b.classList.toggle('no', !t.have[k9]); b.title = L(TOOL[k9].t) + (t.have[k9] ? '' : ' — ' + L(TOOL[k9].get)); }
     tankSync(); }
-  let tankW = -1; function tankSync() { if (!BAR) return; const w = Math.round(S().tank); if (w === tankW) return; tankW = w; const s = BAR.querySelector('em s'); if (s) { s.style.width = w + '%'; s.style.background = w < 20 ? '#e0603a' : '#3a8fe0'; } }
+  let tankW = -1; function tankSync() { if (!BAR) return; const w = Math.round(S().tank / tankMax() * 100); if (w === tankW) return; tankW = w; const s = BAR.querySelector('em s'); if (s) { s.style.width = w + '%'; s.style.background = w < 20 ? '#e0603a' : '#3a8fe0'; } }
   function tchSync() { if (!tchBtn) return; const on = A.tch() && !!shownK && !A.busy(); tchBtn.style.display = on ? 'flex' : 'none'; if (on) { const k = cur(); tchBtn.firstChild.textContent = '🧰 ' + (FS && FS.ph === 'bite' ? (en() ? 'Pull!' : '당겨요!') : (en() ? 'Use' : '쓰기')); tchBtn.title = L(TOOL[k].t); } }
   function ui() { if (BAR) return; CSS = document.createElement('style'); CSS.textContent = '.twn-tools{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:21;display:none;gap:5px;padding:5px 6px;background:#fff8ea;border:2px solid #2b2420;border-radius:12px;box-shadow:0 3px 0 #2b2420;pointer-events:auto}'
       + '.twn-tools.on{display:flex}.twn-tools button{position:relative;width:44px;height:44px;padding:0;border:2px solid #2b2420;border-bottom-width:4px;border-radius:9px;background:#fff;cursor:pointer;font:24px/1 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif,SMEmoji;color:#2b2420}'
@@ -136,6 +138,7 @@ export function createTools(A) {
     useOnce(); return true; }
   function stopPour() { pressing = false; burstT = 0; map.player.holdUse(false); }
   function useOnce() { const k = cur(), act = map.player.acting; if (!k) return; if (k === 'rod' && FS) { fishPress(); return; } if (act && /^(dig|cast|peer|sweep|reach)$/.test(act)) return;
+    if (k === 'scope') { if (A.scope) A.scope(); return; }   /* REWARD-1 망원경 = 누를 때마다 켜고 끔(town_reward.js) */
     aimCalc(true); if (!T.lock && k !== 'rod' && k !== 'can') { const xp = A.xp && A.xp(), h9 = xp && xp.hint(T.x, T.z, k); if (h9) { toast(h9, 2.8); return; } }   /* EXPLORE-1 흙더미 곁인데 차례가 아닌 도구 = 다음 할 일 한 줄 */
     if (k === 'shovel') useShovel(); else if (k === 'rod') useRod(); else if (k === 'lens') useLens(); else if (k === 'broom') useBroom(); }
 
@@ -195,15 +198,15 @@ export function createTools(A) {
     for (const h of L9) { const k = Math.round(h.x) + ':' + Math.round(h.z); if (SEEN.has(k)) continue; SEEN.add(k); const H9 = map.interact.add({ kind: 'game', x: h.x, z: h.z, y: h.y, r: Math.max(1.0, h.r || 1.2), label: en() ? '💧 Fill the watering can' : '💧 물뿌리개에 물 채우기', use: () => fill([h.x, h.y, h.z]) }); H9.hot.off = true; H9.src = h; FAUCH.push(H9); A.enth.push(H9); }
     for (const [x, z] of A.springs() || []) { const y = A.gy(x, z); const H9 = map.interact.add({ kind: 'game', x, z, y, r: 1.8, label: en() ? '💧 Fill at the spring' : '💧 약수터에서 물 채우기', use: () => fill([x, y, z]) }); H9.hot.off = true; FAUCH.push(H9); A.enth.push(H9); }
     RIVH = map.interact.add({ kind: 'game', x: 0, z: 0, y: -99, r: 1.2, label: en() ? '💧 Fill from the water' : '💧 강물 채우기', use: () => { const me = map.player.pos(); fill([RIVH.hot.wx, me.y, RIVH.hot.wz]); } }); RIVH.hot.off = true; A.enth.push(RIVH); }
-  function fillSync() { const can = shownK === 'can' && S().tank < TANK - 1, src = FAUCH.filter(h => h.src);
+  function fillSync() { const can = shownK === 'can' && S().tank < tankMax() - 1, src = FAUCH.filter(h => h.src);
     for (const h of FAUCH) if (h.hot.off === can) h.hot.off = !can;
     if (can && !FAUOFF && src.length) { const set = new Set(src.map(h => h.src)); FAUOFF = map.interact.enable(h => set.has(h), false); } else if (!can && FAUOFF) { FAUOFF.remove(); FAUOFF = null; }   // 손 씻기·물 주기 E는 그동안만 쉼
     if (!RIVH) return; const me = map.player.pos(); let fw = null, sea = false; if (can) for (let r = 1.2; r <= 2.8 && !fw; r += 0.8) for (let a = 0; a < 8; a++) { const x = me.x + Math.cos(a * 0.785) * r, z = me.z + Math.sin(a * 0.785) * r, w = water(x, z); if (!w) continue; if (w.sea) { sea = true; continue; } fw = [x, z]; break; }
     const h = RIVH.hot; if (fw) { h.x = me.x; h.z = me.z; h.y = me.y; h.wx = fw[0]; h.wz = fw[1]; if (h.off) h.off = false; } else if (!h.off) h.off = true;
     if (sea && !fw && S().tank < 50 && seaTold !== day()) { seaTold = day(); toast(en() ? '🌊 Sea water is salty, so we do not give it to plants — fill up at a tap or riverbank' : '🌊 바닷물은 짜서 식물에 주지 않아요 — 수돗가나 강가에서 채워요', 3.6); } }
   function fill(at) { if (FILL || !A.on()) return; if (cur() !== 'can') { hold('can'); } stopPour(); FILL = { t: 0, g: 0 }; map.player.act('reach', { at: [at[0], at[1] + 0.5, at[2]], msg: null }); }
-  function fillTick(dt) { const t = S(); FILL.t += dt; t.tank = Math.min(TANK, t.tank + 85 * dt); tankSync(); if ((FILL.g -= dt) <= 0) { FILL.g = 0.2; tone(260 + Math.random() * 220, 0, 0.09, 'sine', 0.05, 520); }   // 꼴깍꼴깍
-    if (FILL.t > 1.25 || t.tank >= TANK) { FILL = null; t.tank = TANK; mark(); tankSync(); tone(784, 0, 0.1, 'triangle', 0.05); toast(en() ? '💧 The can is full!' : '💧 물을 가득 채웠어요!', 1.8); A.rec('fill'); } }
+  function fillTick(dt) { const t = S(); FILL.t += dt; t.tank = Math.min(tankMax(), t.tank + 85 * dt * tankMax() / TANK); tankSync(); if ((FILL.g -= dt) <= 0) { FILL.g = 0.2; tone(260 + Math.random() * 220, 0, 0.09, 'sine', 0.05, 520); }   // 꼴깍꼴깍
+    if (FILL.t > 1.25 || t.tank >= tankMax()) { FILL = null; t.tank = tankMax(); mark(); tankSync(); tone(784, 0, 0.1, 'triangle', 0.05); toast(en() ? '💧 The can is full!' : '💧 물을 가득 채웠어요!', 1.8); A.rec('fill'); } }
 
   // ───────── ⛏ 삽 ─────────
   function useShovel() { const x = T.x, z = T.z, y = T.y, en9 = en(), t = S();
@@ -239,7 +242,7 @@ export function createTools(A) {
 
   // ───────── 🎣 낚싯대: 던지기 → 2~6초 뒤 입질(찌가 쏙 + 소리) → 1초 안에 누르면 잡음 → 놓아주기·가방 ─────────
   function useRod() { const e = en(); let at = null; if (T.ok) at = [T.x, T.y + 0.02, T.z];
-    if (!at) { const me = map.player.pos(); _f.set(0, 0, -1).applyQuaternion(map.camera.quaternion); const fl = Math.hypot(_f.x, _f.z) || 1; for (let d = 2.4; d <= 9 && !at; d += 0.5) { const x = me.x + _f.x / fl * d, z = me.z + _f.z / fl * d, w = water(x, z); if (w) at = [x, w.y + 0.02, z]; } }
+    if (!at) { const me = map.player.pos(); _f.set(0, 0, -1).applyQuaternion(map.camera.quaternion); const fl = Math.hypot(_f.x, _f.z) || 1; for (let d = 2.4; d <= rng('rod')[1] && !at; d += 0.5) { const x = me.x + _f.x / fl * d, z = me.z + _f.z / fl * d, w = water(x, z); if (w) at = [x, w.y + 0.02, z]; } }
     if (!at) { toast(e ? '🎣 Face the water and cast — the ring must be on the water' : '🎣 물가에서 물을 보고 던져요 — 고리가 물 위에 있어야 해요', 2.6); return; }
     const w = water(at[0], at[2]), sea = !!(w && w.sea), G = A.GAME; let fish = null, why = '';
     if (sea) { const r = fishAt(A.season(), A.low(), 'near', 'worm', G.S.dex, G.S.day * 7 + G.uses('tool:catch')); fish = r.f; why = r.why; } else fish = A.night() ? FRESH[2] : FRESH[(Math.random() * 2) | 0];   /* 메기 = 밤에 움직임(사실) · 낮 = 붕어·피라미 */
@@ -250,7 +253,7 @@ export function createTools(A) {
   function fishTick(dt) { const F = FS, e = en(); if (F.h.done) { if (F.ph === 'wait' || F.ph === 'fly' || F.ph === 'bite') toast(e ? '🎣 You reeled in the line' : '🎣 낚싯줄을 거뒀어요', 1.6); FS = null; tchSync(); return; }
     if (F.ph === 'fly') { if (F.h.landed) { F.ph = 'wait'; F.t = 0; } return; }
     if (F.ph === 'wait') { F.t += dt; if (F.t >= F.bite && !F.fish) { F.h.reel(false); F.ph = 'none'; tchSync(); toast('🎣 ' + L(FISH_FACT[F.why || 'low']), 4); A.rec('nobite'); return; } if (F.t >= F.bite) { F.h.dip(); F.ph = 'bite'; F.bt = 0; tchSync(); pop(e ? '❗ Now!' : '❗ 지금!'); tone(1175, 0, 0.08, 'square', 0.04); tone(1568, 0.08, 0.1, 'square', 0.04); } return; }
-    if (F.ph === 'bite') { F.bt += dt; if (F.bt > 2.5) { F.h.reel(false); F.ph = 'miss'; tchSync(); toast(e ? '💨 It got away — press as soon as the float dips' : '💨 놓쳤어요 — 찌가 쏙 들어가면 바로 눌러요', 2.4); A.rec('miss'); } } }
+    if (F.ph === 'bite') { F.bt += dt; if (F.bt > (gear('rod2') ? 4 : 2.5)) { F.h.reel(false); F.ph = 'miss'; tchSync(); toast(e ? '💨 It got away — press as soon as the float dips' : '💨 놓쳤어요 — 찌가 쏙 들어가면 바로 눌러요', 2.4); A.rec('miss'); } } }
   function pop(txt) { const p = document.createElement('div'); p.className = 'twn-pop'; p.style.color = '#ffe36b'; p.textContent = txt; document.body.appendChild(p); setTimeout(() => p.remove(), 1300); }
   /* FISH-2: 찌가 쏙 → 누르면 일 놀이와 같은 줄다리기 한 마리(town.js tug → town_minigame.js mkTug) → 낚으면 놓아주기·가방 */
   function tugGo(fish) { if (!fish) return; const e = en(); const ok = A.tug(fish, res => { if (dead) return; if (res > 0) { A.rec('tug-ok'); catchShow(fish); } else if (res === 0) { A.rec('tug-miss'); toast(e ? '💨 It got away — pull the opposite way to the fish' : '💨 물고기가 달아났어요 — 물고기 반대쪽으로 끌어요', 2.6); } }); if (!ok) catchShow(fish); }
@@ -289,7 +292,7 @@ export function createTools(A) {
     const cols = !p ? [0xb8a888, 0xa89878] : p.mode === 'leaf' ? [0xd8762a, 0xc8452e, 0xe8b23a] : p.mode === 'snow' ? [0xf4f8fb, 0xe2ebf2] : [0xf4f4ee, 0xd8d0c0, 0xc8443a];
     map.player.act('sweep', { at: [T.x, T.y, T.z], msg: null, colors: cols, midAt: 1.7, onMid: () => {
       if (!p) { if (Math.random() < 0.5) toast(e ? '🧹 Nothing to sweep here — look for leaves, snow or litter' : '🧹 여긴 쓸 것이 없어요 — 낙엽·눈·쓰레기를 찾아봐요', 2.2); return; }
-      t.sw.k[p.k] = 1; const i = PILES.indexOf(p); if (i >= 0) PILES.splice(i, 1); dirty = true; const d = day(); if (t.clean.d !== d) { t.clean.d = d; t.clean.n = 0; } t.clean.n++; t.clean.all = (t.clean.all || 0) + 1; mark(); A.rec('sweep', { m: p.mode });
+      t.sw.k[p.k] = 1; const i = PILES.indexOf(p); if (i >= 0) PILES.splice(i, 1); dirty = true; let wide = 0; if (gear('broom2')) for (let j = PILES.length - 1; j >= 0; j--) { const q = PILES[j]; if (Math.hypot(q.x - p.x, q.z - p.z) < 3) { t.sw.k[q.k] = 1; PILES.splice(j, 1); wide++; } }   /* REWARD-1 넓은 빗자루 = 곁 3m도 한 번에(솜씨는 한 번) */ const d = day(); if (t.clean.d !== d) { t.clean.d = d; t.clean.n = 0; } t.clean.n += 1 + wide; t.clean.all = (t.clean.all || 0) + 1 + wide; mark(); A.rec('sweep', { m: p.mode, wide });
       A.skUp('work', 1, 'sweep'); tone(988, 0.05, 0.08, 'triangle', 0.04); tone(1319, 0.13, 0.1, 'triangle', 0.04);
       const what = p.mode === 'leaf' ? (e ? 'leaves' : '낙엽을') : p.mode === 'snow' ? (e ? 'snow' : '눈을') : (e ? 'litter' : '쓰레기를');
       toast(e ? '🧹 Swept up the ' + what + '! Today you cleaned ' + t.clean.n + (t.clean.n > 1 ? ' spots' : ' spot') + ' in town' : '🧹 ' + what + ' 쓸었어요! 오늘 마을을 ' + t.clean.n + '곳 깨끗이 했어요', 2.8);
@@ -347,14 +350,14 @@ export function createTools(A) {
     if (FS) fishTick(dt);
     if (burstT > 0 && (burstT -= dt) <= 0 && pressing === 'b') pressing = false;
     const ok = on && !!shownK && !A.busy();
-    if (ok) { if ((aimQ -= dt) <= 0) { aimQ = 0.1; aimCalc(false); } if (RING) { const vis = cur() !== 'rod' || T.ok; RING.visible = vis && !(cur() === 'rod' && FS); if (vis) { RING.position.x += (T.x - RING.position.x) * Math.min(1, dt * 14); RING.position.z += (T.z - RING.position.z) * Math.min(1, dt * 14); RING.position.y = T.y + 0.05;
+    if (ok) { if ((aimQ -= dt) <= 0) { aimQ = 0.1; aimCalc(false); } if (RING) { const vis = cur() !== 'scope' && (cur() !== 'rod' || T.ok); RING.visible = vis && !(cur() === 'rod' && FS); if (vis) { RING.position.x += (T.x - RING.position.x) * Math.min(1, dt * 14); RING.position.z += (T.z - RING.position.z) * Math.min(1, dt * 14); RING.position.y = T.y + 0.05;
           const s = cur() === 'broom' ? 1.35 : cur() === 'lens' ? 0.8 : 1; RING.scale.set(s, s, s); RING.material.color.setHex(T.lock ? 0xffd23c : 0xffffff); } } }
     else if (RING && RING.visible) RING.visible = false;
     if (ok && pressing && cur() === 'can' && !FILL) pourTick(dt); else { if (pressing && cur() !== 'can') pressing = false; map.player.holdUse(false); if (aimHold > 0 && (aimHold -= dt) <= 0) map.player.aim(null); }
     dropTick(dt);
     if (on) shoulderTick(dt); }
   // 키(town.js keyDn이 부름 — 창·대화·놀이가 아닐 때): 1~5 = 들기 · 도구를 들고 보일 때만 F = 쓰기(아니면 예전대로 장소 찾기)
-  function key(e) { if (dead || !A.on() || A.busy() || (window.__pause && window.__pause.on) || document.body.classList.contains('title-on')) return false; const c = e.code, d = /^(?:Digit|Numpad)([1-5])$/.exec(c);
+  function key(e) { if (dead || !A.on() || A.busy() || (window.__pause && window.__pause.on) || document.body.classList.contains('title-on')) return false; const c = e.code, d = /^(?:Digit|Numpad)([1-6])$/.exec(c);
     if (d) { hold(TOOL_ORDER[+d[1] - 1]); return true; }
     if (c === 'KeyF' && shownK) { press(true, 'f'); return true; } return false; }
   const onKU = e => { if (e.code === 'KeyF') press(false, 'f'); };
@@ -373,11 +376,12 @@ export function createTools(A) {
     info: () => { const t = S(); return { have: Object.keys(t.have).filter(k => t.have[k]), cur: t.cur, shown: shownK, engine: map.player.holding, tank: +t.tank.toFixed(1), pressing: !!pressing, aim: { x: +T.x.toFixed(2), y: +T.y.toFixed(2), z: +T.z.toFixed(2), ok: T.ok, lock: T.lock, k: T.k }, ring: !!(RING && RING.visible),
       fish: FS ? { ph: FS.ph, t: +FS.t.toFixed(2), bite: +FS.bite.toFixed(2) } : null, fill: !!FILL, holes: t.holes.filter(h => h[4] === day()).length, piles: PILES.length, mode: swMode(), clean: { ...t.clean }, bloom: Object.keys(t.bloom).length, worm: t.n.worm || 0, drops: pAlive, bar: !!(BAR && BAR.classList.contains('on')), touch: !!(tchBtn && tchBtn.style.display !== 'none'),
       faucets: FAUCH.length, faucetOn: FAUCH.filter(h => !h.hot.off).length, river: !!(RIVH && !RIVH.hot.off), stands: STANDS.length, pend: PEND.slice(), ovl: !!OVL, wet: WM.filter(w => w.on).length, wide: wideOn(), sides: SIDE.filter(q => q.on).map(q => [+q.x.toFixed(2), +q.z.toFixed(2)]), pourN, pourMax }; },   /* SPEND-1: 이번 누름에 젖은 두둑 수 · 가장 많이 */
-    hold: k => hold(k), give: k => got(k), aim: (x, z) => { if (x == null) OVR.on = false; else { OVR.on = true; OVR.x = x; OVR.z = z; } aimCalc(true); return { ...T }; }, press: (on, src) => press(on, src || 'k'), use: () => press(true, 'k'),
+    hold: k => hold(k), give: k => got(k), own: k => { const t = S(); if (!TOOL[k] || t.have[k]) return false; t.have[k] = 1; mark(); barSync(); return true; }, fill: () => { S().tank = tankMax(); tankSync(); },   /* REWARD-1: 보상으로 받은 도구(꽃가루 연출 없이 — 보상 창이 대신) */
+ aim: (x, z) => { if (x == null) OVR.on = false; else { OVR.on = true; OVR.x = x; OVR.z = z; } aimCalc(true); return { ...T }; }, press: (on, src) => press(on, src || 'k'), use: () => press(true, 'k'),
     bite: () => { if (FS && FS.ph === 'wait') FS.bite = FS.t; else if (FS && FS.ph === 'fly') FS.bite = 0; return !!FS; }, piles: () => PILES.map(p => ({ k: p.k, x: p.x, z: p.z, y: +p.y.toFixed(2), mode: p.mode })), stands: () => STANDS.map(s => ({ x: +s.x.toFixed(1), z: +s.z.toFixed(1) })),
-    tank: v => { S().tank = Math.max(0, Math.min(TANK, v)); tankSync(); fillSync(); }, faucets: () => FAUCH.map(h => ({ x: +h.hot.x.toFixed(2), z: +h.hot.z.toFixed(2), y: +h.hot.y.toFixed(2), off: h.hot.off, src: !!h.src })), sync: () => { showSync(); fillSync(); barSync(); tchSync(); pilesSync(true); drawAll(); },
+    tank: v => { S().tank = Math.max(0, Math.min(tankMax(), v)); tankSync(); fillSync(); }, faucets: () => FAUCH.map(h => ({ x: +h.hot.x.toFixed(2), z: +h.hot.z.toFixed(2), y: +h.hot.y.toFixed(2), off: h.hot.off, src: !!h.src })), sync: () => { showSync(); fillSync(); barSync(); tchSync(); pilesSync(true); drawAll(); },
     pick: () => pick(), mesh: () => ({ ring: RING, mound: MOUND && MOUND.count, bits: BITS && BITS.count, hole: HOLE && HOLE.count, wet: WET && WET.count }) };
   function pick() { if (!A.on()) return; ui(); PICK = 8; barSync(); if (!A.tch()) toast(en() ? '🧰 Press 1–5 to hold a tool (click a slot too)' : '🧰 숫자 1~5로 도구를 들어요 (칸을 눌러도 돼요)', 2.6); }
-  function keys9() { const e = en(), K = [['1~5', e ? 'tools' : '도구']]; if (shownK) K.push([e ? 'Click·F' : '클릭·F', e ? 'use' : '쓰기']); return K; }
+  function keys9() { const e = en(), K = [['1~' + (S().have.scope ? 6 : 5), e ? 'tools' : '도구']]; if (shownK) K.push([e ? 'Click·F' : '클릭·F', e ? 'use' : '쓰기']); return K; }
   return { init, tick, dispose, key, got, hold, pick, keys: keys9, get cur() { return shownK; }, get have() { return { ...S().have }; }, api: API };
 }

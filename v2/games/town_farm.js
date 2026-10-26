@@ -14,6 +14,7 @@ export const CROPS = {
   '🌽': ['옥수수', 'Corn', 3, 3, 0x6aa84f, 0xf2c531, 0.85, 'tall'],
   '🥬': ['배추', 'Cabbage', 3, 3, 0x6fb34f, 0xc8e69a, 0.36, 'leafy'],
   '🍠': ['고구마', 'Sweet potato', 3, 4, 0x4f8a3e, 0xa8456a, 0.26, 'root'],
+  '🍓': ['딸기', 'Strawberry', 3, 4, 0x4f9a40, 0xe0304a, 0.2, 'root'],   /* REWARD-1 딸기 모종(농사 5레벨 보상 · 계절 씨앗 표 SEEDS엔 없음 — 받은 아이만 고르기 칸에) */
 };
 // 계절마다 심는 씨앗(우리나라 학교 텃밭 어림 · ✨ 놀이용) · '지금' = 여름(놀이 계절 seaPlay — 부르는 쪽이 넘김)
 export const SEEDS = { spring: ['🥔', '🥕'], summer: ['🍅', '🥒', '🌽'], autumn: ['🥬', '🍠'], winter: [] };

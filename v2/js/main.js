@@ -8,7 +8,7 @@ import { buildWorld } from './world.js?v=158';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=95';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=96';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=11';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=29';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -560,7 +560,7 @@ function step(dt) {
   //  6.3m 뒤·17° 위에서 내려다보면 실내에선 천장(3.24m) 밑에 붙어 위에서 내려다보고, 화각 48°는 휴대폰 광각보다 훨씬 좁다.
   //  → 실내(머리 위에 천장)에선 가깝고(3.3m) 낮게(피치 ≤0.2)·화각 60°, 밖은 6.3m·52°. V = 1인칭(눈높이 1.5m) 전환.
   const indoor = ceilAt(P.x, P.z, P.y + 1.6, P.y + 5.5) !== null;
-  const tFov = camFirst ? 66 : indoor ? (inCorr ? 64 : 60) : 52;   // CORR-FEEL(09-28 계획 2-20): 복도 구역(본관·동관·세로·2층)만 화각 4° 넓게 — 좁아 보이던 복도(휴대폰 초광각 영상과 비교)
+  const tFov = (camFirst ? 66 : indoor ? (inCorr ? 64 : 60) : 52) / (CTRL.zoom || 1);   /* REWARD-1 망원경 = 화각 ÷ zoom */   // CORR-FEEL(09-28 계획 2-20): 복도 구역(본관·동관·세로·2층)만 화각 4° 넓게 — 좁아 보이던 복도(휴대폰 초광각 영상과 비교)
   if (Math.abs(camera.fov - tFov) > 0.05) { camera.fov += (tFov - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); }
   { const S = PHY.sc, gy = pGround(P.x, P.z, P.y + 0.05 * S), h = Math.max(0, P.y - gy) / S, k = Math.max(0.35, 1 - h * 0.35);   // GFX-2 발밑 그림자(SHRINK-1: 몸 크기 비례)
     blob.position.set(P.x, gy + 0.045 * Math.max(S, 0.2), P.z); blob.scale.setScalar(0.95 * k * S); blob.material.opacity = k; blob.visible = !ACT.sit && h < 3; }

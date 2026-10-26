@@ -13,8 +13,8 @@
 //     stam() 상태 | null · stamFill() · stamShow(s) · stamBusy() · stamGraph() | null
 import { GIFT_OF } from './town_news.js?v=11';
 import { inSeason, seaKey } from './town_bundle.js?v=3';
-import { ITEMS, itemName, won } from './town_game.js?v=43';
-import { DECO } from './town_cozy.js?v=2';
+import { ITEMS, itemName, won } from './town_game.js?v=44';
+import { DECO } from './town_cozy.js?v=3';
 export const BAG2_V = 1;
 const T2 = (ko, en) => [ko, en];
 const jo = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1); return w + (c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? a : b); };
@@ -33,6 +33,9 @@ export const FOOD = {
   '🥞': { x: 1, xm: 180, why: T2('밀가루와 달걀이 든든해요', 'Flour and egg fill you up') },
   '🍓🥞': { x: 1, xm: 180, f: 1.5, fm: 90, why: T2('팬케이크는 든든하고 딸기는 금방 힘이 나요', 'Pancake fills you and strawberry gives quick energy') },
   '🥘': { x: 1, xm: 180, why: T2('버섯과 버터가 든든해요', 'Mushroom and butter fill you up') },
+  '🍛': { x: 1, xm: 300, why: T2('밥과 감자가 들어 오래 든든해요', 'Rice and potato keep you going a long time') },   /* REWARD-1 요리법 보상 셋 */
+  '🥟': { x: 1, xm: 180, why: T2('밀가루 피와 채소 소가 든든해요', 'Flour wrappers and vegetable filling fill you up') },
+  '🥧': { x: 1, xm: 180, f: 1.5, fm: 60, why: T2('고구마는 녹말이 많아 든든하고 달아요', 'Sweet potato is starchy, filling and sweet') },
   '🥗': { x: 1, xm: 150, why: T2('산나물 반찬이 몸에 좋아요', 'Wild greens are good for you') },
   '🌽♨': { x: 1, xm: 180, why: T2('옥수수는 녹말이 많아 든든해요', 'Corn is starchy and filling') },
   '🍿': { x: 1, xm: 120, why: T2('옥수수로 만든 간식이라 조금 든든해요', 'A corn snack — a little filling') },
@@ -92,10 +95,10 @@ export function createBag(A) {
   const canEatNow = () => !(A.stamBusy && A.stamBusy());
   function fxText(e, untilX, untilF) { const F = FOOD[e]; if (!F) return ''; const p = []; if (F.x) p.push(en() ? 'one more breath ring' + (untilX ? ' until ' + hm(untilX % 1440) : '') : '숨이 한 칸 더 길어요' + (untilX ? '(' + hm(untilX % 1440) + '까지)' : ''));
     if (F.f > 1) p.push(en() ? 'breath comes back faster' + (untilF ? ' until ' + hm(untilF % 1440) : '') : '숨이 조금 빨리 돌아와요' + (untilF ? '(' + hm(untilF % 1440) + '까지)' : '')); return p.join(en() ? ', ' : ' · '); }
-  function fxPlain(e) { const F = FOOD[e]; if (!F) return ''; const h = m => (m >= 300 ? T2('반나절', 'half a day') : m >= 150 ? T2('두세 시간', 'a few hours') : T2('한두 시간', 'an hour or two')); const p = [];
+  function fxPlain(e) { const F = FOOD[e]; if (!F) return ''; const lk = A.gear && A.gear('lunch') ? 1.5 : 1, h = m0 => { const m = m0 * lk; return (m >= 300 ? T2('반나절', 'half a day') : m >= 150 ? T2('두세 시간', 'a few hours') : T2('한두 시간', 'an hour or two')); }; const p = [];
     if (F.x) p.push(en() ? 'one more breath ring for ' + L(h(F.xm)) : '숨 한 칸 더 · ' + L(h(F.xm))); if (F.f > 1) p.push(en() ? 'breath back faster for ' + L(h(F.fm)) : '숨이 빨리 돌아옴 · ' + L(h(F.fm))); return p.join(en() ? ', ' : ', '); }
   /* 먹기: town.js eatDish가 GAME.take 뒤에 부름 → 배너 꼬리 한 줄 · 땅에서 먹으면 숨이 바로 다 참 */
-  function eat(e) { const F = FOOD[e]; if (!F) return ''; const s = S(), f = s.fx, t = abs(); if (F.x) { f.x = 1; f.xT = Math.max(f.xT > t ? f.xT : 0, t + F.xm); } if (F.f > 1) { f.f = Math.max(fast(), F.f); f.fT = Math.max(f.fT > t ? f.fT : 0, t + F.fm); } f.e = e; s.kn.eat[e] = day(); mark();
+  function eat(e) { const F = FOOD[e]; if (!F) return ''; const s = S(), f = s.fx, t = abs(), lk = A.gear && A.gear('lunch') ? 1.5 : 1;   /* REWARD-1 도시락통 = 1.5배 오래 */ if (F.x) { f.x = 1; f.xT = Math.max(f.xT > t ? f.xT : 0, t + F.xm * lk); } if (F.f > 1) { f.f = Math.max(fast(), F.f); f.fT = Math.max(f.fT > t ? f.fT : 0, t + F.fm * lk); } f.e = e; s.kn.eat[e] = day(); mark();
     if (A.stamFill) A.stamFill(); if (A.stamShow) A.stamShow(2.6); log('eat ' + e + ' x' + extra() + ' f' + fast());
     return L(F.why) + (en() ? '. ' : '. ') + fxText(e, F.x ? f.xT : 0, F.f > 1 ? f.fT : 0); }
   function fxNow() { const s = S(), f = s.fx, t = abs(), o = []; if (f.x > 0 && t < f.xT) o.push(en() ? 'one more breath ring until ' + hm(f.xT % 1440) : '숨 한 칸 더 ' + hm(f.xT % 1440) + '까지'); if (f.f > 1 && t < f.fT) o.push(en() ? 'faster breath until ' + hm(f.fT % 1440) : '숨이 빨리 돌아옴 ' + hm(f.fT % 1440) + '까지'); return o.join(' · '); }

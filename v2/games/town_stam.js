@@ -296,9 +296,9 @@ export function createStam(A) {
     if (!rt || !keyUp()) { ST.grab = 0; return; } ST.grab = (ST.grab || 0) + dt; if (ST.grab < 0.3) return; ST.grab = 0; ST.mode = 'climb'; ST.climb = { r: rt, y: Math.max(rt.y0, me.y), t: 0, snd: 0, pull: -1 }; map.player.pose('climb', { y: 0 }); if (!S().tip.climb) { S().tip.climb = 1; A.GAME.mark(); say(TXT.grab, 3); } map.sfx && map.sfx('tick'); }
   function climbTick(dt, me) { const C = ST.climb, r = C.r, yaw = Math.atan2(-r.nx, -r.nz), cam = Math.atan2(r.nx, r.nz); void me;
     if (C.pull >= 0) { C.pull += dt / 0.4; const k = Math.min(1, C.pull), x = r.bx + (r.tx - r.bx) * k, z = r.bz + (r.tz - r.bz) * k; pin(x, r.y1 + Math.sin(k * Math.PI) * 0.35 + (k >= 1 ? 0.02 : 0), z, { yaw, cam }); if (k >= 1) { ST.mode = null; unpin(); map.player.pose(null); ST.climb = null; map.sfx && map.sfx('ding'); say(TXT.top, 1.8); } return; }
-    let v = 0; if (keyUp()) v = r.sp; else if (keyDn()) v = -r.sp;
+    const gl = A.gear && A.gear('gloves');   /* REWARD-1 목장갑 = 오르기 1.35배 · 덜 지침 */ let v = 0; if (keyUp()) v = r.sp * (gl ? 1.35 : 1); else if (keyDn()) v = -r.sp * (gl ? 1.35 : 1);
     if (v > 0 && ST.v <= 0) { ST.mode = 'slide'; ST.sl = { r, y: C.y, to: r.y0 }; map.player.pose('climb', { y: 0 }); const s = S(), F = s.fail[r.id] && s.fail[r.id][0] === day() ? s.fail[r.id] : (s.fail[r.id] = [day(), 0]); F[1]++; A.GAME.mark(); say(TXT.slide, 2.8); if (F[1] >= 2 && s.said[r.id] !== day()) hint(r.id, 'climb'); return; }
-    const ny = Math.max(r.y0, Math.min(r.y1, C.y + v * dt)), d = ny - C.y; if (d > 0) drain(d / STAM_CL); else if (d < 0) drain(-d / (STAM_CL * 2)); C.y = ny; C.snd += Math.abs(d); if (C.snd > 0.5) { C.snd = 0; map.sfx && map.sfx('tick'); }
+    const ny = Math.max(r.y0, Math.min(r.y1, C.y + v * dt)), d = ny - C.y; if (d > 0) drain(d / STAM_CL * (gl ? 0.75 : 1)); else if (d < 0) drain(-d / (STAM_CL * 2) * (gl ? 0.75 : 1)); C.y = ny; C.snd += Math.abs(d); if (C.snd > 0.5) { C.snd = 0; map.sfx && map.sfx('tick'); }
     map.player.pose('climb', { y: v }); pin(r.bx, C.y, r.bz, { yaw, cam });
     if (C.y >= r.y1 - 1e-3) { C.pull = 0; return; }
     if ((keyDn() || map.player.held('Space')) && C.y - r.y0 < 2.0 && (C.y <= r.y0 + 0.02 || map.player.held('Space'))) { ST.mode = null; unpin(); map.player.pose(null); ST.climb = null; return; }
@@ -306,7 +306,7 @@ export function createStam(A) {
   function slideTick(dt) { const Sl = ST.sl, r = Sl.r; Sl.y = Math.max(Sl.to, Sl.y - SLIDE_SP * dt); pin(r.bx, Sl.y, r.bz, { yaw: Math.atan2(-r.nx, -r.nz) }); if (Sl.y <= Sl.to + 1e-3) { ST.mode = null; unpin(); map.player.pose(null); ST.sl = null; } }
   // ───────── 비탈 달리기(사다리 밖 · 다 쓰면 걷기) ─────────
   function runTick(dt, me, dy, dl, jump) { const st = map.player.stick(), run = !A.bike() && map.player.input && ((map.player.held('ShiftLeft') || map.player.held('ShiftRight')) || (st && st.m >= 0.92)); ST.running = !!run && !ST.runLock; void me;
-    if (ST.running && !jump && dy > 0 && dl > 1e-3 && dy / dl > 0.1 && Math.abs(map.player.vy) < 0.05) { drain(dy / STAM_RUN); if (ST.v <= 0 && !ST.runLock) { ST.runLock = true; ST.running = false; map.player.run(false); say(TXT.run0, 2.4); map.sfx && map.sfx('pop'); } }
+    if (ST.running && !jump && dy > 0 && dl > 1e-3 && dy / dl > 0.1 && Math.abs(map.player.vy) < 0.05) { drain(dy / STAM_RUN * (A.gear && A.gear('hike') ? 0.5 : 1));   /* REWARD-1 등산화 = 오르막 달리기 숨 반 */ if (ST.v <= 0 && !ST.runLock) { ST.runLock = true; ST.running = false; map.player.run(false); say(TXT.run0, 2.4); map.sfx && map.sfx('pop'); } }
     if (ST.runLock && ST.v >= cap() - 1e-3) { ST.runLock = false; if (!A.bike()) map.player.run(true); } }
   // ───────── 도장(그 단계 칸을 끝까지 다 써야 닿는 자리 · 1초 서 있으면 꾹) ─────────
   function stampTick(dt, me) { const s = S(); for (const q of G.stamps) { if (s.got[q.id]) continue; if (Math.hypot(q.cx - me.x, q.cz - me.z) > q.r || Math.abs(me.y - q.y) > 1.3) { q.t = 0; continue; } q.t = (q.t || 0) + dt; if (q.t < 1.0) continue; q.t = 0; award(q); } }
