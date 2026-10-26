@@ -30,6 +30,7 @@ const CSS = `.twn-day{cursor:pointer;position:fixed;left:10px;top:132px;z-index:
 //   nightRows(d) 밤·이른 아침 때 [{ m, g, ic, s, t, p }] · nightKey()(NIGHT-1 town_night.js · 없어도 됨)
 //   typh(d1) 태풍 판 한 줄 | null(TYPH-1 · 없어도 됨) · bagWait(d0, pre) · bagDue(d) · bagKey()(BAG-2 town_bag.js · 없어도 됨)
 //   pathRow(d) 하루 마무리 '나의 길' 줄 [k, ic, 제목, 글] | null · pathWait() 내일 기다리는 표지판 { ic, s, t, p } | null(PATH-1 · 없어도 됨)
+//   feastRow(d) 오늘 도운 잔치 준비 줄 | null · feast(d1) 잔치까지 ○밤 { k, ic, s, t, p } | null(FEAST-1 town_feast.js · 없어도 됨)
 //   bunRow(d) '오늘 바뀐 것' 꾸러미로 바뀐 마을 줄 | null · bunWait(d0, pre) 내일 아침 바뀌는 곳 { ic, s, t, p } | null(BUNDLE-2 · 없어도 됨)
 //   날: wx() 오늘 날씨 · fc(i) 예보(오늘 = 0) · auto() 예보대로 · jang(d) · season(d) · seaName(s) [ko, en]
 export function createDay(A) {
@@ -97,6 +98,7 @@ export function createDay(A) {
       let rows = []; try { rows = A.ladRows() || []; } catch (x) { rows = []; } const nb = rows.filter(r => r.best && (sn.bs || {})[r.key] !== r.best).map(r => r.name); if (nb.length) out.push(['best', '🏅', e ? 'New personal best' : '새 내 최고', esc(nb.join(', '))]); }
     { const r = A.pathRow && A.pathRow(d); if (r) out.push(r); }   /* PATH-1 오늘 나의 길 걸음(town_path.js) */
     { const r = A.bunRow && A.bunRow(d); if (r) out.push(r); }   /* BUNDLE-2 꾸러미로 바뀐 마을(town_bundle2.js) */
+    { const r = A.feastRow && A.feastRow(d); if (r) out.push(r); }   /* FEAST-1 오늘 도운 잔치 준비(town_feast.js) */
     return out; }
   //   내일 기다리는 것: 내가 한 일 → 세상 일 · 셋까지 · pre = 잠들기 전(내일 = d + 1) · 아니면 이미 그 아침(자정 잠)
   function waits(T, pre) { const s = S(), e = en(), d0 = T.day | 0, d1 = d0 + 1, fi = pre ? 1 : 0, out = [], add = (k, ic, s9, t, p) => out.push({ k, ic, s: s9, t, p: p || null, mine: 0 });
@@ -120,6 +122,7 @@ export function createDay(A) {
     // 세상 일
     const W = [];
     { const q = A.typh ? A.typh(d1) : null; if (q) W.push(q); }   /* TYPH-1 태풍 판(태풍까지 n일 · 내일 태풍 · 태풍 뒤 아침) = 세상 일 맨 앞 */
+    { const q = A.feast ? A.feast(d1) : null; if (q) W.push(q); }   /* FEAST-1 잔치까지 ○밤(이레 안) · 모자란 갈래 · 잔치 날(town_feast.js) */
     if (A.stall() && A.jang(d1)) W.push({ k: 'jang', ic: '🎪', s: T2('장날', 'Market day'), t: T2('장날이에요. 장터 값이 더 좋아요', 'Market day — the market pays more'), p: plc('🛒', e ? 'market' : '장터', A.stall()) });
     const fw = A.auto() ? A.fc(fi) : null;
     if (fw === 'rain') W.push({ k: 'wx', ic: '🌧', s: T2('비 예보', 'Rain'), t: T2('비 예보예요. 숲 그늘에 버섯이 돋고 강물이 불어요', 'Rain is forecast. Mushrooms come up in the shady woods and the river rises'), p: plc('🍄', e ? 'mushrooms' : '버섯', A.mush()) });
