@@ -285,7 +285,7 @@ export function createMapApi(host, NAV, META) {
   const small = () => document.body.classList.contains('small');
   const chipText = t => small() || (document.body.classList.contains('touch') && !window.SM_PROMO) ? String(t).replace(/\s*\((?:[A-Z]|[A-Z]:[^)]*)\)\s*$/, '') : t;   // TOUCH-2: 태블릿(터치·큰 화면)도 키 글자 X
   // MOBUI-1 리뷰: 터치(휴대폰·태블릿)에서 누르는 칩(.gtap — 💡 길 안내·🎫 도장·🔊 소리)은 44px 칸(가운데 정렬 + 투명 누름 자리 phone.css), 보기만 하는 칩은 30px(휴대폰) 칸 · 데스크톱은 34 그대로
-  const slot = c => c.tap && document.body.classList.contains('touch') ? 44 : small() ? 30 : 34;
+  const slot = c => c.tap && document.body.classList.contains('touch') ? 44 : document.body.classList.contains('h-town') ? Math.max(small() ? 30 : 34, (c.el.offsetHeight || 0) + 6) : small() ? 30 : 34;   /* UIUX-1: 마을 칩(잉크 테두리·그림자 38px)이 34 칸보다 커서 자전거·메뉴 칩이 5px 겹치던 것 → 마을에서만 칸을 칩 높이 + 6으로(학교·홍보판 그대로) */
   // LAND-1: 휴대폰 가로(세로 공간이 아주 좁다 — 사파리 주소창·탭 줄)면 칩을 미니맵 왼쪽 · 목표 줄 아래에 가로 한 줄로, 글자는 짧게('📖 정림초 도감 1/15' → '📖 1/15')
   const shortChip = t => { t = String(t).trim(); if ([...t].length <= 8) return t; const p = t.split(/\s+/), n = t.match(/\d+\s*\/\s*\d+/); if (n) return p[0] + ' ' + n[0].replace(/\s+/g, ''); const w = [...(p[1] || '')]; return p[0] + (w.length ? ' ' + (w.length > 6 ? w.slice(0, 5).join('') + '…' : w.join('')) : ''); };
   const rowMode = () => small() && document.body.classList.contains('touch') && innerWidth > innerHeight;
