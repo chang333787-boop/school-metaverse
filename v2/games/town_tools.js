@@ -85,7 +85,7 @@ export function createTools(A) {
     if (force && RING) RING.position.set(T.x, T.y + 0.05, T.z); }
   // 붙는 대상: 삽 = 보물 흙더미 · 빗자루 = 쓸 자리 · 돋보기 = 곤충·버섯·꽃·돌 · 물뿌리개 = 텃밭·모닥불·꽃·화분(고리가 그 위면 노랑만 — 자리는 그대로)
   function snap(k, x, z, me) {
-    if (k === 'shovel' || k === 'broom') { const xp = A.xp && A.xp(), f = xp && xp.near(x, z, k); if (f) return [f.x, f.y, f.z, 'fos', f.id]; }   /* EXPLORE-1 층층골 흙더미·돌판(그 도구 차례일 때만) */
+    if (k === 'shovel' || k === 'broom') { const xp = A.xp && A.xp(), f = xp && xp.near(x, z, k); if (f) return [f.x, f.y, f.z, 'fos', f.id]; const wv = A.wxev && A.wxev(), g = wv && wv.near(x, z, k); if (g) return [g.x, g.y, g.z, 'wxe', g.id]; }   /* WXEV-1 폭설 눈 더미(삽·빗자루 · town_wxev.js) */   /* EXPLORE-1 층층골 흙더미·돌판(그 도구 차례일 때만) */
     if (k === 'shovel') { const t = A.trs(), c = t && t.near && t.near(x, z); if (c) return [c.x, c.y, c.z, 'trs']; return null; }
     if (k === 'broom') { let b = null, bd = gear('broom2') ? 2.2 : 1.4; for (const p of PILES) { const d = Math.hypot(p.x - x, p.z - z); if (d < bd) { bd = d; b = p; } } return b ? [b.x, b.y, b.z, 'pile', b.k] : null; }
     if (k === 'lens') { const L9 = lensAt(x, z, me); return L9 ? [L9.x, L9.y, L9.z, L9.kind, L9.key] : null; }
@@ -211,6 +211,7 @@ export function createTools(A) {
   // ───────── ⛏ 삽 ─────────
   function useShovel() { const x = T.x, z = T.z, y = T.y, en9 = en(), t = S();
     if (T.lock === 'fos') { const id = T.k; map.player.act('dig', { at: [x, y, z], msg: null, midAt: 1.55, color: 0x8a7458, color2: 0xa8957a, onMid: () => { const xp = A.xp(); if (xp && xp.use('shovel', id)) A.rec('dig-fos'); } }); return; }   /* EXPLORE-1 층층골 흙더미(무엇이 나올지 자리마다 정해짐 · 무작위 X) */
+    if (T.lock === 'wxe') { const id = T.k; map.player.act('dig', { at: [x, y, z], msg: null, midAt: 1.55, color: 0xf4f8fb, color2: 0xe2ebf2, onMid: () => { const wv = A.wxev && A.wxev(); if (wv && wv.use('shovel', id)) A.rec('snow-clear'); } }); return; }   /* WXEV-1 눈 한 삽 */
     if (T.lock === 'trs') { map.player.act('dig', { at: [x, y, z], msg: null, midAt: 1.55, onMid: () => { const tr = A.trs(); if (tr && tr.shovel && tr.shovel()) { A.rec('dig-trs'); } } }); return; }
     if (A.inSchool(x, z)) { toast(en9 ? '🏫 We do not dig at school — dig in the town soil' : '🏫 학교 땅은 파지 않아요 — 마을 흙에서 파요', 2.4); return; }
     if (water(x, z)) { toast(en9 ? '💧 You cannot dig in water' : '💧 물에서는 팔 수 없어요', 2); return; }
@@ -287,7 +288,8 @@ export function createTools(A) {
   function pilesSync(force) { const me = map.player.pos(), cx = Math.floor(me.x / CELL), cz = Math.floor(me.z / CELL), d = day(), mode = swMode(), t = S(); if (t.sw.d !== d) { t.sw = { d, k: {} }; mark(); }
     const sig = cx + ':' + cz + ':' + d + ':' + mode; if (!force && sig === center) return; center = sig; if (mode !== lastMode || d !== lastDay) { PCACHE.clear(); lastMode = mode; lastDay = d; }
     PILES.length = 0; if (A.on()) for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) for (const p of cellPiles(cx + i, cz + j, d, mode)) if (!t.sw.k[p.k]) PILES.push(p); dirty = true; }
-  function useBroom() { if (T.lock === 'fos') { const id = T.k; map.player.act('sweep', { at: [T.x, T.y, T.z], msg: null, colors: [0xd2c6b0, 0xb8a888], midAt: 1.7, onMid: () => { const xp = A.xp(); if (xp && xp.use('broom', id)) A.rec('sweep-fos'); } }); return; }   /* EXPLORE-1 돌판 쓸기 */
+  function useBroom() { if (T.lock === 'wxe') { const id = T.k; map.player.act('sweep', { at: [T.x, T.y, T.z], msg: null, colors: [0xf4f8fb, 0xe2ebf2], midAt: 1.7, onMid: () => { const wv = A.wxev && A.wxev(); if (wv && wv.use('broom', id)) A.rec('snow-clear'); } }); return; }   /* WXEV-1 눈 쓸기 */
+    if (T.lock === 'fos') { const id = T.k; map.player.act('sweep', { at: [T.x, T.y, T.z], msg: null, colors: [0xd2c6b0, 0xb8a888], midAt: 1.7, onMid: () => { const xp = A.xp(); if (xp && xp.use('broom', id)) A.rec('sweep-fos'); } }); return; }   /* EXPLORE-1 돌판 쓸기 */
     const e = en(), t = S(), p = T.lock === 'pile' ? PILES.find(q => q.k === T.k) : null, mode = swMode();
     const cols = !p ? [0xb8a888, 0xa89878] : p.mode === 'leaf' ? [0xd8762a, 0xc8452e, 0xe8b23a] : p.mode === 'snow' ? [0xf4f8fb, 0xe2ebf2] : [0xf4f4ee, 0xd8d0c0, 0xc8443a];
     map.player.act('sweep', { at: [T.x, T.y, T.z], msg: null, colors: cols, midAt: 1.7, onMid: () => {
