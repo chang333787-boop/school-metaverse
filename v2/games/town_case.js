@@ -10,6 +10,9 @@
 //   둘째 사건 ⚖️ 사라진 장터 저울(SCALE-1 · 10-26): 장날 아침 · 범인 몰기 X = 오해를 푸는 이야기(옆 가게 이웃이 눈금이 틀린 저울을 계량 검사에 맡기고 말을 못 전함)
 //     단서 여섯 = 판매대 바닥 자국(방위) · 정류장 시간표 · 정자 이웃(맑은 저녁 6~8시) · 옆 가게 이웃(오후 · 본 것을 보여 줘야 생각남) · 맡긴 곳 장부(9~18시) · 날씨 기록(어제 바람)
 //     보고 = 상인에게 본 것 둘 → 다음 날 고친 저울 + '정확해요' 판 + 서로 고맙다는 소식 · 늦으면 다음 장날 임시 저울(줄이 길어요 · 벌 X)
+//   셋째 사건 🚧 공사장 길 안전(SITEROAD-1 · 10-26): 흐려진 강이 끝난 다음 날부터(seeds.siteRoad) · 흙막이 세운 그 공사장 입구 앞 등굣길
+//     단서 여섯 = 입구 곁에 서서 지켜보기(몸으로 · 아침 8~9시에만 트럭) · 길바닥 흙 · 쌓인 자재(눈높이) · 끊긴 보도 · 길을 자주 지나는 이웃(생각: 빨라서) · 공사 일꾼(생각: 어두워서)
+//     까닭 셋(빨라서 = 과속 방지 턱 · 어두워서 = 가로등 · 아이들이 다니는 때 + 끊긴 보도 + 가린 자재 ✓) → 창구 보고 + 대책 고르기 → 다음 날 울타리 친 임시 보도 · 건널목 표시 · '공사 차량 시간' 판 · 늦으면 하루 보도 막힘
 //   사건마다 다른 것 = 사건 표 줄의 글(ann·yes·ask·recv·nosup…) + PLACE[id] + 모습·E 자리(sync·hotSync 안 갈래) · 고리·수첩·기한·보고 창·칩은 같음
 export const CASE_V = 1;
 const DIR8 = [T2('북', 'north'), T2('북동', 'northeast'), T2('동', 'east'), T2('남동', 'southeast'), T2('남', 'south'), T2('남서', 'southwest'), T2('서', 'west'), T2('북서', 'northwest')];
@@ -61,7 +64,26 @@ export const CASES = {
     ask: T2('상인: "저울이 어디로 갔는지 알아냈어요? 근거를 두 가지 보여 줘요."', 'Seller: “Did you find out where my scale went? Show me two pieces of evidence.”'),
     nosup: T2('상인: "그걸로는 저울이 어디로 갔는지 모르겠어요. 저울이 간 곳을 보여 주는 것도 하나 골라 줘요."', 'Seller: “That does not tell me where the scale went. Add one that shows where it went.”'),
     recv: T2('상인: "아, 옆 가게에서 눈금을 고치러 맡겨 준 거였군요! 누가 가져간 줄 알았어요. 내일 아침이면 저울이 돌아온대요. 고마워요."', 'Seller: “Oh, my neighbour took it to have the marks fixed! I thought someone had taken it. It comes back tomorrow morning. Thank you.”') },
-  siteRoad: { ready: false, icon: '🚧', t: T2('공사장 길 안전', 'Safe road by the building site'), days: 3, seed: 'river', when: () => false },
+  // 🚧 공사장 길 안전(SITEROAD-1): 흐려진 강이 끝난 다음 날부터 · 기한 사흘 · 보고 = 행정복지센터 창구 + 대책 고르기(fixes) · 늦으면 = 다음 날 하루 보도 막힘
+  //   4학년 사회(우리 고장의 문제 · 안전): 위험한 곳은 '왜' 위험한지(때 · 자리 · 눈높이)를 알아야 맞는 대책을 고름 · 공사하는 분도 이웃(범인 몰기 X · 불편해지는 사람도 있음)
+  siteRoad: { ready: true, icon: '🚧', t: T2('공사장 길 안전', 'Safe road by the building site'), days: 3, seed: 'river',
+    when: c => !!(c.seeds && c.seeds.siteRoad != null && c.day > c.seeds.siteRoad),
+    q: T2('공사장 앞 등굣길이 어디가 왜 위험한지 알아내요.', 'Find out where and why the school road by the building site is dangerous.'),
+    words: [[T2('보도', 'Pavement'), T2('사람이 걸어 다니도록 찻길과 나누어 만든 길', 'The part of a street made for people to walk on, apart from the cars')], [T2('시야', 'Line of sight'), T2('눈으로 볼 수 있는 넓이', 'How far and wide your eyes can see')]],
+    clues: ['sr_truck', 'sr_mud', 'sr_pile', 'sr_gap', 'sr_nbr', 'sr_crew'], chkOnly: ['sr_slow', 'sr_lamp', 'sr_cross'], lead0: 'sr0',
+    hyps: [{ k: 'speed', t: T2('트럭이 너무 빨리 달려서 위험해요', 'The trucks drive too fast'), chk: 'slow', fk: 'sr_slow', no: T2('입구 앞 찻길에 과속 방지 턱과 "천천히" 표지가 있어 트럭이 빨리 달릴 수 없어요. 빨라서 위험한 것은 아니었어요.', 'There is a speed bump and a “Slow” sign by the gate, so trucks cannot go fast there. Speed was not it.') },
+      { k: 'dark', t: T2('저녁에 길이 어두워서 위험해요', 'The road is too dark in the evening'), chk: 'lamp', fk: 'sr_lamp', no: T2('입구 곁에 가로등이 둘 서 있어요. 아이들이 학교 가는 아침엔 해가 떠서 밝아요. 어두워서 위험한 것은 아니었어요.', 'There are two street lamps by the gate, and the morning school walk is in daylight. Darkness was not it.') },
+      { k: 'cross', t: T2('아이들이 다니는 때에 트럭이 드나들고, 보도가 끊기고, 자재가 눈을 가려요', 'Trucks come and go while children walk by, the pavement breaks off, and building materials block the view'), chk: 'c', fk: 'sr_cross', ok: 1 }],
+    sup: ['sr_truck', 'sr_pile', 'sr_gap', 'sr_cross'], repTo: 'hall', lateMax: 2, lateOn: () => true,   /* 늦으면 = 기한 다음 날 하루 보도 막힘(길 건너편으로 돌아감) */
+    fixes: [{ k: 'fix', ok: 1, t: T2('등교 때(아침 8~9시)는 트럭이 쉬고, 끊긴 자리에 울타리 친 보도를 내고, 자재를 안쪽으로 옮겨요', 'Trucks rest during the school walk (8–9 am), a fenced path fills the gap, and the materials move inside') },
+      { k: 'away', t: T2('공사가 끝날 때까지 아이들이 먼 길로 돌아서 다녀요', 'Children take a long way round until the works end'), no: T2('공사는 오래 이어져요. 아이들이 날마다 먼 길을 돌면 힘들고 늦어요. 이 길을 안전하게 바꿀 방법은 없을까요?', 'The works will go on for a long time. A long way round every day is tiring and makes them late. Can we make this road safe instead?') },
+      { k: 'care', t: T2('트럭 운전하는 분께 조심해 달라고 말해요', 'Ask the truck drivers to be careful'), no: T2('조심하는 것만으로는 끊긴 보도와 눈을 가리는 자재가 그대로예요. 본 것을 하나씩 고치는 방법을 골라 줄래요?', 'Being careful leaves the broken pavement and the blocking pile as they are. Can you pick a way that fixes what you saw?') }],
+    ann: T2('공사장 앞 길로 학교 가는 아이들이 위험하대요. 사흘 안에 어디가 왜 위험한지 알아내 행정복지센터에 알려요(📒 수첩 칩).', 'Children walking to school past the building site are in danger. Find out where and why within 3 days and tell the community centre (notebook chip).'),
+    yes: T2('이제 보고서를 내요. 직접 본 것 둘을 골라 행정복지센터 창구(09~18시)에 내요.', 'Now write a report: pick two things you saw yourself, and hand it in at the community centre desk (9 am–6 pm).'),
+    ask: T2('직원: "공사장 앞 길이 왜 위험한가요? 근거를 두 가지 골라 주세요."', 'Clerk: “Why is the road by the site dangerous? Pick two pieces of evidence.”'),
+    nosup: T2('직원: "그건 다른 까닭이 아니라는 근거예요. 아이들이 왜 위험한지 보여 주는 것도 하나 골라 줘요."', 'Clerk: “Those show what it was NOT. Add one that shows why the children are in danger.”'),
+    fixAsk: T2('직원: "잘 알았어요. 그럼 무엇을 하면 좋을까요?"', 'Clerk: “I see. So what should we do?”'),
+    recv: T2('직원: "좋아요. 내일 공사하는 분들과 함께 그렇게 바꿀게요. 아침 8~9시엔 트럭이 쉬어요."', 'Clerk: “Good. Tomorrow we will change it with the builders. Trucks will rest from 8 to 9 am.”') },
 };
 
 // 단서 글(본 것 = 내가 직접 본·잰 것 · 들은 생각 = 이웃이 한 말)
@@ -90,6 +112,16 @@ export const CL = {
   calm: { f: 'fact', ic: '🌤', t: T2('날씨 기록을 보니 어제는 바람이 약했어요.', 'The weather record says the wind was light yesterday.') },
   roll: { f: 'fact', ic: '🔎', t: T2('판매대 뒤 낮은 곳까지 살펴봤는데 저울이 없고, 받침 자국도 반듯하게 남아 있어요.', 'I looked down in the low ground behind the stall: no scale, and the foot marks are still neat.') },
   lost: { f: 'fact', ic: '🔎', t: p => T2(p.lost.name + ' 분실물 장부에 저울은 없어요.', 'There is no scale in the lost-and-found book at the ' + p.lost.name + '.') },
+  // 🚧 공사장 길 안전 — 본 것 넷(지켜보기는 몸으로) · 들은 생각 둘(그럴듯하지만 틀린 의견) · 확인 자리에서만 얻는 본 것 셋
+  sr_truck: { f: 'fact', ic: '🚚', t: T2('입구 곁에 서서 지켜보니, 아이들이 학교 가는 아침 8시~9시에 흙 실은 트럭이 입구를 드나들어요.', 'Standing by the gate I watched: from 8 to 9 am, when children walk to school, soil trucks go in and out.') },
+  sr_mud: { f: 'fact', ic: '👣', t: T2('입구 앞 찻길에 트럭 바퀴에서 떨어진 흙이 깔려 있어요. 밟아 보니 미끄러워요.', 'Soil from the truck wheels covers the road by the gate. It is slippery underfoot.') },
+  sr_pile: { f: 'fact', ic: '📦', t: T2('보도 곁에 공사 자재가 어른 키보다 높게 쌓여 있어요. 아이 눈높이에서는 입구에서 나오는 트럭이 안 보여요.', 'Building materials are piled higher than a grown-up by the pavement. At a child’s eye height you cannot see trucks coming out of the gate.') },
+  sr_gap: { f: 'fact', ic: '🚶', t: T2('입구 앞에서 보도가 끊겨 있어요. 걷는 사람은 트럭이 나오는 길로 내려서야 해요.', 'The pavement stops at the gate. People on foot must step into the trucks’ way.') },
+  sr_nbr: { f: 'idea', ic: '🗣', who: T2('그 길을 자주 지나는 이웃', 'the neighbour who often walks that road'), t: T2('그 길을 자주 지나는 이웃: "트럭이 너무 빨리 달려서 위험한 거예요. 빠르기만 줄이면 될 거예요."', 'Neighbour who often walks there: “The trucks are just too fast. Slow them down and it will be fine.”') },
+  sr_crew: { f: 'idea', ic: '🗣', who: T2('공사 일꾼', 'the site worker'), t: T2('공사 일꾼: "우리 트럭은 아침에만 흙을 날라요. 천천히 다니니까 괜찮아요. 저녁에 길이 어두운 게 문제 아닐까요?"', 'Site worker: “Our trucks only carry soil in the morning, and they go slowly. Isn’t the dark road in the evening the problem?”') },
+  sr_slow: { f: 'fact', ic: '🔎', t: T2('입구 앞 찻길에 과속 방지 턱이 있고 "공사 차량 천천히" 표지가 서 있어요.', 'There is a speed bump by the gate and a “Works vehicles: slow” sign.') },
+  sr_lamp: { f: 'fact', ic: '🔎', t: T2('입구 곁에 가로등이 둘 서 있어요. 아이들은 해가 뜬 밝은 아침에 이 길로 다녀요.', 'Two street lamps stand by the gate, and children walk here in the bright morning.') },
+  sr_cross: { f: 'fact', ic: '🔎', t: T2('끊긴 보도 자리에 아이 눈높이로 서 보니, 자재 더미에 가려 입구 쪽이 안 보이고 바로 앞이 트럭이 나오는 길이에요.', 'Standing at child height where the pavement breaks, the pile hides the gate, and the trucks’ way is right in front of me.') },
   shelf: { f: 'fact', ic: '🔎', t: p => T2(p.fix.name + ' 선반에 "장터" 이름표를 단 저울이 있고, 눈금을 0에 다시 맞춰 두었어요.', 'On a shelf at the ' + p.fix.name + ' is a scale tagged “market”, with its marks set back to zero.') },
 };
 const ct = (k, p, i) => { const t = CL[k].t; return (typeof t === 'function' ? t(p) : t)[i]; };   /* 단서 글(자리가 들어가는 글은 함수) */
@@ -109,6 +141,11 @@ const LEAD = {
   sc_track: p => [T2('바퀴 자국이 ' + DIR8[p.dir][0] + '쪽으로 나 있어요. 그쪽에 무엇이 있는지 지도에서 찾아봐요.', 'The wheel tracks lead ' + DIR8[p.dir][1] + '. Look on the map for what is that way.')],
   sc_nbr0: () => [T2('옆 가게 이웃은 잘 모른대요. 직접 본 것을 보여 주면 생각이 날지도 몰라요.', 'The next-stall neighbour does not know. Showing something you saw might help them remember.')],
   sc_nbr: p => [T2('저울을 맡겼다는 ' + p.fix.name + '(' + p.fix.cell + ' 칸)에 가서 장부를 직접 봐요(9~18시).', 'Go and read the book at the ' + p.fix.name + ' (' + p.fix.cell + ') yourself (9 am–6 pm).')],
+  // 🚧 공사장 길 안전(빨간 선 X · 칸 이름과 '흙막이 세운 공사장'만)
+  sr0: p => [T2('흙막이를 세운 공사장(' + p.cell + ' 칸) 입구 앞 길을 따라 걸으며 위험한 곳을 찾아봐요.', 'Walk along the road by the gate of the silt-fenced site (' + p.cell + ') and look for danger spots.'),
+    T2('트럭이 언제 다니는지는 입구 곁에 서서 지켜봐야 알 수 있어요.', 'To know when the trucks run, stand by the gate and watch.'),
+    T2('그 길을 자주 지나는 이웃(' + p.nb.cell + ' 칸에서 일해요)과 공사 일꾼(낮)에게도 물어봐요.', 'Ask the neighbour who often walks that road (works in ' + p.nb.cell + ') and the site worker (daytime) too.')],
+  sr_crew: () => [T2('공사 일꾼은 트럭이 아침에만 다닌대요. 아침에 입구 곁에 서서 지켜봐요.', 'The site worker says the trucks run only in the morning. Stand by the gate in the morning and watch.')],
   sc_wit: () => [T2('정자 이웃은 마지막 버스가 오기 조금 전에 들었대요. 그때가 몇 시인지 정류장 시간표로 알아봐요.', 'The pavilion neighbour heard it just before the last bus. Check the bus stop timetable for the time.')],
 };
 
@@ -191,7 +228,34 @@ export function createCase(A) {
     return { mk: { x: sMk.x, z: sMk.z, i: mk.i, k: 'stall' }, nb: { x: sNb.x, z: sNb.z, i: nb.i, k: nb.k }, mkCell: A.cell(m0.x, m0.z), track: { x: tr.x, z: tr.z, ux: r2(ux / ul), uz: r2(uz / ul), fy: r2(Math.atan2(sMk.x - tr.x, sMk.z - tr.z)) }, dir: dir8(ux, uz),
       fix: { x: fS.x, z: fS.z, name: fx.name || '', kind: fk, cell: A.cell(fx.x, fx.z), dx: fx.door[0], dz: fx.door[1] }, lost: { x: lS.x, z: lS.z, name: ls.name || '', cell: A.cell(ls.x, ls.z) }, bus: bs, roll: rl, pav: { x: r2(pv.x), z: r2(pv.z), cell: A.cell(pv.x, pv.z) } };
   }
-  const PLACE = { river: placeRiver, scale: placeScale };
+  // 🚧 공사장 길 안전: 공사장 = 흐려진 강과 같은 자리(placeRiver · 같은 마을이면 같은 곳) · 입구 = 울타리 길 쪽 5.2m · 트럭 길 = 입구 → 가장 가까운 찻길(45m 안)
+  //   끊긴 보도 = 트럭 길이 찻길 가장자리 1.3m 안쪽을 지나는 곳(c) · 보도 = 그 줄을 따라 양쪽 2.6~11m · 자재 더미 = 끊긴 자리 한쪽 곁 · 지켜보는 자리 = 다른 쪽 곁
+  //   과속 방지 턱 = 입구 앞 찻길 · '천천히' 표지·가로등 둘 = 보도 줄 · 길을 자주 지나는 이웃 = 입구에서 가장 가까운 일꾼(600m 안)
+  function placeSiteRoad() { const b = placeRiver(); if (!b) { log('sr:1'); return null; } const st = b.site, ux = st.ux, uz = st.uz, gx = st.x + ux * 5.2, gz = st.z + uz * 5.2;
+    let rd = null; for (let t = 0.5; t < 45 && !rd; t += 0.5) for (const a of [0, 0.2, -0.2, 0.4, -0.4, 0.6, -0.6]) { const c = Math.cos(a), sn = Math.sin(a), vx = ux * c - uz * sn, vz = ux * sn + uz * c; if (A.onRoad(gx + vx * t, gz + vz * t)) { rd = { t, vx, vz }; break; } }
+    if (!rd) { log('sr:2'); return null; }
+    const rx = gx + rd.vx * rd.t, rz = gz + rd.vz * rd.t; let sxx = 0, sxz = 0, szz = 0, nR = 0; for (const r of [3, 5, 7]) for (let a = 0; a < 16; a++) { const dx = Math.cos(a * 0.3927) * r, dz = Math.sin(a * 0.3927) * r; if (A.onRoad(rx + dx, rz + dz)) { sxx += dx * dx; sxz += dx * dz; szz += dz * dz; nR++; } }   /* 찻길 방향 = 둘레 찻길 점들의 긴 축 */
+    const th = 0.5 * Math.atan2(2 * sxz, sxx - szz); let tx = Math.cos(th), tz = Math.sin(th), nx = -tz, nz = tx; if (nx * rd.vx + nz * rd.vz < 0) { nx = -nx; nz = -nz; }   /* n = 입구 → 찻길(길에 수직) · t = 길 따라 */
+    let t0 = 0; while (t0 < 45 && !A.onRoad(gx + nx * t0, gz + nz * t0)) t0 += 0.25; if (t0 >= 45 || nR < 6) { log('sr:2b'); return null; }
+    const ed = Math.max(0.3, t0 - 1.3), cx = gx + nx * ed, cz = gz + nz * ed;
+    const at = (s, o) => ({ x: r2(cx + tx * s - nx * o), z: r2(cz + tz * s - nz * o) }), inSite = q => { const dx = q.x - st.x, dz = q.z - st.z, a = dx * ux + dz * uz, b = dx * uz - dz * ux; return Math.abs(a) < 4.8 && Math.abs(b) < 5.8; }, fine = q => A.okSpot(q.x, q.z) && !A.onRoad(q.x, q.z) && !inSite(q);   /* s = 길 따라 · o = 찻길에서 안쪽으로 · 공사장 울타리 안 X */
+    const first = (L) => { for (const [s, o] of L) { const q = at(s, o); if (fine(q)) return q; } return null; };
+    let t1 = t0; while (t1 < t0 + 30 && A.onRoad(gx + nx * t1, gz + nz * t1)) t1 += 0.25; const fo = -(t1 - ed + 1.2);   /* 길 건너편(찻길 너머 1.2m) = o 음수 */
+    let side = 0, pile = null, watch = null; for (const sg of [1, -1]) { if (side) break; const p9 = first([[sg * 3.6, 1.9], [sg * 3.8, 1.2], [sg * 4.4, 0.9], [sg * 5, 0.6]]), w9 = p9 && first([[-sg * 3.4, 1.4], [-sg * 3.4, 0.9], [-sg * 4, 0.5], [-sg * 4.6, 0.3], [-sg * 1.4, fo], [-sg * 2.6, fo], [0, fo], [sg * 1.4, fo]]); if (p9 && w9) { side = sg; pile = p9; watch = w9; } }   /* 지켜보는 자리 = 자재 반대쪽 곁 → 없으면 길 건너편(입구가 보이는 곳) */
+    if (!side) { log('sr:3'); return null; }
+    const slowS = first([[-side * 6.2, 0.3], [-side * 7.4, 0.3], [-side * 8.6, 0.5], [-side * 5.4, 0.8], [side * 6.2, 0.3], [side * 7.4, 0.3]]), lampA = first([[side * 8.6, 0.3], [side * 9.6, 0.3], [side * 10.6, 0.5], [side * 7.4, 0.9]]), lampB = first([[-side * 10, 0.3], [-side * 11, 0.3], [-side * 9.2, 0.7], [-side * 4, fo], [side * 4, fo]]);
+    const far9 = (q, L9) => L9.every(o => !o || Math.hypot(o.x - q.x, o.z - q.z) > 1.1), firstF = (L, av) => { for (const [s, o] of L) { const q = at(s, o); if (fine(q) && far9(q, av)) return q; } return null; };
+    const crew = first([[-side * 1.7, 3.4], [-side * 2.2, 2.8], [side * 1.6, 3.6], [0, 4.2], [-side * 1.8, 0.9], [-side * 2.2, 0.4], [side * 1.8, 0.4]]);
+    const info = firstF([[-side * 2.4, 0.3], [-side * 4.8, 0.3], [-side * 8.6, 0.3], [-side * 9.8, 0.3], [side * 6.2, 0.3], [side * 7.4, 0.3]], [slowS, lampA, lampB, crew]);   /* 안내판('공사 차량 시간' · '보도 막힘') = 입구 쪽 보도 줄 */
+    if (!slowS || !lampA || !crew || !info) { log('sr:4'); return null; }
+    const sw = []; for (const sg of [-1, 1]) for (let s = 2.6; s <= 11.2; s += 1.2) if (fine(at(sg * s, 0))) sw.push(r2(sg * s));
+    const WK = A.workers() || []; let nb = null, nd = 600; for (const w of WK) { if (w.i == null || w.gate) continue; const d = Math.hypot(w.x - gx, w.z - gz); if (d < nd) { nd = d; nb = w; } } if (!nb) { log('sr:5'); return null; }
+    const nb0 = { x: nb.hx ?? nb.x, z: nb.hz ?? nb.z }; let nbS = null; for (const r of [2.4, 3.2]) for (let a = 0; a < 8 && !nbS; a++) { const x = nb0.x + Math.cos(a * 0.785 + 0.4) * r, z = nb0.z + Math.sin(a * 0.785 + 0.4) * r; if (A.okSpot(x, z)) nbS = { x: r2(x), z: r2(z) }; } if (!nbS) nbS = { x: r2(nb0.x + 2), z: r2(nb0.z + 2) };
+    return { site: { x: st.x, z: st.z, ux, uz }, cell: st.cell, gate: { x: r2(gx), z: r2(gz) }, n: [r2(nx), r2(nz)], ed: r2(ed), side, c: { x: r2(cx), z: r2(cz) }, cCell: A.cell(cx, cz),
+      mud: { x: r2(cx + nx * 1.5), z: r2(cz + nz * 1.5) }, bump: { x: r2(cx + nx * 3.6), z: r2(cz + nz * 3.6) }, pile, watch, slow: slowS, info, lamp: lampA, lamp2: lampB, crew, sw,
+      nb: { x: nbS.x, z: nbS.z, i: nb.i, k: nb.k, cell: A.cell(nb0.x, nb0.z) } };
+  }
+  const PLACE = { river: placeRiver, scale: placeScale, siteRoad: placeSiteRoad };
 
   // 물빛(0 맑음 ~ 1 흙빛): 물머리 안 = 고랑 끝에서 멀수록 맑음 · 강 = 흐림(내려갈수록 조금씩 옅어짐) · 흙막이 뒤 = 날마다 맑아짐
   function murk(q, x, z) { const p = q.pl, k = clearK(q), dT = Math.hypot(x - p.trail.x, z - p.trail.z); let inSrc = false; { const P = p.poly; let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { if ((P[i][1] > z) !== (P[j][1] > z) && x < (P[j][0] - P[i][0]) * (z - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; } inSrc = c || dT < 40 || edgeD(P, x, z) < 9; }
@@ -211,7 +275,7 @@ export function createCase(A) {
   function spend(min) { const G = A.GAME.S; G.min = Math.min(DAYM - 10, (G.min | 0) + min); mark(); }
 
   // ───────── 생김 ─────────
-  function ctx() { const D = day(); return { water: A.water ? A.water() : null, wx: A.wxDay ? A.wxDay() : '', day: D, jang: A.jang ? A.jang() : null, windyY: A.windy ? !!A.windy(D - 1) : false }; }
+  function ctx() { const D = day(); return { water: A.water ? A.water() : null, wx: A.wxDay ? A.wxDay() : '', day: D, jang: A.jang ? A.jang() : null, windyY: A.windy ? !!A.windy(D - 1) : false, seeds: S().seeds }; }
   function plan(force, only) { const s = S(), D = day(); if (s.cur) return null; if (!force && s.d === D) return null;
     if (!force) { if (!A.open() || A.busy() || A.away() || (A.GAME.S.min | 0) < 6 * 60 + 30) { if (DBG[DBG.length - 1] !== 'wait') log('wait'); return null; } if (A.emOn() || A.storyBusy()) { s.d = D; mark(); log('skip ' + D); return null; } }
     s.d = D; mark(); const c = ctx();
@@ -233,7 +297,7 @@ export function createCase(A) {
       if (q.st === 'late' && q.mudD && (q.mudD < 0 || D > q.mudD) && !q.fixD) { q.fixD = D; q.st = 'lateFix'; mark(); }   /* 그다음 날 마을이 흙막이를 세움(벌 X) */
       if (q.st === 'ok' && D > q.rep.d && !q.fixD) { q.fixD = D; q.st = 'fixed'; mark(); s.helper = (s.helper | 0) + 1; A.rec('case', { id: q.id, ev: 'fixed', d: D }); }
       if ((q.st === 'fixed' || q.st === 'lateFix') && D >= q.fixD + 4) { s.log.unshift({ id: q.id, d0: q.d0, st: q.st === 'fixed' ? 'ok' : 'late', fixD: q.fixD, hyp: q.hyp, wrong: q.wrong, rep: q.rep ? q.rep.ev : null }); s.log.length = Math.min(s.log.length, 10); s.done[q.id] = D; const nx = CASES[q.id].next; if (nx) s.seeds[nx] = D; s.cur = null; mark(); q = null; } }
-    sync(); hotSync(); chipSync(); }
+    watchSec(q); sync(); hotSync(); chipSync(); }
 
   // ───────── 모습(합친 부품) ─────────
   //   공사장 = 울타리(입구 하나 · 길 쪽) + 흙더미 셋 + 빗물 고랑(물가까지 흙빛 띠) + 공사 일꾼(이름 없는 역할 · 08~18시) · 흙막이 뒤 = 판 여섯 + 흙더미 덮개 · 고랑 X
@@ -259,6 +323,25 @@ export function createCase(A) {
   function partsMud() { return A.buildParts(put => { put('b', 0, 0.04, 0, 10, 0.04, 10, 0x7a5e3b); for (const [x, z, w] of [[-2.5, 1.8, 2.2], [2.2, -1.4, 1.8], [0.6, 3.1, 1.2], [-1.2, -2.8, 1.5]]) put('b', x, 0.085, z, w, 0.02, w * 0.7, 0x8f7552, 0, x * 0.3); }); }   /* 흙탕물이 덮은 논 한 칸(10m · 옅은 얼룩 넷) */
   function worker() { return A.buildParts(put => { for (const sg of [-1, 1]) put('b', sg * 0.09, 0, 0, 0.12, 0.8, 0.12, 0x3b4a5c); put('c', 0, 0.8, 0, 0.19, 0.55, 0, 0xf0a030); for (const sg of [-1, 1]) put('b', sg * 0.24, 0.86, 0.02, 0.08, 0.46, 0.08, 0xf0a030);
     put('s', 0, 1.5, 0, 0.16, 1, 0, 0xf2c9a0); put('c', 0, 1.58, 0, 0.19, 0.1, 0, 0xf5d020); put('s', 0, 1.62, 0, 0.17, 0.6, 0, 0xf5d020); }); }   /* 공사 일꾼(이름 없는 역할 · 노란 안전모 · 주황 조끼) */
+  // 🚧 공사장 길 소품(합친 부품 · 끊긴 보도 가운데 c 기준 · 앞 = +z = 찻길 쪽 · +x = 길 따라 −s): 보도 판 · 자재 더미 · 길바닥 흙 · 과속 방지 턱 · 가로등 둘('천천히' 표지 · 안내판은 따로 roadSign)
+  //   mode 'open' = 알아보는 동안 · 'fixed' = 고친 뒤(끊긴 자리에 철판 보도 + 건널목 표시 + 노란 울타리 · 자재 X · 흙 X) · 'closed' = 늦은 날(고깔 줄 + '보도 막힘' 판)
+  function partsRoad(q, mode) { const p = q.pl, nx = p.n[0], nz = p.n[1], c0 = p.c, g0 = A.gy(c0.x, c0.z), gyL = (lx, lz) => A.gy(c0.x + lx * nz + lz * nx, c0.z - lx * nx + lz * nz) - g0, L = w => [r2((w.x - c0.x) * nz - (w.z - c0.z) * nx), r2((w.x - c0.x) * nx + (w.z - c0.z) * nz)];
+    return A.buildParts(put => {
+      for (const s of p.sw) put('b', -s, gyL(-s, 0) - 0.02, 0, 1.12, 0.11, 1.5, Math.round(Math.abs(s) / 1.2) % 2 ? 0xc9c4b8 : 0xbdb8ad);   /* 보도 판(입구 앞 5.2m가 비어 있음) */
+      const [bx, bz] = L(p.bump); for (let i = -4; i <= 4; i++) put('b', bx + i * 0.5, gyL(bx + i * 0.5, bz) + 0.004 + (i % 2 ? 0.003 : 0), bz, 0.5, 0.07, 0.55, i % 2 ? 0xf2c94c : 0x3a3a3a);   /* 과속 방지 턱(노랑·검정) */
+      for (const lp of [p.lamp, p.lamp2]) { if (!lp) continue; const [lx, lz] = L(lp), y = gyL(lx, lz); put('c', lx, y, lz, 0.07, 4.2, 0, 0x5a6068); put('b', lx, y + 4.15, lz + 0.3, 0.14, 0.08, 0.75, 0x5a6068); put('b', lx, y + 4.08, lz + 0.55, 0.28, 0.07, 0.36, 0xfff3c4, 1); }   /* 가로등(머리 = 빛 없는 밝은 판 · 새 Light X) */
+      if (mode !== 'fixed') { const [px, pz] = L(p.pile), y = gyL(px, pz); for (let i = 0; i < 4; i++) put('b', px - 0.9 + (i % 2) * 0.1, y + i * 0.52, pz, 2.0, 0.5, 1.3, i % 2 ? 0x9aa0a6 : 0x8a8f95);   /* 자재 더미(블록 판 넷 · 어른 키보다 높게 2.1m) */
+        for (let i = 0; i < 3; i++) put('c', px + 1.35, y + 0.18 + i * 0.36, pz - 0.45 + i * 0.45, 0.18, 1.3, 0, 0x6a7078, 0, 0, Math.PI / 2);   /* 쌓인 관 셋 */
+        for (let i = 0; i < 6; i++) { const lz = -p.ed + 0.6 + i * ((p.ed + 3.2) / 6); put('b', Math.sin(i * 1.9) * 0.6, gyL(0, lz) + 0.006 + (i % 2) * 0.004, lz, 1.4 + (i % 3) * 0.3, 0.03, 0.9, i % 2 ? 0x6b5233 : 0x7a5e3b); } }   /* 바퀴에서 떨어진 흙(입구 → 찻길) */
+      if (mode === 'fixed') { put('b', 0, gyL(0, 0) - 0.02, 0, 4.0, 0.11, 1.5, 0x8d9aa6); for (let i = -3; i <= 3; i++) put('b', i * 0.55, gyL(i * 0.55, 0) + 0.09, 0, 0.32, 0.025, 1.3, 0xf6f6f0);   /* 철판 보도 + 건널목 흰 줄(트럭 길을 건너는 자리) */
+        for (const s of p.sw.concat([-2.5, 2.5])) { const y = gyL(-s, 0.85); put('b', -s, y, 0.85, 0.08, 1.0, 0.08, 0xf2c94c); put('b', -s, y + 1.0, 0.85, 0.1, 0.06, 0.1, 0x3a3a3a); }   /* 노란 울타리 말뚝(찻길 쪽 · 검은 머리) */
+        for (const sg of [-1, 1]) { const S = p.sw.filter(s => s * sg > 0); if (!S.length) continue; const s0 = Math.min(...S.map(Math.abs)) * sg, s1 = Math.max(...S.map(Math.abs)) * sg, m = (s0 + s1) / 2, w = Math.abs(s1 - s0) + 1.2; for (const [h, col] of [[0.5, 0x3a3a3a], [0.84, 0xf2c94c]]) put('b', -m, gyL(-m, 0.85) + h, 0.85, w, 0.09, 0.05, col); } }   /* 노랑·검정 가로대(입구 앞 트럭 길은 비워 둠) */
+      if (mode === 'closed') { for (let i = -2; i <= 2; i++) { const x = i * 0.9, y = gyL(x, 0.2); put('b', x, y, 0.2, 0.34, 0.03, 0.34, 0xe06a2a); put('k', x, y + 0.03, 0.2, 0.15, 0.6, 0, 0xe06a2a); put('b', x - 0.12, y + 0.32, 0.2, 0.24, 0.08, 0.24, 0xffffff); } }   /* 고깔 다섯(끊긴 자리를 막음) */
+    }); }
+  function partsTruck() { return A.buildParts(put => { for (const [x, z] of [[-0.95, -1.7], [0.95, -1.7], [-0.95, 0.4], [0.95, 0.4], [-0.95, 1.7], [0.95, 1.7]]) put('c', x, 0.45, z, 0.45, 0.3, 0, 0x2b2b2b, 0, Math.PI / 2, Math.PI / 2);   /* 바퀴 여섯 */
+    put('b', 0, 0.55, -0.6, 2.2, 0.3, 4.4, 0x4a4f55); put('b', 0, 0.85, 1.55, 2.2, 1.55, 1.3, 0xe8a23a); put('b', 0, 1.7, 2.2, 1.9, 0.55, 0.04, 0x9cc4dc);   /* 차대 · 앞칸(앞 = +z) · 앞 유리 */
+    put('b', 0, 0.85, -0.85, 2.3, 1.15, 3.1, 0xd8902c); put('b', 0, 2.0, -0.85, 2.0, 0.25, 2.8, 0x7a5e3b); }); }   /* 짐칸 + 흙 */
+  function roadSign(e, lines, col) { const g = partsSign(); g.add(board(lines(e), 1.04, 0.7, 1.525, 0.02, col)); return g; }
   // ⚖️ 저울 사건 소품(합친 부품 · 앞 = +z): 바닥 자국(받침 자국 넷 + 바퀴 자국 두 줄 · 맡긴 곳 쪽) · 장부 탁자 · 저울(돌아온 저울 + '정확해요' 판 · 임시 저울 = 막대저울)
   function partsTrack(q) { const p = q.pl, t = p.track, ry = Math.atan2(t.ux, t.uz), c = Math.cos(ry), s = Math.sin(ry), g0 = A.gy(t.x, t.z), gy = (lx, lz) => A.gy(t.x + lx * c + lz * s, t.z - lx * s + lz * c) - g0; return A.buildParts(put => {
     for (const [lx, lz] of [[-0.24, -0.2], [0.24, -0.2], [-0.24, 0.2], [0.24, 0.2]]) put('b', lx, gy(lx, lz) + 0.005, lz, 0.13, 0.03, 0.13, 0x4a3a2c);   /* 저울 받침 자국 넷 */
@@ -274,7 +357,7 @@ export function createCase(A) {
     const tx = new T3.CanvasTexture(c); tx.colorSpace = T3.SRGBColorSpace; tx.anisotropy = 2; const m = new T3.Mesh(new T3.PlaneGeometry(w, h), new T3.MeshLambertMaterial({ map: tx })); m.position.set(x || 0, y, z); m.userData.own = 1; return m; }
   function drop(k) { const g = VIS[k]; if (!g) return; map.remove(g); g.traverse(o => { if (o.isMesh) { o.geometry.dispose(); if (o.userData.own) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } } }); VIS[k] = null; }
   function put(k, key, mk, x, z, ry) { if (VKEY[k] === key) return; VKEY[k] = key; drop(k); if (!key) return; const g = mk(); g.position.set(x, A.gy(x, z), z); g.rotation.y = ry || 0; g.userData.fx = 1; map.add(g); g.updateMatrixWorld(true); VIS[k] = g; }
-  function sync() { const q0 = S().cur; syncScale(q0 && q0.id === 'scale' ? q0 : null); const q = q0 && q0.id === 'river' ? q0 : null;
+  function sync() { const q0 = S().cur; syncScale(q0 && q0.id === 'scale' ? q0 : null); syncSite(q0 && q0.id === 'siteRoad' ? q0 : null); const q = q0 && q0.id === 'river' ? q0 : null;
     const e = en(), p = q && q.pl, live = q && q.st !== 'done', fixed = !!(q && q.fixD && day() >= q.fixD), siteA = p ? Math.atan2(p.site.ux, p.site.uz) : 0, m9 = A.GAME.S.min | 0;
     put('site', live ? 'site:' + (fixed ? 1 : 0) + p.site.x : '', () => partsSite(q, fixed), p && p.site.x, p && p.site.z, siteA);
     put('trail', live && !fixed ? 'trail:' + p.trail.x : '', () => partsTrail(q), p && p.site.x, p && p.site.z, 0);
@@ -283,6 +366,17 @@ export function createCase(A) {
     put('mud', q && q.mudD > 0 && day() === q.mudD ? 'mud:' + q.mudD : '', () => partsMud(), p && p.mud.x, p && p.mud.z, 0);
     const wOn = live && m9 >= 8 * 60 && m9 < 18 * 60, gx = p ? p.site.x + p.site.ux * 6.2 + p.site.uz * 2.2 : 0, gz = p ? p.site.z + p.site.uz * 6.2 - p.site.ux * 2.2 : 0;
     put('wk', wOn ? 'wk:' + gx : '', () => worker(), gx, gz, siteA); }
+  //   🚧 공사장 길: 공사장(흙막이 선 모습) · 길 소품(알아보는 동안 / 고친 뒤 / 늦은 날) · '천천히' 표지 · 안내판(고친 뒤 '공사 차량 시간' · 늦은 날 '보도 막힘')
+  //     트럭 = 알아보는 동안엔 아침 8~9시에만 입구에 · 고친 뒤엔 그때를 비우고 9~12시 · 공사 일꾼 = 8~18시
+  const srMode = q => { const D = day(); return q.fixD && D >= q.fixD ? 'fixed' : q.mudD > 0 && D === q.mudD ? 'closed' : 'open'; };
+  function syncSite(q) { const e = en(), p = q && q.pl, live = !!q, mode = q ? srMode(q) : '', m9 = A.GAME.S.min | 0, ry = p ? Math.atan2(p.n[0], p.n[1]) : 0;
+    put('sr_site', live ? 'srs:' + p.site.x : '', () => partsSite(q, true), p && p.site.x, p && p.site.z, p ? Math.atan2(p.site.ux, p.site.uz) : 0);
+    put('sr_road', live ? 'srr:' + mode + p.c.x : '', () => partsRoad(q, mode), p && p.c.x, p && p.c.z, ry);
+    put('sr_slow', live ? 'srw:' + e : '', () => roadSign(e, e9 => (e9 ? ['Works vehicles', 'SLOW'] : ['공사 차량', '천천히']), '#c0392b'), p && p.slow.x, p && p.slow.z, ry);
+    put('sr_info', live && mode !== 'open' ? 'sri:' + mode + e : '', () => roadSign(e, mode === 'fixed' ? (e9 => (e9 ? ['Works vehicles', 'Rest 8–9 am', 'school walk time'] : ['공사 차량 시간', '아침 8~9시 쉬어요', '아이들 학교 가는 때'])) : (e9 => (e9 ? ['Pavement closed', 'Please use', 'the other side'] : ['보도 막힘', '길 건너편으로', '돌아가 주세요'])), mode === 'fixed' ? '#2f7d4a' : '#c0392b'), p && p.info.x, p && p.info.z, ry);
+    const rush = m9 >= 8 * 60 && m9 < 9 * 60, trk = live && (mode === 'fixed' ? m9 >= 9 * 60 && m9 < 12 * 60 : rush), tx = p ? p.gate.x + p.n[0] * 1.6 : 0, tz = p ? p.gate.z + p.n[1] * 1.6 : 0;
+    put('sr_truck', trk ? 'srt:' + tx : '', () => partsTruck(), tx, tz, ry);
+    put('sr_wk', live && m9 >= 8 * 60 && m9 < 18 * 60 ? 'srk:' + p.crew.x : '', () => worker(), p && p.crew.x, p && p.crew.z, ry + Math.PI); }
   //   저울: 알아보는 동안(open) = 바닥 자국 · 정류장 시간표 · 맡긴 곳 장부 탁자 · 돌아온 날부터 = 저울 + '정확해요' 판 · 늦은 장날 하루 = 임시 막대저울
   function syncScale(q) { const e = en(), p = q && q.pl, live = !!q, back = !!(q && q.fixD && day() >= q.fixD), slow = !!(q && q.mudD > 0 && day() === q.mudD && !back), t = p && p.track, fixA = p ? Math.atan2(p.fix.x - p.fix.dx, p.fix.z - p.fix.dz) : 0;
     put('sc_track', live && q.st === 'open' ? 'trk:' + t.x : '', () => partsTrack(q), t && t.x, t && t.z, t ? Math.atan2(t.ux, t.uz) : 0);
@@ -292,7 +386,7 @@ export function createCase(A) {
 
   // ───────── E 자리(그 자리 · 빨간 선 X — 확인 자리만 빨간 선) ─────────
   function hot(k, on, x, z, label, use, r) { const key = on ? label + ':' + x + ':' + z : ''; if (HKEY[k] === key) return; HKEY[k] = key; if (HOT[k]) { HOT[k].remove(); HOT[k] = null; } if (!on) return; HOT[k] = map.interact.add({ kind: 'game', x, z, y: A.gy(x, z), r: r || 2.2, label, use }); }
-  function hotSync() { const q0 = S().cur; hotScale(q0 && q0.id === 'scale' ? q0 : null); const q = q0 && q0.id === 'river' ? q0 : null, e = en(), open = !!(q && q.st === 'open'), p = q && q.pl, m9 = A.GAME.S.min | 0;
+  function hotSync() { const q0 = S().cur; hotScale(q0 && q0.id === 'scale' ? q0 : null); hotSite(q0 && q0.id === 'siteRoad' ? q0 : null); const q = q0 && q0.id === 'river' ? q0 : null, e = en(), open = !!(q && q.st === 'open'), p = q && q.pl, m9 = A.GAME.S.min | 0;
     hot('site', open, p && p.site.x + p.site.ux * 0.8, p && p.site.z + p.site.uz * 0.8, '🔍 ' + (e ? 'Look at the soil heaps' : '흙더미 살펴보기'), () => clue('site', 'look'), 2.6);
     hot('drain', open, p && p.drain.x, p && p.drain.z, (q && q.hyp === 'fac' ? '🔎 ' : '🔍 ') + (e ? 'Look at the drain' : '배수구 살펴보기'), () => (q.hyp === 'fac' ? check('fac') : clue('drain', 'look')));
     hot('sign', open, p && p.sign.x, p && p.sign.z, '🔍 ' + (e ? 'Read the bus stop notice' : '정류장 안내판 읽기'), () => clue('sign', 'look'));
@@ -340,6 +434,28 @@ export function createCase(A) {
       if (q.st === 'open') { bub(p.mk, e ? 'I left my scale on the stall last evening, and this morning it was gone.' : '어제 저녁 판매대에 저울을 두고 갔는데, 아침에 와 보니 없어요.'); return; }
       bub(p.mk, q.fixD && day() >= q.fixD ? (e ? 'I was worried when it vanished. Thank you for having it fixed!' : '말없이 사라져서 걱정했는데, 고쳐 줘서 고마워요!') : (e ? 'This spare scale is slow. Sorry for the wait!' : '임시 저울이라 좀 느려요. 기다려 줘서 고마워요.')); return; }
     if (k === 'nb2') bub(p.nb, e ? 'Sorry I forgot to tell you. Next time I will leave a note.' : '말을 못 전해서 미안해요. 다음엔 쪽지를 남길게요.'); }
+
+  // 🚧 공사장 길 E 자리(단서 자리엔 빨간 선 X · 확인 자리만) — 지켜보기 = 그 시각(8~9시)에 그 자리에 서 있어야(1초 칸이 셈 · 떠나면 처음부터)
+  function hotSite(q) { const e = en(), open = !!(q && q.st === 'open'), p = q && q.pl, done9 = !!(q && q.fixD && day() >= q.fixD);
+    hot('sr_watch', open && !q.clues.sr_truck && !q.watch, p && p.watch.x, p && p.watch.z, '🔍 ' + (e ? 'Stand by the gate and watch' : '입구 곁에 서서 지켜보기'), () => watchStart(), 2.0);
+    hot('sr_mud', open, p && p.mud.x, p && p.mud.z, '🔍 ' + (e ? 'Look at the road surface' : '길바닥 살펴보기'), () => clue('sr_mud', 'look'), 2.0);
+    hot('sr_pile', open, p && p.pile.x, p && p.pile.z, '🔍 ' + (e ? 'Look at the pile of materials' : '쌓인 자재 살펴보기'), () => clue('sr_pile', 'look'), 2.4);
+    hot('sr_gap', open, p && p.c.x, p && p.c.z, q && q.hyp === 'cross' ? '🔎 ' + (e ? 'Stand at child height where it breaks' : '끊긴 보도에 아이 눈높이로 서 보기') : '🔍 ' + (e ? 'Look at the pavement' : '보도 살펴보기'), () => (q.hyp === 'cross' ? check('cross') : clue('sr_gap', 'look')), 1.8);
+    hot('sr_slow', open && q.hyp === 'speed', p && p.slow.x, p && p.slow.z, '🔎 ' + (e ? 'Look at the road by the gate' : '입구 앞 찻길 살펴보기'), () => check('speed'));
+    hot('sr_lamp', open && q.hyp === 'dark', p && p.lamp.x, p && p.lamp.z, '🔎 ' + (e ? 'Look at the street lamps' : '가로등 살펴보기'), () => check('dark'));
+    hot('sr_nbr', open && !q.clues.sr_nbr, p && p.nb.x, p && p.nb.z, '🗣 ' + (e ? 'Ask about the site road' : '공사장 길 이야기 묻기'), () => talkSite('nbr'), 2.0);
+    hot('sr_crew', !!(q && VIS.sr_wk && (open ? !q.clues.sr_crew : done9)), p && p.crew.x, p && p.crew.z, '🗣 ' + (open ? (e ? 'Ask the site worker' : '공사 일꾼에게 묻기') : (e ? 'Talk to the site worker' : '공사 일꾼과 이야기하기')), () => talkSite('crew'), 2.0); }
+  function watchStart() { const q = S().cur, e = en(); if (!q || q.id !== 'siteRoad' || q.st !== 'open' || A.panelOpen()) return;
+    if (!minIn(8, 9)) { toast('🚚 ' + (e ? 'The gate is quiet now. No trucks are coming or going.' : '지금은 입구가 조용해요. 드나드는 트럭이 없어요.'), 3); A.rec('case', { id: q.id, ev: 'watch0', m: A.GAME.S.min | 0 }); return; }
+    q.watch = 1; mark(); toast('🚚 ' + (e ? 'Stay here and watch the gate for a while. If you leave, you start again.' : '이 자리에 서서 입구를 잠깐 지켜봐요. 자리를 떠나면 처음부터 다시 봐요.'), 3.4); }
+  function watchSec(q) { if (!q || q.id !== 'siteRoad' || q.st !== 'open' || !q.watch) return; const w = q.pl.watch, e = en();
+    if (dist(w.x, w.z) > 3.5 || A.away() || !minIn(8, 9)) { q.watch = 0; mark(); log('watch:left'); A.say('🚚 ' + (e ? 'You did not see it through. Come back and watch again.' : '끝까지 못 봤어요. 다시 와서 지켜봐요.'), 2.6, 1); return; }
+    if (++q.watch > 6 && !A.panelOpen()) { q.watch = 0; mark(); clue('sr_truck', 'body'); } }
+  function talkSite(k) { const q = S().cur, e = en(); if (!q || q.id !== 'siteRoad' || A.panelOpen()) return; const p = q.pl, bub = (o, t) => A.bubble({ x: o.x, y: A.gy(o.x, o.z), z: o.z, sc: 1 }, t); log('talkR ' + k + ' ' + (A.GAME.S.min | 0));
+    if (k === 'nbr') { if (wkOut(p.nb.i)) { toast(e ? 'Nobody is here right now.' : '지금은 자리에 아무도 없어요.', 2.4); return; } bub(p.nb, ct('sr_nbr', p, e ? 1 : 0).replace(/^[^:]+: /, '')); clue('sr_nbr', 'talk'); return; }
+    if (k !== 'crew' || !VIS.sr_wk) return;
+    if (q.st === 'open') { bub(p.crew, ct('sr_crew', p, e ? 1 : 0).replace(/^[^:]+: /, '')); clue('sr_crew', 'talk'); if (!q.leads.includes('sr_crew')) { q.leads.push('sr_crew'); mark(); } return; }
+    bub(p.crew, e ? 'Resting an hour each morning slows the work a little. Still, the children come first.' : '아침 한 시간을 쉬니 공사가 조금 늦어져요. 그래도 아이들이 먼저지요.'); }
 
   // ───────── 단서 얻기 ─────────
   function clue(k, how, quiet) { const q = S().cur, e = en(); if (!q || q.st !== 'open') return false; const neu = !q.clues[k];
@@ -404,8 +520,16 @@ export function createCase(A) {
       if (b.dataset.a === 'go' && pick.length === 2) { q.repTry++; mark(); const idea = pick.find(k => CL[k].f === 'idea');
         if (idea) { const who = hall ? (e ? 'Clerk' : '직원') : (e ? 'Seller' : '상인'); msg = who + (e ? ': “' : ': "') + L(IDEA_RIVER[idea] || ideaAsk(CL[idea].who)) + (e ? '”' : '"'); sfx('tick'); A.rec('case', { id: q.id, ev: 'repIdea', k: idea }); pick = pick.filter(k => k !== idea); paint(); return; }
         if (!pick.some(k => R.sup.includes(k))) { msg = L(R.nosup); sfx('tick'); pick = []; paint(); return; }
-        q.rep = { d: day(), m: A.GAME.S.min | 0, ev: pick.slice() }; q.st = 'ok'; mark(); A.skUp('explore', 4, 'case:' + q.id + ':rep'); A.rec('case', { id: q.id, ev: 'rep', k: pick, tries: q.repTry, wrong: q.wrong }); sfx('ding');
-        const bx = P.querySelector('.bx'); (bx || P).innerHTML = '<h3>📝 ' + (hall ? (e ? 'Report received' : '보고서를 받았어요') : (e ? 'The seller understands' : '상인이 알았어요')) + '</h3><div class="pc-tx">' + esc(L(R.recv)) + '</div><div class="cs-wd">' + R.words.map(w => '<div>📖 <b>' + esc(L(w[0])) + '</b> = ' + esc(L(w[1])) + '</div>').join('') + '</div><div class="row"><button data-a="x">' + (e ? 'OK' : '좋아요') + '</button></div>'; } }; }
+        const ev0 = pick.slice(), bx = P.querySelector('.bx') || P;
+        const accept = () => { q.rep = { d: day(), m: A.GAME.S.min | 0, ev: ev0, fx: q.fixK || '' }; q.st = 'ok'; mark(); A.skUp('explore', 4, 'case:' + q.id + ':rep'); A.rec('case', { id: q.id, ev: 'rep', k: ev0, tries: q.repTry, wrong: q.wrong }); sfx('ding'); P.onclick = ev9 => { const b9 = ev9.target.closest('button'); if (b9) A.closeP(); };
+          bx.innerHTML = '<h3>📝 ' + (hall ? (e ? 'Report received' : '보고서를 받았어요') : (e ? 'The seller understands' : '상인이 알았어요')) + '</h3><div class="pc-tx">' + esc(L(R.recv)) + '</div><div class="cs-wd">' + R.words.map(w => '<div>📖 <b>' + esc(L(w[0])) + '</b> = ' + esc(L(w[1])) + '</div>').join('') + '</div><div class="row"><button data-a="x">' + (e ? 'OK' : '좋아요') + '</button></div>'; };
+        if (!R.fixes) { accept(); return; }
+        /* 🚧 대책 고르기(근거가 받아들여진 뒤 · 섞어 보임) — 본 것을 고치지 못하는 대책은 직원이 까닭을 말하고 다시 고름(시간 X) */
+        const F = R.fixes.slice().sort((a, b) => hashS(a.k + q.d0 + 'f') - hashS(b.k + q.d0 + 'f')); let fm = '';
+        const drawF = () => '<h3>🛠 ' + (e ? 'What should we do?' : '대책 고르기') + '</h3><div class="pc-tx">' + esc(L(R.fixAsk)) + '</div><div class="cs-ch">' + F.map(f => '<button class="sub" data-x="' + f.k + '">' + esc(L(f.t)) + '</button>').join('') + '</div><div class="sm" style="color:#a2541b;font-weight:700">' + esc(fm) + '</div><div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>';
+        bx.innerHTML = drawF(); P.onclick = ev9 => { const b9 = ev9.target.closest('button'); if (!b9) return; if (b9.dataset.a === 'x') { A.closeP(); return; } const f = F.find(o => o.k === b9.dataset.x); if (!f) return; A.rec('case', { id: q.id, ev: 'fixPick', k: f.k });
+          if (!f.ok) { fm = (e ? 'Clerk: “' : '직원: "') + L(f.no) + (e ? '”' : '"'); sfx('tick'); bx.innerHTML = drawF(); return; }
+          q.fixK = f.k; accept(); }; } }; }
 
   // ───────── 수첩 창 ─────────
   function notebook() { const q = S().cur, e = en(); if (!q) { toast(e ? 'No case right now.' : '지금은 사건이 없어요.', 2); return; } if (A.panelOpen()) A.closeP(); const R = CASES[q.id];
@@ -420,7 +544,7 @@ export function createCase(A) {
       + '<div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button>' + (st === 'open' && !q.chk ? '<button data-a="h"' + (nClue(q) >= 3 ? '' : ' disabled style="opacity:.5"') + '>🤔 ' + (e ? 'Pick a reason' : '까닭 고르기') + (nClue(q) >= 3 ? '' : esc(e ? ' (3 clues)' : ' (단서 셋부터)')) + '</button>' : '') + (st === 'open' && q.hyp ? '<button class="sub" data-a="way">🧭 ' + (e ? 'Way to check' : '확인할 곳 길') + '</button>' : '') + '</div>', false, 'case');
     const cv = P.querySelector('canvas'); if (cv) A.mapSnip(cv, q.samples.map((o, i) => ({ x: o.x, z: o.z, label: (i + 1) + ' ' + L(murkWord(o.m)), main: o.m > 0.6 })));
     P.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; A.closeP(); if (b.dataset.a === 'h') hypPick(); else if (b.dataset.a === 'way' && q.hyp) { const to = chkAt(q, q.hyp); A.guide([to.x, to.z], { icon: '🔎', name: e ? 'Check here' : '확인할 곳' }); } }; return P; }
-  function resultHtml(q) { const e = en(), D = day(); if (q.st === 'open') return ''; if (q.id === 'scale') return resultScale(q);
+  function resultHtml(q) { const e = en(), D = day(); if (q.st === 'open') return ''; if (q.id === 'scale') return resultScale(q); if (q.id === 'siteRoad') return resultSite(q);
     if (q.st === 'ok') return '<div class="grp">' + (e ? 'Waiting for' : '기다리는 것') + '</div><div class="cs-ld">' + esc(e ? 'Tomorrow morning: silt fences at the site.' : '내일 아침: 공사장에 흙막이가 서요.') + '</div>';
     const late = q.st === 'late' || q.st === 'lateFix', mudNow = q.mudD > 0 && D === q.mudD, H = [];
     if (late) H.push(e ? 'The report was late. ' : '보고가 늦었어요. ', mudNow || q.mudD > 0 ? (e ? 'In the heavy rain, muddy water ran down the canal into one rice paddy for a day. ' : '큰비 오는 날 흙탕물이 농수로를 타고 논 한 칸에 하루 들어갔어요. ') : '', e ? 'Next time, tell the centre sooner.' : '다음엔 더 빨리 알려 줘요.');
@@ -436,6 +560,15 @@ export function createCase(A) {
     const I = back ? [e ? 'Seller: “I was worried when it vanished. Thank you for having it fixed!”' : '상인: "말없이 사라져서 걱정했는데, 고쳐 줘서 고마워요."', e ? 'Next-stall neighbour: “Sorry I forgot to tell you. Next time I will leave a note.”' : '옆 가게 이웃: "말을 못 전해서 미안해요. 다음엔 쪽지를 남길게요."'] : [];
     return '<div class="grp">' + (e ? 'What happened' : '어떻게 되었나') + '</div>' + (H.length ? '<div class="cs-ld">' + esc(H.join('')) + '</div>' : '') + (F.length ? '<div class="cs-g"><div class="cs-c"><h4>👀 ' + (e ? 'Facts' : '본 것') + '</h4>' + F.map(t => '<div>' + esc(t) + '</div>').join('') + '</div><div class="cs-c idea"><h4>🗣 ' + (e ? 'Ideas' : '생각') + '</h4>' + I.map(t => '<div>' + esc(t) + '</div>').join('') + '</div></div>'
       + '<div class="cs-ld">' + esc(e ? 'A scale must be accurate so that neither the buyer nor the seller loses out.' : '저울이 정확해야 사는 사람도 파는 사람도 손해를 보지 않아요.') + '</div><div class="cs-ld">' + esc(e ? 'In our real town: is there a check sticker on the market scales?' : '우리 진짜 동네라면? 시장 저울에 검사 표시가 붙어 있는지 살펴봐요.') + '</div>' : ''); }
+  // 🚧 공사장 길 결과: 기다림 · 고친 길(본 것 둘 + 생각 둘 · 불편해진 공사 일꾼도) · 늦음(하루 보도 막힘 · 벌 X) · 배운 것 한 줄 · 우리 진짜 동네라면?
+  function resultSite(q) { const e = en(), D = day();
+    if (q.st === 'ok') return '<div class="grp">' + (e ? 'Waiting for' : '기다리는 것') + '</div><div class="cs-ld">' + esc(e ? 'Tomorrow morning: a fenced path by the site gate, and no trucks from 8 to 9 am.' : '내일 아침: 공사장 앞에 울타리 친 보도가 생기고, 아침 8~9시엔 트럭이 쉬어요.') + '</div>';
+    const late = q.st === 'late' || q.st === 'lateFix', fx = q.fixD && D >= q.fixD, H = [];
+    if (late) H.push(e ? 'The report was late. ' : '보고가 늦었어요. ', q.mudD > 0 ? (e ? 'For a day the pavement by the site was closed, and children walked round on the other side of the road. ' : '하루 동안 공사장 앞 보도가 막혀, 학교 가는 아이들이 길 건너편으로 돌아서 다녔어요. ') : '', e ? 'Next time, tell the centre sooner.' : '다음엔 더 빨리 알려 줘요.');
+    const F = fx ? [e ? 'Steel plates and a crossing mark now fill the gap in the pavement, with a yellow fence on the road side.' : '끊긴 보도에 철판 보도와 건널목 표시가 생기고, 찻길 쪽에 노란 울타리가 섰어요.', e ? 'The pile moved inside the site, and a sign says works vehicles rest from 8 to 9 am.' : '자재 더미를 공사장 안쪽으로 옮겼고, "공사 차량 시간 · 아침 8~9시 쉬어요" 판이 섰어요.'] : [];
+    const I = fx ? [e ? 'Site worker: “Resting an hour each morning slows the work a little. Still, the children come first.”' : '공사 일꾼: "아침 한 시간을 쉬니 공사가 조금 늦어져요. 그래도 아이들이 먼저지요."', e ? 'Neighbour who often walks there: “Now the children do not have to step into the road.”' : '그 길을 자주 지나는 이웃: "이제 아이들이 찻길로 내려서지 않아도 되겠어요."'] : [];
+    return '<div class="grp">' + (e ? 'What happened' : '어떻게 되었나') + '</div>' + (H.length ? '<div class="cs-ld">' + esc(H.join('')) + '</div>' : '') + (F.length ? '<div class="cs-g"><div class="cs-c"><h4>👀 ' + (e ? 'Facts' : '본 것') + '</h4>' + F.map(t => '<div>' + esc(t) + '</div>').join('') + '</div><div class="cs-c idea"><h4>🗣 ' + (e ? 'Ideas' : '생각') + '</h4>' + I.map(t => '<div>' + esc(t) + '</div>').join('') + '</div></div>'
+      + '<div class="cs-ld">' + esc(e ? 'To pick the right fix, find out when, where and at whose eye height a place is dangerous.' : '언제, 어디서, 누구 눈높이에서 위험한지 알아야 맞는 대책을 고를 수 있어요.') + '</div><div class="cs-ld">' + esc(e ? 'In our real town: if there is a building site on the way to school, is the pavement unbroken?' : '우리 진짜 동네라면? 학교 가는 길에 공사장이 있으면 보도가 끊기지 않았는지 살펴봐요.') + '</div>' : ''); }
   function react(k) { const q = S().cur, e = en(); if (!q || k !== 'wk' || !VIS.wk) return; const g = VIS.wk.position; A.bubble({ x: g.x, y: g.y, z: g.z, sc: 1 }, e ? 'The fences slowed us by a day. Still, it had to be done.' : '흙막이 세우느라 하루 늦어졌어요. 그래도 했어야 할 일이지요.'); }
 
   // ───────── 칩 · 위 가운데 줄 · 하루 마무리 · 소식 · 찾기 ─────────
@@ -446,9 +579,9 @@ export function createCase(A) {
   function line() { const q = S().cur; if (!q || q.st !== 'open') return ''; return CASES[q.id].icon + ' ' + L(CASES[q.id].t) + ' · ' + dueText(q); }
   function recapLine(d) { const q = S().cur, e = en(); if (!q) return ''; const R = CASES[q.id];
     if (q.st === 'open') return '📒 ' + (e ? 'Waiting tomorrow: ' : '내일 기다리는 것: ') + L(R.t) + ' — ' + (q.d0 + R.days - 1 - d === 1 ? (e ? 'tomorrow is the last day' : '내일이 마지막 날이에요') : q.d0 + R.days - 1 - d <= 0 ? (e ? 'today was the last day' : '오늘이 마지막 날이었어요') : (e ? (q.d0 + R.days - 1 - d + 1) + ' days left' : (q.d0 + R.days - 1 - d + 1) + '일 남았어요'));
-    if ((q.st === 'ok' || q.st === 'fixed') && q.rep && q.rep.d === d) return '📒 ' + (q.id === 'scale' ? (e ? 'Tomorrow morning: see if the scale is back at the market' : '내일 아침: 장터에 저울이 돌아왔는지 보러 가요') : (e ? 'Tomorrow morning: see the silt fences at the building site' : '내일 아침: 공사장에 흙막이가 서는지 보러 가요'));
+    if ((q.st === 'ok' || q.st === 'fixed') && q.rep && q.rep.d === d) return '📒 ' + (q.id === 'scale' ? (e ? 'Tomorrow morning: see if the scale is back at the market' : '내일 아침: 장터에 저울이 돌아왔는지 보러 가요') : q.id === 'siteRoad' ? (e ? 'Tomorrow morning: see how the road by the building site has changed' : '내일 아침: 공사장 앞 길이 어떻게 바뀌었는지 보러 가요') : (e ? 'Tomorrow morning: see the silt fences at the building site' : '내일 아침: 공사장에 흙막이가 서는지 보러 가요'));
     return ''; }
-  function news(d) { const q = S().cur, out = []; if (!q) return out; const R = CASES[q.id], p = q.pl; if (q.id === 'scale') return newsScale(q, d);
+  function news(d) { const q = S().cur, out = []; if (!q) return out; const R = CASES[q.id], p = q.pl; if (q.id === 'scale') return newsScale(q, d); if (q.id === 'siteRoad') return newsSite(q, d);
     if (q.st === 'open' && q.d0 === d) out.push({ k: 'case:' + q.id, two: 1, t: T2('🌊 비 사흘 뒤 강물이 흙빛이에요. 왜 그럴까요?', '🌊 After three days of rain the river is brown. Why?'), at: null });
     if (q.st === 'fixed' && q.fixD === d) out.push({ k: 'case:' + q.id, t: T2('🚧 어제 낸 보고서대로 ' + p.site.cell + ' 칸 공사장에 흙막이를 세웠어요. 강물이 조금씩 맑아질 거예요', '🚧 As you reported, silt fences went up at the site in ' + p.site.cell + '. The river will slowly clear'), at: [p.site.x, p.site.z] });
     if (q.mudD > 0 && q.mudD === d) out.push({ k: 'case:' + q.id + ':mud', two: 1, t: T2('🌧 큰비에 흙탕물이 농수로를 타고 ' + A.cell(p.mud.x, p.mud.z) + ' 칸 논 한 곳에 들어갔어요', '🌧 In the heavy rain, muddy water ran down the canal into a paddy in ' + A.cell(p.mud.x, p.mud.z)), at: [p.mud.x, p.mud.z] });
@@ -460,6 +593,12 @@ export function createCase(A) {
     if ((q.st === 'fixed' && q.fixD === d) || (q.st === 'ok' && q.rep && q.rep.d < d)) out.push({ k: 'case:' + q.id, t: T2('⚖️ ' + p.fix.name + '에서 눈금을 맞춘 저울이 장터로 돌아왔어요. 상인과 옆 가게 이웃이 서로 고맙다고 했어요', '⚖️ The scale, set right at the ' + p.fix.name + ', is back at the market. The seller and the next-stall neighbour thanked each other'), at });
     if ((q.mudD > 0 && q.mudD === d) || (q.st === 'late' && !q.mudD && d === day() && d > q.d0 && A.jang && A.jang().on)) out.push({ k: 'case:' + q.id + ':slow', two: 1, t: T2('⚖️ 장터 상인이 오늘은 임시 저울로 팔아요. 무게를 재는 데 오래 걸려 손님 줄이 길어요', '⚖️ Today the market seller is using a slow spare scale, so the queue is long'), at });
     if ((q.st === 'lateFix' && q.fixD === d) || (q.st === 'late' && q.mudD > 0 && d > q.mudD)) out.push({ k: 'case:' + q.id, t: T2('⚖️ ' + p.fix.name + '에서 고친 저울이 장터로 돌아왔어요. 다음엔 더 빨리 알려 줘요', '⚖️ The fixed scale came back from the ' + p.fix.name + '. Next time, tell them sooner'), at });
+    return out; }
+  function newsSite(q, d) { const p = q.pl, out = [], at = [p.watch.x, p.watch.z];
+    if (q.st === 'open' && q.d0 === d) out.push({ k: 'case:' + q.id, two: 1, t: T2('🚧 흙막이를 세운 ' + p.cell + ' 칸 공사장 앞 길로 학교 가는 아이들이 위험하대요. 어디가 왜 위험할까요?', '🚧 Children walking to school past the silt-fenced site in ' + p.cell + ' are in danger. Where, and why?'), at: null });
+    if ((q.st === 'fixed' && q.fixD === d) || (q.st === 'ok' && q.rep && q.rep.d < d)) out.push({ k: 'case:' + q.id, t: T2('🚧 보고서대로 ' + p.cell + ' 칸 공사장 앞에 울타리 친 보도와 건널목 표시가 생겼어요. 아침 8~9시엔 공사 차량이 쉬어요', '🚧 As you reported, the site in ' + p.cell + ' now has a fenced path and a crossing mark. Works vehicles rest from 8 to 9 am'), at });
+    if ((q.mudD > 0 && q.mudD === d) || (q.st === 'open' && d > q.d0 + CASES[q.id].days - 1)) out.push({ k: 'case:' + q.id + ':shut', two: 1, t: T2('🚧 ' + p.cell + ' 칸 공사장 앞 보도가 오늘 하루 막혀요. 학교 가는 아이들은 길 건너편으로 돌아가요', '🚧 The pavement by the site in ' + p.cell + ' is closed today. Children walk round on the other side'), at });
+    if ((q.st === 'lateFix' && q.fixD === d) || (q.st === 'late' && q.mudD > 0 && d > q.mudD)) out.push({ k: 'case:' + q.id, t: T2('🚧 행정복지센터가 ' + p.cell + ' 칸 공사장 앞에 울타리 친 보도를 냈어요. 다음엔 더 빨리 알려 줘요', '🚧 The centre put a fenced path by the site in ' + p.cell + '. Next time, tell them sooner'), at });
     return out; }
   function findList() { const q = S().cur, e = en(); if (!q || q.st !== 'open') return []; const L9 = [];
     if (q.hyp) { const to = chkAt(q, q.hyp); L9.push({ icon: '🔎', t: e ? 'Check the reason (' + L(CASES[q.id].t) + ')' : '까닭 확인하기 · ' + L(CASES[q.id].t), at: [to.x, to.z] }); }
@@ -476,12 +615,14 @@ export function createCase(A) {
     if (q.id === 'scale') { const w = W[D - 1], wy = A.windy ? !!A.windy(D - 1) : false, div = document.createElement('div'); div.className = 'sm'; div.dataset.case = '1'; div.style.cssText = 'margin:6px 0;padding:6px 8px;border:2px dashed #c9b27a;border-radius:10px;background:#fffdf2';
       div.textContent = '📒 ' + (e ? 'Yesterday: ' : '어제 날씨: ') + (w === 'rain' ? (e ? 'rain' : '비') : w === 'snow' ? (e ? 'snow' : '눈') : (e ? 'clear' : '맑음')) + (e ? ', wind ' : ', 바람 ') + (wy ? (e ? 'strong' : '셈') : (e ? 'light' : '약함')) + (wy ? '' : (e ? ' — written in the notebook' : ' — 수첩에 적었어요'));
       const bx = P.querySelector('.bx') || P, h3 = bx.querySelector('h3'); if (h3 && h3.nextSibling) bx.insertBefore(div, h3.nextSibling.nextSibling || null); else bx.appendChild(div); if (!wy) clue('calm', 'wx', true); return; }
+    if (q.id !== 'river') return;   /* 비 기록 = 흐려진 강만 */
     for (let k = D - 3; k <= D - 1; k++) row.push(W[k] === 'rain' ? '🌧' : W[k] === 'snow' ? '❄️' : W[k] ? '☀️' : '·');
     const div = document.createElement('div'); div.className = 'sm'; div.dataset.case = '1'; div.style.cssText = 'margin:6px 0;padding:6px 8px;border:2px dashed #c9b27a;border-radius:10px;background:#fffdf2'; div.textContent = '📒 ' + (e ? 'Rain record, last 3 days: ' : '지난 사흘 날씨 기록: ') + row.join(' ') + (e ? ' — written in the notebook' : ' — 수첩에 적었어요');
     const bx = P.querySelector('.bx') || P, h3 = bx.querySelector('h3'); if (h3 && h3.nextSibling) bx.insertBefore(div, h3.nextSibling.nextSibling || null); else bx.appendChild(div);
     if (row.filter(t => t === '🌧').length >= 3) clue('rain', 'wx', true); }
   // 📷 사진(K): 셔터 그 프레임 — 물가면 물 떠 보기와 같이 셈 X(창은 안 띄움) · 공사장 울타리 안이면 흙더미 단서
-  function photo() { const q = S().cur; if (!q || q.st !== 'open') return; const p = q.pl; if (q.id === 'scale') { if (dist(p.track.x, p.track.z) < 4) clue('track', 'photo', true); else if (dist(p.bus.x, p.bus.z) < 4) clue('bus', 'photo', true); return; } if (dist(p.site.x, p.site.z) < 7) clue('site', 'photo', true); else if (dist(p.sign.x, p.sign.z) < 4) clue('sign', 'photo', true); else if (dist(p.drain.x, p.drain.z) < 5) clue('drain', 'photo', true); }
+  function photo() { const q = S().cur; if (!q || q.st !== 'open') return; const p = q.pl; if (q.id === 'scale') { if (dist(p.track.x, p.track.z) < 4) clue('track', 'photo', true); else if (dist(p.bus.x, p.bus.z) < 4) clue('bus', 'photo', true); return; }
+    if (q.id === 'siteRoad') { if (dist(p.pile.x, p.pile.z) < 4) clue('sr_pile', 'photo', true); else if (dist(p.c.x, p.c.z) < 3) clue('sr_gap', 'photo', true); else if (dist(p.mud.x, p.mud.z) < 3) clue('sr_mud', 'photo', true); return; } if (dist(p.site.x, p.site.z) < 7) clue('site', 'photo', true); else if (dist(p.sign.x, p.sign.z) < 4) clue('sign', 'photo', true); else if (dist(p.drain.x, p.drain.z) < 5) clue('drain', 'photo', true); }
   function dayLine() { return line(); }
   // town_day.js 손잡이: wait = 하루 마무리 '내일 기다리는 것' 한 줄 · due = 오늘 때 목록(마지막 날 18:00) · key = 때 목록 다시 셀 열쇠 — 단서 자리 길(p)은 주지 않음(빨간 선 X · 창구·흙막이만)
   const hallP = () => { const h = hallNear(); return h ? { icon: '🏛', name: en() ? 'Community centre' : '행정복지센터', door: h.door } : null; };
@@ -489,6 +630,7 @@ export function createCase(A) {
   function wait(d) { const q = S().cur; if (!q) return null; const R = CASES[q.id], last = q.d0 + R.days - 1;
     if (q.st === 'open') { const left = last - d; return { ic: R.icon, s: T2(L9(R.t) + ' 기한', 'Case due'), t: left === 1 ? T2(L9(R.t) + ': 내일이 마지막 날이에요(' + (R.repTo === 'mk' ? '' : '창구 ') + '18시까지)', L9(R.t, 1) + ': tomorrow is the last day (' + (R.repTo === 'mk' ? '' : 'desk ') + 'until 6 pm)') : left <= 0 ? T2(L9(R.t) + ': 기한이 지났어요', L9(R.t, 1) + ': past the deadline') : T2(L9(R.t) + ': 오늘 말고 ' + left + '일 남았어요', L9(R.t, 1) + ': ' + left + ' more days'), p: q.chk ? repP(q) : null }; }
     if ((q.st === 'ok' || q.st === 'fixed') && q.rep && q.rep.d === d && q.id === 'scale') return { ic: '⚖️', s: T2('장터 저울', 'Market scale'), t: T2('내일 아침 장터에 고친 저울이 돌아와요', 'The fixed scale comes back to the market tomorrow morning'), p: { icon: '⚖️', name: en() ? 'market' : '장터', door: [q.pl.mk.x, q.pl.mk.z] } };
+    if ((q.st === 'ok' || q.st === 'fixed') && q.rep && q.rep.d === d && q.id === 'siteRoad') return { ic: '🚧', s: T2('공사장 길', 'Site road'), t: T2('내일 아침 공사장 앞에 울타리 친 보도가 생겨요', 'A fenced path goes in by the site tomorrow morning'), p: { icon: '🚧', name: en() ? 'site road' : '공사장 길', door: [q.pl.watch.x, q.pl.watch.z] } };
     if ((q.st === 'ok' || q.st === 'fixed') && q.rep && q.rep.d === d) return { ic: '🚧', s: T2('흙막이', 'Silt fence'), t: T2('낸 보고서대로 공사장에 흙막이가 서요', 'Silt fences go up at the site, as you reported'), p: { icon: '🚧', name: en() ? 'building site' : '공사장', door: [q.pl.site.x + q.pl.site.ux * 7, q.pl.site.z + q.pl.site.uz * 7] } };
     return null; }
   function due(d) { const q = S().cur; if (!q || q.st !== 'open' || q.d0 + CASES[q.id].days - 1 !== d) return null; const R = CASES[q.id]; return { m: DUE_H * 60, ic: '📒', s: T2(L9(R.t) + ' 기한', 'Case due'), t: R.repTo === 'mk' ? T2(L9(R.t) + ' 기한(장터 상인에게 18시까지)', L9(R.t, 1) + ' due (tell the market seller by 6 pm)') : T2(L9(R.t) + ' 보고서 기한(행정복지센터 창구 18시까지)', L9(R.t, 1) + ' report due (community centre desk until 6 pm)'), p: q.chk ? repP(q) : null }; }

@@ -6,7 +6,7 @@
 //     · 지역 비하 X · 아이콘·% 체크리스트 X · 새 Light X · 지어낸 실제 사실 X(태풍 대비 일반 상식만)
 //   렉: 매 프레임 일 0 · 1초 칸 sec · 모습(합친 부품)은 상태가 바뀔 때만 다시 지음
 //   사건 수첩 엔진(town_case.js)이 main에 오면 '들은 말'·'대피 길'은 그 틀로 옮김(RUM·path가 그 자리)
-import { CASES, CL } from './town_case.js?v=3';   /* CASE-1 사건 수첩 표(대피 길 = CASES.typhoon 한 줄) */
+import { CASES, CL } from './town_case.js?v=4';   /* CASE-1 사건 수첩 표(대피 길 = CASES.typhoon 한 줄) */
 export const TY_V = 1;
 const T2 = (ko, en) => [ko, en];
 const hashS = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };

@@ -1,4 +1,6 @@
-// 📒 사건 수첩 시험(CASE-1 · v2/games/town_case.js · 첫 사건 '흐려진 강' · 둘째 사건 '사라진 장터 저울'): node tools/harness/town_case.cjs [마을=ourtown] [포트=8002] [--shots=폴더] [--only=river|scale]
+// 📒 사건 수첩 시험(CASE-1 · v2/games/town_case.js · 첫 사건 '흐려진 강' · 둘째 사건 '사라진 장터 저울'): node tools/harness/town_case.cjs [마을=ourtown] [포트=8002] [--shots=폴더] [--only=river|scale|siteRoad]
+//   🚧 ⑨ 공사장 길 안전: 흐려진 강 씨앗 날 = 아직 X → 다음 날 아침 저절로 · 기한 사흘 · 단서 여섯(입구 지켜보기 = 아침 8~9시에 그 자리에 서 있어야 · 떠나면 처음부터 · 길바닥 흙 · 쌓인 자재 · 끊긴 보도 · 길을 지나는 이웃 · 공사 일꾼)
+//      틀린 까닭 둘(빨라서 = 과속 방지 턱 · 어두워서 = 가로등) '아니었어요' + 90분 · 맞는 까닭 = 끊긴 보도 눈높이 · 창구(생각 = 되물음 · 근거 없음 = 하나 더) → 대책 고르기(틀린 대책 = 직원이 까닭) · 다음 날 울타리 보도·건널목·'공사 차량 시간' 판 · 트럭이 8~9시를 비움 · 늦음 = 하루 보도 막힘 → 다음 날 고침
 //   ⚖️ ⑧ 장날 아침(어제 바람 약함) 저절로 · 기한 이틀 · 단서 여섯(바닥 자국 방위 · 정류장 시간표 · 정자 이웃 저녁 · 옆 가게 이웃 오후 + 본 것을 보여 줘야 생각남 · 맡긴 곳 장부 9~18시 · 날씨 창 바람)
 //      틀린 까닭 = 분실물 '아니었어요' + 90분 · 맞는 까닭 = 선반 · 상인에게 본 것 둘(생각 = 되물음 · 간 곳 근거 없음 = 하나 더) · 다음 날 고친 저울 + '정확해요' 판 + 소식 · 늦음 = 다음 장날 임시 저울 → 그다음 날 돌아옴
 //   ① 비 사흘 → 그다음 아침 저절로 사건(물 높이 +1) · 칩·위 가운데 줄 '기한 사흘' · 단서 자리엔 빨간 선 X
@@ -8,7 +10,7 @@
 //   ⑥ 기한 넘김 판: 사흘 넘게 안 냄 → 늦음 → 비 오는 날 논 한 칸 흙탕(하루) → 다음 날 흙막이 · 벌 X ⑦ 휴대폰 390 수첩 창(가로 넘침 X) ⑧ 페이지 오류 0
 const { chromium } = require('./pw.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
-const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7) || null;   /* --only=river · --only=scale = 한 사건만 */
+const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7) || null;   /* --only=river · --only=scale · --only=siteRoad = 한 사건만 */
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 if (SHOTS) require('fs').mkdirSync(SHOTS, { recursive: true });
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
@@ -189,6 +191,83 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await ev(() => SM_TOWN.case().notebook()); await W8(300); P = await panel(); ok(/임시 저울/.test(P.t) && /다음엔 더 빨리/.test(P.t), '수첩 = 「다음엔 더 빨리 알려 줘요」(벌 X)'); await closeAll();
     await sleep(); await at(9 * 60); let j4 = null; for (let i = 0; i < 8; i++) { await W8(500); j4 = await I(); if (j4.cur && j4.cur.st === 'lateFix') break; } ok(j4.cur.st === 'lateFix' && j4.meshes.sc_scale >= 2 && !j4.meshes.sc_track, '그다음 날 = 고친 저울이 돌아옴');
     ok((await ev(d => SM_TOWN.case().news(d), nJ + 1)).some(q => /다음엔 더 빨리/.test(q.t[0])), '아침 소식 = 「고친 저울이 돌아왔어요 · 다음엔 더 빨리」');
+    }
+    // ───────── 🚧 공사장 길 안전(SITEROAD-1) ─────────
+    if (!ONLY || ONLY === 'siteRoad') {
+    console.log('  — 🚧 공사장 길 안전');
+    const tpR = async (x, z, lab, done) => { for (let k = 0; k < 6; k++) { await closeAll(); await tp(x + 0.2, z + 0.2); for (let w = 0; w < 40; w++) { await W8(300); if (await ev(l => [...document.querySelectorAll('div')].some(d => /^(E  |✋ )/.test(d.textContent) && d.textContent.includes(l) && d.style.display !== 'none' && !d.children.length), lab)) break; } await W8(300); await p.keyboard.press('KeyE'); await W8(800); if (!done || await done()) return true; await W8(700); } return false; };
+    const clueR = (x, z, lab) => tpR(x, z, lab, async () => ((await panel()) || {}).k === 'caseclue');
+    await closeAll(); await ev(() => { SM_TOWN.case().dbg.clear(); SM_TOWN.rules.wx('clear'); if (SM_TOWN.typhoon) { SM_TOWN.typhoon.info(); if (SM_TOWN.game().S.typh && SM_TOWN.game().S.typh.st) SM_TOWN.typhoon.dbg.finish(); } const t9 = SM_TOWN.game().S.typh; if (t9 && !t9.st) { t9.n = Math.max(1, t9.n | 0); t9.last = 1e6; } }); await calm();
+    // ⑨ 흐려진 강이 끝난 날(씨앗) = 아직 X → 다음 날 아침 저절로
+    const dSd = await ev(() => { const G = SM_TOWN.game().S, s9 = G.case; s9.done.river = G.day; s9.done.scale = G.day; s9.seeds.siteRoad = G.day; s9.d = -1; SM_TOWN.game().mark(); return G.day; });
+    await at(9 * 60); await W8(1300); ok(!(await I()).cur, '흐려진 강이 끝난 날(' + dSd + '일째) = 아직 사건 X'); await sleep();
+    await ev(() => SM_TOWN.rules.wx('clear')); await at(7 * 60); let k0 = null; for (let i = 0; i < 12; i++) { await W8(500); k0 = await I(); if (k0.cur) break; }
+    ok(k0.cur && k0.cur.id === 'siteRoad' && k0.cur.d0 === dSd + 1, '다음 날 아침 = 「공사장 길 안전」 저절로');
+    if (!k0.cur || k0.cur.id !== 'siteRoad') throw new Error('공사장 길 사건이 안 생김 ' + JSON.stringify(k0.dbg));
+    const RQ = k0.cur.pl; console.log('    자리: 공사장 ' + RQ.cell + ' · 끊긴 보도 ' + RQ.cCell + ' · 지켜보는 자리 ' + JSON.stringify(RQ.watch) + ' · 이웃 ' + RQ.nb.cell + '(' + RQ.nb.k + ') · 보도 판 ' + RQ.sw.length);
+    ok(/공사장 길 안전 · 기한 사흘/.test(k0.line) && /기한 사흘/.test(k0.chip), '칩·위 가운데 줄 = 「' + k0.line + '」');
+    ok(k0.meshes.sr_site === 1 && k0.meshes.sr_road === 2 && k0.meshes.sr_slow === 2 && !k0.meshes.sr_info && !k0.meshes.sr_truck, '소품: 공사장 1 · 길 2(합친 부품 + 가로등 머리) · 천천히 표지 2 · 안내판 X · 7시 트럭 X ' + JSON.stringify(k0.meshes));
+    ok((await ev(d => SM_TOWN.case().news(d), dSd + 1)).some(q => /위험하대요/.test(q.t[0])), '아침 소식 = 「아이들이 위험하대요」');
+    const SR = [RQ.watch, RQ.mud, RQ.pile, RQ.c, RQ.slow, RQ.info, RQ.lamp, RQ.nb, RQ.crew], noLineR = async () => { const rp = await route(); if (!rp || !rp.length) return true; const e9 = rp[rp.length - 1]; return !SR.some(q => Math.hypot(e9[0] - q.x, e9[1] - q.z) < 8); };
+    ok(await noLineR(), '처음 = 단서 자리에 빨간 선 X');
+    // 지켜보기: 낮 = 조용해요 · 공사 일꾼 · 이웃 · 길바닥 · 자재 · 보도
+    await at(10 * 60); r = await tpR(RQ.watch.x, RQ.watch.z, '입구 곁에 서서', () => said('조용해요')); ok(r && !(await I()).cur.clues.sr_truck && !(await I()).meshes.sr_truck, '🚚 입구 지켜보기 10:00 = 「지금은 입구가 조용해요」 · 트럭 X · 단서 X');
+    r = await tpR(RQ.crew.x, RQ.crew.z, '공사 일꾼에게', async () => !!(await I()).cur.clues.sr_crew); P = await panel(); ok(r && P && /들은 생각/.test(P.t) && /어두운/.test(P.t), '🗣 공사 일꾼 10:00 = 들은 생각(어두워서)');
+    r = await tpR(RQ.nb.x, RQ.nb.z, '공사장 길 이야기', async () => !!(await I()).cur.clues.sr_nbr); P = await panel(); ok(r && P && /빨리 달려서/.test(P.t), '🗣 길을 자주 지나는 이웃(' + RQ.nb.cell + ') = 들은 생각(빨라서)');
+    r = await clueR(RQ.mud.x, RQ.mud.z, '길바닥'); P = await panel(); ok(r && /미끄러워요/.test(P.t) && /본 것/.test(P.t), '👣 입구 앞 길바닥 흙 = 본 것');
+    r = await clueR(RQ.pile.x, RQ.pile.z, '쌓인 자재'); P = await panel(); ok(r && /눈높이/.test(P.t) && /본 것/.test(P.t), '📦 쌓인 자재(아이 눈높이) = 본 것');
+    r = await clueR(RQ.c.x, RQ.c.z, '보도 살펴보기'); P = await panel(); ok(r && /보도가 끊겨/.test(P.t), '🚶 끊긴 보도 = 본 것');
+    // 몸으로: 아침 8~9시에 그 자리에 서 있어야(떠나면 처음부터)
+    await at(8 * 60 + 10); let tk8 = 0; for (let i = 0; i < 12 && !tk8; i++) { await W8(500); tk8 = (await I()).meshes.sr_truck | 0; } ok(tk8 >= 1, '아침 8:10 = 입구에 트럭');
+    r = await tpR(RQ.watch.x, RQ.watch.z, '입구 곁에 서서', () => said('지켜봐요')); ok(r && (await I()).cur.watch > 0, '  8:10 지켜보기 시작 = 「이 자리에 서서 입구를 잠깐 지켜봐요」');
+    await W8(1500); await tp(RQ.watch.x + 12, RQ.watch.z + 12); let lv9 = false; for (let i = 0; i < 30 && !lv9; i++) { await W8(500); lv9 = (await I()).dbg.includes('watch:left'); } ok(lv9 && !(await I()).cur.watch && !(await I()).cur.clues.sr_truck, '  중간에 자리를 떠나면 = 「끝까지 못 봤어요」 · 단서 X');
+    r = await tpR(RQ.watch.x, RQ.watch.z, '입구 곁에 서서', () => said('지켜봐요')); let wk9 = null; for (let i = 0; i < 40; i++) { await W8(1000); wk9 = await I(); if (wk9.cur.clues.sr_truck) break; } P = await panel();
+    ok(r && wk9.cur.clues.sr_truck && wk9.cur.clues.sr_truck.how === 'body' && P && /8시~9시/.test(P.t), '  그 자리에 서 있으면 = 「아침 8시~9시에 트럭이 드나들어요」 (본 것 · 몸으로)');
+    if (SHOTS) await shot('road_truck', [RQ.watch.x, RQ.watch.z], [RQ.gate.x, RQ.gate.z]);
+    ok(await noLineR(), '단서를 다 모아도 빨간 선 X');
+    await closeAll(); await ev(() => SM_TOWN.case().notebook()); await W8(400); ok(await ev(() => { const c = document.querySelectorAll('.twn-p .cs-c'); return c.length === 2 && /보도가 끊겨/.test(c[0].innerText) && /빨리 달려서/.test(c[1].innerText) && /어두운/.test(c[1].innerText) && !/빨리 달려서/.test(c[0].innerText); }), '수첩 = 본 것 칸 · 들은 생각 칸이 나뉨');
+    if (SHOTS) await p.screenshot({ path: SHOTS + '/road_notebook.png' });
+    // 틀린 까닭 둘 → 아니었어요 + 90분
+    await ev(() => document.querySelector('.twn-p [data-a="h"]').click()); await W8(400); ok((await ev(() => [...document.querySelectorAll('.twn-p [data-h]')].map(b => b.dataset.h).sort().join())) === 'cross,dark,speed', '까닭 셋 고르기(빨라서 · 어두워서 · 다니는 때 + 끊긴 보도 + 가린 자재)');
+    await ev(() => document.querySelector('.twn-p [data-h="speed"]').click()); await W8(800); { const rp = await route(), e9 = rp && rp[rp.length - 1]; ok(e9 && Math.hypot(e9[0] - RQ.slow.x, e9[1] - RQ.slow.z) < 8, '「빨라서」 = 확인 자리(천천히 표지)에만 빨간 선'); }
+    const v0 = await ev(() => SM_TOWN.game().S.min), g0 = (await I()).due - (await I()).now;
+    r = await tpR(RQ.slow.x, RQ.slow.z, '입구 앞 찻길', async () => ((await panel()) || {}).k === 'casechk'); P = await panel(); const v1 = await ev(() => SM_TOWN.game().S.min), g1 = (await I()).due - (await I()).now;
+    ok(r && /과속 방지 턱/.test(P.t) && /아니었어요/.test(P.t) && /90분/.test(P.t), '천천히 표지 = 「빨라서 위험한 것은 아니었어요」'); ok(v1 - v0 >= 90 && g0 - g1 >= 90, '틀린 까닭 = 시각 +' + (v1 - v0) + '분 · 기한 ' + (g0 - g1) + '분 줄어듦');
+    if (!(await panel())) { await ev(() => SM_TOWN.case().notebook()); await W8(400); await ev(() => document.querySelector('.twn-p [data-a="h"]').click()); } else await ev(() => document.querySelector('.twn-p [data-a="h"]').click()); await W8(400);
+    await ev(() => document.querySelector('.twn-p [data-h="dark"]').click()); await W8(800);
+    r = await tpR(RQ.lamp.x, RQ.lamp.z, '가로등', async () => ((await panel()) || {}).k === 'casechk'); P = await panel(); ok(r && /가로등/.test(P.t) && /아니었어요/.test(P.t), '가로등 = 「어두워서 위험한 것은 아니었어요」');
+    if (!(await panel())) { await ev(() => SM_TOWN.case().notebook()); await W8(400); } await ev(() => document.querySelector('.twn-p [data-a="h"]').click()); await W8(400);
+    ok(await ev(() => document.querySelector('.twn-p [data-h="speed"]').disabled && document.querySelector('.twn-p [data-h="dark"]').disabled), '고른 적 있는 까닭 둘 = 「아니었어요」로 막힘');
+    await ev(() => document.querySelector('.twn-p [data-h="cross"]').click()); await W8(800); { const rp = await route(), e9 = rp && rp[rp.length - 1]; ok(e9 && Math.hypot(e9[0] - RQ.c.x, e9[1] - RQ.c.z) < 8, '맞는 까닭 = 확인 자리(끊긴 보도)에 빨간 선'); }
+    r = await tpR(RQ.c.x, RQ.c.z, '아이 눈높이', async () => ((await panel()) || {}).k === 'casechk'); P = await panel(); ok(r && /맞았어요/.test(P.t) && /자재 더미에 가려/.test(P.t), '끊긴 보도 아이 눈높이 = 「맞았어요」 → 보고서'); await closeAll();
+    // 창구 → 대책 고르기
+    const H1 = (await ev(() => SM_TOWN.fix().info())).halls[0]; await at(14 * 60); r = await tpE(H1.at[0], H1.at[1], async () => ((await panel()) || {}).k === 'caserep'); ok(r, '창구 14:00 = 사건 보고서 창');
+    P = await pickK(['sr_nbr', 'sr_truck']); ok(/그 길을 자주 지나는 이웃의 생각/.test(P.t) && (await I()).cur.st === 'open', '「들은 생각」을 근거로 내면 = 직원이 되물음');
+    await ev(() => document.querySelector('.twn-p [data-k="sr_truck"]').click()); await W8(200);   /* 남은 골라 둔 것 비우기 */
+    P = await pickK(['sr_mud', 'sr_slow']); ok(/왜 위험한지 보여 주는 것도/.test(P.t) && (await I()).cur.st === 'open', '흙·과속 방지 턱만 = 「아이들이 왜 위험한지 보여 주는 것도」');
+    P = await pickK(['sr_truck', 'sr_pile']); ok(P && /대책 고르기/.test(P.t) && (await ev(() => document.querySelectorAll('.twn-p [data-x]').length)) === 3 && (await I()).cur.st === 'open', '본 것 둘(트럭 때 · 자재) = 「무엇을 하면 좋을까요?」 대책 셋');
+    await ev(() => document.querySelector('.twn-p [data-x="care"]').click()); await W8(400); P = await panel(); ok(/조심하는 것만으로는/.test(P.t) && (await I()).cur.st === 'open', '  「조심해 달라고」 = 직원이 까닭(끊긴 보도·자재가 그대로)');
+    await ev(() => document.querySelector('.twn-p [data-x="away"]').click()); await W8(400); P = await panel(); ok(/먼 길을 돌면/.test(P.t) && (await I()).cur.st === 'open', '  「먼 길로 돌아서」 = 직원이 까닭(날마다 힘들고 늦음)');
+    await ev(() => document.querySelector('.twn-p [data-x="fix"]').click()); await W8(400); P = await panel(); ok(/받았어요/.test(P.t) && /보도/.test(P.t) && /시야/.test(P.t) && (await I()).cur.st === 'ok' && (await I()).cur.fixK === 'fix', '  「8~9시 트럭이 쉬고 · 울타리 보도 · 자재 옮김」 = 접수 + 낱말 둘(보도 · 시야)'); await closeAll();
+    // 다음 날 결과
+    const dRR = await ev(() => SM_TOWN.game().S.day); const rcR = await sleep(); ok(rcR && /울타리 친 보도/.test(rcR.t), '하루 마무리 「내일 기다리는 것」 = 「공사장 앞에 울타리 친 보도가 생겨요」');
+    await at(8 * 60 + 30); let k2 = null; for (let i = 0; i < 8; i++) { await W8(500); k2 = await I(); if (k2.cur && k2.cur.st === 'fixed') break; }
+    ok(k2.cur.st === 'fixed' && k2.cur.fixD === dRR + 1 && k2.meshes.sr_info === 2 && k2.meshes.sr_road === 2, '다음 날 = 울타리 보도 + 「공사 차량 시간」 판 (그리기 ' + k2.meshes.sr_info + ')');
+    ok(!k2.meshes.sr_truck, '  고친 뒤 아침 8:30 = 트럭이 쉼(입구에 트럭 X)'); await at(10 * 60); let tk9 = 0; for (let i = 0; i < 12 && !tk9; i++) { await W8(500); tk9 = (await I()).meshes.sr_truck | 0; } ok(tk9 >= 1, '  10:00 = 트럭이 다님');
+    ok((await ev(d => SM_TOWN.case().news(d), dRR + 1)).some(q => /울타리 친 보도와 건널목/.test(q.t[0])), '아침 소식 「울타리 친 보도와 건널목 표시」');
+    await ev(() => SM_TOWN.case().notebook()); await W8(400); P = await panel(); ok(/철판 보도/.test(P.t) && /공사 일꾼: /.test(P.t) && /자주 지나는 이웃: /.test(P.t) && /눈높이/.test(P.t) && /우리 진짜 동네라면/.test(P.t), '결과 = 본 것 둘 + 생각 둘(늦어지는 공사 일꾼 · 반기는 이웃) + 배운 것 + 우리 동네'); await closeAll();
+    r = await tpR(RQ.crew.x, RQ.crew.z, '공사 일꾼과 이야기', async () => (await I()).dbg.some(t => /^talkR crew/.test(t))); ok(r, '결과 날 공사 일꾼 E = 한마디');
+    if (SHOTS) { await shot('road_fixed', [RQ.watch.x - RQ.n[1] * 6, RQ.watch.z + RQ.n[0] * 6], [RQ.c.x, RQ.c.z]); await shot('road_fixed_b', [RQ.watch.x, RQ.watch.z], [RQ.c.x, RQ.c.z]); }
+    // 늦은 판: 사흘 넘김 → 다음 날 하루 보도 막힘 → 그다음 날 고침
+    await ev(() => SM_TOWN.case().dbg.plan('siteRoad')); await W8(600); const dLR = await ev(() => SM_TOWN.game().S.day);
+    for (let k = 0; k < 3; k++) { await at(10 * 60); const rc9 = await sleep(); if (k === 1) ok(rc9 && /공사장 길 안전: 내일이 마지막 날/.test(rc9.t), '하루 마무리(둘째 날) = 「공사장 길 안전: 내일이 마지막 날이에요」'); }
+    await at(9 * 60); let k3 = null; for (let i = 0; i < 8; i++) { await W8(500); k3 = await I(); if (k3.cur && k3.cur.mudD) break; }
+    ok(k3.cur.st === 'late' && k3.cur.mudD === dLR + 3 && k3.meshes.sr_info === 2 && k3.meshes.sr_road === 2, '기한 넘김 → 다음 날 하루 보도 막힘(고깔 + 「보도 막힘」 판)');
+    ok((await ev(d => SM_TOWN.case().news(d), dLR + 3)).some(q => /하루 막혀요/.test(q.t[0])), '아침 소식 = 「보도가 오늘 하루 막혀요」');
+    if (SHOTS) await shot('road_closed', [RQ.watch.x, RQ.watch.z], [RQ.c.x, RQ.c.z]);
+    await ev(() => SM_TOWN.case().notebook()); await W8(300); P = await panel(); ok(/길 건너편으로 돌아서/.test(P.t) && /다음엔 더 빨리/.test(P.t), '수첩 = 「다음엔 더 빨리 알려 줘요」(벌 X)'); await closeAll();
+    await sleep(); await at(9 * 60); let k4 = null; for (let i = 0; i < 8; i++) { await W8(500); k4 = await I(); if (k4.cur && k4.cur.st === 'lateFix') break; } ok(k4.cur.st === 'lateFix' && k4.meshes.sr_info === 2, '그다음 날 = 마을이 울타리 보도를 냄');
+    ok((await ev(d => SM_TOWN.case().news(d), dLR + 4)).some(q => /다음엔 더 빨리/.test(q.t[0])), '아침 소식 = 「울타리 친 보도를 냈어요 · 다음엔 더 빨리」');
     }
     const txt = await ev(() => document.body.innerText); ok(!/undefined|NaN/.test(txt), '화면 글에 undefined·NaN 0');
     ok(!errs.length, '페이지 오류 0' + (errs.length ? ' — ' + errs.join(' | ') : ''));
