@@ -161,7 +161,7 @@ export const TOWN = {
         { cell: '다3', t: '산 집', style: [], ai: '뒷산 꼭대기 쪽 집 두 채 — 평평하게 고른 터 · 둘레는 산숲' },
         { cell: '다4', t: '숲', style: [], ai: '뒷산 숲(초록 블록 = 큰 나무)' }, { cell: '라3', t: '숲', style: [], ai: '뒷산 숲' },
         { cell: '다5', t: '산에 있는 집', style: ['bigtree'], ai: '산 중턱 집 — 평평하게 고른 터 · 세운 초록 판 = 큰 나무' },
-        { cell: '라5', t: '숲속 마을', style: ['flowers'], fill: { k: 'live', type: 'house', dens: 'sparse' }, ai: '숲속 마을 — 산자락 숲 사이 집 몇 채' },
+        { cell: '라5', t: '숲속 마을', style: ['flowers', 'woods'], fill: { k: 'live', type: 'house', dens: 'sparse' }, ai: '숲속 마을 — 산자락 숲 사이 집 몇 채 · woods = 집 사이까지 숲(KIDLOOK-2 들머리에서 숲속으로 보이게)' },
         { cell: '다6', t: '자연친화 마을', style: ECO, fill: { k: 'live', type: 'house', dens: 'normal' }, ai: '자연친화 마을 — 집 사이 나무·꽃 · 옥상 정원 · 덩굴 벽' },
         { cell: '다8', t: '자연 도시(생태계 보호)', style: [...ECO, 'trail', 'solar', 'bigtree'], fill: { k: 'live', type: 'mix', dens: 'sparse' }, ai: '생태계 보호 — 숲길·꽃길 · 옥상 정원 · 태양광 · 큰 나무(「자연 마을」 이름표도 같은 칸)' },
         { cell: '다11', t: '동물 카페', style: ['pets', 'flowers'], fill: { k: 'work', type: 'shop', dens: 'sparse' }, ai: '초록 잔디에서 동물과 산책 — 잔디 산책 마당 · 강아지들' },
@@ -241,7 +241,7 @@ export const TOWN = {
       ],
       // KIDLOOK-1 아이 동네 이름답게(✨ 10-26 · 사용자 '자연친화 마을인데 엥 이게 왜 자연친화 마을?') — 이름은 그대로 · 들머리(아이 동네 표지석 곁)에 이름다운 시설 묶음 + 할 거리 · 엔진 = town_kidlook.js · 표 = docs/systems/town_names.md 2-0 '모습'
       kidlook: [
-        { cell: '다6', k: 'rain', ai: '자연친화 마을 — 빗물 저금통·공동 텃밭·생태 연못·분리수거장·투수 블록 길·자전거 · 집 지붕 태양광' },
+        { cell: '다6', k: 'rain', mid: true, ai: '자연친화 마을 — 빗물 저금통·공동 텃밭·생태 연못·분리수거장·투수 블록 길·자전거 · 집 지붕 태양광 · mid = 묶음은 칸 가운데 쪽(표지석 곁 띠는 큰길과 담 사이라 걸어서 못 들어감 · KIDLOOK-2) — 들머리엔 풍력·저금통·텃밭 상자' },
         { cell: '마11', k: 'temp', ai: '자연친화도시 — 덩굴 시렁·벽면 녹화(덩굴 벽) 앞·맨 벽 앞·나무 그늘 온도계 셋 · 아파트 옥상 정원' },
         { cell: '다8', k: 'obs', ai: '자연 도시(생태계 보호) — 생태 보호 구역(밧줄 울)·새집·곤충 호텔·생태 연못' },
         { cell: '바11', k: 'perm', ai: '자연도시 — 투수 블록 길과 아스팔트를 나란히·빗물 정원(자갈 고랑)' },

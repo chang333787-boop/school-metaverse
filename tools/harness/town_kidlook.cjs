@@ -30,7 +30,7 @@ const HOODS = ['다6', '마11', '다8', '바11', '사3', '라5', '다3', '다5',
     /* 새 소품 · 할 거리 */
     const K = await ev(() => SM_TOWN.kidlook ? SM_TOWN.kidlook() : null);
     if (!K) ok(false, 'SM_TOWN.kidlook 없음(고치기 전)');
-    else { for (const h of H) { const q = K.hoods.find(o => o.g === h.id); ok(!!q && q.n >= 3, h.t + ': 들머리 묶음 소품 ' + (q ? q.n + '(' + q.list.join(' ') + ')' : 0)); ok(!!q && q.d < 60, h.t + ': 묶음이 표지석에서 ' + (q ? Math.round(q.d) : '-') + 'm(첫눈에 · 60m 안)'); ok(!!q && !!q.use, h.t + ': 할 거리 E 「' + (q && q.use || '-') + '」'); }
+    else { for (const h of H) { const q = K.hoods.find(o => o.g === h.id); ok(!!q && q.n >= 3, h.t + ': 들머리 묶음 소품 ' + (q ? q.n + '(' + q.list.join(' ') + ')' : 0)); ok(!!q && Math.min(q.d, q.hd ?? 1e9) < 60, h.t + ': 묶음이 표지석에서 ' + (q ? Math.round(q.d) : '-') + 'm' + (q && q.hd != null ? ' · 들머리 표지 ' + Math.round(q.hd) + 'm' : '') + '(첫눈에 · 가까운 것 60m 안 · KIDLOOK-2 들머리 표지 = 돌 곁)'); ok(!!q && !!q.use, h.t + ': 할 거리 E 「' + (q && q.use || '-') + '」'); }
       /* 할 거리 E: 누르면 반응 · 판단 창이면 고르기까지 해 봄 */
       const post = (lab, x0, z0) => ev(async ([lab, x0, z0]) => { const M = SD2.map, L9 = M.interact.list().filter(o => o.kind === 'game' && !o.off && o.label === lab && Math.hypot(o.x - x0, o.z - z0) < 130), out = [];
         for (const h of L9) { M.player.teleport([h.x, (h.y ?? SM_TOWN.ground(h.x, h.z)) + 0.05, h.z]); await new Promise(r => setTimeout(r, 250)); const t0 = (document.getElementById('toast') || {}).textContent || ''; SD2.actOn(h); await new Promise(r => setTimeout(r, 500)); const te = document.getElementById('toast'); out.push(te && te.style.display !== 'none' ? te.textContent : ''); void t0; } return out; }, [lab, x0, z0]);
