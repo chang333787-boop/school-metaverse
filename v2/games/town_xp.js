@@ -86,7 +86,7 @@ export function createXp(A) {
       if (u > GZ.L + 0.15 || v < GZ.wall - 0.15 || v >= GZ.slope - 0.3 || b > GZ.Pm - 0.4 && v > GZ.flo) c = base;
       else if (v <= GZ.flo) { c = mix(A.rgb(0xb5a890), A.rgb(0x988c77), n9); if (Math.hypot(v - POOL.v, u - POOL.u) < POOL.r + 0.6) c = mix(c, A.rgb(0x6f675a), 0.5); }
       else { const bi = bandAt(b); c = A.rgb(BANDS[bi].hex, 0.92 + 0.14 * n9); if (b > GZ.Pm - 1.4) c = mix(c, base, 0.5); } }
-    else { const dx = x - e.cx, dz = z - e.cz, r = Math.hypot(dx, dz); c = mix(A.rgb(0x8f4b35), A.rgb(0x6d3a2b), n9); if (n2 > 0.68) c = mix(c, A.rgb(0x4d4743), 0.7);
+    else { const dx = x - e.cx, dz = z - e.cz, r = Math.hypot(dx, dz); c = mix(A.rgb(0x4a4440), A.rgb(0x37322f), n9); if (n2 > 0.66) c = mix(c, A.rgb(0x7e4030), 0.65);   /* NAME-1 「까망봉」 = 까만 봉우리: 검은 송이·현무암 비탈이 바탕 · 붉은 송이는 군데군데(예전엔 붉은 갈색이 바탕이라 이름과 빛깔이 어긋남) */
       const gr = ss(50, 78, r) * (0.5 + 0.6 * n2); if (gr > 0) c = mix(c, base, Math.min(1, gr)); }
     return mix(base, c, w); }
   // 판 + 벽 + 돌을 한 메시로(그리기 1) · 벽·돌 꼭짓점은 계절 칠하기에서 빠짐(땅 높이와 다름 → null)

@@ -9,7 +9,7 @@
 //   보상 = 솜씨만(rwCheck 꼬리표 xp:fos · xp:surp · tmap:lost · chem:app) · 나의 길 걸음 = 위 넷 가운데 그날 처음 하나(S.regen.pd = { 날: 길 })
 //   저장 GAME.S.regen = { v, pd, fos: { d, u, f, n } | null, fd, fn, spec: [{ n, f, d }], sv: { 놀람: [변주] }, svd, lost: { h: [판], o: [이웃] }, app: { d, id, ok, pos, tries, wind, h: [id], ph: [자리] } }
 //   지킴: 매 프레임 일 0(1초 칸 sec · 하루 넘김 day) · 새 Light X · 그리기 +0(흙더미는 town_xp 인스턴스 · 지도는 town_treasure 캔버스) · 숫자는 표본 번호만 · 실명 X(이웃 = 하는 일)
-import { FINDS } from './town_xp.js?v=6';
+import { FINDS } from './town_xp.js?v=7';
 export const REGEN_V = 1;
 const T2 = (ko, en) => [ko, en];
 const hashS = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };

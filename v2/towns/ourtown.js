@@ -230,6 +230,15 @@ export const TOWN = {
         { id: 'c_reclaim', k: 'reclaim', cell: '다13', ai: '교과서 간척 — 바다를 막아(방조제) 새로 만든 땅 · 논과 작은 산업 용지(✨ 빈칸 · 아이 갯벌 마13·바13은 그대로 · 또래 10-16)' },
         { id: 'c_noise', k: 'noisewall', ai: '지역 문제 — 큰길 소음 + 아파트 앞 방음벽(교사 10-15 ✨)' },
       ],
+      // FILL-2 빈 땅 채우기 둘째(✨ AI가 정함 · 10-26 · 표·까닭 = docs/systems/town_names.md) — 걸어 다니며 보이는 넓은 빈 잔디 한 곳에 그 동네에 맞는 것 하나 · at = 칸 안 어림 자리(엔진이 54m 안 평평한 빈 땅을 찾음) · 아이 블록·소품·이름표는 그대로
+      fill2: [
+        { id: 'f_shade', k: 'shade', cell: '나7', at: [0.49, 0.74], ai: '읍내 우체국 곁 빈 잔디 — 우체국·사무실에 온 사람이 기다리며 쉴 그늘이 없어서, 마을 어귀에 흔한 큰 나무(정자나무) 밑 정자 쉼터로(✨)' },
+        { id: 'f_garden', k: 'garden', cell: '차1', at: [0.44, 0.63], ai: '시내 남서쪽 끝 빈 잔디 — 아파트·상가에 사는 이웃이 흙을 만질 곳이 없어서, 빈터를 칸으로 나눠 가꾸는 마을 텃밭으로 · 옆 칸 들(딸기 하우스·배 과수원)과 이어짐(✨)' },
+        { id: 'f_flower', k: 'flower', cell: '자5', at: [0.55, 0.64], ai: '곤충 박물관 앞 빈 잔디 — 박물관에서 본 나비·벌을 밖에서 직접 보도록 꿀이 많은 꽃을 심은 꽃밭(✨)' },
+        { id: 'f_cairn', k: 'cairn', cell: '다3', at: [0.7, 0.19], ai: '뒷산 전망대 가는 산길 곁 평평한 자리 — 오르는 사람이 돌을 하나씩 얹어 쌓은 돌탑과 걸상(쉬어 가는 곳 · 길 표시)(✨)' },
+        { id: 'f_gym', k: 'gym', cell: '바5', at: [0.26, 0.77], ai: '「아파트」 칸 아파트 곁 빈 잔디 — 아파트 사는 이웃이 아침저녁 몸을 푸는 운동 쉼터(✨)' },
+        { id: 'f_bikes', k: 'bikes', cell: '사2', at: [0.5, 0.62], ai: '관광 동네(아쿠아리움·뷔페) 빈 잔디 — 놀러 온 사람이 자전거를 세울 곳이 없어서 자전거 보관대(✨)' },
+      ],
       fac: [   // 완성된 도시의 길가 시설(교사 10-13 — AI가 채움 ✨ · 아이가 요구한 시설과 기록을 나눔)
         { k: 'streetlight', rule: 'allroads', ai: true }, ...['crosswalk', 'signal', 'bikelane'].map(k => { const r = KID_REQ.find(q => q.k === k); return { k, rule: r.rule,   /* A3(패들렛 55 · 교사 10-16 'T자 포함 모든 갈림길'): 신호 = allcross(예전 bigcross) */ by: r.by, why: r.why }; }),   // 10-15 패들렛 🙋(신호등 = 큰길 교차로마다 · 차가 빨간불에 멈춤 — 또래 결정)
         { k: 'busstop', rule: 'bigroads', ai: true }, { k: 'bench', rule: 'parks', ai: true }, { k: 'schoolzone', rule: 'school', ai: true },
