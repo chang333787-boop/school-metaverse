@@ -215,7 +215,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     r = await tpR(RQ.crew.x, RQ.crew.z, '공사 일꾼에게', async () => !!(await I()).cur.clues.sr_crew); P = await panel(); ok(r && P && /들은 생각/.test(P.t) && /어두운/.test(P.t), '🗣 공사 일꾼 10:00 = 들은 생각(어두워서)');
     r = await tpR(RQ.nb.x, RQ.nb.z, '공사장 길 이야기', async () => !!(await I()).cur.clues.sr_nbr); P = await panel(); ok(r && P && /빨리 달려서/.test(P.t), '🗣 길을 자주 지나는 이웃(' + RQ.nb.cell + ') = 들은 생각(빨라서)');
     r = await clueR(RQ.mud.x, RQ.mud.z, '길바닥'); P = await panel(); ok(r && /미끄러워요/.test(P.t) && /본 것/.test(P.t), '👣 입구 앞 길바닥 흙 = 본 것');
-    r = await clueR(RQ.pile.x, RQ.pile.z, '쌓인 자재'); P = await panel(); ok(r && /눈높이/.test(P.t) && /본 것/.test(P.t), '📦 쌓인 자재(아이 눈높이) = 본 것');
+    r = await clueR(RQ.pile.x + RQ.n[0] * 1.6, RQ.pile.z + RQ.n[1] * 1.6, '쌓인 자재');   /* CASE-COL: 자재 더미 = 몸이 못 들어감 → 찻길 쪽 1.6m 앞에서 살펴봄(살펴보기 반지름 2.4) */ P = await panel(); ok(r && /눈높이/.test(P.t) && /본 것/.test(P.t), '📦 쌓인 자재(아이 눈높이) = 본 것');
     r = await clueR(RQ.c.x, RQ.c.z, '보도 살펴보기'); P = await panel(); ok(r && /보도가 끊겨/.test(P.t), '🚶 끊긴 보도 = 본 것');
     // 몸으로: 아침 8~9시에 그 자리에 서 있어야(떠나면 처음부터)
     await at(8 * 60 + 10); let tk8 = 0; for (let i = 0; i < 12 && !tk8; i++) { await W8(500); tk8 = (await I()).meshes.sr_truck | 0; } ok(tk8 >= 1, '아침 8:10 = 입구에 트럭');

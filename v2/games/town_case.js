@@ -304,6 +304,7 @@ export function createCase(A) {
   function partsSite(q, fixed) { return A.buildParts(put => {
     const W = 11, D = 9, H = 1.5, gap = 2.6;   /* 틀: z = 물 쪽(−) ~ 길 쪽(+) */
     for (const sg of [-1, 1]) put('b', sg * W / 2, 0, 0, 0.08, H, D, 0xe7d38a, 0, 0);   /* 옆 울타리 */
+    for (const sg of [-1, 1]) cb(sg * W / 2, 0, 0.1, D, H); cb(0, -D / 2, W, 0.1, H); for (const sg of [-1, 1]) cb(sg * (W / 4 + gap / 4), D / 2, W / 2 - gap / 2, 0.1, H);
     put('b', 0, 0, -D / 2, W, H, 0.08, 0xe7d38a); put('b', -(W / 4 + gap / 4), 0, D / 2, W / 2 - gap / 2, H, 0.08, 0xe7d38a); put('b', W / 4 + gap / 4, 0, D / 2, W / 2 - gap / 2, H, 0.08, 0xe7d38a);   /* 물 쪽 · 길 쪽(가운데 입구) */
     for (let i = -2; i <= 2; i++) put('b', i * W / 4, H, D / 2 + 0.06, 0.1, 0.12, 0.1, 0x3a3a3a);
     const pile = (x, z, r, h) => fixed ? put('k', x, 0.02, z, r * 1.05, h * 0.9, 0, 0x3f6fa0) : put('k', x, 0.02, z, r, h, 0, 0x8a6a45);   /* 흙더미(흙빛) · 흙막이 뒤 = 파란 덮개 */
@@ -330,12 +331,13 @@ export function createCase(A) {
       for (const s of p.sw) put('b', -s, gyL(-s, 0) - 0.02, 0, 1.12, 0.11, 1.5, Math.round(Math.abs(s) / 1.2) % 2 ? 0xc9c4b8 : 0xbdb8ad);   /* 보도 판(입구 앞 5.2m가 비어 있음) */
       const [bx, bz] = L(p.bump); for (let i = -4; i <= 4; i++) put('b', bx + i * 0.5, gyL(bx + i * 0.5, bz) + 0.004 + (i % 2 ? 0.003 : 0), bz, 0.5, 0.07, 0.55, i % 2 ? 0xf2c94c : 0x3a3a3a);   /* 과속 방지 턱(노랑·검정) */
       for (const lp of [p.lamp, p.lamp2]) { if (!lp) continue; const [lx, lz] = L(lp), y = gyL(lx, lz); put('c', lx, y, lz, 0.07, 4.2, 0, 0x5a6068); put('b', lx, y + 4.15, lz + 0.3, 0.14, 0.08, 0.75, 0x5a6068); put('b', lx, y + 4.08, lz + 0.55, 0.28, 0.07, 0.36, 0xfff3c4, 1); }   /* 가로등(머리 = 빛 없는 밝은 판 · 새 Light X) */
-      if (mode !== 'fixed') { const [px, pz] = L(p.pile), y = gyL(px, pz); for (let i = 0; i < 4; i++) put('b', px - 0.9 + (i % 2) * 0.1, y + i * 0.52, pz, 2.0, 0.5, 1.3, i % 2 ? 0x9aa0a6 : 0x8a8f95);   /* 자재 더미(블록 판 넷 · 어른 키보다 높게 2.1m) */
+      if (mode !== 'fixed') { const [px, pz] = L(p.pile), y = gyL(px, pz); cb(px - 0.85, pz, 2.1, 1.3, 2.1); cb(px + 1.35, pz, 1.3, 1.3, 1.0); for (let i = 0; i < 4; i++) put('b', px - 0.9 + (i % 2) * 0.1, y + i * 0.52, pz, 2.0, 0.5, 1.3, i % 2 ? 0x9aa0a6 : 0x8a8f95);   /* 자재 더미(블록 판 넷 · 어른 키보다 높게 2.1m) */
         for (let i = 0; i < 3; i++) put('c', px + 1.35, y + 0.18 + i * 0.36, pz - 0.45 + i * 0.45, 0.18, 1.3, 0, 0x6a7078, 0, 0, Math.PI / 2);   /* 쌓인 관 셋 */
         for (let i = 0; i < 6; i++) { const lz = -p.ed + 0.6 + i * ((p.ed + 3.2) / 6); put('b', Math.sin(i * 1.9) * 0.6, gyL(0, lz) + 0.006 + (i % 2) * 0.004, lz, 1.4 + (i % 3) * 0.3, 0.03, 0.9, i % 2 ? 0x6b5233 : 0x7a5e3b); } }   /* 바퀴에서 떨어진 흙(입구 → 찻길) */
       if (mode === 'fixed') { put('b', 0, gyL(0, 0) - 0.02, 0, 4.0, 0.11, 1.5, 0x8d9aa6); for (let i = -3; i <= 3; i++) put('b', i * 0.55, gyL(i * 0.55, 0) + 0.09, 0, 0.32, 0.025, 1.3, 0xf6f6f0);   /* 철판 보도 + 건널목 흰 줄(트럭 길을 건너는 자리) */
         for (const s of p.sw.concat([-2.5, 2.5])) { const y = gyL(-s, 0.85); put('b', -s, y, 0.85, 0.08, 1.0, 0.08, 0xf2c94c); put('b', -s, y + 1.0, 0.85, 0.1, 0.06, 0.1, 0x3a3a3a); }   /* 노란 울타리 말뚝(찻길 쪽 · 검은 머리) */
-        for (const sg of [-1, 1]) { const S = p.sw.filter(s => s * sg > 0); if (!S.length) continue; const s0 = Math.min(...S.map(Math.abs)) * sg, s1 = Math.max(...S.map(Math.abs)) * sg, m = (s0 + s1) / 2, w = Math.abs(s1 - s0) + 1.2; for (const [h, col] of [[0.5, 0x3a3a3a], [0.84, 0xf2c94c]]) put('b', -m, gyL(-m, 0.85) + h, 0.85, w, 0.09, 0.05, col); } }   /* 노랑·검정 가로대(입구 앞 트럭 길은 비워 둠) */
+        for (const sg of [-1, 1]) { const S = p.sw.filter(s => s * sg > 0); if (!S.length) continue; const s0 = Math.min(...S.map(Math.abs)) * sg, s1 = Math.max(...S.map(Math.abs)) * sg, m = (s0 + s1) / 2, w = Math.abs(s1 - s0) + 1.2; cb(-m, 0.85, w, 0.12, 1.0); for (const [h, col] of [[0.5, 0x3a3a3a], [0.84, 0xf2c94c]]) put('b', -m, gyL(-m, 0.85) + h, 0.85, w, 0.09, 0.05, col); } }   /* 노랑·검정 가로대(입구 앞 트럭 길은 비워 둠) */
+      if (mode === 'closed') cb(0, 0.2, 4.0, 0.4, 0.62);
       if (mode === 'closed') { for (let i = -2; i <= 2; i++) { const x = i * 0.9, y = gyL(x, 0.2); put('b', x, y, 0.2, 0.34, 0.03, 0.34, 0xe06a2a); put('k', x, y + 0.03, 0.2, 0.15, 0.6, 0, 0xe06a2a); put('b', x - 0.12, y + 0.32, 0.2, 0.24, 0.08, 0.24, 0xffffff); } }   /* 고깔 다섯(끊긴 자리를 막음) */
     }); }
   function partsTruck() { return A.buildParts(put => { for (const [x, z] of [[-0.95, -1.7], [0.95, -1.7], [-0.95, 0.4], [0.95, 0.4], [-0.95, 1.7], [0.95, 1.7]]) put('c', x, 0.45, z, 0.45, 0.3, 0, 0x2b2b2b, 0, Math.PI / 2, Math.PI / 2);   /* 바퀴 여섯 */
@@ -356,7 +358,17 @@ export function createCase(A) {
     const n = lines.length; lines.forEach((t, i) => { g.font = (i === 0 ? '900 28px ' : '700 22px ') + FONT; g.fillStyle = i === 0 ? (col || '#2b2420') : '#3d4650'; g.fillText(t, 128, c.height * (i + 0.6) / (n + 0.2)); });
     const tx = new T3.CanvasTexture(c); tx.colorSpace = T3.SRGBColorSpace; tx.anisotropy = 2; const m = new T3.Mesh(new T3.PlaneGeometry(w, h), new T3.MeshLambertMaterial({ map: tx })); m.position.set(x || 0, y, z); m.userData.own = 1; return m; }
   function drop(k) { const g = VIS[k]; if (!g) return; map.remove(g); g.traverse(o => { if (o.isMesh) { o.geometry.dispose(); if (o.userData.own) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } } }); VIS[k] = null; }
-  function put(k, key, mk, x, z, ry) { if (VKEY[k] === key) return; VKEY[k] = key; drop(k); if (!key) return; const g = mk(); g.position.set(x, A.gy(x, z), z); g.rotation.y = ry || 0; g.userData.fx = 1; map.add(g); g.updateMatrixWorld(true); VIS[k] = g; }
+  /* CASE-COL: 울타리·자재 더미·고깔은 몸이 못 지나감 · 만들 때 cb(가운데 x, z, 너비, 깊이, 높이)로 적고 놓을 때 세상 칸으로 바꿈(긴 판은 0.7m 조각 · 돌린 판도 꼭 맞게) · 허리 아래 = 카메라 통과(nc) */
+  let COLS = null; const HC = {};
+  const cb = (x, z, w, d, h) => { if (COLS) COLS.push([x, z, w, d, h]); };
+  function colsOn(k, x, z, ry, y0) { const c9 = Math.cos(ry), s9 = Math.sin(ry), out = [];
+    for (const [lx, lz, w, d, h] of COLS) { const n = Math.max(1, Math.ceil(Math.max(w, d) / 0.7)), alongX = w >= d;
+      for (let i = 0; i < n; i++) { const t = (i + 0.5) / n - 0.5, px = lx + (alongX ? t * w : 0), pz = lz + (alongX ? 0 : t * d), hw = (alongX ? w / n : w) / 2 + 0.02, hd = (alongX ? d : d / n) / 2 + 0.02;
+        const wx = x + px * c9 + pz * s9, wz = z - px * s9 + pz * c9, ex = Math.abs(hw * c9) + Math.abs(hd * s9), ez = Math.abs(hw * s9) + Math.abs(hd * c9), g9 = A.gy(wx, wz);
+        try { const hd9 = map.collider.add({ x0: wx - ex, x1: wx + ex, z0: wz - ez, z1: wz + ez, y0: Math.min(y0, g9) - 0.5, y1: g9 + h, nc: h <= 1.2 }); if (hd9) out.push(hd9); } catch (e9) { /* 칸 넣기 실패 = 보이기만 */ } } }
+    HC[k] = out; }
+  function colsOff(k) { const H = HC[k]; if (!H) return; for (const h of H) { try { h.remove(); } catch (e9) { /* 이미 빠짐 */ } } HC[k] = null; }
+  function put(k, key, mk, x, z, ry) { if (VKEY[k] === key) return; VKEY[k] = key; drop(k); colsOff(k); if (!key) return; COLS = []; const g = mk(); const C9 = COLS; COLS = null; g.position.set(x, A.gy(x, z), z); g.rotation.y = ry || 0; g.userData.fx = 1; map.add(g); g.updateMatrixWorld(true); VIS[k] = g; if (C9.length && map.collider && map.collider.add) { COLS = C9; colsOn(k, x, z, ry || 0, A.gy(x, z)); COLS = null; } }
   function sync() { const q0 = S().cur; syncScale(q0 && q0.id === 'scale' ? q0 : null); syncSite(q0 && q0.id === 'siteRoad' ? q0 : null); const q = q0 && q0.id === 'river' ? q0 : null;
     const e = en(), p = q && q.pl, live = q && q.st !== 'done', fixed = !!(q && q.fixD && day() >= q.fixD), siteA = p ? Math.atan2(p.site.ux, p.site.uz) : 0, m9 = A.GAME.S.min | 0;
     put('site', live ? 'site:' + (fixed ? 1 : 0) + p.site.x : '', () => partsSite(q, fixed), p && p.site.x, p && p.site.z, siteA);
