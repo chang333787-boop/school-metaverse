@@ -42,11 +42,12 @@ srv.listen(0, async () => {
       console.log('\n[학교] 처음 고르기 창 → 기억');
       await p.goto(base + '/v2/?title=0&gmpick=1'); await p.waitForFunction(() => window.SD2 && SD2.map && SD2.gfx && SD2.gfx.fm, null, { timeout: 120000 }); await W8(2500);
       await ev(() => { localStorage.removeItem('sm-set'); }); await p.reload(); await p.waitForFunction(() => window.SD2 && SD2.gfx && SD2.gfx.fm, null, { timeout: 120000 }); await W8(2500);
-      const p0 = await perf(); ok(p0.mode === 'smooth', '안 고른 기기 = 부드럽게(' + p0.mode + ' · 판 ' + p0.gfxMode + ')');
+      const p0 = await perf(); ok(p0.mode === 'auto', '안 고른 기기 = 자동(MODE-2 · ' + p0.mode + ' · 판 ' + p0.gfxMode + ')');
       ok(!(await ev(() => !!document.getElementById('gmPop'))), '걷기 전엔 고르기 창 없음');
       await ev(() => SD2.map.player.teleport('zone:운동장')); await W8(1200); await p.keyboard.down('KeyW'); await W8(2500); await p.keyboard.up('KeyW');
       let pop = false; for (let i = 0; i < 8 && !pop; i++) { await W8(700); pop = await ev(() => !!document.getElementById('gmPop')); }
-      ok(pop, '몇 걸음 걸으면 고르기 창이 뜸');
+      ok(!pop, '고르기 창은 안 뜸(MODE-2 · 기본 = 자동)');
+      await setGm(1); await W8(400);
       if (pop) { R.popTxt = await ev(() => document.getElementById('gmPop').innerText.replace(/\s+/g, ' ').slice(0, 160)); console.log('   창 글: ' + R.popTxt);
         await ev(() => document.querySelector('#gmPop button[data-gm="1"]').click()); await W8(400); }
       ok((await perf()).mode === 'graphics', '그래픽 우선 고름 → 바로 30fps 모드');

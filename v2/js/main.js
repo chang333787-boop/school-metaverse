@@ -2,8 +2,8 @@
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
 import { attachLook, openLookPanel, parseLook, lookColors } from './look.js?v=1';
-import { SET, openSetPanel, openGfxPick } from './settings.js?v=4';   // SET-1 설정·접근성(글씨·색 구분·소리 끄기·흔들림·읽어 주기 — body 꼬리표 · 홍보판 = 기본값)
-import { afterRender, takePhoto, openPhotoPanel } from './photo.js?v=5';   // PHOTO-1 사진관(렌더 바로 뒤 한 번 잡기 · 이 기기 IndexedDB)   // LOOK-1 내 모습(모자·윗옷·바지·머리·피부 색 — 정점 색만 · 홍보판 = 기본)
+import { SET, openSetPanel, openGfxPick } from './settings.js?v=5';   // SET-1 설정·접근성(글씨·색 구분·소리 끄기·흔들림·읽어 주기 — body 꼬리표 · 홍보판 = 기본값)
+import { afterRender, takePhoto, openPhotoPanel } from './photo.js?v=6';   // PHOTO-1 사진관(렌더 바로 뒤 한 번 잡기 · 이 기기 IndexedDB)   // LOOK-1 내 모습(모자·윗옷·바지·머리·피부 색 — 정점 색만 · 홍보판 = 기본)
 import { buildWorld } from './world.js?v=158';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
@@ -70,7 +70,7 @@ if (NORENDER) { const p = Math.min(0.25, 64 / Math.max(64, innerWidth)); Object.
 const FM = (() => { const q = new URLSearchParams(location.search), fixed = !!(window.SM_PROMO || NORENDER || q.get('hq') === '1' || +q.get('dpr') || q.get('adapt') === '0' || /[?&](check|health)=1/.test(location.search) || q.get('shot'));
   return { on: !fixed, q: false, mode: 'fixed', target: 60, lv: 0, step: '기본', fps: 0, fk: 1, dk: 1, shOff: false, slowN: 0, goodT: 0, cool: 0, hold: 0, upAt: -1e9, pre: 0, fail: [0, 0, 0], bt: 0, bn: 0, last: 0, lt: 0, draws: 0, fa: 0, fb: 0, nb: 0, ca: 0, cb: 0, town: false, log: [] }; })();
 const FM_STEP = ['기본', '안개 당김', '디테일 줄임', '그림자 끔'];
-function fmMode() { FM.q = FM.on && SET.gm === 1; FM.mode = !FM.on ? 'fixed' : FM.q ? 'graphics' : 'smooth'; FM.target = FM.q ? 30 : 60; }
+function fmMode() { FM.q = FM.on && SET.gm === 1; FM.mode = !FM.on ? 'fixed' : FM.q ? 'graphics' : SET.gm === 2 ? 'smooth' : 'auto'; FM.target = FM.q ? 30 : 60; }   /* MODE-2 auto = 예전 그대로(자동 해상도만 · 안개·디테일·그림자 단계 X · 30 고정 X) */
 fmMode(); GFX.fm = FM;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: GFX.aa, powerPreference: 'high-performance' });
 if (NORENDER) {   // FAST-1: 그리기만 건너뜀 — three render가 하던 장면·카메라 행렬 갱신은 그대로 해 둔다(레이·투영·말풍선 자리·getWorldPosition이 그리는 판과 같게) · 셰이더 짓기(compile)도 건너뜀
@@ -1493,7 +1493,7 @@ function fmSet(lv) {   // 단계 바꾸기: 1 = 안개·먼 평면 ×0.8(fmView�
   const off = lv >= 3 && GFX.shadow > 0; if (off !== FM.shOff) { FM.shOff = off; sun.castShadow = !off; renderer.shadowMap.enabled = !off && GFX.shadow > 0; if (!off) bakeShadows(); }
 }
 function fmEval(fps, now) {
-  const F = FM; F.fps = Math.round(fps * 10) / 10;
+  const F = FM; F.fps = Math.round(fps * 10) / 10; if (F.mode !== 'smooth') { if (F.lv) fmSet(0); return; }   /* MODE-2: 자동·그래픽 우선 = 단계 X */
   if (F.cool > 0) { F.cool--; F.slowN = 0; F.goodT = 0; return; }
   if (F.pre) { const p0 = F.pre; F.pre = 0; if (fps < p0 * 1.04 + 0.5 && F.lv > 0) { F.log.push([+now.toFixed(1), 'nohelp', F.lv, F.fps]); fmSet(F.lv - 1); F.hold = now + 120; F.cool = 2; return; } }   /* 내렸는데 안 빨라짐(브라우저 30fps 잠금·에너지 절약) = 되돌리고 2분 쉼 */
   if (fps < 50) { F.slowN++; F.goodT = 0; } else F.slowN = 0;
@@ -1963,7 +1963,7 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
   const setOpen = () => { if (window.SM_PROMO || document.getElementById('setPop')) return; keys.clear(); const fz0 = CTRL.frozen; CTRL.frozen = true; openSetPanel({ onClose: () => { CTRL.frozen = fz0; } }); };   // SET-1 ⚙(⏸ 멈춤 창 6 · 오프닝 메뉴 머리 ⚙ = sm-set-open)
   addEventListener('sm-set-open', setOpen);
   // MODE-1: 처음 한 번 화면 모드 고르기 — 몇 걸음(3m) 걸은 뒤 다른 창이 없을 때 · 자동 시험 브라우저(webdriver)는 ?gmpick=1일 때만
-  if (FM.on && !SET.gm && (!navigator.webdriver || /[?&]gmpick=1/.test(location.search))) { let st0 = null, okN = 0;
+  if (false && FM.on && !SET.gm && (!navigator.webdriver || /[?&]gmpick=1/.test(location.search))) {   /* MODE-2: 처음 고르기 창 X(기본 = 자동 · 설정에서 바꿈) */ let st0 = null, okN = 0;
     const iv = setInterval(() => { if (SET.gm) { clearInterval(iv); return; } if (document.hidden || busy() || pz.style.display === 'flex') { okN = 0; return; }
       if (!st0) { st0 = [P.x, P.z]; return; } if (Math.hypot(P.x - st0[0], P.z - st0[1]) < 3 || ++okN < 2) return;
       clearInterval(iv); keys.clear(); document.exitPointerLock?.(); const fz0 = CTRL.frozen; CTRL.frozen = true; openGfxPick({ en: document.documentElement.lang === 'en', onClose: () => { CTRL.frozen = fz0; } }); }, 1000); }
