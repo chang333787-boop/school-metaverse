@@ -2,8 +2,8 @@
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
 import { attachLook, openLookPanel, parseLook, lookColors } from './look.js?v=1';
-import { SET, openSetPanel } from './settings.js?v=3';   // SET-1 설정·접근성(글씨·색 구분·소리 끄기·흔들림·읽어 주기 — body 꼬리표 · 홍보판 = 기본값)
-import { afterRender, takePhoto, openPhotoPanel } from './photo.js?v=4';   // PHOTO-1 사진관(렌더 바로 뒤 한 번 잡기 · 이 기기 IndexedDB)   // LOOK-1 내 모습(모자·윗옷·바지·머리·피부 색 — 정점 색만 · 홍보판 = 기본)
+import { SET, openSetPanel, openGfxPick } from './settings.js?v=4';   // SET-1 설정·접근성(글씨·색 구분·소리 끄기·흔들림·읽어 주기 — body 꼬리표 · 홍보판 = 기본값)
+import { afterRender, takePhoto, openPhotoPanel } from './photo.js?v=5';   // PHOTO-1 사진관(렌더 바로 뒤 한 번 잡기 · 이 기기 IndexedDB)   // LOOK-1 내 모습(모자·윗옷·바지·머리·피부 색 — 정점 색만 · 홍보판 = 기본)
 import { buildWorld } from './world.js?v=158';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
@@ -63,6 +63,15 @@ const GFX = (() => { const q = new URLSearchParams(location.search), hq = q.get(
   const aaQ = q.get('aa'), aa = aaQ === '1' ? true : aaQ === '0' ? false : !low && !cros;   // STORY-PERF(10-06): 크롬북도 MSAA 끔(약한 내장 그래픽 — 4배 표본·풀기 대역폭이 프레임을 먹는다 · ?aa=1이면 켬)   // 10-04 교사 '폰으로 하면 계속 떨리고 멀미': 휴대폰도 MSAA(타일 GPU라 싸다 — 가장자리 지글거림이 걸을 때 떨림으로 보였다) · 저사양만 끔
   return { mode: low ? 'low' : mobile ? 'mobile' : cros ? 'cb' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, mobile || low ? 1 : 0.6), ios, shadow: low ? 0 : mobile || cros ? 1024 : 2048, adapt, aa, dev }; })();
 if (NORENDER) { const p = Math.min(0.25, 64 / Math.max(64, innerWidth)); Object.assign(GFX, { dpr: p, cap: p, start: p, floor: p, adapt: false, aa: false, norender: true }); }   // FAST-1: 그리는 판 ≈ 가로 64px(1280 창 = 배율 0.05) · 자동 해상도·MSAA 끔 · 판 갈래(mode)·그림자 값은 그대로(그걸 보고 정하는 게임 규칙이 같게)
+// MODE-1(10-27 사용자 '성능모드 30fps, 최적모드 60fps 두 개 · 60 유지 빡세면 50이라도'): 화면 모드 둘 — 설정 SET.gm(settings.js) · 값 = SD2.gfx.fm · SD2.perf()
+//   🎨 그래픽 우선(gm 1) = 30fps 고정(rAF는 돌되 33ms마다 그림 — 남는 시간 = CPU·GPU 쉼) · 해상도·디테일·그림자 = 기기 기본 · 자동 해상도는 30 아래일 때만
+//   ⚡ 부드럽게(gm 2 · 안 고름 0) = 60 목표 · 50 아래가 이어지면 차례로 1) 자동 해상도(ADAPT) 2) 안개·먼 평면 ×0.8 3) 디테일 거리 ×0.75 4) 그림자 끔 — 되돌림은 거꾸로(단계마다 쉼 3초 · 다시 올리는 기다림 6초×2^실패)
+//   홍보판·시험 주소(게이트·검진·사진·?hq·?dpr·?adapt=0·그리기 끔) = 예전 그대로(on false · 고르기 창 X)
+const FM = (() => { const q = new URLSearchParams(location.search), fixed = !!(window.SM_PROMO || NORENDER || q.get('hq') === '1' || +q.get('dpr') || q.get('adapt') === '0' || /[?&](check|health)=1/.test(location.search) || q.get('shot'));
+  return { on: !fixed, q: false, mode: 'fixed', target: 60, lv: 0, step: '기본', fps: 0, fk: 1, dk: 1, shOff: false, slowN: 0, goodT: 0, cool: 0, hold: 0, upAt: -1e9, pre: 0, fail: [0, 0, 0], bt: 0, bn: 0, last: 0, lt: 0, draws: 0, fa: 0, fb: 0, nb: 0, ca: 0, cb: 0, town: false, log: [] }; })();
+const FM_STEP = ['기본', '안개 당김', '디테일 줄임', '그림자 끔'];
+function fmMode() { FM.q = FM.on && SET.gm === 1; FM.mode = !FM.on ? 'fixed' : FM.q ? 'graphics' : 'smooth'; FM.target = FM.q ? 30 : 60; }
+fmMode(); GFX.fm = FM;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: GFX.aa, powerPreference: 'high-performance' });
 if (NORENDER) {   // FAST-1: 그리기만 건너뜀 — three render가 하던 장면·카메라 행렬 갱신은 그대로 해 둔다(레이·투영·말풍선 자리·getWorldPosition이 그리는 판과 같게) · 셰이더 짓기(compile)도 건너뜀
   //   '올림'만 흉내: 카메라 안에 드는 메시(three와 같은 보임·층·절두체 검사)는 GPU에 올린 것처럼 onUploadCallback·onAfterRender를 부른다 → 마을이 올린 뒤 비우는 정적 배열(GEOS·armFree)이 그리는 판과 같은 때 비워짐(힙이 같고 '비운 배열 읽기' 버그도 같이 드러남)
@@ -1363,7 +1372,7 @@ function detailTick(dt, budget = Infinity) {
   let t0 = performance.now(), occW = false, prep = false;
   if (detailT >= 0.2 || moved) { detailT = 0;
     const camIn = ceilAt(cp.x, cp.z, cp.y - 0.3, cp.y + 4.5) !== null;
-    const R = ((FILM_VIEW ? FILM_VIEW.far : DETAIL_FAR) + 11.3) ** 2, RI = FILM_VIEW ? R : ((camIn ? DETAIL_IN_IN : DETAIL_IN) + 11.3) ** 2;
+    const R = ((FILM_VIEW ? FILM_VIEW.far : DETAIL_FAR * FM.dk) + 11.3) ** 2, RI = FILM_VIEW ? R : ((camIn ? DETAIL_IN_IN : DETAIL_IN) * FM.dk + 11.3) ** 2;   /* MODE-1 단계 2 = ×0.75 */
     if (!OCC.occ) { const tp = performance.now(); occPrep(); prep = true; TIMING.occPrepMs = performance.now() - tp; t0 += TIMING.occPrepMs; }   // 한 번뿐인 준비는 OCC.ms·occP95 고리에서 뺀다
     // PERF-LOAD(09-26): 가림 판정(광선)은 절두체에 든 청크만, 처음 필요한 프레임에 — 판정 자리는 이 재계산 자리(OCC.x·y·z)라 예전(전부 여기서)과 결과가 같다.
     //  돌아서기만 하면(재계산 없이) 새로 들어온 청크를 그 프레임에 같은 자리로 잰다. 광선도 그 청크들이 쓰는 것만(occRays nd) — 테 광선·이웃 광선 쌍(occGap)까지(angSpan outer).
@@ -1460,15 +1469,15 @@ function adaptTick(ts) {
     if (A.ft > P0.ft * 0.88) { A.lvl = P0.lvl; setDpr(L0[A.lvl]); if (A.shadow0 > 1024 && GFX.shadow !== A.shadow0) setShadowSize(A.shadow0); A.capT = performance.now() + 300000; A.log.push(['cap', +A.ft.toFixed(1)]); adaptReset(2); return; }
   }
   if (A.capT && performance.now() < A.capT) { A.slowT = 0; return; }
-  if (A.ft > 18.5) { A.slowT += dtE; A.goodT = 0; } else A.slowT = 0;
+  if (A.ft > (FM.q ? 36.5 : 18.5)) { A.slowT += dtE; A.goodT = 0; } else A.slowT = 0;   /* MODE-1: 그래픽 우선 = 30fps(33.3ms) 아래로 떨어질 때만 내림 */
   const L = A.ladder, logp = () => A.log.push([+(performance.now() / 1000).toFixed(1), L[A.lvl], +A.ft.toFixed(1)]);
   if (A.slowT >= 1 && A.lvl < L.length - 1) {   // 내림
     A.pre = { lvl: A.lvl, ft: A.ft }; A.fail.set(A.lvl, (A.fail.get(A.lvl) || 0) + 1); A.lvl++; A.steps++; logp();
     setDpr(L[A.lvl]); if (A.lvl === L.length - 1 && A.shadow0 > 1024) setShadowSize(1024);
     adaptReset(1.5); return;
   }
-  if (A.lvl === 0) return;
-  const up = A.lvl - 1, good = A.ft < 13 || (up >= A.s0 && A.ft < 17.5);   // start 위로는 진짜 여유(13ms)만
+  if (A.lvl === 0 || FM.lv > 0) return;   /* MODE-1: 부드럽게 단계(안개·디테일·그림자)를 먼저 되돌린 뒤에 해상도를 올림 */
+  const up = A.lvl - 1, good = FM.q ? up >= A.s0 && A.ft < 35.5 : A.ft < 13 || (up >= A.s0 && A.ft < 17.5);   /* 그래픽 우선 = 기기 기본(start)까지만 되돌림 */   // start 위로는 진짜 여유(13ms)만
   if (good) A.goodT += dtE; else { A.goodT = 0; return; }
   const f = A.fail.get(up) || 0; if (f >= 3) return;
   if (A.goodT >= 4 * Math.min(16, 2 ** f)) {   // 올림
@@ -1477,6 +1486,45 @@ function adaptTick(ts) {
     adaptReset(1.5);
   }
 }
+// ---------- MODE-1 부드럽게 단계(1초마다 판단 · 할당 없음) ----------
+function fmSet(lv) {   // 단계 바꾸기: 1 = 안개·먼 평면 ×0.8(fmView가 그리기 직전에 맞춤) · 2 = 디테일 거리 ×0.75 · 3 = 그림자 끔(해 그림자 끔 = 셰이더 한 번 다시 지음)
+  FM.lv = lv; FM.step = FM_STEP[lv]; FM.fk = lv >= 1 ? 0.8 : 1;
+  const dk = lv >= 2 ? 0.75 : 1; if (dk !== FM.dk) { FM.dk = dk; OCC.x = 1e9; }
+  const off = lv >= 3 && GFX.shadow > 0; if (off !== FM.shOff) { FM.shOff = off; sun.castShadow = !off; renderer.shadowMap.enabled = !off && GFX.shadow > 0; if (!off) bakeShadows(); }
+}
+function fmEval(fps, now) {
+  const F = FM; F.fps = Math.round(fps * 10) / 10;
+  if (F.cool > 0) { F.cool--; F.slowN = 0; F.goodT = 0; return; }
+  if (F.pre) { const p0 = F.pre; F.pre = 0; if (fps < p0 * 1.04 + 0.5 && F.lv > 0) { F.log.push([+now.toFixed(1), 'nohelp', F.lv, F.fps]); fmSet(F.lv - 1); F.hold = now + 120; F.cool = 2; return; } }   /* 내렸는데 안 빨라짐(브라우저 30fps 잠금·에너지 절약) = 되돌리고 2분 쉼 */
+  if (fps < 50) { F.slowN++; F.goodT = 0; } else F.slowN = 0;
+  const A = ADAPT, dprDone = !GFX.adapt || A.lvl >= A.ladder.length - 1 || (A.capT && performance.now() < A.capT);   /* 해상도를 낮춰도 안 빨라진 기기(CPU가 버거움 · ADAPT cap) = 해상도 다음 단계로 — 진짜 30fps 잠금이면 아래 '안 빨라짐' 되돌림이 잡음 */
+  if (F.slowN >= 2 && F.lv < (GFX.shadow > 0 ? 3 : 2) && now >= F.hold && dprDone) { if (now - F.upAt < 12) F.fail[F.lv] = Math.min(4, F.fail[F.lv] + 1);   /* 올린 지 얼마 안 돼 다시 버거움 = 그 단계는 더 오래 기다림 */
+    F.pre = fps; fmSet(F.lv + 1); F.cool = 3; F.slowN = 0; F.log.push([+now.toFixed(1), 'down', F.lv, F.fps]); if (F.log.length > 40) F.log.splice(0, 20); return; }
+  if (F.lv > 0 && fps >= 57) { F.goodT++; if (F.goodT >= 6 * 2 ** F.fail[F.lv - 1]) { F.upAt = now; fmSet(F.lv - 1); F.cool = 3; F.goodT = 0; F.log.push([+now.toFixed(1), 'up', F.lv, F.fps]); if (F.log.length > 40) F.log.splice(0, 20); } } else F.goodT = 0;
+}
+function fmTick(ts) {   // 그린 프레임마다 — 1초 창이 차면 fmEval
+  const F = FM, raw = F.last ? ts - F.last : 0; F.last = ts; F.draws++;
+  if (!F.on || !(raw > 0)) return;
+  if (document.hidden || window.SM_HOLD3D > 0 || (ADAPT.hold && ADAPT.hold())) { F.bt = F.bn = 0; return; }
+  if (raw > 250) { F.bt = F.bn = 0; return; }   /* 게임 열기·탭 전환 같은 한 번 끊김은 버림 */
+  F.bt += raw; F.bn++; if (F.bt < 1000) return;
+  const fps = F.bn * 1000 / F.bt; F.bt = F.bn = 0; F.town = document.body.classList.contains('h-town');
+  if (F.q) { F.fps = Math.round(fps * 10) / 10; return; }
+  fmEval(fps, ts / 1000);
+}
+function fmView() {   // 그리기 직전: 안개(·학교 맵은 먼 평면도)를 바탕값 × fk로 — 다른 쪽(시간대·게임 화풍·높은 곳 전망)이 바꾸면 그 값을 새 바탕으로
+  const F = FM, f = scene.fog; if (!f || (F.fk === 1 && !F.fa)) return;
+  if (f.far !== F.fa) { F.fb = f.far; F.nb = f.near; }
+  if (F.fk === 1) { f.far = F.fb; f.near = F.nb; F.fa = 0; } else { f.far = F.fb * F.fk; f.near = F.nb * F.fk; F.fa = f.far; }
+  const ck = F.town ? 1 : F.fk;   /* 마을 = 먼 평면은 그대로(먼 산 깊이 당기기 HAZE-1 · 안개 끝 밖 숨김 lodTick이 안개를 보고 덜 그림) */
+  if (ck === 1 && !F.ca) return;
+  if (camera.far !== F.ca) F.cb = camera.far;
+  const nf = ck === 1 ? F.cb : Math.max(f.far + 10, F.cb * ck);
+  if (camera.far !== nf) { camera.far = nf; camera.updateProjectionMatrix(); }
+  F.ca = ck === 1 ? 0 : nf; skyDome.scale.setScalar(ck === 1 ? 1 : Math.min(1, nf * 0.95 / 290));   /* 하늘 돔(반지름 290)이 먼 평면 안에 들게 */
+}
+addEventListener('sm-set', (e) => { const d = e && e.detail, was = FM.mode; if (d && d.gm != null && d.gm !== SET.gm) SET.gm = d.gm; fmMode(); if (was === FM.mode) return;
+  fmSet(0); FM.fail.fill(0); FM.hold = 0; FM.cool = 2; FM.pre = 0; FM.lt = 0; FM.bt = FM.bn = 0; adaptReset(1.5); FM.log.push([+(performance.now() / 1000).toFixed(1), 'mode', FM.mode]); });
 // ---------- 셰이더 미리 짓기(PERF-WIN) — 첫 프레임 뒤 쉬는 시간에 ----------
 // 장면에 있지만 아직 한 번도 안 그려 프로그램이 없는 재질(밤 별 Points · 게임이 만든 물총 자국·숨바꼭질·방탈출 재질 등)만 골라,
 //  같은 지오메트리·재질·그림자 받기·인스턴스(색) 설정의 대역 오브젝트를 임시 장면에 두고 renderer.compile(장면 조명·안개 기준) — 원래 오브젝트는 건드리지 않는다(화면 변화 0).
@@ -1828,6 +1876,8 @@ body.small #mpWR .sum{font-size:13px}body.small #mpWR .low{display:none}
 function loop(ts) {
   requestAnimationFrame(loop);
   if (window.SM_HOLD3D > 0 && ts) { if (ts - (loop.held || 0) < 250) { ADAPT.last = ts; return; } loop.held = ts; }   // MOB-2: 견학 영상 창(유튜브)이 열린 동안 3D는 쉬엄쉬엄
+  if (FM.q && ts) { const g = ts - FM.lt; if (g < 29.3) return; FM.lt = g > 50 ? ts : FM.lt + 33.34; }   /* MODE-1 그래픽 우선: 33.3ms마다 그림(60·120·144Hz 모두 평균 30) — 안 그리는 rAF는 할 일 없음 */
+  if (ts) fmTick(ts);
   if (!ADAPT.ext) adaptTick(ts || performance.now());   // PERF-WIN 자동 해상도(진짜 프레임 간격 · ext = 시험이 가짜 시각을 넣는 동안 끔)
   const dt = Math.min(0.05, clock.getDelta());
   const t0 = performance.now();
@@ -1842,6 +1892,7 @@ function loop(ts) {
   simMs = Math.max(simMs, performance.now() - t0);
   skyTick(dt);
   detailTick(dt, OCC_BUDGET);
+  fmView();
   const tR0 = performance.now();
   renderer.render(scene, camera);
   afterRender(canvas);   // PHOTO-1: 찍을 때만 그 한 번 2D로 옮김(평소엔 null 확인 하나 — preserveDrawingBuffer 없이)
@@ -1852,7 +1903,7 @@ function loop(ts) {
   RB.cpu[RB.ci++ % RB.cpu.length] = (tR0 - t0) + (performance.now() - tR1);   // PERF-LOAD: 프레임 CPU(렌더 제외)
   if (acc > 1) {
     const fps = Math.round(n / acc);
-    const dc = renderer.info.render.calls;
+    const dc = renderer.info.render.calls; FM.fps1 = fps; FM.dc = dc;   /* MODE-1: SD2.perf() */
     fpsBox.textContent = fps + ' fps · ' + Math.round(GFX.dpr * 100) / 100 + 'x · ' + dc + ' dc · sim ' + simMs.toFixed(2) + 'ms' + (MAP.game.current ? ' · game ' + MAP.game.lastMs.toFixed(2) + 'ms' : '');
     if (dc > 300) console.warn('예산 초과: drawCalls', dc);
     if (simMs > 1) console.warn('예산 초과: sim ms', simMs.toFixed(2));
@@ -1911,6 +1962,11 @@ if (!/[?&](check|health)=1/.test(location.search)) idle(() => MAP.navIdle && MAP
   addEventListener('sm-look-open', lookOpen);
   const setOpen = () => { if (window.SM_PROMO || document.getElementById('setPop')) return; keys.clear(); const fz0 = CTRL.frozen; CTRL.frozen = true; openSetPanel({ onClose: () => { CTRL.frozen = fz0; } }); };   // SET-1 ⚙(⏸ 멈춤 창 6 · 오프닝 메뉴 머리 ⚙ = sm-set-open)
   addEventListener('sm-set-open', setOpen);
+  // MODE-1: 처음 한 번 화면 모드 고르기 — 몇 걸음(3m) 걸은 뒤 다른 창이 없을 때 · 자동 시험 브라우저(webdriver)는 ?gmpick=1일 때만
+  if (FM.on && !SET.gm && (!navigator.webdriver || /[?&]gmpick=1/.test(location.search))) { let st0 = null, okN = 0;
+    const iv = setInterval(() => { if (SET.gm) { clearInterval(iv); return; } if (document.hidden || busy() || pz.style.display === 'flex') { okN = 0; return; }
+      if (!st0) { st0 = [P.x, P.z]; return; } if (Math.hypot(P.x - st0[0], P.z - st0[1]) < 3 || ++okN < 2) return;
+      clearInterval(iv); keys.clear(); document.exitPointerLock?.(); const fz0 = CTRL.frozen; CTRL.frozen = true; openGfxPick({ en: document.documentElement.lang === 'en', onClose: () => { CTRL.frozen = fz0; } }); }, 1000); }
   // 단축키(09-28 사용자 "메뉴·게임 키도 버튼 할당"): P = 멈춤 창(잠금 중에도 — 잠금을 풀고 창) · G = 🎮 놀이 고르기 · 멈춤 창 안: Enter/Space/1 계속 · 2 메뉴로 · 3 놀이 바꾸기 · Esc 닫기
   addEventListener('keydown', e => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -2031,6 +2087,7 @@ window.SD2 = {
   doors: () => DOORS.length, doorCheck,
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
   film: FILM, top: TOP, acts: ACTS, hotNow: () => hotNear, actOn: h => act(h), camOvr: f => { CAM_OVR = f; }, pg,   // ACTION-1: 보이는 행동(시험 — SD2.acts.play('drink', {at:[x,y,z]}) · stats())
+  perf: () => ({ fps: FM.fps1 || 0, mode: FM.mode, target: FM.target, step: FM.lv, stepName: FM.step, dpr: GFX.dpr, dprLvl: ADAPT.lvl + '/' + (ADAPT.ladder.length - 1), fog: FM.fk, detail: FM.dk, shadow: !FM.shOff && GFX.shadow > 0, drawCalls: FM.dc || 0, gfxMode: GFX.mode, log: FM.log.slice(-8) }),   /* MODE-1: 지금 모드·목표·단계 */
   touch: TOUCH, gfx: GFX, title: TITLE, input: { keys, KEY_NEW, KEY_UP, MOUSE, clear: keysClear }, prewarm, setDpr, setShadowSize, adaptTick,   // PERF-WIN
   cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)
@@ -2041,5 +2098,6 @@ window.SD2 = {
     frameCpuP50: { get: () => rbPct(RB.cpu, RB.ci, 0.5), enumerable: true }, frameCpuP95: { get: () => rbPct(RB.cpu, RB.ci, 0.95), enumerable: true },
     occP95: { get: () => rbPct(RB.occ, RB.oi, 0.95), enumerable: true }, reset: { value: () => { RB.ci = RB.oi = 0; } } }),
 };
+if (!window.SD) window.SD = { perf: window.SD2.perf };   /* MODE-1: 예전 이름 SD.perf()도 같은 값 */
 // 게임 로더(MAP-API-1): ?game=이름 → v2/games/registry.js 허용 목록 → export default start(map) (사진 대조 모드에선 안 켠다)
 { const QS = new URLSearchParams(location.search), GAME = QS.get('game') || (QS.get('tour') === '1' ? 'tour' : null) || (QS.get('town') && !window.SM_PROMO ? 'town' : null); /* TOWN-1: ?town=<마을 자료> = 마을 세계(홍보판엔 없음) */ if (GAME && !SHOT) MAP.game.load(GAME, Object.fromEntries(new URLSearchParams(location.search))); }

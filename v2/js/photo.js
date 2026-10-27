@@ -2,7 +2,7 @@
 //   잡는 법 = preserveDrawingBuffer 없이: main.js가 renderer.render 바로 뒤에 afterRender(canvas)를 부름(평소엔 null 확인 하나) → 찍을 때 그 한 번만 2D 캔버스로 drawImage(같은 작업 안이라 그림판이 아직 살아 있음) → toBlob
 //   서버에 올리지 않음(아이 기록이 밖으로 나가지 않음) · '💾 기기에 저장' = 내려받기 · 방 안이면 정해진 말 '📷 3초 뒤 찍어요!'를 이미 있는 방 채팅으로(새 가지 X) · 홍보판 없음
 //   앨범 = 마을 '📷 앨범'(요리 사진) 안 '마을 사진' 쪽 · 학교 = ⏸ 멈춤 창 '📷 사진'
-import { schoolPop } from './settings.js?v=3';
+import { schoolPop } from './settings.js?v=4';
 const DBN = 'sm-photos', ST = 'p', MAX = 30, W9 = 320, H9 = 180;
 let shotQ = null, busy = false, URLS = [];
 export const lastShot = { ms: 0, kb: 0, n: 0 };
