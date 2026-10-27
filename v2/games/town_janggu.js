@@ -42,15 +42,28 @@ export function createJanggu(A) {
   const DBG = { plays: 0, cheer: 0, last: null }, C3 = new A.T3.Vector3();   /* 스크래치(카메라 앞 방향) */
 
   // ───────── 선생님 자리(짓기 때 한 번) ─────────
-  function pickTeacher() { const WK = A.workers() || [], P = (A.places() || []).filter(p => p.kind === 'park' || /광장|공원/.test(p.name || '')); let best = -1, bs = 1e18;
+  function pickTeacher() { const T9 = A.teacher && A.teacher(); if (T9 && T9.i != null) return T9.i;   /* BUG4-2: 잔치 마당 무대 옆으로 옮긴 곁 일손(town.js jgPlace) · 없으면 예전대로 장터 쪽 */
+    const WK = A.workers() || [], P = (A.places() || []).filter(p => p.kind === 'park' || /광장|공원/.test(p.name || '')); let best = -1, bs = 1e18;
     WK.forEach((w, i) => { if (!w.k || w.role === 'swim' || w.role === 'guest' || w.gate) return; let open9 = 0; for (let a = 0; a < 12; a++) { const ang = a * Math.PI / 6; if (A.okSpot(w.x + Math.sin(ang) * 2.6, w.z + Math.cos(ang) * 2.6)) open9++; } if (open9 < 8) return;   /* FIX-JG1(사용자 10-24 '장구 선생님 못 찾겠네'): 몸이 벽에 묻히거나 둘레가 막힌 일꾼은 X — 둘레 12방향 가운데 8 이상 트인 곳만 */ let d = 1e6; for (const p of P) d = Math.min(d, Math.hypot(p.x - w.x, p.z - w.z)); const sc = (w.k === 'stall' ? 0 : 150) + (P.length ? d : 0); if (sc < bs) { bs = sc; best = i; } });
     return best; }
   function hotSpot(w) { const hx = w.hx ?? null, hz = w.hz ?? null, f = w.ry || 0; let pick = null, pd = 1e9;
     for (const r of [2.6, 3.2, 3.9]) for (let a = 0; a < 12; a++) { const ang = f + a * Math.PI / 6, x = w.x + Math.sin(ang) * r, z = w.z + Math.cos(ang) * r; if (!A.okSpot(x, z)) continue; if (hx != null && Math.hypot(x - hx, z - hz) < 3.6) continue;
       const d = r + Math.min(a, 12 - a) * 0.15; if (d < pd) { pd = d; pick = [x, z]; } }
     return pick || [w.x + Math.sin(f) * 1.6, w.z + Math.cos(f) * 1.6]; }
-  function init() { const out = []; if (HOT) { HOT = null; } TI = pickTeacher(); TW = TI >= 0 ? A.workers()[TI] : null; if (!TW || !A.on()) return out;
-    const [x, z] = hotSpot(TW); HOT = map.interact.add({ kind: 'game', x, z, y: A.gy(x, z), r: 2.2, label: '🥁 ' + (en() ? 'Learn the janggu (janggu teacher)' : '장구 배우기 (장구 선생님)'), use: () => open() }); out.push(HOT); return out; }
+  /* BUG4-2 일 시간(9~18시 · town.js WHRS.janggu · docs/systems/town_hours.md) — 밖이면 몸은 집에 가고 E = 한 줄 */
+  const hrs = () => (A.hrs ? A.hrs() : [9, 18]), inHrs = () => { const m = A.min ? A.min() : 600, H9 = hrs(); return m >= H9[0] * 60 && m < H9[1] * 60; }, mine9 = () => !!(TW && TW.jg);
+  function restLine() { const H9 = hrs(), m = A.min ? A.min() : 600, e = en(), early = m < H9[0] * 60; return '🥁 ' + (e ? 'The janggu teacher is resting now. Come back ' + (early ? 'at ' : 'tomorrow at ') + H9[0] + ':00 (lessons ' + H9[0] + ':00 to ' + H9[1] + ':00).' : '지금은 장구 선생님이 쉬는 때예요. ' + (early ? '' : '내일 ') + H9[0] + '시에 와요(가르치는 때 ' + H9[0] + '시~' + H9[1] + '시).'); }
+  let PROP = null, PCOLH = null;
+  function propBuild() { if (PROP || !TW || !TW.jg || !A.buildParts) return; const ry = TW.ry || 0, c = Math.cos(ry), sn = Math.sin(ry), px = TW.x + c * 1.15 + sn * 0.25, pz = TW.z - sn * 1.15 + c * 0.25;   /* 선생님 오른쪽 옆 · 조금 앞 */
+    PROP = A.buildParts(p => { p('b', 0, 0, 0, 1.9, 0.03, 1.4, 0xd9c27a); for (let i = 0; i < 6; i++) p('b', 0, 0.03, -0.6 + i * 0.24, 1.86, 0.004, 0.05, 0xa88a3a);   /* 짚 돗자리 */
+      const R9 = 1.5708; p('b', 0, 0.03, 0, 0.36, 0.28, 0.8, 0x5a3e28);   /* 낮은 받침 */
+      for (const s9 of [-1, 1]) { p('c', 0, 0.5, s9 < 0 ? -0.42 : 0.22, 0.19, 0.2, 0, 0xc8423a, 0, 0, R9); p('c', 0, 0.5, s9 < 0 ? -0.45 : 0.42, 0.23, 0.03, 0, 0xf6f4ee, 0, 0, R9); }   /* 양쪽 울림통(붉은 칠) · 흰 가죽 면 */
+      p('c', 0, 0.5, -0.22, 0.06, 0.44, 0, 0x7a3b1e, 0, 0, R9); for (let k = 0; k < 6; k++) { const a = k / 6 * 6.2832; p('c', Math.cos(a) * 0.15, 0.5 + Math.sin(a) * 0.15, -0.43, 0.008, 0.86, 0, 0xe8d38a, 0, 0, R9); }   /* 잘록한 허리 · 조임줄 */
+      p('c', 0.55, 0.035, -0.2, 0.012, 0.42, 0, 0x6b4a2f, 0, 0, R9); p('c', 0.7, 0.035, -0.2, 0.012, 0.4, 0, 0xd8b878, 0, 0, R9); });   /* 궁채 · 열채 */
+    PROP.position.set(px, A.gy(px, pz), pz); PROP.rotation.y = ry + 1.5708;   /* 장구 몸통이 앞에서 옆으로 보이게(잘록한 허리) */ map.add(PROP); PROP.updateMatrixWorld(true);
+    if (A.collider) { const y = A.gy(px, pz); PCOLH = A.collider({ x0: px - 0.5, x1: px + 0.5, z0: pz - 0.5, z1: pz + 0.5, y0: y - 1, y1: y + 0.55, nc: true }); } }
+  function init() { const out = []; if (HOT) { HOT = null; } TI = pickTeacher(); TW = TI >= 0 ? A.workers()[TI] : null; if (!TW || !A.on()) return out; propBuild();
+    const [x, z] = hotSpot(TW), H9 = hrs(); HOT = map.interact.add({ kind: 'game', x, z, y: A.gy(x, z), r: 2.2, label: '🥁 ' + (en() ? 'Learn the janggu (janggu teacher, ' + H9[0] + ':00 to ' + H9[1] + ':00)' : '장구 배우기 (장구 선생님 · ' + H9[0] + '시~' + H9[1] + '시)'), use: () => { if (mine9() && !inHrs()) { toast(restLine(), 3.6); return; } open(); } }); out.push(HOT); return out; }
 
   // ───────── 창 ─────────
   function css() { if (cssOn || document.getElementById('jg-css')) { cssOn = true; return; } const st = document.createElement('style'); st.id = 'jg-css'; st.textContent = CSS; document.head.appendChild(st); cssOn = true; }
@@ -141,7 +154,7 @@ export function createJanggu(A) {
     if (near(/^hospital$/, 30)) return 'hosp'; if (A.night() && near(/^(house|apt)$/, 35)) return 'night'; if (near(/^(house|apt)$/, 14)) return 'home'; return 'ok'; }
   function audience(me) { const out = [], WK = A.workers() || [], cam = map.camera; let fx = 0, fz = -1; if (cam && cam.getWorldDirection) { cam.getWorldDirection(C3); const l = Math.hypot(C3.x, C3.z) || 1; fx = C3.x / l; fz = C3.z / l; }
     const cx = cam ? cam.position.x : me.x, cz = cam ? cam.position.z : me.z;
-    WK.forEach((w, i) => { if (w.role === 'swim' || w.party) return; const d = Math.hypot(w.x - me.x, w.z - me.z); if (d > 32 || Math.abs(w.g - me.y) > 5) return; const vx = w.x - cx, vz = w.z - cz, vl = Math.hypot(vx, vz) || 1; if (d > 4 && (vx * fx + vz * fz) / vl < 0.3) return; out.push(i); });
+    WK.forEach((w, i) => { if (w.role === 'swim' || w.party || w.out9 === 1) return;   /* 집에 간(숨은) 몸은 손뼉 X */ const d = Math.hypot(w.x - me.x, w.z - me.z); if (d > 32 || Math.abs(w.g - me.y) > 5) return; const vx = w.x - cx, vz = w.z - cz, vl = Math.hypot(vx, vz) || 1; if (d > 4 && (vx * fx + vz * fz) / vl < 0.3) return; out.push(i); });
     return out; }
   function busk() { if (!canBusk()) { toast(en() ? '🥁 First make and save your rhythm with the janggu teacher' : '🥁 먼저 장구 선생님께 내 장단을 지어 저장해요', 3); return false; } if (BK || A.busy()) return false;
     const s = S(), G = shapeOf(s.mine.si), me = map.player.pos(), why = placeWhy(me.x, me.z), aud = why === 'ok' ? audience(me) : [], e = en(), M = mus(); if (M) M.hold(true);
@@ -159,9 +172,10 @@ export function createJanggu(A) {
     if (!A.GAME.picked('jg:busk')) { A.GAME.pick('jg:busk'); A.money(BUSK_MONEY); A.skUp('work', 1); } }
 
   function tick() { if (W && !W.el.isConnected) closed(); }
-  function sec() { if (W && !W.el.isConnected) closed(); }
-  function dispose() { for (const id of tmr) clearTimeout(id); tmr = []; stopPlay(); if (BK) buskEnd(true); if (kd) { removeEventListener('keydown', kd, true); kd = null; } W = null; R = null; HOT = null; }
-  const info = () => { const s = S(); return { on: !!TW, teacher: TW && { i: TI, x: +TW.x.toFixed(1), z: +TW.z.toFixed(1), g: +TW.g.toFixed(2), k: TW.k, role: TW.role, cell: A.cell(TW.x, TW.z) }, hot: HOT && { x: +HOT.hot.x.toFixed(1), z: +HOT.hot.z.toFixed(1), y: +HOT.hot.y.toFixed(2), label: HOT.hot.label },
+  function sec() { if (W && !W.el.isConnected) closed(); if (!mine9()) return; const v = inHrs() || !!W || !!BK ? 0 : 1; if (TW.out9 !== v) TW.out9 = v;   /* 일 시간 밖 = 몸 숨김(town.js WKM.tick이 out9 1을 숨김) · 창·버스킹 중엔 그대로 */
+    const WM = A.wkMesh(); if (WM && !BK && WM.actOf && WM.actOf(TI) !== 0 && !(R && W)) WM.act(TI, 'stand', 'none'); }   /* 버스킹 뒤 reset이 옛 일 몸짓(허리 굽히기 등)으로 돌리던 것 → 서 있기 */
+  function dispose() { if (PROP) { map.remove(PROP); PROP.traverse(o => { if (o.geometry) o.geometry.dispose(); }); PROP = null; } if (PCOLH) { PCOLH.remove(); PCOLH = null; } for (const id of tmr) clearTimeout(id); tmr = []; stopPlay(); if (BK) buskEnd(true); if (kd) { removeEventListener('keydown', kd, true); kd = null; } W = null; R = null; HOT = null; }
+  const info = () => { const s = S(); return { on: !!TW, teacher: TW && { i: TI, x: +TW.x.toFixed(1), z: +TW.z.toFixed(1), g: +TW.g.toFixed(2), k: TW.k, role: TW.role, cell: A.cell(TW.x, TW.z), moved: TW.jg || null, out9: TW.out9 | 0, hrs: hrs(), inHrs: inHrs(), prop: PROP ? [+PROP.position.x.toFixed(1), +PROP.position.z.toFixed(1)] : null }, hot: HOT && { x: +HOT.hot.x.toFixed(1), z: +HOT.hot.z.toFixed(1), y: +HOT.hot.y.toFixed(2), label: HOT.hot.label },
     open: !!(W && W.el.isConnected), mode: W ? W.mode : null, S: JSON.parse(JSON.stringify(s)), R: R && { si: R.si, pat: R.pat && R.pat.join(''), mine: R.mine.join(','), cur: R.cur, demo: R.demo, bad: R.bad.slice(), done: R.done, s: R.s, up: R.up || null, tries: R.tries, replays: R.replays },
     busk: BK && { why: BK.why, aud: BK.aud.slice() }, plays: DBG.plays, cheer: DBG.cheer, last: DBG.last, canBusk: canBusk() }; };
   return { init, tick, sec, dispose, open, busk, canBusk, info, spot: () => (HOT && HOT.hot && TW ? { x: HOT.hot.x, z: HOT.hot.z, tx: TW.x, tz: TW.z } : null), get active() { return !!(W || BK); }, STG, dbg: { hit, submit, erase, stage: n => { const s = S(); s.lv = Math.max(0, Math.min(STG.length - 1, n)); s.good = 0; s.top = false; mark(); }, place: (x, z) => placeWhy(x, z) } };

@@ -86,7 +86,7 @@ export function createDay(A) {
   function snapNow() { const s = S(), sk = {}; for (const k of SK_ORDER) sk[k] = levelOf((s.skill || {})[k]).L; const bs = {}; try { for (const r of A.ladRows() || []) bs[r.key] = r.best || ''; } catch (x) { /* 기록 없음 */ } return { d: day(), sk, bs }; }
   function snap() { const s = S(), o = s.dsnap; if (o && o.d === day()) return; const n = snapNow(); if (o && o.d === day() - 1) { delete o.prev; n.prev = o; } s.dsnap = n; mark(); }
   function changes(d) { const s = S(), e = en(), out = [], dOf = v => (typeof v === 'number' ? v : v && v.d);
-    const st = Object.entries(((s.pass || {}).v) || {}).filter(([, v]) => v === d).map(([k]) => String(k).split('@')[0].replace(/^xp_/, ''));
+    const st = Object.entries(((s.pass || {}).v) || {}).filter(([, v]) => v === d).map(([k]) => (A.passName ? A.passName(k) : null) || (String(k).includes('@') ? String(k).split('@')[0].replace(/^xp_/, '') : null)).filter(Boolean);   /* BUG4-1: 'pub_gaf_숲속 마을_786' 같은 id가 하루 마무리에 그대로 뜨던 것 → 장소 이름 */
     if (st.length) out.push(['st', '🛂', e ? 'New stamps' : '새 여권 도장', esc(st.slice(0, 4).join(', ')) + (st.length > 4 ? ' …' : '')]);
     const dx = Object.entries(s.dex || {}).filter(([, v]) => dOf(v) === d).map(([k]) => { const i = k.indexOf(':'); if (i < 0) return k.length <= 4 ? k : '📖'; const p = k.slice(0, i), r = k.slice(i + 1); return p === 'ate' ? r : DEXI[p] || '📖'; });
     if (dx.length) out.push(['dex', '📖', e ? 'New in the codex' : '새 도감 칸', '<span class="dy-ch">' + dx.slice(0, 12).join(' ') + (dx.length > 12 ? ' …' : '') + '</span>']);

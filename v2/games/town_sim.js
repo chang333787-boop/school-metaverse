@@ -64,9 +64,14 @@ export function createSim(A) {
 // ── 비 띠 그림: 먹구름 + 세로 커튼 두 장(행마다) · 소나기 상자 — 인스턴스 메시 하나(그리기 +1 · 비가 없으면 0) ──
 export function makeFrontView(T3, F, A) {
   /* A = { tH(x,z), TY, group } */
-  const nR = F.nR, MAXI = nR * 3 + 5, cv = document.createElement('canvas'); cv.width = 32; cv.height = 64; { const g = cv.getContext('2d'), R = rngOf(91); g.clearRect(0, 0, 32, 64); for (let i = 0; i < 46; i++) { const x = R() * 32, a = 0.35 + R() * 0.5; g.fillStyle = 'rgba(255,255,255,' + a.toFixed(2) + ')'; g.fillRect(x, 0, 1, 64); } const gr = g.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.15, 'rgba(255,255,255,0.6)'); gr.addColorStop(1, 'rgba(255,255,255,0.42)'); g.globalCompositeOperation = 'destination-over'; g.fillStyle = gr; g.fillRect(0, 0, 32, 64); }
+  /* BUG4-3(사용자 10-27 '저 정체불명의 박스 선 같은 거 뭐야?'): 커튼·먹구름 판이 네모 그대로(곧은 가장자리 · 진한 빗줄 46개)라 맑은 칸에서 보면 하늘까지 솟은 반투명 상자 모서리와 한 점으로 모이는 줄로 보였음
+     → 빗줄은 옅게(대비 1/3) · 판 가장자리 넷은 alphaMap으로 흐리게(옆 22% · 위 18% · 아래 10% — 상자 모서리 X) · 카메라 가까이(24~90m)는 옅어짐(비 속 빗방울 입자가 대신) */
+  const nR = F.nR, MAXI = nR * 3 + 5, cv = document.createElement('canvas'); cv.width = 32; cv.height = 64; { const g = cv.getContext('2d'), R = rngOf(91); g.clearRect(0, 0, 32, 64); for (let i = 0; i < 30; i++) { const x = R() * 32, a = 0.1 + R() * 0.16; g.fillStyle = 'rgba(255,255,255,' + a.toFixed(2) + ')'; g.fillRect(x, 0, 1, 64); } const gr = g.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, 'rgba(255,255,255,0.8)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.62)'); gr.addColorStop(1, 'rgba(255,255,255,0.5)'); g.globalCompositeOperation = 'destination-over'; g.fillStyle = gr; g.fillRect(0, 0, 32, 64); }
   const tex = new T3.CanvasTexture(cv); tex.wrapS = T3.RepeatWrapping; tex.repeat.set(6, 1);
-  const mat = new T3.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.62, depthWrite: false, side: T3.DoubleSide, fog: true }), geo = new T3.PlaneGeometry(1, 1);
+  const ca = document.createElement('canvas'); ca.width = ca.height = 64; { const g = ca.getContext('2d'), D = g.createImageData(64, 64), sm = t => t * t * (3 - 2 * t), ed = (t, w) => sm(Math.min(1, Math.max(0, t / w))); for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) { const u = (x + 0.5) / 64, v = (y + 0.5) / 64, k = Math.round(255 * ed(u, 0.22) * ed(1 - u, 0.22) * ed(v, 0.18) * ed(1 - v, 0.1)), i = (y * 64 + x) * 4; D.data[i] = D.data[i + 1] = D.data[i + 2] = k; D.data[i + 3] = 255; } g.putImageData(D, 0, 0); }   /* 위(v 작음) = 먹구름 쪽 · 아래 = 땅 쪽 */
+  const amap = new T3.CanvasTexture(ca);
+  const mat = new T3.MeshBasicMaterial({ map: tex, alphaMap: amap, transparent: true, opacity: 0.55, depthWrite: false, side: T3.DoubleSide, fog: true }), geo = new T3.PlaneGeometry(1, 1);
+  mat.onBeforeCompile = sh => { sh.vertexShader = 'varying float vFD_r;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n vFD_r = -mvPosition.z;'); sh.fragmentShader = 'varying float vFD_r;\n' + sh.fragmentShader.replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\n diffuseColor.a *= smoothstep(24.0, 90.0, vFD_r);'); }; mat.customProgramCacheKey = () => 'front2';
   const m = new T3.InstancedMesh(geo, mat, MAXI); m.count = 0; m.frustumCulled = false; m.userData.fx = 1; m.renderOrder = 2; m.visible = false; m.setColorAt(0, new T3.Color(0xffffff));
   const O = new T3.Object3D(), CC = new T3.Color(0x6d7a8a), CK = new T3.Color(0x4e5763), HT = new Float32Array(F.nR * F.nC).fill(-1e9); let htRow = 0;
   A.group.add(m);
@@ -83,7 +88,7 @@ export function makeFrontView(T3, F, A) {
     m.count = k; m.visible = k > 0; if (k) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } }
   function hide() { m.count = 0; m.visible = false; }
   function scroll(dt) { if (m.visible) tex.offset.y -= dt * 0.9; }   /* 빗줄기가 흘러내림(uniform 하나 꼴 · 매 프레임 새 객체 X) */
-  return { m, update, hide, scroll, get n() { return k; }, dispose() { A.group.remove(m); geo.dispose(); mat.dispose(); tex.dispose(); } };
+  return { m, update, hide, scroll, get n() { return k; }, dispose() { A.group.remove(m); geo.dispose(); mat.dispose(); tex.dispose(); amap.dispose(); } };
 }
 
 // ── 바람개비 대신 풍향 깃발(높은 곳·정문) — 인스턴스 하나 · 깃발 = 바람이 불어 가는 쪽 ──
