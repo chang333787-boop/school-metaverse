@@ -35,7 +35,7 @@ export const DEFAULT_YARD = (() => { const decos = [], floor = {}; for (let r = 
   for (const [c, r] of [[40, 6], [52, 6], [40, 13], [52, 13]]) decos.push({ id: 'd_y1', col: c, row: r }, { id: 'd_y2', col: c + 1, row: r }, { id: 'd_y1', col: c + 2, row: r });
   for (const [c, r] of [[34, 7], [58, 7], [34, 17], [58, 17]]) decos.push({ id: 'd_y9', col: c, row: r }); decos.push({ id: 'd_y10', col: 46, row: 19 }, { id: 'd_y5', col: 43, row: 21 }, { id: 'd_y5', col: 49, row: 21 }); return { decos, floor, ai: true }; })();
 
-export function createYards({ T3, map, onCollider, removeCollider, en, animals, onBuilt, offAt }) {
+export function createYards({ T3, map, onCollider, removeCollider, en, animals, onBuilt, offAt, far }) {   // far = 이 거리 밖 마당은 숨김(크롬북 150m · PERF-2)
   if (!C9) C9 = new T3.Color();
   const MAT = new T3.MeshLambertMaterial({ vertexColors: true }), GLOW = new T3.MeshBasicMaterial({ vertexColors: true }), FLOOR = new T3.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   const Y = [];   // { home, ox, oz, y, ext, grp, cols, anim, data, at, busy, src }
@@ -87,18 +87,22 @@ export function createYards({ T3, map, onCollider, removeCollider, en, animals, 
       for (const [dr, dc, a] of [[-1, 0, 'n'], [1, 0, 's'], [0, -1, 'w'], [0, 1, 'e']]) { if (fam[(r + dr) + '_' + (c + dc)]) continue; const p = a === 'n' ? [x0 + h9, y, z0 + 0.06] : a === 's' ? [x0 + h9, y, z0 + CS - 0.06] : a === 'w' ? [x0 + 0.06, y, z0 + h9] : [x0 + CS - 0.06, y, z0 + h9], s = a === 'n' || a === 's' ? [CS, 0.18, 0.12] : [0.12, 0.18, CS]; pushPart(A, { k: 'box', s, p }, IDN, rc); } } }
 
   // ── 장식(자리 = 칸 ×1.4 · 모양 = SCALE) ──
-  function buildDecos(Yd, list, Ast, Agl, grp) { const anim = [], cols = [], seen = new Set(), [c0, r0, c1, r1] = Yd.ext;
+  function buildDecos(Yd, list, Ast, Agl, grp) { const anim = [], cols = [], seen = new Set(), [c0, r0, c1, r1] = Yd.ext, AK = {};
     for (const d of list) { const R = DECO3D[d.id] || FALLBACK, w = R.w || 1, h = R.h || 1; if (d.col < c0 || d.row < r0 || d.col + w > c1 || d.row + h > r1) continue; if (d.col < HOUSE[2] && d.col + w > HOUSE[0] && d.row < HOUSE[3]) continue;   // 집 자리 위는 집이 섬
       const key = d.id + '@' + d.col + '_' + d.row; if (seen.has(key)) continue; seen.add(key);
       const md = R === FALLBACK ? '' : SCALE[d.id] || '', sx = md ? CS : 1, sy = md === 'A' ? CS : 1, cx = Yd.ox + (d.col + w / 2) * CS, cz = Yd.oz + (d.row + h / 2) * CS, world = new T3.Matrix4().makeTranslation(cx, Yd.y + 0.03, cz).multiply(new T3.Matrix4().makeScale(sx, sy, sx));
-      const AM9 = animals && AMODEL[d.id]; if (AM9 && R.anim === 'walk' && anim.length < 16) { const h = animals.mesh(AM9[0][0], AM9.length); if (h) { AM9.forEach(([, ox, oz, s9], i) => h.set(i, ox, 0, oz, 0, s9, AM9[0][0] === 'dog' ? 2 : 0)); h.done(); h.m.position.set(cx, Yd.y + 0.03, cz); h.m.userData.anim9 = h; grp.add(h.m); anim.push({ m: h.m, mdl: h, idle: AM9[0][0] === 'dog' ? 2 : 0, hx: cx, hz: cz, r: Math.min((R.walkR || 3) * CS, 8), t: Math.random() * 6, tx: cx, tz: cz, wait: Math.random() * 2 }); continue; } }   // ANIMAL-1 블렌더 양·강아지(걸을 때 다리 · 서면 풀 뜯기/두리번)
+      const AM9 = animals && AMODEL[d.id]; if (AM9 && R.anim === 'walk' && anim.length < 16 && animals.has(AM9[0][0])) { const k9 = AM9[0][0]; (AK[k9] || (AK[k9] = [])).push(anim.length); anim.push({ m: { position: new T3.Vector3(cx, Yd.y + 0.03, cz), rotation: { y: 0, z: 0 } }, kind9: k9, offs: AM9, cnt: AM9.length, idle: k9 === 'dog' ? 2 : 0, hx: cx, hz: cz, r: Math.min((R.walkR || 3) * CS, 8), t: Math.random() * 6, tx: cx, tz: cz, wait: Math.random() * 2 }); continue; }   /* PERF-2: 같은 종류 동물은 마당마다 인스턴스 하나(그리기 = 종류 수) — 움직임은 아래 place가 칸마다 행렬로 */   // ANIMAL-1 블렌더 양·강아지(걸을 때 다리 · 서면 풀 뜯기/두리번)
       if (R.anim === 'walk' && anim.length < 16) { const A = newA(); for (const p of R.parts) pushPart(A, p, IDN, hexRGB(p.c)); const m = meshOf(A, MAT); if (m) { m.position.set(cx, Yd.y + 0.03, cz); grp.add(m); anim.push({ m, hx: cx, hz: cz, r: Math.min((R.walkR || 3) * CS, 8), t: Math.random() * 6, tx: cx, tz: cz, wait: Math.random() * 2 }); } continue; }   // 동물 = 실제 크기 · 걷는 반경 ×1.4
       let top = 0; for (const p of R.parts) { if (p.spin) continue; pushPart(p.glow ? Agl : Ast, p, world, hexRGB(p.c)); top = Math.max(top, p.p[1] + (p.k === 'sph' ? (p.s[1] ?? p.s[0]) : partH(p))); } top *= sy;
       const sp = R.parts.filter(p => p.spin); if (sp.length) { const hub = sp[0].p, A = newA(), MS = new T3.Matrix4().makeScale(sx, sy, sx); for (const p of sp) { const a = p.rz || 0, ox = -Math.sin(a) * (p.off || 0), oy = Math.cos(a) * (p.off || 0); pushPart(A, { ...p, p: [ox, oy, 0], rx: 0, rz: a, lay: 1 }, MS, hexRGB(p.c)); }
         const m = meshOf(A, MAT); if (m) { m.position.set(cx + hub[0] * sx, Yd.y + 0.03 + hub[1] * sy, cz + hub[2] * sx); grp.add(m); anim.push({ m, spin: true }); } }
       const fw = md ? w * CS : Math.min(w * CS, 1.2), fh = md ? h * CS : Math.min(h * CS, 1.2);
       if (top > 0.8 && R !== FALLBACK) cols.push({ x0: cx - fw * 0.42, x1: cx + fw * 0.42, z0: cz - fh * 0.42, z1: cz + fh * 0.42, y0: Yd.y - 1, y1: Yd.y + Math.min(top, 7) }); }
-    return { anim, cols }; }
+    for (const k9 in AK) { const L9 = AK[k9].map(i => anim[i]); let n = 0; for (const a of L9) n += a.cnt; const h = animals.mesh(k9, n); if (!h) { for (const a of L9) a.dead9 = 1; continue; } let i0 = 0; for (const a of L9) { a.mdl = h; a.i0 = i0; i0 += a.cnt; place(a, a.idle); } h.done();
+      const mx = Yd.ox + (c0 + c1) / 2 * CS, mz = Yd.oz + (r0 + r1) / 2 * CS; h.m.boundingSphere = new T3.Sphere(new T3.Vector3(mx, Yd.y, mz), Math.hypot(c1 - c0, r1 - r0) * CS / 2 + 10); h.m.userData.anim9 = h; grp.add(h.m); }   /* 걸어 다녀도 마당 안이라 마당 둘레 구(球)로 컬링 */
+    return { anim: anim.filter(a => !a.dead9), cols }; }
+  function place(a, md) { const c = Math.cos(a.m.rotation.y), s = Math.sin(a.m.rotation.y), P = a.m.position; for (let k = 0; k < a.cnt; k++) { const [, ox, oz, s9] = a.offs[k]; a.mdl.set(a.i0 + k, P.x + ox * c + oz * s, P.y, P.z - ox * s + oz * c, a.m.rotation.y, s9, md); } }
+  const mdlMode = (a, md) => { for (let i = 0; i < a.cnt; i++) a.mdl.mode(a.i0 + i, md); };
 
   // ANIMAL-1: 마당 걷는 동물 중 블렌더 모델로 바꾸는 것 [종류, 메시 안 x, z, 크기] — 고양이는 모델이 없어 예전 그대로
   const AMODEL = { d_y40: [['sheep', 0.35, 0, 0.72], ['sheep', -0.5, 0, 0.5]], d_y57: [['sheep', 0, 0, 0.7]], d_y53: [['dog', 0, 0, 1]] };
@@ -129,12 +133,12 @@ export function createYards({ T3, map, onCollider, removeCollider, en, animals, 
     wake() { vq = 1; },   // 순간이동 직후 = 이번 프레임에 보임 다시 정함
     tick(dt, me, cam) { if (hidden) return;
       for (const Yd of Y) if (Yd.warm && Yd.grp) { if (Yd.warm === 2) { Yd.grp.visible = true; vq = 0; Yd.grp.traverse(o => { if (o.isMesh) o.frustumCulled = false; }); } else { Yd.grp.traverse(o => { if (o.isMesh) o.frustumCulled = true; }); vq = 1; } Yd.warm--; }   // 지은 뒤 한 프레임은 멀어도 그려 GPU에 올려 둠(10-15 또래 '순간이동하면 마당 장식이 2~5초 뒤에') — 다음 프레임부터 거리대로
-      if ((vq += dt) > 0.4) { vq = 0; for (const Yd of Y) { if (!Yd.grp) continue; const [c0, r0, c1, r1] = Yd.ext, mx = Yd.ox + (c0 + c1) / 2 * CS, mz = Yd.oz + (r0 + r1) / 2 * CS; Yd.grp.visible = Math.hypot(cam.x - mx, cam.z - mz) < 260;
+      if ((vq += dt) > 0.4) { vq = 0; for (const Yd of Y) { if (!Yd.grp) continue; const [c0, r0, c1, r1] = Yd.ext, mx = Yd.ox + (c0 + c1) / 2 * CS, mz = Yd.oz + (r0 + r1) / 2 * CS; Yd.grp.visible = Math.hypot(cam.x - mx, cam.z - mz) < (far || 260);
           if (Yd.at && me.x > Yd.ox + c0 * CS - 6 && me.x < Yd.ox + c1 * CS + 6 && me.z > Yd.oz - NORTH - 8 && me.z < Yd.oz + r1 * CS + 6 && performance.now() - Yd.at > 60000) load(Yd); } }   // 그 마당에 들어올 때 60초 지났으면 다시 읽기(범위 밖에 새로 놓은 것은 다음에 마을을 열 때)
       for (const Yd of Y) { if (!Yd.grp || !Yd.grp.visible) continue; for (const a of Yd.anim) { if (a.spin) { a.m.rotation.z -= dt * 1.2; continue; }
-        if (a.wait > 0) { a.wait -= dt; if (a.mdl) for (let i = 0; i < a.mdl.n; i++) a.mdl.mode(i, a.idle); continue; } const dx = a.tx - a.m.position.x, dz = a.tz - a.m.position.z, d = Math.hypot(dx, dz); if (a.mdl) for (let i = 0; i < a.mdl.n; i++) a.mdl.mode(i, 1);
+        if (a.wait > 0) { a.wait -= dt; if (a.mdl) mdlMode(a, a.idle); continue; } const dx = a.tx - a.m.position.x, dz = a.tz - a.m.position.z, d = Math.hypot(dx, dz); if (a.mdl) mdlMode(a, 1);
         if (d < 0.1) { const an = Math.random() * 6.2832, rr = Math.random() * a.r; a.tx = a.hx + Math.cos(an) * rr; a.tz = a.hz + Math.sin(an) * rr; a.wait = 1 + Math.random() * 3; continue; }
-        const st = Math.min(d, dt * 0.55); a.m.position.x += dx / d * st; a.m.position.z += dz / d * st; a.m.rotation.y = a.mdl ? Math.atan2(dx, dz) : Math.atan2(-dx, -dz); a.t += dt; if (!a.mdl) a.m.position.y = Yd.y + 0.03 + Math.abs(Math.sin(a.t * 9)) * 0.03; } } },   /* 블렌더 모델 = 앞 +z · 다리가 걸으니 통통 튐 X */   // 동물 = 마당 안 천천히(머리 = -z)
+        const st = Math.min(d, dt * 0.55); a.m.position.x += dx / d * st; a.m.position.z += dz / d * st; a.m.rotation.y = a.mdl ? Math.atan2(dx, dz) : Math.atan2(-dx, -dz); a.t += dt; if (!a.mdl) a.m.position.y = Yd.y + 0.03 + Math.abs(Math.sin(a.t * 9)) * 0.03; else place(a, 1); } } },   /* 블렌더 모델 = 앞 +z · 다리가 걸으니 통통 튐 X */   // 동물 = 마당 안 천천히(머리 = -z)
     info: () => Y.map(Yd => ({ home: Yd.home, src: Yd.src || null, n: Yd.n || 0, vis: !!(Yd.grp && Yd.grp.visible), busy: Yd.busy, cols: (Yd.cols || []).length, anim: (Yd.anim || []).length, rect: [Yd.ox + Yd.ext[0] * CS, Yd.oz + Yd.ext[1] * CS, Yd.ox + Yd.ext[2] * CS, Yd.oz + Yd.ext[3] * CS].map(v => +v.toFixed(1)), ext: Yd.ext })),
     reload: () => Promise.all(Y.map(Yd => load(Yd, true))),
     dispose() { dead = true; for (const Yd of Y) clearYard(Yd); Y.length = 0; for (const k in GEO) GEO[k].dispose(); MAT.dispose(); GLOW.dispose(); FLOOR.dispose(); },

@@ -6602,8 +6602,8 @@ export function buildWorld(scene) {
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(cx, cy, cz), Math.sqrt(r2));
     if (box) g.boundingBox = new THREE.Box3(new THREE.Vector3(x0, y0, z0), new THREE.Vector3(x1, y1, z1)); };
   // OBJ-1: 물건마다 이 메시 안 정점 범위(이어진 삼각형 묶음) — 사람 parts와 같은 모양 {mesh, start, count}
-  const objParts = (arr, T, m) => { if (!arr) return; let cur = -1, st = 0;
-    for (let t = 0; t <= T; t++) { const o9 = t < T && t < arr.length ? arr[t] : -1; if (o9 !== cur) { if (cur >= 0) OBJS[cur].parts.push({ mesh: m, start: st * 3, count: (t - st) * 3 }); cur = o9; st = t; } } };
+  const objParts = (arr, T, m, t0 = 0) => { if (!arr) return; let cur = -1, st = 0;   // t0 = 합친 무늬 메시 안 이 무늬의 첫 삼각형(PERF-2)
+    for (let t = 0; t <= T; t++) { const o9 = t < T && t < arr.length ? arr[t] : -1; if (o9 !== cur) { if (cur >= 0) OBJS[cur].parts.push({ mesh: m, start: (st + t0) * 3, count: (t - st) * 3 }); cur = o9; st = t; } } };
   for (const ch of chunks.values()) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ch.pos), 3));
@@ -6618,21 +6618,49 @@ export function buildWorld(scene) {
   }
   buildSigns();
   // 무늬 층 병합(PATTERN-1): 무늬마다 캔버스 한 장(월드 좌표 반복) + 메시 하나
+  // PERF-2(10-27 크롬북 그리기 수 · 학교 곁 무늬 약 50콜): 재질 갈래(빛 받음/안 받음 · AO · 땅 무늬 · 그림자 받음)가 같은 무늬끼리 텍스처 배열(층 = 무늬 · 256칸으로 맞춤) 한 장 + 메시 하나 — 같은 정점·같은 UV(월드 m 반복)·같은 셰이더 갈래 · 갈래에 무늬가 하나면 예전 그대로
+  const PAT_RECV = new Set(['grass', 'dirt', 'pave', 'paveE', 'paveF', 'paveG', 'asph', 'gravel', 'chip', 'ilock', 'sand', 'hop', 'brick', 'kidHop', 'redRd']);   // = main.js SHADOW_RECV(그림자 받는 무늬 — 갈래를 나눠야 받는 것만 받음)
+  const patMat = (basic, map, aoUsed, gk) => { const m0 = basic ? new THREE.MeshBasicMaterial({ map, vertexColors: true }) : new THREE.MeshLambertMaterial({ map, vertexColors: true }); return legoPatch(aoUsed || gk ? aoPatch(m0, aoUsed ? (basic ? 'ceil' : 'floor') : null, gk) : m0); };   // LEGO-1: 겉벽·바닥 무늬도(시제품)
+  const patAvg = cv => { const c8 = document.createElement('canvas'); c8.width = c8.height = 8; const g8 = c8.getContext('2d'); g8.drawImage(cv, 0, 0, 8, 8); const d = g8.getImageData(0, 0, 8, 8).data; let r = 0, g = 0, b = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; } return [r / 16320, g / 16320, b / 16320]; };   // 무늬 평균색(sRGB) — town.js 먼 학교 무늬 덩어리(OPT-17)가 층마다 씀
+  const PG9 = new Map();
   for (const [kind, P] of PAT) {
     const [, N, basic, draw] = PATDEF[kind];
     const cv = document.createElement('canvas'); cv.width = cv.height = N;
     let seed = 17; for (const ch of kind) seed = (seed * 31 + ch.charCodeAt(0)) % 100003;
     draw(cv.getContext('2d'), N, seeded(seed));
-    const tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(P.pos, 3));
-    g.setAttribute('uv', new THREE.Float32BufferAttribute(P.uv, 2));
-    g.setAttribute('color', new THREE.Float32BufferAttribute(P.col, 3));
-    g.computeVertexNormals(); g.computeBoundingSphere();
-    if (P.aoUsed) { aoPad(P.ao, P.pos.length / 3 * 4); g.setAttribute('aoD', new THREE.BufferAttribute(new Int16Array(P.ao), 4)); }   // GFX-3
-    const m0 = basic ? new THREE.MeshBasicMaterial({ map: tex, vertexColors: true }) : new THREE.MeshLambertMaterial({ map: tex, vertexColors: true });
-    const ground = kind === 'grass' || kind === 'dirt', m = new THREE.Mesh(g, legoPatch(P.aoUsed || ground ? aoPatch(m0, P.aoUsed ? (basic ? 'ceil' : 'floor') : null, ground && kind) : m0));   // 무늬 메시엔 나무·덤불이 없다 — 상자만으로   // LEGO-1: 겉벽·바닥 무늬도(시제품)
-    m.matrixAutoUpdate = false; m.userData.pat = kind; scene.add(m); objParts(P.obj, P.pos.length / 9, m);   // GFX-2: main.js가 바깥 바닥 무늬만 그림자를 받게 고른다
+    const ground = kind === 'grass' || kind === 'dirt', key = (basic ? 'b' : 'l') + (P.aoUsed ? 'a' : '') + (ground ? kind : '') + (PAT_RECV.has(kind) ? 'r' : '');
+    let G = PG9.get(key); if (!G) PG9.set(key, G = []); G.push({ kind, P, cv, basic, ground });
+  }
+  let PDUM = null;
+  function patArr(G) { const S9 = 256, L9 = G.length, RW = S9 * 4, data = new Uint8Array(S9 * RW * L9), c2 = document.createElement('canvas'); c2.width = c2.height = S9; const x2 = c2.getContext('2d', { willReadFrequently: true }); x2.imageSmoothingEnabled = true; x2.imageSmoothingQuality = 'high';
+    const avg9 = []; for (let l = 0; l < L9; l++) { x2.clearRect(0, 0, S9, S9); x2.drawImage(G[l].cv, 0, 0, S9, S9); const d = x2.getImageData(0, 0, S9, S9).data, o0 = l * S9 * RW; for (let r = 0; r < S9; r++) data.set(d.subarray((S9 - 1 - r) * RW, (S9 - r) * RW), o0 + r * RW); avg9.push(patAvg(G[l].cv)); }   /* CanvasTexture는 위아래를 뒤집어 올림(flipY) — 배열 텍스처는 뒤집지 못해 줄을 거꾸로 담음 */
+    const ta = new THREE.DataArrayTexture(data, S9, S9, L9); ta.format = THREE.RGBAFormat; ta.type = THREE.UnsignedByteType; ta.colorSpace = THREE.SRGBColorSpace; ta.wrapS = ta.wrapT = THREE.RepeatWrapping; ta.minFilter = THREE.LinearMipmapLinearFilter; ta.magFilter = THREE.LinearFilter; ta.generateMipmaps = true; ta.anisotropy = 8; ta.onUpdate = t => { t.image.data = null; }; ta.needsUpdate = true;   /* GPU로 올린 뒤 JS 배열(층 × 256KB)은 놓음 — 크롬북 힙 */
+    return { ta, avg9 }; }
+  function patGeo(G) { const ao9 = !!G[0].P.aoUsed; let nV = 0; for (const q of G) nV += q.P.pos.length / 3; const pos = new Float32Array(nV * 3), uv = new Float32Array(nV * 2), col = new Float32Array(nV * 3), lay = new Float32Array(nV), ao = ao9 ? new Int16Array(nV * 4) : null; let o = 0;
+    for (let l = 0; l < G.length; l++) { const q = G[l], n = q.P.pos.length / 3; pos.set(q.P.pos, o * 3); uv.set(q.P.uv, o * 2); col.set(q.P.col, o * 3); lay.fill(l, o, o + n); if (ao) { aoPad(q.P.ao, n * 4); ao.set(q.P.ao, o * 4); } q.off = o; o += n; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.setAttribute('aPatL9', new THREE.BufferAttribute(lay, 1));
+    g.computeVertexNormals(); g.computeBoundingSphere(); if (ao) g.setAttribute('aoD', new THREE.BufferAttribute(ao, 4)); return g; }
+  function patArrMat(q0, ta) { if (!PDUM) { PDUM = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1); PDUM.colorSpace = THREE.SRGBColorSpace; PDUM.needsUpdate = true; }   // 빈 map(UV 줄·USE_MAP을 켜려고 — 실제 색은 배열에서)
+    const mt = patMat(q0.basic, PDUM, !!q0.P.aoUsed, q0.ground && q0.kind), pv = mt.onBeforeCompile, kk = mt.customProgramCacheKey.bind(mt);
+    mt.onBeforeCompile = (sh, r) => { if (pv) pv.call(mt, sh, r); sh.uniforms.uPatA9 = { value: ta };
+      sh.vertexShader = 'attribute float aPatL9;\nvarying float vPatL9;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvPatL9 = aPatL9;');
+      sh.fragmentShader = 'uniform highp sampler2DArray uPatA9;\nvarying float vPatL9;\n' + sh.fragmentShader.replace('#include <map_fragment>', 'diffuseColor *= texture(uPatA9, vec3(vMapUv, vPatL9));'); };
+    mt.customProgramCacheKey = () => kk() + 'patA9'; return mt; }
+  for (const [, G] of PG9) {
+    if (G.length === 1 || !THREE.DataArrayTexture) { for (const { kind, P, cv, basic, ground } of G) {
+      const tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(P.pos, 3));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute(P.uv, 2));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(P.col, 3));
+      g.computeVertexNormals(); g.computeBoundingSphere();
+      if (P.aoUsed) { aoPad(P.ao, P.pos.length / 3 * 4); g.setAttribute('aoD', new THREE.BufferAttribute(new Int16Array(P.ao), 4)); }   // GFX-3
+      const m = new THREE.Mesh(g, patMat(basic, tex, P.aoUsed, ground && kind));   // 무늬 메시엔 나무·덤불이 없다 — 상자만으로
+      m.matrixAutoUpdate = false; m.userData.pat = kind; scene.add(m); objParts(P.obj, P.pos.length / 9, m);   // GFX-2: main.js가 바깥 바닥 무늬만 그림자를 받게 고른다
+    } continue; }
+    const { ta, avg9 } = patArr(G), g = patGeo(G), mt = patArrMat(G[0], ta);   /* 따로 함수 = 셰이더 닫힘이 층 배열(수 MB)을 붙잡지 않게 */
+    const m = new THREE.Mesh(g, mt); m.matrixAutoUpdate = false; m.userData.pat = G[0].kind; m.userData.patK9 = G.map(q => q.kind); m.userData.patAvg9 = avg9; scene.add(m);   // pat = 갈래 대표(그림자 받기 = main.js SHADOW_RECV)
+    for (const q of G) objParts(q.P.obj, q.P.pos.length / 9, m, q.off / 3);
   }
   let lampMesh = null;   // WORLD-FX: 방마다 불 끄기(worldfx.js가 처음 쓸 때 정점색을 붙인다 — 평소 모양 그대로)
   if (lampPos.length) {   // 조명 — 한 메시(조명 무시 재질)

@@ -102,11 +102,13 @@ export function createChem(A) {
         sh.fragmentShader = 'varying float vEm9;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', 'outgoingLight = mix(outgoingLight, diffuseColor.rgb, vEm9);\n#include <opaque_fragment>'); };
       mat.customProgramCacheKey = () => 'chem1'; }
     const mesh = new T3.InstancedMesh(gg, mat, n); mesh.frustumCulled = false; mesh.matrixAutoUpdate = false; mesh.userData.fx = 1; mesh.setColorAt(0, C4.setHex(0xffffff)); for (let i = 0; i < n; i++) mesh.setMatrixAt(i, Z4); mesh.count = n;
-    DM = { mesh, g: gg, g0: g, mat, aSq, aEm, cap: n, dirty: false, vis: new Uint8Array(n) }; return DM; }
+    DM = { mesh, g: gg, g0: g, mat, aSq, aEm, cap: n, dirty: false, vis: new Uint8Array(n), ph: new Int32Array(n).fill(-1), lg: new Int32Array(n), k: 0 }; return DM; }   /* PERF-2 ph = 칸 → 그리는 자리(보이는 것만 앞에 촘촘히) · lg = 거꾸로 · k = 그리는 수 */
   // 칸 하나 그리기(크기 sx 없음 = 숨김) · ry = 돌림 · sq = 네모로 폄 · em = 스스로 빛남(true = 불꽃 · 수 = 그만큼) · rx = 뒤집기(X축 · 음수 크기 X — 인스턴스는 감김 방향을 못 뒤집음)
-  function put(i, x, y, z, sx, sy, sz, hex, ry, sq, em, rx) { if (!DM || i < 0) return; if (!sx) { if (DM.vis[i]) { DM.mesh.setMatrixAt(i, Z4); DM.vis[i] = 0; DM.dirty = true; } return; }
-    M4.compose(V4.set(x, y, z), Q4.setFromEuler(E4.set(rx || 0, ry || 0, 0)), S4.set(sx, sy, sz)); DM.mesh.setMatrixAt(i, M4); DM.mesh.setColorAt(i, C4.setHex(hex)); DM.aSq.setX(i, sq ? 1 : 0); DM.aEm.setX(i, em === true ? 1 : +em || 0); DM.vis[i] = 1; DM.dirty = true; }
-  function flush() { if (!DM || !DM.dirty) return; DM.dirty = false; const m = DM.mesh; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; DM.aSq.needsUpdate = DM.aEm.needsUpdate = true; let any = false; for (let i = 0; i < DM.cap; i++) if (DM.vis[i]) { any = true; break; } m.visible = any; }
+  const mvI = (a, b) => { const m = DM.mesh; m.instanceMatrix.array.copyWithin(b * 16, a * 16, a * 16 + 16); m.instanceColor.array.copyWithin(b * 3, a * 3, a * 3 + 3); DM.aSq.array[b] = DM.aSq.array[a]; DM.aEm.array[b] = DM.aEm.array[a]; };
+  function put(i, x, y, z, sx, sy, sz, hex, ry, sq, em, rx) { if (!DM || i < 0) return; if (!sx) { if (DM.vis[i]) { DM.vis[i] = 0; const j = DM.ph[i], L = --DM.k; if (j !== L) { const li = DM.lg[L]; mvI(L, j); DM.ph[li] = j; DM.lg[j] = li; } DM.ph[i] = -1; DM.mesh.setMatrixAt(L, Z4); DM.dirty = true; } return; }   /* PERF-2: 숨기면 맨 뒤 것을 그 자리로(그리는 수 = 보이는 수 — 예전 = 1078칸을 늘 다 돌림 · 늘 10만 삼각형) */
+    let j = DM.ph[i]; if (j < 0) { j = DM.k++; DM.ph[i] = j; DM.lg[j] = i; }
+    M4.compose(V4.set(x, y, z), Q4.setFromEuler(E4.set(rx || 0, ry || 0, 0)), S4.set(sx, sy, sz)); DM.mesh.setMatrixAt(j, M4); DM.mesh.setColorAt(j, C4.setHex(hex)); DM.aSq.setX(j, sq ? 1 : 0); DM.aEm.setX(j, em === true ? 1 : +em || 0); DM.vis[i] = 1; DM.dirty = true; }
+  function flush() { if (!DM || !DM.dirty) return; DM.dirty = false; const m = DM.mesh; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; DM.aSq.needsUpdate = DM.aEm.needsUpdate = true; m.count = DM.k; m.visible = DM.k > 0; }
 
   // ───────── 틀 공용: 처마 · 모닥불 자리 · 알아냄 ─────────
   // 처마: 건물 둘레 1.1m 안(건물 상자 밖) = 비가 안 닿음 · 16m 칸 묶음
@@ -420,7 +422,7 @@ export function createChem(A) {
     if (pend === 2) { for (const R of RS) if (R.init) R.init(); pend = 3; buildMs += performance.now() - tb; return; }
     pend = false; on = true;
     let n = 0; for (const R of RS) if (R.slots) n = R.slots(n);
-    mkPoints(); mkDome(Math.max(1, n)); for (let i = 0; i < DM.cap; i++) { DM.mesh.setMatrixAt(i, Z4); DM.vis[i] = 0; } for (const R of RS) if (R.reset) R.reset();
+    mkPoints(); mkDome(Math.max(1, n)); for (let i = 0; i < DM.cap; i++) { DM.mesh.setMatrixAt(i, Z4); DM.vis[i] = 0; DM.ph[i] = -1; } DM.k = 0; for (const R of RS) if (R.reset) R.reset();
     const root = A.root(); root.add(PT.mesh); root.add(DM.mesh);
     put(0, 0, -500, 0, 0.001, 0.001, 0.001, 0xffffff); DM.mesh.visible = true; PT.mesh.visible = true; PT.until = now() + 1;   /* 첫 그리기 = 셰이더를 짓는 동안 미리 한 번(첫 비에 멈춤 X) — 다음 1초 칸에서 숨김 */
     for (const R of RS) if (R.hots) R.hots();
