@@ -9,7 +9,7 @@
 //   매 프레임 = 배를 탄 동안 노 그림·팔 힘(물살은 0.25초마다) · 밤엔 빛살 돌리기(등대 수만큼 setMatrixAt) — 새 객체 X
 //   구조 배(ISLE-1) = 썰물섬에 갇히거나 바닷길이 잠길 때만 한 척(그리기 +1 · 그 동안만) · 헤엄 X — 배가 데리러 와서 바닷가 앞까지
 export const BOAT_V = 1;
-import { lowAt, TIDE_P } from './town_shore.js?v=5';   /* JUDGE-2 물때(마을·긴급 출동과 같은 모듈 · 같은 ?v) */
+import { lowAt, TIDE_P } from './town_shore.js?v=6';   /* JUDGE-2 물때(마을·긴급 출동과 같은 모듈 · 같은 ?v) */
 const CUR_MAX = 2.6, ARM_MAX = 6, HARD = 3;   // 물살 가장 셀 때 2.6m/초 · 팔 힘 6초 · 힘껏 = 노 빠르기 +3
 const DIR8 = [['북', 'north'], ['북동', 'northeast'], ['동', 'east'], ['남동', 'southeast'], ['남', 'south'], ['남서', 'southwest'], ['서', 'west'], ['북서', 'northwest']], dir8 = (dx, dz) => Math.round(((Math.atan2(dx, -dz) * 57.29578 + 360) % 360) / 45) % 8;
 

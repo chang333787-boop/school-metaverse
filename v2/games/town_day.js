@@ -8,7 +8,7 @@
 //   지킴: 판타지 X · 실명 X · 지어낸 사실 X(이미 있는 엔진이 실제로 하는 것만) · 빈 칭찬 X
 //   렉: 매 프레임 일 0 · 1초 칸 sec(글이 바뀔 때만 DOM) · 오늘 때 목록 = 날·날씨가 바뀔 때만 다시 셈 · 하루 마무리 = 창 열 때 한 번
 import { CROPS, plotState } from './town_farm.js?v=3';
-import { lowsOf } from './town_shore.js?v=5';
+import { lowsOf } from './town_shore.js?v=6';
 import { SKILLS, SK_ORDER, levelOf } from './town_skill.js?v=5';
 export const DAY_V = 1;
 const T2 = (ko, en) => [ko, en];

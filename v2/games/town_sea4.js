@@ -4,7 +4,7 @@
 //   E 한 번에 끝 X — 창 안에 본 것(구멍 둘레 · 물때 표 · 부표 그림 · 몸에 맞는지)을 같이 두고 아이가 고름 · 고른 것이 세상에 남음(주운 쓰레기가 사라짐 · 부표 사이로 지나가 봄)
 //   위쪽 = 순수(칸 서명 → 줄) — 칸 키트 haveOf와 Node 하네스(town_cells.cjs)가 같이 씀 · 아래 = 게임(createSea4)
 //   그리기 = 상자 인스턴스 하나(+ 밤 부표 불빛 인스턴스 하나 · 밤에 가까울 때만) · 새 Light X · 매 프레임 = 0.1초 거름 + 가까울 때만 움직임(게·갈매기·물에 뜬 것) · 새 객체 X
-import { isLow, lowsOf, lowAt, tideLvl, TIDE_P, hm } from './town_shore.js?v=5';
+import { isLow, lowsOf, lowAt, tideLvl, TIDE_P, hm } from './town_shore.js?v=6';
 export const SEA4_V = 1;
 const T2 = (ko, en9) => [ko, en9];
 const SAND = s => (s.land && s.land.sand) || 0, SWIMC = s => /오리배/.test(s.ar || '');   /* 오리배 바다 = 해수욕장 앞바다(수영 구역에 둘러싸여 배가 못 들어감 · 헤엄으로 감) */
@@ -102,7 +102,7 @@ export function createSea4(A) {
   // 보일 것(1초마다 · 바뀔 때만 다시 그림): 게 = 물가 모래는 낮 썰물·밤, 먼 모래는 밤 · 쓰레기 = 오늘 고른 칸은 생물만 남음 · 갈매기 = 낮 · 조끼 = 고른 하나는 입고 감
   function paint() { if (!BOX) return; const N = A.night() >= 1, lo = low();
     for (const sp of SP) { const dn = doneT(sp); for (const p of sp.parts) { let h = false;
-        if (sp.id === 'crab') h = p.k === 'crab' && !(N || (sp.wet && lo));
+        if (sp.id === 'crab') h = (p.k === 'crab' && !(N || (sp.wet && lo))) || (!!sp.cl && /crab|pellet|hole/.test(p.k));   /* CLOSE-1: 가까이 보기 중엔 상자 게·구멍·경단 숨김(둥근 모양이 대신) */
         else if (sp.id === 'wrack') h = dn && !/shell|weed/.test(p.k);
         else if (sp.id === 'drift') h = dn && !/weed|jelly/.test(p.k);
         else if (sp.id === 'gull') h = N || ((p.k === 'glint') && dn);
@@ -143,8 +143,9 @@ export function createSea4(A) {
     P.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') { A.closeP(); return; } const i = +String(b.dataset.a).slice(1), o = opts[i]; if (!o) return;
       if (o[1]) { for (const q9 of P.querySelectorAll('[data-a^="o"]')) q9.disabled = true; b.style.outline = '3px solid #2f8a55'; msg(tx(o[2])); map.sfx && map.sfx('ding'); setTimeout(() => ok && ok(P), 50); } else { b.disabled = true; msg(tx(o[2])); map.sfx && map.sfx('tick'); } }; return P; }
   const seen = L9 => '<div class="sm">' + L9.map(t9 => A.esc(t9)).join('<br>') + '</div>';
-  function use(sp) { if (A.busy() || A.inb()) return; const e = en(), N = A.night() >= 1, c = ST(), first = !c.n[sp.id];
-    if (sp.id === 'crab') {
+  function use(sp, cl) { if (A.busy() || A.inb()) return; const e = en(), N = A.night() >= 1, c = ST(), first = !c.n[sp.id];
+    if (sp.id === 'crab') { const ef = !cl && A.efx && A.efx(); if (ef && ef.closeOn && ef.closeOn()) { ef.closeKey(); return; }
+      if (ef && ef.closeCrab && (N || (sp.wet && low())) && ef.closeCrab({ holes: sp.parts.filter(p => p.k === 'hole').map(p => [p.x, A.gy(p.x, p.z), p.z]), pellets: sp.parts.filter(p => p.k === 'pellet').map(p => [p.x, A.gy(p.x, p.z), p.z]), night: N, hide: on => { sp.cl = !!on; paint(); }, show: () => use(sp, true) })) return;   /* CLOSE-1: 먼저 가까이 보기(구멍에서 게가 나옴 · 밤 = 구멍으로 쏙) → 고르기 창 */
       if (N) return ask(e ? '🦀 Crabs on the night beach' : '🦀 밤 모래밭의 게', seen(e ? ['A pale crab with long legs runs very fast over the dry sand.', 'When you step closer, it dives into a hole in a flash.'] : ['다리가 긴 하얀 게가 마른 모래 위를 아주 빨리 달려요.', '한 걸음 다가가면 눈 깜짝할 새 구멍으로 쏙 들어가요.']), e ? 'How can you watch it up close?' : '이 게(달랑게)를 가까이 보려면?',
         [[T2('뛰어가서 잡는다', 'Run and grab it'), 0, T2('발소리와 흔들림을 느끼고 더 빨리 숨어요', 'It feels the footsteps and hides even faster')], [T2('멀찍이 서서 가만히 기다린다', 'Stand back and wait quietly'), 1, T2('가만히 있으면 다시 나와 먹이를 찾아요. 달랑게는 낮엔 구멍에 있다가 밤에 나와요.', 'Stay still and it comes back out to feed. Ghost crabs hide by day and come out at night.')], [T2('구멍을 파 본다', 'Dig up the hole'), 0, T2('구멍은 게의 집이에요 — 무너지면 다시 파야 해요', 'The hole is its home — it would have to dig again')]], () => reward(sp, 'look', first));
       if (!(sp.wet && low())) { const L9 = lowsOf(S().day), m = S().min, nx = L9.find(w => w[0] > m && w[0] + 20 < 18 * 60), now9 = hm(m), opts = [];

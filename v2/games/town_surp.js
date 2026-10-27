@@ -9,7 +9,7 @@
 //   수첩 👀 놀람 = 찾은 날짜순 일지만(분모·%·빈칸 귀띔·숫자 X — 계절과 때 낱말로 적음) · 처음 하나는 아침 소식 이웃 소문 한 줄이 이끔(아무것도 못 찾은 동안만)
 //   보상 = 솜씨만(rwCheck 꼬리표 'xp:surp' · 하루 한도는 문이 셈) · 처음 찾으면 +3 · 다른 날 다시 보면 +1(같은 놀람은 하루 한 번)
 //   저장 GAME.S.xp.surp = { id: [날, 분, 계절, 날씨] }(처음 본 때) · surpD = { id: 마지막 본 날 } · 일이 생길 때만 GAME.mark
-import { isLow } from './town_shore.js?v=5';
+import { isLow } from './town_shore.js?v=6';
 export const SURP_V = 1;
 const T2 = (a, b) => [a, b];
 const DIR8 = [['북', 'north'], ['북동', 'north-east'], ['동', 'east'], ['남동', 'south-east'], ['남', 'south'], ['남서', 'south-west'], ['서', 'west'], ['북서', 'north-west']];

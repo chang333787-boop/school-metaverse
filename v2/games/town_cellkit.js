@@ -4,7 +4,7 @@
 //   유비식 X: 아이콘·물음표·'몇 칸 중'·% 0 — 찾는 길은 세상 단서(움직임·소리·비) · 지어내지 않음: 새 건물·명소·실명 인물 0 · 판타지 X
 //   이 파일 위쪽(자료·규칙·고르기)은 순수 함수 — Node 하네스(tools/harness/town_cells.cjs)와 게임이 같은 함수를 씀
 export const CK_V = 1;
-import { seaLinesOf } from './town_sea4.js?v=1';   /* SEA4-1 바다·모래사장 칸 할 거리(같은 줄을 haveOf에 셈) */
+import { seaLinesOf } from './town_sea4.js?v=2';   /* SEA4-1 바다·모래사장 칸 할 거리(같은 줄을 haveOf에 셈) */
 const HG = '가나다라마바사아자차카타파하';
 export const FAMS = ['생', '손', '사'];
 export const SEAS = ['spring', 'summer', 'autumn', 'winter'];
@@ -188,6 +188,7 @@ const RC_ITEMS = [[T2('신문지', 'Newspaper'), 0, T2('종이는 물에 젖지 
   [T2('빈 통조림 캔', 'Empty tin can'), 2, T2('캔은 헹궈서 넣어요', 'Rinse cans first')], [T2('빈 음료 캔', 'Empty drink can'), 2, T2('캔은 찌그러뜨리면 자리를 덜 차지해요', 'Squashed cans take less space')],
   [T2('빈 유리병', 'Empty glass bottle'), 3, T2('유리병은 깨지지 않게 살살 넣어요', 'Put glass bottles in gently so they don’t break')], [T2('빈 잼 병', 'Empty jam jar'), 3, T2('병뚜껑은 따로 모아요', 'Keep lids separate')]];
 const RC_BINS = [[T2('종이', 'Paper'), '#2f6fd0'], [T2('플라스틱', 'Plastic'), '#c99a10'], [T2('캔', 'Cans'), '#6f777d'], [T2('유리', 'Glass'), '#2f9a55']];
+const ANT_DUR = 3.2;   /* CLOSE-1 줄 끝이 먹이 쪽으로 옮겨 가는 시간(초) */
 const NS = { bud: 0, worm: 5, snail: 6, ant: 12, moth: 4, ice: 4, seed: 4, recycle: 5, shadow: 3, wind: 0, echo: 0, mail: 3, cross: 0, _m: 4, _mt: 3, cat: 8, cricket: 2, frog: 4, smoth: 4, drip: 4, icep: 4, box: 4, board: 6 };   /* 줄마다 쓰는 둥근 판 칸 수(키트가 그리는 줄만) */
 export function createCellKit(A) {
   const en = () => A.lang() === 'en', tx = a => a[en() ? 1 : 0], map = A.map, S = () => A.GAME.S;
@@ -317,6 +318,7 @@ export function createCellKit(A) {
 
   // ───────── 그리기(chem 둥근 판 칸 · 반구 하나를 늘이고 눌러 씀) ─────────
   const gy = (x, z) => A.gy(x, z);
+  const PAVE = 0.14, gyS = (x, z) => gy(x, z) + (sideOk(x, z) && !okG(x, z) ? PAVE + 0.002 : 0), yOf = sp => sp.yS ?? (sp.yS = gyS(sp.x, sp.z));   /* CLOSE-1: 보도 위 = 인도 띠 윗면(town.js strip 0.14) — 개미·민들레·살얼음·지렁이가 보도 판 밑(땅 높이)에 묻혀 안 보이던 것 */
   function drawI(I) { const sp = I.sp, b = I.sl, day = S().day; if (I.ns && b < 0) return; if (!sp && I.id !== '_m') return;
     switch (I.id) {
       case 'worm': if (I.st === 'out') wormAt(I, sp.x, sp.z); else for (let j = 0; j < 4; j++) put(b + j, 0); break;
@@ -325,7 +327,7 @@ export function createCellKit(A) {
       case 'ant': antAt(I); break;
       case 'moth': mothAt(I); break;
       case 'ice': iceAt(I); break;
-      case 'seed': { const y = gy(sp.x, sp.z); put(b, sp.x, y + 0.012, sp.z, 0.14, 0.03, 0.14, 0x5a9a40); put(b + 1, sp.x, y + 0.01, sp.z, 0.013, 0.32, 0.013, 0x7fae4a); if (I.st === 'head') { put(b + 2, sp.x, y + 0.4, sp.z, 0.1, 0.1, 0.1, 0xf2f2ea); put(b + 3, sp.x, y + 0.4, sp.z, 0.1, 0.1, 0.1, 0xe8e8de, 0, false, 0, Math.PI); } else { put(b + 2, 0); put(b + 3, 0); } break; }
+      case 'seed': { const y = yOf(sp); put(b, sp.x, y + 0.012, sp.z, 0.14, 0.03, 0.14, 0x5a9a40); put(b + 1, sp.x, y + 0.01, sp.z, 0.013, 0.32, 0.013, 0x7fae4a); if (I.st === 'head') { put(b + 2, sp.x, y + 0.4, sp.z, 0.1, 0.1, 0.1, 0xf2f2ea); put(b + 3, sp.x, y + 0.4, sp.z, 0.1, 0.1, 0.1, 0xe8e8de, 0, false, 0, Math.PI); } else { put(b + 2, 0); put(b + 3, 0); } break; }
       case 'recycle': { if (I.st !== 'pile') { for (let j = 0; j < 5; j++) put(b + j, 0); break; } const cx = sp.x + (sp.fx - sp.x) * 0.55, cz = sp.z + (sp.fz - sp.z) * 0.55, y = gy(cx, cz), ux = Math.sin(sp.ry), uz = Math.cos(sp.ry);
         [[-0.55, 0.12, 0xc8a070, 0.17, 0.15, 0.13, true], [-0.22, -0.1, 0xe8e4d8, 0.18, 0.03, 0.13, true], [0.08, 0.12, 0xbfe0f0, 0.05, 0.23, 0.05, false], [0.3, -0.06, 0xb8bec4, 0.05, 0.12, 0.05, false], [0.55, 0.1, 0x4f9a5a, 0.05, 0.25, 0.05, false]].forEach(([u, v, hx, a, h, c9, sq], j) => put(b + j, cx + ux * u + uz * v, y + 0.004, cz + uz * u - ux * v, a, h, c9, hx, sp.ry + j, sq)); break; }
       case 'shadow': { const m = ST().sh; for (let j = 0; j < 3; j++) { const q = m && m.d === day && m.n === I.n ? m.m[j] : null; if (q) put(b + j, q[1], gy(q[1], q[2]) + 0.012, q[2], 0.09, 0.006, 0.09, 0xf4f4ee); else put(b + j, 0); } break; }
@@ -342,13 +344,14 @@ export function createCellKit(A) {
       case 'mail': case '_mt': { const y = gy(sp.x, sp.z), up = I.id === '_mt' && !!sp.done, px = Math.cos(sp.ry) * 0.17, pz = -Math.sin(sp.ry) * 0.17;
         put(b, sp.x, y, sp.z, 0.035, 0.95, 0.035, 0x5f666d); put(b + 1, sp.x, y + 0.88, sp.z, 0.15, 0.24, 0.19, 0x2f6fb0, sp.ry, true);   /* 집 우편함 = 파랑(길가 빨간 우체통 HEAL-1과 헷갈리지 않게) */ put(b + 2, sp.x + px, y + (up ? 1.04 : 0.92), sp.z + pz, 0.012, up ? 0.17 : 0.07, 0.05, 0xf2c230, sp.ry, true); break; }
     } }
-  function wormAt(I, x, z) { const sp = I.sp, b = I.sl, ry = sp.ry + 1.2, fx = Math.sin(ry), fz = Math.cos(ry), y = gy(x, z); for (let j = 0; j < 4; j++) { const w = Math.sin(I.t * 3 + j * 1.3) * 0.025, u = (j - 1.5) * 0.075; put(b + j, x + fx * u + fz * w, y + 0.012, z + fz * u - fx * w, 0.034, 0.03, 0.055, j === 1 ? 0xc06c64 : 0xd08078, ry + Math.cos(I.t * 3 + j) * 0.3); } }
+  function wormAt(I, x, z) { const sp = I.sp, b = I.sl, ry = sp.ry + 1.2, fx = Math.sin(ry), fz = Math.cos(ry), y = gyS(x, z); for (let j = 0; j < 4; j++) { const w = Math.sin(I.t * 3 + j * 1.3) * 0.025, u = (j - 1.5) * 0.075; put(b + j, x + fx * u + fz * w, y + 0.012, z + fz * u - fx * w, 0.034, 0.03, 0.055, j === 1 ? 0xc06c64 : 0xd08078, ry + Math.cos(I.t * 3 + j) * 0.3); } }
   function snailAt(I) { const s = I.sp, b = I.sl, ph = I.t * 0.12, o = Math.sin(ph) * 0.25, x = s.x + s.ux * o, z = s.z + s.uz * o, y = gy(x, z), ry = Math.atan2(s.ux, s.uz) + (Math.cos(ph) < 0 ? Math.PI : 0), fx = Math.sin(ry), fz = Math.cos(ry), cx = x - fx * 0.02, cz = z - fz * 0.02, st = 0.05 + 0.05 * I.peek;
     put(b, x, y + 0.003, z, 0.035, 0.028, 0.12, 0xb8a58a, ry); put(b + 1, cx, y + 0.075, cz, 0.07, 0.07, 0.04, 0xa8743e, ry + Math.PI / 2, false, 0, Math.PI / 2); put(b + 2, cx, y + 0.075, cz, 0.07, 0.07, 0.04, 0x9a6634, ry + Math.PI / 2, false, 0, -Math.PI / 2);
     put(b + 3, cx + fz * 0.04, y + 0.08, cz - fx * 0.04, 0.03, 0.03, 0.012, 0x6e4a26, ry + Math.PI / 2, false, 0, Math.PI / 2); put(b + 4, x + fx * 0.1 + fz * 0.015, y + 0.02, z + fz * 0.1 - fx * 0.015, 0.008, st, 0.008, 0x9a8a70); put(b + 5, x + fx * 0.1 - fz * 0.015, y + 0.02, z + fz * 0.1 + fx * 0.015, 0.008, st, 0.008, 0x9a8a70); }
-  function antAt(I) { const s = I.sp, b = I.sl, c = ST(), crumb = c.an === S().day + ':' + I.n, ax = s.x, az = s.z, rk = crumb && I.rt != null ? Math.min(1, (I.t - I.rt) / 2.5) : 1, bx = crumb ? s.bx + ((s.cx ?? s.bx) - s.bx) * rk : s.bx, bz = crumb ? s.bz + ((s.cz ?? s.bz) - s.bz) * rk : s.bz, dx = bx - ax, dz = bz - az, ry = Math.atan2(dx, dz), L = Math.hypot(dx, dz) || 1, px = -dz / L, pz = dx / L, y = gy(ax, az);
-    for (let j = 0; j < 10; j++) { const u = (I.t * 0.1 + j / 10) % 1, w = Math.sin(u * 9.4 + j) * 0.04, back = j % 2 ? 1 - u : u; put(b + j, ax + dx * back + px * w, y + 0.006, az + dz * back + pz * w, 0.02, 0.018, 0.045, 0x2b211a, j % 2 ? ry + Math.PI : ry); }
-    if (crumb && s.cx != null) put(b + 10, s.cx, gy(s.cx, s.cz) + 0.006, s.cz, 0.07, 0.03, 0.07, s.ck === 'seed' ? 0x8a6a3a : 0xd8a85a);   /* EFX-1: 줄 끝이 2.5초에 걸쳐 먹이 쪽으로 옮겨 감(한 번에 튀지 않게) */ else put(b + 10, 0); put(b + 11, ax, y + 0.003, az, 0.06, 0.008, 0.06, 0x3a2a1e); }
+  function antAt(I) { const s = I.sp, b = I.sl, c = ST(), crumb = c.an === S().day + ':' + I.n, ax = s.x, az = s.z, rk = crumb && I.rt != null ? Math.max(0, Math.min(1, (I.t - I.rt) / ANT_DUR)) : 1, bx = crumb ? s.bx + ((s.cx ?? s.bx) - s.bx) * rk : s.bx, bz = crumb ? s.bz + ((s.cz ?? s.bz) - s.bz) * rk : s.bz, dx = bx - ax, dz = bz - az, ry = Math.atan2(dx, dz), L = Math.hypot(dx, dz) || 1, px = -dz / L, pz = dx / L, y = yOf(s);
+    const ef = A.efx && A.efx(), cl9 = !!(ef && ef.antOn && ef.antOn(I.k));   /* CLOSE-1: 가까이 보기 중 = 이 줄 개미는 town_efx가 머리·가슴·배 모양으로 그림(여기는 숨김) */
+    for (let j = 0; j < 10; j++) { if (cl9) { put(b + j, 0); continue; } const u = (I.t * 0.1 + j / 10) % 1, w = Math.sin(u * 9.4 + j) * 0.03, back = j % 2 ? 1 - u : u; put(b + j, ax + dx * back + px * w, y + 0.006, az + dz * back + pz * w, 0.02, 0.018, 0.045, 0x2b211a, j % 2 ? ry + Math.PI : ry); }
+    if (crumb && s.cx != null) put(b + 10, s.cx, y + 0.006, s.cz, 0.07, 0.03, 0.07, s.ck === 'seed' ? 0x8a6a3a : 0xd8a85a);   /* EFX-1: 줄 끝이 2.5초에 걸쳐 먹이 쪽으로 옮겨 감(한 번에 튀지 않게) */ else put(b + 10, 0); put(b + 11, ax, y + 0.003, az, 0.06, 0.008, 0.06, 0x3a2a1e); }
   function mothAt(I) { const s = I.sp, b = I.sl, q9 = I.sc0 != null ? Math.max(0, 1 - (I.t - I.sc0) / 4) : 0; for (let j = 0; j < 4; j++) { const a = I.t * (2.2 + q9 * 3) + j * 1.571, r = 0.35 + 0.08 * Math.sin(I.t * 3 + j) + q9 * 1.3 * Math.sin(Math.min(1, (I.t - I.sc0) / 0.6) * 1.5708);   /* EFX-1: 살펴보면 나방이 흩어졌다(4초) 다시 불빛으로 모여듦 */ put(b + j, s.hx + Math.cos(a) * r, s.hy - 0.28 + 0.12 * Math.sin(I.t * 4 + j * 2), s.hz + Math.sin(a) * r, 0.06, 0.01, 0.04, 0xe8dcc0, -a); } }
   function iceAt(I) { const s = I.sp, b = I.sl; if (I.st !== 'run' && I.st !== 'melted') { for (let j = 0; j < 4; j++) put(b + j, 0); return; } const t = I.t, ks = Math.max(0, 1 - t / 18), kh = Math.max(0, 1 - t / 70);
     for (const [j, x, z, k] of [[0, s.sx, s.sz, ks], [1, s.hx, s.hz, kh]]) { const y = gy(x, z); if (k > 0.04) put(b + j, x, y + 0.004, z, 0.1 * k + 0.02, 0.14 * k + 0.01, 0.1 * k + 0.02, 0xe6f5fc, 0.5, true, 0.3); else put(b + j, 0); const w = 0.1 + 0.2 * (1 - k); put(b + 2 + j, x, y + 0.003, z, w, 0.004, w * 0.9, 0x86a2b8, 0.2, true); } }
@@ -374,7 +377,7 @@ export function createCellKit(A) {
     for (let j = 0; j < 3; j++) { const u = (I.t + j * T / 3) % T, h = s.top - 4.9 * u * u, ox = (j - 1) * 0.35, x = s.x + Math.cos(s.ry) * ox, z = s.z - Math.sin(s.ry) * ox; if (h > g0) put(b + j, x, h, z, 0.022, 0.05, 0.022, 0x9cc4dc, 0, false, 0.35); else { put(b + j, 0); if (snd && I.d < 7 && map.tone && u - T0 < 0.1) map.tone(1400 + j * 160, 0, 0.05, 'sine', 0.02); } }
     put(b + 3, s.x, g0 + 0.004, s.z, 0.55, 0.004, 0.16, 0x6f8fa4, s.ry + Math.PI / 2, true); }
   // 웅덩이 살얼음(바닥 네모 둘 · 조금 빛남) → 밟으면 금 두 줄(오늘)
-  function icepAt(I) { const s = I.sp, b = I.sl, y = gy(s.x, s.z); put(b, s.x, y + 0.006, s.z, 0.42, 0.01, 0.3, 0xcfe3ec, s.ry, true, 0.25); put(b + 1, s.x + 0.05, y + 0.008, s.z - 0.03, 0.28, 0.01, 0.18, 0xeaf5fa, s.ry + 0.3, true, 0.35);
+  function icepAt(I) { const s = I.sp, b = I.sl, y = yOf(s); put(b, s.x, y + 0.006, s.z, 0.42, 0.01, 0.3, 0xcfe3ec, s.ry, true, 0.25); put(b + 1, s.x + 0.05, y + 0.008, s.z - 0.03, 0.28, 0.01, 0.18, 0xeaf5fa, s.ry + 0.3, true, 0.35);
     if (I.st === 'crack') { put(b + 2, s.x, y + 0.01, s.z, 0.014, 0.01, 0.26, 0x6f8a9a, s.ry + 0.6, true); put(b + 3, s.x + 0.06, y + 0.01, s.z + 0.04, 0.012, 0.01, 0.17, 0x6f8a9a, s.ry - 0.5, true); } else { put(b + 2, 0); put(b + 3, 0); } }
   // 빈 상자 셋(아무렇게나 쌓임) → 접어 묶은 한 묶음(오늘)
   function boxAt(I) { const s = I.sp, b = I.sl, y = gy(s.x, s.z), ux = Math.sin(s.ry), uz = Math.cos(s.ry), px = uz, pz = -ux, k = I.st === 'fold' ? Math.min(1, I.mt / 1.4) : I.st === 'done' ? 1 : 0;
@@ -395,14 +398,16 @@ export function createCellKit(A) {
   // ───────── 해 보기(E) ─────────
   function reward(id, k) { const c = ST(), n0 = c.n[id] || 0; c.n[id] = n0 + 1; A.GAME.mark(); A.skUp(k || 'look', n0 ? 1 : 2, 'kit:' + id); }
   const act = (k, at) => { try { map.player.act(k, at ? { at, msg: null } : { msg: null }); } catch (e) { /* 몸짓 없음 */ } };
-  function use(I) { if (A.busy() || A.inb()) return; const c = ST(), day = S().day, sp = I.sp, e = tx;
+  function use(I) { if (A.busy() || A.inb()) return; { const ef0 = A.efx && A.efx(); if (ef0 && ef0.closeOn && ef0.closeOn()) { ef0.closeKey(); return; } }   /* CLOSE-1: 가까이 보기 중 E = 돌아가기 */ const c = ST(), day = S().day, sp = I.sp, e = tx;
     switch (I.id) {
       case 'bud': act('look'); toast(e(TX.bud.done), 4.5); reward('bud'); hotOff(I); break;
       case 'worm': if (I.st !== 'out') return; act('reach', [sp.x, gy(sp.x, sp.z), sp.z]); I.st = 'moving'; I.mt = 0; hotOff(I); break;
       case 'snail': act('shoes', [sp.x, gy(sp.x, sp.z), sp.z]); I.peek = 1; toast(e(TX.snail.done), 4.5); reward('snail'); hotOff(I); break;
       case 'ant': { const bread = A.has('🍞') && c.an !== day + ':' + I.n; act('shoes', [I.ex, gy(I.ex, I.ez), I.ez]);
         { const mx = sp.x + (sp.bx - sp.x) * 0.6, mz = sp.z + (sp.bz - sp.z) * 0.6; let C9 = null; for (const k of (bread ? [0.7, -0.7, 0.45, -0.45] : [-0.8, 0.8, -0.5, 0.5])) { const x = mx + sp.px * k, z = mz + sp.pz * k; if (stand(x, z)) { C9 = [x, z]; break; } }   /* EFX-1: 빵이 없어도 = 정찰 개미가 씨앗을 찾아 줄이 그리로(그 자리 변화) · 빵 = 내가 놓은 쪽으로 */
-          if (C9 && c.an !== day + ':' + I.n) { sp.cx = C9[0]; sp.cz = C9[1]; sp.ck = bread ? 'bread' : 'seed'; I.rt = I.t; c.an = day + ':' + I.n; A.GAME.mark(); if (A.efx) A.efx().bump('ant'); } toast(e(!C9 ? TX.ant.done : bread ? TX.ant.done2 : TX.ant.done3), 4.5); }
+          if (C9 && c.an !== day + ':' + I.n) { sp.cx = C9[0]; sp.cz = C9[1]; sp.ck = bread ? 'bread' : 'seed'; I.rt = I.t + 1.5; c.an = day + ':' + I.n; A.GAME.mark(); if (A.efx) A.efx().bump('ant'); }   /* CLOSE-1: 줄 끝은 카메라가 다가간 뒤(1.5초)에 옮겨 감 */
+          { const ef = A.efx && A.efx(), crumb = c.an === day + ':' + I.n && sp.cx != null; if (ef && ef.closeAnt && ef.closeAnt({ key: I.k, a: [sp.x, sp.z], b: [sp.bx, sp.bz], c: crumb ? [sp.cx, sp.cz] : null, y: yOf(sp), t0: I.t, rt: I.rt ?? I.t, dur: ANT_DUR })) { drawI(I); const c9 = CH(); if (c9) c9.kitFlush(); } }   /* 가까이 보기(개미가 화면에 크게) */
+          toast(e(!C9 ? TX.ant.done : bread ? TX.ant.done2 : TX.ant.done3), 4.5); }
         reward('ant'); hotOff(I); break; }
       case 'moth': act('look'); I.sc0 = I.t; toast(e(TX.moth.done), 4.5); reward('moth'); hotOff(I); break;
       case 'ice': if (I.st !== 'idle') return; act('reach', [sp.hx, gy(sp.hx, sp.hz), sp.hz]); I.st = 'run'; I.t = 0; I.told = false; toast(e(TX.ice.go), 4); hotOff(I); break;
@@ -502,7 +507,7 @@ export function createCellKit(A) {
   // ───────── 다른 엔진에 넘기는 자리 · 시험 ─────────
   function clear() { clearInst(); on = false; }
   function dispose() { clear(); if (SHM) { if (SHM.m.parent) SHM.m.parent.remove(SHM.m); SHM.m.dispose(); SHM.geo.dispose(); SHM.mat.dispose(); SHM.tex.dispose(); SHM = null; } }
-  const bugSpots = () => { const o = []; for (const C9 of Object.values(CEL)) { const t = C9.sp.tree, f = C9.sp.flower, d = C9.sp.dfly; if (t) o.push({ hab: 'tree', x: t.bx, z: t.bz, yo: 1.5, kc: C9.n, kl: 'tree' }); if (f) o.push({ hab: 'flower', x: f.x, z: f.z, yo: 0.9, kc: C9.n, kl: 'flower' }); if (d) o.push({ hab: 'open', x: d.x, z: d.z, yo: 0, kc: C9.n, kl: 'dfly' }); } return o; };
+  const bugSpots = () => { const o = []; for (const C9 of Object.values(CEL)) { const t = C9.sp.tree, f = C9.sp.flower, d = C9.sp.dfly; if (t) o.push({ hab: 'tree', x: t.bx, z: t.bz, yo: 1.5, kc: C9.n, kl: 'tree', tr: { x: t.x, z: t.z, s: t.s } }); if (f) o.push({ hab: 'flower', x: f.x, z: f.z, yo: 0.9, kc: C9.n, kl: 'flower' }); if (d) o.push({ hab: 'open', x: d.x, z: d.z, yo: 0, kc: C9.n, kl: 'dfly' }); } return o; };
   const birdSpots = () => { const o = []; for (const C9 of Object.values(CEL)) { const b = C9.sp.birds; if (b) for (const [x, z] of b.pts) o.push({ x, z, kc: C9.n, kl: 'birds' }); } return o; };
   const pdCells = () => { const o = new Set(); for (const C9 of Object.values(CEL)) if (C9.sp.puddle) o.add(C9.n); return o; };
   function audit() { allFull(); const out = { cells: 0, low: [], nlow: [], sea: [], lines: {}, spots: 0, bad: [], day: {}, night: {} }, d0 = S().day;

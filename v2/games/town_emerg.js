@@ -7,7 +7,7 @@
 //     · 🐶 동물보호센터 길 잃은 강아지(PET-1 · 비 오는 날 · 이웃 말 = 목줄 색·털 색·방위 → 처마 밑 강아지 찾기 → 천천히 다가가기(고르기) → 따라오게 걷기 → 보호센터 마당 · 다음 날 보호센터 방에 그 강아지)
 //   지킴: 범인·싸움·총·피·깜짝 X(경찰 = 돕고 지키는 일) · 판타지 X · 새 실명 X(경찰관·구급대원·어린이·이웃 = 이름 없는 역할 · 보호자 = 이미 있는 일꾼) · 보상 = 꼬리표 emerg:<갈래>로 rwCheck 한 문
 //   렉: 매 프레임 = 진행 중인 사건만(따라오는 아이 하나 · 구급차 하나 · 연기 하나) · 생김·끝 판정 = 1초 칸(sec) · 새 Light X · 사건 동안만 몸(합친 부품 = 그리기 1씩)·차 1 · 흔적 = 인스턴스 한 벌
-import { isLow, lowAt, lowsOf, hm, LOW_W, TIDE_P } from './town_shore.js?v=5';   /* TIDE-1 물때(마을과 같은 모듈 · 같은 ?v) */
+import { isLow, lowAt, lowsOf, hm, LOW_W, TIDE_P } from './town_shore.js?v=6';   /* TIDE-1 물때(마을과 같은 모듈 · 같은 ?v) */
 export const EM_V = 1;
 const T2 = (ko, en) => [ko, en];
 const hashS = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };

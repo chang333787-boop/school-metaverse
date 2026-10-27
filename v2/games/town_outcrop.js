@@ -8,7 +8,7 @@
 //     판마다 놓을 것이 다름(씨앗 = 날 · 몇 번째 판 · 바로 앞 판과 같은 묶음 X) · 칸 = 두 판 뒤 넷 · 네 판 뒤 현무암까지
 //   저장 GAME.S.oc = { v, got: { 조각 id: { band, d } }, seen: { 자리: 날 }, said: { 자리: 날 }, r: { n, last, h: [묶음] } } · 보상 = 솜씨만(xp:oc · xp:order → rwCheck)
 //   지킴: 사실만(풍화·침식·지층 쌓임) · 판타지 X · 매 프레임 일 0(1초 칸 sec) · 새 Light X · 그리기 = 자리마다 작은 합친 부품 하나(열린 날만 보임) · 줄 가운데 // X
-import { BANDS, FINDS } from './town_xp.js?v=8';
+import { BANDS, FINDS } from './town_xp.js?v=9';
 export const OC_V = 1;
 const T2 = (ko, en) => [ko, en];
 const hashS = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };

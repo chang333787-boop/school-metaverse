@@ -50,6 +50,8 @@ export function createKidLook(A) {
     if (!MATS) MATS = new T3.MeshLambertMaterial({ vertexColors: true });
     const m = new T3.Mesh(g, MATS); m.matrixAutoUpdate = false; m.visible = false; A.group().add(m); STM.push(m); return m; }
   // ───────── 묶음 짓기(갈래마다) — K = { Q(u,v) → [x,z], ry, g(u,v) 땅 높이 } · +v = 길 쪽(앞) ─────────
+  // CLOSE-1 가까이 보기 자리(묶음 안 [u, v, 높이] → 마을 [x, y, z]) · n = 묶음 +v 쪽(새집·곤충 호텔 앞면이 보는 쪽)
+  const lookW = (K, L) => { const W = q => { const [x, z] = K.Q(q[0], q[1]); return [x, K.g(q[0], q[1]) + q[2], z]; }, [x0, z0] = K.Q(0, 0), [x1, z1] = K.Q(0, 1); return { at: W(L.at), tubes: (L.tubes || []).map(W), n: [x1 - x0, z1 - z0] }; };
   const kitK = (sp) => { const K = { x: sp.x, z: sp.z, ry: sp.ry, Q: sp.Q }; K.g = (u, v) => { const [x, z] = K.Q(u, v); return A.ty(x, z); };
     K.B = (u, v, yo, sx, sy, sz, hex, o = {}) => { const [x, z] = K.Q(u, v); A.box(x, A.ty(x, z) + yo, z, sx, sy, sz, K.ry + (o.ro || 0), hex, o); };
     K.D = (u, v, yo, sx, sy, sz, hex, o = {}) => { const [x, z] = K.Q(u, v); A.dbx(x, A.ty(x, z) + yo, z, sx, sy, sz, K.ry + (o.ro || 0), hex, o); };
@@ -108,7 +110,7 @@ export function createKidLook(A) {
       K.col(3.25, -3.2, 0.95, 0.3, 2.4);
       pond(K, -2.6, 2.4, 2.0); for (let i = 0; i < 18; i++) K.F(2.0 + (i % 6) * 0.55, 1.6 + ((i / 6) | 0) * 0.6, i);
       K.sign(4.6, 4.4, '생태 보호 구역', { w: 1.9, h: 0.56, y: 0.95, bg: 0x2f8a5a, bgc: '#2f8a5a', fg: '#ffffff' }); K.T(6.2, -1.0, 1.2); K.bush(-6.4, 0.6, 0.9); K.bush(6.4, 2.6, 0.8);
-      H.posts = [{ id: 'nest', at: [-3.2, -1.6], lab: T2('🐦 새집 살펴보기', '🐦 Look at the nest box') }, { id: 'hotel', at: [3.25, -2.1], lab: T2('🐝 곤충 호텔 살펴보기', '🐝 Look at the bug hotel') }, { id: 'pond', at: [-2.6, 4.9], lab: T2('🐸 생태 연못 살펴보기', '🐸 Look at the wildlife pond') }];
+      H.posts = [{ id: 'nest', at: [-3.2, -1.6], lab: T2('🐦 새집 살펴보기', '🐦 Look at the nest box'), look: { at: [-3.2, -2.58, 3.18], tubes: [] } }, { id: 'hotel', at: [3.25, -2.1], lab: T2('🐝 곤충 호텔 살펴보기', '🐝 Look at the bug hotel'), look: { at: [3.25, -2.94, 1.33], tubes: [[3.24, -2.94, 1.33], [3.88, -2.94, 1.33]] } }, { id: 'pond', at: [-2.6, 4.9], lab: T2('🐸 생태 연못 살펴보기', '🐸 Look at the wildlife pond') }];
       H.main = [4.6, 5.0]; H.after = st; },
     perm(K, H) { const st = [];
       K.pad(-3.6, -0.6, 5.0, 4.0, 0.06, 0x6f9a5a); for (let r = 0; r < 6; r++) for (let c = 0; c < 7; c++) K.D(-6.0 + c * 0.7 + 0.05, -2.4 + r * 0.66, 0.06, 0.58, 0.07, 0.54, [0xc0b49e, 0xb5a991, 0xcbbfa8][(r + c) % 3]);   /* 투수 블록(틈에 풀) */
@@ -273,7 +275,7 @@ export function createKidLook(A) {
       if (H.holes) { E.hs = H.after.map(p => stateMesh(K, [p])).filter(Boolean); E.ws = H.after2.map(p => stateMesh(K, [p])).filter(Boolean); E.st = E.st2 = null; } else { E.st = H.after ? stateMesh(K, H.after) : null; E.st2 = H.after2 ? stateMesh(K, H.after2) : null; }
       if (H.alley) { const R9 = rngOf('alley:' + g.id), cs = g.cells.slice(), out = []; for (let i = 0; i < 40 && out.length < 3; i++) { const c9 = cs[i % cs.length], ctr = A.cellXZ(c9); if (!ctr) continue; const tx9 = ctr[0] + (R9() - 0.5) * 90, tz9 = ctr[1] + (R9() - 0.5) * 90, q = A.spot(tx9, tz9, 2.4, 2.4); if (!q) continue; const dd = Math.hypot(q.x - sp.x, q.z - sp.z); if (dd < 18 || dd > 120 || out.some(o => Math.hypot(o.x - q.x, o.z - q.z) < 18) || A.hoodAt(q.x, q.z) !== g.id) continue; out.push(q); }
         out.forEach((q, i) => { hangSign(q.x, q.z, q.ry, tx(SIGNS[i])); A.occ(q.x - 1.2, q.z - 1.2, q.x + 1.2, q.z + 1.2); E.posts.push({ id: 's' + i, x: q.x + Math.sin(q.ry) * 1.3, z: q.z + Math.cos(q.ry) * 1.3, sx: q.x, sz: q.z, lab: T2('🔎 간판 살펴보기', '🔎 Look at the hanging sign'), sg: i }); }); }
-      for (const p of H.posts || []) { const [x, z] = K.Q(p.at[0], p.at[1]); E.posts.push({ ...p, x, z }); }
+      for (const p of H.posts || []) { const [x, z] = K.Q(p.at[0], p.at[1]); E.posts.push({ ...p, x, z, look: p.look ? lookW(K, p.look) : null }); }
       { const [x, z] = K.Q(H.main[0], H.main[1]); E.main = { x, z }; }
       E.hero = hero(g, k, hill); if (k === 'rain') E.fill = ecoFill(g, sp);
       KL.push(E);
@@ -377,7 +379,7 @@ export function createKidLook(A) {
   const AFTER = { rain: T2('물 준 두둑의 흙이 짙게 젖었어요. 내일 다시 와서 잎을 살펴봐요.', 'The watered bed is dark and damp now. Come back tomorrow to check the leaves.'), temp: T2('기록판에 오늘 온도 막대를 그렸어요.', 'You drew today\'s bars on the record board.'), obs: T2('곤충 호텔 빈 칸에 갈대 줄기를 채웠어요.', 'You filled the empty slots with reed stems.'), perm: T2('아스팔트 위 웅덩이는 한동안 남아 있어요.', 'The puddle on the asphalt stays for a while.'), jang: T2('장독 뚜껑은 고른 대로 그대로 있어요. 날씨가 바뀌면 다시 와 봐요.', 'The lids stay as you left them. Come back when the weather changes.'), tree: T2('잰 나무 셋에 빨간 끈을 느슨하게 묶었어요.', 'You tied a loose red band round each tree you measured.'), wood: T2('마른 장작을 처마 밑 받침목 위에 쌓았어요.', 'You stacked the dry wood on the bearers under the eaves.'), hole: T2('막힌 구멍을 뚫었어요. 비 오는 날 와 보면 물이 나와요.', 'You cleared the blocked hole. On a rainy day, water will trickle out.'), bus: T2('시간표에 내가 탈 줄을 표시했어요.', 'You marked your bus on the timetable.'), alley: T2('분수 둘레 화분에 물을 주니 꽃이 가득 피었어요.', 'You watered the planters round the fountain and they are full of flowers.') };
   // ───────── E 자리 ─────────
   function hots() { const out = []; for (const E of KL) { const def = KITS[E.k]; out.push({ x: E.main.x, z: E.main.z, label: def.ic + ' ' + tx(def.nm) + (en() ? ' — ' : ' — ') + tx(T2('기록판', 'board')), use: () => mainUse(E), g: E.g, main: true });
-      for (const p of E.posts) out.push({ x: p.x, z: p.z, label: tx(p.lab), use: () => postUse(E, p), g: E.g }); } return out; }
+      for (const p of E.posts) out.push({ x: p.x, z: p.z, label: tx(p.lab), use: () => postUse(E, p), g: E.g, look: p.look || null }); } return out; }
   function dayTick() { refresh(); }
   function info() { return { solar: A.solarN || 0, eco: ECO9, hoods: KL.map(E => ({ g: E.g, t: E.t, k: E.k, cell: E.cell, x: +E.x.toFixed(1), z: +E.z.toFixed(1), ry: +E.ry.toFixed(3), hd: E.hero ? +E.hero.d.toFixed(1) : null, fill: E.fill || null, d: +E.d.toFixed(1), n: E.list.length, list: E.list, use: KITS[E.k].ic + ' ' + tx(KITS[E.k].nm) + ' — ' + tx(T2('기록판', 'board')), posts: E.posts.map(p => tx(p.lab)), done: KS(E.k).done || 0, st: [E.st, E.st2, ...(E.hs || [])].filter(Boolean).map(m => m.visible) })) }; }
   return { build, hots, info, refresh: dayTick, ecoKit: k => !!KITS[k] };

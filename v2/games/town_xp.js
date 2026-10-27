@@ -13,7 +13,7 @@
 //     섬에서 잠기면 = 「다음 썰물까지 기다리기」(같은 날만 · 함께하기 방 X) 또는 「배 부르기」(town_boat 구조 배) · 헤엄 X · 물에 빠짐 X
 //     섬 = 돌탑에 내 돌 하나 얹기(S.xp.cairn = 날 · 다음에 와도 보임) · 바위 웅덩이(물이 빠졌을 때만 · town_shore 바다 친구 표) · 바닷새 바위 10m 안 X
 //     저장 S.xp.cairn · il(섬에 닿은 날) · ib(걸어서 돌아온 날) · 보상 = 솜씨만(rwCheck 꼬리표 'xp:isle') · 그리기 = 섬 판 1 + 바닷길 판 1(+ 내 돌 1 · 구조 배는 그 동안만)
-import { tideLvl, lowAt, lowsOf, LOW_W, TIDE_P, hm, shoreAt, drawShore } from './town_shore.js?v=5';
+import { tideLvl, lowAt, lowsOf, LOW_W, TIDE_P, hm, shoreAt, drawShore } from './town_shore.js?v=6';
 export const XP_V = 1;
 const T2 = (a, b) => [a, b];
 // 띠(위 → 아래) · lo = 이 띠가 시작하는 높이(골 바닥 쪽 판 밖 땅 위 m)
@@ -287,8 +287,10 @@ export function createXp(A) {
       + '<div class="sm"><b>' + (e.open ? (ex ? 'The sea path closes in about ' + remSec() + ' s' : '바닷길이 잠기기까지 약 ' + remSec() + '초') : (ex ? 'The sea path is under water now' : '지금은 바닷길이 잠겼어요')) + '</b></div>'
       + '<div class="row"><button class="sub" data-a="ph">📷 ' + (ex ? 'Photo' : '사진 찍기') + '</button><button class="sub" data-a="x">' + (ex ? 'Close' : '닫기') + '</button></div>', false, 'xp');
     P9.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') A.closeP(); else if (b.dataset.a === 'ph') { A.closeP(); A.shoot(); } }; }
-  function poolLook() { const e = ISL, ex = en(); if (!e) return; if (!e.open) { toast(ex ? '🌊 The rock pool is under water now — come back at low tide (' + nextLowT() + ')' : '🌊 지금은 바위 웅덩이가 물에 잠겼어요 — 썰물 때 다시 와요 (' + nextLowT() + ')', 3.2); return; }
-    if (A.busy() && !document.querySelector('.twn-p')) return; const sea = A.GAME.season ? A.GAME.season() : 'summer', b = shoreAt(sea, day()); if (!b) return; const neu = A.GAME.found('shore:' + b.id); A.skUp('look', neu ? 2 : 1, 'xp:isle');
+  function poolLook(cl) { const e = ISL, ex = en(); if (!e) return; if (!e.open) { toast(ex ? '🌊 The rock pool is under water now — come back at low tide (' + nextLowT() + ')' : '🌊 지금은 바위 웅덩이가 물에 잠겼어요 — 썰물 때 다시 와요 (' + nextLowT() + ')', 3.2); return; }
+    if (A.busy() && !document.querySelector('.twn-p')) return; const sea = A.GAME.season ? A.GAME.season() : 'summer', b = shoreAt(sea, day()); if (!b) return;
+    { const ef = !cl && A.efx && A.efx(); if (ef && ef.closeOn && ef.closeOn()) { ef.closeKey(); return; } const [px9, pz9] = e.pool; if (ef && ef.closeSea && ef.closeSea({ b, at: [px9, G.TY + (isleH(e, px9, pz9) ?? G.base(px9, pz9)), pz9], show: () => poolLook(true) })) return; }   /* CLOSE-1: 웅덩이 속 바다 친구를 가까이 → 창 */
+    const neu = A.GAME.found('shore:' + b.id); A.skUp('look', neu ? 2 : 1, 'xp:isle');
     const P9 = A.openP('<h3>🔍 ' + esc(b.t[ex ? 1 : 0]) + '</h3><div class="st"><canvas class="xp-pool" width="200" height="200" style="flex:none;width:130px;height:130px"></canvas><div>' + esc(b.line[ex ? 1 : 0]) + '<div class="sm">' + (ex ? 'Found in the seawater left between the rocks at low tide. We only look, then let it be.' : '썰물 때 바위 틈에 남은 바닷물에서 찾았어요. 잡지 않고 보기만 해요.') + '</div>' + (neu ? '<div class="sm"><b>📖 ' + (ex ? 'New in your codex!' : '도감에 새로 적었어요!') + '</b></div>' : '') + '</div></div><div class="row"><button class="sub" data-a="x">' + (ex ? 'Close' : '닫기') + '</button></div>', false, 'xp');
     drawShore(P9.querySelector('.xp-pool'), b, true); P9.onclick = ev => { const bt = ev.target.closest('button'); if (bt && bt.dataset.a === 'x') A.closeP(); }; }
   // 길 안내(장소 찾기 🧭): 들머리까지 길 + 썰물이면 바닷길을 따라 돌탑까지 · 밀물이면 '물때를 봐요' 한 줄

@@ -74,16 +74,18 @@ export function createShore(A) {
     for (const s of SP) { const b = lo ? shoreAt(sea, s.k) : null, d = Math.hypot(s.x - me.x, s.z - me.z); s.b = b;
       if (s.h) { const off = !b || in9; if (s.h.hot.off !== off) s.h.hot.off = off; if (b) { const lb = '🔍 ' + b.t[e ? 1 : 0] + (e ? ' — look closely' : ' 관찰하기'); if (s.h.hot.label !== lb) s.h.hot.label = lb; } }
       if (b && d < 60 && !in9 && A.on()) { if (!s.spr || s.sid !== b.id) { if (s.spr) { A.map.remove(s.spr); s.spr.material.dispose(); } s.spr = new T3.Sprite(new T3.SpriteMaterial({ map: tex(b), transparent: true, depthWrite: false })); s.sid = b.id; s.sc = b.draw === 'worm' ? 0.42 : 0.38; s.spr.scale.set(s.sc, s.sc, 1); s.y0 = s.y + 0.16; s.t = s.k * 1.3; s.spr.position.set(s.x, s.y0, s.z); s.spr.userData.fx = 1; A.map.add(s.spr); }
-        s.spr.visible = true; VIS.push(s); if (d < 12 && performance.now() > quietT && !(S().dex || {})['shore:' + b.id] && told !== S().day) { told = S().day; A.map.hud.toast(e ? '🦀 Something is moving on the mudflat — get close and press E' : '🦀 갯벌에서 뭔가 움직여요 — 가까이 가서 E', 2.6); } }
+        s.spr.visible = !s.cl; VIS.push(s); if (d < 12 && performance.now() > quietT && !(S().dex || {})['shore:' + b.id] && told !== S().day) { told = S().day; A.map.hud.toast(e ? '🦀 Something is moving on the mudflat — get close and press E' : '🦀 갯벌에서 뭔가 움직여요 — 가까이 가서 E', 2.6); } }
       else if (s.spr) s.spr.visible = false; } }
   // 매 프레임: 보이는 것만(보통 0~2) · 새 객체 X — 게는 옆으로 종종 · 망둥어는 폴짝 · 고둥은 느릿느릿 · 갯지렁이는 꿈틀
   function tick(dt) { if ((tdq += dt) >= 1) { tdq = 0; sec(false); }
-    for (const s of VIS) { const b = s.b, sp = s.spr; if (!b || !sp) continue; const t = (s.t += dt), dr = b.draw;
+    for (const s of VIS) { const b = s.b, sp = s.spr; if (!b || !sp || s.cl) continue; const t = (s.t += dt), dr = b.draw;
       if (dr === 'crab' || dr === 'fiddler') { const p = Math.sin(t * 0.9); sp.position.x = s.x + p * 0.7 + (Math.abs(Math.sin(t * 9)) * 0.03); }
       else if (dr === 'skipper') sp.position.y = s.y0 + Math.pow(Math.max(0, Math.sin(t * 1.6)), 6) * 0.35;
       else if (dr === 'snail') sp.position.x = s.x + Math.sin(t * 0.12) * 0.4;
       else if (dr === 'worm') sp.scale.x = s.sc * (0.85 + 0.15 * Math.sin(t * 3)); } }
-  function look(s) { const b = s.b; if (!b || A.panel()) return; const e = en(), neu = A.GAME.found('shore:' + b.id); A.skUp('look', neu ? 3 : 1, 'shore:' + b.id);
+  function look(s, cl) { const b = s.b; if (!b || A.panel()) return; const ef = !cl && A.efx && A.efx(); if (ef && ef.closeOn && ef.closeOn()) { ef.closeKey(); return; }
+    if (ef && ef.closeSea && s.spr && ef.closeSea({ b, at: [s.x, A.gy(s.x, s.z), s.z], hide: on => { s.cl = !!on; if (s.spr) s.spr.visible = !on; }, show: () => look(s, true) })) return;   /* CLOSE-1: 먼저 가까이 보기(옆걸음·집게·꿈틀) → 창 */
+    const e = en(), neu = A.GAME.found('shore:' + b.id); A.skUp('look', neu ? 3 : 1, 'shore:' + b.id);
     const P9 = A.openP('<h3>🔍 ' + A.esc(b.t[e ? 1 : 0]) + '</h3>' + (/crab|fiddler/.test(b.draw) ? photoHtml('suncheon', e) : '') + '<div class="st"><canvas class="twn-shore" width="200" height="200" style="flex:none;width:150px;height:150px"></canvas><div>' + A.esc(b.line[e ? 1 : 0]) + '<div class="sm">' + A.esc(b.hint[e ? 1 : 0]) + (e ? ' · we only look, then let it be' : ' · 잡지 않고 보기만 해요') + '</div>' + (neu ? '<div class="sm"><b>📖 ' + (e ? 'New in your codex!' : '도감에 새로 적었어요!') + '</b></div>' : '') + '</div></div><div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>', false, 'shore');
     drawShore(P9.querySelector('.twn-shore'), b, true); P9.onclick = ev => { const bt = ev.target.closest('button'); if (bt && bt.dataset.a === 'x') A.closeP(); }; A.map.sfx && A.map.sfx(neu ? 'ding' : 'tick'); if (neu) A.bagShow(); }
   // 다음 썰물(지금 썰물이면 끝나는 시각) — 칩·알림·조개 캐기 안내가 같이 씀
