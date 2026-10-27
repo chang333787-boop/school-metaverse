@@ -230,6 +230,34 @@ export function createKidLook(A) {
     for (const dd of [7, 10, 13, 16]) for (const lat of [4.5, -4.5, 6.5, -6.5, 2.5, -2.5, 8.5, -8.5]) { const tx9 = g.sx + fx * dd - fz * lat, tz9 = g.sz + fz * dd + fx * lat, q = A.spot(tx9, tz9, H9.w, H9.d, hill ? 2.0 : 0.8, 4, true); if (!q) continue;
       const qx = q.x - g.sx, qz = q.z - g.sz, qd = Math.hypot(qx, qz); if (qd > 19 || (qx * fx + qz * fz) / (qd || 1) < 0.45) continue; const K = kitK(q); A.occ(q.x - H9.w / 2 - 0.5, q.z - H9.w / 2 - 0.5, q.x + H9.w / 2 + 0.5, q.z + H9.w / 2 + 0.5); A.clear(q.x, q.z, Math.max(H9.w, H9.d) / 2 + 0.6); const ts9 = [-(qx) * Math.cos(q.ry) + (qz) * Math.sin(q.ry), -(qx) * Math.sin(q.ry) - (qz) * Math.cos(q.ry)], tl = Math.hypot(ts9[0], ts9[1]) || 1; H9.f(K, [ts9[0] / tl, ts9[1] / tl]); return { x: q.x, z: q.z, d: qd }; }
     return null; }
+  // KIDLOOK-3 자연친화 들머리 채우기(사용자 10-27 '들머리가 아직 풀밭이 대부분') — 표지석에서 동네 쪽(= 빗물 텃밭 묶음 쪽)을 볼 때 보이는 빈 잔디(9~34m · 앞 ±40°)에 작은 것 여럿
+  //   실제 친환경 동네에 있는 것만: 태양광 그늘 정자 · 공동 텃밭 줄(이웃이 한 두둑씩) · 자전거 거치대 · 꽃길 · 빗물 통 + 퇴비함 · 어린 나무 — 합친 상자(청크 병합) · 새 메시·Light 0 · 매 프레임 일 0
+  const bedRow = (K, R9) => { const CR = [[0x8cc65a, 0x6fae48], [0x5f9a3f, 0xd9473b], [0x9bcf6a, 0x7fb850], [0x4e9a43, 0xe2b13c]];
+    for (const v of [-0.75, 0.75]) { const c9 = CR[(R9() * 4) | 0]; K.B(0, v, 0, 6.2, 0.36, 1.1, 0x8a6440, { top: 0x7a5236 }); K.D(0, v, 0.36, 5.9, 0.04, 0.85, 0x5e4330);
+      for (let i = 0; i < 9; i++) K.D(-2.6 + i * 0.65, v + (i % 2 ? 0.16 : -0.16), 0.4, 0.34, 0.2 + (i % 3) * 0.06, 0.34, c9[i % 2 && R9() < 0.4 ? 1 : 0]); K.col(0, v, 3.1, 0.55, 0.4); }
+    for (const u of [-3.25, 3.25]) K.D(u, -0.75, 0, 0.08, 0.9, 0.08, 0x8a5a32); K.D(-3.25, -0.75, 0.9, 0.05, 0.3, 0.42, 0xf6f1e2); };   /* 두둑 둘(나무 틀 + 흙 + 작물) + 이름 말뚝(빈 팻말) */
+  const FILLK = [
+    ['pav', 3.4, 2.8, K => HERO.perm.f(K)],
+    ['bed', 7.0, 3.2, (K, R9) => bedRow(K, R9)],
+    ['rack', 4.4, 2.0, K => { K.B(0, -0.35, 0, 4.0, 0.12, 0.12, 0x8a8f95); for (let i = 0; i < 4; i++) { const u = -1.5 + i; K.rod([u - 0.3, -0.35, 0.12], [u - 0.3, -0.35, 0.7], 0.03, 0x8a8f95); K.rod([u + 0.3, -0.35, 0.12], [u + 0.3, -0.35, 0.7], 0.03, 0x8a8f95); K.rod([u - 0.3, -0.35, 0.7], [u + 0.3, -0.35, 0.7], 0.03, 0x8a8f95); }
+      [[-1.5, 0x2f9a55], [-0.5, 0xe2b13c], [1.5, 0xd9473b]].forEach(([u, c9]) => bike(K, u, 0.25, c9)); K.col(0, -0.35, 2.0, 0.1, 0.75); }],   /* 자전거 거치대(ㄷ자 넷) + 자전거 셋 */
+    ['flw', 8.4, 1.6, (K, R9) => { K.pad(0, 0, 8.2, 0.7, 0.065, 0xc9b79a); for (const v of [-0.62, 0.62]) for (let i = 0; i < 11; i++) K.F(-3.8 + i * 0.76 + (R9() - 0.5) * 0.2, v, (i + (v > 0 ? 2 : 0)) | 0); }],   /* 꽃길(흙길 양옆 꽃) */
+    ['bed', 7.0, 3.2, (K, R9) => bedRow(K, R9)],
+    ['bin', 3.0, 2.0, K => { K.C(-0.7, 0, 0, 0.5, 1.1, 0x3d74c9, 12, { top: 0x2f5fa8 }); K.D(-0.7, 0, 1.1, 0.42, 0.05, 0.42, 0x2b4f8a); K.col(-0.7, 0, 0.5, 0.5, 1.15);
+      K.B(0.75, 0, 0, 1.0, 0.8, 0.9, 0x8a5a32); for (let k = 0; k < 3; k++) K.D(0.75, 0.47, 0.12 + k * 0.25, 0.94, 0.05, 0.02, 0x5e4330); K.col(0.75, 0, 0.5, 0.45, 0.8); K.T(0.2, -1.6, 0.8); }],   /* 빗물 통 + 퇴비함 + 어린 나무 */
+    ['flw', 8.4, 1.6, (K, R9) => { K.pad(0, 0, 8.2, 0.7, 0.065, 0xc9b79a); for (const v of [-0.62, 0.62]) for (let i = 0; i < 11; i++) K.F(-3.8 + i * 0.76 + (R9() - 0.5) * 0.2, v, (i * 3 + (v > 0 ? 1 : 0)) | 0); }],
+    ['tree', 8.0, 2.4, K => { for (const u of [-2.8, 0, 2.8]) { K.T(u, 0, 0.62); for (const a of [-0.45, 0.45]) K.D(u + a, 0.0, 0, 0.07, 1.3, 0.07, 0x9b6a3c); K.D(u, 0.0, 1.1, 1.0, 0.05, 0.05, 0x9b6a3c); for (let k = 0; k < 6; k++) K.F(u - 0.9 + (k % 3) * 0.9, (k < 3 ? -0.8 : 0.8), k + 3 + Math.round(u)); } }],   /* 어린 나무 셋(받침대) + 둘레 꽃 — 마을이 함께 심은 나무 줄 */
+    ['bed', 7.0, 3.2, (K, R9) => bedRow(K, R9)],
+    ['pav', 3.4, 2.8, K => HERO.perm.f(K)],
+  ];
+  function ecoFill(g, sp) { if (g.sx == null) return []; const lx = sp ? sp.x : g.lx ?? g.cx, lz = sp ? sp.z : g.lz ?? g.cz, L9 = Math.hypot(lx - g.sx, lz - g.sz) || 1, fx = (lx - g.sx) / L9, fz = (lz - g.sz) / L9, out = [], R9 = rngOf('eco:' + g.id);
+    const vx = g.sx - fx * 7, vz = g.sz - fz * 7;   /* 보는 자리 = 표지석에서 7m 물러난 곳(돌을 읽고 동네 쪽을 보는 눈) — 그 눈의 시야(±34°) 안을 채움 */
+    for (const [nm, w, d, f] of FILLK) { let best = null;
+      for (const dd of [9, 12, 15, 18, 21, 25, 29, 33, 37]) { for (const an of [0, 0.2, -0.2, 0.4, -0.4, 0.55, -0.55]) { const c9 = Math.cos(an), s9 = Math.sin(an), tx9 = vx + (fx * c9 - fz * s9) * dd, tz9 = vz + (fx * s9 + fz * c9) * dd, q = A.spot(tx9, tz9, w, d, 0.6, 3, false, true); if (!q) continue;
+        const qx = q.x - vx, qz = q.z - vz, qv = Math.hypot(qx, qz), qa = Math.acos(Math.max(-1, Math.min(1, (qx * fx + qz * fz) / (qv || 1)))), qd = Math.hypot(q.x - g.sx, q.z - g.sz), r9 = Math.max(w, d) / 2; if (qd > 36 || qv < 7 || qa > 0.6) continue;
+        if (out.some(o => Math.hypot(o.x - q.x, o.z - q.z) < o.r + r9 + 0.8) || (A.nearSchool && A.nearSchool(q.x, q.z, r9 + 6))) continue; best = { ...q, r: r9 }; break; } if (best) break; }
+      if (!best) continue; const K = kitK(best), r9 = best.r; A.occ(best.x - r9, best.z - r9, best.x + r9, best.z + r9); A.clear(best.x, best.z, r9 + 0.3); f(K, R9); out.push({ k: nm, x: best.x, z: best.z, r: r9, d: +Math.hypot(best.x - g.sx, best.z - g.sz).toFixed(1) }); }
+    return out; }
   // ───────── 짓기(town.js가 구역 표지석 뒤에 한 번) ─────────
   function build(list) { KL.length = 0; HOT.length = 0; STM.length = 0; if (!A.on()) return;
     const G = A.groups();
@@ -247,14 +275,14 @@ export function createKidLook(A) {
         out.forEach((q, i) => { hangSign(q.x, q.z, q.ry, tx(SIGNS[i])); A.occ(q.x - 1.2, q.z - 1.2, q.x + 1.2, q.z + 1.2); E.posts.push({ id: 's' + i, x: q.x + Math.sin(q.ry) * 1.3, z: q.z + Math.cos(q.ry) * 1.3, sx: q.x, sz: q.z, lab: T2('🔎 간판 살펴보기', '🔎 Look at the hanging sign'), sg: i }); }); }
       for (const p of H.posts || []) { const [x, z] = K.Q(p.at[0], p.at[1]); E.posts.push({ ...p, x, z }); }
       { const [x, z] = K.Q(H.main[0], H.main[1]); E.main = { x, z }; }
-      E.hero = hero(g, k, hill);
+      E.hero = hero(g, k, hill); if (k === 'rain') E.fill = ecoFill(g, sp);
       KL.push(E);
       A.place({ id: 'kl_' + g.id, name: def.nm[0], en: def.nm[1], kind: 'prop', x: sp.x, z: sp.z, door: [E.main.x, E.main.z], icon: def.ic, sym: def.ic, ai: '아이 동네 「' + g.t + '」 이름답게(KIDLOOK-1)', prop: true });
       A.rec({ id: 'kl:' + g.id, k: 'land', cell: A.cellOf(sp.x, sp.z), note: '✨ ' + def.nm[0], dens: '', n: { [def.nm[0]]: 1 } }); }
     /* 자연친화 동네(ECO 꾸밈 낱말이 있는 칸)의 박공지붕 집 = 남쪽 비탈 태양광 */
     let ns = 0; for (const gr of A.gabRoofs()) { if (!A.ecoAt(gr.cx, gr.cz)) continue; if (gr.w < 3.6 || gr.d < 3.6) continue; roofSolar(gr); ns++; } A.solarN = ns;   /* KIDLOOK-2: 작은 집(3.6m~)도 */
     { const EB = A.ecoBld ? A.ecoBld() : []; ECO9 = { n: EB.length, garden: EB.filter(b => b.flat).length, roof: EB.filter(b => b.flat || b.gab).length, vine: EB.filter(b => b.vine).length, solar: ns }; }   /* 자연친화 아이 동네 건물 수 · 옥상 정원 · 지붕 꾸밈(정원 또는 태양광) · 덩굴 · 태양광(시험 읽기) */
-    const HN = { rain: '소형 풍력 발전기', temp: '덩굴 아치 문', obs: '탐조대', perm: '태양광 그늘 쉼터', wood: '장작 헛간', hole: '비탈 돌계단' }; for (const E of KL) { E.list = listOf(E); if (E.hero) E.list.push(HN[E.k] + '(들머리 ' + Math.round(E.hero.d) + 'm)'); } refresh(); }
+    const HN = { rain: '소형 풍력 발전기', temp: '덩굴 아치 문', obs: '탐조대', perm: '태양광 그늘 쉼터', wood: '장작 헛간', hole: '비탈 돌계단' }; for (const E of KL) { E.list = listOf(E); if (E.hero) E.list.push(HN[E.k] + '(들머리 ' + Math.round(E.hero.d) + 'm)'); if (E.fill && E.fill.length) E.list.push('들머리 채움 ' + E.fill.map(f => ({ pav: '태양광 정자', bed: '공동 텃밭 줄', rack: '자전거 거치대', flw: '꽃길', bin: '빗물 통·퇴비함', tree: '함께 심은 나무 줄' })[f.k] + ' ' + Math.round(f.d) + 'm').join(' · ')); } refresh(); }
   const listOf = E => { const L = { rain: ['투수 블록 길', '텃밭 셋', '빗물 저금통', '창고', '생태 연못', '분리수거장', '자전거 둘', '꽃'], temp: ['덩굴 시렁', '덩굴 벽', '맨 벽', '온도계 셋', '기록판', '나무'], obs: ['밧줄 울', '새집', '곤충 호텔', '생태 연못', '안내판', '꽃'], perm: ['투수 블록 길', '아스팔트 판', '빗물 정원', '물뿌리개'], jang: ['장독대', '장독 일곱', '돌담', '텃밭', '경운기'], tree: ['오솔길', '큰 소나무 셋', '통나무 의자', '걸상', '그루터기'], wood: ['돌축대', '처마', '받침목', '장작 두 더미', '그루터기'], hole: ['축대', '물빠짐 구멍 셋', '배수 도랑', '안내판'], bus: ['승하차 자리', '어린이 통학버스', '정류장', '시간표 판'], alley: ['돌길 광장', '분수', '꽃 화분 넷', '옛 가로등 둘', '벤치 둘', '맞붙은 반목조 집 셋'] }[E.k] || []; return E.posts.some(p => p.sg != null) ? L.concat(['골목 간판 ' + E.posts.length]) : L; };
   // ───────── 상태 메시를 오늘 상태대로(짓기 뒤 · 할 거리 뒤 · 날이 바뀔 때) ─────────
   function refresh() { const day = A.GAME.S.day;
@@ -351,6 +379,6 @@ export function createKidLook(A) {
   function hots() { const out = []; for (const E of KL) { const def = KITS[E.k]; out.push({ x: E.main.x, z: E.main.z, label: def.ic + ' ' + tx(def.nm) + (en() ? ' — ' : ' — ') + tx(T2('기록판', 'board')), use: () => mainUse(E), g: E.g, main: true });
       for (const p of E.posts) out.push({ x: p.x, z: p.z, label: tx(p.lab), use: () => postUse(E, p), g: E.g }); } return out; }
   function dayTick() { refresh(); }
-  function info() { return { solar: A.solarN || 0, eco: ECO9, hoods: KL.map(E => ({ g: E.g, t: E.t, k: E.k, cell: E.cell, x: +E.x.toFixed(1), z: +E.z.toFixed(1), ry: +E.ry.toFixed(3), hd: E.hero ? +E.hero.d.toFixed(1) : null, d: +E.d.toFixed(1), n: E.list.length, list: E.list, use: KITS[E.k].ic + ' ' + tx(KITS[E.k].nm) + ' — ' + tx(T2('기록판', 'board')), posts: E.posts.map(p => tx(p.lab)), done: KS(E.k).done || 0, st: [E.st, E.st2, ...(E.hs || [])].filter(Boolean).map(m => m.visible) })) }; }
+  function info() { return { solar: A.solarN || 0, eco: ECO9, hoods: KL.map(E => ({ g: E.g, t: E.t, k: E.k, cell: E.cell, x: +E.x.toFixed(1), z: +E.z.toFixed(1), ry: +E.ry.toFixed(3), hd: E.hero ? +E.hero.d.toFixed(1) : null, fill: E.fill || null, d: +E.d.toFixed(1), n: E.list.length, list: E.list, use: KITS[E.k].ic + ' ' + tx(KITS[E.k].nm) + ' — ' + tx(T2('기록판', 'board')), posts: E.posts.map(p => tx(p.lab)), done: KS(E.k).done || 0, st: [E.st, E.st2, ...(E.hs || [])].filter(Boolean).map(m => m.visible) })) }; }
   return { build, hots, info, refresh: dayTick, ecoKit: k => !!KITS[k] };
 }
