@@ -36,8 +36,9 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await ev(() => { SM_TOWN.game().tally('cooked'); }); I = await F(); ok(I.lv.food === 2 && I.dc.b.food === 2, '같은 날 셋째 = 안 셈(하루 두 번까지 · 조급함)');
     const REC = (k, o) => ev(([k, o]) => SM_TOWN.rec ? SM_TOWN.rec().add(k, o) : null, [k, o]);
     const recOk = await ev(() => !!(SM_TOWN.rec && SM_TOWN.rec().add)); ok(recOk, 'SM_TOWN.rec().add 있음');
+    const g0 = (await F()).lv.guest | 0;   /* OPEN-1: 첫 아침 = 우리 집 칸(새 칸)에서 시작 → 그날 '새 칸 가 보기' 손님맞이 하나가 먼저 있을 수 있음 */
     await REC('bun2', { ev: 'fill', id: 'spring' }); await REC('bun2', { ev: 'fill', id: 'summer' }); await REC('janggu', { lv: 0, s: 2 }); await REC('busk', { why: '', n: 2 }); await REC('bldg', { k: 'post', ev: 'send', e: '🍓' }); await REC('case', { id: 'zz', ev: 'clue', k: 'a' });
-    I = await F(); ok(I.st.deco === 1 && I.st.show === 1 && I.lv.guest === 1 && I.lv.safe === 0, '꾸러미 채우기 → 꾸미기 · 장구 한 판·들려주기 → 공연 · 소포 → 손님맞이 · 사건 단서(끝 아님) → 안 셈 ' + JSON.stringify(I.lv));
+    I = await F(); ok(I.st.deco === 1 && I.st.show === 1 && I.lv.guest === g0 + 1 && I.lv.safe === 0, '꾸러미 채우기 → 꾸미기 · 장구 한 판·들려주기 → 공연 · 소포 → 손님맞이 · 사건 단서(끝 아님) → 안 셈 ' + JSON.stringify(I.lv));
     ok(I.vis.includes('deco:0') && I.vis.includes('show:0'), '현수막 · 낮은 무대가 장면에');
     // ③ 여러 날 준비
     for (const d of [1, 2]) { await setDay(I.day + d);

@@ -63,6 +63,7 @@
 | **밤샘 차례표(10-24 · A~H 39줄)** · 단계 1 설계(하루 한 바퀴 + 내 집) · 직업 놀이 엔진 설계(JOBS-2 · 양몰이·장구·부엌·낚시…) · 단계 2 표시 걷기·길 묻기 · 단계 3 기억하는 이웃·돈 쓸 곳 | `docs/systems/town_night_queue.md` · `docs/systems/town_phase1.md` · `docs/systems/town_jobs2.md` · `docs/systems/town_phase2.md` · `docs/systems/town_phase3.md` · `docs/systems/town_phase4.md`(엔진 여덟) · `docs/systems/town_explore.md`(탐험·특수 지형) |
 | 마을 건물 들어가기(town_enter.js · 갈래 표 한 줄 = 방 하나 · 99%) · 레벨 보상(town_reward.js · 솜씨 × 레벨 = 쓰는 물건) · 땅이름·아이 동네 이름·구역 이름(town_names.md) | `docs/systems/town_enter.md` · `docs/systems/town_rewards.md` · `docs/systems/town_names.md` |
 | 마을 잔치(town_feast.js · 준비 다섯 갈래) · 밤(town_night.js) · 날씨 사건(town_wxev.js 폭염·폭설) · 계절 행사(town_season.js 설·대보름·단오·추석·김장) | `docs/systems/town_feast.md` · `docs/systems/town_hours.md` · `docs/systems/town_wxev.md` · `docs/systems/town_season.md` |
+| 마을 처음 화면·저장 칸 셋·첫날 시작(town_game.js 저장 옮기기·bak·old · 우리 집 현관에서 첫 아침) · 화면 모드 둘(그래픽 우선 30 / 부드럽게 60) | `docs/systems/town_open.md` · `docs/systems/perf.md` |
 | 게임용 지도 API 정본(map.*) | `docs/map_api.md` |
 | 품질 숫자 척도(풍성·놀이·그래픽·효과·이야기·각색·완성도·직관성) | `docs/tasks/quality_scale.md` |
 | 새 이야기·에피소드 더하기 | `docs/tasks/new_episode.md` |
