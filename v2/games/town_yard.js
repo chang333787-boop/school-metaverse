@@ -35,7 +35,7 @@ export const DEFAULT_YARD = (() => { const decos = [], floor = {}; for (let r = 
   for (const [c, r] of [[40, 6], [52, 6], [40, 13], [52, 13]]) decos.push({ id: 'd_y1', col: c, row: r }, { id: 'd_y2', col: c + 1, row: r }, { id: 'd_y1', col: c + 2, row: r });
   for (const [c, r] of [[34, 7], [58, 7], [34, 17], [58, 17]]) decos.push({ id: 'd_y9', col: c, row: r }); decos.push({ id: 'd_y10', col: 46, row: 19 }, { id: 'd_y5', col: 43, row: 21 }, { id: 'd_y5', col: 49, row: 21 }); return { decos, floor, ai: true }; })();
 
-export function createYards({ T3, map, onCollider, removeCollider, en, animals, onBuilt }) {
+export function createYards({ T3, map, onCollider, removeCollider, en, animals, onBuilt, offAt }) {
   if (!C9) C9 = new T3.Color();
   const MAT = new T3.MeshLambertMaterial({ vertexColors: true }), GLOW = new T3.MeshBasicMaterial({ vertexColors: true }), FLOOR = new T3.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   const Y = [];   // { home, ox, oz, y, ext, grp, cols, anim, data, at, busy, src }
@@ -117,11 +117,14 @@ export function createYards({ T3, map, onCollider, removeCollider, en, animals, 
       if (!data && Yd.data && !force) data = Yd.data; if (!data) data = DEFAULT_YARD; Yd.data = data; Yd.at = performance.now(); buildYard(Yd, data);
     } finally { Yd.busy = false; } }
 
+  /* GFX-1(사용자 10-27 '도로가 초록색'): 마당이 칸(블록)보다 넓어 길에 걸치면 길에 걸린 바깥 줄·칸을 잘라 냄(잔디 판·생울타리·장식이 차도·인도를 덮지 않게 · 집 자리는 그대로) */
+  function clipExt(q) { if (!offAt) return q.ext; let [c0, r0, c1, r1] = q.ext; const hitC = c => { for (let r = r0; r < r1; r++) if (offAt(q.ox + (c + 0.5) * CS, q.oz + (r + 0.5) * CS)) return true; return false; }, hitR = r => { for (let c = c0; c < c1; c++) if (offAt(q.ox + (c + 0.5) * CS, q.oz + (r + 0.5) * CS)) return true; return false; };
+    while (c0 < HOUSE[0] && hitC(c0)) c0++; while (c1 > HOUSE[2] && hitC(c1 - 1)) c1--; while (r0 < HOUSE[1] && hitR(r0)) r0++; while (r1 > HOUSE[3] && hitR(r1 - 1)) r1--; return [c0, r0, c1, r1]; }
   return {
     // 마을 짓기 전에 한 번(범위를 알아야 터·자리를 정함) — 다 못 읽으면 ms 뒤에 기본 정원으로
     async prefetch(homes, ms = 4500) { const t0 = performance.now(); const job = (async () => { const sids = await findSids(homes); await Promise.all(homes.map(async h => { if (PRE[h] !== undefined) return; PRE[h] = sids[h] ? await fetchYard(sids[h]) : null; })); })();
       await Promise.race([job, new Promise(r => setTimeout(r, Math.max(0, ms - (performance.now() - t0))))]); const out = {}; for (const h of homes) out[h] = PRE[h] || DEFAULT_YARD; return out; },
-    set(list) { for (const Yd of Y) clearYard(Yd); Y.length = 0; for (const q of list) Y.push({ ...q, grp: null, cols: [], anim: [], data: null, at: 0, busy: false }); Y.forEach((Yd, i) => setTimeout(() => { if (!dead && Y.includes(Yd)) load(Yd); }, 400 + i * 220)); },   // 마을을 다 지은 뒤 한 마당씩(처음 짓기 시간에 안 넣음)
+    set(list) { for (const Yd of Y) clearYard(Yd); Y.length = 0; for (const q of list) Y.push({ ...q, ext: clipExt(q), grp: null, cols: [], anim: [], data: null, at: 0, busy: false }); Y.forEach((Yd, i) => setTimeout(() => { if (!dead && Y.includes(Yd)) load(Yd); }, 400 + i * 220)); },   // 마을을 다 지은 뒤 한 마당씩(처음 짓기 시간에 안 넣음)
     hide(v) { hidden = !!v; for (const Yd of Y) if (Yd.grp) Yd.grp.visible = !hidden; },
     wake() { vq = 1; },   // 순간이동 직후 = 이번 프레임에 보임 다시 정함
     tick(dt, me, cam) { if (hidden) return;
