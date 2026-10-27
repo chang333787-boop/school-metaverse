@@ -138,9 +138,9 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       ok(tk && tk.d === D3 && /^[가나다라마][1-6]$/.test(tk.seat) && (await ev(() => SM_TOWN.game().S.money)) === 2500, '표 = 돈 −500 · 자리 ' + (tk && tk.seat)); ok(P && /줄 글자/.test(P.t) && /상영/.test(P.t) && /시간표/.test(P.t), '표 창 = 자리 찾는 법(지도 칸 주소) + 낱말 상자'); await closeAll();
       I = await BI(); ok(I.cur.extra.some(q => q.k === 'bd:seat'), '표를 사면 그 자리에 E가 생김'); await checkRoom('영화관(자리 E)');
       await E('bd:seat', async () => ((await panel()) || {}).k === 'bdseat'); P = await panel(); ok(P && /기다릴까요/.test(P.t), '자리 E(시작 전) = 시작 시각까지 기다리기');
-      await ev(() => document.querySelector('.twn-p button[data-w]').click()); await W8(400); P = await panel(); const sh = T3.starts[rt]; ok(P && P.k === 'bdfilm' && (await ev(() => SM_TOWN.game().S.min)) === sh, '기다리면 시계 = 시작 시각 · 영화 장면 창'); ok((await BI()).cur.play != null, '화면 = 영화 장면');
-      for (let i = 0; i < 3; i++) { await ev(() => document.querySelector('.twn-p button[data-n]').click()); await W8(250); }
-      const mn = await ev(() => SM_TOWN.game().S.min); ok(!(await panel()) && mn === T3.ends[rt] && (await ev(() => SM_TOWN.game().S.bldg.cinema.seen)) === D3, '다 보면 시계 = 끝나는 시각(' + mn + ') · 본 날 기록'); ok(await waitSaid('영화가 끝났어요'), '「영화가 끝났어요 · 지금 …」 한 줄'); ok((await xp('explore')) > ex3, '탐험 솜씨 +');
+      await ev(() => document.querySelector('.twn-p button[data-w]').click()); await W8(400); P = await panel(); const sh = T3.starts[rt]; ok(!P && (await ev(() => SM_TOWN.game().S.min)) === sh, '기다리면 시계 = 시작 시각 · 창 없이 상영(CINE-3)'); ok((await BI()).cur.play != null, '화면 = 움직이는 영화');
+      await ev(() => SM_TOWN.bldg().dbg.ff(120)); await W8(700);   /* CINE-3 영화 끝까지 빨리 감기(자세한 시험 = town_cine3.cjs) */
+      const mn = await ev(() => SM_TOWN.game().S.min); ok(!(await panel()) && mn >= T3.ends[rt] && mn <= T3.ends[rt] + 3 && (await ev(() => SM_TOWN.game().S.bldg.cinema.seen)) === D3, '다 보면 시계 = 끝나는 시각(' + mn + ') · 본 날 기록'); ok(await waitSaid('영화가 끝났어요'), '「영화가 끝났어요 · 지금 …」 한 줄'); ok((await xp('explore')) > ex3, '탐험 솜씨 +');
       await E('bd:ticket', () => said('벌써 영화를')); ok(await waitSaid('벌써 영화를') && !(await panel()), '같은 날 다시 매표소 = 「오늘은 벌써 영화를 봤어요」'); await leave();
       await ev(() => { SM_TOWN.game().S.min = 21 * 60 + 30; }); await ev(id => SM_TOWN.indoor.enter(id), cn.id); await W8(1500); ok(!(await ev(() => SM_TOWN.indoor.on)) && await waitSaid('문을 닫았어요'), '21:30 영화관 = 문 닫음(안 들어감)'); await ev(() => { SM_TOWN.game().S.min = 11 * 60; });
       // 🏭 공장

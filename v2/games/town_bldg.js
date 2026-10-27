@@ -13,6 +13,7 @@
 //     박물관 🏺 = 옛 물건 넷(맷돌·다듬잇돌·지게·호롱) 쓰임 → 오늘날 무엇이 그 일을 하나 · 알아본 받침대에 금빛 표 · 곤충 박물관은 들어가지 않음(쇼가 따로 있음)
 //   렉: 매 프레임 일 0 · 새 Light X · 방은 들어갈 때만 지음(town_indoor.js KIT) · 판 = 캔버스 한 장(나오면 버림) · 밥 = 합친 부품 1
 export const BD_V = 1;
+import { CINE, filmDraw, filmLen, filmMusic } from './town_cine.js?v=2';   /* CINE-3 영화관 짧은 영화 */
 const T2 = (ko, en) => [ko, en];
 const hashS = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
 // 건물 이름 → 방 갈래(town.js pubIn이 부름 · 동물병원은 보호센터 동물만 쓰는 곳이라 들어가지 않음)
@@ -71,11 +72,8 @@ const WORDS = {
 
 // ───────── BLDG-3 자료 ─────────
 // 🎬 영화(이름 없는 작은 영화 · 실제 영화·회사 X · 장면 글 = 사실만) · 상영 = [영화, 시작(분), 끝(분)] — 같은 영화는 늘 같은 길이(80·100·100분)
-const FILMS = [
-  { t: T2('갯벌 친구들', 'Friends of the Mudflat'), bg: '#8a6a4a', sc: [T2('썰물이 되면 바닷물이 빠지고 갯벌이 드러나요.', 'At low tide the sea pulls back and the mudflat appears.'), T2('칠게와 짱뚱어가 구멍에서 나와 먹이를 찾아요.', 'Crabs and mudskippers come out of their holes to find food.'), T2('밀물이 들어오면 다시 구멍 속으로 숨어요.', 'When the tide comes in, they hide in their holes again.')] },
-  { t: T2('자전거로 고개 넘기', 'Over the Hill by Bike'), bg: '#5a9a5a', sc: [T2('오르막에서는 기어를 가볍게 하고 천천히 페달을 밟아요.', 'Uphill, change to an easy gear and pedal slowly.'), T2('내리막에서는 브레이크를 조금씩 나누어 잡아요.', 'Downhill, squeeze the brakes a little at a time.'), T2('쉼터에서 물을 마시고 헬멧 끈을 다시 매요.', 'At the rest stop, drink water and do up the helmet strap again.')] },
-  { t: T2('별 보는 밤', 'A Night of Stars'), bg: '#1c2a4a', sc: [T2('불빛이 적은 곳일수록 별이 많이 보여요.', 'The fewer lights around, the more stars you can see.'), T2('북두칠성의 국자 끝 두 별을 이어 쭉 가면 북극성이 있어요.', 'Follow the two end stars of the Big Dipper’s cup to find the North Star.'), T2('북극성은 밤새 거의 움직이지 않아 북쪽을 알려 줘요.', 'The North Star hardly moves all night, so it shows which way is north.')] },
-];
+//   CINE-3(10-27): 영화 = town_cine.js 움직이는 짧은 영화(40~50초 · 카메라가 움직이는 장면 · 마디 박자 음악) · 여기는 제목·포스터 색만
+const FILMS = CINE.map(f => ({ t: f.t, bg: f.bg }));
 const SHOWS = [[0, 600, 680], [1, 690, 790], [2, 780, 880], [0, 870, 950], [1, 960, 1060], [2, 1050, 1150], [0, 1140, 1220]];
 export const BD_SHOWS = SHOWS.map(q => ({ s: q[1], e: q[2], t: FILMS[q[0]].t }));   /* DAY-2 오늘 시간표 줄(town_day.js)이 읽음 */
 const TICKET = 500, ROWS = ['가', '나', '다', '라', '마'], ROWZ = [-4.5, -3.2, -1.9, -0.6, 0.7], COLX = c => -2.5 + (c - 1);   /* 영화 표 값(소포와 같은 결) · 줄 가(화면 앞)~마 · 번호 1~6 */
@@ -156,7 +154,7 @@ export function createBldg(A) {
   function tip(k) { return TIP[k] ? L(TIP[k]) : ''; }
   function canIn(k, B9) { if (!BD_HRS[k] || open(k)) return true; const nm = (B9 && B9.name) || '', H = BD_HRS[k]; toast('🌙 ' + (en() ? nm + ' is closed now. It opens at ' + hh(H[0]) + '.' : nm + '은 지금 문을 닫았어요. ' + hh(H[0]) + '에 열어요.'), 3); return false; }
   function opts(B9, k) { if (!TIP[k]) return {}; if (k === 'post') return { deco: (S9, made, X9) => postDeco(S9, made, B9, X9 && X9.K), onExtra: kk => use(kk) }; return { room: (at, K) => build(k, at, K, B9), onExtra: kk => use(kk) }; }
-  function left() { if (A.why) A.why().roomLeft(); if (!CUR) return; if (CUR.board) { CUR.board.m.material.map.dispose(); CUR.board.m.material.dispose(); } CUR = null; }   /* 방 모양(geometry)은 town_indoor exit()이 치움 · 캔버스 재질만 여기서 */
+  function left() { if (A.why) A.why().roomLeft(); if (!CUR) return; if (CUR.play) filmStop(); if (CUR.board) { CUR.board.m.material.map.dispose(); CUR.board.m.material.dispose(); } CUR = null; }   /* 방 모양(geometry)은 town_indoor exit()이 치움 · 캔버스 재질만 여기서 */
 
   // ───────── 벽 판(캔버스 한 장 · 글이 바뀌면 다시 그림) ─────────
   function boardMesh(K, S9, x, y, z, ry, w, h) { const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512 * h / w); const tx = new T3.CanvasTexture(c); tx.colorSpace = T3.SRGBColorSpace; tx.anisotropy = 2;
@@ -178,11 +176,7 @@ export function createBldg(A) {
   // 🎬 화면(캔버스 512×216): 쉴 때 = 오늘 상영 시간표(지난 상영 = 흐리게 · 내 표 = 노랑) · 상영 때 = 영화 장면 글 + 단순한 그림
   const wrapT = (g, t, w) => { const out = []; let cur = ''; for (const ch of String(t)) { if (g.measureText(cur + ch).width > w && cur) { const sp = cur.lastIndexOf(' '); if (sp > 4) { out.push(cur.slice(0, sp)); cur = cur.slice(sp + 1) + ch; } else { out.push(cur); cur = ch; } } else cur += ch; } if (cur) out.push(cur); return out; };
   function screenDraw() { const { c, tx } = CUR.board, g = c.getContext('2d'), W = c.width, H = c.height, e = en(), s = S().cinema, D = day(), now = now9(); g.textBaseline = 'top';
-    if (CUR.play) { const F = FILMS[CUR.play.f]; g.fillStyle = F.bg; g.fillRect(0, 0, W, H);
-      if (CUR.play.f === 0) { g.fillStyle = '#6b4f34'; g.fillRect(0, H - 52, W, 52); g.fillStyle = '#e0453a'; for (const x of [90, 300, 420]) { g.beginPath(); g.arc(x, H - 30, 10, 0, 6.2832); g.fill(); } }
-      else if (CUR.play.f === 1) { g.fillStyle = '#3f7a3f'; g.beginPath(); g.moveTo(0, H); g.lineTo(0, H - 30); g.lineTo(260, H - 90); g.lineTo(W, H - 40); g.lineTo(W, H); g.fill(); g.strokeStyle = '#2b2420'; g.lineWidth = 4; for (const x of [230, 262]) { g.beginPath(); g.arc(x, H - 98, 13, 0, 6.2832); g.stroke(); } }
-      else { g.fillStyle = '#fff8dc'; for (let i = 0; i < 40; i++) { const h9 = hashS('st' + i); g.fillRect(h9 % W, (h9 >> 9) % (H - 70) + 4, 2 + (h9 % 3), 2 + (h9 % 3)); } }
-      g.fillStyle = '#ffffff'; g.font = '900 22px ' + FONT; g.textAlign = 'center'; g.fillText(L(F.t), W / 2, 12); g.font = '800 21px ' + FONT; wrapT(g, L(F.sc[CUR.play.i]), W - 60).slice(0, 3).forEach((t, i) => g.fillText(t, W / 2, 50 + i * 28)); tx.needsUpdate = true; return; }
+    if (CUR.play) { CUR.play.si = filmDraw(g, W, H, CINE[CUR.play.f], CUR.play.T, e); CUR.play.n++; tx.needsUpdate = true; return; }   /* CINE-3 상영 = 움직이는 영화 한 장(0.033초마다) */
     g.fillStyle = '#15121c'; g.fillRect(0, 0, W, H); g.fillStyle = '#f2c230'; g.font = '900 24px ' + FONT; g.textAlign = 'center'; g.fillText(e ? 'Today’s timetable' : '오늘 상영 시간표', W / 2, 8); g.textAlign = 'left'; g.font = '800 18px ' + FONT;
     SHOWS.forEach((sh, i) => { const mine = s.tk && s.tk.d === D && s.tk.i === i, y = 42 + i * 24; g.fillStyle = mine ? '#f2c230' : sh[1] <= now ? '#6a6478' : '#f6f4ee'; g.fillText(hm(sh[1]) + ' ~ ' + hm(sh[2]) + '   ' + L(FILMS[sh[0]].t) + (mine ? '  🎫 ' + s.tk.seat : ''), 70, y); });
     tx.needsUpdate = true; }
@@ -487,6 +481,7 @@ export function createBldg(A) {
         boardDraw(); st = 1; W9.paint(draw()); } };
     log('cinema'); }
   function seatUse() { const s = S().cinema, e = en(), D = day(), tk = s.tk;
+    if (CUR && CUR.play) { filmStop(); toast('🎬 ' + (e ? 'You stopped the film. Your ticket works until its end time.' : '영화를 그만 봤어요. 표에 적힌 끝나는 시각 전에는 다시 앉아 볼 수 있어요.'), 3.2); return; }
     if (s.seen === D) { toast('🎬 ' + (e ? 'You have seen today’s film.' : '오늘 영화는 다 봤어요.'), 2.6); return; }
     if (!tk || tk.d !== D) { toast('🎫 ' + (e ? 'Buy a ticket at the ticket desk first.' : '먼저 매표소에서 표를 사요.'), 2.6); return; }
     const sh = SHOWS[tk.i], now = now9();
@@ -494,13 +489,17 @@ export function createBldg(A) {
     if (now < sh[1]) { const W9 = panelOf('<h3>🎫 ' + esc(e ? 'Seat ' + tk.seat : '자리 ' + tk.seat) + '</h3><div class="pc-tx">' + esc(e ? 'The film starts at ' + hm(sh[1]) + '. It is ' + hm(now) + ' now. Sit and wait?' : '영화는 ' + hm(sh[1]) + '에 시작해요. 지금은 ' + hm(now) + '이에요. 앉아서 기다릴까요?') + '</div><div class="row"><button data-w="1">' + (e ? 'Wait until ' + hm(sh[1]) : hm(sh[1]) + '까지 기다리기') + '</button><button class="sub" data-a="x">' + (e ? 'Later' : '나중에') + '</button></div>', 'bdseat');
       W9.P.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.w) { A.GAME.waitMin(sh[1]); A.closeP(); play(); return; } A.closeP(); }; return; }
     play(); }
-  function play() { const s = S().cinema, e = en(), D = day(), tk = s.tk; if (!tk || !CUR) return; const sh = SHOWS[tk.i], F = FILMS[sh[0]]; let i = 0; CUR.play = { f: sh[0], i: 0 }; boardDraw(); sfx('pop');
-    const draw = () => '<h3>🎬 ' + esc(L(F.t)) + ' <span class="sm">' + (i + 1) + '/' + F.sc.length + '</span></h3><div class="pc-tx" style="font-size:18px">' + esc(L(F.sc[i])) + '</div><div class="row"><button data-n="1">' + (i < F.sc.length - 1 ? (e ? 'Next' : '다음') : (e ? 'The end' : '끝')) + '</button></div>';
-    const W9 = panelOf(draw(), 'bdfilm');
-    W9.P.onclick = ev => { const b = ev.target.closest('button'); if (!b || !b.dataset.n) return; if (i < F.sc.length - 1) { i++; if (CUR && CUR.play) CUR.play.i = i; boardDraw(); W9.paint(draw()); return; }
-      if (now9() < sh[2]) A.GAME.waitMin(sh[2]); s.seen = D; mark(); reward('cinema', 'explore', 2); A.rec('bldg', { k: 'cinema', ev: 'watch', i: tk.i }); if (CUR) CUR.play = null; boardDraw(); A.closeP();
-      toast('🎬 ' + (e ? 'The film is over. It is ' + hm(now9()) + ' now — the end time on your ticket.' : '영화가 끝났어요. 지금 ' + hm(now9()) + ' — 표에 적힌 끝나는 시각이에요.'), 3.6); };
-    log('play ' + tk.i); }
+  // CINE-3: 자리에 앉음(몸 고정 · 화면 쪽) → 큰 화면에서 영화가 움직임(창 X · 관객석에서 봄) · 다 보면 시계 = 끝나는 시각 · 자리 E = 그만 보기 · 방을 나가면 멈춤·정리
+  function play() { const s = S().cinema, e = en(), tk = s.tk; if (!tk || !CUR || CUR.play) return; const sh = SHOWS[tk.i], F = CINE[sh[0]], p9 = seatAt9(tk.seat);
+    CUR.play = { f: sh[0], i: tk.i, T: 0, t0: performance.now() + 300, si: 0, n: 0, len: filmLen(F), last: 0, raf: 0, au: null }; sfx('pop');
+    if (p9 && A.seat) A.seat(true, [CUR.at[0] + p9[0], CUR.at[1], CUR.at[2] + p9[1]]); if (A.goal) A.goal('🎬 ' + (e ? 'Now showing — E on your seat to stop' : '상영 중 — 그만 보려면 자리에서 E'));
+    const M = A.mus && A.mus(); if (M && M.playEv) { M.hold(true); try { CUR.play.au = M.playEv(filmMusic(F), { lead: 0.3 }); } catch (er) { CUR.play.au = null; } }
+    const P = CUR.play, loop = now => { if (!CUR || CUR.play !== P) return; P.raf = requestAnimationFrame(loop); if (now - P.last < 33) return; P.last = now; P.T = Math.max(0, (now - P.t0) / 1000); if (P.T >= P.len) { filmEnd(); return; } boardDraw(); };
+    boardDraw(); P.raf = requestAnimationFrame(loop); log('play ' + tk.i); }
+  function filmStop() { const P = CUR && CUR.play; if (!P) return; cancelAnimationFrame(P.raf); if (P.au) { try { P.au.stop(); } catch (er) { /* */ } } const M = A.mus && A.mus(); if (M && M.hold) M.hold(false); if (A.seat) A.seat(false); if (A.goal) A.goal(''); CUR.play = null; boardDraw(); }
+  function filmEnd() { const s = S().cinema, e = en(), D = day(), tk = s.tk; if (!tk || !CUR || !CUR.play) return; const sh = SHOWS[tk.i]; filmStop();
+    if (now9() < sh[2]) A.GAME.waitMin(sh[2]); s.seen = D; mark(); reward('cinema', 'explore', 2); A.rec('bldg', { k: 'cinema', ev: 'watch', i: tk.i }); boardDraw();
+    toast('🎬 ' + (e ? 'The film is over. It is ' + hm(now9()) + ' now — the end time on your ticket.' : '영화가 끝났어요. 지금 ' + hm(now9()) + ' — 표에 적힌 끝나는 시각이에요.'), 3.6); }
   // 🚚 BLDG-3b 공장 → 가게·장터: 만든 다음 날(사흘 안) 아침 = 상자가 트럭에 실려 가게(젤리 케이크 → 빵집·가게)·장터(감자 → 장터)에 들어옴 · 갈 곳은 마을 쪽(A.facDest)이 판 이름으로 고름 · 그 창에 '우리가 만든 것' 한 칸 · 보상 X(솜씨는 공장에서 받음)
   const facNow = () => { const q = S().factory.dl; return q && !q.none && day() - q.d <= 1 ? q : null; };   /* 들어온 날 + 다음 날까지 진열 */
   function facDeliv() { const s = S().factory, D = day(); if (!(s.made > 0) || s.made >= D || D - s.made > 3 || (s.dl && s.dl.m === s.made)) return facNow();
@@ -696,6 +695,6 @@ export function createBldg(A) {
 
   function dispose() { left(); if (css) { css.remove(); css = null; } }
   return { tip, canIn, opts, left, dispose, open, sec, facNews, facAt, facTake, facPend: () => { const f = ((A.GAME.S.bldg || {}).factory) || {}; return f.made > 0 && !(f.dl && f.dl.m === f.made); }, pend: () => { const b = (A.GAME.S.bldg || {}).post; return !!(b && Array.isArray(b.box) && b.box.some(q => q && !q.ok)); },
-    info: () => ({ cur: CUR ? { k: CUR.k, name: CUR.name, food: CUR.food ? CUR.food.visible : null, prod: CUR.prod ? CUR.prod.visible : null, stars: CUR.stars ? CUR.stars.map(g => g.visible) : null, play: CUR.play, line: CUR.made.line || null, box: CUR.box ? CUR.box.visible : null, nb: !!(CUR.made && CUR.made.nb), at: CUR.at, vis: CUR.vis ? { id: CUR.vis.id, d: CUR.vis.d, gone: !!CUR.visGone, mis: CUR.visMis | 0, ans: CUR.visC ? CUR.visC.ch.findIndex(q => q.ok) : -1 } : null, extra: (CUR.made.extra || []).map(h => ({ k: h.k, label: h.label, at: [CUR.at[0] + h.stand[0], CUR.at[1] + h.stand[1], CUR.at[2] + h.stand[2]] })) } : null, s: JSON.parse(JSON.stringify(S())), dbg: DBG.slice() }),
-    dbg: { use: kk => use(kk), vpick: (k, d) => visPick(k, d == null ? day() : d), vcase: () => { const C = CUR && CUR.vis ? visCase(CUR.k, CUR.vis) : null; return C ? { t: C.t, v: C.v, ans: C.ch.findIndex(q => q.ok), n: C.ch.length, cmp: !!C.cmp, cells: C.cells || null, who: C.who } : null; }, sec: () => sec(), fac: () => facDeliv(), int: () => bankInt(), board: () => (CUR && CUR.board ? CUR.board.c.toDataURL().length : 0) } };
+    info: () => ({ cur: CUR ? { k: CUR.k, name: CUR.name, food: CUR.food ? CUR.food.visible : null, prod: CUR.prod ? CUR.prod.visible : null, stars: CUR.stars ? CUR.stars.map(g => g.visible) : null, play: CUR.play ? { f: CUR.play.f, T: +CUR.play.T.toFixed(2), si: CUR.play.si, n: CUR.play.n, len: +CUR.play.len.toFixed(1), au: !!CUR.play.au } : null, line: CUR.made.line || null, box: CUR.box ? CUR.box.visible : null, nb: !!(CUR.made && CUR.made.nb), at: CUR.at, vis: CUR.vis ? { id: CUR.vis.id, d: CUR.vis.d, gone: !!CUR.visGone, mis: CUR.visMis | 0, ans: CUR.visC ? CUR.visC.ch.findIndex(q => q.ok) : -1 } : null, extra: (CUR.made.extra || []).map(h => ({ k: h.k, label: h.label, at: [CUR.at[0] + h.stand[0], CUR.at[1] + h.stand[1], CUR.at[2] + h.stand[2]] })) } : null, s: JSON.parse(JSON.stringify(S())), dbg: DBG.slice() }),
+    dbg: { use: kk => use(kk), vpick: (k, d) => visPick(k, d == null ? day() : d), vcase: () => { const C = CUR && CUR.vis ? visCase(CUR.k, CUR.vis) : null; return C ? { t: C.t, v: C.v, ans: C.ch.findIndex(q => q.ok), n: C.ch.length, cmp: !!C.cmp, cells: C.cells || null, who: C.who } : null; }, sec: () => sec(), fac: () => facDeliv(), int: () => bankInt(), board: () => (CUR && CUR.board ? CUR.board.c.toDataURL().length : 0), px: () => { if (!CUR || !CUR.board) return null; const c = CUR.board.c, d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let h = 0; for (let i = 0; i < d.length; i += 64) h = (Math.imul(h, 31) + d[i] + d[i + 1] * 3 + d[i + 2] * 7) >>> 0; return h; }, ff: sec => { if (CUR && CUR.play) CUR.play.t0 -= sec * 1000; }, png: () => (CUR && CUR.board ? CUR.board.c.toDataURL('image/png') : null), films: () => CINE.map(f => ({ id: f.id, len: +filmLen(f).toFixed(1), shots: f.shots.length })) } };   /* CINE-3 시험: 화면 픽셀 지문 · 빨리 감기 */
 }
