@@ -74,8 +74,14 @@ export function srcOf(k, o) { o = o || {};
   if (k === 'case') return o.ev === 'fixed' ? 'safe' : null;
   if (k === 'fix') return o.ev === 'rep' ? 'safe' : null;
   if (k === 'emerg') return o.ev === 'done' ? 'safe' : null;
+  if (k === 'ent') return entBr(o.k);   /* ENT-F(코덱스 10-27 'srcOf에 실내 부탁 ent가 빠짐'): 들어간 가게 갈래 → 알맞은 잔치 갈래(ENT_BR) */
   if (k === 'bldg') return (o.k === 'police' && o.ev === '112') || (o.k === 'clinic' && o.ev === 'aid') ? 'safe' : o.k === 'post' && o.ev === 'send' ? 'guest' : null;
   return null; }
+/* 실내 부탁(town_enter.js CATS 키 → 잔치 갈래) — 음식점·먹을거리 가게 = 음식 · 꽃집·철물점·농자재·문구·목공 = 마당 꾸미기 · 학원·서점·사진관 = 공연 · 안내·부동산·여행사·센터·회관·민박·이웃 집 = 손님맞이 · 병원·약국·수리 = 안전 · 나머지(신발·안경·낚시…) = 셈 X */
+export const ENT_BR = { food: ['noodle', 'kimbap', 'snack', 'chicken', 'cutlet', 'bibim', 'porridge', 'chinese', 'pizza', 'seafood', 'fruit', 'deli', 'ricecake', 'butcher', 'dryfish', 'fishmkt', 'farmstand', 'mill', 'ice', 'store'],
+  deco: ['flower', 'hardware', 'farmsupply', 'stationery', 'workshop'], show: ['english', 'math', 'piano', 'art', 'taekwondo', 'study', 'science', 'books', 'photo'],
+  guest: ['realty', 'travel', 'center', 'office', 'terminal', 'inn', 'hall', 'home', 'apt', 'gift', 'laundry', 'salon', 'bath'], safe: ['pharmacy', 'via:clinic', 'machine'] };
+export const entBr = k => B_ORDER.find(b => ENT_BR[b].includes(String(k || ''))) || null;
 const SRC_CAP = { 'st:cells': 1 };   /* 걷기만으로 손님맞이가 다 차지 않게(하루 한 번) */
 export const stageOf = n => Math.min(3, ((n | 0) / PER) | 0);
 
@@ -83,7 +89,7 @@ const CSS = `.twn-p .fst-row{border:3px solid #2b2420;border-left:9px solid var(
 .twn-p .fst-row h4{margin:0 0 2px;font-size:16px}.twn-p .fst-row .who{font-size:13px;opacity:.8}.twn-p .fst-has{font-size:15px;font-weight:800;margin:3px 0}.twn-p .fst-nx{font-size:14px;margin:2px 0}
 .twn-p .fst-how{font-size:13px;opacity:.82}.twn-p .fst-day{font-size:13px;font-weight:800;color:#5a4a3a;margin-top:3px}.twn-p .fst-pics{display:flex;gap:6px;margin:4px 0}
 .twn-p .fst-pics span{border:2px solid #2b2420;border-radius:8px;padding:2px 8px;font-size:13px;background:#fbe9c8}.twn-p .fst-pics span.no{border-style:dashed;border-color:#bfae8c;background:none;color:#8a7a5a}
-.twn-p .fst-give{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.twn-p .fst-give button{min-height:40px;font-size:14px}.twn-p .fst-past{font-size:14px;margin:4px 0}`;
+.twn-p .fst-give{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.twn-p .fst-give button{min-height:40px;font-size:14px}.twn-p .fst-past{font-size:14px;margin:4px 0}.twn-p .fst-story{font-size:14px;font-weight:800;background:#fbe9c8;border:2px solid #2b2420;border-radius:10px;padding:4px 8px;margin:2px 0 6px}`;
 
 // 마을 쪽이 넘기는 것(A): map · T3 · GAME · on() · ready() 할 일 화면이 열렸나 · lang() · esc · openP(h, wide, kind) · closeP() · panel() · busy() · storm() 태풍 날
 //   say(t, s, lv) · sfx(k) · banner(t, s) · chip(k, t, o) · route(p) · dialog(o) · rec(k, o) · buildParts(fn) · gy(x, z) · collider(o) · season(d) · diary(t) · take(e) · bag() · item(e) [ko, en, kind]
@@ -221,9 +227,11 @@ export function createFeast(A) {
     let fd = s.fd + GAP; while (fd < d + 7) fd += GAP; const th = themeOf(A.season ? A.season(fd) : 'now');
     Object.assign(s, { n: s.n + 1, fd, d0: d, th, lv: zero(), dc: null, fx: {}, ann: -1 }); mark(); A.rec('feast', { ev: 'end', n: s.n - 1, got: got.length });
     for (const b of B_ORDER) for (let i = 0; i < 3; i++) drop(b + ':' + i); build('plaque'); if (VIS.board && VIS.board.B) VIS.board.B.redraw(); PKEY = ''; log('finish → next ' + fd + ' ' + th); return true; }
-  function bestAsk() { const d = day(); let best = null; B_ORDER.forEach((b, i) => { const s9 = st(b), sc = s9 * 10 + ((i + d) % 5); if (!best || sc < best.sc) best = { b, sc }; }); return best ? best.b : 'food'; }
+  function bestAsk() { const d = day(); let best = null; B_ORDER.forEach((b, i) => { const s9 = st(b); if (s9 >= 3) return; const sc = s9 * 10 + ((i + d) % 5); if (!best || sc < best.sc) best = { b, sc }; }); return best ? best.b : null; }   /* 다 선 갈래는 권하지 않음 · 다섯 갈래가 다 서면 null = 준비 끝(코덱스 10-27) */
+  const allDone = () => B_ORDER.every(b => st(b) >= 3);
   function notice(first) { const s = S(), e = en(), b = bestAsk(), n = left(), p = toDoor();
     if (isDay()) { A.say('🎉 ' + (e ? 'Today is the ' + title() + '! Neighbours gather in the feast yard from 10:00.' : '오늘은 ' + title() + ' 날이에요! 10시부터 잔치 마당에 이웃들이 모여요.'), 5, 1); }
+    else if (!b) A.say('🎉 ' + (e ? 'Feast prep is all done. Now we wait for the feast day — ' + nightsW(n, 1) + ' to go.' : title() + ' 준비 끝! 이제 잔칫날을 기다려요. ' + nightsW(n) + ' 남았어요.'), 4.5, 1);   /* 다섯 갈래가 다 섬 */
     else if (first) { A.banner('🎉 ' + (e ? title() + ' in ' + nightsW(n, 1) : title() + '까지 ' + nightsW(n)), 5); A.say(e ? BR[b].who[1].replace(/^./, c => c.toUpperCase()) + ' put up the feast board: five kinds of preparation. ' + BR[b].ask[1] : BR[b].who[0] + jo(BR[b].who[0], '이', '가') + ' 잔치 준비 게시판을 세웠어요. 준비 다섯 갈래가 있어요. ' + BR[b].ask[0], 5, 1); }
     else A.say('🎉 ' + (e ? nightsW(n, 1).replace(/^./, c => c.toUpperCase()) + ' until the feast. Today, how about ' + BR[b].t[1].toLowerCase() + ' for ' + BR[b].who[1] + '?' : title() + '까지 ' + nightsW(n) + '이에요. 오늘은 ' + BR[b].who[0] + jo(BR[b].who[0], '이', '가') + ' 맡긴 ' + BR[b].t[0] + jo(BR[b].t[0], '을', '를') + ' 해 볼까요?'), 4.5, 1);
     if (p) { chipK = 'go'; chipT = performance.now(); A.chip('twn-fst', '🎉 ' + (e ? 'Feast board' : '잔치 게시판') + (isDay() ? '' : ' · ' + (e ? nightsW(n, 1) : nightsW(n))), { onClick: () => { A.chip('twn-fst', null); chipK = ''; A.route(p); } }); } log('notice ' + (first ? 'first' : '') + ' ' + b); }
@@ -248,6 +256,11 @@ export function createFeast(A) {
     const bk = [left(), isDay(), JSON.stringify(stages()), en()].join('|'); if (bk !== BKEY) { BKEY = bk; if (VIS.board && VIS.board.B) VIS.board.B.redraw(); }
     if (chipK && performance.now() - chipT > 90000) { A.chip('twn-fst', null); chipK = ''; } }
 
+  /* STORYF-1(코덱스 10-27 '이야기를 끝내면 잔치인가, 날짜가 오면 잔치인가'): 창 맨 위 한 줄 = 이야기의 잔치와 이 잔치의 관계 */
+  function storyLine() { const s = S(), e = en(), Q = G().story || {}, F = Q.fest || {}, n = left(), when = isDay() ? (e ? 'It is today.' : '오늘이 그날이에요.') : (e ? nightsW(n, 1).replace(/^./, c => c.toUpperCase()) + ' to go.' : nightsW(n) + ' 남았어요.');
+    if (s.n === 0) return '📜 ' + (e ? 'The feast the prologue note asked helpers for is this one. ' : '프롤로그 쪽지가 도우미를 찾던 그 첫 잔치가 바로 이 잔치예요. ') + when;
+    const fin = F.site && !F.done ? (e ? ' The feast at ' + F.site + ' you chose in the story opens at the end of the story.' : ' 이야기에서 고른 ' + F.site + ' 잔치는 이야기 마지막 장에서 열려요.') : '';
+    return '📜 ' + (e ? 'After the first feast, a town feast comes back every two weeks. ' : '첫 잔치 뒤로 두 이레마다 돌아오는 마을 잔치예요. ') + when + fin; }
   // ───────── 수첩 🎉 잔치 · 게시판 창 ─────────
   function open(atBoard) { const s = S(), e = en(), th = THEMES[s.th] || THEMES.homi, on = isDay(), pre = prepOn(), dc = s.dc && s.dc.d === day() ? s.dc.b : {};
     const rows = B_ORDER.map(b => { const R = BR[b], n = st(b), pics = R.things.map((t, i) => '<span class="' + (i < n ? '' : 'no') + '">' + esc(L(t)) + '</span>').join(''), cap = (dc[b] | 0) >= CAP;
@@ -255,9 +268,9 @@ export function createFeast(A) {
       const today = !pre ? '' : cap ? (e ? 'Today’s share is done. You can help again tomorrow.' : '오늘 몫은 했어요. 내일 또 도울 수 있어요.') : (dc[b] | 0) ? (e ? 'You can help once more today.' : '오늘 한 번 더 도울 수 있어요.') : (e ? 'You can help today.' : '오늘 도울 수 있어요.');
       return '<div class="fst-row" style="--fc:' + R.col + '" data-br="' + b + '"><h4>' + R.ic + ' ' + esc(L(R.t)) + ' <span class="who">' + esc((e ? 'asked by ' : '맡긴 이: ') + L(R.who)) + '</span></h4><div class="fst-pics">' + pics + '</div><div class="fst-nx">' + esc(nx) + '</div>'
         + (pre ? '<div class="fst-how">' + esc((e ? 'How: ' : '하는 법: ') + L(R.how)) + '</div><div class="fst-day">' + esc(today) + '</div>' : '') + (atBoard && pre && !cap && (b === 'food' || b === 'deco') ? giveRow(b) : '') + '</div>'; }).join('');
-    const head = on ? (e ? 'Today is the feast. Neighbours gather in the feast yard from 10:00. What you prepared is out there.' : '오늘이 잔치 날이에요. 10시부터 잔치 마당에 이웃이 모여요. 준비한 것이 그대로 나와 있어요.') : (e ? nightsW(left(), 1).replace(/^./, c => c.toUpperCase()) + ' until the feast. Five neighbours asked for help. Each kind can move up to one thing a day.' : '잔치까지 ' + nightsW(left()) + '. 이웃 다섯이 준비를 맡겼어요. 갈래마다 하루에 한 가지씩 생길 수 있어요.');
+    const head = !on && pre && allDone() ? (e ? 'Prep is all done — every kind is up in the feast yard. Now we wait for the feast day: ' + nightsW(left(), 1) + ' to go.' : '준비 끝! 다섯 갈래가 다 잔치 마당에 섰어요. 이제 잔칫날을 기다려요. ' + nightsW(left()) + ' 남았어요.') : on ? (e ? 'Today is the feast. Neighbours gather in the feast yard from 10:00. What you prepared is out there.' : '오늘이 잔치 날이에요. 10시부터 잔치 마당에 이웃이 모여요. 준비한 것이 그대로 나와 있어요.') : (e ? nightsW(left(), 1).replace(/^./, c => c.toUpperCase()) + ' until the feast. Five neighbours asked for help. Each kind can move up to one thing a day.' : '잔치까지 ' + nightsW(left()) + '. 이웃 다섯이 준비를 맡겼어요. 갈래마다 하루에 한 가지씩 생길 수 있어요.');
     const past = s.past.slice(-3).reverse().map(q => { const T = THEMES[q.th] || THEMES.homi, got = B_ORDER.filter(b => (q.st || {})[b] > 0).map(b => BR[b].t[e ? 1 : 0]); return '<div class="fst-past">' + esc((q.n === 0 ? (e ? 'First town feast' : '첫 마을 잔치') : T.t[e ? 1 : 0]) + ' — ' + (got.length ? got.join(', ') : (e ? 'a quiet feast' : '조용한 잔치')) + (q.ph ? (e ? ' · photo in the album' : ' · 앨범에 사진') : '')) + '</div>'; }).join('');
-    const h = '<h3>🎉 ' + esc(title()) + '</h3><div class="sm">' + esc(head) + '</div><div class="sm" style="margin:4px 0">' + esc(L(th.fact)) + '</div>' + rows + (past ? '<div class="grp">' + (e ? 'Past feasts' : '지난 잔치') + '</div>' + past : '')
+    const h = '<h3>🎉 ' + esc(title()) + '</h3>' + (storyLine() ? '<div class="fst-story">' + esc(storyLine()) + '</div>' : '') + '<div class="sm">' + esc(head) + '</div><div class="sm" style="margin:4px 0">' + esc(L(th.fact)) + '</div>' + rows + (past ? '<div class="grp">' + (e ? 'Past feasts' : '지난 잔치') + '</div>' + past : '')
       + '<div class="row"><button class="sub" data-a="go">🧭 ' + (e ? 'Go to the feast yard' : '잔치 마당 가기') + '</button><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>';
     const W = A.openP(h, false, 'feast'); W.onclick = ev => { const b9 = ev.target.closest('button'); if (!b9) return; if (b9.dataset.gb) { if (give(b9.dataset.gb, b9.dataset.ge)) open(atBoard); return; } if (b9.dataset.a === 'go') { A.closeP(); const p = toDoor(); if (p) A.route(p); return; } if (b9.dataset.a === 'x') A.closeP(); }; log('open ' + (atBoard ? 'board' : 'nb')); return W; }
 
@@ -265,11 +278,12 @@ export function createFeast(A) {
   function dayRow(d) { const s = S(), e = en(); if (!s.dc || s.dc.d !== d) return null; const B9 = B_ORDER.filter(b => (s.dc.b[b] | 0) > 0); if (!B9.length) return null;
     return ['feast', '🎉', e ? 'Feast preparation' : '잔치 준비', esc(B9.map(b => L(BR[b].t)).join(', ') + (e ? ' moved forward' : ' 준비를 도왔어요'))]; }
   function wait(d1) { const s = S(), e = en(), p = toDoor(); if (!(s.fd > 0)) return null; const n = s.fd - d1; if (n < 0 || n > 6) return null; const b = bestAsk();
-    const t = n === 0 ? T2(title() + ' 날이에요. 10시부터 잔치 마당에 이웃이 모여요', 'It is the ' + title() + '. Neighbours gather in the feast yard from 10:00') : T2(title() + '까지 ' + nightsW(n) + '. ' + BR[b].who[0] + jo(BR[b].who[0], '이', '가') + ' 맡긴 ' + BR[b].t[0] + jo(BR[b].t[0], '이', '가') + ' 아직 모자라요', nightsW(n, 1) + ' until the feast. ' + BR[b].t[1] + ' for ' + BR[b].who[1] + ' still needs help');
+    const t = n === 0 ? T2(title() + ' 날이에요. 10시부터 잔치 마당에 이웃이 모여요', 'It is the ' + title() + '. Neighbours gather in the feast yard from 10:00') : !b ? T2(title() + '까지 ' + nightsW(n) + '. 준비는 다 끝났어요. 잔칫날을 기다려요', nightsW(n, 1) + ' until the feast. Everything is ready — just wait for the day') : T2(title() + '까지 ' + nightsW(n) + '. ' + BR[b].who[0] + jo(BR[b].who[0], '이', '가') + ' 맡긴 ' + BR[b].t[0] + jo(BR[b].t[0], '이', '가') + ' 아직 모자라요', nightsW(n, 1) + ' until the feast. ' + BR[b].t[1] + ' for ' + BR[b].who[1] + ' still needs help');
     return { k: 'feast', ic: '🎉', s: T2(n === 0 ? '잔치 날' : '잔치까지 ' + nightsW(n), n === 0 ? 'Feast day' : nightsW(n, 1) + ' to the feast'), t, p: p ? { ...p } : null }; }
   function news(d) { const s = S(); if (!(s.fd > 0)) return []; const P = site(), at = P ? P.Q(-6.5, 9.4) : null, b = bestAsk(), last = s.past[s.past.length - 1];
     if (last && last.d === d - 1) { const T = THEMES[s.th] || THEMES.homi; return [{ k: 'feast', t: ['🎉 어제 잔치가 끝났어요. 다음은 ' + T.t[0] + ', ' + nightsW(s.fd - d) + ' 남았어요', '🎉 Yesterday’s feast is over. Next is the ' + T.t[1] + ', ' + nightsW(s.fd - d, 1) + ' away'], at }]; }
     if (d === s.fd) return [{ k: 'feast', t: ['🎉 오늘은 ' + title() + ' 날! 10시부터 잔치 마당에 이웃이 모여요', '🎉 Today is the ' + title() + '! Neighbours gather from 10:00'], at }];
+    if (d < s.fd && !b) return [{ k: 'feast', t: ['🎉 ' + title() + '까지 ' + nightsW(s.fd - d) + '. 준비는 다 끝났어요. 잔칫날을 기다려요', '🎉 ' + nightsW(s.fd - d, 1) + ' to the feast. Everything is ready — wait for the day'], at }];
     if (d < s.fd) return [{ k: 'feast', t: ['🎉 ' + title() + '까지 ' + nightsW(s.fd - d) + '. ' + BR[b].who[0] + jo(BR[b].who[0], '이', '가') + ' ' + BR[b].t[0] + ' 준비를 부탁했어요', '🎉 ' + nightsW(s.fd - d, 1) + ' to the feast. ' + BR[b].who[1].replace(/^./, c => c.toUpperCase()) + ' asked for help with ' + BR[b].t[1].toLowerCase()], at }];
     return []; }
   const calLine = () => { const s = S(); if (!(s.fd > 0)) return ''; return '🎉 ' + (isDay() ? (en() ? 'Today is the ' + title() : '오늘은 ' + title() + ' 날') : (en() ? title() + ' in ' + nightsW(left(), 1) : title() + '까지 ' + nightsW(left()))); };

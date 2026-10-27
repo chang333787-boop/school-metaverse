@@ -1,9 +1,10 @@
 // 🎮 우리 마을 게임 층(GAME-0 · 교사 10-16 주말 '상호작용만이 아니라 실제 게임처럼 · 인벤토리·경제·시간은 맡김 → 오픈월드 준비 · 전투 X · 최적화!!')
 //   게임 상태 한 곳 S = 하루(day)·시각(min)·가방(bag)·돈(money)·도감(dex)·오늘 딴 자리(picked)·할 일(tasks) — 마을(town.js)은 이 상태를 읽고 쓰기만
-//   저장 = 이 기기 localStorage(마을마다 한 칸 · 바뀐 뒤 2초에 한 번까지 · 마을을 나가거나 창을 닫을 때 한 번 더) · 서버 X(아이 기록이 밖으로 나가지 않음)
+//   저장 = 이 기기 localStorage(마을마다 한 칸 · 바뀐 뒤 2초에 한 번까지 · 마을을 나가거나 창을 닫을 때 한 번 더) · 학급 번호 + 반 코드(v4 ?cls=)로 들어오면 town_cloud.js가 이 판을 학급 저장소에도 올림(이름 X) · 그 밖엔 서버 X
 //   시계 = 게임 1분 = 0.7초(스타듀밸리와 같은 빠르기 · 06:00~24:00 = 12분 36초) · 창·놀이가 열린 동안 멈춤 · 24:00 = 졸려서 잠 → 다음 날 06:00(벌 없음)
 //   매 프레임 일 = 시계 더하기 몇 줄(새 객체 X · 알림은 문자열 하나)
 //   SAVE-2(사용자 10-27 '로컬에서 저장 제대로 되는 처음하기 이어하기 확실하게' · docs/systems/town_open.md §1): 판 번호가 달라도 버리지 않고 옮김(migrate) · 쓰기 전 직전 판 = :bak(1분에 한 번 · 깨지면 bak에서) · 쓰기 실패 = 'save-fail' 한 번
+//     SAVE-3(코덱스 10-27 표 1): 판 모양 검사(day 없는 {} = 깨진 판) · 본 저장이 없어도 :bak을 찾음 · 지우기·처음부터·되살리기 = :old 보관이 성공한 뒤에만 지움(실패 = 그대로 두고 false · G.why) · 칸 바꾸기는 저장 성공 뒤에만(town.js)
 //     창을 숨기거나 닫을 때 바로 저장 · 창 둘 = 나중에 연 창이 앞 창에 '넘겨 줘'를 묻고(앞 창이 마지막 몫을 쓰고 손을 뗌) 받아 씀 · 손을 뗀 창 = 'save-tab'(읽기만) · 저장 시각 S.sv · 처음부터 = :old(30일 · 되살리기)
 export const SAVE_V = 2;
 const MIG = { 1: j => { if (!j.sv || typeof j.sv !== 'object') j.sv = { at: 0, n: 0 }; } };   /* 판 n → n+1 옮기는 일(옛 칸은 그대로 두고 새 칸만 더함) — 판 번호를 올릴 땐 여기에 한 줄 */
@@ -11,15 +12,20 @@ export function migrate(j) { let v = j.v | 0; if (!(v >= 1)) v = 1; const v0 = v
 export const OLD_DAYS = 30, TAB_ID = Math.random().toString(36).slice(2, 10);
 const LS = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }, del: k => { try { localStorage.removeItem(k); } catch (e) { /* 막힘 */ } } };
 // 저장 읽기(마을 짓기 전 첫 화면·HUD도 같은 길) → { j, src: 'main' | 'bak' | '', broken: 깨진 글 | null }
-export function readSave(key) { const raw = LS.get(key); let j = null, broken = null; if (raw) { try { j = JSON.parse(raw); } catch (e) { j = null; } if (!j || typeof j !== 'object' || Array.isArray(j)) { broken = raw; j = null; } }
-  if (j) return { j, src: 'main', broken: null }; if (!broken) return { j: null, src: '', broken: null };
-  const b = LS.get(key + ':bak'); if (b) try { const jb = JSON.parse(b); if (jb && typeof jb === 'object' && !Array.isArray(jb)) return { j: jb, src: 'bak', broken }; } catch (e) { /* bak도 깨짐 */ } return { j: null, src: '', broken }; }
+export const saveOK = j => !!(j && typeof j === 'object' && !Array.isArray(j) && Number.isFinite(j.day) && j.day >= 1);   /* 판 모양 검사(SAVE-3): 날(day)이 있어야 판 — {}·[]·숫자 = 깨진 판 */
+const parseOK = t => { if (!t) return null; try { const j = JSON.parse(t); return saveOK(j) ? j : null; } catch (e) { return null; } };
+export function readSave(key) { const raw = LS.get(key), j = parseOK(raw), broken = raw && !j ? raw : null;
+  if (j) return { j, src: 'main', broken: null };
+  const jb = parseOK(LS.get(key + ':bak')); if (jb) return { j: jb, src: 'bak', broken };   /* 본 저장이 깨졌거나 없으면 직전 판(:bak) */
+  return { j: null, src: '', broken }; }
 // 처음부터 판 보관(:old · 30일) — { at, raw }
 export function oldSave(key) { const r = LS.get(key + ':old'); if (!r) return null; try { const o = JSON.parse(r); if (!o || !o.raw || !(o.at > 0)) return null; if (Date.now() - o.at > OLD_DAYS * 864e5) { LS.del(key + ':old'); return null; } const j = JSON.parse(o.raw); return { at: o.at, day: j.day || 1, raw: o.raw }; } catch (e) { return null; } }
 // SLOT-1 저장 칸 셋(사용자 10-27 '고전 게임처럼 3개'): 칸 ① = 예전 한 칸(KEY 그대로 · 옮길 것 없음) · ② ③ = KEY#2 · KEY#3 — 칸마다 :bak·:old·:own이 따로
 export const slotKey = (id, k) => 'sm-town-game:' + id + (k > 1 ? '#' + k : '');
-export function delSave(key) { const cur = LS.get(key); if (cur) LS.set(key + ':old', JSON.stringify({ at: Date.now(), raw: cur })); LS.del(key); LS.del(key + ':bak'); return !!cur; }   /* 지우기 = :old(30일 되살리기) */
-export function restoreSave(key) { const o = oldSave(key); if (!o) return false; const cur = LS.get(key); if (!LS.set(key, o.raw)) return false; if (cur) LS.set(key + ':old', JSON.stringify({ at: Date.now(), raw: cur })); else LS.del(key + ':old'); LS.del(key + ':bak'); return true; }
+/* :old 보관 쓰기(성공 = true) — 가득 차면 같은 칸의 :bak(직전 판 · 지울 판의 옛 몫)만 비우고 한 번 더 · 다른 칸·다른 아이 것은 건드리지 않음 */
+function keepOld(key, raw) { const v = JSON.stringify({ at: Date.now(), raw }); if (LS.set(key + ':old', v)) return true; LS.del(key + ':bak'); return LS.set(key + ':old', v); }
+export function delSave(key, raw) { const cur = raw || LS.get(key); if (cur && !keepOld(key, cur)) return false; LS.del(key); LS.del(key + ':bak'); return true; }   /* 지우기 = :old(30일 되살리기) · SAVE-3: 보관이 실패하면 지우지 않고 false(raw = 메모리의 지금 판 · 없으면 저장된 판) */
+export function restoreSave(key) { const o = oldSave(key); if (!o) return false; const cur = LS.get(key); if (!LS.set(key, o.raw)) return false; if (cur) { if (!LS.set(key + ':old', JSON.stringify({ at: Date.now(), raw: cur }))) { LS.set(key, cur); return false; } } else LS.del(key + ':old'); LS.del(key + ':bak'); return true; }   /* SAVE-3: 지금 판을 :old에 못 쓰면 바꾸기를 되돌림(지금 판을 잃지 않게) */
 export const saveSize = key => ((LS.get(key) || '').length + (LS.get(key + ':bak') || '').length + (LS.get(key + ':old') || '').length);   /* 칸 크기(글자 수 · 시험·메뉴용) */
 // 가득 참 = 가장 오래된 :old부터 하나 비움(모든 마을·칸) → 비웠으면 true
 export function evictOld(keep) { let best = null, at = Infinity; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (!k || !/^sm-town-game:.*:old$/.test(k) || k === keep) continue; let a = 0; try { a = JSON.parse(localStorage.getItem(k)).at || 0; } catch (e) { a = 0; } if (a < at) { at = a; best = k; } } } catch (e) { return false; } if (!best) return false; LS.del(best); return true; }
@@ -145,11 +151,12 @@ export function createGame(id) {
       let ok = LS.set(KEY, str); if (!ok) { LS.del(KEY + ':bak'); LS.del('sm-town-stuck'); ok = LS.set(KEY, str); for (let n = 0; !ok && n < 6 && evictOld(); n++) ok = LS.set(KEY, str); }   /* 가득 참 = 덜 중요한 것부터 비우고 한 번 더 */
       if (!ok) { sv.at = at0; sv.n = n0; G.saveErr = now; if (!failSaid) { failSaid = true; emit('save-fail'); } return false; }   /* SAVE-2(코덱스 10-24): 성공한 뒤에만 dirty = false — 가득 참·막힘이면 2초 뒤 다시 시도 · 알림은 한 번 */
       prevRaw = str; dirty = false; G.savedAt = now; G.saveErr = 0; LS.set(KEY + ':own', JSON.stringify({ id: TAB_ID, at: now })); return true; },
-    get readOnly() { return ro; }, get migFrom() { return migFrom; }, get loadSrc() { return RS.src; }, had: !!RS.j, savedAt: (S.sv && S.sv.at) || 0, saveErr: 0, key: KEY,
+    get readOnly() { return ro; }, get migFrom() { return migFrom; }, get loadSrc() { return RS.src; }, had: !!RS.j, savedAt: (S.sv && S.sv.at) || 0, saveErr: 0, key: KEY, why: '',
     // 처음부터(보관 뒤 새로고침): 지금 판을 :old에 30일 · 저장 칸 비움 · 이 창은 더 쓰지 않음
-    newGame() { G.flush(true); delSave(KEY); ro = true; return true; },
+    /* SAVE-3: 다른 창이 주인 = X('ro') · 메모리의 지금 판 그대로를 :old에 보관하고 성공했을 때만 지움(보관 실패 = 'full' · 판은 그대로) */
+    newGame() { G.why = ''; if (ro) { G.why = 'ro'; return false; } let str = ''; try { str = JSON.stringify(S); } catch (e) { str = ''; } if (!delSave(KEY, str)) { G.why = 'full'; return false; } ro = true; return true; },
     // 되살리기: :old ↔ 지금 판(바꿔 끼움 — 되살리기도 되돌릴 수 있게) · 이 창은 더 쓰지 않음(새로고침해서 읽음)
-    restoreOld() { if (!oldSave(KEY)) return false; G.flush(true); if (!restoreSave(KEY)) return false; ro = true; return true; },
+    restoreOld() { G.why = ''; if (!oldSave(KEY)) { G.why = 'none'; return false; } if (ro) { G.why = 'ro'; return false; } if (!G.flush(true) || !restoreSave(KEY)) { G.why = 'full'; return false; } ro = true; return true; },   /* SAVE-3: 지금 판 저장이 먼저 성공해야 바꿈 */
     oldInfo: () => oldSave(KEY),
     dispose() { if (typeof removeEventListener !== 'function') return; removeEventListener('storage', onStore); removeEventListener('pagehide', onHide); removeEventListener('beforeunload', onHide); if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVis); },
     // 매 프레임: 저장 2초 상한 + 시계(paused = 창·놀이·실내 문 덮개 동안)
@@ -212,7 +219,7 @@ export function createGame(id) {
     taskEv(ev, n = 1) { const T = S.tasks; if (!T || T.day !== S.day) return null; let out = null; for (const t of T.list) { if (t.done || t.ev !== ev) continue; t.n = Math.min(t.need, t.n + n); if (t.n >= t.need) { t.done = true; const r9 = G.rw('money', 'task:' + t.id, t.rew); S.money += r9; S.earned += r9; S.tasksDone = (S.tasksDone || 0) + 1; if (S.today) { S.today.tasks++; S.today.earned += r9; } (out = out || []).push(t); } }
       if (out && !T.all && T.list.every(t => t.done)) { T.all = true; out.all = true; }   /* HEAL-1: 셋 다 = 덤 돈 X(숙제처럼 읽힘) · 마을이 이웃 말 한 줄만 */ if (out) dirty = true; return out; },
     // 처음부터(가방·돈·도감·날짜 모두) — 가방 객체는 그대로 두고 비움(마을이 같은 객체를 들고 있음)
-    reset() { if (ro) return; G.flush(true); { const cur = LS.get(KEY); if (cur) LS.set(KEY + ':old', JSON.stringify({ at: Date.now(), raw: cur })); }   /* SAVE-2: 메뉴 '처음부터'도 지난 판을 :old에(30일 되살리기) */ const b = S.bag; for (const k of Object.keys(b)) delete b[k]; const f = fresh(); f.bag = b; for (const k of Object.keys(S)) delete S[k]; Object.assign(S, f); acc = 0; ph = phaseOf(S.min); dirty = true; G.flush(); emit('clock'); emit('phase'); },
+    reset() { G.why = ''; if (ro) { G.why = 'ro'; return false; } { let cur = ''; try { cur = JSON.stringify(S); } catch (e) { cur = LS.get(KEY) || ''; } if (cur && !keepOld(KEY, cur)) { G.why = 'full'; return false; } }   /* SAVE-2: 메뉴 '처음부터'도 지난 판을 :old에(30일 되살리기) · SAVE-3: 보관이 실패하면 비우지 않음(false) */ const b = S.bag; for (const k of Object.keys(b)) delete b[k]; const f = fresh(); f.bag = b; for (const k of Object.keys(S)) delete S[k]; Object.assign(S, f); acc = 0; ph = phaseOf(S.min); dirty = true; G.flush(); emit('clock'); emit('phase'); return true; },
   };
   return G;
 }

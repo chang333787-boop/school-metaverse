@@ -286,7 +286,7 @@ export function createCase(A) {
     return null; }
   function announce() { const q = S().cur; if (!q) return; const R = CASES[q.id], e = en();
     A.banner(R.icon + ' ' + (e ? 'New case: ' : '새 사건: ') + L(R.t), 3.6); sfx('ding');
-    toast('📒 ' + L(R.ann), 5); }
+    A.say('📒 ' + L(R.ann), 5, 2); }   /* NOTE-1 사건 시작 = 중요(lv2 · 창이 닫힌 뒤 · 못 보면 🔔 지난 알림) */
 
   // ───────── 1초 칸 ─────────
   function sec() { if (dead || !A.on()) return; if (OFF) { if (S().cur) { S().cur = null; mark(); } sync(); hotSync(); chipSync(); return; } const s = S(), D = day(); let q = s.cur;

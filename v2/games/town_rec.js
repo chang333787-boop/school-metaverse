@@ -1,9 +1,9 @@
-// 📊 학급 기록 준비(REC-0 · 10-18 · town_lessons G '학급 기록 화면' · town_quests §0 '배운 것이 기기에만 남아 교사가 볼 수 없음'): 이 기기 안 기록 + 선생님 보기 + 복사하기 — 서버 X(나중에 이 꼴 그대로 올림 · docs/systems/town_record.md)
+// 📊 학급 기록 준비(REC-0 · 10-18 · town_lessons G '학급 기록 화면' · town_quests §0 '배운 것이 기기에만 남아 교사가 볼 수 없음'): 이 기기 안 기록 + 선생님 보기 + 복사하기 — 기록은 게임 판(S.rec) 안이라 학급 번호 + 반 코드로 들어오면 town_cloud.js가 판째 학급 저장소에도 올림(A.cloud · 화면 글도 모드별) · 따로 보내는 길은 없음(나중에 이 꼴 그대로 올림 · docs/systems/town_record.md)
 //   GAME.S.rec = { v, days: { 'YYYY-MM-DD': { g0·g1 그날 게임 날, st 이야기 단계, cd 장 끝냄, q 보너스 문제, help 일꾼 곁 거들기, job 직업 체험, show 쇼, rank 승급 미션, play 강·들 놀이 } } }
 //   이야기 단계 이름 = 이야기 S.story.rec.st와 같게(c 장 · s 단계 · h 힌트 단계 · tr 틀린 수 · p 고른 것 · w 까닭 · l 불편해질 사람 · t 한 줄 · f 잰 값) — QUEST-2 기록을 같은 이름으로 한 곳에
 //   하루 = 실제 날짜(수업 한 번 = 하루 · 게임 하루는 12분이라 게임 날로 묶으면 14일이 수업 한두 번) · 최근 14일 · 갈래마다 하루 상한 · 글은 짧게 자름 · 전체가 80KB를 넘으면 오래된 날부터(보통 하루 3~4KB · 꽉 찬 하루 약 15KB)
 //   이름·sid·기기 번호 X — 화면엔 '이 기기'로만 · 매 프레임 일 0(일이 끝날 때 add 한 번 · 창은 열 때만 셈)
-import { CHAPTERS } from './town_story.js?v=26';
+import { CHAPTERS } from './town_story.js?v=27';
 import { BANK, DIR8 } from './town_quiz.js?v=13';
 export const REC_V = 1, REC_DAYS = 14, REC_MAX = 80 * 1024;
 const T2 = (ko, en) => [ko, en];
@@ -58,7 +58,7 @@ export function createRec(A) {
   // 선생님 보기(이 기기 하나 · 투사 모드 = 날짜·'이 기기' 숨기고 글을 크게)
   function view() { const e = en(), M = recSum(S()), big = proj ? 'font-size:20px;line-height:1.5' : '';
     let h = '<h3>📊 ' + (e ? 'Class record — this device' : '학급 기록 — 이 기기') + '</h3>'
-      + (proj ? '' : '<div class="sm">' + (e ? 'What was done on this device in the last 14 days. Nothing is sent to a server. To gather several devices, copy each one and paste them together.' : '최근 14일 동안 이 기기에서 한 것이에요. 서버로 보내지 않아요. 여러 기기를 모으려면 기기마다 복사해서 한곳에 붙여 모아요.') + '</div>')
+      + (proj ? '' : '<div class="sm">' + (A.cloud && A.cloud() ? (e ? 'What was done on this device in the last 14 days. This record is part of the game, so it is also saved in the class save (logged in with a class number · no names). To gather several devices, copy each one and paste them together.' : '최근 14일 동안 이 기기에서 한 것이에요. 학급 번호로 들어와서 이 기록도 게임 판과 함께 학급 저장소에 저장돼요(이름은 보내지 않아요). 여러 기기를 모으려면 기기마다 복사해서 한곳에 붙여 모아요.') : (e ? 'What was done on this device in the last 14 days. It stays on this device only and is not sent to a server. To gather several devices, copy each one and paste them together.' : '최근 14일 동안 이 기기에서 한 것이에요. 이 기기에만 있고 서버로 보내지 않아요. 여러 기기를 모으려면 기기마다 복사해서 한곳에 붙여 모아요.'))   /* SAVE-3(코덱스 10-27 표 2): 학급 계정(town_cloud)이면 판 전체가 올라감 → 모드별 */ + '</div>')
       + '<div class="row" style="justify-content:flex-start"><button class="sub" data-a="proj">📽 ' + (proj ? (e ? 'Projector mode: on' : '투사 모드: 켬') : (e ? 'Projector mode: off' : '투사 모드: 끔')) + '</button><button class="sub" data-a="copy">📋 ' + (e ? 'Copy record' : '복사하기') + '</button></div>'
       + (proj || !M.days.length ? '' : '<div class="sm">' + (e ? 'Days recorded: ' : '기록한 날: ') + M.days.map(dayLab).join(', ') + '</div>');
     if (!M.days.length) h += '<div class="sm">' + (e ? 'Nothing recorded yet.' : '아직 기록이 없어요.') + '</div>';

@@ -48,12 +48,14 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await ev(() => SM_TOWN.feast().open(true)); await W8(300);
     const PT = await ev(() => { const P9 = document.querySelector('.twn-p'); return P9 ? { rows: P9.querySelectorAll('.fst-row').length, txt: [...P9.querySelectorAll('.fst-row,.sm')].map(e => e.textContent).join(' | '), give: !!P9.querySelector('[data-gb="deco"]'), tab: [...P9.querySelectorAll('.nb-tabs button')].map(b => b.textContent).join(',') } : null; });
     ok(PT && PT.rows === 5 && !/\d|%/.test(PT.txt.replace(/112/g, '')), '게시판 창 = 다섯 갈래 · 글에 숫자·% 0(112 신고 말고)'); ok(PT && /잔치/.test(PT.tab), '수첩 탭 줄에 🎉 잔치 (' + (PT && PT.tab) + ')');
+    const SL = await ev(() => { const q = document.querySelector('.twn-p .fst-story'); return q ? q.textContent : ''; }); ok(/프롤로그 쪽지가 도우미를 찾던 그 첫 잔치/.test(SL) && /밤 남았어요/.test(SL), '창 맨 위 이야기 관계 줄(STORYF-1) = 「' + SL + '」');
     const dl0 = (await F()).lv.deco; await ev(() => { const b9 = document.querySelector('.twn-p [data-gb="deco"]'); if (b9) b9.click(); }); await W8(300); I = await F();
     ok(PT && PT.give && I.lv.deco === dl0 + 1 && (await ev(() => SM_TOWN.game().S.bag['🌰'] | 0)) === 1, '게시판에 솔방울 드리기 = 꾸미기 보탬 · 가방에서 하나 빠짐');
     await shot(p, '01_board_panel'); await closeAll(p);
     I = await F(); console.log('  준비 뒤: ' + JSON.stringify(I.st) + ' · ' + JSON.stringify(I.lv));
     ok(I.st.food === 3 && I.st.deco === 3 && I.st.show === 2 && I.st.guest >= 1 && I.st.safe === 0, '음식 셋 · 꾸미기 셋 · 공연 둘 · 손님맞이 하나 넘게 · 안전 0');
     ok(['food:2', 'deco:2', 'show:1', 'guest:0'].every(id => I.vis.includes(id)) && !I.vis.some(id => /^safe:/.test(id)), '갈래마다 단계만큼 물건(천막 · 꽃 화분 · 차양 · 안내판) · 안전 물건 0');
+    { const NW = []; for (let k = 0; k < 5; k++) { const q = await ev(d => SM_TOWN.feast().news(d), I.day + k); if (q[0] && I.day + k < I.fd) NW.push(q[0].t[0]); } ok(NW.length && NW.every(t => !/식당 요리사|정원사/.test(t)), '다 선 갈래(음식·꾸미기)는 아침 소식이 권하지 않음(닷새 돌아가며) ' + JSON.stringify(NW.slice(0, 2))); }
     const dr = await ev(d => SM_TOWN.feast().dayRow(d), I.day); ok(dr && /잔치 준비/.test(dr[2]), '하루 마무리 「오늘」 줄 = ' + (dr && dr[3]));
     // ④ 잔치 날
     await setDay(I.fd); await ev(() => { SM_TOWN.game().S.min = 10 * 60 + 30; }); await sec(3); await W8(1200);
@@ -84,11 +86,20 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     const seaN = await ev(d => SM_TOWN.game().seasonAt(d), I.fd), thW = { spring: 'flower', summer: 'homi', now: 'homi', autumn: 'harvest', winter: 'dongji' }[seaN];
     ok(I.th === thW, '다음 잔치 주제 = 그 날 계절(' + seaN + ') → ' + I.th);
     ok(I.vis.includes('plaque') && !I.vis.some(id => /^(food|deco|show|guest|safe):/.test(id)), '잔치 물건 치움 · 지난 잔치 판이 남음 ' + JSON.stringify(I.vis));
+    // ⑦ 실내 부탁(ent) → 갈래 · 다섯 갈래가 다 서면 '준비 끝'(코덱스 10-27)
+    { const l0 = (await F()).lv; await REC('ent', { k: 'pharmacy', mis: 0 }); await REC('ent', { k: 'bibim', mis: 1 }); await REC('ent', { k: 'shoes', mis: 0 }); const l1 = (await F()).lv;
+      ok(l1.safe === l0.safe + 1 && l1.food === l0.food + 1 && l1.guest === l0.guest && l1.deco === l0.deco, '실내 부탁: 약국 → 안전 · 식당 → 음식 · 신발 가게 → 안 셈 ' + JSON.stringify(l1)); }
+    await ev(() => { const G = SM_TOWN.game(); for (const b of ['food', 'deco', 'show', 'guest', 'safe']) G.S.feast.lv[b] = 6; G.S.feast.ann = -1; G.S.min = 7 * 60; G.mark(); }); let TX = ''; for (let i = 0; i < 20; i++) { TX += ' ' + await ev(() => (document.getElementById('toast') || {}).textContent || ''); await W8(400); }
+    { const nw3 = await ev(d => SM_TOWN.feast().news(d), I.day + 1), wt3 = await ev(d => SM_TOWN.feast().wait(d), I.fd - 3), tx = TX, lg3 = (await ev(() => SM_TOWN.feast().dbg.log())).filter(t => /^notice/.test(t)).slice(-1)[0] || '';
+      ok(nw3[0] && /준비는 다 끝났어요/.test(nw3[0].t[0]) && wt3 && /준비는 다 끝났어요/.test(wt3.t[0]), '다 끝남: 아침 소식·내일 기다리는 것 = 「' + (nw3[0] && nw3[0].t[0]) + '」');
+      ok(/준비 끝! 이제 잔칫날을 기다려요/.test(tx) && !/맡긴 .*(해 볼까요)/.test(tx), '다 끝남: 아침 알림 = 준비 끝 · 다시 준비를 권하지 않음(' + lg3 + ')');
+      await closeAll(p); await ev(() => SM_TOWN.feast().open(false)); await W8(300); const h9 = await ev(() => { const P9 = document.querySelector('.twn-p'); return P9 ? (P9.querySelector('.fst-story') || {}).textContent + ' | ' + (P9.querySelector('.sm') || {}).textContent : ''; });
+      ok(/두 이레마다/.test(h9) && /준비 끝! 다섯 갈래가 다/.test(h9), '다 끝남: 창 머리 = 「' + h9 + '」'); await closeAll(p); }
     const nw2 = await ev(d => SM_TOWN.feast().news(d), I.day); ok(nw2.length && /어제 잔치/.test(nw2[0].t[0]), '아침 소식 = 「' + (nw2[0] && nw2[0].t[0]) + '」');
     const cal2 = await ev(() => SM_TOWN.feast().calLine()); ok(!/첫 마을/.test(cal2) && /잔치까지/.test(cal2), '달력 = 다음 잔치 「' + cal2 + '」');
     // 그 밖: 태풍 날 = 하루 미룸 · 순수 표
-    const sm = await ev(async () => { const M = await import('/v2/games/town_feast.js?v=1'); return [M.srcOf('job', { k: 'bake', ph: 'order-end' }), M.srcOf('job', { k: 'passreq', ph: 'done' }), M.srcOf('emerg', { ev: 'done' }), M.srcOf('emerg', { ev: 'call' }), M.srcOf('night', { k: 'patrol' }), M.srcOf('bldg', { k: 'police', ev: '112' }), M.nightsW(13), M.nightsW(1), M.nightsW(0)]; });
-    ok(JSON.stringify(sm) === JSON.stringify(['food', 'guest', 'safe', null, 'safe', 'safe', '열세 밤', '한 밤', '오늘']), '기록 → 갈래 표 · 남은 밤 낱말 ' + JSON.stringify(sm));
+    const sm = await ev(async () => { const M = await import('/v2/games/town_feast.js?v=1'); return [M.srcOf('job', { k: 'bake', ph: 'order-end' }), M.srcOf('job', { k: 'passreq', ph: 'done' }), M.srcOf('emerg', { ev: 'done' }), M.srcOf('emerg', { ev: 'call' }), M.srcOf('night', { k: 'patrol' }), M.srcOf('bldg', { k: 'police', ev: '112' }), M.nightsW(13), M.nightsW(1), M.nightsW(0), M.srcOf('ent', { k: 'flower' }), M.srcOf('ent', { k: 'piano' }), M.srcOf('ent', { k: 'realty' }), M.srcOf('ent', { k: 'noodle' }), M.srcOf('ent', { k: 'via:clinic' }), M.srcOf('ent', { k: 'optician' })]; });
+    ok(JSON.stringify(sm) === JSON.stringify(['food', 'guest', 'safe', null, 'safe', 'safe', '열세 밤', '한 밤', '오늘', 'deco', 'show', 'guest', 'food', 'safe', null]), '기록 → 갈래 표 · 남은 밤 낱말 ' + JSON.stringify(sm));
     ok(!errs.length, '페이지 오류 0' + (errs.length ? ' — ' + errs.join(' | ') : ''));
     await p.context().close();
   } catch (e) { fails.push('하네스 예외 ' + e.message.split('\n')[0]); console.log('  ✗ 하네스 예외 ' + e.message.split('\n')[0]); } finally { await b.close(); }

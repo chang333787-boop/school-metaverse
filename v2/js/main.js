@@ -1581,12 +1581,13 @@ function chatOn(on) {
   for (const t of ['keydown', 'keyup', 'keypress']) bar.addEventListener(t, (e) => e.stopPropagation());
   const outside = (e) => { if (bar.style.display !== 'none' && !bar.contains(e.target) && !btn.contains(e.target)) close(); };   // UX-1(10-05 교사 편의성): 바깥을 누르면 닫힘(휴대폰엔 Esc가 없고 💬 단추는 열린 줄에 가렸다)
   addEventListener('pointerdown', outside, true);
-  const U = { root: { remove() { root.remove(); btn.remove(); removeEventListener('pointerdown', outside, true); } }, open, close, add, last: 0, lastTx: '', lastT: 0, lines: [] };
+  let fadeT = 0;   /* FIX-CX1027(코덱스 10-27 표 9): 흐리기 타이머를 지울 때 같이 멈춤(방을 들락날락하면 쌓이던 것) */
+  const U = { root: { remove() { clearInterval(fadeT); root.remove(); btn.remove(); removeEventListener('pointerdown', outside, true); } }, open, close, add, last: 0, lastTx: '', lastT: 0, lines: [] };
   function line(m, sys) { const d = document.createElement('div'); d.style.cssText = 'align-self:flex-start;max-width:100%;padding:3px 9px;border-radius:9px;background:rgba(29,53,87,.78);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.3);word-break:break-all;transition:opacity .8s';
     d.innerHTML = sys ? '<i style="opacity:.8">' + m + '</i>' : '<b style="color:#ffd23c">' + String(m.n || '친구').replace(/[<>&]/g, '') + '</b> ' + String(m.tx).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])); d._t = performance.now(); return d; }
   function add(m, sys) { const d = line(m, sys); log.appendChild(d); while (log.children.length > 20) log.firstChild.remove(); fade(); }
   function fade() { const now = performance.now(), openNow = bar.style.display !== 'none'; [...log.children].forEach((d, i, arr) => { const recent = i >= arr.length - 6; d.style.display = openNow || recent ? '' : 'none'; d.style.opacity = openNow || now - d._t < 20000 ? '1' : '0'; }); }
-  setInterval(fade, 2000);
+  fadeT = setInterval(fade, 2000);
   function off() { return NET && NET.ctlData && NET.ctlData.chat && NET.ctlData.chat.off; }
   function open(kb) { if (!NET) return; document.exitPointerLock?.(); bar.style.display = ''; why.textContent = off() ? '🔇 선생님이 채팅을 껐어요' : ''; fade(); if (kb || !document.body.classList.contains('touch')) setTimeout(() => inp.focus(), 20); }   // UX-1: 터치면 글자판을 바로 띄우지 않음(가로 화면을 덮었다) — 정해진 말 단추 먼저 · 칸을 누르면 글쓰기
   function close() { bar.style.display = 'none'; inp.blur(); fade(); }

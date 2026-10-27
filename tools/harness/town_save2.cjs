@@ -1,7 +1,9 @@
 // 💾 저장 확실하게(SAVE-2 · 사용자 10-27 '로컬에서 저장 제대로 되는 처음하기 이어하기 확실하게') — node tools/harness/town_save2.cjs [마을=ourtown] [포트=8002]
 //   ① 저장 없음 = 첫 화면에 '처음부터'만  ② 진행 → 새로고침 → 첫 화면 '이어하기(지난번: n일째 · 곳 · 시각 저장)' → 같은 자리·가방·날
 //   ③ 옛 판 번호(v:1) 저장 → 옮겨 읽음(버리지 않음)  ④ 저장 글 깨뜨림 → :bak에서  ⑤ 처음부터(확인 한 번) → 새 판 · :old → 메뉴 되살리기 → 지난 판
-//   ⑥ 창 둘 = 나중 창이 앞 창의 마지막 몫을 받아 읽고, 앞 창은 저장을 멈춤(덮어쓰지 않음)  ⑦ 페이지 오류 0 · 브라우저는 GPU 옵션 · 끝나면 닫음
+//   ⑥ 창 둘 = 나중 창이 앞 창의 마지막 몫을 받아 읽고, 앞 창은 저장을 멈춤(덮어쓰지 않음)  ⑦ 저장 칸 셋
+//   ⑧ SAVE-3(코덱스 10-27 표 1): 저장 공간 가득 참(setItem이 throw) = 처음부터·칸 바꾸기·칸 지우기가 원본을 안 잃고 막힘(까닭 한 줄) · 본 저장 없고 :bak만 = bak에서 · {} 저장 = 깨진 판(새로 · 글은 따로 남김)
+//   페이지 오류 0 · 브라우저는 GPU 옵션 · 끝나면 닫음
 const { chromium } = require('./pw.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8), shot = async (p, n) => { if (SHOTS) { await p.screenshot({ path: SHOTS + '/' + n + '.png' }); console.log('    📷 ' + SHOTS + '/' + n + '.png'); } };
@@ -73,6 +75,39 @@ const st = p => p.evaluate(() => { const S = SM_TOWN.game().S, q = SD2.map.playe
     await p.evaluate(() => document.querySelector('.twn-ld [data-rs9="2"]').click()); C = await cards(); ok(/2일째/.test(C[1]), '칸 ② 되살림(' + C[1] + ')');
     const sz = await p.evaluate(() => SM_TOWN.slot().all.map(q => q.size || 0)); ok(sz[0] > 0 && sz[1] > 0 && !sz[2], '칸 크기 잼(' + sz.join(' · ') + '자)');
     await c2.close();
+    console.log('⑧ 가득 참 · bak만 · {} (SAVE-3)');
+    const c3 = await b.newContext({ viewport: { width: 1366, height: 768 } });
+    await c3.addInitScript(() => { const o = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { if (this === window.localStorage && /^sm-town-game/.test(k) && window.sessionStorage.getItem('__full') === '1') throw new DOMException('full', 'QuotaExceededError'); return o.call(this, k, v); }; });   /* 가득 참 흉내: 마을 저장 쓰기만 throw */
+    p = await c3.newPage(); watch(p, 'F'); await p.goto(BLANK);
+    await p.evaluate(k => { localStorage.setItem(k, JSON.stringify({ v: 2, day: 5, min: 600, bag: { '🍐': 1 }, money: 500 })); localStorage.setItem(k + '#2', JSON.stringify({ v: 2, day: 3, min: 600, bag: {}, money: 30 })); }, KEY); await p.goto(URL); await ready(p);
+    await click(p, 'x'); await p.waitForTimeout(800); await p.evaluate(() => { sessionStorage.setItem('__full', '1'); const G = SM_TOWN.game(); G.S.money = 555; G.mark(); window.__stay = 1; });
+    const raw0 = await p.evaluate(k => localStorage.getItem(k), KEY), stay = () => p.evaluate(() => window.__stay === 1).catch(() => false), main = () => p.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), KEY), oldOf = k2 => p.evaluate(k => localStorage.getItem(k + ':old'), k2);
+    await p.evaluate(() => SM_TOWN.menu()); await click(p, 'reset'); await click(p, 'reset'); await p.waitForTimeout(2500);
+    let M = await main(), sv8 = await p.evaluate(() => (document.querySelector('.twn-p .sv8') || {}).textContent || '');
+    ok(await stay() && M && M.day === 5 && M.money === 500 && !(await oldOf(KEY)) && !(await p.evaluate(() => SM_TOWN.save().ro)), '가득 참 + 메뉴 처음부터 = 새로고침 X · 본 저장 그대로(5일째 500원) · 이 창도 계속 저장 시도');
+    ok(/저장 공간이 모자라 지우지 않았어요/.test(sv8), '메뉴 안 까닭 한 줄 = ' + sv8);
+    await p.evaluate(() => SM_TOWN.menu()); await click(p, 'slot9'); await p.waitForTimeout(2500); sv8 = await p.evaluate(() => (document.querySelector('.twn-p .sv8') || {}).textContent || '');
+    ok(await stay() && /칸을 바꾸지 않았어요/.test(sv8), '가득 참 + 저장 칸 바꾸기 = 막힘(' + sv8 + ')');
+    ok(await p.evaluate(() => SM_TOWN.game().S.money === 555), '메모리 판도 그대로(555원 · 저장되면 이어서 씀)');
+    await p.reload(); await ready(p); await p.evaluate(() => { window.__stay = 1; });
+    await click(p, 'new'); await click(p, 'ok9'); await p.waitForTimeout(2500);
+    let W = await p.evaluate(() => (document.querySelector('.twn-ld .svf9') || {}).textContent || ''); M = await main();
+    ok(await stay() && M && M.day === 5 && !(await oldOf(KEY)) && /지우지 않았어요/.test(W), '가득 참 + 첫 화면 처음부터 = 막힘 · 원본 그대로(' + W + ')');
+    await p.evaluate(() => document.querySelector('.twn-ld [data-s9="2"]').click()); await p.waitForTimeout(2500); W = await p.evaluate(() => (document.querySelector('.twn-ld .svf9') || {}).textContent || '');
+    ok(await stay() && (await p.evaluate(() => SM_TOWN.slot().n)) === 1 && /칸을 바꾸지 않았어요/.test(W), '가득 참 + 칸 ② 고르기 = 막힘(' + W + ')');
+    await p.evaluate(() => document.querySelector('.twn-ld [data-del9="2"]').click()); await p.evaluate(() => document.querySelector('.twn-ld [data-del9="2"]').click()); await p.waitForTimeout(400);
+    C = await cards(); const m2 = await p.evaluate(k => JSON.parse(localStorage.getItem(k + '#2') || 'null'), KEY);
+    ok(m2 && m2.day === 3 && /3일째/.test(C[1]) && !(await oldOf(KEY + '#2')), '가득 참 + 칸 ② 지우기 = 안 지움(3일째 그대로 · ' + C[1] + ')');
+    ok(await p.evaluate(k => localStorage.getItem(k), KEY) === raw0, '본 저장 글자 하나 안 바뀜');
+    await p.evaluate(() => sessionStorage.removeItem('__full'));
+    await p.goto(BLANK); await p.evaluate(k => { const j = JSON.parse(localStorage.getItem(k)); j.day = 8; localStorage.setItem(k + ':bak', JSON.stringify(j)); localStorage.removeItem(k); }, KEY); await p.goto(URL); await ready(p);
+    B = await st(p); ok(B.save.src === 'bak' && B.day === 8 && B.save.had, '본 저장 없음 + :bak만 = 직전 판(' + B.save.src + ' · ' + B.day + '일째)'); T = await title(p); ok(T.btn.some(s9 => /이어하기/.test(s9)), '첫 화면 = 이어하기');
+    await p.goto(BLANK); await p.evaluate(k => { localStorage.removeItem(k + ':bak'); localStorage.setItem(k, '{}'); }, KEY); await p.goto(URL); await ready(p);
+    B = await st(p); T = await title(p); ok(!B.save.had && B.day === 1 && T.btn.length === 1 && /처음부터/.test(T.btn[0]), '{} 저장 = 판으로 안 받음(새 판 · 단추 ' + T.btn.join(' | ') + ')');
+    ok(await p.evaluate(id => localStorage.getItem('sm-town-game-bak:' + id) === '{}', ID), '{} 글은 따로 남김(sm-town-game-bak)');
+    await p.goto(BLANK); await p.evaluate(k => { localStorage.setItem(k + ':bak', JSON.stringify({ v: 2, day: 6, min: 600, bag: {}, money: 60 })); localStorage.setItem(k, '{"v":2}'); }, KEY); await p.goto(URL); await ready(p);
+    B = await st(p); ok(B.save.src === 'bak' && B.day === 6, '날 없는 판 + :bak = 직전 판(' + B.day + '일째)');
+    await c3.close();
   } catch (e) { console.error(e); fails++; }
   console.log('페이지 오류 ' + errs.length); for (const e of errs.slice(0, 8)) console.log('   ' + e); if (errs.length) fails++;
   await b.close(); console.log(fails ? 'FAIL ' + fails : 'PASS'); process.exit(fails ? 1 : 0);

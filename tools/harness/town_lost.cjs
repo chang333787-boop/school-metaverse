@@ -27,7 +27,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await W8(2300); ok(/저절로 시험 가/.test(await ev(() => __toast())), 'lv1은 줄 섰다가 막힘 4초 뒤에 뜸');
     await W8(4200); await ev(() => SM_TOWN.say('📌 저절로 시험 가', 3, 1)); await W8(300); ok(!/저절로 시험 가/.test(await ev(() => __toast())), '같은 글 30초 안 = 다시 안 뜸');
     await ev(() => SM_TOWN.say('🎯 내 행동 하나', 2)); await W8(200); await ev(() => SM_TOWN.say('🎯 내 행동 둘', 2)); await W8(200); ok(/내 행동 둘/.test(await ev(() => __toast())), 'lv0(내 행동)은 늘 바로');
-    await ev(() => SM_TOWN.say('📌 늦은 저절로', 3, 1)); await W8(200); await ev(() => SM_TOWN.say('🚧 막힘 둘', 4)); await W8(4600); ok(!/늦은 저절로/.test(await ev(() => __toast())), '3초 안에 못 뜬 lv1 = 버림(늦게 뜨지 않음)');
+    await ev(() => SM_TOWN.say('📌 늦은 저절로', 3, 1)); await W8(200); await ev(() => SM_TOWN.say('🚧 막힘 둘', 4)); await W8(4600); ok(/늦은 저절로/.test(await ev(() => __toast())), 'NOTE-1: 막힘 바로 뒤 lv1 = 4초 바쁨이 끝나면 뜸(예전 = 3초 버림이 먼저라 늘 잃음)');
+    await W8(4200); await ev(() => SM_TOWN.say('📌 아주 늦은 저절로', 3, 1)); await W8(200); await ev(() => SM_TOWN.say('🚧 막힘 셋', 4)); await W8(3000); await ev(() => SM_TOWN.say('🚧 막힘 넷', 4)); await W8(4400); ok(!/아주 늦은 저절로/.test(await ev(() => __toast())), '6초 안에 못 뜬 lv1 = 버림(늦게 뜨지 않음)');
     console.log('    say 수: ' + JSON.stringify(await ev(() => { const n = SM_TOWN.sayN(); return { lv0: n.n0, lv1: n.n1, drop: n.drop }; })));
 
     // ③ 화면 글: 도감·여권·가방·큰 지도
