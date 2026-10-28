@@ -4430,7 +4430,8 @@ body.small .twn-dlg .face{width:56px;height:56px;font-size:32px}body.small .twn-
       if (win) { B9 = win.b; Object.assign(H, { id: B9.b.id, h: hh, x: +B9.cx.toFixed(2), z: +B9.cz.toFixed(2), len: Math.round(win.len), walk: win.walk }); }
       else Object.assign(H, { id: null, h: hh, x: 0, z: 0 }); GAME.mark(); }
     if (HOME && (HOME.B9 !== B9 || HOME.root !== ROOT)) homeDispose();
-    if (B9) { B9.b.mine = true; if (!HOME) homeDeco(B9); if (ENT9 && !(B9.hot9 && DOORH.some(d => d[0] === B9.hot9))) ENT9(B9); }
+    if (B9) { B9.b.mine = true; if (!HOME) homeDeco(B9); if (B9.hot9 && !DOORH.some(d => d[0] === B9.hot9)) { const i9 = ENTH.findIndex(h => h && h.hot === B9.hot9); if (i9 >= 0) { try { ENTH[i9].remove(); } catch (e9) { /* 이미 빠짐 */ } ENTH.splice(i9, 1); } B9.hot9 = null; }   /* HOME-2(사용자 10-28 '우리 집이 왜 간호사 이웃 집이야'): 우리 집으로 정해지기 전에 ENTER-1이 '이웃 집'(간호사 이웃 등) 문을 먼저 달아 둔 것 → 떼고 우리 집 문으로 */
+      if (ENT9 && !(B9.hot9 && DOORH.some(d => d[0] === B9.hot9))) ENT9(B9); }
     const ms = +(performance.now() - t0).toFixed(1); if (HOME) { HOME.ms = ms; if (info) HOME.info = info; } H.ms = ms; return B9; }
   function homeWall(B9) {   /* 앞벽 = 문 자리에서 집 가운데 쪽으로 걸어가 막히는 곳(벽 앞면 · 자료 크기 X) */
     const fw = B9.fw || [0, 1], g = ty(B9.door[0], B9.door[1]); for (let k = 0; k < 40; k++) { const x = B9.door[0] - fw[0] * k * 0.1, z = B9.door[1] - fw[1] * k * 0.1; if (map.q.blocked(x, z, g + 1.0)) return k * 0.1; } return 2.5; }
