@@ -20,7 +20,7 @@ const KIND = {
   fishmarket: { ko: '수산물 가게', en: 'Fish Market', sym: '◆', emo: '🐟', g: 'work' }, gearshed: { ko: '어구 창고', en: 'Fishing Gear Shed', sym: '⚓', emo: '⚓', g: 'work' },   // SEA-2 어촌
   park: { ko: '공원', en: 'Park', sym: '♣', emo: '🌳', g: 'nat' }, pitch: { ko: '운동장', en: 'Sports Field', sym: '⚽', emo: '⚽', g: 'pub' },   // 운동장 = 땅 위 시설(블록 = 관람석) green: { ko: '자연', en: 'Nature', sym: '♣', emo: '🌳', g: 'nat' },
 };
-import { createYards, YARD_SIZE, YARD_CS, YARD_NORTH, extentOf, DEFAULT_YARD } from './town_yard.js?v=9';   // YARD-1 아이 집 마당 = 우리반RPG 꾸미기(10-15)
+import { createYards, YARD_SIZE, YARD_CS, YARD_NORTH, extentOf, DEFAULT_YARD } from './town_yard.js?v=10';   // YARD-1 아이 집 마당 = 우리반RPG 꾸미기(10-15)
 import { createIndoor, ROOM_ITEMS, kidItem } from './town_indoor.js?v=21';
 import { placeParked, TRUCK } from './town_fire.js?v=1';   // FIRE-1 소방차(인스턴스 한 벌 · 출동용 makeFireTruck은 생활 팀이 town_fire.js에서 바로 부름)
 import { createJobs, JOBK } from './town_jobs.js?v=22';
@@ -361,7 +361,7 @@ body.small .twn-dlg .face{width:56px;height:56px;font-size:32px}body.small .twn-
   const LAYERS = Object.keys(D.layers);
   let LID = D.layers[params.layer] ? params.layer : D.base && D.layers[D.base] ? D.base : LAYERS[0], L = resolve(LID);
   const ANM = createAnimals(T3);   // ANIMAL-1 블렌더 동물(목장·마당 같이 씀)
-  const YSYS = D.yards ? createYards({ T3, map, far: /^(cb|low|mobile)$/.test((window.SD2 && SD2.gfx && SD2.gfx.mode) || '') ? 150 : 260, onCollider: c => map.collider.add(c), removeCollider: h => h.remove(), en: LANG === 'en', animals: ANM, onBuilt: R => doorFix(R), offAt: (x, z) => !!onRoad(x, z, 2.3) }) : null;   // YARD-1 (PLAUS+ 9: 자료를 읽은 바로 뒤에 만듦 — 아래 미리 읽기용)
+  const YSYS = D.yards ? createYards({ T3, map, far: /^(cb|low|mobile)$/.test((window.SD2 && SD2.gfx && SD2.gfx.mode) || '') ? 150 : 260, onCollider: c => map.collider.add(c), removeCollider: h => h.remove(), en: LANG === 'en', animals: ANM, onBuilt: R => doorFix(R), offAt: (x, z) => !!onRoad(x, z, 2.3), lowAt: (x, z, y) => ty(x, z) < y - 0.4 }) : null;   // YARD-1 (PLAUS+ 9: 자료를 읽은 바로 뒤에 만듦 — 아래 미리 읽기용)
   let YPP = YSYS && params.look !== 'mat' ? YSYS.prefetch(L.blocks.filter(b => b.home).map(b => b.home)).catch(() => null) : null;   // PLAUS+ 9: 아이 마당 읽기(네트워크 세 번 왕복)를 미리 출발 — 마을 준비(재질·땅·자료)와 겹침 · 짓기에서 받기만 · 못 읽으면 예전처럼 다시 · 마을 모습만(LOOK 'town')
 
   // ───────── 자연환경 엔진: 높이 격자(5m) — 산(쌓은 높이 → 부드러운 봉우리) · 물(강·연못 바닥) · 다리 ─────────
@@ -4032,7 +4032,7 @@ body.small .twn-dlg .face{width:56px;height:56px;font-size:32px}body.small .twn-
     sc.fog.near = VA.near + (800 - VA.near) * t; sc.fog.far = VA.far + (2200 - VA.far) * t; cam.far = VA.cf + (2400 - VA.cf) * t; cam.updateProjectionMatrix(); HZU.uCF.value = cam.far * 0.975; HZU.uC0.value = VA.uC0 + (2200 - VA.uC0) * t; }
   const hazeOf = (m, compress, prev) => { m.onBeforeCompile = sh => { if (prev) prev(sh); Object.assign(sh.uniforms, HZU);
       sh.vertexShader = 'varying float vTD9;\nvarying float vWY9;\nvarying vec3 vFC9;\nuniform float uC0;\nuniform float uCF;\n' + SKYF9 + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n vTD9 = -mvPosition.z; vWY9 = (modelMatrix * vec4(transformed, 1.0)).y; { vec3 fd9 = normalize((modelMatrix * vec4(transformed, 1.0)).xyz - cameraPosition); fd9.y = max(fd9.y, 0.0); vFC9 = ' + LOOKX.fogFn() + '; }' + (compress ? '\n { float dd = length(mvPosition.xyz); if (dd > uC0) { float nd = uC0 + (uCF - uC0) * (1.0 - exp(-(dd - uC0) / 600.0)); gl_Position = projectionMatrix * vec4(mvPosition.xyz * (nd / dd), 1.0); } }' : ''));
-      sh.fragmentShader = 'varying float vTD9;\nvarying float vWY9;\nvarying vec3 vFC9;\nuniform float uTY9;\n' + sh.fragmentShader.replace('#include <fog_fragment>', '#ifdef USE_FOG\n float lin9 = smoothstep(fogNear, fogFar, vTD9); float far9 = smoothstep(200.0, 1700.0, vTD9) * 0.55; float w9 = smoothstep(16.0, 120.0, vWY9 - uTY9);\n gl_FragColor.rgb = mix(gl_FragColor.rgb, linearToOutputTexel(vec4(vFC9, 1.0)).rgb, mix(lin9, far9, w9));\n#endif'); };   /* ART-2: 안개 색 = 그 방향 하늘빛(해 쪽은 따뜻하게 — 먼 땅·바다가 하늘과 이어짐) */
+      sh.fragmentShader = 'varying float vTD9;\nvarying float vWY9;\nvarying vec3 vFC9;\nuniform float uTY9;\n' + sh.fragmentShader.replace('#include <fog_fragment>', '#ifdef USE_FOG\n float lin9 = smoothstep(fogNear, fogFar, vTD9); float far9 = smoothstep(200.0, 1700.0, vTD9) * 0.55; float w9 = smoothstep(16.0, 120.0, vWY9 - uTY9);\n gl_FragColor.rgb = mix(gl_FragColor.rgb, linearToOutputTexel(vec4(vFC9, 1.0)).rgb, mix(lin9, max(far9, lin9 * 0.42), w9));\n#endif'); };   /* GFX-2(사용자 10-28 '고랭지 배추밭에서 산 쪽 볼 때 검은색 막 같은 거'): 안개 끝 밖 높은 땅 = 안개를 거의 안 받아(0.03) 밑자락만 하얗게 묻힌 채 위가 짙은 판처럼 떠 보였음(판 밖 북쪽 산줄기 · 저녁·밤엔 검게) → 안개 끝 밖은 높아도 안개 42%는 받음(봉우리는 그대로 보이고 밑자락과 이어짐 · 그리기 그대로) */   /* ART-2: 안개 색 = 그 방향 하늘빛(해 쪽은 따뜻하게 — 먼 땅·바다가 하늘과 이어짐) */
     const k0 = m.customProgramCacheKey ? m.customProgramCacheKey() : ''; m.customProgramCacheKey = () => k0 + ':haze' + (compress ? 'C' : ''); return m; };
   const HASSEA = Object.values(D.layers).some(l => (l.nature || []).some(n => n.k === 'sea'));   // SEA-1: 바다가 있는 판(수평선까지 = 먼 깊이 압축)
   if (RANGE || HASSEA) { hazeOf(MAT.mtn, true); hazeOf(MAT.ground, true); hazeOf(MAT.solid, false); { const pv = MAT.tree.onBeforeCompile; hazeOf(MAT.tree, false, pv); } }

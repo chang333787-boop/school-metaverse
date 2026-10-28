@@ -35,7 +35,7 @@ export const DEFAULT_YARD = (() => { const decos = [], floor = {}; for (let r = 
   for (const [c, r] of [[40, 6], [52, 6], [40, 13], [52, 13]]) decos.push({ id: 'd_y1', col: c, row: r }, { id: 'd_y2', col: c + 1, row: r }, { id: 'd_y1', col: c + 2, row: r });
   for (const [c, r] of [[34, 7], [58, 7], [34, 17], [58, 17]]) decos.push({ id: 'd_y9', col: c, row: r }); decos.push({ id: 'd_y10', col: 46, row: 19 }, { id: 'd_y5', col: 43, row: 21 }, { id: 'd_y5', col: 49, row: 21 }); return { decos, floor, ai: true }; })();
 
-export function createYards({ T3, map, onCollider, removeCollider, en, animals, onBuilt, offAt, far }) {   // far = 이 거리 밖 마당은 숨김(크롬북 150m · PERF-2)
+export function createYards({ T3, map, onCollider, removeCollider, en, animals, onBuilt, offAt, lowAt, far }) {   // far = 이 거리 밖 마당은 숨김(크롬북 150m · PERF-2)
   if (!C9) C9 = new T3.Color();
   const MAT = new T3.MeshLambertMaterial({ vertexColors: true }), GLOW = new T3.MeshBasicMaterial({ vertexColors: true }), FLOOR = new T3.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   const Y = [];   // { home, ox, oz, y, ext, grp, cols, anim, data, at, busy, src }
@@ -122,8 +122,10 @@ export function createYards({ T3, map, onCollider, removeCollider, en, animals, 
     } finally { Yd.busy = false; } }
 
   /* GFX-1(사용자 10-27 '도로가 초록색'): 마당이 칸(블록)보다 넓어 길에 걸치면 길에 걸린 바깥 줄·칸을 잘라 냄(잔디 판·생울타리·장식이 차도·인도를 덮지 않게 · 집 자리는 그대로) */
-  function clipExt(q) { if (!offAt) return q.ext; let [c0, r0, c1, r1] = q.ext; const hitC = c => { for (let r = r0; r < r1; r++) if (offAt(q.ox + (c + 0.5) * CS, q.oz + (r + 0.5) * CS)) return true; return false; }, hitR = r => { for (let c = c0; c < c1; c++) if (offAt(q.ox + (c + 0.5) * CS, q.oz + (r + 0.5) * CS)) return true; return false; };
-    while (c0 < HOUSE[0] && hitC(c0)) c0++; while (c1 > HOUSE[2] && hitC(c1 - 1)) c1--; while (r0 < HOUSE[1] && hitR(r0)) r0++; while (r1 > HOUSE[3] && hitR(r1 - 1)) r1--; return [c0, r0, c1, r1]; }
+  /* GFX-2(사용자 10-28 '예지네 집 아래에서 봤을 때 옆 옹벽에서 깨지는데'): 마당은 집 높이 판 하나라 비탈 아래 길 쪽(옹벽·풀 비탈 덮개)으로 나간 줄은 땅 위로 뜸(예지네 마당 동쪽 끝 = 땅보다 14m 위 생울타리) → 땅이 마당 판보다 낮아지는 바깥 줄·칸도 잘라 냄(lowAt · 집 자리는 그대로) */
+  function clipExt(q) { if (!offAt && !lowAt) return q.ext; let [c0, r0, c1, r1] = q.ext; const bad = (x, z) => (offAt && offAt(x, z)) || (lowAt && q.y != null && lowAt(x, z, q.y));
+    const hitC = c => { for (let r = r0; r < r1; r++) for (const u of [0.05, 0.5, 0.95]) if (bad(q.ox + (c + u) * CS, q.oz + (r + 0.5) * CS)) return true; return false; }, hitR = r => { for (let c = c0; c < c1; c++) for (const u of [0.05, 0.5, 0.95]) if (bad(q.ox + (c + 0.5) * CS, q.oz + (r + u) * CS)) return true; return false; };
+    for (let k = 0; k < 4; k++) { while (c0 < HOUSE[0] && hitC(c0)) c0++; while (c1 > HOUSE[2] && hitC(c1 - 1)) c1--; while (r0 < HOUSE[1] && hitR(r0)) r0++; while (r1 > HOUSE[3] && hitR(r1 - 1)) r1--; } return [c0, r0, c1, r1]; }
   return {
     // 마을 짓기 전에 한 번(범위를 알아야 터·자리를 정함) — 다 못 읽으면 ms 뒤에 기본 정원으로
     async prefetch(homes, ms = 4500) { const t0 = performance.now(); const job = (async () => { const sids = await findSids(homes); await Promise.all(homes.map(async h => { if (PRE[h] !== undefined) return; PRE[h] = sids[h] ? await fetchYard(sids[h]) : null; })); })();
