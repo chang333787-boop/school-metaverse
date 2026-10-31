@@ -19,6 +19,7 @@ const SPEC = {
   zippleback: { jaw: 0.6,  flapHz: 1.2, stepHz: 0.95, biped: false },
   nightmare:  { jaw: 0.72, flapHz: 0.85, stepHz: 0.8, biped: false },
   terror:     { jaw: 0.65, flapHz: 2.2, stepHz: 2.0,  biped: false },
+  boss:       { jaw: 0.66, flapHz: 0.45, stepHz: 0.5, biped: false },   // 대장(레드 데스 결 · 몸이 아주 커서 느리게)
 };
 const ALIAS = { nightfury: 'toothless' };
 

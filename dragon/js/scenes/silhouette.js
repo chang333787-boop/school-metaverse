@@ -1,5 +1,5 @@
 // 64px 실루엣 시험(design §15 합격 기준) — ?scene=sil&dpr=1 · 흰 바탕에 회색 그림자만 · 칸마다 64×64 화소에 꽉 차게
-// 줄: 사람 앞·옆(히컵·스토이크·고버·아스트리드·피시레그) · 드래곤 옆·비스듬 앞(접음)·위(활공)(투슬리스·그롱클·내더·지플백·나이트메어 + 테러 덤)
+// 줄: 사람 앞·옆(히컵·스토이크·고버·아스트리드·피시레그) · 드래곤 옆·비스듬 앞(접음)·위(활공)(투슬리스·그롱클·내더·지플백·나이트메어 + 테러 덤) · 옆 줄 끝 = 대장(10장)
 // 사진: docs/dragon/shots/silhouette.png — 헷갈리는 짝이 있으면 모양을 고쳐 다시(시험 장면이라 재질은 단색 하나)
 import * as THREE from 'three';
 import { loadModel } from '../look/models.js?v=16';
@@ -12,7 +12,7 @@ const DRAGONS = [['toothless', '투슬리스'], ['gronckle', '그롱클'], ['nad
 const ROWS = [
   ['사람 앞', PEOPLE, [0, 0], {}],
   ['사람 옆', PEOPLE, [0, Math.PI / 2], {}],
-  ['드래곤 옆(접음)', DRAGONS, [0, Math.PI / 2], { fold: 1 }],
+  ['드래곤 옆(접음)', DRAGONS.concat([['boss', '대장']]), [0, Math.PI / 2], { fold: 1 }],
   ['비스듬 앞', DRAGONS, [0.35, 0.75], { fold: 1 }],
   ['위(활공)', DRAGONS, [Math.PI / 2, Math.PI], { fold: 0, glide: 1 }],
 ];

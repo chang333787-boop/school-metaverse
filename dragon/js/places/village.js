@@ -237,11 +237,15 @@ export async function buildPlace(ctx) {
   }
 
   mk('회관');
+  /* 그을린 집 = 후보(H.burn) 가운데 opt.burnt(1장에서 실제 탄 집 번호 = HOUSES 순번 · G.flags.burnt)만 · 없으면 후보 다섯 다 */
+  const burntSet = Array.isArray(opt.burnt) ? new Set(opt.burnt) : null;
+  const charOf = (H) => (charred && H.burn && (!burntSet || burntSet.has(HOUSES.indexOf(H))) ? H.burn : 0);
+
   /* ── 집들 ── */
   const housesOut = [];
   for (const H of HOUSES) {
     const pad = PADS.find((p) => p.house === H), floor = pad.h + (H.stilts ? 1.2 : 0.35);
-    const r = P.house(group, { ...H, floor, char: charred ? H.burn || 0 : 0, rebuild: H.rebuild, hw: H.hw2 || H.hw });
+    const r = P.house(group, { ...H, floor, char: charOf(H), rebuild: H.rebuild, hw: H.hw2 || H.hw });
     walls.push(...r.walls); housesOut.push({ H, r, floor });
     if (H.id === 'hiccup') A('house_hiccup', r.door.x, r.door.z, r.door.yaw);
   }
@@ -252,7 +256,7 @@ export async function buildPlace(ctx) {
       const lz = fz * H.d, u = r.roof.uOf(lz), v = r.roof.vOf(lx, u), ly = (H.hw || 2.7) + r.roof.Y(u, v) + 0.06, p = new THREE.Vector3(lx, ly, lz).applyMatrix4(r.M);
       const slope = Math.atan2(r.roof.Y(u, Math.min(1, v + 0.05)) - r.roof.Y(u, v), r.roof.X(u, Math.min(1, v + 0.05)) - r.roof.X(u, v));
       lists.patched.push({ x: p.x, y: p.y, z: p.z, yaw: H.yaw, house: HOUSES.indexOf(H) });
-      if (charred) for (let k = 0; k < 3; k++) {
+      if (charOf(H)) for (let k = 0; k < 3; k++) {
         const M = new THREE.Matrix4().multiplyMatrices(r.M, M4(lx, ly + 0.02 + k * 0.03, lz - 0.6 + k * 0.6, 0, 0, Math.sign(lx) * slope + (rng() - 0.5) * 0.15));
         P.box(M, 1.6 + rng() * 0.5, 0.06, 0.32, P.pWood(P.vary(PAL.fresh, 0.15)), { ao: false });
       }
@@ -556,7 +560,7 @@ export async function buildPlace(ctx) {
 
   P.finish(group); P.finishFire(group);
   P.setWindows(false);
-  const burnt = charred ? housesOut.filter((h) => h.H.burn).slice(0, 3).map(({ r, H }) => { const p = new THREE.Vector3(H.w * 0.15, (H.hw2 || H.hw || 2.7) + r.roof.Y(0.6, 0.3), H.d * 0.2).applyMatrix4(r.M); return [p.x, p.y, p.z]; }) : [];
+  const burnt = charred ? housesOut.filter((h) => charOf(h.H)).slice(0, 3).map(({ r, H }) => { const p = new THREE.Vector3(H.w * 0.15, (H.hw2 || H.hw || 2.7) + r.roof.Y(0.6, 0.3), H.d * 0.2).applyMatrix4(r.M); return [p.x, p.y, p.z]; }) : [];
   const smoke = P.smoke(group, burnt.concat(smokeSpots).concat(housesOut.filter((h) => (h.H.extras || []).includes('vent')).slice(0, 4).map(({ r, H }) => { const p = new THREE.Vector3(0, (H.hw2 || H.hw || 2.7) + r.roof.Y(0.5, 0) + 0.6, H.d * 0.15).applyMatrix4(r.M); return [p.x, p.y, p.z]; })));
 
   /* ── 때 ── */
@@ -590,7 +594,7 @@ export async function buildPlace(ctx) {
       camera.position.set(a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, a[2] + (b[2] - a[2]) * s);
       camera.lookAt(a[3] + (b[3] - a[3]) * s, a[4] + (b[4] - a[4]) * s, a[5] + (b[5] - a[5]) * s);
     },
-    stats: () => ({ tris: Math.round(P.tris), pieces: P.pieces, walls: walls.length, blockers: blockers.length, houses: HOUSES.length, near: P.nearMeshes.length, parts: TB, burnt: HOUSES.filter((h) => h.burn).map((h) => [Math.round(h.x), Math.round(h.z)]) }),
+    stats: () => ({ tris: Math.round(P.tris), pieces: P.pieces, walls: walls.length, blockers: blockers.length, houses: HOUSES.length, near: P.nearMeshes.length, parts: TB, burnt: HOUSES.filter((h) => h.burn).map((h) => [Math.round(h.x), Math.round(h.z)]), charred: HOUSES.filter(charOf).map((h) => HOUSES.indexOf(h)) }),
   };
   return place;
 }

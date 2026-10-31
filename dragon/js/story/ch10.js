@@ -447,7 +447,10 @@ function* bossFight(G, C) {
   yield* until(() => T.root && P.root, 20);
   yield* awaitP(B.loaded);
   const sa = A.spawn_air;
-  const fl = yield* startFlight(G, C, T, pl.fly, { x: sa.x, y: sa.y, z: sa.z, yaw: sa.yaw });
+  /* 불난 배 위 상승 기류(불 × 공기) — 비행 엔진 world.updrafts가 읽음 · 날갯짓 없이 솟음 · 보이는 짝 = 연기 기둥·불티 */
+  const ships = pl.lists.ships || [], UPS = ships.map(() => ({ x: 0, z: 0, r: 16, top: 170, lift: 7.5 }));
+  const updrafts = () => { for (let i = 0; i < ships.length; i++) { UPS[i].x = ships[i].x; UPS[i].z = ships[i].z; } return UPS; };
+  const fl = yield* startFlight(G, C, T, Object.assign({}, pl.fly, { updrafts }), { x: sa.x, y: sa.y, z: sa.z, yaw: sa.yaw });
   if (!fl) return true;
   const { F, cam } = fl; C.F = F;
   B.mode = 'fly'; B.circle = { x: pl.mountain.x, z: pl.mountain.z, r: 175, dir: 1 }; B.x = pl.mountain.x + 175; B.z = pl.mountain.z; B.y = 100; B.yaw = 0; B.cool = 5;
@@ -464,17 +467,14 @@ function* bossFight(G, C) {
   G.hud.goal('대장 날개에 구멍 0/' + need); G.hud.howto(diff === 'easy' ? 'boss10e' : 'boss10', 10);
   G.hud.say('hiccup', '날개 막을 노리자. 구름에 숨었다가 쏘고 — 바로 옮겨!', [], { secs: 3 });
   G.book.note('boss', 'weak', '날개 막이 약함 · 소리·냄새로 찾음', false);
-  const ships = pl.lists.ships || [];
   const onHit = (part, h) => { if (part === 'wing') B.addHole(h.memb); else if (sayCd <= 0) { sayCd = 2.5; G.hud.say('hiccup', part === 'mouth' ? '아직 입은 아니야!' : '몸은 너무 단단해 — 날개 막!', [], { secs: 1.2 }); } };
   while (B.holes < need) {
     const dt = yield; t += dt; const I = G.input;
     if (hitCd > 0) hitCd -= dt; if (sayCd > 0) sayCd -= dt;
     /* 날갯바람(옆에서 밂 · 비행 엔진 돌풍 칸을 씀) */
-    if (gust > 0) { gust -= dt * 1.2; const k = Math.max(0, gust) * 30; S.gustX = Math.sin(gustYaw) * k; S.gustZ = Math.cos(gustYaw) * k; if (gust <= 0) S.gustX = S.gustZ = 0; }
+    if (gust > 0) { gust -= dt * 1.2; const k = Math.max(0, gust) * 30; F.push(Math.sin(gustYaw) * k, 0, Math.cos(gustYaw) * k); }
     F.step(dt, I);
-    /* 불난 배 위 상승 기류(불 × 공기) — 날갯짓 없이 솟음 · 보이는 짝 = 연기 기둥·불티 */
-    C.lift = false;
-    for (const s of ships) if (Math.hypot(S.x - s.x, S.z - s.z) < 16 && S.y < 170) { S.lift = Math.max(S.lift, 7.5); C.lift = true; }
+    C.lift = S.updraft;
     /* 숨음·드러남 */
     const cloud = pl.inCloud(S.x, S.y, S.z);
     me.x = S.x; me.y = S.y; me.z = S.z; me.vx = S.vx; me.vy = S.vy; me.vz = S.vz; me.hidden = !!cloud; me.cloud = cloud; me.revealed = false;

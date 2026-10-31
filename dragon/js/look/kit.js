@@ -156,12 +156,11 @@ export function makeSea() {
         float sp = max(dot(reflect(-uSunDir, n), v), 0.0);
         c += uFogSun * smoothstep(0.93, 0.97, sp) * 0.5;                       // 반짝임도 톤처럼 끊어서
         c = mix(c, foam, smoothstep(2.4, 3.1, vH) * 0.45 * smoothstep(6.0, 30.0, length(vW - cameraPosition)));   /* 물마루 꼭대기에만 · 코앞(배·낮은 비행)에선 흐리게 */
-        #ifdef USE_FOG
-          gl_FragColor = vec4(drgFog(c, vW, vFogDepth), 1.0);
-        #else
-          gl_FragColor = vec4(c, 1.0);
-        #endif
+        gl_FragColor = vec4(c, 1.0);
         #include <colorspace_fragment>
+        #ifdef USE_FOG
+          gl_FragColor.rgb = drgFog(gl_FragColor.rgb, vW, vFogDepth);   /* three r170: fogColor는 화면 색공간(sRGB) → 땅(toon)처럼 색공간을 바꾼 뒤 섞음(전엔 안개색이 두 번 밝아져 밤·짙은 안개에 바다가 뜸) */
+        #endif
       }`,
   });
   Object.assign(m.uniforms, { uTime: U.uTime, uSunDir: U.uSunDir, uFogSun: U.uFogSun, uSunFog: U.uSunFog, uFogBase: U.uFogBase, uFogFall: U.uFogFall, uFogLow: U.uFogLow });

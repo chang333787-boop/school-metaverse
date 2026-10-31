@@ -2,6 +2,7 @@
 // 계약 = docs/dragon/stage3_plan.md §5 · 충돌은 메시 레이 없이 world.ground(x,z) + 원기둥(pillars) + 아치(arches) 목록만(32m 격자) · 매 걸음 new X
 // 조작(보통): ↑↓ = 오르기·내리기 · ←→ = 돌기 · Space = 날갯짓(날개가 다 올라간 박자에 누르면 힘 다 실림 · 연타 = 절반) · 1~4 꼬리 자리
 // 조작(쉬움): 앞으로 저절로 · 방향키 · Space 누르고 있기 = 꼬리 펴기(날카롭게 돎) · 떨어지면 저절로 다시 붙음
+// 바깥 갈고리: world.updrafts(함수 또는 배열 [{x, z, r, top?, lift?, power?, y?}]) 위 = 날갯짓 없이 솟음(S.updraft) · F.push(ax, ay, az) = 이 걸음 움직임에만 더함(m/s · 걸음마다 다시 부름)
 // 좌표: 앞 = (sin yaw, cos yaw) · 오른쪽 = (−cos yaw, sin yaw)(걷기와 같음) · roll > 0 = 오른쪽 날개가 내려감 · pitch > 0 = 고개 듦
 import * as THREE from 'three';
 
@@ -56,11 +57,12 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
   const S = {
     x: 0, y: 30, z: 0, vx: 0, vy: 0, vz: 0, yaw: 0, pitch: 0, roll: 0, speed: FK.vcruise, tail: 1, flapPh: 1, stall: false, fallen: false, gates: 0, grazes: 0,
     t: 0, done: false, doneT: 0, boost: 0, lift: 0, stallT: 0, splashes: 0, crashes: 0, bumps: 0, falls: 0, regrabs: 0, perfect: 0, early: 0, matched: 0, tailHits: 0,
-    spread: false, grab: false, riderDist: 0, grabT: 0, lockT: 0, tuck: 0, liftT: 0, gustX: 0, gustZ: 0, misses: 0, safeT: 0, fallT: 0,
+    spread: false, grab: false, riderDist: 0, grabT: 0, lockT: 0, tuck: 0, liftT: 0, gustX: 0, gustZ: 0, misses: 0, safeT: 0, fallT: 0, updraft: false,
   };
   const P = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0 };   // 앞 걸음(그리기 보간)
   const RD = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, px: 0, py: 0, pz: 0, spin: 0 };   // 떨어진 히컵
   const pose = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, speed: 0, rx: 0, ry: 0, rz: 0 };   // 그린 자리(카메라가 읽음)
+  let pushX = 0, pushY = 0, pushZ = 0;
   let gates = [], turnS = 0, pitchS = 0, turnHeld = 0, tailCool = 0, fp = 1, splashCool = 0, gustT = 4, gustDur = 0, gustA = 0, gustK = 0, autoFlap = 0;
 
   /* 사건 — 드문 일이라 받는 쪽 함수만 부름(값 그릇은 하나씩 다시 씀) */
@@ -132,8 +134,24 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
     EV.regrab.auto = auto; emit('regrab');
   }
 
+  /* 바깥 힘 — 이 걸음 움직임에만 더함(돌풍 칸과 같은 자리 · 여러 번 부르면 쌓임 · 걸음이 끝나면 0) */
+  F.push = (ax, ay, az) => { pushX += ax || 0; pushY += ay || 0; pushZ += az || 0; return F; };
+  /* 상승 기류(불 × 공기) — 걸음 끝 자리가 기둥 안이면 뜨는 힘을 채움(다음 걸음 가라앉음 0 · 날갯짓 없이 솟음) */
+  function stepUps() {
+    S.updraft = false;
+    const U = typeof W.updrafts === 'function' ? W.updrafts() : W.updrafts; if (!U || !U.length) return;
+    for (let i = 0; i < U.length; i++) {
+      const u = U[i], top = u.top != null ? u.top : u.y != null ? u.y + 40 : 1e9;
+      if (S.y >= top) continue;
+      const dx = S.x - u.x, dz = S.z - u.z; if (dx * dx + dz * dz >= u.r * u.r) continue;
+      const k = u.lift != null ? u.lift : 7.5 * (u.power != null ? Math.min(1, u.power) : 1);
+      if (k > S.lift) S.lift = k; S.updraft = true;
+    }
+  }
+
   /* 한 걸음(1/60초) */
-  F.step = (dt, I) => {
+  F.step = (dt, I) => { stepCore(dt, I); stepUps(); pushX = pushY = pushZ = 0; };
+  const stepCore = (dt, I) => {
     S.t += dt; P.x = S.x; P.y = S.y; P.z = S.z; P.yaw = S.yaw; P.pitch = S.pitch; P.roll = S.roll;
     RD.px = RD.x; RD.py = RD.y; RD.pz = RD.z;
     if (tailCool > 0) tailCool -= dt; if (splashCool > 0) splashCool -= dt; if (S.safeT > 0) S.safeT -= dt;
@@ -208,8 +226,8 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
     S.roll += (bankT - S.roll) * Math.min(1, dt * 4);
 
     const h = Math.cos(S.pitch) * v;
-    S.vx = Math.sin(S.yaw) * h + S.gustX; S.vz = Math.cos(S.yaw) * h + S.gustZ;
-    S.vy = Math.sin(S.pitch) * v + S.lift - sink;
+    S.vx = Math.sin(S.yaw) * h + S.gustX + pushX; S.vz = Math.cos(S.yaw) * h + S.gustZ + pushZ;
+    S.vy = Math.sin(S.pitch) * v + S.lift - sink + pushY;
 
     const wy = waterAt(S.x, S.z), gy = W.ground ? W.ground(S.x, S.z) : -1e9, floorY = Math.max(wy, gy);
     if (A.floor > 0) {

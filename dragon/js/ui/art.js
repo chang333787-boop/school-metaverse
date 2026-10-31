@@ -51,6 +51,11 @@ export const ICONS = {
   bola: svg('0 0 32 32', `<circle cx="8" cy="24" r="4" fill="#8d8a82"/><circle cx="24" cy="24" r="4" fill="#8d8a82"/><path d="M8 24 C12 10 20 10 24 24" stroke="#b08a5a"/>`),
   sheep: svg('0 0 32 32', `<ellipse cx="17" cy="17" rx="11" ry="8" fill="#f4f0e6"/><circle cx="7" cy="15" r="4" fill="#3a3430"/><path d="M11 24 L11 28 M22 24 L22 28" stroke-width="3"/>`),
   water: svg('0 0 32 32', `<path d="M16 4 C10 14 8 18 8 21 C8 26 12 29 16 29 C20 29 24 26 24 21 C24 18 22 14 16 4 Z" fill="#7fb0c8"/>`),
+  /* 8장에서 옮겨 옴(구름·코·떼·주먹) */
+  cloud: svg('0 0 32 32', `<path d="M7 23 C2 23 2 16 7 16 C7 10 15 9 17 13 C19 9 27 10 26 16 C30 16 30 23 25 23 Z" fill="#f4ead2"/>`),
+  nose: svg('0 0 32 32', `<path d="M4 20 C6 10 26 10 28 20 C24 26 8 26 4 20 Z" fill="#5a4a46"/><ellipse cx="11" cy="19" rx="3" ry="2" fill="#1a1412"/><ellipse cx="21" cy="19" rx="3" ry="2" fill="#1a1412"/>`),
+  flock: svg('0 0 32 32', `<path d="M3 12 L8 9 L13 12 M17 8 L22 5 L27 8 M10 22 L15 19 L20 22"/><circle cx="15" cy="15" r="4" stroke-dasharray="2 2"/>`),
+  fist: svg('0 0 32 32', `<path d="M8 12 C8 8 22 8 24 12 L24 20 C24 25 10 25 8 20 Z" fill="#f0c9a8"/><path d="M12 11 L12 16 M16 10 L16 16 M20 11 L20 16"/>`),
 };
 
 /* 키 그림 — 글자 하나(또는 짧은 낱말)를 키캡에 */
@@ -59,6 +64,7 @@ export function keyCap(label, wide = false) {
   return `<svg viewBox="0 0 ${w + 4} 38" class="key${wide ? ' wide' : ''}" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="${w}" height="32" rx="7" fill="#f4ead2" stroke="${INK}" stroke-width="2"/><path d="M6 31 L${w - 2} 31" stroke="#c9b894" stroke-width="2"/><text x="${2 + w / 2}" y="23" text-anchor="middle" font-size="${label.length > 2 ? 13 : 17}" font-weight="700" fill="${INK}" font-family="sans-serif">${label}</text></svg>`;
 }
 const ARROWS = `<span class="keys">${keyCap('W')}${keyCap('A')}${keyCap('S')}${keyCap('D')}</span>`;
+const ARR2 = `<span class="keys">${keyCap('←')}${keyCap('→')}</span>`, ARR3 = `<span class="keys">${keyCap('←')}${keyCap('↑')}${keyCap('→')}</span>`;
 /* 하는 법 창 — 동사마다 그림 세 줄(design §1 · 동사마다 한 번만 만듦) · 글은 두세 낱말 */
 export const HOWTO = {
   listen:   [[ARROWS, 'walkers', '걸으며 듣기'], [keyCap('F'), ICONS.torch, '가까이서 쓰기'], ['', FACES.stoick(), '말은 걸어도 들려요']],
@@ -78,6 +84,16 @@ export const HOWTO = {
   sketch3:  [[keyCap('Shift', true), 'tiptoe', '살금살금'], ['', 'rock', '바위 곁에 숨기'], [keyCap('F 꾹', true), ICONS.pencil, '누르는 동안 그리기']],
   shield3:  [['', ICONS.eye, '예고를 보고'], [keyCap('F'), ICONS.shield, '방패 두드리기'], [keyCap('Space', true), 'roll', '구르기']],
   cut2:     [[keyCap('Shift', true), 'tiptoe', '살금살금'], [keyCap('F'), ICONS.knife, '말뚝 곁에서 자르기'], ['', ICONS.eye, '숨 고를 때만']],
+  /* 장마다 쓰는 표(8장 · 10장에서 옮겨 옴 — 장 파일의 런타임 더하기와 같은 값) */
+  cling8:   [[ARR2, ICONS.wind, '기울면 반대쪽'], [keyCap('↑'), ICONS.fin, '곤두박질엔 ↑ 꾹'], ['', ICONS.hand, '손이 미끄러지지 않게']],
+  glide8:   [[ARR3, ICONS.wind, '방향 · ↑ 오르기'], ['', ICONS.cloud, '구름 속 = 숨기'], ['', 'wing', '앞으로는 저절로']],
+  flock8:   [[ARR3, ICONS.flock, '떼 가운데 내 자리'], ['', ICONS.eye, '눈이 뜨이면 안쪽으로'], ['', 'wait', '부딪히지 않기']],
+  sniff8:   [[keyCap('Shift', true), 'tiptoe', '살금살금(낮게)'], ['', ICONS.nose, '콧구멍 벌름 = 낮게 멈춤'], [ARROWS, 'rock', '바위 턱 → 틈']],
+  point10:  [[keyCap('←') + keyCap('→'), ICONS.hand, '손짓으로 방향'], ['', ICONS.torch, '물 위 불빛 찾기'], ['', ICONS.eye, '안 보이면 둘러보기']],
+  mark10:   [[keyCap('F 꾹', true), 'aim', '누르는 동안 겨누기'], [ARROWS, 'aim', '눈·날개·입 고르기'], [keyCap('F'), ICONS.bucket, '통 옆 = 물통 들기']],
+  boss10:   [[ARROWS, ICONS.wind, '몸 기울이기'], [keyCap('Space', true), 'wing', '날갯짓 박자'], [keyCap('F'), ICONS.eye, '쏘기 — 날개 막']],
+  boss10e:  [[ARROWS, ICONS.wind, '방향'], [keyCap('Space 꾹', true), ICONS.finNew, '꼬리 펴서 휙'], [keyCap('F'), ICONS.eye, '쏘기 — 날개 막']],
+  dive10:   [[keyCap('S') + keyCap('↓'), 'wing', '곧장 아래로'], [keyCap('F'), ICONS.eye, '입이 밝을 때 쏘기'], [keyCap('W') + keyCap('↑'), ICONS.wind, '솟구치기']],
 };
 /* 하는 법 그림에 쓰는 작은 그림(낱말 대신) */
 export const PICT = {

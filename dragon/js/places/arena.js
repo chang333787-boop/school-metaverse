@@ -119,6 +119,7 @@ export async function buildPlace(ctx) {
   }
 
   /* ── 쇠사슬 그물 지붕(고리 인스턴스 · 날줄 열둘 + 씨줄 넷 · 마디마다 큰 고리) ── */
+  const NETS = [];                                       // 구멍 낼 인스턴스 [{ m, it, orig }] — place.netHole이 씀
   {
     const link = P.chainLinkGeo(0.52, 0.04), items = [], R0 = 25.6, Y0 = B + RIM + 4.1, TOP = 15.5;
     const dome = (a, t) => new THREE.Vector3(Math.cos(a) * R0 * Math.cos(t * Math.PI / 2), Y0 + TOP * Math.sin(t * Math.PI / 2) * (1 - 0.18 * t * t), Math.sin(a) * R0 * Math.cos(t * Math.PI / 2));
@@ -137,7 +138,8 @@ export async function buildPlace(ctx) {
     for (const t of [0.3, 0.55, 0.76, 0.9]) { const pts = []; for (let q = 0; q <= 48; q++) pts.push(dome(q / 48 * Math.PI * 2, t)); lay(pts); }
     const cl = P.inst(link, 'o', items, group); cl.frustumCulled = true;
     const nodes = []; for (let m = 0; m < NM; m++) for (const t of [0.3, 0.55, 0.76, 0.9]) { const p = dome(m / NM * Math.PI * 2 + 0.13, t); nodes.push({ x: p.x, y: p.y, z: p.z, yaw: m / NM * 6.28, s: 1 }); }
-    P.inst(P.prep(new THREE.TorusGeometry(0.28, 0.07, 4, 8), null, P.pIron(), { ao: false }), 'o', nodes, group);
+    const nm = P.inst(P.prep(new THREE.TorusGeometry(0.28, 0.07, 4, 8), null, P.pIron(), { ao: false }), 'o', nodes, group);
+    for (const [m, it] of [[cl, items], [nm, nodes]]) if (m) NETS.push({ m, it, orig: m.instanceMatrix.array.slice() });
     const top = dome(0, 0.94); P.put(new THREE.TorusGeometry(R0 * Math.cos(0.94 * Math.PI / 2), 0.12, 4, 24).rotateX(Math.PI / 2), M4(0, top.y, 0), P.pIron(), { ao: false });
   }
 
@@ -201,6 +203,14 @@ export async function buildPlace(ctx) {
 
   const place = {
     name: 'arena', group, time, height, blockers, walls, bound: { x: 0, z: 0, r: OUT }, anchors, lists, board, wallsVer: 0,
+    /* 그물 구멍(9장 · 드래곤이 뚫고 지나감) — (x, z)에서 수평 r m 안 고리·마디를 숨김 · r = 0이면 되돌림 · 구멍은 하나(부를 때마다 새로) */
+    netHole(x, z, r) {
+      for (const N of NETS) {
+        const a = N.m.instanceMatrix.array; a.set(N.orig);
+        if (r > 0) for (let i = 0; i < N.it.length; i++) { const dx = N.it[i].x - x, dz = N.it[i].z - z; if (dx * dx + dz * dz < r * r) a.fill(0, i * 16, i * 16 + 16); }
+        N.m.instanceMatrix.needsUpdate = true;
+      }
+    },
     setMaze(segs) {
       let n = 0; const W = baseWalls.slice();
       for (const s of segs || []) {

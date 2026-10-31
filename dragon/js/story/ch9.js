@@ -215,13 +215,13 @@ function* between(G, C) {
   N.pose = { blaze: 0.9, crouch: 0.6 };
   const links = chainBits(pl.group, 14), puffs = makePuffs(pl.group, 80, 0xd9c49a);
   const glow = glowSprite(0x7a8cff, 1.2, 0.0); pl.group.add(glow);
-  C.cleanup = () => { links.dispose(); puffs.mesh.removeFromParent(); puffs.mesh.geometry.dispose(); glow.removeFromParent(); };
+  C.cleanup = () => { links.dispose(); puffs.mesh.removeFromParent(); puffs.mesh.geometry.dispose(); glow.removeFromParent(); pl.netHole && pl.netHole(0); };
   /* 내려옴 — 나와 나이트메어 사이(1.3초 · 지붕을 지날 때 고리가 쏟아짐) */
   const LS = { x: P.W.x + (N.x - P.W.x) * 0.45, z: P.W.z + (N.z - P.W.z) * 0.45 }, fy = pl.height(LS.x, LS.z, 9);
   T.show(true); T.stay(); T.place(LS.x, LS.z, Math.atan2(N.x - LS.x, N.z - LS.z)); T.faceTo(N.x, N.z);
   T.pose = { flapRate: 1, fold: 0, glide: 0.3 }; T.flyAt = null;
   let broke = false;
-  yield* timed(1.3, (k, dt) => { T.rigY = (1 - k * k) * 24; links.step(dt); if (!broke && T.rigY < 23) { broke = true; links.burst(LS.x, fy + 22, LS.z, fy); G.sfx.play('clang'); G.sfx.play('boom'); } });
+  yield* timed(1.3, (k, dt) => { T.rigY = (1 - k * k) * 24; links.step(dt); if (!broke && T.rigY < 23) { broke = true; links.burst(LS.x, fy + 22, LS.z, fy); pl.netHole && pl.netHole(LS.x, LS.z, 3.4); G.sfx.play('clang'); G.sfx.play('boom'); } });
   T.rigY = 0; puffs.burst(LS.x, fy + 0.2, LS.z, 30, 3, 2.5); G.sfx.play('thud');
   T.pose = { jaw: 1, crouch: 0.4, teeth: 1, pupil: 0.15 }; G.sfx.play('roar');
   G.hud.say('hiccup', '투슬리스!', [], { secs: 1.2 });
@@ -431,7 +431,7 @@ function* friends(G, C) {
   holdItem(F.snotlout, 'hammer');
   const puffs = makePuffs(pl.group, 90, 0x9ac46a), dust = makePuffs(pl.group, 60, 0xd9c49a);
   const D = [], riders = [];
-  C.cleanup = () => { puffs.mesh.removeFromParent(); puffs.mesh.geometry.dispose(); dust.mesh.removeFromParent(); dust.mesh.geometry.dispose(); for (const cg of cages) cg.open(0); P.cam = 'follow'; };
+  C.cleanup = () => { puffs.mesh.removeFromParent(); puffs.mesh.geometry.dispose(); dust.mesh.removeFromParent(); dust.mesh.geometry.dispose(); for (const cg of cages) cg.open(0); P.cam = 'follow'; pl.netHole && pl.netHole(0); };
   C.drawHook = (a, dt) => {
     for (const r of riders) seatOn(r.H, r.D, r.back || 0, r.side || 0, dt);
     if (C.zb && C.zb.root) { bendNeck(C.zb, 'A', C.lowA || 0); bendNeck(C.zb, 'B', C.lowB || 0); }
@@ -615,6 +615,7 @@ function* friends(G, C) {
     cam.lookAt(lk.x, lk.y + 2, lk.z);
   };
   P.hidden = false;
+  { let mx = 0, mz = 0, n = 0, rr = 0; for (const d of D) { mx += d.x; mz += d.z; n++; } if (n) { mx /= n; mz /= n; for (const d of D) rr = Math.max(rr, Math.hypot(d.x - mx, d.z - mz)); if (pl.netHole) pl.netHole(mx, mz, rr + 3.5); } }   // 솟아오르는 무리 위 그물에 구멍
   G.sfx.play('whoosh');
   G.hud.say('fishlegs', '와아아—!', [], { secs: 1.4 }); G.hud.say('snotlout', '나는 스노트라우트다아!', [], { secs: 1.6 });
   yield* timed(3, (k, dt) => rise(dt));
