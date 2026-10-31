@@ -2,7 +2,7 @@
 //   check.cjs는 마을을 열지 않아 마을이 통째로 깨져도 17/17이 찍혔음 → 이 관문이 마을을 실제로 열고 걸어 봄 · 그림 없음(pw.cjs) · 2~3분 · 하나라도 실패하면 exit 1
 //   ⑤ 홍보판(/)에 ?game=town&town=… = 마을이 안 열림(SM_PROMO · 지금 놀이 없음 · 짓는 화면 없음 · 로더 loadGame('town') = null)
 //   ① 우리 학교용 /v2/?town=… = 240초 안에 다 지어짐 · 페이지 오류 0(두 쪽 모두 끝까지 셈)
-//   ② 첫 아침(우리 집 현관) → 칠판 쪽지 → 프롤로그 → 1-1 첫 '해 보기'(tmap) 단계까지 순간이동 없이 걸어서 5분 안(lib_walk.cjs = town_first.cjs와 같은 걷기 · 0.12초 한 걸음 2m 넘으면 순간이동)
+//   ② 첫 아침(우리 집 현관) → 칠판 쪽지 → 프롤로그 → 1-1 첫 '해 보기'(tmap) 단계까지 순간이동 없이 걸어서 5분 안(lib_walk.cjs = town_first.cjs와 같은 걷기 · 튐 판정 = JUMP-1 샘플 빠르기 1.5배 + 한 프레임 1.0m) · --cpu=4 = 크롬북 흉내(마을 쪽 CPU 4× 느리게 · 짓기 끝난 뒤부터)
 //   ③ E 자리 수(SD2.map.interact.list) = 짓기 끝 · 걷기 끝 · 모자 쓰고 벗은 뒤 · 새로고침 뒤 모두 기준선 E_MIN 이상 + 처음 수의 90% 이상(모자 벗기 2551 → 250처럼 마을이 무너지는 것)
 //   ④ 저장 → 새로고침 → 첫 화면 '이어하기' → 그대로(날·돈·가방·이야기 장·단계·끝낸 장·모자·우리 집·세대 id)
 //   서버: 저장소 뿌리에서 python3 -m http.server <포트> --bind 127.0.0.1(이 스크립트는 열기만) · 시험 저장은 시험 브라우저 안에만
@@ -38,6 +38,7 @@ const T00 = Date.now(), el = () => ((Date.now() - T00) / 1000).toFixed(0) + '초
     let t9 = Date.now(), built = false; try { await p.goto(URL); await ready(); built = true; } catch (e) { console.log('    ' + String(e.message || e).slice(0, 200)); }
     ok(built, '마을이 다 지어짐(' + ((Date.now() - t9) / 1000).toFixed(1) + '초 · 마을 짓기 ' + (built ? await p.evaluate(() => (SM_TOWN.load && SM_TOWN.load.ms) | 0) : '-') + 'ms)');
     if (!built) throw new Error('마을이 안 열림');
+    { const a9 = process.argv.find(q => q.startsWith('--cpu=')), CPU = +(a9 ? a9.slice(6) : process.env.CPU || 0); if (CPU > 1) { const cdp = await c.newCDPSession(p); await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU }); console.log('   CPU ' + CPU + '× 느리게(크롬북 흉내)'); } }
     const E0 = await nE(); ok(E0 >= E_MIN, '③ 짓기 끝 E 자리 ' + E0 + ' ≥ ' + E_MIN);
     const eOK = (n, tag) => ok(n >= E_MIN && n >= E0 * 0.9, '③ ' + tag + ' E 자리 ' + E0 + ' → ' + n + '(기준선 ' + E_MIN + ' · 처음의 90% ' + Math.ceil(E0 * 0.9) + ')');
 
@@ -46,7 +47,7 @@ const T00 = Date.now(), el = () => ((Date.now() - T00) / 1000).toFixed(0) + '초
     const T0 = Date.now(), t = () => (Date.now() - T0) / 1000, Wk = walker(p, { t }), { S, shut, st } = Wk;
     const mark = n => console.log('   ' + mmss(t()) + '  ' + n), shot = async () => {};
     const R1 = await toFirstTry(Wk, { ok, mark, shot, mmss, t, PICK: '마트' });
-    ok(st.maxJ < 2.0 && st.steps > 100, '순간이동 없음(0.12초 한 걸음 최대 ' + st.maxJ.toFixed(2) + 'm · 샘플 ' + st.steps + ')'); ok(!st.selfBad.length, '데려가기 단계에 빨간 선 0 ' + st.selfBad.slice(0, 4).join(' '));
+    { const J = await Wk.jumpCheck(); ok(J.ok && st.steps > 100, J.msg); } ok(!st.selfBad.length, '데려가기 단계에 빨간 선 0 ' + st.selfBad.slice(0, 4).join(' '));
     void R1; eOK(await nE(), '걷기 끝');
 
     console.log('③ 모자 쓰고 벗기 — 마을이 그대로 (' + el() + ')');

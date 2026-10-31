@@ -1,11 +1,11 @@
 // 🧭 첫 장 봇(FIRST-1 · 10-31 첫 장 다시 짜기 · 비판 G1 '첫 13단계에 놀이 0' · G4 'show:ans 45곳'): node tools/harness/town_first.cjs [마을=ourtown] [포트=8002] [--pick=마트] [--shots=폴더]
-//   ① 새 아이 = 우리 집 현관 → 칠판 E → 프롤로그 → 1-1 끝까지 · 순간이동 없이 걸어서(자동 걷기 steer 4.2m/s · 0.12초마다 2m 넘게 튀면 실패)
+//   ① 새 아이 = 우리 집 현관 → 칠판 E → 프롤로그 → 1-1 끝까지 · 순간이동 없이 걸어서(자동 걷기 steer 4.2m/s · 튐 판정 = lib_walk.cjs JUMP-1: 샘플 빠르기 1.5배 + 한 프레임 1.0m)
 //   ② 첫 5분 안에 '해 보기' 단계 도착(1-1 보물 지도 첫 장 · 시작 = 첫 화면을 닫은 때) · 그 단계는 삽(2 → 겨눔 → F)으로 파야 넘어감
 //   ③ 스스로 찾는 단계(꽃 물 주기 · 노란 ❗ 데려가기 · 지도 조각 ✕ · 112 길 잃은 새 친구) = 셋째 힌트 전엔 빨간 선 X · 지도 조각 ✕·112는 둘째 힌트 전엔 나침반 띠 목적지도 X
 //   ③-2 COVER-1(10-31): 112 = 빛기둥 → 경찰관 E(이야기 말) → 새 친구에게 묻기(물음 넷 · 단서 수첩) → 지도에서 집(틀리면 다시 말함) → 같이 걷기(새 친구 몸 · 자전거여도 '내려' X) → 1-1 끝 · 112 기록
 //   ④ 자료 셈: 처음 13단계(장 차례 그대로) 고르기·빈칸 셋 이하 · 해 보기 하나 이상 · 'show:ans' 0
 //   ⑤ 자료 다시 보기(SEE-1)·보기 줄이기(CUT-1): 1-2 '만드는 일 둘' 세 번 틀림 → 아까 본 자료 상자(STORY-AUDIT: 목장 일꾼의 '우유 가는 길' 말이 그 안에) · 노란 테두리 0 · 다섯 번 → 틀린 보기가 지워짐(맞는 보기는 남음) · 맞히면 넘어감 / 문장 틀(우유가 오는 길) 다섯 번 → 틀린 카드 지움
-//   ⑥ 페이지 오류 0 · --shots = 첫 카드·노란 ❗·지도 조각·파기·우체국·자료 상자 사진
+//   ⑥ 페이지 오류 0 · --shots = 첫 카드·노란 ❗·지도 조각·파기·우체국·자료 상자 사진 · --cpu=4 = 크롬북 흉내(CDP CPU 4× 느리게 · 짓기 끝난 뒤부터)
 const { chromium } = require('./pw.cjs'), { walker, toFirstTry } = require('./lib_walk.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const arg = k => { const a = process.argv.find(s => s.startsWith('--' + k)); return a ? (a.includes('=') ? a.slice(a.indexOf('=') + 1) : true) : null; };
@@ -29,6 +29,7 @@ const mmss = s => Math.floor(s / 60) + '분 ' + String(Math.round(s % 60)).padSt
     const ev = (f, a) => p.evaluate(f, a), W8 = ms => p.waitForTimeout(ms);
     const shot = async n => { if (!SHOTS) return; await W8(350); await p.screenshot({ path: SHOTS + '/' + n + '.png' }); console.log('    📷 ' + SHOTS + '/' + n + '.png'); };
     await p.goto(URL); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && window.SD2 && SM_TOWN.story, null, { timeout: 240000 }); await W8(1500);
+    { const CPU = +(arg('cpu') || process.env.CPU || 0); if (CPU > 1) { const cdp = await ctx.newCDPSession(p); await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU }); console.log('   CPU ' + CPU + '× 느리게(크롬북 흉내)'); } }
     await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); }); await W8(1200);
     const T0 = Date.now(), t = () => (Date.now() - T0) / 1000, LOG = [];
     const Wk = walker(p, { t }), { S, closeDlg, shut, walk, waitStep, st } = Wk;   /* 걷기 = lib_walk.cjs(town_gate.cjs와 같이 씀) */
@@ -58,7 +59,7 @@ const mmss = s => Math.floor(s / 60) + '분 ' + String(Math.round(s % 60)).padSt
         await p.keyboard.press('KeyB'); await W8(1600); const g9 = await ev(() => SM_TOWN.emerg().info().goal || ''); ok(!/내려/.test(g9), '자전거를 타도 「내려」 말 X(' + g9.slice(0, 40) + ')'); await p.keyboard.press('KeyB'); await W8(500);
         const T = await ev(() => SM_TOWN.storyTarget()); await shot('first_8_walk'); await walk(T.x, T.z, { self: 1, r: 8, until: r => r.cur !== 'a1_1' || r.sid !== 'lost', tag: 'walk', lim: 300 }); } }
     s = await waitStep(q => q.done.includes('a1_1'), 8000); ok(s.done.includes('a1_1'), '1-1 끝(' + mmss(t()) + ')'); mark('1-1 끝');
-    ok(st.maxJ < 2.0, '순간이동 없음(0.12초 한 걸음 최대 ' + st.maxJ.toFixed(2) + 'm · 샘플 ' + st.steps + ')'); ok(!st.selfBad.length, '스스로 찾는 단계에 빨간 선 0(셋째 힌트 전) ' + st.selfBad.slice(0, 4).join(' ')); ok(!st.compBad.length, '지도 조각·112 단계 나침반 목적지 0(둘째 힌트 전) ' + st.compBad.slice(0, 4).join(' ')); { const L9 = await ev(() => (SM_TOWN.game().S.emerg || { log: [] }).log[0] || null); ok(!!(L9 && L9.k === 'lost' && L9.ok), '112 기록(경찰서 칭찬 게시판이 알아봄)'); }
+    { const J = await Wk.jumpCheck(); ok(J.ok, J.msg); } ok(!st.selfBad.length, '스스로 찾는 단계에 빨간 선 0(셋째 힌트 전) ' + st.selfBad.slice(0, 4).join(' ')); ok(!st.compBad.length, '지도 조각·112 단계 나침반 목적지 0(둘째 힌트 전) ' + st.compBad.slice(0, 4).join(' ')); { let L9 = null; for (let i = 0; i < 10 && !(L9 && L9.k === 'lost'); i++) { if (i) await W8(300); L9 = await ev(() => (SM_TOWN.game().S.emerg || { log: [] }).log[0] || null); }   /* 사건 기록(end) = 'done' 0.4초 뒤 · 이야기가 먼저 넘어가면 곧바로 보면 아직 없음(10-31 한 번) → 3초까지 */ ok(!!(L9 && L9.k === 'lost' && L9.ok), '112 기록(경찰서 칭찬 게시판이 알아봄)' + (L9 && !(L9.k === 'lost' && L9.ok) ? ' — ' + JSON.stringify(L9).slice(0, 80) : '')); }
     for (let i = 0; i < 8 && s.cur !== 'a1_3'; i++) { await shut(); s = await waitStep(q => q.cur === 'a1_3', 3000); }   /* 112 도우미 끝 창(배운 것)을 닫은 뒤 9초 */ ok(s.cur === 'a1_3', '다음 장(목장의 아침 · 양몰이)이 저절로(' + s.cur + ')');
     { const rec = await ev(() => { const R = SM_TOWN.game().S.story.rec; return { p0: R.p0 && R.p0.st, a1: R.a1_1 && R.a1_1.st }; }); console.log('   기록 ' + JSON.stringify(rec).slice(0, 300)); }
 
