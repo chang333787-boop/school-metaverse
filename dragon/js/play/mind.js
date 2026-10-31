@@ -59,7 +59,7 @@ export function createMind(kind, init = {}) {
     /* 몸짓 → 마음(반응 표) */
     const near = p.d < sp.space, threat = p.weapon && M.sees;
     if (threat) { const k = near ? 2 : p.d < 12 ? 1 : 0.25; M.fear = clamp(M.fear + 0.22 * h * k); M.anger = clamp(M.anger + 0.12 * h * sp.temper * k); }   // 멀리서 든 칼은 덜 무서움
-    if (p.close > 1.6 && p.d < 14) M.fear = clamp(M.fear + 0.55 * h * sp.shy);   // 빠르게 다가옴
+    if (p.close > 1.6 && p.d < 14) M.fear = clamp(M.fear + 0.55 * h * sp.shy * (1 - M.trust * 0.85));   // 빠르게 다가옴(믿는 사이면 덜)
     if (near && !p.reach && M.trust < 0.6) M.fear = clamp(M.fear + 0.25 * h * (1 - M.trust) * sp.shy);
     if (p.low && p.close < 1.3 && !threat) { M.fear = clamp(M.fear - 0.07 * h); M.curious = clamp(M.curious + 0.05 * h); }
     if (p.reach && p.still && !M.eye && p.d < 3.8 && !threat) M.trust = clamp(M.trust + 0.14 * h * (1 - M.fear));

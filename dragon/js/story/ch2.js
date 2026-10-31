@@ -87,8 +87,9 @@ function trackSense(G, C) {
   const vis = [];
   for (let i = 0; i < (C.clues || []).length; i++) { const c = C.clues[i]; if (G.near(c, 28) && G.vis(c.x, 0.5 + G.place.height(c.x, c.z, 0), c.z, 30)) vis.push({ i, kind: c.kind, x: +c.x.toFixed(1), z: +c.z.toFixed(1) }); }
   const f = C.fin, cr = C.crash;
-  return { clues: vis, fin: f && !C.got && G.near(f, 25) && G.vis(f.x, 0.3, f.z, 26) ? { x: f.x, z: f.z } : null, got: !!C.got,
-    crash: cr && G.near(cr, 30) && G.vis(cr.x, 1, cr.z, 32) ? { x: cr.x, z: cr.z } : null, guess: C.guess, stuck: false };
+  const H = (q) => G.place.height(q.x, q.z, G.player.W.y);
+  return { clues: vis, fin: f && !C.got && G.near(f, 25) && G.vis(f.x, H(f) + 0.3, f.z, 26) ? { x: f.x, z: f.z } : null, got: !!C.got,
+    crash: cr && G.near(cr, 30) && G.vis(cr.x, H(cr) + 1, cr.z, 32) ? { x: cr.x, z: cr.z } : null, guess: C.guess, stuck: false };
 }
 
 /* ③ 묶인 나이트 퓨리 — 밧줄 넷을 하나씩 · 숨이 고를 때(동공 둥긂)만 끊김 · 버둥일 때 끊으면 한 줄이 되감김(쉬움 = 안 끊길 뿐) */
@@ -96,6 +97,7 @@ const ROPES = [[1.3, 2.1], [-1.7, 0.3], [1.7, -0.6], [-0.5, -3.1]];   // 투슬�
 function* tied(G, C) {
   const P = G.player, pl = G.place, cr = pl.anchors.crash || { x: 0, z: 0, yaw: 0 };
   const T = G.dragon('nightfury', cr, { mind: { fear: 0.8, anger: 0.4 }, noCollide: true }); C.T = T; T.solid = true;
+  if (G.dist(P.W, cr) > 16) G.putPlayer({ x: cr.x - Math.sin(cr.yaw || 0) * 9, z: cr.z - Math.cos(cr.yaw || 0) * 9, yaw: cr.yaw || 0 });   // 이 차례부터 바로 시작했을 때만(숲 추적에서 이어지면 그 자리)
   T.mind.lock = 'tied'; T.stay();
   yield* until(() => T.root);
   holdItem(P, 'knife');
@@ -119,7 +121,7 @@ function* tied(G, C) {
     pt += dt;
     const d = G.dist(P.W, T);
     if (P.W.speed > 2.5 && d < 7 && phase === 'calm') { phase = 'struggle'; pt = 0; plen = 2 + G.rng(); }
-    if (pt > plen) { phase = phase === 'calm' ? 'struggle' : 'calm'; pt = 0; plen = phase === 'calm' ? (easy ? 3 : 1.6 + G.rng()) : 2 + G.rng() * 2; }
+    if (pt > plen) { phase = phase === 'calm' ? 'struggle' : 'calm'; pt = 0; plen = phase === 'calm' ? (easy ? 3 : 1.8 + G.rng()) : 1.5 + G.rng() * 1.3; }
     C.phase = phase;
     T.pose = { lie: 0.55, struggle: phase === 'struggle' ? 1 : 0, pupil: phase === 'calm' ? 0.95 : 0.08, ear: phase === 'calm' ? 0 : -0.8, teeth: phase === 'struggle' ? 0.6 : 0, jaw: phase === 'struggle' ? 0.25 + Math.sin(G.t * 9) * 0.1 : 0, fold: 1 };
     if (said === 0 && d < 4.5) { said = 1; G.hud.say('hiccup', '할 수 있어…', [], { secs: 1.4 }); G.hud.say('hiccup', '해야 돼…', [], { secs: 1.4 }); G.hud.say('hiccup', '…해야… 돼…', [], { secs: 1.6 }); }
@@ -153,7 +155,7 @@ function* tied(G, C) {
   return true;
 }
 function tiedSense(G, C) {
-  const pegs = (C.pegs || []).filter((p) => !p.cut && G.vis(p.x, 0.3, p.z, 30)).map((p) => ({ x: +p.x.toFixed(2), z: +p.z.toFixed(2) }));
+  const pegs = (C.pegs || []).filter((p) => !p.cut && G.vis(p.x, G.place.height(p.x, p.z, G.player.W.y) + 0.3, p.z, 30)).map((p) => ({ x: +p.x.toFixed(2), z: +p.z.toFixed(2) }));
   return { pegs, left: (C.pegs || []).filter((p) => !p.cut).length, tl: tlSense(G, C.T) };
 }
 

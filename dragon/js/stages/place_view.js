@@ -12,7 +12,7 @@ export function buildPlaceView(scene, camera, rng, opt = {}) {
   const env = createEnv(scene, camera);
   const host = createStageHost({ gfx: opt.gfx, scene, camera });
   const name = opt.p || 'village';
-  let place = null, W = null, C = null, coll = null, hic = null, hrig = null, free = false, t = 0, last = performance.now(), fHold = 0;
+  let place = null, W = null, C = null, coll = null, hic = null, hrig = null, free = false, t = 0, last = performance.now(), fHold = 0, benchT = -1e9;
   const fc = { x: 0, y: 30, z: 0, yaw: 0, pitch: -0.2 }, fp = { x: 0, y: 0, z: 0 };
   async function load() {
     const m = await import(`../places/${name}.js?v=14`);
@@ -56,13 +56,14 @@ export function buildPlaceView(scene, camera, rng, opt = {}) {
     draw(a) {
       const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
       if (place) {
-        if (free) { camera.position.set(fp.x + (fc.x - fp.x) * a, fp.y + (fc.y - fp.y) * a, fp.z + (fc.z - fp.z) * a); camera.rotation.set(fc.pitch, fc.yaw + Math.PI, 0, 'YXZ'); }
+        if (performance.now() - benchT < 250) { /* bench가 카메라를 잡고 있음(benchPath) */ }
+        else if (free) { camera.position.set(fp.x + (fc.x - fp.x) * a, fp.y + (fc.y - fp.y) * a, fp.z + (fc.z - fp.z) * a); camera.rotation.set(fc.pitch, fc.yaw + Math.PI, 0, 'YXZ'); }
         else if (hic && W) { W.draw(a, hic); C.draw(dt, hic); }
         place.draw && place.draw(a);
       }
       env.follow();
     },
-    benchPath: (tt) => { if (place && place.benchPath) place.benchPath(tt); },
+    benchPath: (tt) => { benchT = performance.now(); if (place && place.benchPath) place.benchPath(tt); },
     snapshot: () => (W ? { x: +W.x.toFixed(3), z: +W.z.toFixed(3), y: +W.y.toFixed(3), place: name } : { place: name, loading: true }),
   };
 }

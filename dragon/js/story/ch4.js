@@ -317,7 +317,7 @@ export const chapter = {
       bookPage: { title: '반 토막', draw: 'nightfury', line: '투슬리스가 생선을 게워 반 토막을 나눠 줬다. 친해지려는 뜻이다.' },
       hints: { 1: '투슬리스가 볼 때만 먹는 척.', 2: '눈을 돌리면 F에서 손을 떼자.' }, howtoVerb: 'approach', run: halfFish,
       sense: (G, C) => ({ look: !!C.look, earTurn: !!C.earTurn, chew: +(C.chew || 0).toFixed(2), tl: tlSense(G, C.T) }) },
-    { id: '4-5', verb: 'approach', place: 'cove', time: 'day', atNew: 'gap_in', goal: '투슬리스 가까이 가기', limit: 180,
+    { id: '4-5', verb: 'approach', place: 'cove', time: 'day', atNew: 'gap_in', goal: '투슬리스 가까이 가기', limit: 180, botObst: true,
       hints: { 1: '선을 밟으면 화를 내. 틈을 찾아 돌아가자.', 2: '가까이 가면 고개를 돌리고 손을 내밀자(F 길게).' }, run: sand,
       sense: (G, C) => ({ segs: C.segs || null, center: C.S || null, steps: C.steps || 0, reachT: +(C.reachT || 0).toFixed(2), tl: tlSense(G, C.T) }) },
   ],

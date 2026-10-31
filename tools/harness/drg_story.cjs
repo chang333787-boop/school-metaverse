@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const root = path.resolve(process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : '.');
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
-const CHS = arg('ch', '2,3,4,5,6').split(',').map(Number), ONLY = arg('only', ''), LEVELS = arg('levels', 'easy,normal').split(','), DUMB = arg('dumb', '1') === '1', TURBO = +arg('turbo', 8);
+const CHS = arg('ch', '2,3,4,5,6').split(',').map(Number), ONLY = arg('only', ''), LEVELS = arg('levels', 'easy,normal').split(',').filter((x) => x && x !== 'none'), DUMB = arg('dumb', '1') === '1', TURBO = +arg('turbo', 8);
 const types = { '.js': 'text/javascript', '.html': 'text/html', '.glb': 'model/gltf-binary', '.png': 'image/png', '.json': 'application/json' };
 const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split('?')[0]), p = path.join(root, u, u.endsWith('/') ? 'index.html' : ''); fs.readFile(p, (e, d) => { if (e) { r.writeHead(404); r.end(); return; } r.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); r.end(d); }); });
 const rows = [], fails = [];
@@ -27,9 +27,10 @@ srv.listen(0, async () => {
       const m = await import('/dragon/js/bots/story_bots.js?v=' + V);
       const s0 = DRG.sense(), n0 = DRG.loop.n;
       DRG.bot.run(kind === 'story' ? m.storyBot(level) : m.dumbBot(kind, key));
-      return await new Promise((res) => { const iv = setInterval(() => { const s = DRG.sense(), sec = (DRG.loop.n - n0) / 60;
+      const trail = []; let lastT = -99;
+      return await new Promise((res) => { const iv = setInterval(() => { const s = DRG.sense(), sec = (DRG.loop.n - n0) / 60; if (sec - lastT > 15 && s.me) { lastT = sec; trail.push([Math.round(sec), s.me.x, s.me.z, DRG.input.heldList().join('+')]); }
         if (s.idx !== s0.idx || s.done || s.ch !== s0.ch) { clearInterval(iv); DRG.bot.stop(); res({ ok: true, sec: +sec.toFixed(1), fails: s0.fails }); }
-        else if (sec > limitSec) { clearInterval(iv); DRG.bot.stop(); res({ ok: false, sec: +sec.toFixed(1), last: JSON.stringify(s).slice(0, 300) }); } }, 100); });
+        else if (sec > limitSec) { clearInterval(iv); DRG.bot.stop(); res({ ok: false, sec: +sec.toFixed(1), last: JSON.stringify(s, (k, v) => (Array.isArray(v) && v.length > 6 ? '[' + v.length + ']' : v)).slice(0, 600) + ' errs ' + JSON.stringify(DRG.diag().errs.slice(-3)) + ' trail ' + JSON.stringify(trail) }); } }, 100); });
     }, { kind, level, key, limitSec, V });
   }
   try {

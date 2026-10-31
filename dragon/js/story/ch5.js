@@ -155,7 +155,7 @@ function* lift(G, C) {
     cam = mod.createFlightCam ? mod.createFlightCam(G.camera) : null;
   } else F = simpleLift(G, T, fly, lake, () => { splash = true; }, () => { crash = true; });
   T.manual = true; P.cam = 'fly'; P.hidden = false;
-  G.camDraw = (a, dt) => { F.draw(a, dt); if (cam) (cam.draw || cam.update).call(cam, a, dt, F); };
+  G.camDraw = (a, dt) => { F.draw(a, dt); if (cam) { if (cam.update) cam.update(dt, F); else cam.draw(a, dt, F); } };
   C.cleanup = () => { T.manual = false; P.cam = 'follow'; G.camDraw = null; F.dispose && F.dispose(); };
   G.hud.goal('꼬리날개로 돌벽 피하기'); G.hud.howto(G.diff === 'easy' ? 'flyEasy' : 'fly', 6);
   G.hud.say('hiccup', '뜬다…! 발이, 땅에서…!', [], { secs: 2.4 });
@@ -225,17 +225,20 @@ function* zipple(G, C) {
     if (held === 'bucket') {
       P.noReach = true;
       if (G.input.on('use') && P.fT > 0.25) {
-        if (!aim) aim = { x: P.W.x + Math.sin(P.W.yaw) * 5, z: P.W.z + Math.cos(P.W.yaw) * 5 };
-        P.lock = true;
-        if (G.diff === 'easy') { aim.x += G.input.axis('left', 'right') * -6 * dt * Math.cos(P.W.yaw) + G.input.axis('back', 'fwd') * 6 * dt * Math.sin(P.W.yaw); aim.z += G.input.axis('left', 'right') * 6 * dt * Math.sin(P.W.yaw) + G.input.axis('back', 'fwd') * 6 * dt * Math.cos(P.W.yaw); }
-        else { const lk = G.input.look(); aim.x -= lk.x * 0.03; aim.z -= lk.y * 0.03; }
+        const my = P.C.moveYaw(), fx = Math.sin(my), fz = Math.cos(my), rx = -Math.cos(my), rz = Math.sin(my);   // 화면 기준 앞·오른쪽
+        if (!aim) aim = { x: P.W.x + fx * 5, z: P.W.z + fz * 5 };
+        P.lock = true; P.aiming = true;
+        let ar, af;
+        if (G.diff === 'easy') { ar = G.input.axis('left', 'right') * 6 * dt; af = G.input.axis('back', 'fwd') * 6 * dt; }
+        else { const lk = G.input.look(); ar = lk.x * 0.03; af = -lk.y * 0.03; }
+        aim.x += rx * ar + fx * af; aim.z += rz * ar + fz * af;
         ring.visible = true; ring.position.set(aim.x, pl.height(aim.x, aim.z, 0) + 0.05, aim.z);
       } else if (aim) {                                           // 놓음 = 던짐
-        P.lock = false; ring.visible = false; P.pose = { throw: 1 };
+        P.lock = false; P.aiming = false; ring.visible = false; P.pose = { throw: 1 };
         throwB = { t: 0, sx: P.W.x, sz: P.W.z, tx: aim.x, tz: aim.z }; water.visible = true; aim = null; held = 'none'; holdItem(P, null); P.noReach = false;
       }
     }
-    C.aim = aim ? { x: +aim.x.toFixed(2), z: +aim.z.toFixed(2) } : null; C.held = held;
+    C.aim = aim ? { x: +aim.x.toFixed(2), z: +aim.z.toFixed(2) } : null; C.held = held; C.camYaw = P.C.moveYaw();
     if (throwB) {
       throwB.t += dt / 0.8; const k = Math.min(1, throwB.t);
       water.position.set(throwB.sx + (throwB.tx - throwB.sx) * k, 1.4 + Math.sin(k * Math.PI) * 2.5 + k * 1.0, throwB.sz + (throwB.tz - throwB.sz) * k);

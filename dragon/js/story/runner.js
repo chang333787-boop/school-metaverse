@@ -39,7 +39,7 @@ export function createRunner(G) {
     if (st.at) G.putPlayer(st.at);
     else if (st.atNew && G.freshPlace) G.putPlayer(st.atNew);      // 이 장소에서 처음 시작할 때만(앞 차례에서 이어지면 그 자리 그대로)
     G.freshPlace = false;
-    G.player.item = st.item ?? null; G.player.lock = false;
+    G.hold ? G.hold(st.item ?? null) : (G.player.item = st.item ?? null); G.player.lock = false; G.player.pose = null; G.player.noReach = false; G.player.aiming = false; G.useSpots = [];
     G.hud.reset();
     if (st.goal) G.hud.goal(st.goal);
     if (st.verb && st.howto !== false) G.hud.howto(G.diff === 'easy' && st.verb === 'fly' ? 'flyEasy' : (st.howtoVerb || st.verb));

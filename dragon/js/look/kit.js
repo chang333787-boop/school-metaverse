@@ -11,7 +11,7 @@ export const U = {
 };
 
 /* 높이 안개 — 멀수록 + 낮을수록(바다·골짜기) 짙고, 해를 바라보면 따뜻한 색 */
-const FOG_PARS = `
+export const FOG_PARS = `
 uniform vec3 uFogSun; uniform float uSunFog; uniform float uFogBase; uniform float uFogFall; uniform float uFogLow; uniform vec3 uSunDir;
 vec3 drgFog(vec3 col, vec3 wp, float depth) {
   float f = smoothstep(fogNear, fogFar, depth);

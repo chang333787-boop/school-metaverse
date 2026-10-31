@@ -24,7 +24,7 @@ gfx.onResize = (w, h) => { camera.aspect = w / h; camera.updateProjectionMatrix(
 /* 팀이 만드는 장면은 파일이 생기면 열림(동적 import) — sil = 64px 실루엣(M) · fly = 비행 시험(F) */
 const lazy = (file, fn) => async (...a) => (await import(file))[fn](...a);
 const SCENES = { game: buildGame, base: buildBaseTest, a: buildLookA, model: buildModelView, walk: buildWalkTest, place: buildPlaceView,
-  sil: lazy('./scenes/silhouette.js?v=14', 'buildSilhouette'), fly: lazy('./stages/flight_test.js?v=14', 'buildFlightTest') };
+  sil: lazy('./scenes/silhouette.js?v=14', 'buildSilhouette'), fly: lazy('./stages/flight_test.js?v=14', 'buildFlightTest'), key: lazy('./stages/keyframe.js?v=14', 'buildKeyframe') };
 const world = await (SCENES[Q.get('scene') || 'game'] || buildGame)(scene, camera, rng, { gfx, time: Q.get('time'), mode: Q.get('mode2'), yaw: Q.has('yaw') ? +Q.get('yaw') : undefined, dist: Q.get('dist'), pitch: Q.has('pitch') ? +Q.get('pitch') : undefined, people: Q.get('people'), who: Q.get('who'), p: Q.get('p'), variant: Q.get('variant'), at: Q.get('at'), marks: Q.get('marks') === '1', swap: Q.get('swap') === '1', diff: Q.get('diff') || 'normal' });
 const ctx = { gfx, input, canvas, scene, camera, world, benchPath: world.benchPath, snapshot: world.snapshot, sense: world.sense };
 const dbg = installDebug(ctx);
@@ -39,5 +39,5 @@ ctx.loop = loop;
 Promise.resolve(world.ready).catch((e) => console.error('ready', e)).then(() => gfx.renderer.compileAsync(scene, camera)).catch(() => {}).finally(() => {
   document.getElementById('load').classList.add('hide');
   loop.start();
-  if (Q.get('bench') === '1') setTimeout(() => dbg.DRG.bench(60), 1500);
+  if (Q.get('bench') === '1' && Q.get('scene') && Q.get('scene') !== 'game') setTimeout(() => dbg.DRG.bench(60), 1500);   // 게임 본판은 장소 넷을 도는 관문(game.js benchTour)
 });

@@ -158,7 +158,7 @@ function sketchLine(X, i) {                                       // 연필 선�
 }
 function watchSense(G, C) {
   const W = G.place.lists.rim_watch || [];
-  return { watch: W.map((w) => ({ x: w.x, z: w.z })), climbing: !!C.climbing && C.T && G.vis(C.T.x, C.T.y + 1, C.T.z), lookUp: !!C.lookUp, earUp: !!C.earUp, prog: +(C.prog || 0).toFixed(2), tl: tlSense(G, C.T) };
+  return { watch: W.map((w) => ({ x: w.x, z: w.z, yaw: w.yaw })), climbing: !!C.climbing && C.T && G.vis(C.T.x, C.T.y + 1, C.T.z), lookUp: !!C.lookUp, earUp: !!C.earUp, prog: +(C.prog || 0).toFixed(2), tl: tlSense(G, C.T) };
 }
 
 /* ③ 밤 큰 회관 — 고버가 드래곤 책을 줌 · 쌍둥이·스노트라우트는 나감 · 나이트 퓨리 칸 '알 수 없음'에 내가 그림(점 여섯) */

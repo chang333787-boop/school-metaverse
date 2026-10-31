@@ -92,20 +92,24 @@ export function createBench() {
   /* ④ 바느질(안장) — 바늘이 좌우로 오가다 구멍 위에 올 때 Space · 엇박 = 실 엉킴 */
   B.stitch = function* (I, easy, n = 6) {
     B.show();
-    let k = 0, ph = 0, tangle = 0;
-    const holes = []; for (let q = 0; q < n; q++) holes.push(260 + q * 90);
+    let k = 0, t = 0, tangle = 0;
+    const holes = []; for (let q = 0; q < n; q++) holes.push(220 + q * (560 / Math.max(1, n - 1)));
+    const T = easy ? 1.8 : 1.4, W = easy ? 0.34 : 0.24;             // 바늘 한 번 오르내림 · 가죽에 닿아 있는 시간(초)
     B.S = { kind: 'stitch' };
     while (k < n) {
-      const dt = yield; ph += dt * (easy ? 0.9 : 1.25);
-      const x = 500 + Math.sin(ph * Math.PI) * 330, tgt = holes[k], on = Math.abs(x - tgt) < (easy ? 26 : 18);
+      const dt = yield; t += dt;
+      const p = (t % T) / T, on = Math.abs(p - 0.5) * T < W / 2, y = 250 + Math.sin(p * Math.PI) * 100;   // 가운데(가장 낮을 때) = 가죽에 닿음
       if (tangle > 0) tangle -= dt;
-      if (I.tap('jump')) { if (on && tangle <= 0) k++; else tangle = 0.8; }
-      B.S.on = on; B.S.k = k; B.S.tangle = tangle > 0;
-      clear('안장 바느질 — 바늘이 구멍 위일 때 Space');
-      X.fillStyle = '#7a4a26'; X.beginPath(); X.ellipse(500, 360, 380, 110, 0, 0, 6.3); X.fill(); X.strokeStyle = INK; X.lineWidth = 4; X.stroke();
+      if (I.tap('jump')) { if (on && tangle <= 0) { k++; t = 0; } else tangle = 0.8; }
+      B.S.on = on; B.S.k = k; B.S.tangle = tangle > 0; B.S.p = +p.toFixed(2);
+      clear('안장 바느질 — 바늘이 가죽에 닿을 때 Space');
+      X.fillStyle = '#7a4a26'; X.beginPath(); X.ellipse(500, 380, 400, 100, 0, 0, 6.3); X.fill(); X.strokeStyle = INK; X.lineWidth = 4; X.stroke();
       holes.forEach((h, q) => { X.beginPath(); X.arc(h, 360, 10, 0, 6.3); X.fillStyle = q < k ? '#e8dcc0' : q === k ? '#2b2118' : '#5a3a20'; X.fill(); });
-      X.strokeStyle = '#e8dcc0'; X.lineWidth = 4; X.beginPath(); for (let q = 0; q < k; q++) { X.moveTo(holes[q], 360); X.lineTo(holes[q] + 45, 340); } X.stroke();
-      X.strokeStyle = tangle > 0 ? '#a83e1e' : INK; X.lineWidth = 5; X.beginPath(); X.moveTo(x, 300); X.lineTo(x, 372); X.stroke();
+      X.strokeStyle = '#e8dcc0'; X.lineWidth = 4; X.beginPath(); for (let q = 0; q < k; q++) { X.moveTo(holes[q], 360); X.lineTo(holes[q] + 40, 340); } X.stroke();
+      const hx = holes[Math.min(k, n - 1)];
+      X.strokeStyle = tangle > 0 ? '#a83e1e' : INK; X.lineWidth = 6; X.beginPath(); X.moveTo(hx, y - 90); X.lineTo(hx, y); X.stroke();
+      if (on) { X.fillStyle = '#2b2118'; X.beginPath(); X.arc(hx, 360, 16, 0, 6.3); X.lineWidth = 3; X.stroke(); }
+      if (tangle > 0) { X.fillStyle = '#a83e1e'; X.font = 'bold 26px sans-serif'; X.fillText('실이 엉켰다!', hx - 60, 200); }
     }
     B.S = {}; return { k };
   };

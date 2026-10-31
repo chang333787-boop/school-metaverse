@@ -16,6 +16,7 @@ import { createSfx } from '../core/sfx.js?v=14';
 import { showTitle, diffOf } from '../ui/title.js?v=14';
 import { createRunner } from '../story/runner.js?v=14';
 import { writeSlot, flushSlot } from '../story/save.js?v=14';
+import { holdItem } from '../story/fx.js?v=14';
 
 export const PLAYABLE = [2, 3, 4, 5, 6];
 const CH_FILE = { 2: 'ch2', 3: 'ch3', 4: 'ch4', 5: 'ch5', 6: 'ch6' };
@@ -78,6 +79,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
   G.dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
   G.near = (pos, r) => P.W && Math.hypot(P.W.x - pos.x, P.W.z - pos.z) < r;
   G.useSpots = [];                                      // 쉬움 F 표시 자리 [{x,y,z}] — 장이 채움
+  G.hold = (name) => holdItem(P, name);
 
   /* 걸음 */
   G.playerStep = (dt, I) => {
@@ -87,12 +89,12 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     else { if (P.fT > 0 && P.fT < 0.3) P.fTap = true; P.fT = 0; P.fLong = false; }
     P.reach = P.fLong && !P.noReach; P.away = P.reach;
     P.W.lock = P.lock || P.reach;                         // 손 내미는 동안은 멈춤(기다리기)
-    if (P.cam === 'follow') { if (!G.book.draw) P.C.step(dt, I, P.W); P.W.step(dt, I, P.C.moveYaw()); }   // 책에 그리는 동안 끌기 = 펜
+    if (P.cam === 'follow') { if (!G.book.draw && !P.aiming && G.bench.el.classList.contains('gone')) P.C.step(dt, I, P.W); P.W.step(dt, I, P.C.moveYaw()); }   // 책·작업대에 그리는 동안 끌기 = 펜
   };
   G.playerDraw = (a, dt) => {
     if (!P.root || !P.W) return;
     P.root.visible = !P.hidden;
-    if (P.cam === 'follow') { P.W.draw(a, P.root); P.C.draw(dt, P.root); }
+    if (P.cam === 'follow') { P.W.draw(a, P.root); if (performance.now() - (G.benchT || -1e9) > 250) P.C.draw(dt, P.root); }   // bench 동안 카메라는 benchPath
     if (P.rig) {
       const to = P.pose || {}, R = P.rig;
       const tg = { speed: Math.min(1, P.W.speed / 4.2), low: P.W.low ? 1 : 0, reach: P.reach ? 1 : 0, away: P.away ? 0.8 : 0, throw: 0 };
@@ -117,9 +119,36 @@ export async function buildGame(scene, camera, rng, opt = {}) {
   }
   G.startCh = startCh;
 
+  /* 선생님 크롬북 관문 ?bench=1 — 장소 넷을 15초씩 돌며 그린 프레임 간격을 재고 한 줄로(복사 단추) · 한국어 기기 음성 · Shift+Space 한/영 */
+  G.benchTour = async () => {
+    const spots = [['village', 'night'], ['arena', 'day'], ['cove', 'sunset'], ['sea', 'clear']], out = [];
+    for (const [pn, tm] of spots) {
+      await G.loadPlace(pn, tm); P.hidden = true; hud.veil.hide();
+      const ivs = []; let last = 0, calls = 0, tris = 0; const t0 = performance.now();
+      await new Promise((res) => { const f = (ts) => { const t = (performance.now() - t0) / 1000; G.benchT = performance.now(); if (G.place.benchPath) G.place.benchPath(t * 4); if (last) ivs.push(ts - last); last = ts; const r = G.gfx.renderer.info.render; calls = Math.max(calls, r.calls); tris = Math.max(tris, r.triangles); if (t < 15) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
+      ivs.sort((a, b) => a - b); out.push(pn + ' p95 ' + (ivs[Math.floor(ivs.length * 0.95)] || 0).toFixed(1) + ' fps ' + (ivs.length / 15).toFixed(0) + ' c' + calls + ' t' + Math.round(tris / 1000) + 'k');
+    }
+    const st = G.gfx.stats();
+    const v = (speechSynthesis.getVoices() || []).filter((x) => /^ko/.test(x.lang));
+    const line = ['DRG-BENCH v2', 'CB ' + (st.cb ? 1 : 0), innerWidth + 'x' + innerHeight + '@' + (devicePixelRatio || 1), 'mode ' + st.mode, 'res ' + st.res, out.join(' / '), 'heap ' + st.heapMB, 'koVoice ' + v.length + '(' + v.filter((x) => x.localService).length + ' local)', 'err ' + (window.DRG ? DRG.diag().errs.length : '-')].join(' | ');
+    return line;
+  };
+  G.benchShow = (line) => {
+    const box = document.createElement('div'); box.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:90;background:#f4ead2;color:#2b2118;border:2px solid #2b2118;border-radius:10px;padding:10px 12px;font:14px/1.5 monospace;word-break:break-all';
+    const tx = document.createElement('div'); tx.textContent = line; box.appendChild(tx);
+    const hint = document.createElement('div'); hint.style.cssText = 'font:600 15px sans-serif;margin-top:6px'; hint.textContent = '끝으로 Shift+Space를 한 번 눌러 보세요(한/영 전환 확인) → 줄 끝에 결과가 붙어요. 그다음 복사해서 보내 주세요.'; box.appendChild(hint);
+    const b = document.createElement('button'); b.textContent = '복사'; b.style.cssText = 'margin-top:6px;font:inherit;padding:2px 10px';
+    b.onclick = () => { try { navigator.clipboard.writeText(tx.textContent); b.textContent = '복사됨'; } catch (e) { b.textContent = '길게 눌러 복사'; } };
+    box.appendChild(b); document.body.appendChild(box);
+    addEventListener('keydown', (e) => { if (e.code === 'Space' && e.shiftKey && !/ShiftSpace/.test(tx.textContent)) tx.textContent += ' | ShiftSpace ok key=' + e.key; }, { once: false });
+  };
+
   /* 시작 — ?ch=4&step=2 바로 · 아니면 첫 화면 */
   let ready;
-  if (Q.has('ch')) {
+  if (Q.get('bench') === '1') {
+    ready = Promise.resolve(); hud.veil.show('성능 재기', '1분쯤 걸려요 · 손대지 말고 기다려 주세요');
+    setTimeout(() => G.benchTour().then((l) => { hud.veil.hide(); G.benchShow(l); console.log(l); window.DRG_BENCH = l; }), 600);
+  } else if (Q.has('ch')) {
     G.grade = +(Q.get('grade') || 4); G.diff = diffOf(G.grade, Q); G.slot = +(Q.get('slot') || 3);
     ready = startCh(+Q.get('ch'), +(Q.get('step') || 0));
   } else {
@@ -164,12 +193,18 @@ export async function buildGame(scene, camera, rng, opt = {}) {
       }
       if (R.C && R.C.drawHook) R.C.drawHook(a, dt);
     },
-    benchPath: (t) => { if (G.place && G.place.benchPath) G.place.benchPath(t); },
+    benchPath: (t) => { G.benchT = performance.now(); if (G.place && G.place.benchPath) G.place.benchPath(t); },
     snapshot: () => (P.W ? { x: +P.W.x.toFixed(3), z: +P.W.z.toFixed(3), ch: R.ch ? R.ch.id : 0, idx: R.idx, id: R.step ? R.step.id || '' : '' } : { loading: true }),
     sense: () => {
       const s = R.sense();
       if (P.W) { s.me = { x: +P.W.x.toFixed(2), z: +P.W.z.toFixed(2), y: +P.W.y.toFixed(2), yaw: +P.W.yaw.toFixed(3), low: P.W.low, item: P.item, roll: P.W.rollT > 0 }; s.camYaw = +P.C.moveYaw().toFixed(3); }
       s.hud = hud.state(); s.diff = G.diff; s.place = G.place ? G.place.name : ''; s.chDone = G.chDone || 0;
+      if (P.W && G.collide && R.step && R.step.botObst) {        /* 둘레 30m 벽·바위(눈에 보이는 땅 모양) — 길 찾는 봇이 쓰는 차례만 */
+        const w = [], r = [], x = P.W.x, z = P.W.z;
+        for (const q of G.collide.walls) if (Math.min(Math.hypot(q[0] - x, q[1] - z), Math.hypot(q[2] - x, q[3] - z)) < 34) w.push(q);
+        for (const q of G.collide.blockers) if (Math.hypot(q[0] - x, q[1] - z) < 30) r.push(q);
+        s.obst = { walls: w, rocks: r };
+      }
       return s;
     },
   };

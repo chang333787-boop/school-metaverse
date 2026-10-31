@@ -35,9 +35,9 @@ function* flyCourse(G, C, o) {
   const cam = mod.createFlightCam ? mod.createFlightCam(G.camera) : null;
   let ev = { gate: 0, crash: 0, graze: 0, fall: 0 };
   F.on && ['gate', 'crash', 'graze', 'fall', 'regrab', 'splash'].forEach((k) => F.on(k, () => { ev[k] = (ev[k] || 0) + 1; }));
-  if (o.start) F.state && Object.assign(F.state, o.start);
+  if (o.start) { if (F.place) F.place(o.start.x, o.start.y, o.start.z, o.start.yaw || 0); else if (F.state) Object.assign(F.state, o.start); }
   T.manual = true; P.cam = 'fly';
-  G.camDraw = (a, dt) => { F.draw(a, dt); if (cam) (cam.draw || cam.update).call(cam, a, dt, F); };
+  G.camDraw = (a, dt) => { F.draw(a, dt); if (cam) { if (cam.update) cam.update(dt, F); else cam.draw(a, dt, F); } };
   const prevClean = C.cleanup; C.cleanup = () => { T.manual = false; P.cam = 'follow'; G.camDraw = null; F.dispose && F.dispose(); prevClean && prevClean(); };
   C.F = F; C.ev = ev;
   let t = 0;
@@ -136,9 +136,10 @@ function* trio(G, C) {
       d.next -= dt;
       if (d.next <= 0 && M.warnT <= 0 && M.beh !== 'attack' && !M.inGap()) { M.windup(WARN[G.diff]); d.next = 4 + G.rng() * 2.5; }
       if (M.beh === 'attack' && !d.shot) { d.shot = { t: 0, x: P.W.x, z: P.W.z }; }
-      if (d.shot) { d.shot.t += dt; if (d.shot.t > 0.5) { puffs.burst(d.shot.x, 0.3, d.shot.z, 12, 2, 2); if (Math.hypot(P.W.x - d.shot.x, P.W.z - d.shot.z) < 1.5 && !(P.W.rollT > 0)) { knocks++; P.lock = true; P.pose = { stumble: 1 }; C.down = G.diff === 'easy' ? 0.6 : 2; } d.shot = null; } }
+      if (d.gapT > 0) d.gapT -= dt;
+      if (d.shot) { d.shot.t += dt; if (d.shot.t > 0.5) { d.gapT = { easy: 3, normal: 2.2, hard: 1.5 }[G.diff]; puffs.burst(d.shot.x, 0.3, d.shot.z, 12, 2, 2); if (Math.hypot(P.W.x - d.shot.x, P.W.z - d.shot.z) < 1.5 && !(P.W.rollT > 0)) { if (G.diff === 'easy') G.hud.say('hiccup', '앗 뜨거!', [], { secs: 0.8 }); else { knocks++; P.lock = true; P.pose = { stumble: 1 }; C.down = 2; } } /* 쉬움 = 맞아도 안 넘어짐(design §8) */ d.shot = null; } }
       /* 진정 — 틈 안에서 맞는 것 · 그롱클 = 풀 · 내더 = 턱 밑(F 길게) · 테러 = 생선(또는 빛 점) */
-      const near = G.dist(P.W, d) < (d.kind === 'terror' ? 2 : 3.2), gap = M.inGap() || G.diff === 'easy' && M.beh !== 'attack' && M.warnT <= 0;
+      const near = G.dist(P.W, d) < (d.kind === 'terror' ? 2 : 3.2), gap = d.gapT > 0 || G.diff === 'easy' && M.beh !== 'attack' && M.warnT <= 0;   // 쏜 뒤 숨 고르는 틈(보통 2.2초)
       if (near && gap) {
         const ok = (d.kind === 'gronckle' && P.fTap && P.item === 'nip') || (d.kind === 'nadder' && P.reach && (C.chinT = (C.chinT || 0) + dt) > 0.8) || (d.kind === 'terror' && P.fTap && P.item === 'cod');
         if (ok) { d.calm = true; M.lock = d.kind === 'gronckle' ? 'roll' : 'flop'; M.event(d.kind === 'gronckle' ? 'nip' : d.kind === 'nadder' ? 'chin' : 'offer', d.kind === 'terror' ? 'cod' : undefined); G.hud.say('fishlegs', d.kind === 'gronckle' ? '그롱클이 뒹굴어!' : d.kind === 'nadder' ? '내더가 털썩!' : '테러가 받아먹었어!', [], { secs: 1.4 }); C.chinT = 0; }
@@ -156,7 +157,7 @@ function* trio(G, C) {
   return true;
 }
 function trioSense(G, C) {
-  return { item: C.item, dragons: (C.D || []).map((d) => ({ kind: d.kind, x: +d.x.toFixed(1), z: +d.z.toFixed(1), calm: d.calm, warn: d.mind.warnT > 0, gap: d.mind.inGap(), vis: !!(d.root && G.vis(d.x, d.y + 1, d.z)) })) };
+  return { item: C.item, dragons: (C.D || []).map((d) => ({ kind: d.kind, x: +d.x.toFixed(1), z: +d.z.toFixed(1), calm: d.calm, warn: d.mind.warnT > 0, gap: d.gapT > 0, vis: !!(d.root && G.vis(d.x, d.y + 1, d.z)) })) };
 }
 
 /* ⑤ 스토이크 귀환 — 부서진 배를 망치 박자로 고치며 듣기(쉬움 = 걸어가서 듣기만) */

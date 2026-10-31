@@ -43,7 +43,7 @@ export function createDragon(o) {
   /* 걸음 — pl = 플레이어 { x, z, vx, vz, low, weapon, reach, yaw } · 마음 엔진에 몸짓을 넣고 행동대로 움직임 */
   const P = { d: 99, close: 0, low: false, weapon: false, facing: false, reach: false, still: true, dragonFacing: 0, blindSpot: false };
   D.step = (dt, pl) => {
-    D.t += dt; D.px = D.x; D.pz = D.z; D.py = D.y; D.pyaw = D.yaw;
+    D.t += dt; D.simAcc = (D.simAcc || 0) + dt; D.px = D.x; D.pz = D.z; D.py = D.y; D.pyaw = D.yaw;
     const M = D.mind, sp = M.S;
     if (pl) {
       const dx = D.x - pl.x, dz = D.z - pl.z, d = Math.hypot(dx, dz) || 1e-4;
@@ -74,8 +74,11 @@ export function createDragon(o) {
       const k = Math.min(1, dt * 3), vx = d > 0.05 ? dx / d * want : 0, vz = d > 0.05 ? dz / d * want : 0;
       D.vx = lerp(D.vx, vx, k); D.vz = lerp(D.vz, vz, k);
     } else { const k = Math.min(1, dt * 5); D.vx = lerp(D.vx, 0, k); D.vz = lerp(D.vz, 0, k); }
+    const bx = D.x, bz = D.z;
     D.x += D.vx * dt; D.z += D.vz * dt;
     if (o.collide) { _p.x = D.x; _p.z = D.z; o.collide.push(_p, D.radius); D.x = _p.x; D.z = _p.z; }
+    /* 정해 둔 곳에 벽·바위 때문에 못 닿으면(1.2초 제자리) 닿은 셈 — 대본이 멈추지 않게 */
+    if (D.mode === 'script' && D.target) { if (Math.hypot(D.x - bx, D.z - bz) < 0.2 * dt) { D.stuckT = (D.stuckT || 0) + dt; if (D.stuckT > 1.2) { D.target = null; D.stuckT = 0; } } else D.stuckT = 0; }
     if (o.bound) { const bx = D.x - o.bound.x, bz = D.z - o.bound.z, bd = Math.hypot(bx, bz), br = o.bound.r - D.radius; if (bd > br) { D.x = o.bound.x + bx / bd * br; D.z = o.bound.z + bz / bd * br; } }
     D.y = o.place.height(D.x, D.z, D.y);
     D.speed = Math.hypot(D.vx, D.vz);
@@ -93,7 +96,7 @@ export function createDragon(o) {
     let dy = angTo(D.pyaw, D.yaw);
     D.root.position.set(lerp(D.px, D.x, a), lerp(D.py, D.y, a) + D.rigY, lerp(D.pz, D.z, a)); D.root.rotation.y = D.pyaw + dy * a;
     const far = camPos && Math.hypot(camPos.x - D.x, camPos.z - D.z) > 30;
-    D.rigAcc += dt; if (far && D.rigAcc < 1 / 15) return; const h = D.rigAcc; D.rigAcc = 0;
+    D.rigAcc += D.simAcc || 0; D.simAcc = 0; if (far && D.rigAcc < 1 / 15) return; const h = Math.min(0.5, D.rigAcc); D.rigAcc = 0;   // 놀이 시간(걸음)으로 — ?turbo에서도 신호가 같은 빠르기
     const M = D.mind, g = M.sig, b = M.beh, R = D.rig;
     T.walk = Math.min(1, D.speed / 3); T.crouch = g.crouch; T.pupil = g.pupil; T.ear = g.ear; T.teeth = g.teeth; T.tailCurl = g.tailCurl;
     T.jaw = g.jaw; T.sniff = g.sniff; T.tilt = g.tilt; T.headUp = g.headUp;
@@ -123,7 +126,7 @@ export function createPerson(o) {
   H.show = (v) => { H.hidden = !v; if (H.root) H.root.visible = v; };
   H.arrived = () => !H.target;
   H.step = (dt) => {
-    H.px = H.x; H.pz = H.z; H.py = H.y; H.pyaw = H.yaw;
+    H.simAcc = (H.simAcc || 0) + dt; H.px = H.x; H.pz = H.z; H.py = H.y; H.pyaw = H.yaw;
     let vx = 0, vz = 0;
     if (H.target) { const dx = H.target.x - H.x, dz = H.target.z - H.z, d = Math.hypot(dx, dz); if (d < 0.25) H.target = null; else { vx = dx / d * H.target.sp; vz = dz / d * H.target.sp; } }
     const k = Math.min(1, dt * 6); H.vx = lerp(H.vx, vx, k); H.vz = lerp(H.vz, vz, k);
@@ -139,7 +142,7 @@ export function createPerson(o) {
     if (!H.root) return;
     H.root.position.set(lerp(H.px, H.x, a), lerp(H.py, H.y, a), lerp(H.pz, H.z, a)); H.root.rotation.y = H.pyaw + angTo(H.pyaw, H.yaw) * a;
     const far = camPos && Math.hypot(camPos.x - H.x, camPos.z - H.z) > 30;
-    H.rigAcc += dt; if (far && H.rigAcc < 1 / 15) return; const h = H.rigAcc; H.rigAcc = 0;
+    H.rigAcc += H.simAcc || 0; H.simAcc = 0; if (far && H.rigAcc < 1 / 15) return; const h = Math.min(0.5, H.rigAcc); H.rigAcc = 0;
     for (const n in T) T[n] = 0;
     T.speed = Math.min(1, H.speed / 4.2);
     for (const n in H.pose) T[n] = H.pose[n];
