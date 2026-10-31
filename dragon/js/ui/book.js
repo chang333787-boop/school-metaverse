@@ -13,6 +13,8 @@ export const PAGES = [
   { key: 'nightmare', name: '몬스트러스 나이트메어', line: '매우 위험. 보이면 처치.', fl: '화력 15' },
   { key: 'terror', name: '테러블 테러', line: '매우 위험. 보이면 처치.', fl: '공격 8 · 독 12' },
   { key: 'scauldron', name: '스콜드런', line: '끓는 물을 뿜는다. 보이면 처치.', bookOnly: true },
+  { key: 'nest', name: '둥지(내가 쓴 쪽)', line: '책에 없는 쪽 — 내가 직접 보고 씀', mine: true },
+  { key: 'boss', name: '대장 드래곤(내가 쓴 쪽)', line: '책에 없는 드래곤 — 내가 직접 보고 씀', mine: true },
 ];
 /* 종 그림 — 손그림 실루엣(우리 모양 · 영화 그림 X) */
 const DRAW = {
@@ -22,6 +24,8 @@ const DRAW = {
   zippleback: '<ellipse cx="110" cy="130" rx="55" ry="25" fill="#6a8a5a"/><path d="M140 120 C170 100 180 70 210 60" stroke-width="12" stroke="#6a8a5a"/><path d="M140 130 C175 120 195 100 225 98" stroke-width="12" stroke="#6a8a5a"/><path d="M60 135 C40 140 25 150 15 165" stroke-width="8" stroke="#6a8a5a"/>',
   nightmare: '<path d="M20 140 C60 130 90 120 120 110 C150 100 170 80 200 70 L225 60 L210 85 C190 100 170 120 140 135 C100 150 60 152 20 140 Z" fill="#a8543a"/><path d="M110 112 L60 30 L160 95 Z" fill="#8a3a2a"/><path d="M205 66 L215 40 M212 72 L235 55" stroke-width="4"/>',
   terror: '<ellipse cx="120" cy="125" rx="28" ry="18" fill="#7a8a4a"/><circle cx="150" cy="115" r="12" fill="#7a8a4a"/><path d="M95 125 C80 130 70 135 60 145" stroke-width="5" stroke="#7a8a4a"/><path d="M118 112 L105 92 L130 108 Z" fill="#5a6a3a"/>',
+  nest: '<path d="M20 170 C60 90 100 60 125 60 C150 60 190 90 230 170 Z" fill="#6a5a58"/><path d="M105 62 C112 40 138 40 145 62" stroke="#a8543a" stroke-width="5"/><path d="M60 120 L70 110 M180 120 L170 110" stroke-width="3"/>',
+  boss: '<path d="M10 160 C40 90 90 70 130 72 C170 74 210 100 240 160 Z" fill="#5a4a48"/><circle cx="120" cy="100" r="3" fill="#e8dcc0"/><circle cx="132" cy="98" r="3" fill="#e8dcc0"/><circle cx="144" cy="100" r="3" fill="#e8dcc0"/>',
   scauldron: '<path d="M30 140 C70 120 120 110 170 112 L215 100 L200 122 C170 130 120 140 30 140 Z" fill="#6a8aa8"/><path d="M215 100 C230 96 238 90 240 80" stroke="#7fb0c8" stroke-dasharray="4 4"/>',
   joke: '<path d="M30 150 L80 90 L120 120 L160 70 L220 150 Z" fill="#e8e4dc" stroke-width="2"/><path d="M60 60 L62 66 M90 40 L92 46 M150 35 L152 41 M190 55 L192 61" stroke="#9aa6ae"/>',
 };
@@ -71,7 +75,7 @@ export function createBook(G) {
     const p = PAGES[B.page], n = B.notes[p.key] || {}, covered = Object.keys(n).length > 0 || B.sketch[p.key];
     const left = `<div class="pg"><h2>${p.name}</h2><div class="ln" style="${covered && !p.joke ? 'text-decoration:line-through;opacity:.6' : ''}">${p.line}</div>${p.fl ? `<div class="fl">피시레그가 외는 숫자: ${p.fl}</div>` : ''}
       <svg viewBox="0 0 250 200" style="width:100%;height:58%;margin-top:6px" stroke="${INK}" stroke-width="2" fill="none" stroke-linecap="round">${p.unknown && !B.sketch.nightfury ? '<text x="125" y="110" text-anchor="middle" font-size="28" fill="#8a7a62" stroke="none">?</text>' : (DRAW[p.key] || '')}</svg>
-      ${!p.joke && !covered ? `<svg class="stamp" viewBox="0 0 32 32">${ICONS.x.replace(/^<svg[^>]*>|<\/svg>$/g, '')}</svg>` : ''}${p.bookOnly ? '<div class="fl">(책에만 나오는 드래곤)</div>' : ''}</div>`;
+      ${!p.joke && !p.mine && !covered ? `<svg class="stamp" viewBox="0 0 32 32">${ICONS.x.replace(/^<svg[^>]*>|<\/svg>$/g, '')}</svg>` : ''}${p.bookOnly ? '<div class="fl">(책에만 나오는 드래곤)</div>' : ''}</div>`;
     const right = p.joke ? `<div class="pg"><div class="ln" style="margin-top:40px;font-size:22px">${p.line}</div><div class="fl">— 히컵의 낙서</div></div>`
       : `<div class="pg"><h2 style="font-size:20px">내가 본 것</h2>${CELLS.map(([k, t]) => `<div class="cell"><b>${t}</b><span class="pen">${n[k] || ''}</span></div>`).join('')}</div>`;
     el.innerHTML = `<div class="sp">${left}${right}<div class="nav"><button data-a="prev">◀</button><button data-a="close">닫기</button><button data-a="next">▶</button></div></div>`;
