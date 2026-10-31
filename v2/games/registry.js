@@ -43,6 +43,7 @@ export const GAMES = {
   world_animal: { title: '동물 세계', folder: 'world', v: 23, use: 'story', params: { set: 'world_animal' }, desc: '세계 판 5번(시아·지원) — 운동장의 물약을 마시고 아기 카피바라로 · 동물병원 · 동물원 카피바라 존 · 규칙을 어기면 💥 · 반전 · 📖 세계 안내서', icon: '🐾', group: '상상', short: '아기 카피바라가 되어 동물원 신기한 일 16가지' },
   school2036: { title: '10년 뒤 학교', v: 1, lesson: 'story', cat: 'imagine', link: '../imagine/school2036/', icon: '🌱', group: '상상', short: '2036년, AI와 함께 자란 학교를 걸어 보기' },
   wizard: { title: '마법사 마을', v: 1, lesson: 'story', cat: 'imagine', link: '../imagine/wizard/', icon: '🧙', group: '상상', short: '용 키워 타기 · 구름 고래 · 날씨·변신 마법 — 신기한 일 16가지' },
+  dragon: { title: '버크의 드래곤 친구', v: 1, folder: 'story', link: '../dragon/', icon: '🐉', group: '모험', short: '영화를 보고 4학년이 기획 — 길들이기 · 첫 비행 · 대장 드래곤' },   // DRAGON-1(10-31 · goal §6) 다른 페이지(v2 엔진 밖) · 홍보판엔 카드 없음
   blocks_solo: { title: '블록 놀이(혼자)', folder: 'make', v: 12, use: 'blocks', params: { solo: true }, desc: '🏠 나만의 판에서 혼자 블록을 쌓고 가구·나무를 부숴요 — 이 기기에 저장돼요', icon: '🧱', group: '놀이', short: '혼자 블록 쌓기 · 이 기기에 저장' },
   blocks: { title: '블록 놀이(같이)', folder: 'make', v: 12, mp: 'together', desc: '같은 판 친구들과 학교 곳곳에 블록을 놓고 부숴요 — 책상·책장 같은 가구도 🔨로 통째로 퍽! 친구들 블록이 바로 보여요(선생님이 판 잠그기·비우기)', icon: '🧱', group: '놀이', short: '같은 판 친구와 블록 쌓기 · 가구 부수기' },
   memo: { title: '메타버스 메모장', folder: 'think', v: 34, mp: 'together', desc: '우리 이야기를 장면으로 나눠 적고(인물·대사·물건 덧붙이기) 학교 곳곳에 장면 깃발을 꽂아요 — 같은 판 친구들 것이 바로 보여요', icon: '📝', group: '이야기', short: '장면 적고 학교에 장면 깃발 꽂기' },
