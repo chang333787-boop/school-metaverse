@@ -10,6 +10,7 @@ import { buildLookA } from './scenes/look_a.js?v=14';
 import { buildModelView } from './scenes/model_view.js?v=14';
 import { buildWalkTest } from './stages/walk_test.js?v=14';
 import { buildPlaceView } from './stages/place_view.js?v=14';
+import { buildGame } from './stages/game.js?v=14';
 
 const Q = new URLSearchParams(location.search);
 const canvas = document.getElementById('scene');
@@ -22,9 +23,9 @@ gfx.onResize = (w, h) => { camera.aspect = w / h; camera.updateProjectionMatrix(
 
 /* 팀이 만드는 장면은 파일이 생기면 열림(동적 import) — sil = 64px 실루엣(M) · fly = 비행 시험(F) */
 const lazy = (file, fn) => async (...a) => (await import(file))[fn](...a);
-const SCENES = { base: buildBaseTest, a: buildLookA, model: buildModelView, walk: buildWalkTest, place: buildPlaceView,
+const SCENES = { game: buildGame, base: buildBaseTest, a: buildLookA, model: buildModelView, walk: buildWalkTest, place: buildPlaceView,
   sil: lazy('./scenes/silhouette.js?v=14', 'buildSilhouette'), fly: lazy('./stages/flight_test.js?v=14', 'buildFlightTest') };
-const world = await (SCENES[Q.get('scene')] || buildLookA)(scene, camera, rng, { gfx, time: Q.get('time'), mode: Q.get('mode2'), yaw: Q.has('yaw') ? +Q.get('yaw') : undefined, dist: Q.get('dist'), pitch: Q.has('pitch') ? +Q.get('pitch') : undefined, people: Q.get('people'), who: Q.get('who'), p: Q.get('p'), variant: Q.get('variant'), at: Q.get('at'), marks: Q.get('marks') === '1', swap: Q.get('swap') === '1', diff: Q.get('diff') || 'normal' });
+const world = await (SCENES[Q.get('scene') || 'game'] || buildGame)(scene, camera, rng, { gfx, time: Q.get('time'), mode: Q.get('mode2'), yaw: Q.has('yaw') ? +Q.get('yaw') : undefined, dist: Q.get('dist'), pitch: Q.has('pitch') ? +Q.get('pitch') : undefined, people: Q.get('people'), who: Q.get('who'), p: Q.get('p'), variant: Q.get('variant'), at: Q.get('at'), marks: Q.get('marks') === '1', swap: Q.get('swap') === '1', diff: Q.get('diff') || 'normal' });
 const ctx = { gfx, input, canvas, scene, camera, world, benchPath: world.benchPath, snapshot: world.snapshot, sense: world.sense };
 const dbg = installDebug(ctx);
 const loop = createLoop({
