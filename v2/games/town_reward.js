@@ -195,6 +195,8 @@ export function createReward(A) {
     for (const [gk, p, sc, hex, r] of parts) { const g0 = G[gk], g = g0.index ? g0.toNonIndexed() : g0, P = g.attributes.position, N = g.attributes.normal; _m.compose(_v.set(p[0], p[1], p[2]), _q.setFromEuler(_e.set(...(r || [0, 0, 0]))), _s.set(sc[0], sc[1], sc[2])); _nm.getNormalMatrix(_m); _c.set(hex);
       for (let i = 0; i < P.count; i++) { _v.fromBufferAttribute(P, i).applyMatrix4(_m); pos.push(_v.x, _v.y, _v.z); _n.fromBufferAttribute(N, i).applyMatrix3(_nm).normalize(); nor.push(_n.x, _n.y, _n.z); cl.push(_c.r, _c.g, _c.b); } if (g !== g0) g.dispose(); }
     const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(cl, 3)); GEOS.push(g); const m = new T3.Mesh(g, kmat()); m.castShadow = false; m.userData.rwd = 1; return m; }
+  /* RWFIX-1(코덱스 C E6): 바꿔 단 옷·좌판 그림은 모양까지 버림(예전 = 부모에서만 떼고 GEOS에 쌓여 마을을 나갈 때까지 남음) */
+  function drop(o) { if (!o) return; if (o.parent) o.parent.remove(o); o.traverse(q => { if (q.geometry) { const i = GEOS.indexOf(q.geometry); if (i >= 0) GEOS.splice(i, 1); q.geometry.dispose(); } if (q.material && q.material !== KMAT) { const j = MATS.indexOf(q.material); if (j >= 0) { MATS.splice(j, 1); q.material.dispose(); } } }); }
   const rig = () => { if (A.promo()) return null; const K = map.player.rig; return K && K.head && K.body ? K : null; };
   /* 기본 모자 칸(정점) = 처음 붙일 때 '지금 칠해진 모자 색'으로 찾아 둠 · 모자를 쓰면 그 칸을 모자 색으로 · 벗으면 내 모습(look.js) 색으로 다시 */
   let CAPI = null, CAPP = false;
@@ -203,11 +205,11 @@ export function createReward(A) {
     if (hex == null) { if (CAPP) { CAPP = false; A.lookRepaint(); } return; } CAPP = true; _c.set(hex); for (const i of CAPI) C.setXYZ(i, _c.r, _c.g, _c.b); C.needsUpdate = true; }
   function wear() { const K = rig(), r = S(); if (!K) return; if (RIG !== K) { RIG = K; CAPI = null; }
     const hk = r.hat && HATS[r.hat] && own().has('h:' + r.hat) ? r.hat : '';
-    if (HAT && HAT.userData.k !== hk) { HAT.parent && HAT.parent.remove(HAT); HAT = null; }
+    if (HAT && HAT.userData.k !== hk) { drop(HAT); HAT = null; }
     if (hk && !HAT) { HAT = bake(HATS[hk].p); HAT.userData.k = hk; K.head.add(HAT); }
     capPaint(hk ? HATS[hk].cap : null);
     const sk = r.scarf && A.rcol(r.scarf) != null && own().has('s:' + r.scarf) ? r.scarf : '';
-    if (SCF && SCF.userData.k !== sk) { SCF.parent && SCF.parent.remove(SCF); SCF = null; }
+    if (SCF && SCF.userData.k !== sk) { drop(SCF); SCF = null; }
     if (sk && !SCF) { const c = A.rcol(sk), d = dark(c); SCF = bake([['tor', [0, 0.745, 0.005], [0.158, 0.158, 0.14], c, [Math.PI / 2, 0, 0]], ['cyl', [0.06, 0.655, 0.128], [0.04, 0.12, 0.016], d, [0.12, 0, 0.18]]]); SCF.userData.k = sk; K.rig.add(SCF); }
     lampSync(); }
   const dark = h => (((h >> 16 & 255) * 0.8) << 16) | (((h >> 8 & 255) * 0.8) << 8) | ((h & 255) * 0.8);
@@ -224,7 +226,7 @@ export function createReward(A) {
     const sg = new T3.CircleGeometry(1.7, 28); sg.rotateX(-Math.PI / 2); GEOS.push(sg); const sm = new T3.MeshBasicMaterial({ color: 0xfff0b8, transparent: true, opacity: 0.32, blending: T3.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }); MATS.push(sm);
     const spot = new T3.Mesh(sg, sm); spot.position.set(0, -0.72, 4.4); spot.scale.set(1, 1, 1.35); spot.renderOrder = 4; spot.userData.beam = 1; g.add(cone, spot); g.userData.k = 'lamp'; K.head.add(g); return g; }
   let LAMPON = null;
-  function lampSync() { const K = rig(); if (!K || !has('lamp')) { if (LAMP) LAMP.visible = false; LAMPON = false; return; } if (!LAMP || LAMP.parent !== K.head) { if (LAMP && LAMP.parent) LAMP.parent.remove(LAMP); LAMP = lampBuild(K); }
+  function lampSync() { const K = rig(); if (!K || !has('lamp')) { if (LAMP) LAMP.visible = false; LAMPON = false; return; } if (!LAMP || LAMP.parent !== K.head) { drop(LAMP); LAMP = lampBuild(K); }
     const on = GAME.phase === 'night' && !A.indoor() && !S().lampOff; LAMP.visible = true; for (const o of LAMP.children) if (o.userData.beam) o.visible = on; if (on !== LAMPON) { LAMPON = on; if (on && !S().tipLamp) { S().tipLamp = 1; mark(); A.say(en() ? '🔦 It got dark, so your head lamp turned on' : '🔦 어두워져서 이마 전등이 켜졌어요', 3, 1); } } }
   // ── 장화: 갯벌·논에선 발이 빠져 느림(0.62) · 장화면 그대로 — 0.25초 칸에서 바뀔 때만 걸음 빠르기 다시 ──
   function walkK() { return MUDN && !has('boots') ? 0.62 : 1; }
@@ -248,7 +250,7 @@ export function createReward(A) {
   function stPay() { const r = S(), st = r.st; if (!st || !st.it || !st.it.length || st.d >= day()) return; let v = 0; for (const q of st.it) v += q[1] | 0; const n = st.it.length; r.st = null; mark(); matDraw(); const got = v > 0 ? GAME.earn(v, 'mv:sell') : 0; if (got > 0) A.moneyPop(got);   /* 장터 팔기와 같은 옮김(mv:sell) */
     A.say(en() ? '🧺 The ' + n + ' thing(s) on your mat at ' + st.nm + ' sold overnight: ' + A.won(got) : '🧺 ' + st.nm + ' 좌판에 둔 ' + n + '개가 밤사이 팔렸어요. ' + A.won(got) + '이 들어왔어요', 4, 1); }
   /* 좌판 그림 = 깔개 하나 + 둔 만큼 작은 바구니(정점색 한 메시 · 둘 때만 다시 짓기) */
-  function matDraw() { if (MAT) { map.remove(MAT); MAT.geometry.dispose(); MAT = null; } const st = S().st; if (!st || !st.it || !st.it.length || A.promo()) return; const c = Math.cos(st.ry || 0), s = Math.sin(st.ry || 0), ox = st.x + c * 1.9, oz = st.z - s * 1.9, gy = A.gy(ox, oz);
+  function matDraw() { if (MAT) { map.remove(MAT); drop(MAT); MAT = null; } const st = S().st; if (!st || !st.it || !st.it.length || A.promo()) return; const c = Math.cos(st.ry || 0), s = Math.sin(st.ry || 0), ox = st.x + c * 1.9, oz = st.z - s * 1.9, gy = A.gy(ox, oz);
     const P = [['cyl', [0, 0.012, 0], [0.7, 0.024, 0.5], 0x6a8ac8]]; st.it.forEach((q, i) => { const a = (i - (st.it.length - 1) / 2) * 0.27; P.push(['cyl', [a, 0.07, 0.05 * (i % 2)], [0.11, 0.1, 0.11], 0xc49a6a], ['sph', [a, 0.13, 0.05 * (i % 2)], [0.085, 0.05, 0.085], [0xe2412f, 0xf2c531, 0x5aa043, 0xa8456a, 0xf4f1e8][i % 5]]); });
     MAT = bake(P); MAT.position.set(ox, gy, oz); MAT.rotation.y = st.ry || 0; MAT.updateMatrix(); MAT.matrixAutoUpdate = false; map.add(MAT); }
   // ── 🔭 망원경(도구 띠 6) — 누르면 1인칭 + 화각 ÷3 · 0.3초마다 가운데 보이는 곳 이름·거리 · 다시 누르거나 내려놓으면 끝 ──

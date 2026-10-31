@@ -45,10 +45,12 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     for (let i = 0; i < 3; i++) { await q(O[i][0]); await use('sp'); } S9 = await I(); ok(S9.st.spn === 3, '송편: 이웃 셋에게 맞는 소 = 셋 다 빚음(상에 송편이 하나씩)');
     await q('lighter'); await use('trail'); S9 = await I(); ok(!(S9.st.pk || []).length, '성묘길: 라이터 = 안 셈(산불 까닭)');
     await q('sleeve'); await use('trail'); await q('water'); await use('trail'); S9 = await I(); let lv1 = await lvF();
-    ok(S9.st.done === 1 && S9.past.some(q9 => q9.id === 'chu'), '성묘길 긴소매·물 → 추석 할 일 끝 · 기록');
-    ok(!lv0 || lv1.food === lv0.food + 1, '잔치 준비 「잔치 음식」에 보탬 ' + JSON.stringify(lv0 && lv0.food) + ' → ' + JSON.stringify(lv1 && lv1.food));
+    ok(!S9.st.done && (S9.st.pk || []).length === 2 && !S9.past.some(q9 => q9.id === 'chu'), '성묘길 긴소매·물 → 낮 할 일 둘 · 밤 강강술래가 남아 아직 끝 X(RWFIX-1 E9 · 안내판 셋 = 끝 조건)');
     await setMin(19 * 60 + 30); S9 = await I(); SP = await ev(() => SM_TOWN.seasonP());
     ok(!!S9.hot.ggr && !!S9.moon && SP.filter(q9 => q9[3] === 'walk').length >= 6, '추석 밤 = 보름달 · 강강술래 원(' + SP.filter(q9 => q9[3] === 'walk').length + '명) · E 강강술래 구경');
+    await use('ggr'); S9 = await I(); lv1 = await lvF();
+    ok(S9.st.done === 1 && S9.past.some(q9 => q9.id === 'chu'), '강강술래 구경까지 → 추석 할 일 셋 끝 · 기록');
+    ok(!lv0 || lv1.food === lv0.food + 1, '잔치 준비 「잔치 음식」에 보탬 ' + JSON.stringify(lv0 && lv0.food) + ' → ' + JSON.stringify(lv1 && lv1.food));
     { const me = await ev(() => SD2.map.player.pos()); ok(S9.moon[0] - me.x > 150 && S9.moon[1] > me.y, '보름달 = 동쪽(+x) 하늘 ' + JSON.stringify(S9.moon)); }
 
     // 김장
@@ -71,8 +73,9 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await q('money'); await q(null); await use('h' + el); S9 = await I(); ok(!(S9.st.sb || []).length, '어르신께 「세뱃돈 주세요」 = 안 셈');
     await q('ok'); await use('h' + el); for (const i of [0, 1, 2]) if (i !== el) await use('h' + i); S9 = await I();
     ok((S9.st.sb || []).length === 3 && S9.st.sb[0] === el && !!S9.hot.dd, '어르신 먼저 → 세 집 세배 → 떡국 상 E가 생김');
-    await q(null); await use('dd'); S9 = await I(); lv1 = await lvF(); ok(S9.st.done === 1 && (!lv0 || lv1.guest === lv0.guest + 1), '떡국 → 설날 끝 · 잔치 준비 「손님맞이」 보탬');
+    await q(null); await use('dd'); S9 = await I(); ok(S9.st.dd && !S9.st.done, '떡국 → 할 일 둘 · 윷놀이가 남아 아직 끝 X(RWFIX-1 E9)');
     await use('yut'); await W8(400); const yt = await panelTxt(); ok(/윷/.test(yt), '윷놀이 E = 판 놀이 창(윷) 열림'); await closeAll();
+    S9 = await I(); lv1 = await lvF(); ok(S9.st.done === 1 && (!lv0 || lv1.guest === lv0.guest + 1), '윷놀이까지 → 설날 끝 · 잔치 준비 「손님맞이」 보탬');
     await D('use', 'board'); await W8(300); const bt = await panelTxt(); ok(/설날/.test(bt) && !/\d|%/.test(bt), '안내판 창 = 할 일 셋 · 글에 숫자·% 0'); await closeAll();
     if (SHOTS) { await setMin(11 * 60); await shotAt('01_seol_yard', 0, 13, 0, -1); }
 

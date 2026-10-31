@@ -64,7 +64,7 @@ export function srcOf(k, o) { o = o || {};
   if (k === 'tally:gift' || k === 'st:cells') return 'guest';
   if (k === 'st:deco' || k === 'give:deco') return 'deco';
   if (k === 'st:typh') return 'safe';
-  if (k === 'job') { if (o.k === 'bake') return o.ph === 'order-end' ? 'food' : null; if (o.k === 'kitchen') return 'food'; if (o.k === 'rhy:mo') return 'show'; if (o.k === 'passreq') return o.ph === 'done' ? 'guest' : null; return o.done === 1 ? 'guest' : null; }
+  if (k === 'job') { if (o.k === 'bake') return o.ph === 'order-end' ? 'food' : null; if (o.k === 'kitchen') return null;   /* RWFIX-1(코덱스 C E12): 부엌 요리는 tally:cooked(잘 된 요리 · 한 판 한 번)로만 — 같은 요리가 두 길로 하루 몫을 다 채우고 탄 요리도 보태던 것 */ if (o.k === 'rhy:mo') return 'show'; if (o.k === 'passreq') return o.ph === 'done' ? 'guest' : null; return o.done === 1 ? 'guest' : null; }
   if (k === 'bun2') return o.ev !== 'fill' ? null : ['cook', 'autumn', 'garden'].includes(o.id) ? 'food' : ['spring', 'summer', 'forest', 'winter'].includes(o.id) ? 'deco' : null;
   if (k === 'night') return o.k === 'mkt' ? 'food' : o.k === 'patrol' ? 'safe' : null;
   if (k === 'janggu') return o.s != null ? 'show' : null;
@@ -183,6 +183,7 @@ export function createFeast(A) {
     if (want.show) hot('show', 0, -3.9, '🥁 ' + (e ? 'Play a rhythm on the stage' : '무대에서 장단 치기'), () => perform(), 1.8); else unhot('show'); }
   function give(b, e9) { const s = S(), e = en(); if (!prepOn()) { A.say(e ? '🎉 Preparation is over. Enjoy the feast.' : '🎉 준비는 끝났어요. 잔치를 즐겨요.', 2.4); return false; }
     const dc = S().dc && S().dc.d === day() ? S().dc.b : {}; if ((dc[b] | 0) >= CAP) { add(b, 'give:' + b, true); return false; }
+    if (st(b) >= 3) { A.say(e ? '🎉 ' + BR[b].t[1] + ' is all set up already. Keep it for yourself.' : '🎉 ' + BR[b].t[0] + jo(BR[b].t[0], '은', '는') + ' 셋 다 섰어요. 가방에 그대로 둬요.', 2.6); return false; }   /* RWFIX-1(코덱스 C E13): 다 선 갈래는 받지 않음(물건만 사라지고 바뀌는 것 없던 것) */
     if (!A.take(e9)) return false; add(b, 'give:' + b, true); A.sfx('ding'); return true; }
   function giveRow(b) { const B9 = A.bag() || {}, e = en(); const L9 = keys(B9).filter(k => (B9[k] | 0) > 0 && (b === 'food' ? ['dish', 'food'].includes((A.item(k) || [])[2]) : GIVE.deco.includes(k))).slice(0, 6);
     if (!L9.length) return '<div class="fst-how">' + esc(b === 'food' ? (e ? 'No dish or ingredient in your bag.' : '가방에 요리나 재료가 없어요.') : (e ? 'No pine cone, twigs, wool, pot or wind chime in your bag.' : '가방에 솔방울, 마른 가지, 양털, 화분, 풍경이 없어요.')) + '</div>';
@@ -190,6 +191,7 @@ export function createFeast(A) {
   async function share() { const s = S(), e = en(), n = st('food'), B9 = A.bag() || {}, d9 = keys(B9).find(k => (B9[k] | 0) > 0 && (A.item(k) || [])[2] === 'dish');
     const what = BR.food.things.slice(0, n).map(t => t[e ? 1 : 0]).join(e ? ', ' : ', ');
     const r = await A.dialog({ who: L(BR.food.who), icon: '🍲', text: [(e ? 'On the table: ' : '상 위에 차린 것: ') + what + '.', L((THEMES[s.th] || THEMES.homi).fact), d9 ? (e ? 'You have ' + (A.item(d9) || [])[1] + ' in your bag. Put a plate on the table?' : '가방에 ' + (A.item(d9) || [])[0] + '이 있네. 한 접시 올릴래?') : (e ? 'Come and eat with everyone.' : '와서 같이 먹자.')], choices: d9 ? [['put', e ? 'Put it on the table' : '상에 올리기'], ['eat', e ? 'Just eat together' : '같이 먹기만']] : null });
+    if (r == null || dead) return;   /* RWFIX-1(코덱스 C E19): 대화를 닫거나(Esc) 마을을 나가면 먹은 것으로 적지 않음 */
     if (d9 && r === 'put' && A.take(d9)) A.say(e ? '🍲 Your dish is on the feast table. The neighbours share it.' : '🍲 내 요리 한 접시가 잔칫상에 올랐어요. 이웃들이 나눠 먹어요.', 3, 1);
     s.fx.ate = 1; mark(); A.cheer(); A.sfx('pop'); A.rec('feast', { ev: 'ate', d: day() }); }
   /* 무대 = 저장한 내 장단이 있으면 그 자리에서 들려주기(버스킹 · 모인 이웃이 손뼉) · 없으면 장구 선생님 창(한 판 끝나면 공연한 것) */
@@ -267,7 +269,7 @@ export function createFeast(A) {
       const nx = n >= 3 ? (e ? 'All three are up in the feast yard.' : '셋 다 잔치 마당에 섰어요.') : on ? L(R.miss) : (e ? 'Next: ' : '다음: ') + L(R.things[n]);
       const today = !pre ? '' : cap ? (e ? 'Today’s share is done. You can help again tomorrow.' : '오늘 몫은 했어요. 내일 또 도울 수 있어요.') : (dc[b] | 0) ? (e ? 'You can help once more today.' : '오늘 한 번 더 도울 수 있어요.') : (e ? 'You can help today.' : '오늘 도울 수 있어요.');
       return '<div class="fst-row" style="--fc:' + R.col + '" data-br="' + b + '"><h4>' + R.ic + ' ' + esc(L(R.t)) + ' <span class="who">' + esc((e ? 'asked by ' : '맡긴 이: ') + L(R.who)) + '</span></h4><div class="fst-pics">' + pics + '</div><div class="fst-nx">' + esc(nx) + '</div>'
-        + (pre ? '<div class="fst-how">' + esc((e ? 'How: ' : '하는 법: ') + L(R.how)) + '</div><div class="fst-day">' + esc(today) + '</div>' : '') + (atBoard && pre && !cap && (b === 'food' || b === 'deco') ? giveRow(b) : '') + '</div>'; }).join('');
+        + (pre ? '<div class="fst-how">' + esc((e ? 'How: ' : '하는 법: ') + L(R.how)) + '</div><div class="fst-day">' + esc(today) + '</div>' : '') + (atBoard && pre && !cap && n < 3 && (b === 'food' || b === 'deco') ? giveRow(b) : '') + '</div>'; }).join('');
     const head = !on && pre && allDone() ? (e ? 'Prep is all done — every kind is up in the feast yard. Now we wait for the feast day: ' + nightsW(left(), 1) + ' to go.' : '준비 끝! 다섯 갈래가 다 잔치 마당에 섰어요. 이제 잔칫날을 기다려요. ' + nightsW(left()) + ' 남았어요.') : on ? (e ? 'Today is the feast. Neighbours gather in the feast yard from 10:00. What you prepared is out there.' : '오늘이 잔치 날이에요. 10시부터 잔치 마당에 이웃이 모여요. 준비한 것이 그대로 나와 있어요.') : (e ? nightsW(left(), 1).replace(/^./, c => c.toUpperCase()) + ' until the feast. Five neighbours asked for help. Each kind can move up to one thing a day.' : '잔치까지 ' + nightsW(left()) + '. 이웃 다섯이 준비를 맡겼어요. 갈래마다 하루에 한 가지씩 생길 수 있어요.');
     const past = s.past.slice(-3).reverse().map(q => { const T = THEMES[q.th] || THEMES.homi, got = B_ORDER.filter(b => (q.st || {})[b] > 0).map(b => BR[b].t[e ? 1 : 0]); return '<div class="fst-past">' + esc((q.n === 0 ? (e ? 'First town feast' : '첫 마을 잔치') : T.t[e ? 1 : 0]) + ' — ' + (got.length ? got.join(', ') : (e ? 'a quiet feast' : '조용한 잔치')) + (q.ph ? (e ? ' · photo in the album' : ' · 앨범에 사진') : '')) + '</div>'; }).join('');
     const h = '<h3>🎉 ' + esc(title()) + '</h3>' + (storyLine() ? '<div class="fst-story">' + esc(storyLine()) + '</div>' : '') + '<div class="sm">' + esc(head) + '</div><div class="sm" style="margin:4px 0">' + esc(L(th.fact)) + '</div>' + rows + (past ? '<div class="grp">' + (e ? 'Past feasts' : '지난 잔치') + '</div>' + past : '')

@@ -6,7 +6,7 @@
 //   지킴: 실제 풍습만(지어내기 X · 종교 강요 X) · 판타지·전투 X(씨름 = 구경·응원만) · 실명 X(이웃 = 하는 일·어르신) · 지역 비하 X · 숫자·% X · 새 Light X(달집 불·달 = MeshBasic)
 //     · 매 프레임 일 0(1초 칸 sec) · 저절로 뜨는 알림 = say(t, s, 1) · 사람 수 그대로(있는 일꾼을 옮기고 옷만 바꿈) · 홍보판 X(A.on())
 //   저장 GAME.S.season = { v, d 그날, id 그날 행사, st 그날 한 것, mv { '행사:본래 날': 1 } 태풍으로 미룸, ann 알림 날, past [{ id, d, ok }] }
-import { nightsW } from './town_feast.js?v=4';
+import { nightsW } from './town_feast.js?v=5';
 export const SEASON_V = 1;
 const T2 = (ko, en) => [ko, en];
 const FONT = '"Noto Sans KR","Noto Sans CJK KR","Apple SD Gothic Neo","Malgun Gothic","NanumGothic",sans-serif';
@@ -201,7 +201,9 @@ export function createSeason(A) {
   const late = () => { const m = min(); return m < 7 * 60 || m >= 22 * 60 + 30; };
   const sleepy = () => { if (!late()) return false; A.say(en() ? '🌙 Everyone is resting now. Come back in the morning.' : '🌙 이웃들이 쉬는 때예요. 아침에 다시 와요.', 2.6); return true; };
   function step(k) { const s = st(); s[k] = s[k] || 1; mark(); A.rec('season', { id: cur(), ev: 'step', s: k }); checkDone(); }
-  function checkDone() { const id = cur(), s = st(); if (!id || s.done) return; const ok = id === 'seol' ? s.dd : id === 'bor' ? s.nut && s.lit : id === 'dano' ? s.cp && s.cake && s.cheer : id === 'chu' ? (s.spn | 0) >= 3 && (s.pk || []).length >= 2 : (s.dv || []).length >= 3;
+  /* RWFIX-1(코덱스 C E9): 안내판 줄 = 끝 조건(같은 표 하나) — 설날 윷놀이·추석 강강술래를 안 했는데 '다 했어요'·일기에 적던 것 */
+  const didOf = (id, s) => [id === 'chu' ? (s.spn | 0) >= 3 : id === 'kim' ? (s.ko | 0) >= 5 : id === 'seol' ? (s.sb || []).length >= 3 : id === 'bor' ? !!s.nut : !!s.cp, id === 'chu' ? (s.pk || []).length >= 2 : id === 'kim' ? (s.dv || []).length >= 3 : id === 'seol' ? !!s.dd : id === 'bor' ? !!s.dir : !!s.cake, id === 'chu' ? !!s.ggr : id === 'seol' ? !!s.yut : id === 'bor' ? !!s.lit : !!s.cheer].slice(0, EV[id].todo.length);
+  function checkDone() { const id = cur(), s = st(); if (!id || s.done) return; const ok = didOf(id, s).every(Boolean);
     if (!ok) return; s.done = 1; A.chip('twn-ssn', null); chipT = 0; const S9 = S(); S9.past.push({ id, d: day(), ok: 1 }); while (S9.past.length > 20) S9.past.shift(); mark();
     A.banner(EV[id].ic + ' ' + (en() ? L(EV[id].t) + ': you did it all today' : '오늘 ' + L(EV[id].t) + ' 할 일을 다 했어요'), 4); A.sfx('done'); A.rec('season', { id, ev: 'done', b: EV[id].b });
     if (A.diary) A.diary(EV[id].ic, en() ? L(EV[id].t) + ': ' + EV[id].todo.map(t => t[1].split(' — ')[0]).join(', ') : L(EV[id].t) + jo(L(EV[id].t), '이었어요', '였어요') + '. ' + EV[id].todo.map(t => t[0].split(' — ')[0]).join(', ') + ' 했어요'); log('done ' + id); }
@@ -219,7 +221,7 @@ export function createSeason(A) {
     A.rec('season', { id: 'seol', ev: 'step', s: 'bow' }); if (sb.length >= 3) { A.banner('🙇 ' + (e ? 'You bowed at all three homes. Tteokguk is ready in the yard.' : '세 집 모두 세배를 드렸어요. 마당 상에 떡국이 차려졌어요.'), 4); const p = toYard(); if (p) { chipT = performance.now(); A.chip('twn-ssn', '🍲 ' + (e ? 'Tteokguk' : '떡국 먹으러'), { onClick: () => { A.chip('twn-ssn', null); A.route(p); } }); } } else hint(); KEY = ''; }
   async function eatDd() { const s = st(), e = en(); if (s.dd) { A.say(e ? '🍲 You already had a bowl. One is enough.' : '🍲 떡국은 벌써 한 그릇 먹었어요.', 2.2); return; }
     await ask({ who: e ? 'Neighbour' : '이웃', icon: '🍲', text: [e ? 'Here’s a bowl of tteokguk. White rice-cake slices are said to wish for a clean, bright year.' : '떡국 한 그릇 먹으렴. 하얀 가래떡처럼 깨끗하고 밝은 한 해를 보내라는 뜻이 있단다.', e ? 'With this bowl, you are a year older.' : '이 한 그릇을 먹으면 한 살 더 먹는 거야.'] }); s.dd = 1; mark(); A.sfx('done'); checkDone(); }
-  function yut() { if (sleepy()) return; if (!(A.table && A.table('yut'))) A.say(en() ? '🎯 The yut mat is busy now. Try again soon.' : '🎯 지금은 윷판을 쓸 수 없어요. 조금 뒤에 다시 해요.', 2.4); else { st().yut = 1; mark(); } }
+  function yut() { if (sleepy()) return; if (!(A.table && A.table('yut'))) A.say(en() ? '🎯 The yut mat is busy now. Try again soon.' : '🎯 지금은 윷판을 쓸 수 없어요. 조금 뒤에 다시 해요.', 2.4); else { st().yut = 1; mark(); checkDone(); } }
 
   /* 정월 대보름 — 부럼 · 달맞이(방위) · 달집(안전 줄 밖) */
   async function nut() { if (sleepy()) return; const s = st(), e = en(); if (s.nut) { A.say(e ? '🌰 Crack! You already cracked your bureom.' : '🌰 부럼은 벌써 깨물었어요.', 2.2); return; }
@@ -280,7 +282,7 @@ export function createSeason(A) {
     const r = await ask({ who: e ? 'Family going to the graves' : '성묘 가는 이웃', icon: '🌲', text: [e ? 'We’re walking up the hill to greet our ancestors’ graves. The grass is dry in autumn. What should we take? Pick one.' : '조상 산소에 인사하러 산길을 올라가요. 가을 산은 풀이 말라 있어요. 무엇을 챙겨 갈까요? 하나 골라 줘요.'], choices: C });
     const q = PACK.find(x => x[0] === r); if (!q) return; A.say((q[2] ? '🌲 ' : '🧯 ') + L(q[3]), 3.4); if (!q[2]) { log('pk wrong ' + r); return; }
     pk.push(r); mark(); A.sfx('pop'); A.rec('season', { id: 'chu', ev: 'step', s: 'pk' }); if (pk.length >= 2) A.banner('🌲 ' + (e ? 'Ready for the hill path. No sparks in dry hills.' : '성묘길 준비 끝. 마른 산에선 불씨 하나도 조심해요.'), 3.6); checkDone(); hint(); }
-  function ggr() { const s = st(), e = en(); if (!moonUp()) return; A.say(e ? '🌕 Under the full moon, neighbours hold hands in a big circle and go round, singing “ganggang sullae”.' : '🌕 둥근 보름달 아래 이웃들이 손을 잡고 둥글게 돌며 「강강술래」를 불러요.', 4); A.sfx('pop'); s.ggr = 1; mark(); }
+  function ggr() { const s = st(), e = en(); if (!moonUp()) return; A.say(e ? '🌕 Under the full moon, neighbours hold hands in a big circle and go round, singing “ganggang sullae”.' : '🌕 둥근 보름달 아래 이웃들이 손을 잡고 둥글게 돌며 「강강술래」를 불러요.', 4); A.sfx('pop'); s.ggr = 1; mark(); checkDone(); }
 
   /* 김장 — 절이기 차례(마당 자리를 보고) · 나누기(문 앞에 김치통이 이미 있는 집은 빼고) */
   function kimOpen() { if (sleepy()) return; const s = st(), e = en(); if ((s.ko | 0) >= 5) { const left = 3 - (s.dv || []).length; A.say(left > 0 ? (e ? '🥬 Take the kimchi to homes that could not make any. Look at the doorsteps.' : '🥬 김장을 못 한 이웃 집에 김치를 전해요. 문 앞을 잘 봐요.') : (e ? '🥬 All shared. Thank you!' : '🥬 다 나눴어요. 고마워요!'), 3); hint(); return; }
@@ -289,14 +291,14 @@ export function createSeason(A) {
       + '<div data-done style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">' + KIMS.slice(0, n).map(k => '<span style="border:2px solid #2b2420;border-radius:8px;padding:3px 8px;background:#e8f0c0;font-weight:800">' + esc(L(k[0])) + '</span>').join('') + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:6px">' + ord.filter(i => i >= n).map(i => '<button class="sub" data-k="' + i + '" style="min-height:44px;text-align:left">' + esc(L(KIMS[i][0])) + '</button>').join('') + '</div>'
       + '<div class="sm" data-why style="margin-top:6px;font-weight:800"></div><div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>';
-    const W = A.openP(h, false, 'season'); if (!W) return; W.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') { A.closeP(); return; } if (b.dataset.k != null) { const r = pickKim(+b.dataset.k); if (r.ok) { if (r.all) setTimeout(() => { if (!dead) A.closeP(); }, 1400); else { A.closeP(); kimOpen(); return; } } const w9 = W.querySelector('[data-why]'); if (w9) w9.textContent = r.t; } }; return W; }
-  function pickKim(k) { const s = st(), e = en(), n = s.ko | 0; if (k !== n) { log('kim wrong ' + k + ' at ' + n); return { ok: false, t: L(KIMS[n][1]) }; }
+    const W = A.openP(h, false, 'season'); if (!W) return; W.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') { A.closeP(); return; } if (b.dataset.k != null) { const r = pickKim(+b.dataset.k); if (r.ok) { if (r.all) { W.querySelectorAll('[data-k]').forEach(q => { q.disabled = true; }); setTimeout(() => { if (!dead && W.isConnected) A.closeP(); }, 1400); } else { A.closeP(); kimOpen(); return; } }   /* RWFIX-1(코덱스 C E7·E8): 다 됐으면 단추를 막음(두 번 누름 예외) · 1.4초 뒤엔 이 창이 아직 떠 있을 때만 닫음(다른 창을 닫던 것) */ const w9 = W.querySelector('[data-why]'); if (w9) w9.textContent = r.t; } }; return W; }
+  function pickKim(k) { const s = st(), e = en(), n = s.ko | 0; if (n >= KIMS.length) return { ok: false, t: '' }; if (k !== n) { log('kim wrong ' + k + ' at ' + n); return { ok: false, t: L(KIMS[n][1]) }; }
     s.ko = n + 1; mark(); A.sfx('ding'); if (s.ko < 5) return { ok: true, t: '' };
     s.carry = 3; mark(); A.rec('season', { id: 'kim', ev: 'step', s: 'order' }); A.banner('🥬 ' + (e ? 'The kimchi is done. Take one tub each to three homes that could not make any.' : '김치가 다 됐어요. 김장을 못 한 세 집에 한 통씩 전해요.'), 4.5); hint(); return { ok: true, all: true, t: e ? 'All done!' : '다 됐어요!' }; }
   async function give(i) { if (sleepy()) return; const s = st(), e = en(), dv = s.dv || (s.dv = []), slot = houseSlot(i);
     if (dv.includes(i)) { A.say(e ? '🥬 You already brought kimchi here.' : '🥬 이 집엔 벌써 김치를 전했어요.', 2.2); return; }
     if (!(s.carry > 0)) { A.say(e ? '🥬 First help with the gimjang in the yard.' : '🥬 먼저 김장 마당에서 김장을 거들어요.', 2.6); const p = toYard(); if (p) A.route(p); return; }
-    if (i === s.sp) { sayN(slot, e ? 'We made ours yesterday. See the tubs by the door? Take it to a home that needs it.' : '우리 집은 어제 담갔단다. 문 옆 김치통 보이지? 못 한 집에 갖다주렴.'); await ask({ who: e ? 'Neighbour' : '이웃', icon: '🥬', text: [e ? 'Thank you, but we already made kimchi yesterday. Look at the red basin and tubs by our door. Please take it to a home that couldn’t make any.' : '고마워. 그런데 우리 집은 어제 김장했단다. 문 옆 빨간 대야랑 김치통 보이지? 김장을 못 한 집에 갖다주렴.'] }); log('give decoy'); return; }
+    if (i === s.sp) { s.spNo = 1; mark(); sayN(slot, e ? 'We made ours yesterday. See the tubs by the door? Take it to a home that needs it.' : '우리 집은 어제 담갔단다. 문 옆 김치통 보이지? 못 한 집에 갖다주렴.'); await ask({ who: e ? 'Neighbour' : '이웃', icon: '🥬', text: [e ? 'Thank you, but we already made kimchi yesterday. Look at the red basin and tubs by our door. Please take it to a home that couldn’t make any.' : '고마워. 그런데 우리 집은 어제 김장했단다. 문 옆 빨간 대야랑 김치통 보이지? 김장을 못 한 집에 갖다주렴.'] }); log('give decoy'); return; }
     s.carry--; dv.push(i); mark(); addTub(i); A.sfx('pop'); const old = i === (s.sp + 1) % 4;
     sayN(slot, old ? (e ? 'My back hurt this year, so I couldn’t make any. Thank you, dear.' : '올해는 허리가 아파 못 담갔는데, 고맙구나.') : (e ? 'We were too busy this year. Thank you!' : '올해는 바빠서 못 담갔어요. 고마워요!'));
     A.rec('season', { id: 'kim', ev: 'step', s: 'give' }); checkDone(); if (!st().done) hint(); KEY = ''; }
@@ -304,22 +306,24 @@ export function createSeason(A) {
   /* 다음 할 일 칩(빨간 선) — 가까운 남은 집 · 마당 */
   function hint() { const id = cur(), s = st(), e = en(); if (!id || s.done) return null; let to = null, t = '';
     if (id === 'seol' && (s.sb || []).length < 3) { const left = HS.filter(h => !(s.sb || []).includes(h.i)), me = A.me(); left.sort((a, b) => Math.hypot(a.at[0] - me.x, a.at[1] - me.z) - Math.hypot(b.at[0] - me.x, b.at[1] - me.z)); if (left.length) { to = { icon: '🙇', name: e ? 'neighbour’s home' : '이웃 집', door: left[0].hot }; t = '🙇 ' + (e ? 'Sebae homes' : '세배할 집'); } }
-    else if (id === 'kim' && s.carry > 0) { const me = A.me(), left = HS.filter(h => !(s.dv || []).includes(h.i)).sort((a, b) => Math.hypot(a.at[0] - me.x, a.at[1] - me.z) - Math.hypot(b.at[0] - me.x, b.at[1] - me.z)); if (left.length) { to = { icon: '🥬', name: e ? 'neighbour’s home' : '이웃 집', door: left[0].hot }; t = '🥬 ' + (e ? 'Homes to share with' : '김치 전할 집'); } }
+    else if (id === 'kim' && s.carry > 0) { const me = A.me(), left = HS.filter(h => !(s.dv || []).includes(h.i) && !(s.spNo && h.i === s.sp)).sort((a, b) => Math.hypot(a.at[0] - me.x, a.at[1] - me.z) - Math.hypot(b.at[0] - me.x, b.at[1] - me.z)); if (left.length) { to = { icon: '🥬', name: e ? 'neighbour’s home' : '이웃 집', door: left[0].hot }; t = '🥬 ' + (e ? 'Homes to share with' : '김치 전할 집'); } }   /* RWFIX-1(코덱스 C E10): 이미 김장했다고 들은 집은 다시 권하지 않음 */
     if (!to) { const p = toYard(); if (!p) return null; to = p; t = EV[id].ic + ' ' + L(EV[id].t) + (e ? ' yard' : ' 마당'); }
     chipT = performance.now(); A.chip('twn-ssn', t, { onClick: () => { A.chip('twn-ssn', null); A.route(to); } }); return to; }
 
   // ───────── 안내판·수첩 창 ─────────
   function openBoard() { const id = cur(), s = st(), e = en(); if (!id) return null; const E9 = EV[id];
-    const did = [id === 'chu' ? (s.spn | 0) >= 3 : id === 'kim' ? (s.ko | 0) >= 5 : id === 'seol' ? (s.sb || []).length >= 3 : id === 'bor' ? s.nut : s.cp, id === 'chu' ? (s.pk || []).length >= 2 : id === 'kim' ? (s.dv || []).length >= 3 : id === 'seol' ? s.dd : id === 'bor' ? s.dir : s.cake, id === 'chu' ? s.ggr : id === 'seol' ? s.yut : id === 'bor' ? s.lit : s.cheer];
+    const did = didOf(id, s);
     const rows = E9.todo.map((t, i) => '<div style="border:2px solid #2b2420;border-left:8px solid ' + (did[i] ? '#2f8a4e' : '#c8a060') + ';border-radius:10px;padding:6px 9px;margin:6px 0;background:#fffdf6;font-size:15px;font-weight:800">' + esc(L(t)) + '<div style="font-size:13px;opacity:.78;font-weight:700">' + esc(did[i] ? (e ? 'Done' : '했어요') : (e ? 'Not yet' : '아직')) + '</div></div>').join('');
     const h = '<h3>' + E9.ic + ' ' + esc(L(E9.t)) + '</h3><div class="sm">' + esc(L(E9.fact)) + '</div>' + rows + '<div class="row"><button class="sub" data-a="go">🧭 ' + (e ? 'Show the way' : '길 안내') + '</button><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>';
     const W = A.openP(h, false, 'season'); if (!W) return null; W.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') A.closeP(); if (b.dataset.a === 'go') { A.closeP(); const to = hint() || toYard(); if (to) { A.chip('twn-ssn', null); A.route(to); } } }; log('board'); return W; }
 
   // ───────── 1초 칸 ─────────
-  function begin() { const s = S(), d = day(); if (s.d === d) return; dropAll(); const id = rawOn(d); s.d = d; s.st = {}; s.id = id; s.ann = -1; mark(); metD = -1; log('day ' + d + ' → ' + (id || '-'));
+  function begin() { const s = S(), d = day(); if (s.d === d) return; dropAll(); const id = rawOn(d); s.d = d; s.st = {}; s.id = id; s.ann = -1; s.sk = String(A.season(d)); mark(); metD = -1; log('day ' + d + ' → ' + (id || '-'));
     if (id) { buildHouses(id); buildYard(id); } }
   function sec() { if (dead || !A.on()) { if (VIS.yard) dropAll(); return; } const s = S(), d = day();
-    if (s.d !== d) begin(); const id = cur();
+    if (s.d !== d) begin();
+    { const sk = String(A.season(d)); if (s.sk == null) { s.sk = sk; mark(); } else if (s.sk !== sk) { s.sk = sk; const id2 = rawOn(d); if (id2 !== s.id) { dropAll(); A.chip('twn-ssn', null); chipT = 0; s.id = id2; s.st = {}; s.ann = -1; metD = -1; log('cal ' + sk + ' → ' + (id2 || '-')); if (id2) { buildHouses(id2); buildYard(id2); } } mark(); } }   /* RWFIX-1(코덱스 C E17): 달력·고정 계절을 바꾸면 그날 행사를 다시 셈(날짜만 보던 캐시) · 같은 행사면 한 것은 그대로 */
+    const id = cur();
     if (id && A.storm && A.storm() && min() < 10 * 60) { const bd = [d - 1, d].find(b => baseId(b) === id && target(id, b) === d); if (bd != null && !s.mv[id + ':' + bd]) { s.mv[id + ':' + bd] = 1; mark(); const t9 = '🌀 ' + (en() ? 'A typhoon is here, so ' + L(EV[id].t) + ' moves to tomorrow.' : '태풍이 와서 ' + L(EV[id].t) + jo(L(EV[id].t), '을', '를') + ' 내일로 미뤄요.'); if (!(A.stormNote && A.stormNote(t9))) A.say(t9, 4, 1); s.d = -1; begin(); return; } }   /* TYPH-2 = 태풍 날 창 안 한 줄(따로 알림 X) */
     if (!id) return; if (!VIS.yard) { buildHouses(id); buildYard(id); }
     gatherSec(); hots(); fireSec(); moonSec();

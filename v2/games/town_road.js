@@ -210,10 +210,10 @@ export function createRoad(A) {
   function actEnd(ok, why) { const a = ACT; if (!a) return; ACT = null; const w = a.w, e = en(), M = A.wkMesh(); if (M) { M.reset(a.i); if (M.hat) M.hat(a.i, true); } hotOff(w, false);
     if (a.h) a.h.remove(); if (a.hs) for (const h of a.hs) h.remove(); if (HAT) HAT.visible = false; if (ITEM) ITEM.visible = false;
     const s = S(); if (ok) { s.hk[a.kind] = (s.hk[a.kind] || 0) + 1; const hk9 = 'rd:h:' + w.k + ':' + Math.round(w.x) + ':' + Math.round(w.z), hOk = !A.GAME.picked(hk9), pay = A.GAME.uses('road:pay') < 4;   /* 하루 한도: 그 이웃 ❤ = 하루 한 번 · 100원·일 솜씨 = 하루 넷(되풀이로 무한히 오르지 않게 · FIX-LK1과 같은 길) */
-      if (hOk) { A.GAME.pick(hk9); A.heart(w, 1, 'rd:' + a.kind); } if (pay) { A.GAME.use('road:pay'); A.money(100, 'rd:' + a.kind); A.skUp('work', 2, 'rd:' + a.kind); }   /* REW-1 꼬리표(모자·줍기 따로 = 하루 셋씩 · 이 파일 한도 넷이 먼저) */ A.GAME.use('road:help'); mark(); A.GAME.flush && A.GAME.flush(); sfx('ding');
+      let hG = 0, pG = 0; if (hOk) { A.GAME.pick(hk9); hG = A.heart(w, 1, 'rd:' + a.kind) | 0; } if (pay) { A.GAME.use('road:pay'); pG = A.money(100, 'rd:' + a.kind) | 0; A.skUp('work', 2, 'rd:' + a.kind); }   /* RWFIX-1: 배너 = 실제로 오른 마음·들어온 돈(한도에 막히면 안 씀) */   /* REW-1 꼬리표(모자·줍기 따로 = 하루 셋씩 · 이 파일 한도 넷이 먼저) */ A.GAME.use('road:help'); mark(); A.GAME.flush && A.GAME.flush(); sfx('ding');
       const L9 = a.kind === 'hat' ? T2('고마워요! 바람이 참 세네요.', 'Thank you! What a wind!') : a.kind === 'pick' ? T2('고마워요! 덕분에 금방 끝났어요.', 'Thank you! That was quick!') : T2('고마워요!', 'Thank you!');
       A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, L(L9));
-      banner('🙋 ' + (e ? 'You helped!' + (hOk ? ' ❤+1' : '') + (pay ? (hOk ? ' and' : '') + ' 100 won' : '') : '도와드렸어요!' + (hOk ? ' ❤+1' : '') + (pay ? (hOk ? ', ' : ' ') + '100원을 받았어요' : '')) + (pay ? '' : (e ? ' (today\'s share is done)' : ' (오늘 받을 몫은 끝)')), 3);
+      banner('🙋 ' + (e ? 'You helped!' + (hG > 0 ? ' ❤+' + hG : '') + (pG > 0 ? (hG > 0 ? ' and' : '') + ' ' + pG + ' won' : '') : '도와드렸어요!' + (hG > 0 ? ' ❤+' + hG : '') + (pG > 0 ? (hG > 0 ? ', ' : ' ') + pG + '원을 받았어요' : '')) + (pG > 0 ? '' : (e ? ' (today\'s share is done)' : ' (오늘 받을 몫은 끝)')), 3);
       const f = a.kind === 'hat' ? windFact() : L(a.plan.crop[4]);
       setTimeout(() => toast('💡 ' + f, 4.6, 1), 1500); }
     else { A.GAME.use('road:help'); mark(); if (Math.hypot(map.player.pos().x - w.x, map.player.pos().z - w.z) < 45) A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, L(T2('괜찮아요, 다음에 또 부탁해요!', 'That is OK, maybe next time!')));

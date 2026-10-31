@@ -126,7 +126,7 @@ export function createJanggu(A) {
     const good = R.s >= 2; if (good && !s.top) { s.good++; if (s.good >= GOOD_UP) { s.good = 0; if (s.lv < STG.length - 1) { s.lv++; R.up = 'lv'; } else { s.top = true; R.up = 'top'; } } }
     s.last = { si: R.si, c: R.pat.join('') }; mark();
     if (A.GAME.use('jg:xp') <= XP_DAY) A.skUp('work', good ? 2 : 1);
-    if (R.up) { const k = 'jg:up' + (R.up === 'top' ? 'T' : s.lv); if (!s[k]) { s[k] = 1; A.money(UP_MONEY); } if (TW && !A.GAME.picked('jg:h')) { A.GAME.pick('jg:h'); A.heart(TW, 2); } mark(); }
+    if (R.up) { const k = 'jg:up' + (R.up === 'top' ? 'T' : s.lv); if (!s[k]) { s[k] = 1; A.money(UP_MONEY, true); }   /* RWFIX-1: 승급 상 = 한 번뿐 — 하루 총량에 막히면 다음에 들어옴(팝은 실제로 들어온 돈만) */ if (TW && !A.GAME.picked('jg:h')) { A.GAME.pick('jg:h'); A.heart(TW, 2); } mark(); }
     const what = first ? (e ? 'Every sound is in the right order.' : '소리 차례가 다 맞았어요.') : (e ? 'You fixed it. Every sound is in order now.' : '고쳐서 소리 차례가 다 맞았어요.');
     const next = R.up === 'lv' ? (e ? 'Next: ' + L(STG[s.lv].t) + '. ' + L(STG[s.lv].say) : '다음엔 「' + L(STG[s.lv].t) + '」을 배워요. ' + L(STG[s.lv].say)) : R.up === 'top' ? (e ? 'Next: make your own rhythm and play it for people.' : '다음엔 내 장단을 지어 사람들 앞에서 쳐 봐요.')
       : !first ? (e ? 'Next time, try to get it right the first time.' : '다음엔 한 번에 맞혀 봐요.') : !third ? (R.si === 0 ? (e ? 'Next time, try without erasing.' : '다음엔 지우지 않고 해 봐요.') : (e ? 'Next time, try hearing it only once.' : '다음엔 한 번만 듣고 해 봐요.')) : (e ? 'Next: another rhythm from the teacher.' : '다음엔 선생님의 다른 장단을 받아요.');

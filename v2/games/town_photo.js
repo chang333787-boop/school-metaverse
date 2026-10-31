@@ -104,7 +104,8 @@ export function createPress(A) {
     P9.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') { A.closeP(); return; } if (b.dataset.a === 'send') { const r = send(+b.dataset.t), box = b.parentElement, res = box && box.querySelector('.res'); if (res && r) res.innerHTML = '<b>' + esc(r.msg) + '</b>'; b.remove(); } }; }
   // 기사 내기: 문(rwCheck) 꼬리표 'photo:<동물>' — 같은 동물 같은 게임 날 한 번(RW_GEN·RW_XP photo = 1) · 막히면 앨범에만 남김
   function send(t) { const e9 = en(), L = e9 ? 1 : 0, P = ST(), a = P.list.find(q => q.t === t && !q.sent); if (!a) return null; const w = wildById(a.id), Q = pressLines(a, e9), th = P.th && P.th.d === S().day && !P.th.done && P.th.id === a.id;
-    const pay = A.earn(pressPay(a, th), 'photo:' + a.id); a.sent = S().day; A.GAME.mark();
+    const pay = A.earn(pressPay(a, th), 'photo:' + a.id); if (!(pay > 0) && A.GAME.rwWhy === 'rd') return { ok: false, msg: e9 ? 'You gathered plenty today, so there is no fee left to pay. Keep this story and hand it in tomorrow.' : '오늘은 충분히 모아서 줄 기사료가 없어요. 이 기사는 두었다가 내일 내요.' };   /* RWFIX-1: 실제 날짜 총량에 막힌 것 = 기사를 쓰지 않고 남김(예전 = 「벌써 실었어요」라며 기사를 써 버림) */
+    a.sent = S().day; A.GAME.mark();
     if (!(pay > 0)) { a.paid = -1; return { ok: false, msg: e9 ? 'We already ran a ' + w.t[1].toLowerCase() + ' story today. I will keep this one in your album — try another animal, or come back tomorrow.' : '오늘 ' + w.t[0] + ' 기사는 벌써 실었어요. 이 기사는 앨범에 남겨 둘게요. 다른 동물을 찍거나 내일 또 와요.' }; }
     a.paid = pay; if (th) P.th.done = S().day; P.news.push({ d: S().day, h: [pressLines(a, false).head, pressLines(a, true).head] }); while (P.news.length > 8) P.news.shift();
     A.skUp('look', 2, 'photo:' + a.id); A.sfx && A.sfx('done'); A.toast('📰 ' + (e9 ? 'In the town newsletter: ' : '마을 소식지에 실렸어요: ') + Q.head, 3.6);

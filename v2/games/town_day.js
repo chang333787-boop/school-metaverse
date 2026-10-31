@@ -43,7 +43,7 @@ export function createDay(A) {
   // ───────── ① 오늘 때 목록 ─────────
   //   하나 = { m(분), g(갈래 — 줄에선 갈래마다 하나), ic, s:[짧게], t:[길게], p(🧭 장소) | null }
   const plc = (icon, name, at) => (at ? { icon, name, door: [at[0], at[1]] } : null);
-  function build(d) { const out = [], e = en(), w = A.wx(), put = (m, g, ic, s, t, p) => { if (m >= 0 && m < 1440) out.push({ m, g, ic, s, t: t || s, p: p || null }); };
+  function build(d) { const out = [], e = en(), w = A.wx(), put = (m, g, ic, s, t, p, e9) => { if (m >= 0 && m < 1440) out.push({ m, g, ic, s, t: t || s, p: p || null, e: e9 > m ? e9 : 0 }); };   /* RWFIX-1(코덱스 C E16): e = 끝나는 때 — 시간표 창에서 그때까지 '하는 중'(흐림 X · 🧭 그대로 · 6시 경매가 깨자마자 지난 일정이 되던 것) · 위 ⏰ 줄은 예전처럼 '앞으로 올 때'만 */
     // 썰물: 섬에 가 본 뒤 = 섬 바닷길(KIDEYE-1과 같은 선) · 아니면 갯벌
     const isl = A.seenIsle() ? A.isle() : null, sh = A.shore(), LW = (isl || sh) ? lowsOf(d) : [];
     for (const [a, b] of LW) { if (isl) { const p = { ...isl, icon: '🏝' }; if (a > 360) put(a, 'tide', '🏝', T2('썰물섬 열림', 'Isle path opens'), T2('썰물섬 바닷길이 열려요', 'The sea path to Ebb-Tide Isle opens'), p); if (b < 1440) put(b, 'tide', '🌊', T2('썰물섬 닫힘', 'Isle path closes'), T2('바닷물이 차서 썰물섬 바닷길이 닫혀요', 'The sea comes in and the isle path closes'), p); }
@@ -62,7 +62,7 @@ export function createDay(A) {
     const G = new Map(); for (const q of A.shops()) { if (!(q.h1 < 24)) continue; const a = G.get(q.h1) || []; a.push(q); G.set(q.h1, a); }
     for (const [h, a] of G) { const nm = a.map(q => q.name), s9 = nm.length > 1 ? (e ? nm[0] + ' +' + (nm.length - 1) : nm[0] + ' 외 ' + (nm.length - 1) + '곳') : nm[0]; put(h * 60, 'shop' + h, '🏪', T2(s9 + ' 닫음', s9 + ' closes'), T2('가게 문 닫음: ' + nm.join(', '), 'Shops close: ' + nm.join(', ')), plc('🏪', a[0].name, a[0].door)); }
     for (const q of A.offices()) put(q.h1 * 60, 'off:' + q.name, q.ic, T2(q.name + ' 닫음', q.name + ' closes'), T2(q.name + ' 창구가 문을 닫아요', 'The ' + q.name + ' counter closes'), plc(q.ic, q.name, q.door));
-    if (A.nightRows) for (const c of A.nightRows(d) || []) put(c.m, c.g, c.ic, c.s, c.t, c.p);   /* NIGHT-1 야시장·밤 낚시·밤 순찰·아침 경매(town_night.js) */
+    if (A.nightRows) for (const c of A.nightRows(d) || []) put(c.m, c.g, c.ic, c.s, c.t, c.p, c.e);   /* NIGHT-1 야시장·밤 낚시·밤 순찰·아침 경매(town_night.js) */
     { const c = A.caseDue && A.caseDue(d); if (c) put(c.m, 'case', c.ic, c.s, c.t, c.p); }   /* CASE-1 사건 기한(마지막 날 18:00) */
     { const c = A.bagDue && A.bagDue(d); if (c) put(c.m, 'req', c.ic, c.s, c.t, c.p); }   /* BAG-2 이웃 부탁 마감(18:00) */
     out.sort((a, b) => a.m - b.m); return out; }
@@ -73,7 +73,7 @@ export function createDay(A) {
   function openToday() { const e = en(), m = now(), L9 = list(), FL = L9.filter(q => q.g === 'film'), done = new Set(); let i0 = 0;
     const rows = []; for (const q of L9) { if (q.g === 'film') { if (done.has('film')) continue; done.add('film'); const nx = FL.find(f => f.m > m) || FL[FL.length - 1];   /* 영화는 한 줄(다음 상영 자리 · 시각들은 그 줄 안에 · 지난 것 흐림) */
         rows.push({ m: nx.m, ic: '🎬', h: (e ? 'Films: ' : '영화 상영: ') + FL.map(f => '<span class="' + (f.m <= m ? 'past' : '') + '">' + hm(f.m) + '</span>').join(' '), p: nx.p, past: FL.every(f => f.m <= m), sub: L(nx.t) }); continue; }
-      rows.push({ m: q.m, ic: q.ic, h: esc(L(q.t)), p: q.p, past: q.m <= m }); }
+      rows.push({ m: q.m, ic: q.ic, h: esc(L(q.t)), p: q.p, past: (q.e || q.m) <= m }); }
     rows.sort((a, b) => a.m - b.m); for (let i = 0; i < rows.length; i++) if (!rows[i].past) { i0 = i; break; }
     const P = [];
     const h = '<h3>⏰ ' + (e ? 'Today’s times' : '오늘 시간표') + '</h3><div class="sm">' + esc(e ? 'Now ' + hm(m) + '. The day ends when you sleep (or at midnight). Grey = already past.' : '지금 ' + hm(m) + '. 자거나 자정이 되면 하루가 끝나요. 흐린 줄은 지난 때예요.') + '</div>'
