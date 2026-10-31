@@ -131,7 +131,7 @@ export async function buildFlightTest(scene, camera, rng, opt = {}) {
 const fmt = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 
 /* ── 화면 글·쪽지(DOM) ── 종이 색 · 잉크 갈색 · 손그림 흔들림(고정 난수) */
-function makeUI(diff, boatMode) {
+export function makeUI(diff, boatMode) {
   const css = document.createElement('style');
   css.textContent = `
   .fl-tag{position:fixed;left:14px;top:12px;z-index:20;display:flex;align-items:center;gap:10px;background:#f4ead2;color:#2b2118;border:2px solid #2b2118;border-radius:8px;padding:6px 12px;font:600 17px/1.3 "Noto Sans KR","Apple SD Gothic Neo",sans-serif;box-shadow:2px 3px 0 rgba(43,33,24,.35)}
@@ -175,6 +175,7 @@ function makeUI(diff, boatMode) {
       box.classList.toggle('gust', Math.hypot(s.gustX, s.gustZ) > 0.9);
     },
     note(course, cur) { drawNote(cv, course, cur, diff); },
+    dispose() { tag.remove(); fall.remove(); ban.remove(); box.remove(); css.remove(); },   // 이야기 장이 다 쓰면 치움
   };
   return api;
 }

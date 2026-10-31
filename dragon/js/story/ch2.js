@@ -36,19 +36,19 @@ function* meeting(G, C) {
     const dt = yield;
     /* 말 — 가까이 있어야 들림(쉬움) · 보통은 어디서나 들림 */
     if (!G.hud.busy() && li < MEETING.length && (!easy || G.dist(P.W, tb) < 9)) { const m = MEETING[li++]; G.hud.say(m[0], m[1], m[2] || []); S.pose = { talk: m[0] === 'stoick' ? 1 : 0, point: li === 5 ? 1 : 0 }; }
-    /* 횃불이 하나씩 꺼져 감(8초) — 씨앗 순서 · 바람이 들 때 */
+    /* 횃불이 하나씩 꺼져 감(12초) — 한 번에 하나 · 다시 붙이거나 꺼지면 3~5초 뒤 다음 것 · 씨앗 순서 */
     killT -= dt;
-    if (killT <= 0) { killT = 4.2 + G.rng() * 2.2; let k = (kk++ * 7 + 3) % T.length; for (let q = 0; q < T.length && (dying[k] || life[k] <= 0); q++) k = (k + 1) % T.length; dying[k] = true; }
+    if (killT <= 0 && !dying.some((v) => v)) { let k = (kk++ * 7 + 3) % T.length; for (let q = 0; q < T.length && life[k] <= 0; q++) k = (k + 1) % T.length; dying[k] = true; killT = 1e9; }
     let lit = 0; G.useSpots.length = 0;
     for (let i = 0; i < T.length; i++) {
-      if (dying[i]) { life[i] = Math.max(0, life[i] - dt / 8); }
+      if (dying[i]) { life[i] = Math.max(0, life[i] - dt / 12); if (life[i] <= 0) { dying[i] = false; killT = 3 + G.rng() * 2; } }
       T[i].set && T[i].set(life[i]);
       if (life[i] > 0.05) lit++;
-      if (dying[i]) G.useSpots.push({ x: T[i].x, y: T[i].y - 1.5, z: T[i].z });
-      if (P.fTap && dying[i] && Math.hypot(P.W.x - T[i].x, P.W.z - T[i].z) < 2.4) { life[i] = 1; dying[i] = false; G.hud.say('hiccup', life[i] ? '기름 조금… 됐다.' : '', [], { secs: 1 }); }
+      if (dying[i] || life[i] <= 0) G.useSpots.push({ x: T[i].x, y: T[i].y - 1.5, z: T[i].z });
+      if (P.fTap && (dying[i] || life[i] <= 0) && Math.hypot(P.W.x - T[i].x, P.W.z - T[i].z) < 2.8) { life[i] = 1; dying[i] = false; killT = 3 + G.rng() * 2; G.hud.say('hiccup', '기름 조금… 됐다.', [], { secs: 1 }); }
     }
     C.lit = lit; C.life = life;
-    if (!easy && lit <= T.length - 3) { G.hud.clearSay(); yield* sayAll(G, [['stoick', '어두워서 얼굴이 안 보이는군. 불부터 켜라!']]); return 'retry'; }
+    if (!easy && lit <= T.length - 2) { G.hud.clearSay(); yield* sayAll(G, [['stoick', '어두워서 얼굴이 안 보이는군. 불부터 켜라!']]); return 'retry'; }
   }
   G.hud.goal('');
   yield* sayAll(G, [['hiccup', '(…훈련? 싫은데. 그보다 숲에 떨어진 그 드래곤!)']]);

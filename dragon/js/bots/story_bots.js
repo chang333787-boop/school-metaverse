@@ -63,6 +63,18 @@ function body(B) {
       return false;
     },
     stop() { K.set('KeyW', false); },
+    /* 길 찾아 걷기 — 보이는 벽·바위(sense.obst)로 A* · 막히면 다시 찾음 */
+    go(s, tx, tz, slow = false, arrive = 1) {
+      const me = K.cur.me, ob = K.cur.obst;
+      if (Math.hypot(tx - me.x, tz - me.z) < arrive) { K.stop(); K.path = null; return true; }
+      const key = tx.toFixed(1) + ',' + tz.toFixed(1);
+      if (!K.path || K.pathKey !== key || K.pk >= K.path.length || (K.replanT = (K.replanT || 0) + 1 / 60) > 4) {
+        K.replanT = 0; K.pathKey = key; K.pk = 0;
+        K.path = ob && Math.hypot(tx - me.x, tz - me.z) < 70 ? planPath(me.x, me.z, tx, tz, ob.walls, 0.5, 0.5, 8, ob.rocks) || [[tx, tz]] : [[tx, tz]];
+      }
+      const p = K.path[K.pk]; if (K.walk(s, p[0], p[1], slow, K.pk === K.path.length - 1 ? arrive : 0.8)) K.pk++;
+      return false;
+    },
     face(s, tx, tz) { const c = K.cur || s, me = c.me, want = Math.atan2(tx - me.x, tz - me.z), da = Math.atan2(Math.sin(want - c.camYaw), Math.cos(want - c.camYaw)); if (Math.abs(da) > 0.05) B.drag(Math.max(-30, Math.min(30, -da / 0.006 * 0.3)), 0); return Math.abs(da) < 0.15; },
     held,
   };
@@ -111,7 +123,7 @@ BOTS['4-1'] = (s, K, M, B) => {                          // 내더 미로: 살�
     return;
   }
   M.warn = 0; M.rolled = false;
-  if (!M.path || (M.k >= M.path.length)) { M.path = planPath(s.me.x, s.me.z, s.exit.x, s.exit.z, s.maze, 0.7, 0.5, 20) || [[s.exit.x, s.exit.z]]; M.k = 0; }
+  if (!M.path || (M.k >= M.path.length)) { const ob = K.cur.obst || { walls: [], rocks: [] }; M.path = planPath(s.me.x, s.me.z, s.exit.x, s.exit.z, s.maze, 0.7, 0.5, 20, ob.rocks) || [[s.exit.x, s.exit.z]]; M.k = 0; }
   const p = M.path[M.k]; if (K.walk(s, p[0], p[1], null, 0.6)) M.k++;
 };
 BOTS['4-2'] = (s, K, M, B, lv) => {                      // 배(팀 F 배 봇) + 낚시
@@ -154,8 +166,8 @@ BOTS['4-5'] = (s, K, M) => {                            // 선 피해 다가가 
 BOTS['2-1'] = (s, K, M, B, lv) => {                      // 횃불: 꺼져 가는 것(가장 낮은 것)으로 가서 F · 쉬움 = 탁자로
   if (s.diff === 'easy') { if (s.table) K.walk(s, s.table.x, s.table.z, false, 4); return; }
   const T = (s.torches || []).filter((t) => t.level < 0.92).sort((a, b) => a.level - b.level)[0];
-  if (!T) { K.stop(); if ((M.scan = (M.scan || 0) + 1) % 30 === 0) B.drag(40, 0); return; }
-  if (K.walk(s, T.x, T.z, false, 1.6)) { K.stop(); if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 0.6; } }
+  if (!T) { K.stop(); B.drag(4, 0); return; }
+  if (K.go(s, T.x, T.z, false, 2.2)) { K.stop(); if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 0.6; } }
 };
 BOTS['2-2'] = (s, K, M, B) => {                          // 추적: 조각이 보이면 줍고 · 떨어진 곳이 보이면 가고 · 아니면 짐작 X에 가장 가까운 단서로
   const me = K.cur.me;
@@ -185,7 +197,7 @@ BOTS['2-3'] = (s, K, M) => {                             // 밧줄: 살금살금
   else if (M.cd > 0) M.cd -= 1 / 60;
 };
 /* ── 3장 ── */
-BOTS['3-0'] = (s, K) => { if (s.target) K.walk(s, s.target.x, s.target.z, false, 4); };
+BOTS['3-0'] = (s, K) => { if (s.target) K.go(s, s.target.x, s.target.z, false, 4); };
 BOTS['3-1'] = (s, K, M) => {                             // 그롱클: 볼이 부풀면 한 번 두드림 · 방패를 놓치면 주움
   if (!s.shieldOn && s.shieldAt) { if (K.walk(s, s.shieldAt.x, s.shieldAt.z, false, 1.2)) { K.stop(); if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 0.6; } } return; }
   K.stop();
@@ -213,7 +225,7 @@ BOTS['5-1'] = (s, K, M) => {                             // 망루: 바람이 �
   const off = (s.torches || []).find((t) => !t.lit);
   if (s.gust) { K.walk(s, s.gust.x, s.gust.z, false, 0.35); return; }
   if (off) { if (K.walk(s, off.x, off.z, false, 1.3)) { K.stop(); if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 0.6; } } return; }
-  if (s.diff === 'easy' && s.top) { K.walk(s, s.top.x, s.top.z, false, 3); return; }
+  if (s.diff === 'easy' && s.top) { K.go(s, s.top.x, s.top.z, false, 3); return; }
   K.stop();
 };
 BOTS['5-2'] = (s, K, M) => {                             // 대장간: 작업대 → 자르기·바람·망치(모양을 보고 맞춰 누름)
@@ -273,18 +285,20 @@ BOTS['6-4'] = (s, K, M) => {                             // 셋 진정: 예고�
   const need = { gronckle: 'nip', nadder: 'chin', terror: 'cod' };
   const ds = (s.dragons || []).filter((d) => !d.calm); if (!ds.length) return;
   const me = K.cur.me, d = ds[0], want = need[d.kind], dd = Math.hypot(d.x - me.x, d.z - me.z);
-  const warn = ds.some((x) => x.warn);
-  if (warn && s.diff !== 'easy') { M.after = 0.9; M.inWarn = true; } else if (M.inWarn) { M.inWarn = false; K.tap('Space'); }   // 예고 동안 옆으로 · 예고가 끝나는 순간(쏨) 구르기 · 0.9초 더 움직임
-  if (M.after > 0) { M.after -= 1 / 60; K.set('KeyF', false); K.set('KeyW', false); M.side = M.side ?? 1; if (!M.wasWarn) M.side = -M.side; K.set(M.side > 0 ? 'KeyD' : 'KeyA', true); K.set(M.side > 0 ? 'KeyA' : 'KeyD', false); M.wasWarn = true; return; }
-  if (M.wasWarn) { M.wasWarn = false; K.set('KeyA', false); K.set('KeyD', false); }
+  /* 피하기 — 예고 동안은 하던 일 · 가까운 드래곤이 쏘는 순간(예고가 꺼짐) 옆으로 구르기 */
+  M.pw = M.pw || {};
+  for (const x of ds) { const was = M.pw[x.kind]; M.pw[x.kind] = x.warn; if (was && !x.warn && Math.hypot(x.x - me.x, x.z - me.z) < 14 && s.diff !== 'easy') { M.rollT = 0.5; M.side = -(M.side || 1); } }
+  if (M.rollT > 0) { M.rollT -= 1 / 60; K.set('KeyF', false); K.set(M.side > 0 ? 'KeyD' : 'KeyA', true); K.set(M.side > 0 ? 'KeyA' : 'KeyD', false); if (!M.rolled) { M.rolled = true; K.tap('Space'); } return; }
+  M.rolled = false; K.set('KeyA', false); K.set('KeyD', false);
   if (want !== 'chin' && s.item !== want) { K.set('KeyF', false); if (dd < 4.2) { K.walk(s, me.x - (d.x - me.x), me.z - (d.z - me.z), false, 0.2); return; } K.stop(); if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 0.5; } return; }
   const gap = d.gap || s.diff === 'easy';
-  if (!gap) { K.set('KeyF', false); if (dd < 2.6) K.walk(s, me.x - (d.x - me.x), me.z - (d.z - me.z), false, 0.2); else if (dd > 4.2) K.walk(s, d.x, d.z, false, 3.4); else { K.stop(); K.face(s, d.x, d.z); } return; }
+  const near = d.kind === 'nadder' ? 2.2 : 2.6, stand = d.kind === 'nadder' ? 3.0 : 3.4;
+  if (!gap) { K.set('KeyF', false); if (dd < near) K.walk(s, me.x - (d.x - me.x), me.z - (d.z - me.z), false, 0.2); else if (dd > stand + 0.8) K.walk(s, d.x, d.z, false, stand); else { K.stop(); K.face(s, d.x, d.z); } return; }
   if (!K.walk(s, d.x, d.z, false, d.kind === 'terror' ? 1.6 : 2.6)) { K.set('KeyF', false); return; }
   K.stop(); K.face(s, d.x, d.z);
   if (want === 'chin') K.set('KeyF', true); else if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 0.5; }
 };
-BOTS['6-5'] = (s, K, M) => { const b = s.bench || {}; if (b.kind === 'hammer') { if (b.hot && !M.hit && !b.numb) { M.hit = true; K.tap('KeyF'); } if (!b.hot) M.hit = false; return; } if (s.target && K.walk(s, s.target.x, s.target.z, false, 3)) { K.stop(); if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 1; } } };
+BOTS['6-5'] = (s, K, M) => { const b = (K.cur && K.cur.bench) || s.bench || {}; if (b.kind === 'hammer') { if (b.hot && !M.hit && !b.numb) { M.hit = true; K.tap('KeyF'); } if (!b.hot) M.hit = false; return; } if (s.target && K.go(s, s.target.x, s.target.z, false, 3)) { K.stop(); if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 1; } } };
 BOTS['6-7'] = (s, K, M) => {                             // 다친 테러: 살금살금 생선 → 천 감기(움찔이면 떼기)
   const t = s.terror; if (!t) { K.stop(); return; }
   if (!K.walk(s, t.x, t.z, true, 1.6)) { K.set('KeyF', false); return; }

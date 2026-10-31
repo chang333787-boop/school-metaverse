@@ -199,7 +199,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
       const s = R.sense();
       if (P.W) { s.me = { x: +P.W.x.toFixed(2), z: +P.W.z.toFixed(2), y: +P.W.y.toFixed(2), yaw: +P.W.yaw.toFixed(3), low: P.W.low, item: P.item, roll: P.W.rollT > 0 }; s.camYaw = +P.C.moveYaw().toFixed(3); }
       s.hud = hud.state(); s.diff = G.diff; s.place = G.place ? G.place.name : ''; s.chDone = G.chDone || 0;
-      if (P.W && G.collide && R.step && R.step.botObst) {        /* 둘레 30m 벽·바위(눈에 보이는 땅 모양) — 길 찾는 봇이 쓰는 차례만 */
+      if (P.W && G.collide) {                                   /* 둘레 30m 벽·바위(눈에 보이는 땅 모양) — 길 찾는 봇이 씀(sense는 봇·시험만 부름) */
         const w = [], r = [], x = P.W.x, z = P.W.z;
         for (const q of G.collide.walls) if (Math.min(Math.hypot(q[0] - x, q[1] - z), Math.hypot(q[2] - x, q[3] - z)) < 34) w.push(q);
         for (const q of G.collide.blockers) if (Math.hypot(q[0] - x, q[1] - z) < 30) r.push(q);

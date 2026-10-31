@@ -39,17 +39,22 @@ function* flyCourse(G, C, o) {
   F.on && ['gate', 'crash', 'graze', 'fall', 'regrab', 'splash'].forEach((k) => F.on(k, () => { ev[k] = (ev[k] || 0) + 1; }));
   F.on('graze', () => { G.sfx.play('whoosh'); if (cam && cam.kickFov) cam.kickFov(4); }); F.on('gate', (e) => { if (e && e.matched && cam && cam.kickFov) cam.kickFov(2); });
   if (o.start) { if (F.place) F.place(o.start.x, o.start.y, o.start.z, o.start.yaw || 0); else if (F.state) Object.assign(F.state, o.start); }
+  /* 비행 화면 글(팀 F) — 관문 수 · 지금 꼬리 자리 그림 · 꼬리 쪽지(o.note) · 떨어지면 다시 붙기 안내 */
+  const ftm = yield* awaitP(import('../stages/flight_test.js?v=14').catch(() => null));
+  const ui = ftm && ftm.makeUI ? ftm.makeUI(G.diff, false) : null;
+  if (ui) { if (o.note) ui.note(o.gates, 0); else { const nb = document.querySelector('.fl-note:last-of-type'); if (nb) nb.style.display = 'none'; } ui.gates(0, o.gates.length); F.on('fall', () => ui.fall(true)); F.on('regrab', () => ui.fall(false)); }
+  let noteGate = 0;
   T.manual = true; P.cam = 'fly';
-  G.camDraw = (a, dt) => { F.draw(a, dt); if (cam) { if (cam.update) cam.update(dt, F); else cam.draw(a, dt, F); } };
-  const prevClean = C.cleanup; C.cleanup = () => { T.manual = false; P.cam = 'follow'; G.camDraw = null; F.dispose && F.dispose(); prevClean && prevClean(); };
-  C.F = F; C.ev = ev;
-  let t = 0;
+  G.camDraw = (a, dt) => { F.draw(a, dt); if (cam) { if (cam.update) cam.update(dt, F); else cam.draw(a, dt, F); } if (ui && ui.tick) ui.tick(F, t); };
+  const prevClean = C.cleanup; C.cleanup = () => { T.manual = false; P.cam = 'follow'; G.camDraw = null; F.dispose && F.dispose(); ui && ui.dispose(); prevClean && prevClean(); };
+  C.F = F; C.ev = ev; let t = 0;
   while ((F.state && F.state.gates != null ? F.state.gates : ev.gate) < o.gates.length) {
     const dt = yield; t += dt; F.step(dt, G.input); if (pl.gateMark && F.state) pl.gateMark(F.state.gates);
+    if (ui && F.state.gates !== noteGate) { noteGate = F.state.gates; ui.gates(noteGate, o.gates.length); if (o.note && !C.blown) ui.note(o.gates, noteGate); if (o.note && C.blown && !C.blowShown) { C.blowShown = true; ui.blow(); } }
     if (o.tick) o.tick(dt, F, ev, t);
     if (o.maxT && t > o.maxT) break;
   }
-  T.manual = false; P.cam = 'follow'; G.camDraw = null;
+  T.manual = false; P.cam = 'follow'; G.camDraw = null; ui && ui.dispose();
   return { t, ev };
 }
 function flySense(G, C) { const F = C.F; if (!F || !F.state) return {}; return fsFlat(F, { noteGone: !!C.blown }); }
@@ -137,14 +142,14 @@ function* trio(G, C) {
       if (d.calm) continue;
       const M = d.mind; d.faceTo(P.W.x, P.W.z);
       d.next -= dt;
-      if (d.next <= 0 && M.warnT <= 0 && M.beh !== 'attack' && !M.inGap()) { M.windup(WARN[G.diff]); d.next = 4 + G.rng() * 2.5; }
+      if (d.next <= 0 && M.warnT <= 0 && M.beh !== 'attack' && !M.inGap()) { M.windup(WARN[G.diff]); d.next = 5.5 + G.rng() * 3; }
       if (M.beh === 'attack' && !d.shot) { d.shot = { t: 0, x: P.W.x, z: P.W.z }; }
       if (d.gapT > 0) d.gapT -= dt;
       if (d.shot) { d.shot.t += dt; if (d.shot.t > 0.5) { d.gapT = { easy: 3, normal: 2.2, hard: 1.5 }[G.diff]; puffs.burst(d.shot.x, 0.3, d.shot.z, 12, 2, 2); if (Math.hypot(P.W.x - d.shot.x, P.W.z - d.shot.z) < 1.5 && !(P.W.rollT > 0)) { if (G.diff === 'easy') G.hud.say('hiccup', '앗 뜨거!', [], { secs: 0.8 }); else { knocks++; P.lock = true; P.pose = { stumble: 1 }; C.down = 2; } } /* 쉬움 = 맞아도 안 넘어짐(design §8) */ d.shot = null; } }
       /* 진정 — 틈 안에서 맞는 것 · 그롱클 = 풀 · 내더 = 턱 밑(F 길게) · 테러 = 생선(또는 빛 점) */
       const near = G.dist(P.W, d) < (d.kind === 'terror' ? 2 : 3.2), gap = d.gapT > 0 || G.diff === 'easy' && M.beh !== 'attack' && M.warnT <= 0;   // 쏜 뒤 숨 고르는 틈(보통 2.2초)
       if (near && gap) {
-        const ok = (d.kind === 'gronckle' && P.fTap && P.item === 'nip') || (d.kind === 'nadder' && P.reach && (C.chinT = (C.chinT || 0) + dt) > 0.8) || (d.kind === 'terror' && P.fTap && P.item === 'cod');
+        const ok = (d.kind === 'gronckle' && P.fTap && P.item === 'nip') || (d.kind === 'nadder' && P.reach && (C.chinT = (C.chinT || 0) + dt) > 0.55) || (d.kind === 'terror' && P.fTap && P.item === 'cod');
         if (ok) { d.calm = true; M.lock = d.kind === 'gronckle' ? 'roll' : 'flop'; M.event(d.kind === 'gronckle' ? 'nip' : d.kind === 'nadder' ? 'chin' : 'offer', d.kind === 'terror' ? 'cod' : undefined); G.hud.say('fishlegs', d.kind === 'gronckle' ? '그롱클이 뒹굴어!' : d.kind === 'nadder' ? '내더가 털썩!' : '테러가 받아먹었어!', [], { secs: 1.4 }); C.chinT = 0; }
       }
     }
@@ -190,7 +195,7 @@ function* seaFlight(G, C) {
   const note = G.note || null;
   G.hud.goal('돌기둥 사이를 빠져나가기');
   const sa = A.spawn_air || { x: gates[0].x, z: gates[0].z - 60, y: 40, yaw: 0 };
-  const r = yield* flyCourse(G, C, { T, world: pl.fly, gates, opts: { assist: true, ceil: (pl.fly || {}).ceil, noteGates: true }, start: { x: sa.x, y: sa.y || 40, z: sa.z, yaw: sa.yaw || 0 },
+  const r = yield* flyCourse(G, C, { T, world: pl.fly, gates, opts: { assist: true, ceil: (pl.fly || {}).ceil }, note: true, start: { x: sa.x, y: sa.y || 40, z: sa.z, yaw: sa.yaw || 0 },
     tick: (dt, F, ev) => { const gi = F.state && F.state.gates != null ? F.state.gates : ev.gate; if (gi === Math.floor(gates.length / 2) && !C.blown) { C.blown = true; G.hud.say('hiccup', '쪽지가…! 날아갔다!', [], { secs: 1.6 }); G.flags.noteGone = true; F.setOpts && F.setOpts({ noteHidden: true }); } } });
   if (r === 'skip') return true;
   G.hud.banner('쪽지 없이 돌기둥 사이를 빠져나왔다 — 하늘 지도가 열렸다', 'map', 4);
@@ -226,8 +231,8 @@ function* lunch(G, C) {
       if (P.W.speed > 2 && d < 6) { M.fear = Math.min(1, M.fear + dt * 0.8); t2.goTo(t2.x - (P.W.x - t2.x) * 0.3, t2.z - (P.W.z - t2.z) * 0.3, 2, 0.3); }
       if (P.fTap && d < 2.6) { if (M.fear < 0.75 || P.W.low) { fed = true; M.fear = 0.3; holdItem(P, 'cloth'); C.stage = 'wrap'; t2.pose = { crouch: 0.3, tailCurl: 0.3 }; G.hud.say('hiccup', '왼쪽 날개가 처졌구나… 천으로 감아 줄게.', ['cloth']); } else G.hud.say('hiccup', '너무 겁먹었어… 살금살금.', [], { secs: 1.2 }); }
     } else {
-      if (flinch > 0) { flinch -= dt; t2.pose = { crouch: 0.8, tailCurl: 0.8 }; if (P.reach && flinch < 0.6) { wrapT = Math.max(0, wrapT - 0.6); G.hud.say('hiccup', '아팠지? 미안.', [], { secs: 0.9 }); flinch = 0; } }
-      else if (P.reach && d < 2.2) { wrapT += dt; t2.pose = { crouch: 0.3 }; if (wrapT > 0.9 && wrapT < 0.95 + dt) flinch = 1.1; }
+      if (flinch > 0) { flinch -= dt; t2.pose = { crouch: 0.8, tailCurl: 0.8 }; if (P.reach && flinch < (G.diff === 'easy' ? 0.3 : 0.6)) { wrapT = Math.max(0, wrapT - 0.6); G.hud.say('hiccup', '아팠지? 미안.', [], { secs: 0.9 }); flinch = 0; } }
+      else if (P.reach && d < 2.2) { wrapT += dt; t2.pose = { crouch: 0.3 }; if (wrapT > 0.9 && !C.fl1 || G.diff !== 'easy' && wrapT > 1.8 && !C.fl2) { if (wrapT > 1.8) C.fl2 = true; else C.fl1 = true; flinch = 1.1; } }   // 움찔 = 보통 두 번 · 쉬움 한 번
       if (wrapT > 2.4) break;
     }
     C.flinch = flinch > 0; C.fed = fed; C.wrap = +wrapT.toFixed(2);
