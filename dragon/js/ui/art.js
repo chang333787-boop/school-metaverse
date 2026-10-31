@@ -71,6 +71,13 @@ export const HOWTO = {
   fly:      [[ARROWS, ICONS.wind, '몸 기울이기'], [keyCap('Space', true), 'wing', '날갯짓 박자'], [keyCap('1~4', true), ICONS.finNew, '꼬리 자리']],
   flyEasy:  [[ARROWS, ICONS.wind, '방향'], [keyCap('Space 꾹', true), ICONS.finNew, '꼬리 펴서 휙 돌기'], ['', 'wing', '앞으로는 저절로']],
   draw:     [['', 'drag', '끌어서 펜 옮기기'], [keyCap('F 꾹', true), ICONS.pencil, '누르는 동안 그리기'], ['', 'dots', '점을 차례로 잇기']],
+  /* 차례 안에서 할 일이 바뀌는 곳(팀 G 눈높이 점검 · 동사 표에 없던 손) */
+  fish:     [[keyCap('F'), ICONS.cod, '던지기'], [keyCap('F'), 'beat', '찌가 쏙 = 당기기'], [`<span class="keys">${keyCap('A')}${keyCap('D')}</span>`, ICONS.rope, '반대쪽 버티기']],
+  tail5:    [[ARROWS, 'tiptoe', '꼬리 쪽으로'], [keyCap('F'), ICONS.finNew, '꼬리날개 달기'], ['', 'wait', '먹는 동안에']],
+  lift5:    [[`<span class="keys">${keyCap('A')}${keyCap('D')}</span>`, ICONS.finNew, '꼬리날개 돌리기'], ['', 'rock', '돌벽 반대쪽으로'], ['', 'wing', '앞으로는 저절로']],
+  sketch3:  [[keyCap('Shift', true), 'tiptoe', '살금살금'], ['', 'rock', '바위 곁에 숨기'], [keyCap('F 꾹', true), ICONS.pencil, '누르는 동안 그리기']],
+  shield3:  [['', ICONS.eye, '예고를 보고'], [keyCap('F'), ICONS.shield, '방패 두드리기'], [keyCap('Space', true), 'roll', '구르기']],
+  cut2:     [[keyCap('Shift', true), 'tiptoe', '살금살금'], [keyCap('F'), ICONS.knife, '말뚝 곁에서 자르기'], ['', ICONS.eye, '숨 고를 때만']],
 };
 /* 하는 법 그림에 쓰는 작은 그림(낱말 대신) */
 export const PICT = {

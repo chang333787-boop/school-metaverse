@@ -159,7 +159,7 @@ function* lift(G, C) {
   T.manual = true; P.cam = 'fly'; P.hidden = false;
   G.camDraw = (a, dt) => { F.draw(a, dt); if (cam) { if (cam.update) cam.update(dt, F); else cam.draw(a, dt, F); } };
   C.cleanup = () => { T.manual = false; P.cam = 'follow'; G.camDraw = null; F.dispose && F.dispose(); };
-  G.hud.goal('꼬리날개로 돌벽 피하기'); G.hud.howto(G.diff === 'easy' ? 'flyEasy' : 'fly', 6);
+  G.hud.goal('꼬리날개로 돌벽 피하기'); G.hud.howto('lift5', 6);
   G.hud.say('hiccup', '뜬다…! 발이, 땅에서…!', [], { secs: 2.4 });
   C.F = F;
   while (!splash && !crash) { const dt = yield; F.step(dt, G.input); }
@@ -278,7 +278,7 @@ export const chapter = {
     { id: '5-3', verb: 'approach', place: 'cove', time: 'day', at: 'gap_in', goal: '투슬리스 먹이기', limit: 200,
       hints: { 1: '투슬리스가 뭘 보고 놀랐을까?', 2: '움찔하면 손을 떼고, 눈이 둥글어지면 다시.' }, run: eelTail, sense: eelSense },
     { id: '5-4', verb: 'fly', place: 'cove', time: 'day', goal: '먹는 틈에 꼬리날개 달기', limit: 120,
-      hints: { 1: '꼬리 쪽으로 가서 F.', 2: '벽이 다가오면 반대쪽으로 꼬리를 돌리자.' }, run: lift,
+      howtoVerb: 'tail5', howtoEasy: 'tail5', hints: (G, C) => (C.tail ? { 1: '꼬리 쪽으로 가서 F.', 2: '먹는 동안 꼬리 끝 곁에서 F 짧게.' } : { 1: '벽이 다가오면 반대쪽으로!', 2: '벽이 다가오면 반대쪽으로 꼬리를 돌리자(A·D).' }), run: lift,
       sense: (G, C) => Object.assign({ tail: C.tail || null, bounds: G.place.fly ? G.place.fly.bounds : null }, C.F && C.F.state ? flySense(C.F) : {}) },
     { id: '5-5', verb: 'throw', place: 'arena', time: 'day', goal: '지플백을 우리로', easy: false, limit: 180,
       bookPage: { title: '훈련 3일 — 지플백', draw: 'zippleback', line: '불꽃 머리에 물을 끼얹으면 불이 안 붙는다. 뱀장어를 싫어한다.' },

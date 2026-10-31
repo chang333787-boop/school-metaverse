@@ -37,7 +37,7 @@ function* talk(G, C) {
   G.hud.goal('숫돌에서 칼 갈기'); G.useSpots = [{ x: gr.x, y: gr.y, z: gr.z }]; C.stage = 'go';
   yield* until(() => G.near(gr, 2.4) && P.fTap);
   G.useSpots = []; P.lock = true; C.stage = 'grind';
-  const g = createGrind(G, easy); g.show(); C.g = g;
+  const g = createGrind(G, easy); g.show(); C.g = g; G.hud.howto('rhythm', 8);
   C.cleanup = () => { g.hide(); P.lock = false; };
   /* 아빠가 밖에서 걸어 들어옴(이어지는 차례에서도 남음) */
   const S = G.castBy.stoick || G.person('stoick', { x: fr.x - 9, z: fr.z + 1, yaw: Math.PI / 2 }, { keep: 'stoick' });
@@ -336,7 +336,7 @@ function* awaitP(p) { let done = false; Promise.resolve(p).then(() => { done = t
 export const chapter = {
   id: 7, title: '7장 · 아빠의 투구', sub: '대장간 → 훈련장 → 마을 → 숨은 호수(코브)',
   steps: [
-    { id: '7-1', verb: 'listen', place: 'village', time: 'day', at: 'forge_front', goal: '숫돌에서 칼 갈기', limit: 100,
+    { id: '7-1', verb: 'listen', howtoVerb: 'rhythm', place: 'village', time: 'day', at: 'forge_front', goal: '숫돌에서 칼 갈기', limit: 100,
       hints: { 1: '숫돌이 돌아야 이야기가 이어져.', 2: '발판이 바닥에 닿을 때 Space.' }, run: talk,
       sense: (G, C) => ({ stage: C.stage || '', at: G.place.anchors.forge_grind || null, bench: G.bench.sense(), li: C.li || 0 }) },
     { id: '7-2', place: 'village', time: 'day', atNew: 'forge_grind', run: gift,

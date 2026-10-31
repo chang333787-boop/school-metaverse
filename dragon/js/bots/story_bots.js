@@ -130,6 +130,10 @@ BOTS['4-1'] = (s, K, M, B) => {                          // 내더 미로: 살�
     return;
   }
   M.warn = 0; M.rolled = false;
+  /* 다시 하기(가시 세 번 → 들어온 문)면 옛 길을 버림 · 3초 동안 1m도 못 가면 다시 찾음(팀 G — CPU 4× 실제 시간에서 옛 길 끝을 향해 벽만 밀던 막힘) */
+  if (M.fails !== s.fails) { M.fails = s.fails; M.path = null; }
+  M.chkT = (M.chkT || 0) + 1 / 60;
+  if (M.chkT > 3) { if (M.cx !== undefined && Math.hypot(s.me.x - M.cx, s.me.z - M.cz) < 1) M.path = null; M.chkT = 0; M.cx = s.me.x; M.cz = s.me.z; }
   if (!M.path || (M.k >= M.path.length)) { const ob = K.cur.obst || { walls: [], rocks: [] }; M.path = planPath(s.me.x, s.me.z, s.exit.x, s.exit.z, s.maze, 0.7, 0.5, 20, ob.rocks) || [[s.exit.x, s.exit.z]]; M.k = 0; }
   const p = M.path[M.k]; if (K.walk(s, p[0], p[1], null, 0.6)) M.k++;
 };

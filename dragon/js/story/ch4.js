@@ -110,7 +110,7 @@ function* fishing(G, C) {
     G.putPlayer(pl.anchors.fishing || pl.anchors.dock || { x: 0, z: 0 });
   }
   /* 낚시 — F 짧게 = 던지기 · 찌가 쏙 가라앉는 박자에 F · 고기가 왼쪽으로 당기면 오른쪽(D) 버티기 */
-  C.state = 'cast'; G.hud.goal('물고기 ' + C.need + '마리 잡기');
+  C.state = 'cast'; G.hud.goal('물고기 ' + C.need + '마리 잡기'); G.hud.howto('fish', 8);
   const bob = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshToonMaterial({ color: 0xc8503a })); bob.visible = false; pl.group.add(bob);
   const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]); const line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0x2b2118 })); line.frustumCulled = false; pl.group.add(line); line.visible = false;
   const puffs = makePuffs(pl.group, 80);
@@ -320,7 +320,7 @@ export const chapter = {
       bookPage: { title: '훈련 2일 — 데들리 내더', draw: 'nadder', line: '나무벽 미로에서 내더 눈길을 피해 빠져나왔다. 내더는 날래고 눈이 밝다.' },
       hints: { 1: '벽 뒤에 있으면 내더가 못 봐.', 2: '내더 고개가 다른 데로 돌 때 움직이자.' }, run: naddermaze, sense: mazeSense },
     { id: '4-2', verb: 'rhythm', place: 'sea', time: 'clear', at: 'dock', goal: '노를 박자에 맞춰 돌기둥까지', limit: 240,
-      hints: { 1: '찌가 쏙 들어갈 때 당겨야 해.', 2: '고기가 당기는 반대쪽 키를 누르자.' }, run: fishing,
+      hints: (G, C) => (C.state === 'row' ? { 1: '노가 물에 닿는 박자를 보자.', 2: '노가 물에 닿을 때 Space · 마구 누르면 엉켜.' } : { 1: '찌가 쏙 들어갈 때 당겨야 해.', 2: '고기가 당기는 반대쪽 키를 누르자.' }), run: fishing,
       sense: (G, C) => Object.assign({ state: C.state, bob: C.bob || '', pull: C.pull || 0, got: C.got || 0, need: C.need || 0 }, C.state === 'row' && C.boat ? boatSense(C.boat) : {}) },
     { id: '4-3', verb: 'approach', place: 'cove', time: 'day', at: 'gap_in', goal: '투슬리스에게 가까이 가기', limit: 200,
       hints: { 1: '칼을 든 채로는 겁을 내…', 2: '투슬리스가 날 볼 때 칼을 내려놓자(F 짧게).' }, run: nameIt,

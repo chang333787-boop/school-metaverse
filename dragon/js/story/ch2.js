@@ -97,7 +97,7 @@ const ROPES = [[1.3, 2.1], [-1.7, 0.3], [1.7, -0.6], [-0.5, -3.1]];   // 투슬�
 function* tied(G, C) {
   const P = G.player, pl = G.place, cr = pl.anchors.crash || { x: 0, z: 0, yaw: 0 };
   const T = G.dragon('nightfury', cr, { mind: { fear: 0.8, anger: 0.4 }, noCollide: true }); C.T = T; T.solid = true;
-  if (G.dist(P.W, cr) > 16) G.putPlayer({ x: cr.x - Math.sin(cr.yaw || 0) * 9, z: cr.z - Math.cos(cr.yaw || 0) * 9, yaw: cr.yaw || 0 });   // 이 차례부터 바로 시작했을 때만(숲 추적에서 이어지면 그 자리)
+  if (G.dist(P.W, cr) > 16) G.putPlayer(pl.anchors.crash_in || { x: cr.x - Math.sin(cr.yaw || 0) * 9, z: cr.z - Math.cos(cr.yaw || 0) * 9, yaw: cr.yaw || 0 });   // 이 차례부터 바로 시작했을 때만(숲 추적에서 이어지면 그 자리)
   T.mind.lock = 'tied'; T.stay();
   yield* until(() => T.root);
   holdItem(P, 'knife');
@@ -182,7 +182,7 @@ export const chapter = {
       hints: { 1: '꺼져 가는 횃불이 있어.', 2: '횃불 가까이 가서 F 짧게(기름).' }, run: meeting, sense: meetSense },
     { id: '2-2', verb: 'track', place: 'forest', time: 'fog', at: 'spawn', goal: '떨어진 드래곤을 찾아라', limit: 300,
       hints: { 1: '부러진 나무를 따라가 볼까?', 2: '지도의 큰 바위·개울과 땅을 맞대 보자.' }, run: track, sense: trackSense },
-    { id: '2-3', verb: 'approach', place: 'forest', time: 'fog', goal: '밧줄을 끊어라', limit: 150,
+    { id: '2-3', verb: 'approach', howtoVerb: 'cut2', place: 'forest', time: 'fog', goal: '밧줄을 끊어라', limit: 150,
       hints: { 1: '버둥댈 때는 안 돼…', 2: '눈이 둥글어지고 숨이 고를 때 F 짧게.' }, run: tied, sense: tiedSense },
     { id: '2-4', place: 'village', time: 'sunset', at: 'house_hiccup', run: home },
   ],

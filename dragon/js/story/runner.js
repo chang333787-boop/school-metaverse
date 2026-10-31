@@ -42,7 +42,7 @@ export function createRunner(G) {
     G.hold ? G.hold(st.item ?? null) : (G.player.item = st.item ?? null); G.player.lock = false; G.player.pose = null; G.player.noReach = false; G.player.aiming = false; G.useSpots = [];
     G.hud.reset();
     if (st.goal) G.hud.goal(st.goal);
-    if (st.verb && st.howto !== false) G.hud.howto(G.diff === 'easy' && st.verb === 'fly' ? 'flyEasy' : (st.howtoVerb || st.verb));
+    if (st.verb && st.howto !== false) G.hud.howto(G.diff === 'easy' && st.howtoEasy ? st.howtoEasy : G.diff === 'easy' && st.verb === 'fly' ? 'flyEasy' : (st.howtoVerb || st.verb));
     R.it = st.run(G, R.C);
   }
   function cleanup() {
@@ -65,12 +65,13 @@ export function createRunner(G) {
     R.stepT += dt; R.total += dt; if (R.C) R.C.t = R.stepT;
     /* 힌트 단계 — 키를 아무것도 안 누르고 멈춘 시간 */
     const st = R.step;
-    if (st.verb && st.hints) {
+    const hs = typeof st.hints === 'function' ? st.hints(G, R.C) : st.hints;   // 함수면 지금 단계에 맞는 힌트(팀 G — 배 젓기 → 낚시처럼 한 차례 안에서 할 일이 바뀔 때)
+    if (st.verb && hs) {
       const moving = I.heldList().length > 0 || (G.player.W && G.player.W.speed > 0.3);
       R.idleT = moving ? 0 : R.idleT + dt;                       // 무엇이든 누르면 멈춤 시간을 처음부터(톡톡 누르는 동안 힌트가 뜨지 않게 · 팀 B)
       const at = HINT_AT[G.diff] || HINT_AT.normal;
-      if (R.hintLv < 1 && R.idleT >= at[0] && st.hints[1]) { R.hintLv = 1; G.hud.hint(st.hints[1]); }
-      if (R.hintLv < 2 && R.idleT >= at[1] && st.hints[2]) { R.hintLv = 2; G.hud.hint(st.hints[2]); G.hud.howto(st.howtoVerb || st.verb, 10); }
+      if (R.hintLv < 1 && R.idleT >= at[0] && hs[1]) { R.hintLv = 1; G.hud.hint(hs[1]); }
+      if (R.hintLv < 2 && R.idleT >= at[1] && hs[2]) { R.hintLv = 2; G.hud.hint(hs[2]); const hv = G.hud.howtoVerb || (st.howto !== false && (st.howtoVerb || st.verb)); if (hv) G.hud.howto(hv, 10); }   // 하는 법 창 다시 = 마지막에 띄운 것(차례 안에서 바뀐 하는 법 · 쉬움 비행 = flyEasy)
     }
     let r;
     try { r = R.it.next(dt); } catch (e) { console.error('step', st.id, e); R.done = true; return; }

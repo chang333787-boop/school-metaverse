@@ -100,6 +100,6 @@ export function createHud() {
     if (H.howtoT > 0) { H.howtoT -= dt; if (H.howtoT <= 0) $('howto').classList.add('gone'); }
   };
   H.state = () => ({ goal: H.goalText || '', hint: H.hintText || '', bubble: H.cur ? H.cur.who + ': ' + H.cur.text : '', banner: H.bannerT > 0 ? H.bannerText : '', howto: H.howtoT > 0 ? H.howtoVerb : '' });
-  H.reset = () => { H.clearSay(); H.goal(''); H.hint(''); $('howto').classList.add('gone'); $('banner').classList.add('gone'); H.mood(null); H.fkeys([]); H.sketch(false); };
+  H.reset = () => { H.clearSay(); H.goal(''); H.hint(''); $('howto').classList.add('gone'); H.howtoVerb = ''; $('banner').classList.add('gone'); H.mood(null); H.fkeys([]); H.sketch(false); };
   return H;
 }

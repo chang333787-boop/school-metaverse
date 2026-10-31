@@ -175,7 +175,7 @@ function* bookNight(G, C) {
   Tw.walkTo((pl.anchors.door || b).x, (pl.anchors.door || b).z, 2.4); Sn.walkTo((pl.anchors.door || b).x + 1, (pl.anchors.door || b).z, 2.4);
   yield* sayAll(G, [['fishlegs', '그롱클은 턱 힘 8! 내더는 속도 8…'], ['hiccup', '나이트 퓨리는… 알 수 없음?', ['book']]]);
   G.hud.goal('알 수 없음 칸에 그려 넣기');
-  C.draw = G.book.startDraw(G.diff === 'easy');
+  C.draw = G.book.startDraw(G.diff === 'easy'); G.hud.howto('draw', 8);
   while (!G.book.drawStep(yield, G.input)) { /* 그리는 중 */ }
   yield* wait(0.6);
   G.book.endDraw(); G.book.show('nightfury');
@@ -191,12 +191,12 @@ export const chapter = {
   id: 3, title: '3장 · 훈련 첫날 · 숨은 호수', sub: '선착장 → 훈련장 → 코브 → 밤 큰 회관',
   steps: [
     { id: '3-0', place: 'village', time: 'sleet', at: 'dock_top', run: farewell, sense: (G) => ({ target: G.place.anchors.dock_end || null }) },
-    { id: '3-1', verb: 'dodge', place: 'arena', time: 'day', goal: '그롱클을 버텨라', easy: false, limit: 120,
+    { id: '3-1', verb: 'dodge', howtoVerb: 'shield3', place: 'arena', time: 'day', goal: '그롱클을 버텨라', easy: false, limit: 120,
       bookPage: { title: '훈련 1일 — 그롱클', draw: 'gronckle', line: '그롱클은 여섯 발을 쏘면 끝. 방패를 두드리면 조준이 흐려진다.' },
       hints: { 1: '볼이 부풀면 쏠 거야!', 2: '볼이 부풀 때 F 짧게(방패 두드리기) · 아니면 가림막 뒤로.' }, run: gronckle, sense: grSense },
-    { id: '3-2', verb: 'hide', place: 'cove', time: 'day', at: 'rim_start', goal: '들키지 말고 투슬리스를 그려라', limit: 180,
+    { id: '3-2', verb: 'hide', howtoVerb: 'sketch3', place: 'cove', time: 'day', at: 'rim_start', goal: '들키지 말고 투슬리스를 그려라', limit: 180,
       hints: { 1: '바위 뒤에서 살금살금(Shift).', 2: '벽을 오르다 미끄러질 때 F를 꾹 눌러 그리자.' }, run: watch, sense: watchSense },
     { id: '3-3', verb: 'draw', place: 'hall', time: 'night', at: 'door', goal: '드래곤 책 받기', limit: 150,
-      hints: { 1: '빈칸에 내가 본 걸 그리자.', 2: 'F를 누른 채 점을 차례로 이어.' }, run: bookNight, sense: (G) => ({ draw: G.book.drawSense(), table: G.place.anchors.table_book || null, have: G.book.have }) },
+      howto: false, hints: (G, C) => (C.draw ? { 1: '빈칸에 내가 본 걸 그리자.', 2: 'F를 누른 채 점을 차례로 이어.' } : { 1: '고버 아저씨가 탁자에 책을 놓았어.', 2: '불가 탁자 곁에서 F 짧게.' }), run: bookNight, sense: (G) => ({ draw: G.book.drawSense(), table: G.place.anchors.table_book || null, have: G.book.have }) },
   ],
 };

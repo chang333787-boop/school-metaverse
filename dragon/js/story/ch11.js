@@ -322,7 +322,7 @@ export const chapter = {
     { id: '11-2', place: 'village', time: 'clear', at: 'plaza', run: flyOver, sense: (G, C) => Object.assign(C.F ? flySense(C.F) : {}, { tl: tlSense(G, C.T) }) },
     { id: '11-3', verb: 'approach', place: 'village', time: 'clear', at: { x: 0, z: 9, yaw: Math.PI * 0.75 }, goal: '드래곤 먹이 주기', limit: 200,
       hints: { 1: '뛰어가면 겁내. 살금살금(Shift).', 2: '바구니에서 생선(F) · 날 볼 때 가까이서 F.' }, run: feed, sense: feedSense },
-    { id: '11-4', verb: 'rhythm', place: 'village', time: 'clear', at: 'dock_end', goal: '물고기 잡기', limit: 220,
+    { id: '11-4', verb: 'rhythm', howtoVerb: 'fish', place: 'village', time: 'clear', at: 'dock_end', goal: '물고기 잡기', limit: 220,
       hints: { 1: '찌가 쏙 들어갈 때 당겨야 해.', 2: '고기가 당기는 반대쪽 키를 누르자.' }, run: fish, sense: (G, C) => ({ state: C.state, bob: C.bob || '', pull: C.pull || 0, got: C.got || 0, need: C.need || 0 }) },
     { id: '11-5', verb: 'approach', howtoVerb: 'hide', place: 'village', time: 'clear', at: { x: 10, z: -16, yaw: Math.PI / 2 }, goal: '드래곤 책 채우기', limit: 240,
       hints: { 1: '가까이 가면 놀라. 조금 떨어져서 살금살금.', 2: '멈춰 서서 그쪽을 바라보고 기다리자.' }, run: observe, sense: obsSense },

@@ -364,6 +364,7 @@ export async function buildPlace(ctx) {
   const anchors = {
     spawn: P(sp0[0], sp0[1], Math.atan2(sp1[0] - sp0[0], sp1[1] - sp0[1])),
     crash: P(CRASH[0], CRASH[1], crashYaw),
+    crash_in: (() => { const ga = crashFront + 3.47; return P(CRASH[0] + Math.sin(ga) * 6.5, CRASH[1] + Math.cos(ga) * 6.5, ga + Math.PI); })(),   // 쓰러진 나무가 비운 쪽(다가가는 길)에서 드래곤을 봄 — 2-3을 바로 열 때 자리(팀 G · 예전 자리는 카메라가 쓰러진 나무에 가림)
     crash_rock: P(CR.x, CR.z, Math.atan2(CRASH[0] - CR.x, CRASH[1] - CR.z)),
     fin: Object.assign(P(fp.x, fp.z, Math.atan2(fp.dx, fp.dz)), { show: (on) => { finM.visible = !!on; } }),
   };
