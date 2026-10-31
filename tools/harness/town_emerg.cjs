@@ -36,7 +36,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     ok(i0 && i0.ev && i0.ev.k === 'lost', '그때가 되면 저절로 생김(👮 길 잃은 어린이 · ' + (i0 && i0.ev ? i0.ev.cell : '-') + ')'); if (!i0 || !i0.ev) throw new Error('사건이 안 생김: ' + JSON.stringify(i0 && i0.dbg));
     // ② 알림
     const me0 = await ev(() => { const m = SD2.map.player.pos(); return [m.x, m.z]; }); const dEv = Math.round(Math.hypot(i0.ev.x - me0[0], i0.ev.z - me0[1])); ok(dEv > 30 && dEv < 260, '내 둘레 ' + dEv + 'm');
-    let g = await goalTx(); ok(/칸/.test(g) && /\d+m/.test(g), '위 가운데 줄 = 칸·방향·거리 「' + g + '」'); ok(await ev(() => [...document.querySelectorAll('.gchip')].some(c => /👮/.test(c.textContent) && getComputedStyle(c).display !== 'none')), '칩 👮 (누르면 길)');
+    let g = await goalTx(); ok(!/길 잃은/.test(g), 'TRACK-1: 새 사건은 위 가운데 줄을 빼앗지 않음 「' + g + '」'); await ev(() => SM_TOWN.track && SM_TOWN.track.pick('em:emerg')); await W8(700);   /* 🧭 바꾸기로 이 사건을 고름 */
+    g = await goalTx(); ok(/칸/.test(g) && /\d+m/.test(g), '고른 뒤 위 가운데 줄 = 칸·방향·거리 「' + g + '」'); ok(await ev(() => [...document.querySelectorAll('.gchip')].some(c => /👮/.test(c.textContent) && getComputedStyle(c).display !== 'none')), '칩 👮 (누르면 길)');
     await p.keyboard.press('KeyF'); await W8(600); ok(/지금 생긴 일/.test((await panel() || {}).t || '') && /길 잃은 어린이/.test((await panel() || {}).t || ''), '장소 찾기 맨 위 = 지금 생긴 일'); await closeAll();
     // ②+ EMERG-3 멀리서 보임: 생기자마자(도착 전) 그 자리 사람 · 머리 위 표시 · 지도 점 · 120m 앞에서 화면 안 · 200m 밖 = 몸만 숨김(표시는 그대로)
     { const tpFrom = (q, d) => ev(([ex, ez, d]) => { const M = SD2.map, me = M.player.pos(), dx = me.x - ex, dz = me.z - ez, l = Math.hypot(dx, dz) || 1, x = ex + dx / l * d, z = ez + dz / l * d; M.player.teleport([x, M.q.groundAt(x, z, SM_TOWN.ground(x, z) + 2) + 0.05, z]); M.player.lookAt([ex, ez]); }, [q.x, q.z, d]);
@@ -127,6 +128,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       const nS = await E('sites'); ok(nS > 0, '산·숲 가장자리 밭가 자리 ' + nS + '곳'); const Wd = await E('wind'); let got = false;
       for (let t = 0; t < 14 && !got && nS; t++) { const s = await E('site', Math.floor(t * nS / 14)); const px = s[0] + Wd.x * 200, pz = s[1] + Wd.z * 200; await tp(px, pz); await W8(500); if (await E('spawn', 'smoke')) got = true; }
       ok(got, '🌲 산불 감시 생김(바람 아래쪽 200m에서)'); if (!got) throw new Error('산불 감시 안 생김 ' + JSON.stringify((await I()).dbg.slice(-4)));
+      await ev(() => SM_TOWN.track && SM_TOWN.track.pick('em:emerg'));   /* TRACK-1: 새 사건은 고른 뒤에 위 가운데 줄 */
       await W8(900); let Sm = await I(); g = await goalTx(); ok(/바람은 .+쪽에서 불어와요/.test(g) && /연기는 .+쪽/.test(g) && !/\d+m/.test(g), '위 가운데 줄 = 바람 방위 + 연기 쪽 방위(거리 X) 「' + g + '」');
       ok(!Sm.ev.mk && Sm.ev.smk, '처음엔 빛기둥 X · 하늘에 연기'); ok(Sm.ev.al > 0, '연기 시작 자리 = 바람이 불어오는 쪽(al ' + Sm.ev.al + ')'); await shot('em_smoke_far');
       const cS = await calls(); await E('vis', false); const cS0 = await calls(); await E('vis', true); ok(cS - cS0 <= 4, '산불 감시 그리기 +' + (cS - cS0));
@@ -170,6 +172,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       { const R9 = await ev(() => { const R = SM_TOWN.emerg().dbg; return [R.w('tide', { wx: 'clear', sea: 'summer' }), R.w('tide', { wx: 'clear', sea: 'winter' }), R.w('tide', { wx: 'rain', sea: 'summer' })]; }); ok(R9[0] > R9[1] && R9[0] > R9[2], '밀물 갯벌 무게: 여름 ↑ · 겨울·비 ↓ (' + R9.map(v => +v.toFixed(2)).join(' · ') + ')'); }
       const sps = await ev(() => SM_TOWN.shore().spots()); ok(sps.length > 0, '갯벌 관찰 자리 ' + sps.length + '곳'); await tp(sps[0].x, sps[0].z); await W8(900);
       const gotT = await E('spawn', 'tide'); ok(gotT, '🌊 밀물 갯벌 알리기 생김'); if (!gotT) throw new Error('밀물 안 생김 ' + JSON.stringify((await I()).dbg.slice(-4))); await W8(900);
+      await ev(() => SM_TOWN.track && SM_TOWN.track.pick('em:emerg')); await W8(700);   /* TRACK-1: 새 사건은 고른 뒤에 위 가운데 줄 */
       let Td = await I(); g = await goalTx(); ok(/칸/.test(g) && /\d+m/.test(g) && Td.ev.mk, '빛기둥 · 위 가운데 줄 = 칸·방향·거리 「' + g + '」'); await shot('em_tide_call');
       await E('near'); for (let i = 0; i < 8; i++) { await W8(400); if ((await I()).ev.st !== 'call') break; } Td = await I(); ok(Td.ev.st === 'brief', '도착 = 해양경찰관(높은 곳) · 갯벌 이웃 둘');
       { const cA = await calls(); await E('vis', false); const cB = await calls(); await E('vis', true); ok(cA - cB <= 4, '밀물 사건 몸 그리기 +' + (cA - cB)); }
@@ -196,7 +199,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       await ev(() => { SM_TOWN.rules.wx('clear'); SM_TOWN.game().S.min = 11 * 60; }); await noPlan(); ok(!(await E('spawn', 'pet')), '맑은 날 = 안 생김');
       await ev(() => SM_TOWN.rules.wx('rain')); await noPlan(); const SHp = await E('shelter'); ok(!!SHp, '동물보호센터 = ' + (SHp && SHp.name));
       let gotP = false; for (const [ox, oz] of [[110, 0], [-110, 0], [0, 110], [0, -110], [160, 70], [-160, -70], [70, -160], [-70, 160], [220, 0], [0, 220]]) { await tp(SHp.door[0] + ox, SHp.door[1] + oz); await W8(500); if (await E('spawn', 'pet')) { gotP = true; break; } }
-      ok(gotP, '🐶 길 잃은 강아지 생김(비)'); if (!gotP) throw new Error('강아지 안 생김 ' + JSON.stringify((await I()).dbg.slice(-4))); await W8(900);
+      ok(gotP, '🐶 길 잃은 강아지 생김(비)'); if (!gotP) throw new Error('강아지 안 생김 ' + JSON.stringify((await I()).dbg.slice(-4))); await ev(() => SM_TOWN.track && SM_TOWN.track.pick('em:emerg')); await W8(900);   /* TRACK-1: 고른 뒤 위 가운데 줄 */
       let Pt = await I(); g = await goalTx(); ok(Pt.ev.mk && /칸/.test(g), '빛기둥(신고한 이웃) · 위 가운데 줄 「' + g + '」');
       await E('near'); for (let i = 0; i < 8; i++) { await W8(400); if ((await I()).ev.st !== 'call') break; } Pt = await I(); ok(Pt.ev.st === 'brief', '도착 = 신고한 이웃 · 처마 밑 강아지' + (Pt.ev.dc ? ' · 다른 목줄 집 강아지와 주인' : '')); await shot('em_pet_scene');
       { const cA = await calls(); await E('vis', false); const cB = await calls(); await E('vis', true); ok(cA - cB <= 4, '강아지 사건 몸 그리기 +' + (cA - cB)); }

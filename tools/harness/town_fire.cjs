@@ -40,7 +40,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     // ② 보임
     const sm = await SM(); ok(sm && sm.top - sm.roof >= 12, '연기 기둥 = 옥상 위 ' + (sm ? (sm.top - sm.roof).toFixed(1) : '?') + 'm'); ok(sm && sm.beacon, '불난 집 빛기둥');
     const chip = await ev(() => [...document.querySelectorAll('.gchip')].some(c => /🚒/.test(c.textContent) && getComputedStyle(c).display !== 'none')); ok(chip, '오른쪽 칩 🚒');
-    await W8(700); let g = await goalTx(); ok(/불/.test(g) && /\d+m/.test(g) && /쪽/.test(g), '위 가운데 줄 = 칸·방향·거리 「' + g + '」');
+    await W8(700); let g = await goalTx(); ok(!/불이 났어요/.test(g) && await ev(() => [...document.querySelectorAll('.gchip')].some(c => /🚒/.test(c.textContent) && /안내 받기/.test(c.textContent))), 'TRACK-1: 새 불은 위 가운데 줄을 빼앗지 않음 · 칩 = 안내 받기 「' + g + '」'); await ev(() => SM_TOWN.track && SM_TOWN.track.pick('em:fire')); await W8(700);   /* 🧭 바꾸기로 불을 고름 */
+    g = await goalTx(); ok(/불/.test(g) && /\d+m/.test(g) && /쪽/.test(g), '고른 뒤 위 가운데 줄 = 칸·방향·거리 「' + g + '」');
     { const far = await ev(fs => { const M = SD2.map, me = M.player.pos(), dx = me.x - fs.hs[0], dz = me.z - fs.hs[1], l = Math.hypot(dx, dz) || 1, x = fs.hs[0] + dx / l * 120, z = fs.hs[1] + dz / l * 120; M.player.teleport([x, SM_TOWN.ground(x, z) + 0.3, z]); M.player.lookAt([fs.hs[0], fs.hs[1]]); return [x, z]; }, fs); await W8(1600);
       const vis = await ev(() => { const S = SM_TOWN.jobs().dbg.smoke(), cam = SD2.map.camera, V = cam.position.clone(); V.set(S.col[0] + 2, S.col[1] + 9, S.col[2] + 1).project(cam); return { x: +V.x.toFixed(2), y: +V.y.toFixed(2), z: +V.z.toFixed(3) }; });
       ok(Math.abs(vis.x) < 1 && Math.abs(vis.y) < 1 && vis.z < 1, '120m 앞에서 연기 기둥이 화면 안 (' + JSON.stringify(vis) + ')'); await shot('fire_120m');
