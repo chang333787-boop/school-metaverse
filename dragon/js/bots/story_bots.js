@@ -70,6 +70,8 @@ function body(B) {
 }
 
 /* 장 봇 — level 'easy'|'normal' · 차례 id마다 하는 일 */
+import { flyBot, boatBot } from './flight_bot.js?v=14';
+window.DRG_FLYBOT = flyBot; window.DRG_BOATBOT = boatBot;
 export function storyBot(level = 'normal') {
   const lag = Math.round(RT[level] * 60);
   const hist = []; let K = null, mem = {}, lastId = '', T = 0;
@@ -112,8 +114,8 @@ BOTS['4-1'] = (s, K, M, B) => {                          // 내더 미로: 살�
   if (!M.path || (M.k >= M.path.length)) { M.path = planPath(s.me.x, s.me.z, s.exit.x, s.exit.z, s.maze, 0.7, 0.5, 20) || [[s.exit.x, s.exit.z]]; M.k = 0; }
   const p = M.path[M.k]; if (K.walk(s, p[0], p[1], null, 0.6)) M.k++;
 };
-BOTS['4-2'] = (s, K, M, B) => {                          // 배 + 낚시
-  if (s.state === 'row' && s.boat) { if (s.boat.beat) K.tap('Space'); return; }
+BOTS['4-2'] = (s, K, M, B, lv) => {                      // 배(팀 F 배 봇) + 낚시
+  if (s.state === 'row') { if (s.mode === 'boat' && window.DRG_BOATBOT) { M.bb = M.bb || window.DRG_BOATBOT('beat', lv); M.bb(window.DRG.loop.n, B); } return; }
   if (s.state === 'cast') { K.set('KeyA', false); K.set('KeyD', false); if (!M.cd || M.cd <= 0) { K.tap('KeyF'); M.cd = 1.2; } M.cd -= 1 / 60; return; }
   if (s.state === 'wait') { if (s.bob === 'sink' && !M.hooked) { M.hooked = true; K.tap('KeyF'); } if (s.bob !== 'sink') M.hooked = false; return; }
   if (s.state === 'fight') { K.set('KeyA', s.pull > 0); K.set('KeyD', s.pull < 0); }
@@ -231,8 +233,9 @@ BOTS['5-3'] = (s, K, M) => {                             // 뱀장어 치우기 
   }
 };
 BOTS['5-3eel'] = (s, K, M) => { if (!s.basketAt) return; if (K.walk(s, s.basketAt.x, s.basketAt.z, false, 1.4)) { K.stop(); if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 0.8; } } };
-BOTS['5-4'] = (s, K, M) => {                             // 첫 들림: 꼬리에 F → 벽이 가까우면 가운데 쪽으로 꼬리(A/D)
+BOTS['5-4'] = (s, K, M, B, lv) => {                      // 첫 들림: 꼬리에 F → 팀 F 비행 봇(들림)
   if (s.tail) { if (K.walk(s, s.tail.x, s.tail.z, false, 1.2)) { K.stop(); if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 0.8; } } return; }
+  if (s.mode === 'fly' && window.DRG_FLYBOT) { if (!M.fb) { K.releaseAll(); M.fb = window.DRG_FLYBOT(lv); } M.fb(window.DRG.loop.n, B); return; }
   const f = s.fly; if (!f) return;
   const want = f.toC != null ? f.toC : 0, da = Math.atan2(Math.sin(want - f.yaw), Math.cos(want - f.yaw));
   const steer = (f.wall != null && f.wall < 12) || Math.abs(da) > 1.2 ? Math.sign(da) : 0;
@@ -290,7 +293,8 @@ BOTS['6-7'] = (s, K, M) => {                             // 다친 테러: 살�
   K.set('KeyF', !s.flinch);
 };
 BOTS['6-2'] = (s, K, M, B, lv) => {                      // 올라타기 → 비행(팀 F 봇)
-  if (!s.fly) { const t = s.tl; if (t && t.x != null) { if (K.walk(s, t.x, t.z, false, 2.8)) { K.stop(); if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 1; } } } else B.drag(4, 0); return; }
-  if (window.DRG_FLYBOT) { M.fb = M.fb || window.DRG_FLYBOT(lv); M.fb(0, B, s); }
+  if (s.mode !== 'fly') { const t = s.tl; if (t && t.x != null) { if (K.walk(s, t.x, t.z, false, 2.8)) { K.stop(); if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 1; } } } else B.drag(4, 0); return; }
+  if (window.DRG_FLYBOT) { if (!M.fb) { K.releaseAll(); M.fb = window.DRG_FLYBOT(lv); } M.fb(window.DRG.loop.n, B); }
 };
+BOTS['6-6'] = (s, K, M, B, lv) => { if (s.mode === 'fly' && window.DRG_FLYBOT) { M.fb = M.fb || window.DRG_FLYBOT(lv); M.fb(window.DRG.loop.n, B); } };
 export { BOTS };

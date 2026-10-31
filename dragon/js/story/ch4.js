@@ -4,6 +4,7 @@
 import { wait, until, sayAll } from './runner.js?v=14';
 import { holdItem, dropItem, sandLines, makePuffs } from './fx.js?v=14';
 import * as THREE from 'three';
+import { boatSense, boatCam } from './flysense.js?v=14';
 
 const TAU = Math.PI * 2;
 const ang = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
@@ -92,14 +93,19 @@ function* fishing(G, C) {
   /* 배 — boat.js가 있으면 노 박자로 돌기둥까지 · 없으면 바로 낚시 자리 */
   let B = null;
   const mod = yield* awaitP(import('../play/boat.js?v=14').catch(() => null));
-  if (mod && mod.createBoat) {
-    B = mod.createBoat({ place: pl, group: pl.group, mode: G.diff, rider: P });
-    C.boat = B; P.cam = 'boat'; G.camDraw = (a, dt) => B.draw(a, dt, G.camera);
-    C.cleanup = () => { P.cam = 'follow'; G.camDraw = null; B.dispose && B.dispose(); };
+  if (mod && mod.createBoat && pl.lists.boatPath) {
+    B = mod.createBoat({ path: pl.lists.boatPath, mode: G.diff, rider: { root: P.root, rig: P.rig } });
+    pl.group.add(B.root); if (B.foam) pl.group.add(B.foam);
+    C.boat = B; P.cam = 'boat'; const BC = { init: false };
+    G.camDraw = (a, dt) => { B.draw(a, dt); boatCam(G.camera, B, dt, BC); };
+    C.cleanup = () => { P.cam = 'follow'; G.camDraw = null; B.root.removeFromParent(); if (B.foam) B.foam.removeFromParent(); B.dispose && B.dispose(); };
     yield* sayAll(G, [['hiccup', '물고기를 잔뜩 잡아 가자. 배고플 테니까.', ['cod']]]);
     G.hud.goal('노를 박자에 맞춰 돌기둥까지');
-    let arrived = false; B.on && B.on('arrive', () => { arrived = true; });
-    while (!arrived) { const dt = yield; B.step(dt, G.input); }
+    let arrived = false; B.on('arrive', () => { arrived = true; });
+    B.on('stroke', (e) => { if (e.kind === 'beat') G.sfx.play('splash'); });
+    while (!arrived) { const dt = yield; B.step(dt, G.input, G.t); }
+    /* 닿음 — 배 위에서 낚시(배 카메라 그대로 · 낚싯대 방향 = 배 옆) */
+    P.W.x = B.state.x; P.W.z = B.state.z; P.W.yaw = B.state.yaw + Math.PI / 2; P.W.y = 0.4;
   } else {
     G.putPlayer(pl.anchors.fishing || pl.anchors.dock || { x: 0, z: 0 });
   }
@@ -309,7 +315,7 @@ export const chapter = {
       hints: { 1: '벽 뒤에 있으면 내더가 못 봐.', 2: '내더 고개가 다른 데로 돌 때 움직이자.' }, run: naddermaze, sense: mazeSense },
     { id: '4-2', verb: 'rhythm', place: 'sea', time: 'clear', at: 'dock', goal: '노를 박자에 맞춰 돌기둥까지', limit: 240,
       hints: { 1: '찌가 쏙 들어갈 때 당겨야 해.', 2: '고기가 당기는 반대쪽 키를 누르자.' }, run: fishing,
-      sense: (G, C) => ({ state: C.state, bob: C.bob || '', pull: C.pull || 0, got: C.got || 0, need: C.need || 0, boat: C.boat && C.boat.sense ? C.boat.sense() : null }) },
+      sense: (G, C) => Object.assign({ state: C.state, bob: C.bob || '', pull: C.pull || 0, got: C.got || 0, need: C.need || 0 }, C.state === 'row' && C.boat ? boatSense(C.boat) : {}) },
     { id: '4-3', verb: 'approach', place: 'cove', time: 'day', at: 'gap_in', goal: '투슬리스에게 가까이 가기', limit: 200,
       hints: { 1: '칼을 든 채로는 겁을 내…', 2: '투슬리스가 날 볼 때 칼을 내려놓자(F 짧게).' }, run: nameIt,
       sense: (G, C) => ({ stage: C.stage, tl: tlSense(G, C.T) }) },

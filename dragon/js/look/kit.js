@@ -103,7 +103,7 @@ export function makeSky() {
 }
 
 /* 바다: 카메라 둘레 고리 격자(가까울수록 촘촘 · 반지름 ≥ 안개 끝 ×1.2) + 정점 거스트너 물결 넷(짧은 물결일수록 가까이서만) + 물마루·거품·하늘빛 반사 */
-function ringGrid(R = 2000, r0 = 1.2, k = 1.036, seg = 128) {
+function ringGrid(R = 2000, r0 = 1.2, k = 1.045, seg = 104) {   // 삼각형 ≈ 3.5만(예전 5.4만 · W1 지적)
   const rs = [0]; for (let r = r0; r < R; r *= k) rs.push(r); rs.push(R);
   const pos = new Float32Array(rs.length * seg * 3), idx = [];
   for (let i = 0; i < rs.length; i++) for (let j = 0; j < seg; j++) { const a = j / seg * Math.PI * 2, o = (i * seg + j) * 3; pos[o] = Math.cos(a) * rs[i]; pos[o + 2] = Math.sin(a) * rs[i]; }
@@ -155,7 +155,7 @@ export function makeSea() {
         c = mix(c, skyCol, fr * 0.35);
         float sp = max(dot(reflect(-uSunDir, n), v), 0.0);
         c += uFogSun * smoothstep(0.93, 0.97, sp) * 0.5;                       // 반짝임도 톤처럼 끊어서
-        c = mix(c, foam, smoothstep(2.0, 2.8, vH) * 0.55);   /* 물마루 꼭대기에만 */
+        c = mix(c, foam, smoothstep(2.4, 3.1, vH) * 0.45 * smoothstep(6.0, 30.0, length(vW - cameraPosition)));   /* 물마루 꼭대기에만 · 코앞(배·낮은 비행)에선 흐리게 */
         #ifdef USE_FOG
           gl_FragColor = vec4(drgFog(c, vW, vFogDepth), 1.0);
         #else

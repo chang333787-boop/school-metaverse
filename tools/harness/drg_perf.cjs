@@ -72,8 +72,8 @@ srv.listen(0, async () => {
       console.log('\n[장소 열 번 오가기 힙]');
       await open('?ch=4&step=2&diff=normal&chain=0&seed=1&mode=smooth');
       const hp = await ev(async () => {
-        const G = DRG.world.G, names = ['arena', 'cove', 'village', 'forest', 'sea', 'hall'], gc = () => { if (window.gc) { gc(); gc(); } };
-        const heap = () => { gc(); return performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0; };
+        const G = DRG.world.G, names = ['arena', 'cove', 'village', 'forest', 'sea', 'hall'], GC = () => { if (window.gc) { window.gc(); window.gc(); } };
+        const heap = () => { GC(); return performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0; };
         for (let i = 0; i < 2; i++) { await G.loadPlace(names[i % 6], 'day'); await new Promise(r => setTimeout(r, 400)); }
         const h0 = heap(), g0 = DRG.gfx.renderer.info.memory.geometries, t0 = DRG.gfx.renderer.info.memory.textures;
         for (let i = 0; i < 10; i++) { await G.loadPlace(names[(i + 2) % 6], 'day'); await new Promise(r => setTimeout(r, 400)); }

@@ -6,6 +6,7 @@ import { wait, until, sayAll } from './runner.js?v=14';
 import { holdItem, dropItem, makePuffs } from './fx.js?v=14';
 import { toon, flameMesh, glowSprite } from '../look/kit.js?v=14';
 import { tlSense } from './ch4.js?v=14';
+import { flySense } from './flysense.js?v=14';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const TAU = Math.PI * 2;
@@ -149,9 +150,10 @@ function* lift(G, C) {
   const lake = pl.lake || { x: (A.lake || T).x, z: (A.lake || T).z, r: 12, y: 0 }, fly = pl.fly || { ground: (x, z) => pl.height(x, z, 0), pillars: [], ceil: 40, bounds: { x: lake.x, z: lake.z, r: 40 } };
   let F = null, cam = null, splash = false, crash = false;
   if (mod && mod.createFlight) {
-    F = mod.createFlight({ world: fly, mode: G.diff, dragon: { root: T.root, rig: T.rig }, rider: { root: P.root, rig: P.rig, tail: true } });
-    F.setOpts && F.setOpts({ liftOnly: true, autoForward: true, ceil: (fly.ceil || 40), lake });
-    F.on && F.on('splash', () => { splash = true; }); F.on && F.on('crash', () => { crash = true; });
+    F = mod.createFlight({ world: Object.assign({ lake }, fly), mode: G.diff, dragon: { root: T.root, rig: T.rig }, rider: { root: P.root, rig: P.rig, tail: true }, rng: G.rng });
+    const toLake = Math.atan2(lake.x - T.x, lake.z - T.z), side = Math.sin(G.t * 1.7) > 0 ? 1 : -1;   // 호수를 옆에 두고 떠오름 → 꼬리로 돌아야 첨벙(가만히 = 돌벽)
+    F.setOpts({ liftOnly: true }); F.place(T.x, T.y + 1, T.z, toLake + side * 1.45, 0); F.setOpts({ liftOnly: true });
+    F.on('done', () => { splash = true; }); F.on('splash', () => { if (F.state.liftT > 2) splash = true; }); F.on('crash', () => { crash = true; }); F.on('fall', () => { crash = true; });
     cam = mod.createFlightCam ? mod.createFlightCam(G.camera) : null;
   } else F = simpleLift(G, T, fly, lake, () => { splash = true; }, () => { crash = true; });
   T.manual = true; P.cam = 'fly'; P.hidden = false;
@@ -277,7 +279,7 @@ export const chapter = {
       hints: { 1: '투슬리스가 뭘 보고 놀랐을까?', 2: '움찔하면 손을 떼고, 눈이 둥글어지면 다시.' }, run: eelTail, sense: eelSense },
     { id: '5-4', verb: 'fly', place: 'cove', time: 'day', goal: '먹는 틈에 꼬리날개 달기', limit: 120,
       hints: { 1: '꼬리 쪽으로 가서 F.', 2: '벽이 다가오면 반대쪽으로 꼬리를 돌리자.' }, run: lift,
-      sense: (G, C) => ({ tail: C.tail || null, fly: C.F && C.F.sense ? C.F.sense() : (C.F && C.F.state ? { x: C.F.state.x, z: C.F.state.z, yaw: C.F.state.yaw } : null), bounds: G.place.fly ? G.place.fly.bounds : null }) },
+      sense: (G, C) => Object.assign({ tail: C.tail || null, bounds: G.place.fly ? G.place.fly.bounds : null }, C.F && C.F.state ? flySense(C.F) : {}) },
     { id: '5-5', verb: 'throw', place: 'arena', time: 'day', goal: '지플백을 우리로', easy: false, limit: 180,
       bookPage: { title: '훈련 3일 — 지플백', draw: 'zippleback', line: '불꽃 머리에 물을 끼얹으면 불이 안 붙는다. 뱀장어를 싫어한다.' },
       hints: { 1: '입가에 불티가 튀는 쪽이 불꽃 머리.', 2: '물통 옆 F → F를 꾹 눌러 겨누고 놓기.' }, run: zipple, sense: zipSense },

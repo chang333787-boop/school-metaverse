@@ -6,6 +6,7 @@ import { wait, until, sayAll } from './runner.js?v=14';
 import { holdItem, dropItem, makePuffs } from './fx.js?v=14';
 import { toon } from '../look/kit.js?v=14';
 import { tlSense } from './ch4.js?v=14';
+import { flySense as fsFlat } from './flysense.js?v=14';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 function* awaitP(p) { let v, done = false; p.then((x) => { v = x; done = true; }, () => { done = true; }); while (!done) yield; return v; }
@@ -28,13 +29,15 @@ function* saddle(G, C) {
 /* 비행 한 판(②·⑥이 같이 씀) — flight.js(팀 F)로 · gates를 차례로 지나면 끝 · 떨어지면 다시 붙기 */
 function* flyCourse(G, C, o) {
   const P = G.player, pl = G.place, T = o.T;
+  let cam = null;
   const mod = yield* awaitP(import('../play/flight.js?v=14').catch(() => null));
   if (!mod || !mod.createFlight) { G.hud.say('hiccup', '(비행 엔진 준비 중)', [], { secs: 1 }); yield* wait(1); return 'skip'; }
-  const F = mod.createFlight({ world: o.world, mode: G.diff, dragon: { root: T.root, rig: T.rig }, rider: { root: P.root, rig: P.rig } });
+  const F = mod.createFlight({ world: o.world, mode: G.diff, dragon: { root: T.root, rig: T.rig }, rider: { root: P.root, rig: P.rig }, rng: G.rng });
   F.setOpts && F.setOpts(o.opts || {}); F.setGates && F.setGates(o.gates);
-  const cam = mod.createFlightCam ? mod.createFlightCam(G.camera) : null;
+  cam = mod.createFlightCam ? mod.createFlightCam(G.camera) : null;
   let ev = { gate: 0, crash: 0, graze: 0, fall: 0 };
   F.on && ['gate', 'crash', 'graze', 'fall', 'regrab', 'splash'].forEach((k) => F.on(k, () => { ev[k] = (ev[k] || 0) + 1; }));
+  F.on('graze', () => { G.sfx.play('whoosh'); if (cam && cam.kickFov) cam.kickFov(4); }); F.on('gate', (e) => { if (e && e.matched && cam && cam.kickFov) cam.kickFov(2); });
   if (o.start) { if (F.place) F.place(o.start.x, o.start.y, o.start.z, o.start.yaw || 0); else if (F.state) Object.assign(F.state, o.start); }
   T.manual = true; P.cam = 'fly';
   G.camDraw = (a, dt) => { F.draw(a, dt); if (cam) { if (cam.update) cam.update(dt, F); else cam.draw(a, dt, F); } };
@@ -42,14 +45,14 @@ function* flyCourse(G, C, o) {
   C.F = F; C.ev = ev;
   let t = 0;
   while ((F.state && F.state.gates != null ? F.state.gates : ev.gate) < o.gates.length) {
-    const dt = yield; t += dt; F.step(dt, G.input);
+    const dt = yield; t += dt; F.step(dt, G.input); if (pl.gateMark && F.state) pl.gateMark(F.state.gates);
     if (o.tick) o.tick(dt, F, ev, t);
     if (o.maxT && t > o.maxT) break;
   }
   T.manual = false; P.cam = 'follow'; G.camDraw = null;
   return { t, ev };
 }
-function flySense(G, C) { const F = C.F; if (!F) return {}; return { fly: F.sense ? F.sense() : null, gates: C.gatesLeft || null }; }
+function flySense(G, C) { const F = C.F; if (!F || !F.state) return {}; return fsFlat(F, { noteGone: !!C.blown }); }
 
 /* ② 코브 연습 비행 — 바위 틈 셋을 꼬리 자리로 · 끝에 드래곤 풀 덤불로 고꾸라짐(발견 1의 계기) */
 function* practice(G, C) {

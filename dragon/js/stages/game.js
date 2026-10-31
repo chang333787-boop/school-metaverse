@@ -95,7 +95,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     if (!P.root || !P.W) return;
     P.root.visible = !P.hidden;
     if (P.cam === 'follow') { P.W.draw(a, P.root); if (performance.now() - (G.benchT || -1e9) > 250) P.C.draw(dt, P.root); }   // bench 동안 카메라는 benchPath
-    if (P.rig) {
+    if (P.rig && P.cam === 'follow') {
       const to = P.pose || {}, R = P.rig;
       const tg = { speed: Math.min(1, P.W.speed / 4.2), low: P.W.low ? 1 : 0, reach: P.reach ? 1 : 0, away: P.away ? 0.8 : 0, throw: 0 };
       for (const k in to) tg[k] = to[k];
@@ -183,8 +183,8 @@ export async function buildGame(scene, camera, rng, opt = {}) {
       if (!G.place) { env.follow(); return; }
       G.playerDraw(a, dt);
       if (G.camDraw) G.camDraw(a, dt);
-      if (R.C) for (const x of R.C.actors) x.draw && x.draw(a, dt, camera.position);
-      for (const x of G.cast) x.draw && x.draw(a, dt, camera.position);
+      if (R.C) for (const x of R.C.actors) if (!x.manual) x.draw && x.draw(a, dt, camera.position);   // manual = 비행 엔진이 놓고 자세도 갱신
+      for (const x of G.cast) if (!x.manual) x.draw && x.draw(a, dt, camera.position);
       G.place.draw && G.place.draw(a);
       env.follow();
       if (G.diff === 'easy') {                          // 쉬움: 쓸 수 있는 물건 위 F 키 그림만(6m 안)
