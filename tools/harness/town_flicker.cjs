@@ -50,5 +50,5 @@ const ROOMS = opt('rooms') || 'all', OUTN = +(opt('out') || 6), R = 40, ROOFN = 
   const shops = await p.evaluate(n => { const L = SM_TOWN.indoor.list().filter(q => q.kind === 'shop'); const st = Math.max(1, Math.floor(L.length / n)); return L.filter((_, i) => i % st === 0).slice(0, n); }, OUTN);
   for (const q of shops) { const r = await p.evaluate(async q => { const x = q.at && q.at[0], z = q.at && q.at[1]; if (x == null) return { name: q.name, err: 'no pos' }; SD2.map.player.teleport([x + 6, SM_TOWN.ground(x + 6, z + 6) + 0.3, z + 6]); SD2.map.player.lookAt([x, z]); await new Promise(r => setTimeout(r, 1500)); return { name: q.name, at: [Math.round(x), Math.round(z)], ...window.__flick([SD2.scene], [x, z], 40) }; }, q); out.outside.push(r); }
   const bad = out.rooms.filter(r => r.n || r.err).length + out.outside.filter(r => r.n).length;   /* 못 들어간 방·빈 방도 실패(검사 못 한 것 = 통과 아님) */
-  out.boots = boots; console.log(JSON.stringify(out, null, 1)); console.log(bad ? 'FLICKER ' + bad : 'PASS'); await b.close();
+  out.boots = boots; console.log(JSON.stringify(out, null, 1)); console.log(bad ? 'FLICKER ' + bad : 'PASS'); await b.close(); process.exit(bad ? 1 : 0);   /* GATE-2(10-31): 실패면 exit 1 */
 })();

@@ -1,0 +1,81 @@
+#!/bin/sh
+# pre-push 관문(GATE-2 · 10-31 '진짜 시험') — 설치·건너뛰기는 tools/hooks/README.md
+#   바뀐 파일(올리려는 커밋 ↔ 원격) → ① 문법(.js = 모듈 · .cjs·.mjs) ② check.cjs --full(우리 학교용) ③ PAGE=/ check.cjs --full(홍보판) ④ town_gate.cjs(마을 · 빈 포트에 서버를 띄웠다 닫음)
+#   하나라도 실패하면 push를 막음(exit 1) · 문서(.md 등)만 바뀌었으면 ②~④는 건너뜀 · 시험은 지금 작업 폴더 그대로(커밋 안 한 변경이 있으면 알림)
+#   기록: ${TMPDIR:-/tmp}/sm-prepush-<시각>/
+#   env: SM_SKIP_GATE=1(건너뜀) · SM_GATE_ALL=1(문서만이어도 다 돌림) · SM_GATE_B2=1(브라우저 시험을 tools/ops/b2.sh 자리로)
+[ -n "$SM_SKIP_GATE" ] && { echo "pre-push: SM_SKIP_GATE=1 — 시험을 건너뛰어요"; exit 0; }
+ROOT=$(git rev-parse --show-toplevel) || exit 1
+cd "$ROOT" || exit 1
+Z=0000000000000000000000000000000000000000
+BASEREF=origin/main
+TD=${TMPDIR:-/tmp}; TD=${TD%/}
+LIST=$(mktemp "$TD/sm-prepush-files.XXXXXX") || exit 1
+HAD=0; PUSH_SHA=""
+while read -r lref lsha rref rsha; do
+  [ -z "$lsha" ] && continue
+  [ "$lsha" = "$Z" ] && continue
+  HAD=1; PUSH_SHA=$lsha
+  if [ "$rsha" != "$Z" ] && git cat-file -e "$rsha^{commit}" 2>/dev/null; then base=$rsha; else base=$(git merge-base "$lsha" "$BASEREF" 2>/dev/null); fi
+  if [ -n "$base" ]; then git diff --name-only "$base" "$lsha" >> "$LIST"; else git ls-tree -r --name-only "$lsha" >> "$LIST"; fi
+done
+if [ $HAD = 0 ]; then
+  # 손으로 돌릴 때(sh tools/hooks/pre-push < /dev/null) = 원격 main과 지금 작업 폴더의 차이(커밋 안 한 것·새 파일 포함)
+  base=$(git merge-base HEAD "$BASEREF" 2>/dev/null || git rev-parse HEAD)
+  git diff --name-only "$base" >> "$LIST"; git ls-files --others --exclude-standard >> "$LIST"; PUSH_SHA=$(git rev-parse HEAD)
+fi
+FILES=$(sort -u "$LIST"); rm -f "$LIST"
+[ -z "$FILES" ] && [ -z "$SM_GATE_ALL" ] && { echo "pre-push: 바뀐 파일이 없어요"; exit 0; }
+LOG="$TD/sm-prepush-$(date +%Y%m%d-%H%M%S)"; mkdir -p "$LOG"
+FAIL=0; say() { printf '%s\n' "$*"; }
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then say "pre-push: ⚠ 커밋 안 한 변경이 있어요 — 그 변경까지 시험돼요(올라가는 것은 커밋된 것뿐)"; fi
+[ "$PUSH_SHA" != "$(git rev-parse HEAD)" ] && say "pre-push: ⚠ 올리는 커밋($PUSH_SHA)이 지금 HEAD가 아니에요 — 시험은 지금 작업 폴더로 해요"
+say "pre-push 관문 — 기록 $LOG"
+
+# ① 문법
+NJS=0; BADJS=""
+while IFS= read -r f; do
+  [ -f "$f" ] || continue
+  case "$f" in
+    *.js) NJS=$((NJS+1)); node --input-type=module --check < "$f" >> "$LOG/syntax.txt" 2>&1 || BADJS="$BADJS $f";;
+    *.cjs|*.mjs) NJS=$((NJS+1)); node --check "$f" >> "$LOG/syntax.txt" 2>&1 || BADJS="$BADJS $f";;
+  esac
+done <<EOF_FILES
+$FILES
+EOF_FILES
+if [ -n "$BADJS" ]; then say "  ✗ 문법 —$BADJS"; FAIL=1; else say "  ✓ 문법 ${NJS}개"; fi
+
+# 문서만 바뀌었으면 브라우저 시험은 건너뜀
+CODE=0
+while IFS= read -r f; do [ -z "$f" ] && continue; case "$f" in *.md|*.txt|*.png|*.jpg|*.jpeg|*.webp|*.svg|*.pdf|docs/*|.claude/*) ;; *) CODE=1;; esac; done <<EOF_FILES
+$FILES
+EOF_FILES
+[ -n "$SM_GATE_ALL" ] && CODE=1
+if [ $CODE = 0 ]; then
+  [ $FAIL = 0 ] && { say "  · 문서만 바뀜 — 브라우저 시험 건너뜀"; exit 0; }
+else
+  B2=""; [ -n "$SM_GATE_B2" ] && [ -f tools/ops/b2.sh ] && B2="zsh tools/ops/b2.sh"
+  TO=""; command -v perl >/dev/null 2>&1 && TO="perl -e alarm(shift);exec(@ARGV) 900"
+  run() { name=$1; shift; t0=$(date +%s); $TO $B2 "$@" > "$LOG/$name.txt" 2>&1; rc=$?; t1=$(date +%s); last=$(grep -E '^(CHECK |PASS|FAIL)' "$LOG/$name.txt" | tail -1 | cut -c1-220)
+    if [ $rc = 0 ]; then say "  ✓ $name ($((t1-t0))초) $last"; else say "  ✗ $name rc=$rc ($((t1-t0))초) ${last:-$(tail -2 "$LOG/$name.txt" | tr '\n' ' ' | cut -c1-220)}"; grep -E '✗' "$LOG/$name.txt" | head -5 | sed 's/^/      /'; FAIL=1; fi; }
+  run check node tools/harness/check.cjs . --full
+  PAGE=/; export PAGE; run check-promo node tools/harness/check.cjs . --full; unset PAGE
+  # 빈 포트(운영체제가 고른 것) + 정적 서버 → 마을 관문 → 서버 닫기
+  PY=""; for c in python3 python "py -3"; do if $c -c 'import sys; sys.exit(0 if sys.version_info[0] == 3 else 1)' >/dev/null 2>&1; then PY=$c; break; fi; done
+  PORT=$(node -e "const s=require('net').createServer();s.listen(0,'127.0.0.1',()=>{console.log(s.address().port);s.close();})")
+  if [ -z "$PY" ] || [ -z "$PORT" ]; then say "  ✗ town_gate — 서버를 못 띄움(python3 ${PY:-없음} · 포트 ${PORT:-없음})"; FAIL=1
+  else
+    $PY -m http.server "$PORT" --bind 127.0.0.1 > "$LOG/server.txt" 2>&1 & SV=$!
+    trap 'kill $SV 2>/dev/null' EXIT INT TERM
+    up=0; for i in 1 2 3 4 5 6 7 8 9 10; do node -e "require('http').get('http://127.0.0.1:$PORT/v2/index.html',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))" && { up=1; break; }; sleep 1; done
+    if [ $up = 1 ]; then run town_gate node tools/harness/town_gate.cjs ourtown "$PORT"; else say "  ✗ town_gate — 서버가 포트 $PORT에서 대답하지 않음"; FAIL=1; fi
+    kill $SV 2>/dev/null; trap - EXIT INT TERM
+  fi
+fi
+if [ $FAIL != 0 ]; then
+  say "pre-push: ✗ push를 막았어요 — 위 ✗를 고친 뒤 다시 push · 기록 $LOG"
+  say "          꼭 지금 올려야 하면: SM_SKIP_GATE=1 git push  (또는 git push --no-verify)"
+  exit 1
+fi
+say "pre-push: ✓ 모두 통과"
+exit 0

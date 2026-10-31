@@ -51,5 +51,5 @@ const ROOMS = opt('rooms') || 'all', OUTN = +(opt('out') || 6), R = 40, ROOFN = 
         else { const D = +view.slice(3), x = rf.cx + D * 0.8, z = rf.cz + D * 0.6; SD2.map.player.teleport([x, SM_TOWN.ground(x, z) + 6, z]); }   /* 먼 판/가까운 판이 바뀌는 거리(구역 경계에서 둘이 같이 보이는지) */
         SD2.map.player.lookAt([rf.cx, rf.cz]); await new Promise(r => setTimeout(r, 1300)); const res = window.__flick([SD2.scene], [rf.cx, rf.cz], Math.max(rf.w, rf.d) / 2 + 3, view.startsWith('far') ? 0.03 : 0); SD2.map.player.freeze(false); return { at: [rf.cx, rf.cz], deco: rf.deco, view, ...res }; }, [rf, view]); out.roofs.push(r); } }
   const bad = out.rooms.filter(r => r.n).length + out.outside.filter(r => r.n).length + out.roofs.filter(r => r.n).length;
-  console.log(JSON.stringify(out, null, 1)); console.log(bad ? 'FLICKER ' + bad : 'PASS'); await b.close();
+  console.log(JSON.stringify(out, null, 1)); console.log(bad ? 'FLICKER ' + bad : 'PASS'); await b.close(); process.exit(bad ? 1 : 0);   /* GATE-2(10-31): 실패면 exit 1 */
 })();

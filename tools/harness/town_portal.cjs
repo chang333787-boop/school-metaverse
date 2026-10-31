@@ -23,4 +23,4 @@ const ID = process.argv[2] || 'ourtown', PORT = process.argv[3] || '8002';
       await p.evaluate(() => SM_TOWN.top(true)); await W(900); await expectOut(tag + ' top', { door: it.at }); await p.evaluate(() => SM_TOWN.top(false)); await W(600); } }
   { const it = list[0]; await toDoor(it.at); await W(400); await p.evaluate(id => SM_TOWN.indoor.enter(id), it.id); await W(2300); await expectIn('look in', it.id);
     await p.evaluate(() => SM_TOWN.setLook('mat')); await W(9000); await p.evaluate(() => SM_TOWN.setLook('town')); await W(12000); await expectOut('look', { door: it.at }); }
-  console.log(JSON.stringify({ places: list.length, checks: n, bad: bad.length, badAt: bad.slice(0, 20), gate: bad.length || errs.length ? 'FAIL' : 'PASS', errs }, null, 1)); await b.close(); })();
+  console.log(JSON.stringify({ places: list.length, checks: n, bad: bad.length, badAt: bad.slice(0, 20), gate: bad.length || errs.length ? 'FAIL' : 'PASS', errs }, null, 1)); await b.close(); process.exit(bad.length || errs.length ? 1 : 0); })();   /* GATE-2(10-31): 실패면 exit 1 */

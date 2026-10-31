@@ -23,4 +23,4 @@ const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2
     res.push(r); await W8(400); }
   const bad = res.filter(r => r.err || r.bad.length);
   console.log(JSON.stringify({ rooms: res.length, shops: res.filter(r => r.kind === 'shop').length, bad: bad.length, badRooms: bad.map(r => ({ name: r.name, kind: r.kind, err: r.err, bad: r.bad, mv: r.mv, spawn: r.spawn })), errs, all: res.map(r => [r.name, r.kind, r.mv, r.chk && r.chk.roomy, r.out]) }, null, 1));
-  console.log(bad.length || errs.length ? 'FAIL' : 'PASS'); await b.close(); })();
+  console.log(bad.length || errs.length ? 'FAIL' : 'PASS'); await b.close(); process.exit(bad.length || errs.length ? 1 : 0); })();   /* GATE-2(10-31): 실패면 exit 1 */
