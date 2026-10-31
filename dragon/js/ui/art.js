@@ -45,6 +45,11 @@ export const ICONS = {
   ship: svg('0 0 32 32', `<path d="M3 20 L29 20 L25 27 L7 27 Z" fill="#8a5a32"/><path d="M16 20 L16 4"/><path d="M16 5 L26 16 L16 16 Z" fill="#e8dcc0"/>`),
   x: svg('0 0 32 32', `<path d="M7 7 L25 25 M25 7 L7 25" stroke="#a83e1e" stroke-width="4"/>`),
   heart: svg('0 0 32 32', `<path d="M16 27 C4 18 4 8 10 7 C13 6 15 8 16 11 C17 8 19 6 22 7 C28 8 28 18 16 27 Z" fill="#c97a6a"/>`),
+  helmet: svg('0 0 32 32', `<path d="M5 22 C5 8 27 8 27 22 Z" fill="#8d8a82"/><path d="M5 22 L27 22"/><path d="M6 16 C1 13 2 6 5 4 C6 9 8 12 10 13 M26 16 C31 13 30 6 27 4 C26 9 24 12 22 13" fill="#e8dcc0"/>`),
+  cloth: svg('0 0 32 32', `<path d="M5 8 L27 6 L25 26 L7 25 Z" fill="#d8c8a0"/><path d="M9 12 L23 11 M9 17 L22 16 M9 21 L21 21" stroke="#a89470"/>`),
+  axe: svg('0 0 32 32', `<path d="M8 28 L22 8" stroke="#6a4a2e" stroke-width="3"/><path d="M18 6 C26 4 30 10 28 16 C24 14 21 12 18 6 Z" fill="#cfd4d6"/>`),
+  bola: svg('0 0 32 32', `<circle cx="8" cy="24" r="4" fill="#8d8a82"/><circle cx="24" cy="24" r="4" fill="#8d8a82"/><path d="M8 24 C12 10 20 10 24 24" stroke="#b08a5a"/>`),
+  sheep: svg('0 0 32 32', `<ellipse cx="17" cy="17" rx="11" ry="8" fill="#f4f0e6"/><circle cx="7" cy="15" r="4" fill="#3a3430"/><path d="M11 24 L11 28 M22 24 L22 28" stroke-width="3"/>`),
   water: svg('0 0 32 32', `<path d="M16 4 C10 14 8 18 8 21 C8 26 12 29 16 29 C20 29 24 26 24 21 C24 18 22 14 16 4 Z" fill="#7fb0c8"/>`),
 };
 

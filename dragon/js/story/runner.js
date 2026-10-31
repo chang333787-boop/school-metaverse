@@ -67,7 +67,7 @@ export function createRunner(G) {
     const st = R.step;
     if (st.verb && st.hints) {
       const moving = I.heldList().length > 0 || (G.player.W && G.player.W.speed > 0.3);
-      R.idleT = moving ? Math.max(0, R.idleT - dt * 2) : R.idleT + dt;
+      R.idleT = moving ? 0 : R.idleT + dt;                       // 무엇이든 누르면 멈춤 시간을 처음부터(톡톡 누르는 동안 힌트가 뜨지 않게 · 팀 B)
       const at = HINT_AT[G.diff] || HINT_AT.normal;
       if (R.hintLv < 1 && R.idleT >= at[0] && st.hints[1]) { R.hintLv = 1; G.hud.hint(st.hints[1]); }
       if (R.hintLv < 2 && R.idleT >= at[1] && st.hints[2]) { R.hintLv = 2; G.hud.hint(st.hints[2]); G.hud.howto(st.howtoVerb || st.verb, 10); }

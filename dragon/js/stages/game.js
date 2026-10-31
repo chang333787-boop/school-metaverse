@@ -120,6 +120,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     if (nx && Q.get('chain') !== '0') setTimeout(() => startCh(nx, 0), 1800);
   };
   async function startCh(n, idx) {
+    if (G.inv.helmet && n >= 8 && n <= 10) { const fx = await import('../story/fx79.js?v=15'); fx.setHelmet(G, true); }   // 7장에서 받은 투구가 이어하기에도(팀 B)
     const m = await import(`../story/${CH_FILE[n]}.js?v=15`);
     await R.start(m.chapter, idx);
   }
