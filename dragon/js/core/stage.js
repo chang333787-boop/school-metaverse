@@ -1,7 +1,7 @@
 // 무대 틀(design §12) — 장소 하나 = 무대 모듈 { load → step·draw → dispose } · 바꿀 때 덮개 아래에서 짓고 셰이더를 미리 굽고(compileAsync) 옛 것은 GPU까지 비움
 // 장소 모듈 계약 = docs/dragon/stage3_plan.md §2 · 지울 때 kit의 공유 자원(SHARED)은 남김 · renderLists.dispose()로 그리기 목록 캐시도 비움
 import * as THREE from 'three';
-import { SHARED } from '../look/kit.js?v=14';
+import { SHARED } from '../look/kit.js?v=15';
 
 /* 장면에서 뺀 묶음의 기하·재질·텍스처를 GPU까지 비움(공유 것은 건너뜀) */
 export function disposeTree(root) {

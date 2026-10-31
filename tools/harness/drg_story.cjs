@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const root = path.resolve(process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : '.');
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
-const CHS = arg('ch', '2,3,4,5,6').split(',').map(Number), ONLY = arg('only', ''), LEVELS = arg('levels', 'easy,normal').split(',').filter((x) => x && x !== 'none'), DUMB = arg('dumb', '1') === '1', TURBO = +arg('turbo', 8);
+const CHS = arg('ch', '2,3,4,5,6').split(',').map(Number), ONLY = arg('only', ''), LEVELS = arg('levels', 'easy,normal').split(',').filter((x) => x && x !== 'none'), DUMB = arg('dumb', '1') === '1', TURBO = +arg('turbo', 4);
 const types = { '.js': 'text/javascript', '.html': 'text/html', '.glb': 'model/gltf-binary', '.png': 'image/png', '.json': 'application/json' };
 const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split('?')[0]), p = path.join(root, u, u.endsWith('/') ? 'index.html' : ''); fs.readFile(p, (e, d) => { if (e) { r.writeHead(404); r.end(); return; } r.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); r.end(d); }); });
 const rows = [], fails = [];

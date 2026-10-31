@@ -1,10 +1,10 @@
 // 배우 — 드래곤(모델 + 자세 함수 + 마음 엔진 + 땅 위 걸음) · 사람(모델 + 자세 함수 + 걸어가기·바라보기)
 // 위치는 걸음마다(60Hz) · 그리기는 보간 · 30m 밖 뼈는 15Hz(goal §7) · 매 걸음 new 없음
 import * as THREE from 'three';
-import { loadModel } from '../look/models.js?v=14';
-import { createDragonRig } from '../look/dragon_rig.js?v=14';
-import { createHumanRig } from '../look/human_rig.js?v=14';
-import { createMind } from './mind.js?v=14';
+import { loadModel } from '../look/models.js?v=15';
+import { createDragonRig } from '../look/dragon_rig.js?v=15';
+import { createHumanRig } from '../look/human_rig.js?v=15';
+import { createMind } from './mind.js?v=15';
 
 const _p = { x: 0, z: 0 };
 const angTo = (a, b) => { let d = b - a; return Math.atan2(Math.sin(d), Math.cos(d)); };
@@ -25,7 +25,7 @@ export function createDragon(o) {
   };
   D.y = o.place.height(D.x, D.z, o.y ?? 0); D.px = D.x; D.pz = D.z; D.py = D.y; D.pyaw = D.yaw;
   const file = DRAGON_FILE[D.kind] || 'toothless';
-  D.ready = loadOr('assets/models/' + file + '.glb?v=14', 'assets/models/toothless.glb?v=14').then(({ root, bones }) => {
+  D.ready = loadOr('assets/models/' + file + '.glb?v=15', 'assets/models/toothless.glb?v=15').then(({ root, bones }) => {
     D.root = root; D.rig = createDragonRig(bones, root, D.kind);
     const sc = (file === 'toothless' && D.kind !== 'nightfury') ? STAND_IN[D.kind] || 1 : 1;
     if (sc !== 1) root.scale.setScalar(sc);
@@ -117,7 +117,7 @@ export function createDragon(o) {
 export function createPerson(o) {
   const H = { who: o.who, x: o.x || 0, z: o.z || 0, y: 0, yaw: o.yaw || 0, px: 0, pz: 0, py: 0, pyaw: 0, vx: 0, vz: 0, speed: 0, root: null, rig: null, target: null, face: null, pose: {}, hidden: false, rigAcc: 0 };
   H.y = o.place.height(H.x, H.z, o.y ?? 0); H.px = H.x; H.pz = H.z; H.py = H.y; H.pyaw = H.yaw;
-  H.ready = loadOr('assets/models/' + o.who + '.glb?v=14', 'assets/models/hiccup.glb?v=14').then(({ root, bones }) => {
+  H.ready = loadOr('assets/models/' + o.who + '.glb?v=15', 'assets/models/hiccup.glb?v=15').then(({ root, bones }) => {
     H.root = root; H.rig = createHumanRig(bones, root); H.bones = bones; root.visible = !H.hidden; o.group.add(root); return H;
   });
   H.walkTo = (x, z, sp = 1.6) => { H.target = { x, z, sp }; };

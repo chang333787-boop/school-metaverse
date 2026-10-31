@@ -1,22 +1,22 @@
 // 게임 본판 — 첫 화면 → 장(2~6 수직 조각) · 장소는 무대 그릇으로 짓고 비움 · 플레이어 = 히컵(걷기 + 뒤따르는 카메라)
 // 장 차례 생성기는 story/ch*.js · G(놀이 상태)를 장과 봇 감각(sense)이 함께 봄 · 봇은 DRG.sense()만 읽고 키만 누름
 import * as THREE from 'three';
-import { createEnv, U } from '../look/kit.js?v=14';
-import { createStageHost } from '../core/stage.js?v=14';
-import { createCollide } from '../play/collide.js?v=14';
-import { createWalker, createFollowCam } from '../play/walker.js?v=14';
-import { loadModel } from '../look/models.js?v=14';
-import { createHumanRig } from '../look/human_rig.js?v=14';
-import { createDragon, createPerson } from '../play/actors.js?v=14';
-import { createHud } from '../ui/hud.js?v=14';
-import { createBook } from '../ui/book.js?v=14';
-import { createMap } from '../ui/map.js?v=14';
-import { createBench } from '../ui/bench.js?v=14';
-import { createSfx } from '../core/sfx.js?v=14';
-import { showTitle, diffOf } from '../ui/title.js?v=14';
-import { createRunner } from '../story/runner.js?v=14';
-import { writeSlot, flushSlot } from '../story/save.js?v=14';
-import { holdItem } from '../story/fx.js?v=14';
+import { createEnv, U } from '../look/kit.js?v=15';
+import { createStageHost } from '../core/stage.js?v=15';
+import { createCollide } from '../play/collide.js?v=15';
+import { createWalker, createFollowCam } from '../play/walker.js?v=15';
+import { loadModel } from '../look/models.js?v=15';
+import { createHumanRig } from '../look/human_rig.js?v=15';
+import { createDragon, createPerson } from '../play/actors.js?v=15';
+import { createHud } from '../ui/hud.js?v=15';
+import { createBook } from '../ui/book.js?v=15';
+import { createMap } from '../ui/map.js?v=15';
+import { createBench } from '../ui/bench.js?v=15';
+import { createSfx } from '../core/sfx.js?v=15';
+import { showTitle, diffOf } from '../ui/title.js?v=15';
+import { createRunner } from '../story/runner.js?v=15';
+import { writeSlot, flushSlot } from '../story/save.js?v=15';
+import { holdItem } from '../story/fx.js?v=15';
 
 export const PLAYABLE = [2, 3, 4, 5, 6];
 const CH_FILE = { 2: 'ch2', 3: 'ch3', 4: 'ch4', 5: 'ch5', 6: 'ch6' };
@@ -31,11 +31,11 @@ export async function buildGame(scene, camera, rng, opt = {}) {
   G.book = createBook(G); G.map = createMap(); G.bench = createBench(); G.sfx = createSfx();
   /* 플레이어 */
   const P = G.player = { W: null, C: null, root: null, rig: null, item: null, lock: false, fT: 0, fTap: false, fLong: false, reach: false, away: false, cam: 'follow', hidden: false };
-  loadModel('assets/models/hiccup.glb?v=14').then(({ root, bones }) => { P.root = root; P.rig = createHumanRig(bones, root); P.bones = bones; if (G.place) G.place.group.add(root); });
+  loadModel('assets/models/hiccup.glb?v=15').then(({ root, bones }) => { P.root = root; P.rig = createHumanRig(bones, root); P.bones = bones; if (G.place) G.place.group.add(root); });
 
   /* 장소 짓기 — places/<이름>.js가 없으면 자리표시(_stub) */
   G.loadPlace = async (name, time, variant) => {
-    let mod; try { mod = await import(`../places/${name}.js?v=14`); } catch (e) { mod = await import('../places/_stub.js?v=14'); }
+    let mod; try { mod = await import(`../places/${name}.js?v=15`); } catch (e) { mod = await import('../places/_stub.js?v=15'); }
     G.place = null; G.cast.length = 0; G.castBy = {};             // 장 안에서 이어지는 배우(keep)는 장소가 바뀌면 함께 비움
     const place = await host.load(name, (ctx) => mod.buildPlace(Object.assign(ctx, { env, rng, opt: { time, variant, stub: name } })));
     G.place = place; G.freshPlace = true; G.collide = createCollide(place.blockers || [], place.walls || []);
@@ -85,6 +85,8 @@ export async function buildGame(scene, camera, rng, opt = {}) {
   G.playerStep = (dt, I) => {
     if (!P.W) return;
     P.fTap = false;
+    if (I.tap('use')) { P.taps = (P.taps || []).filter((t) => G.t - t < 1.5); P.taps.push(G.t); }
+    P.mash = !!P.taps && P.taps.filter((t) => G.t - t < 1.5).length >= 4;   // 1.5초에 넷 = 연타(드래곤이 놀람 · design §1)
     if (I.on('use')) { P.fT += dt; P.fLong = P.fT >= 0.3; }
     else { if (P.fT > 0 && P.fT < 0.3) P.fTap = true; P.fT = 0; P.fLong = false; }
     P.reach = P.fLong && !P.noReach; P.away = P.reach;
@@ -114,7 +116,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     if (nx && Q.get('chain') !== '0') setTimeout(() => startCh(nx, 0), 1800);
   };
   async function startCh(n, idx) {
-    const m = await import(`../story/${CH_FILE[n]}.js?v=14`);
+    const m = await import(`../story/${CH_FILE[n]}.js?v=15`);
     await R.start(m.chapter, idx);
   }
   G.startCh = startCh;

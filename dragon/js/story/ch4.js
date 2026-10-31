@@ -1,10 +1,10 @@
 // 4장 생선과 이름(design §2 · reference #8~10) — ① 훈련 2일 내더 미로[숨기 · 쉬움 X] ② 고기잡이배 노 박자 + 낚시[박자] ③ 칼 내려놓기·생선·이름[다가가 기다리기]
 // ④ 게워 낸 반 토막[다가가 · 쉬움 X] ⑤ 모래 그림 → 코가 손바닥에[다가가] · 와! = 코가 손에 닿는 순간 → 콧김 뿜고 휙 가 버림
 // 대사는 모두 우리 말로 새로(저작권) · 실제 학생 이름 X(영화 인물만) · 깜짝 놀래기 X(예고 먼저)
-import { wait, until, sayAll } from './runner.js?v=14';
-import { holdItem, dropItem, sandLines, makePuffs } from './fx.js?v=14';
+import { wait, until, sayAll } from './runner.js?v=15';
+import { holdItem, dropItem, sandLines, makePuffs } from './fx.js?v=15';
 import * as THREE from 'three';
-import { boatSense, boatCam } from './flysense.js?v=14';
+import { boatSense, boatCam } from './flysense.js?v=15';
 
 const TAU = Math.PI * 2;
 const ang = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
@@ -92,7 +92,7 @@ function* fishing(G, C) {
   C.need = G.diff === 'easy' ? 2 : 3; C.got = 0; C.lost = 0; C.state = 'row';
   /* 배 — boat.js가 있으면 노 박자로 돌기둥까지 · 없으면 바로 낚시 자리 */
   let B = null;
-  const mod = yield* awaitP(import('../play/boat.js?v=14').catch(() => null));
+  const mod = yield* awaitP(import('../play/boat.js?v=15').catch(() => null));
   if (mod && mod.createBoat && pl.lists.boatPath) {
     B = mod.createBoat({ path: pl.lists.boatPath, mode: G.diff, rider: { root: P.root, rig: P.rig } });
     pl.group.add(B.root); if (B.foam) pl.group.add(B.foam);
@@ -179,14 +179,20 @@ function* nameIt(G, C) {
     const d = G.dist(P.W, T), M = T.mind;
     G.useSpots = [{ x: T.x, y: T.y, z: T.z }];
     if (G.diff === 'easy') G.hud.mood(T.rig.pupil);
+    if (P.mash && d < 14 && !C.startled) {                    /* 연타 = 놀라 물러남(기다림이 핵심) */
+      C.startled = 2; M.event('loud'); M.lock = null; if (C.stage === 'come') C.stage = 'fish'; P.pose = null;
+      G.hud.say('hiccup', '앗, 너무 서둘렀다… 놀랐나 봐.', [], { secs: 1.6 });
+    }
+    if (C.startled > 0) { C.startled -= dt; if (C.startled <= 0) C.startled = 0; continue; }
     if (C.stage === 'knife' && P.fTap) {
       if (M.sees) {
         C.stage = 'fish'; holdItem(P, 'cod'); C.knife = dropItem(pl.group, 'knife', P.W.x + Math.sin(P.W.yaw + 1.2) * 0.6, P.W.y, P.W.z + Math.cos(P.W.yaw + 1.2) * 0.6, P.W.yaw);
         M.event('drop'); G.hud.say('hiccup', '봐, 칼 없어. 괜찮아.', [], { secs: 1.8 }); G.book.note('nightfury', 'hates', '칼(내려놓으니 누그러짐)');
       } else G.hud.say('hiccup', '…지금은 날 안 보고 있네.', [], { secs: 1.4 });
-    } else if (C.stage === 'fish' && P.fTap && d < 9) {
+    } else if (C.stage === 'fish' && P.fTap && d < 6.5) {
       offerT = 3; P.pose = { reach: 1 }; M.event('offer', 'cod');
       if (M.fear < 0.5) { M.lock = 'come'; C.stage = 'come'; } else G.hud.say('hiccup', '아직은 겁내네… 조금 더 천천히.', [], { secs: 1.6 });
+    } else if (C.stage === 'fish' && P.fTap && d >= 6.5) { G.hud.say('hiccup', '여기선 너무 멀어.', [], { secs: 1 });
     } else if (C.stage === 'come') {
       P.pose = { reach: 1 };
       if (P.W.speed > 0.5) { M.lock = null; M.fear = Math.min(1, M.fear + 0.25); C.stage = 'fish'; P.pose = null; G.hud.say('hiccup', '앗, 내가 다가가면 안 되는구나.', [], { secs: 1.8 }); }

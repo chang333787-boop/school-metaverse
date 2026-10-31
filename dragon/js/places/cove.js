@@ -3,9 +3,9 @@
 // 층 둘: 위 가장자리 길(북쪽 1/3 둘레 · 숨을 바위 셋) / 바닥 — height(x, z, yHint) = yHint에 가까운 층 · 둘은 걸어서 못 오감(입구 틈 = 바닥 출입)
 // 노을 때 해가 낮게 서쪽에서 → 바닥·서쪽 벽은 그늘, 동쪽 벽 위쪽만 빛(지을 때 해 그늘을 정점색에 구움 · 그림자 지도 X)
 import * as THREE from 'three';
-import { setTime, TIMES, toon } from '../look/kit.js?v=14';
-import { createNoise } from '../core/noise.js?v=14';
-import * as NT from '../look/nature.js?v=14';
+import { setTime, TIMES, toon } from '../look/kit.js?v=15';
+import { createNoise } from '../core/noise.js?v=15';
+import * as NT from '../look/nature.js?v=15';
 
 const { C3, mixc, sstep, clamp, hash, TAU, mat4, matLay } = NT;
 const RX = 45, RZ = 35;                                 // 바닥 타원 반지름(벽 밑동)

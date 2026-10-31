@@ -2,10 +2,10 @@
 // → 묶인 나이트 퓨리(숨이 고를 때만 밧줄 끊기 · 찌르는 동작 없음)[다가가 기다리기] → 와! 덮쳐 울부짖고 비틀대며 날아감 → 저녁 집(말이 겹쳐 '싫어요'가 묻힘)
 // 대사는 우리 말로 새로(저작권) · "바이킹은 겁나도 간다"는 10장에서 히컵이 되돌려 줌
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=14';
-import { holdItem, dropItem, makePuffs } from './fx.js?v=14';
-import { toon } from '../look/kit.js?v=14';
-import { tlSense } from './ch4.js?v=14';
+import { wait, until, sayAll } from './runner.js?v=15';
+import { holdItem, dropItem, makePuffs } from './fx.js?v=15';
+import { toon } from '../look/kit.js?v=15';
+import { tlSense } from './ch4.js?v=15';
 
 /* ① 회의 동안 횃불 지키기 — 꺼져 가는 횃불에 기름(F 짧게) · 끝에 넷 이상 켜져 있으면 · 쉬움 = 탁자 가까이 가서 듣기만 */
 const MEETING = [
@@ -31,7 +31,7 @@ function* meeting(G, C) {
   G.useSpots = [];
   const easy = G.diff === 'easy';
   if (easy) { G.hud.goal('회의를 들으러 탁자 가까이'); yield* until(() => G.dist(P.W, tb) < 7); }
-  let li = 0, next = 0, killT = easy ? 1e9 : 2.5, kk = 0;
+  let li = 0, next = 0, killT = easy ? 1e9 : 1.5, kk = 0;
   while (li < MEETING.length || G.hud.busy()) {
     const dt = yield;
     /* 말 — 가까이 있어야 들림(쉬움) · 보통은 어디서나 들림 */
@@ -41,11 +41,11 @@ function* meeting(G, C) {
     if (killT <= 0 && !dying.some((v) => v)) { let k = (kk++ * 7 + 3) % T.length; for (let q = 0; q < T.length && life[k] <= 0; q++) k = (k + 1) % T.length; dying[k] = true; killT = 1e9; }
     let lit = 0; G.useSpots.length = 0;
     for (let i = 0; i < T.length; i++) {
-      if (dying[i]) { life[i] = Math.max(0, life[i] - dt / 12); if (life[i] <= 0) { dying[i] = false; killT = 3 + G.rng() * 2; } }
+      if (dying[i]) { life[i] = Math.max(0, life[i] - dt / 10); if (life[i] <= 0) { dying[i] = false; killT = 2 + G.rng(); } }   /* 10초에 꺼짐 · 다음은 2~3초 뒤 → 손을 놓으면 회의 끝(30초) 전에 둘이 꺼짐 */
       T[i].set && T[i].set(life[i]);
       if (life[i] > 0.05) lit++;
       if (dying[i] || life[i] <= 0) G.useSpots.push({ x: T[i].x, y: T[i].y - 1.5, z: T[i].z });
-      if (P.fTap && (dying[i] || life[i] <= 0) && Math.hypot(P.W.x - T[i].x, P.W.z - T[i].z) < 2.8) { life[i] = 1; dying[i] = false; killT = 3 + G.rng() * 2; G.hud.say('hiccup', '기름 조금… 됐다.', [], { secs: 1 }); }
+      if (P.fTap && (dying[i] || life[i] <= 0) && Math.hypot(P.W.x - T[i].x, P.W.z - T[i].z) < 2.8) { life[i] = 1; dying[i] = false; killT = 2.5 + G.rng() * 1.5; G.hud.say('hiccup', '기름 조금… 됐다.', [], { secs: 1 }); }
     }
     C.lit = lit; C.life = life;
     if (!easy && lit <= T.length - 2) { G.hud.clearSay(); yield* sayAll(G, [['stoick', '어두워서 얼굴이 안 보이는군. 불부터 켜라!']]); return 'retry'; }

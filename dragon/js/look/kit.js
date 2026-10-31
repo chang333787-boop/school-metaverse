@@ -57,7 +57,7 @@ function patch(m) {
     #if NUM_DIR_LIGHTS > 0
       side = clamp(dot(rn, directionalLights[0].direction) * 0.5 + 0.6, 0.0, 1.0);
     #endif
-    outgoingLight += uRimCol * rim * side * uRim;
+    outgoingLight += uRimCol * rim * side * uRim * (0.14 + 0.86 * smoothstep(0.0, 0.2, dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114))));   /* 어두운 몸(투슬리스)은 가장자리 빛을 줄여 검게(팀 M) */
   }
   #include <opaque_fragment>`)
       .replace('#include <fog_fragment>', '#ifdef USE_FOG\n  gl_FragColor.rgb = drgFog(gl_FragColor.rgb, vDrgW, vFogDepth);\n#endif');
@@ -66,7 +66,7 @@ function patch(m) {
   return m;
 }
 
-const PATCH_KEY = 'drgToon2';
+const PATCH_KEY = 'drgToon3';
 
 /* 재질 캐시 — 같은 옵션이면 같은 재질 하나 */
 const CACHE = new Map();

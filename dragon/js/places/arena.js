@@ -2,8 +2,8 @@
 //   가장자리 관중 난간 · 문으로 내려가는 돌계단 · 순위판(캔버스 글) · 무기·방패 걸이 · 물통 셋 · 나무벽 미로(setMaze) — 계약 = docs/dragon/stage3_plan.md §2·§3 arena
 // 때 day / overcast · 지붕 그물 때문에 비행 X(fly 없음) · 원점 = 구덩이 가운데 바닥 · +Z = 들어오는 계단 쪽
 import * as THREE from 'three';
-import { setTime, toon } from '../look/kit.js?v=14';
-import { createProps, M4, PAL, ss, textBoard } from '../look/props.js?v=14';
+import { setTime, toon } from '../look/kit.js?v=15';
+import { createProps, M4, PAL, ss, textBoard } from '../look/props.js?v=15';
 
 const FR = 22, RIM = 6, OUT = 38, CW = 1.6, CZ1 = 35.3, B = 9;    // 바닥 반지름 · 가장자리 높이 · 바깥 경계 · 계단 골 반폭 · 계단 위 끝 · 바닥 높이(바다 위 9m — 물결이 구덩이로 안 들어오게)
 const CAGE_A = [0.8, 1.6, 2.4, 3.95, 4.75, 5.55].map((k) => Math.PI / 2 + k);   // 우리 문 자리(들어오는 쪽 +Z = π/2 를 비움)

@@ -1,6 +1,6 @@
 // 자리표시 장소 — 팀이 진짜 장소를 넘기기 전에 장 흐름을 시험하려고(계약 이름 자리만 맞춤 · 결 시험용 아님)
 import * as THREE from 'three';
-import { toon, setTime } from '../look/kit.js?v=14';
+import { toon, setTime } from '../look/kit.js?v=15';
 
 const NAMES = {
   village: ['plaza', 'hall_stairs', 'hall_door', 'forge_front', 'forge_anvil', 'forge_bellows', 'forge_grind', 'forge_bench', 'forge_wall', 'tower_base', 'tower_top', 'dock_top', 'dock_end', 'dock_ship', 'house_hiccup', 'arena_bridge', 'forest_gate', 'sheep_pen'],

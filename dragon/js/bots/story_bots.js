@@ -82,7 +82,7 @@ function body(B) {
 }
 
 /* 장 봇 — level 'easy'|'normal' · 차례 id마다 하는 일 */
-import { flyBot, boatBot } from './flight_bot.js?v=14';
+import { flyBot, boatBot } from './flight_bot.js?v=15';
 window.DRG_FLYBOT = flyBot; window.DRG_BOATBOT = boatBot;
 export function storyBot(level = 'normal') {
   const lag = Math.round(RT[level] * 60);
@@ -140,7 +140,7 @@ BOTS['4-3'] = (s, K, M) => {                            // 칼 내려놓기 → 
     K.stop(); K.face(s, t.x, t.z); if (t.facingMe && (!M.cd || M.cd <= 0)) { K.tap('KeyF'); M.cd = 1.0; } M.cd = (M.cd || 0) - 1 / 60; return;
   }
   if (s.stage === 'fish') {
-    if (t.d > 5) { K.walk(s, t.x, t.z, true); return; }
+    if (t.d > 6) { K.walk(s, t.x, t.z, true, 5.8); return; }
     K.stop(); K.face(s, t.x, t.z); M.cd = (M.cd || 0) - 1 / 60;
     if (t.pupil > 0.55 && M.cd <= 0) { K.tap('KeyF'); M.cd = 3.5; }
     return;

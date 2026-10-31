@@ -2,8 +2,8 @@
 // 계약 = docs/dragon/stage3_plan.md §2·§3 hall · 때 night(비 오는 밤 · 문틈으로 비 · 화로·횃불 빛 퍼짐) / overcast(낮 회의 · 문 활짝 · 연기 구멍 빛)
 // 실내 빛: Light를 더하지 않고 '구워 둔 불빛'(정점색에 화로·횃불·문 빛을 거리로 곱함) + 불꽃·빛 퍼짐 판 · 원점 = 가운데 바닥 · +Z = 문 쪽
 import * as THREE from 'three';
-import { setTime } from '../look/kit.js?v=14';
-import { createProps, M4, PAL, ss } from '../look/props.js?v=14';
+import { setTime } from '../look/kit.js?v=15';
+import { createProps, M4, PAL, ss } from '../look/props.js?v=15';
 
 const HX = 12, HZ = 25, EAVE = 8, RIDGE = 17.5;
 

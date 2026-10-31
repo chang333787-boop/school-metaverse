@@ -1,10 +1,10 @@
 // 3장 훈련 첫날 · 숨은 호수(design §2 · reference #5·#6·#7) — 선착장 배웅(이음 · 진눈깨비) → ① 그롱클(방패 두드리기 · 여섯 발)[피하기+던지기 · 쉬움 X]
 // → ② 코브 가장자리에서 숨어 관찰 · 미끄러지는 투슬리스 스케치[숨기] → ③ 밤 큰 회관 드래곤 책 · 점 여섯 잇기[그리기] · 와! = 내 그림이 X 도장을 덮음
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=14';
-import { holdItem, dropItem, makePuffs } from './fx.js?v=14';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=14';
-import { tlSense } from './ch4.js?v=14';
+import { wait, until, sayAll } from './runner.js?v=15';
+import { holdItem, dropItem, makePuffs } from './fx.js?v=15';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=15';
+import { tlSense } from './ch4.js?v=15';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 
@@ -30,7 +30,7 @@ function* gronckle(G, C) {
   const cover = [[c.x - 6, c.z + 3, c.x - 3, c.z + 3], [c.x + 3, c.z - 2, c.x + 6, c.z - 2], [c.x - 1, c.z - 7, c.x + 2, c.z - 7]];   // 나무 가림막 셋
   pl.setMaze && pl.setMaze(cover); G.collideAdd(cover);
   C.cover = cover;
-  G.putPlayer({ x: c.x, z: c.z - 10, yaw: 0 });
+  G.putPlayer({ x: c.x - 4, z: c.z - 10, yaw: 0.3 });          // 가림막에 안 가린 자리 — 숨으려면 걸어가야
   holdItem(P, 'shield');
   const Gr = G.dragon('gronckle', { x: c.x, z: c.z + 9, yaw: Math.PI }, { mind: { fear: 0.1, anger: 0.5 }, noCollide: true }); Gr.solid = true; Gr.radius = 1.6;
   Gr.mind.lock = 'watch'; C.Gr = Gr;
