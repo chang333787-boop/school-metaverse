@@ -16,7 +16,7 @@ const CSS = `
 #title .q { font-size:22px; font-weight:700; }
 `;
 export const CHAPTERS = [
-  [1, '습격의 밤'], [2, '숲의 자국'], [3, '숨은 호수'], [4, '생선과 이름'], [5, '꼬리날개'], [6, '하늘을 나는 법'], [7, '아빠의 투구'], [8, '아스트리드와 둥지'], [9, '마지막 시험'], [10, '대장 드래곤'],
+  [1, '습격의 밤'], [2, '숲의 자국'], [3, '숨은 호수'], [4, '생선과 이름'], [5, '꼬리날개'], [6, '하늘을 나는 법'], [7, '아빠의 투구'], [8, '아스트리드와 둥지'], [9, '마지막 시험'], [10, '대장 드래곤'], [11, '함께 사는 버크'],
 ];
 export function showTitle({ playable, Q }) {
   return new Promise((done) => {
@@ -36,9 +36,9 @@ export function showTitle({ playable, Q }) {
       el.querySelector('[data-t]').onclick = () => { pick.slot = pick.slot || 1; chapters(null, true); };
     }
     function chapters(s, teacher) {
-      const upTo = teacher ? 10 : Math.max(playable[0], s ? s.ch : playable[0]);
+      const upTo = teacher ? 11 : Math.max(1, s ? s.ch : 1);
       el.innerHTML = head(s ? '이어서 할까요?' : '어디부터 할까요?') + `<div class="row">${CHAPTERS.map(([n, t]) => `<button class="ch" data-c="${n}" ${playable.includes(n) && n <= upTo ? '' : 'disabled'}><b>${n}</b>${t}</button>`).join('')}</div>`;
-      el.querySelectorAll('.ch').forEach((b) => { if (!b.disabled) b.onclick = () => { const ch = +b.dataset.c; end({ grade: pick.grade, slot: pick.slot, ch, idx: s && s.ch === ch ? s.idx || 0 : 0, save: s }); }; });
+      el.querySelectorAll('.ch').forEach((b) => { if (!b.disabled) b.onclick = () => { let ch = +b.dataset.c; if (ch === 1 && !s && !teacher) ch = 0; end({ grade: pick.grade, slot: pick.slot, ch, idx: s && s.ch === ch ? s.idx || 0 : 0, save: s }); }; });   // 새로 시작하면 오프닝(0)부터
     }
     if (pick.grade) slots(); else grades();
   });

@@ -83,6 +83,13 @@ function body(B) {
 
 /* 장 봇 — level 'easy'|'normal' · 차례 id마다 하는 일 */
 import { flyBot, boatBot } from './flight_bot.js?v=15';
+import { BOTS as B0 } from './ch0_bots.js?v=15';
+import { BOTS as B1 } from './ch1_bots.js?v=15';
+import { BOTS as B7 } from './ch7_bots.js?v=15';
+import { BOTS as B8 } from './ch8_bots.js?v=15';
+import { BOTS as B9 } from './ch9_bots.js?v=15';
+import { BOTS as B10 } from './ch10_bots.js?v=15';
+import { BOTS as B11 } from './ch11_bots.js?v=15';
 window.DRG_FLYBOT = flyBot; window.DRG_BOATBOT = boatBot;
 export function storyBot(level = 'normal') {
   const lag = Math.round(RT[level] * 60);
@@ -311,4 +318,5 @@ BOTS['6-2'] = (s, K, M, B, lv) => {                      // 올라타기 → 비
   if (window.DRG_FLYBOT) { if (!M.fb) { K.releaseAll(); M.fb = window.DRG_FLYBOT(lv); } M.fb(window.DRG.loop.n, B); }
 };
 BOTS['6-6'] = (s, K, M, B, lv) => { if (s.mode === 'fly' && window.DRG_FLYBOT) { M.fb = M.fb || window.DRG_FLYBOT(lv); M.fb(window.DRG.loop.n, B); } };
+Object.assign(BOTS, B0, B1, B7, B8, B9, B10, B11);          // 장마다 봇 파일(팀이 따로 씀) — 같은 꼴: (s, K, M, B, level, now)
 export { BOTS };

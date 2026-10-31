@@ -18,8 +18,8 @@ import { createRunner } from '../story/runner.js?v=15';
 import { writeSlot, flushSlot } from '../story/save.js?v=15';
 import { holdItem } from '../story/fx.js?v=15';
 
-export const PLAYABLE = [2, 3, 4, 5, 6];
-const CH_FILE = { 2: 'ch2', 3: 'ch3', 4: 'ch4', 5: 'ch5', 6: 'ch6' };
+export const PLAYABLE = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];   // 0 = 오프닝 · 11 = 종장
+const CH_FILE = Object.fromEntries(PLAYABLE.map((n) => [n, 'ch' + n]));
 const _v = new THREE.Vector3(), _f = new THREE.Frustum(), _m = new THREE.Matrix4();
 
 export async function buildGame(scene, camera, rng, opt = {}) {
