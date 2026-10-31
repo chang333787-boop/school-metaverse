@@ -13,7 +13,7 @@
 //   E.remove(id)                       // 떼어냄(갈고리로 판 끌어내리기 = 불길 끊기 · 그 칸은 더 안 탐)
 //   E.move(id, x, y, z)                // 움직이는 칸(날아가는 가죽 꼬리날개 · 떠가는 배 · 흐르는 가스) — 이웃 표는 처음 자리 기준
 //   E.step(dt)                         // 걸음마다(규칙은 0.2초마다 · 파티클은 걸음마다)
-//   E.draw(camPos)                     // 그리기마다(가까운 타는 칸 여섯만 불꽃·빛 판 — 나머지는 지붕 발광색)
+//   E.draw(camPos)                     // 그리기마다(가까운 타는 칸 여섯만 불꽃 혀 띠 — 모든 칸은 밑 면 겉칠: 그을음·불씨·달아오름·젖음 · 11-01 팀 K)
 //   E.updrafts()  → [{ x, y, z, r, power }]   // 불 × 공기 = 상승 기류(비행 엔진이 읽음 · 불난 지붕·배·굴뚝)
 //   E.steams()    → [{ x, y, z, r, t }]       // 김 구름(10장 김 가림막 · 숨기 판정)
 //   E.fireNear(x, z, r) → 0~1          // 둘레 가장 센 불(마음 엔진: 불 = 두려움↑ · 걷기: 뜨거워 못 감)
@@ -26,7 +26,7 @@
 // 규칙(r2 F-1 + 우리 것): 불 → 바람 아래로 번짐 · 물 → 꺼짐 + 김 + 젖음 · 가스 + 불꽃 = 펑 · 젖은 칸은 안 붙음 · 다 타면 그을음(결과가 남음) · 불 × 공기 = 상승 기류
 // 매 걸음 new X(파티클·목록은 처음에 한 번) · 전체 순회는 5Hz 규칙 안에서만(칸 ≤ 수백) · 쏜 물·불은 8m 격자로 찾음 · Light 추가 X
 import * as THREE from 'three';
-import { flameMesh, glowSprite } from '../look/kit.js?v=18';
+import { glowSprite, tongueGeo, flameTongueMat, FOG_PARS, U, SHARED } from '../look/kit.js?v=18';
 import { getSfx } from '../core/sfx.js?v=18';
 
 /* 꼬리표 비트 — 한 칸이 여럿을 가질 수 있음 */
@@ -41,7 +41,64 @@ export const KIND = {
   chimney: { tags: 0, fuel: 1e9, grow: 0, catch: 0, give: 0, flame: 0, up: 0.8 },        // 굴뚝 = 늘 따뜻한 공기(타지 않음)
   gas:   { tags: TAG.GAS, life: 7 },
 };
-const CELL8 = 8, MAXC = 256, SLOTS = 6;
+const CELL8 = 8, MAXC = 256, SLOTS = 6, TPC = 6, MAXV = 12000;   // TPC = 칸마다 불꽃 혀 · MAXV = 겉칠 정점 상한
+const upRange = (at, n) => { at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; };
+const hash3 = (x, z) => { const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return s - Math.floor(s); };
+/* 겉칠 재질(모든 원소 엔진이 함께 · 하나) — 칸 값(그을음 반지름·불 앞줄·불씨·불 세기·달아오름·젖음)을 정점에 싣고 픽셀마다 칸 가운데까지 거리로 칠함(세모 모자이크 X)
+   미리 곱한 알파: 어둡게 = 밑 지붕빛을 그만큼 덮음(밤에도 그을음이 지붕보다 밝아지지 않음) · 빛 = 더함 · 불씨는 uTime으로 깜박(CPU 0) · 안개는 지붕과 같은 drgFog 몫만큼 사라짐
+   겹치는 차례: 불빛(불 끝 바깥 주황) · 젖음 · 달아오름(어두운 빨강 = 곧 붙음 예고) → 그을린 갈색 띠 → 숯 · 불씨 = 앞줄 띠 + 숯 속 점점이 · 가장자리는 들쭉날쭉(부드러운 결 무늬) */
+let SKIN_M = null;
+function skinMat() {
+  if (SKIN_M) return SKIN_M;
+  SKIN_M = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog]),
+    transparent: true, depthWrite: false, premultipliedAlpha: true, fog: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
+    vertexShader: `#include <common>
+      #include <fog_pars_vertex>
+      attribute vec4 aC; attribute vec4 aS; attribute vec2 aH; varying vec4 vC; varying vec4 vS; varying vec2 vH; varying vec3 vDrgW;
+      void main(){ vC = aC; vS = aS; vH = aH; vec4 wp = modelMatrix * vec4(position, 1.0); vDrgW = wp.xyz; vec4 mvPosition = viewMatrix * wp; gl_Position = projectionMatrix * mvPosition;
+        #include <fog_vertex>
+      }`,
+    fragmentShader: `#include <common>
+      #include <fog_pars_fragment>
+      #ifdef USE_FOG
+      ${FOG_PARS}
+      #endif
+      uniform float uTime; varying vec4 vC; varying vec4 vS; varying vec2 vH; varying vec3 vDrgW;
+      void main(){
+        vec2 p = vDrgW.xz; float sd = vC.w;
+        float q = length(p - vC.xy) / vC.z;
+        float n = 0.5 + 0.22 * sin(p.x * 1.9 + sd) * sin(p.y * 1.6 - sd * 0.7) + 0.16 * sin((p.x + p.y) * 3.3 + sd * 2.0) + 0.1 * sin((p.x - p.y) * 5.1 + sd);
+        float n2 = 0.5 + 0.2 * sin(p.x * 4.7 + sd * 3.0) + 0.17 * sin(p.y * 5.9 - sd + p.x * 1.3) + 0.13 * sin((p.x * 0.6 - p.y) * 7.3 + sd * 2.0);   /* 불씨 점점이(줄 맞춘 점무늬 X) */
+        float qq = q * (0.72 + 0.56 * n);
+        float soot = vS.x, fr = vS.y, emb = vS.z, fire = vS.w, hk = vH.x, wk = vH.y, k;
+        bool burning = fr > 0.0;
+        float D = 0.0; vec3 L = vec3(0.0);
+        if (burning) { k = 0.3 * fire * (1.0 - smoothstep(fr, 1.1, qq)); L += vec3(0.62, 0.27, 0.08) * k; }
+        if (wk > 0.0) { k = 0.26 * wk; D = 1.0 - (1.0 - D) * (1.0 - k); L.b += 0.02 * k; }
+        if (hk > 0.0) { k = hk * (1.0 - smoothstep(0.55, 0.95, qq)); D = 1.0 - (1.0 - D) * (1.0 - 0.25 * k); L += vec3(0.2, 0.03, 0.0) * k; }
+        float fringe = max(soot + 0.16, fr);
+        if (soot > 0.0 || burning) { k = 0.5 * (1.0 - smoothstep(fringe - 0.12, fringe + 0.1, qq)); D = 1.0 - (1.0 - D) * (1.0 - k); L *= vec3(1.0 - k * 0.5, 1.0 - k * 0.6, 1.0 - k); L += vec3(0.035, 0.015, 0.0) * k; }
+        if (soot > 0.0) { k = 0.86 * (1.0 - smoothstep(soot - 0.14, soot + 0.04, qq)); D = 1.0 - (1.0 - D) * (1.0 - k); L *= 1.0 - k; }
+        float e = 0.0;
+        if (burning) e = emb * max(smoothstep(soot - 0.22, soot, qq) * (1.0 - smoothstep(fr - 0.1, fr + 0.04, qq)) * (0.35 + 0.65 * smoothstep(0.3, 0.6, n2)), qq < soot ? 0.5 * smoothstep(0.72, 0.8, n2) : 0.0);
+        else if (emb > 0.0 && qq < soot) e = emb * smoothstep(0.72, 0.8, n2);
+        else if (hk > 0.4 && qq < 0.7) e = (hk - 0.4) * 0.6 * smoothstep(0.74, 0.82, n2);
+        float f = 1.0 - smoothstep(0.95, 1.15, q);
+        float fl = 0.7 + 0.3 * sin(uTime * 6.3 + p.x * 3.1 + p.y * 2.3) * sin(uTime * 3.9 + p.y * 4.7 - p.x);
+        vec3 em = mix(vec3(0.62, 0.16, 0.06), vec3(1.0, 0.62, 0.22), fl);
+        vec4 o = vec4(L * (1.0 - e) + em * e, mix(D, 0.94, e)) * f;
+        #ifdef USE_FOG
+          float ff = 1.0 - (drgFog(vec3(1.0), vDrgW, vFogDepth).r - drgFog(vec3(0.0), vDrgW, vFogDepth).r);
+          o *= 1.0 - ff;
+        #endif
+        if (o.a < 0.004 && o.r + o.g < 0.004) discard;
+        gl_FragColor = o;
+      }`,
+  });
+  Object.assign(SKIN_M.uniforms, U); SHARED.add(SKIN_M);
+  return SKIN_M;
+}
 
 export function createElements(o = {}) {
   const group = o.group || null;
@@ -74,7 +131,7 @@ export function createElements(o = {}) {
     const cell = { id: E.cells.length, kind: c.kind || 'roof', K, x: c.x, y: c.y || 0, z: c.z, r: c.r || 1.5, tags: c.tags ?? K.tags, house: c.house ?? -1, user: c.user || null, give: c.give ?? K.give,
       state: 0, heat: 0, fire: 0, fuel: c.fuel ?? K.fuel, wet: 0, life: c.life ?? K.life ?? 0, nb: [], nw: [], nx: [], nz: [], inHeat: 0, smokeT: 0, burnT: 0, vis: -1 };
     E.cells.push(cell); gAdd(cell);
-    if (linked) linkOne(cell);
+    if (linked) { linkOne(cell); scan([cell]); }
     return cell.id;
   };
   function linkOne(a) {                                          // a와 다른 칸 모두 → 거리 안이면 서로 이웃(가중치 = 가까울수록 큼)
@@ -88,7 +145,7 @@ export function createElements(o = {}) {
       b.nb.push(a.id); b.nw.push(w); b.nx.push(-dx / d); b.nz.push(-dz / d);
     }
   }
-  E.link = () => { if (linked) return E; for (const c of E.cells) { c.nb.length = c.nw.length = c.nx.length = c.nz.length = 0; } linked = true; const all = E.cells.slice(); E.cells.length = 0; grid.clear(); for (const c of all) { c.id = E.cells.length; E.cells.push(c); gAdd(c); linkOne(c); } return E; };
+  E.link = () => { if (linked) return E; for (const c of E.cells) { c.nb.length = c.nw.length = c.nx.length = c.nz.length = 0; } linked = true; const all = E.cells.slice(); E.cells.length = 0; grid.clear(); for (const c of all) { c.id = E.cells.length; E.cells.push(c); gAdd(c); linkOne(c); } scan(E.cells); return E; };
 
   /* 불씨 · 물 · 가스 · 불티 · 떼어냄 */
   E.ignite = (id, f = 0.3) => {
@@ -196,18 +253,95 @@ export function createElements(o = {}) {
 
   /* ── 그림(규칙의 결과만 보여 줌) ── */
   const VIEW = new THREE.Vector3();
-  const slots = [], embers = { mesh: null };
+  const slots = [];
   const SMOKE = mkPool(group, 200, 0x3a3532, 2.0, 0.5, false, -0.0, 3.4);
   const STEAM = mkPool(group, 90, 0xeef2f2, 2.4, 0.55, false, 0, 1.8);
   const SPARK = mkPool(group, 140, 0xffa848, 0.32, 1, true, 7, 1.4);
   const GAS = mkPool(group, 90, 0x9ac87a, 2.2, 0.5, false, 0, 1.6);
+  /* 11-01 팀 K — 납작한 발광 판(스티커처럼 보임)을 버리고 ① 겉칠: 칸 밑 실제 면(지붕널·수레 윗면)을 한 번 베껴 와 그 위에 그을음·불씨 정점색
+     ② 불꽃 혀 띠: 가까운 타는 칸 여섯의 '불 앞줄'(그을음 끝 ~ 불 끝)에 혀 여섯씩 · 둘 다 그리기 한 번씩(예전 13 → 2) · 덧셈 빛 판 X */
+  const own = new Set(), skin = { mesh: null, n: 0 }, tongues = { mesh: null };
   if (group) {
-    for (let i = 0; i < SLOTS; i++) { const f = flameMesh(1), g = glowSprite(0xff8a3a, 6, 0.42); f.visible = g.visible = false; group.add(f); group.add(g); slots.push({ f, g, c: null }); }
-    const geo = new THREE.SphereGeometry(1, 9, 5); geo.scale(1, 0.32, 1);
-    const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: true });
-    const m = new THREE.InstancedMesh(geo, mat, MAXC); m.count = 0; m.frustumCulled = false; m.renderOrder = 5; group.add(m); embers.mesh = m;
+    for (let i = 0; i < SLOTS; i++) slots.push({ c: null });
+    const tm = new THREE.InstancedMesh(tongueGeo(), flameTongueMat('el'), SLOTS * TPC); tm.count = 0; tm.frustumCulled = false; group.add(tm); tongues.mesh = tm; own.add(tm);
   }
-  function assignSlots() {                                       // 타는 칸 가운데 카메라에 가까운 여섯 → 불꽃 + 빛 판(5Hz)
+  function makeSkin() {                                          // 겉칠 버퍼(처음 칸을 베낄 때 한 번 · 정점 MAXV까지)
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAXV * 3), 3));
+    g.setAttribute('aC', new THREE.BufferAttribute(new Float32Array(MAXV * 4), 4));   // 칸 가운데 x·z · 반지름 · 씨앗(지을 때)
+    g.setAttribute('aS', new THREE.BufferAttribute(new Float32Array(MAXV * 4), 4));   // 그을음 반지름 · 불 앞줄 · 불씨 · 불 세기(5Hz · 바뀐 칸만)
+    g.setAttribute('aH', new THREE.BufferAttribute(new Float32Array(MAXV * 2), 2));   // 달아오름 · 젖음
+    g.setDrawRange(0, 0);
+    const m = new THREE.Mesh(g, skinMat()); m.frustumCulled = false; m.renderOrder = 6; m.matrixAutoUpdate = false;
+    group.add(m); own.add(m); skin.mesh = m;
+  }
+  /* 칸 밑 면 베끼기 — 정적 물건(병합 조각·소품)의 위를 보는 세모 가운데 무게중심이 칸 안(가로 r × 1.15 · 높이 -1.2~+0.9)인 것 · 세모마다 가장 가까운 칸 하나에만 */
+  const _sph = new THREE.Sphere(), _cv = new THREE.Vector3();
+  function scan(list) {
+    if (!group) return;
+    const want = list.filter((c) => !(c.tags & TAG.GAS) && c.kind !== 'chimney' && c.sv1 === undefined); if (!want.length) return;
+    const t0 = performance.now();
+    if (!skin.mesh) makeSkin();
+    group.updateMatrixWorld(true);
+    const tri = new Map();                                       // 칸 → 세모 아홉 값(지을 때만 · 매 걸음 X)
+    group.traverse((o) => {
+      if (!o.isMesh || o.isSkinnedMesh || o.isInstancedMesh || own.has(o) || !o.geometry || !o.geometry.attributes.position) return;
+      const mt = o.material; if (!mt || Array.isArray(mt) || mt.transparent || mt.isShaderMaterial) return;
+      const g = o.geometry; if (!g.boundingSphere) g.computeBoundingSphere();
+      _sph.copy(g.boundingSphere).applyMatrix4(o.matrixWorld);
+      const cand = want.filter((c) => _cv.set(c.x, c.y, c.z).distanceTo(_sph.center) < _sph.radius + c.r * 1.2 + 1.2); if (!cand.length) return;
+      const e = o.matrixWorld.elements, pa = g.attributes.position.array, ix = g.index ? g.index.array : null, n = ix ? ix.length : g.attributes.position.count;
+      const det = e[0] * (e[5] * e[10] - e[9] * e[6]) - e[4] * (e[1] * e[10] - e[9] * e[2]) + e[8] * (e[1] * e[6] - e[5] * e[2]), sg = det < 0 ? -1 : 1;
+      const P = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+      for (let t = 0; t + 2 < n; t += 3) {
+        for (let k = 0; k < 3; k++) { const i = (ix ? ix[t + k] : t + k) * 3, x = pa[i], y = pa[i + 1], z = pa[i + 2]; P[k * 3] = e[0] * x + e[4] * y + e[8] * z + e[12]; P[k * 3 + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]; P[k * 3 + 2] = e[2] * x + e[6] * y + e[10] * z + e[14]; }
+        const gx = (P[0] + P[3] + P[6]) / 3, gy = (P[1] + P[4] + P[7]) / 3, gz = (P[2] + P[5] + P[8]) / 3;
+        let best = null, bd = 1e9;
+        for (const c of cand) { const dx = gx - c.x, dz = gz - c.z, d2 = dx * dx + dz * dz, R = c.r * 1.15, dy = gy - c.y; if (d2 < R * R && dy < 0.9 && dy > -1.2 && d2 < bd) { bd = d2; best = c; } }
+        if (!best) continue;
+        const ux = P[3] - P[0], uy = P[4] - P[1], uz = P[5] - P[2], vx = P[6] - P[0], vy = P[7] - P[1], vz = P[8] - P[2];
+        let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const L = Math.hypot(nx, ny, nz) * sg; if (!(Math.abs(L) > 1e-6)) continue;
+        nx /= L; ny /= L; nz /= L; if (ny < 0.3) continue;      // 위를 보는 면만(밑면·벽 X)
+        let a = tri.get(best); if (!a) tri.set(best, a = []);
+        a.push(P[0] + nx * 0.03, P[1] + ny * 0.03, P[2] + nz * 0.03, P[3] + nx * 0.03, P[4] + ny * 0.03, P[5] + nz * 0.03, P[6] + nx * 0.03, P[7] + ny * 0.03, P[8] + nz * 0.03);
+      }
+    });
+    const pos = skin.mesh.geometry.attributes.position.array, ac = skin.mesh.geometry.attributes.aC.array;
+    for (const c of want) {
+      const a = tri.get(c) || [], nv = Math.min(a.length / 3, MAXV - skin.n) | 0;
+      c.sv0 = skin.n; c.sv1 = skin.n + nv - nv % 3; c.vk = -1; c.fuel0 = Math.max(c.fuel, 1e-3);
+      for (let v = c.sv0, k = 0; v < c.sv1; v++, k += 3) {
+        pos[v * 3] = a[k]; pos[v * 3 + 1] = a[k + 1]; pos[v * 3 + 2] = a[k + 2];
+        ac[v * 4] = c.x; ac[v * 4 + 1] = c.z; ac[v * 4 + 2] = c.r; ac[v * 4 + 3] = (c.id * 1.37) % 6.2832;
+      }
+      skin.n = c.sv1;
+      /* 불꽃 혀 자리 열여섯(방향 여덟 × 안·바깥) — 베낀 면의 세모 무게중심 가운데 그 자리에 가장 가까운 것 · 면이 없으면 칸 높이 둥근 판 */
+      c.anc = new Float32Array(16 * 4);
+      for (let j = 0; j < 16; j++) {
+        const ang = (j % 8) / 8 * 6.2832 + (j >= 8 ? 0.39 : 0), rq = j < 8 ? 0.72 : 0.36, wx = c.x + Math.cos(ang) * rq * c.r, wz = c.z + Math.sin(ang) * rq * c.r;
+        let bx = wx, by = c.y, bz = wz, bd = 1e9;
+        for (let k = 0; k + 8 < a.length; k += 9) { const gx = (a[k] + a[k + 3] + a[k + 6]) / 3, gz = (a[k + 2] + a[k + 5] + a[k + 8]) / 3, d = (gx - wx) ** 2 + (gz - wz) ** 2; if (d < bd) { bd = d; bx = gx; by = (a[k + 1] + a[k + 4] + a[k + 7]) / 3; bz = gz; } }
+        c.anc[j * 4] = bx; c.anc[j * 4 + 1] = by; c.anc[j * 4 + 2] = bz; c.anc[j * 4 + 3] = Math.hypot(bx - c.x, bz - c.z) / c.r;
+      }
+    }
+    skin.mesh.geometry.setDrawRange(0, skin.n); skin.mesh.geometry.attributes.position.needsUpdate = true; skin.mesh.geometry.attributes.aC.needsUpdate = true;
+    E.scanMs = +((E.scanMs || 0) + performance.now() - t0).toFixed(1);   // 지을 때만(E.stats로 봄)
+  }
+  /* 칸 상태 → 겉칠 값(5Hz · 바뀐 칸만 정점을 다시 칠함) — 탄 몫 p = 쓴 연료 · 그을음 반지름 = p · 불 앞줄 = 그을음 끝 ~ 불 끝(불 세기·p) · 꺼져도 탄 몫은 남음(결과가 남음) */
+  function look(c) {
+    const st = c.state, p = st === 2 ? 1 : Math.max(0, Math.min(1, 1 - c.fuel / (c.fuel0 || 1)));
+    c.soot = st === 3 ? 0 : st === 2 ? 1.12 : Math.max(0, Math.min(1.05, p * 1.3 - 0.05));
+    c.front = st === 1 ? Math.min(1.08, Math.max(c.soot + 0.22, 0.3 + 0.5 * c.fire + 0.5 * p)) : 0;
+    c.emb = st === 1 ? 0.55 + 0.45 * c.fire : st === 2 ? Math.max(0, 0.5 - c.smT / 50) : 0;
+    c.hk = st === 0 && c.heat > 0.3 ? Math.min(1, (c.heat - 0.3) / 0.7) : 0;
+    c.wk = st === 0 || st === 2 ? Math.min(1, Math.max(0, c.wet) / 3) : 0;
+    return st * 1e9 + Math.round(c.soot * 40) * 1e7 + Math.round(c.front * 40) * 1e5 + Math.round(c.emb * 20) * 1e3 + Math.round(c.hk * 9) * 100 + Math.round(c.wk * 9) * 10 + (st === 1 ? Math.round(c.fire * 9) : 0);
+  }
+  function paint(c) {                                            // 칸 값만 그 칸 정점에(칠하기는 셰이더가 픽셀마다)
+    const A = skin.mesh.geometry.attributes, S = A.aS.array, H = A.aH.array;
+    for (let v = c.sv0; v < c.sv1; v++) { S[v * 4] = c.soot; S[v * 4 + 1] = c.front; S[v * 4 + 2] = c.emb; S[v * 4 + 3] = c.state === 1 ? c.fire : 0; H[v * 2] = c.hk; H[v * 2 + 1] = c.wk; }
+  }
+  function assignSlots() {                                       // 타는 칸 가운데 카메라에 가까운 여섯 → 불꽃 혀 띠(5Hz) · 겉칠은 바뀐 칸만
     for (const s of slots) { if (s.c) s.c.inSlot = false; s.c = null; }
     for (const c of E.cells) {
       c.inSlot = false;
@@ -218,34 +352,35 @@ export function createElements(o = {}) {
     }
     for (const s of slots) if (s.c) s.c.inSlot = true;          // 파티클(연기·불티)은 이 여섯 칸만(design §3-2)
     const SX = getSfx(); if (SX && SX.on) for (const s of slots) if (s.c) SX.near('crackle', s.c.x, s.c.y, s.c.z, Math.min(1, 0.35 + s.c.fire * 0.65));   // 불 탁탁 = 타는 칸 자리에서(가까울수록 · 보이는 짝 = 불꽃)
-    /* 지붕 발광색(인스턴스 하나) — 탐 = 주황(불 세기) · 달아오름 = 어두운 빨강(곧 붙음 = 보이는 예고) · 다 탐 = 그을음 · 떼어냄·멀쩡 = 안 보임 */
-    const m = embers.mesh; if (!m) return;
-    let n = 0;
+    if (!skin.mesh) return;
+    let dirty = false;
     for (const c of E.cells) {
-      if (c.tags & TAG.GAS || c.kind === 'chimney') continue;
-      let r = 0, g = 0, b = 0, show = true;
-      if (c.state === 1) { const fl = 0.75 + 0.25 * Math.sin(E.t * 9 + c.id * 2.3); r = (0.55 + 0.45 * c.fire) * fl; g = (0.18 + 0.3 * c.fire) * fl; b = 0.04; }
-      else if (c.state === 2) { r = 0.09; g = 0.07; b = 0.06; }
-      else if (c.state === 0 && c.heat > 0.3) { const k = Math.min(1, (c.heat - 0.3) / 0.7); r = 0.25 + 0.3 * k; g = 0.08 + 0.05 * k; b = 0.05; }
-      else if (c.state === 0 && c.wet > 0) { r = 0.32; g = 0.36; b = 0.4; show = c.wet > E.opt.wetSec - 3; }   // 막 젖은 자리만 잠깐 어둡게
-      else show = false;
-      if (!show) continue;
-      const sc = c.r * (c.state === 2 ? 1.05 : 0.95);
-      _m.makeScale(sc, sc, sc).setPosition(c.x, c.y + 0.12, c.z); m.setMatrixAt(n, _m); _col.setRGB(r, g, b); m.setColorAt(n, _col); n++;
+      if (c.sv1 === undefined || c.sv1 === c.sv0) continue;
+      if (c.state === 2) c.smT = (c.smT || 0) + 0.2;
+      const k = look(c); if (k === c.vk) continue;
+      c.vk = k; paint(c); dirty = true;
     }
-    m.count = n; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true;
+    if (dirty) { const A = skin.mesh.geometry.attributes; upRange(A.aS, skin.n * 4); upRange(A.aH, skin.n * 2); }   // 쓰는 몫만 올림
+    /* 불꽃 혀 — 칸마다 불 앞줄(그을음 끝 - 0.15 ~ 불 끝 + 0.05)에 든 자리부터, 모자라면 앞줄에 가까운 자리 · 키 = 불꽃 크기 × 불 세기 */
+    const tm = tongues.mesh; let n = 0;
+    for (const s of slots) {
+      const c = s.c; if (!c || c.state !== 1 || !c.anc) continue;
+      const lo = c.soot - 0.15, hi = c.front + 0.05, need = Math.min(TPC, Math.ceil(TPC * (0.35 + 0.65 * c.fire))), k0 = c.K.flame * (0.45 + c.fire * 0.85);
+      let got = 0;
+      for (let pass = 0; pass < 2 && got < need; pass++) for (let j = 0; j < 16 && got < need; j++) {
+        const q = c.anc[j * 4 + 3], inB = q >= lo && q <= hi; if (pass === 0 ? !inB : inB) continue;
+        if (pass === 1 && Math.abs(q - Math.max(lo, Math.min(hi, q))) > 0.45) continue;
+        const h = k0 * (0.65 + 0.5 * hash3(c.id * 3.1 + j, j * 1.7)) * (pass ? 0.7 : 1);
+        _m.makeScale(h * 0.58, h, h * 0.58).setPosition(c.anc[j * 4], c.anc[j * 4 + 1] - 0.06, c.anc[j * 4 + 2]); tm.setMatrixAt(n++, _m); got++;
+      }
+    }
+    tm.count = n; if (n) tm.instanceMatrix.needsUpdate = true;
   }
-  const _m = new THREE.Matrix4(), _col = new THREE.Color();
+  const _m = new THREE.Matrix4();
   E.draw = (camPos) => {
     if (!group) return;
     if (camPos) VIEW.copy(camPos);
-    for (const s of slots) {
-      const c = s.c; if (!c || c.state !== 1) { s.f.visible = s.g.visible = false; continue; }
-      const k = c.K.flame * (0.45 + c.fire * 0.85);
-      s.f.visible = s.g.visible = true; s.f.position.set(c.x, c.y - 0.1, c.z); s.f.scale.set(k * 2.6, k * 1.6, k * 2.6);
-      s.f.rotation.z = -E.wind.x * 0.25 * E.wind.speed; s.f.rotation.x = E.wind.z * 0.25 * E.wind.speed;   // 바람 쪽으로 기움
-      s.g.position.set(c.x, c.y + 0.9 * k, c.z); s.g.scale.setScalar(3 + 5 * c.fire * c.K.flame);
-    }
+    const l = tongues.mesh.material.uniforms.uLean.value; l.set(E.wind.x * 0.35 * E.wind.speed, E.wind.z * 0.35 * E.wind.speed);   // 바람 쪽으로 기움
   };
 
   /* 파티클 풀 — 연기(오름 · 바람에 흐름) · 김(빨리 오르고 금방 사라짐) · 불티(튐 · 무게) */
@@ -300,11 +435,11 @@ export function createElements(o = {}) {
   }
   E.puff = (kind, x, y, z, n = 10, sp = 2) => puff(kind === 'steam' ? STEAM : kind === 'spark' ? SPARK : kind === 'gas' ? GAS : SMOKE, x, y, z, n, sp);   // 장이 원인 자리에서 부름(물통이 닿음 등)
 
-  E.stats = () => ({ cells: E.cells.length, burning: E.count(1), burnt: E.count(2), gone: E.count(3), ups: ups.length, steams: steamList.length, draws: group ? SLOTS * 2 + 5 : 0 });
+  E.stats = () => ({ cells: E.cells.length, burning: E.count(1), burnt: E.count(2), gone: E.count(3), ups: ups.length, steams: steamList.length, draws: group ? 2 + 4 : 0, skinV: skin.n, scanMs: E.scanMs || 0 });
   E.dispose = () => {
     if (!group) return;
-    for (const s of slots) { s.f.removeFromParent(); s.g.removeFromParent(); }
-    if (embers.mesh) { embers.mesh.removeFromParent(); embers.mesh.geometry.dispose(); embers.mesh.material.dispose(); embers.mesh.dispose && embers.mesh.dispose(); }
+    if (tongues.mesh) { tongues.mesh.removeFromParent(); tongues.mesh.dispose(); }   // 혀 판·재질은 kit 공유(SHARED)
+    if (skin.mesh) { skin.mesh.removeFromParent(); skin.mesh.geometry.dispose(); }
     for (const P of POOLS) if (P.mesh) { P.mesh.removeFromParent(); P.mesh.geometry.dispose(); P.mesh.material.dispose(); }
     L.ignite = L.out = L.burnt = L.boom = L.steam = L.catch = null;
   };

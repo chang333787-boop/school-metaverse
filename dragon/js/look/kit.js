@@ -238,6 +238,57 @@ export function flameMesh(scale = 1) {
   }
   const m = new THREE.Mesh(FLAME_G, FLAME_M); m.scale.setScalar(scale); m.renderOrder = 940; return m;
 }
+/* 불꽃 혀(그림책 결 · 11-01 팀 K) — 세로로 선 판 하나가 카메라 쪽을 봄(원통 빌보드 · 늘 위로 섬) · 바깥 빨강 · 가운데 주황 · 속 노랑 세 띠 + 가는 테두리(붓 칠)
+   오려낸 불투명(discard · 깊이 씀 · 반투명 겹 0 · 덧셈 빛 X) · 밑동은 둥글어 지붕·몸 속에 묻힘 · 모양·일렁임·끝 갈라짐은 uTime(CPU 0)
+   Mesh = 하나(뼈에 붙임) · InstancedMesh = 띠(지붕 면을 따라) · 크기 = scale(x 폭 · y 높이) · 재질은 key마다 하나(uLean = 바람 기울기 xz) */
+const TONGUE_M = new Map(); let TONGUE_G = null;
+export function tongueGeo() {
+  if (!TONGUE_G) { TONGUE_G = new THREE.PlaneGeometry(1, 1, 1, 6).translate(0, 0.5, 0); SHARED.add(TONGUE_G); }
+  return TONGUE_G;
+}
+export function flameTongueMat(key = 'a') {
+  let m = TONGUE_M.get(key); if (m) return m;
+  m = new THREE.ShaderMaterial({
+    uniforms: { uTime: U.uTime, uLean: { value: new THREE.Vector2(0, 0) } },
+    side: THREE.DoubleSide,
+    vertexShader: `uniform float uTime; uniform vec2 uLean; varying vec2 vUv; varying float vSeed;
+      void main(){
+        mat4 mw = modelMatrix;
+        #ifdef USE_INSTANCING
+          mw = modelMatrix * instanceMatrix;
+        #endif
+        vec3 c = (mw * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+        float sx = length(mw[0].xyz), sy = length(mw[1].xyz);
+        vSeed = fract(sin(dot(floor(c * 7.0), vec3(12.9898, 78.233, 37.719))) * 43758.5453) * 6.2832;
+        vec3 r = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]); r = normalize(vec3(r.x, 0.0, r.z) + vec3(1e-4, 0.0, 0.0));
+        float h = position.y, hh = h * h;
+        float sw = sin(uTime * 5.3 + vSeed + h * 2.6) * 0.18 * hh;
+        float grow = 0.86 + 0.16 * sin(uTime * 6.1 + vSeed * 1.7) * sin(uTime * 3.3 + vSeed);
+        vec3 wp = c + r * (position.x + sw) * sx + vec3(uLean.x * hh * sy, h * sy * grow, uLean.y * hh * sy);
+        vUv = uv;
+        gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0);
+      }`,
+    fragmentShader: `uniform float uTime; varying vec2 vUv; varying float vSeed;
+      void main(){
+        float y = vUv.y, x = vUv.x * 2.0 - 1.0;
+        float cx = sin(y * 4.2 - uTime * 6.0 + vSeed) * 0.16 * y;
+        float b = 0.24;
+        float w = y < b ? sqrt(max(0.0, 1.0 - (b - y) * (b - y) / (b * b))) : pow(max(0.0, (1.0 - y) / (1.0 - b)), 0.8);
+        w *= 0.9 + 0.1 * sin(uTime * 8.0 + vSeed * 2.0 + y * 7.0);
+        float ax = abs(x - cx), d = ax / max(w, 1e-3);
+        float split = smoothstep(0.5, 0.92, y) * (0.55 + 0.45 * sin(uTime * 3.7 + vSeed * 3.0));
+        if (d > 1.0 || ax < split * w * 0.42 && y > 0.5) discard;
+        float k = d * (1.0 - 0.3 * y) + y * 0.6;
+        vec3 c = vec3(0.70, 0.17, 0.07);
+        c = mix(c, vec3(0.84, 0.25, 0.09), smoothstep(0.97, 0.9, d));
+        c = mix(c, vec3(0.95, 0.53, 0.16), smoothstep(0.86, 0.8, k));
+        c = mix(c, vec3(1.0, 0.85, 0.45), smoothstep(0.58, 0.52, k));
+        gl_FragColor = vec4(pow(c, vec3(2.2)), 1.0);
+        #include <colorspace_fragment>
+      }`,
+  });
+  TONGUE_M.set(key, m); SHARED.add(m); return m;
+}
 /* 장소가 지운 뒤에도 남는 공유 자원인지(dispose 때 건너뜀) */
 export function isShared(o) { return SHARED.has(o); }
 
