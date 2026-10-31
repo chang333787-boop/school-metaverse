@@ -69,6 +69,7 @@ export function installDebug(ctx) {               // ctx = { gfx, loop, input, c
     perf: () => Object.assign(ctx.gfx.stats(), { simMs: Math.round(ctx.loop.simMs * 100) / 100, simMax: Math.round(ctx.loop.takeMax() * 100) / 100, long50: ctx.loop.long50, simStep: ctx.loop.n }),
     diag: () => ({ errs: errs.slice(), ctxLost: D.ctxLost, upSec: Math.round((Date.now() - D.t0) / 1000), ua: navigator.userAgent, heapMB: ctx.gfx.stats().heapMB }),
     state: () => (ctx.snapshot ? ctx.snapshot() : null),   // 읽기만(봇 판정·같은 판 되풀이 확인)
+    sense: () => (ctx.sense ? ctx.sense() : null),         // 봇이 읽는 것 = 화면·소리로 드러난 것만(design §13)
     bot, bench, gfx: ctx.gfx, input: ctx.input,
     get loop() { return ctx.loop; },
     scene: ctx.scene, camera: ctx.camera, world: ctx.world,           // 들여다보기 전용(봇은 쓰지 않음)                // 루프는 debug 다음에 생김

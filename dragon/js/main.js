@@ -9,6 +9,7 @@ import { buildBaseTest } from './scenes/base_test.js?v=14';
 import { buildLookA } from './scenes/look_a.js?v=14';
 import { buildModelView } from './scenes/model_view.js?v=14';
 import { buildWalkTest } from './stages/walk_test.js?v=14';
+import { buildPlaceView } from './stages/place_view.js?v=14';
 
 const Q = new URLSearchParams(location.search);
 const canvas = document.getElementById('scene');
@@ -19,9 +20,12 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.3, 4000);
 gfx.onResize = (w, h) => { camera.aspect = w / h; camera.updateProjectionMatrix(); };
 
-const SCENES = { base: buildBaseTest, a: buildLookA, model: buildModelView, walk: buildWalkTest };
-const world = (SCENES[Q.get('scene')] || buildLookA)(scene, camera, rng, { time: Q.get('time'), mode: Q.get('mode2'), yaw: Q.has('yaw') ? +Q.get('yaw') : undefined, dist: Q.get('dist'), pitch: Q.has('pitch') ? +Q.get('pitch') : undefined, people: Q.get('people'), who: Q.get('who') });
-const ctx = { gfx, input, canvas, scene, camera, world, benchPath: world.benchPath, snapshot: world.snapshot };
+/* 팀이 만드는 장면은 파일이 생기면 열림(동적 import) — sil = 64px 실루엣(M) · fly = 비행 시험(F) */
+const lazy = (file, fn) => async (...a) => (await import(file))[fn](...a);
+const SCENES = { base: buildBaseTest, a: buildLookA, model: buildModelView, walk: buildWalkTest, place: buildPlaceView,
+  sil: lazy('./scenes/silhouette.js?v=14', 'buildSilhouette'), fly: lazy('./stages/flight_test.js?v=14', 'buildFlightTest') };
+const world = await (SCENES[Q.get('scene')] || buildLookA)(scene, camera, rng, { gfx, time: Q.get('time'), mode: Q.get('mode2'), yaw: Q.has('yaw') ? +Q.get('yaw') : undefined, dist: Q.get('dist'), pitch: Q.has('pitch') ? +Q.get('pitch') : undefined, people: Q.get('people'), who: Q.get('who'), p: Q.get('p'), variant: Q.get('variant'), at: Q.get('at'), marks: Q.get('marks') === '1', swap: Q.get('swap') === '1', diff: Q.get('diff') || 'normal' });
+const ctx = { gfx, input, canvas, scene, camera, world, benchPath: world.benchPath, snapshot: world.snapshot, sense: world.sense };
 const dbg = installDebug(ctx);
 const loop = createLoop({
   gfx, input, beforeStep: dbg.bot.tick,
@@ -30,8 +34,8 @@ const loop = createLoop({
 });
 ctx.loop = loop;
 
-/* 첫 화면 전에 셰이더를 미리 짓는다(첫 프레임 멈칫 줄이기) */
-gfx.renderer.compileAsync(scene, camera).catch(() => {}).finally(() => {
+/* 첫 화면 전에 셰이더를 미리 짓는다(첫 프레임 멈칫 줄이기) · 장소를 짓는 장면은 다 지을 때까지(ready) */
+Promise.resolve(world.ready).catch((e) => console.error('ready', e)).then(() => gfx.renderer.compileAsync(scene, camera)).catch(() => {}).finally(() => {
   document.getElementById('load').classList.add('hide');
   loop.start();
   if (Q.get('bench') === '1') setTimeout(() => dbg.DRG.bench(60), 1500);
