@@ -1,24 +1,24 @@
 // 게임 본판 — 첫 화면 → 장(2~6 수직 조각) · 장소는 무대 그릇으로 짓고 비움 · 플레이어 = 히컵(걷기 + 뒤따르는 카메라)
 // 장 차례 생성기는 story/ch*.js · G(놀이 상태)를 장과 봇 감각(sense)이 함께 봄 · 봇은 DRG.sense()만 읽고 키만 누름
 import * as THREE from 'three';
-import { createEnv, U } from '../look/kit.js?v=16';
-import { createStageHost } from '../core/stage.js?v=16';
-import { createCollide } from '../play/collide.js?v=16';
-import { createWalker, createFollowCam } from '../play/walker.js?v=16';
-import { loadModel } from '../look/models.js?v=16';
-import { createHumanRig } from '../look/human_rig.js?v=16';
-import { createDragon, createPerson } from '../play/actors.js?v=16';
-import { createHud } from '../ui/hud.js?v=16';
-import { createBook } from '../ui/book.js?v=16';
-import { createMap } from '../ui/map.js?v=16';
-import { createBench } from '../ui/bench.js?v=16';
-import { createSfx } from '../core/sfx.js?v=16';
-import { showTitle, diffOf } from '../ui/title.js?v=16';
-import { createRunner } from '../story/runner.js?v=16';
-import { writeSlot, flushSlot } from '../story/save.js?v=16';
-import { holdItem } from '../story/fx.js?v=16';
-import { createRng } from '../core/rng.js?v=16';
-import { showEnding } from '../ui/ending.js?v=16';
+import { createEnv, U } from '../look/kit.js?v=17';
+import { createStageHost } from '../core/stage.js?v=17';
+import { createCollide } from '../play/collide.js?v=17';
+import { createWalker, createFollowCam } from '../play/walker.js?v=17';
+import { loadModel } from '../look/models.js?v=17';
+import { createHumanRig } from '../look/human_rig.js?v=17';
+import { createDragon, createPerson } from '../play/actors.js?v=17';
+import { createHud } from '../ui/hud.js?v=17';
+import { createBook } from '../ui/book.js?v=17';
+import { createMap } from '../ui/map.js?v=17';
+import { createBench } from '../ui/bench.js?v=17';
+import { createSfx } from '../core/sfx.js?v=17';
+import { showTitle, diffOf } from '../ui/title.js?v=17';
+import { createRunner } from '../story/runner.js?v=17';
+import { writeSlot, flushSlot } from '../story/save.js?v=17';
+import { holdItem } from '../story/fx.js?v=17';
+import { createRng } from '../core/rng.js?v=17';
+import { showEnding } from '../ui/ending.js?v=17';
 
 export const PLAYABLE = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];   // 0 = 오프닝 · 11 = 종장
 const CH_FILE = Object.fromEntries(PLAYABLE.map((n) => [n, 'ch' + n]));
@@ -33,11 +33,11 @@ export async function buildGame(scene, camera, rng, opt = {}) {
   G.book = createBook(G); G.map = createMap(); G.bench = createBench(); G.sfx = createSfx();
   /* 플레이어 */
   const P = G.player = { W: null, C: null, root: null, rig: null, item: null, lock: false, fT: 0, fTap: false, fLong: false, reach: false, away: false, cam: 'follow', hidden: false };
-  loadModel('assets/models/hiccup.glb?v=16').then(({ root, bones }) => { P.root = root; P.rig = createHumanRig(bones, root); P.bones = bones; if (G.place) G.place.group.add(root); });
+  loadModel('assets/models/hiccup.glb?v=17').then(({ root, bones }) => { P.root = root; P.rig = createHumanRig(bones, root); P.bones = bones; if (G.place) G.place.group.add(root); });
 
   /* 장소 짓기 — places/<이름>.js가 없으면 자리표시(_stub) */
   G.loadPlace = async (name, time, variant) => {
-    let mod; try { mod = await import(`../places/${name}.js?v=16`); } catch (e) { mod = await import('../places/_stub.js?v=16'); }
+    let mod; try { mod = await import(`../places/${name}.js?v=17`); } catch (e) { mod = await import('../places/_stub.js?v=17'); }
     G.place = null; G.cast.length = 0; G.castBy = {};             // 장 안에서 이어지는 배우(keep)는 장소가 바뀌면 함께 비움
     let hs = 7; for (const ch of name) hs = (hs * 31 + ch.charCodeAt(0)) >>> 0;   // 장소마다 제 씨앗(앞에서 난수를 얼마나 썼든 같은 마을 · 팀 A 지적)
     const prng = createRng(name === 'village' ? 1656844137 : hs);   // 마을 = 팀 A가 골목·지붕·길을 맞춘 배치(fx1 VILLAGE_SEED)
@@ -120,8 +120,8 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     if (nx && Q.get('chain') !== '0') setTimeout(() => startCh(nx, 0), 1800);
   };
   async function startCh(n, idx) {
-    if (G.inv.helmet && n >= 8 && n <= 10) { const fx = await import('../story/fx79.js?v=16'); fx.setHelmet(G, true); }   // 7장에서 받은 투구가 이어하기에도(팀 B)
-    const m = await import(`../story/${CH_FILE[n]}.js?v=16`);
+    if (G.inv.helmet && n >= 8 && n <= 10) { const fx = await import('../story/fx79.js?v=17'); fx.setHelmet(G, true); }   // 7장에서 받은 투구가 이어하기에도(팀 B)
+    const m = await import(`../story/${CH_FILE[n]}.js?v=17`);
     await R.start(m.chapter, idx);
   }
   G.startCh = startCh;

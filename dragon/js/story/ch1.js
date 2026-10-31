@@ -3,11 +3,11 @@
 // → 이어서(이음) 나이트메어가 쫓아옴 → 스토이크가 막음 · 아무도 안 믿음 · '낙서' 공책 → 아침(그을린 지붕 · 덧댄 판자 · 비늘 조각)
 // 쉬움 = 해 질 녘(design §6-5) · 깜짝 X(예고 2~3초) · 피·죽음 X · 대사는 모두 우리 말로 새로(저작권) · 실제 학생 이름 X(영화 인물만)
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=16';
-import { holdItem, makePuffs } from './fx.js?v=16';
-import { setTime, toon, flameMesh, glowSprite } from '../look/kit.js?v=16';
-import { createElements } from '../play/elements.js?v=16';
-import { raidSky, makeBreath, makeThrow, makeFlyer, makeStars, makeTrail, prop, ringWalls, ensureVillage, seedVillage } from './fx1.js?v=16';
+import { wait, until, sayAll } from './runner.js?v=17';
+import { holdItem, makePuffs } from './fx.js?v=17';
+import { setTime, toon, flameMesh, glowSprite } from '../look/kit.js?v=17';
+import { createElements } from '../play/elements.js?v=17';
+import { raidSky, makeBreath, makeThrow, makeFlyer, makeStars, makeTrail, prop, ringWalls, ensureVillage, seedVillage } from './fx1.js?v=17';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const KNOCK = { easy: 0, normal: 2, hard: 2.6 };          // 맞으면 넘어져 있는 초(쉬움 = 안 넘어짐 · design §8)

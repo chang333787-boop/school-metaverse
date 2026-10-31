@@ -3,7 +3,7 @@
 // 회전은 '모델 축'(X 왼쪽 · Y 위 · Z 앞)으로 준다 — 뼈마다 모델 축을 뼈 자신의 축으로 바꿔 둠(뼈 roll과 상관없음)
 // 날개 접기 = 박쥐처럼: 위팔은 뒤·아래로 · 아래팔은 앞으로 · 손가락은 뒤로 모아 몸 옆에 세로로 붙임(미리 셈한 자세로 slerp)
 import * as THREE from 'three';
-import * as KIT from './kit.js?v=16';
+import * as KIT from './kit.js?v=17';
 
 const _q = new THREE.Quaternion(), _a = new THREE.Quaternion(), _w = new THREE.Quaternion(), _ri = new THREE.Quaternion();
 const _m0 = new THREE.Matrix4(), _m1 = new THREE.Matrix4(), _v = new THREE.Vector3(), _d = new THREE.Vector3(), _n = new THREE.Vector3(), _c = new THREE.Vector3();

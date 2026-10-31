@@ -1,13 +1,13 @@
 // 장이 같이 쓰는 작은 물건·이펙트 — 손에 든 것 · 바닥에 놓인 것 · 모래 선 · 물보라 · 날아가는 것(원인 → 결과만 · 버튼 이펙트 X)
 // 모두 toon 재질(공유) · 기하는 처음 한 번만 짓고 공유(SHARED) · 매 걸음 new X
 import * as THREE from 'three';
-import { toon, SHARED } from '../look/kit.js?v=16';
-import { loadModel } from '../look/models.js?v=16';
+import { toon, SHARED } from '../look/kit.js?v=17';
+import { loadModel } from '../look/models.js?v=17';
 
 const G = {};
 function geo(k, f) { if (!G[k]) { G[k] = f(); SHARED.add(G[k]); } return G[k]; }
 /* 손에 드는 것(팀 M의 props_hand.glb가 오면 그 메시 · 없으면 코드로 지은 자리표시) */
-let HAND = null; loadModel('assets/models/props_hand.glb?v=16').then((m) => { HAND = m.root; HAND.traverse((o) => { if (o.geometry) SHARED.add(o.geometry); }); }).catch(() => {});
+let HAND = null; loadModel('assets/models/props_hand.glb?v=17').then((m) => { HAND = m.root; HAND.traverse((o) => { if (o.geometry) SHARED.add(o.geometry); }); }).catch(() => {});
 function fallback(name) {
   const g = new THREE.Group();
   if (name === 'knife') { g.add(new THREE.Mesh(geo('blade', () => new THREE.BoxGeometry(0.04, 0.02, 0.32).translate(0, 0, 0.2)), toon({ color: 0xcfd4d6 }))); g.add(new THREE.Mesh(geo('grip', () => new THREE.CylinderGeometry(0.025, 0.025, 0.12, 6).rotateX(Math.PI / 2)), toon({ color: 0x6a4a2e }))); }

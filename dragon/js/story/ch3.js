@@ -1,10 +1,10 @@
 // 3장 훈련 첫날 · 숨은 호수(design §2 · reference #5·#6·#7) — 선착장 배웅(이음 · 진눈깨비) → ① 그롱클(방패 두드리기 · 여섯 발)[피하기+던지기 · 쉬움 X]
 // → ② 코브 가장자리에서 숨어 관찰 · 미끄러지는 투슬리스 스케치[숨기] → ③ 밤 큰 회관 드래곤 책 · 점 여섯 잇기[그리기] · 와! = 내 그림이 X 도장을 덮음
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=16';
-import { holdItem, dropItem, makePuffs } from './fx.js?v=16';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=16';
-import { tlSense } from './ch4.js?v=16';
+import { wait, until, sayAll } from './runner.js?v=17';
+import { holdItem, dropItem, makePuffs } from './fx.js?v=17';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=17';
+import { tlSense } from './ch4.js?v=17';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 

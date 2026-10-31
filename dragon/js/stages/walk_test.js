@@ -1,10 +1,10 @@
 // 걷기 시험 무대(단계 3 앞) — 시안 A 섬에서 히컵 걷기 · Shift 살금살금 · Space 구르기 · F 길게 손 내밀기 · 투슬리스가 근처에서 쉼
 import * as THREE from 'three';
-import { buildLookA } from '../scenes/look_a.js?v=16';
-import { loadModel } from '../look/models.js?v=16';
-import { createHumanRig } from '../look/human_rig.js?v=16';
-import { createDragonRig } from '../look/dragon_rig.js?v=16';
-import { createWalker, createFollowCam } from '../play/walker.js?v=16';
+import { buildLookA } from '../scenes/look_a.js?v=17';
+import { loadModel } from '../look/models.js?v=17';
+import { createHumanRig } from '../look/human_rig.js?v=17';
+import { createDragonRig } from '../look/dragon_rig.js?v=17';
+import { createWalker, createFollowCam } from '../play/walker.js?v=17';
 
 export function buildWalkTest(scene, camera, rng, opt = {}) {
   const base = buildLookA(scene, camera, rng, { time: opt.time || 'day' });
@@ -12,8 +12,8 @@ export function buildWalkTest(scene, camera, rng, opt = {}) {
   const W = createWalker({ height: H, x: 150, z: 300, yaw: Math.PI });
   const C = createFollowCam(camera, H);
   let hic = null, hrig = null, tl = null, trig = null, fHold = 0, last = performance.now();
-  loadModel('assets/models/' + (opt.who || 'hiccup') + '.glb?v=16').then(({ root, bones }) => { hrig = createHumanRig(bones, root); hic = root; scene.add(root); });
-  loadModel('assets/models/toothless.glb?v=16').then(({ root, bones }) => {
+  loadModel('assets/models/' + (opt.who || 'hiccup') + '.glb?v=17').then(({ root, bones }) => { hrig = createHumanRig(bones, root); hic = root; scene.add(root); });
+  loadModel('assets/models/toothless.glb?v=17').then(({ root, bones }) => {
     trig = createDragonRig(bones, root); tl = root; root.position.set(158, H(158, 290), 290); root.rotation.y = -2.2; scene.add(root);
   });
   return {

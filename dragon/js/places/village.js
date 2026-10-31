@@ -3,9 +3,9 @@
 // 우리 섬 · 우리 배치(영화 화면을 베끼지 않음) · 때 overcast / sleet / night(횃불·창 켜짐) / dawn / day · variant 'charred' = 1장 뒤 아침(그을린 지붕 + 덧댄 새 판자)
 // 걷기: height = 겹(계단·다리·선착장·망루 위) 먼저, 아니면 땅 격자(그린 삼각형과 같은 보간) · 벽 = 집·대장간·울타리 + '걸을 수 있는 칸' 등고선(절벽·둑·물가·산 밑)
 import * as THREE from 'three';
-import { setTime } from '../look/kit.js?v=16';
-import { createNoise } from '../core/noise.js?v=16';
-import { createProps, M4, PAL, ss, inPoly } from '../look/props.js?v=16';
+import { setTime } from '../look/kit.js?v=17';
+import { createNoise } from '../core/noise.js?v=17';
+import { createProps, M4, PAL, ss, inPoly } from '../look/props.js?v=17';
 
 const X0 = -150, Z0 = -150, CS = 2.0, NX = 146, NZ = 126;           // 땅 격자(마디) — x −150~140 · z −150~100
 const capD = (x, z, ax, az, bx, bz) => { const ex = bx - ax, ez = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * ex + (z - az) * ez) / (ex * ex + ez * ez))); return Math.hypot(x - ax - ex * t, z - az - ez * t); };

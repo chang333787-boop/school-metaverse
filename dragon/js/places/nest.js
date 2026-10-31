@@ -4,11 +4,11 @@
 // 결 = 시안 A(toon 정점색 · 상자 X · 깎은 땅·돌) · 불빛은 flameMesh + glowSprite(Light X) · 연기·구름·불티는 정점 셰이더가 움직임(CPU 0) · 매 걸음 new X
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { toon, setTime, TIMES, U, flameMesh, glowSprite, FOG_PARS } from '../look/kit.js?v=16';
-import { createNoise } from '../core/noise.js?v=16';
-import { createRng } from '../core/rng.js?v=16';
-import * as NT from '../look/nature.js?v=16';
-import { loadModel } from '../look/models.js?v=16';
+import { toon, setTime, TIMES, U, flameMesh, glowSprite, FOG_PARS } from '../look/kit.js?v=17';
+import { createNoise } from '../core/noise.js?v=17';
+import { createRng } from '../core/rng.js?v=17';
+import * as NT from '../look/nature.js?v=17';
+import { loadModel } from '../look/models.js?v=17';
 
 const { C3, mixc, sstep, clamp, hash, TAU } = NT;
 /* ── 섬 모양(모든 variant가 같은 섬) — 단위 m · 바다 = y 0 ── */
@@ -561,12 +561,12 @@ async function buildCrater(ctx) {
   const BOSS = { x: 0, y: -20, z: -14, yaw: 0 };
   let boss = null, bossRig = null, head = null; const hp = new THREE.Vector3();
   try {
-    const { root, bones } = await loadModel('assets/models/boss.glb?v=16');
+    const { root, bones } = await loadModel('assets/models/boss.glb?v=17');
     root.position.set(BOSS.x, BOSS.y, BOSS.z); root.rotation.y = BOSS.yaw; root.scale.setScalar(0.62);
     const dark = toon({ vc: true, color: 0x6a5e5a });
     root.traverse((o) => { if (o.isMesh && o.userData.mat === 'drg_body') o.material = dark; });
     group.add(root); boss = root; head = bones.head;
-    const { createDragonRig } = await import('../look/dragon_rig.js?v=16'); bossRig = createDragonRig(bones, root, 'boss'); bossRig.fold = 1; bossRig.headUp = 0.4; bossRig.update(0.016);
+    const { createDragonRig } = await import('../look/dragon_rig.js?v=17'); bossRig = createDragonRig(bones, root, 'boss'); bossRig.fold = 1; bossRig.headUp = 0.4; bossRig.update(0.016);
   } catch (e) { /* 모델이 없으면 김·빛만 */ }
   const NB = noseM.geometry.attributes.aB, NS = noseM.geometry.attributes.aS;
   let sign = 0, signShown = -1;

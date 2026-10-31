@@ -6,16 +6,16 @@
 // ⑥ [관문 비행] 와! 구름을 뚫고 올라 오로라 아래로 · 약속 — 변화 = 책 둥지 쪽 '대장만 나쁘다' · 하늘 지도 안개 바다
 // 대사는 모두 새로 씀(원문 X) · 삼키는 장면 화면 밖 · 깜짝 X(예고 먼저) · 구름·떼·오로라는 G.place.group에 붙였다가 장소와 함께 치움
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=16';
-import { holdItem, makeItem, makePuffs } from './fx.js?v=16';
-import { toon, setTime } from '../look/kit.js?v=16';
-import { createClouds, towerSpheres, clumpSpheres, deckTop, DECK } from '../look/clouds.js?v=16';
-import { createNightSky, blendTime } from '../look/aurora.js?v=16';
-import { createFlock } from '../play/flock.js?v=16';
-import { createFlight, createFlightCam } from '../play/flight.js?v=16';
-import { createRng } from '../core/rng.js?v=16';
-import { flySense as fsFlat } from './flysense.js?v=16';
-import { HOWTO, ICONS, keyCap } from '../ui/art.js?v=16';
+import { wait, until, sayAll } from './runner.js?v=17';
+import { holdItem, makeItem, makePuffs } from './fx.js?v=17';
+import { toon, setTime } from '../look/kit.js?v=17';
+import { createClouds, towerSpheres, clumpSpheres, deckTop, DECK } from '../look/clouds.js?v=17';
+import { createNightSky, blendTime } from '../look/aurora.js?v=17';
+import { createFlock } from '../play/flock.js?v=17';
+import { createFlight, createFlightCam } from '../play/flight.js?v=17';
+import { createRng } from '../core/rng.js?v=17';
+import { flySense as fsFlat } from './flysense.js?v=17';
+import { HOWTO, ICONS, keyCap } from '../ui/art.js?v=17';
 
 const INK = '#2b2118';
 const svg = (b) => `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${b}</svg>`;
