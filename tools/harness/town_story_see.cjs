@@ -4,6 +4,8 @@
 //   단계 잇기(덧붙임 10-31): 맞힌 뒤 한 줄로 다음 할 일의 까닭(팬케이크 → 자전거 · 더운 날 → 마실 것 · 갯벌 → 염전) · 벼 베기 차례
 //   ③ 더운 날(일 끝 글 → 약속 고르기) ④ 갯벌(가만히 6초 → 끝 글 → 갯벌이 하는 일) ⑤ 나무·큰비·소금 의뢰 쪽지 글 ⑥ 옛 저장(목장 '만드는 일' 앞) → 새로고침 → '우유 가는 길'로(한 번만) · 페이지 오류 0
 //   COVER-1(10-31 메인이 기능·지역을 덮게): ⓪-2 장마다 처음 기능 하나(차례) ⑦ 1-4 돋보기 → 짐작(아까 본 자료) ⑧ 1-3 잠 → 우리 집 칠판 → 싹 → 씨감자 실험 ⑨ 2-1 가방 우유 · 우리 집 부엌 E ⑩ 2-4 바다 장터 바꾸기
+//   COVER-2(10-31 3막 나머지·4막·피날레·에필로그): ⓪-3 장 차례(새 단계 갈래) ⑪ 3-1 노선도 고르기 ⑫ 3-2 물때표 → 썰물에만 지켜보기 ⑬ 3-3 날씨 전선 ⑭ 3-4 야생동물(실제 솜씨 꼬리표) ⑮ 3-5 관광 안내소 → 더 높은 산 ⑯ 4-1 한 표 → 잔치 마당이 그 자리로 · 걸어 재기 → 창구
+//     ⑰ 4-3 집배원(실제 기록) ⑱ 4-5 층층골 화석 → 까망봉 ⑲ 4-6 장구 ⑳ 피날레 = 잔치 엔진 첫 잔치(내일로 당김 · 10시 · 잔치 마당 · 무대 · 모인 이웃) ㉑ 에필로그 마디탑 ㉒ 옛 저장(게시판의 q_contour · 피날레 '밤' 단계)
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const { chromium } = require('./pw.cjs'), { walker } = require('./lib_walk.cjs');
 let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails++; };
@@ -23,6 +25,19 @@ let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m)
     { const c9 = M.CHAPTERS.find(q => q.id === 'a2_2'); ok(c9.steps.find(q => q.id === 'sea').do.ok.includes('spring') && /논일/.test(c9.t[0]), '2-3 = 봄(모내기)·가을(벼 베기) ' + c9.t[0]); }
     { const c9 = M.CHAPTERS.find(q => q.id === 'a2_1'), sl = c9.steps.find(q => q.id === 'sell').do, gt = c9.steps.find(q => q.id === 'get'); ok(sl.get && sl.get['🧂'] === 1 && !(gt.intro && gt.intro.key === 'jump'), '2-4 = 팔기 또는 소금과 바꾸기 · 바로 가기 소개 X'); }
     ok(has('a1_5', /salt:work dry:law line:line/), '3-2 = 염전 → 생선 햇볕에 널기(실험 표 둘째) ' + ord('a1_5').join(' → '));
+    console.log('⓪-3 COVER-2 — 3막 나머지·4막·피날레·에필로그 차례');
+    ok(has('a1_4', /^n:note bline:choose bus:ride work:work/), '3-1 = 쪽지 → 노선도 고르기 → 버스 → 배추밭 ' + ord('a1_4').join(' → '));
+    ok(has('a1_5', /^n:note tide:choose line9:choose/) && M.CHAPTERS.find(q => q.id === 'a1_5').steps.find(q => q.id === 'watch').do.low === 1, '3-2 = 쪽지 → 물때표 → 지하철 · 지켜보기 = 썰물에만 ' + ord('a1_5').join(' → '));
+    ok(has('a2_4', /sea:season rain:front safe:choose/), '3-3 = 계절 → 날씨 전선(배추밭에서 비) → 약속 ' + ord('a2_4').join(' → '));
+    ok(has('a2_5', /plant:plant wild:sk line:line/), '3-4 = 심기 → 야생동물 살펴보기 → 한 줄 ' + ord('a2_5').join(' → '));
+    { const c9 = M.CHAPTERS.find(q => q.id === 'q_contour'), ix9 = M.CHAPTERS.findIndex(q => q.id === 'q_contour'); ok(c9.act === 3 && !c9.quest && c9.lamp === 1 && ix9 > M.CHAPTERS.findIndex(q => q.id === 'a2_5') && ix9 < M.CHAPTERS.findIndex(q => q.id === 'a3_1'), '3-5 = 의뢰 q_contour → 메인 3막(장 id 그대로 · 등불)'); ok(has('q_contour', /^n:note desk:go go:go map:contour why:choose steep:contour top:pace real:line$/), '3-5 = 관광 안내소 → 전망대 → 등고선 → 꼭대기까지 걸어 재기 ' + ord('q_contour').join(' → ')); }
+    ok(has('a3_1', /sign:go pace:pace desk:go line:line$/), '4-1 = 예정지 → 정류장까지 걸어 재기 → 창구 → 의견서 ' + ord('a3_1').join(' → '));
+    ok(has('a3_3', /^n:note post:rec first:choose give:invite/), '4-3 = 쪽지 → 집배원 체험 → 동네 고르기 → 초대 ' + ord('a3_3').join(' → '));
+    ok(has('a3_5', /^n:note fos:sk crater:sk b1:line/), '4-5 = 쪽지 → 층층골 화석 → 까망봉 → 자랑 ' + ord('a3_5').join(' → '));
+    ok(has('a3_6', /walk:go jg:rec line:line$/), '4-6 = 등불 길 → 장구 → 한 줄 ' + ord('a3_6').join(' → '));
+    ok(has('f1', /^n:note night:fnight go:go play:fplay greet:greet line:line$/), '피날레 = 단계 id 그대로 · 잔치 엔진 갈래 ' + ord('f1').join(' → '));
+    ok(has('c5', /go:go tower:rec$/), '에필로그 = 쪽지 전하기 → 마디탑 ' + ord('c5').join(' → '));
+    { const BODY = /^(tool|lost|bike|work|plant|have|buy|cook|give|sow|sprout|law|harvest|sell|swap|ride|metro|pace|sk|rec|fplay|watch|tmap)$/, none = M.CHAPTERS.filter(c => !c.quest && !c.hold && !c.old && !c.steps.some(q => BODY.test(q.do.type))).map(c => c.id); ok(!none.length, '몸·놀이 단계 0인 장 = ' + (none.join(', ') || '없음')); }
     { let nAi = 0; for (const c of M.CHAPTERS) for (const st of c.steps) if (/아이 집/.test(JSON.stringify(st))) nAi++; ok(nAi === 0, '이야기 글에 「아이 집」 부엌 0(' + nAi + ')'); } }
   const M2 = await import(require('path').resolve(__dirname, '../../v2/games/town_story.js')), ix = (c, id) => M2.CHAPTERS.find(q => q.id === c).steps.findIndex(q => q.id === id);
   const b = await chromium.launch({ args: ['--use-gl=angle', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] });
@@ -72,8 +87,8 @@ let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m)
     await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
 
     console.log('④ 갯벌 — 가만히 6초 → 갯벌이 물을 깨끗하게 → 묻기');
-    await ev(() => SM_TOWN.storyAt('a1_5', 4)); await W8(900); await shut();
-    { const a = await ev(() => { const v = SM_TOWN.game().S.story.v, a9 = v && v.at; if (a9) SD2.map.player.teleport([a9.x + 3, SM_TOWN.ground(a9.x + 3, a9.z) + 1.5, a9.z]); return a9 ? [Math.round(a9.x), Math.round(a9.z)] : null; }); ok(!!a, '갯벌 쉼터 곁(' + a + ')'); }
+    await ev(i9 => SM_TOWN.storyAt('a1_5', i9), ix('a1_5', 'watch')); await W8(900); await shut();
+    { const a = await ev(() => { const G9 = SM_TOWN.game().S, c9 = 300 + (((G9.day | 0) * 50 + 250) % 745); G9.min = [c9, c9 + 745, c9 - 745].find(m => m > 370 && m < 1430) || c9;   /* COVER-2: 숨구멍은 썰물에만(town_shore.js lowAt) */ const v = SM_TOWN.game().S.story.v, a9 = v && v.at; if (a9) SD2.map.player.teleport([a9.x + 3, SM_TOWN.ground(a9.x + 3, a9.z) + 1.5, a9.z]); return a9 ? [Math.round(a9.x), Math.round(a9.z)] : null; }); ok(!!a, '갯벌 쉼터 곁(' + a + ')'); }
     { let ban = ''; for (let i = 0; i < 24; i++) { await W8(500); ban = await ev(() => (document.getElementById('hudBan') || {}).textContent || ''); if (/깨끗해지도록/.test(ban)) break; } ok(/게는 갯벌 흙 속 찌꺼기를 먹고 조개는 물을 걸러 먹어서/.test(ban), '지켜보기 끝 배너 「' + ban.slice(0, 60) + '」'); }
     { const s = await waitStep(q => q.id === 'why', 5000); ok(s.id === 'why', '갯벌이 하는 일 고르기(' + s.id + ')'); } ok(await panel(), '고르기 창'); await pickAns(); { const s = await S(), ban = await ev(() => (document.getElementById('hudBan') || {}).textContent || ''); ok(s.id === 'salt', '맞히면 염전(' + s.id + ')'); ok(/옆 염전에서 소금도/.test(ban), '이음 한 줄 「' + ban.slice(0, 60) + '」'); }
     await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
@@ -115,6 +130,92 @@ let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m)
       ok(/소금이랑 하나씩/.test(d), '상인 말 = 팔기 또는 바꾸기(' + d.replace(/\s+/g, ' ').slice(0, 60) + ')'); const ch = await ev(() => [...document.querySelectorAll('.twn-dlg button, .twn-dlg [data-k]')].map(b9 => b9.textContent.trim())); console.log('    고르기: ' + ch.join(' / '));
       await ev(() => { const b9 = [...document.querySelectorAll('.twn-dlg button, .twn-dlg [data-k]')].find(q => /🍓/.test(q.textContent)); if (b9) b9.click(); }); await W8(1200); const s1 = await ev(() => SM_TOWN.game().count('🧂')), s = await S(); ok(s1 === s0 + 1 && s.id === 'line', '🍓 주고 🧂 받음 → 수첩(' + s0 + '→' + s1 + ' · ' + s.id + ')'); } }
     await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
+
+    console.log('⑪ COVER-2 3-1 — 노선도에서 번호 고르기(노선 그림이 창 안에)');
+    await ev(i9 => SM_TOWN.storyAt('a1_4', i9), ix('a1_4', 'bline')); await W8(900);
+    { const s = await S(); if (s.id !== 'bline') console.log('    (노선이 없거나 학교 앞이면 건너뜀 · ' + s.id + ')'); else { ok(await panel(), '노선도 고르기 창'); const r = await ev(() => ({ lb: [...document.querySelectorAll('.twn-p button[data-k]')].map(b9 => b9.textContent.trim()), cv: !!document.querySelector('.twn-p canvas.twn-qsnip'), A: SM_TOWN.storyAns() })); ok(r.cv && r.lb.length >= 2 && r.lb.every(t => /번\(/.test(t)), '보기 = 번호(색) ' + r.lb.join(' / ') + ' · 그림 ' + r.cv + ' · 답 ' + r.A);
+      await pickAns(); const s2 = await S(), ban = await ev(() => (document.getElementById('hudBan') || {}).textContent || ''); ok(s2.id === 'bus' && /갈아타요/.test(ban), '맞히면 버스 타기 · 한 줄에 갈아타기(' + s2.id + ' · 「' + ban.slice(0, 60) + '」)'); } }
+    await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
+
+    console.log('⑫ COVER-2 3-2 — 물때표(창 안) → 썰물에만 지켜보기'); const tideM = { hi: null, lo: null };
+    const waitLbl = async () => { await shut(); await ev(() => SM_TOWN.storyOpen()); await W8(500); const t = await ev(() => { const b9 = document.querySelector('.twn-p [data-a="wait"]'); return b9 ? b9.textContent.trim() : ''; }); await shut(); return t; };
+    await ev(() => { SM_TOWN.game().S.min = 7 * 60; }); await ev(i9 => SM_TOWN.storyAt('a1_5', i9), ix('a1_5', 'tide')); await W8(900); ok(await panel(), '물때 고르기 창');
+    { const r = await ev(() => ({ tx: (document.querySelector('.twn-p') || {}).innerText || '', lb: [...document.querySelectorAll('.twn-p button[data-k]')].map(b9 => b9.dataset.k + '=' + b9.textContent.trim()) })); ok(/물때표\(오늘\)/.test(r.tx) && /썰물/.test(r.tx) && r.lb.length >= 2 && !r.lb.some(t => /썰물|밀물/.test(t)), '창 안 물때표 + 보기는 시각만(' + r.lb.join(' / ') + ')');
+      for (const t of r.lb) { const [k, lab] = t.split('='), m9 = (lab.match(/(\d\d):(\d\d)/) || []).slice(1).map(Number); if (m9.length < 2) continue; const mm = m9[0] * 60 + m9[1]; if (/^H/.test(k) && tideM.hi == null) tideM.hi = mm; if (/^L/.test(k) && mm + 20 > 7 * 60 && tideM.lo == null) tideM.lo = mm + 20; }
+      const hk = r.lb.map(t => t.split('=')[0]).find(k => /^H/.test(k)); if (hk) { await ev(k => { const b9 = document.querySelector('.twn-p button[data-k="' + k + '"]'); if (b9) b9.click(); const o9 = document.querySelector('.twn-p [data-a="ok"]'); if (o9) o9.click(); }, hk); await W8(600); const t = await ev(() => (document.querySelector('.twn-p .twn-chr') || {}).textContent || ''); ok(/밀물이라/.test(t), '밀물 시각 = 반응 「' + t.slice(0, 40) + '」'); } }
+    await pickAns(); { const s = await S(), ban = await ev(() => (document.getElementById('hudBan') || {}).textContent || ''); ok(s.id !== 'tide' && /물이 빠져 갯벌이 드러나요/.test(ban), '맞히면 다음(' + s.id + ' · 「' + ban.slice(0, 50) + '」)'); }
+    await shut(); await ev(i9 => SM_TOWN.storyAt('a1_5', i9), ix('a1_5', 'watch')); await W8(900); await shut();
+    { const TM = tideM; if (!TM.hi || !TM.lo) console.log('    (물때 보기 없음 · ' + JSON.stringify(TM) + ')'); else {
+      await ev(m => { const G = SM_TOWN.game().S, a9 = G.story.v.at; G.min = m; if (a9) SD2.map.player.teleport([a9.x + 2, SM_TOWN.ground(a9.x + 2, a9.z) + 1.5, a9.z]); }, TM.hi); await W8(2600); const ban = await ev(() => (document.getElementById('hudBan') || {}).textContent || '');
+      ok(/밀물이라 갯벌이 물에 잠겼어요/.test(ban) && (await S()).id === 'watch', '밀물(' + TM.hi + '분) = 아직(「' + ban.slice(0, 40) + '」)'); const wt = await waitLbl(); ok(/썰물/.test(wt), '기다리기 단추 = ' + wt);
+      await ev(m => { SM_TOWN.game().S.min = m; }, TM.lo); let s = null; for (let i = 0; i < 16; i++) { await W8(700); s = await S(); if (s.id !== 'watch') break; } ok(s.id === 'why', '썰물(' + TM.lo + '분) + 가만히 6초 → 갯벌이 하는 일(' + s.id + ')'); } }
+    await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
+
+    console.log('⑬ COVER-2 3-3 — 날씨 전선: 비 오는 날 배추밭 곁에서');
+    await ev(i9 => SM_TOWN.storyAt('a2_4', i9), ix('a2_4', 'rain')); await W8(900); await shut();
+    { const s0 = await ev(() => SM_TOWN.story().step || {}); ok(s0.id === 'rain' && s0.type === 'front', '단계 = 날씨 전선(' + s0.id + ':' + s0.type + ')'); await W8(1500); ok((await S()).id === 'rain', '맑은 날 = 그대로');
+      await ev(() => SM_TOWN.rules.wx('rain')); await W8(1500); const t = await ev(() => SM_TOWN.storyTarget()); ok(!!t, '비 오는 날 목적지 = ' + (t && t.name));
+      if (t) { await ev(t9 => { const x = t9.x + 3, z = t9.z + 3; SD2.map.player.teleport([x, SM_TOWN.ground(x, z) + 1.5, z]); SM_TOWN.game().S.min = 20 * 60; }, t); let s = null; for (let i = 0; i < 10; i++) { await W8(600); s = await S(); if (s.id !== 'rain') break; } const ban = await ev(() => (document.getElementById('hudBan') || {}).textContent || ''); ok(s.id === 'safe', '배추밭 곁 = 산길 약속으로(' + s.id + ' · 「' + ban.slice(0, 50) + '」)'); }
+      await ev(() => SM_TOWN.rules.wx('clear')); }
+    await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
+
+    console.log('⑭ COVER-2 3-4 — 야생동물(마을 솜씨 꼬리표 wild:)');
+    await ev(i9 => SM_TOWN.storyAt('a2_5', i9), ix('a2_5', 'wild')); await W8(900); await shut();
+    { const t = await ev(() => SM_TOWN.storyTarget()); ok(!!t && /천연기념물/.test(t.name), '목적지 = ' + (t && t.name)); await ev(() => SM_TOWN.skUp('look', 1, 'shore:x')); await W8(400); ok((await S()).id === 'wild', '다른 꼬리표 = 아직'); await ev(() => SM_TOWN.skUp('look', 1, 'wild:deer')); await W8(700); const s = await S(), ban = await ev(() => (document.getElementById('hudBan') || {}).textContent || ''); ok(s.id === 'line' && /숲이 우거지면/.test(ban), 'wild: → 한 줄(' + s.id + ')'); }
+    await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
+
+    console.log('⑮ COVER-2 3-5 — 관광 안내소(나들터) → 전망대 → 더 높은 산');
+    await ev(i9 => SM_TOWN.storyAt('q_contour', i9), ix('q_contour', 'desk')); await W8(900); await shut();
+    { const t = await ev(() => { const t9 = SM_TOWN.storyTarget(); return t9 ? { ...t9, reg: SM_TOWN.regionAt ? SM_TOWN.regionAt(t9.x, t9.z) : '' } : null; }); ok(!!t && /관광 안내소/.test(t.name) && t.reg === '관광', '목적지 = ' + (t && t.name) + ' (' + (t && t.reg) + ')'); if (t) { await ev(t9 => { const x = t9.x + 1, z = t9.z + 1; SD2.map.player.teleport([x, SM_TOWN.ground(x, z) + 1.5, z]); }, t); let s = null; for (let i = 0; i < 8; i++) { await W8(500); s = await S(); if (s.id !== 'desk') break; } ok(s.id === 'go', '안내소 → 전망대(' + s.id + ')'); } }
+    await ev(i9 => SM_TOWN.storyAt('q_contour', i9), ix('q_contour', 'top')); await W8(900); await shut();
+    { const t = await ev(() => SM_TOWN.storyTarget()); ok(!!t && /꼭대기/.test(t.name), '꼭대기 목적지(' + (t && [Math.round(t.x), Math.round(t.z)]) + ')'); if (t) { await ev(t9 => { SD2.map.player.teleport([t9.x, SM_TOWN.ground(t9.x, t9.z) + 1.5, t9.z]); }, t); let s = null; for (let i = 0; i < 8; i++) { await W8(500); s = await S(); if (s.id !== 'top') break; } const ban = await ev(() => (document.getElementById('hudBan') || {}).textContent || ''); ok(s.id === 'real' && /꼭대기까지 걸어서 약 \d+초/.test(ban), '꼭대기 = 걸어 잰 시간 → 우리 동네(' + s.id + ' · 「' + ban.slice(0, 50) + '」)'); } }
+    await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
+
+    console.log('⑯ COVER-2 4-1 — 한 표 → 잔치 마당이 그 자리로 · 정류장까지 걸어 재기 → 창구(시내)');
+    { const r = await ev(() => { const F = SM_TOWN.feast(), s0 = F.info().site; SM_TOWN.game().S.story.fest.site = '축구장'; F.sec(true); const s1 = F.info().site, P = SM_TOWN.places().find(q => q.name === '축구장'); return { s0, s1, P: P ? [P.x, P.z] : null }; }); const d1 = r.P && r.s1 ? Math.hypot(r.s1[0] - r.P[0], r.s1[1] - r.P[1]) : 1e9; ok(d1 < 160, '잔치 마당 → 축구장 둘레(' + JSON.stringify(r.s0) + ' → ' + JSON.stringify(r.s1) + ' · ' + Math.round(d1) + 'm)'); }
+    await ev(i9 => SM_TOWN.storyAt('a3_1', i9), ix('a3_1', 'pace')); await W8(900); await shut();
+    { const t = await ev(() => SM_TOWN.storyTarget()); ok(!!t && /정류장/.test(t.name), '걸어 잴 곳 = ' + (t && t.name)); if (t) { await W8(3200); await ev(t9 => { SD2.map.player.teleport([t9.x + 1, SM_TOWN.ground(t9.x + 1, t9.z) + 1.5, t9.z]); }, t); let s = null; for (let i = 0; i < 8; i++) { await W8(500); s = await S(); if (s.id !== 'pace') break; } const ban = await ev(() => (document.getElementById('hudBan') || {}).textContent || ''); ok(s.id === 'desk' && /걸어서 약 \d+초/.test(ban), '잰 시간이 수첩에 → 창구(' + s.id + ' · 「' + ban.slice(0, 60) + '」)'); } }
+    { const t = await ev(() => { const t9 = SM_TOWN.storyTarget(); return t9 ? { ...t9, reg: SM_TOWN.regionAt ? SM_TOWN.regionAt(t9.x, t9.z) : '' } : null; }); ok(!!t && /행정복지센터/.test(t.name) && t.reg === '시내', '창구 = ' + (t && t.name) + ' (' + (t && t.reg) + ')'); if (t) { await ev(t9 => { SD2.map.player.teleport([t9.x + 1, SM_TOWN.ground(t9.x + 1, t9.z) + 1.5, t9.z]); }, t); let s = null; for (let i = 0; i < 8; i++) { await W8(500); s = await S(); if (s.id !== 'desk') break; } ok(s.id === 'line', '창구 → 의견서(' + s.id + ')'); ok(await panel(), '의견서 문장 틀'); const nb = await ev(() => (document.querySelector('.twn-p') || {}).innerText || ''); ok(/걸어서 약 \d+초/.test(nb), '의견서 창에 잰 것(수첩)'); } }
+    await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
+
+    console.log('⑰ COVER-2 4-3 — 집배원 체험(마을 기록 job)');
+    await ev(i9 => SM_TOWN.storyAt('a3_3', i9), ix('a3_3', 'post')); await W8(900); await shut();
+    { const t = await ev(() => SM_TOWN.storyTarget()); ok(!!t && /우체국/.test(t.name), '목적지 = ' + (t && t.name)); await ev(() => SM_TOWN.rec().add('job', { k: 'fire', done: 1, pr: 0 })); await W8(400); ok((await S()).id === 'post', '다른 체험 = 아직'); await ev(() => SM_TOWN.rec().add('job', { k: 'post', done: 1, pr: 0 })); await W8(700); ok((await S()).id === 'first', '집배원 끝 → 동네 고르기'); }
+    await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
+
+    console.log('⑱ COVER-2 4-5 — 판 밖 층층골 화석 → 까망봉 분화구(솜씨 꼬리표 xp:)');
+    await ev(i9 => SM_TOWN.storyAt('a3_5', i9), ix('a3_5', 'fos')); await W8(900); await shut();
+    { const s0 = await S(); if (s0.id !== 'fos') console.log('    (판 밖이 없는 마을 = 건너뜀 · ' + s0.id + ')'); else { const t = await ev(() => SM_TOWN.storyTarget()); ok(!!t && /층층골/.test(t.name), '목적지 = ' + (t && t.name)); await ev(() => SM_TOWN.skUp('look', 2, 'xp:fos')); await W8(700); const t2 = await ev(() => SM_TOWN.storyTarget()); ok((await S()).id === 'crater' && /까망봉/.test((t2 || {}).name || ''), '화석 → 까망봉'); await ev(() => SM_TOWN.skUp('look', 2, 'xp:crater')); await W8(700); ok((await S()).id === 'b1', '분화구 → 자랑 쓰기'); } }
+    await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
+
+    console.log('⑲ COVER-2 4-6 — 장구 선생님께 장단(마을 기록 janggu)');
+    await ev(i9 => SM_TOWN.storyAt('a3_6', i9), ix('a3_6', 'jg')); await W8(900); await shut();
+    { const s0 = await S(); if (s0.id !== 'jg') console.log('    (장구 선생님이 없는 마을 = 건너뜀)'); else { const t = await ev(() => SM_TOWN.storyTarget()); ok(!!t && /장구/.test(t.name), '목적지 = ' + (t && t.name)); await ev(() => SM_TOWN.rec().add('janggu', { open: 'learn', lv: 0 })); await W8(400); ok((await S()).id === 'jg', '창만 열면 = 아직'); await ev(() => SM_TOWN.rec().add('janggu', { lv: 0, s: 2, up: null })); await W8(700); ok((await S()).id === 'line', '한 판 끝 → 한 줄'); } }
+    await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
+
+    console.log('⑳ COVER-2 피날레 = 잔치 엔진 첫 잔치(내일로 당김 → 10시 → 잔치 마당 → 무대 → 모인 이웃)');
+    { const d0 = await ev(() => SM_TOWN.game().S.day); await ev(() => SM_TOWN.storyAt('f1', 0)); const t = await dlgAll(); const I = await ev(() => SM_TOWN.feast().info()); ok(I.fd === d0 + 1 && I.n === 0, '잔치 날 = 내일(' + I.fd + ' · 오늘 ' + d0 + ' · 첫 잔치 n ' + I.n + ')'); ok(/우리 마을 첫 잔치 날이 내일로/.test(t), '쪽지 = 엔진 판(' + t.slice(0, 50) + '…)');
+      const s1 = await waitStep(q => q.id !== 'n', 6000); ok(s1.id === 'night', '쪽지 → 잔치 날 기다리기(' + s1.id + ')'); const w1 = await waitLbl(); ok(/잔치 날 아침/.test(w1), '기다리기 = ' + w1);
+      await ev(fd => { const G = SM_TOWN.game().S; G.day = fd; G.min = 10 * 60 + 30; SM_TOWN.feast().sec(true); }, I.fd); let s = null; for (let i = 0; i < 10; i++) { await W8(600); s = await S(); if (s.id !== 'night') break; } ok(s.id === 'go', '잔치 날 10시 → 잔치 마당 가기(' + s.id + ')');
+      const ty = await ev(() => { const t9 = SM_TOWN.storyTarget(), y = SM_TOWN.feast().yard(); return { t: t9, y }; }); ok(!!ty.t && !!ty.y && Math.hypot(ty.t.x - ty.y.door[0], ty.t.z - ty.y.door[1]) < 2, '목적지 = 엔진 잔치 마당(' + (ty.t && ty.t.name) + ')');
+      if (ty.t) { await ev(t9 => { SD2.map.player.teleport([t9.x, SM_TOWN.ground(t9.x, t9.z) + 1.5, t9.z]); }, ty.t); for (let i = 0; i < 10; i++) { await W8(600); s = await S(); if (s.id !== 'go') break; } ok(s.id === 'play', '잔치 마당 → 무대·잔칫상(' + s.id + ')'); }
+      await ev(() => { const f = SM_TOWN.game().S.feast; f.fx.show = 1; }); for (let i = 0; i < 6; i++) { await W8(600); s = await S(); if (s.id !== 'play') break; } ok(s.id === 'greet', '무대 장단(fx.show) → 인사(' + s.id + ')');
+      let G9 = []; for (let i = 0; i < 8 && G9.length < 2; i++) { await W8(800); await ev(() => SM_TOWN.feast().sec(true)); G9 = await ev(() => SM_TOWN.feastP ? SM_TOWN.feastP() : []); } ok(G9.length >= 2, '모인 이웃 ' + G9.length); for (const g of G9.slice(0, 3)) { await ev(g9 => { SD2.map.player.teleport([g9[1] + 0.6, SM_TOWN.ground(g9[1] + 0.6, g9[2]) + 1.5, g9[2]]); }, g); await W8(1600); s = await S(); if (s.id !== 'greet') break; } ok(s.id === 'line', '이웃 둘 인사 → 한 줄(' + s.id + ')');
+      const tents = await ev(() => { const m = SM_TOWN.fest ? SM_TOWN.fest() : null; return m ? m.pot : 'na'; }); ok(!tents, '이야기 천막·투호 항아리 X(잔치 마당 = 엔진 · ' + JSON.stringify(tents) + ')'); }
+    await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
+
+    console.log('⑳-2 COVER-2 피날레 도중 잔치 날을 놓치면 → 다음 잔치를 내일로 · 잔치 날 기다리기부터');
+    { await ev(() => { const G = SM_TOWN.game().S, f = G.feast; G.day = (f.fd | 0) + 1; G.min = 8 * 60; SM_TOWN.feast().sec(true); }); await ev(i9 => SM_TOWN.storyAt('f1', i9), ix('f1', 'play')); let s = null; for (let i = 0; i < 10; i++) { await W8(600); s = await S(); if (s.id === 'night') break; } const I = await ev(() => SM_TOWN.feast().info()); ok(s.id === 'night' && I.fd === I.day + 1, '놓친 잔치 = 잔치 날 기다리기로 · 다음 잔치 내일(' + s.id + ' · ' + I.fd + '/' + I.day + ')'); }
+    await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
+
+    console.log('㉑ COVER-2 에필로그 — 쪽지 전하기 → 마디탑(마을 기록 tower)');
+    await ev(i9 => SM_TOWN.storyAt('c5', i9), ix('c5', 'tower')); await W8(900); await shut();
+    { const s0 = await S(); if (s0.id !== 'tower') console.log('    (마디탑이 없는 마을 = 건너뜀)'); else { const t = await ev(() => SM_TOWN.storyTarget()); ok(!!t && /마디탑/.test(t.name), '목적지 = ' + (t && t.name)); await ev(() => SM_TOWN.rec().add('tower', { n: 1 })); await W8(900); const dn = await ev(() => !!SM_TOWN.game().S.story.done.c5); ok(dn, '마디탑 → 에필로그 끝'); } }
+    await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
+
+    console.log('㉒ COVER-2 옛 저장 — 게시판에 붙은 q_contour · 피날레 \'밤\' 단계');
+    { const r = await ev(() => { const s = SM_TOWN.game().S.story; s.board = s.board || { day: 0, list: [], took: {} }; s.board.list.push('q_contour'); s.board.took.q_contour = 1; return SM_TOWN.storyCan('q_contour'); }); console.log('    q_contour 열림(3막 열림에 따름) = ' + r); await ev(() => SM_TOWN.storyOpen && SM_TOWN.storyOpen()); await W8(700); const tx = await ev(() => (document.querySelector('.twn-p') || {}).innerText || ''); ok(!/본부 의뢰[\s\S]*측량 도우미[\s\S]*이어 하기|맡기/.test(tx.split('3막')[0] || ''), '목록 창 = 오류 없음 · 게시판 칸에 측량 도우미 X'); }
+    await shut();
     console.log('⑥ 옛 저장 — 목장 \'만드는 일\' 앞에 서 있던 판 → 새로고침 → 우유 가는 길부터');
     await ev(() => { const s = SM_TOWN.game().S.story; s.cur = 'a1_3'; s.i = 2; s.sid = 'make'; s.v = { who: 'pasture' }; delete s.mv31; s.paused = null; SM_TOWN.game().mark && SM_TOWN.game().mark(); return SM_TOWN.save && SM_TOWN.save().flush && SM_TOWN.save().flush(); });
     await W8(1500); await boot(); await W8(2500);

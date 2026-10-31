@@ -12,7 +12,7 @@
 import { regName } from './town_region.js?v=1';
 import { SKILLS, SK_ORDER, levelOf } from './town_skill.js?v=5';
 import { EV, yrWord } from './town_season.js?v=6';
-import { nightsW } from './town_feast.js?v=6';
+import { nightsW } from './town_feast.js?v=7';
 export const AFTER_V = 1;
 const T2 = (ko, en) => [ko, en];
 const keys = o => (o && typeof o === 'object' && !Array.isArray(o) ? Object.keys(o) : []);

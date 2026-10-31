@@ -6,7 +6,7 @@
 //   지킴: 실제 풍습만(지어내기 X · 종교 강요 X) · 판타지·전투 X(씨름 = 구경·응원만) · 실명 X(이웃 = 하는 일·어르신) · 지역 비하 X · 숫자·% X · 새 Light X(달집 불·달 = MeshBasic)
 //     · 매 프레임 일 0(1초 칸 sec) · 저절로 뜨는 알림 = say(t, s, 1) · 사람 수 그대로(있는 일꾼을 옮기고 옷만 바꿈) · 홍보판 X(A.on())
 //   저장 GAME.S.season = { v, d 그날, id 그날 행사, st 그날 한 것, mv { '행사:본래 날': 1 } 태풍으로 미룸, ann 알림 날, past [{ id, d, ok }] }
-import { nightsW } from './town_feast.js?v=6';
+import { nightsW } from './town_feast.js?v=7';
 export const SEASON_V = 1;
 const T2 = (ko, en) => [ko, en];
 const FONT = '"Noto Sans KR","Noto Sans CJK KR","Apple SD Gothic Neo","Malgun Gothic","NanumGothic",sans-serif';

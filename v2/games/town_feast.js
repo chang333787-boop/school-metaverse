@@ -15,6 +15,8 @@
 //     ③ 잔치가 끝날 때마다 마을에 기념물 하나(mem · 첫 잔치 = 기념 나무 · 그 뒤 = 주제마다 실제 풍습 물건) — 잔치 마당 가장자리 여섯 자리 · 그리기 하나(합친 상자)
 import { regName } from './town_region.js?v=1';
 export const FEAST_V = 1, FIRST_DAY = 14, GAP = 14, PER = 2, CAP = 2, KEEP_MIN = 2, MEM_N = 6;
+/* COVER-2(10-31 사용자 "ㄱ" · '첫 잔치'가 이야기 피날레와 이 엔진에서 두 번 열리던 것 → 하나로): 이야기를 하는 판(A.storyOn)의 첫 잔치 = 이야기 피날레 — 날은 늦어도 STORY_DAY(한 해 끝 · 계절 7일 × 4) · 4막을 마치면 이야기가 pull()로 내일로 당김 · 잔치 마당 = 이야기 4-1에서 한 표를 받은 자리(A.home · 없으면 예전 자리) */
+export const STORY_DAY = 28;
 const T2 = (ko, en) => [ko, en];
 /* 손님 동네(두 번째 잔치부터 · 들고 오는 것 = 그 동네에서 나는 것 · 반가워하는 것 = 그 동네에서 안 나는 것 — 모든 동네가 주고 또 받음 · 손님 말은 모인 일꾼 몸 위) */
 export const GUESTS = { 바다: { bring: '🐟', like: '🍄' }, 산: { bring: '🍄', like: '🧂' }, 들: { bring: '🍓', like: '🌿' }, 강: { bring: '🥒', like: '🍯' }, 시내: { bring: '🍞', like: '🍐' }, 관광: { bring: '🍦', like: '🍓' } };
@@ -116,7 +118,7 @@ export function createFeast(A) {
   const zero = () => ({ food: 0, deco: 0, show: 0, guest: 0, safe: 0 });
   const S = () => { const g = G(); let s = g.feast; if (!s || typeof s !== 'object' || s.v !== FEAST_V) s = g.feast = { v: FEAST_V, n: 0, fd: 0, d0: 0, th: 'homi', lv: zero(), dc: null, ann: -1, ann0: -1, fx: {}, cn: null, past: [] };
     if (!s.lv || typeof s.lv !== 'object') s.lv = zero(); if (!s.fx || typeof s.fx !== 'object') s.fx = {}; if (!Array.isArray(s.past)) s.past = []; if (!Array.isArray(s.mem)) s.mem = []; return s; };
-  let css = null, dead = false, SITE = null, VIS = {}, HOT = {}, BKEY = '', PKEY = '', LIT = null, GAT = 0, NLN = null, chipK = '', chipT = 0, tally0 = null, metT = 0, metT2 = 0; const DBG = [];
+  let HOMEK = null, css = null, dead = false, SITE = null, VIS = {}, HOT = {}, BKEY = '', PKEY = '', LIT = null, GAT = 0, NLN = null, chipK = '', chipT = 0, tally0 = null, metT = 0, metT2 = 0; const DBG = [];
   /* AFTER-1: 지난 잔치에서 남은 물건 이름 · 이번 손님 */
   const keptNames = () => { const s = S(), k = s.keep || {}; return s.n > 0 ? B_ORDER.filter(b => k[b] && st(b) >= 1).map(b => L(BR[b].things[0])) : []; };
   const guestOf = () => { const s = S(); return s.n > 0 && s.gu && GUESTS[s.gu] ? { r: s.gu, nm: regName(s.gu, en()) || s.gu, ...GUESTS[s.gu] } : null; };
@@ -137,7 +139,7 @@ export function createFeast(A) {
   const thingsOf = b => BR[b].things.slice(0, st(b)).map(L);
 
   // ───────── 잔치 마당 자리(이웃이 모이는 정자 둘레 · 없으면 장터 · 행정복지센터 · 학교 앞) ─────────
-  function site() { if (SITE) return SITE; const P = (A.spots && A.spots()) || {}, c = P.pav ? P.pav.c : P.stall ? P.stall : P.hall ? P.hall.door : [16.5, 50]; const sp = A.site ? A.site(c[0], c[1]) : null; if (!sp) return null;
+  function site() { if (SITE) return SITE; const P = (A.spots && A.spots()) || {}, H9 = A.home ? A.home() : null, c0 = P.pav ? P.pav.c : P.stall ? P.stall : P.hall ? P.hall.door : [16.5, 50]; let sp = H9 && A.site ? A.site(H9[0], H9[1]) : null; if (!sp && A.site) sp = A.site(c0[0], c0[1]); if (!sp) return null;   /* COVER-2: 이야기에서 한 표를 받은 자리 둘레 먼저 */
     const ry = sp.ry, cs = Math.cos(ry), sn = Math.sin(ry); SITE = { x: sp.x, z: sp.z, ry, Q: (lx, lz) => [sp.x + lx * cs + lz * sn, sp.z - lx * sn + lz * cs] }; log('site ' + sp.x.toFixed(1) + ',' + sp.z.toFixed(1) + ' ry ' + ry.toFixed(2)); return SITE; }
   const toDoor = () => { const P = site(); if (!P) return null; const [x, z] = P.Q(-6.5, 10); return { icon: '🎉', name: en() ? 'feast yard' : '잔치 마당', door: [x, z] }; };
 
@@ -249,8 +251,8 @@ export function createFeast(A) {
     const s = S(), o = s.cn; s.cn = cn; if (!o) return; if (cn.cells > o.cells) add('guest', 'st:cells'); if (cn.typ > o.typ) add('safe', 'st:typh'); if (o.d === d && cn.deco > o.deco) add('deco', 'st:deco'); }
 
   // ───────── 날짜 ─────────
-  function plan(force) { const s = S(), d = day(); if (s.fd > 0 && !force) return; const th = themeOf(A.season ? A.season(Math.max(FIRST_DAY, d + 7)) : 'now');
-    Object.assign(s, { n: 0, fd: Math.max(FIRST_DAY, d + 7), d0: d, th, lv: zero(), dc: null, fx: {}, ann: -1, ann0: -1 }); mark(); log('plan fd ' + s.fd + ' ' + th); }
+  function plan(force) { const s = S(), d = day(); if (s.fd > 0 && !force) return; const f0 = A.storyOn && A.storyOn() ? STORY_DAY : FIRST_DAY, th = themeOf(A.season ? A.season(Math.max(f0, d + 7)) : 'now');   /* COVER-2: 이야기를 하는 판 = 늦어도 한 해 끝(그 전에 이야기 피날레가 pull로 당김) */
+    Object.assign(s, { n: 0, fd: Math.max(f0, d + 7), d0: d, th, lv: zero(), dc: null, fx: {}, ann: -1, ann0: -1 }); mark(); log('plan fd ' + s.fd + ' ' + th); }
   /* AFTER-1 다음 손님 동네: 이 마을에 있는 동네(A.regions) 가운데 돌아가며 · 바로 앞 손님과 다르게 · 잔치 마당 동네(읍내)는 주인이라 빼고 */
   function nextGuest(s) { const have = A.regions ? A.regions() : null, C = GUEST_ORDER.filter(r => !have || have.includes(r)), L9 = C.length ? C : GUEST_ORDER; let g = L9[(s.n | 0) % L9.length]; if (g === s.gu && L9.length > 1) g = L9[((s.n | 0) + 1) % L9.length]; return g; }
   function finish() { const s = S(), d = day(), e = en(); if (!(s.fd > 0 && d > s.fd)) return false; const stg = stages();
@@ -274,7 +276,7 @@ export function createFeast(A) {
   /* 잔치 날 모이기(앞 두 줄 · 무대를 봄) */
   function gatherSpots(n) { const P = site(); if (!P) return []; const out = [], [sx, sz] = P.Q(0, -6.6); for (let i = 0; i < n; i++) { const row = i < 6 ? 0 : 1, k = row ? i - 6 : i, cnt = row ? 5 : 6, lx = (k - (cnt - 1) / 2) * 1.5, lz = row ? 0.9 : -1.6, [x, z] = P.Q(lx + (row ? 0.4 : 0), lz); out.push([x, z, Math.atan2(sx - x, sz - z)]); } return out; }
   function feastSec() { const s = S(), e = en(), on = festOn(), m = min();
-    const want = on ? Math.min(11, 4 + B_ORDER.reduce((a, b) => a + st(b), 0) / 2 | 0) : 0; if (want !== GAT) { const got = A.gather(want ? gatherSpots(want) : null); GAT = want; log('gather ' + want + ' → ' + got); }
+    const want = on ? Math.min(11, 4 + B_ORDER.reduce((a, b) => a + st(b), 0) / 2 | 0) : 0; if (want !== GAT) { const got = A.gather(want ? gatherSpots(want) : null); GAT = want && !got ? 0 : want; log('gather ' + want + ' → ' + got); }   /* COVER-2: 한 명도 못 모았으면(시각을 건너뛴 직후 일꾼이 아직 집) 다음 칸에 다시 */
     if (on && !s.fx.met && A.me) { const me = A.me(), P = site(); if (P && Math.hypot(me.x - P.x, me.z - P.z) < 16) { s.fx.met = 1; mark(); const mk = B_ORDER.filter(b => st(b) > 0), ms = B_ORDER.filter(b => st(b) === 0);
         A.bubbleW(0, L(mk.length ? BR[mk[(day() + mk.length) % mk.length]].made : T2('준비는 조금 모자랐어도 이렇게 모이니 좋다.', 'We were not fully ready, but it is good to be together.')));
         const t2 = ms.length ? L(BR[ms[day() % ms.length]].miss) : L(T2('오늘 잔치 마당이 가득 찼어. 다섯 갈래 준비가 다 나왔네.', 'The feast yard is full today. All five kinds of preparation came out.'));
@@ -286,6 +288,7 @@ export function createFeast(A) {
     if (on && m >= 20 * 60 && !s.fx.ph && !s.fx.phc && !A.busy() && !A.panel()) { s.fx.phc = 1; mark(); A.say('📷 ' + (e ? 'Before the feast ends, take this year’s feast photo at the board.' : '잔치가 끝나기 전에 게시판에서 올해 잔치 사진을 찍어요.'), 4, 1); chipK = 'ph'; chipT = performance.now(); A.chip('twn-fst', '📷 ' + (e ? 'Feast photo' : '잔치 사진'), { onClick: () => { A.chip('twn-fst', null); chipK = ''; const p = toDoor(); if (p) A.route(p); } }); } }
   function sec(force) { if (dead || !A.on()) return; const s = S(), d = day();
     if (!(s.fd > 0)) plan(); if (d > s.fd) finish();
+    { const hk = A.home ? String(A.home() || '') : ''; if (HOMEK === null) HOMEK = hk; else if (hk !== HOMEK) { HOMEK = hk; if (SITE && !festOn()) { rebuild(); log('home → ' + hk); } } }   /* COVER-2: 이야기 4-1 한 표 = 잔치 마당이 그 자리로(잔치 중이면 끝난 뒤) */
     if (isDay() && A.storm && A.storm() && min() < 600) { s.fd++; s.ann = -1; mark(); const t9 = '🌀 ' + (en() ? 'A typhoon is here, so the feast moves to tomorrow.' : '태풍이 와서 잔치를 하루 미뤄요.'); if (!(A.stormNote && A.stormNote(t9))) A.say(t9, 4, 1); log('storm → ' + s.fd); }   /* TYPH-2 = 태풍 날 창 안 한 줄(따로 알림 X) */
     if (!VIS.board) buildAll(); counters();
     if (A.ready() && !A.busy() && !A.panel()) { if (s.ann0 !== s.n) { s.ann0 = s.n; s.ann = d; mark(); notice(true); } else if (s.ann !== d && min() >= 6 * 60) { s.ann = d; mark(); notice(false); } }
@@ -302,8 +305,8 @@ export function createFeast(A) {
     return (s.n > 0 ? '🎉 ' : '') + out.join(' '); }
   /* STORYF-1(코덱스 10-27 '이야기를 끝내면 잔치인가, 날짜가 오면 잔치인가'): 창 맨 위 한 줄 = 이야기의 잔치와 이 잔치의 관계 */
   function storyLine() { const s = S(), e = en(), Q = G().story || {}, F = Q.fest || {}, n = left(), when = isDay() ? (e ? 'It is today.' : '오늘이 그날이에요.') : (e ? nightsW(n, 1).replace(/^./, c => c.toUpperCase()) + ' to go.' : nightsW(n) + ' 남았어요.');
-    if (s.n === 0) return '📜 ' + (e ? 'The feast the prologue note asked helpers for is this one. ' : '프롤로그 쪽지가 도우미를 찾던 그 첫 잔치가 바로 이 잔치예요. ') + when;
-    const fin = F.site && !F.done ? (e ? ' The feast at ' + F.site + ' you chose in the story opens at the end of the story.' : ' 이야기에서 고른 ' + F.site + ' 잔치는 이야기 마지막 장에서 열려요.') : '';
+    const D = Q.done || {}; if (s.n === 0) return '📜 ' + (e ? 'The feast the prologue note asked helpers for is this one. ' + (D.f1 ? '' : 'Finishing Act 4 of the story moves it to the next day. ') : '프롤로그 쪽지가 도우미를 찾던 그 첫 잔치가 바로 이 잔치예요. ' + (D.f1 ? '' : '이야기 4막을 마치면 그다음 날로 당겨져요. ')) + when;   /* COVER-2: 이야기 피날레 = 이 잔치 */
+    const fin = F.site && !D.f1 ? (e ? ' The story finale uses the next feast, at ' + F.site + '.' : ' 이야기 마지막 장은 ' + F.site + '에서 여는 다음 잔치를 써요.') : '';
     return '📜 ' + (e ? 'After the first feast, a town feast comes back every two weeks. ' : '첫 잔치 뒤로 두 이레마다 돌아오는 마을 잔치예요. ') + when + fin; }
   // ───────── 수첩 🎉 잔치 · 게시판 창 ─────────
   function open(atBoard) { const s = S(), e = en(), th = THEMES[s.th] || THEMES.homi, on = isDay(), pre = prepOn(), dc = s.dc && s.dc.d === day() ? s.dc.b : {};
@@ -335,8 +338,10 @@ export function createFeast(A) {
 
   function dispose() { dead = true; clearTimeout(metT); clearTimeout(metT2); for (const id of keys(VIS)) drop(id); for (const id of keys(HOT)) HOT[id].remove(); HOT = {}; if (NLN) { map.remove(NLN); NLN.geometry.dispose(); NLN.material.dispose(); NLN = null; } if (GAT) { A.gather(null); GAT = 0; } A.chip('twn-fst', null);
     const g = A.GAME; if (g.tally && g.tally.fst && tally0) g.tally = tally0; if (css) { css.remove(); css = null; } }
+  /* COVER-2 이야기 피날레가 부름: 잔치 날을 내일로(이미 오늘·내일이면 그대로) · 준비한 갈래(lv)는 그대로 · 주제는 그 날 계절대로 · 아침 알림은 다시 */
+  function pull() { const s = S(), d = day(); if (!(s.fd > 0)) plan(); if (s.fd <= d + 1) return s.fd; s.fd = d + 1; s.th = themeOf(A.season ? A.season(s.fd) : 'now'); s.ann = -1; mark(); PKEY = ''; BKEY = ''; log('story pull → ' + s.fd); return s.fd; }
   function rebuild() { SITE = null; for (const id of keys(VIS)) drop(id); for (const id of keys(HOT)) HOT[id].remove(); HOT = {}; PKEY = ''; if (GAT) { A.gather(null); GAT = 0; } buildAll(); }
-  return { sec, open, tap, dayRow, wait, news, calLine, festNear, dispose, rebuild, has: () => true,
+  return { sec, open, tap, dayRow, wait, news, calLine, festNear, dispose, rebuild, has: () => true, pull, yard: () => { const p = toDoor(), P = site(); return p && P ? { door: p.door, stage: P.Q(0, -3.9), table: P.Q(-8.6, -0.6), x: P.x, z: P.z } : null; },   /* COVER-2 이야기 피날레(잔치 마당 · 무대 · 상 자리) */
     title: () => title(), afterLine: () => (S().n > 0 ? afterLine() : ''),   /* AFTER-1 엔딩 상자 줄(town_after.js) */
     info: () => { const s = S(), P = site(); return { fd: s.fd, n: s.n, th: s.th, d0: s.d0, day: day(), left: left(), lv: { ...s.lv }, st: stages(), dc: s.dc, fx: { ...s.fx }, past: s.past.slice(), prep: prepOn(), on: festOn(), gat: GAT, lit: LIT, nln: NLN ? NLN.count : 0, chip: chipK, keep: { ...(s.keep || {}) }, gu: s.gu || '', mem: s.mem.map(q => q.k),
       site: P ? [+P.x.toFixed(1), +P.z.toFixed(1), +P.ry.toFixed(2)] : null, vis: keys(VIS), vat: Object.fromEntries(keys(VIS).map(id => [id, VIS[id].g.map(g => [+g.position.x.toFixed(1), +g.position.z.toFixed(1), +g.position.y.toFixed(2), !!g.parent])])), hot: Object.fromEntries(keys(HOT).map(k => [k, HOTL[k] || ''])) }; },
