@@ -19,7 +19,7 @@ export function createGfx(canvas) {
     mode: Q.get('mode') || set.mode || 'smooth', adapt: !fixed && Q.get('adapt') !== '0',
     steps: [], lv: 0, draws: 0, log: [],
   };
-  const iv = new Float32Array(RING); let ivN = 0, ivI = 0, lastDraw = 0, due = 0;
+  const iv = new Float32Array(RING); let ivN = 0, ivI = 0, lastDraw = 0, due = 0, ivTot = 0, since = 0;
   let evalT = 0, slowS = 0, fastS = 0, coolT = 0, capT = 0, trial = null, fail = 0;
 
   function applySize() { renderer.setPixelRatio(fixed || G.base * G.res); renderer.setSize(innerWidth, innerHeight, false); }
@@ -38,7 +38,7 @@ export function createGfx(canvas) {
   };
   G.drew = (ts) => {
     if (G.mode === 'gfx') due += 33.333;
-    if (lastDraw) { const d = ts - lastDraw; if (d < 250) { iv[ivI] = d; ivI = (ivI + 1) % RING; if (ivN < RING) ivN++; } }
+    if (lastDraw) { const d = ts - lastDraw; if (d < 250) { iv[ivI] = d; ivI = (ivI + 1) % RING; if (ivN < RING) ivN++; ivTot++; } }
     lastDraw = ts; G.draws++;
     if (G.adapt && ts - evalT >= 1000) { evalT = ts; adaptTick(ts); }
   };
@@ -63,11 +63,11 @@ export function createGfx(canvas) {
     else if (dir < 0) { const s = G.steps[G.lv]; s.fn(true); G.lv++; }
     else { G.lv--; G.steps[G.lv].fn(false); }
     G.log.push([Math.round(ts / 1000), kind, dir, G.res, G.lv]); if (G.log.length > 40) G.log.shift();
-    coolT = ts + 3000; slowS = fastS = 0;
+    coolT = ts + 3000; slowS = fastS = 0; since = ivTot;   // 바꾼 뒤 간격만 셈
   }
   function adaptTick(ts) {
     const target = G.mode === 'gfx' ? 33.333 : 16.667, n = G.mode === 'gfx' ? 60 : 120;
-    const ft = trimmed(n); if (!ft) return;
+    const ft = trimmed(Math.min(n, ivTot - since)); if (!ft) return;
     if (trial && ts >= coolT) {                     // 내렸는데 안 빨라졌으면(브라우저 30 잠금·에너지 절약) 되돌리고 2분 쉼
       if (ft > trial.ft / 1.04 - 0.3) { const t = trial; trial = null; change(t.kind, +1, ts); capT = ts + 120000; fail++; }
       else trial = null;

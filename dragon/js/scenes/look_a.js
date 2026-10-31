@@ -1,8 +1,8 @@
 // 시안 A 시험 장면 — 섬(높이맵 · 정점색) · 바다 돌기둥 · 거스트너 바다 · 3색 하늘 · 빌보드 구름 · 때 넷(T로 바꿈 · ?time=)
 // 섬 모양·배치는 영화 버크를 본뜨지 않은 자리표시(goal §2-2) — 결(셰이딩·안개·색 흐름)과 성능을 보려는 장면
 import * as THREE from 'three';
-import { toon, makeSky, makeSea, setTime, U, TIMES } from '../look/kit.js?v=4';
-import { createNoise } from '../core/noise.js?v=3';
+import { toon, makeSky, makeSea, setTime, U, TIMES } from '../look/kit.js?v=12';
+import { createNoise } from '../core/noise.js?v=12';
 
 export function buildLookA(scene, camera, rng, opt = {}) {
   const N = createNoise(11);
@@ -11,7 +11,7 @@ export function buildLookA(scene, camera, rng, opt = {}) {
   const sun = new THREE.DirectionalLight(0xfff0d8, 1.5); scene.add(sun);
   const sky = makeSky(); scene.add(sky);
   const sea = makeSea(); scene.add(sea);
-  const env = { scene, sky, sea, sun, hemi, time: 'day' };
+  const env = { scene, sky, sea, sun, hemi, camera, time: 'day' };
 
   /* 섬 높이 — 둥근 가림 × fbm, 가장자리는 절벽처럼 가파르게 */
   const IS = 1100, SEG = 180, half = IS / 2;

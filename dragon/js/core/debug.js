@@ -15,7 +15,9 @@ export function installDebug(ctx) {               // ctx = { gfx, loop, input, c
   const bot = {
     tick(n) {
       now = n;
-      for (let i = q.length - 1; i >= 0; i--) if (q[i][0] <= n) { ctx.input.virtual(q[i][1], q[i][2]); q.splice(i, 1); }
+      let w = 0;                                      // 넣은 차례대로 적용(같은 걸음의 누름 → 뗌 순서를 지킴)
+      for (let i = 0; i < q.length; i++) { if (q[i][0] <= n) ctx.input.virtual(q[i][1], q[i][2]); else q[w++] = q[i]; }
+      q.length = w;
       if (script) { try { if (script(n, bot) === false) script = null; } catch (e) { pushErr('bot: ' + e.message); script = null; } }
     },
     hold(code, steps = 1, after = 0) { q.push([now + after, code, true], [now + after + Math.max(1, steps), code, false]); },
@@ -30,6 +32,7 @@ export function installDebug(ctx) {               // ctx = { gfx, loop, input, c
   function afterDraw() {
     if (!B) return;
     const r = ctx.gfx.renderer.info.render;
+    const now = performance.now(); if (B.last) B.ivs.push(now - B.last); B.last = now; B.fr++;
     if (r.calls > B.calls) B.calls = r.calls; if (r.triangles > B.tris) B.tris = r.triangles;
     if (ctx.gfx.res < B.resMin) B.resMin = ctx.gfx.res;
   }
@@ -37,17 +40,15 @@ export function installDebug(ctx) {               // ctx = { gfx, loop, input, c
     if (!ctx.benchPath) return Promise.resolve('bench: 이 장면엔 카메라 길이 없음');
     return new Promise((res) => {
       const L = ctx.loop, long0 = L.long50, e0 = errs.length;
-      B = { calls: 0, tris: 0, resMin: 1, t0: performance.now(), fr: 0, ivs: [] };
+      B = { calls: 0, tris: 0, resMin: 1, t0: performance.now(), fr: 0, ivs: [], last: 0 };
       ctx.gfx.resetStats();
-      let last = 0;
       const f = (ts) => {
         const t = (performance.now() - B.t0) / 1000;
-        if (last) B.ivs.push(ts - last); last = ts; B.fr++;
         ctx.benchPath(t);
         if (t < sec) { requestAnimationFrame(f); return; }
         const s = B.ivs.slice().sort((a, b) => a - b), p95 = s[Math.floor(s.length * 0.95)] || 0, st = ctx.gfx.stats();
         const line = ['DRG-BENCH v1', 'CB ' + (st.cb ? 1 : 0), innerWidth + 'x' + innerHeight + '@' + (devicePixelRatio || 1), 'mode ' + st.mode,
-          'fps ' + (B.fr / sec).toFixed(1), 'p95 ' + p95.toFixed(1) + 'ms', 'long ' + (L.long50 - long0), 'calls ' + B.calls, 'tris ' + Math.round(B.tris / 1000) + 'k',
+          'fps ' + (B.fr / sec).toFixed(1) + (st.mode === 'gfx' ? '(30고정)' : '') + (ctx.gfx.adapt ? '' : ' 고정해상도'), 'p95 ' + p95.toFixed(1) + 'ms', 'long ' + (L.long50 - long0), 'calls ' + B.calls, 'tris ' + Math.round(B.tris / 1000) + 'k',
           'prog ' + st.programs, 'tex ' + st.textures, 'res ' + B.resMin, 'heap ' + (st.heapMB == null ? '-' : st.heapMB), 'err ' + (errs.length - e0)].join(' | ');
         B = null; show(line); res(line);
       };

@@ -12,7 +12,7 @@ export const ACT = {
 export function createInput(el) {
   const held = new Set(), hits = new Set(), late = new Set();
   const look = { x: 0, y: 0 }, out = { x: 0, y: 0 };
-  let drag = false, dragId = -1;
+  let drag = false, dragId = -1, px = 0, py = 0;
 
   function kd(code) { if (!held.has(code)) hits.add(code); held.add(code); late.delete(code); }
   function ku(code) { if (hits.has(code)) late.add(code); else held.delete(code); }
@@ -27,15 +27,16 @@ export function createInput(el) {
   addEventListener('blur', clear);
   document.addEventListener('visibilitychange', () => { if (document.hidden) clear(); });
 
-  el.addEventListener('pointerdown', (e) => { drag = true; dragId = e.pointerId; try { el.setPointerCapture(e.pointerId); } catch (_) { /* 이미 놓인 손가락 */ } });
+  el.addEventListener('pointerdown', (e) => { drag = true; dragId = e.pointerId; px = e.clientX; py = e.clientY; try { el.setPointerCapture(e.pointerId); } catch (_) { /* 이미 놓인 손가락 */ } });
   el.addEventListener('pointerup', (e) => { if (e.pointerId === dragId) drag = false; });
   el.addEventListener('pointercancel', () => { drag = false; });
   el.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== dragId) return;
-    const dx = e.movementX || 0, dy = e.movementY || 0;
-    if (Math.abs(dx) > 200 || Math.abs(dy) > 150) return;   // 튀는 값(포커스 잡힐 때 한 번)
+    const dx = e.clientX - px, dy = e.clientY - py; px = e.clientX; py = e.clientY;   // movementX는 크롬북 터치패드에서 튐
+    if (Math.abs(dx) > 200 || Math.abs(dy) > 150) return;
     look.x += dx; look.y += dy;
   });
+  el.addEventListener('wheel', (e) => { e.preventDefault(); look.x += e.deltaX * 0.6; look.y += e.deltaY * 0.6; }, { passive: false });   // 터치패드 두 손가락 쓸기
 
   const I = {
     held: (code) => held.has(code), hit: (code) => hits.has(code),

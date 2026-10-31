@@ -10,6 +10,11 @@ const types = { '.js': 'text/javascript', '.html': 'text/html', '.css': 'text/cs
 const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split('?')[0]), p = path.join(root, u, u.endsWith('/') ? 'index.html' : ''); fs.readFile(p, (e, d) => { if (e) { r.writeHead(404); r.end(); return; } r.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); r.end(d); }); });
 const UA = 'Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
+/* 캐시 번호 검사 — dragon/ 안에서 같은 파일을 다른 ?v=로 부르면 모듈이 둘로 갈라짐 */
+(() => { const seen = {}, walk = d => fs.readdirSync(d, { withFileTypes: true }).forEach(e => { const q = path.join(d, e.name); if (e.isDirectory()) walk(q); else if (/\.(js|html)$/.test(e.name)) {
+  for (const m of fs.readFileSync(q, 'utf8').matchAll(/['"]([^'"?]+\.(?:js|glb))\?v=(\d+)['"]/g)) { const k = path.basename(m[1]); (seen[k] = seen[k] || new Set()).add(m[2]); } } });
+  walk(path.join(root, 'dragon')); const bad = Object.entries(seen).filter(([, v]) => v.size > 1).map(([k, v]) => k + '=' + [...v].join('/'));
+  ok(!bad.length, '캐시 번호 한 파일 한 번호' + (bad.length ? ' — ' + bad.join(' ') : '')); })();
 srv.listen(0, async () => {
   const base = 'http://127.0.0.1:' + srv.address().port;
   const b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] });

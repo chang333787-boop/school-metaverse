@@ -62,9 +62,11 @@ function patch(m) {
   #include <opaque_fragment>`)
       .replace('#include <fog_fragment>', '#ifdef USE_FOG\n  gl_FragColor.rgb = drgFog(gl_FragColor.rgb, vDrgW, vFogDepth);\n#endif');
   };
-  m.customProgramCacheKey = () => 'drgToon1';
+  m.customProgramCacheKey = () => PATCH_KEY;        // patch()를 고치면 PATCH_KEY를 올린다(같은 열쇠면 three가 옛 셰이더를 다시 씀)
   return m;
 }
+
+const PATCH_KEY = 'drgToon2';
 
 /* 재질 캐시 — 같은 옵션이면 같은 재질 하나 */
 const CACHE = new Map();
@@ -95,13 +97,24 @@ export function makeSky() {
       }`,
   });
   const g = new THREE.SphereGeometry(100, 32, 16);
-  const sky = new THREE.Mesh(g, m); sky.frustumCulled = false; sky.renderOrder = -10;
+  const sky = new THREE.Mesh(g, m); sky.frustumCulled = false; sky.renderOrder = 900;   // 불투명 중 맨 끝 = 빈 화소만 칠함(깊이 1.0 · LEQUAL)
   return sky;
 }
 
-/* 바다: 카메라를 따라오는 격자(칸 단위로 맞춰 물결이 미끄러지지 않음) + 정점 거스트너 물결 넷 + 물마루 밝게 · 거품 · 하늘빛 반사(프레넬) */
-export function makeSea(size = 2400, seg = 160) {
-  const g = new THREE.PlaneGeometry(size, size, seg, seg).rotateX(-Math.PI / 2);
+/* 바다: 카메라 둘레 고리 격자(가까울수록 촘촘 · 반지름 ≥ 안개 끝 ×1.2) + 정점 거스트너 물결 넷(짧은 물결일수록 가까이서만) + 물마루·거품·하늘빛 반사 */
+function ringGrid(R = 2000, r0 = 1.2, k = 1.036, seg = 128) {
+  const rs = [0]; for (let r = r0; r < R; r *= k) rs.push(r); rs.push(R);
+  const pos = new Float32Array(rs.length * seg * 3), idx = [];
+  for (let i = 0; i < rs.length; i++) for (let j = 0; j < seg; j++) { const a = j / seg * Math.PI * 2, o = (i * seg + j) * 3; pos[o] = Math.cos(a) * rs[i]; pos[o + 2] = Math.sin(a) * rs[i]; }
+  for (let i = 0; i < rs.length - 1; i++) for (let j = 0; j < seg; j++) {
+    const a = i * seg + j, b = i * seg + (j + 1) % seg, c = (i + 1) * seg + j, d = (i + 1) * seg + (j + 1) % seg;
+    idx.push(a, b, c, b, d, c);                                  // 위에서 볼 때 앞면(법선 +Y)
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setIndex(idx);
+  g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), R); return g;
+}
+export function makeSea() {
+  const g = ringGrid();
   const m = new THREE.ShaderMaterial({
     fog: true,
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
@@ -118,18 +131,20 @@ export function makeSea(size = 2400, seg = 160) {
       }
       void main() {
         vec3 p = (modelMatrix * vec4(position, 1.0)).xyz; vec3 t = vec3(1,0,0), b = vec3(0,0,1), o = vec3(0);
-        float fade = 1.0 - smoothstep(300.0, 1100.0, length(p.xz - cameraPosition.xz));   // 멀면 잔잔하게(안개 속)
-        o += gw(vec4( 1.0, 0.3, 0.16 * amp * fade, 62.0), p.xz, t, b);
-        o += gw(vec4( 0.6, 1.0, 0.13 * amp * fade, 31.0), p.xz, t, b);
-        o += gw(vec4(-0.4, 0.9, 0.10 * amp * fade, 17.0), p.xz, t, b);
-        o += gw(vec4( 0.9,-0.5, 0.08 * amp * fade,  9.0), p.xz, t, b);
+        float dc = length(p.xz - cameraPosition.xz);                                  // 물결마다 파장 ×6~14 거리에서 사라짐(격자보다 짧은 물결 = 엉뚱한 무늬)
+        o += gw(vec4( 1.0, 0.3, 0.16 * amp * (1.0 - smoothstep(372.0, 868.0, dc)), 62.0), p.xz, t, b);
+        o += gw(vec4( 0.6, 1.0, 0.13 * amp * (1.0 - smoothstep(186.0, 434.0, dc)), 31.0), p.xz, t, b);
+        o += gw(vec4(-0.4, 0.9, 0.10 * amp * (1.0 - smoothstep(102.0, 238.0, dc)), 17.0), p.xz, t, b);
+        o += gw(vec4( 0.9,-0.5, 0.08 * amp * (1.0 - smoothstep( 54.0, 126.0, dc)),  9.0), p.xz, t, b);
         p += o; vW = p; vH = o.y; vN = normalize(cross(b, t));
         vec4 mv = viewMatrix * vec4(p, 1.0); vFogDepth = -mv.z; gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
       uniform vec3 deep; uniform vec3 shallow; uniform vec3 foam; uniform vec3 skyCol;
       #include <fog_pars_fragment>
+      #ifdef USE_FOG
       ${FOG_PARS}
+      #endif
       varying vec3 vW; varying vec3 vN; varying float vH;   /* vFogDepth는 fog_pars_fragment가 선언 */
       void main() {
         vec3 n = normalize(vN), v = normalize(cameraPosition - vW);
@@ -140,14 +155,17 @@ export function makeSea(size = 2400, seg = 160) {
         float sp = max(dot(reflect(-uSunDir, n), v), 0.0);
         c += uFogSun * smoothstep(0.93, 0.97, sp) * 0.5;                       // 반짝임도 톤처럼 끊어서
         c = mix(c, foam, smoothstep(2.0, 2.8, vH) * 0.55);   /* 물마루 꼭대기에만 */
-        gl_FragColor = vec4(drgFog(c, vW, vFogDepth), 1.0);
+        #ifdef USE_FOG
+          gl_FragColor = vec4(drgFog(c, vW, vFogDepth), 1.0);
+        #else
+          gl_FragColor = vec4(c, 1.0);
+        #endif
         #include <colorspace_fragment>
       }`,
   });
   Object.assign(m.uniforms, { uTime: U.uTime, uSunDir: U.uSunDir, uFogSun: U.uFogSun, uSunFog: U.uSunFog, uFogBase: U.uFogBase, uFogFall: U.uFogFall, uFogLow: U.uFogLow });
-  const sea = new THREE.Mesh(g, m); sea.frustumCulled = false;
-  const step = size / seg;
-  sea.follow = (cam) => { sea.position.set(Math.round(cam.position.x / step) * step, 0, Math.round(cam.position.z / step) * step); };
+  const sea = new THREE.Mesh(g, m); sea.frustumCulled = false; sea.renderOrder = 800;   // 땅 다음(가려질 화소를 먼저 칠하지 않게)
+  sea.follow = (cam) => { sea.position.set(Math.round(cam.position.x), 0, Math.round(cam.position.z)); };   // 1m 칸에 맞춰 물결이 미끄러지지 않게
   return sea;
 }
 
@@ -161,12 +179,13 @@ export const TIMES = {
 export function setTime(env, name) {
   const T = TIMES[name]; if (!T) return;
   const { scene, sky, sea, sun, hemi } = env;
-  sky.material.uniforms.top.value.setHex(T.top); sky.material.uniforms.mid.value.setHex(T.mid); sky.material.uniforms.bot.value.setHex(T.bot); sky.material.uniforms.sunCol.value.setHex(T.sun);
+  sky.material.uniforms.top.value.setHex(T.top); sky.material.uniforms.mid.value.setHex(T.mid); sky.material.uniforms.bot.value.setHex(T.fog); sky.material.uniforms.sunCol.value.setHex(T.sun);   // 아랫색 = 안개색(바다 끝 띠 숨김)
   scene.fog.color.setHex(T.fog); scene.fog.near = T.near; scene.fog.far = T.far;
   U.uFogSun.value.setHex(T.fogSun); U.uRim.value = T.rim; U.uFogLow.value = T.low;
   U.uSunDir.value.set(...T.sunDir).normalize();
   sun.color.setHex(T.sun); sun.intensity = T.sunI; sun.position.copy(U.uSunDir.value).multiplyScalar(500);
   hemi.color.setHex(T.hs); hemi.groundColor.setHex(T.hg); hemi.intensity = T.hI;
   if (sea) { const su = sea.material.uniforms; su.deep.value.setHex(T.seaD); su.shallow.value.setHex(T.seaS); su.skyCol.value.setHex(T.mid); su.fogColor.value.setHex(T.fog); su.fogNear.value = T.near; su.fogFar.value = T.far; }
+  if (env.camera) { env.camera.far = T.far * 1.25; env.camera.updateProjectionMatrix(); }   // 안개에 다 묻힌 것까지 그리지 않음
   env.time = name;
 }
