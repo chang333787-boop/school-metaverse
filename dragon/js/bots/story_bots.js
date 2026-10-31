@@ -100,7 +100,11 @@ export function storyBot(level = 'normal') {
     hist.push(now); if (hist.length > lag + 1) hist.shift();
     const s = hist[0];                                     // 반응 늦음만큼 지난 감각
     const dt = 1 / 60; T += dt; K.tick(dt);
-    if (now.id !== lastId || now.fails !== lastFails) { K.releaseAll(); mem = {}; lastId = now.id; lastFails = now.fails; K.path = null; hist.length = 0; hist.push(now); return; }   // 다시 하기 뒤에도 기억을 비움(팀 G)
+    if (now.id !== lastId || now.fails !== lastFails) {   // 다시 하기 뒤에도 기억을 비움(팀 G)
+      /* 손을 다 뗌(팀 K) — 비행 봇(DRG_FLYBOT)은 K를 거치지 않고 B.press로 누르므로 K.releaseAll만으론 방향키가 남음 → 6-6 비행 끝에 눌린 ArrowRight가 6-7 내내 카메라를 돌려 테러 둘레를 맴돎(CPU 4× 실제 시간 · 이어 놀기에서만) */
+      K.releaseAll(); const IN = window.DRG.input; if (IN && IN.heldList) for (const c of IN.heldList()) B.release(c);
+      mem = {}; lastId = now.id; lastFails = now.fails; K.path = null; K.stuckT = K.sideT = 0; hist.length = 0; hist.push(now); return;
+    }
     if (s.busy || !s.me || !now.me) return;
     K.cur = now;
     const f = BOTS[s.id]; if (f) f(s, K, mem, B, level, now);
@@ -310,8 +314,8 @@ BOTS['6-4'] = (s, K, M) => {                             // 셋 진정: 예고�
   if (want === 'chin') K.set('KeyF', true); else if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 0.5; }
 };
 BOTS['6-5'] = (s, K, M) => { const b = (K.cur && K.cur.bench) || s.bench || {}; if (b.kind === 'hammer') { if (b.hot && !M.hit && !b.numb) { M.hit = true; K.tap('KeyF'); } if (!b.hot) M.hit = false; return; } if (s.target && K.go(s, s.target.x, s.target.z, false, 3)) { K.stop(); if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 1; } } };
-BOTS['6-7'] = (s, K, M) => {                             // 다친 테러: 살금살금 생선 → 천 감기(움찔이면 떼기)
-  const t = s.terror; if (!t) { K.stop(); return; }
+BOTS['6-7'] = (s, K, M, B) => {                             // 다친 테러: 살금살금 생선 → 천 감기(움찔이면 떼기)
+  const t = s.terror; if (!t) { K.stop(); K.set('KeyF', false); B.drag(5, 0); return; }   // 안 보이면 둘러봄(가만히 서서 기다리지 않음)
   if (!K.walk(s, t.x, t.z, true, 1.6)) { K.set('KeyF', false); return; }
   K.stop();
   if (!s.fed) { if ((M.cd = (M.cd || 0) - 1 / 60) <= 0) { K.tap('KeyF'); M.cd = 1; } return; }

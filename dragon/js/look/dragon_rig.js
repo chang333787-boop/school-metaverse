@@ -22,6 +22,8 @@ const SPEC = {
   boss:       { jaw: 0.66, flapHz: 0.45, stepHz: 0.5, biped: false },   // 대장(레드 데스 결 · 몸이 아주 커서 느리게)
 };
 const ALIAS = { nightfury: 'toothless' };
+/* 나이트메어 몸 불꽃 자리 — [뼈, 키(엉덩이 높이 배) · 등 위 높이(엉덩이 높이 배)] */
+const BLAZE = [['neck2', 0.95, 0.34], ['neck1', 1.2, 0.38], ['chest', 1.5, 0.42], ['hips', 1.35, 0.4], ['tail1', 1.05, 0.3], ['tail2', 0.8, 0.24], ['tail3', 0.55, 0.16]];
 
 /* 접은 날개 목표(왼쪽 날개 기준 · 오른쪽은 X 거울) — [뼈 방향, 막 법선] 모델 축 */
 /* 막이 팔 아래로 드리워 옆구리 위쪽을 덮게: 위팔·손가락은 막 윗면이 몸 쪽(법선 안쪽) · 아래팔은 앞으로 접히며 뒤집힘(법선 바깥) — 모든 막이 옆구리와 나란한 한 판
@@ -190,16 +192,18 @@ export function createDragonRig(bones, root, species) {
         F.scale.setScalar(1 - FOLD.shrink * fold);
       }
     }
-    /* ── 몸 불(나이트메어) ── */
-    if (blazeMat) blazeMat.emissive.setRGB(0.85 * R.blaze, 0.3 * R.blaze, 0.05 * R.blaze);
-    if (R.blaze > 0.01 && !flamesMade && KIT.flameMesh) {
+    /* ── 몸 불(나이트메어 · 11-01 팀 K) — 몸빛은 은은하게(예전 주황 단색 0.85 → 0.3 · 숨 쉬듯 천천히) + 등줄기를 따라 일렁이는 불꽃 혀(그림책 결 · 덧셈 빛 X)
+         혀는 뼈마다 하나(그리기 = 예전 원뿔 수 이하) · 목 → 꼬리로 갈수록 작게 · 모양·일렁임은 셰이더(uTime) · 크기만 여기서 ── */
+    if (blazeMat) { const k = R.blaze * (0.82 + 0.18 * Math.sin(t * 2.3)); blazeMat.emissive.setRGB(0.3 * k, 0.085 * k, 0.018 * k); }
+    if (R.blaze > 0.01 && !flamesMade && KIT.flameTongueMat) {
       flamesMade = true;
-      for (const n of ['neck1', 'neck2', 'chest', 'hips', 'tail1', 'tail2', 'tail3']) {
-        const b = bones[n]; if (!b) continue; const m = KIT.flameMesh(1), up = b.userData.ax[1];   // 모델 '위'를 뼈 축으로 — 등 위에 세움
-        m.position.copy(up).multiplyScalar(h0 * 0.5); m.quaternion.setFromUnitVectors(AX[1], up); b.add(m); flames.push(m);
+      const geo = KIT.tongueGeo(), mat = KIT.flameTongueMat('body');
+      for (const [n, sz, up0] of BLAZE) {
+        const b = bones[n]; if (!b) continue; const m = new THREE.Mesh(geo, mat), up = b.userData.ax[1];   // 모델 '위'를 뼈 축으로 — 등 위(밑동은 몸속에 묻힘)
+        m.position.copy(up).multiplyScalar(h0 * up0); m.userData.sz = sz * h0; m.frustumCulled = false; b.add(m); flames.push(m);
       }
     }
-    for (let i = 0; i < flames.length; i++) { const m = flames[i]; m.visible = R.blaze > 0.02; m.scale.setScalar(R.blaze * (0.9 + 0.25 * Math.sin(t * 5 + i))); }
+    for (let i = 0; i < flames.length; i++) { const m = flames[i], h = m.userData.sz * R.blaze; m.visible = R.blaze > 0.02; m.scale.set(h * 0.55, h, h * 0.55); }
   };
   return R;
 }
