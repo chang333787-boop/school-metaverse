@@ -3,7 +3,7 @@
 //   교사 화면(반 표) = 번호 · 지금 장 · 오늘 한 일 · 남긴 결과물 · 마지막 접속 — 한 줄 = 판 요약(town_tsum.js)
 //     자료 셋: ① 이 기기 판(같은 반 번호 판 + 번호 없는 칸) ② 붙여 넣기(기록 복사하기 JSON 여러 개 · 판 JSON) ③ 서버(반 코드 + 교사 열쇠 → /class · 배포 전이면 안내만)
 //   매 프레임 일 0(창을 열 때만 셈) · 이름 X(번호만) · 교사 열쇠는 이 탭 메모리에만(잠그면 지움)
-import { CHAPTERS } from './town_story.js?v=30';
+import { CHAPTERS } from './town_story.js?v=31';
 import { tsum, tsumDays } from './town_tsum.js?v=2';
 import { pickLabel, dayKey } from './town_rec.js?v=18';
 import { cloudTeach, cloudOn } from './town_cloud.js?v=4';

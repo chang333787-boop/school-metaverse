@@ -321,3 +321,15 @@
 - 남긴 것(하 8 + 단계 잇기 중 1): 텃밭 장날 값은 팔기 갈래만 · 눈길·바다 물건·항구·김은 상식 · 투호 막대 놀이 · 요리 놀이 팬 기름 그림 🧈 · 틀 없는 한 줄 15곳.
 - 시험: `town_first.cjs`(보기 넷 · 처음 13단계 고르기·빈칸 3 · `milk`가 `make` 앞 · 세 번 틀리면 자료 상자에 '우유 공장') · `town_open.cjs` ③-2 · `town_story_see.cjs`(목장 양몰이 끝 → 일꾼 말 → 고르기 → 문장 틀 → 장 끝 · 팬케이크 · 더운 날 · 갯벌 · 쪽지 셋 · 옛 저장 새로고침).
 
+
+## 10-31 메인이 마을을 덮게(COVER-1) — 장마다 처음 기능 하나 + 새 곳 하나
+설계 `town_coverage_1031.md` 4-2 · 짓기 기록 7절 · 단계 사슬 `town_story_audit_1031.md`.
+- 새 단계 갈래 넷(`town_story.js`):
+  - `tool` `{ k, rec, near, r, nm?, give?, giveT?, done }` — 도구 띠 rec(`can-flower` · `lens-…`)가 그 자리(`near` 곳 · 꽃이면 그 둘레 40m 안 가장 가까운 꽃) 16m 안에서 오면 넘어감 · `give` = 없으면 그 도구를 줌(새 친구 한 줄) · 자리가 없는 마을은 건너뜀. 마을 `createTools({ rec })`가 `qst().ev('tool', { k })`.
+  - `lost` `{ home, r, look, t, askT, walkT, done, fbDone }` — 긴급 출동 엔진 112 이야기 모드(`town_emerg.js` `EMSTY.go/info/stop` → 마을이 `api.em()`으로 넘김). 엔진 = 알림·빛기둥·경찰관(`copT`)·묻기(`qs`)·지도에서 집 고르기·같이 걷기(st `sw` = 마을 새 친구 몸이 따라옴) · 이야기 = 할 일 갈래(`lph` call·ask·sw)·새 친구 몸 끄고 켜기·힌트(갈래가 바뀌면 처음부터 · 묻는 동안 시계 X). 시간 끝 X · 저장 X(이어 하기·잠으로 끊기면 5초 뒤 다시 부름) · 끝 = 112 기록(경찰서 칭찬 게시판). 엔진이 없으면 '우체국은 지도만 보고 찾아가기'.
+  - `news` `{ r, done }` — 단계 시작한 날보다 뒤 + 우리 집 칠판(`api.homeAt`) 앞 = 넘어감 · 배너 = 칠판에 실제로 적힌 텃밭 줄(없으면 단계 글).
+  - `law` `{ at, e, give, done }` — 가방 실험 단추(`qst().ev('law', { e, at })`)가 그 자리·물건이면 넘어감 · `give` = 시작 때 재료 · 놓아주거나 팔면 한 번 더.
+- 고친 갈래: `buy.have`(가방에 있는 것 = 산 것) · `cook.home`(우리 집 부엌 `api.homeKit` → 없으면 가까운 부엌) · `sell.get·give·say·noT·swapDone`(팔기 또는 하나씩 바꾸기 = swapTry).
+- 마을(`town.js`): `homeKitchen` — 엔진 집 기본 방(부엌 X)에 조리대 하나(왼벽 앞 · `made.cook`) · 스스로 찾는 단계 동안 첫 해 질 녘 '우리 집' 빨간 선을 미룸(`step.self`).
+- 옛 저장: `a1_1.post·d2·big·why → lost` · `c1.bike → look`.
+- 시험: `town_first.cjs`(꽃 물 · 112 전 과정) · `town_story_see.cjs` ⓪-2·⑦~⑩ · `town_open.cjs` ③·③-1 · `town_state.cjs --story --only=st_tool,st_lost,st_news,st_law`.

@@ -1,7 +1,8 @@
 // 🧭 첫 장 봇(FIRST-1 · 10-31 첫 장 다시 짜기 · 비판 G1 '첫 13단계에 놀이 0' · G4 'show:ans 45곳'): node tools/harness/town_first.cjs [마을=ourtown] [포트=8002] [--pick=마트] [--shots=폴더]
 //   ① 새 아이 = 우리 집 현관 → 칠판 E → 프롤로그 → 1-1 끝까지 · 순간이동 없이 걸어서(자동 걷기 steer 4.2m/s · 0.12초마다 2m 넘게 튀면 실패)
 //   ② 첫 5분 안에 '해 보기' 단계 도착(1-1 보물 지도 첫 장 · 시작 = 첫 화면을 닫은 때) · 그 단계는 삽(2 → 겨눔 → F)으로 파야 넘어감
-//   ③ 스스로 찾는 단계(노란 ❗ 데려가기 · 지도 조각 ✕ · 우체국) = 셋째 힌트 전엔 빨간 선 X · 지도 조각 ✕·우체국은 둘째 힌트 전엔 나침반 띠 목적지도 X
+//   ③ 스스로 찾는 단계(꽃 물 주기 · 노란 ❗ 데려가기 · 지도 조각 ✕ · 112 길 잃은 새 친구) = 셋째 힌트 전엔 빨간 선 X · 지도 조각 ✕·112는 둘째 힌트 전엔 나침반 띠 목적지도 X
+//   ③-2 COVER-1(10-31): 112 = 빛기둥 → 경찰관 E(이야기 말) → 새 친구에게 묻기(물음 넷 · 단서 수첩) → 지도에서 집(틀리면 다시 말함) → 같이 걷기(새 친구 몸 · 자전거여도 '내려' X) → 1-1 끝 · 112 기록
 //   ④ 자료 셈: 처음 13단계(장 차례 그대로) 고르기·빈칸 셋 이하 · 해 보기 하나 이상 · 'show:ans' 0
 //   ⑤ 자료 다시 보기(SEE-1)·보기 줄이기(CUT-1): 1-2 '만드는 일 둘' 세 번 틀림 → 아까 본 자료 상자(STORY-AUDIT: 목장 일꾼의 '우유 가는 길' 말이 그 안에) · 노란 테두리 0 · 다섯 번 → 틀린 보기가 지워짐(맞는 보기는 남음) · 맞히면 넘어감 / 문장 틀(우유가 오는 길) 다섯 번 → 틀린 카드 지움
 //   ⑥ 페이지 오류 0 · --shots = 첫 카드·노란 ❗·지도 조각·파기·우체국·자료 상자 사진
@@ -15,7 +16,7 @@ const mmss = s => Math.floor(s / 60) + '분 ' + String(Math.round(s % 60)).padSt
   const fs = require('fs'); if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
   const M = await import(require('path').resolve(__dirname, '../../v2/games/town_story.js'));
   console.log('④ 자료 셈(장 차례 그대로)');
-  { const verb = t => (t === 'note' ? '쪽지' : t === 'go' ? '가기' : t === 'choose' ? '고르기' : t === 'line' ? '빈칸' : ['tmap', 'work', 'harvest', 'sow', 'try', 'plant', 'watch', 'cook', 'play'].includes(t) ? '해 보기' : t);
+  { const verb = t => (t === 'note' ? '쪽지' : t === 'go' ? '가기' : t === 'choose' ? '고르기' : t === 'line' ? '빈칸' : ['tmap', 'work', 'harvest', 'sow', 'try', 'plant', 'watch', 'cook', 'play', 'tool', 'lost', 'bike', 'law'].includes(t) ? '해 보기' : t);   /* COVER-1: tool(물뿌리개·돋보기) · lost(112) · law(실험 표) */
     const seq = []; for (const id of ['p0', 'a1_1', 'a1_3', 'c3']) { const c = M.CHAPTERS.find(q => q.id === id); if (c) for (const st of c.steps) seq.push([id + '.' + st.id, verb(st.do.type)]); }
     const cnt = L => L.reduce((o, q) => ((o[q[1]] = (o[q[1]] || 0) + 1), o), {}), f13 = seq.slice(0, 13), c13 = cnt(f13), pa = seq.filter(q => /^(p0|a1_1)\./.test(q[0])), cpa = cnt(pa);
     console.log('   처음 13: ' + f13.map(q => q[0] + '(' + q[1] + ')').join(' → ')); console.log('   처음 13 셈 ' + JSON.stringify(c13) + ' · 첫 장(프롤로그+1-1) ' + pa.length + '단계 ' + JSON.stringify(cpa));
@@ -38,12 +39,27 @@ const mmss = s => Math.floor(s / 60) + '분 ' + String(Math.round(s % 60)).padSt
       await shut(); const I = await ev(() => SM_TOWN.treasure().info()), c = I.cur; ok(!!(c && c.st && c.k === 'fire'), '이야기 조각 = 소방서 곁 ✕(' + (c && c.id) + ')'); ok(I.card, '왼쪽 지도 조각 카드');
       if (c) { const r = await walk(c.x, c.z, { self: 1, noComp: 1, r: 2.0, tag: 'tmap', lim: 420 }); const I2 = await ev(() => SM_TOWN.treasure().info()); ok(I2.mound, '✕ 가까이 = 흙더미 보임'); ok(r && r.d < 2.6, '걸어서 ✕ 도착(남은 ' + (r ? r.d.toFixed(1) : '?') + 'm)'); await shot('first_4_mound');
         await p.keyboard.press('Digit2'); await W8(500); await ev(([x, z]) => { SD2.map.player.lookAt([x, z]); SM_TOWN.tools.aim(x, z); }, [c.x, c.z]); await W8(200); await p.keyboard.press('KeyF'); await W8(600); await ev(() => SM_TOWN.tools.aim(null));
-        s = await waitStep(q => q.id !== 'tmap', 8000); ok(s.id === 'post', '삽으로 파서 넘어감 → 우체국(' + s.id + ')'); mark('📦 보물 상자 찾음'); let n2 = 0; for (; n2 < 20 && !(await ev(() => /보물 상자를 찾았어요/.test((document.querySelector('.twn-p') || {}).innerText || ''))); n2++) await W8(300); ok(n2 < 20, '보상 창(작은 종 · 사실 한 줄)'); await shot('first_5_chest'); await shut(); await p.keyboard.press('Digit2'); } }
-    mark('📮 우체국은 지도만 보고(빨간 선 X)');
-    { await W8(800); const r0 = await S(); ok(!r0.route && !r0.comp, '우체국 단계 = 빨간 선·나침반 목적지 없음(둘째 힌트 전)'); const T = await ev(() => SM_TOWN.storyTarget()); await shot('first_6_post'); await walk(T.x, T.z, { self: 1, noComp: 1, r: 10, until: r => r.cur !== 'a1_1' || r.sid !== 'post', tag: 'post' }); }
+        s = await waitStep(q => q.id !== 'tmap', 8000); ok(s.id === 'lost', '삽으로 파서 넘어감 → 112 길 잃은 새 친구(' + s.id + ')'); mark('📦 보물 상자 찾음'); let n2 = 0; for (; n2 < 20 && !(await ev(() => /보물 상자를 찾았어요/.test((document.querySelector('.twn-p') || {}).innerText || ''))); n2++) await W8(300); ok(n2 < 20, '보상 창(작은 종 · 사실 한 줄)'); await shot('first_5_chest'); await shut(); await p.keyboard.press('Digit2'); } }
+    mark('📞 112 — 길 잃은 새 친구(긴급 출동 엔진 · 빨간 선 X)');   /* COVER-1(10-31): 우체국 찾아가기 → 112 흐름(빛기둥 → 경찰관 → 묻기 → 지도에서 집 → 같이 걷기) */
+    { let I = null; for (let i = 0; i < 30; i++) { I = await ev(() => { const E = SM_TOWN.emerg && SM_TOWN.emerg(); return E ? E.info() : null; }); if (I && I.ev) break; await W8(400); }
+      const e0 = I && I.ev; ok(!!(e0 && e0.k === 'lost' && e0.st === 'call'), '112 사건이 생김(' + (e0 && e0.k + ' ' + e0.st + ' ' + e0.cell) + ')'); ok(!!(e0 && e0.mk), '멀리서 보이는 빛기둥(마커)'); await W8(600); const r0 = await S(); ok(!r0.route, '112 찾아가기 = 빨간 선 없음(셋째 힌트 전)'); await shot('first_6_call');
+      const fr0 = await ev(() => { const E = SM_TOWN.emerg().info(); return { goal: E.goal || '', chip: (document.querySelector('#twn-em,.twn-em,[data-chip="twn-em"]') || {}).textContent || '' }; }); console.log('    위 가운데 줄: ' + fr0.goal);
+      if (e0) { await walk(e0.x, e0.z, { self: 1, noComp: 1, r: 6, until: r => r.cur !== 'a1_1' || r.sid !== 'lost', tag: 'call', lim: 300 });
+        let I2 = null; for (let i = 0; i < 20; i++) { I2 = await ev(() => SM_TOWN.emerg().info()); if (I2.ev && I2.ev.st !== 'call') break; await W8(300); } ok(!!(I2.ev && I2.ev.st === 'cop'), '도착 → 경찰관·새 친구(' + (I2.ev && I2.ev.st) + ')');
+        const hot = async re => { for (let i = 0; i < 20; i++) { const h = await ev(r9 => { const H = SD2.map.interact.list().find(q => new RegExp(r9).test(q.label || '')); return H ? [H.x, H.z] : null; }, re); if (h) return h; await W8(300); } return null; };
+        const hc = await hot('경찰관과 이야기하기'); if (hc) { await walk(hc[0], hc[1], { r: 1.2, lim: 30 }); await p.keyboard.press('KeyE'); await W8(900); const dl = await ev(() => (document.querySelector('.twn-dlg') || {}).innerText || ''); ok(/집에 가다가/.test(dl), '경찰관 말 = 이야기 글(' + dl.replace(/\s+/g, ' ').slice(0, 50) + ')'); await closeDlg(); }
+        const hk = await hot('새 친구에게 물어보기'); if (hk) { await walk(hk[0], hk[1], { r: 1.0, lim: 30 }); await p.keyboard.press('KeyE'); await W8(900); }
+        let n = 0; for (; n < 20 && !(await ev(() => !!document.querySelector('.twn-p [data-q]'))); n++) await W8(300); const Q = await ev(() => [...document.querySelectorAll('.twn-p [data-q]')].map(b9 => b9.dataset.q + ':' + b9.textContent)); ok(Q.length === 4 && Q.some(q => /^near:/.test(q)), '묻기 창 = 이야기 물음 넷(' + Q.join(' / ') + ')');
+        for (const q of ['tel', 'near', 'dir']) { await ev(q9 => { const b9 = document.querySelector('.twn-p [data-q="' + q9 + '"]'); if (b9) b9.click(); }, q); await W8(350); }
+        const note = await ev(() => (document.querySelector('.twn-p .em-note') || {}).innerText || ''); ok(/편지랑 소포/.test(note) && /외워 두면/.test(note), '단서 수첩 = 새 친구 답(' + note.replace(/\s+/g, ' ').slice(0, 70) + ')'); await shot('first_7_ask');
+        const O = await ev(() => SM_TOWN.emerg().info().ev.opts); const wrong = O.findIndex(k => k !== 'home'), right = O.indexOf('home'); ok(right >= 0 && O.length >= 2, '지도 보기 ' + O.join(',')); if (wrong >= 0) { await ev(i9 => document.querySelector('.twn-p [data-o="' + i9 + '"]').click(), wrong); await W8(400); const m9 = await ev(() => (document.querySelector('.twn-p [data-m]') || {}).textContent || ''); ok(/고개를 저어요/.test(m9), '틀린 곳 = 새 친구가 단서를 다시 말함(' + m9.slice(0, 40) + ')'); }
+        await ev(i9 => document.querySelector('.twn-p [data-o="' + i9 + '"]').click(), right); await W8(1200);
+        const I3 = await ev(() => SM_TOWN.emerg().info()); ok(!!(I3.ev && I3.ev.st === 'sw'), '맞는 집 → 같이 걷기(' + (I3.ev && I3.ev.st) + ')'); const r3 = await S(); ok(!r3.route, '같이 걷기 = 빨간 선 없음'); const fon = await ev(() => { const s9 = SM_TOWN.story(); return s9.step && s9.step.v && s9.step.v.lw; }); ok(!!fon, '새 친구 몸이 다시 곁에(같이 걷기)');
+        await p.keyboard.press('KeyB'); await W8(1600); const g9 = await ev(() => SM_TOWN.emerg().info().goal || ''); ok(!/내려/.test(g9), '자전거를 타도 「내려」 말 X(' + g9.slice(0, 40) + ')'); await p.keyboard.press('KeyB'); await W8(500);
+        const T = await ev(() => SM_TOWN.storyTarget()); await shot('first_8_walk'); await walk(T.x, T.z, { self: 1, r: 8, until: r => r.cur !== 'a1_1' || r.sid !== 'lost', tag: 'walk', lim: 300 }); } }
     s = await waitStep(q => q.done.includes('a1_1'), 8000); ok(s.done.includes('a1_1'), '1-1 끝(' + mmss(t()) + ')'); mark('1-1 끝');
-    ok(st.maxJ < 2.0, '순간이동 없음(0.12초 한 걸음 최대 ' + st.maxJ.toFixed(2) + 'm · 샘플 ' + st.steps + ')'); ok(!st.selfBad.length, '스스로 찾는 단계에 빨간 선 0(셋째 힌트 전) ' + st.selfBad.slice(0, 4).join(' ')); ok(!st.compBad.length, '지도 조각·우체국 단계 나침반 목적지 0(둘째 힌트 전) ' + st.compBad.slice(0, 4).join(' '));
-    s = await waitStep(q => q.cur === 'a1_3', 16000); ok(s.cur === 'a1_3', '다음 장(목장의 아침 · 양몰이)이 저절로(' + s.cur + ')');
+    ok(st.maxJ < 2.0, '순간이동 없음(0.12초 한 걸음 최대 ' + st.maxJ.toFixed(2) + 'm · 샘플 ' + st.steps + ')'); ok(!st.selfBad.length, '스스로 찾는 단계에 빨간 선 0(셋째 힌트 전) ' + st.selfBad.slice(0, 4).join(' ')); ok(!st.compBad.length, '지도 조각·112 단계 나침반 목적지 0(둘째 힌트 전) ' + st.compBad.slice(0, 4).join(' ')); { const L9 = await ev(() => (SM_TOWN.game().S.emerg || { log: [] }).log[0] || null); ok(!!(L9 && L9.k === 'lost' && L9.ok), '112 기록(경찰서 칭찬 게시판이 알아봄)'); }
+    for (let i = 0; i < 8 && s.cur !== 'a1_3'; i++) { await shut(); s = await waitStep(q => q.cur === 'a1_3', 3000); }   /* 112 도우미 끝 창(배운 것)을 닫은 뒤 9초 */ ok(s.cur === 'a1_3', '다음 장(목장의 아침 · 양몰이)이 저절로(' + s.cur + ')');
     { const rec = await ev(() => { const R = SM_TOWN.game().S.story.rec; return { p0: R.p0 && R.p0.st, a1: R.a1_1 && R.a1_1.st }; }); console.log('   기록 ' + JSON.stringify(rec).slice(0, 300)); }
 
     console.log('⑤ 자료 다시 보기(SEE-1)·보기 줄이기(CUT-1) — 1-2 고르기·문장 틀');

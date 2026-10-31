@@ -1,6 +1,6 @@
 // 🚶 걷기 봇 공용(GATE-2 · 10-31 '진짜 시험') — town_first.cjs의 걷기와 첫 장 길을 코드 그대로 옮김 · town_first.cjs · town_gate.cjs가 같이 씀
 //   walker(p, { t }) = { p, ev, W8, S, closeDlg, shut, walk, waitStep, st } · st = { maxJ(0.12초 한 걸음 최대 m — 2m 넘으면 순간이동), steps, selfBad, compBad } · t() = 시작부터 초(기록 꼬리표)
-//   toFirstTry(Wk, { ok, mark, shot, mmss, t, PICK }) = 현관 칠판 E → 프롤로그(도서관 · 카드 둘 · 데려가기) → 1-1 첫 '해 보기'(tmap) 단계 도착까지 걸어서 · 돌려줌 { s, tT }
+//   toFirstTry(Wk, { ok, mark, shot, mmss, t, PICK }) = 현관 칠판 E → 프롤로그(도서관 · 꽃에 물 주기(COVER-1) · 카드 둘 · 데려가기) → 1-1 첫 '해 보기'(tmap) 단계 도착까지 걸어서 · 돌려줌 { s, tT }
 function walker(p, o = {}) {
   const ev = (f, a) => p.evaluate(f, a), W8 = ms => p.waitForTimeout(ms), t = o.t || (() => 0), st = { maxJ: 0, steps: 0, selfBad: [], compBad: [] };
   const S = () => ev(() => { const s = SM_TOWN.story(), q = SD2.map.player.get(); return { cur: s.cur, id: s.step && s.step.id, type: s.step && s.step.type, h: s.step ? s.step.h : 0, done: Object.keys((s.S && s.S.done) || {}), x: q.x, z: q.z, dlg: !!document.querySelector('.twn-dlg'), pan: !!document.querySelector('.twn-p'), route: !!SM_TOWN.routeNow(), comp: SM_TOWN.compTgt ? SM_TOWN.compTgt() : null }; });
@@ -30,6 +30,9 @@ async function toFirstTry(Wk, o) {
     let s = await S(); if (s.cur !== 'p0') { await ev(() => SM_TOWN.storyStart('p0')); await W8(1200); s = await S(); } ok(s.cur === 'p0', '프롤로그 시작(' + s.cur + ')'); mark('프롤로그 쪽지'); }
   await closeDlg(); let s = await waitStep(q => q.id === 'lib'); mark('📚 작은 도서관 가기(빨간 선)');
   { const T = await ev(() => SM_TOWN.storyTarget()); let rt = false; for (let i = 0; i < 12 && !rt; i++) { rt = await ev(() => !!SM_TOWN.routeNow()); if (!rt) await W8(250); }   /* 길은 단계 시작 0.45초 뒤 그려짐 */ ok(rt, '처음 걷기 = 빨간 선 있음(튜토리얼)'); await walk(T.x, T.z, { line: true, r: 6, until: r => r.sid !== 'lib', tag: 'lib' }); }
+  s = await waitStep(q => q.id !== 'lib'); if (s.id === 'bed') { mark('💧 도서관 앞 마른 꽃에 물 주기(물뿌리개 · 도구 띠 처음)'); await closeDlg(); const T = await ev(() => SM_TOWN.storyTarget()); const r0 = await S(); ok(!r0.route, '꽃 물 주기 = 빨간 선 없음(❗만)');   /* COVER-1(10-31) */
+    if (T) { await walk(T.x, T.z, { self: 1, r: 2.4, lim: 90, tag: 'bed' }); await p.keyboard.press('Digit1'); await W8(400); await ev(([x, z]) => { SD2.map.player.lookAt([x, z]); SM_TOWN.tools.aim(x, z); }, [T.x, T.z]); await W8(200); await p.keyboard.down('KeyF'); await W8(2200); await p.keyboard.up('KeyF'); await ev(() => SM_TOWN.tools.aim(null)); await p.keyboard.press('Digit1'); }
+    s = await waitStep(q => q.id !== 'bed', 8000); ok(s.id === 'first', '물뿌리개로 꽃에 물 → 넘어감(' + s.id + ')'); await shot('first_0_bed'); }
   s = await waitStep(q => q.id === 'first'); ok(s.id === 'first', '도서관 도착 → 보여 줄 곳과 까닭(카드 한 번)');
   { let n = 0; for (; n < 40 && !(await ev(() => !!document.querySelector('.twn-p [data-card]'))); n++) await W8(300); const C0 = await ev(() => [...document.querySelectorAll('.twn-p [data-card]')].map(b9 => b9.textContent)); ok(C0.length >= 2 && C0.some(x => /🏪|📮|🚒|🎠/.test(x)), '첫 칸 = 그림 + 장소 이름(' + C0.join(', ') + ')'); await shot('first_1_card');
     const k = await ev(nm => { const L9 = [...document.querySelectorAll('.twn-p [data-card]')], b9 = L9.find(q => q.textContent.includes(nm)) || L9[0]; b9.click(); return b9.textContent; }, PICK); await W8(300);
