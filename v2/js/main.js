@@ -8,7 +8,7 @@ import { buildWorld } from './world.js?v=159';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=97';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=98';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=11';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=29';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -2101,4 +2101,4 @@ window.SD2 = {
 };
 if (!window.SD) window.SD = { perf: window.SD2.perf };   /* MODE-1: 예전 이름 SD.perf()도 같은 값 */
 // 게임 로더(MAP-API-1): ?game=이름 → v2/games/registry.js 허용 목록 → export default start(map) (사진 대조 모드에선 안 켠다)
-{ const QS = new URLSearchParams(location.search), GAME = QS.get('game') || (QS.get('tour') === '1' ? 'tour' : null) || (QS.get('town') && !window.SM_PROMO ? 'town' : null); /* TOWN-1: ?town=<마을 자료> = 마을 세계(홍보판엔 없음) */ if (GAME && !SHOT) MAP.game.load(GAME, Object.fromEntries(new URLSearchParams(location.search))); }
+{ const QS = new URLSearchParams(location.search), G0 = QS.get('game') || (QS.get('tour') === '1' ? 'tour' : null) || (QS.get('town') && !window.SM_PROMO ? 'town' : null), GAME = window.SM_PROMO && G0 === 'town' ? null : G0; /* TOWN-1: ?town=<마을 자료> = 마을 세계(홍보판엔 없음) · SAVE-3b(코덱스 C E1): 홍보판에 ?game=town을 붙여도 마을은 안 엶(로더 loadGame도 막음 · 루트 index.html은 그대로) */ if (GAME && !SHOT) MAP.game.load(GAME, Object.fromEntries(new URLSearchParams(location.search))); }

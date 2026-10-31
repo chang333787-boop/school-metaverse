@@ -533,12 +533,14 @@ export function createMapApi(host, NAV, META) {
   const game = { current: null, ms: 0, msN: 0, msT: 0, seq: 0 };
   async function loadGame(id, params = {}) {
     if (!/^[a-z_][a-z0-9_-]{0,31}$/.test(id || '')) { hud.toast('게임 이름이 올바르지 않아요'); return null; }   // GAME-FIND-1: 가운데 밑줄 허용(find_place) — 점·빗금은 여전히 막힘
+    if (window.SM_PROMO && id === 'town') return null;   // SAVE-3b(코덱스 C E1): 홍보판은 마을 세계를 열지 않음(학생 집·저장 칸 · ?game=town 우회 막기) — 마을 파일을 빌려 쓰는 항목(use)도 아래에서
     if (game.current) stopGame('replace');
     const my = ++game.seq;   // 리뷰(found2): 모듈을 받는 동안 ⏹(또는 다른 게임 고르기)가 오면 이 로드는 버린다 — 예전엔 stop이 무시되고 게임이 그대로 시작했다(두 번 누르면 두 게임)
     try {
       const reg = await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url));
       if (my !== game.seq) return null;
       const ent = reg.GAMES && reg.GAMES[id]; if (!ent) { hud.toast('없는 게임이에요: ' + id); return null; }
+      if (window.SM_PROMO && ent.use === 'town') return null;
       const mod = await import(new URL('../games/' + (/^[a-z_][a-z0-9_-]{0,31}$/.test(ent.use || '') ? ent.use : id) + '.js?v=' + (ent.v || 1), import.meta.url));   // LESSON(10-03): use = 다른 게임 파일을 빌려 씀 · params = 미리 정한 값(카드 하나 = 이야기 하나)
       if (ent.params && typeof ent.params === 'object') params = { ...ent.params, ...params };
       if (my !== game.seq) return null;

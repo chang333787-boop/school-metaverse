@@ -4,7 +4,7 @@
 //   규칙 카드 = 한 문장 + 그림 한 장(처음 한 번 · 판 안 '규칙' 단추) · 저장 = 놀이마다 { lv, best(별 · 안에서만), good, fail, w, n } · 보상 = 문(rwCheck) 하나 — 꼬리표 table:*
 //   노인정·경로당·마을회관도 같은 틀(open(놀이, { who })) · 상품 보드게임(상표·판 그림) X — 모두 전통·공용 규칙 · 셈 X(윷은 칸을 세며 옮김 · 점수판·순위 X)
 //   위 = 순수 함수(판 규칙·AI · node 시험 tools/harness/town_table.cjs) · 아래 = 화면 createTable(A)
-import { ITEMS } from './town_game.js?v=48';   // 짝 맞추기 '나는 것 ↔ 나는 곳'(물건표 한 곳)
+import { ITEMS } from './town_game.js?v=49';   // 짝 맞추기 '나는 것 ↔ 나는 곳'(물건표 한 곳)
 import { JOBS, PG, jobSvg } from './town_places.js?v=3';   // 짝 맞추기 '일하는 사람 ↔ 일터'(장소 카드와 같은 표 · 같은 그림)
 export const TABLE_V = 1;
 const T2 = (ko, en) => [ko, en];
