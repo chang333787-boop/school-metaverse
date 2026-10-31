@@ -231,7 +231,7 @@ export function createBoss({ group, diff = 'normal', scale = 1, sfx = null, plac
   B.resetHoles = () => { if (holeU) for (const h of holeU.H) h.w = -1; B.holes = 0; for (const p of B.memb) p.holed = false; };
 
   /* ── 예고(warn) → 수 ── */
-  function begin(kind, target) { B.act = kind; B.actT = 0; B.warn = { kind, T: WARN[diff] * (kind === 'sniff' ? 1 : 1), left: WARN[diff], target, aimAtMe: target === 'me' }; emit('warn', B.warn); }
+  function begin(kind, target) { B.act = kind; B.actT = 0; B.warn = { kind, T: WARN[diff] * (kind === 'sniff' ? 1 : 1), left: WARN[diff], target, aimAtMe: target === 'me' }; emit('warn', B.warn); if (sfx) sfx.play(kind === 'fire' ? 'inhale' : 'growl', B.mouth, 1.2); }   // 예고 소리(보이는 짝 = 목 부풂·입 안 밝아짐 · 자세)
   B.begin = begin;
   B.cancel = () => { B.act = ''; B.warn = null; B.inhale = 0; endFire(); };
   /* 불 — 입에서 aim 점까지 · 0.35초 뻗고 1.1초 머묾 · 맞는 곳 = 원뿔 넓은 쪽 */

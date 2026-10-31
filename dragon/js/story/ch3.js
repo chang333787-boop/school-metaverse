@@ -48,11 +48,11 @@ function* gronckle(G, C) {
     const M = Gr.mind;
     Gr.faceTo(P.W.x, P.W.z);
     /* 공격 박자 */
-    if (!ball && M.warnT <= 0 && M.beh !== 'attack' && !M.inGap() && shots < 6) { next -= dt; if (next <= 0) { M.windup(WARN[G.diff]); blur = 0; } }
+    if (!ball && M.warnT <= 0 && M.beh !== 'attack' && !M.inGap() && shots < 6) { next -= dt; if (next <= 0) { M.windup(WARN[G.diff]); blur = 0; G.sfx.play('cry_gronckle', Gr); } }
     C.puff = M.warnT > 0;
     /* 방패 두드리기 — 볼이 부풀 때만 통함 · 연타는 익숙해짐 */
     if (P.fTap && shieldOn && !down) {
-      P.pose = { hammer: 1 }; C.bangT = 0.25; G.sfx.play('bang');
+      P.pose = { hammer: 1 }; C.bangT = 0.25; G.sfx.play('bang'); G.sfx.play('clang', null, 0.7);
       if (M.warnT > 0 && hab < 3) { blur = 1; puffs.burst(Gr.x, Gr.y + 1.6, Gr.z, 6, 1, 1); G.hud.say('fishlegs', '조준이 흐려졌어!', [], { secs: 1 }); }
       else hab += 1;
       M.event('loud');

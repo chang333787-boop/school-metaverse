@@ -113,11 +113,11 @@ function* finale(G, C) {
     const M = Gr.mind, dP = G.dist(P.W, Gr), dA = Math.hypot(As.x - Gr.x, As.z - Gr.z), tired = shots >= 6 && !ball;
     crowdPose(fans, aHits > 0 || shots > 0 ? 'cheer' : 'murmur', G.t);
     /* 쏘기 박자 — 쏠 때는 가까운 사람(방패 소리가 나면 나) */
-    if (!tired && !ball && M.warnT <= 0 && M.beh !== 'attack' && gapT <= 0) { next -= dt; if (next <= 0) { M.windup(WARN[G.diff]); tgt = dP <= dA + 0.5 ? 'me' : 'as'; blur = false; } }
+    if (!tired && !ball && M.warnT <= 0 && M.beh !== 'attack' && gapT <= 0) { next -= dt; if (next <= 0) { M.windup(WARN[G.diff]); tgt = dP <= dA + 0.5 ? 'me' : 'as'; blur = false; G.sfx.play('cry_gronckle', Gr); } }
     if (M.warnT > 0) { const T = tgt === 'me' ? P.W : As; Gr.faceTo(T.x, T.z); } else if (tired) Gr.faceTo(P.W.x, P.W.z);
     /* 방패 두드리기(멀리서 F) — 볼이 부풀 때만 통함 · 그롱클이 나를 봄 · 연타는 익숙해짐 */
     if (P.fTap && dP >= 3.2 && !down) {
-      P.pose = { hammer: 1 }; C.bangT = 0.25; G.sfx.play('bang'); M.event('loud');
+      P.pose = { hammer: 1 }; C.bangT = 0.25; G.sfx.play('bang'); G.sfx.play('clang', null, 0.7); M.event('loud');
       if (M.warnT > 0 && hab < 3) { blur = true; tgt = 'me'; puffs.burst(Gr.x, Gr.y + 1.6, Gr.z, 6, 1, 1); G.hud.say('fishlegs', '조준이 흐려졌어!', [], { secs: 1 }); }
       else hab += 1;
     }

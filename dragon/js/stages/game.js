@@ -30,7 +30,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
   const hud = createHud();
   const host = createStageHost({ gfx: opt.gfx, scene, camera, veil: { show: (t) => hud.veil.show(t || '불러오는 중'), hide: () => {} } });
   const G = { scene, camera, gfx: opt.gfx, env, host, hud, rng, diff: 'normal', grade: 0, slot: 1, place: null, placeKey: '', collide: null, inv: {}, flags: {}, t: 0, records: {}, cast: [], castBy: {} };
-  G.book = createBook(G); G.map = createMap(); G.bench = createBench(); G.sfx = createSfx();
+  G.book = createBook(G); G.map = createMap(); G.bench = createBench(); G.sfx = createSfx(G); G.music = G.sfx.music;
   /* 플레이어 */
   const P = G.player = { W: null, C: null, root: null, rig: null, item: null, lock: false, fT: 0, fTap: false, fLong: false, reach: false, away: false, cam: 'follow', hidden: false };
   loadModel('assets/models/hiccup.glb?v=17').then(({ root, bones }) => { P.root = root; P.rig = createHumanRig(bones, root); P.bones = bones; if (G.place) G.place.group.add(root); });

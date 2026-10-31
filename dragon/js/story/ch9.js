@@ -154,7 +154,7 @@ function* fury(G, C) {
     /* 나이트메어 — 7~10m 거리를 두고 돎 · 예고(몸이 더 달아오름 + 웅크림 + 입) → 쏨(움직이는 쪽을 조금 앞질러) → 숨 고름 */
     if (!shot && M.warnT <= 0) { if (d > 10) N.goTo(P.W.x + (N.x - P.W.x) / d * 8, P.W.z + (N.z - P.W.z) / d * 8, 2.6, 0.8); else if (d < 6) N.goTo(N.x + (N.x - P.W.x) / d * 3, N.z + (N.z - P.W.z) / d * 3, 2.4, 0.6); }
     N.faceTo(P.W.x, P.W.z);
-    if (!shot && M.warnT <= 0 && M.beh !== 'attack') { next -= dt; if (next <= 0) { M.windup(WARN[G.diff]); N.stay(); } }
+    if (!shot && M.warnT <= 0 && M.beh !== 'attack') { next -= dt; if (next <= 0) { M.windup(WARN[G.diff]); N.stay(); G.sfx.play('cry_' + N.kind, N); } }
     const warn = M.warnT > 0;
     blz.blaze = warn ? 1 : 0.85; blz.crouch = warn ? 0.85 : 0.5; blz.jaw = warn ? 0.2 + 0.25 * (1 - M.warnT / WARN[G.diff]) : 0;
     if (M.beh === 'attack' && !shot && !warn) {

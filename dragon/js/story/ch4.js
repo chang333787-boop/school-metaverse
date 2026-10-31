@@ -50,7 +50,7 @@ function* naddermaze(G, C) {
     const sees = d < 13 && fa > Math.cos(0.96) && !blind && G.collide.cut(N.x, N.z, P.W.x, P.W.z) >= 1;
     C.sees = sees;
     seenT = sees ? seenT + dt * (P.W.low ? 0.6 : 1) : Math.max(0, seenT - dt * 0.5);
-    if (seenT > 0.6 && !N.mind.warnT && !spikes) { N.stay(); N.faceTo(P.W.x, P.W.z); N.mind.windup(WARN[G.diff]); C.aim = { x: P.W.x, z: P.W.z }; G.hud.say('fishlegs', '가시를 세웠어! 쏜다!', [], { secs: 1.6 }); }
+    if (seenT > 0.6 && !N.mind.warnT && !spikes) { N.stay(); N.faceTo(P.W.x, P.W.z); N.mind.windup(WARN[G.diff]); G.sfx.play('cry_nadder', N); C.aim = { x: P.W.x, z: P.W.z }; G.hud.say('fishlegs', '가시를 세웠어! 쏜다!', [], { secs: 1.6 }); }
     if (N.mind.warnT > 0) { N.faceTo(P.W.x, P.W.z); C.aim = { x: P.W.x, z: P.W.z }; }
     if (N.mind.beh === 'attack' && !spikes) {               // 쏨 — 예고 끝에 본 자리로 · 0.35초 뒤 닿음
       spikes = { t: 0, x: P.W.x, z: P.W.z, cut: G.collide.cut(N.x, N.z, P.W.x, P.W.z) < 1 };
@@ -202,7 +202,7 @@ function* nameIt(G, C) {
         holdItem(P, null); P.pose = null; T.pose = { teeth: 0, jaw: 0.1 }; yield* wait(0.9);
         T.pose = { teeth: 1, jaw: 0.25 }; yield* wait(0.5);
         G.hud.say('hiccup', '이가 쏙… 들어갔다 나왔어? 이 없는… 투슬리스!', [], { secs: 2.6 });
-        G.hud.banner('이름이 생겼다 — 투슬리스', 'heart', 3.5); G.sfx.play('ok');
+        G.hud.banner('이름이 생겼다 — 투슬리스', 'heart', 3.5); G.sfx.play('ok'); G.sfx.play('purr', T);
         G.book.note('nightfury', 'likes', '생선(대구·연어)'); G.flags.named = true;
         T.pose = {}; yield* wait(1.2);
         return true;
@@ -300,7 +300,7 @@ function* sand(G, C) {
       const hx = P.W.x + Math.sin(P.W.yaw) * 0.9, hz = P.W.z + Math.cos(P.W.yaw) * 0.9;
       T.goTo(hx + (T.x - hx) * 0.05, hz + (T.z - hz) * 0.05, 0.8, 1.5); T.pose = { headUp: -0.25, sniff: 0, teeth: 0 };
       yield* wait(1.4);
-      G.hud.banner('코가 손바닥에 닿았다', 'hand', 3.5); G.sfx.play('purr');
+      G.hud.banner('코가 손바닥에 닿았다', 'hand', 3.5); G.sfx.play('purr', T);
       G.book.note('nightfury', 'sign', '동공이 둥글면 마음 놓음');
       yield* wait(1.6);
       const puffs = makePuffs(pl.group, 40, 0xd9c49a); puffs.burst(T.x, T.y + 0.8, T.z, 18, 1.5, 1.5);

@@ -5,6 +5,7 @@
 // 바깥 갈고리: world.updrafts(함수 또는 배열 [{x, z, r, top?, lift?, power?, y?}]) 위 = 날갯짓 없이 솟음(S.updraft) · F.push(ax, ay, az) = 이 걸음 움직임에만 더함(m/s · 걸음마다 다시 부름)
 // 좌표: 앞 = (sin yaw, cos yaw) · 오른쪽 = (−cos yaw, sin yaw)(걷기와 같음) · roll > 0 = 오른쪽 날개가 내려감 · pitch > 0 = 고개 듦
 import * as THREE from 'three';
+import { getSfx } from '../core/sfx.js?v=17';
 
 /* 손맛 값 — 한곳에서만 고친다(봇 기록으로 맞춤) */
 export const FK = {
@@ -71,6 +72,8 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
   const emit = (n) => { const a = L[n]; if (a) for (let i = 0; i < a.length; i++) a[i](EV[n]); };
   const F = { state: S, pose, mode, world: W, rider: RD };
   F.on = (ev, fn) => { (L[ev] = L[ev] || []).push(fn); return F; };
+  const SX = getSfx();                                      /* 소리(켜졌을 때만 · 보이는 짝 = 날개 · 물보라 · 흔들림) — 날갯짓 박자 · 물보라 · 부딪힘 */
+  if (SX) { F.on('flap', (e) => SX.play('flap', null, 0.55 + 0.45 * e.power)); F.on('splash', () => SX.play('splash')); F.on('bump', () => SX.play('thud', null, 0.5)); F.on('crash', () => SX.play('thud')); }
   F.off = (ev, fn) => { const a = L[ev]; if (a) { const k = a.indexOf(fn); if (k >= 0) a.splice(k, 1); } };
   F.setOpts = (o) => { Object.assign(O, o); if (o.assist === false) A = ASSIST.hard; else if (o.assist === true) A = ASSIST[mode] || ASSIST.normal; if (o.liftOnly) { S.liftT = 0; S.speed = 0; } return F; };
   F.opts = O;
@@ -150,7 +153,7 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
   }
 
   /* 한 걸음(1/60초) */
-  F.step = (dt, I) => { stepCore(dt, I); stepUps(); pushX = pushY = pushZ = 0; };
+  F.step = (dt, I) => { stepCore(dt, I); stepUps(); pushX = pushY = pushZ = 0; if (SX && SX.on) SX.level('wind', clamp((S.speed + S.boost - 6) / 27, 0, 1) + Math.min(0.25, Math.hypot(S.gustX, S.gustZ) * 0.07)); };   // 바람 = 빠를수록 · 돌풍 때 더
   const stepCore = (dt, I) => {
     S.t += dt; P.x = S.x; P.y = S.y; P.z = S.z; P.yaw = S.yaw; P.pitch = S.pitch; P.roll = S.roll;
     RD.px = RD.x; RD.py = RD.y; RD.pz = RD.z;
@@ -187,7 +190,7 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
       EV.flap.power = pw; EV.flap.kind = kind; emit('flap');
     }
     if (easy || O.autoForward) {                              // 쉬움: 저절로 날갯짓(보이는 것만) · 오를 때 더 자주
-      autoFlap -= dt; if (autoFlap <= 0 && (pitchS > 0.2 || S.speed < FK.vcruise - 2)) { fp = 0; autoFlap = 0.9; }
+      autoFlap -= dt; if (autoFlap <= 0 && (pitchS > 0.2 || S.speed < FK.vcruise - 2)) { fp = 0; autoFlap = 0.9; if (SX) SX.play('flap', null, 0.5); }
     }
     S.flapPh = fp;
 

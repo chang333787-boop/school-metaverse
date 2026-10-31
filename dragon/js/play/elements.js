@@ -27,6 +27,7 @@
 // 매 걸음 new X(파티클·목록은 처음에 한 번) · 전체 순회는 5Hz 규칙 안에서만(칸 ≤ 수백) · 쏜 물·불은 8m 격자로 찾음 · Light 추가 X
 import * as THREE from 'three';
 import { flameMesh, glowSprite } from '../look/kit.js?v=17';
+import { getSfx } from '../core/sfx.js?v=17';
 
 /* 꼬리표 비트 — 한 칸이 여럿을 가질 수 있음 */
 export const TAG = { FUEL: 1, WET: 2, GAS: 4, ROOF: 8, CLOTH: 16, STONE: 32, LOOSE: 64 };   // LOOSE = 갈고리로 떼어낼 수 있음
@@ -216,6 +217,7 @@ export function createElements(o = {}) {
       if (!slots[w].c || slots[w].c._d > d) slots[w].c = c;
     }
     for (const s of slots) if (s.c) s.c.inSlot = true;          // 파티클(연기·불티)은 이 여섯 칸만(design §3-2)
+    const SX = getSfx(); if (SX && SX.on) for (const s of slots) if (s.c) SX.near('crackle', s.c.x, s.c.y, s.c.z, Math.min(1, 0.35 + s.c.fire * 0.65));   // 불 탁탁 = 타는 칸 자리에서(가까울수록 · 보이는 짝 = 불꽃)
     /* 지붕 발광색(인스턴스 하나) — 탐 = 주황(불 세기) · 달아오름 = 어두운 빨강(곧 붙음 = 보이는 예고) · 다 탐 = 그을음 · 떼어냄·멀쩡 = 안 보임 */
     const m = embers.mesh; if (!m) return;
     let n = 0;

@@ -142,7 +142,7 @@ function* trio(G, C) {
       if (d.calm) continue;
       const M = d.mind; d.faceTo(P.W.x, P.W.z);
       d.next -= dt;
-      if (d.next <= 0 && M.warnT <= 0 && M.beh !== 'attack' && !M.inGap()) { M.windup(WARN[G.diff]); d.next = 5.5 + G.rng() * 3; }
+      if (d.next <= 0 && M.warnT <= 0 && M.beh !== 'attack' && !M.inGap()) { M.windup(WARN[G.diff]); d.next = 5.5 + G.rng() * 3; G.sfx.play('cry_' + d.kind, d); }
       if (M.beh === 'attack' && !d.shot) { d.shot = { t: 0, x: P.W.x, z: P.W.z }; }
       if (d.gapT > 0) d.gapT -= dt;
       if (d.shot) { d.shot.t += dt; if (d.shot.t > 0.5) { d.gapT = { easy: 3, normal: 2.2, hard: 1.5 }[G.diff]; puffs.burst(d.shot.x, 0.3, d.shot.z, 12, 2, 2); if (Math.hypot(P.W.x - d.shot.x, P.W.z - d.shot.z) < 1.5 && !(P.W.rollT > 0)) { if (G.diff === 'easy') G.hud.say('hiccup', '앗 뜨거!', [], { secs: 0.8 }); else { knocks++; P.lock = true; P.pose = { stumble: 1 }; C.down = 2; } } /* 쉬움 = 맞아도 안 넘어짐(design §8) */ d.shot = null; } }
@@ -150,7 +150,7 @@ function* trio(G, C) {
       const near = G.dist(P.W, d) < (d.kind === 'terror' ? 2 : 3.2), gap = d.gapT > 0 || G.diff === 'easy' && M.beh !== 'attack' && M.warnT <= 0;   // 쏜 뒤 숨 고르는 틈(보통 2.2초)
       if (near && gap) {
         const ok = (d.kind === 'gronckle' && P.fTap && P.item === 'nip') || (d.kind === 'nadder' && P.reach && (C.chinT = (C.chinT || 0) + dt) > 0.55) || (d.kind === 'terror' && P.fTap && P.item === 'cod');
-        if (ok) { d.calm = true; M.lock = d.kind === 'gronckle' ? 'roll' : 'flop'; M.event(d.kind === 'gronckle' ? 'nip' : d.kind === 'nadder' ? 'chin' : 'offer', d.kind === 'terror' ? 'cod' : undefined); G.hud.say('fishlegs', d.kind === 'gronckle' ? '그롱클이 뒹굴어!' : d.kind === 'nadder' ? '내더가 털썩!' : '테러가 받아먹었어!', [], { secs: 1.4 }); C.chinT = 0; }
+        if (ok) { d.calm = true; G.sfx.play('purr', d); M.lock = d.kind === 'gronckle' ? 'roll' : 'flop'; M.event(d.kind === 'gronckle' ? 'nip' : d.kind === 'nadder' ? 'chin' : 'offer', d.kind === 'terror' ? 'cod' : undefined); G.hud.say('fishlegs', d.kind === 'gronckle' ? '그롱클이 뒹굴어!' : d.kind === 'nadder' ? '내더가 털썩!' : '테러가 받아먹었어!', [], { secs: 1.4 }); C.chinT = 0; }
       }
     }
     if (P.fTap && !D.some((d) => !d.calm && G.dist(P.W, d) < 3.4)) { C.ii = ((C.ii ?? 0) + 1) % items.length; holdItem(P, items[C.ii]); G.hud.say('hiccup', { nip: '드래곤 풀', shield: '방패', cod: '생선' }[items[C.ii]], [items[C.ii]], { secs: 0.8 }); }   // 드래곤에서 떨어져 F = 들 것 바꾸기

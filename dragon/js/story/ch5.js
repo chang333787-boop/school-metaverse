@@ -128,7 +128,7 @@ function* eelTail(G, C) {
     if (knocked >= 3) { yield* sayAll(G, [['hiccup', '…아프게 했나 봐. 천천히 다시.']]); return 'retry'; }
   }
   G.useSpots = []; T.pose = {};
-  G.hud.banner('첫 치유 — 다친 꼬리를 살폈다', 'heart', 3.5);
+  G.hud.banner('첫 치유 — 다친 꼬리를 살폈다', 'heart', 3.5); G.sfx.play('purr', T);
   G.book.note('nightfury', 'other', '다친 곳을 만지면 움찔 · 기다리면 맡겨 줌');
   return true;
 }
@@ -170,7 +170,7 @@ function* lift(G, C) {
   for (let k = 0; k < 60; k++) puffs.step(yield);
   yield* sayAll(G, [['hiccup', '첨벙… 그래도 날았어! 우리 둘이!']]);
   G.inv.bond = Math.max(G.inv.bond || 0, 1);
-  G.hud.banner('사이 레벨 1 — 부르면 오는 거리', 'heart', 4);
+  G.hud.banner('사이 레벨 1 — 부르면 오는 거리', 'heart', 4); G.sfx.play('purr', T);
   return true;
 }
 function* awaitP(p) { let v, done = false; p.then((x) => { v = x; done = true; }, () => { done = true; }); while (!done) yield; return v; }

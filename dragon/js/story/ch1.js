@@ -146,14 +146,14 @@ function* weapons(G, C) {
     /* 도끼 꾸러미 */
     if (C.stage === 'rack') {
       G.useSpots = [{ x: rack.position.x, y: rack.position.y, z: rack.position.z }];
-      if (P.fTap && G.near(rack.position, 2.4)) { C.stage = 'carry'; held = 3; holdItem(P, 'axe'); rack.visible = false; G.useSpots = []; G.hud.goal('바이킹 셋에게 도끼 날라 주기 (0/3)'); G.hud.say('hiccup', '도끼 셋! 무겁다…', [], { secs: 1.4 }); }
+      if (P.fTap && G.near(rack.position, 2.4)) { C.stage = 'carry'; held = 3; holdItem(P, 'axe'); G.sfx.play('clang', rack.position); rack.visible = false; G.useSpots = []; G.hud.goal('바이킹 셋에게 도끼 날라 주기 (0/3)'); G.hud.say('hiccup', '도끼 셋! 무겁다…', [], { secs: 1.4 }); }
       continue;
     }
     /* 앉은 드래곤 — 가까이 오면 예고(볼 부풂 · 가시 세움) → 쏨 → 맞으면 뒤로 밀림 */
     for (const d of sit) {
       if (!d.root) continue;
       const dd = G.dist(P.W, d), M = d.mind; d.faceTo(P.W.x, P.W.z); d.cd -= dt;
-      if (dd < 9 && d.cd <= 0 && M.warnT <= 0 && M.beh !== 'attack' && !d.shot && G.collide.cut(P.W.x, P.W.z, d.x, d.z) >= 1) { M.windup(WARN[G.diff]); d.cd = 4; if (!d.told) { d.told = true; G.hud.say('hiccup', d.kind === 'gronckle' ? '볼이 부푼다… 이 골목은 안 되겠어!' : '가시를 세웠어! 다른 길로!', [], { secs: 1.8 }); } }
+      if (dd < 9 && d.cd <= 0 && M.warnT <= 0 && M.beh !== 'attack' && !d.shot && G.collide.cut(P.W.x, P.W.z, d.x, d.z) >= 1) { M.windup(WARN[G.diff]); d.cd = 4; G.sfx.play('cry_' + d.kind, d); if (!d.told) { d.told = true; G.hud.say('hiccup', d.kind === 'gronckle' ? '볼이 부푼다… 이 골목은 안 되겠어!' : '가시를 세웠어! 다른 길로!', [], { secs: 1.8 }); } }
       if (M.beh === 'attack' && !d.shot) { d.shot = { t: 0, sx: d.x, sz: d.z, sy: d.y + 1.4, tx: P.W.x, tz: P.W.z, ty: pl.height(P.W.x, P.W.z, P.W.y) }; ball.visible = true; }
       if (d.shot) {
         const s = d.shot; s.t += dt / 0.7; const k = Math.min(1, s.t);
@@ -374,7 +374,7 @@ function* gauntlet(G, C) {
       if (gi > d.st.at + 1 && dd > 15) { d.done = true; M.lock = 'idle'; d.faceTo(d.x, d.z - 40); d.pose = { tailCurl: 1, headUp: 0.3, look: 0.6 }; continue; }   // 지나가면 뒤(북쪽 바다)를 돌아봄 = 겁먹은 신호
       d.faceTo(P.W.x, P.W.z); d.cd -= dt;
       if (dd < 13 && G.vis(d.x, d.y + 1.5, d.z) && G.collide.cut(P.W.x, P.W.z, d.x, d.z) >= 1 && d.cd <= 0 && !atk && M.warnT <= 0 && M.beh !== 'attack') {   // 보이는 드래곤만(집 벽에 가리면 안 쏨 · 깜짝 X)
-        M.windup(WARN[G.diff]); d.cd = sk === 'nightmare' ? 4.2 : 3.2;
+        M.windup(WARN[G.diff]); d.cd = sk === 'nightmare' ? 4.2 : 3.2; G.sfx.play('cry_' + sk, d);
         atk = { d, kind: sk, t: 0, phase: 'warn' };
         if (!d.told) { d.told = true; G.hud.say('fishlegs', { nadder: '내더가 가시를 세웠어! 속도 8!', gronckle: '그롱클 볼이 부풀어! 턱 힘 8!', nightmare: '나이트메어가 달아올라! 화력 15!', zippleback: '초록 김! 그다음은 불티야!' }[sk], [], { secs: 2 }); }
         if (sk === 'zippleback') { gas = { id: E.gas(P.W.x, P.W.y + 0.9, P.W.z, 3.2, 9), x: P.W.x, z: P.W.z }; E.puff('gas', P.W.x, P.W.y + 0.6, P.W.z, 16, 1.5); }
@@ -471,7 +471,7 @@ function* sheep(G, C) {
     if (!T2.held && P.fTap && G.near(PILE, 2.4)) T2.give();
     /* 테러 차례: 하늘에서 한 바퀴(예고 3초 · 그림자 · 울음) → 양에게 내려옴 → 물고 서쪽 벼랑으로 */
     next -= dt;
-    if (next <= 0 && idx < ter.length && !ter.some((d) => d.st === 'circle' || d.st === 'dive' || d.st === 'carry')) { const d = ter[idx++]; d.st = 'circle'; d.t = 0; d.prey = flock.find((s) => !s.taken && !s.gone); next = 5; G.sfx.play('growl'); }
+    if (next <= 0 && idx < ter.length && !ter.some((d) => d.st === 'circle' || d.st === 'dive' || d.st === 'carry')) { const d = ter[idx++]; d.st = 'circle'; d.t = 0; d.prey = flock.find((s) => !s.taken && !s.gone); next = 5; G.sfx.play('cry_terror', d); }
     for (const d of ter) {
       if (!d.root) continue;
       d.t += dt; const R = d.rig; R.fold = 0; R.flapRate = d.st === 'fall' || d.st === 'down' ? 0 : 1; R.tailCurl = d.st === 'flee' ? 1 : 0; R.update(dt);
@@ -539,7 +539,7 @@ function* launcher(G, C) {
     if (NF.root) { const nx = furyAt(ph - 0.05, bp); NF.root.position.set(fp.x, fp.y, fp.z); NF.root.rotation.set(0, Math.atan2(nx.x - fp.x, nx.z - fp.z), 0.5, 'YXZ'); NF.rig.flapRate = 0.6; NF.rig.fold = 0; NF.rig.glide = 0.6; NF.rig.update(dt); }
     if ((ft * 30 | 0) % 2 === 0) trail.push(fp.x, fp.y, fp.z);
     /* 휘파람(소리 짝) — 가까운 쪽으로 들어올 때 한 번 */
-    const near = Math.sin(ph) < -0.55; if (near && !whistled) { whistled = true; G.sfx.play('whoosh'); } if (!near) whistled = false;
+    const near = Math.sin(ph) < -0.55; if (near && !whistled) { whistled = true; G.sfx.play('whistle', fp); } if (!near) whistled = false;
   }
   C.cleanup = ((old) => () => { gun.removeFromParent(); tube.geometry.dispose(); frame.geometry.dispose(); stars.dispose(); trail.dispose(); bola.dispose(); P.cam = 'follow'; P.hidden = false; G.camDraw = null; reticle.remove(); old && old(); })(C.cleanup);
   /* 조준점(화면 가운데 손그림 동그라미) */
@@ -612,7 +612,7 @@ function* chase(G, C) {
   C.cleanup = ((old) => () => { glow.removeFromParent(); old && old(); })(C.cleanup);
   yield* T(C, until(() => N.root, 5));
   yield* T(C, sayAll(G, [['hiccup', '…저기, 나 혼자 맞혔다고요— 어?']]));
-  G.hud.goal('피하기'); G.sfx.play('growl');
+  G.hud.goal('피하기'); G.sfx.play('cry_nightmare', N);
   N.mind.windup(3); N.faceTo(P.W.x, P.W.z);
   G.hud.say('hiccup', '나이트메어가 달아오른다…!', [], { secs: 2 });
   yield* T(C, until(() => { glow.visible = N.mind.warnT > 0; glow.position.set(N.x, N.y + 2, N.z); return N.mind.beh === 'attack'; }, 6));
