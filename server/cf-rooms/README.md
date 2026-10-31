@@ -102,3 +102,13 @@ setInterval(() => { if (moved()) ws.send(JSON.stringify({ t: 'p', x, y, z, h, s:
 - 마을 쪽: v4 주소에 `?cls=반코드`를 한 번 붙여 열면(예: `…/v4/?cls=ban4a`) 그 기기에 반 코드가 남아요. 번호 + 비밀번호로 들어오면 서버 것이 더 새것일 때 받아 이어 하고, 45초마다·창을 닫을 때 올려요(`v2/games/town_cloud.js`). 서버가 안 되면 이 기기 저장으로 그대로 놀아요.
 - 시험: `node tools/harness/town_cloud.cjs <포트>` — 기기 A에서 놀고 → 빈 기기 B에서 같은 번호·비밀번호로 이어지나 · 틀린 비밀번호 막힘 · 끝나면 시험 판(zz) 지움.
 - Firebase DB 규칙은 바꾸지 않았어요.
+
+## 교사 표(TEACH-1 · 10-31 · 코드·흉내 시험까지 · 아직 배포 X)
+| 주소(POST · JSON 본문) | 본문 | 답 |
+|---|---|---|
+| `/tclaim/<반코드>` | `{tkey}` | 그 반 교사 열쇠를 처음 정함 · 다른 열쇠가 있으면 409 |
+| `/class/<반코드>` | `{tkey}` | `{ok, at, L:[{n, at, s}]}` — s = 판 요약(`v2/games/town_tsum.js`) · 판 전체·핀 X |
+| `/treset/<반코드>` | `{admin, tkey}` | 비밀값 `ADMIN`이 맞을 때만 교사 열쇠를 바꿈 |
+- 교사 열쇠 = 6~32자 · `PEPPER` 소금 해시만 · 5번 틀리면 10분 잠금. 요약은 `/save` 때 `s.sum` 칸에 만들어 둠(예전 판은 표를 열 때 채움).
+- 흉내 시험(배포·로그인 X): `node --no-warnings test_teach.mjs` · 흉내 HTTP 서버: `node mock.mjs <포트>` → 마을을 `?cf=http://127.0.0.1:<포트>`로.
+- 자세한 것·교사가 정할 것: `docs/systems/town_teacher.md`.

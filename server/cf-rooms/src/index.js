@@ -17,6 +17,7 @@
 //   - 하루 메시지 수는 메모리에 세고 10초마다 한 번만 저장(무료 하루 쓰기 10만 줄 아끼기).
 
 import { DurableObject } from 'cloudflare:workers';
+import { tsum } from '../../../v2/games/town_tsum.js';   /* TEACH-1 교사 표 요약(마을과 같은 함수 · wrangler가 묶어 올림) */
 
 const TICK = 50;              /* 박자 50ms = 초당 20번 */
 const IDLE_MS = 3000;         /* 이만큼 아무도 안 움직이면 박자 멈춤 */
@@ -46,6 +47,8 @@ export default {
     if (url.pathname === '/' || url.pathname === '/health') return text('sm-rooms 살아 있어요', 200);
     const sv = url.pathname.match(/^\/(save|load|drop)\/([^/]+)\/(\d{1,2})$/);
     if (sv) return saveRoute(req, env, sv[1], sv[2], +sv[3]);
+    const tv = url.pathname.match(/^\/(class|tclaim|treset)\/([^/]+)$/);
+    if (tv) return teachRoute(req, env, tv[1], tv[2]);
     const m = url.pathname.match(/^\/room\/([^/]+)$/);
     if (!m) return text('없는 주소예요', 404);
     if (!originOk(req.headers.get('Origin'))) return text('허락되지 않은 곳이에요', 403);
@@ -298,6 +301,27 @@ async function saveRoute(req, env, kind, code, num) {
   const r = await stub.fetch('https://saves/' + kind + '/' + code.toLowerCase() + '/' + num, { method: 'POST', body });
   const out = await r.text(); return new Response(out, { status: r.status, headers: { 'content-type': 'application/json; charset=utf-8', ...cors(req) } });
 }
+/* ───────── 교사 표(TEACH-1 · 10-31 '2주 믿게 만들기' 셋째 · docs/systems/town_teacher.md) ─────────
+   POST /tclaim/<반코드>  {tkey}         → 그 반 교사 열쇠를 처음 정함 {ok, made:1} · 이미 같은 열쇠면 {ok, made:0} · 다른 열쇠가 있으면 409
+   POST /class/<반코드>   {tkey}         → {ok, at, L:[{n, at, s}]} · s = 판 요약(town_tsum.js) — 판 전체·핀은 보내지 않음 · 열쇠가 아직 없으면 404 {nokey:1}
+   POST /treset/<반코드>  {admin, tkey}  → 관리 열쇠(비밀값 ADMIN)가 맞을 때만 교사 열쇠를 바꿈 · ADMIN을 안 넣었으면 늘 403
+   - 교사 열쇠 = 6~32자(띄어쓰기 X) · 소금(PEPPER + 반 코드) + SHA-256 해시만 둠 · 5번 틀리면 10분 잠금(정하기 다툼 409도 틀림으로 셈)
+   - 요약은 저장할 때 한 번 만들어 둠(표를 열 때 판 25개를 다시 읽지 않음) · 예전 판(요약 없음)은 표를 열 때 열 개씩 채움 */
+const TKEY_RX = /^\S{6,32}$/, TLOCK_MS = 10 * 60 * 1000, TFILL_MAX = 10;
+async function teachRoute(req, env, kind, code) {
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(req) });
+  if (!originOk(req.headers.get('Origin'))) return text('허락되지 않은 곳이에요', 403);
+  if (req.method !== 'POST') return json(req, { ok: false, m: 'POST로 보내요' }, 405);
+  if (!CLASS_RX.test(code)) return json(req, { ok: false, m: '반 코드는 영문·숫자 4~8자' }, 400);
+  const body = await req.text(); if (body.length > 1000) return json(req, { ok: false, m: '너무 길어요' }, 413);
+  const stub = env.SAVES.get(env.SAVES.idFromName(code.toLowerCase()));
+  const r = await stub.fetch('https://saves/t/' + kind + '/' + code.toLowerCase(), { method: 'POST', body });
+  const out = await r.text(); return new Response(out, { status: r.status, headers: { 'content-type': 'application/json; charset=utf-8', ...cors(req) } });
+}
+async function keyHash(pepper, code, key) { const b = new TextEncoder().encode((pepper || 'sm-town') + '|' + code + '|T|' + key); const h = await crypto.subtle.digest('SHA-256', b); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+function sameStr(a, b) { a = String(a); b = String(b); let d = a.length ^ b.length; for (let i = 0; i < Math.max(a.length, b.length); i++) d |= (a.charCodeAt(i) | 0) ^ (b.charCodeAt(i) | 0); return d === 0; }
+function sumOf(dataStr) { try { const s = tsum(JSON.parse(dataStr)); return s ? JSON.stringify(s) : null; } catch (e) { return null; } }
+
 async function pinHash(pepper, code, num, pin) { const b = new TextEncoder().encode((pepper || 'sm-town') + '|' + code + '|' + num + '|' + pin); const h = await crypto.subtle.digest('SHA-256', b); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); }
 const NAME_KEYS = new Set(['name', 'nick', 'realName']);
 function noNames(v, d = 0) { if (d > 12 || !v || typeof v !== 'object') return v; if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) v[i] = noNames(v[i], d + 1); return v; } for (const k of Object.keys(v)) { if (NAME_KEYS.has(k) && typeof v[k] === 'string') delete v[k]; else v[k] = noNames(v[k], d + 1); } return v; }
@@ -307,10 +331,39 @@ export class Saves extends DurableObject {
     super(ctx, env); this.env = env; this.sql = ctx.storage.sql;
     this.sql.exec('CREATE TABLE IF NOT EXISTS s (num INTEGER PRIMARY KEY, pin TEXT, data TEXT, at INTEGER, fails INTEGER DEFAULT 0, lock INTEGER DEFAULT 0)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS d (day TEXT PRIMARY KEY, c INTEGER)');
+    /* TEACH-1: 판 요약 칸(예전 표에 한 번 더함 · 이미 있으면 그대로) + 교사 열쇠 표(반 하나 = 한 줄) */
+    try { this.sql.exec('ALTER TABLE s ADD COLUMN sum TEXT'); } catch (e) { /* 이미 있음 */ }
+    this.sql.exec('CREATE TABLE IF NOT EXISTS t (k INTEGER PRIMARY KEY, h TEXT, fails INTEGER DEFAULT 0, lock INTEGER DEFAULT 0, at INTEGER)');
+  }
+  async teach(kind, code, d, now) {
+    const tk = String((d && d.tkey) || ''); if (!TKEY_RX.test(tk)) return Response.json({ ok: false, m: '교사 열쇠는 띄어쓰기 없이 6~32자예요' }, { status: 400 });
+    const h = await keyHash(this.env.PEPPER, code, tk), row = this.sql.exec('SELECT h, fails, lock FROM t WHERE k = 1').toArray()[0];
+    if (kind === 'treset') {
+      if (!this.env.ADMIN || !sameStr(String((d && d.admin) || ''), this.env.ADMIN)) return Response.json({ ok: false, m: '관리 열쇠가 달라요' }, { status: 403 });
+      this.sql.exec('INSERT INTO t (k, h, fails, lock, at) VALUES (1, ?, 0, 0, ?) ON CONFLICT(k) DO UPDATE SET h = excluded.h, fails = 0, lock = 0, at = excluded.at', h, now); return Response.json({ ok: true, reset: 1 });
+    }
+    if (!row) {
+      if (kind === 'tclaim') { this.sql.exec('INSERT INTO t (k, h, fails, lock, at) VALUES (1, ?, 0, 0, ?)', h, now); return Response.json({ ok: true, made: 1 }); }
+      return Response.json({ ok: false, nokey: 1, m: '이 반은 아직 교사 열쇠가 없어요' }, { status: 404 });
+    }
+    if (row.lock > now) return Response.json({ ok: false, lock: 1, m: '잠깐 잠겼어요. 10분 뒤에 다시 해요' }, { status: 423 });
+    if (row.h !== h) { const f = (row.fails || 0) + 1; this.sql.exec('UPDATE t SET fails = ?, lock = ? WHERE k = 1', f >= 5 ? 0 : f, f >= 5 ? now + TLOCK_MS : 0); return kind === 'tclaim' ? Response.json({ ok: false, taken: 1, m: '이 반은 이미 다른 교사 열쇠가 있어요' }, { status: 409 }) : Response.json({ ok: false, bad: 1, m: '교사 열쇠가 달라요' }, { status: 403 }); }
+    if (row.fails || row.lock) this.sql.exec('UPDATE t SET fails = 0, lock = 0 WHERE k = 1');
+    if (kind === 'tclaim') return Response.json({ ok: true, made: 0 });
+    /* class: 번호 · 마지막 저장 · 요약만(판 전체 X) */
+    let fill = 0; const L = [];
+    for (const r of this.sql.exec('SELECT num, at, sum FROM s ORDER BY num').toArray()) {
+      let s = r.sum;
+      if (!s && fill < TFILL_MAX) { fill++; const dr = this.sql.exec('SELECT data FROM s WHERE num = ?', r.num).toArray()[0]; s = dr && dr.data ? sumOf(dr.data) : null; if (s) this.sql.exec('UPDATE s SET sum = ? WHERE num = ?', s, r.num); }
+      let o = null; try { o = s ? JSON.parse(s) : null; } catch (e) { o = null; }
+      L.push({ n: r.num, at: r.at, s: o });
+    }
+    return Response.json({ ok: true, at: now, L });
   }
   async fetch(req) {
     const [, kind, code, n] = new URL(req.url).pathname.split('/'), num = +n, now = Date.now();
     let d; try { d = JSON.parse(await req.text()); } catch (e) { return Response.json({ ok: false, m: '읽을 수 없는 저장' }, { status: 400 }); }
+    if (kind === 't') { const [, , tk, tcode] = new URL(req.url).pathname.split('/'); return this.teach(tk, tcode, d, now); }
     const pin = String((d && d.pin) || ''); if (!/^\d{4}$/.test(pin)) return Response.json({ ok: false, m: '비밀번호는 숫자 네 자리' }, { status: 400 });
     const row = this.sql.exec('SELECT pin, data, at, fails, lock FROM s WHERE num = ?', num).toArray()[0];
     const h = await pinHash(this.env.PEPPER, code, num, pin);
@@ -324,8 +377,9 @@ export class Saves extends DurableObject {
     const day = new Date(now).toISOString().slice(0, 10), c = (this.sql.exec('SELECT c FROM d WHERE day = ?', day).toArray()[0] || { c: 0 }).c;
     if (c >= SAVE_DAY_MAX) return Response.json({ ok: false, m: '오늘은 저장이 꽉 찼어요. 이 기기에는 남아 있어요', full: 1 }, { status: 429 });
     if (!d.data || typeof d.data !== 'object' || Array.isArray(d.data)) return Response.json({ ok: false, m: '저장할 것이 없어요' }, { status: 400 });
-    const data = JSON.stringify(noNames(d.data)); if (data.length > SAVE_MAX) return Response.json({ ok: false, m: '저장이 너무 커요' }, { status: 413 });
-    this.sql.exec('INSERT INTO s (num, pin, data, at, fails, lock) VALUES (?, ?, ?, ?, 0, 0) ON CONFLICT(num) DO UPDATE SET data = excluded.data, at = excluded.at', num, h, data, now);
+    const clean = noNames(d.data), data = JSON.stringify(clean); if (data.length > SAVE_MAX) return Response.json({ ok: false, m: '저장이 너무 커요' }, { status: 413 });
+    let sum = null; try { const s9 = tsum(clean); sum = s9 ? JSON.stringify(s9) : null; } catch (e) { sum = null; }   /* TEACH-1 교사 표 요약(저장할 때 한 번) */
+    this.sql.exec('INSERT INTO s (num, pin, data, at, fails, lock, sum) VALUES (?, ?, ?, ?, 0, 0, ?) ON CONFLICT(num) DO UPDATE SET data = excluded.data, at = excluded.at, sum = excluded.sum', num, h, data, now, sum);
     this.sql.exec('INSERT INTO d (day, c) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET c = c + 1', day);
     if (Math.random() < 0.02) this.sql.exec('DELETE FROM d WHERE day < ?', new Date(now - 7 * 86400000).toISOString().slice(0, 10));
     return Response.json({ ok: true, at: now });

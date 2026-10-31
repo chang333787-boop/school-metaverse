@@ -58,6 +58,7 @@
 | 마을 길 위 사건(town_road.js · 자전거 고리 코스 · 모자 잡기 · 떨어진 것 줍기 · 날아온 지도 조각) | `docs/systems/town_road.md` |
 | 마을 보상 하루 한도(rwCheck 한 문 · 출처마다 하루 n번 · 실제 날짜 총량 · 전수표) — 새 보상은 src 꼬리표로 이 문만 | `docs/systems/town_reward_cap.md` |
 | 마을 긴급 출동(town_emerg.js · 112 길 잃은 어린이 · 119 넘어진 이웃 · 불의 때 · 사건 표 한 줄 = 사건 하나 · 남은 아홉 차례) | `docs/systems/town_emergency.md` |
+| 마을 선생님 칸·교사 반 표(town_teach.js · town_tsum.js · 장 열기·날 넘기기·날씨 고정은 비밀번호 뒤 · 반 표 = 이 기기·붙여 넣기·서버 /class · 서버는 배포 전) | `docs/systems/town_teacher.md` |
 | 마을 야생동물(town_wild.js · 아홉 종 · 서식지·계절·달아남·관찰 별) | `docs/systems/town_wild.md` |
 | **10-24 밤샘 아침 보고(올린 것·성능 전후·10시 확인 다섯)** | `docs/systems/town_night_1024.md` |
 | **밤샘 차례표(10-24 · A~H 39줄)** · 단계 1 설계(하루 한 바퀴 + 내 집) · 직업 놀이 엔진 설계(JOBS-2 · 양몰이·장구·부엌·낚시…) · 단계 2 표시 걷기·길 묻기 · 단계 3 기억하는 이웃·돈 쓸 곳 | `docs/systems/town_night_queue.md` · `docs/systems/town_phase1.md` · `docs/systems/town_jobs2.md` · `docs/systems/town_phase2.md` · `docs/systems/town_phase3.md` · `docs/systems/town_phase4.md`(엔진 여덟) · `docs/systems/town_explore.md`(탐험·특수 지형) |

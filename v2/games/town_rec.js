@@ -3,8 +3,9 @@
 //   이야기 단계 이름 = 이야기 S.story.rec.st와 같게(c 장 · s 단계 · h 힌트 단계 · tr 틀린 수 · p 고른 것 · w 까닭 · l 불편해질 사람 · t 한 줄 · f 잰 값) — QUEST-2 기록을 같은 이름으로 한 곳에
 //   하루 = 실제 날짜(수업 한 번 = 하루 · 게임 하루는 12분이라 게임 날로 묶으면 14일이 수업 한두 번) · 최근 14일 · 갈래마다 하루 상한 · 글은 짧게 자름 · 전체가 80KB를 넘으면 오래된 날부터(보통 하루 3~4KB · 꽉 찬 하루 약 15KB)
 //   이름·sid·기기 번호 X — 화면엔 '이 기기'로만 · 매 프레임 일 0(일이 끝날 때 add 한 번 · 창은 열 때만 셈)
-import { CHAPTERS } from './town_story.js?v=28';
+import { CHAPTERS } from './town_story.js?v=29';
 import { BANK, DIR8 } from './town_quiz.js?v=13';
+import { tsum } from './town_tsum.js?v=2';   /* TEACH-1 복사한 기록에도 교사 표 한 줄 요약 */
 export const REC_V = 1, REC_DAYS = 14, REC_MAX = 80 * 1024;
 const T2 = (ko, en) => [ko, en];
 // 갈래: 하루 상한 · 이름(선생님 보기)
@@ -38,8 +39,8 @@ export function recSum(S) { const R = recRoot(S), days = Object.keys(R.days).sor
     for (const e of B.rank || []) { const X = out.rank[e.k + ':' + e.L] || (out.rank[e.k + ':' + e.L] = { k: e.k, L: e.L, go: 0, done: 0, h: 0 }); if (e.done) { X.done++; X.h = Math.max(X.h, e.h | 0); } else X.go++; }
     for (const e of B.play || []) { const X = out.play[e.k] || (out.play[e.k] = [0, 0, 0]); X[Math.max(0, Math.min(2, e.g | 0))]++; } }
   return out; }
-// 복사용 한 덩어리(서버에 올릴 꼴 그대로 · 이름·sid·기기 번호 X)
-export const recExport = (S, town) => ({ kind: 'sm-town-rec', v: REC_V, town: town || '', made: dayKey(), days: recRoot(S).days });
+// 복사용 한 덩어리(서버에 올릴 꼴 그대로 · 이름·기기 번호 X) · TEACH-1: n = 출석 번호(v4 번호 로그인일 때만 · 교사 표 줄) · sum = 교사 표 요약(town_tsum.js)
+export const recExport = (S, town, n) => ({ kind: 'sm-town-rec', v: REC_V, town: town || '', made: dayKey(), ...(n >= 1 && n <= 40 ? { n: n | 0 } : {}), sum: tsum(S), days: recRoot(S).days });
 // 고른 것 → 사람 말(장 보기 · 단계 보기 · 장소 이름 · 방위)
 export function pickLabel(c, st, key, en) { const L = p => (Array.isArray(p) ? p[en ? 1 : 0] : String(p)), d = (st && st.do) || {};
   if (d.type === 'judge') { const o = (c.opts || []).find(q => q[0] === key); if (o) return L(o[1]); }
@@ -58,7 +59,7 @@ export function createRec(A) {
   // 선생님 보기(이 기기 하나 · 투사 모드 = 날짜·'이 기기' 숨기고 글을 크게)
   function view() { const e = en(), M = recSum(S()), big = proj ? 'font-size:20px;line-height:1.5' : '';
     let h = '<h3>📊 ' + (e ? 'Class record — this device' : '학급 기록 — 이 기기') + '</h3>'
-      + (proj ? '' : '<div class="sm">' + (A.cloud && A.cloud() ? (e ? 'What was done on this device in the last 14 days. This record is part of the game, so it is also saved in the class save (logged in with a class number · no names). To gather several devices, copy each one and paste them together.' : '최근 14일 동안 이 기기에서 한 것이에요. 학급 번호로 들어와서 이 기록도 게임 판과 함께 학급 저장소에 저장돼요(이름은 보내지 않아요). 여러 기기를 모으려면 기기마다 복사해서 한곳에 붙여 모아요.') : (e ? 'What was done on this device in the last 14 days. It stays on this device only and is not sent to a server. To gather several devices, copy each one and paste them together.' : '최근 14일 동안 이 기기에서 한 것이에요. 이 기기에만 있고 서버로 보내지 않아요. 여러 기기를 모으려면 기기마다 복사해서 한곳에 붙여 모아요.'))   /* SAVE-3(코덱스 10-27 표 2): 학급 계정(town_cloud)이면 판 전체가 올라감 → 모드별 */ + '</div>')
+      + (proj ? '' : '<div class="sm">' + (A.cloud && A.cloud() ? (e ? 'What was done on this device in the last 14 days. This record is part of the game, so it is also saved in the class save (logged in with a class number · no names). To gather several devices, copy each one and paste them into the class table in the teacher section.' : '최근 14일 동안 이 기기에서 한 것이에요. 학급 번호로 들어와서 이 기록도 게임 판과 함께 학급 저장소에 저장돼요(이름은 보내지 않아요). 여러 기기를 모으려면 기기마다 복사해서 선생님 칸 반 표의 붙여 넣기에 모아 넣어요.') : (e ? 'What was done on this device in the last 14 days. It stays on this device only and is not sent to a server. To gather several devices, copy each one and paste them into the class table in the teacher section.' : '최근 14일 동안 이 기기에서 한 것이에요. 이 기기에만 있고 서버로 보내지 않아요. 여러 기기를 모으려면 기기마다 복사해서 선생님 칸 반 표의 붙여 넣기에 모아 넣어요.'))   /* SAVE-3(코덱스 10-27 표 2): 학급 계정(town_cloud)이면 판 전체가 올라감 → 모드별 */ + '</div>')
       + '<div class="row" style="justify-content:flex-start"><button class="sub" data-a="proj">📽 ' + (proj ? (e ? 'Projector mode: on' : '투사 모드: 켬') : (e ? 'Projector mode: off' : '투사 모드: 끔')) + '</button><button class="sub" data-a="copy">📋 ' + (e ? 'Copy record' : '복사하기') + '</button></div>'
       + (proj || !M.days.length ? '' : '<div class="sm">' + (e ? 'Days recorded: ' : '기록한 날: ') + M.days.map(dayLab).join(', ') + '</div>');
     if (!M.days.length) h += '<div class="sm">' + (e ? 'Nothing recorded yet.' : '아직 기록이 없어요.') + '</div>';
@@ -94,9 +95,10 @@ export function createRec(A) {
     h += '<div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>';
     const P9 = A.openP(h, true, 'rec'); P9.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') A.closeP(); else if (b.dataset.a === 'proj') { proj = !proj; view(); } else if (b.dataset.a === 'copy') copy(P9); }; return P9; }
   // 복사하기: JSON 한 덩어리 → 클립보드(안 되면 창 안 글 상자에 담아 골라 둠)
-  function copy(P9) { const t = JSON.stringify(recExport(S(), A.town)), e = en(), shown = () => { let ta = P9.querySelector('textarea[data-rec]'); if (!ta) { ta = document.createElement('textarea'); ta.dataset.rec = '1'; ta.readOnly = true; ta.style.cssText = 'width:100%;height:120px;font:12px monospace;margin-top:8px'; P9.querySelector('.bx').appendChild(ta); } ta.value = t; ta.focus(); ta.select(); A.toast(e ? 'Select all and copy (Ctrl+C)' : '글 상자를 모두 골라 복사해요(Ctrl+C)', 3); };
-    try { navigator.clipboard.writeText(t).then(() => A.toast(e ? '📋 Copied — paste it into a note to gather devices' : '📋 복사했어요. 메모장이나 패들렛에 붙여 넣어 모아요', 3), shown); } catch (er) { shown(); } return t; }
+  const num = () => { const m = /^s(\d{1,2})$/.exec((A.sid && A.sid()) || ''); return m ? +m[1] : 0; };
+  function copy(P9) { const t = JSON.stringify(recExport(S(), A.town, num())), e = en(), shown = () => { let ta = P9.querySelector('textarea[data-rec]'); if (!ta) { ta = document.createElement('textarea'); ta.dataset.rec = '1'; ta.readOnly = true; ta.style.cssText = 'width:100%;height:120px;font:12px monospace;margin-top:8px'; P9.querySelector('.bx').appendChild(ta); } ta.value = t; ta.focus(); ta.select(); A.toast(e ? 'Select all and copy (Ctrl+C)' : '글 상자를 모두 골라 복사해요(Ctrl+C)', 3); };
+    try { navigator.clipboard.writeText(t).then(() => A.toast(e ? '📋 Copied — paste several into the class table in the teacher section' : '📋 복사했어요. 선생님 칸 반 표의 붙여 넣기에 여러 개를 한꺼번에 넣어 봐요', 3), shown); } catch (er) { shown(); } return t; }
   // 이야기 목록 선생님 칸 → 비밀번호 창 → 보기
   async function open() { const ok = await A.pin(); if (ok) view(); }
-  return { add, view, open, copy, sum: () => recSum(S()), dump: () => recExport(S(), A.town), get proj() { return proj; } };
+  return { add, view, open, copy, sum: () => recSum(S()), dump: () => recExport(S(), A.town, num()), get proj() { return proj; } };
 }
