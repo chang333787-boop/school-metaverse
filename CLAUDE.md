@@ -64,6 +64,7 @@
 | 마을 건물 들어가기(town_enter.js · 갈래 표 한 줄 = 방 하나 · 99%) · 레벨 보상(town_reward.js · 솜씨 × 레벨 = 쓰는 물건) · 땅이름·아이 동네 이름·구역 이름(town_names.md) | `docs/systems/town_enter.md` · `docs/systems/town_rewards.md` · `docs/systems/town_names.md` |
 | 마을 잔치(town_feast.js · 준비 다섯 갈래) · 밤(town_night.js) · 날씨 사건(town_wxev.js 폭염·폭설) · 계절 행사(town_season.js 설·대보름·단오·추석·김장) | `docs/systems/town_feast.md` · `docs/systems/town_hours.md` · `docs/systems/town_wxev.md` · `docs/systems/town_season.md` |
 | 마을 처음 화면·저장 칸 셋·첫날 시작(town_game.js 저장 옮기기·bak·old · 우리 집 현관에서 첫 아침) · 화면 모드 둘(그래픽 우선 30 / 부드럽게 60) | `docs/systems/town_open.md` · `docs/systems/perf.md` |
+| **드래곤 길들이기 게임(10-31 · `dragon/` · 4학년 기획 · 다른 학년용 · 메타버스 결 X)** — 정본 goal · 사실 · 이어받기 | `docs/dragon/goal_prompt.md` · `docs/dragon/reference.md` · `docs/dragon/handoff.md` — 이 게임엔 v2 지오메트리 규칙·마을 '판타지 X'를 쓰지 않음(goal §1) |
 | 게임용 지도 API 정본(map.*) | `docs/map_api.md` |
 | 품질 숫자 척도(풍성·놀이·그래픽·효과·이야기·각색·완성도·직관성) | `docs/tasks/quality_scale.md` |
 | 새 이야기·에피소드 더하기 | `docs/tasks/new_episode.md` |
