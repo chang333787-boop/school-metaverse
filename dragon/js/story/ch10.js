@@ -687,7 +687,7 @@ export const chapter = {
       hints: { 1: '물 위에 떠 있는 불빛을 찾아.', 2: '불빛이 보이는 쪽으로 방향키 — 아스트리드가 따라 돌아.' }, run: fogRide, sense: fogSense },
     { id: '10-2', verb: 'throw', howtoVerb: 'mark10', place: 'nest', time: 'nest', variant: 'beach', at: 'beach', goal: '어른들을 구하기', limit: 330,
       hints: { 1: '눈·날개·입 — 어디를 맞히면 누가 올까?', 2: '입(가스) 다음에 날개(불)를 맞히면 펑! · 통 옆에서 F = 물통 → 불난 배에.' }, run: beachBattle, sense: beachSense },
-    { id: '10-3', verb: 'approach', place: 'nest', time: 'nest', variant: 'under', at: 'under_in', goal: '투슬리스를 묶은 고리 찾기', limit: 160,
+    { id: '10-3', verb: 'approach', howtoVerb: 'ring10', place: 'nest', time: 'nest', variant: 'under', at: 'under_in', goal: '투슬리스를 묶은 고리 찾기', limit: 160,
       hints: { 1: '사슬을 따라가 봐. 어느 게 투슬리스한테 가지?', 2: '투슬리스가 숨 고를 때(눈이 동그랄 때) F를 꾹.' }, run: underwater, sense: underSense },
     { id: '10-3b', place: 'nest', time: 'nest', variant: 'beach', run: reunion },
     { id: '10-4', verb: 'fly', howtoVerb: 'boss10', place: 'nest', time: 'nest', variant: 'beach', goal: '대장 날개에 구멍 내기', limit: 380,

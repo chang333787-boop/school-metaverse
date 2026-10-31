@@ -83,6 +83,8 @@ export const HOWTO = {
   lift5:    [[`<span class="keys">${keyCap('A')}${keyCap('D')}</span>`, ICONS.finNew, '꼬리날개 돌리기'], ['', 'rock', '돌벽 반대쪽으로'], ['', 'wing', '앞으로는 저절로']],
   sketch3:  [[keyCap('Shift', true), 'tiptoe', '살금살금'], ['', 'rock', '바위 곁에 숨기'], [keyCap('F 꾹', true), ICONS.pencil, '누르는 동안 그리기']],
   shield3:  [['', ICONS.eye, '예고를 보고'], [keyCap('F'), ICONS.shield, '방패 두드리기'], [keyCap('Space', true), 'roll', '구르기']],
+  tell9:    [[ARROWS, 'walkers', '아빠 곁에 있기'], [keyCap('F'), ICONS.book, '책 보여 주기'], ['', FACES.stoick(), '말은 걸어도 들려요']],
+  ring10:   [[ARROWS, ICONS.rope, '사슬 따라가기'], ['', ICONS.eye, '눈이 동그랄 때'], [keyCap('F 꾹', true), ICONS.hand, '고리 꽉 잡기']],
   cut2:     [[keyCap('Shift', true), 'tiptoe', '살금살금'], [keyCap('F'), ICONS.knife, '말뚝 곁에서 자르기'], ['', ICONS.eye, '숨 고를 때만']],
   /* 장마다 쓰는 표(8장 · 10장에서 옮겨 옴 — 장 파일의 런타임 더하기와 같은 값) */
   cling8:   [[ARR2, ICONS.wind, '기울면 반대쪽'], [keyCap('↑'), ICONS.fin, '곤두박질엔 ↑ 꾹'], ['', ICONS.hand, '손이 미끄러지지 않게']],

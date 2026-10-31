@@ -43,11 +43,11 @@ function puffMat(o) {
       #include <fog_pars_fragment>
       void main(){ vec4 t = texture2D(map, vUv); float a = t.a * vA * op; if (a < 0.01) discard; vec3 c = mix(c0, c1, clamp(vK + (vUv.y - 0.5) * 0.6, 0.0, 1.0));
         gl_FragColor = vec4(c, a);
+        #include <colorspace_fragment>
         #ifdef USE_FOG
-          gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, smoothstep(fogNear, fogFar, vFogDepth) * ${o.add ? '1.0' : '0.85'});
+          gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, smoothstep(fogNear, fogFar, vFogDepth) * ${o.add ? '1.0' : '0.85'});   /* 색공간을 바꾼 뒤 섞음(fogColor = sRGB · kit 바다와 같음) */
           ${o.add ? 'gl_FragColor.a *= 1.0 - smoothstep(fogNear, fogFar, vFogDepth);' : ''}
         #endif
-        #include <colorspace_fragment>
       }`,
   });
   m.uniforms.uTime = U.uTime; return m;

@@ -867,10 +867,10 @@ export function createProps(rng, opt = {}) {
       fragmentShader: `uniform sampler2D map; uniform vec3 uCol; varying vec2 vUv; varying float vA;
         #include <fog_pars_fragment>
         void main(){ vec4 t = texture2D(map, vUv); gl_FragColor = vec4(uCol, t.a * vA);
-          #ifdef USE_FOG
-            gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, smoothstep(fogNear, fogFar, vFogDepth));
-          #endif
           #include <colorspace_fragment>
+          #ifdef USE_FOG
+            gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, smoothstep(fogNear, fogFar, vFogDepth));   /* 색공간을 바꾼 뒤 섞음(fogColor = sRGB · kit 바다와 같음) */
+          #endif
         }` });
     m.uniforms.map.value = tex;
     const ig = new THREE.InstancedBufferGeometry(); ig.index = g.index; ig.setAttribute('position', g.attributes.position); ig.setAttribute('uv', g.attributes.uv);

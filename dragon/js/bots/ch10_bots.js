@@ -76,7 +76,8 @@ BOTS['10-4'] = (s, K, M, B, lv, now) => {
     let best = null, bd = 1e9; for (const t of c.targets || []) { const d = Math.hypot(t.x - c.x, t.y - c.y, t.z - c.z); if (d < bd) { bd = d; best = t; } }
     if (best && bd > 62) { aim = best; tx = best.x; ty = best.y; tz = best.z; }
     else if (best) { const ax = c.x - bs.x, az = c.z - bs.z, l = Math.hypot(ax, az) || 1; tx = c.x + ax / l * 60 + az / l * 30; tz = c.z + az / l * 60 - ax / l * 30; ty = c.y + 6; }   // 너무 가까움 → 비켜서 거리 벌림
-    else { tx = bs.x + 120; ty = bs.y; tz = bs.z; }
+    else if (dB > 95) { tx = bs.x; ty = bs.y + 8; tz = bs.z; }   // 막이 화면에 안 보임 → 대장 쪽으로 돌아봄(전엔 대장 옆 120m 점을 맴돌아 화면 밖 · 맞기만 하다 다시 하기)
+    else { const ax = c.x - bs.x, az = c.z - bs.z, l = Math.hypot(ax, az) || 1; tx = c.x + ax / l * 60 + az / l * 30; tz = c.z + az / l * 60 - ax / l * 30; ty = c.y + 6; }   // 가까움 → 비켜서 거리 벌림
   }
   /* 땅·경계 */
   if (c.y - c.ground < 34) ty = Math.max(ty, c.ground + 60);

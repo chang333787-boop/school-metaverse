@@ -603,8 +603,9 @@ export function waterMat(o = {}) {
         vec3 n = normalize(vec3(r1 * 0.07, 1.0, r2 * 0.07));
         c += uFogSun * smoothstep(0.965, 0.99, max(dot(reflect(-uSunDir, n), v), 0.0)) * 0.3;
         c = mix(edge, c, smoothstep(0.0, 0.2, vD + rip * 0.025));
-        gl_FragColor = vec4(drgFog(c, vW, vFogDepth), 1.0);
+        gl_FragColor = vec4(c, 1.0);
         #include <colorspace_fragment>
+        gl_FragColor.rgb = drgFog(gl_FragColor.rgb, vW, vFogDepth);   /* three r170 fogColor = 화면 색공간(sRGB) → 색공간을 바꾼 뒤 섞음(kit 바다와 같음 · 노을·짙은 안개에 물이 뜨던 것) */
       }`,
   });
   Object.assign(m.uniforms, { uTime: U.uTime, uSunDir: U.uSunDir, uFogSun: U.uFogSun, uSunFog: U.uSunFog, uFogBase: U.uFogBase, uFogFall: U.uFogFall, uFogLow: U.uFogLow });

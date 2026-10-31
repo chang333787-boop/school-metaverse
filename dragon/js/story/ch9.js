@@ -126,7 +126,7 @@ function* fury(G, C) {
   /* 예고 2초 — 아빠가 망치를 번쩍 */
   holdItem(St, 'hammer'); St.faceTo(c.x, c.z); St.pose = { cheer: 1 };
   G.hud.say('stoick', '그만! 시험을 멈춰라!', ['hammer'], { secs: 2.2 });
-  G.hud.goal('');
+  G.hud.goal('불을 피해 버티기');   /* 첫 2초에도 목표가 보이게(눈높이 9-2 · 전엔 비웠다가 쾅 뒤에 띄움) */
   yield* timed(2, () => { N.faceTo(St.x, St.z); });
   /* 쾅 — 원인 자리(아빠 앞 난간)에 먼지 · 소리 · 나이트메어가 몸에 불 */
   St.pose = { hammer: 1 }; G.sfx.play('bang'); G.sfx.play('clang');
@@ -650,7 +650,7 @@ export const chapter = {
       sense: (G, C) => ({ t: +(C.t || 0).toFixed(1), hits: C.hits || 0, nm: dSense(G, C.N, { warn: !!C.warn, shot: !!C.shot }) }) },
     { id: '9-3', verb: 'approach', place: 'arena', time: 'day', goal: '아빠와 투슬리스 사이에서 손 내밀기', limit: 90,
       hints: { 1: '둘 사이에 서야 해. 둘이 움직이면 나도 옮기자.', 2: '사이에 서서 F 길게 — 옮기면 손을 떼고 다시 사이로.' }, run: between, sense: btwSense },
-    { id: '9-4', verb: 'listen', place: 'hall', time: 'overcast', goal: '아빠에게 말하기', limit: 120,
+    { id: '9-4', verb: 'listen', howtoVerb: 'tell9', place: 'hall', time: 'overcast', goal: '아빠에게 말하기', limit: 120,
       hints: { 1: '아빠 곁에 있어야 말이 이어져.', 2: '아빠 가까이에서 F로 책을 보여 주자.' }, run: hall, sense: hallSense },
     { id: '9-5', place: 'village', time: 'fog', at: 'dock_end', run: departure, sense: () => ({}) },
     { id: '9-6', place: 'village', time: 'fog', atNew: 'dock_end', run: astrid,

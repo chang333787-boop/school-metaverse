@@ -99,8 +99,11 @@ function* fishing(G, C) {
     C.boat = B; P.cam = 'boat'; const BC = { init: false };
     G.camDraw = (a, dt) => { B.draw(a, dt); boatCam(G.camera, B, dt, BC); };
     C.cleanup = () => { P.cam = 'follow'; G.camDraw = null; B.root.removeFromParent(); if (B.foam) B.foam.removeFromParent(); B.dispose && B.dispose(); };
-    yield* sayAll(G, [['hiccup', '물고기를 잔뜩 잡아 가자. 배고플 테니까.', ['cod']]]);
+    /* 말하는 동안에도 배를 물결 위에 띄움(입력 없이 걸음만) — 전엔 첫 걸음 전까지 배가 y 0(물마루 아래)에 잠겨 첫 화면에 배·노가 안 보였음(눈높이 4-2) */
+    const NOI = { tap: () => false, axis: () => 0 };
     G.hud.goal('노를 박자에 맞춰 돌기둥까지');
+    G.hud.say('hiccup', '물고기를 잔뜩 잡아 가자. 배고플 테니까.', ['cod']);
+    while (G.hud.busy()) { const dt = yield; B.step(dt, NOI, G.t); }
     let arrived = false; B.on('arrive', () => { arrived = true; });
     B.on('stroke', (e) => { if (e.kind === 'beat') G.sfx.play('splash'); });
     while (!arrived) { const dt = yield; B.step(dt, G.input, G.t); }

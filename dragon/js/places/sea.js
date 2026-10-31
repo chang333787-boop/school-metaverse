@@ -259,10 +259,10 @@ export async function buildPlace(ctx) {
       #include <fog_pars_fragment>
       void main(){ vec4 t = texture2D(map, vUv); if (t.a < 0.02) discard; vec3 c = mix(shade, tint, smoothstep(-0.4, 0.4, vY));
         gl_FragColor = vec4(c, t.a * 0.88);
-        #ifdef USE_FOG
-          gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, smoothstep(fogNear, fogFar, vFogDepth) * 0.8);
-        #endif
         #include <colorspace_fragment>
+        #ifdef USE_FOG
+          gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, smoothstep(fogNear, fogFar, vFogDepth) * 0.8);   /* 색공간을 바꾼 뒤 섞음(fogColor = sRGB · kit 바다와 같음) */
+        #endif
       }`,
   });
   cloudMat.uniforms.map.value = ctex;

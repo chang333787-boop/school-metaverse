@@ -223,8 +223,12 @@ export function createBoss({ group, diff = 'normal', scale = 1, sfx = null, plac
     if (!holeU || !p || B.holes >= 8) return false;
     const r = HOLE_R * qAttr * (0.9 + (B.holes % 3) * 0.12);
     holeU.H[B.holes].set(p.bx, p.by, p.bz, r); B.holes++;
-    for (const q of B.memb) if (Math.hypot(q.x - p.x, q.y - p.y, q.z - p.z) < 8 * S) q.holed = true;
-    p.holed = true; B.flinchT = 0.8; if (B.mode === 'fly' && !B.act) B.cool = Math.min(B.cool, 1.2);   // 아프면 곧 돌아봄 smoke.burst(p.x, p.y, p.z, 14, 6, 3, 1.4); embers.burst(p.x, p.y, p.z, 16, 12, 6, 1.0);
+    /* 둘레 막 점은 뚫린 셈 — 단 앞으로 낼 수 있는 구멍 수만큼은 막 점을 남김(가까운 것부터 · 전엔 구멍 넷이 막 점 스물넷을 다 지워 보통(다섯)의 마지막 구멍을 겨눌 표적·조준 도움이 사라졌음) */
+    p.holed = true;
+    const nb = B.memb.filter((q) => !q.holed && Math.hypot(q.x - p.x, q.y - p.y, q.z - p.z) < 8 * S).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y, a.z - p.z) - Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z));
+    let left = 0; for (const q of B.memb) if (!q.holed) left++;
+    for (const q of nb) { if (left <= 8 - B.holes) break; q.holed = true; left--; }
+    B.flinchT = 0.8; if (B.mode === 'fly' && !B.act) B.cool = Math.min(B.cool, 1.2);   // 아프면 곧 돌아봄 smoke.burst(p.x, p.y, p.z, 14, 6, 3, 1.4); embers.burst(p.x, p.y, p.z, 16, 12, 6, 1.0);
     if (sfx) sfx.play('growl');
     emit('hole', B.holes); return true;
   };

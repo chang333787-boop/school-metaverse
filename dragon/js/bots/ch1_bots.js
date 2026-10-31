@@ -57,7 +57,7 @@ BOTS['1-2'] = (s, K, M) => {
   const fires = (c.fires || []).filter((f) => f.on);
   if (!th.held) {
     K.set('KeyF', false);
-    if (goC(K, M, c.hand.x, c.hand.z, 1.3)) { K.stop(); if (c.ready && cd(M, 'f', 0.5)) K.tap('KeyF'); else if (fires[0]) K.face(c, fires[0].x, fires[0].z); }
+    if (goC(K, M, c.hand.x, c.hand.z, 2.0)) {   /* 받는 거리 2.6 안 · 1.3이면 줄 끝 사람(7.6, 16.0)에 막혀 1.8m에서 멈춘 채 못 받았음 */ K.stop(); if (c.ready && cd(M, 'f', 0.5)) K.tap('KeyF'); else if (fires[0]) K.face(c, fires[0].x, fires[0].z); }
     return;
   }
   /* 과녁 고르기 — 불 세기 + 동쪽(바람 아래) 덤 − 거리 · 정한 과녁은 꺼질 때까지 */

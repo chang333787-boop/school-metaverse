@@ -92,7 +92,7 @@ function* intro(G, C) {
   yield* T(C, sayAll(G, [
     ['gobber', '드래곤이다! 히컵, 넌 들어가 있어!', ['shield']],
     ['hiccup', '(한 마리만 잡으면… 다들 나를 볼 거야.)'],
-    ['gobber', '…아, 들어가기 전에! 이 도끼들 좀 날라 다오. 손이 모자라!', ['hammer']],
+    ['gobber', '…아, 그 전에! 도끼 좀 날라 다오. 손이 모자라!', ['hammer']],
   ]));
   Gb.walkTo(f0.x - 14, f0.z + 6, 3);
   yield* T(C, wait(0.6));
@@ -133,7 +133,7 @@ function* weapons(G, C) {
   const lightStep = () => { for (const L of lights) { const h = L.h, on = !h.got || h.speed > 0.3; L.f.visible = L.g.visible = on; L.f.position.set(h.x + Math.sin(h.yaw - 0.6) * 0.45, h.y + 2.3, h.z + Math.cos(h.yaw - 0.6) * 0.45); L.g.position.copy(L.f.position).y += 0.4; } };
   const oldDraw = C.drawHook; C.drawHook = (a, dt) => { oldDraw(a, dt); lightStep(); };
   C.cleanup = ((old) => () => { for (const L of lights) { L.f.removeFromParent(); L.g.removeFromParent(); } old && old(); })(C.cleanup);
-  G.hud.say('gobber', '회관 앞 · 남쪽 벼랑 길 · 선착장 길에 하나씩! 횃불 든 사람들이다!', ['torch'], { secs: 3.5 });
+  G.hud.say('gobber', '횃불 든 셋에게 하나씩! 회관 앞·벼랑 길·선착장 길!', ['torch'], { secs: 3.5 });   /* 말풍선 두 줄 30자 안(눈높이 1-1) */
   C.V = V; C.sit = sit; C.rack = { x: rack.position.x, z: rack.position.z };
   /* 지붕 사다리(다른 길) — 가운데 집 북쪽 벽에 기댄 사다리 · F = 올라가 용마루를 넘어 남쪽 벼랑 길로 */
   const lad = ladderOver(G, E.houses[9]); C.lad = lad;
