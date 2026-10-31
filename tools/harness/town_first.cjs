@@ -8,7 +8,7 @@
 const { chromium } = require('./pw.cjs'), { walker, toFirstTry } = require('./lib_walk.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const arg = k => { const a = process.argv.find(s => s.startsWith('--' + k)); return a ? (a.includes('=') ? a.slice(a.indexOf('=') + 1) : true) : null; };
-const SHOTS = arg('shots'), PICK = arg('pick') || '마트', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0';
+const SHOTS = arg('shots'), PICK = arg('pick') || '마트', URL = process.env.TOWN_URL || ('http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0');   /* TOWN_URL = 공개판 uri-maeul 같은 다른 주소(내보내기 시험이 씀) */
 let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails++; };
 const mmss = s => Math.floor(s / 60) + '분 ' + String(Math.round(s % 60)).padStart(2, '0') + '초';
 (async () => {

@@ -139,7 +139,7 @@ def kid_names(layout_src, cfg):
 def build_index(src, app, app_en):
     s = open(os.path.join(src, 'v2/index.html'), encoding='utf-8').read()
     reps = [
-        (r'<title>[^<]*</title>', '<title>%s</title>\n<meta name="description" content="어린이들이 종이 판 위에 지은 마을을 걸어 다니며 이웃을 돕고 첫 마을 잔치를 준비하는 3D 마을 놀이">' % app),
+        (r'<title>[^<]*</title>', '<title>%s</title>\n<meta name="description" content="자전거·버스·지하철로 마을을 다니며 이웃을 돕고, 양을 몰고, 불을 끄고, 밤 장터와 첫 마을 잔치를 준비하는 3D 마을 놀이">' % app),
         (r'"three": "\.\./lib/three\.module\.min\.js"', '"three": "./lib/three.module.min.js"'),
         (r'<div id="boot">[^<]*<i>', '<div id="boot">%s로 가는 중<i>' % app),
         (r"<div class=\"tb-t\">[^<]*<br>[^<]*</div>", '<div class="tb-t">%s</div>' % app),

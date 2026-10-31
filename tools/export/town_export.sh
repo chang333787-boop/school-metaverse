@@ -6,7 +6,7 @@
 # 이름 바꾸기 표 = tools/export/names.json · 새 저장소에만 있는 것(인트로·README·사진 출처) = tools/export/overlay/
 # 확인(새 폴더를 python3 -m http.server <포트> --bind 127.0.0.1 로 띄운 뒤 · 브라우저는 zsh tools/ops/b2.sh node … 로 하나씩):
 #   python3 tools/export/test/uri_check.py <폴더>          글 검사(사진·docs·비밀값·'정림'·이름 바꿈·아이 집)
-#   node tools/export/test/uri_intro.cjs <포트> [--shots=…]  인트로(긴 판·짧은 판·건너뛰기·다시 보기·휴대폰)
+#   node tools/export/test/uri_intro.cjs <포트> [--shots=…]  인트로 예고편(장면마다 글·시간대 · 끝 장 시작하기 · 짧은 판 · 건너뛰기 · 다시 보기 · 휴대폰 · 끝난 뒤 시각·저장 그대로)
 #   node tools/export/test/uri_first.cjs <포트>              처음부터 → 칠판 E → 첫 장을 몸으로 걷기 → 저장·새로고침
 #   node tools/export/test/town_hud.cjs ourtown <포트> · town_open.cjs ourtown <포트>   원본 마을 시험을 새 주소로
 set -e
