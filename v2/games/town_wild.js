@@ -4,6 +4,7 @@
 //   행동(야숨 결) = 뛰면 12m에서 달아남 · 걸으면 5m에서 알아채 고개를 들고 3m 안이면 달아남 · 쪼그리면(C) 1.5m까지 · 새는 날아올라 다른 물가로 · 개구리는 물로 · 수달은 물속으로 · 다람쥐는 나무 위로
 //   우리반RPG '손님 도감' 결(10-19): 못 만난 칸 = 실루엣 + 때·곳 귀띔 · 첫 만남 ★ 스티커 · 가만히(쪼그려 3초) 있으면 겁 많은 동물이 먼저 다가옴 · 같은 동물 10번 ⭐ · 30번 ⭐⭐ · 모두 ⭐⭐ = 칭호 '들판 관찰가'(순위·견주기 X)
 //   일 = 1초 칸(내 둘레 80m 안 12마리 고르기 · E 자리 옮기기) + 20m 안에 있을 때만 0.1초 판정 + 움직이는 몇 초만 매 프레임(보통 0~2마리) · 매 프레임 새 객체 X
+import { photoHtml } from './town_photos.js?v=2';   /* REALPIC-1 카드 아래 실제 모습 한 장(창 안에서만 · 열 때만 부름) */
 export const WILD_V = 1;
 const ALL = ['spring', 'summer', 'autumn', 'winter'], WARM = ['spring', 'summer', 'autumn'];
 // 종: hab 사는 곳(자리 고르는 규칙) · sea 나오는 계절 · time day(낮·노을) | night(밤·노을·새벽) | any · flee 달아나는 꼴 · sc 그림 크기(작은 동물은 3인칭 화면에서 보이게 키움) · ga 이름 뒤 '이/가'
@@ -305,7 +306,7 @@ export function createWild(A) {
       + '<div class="sm" style="margin-top:6px">' + A.esc(prog) + (add ? '' : e9 ? ' (already counted this one today)' : ' (이 친구는 오늘 벌써 셌어요)') + '</div>'
       + (lv > lv0 ? '<div style="margin-top:4px;font-weight:800;color:#2f8a3a">' + '⭐'.repeat(lv) + ' ' + (e9 ? 'Observation star!' : '관찰 별을 받았어요') + '</div>' : '')
       + (neuT ? '<div style="margin-top:4px;font-weight:900">🏅 ' + (e9 ? 'New title: Field watcher' : '새 칭호: 들판 관찰가') + '</div>' : '')
-      + '</div></div><div class="row"><button class="sub" data-a="x">' + (e9 ? 'Close' : '닫기') + '</button></div>', false, 'wild');
+      + '</div></div>' + photoHtml('wild:' + w.id, e9, { sm: 1 }) + '<div class="row"><button class="sub" data-a="x">' + (e9 ? 'Close' : '닫기') + '</button></div>', false, 'wild');
     const cv = P9.querySelector('.twn-wild'); if (cv) drawWild(cv, w, { bg: BG[s.reed ? 'river' : w.hab] }); P9.onclick = e => { const b = e.target.closest('button'); if (b && b.dataset.a === 'x') A.closeP(); }; A.map.sfx && A.map.sfx(neu || lv > lv0 ? 'ding' : 'tick'); if (neu) A.bagShow(); }
   // 도감 칸(이 마을에 사는 곳이 있는 종만) · 칸 그림 = 같은 모양 옆모습(이모지가 없는 종도 같은 꼴)
   function pic(w, sil) { const k9 = w.id + (sil ? ':s' : ''); if (picN[k9]) return picN[k9]; const c = document.createElement('canvas'); c.width = 84; c.height = 60; drawWild(c, w, sil ? { sil: '#4b4f55' } : {}); return (picN[k9] = '<img src="' + c.toDataURL() + '" alt="" style="height:36px;width:auto;display:inline-block">'); }

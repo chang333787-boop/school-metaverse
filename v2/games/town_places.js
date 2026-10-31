@@ -1,5 +1,5 @@
 // 🛂 장소 카드 자료(LIVING-1 · 사용자 10-17 '천연기념물 보호소처럼 이름만 있고 아무 역할 안 하는 곳' · '무엇을 하는 곳인지 · 어떤 도움 · 관련 직업'): 놀이 코드와 떼어 둔 자료표(town_skill.js·town_shore.js와 같은 결)
-//   이름(아이 판 그대로) → 갈래 일곱(행정·안전·건강·배움(문화)·일터·가게·쉼) · 하는 일 한 줄 · 우리에게 주는 도움 한 줄 · 일하는 사람(직업 2~4 · 하는 일 한 줄) · 사진 자리(비워 둠 — 사진 일감이 채움)
+//   이름(아이 판 그대로) → 갈래 일곱(행정·안전·건강·배움(문화)·일터·가게·쉼) · 하는 일 한 줄 · 우리에게 주는 도움 한 줄 · 일하는 사람(직업 2~4 · 하는 일 한 줄) · 사진(town_photos.js · 이름으로 찾음)
 //   사실만 · 이름에 맞는 일반 역할만(아이 판 장소 뜻을 바꾸지 않음) · 셈 X · 직업 그림 = 남녀 고르게(장소마다 번갈아) · 이모지는 갈래 머리에 하나
 export const PLACES_V = 1;
 const T2 = (ko, en) => [ko, en];
@@ -186,19 +186,8 @@ export function jobSvg(key, f, k = 0) { const J = JOBS[key]; if (!J) return ''; 
 // 장소의 직업 줄: 장소 이름마다 시작을 바꿔 남녀·피부를 번갈아(한 카드 안에서도 번갈아)
 export const jobRow = (name, keys) => { let h = 7; for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return keys.map((k, i) => ({ k, f: (h + i) % 2 === 0, skin: (h + i) % 3 })); };
 
-// 실제 사진(창 안에서만 — 3D 세상에 붙이지 않음 · 실사 금지 규칙): v2/img/photos/ · 출처 = CREDITS.md와 같게 · 사진 밑에 출처 한 줄을 꼭 보임 · 새 사진은 여기 한 줄 + PHOTO_OF 한 줄
-export const PHOTOS = {
-  gochang: { src: 'mudflat_gochang.jpg', t: T2('고창 갯벌', 'Gochang tidal flat'), by: '문화재청', lic: T2('공공누리 1유형(출처 표시)', 'KOGL Type 1 (attribution)'), url: 'https://commons.wikimedia.org/wiki/File:Gochang_tidal_flat_01.jpg' },
-  saemangeum: { src: 'seawall_saemangeum.jpg', t: T2('새만금 방조제 — 바다를 막은 둑', 'Saemangeum seawall — a dike that walls off the sea'), by: 'Kussy', lic: T2('CC BY-SA 2.1 jp', 'CC BY-SA 2.1 jp'), url: 'https://commons.wikimedia.org/wiki/File:Saemangeum_seawall.JPG' },
-  suncheon: { src: 'mudflat_suncheon.jpg', t: T2('순천만 갯벌의 게와 구멍', 'Crabs and burrows on the Suncheon Bay mudflat'), by: 'lumoplank', lic: T2('CC0(퍼블릭 도메인)', 'CC0 (public domain)'), url: 'https://commons.wikimedia.org/wiki/File:Suncheon_Bay_Natural_Reserve_-_SuncheonBNG2975.jpg' },
-};
-export const PHOTO_OF = [[/갯벌/, 'gochang'], [/간척/, 'saemangeum']];   // 장소 이름 → 사진(앞에서부터)
-export const photoKey = name => { for (const [re, k] of PHOTO_OF) if (re.test(String(name || ''))) return k; return null; };
-const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-// 사진 한 장(창 안 HTML): 그림 + 무엇 + 출처 한 줄(지은이 · 이용 허락 · 원본 링크)
-export function photoHtml(k, en) { const P = PHOTOS[k]; if (!P) return ''; const L = en ? 1 : 0, src = new URL('../img/photos/' + P.src, import.meta.url).href;
-  return '<figure class="pc-ph"><img src="' + src + '" alt="' + escH(P.t[L]) + '" loading="lazy" decoding="async"><figcaption><b>' + escH(P.t[L]) + '</b><br>' + (en ? 'Photo: ' : '사진: ') + escH(P.by) + ' · ' + escH(P.lic[L]) + ' · <a href="' + escH(P.url) + '" target="_blank" rel="noopener">' + (en ? 'Wikimedia Commons' : '위키미디어 공용') + '</a></figcaption></figure>'; }
-export const PHOTO_CSS = '.twn-p .pc-ph{margin:4px 0 10px;border:3px solid var(--ink);border-radius:14px;overflow:hidden;background:var(--card);box-shadow:0 4px 0 var(--ink)}.twn-p .pc-ph img{display:block;width:100%;max-height:300px;object-fit:cover}.twn-p .pc-ph figcaption{padding:6px 10px;font-size:12.5px;color:var(--mut);line-height:1.4}.twn-p .pc-ph figcaption b{color:var(--ink);font-size:14px}.twn-p .pc-ph a{color:inherit}';
+// 실제 사진(창 안에서만 — 3D 세상에 붙이지 않음 · 실사 금지 규칙): 표·그리기는 town_photos.js(REALPIC-1 · 곤충·동물·물고기·식물·자연 장소와 같이 씀) — 장소 카드는 이름으로 찾음(PHOTO_OF)
+export { PHOTOS, PHOTO_OF, photoKey, photoHtml, PHOTO_CSS } from './town_photos.js?v=2';
 
 // 사서 체험 자료(한국십진분류법 KDC — 책등 번호 첫 자리로 갈래): [번호, 이름, 영어, 책장 색, 무엇이 있나]
 export const LIB_CATS = [

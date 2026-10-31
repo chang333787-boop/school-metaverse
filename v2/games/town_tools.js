@@ -8,6 +8,7 @@
 //     그리기 = 고리 1 + 물방울 1 + 덩이 1 + 조각 1 + 구덩이 1 + 젖은 자국 1(있을 때만) — 바뀔 때만 setMatrixAt
 //   지어내지 않음(사실만: 지렁이·분해자 · 금어기·놓아주기 · 바닷물 · 꽃의 암술·수술) · 새 사람 X(빗자루 = 마을회관 앞 쪽지 · 낚싯대 = 부두 어부 일꾼) · 홍보판(SM_PROMO) X
 import { fishAt, FISH_FACT } from './town_fish.js?v=2';   /* FISH-2: 바다 = 물때·계절로 걸리는 고기(가까운 얕은 물) */
+import { photoHtml } from './town_photos.js?v=2';   /* REALPIC-1 낚은 물고기 실제 모습(창 안에서만) */
 export const TOOLS_V = 1;
 export const TOOL_ORDER = ['can', 'shovel', 'rod', 'lens', 'broom', 'scope'];   /* REWARD-1: 6 = 망원경(관찰 2레벨 보상) */
 export const TOOL = {
@@ -260,7 +261,7 @@ export function createTools(A) {
   function tugGo(fish) { if (!fish) return; const e = en(); const ok = A.tug(fish, res => { if (dead) return; if (res > 0) { A.rec('tug-ok'); catchShow(fish); } else if (res === 0) { A.rec('tug-miss'); toast(e ? '💨 It got away — pull the opposite way to the fish' : '💨 물고기가 달아났어요 — 물고기 반대쪽으로 끌어요', 2.6); } }); if (!ok) catchShow(fish); }
   function catchShow(fish) { const e = en(), G = A.GAME; if (!fish) return; G.use('tool:catch');
     const neu = G.found('fish:' + fish.id); A.skUp('look', neu ? 3 : 1, 'fish:' + fish.id); A.rec('catch', { id: fish.id }); const full = G.uses('tool:fish') >= 2;
-    const P = A.openP('<h3>🎣 ' + (e ? 'You caught a fish!' : '물고기를 낚았어요!') + '</h3><div style="display:flex;gap:14px;align-items:center;margin:6px 0"><div style="font-size:54px;line-height:1">🐟</div><div><b style="font-size:18px">' + esc(L(fish.t)) + '</b><div class="sm">' + esc(L(fish.line)) + '</div></div></div>'
+    const P = A.openP('<h3>🎣 ' + (e ? 'You caught a fish!' : '물고기를 낚았어요!') + '</h3><div style="display:flex;gap:14px;align-items:center;margin:6px 0"><div style="font-size:54px;line-height:1">🐟</div><div><b style="font-size:18px">' + esc(L(fish.t)) + '</b><div class="sm">' + esc(L(fish.line)) + '</div></div></div>' + photoHtml('fish:' + fish.id, e, { sm: 1 })
       + (neu ? '<div class="sm">' + (e ? 'Added to the codex: 🎣 Fish met.' : '도감 「🎣 낚은 물고기」에 넣었어요.') + '</div>' : '')
       + '<div class="sm">' + (e ? 'Let it go and it grows up to lay eggs. In breeding season people agree not to fish.' : '놓아주면 다시 자라 알을 낳아요. 알 낳는 때(금어기)엔 잡지 않기로 약속해요.') + '</div>'
       + '<div class="row"><button data-a="rel">💧 ' + (e ? 'Let it go' : '놓아주기') + '</button><button class="sub" data-a="bag"' + (full ? ' disabled' : '') + '>🎒 ' + (e ? 'Into the bag' : '가방에 넣기') + '</button></div>'

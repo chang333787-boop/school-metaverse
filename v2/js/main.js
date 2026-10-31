@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
 import { attachLook, openLookPanel, parseLook, lookColors } from './look.js?v=1';
-import { SET, openSetPanel, openGfxPick } from './settings.js?v=5';   // SET-1 설정·접근성(글씨·색 구분·소리 끄기·흔들림·읽어 주기 — body 꼬리표 · 홍보판 = 기본값)
+import { SET, openSetPanel, openGfxPick } from './settings.js?v=6';   // SET-1 설정·접근성(글씨·색 구분·소리 끄기·흔들림·읽어 주기 — body 꼬리표 · 홍보판 = 기본값)
 import { afterRender, takePhoto, openPhotoPanel } from './photo.js?v=6';   // PHOTO-1 사진관(렌더 바로 뒤 한 번 잡기 · 이 기기 IndexedDB)   // LOOK-1 내 모습(모자·윗옷·바지·머리·피부 색 — 정점 색만 · 홍보판 = 기본)
 import { buildWorld } from './world.js?v=159';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)

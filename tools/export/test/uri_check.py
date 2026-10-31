@@ -30,7 +30,17 @@ ALLOW = re.compile(r'^(index\.html|README\.md|LICENSE|\.gitignore|phone\.css|tit
 bad = [f for f in files if not ALLOW.match(f)]
 ok(not bad, '들어가도 되는 파일만(' + ', '.join(bad[:8]) + ')')
 pics = [f for f in files if re.search(r'\.(png|jpe?g|webp|gif|pdf|heic|mov|mp4)$', f, re.I)]
-ok(all(f.startswith('img/photos/') for f in pics) and len(pics) <= 3, '사진 = 장소 카드 공개 사진 셋뿐(' + ', '.join(pics) + ')')
+ok(all(re.match(r'^img/photos/[a-z_]+\.jpg$', f) for f in pics), '사진 = img/photos/의 공개 사진(JPEG)뿐(' + ', '.join(f for f in pics if not f.startswith('img/photos/'))[:200] + ')')
+# 사진마다 출처 줄(CREDITS.md: 파일 · 지은이 · 이용 허락 · 위키미디어 공용 원본 주소) · 자유 이용 허락만 · 장당 크기 상한
+cred = open(os.path.join(OUT, 'img/photos/CREDITS.md'), encoding='utf-8').read() if os.path.exists(os.path.join(OUT, 'img/photos/CREDITS.md')) else ''
+rows = {r.split('|')[1].strip(): r for r in cred.split('\n') if r.startswith('| ') and not re.match(r'^\| (파일|---)', r)}
+nocred = [f for f in pics if os.path.basename(f) not in rows or 'https://commons.wikimedia.org/wiki/File:' not in rows[os.path.basename(f)]]
+ok(pics and not nocred, '사진 %d장 모두 출처 줄 있음(CREDITS.md)' % len(pics) + ('' if not nocred else ' ← ' + ', '.join(nocred[:6])))
+LICRE = re.compile(r'CC0|퍼블릭 도메인|공공누리 1유형|CC BY(-SA)? \d')
+badlic = [f for f, r in rows.items() if not LICRE.search(r.split('|')[4])]
+ok(not badlic, '출처 줄의 이용 허락 = 자유 이용만' + ('' if not badlic else ' ← ' + ', '.join(badlic[:6])))
+heavy = [f for f in pics if os.path.getsize(os.path.join(OUT, f)) > 400 * 1024]
+ok(not heavy, '사진 장당 400KB 이하' + ('' if not heavy else ' ← ' + ', '.join(heavy)))
 ok(not any(re.search(r'(^|/)(docs|scratchpad|server|memory|\.claude|tour_media|patches?)(/|$)', f) for f in files), 'docs·메모·서버·견학 사진 폴더 0')
 
 text = {f: open(os.path.join(OUT, f), encoding='utf-8', errors='replace').read() for f in files if not re.search(r'\.(jpe?g|png)$', f)}

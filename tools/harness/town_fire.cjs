@@ -2,6 +2,8 @@
 //   ① 생김: 이야기 전(첫 30분) = 불 없음 · 첫 쪽지 + 1막 첫 장 뒤 = 그날 정한 때에 내 둘레(60~260m) 집에 불(직업 체험이 잠겨 있어도) · 소방서 450m 밖에서도
 //   ② 보임: 연기 기둥(옥상 + 12m 넘게) · 빛기둥 · 위 가운데 줄 = 칸 + 방향 + 거리(지나가는 장소 글에 안 덮임) · 120m 앞에서 기둥이 화면 안 · 장소 찾기(F) 맨 위 '지금 생긴 일' → 길 · J 검색 '불'
 //   ③ 한 판(FIRE-5): 빨간 선을 걸어서 불난 집 앞 → E → 소방차 → 반장 판단(원인에 맞는 끄는 법) → 차례(사다리차 자리 · 분전함 · 덮개 · 소화기 순서) → 물 뿌리기 → 대상(막아서기 · 고양이 찾기) → 이웃 물음 → 물건 둘러보기 → 원인 고르기 → 끝 창(늦은 것 · 칸 기록)
+//   ⓪ EMERG-3 첫 불(사용자 10-31 '처음에 무조건 불나는 거' 극혐): 첫날 = 불 칸 0 · 첫날 하루를 걸어 다녀도 불 0 · 불을 아직 못 봤으면 둘째 날 한 칸은 불(사흘 안 한 번) · 본 뒤엔 날마다 강제 X
+//   ⑥ FIRE-6 건물 안 = 잠시 멈춤(사용자 10-31 '불 끄는 퀘스트 중간에 집 들어갔다고 멈추는 거 뭐야'): 물 뿌리다 들어가도 체험·불 그대로 · 할 일 줄 = 잠시 멈춤 · 나오면 그 차례부터 · 불난 집 문은 못 들어감 · 순간 이동 = 끝 + 한 줄
 //   ④ 끝나면 바뀜: 그을음 + 예방 판(E) · 다음 날 새 소화기 + 아침 소식 · 예방 지도 · 그다음 날 흔적 사라짐 ⑤ 열 판: 조합 같은 것 둘 이하 · 상황 넷 · 원인 넷+ · 대상 셋 · 칸 1→5 · 틀린 판 = 번짐 + '무엇이 늦었나' · 오류 0
 const { chromium } = require('playwright');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
@@ -16,11 +18,20 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     const F = () => ev(() => SM_TOWN.jobs().fire), FS = () => ev(() => SM_TOWN.jobs().dbg.fireState()), SM = () => ev(() => SM_TOWN.jobs().dbg.smoke());
     await p.goto(URL); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && window.SD2 && SM_TOWN.jobs && SM_TOWN.routePts, null, { timeout: 240000 }); await W8(2500); await closeAll(); await W8(800);
     const setT = (m, o = {}) => ev(([m, o]) => { const G = SM_TOWN.game().S; G.jobs = G.jobs || {}; delete G.jobs.fireDay; delete G.jobs.fireNo; delete G.jobs.fire; if (o.day) G.day = o.day; G.min = m; const E9 = SM_TOWN.emerg && SM_TOWN.emerg(); if (E9) { E9.abort(); E9.dbg.plan(); G.emerg.plan = [{ k: 'fire', at: m, until: m + 200, st: 0 }]; E9.dbg.walk(100); } }, [m, o]);   /* EMERG-1이 있으면 불의 때는 엔진이 정함 → 그날 칸 = 지금 불 · 다니는 중(80m)으로 맞춤 */
+    // ⓪ EMERG-3 첫 불: 그날 계획(칸 둘)을 사흘 + 열이틀 뽑아 봄 — 첫날 불 0 · 사흘 안 한 번 · 본 뒤엔 날마다 강제 X
+    { const P = await ev(() => { const G = SM_TOWN.game().S, E9 = SM_TOWN.emerg(), d0 = G.day, j0 = JSON.stringify(G.jobs || {}), out = { d: [], first: null, later: 0 }; G.jobs = {};
+        for (let d = 1; d <= 3; d++) { G.day = d; const pl = E9.dbg.plan().map(q => q.k); out.d.push(pl.join(',')); if (pl.includes('fire') && out.first == null) { out.first = d; G.jobs.fireDay = d; } }
+        for (let d = 4; d <= 15; d++) { G.day = d; if (E9.dbg.plan().some(q => q.k === 'fire')) out.later++; } G.day = d0; G.jobs = JSON.parse(j0); E9.dbg.plan(); return out; });
+      ok(!P.d[0].split(',').includes('fire'), '첫날 계획 = 불 칸 0 (' + P.d[0] + ')'); ok(P.first >= 2 && P.first <= 3, '불을 아직 못 봤으면 사흘 안 한 번 = ' + P.first + '일째 (' + P.d.join(' / ') + ')'); ok(P.later < 12, '불을 본 뒤 = 날마다 강제 X (4~15일째 불 칸 ' + P.later + '/12)'); }
     // ① 생김(정문 밖 길에서 — 긴급 출동은 학교 안에선 안 생김)
     { const R9 = await ev(() => SM_TOWN.schRect()); await ev(([x, z]) => { const M = SD2.map; M.player.teleport([x, M.q.groundAt(x, z, SM_TOWN.ground(x, z) + 2) + 0.05, z]); }, [(R9[0] + R9[2]) / 2, R9[3] + 28]); await W8(800); }
     await ev(() => { const G = SM_TOWN.game().S; G.story = G.story || {}; G.story.done = {}; G.story.cur = null; }); await setT(15 * 60); await W8(2600);
     ok(!(await F()), '이야기 전(첫 30분) = 불 사건 없음(INTUIT-1 그대로)');
     const meA = await ev(() => { const m = SD2.map.player.pos(), st = SM_TOWN.places().find(q => /소방서/.test(q.name || '')); return { x: m.x, z: m.z, st: st ? Math.round(Math.hypot(st.door[0] - m.x, st.door[1] - m.z)) : -1 }; });
+    { const d1 = await ev(() => { const G = SM_TOWN.game().S; G.day = 1; G.jobs = {}; G.story.done = { p0: 1, a1_1: 1 }; const E9 = SM_TOWN.emerg(); E9.abort(); return E9.dbg.plan().map(q => [q.k, q.at]); }); let fz = 0;
+      for (const [, at] of d1) { await ev(at => { SM_TOWN.game().S.min = at + 1; SM_TOWN.emerg().dbg.walk(100); }, at); await W8(2600); if (await F()) fz++; if ((await ev(() => SM_TOWN.emerg().info().ev))) await ev(() => SM_TOWN.emerg().dbg.end(false)); await closeAll(); }
+      await ev(() => { SM_TOWN.game().S.min = 15 * 60 + 40; SM_TOWN.emerg().dbg.walk(100); }); await W8(2600); if (await F()) fz++;
+      ok(fz === 0, '첫날(이야기 1-1 뒤) 하루를 걸어 다녀도 불 0 (그날 칸 ' + (d1.map(q => q[0]).join(',') || '없음') + ')'); }
     await ev(() => { const G = SM_TOWN.game().S; G.story.done = { p0: 1, a1_1: 1 }; }); await setT(15 * 60); let f0 = null; for (let i = 0; i < 12 && !f0; i++) { await W8(500); f0 = await F(); } await closeAll();
     const lockJ = await ev(() => SM_TOWN.hud.on('jobs'));
     ok(!!f0, '첫 쪽지 + 1막 첫 장 뒤 15시 = 불 사건 생김 (직업 체험 ' + (lockJ ? '열림' : '잠김') + ' · 소방서까지 ' + meA.st + 'm)');
@@ -86,12 +97,21 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await ev(d => { SM_TOWN.game().S.day = d + 2; }, d0); await W8(1500); ok(!(await ev(() => SM_TOWN.jobs().dbg.mark())).drawn, '그다음 날 흔적이 사라짐');
     // ⑤ 열 판(날마다 · 칸이 오름 · 비·밤 섞음 · 한 판은 일부러 틀림)
     const keys = [], sits = new Set(), causes = new Set(), tgs = new Set(), lvs = []; let badLog = null, d9 = d0 + 3;
+    let pzDone = false; const pauseChk = async f => { if (f.phase !== 'hose' || pzDone) return; pzDone = true;   /* ⑥ FIRE-6 */
+      const st = await FS(), L9 = await ev(([x, z]) => SM_TOWN.indoor.list().filter(r => r.at).map(r => ({ id: r.id, kind: r.kind, name: r.name, d: Math.hypot(r.at[0] - x, r.at[1] - z) })).sort((a, b) => a.d - b.d), st.door);
+      const own = L9.find(r => r.d < 4); if (own) { await ev(id => SM_TOWN.indoor.enter(id), own.id); await W8(1000); ok(!(await ev(() => SM_TOWN.indoor.on)), '불난 집 문 = 들어가지 않음'); } else console.log('    (불난 집이 들어가는 집이 아님 — 문 막기 시험 건너뜀)');
+      const R = L9.find(r => r.d >= 4 && r.kind !== 'home'); if (!R) { console.log('    (곁에 들어갈 건물 없음 — 실내 멈춤 시험 건너뜀)'); return; }
+      await ev(id => SM_TOWN.indoor.enter(id), R.id); let inn = false; try { await p.waitForFunction(() => SM_TOWN.indoor.on && !SM_TOWN.indoor.busy, null, { timeout: 8000 }); inn = true; } catch (e9) { /* 못 들어감 */ } ok(inn, '물 뿌리다 ' + R.name + '(' + R.kind + ') 안으로 들어감');
+      await W8(400); const h0 = (await F5()).flames.reduce((a, q) => a + q[3], 0); await W8(3000); const a1 = await ev(() => SM_TOWN.jobs().active), f1 = await F5(), g1 = await goalTx(), ret1 = await ev(() => !!document.querySelector('.pc-ret')), h1 = f1 ? f1.flames.reduce((a, q) => a + q[3], 0) : -1;
+      ok(a1 === 'fire' && f1 && f1.phase === 'hose' && Math.abs(h1 - h0) < 0.02 && !ret1, '건물 안 = 체험 그대로 · 불도 안 자람(' + h0.toFixed(2) + ' → ' + h1.toFixed(2) + ') · 겨누기 화면 치움'); ok(/잠시 멈췄어요/.test(g1), '안에서 할 일 줄 = 「불 끄기는 잠시 멈췄어요」 「' + g1 + '」'); await shot('fire_pause_in');
+      await ev(() => SM_TOWN.indoor.exit()); for (let i = 0; i < 20; i++) { await W8(250); if (!await ev(() => SM_TOWN.indoor.on)) break; } await W8(1300);
+      const a2 = await ev(() => SM_TOWN.jobs().active), f2 = await F5(), ret2 = await ev(() => !!document.querySelector('.pc-ret')), hud2 = await ev(() => !!document.querySelector('.pc-hud button')); ok(a2 === 'fire' && f2 && f2.phase === 'hose' && ret2 && hud2, '나오면 = 그 차례(물 뿌리기)부터 이어서 · 겨누기 동그라미·꾹 단추 다시'); await shot('fire_pause_out'); };
     for (let r = 0; r < 10; r++) { d9++; const wx = r === 2 || r === 7 ? 'rain' : 'clear', night = r === 5;
       await ev(([d, wx, night]) => { const G = SM_TOWN.game().S; G.day = d; G.min = night ? 20 * 60 + 40 : 11 * 60; G.jobs = G.jobs || {}; delete G.jobs.fireDay; delete G.jobs.fireNo; delete G.jobs.fire; SM_TOWN.rules.wx(wx); const E9 = SM_TOWN.emerg && SM_TOWN.emerg(); if (E9) { E9.abort(); E9.dbg.plan(); G.emerg.plan = []; } }, [d9, wx, night]); await W8(night ? 2500 : 900);
       const st = await ev(() => { const s = SM_TOWN.places().find(q => /소방서/.test(q.name || '')); return s ? s.door : null; }); await TP(st[0] + 6, st[1] + 6); await W8(600);
       const okOffer = await ev(() => SM_TOWN.jobs().dbg.offer()); await closeAll(); if (!okOffer) { ok(false, '판 ' + (r + 1) + ' 불이 안 생김'); continue; }
       await ev(() => SM_TOWN.jobs().startJob('fire', null, { scene: true })); await W8(600);
-      const lg = await runRound('판 ' + (r + 1), { bad: r === 4 }); await closeAll(); if (r === 4) badLog = lg; if (!lg.f) continue;
+      const lg = await runRound('판 ' + (r + 1), { bad: r === 4, onPhase: r === 1 ? pauseChk : null }); await closeAll(); if (r === 4) badLog = lg; if (!lg.f) continue;
       keys.push(lg.f.plan.key); sits.add(lg.f.plan.sit); causes.add(lg.f.plan.cause); tgs.add(lg.f.plan.target === 'roofcat' ? 'cat' : lg.f.plan.target); lvs.push(lg.f.lv);
       if (lg.stuck) ok(false, '판 ' + (r + 1) + ' 멈춤 = ' + lg.stuck); }
     { const c = {}; for (const k of keys) c[k] = (c[k] || 0) + 1; const mx = Math.max(0, ...Object.values(c)); ok(keys.length === 10 && mx <= 2, '열 판 조합(상황|원인|대상) 같은 것 둘 이하 (최대 ' + mx + ' · ' + Object.keys(c).length + '가지)'); }
@@ -100,6 +120,11 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     ok(badLog && badLog.f && badLog.f.late.length >= 1 && /무엇이 늦었나/.test(badLog.end || ''), '일부러 틀린 판 = 불이 번짐 + 끝 창 「무엇이 늦었나」 (' + (badLog && badLog.f ? badLog.f.late.join(' / ') : '-') + ')');
     ok(badLog && badLog.f && badLog.f.flames.some(q => q[5] === 0 && q[4] === 2), '틀린 동안 바람 아래쪽 잠든 불꽃이 깨어남');
     { const FM = await ev(() => SM_TOWN.jobs().dbg.fmap()); ok(FM.length >= 10, '예방 지도 점 ' + FM.length + '개'); }
+    ok(pzDone, '실내 멈춤 시험을 돌림(둘째 판 물 뿌리기)');
+    // 순간 이동 = 진짜 끝 + 한 줄(무엇 때문에 끝났고 어떻게 다시 하는지)
+    { await ev(() => { const G = SM_TOWN.game().S; G.day += 1; G.min = 11 * 60; G.jobs = G.jobs || {}; delete G.jobs.fireDay; delete G.jobs.fireNo; delete G.jobs.fire; }); await W8(600); const st = await ev(() => { const s = SM_TOWN.places().find(q => /소방서/.test(q.name || '')); return s ? s.door : null; }); await TP(st[0] + 6, st[1] + 6); await W8(500);
+      if (await ev(() => SM_TOWN.jobs().dbg.offer())) { await closeAll(); await ev(() => SM_TOWN.jobs().startJob('fire', null, { scene: true })); await W8(700); await ev(() => SM_TOWN.jumpCell('가1')); let tx = ''; for (let i = 0; i < 24 && !/불 끄기를 끝냈어요/.test(tx); i++) { await W8(300); tx = await ev(() => (document.getElementById('toast') || {}).textContent || ''); } await closeAll();
+        const nt = await ev(() => (SM_TOWN.game().S.ntf || []).map(q => q.t).filter(t => /불 끄기를 끝냈어요/.test(t)).pop() || ''); ok(!(await ev(() => SM_TOWN.jobs().active)) && /다시/.test(nt) && /불 끄기를 끝냈어요/.test(tx), '순간 이동 = 불 끄기 끝 + 한 줄(화면에 뜸 · 🔔 지난 알림) 「' + nt + '」'); } }
     // 그냥 둔 불 = 소방관들이 끄고 흔적은 남음
     await ev(() => { const G = SM_TOWN.game().S; G.day += 1; G.min = 11 * 60; G.jobs = G.jobs || {}; delete G.jobs.fireDay; delete G.jobs.fireNo; delete G.jobs.fire; SM_TOWN.rules.wx('clear'); }); await W8(800);
     ok(await ev(() => SM_TOWN.jobs().dbg.offer()), '다른 날 불(바로 띄움)'); await closeAll(); await ev(() => SM_TOWN.jobs().dbg.autoNow()); await W8(1500); const mk2 = await ev(() => SM_TOWN.jobs().dbg.mark());

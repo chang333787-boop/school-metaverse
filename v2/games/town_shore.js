@@ -2,7 +2,7 @@
 //   물때 = 실제 결(하루에 밀물·썰물이 두 번씩 · 한 바퀴 약 12시간 25분 · 날마다 약 50분씩 늦어짐) · 썰물(간조 앞뒤 약 1시간 반) 동안만 갯벌이 드러남 → 바다 친구·조개 캐기
 //   밀물 = 갯벌 위로 물낯 한 장이 올라옴(1초마다 높이만 바꿈 · 썰물엔 숨김) · 갯벌 가까이 있을 때만 '물이 들어와요' 알림 · 물때 칩은 갯벌 가까이 갔을 때만
 //   바다 친구 = 우리나라 갯벌에서 흔히 보는 것 — 실제 사실만(지어낸 이야기 X) · 겨울엔 게·망둥어가 굴 속에서 지내서 고둥·갯지렁이만
-import { photoHtml } from './town_places.js?v=3';   // LIVING-1 실제 사진(창 안에서만 · 출처 한 줄)
+import { photoHtml } from './town_places.js?v=4';   // LIVING-1 실제 사진(창 안에서만 · 출처 한 줄)
 export const SHORE_V = 1;
 const ALL = ['spring', 'summer', 'autumn', 'winter'], WARM = ['spring', 'summer', 'autumn'];
 export const SHORE = [

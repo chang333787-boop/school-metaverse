@@ -4,9 +4,9 @@
 //   매 프레임 일 0 — 모양은 body 꼬리표 + CSS, 소리는 부르는 쪽이 SET.mute를 봄(main.js tone · 마을 자연 소리), 색은 그릴 때 SET.cb를 봄(마을 지도)
 const promo = () => !!(typeof window !== 'undefined' && window.SM_PROMO);
 const RM = (() => { try { return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } })();
-const DEF = { fs: 0, cb: false, mute: false, calm: RM, read: false, comp: true, chal: false, gm: 0 };   // chal = 🏅 도전 모드(CHAL-1 · 마을만 · 빨간 선·거리 줄 X) · comp = 🧭 나침반 띠(NAV-1 · 마을 화면 위)
+const DEF = { fs: 0, cb: false, mute: false, calm: RM, read: false, comp: true, chal: false, gm: 0, tips: true };   // chal = 🏅 도전 모드(CHAL-1 · 마을만 · 빨간 선·거리 줄 X) · comp = 🧭 나침반 띠(NAV-1 · 마을 화면 위)
 const KEY = 'sm-set';
-const clean = (o) => ({ fs: [0, 1, 2].includes(o && o.fs) ? o.fs : 0, cb: !!(o && o.cb), mute: !!(o && o.mute), calm: o && typeof o.calm === 'boolean' ? o.calm : RM, read: !!(o && o.read), comp: !(o && o.comp === false), chal: !!(o && o.chal), gm: o && o.gmv === 2 && [0, 1, 2].includes(o.gm) ? o.gm : 0, gmv: 2 });   /* MODE-2(사용자 10-27 '가변 프레임이 아니라 60·30으로 하니 컴퓨터에서도 그래픽이 별로') gm = 0 자동(기본 · 기기에 맞춤 = MODE-1 전 그대로 · 해상도만 필요할 때) · 1 그래픽 우선 30fps · 2 부드럽게 60fps · gmv 2 전 저장(창을 그냥 닫아 2가 된 것 포함)은 자동으로 되돌림 */
+const clean = (o) => ({ fs: [0, 1, 2].includes(o && o.fs) ? o.fs : 0, cb: !!(o && o.cb), mute: !!(o && o.mute), calm: o && typeof o.calm === 'boolean' ? o.calm : RM, read: !!(o && o.read), comp: !(o && o.comp === false), chal: !!(o && o.chal), tips: !(o && o.tips === false), gm: o && o.gmv === 2 && [0, 1, 2].includes(o.gm) ? o.gm : 0, gmv: 2 });   /* MODE-2(사용자 10-27 '가변 프레임이 아니라 60·30으로 하니 컴퓨터에서도 그래픽이 별로') gm = 0 자동(기본 · 기기에 맞춤 = MODE-1 전 그대로 · 해상도만 필요할 때) · 1 그래픽 우선 30fps · 2 부드럽게 60fps · gmv 2 전 저장(창을 그냥 닫아 2가 된 것 포함)은 자동으로 되돌림 */
 function load() { if (promo()) return { ...DEF }; try { return clean(JSON.parse(localStorage.getItem(KEY) || 'null') || DEF); } catch (e) { return { ...DEF }; } }
 export const SET = load();
 // 색 구분 돕기 팔레트(Okabe–Ito — 빨강·초록 대신 주황·청록·파랑 + 무늬)
@@ -57,12 +57,13 @@ export function setHTML(en, o9) { const town = !!(o9 && o9.town), L = (ko, e9) =
     + '<div class="grp">📢 ' + L('읽어 주기', 'Read aloud') + '</div><div class="row st-tg" style="justify-content:flex-start">' + tg('read', 1, SET.read, L('켜기', 'On')) + tg('read', 0, !SET.read, L('끄기', 'Off')) + '</div><div class="sm">' + (!ss ? L('이 브라우저는 읽어 주기를 못 해요', 'This browser cannot read aloud') : ko ? L('대화창 글을 소리 내어 읽어요(소리 끄기면 안 읽어요)', 'Reads dialogue aloud (not when sound is off)') : L('이 기기에 한국어 목소리가 없어요 — 켜 두면 목소리가 생길 때 읽어요', 'No Korean voice on this device yet')) + '</div>'
     + '<div class="grp">🧭 ' + L('나침반 띠 (마을 화면 위 · 동서남북과 갈 곳)', 'Compass strip (town · directions and your goal)') + '</div><div class="row st-tg" style="justify-content:flex-start">' + tg('comp', 1, SET.comp, L('켜기', 'On')) + tg('comp', 0, !SET.comp, L('끄기', 'Off')) + '</div>'
     + (town ? '<div class="grp">🏅 ' + L('도전 모드 (마을 · 빨간 선 없이 찾아가기)', 'Challenge mode (town · find places without the red line)') + '</div><div class="row st-tg" style="justify-content:flex-start">' + tg('chal', 1, SET.chal, L('켜기', 'On')) + tg('chal', 0, !SET.chal, L('끄기', 'Off')) + '</div><div class="sm">' + L('켜면 빨간 선과 거리 숫자가 없어지고, 길 안내 단추가 「지도 펴기」가 돼요. 이웃 말과 지도로 찾아가면 나의 길 도전가 걸음이 하루 하나 늘어요.', 'No red line or distance numbers; the guide button opens the map. Finding a place this way adds one Challenger step a day.') + '</div>' : '')
+    + (town ? '<div class="grp">💡 ' + L('처음 쓸 때 한 줄 안내 (마을)', 'First-time tips (town)') + '</div><div class="row st-tg" style="justify-content:flex-start">' + tg('tips', 1, SET.tips, L('켜기', 'On')) + tg('tips', 0, !SET.tips, L('끄기', 'Off')) + '</div><div class="sm">' + L('자전거·우산·버스처럼 처음 쓸 때 화면 아래에 한 번 알려 줘요. 꺼도 H 조작 도움 창은 그대로예요.', 'Shows a line at the bottom the first time you need the bike, umbrella, bus and so on. The H controls window still works when this is off.') + '</div>' : '')   /* TIPS-1 */
     + '<div class="sm" style="margin-top:6px">' + L('이 기기에 기억해요', 'Saved on this device') + '</div>'
     + '<div class="row"><button type="button" class="sub" data-st="reset">↺ ' + L('처음 설정', 'Defaults') + '</button><button type="button" data-st="x">' + L('다 됐어요', 'Done') + '</button></div>'; }
 export function bindSet(root, o = {}) {
   root.addEventListener('click', (e) => { const b = e.target.closest('button[data-st]'); if (!b || !root.contains(b)) return; e.stopPropagation(); const k = b.dataset.st;
     if (k === 'x') { if (o.onClose) o.onClose(); return; }
-    if (k === 'reset') setSet({ fs: 0, cb: false, mute: false, calm: RM, read: false, comp: true, chal: false }); else setSet({ [k]: k === 'fs' || k === 'gm' ? +b.dataset.v : b.dataset.v === '1' });   /* (처음 설정은 화면 모드를 그대로 둠 — 기기 성능 고르기) */
+    if (k === 'reset') setSet({ fs: 0, cb: false, mute: false, calm: RM, read: false, comp: true, chal: false, tips: true }); else setSet({ [k]: k === 'fs' || k === 'gm' ? +b.dataset.v : b.dataset.v === '1' });   /* (처음 설정은 화면 모드를 그대로 둠 — 기기 성능 고르기) */
     if (k === 'read' && SET.read) speak(o.en ? '읽어 주기를 켰어요' : '읽어 주기를 켰어요');
     if (o.redraw) o.redraw(); else { const box = root.classList.contains('st-box') ? root : root.querySelector('.bx'); if (box) { const sc = box.scrollTop; box.innerHTML = setHTML(o.en, o); box.scrollTop = sc; } } });
 }
