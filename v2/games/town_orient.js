@@ -9,7 +9,7 @@
 //     장소 안내 = 이웃 말 한 줄(칸·방위·랜드마크 — town_ask.js wayLine) · 그렇게 찾아가 닿으면(40m 넘게 떨어진 곳) 나의 길 🏅 도전가 걸음 하나(하루 한도)
 //   저장 GAME.S.orient = { v, cd: { 날: 1 }, best: { c1: { t, w, d } }, last: { c1: { t, w, d, j } }, n: { c1: 번 }, rw: { c1: 날 } } — 진행 중인 판은 저장하지 않음(새로고침 = 출발 판에서 다시)
 //   지킴: 판타지 X · 실명 X(판·깃발에 사람 X) · 순위 X · 아이콘·% X(수첩 시간만) · 새 Light X · 매 프레임 = 0.25초 칸 하나(시험 중에만) · 새 객체 X(스크래치) · 캔버스 글자에 이모지 X
-import { mapInk } from './town_treasure.js?v=8';
+import { mapInk } from './town_treasure.js?v=9';
 export const OR_V = 1;
 const T2 = (ko, en) => [ko, en];
 export const COURSES = [

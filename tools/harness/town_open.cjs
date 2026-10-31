@@ -1,6 +1,6 @@
 // 🏠 첫 아침 시험(OPEN-1 · 사용자 10-27 '오픈월드인데 아직 시작 부분이 학교에서 대기 — 다시 구성') — node tools/harness/town_open.cjs [마을=ourtown] [포트=8002] [--shots=폴더]
 //   ① 처음부터 = 우리 집 현관 앞(학교 운동장 X) · 아침 · 위 가운데 첫 할 일 한 줄(현관 칠판) · 칠판 E = 프롤로그 쪽지(어린이 도우미) · 학교 이름 X
-//   ② 자전거 = 첫날부터 B · 칩  ③ 가 본 곳(BEEN-1): 소방서를 먼저 가 본 판 → 1-1 쪽지가 알아봄 · 소방서에 선 채 그 단계가 되면 바로 넘어감 · 방위 고르기는 그대로
+//   ② 자전거 = 첫날부터 B · 칩  ③ 가 본 곳(BEEN-1): 소방서를 먼저 가 본 판 → 1-1 쪽지가 알아봄 · 우체국에 선 채 그 단계가 되면 바로 넘어감 · 보물 지도 첫 장(파기)은 그대로(FIRST-1 10-31)
 //   ④ 이어하기 = 지난 자리(새 시작 장면 X)  ⑤ (--shots) 첫 10초 캡처 데스크톱 1366×768 · 휴대폰 세로 390×844  ⑥ 페이지 오류 0
 const { chromium, devices } = require('./pw.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
@@ -47,18 +47,18 @@ const where = p => p.evaluate(() => { const q = SD2.map.player.get(), H = SM_TOW
     let pages = ntxt; for (let i = 0; i < 5 && !/데려가 줘/.test(pages); i++) { await p.keyboard.press('Space'); await p.waitForTimeout(500); pages += ' ' + await p.evaluate(() => (document.querySelector('.twn-dlg') || {}).innerText || ''); }
     const pg9 = pages.replace(/\s+/g, ' '); ok(/너 소방서는 벌써 가 봤지\? ?그럼 나 좀 데려가 줘!/.test(pg9), '1-1 쪽지가 알아봄(' + (pg9.match(/너 소방서[^!]*!/) || [''])[0] + ')');
     await closeAll(p);
-    await p.evaluate(async () => { SM_TOWN.storyAt('a1_1', 3); const a = SM_TOWN.story().step.v.at; SM_TOWN.storyAt('a1_1', 2); SD2.map.player.teleport([a.x + 2, SM_TOWN.ground(a.x + 2, a.z) + 1.5, a.z]); }); await p.waitForTimeout(800); await closeAll(p); await p.evaluate(() => SM_TOWN.storyAt('a1_1', 3)); await p.waitForTimeout(2600);   /* 소방서 단계 목적지에 먼저 서 있다가 그 단계가 됨 */
-    const st3 = await p.evaluate(() => SM_TOWN.story().step); ok(st3 && st3.id !== 'fire', '소방서에 선 채로 「소방서까지 걷기」 → 바로 넘어감(지금 단계 ' + (st3 && st3.id) + ')');
-    await p.evaluate(() => SM_TOWN.storyAt('a1_1', 2)); await p.waitForTimeout(1200); const st2 = await p.evaluate(() => SM_TOWN.story().step); ok(st2 && st2.id === 'd1' && st2.type === 'choose', '방위 고르기는 그대로(' + (st2 && st2.id) + ')');
-    await p.evaluate(() => SM_TOWN.storyOff && SM_TOWN.storyOff());
-    console.log('③-2 프롤로그에서 소방서를 고른 판 → 1-1이 소방서 걷기를 되풀이하지 않음(SOLO-1)');
+    await p.evaluate(async () => { SM_TOWN.storyAt('a1_1', 2); const a = SM_TOWN.story().step.v.at; SM_TOWN.storyOff(); SD2.map.player.teleport([a.x + 2, SM_TOWN.ground(a.x + 2, a.z) + 1.5, a.z]); }); await p.waitForTimeout(800); await closeAll(p); await p.evaluate(() => SM_TOWN.storyAt('a1_1', 2)); await p.waitForTimeout(2600);   /* FIRST-1(10-31 첫 장 다시 짜기): 우체국(지도만 보고 찾아가기) 목적지에 먼저 서 있다가 그 단계가 됨 */
+    const st3 = await p.evaluate(() => ({ st: SM_TOWN.story().step, done: !!(SM_TOWN.game().S.story.done || {}).a1_1 })); ok(!(st3.st && st3.st.id === 'post'), '우체국에 선 채로 「우체국은 지도만 보고 찾아가기」 → 바로 넘어감(지금 단계 ' + (st3.st && st3.st.id) + ' · 1-1 끝 ' + st3.done + ')');
+    await closeAll(p); await p.evaluate(() => SM_TOWN.storyAt('a1_1', 1)); await p.waitForTimeout(1200); const st2 = await p.evaluate(() => SM_TOWN.story().step); ok(st2 && st2.id === 'tmap' && st2.type === 'tmap', '보물 지도 첫 장(파기)은 소방서를 가 봤어도 그대로(' + (st2 && st2.id) + ')');
+    await closeAll(p); await p.evaluate(() => SM_TOWN.storyOff && SM_TOWN.storyOff());
+    console.log('③-2 프롤로그에서 소방서를 고른 판 → 쪽지가 알아봄 · 파기는 그대로 · 우체국을 같이 간 판 = 새 친구 혼자(SOLO-1)');
     await p.evaluate(() => { const s = SM_TOWN.game().S.story; s.done = { p0: { d: 1 } }; s.fw = { '작은 도서관': 1, '소방서': 1 }; s.cur = null; s.autoNext = null; SM_TOWN.storyStart('a1_1'); }); await p.waitForTimeout(1500);
-    { let pg = await p.evaluate(() => (document.querySelector('.twn-dlg') || {}).innerText || ''); for (let i = 0; i < 5 && !/혼자 찾아가/.test(pg); i++) { await p.keyboard.press('Space'); await p.waitForTimeout(500); pg += ' ' + await p.evaluate(() => (document.querySelector('.twn-dlg') || {}).innerText || ''); }
-      pg = pg.replace(/\s+/g, ' '); ok(/소방서는 아까 같이 가 봤으니까 방향만 알려 줘/.test(pg) && !/소방서는 벌써 가 봤지\? ?그럼 나 좀 데려가/.test(pg), '1-1 쪽지 = 「' + (pg.match(/소방서는 아까[^!]*!/) || [''])[0] + '」'); }
-    await closeAll(p); await p.evaluate(() => SM_TOWN.storyAt('a1_1', 2)); await p.waitForTimeout(900); { const q = await p.evaluate(() => SM_TOWN.story().step); ok(q && q.id === 'd1' && q.type === 'choose', '도서관 → 소방서 방위 고르기는 그대로(' + (q && q.id) + ')'); }
-    await closeAll(p); await p.evaluate(() => SM_TOWN.storyAt('a1_1', 3)); await p.waitForTimeout(900);
-    { const q = await p.evaluate(() => ({ st: SM_TOWN.story().step, rec: ((SM_TOWN.game().S.story.rec || {}).a1_1 || { st: {} }).st.fire, ban: (document.getElementById('hudBan') || {}).textContent || '' })); ok(q.st && q.st.id === 'd2' && q.rec && q.rec.solo === 1, '「소방서까지 걷기」 = 건너뜀 → 다음 = ' + (q.st && q.st.id) + ' · 기록 solo'); ok(/혼자 찾아가요/.test(q.ban), '배너 = 「' + q.ban + '」'); }
-    await closeAll(p); await p.evaluate(() => SM_TOWN.storyAt('a1_1', 5)); await p.waitForTimeout(900); { const q = await p.evaluate(() => SM_TOWN.story().step); ok(q && q.id === 'post', '안 가 본 우체국은 그대로 걷기(' + (q && q.id) + ')'); }
+    { let pg = await p.evaluate(() => (document.querySelector('.twn-dlg') || {}).innerText || ''); for (let i = 0; i < 5 && !/지도 조각으로 찾아보자/.test(pg); i++) { await p.keyboard.press('Space'); await p.waitForTimeout(500); pg += ' ' + await p.evaluate(() => (document.querySelector('.twn-dlg') || {}).innerText || ''); }
+      pg = pg.replace(/\s+/g, ' '); ok(/소방서는 아까 같이 가 봤지! ?이번엔 지도 조각으로 찾아보자/.test(pg) && !/소방서는 벌써 가 봤지\? ?그럼 나 좀 데려가/.test(pg), '1-1 쪽지 = 「' + (pg.match(/소방서는 아까[^.]*\./) || [''])[0] + '」'); }
+    await closeAll(p); await p.evaluate(() => SM_TOWN.storyAt('a1_1', 1)); await p.waitForTimeout(900); { const q = await p.evaluate(() => SM_TOWN.story().step); ok(q && q.id === 'tmap', '같이 가 본 소방서라도 보물 지도 첫 장은 그대로(' + (q && q.id) + ')'); }
+    await closeAll(p); await p.evaluate(() => { const P = SM_TOWN.places().find(q => q.name === '작은 도서관' && q.door); if (P) { const x = P.door[0] + 2, z = P.door[1]; SD2.map.player.teleport([x, SM_TOWN.ground(x, z) + 1.5, z]); } SM_TOWN.storyAt('a1_1', 2); }); await p.waitForTimeout(900); { const q = await p.evaluate(() => SM_TOWN.story().step); ok(q && q.id === 'post', '안 가 본 우체국은 그대로 걷기(' + (q && q.id) + ')'); }   /* ③에서 우체국에 서 있던 몸을 도서관 앞으로(서 있으면 바로 넘어가므로) */
+    await closeAll(p); await p.evaluate(() => { SM_TOWN.storyOff(); const s = SM_TOWN.game().S.story; s.done = { p0: { d: 1 } }; s.fw['우체국'] = 1; s.autoNext = null; SM_TOWN.storyAt('a1_1', 2); }); await p.waitForTimeout(900);
+    { const q = await p.evaluate(() => ({ st: SM_TOWN.story().step, rec: ((SM_TOWN.game().S.story.rec || {}).a1_1 || { st: {} }).st.post, ban: (document.getElementById('hudBan') || {}).textContent || '' })); ok(!(q.st && q.st.id === 'post') && q.rec && q.rec.solo === 1, '같이 간 우체국 = 건너뜀(새 친구 혼자) · 기록 solo'); ok(/혼자 찾아가요/.test(q.ban) || (!q.st && /끝/.test(q.ban)), '배너 = 「' + q.ban + '」(우체국이 1-1 마지막 단계라 건너뛰면 곧 장 끝 배너 — 새 친구 말은 그대로)'); }
     await p.evaluate(() => { SM_TOWN.storyOff && SM_TOWN.storyOff(); const s = SM_TOWN.game().S.story; delete s.fw; });
     console.log('③-3 첫 완료 뒤 할 일 하나(ONE-1) — 프롤로그만 끝낸 날 = 잔치 첫 안내 X');
     { const F1 = await p.evaluate(() => { const G = SM_TOWN.game().S, s = G.story; s.done = { p0: { d: G.day } }; s.cur = 'a1_1'; s.i = 1; const f = G.feast; if (f) f.ann0 = -1; const a0 = f ? f.ann0 : null; return { a0, n: f ? f.n : null }; }); for (let i = 0; i < 3; i++) { await closeAll(p); await p.evaluate(() => SM_TOWN.feast && SM_TOWN.feast().sec(true)); await p.waitForTimeout(150); }
