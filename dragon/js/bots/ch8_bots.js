@@ -42,23 +42,13 @@ BOTS['8-4'] = (s, K, M, B, lv) => {
   K.set('ArrowUp', dy > 1.2); K.set('ArrowDown', dy < -1.2);
 };
 
-/* ⑤ 둥지 — 살금살금 · 킁킁이 끝나면 다음 바위 턱으로 · 콧구멍이 벌름하는데 다음 턱이 멀면 가까운 턱으로 돌아가 멈춤 */
+/* ⑤ 둥지 — 살금살금(낮게) 길목을 따라 · 콧구멍이 벌름하면(늦은 만큼 앞당겨) 낮게 멈춤 · 킁킁이 끝나면 다시 */
 BOTS['8-5'] = (s, K, M, B, lv) => {
   if (s.stage !== 'sneak' || !s.chain) { K.stop(); return; }
   const me = K.cur.me;
   if (!me.low) { K.stop(); if ((K.shiftCd = (K.shiftCd || 0) - DT) <= 0) { K.tap('ShiftLeft'); K.shiftCd = 0.5; } return; }
-  const ch = s.chain, last = ch.length - 1;
-  M.goal = Math.max(M.goal || 0, s.prog + 1);
-  const nx = ch[Math.min(last, M.goal)];
-  const near = ch.slice(0, last).map((q, i) => ({ i, d: Math.hypot(q.x - me.x, q.z - me.z) })).sort((a, b) => a.d - b.d)[0];
-  if (s.state === 'sniff') { K.stop(); return; }                          // 킁킁 = 그 자리 멈춤(턱이면 안전)
-  if (s.state === 'warn') {
-    const left = (1 - s.sign) * ({ easy: 3, normal: 2.5, hard: 2 }[s.diff] || 2.5) - (LAG[lv] || 0.35) - 0.4;   // 남은 예고(콧구멍 벌어진 정도로 짐작)
-    const dn = Math.hypot(nx.x - me.x, nx.z - me.z);
-    if (s.at >= 0 && dn > 1.6 * left) { K.stop(); return; }              // 턱에 있으면 기다림
-    const tgt = dn <= 1.6 * left || !near ? nx : ch[near.i];
-    if (K.walk(s, tgt.x, tgt.z, true, 0.9)) K.stop();
-    return;
-  }
-  if (K.walk(s, nx.x, nx.z, true, M.goal === last ? 1.5 : 0.9)) K.stop();
+  const lag = LAG[lv] || 0.35, W = { easy: 3, normal: 2.5, hard: 2 }[s.diff] || 2.5;
+  if (s.state === 'sniff' || (s.state === 'warn' && s.sign > 1 - (lag + 0.9) / W)) { K.stop(); return; }   // 남은 예고 안에 멈춤
+  const ch = s.chain, last = ch.length - 1, nx = ch[Math.min(last, s.prog + 1)];
+  if (K.walk(s, nx.x, nx.z, true, s.prog + 1 >= last ? 1.5 : 1.2)) K.stop();
 };

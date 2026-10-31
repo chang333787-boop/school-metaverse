@@ -29,7 +29,7 @@ const ARR2 = `<span class="keys">${keyCap('←')}${keyCap('→')}</span>`, ARR4 
 HOWTO.cling8 = [[ARR2, ICONS.wind, '기울면 반대쪽'], [keyCap('↑'), ICONS.fin, '곤두박질엔 ↑ 꾹'], ['', ICONS.hand, '손이 미끄러지지 않게']];
 HOWTO.glide8 = [[ARR4, ICONS.wind, '방향 · ↑ 오르기'], ['', ICONS.cloud, '구름 속 = 숨기'], ['', 'wing', '앞으로는 저절로']];
 HOWTO.flock8 = [[ARR4, ICONS.flock, '떼 가운데 내 자리'], ['', ICONS.eye, '눈이 뜨이면 안쪽으로'], ['', 'wait', '부딪히지 않기']];
-HOWTO.sniff8 = [[keyCap('Shift', true), 'tiptoe', '살금살금'], ['', ICONS.nose, '콧구멍 벌름 = 멈춤'], [`<span class="keys">${keyCap('W')}${keyCap('A')}${keyCap('S')}${keyCap('D')}</span>`, 'rock', '바위 턱 → 틈']];
+HOWTO.sniff8 = [[keyCap('Shift', true), 'tiptoe', '살금살금(낮게)'], ['', ICONS.nose, '콧구멍 벌름 = 낮게 멈춤'], [`<span class="keys">${keyCap('W')}${keyCap('A')}${keyCap('S')}${keyCap('D')}</span>`, 'rock', '바위 턱 → 틈']];
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const SADDLE = new THREE.Vector3(0, 1.16, -0.05), BACK = new THREE.Vector3(0, 1.1, -0.74);
@@ -463,13 +463,15 @@ function nestLayout(pl) {
     const len = Math.abs(da) * (r0 + r1) / 2, n = Math.max(4, Math.round(len / 10.5) - 1);
     for (let i = 1; i <= n; i++) { const t = i / (n + 1), a = a0 + da * t, r = r0 + (r1 - r0) * t; ledges.push({ x: pit.x + Math.sin(a) * r, y: 0, z: pit.z + Math.cos(a) * r }); }
   }
-  /* 차례 — 들어온 턱에서 틈 쪽으로(틈 방향으로 비춘 거리 순) */
-  const ux = ex.x - lin.x, uz = ex.z - lin.z, ul = Math.hypot(ux, uz) || 1;
-  ledges.sort((a, b) => ((a.x - lin.x) * ux + (a.z - lin.z) * uz) - ((b.x - lin.x) * ux + (b.z - lin.z) * uz));
-  ledges = ledges.filter((q) => Math.hypot(q.x - lin.x, q.z - lin.z) > 3 && Math.hypot(q.x - ex.x, q.z - ex.z) > 3);
-  const chain = [lin, ...ledges, ex];
-  let gap = 0; for (let i = 0; i < chain.length - 1; i++) gap = Math.max(gap, Math.hypot(chain[i + 1].x - chain[i].x, chain[i + 1].z - chain[i].z));
-  return { pit, lin, ex, drop, boss, ledges, chain, gap, ul };
+  /* 길 — 들어온 턱에서 구덩이 둘레(바닥 고리)를 짧은 쪽으로 돌아 틈까지 ~10m마다(화살표·봇·중간 자리) · 숨을 곳 = 들어온 턱 + 바위 턱 */
+  const a0 = Math.atan2(lin.x - pit.x, lin.z - pit.z), a1 = Math.atan2(ex.x - pit.x, ex.z - pit.z), da = wrap(a1 - a0);
+  const rr = Math.hypot(lin.x - pit.x, lin.z - pit.z) * 0.97, n = Math.max(2, Math.round(Math.abs(da) * rr / 10));
+  const chain = [lin];
+  for (let i = 1; i <= n; i++) { const a = a0 + da * i / n; chain.push({ x: pit.x + Math.sin(a) * rr, y: lin.y || 0, z: pit.z + Math.cos(a) * rr }); }
+  if (Math.hypot(ex.x - chain[n].x, ex.z - chain[n].z) > 3) chain.push(ex); else chain[n] = ex;
+  const hides = [lin, ...ledges];
+  const smellR = 0.62 * Math.min(...hides.map((q) => Math.hypot(q.x - pit.x, q.z - pit.z)));
+  return { pit, lin, ex, drop, boss, ledges, chain, hides, smellR };
 }
 /* 자리표시 둥지 소품(팀 D 장소가 없을 때만) — 바위 턱 · 구덩이 · 대장 그림자 등(콧구멍) · 틈 바위 */
 function stubNest(G, N) {
@@ -492,7 +494,9 @@ function makeDraft(group) {
   const n = 46, pos = new Float32Array(n * 3), ph = new Float32Array(n);
   for (let i = 0; i < n; i++) { ph[i] = (i * 0.618) % 1; pos[i * 3 + 1] = -99; }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const m = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xb8a48c, size: 0.16, transparent: true, opacity: 0.75, depthWrite: false }));
+  const cv = document.createElement('canvas'); cv.width = cv.height = 32; const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.beginPath(); x.ellipse(16, 16, 13, 9, 0.5, 0, Math.PI * 2); x.fill();   // 둥근 먼지 조각(네모 점 X)
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xb8a48c, map: tex, alphaTest: 0.3, size: 0.13, transparent: true, opacity: 0.75, depthWrite: false }));
   m.frustumCulled = false; group.add(m);
   return {
     step(dt, k, px, py, pz, tx, tz) {
@@ -505,7 +509,7 @@ function makeDraft(group) {
       }
       m.material.opacity = 0.2 + 0.6 * k; g.attributes.position.needsUpdate = true;
     },
-    dispose() { m.removeFromParent(); g.dispose(); m.material.dispose(); },
+    dispose() { m.removeFromParent(); g.dispose(); m.material.dispose(); tex.dispose(); },
   };
 }
 const NEST = { easy: { sniff: 1.5, noise: 1.6 }, normal: { sniff: 1.8, noise: 1.0 }, hard: { sniff: 2.0, noise: 0.8 } };
@@ -514,7 +518,7 @@ function* nest(G, C) {
   const stub = !!pl.stub || !(pl.anchors && pl.anchors.ledge_in);
   const props = stub ? stubNest(G, N) : null;
   const sign = (k) => { if (pl.bossSign) pl.bossSign(k); if (props) props.sign(k); };
-  const rest = clamp(N.gap / 1.5 - W + 1.6, 4.5, 12);            // 바위 턱 사이를 살금살금 갈 만큼(가장 먼 사이 기준)
+  const rest = { easy: 7, normal: 5.5, hard: 4.5 }[G.diff] || 5.5;   // 킁킁 사이 쉼(박자)
   const mist = makePuffs(pl.group, 90, 0x7a6a66), draft = makeDraft(pl.group);
   const Fl = createFlock({ group: pl.group, n: 20, rng: createRng(77) });
   Fl.circle({ x: N.pit.x, y: Math.max((N.pit.y || 0) + 34, (N.lin.y || 0) + 24), z: N.pit.z, r: 44 });
@@ -543,7 +547,7 @@ function* nest(G, C) {
     fear.forEach((d) => { d.mind.lock = 'idle'; d.stay(); d.pose = { tailCurl: 1, crouch: 0.7, ear: -0.8 }; d.faceTo(N.pit.x, N.pit.z); });
     const floorY = (N.pit.y || 0) - 3;
     const drop = (o, t0, x, z) => { const k = t - t0; if (k < 0) { o.visible = false; return; } const y = N.drop.y + 18 - 4.9 * k * k; o.visible = y > floorY; o.position.set(x, y, z); o.rotation.x = k * 2; };
-    const gy = (N.pit.y || 0) + 15, g0 = { x: N.pit.x + 40, y: gy + 14, z: N.pit.z + 10 };
+    const gy = Math.max((N.pit.y || 0) + 15, (N.lin.y || 0) + 9), g0 = { x: N.pit.x + 40, y: gy + 14, z: N.pit.z + 10 };   // 구덩이 가장자리 위(턱에서 보이게)
     G.hud.say('hiccup', '(속삭임) 쉿… 여기가 둥지야.');
     let said = 0, eaten = false;
     while (t < 26) {
@@ -570,12 +574,13 @@ function* nest(G, C) {
     answerFear(G); G.flags.c8w = 1;
     P.lock = false;
   }
-  /* 도전 — 콧구멍이 벌름(예고 W초) → 킁킁(sniff초) 동안 바위 턱 뒤에서 멈춤 · 뛰면 소리 → 일찍 킁킁 · 구덩이 가까이 X */
+  /* 도전 — 콧구멍이 벌름(예고 W초) → 킁킁(sniff초) 동안 멈춤 · 움직이면 소리 · 서 있거나(낮게 X) 구덩이 가까이면 냄새(바위 턱 뒤는 괜찮음) · 뛰면 소리 → 일찍 킁킁 */
   C.stage = 'sneak'; G.hud.goal('들키지 않게 틈으로 빠져나가기'); G.hud.howto('sniff8', 9);
   G.hud.say('astrid', '(속삭임) 저 큰 녀석, 눈은 작아. 냄새랑 소리로 찾아.', ['nose']);
-  let state = 'rest', st = rest * 0.7, noise = 0, prog = ck, k = 0, shh = 0;
-  const hideR = 2.6, pitR = Math.min(11, 0.45 * Math.min(...N.chain.map((q) => Math.hypot(q.x - N.pit.x, q.z - N.pit.z))));
-  const atHide = () => { for (let i = 0; i < N.chain.length - 1; i++) { const q = N.chain[i]; if (Math.hypot(P.W.x - q.x, P.W.z - q.z) < hideR) return i; } return -1; };
+  G.hud.say('hiccup', '(콧구멍이 벌름하면… 낮게 멈추자.)', ['nose']);
+  let state = 'rest', st = rest * 0.8, noise = 0, prog = ck, k = 0, shh = 0;
+  const hideR = 2.6, pitR = Math.min(11, 0.45 * N.smellR / 0.62);
+  const atHide = () => { for (let i = 0; i < N.hides.length; i++) { const q = N.hides[i]; if (Math.hypot(P.W.x - q.x, P.W.z - q.z) < hideR) return i; } return -1; };
   C.ns = () => ({ state, sign: +k.toFixed(2), prog });
   while (true) {
     const dt = yield; Fl.update(dt, 0, null, 0); mist.step(dt);
@@ -584,17 +589,23 @@ function* nest(G, C) {
     if (loud) noise += dt / Z.noise; else noise = Math.max(0, noise - dt * 0.4);
     if (state === 'rest' && (st <= 0 || noise >= 1)) { state = 'warn'; st = W; noise = 0; if (shh < 3) { shh++; G.hud.say('astrid', '쉿! 콧구멍이 벌름거려…!', ['nose'], { secs: 1.4 }); } As.pose = { low: 1, point: 0.7 }; }
     else if (state === 'warn' && st <= 0) { state = 'sniff'; st = Z.sniff; mist.burst(N.pit.x, (N.pit.y || 0) + 3, N.pit.z, 30, 3, 5); }
-    else if (state === 'sniff' && st <= 0) { state = 'rest'; st = rest; As.pose = { low: 1 }; }
+    else if (state === 'sniff' && st <= 0) { state = 'rest'; st = rest + G.rng() * 1.5; As.pose = { low: 1 }; }
     k = state === 'warn' ? clamp(1 - st / W, 0, 1) : state === 'sniff' ? 1 : Math.max(0, k - dt * 2);
     sign(k); draft.step(dt, k, P.W.x, P.W.y, P.W.z, N.pit.x, N.pit.z);
-    const hi = atHide();
-    if (hi >= 0 && hi > prog) { prog = hi; G.flags.c8L = hi; As.walkTo(N.chain[Math.max(0, hi)].x - 1.2, N.chain[Math.max(0, hi)].z - 1.2, 1.3); }
-    C.at = hi;
+    /* 길 진행(다음 길목 3m 안) — 들키면 거기서 다시 · 아스트리드가 뒤따름 */
+    const nq0 = N.chain[Math.min(N.chain.length - 1, prog + 1)];
+    if (prog < N.chain.length - 1 && Math.hypot(P.W.x - nq0.x, P.W.z - nq0.z) < 3) { prog++; if (prog < N.chain.length - 1) G.flags.c8L = prog; As.walkTo(N.chain[prog - 1].x, N.chain[prog - 1].z, 1.3); }
+    const hi = atHide(); C.at = hi;
     const nq = N.chain[Math.min(N.chain.length - 1, prog + 1)]; nxt.x = nq.x; nxt.z = nq.z; nxt.y = pl.height(nq.x, nq.z, nq.y || 0) + 1;
     arrow.at(G, nxt);
+    const dp = Math.hypot(P.W.x - N.pit.x, P.W.z - N.pit.z);
     let caught = '';
-    if (state === 'sniff' && (hi < 0 || P.W.speed > 0.3)) caught = hi < 0 ? '냄새가 났어…!' : '움직이는 소리를 들었어…!';
-    if (Math.hypot(P.W.x - N.pit.x, P.W.z - N.pit.z) < pitR) caught = '너무 가까이 갔어…!';
+    if (state === 'sniff' && hi < 0) {
+      if (P.W.speed > 0.3) caught = '움직이는 소리를 들었어…!';
+      else if (!P.W.low) caught = '서 있어서 냄새가 났어…!';
+      else if (dp < N.smellR) caught = '너무 가까워서 냄새가 났어…!';
+    } else if (state === 'sniff' && P.W.speed > 0.3) caught = '움직이는 소리를 들었어…!';
+    if (dp < pitR) caught = '너무 가까이 갔어…!';
     if (caught) {
       sign(1); if (props) props.rise(0.6); G.sfx.play('roar');
       G.hud.sayNow('hiccup', caught + ' 뒤로!', [], { secs: 1.6 }); P.lock = true;
@@ -623,7 +634,7 @@ function answerFear(G) {
 function nestSense(G, C) {
   const pl = G.place; if (!pl) return {};
   const N = C.N || (C.N = nestLayout(pl)), ns = C.ns ? C.ns() : { state: '', sign: 0, prog: 0 };
-  return { stage: C.stage || '', state: ns.state, sign: ns.sign, prog: ns.prog, at: C.at ?? -1, chain: N.chain.map((q) => ({ x: +q.x.toFixed(2), z: +q.z.toFixed(2) })), pit: { x: N.pit.x, z: N.pit.z } };
+  return { stage: C.stage || '', state: ns.state, sign: ns.sign, prog: ns.prog, at: C.at ?? -1, chain: N.chain.map((q) => ({ x: +q.x.toFixed(2), z: +q.z.toFixed(2) })), hides: N.hides.map((q) => ({ x: +q.x.toFixed(2), z: +q.z.toFixed(2) })), pit: { x: N.pit.x, z: N.pit.z } };
 }
 
 /* ⑥ 와! — 구름 밑 어둠에서 구름을 뚫고 올라 오로라 아래로 · 약속(주먹 한 대 + 볼) · 변화 */
@@ -667,7 +678,7 @@ export const chapter = {
     { id: '8-4', verb: 'hide', howtoVerb: 'flock8', place: 'sea', time: 'sunset', goal: '떼 속에 숨어 따라가기', limit: 120,
       hints: { 1: '둘레 드래곤 눈이 뜨이면 가운데로.', 2: '떼가 도는 쪽으로 같이 돌고, 같이 내려가.' }, run: flockHide, sense: flockSense },
     { id: '8-5', verb: 'hide', howtoVerb: 'sniff8', place: 'nest', variant: 'crater', time: 'nest', goal: '숨어서 지켜보기', limit: 200,
-      hints: { 1: '콧구멍이 벌름하면 바위 턱 뒤에서 멈춰.', 2: 'Shift로 살금살금 · 킁킁이 끝나면 다음 바위로.' }, run: nest, sense: nestSense },
+      hints: { 1: '콧구멍이 벌름하면 낮게 멈춰.', 2: 'Shift로 살금살금 · 킁킁이 끝나면 화살표 쪽으로.' }, run: nest, sense: nestSense },
     { id: '8-6', verb: 'fly', howtoVerb: 'glide8', place: 'sea', time: 'night', goal: '구름을 뚫고 위로', limit: 100,
       hints: { 1: '↑ 를 눌러 위로!', 2: '화살표 쪽 구름으로 들어갔다 나와.' }, run: breakout, sense: rideSense },
   ],
