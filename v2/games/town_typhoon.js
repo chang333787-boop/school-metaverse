@@ -15,7 +15,7 @@ const hm = m => { m = Math.round(m); return String(((m / 60) | 0) % 24).padStart
 const DIRN = [T2('북', 'north'), T2('북동', 'northeast'), T2('동', 'east'), T2('남동', 'southeast'), T2('남', 'south'), T2('남서', 'southwest'), T2('서', 'west'), T2('북서', 'northwest')];
 const dirIdx = (dx, dz) => ((Math.round(Math.atan2(dx, -dz) / (Math.PI / 4)) % 8) + 8) % 8;   /* 0 = 북(−z) · 2 = 동(+x) */
 const dirVec = i => [Math.sin(i * Math.PI / 4), -Math.cos(i * Math.PI / 4)];
-export const TY = { work: [8, 19], hall: [9, 18], rope: 2, sand: 4, steep: 0.3, steepN: 5, low: 16, restPer: 15, wrong: 30 };   /* 일하는 때 · 센터 창구 · 하루 몫 · 지름길 비탈(기울기 30%) 오를 체력 칸 · 강가 낮은 곳(물까지 m) · 모자란 칸마다 쉬는 분 · 틀린 자리 */
+export const TY = { work: [8, 19], hall: [9, 18], rope: 2, sand: 4, steep: 0.3, steepN: 5, low: 16, restPer: 15, wrong: 30, door: 9, grace: 5, late: 22 };   /* 일하는 때 · 센터 창구 · 하루 몫 · 지름길 비탈(기울기 30%) 오를 체력 칸 · 강가 낮은 곳(물까지 m) · 모자란 칸마다 쉬는 분 · 틀린 자리 · TYPH-2 태풍 날: 집 문가(m) · 밖에서 몇 초 뒤 안으로 · 안에서 할 일이 시간을 보내는 끝(시) */
 // 부탁 갈래: 무엇 · 몇 분 · 끈 · 모래주머니 · 무거운 정도(체력 칸) · 판단
 const KIND = {
   boat: { ic: '🚤', t: T2('배 묶기', 'Tie up the boat'), m: 40, rope: 2, sand: 0, heavy: 4, how: 'side' },
@@ -34,17 +34,20 @@ const RUM = CR.clues.map(k => ({ id: k.replace(/^ty_/, ''), f: CL[k].f === 'fact
 const CSS = `.twn-p .ty-r{border:2px solid #c9b27a;border-radius:12px;background:#fffdf2;padding:6px 10px;margin:6px 0;line-height:1.45}.twn-p .ty-r.done{opacity:.6}.twn-p .ty-r b{font-size:15px}
 .twn-p .ty-ch{display:grid;gap:8px;margin:6px 0}.twn-p .ty-ch button{min-height:46px;font-size:15px;text-align:left}.twn-p .ty-rm{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}.twn-p .ty-rm button{min-height:38px;padding:2px 10px}
 .twn-p .ty-tag{display:inline-block;font-weight:800;border-radius:8px;padding:0 6px;margin-right:4px}.twn-p .ty-tag.f{background:#dff0e2;color:#22603a}.twn-p .ty-tag.t{background:#f3e6d0;color:#7a5a2a}
-.twn-p canvas.ty-map{display:block;width:100%;max-width:520px;height:auto;border-radius:8px;margin:4px 0}`;
+.twn-p canvas.ty-map{display:block;width:100%;max-width:520px;height:auto;border-radius:8px;margin:4px 0}
+.twn-p .ty-a{display:flex;align-items:center;gap:10px}.twn-p .ty-a>div{flex:1;min-width:0}.twn-p .ty-a>button{min-height:42px;padding:2px 14px;flex:none}`;   /* TYPH-2 태풍 날 할 일 줄 = 글 + 단추 한 줄 */
 
 // 마을 쪽이 넘기는 것(A): map · T3 · GAME · on() · lang() · esc · openP(h, wide, kind) · closeP() · panel() · say(t, s) · sfx(k) · bubble(o, t) · busy() · inb() · inSchool(x, z)
 //   places() PLACES · shops() [{ name, door }] · harb() { dock, x, z } | null · workers() WKP · home() 문 자리 | null · gate() 정문 안 [x, z]
 //   water(x, z) 강·바다까지 m · sea(x, z) 바다까지 m(물 안 = 음수) · land(x, z) 서 있을 수 있는 땅 · gy(x, z) · cell(x, z) · mapSnip(cv, pts) · route(p) · guideOff()
-//   stam() 탐험 체력 { n } · story1() 1막 끝 · season() · setWx(w) · wx() · sleep() · taskEv(ev) · skUp(k, n, src) · heart(w, n, src) · diary(t) · buildParts(fn) · restack()
+//   stam() 탐험 체력 { n } · story1() 1막 끝 · season() · setWx(w) · wx() · sleep() 메뉴 잠과 같은 길 · taskEv(ev) · skUp(k, n, src) · heart(w, n, src) · diary(t) · buildParts(fn) · restack()
+//   TYPH-2: homeDoor() 우리 집 문 [x, z] | null · fade(fn) 어둡게 넘기며 fn → Promise · table(g) 판 놀이 열기 → bool
+//   마을 쪽이 쓰는 것: note(t) 태풍 날에 미룬 행사 한 줄(true = 태풍 날 창이 받음 · 따로 알림 X) · open7() 태풍 날 창
 export function createTyphoon(A) {
   const map = A.map, en = () => A.lang() === 'en', L = t => (Array.isArray(t) ? t[en() ? 1 : 0] : String(t == null ? '' : t)), esc = t => A.esc(t);
   const G = () => A.GAME, day = () => G().S.day | 0, now = () => G().S.min | 0, mark = () => G().mark();
   const S = () => { const g = G().S; let s = g.typh; if (!s || typeof s !== 'object' || s.v !== TY_V) s = g.typh = { v: TY_V, n: 0, d0: 0, st: '', last: 0, log: [], mem: {} }; if (!Array.isArray(s.log)) s.log = []; if (!s.mem || typeof s.mem !== 'object') s.mem = {}; return s; };
-  let dead = false, css = null, VIS = [], HOT = [], VKEY = '', DBG = [], said = {}, PEND = '', pathQ = [];
+  let dead = false, css = null, VIS = [], HOT = [], VKEY = '', DBG = [], said = {}, PEND = '', pathQ = [], P7 = null, LASTOK = null, TPING = false; const OUT = { t: 0, said: 0, k7: 0 };   /* TYPH-2 태풍 날 창 · 마지막으로 안에 있던 자리 · 밖에 있은 초 */
   const log = t => { DBG.push(t); if (DBG.length > 40) DBG.shift(); };
   const me = () => map.player.pos(), dist = (p) => { const m = me(); return Math.hypot(p[0] - m.x, p[1] - m.z); };
   const K = () => { const s = S(); return s.st ? day() - s.d0 + 1 : 0; };   /* 판 안의 날(1~) · 0 = 판 없음 */
@@ -111,7 +114,7 @@ export function createTyphoon(A) {
   function onDay() { if (dead || !A.on()) return; const s = S(); said = {};
     if (!s.st && want()) start('auto');
     if (!s.st) return; const k = K();
-    if (k === 7) { A.setWx('rain'); s.said.k7 = 0; mark(); }
+    if (k === 7) { A.setWx('rain'); s.said.k7 = 0; OUT.k7 = 0; OUT.t = 0; OUT.said = 0; LASTOK = null; mark(); }
     if (k === 8 && !s.res) result();
     if (k > 13 || (k > 8 && s.res && (s.fix || []).every(f => f.st === 'done'))) finish();
     VKEY = ''; }
@@ -155,9 +158,12 @@ export function createTyphoon(A) {
   function sync() { if (!A.on()) return; const s = S(), k = K(), key = s.st ? [s.n, k, A.lang(), (s.reqs || []).map(q => q.st + (q.got ? q.got.length : '') + q.seen).join(''), s.path && s.path.ok, s.res ? 1 : 0, (s.fix || []).map(f => f.st).join(''), s.mat && s.mat.d === day() ? s.mat.nr + ':' + s.mat.ns : ''].join('|') : '';
     if (key === VKEY) return; clearVis(); VKEY = key; if (!s.st) return;
     if (s.desk && k <= 6) { const d = s.desk; add(deskParts(), d[0], d[1], 0); hot(d[0], d[1] + 0.9, '🧰 ' + (en() ? 'Typhoon supplies (ropes, sandbags)' : '태풍 대비 물품 받기(끈·모래주머니)'), () => deskUse(), 2.2); }
+    if (k === 7) for (const p of stormSpots()) hot(p[0], p[1], '🌀 ' + (en() ? 'Typhoon day — things to do inside' : '태풍 날 — 안에서 할 일'), () => open7(), 1.8);   /* TYPH-2 집 문가 · 대피소(학교 안) */
     for (const q of s.reqs || []) buildReq(q, k);
     if (s.res) for (const f of s.fix || []) buildFix(f);
     log('sync ' + key + ' vis ' + VIS.length + ' hot ' + HOT.length); }
+  function stormSpots() { const out = [], h = A.home(), sh = S().shelter; if (h) { const p = landNear(h[0] + 1.6, h[1] + 1.6, 2.5); if (p) out.push(p); }
+    if (sh) { let p = null; if (sh.school) { const g = A.gate(); for (const [dx, dz] of [[0, -4], [3, -4], [-3, -4], [0, -7]]) { const x = g[0] + dx, z = g[1] + dz; if (A.inSchool(x, z) && A.land(x, z)) { p = [x, z]; break; } } } out.push(p || sh.at); } return out; }
   function buildReq(q, k) { const pre = k <= 6, shown = q.d <= k, done = q.st === 'done', miss = !!S().res && !done;
     if (q.k === 'boat') { const sp = q.site, y = A.seaY ? A.seaY() - 0.05 : A.gy(sp[0], sp[1]); const f = (S().fix || []).find(o => o.id === q.id), drift = miss && !(f && f.st === 'done');
       if (!drift) add(boatParts(done), sp[0], sp[1], q.ry, y); else { const p = landNear(sp[0] + (q.pa[0] - sp[0]) * 0.5, sp[1] + (q.pa[1] - sp[1]) * 0.5, 4) || q.pb; const g = add(boatParts(false), p[0], p[1], q.ry + 0.6); g.rotation.z = 0.12; g.updateMatrixWorld(true); }
@@ -271,19 +277,105 @@ export function createTyphoon(A) {
     s.mat.rope -= k.rope; f.st = 'done'; f.d = day(); const mm = s.mem[f.k + ':' + (f.shop || f.id)]; if (mm) mm.k = 'both'; mark(); const rest = restOf(k.heavy); spend(k.m + rest, rest ? T2('무거워서 숨을 골랐어요', 'heavy work, you caught your breath') : null); A.sfx('ding'); A.skUp('work', 1, 'case:typhoon'); A.taskEv('typh'); VKEY = '';
     A.say('🔧 ' + (e ? 'Fixed together. “Thanks for coming to help!”' : '같이 고쳤어요. "와서 도와줘서 고마워!"'), 3.2); if (s.fix.every(o => o.st === 'done')) setTimeout(() => { if (!dead) finish(); }, 1500); }
   // 남은 기억(결과 날부터 사흘): 그 자리 가까이 가면 이웃 말 한 번(하루 한 번)
-  function memSec() { const s = S(), m = me(), d = day(); for (const [key, o] of Object.entries(s.mem)) { if (!o || !o.at || d - o.d > 3 || said['mem:' + key] === d) continue; if (Math.hypot(o.at[0] - m.x, o.at[1] - m.z) > 9) continue; said['mem:' + key] = d;
+  function memSec() { const s = S(), m = me(), d = day(); for (const [key, o] of Object.entries(s.mem)) { if (!o || !o.at || key.startsWith('home:') || d - o.d > 3 || said['mem:' + key] === d) continue;   /* TYPH-2 우리 집은 말하는 이웃이 없음('우리 집: …' X) */ if (Math.hypot(o.at[0] - m.x, o.at[1] - m.z) > 9) continue; said['mem:' + key] = d;
       const t = o.k === 'thx' ? T2('태풍 때 도와줘서 고마워. 덕분에 멀쩡했어.', 'Thanks for helping before the typhoon. Everything was fine.') : o.k === 'both' ? T2('기울어진 건 아쉬웠지만, 같이 고쳐 줘서 고마워.', 'It was a shame it got damaged, but thanks for fixing it with me.') : T2('다음 태풍 땐 미리 같이 준비하자. 다친 사람이 없어서 다행이야.', 'Next time let’s get ready early together. Good thing no one was hurt.');
       A.say('💬 ' + L(o.who) + ': "' + L(t) + '"', 4); break; } }
-  // 태풍 날: 집 문 가까이·대피소(학교)·건물 안에서만 · 밖으로 나가면 한 줄 + 집(없으면 학교 정문 안)
-  function stormSec() { const s = S(), m = me(), h = A.home(), sh = s.shelter;
+  // ───────── 태풍 날(TYPH-2 · 사용자 10-31 '태풍날 아무것도 못 하고 시간도 못 보내고 이벤트가 뭔가 이상해') ─────────
+  //   ① 안 = 건물 안 · 학교 울타리 안 · 집 문가(TY.door) · 대피소 곁 — 학교에서 시작했으면 학교에 머물러도 됨
+  //   ② 밖으로 나가면 알림 한 번 → TY.grace초 안에 돌아오면 그대로 · 아니면 어둡게 넘겨 마지막으로 안에 있던 자리로(집이 아니라 — 학교에 있었으면 학교)
+  //   ③ 태풍 날 창 = 한 곳(할 일 줄 · 수첩 · 집·대피소 🌀 E · 아침 한 번 저절로): 미룬 행사 줄 + 안에서 할 일 넷 + ⏩ 기다리기(메뉴 잠과 같은 길 = 마무리 창 한 번)
+  //   ④ 할 일은 시간을 보냄(A.say 없이 · 창 뒤 알림 X) · 보상 = 솜씨 1(case:typhoon · rwCheck 하루 3) · 틀리면 까닭 한 줄만(벌 X) · 사실 = 태풍 행동 요령 일반 상식만
+  const safeAt = (x, z) => { const h = A.home(), hd = A.homeDoor ? A.homeDoor() : null, sh = S().shelter; return A.inSchool(x, z) || (h && Math.hypot(x - h[0], z - h[1]) < TY.door) || (hd && Math.hypot(x - hd[0], z - hd[1]) < TY.door) || (sh && Math.hypot(x - sh.at[0], z - sh.at[1]) < 8); };
+  function goBack() { const s = S(), h = A.home(), to = LASTOK && safeAt(LASTOK[0], LASTOK[1]) ? LASTOK : h ? landNear(h[0], h[1], 3) || h : A.gate(), put = () => map.player.teleport([to[0], A.gy(to[0], to[1]) + 0.05, to[1]]);
+    s.out = (s.out | 0) + 1; mark(); OUT.t = 0; log('storm back');
+    if (A.fade) { TPING = true; A.fade(put).then(() => { TPING = false; }, () => { TPING = false; }); } else put(); }
+  function stormSec() { const s = S(), m = me();
     if (A.wx() !== 'rain') A.setWx('rain');
-    const ok = A.inb() || A.inSchool(m.x, m.z) || (h && Math.hypot(m.x - h[0], m.z - h[1]) < 6) || (sh && Math.hypot(m.x - sh.at[0], m.z - sh.at[1]) < 8);
-    if (!ok && !A.busy()) { const to = h ? landNear(h[0], h[1], 3) || h : A.gate(); map.player.teleport([to[0], A.gy(to[0], to[1]) + 0.05, to[1]]); A.say('🌀 ' + (en() ? 'Stay inside for now — wait until the typhoon passes.' : '지금은 안에 있어요. 태풍이 지나갈 때까지 기다려요.'), 3); s.out = (s.out | 0) + 1; mark(); log('storm back'); }
-    if (!s.said.k7 && !A.panel() && !A.busy()) { s.said.k7 = 1; mark(); stormPanel(); } }
-  function stormPanel() { const e = en(), s = S(); const P9 = A.openP('<h3>🌀 ' + (e ? 'The typhoon is passing' : '태풍이 지나가는 날') + '</h3><div class="pc-tx">' + esc(e ? 'Strong wind and heavy rain all day. Today we stay inside — at home or at the shelter — and watch from the doorway.' : '하루 종일 센 바람과 큰비가 와요. 오늘은 집이나 대피소 안에서 지내요. 문가에서 밖을 지켜볼 수 있어요.') + '</div>'
-      + '<div class="sm">' + esc(e ? 'Look: the river is higher and the flags point ' + L(DIRN[((s.wind | 0) + 4) % 8]) + '.' : '보세요: 강물이 높아졌고, 깃발이 ' + L(DIRN[((s.wind | 0) + 4) % 8]) + '쪽으로 날려요.') + '</div>'
-      + '<div class="row"><button class="sub" data-a="x">' + (e ? 'Watch' : '지켜보기') + '</button><button data-a="ff">⏩ ' + (e ? 'Wait until it passes' : '태풍이 지나갈 때까지 기다리기') + '</button></div>', false, 'typstorm');
-    P9.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; A.closeP(); if (b.dataset.a === 'ff') { log('ff'); A.sleep(); } }; }
+    if (TPING) return; const inside = A.inb(), ok = inside || safeAt(m.x, m.z);
+    if (ok) { if (!inside) LASTOK = [m.x, m.z]; OUT.t = 0; OUT.said = 0; }
+    else if (!A.busy() && !A.panel()) { OUT.t++;
+      if (!OUT.said) { OUT.said = 1; A.say('🌀 ' + (en() ? 'The wind is too strong out here. You’ll head back inside in a moment.' : '밖은 바람이 너무 세요. 곧 안으로 돌아가요.'), 3.4); }
+      if (OUT.t >= TY.grace) goBack(); }
+    if (!s.said.k7 && !A.panel() && !A.busy() && ++OUT.k7 >= 2) { s.said.k7 = 1; mark(); open7(); } }
+  // 미룬 행사(잔치·계절 행사)는 따로 알림 대신 태풍 날 창 안 한 줄
+  function note(t) { const s = S(); if (!storm()) return false; if (!s.notes || s.notes.d !== day()) s.notes = { d: day(), L: [] }; const t9 = String(t || '').replace(/^🌀\s*/, ''); if (t9 && !s.notes.L.includes(t9)) s.notes.L.push(t9); mark();
+    if (P7 && P7.isConnected) { const n = P7.querySelector('[data-notes]'); if (n) n.innerHTML = notesHtml(); } log('note ' + t9.slice(0, 20)); return true; }
+  const notesHtml = () => { const s = S(); return s.notes && s.notes.d === day() ? s.notes.L.map(t => '<div class="ty-r">📅 ' + esc(t) + '</div>').join('') : ''; };
+  const act = () => { const s = S(); if (!s.act || s.act.d !== day()) s.act = { d: day(), radio: [0, 0, 0], check: 0, ck: [], call: {}, yut: 0 }; return s.act; };
+  const actDone = () => { const a = act(); return { radio: a.radio.some(Boolean) ? 1 : 0, check: a.check ? 1 : 0, call: Object.keys(a.call).length ? 1 : 0, yut: a.yut ? 1 : 0 }; };
+  const pass = m => { const t = Math.min(now() + m, TY.late * 60); if (t > now()) G().waitMin(t); A.sfx('tick'); };   /* 조용히(알림 X) — 창 안 글로 */
+  const rew = k => A.skUp(k, 1, 'case:typhoon');
+  // 📻 라디오: 때(아침 · 한낮 · 오후)마다 소식 하나 · 듣고 지금 할 일 고르기
+  const RADIO = [
+    { at: 0, say: T2('"태풍이 우리 마을 쪽으로 다가오고 있습니다. 바람이 점점 세지고 비가 많이 오겠습니다. 바깥에 나가지 말고 안에 머물러 주세요."', '"The typhoon is coming towards our town. The wind will get stronger and there will be heavy rain. Please stay indoors."'),
+      ops: [[1, T2('창문을 꼭 닫고, 창가에서 조금 떨어져 지내요', 'Shut the windows tight and stay a little away from them'), T2('맞아요. 센 바람에 창문이 흔들리면 창가는 위험할 수 있어요.', 'Right. When strong wind shakes the windows, it is safer away from them.')],
+        [0, T2('바람이 얼마나 센지 강가에 나가 봐요', 'Go to the river to see how strong the wind is'), T2('강가와 바닷가는 물이 불어나 위험해요. 태풍 때는 가까이 가지 않아요.', 'Rivers and the seaside rise and get dangerous. Stay away from them in a typhoon.')],
+        [0, T2('우산을 쓰고 가게에 다녀와요', 'Take an umbrella and pop to the shop'), T2('센 바람에는 우산이 뒤집혀요. 날아온 물건에 다칠 수도 있으니 안에 있어요.', 'Strong wind flips umbrellas, and flying things can hurt you. Stay inside.')]] },
+    { at: 11 * 60, say: T2('"태풍이 지금 우리 마을 가까이 지나고 있습니다. 전기가 잠깐 끊길 수 있으니 손전등을 가까이 두세요."', '"The typhoon is passing close to our town now. The power may go off for a while, so keep a torch nearby."'),
+      ops: [[1, T2('손전등을 꺼내 가까이 두고, 전기가 끊기면 어른께 알려요', 'Keep a torch close, and tell a grown-up if the power goes off'), T2('맞아요. 어두워져도 손전등이 있으면 안심이에요.', 'Right. With a torch nearby, the dark is nothing to worry about.')],
+        [0, T2('전기가 끊기면 무슨 일인지 밖에 나가 살펴봐요', 'Go outside to see why the power went off'), T2('밖에는 떨어진 전선이나 날아온 물건이 있을 수 있어요. 나가지 말고 어른께 알려요.', 'There may be fallen wires or blown things outside. Stay in and tell a grown-up.')],
+        [0, T2('냉장고 문을 자주 열어 시원한지 봐요', 'Keep opening the fridge to check it is cold'), T2('전기가 끊기면 냉장고 문을 덜 열어야 찬 기운이 오래가요.', 'When the power is off, opening the fridge less keeps it cold longer.')]] },
+    { at: 15 * 60, say: T2('"태풍이 조금씩 멀어지고 있습니다. 그러나 바람과 비는 아직 강합니다. 태풍이 지나갔다는 방송이 나올 때까지 안전한 곳에 머물러 주세요."', '"The typhoon is slowly moving away, but the wind and rain are still strong. Please stay somewhere safe until we announce it has passed."'),
+      ops: [[1, T2('"지나갔다"는 방송이 나올 때까지 안에서 기다려요', 'Wait inside until the radio says it has passed'), T2('맞아요. 비가 잠깐 약해져도 바람이 다시 세질 수 있어요.', 'Right. Even if the rain eases, the wind can pick up again.')],
+        [0, T2('비가 잠깐 약해졌으니 바로 놀러 나가요', 'The rain eased, so go out to play'), T2('비가 약해져도 바람이 다시 세질 수 있어요. 방송을 기다려요.', 'The wind can pick up again. Wait for the announcement.')],
+        [0, T2('물이 고인 길로 걸어서 구경해요', 'Walk through the flooded street to look'), T2('고인 물은 깊이를 알 수 없어요. 들어가지 않아요.', 'You can’t tell how deep standing water is. Don’t walk in it.')]] }];
+  const seg = () => (now() >= RADIO[2].at ? 2 : now() >= RADIO[1].at ? 1 : 0);
+  // 🔦 집 안 대비 살피기: 다섯 줄을 '맞아요/아니에요'로
+  const CHECK = [[1, T2('큰 통이나 욕조에 물을 받아 둬요. 물이 끊길 때 써요.', 'Fill a big tub or the bath with water, in case the water goes off.')], [1, T2('손전등과 휴대용 라디오의 건전지를 살펴봐요.', 'Check the batteries in the torch and the portable radio.')], [1, T2('창문을 꼭 잠가요.', 'Lock the windows tight.')],
+    [0, T2('바람이 얼마나 센지 창문을 열어 봐요.', 'Open a window to feel how strong the wind is.'), T2('창문을 열면 비바람이 들이치고 물건이 날아들 수 있어요.', 'Rain and wind rush in, and things can blow inside.')], [0, T2('물이 잘 빠지는지 비 오는 길의 하수구에 가 봐요.', 'Go out in the rain to see if the drains are clear.'), T2('태풍 때는 밖에 나가지 않아요. 하수구는 태풍이 오기 전에 어른이 살펴요.', 'We don’t go out in a typhoon. Grown-ups check drains before it comes.')]];
+  const ckOrder = () => CHECK.map((_, i) => i).sort((a, b) => hashS('ck' + a + S().d0) - hashS('ck' + b + S().d0));
+  // 📞 안부 전화: 부탁을 들은 이웃(이름 없는 역할) — 도운 일이 있으면 그 일로 고마워함 · 없어도 탓하지 않음
+  function calls() { const s = S(), L9 = [], seen = new Set(); for (const q of s.reqs || []) { if (q.k === 'home' || !q.st) continue; const key = L(q.who) + (q.k === 'sign' || q.k === 'sand' ? q.shop : ''); if (seen.has(key)) continue; seen.add(key); L9.push(q); }
+    L9.push({ id: 'friend', k: 'friend', who: T2('같은 반 친구', 'A classmate'), st: '' }); return L9; }   /* 친구(이름 없는 역할)는 늘 — 부탁을 못 들었어도 전화할 곳이 있음 */
+  function callLine(q) { const ok = q.st === 'done';
+    if (q.k === 'elder') return ok ? T2('"네가 알려 준 길로 다 같이 일찍 대피소에 와 있단다. 걱정 마라."', '"We all came early to the shelter by the way you checked. Don’t worry."') : T2('"이웃이 데려다줘서 대피소에 잘 와 있단다. 전화해 줘서 고맙구나."', '"A neighbour brought us to the shelter. Thank you for calling."');
+    if (q.k === 'boat') return ok ? T2('"밧줄을 잘 묶어 줘서 배 걱정은 덜었어. 고마워."', '"You tied the rope well, so I’m less worried about the boat. Thanks."') : T2('"배가 조금 걱정되지만 사람은 다 안에 있어. 지나가면 같이 살펴보자."', '"I’m a bit worried about the boat, but everyone is inside. Let’s check it together afterwards."');
+    if (q.k === 'vinyl') return ok ? T2('"하우스 둘레를 치워 줘서 마음이 놓여."', '"You cleared around the greenhouse, so I feel at ease."') : T2('"하우스가 좀 걱정이지만 우리 식구는 안에서 잘 있어."', '"I’m a little worried about the greenhouse, but my family is fine inside."');
+    if (q.k === 'friend') return T2('"우리 집도 괜찮아. 태풍 지나가면 학교에서 보자!"', '"We’re fine at home too. See you at school after the typhoon!"');
+    return ok ? T2('"덕분에 가게 걱정은 덜었어. 너도 안에서 조심해."', '"Thanks to you, I’m less worried about the shop. Stay safe inside."') : T2('"가게는 지나가면 같이 살펴보자. 우리는 안에서 잘 있어."', '"Let’s look at the shop together afterwards. We’re fine inside."'); }
+  // 태풍 날 창(한 곳) — 위: 미룬 일 · 창밖 · 할 일 넷 · ⏩
+  function open7() { if (dead || !S().st || K() !== 7) return null; const e = en(), s = S(), D = actDone(), n = D.radio + D.check + D.call + D.yut;
+    const row = (k, ic, t, sub, btn, done) => '<div class="ty-r ty-a' + (done ? ' done' : '') + '"><div><b>' + ic + ' ' + esc(t) + (done ? ' — ' + (e ? 'done' : '했어요') : '') + '</b><div class="sm">' + esc(sub) + '</div></div><button class="sub" data-act="' + k + '">' + esc(btn) + '</button></div>';
+    const h = '<h3>🌀 ' + (e ? 'The typhoon is passing' : '태풍이 지나가는 날') + '</h3><div class="pc-tx">' + esc(e ? 'Strong wind and heavy rain all day. Today we stay inside, at home or at the shelter.' : '하루 종일 센 바람과 큰비가 와요. 오늘은 집이나 대피소 안에서 지내요.') + '</div>'
+      + '<div data-notes>' + notesHtml() + '</div>'
+      + '<div class="sm">' + esc(e ? 'Out of the window: the river is higher and the flags point ' + L(DIRN[((s.wind | 0) + 4) % 8]) + '. Now ' + hm(now()) + '.' : '창밖을 보면 강물이 높아졌고, 깃발이 ' + L(DIRN[((s.wind | 0) + 4) % 8]) + '쪽으로 날려요. 지금 ' + hm(now()) + '이에요.') + '</div>'
+      + '<div class="grp">' + (e ? 'Things to do inside (' + n + '/4)' : '안에서 할 수 있는 것 (' + n + '/4)') + '</div>'
+      + row('radio', '📻', e ? 'Radio typhoon news' : '라디오 태풍 소식', e ? 'Hear where the typhoon is now. News at 07:00, 11:00 and 15:00.' : '태풍이 지금 어디쯤인지 들어요. 아침, 11시, 15시에 새 소식이 나와요.', e ? 'Listen' : '듣기', D.radio)
+      + row('check', '🔦', e ? 'Check the house is ready' : '집 안 태풍 대비 살피기', e ? 'Which of these are right to do? About 30 minutes.' : '무엇이 맞는 준비인지 골라요. 30분쯤 걸려요.', e ? 'Check' : '살피기', D.check)
+      + row('call', '📞', e ? 'Call the neighbours' : '이웃에게 안부 전화', e ? 'Ask the people who asked you for help how they are.' : '부탁했던 이웃이 잘 있는지 물어봐요.', e ? 'Call' : '전화하기', D.call)
+      + row('yut', '🎲', e ? 'A game of yut with the family' : '가족과 윷놀이 한 판', e ? 'A board game while the rain falls.' : '비 오는 날 집 안 놀이예요.', e ? 'Play' : '놀기', D.yut)
+      + '<div class="row"><button class="sub" data-a="x">' + (e ? 'Watch outside' : '창밖 지켜보기') + '</button><button class="sub" data-a="nb">📒 ' + (e ? 'Notebook' : '태풍 수첩') + '</button><button data-a="ff">⏩ ' + (e ? 'Wait until it passes' : '태풍이 지나갈 때까지 기다리기') + '</button></div>';
+    const P9 = A.openP(h, false, 'typstorm'); P7 = P9;
+    P9.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; const a = b.dataset.a, k = b.dataset.act;
+      if (a === 'x') { A.closeP(); return; } if (a === 'nb') { A.closeP(); open(true); return; } if (a === 'ff') { ff(); return; }
+      if (k === 'radio') radioP(); else if (k === 'check') checkP(); else if (k === 'call') callP(); else if (k === 'yut') yut(); };
+    log('open7 ' + n); return P9; }
+  function ff() { log('ff'); A.closeP(); A.sleep(); }   /* 메뉴 잠과 같은 길(마무리 창 먼저 · 깬 뒤 다시 X) */
+  const actP = (ic, t, body) => A.openP('<h3>' + ic + ' ' + esc(t) + '</h3>' + body + '<div class="sm" data-m></div><div class="row"><button class="sub" data-a="back">' + (en() ? 'Back' : '안에서 할 일로') + '</button><button class="sub" data-a="x">' + (en() ? 'Close' : '닫기') + '</button></div>', false, 'typact');
+  const msgIn = (P9, t) => { const m9 = P9.querySelector('[data-m]'); if (m9) m9.textContent = t; };
+  function radioPick(i) { const g = seg(), R = RADIO[g], a = act(), o = R.ops[i]; if (!o) return null; if (a.radio[g]) return { ok: 1, t: L(o[2]), again: 1 };
+    if (!o[0]) return { ok: 0, t: L(o[2]) }; const first = !a.radio.some(Boolean); a.radio[g] = 1; mark(); pass(20); if (first) rew('look'); return { ok: 1, t: L(o[2]) }; }
+  function radioP(m0) { const e = en(), g = seg(), R = RADIO[g], a = act(), ord = [0, 1, 2].sort((x, y) => hashS('r' + g + x + S().d0) - hashS('r' + g + y + S().d0)), nx = g < 2 ? RADIO[g + 1].at : 0;
+    const body = '<div class="pc-tx">📻 ' + esc(L(R.say)) + '</div>' + (a.radio[g] ? '<div class="sm">' + esc(e ? 'You heard this news. ' + (nx ? 'Next news at ' + hm(nx) + '.' : 'That was the last news today.') : '이 소식은 들었어요. ' + (nx ? '다음 소식은 ' + hm(nx) + '에 나와요.' : '오늘 마지막 소식이었어요.')) + '</div>' + (nx ? '<div class="row"><button class="sub" data-a="next">⏰ ' + esc(e ? 'Rest until ' + hm(nx) : hm(nx) + '까지 쉬기') + '</button></div>' : '')
+      : '<div class="sm">' + esc(e ? 'After the news, what should we do now?' : '소식을 듣고, 지금 할 일을 골라요.') + '</div><div class="ty-ch">' + ord.map(i => '<button class="sub" data-i="' + i + '">' + esc(L(R.ops[i][1])) + '</button>').join('') + '</div>');
+    const P9 = actP('📻', e ? 'Radio typhoon news' : '라디오 태풍 소식', body); if (m0) msgIn(P9, m0);
+    P9.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; const d = b.dataset; if (d.a === 'x') { A.closeP(); return; } if (d.a === 'back') { open7(); return; }
+      if (d.a === 'next') { if (nx > now()) { G().waitMin(Math.min(nx, TY.late * 60)); A.sfx('tick'); } radioP(); return; }
+      if (d.i != null) { const r = radioPick(+d.i); if (!r) return; if (!r.ok) { A.sfx('tick'); msgIn(P9, '🤔 ' + r.t); return; } A.sfx('ding'); radioP('✅ ' + r.t + (e ? ' (20 minutes)' : ' (20분이 지났어요)')); } }; return P9; }
+  function checkPick(i, v) { const a = act(), c = CHECK[i]; if (!c || a.ck.includes(i)) return null; if ((v ? 1 : 0) !== c[0]) return { ok: 0, t: c[2] ? L(c[2]) : (en() ? 'Think again: does this keep the house safe?' : '다시 생각해 봐요. 이렇게 하면 집이 안전해질까요?') };
+    a.ck.push(i); mark(); if (a.ck.length >= CHECK.length && !a.check) { a.check = 1; mark(); pass(30); rew('work'); return { ok: 1, all: 1 }; } return { ok: 1 }; }
+  function checkP(m0) { const e = en(), a = act(), ord = ckOrder();
+    const body = '<div class="sm">' + esc(e ? 'Read each one. Is it a right thing to do in a typhoon?' : '하나씩 읽고, 태풍 때 맞는 준비인지 골라요.') + '</div>' + ord.map(i => { const c = CHECK[i], got = a.ck.includes(i); return '<div class="ty-r' + (got ? ' done' : '') + '">' + esc(L(c[1])) + '<div class="ty-rm">' + (got ? '<span class="ty-tag ' + (c[0] ? 'f' : 't') + '">' + (c[0] ? (e ? 'Right' : '맞아요') : (e ? 'Not right' : '아니에요')) + '</span>' : '<button class="sub" data-y="' + i + '">' + (e ? 'Right' : '맞아요') + '</button><button class="sub" data-n="' + i + '">' + (e ? 'Not right' : '아니에요') + '</button>') + '</div></div>'; }).join('');
+    const P9 = actP('🔦', e ? 'Check the house is ready' : '집 안 태풍 대비 살피기', body); if (m0) msgIn(P9, m0);
+    P9.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; const d = b.dataset; if (d.a === 'x') { A.closeP(); return; } if (d.a === 'back') { open7(); return; }
+      if (d.y != null || d.n != null) { const r = checkPick(+(d.y ?? d.n), d.y != null); if (!r) return; if (!r.ok) { A.sfx('tick'); msgIn(P9, '🤔 ' + r.t); return; } A.sfx(r.all ? 'ding' : 'pop'); checkP(r.all ? '✅ ' + (e ? 'All checked. The house is ready (30 minutes).' : '다 살폈어요. 집 안 준비가 끝났어요(30분이 지났어요).') : ''); } }; return P9; }
+  function callPick(id) { const a = act(), q = calls().find(o => o.id === id); if (!q || a.call[id]) return null; const first = !Object.keys(a.call).length; a.call[id] = 1; mark(); pass(10); if (first) rew('work'); return { t: L(q.who) + ': ' + L(callLine(q)) }; }
+  function callP(m0) { const e = en(), a = act(), C9 = calls();
+    const body = '<div class="sm">' + esc(e ? 'Who will you call? Each call takes about 10 minutes.' : '누구에게 전화할까요? 한 통에 10분쯤 걸려요.') + '</div>' + C9.map(q => '<div class="ty-r' + (a.call[q.id] ? ' done' : '') + '"><b>' + esc(L(q.who) + (q.shop && (q.k === 'sign' || q.k === 'sand') ? ' (' + q.shop + ')' : '')) + '</b>' + (a.call[q.id] ? '<div class="sm">' + esc(L(callLine(q))) + '</div>' : '<div class="ty-rm"><button class="sub" data-c="' + esc(q.id) + '">📞 ' + (e ? 'Call' : '전화하기') + '</button></div>') + '</div>').join('');
+    const P9 = actP('📞', e ? 'Call the neighbours' : '이웃에게 안부 전화', body); if (m0) msgIn(P9, m0);
+    P9.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; const d = b.dataset; if (d.a === 'x') { A.closeP(); return; } if (d.a === 'back') { open7(); return; }
+      if (d.c != null) { const r = callPick(d.c); if (!r) return; A.sfx('ding'); callP(''); } }; return P9; }
+  function yut() { const a = act(); A.closeP(); const ok = A.table ? A.table('yut') : false; if (!ok) { A.say(en() ? 'You can’t start a game right now' : '지금은 놀이를 펼 수 없어요', 2.4); return false; } if (!a.yut) { a.yut = 1; mark(); pass(30); } log('yut'); return true; }
   function resPanel() { const e = en(), s = S(), R = s.res; if (!R) return null; const ok = R.L.filter(o => o.ok), no = R.L.filter(o => !o.ok);
     const row = o => '<div class="ty-r"><b>' + (KIND[o.k] ? KIND[o.k].ic : '') + ' ' + esc(L(o.t)) + '</b></div>';
     const P9 = A.openP('<h3>🌅 ' + (e ? 'The morning after the typhoon' : '태풍이 지나간 아침') + '</h3><div class="sm">' + esc(e ? 'Everyone in town is safe. Here is what changed:' : '마을 사람과 동물은 모두 무사해요. 달라진 것은 이래요.') + '</div>'
@@ -296,7 +388,7 @@ export function createTyphoon(A) {
     s.fcSeen = day(); mark(); P9.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; A.closeP(); if (b.dataset.a === 'nb') open(); }; return P9; }
 
   // ───────── 수첩(부탁 · 물건 · 들은 말 사실/생각 · 대피 길) ─────────
-  function open() { if (dead) return null; const e = en(), s = S(); if (!s.st) { A.say(e ? 'No typhoon news right now' : '지금은 태풍 소식이 없어요', 2.2); return null; } const k = K(), B = budget();
+  function open(nb) { if (dead) return null; const e = en(), s = S(); if (!s.st) { A.say(e ? 'No typhoon news right now' : '지금은 태풍 소식이 없어요', 2.2); return null; } const k = K(), B = budget(); if (k === 7 && !nb) return open7();   /* TYPH-2 태풍 날 = 할 일 줄·수첩 단추 모두 태풍 날 창으로(⏩ 늘 닿음) */
     const left = k <= 6 ? (e ? (7 - k) + ' day(s) until the typhoon' : '태풍까지 ' + (7 - k) + '일') : k === 7 ? (e ? 'The typhoon is passing today' : '오늘 태풍이 지나가요') : (e ? 'The typhoon has passed' : '태풍이 지나갔어요');
     const reqs = (s.reqs || []).filter(q => q.d <= Math.min(k, 6)), rr = q => { const kd = KIND[q.k], st = q.st === 'done' ? (e ? 'Done' : '했어요') : q.st ? (e ? 'Heard — not done yet' : '들었어요 — 아직 못 했어요') : (e ? 'Not heard yet — go and ask' : '아직 못 들었어요 — 찾아가 물어봐요');
       return '<div class="ty-r' + (q.st === 'done' ? ' done' : '') + '"><b>' + kd.ic + ' ' + esc(L(kd.t)) + '</b> · ' + esc(L(q.who)) + '<div class="sm">' + esc(where(q)) + '</div><div class="sm">' + esc(st) + (needLine(q) && q.st !== 'done' ? ' · ' + esc(needLine(q)) : '') + '</div>' + (q.st !== 'done' ? '<button class="sub" data-map="' + q.id + '">🗺 ' + (e ? 'Map' : '지도') + '</button>' + (q.seen ? '<button class="sub" data-go="' + q.id + '">🧭 ' + (e ? 'Way (been there)' : '길 안내(가 본 곳)') + '</button>' : '') : '') + '</div>'; };
@@ -309,12 +401,12 @@ export function createTyphoon(A) {
       + (reqs.length && k <= 6 ? '<div class="grp">' + (e ? 'Requests' : '부탁') + '</div>' + reqs.map(rr).join('') : '') + (fixes ? '<div class="grp">' + (e ? 'Fix together' : '함께 고치기') + '</div>' + fixes : '')
       + (pathT && k <= 6 ? '<div class="grp">🧭 ' + (e ? 'Way to the shelter' : '대피 길') + '</div><div class="ty-r">' + esc(pathT) + '</div>' : '')
       + (rum ? '<div class="grp">👂 ' + (e ? 'Things I heard' : '들은 말') + '</div>' + rum : '') + '<canvas class="ty-map" width="520" height="220" style="display:none"></canvas>'
-      + '<div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>';
+      + '<div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button>' + (k === 7 ? '<button class="sub" data-a="in">🌀 ' + (e ? 'Things to do inside' : '안에서 할 일') + '</button><button data-a="ff">⏩ ' + (e ? 'Wait until it passes' : '태풍이 지나갈 때까지 기다리기') + '</button>' : '') + '</div>';
     const P9 = A.openP(h, true, 'typnb'), cv = () => P9.querySelector('canvas.ty-map');
     P9.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; const d = b.dataset;
-      if (d.a === 'x') { A.closeP(); return; }
+      if (d.a === 'x') { A.closeP(); return; } if (d.a === 'in') { open7(); return; } if (d.a === 'ff') { ff(); return; }
       if (d.rf || d.rt) { const id = d.rf || d.rt, r = s.rum.find(o => o.id === id), o = RUM.find(q => q.id === id); if (!r || !o) return; const pick = d.rf ? 1 : 0;
-        if (pick === o.f) { r.s = o.f ? 'f' : 't'; mark(); A.sfx('ding'); open(); } else { A.sfx('tick'); A.say(e ? 'Think again: did someone see or measure it, or is it a guess?' : '다시 생각해 봐요. 누가 직접 보거나 잰 것인가요, 짐작인가요?', 3.2); } return; }
+        if (pick === o.f) { r.s = o.f ? 'f' : 't'; mark(); A.sfx('ding'); open(true); } else { A.sfx('tick'); A.say(e ? 'Think again: did someone see or measure it, or is it a guess?' : '다시 생각해 봐요. 누가 직접 보거나 잰 것인가요, 짐작인가요?', 3.2); } return; }
       if (d.map || d.fm) { const q = d.map ? s.reqs.find(o => o.id === d.map) : s.fix.find(o => o.id === d.fm), c = cv(); if (!q || !c) return; const at = q.site || q.at, m = me(); c.style.display = ''; try { A.mapSnip(c, [{ x: at[0], z: at[1], label: L(q.nm || q.who), main: true }, { x: m.x, z: m.z, label: e ? 'Me' : '나' }]); } catch (x) { /* 지도 조각 없음 */ } return; }
       if (d.go) { const q = s.reqs.find(o => o.id === d.go); if (!q) return; A.closeP(); A.route({ icon: KIND[q.k].ic, name: L(q.nm), door: q.at.slice(0, 2) }); } };
     log('open k' + k); return P9; }
@@ -339,7 +431,7 @@ export function createTyphoon(A) {
   const line = () => { const s = S(); if (!s.st) return ''; const k = K(), e = en(), n = openReq().length, nf = (s.fix || []).filter(f => f.st !== 'done').length;
     if (k <= 1) return e ? '🌀 Typhoon forecast — open the notebook' : '🌀 태풍 예보 — 태풍 수첩 보기';
     if (k <= 6) return (e ? '🌀 ' + (7 - k) + ' day(s) to the typhoon' : '🌀 태풍까지 ' + (7 - k) + '일') + (n ? (e ? ' · ' + n + ' requests left' : ' · 남은 부탁 ' + n) : (e ? ' · all ready' : ' · 준비 다 했어요'));
-    if (k === 7) return e ? '🌀 Typhoon day — open the notebook' : '🌀 태풍 날 — 태풍 수첩 보기';
+    if (k === 7) return e ? '🌀 Typhoon day — things to do inside' : '🌀 태풍 날 — 안에서 할 일 보기';   /* TYPH-2 누르면 태풍 날 창(할 일 넷 · ⏩ 기다리기) · 수는 창 안에만(줄은 늘 새로 그려지지 않음) */
     return nf ? (e ? '🌀 After the typhoon · ' + nf + ' to fix together' : '🌀 태풍이 지나갔어요 · 함께 고칠 곳 ' + nf) : ''; };
   const goal = () => { const s = S(); if (!s.st) return ''; const k = K(), e = en();
     if (s.path && s.path.st === 'walk') return e ? '🧭 Checking the way — walk to ' + L(s.shelter.nm) + ' · avoid low riverside ground' : '🧭 대피 길 확인 중 — ' + L(s.shelter.nm) + '까지 걸어가요 · 강가 낮은 곳은 피해요';
@@ -357,9 +449,12 @@ export function createTyphoon(A) {
   const wxLine = () => { const s = S(); if (!s.st) return ''; const k = K(); return k <= 6 ? (en() ? '🌀 Typhoon on day ' + (s.d0 + 6) + ' — wind from the ' + wname() + ', heavy rain' : '🌀 ' + (s.d0 + 6) + '일째에 태풍 — ' + wname() + '쪽에서 센 바람, 큰비') : k === 7 ? (en() ? '🌀 Typhoon today' : '🌀 오늘 태풍이 지나가요') : ''; };
   function dispose() { dead = true; clearVis(); if (css) { css.remove(); css = null; } }
   function info() { const s = S(); return { st: s.st, n: s.n, d0: s.d0, k: K(), out: s.out | 0, wind: s.wind, shelter: s.shelter || null, desk: s.desk || null, mat: s.mat ? { ...s.mat } : null, reqs: (s.reqs || []).map(q => ({ id: q.id, k: q.k, d: q.d, st: q.st, mis: q.mis, at: q.at, site: q.site, pa: q.pa, pb: q.pb, ok: q.ok, spots: q.spots, items: q.items, got: q.got, shop: q.shop, seen: q.seen })),
-    rum: (s.rum || []).map(r => ({ ...r })), path: s.path ? { ...s.path } : null, res: s.res ? JSON.parse(JSON.stringify(s.res)) : null, fix: (s.fix || []).map(f => ({ ...f })), mem: JSON.parse(JSON.stringify(s.mem)), log: s.log.slice(0, 3), budget: s.st ? budget() : null, vis: VIS.length, hot: HOT.map(h => h.label || (h.hot && h.hot.label) || ''), line: line(), goal: goal(), dbg: DBG.slice() }; }
+    rum: (s.rum || []).map(r => ({ ...r })), path: s.path ? { ...s.path } : null, res: s.res ? JSON.parse(JSON.stringify(s.res)) : null, fix: (s.fix || []).map(f => ({ ...f })), mem: JSON.parse(JSON.stringify(s.mem)), log: s.log.slice(0, 3), budget: s.st ? budget() : null, vis: VIS.length, hot: HOT.map(h => h.label || (h.hot && h.hot.label) || ''), line: line(), goal: goal(), act: s.act ? JSON.parse(JSON.stringify(s.act)) : null, notes: s.notes ? s.notes.L.slice() : [], dbg: DBG.slice() }; }
   // 시험 손잡이: E 자리의 쓰기를 그대로 부름(자리 판단 · 시간 · 물건 · 체력이 실제와 같음)
   const byId = id => (S().reqs || []).find(q => q.id === id || q.k === id);
-  const dbg = { want: () => want(), talk: id => { const q = byId(id); if (q) talk(q); }, desk: () => deskUse(), tieBoat: (w) => tieBoat(byId('boat'), w), sand: i => stackSand(byId('sand'), i), gather: (id, i) => gather(byId(id), i), vinyl: () => tieVinyl(byId('vinyl')), sign: id => tieSign(byId(id)), path: () => pathStart(byId('elder')), pathSec: () => pathSec(), tell: () => tellElder(byId('elder')), result: () => result(), fix: id => { const f = S().fix.find(o => o.id === id || o.k === id); if (f) fixUse(f); }, finish: () => finish(), heard: id => heard(id), water: (x, z) => A.water(x, z), worker: () => { const w = (A.workers() || []).find(o => !o.gate && !A.inSchool(o.x, o.z)); return w ? [w.x, w.z] : null; }, sync: () => { VKEY = ''; sync(); return VIS.length; } };
-  return { sec, day: onDay, start, open, line, goal, wait, ctx, fcAt, windAt, wxLine, storm, info, dbg, dispose, budget };
+  const dbg = { want: () => want(), talk: id => { const q = byId(id); if (q) talk(q); }, desk: () => deskUse(), tieBoat: (w) => tieBoat(byId('boat'), w), sand: i => stackSand(byId('sand'), i), gather: (id, i) => gather(byId(id), i), vinyl: () => tieVinyl(byId('vinyl')), sign: id => tieSign(byId(id)), path: () => pathStart(byId('elder')), pathSec: () => pathSec(), tell: () => tellElder(byId('elder')), result: () => result(), fix: id => { const f = S().fix.find(o => o.id === id || o.k === id); if (f) fixUse(f); }, finish: () => finish(), heard: id => heard(id), water: (x, z) => A.water(x, z), worker: () => { const w = (A.workers() || []).find(o => !o.gate && !A.inSchool(o.x, o.z)); return w ? [w.x, w.z] : null; }, sync: () => { VKEY = ''; sync(); return VIS.length; },
+    inSchool: (x, z) => A.inSchool(x, z), safe: (x, z) => !!safeAt(x, z), spots: () => stormSpots(), radio: i => radioPick(i), check: (i, v) => checkPick(i, v), call: id => callPick(id), calls: () => calls().map(q => q.id), yut: () => yut(),
+    actAll: () => { let n = 0; const g = seg(), R = RADIO[g]; if (radioPick(R.ops.findIndex(o => o[0]))) n++; CHECK.forEach((c, i) => checkPick(i, !!c[0])); if (act().check) n++; const c9 = calls()[0]; if (c9 && callPick(c9.id)) n++; return { done: n, act: JSON.parse(JSON.stringify(act())) }; } };   /* TYPH-2 태풍 날 할 일(창 단추와 같은 함수) */
+  const quiet = () => { const s = S(); return !!s.st && (storm() || (K() === 8 && !!s.res && s.res.d === day())); };   /* TYPH-2 태풍 날·결과 아침 = 그날 큰 창 하나(깬 자리 알림 X) */
+  return { sec, day: onDay, start, open, open7, note, quiet, line, goal, wait, ctx, fcAt, windAt, wxLine, storm, info, dbg, dispose, budget };
 }

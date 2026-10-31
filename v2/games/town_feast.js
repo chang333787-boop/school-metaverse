@@ -91,7 +91,7 @@ const CSS = `.twn-p .fst-row{border:3px solid #2b2420;border-left:9px solid var(
 .twn-p .fst-pics span{border:2px solid #2b2420;border-radius:8px;padding:2px 8px;font-size:13px;background:#fbe9c8}.twn-p .fst-pics span.no{border-style:dashed;border-color:#bfae8c;background:none;color:#8a7a5a}
 .twn-p .fst-give{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.twn-p .fst-give button{min-height:40px;font-size:14px}.twn-p .fst-past{font-size:14px;margin:4px 0}.twn-p .fst-story{font-size:14px;font-weight:800;background:#fbe9c8;border:2px solid #2b2420;border-radius:10px;padding:4px 8px;margin:2px 0 6px}`;
 
-// 마을 쪽이 넘기는 것(A): map · T3 · GAME · on() · ready() 할 일 화면이 열렸나 · lang() · esc · openP(h, wide, kind) · closeP() · panel() · busy() · storm() 태풍 날
+// 마을 쪽이 넘기는 것(A): map · T3 · GAME · on() · ready() 할 일 화면이 열렸나 · lang() · esc · openP(h, wide, kind) · closeP() · panel() · busy() · storm() 태풍 날 · stormNote(t) 태풍 날 창 한 줄(true면 따로 알림 X)
 //   say(t, s, lv) · sfx(k) · banner(t, s) · chip(k, t, o) · route(p) · dialog(o) · rec(k, o) · buildParts(fn) · gy(x, z) · collider(o) · season(d) · diary(t) · take(e) · bag() · item(e) [ko, en, kind]
 //   site(x, z) 잔치 마당 { x, z, ry } | null · spots() 나의 길 자리(pav · stall · hall) · gather(L) 일꾼 모으기([x, z, ry] | null → 모인 수) · cheer() 모인 일꾼 손뼉 · bubbleW(i, t) 모인 i번째 일꾼 말
 //   lampLine(from, to, n) [[x, z]] · nightMkt() [x, z] | null · janggu() 장구 창 열기(true|false) · photo(label) Promise(rec | null)
@@ -249,7 +249,7 @@ export function createFeast(A) {
     if (on && m >= 20 * 60 && !s.fx.ph && !s.fx.phc && !A.busy() && !A.panel()) { s.fx.phc = 1; mark(); A.say('📷 ' + (e ? 'Before the feast ends, take this year’s feast photo at the board.' : '잔치가 끝나기 전에 게시판에서 올해 잔치 사진을 찍어요.'), 4, 1); chipK = 'ph'; chipT = performance.now(); A.chip('twn-fst', '📷 ' + (e ? 'Feast photo' : '잔치 사진'), { onClick: () => { A.chip('twn-fst', null); chipK = ''; const p = toDoor(); if (p) A.route(p); } }); } }
   function sec(force) { if (dead || !A.on()) return; const s = S(), d = day();
     if (!(s.fd > 0)) plan(); if (d > s.fd) finish();
-    if (isDay() && A.storm && A.storm() && min() < 600) { s.fd++; s.ann = -1; mark(); A.say('🌀 ' + (en() ? 'A typhoon is here, so the feast moves to tomorrow.' : '태풍이 와서 잔치를 하루 미뤄요.'), 4, 1); log('storm → ' + s.fd); }
+    if (isDay() && A.storm && A.storm() && min() < 600) { s.fd++; s.ann = -1; mark(); const t9 = '🌀 ' + (en() ? 'A typhoon is here, so the feast moves to tomorrow.' : '태풍이 와서 잔치를 하루 미뤄요.'); if (!(A.stormNote && A.stormNote(t9))) A.say(t9, 4, 1); log('storm → ' + s.fd); }   /* TYPH-2 = 태풍 날 창 안 한 줄(따로 알림 X) */
     if (!VIS.board) buildAll(); counters();
     if (A.ready() && !A.busy() && !A.panel()) { if (s.ann0 !== s.n) { s.ann0 = s.n; s.ann = d; mark(); notice(true); } else if (s.ann !== d && min() >= 6 * 60) { s.ann = d; mark(); notice(false); } }
     feastSec(); hots(); lightNow(false);

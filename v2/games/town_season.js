@@ -6,7 +6,7 @@
 //   지킴: 실제 풍습만(지어내기 X · 종교 강요 X) · 판타지·전투 X(씨름 = 구경·응원만) · 실명 X(이웃 = 하는 일·어르신) · 지역 비하 X · 숫자·% X · 새 Light X(달집 불·달 = MeshBasic)
 //     · 매 프레임 일 0(1초 칸 sec) · 저절로 뜨는 알림 = say(t, s, 1) · 사람 수 그대로(있는 일꾼을 옮기고 옷만 바꿈) · 홍보판 X(A.on())
 //   저장 GAME.S.season = { v, d 그날, id 그날 행사, st 그날 한 것, mv { '행사:본래 날': 1 } 태풍으로 미룸, ann 알림 날, past [{ id, d, ok }] }
-import { nightsW } from './town_feast.js?v=3';
+import { nightsW } from './town_feast.js?v=4';
 export const SEASON_V = 1;
 const T2 = (ko, en) => [ko, en];
 const FONT = '"Noto Sans KR","Noto Sans CJK KR","Apple SD Gothic Neo","Malgun Gothic","NanumGothic",sans-serif';
@@ -61,7 +61,7 @@ const KIMS = [   /* 김장 차례(마당 왼쪽 → 오른쪽 자리와 같음) 
   [T2('맑은 물에 씻어 물 빼기', 'Rinse and drain'), T2('짠 소금물을 먼저 씻어 내야 해요.', 'Rinse off the salty water first.')],
   [T2('양념 속을 넣어 통에 담기', 'Add the seasoning and pack the tubs'), T2('물이 덜 빠지면 양념이 싱거워져요. 씻고 물부터 빼요.', 'If it isn’t drained, the seasoning goes watery. Rinse and drain first.')]];
 
-// 마을 쪽이 넘기는 것(A): map · T3 · GAME · on() · ready() · lang() · esc · openP(h, w, k) · closeP() · panel() · busy() · storm() · say(t, s, lv) · sfx(k) · banner(t, s) · chip(k, t, o) · route(p) · dialog(o)
+// 마을 쪽이 넘기는 것(A): map · T3 · GAME · on() · ready() · lang() · esc · openP(h, w, k) · closeP() · panel() · busy() · storm() · stormNote(t) 태풍 날 창 한 줄 · say(t, s, lv) · sfx(k) · banner(t, s) · chip(k, t, o) · route(p) · dialog(o)
 //   rec(k, o) · buildParts(fn) · gy(x, z) · collider(o) · season(d) 달력 계절 | null(달력 끔) · calDay(d) 1~7 · feastDay() · me() · site() 행사 마당 { x, z, ry } | null · houses(x, z, n) [{ door, fw }]
 //   gather(L [{ x, z, ry, act, dr }] | null) → 자리마다 모인 일꾼 번호(−1 = 못 구함) · act(slot, a) 몸짓 바꾸기 · bubbleW(slot, t) · table(g) 판 놀이 창 · diary(e, t)
 export function createSeason(A) {
@@ -320,7 +320,7 @@ export function createSeason(A) {
     if (id) { buildHouses(id); buildYard(id); } }
   function sec() { if (dead || !A.on()) { if (VIS.yard) dropAll(); return; } const s = S(), d = day();
     if (s.d !== d) begin(); const id = cur();
-    if (id && A.storm && A.storm() && min() < 10 * 60) { const bd = [d - 1, d].find(b => baseId(b) === id && target(id, b) === d); if (bd != null && !s.mv[id + ':' + bd]) { s.mv[id + ':' + bd] = 1; mark(); A.say('🌀 ' + (en() ? 'A typhoon is here, so ' + L(EV[id].t) + ' moves to tomorrow.' : '태풍이 와서 ' + L(EV[id].t) + jo(L(EV[id].t), '을', '를') + ' 내일로 미뤄요.'), 4, 1); s.d = -1; begin(); return; } }
+    if (id && A.storm && A.storm() && min() < 10 * 60) { const bd = [d - 1, d].find(b => baseId(b) === id && target(id, b) === d); if (bd != null && !s.mv[id + ':' + bd]) { s.mv[id + ':' + bd] = 1; mark(); const t9 = '🌀 ' + (en() ? 'A typhoon is here, so ' + L(EV[id].t) + ' moves to tomorrow.' : '태풍이 와서 ' + L(EV[id].t) + jo(L(EV[id].t), '을', '를') + ' 내일로 미뤄요.'); if (!(A.stormNote && A.stormNote(t9))) A.say(t9, 4, 1); s.d = -1; begin(); return; } }   /* TYPH-2 = 태풍 날 창 안 한 줄(따로 알림 X) */
     if (!id) return; if (!VIS.yard) { buildHouses(id); buildYard(id); }
     gatherSec(); hots(); fireSec(); moonSec();
     if (A.ready() && !A.busy() && !A.panel() && s.ann !== d && min() >= 6 * 60) { s.ann = d; mark(); A.say(EV[id].ic + ' ' + (en() ? 'Today is ' + L(EV[id].t) + '. ' + L(EV[id].todo[0]).split(' — ')[0] + ' and more in the ' + L(EV[id].t) + ' yard.' : '오늘은 ' + L(EV[id].t) + jo(L(EV[id].t), '이에요', '예요') + '. ' + L(EV[id].t) + ' 마당에서 ' + L(EV[id].todo[0]).split(' — ')[0] + jo(L(EV[id].todo[0]).split(' — ')[0], '을', '를') + ' 해 볼까요?'), 5, 1); hint(); }
