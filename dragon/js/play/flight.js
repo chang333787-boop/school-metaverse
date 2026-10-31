@@ -5,7 +5,7 @@
 // 바깥 갈고리: world.updrafts(함수 또는 배열 [{x, z, r, top?, lift?, power?, y?}]) 위 = 날갯짓 없이 솟음(S.updraft) · F.push(ax, ay, az) = 이 걸음 움직임에만 더함(m/s · 걸음마다 다시 부름)
 // 좌표: 앞 = (sin yaw, cos yaw) · 오른쪽 = (−cos yaw, sin yaw)(걷기와 같음) · roll > 0 = 오른쪽 날개가 내려감 · pitch > 0 = 고개 듦
 import * as THREE from 'three';
-import { getSfx } from '../core/sfx.js?v=17';
+import { getSfx } from '../core/sfx.js?v=18';
 
 /* 손맛 값 — 한곳에서만 고친다(봇 기록으로 맞춤) */
 export const FK = {

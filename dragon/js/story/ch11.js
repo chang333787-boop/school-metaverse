@@ -3,22 +3,22 @@
 // → 이음 + 손일: 새 꼬리날개에 무늬 다시 그리기 → 이음: 마을 위를 함께 날기(실패 없음) → 또 하기 ① 먹이 주기[다가가] ② 낚시[박자] ③ 드래곤 책 채우기[다가가] → 끝(G.ending — 엔딩·크레딧은 메인)
 // 다리는 고버 한 줄 + 몸짓으로만(design §8) · 대사는 모두 우리 말로 새로 · 실제 학생 이름 X · 마을에 드래곤이 함께 삶(지붕 위 테러 · 광장 그롱클 · 대장간 지플백)
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=17';
-import { holdItem, makePuffs } from './fx.js?v=17';
-import { loadModel } from '../look/models.js?v=17';
-import { createHumanRig } from '../look/human_rig.js?v=17';
-import { glowSprite } from '../look/kit.js?v=17';
-import { createElements } from '../play/elements.js?v=17';
-import { awaitP, prop, ensureVillage } from './fx1.js?v=17';
-import { tlSense } from './ch4.js?v=17';
-import { flySense } from './flysense.js?v=17';
+import { wait, until, sayAll } from './runner.js?v=18';
+import { holdItem, makePuffs } from './fx.js?v=18';
+import { loadModel } from '../look/models.js?v=18';
+import { createHumanRig } from '../look/human_rig.js?v=18';
+import { glowSprite } from '../look/kit.js?v=18';
+import { createElements } from '../play/elements.js?v=18';
+import { awaitP, prop, ensureVillage } from './fx1.js?v=18';
+import { tlSense } from './ch4.js?v=18';
+import { flySense } from './flysense.js?v=18';
 
 const ang = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
 /* 히컵 = 의족 모델로(종장 내내) — 손에 든 것은 새 손에 다시 붙임 */
 function* legOn(G) {
   const P = G.player; if (P.leg) return;
-  const m = yield* awaitP(loadModel('assets/models/hiccup_leg.glb?v=17').catch(() => null));
+  const m = yield* awaitP(loadModel('assets/models/hiccup_leg.glb?v=18').catch(() => null));
   if (!m || P.leg) return;
   const old = P.root; P.root = m.root; P.rig = createHumanRig(m.bones, m.root); P.bones = m.bones; P.leg = true; P.itemObj = null;
   if (old) { m.root.position.copy(old.position); m.root.rotation.copy(old.rotation); if (old.parent) old.parent.add(m.root); old.removeFromParent(); }
@@ -112,7 +112,7 @@ function* flyOver(G, C) {
   const RING = [-90, -30, 30, 90, 150, 210].map((d) => [5 + Math.cos(d * Math.PI / 180) * 55, -12 + Math.sin(d * Math.PI / 180) * 55, 20]);   // 마을 둘레 둥근 길(부드럽게 돎)
   const GATES = RING.concat([[0, 3, 16]]).map(([x, z, h]) => ({ x, z, y: Math.max(gy(x, z), 0) + h, r: 11 }));
   const world = { ground: (x, z) => gy(x, z), water: 0, pillars: [{ x: -46.4, z: 41, r: 3.5, top: 34 }], ceil: 230, bounds: { x: 10, z: -10, r: 175 } };
-  const mod = yield* awaitP(import('../play/flight.js?v=17').catch(() => null));
+  const mod = yield* awaitP(import('../play/flight.js?v=18').catch(() => null));
   if (!mod || !mod.createFlight) return true;
   const F = mod.createFlight({ world, mode: G.diff, dragon: { root: T.root, rig: T.rig }, rider: { root: P.root, rig: P.rig }, rng: G.rng });
   F.setOpts({ assist: true, ceil: world.ceil }); F.setGates(GATES);
@@ -120,7 +120,7 @@ function* flyOver(G, C) {
   const cam = mod.createFlightCam(G.camera);
   /* 길잡이 = 그 자리를 도는 테러(친구) — 둥근 고리 대신 마을 것으로 */
   const marks = GATES.map((g, i) => { const d = G.dragon('terror', { x: g.x, z: g.z }, { noCollide: true, scale: 1.6 }); d.manual = true; d.g = g; d.ph = i; return d; });
-  const ftm = yield* awaitP(import('../stages/flight_test.js?v=17').catch(() => null));
+  const ftm = yield* awaitP(import('../stages/flight_test.js?v=18').catch(() => null));
   const ui = ftm && ftm.makeUI ? ftm.makeUI(G.diff, false) : null;
   if (ui) { document.querySelectorAll('.fl-note').forEach((n) => { n.style.display = 'none'; }); ui.gates(0, GATES.length); }
   T.manual = true; P.cam = 'fly'; C.F = F;

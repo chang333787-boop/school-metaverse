@@ -1,6 +1,6 @@
 // 1장 봇 — BOTS['1-1'] = (s, K, M, B, level, now) · s = 반응 늦은 감각 · K = 몸(walk·go·face·tap·set·stop · K.cur = 지금 화면) · story_bots.js가 합침
 // 화면에 보이는 것만(sense) · 키·끌기만 · 동시 키 셋 · 초당 6타
-import { planPath } from './story_bots.js?v=17';
+import { planPath } from './story_bots.js?v=18';
 
 const DT = 1 / 60, LAG = { easy: 0.6, normal: 0.35, hard: 0.3 }, WARN = { easy: 3, normal: 2.5, hard: 2 };
 const cd = (M, k, sec) => { M[k] = (M[k] || 0) - DT; if (M[k] <= 0) { M[k] = sec; return true; } return false; };

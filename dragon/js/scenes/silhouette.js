@@ -2,9 +2,9 @@
 // 줄: 사람 앞·옆(히컵·스토이크·고버·아스트리드·피시레그) · 드래곤 옆·비스듬 앞(접음)·위(활공)(투슬리스·그롱클·내더·지플백·나이트메어 + 테러 덤) · 옆 줄 끝 = 대장(10장)
 // 사진: docs/dragon/shots/silhouette.png — 헷갈리는 짝이 있으면 모양을 고쳐 다시(시험 장면이라 재질은 단색 하나)
 import * as THREE from 'three';
-import { loadModel } from '../look/models.js?v=17';
-import { createDragonRig } from '../look/dragon_rig.js?v=17';
-import { createHumanRig } from '../look/human_rig.js?v=17';
+import { loadModel } from '../look/models.js?v=18';
+import { createDragonRig } from '../look/dragon_rig.js?v=18';
+import { createHumanRig } from '../look/human_rig.js?v=18';
 
 const PEOPLE = [['hiccup', '히컵'], ['stoick', '스토이크'], ['gobber', '고버'], ['astrid', '아스트리드'], ['fishlegs', '피시레그']];
 const DRAGONS = [['toothless', '투슬리스'], ['gronckle', '그롱클'], ['nadder', '내더'], ['zippleback', '지플백'], ['nightmare', '나이트메어'], ['terror', '테러']];
@@ -51,7 +51,7 @@ export async function buildSilhouette(scene, camera, rng, opt = {}) {
     }
   }
   const jobs = [];
-  ROWS.forEach((row, r) => row[1].forEach(([n], i) => jobs.push(loadModel('assets/models/' + n + '.glb?v=17').then(({ root, bones }) => {
+  ROWS.forEach((row, r) => row[1].forEach(([n], i) => jobs.push(loadModel('assets/models/' + n + '.glb?v=18').then(({ root, bones }) => {
     const dragon = !!bones.wing1L;
     const rig = dragon ? createDragonRig(bones, root, n) : createHumanRig(bones, root);
     for (const k in row[3]) rig[k] = row[3][k];

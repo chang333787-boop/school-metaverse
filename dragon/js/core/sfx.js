@@ -12,8 +12,8 @@
 // 이름: flap whoosh splash roar growl purr fire boom bang clang thud pluck pop ok wind whistle inhale
 //       cry_gronckle cry_nadder cry_nightmare cry_zippleback cry_terror · 이어지는 소리: wind crackle
 // ───────────────────────────────────────────────────────────────────────────────────────────────
-import { loadSet, saveSet } from './gfx.js?v=17';
-import { createMusic } from './music.js?v=17';
+import { loadSet, saveSet } from './gfx.js?v=18';
+import { createMusic } from './music.js?v=18';
 
 let CUR = null;
 export const getSfx = () => CUR;

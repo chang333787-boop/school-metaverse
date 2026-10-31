@@ -2,10 +2,10 @@
 // → 묶인 나이트 퓨리(숨이 고를 때만 밧줄 끊기 · 찌르는 동작 없음)[다가가 기다리기] → 와! 덮쳐 울부짖고 비틀대며 날아감 → 저녁 집(말이 겹쳐 '싫어요'가 묻힘)
 // 대사는 우리 말로 새로(저작권) · "바이킹은 겁나도 간다"는 10장에서 히컵이 되돌려 줌
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=17';
-import { holdItem, dropItem, makePuffs } from './fx.js?v=17';
-import { toon } from '../look/kit.js?v=17';
-import { tlSense } from './ch4.js?v=17';
+import { wait, until, sayAll } from './runner.js?v=18';
+import { holdItem, dropItem, makePuffs } from './fx.js?v=18';
+import { toon } from '../look/kit.js?v=18';
+import { tlSense } from './ch4.js?v=18';
 
 /* ① 회의 동안 횃불 지키기 — 꺼져 가는 횃불에 기름(F 짧게) · 끝에 넷 이상 켜져 있으면 · 쉬움 = 탁자 가까이 가서 듣기만 */
 const MEETING = [

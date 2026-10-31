@@ -4,10 +4,10 @@
 // ⑥ 아스트리드 '왜 안 죽였어?' · 3장 그림 · 훈련장으로(이음) ⑦ 우리 문을 직접 열고 친구 넷을 드래곤과 이어 줌[다가가] → 와! 다섯 드래곤이 솟아오름
 // 슬픈 셋(③ 끝 붙잡힘 · ④ · ⑤)은 합쳐 90초 안 · 의절 말은 '이제 넌 우리 편이 아니다'까지만 · 대사는 모두 우리 말로 새로 · 피 X · 깜짝 X(예고 먼저)
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=17';
-import { holdItem, dropItem, makePuffs } from './fx.js?v=17';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=17';
-import { setHelmet, helmetObj, crowd, crowdPose, pz, seatOn, drawCoveSketch, drawNestPage, chainBits } from './fx79.js?v=17';
+import { wait, until, sayAll } from './runner.js?v=18';
+import { holdItem, dropItem, makePuffs } from './fx.js?v=18';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=18';
+import { setHelmet, helmetObj, crowd, crowdPose, pz, seatOn, drawCoveSketch, drawNestPage, chainBits } from './fx79.js?v=18';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const ang = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));

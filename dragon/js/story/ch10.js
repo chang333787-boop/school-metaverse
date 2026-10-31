@@ -6,11 +6,11 @@
 // 와! = 입 안으로 쏘고 솟구치는 1초 · 변화 = 둥지 하늘이 맑아짐 · 드래곤들이 흩어짐 · 해변 무기 더미 · 기록 = 걸린 시간 · 안 맞은 횟수 · 친구 조합 수
 // 대사는 모두 우리 말로 새로(원문 X) · 피·죽음 X · 깜짝 X(예고 2~3초 · 소리 서서히) · 불·추락은 연기·그림자·먼 구도
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=17';
-import { holdItem, makeItem } from './fx.js?v=17';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=17';
-import { HOWTO, ICONS, PICT, keyCap } from '../ui/art.js?v=17';
-import { createBoss, createShots, makeParts, WARN } from '../play/boss.js?v=17';
+import { wait, until, sayAll } from './runner.js?v=18';
+import { holdItem, makeItem } from './fx.js?v=18';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=18';
+import { HOWTO, ICONS, PICT, keyCap } from '../ui/art.js?v=18';
+import { createBoss, createShots, makeParts, WARN } from '../play/boss.js?v=18';
 
 const TAU = Math.PI * 2;
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -428,7 +428,7 @@ function* reunion(G, C) {
 /* 비행 한 판 준비(④·⑤가 같이 씀) — flight.js(팀 F) + 뒤따르는 카메라 */
 function* startFlight(G, C, T, world, start) {
   const P = G.player;
-  const mod = yield* awaitP(import('../play/flight.js?v=17').catch(() => null));
+  const mod = yield* awaitP(import('../play/flight.js?v=18').catch(() => null));
   if (!mod || !mod.createFlight) return null;
   const F = mod.createFlight({ world, mode: G.diff, dragon: { root: T.root, rig: T.rig }, rider: { root: P.root, rig: P.rig }, rng: G.rng });
   F.setOpts({ assist: G.diff !== 'hard', ceil: world.ceil, gusts: false });

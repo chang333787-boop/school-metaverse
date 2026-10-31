@@ -3,7 +3,7 @@
 //   → 재질 하나 = 청크 하나에 그리기 한 번 · 먼 청크는 LOD 낮은 판(원뿔 나무·땅만) · 안개 끝 밖은 카메라 far가 잘라 냄
 //   정점색으로 이끼·그을음·젖은 바위·흰 자작나무 얼룩 · 물은 불투명 셰이더(반사 X · 가장자리 밝게 · 작은 물결) · 매 프레임 new X
 import * as THREE from 'three';
-import { toon, U } from './kit.js?v=17';
+import { toon, U } from './kit.js?v=18';
 
 export const TAU = Math.PI * 2;
 const _c = new THREE.Color();

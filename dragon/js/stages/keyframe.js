@@ -1,11 +1,11 @@
 // 키 프레임 여섯(goal §5 · design §15 색 흐름) — ?scene=key&k=1~6 · 정한 결(시안 A)로 그림처럼 구도 잡은 기준 사진 · 시험의 기준
 // 1 습격 밤 마을 · 2 코브 노을 · 3 구름 위 비행 · 4 훈련장 · 5 안개 속 둥지(둥지 섬 전 · 바다 돌기둥 + 둥지 때) · 6 종장 마을
 import * as THREE from 'three';
-import { createEnv, U } from '../look/kit.js?v=17';
-import { createStageHost } from '../core/stage.js?v=17';
-import { loadModel } from '../look/models.js?v=17';
-import { createDragonRig } from '../look/dragon_rig.js?v=17';
-import { createHumanRig } from '../look/human_rig.js?v=17';
+import { createEnv, U } from '../look/kit.js?v=18';
+import { createStageHost } from '../core/stage.js?v=18';
+import { loadModel } from '../look/models.js?v=18';
+import { createDragonRig } from '../look/dragon_rig.js?v=18';
+import { createHumanRig } from '../look/human_rig.js?v=18';
 
 const KEYS = {
   1: { p: 'village', time: 'night', at: ['plaza', 'hall_stairs'], cam: [-14, 9, -16], look: [0, 4, 6], dragons: [['nadder', 6, 22, 10, 1.2, 'fly'], ['gronckle', -10, 18, 14, 0.4, 'fly'], ['nightmare', 18, 28, 4, 2.2, 'fly']], people: [['hiccup', 0, 0, 0.6, 'cower'], ['stoick', 2.5, 1.5, 3.4, 'point'], ['gobber', -2.2, 2, 2.6, 'talk']] },
@@ -21,7 +21,7 @@ export async function buildKeyframe(scene, camera, rng, opt = {}) {
   const k = +(new URLSearchParams(location.search).get('k') || 1), K = KEYS[k] || KEYS[1];
   const env = createEnv(scene, camera);
   const host = createStageHost({ gfx: opt.gfx, scene, camera });
-  const mod = await import(`../places/${K.p}.js?v=17`).catch(() => import('../places/_stub.js?v=17'));
+  const mod = await import(`../places/${K.p}.js?v=18`).catch(() => import('../places/_stub.js?v=18'));
   const place = await host.load(K.p, (ctx) => mod.buildPlace(Object.assign(ctx, { env, rng, opt: { time: K.time, stub: K.p } })));
   const A = place.anchors, a = A[K.at[0]] || Object.values(A)[0] || { x: 0, z: 0, y: 0, yaw: 0 };
   const yaw = a.yaw || 0, cy = Math.cos(yaw), sy = Math.sin(yaw);
@@ -31,7 +31,7 @@ export async function buildKeyframe(scene, camera, rng, opt = {}) {
   const rigs = [];
   for (const [kind, x, z, ry, up, pose] of K.dragons) {
     const p = W(x, z);
-    loadModel('assets/models/' + FILE[kind] + '.glb?v=17').catch(() => loadModel('assets/models/toothless.glb?v=17')).then(({ root, bones }) => {
+    loadModel('assets/models/' + FILE[kind] + '.glb?v=18').catch(() => loadModel('assets/models/toothless.glb?v=18')).then(({ root, bones }) => {
       const r = createDragonRig(bones, root, kind); root.position.set(p.x, H(p.x, p.z) + (up || 0) + (pose === 'fly' ? 18 : 0), p.z); root.rotation.y = yaw + ry; place.group.add(root);
       const P = { fly: { flapRate: 1, fold: 0 }, glide: { glide: 1, fold: 0, flapRate: 0.2 }, sit: { fold: 1 }, walk: { walk: 0.6, fold: 1 }, puff: { puff: 1, crouch: 0.6 } }[pose] || {};
       rigs.push({ r, P });
@@ -39,7 +39,7 @@ export async function buildKeyframe(scene, camera, rng, opt = {}) {
   }
   for (const [who, x, z, ry, pose] of K.people) {
     const p = W(x, z);
-    loadModel('assets/models/' + who + '.glb?v=17').catch(() => loadModel('assets/models/hiccup.glb?v=17')).then(({ root, bones }) => {
+    loadModel('assets/models/' + who + '.glb?v=18').catch(() => loadModel('assets/models/hiccup.glb?v=18')).then(({ root, bones }) => {
       const r = createHumanRig(bones, root); root.position.set(p.x, H(p.x, p.z) + (pose === 'ride' ? 1.6 : 0), p.z); root.rotation.y = yaw + ry; place.group.add(root);
       const P = { cower: { cower: 1 }, point: { point: 1 }, talk: { talk: 1 }, reach: { reach: 1, away: 0.8 }, ride: { ride: 1 }, shield: { carry: 0.5 }, cheer: { cheer: 1 } }[pose] || {};
       rigs.push({ r, P });

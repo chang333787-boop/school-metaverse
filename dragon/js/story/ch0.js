@@ -1,16 +1,16 @@
 // 0장 오프닝(design §0 '오프닝 30초') — 노을 바다 위에서 투슬리스를 직접 몬다(쉬움 고정 · 앞으로 저절로 · 방향키 · Space 꾹 = 꼬리 펴서 휙 · 떨어지지 않음)
 // → 그림 한 장 '처음엔 히컵도 드래곤이 무서웠어요' → 1장(runner가 이어서 엶) · 도전이 아니라 맛보기(이음 · 30초가 지나면 끝 · 봇 판정 X)
 // 갈매기 떼가 도는 돌기둥 사이(바다 장소 course 앞 넷)를 길잡이로 둠 · 대사는 우리 말로 새로
-import { wait, until, sayAll } from './runner.js?v=17';
-import { awaitP, seedVillage } from './fx1.js?v=17';
-import { flySense } from './flysense.js?v=17';
+import { wait, until, sayAll } from './runner.js?v=18';
+import { awaitP, seedVillage } from './fx1.js?v=18';
+import { flySense } from './flysense.js?v=18';
 
 const SEC = 30;
 function* opening(G, C) {
   const P = G.player, pl = G.place, A = pl.anchors, fly = pl.fly || {};
   const T = G.dragon('nightfury', A.lunch || A.spawn_air || { x: 0, z: 0 }, { mind: { fear: 0.05, trust: 0.95 }, noCollide: true }); C.T = T;
   yield* until(() => T.root && P.root, 8);
-  const mod = yield* awaitP(import('../play/flight.js?v=17').catch(() => null));
+  const mod = yield* awaitP(import('../play/flight.js?v=18').catch(() => null));
   if (!mod || !mod.createFlight || !T.root) { yield* wait(1); return true; }
   const F = mod.createFlight({ world: fly, mode: 'easy', dragon: { root: T.root, rig: T.rig }, rider: P.root ? { root: P.root, rig: P.rig } : null, rng: G.rng });
   const gates = (pl.lists.course || []).slice(0, 4);
@@ -19,7 +19,7 @@ function* opening(G, C) {
   const sa = A.spawn_air || { x: 0, y: 40, z: 0, yaw: 0 };
   F.place(sa.x, sa.y || 40, sa.z, sa.yaw || 0);
   /* 비행 화면 글(팀 F) — 지나간 돌기둥 수만(쪽지는 숨김) */
-  const ftm = yield* awaitP(import('../stages/flight_test.js?v=17').catch(() => null));
+  const ftm = yield* awaitP(import('../stages/flight_test.js?v=18').catch(() => null));
   const ui = ftm && ftm.makeUI ? ftm.makeUI('easy', false) : null;
   if (ui) { const nb = document.querySelectorAll('.fl-note'); nb.forEach((n) => { n.style.display = 'none'; }); ui.gates(0, gates.length); }
   T.manual = true; P.cam = 'fly'; C.F = F;

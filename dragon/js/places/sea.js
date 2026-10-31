@@ -4,9 +4,9 @@
 // 자리는 장소 고정 난수로(게임 씨앗과 따로 — 씨앗이 바뀌어도 코스는 같음) · 그리기 ≤ 110 · 삼각형 ≤ 25만 · 텍스처 2장(구름·불빛)
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { toon, setTime, TIMES, U } from '../look/kit.js?v=17';
-import { createRng } from '../core/rng.js?v=17';
-import { createNoise } from '../core/noise.js?v=17';
+import { toon, setTime, TIMES, U } from '../look/kit.js?v=18';
+import { createRng } from '../core/rng.js?v=18';
+import { createNoise } from '../core/noise.js?v=18';
 
 /* 코스 — 출발(공중) → 관문 열둘: [x, z, y, 'arch'] · 꼬리 자리는 들어오고 나가는 방향으로 셈 */
 const SPAWN = { x: 0, y: 30, z: -548, yaw: 0 };

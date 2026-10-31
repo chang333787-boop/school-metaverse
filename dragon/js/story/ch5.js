@@ -2,11 +2,11 @@
 // ③ 코브: 뱀장어에 질겁 · 꼬리 살피기(첫 치유)[다가가] ④ 꼬리날개 달고 첫 들림 → 첨벙[관문 비행] ⑤ 훈련 3일 지플백(불꽃 머리에 물 · 다른 길 뱀장어)[던지기 · 쉬움 X]
 // 와! = 첫 들림에 발이 땅에서 떨어지는 3초 · 변화 = 갈색 가죽 꼬리날개 · 대장간 벽 설계도 · 덧댄 방패 · 사이 레벨 1(부르면 오는 거리)
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=17';
-import { holdItem, dropItem, makePuffs } from './fx.js?v=17';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=17';
-import { tlSense } from './ch4.js?v=17';
-import { flySense } from './flysense.js?v=17';
+import { wait, until, sayAll } from './runner.js?v=18';
+import { holdItem, dropItem, makePuffs } from './fx.js?v=18';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=18';
+import { tlSense } from './ch4.js?v=18';
+import { flySense } from './flysense.js?v=18';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const TAU = Math.PI * 2;
@@ -146,7 +146,7 @@ function* lift(G, C) {
   G.hud.say('hiccup', '…됐다. 가만히 있어 봐…', ['finNew']);
   yield* wait(1.2);
   /* 날기 — flight.js(팀 F) liftOnly · 없으면 간단한 들림(앞으로 저절로 · A/D 꼬리) */
-  const mod = yield* awaitP(import('../play/flight.js?v=17').catch(() => null));
+  const mod = yield* awaitP(import('../play/flight.js?v=18').catch(() => null));
   const lake = pl.lake || { x: (A.lake || T).x, z: (A.lake || T).z, r: 12, y: 0 }, fly = pl.fly || { ground: (x, z) => pl.height(x, z, 0), pillars: [], ceil: 40, bounds: { x: lake.x, z: lake.z, r: 40 } };
   let F = null, cam = null, splash = false, crash = false;
   if (mod && mod.createFlight) {
