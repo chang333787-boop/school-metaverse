@@ -66,3 +66,16 @@
 3. 물물교환 진짜(town.js:4571 값 안 견주고 BAG 직접) → 값 있는 상품만·가까운 값 · GAME.take + `GAME.add(loc,1,'mv:trade')` · 판매대 올릴 때 `MKT().n[mkKey(w,e)]` · town_econ 하네스 영향 주의
 4. 진짜 — rwCheck가 C[ck]를 먼저 올림 → 줄 양 > 0일 때만
 5~14: town_feast.js(5·14) · town.js:7490 종료 목록에 BAKE.abort/dispose(6) · town_reward.js(7) · town_season.js(8·9·10·13) · town_night.js(11·12) · town_day.js(12)
+
+## 10-31 밤 상태(메타버스 세션 · main = 34b471e · 공개판 uri-maeul = c09966f · 주간 44% · 문맥 90%)
+- 오늘 올린 것: 태풍 날 9069694 · 저장 지키기 aa0a49f · 비판 보고서 1a82cf3(town_critique_1031.md) · 2주 믿게 만들기(보상 32394fe · 첫 장 놀이 ec61edc · 교사 화면 a1fac1d + 서버 배포 · 진짜 시험 21c0159) · 마을 분리 eb5482a(tools/export → 공개 github.com/chang333787-boop/uri-maeul · Pages) · 메인 퀘스트 전수 조사·단계 잇기 d1fba61 · 인트로 예고편 ec3d525 · 사진 65·조작 안내·긴급 불편 넷 65e2b8c · 메인 퀘스트 1·2막 다시 짜기 34b471e
+- **마을 push마다 공개판도**: `zsh tools/export/town_export.sh /Users/dobuk/Projects/uri-maeul --commit "…"` → `git -C /Users/dobuk/Projects/uri-maeul push`(tools/ops/README.md)
+- 합치기: 합치기 폴더 = scratchpad/mm(없으면 `git worktree add --detach … origin/main` + node_modules 링크) · `git apply -3` → `python3 tools/ops/r5.py <파일>`(충돌 자리만 · 먼저 add하지 말 것) → `python3 tools/ops/bump.py <폴더>` → `B1_MAIN=1 zsh tools/ops/b2.sh zsh tools/ops/gm.sh <폴더> <포트> "<하네스>"`(gm이 잡힌 포트를 피함) → `CHECK PASS` 둘 확인 → rebase → `git push origin HEAD:main`
+- primary 작업 폴더에는 다른 세션(드래곤)의 커밋 안 한 변경이 있음 → primary에서 pull·add -A 하지 말 것
+- **다음 차례(사용자 'ㄱ' 받음 · 10-31 20:3x)**: docs/systems/town_coverage_1031.md 7절 —
+  1. 3막 나머지(버스 노선·물때표·날씨 전선·야생동물·등고선 q_contour를 3막으로) + 관광 지역(3-5)
+  2. 4막·에필로그(몸 단계 넣기 · '첫 잔치'가 이야기와 잔치 엔진에서 두 번 열리는 것 하나로 · 판 밖 층층골·까망봉 4-5)
+  3. 엔딩 뒤 고리(잔치 14일 주기 이어 가기 · 두 번째 해 계절 · 동네 교류 의뢰 · 장인 칭호 · 설계안 고리 14 중 엔진 그대로 6 + 조금 고침 6)
+  - town_story.js는 한 팀만 손대게(1·2는 같은 팀 차례로 · 3은 town_feast·town_season 쪽 + yearEnd만)
+- 남은 작은 것: town_state '가게 안 → 이어 하기 단추 없음'(원래 있던 것) · 차1 벤치 E로 못 일어남 · 갈아탄 정류장 카메라 · 잔치 밤 늘 투호 · 민어 사진 없음
+- 교사 결정 대기: 반 표 서버 관리 열쇠(ADMIN) 넣을지 · 원본 v2에도 인트로 넣을지
