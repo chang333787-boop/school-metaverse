@@ -3,7 +3,7 @@
 //   ② 첫 5분 안에 '해 보기' 단계 도착(1-1 보물 지도 첫 장 · 시작 = 첫 화면을 닫은 때) · 그 단계는 삽(2 → 겨눔 → F)으로 파야 넘어감
 //   ③ 스스로 찾는 단계(노란 ❗ 데려가기 · 지도 조각 ✕ · 우체국) = 셋째 힌트 전엔 빨간 선 X · 지도 조각 ✕·우체국은 둘째 힌트 전엔 나침반 띠 목적지도 X
 //   ④ 자료 셈: 처음 13단계(장 차례 그대로) 고르기·빈칸 셋 이하 · 해 보기 하나 이상 · 'show:ans' 0
-//   ⑤ 자료 다시 보기(SEE-1)·보기 줄이기(CUT-1): 1-2 '만드는 일 둘' 세 번 틀림 → 아까 본 자료 상자 · 노란 테두리 0 · 다섯 번 → 틀린 보기가 지워짐(맞는 보기는 남음) · 맞히면 넘어감 / 문장 틀(우유가 오는 길) 다섯 번 → 틀린 카드 지움
+//   ⑤ 자료 다시 보기(SEE-1)·보기 줄이기(CUT-1): 1-2 '만드는 일 둘' 세 번 틀림 → 아까 본 자료 상자(STORY-AUDIT: 목장 일꾼의 '우유 가는 길' 말이 그 안에) · 노란 테두리 0 · 다섯 번 → 틀린 보기가 지워짐(맞는 보기는 남음) · 맞히면 넘어감 / 문장 틀(우유가 오는 길) 다섯 번 → 틀린 카드 지움
 //   ⑥ 페이지 오류 0 · --shots = 첫 카드·노란 ❗·지도 조각·파기·우체국·자료 상자 사진
 const { chromium } = require('./pw.cjs'), { walker, toFirstTry } = require('./lib_walk.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
@@ -47,12 +47,12 @@ const mmss = s => Math.floor(s / 60) + '분 ' + String(Math.round(s % 60)).padSt
     { const rec = await ev(() => { const R = SM_TOWN.game().S.story.rec; return { p0: R.p0 && R.p0.st, a1: R.a1_1 && R.a1_1.st }; }); console.log('   기록 ' + JSON.stringify(rec).slice(0, 300)); }
 
     console.log('⑤ 자료 다시 보기(SEE-1)·보기 줄이기(CUT-1) — 1-2 고르기·문장 틀');
-    await shut(); await ev(() => SM_TOWN.storyAt('a1_3', 2)); let n = 0; for (; n < 40 && !(await ev(() => !!document.querySelector('.twn-p button[data-k]'))); n++) await W8(300);
+    await shut(); { const iMk = M.CHAPTERS.find(q => q.id === 'a1_3').steps.findIndex(q => q.id === 'make'), iMl = M.CHAPTERS.find(q => q.id === 'a1_3').steps.findIndex(q => q.id === 'milk'); ok(iMl >= 0 && iMl < iMk, '1-2 묻기 전에 우유 가는 길 말(milk ' + iMl + ' → make ' + iMk + ')'); await ev(i9 => SM_TOWN.storyAt('a1_3', i9), iMk); }   /* STORY-AUDIT 10-31: 번호 대신 단계 id로 */ let n = 0; for (; n < 40 && !(await ev(() => !!document.querySelector('.twn-p button[data-k]'))); n++) await W8(300);
     { const A = await ev(() => SM_TOWN.storyAns()); const wrong = await ev(A9 => [...document.querySelectorAll('.twn-p button[data-k]')].map(b9 => b9.dataset.k).filter(k => !A9.includes(k)), A); console.log('   답 ' + A.join(',') + ' · 틀린 보기 ' + wrong.join(','));
       const tryWrong = () => ev(W9 => { const L9 = [...document.querySelectorAll('.twn-p button[data-k]')].filter(b9 => !b9.disabled), w = L9.filter(b9 => W9.includes(b9.dataset.k)).slice(0, 2); if (w.length < 2) return 'few'; for (const b9 of document.querySelectorAll('.twn-p button.pri[data-k]')) if (!w.includes(b9)) b9.click(); for (const b9 of w) if (!document.querySelector('.twn-p button[data-k="' + b9.dataset.k + '"]').classList.contains('pri')) document.querySelector('.twn-p button[data-k="' + b9.dataset.k + '"]').click(); document.querySelector('.twn-p [data-a="ok"]').click(); return 'ok'; }, wrong);
       for (let i = 0; i < 3; i++) { await tryWrong(); await W8(500); }
       const v3 = await ev(() => { const P = document.querySelector('.twn-p'); return { see: !!(P && P.querySelector('.twn-see')), seeT: P && P.querySelector('.twn-see') ? P.querySelector('.twn-see').innerText : '', yellow: [...document.querySelectorAll('.twn-p button')].some(b9 => /f2c230|242, 194, 48/.test(b9.getAttribute('style') || '')), off: document.querySelectorAll('.twn-p button[data-k][disabled]').length }; });
-      ok(v3.see, '세 번 틀림 = 아까 본 자료 상자(' + v3.seeT.replace(/\s+/g, ' ').slice(0, 80) + ')'); ok(!v3.yellow, '정답 노란 테두리 0'); ok(v3.off === 0, '아직 보기는 그대로(지운 것 ' + v3.off + ')'); await shot('first_7_see');
+      ok(v3.see && /우유 공장/.test(v3.seeT), '세 번 틀림 = 아까 본 자료 상자 · 목장 일꾼이 들려준 우유 가는 길이 들어 있음(' + v3.seeT.replace(/\s+/g, ' ').slice(0, 80) + ')'); ok(!v3.yellow, '정답 노란 테두리 0'); ok(v3.off === 0, '아직 보기는 그대로(지운 것 ' + v3.off + ')'); await shot('first_7_see');
       for (let i = 0; i < 2; i++) { await tryWrong(); await W8(500); }
       const v5 = await ev(A9 => ({ off: [...document.querySelectorAll('.twn-p button[data-k][disabled]')].map(b9 => b9.dataset.k), on: [...document.querySelectorAll('.twn-p button[data-k]:not([disabled])')].map(b9 => b9.dataset.k), msg: (document.querySelector('.twn-chr') || {}).textContent || '' }), A);
       ok(v5.off.length === 1 && !v5.off.some(k => A.includes(k)) && A.every(k => v5.on.includes(k)) && v5.on.length > A.length, '다섯 번 틀림 = 틀린 보기 하나 지움(' + v5.off.join(',') + ' · 남은 ' + v5.on.join(',') + ') · ' + v5.msg.slice(0, 60)); await shot('first_8_cut');

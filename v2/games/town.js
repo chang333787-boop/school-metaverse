@@ -26,7 +26,7 @@ import { placeParked, TRUCK } from './town_fire.js?v=1';   // FIRE-1 소방차(�
 import { createJobs, JOBK } from './town_jobs.js?v=22';
 import { createBake } from './town_bake.js?v=3'; import { createTable, GAMES as TBG, LV_NAME as TBLV } from './town_table.js?v=13';   /* TABLE-1 판 놀이 틀(보드게임 카페 · 사방치기) */   // BAKE-1 🍞 제빵(빵집 화덕 앞 · 반죽 치대기 + 부풀 자리 → 판 밖 발효 → 굽기)   // LIVING-1 장소 카드 · 마을 여권 · 직업 체험 셋(소방관·집배원·사서)
 import { createGame, ITEMS, itemName, DISHES, shopOf, won, RECIPES, CAL_LEN, SHOPS, RW_GEN, readSave, claimSave, slotKey, delSave, restoreSave, oldSave, saveSize } from './town_game.js?v=50';
-import { createStory, CHAPTERS, VEG, parkSim, parkSlot } from './town_story.js?v=29';
+import { createStory, CHAPTERS, VEG, parkSim, parkSlot } from './town_story.js?v=30';
 import { attachLook, lookHTML, bindLook, setLook as setMyLook, getLook, lookColors } from '../js/look.js?v=1'; import { buildKid } from '../js/kid.js?v=5';   // LOOK-1 내 모습(학교와 같은 모듈 — 같은 주소라 한 벌) · 미리보기 아이
 import { startKeyText, stopKeyText } from '../js/keytext.js?v=1';
 import { createFriends } from './town_friends.js?v=1';   // TOGETHER-0 같은 방 친구를 마을에서(인스턴스 · 그리기 ≤ 11번)   // TOUCH-2 터치 키 글자 거르기(한 곳)
