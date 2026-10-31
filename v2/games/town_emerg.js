@@ -32,7 +32,7 @@ export const ROWS = {
 };
 const SLOTS = [[570, 750], [810, 1060]];   /* 하루 두 칸(오전 9:30~12:30 · 오후 13:30~17:40) — 칸마다 하나까지 · 같은 갈래는 하루 한 번 */
 const LIVE = 300;   /* 아무도 안 오면 5분 뒤 기관이 해결(벌 X · 흔적 X) */
-export const EMSTY = { go: null, info: null, stop: null };   /* COVER-1(10-31): 이야기 1-1 「길 잃은 새 친구」가 같은 112 흐름을 부름 — createEmerg가 채움(마을이 이야기 api.em으로 넘김) */
+export const EMSTY = { go: null, info: null, stop: null, tide: null, tideOk: null, ev: null };   /* COVER-1(10-31): 이야기 1-1 「길 잃은 새 친구」가 같은 112 흐름을 부름 — createEmerg가 채움(마을이 이야기 api.em으로 넘김) */
 
 // 길 잃은 어린이 단서: 일터 갈래(k) → [하는 일 · 일터 이름] (실제 그 일의 모습 · 지역을 낮추는 말 X)
 const WORKC = {
@@ -309,6 +309,7 @@ export function createEmerg(A) {
     return { st: EV.st, walk: sw, to: sw && EV.sty.home ? { x: EV.sty.home.x, z: EV.sty.home.z, name: EV.sty.home.name } : { x: EV.x, z: EV.z, name: EV.place }, cell: EV.cell, place: EV.place }; }
   function styStop() { if (EV && EV.sty) end(false, 'abort'); kidLook(false); STY.st = null; }
   EMSTY.go = styGo; EMSTY.info = styInfo; EMSTY.stop = styStop;
+  EMSTY.tide = () => (dead ? false : EV ? EV.k === 'tide' : spawn('tide')); EMSTY.tideOk = () => !!(CAN.tide() && A.shoreSpots && A.shoreSpots().length); EMSTY.ev = () => (EV ? { k: EV.k, st: EV.st, x: EV.x, z: EV.z } : null);   /* COVER-3(10-31): 이야기 3-2 「갯벌의 숨구멍」이 들물 앞에 같은 밀물 알리기(TIDE-1)를 부름 — 보통 사건과 똑같이(시간 끝·배로 데려옴 그대로) · 다른 사건 중이면 false */
 
   // ───────── 🚑 119 넘어진 이웃 ─────────
   //   ① 둘레 보기(카메라를 왼쪽·오른쪽으로 돌려 차·자전거가 오는지) → ② 말 걸기 E → ③ 119 신고 창(번호 → 자리 = 칸 + 가까운 곳 · 지도 보고 고르기 → 무슨 일) → ④ 처치(JUDGE-2 · 꾹 X — 삔 발 = 찬 물병 받기 → 처치 창에서 차례·자리 고르기 / 더위 = 빛기둥 둘 중 그늘 고르기 → 물 → 처치 창) → ⑤ 구급차
