@@ -17,6 +17,7 @@ import { showTitle, diffOf } from '../ui/title.js?v=15';
 import { createRunner } from '../story/runner.js?v=15';
 import { writeSlot, flushSlot } from '../story/save.js?v=15';
 import { holdItem } from '../story/fx.js?v=15';
+import { showEnding } from '../ui/ending.js?v=15';
 
 export const PLAYABLE = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];   // 0 = 오프닝 · 11 = 종장
 const CH_FILE = Object.fromEntries(PLAYABLE.map((n) => [n, 'ch' + n]));
@@ -120,6 +121,8 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     await R.start(m.chapter, idx);
   }
   G.startCh = startCh;
+  /* 엔딩 — 종장 마지막 차례가 부름 · 다 보면 첫 화면으로 */
+  G.ending = () => { G.ended = true; showEnding(G, { feel: G.feel || [] }).then(() => { if (!Q.has('ch')) location.href = location.pathname; }); };
 
   /* 선생님 크롬북 관문 ?bench=1 — 장소 넷을 15초씩 돌며 그린 프레임 간격을 재고 한 줄로(복사 단추) · 한국어 기기 음성 · Shift+Space 한/영 */
   G.benchTour = async () => {

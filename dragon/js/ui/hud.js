@@ -84,9 +84,17 @@ export function createHud() {
   H.sketch = (on) => { $('sketch').classList.toggle('gone', !on); return $('sketch').querySelector('canvas'); };
   /* 덮개 — 장소를 지을 때 */
   H.veil = { show(t, s) { veil.querySelector('.t').textContent = t || ''; veil.querySelector('.s').textContent = s || ''; veil.style.display = ''; veil.classList.remove('hide'); }, hide() { veil.classList.add('hide'); setTimeout(() => { if (veil.classList.contains('hide')) veil.style.display = 'none'; }, 400); } };
+  /* 읽어 주기(1~2학년 덤 · goal §2-6) — 이 기기 안 한국어 음성(localService)만 · 온라인 음성은 글이 바깥 서버로 가서 X · 없으면 단추를 숨김 */
+  H.voice = null; H.read = false;
+  const rb = document.createElement('button'); rb.style.cssText = 'position:fixed;left:120px;bottom:14px;z-index:25;font:600 15px "Noto Sans KR",sans-serif;padding:6px 12px;background:#f4ead2;color:#2b2118;border:2px solid #2b2118;border-radius:12px 16px 10px 18px;cursor:pointer;display:none';
+  rb.textContent = '읽어 주기 켜기'; document.body.appendChild(rb);
+  rb.onclick = () => { H.read = !H.read; rb.textContent = H.read ? '읽어 주기 끄기' : '읽어 주기 켜기'; if (!H.read) try { speechSynthesis.cancel(); } catch (e) { /* 없음 */ } rb.blur(); };
+  const pickVoice = () => { try { const v = speechSynthesis.getVoices().filter((x) => /^ko/i.test(x.lang) && x.localService === true); H.voice = v[0] || null; rb.style.display = H.voice ? '' : 'none'; } catch (e) { H.voice = null; } };
+  if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+  const speak = (text) => { if (!H.read || !H.voice) return; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text.replace(/[()…]/g, ' ')); u.voice = H.voice; u.lang = H.voice.lang; u.rate = 1; speechSynthesis.speak(u); } catch (e) { /* 그대로 */ } };
   /* 걸음마다(실제 시간) — 말풍선 차례 · 배너·하는 법 시간 */
   H.tick = (dt) => {
-    if (!H.cur && H.queue.length) { H.cur = H.queue.shift(); H.curT = H.cur.secs; showBubble(H.cur); }
+    if (!H.cur && H.queue.length) { H.cur = H.queue.shift(); H.curT = H.cur.secs; showBubble(H.cur); speak(H.cur.text); }
     if (H.cur) { H.curT -= dt; if (H.curT <= 0) { H.cur = null; if (!H.queue.length) $('bubble').classList.add('gone'); } }
     if (H.bannerT > 0) { H.bannerT -= dt; if (H.bannerT <= 0) $('banner').classList.add('gone'); }
     if (H.howtoT > 0) { H.howtoT -= dt; if (H.howtoT <= 0) $('howto').classList.add('gone'); }
