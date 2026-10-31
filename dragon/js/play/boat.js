@@ -2,7 +2,7 @@
 // Space = 노가 물에 들어가는 박자에 누르면 힘(다 실림) · 노가 공중에 있을 때(엇박) = 거의 안 감 · 노가 물을 당기는 중에 또 누름·연타 = 노가 엉킴(잠깐 멈춤)
 // ←→ = 배를 옆으로 조금(물결 피하기) · 끝에 닿으면 'arrive'(낚시는 메인이 만듦) · 배 모양은 three 코드로(곡면 선체 · 노 둘 · 히컵 자리) · 매 걸음 new X
 import * as THREE from 'three';
-import { toon } from '../look/kit.js?v=15';
+import { toon } from '../look/kit.js?v=16';
 
 /* 노 박자 — 누른 뒤 0~0.5초 물 당기기 · ~1.1초 노를 들어 앞으로 · 1.1~1.5초 = 노가 물에 들어가는 박자(힘 다 실림) · 그 뒤 = 물 위에서 기다림 */
 export const BK = { drive: 0.5, catchA: 1.1, catchB: 1.5, power: 1.5, drag: 0.2, vmax: 7, side: 2.6, latMax: 5, tangle: 1.6 };

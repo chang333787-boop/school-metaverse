@@ -3,10 +3,10 @@
 //   값에 수가 없으면 0↔1로 천천히 오감 · 사람 모델이면 사람 자세 값(hammer·cheer…) · m 생략 = 투슬리스(1 접기 · 2 날갯짓 · 3 활공 · 4 귀)
 //   &gap=m(줄 간격) &face=라디안(모델이 보는 쪽) · &faces=0,1.57,…(모델마다 보는 쪽) · &hold=knife,,shield(사람 i 오른손에 손 물건) · &people=hiccup,… 은 예전처럼 드래곤 곁에 세움
 import * as THREE from 'three';
-import { buildLookA } from './look_a.js?v=15';
-import { loadModel } from '../look/models.js?v=15';
-import { createDragonRig } from '../look/dragon_rig.js?v=15';
-import { createHumanRig } from '../look/human_rig.js?v=15';
+import { buildLookA } from './look_a.js?v=16';
+import { loadModel } from '../look/models.js?v=16';
+import { createDragonRig } from '../look/dragon_rig.js?v=16';
+import { createHumanRig } from '../look/human_rig.js?v=16';
 
 const DRAGONS = new Set(['toothless', 'gronckle', 'nadder', 'zippleback', 'nightmare', 'terror']);
 
@@ -22,16 +22,16 @@ export function buildModelView(scene, camera, rng, opt = {}) {
   const items = [];
   window.__ready = false;
   const parseAnim = (s) => (s || '').split(';').filter(Boolean).map((x) => { const [k, v] = x.split(':'); return { k, v: v == null ? null : +v }; });
-  const loads = names.map((n, i) => loadModel('assets/models/' + n + '.glb?v=15').then(({ root, bones, info }) => {
+  const loads = names.map((n, i) => loadModel('assets/models/' + n + '.glb?v=16').then(({ root, bones, info }) => {
     const dragon = DRAGONS.has(n) || !!bones.wing1L;
     const rig = dragon ? createDragonRig(bones, root, n) : createHumanRig(bones, root);
     let tris = 0; root.traverse((o) => { if (o.isMesh && o.geometry.index) tris += o.geometry.index.count / 3; });
     const hold = holds[i];                                      // &hold=knife,,shield … — 사람 i의 오른손(handR)에 손 물건(props_hand.glb 메시 이름)
-    if (hold && bones.handR) loadModel('assets/models/props_hand.glb?v=15').then((p) => { const m = p.root.getObjectByName(hold); if (m) { const c = m.clone(); c.position.set(0, 0, 0); c.rotation.set(0, 0, 0); bones.handR.add(c); } });
+    if (hold && bones.handR) loadModel('assets/models/props_hand.glb?v=16').then((p) => { const m = p.root.getObjectByName(hold); if (m) { const c = m.clone(); c.position.set(0, 0, 0); c.rotation.set(0, 0, 0); bones.handR.add(c); } });
     const it = { n, root, rig, dragon, anim: parseAnim(anims[i] ?? anims[anims.length - 1]), tris, bones: Object.keys(bones).length, info };
     items[i] = it; scene.add(root); return it;
   }));
-  (opt.people || '').split(',').filter(Boolean).forEach((k, i) => loadModel('assets/models/' + k + '.glb?v=15').then(({ root, bones }) => {
+  (opt.people || '').split(',').filter(Boolean).forEach((k, i) => loadModel('assets/models/' + k + '.glb?v=16').then(({ root, bones }) => {
     root.position.set(P.x - 4 - i * 1.6, 0, P.z + 2.5 + i * 0.5); root.position.y = Math.max(2, base.height(root.position.x, root.position.z)); root.rotation.y = 0.9; scene.add(root);
     const rig = createHumanRig(bones, root); items.push({ n: k, root, rig, dragon: false, anim: [], extra: true });
   }));

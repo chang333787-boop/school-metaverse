@@ -2,14 +2,14 @@
 // 바다 장소(places/sea.js)를 무대 그릇(core/stage.js)으로 짓고 투슬리스 위에 히컵 · 관문 코스 · 화면 아래 꼬리 쪽지(코스 중간에 바람에 날아감)
 // 봇은 sense()만 읽음(화면에 보이는 것: 내 자리·속도·방향 · 갈매기가 도는 다음 관문 둘 · 쪽지에 보이는 꼬리 자리 · 날개가 다 올라갔는지 · 떨어졌는지 · 투슬리스와의 거리)
 import * as THREE from 'three';
-import { createEnv, U } from '../look/kit.js?v=15';
-import { createStageHost } from '../core/stage.js?v=15';
-import { loadModel } from '../look/models.js?v=15';
-import { createDragonRig } from '../look/dragon_rig.js?v=15';
-import { createHumanRig } from '../look/human_rig.js?v=15';
-import { createFlight, createFlightCam } from '../play/flight.js?v=15';
-import { createBoat } from '../play/boat.js?v=15';
-import { buildPlace } from '../places/sea.js?v=15';
+import { createEnv, U } from '../look/kit.js?v=16';
+import { createStageHost } from '../core/stage.js?v=16';
+import { loadModel } from '../look/models.js?v=16';
+import { createDragonRig } from '../look/dragon_rig.js?v=16';
+import { createHumanRig } from '../look/human_rig.js?v=16';
+import { createFlight, createFlightCam } from '../play/flight.js?v=16';
+import { createBoat } from '../play/boat.js?v=16';
+import { buildPlace } from '../places/sea.js?v=16';
 
 const Q = new URLSearchParams(location.search);
 const NOTE_BLOW = 6;                                   // 이 관문을 지나면 쪽지가 바람에 날아감(12개 중 가운데)
@@ -26,7 +26,7 @@ export async function buildFlightTest(scene, camera, rng, opt = {}) {
 
   const ready = (async () => {
     place = await host.load('sea', (ctx) => buildPlace(Object.assign(ctx, { env, rng, opt: { time: opt.time || 'clear' } })));
-    const hic = await loadModel('assets/models/hiccup.glb?v=15');
+    const hic = await loadModel('assets/models/hiccup.glb?v=16');
     const rider = { root: hic.root, rig: createHumanRig(hic.bones, hic.root) };
     scene.add(hic.root);
     if (boatMode) {
@@ -37,7 +37,7 @@ export async function buildFlightTest(scene, camera, rng, opt = {}) {
       C = makeBoatCam(camera);
       return;
     }
-    const tl = await loadModel('assets/models/toothless.glb?v=15');
+    const tl = await loadModel('assets/models/toothless.glb?v=16');
     scene.add(tl.root);
     /* ?lift=1 — 5장 첫 들림 엔진 시험: 바다 위 가짜 땅(높이 2m) + 앞쪽 호수(반지름 26m) + 타원 돌벽(경계) — 보이는 땅은 없음(엔진·봇 시험용) */
     const LK = { x: -60, z: -470, r: 26, y: 0.4 }, world = liftMode ? { ground: (x, z) => (Math.hypot(x - LK.x, z - LK.z) < LK.r ? -5 : 2), lake: LK, pillars: [], bounds: { x: -60, z: -490, rx: 48, rz: 40 }, ceil: 12 } : place.fly;

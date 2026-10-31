@@ -58,12 +58,12 @@ srv.listen(0, async () => {
     if (PLACES) {
       console.log('\n[크롬북 흉내 표 · ⚡ · CPU 4× · 장소 카메라 길 12초]');
       for (const pt of PLACES.split(',')) {
-        const [pn, tm] = pt.split(':');
-        await open('?scene=place&p=' + pn + '&time=' + tm + '&seed=1&mode=smooth'); await thr(4); await W8(2000);
+        const [pn, tm, vr] = pt.split(':');
+        await open('?scene=place&p=' + pn + '&time=' + tm + (vr ? '&variant=' + vr : '') + '&seed=1&mode=smooth'); await thr(4); await W8(2000);
         const ln = await ev(s => DRG.bench(s), 12); await thr(1);
         const v = (k) => +(new RegExp(k + ' ([\\d.]+)').exec(ln) || [])[1];
         const row = { p95: v('p95'), calls: v('calls'), tris: v('tris'), prog: v('prog'), tex: v('tex') };
-        console.log('   ' + pn + '(' + tm + ') p95 ' + row.p95 + 'ms · 그리기 ' + row.calls + ' · 삼각형 ' + row.tris + 'k · 셰이더 ' + row.prog + ' · 텍스처 ' + row.tex);
+        console.log('   ' + pn + '(' + tm + (vr ? '·' + vr : '') + ') p95 ' + row.p95 + 'ms · 그리기 ' + row.calls + ' · 삼각형 ' + row.tris + 'k · 셰이더 ' + row.prog + ' · 텍스처 ' + row.tex);
         ok(row.p95 > 0 && row.p95 <= 33 && row.calls <= 150 && row.tris <= 350, pn + ' 예산 안(p95 ≤ 33 · 그리기 ≤ 150 · 삼각형 ≤ 35만)');
       }
     }

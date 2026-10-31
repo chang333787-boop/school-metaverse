@@ -1,8 +1,8 @@
 // 0·1·11장이 같이 쓰는 작은 것 — 습격 하늘(나는 드래곤 실루엣) · 불 뿜기 원뿔 · 던지기(물통·볼라 · 쉬움 방향키 조준) · 날아가는 물건 · 별 하늘 · 둥근 벽(불·드래곤 자리)
 // 모두 원인 → 결과(불 뿜기가 닿은 칸에만 원소 엔진 불씨 · 물통이 떨어진 자리에만 물) · 매 걸음 new X(처음에 한 번 짓고 다시 씀) · Light 추가 X
 import * as THREE from 'three';
-import { toon, flameMesh, glowSprite, SHARED } from '../look/kit.js?v=15';
-import { makeItem } from './fx.js?v=15';
+import { toon, flameMesh, glowSprite, SHARED } from '../look/kit.js?v=16';
+import { makeItem } from './fx.js?v=16';
 
 const TAU = Math.PI * 2;
 export const ang = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));

@@ -1,6 +1,6 @@
 // 소리(design §15·§8) — WebAudio로 직접 합성(내려받은 소리 X · 원작 소리·멜로디 X) · 기본은 꺼짐(교실) · 모든 소리에 보이는 짝 신호가 따로 있음
 // 울음·폭발은 음량 상한 + 서서히 커짐(깜짝 X) · 켜고 끄기 = 구석 단추(키 X) · 설정은 이 기기에 기억
-import { loadSet, saveSet } from './gfx.js?v=15';
+import { loadSet, saveSet } from './gfx.js?v=16';
 
 export function createSfx() {
   let ac = null, master = null, noiseBuf = null;

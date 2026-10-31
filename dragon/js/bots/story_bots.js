@@ -82,14 +82,14 @@ function body(B) {
 }
 
 /* 장 봇 — level 'easy'|'normal' · 차례 id마다 하는 일 */
-import { flyBot, boatBot } from './flight_bot.js?v=15';
-import { BOTS as B0 } from './ch0_bots.js?v=15';
-import { BOTS as B1 } from './ch1_bots.js?v=15';
-import { BOTS as B7 } from './ch7_bots.js?v=15';
-import { BOTS as B8 } from './ch8_bots.js?v=15';
-import { BOTS as B9 } from './ch9_bots.js?v=15';
-import { BOTS as B10 } from './ch10_bots.js?v=15';
-import { BOTS as B11 } from './ch11_bots.js?v=15';
+import { flyBot, boatBot } from './flight_bot.js?v=16';
+import { BOTS as B0 } from './ch0_bots.js?v=16';
+import { BOTS as B1 } from './ch1_bots.js?v=16';
+import { BOTS as B7 } from './ch7_bots.js?v=16';
+import { BOTS as B8 } from './ch8_bots.js?v=16';
+import { BOTS as B9 } from './ch9_bots.js?v=16';
+import { BOTS as B10 } from './ch10_bots.js?v=16';
+import { BOTS as B11 } from './ch11_bots.js?v=16';
 window.DRG_FLYBOT = flyBot; window.DRG_BOATBOT = boatBot;
 export function storyBot(level = 'normal') {
   const lag = Math.round(RT[level] * 60);

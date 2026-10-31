@@ -2,45 +2,44 @@
 
 정본 = `docs/dragon/goal_prompt.md`(교사 10-31 "진행하자"로 승인 · §9 열두 조건이 끝 조건) · 설계 = `docs/dragon/design.md`(v2.1 + §17 단계 3에서 정한 것 · 장 번호는 설계 기준 — goal의 '1~5장' = 설계 '1~6장') · 사실 = `docs/dragon/reference.md` · 팀 약속(장소·모델·비행 계약) = `docs/dragon/stage3_plan.md`.
 
-## 지금 상태 (2026-10-31 밤 · 단계 3 수직 조각 2~6장 놀 수 있음)
-- ✅ 단계 0 조사 · ✅ 단계 1 설계 v2.1 · ✅ 단계 2 바탕(결 시안 A 확정 — design §17-1)
-- ✅ **단계 3 수직 조각 = 2~6장**(설계 기준) — 첫 화면(학년 1~6 · 저장 칸 셋 · 장 줄 · 선생님 장 고르기) → 장마다 차례 → 장 끝에 저장·다음 장
-  - 2장 회의 횃불(걸으며 듣기) · 안개 숲 추적(손그림 지도 · 단서 · 꼬리날개 조각) · 묶인 나이트 퓨리(숨 고를 때만 밧줄) · 저녁 집
-  - 3장 선착장 배웅(진눈깨비) · 그롱클(방패 소리 · 여섯 발) · 코브 숨어 그리기 · 밤 회관 드래곤 책 점 잇기
-  - 4장 내더 미로 · 노 박자 배 + 낚시 · 칼 내려놓기·생선·이름 · 반 토막 · 모래 그림 → 코가 손바닥에
-  - 5장 망루 바람 속 횃불 · 대장간(자르기·바람 시험·망치) · 뱀장어 질겁·꼬리 살피기(첫 치유) · 첫 들림 → 첨벙 · 지플백(물통·뱀장어)
-  - 6장 안장 바느질·꼬리날개 무늬 · 코브 연습 비행 · 발견 셋(풀·턱 밑·빛 점) · 훈련장 셋 진정 · 스토이크 귀환(배 고치기) · 첫 바다 비행(쪽지가 날아감) · 돌기둥 점심(테러 입 안 불·다친 테러 치유)
-  - 쉬움에서 빠지는 도전(design §8) = 3①·4①·4④·5⑤ → 책 한 쪽(그림 + 한 줄)
-- **봇 시험**(`tools/harness/drg_story.cjs` · `?turbo=8` · 입력만): 2~6장 모든 차례를 쉬움 봇·보통 봇이 깸 · 가만히·F 연타·F 누른 채·Space 연타·W 누른 채 F 연타 봇은 도전을 못 깸(결과 = 아래 표 · 마지막 돌린 값)
-- **크롬북 흉내**(`tools/harness/drg_perf.cjs` · CrOS UA · 1366×768 · CPU 4× · ⚡): 장소 여섯 p95 17~19ms · 그리기 ≤ 53 · 삼각형 ≤ 25만 · 장소 열 번 오가기 힙 +0.0MB(마지막 값 = design §17)
-- 아직 v2 메뉴에 연결하지 않았다(완성 전) · `noindex` · 홍보판·v2 안 건드림(기준선 v2 17/17 · 홍보판 16/17 그대로)
+## 지금 상태 (2026-10-31 밤 · 단계 4 끝까지 잇기 끝 · v2 메뉴 연결)
+- ✅ 단계 0 조사 · ✅ 단계 1 설계 v2.1 · ✅ 단계 2 바탕(결 시안 A 확정 — design §17-1) · ✅ 단계 3 수직 조각(2~6장)
+- ✅ **단계 4 끝까지 잇기** — 오프닝(장 0) → 1~10장 → 종장(장 11) → 엔딩(요구 39줄 '이 생각은 여기에' · 영화에서 더 볼 장면 셋) 모두 놀 수 있음
+  - 팀 A 오프닝·1장 습격의 밤·종장 + 원소 엔진(`play/elements.js`) · 팀 B 7장·9장 · 팀 C 8장 + 구름·오로라·드래곤 떼 · 팀 D 10장 + 둥지 섬(다섯 차림) + 대장 드래곤(모델·상태 기계)
+- **v2 메뉴 연결**: `v2/games/registry.js`의 `dragon`(싱글플레이 → 이야기·방탈출 · 다른 페이지 링크) · 홍보판엔 카드가 없음(메뉴 판이 숨겨짐)
+- **봇 시험**(`drg_story.cjs` · turbo 4 · 입력만): 0~11장 모든 차례를 쉬움 봇·보통 봇이 깸 · 클릭형 봇 다섯(가만히·F 연타·F 누른 채·Space 연타·W+F 연타)은 도전마다 못 깸(2~6장 메인 135판 · 0·1·11장·7·9장·8장·10장은 팀 시험)
+- **시간**(봇 놀이 시간 · design §17-9): 오프닝~6장 쉬움 15.7분 × 1.5 = 23.5분(30분 안 ✓) · 전체 쉬움 37분 · 보통 45분(× 1.5 ≈ 67분 — goal '40~60분'보다 조금 김)
+- **크롬북 흉내**(`drg_perf.cjs` · CPU 4× · ⚡): 장소 열(마을 밤·회관·훈련장·숲·코브·바다·둥지 해변·분화구·안개·물속) p95 17.3~18.4ms · 그리기 ≤ 55 · 삼각형 ≤ 23.2만 · 장소 열 번 오가기 힙 +0.0MB · 놀이 중 가장 무거운 자리 = 1장 지붕 불(그리기 92 · 삼각형 28.8만 · 팀 A) · 10장 해변 싸움(71 · 23.8만)
+- **40분 쉬지 않는 놀이**(`drg_long.cjs`): design §17-9에 기록
+- 아직 실제 크롬북 값 없음(흉내 값) · 선생님께 `?bench=1` 부탁함
 
 ## 파일 지도(dragon/js)
 | 갈래 | 파일 | 하는 일 |
 |---|---|---|
 | 바탕 | `core/` gfx·input·loop(`?turbo`)·rng·noise·debug(`DRG` · sense)·**stage**(무대 그릇)·**sfx**(합성 소리 · 기본 끔) | |
-| 결 | `look/kit.js`(toon · 때 아홉 · createEnv · flameMesh·glowSprite · SHARED) · `props.js`(마을 소품 · W1) · `nature.js`(숲·바위·물 · W2) · `models.js`·`dragon_rig.js`·`human_rig.js`(M) | |
-| 장소 | `places/` village·hall·arena(W1) · forest·cove(W2) · sea(F) · `_stub.js`(자리표시) | 계약 stage3_plan §2·§3 |
-| 놀이 | `play/` walker·collide(벽 선분 8m 격자)·**mind**(마음 엔진)·**actors**(드래곤·사람 배우)·flight·boat(F) | |
-| 화면 글 | `ui/` hud(지금 할 일·하는 법·그림 말풍선·힌트·F 표시·배너·덮개)·art(손그림 얼굴·물건·키)·book(드래곤 책·그리기)·map(손그림 지도)·bench(작업대 박자)·title(첫 화면) | |
-| 장 | `story/` runner(차례 생성기·힌트 단계·다시 하기·저장)·ch2~ch6·fx(손에 든 것·모래 선·물보라)·flysense·save | |
-| 봇 | `bots/story_bots.js`(차례마다 · A* 길 찾기) · `flight_bot.js`(F) | sense만 읽고 키만 |
+| 결 | `look/clouds.js`·`aurora.js`(C) · `look/kit.js`(toon · 때 아홉 · createEnv · flameMesh·glowSprite · SHARED) · `props.js`(마을 소품 · W1) · `nature.js`(숲·바위·물 · W2) · `models.js`·`dragon_rig.js`·`human_rig.js`(M) | |
+| 장소 | `places/` village·hall·arena(W1) · forest·cove(W2) · sea(F) · nest(D · beach·fog·under·after·crater) · `_stub.js` | 계약 stage3_plan §2·§3 · 장소마다 제 씨앗(마을 = 1656844137) |
+| 놀이 | `play/` walker·collide·**mind**(마음 엔진)·**actors**·flight·boat(F)·**elements**(원소 엔진 · A)·flock(드래곤 떼 · C)·boss(대장 · D) | |
+| 화면 글 | `ui/` ending(엔딩·크레딧) · hud(지금 할 일·하는 법·그림 말풍선·힌트·F 표시·배너·덮개·읽어 주기)·art(손그림 얼굴·물건·키)·book(드래곤 책·그리기)·map(손그림 지도)·bench(작업대 박자)·title(첫 화면) | |
+| 장 | `story/` runner(차례 생성기·힌트 단계·다시 하기·저장)·ch0(오프닝)~ch11(종장)·fx·fx1(1장)·fx79(7·9장)·flysense·save | |
+| 봇 | `bots/story_bots.js`(몸 K · A* 길 찾기 · 2~6장) · `ch0/1/7/8/9/10/11_bots.js`(장마다) · `flight_bot.js`(F) | sense만 읽고 키만 |
 | 장면 | `stages/game.js`(본판 · `?ch=&step=&diff=` · `?bench=1`) · place_view(`?scene=place&p=`) · keyframe(`?scene=key&k=1~6`) · flight_test(`?scene=fly`) · walk_test · `scenes/silhouette.js`(`?scene=sil` · M) | |
 
-## 다음 할 일 — 단계 4 끝까지 잇기(설계 1·7~10장 · 오프닝 · 종장 → 완성도 3)
-1. **선생님 크롬북 `?bench=1` 받기**(채팅으로 요청함): 결과 줄이 오면 design §13 판정에 '실기기 값'으로 적고 예산을 넘는 장소부터 줄이기
-2. 오프닝(30초 직접 몰기) → 1장 습격의 밤(원소 엔진 첫 쓰임: 지붕 불 번짐·물통 줄) — 마을 `variant: 'charred'`는 이미 있음
-3. 7~10장 · 종장 — 같은 틀(장소 계약 + 차례 생성기 + 봇)로. 둥지 섬 장소·구름(숨기)·드래곤 떼(인스턴스)·대장 드래곤은 새로
-4. 원소 엔진(design §3-2) — 지금은 장마다 규칙을 그 자리에서 씀(17-3 표) → 1장에서 칸 표·이웃 표로 묶기
-5. 소리: 합성 소리가 원인 자리에 몇 군데만 걸림 → 장마다 짝 신호와 함께 넓히기 · 곡(북·피리·현)
-6. 남은 손질: 4장 칼을 끌어 물에 던지는 덤 길 · 6장 훈련장 셋 보통 봇 40초(사람은 더 걸림 — 실제 아이 시험으로 틈 2.2초 확인) · 숲 부러진 나무 윗동이 납작함(W2 남김) · 마을 rim이 낮은 시선에서 바닥을 띄움(W1 남김)
+## 다음 할 일 — 단계 5 장마다 다듬기(1·7~10장·종장 → 완성도 5) · 단계 6 시험(§9)
+1. **선생님 크롬북 `?bench=1` 결과**가 오면 design §13 판정에 '실기기 값'으로 적고, 예산을 넘는 장소부터 줄이기(1장 지붕 불 · 10장 해변이 가장 무거움)
+2. 팀이 남긴 '메인이 고칠 것'(이 아래 표) — 비행 엔진에 상승 기류(`world.updrafts`)·바깥 힘·쏘기 갈고리 · `art.js` HOWTO에 장마다 런타임으로 넣는 표(cling8·glide8·flock8·sniff8·point10·mark10·boss10·boss10e·dive10) 옮기기 · `dragon_rig` SPEC에 boss · 사람 자세 `lie` · 마을 'charred'는 실제 탄 집만(`G.flags.burnt`) · 바다 셰이더 안개 색(sRGB/선형 · 밤에 바다가 뜸) · 훈련장 그물에 구멍(9장) · 실루엣 장면에 대장
+3. 길이: 7-5 짐 모으기 · 9-7 친구 잇기 · 8-5 둥지가 봇 2분 넘음 → 아이 시험으로 줄일지 정하기
+4. 소리: 합성 소리가 원인 자리에 걸린 곳 넓히기 · 곡(북·피리·현) · 휘파람(방향) 소리
+5. 눈높이 시험(§9-8): 1·3·6학년 역할로 장마다 첫 10초 · 막힌 곳 0 — 화면 사진 + 역할 에이전트
+6. 종장 또 하기 넓히기(빼는 차례 1번에서 뺀 것: 스콜드런 · 다친 야생 드래곤 · 날씨 날 · 이웃 둘 · 배 타기)
 
 ## 시험(push 전)
 ```
 zsh tools/dragon_ver.sh                                  # dragon/ 캐시 번호 한 번에
 B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_perf.cjs . --sec=12   # 바탕 + 장소 여섯 흉내 표 + 힙
-B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_story.cjs . --dumb=0  # 2~6장 쉬움·보통 봇(약 25분)
-B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_story.cjs . --levels=none   # 클릭형 봇 다섯(약 1시간)
+B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_story.cjs . --dumb=0  # 0~11장 쉬움·보통 봇(약 1시간 · turbo 4)
+B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_story.cjs . --levels=none   # 클릭형 봇 다섯(장마다 · 오래 걸림 → --ch=로 나눠서)
+B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_long.cjs . --min=40   # 40분 쉬지 않는 놀이(CPU 4× · fps·힙)
 B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_fly.cjs .             # 비행·배(F)
 node tools/harness/check.cjs . --full  ·  PAGE=/ node tools/harness/check.cjs . --full   # v2 17/17 · 홍보판 16/17
 ```

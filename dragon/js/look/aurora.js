@@ -2,7 +2,7 @@
 // 결: 그림책 수채 띠 — 빛 더하기(가산 혼합)·네온·글로우 X · 보통 섞기 · 색은 흐린 풀빛 → 청록 · 세로 붓결 · 반투명 겹 ≤ 2(커튼 둘이 조금만 겹침)
 // 때 섞기 blendTime(env, a, b, k) — kit TIMES 두 때 사이 값(노을 → 밤)을 걸음마다 섞음(setTime과 같은 자리를 만짐 · new X)
 import * as THREE from 'three';
-import { TIMES, U } from './kit.js?v=15';
+import { TIMES, U } from './kit.js?v=16';
 
 /* ── 때 섞기 ── */
 const _a = new THREE.Color(), _b = new THREE.Color(), _da = new THREE.Vector3(), _db = new THREE.Vector3();

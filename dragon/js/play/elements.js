@@ -2,7 +2,7 @@
 // 1장(습격의 밤 · 지붕 불·물통 줄)에서 처음 씀 · 10장(불난 배 · 가스 + 불꽃 = 펑 · 김 가림막 · 상승 기류)도 같은 엔진을 쓴다
 //
 // ── 쓰는 법(장 팀이 읽는 문서) ─────────────────────────────────────────────────────────────
-//   import { createElements, TAG } from '../play/elements.js?v=15';
+//   import { createElements, TAG } from '../play/elements.js?v=16';
 //   const E = createElements({ group: G.place.group, wind: { x: 1, z: 0, speed: 1 } });   // group 없으면 그림 없이 규칙만
 //   const id = E.add({ kind: 'roof', x, y, z, r: 1.6, house: 2 });   // 칸 하나 — kind = KIND 표의 이름 · house = 같은 집 묶음(덤) · give: 0 = 남에게 안 옮김(길 막는 수레)
 //   E.link();                          // 이웃 표(한 번 · 그 뒤에 add 해도 그 칸만 이어 붙음)
@@ -26,7 +26,7 @@
 // 규칙(r2 F-1 + 우리 것): 불 → 바람 아래로 번짐 · 물 → 꺼짐 + 김 + 젖음 · 가스 + 불꽃 = 펑 · 젖은 칸은 안 붙음 · 다 타면 그을음(결과가 남음) · 불 × 공기 = 상승 기류
 // 매 걸음 new X(파티클·목록은 처음에 한 번) · 전체 순회는 5Hz 규칙 안에서만(칸 ≤ 수백) · 쏜 물·불은 8m 격자로 찾음 · Light 추가 X
 import * as THREE from 'three';
-import { flameMesh, glowSprite } from '../look/kit.js?v=15';
+import { flameMesh, glowSprite } from '../look/kit.js?v=16';
 
 /* 꼬리표 비트 — 한 칸이 여럿을 가질 수 있음 */
 export const TAG = { FUEL: 1, WET: 2, GAS: 4, ROOF: 8, CLOTH: 16, STONE: 32, LOOSE: 64 };   // LOOSE = 갈고리로 떼어낼 수 있음

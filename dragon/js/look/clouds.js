@@ -3,7 +3,7 @@
 // 결 = kit toon(3단 톤 + 가장자리 빛 + 높이 안개)을 그대로 이어 씀(셰이더 변형 = 이름 열쇠 하나씩) · 반투명 0겹(속이 찬 구름) · 빛 추가 X
 // 구름 속(카메라가 구 안 · 구름 바다 안)에서는 판 대신 안개 색·거리만 바꿈(화면이 하얗게 덮임) · 매 걸음 new X
 import * as THREE from 'three';
-import { toon, RAMP } from './kit.js?v=15';
+import { toon, RAMP } from './kit.js?v=16';
 
 /* 구름 바다 높이 — 위 겹 밑동 TOP0 · 아래 겹 BOT0(아래로 볼록) · 사이가 구름 속 */
 export const DECK = { top: 212, bot: 198 };

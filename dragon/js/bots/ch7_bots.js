@@ -1,6 +1,6 @@
 // 7장 봇 — BOTS['7-1'] = (s, K, M, B, level, now) · s = 반응 늦은 감각 · K = 몸(walk·go·face·tap·set·stop) · K.cur = 지금 화면(손·눈 움직임만) · story_bots.js가 합침
 // DRG.sense()만 읽고 키만 누름(상태 쓰기 X) · 초당 6타 · 동시 키 셋
-import { planPath } from './story_bots.js?v=15';
+import { planPath } from './story_bots.js?v=16';
 export const BOTS = {};
 const cd = (M, k, sec) => { M[k] = (M[k] || 0) - 1 / 60; if (M[k] <= 0) { M[k] = sec; return true; } return false; };
 /* 촘촘한 길 찾기(대장간 뒷방 문 1.2m처럼 좁은 틈) — 보이는 벽·바위(sense.obst)로 · 막히면 다시 찾음 */

@@ -1,6 +1,6 @@
 // 화면 글 — 지금 할 일(목표만) · 하는 법 창(그림 세 줄) · 그림 말풍선(얼굴 + 물건 + 두 줄 30자) · 힌트 단계 · F 키 표시(쉬움) · 배너(보이는 변화) · 덮개(불러오기)
 // 공책 결(종이 #f4ead2 · 잉크 #2b2118 · 손으로 자른 듯한 모서리) · 그라데이션·유리·✨ 없음 · :has() 없음 · 놀이를 멈추지 않음(걸으며 들음)
-import { FACES, ICONS, HOWTO, PICT } from './art.js?v=15';
+import { FACES, ICONS, HOWTO, PICT } from './art.js?v=16';
 
 const CSS = `
 #hud { position:fixed; inset:0; pointer-events:none; z-index:20; font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif; color:#2b2118; }

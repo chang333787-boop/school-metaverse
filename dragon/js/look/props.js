@@ -4,8 +4,8 @@
 // 영화 화면·배치를 베끼지 않는다 — 빌린 것은 '늘 고쳐 짓는 나무집 · 가파른 곡선 지붕 · 지붕 끝 갈고리 장식 · 비늘 같은 지붕널 · 클링커 배' 같은 원리뿐
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { toon, flameMesh, glowSprite, U } from './kit.js?v=15';
-import { createNoise } from '../core/noise.js?v=15';
+import { toon, flameMesh, glowSprite, U } from './kit.js?v=16';
+import { createNoise } from '../core/noise.js?v=16';
 
 /* 색 — 실제 바이킹보다 조금 진하고 따뜻하게(r3 F-2 · 젖은 갈색 나무 · 청회색 돌 · 회녹색 풀) · 값은 우리가 새로 고름 */
 export const PAL = {

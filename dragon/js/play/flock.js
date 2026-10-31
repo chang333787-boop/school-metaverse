@@ -2,7 +2,7 @@
 // 자리 번호: 떼 가운데(길 위 한 점) 둘레에 자리 n개(옆·위·앞) — 가운데 빈 자리(주머니)가 내 자리 · 들킴 = 주머니에서 벗어난 거리(장이 셈)
 // 둥지 위를 맴도는 차림(circle)도 같은 메시로 · 매 걸음 new X(스크래치) · 그리기 1번 · 삼각형 ≈ 인스턴스 × 130
 import * as THREE from 'three';
-import { chainToon } from '../look/clouds.js?v=15';
+import { chainToon } from '../look/clouds.js?v=16';
 
 /* 종 색·크기(먼 실루엣용 — 모델 팀의 종 색을 흐리게) */
 const KINDS = [

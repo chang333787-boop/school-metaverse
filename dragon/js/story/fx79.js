@@ -1,10 +1,10 @@
 // 7·9장이 같이 쓰는 것 — 숫돌 박자(작업대 판 같은 꼴) · 투구 바꿔 쓰기 · 짐 보따리(8장도 씀) · 벗은 투구 · 눈길 부채꼴(땅을 따라) · 머리 위 ?/! · 관중 · 탄 사람 자리 · 공책 그림(코브 스케치 · 둥지 쪽)
 // 기하·재질은 처음 한 번만 짓고 SHARED(장소를 비워도 남김) · 매 걸음 new X · 이펙트는 원인 자리에서만
 import * as THREE from 'three';
-import { toon, SHARED } from '../look/kit.js?v=15';
-import { loadModel } from '../look/models.js?v=15';
-import { createHumanRig } from '../look/human_rig.js?v=15';
-import { holdItem } from './fx.js?v=15';
+import { toon, SHARED } from '../look/kit.js?v=16';
+import { loadModel } from '../look/models.js?v=16';
+import { createHumanRig } from '../look/human_rig.js?v=16';
+import { holdItem } from './fx.js?v=16';
 
 const INK = '#2b2118';
 const GEO = {};
@@ -64,7 +64,7 @@ export function setHelmet(G, on) {
   const P = G.player; on = !!on; G.inv.helmet = on ? 1 : 0; G.flags.helmet = on;
   if (!!P.helmOn === on && P.root) return Promise.resolve();
   P.helmOn = on;
-  return loadModel('assets/models/' + (on ? 'hiccup_hel' : 'hiccup') + '.glb?v=15').then(({ root, bones }) => {
+  return loadModel('assets/models/' + (on ? 'hiccup_hel' : 'hiccup') + '.glb?v=16').then(({ root, bones }) => {
     if (P.helmOn !== on) return;
     const old = P.root, parent = old ? old.parent : null, item = P.item;
     if (old) { root.position.copy(old.position); root.rotation.copy(old.rotation); old.removeFromParent(); }

@@ -1,7 +1,7 @@
 // 첫 화면(design §0) — 제목 · 비상업 한 줄 · 큰 숫자 단추 1~6(학년 · 1·2 = 쉬움) → 저장 칸 셋(드래곤 얼굴) → 장 그림 줄 · 선생님 장 고르기
 // ?grade= 이면 학년을 묻지 않음 · ?ch=&step= 이면 첫 화면 없이 바로(시험·선생님)
-import { FACES } from './art.js?v=15';
-import { readSlot } from '../story/save.js?v=15';
+import { FACES } from './art.js?v=16';
+import { readSlot } from '../story/save.js?v=16';
 
 const CSS = `
 #title { position:fixed; inset:0; z-index:35; background:#1d2730; color:#f4ead2; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif; pointer-events:auto; }
