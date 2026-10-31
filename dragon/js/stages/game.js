@@ -40,7 +40,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     let mod; try { mod = await import(`../places/${name}.js?v=15`); } catch (e) { mod = await import('../places/_stub.js?v=15'); }
     G.place = null; G.cast.length = 0; G.castBy = {};             // 장 안에서 이어지는 배우(keep)는 장소가 바뀌면 함께 비움
     let hs = 7; for (const ch of name) hs = (hs * 31 + ch.charCodeAt(0)) >>> 0;   // 장소마다 제 씨앗(앞에서 난수를 얼마나 썼든 같은 마을 · 팀 A 지적)
-    const prng = createRng(hs);
+    const prng = createRng(name === 'village' ? 1656844137 : hs);   // 마을 = 팀 A가 골목·지붕·길을 맞춘 배치(fx1 VILLAGE_SEED)
     const place = await host.load(name, (ctx) => mod.buildPlace(Object.assign(ctx, { env, rng: prng, opt: { time, variant, stub: name } })));
     G.place = place; G.freshPlace = true; G.collide = createCollide(place.blockers || [], place.walls || []);
     P.W = createWalker({ height: place.height, collide: G.collide, bound: place.bound, x: 0, z: 0 });
