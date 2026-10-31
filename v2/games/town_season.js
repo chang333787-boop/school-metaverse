@@ -6,7 +6,7 @@
 //   지킴: 실제 풍습만(지어내기 X · 종교 강요 X) · 판타지·전투 X(씨름 = 구경·응원만) · 실명 X(이웃 = 하는 일·어르신) · 지역 비하 X · 숫자·% X · 새 Light X(달집 불·달 = MeshBasic)
 //     · 매 프레임 일 0(1초 칸 sec) · 저절로 뜨는 알림 = say(t, s, 1) · 사람 수 그대로(있는 일꾼을 옮기고 옷만 바꿈) · 홍보판 X(A.on())
 //   저장 GAME.S.season = { v, d 그날, id 그날 행사, st 그날 한 것, mv { '행사:본래 날': 1 } 태풍으로 미룸, ann 알림 날, past [{ id, d, ok }] }
-import { nightsW } from './town_feast.js?v=5';
+import { nightsW } from './town_feast.js?v=6';
 export const SEASON_V = 1;
 const T2 = (ko, en) => [ko, en];
 const FONT = '"Noto Sans KR","Noto Sans CJK KR","Apple SD Gothic Neo","Malgun Gothic","NanumGothic",sans-serif';
@@ -40,6 +40,21 @@ export const EV = {
     lines: [T2('창포물에 머리를 감으면 머릿결이 좋아진다고 했어.', 'They said washing in iris water makes hair shine.'), T2('씨름판 모래 안은 선수만 들어가. 우리는 밖에서 응원하자.', 'Only wrestlers go inside the sand ring. We cheer from outside.'), T2('그네 줄을 새로 맸어. 아주 높이 올라가.', 'The swing ropes are new. It goes really high.')] },
 };
 export const EV_ORDER = ['chu', 'kim', 'seol', 'bor', 'dano'];
+// AFTER-1 두 번째 해(10-31 엔딩 뒤 고리 ② · docs/systems/town_coverage_1031.md §5-2): 계절이 한 바퀴 돈 뒤 같은 행사 = 'n번째 해' 판
+//   해 = 그 행사가 앞서 달력에 몇 번 있었나 + 1(날을 세어 앎 · 새 저장 칸 X) · 둘째 해부터 안내판에 지난해 기록(끝낸 때 · 다시 고른 횟수)과 올해 목표 · 사실 한 줄 더(실제 풍습만)
+//   올해 목표 = 다시 고르지 않고 한 번에(모든 행사) + 추석은 송편 넷(이웃이 한 사람 더) · 다 하면 지난해와 견준 한 줄(벌·점수·% X)
+export const Y2 = {
+  chu: { add: T2('올해는 이웃이 한 사람 더 왔어요. 송편을 넷 빚어요.', 'One more neighbour came this year. Make four songpyeon.'), todo0: T2('송편 빚기 — 이웃 넷에게 맞는 소 고르기', 'Make songpyeon — the right filling for four neighbours'),
+    fact: T2('추석은 한가위라고도 해요. ‘한’은 크다, ‘가위’는 가운데라는 뜻이라, 음력 팔월 한가운데의 큰 날이라는 말이에요.', 'Chuseok is also called Hangawi: “han” means big and “gawi” means middle — the big day in the middle of the eighth lunar month.') },
+  kim: { fact: T2('우리 김장 문화는 유네스코 인류무형문화유산이에요. 이웃이 함께 담그고 나누는 마음을 귀하게 여긴 거예요.', 'Korea’s gimjang culture is on UNESCO’s list of the Intangible Cultural Heritage of Humanity — for the way neighbours make and share it together.') },
+  seol: { fact: T2('설날 아침엔 한 해 복을 담으라고 복조리를 걸어 두기도 했어요.', 'On Seollal morning people hung a bokjori (rice scoop) to scoop up good luck for the year.') },
+  bor: { fact: T2('대보름 아침엔 이웃 이름을 불러 대답하면 “내 더위 사 가라!” 하는 더위팔기를 했어요. 오곡밥과 묵은 나물도 먹었어요.', 'On Daeboreum morning people called a friend’s name and, when they answered, said “Buy my summer heat!” They also ate five-grain rice and dried greens.') },
+  dano: { fact: T2('단오엔 다가올 여름 더위를 잘 나라고 부채를 선물했어요. 이것을 단오 부채라고 해요.', 'On Dano people gave fans as gifts to get through the coming summer heat. These are called Dano fans.') } };
+const ORDW = [T2('', ''), T2('첫', 'first'), T2('두 번째', 'second'), T2('세 번째', 'third'), T2('네 번째', 'fourth'), T2('다섯 번째', 'fifth')];
+export const yrWord = (n, en) => { const w = ORDW[Math.max(1, Math.min(5, n | 0))]; return en ? (n > 5 ? 'later' : w[1]) + ' year' : (n > 5 ? '여러' : w[0]) + ' 해'; };
+const NKS = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉', '열'];
+const timesW = (n, en) => (en ? (n === 1 ? 'once' : n === 2 ? 'twice' : (n > 10 ? 'many' : ['', '', '', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][n]) + ' times') : (NKS[n] || '여러') + ' 번');
+const whenW = (m, en) => { const h = (m | 0) / 60; return h < 11 ? (en ? 'in the morning' : '아침에') : h < 15 ? (en ? 'around midday' : '낮에') : h < 18 ? (en ? 'in the afternoon' : '오후에') : h < 21 ? (en ? 'in the evening' : '저녁에') : (en ? 'at night' : '밤에'); };
 
 // 판단 거리(실제 풍습·안전 수칙만)
 const FILL = { sesame: T2('깨 소', 'sesame filling'), bean: T2('콩 소', 'bean filling'), chest: T2('밤 소', 'chestnut filling') };
@@ -87,6 +102,20 @@ export function createSeason(A) {
   const cur = () => { const s = S(); return s.d === day() ? s.id : null; };
   const on = () => !!cur();
   const st = () => S().st;
+  /* AFTER-1 두 번째 해: 그 행사가 d 앞 달력에 몇 번 있었나 + 1 · 지난해 기록 · 다시 고른 횟수(wr) */
+  function yrOf(id, d) { if (!id) return 1; let n = 1; for (let b = 1; b < d - 1; b++) if (baseId(b) === id) n++; return n; }
+  const yr = () => { const id = cur(); if (!id) return 1; const s = S(); if (!(s.yr >= 1)) { s.yr = yrOf(id, day()); mark(); } return s.yr; };   /* 업데이트 전에 시작한 날 = 그 자리에서 셈 */
+  const lastOf = (id, d) => S().past.filter(p => p && p.id === id && p.d < (d == null ? day() : d) - 1).pop() || null;
+  const oops = k => { const s = st(); s.wr = (s.wr | 0) + 1; mark(); log(k); };
+  const spNeed = () => (yr() >= 2 ? 4 : 3);
+  const todoOf = id => { const T = EV[id].todo.slice(); if (yr() >= 2 && Y2[id] && Y2[id].todo0) T[0] = Y2[id].todo0; return T; };
+  function lastLine(id, d) { const e = en(), q = lastOf(id, d); if (!q) return e ? 'Last year you didn’t finish this day. Give it a go this year.' : '지난해엔 이날 할 일을 다 하지 못했어요. 올해 해 봐요.';
+    const w = q.wr == null ? '' : q.wr | 0 ? (e ? ', choosing again ' + timesW(q.wr | 0, 1) : ', 다시 고른 것은 ' + timesW(q.wr | 0) + '이었어요') : (e ? ', getting every choice right the first time' : ', 다시 고른 것 없이 한 번에 했어요');
+    return e ? 'Last year you finished ' + (q.m != null ? whenW(q.m, 1) : '') + w + '.' : '지난해엔 ' + (q.m != null ? whenW(q.m) + ' ' : '') + '다 했어요' + (w ? w.replace(/^, /, '. ') : '') + '.'; }
+  function goalLine(id) { const e = en(), add = Y2[id] && Y2[id].add; return (e ? 'This year’s goal: get each choice right the first time.' : '올해 목표: 다시 고르지 않고 한 번에 해 봐요.') + (add ? ' ' + L(add) : ''); }
+  function cmpLine(id, s) { const e = en(), q = lastOf(id), w = s.wr | 0; if (!q) return e ? 'This year you finished it all.' : '올해는 다 해냈어요.';
+    const qw = q.wr | 0, a = w < qw ? (e ? 'Fewer second tries than last year.' : '지난해보다 다시 고른 것이 줄었어요.') : w === 0 ? (e ? 'Right the first time, just like last year.' : '지난해처럼 한 번에 다 골랐어요.') : w === qw ? (e ? 'About the same as last year.' : '지난해만큼 했어요.') : (e ? 'A few more second tries than last year. Next year, try first time.' : '지난해보다 다시 고른 것이 조금 많았어요. 내년엔 한 번에 해 봐요.');
+    const t = q.m == null ? '' : min() + 30 < q.m ? (e ? ' Earlier in the day, too.' : ' 끝낸 때도 지난해보다 일러요.') : ''; return a + t; }
 
   // ───────── 행사 마당(학교·잔치 마당과 떨어진 평평한 빈 땅) ─────────
   function site() { if (SITE !== null) return SITE || null; const sp = A.site ? A.site() : null; if (!sp) { SITE = false; log('site X'); return null; } const ry = sp.ry, cs = Math.cos(ry), sn = Math.sin(ry);
@@ -202,20 +231,20 @@ export function createSeason(A) {
   const sleepy = () => { if (!late()) return false; A.say(en() ? '🌙 Everyone is resting now. Come back in the morning.' : '🌙 이웃들이 쉬는 때예요. 아침에 다시 와요.', 2.6); return true; };
   function step(k) { const s = st(); s[k] = s[k] || 1; mark(); A.rec('season', { id: cur(), ev: 'step', s: k }); checkDone(); }
   /* RWFIX-1(코덱스 C E9): 안내판 줄 = 끝 조건(같은 표 하나) — 설날 윷놀이·추석 강강술래를 안 했는데 '다 했어요'·일기에 적던 것 */
-  const didOf = (id, s) => [id === 'chu' ? (s.spn | 0) >= 3 : id === 'kim' ? (s.ko | 0) >= 5 : id === 'seol' ? (s.sb || []).length >= 3 : id === 'bor' ? !!s.nut : !!s.cp, id === 'chu' ? (s.pk || []).length >= 2 : id === 'kim' ? (s.dv || []).length >= 3 : id === 'seol' ? !!s.dd : id === 'bor' ? !!s.dir : !!s.cake, id === 'chu' ? !!s.ggr : id === 'seol' ? !!s.yut : id === 'bor' ? !!s.lit : !!s.cheer].slice(0, EV[id].todo.length);
+  const didOf = (id, s) => [id === 'chu' ? (s.spn | 0) >= spNeed() : id === 'kim' ? (s.ko | 0) >= 5 : id === 'seol' ? (s.sb || []).length >= 3 : id === 'bor' ? !!s.nut : !!s.cp, id === 'chu' ? (s.pk || []).length >= 2 : id === 'kim' ? (s.dv || []).length >= 3 : id === 'seol' ? !!s.dd : id === 'bor' ? !!s.dir : !!s.cake, id === 'chu' ? !!s.ggr : id === 'seol' ? !!s.yut : id === 'bor' ? !!s.lit : !!s.cheer].slice(0, EV[id].todo.length);
   function checkDone() { const id = cur(), s = st(); if (!id || s.done) return; const ok = didOf(id, s).every(Boolean);
-    if (!ok) return; s.done = 1; A.chip('twn-ssn', null); chipT = 0; const S9 = S(); S9.past.push({ id, d: day(), ok: 1 }); while (S9.past.length > 20) S9.past.shift(); mark();
-    A.banner(EV[id].ic + ' ' + (en() ? L(EV[id].t) + ': you did it all today' : '오늘 ' + L(EV[id].t) + ' 할 일을 다 했어요'), 4); A.sfx('done'); A.rec('season', { id, ev: 'done', b: EV[id].b });
+    if (!ok) return; s.done = 1; A.chip('twn-ssn', null); chipT = 0; const S9 = S(), y9 = yr(), cmp = y9 >= 2 ? cmpLine(id, s) : ''; S9.past.push({ id, d: day(), ok: 1, yr: y9, wr: s.wr | 0, m: min() }); while (S9.past.length > 20) S9.past.shift(); mark();   /* AFTER-1 해 · 다시 고른 횟수 · 끝낸 때 */
+    A.banner(EV[id].ic + ' ' + (en() ? (y9 >= 2 ? L(EV[id].t) + ', ' + yrWord(y9, 1) + ': all done. ' + cmp : L(EV[id].t) + ': you did it all today') : (y9 >= 2 ? yrWord(y9) + ' ' + L(EV[id].t) + ' 할 일을 다 했어요. ' + cmp : '오늘 ' + L(EV[id].t) + ' 할 일을 다 했어요')), y9 >= 2 ? 5.5 : 4); A.sfx('done'); A.rec('season', { id, ev: 'done', b: EV[id].b, yr: y9, wr: s.wr | 0 });
     if (A.diary) A.diary(EV[id].ic, en() ? L(EV[id].t) + ': ' + EV[id].todo.map(t => t[1].split(' — ')[0]).join(', ') : L(EV[id].t) + jo(L(EV[id].t), '이었어요', '였어요') + '. ' + EV[id].todo.map(t => t[0].split(' — ')[0]).join(', ') + ' 했어요'); log('done ' + id); }
 
   /* 설날 — 세배(웃어른 = 흰머리로 돗자리에 앉은 이웃 먼저) · 떡국 · 윷 */
   async function bow(i) { if (sleepy()) return; const s = st(), e = en(), sb = s.sb || (s.sb = []), h = HS[i], el = HS[s.sp], slot = houseSlot(i); if (!h) return;
     if (sb.includes(i)) { A.say(e ? '🙇 You already bowed here. Happy New Year!' : '🙇 이 집엔 벌써 세배했어요.', 2.2); return; }
     if (!sb.includes(s.sp) && i !== s.sp) { const d = dir8(el.at[0] - h.at[0], el.at[1] - h.at[1]); sayN(slot, e ? 'Thank you! But bow to the eldest first. Go to the elder to the ' + d[1] + '.' : '고맙구나. 그런데 세배는 웃어른께 먼저 드린단다. ' + d[0] + '쪽 집 어르신부터 뵙고 오렴.');
-      await ask({ who: e ? 'Neighbour' : '이웃', icon: '🙂', text: [e ? 'Thank you! But on Seollal you bow to the eldest first. The elder is in the house to the ' + d[1] + '. Look for white hair, sitting on a mat.' : '고맙구나. 그런데 설날엔 웃어른께 먼저 세배를 드린단다. ' + d[0] + '쪽 집에 어르신이 계셔. 돗자리에 앉아 계신 흰머리 어르신을 찾아보렴.'] }); log('bow early ' + i); return; }
+      await ask({ who: e ? 'Neighbour' : '이웃', icon: '🙂', text: [e ? 'Thank you! But on Seollal you bow to the eldest first. The elder is in the house to the ' + d[1] + '. Look for white hair, sitting on a mat.' : '고맙구나. 그런데 설날엔 웃어른께 먼저 세배를 드린단다. ' + d[0] + '쪽 집에 어르신이 계셔. 돗자리에 앉아 계신 흰머리 어르신을 찾아보렴.'] }); oops('bow early ' + i); return; }
     if (i === s.sp) { const R = rnd('greet:' + day()), C = shuf([['ok', e ? '“Happy New Year!”' : '「새해 복 많이 받으세요」'], ['money', e ? '“Please give me New Year money.”' : '「세뱃돈 주세요」'], ['bye', e ? '“Goodbye.”' : '「안녕히 계세요」']], R);
       const r = await ask({ who: e ? 'Elder neighbour' : '이웃 어르신', icon: '👵', text: [e ? 'You bow low, hands together. What do you say as you get up?' : '두 손을 모으고 큰절을 올렸어요. 일어나며 무엇이라고 말할까요?'], choices: C });
-      if (r !== 'ok') { if (r) await ask({ who: e ? 'Elder neighbour' : '이웃 어르신', icon: '👵', text: [r === 'money' ? (e ? 'Ho ho. Sebae is a greeting, not a way to ask for money. Try again.' : '허허, 세배는 인사란다. 돈을 먼저 말하면 서운하지. 다시 해 보렴.') : (e ? 'That is what you say when leaving. What do you wish someone at New Year?' : '그건 헤어질 때 하는 인사란다. 새해엔 무엇을 빌어 주지?')] }); log('greet ' + r); return; }
+      if (r !== 'ok') { if (r) await ask({ who: e ? 'Elder neighbour' : '이웃 어르신', icon: '👵', text: [r === 'money' ? (e ? 'Ho ho. Sebae is a greeting, not a way to ask for money. Try again.' : '허허, 세배는 인사란다. 돈을 먼저 말하면 서운하지. 다시 해 보렴.') : (e ? 'That is what you say when leaving. What do you wish someone at New Year?' : '그건 헤어질 때 하는 인사란다. 새해엔 무엇을 빌어 주지?')] }); if (r) oops('greet ' + r); return; }
       sb.push(i); mark(); sayN(slot, e ? 'Grow up healthy and brave this year.' : '그래, 올해도 건강하고 씩씩하게 자라렴.'); A.sfx('pop'); A.say(e ? '🙇 The elder gave you kind words (deokdam). Now the other two homes.' : '🙇 어르신이 덕담을 해 주셨어요. 이제 다른 두 집에도 가 봐요.', 3); }
     else { sb.push(i); mark(); sayN(slot, e ? 'Happy New Year to you too! Study and play well.' : '너도 새해 복 많이 받아라. 즐겁게 배우고 놀렴.'); A.sfx('pop'); }
     A.rec('season', { id: 'seol', ev: 'step', s: 'bow' }); if (sb.length >= 3) { A.banner('🙇 ' + (e ? 'You bowed at all three homes. Tteokguk is ready in the yard.' : '세 집 모두 세배를 드렸어요. 마당 상에 떡국이 차려졌어요.'), 4); const p = toYard(); if (p) { chipT = performance.now(); A.chip('twn-ssn', '🍲 ' + (e ? 'Tteokguk' : '떡국 먹으러'), { onClick: () => { A.chip('twn-ssn', null); A.route(p); } }); } } else hint(); KEY = ''; }
@@ -227,7 +256,7 @@ export function createSeason(A) {
   async function nut() { if (sleepy()) return; const s = st(), e = en(); if (s.nut) { A.say(e ? '🌰 Crack! You already cracked your bureom.' : '🌰 부럼은 벌써 깨물었어요.', 2.2); return; }
     const C = shuf([['ok', e ? 'Walnuts and peanuts' : '호두와 땅콩'], ['candy', e ? 'Candy and jelly' : '사탕과 젤리'], ['rice', e ? 'Rice cake and noodles' : '떡과 국수'], ['fruit', e ? 'Apple and pear' : '사과와 배']], rnd('nut:' + day()));
     const r = await ask({ who: e ? 'Neighbour' : '이웃', icon: '🌰', text: [e ? 'On Daeboreum morning you crack hard nuts with your teeth, wishing for no boils all year. Look at the tray. Which are bureom?' : '대보름 아침엔 단단한 열매를 이로 딱 깨물며 한 해 동안 부스럼이 나지 않기를 빌어요. 상 위를 잘 봐요. 부럼은 어느 것일까요?'], choices: C });
-    if (r !== 'ok') { if (r) A.say(e ? '🌰 Look at the tray again: small, hard nuts with shells.' : '🌰 상 위를 다시 봐요. 껍데기가 단단한 작은 열매예요.', 3); return; }
+    if (r !== 'ok') { if (r) { A.say(e ? '🌰 Look at the tray again: small, hard nuts with shells.' : '🌰 상 위를 다시 봐요. 껍데기가 단단한 작은 열매예요.', 3); oops('nut ' + r); } return; }
     s.nut = 1; mark(); A.sfx('pop'); A.say(e ? '🌰 Crack! Walnuts, peanuts and chestnuts are bureom.' : '🌰 딱! 호두, 땅콩, 밤이 부럼이에요.', 3); A.rec('season', { id: 'bor', ev: 'step', s: 'nut' }); checkDone(); hint(); }
   function moonAsk() { if (sleepy()) return; const s = st(), e = en(); if (s.dir) { A.say(moonUp() ? (e ? '🌕 The moon is up in the east. Make a wish!' : '🌕 동쪽 하늘에 보름달이 떴어요. 소원을 빌어요.') : (e ? '🌕 The moon rises around six in the evening.' : '🌕 달은 저녁 여섯 시쯤 떠올라요.'), 2.6); return; }
     if (min() < 16 * 60) { A.say(e ? '🌕 The moon comes up in the evening. Come back after four in the afternoon.' : '🌕 달은 저녁에 떠요. 오후 네 시 넘어 다시 와요.', 3); return; }
@@ -239,7 +268,7 @@ export function createSeason(A) {
       + '<div style="display:grid;grid-template-columns:repeat(3,auto);justify-content:center;gap:6px">' + '<span></span>' + B9('n', e ? 'North' : '북', '') + '<span></span>' + B9('w', e ? 'West' : '서', '') + '<span></span>' + B9('e', e ? 'East' : '동', '') + '<span></span>' + B9('s', e ? 'South' : '남', '') + '<span></span></div>'
       + '<div class="sm" data-why style="margin-top:6px;font-weight:800"></div><div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>';
     const W = A.openP(h, false, 'season'); if (!W) return; W.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') { A.closeP(); return; } if (b.dataset.dir) { const r = answerDir(b.dataset.dir); const w9 = W.querySelector('[data-why]'); if (w9) w9.textContent = r.t; if (r.ok) setTimeout(() => { if (!dead) A.closeP(); }, 1600); } }; log('moon panel ' + (up ? 'up' : 'pre')); return W; }
-  function answerDir(d) { const s = st(), e = en(), up = moonUp(); if (d !== 'e') { log('dir ' + d); return { ok: false, t: up ? (e ? 'Look again. Turn until you face the moon.' : '다시 하늘을 둘러봐요. 달이 보이는 쪽으로 몸을 돌려 봐요.') : d === 'w' ? (e ? 'That is where the sun sets. The full moon is on the opposite side.' : '그쪽은 해가 지는 쪽이에요. 보름달은 그 맞은편에서 떠요.') : (e ? 'Opposite the setting sun. Look at the sun on the compass.' : '지는 해의 맞은편이에요. 나침반 그림의 해를 봐요.') }; }
+  function answerDir(d) { const s = st(), e = en(), up = moonUp(); if (d !== 'e') { oops('dir ' + d); return { ok: false, t: up ? (e ? 'Look again. Turn until you face the moon.' : '다시 하늘을 둘러봐요. 달이 보이는 쪽으로 몸을 돌려 봐요.') : d === 'w' ? (e ? 'That is where the sun sets. The full moon is on the opposite side.' : '그쪽은 해가 지는 쪽이에요. 보름달은 그 맞은편에서 떠요.') : (e ? 'Opposite the setting sun. Look at the sun on the compass.' : '지는 해의 맞은편이에요. 나침반 그림의 해를 봐요.') }; }
     s.dir = 1; mark(); A.sfx('ding'); A.rec('season', { id: 'bor', ev: 'step', s: 'dir' }); return { ok: true, t: up ? (e ? 'Yes! The full moon is in the east. We light the dalijip now. Step behind the safety line.' : '맞아요! 보름달은 동쪽에 떴어요. 이제 달집에 불을 붙여요. 안전 줄 밖으로 물러서요.') : (e ? 'Yes! It rises in the east around six. When it is up, the dalijip is lit.' : '맞아요! 저녁 여섯 시쯤 동쪽에서 떠올라요. 달이 뜨면 달집에 불을 붙여요.') }; }
   function fireSec() { const s = st(), e = en(); if (cur() !== 'bor' || s.lit || !s.dir || !moonUp() || late()) return; const P = site(); if (!P) return; const [cx, cz] = P.Q(0, -3.2), me = A.me(), d = Math.hypot(me.x - cx, me.z - cz);
     if (d > 60) return; const fs = SLOT[0];
@@ -252,12 +281,12 @@ export function createSeason(A) {
   async function iris() { if (sleepy()) return; const s = st(), e = en(); if (s.cp) { A.say(e ? '🌿 You washed your hair in iris water. It smells fresh.' : '🌿 창포물에 머리를 감았어요. 풀 내음이 나요.', 2.2); return; }
     const C = shuf([['0', e ? 'The bundle with a red tie' : '빨간 끈으로 묶은 다발'], ['1', e ? 'The bundle with a blue tie' : '파란 끈으로 묶은 다발']], rnd('cp:' + day()));
     const r = await ask({ who: e ? 'Neighbour' : '이웃', icon: '🌿', text: [e ? 'On Dano we boiled changpo (sweet flag) and washed our hair in the water. Changpo grows by streams; its leaves are long and straight like a sword. Which bundle by the basin is changpo?' : '단오엔 창포를 삶은 물에 머리를 감았어요. 창포는 냇가에서 자라고, 잎이 칼처럼 길고 곧아요. 대야 곁 두 다발 가운데 창포는 어느 쪽일까요?'], choices: C });
-    if (r == null) return; if (+r !== s.cpk) { A.say(e ? '🌿 Those leaves are round. Look for long, straight leaves.' : '🌿 그 다발은 잎이 둥글어요. 길고 곧은 잎을 찾아봐요.', 3); return; }
+    if (r == null) return; if (+r !== s.cpk) { A.say(e ? '🌿 Those leaves are round. Look for long, straight leaves.' : '🌿 그 다발은 잎이 둥글어요. 길고 곧은 잎을 찾아봐요.', 3); oops('cp ' + r); return; }
     s.cp = 1; mark(); A.sfx('pop'); A.say(e ? '🌿 That’s changpo. You wash your hair in the iris water.' : '🌿 그게 창포예요. 창포물에 머리를 감았어요.', 3); A.rec('season', { id: 'dano', ev: 'step', s: 'cp' }); checkDone(); hint(); }
   async function cake() { if (sleepy()) return; const s = st(), e = en(); if (s.cake) { A.say(e ? '🟢 You already had a surichwi cake.' : '🟢 수리취떡은 벌써 먹었어요.', 2.2); return; }
     const C = shuf([['ok', e ? 'A cart wheel' : '수레바퀴'], ['star', e ? 'A star' : '별'], ['fish', e ? 'A fish' : '물고기'], ['leaf', e ? 'A leaf' : '나뭇잎']], rnd('cake:' + day()));
     const r = await ask({ who: e ? 'Neighbour' : '이웃', icon: '🟢', text: [e ? 'These green cakes are made with surichwi leaves. Look closely at the table: what pattern is pressed on them?' : '수리취 잎을 넣어 빚은 초록 떡이에요. 상 위 떡을 가까이 봐요. 어떤 무늬가 찍혀 있나요?'], choices: C });
-    if (r !== 'ok') { if (r) A.say(e ? '🟢 Look again: lines spread out from the middle.' : '🟢 다시 봐요. 가운데에서 살이 퍼져 나가요.', 3); return; }
+    if (r !== 'ok') { if (r) { A.say(e ? '🟢 Look again: lines spread out from the middle.' : '🟢 다시 봐요. 가운데에서 살이 퍼져 나가요.', 3); oops('cake ' + r); } return; }
     s.cake = 1; mark(); A.sfx('pop'); A.say(e ? '🟢 A cart wheel! Dano is also called Surinal, and the cakes carry a wheel pattern.' : '🟢 수레바퀴예요! 단오를 수릿날이라고도 해서 수레바퀴 무늬를 찍은 수리취떡을 먹었어요.', 3.6); A.rec('season', { id: 'dano', ev: 'step', s: 'cake' }); checkDone(); hint(); }
   async function cheer() { if (sleepy()) return; const s = st(), e = en(), P = site(); if (!P) return; const [cx, cz] = P.Q(3.0, -3.0), me = A.me();
     if (Math.hypot(me.x - cx, me.z - cz) < 3.4) { A.say(e ? '📣 Only the wrestlers go on the sand. Watch from outside the straw ring.' : '📣 모래판 안은 선수만 들어가요. 짚 띠 밖에서 봐요.', 3); return; }
@@ -270,17 +299,17 @@ export function createSeason(A) {
   function swing() { if (sleepy()) return; const e = en(); A.say(e ? '🎢 On Dano people rode tall swings and saw who could go highest. Ropes hang from a beam between two tall posts.' : '🎢 단오엔 높은 그네를 뛰며 누가 더 높이 오르나 겨뤘어요. 큰 기둥 둘 사이 가로대에 줄을 매어 달아요.', 4); st().sw = 1; mark(); }
 
   /* 추석 — 송편(이웃마다 소 고르기) · 성묘길 챙기기(산불·벌) · 강강술래 */
-  const orders = () => { const R = rnd('sp:' + day()); return shuf(WANT, R).slice(0, 3); };
-  async function songp() { if (sleepy()) return; const s = st(), e = en(), n = s.spn | 0, O = orders(); if (n >= 3) { A.say(e ? '🌕 You made songpyeon for all three neighbours.' : '🌕 세 이웃의 송편을 다 빚었어요.', 2.2); return; }
+  const orders = () => { const R = rnd('sp:' + day()); return shuf(WANT, R).slice(0, spNeed()); };   /* AFTER-1 둘째 해 = 이웃 넷 */
+  async function songp() { if (sleepy()) return; const s = st(), e = en(), n = s.spn | 0, O = orders(); if (n >= spNeed()) { A.say(e ? '🌕 You made songpyeon for every neighbour.' : '🌕 이웃들의 송편을 다 빚었어요.', 2.2); return; }
     const q = O[n], C = shuf(keys(FILL).map(k => [k, L(FILL[k])]), rnd('spc:' + day() + ':' + n)), slot = SLOT[n] != null ? SLOT[n] : -1;
     sayN(slot, L(q.t)); const r = await ask({ who: e ? 'Neighbour at the table' : '송편 상 이웃', icon: '🌕', text: [L(q.t), e ? 'Look at the three filling bowls. Which filling will you put in?' : '소 그릇 셋을 봐요. 어떤 소를 넣어 빚을까요?'], choices: C });
-    if (r == null) return; if (!q.ok.includes(r)) { await ask({ who: e ? 'Neighbour at the table' : '송편 상 이웃', icon: '🌕', text: [L(q.why) + (e ? ' Try another one.' : ' 다른 소로 다시 빚어 볼래?')] }); log('sp wrong ' + r); return; }
-    s.spn = n + 1; mark(); A.sfx('pop'); sayN(slot, e ? 'Thank you! It looks like a half moon.' : '고마워! 반달처럼 예쁘게 빚었네.'); if (VIS.yard) { const i = n; piece(VIS.yard, -3.4 + (i - 1) * 0.25, 0.85, p => { p('s', 0, 0.5, 0, 0.06, 0.7, 0, [0xf6f4ee, 0x9fd06a, 0xf2a7b8][i]); }); }   /* 빚은 송편이 상에 하나씩 */
+    if (r == null) return; if (!q.ok.includes(r)) { await ask({ who: e ? 'Neighbour at the table' : '송편 상 이웃', icon: '🌕', text: [L(q.why) + (e ? ' Try another one.' : ' 다른 소로 다시 빚어 볼래?')] }); oops('sp wrong ' + r); return; }
+    s.spn = n + 1; mark(); A.sfx('pop'); sayN(slot, e ? 'Thank you! It looks like a half moon.' : '고마워! 반달처럼 예쁘게 빚었네.'); if (VIS.yard) { const i = n; piece(VIS.yard, -3.4 + (i - 1) * 0.25, 0.85, p => { p('s', 0, 0.5, 0, 0.06, 0.7, 0, [0xf6f4ee, 0x9fd06a, 0xf2a7b8, 0xc98a4a][i % 4]); }); }   /* 빚은 송편이 상에 하나씩 */
     A.rec('season', { id: 'chu', ev: 'step', s: 'sp' }); checkDone(); hint(); }
   async function trail() { if (sleepy()) return; const s = st(), e = en(), pk = s.pk || (s.pk = []); if (pk.length >= 2) { A.say(e ? '🌲 The family is ready for the hill path.' : '🌲 성묘 가는 가족은 챙길 것을 다 챙겼어요.', 2.2); return; }
     const C = shuf(PACK.filter(q => !pk.includes(q[0])).map(q => [q[0], L(q[1])]), rnd('pk:' + day() + ':' + pk.length));
     const r = await ask({ who: e ? 'Family going to the graves' : '성묘 가는 이웃', icon: '🌲', text: [e ? 'We’re walking up the hill to greet our ancestors’ graves. The grass is dry in autumn. What should we take? Pick one.' : '조상 산소에 인사하러 산길을 올라가요. 가을 산은 풀이 말라 있어요. 무엇을 챙겨 갈까요? 하나 골라 줘요.'], choices: C });
-    const q = PACK.find(x => x[0] === r); if (!q) return; A.say((q[2] ? '🌲 ' : '🧯 ') + L(q[3]), 3.4); if (!q[2]) { log('pk wrong ' + r); return; }
+    const q = PACK.find(x => x[0] === r); if (!q) return; A.say((q[2] ? '🌲 ' : '🧯 ') + L(q[3]), 3.4); if (!q[2]) { oops('pk wrong ' + r); return; }
     pk.push(r); mark(); A.sfx('pop'); A.rec('season', { id: 'chu', ev: 'step', s: 'pk' }); if (pk.length >= 2) A.banner('🌲 ' + (e ? 'Ready for the hill path. No sparks in dry hills.' : '성묘길 준비 끝. 마른 산에선 불씨 하나도 조심해요.'), 3.6); checkDone(); hint(); }
   function ggr() { const s = st(), e = en(); if (!moonUp()) return; A.say(e ? '🌕 Under the full moon, neighbours hold hands in a big circle and go round, singing “ganggang sullae”.' : '🌕 둥근 보름달 아래 이웃들이 손을 잡고 둥글게 돌며 「강강술래」를 불러요.', 4); A.sfx('pop'); s.ggr = 1; mark(); checkDone(); }
 
@@ -292,13 +321,13 @@ export function createSeason(A) {
       + '<div style="display:flex;flex-direction:column;gap:6px">' + ord.filter(i => i >= n).map(i => '<button class="sub" data-k="' + i + '" style="min-height:44px;text-align:left">' + esc(L(KIMS[i][0])) + '</button>').join('') + '</div>'
       + '<div class="sm" data-why style="margin-top:6px;font-weight:800"></div><div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>';
     const W = A.openP(h, false, 'season'); if (!W) return; W.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') { A.closeP(); return; } if (b.dataset.k != null) { const r = pickKim(+b.dataset.k); if (r.ok) { if (r.all) { W.querySelectorAll('[data-k]').forEach(q => { q.disabled = true; }); setTimeout(() => { if (!dead && W.isConnected) A.closeP(); }, 1400); } else { A.closeP(); kimOpen(); return; } }   /* RWFIX-1(코덱스 C E7·E8): 다 됐으면 단추를 막음(두 번 누름 예외) · 1.4초 뒤엔 이 창이 아직 떠 있을 때만 닫음(다른 창을 닫던 것) */ const w9 = W.querySelector('[data-why]'); if (w9) w9.textContent = r.t; } }; return W; }
-  function pickKim(k) { const s = st(), e = en(), n = s.ko | 0; if (n >= KIMS.length) return { ok: false, t: '' }; if (k !== n) { log('kim wrong ' + k + ' at ' + n); return { ok: false, t: L(KIMS[n][1]) }; }
+  function pickKim(k) { const s = st(), e = en(), n = s.ko | 0; if (n >= KIMS.length) return { ok: false, t: '' }; if (k !== n) { oops('kim wrong ' + k + ' at ' + n); return { ok: false, t: L(KIMS[n][1]) }; }
     s.ko = n + 1; mark(); A.sfx('ding'); if (s.ko < 5) return { ok: true, t: '' };
     s.carry = 3; mark(); A.rec('season', { id: 'kim', ev: 'step', s: 'order' }); A.banner('🥬 ' + (e ? 'The kimchi is done. Take one tub each to three homes that could not make any.' : '김치가 다 됐어요. 김장을 못 한 세 집에 한 통씩 전해요.'), 4.5); hint(); return { ok: true, all: true, t: e ? 'All done!' : '다 됐어요!' }; }
   async function give(i) { if (sleepy()) return; const s = st(), e = en(), dv = s.dv || (s.dv = []), slot = houseSlot(i);
     if (dv.includes(i)) { A.say(e ? '🥬 You already brought kimchi here.' : '🥬 이 집엔 벌써 김치를 전했어요.', 2.2); return; }
     if (!(s.carry > 0)) { A.say(e ? '🥬 First help with the gimjang in the yard.' : '🥬 먼저 김장 마당에서 김장을 거들어요.', 2.6); const p = toYard(); if (p) A.route(p); return; }
-    if (i === s.sp) { s.spNo = 1; mark(); sayN(slot, e ? 'We made ours yesterday. See the tubs by the door? Take it to a home that needs it.' : '우리 집은 어제 담갔단다. 문 옆 김치통 보이지? 못 한 집에 갖다주렴.'); await ask({ who: e ? 'Neighbour' : '이웃', icon: '🥬', text: [e ? 'Thank you, but we already made kimchi yesterday. Look at the red basin and tubs by our door. Please take it to a home that couldn’t make any.' : '고마워. 그런데 우리 집은 어제 김장했단다. 문 옆 빨간 대야랑 김치통 보이지? 김장을 못 한 집에 갖다주렴.'] }); log('give decoy'); return; }
+    if (i === s.sp) { s.spNo = 1; mark(); sayN(slot, e ? 'We made ours yesterday. See the tubs by the door? Take it to a home that needs it.' : '우리 집은 어제 담갔단다. 문 옆 김치통 보이지? 못 한 집에 갖다주렴.'); await ask({ who: e ? 'Neighbour' : '이웃', icon: '🥬', text: [e ? 'Thank you, but we already made kimchi yesterday. Look at the red basin and tubs by our door. Please take it to a home that couldn’t make any.' : '고마워. 그런데 우리 집은 어제 김장했단다. 문 옆 빨간 대야랑 김치통 보이지? 김장을 못 한 집에 갖다주렴.'] }); if (!s.spNo2) { s.spNo2 = 1; oops('give decoy'); } return; }
     s.carry--; dv.push(i); mark(); addTub(i); A.sfx('pop'); const old = i === (s.sp + 1) % 4;
     sayN(slot, old ? (e ? 'My back hurt this year, so I couldn’t make any. Thank you, dear.' : '올해는 허리가 아파 못 담갔는데, 고맙구나.') : (e ? 'We were too busy this year. Thank you!' : '올해는 바빠서 못 담갔어요. 고마워요!'));
     A.rec('season', { id: 'kim', ev: 'step', s: 'give' }); checkDone(); if (!st().done) hint(); KEY = ''; }
@@ -313,16 +342,17 @@ export function createSeason(A) {
   // ───────── 안내판·수첩 창 ─────────
   function openBoard() { const id = cur(), s = st(), e = en(); if (!id) return null; const E9 = EV[id];
     const did = didOf(id, s);
-    const rows = E9.todo.map((t, i) => '<div style="border:2px solid #2b2420;border-left:8px solid ' + (did[i] ? '#2f8a4e' : '#c8a060') + ';border-radius:10px;padding:6px 9px;margin:6px 0;background:#fffdf6;font-size:15px;font-weight:800">' + esc(L(t)) + '<div style="font-size:13px;opacity:.78;font-weight:700">' + esc(did[i] ? (e ? 'Done' : '했어요') : (e ? 'Not yet' : '아직')) + '</div></div>').join('');
-    const h = '<h3>' + E9.ic + ' ' + esc(L(E9.t)) + '</h3><div class="sm">' + esc(L(E9.fact)) + '</div>' + rows + '<div class="row"><button class="sub" data-a="go">🧭 ' + (e ? 'Show the way' : '길 안내') + '</button><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>';
+    const y9 = yr(), rows = todoOf(id).map((t, i) => '<div style="border:2px solid #2b2420;border-left:8px solid ' + (did[i] ? '#2f8a4e' : '#c8a060') + ';border-radius:10px;padding:6px 9px;margin:6px 0;background:#fffdf6;font-size:15px;font-weight:800">' + esc(L(t)) + '<div style="font-size:13px;opacity:.78;font-weight:700">' + esc(did[i] ? (e ? 'Done' : '했어요') : (e ? 'Not yet' : '아직')) + '</div></div>').join('');
+    const y2 = y9 >= 2 ? '<div class="sm ssn-y2" style="border:2px solid #2b2420;border-left:8px solid #7d5bb8;border-radius:10px;padding:6px 9px;margin:6px 0;background:#f4f0fb"><b>' + esc(lastLine(id)) + '</b><div>' + esc(goalLine(id)) + '</div>' + (Y2[id] ? '<div style="opacity:.85">' + esc(L(Y2[id].fact)) + '</div>' : '') + '</div>' : '';   /* AFTER-1 두 번째 해 */
+    const h = '<h3>' + E9.ic + ' ' + esc(L(E9.t)) + (y9 >= 2 ? ' — ' + esc(yrWord(y9, e)) : '') + '</h3><div class="sm">' + esc(L(E9.fact)) + '</div>' + y2 + rows + '<div class="row"><button class="sub" data-a="go">🧭 ' + (e ? 'Show the way' : '길 안내') + '</button><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>';
     const W = A.openP(h, false, 'season'); if (!W) return null; W.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') A.closeP(); if (b.dataset.a === 'go') { A.closeP(); const to = hint() || toYard(); if (to) { A.chip('twn-ssn', null); A.route(to); } } }; log('board'); return W; }
 
   // ───────── 1초 칸 ─────────
-  function begin() { const s = S(), d = day(); if (s.d === d) return; dropAll(); const id = rawOn(d); s.d = d; s.st = {}; s.id = id; s.ann = -1; s.sk = String(A.season(d)); mark(); metD = -1; log('day ' + d + ' → ' + (id || '-'));
+  function begin() { const s = S(), d = day(); if (s.d === d) return; dropAll(); const id = rawOn(d); s.d = d; s.st = {}; s.id = id; s.yr = id ? yrOf(id, d) : 0; s.ann = -1; s.sk = String(A.season(d)); mark(); metD = -1; log('day ' + d + ' → ' + (id || '-'));
     if (id) { buildHouses(id); buildYard(id); } }
   function sec() { if (dead || !A.on()) { if (VIS.yard) dropAll(); return; } const s = S(), d = day();
     if (s.d !== d) begin();
-    { const sk = String(A.season(d)); if (s.sk == null) { s.sk = sk; mark(); } else if (s.sk !== sk) { s.sk = sk; const id2 = rawOn(d); if (id2 !== s.id) { dropAll(); A.chip('twn-ssn', null); chipT = 0; s.id = id2; s.st = {}; s.ann = -1; metD = -1; log('cal ' + sk + ' → ' + (id2 || '-')); if (id2) { buildHouses(id2); buildYard(id2); } } mark(); } }   /* RWFIX-1(코덱스 C E17): 달력·고정 계절을 바꾸면 그날 행사를 다시 셈(날짜만 보던 캐시) · 같은 행사면 한 것은 그대로 */
+    { const sk = String(A.season(d)); if (s.sk == null) { s.sk = sk; mark(); } else if (s.sk !== sk) { s.sk = sk; const id2 = rawOn(d); if (id2 !== s.id) { dropAll(); A.chip('twn-ssn', null); chipT = 0; s.id = id2; s.yr = id2 ? yrOf(id2, d) : 0; s.st = {}; s.ann = -1; metD = -1; log('cal ' + sk + ' → ' + (id2 || '-')); if (id2) { buildHouses(id2); buildYard(id2); } } mark(); } }   /* RWFIX-1(코덱스 C E17): 달력·고정 계절을 바꾸면 그날 행사를 다시 셈(날짜만 보던 캐시) · 같은 행사면 한 것은 그대로 */
     const id = cur();
     if (id && A.storm && A.storm() && min() < 10 * 60) { const bd = [d - 1, d].find(b => baseId(b) === id && target(id, b) === d); if (bd != null && !s.mv[id + ':' + bd]) { s.mv[id + ':' + bd] = 1; mark(); const t9 = '🌀 ' + (en() ? 'A typhoon is here, so ' + L(EV[id].t) + ' moves to tomorrow.' : '태풍이 와서 ' + L(EV[id].t) + jo(L(EV[id].t), '을', '를') + ' 내일로 미뤄요.'); if (!(A.stormNote && A.stormNote(t9))) A.say(t9, 4, 1); s.d = -1; begin(); return; } }   /* TYPH-2 = 태풍 날 창 안 한 줄(따로 알림 X) */
     if (!id) return; if (!VIS.yard) { buildHouses(id); buildYard(id); }
@@ -336,11 +366,15 @@ export function createSeason(A) {
     if (id) { const E9 = EV[id]; return [{ k: 'season', t: [E9.ic + ' 오늘은 ' + E9.t[0] + jo(E9.t[0], '이에요', '예요') + '. ' + E9.todo[0][0].split(' — ')[0] + ', ' + E9.todo[1][0].split(' — ')[0] + ' 같이 해요', E9.ic + ' Today is ' + E9.t[1] + ': ' + E9.todo[0][1].split(' — ')[0].toLowerCase() + ' and more'], at }]; }
     if (nx) { const E9 = EV[nx]; return [{ k: 'season', t: [E9.ic + ' 내일은 ' + E9.t[0] + jo(E9.t[0], '이에요', '예요') + '. 이웃들이 ' + (nx === 'kim' ? '배추를 다듬고' : nx === 'chu' ? '햅쌀을 빻고' : nx === 'dano' ? '그네 줄을 매고' : nx === 'bor' ? '달집을 쌓고' : '한복을 꺼내고') + ' 있어요', E9.ic + ' Tomorrow is ' + E9.t[1] + '. The neighbours are getting ready'], at: null }]; }
     return []; }
-  const calLine = () => { const d = day(), id = idOn(d); if (id) return EV[id].ic + ' ' + (en() ? 'Today is ' + L(EV[id].t) : '오늘은 ' + L(EV[id].t)); for (let i = 1; i <= 6; i++) { const q = idOn(d + i); if (q) return EV[q].ic + ' ' + (en() ? L(EV[q].t) + ' in ' + nightsW(i, 1) : L(EV[q].t) + '까지 ' + nightsW(i)); } return ''; };
+  const yrTag = (id, d) => { const y = id === cur() && d === day() ? yr() : yrOf(id, d); return y >= 2 ? (en() ? ' (' + yrWord(y, 1) + ')' : '(' + yrWord(y) + ')') : ''; };   /* AFTER-1 둘째 해부터 달력 줄 꼬리 */
+  const calLine = () => { const d = day(), id = idOn(d); if (id) return EV[id].ic + ' ' + (en() ? 'Today is ' + L(EV[id].t) + yrTag(id, d) : '오늘은 ' + L(EV[id].t) + yrTag(id, d)); for (let i = 1; i <= 6; i++) { const q = idOn(d + i); if (q) return EV[q].ic + ' ' + (en() ? L(EV[q].t) + yrTag(q, d + i) + ' in ' + nightsW(i, 1) : L(EV[q].t) + yrTag(q, d + i) + '까지 ' + nightsW(i)); } return ''; };
+  /* AFTER-1 엔딩 뒤 상자·계절 창(town_after.js): 다음 행사(오늘 포함 · n일 안) — { id, i 남은 날, yr, ic, t, last 지난해 한 줄, goal, fact } */
+  function nextEv(maxD) { const d = day(); for (let i = 0; i <= (maxD || 35); i++) { const q = idOn(d + i); if (!q) continue; const y = i === 0 && q === cur() ? yr() : yrOf(q, d + i), E9 = EV[q];
+      return { id: q, i, yr: y, ic: E9.ic, t: L(E9.t), today: i === 0, done: i === 0 && q === cur() && !!st().done, last: y >= 2 ? lastLine(q, d + i) : '', goal: y >= 2 ? goalLine(q) : '', fact: y >= 2 && Y2[q] ? L(Y2[q].fact) : '' }; } return null; }
 
   function dispose() { dead = true; clearTimeout(metT); clearTimeout(boutT); dropAll(); A.chip('twn-ssn', null); }
   function rebuild() { SITE = null; const id = cur(); dropAll(); if (id) { buildHouses(id); buildYard(id); } }
-  return { sec, news, calLine, dispose, rebuild, open: () => openBoard(), idOn, has: () => true,
-    info: () => { const s = S(), P = site(); return { day: day(), id: cur(), st: JSON.parse(JSON.stringify(s.st)), mv: { ...s.mv }, past: s.past.slice(), site: P ? [+P.x.toFixed(1), +P.z.toFixed(1), +P.ry.toFixed(2)] : null, vis: keys(VIS), hot: { ...HOTL }, slot: SLOT.slice(), houses: HS.map(h => [+h.hot[0].toFixed(1), +h.hot[1].toFixed(1)]), moon: MOON ? [+MOON.position.x.toFixed(0), +MOON.position.y.toFixed(0), +MOON.position.z.toFixed(0)] : null, flame: !!(FLAME && FLAME.visible), parts: keys(VIS).reduce((n, k) => n + VIS[k].g.length, 0) }; },
+  return { sec, news, calLine, dispose, rebuild, open: () => openBoard(), idOn, has: () => true, nextEv, yearOf: (id, d) => yrOf(id, d == null ? day() : d),
+    info: () => { const s = S(), P = site(); return { day: day(), id: cur(), yr: yr(), wr: st().wr | 0, st: JSON.parse(JSON.stringify(s.st)), mv: { ...s.mv }, past: s.past.slice(), site: P ? [+P.x.toFixed(1), +P.z.toFixed(1), +P.ry.toFixed(2)] : null, vis: keys(VIS), hot: { ...HOTL }, slot: SLOT.slice(), houses: HS.map(h => [+h.hot[0].toFixed(1), +h.hot[1].toFixed(1)]), moon: MOON ? [+MOON.position.x.toFixed(0), +MOON.position.y.toFixed(0), +MOON.position.z.toFixed(0)] : null, flame: !!(FLAME && FLAME.visible), parts: keys(VIS).reduce((n, k) => n + VIS[k].g.length, 0) }; },
     dbg: { q: (...a) => { TQ.push(...a); }, use: id => (HOTF[id] && HOT[id] ? HOTF[id]() : null), dir: d => answerDir(d), orders: () => orders().map(q => q.ok), tq: () => TQ.slice(), kim: k => pickKim(k), at: (lx, lz) => { const P = site(); return P ? P.Q(lx, lz) : null; }, house: i => (HS[i] ? { at: HS[i].at.slice(), hot: HS[i].hot.slice(), sp: st().sp } : null), log: () => DBG.slice(), base: d => baseId(d), dayOf: (id, f) => dayOf(id, f == null ? day() : f) } };
 }

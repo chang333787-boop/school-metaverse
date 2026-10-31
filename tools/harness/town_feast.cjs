@@ -82,10 +82,10 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     const fd0 = I.fd; await setDay(fd0 + 1); await ev(() => { SM_TOWN.game().S.min = 8 * 60; }); await sec(2); I = await F();
     const P0 = I.past[I.past.length - 1] || {}; console.log('  지난 잔치: ' + JSON.stringify(P0) + ' · 다음 ' + I.fd + ' ' + I.th);
     ok(I.n === 1 && I.past.length === 1 && P0.st && P0.st.food === 3 && P0.st.safe === 0 && P0.met === 1 && P0.show === 1 && P0.ate === 1, '지난 잔치 기록(준비한 것 · 만남 · 공연 · 나눔)');
-    ok(I.fd === fd0 + 14 && I.prep && Object.values(I.lv).every(v => v === 0), '다음 잔치 = +14일 · 준비 처음부터');
+    ok(I.fd === fd0 + 14 && I.prep && I.lv.food === 2 && I.lv.deco === 2 && I.lv.show === 2 && I.lv.safe === 0 && I.lv.guest === ((P0.st || {}).guest >= 2 ? 2 : 0) && !!I.gu, '다음 잔치 = +14일 · 두 단계 넘게 세운 갈래만 한 단계에서 시작(AFTER-1) · 손님 ' + I.gu + ' ' + JSON.stringify(I.lv));
     const seaN = await ev(d => SM_TOWN.game().seasonAt(d), I.fd), thW = { spring: 'flower', summer: 'homi', now: 'homi', autumn: 'harvest', winter: 'dongji' }[seaN];
     ok(I.th === thW, '다음 잔치 주제 = 그 날 계절(' + seaN + ') → ' + I.th);
-    ok(I.vis.includes('plaque') && !I.vis.some(id => /^(food|deco|show|guest|safe):/.test(id)), '잔치 물건 치움 · 지난 잔치 판이 남음 ' + JSON.stringify(I.vis));
+    ok(I.vis.includes('plaque') && I.vis.includes('mem') && ['food:0', 'deco:0', 'show:0'].every(id => I.vis.includes(id)) && !I.vis.some(id => /^(food|deco|show|guest|safe):[12]/.test(id)) && !I.vis.includes('safe:0'), '잔치 물건 = 첫 물건만 남고 치움(AFTER-1) · 지난 잔치 판 · 기념 나무 ' + JSON.stringify(I.vis));
     // ⑦ 실내 부탁(ent) → 갈래 · 다섯 갈래가 다 서면 '준비 끝'(코덱스 10-27)
     { const l0 = (await F()).lv; await REC('ent', { k: 'pharmacy', mis: 0 }); await REC('ent', { k: 'bibim', mis: 1 }); await REC('ent', { k: 'shoes', mis: 0 }); const l1 = (await F()).lv;
       ok(l1.safe === l0.safe + 1 && l1.food === l0.food + 1 && l1.guest === l0.guest && l1.deco === l0.deco, '실내 부탁: 약국 → 안전 · 식당 → 음식 · 신발 가게 → 안 셈 ' + JSON.stringify(l1)); }
