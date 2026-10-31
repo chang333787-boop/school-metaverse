@@ -93,14 +93,14 @@ import { BOTS as B11 } from './ch11_bots.js?v=16';
 window.DRG_FLYBOT = flyBot; window.DRG_BOATBOT = boatBot;
 export function storyBot(level = 'normal') {
   const lag = Math.round(RT[level] * 60);
-  const hist = []; let K = null, mem = {}, lastId = '', T = 0;
+  const hist = []; let K = null, mem = {}, lastId = '', lastFails = 0, T = 0;
   return (n, B) => {
     if (!K) K = body(B);
     const now = window.DRG.sense(); if (!now) return;
     hist.push(now); if (hist.length > lag + 1) hist.shift();
     const s = hist[0];                                     // 반응 늦음만큼 지난 감각
     const dt = 1 / 60; T += dt; K.tick(dt);
-    if (now.id !== lastId) { K.releaseAll(); mem = {}; lastId = now.id; hist.length = 0; hist.push(now); return; }
+    if (now.id !== lastId || now.fails !== lastFails) { K.releaseAll(); mem = {}; lastId = now.id; lastFails = now.fails; K.path = null; hist.length = 0; hist.push(now); return; }   // 다시 하기 뒤에도 기억을 비움(팀 G)
     if (s.busy || !s.me || !now.me) return;
     K.cur = now;
     const f = BOTS[s.id]; if (f) f(s, K, mem, B, level, now);
