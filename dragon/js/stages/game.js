@@ -17,6 +17,7 @@ import { showTitle, diffOf } from '../ui/title.js?v=15';
 import { createRunner } from '../story/runner.js?v=15';
 import { writeSlot, flushSlot } from '../story/save.js?v=15';
 import { holdItem } from '../story/fx.js?v=15';
+import { createRng } from '../core/rng.js?v=15';
 import { showEnding } from '../ui/ending.js?v=15';
 
 export const PLAYABLE = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];   // 0 = 오프닝 · 11 = 종장
@@ -38,7 +39,9 @@ export async function buildGame(scene, camera, rng, opt = {}) {
   G.loadPlace = async (name, time, variant) => {
     let mod; try { mod = await import(`../places/${name}.js?v=15`); } catch (e) { mod = await import('../places/_stub.js?v=15'); }
     G.place = null; G.cast.length = 0; G.castBy = {};             // 장 안에서 이어지는 배우(keep)는 장소가 바뀌면 함께 비움
-    const place = await host.load(name, (ctx) => mod.buildPlace(Object.assign(ctx, { env, rng, opt: { time, variant, stub: name } })));
+    let hs = 7; for (const ch of name) hs = (hs * 31 + ch.charCodeAt(0)) >>> 0;   // 장소마다 제 씨앗(앞에서 난수를 얼마나 썼든 같은 마을 · 팀 A 지적)
+    const prng = createRng(hs);
+    const place = await host.load(name, (ctx) => mod.buildPlace(Object.assign(ctx, { env, rng: prng, opt: { time, variant, stub: name } })));
     G.place = place; G.freshPlace = true; G.collide = createCollide(place.blockers || [], place.walls || []);
     P.W = createWalker({ height: place.height, collide: G.collide, bound: place.bound, x: 0, z: 0 });
     P.C = createFollowCam(camera, place.height, { collide: G.collide, ceil: place.ceil });
@@ -109,10 +112,10 @@ export async function buildGame(scene, camera, rng, opt = {}) {
 
   /* 장 진행 */
   const R = G.runner = createRunner(G);
-  G.onStepDone = (ch, idx) => { writeSlot(G.slot, { grade: G.grade, diff: G.diff, ch: ch.id, idx: idx + 1, book: G.book.state(), inv: G.inv, records: G.records }, true); };
+  G.onStepDone = (ch, idx) => { writeSlot(G.slot, { grade: G.grade, diff: G.diff, ch: ch.id, idx: idx + 1, book: G.book.state(), inv: G.inv, records: G.records, flags: G.flags }, true); };
   G.onChapterDone = (ch) => {
     const nx = PLAYABLE[PLAYABLE.indexOf(ch.id) + 1];
-    writeSlot(G.slot, { grade: G.grade, diff: G.diff, ch: nx || ch.id, idx: 0, book: G.book.state(), inv: G.inv, records: G.records }, true);
+    writeSlot(G.slot, { grade: G.grade, diff: G.diff, ch: nx ?? ch.id, idx: 0, book: G.book.state(), inv: G.inv, records: G.records, flags: G.flags }, true);
     G.chDone = (G.chDone || 0) + 1;
     if (nx && Q.get('chain') !== '0') setTimeout(() => startCh(nx, 0), 1800);
   };
@@ -161,7 +164,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     ready = Promise.resolve();
     showTitle({ playable: PLAYABLE, Q }).then((r) => {
       G.grade = r.grade; G.diff = diffOf(r.grade, Q); G.slot = r.slot;
-      if (r.save) { G.book.load(r.save.book); Object.assign(G.inv, r.save.inv || {}); }
+      if (r.save) { G.book.load(r.save.book); Object.assign(G.inv, r.save.inv || {}); Object.assign(G.flags, r.save.flags || {}); Object.assign(G.records, r.save.records || {}); }
       startCh(r.ch, r.idx);
     });
   }
