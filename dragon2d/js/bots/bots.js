@@ -136,6 +136,7 @@ export const BOTS = {
   },
   '4-1': (H) => {
     const x = H.now.x || {}, L = H.late.x || {};
+    if (x.row) { if (x.row.up && x.row.ph > 0.04 && x.row.ph < x.row.win - 0.04) H.tap('use', 0.6); return; }
     if (x.ph === 'idle') H.tap('use', 0.8);
     else if (x.ph === 'dip' && L.ph === 'dip') H.tap('use', 0.5);
     else if (x.ph === 'fight' && L.pull) H.hold(L.pull > 0 ? 'left' : 'right');

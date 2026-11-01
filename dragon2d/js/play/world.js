@@ -85,10 +85,10 @@ export const PLACES = {
     return { M, P, A: { anvil: [9, 7.3], door: [9, 10] }, bounds: [0, 0, 18, 12] };
   },
   dock() {
-    const M = grid(40, 32, 'sea'), P = [];
+    const M = grid(40, 44, 'sea'), P = [];
     M.rect(0, 0, 40, 9, 'grass'); M.rect(0, 9, 40, 12, 'sand'); M.rect(18, 12, 22, 27, 'plank'); M.rect(8, 12, 32, 14, 'plank');
-    P.push(['house', 10, 6, { w: 6, d: 4 }], ['barrel', 23, 13, {}], ['crate', 9, 13.2, {}], ['fish_basket', 21.4, 25.6, { n: 0 }], ['ship', 30, 22, { w: 10, d: 3 }]);
-    return { M, P, A: { pierEnd: [20, 26], shore: [20, 10] }, bounds: [0, 0, 40, 32] };
+    P.push(['house', 10, 6, { w: 6, d: 4 }], ['barrel', 23, 13, {}], ['crate', 9, 13.2, {}], ['fish_basket', 21.4, 25.6, { n: 0 }], ['ship', 30, 22, { w: 10, d: 3 }], ['seastack', 14, 38, { r: 1.6 }], ['seastack', 27, 39, { r: 1.9 }]);
+    return { M, P, A: { pierEnd: [20, 26], shore: [20, 10], fishing: [20, 35] }, bounds: [0, 0, 40, 44] };
   },
   nest() {
     const M = grid(50, 30, 'rockfloor'), P = [];

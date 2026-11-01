@@ -11,9 +11,26 @@ export const chapter = {
   end: '투슬리스 — 이 없는 줄 알았는데!',
   steps: [
     /* ① 고기잡이 — F 던지기 · 찌가 쏙 들어갈 때 F · 물고기가 끄는 반대쪽(←→) 버티기 */
-    { id: '4-1', verb: 'fish', place: 'dock', time: 'day', goal: '생선을 잡아라', at: [20, 25.6], face: [0, 1], limit: 90,
-      hints: ['F로 던지고, 찌가 쏙 들어가면 바로 F', '물고기가 오른쪽으로 끌면 ←, 왼쪽이면 →'],
+    { id: '4-1', verb: 'fish', place: 'dock', time: 'day', goal: '돌기둥까지 저어 가 생선을 잡아라', at: [20, 27.4], face: [0, 1], limit: 110,
+      hints: ['노가 올라가 반짝일 때 F — 배가 앞으로', '찌가 쏙 들어가면 F · 물고기가 끄는 반대쪽 ←→'],
       *run(G) {
+        /* 고기잡이배(#19 배 타기) — 노가 올라간 박자에 F(마구 누르면 노가 엉킴) → 돌기둥 앞 낚시 자리까지 */
+        const boat = G.W.prop('boat', 20, 28.2, { nobox: 1 }), P = G.P;
+        P.lock = true; P.sit = 1; P.dir = 'down';
+        say(G, 'hiccup', '고기잡이배를 빌렸어. 돌기둥 쪽에 물고기가 많대.', { icons: ['ship'] });
+        let ph0 = 0, push = 0; const per = G.diff === 'easy' ? 1.4 : 1.1, win = G.diff === 'easy' ? 0.42 : 0.3;
+        while (P.y < G.W.A.fishing[1]) {
+          const dt = yield; ph0 = (ph0 + dt / per) % 1;
+          const up = ph0 < win; G.flags.row = { up, ph: ph0, win };
+          G.marks.push({ k: 'text', x: P.x + 1.6, y: P.y - 1.6, t: up ? '노 ↑' : '노', s: up ? 22 : 16, c: up ? '#a83e1e' : '#2b2118' });
+          if (up) G.marks.push({ k: 'ring', x: P.x, y: P.y + 0.6, r: 1.3, c: '#e6c464' });
+          goal(G, G.W.A.fishing[0], G.W.A.fishing[1], { h: 1.6 });
+          if (G.I.pressed.use) { if (up && !(G.P.mashT > 0)) { push = 0.55; sfx(G, 'splash', P.x); } else { puff('drop', P.x + 0.9, P.y + 0.4, 0, 0, 0, 1, 0.3, 0.1); G.marks.push({ k: 'text', x: P.x - 1.4, y: P.y - 1.4, t: '엉켰어!', s: 16 }); } }
+          if (push > 0) { push -= dt; P.y += 2.6 * dt; }
+          boat.y = P.y + 0.8; boat.x = P.x;
+        }
+        goal(G, null); G.flags.row = null;
+        G.hud.banner('돌기둥 앞 — 여기서 낚시!', 'ship', 2);
         const need = G.diff === 'easy' ? 2 : 3, kinds = ['cod', 'eel', 'salmon'];
         let ph = 'idle', t = 0, bite = 0, caught = 0, pull = 0, pullT = 0, bad = 0, fightT = 0, eel = false;
         const bob = { x: 20, y: 30, dip: 0 }, basket = G.W.findProp('fish_basket', 21.4, 25.6);
@@ -27,7 +44,7 @@ export const chapter = {
         };
         while (caught < need) {
           const dt = yield; t += dt;
-          G.P.lock = ph !== 'idle'; G.flags.ph = ph; G.flags.pull = pull;
+          G.P.lock = true; G.flags.ph = ph; G.flags.pull = pull;   /* 배 위 = 늘 앉아 있음 */
           if (ph === 'idle') {
             G.fspots.push({ x: G.P.x, y: G.P.y });
             if (G.I.pressed.use) { ph = 'wait'; t = 0; bob.x = G.P.x + (G.rng() - 0.5) * 2; bob.y = G.P.y + 4.6; bite = 1.5 + G.rng() * 2.5; sfx(G, 'splash', bob.x); }
@@ -54,12 +71,12 @@ export const chapter = {
             }
           }
         }
-        G.P.lock = false; G.drawOver = null; G.P.carry = 'fish';
+        G.P.lock = false; G.P.sit = 0; G.drawOver = null; G.P.carry = 'fish';
         say(G, 'hiccup', '이 정도면 됐다. 호수로!');
         yield* wait(1.2);
         return true;
       },
-      sense: (G) => ({ ph: G.flags.ph, pull: G.flags.ph === 'fight' ? G.flags.pull : 0 }) },
+      sense: (G) => ({ row: G.flags.row || null, ph: G.flags.ph, pull: G.flags.ph === 'fight' ? G.flags.pull : 0 }) },
 
     /* ② 코브 — 칼은 투슬리스가 나를 볼 때 F로 내려놓기 · 살금살금 다가가 생선(F) · 이빨이 쏙 = 이름 → 게워 낸 반 토막을 '나를 볼 때' F 꾹 */
     { id: '4-2', verb: 'give', goal: '투슬리스와 친해져라', at: [4, 15], limit: 100, mood: 1,
