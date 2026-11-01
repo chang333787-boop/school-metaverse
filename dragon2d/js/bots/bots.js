@@ -1,136 +1,133 @@
-// 봇 — DRG2.sense()(화면에 보이는 것)만 읽고 키만 누름(상태 쓰기·순간이동 X)
-// 반응 늦음: 쉬움 0.6초 · 보통 0.35초 — '무엇을 할지'(예고·기회)는 늦은 화면(late), '손·눈 움직임'(피하기·겨누기·걷기)은 지금 화면(now)
-// 초당 누름 상한 4번(연타로 깨지 않게) · 클릭형 봇 다섯(가만히 · F 연타 · F 누른 채 · Space 연타 · → 누른 채 F 연타)
-import { BOTS2 } from './bots2.js?v=1';
-const ACTS = ['left', 'right', 'up', 'down', 'run', 'jump', 'use'];
+// 봇(탑뷰) — DRG2.sense()(화면에 보이는 것)만 읽고 키만 누름(상태 쓰기·순간이동 X)
+// 반응 늦음: 쉬움 0.6초 · 보통 0.35초 — '무엇을 할지'(예고·기회)는 늦은 화면(H.late), '손·눈 움직임'(피하기·겨누기·걷기)은 지금 화면(H.now)
+// 누름 상한: 같은 키 0.26초에 한 번(연타로 깨지 않게) · 클릭형 봇 다섯(가만히 · F 연타 · F 누른 채 · Space 연타 · → 누른 채 F 연타)
+// 장 봇 더하기: 이 파일의 BOTS에 '장-차례' 이름으로 (H) => { ... } 를 넣거나, 다른 파일에서 export const BOTS_X = {…} 를 만들어 아래 EXTRA에 이음
+import { BOTS_7 } from './bots7.js?v=1';
+import { BOTS_10 } from './bots10.js?v=1';
+const ACTS = ['left', 'right', 'up', 'down', 'run', 'jump', 'use', 'sneak'];
 
-/* 공용 손 */
+/* ── 공용 손 ─────────────────────────────────────────────────────────── */
 function mkHand(level) {
   const H = { keys: {}, mem: {}, t: 0, level };
   H.hold = (a, v = true) => { if (v) H.keys[a] = true; };
   H.tap = (a, gap = 0.26) => { const m = H.mem; m.tapT = m.tapT || {}; if (H.t - (m.tapT[a] ?? -9) > gap) { m.tapT[a] = H.t; m.tapHold = m.tapHold || {}; m.tapHold[a] = 2; } };
-  H.walk = (x, tol = 0.35, o = {}) => { const me = H.now.me; if (!me) return true; const d = x - me.x; if (Math.abs(d) <= tol) return true; H.hold(d > 0 ? 'right' : 'left'); if (o.run) H.hold('run'); if (o.sneak) H.hold('down'); return false; };
-  H.face = (dir) => { const me = H.now.me; if (me && me.face !== dir && !H.mem.faceT) { H.hold(dir > 0 ? 'right' : 'left'); H.mem.faceT = 1; } else H.mem.faceT = 0; };
-  /* 피하기 — 내 쪽으로 낮게 날아오는 것(드래곤 것)이 0.2초 안에 오면 점프 */
+  /* 걷기 — 8방향 · 막히면(0.5초 안 움직임) 옆으로 0.4초 비킴 · o.run · o.sneak(살금살금 켜고 끄기를 맞춤) */
+  H.walk = (x, y, tol = 0.35, o = {}) => {
+    const me = H.now.me; if (!me) return true;
+    H.sneak(!!o.sneak);
+    const dx = x - me.x, dy = y - me.y;
+    if (Math.abs(dx) <= tol && Math.abs(dy) <= tol) { H.mem.stuckT = 0; return true; }
+    const m = H.mem;
+    if (m.sideT > 0) { m.sideT -= H.dt; H.hold(m.side); return false; }
+    if (m.lastP) { const mv = Math.hypot(me.x - m.lastP[0], me.y - m.lastP[1]); if (mv < 0.01 && !me.hurt) m.stuckT = (m.stuckT || 0) + H.dt; else m.stuckT = 0; }
+    m.lastP = [me.x, me.y];
+    if (m.stuckT > 0.5) { m.stuckT = 0; m.sideT = 0.45; m.side = Math.abs(dx) > Math.abs(dy) ? (H.t % 2 < 1 ? 'up' : 'down') : (H.t % 2 < 1 ? 'left' : 'right'); }
+    if (dx > tol * 0.6) H.hold('right'); else if (dx < -tol * 0.6) H.hold('left');
+    if (dy > tol * 0.6) H.hold('down'); else if (dy < -tol * 0.6) H.hold('up');
+    if (o.run) H.hold('run');
+    return false;
+  };
+  H.sneak = (on) => { const me = H.now.me; if (me && !!me.sneak !== on) H.tap('sneak', 0.4); };
+  /* 바라보기 — 한 걸음(한 프레임)만 그쪽 키 */
+  H.face = (fx, fy) => { const me = H.now.me; if (!me) return true; const ok = (fx === 0 || Math.sign(me.fx) === Math.sign(fx) && Math.abs(me.fx) > 0.5) && (fy === 0 || Math.sign(me.fy) === Math.sign(fy) && Math.abs(me.fy) > 0.5) && (fx !== 0 || Math.abs(me.fx) < 0.5) && (fy !== 0 || Math.abs(me.fy) < 0.5); if (ok) return true; if (!H.mem.faceT || H.t - H.mem.faceT > 0.2) { H.mem.faceT = H.t; if (fx > 0) H.hold('right'); if (fx < 0) H.hold('left'); if (fy > 0) H.hold('down'); if (fy < 0) H.hold('up'); } return false; };
+  /* 피하기 — 붉은 고리(떨어질 자리) 밖으로 · 낮게 날아오는 것이 0.22초 안에 닿으면 점프 */
   H.dodge = (o = {}) => {
-    const me = H.now.me; if (!me || me.air) return false;
+    const me = H.now.me; if (!me) return false;
+    for (const z of H.now.marks || []) { if (z.w) continue; const d = Math.hypot(me.x - z.x, (me.y - z.y) * 1.3); if (d < (z.r || 1.2) + 0.5) { const n = d || 1; H.hold(me.x >= z.x ? 'right' : 'left'); H.hold(me.y >= z.y ? 'down' : 'up'); return true; } }
+    if (me.air) return false;
     for (const s of H.now.shots) {
-      if (s.mine) continue;
-      const dx = s.x - me.x, closing = -Math.sign(dx) * s.vx;
-      if (closing <= 0.5 || s.y > me.y + 1.6) continue;
-      const tt = (Math.abs(dx) - 0.5) / closing;
-      if (tt < (o.lead ?? 0.2) && tt > -0.05) { H.hold('jump'); return true; }
+      if (s.mine || s.z > 1.6) continue;
+      const rx = me.x - s.x, ry = me.y - s.y, d = Math.hypot(rx, ry), closing = (rx * s.vx + ry * s.vy) / (d || 1);
+      if (closing <= 0.5) continue;
+      const miss = Math.abs(rx * s.vy - ry * s.vx) / (Math.hypot(s.vx, s.vy) || 1);
+      if (miss > 1.0) continue;
+      const tt = (d - 0.5) / closing;
+      if (tt < (o.lead ?? 0.22) && tt > -0.05) { H.hold('jump'); return true; }
     }
     return false;
   };
   return H;
 }
+export { mkHand };
 
-/* 던지기 포물선 — 서는 자리 찾기(kit THROW: v 9 · a 1.05 · 손 높이 1.3) */
-export function arcY(dx, v = 9, a = 1.05, h = 1.3, desc = true) {
-  const vx = Math.cos(a) * v, vy = Math.sin(a) * v, t = Math.abs(dx) / vx;
-  return h + vy * t - 4.9 * t * t;
-}
-export function standFor(tx, ty, fromX, o = {}) {
-  let best = null, be = 1e9;
-  for (let d = 1.5; d < 9; d += 0.1) for (const sg of [-1, 1]) {
-    const x = tx - sg * d, y = arcY(d, o.v, o.a);
-    const vyAt = Math.sin(o.a ?? 1.05) * (o.v ?? 9) - 9.8 * d / (Math.cos(o.a ?? 1.05) * (o.v ?? 9));
-    if (o.down && vyAt > 0) continue;
-    const e = Math.abs(y - ty) * 3 + Math.abs(x - fromX) * 0.05 + (o.lo != null && x < o.lo ? 99 : 0) + (o.hi != null && x > o.hi ? 99 : 0);
-    if (e < be) { be = e; best = { x, face: sg }; }
-  }
-  return best;
-}
-
-/* 비행 — 다가오는 돌기둥 틈 높이로 */
+/* 비행(달리기) — 앞 돌기둥 사이 가장 넓은 틈의 x로 · 멀면 꼬리(Space) */
 export function flyBot(H, o = {}) {
   const F = H.now.fly; if (!F) return;
-  let ty = o.cruise ?? 5.5;
-  const ahead = F.ob.filter((q) => q.k !== 'cloud' && q.x + q.w / 2 > F.x - 0.4 && q.x - q.w / 2 < F.x + (o.look ?? 11)).sort((a, b) => a.x - b.x);
-  if (ahead.length) {
-    const x0 = ahead[0].x, col = ahead.filter((q) => Math.abs(q.x - x0) < 1.5);
-    let lo = 0.8, hi = 12;
-    for (const q of col) { if (q.y0 < 0.5) lo = Math.max(lo, q.y1 + 1.2); else hi = Math.min(hi, q.y0 - 1.2); }
-    ty = hi > lo ? (lo + hi) / 2 : lo;
-    if (ty < lo) ty = lo;
+  const lane = o.lane || [10, 38];
+  const ahead = F.ob.filter((q) => q.k === 'stack' && q.y < F.y + 1 && q.y > F.y - (o.look ?? 13));
+  let best = F.x, bc = 1e9;
+  for (let x = lane[0] + 0.8; x <= lane[1] - 0.8; x += 0.5) {
+    let c = Math.abs(x - F.x) * 0.15;
+    for (const q of ahead) { const gap = Math.abs(x - q.x) - q.r - 1.0; if (gap < 0) c += 100 - gap * 10 + (F.y - q.y < 6 ? 50 : 0); }
+    if (c < bc) { bc = c; best = x; }
   }
-  if (o.target != null) ty = o.target;
-  const e = ty - F.y;
-  if (e > 0.25) H.hold('up'); else if (e < -0.25) H.hold('down');
-  if (Math.abs(e) > 1.6 && H.level !== 'easy') H.hold('jump');
+  if (o.target != null) best = o.target;
+  const e = best - F.x;
+  if (e > 0.3) H.hold('right'); else if (e < -0.3) H.hold('left');
+  if (Math.abs(e) > 2 && H.level !== 'easy') H.hold('jump');
 }
+
+/* 던지기 서는 자리 — 과녁(tx, ty)에서 5m 떨어진 곳(kit THROW.R = 5) · 바라볼 쪽 */
+export const R5 = 5;
 
 export const BOTS = {
   '0-1': (H) => flyBot(H),
-  '1-1': (H) => { const n = H.now; if (n.goalX != null && H.walk(n.goalX, 0.6)) H.tap('use'); },
+  '1-1': (H) => { const g = H.now.goalXY; if (g && H.walk(g[0], g[1] + 0.9, 0.6)) H.tap('use'); },
   '1-2': (H) => {
-    const n = H.now, x = n.x || {}, me = n.me;
-    if (!x.carry) { if (H.walk(x.well, 0.6)) H.tap('use'); return; }
+    const x = H.now.x || {}, me = H.now.me;
+    if (!x.carry) { if (H.walk(x.tub[0], x.tub[1] + 0.9, 0.5)) H.tap('use'); return; }
     const fs = (x.fires || []).filter((f) => f.burn > 0); if (!fs.length) return;
     const f = fs.reduce((a, b) => (b.burn > a.burn ? b : a));
-    const sp = H.mem.sp && H.mem.spF === f.x ? H.mem.sp : (H.mem.spF = f.x, H.mem.sp = standFor(f.x, f.top - 0.5, me.x, { down: true, lo: 45, hi: 82 }));
-    if (H.walk(sp.x, 0.25)) { if (me.face !== sp.face) H.hold(sp.face > 0 ? 'right' : 'left'); else if (Math.abs(me.vx) < 0.3) { H.tap('use', 0.5); H.mem.sp = null; } }
+    if (H.walk(f.x, f.y + 2.6, 0.3)) { if (H.face(0, -1) && Math.hypot(me.vx, me.vy) < 0.4) H.tap('use', 0.5); }
   },
-  '1-3': (H) => { if (!H.dodge()) H.walk(101); },
+  '1-3': (H) => { if (!H.dodge()) H.walk(57, 30.6, 0.8); },
   '1-4': (H) => {
-    const n = H.now, x = n.x || {}, me = n.me;
-    if (x.scale != null) { if (H.walk(x.scale, 0.5)) H.tap('use'); return; }
-    if (!x.carry) { if (!n.shots.length && H.walk(x.basket, 0.6)) H.tap('use'); return; }
+    const x = H.now.x || {}, me = H.now.me;
+    if (x.scale) { if (H.walk(x.scale[0], x.scale[1] + 0.3, 0.5)) H.tap('use'); return; }
+    if (!x.carry) { if (!H.now.shots.length && H.walk(x.basket[0], x.basket[1] + 0.9, 0.5)) H.tap('use'); return; }
     if (!x.T || x.T.dizzy) return;
-    if (!H.walk(88, 0.4)) return;
-    H.face(1);
-    /* 테러 움직임 내다보기(두 번 본 자리로 빠르기) */
+    if (!H.walk(54, 28.4, 0.3)) return;
+    if (!H.face(0, -1)) return;
     const pv = H.mem.pv; H.mem.pv = { x: x.T.x, y: x.T.y, t: H.t };
     if (!pv || H.t - pv.t <= 0) return;
     const vx = (x.T.x - pv.x) / (H.t - pv.t), vy = (x.T.y - pv.y) / (H.t - pv.t);
-    const a = 0.85, v = 10, cx = Math.cos(a) * v, cy = Math.sin(a) * v;
-    for (let t = 0.2; t < 1.4; t += 0.05) {
-      const ax = me.x + 0.3 + cx * t, ay = me.y + 1.3 + cy * t - 4.9 * t * t;
-      const px = x.T.x + vx * (t + 0.03), py = x.T.y + vy * t * 0.6;
-      if (Math.hypot(ax - px, ay - py) < 0.55) { H.tap('use', 0.6); break; }
-    }
+    for (let t = 0.15; t < 0.7; t += 0.05) { const by = me.y - 7 * t, px = x.T.x + vx * (t + 0.03), py = x.T.y + vy * (t + 0.03); if (Math.hypot(me.x - px, (by - py) * 1.2) < 0.6) { H.tap('use', 0.6); break; } }
   },
   '1-5': (H) => {
-    const n = H.now, x = n.x || {};
-    if (x.aim < 1.08) { H.hold('up'); return; }
-    if (x.aim > 1.14) { H.hold('down'); return; }
+    const x = H.now.x || {}, A = 1.25;
+    if (x.ang < A - 0.03) { H.hold('right'); return; }
+    if (x.ang > A + 0.03) { H.hold('left'); return; }
     if (!x.fury) return;
     const pv = H.mem.pv; H.mem.pv = { x: x.fury[0], t: H.t };
     if (!pv || pv.x <= x.fury[0] || H.t - pv.t <= 0) return;
-    const vx = (x.fury[0] - pv.x) / (H.t - pv.t), a = x.aim, v = 17, dy = x.fury[1] - x.pivot[1];
-    const vy0 = Math.sin(a) * v, disc = vy0 * vy0 - 19.6 * dy; if (disc < 0) return;
-    const t = (vy0 - Math.sqrt(disc)) / 9.8, xa = x.pivot[0] + Math.cos(a) * v * t;
-    const fx = x.fury[0] + vx * (t + 0.02);
-    if (Math.abs(fx - xa) < 0.7) H.tap('use', 1.2);
+    const vx = (x.fury[0] - pv.x) / (H.t - pv.t), th = (x.fury[1] - x.piv[1]) / (16 * Math.sin(x.ang)); if (th <= 0 || th > 0.85) return;
+    const xb = x.piv[0] + 16 * Math.cos(x.ang) * th, fx = x.fury[0] + vx * (th + 0.02);
+    if (Math.abs(fx - xb) < 0.8) H.tap('use', 1.2);
   },
-  '1-6': (H) => { if (!H.dodge()) H.walk(86); },
-  '2-1': (H) => {
-    const ts = (H.now.x || {}).torches || []; const d = ts.filter((q) => q.dim).sort((a, b) => a.lit - b.lit)[0];
-    if (d && H.walk(d.x, 0.7, { run: Math.abs(d.x - H.now.me.x) > 5 })) H.tap('use');
-  },
+  '1-6': (H) => { if (!H.dodge()) H.walk(46, 29.2, 0.8); },
+  '2-1': (H) => { const ts = (H.now.x || {}).torches || [], d = ts.filter((q) => q.dim).sort((a, b) => a.lit - b.lit)[0]; if (d && H.walk(d.x, d.y, 0.6, { run: Math.abs(d.x - H.now.me.x) > 5 })) H.tap('use'); },
   '2-2': (H) => {
-    const n = H.now, me = n.me, g = n.goalX; if (g == null) return;
-    for (const b of [[37, 38.2], [49, 50.4]]) if (me.x > b[0] - 1.3 && me.x < b[0] && g > b[0] && me.ground) H.hold('jump');
-    if (H.walk(g, 0.5)) { if (Math.abs(me.vx) < 0.4) H.hold('use'); }
+    const x = H.now.x || {}, me = H.now.me, c = (x.clues || [])[x.ci || 0]; if (!c) { H.walk(41, 15, 0.8); return; }
+    for (const [lx, y0, y1] of x.logs || []) if (me.x > lx - 1.3 && me.x < lx - 0.3 && c[0] > lx && me.y > y0 && me.y < y1 && !me.air) H.hold('jump');
+    if (H.walk(c[0], c[1] + 0.4, 0.5)) { if (Math.hypot(me.vx, me.vy) < 0.4) H.hold('use'); }
     if (H.keys.jump) H.hold('right');
   },
   '2-3': (H) => {
-    const n = H.now, x = n.x || {}, me = n.me, D = n.actors.find((a) => a.k === 'toothless'); if (!D) return;
-    const peg = (x.pegs || []).find((q) => !q.cut); if (!peg) return;
-    const sneak = Math.abs(me.x - D.x) < 8;
-    if (H.walk(peg.x, 0.45, { sneak })) { const lp = (H.late.x || {}).pupil ?? 0; if (lp > 0.8 && x.pupil > 0.8) H.tap('use', 0.9); }
+    const x = H.now.x || {}, me = H.now.me, L = H.late.x || {};
+    const peg = (x.pegs || []).find((q) => !q.cut); if (!peg || !x.D) return;
+    const sn = Math.hypot(me.x - x.D[0], me.y - x.D[1]) < 7.5;
+    if (H.walk(peg.x + (peg.x < x.D[0] ? -0.6 : 0.6), peg.y, 0.4, { sneak: sn })) { if ((L.pupil ?? 0) > 0.8 && x.pupil > 0.8) H.tap('use', 0.9); }
   },
   '3-1': (H) => {
-    const n = H.now, x = n.x || {}, me = n.me, L = H.late;
-    if (!x.carry && x.shield != null) { if (H.walk(x.shield, 0.5)) H.tap('use'); return; }
+    const x = H.now.x || {}, L = H.late;
+    if (!x.carry && x.shield) { if (H.walk(x.shield[0], x.shield[1] + 0.3, 0.5)) H.tap('use'); return; }
     if (H.dodge()) return;
     const D = L.actors.find((a) => a.k === 'gronckle');
     if (D && D.tell > 0.3 && !H.mem.banged) { H.tap('use', 0.9); H.mem.banged = 1; }
     if (D && D.tell === 0) H.mem.banged = 0;
-    H.walk(7, 1);
+    H.walk(11, 15, 1.2);
   },
-  '3-2': (H) => { const me = H.now.me; if (H.walk(14.1, 0.3, { sneak: me.x > 10 })) { H.hold('down'); H.hold('use'); } },
+  '3-2': (H) => { const x = H.now.x || {}, r = (x.rocks || [])[1]; if (!r) return; if (H.walk(r[0] - 1.3, r[1] + 0.2, 0.3, { sneak: H.now.me.x > 8 })) { H.sneak(true); H.hold('use'); } },
   '3-3': (H) => {
     const d = (H.now.x || {}).draw; if (!d || !d.next) return;
     const dx = d.next[0] - d.pen[0], dy = d.next[1] - d.pen[1];
@@ -144,64 +141,62 @@ export const BOTS = {
     else if (x.ph === 'fight' && L.pull) H.hold(L.pull > 0 ? 'left' : 'right');
   },
   '4-2': (H) => {
-    const n = H.now, x = n.x || {}, L = H.late.x || {}, me = n.me, D = n.actors.find((a) => a.k === 'toothless'); if (!D) return;
-    const d = Math.abs(D.x - me.x);
-    if (x.knife) { if (H.walk(D.x - 9, 0.6)) { if (L.look === 1 && x.look === 1) H.tap('use', 0.8); } return; }
-    if (x.eat) return;
-    if (H.mem.half || (n.bubble || '').includes('반 토막')) { H.mem.half = 1; if (d > 3.5) { H.walk(D.x - 2.5, 0.4, { sneak: true }); return; } if (x.look === 1 && L.look === 1) H.hold('use'); return; }
-    if (d > 2.4) { H.walk(D.x - 2.2, 0.3, { sneak: true }); return; }
+    const x = H.now.x || {}, L = H.late.x || {}, me = H.now.me; if (!x.D) return;
+    const d = Math.hypot(x.D[0] - me.x, x.D[1] - me.y);
+    if (x.ph === 'knife') { if (H.walk(x.D[0] - 9, x.D[1], 0.6)) { if (L.look === 1 && x.look === 1) H.tap('use', 0.8); } return; }
+    if (x.ph === 'eat') return;
+    if (x.ph === 'half') { if (d > 3.5) { H.walk(x.D[0] - 2.5, x.D[1], 0.4, { sneak: true }); return; } if (x.look === 1 && L.look === 1) H.hold('use'); return; }
+    if (d > 2.5) { H.walk(x.D[0] - 2.2, x.D[1], 0.3, { sneak: true }); return; }
     if (x.fear < 0.35 && L.fear < 0.4) H.tap('use', 1);
   },
   '4-3': (H) => {
-    const n = H.now, x = n.x || {}, me = n.me, D = n.actors.find((a) => a.k === 'toothless'); if (!D) return;
-    if (me.x < 26.5) {
-      const next = (x.lines || []).find((l) => l > me.x - 0.1);
-      if (next != null && next - me.x < 1.0 && next - me.x > 0.45 && me.ground) H.hold('jump');
-      if (!me.ground || next == null || next - me.x > 0.45) H.hold('right');
+    const x = H.now.x || {}, me = H.now.me, D = H.now.actors.find((a) => a.k === 'toothless'); if (!D) return;
+    if (me.x < 22.3) {
+      H.sneak(false);
+      const next = (x.lines || []).find((l) => l[0] > me.x - 0.1);
+      if (next && next[0] - me.x < 0.95 && next[0] - me.x > 0.45 && !me.air) H.hold('jump');
+      if (Math.abs(me.y - 15) > 0.4) H.hold(me.y < 15 ? 'down' : 'up');
+      if (me.air || !next || next[0] - me.x > 0.45) H.hold('right');
       return;
     }
-    if (Math.abs(D.x - me.x) > 3.0) { H.walk(D.x - 2.6, 0.3, { sneak: true }); return; }
+    if (Math.hypot(D.x - me.x, D.y - me.y) > 3.0) { H.walk(D.x - 2.4, D.y, 0.3, { sneak: true }); return; }
     H.hold('use');
   },
-  '5-1': (H) => { const f = H.now.x || {}; },
+  '5-1': (H) => { const f = H.now.x || {}; if (f.h != null && Math.abs(f.h - 0.6) < f.win * 0.3) H.tap('use', 0.5); },
   '5-2': (H) => {
-    const n = H.now, x = n.x || {}, L = H.late.x || {}, me = n.me;
-    if (x.ph === 'eel') { if (H.walk(x.basket, 0.5)) H.tap('use', 0.8); return; }
+    const x = H.now.x || {}, L = H.late.x || {};
+    if (x.ph === 'eel' || !x.ph) { if (H.walk(x.basket[0], x.basket[1] + 0.8, 0.5)) H.tap('use', 0.8); return; }
     if (x.ph === 'throw') { H.tap('use', 0.8); return; }
-    if (x.ph !== 'eat' || x.tail == null) return;
-    if (!H.walk(x.tail, 0.4, { sneak: true })) return;
-    H.hold('down');
+    if (x.ph !== 'eat' || !x.tail) return;
+    if (!H.walk(x.tail[0] + 0.5, x.tail[1], 0.35, { sneak: true })) return;
     if (!x.look && !x.flinch && !L.flinch) H.hold('use');
   },
-  '5-3': (H) => flyBot(H, { look: 7 }),
+  '5-3': (H) => flyBot(H, { lane: [5, 34], look: 8 }),
   '5-4': (H) => {
-    const n = H.now, x = n.x || {}, me = n.me;
-    if (!x.carry) { if (!n.shots.some((s) => s.mine) && H.walk(x.barrel, 0.5)) H.tap('use'); return; }
+    const x = H.now.x || {}, me = H.now.me;
+    if (!x.carry) { H.mem.ready = 0; if (!H.now.shots.some((s) => s.mine) && H.walk(x.tub[0], x.tub[1] + 0.9, 0.5)) H.tap('use'); return; }
     if (!x.sp) return;
-    const sp = standFor(x.sp.x, x.sp.y, me.x, { lo: 5, hi: x.sp.x - 1.5 });
-    if (H.walk(sp.x, 0.25)) { H.face(1); if (Math.abs(me.vx) < 0.3 && me.face > 0) H.tap('use', 0.8); }
+    if (!H.mem.ready) { if (H.walk(x.sp.x - 6.6, x.sp.y, 0.4)) H.mem.ready = 1; return; }
+    if (H.walk(x.sp.x - 5, x.sp.y, 0.25)) { if (H.face(1, 0) && Math.hypot(me.vx, me.vy) < 0.3) H.tap('use', 0.8); }
   },
   '6-1': (H) => {
-    const n = H.now, x = n.x || {}, me = n.me, L = H.late.x || {};
-    if (H.dodge({ lead: 0.22 })) return;
-    const ds = x.ds || [], g = ds.find((d) => d.k === 'gronckle'), nd = ds.find((d) => d.k === 'nadder'), tr = ds.find((d) => d.k === 'terror');
-    const cur = [g, nd, tr].find((d) => d && !d.calm); if (!cur) return;
-    if (cur.k === 'terror') { if (H.walk(x.sun, 0.3)) { if (!x.light) H.tap('use', 1); } return; }
+    const x = H.now.x || {}, me = H.now.me, L = H.late.x || {};
+    if (H.dodge()) return;
+    const ds = x.ds || [], cur = ['gronckle', 'nadder', 'terror'].map((k) => ds.find((d) => d.k === k)).find((d) => d && !d.calm); if (!cur) return;
+    if (cur.k === 'terror') { if (H.walk(x.sun[0], x.sun[1] + 0.3, 0.35)) { if (!x.light) H.tap('use', 1); } return; }
     const ld = (L.ds || []).find((d) => d.k === cur.k) || cur;
-    const side = me.x < cur.x ? -1 : 1, near = cur.k === 'gronckle' ? 2.0 : 1.7, far = 4.5;
-    if (ld.st === 'gap' && cur.st === 'gap') { if (H.walk(cur.x + side * near, 0.35)) { H.face(-side); if (cur.k === 'gronckle') H.tap('use', 0.6); else H.hold('use'); } }
-    else H.walk(cur.x + side * far, 0.6);
+    if (ld.st === 'gap' && cur.st === 'gap') { if (H.walk(cur.x, cur.y + 1.5, 0.4)) { if (cur.k === 'gronckle') H.tap('use', 0.6); else H.hold('use'); } }
+    else H.walk(cur.x + (me.x < cur.x ? -3.6 : 3.6), cur.y + 2.5, 0.8);
   },
   '6-2': (H) => flyBot(H),
 };
-Object.assign(BOTS, BOTS2);
-BOTS['5-1'] = (H) => { const f = H.now.x || {}; if (f.h != null && Math.abs(f.h - 0.6) < f.win * 0.32 && f.rising !== false) H.tap('use', 0.5); };
+Object.assign(BOTS, BOTS_7 || {}, BOTS_10 || {});
 
 export function storyBot(level) {
   const lag = level === 'easy' ? 0.6 : 0.35, hist = [];
   const H = mkHand(level); let lastKey = '';
   return (sense, set, dt) => {
-    H.t += dt;
+    H.t += dt; H.dt = dt;
     const now = sense(); hist.push([H.t, now]); while (hist.length > 1 && H.t - hist[0][0] > lag) hist.shift();
     H.now = now; H.late = hist[0][1];
     const key = now.ch + ':' + now.idx + ':' + now.fails;
@@ -214,9 +209,9 @@ export function storyBot(level) {
 }
 /* 클릭형 봇 — idle · fmash · fhold · smash · wfmash */
 export function dumbBot(kind) {
-  let t = 0, k = 0;
-  return (sense, set, dt) => {
-    t += dt; k++;
+  let k = 0;
+  return (sense, set) => {
+    k++;
     for (const a of ACTS) set(a, false);
     if (kind === 'fmash') set('use', k % 10 < 3);
     if (kind === 'fhold') set('use', true);
