@@ -1,16 +1,16 @@
 // 드래곤 게임 시작점 — 바탕(gfx·input·rng·loop·debug)을 묶고 장면을 붙인다 · goal = docs/dragon/goal_prompt.md
 import * as THREE from 'three';
-import { createGfx } from './core/gfx.js?v=25';
-import { createInput } from './core/input.js?v=25';
-import { createRng } from './core/rng.js?v=25';
-import { createLoop } from './core/loop.js?v=25';
-import { installDebug } from './core/debug.js?v=25';
-import { buildBaseTest } from './scenes/base_test.js?v=25';
-import { buildLookA } from './scenes/look_a.js?v=25';
-import { buildModelView } from './scenes/model_view.js?v=25';
-import { buildWalkTest } from './stages/walk_test.js?v=25';
-import { buildPlaceView } from './stages/place_view.js?v=25';
-import { buildGame } from './stages/game.js?v=25';
+import { createGfx } from './core/gfx.js?v=26';
+import { createInput } from './core/input.js?v=26';
+import { createRng } from './core/rng.js?v=26';
+import { createLoop } from './core/loop.js?v=26';
+import { installDebug } from './core/debug.js?v=26';
+import { buildBaseTest } from './scenes/base_test.js?v=26';
+import { buildLookA } from './scenes/look_a.js?v=26';
+import { buildModelView } from './scenes/model_view.js?v=26';
+import { buildWalkTest } from './stages/walk_test.js?v=26';
+import { buildPlaceView } from './stages/place_view.js?v=26';
+import { buildGame } from './stages/game.js?v=26';
 
 const Q = new URLSearchParams(location.search);
 const canvas = document.getElementById('scene');
@@ -24,7 +24,7 @@ gfx.onResize = (w, h) => { camera.aspect = w / h; camera.updateProjectionMatrix(
 /* 팀이 만드는 장면은 파일이 생기면 열림(동적 import) — sil = 64px 실루엣(M) · fly = 비행 시험(F) */
 const lazy = (file, fn) => async (...a) => (await import(file))[fn](...a);
 const SCENES = { game: buildGame, base: buildBaseTest, a: buildLookA, model: buildModelView, walk: buildWalkTest, place: buildPlaceView,
-  sil: lazy('./scenes/silhouette.js?v=25', 'buildSilhouette'), fly: lazy('./stages/flight_test.js?v=25', 'buildFlightTest'), key: lazy('./stages/keyframe.js?v=25', 'buildKeyframe') };
+  sil: lazy('./scenes/silhouette.js?v=26', 'buildSilhouette'), fly: lazy('./stages/flight_test.js?v=26', 'buildFlightTest'), key: lazy('./stages/keyframe.js?v=26', 'buildKeyframe') };
 const world = await (SCENES[Q.get('scene') || 'game'] || buildGame)(scene, camera, rng, { gfx, time: Q.get('time'), mode: Q.get('mode2'), yaw: Q.has('yaw') ? +Q.get('yaw') : undefined, dist: Q.get('dist'), pitch: Q.has('pitch') ? +Q.get('pitch') : undefined, people: Q.get('people'), who: Q.get('who'), p: Q.get('p'), variant: Q.get('variant'), at: Q.get('at'), marks: Q.get('marks') === '1', swap: Q.get('swap') === '1', diff: Q.get('diff') || 'normal' });
 const ctx = { gfx, input, canvas, scene, camera, world, benchPath: world.benchPath, snapshot: world.snapshot, sense: world.sense };
 const dbg = installDebug(ctx);
