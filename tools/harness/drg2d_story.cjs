@@ -33,6 +33,22 @@ srv.listen(0, async () => {
         else if (sec > limitSec) { clearInterval(iv); DRG2.bot.stop(); res({ ok: false, sec: +sec.toFixed(1), last: JSON.stringify(s, (k, v) => (Array.isArray(v) && v.length > 6 ? '[' + v.length + ']' : v)).slice(0, 700) + ' errs ' + JSON.stringify(DRG2.diag().errs.slice(-3)) + ' trail ' + JSON.stringify(trail) }); } }, 100); });
     }, { kind, level, limitSec });
   }
+  if (arg('walk', '') === '1') {      /* 이어서 놀기 — 오프닝부터 장을 넘어 엔딩까지(보통 봇 · chain) · 장마다 걸린 시간 */
+    const lv = arg('level', 'normal');
+    await p.goto(`${base}/dragon2d/?ch=0&step=0&diff=${lv}&turbo=${TURBO}&seed=2&mode=smooth`);
+    await p.waitForFunction(() => window.DRG2 && DRG2.sense().id, null, { timeout: 60000 });
+    const r = await p.evaluate(async ({ lv }) => {
+      const m = await import('/dragon2d/js/bots/bots.js?v=1'); DRG2.bot.run(m.storyBot(lv));
+      const n0 = DRG2.loop.n, log = []; let last = '', lastN = n0;
+      return await new Promise((res) => { const iv = setInterval(() => { const s = DRG2.sense(), sec = (DRG2.loop.n - n0) / 60;
+        if (s.id && s.id !== last) { log.push(s.id + '@' + Math.round(sec)); last = s.id; lastN = DRG2.loop.n; }
+        const ended = DRG2.G.ended || !!document.getElementById('ending');
+        if (ended) { clearInterval(iv); res({ ok: true, sec: Math.round(sec), log, errs: DRG2.diag().errs }); }
+        else if ((DRG2.loop.n - lastN) / 60 > 400) { clearInterval(iv); res({ ok: false, sec: Math.round(sec), log, stuck: JSON.stringify(s).slice(0, 600), errs: DRG2.diag().errs }); } }, 200); });
+    }, { lv });
+    console.log((r.ok ? '엔딩까지 이어짐 ' : '막힘 ') + r.sec + '초(놀이 시간) · ' + r.log.join(' ') + (r.stuck ? '\n' + r.stuck : '') + ' · 오류 ' + JSON.stringify(r.errs.concat(errs).slice(0, 3)));
+    await b.close(); srv.close(); process.exit(r.ok && !errs.length ? 0 : 1);
+  }
   try {
     for (const ch of CHS) {
       await open(ch, 0, 'normal');

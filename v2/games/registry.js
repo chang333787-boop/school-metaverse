@@ -44,6 +44,7 @@ export const GAMES = {
   school2036: { title: '10년 뒤 학교', v: 1, lesson: 'story', cat: 'imagine', link: '../imagine/school2036/', icon: '🌱', group: '상상', short: '2036년, AI와 함께 자란 학교를 걸어 보기' },
   wizard: { title: '마법사 마을', v: 1, lesson: 'story', cat: 'imagine', link: '../imagine/wizard/', icon: '🧙', group: '상상', short: '용 키워 타기 · 구름 고래 · 날씨·변신 마법 — 신기한 일 16가지' },
   dragon: { title: '버크의 드래곤 친구', v: 1, folder: 'story', link: '../dragon/', icon: '🐉', group: '모험', short: '영화를 보고 4학년이 기획 — 길들이기 · 첫 비행 · 대장 드래곤' },   // DRAGON-1(10-31 · goal §6) 다른 페이지(v2 엔진 밖) · 홍보판엔 카드 없음
+  dragon2d: { title: '버크의 드래곤 친구 · 2D', v: 1, folder: 'story', link: '../dragon2d/', icon: '🐉', group: '모험', short: '포켓몬처럼 위에서 보는 2D판 — 길들이기 · 첫 비행 · 대장 드래곤' },   // DRAGON-2D(11-01 교사 '2D로 · 포켓몬처럼 탑뷰') 다른 페이지 링크 · 3D판 카드는 그대로 · 홍보판엔 카드 없음
   blocks_solo: { title: '블록 놀이(혼자)', folder: 'make', v: 12, use: 'blocks', params: { solo: true }, desc: '🏠 나만의 판에서 혼자 블록을 쌓고 가구·나무를 부숴요 — 이 기기에 저장돼요', icon: '🧱', group: '놀이', short: '혼자 블록 쌓기 · 이 기기에 저장' },
   blocks: { title: '블록 놀이(같이)', folder: 'make', v: 12, mp: 'together', desc: '같은 판 친구들과 학교 곳곳에 블록을 놓고 부숴요 — 책상·책장 같은 가구도 🔨로 통째로 퍽! 친구들 블록이 바로 보여요(선생님이 판 잠그기·비우기)', icon: '🧱', group: '놀이', short: '같은 판 친구와 블록 쌓기 · 가구 부수기' },
   memo: { title: '메타버스 메모장', folder: 'think', v: 34, mp: 'together', desc: '우리 이야기를 장면으로 나눠 적고(인물·대사·물건 덧붙이기) 학교 곳곳에 장면 깃발을 꽂아요 — 같은 판 친구들 것이 바로 보여요', icon: '📝', group: '이야기', short: '장면 적고 학교에 장면 깃발 꽂기' },

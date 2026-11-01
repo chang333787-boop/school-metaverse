@@ -56,23 +56,27 @@ export const chapter = {
       hints: ['물통 앞에서 F로 물을 받아요', '불붙은 지붕 쪽을 보고 F — 고리가 떨어질 곳'],
       *run(G) {
         FX.wind = [1.2, 0];
-        const tub = G.W.prop('barrel', 37.2, 31.6, { water: 1 });
+        const tubs = [G.W.prop('barrel', 37.2, 31.6, { water: 1 }), G.W.prop('barrel', 45.4, 31.6, { water: 1 })];
         const line = [['astrid', 35.8, 32.4], ['fishlegs', 38.6, 32.3], ['snotlout', 34.6, 32.6], ['ruffnut', 39.8, 32.5], ['tuffnut', 40.8, 32.6]].map(([w, x, y]) => G.cast.person(w, x, y, { dir: 'up', pose: { carry: 'bucket' } }));
         const sky = skyDragons(G);
         const H = [33, 41, 49].map((x) => G.W.findProp('house', x, 27));
-        const F = H.map((p, i) => ({ x: p.x, y: p.y, w: p.o.w * 0.95, d: p.o.d, h: 3, burn: [0.62, 0.45, 0.3][i], next: 6, delay: 5, prop: p, saved: false, lost: false, full: 0, grow: G.diff === 'easy' ? 0.025 : 0.035 }));
+        const F = H.map((p, i) => ({ x: p.x, y: p.y, w: p.o.w * 0.95, d: p.o.d, h: 3, burn: [0.62, 0.45, 0.3][i], next: 6, delay: 5, prop: p, saved: false, lost: false, full: 0, grow: G.diff === 'easy' ? 0.014 : G.diff === 'hard' ? 0.03 : 0.02 }));
         F[0].spread = () => F[1]; F[1].spread = () => F[2];
         FX.fires.push(...F); G.flags.fires = F; G.camOpt = { fixY: 26.6 };   /* 지붕 불과 물통 자리가 한 화면에 */
         say(G, 'astrid', '불이야! 물 받아!', { icons: ['bucket'] });
         say(G, 'hiccup', '바람이 동쪽으로 분다… 불도 그쪽으로 번지겠어.', { icons: ['wind'] });
+        let helpT = 5;
         while (true) {
           const dt = yield; driftSky(sky, dt, G);
-          if (!G.P.carry) { if (useAt(G, tub.x, tub.y, 1.6)) { G.P.carry = 'bucket'; sfx(G, 'splash', tub.x); } }
+          /* 친구들 물통 줄도 거듦(조금씩 · 혼자서는 못 끔) */
+          helpT -= dt; if (helpT <= 0) { helpT = 6; const f = F.filter((q) => q.burn > 0).sort((a, b) => a.x - b.x)[0]; if (f) { const a = line[Math.floor(G.rng() * 2)]; shoot({ kind: 'water', x: a.x, y: a.y - 0.4, z: 1.2, vx: (f.x - a.x) / 0.9, vy: (f.y - 1.5 - a.y) / 0.9, vz: 3.1, g: 9.8, noWall: true, land: () => { if (f.burn > 0) douse(f, 0.15); } }); } }
+          const tub = tubs.reduce((a, b) => (Math.hypot(b.x - G.P.x, b.y - G.P.y) < Math.hypot(a.x - G.P.x, a.y - G.P.y) ? b : a));
+          if (!G.P.carry) { for (const tb of tubs) if (useAt(G, tb.x, tb.y, 1.6)) { G.P.carry = 'bucket'; sfx(G, 'splash', tb.x); } }
           else {
             previewArc(G);
             if (G.I.pressed.use) {
               G.P.carry = null; sfx(G, 'whoosh', G.P.x);
-              throwFrom(G, 'water', { shot: { land(s) { for (const f of F) if (f.burn > 0 && onRoof(f, s.x, s.y)) { douse(f, 0.36); sfx(G, 'splash', f.x); if (f.saved) say(G, 'fishlegs', '꺼졌다! 하나 지켰어!', { secs: 1.6 }); return; } } } });
+              throwFrom(G, 'water', { shot: { land(s) { for (const f of F) if (f.burn > 0 && onRoof(f, s.x, s.y)) { douse(f, 0.5); sfx(G, 'splash', f.x); if (f.saved) say(G, 'fishlegs', '꺼졌다! 하나 지켰어!', { secs: 1.6 }); return; } } } });
             }
           }
           for (const f of F) if (f.burn >= 1) { f.full += dt; if (f.full > 8 && G.diff !== 'easy') { f.burn = 0; f.lost = true; f.prop.o.scorch = 1; f.prop.o.burn = 0; burst('smoke', f.x, f.y - 2, 3, 10, 1.5, 2, 0.6, G.rng); say(G, 'villager', '아이고, 우리 집 지붕이…', { secs: 2 }); } }
@@ -88,7 +92,7 @@ export const chapter = {
         yield* wait(1.5);
         return true;
       },
-      sense: (G) => ({ tub: [37.2, 31.6], carry: G.P.carry, fires: (G.flags.fires || []).map((f) => ({ x: f.x, y: f.y, w: f.w, d: f.d, burn: +f.burn.toFixed(2), lost: f.lost })) }) },
+      sense: (G) => ({ tubs: [[37.2, 31.6], [45.4, 31.6]], carry: G.P.carry, fires: (G.flags.fires || []).map((f) => ({ x: f.x, y: f.y, w: f.w, d: f.d, burn: +f.burn.toFixed(2), lost: f.lost })) }) },
 
     /* ③ 골목 — 망루까지 · 내더 가시(세움 → 부채꼴 셋) · 그롱클 불덩이(볼 부풂 → 떨어질 자리 붉은 고리) · 나이트메어 불길(몸이 달아오름 → 길 가득한 불 줄 = 점프) */
     { id: '1-3', verb: 'dodge', goal: '망루까지 가라', at: [22, 29], limit: 70,

@@ -75,7 +75,8 @@ export const BOTS = {
   '1-1': (H) => { const g = H.now.goalXY; if (g && H.walk(g[0], g[1] + 0.9, 0.6)) H.tap('use'); },
   '1-2': (H) => {
     const x = H.now.x || {}, me = H.now.me;
-    if (!x.carry) { if (H.walk(x.tub[0], x.tub[1] + 0.9, 0.5)) H.tap('use'); return; }
+    const me0 = H.now.me, tb = (x.tubs || []).reduce((a, b) => (Math.abs(b[0] - me0.x) < Math.abs(a[0] - me0.x) ? b : a));
+    if (!x.carry) { if (H.walk(tb[0], tb[1] + 0.9, 0.5)) H.tap('use'); return; }
     const fs = (x.fires || []).filter((f) => f.burn > 0); if (!fs.length) return;
     const f = fs.reduce((a, b) => (b.burn > a.burn ? b : a));
     if (H.walk(f.x, f.y + 2.6, 0.3)) { if (H.face(0, -1) && Math.hypot(me.vx, me.vy) < 0.4) H.tap('use', 0.5); }
