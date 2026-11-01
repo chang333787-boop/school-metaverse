@@ -52,7 +52,7 @@ node tools/harness/check.cjs . --full  ·  PAGE=/ node tools/harness/check.cjs .
 - **모델 다시 짓기**: `tools/dragon_blender/`(M 보고 참고) → gltfpack(`npm install --prefix <임시> gltfpack@0.22.0`).
 - **캐시**: `zsh tools/dragon_ver.sh` 한 번이면 dragon/ 전체 `?v=`가 같은 번호. 홍보판·v2는 건드리지 않는다.
 - **팀 운영(10-31)**: 팀 넷(M 모델 · F 비행·바다 · W1 마을 · W2 자연)이 각자 worktree → 메인이 맡은 파일만 `git checkout <가지> -- <파일>`로 가져와 합침. 팀 worktree가 origin/main에서 시작되면 단계 3 준비 파일이 없으니 지시문에 '로컬 main 기준'을 적을 것.
-- **사용량**: 10-31 밤 기준 주간 20% 안팎 · 깰 때마다 `get_usage` · 80%에서 멈춤.
+- **사용량**: 깰 때마다 `get_usage` · 교사 11-01: **주간 75%는 상한일 뿐 목표가 아니다** — §9 열두 조건이 다 되면 그 자리에서 마감 보고하고 멈춘다(한도까지 채우려고 일을 만들지 않음 · 남은 %는 그대로 둠).
 
 ## 교사에게 물어 둔 것 (답이 오기 전엔 기본값)
 - goal §1 교사 결정 다섯(판 2010 · 원작 이름 쓰기 + 비상업 표시 · 제목 「버크의 드래곤 친구」 · 크레딧 '4학년 친구들' · 느낀 점 문장)
