@@ -293,13 +293,14 @@ srv.listen(0, async () => {
       await p.waitForFunction(() => window.DRG && DRG.sense && DRG.sense() && DRG.sense().id, null, { timeout: 120000 });
       await p.evaluate(HOOK); await thr(CPU); await rec(true); await startBot();
       const t0 = Date.now(), STALL = +arg('stall', 240); let lastId = '', idT = Date.now();
-      const longs = [], seen = {}, stalls = [];
+      const longs = [], seen = {}, stalls = []; let botLongW = 0;
       while (Date.now() - t0 < WMIN * 60000) {
         await p.waitForTimeout(3000);
         const r = await p.evaluate(() => { const R = window.__PF, fr = R.fr.splice(0, Math.max(0, R.fr.length - 1)), last = R.fr[0]; if (last) fr.push(last), np = (R.newP || []).splice(0); const s = DRG.sense(); return { fr, np, ch: s.ch, id: s.id, ended: !!DRG.world.G.ended, err: DRG.world.G.runner.err || '' }; });
         for (const x of r.np) if (!x.veil) { longs.push({ kind: 'prog', st: x.st, ms: x.ms, names: x.names }); console.log(`\n   ${x.st} 새 셰이더 ${x.ms}ms ${x.names.join(' / ')}`); }
         let veilT = -1e9;
-        for (let i = 1; i < r.fr.length; i++) { const a = r.fr[i - 1], c = r.fr[i], dt = c[0] - a[0]; if (c[6] || a[6]) { veilT = c[0]; continue; } const id = c[7]; seen[id] = seen[id] || { n: 0, max: 0, calls: 0, tris: 0 }; const S = seen[id]; S.n++; if (dt > S.max) S.max = dt; if (c[3] > S.calls) S.calls = c[3]; if (c[4] > S.tris) S.tris = c[4]; if (dt > 50) { const L = { kind: 'long', st: id, ms: Math.round(dt), work: Math.round(c[1]), bot: Math.round(c[8] || 0), pw: Math.round(a[1]), pb: Math.round(a[8] || 0), afterVeil: Math.round(c[0] - veilT) }; longs.push(L); console.log(`\n   ${L.st} ${L.ms}ms(게임 일 ${L.work} · 봇 ${L.bot} · 앞 프레임 게임 ${L.pw} · 봇 ${L.pb} · 덮개 걷힌 뒤 ${L.afterVeil}ms)`); } }
+        for (let i = 1; i < r.fr.length; i++) { const a = r.fr[i - 1], c = r.fr[i], dt = c[0] - a[0]; if (c[6] || a[6]) { veilT = c[0]; continue; } const id = c[7]; seen[id] = seen[id] || { n: 0, max: 0, calls: 0, tris: 0 }; const S = seen[id]; S.n++; if (dt > S.max) S.max = dt; if (c[3] > S.calls) S.calls = c[3]; if (c[4] > S.tris) S.tris = c[4]; if (dt > 50 && (a[8] || 0) > dt * 0.5) { botLongW++; continue; }   // 봇 길 찾기 몫
+          if (dt > 50) { const L = { kind: 'long', st: id, ms: Math.round(dt), work: Math.round(c[1]), bot: Math.round(c[8] || 0), pw: Math.round(a[1]), pb: Math.round(a[8] || 0), afterVeil: Math.round(c[0] - veilT) }; longs.push(L); console.log(`\n   ${L.st} ${L.ms}ms(게임 일 ${L.work} · 봇 ${L.bot} · 앞 프레임 게임 ${L.pw} · 봇 ${L.pb} · 덮개 걷힌 뒤 ${L.afterVeil}ms)`); } }
         if (r.id !== lastId) { lastId = r.id; idT = Date.now(); process.stdout.write(' ' + r.id); }
         else if (Date.now() - idT > STALL * 1000 && r.ch < c1) {   // 봇이 막힘(실제 시간 CPU 4×에서만 나는 봇 막힘 · 게임 몫 아님) → 다음 장으로
           console.log(`\n   ${r.id} 봇 막힘 ${STALL}초 → ${r.ch + 1}장으로`); stalls.push(r.id); idT = Date.now();
@@ -309,7 +310,7 @@ srv.listen(0, async () => {
         if (r.ended) break;
         if (r.ch > c1) break;
       }
-      console.log('\n  걸린 ' + f1((Date.now() - t0) / 60000) + '분 · 50ms 넘는 간격(덮개 밖) ' + longs.filter(x => x.kind === 'long').length + (stalls.length ? ' · 봇 막혀 건너뜀 ' + stalls.join(',') : ''));
+      console.log('\n  걸린 ' + f1((Date.now() - t0) / 60000) + '분 · 50ms 넘는 간격(덮개 밖) ' + longs.filter(x => x.kind === 'long').length + ' (봇 길 찾기 몫 ' + botLongW + ' 뺌)' + (stalls.length ? ' · 봇 막혀 건너뜀 ' + stalls.join(',') : ''));
       for (const x of longs) console.log('   ' + (x.kind === 'long' ? `${x.st} ${x.ms}ms(게임 일 ${x.work} · 봇 ${x.bot} · 앞 프레임 게임 ${x.pw} · 봇 ${x.pb} · 덮개 걷힌 뒤 ${x.afterVeil}ms)` : `${x.st} 새 셰이더 ${x.ms}ms ${x.names.join(' / ')}`));
       const worst = Object.entries(seen).sort((a, b) => b[1].tris - a[1].tris).slice(0, 8).map(([k, v]) => `${k} 그리기 ${v.calls} 삼각형 ${Math.round(v.tris / 1000)}k 최대 간격 ${Math.round(v.max)}`);
       console.log('  삼각형 많은 차례: ' + worst.join(' · '));

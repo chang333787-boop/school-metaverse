@@ -89,7 +89,7 @@ export function paintScauldron(root) {
   root.traverse((o) => {
     if (!o.isMesh) return;
     o.geometry = o.geometry.clone(); own.push(o.geometry);
-    if (o.material) { o.material = o.material.clone(); own.push(o.material); }
+    if (o.material) { const m0 = o.material; o.material = m0.clone(); o.material.onBeforeCompile = m0.onBeforeCompile; o.material.customProgramCacheKey = m0.customProgramCacheKey; own.push(o.material); }   // clone은 결 패치(onBeforeCompile)를 안 옮김 → 가장자리 빛·높이 안개 없는 맨 toon + 놀이 중 셰이더 새로 짓기 25ms(팀 C)
     const col = o.geometry.attributes.color;
     if (col) { for (let i = 0; i < col.count; i++) { const l = 0.3 * col.getX(i) + 0.55 * col.getY(i) + 0.15 * col.getZ(i), k = Math.min(1, l * 2.2); if (k < 0.5) c.copy(SC_DEEP).lerp(SC_MID, k * 2); else c.copy(SC_MID).lerp(SC_LIGHT, (k - 0.5) * 2); col.setXYZ(i, c.r, c.g, c.b); } col.needsUpdate = true; }
     else if (o.material && o.material.color) o.material.color.copy(SC_MID);

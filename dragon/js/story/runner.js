@@ -6,6 +6,9 @@ import { createCollide } from '../play/collide.js?v=25';
 import { disposePuffs } from './fx.js?v=25';
 import { INFLIGHT } from '../look/models.js?v=25';
 
+/* 배우 몸의 뼈 텍스처 비우기 — 기하·재질은 모델 캐시가 함께 쓰는 것이라 그대로(SkeletonUtils 복제는 뼈대만 따로) */
+const freeBones = (o) => { if (o.isSkinnedMesh && o.skeleton && o.skeleton.boneTexture) o.skeleton.dispose(); };
+
 export function createRunner(G) {
   const R = { ch: null, idx: 0, step: null, C: null, it: null, busy: false, idleT: 0, hintLv: 0, stepT: 0, total: 0, log: [], done: false, fails: 0 };
   const HINT_AT = { easy: [10, 20], normal: [20, 999], hard: [999, 999] };
@@ -68,7 +71,7 @@ export function createRunner(G) {
   }
   function cleanup() {
     if (!R.C) return;
-    for (const a of R.C.actors) { if (a.root) a.root.removeFromParent(); if (a.dispose) a.dispose(); }
+    for (const a of R.C.actors) { if (a.root) { a.root.removeFromParent(); a.root.traverse(freeBones); } if (a.dispose) a.dispose(); }   // 뼈 텍스처까지(장소 dispose는 group에서 뺀 배우를 못 봄 · 장 열한 번에 텍스처 +19 · 팀 C)
     R.C.actors.length = 0;
     if (R.C.cleanup) { const f = R.C.cleanup; R.C.cleanup = null; f(); }   // 한 번만(장 끝에 치운 C를 다음 장 첫 차례가 또 치우던 것)
     R.C.drawHook = null;                                           // 장이 끝난 뒤 다음 장까지 1.8초 동안 옛 차례 drawHook이 돌던 것(9-7)
