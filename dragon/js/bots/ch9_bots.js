@@ -61,18 +61,18 @@ BOTS['9-7'] = (s, K, M, B) => {
   const me = K.cur.me, dr = s.dr, cur = K.cur;
   const away = (o, r) => { const dx = me.x - o.x, dz = me.z - o.z, L = Math.hypot(dx, dz) || 1; if (L > r) { K.stop(); return true; } K.go(s, o.x + dx / L * (r + 1.5), o.z + dz / L * (r + 1.5), false, 0.6); return false; };
   K.set('KeyF', s.stage === 'between' || s.stage === 'demo' ? K.held.has('KeyF') : false);
-  if (s.stage === 'door') { if (s.door && K.go(s, s.door.x, s.door.z, false, 1.0)) { K.stop(); if (cd(M, 'f', 0.8)) K.tap('KeyF'); } return; }
+  if (s.stage === 'door') { if (s.door && K.go(s, s.door.x, s.door.z, false, 0.45)) { K.stop(); if (cd(M, 'f', 0.8)) K.tap('KeyF'); } return; }   // 문 앞(문 쪽으로 12% 안) 0.45m — 1.0m면 안쪽에 서서 문까지 3.4m를 넘던 것(서기가 빨라져 드러남)
   if (s.stage === 'give') { if (!s.fr) { K.stop(); B.drag(5, 0); return; } const slow = !!dr && Math.hypot(dr.x - me.x, dr.z - me.z) < 7.5; if (K.go(s, s.fr.x, s.fr.z, slow, 2.0)) { K.stop(); if (cd(M, 'f', 0.8)) K.tap('KeyF'); } return; }
   if (dr) M.lastDr = dr;                                   // 뒤로 물러서다 안 보이게 돼도 본 자리를 기억
-  if (s.stage === 'back') { const o = dr || M.lastDr; if (o) away(o, 6.4); else K.stop(); return; }
+  if (s.stage === 'back') { const o = dr || M.lastDr; if (o) away(o, 6.4); else { K.stop(); B.drag(5, 0); } return; }
   if (s.stage === 'between') {
-    if (!dr || !s.fr) { K.set('KeyF', false); K.stop(); return; }
+    if (!dr || !s.fr) { K.set('KeyF', false); K.stop(); B.drag(5, 0); return; }
     const c2 = cur.head || s.head || dr, f2 = cur.fr || s.fr, mx = (c2.x + f2.x) / 2, mz = (c2.z + f2.z) / 2, d = Math.hypot(mx - me.x, mz - me.z);
     if (d > 0.7) { K.set('KeyF', false); K.walk(s, mx, mz, true, 0.4); return; }
     K.stop(); K.face(s, c2.x, c2.z); K.set('KeyF', true); return;
   }
   if (s.stage === 'twins') {
-    if (!s.fr) { K.stop(); return; }
+    if (!s.fr) { K.stop(); B.drag(5, 0); return; }            // 친구가 화면 밖이면 둘러봄(감각 = 보이는 것만 · 예전엔 서서 기다리기만 해 막힘)
     if (Math.hypot(s.fr.x - me.x, s.fr.z - me.z) > 4.5) { K.go(s, s.fr.x, s.fr.z, false, 4); return; }
     K.stop(); if (cur.dnA && cur.dnB && !M.hit) { M.hit = true; K.tap('KeyF'); } if (!(cur.dnA && cur.dnB)) M.hit = false; return;
   }
