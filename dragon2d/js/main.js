@@ -102,10 +102,10 @@ function draw() {
     const F = G.Fl;
     if (F.splashT <= 0 && !(F.invT > 0 && (t * 10 % 1) < 0.3)) { V.at(F.x, F.y - F.z * 0.4, 1, F.scale || 1); ctx.rotate(F.tilt + (F.rot || 0)); drawDragonTop(ctx, F.kind, Object.assign(poseOfFlight(F, t), G.flyPose || {}), t); }
   }
-  if (G.boss) { const B = G.boss; V.at(B.x, B.y); drawBoss(ctx, B.pose, t); }
+  if (G.boss && !G.boss.hide) { const B = G.boss; V.at(B.x, B.y, 1, B.scale || 1); if (B.rot) ctx.rotate(B.rot); if (B.alpha != null) ctx.globalAlpha = B.alpha; drawBoss(ctx, B.pose, t); ctx.globalAlpha = 1; }   /* 대장(위에서 본 모습 · 기준 = 주둥이 앞 끝 · rot π = 머리가 아래(남쪽)를 향함) */
   for (const p of W.props) if (p.over && V.onScreen(p.x, p.y - (p.o.d || 0) / 2, 30)) drawPropAt(V, p, t);
   V.reset();
-  const st = G.runner.step, tint = TINT[(st && st.tint) || W.time] || (W.name === 'under' ? TINT.under : null);
+  const st = G.runner.step, tint = TINT[G.tint || (st && st.tint) || W.time] || (W.name === 'under' ? TINT.under : null);
   if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, V.W, V.H); }
   drawFx(V, t);
   if (G.Fl) for (const o of G.Fl.ob) { if (o.k !== 'cloud' || !V.onScreen(o.x, o.y, o.w)) continue; V.at(o.x, o.y); ctx.globalAlpha = G.Fl.hidden && Math.abs(G.Fl.x - o.x) < o.w / 2 && Math.abs(G.Fl.y - o.y) < o.h / 2 ? 0.5 : 0.92; drawProp(ctx, 'cloud', { w: o.w, h: o.h }, t); ctx.globalAlpha = 1; }

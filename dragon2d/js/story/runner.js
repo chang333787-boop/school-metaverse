@@ -27,7 +27,7 @@ export function createRunner(G) {
   };
   function begin() {
     const st = R.ch.steps[R.idx]; R.step = st;
-    G.hud.reset(); G.cast.clear(true); clearFx(); G.flags = { retry: R.fails }; G.drawOver = null; G.drawUnder = null; G.flyPose = null; G.boss = null; G.book.close && G.book.open && !G.book.draw && G.book.close();
+    G.hud.reset(); G.cast.clear(true); clearFx(); G.flags = { retry: R.fails }; G.drawOver = null; G.drawUnder = null; G.flyPose = null; G.boss = null; G.tint = null; G.book.close && G.book.open && !G.book.draw && G.book.close();
     document.querySelectorAll('.stepui').forEach((e) => e.remove());
     const pl = st.place || R.ch.place, tm = (G.diff === 'easy' && (st.timeEasy || R.ch.timeEasy)) || st.time || R.ch.time || 'day';
     if (!G.W || G.W.name !== pl || G.W.time !== tm || st.fresh) G.W = makePlace(pl, tm, st.placeOpt || {}); else G.W.dropTmp();
