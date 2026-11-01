@@ -111,15 +111,16 @@ export async function buildGame(scene, camera, rng, opt = {}) {
   /* TPS 마우스 잠금 알림(11-01) — 마우스가 있는 기기에서 잠그지 않았을 때만 아래 가운데 작은 쪽지 · 잠그면 사라짐 */
   const lockTip = document.createElement('div');
   lockTip.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:20;background:#efe2c4;color:#2b2118;border:2px solid #2b2118;border-radius:9px;padding:5px 12px;font:15px/1.4 sans-serif;pointer-events:none;display:none';
-  lockTip.textContent = '화면을 한 번 누르면 마우스로 둘러봐요 · Esc = 풀기';
+  const LOCK_WALK = '화면을 한 번 누르면 마우스로 둘러봐요 · Esc = 풀기', LOCK_FLY = '화면을 한 번 누르면 마우스로 방향을 틀어요 · Esc = 풀기';
+  lockTip.textContent = LOCK_WALK;
   document.body.appendChild(lockTip);
   const fine = (() => { try { return matchMedia('(pointer: fine)').matches; } catch (e) { return false; } })();
   let tipT = 0;
 
   /* 걸음 */
   G.playerStep = (dt, I) => {
-    if (!I.gateSet) { I.gateSet = true; I.lockGate = () => !!P.W && P.cam === 'follow' && !G.book.draw && G.bench.el.classList.contains('gone'); }
-    if ((tipT -= dt) <= 0) { tipT = 0.5; const show = fine && !I.locked() && I.lockGate(); if ((lockTip.style.display !== 'none') !== show) lockTip.style.display = show ? 'block' : 'none'; }
+    if (!I.gateSet) { I.gateSet = true; I.lockGate = () => !!P.W && (P.cam === 'follow' || P.cam === 'fly') && !G.book.draw && G.bench.el.classList.contains('gone'); }   // 비행도 같은 손(11-01 팀 B · 잠금 중 마우스 = 방향)
+    if ((tipT -= dt) <= 0) { tipT = 0.5; const show = fine && !I.locked() && I.lockGate(); if ((lockTip.style.display !== 'none') !== show) lockTip.style.display = show ? 'block' : 'none'; const tx = P.cam === 'fly' ? LOCK_FLY : LOCK_WALK; if (show && lockTip.textContent !== tx) lockTip.textContent = tx; }
     if (!P.W) return;
     P.fTap = false;
     if (I.tap('use')) { P.taps = (P.taps || []).filter((t) => G.t - t < 1.5); P.taps.push(G.t); }
@@ -134,7 +135,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
       if (!G.book.draw && !P.aiming && G.bench.el.classList.contains('gone')) { if (P.camOff) { I.look(); P.camOff = false; } P.C.step(dt, I, P.W); }   // 카메라가 쉰 동안(작업대·장소 짓기) 쌓인 끌기는 버림 — 끝나는 순간 카메라가 확 돌던 것(11-01 점검)
       else P.camOff = true;
       P.W.step(dt, I, P.C.moveYaw());
-    }
+    } else P.camOff = true;                                     // 비행·배 동안 쌓인 끌기(비행 엔진이 안 읽는 장면 포함)는 걷기로 돌아올 때 버림
   };
   G.playerDraw = (a, dt) => {
     if (!P.root || !P.W) return;

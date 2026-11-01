@@ -75,8 +75,8 @@ export const HOWTO = {
   throw:    [[keyCap('F 꾹', true), 'aim', '누르는 동안 겨누기'], [ARROWS, 'aim', '방향'], ['', ICONS.bucket, '놓으면 던지기']],
   rhythm:   [['', 'beat', '박자를 보고'], [keyCap('Space', true), ICONS.hammer, '맞춰 누르기'], ['', 'wait', '마구 누르면 엉켜요']],
   bench:    [[ARROWS, 'walkers', '작업대까지 걷기'], [keyCap('F'), ICONS.hammer, '작업대 앞에서 F'], ['', ICONS.torch, '촛불 켜진 뒷방 탁자']],   /* 작업대를 찾기 전(11-01 교사 '대장간 들어가서 뭐 어떻게 하는 거야' — 예전엔 Space 박자 창부터 떠서 헷갈림) */
-  fly:      [[ARROWS, ICONS.wind, '몸 기울이기'], [keyCap('Space', true), 'wing', '날갯짓 박자'], [keyCap('1~4', true), ICONS.finNew, '꼬리 자리']],
-  flyEasy:  [[ARROWS, ICONS.wind, '방향'], [keyCap('Space 꾹', true), ICONS.finNew, '꼬리 펴서 휙 돌기'], ['', 'wing', '앞으로는 저절로']],
+  fly:      [[ARROWS, ICONS.wind, '방향 · 마우스도 돼요'], [keyCap('Space', true), 'wing', '날개가 올라갔을 때 = 쭉'], [keyCap('1~4', true), ICONS.finNew, '꼬리 = 더 날카롭게(몰라도 돼요)']],   /* 11-01 팀 B: 방향키만으로 날 수 있음 · Space·꼬리는 덤 */
+  flyEasy:  [[ARROWS, ICONS.wind, '방향 · 마우스도 돼요'], [keyCap('Space 꾹', true), ICONS.finNew, '꼬리 펴서 휙 돌기'], ['', 'wing', '앞으로는 저절로']],
   draw:     [['', 'drag', '끌어서 펜 옮기기'], [keyCap('F 꾹', true), ICONS.pencil, '누르는 동안 그리기'], ['', 'dots', '점을 차례로 잇기']],
   /* 차례 안에서 할 일이 바뀌는 곳(팀 G 눈높이 점검 · 동사 표에 없던 손) */
   fish:     [[keyCap('F'), ICONS.cod, '던지기'], [keyCap('F'), 'beat', '찌가 쏙 = 당기기'], [`<span class="keys">${keyCap('A')}${keyCap('D')}</span>`, ICONS.rope, '반대쪽 버티기']],
@@ -94,8 +94,8 @@ export const HOWTO = {
   sniff8:   [[keyCap('C'), 'tiptoe', '살금살금(낮게)'], ['', ICONS.nose, '콧구멍 벌름 = 낮게 멈춤'], [ARROWS, 'rock', '바위 턱 → 틈']],
   point10:  [[keyCap('←') + keyCap('→'), ICONS.hand, '손짓으로 방향'], ['', ICONS.torch, '물 위 불빛 찾기'], ['', ICONS.eye, '안 보이면 둘러보기']],
   mark10:   [[keyCap('F 꾹', true), 'aim', '누르는 동안 겨누기'], [ARROWS, 'aim', '눈·날개·입 고르기'], [keyCap('F'), ICONS.bucket, '통 옆 = 물통 들기']],
-  boss10:   [[ARROWS, ICONS.wind, '몸 기울이기'], [keyCap('Space', true), 'wing', '날갯짓 박자'], [keyCap('F'), ICONS.eye, '쏘기 — 날개 막']],
-  boss10e:  [[ARROWS, ICONS.wind, '방향'], [keyCap('Space 꾹', true), ICONS.finNew, '꼬리 펴서 휙'], [keyCap('F'), ICONS.eye, '쏘기 — 날개 막']],
+  boss10:   [[ARROWS, ICONS.wind, '방향 · 마우스로 겨누기'], [keyCap('Space', true), 'wing', '날갯짓 박자'], [keyCap('F'), ICONS.eye, '쏘기 — 날개 막']],
+  boss10e:  [[ARROWS, ICONS.wind, '방향 · 마우스로 겨누기'], [keyCap('Space 꾹', true), ICONS.finNew, '꼬리 펴서 휙'], [keyCap('F'), ICONS.eye, '쏘기 — 날개 막']],
   dive10:   [[keyCap('S') + keyCap('↓'), 'wing', '곧장 아래로'], [keyCap('F'), ICONS.eye, '입이 밝을 때 쏘기'], [keyCap('W') + keyCap('↑'), ICONS.wind, '솟구치기']],
 };
 /* 하는 법 그림에 쓰는 작은 그림(낱말 대신) */
