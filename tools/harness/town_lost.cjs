@@ -52,8 +52,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     let moved = 0; for (const c of J.cells) { const a = await ev(() => __me()); await ev(c9 => SM_TOWN.jumpCell(c9), c); await W8(900); const b9 = await ev(() => __me()); if (Math.hypot(a[0] - b9[0], a[1] - b9[1]) > 5) moved++; await closeAll(); }
     ok(J.cells.length > 0 && moved === 0, '안 가 본 칸 순간이동 0 (' + J.cells.length + '칸 중 ' + moved + ')');
     ok(await ev(() => !!SM_TOWN.routeNow()), '안 가 본 칸 = 빨간 선(길 보기)'); ok((await ev(() => __G.S.tpn || 0)) === J.tpn, '길 보기는 순간이동 수를 안 씀');
-    await p.keyboard.press('KeyJ'); await W8(900); { const t = await panelTxt(); ok(/아직 안 가 봤어요 · 길 보기/.test(t), 'J 창 = 안 가 본 곳에 「아직 안 가 봤어요 · 길 보기」'); ok(!/남은 순간이동/.test(await ev(() => __toast())), '순간이동 n/5 알림 X'); await shot('lost_jump'); }
-    { const r = await ev(() => { const B = [...document.querySelectorAll('.twn-p .jp button[data-j]')].find(e => /아직 안 가 봤어요/.test(e.textContent)); if (!B) return null; const a = __me(); B.click(); return a; }); await W8(1200); const b9 = await ev(() => __me()); ok(!!r && Math.hypot(r[0] - b9[0], r[1] - b9[1]) < 5, 'J 창 안 가 본 장소 단추 = 순간이동 X'); await closeAll(); }
+    await p.keyboard.press('KeyJ'); await W8(900); { const t = await panelTxt(); ok(/아직 안 가 봤어요/.test(t), 'J 창 = 안 가 본 곳에 「아직 안 가 봤어요」(GO-1: 누르면 고르기 창의 까닭 한 줄)'); ok(!/남은 순간이동/.test(await ev(() => __toast())), '순간이동 n/5 알림 X'); await shot('lost_jump'); }
+    { const r = await ev(() => { const B = [...document.querySelectorAll('.twn-p .jp button[data-j]')].find(e => /아직 안 가 봤어요/.test(e.textContent)); if (!B) return null; const a = __me(); B.click(); return a; }); await W8(1200); const b9 = await ev(() => __me()), g9 = await ev(() => SM_TOWN.go() && SM_TOWN.go().info()); ok(!!r && Math.hypot(r[0] - b9[0], r[1] - b9[1]) < 5, 'J 창 안 가 본 장소 단추 = 순간이동 X'); ok(!!g9 && g9.off && /아직 안 가 본 곳/.test(g9.no), 'J 창 안 가 본 장소 = 고르기 창 바로 가기 흐림 + 까닭(' + (g9 && g9.no) + ')'); await closeAll(); }
     { const vis = await ev(() => { const S = __G.S; S.cells = S.cells || {}; const c = SM_TOWN.cell(15.4, 140); S.cells[c] = 1; return c; }); const a = await ev(() => __me()); await ev(c9 => SM_TOWN.jumpCell(c9), vis); await W8(1500); const b9 = await ev(() => __me()); ok(Math.hypot(a[0] - b9[0], a[1] - b9[1]) > 5, '가 본 칸(' + vis + ') = 순간이동 됨'); await closeAll(); }
     await ev(() => SM_TOWN.pathOff());
 
@@ -74,10 +74,11 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       const m1 = await ev(() => __me()); ok(Math.hypot(m0[0] - m1[0], m0[1] - m1[1]) > 10, '단추 = 목적지 가까운 정류장으로 옮김'); ok((await ev(() => __G.S.tpn || 0)) === tpn0, '정류장 단추는 순간이동 수(TP-LIM)에 안 셈');
       ok(!(await ev(() => [...document.querySelectorAll('.gchip')].some(e => /정류장으로/.test(e.textContent)))), '누르면 단추 사라짐');
       // 엉뚱한 쪽 걷기 → 쌓임 → 목표 쪽 다가가면 처음부터
-      await ev(() => SM_TOWN.pathOff()); await ev(t => { const m = __me(), dx = m[0] - t[0], dz = m[1] - t[1], l = Math.hypot(dx, dz) || 1; SD2.map.player.lookAt([m[0] + dx / l * 50, m[1] + dz / l * 50]); }, T); await W8(1200);
+      await ev(() => SM_TOWN.pathOff()); await W8(1200); const T2 = (await ev(() => SM_TOWN.compTgt())) || T;   /* 정류장 단추·선 끄기 뒤 따라가는 목표(TRACK-1)가 바뀌었을 수 있음 — 지금 목표로(예전 T = 앞 단계에서 남은 고른 곳이라 판마다 달랐음 · GO-1 11-01) */
+      await ev(t => { const m = __me(), dx = m[0] - t[0], dz = m[1] - t[1], l = Math.hypot(dx, dz) || 1; SD2.map.player.lookAt([m[0] + dx / l * 50, m[1] + dz / l * 50]); }, T2); await W8(1200);
       const w0 = await ev(() => SM_TOWN.lost().t); await p.keyboard.down('KeyW'); await W8(12000); await p.keyboard.up('KeyW'); const w1 = await ev(() => SM_TOWN.lost());
       ok(w1.t >= w0 + 8 || w1.t >= 8, '엉뚱한 쪽 걷기 = 헤맴 시간 쌓임(' + w0 + ' → ' + w1.t + ')');
-      await ev(t => { const m = __me(), dx = t[0] - m[0], dz = t[1] - m[1], l = Math.hypot(dx, dz) || 1, k = Math.min(60, l - 20); __tp(m[0] + dx / l * k, m[1] + dz / l * k); }, T); await W8(2500);
+      await ev(t => { const m = __me(), dx = t[0] - m[0], dz = t[1] - m[1], l = Math.hypot(dx, dz) || 1, k = Math.min(60, l - 20); __tp(m[0] + dx / l * k, m[1] + dz / l * k); }, T2); await W8(2500);
       const w2 = await ev(() => SM_TOWN.lost()); ok(w2.t <= 3, '목표 쪽으로 20m 넘게 다가감 = 처음부터(t ' + w2.t + ')');
       const ms = await ev(() => SM_TOWN.lost()); ok(ms.ms <= 1, '1초 칸 lostTick 최악 ' + ms.ms.toFixed(3) + 'ms (≤ 1ms) · 단계가 바뀐 한 번(선 긋기) ' + (ms.msA || 0).toFixed(1) + 'ms'); }
     ok(!errs.length, '페이지 오류 0' + (errs.length ? ' — ' + errs.join(' | ') : ''));

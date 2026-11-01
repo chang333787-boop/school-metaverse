@@ -155,13 +155,13 @@ export function createTips(A) {
     g(L('다니기', 'Getting around'));
     r(t9 ? M : K('B'), L('자전거', 'Bike'), t9 ? L('메뉴의 🚲 자전거 타기를 눌러요. 내릴 때는 오른쪽 위 내리기 단추를 눌러요', 'Tap 🚲 Bike in the menu. Tap Get off at the top right to stop') : L('한 번 더 누르면 내려요', 'Press again to get off'), 'bike');
     if (H('mini')) r(t9 ? C('🗺 ' + L('지도', 'Map')) : C(L('작은 지도', 'Small map')), L('작은 지도', 'Small map'), t9 ? L('누르면 펼쳐지고 접혀요', 'Tap to open or fold it') : L('오른쪽 위에 있어요. 누르면 큰 지도가 열려요', 'At the top right. Click it for the big map'), 'mini');
-    if (H('map')) r(t9 ? M : K('M'), L('큰 지도', 'Big map'), t9 ? L('메뉴의 🗺 큰 지도를 눌러요. 작은 지도를 눌러도 열려요', 'Tap 🗺 Big map in the menu, or tap the small map') : L('가고 싶은 곳을 찾아봐요', 'Find where you want to go'), 'map');
-    if (H('find')) r(t9 ? M : K('F'), L('장소 찾기', 'Place finder'), L('이름을 쓰면 빨간 선이 길을 알려 줘요', 'Type a name and a red line shows the way'), 'find');
-    r(t9 ? M : K('J'), L('바로 가기와 찾기', 'Jump and search'), L('장소 이름을 쓰고 Enter를 누르면 빨간 선이 생겨요. 순간이동은 하루 5번이에요', 'Type a place and press Enter for a red line. Quick trips: 5 a day'), 'lost');
+    if (H('map')) r(t9 ? M : K('M'), L('큰 지도', 'Big map'), t9 ? L('메뉴의 🗺 큰 지도나 작은 지도를 눌러 열어요. 지도를 누르면 길 안내와 바로 가기 중에 골라요', 'Open it with 🗺 Big map in the menu or the small map. Tap the map to pick: show the way or quick travel') : L('지도를 누르면 길 안내와 바로 가기 중에 골라요', 'Click the map to pick: show the way or quick travel'), 'map');   /* GO-1 */
+    if (H('find')) r(t9 ? M : K('F'), L('장소 찾기', 'Place finder'), L('이름을 쓰고 장소를 누르면 길 안내와 바로 가기 중에 골라요', 'Type a name, then tap a place to pick: show the way or quick travel'), 'find');
+    r(t9 ? M : K('J'), L('바로 가기와 찾기', 'Jump and search'), L('장소나 칸을 누르면 길 안내와 바로 가기 중에 골라요. 바로 가기는 하루 5번, 가 본 곳만 돼요. 이름을 쓰고 Enter를 누르면 바로 빨간 선이 생겨요', 'Tap a place or cell to pick: show the way or quick travel. Quick travel: 5 a day, only places you have been. Type a name and press Enter for a red line right away'), 'lost');
     if (H('bus')) r(C('🚌 ' + L('정류장', 'Bus stop')) + (t9 ? TB('✋') : K('E')), L('버스', 'Bus'), L('정류장에서 갈 곳을 골라요', 'Pick where to go at the stop'), 'bus');
     if (H('subway')) r(C('🚇 ' + L('역 입구', 'Station')) + (t9 ? TB('✋') : K('E')), L('지하철', 'Subway'), L('역 입구에서 내릴 역을 골라요', 'Pick your stop at the entrance'), 'subway');
     if (A.trkRow && (A.trkRow() || A.GAME.S.trk && A.GAME.S.trk.seen)) r(C('🧭 ' + L('바꾸기', 'Change')), L('따라갈 것 고르기', 'Pick what to follow'), L('왼쪽 위 「따라가는 중」 줄의 단추예요. 이야기, 할 일, 사건 가운데 하나를 고르면 나침반과 지도가 그것만 가리켜요', 'The button on the “Following” line at the top left. Pick a story, task or event and the compass and map show only that one'), 'track');   /* TRACK-1 */
-    r(M, L('하늘에서 보기', 'Sky view'), L('메뉴의 🛰 단추로 마을 전체를 내려다봐요', 'See the whole town with 🛰 in the menu'));
+    r(M, L('하늘에서 보기', 'Sky view'), L('메뉴의 🛰 단추로 마을 전체를 내려다봐요. 누른 곳도 길 안내와 바로 가기 중에 골라요', 'See the whole town with 🛰 in the menu. Tap a spot to pick: show the way or quick travel'));
     if (H('look')) r(t9 ? M : K('Y'), L('판 모습', 'Mat look'), L('우리가 만든 판 모습으로 바꿔요', 'Switch to the mat we built'), 'look');
     g(L('가방과 하루', 'Bag and day'));
     r(t9 ? M : K('I'), L('가방', 'Bag'), t9 ? L('메뉴의 🎒 가방에서 모은 것을 보고 먹거나 나눠요', '🎒 Bag in the menu: see, eat or share what you collected') : L('모은 것을 보고 먹거나 나눠요', 'See, eat or share what you collected'), 'bag');

@@ -107,12 +107,12 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     { const sp = M1.find(m => m.k === 'sprout' && plant && m.c === plant.cell); if (sp) { const J2 = await clickAt(sp.x, sp.z), L2 = J2 ? J2.t.split('\n').filter(t => t.trim() && !/칸 일지/.test(t)) : []; console.log('    일지(' + sp.c + '): ' + (J2 ? J2.t.replace(/\n/g, ' / ') : '없음')); ok(L2.length >= 2 && L2.length <= 3, '심은 칸 일지 ' + L2.length + '줄(심음 + 자람)'); } }
     const me0 = await ev(() => __me()), J1 = await clickAt(pm.x, pm.z); const lines = J1 ? J1.t.split('\n').filter(t => t.trim() && !/칸 일지/.test(t) && !/^🚌/.test(t.trim())) : [];
     console.log('    일지(' + pm.c + '): ' + (J1 ? J1.t.replace(/\n/g, ' / ') : '없음'));
-    ok(J1 && lines.length >= 1 && lines.length <= 3 && J1.go, '흔적 칸 누르기 = 일지 ' + lines.length + '줄(세 줄까지) + 🚌 가기 단추');
+    ok(J1 && lines.length >= 1 && lines.length <= 3 && J1.go, '흔적 칸 누르기 = 일지 ' + lines.length + '줄(세 줄까지) + 📍 이 칸으로 단추');
     ok((await ev(() => __me())).every((v, k) => Math.abs(v - me0[k]) < 1), '흔적 겹에서 누르기만으로는 순간이동 X');
     await shot('trace_map');
     { const t = await ev(() => document.querySelector('.twn-p').innerText); ok(!/%|\d+\s*\/\s*\d+ *칸|칸 중|빈 칸/.test(t.replace(/바로 가기 \(\d\/5\)|\(\d\/5\)/g, '')), '흔적 지도 글에 %·「n 칸 중」·빈 칸 표시 0'); }
-    { const tpn0 = await ev(() => __G.S.tpn || 0); await ev(() => { const b9 = document.querySelector('.twn-p .trj button[data-cell]'); if (b9) b9.click(); }); await W8(1800); const me1 = await ev(() => __me()), tpn1 = await ev(() => __G.S.tpn || 0);
-      const c1 = await ev(([x, z]) => SM_TOWN.cell(x, z), me1); ok(Math.hypot(me1[0] - me0[0], me1[1] - me0[1]) > 10 && c1 === pm.c, '🚌 가기 = 그 칸으로(' + pm.c + ' → ' + c1 + ')');
+    { const tpn0 = await ev(() => __G.S.tpn || 0); await ev(() => { const b9 = document.querySelector('.twn-p .trj button[data-cell]'); if (b9) b9.click(); }); await W8(400); ok(await ev(() => !!(SM_TOWN.go() && SM_TOWN.go().on())), '「📍 이 칸으로」 = 고르기 창(GO-1)'); await ev(() => SM_TOWN.go().pick('j')); await W8(1800); const me1 = await ev(() => __me()), tpn1 = await ev(() => __G.S.tpn || 0);
+      const c1 = await ev(([x, z]) => SM_TOWN.cell(x, z), me1); ok(Math.hypot(me1[0] - me0[0], me1[1] - me0[1]) > 10 && c1 === pm.c, '🚌 바로 가기 = 그 칸으로(' + pm.c + ' → ' + c1 + ')');
       ok(tpn1 === tpn0 + 1, '가기 = 하루 5번 문으로 한 번 셈(' + tpn0 + ' → ' + tpn1 + ')'); }
     await closeAll();
     // 영어 말 틀(같은 함수)
