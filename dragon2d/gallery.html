@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>드래곤 2D 그림 보기 판</title>
+<style>
+  html,body{margin:0;background:#f4ead2;color:#2b2118;font:14px/1.4 "Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+  #bar{position:sticky;top:0;z-index:2;background:#e9dcbc;border-bottom:1px solid #2b2118;padding:6px 10px;display:flex;gap:14px;flex-wrap:wrap}
+  #bar a{color:#2b2118;text-decoration:none;border-bottom:2px solid transparent}
+  #bar a.on{border-bottom-color:#2b2118;font-weight:bold}
+  canvas{display:block}
+  #note{padding:6px 10px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div id="bar">
+  <a id="k-actors" href="?k=actors">인물·드래곤</a>
+  <a id="k-sil" href="?k=sil">실루엣 시험(64px)</a>
+  <a id="k-perf" href="?k=perf">그리기 시간</a>
+  <a href="?k=actors&amp;t=0">움직임 멈춤</a>
+</div>
+<canvas id="cv"></canvas>
+<div id="note"></div>
+<script type="module" src="js/art/gallery.js"></script>
+</body>
+</html>
