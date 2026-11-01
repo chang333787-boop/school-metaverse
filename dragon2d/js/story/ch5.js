@@ -1,6 +1,6 @@
 // 5장 꼬리날개(#11·#12 · design §2 · 탑뷰) — 대장간 밤(고버 무용담 · 쇠가 주황일 때 망치 · 그을린 조각을 방패에 덧대기) → 코브: 뱀장어에 질겁 · 먹는 동안 꼬리로 · 움찔하면 멈췄다 다시(첫 치유)
 // → 첫 들림(꼬리날개로 옆 비키기 · 바위 피하기 → 호수에 첨벙) → 훈련 3일 지플백(불티 머리에 물 · 가스 머리 X)
-import { say, wait, until, goal, useAt, near, dist, talking, throwFrom, previewArc, knock, bang, sfx, shoot, FX, burst, puff, faceTo } from './kit.js?v=1';
+import { say, talk, wait, until, goal, useAt, near, dist, talking, throwFrom, previewArc, knock, bang, sfx, shoot, FX, burst, puff, faceTo } from './kit.js?v=1';
 import { createFlight, addStack } from '../play/flight.js?v=1';
 
 export const chapter = {
@@ -9,13 +9,11 @@ export const chapter = {
   steps: [
     /* ① 대장간 — 쇠가 주황일 때 F(빨강·하양 = 탕 · 연타 = 엉킴) · 꼬리날개 다섯 번 + 방패 덧대기 둘 */
     { id: '5-1', verb: 'forge', place: 'forge', time: 'night', goal: '꼬리날개를 두드려 만들어라', at: [9, 7.4], face: [0, -1], limit: 90,
-      hints: ['쇠가 주황색일 때만 F', '빨갛거나 하얄 땐 기다려요'],
+      hints: ['쇠가 주황색일 때만 Space', '빨갛거나 하얄 땐 기다려요'],
       *run(G) {
         G.cast.person('gobber', 5.6, 6.6, { dir: 'side', flip: 1, pose: { carry: 'hammer' } });
         G.P.lock = true; G.P.dir = 'up'; G.P.carry = 'hammer';
-        say(G, 'gobber', '내가 젊을 땐 드래곤 둘을… 아니 다섯을…', { secs: 2.4 });
-        say(G, 'gobber', '날개나 꼬리를 노려라. 못 나는 드래곤은 못 도망가지!', { secs: 2.8 });
-        say(G, 'hiccup', '(못 나는 드래곤… 꼬리날개를 만들면 되잖아!)', { icons: ['finNew'] });
+        yield* talk(G, [['gobber', '내가 젊을 땐 드래곤 둘을… 아니 다섯을…'], ['gobber', '날개나 꼬리를 노려라. 못 나는 드래곤은 못 도망가지!'], ['hiccup', '(못 나는 드래곤… 꼬리날개를 만들어 주면 되잖아!)', ['finNew']]]);
         const need = G.diff === 'easy' ? 4 : 5, shield = G.inv.scale ? 2 : 0;
         let good = 0, heat = 0, flash = 0;
         const COL = ['#7a2a1a', '#c8442e', '#e9772e', '#f6c24a', '#f8f0d0'], win = G.diff === 'easy' ? 0.5 : 0.36, per = G.diff === 'easy' ? 2.2 : 1.7;
@@ -46,7 +44,7 @@ export const chapter = {
 
     /* ② 코브 — 뱀장어에 질겁(꺼내서 던지기) · 먹는 동안 살금살금 꼬리까지 · F 꾹 = 묶기 · 움찔(동공 가늚)하면 손 떼고 기다렸다 다시 = 첫 치유 */
     { id: '5-2', verb: 'give', goal: '꼬리날개를 달아라', at: [12, 15], limit: 100, mood: 1,
-      hints: ['바구니에서 뱀장어를 F로 꺼내 던져요', '먹는 동안 꼬리 곁에서 F 꾹 — 움찔하면 손을 떼요'],
+      hints: ['바구니에서 뱀장어를 Space로 꺼내 던져요', '먹는 동안 꼬리 곁에서 Space 꾹 — 움찔하면 손을 떼요'],
       *run(G) {
         const D = G.cast.dragon('toothless', 23, 15, { flip: -1, fear: 0.3, pose: { pupil: 0.8, fin: 'none' } });
         const bask = G.W.prop('fish_basket', 18.5, 15.4, { n: 3, eel: 1 });
@@ -54,7 +52,7 @@ export const chapter = {
         D.to = [20.4, 15]; D.spd = 2;
         yield* until(() => !D.to, 3);
         D.fear = 1; D.to = [25, 15]; D.spd = 6; sfx(G, 'growl', D.x); bang(G, D, 2);
-        say(G, 'hiccup', '뱀장어를 보고 질겁했어!', { icons: ['eel'] });
+        yield* talk(G, [['hiccup', '뱀장어를 보고 질겁했어! 드래곤은 뱀장어를 싫어하는구나.', ['eel']]]);
         G.book.note('nightfury', 'hates', '칼 · 뱀장어');
         while (true) {
           const dt = yield; t += dt; G.flags.ph = ph;
@@ -65,7 +63,7 @@ export const chapter = {
             if (look) bang(G, D, 2.2);
             tail = D.x + 2.5; goal(G, tail, D.y + 0.3, { h: 1.4 });
             const at = near(G, tail, D.y + 0.3, 1.0);
-            if (at) G.fspots.push({ x: tail, y: D.y + 0.3, label: 'F꾹' });
+            if (at) G.fspots.push({ x: tail, y: D.y + 0.3, label: 'Space 꾹' });
             if (look && at && G.P.crouch < 0.5 && Math.hypot(G.P.vx, G.P.vy) > 0.3) { knock(G, 1, 0, 0.5); prog = Math.max(0, prog - 0.3); }
             const hold = at && G.I.down.use && !look;
             if (flinch > 0) { flinch -= dt; D.pupilTo = 0.15; if (G.I.down.use && at) { swatT += dt; if (swatT > 0.35) { knock(G, 1, 0.3, 0.7); prog = Math.max(0, prog - 0.35); flinch = 0; swatT = 0; sfx(G, 'growl', D.x); } } }
@@ -98,15 +96,14 @@ export const chapter = {
         for (let t = 0; t < 1; t += yield) F.vx = 6;
         sfx(G, 'splash', F.x); burst('drop', F.x, F.y, 0.2, 18, 4, 0.8, 0.12, G.rng);
         G.Fl = null; G.mode = 'walk'; G.P.x = 24; G.P.y = 6.5;
-        say(G, 'hiccup', '푸하! …첨벙했지만, 날았어! 우리 둘이 같이!');
         G.hud.banner('첫 들림 — 투슬리스는 날개가, 히컵은 꼬리가', 'finNew', 3);
-        yield* wait(2);
+        yield* talk(G, [['hiccup', '푸하! …첨벙했지만, 날았어!'], ['hiccup', '투슬리스는 날개, 나는 꼬리. 둘이 함께여야 날 수 있어.']]);
         return true;
       } },
 
     /* ④ 훈련 3일 지플백 — 초록 김 = 가스 머리 · 입가 불티 = 불꽃 머리 → 불꽃 머리에 물(젖으면 불꽃 X) · 쌍둥이가 서로 물을 끼얹는 사이 가스가 짙어짐 */
     { id: '5-4', verb: 'throw', place: 'arena', time: 'day', goal: '불꽃 머리를 적셔라', at: [8, 15], limit: 90,
-      hints: ['입가에 불티가 튀는 쪽이 불꽃 머리예요', '통 앞에서 F로 물 → 고리를 그 머리에 맞춰 F'],
+      hints: ['입가에 불티가 튀는 쪽이 불꽃 머리예요', '통 앞에서 Space로 물 → 고리를 그 머리에 맞춰 Space'],
       *run(G) {
         const D = G.cast.dragon('zippleback', 18, 8, { flip: -1, pose: { pupil: 0.3 } });
         G.cast.person('ruffnut', 11, 10, { dir: 'side', flip: 1, pose: { carry: 'bucket' } }); G.cast.person('tuffnut', 12.2, 10.6, { dir: 'side', flip: -1, pose: { carry: 'bucket' } });
@@ -142,9 +139,12 @@ export const chapter = {
           if (gas > 0.55) G.marks.push({ k: 'text', x: D.x - 1, y: D.y - 3.6, t: '가스가 짙어져!', s: 18, c: '#4a6a2a' });
           if (gas >= 1) { burst('smoke', D.x - 2, D.y, 2, 14, 3, 1.5, 0.6, G.rng); sfx(G, 'boom', D.x); say(G, 'gobber', '펑! 가스에 불티가 닿으면 터진다니까!', { secs: 2 }); yield* wait(1); return 'retry'; }
         }
-        D.pose.tell = 0; D.to = [22, 5]; D.spd = 3; D.pose.pupil = 0.8;
+        D.pose.tell = 0; D.pose.pupil = 0.8;
         G.book.note('zippleback', 'weak', '젖은 머리는 불꽃 X');
-        say(G, 'gobber', '히컵이 또 해냈어! 어떻게 한 거냐?', { secs: 2 });
+        yield* talk(G, [['hiccup', '그리고… 이것도.', ['eel']]]);
+        G.P.carry = 'fish'; D.fear = 1; D.to = [22, 5]; D.spd = 4; sfx(G, 'growl', D.x);   /* 뱀장어를 보이자 지플백이 우리로 물러남(영화 #12) */
+        yield* wait(1.2); G.P.carry = null;
+        yield* talk(G, [['gobber', '히컵이 또 해냈어! 어떻게 한 거냐?'], ['hiccup', '(투슬리스한테 배웠다고는… 못 하지.)']]);
         G.hud.banner('훈련장 순위판 — 히컵이 중간까지', 'shield', 2.6);
         yield* wait(1.6);
         return true;

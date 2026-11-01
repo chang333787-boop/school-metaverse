@@ -9,6 +9,10 @@ import { RECAP } from './recap.js?v=1';
 
 export const CH_TITLES = ['먼 훗날', '습격의 밤', '숲의 자국', '숨은 호수', '생선과 이름', '꼬리날개', '하늘을 나는 법', '아빠의 투구', '아스트리드와 둥지', '마지막 시험', '대장 드래곤', '함께 사는 버크'];
 export const LAST_CH = 11;
+/* 차례마다 X 키가 하는 일(교사 11-02 '그 장에만 필요한 동작은 한 키에') — 차례의 act가 있으면 그것 · 없으면 아래 표 · 동사 기본값 */
+const ACT_VERB = { dodge: 'jump', shield: 'jump', track: 'jump', fly: 'tail', flock: 'tail', boss: 'tail', cut: 'sneak', hide: 'sneak', give: 'sneak', sand: 'sneak', approach: 'sneak', sneak: 'sneak', sniff: 'sneak', feed: 'sneak' };
+const ACT_STEP = { '1-6': 'jump', '6-1': 'jump', '7-2': 'jump', '9-1': 'sneak', '9-6': 'sneak', '11-2': null, '10-1': 'jump' };
+export const actOf = (st) => (st.act !== undefined ? st.act : st.id in ACT_STEP ? ACT_STEP[st.id] : ACT_VERB[st.verb] || null);
 
 /* 차례 안에서 쓰는 도움 생성기 */
 export function* wait(s) { let t = 0; while (t < s) t += yield; }
@@ -42,7 +46,7 @@ export function createRunner(G) {
     G.P = G.player = createBody(at[0], at[1]); G.P.helmet = st.helmet ?? keepHelm; if (st.face) { G.P.fx = st.face[0]; G.P.fy = st.face[1]; G.P.dir = Math.abs(st.face[0]) > Math.abs(st.face[1]) ? 'side' : st.face[1] < 0 ? 'up' : 'down'; G.P.flip = st.face[0] < 0 ? -1 : 1; }
     G.Fl = null; G.mode = 'walk'; G.goal = null; G.fspots.length = 0; G.marks.length = 0; G.camOpt = {}; G.V.setZoom(st.zoom || 1);
     G.V.snap(G.P.x, G.P.y - 0.8, G.W.bounds); G.cam = G.V.cam;
-    G.hud.goal(st.goal || '');
+    G.hud.goal(st.goal || ''); G.I.setAct(actOf(st));
     const verb = st.verb && (R.ch.howto?.[st.id] || st.verb);
     if (verb && !R.seen.has(verb)) { R.seen.add(verb); G.hud.howto(verb, 9); }
     R.gen = st.run(G); R.t = 0; R.idle = 0; R.hintLv = 0; G.hud.hint(''); R.state = 'run'; R.n++;

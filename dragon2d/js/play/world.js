@@ -108,6 +108,12 @@ export const PLACES = {
     P.push(['rock', 3, 15.5, { w: 2.5, h: 1.4 }], ['rock', 21, 15.8, { w: 2.5, h: 1.6 }]);
     return { M, P, A: { start: [12, 3], chains: [[6, 12], [12, 13], [18, 12]] }, bounds: [0, 0, 24, 18], swim: 1 };
   },
+  stacktop() {
+    const M = grid(24, 16, 'sea'), P = [];
+    M.disc(12, 8.5, 8.6, 5.6, 'sand'); M.disc(12, 8.5, 7.6, 4.8, 'rockfloor');
+    P.push(['rock', 6.4, 6.6, { w: 1.8, h: 1.1 }], ['rock', 17.6, 11.2, { w: 1.6, h: 1 }], ['nip', 10, 11, {}]);
+    return { M, P, A: { start: [9, 9], basket: [8, 10.6] }, bounds: [0, 0, 24, 16] };
+  },
   sea() { const M = grid(48, 48, 'sea'); return { M, P: [], A: {}, bounds: null, sky: 1, wrap: 1 }; },
 };
 

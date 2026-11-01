@@ -65,7 +65,7 @@ srv.listen(0, async () => {
           console.log(rows[rows.length - 1].join(' | '));
         }
         if (DUMB && st.verb) {
-          for (const [kind, lab] of [['idle', '가만히'], ['fmash', 'F 연타'], ['fhold', 'F 누른 채'], ['smash', 'Space 연타'], ['wfmash', '→+F 연타']]) {
+          for (const [kind, lab] of [['idle', '가만히'], ['fmash', 'Space 연타'], ['fhold', 'Space 누른 채'], ['smash', 'X 연타'], ['wfmash', '→+Space 연타']]) {
             if (KINDS.length && !KINDS.includes(kind)) continue;
             await open(ch, i, 'normal', true);
             const r = await runBot(kind, 'normal', st.limit * 2);

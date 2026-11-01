@@ -1,6 +1,6 @@
 // 1장 습격의 밤(#1~3 · design §2 · 탑뷰) — 무기 나르기 → 지붕 불(물통 · 바람 쪽으로 번짐) → 골목(종마다 다른 예고 → 비키기·점프) → 양 지키기(볼라 · 기절 = 그을린 조각)
 // → 나이트 퓨리(바다에 비친 별이 가려지는 곳) → 아무도 안 믿어 줌 · 쉬움 = 해 질 녘 습격(design §4-2) · 깜짝 X: 공격 앞엔 늘 ! + 몸짓 예고 2~3초 · 심부름은 길 찾기 X(갈 곳 ▼)
-import { say, wait, until, goal, useAt, near, dist, talking, throwFrom, previewArc, hitsMe, knock, bang, sfx, shoot, FX, burst, puff, faceTo } from './kit.js?v=1';
+import { say, talk, wait, until, goal, useAt, near, dist, talking, throwFrom, previewArc, hitsMe, knock, bang, sfx, shoot, FX, burst, puff, faceTo } from './kit.js?v=1';
 import { douse, onRoof } from '../play/fx.js?v=1';
 
 const TELL = { easy: 3, normal: 2.5, hard: 2 };
@@ -25,14 +25,14 @@ export const chapter = {
   steps: [
     /* ① 무기 나르기 — 대장간 앞 무기 더미 → 바이킹 셋(골목 따라 오른쪽) */
     { id: '1-1', verb: 'carry', goal: '무기를 바이킹들에게 날라라', at: [8, 29], limit: 70,
-      hints: ['대장간 앞 무기 더미에서 F', '▼ 표시된 바이킹 앞에서 F로 건네요'],
+      hints: ['대장간 앞 무기 더미에서 Space', '▼ 표시된 바이킹 앞에서 Space로 건네요'],
       *run(G) {
         const gob = G.cast.person('gobber', 9.4, 28.6, { dir: 'side', flip: -1, pose: { carry: 'hammer' } });
         const pile = G.W.prop('weapon_pile', 4.6, 29.4, { n: 6 });
         const vik = [[18, 29.4], [27.5, 30.4], [36, 29.2]].map(([x, y], i) => G.cast.person(i === 1 ? 'villager2' : 'villager', x, y, { dir: 'side', flip: -1 }));
         const sky = skyDragons(G);
-        say(G, 'gobber', '히컵! 넌 대장간에 있어라.');
-        say(G, 'gobber', '…아니다, 일손이 모자라. 저 무기 좀 날라 줘!', { icons: ['axe'] });
+        yield* talk(G, [['hiccup', '여기는 버크. 바다 한가운데 바람 센 섬 마을이야.'], ['hiccup', '우리 마을 집은 다 새것이야. 드래곤이 자꾸 태워서.'],
+          ['hiccup', '나는 히컵. 마을에서 제일… 가벼운 바이킹.'], ['gobber', '드래곤이다! 히컵, 넌 대장간에 있어라.'], ['gobber', '…아니다, 일손이 모자라. 저 무기 좀 날라 줘!', ['axe']]]);
         let have = 0, given = 0;
         while (given < 3) {
           const dt = yield; driftSky(sky, dt, G);
@@ -53,7 +53,7 @@ export const chapter = {
 
     /* ② 지붕 불 — 물통(통 앞 F) → 지붕을 향해 F(떨어질 곳 고리) · 바람 쪽(동쪽)으로 번짐 · 둘은 지켜야 함 */
     { id: '1-2', verb: 'throw', goal: '지붕 불을 꺼라', at: [36, 30.6], limit: 80,
-      hints: ['물통 앞에서 F로 물을 받아요', '불붙은 지붕 쪽을 보고 F — 고리가 떨어질 곳'],
+      hints: ['물통 앞에서 Space로 물을 받아요', '불붙은 지붕 쪽을 보고 Space — 고리가 떨어질 곳'],
       *run(G) {
         FX.wind = [1.2, 0];
         const tubs = [G.W.prop('barrel', 37.2, 31.6, { water: 1 }), G.W.prop('barrel', 45.4, 31.6, { water: 1 })];
@@ -96,7 +96,7 @@ export const chapter = {
 
     /* ③ 골목 — 망루까지 · 내더 가시(세움 → 부채꼴 셋) · 그롱클 불덩이(볼 부풂 → 떨어질 자리 붉은 고리) · 나이트메어 불길(몸이 달아오름 → 길 가득한 불 줄 = 점프) */
     { id: '1-3', verb: 'dodge', goal: '망루까지 가라', at: [22, 29], limit: 70,
-      hints: ['! 가 뜨면 곧 쏴요 — 붉은 고리 밖으로, 불 줄은 점프', '가시는 옆으로 비키거나 Space'],
+      hints: ['! 가 뜨면 곧 쏴요 — 붉은 고리 밖으로, 불 줄은 점프', '가시는 옆으로 비키거나 X'],
       *run(G) {
         for (const p of G.W.props) if (p.kind === 'house' && p.y === 27 && p.x > 30) p.o.scorch = Math.max(p.o.scorch || 0, 0.5);
         const sky = skyDragons(G), order = ['nadder', 'gronckle', 'nightmare'], tell = TELL[G.diff];
@@ -126,7 +126,7 @@ export const chapter = {
 
     /* ④ 양 지키기 — 테러가 양을 물고 우리 위를 돎 → 볼라(F · 떨어질 곳 고리)로 기절 → 그을린 비늘 조각(기절 = 가장 낮은 재료) */
     { id: '1-4', verb: 'throw', goal: '양을 지켜라', at: [55, 28.5], face: [-1, 0], limit: 60,
-      hints: ['테러가 고리 안으로 올 때 F로 볼라를', '볼라는 바구니에서 F로 또 집어요'],
+      hints: ['테러가 고리 안으로 올 때 Space로 볼라를', '볼라는 바구니에서 Space로 또 집어요'],
       *run(G) {
         const bask = G.W.prop('crate', 57.5, 27.8, {});
         const T = G.cast.dragon('terror', 54, 23.5, { z: 1.3, flip: -1, pose: { wing: 1, pupil: 0.3 }, flapHz: 3 });
@@ -215,11 +215,8 @@ export const chapter = {
         N.pose.wing = 1; N.z = 0.5; N.to = [75, 20]; N.spd = 9;
         for (let t = 0; t < 1.4; t += yield) N.z += 0.1;
         const gob = G.cast.person('gobber', 44, 28.8, { dir: 'side', flip: 1 }), v = G.cast.person('villager', 50, 30.2, { dir: 'side', flip: 1 });
-        say(G, 'hiccup', '아빠! 제가 나이트 퓨리를 맞혔어요!');
-        say(G, 'stoick', '그만. 오늘 밤 일로도 충분하다.');
-        say(G, 'villager', '낙서나 하던 녀석이 또…', { actor: v });
-        say(G, 'gobber', '가자, 꼬마. 집에 가자.');
-        say(G, 'hiccup', '진짜 맞혔단 말이야… 저 숲 너머로.');
+        yield* talk(G, [['hiccup', '아빠! 제가 나이트 퓨리를 맞혔어요!'], ['stoick', '그만. 드래곤 하나 잡겠다고 마을을 다 흔들었구나.'], ['villager', '낙서나 하던 녀석이 또…'],
+          ['stoick', '드래곤이 양을 또 물고 갔다. 둥지를 찾아야 끝이 나.'], ['gobber', '가자, 꼬마. 집에 가자.'], ['hiccup', '진짜 맞혔단 말이야… 저 숲 너머로.']]);
         goal(G, 46, 29.2);
         st.to = [30, 29]; st.spd = 2.2; gob.to = [40, 29]; gob.spd = 3.2;
         yield* until(() => !talking(G) && G.P.x < 48, 60);

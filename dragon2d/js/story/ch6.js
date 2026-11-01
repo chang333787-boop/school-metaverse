@@ -1,7 +1,8 @@
 // 6장 하늘을 나는 법(#13~16 · design §2 · 탑뷰) — 코브에서 배운 셋(드래곤 풀 · 턱 밑 긁기 · 빛 점) → 훈련장 한 판(그롱클·내더·테러 · 공격 뒤 틈에만 먹힘 · 진정 = 묵은 비늘)
 // → 첫 바다 비행(꼬리 쪽지 → 바람에 날아감 → 감으로 · 돌기둥 1m 스치면 바람 + 덤 빠르기)
-import { say, wait, until, goal, useAt, near, dist, talking, hitsMe, knock, bang, sfx, shoot, FX, burst, puff, faceTo } from './kit.js?v=1';
+import { say, talk, wait, until, goal, useAt, near, dist, talking, hitsMe, knock, bang, sfx, shoot, FX, burst, puff, faceTo } from './kit.js?v=1';
 import { createFlight, addStack, addCloud } from '../play/flight.js?v=1';
+import { mindStep } from '../play/actors.js?v=1';
 
 const TELL = { easy: 3, normal: 2.5, hard: 2 };
 export const chapter = {
@@ -10,9 +11,9 @@ export const chapter = {
   steps: [
     /* ① 훈련장 한 판 — 셋이 한꺼번에 · 그롱클 = 쏜 뒤 틈에 풀(F) · 내더 = 가시 뒤 틈에 턱 밑 F 꾹 · 테러 = 햇빛 자리(☀)에서 방패 F → 빛 점을 쫓아 우리로 */
     { id: '6-1', verb: 'approach', goal: '셋 다 진정시켜라', at: [15, 18], limit: 120,
-      hints: ['쏘고 난 뒤 "휴…" 할 때 가까이 가서 F', '테러는 햇빛 자리(☀)에서 F — 빛 점을 쫓아가요'],
+      hints: ['쏘고 난 뒤 "휴…" 할 때 가까이 가서 Space', '테러는 햇빛 자리(☀)에서 Space — 빛 점을 쫓아가요'],
       *run(G) {
-        say(G, 'hiccup', '투슬리스한테 배웠어: 드래곤 풀 · 턱 밑 긁기 · 빛 점!', { icons: ['nip', 'hand', 'shield'] });
+        yield* talk(G, [['hiccup', '코브에서 날기 연습을 하다 알게 됐어.'], ['hiccup', '드래곤 풀에 뒹굴고, 턱 밑을 긁으면 털썩, 빛 점은 쫓아가!', ['nip', 'hand', 'shield']], ['hiccup', '투슬리스 안장도 만들었어. 이제 훈련장에서 해 볼 차례야.', ['saddle']]]);
         for (const c of G.W.props.filter((p) => p.kind === 'cage')) c.o.open = 1;
         G.cast.person('gobber', 3.5, 18.6, { dir: 'side', flip: 1 });
         const ast = G.cast.person('astrid', 26, 18.2, { dir: 'side', flip: -1, pose: { carry: 'axe' } });
@@ -47,7 +48,7 @@ export const chapter = {
               G.marks.push({ k: 'text', x: D.x, y: D.y - (D.kind === 'nadder' ? 2.8 : 2.3), t: '휴…', s: 18 });
               const d = Math.hypot(G.P.x - D.x, G.P.y - D.y);
               if (D.kind === 'gronckle' && d < 2.8) { G.fspots.push({ x: D.x, y: D.y + 0.6 }); if (G.I.pressed.use && !(G.P.mashT > 0)) { D.calm = true; D.pose.roll = 1; G.W.prop('nip', D.x - 0.6, D.y + 0.4, {}); sfx(G, 'purr', D.x); say(G, 'fishlegs', '드래곤 풀에 뒹굴어! 책에 없던 거야!', { secs: 2 }); G.book.note('gronckle', 'likes', '드래곤 풀'); } }
-              if (D.kind === 'nadder' && d < 2.4) { G.fspots.push({ x: D.x, y: D.y + 0.6, label: 'F꾹' }); if (G.I.down.use) { chin += dt; G.P.handLock = 1; if (chin > 0.6) { D.calm = true; D.pose.sit = 1; D.pose.eat = 0; sfx(G, 'purr', D.x); say(G, 'snotlout', '저걸 어떻게… 턱을 긁었다고?', { secs: 2 }); G.book.note('nadder', 'likes', '턱 밑 긁기'); G.P.handLock = 0; } } else chin = 0; }
+              if (D.kind === 'nadder' && d < 2.4) { G.fspots.push({ x: D.x, y: D.y + 0.6, label: 'Space 꾹' }); if (G.I.down.use) { chin += dt; G.P.handLock = 1; if (chin > 0.6) { D.calm = true; D.pose.sit = 1; D.pose.eat = 0; sfx(G, 'purr', D.x); say(G, 'snotlout', '저걸 어떻게… 턱을 긁었다고?', { secs: 2 }); G.book.note('nadder', 'likes', '턱 밑 긁기'); G.P.handLock = 0; } } else chin = 0; }
               if (D.t > (G.diff === 'easy' ? 3 : G.diff === 'hard' ? 1.6 : 2.2)) { D.st = 'walk'; D.t = 0; D.pose.eat = 0; D.pose.pupil = 0.3; chin = 0; G.P.handLock = 0; D.to = D.kind === 'nadder' ? [17 + G.rng() * 8, 7 + G.rng() * 6] : [5 + G.rng() * 8, 7 + G.rng() * 6]; D.spd = 2.4; }
             }
             if (D.calm) { D.pose.tell = 0; D.pose.pupil = 1; D.to = null; G.inv.oldScale = (G.inv.oldScale || 0) + 1; G.hud.banner('묵은 비늘 — 진정시키면 드래곤이 스스로 내려놔요', 'heart', 2.4); }
@@ -68,18 +69,17 @@ export const chapter = {
           if (hits >= 4 && G.diff !== 'easy') { say(G, 'gobber', '히컵! 셋 다 한꺼번엔 무리였나? 다시!'); yield* wait(1); return 'retry'; }
         }
         G.P.handLock = 0;
-        say(G, 'gobber', '셋 다 진정이라니! 관중석이 들썩이는구나!');
         G.hud.banner('훈련장 순위판 1등 — 히컵', 'shield', 2.6);
+        yield* talk(G, [['gobber', '셋 다 다치지 않고 진정이라니! 관중석이 들썩이는구나!'], ['villager', '히컵이 1등이래! 그 히컵이!'], ['astrid', '(…저 녀석, 뭔가 숨기고 있어.)']]);
         ast.to = [15, 21.5]; ast.spd = 3;
-        say(G, 'astrid', '(…저 녀석, 뭔가 숨기고 있어.)', { secs: 2.2 });
-        yield* wait(2);
+        yield* wait(1);
         return true;
       },
       sense: (G) => ({ sun: [15, 15], light: !!(G.flags.light && G.flags.light()), ds: (G.flags.d6 || []).map((d) => ({ k: d.kind, x: +d.x.toFixed(2), y: +d.y.toFixed(2), st: d.st, calm: d.calm })) }) },
 
     /* ② 첫 바다 비행 — 꼬리 쪽지(그림) → 반쯤에서 바람에 날아감 → 감으로 · 돌기둥 사이 · 스치면 바람 + 덤 */
     { id: '6-2', verb: 'fly', place: 'sea', time: 'day', goal: '돌기둥 사이를 빠져나가라', at: [24, 0], limit: 120,
-      hints: ['돌기둥이 오기 전에 ←→로 틈을 골라요', 'Space를 누르고 있으면 꼬리가 펴져 빨리 꺾여요'],
+      hints: ['돌기둥이 오기 전에 ←→로 틈을 골라요', 'X를 누르고 있으면 꼬리가 펴져 빨리 꺾여요'],
       *run(G) {
         const F = G.Fl = createFlight(24, 0, { speed: 10, assist: G.diff === 'easy', fin: 'new', rider: 'hiccup', lane: [10, 38] }); G.mode = 'fly';
         const R = G.rng, end = -320;
@@ -92,7 +92,7 @@ export const chapter = {
         for (let i = 0; i < 9; i++) addCloud(F, 12 + R() * 24, -30 - i * 36, 9, 5);
         const card = document.createElement('div'); card.className = 'stepui';
         card.style.cssText = 'position:fixed;left:50%;bottom:92px;transform:translateX(-50%) rotate(-2deg);z-index:21;background:#f4ead2;border:2px solid #2b2118;border-radius:8px 14px 10px 12px;padding:6px 12px;font:700 15px "Noto Sans KR",sans-serif;color:#2b2118;transition:transform 1.2s, opacity 1.2s;pointer-events:none';
-        card.innerHTML = '꼬리 쪽지 — ←→ 비키기 · Space 꾹 = 꼬리 펴서 휙 · ↑ 빠르게 · ↓ 느리게';
+        card.innerHTML = '꼬리 쪽지 — ←→ 비키기 · X 꾹 = 꼬리 펴서 휙 · ↑ 빠르게 · ↓ 느리게';
         document.body.appendChild(card);
         say(G, 'hiccup', '쪽지대로 하면 돼… 꼬리 자리 맞추고!', { icons: ['map'] });
         let blown = false, saidG = false;
@@ -108,5 +108,43 @@ export const chapter = {
         yield* wait(1.4);
         return true;
       } },
+    /* ③ 돌기둥 위 점심(#16) — 테러가 투슬리스 생선을 넘봄 → 투슬리스가 입 안에 작은 불(연기 트림 · 다치지 않음) → 히컵이 다른 테러에게 생선(살금살금 · 눈이 동그랄 때 F) → 고양이처럼 웅크림 → '책이 다 틀렸다' */
+    { id: '6-3', verb: 'feed', place: 'stacktop', time: 'day', goal: '작은 테러에게 생선을 나눠 줘라', at: [9, 9], limit: 80, mood: 1,
+      hints: ['바구니에서 Space로 생선을 집어요', 'X를 누른 채 살금살금 다가가 눈이 동그랄 때 Space'],
+      *run(G) {
+        const D = G.cast.dragon('toothless', 13.5, 8.2, { flip: -1, pose: { pupil: 1, fin: 'new', saddle: 1, sit: 1, eat: 1 } });
+        const bask = G.W.prop('fish_basket', 8, 10.6, { n: 4 });
+        yield* talk(G, [['hiccup', '쪽지 없이도 날았어! 여기 돌기둥에서 점심 먹자.', ['cod']]]);
+        const T1 = G.cast.dragon('terror', 20, 4, { z: 2.4, flip: -1, pose: { wing: 1, pupil: 0.4 }, flapHz: 3 });
+        T1.to = [14.6, 7.6]; T1.spd = 4;
+        yield* until(() => !T1.to, 4);
+        T1.z = 0; T1.pose.wing = 0; bang(G, D, 2.2); D.pose.mouth = 1;
+        yield* talk(G, [['hiccup', '어, 작은 드래곤이 투슬리스 생선을 노려!']]);
+        D.pose.mouth = 0.6; puff('ember', T1.x, T1.y, 0.6, 0, 0, 0.6, 0.4, 0.12); T1.pose.tell = 1; sfx(G, 'pop', T1.x);
+        for (let t = 0; t < 1.2; t += yield) { if (G.rng() < 0.3) puff('smoke', T1.x, T1.y, 0.6, 0, 0, 0.8, 0.8, 0.25); }
+        T1.pose.tell = 0; D.pose.mouth = 0;
+        yield* talk(G, [['hiccup', '입 안에 작은 불을 뿜었어! 연기만 퐁… 하나도 안 다쳤네.'], ['hiccup', '테러는 입 안이 불에 약하구나. 책에 적어 둬야지.', ['book']]]);
+        G.book.note('terror', 'weak', '입 안은 불에 약함');
+        T1.pose.wing = 1; T1.z = 1; T1.to = [22, 2]; T1.spd = 5;
+        const T2 = G.cast.dragon('terror', 18.5, 11.6, { flip: -1, fear: 0.6, pose: { pupil: 0.4 } });
+        yield* talk(G, [['hiccup', '저기 또 한 마리… 배고픈가 봐. 하나 나눠 줄까?']]);
+        let fed = false; G.flags.T2 = T2;
+        while (!fed) {
+          const dt = yield;
+          if (!G.P.carry) { goal(G, bask.x, bask.y); if (useAt(G, bask.x, bask.y, 1.5)) { G.P.carry = 'fish'; sfx(G, 'pop', bask.x); } continue; }
+          if (mindStep(T2, G.P, dt, { fastV: 2, near: 4.5, calmK: 0.22, minFear: 0.05 })) { T2.to = [Math.min(20, T2.x + 1.5), T2.y]; T2.spd = 4; sfx(G, 'cry_terror', T2.x); }
+          faceTo(T2, G.P.x, G.P.y); goal(G, T2.x, T2.y, { h: 1.4 });
+          const d = Math.hypot(G.P.x - T2.x, G.P.y - T2.y);
+          if (d < 2) G.fspots.push({ x: T2.x, y: T2.y });
+          if (G.I.pressed.use && d < 2) { if (T2.pose.pupil > 0.65 && !(G.P.mashT > 0)) fed = true; else { T2.fear = 1; T2.to = [Math.min(20, T2.x + 1.5), T2.y]; T2.spd = 4; say(G, 'hiccup', '(놀랐나 봐… 천천히.)', { secs: 1.4 }); } }
+        }
+        G.P.carry = null; T2.pose.eat = 1; T2.pose.pupil = 1; sfx(G, 'purr', T2.x); goal(G, null);
+        yield* wait(1); T2.pose.eat = 0; T2.pose.sit = 1;
+        G.book.note('terror', 'likes', '생선 · 먹고 나면 고양이처럼 웅크림');
+        G.hud.banner('드래곤 책 — "책이 다 틀렸다" 쪽이 생겼다', 'book', 3);
+        yield* talk(G, [['hiccup', '책에는 "보면 처치"라던데… 생선 하나면 고양이 같아.'], ['hiccup', '드래곤 책이 다 틀렸어. 이제 내가 본 대로 고쳐 쓸 거야.', ['pencil']]]);
+        return true;
+      },
+      sense: (G) => { const T = G.flags.T2; return { basket: [8, 10.6], carry: G.P.carry, T: T ? [T.x, T.y] : null, pupil: T ? +T.pose.pupil.toFixed(2) : null }; } },
   ],
 };

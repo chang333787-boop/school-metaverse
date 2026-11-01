@@ -27,7 +27,7 @@ function mkHand(level) {
     if (o.run) H.hold('run');
     return false;
   };
-  H.sneak = (on) => { const me = H.now.me; if (me && !!me.sneak !== on) H.tap('sneak', 0.4); };
+  H.sneak = (on) => { if (on) H.hold('sneak'); };      /* X 꾹 = 살금살금(누르고 있는 동안) */
   /* 바라보기 — 한 걸음(한 프레임)만 그쪽 키 */
   H.face = (fx, fy) => { const me = H.now.me; if (!me) return true; const ok = (fx === 0 || Math.sign(me.fx) === Math.sign(fx) && Math.abs(me.fx) > 0.5) && (fy === 0 || Math.sign(me.fy) === Math.sign(fy) && Math.abs(me.fy) > 0.5) && (fx !== 0 || Math.abs(me.fx) < 0.5) && (fy !== 0 || Math.abs(me.fy) < 0.5); if (ok) return true; if (!H.mem.faceT || H.t - H.mem.faceT > 0.2) { H.mem.faceT = H.t; if (fx > 0) H.hold('right'); if (fx < 0) H.hold('left'); if (fy > 0) H.hold('down'); if (fy < 0) H.hold('up'); } return false; };
   /* 피하기 — 붉은 고리(떨어질 자리) 밖으로 · 낮게 날아오는 것이 0.22초 안에 닿으면 점프 */
@@ -153,12 +153,10 @@ export const BOTS = {
   },
   '4-3': (H) => {
     const x = H.now.x || {}, me = H.now.me; if (!x.D) return; const D = { x: x.D[0], y: x.D[1] };
-    if (me.x < 22.3) {
-      H.sneak(false);
-      const next = (x.lines || []).find((l) => l[0] > me.x - 0.1);
-      if (next && next[0] - me.x < 0.95 && next[0] - me.x > 0.45 && !me.air) H.hold('jump');
-      if (Math.abs(me.y - 15) > 0.4) H.hold(me.y < 15 ? 'down' : 'up');
-      if (me.air || !next || next[0] - me.x > 0.45) H.hold('right');
+    if (me.x < 22.3) {      /* 선 틈으로 지그재그(위·아래 번갈아 열림 · 바위 비켜) */
+      const WP = [[12.5, 20.2], [12.5, 10], [16.5, 10], [16.5, 20.2], [20.4, 20.2], [20.4, 10], [22.4, 10], [22.4, 15]];
+      H.mem.wp = H.mem.wp || 0;
+      const w = WP[H.mem.wp]; if (w && H.walk(w[0], w[1], 0.3)) H.mem.wp++;
       return;
     }
     if (Math.hypot(D.x - me.x, D.y - me.y) > 3.0) { H.walk(D.x - 2.4, D.y, 0.3, { sneak: true }); return; }
@@ -191,6 +189,13 @@ export const BOTS = {
     else H.walk(cur.x + (me.x < cur.x ? -2.2 : 2.2), cur.y + 2.2, 0.8);
   },
   '6-2': (H) => flyBot(H),
+  '4-0': (H) => { if (!H.dodge()) { const g = H.now.goalXY; if (g) H.walk(g[0], g[1] + 0.4, 0.8); } },
+  '6-3': (H) => {
+    const x = H.now.x || {}, me = H.now.me, L = H.late.x || {};
+    if (!x.T) { const g = H.now.goalXY; if (g) H.walk(g[0], g[1] + 0.6, 0.6); return; }
+    if (!x.carry) { if (H.walk(x.basket[0], x.basket[1] + 0.8, 0.5)) H.tap('use', 0.8); return; }
+    if (H.walk(x.T[0] - 1.4, x.T[1], 0.35, { sneak: true })) { if (x.pupil > 0.7 && (L.pupil ?? 0) > 0.7) H.tap('use', 1); }
+  },
 };
 Object.assign(BOTS, BOTS_7 || {}, BOTS_10 || {});
 
@@ -218,7 +223,7 @@ export function dumbBot(kind) {
     for (const a of ACTS) set(a, false);
     if (kind === 'fmash') set('use', k % 10 < 3);
     if (kind === 'fhold') set('use', true);
-    if (kind === 'smash') set('jump', k % 10 < 3);
+    if (kind === 'smash') set('act', k % 10 < 3);           /* X 연타 */
     if (kind === 'wfmash') { set('right', true); set('use', k % 10 < 3); }
   };
 }

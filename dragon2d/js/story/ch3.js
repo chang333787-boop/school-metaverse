@@ -1,22 +1,35 @@
 // 3장 숨은 호수(#5~7 · design §2 · 탑뷰) — 훈련 첫날 그롱클(볼이 부풀 때 방패 · 나무벽 뒤 · 여섯 발) → 숨은 호수 관찰(바위 뒤 살금살금 · F 꾹 스케치 · 왼 꼬리날개 없음) → 큰 회관 밤 드래곤 책(빈칸에 내 그림)
-import { say, wait, until, goal, useAt, near, dist, talking, hitsMe, knock, bang, sfx, shoot, FX, burst, puff, faceTo } from './kit.js?v=1';
+import { say, talk, wait, until, goal, useAt, near, dist, talking, hitsMe, knock, bang, sfx, shoot, FX, burst, puff, faceTo } from './kit.js?v=1';
 
 const TELL = { easy: 3, normal: 2.5, hard: 2 };
 export const chapter = {
   id: 3, title: '숨은 호수', sub: '훈련 첫날 · 그리고 숲 속 호수', place: 'arena', time: 'day',
   end: '드래곤 책 빈칸에 내 그림이 생겼다',
   steps: [
+    /* ⓪ (이음) 선착장 배웅 — 아빠가 둥지를 찾으러 떠남 · 고버가 훈련을 맡음(스토이크 셋째 박자) */
+    { id: '3-0', place: 'dock', time: 'day', goal: '아빠 배웅하기', at: [20, 10.6], limit: 60,
+      *run(G) {
+        const st = G.cast.person('stoick', 20.4, 22.6, { dir: 'up' }), ship = G.W.findProp('ship', 30, 22);
+        G.cast.person('gobber', 18.4, 15, { dir: 'side', flip: 1 }); G.cast.person('villager', 24, 13.2, { dir: 'down' });
+        goal(G, 20, 21);
+        yield* until(() => near(G, 20, 21, 2.4), 40);
+        goal(G, null);
+        yield* talk(G, [['stoick', '얼음이 얼기 전에 다녀오마. 둥지를 찾으면 습격도 끝이다.'], ['hiccup', '…다녀오세요, 아빠.'], ['stoick', '고버, 이 녀석 훈련 잘 시켜 주게.'],
+          ['gobber', '걱정 마! 히컵, 내일부터 훈련장이다.'], ['hiccup', '(훈련장… 드래곤을 처치하는 법을 배우는 곳.)']]);
+        st.to = [27, 22.4]; st.spd = 3;
+        for (let t = 0; t < 2.6; t += yield) { if (t > 1.2) { st.hide = 1; if (ship) ship.y += 0.03; } puff('drop', G.P.x + (G.rng() - 0.5) * 12, G.P.y - 6 + G.rng() * 8, 3, -0.5, 0, -2, 0.8, 0.06); }
+        return true;
+      } },
     /* ① 훈련 1일 그롱클 — 볼이 부풀 때 방패 두드리기(조준 흐림 · 연타 = 익숙해짐) · 나무벽 뒤 · 점프 · 여섯 발이면 끝(피시레그) */
     { id: '3-1', verb: 'shield', goal: '그롱클의 여섯 발을 버텨라', at: [11, 15], limit: 80,
-      hints: ['볼이 부풀면 F로 방패를 두드려요', '나무벽 뒤에 숨거나, 날아오면 점프'],
+      hints: ['볼이 부풀면 Space로 방패를 두드려요', '나무벽 뒤에 숨거나, 날아오면 점프'],
       *run(G) {
         G.W.prop('barricade', 13, 12, { w: 1.8 }); G.W.prop('barricade', 18.5, 15.5, { w: 1.8 });
         G.cast.person('gobber', 15, 18.6, { dir: 'up', pose: { carry: 'hammer' } });
         [['fishlegs', 6, 9], ['astrid', 24, 14], ['snotlout', 22, 17], ['ruffnut', 7, 16], ['tuffnut', 8, 17]].forEach(([w, x, y]) => G.cast.person(w, x, y, { dir: 'side', flip: x < 15 ? 1 : -1, pose: { carry: 'shield' } }));
         const D = G.cast.dragon('gronckle', 16, 7, { flip: -1, fear: 0.7, pose: { pupil: 0.3 } });
         G.P.carry = 'shield'; G.W.findProp('cage', 15, 4).o.open = 1;
-        say(G, 'gobber', '오늘은 그롱클이다! 방패가 제일 중요하지.', { icons: ['shield'] });
-        say(G, 'fishlegs', '그롱클은 여섯 발! 내가 셀게!', { secs: 2.2 });
+        yield* talk(G, [['gobber', '훈련 첫날이다! 마을을 지키려면 드래곤을 알아야지.'], ['gobber', '첫 손님은 그롱클. 방패가 제일 중요하다!', ['shield']], ['fishlegs', '그롱클은 여섯 발! 내가 셀게!']]);
         const tell = TELL[G.diff], NUM = ['하나!', '둘!', '셋!', '넷!', '다섯!', '여섯! 끝!'];
         let shots = 0, ph = 'walk', t = 0, hits = 0, lastBang = -9, blurred = false, dropped = null, blurN = 0;
         D.to = [14, 8];
@@ -55,7 +68,7 @@ export const chapter = {
 
     /* ② 숨은 호수 — 바위 곁에서 C(살금살금) + F 꾹 = 스케치 · 바위가 투슬리스와 나 사이에 있어야 숨음 · 들키면 멀리 날아감 */
     { id: '3-2', verb: 'hide', place: 'cove', time: 'day', goal: '들키지 않고 그려라', at: [3, 15], limit: 90, mood: 1,
-      hints: ['바위 뒤에서 C를 눌러 살금살금 + F를 꾹', '투슬리스가 이쪽을 볼 땐 바위 뒤에'],
+      hints: ['바위 뒤에서 X를 누르고 살금살금 + Space를 꾹', '투슬리스가 이쪽을 볼 땐 바위 뒤에'],
       *run(G) {
         const rocks = G.W.A.rocks;
         const D = G.cast.dragon('toothless', 30, 22.5, { flip: 1, fear: 0.6, pose: { pupil: 0.5, fin: 'none', wing: 0.2 } });
@@ -78,7 +91,7 @@ export const chapter = {
           if (alert > 1) { alert = 0; prog = Math.max(0, prog - 0.25); D.to = [33, 6]; D.spd = 7; ph = 'flee'; t = 0; sfx(G, 'growl', D.x); bang(G, D, 2.2); say(G, 'hiccup', '들켰다! …숨어야 해.', { secs: 1.6 }); }
           if (hid && G.I.down.use && ph !== 'flee' && d < 24) { prog += dt * (d < 15 ? 0.17 : 0.11) * (G.diff === 'easy' ? 1.4 : 1); P.look = 1; }
           const [hx, hy] = rocks[1]; goal(G, hid ? null : hx - 1.3, hid ? 0 : hy + 0.2, { h: 1.6 });
-          G.fspots.push({ x: hx - 1.3, y: hy + 0.2, label: 'F꾹' }); G.flags.hid = hid;
+          G.fspots.push({ x: hx - 1.3, y: hy + 0.2, label: 'Space 꾹' }); G.flags.hid = hid;
           const want = Math.floor(prog * path.length);
           if (want > drawn) { X.strokeStyle = '#2b2118'; X.lineWidth = 3; X.lineCap = 'round'; X.beginPath(); X.moveTo(path[Math.max(0, drawn - 1)][0], path[Math.max(0, drawn - 1)][1]); for (let i = drawn; i < want; i++) X.lineTo(path[i][0], path[i][1]); X.stroke(); drawn = want; }
           if (alert > 0.3) G.marks.push({ k: 'text', x: D.x, y: D.y - 2.6, t: '?', s: 30 });
@@ -86,8 +99,9 @@ export const chapter = {
         X.strokeStyle = '#a83e1e'; X.lineWidth = 4; X.beginPath(); X.arc(36, 238, 22, 0, 7); X.stroke();
         X.fillStyle = '#a83e1e'; X.font = 'bold 22px sans-serif'; X.fillText('왼 꼬리날개 없음!', 120, 280);
         G.hud.banner('왼 꼬리날개가 없다 — 숲에서 주운 조각과 꼭 맞아', 'fin', 3.2);
-        say(G, 'hiccup', '그래서 못 날아가는 거구나…');
-        yield* wait(2.6); G.hud.sketch(false);
+        yield* wait(1.2);
+        yield* talk(G, [['hiccup', '왼쪽 꼬리날개가 없어. 숲에서 주운 조각이 바로 그거야.', ['fin']], ['hiccup', '그래서 날지 못하고 이 호수에 갇힌 거구나…']]);
+        G.hud.sketch(false);
         return true;
       },
       sense: (G) => { const D = G.cast.find('toothless'); return { rocks: G.W.A.rocks, hid: !!G.flags.hid, D: D ? [D.x, D.y] : null }; } },
@@ -99,10 +113,7 @@ export const chapter = {
         const gob = G.cast.person('gobber', 24, 13, { dir: 'side', flip: -1, pose: { carry: 'book' } });
         const tw = [G.cast.person('ruffnut', 25.5, 11.5, { dir: 'side', flip: -1 }), G.cast.person('tuffnut', 26.5, 12.2, { dir: 'side', flip: -1 }), G.cast.person('snotlout', 27, 13.6, { dir: 'side', flip: -1 })];
         G.P.lock = true;
-        say(G, 'gobber', '드래곤 책이다. 밤새 비가 오니 읽기 좋겠지.', { icons: ['book'] });
-        say(G, 'tuffnut', '읽으라고? 책을?', { secs: 1.6 });
-        say(G, 'snotlout', '난 싸우면서 배울래.', { secs: 1.6 });
-        yield* until(() => !talking(G), 12);
+        yield* talk(G, [['gobber', '드래곤 책이다. 밤새 비가 오니 읽기 좋겠지.', ['book']], ['tuffnut', '읽으라고? 책을?'], ['snotlout', '난 싸우면서 배울래.']]);
         for (const a of tw) { a.to = [15, 17.5]; a.spd = 3; }
         gob.pose.carry = null; G.book.give();
         G.book.startDraw(G.diff === 'easy');
@@ -112,7 +123,7 @@ export const chapter = {
         yield* wait(0.8);
         G.book.endDraw(); G.P.lock = false;
         G.hud.banner('드래곤 책에 내 그림 첫 장', 'pencil', 3);
-        yield* wait(1.2);
+        yield* talk(G, [['hiccup', '책에는 "보면 처치"뿐이야. 나이트 퓨리는 "알 수 없음".'], ['hiccup', '아무도 모르는 걸 내가 봤어. 내가 처음 그려 넣은 거야.']]);
         return true;
       },
       sense: (G) => ({ draw: G.book.drawSense() }) },

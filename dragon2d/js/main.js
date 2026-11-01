@@ -115,8 +115,10 @@ function draw() {
 }
 /* 표시 — 목표 ▼(화면 밖이면 가장자리 화살표 + 거리) · 쉬움 F 키 · 예고 ! · 점·고리·글 */
 function keycap(ctx, x, y, s, label) {
-  ctx.fillStyle = '#f4ead2'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(x - s / 2, y - s / 2, s * (label.length > 1 ? 1.5 : 1), s * 0.94, 6); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = INK; ctx.font = `700 ${Math.round(s * 0.5)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x + (label.length > 1 ? s * 0.25 : 0), y);
+  label = label.replace(/^F ?꾹$/, 'Space 꾹').replace(/^F$/, 'Space');            /* 쓰기 = Space(교사 11-02) */
+  ctx.font = `700 ${Math.round(s * 0.42)}px sans-serif`; const w = Math.max(s, ctx.measureText(label).width + s * 0.5);
+  ctx.fillStyle = '#f4ead2'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(x - w / 2, y - s / 2, w, s * 0.94, 6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x, y);
 }
 function drawMarks(ctx) {
   V.reset();
@@ -146,7 +148,12 @@ function drawMarks(ctx) {
     else if (m.k === 'ring') { ctx.strokeStyle = m.c || INK; ctx.lineWidth = 3 * k; ctx.setLineDash([6 * k, 6 * k]); ctx.beginPath(); ctx.ellipse(x, y, (m.r || 1) * V.S, (m.r || 1) * V.S * 0.55, 0, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
     else if (m.k === 'zone') { ctx.fillStyle = m.c || 'rgba(200,68,46,.22)'; ctx.strokeStyle = m.s || 'rgba(168,62,30,.7)'; ctx.lineWidth = 2 * k; ctx.setLineDash([8 * k, 6 * k]); ctx.beginPath(); if (m.w) ctx.rect(V.sx(m.x - m.w / 2), V.sy(m.y - m.h / 2), m.w * V.S, m.h * V.S); else ctx.ellipse(x, y, m.r * V.S, m.r * V.S * 0.55, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.setLineDash([]); }
   }
-  if (G.P && G.P.sneak && G.mode === 'walk') { ctx.font = `700 ${Math.round(15 * k)}px sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.lineWidth = 4 * k; ctx.strokeStyle = INK; ctx.fillStyle = '#f4ead2'; ctx.strokeText('살금살금 (C)', 14 * k, V.H - 70 * k); ctx.fillText('살금살금 (C)', 14 * k, V.H - 70 * k); }
+  /* 이 차례의 키(왼쪽 아래 · 셋 안쪽) — Space = 쓰기 · X = 그 차례 동작 · Shift = 달리기 */
+  if (G.runner.state === 'run') {
+    const am = I.actMode, keys = [['Space', '쓰기·말'], am ? ['X', am === 'jump' ? '점프' : am === 'sneak' ? (G.P && G.P.sneak ? '살금살금 중' : '꾹 = 살금살금') : '꾹 = 꼬리'] : null, G.mode === 'walk' ? ['Shift', '달리기'] : null].filter(Boolean);
+    let x = 14 * k; const y = V.H - 66 * k; ctx.font = `700 ${Math.round(14 * k)}px sans-serif`; ctx.textBaseline = 'middle';
+    for (const [kk, t] of keys) { const w = ctx.measureText(kk).width + 16 * k; ctx.fillStyle = '#f4ead2'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(x, y - 13 * k, w, 26 * k, 6); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(kk, x + 8 * k, y + 1); x += w + 6 * k; ctx.lineWidth = 4 * k; ctx.strokeStyle = INK; ctx.fillStyle = '#f4ead2'; ctx.strokeText(t, x, y + 1); ctx.fillText(t, x, y + 1); x += ctx.measureText(t).width + 14 * k; }
+  }
 }
 
 /* ── 봇(입력만) · 디버그 API ─────────────────────────────────────────────── */

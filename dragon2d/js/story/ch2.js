@@ -1,5 +1,5 @@
 // 2장 숲의 자국(#4 · design §2 · 탑뷰) — 큰 회관 회의(횃불 지키며 듣기 · '바이킹은 겁나도 간다') → 안개 숲 흔적(멈춰서 F 꾹 · 꼬리날개 조각) → 묶인 나이트 퓨리(숨 고를 때만 밧줄 · 찌르는 동작 없음)
-import { say, wait, until, goal, useAt, near, dist, talking, bang, sfx, burst, puff, faceTo } from './kit.js?v=1';
+import { say, talk, wait, until, goal, useAt, near, dist, talking, bang, sfx, burst, puff, faceTo } from './kit.js?v=1';
 import { mindStep } from '../play/actors.js?v=1';
 
 export const chapter = {
@@ -8,7 +8,7 @@ export const chapter = {
   steps: [
     /* ① 큰 회관 회의 — 걸으며 듣기 + 흐려지는 횃불에 F(둘이 함께 꺼지면 다시) */
     { id: '2-1', verb: 'listen', place: 'hall', time: 'night', goal: '횃불을 지키며 회의 듣기', at: [15, 9], limit: 70,
-      hints: ['흐려지는 횃불 앞에서 F', '횃불 둘이 함께 꺼지면 안 돼요'],
+      hints: ['흐려지는 횃불 앞에서 Space', '횃불 둘이 함께 꺼지면 안 돼요'],
       *run(G) {
         const T = G.W.props.filter((p) => p.kind === 'torch'); for (const p of T) { p.o.lit = 1; p.dim = 0; }
         G.cast.person('stoick', 15, 5.6, { dir: 'down' }); G.cast.person('gobber', 12.4, 6.2, { dir: 'down' });
@@ -33,24 +33,27 @@ export const chapter = {
           if (i >= lines.length && !talking(G)) break;
         }
         goal(G, null);
+        /* 저녁 — 둘의 말이 겹쳐 '싫어요'가 묻힘(design §2 2장) */
+        yield* talk(G, [['stoick', '히컵, 할 말이 있다.'], ['hiccup', '아빠, 저도 할 말이 있어요.'], ['stoick', '넌 내일부터 드래곤 훈련을—'], ['hiccup', '저는 드래곤을 죽이는 건 싫—'],
+          ['stoick', '—받는다! 좋은 소식이지? 바이킹은 겁나도 간다.'], ['hiccup', '(…싫다는 말은 또 묻혔다.)']]);
         return true;
       },
       sense: (G) => ({ torches: (G.flags.T || []).map((p) => ({ x: p.x, y: p.y + 0.8, lit: +p.o.lit.toFixed(2), dim: !!p.dim })) }) },
 
     /* ② 안개 숲 — 흔적 셋을 멈춰서 F 꾹 → 지도에 · 꼬리날개 조각 줍기 · 통나무는 점프 */
     { id: '2-2', verb: 'track', goal: '흔적을 따라가라', at: [2.5, 15], limit: 90,
-      hints: ['안개 속 흔적 곁에 멈춰서 F를 꾹', '쓰러진 통나무는 Space로 넘어요'],
+      hints: ['안개 속 흔적 곁에 멈춰서 Space를 꾹', '쓰러진 통나무는 X로 넘어요'],
       *run(G) {
         const clues = G.W.A.clues.map(([x, y], i) => ({ x, y, n: ['부러진 나무', '파인 땅', '그을음', '꼬리날개 조각'][i], k: 0 }));
         for (const c of clues) c.p = G.W.prop(c.n === '꼬리날개 조각' ? '_fin' : '_clue', c.x, c.y, { n: c.n });
-        say(G, 'hiccup', '분명히 이쪽으로 떨어졌어. 흔적이 있을 거야.', { icons: ['map'] });
+        yield* talk(G, [['hiccup', '아무도 안 믿어. 그럼 내가 찾아서 보여 줄 거야.'], ['hiccup', '분명히 이쪽 숲으로 떨어졌어. 흔적이 있을 거야.', ['map']]], { walk: true });
         let ci = 0; G.flags.clues = clues;
         while (ci < clues.length) {
           const dt = yield; const c = clues[ci];
           goal(G, c.x, c.y, { h: 1.4 });
           G.P.gate = [0, 0, c.x + 3, 30];
           const here = near(G, c.x, c.y, 1.4) && Math.hypot(G.P.vx, G.P.vy) < 0.6 && !G.P.air;
-          G.fspots.push({ x: c.x, y: c.y, label: 'F꾹' });
+          G.fspots.push({ x: c.x, y: c.y, label: 'Space 꾹' });
           if (here && G.I.down.use) { c.k += dt; G.marks.push({ k: 'ring', x: c.x, y: c.y, r: 0.4 + c.k * 0.5, c: '#e6c464' }); } else c.k = Math.max(0, c.k - dt * 2);
           if (c.k > (G.diff === 'easy' ? 0.5 : 0.9)) {
             ci++; sfx(G, 'pluck', c.x); G.flags.ci = ci;
@@ -67,7 +70,7 @@ export const chapter = {
 
     /* ③ 묶인 나이트 퓨리 — 숨이 고를 때(동공 둥글 때)만 말뚝 F · 버둥일 때 끊으면 한 줄 되감김 · 찌르는 동작 없음 */
     { id: '2-3', verb: 'cut', goal: '밧줄 넷을 풀어라', at: [39, 15], limit: 90, mood: 1,
-      hints: ['눈이 동그래지고 숨이 느려질 때 말뚝 앞에서 F', '버둥댈 땐 기다려요 — C로 살금살금'],
+      hints: ['눈이 동그래지고 숨이 느려질 때 말뚝 앞에서 Space', '버둥댈 땐 기다려요 — X를 누른 채 살금살금'],
       *run(G) {
         const D = G.cast.dragon('toothless', 45, 15.2, { flip: -1, fear: 0.9, pose: { pupil: 0.15, sit: 1, wing: 0.2, fin: 'none' } });
         const pegs = [[42.6, 13.6], [42.6, 16.9], [47.4, 13.6], [47.4, 16.9]].map(([x, y]) => ({ x, y, cut: false, p: G.W.prop('log', x, y, { len: 0.4, rope: 1, nobox: 1 }) }));
@@ -110,8 +113,7 @@ export const chapter = {
         for (let t = 0; t < 2.4; t += yield) D.z = t * 2 + Math.sin(t * 9) * 0.3;
         G.P.lock = false; G.P.carry = null;
         G.hud.veil.show('', ''); yield* wait(1.2); G.hud.veil.hide();
-        say(G, 'hiccup', '…왜 날 안 해쳤지?');
-        yield* wait(1.5);
+        yield* talk(G, [['hiccup', '…날 덮쳤는데, 해치지 않았어.'], ['hiccup', '나도 못 했어. 떨고 있는 눈을 보니까…'], ['hiccup', '왜 날 안 해쳤지?']]);
         return true;
       },
       sense: (G) => { const D = G.cast.find('toothless'); return { pegs: (G.flags.pegs || []).map((q) => ({ x: q.x, y: q.y, cut: q.cut })), pupil: D ? +D.pose.pupil.toFixed(2) : null, D: D ? [D.x, D.y] : null }; } },

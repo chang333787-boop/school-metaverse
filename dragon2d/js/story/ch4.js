@@ -1,7 +1,8 @@
 // 4장 생선과 이름(#8~10 · design §2 · 탑뷰) — 고기잡이(찌가 쏙 = 당기기 · 끄는 반대쪽 버티기 · 뱀장어도 걸림) → 코브: 투슬리스가 볼 때 칼 내려놓기 · 생선 · 이빨이 쏙 = 이름 · 게워 낸 반 토막 한 입
 // → 모래 선(밟지 않고 틈으로 · 점프로 넘기) · 고개 돌려 손 내밀기(F 꾹 · 기다리기) → 코가 손바닥에 · 휙 가 버림
-import { say, wait, until, goal, useAt, near, dist, talking, bang, sfx, burst, puff, faceTo } from './kit.js?v=1';
+import { say, talk, wait, until, goal, useAt, near, dist, talking, bang, sfx, burst, puff, faceTo } from './kit.js?v=1';
 import { mindStep } from '../play/actors.js?v=1';
+import { hitsMe, knock, shoot } from './kit.js?v=1';
 
 /* 손 내밀기 — F를 누르는 동안 멈춰 팔 뻗고 고개 돌림 */
 function hand(G) { const on = G.I.down.use && !G.P.air; G.P.handLock = on ? 1 : 0; G.P.look = on ? -1 : 0; G.P.lock = on; return on && G.P.hand > 0.6; }
@@ -10,9 +11,36 @@ export const chapter = {
   id: 4, title: '생선과 이름', sub: '먹이를 들고 다시 호수로', place: 'cove', time: 'day',
   end: '투슬리스 — 이 없는 줄 알았는데!',
   steps: [
+    /* ⓪ 훈련 2일 내더(#8) — 가시를 세우면(!) 곧 쏨 · 나무벽 뒤로 숨거나 비키기·점프 · 저쪽 끝 고버에게 · 아스트리드가 떨어지는 웃긴 사고 */
+    { id: '4-0', verb: 'dodge', place: 'arena', time: 'day', goal: '내더를 피해 고버에게 가라', at: [4, 18], limit: 80,
+      hints: ['가시를 세우면(!) 곧 쏴요 — 나무벽 뒤로', '날아오는 가시는 옆으로 비키거나 X'],
+      *run(G) {
+        for (const [x, y] of [[8, 15.5], [12.5, 12], [17.5, 15], [21, 10.5], [25, 13]]) G.W.prop('barricade', x, y, { w: 2.2 });
+        const gob = G.cast.person('gobber', 26, 5.6, { dir: 'down' }), ast = G.cast.person('astrid', 14, 18.6, { dir: 'up', pose: { carry: 'axe' } });
+        const N = G.cast.dragon('nadder', 16, 7.5, { flip: -1, pose: { pupil: 0.3 } });
+        yield* talk(G, [['gobber', '훈련 둘째 날! 내더는 빠르고 가시를 쏜다.'], ['gobber', '나무벽 뒤에 숨어서 저쪽 끝 나한테 와 봐라!']]);
+        const tell = G.diff === 'easy' ? 3 : G.diff === 'hard' ? 2 : 2.5;
+        let st = 'walk', t = 0, hits = 0, fun = false;
+        goal(G, 25.2, 6.6);
+        while (!near(G, 25.2, 6.6, 1.6)) {
+          const dt = yield; t += dt;
+          if (st === 'walk') { faceTo(N, G.P.x, G.P.y); if (!N.to) N.to = [10 + G.rng() * 14, 6 + G.rng() * 5]; if (t > 1.4) { st = 'tell'; t = 0; N.to = null; sfx(G, 'cry_nadder', N.x); } }
+          else if (st === 'tell') { N.pose.tell = Math.min(1, t / (tell * 0.5)); bang(G, N, 2.6); faceTo(N, G.P.x, G.P.y);
+            if (t > tell) { st = 'shot'; t = 0; N.pose.tell = 0; let ux = G.P.x - N.x, uy = G.P.y - N.y; const d = Math.hypot(ux, uy) || 1; ux /= d; uy /= d;
+              for (const a of [-0.14, 0, 0.14]) { const c = Math.cos(a), s = Math.sin(a); shoot({ kind: 'spike', x: N.x + ux * 1.3, y: N.y + uy * 1.3, z: 0.55, vx: (ux * c - uy * s) * 10, vy: (uy * c + ux * s) * 10, g: 0, life: 2.4, hit: (q) => { if (hitsMe(G, q)) { if (knock(G, ux, uy, 0.7)) hits++; return true; } return false; } }); }
+              sfx(G, 'whoosh', N.x); } }
+          else if (st === 'shot' && t > 1) { st = 'walk'; t = 0; }
+          if (!fun && G.P.x > 13) { fun = true; ast.to = [G.P.x + 0.6, G.P.y + 0.3]; ast.spd = 7; say(G, 'astrid', '비켜!', { secs: 1.2 }); say(G, 'hiccup', '(…또 내 위로 넘어졌어.)', { secs: 1.8 }); }
+          if (hits >= 3 && G.diff !== 'easy') { say(G, 'gobber', '세 번이나 찔렸구나! 처음부터 다시!'); yield* wait(1); return 'retry'; }
+        }
+        goal(G, null); N.pose.tell = 0;
+        G.book.note('nadder', 'sign', '가시를 세우면 곧 쏨');
+        yield* talk(G, [['gobber', '잘했다! 내더는 가시를 세우면 곧 쏜다. 봤지?'], ['hiccup', '(투슬리스도 기분이 눈에 보였어. 드래곤마다 신호가 있구나.)']]);
+        return true;
+      } },
     /* ① 고기잡이 — F 던지기 · 찌가 쏙 들어갈 때 F · 물고기가 끄는 반대쪽(←→) 버티기 */
     { id: '4-1', verb: 'fish', place: 'dock', time: 'day', goal: '돌기둥까지 저어 가 생선을 잡아라', at: [20, 27.4], face: [0, 1], limit: 110,
-      hints: ['노가 올라가 반짝일 때 F — 배가 앞으로', '찌가 쏙 들어가면 F · 물고기가 끄는 반대쪽 ←→'],
+      hints: ['노가 올라가 반짝일 때 Space — 배가 앞으로', '찌가 쏙 들어가면 Space · 물고기가 끄는 반대쪽 ←→'],
       *run(G) {
         /* 고기잡이배(#19 배 타기) — 노가 올라간 박자에 F(마구 누르면 노가 엉킴) → 돌기둥 앞 낚시 자리까지 */
         const boat = G.W.prop('boat', 20, 28.2, { nobox: 1 }), P = G.P;
@@ -80,7 +108,7 @@ export const chapter = {
 
     /* ② 코브 — 칼은 투슬리스가 나를 볼 때 F로 내려놓기 · 살금살금 다가가 생선(F) · 이빨이 쏙 = 이름 → 게워 낸 반 토막을 '나를 볼 때' F 꾹 */
     { id: '4-2', verb: 'give', goal: '투슬리스와 친해져라', at: [4, 15], limit: 100, mood: 1,
-      hints: ['투슬리스가 나를 볼 때 F — 칼을 내려놔요', 'C로 살금살금 다가가 생선을 F로 내밀어요'],
+      hints: ['투슬리스가 나를 볼 때 Space — 칼을 내려놔요', 'X를 누른 채 살금살금 다가가 생선을 Space로 내밀어요'],
       *run(G) {
         const D = G.cast.dragon('toothless', 22, 15, { flip: -1, dir: 'down', fear: 0.75, pose: { pupil: 0.3, fin: 'none', sit: 1 } });
         G.P.carry = 'knife';
@@ -114,12 +142,11 @@ export const chapter = {
             if (t > 2.4) {
               D.pose.eat = 0; D.pose.smile = 0; ph = 'half'; t = 0; held = 0; lookT = 2.5;
               G.hud.banner('이빨이 쏙! — 이름은 투슬리스', 'heart', 3.2); G.book.note('nightfury', 'likes', '생선'); G.book.note('nightfury', 'sign', '동공이 둥글면 편안', false);
-              say(G, 'hiccup', '이가 없는 줄 알았는데… 투슬리스! 네 이름이야.');
-              say(G, 'hiccup', '어… 반 토막을 뱉었네? 나도 먹으라고?', { icons: ['cod'] });
+              yield* talk(G, [['hiccup', '어? 이빨이 쏙 나왔다!'], ['hiccup', '이가 없는 줄 알았는데… 투슬리스! 이게 네 이름이야.'], ['hiccup', '어… 반 토막을 뱉었네? 나도 먹으라고?', ['cod']]]);
               G.W.prop('_fish', (D.x + G.P.x) / 2, D.y + 0.3, { half: 1 });
             }
           } else if (ph === 'half') {
-            G.fspots.push({ x: G.P.x, y: G.P.y, label: 'F꾹' });
+            G.fspots.push({ x: G.P.x, y: G.P.y, label: 'Space 꾹' });
             if (G.I.down.use && d < 4 && D.look) { held += dt; G.P.carry = 'fish'; } else held = Math.max(0, held - dt * 2);
             if (!D.look && G.I.down.use) G.marks.push({ k: 'text', x: D.x, y: D.y - 2.6, t: '…?', s: 22 });
             if (held > 1.6) { G.P.carry = null; D.pose.smile = 1; D.look = 1; lookT = 9; sfx(G, 'purr', D.x); say(G, 'hiccup', '으웩… 맛있다! (투슬리스가 내 웃음을 따라 하네?)'); yield* wait(2.2); break; }
@@ -132,7 +159,7 @@ export const chapter = {
 
     /* ③ 모래 선 — 밟으면 으르렁(뒤로) · 틈으로 지나거나 점프로 넘기 · 고개 돌려 손 내밀기(F 꾹 · 움직이면 처음부터) → 코가 손바닥에 */
     { id: '4-3', verb: 'sand', goal: '손을 내밀어 기다려라', at: [8, 15], limit: 100, mood: 1,
-      hints: ['모래 선은 틈으로 지나거나 Space로 넘어요', '가까이 가서 F를 꾹 누르고 기다려요'],
+      hints: ['모래 선은 틈으로 돌아서 지나가요(밟으면 으르렁)', '가까이 가서 Space를 꾹 누르고 기다려요'],
       *run(G) {
         const D = G.cast.dragon('toothless', 25, 15, { flip: -1, fear: 0.3, pose: { pupil: 0.8, fin: 'none' } });
         /* 세로 선 넷 — 틈이 위·아래 번갈아 */
@@ -151,7 +178,7 @@ export const chapter = {
           mindStep(D, P, dt, { fastV: 2.2, near: 4, calmK: 0.25, handR: 4, trustK: G.diff === 'easy' ? 0.42 : 0.3, minFear: 0 });
           if (ph === 'hand') {
             goal(G, D.x - 2.2, D.y, { h: 1.4 });
-            if (Math.hypot(D.x - P.x, D.y - P.y) < 4.5) G.fspots.push({ x: P.x, y: P.y, label: 'F꾹' });
+            if (Math.hypot(D.x - P.x, D.y - P.y) < 4.5) G.fspots.push({ x: P.x, y: P.y, label: 'Space 꾹' });
             if (!on && D.trust > 0) D.trust = Math.max(0, D.trust - dt * 0.4);
             if (on && D.trust > 0.5) { D.to = [P.x + 1.1, P.y]; D.spd = 0.8; faceTo(D, P.x, P.y); }
             if (on && D.trust >= 1 && Math.hypot(D.x - P.x, D.y - P.y) < 1.4) break;
@@ -166,8 +193,7 @@ export const chapter = {
         puff('dust', D.x + 0.8, D.y, 0.5, 2, 0, 0.5, 0.6, 0.3); sfx(G, 'whoosh', D.x);
         D.pose.wing = 1; D.to = [34, 4]; D.spd = 7;
         for (let t = 0; t < 1.6; t += yield) D.z = t * 3;
-        say(G, 'hiccup', '…휙 가 버렸네. 그래도 됐어!');
-        yield* wait(1.5);
+        yield* talk(G, [['hiccup', '…휙 가 버렸네.'], ['hiccup', '그래도 손바닥에 코를 댔어. 이제 날 믿기 시작한 거야.']]);
         return true;
       },
       sense: (G) => { const D = G.cast.find('toothless'); return { lines: G.flags.lines, trust: +(G.flags.trust || 0).toFixed(2), fear: +(G.flags.fear || 0).toFixed(2), D: D ? [D.x, D.y] : null }; } },

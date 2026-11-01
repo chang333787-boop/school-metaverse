@@ -15,6 +15,8 @@ const CSS = `
 #title .ch { width:96px; padding:8px 6px; font-size:14px; } #title .ch b { display:block; font-size:22px; } #title .ch[disabled] { opacity:.4; cursor:default; }
 #title .small { background:none; color:#f4ead2; border:none; box-shadow:none; text-decoration:underline; font-size:14px; }
 #title .q { font-size:22px; font-weight:700; }
+#title button:focus { outline:4px solid #e6c464; outline-offset:3px; }
+#title .keys { font-size:14px; opacity:.85; }
 `;
 export const CHAPTERS = [
   [1, '습격의 밤'], [2, '숲의 자국'], [3, '숨은 호수'], [4, '생선과 이름'], [5, '꼬리날개'], [6, '하늘을 나는 법'], [7, '아빠의 투구'], [8, '아스트리드와 둥지'], [9, '마지막 시험'], [10, '대장 드래곤'], [11, '함께 사는 버크'],
@@ -25,21 +27,32 @@ export function showTitle({ playable, Q }) {
     const el = document.createElement('div'); el.id = 'title'; document.body.appendChild(el);
     const pick = { grade: +(Q.get('grade') || 0), slot: 0 };
     const DRAGONS = ['toothless', 'toothless', 'toothless'];
-    const end = (r) => { el.remove(); done(r); };
-    function head(q) { return `<h1>버크의 드래곤 친구</h1><div class="sub">영화 『드래곤 길들이기』를 보고 4학년이 만든 비상업 팬 게임 · 2D판</div><div class="q">${q}</div>`; }
+    const end = (r) => { el.remove(); removeEventListener('keydown', nav, true); done(r); };
+    /* 방향키로 고르기 · Space·Enter = 그 단추(교사 11-02 '메뉴·선택지는 방향키로') */
+    const btns = () => [...el.querySelectorAll('button:not([disabled])')];
+    const focus0 = () => { const b = btns()[0]; if (b) b.focus(); };
+    function nav(e) {
+      const k = e.code, L = btns(); if (!L.length) return;
+      const i = Math.max(0, L.indexOf(document.activeElement));
+      if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'KeyD' || k === 'KeyS') { e.preventDefault(); e.stopPropagation(); L[(i + 1) % L.length].focus(); }
+      else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'KeyA' || k === 'KeyW') { e.preventDefault(); e.stopPropagation(); L[(i + L.length - 1) % L.length].focus(); }
+      else if ((k === 'Space' || k === 'Enter' || k === 'KeyZ') && document.activeElement && document.activeElement.tagName !== 'BUTTON') { e.preventDefault(); L[i].click(); }
+    }
+    addEventListener('keydown', nav, true);
+    function head(q) { return `<h1>버크의 드래곤 친구</h1><div class="sub">영화 『드래곤 길들이기』를 보고 4학년이 만든 비상업 팬 게임 · 2D판</div><div class="q">${q}</div><div class="keys">방향키로 고르고 Space · Enter</div>`; }
     function grades() {
       el.innerHTML = head('몇 학년이에요?') + `<div class="row">${[1, 2, 3, 4, 5, 6].map((g) => `<button class="g" data-g="${g}">${g}</button>`).join('')}</div>`;
-      el.querySelectorAll('.g').forEach((b) => { b.onclick = () => { pick.grade = +b.dataset.g; slots(); }; });
+      el.querySelectorAll('.g').forEach((b) => { b.onclick = () => { pick.grade = +b.dataset.g; slots(); }; }); focus0();
     }
     function slots() {
       el.innerHTML = head('어느 칸에서 할까요?') + `<div class="row">${[1, 2, 3].map((k) => { const s = readSlot(k); return `<button class="slot" data-k="${k}">${FACES[DRAGONS[k - 1]]({ pupil: s ? 1 : 0.3, smile: !!s })}<span>${k}번 칸<br>${s ? Math.max(1, s.best ?? s.ch) + '장까지 · ' + (s.grade || '') + '학년' : '새로 하기'}</span></button>`; }).join('')}</div><button class="small" data-t="1">선생님: 장 고르기</button>`;
       el.querySelectorAll('.slot').forEach((b) => { b.onclick = () => { pick.slot = +b.dataset.k; const s = readSlot(pick.slot); chapters(s); }; });
-      el.querySelector('[data-t]').onclick = () => { pick.slot = [1, 2, 3].find((k) => !readSlot(k)) || 0; chapters(null, true); };   // 선생님이 고른 장은 빈 칸에만 저장(빈 칸이 없으면 저장 안 함) — 아이 칸을 빈 책으로 덮던 것(11-01 점검)
+      focus0(); el.querySelector('[data-t]').onclick = () => { pick.slot = [1, 2, 3].find((k) => !readSlot(k)) || 0; chapters(null, true); };   // 선생님이 고른 장은 빈 칸에만 저장(빈 칸이 없으면 저장 안 함) — 아이 칸을 빈 책으로 덮던 것(11-01 점검)
     }
     function chapters(s, teacher) {
       const upTo = teacher ? 11 : Math.max(1, s ? s.best ?? s.ch : 1);   // 가장 멀리 간 장까지(앞 장을 다시 해도 줄지 않음)
       el.innerHTML = head(s ? '이어서 할까요?' : '어디부터 할까요?') + `<div class="row">${CHAPTERS.map(([n, t]) => `<button class="ch" data-c="${n}" ${playable.includes(n) && n <= upTo ? '' : 'disabled'}><b>${n}</b>${t}</button>`).join('')}</div>`;
-      el.querySelectorAll('.ch').forEach((b) => { if (!b.disabled) b.onclick = () => { let ch = +b.dataset.c; if (ch === 1 && !s && !teacher) ch = 0; end({ grade: pick.grade, slot: pick.slot, ch, idx: !s ? 0 : s.ch === ch ? s.idx || 0 : (s.best === ch ? s.bestIdx || 0 : 0), save: s }); }; });   // 새로 시작하면 오프닝(0)부터
+      el.querySelectorAll('.ch').forEach((b) => { if (!b.disabled) b.onclick = () => { let ch = +b.dataset.c; if (ch === 1 && !s && !teacher) ch = 0; end({ grade: pick.grade, slot: pick.slot, ch, idx: !s ? 0 : s.ch === ch ? s.idx || 0 : (s.best === ch ? s.bestIdx || 0 : 0), save: s }); }; }); { const L = btns(); const cur = L.find((b) => +b.dataset.c === (s ? s.ch : 1)) || L[0]; if (cur) cur.focus(); }   // 새로 시작하면 오프닝(0)부터
     }
     if (pick.grade) slots(); else grades();
   });
