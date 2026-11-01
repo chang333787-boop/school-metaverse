@@ -34,7 +34,7 @@ export function createWalker(o) {               // o = { height(x,z,yHint), coll
   W.draw = (a, obj) => {
     let dy = W.yaw - W.pyaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
     obj.position.set(W.px + (W.x - W.px) * a, W.py + (W.y - W.py) * a, W.pz + (W.z - W.pz) * a);
-    obj.rotation.y = W.pyaw + dy * a;
+    obj.rotation.x = 0; obj.rotation.z = 0; obj.rotation.y = W.pyaw + dy * a;   // 비행·배가 남긴 몸 기울기는 걷기에서 바로 세움
   };
   return W;
 }

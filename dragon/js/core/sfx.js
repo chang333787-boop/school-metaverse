@@ -12,8 +12,8 @@
 // 이름: flap whoosh splash roar growl purr fire boom bang clang thud pluck pop ok wind whistle inhale
 //       cry_gronckle cry_nadder cry_nightmare cry_zippleback cry_terror · 이어지는 소리: wind crackle
 // ───────────────────────────────────────────────────────────────────────────────────────────────
-import { loadSet, saveSet } from './gfx.js?v=18';
-import { createMusic } from './music.js?v=18';
+import { loadSet, saveSet } from './gfx.js?v=19';
+import { createMusic } from './music.js?v=19';
 
 let CUR = null;
 export const getSfx = () => CUR;
@@ -54,6 +54,7 @@ export function createSfx(G = null) {
   /* 저장된 '켜짐'으로 열면 첫 손짓에 깨움(브라우저는 손짓 전 소리를 막음) */
   const unlock = () => { if (S.on) { if (!ac) apply(); else wake(); } };
   addEventListener('pointerdown', unlock, true); addEventListener('keydown', unlock, true);
+  document.addEventListener('visibilitychange', () => { if (!ac) return; if (document.hidden) { if (ac.state === 'running') ac.suspend().catch(() => {}); } else if (S.on) wake(); });   // 숨은 탭 = 오디오 재움(이어지는 바람·불 소리가 마지막 세기로 계속 나던 것 · 11-01 점검)
   if (S.on) apply();
 
   /* 합성 조각 — 소리가 끝나면 노드가 스스로 끊김(쌓이지 않음) */

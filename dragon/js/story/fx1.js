@@ -1,8 +1,8 @@
 // 0·1·11장이 같이 쓰는 작은 것 — 습격 하늘(나는 드래곤 실루엣) · 불 뿜기 원뿔 · 던지기(물통·볼라 · 쉬움 방향키 조준) · 날아가는 물건 · 별 하늘 · 둥근 벽(불·드래곤 자리)
 // 모두 원인 → 결과(불 뿜기가 닿은 칸에만 원소 엔진 불씨 · 물통이 떨어진 자리에만 물) · 매 걸음 new X(처음에 한 번 짓고 다시 씀) · Light 추가 X
 import * as THREE from 'three';
-import { toon, flameMesh, glowSprite, SHARED } from '../look/kit.js?v=18';
-import { makeItem } from './fx.js?v=18';
+import { toon, flameMesh, glowSprite, SHARED } from '../look/kit.js?v=19';
+import { makeItem } from './fx.js?v=19';
 
 const TAU = Math.PI * 2;
 export const ang = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
@@ -101,6 +101,7 @@ export function makeThrow(G, o) {
   T.drop = () => { T.held = false; T.aim = null; ring.visible = false; P.aiming = false; P.noReach = false; if (P.item === o.item) G.hold(null); };
   T.step = (dt) => {
     fly.step(dt);
+    if (T.poseT > 0) { T.poseT -= dt; if (T.poseT <= 0 && !P.lock) P.pose = null; }   // 던진 뒤에도(손이 빈 채) 자세 시계가 돌게 — 팔이 든 채 남던 것(11-01 점검)
     if (!T.held) return;
     P.noReach = true;
     if (G.input.on('use') && P.fT > 0.25) {
@@ -124,7 +125,6 @@ export function makeThrow(G, o) {
       T.aim = null; T.thrown++; T.held = false; G.hold(null); P.noReach = false;
       if (o.onThrow) o.onThrow();
     }
-    if (T.poseT > 0) { T.poseT -= dt; if (T.poseT <= 0 && !P.lock) P.pose = null; }
   };
   T.sense = () => ({ held: T.held, aim: T.aim ? { x: +T.aim.x.toFixed(2), z: +T.aim.z.toFixed(2) } : null, flying: fly.on });
   T.dispose = () => { ring.removeFromParent(); ring.geometry.dispose(); ring.material.dispose(); fly.dispose(); };

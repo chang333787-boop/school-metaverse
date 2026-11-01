@@ -1,13 +1,13 @@
 // 장이 같이 쓰는 작은 물건·이펙트 — 손에 든 것 · 바닥에 놓인 것 · 모래 선 · 물보라 · 날아가는 것(원인 → 결과만 · 버튼 이펙트 X)
 // 모두 toon 재질(공유) · 기하는 처음 한 번만 짓고 공유(SHARED) · 매 걸음 new X
 import * as THREE from 'three';
-import { toon, SHARED } from '../look/kit.js?v=18';
-import { loadModel } from '../look/models.js?v=18';
+import { toon, SHARED } from '../look/kit.js?v=19';
+import { loadModel } from '../look/models.js?v=19';
 
 const G = {};
 function geo(k, f) { if (!G[k]) { G[k] = f(); SHARED.add(G[k]); } return G[k]; }
 /* 손에 드는 것(팀 M의 props_hand.glb가 오면 그 메시 · 없으면 코드로 지은 자리표시) */
-let HAND = null; loadModel('assets/models/props_hand.glb?v=18').then((m) => { HAND = m.root; HAND.traverse((o) => { if (o.geometry) SHARED.add(o.geometry); }); }).catch(() => {});
+let HAND = null; loadModel('assets/models/props_hand.glb?v=19').then((m) => { HAND = m.root; HAND.traverse((o) => { if (o.geometry) SHARED.add(o.geometry); }); }).catch(() => {});
 function fallback(name) {
   const g = new THREE.Group();
   if (name === 'knife') { g.add(new THREE.Mesh(geo('blade', () => new THREE.BoxGeometry(0.04, 0.02, 0.32).translate(0, 0, 0.2)), toon({ color: 0xcfd4d6 }))); g.add(new THREE.Mesh(geo('grip', () => new THREE.CylinderGeometry(0.025, 0.025, 0.12, 6).rotateX(Math.PI / 2)), toon({ color: 0x6a4a2e }))); }
@@ -58,13 +58,16 @@ export function sandLines(group, place, segs) {
 }
 
 /* 물보라·흙먼지 — 작은 점 파티클 한 풀(합 ≤ 3000 중 한 몫) · 원인 자리에서만 */
+const LIVE = new Set();                                   // 지금 차례의 풀 — runner가 차례를 치울 때 disposePuffs()
+export function disposePuffs() { for (const P of LIVE) { P.mesh.removeFromParent(); P.mesh.geometry.dispose(); P.mesh.material.dispose(); } LIVE.clear(); }
 export function makePuffs(group, max = 120, color = 0xe9f0ee) {
   const pos = new Float32Array(max * 3), vel = new Float32Array(max * 3), life = new Float32Array(max);
+  for (let j = 0; j < max; j++) pos[j * 3 + 1] = -99;     // 처음엔 땅 밑(한 번도 안 움직인 풀의 점이 장소 원점에 보이던 것 · 4-5)
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const m = new THREE.Points(g, new THREE.PointsMaterial({ color, size: 0.18, transparent: true, opacity: 0.85, depthWrite: false }));
   m.frustumCulled = false; group.add(m);
   let k = 0;
-  const P = { mesh: m };
+  const P = { mesh: m }; LIVE.add(P);
   P.burst = (x, y, z, n = 20, sp = 2.5, up = 3) => { for (let i = 0; i < n; i++) { const j = k++ % max, a = (i / n) * 6.283 + k; pos[j * 3] = x; pos[j * 3 + 1] = y; pos[j * 3 + 2] = z; vel[j * 3] = Math.cos(a) * sp * (0.4 + (i % 5) * 0.15); vel[j * 3 + 1] = up * (0.6 + (i % 3) * 0.2); vel[j * 3 + 2] = Math.sin(a) * sp * (0.4 + (i % 4) * 0.15); life[j] = 1; } };
   P.step = (dt) => { for (let j = 0; j < max; j++) { if (life[j] <= 0) { pos[j * 3 + 1] = -99; continue; } life[j] -= dt * 1.2; vel[j * 3 + 1] -= 9 * dt; pos[j * 3] += vel[j * 3] * dt; pos[j * 3 + 1] += vel[j * 3 + 1] * dt; pos[j * 3 + 2] += vel[j * 3 + 2] * dt; } g.attributes.position.needsUpdate = true; };
   return P;

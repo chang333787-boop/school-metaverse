@@ -3,11 +3,11 @@
 // 와! = 관중석이 터지는 순간 → 게시판 앞에서 웃음이 사라짐 · 변화 = 히컵 머리에 투구 · 경기장 자리를 맡는 마을 사람들 · 코브에 짐 보따리
 // 대사는 모두 우리 말로 새로(저작권) · 실제 학생 이름 X · 피·죽음 X · 깜짝 X(예고 먼저)
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=18';
-import { holdItem, makeItem, makePuffs } from './fx.js?v=18';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=18';
-import { createGrind, setHelmet, helmetObj, makePack, gazeFan, headMark, crowd, crowdPose, pz } from './fx79.js?v=18';
-import { tlSense } from './ch4.js?v=18';
+import { wait, until, sayAll } from './runner.js?v=19';
+import { holdItem, makeItem, makePuffs } from './fx.js?v=19';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=19';
+import { createGrind, setHelmet, helmetObj, makePack, gazeFan, headMark, crowd, crowdPose, pz } from './fx79.js?v=19';
+import { tlSense } from './ch4.js?v=19';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const ang = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
@@ -146,7 +146,7 @@ function* finale(G, C) {
     if (C.hitT > 0) { C.hitT -= dt; Gr.pose = HIT_P; } else if (tired) Gr.pose = TIRED_P; else if (gapT > 0) Gr.pose = GAP_P; else Gr.pose = NONE;
     if (gapT > 0) gapT -= dt;
     if (C.fireT > 0) { C.fireT -= dt; if (C.fireT <= 0) fl.visible = gl.visible = false; }
-    if (down > 0) { down -= dt; if (down <= 0) { P.lock = false; P.pose = null; } }
+    if (down > 0) { down -= dt; if (down <= 0) { down = 0; P.lock = false; P.pose = null; } }
     /* 아스트리드 — 둘레를 돌다(6m) · 자기를 쏘면 구르고 · 그 틈에(또는 그롱클이 지치면) 도끼로 침 */
     aS.t += dt;
     if (aS.mode === 'circle') { aS.ang += dt * 0.22; As.walkTo(Gr.x + Math.sin(aS.ang) * 6, Gr.z + Math.cos(aS.ang) * 6, 1.4); As.faceTo(Gr.x, Gr.z); As.pose = NONE; if (tired) { aS.mode = 'lunge'; aS.t = 0; } }

@@ -5,9 +5,9 @@
 //     쉬움 = 불·킁킁 둘 · 보통 = 넷 · 어려움 = 넷 + 빨라짐 · 날개 구멍이 쌓일수록 낮고 느리게 · 구름에 숨어 쏘면 자리가 드러남
 // 매 걸음 new X(모듈 위 스크래치) · Light X(빛은 glowSprite·flameMesh) · 소리는 서서히 + 상한(sfx 압축기)
 import * as THREE from 'three';
-import { toon, glowSprite, U } from '../look/kit.js?v=18';
-import { loadModel } from '../look/models.js?v=18';
-import { createDragonRig } from '../look/dragon_rig.js?v=18';
+import { toon, glowSprite, U } from '../look/kit.js?v=19';
+import { loadModel } from '../look/models.js?v=19';
+import { createDragonRig } from '../look/dragon_rig.js?v=19';
 
 export const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const MOVES = { easy: ['fire', 'sniff'], normal: ['fire', 'tail', 'gust', 'sniff'], hard: ['fire', 'tail', 'gust', 'sniff'] };
@@ -114,7 +114,7 @@ export function createBoss({ group, diff = 'normal', scale = 1, sfx = null, plac
   }
 
   let body = null, holeU = null, qAttr = 1, eyeMat = null, mouthGlow = null, throat = [], extraEyes = null; const eyeGlow = [];
-  B.loaded = loadModel('assets/models/boss.glb?v=18').then(({ root, bones, info }) => {
+  B.loaded = loadModel('assets/models/boss.glb?v=19').then(({ root, bones, info }) => {
     B.root = root; B.bones = bones; root.scale.setScalar(S); group.add(root);
     eyeMat = toon({ color: 0xe9d27c, emissive: 0x4a3508 });
     root.traverse((o) => {
@@ -427,7 +427,7 @@ export function createBoss({ group, diff = 'normal', scale = 1, sfx = null, plac
     warn: B.warn ? { kind: B.warn.kind, left: +B.warn.left.toFixed(2), me: B.warn.target === 'me' || B.warn.target === 'cloud' } : null, fire: !!B.fire, jaw: +B.jawOpen.toFixed(2), glow: +(B.fire ? 1 : B.inhale).toFixed(2),
     tail: +Math.min(1, B.tailK).toFixed(2), wingUp: +B.wingUp.toFixed(2), sniff: +B.sniffK.toFixed(2), stun: B.stunT > 0, dizzy: B.dizzyT > 0,
   });
-  B.dispose = () => { if (shadowEl) { shadowEl.remove(); shadowEl = null; } if (B.root) B.root.removeFromParent(); for (const o of [fireA, fireB, hitGlow, smoke.mesh, embers.mesh, steam.mesh]) o.removeFromParent(); for (const o of [fireA, fireB]) { o.geometry.dispose(); o.material.dispose(); } };
+  B.dispose = () => { if (shadowEl) { shadowEl.remove(); shadowEl = null; } if (B.root) B.root.removeFromParent(); for (const o of [fireA, fireB, hitGlow, smoke.mesh, embers.mesh, steam.mesh]) o.removeFromParent(); for (const o of [fireA, fireB, smoke.mesh, embers.mesh, steam.mesh]) { o.geometry.dispose(); o.material.dispose(); } };
   return B;
 }
 

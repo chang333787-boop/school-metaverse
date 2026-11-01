@@ -32,10 +32,13 @@ export function createInput(el) {
   el.addEventListener('pointercancel', () => { drag = false; });
   el.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== dragId) return;
+    if (e.pointerType === 'mouse' && e.buttons === 0) { drag = false; return; }   // 놓는 것을 못 받았으면(오른쪽 메뉴 등) 끌기를 풂
     const dx = e.clientX - px, dy = e.clientY - py; px = e.clientX; py = e.clientY;   // movementX는 크롬북 터치패드에서 튐
     if (Math.abs(dx) > 200 || Math.abs(dy) > 150) return;
     look.x += dx; look.y += dy;
   });
+  el.addEventListener('contextmenu', (e) => e.preventDefault());   // 크롬북 두 손가락 탭 = 오른쪽 메뉴 → 끌기·키가 눌린 채 남던 것(11-01 점검)
+  el.addEventListener('lostpointercapture', () => { drag = false; });
   el.addEventListener('wheel', (e) => { e.preventDefault(); look.x += e.deltaX * 0.6; look.y += e.deltaY * 0.6; }, { passive: false });   // 터치패드 두 손가락 쓸기
 
   const I = {

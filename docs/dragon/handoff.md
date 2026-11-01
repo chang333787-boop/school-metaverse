@@ -2,7 +2,8 @@
 
 정본 = `docs/dragon/goal_prompt.md`(교사 10-31 "진행하자"로 승인 · §9 열두 조건이 끝 조건) · 설계 = `docs/dragon/design.md`(v2.1 + §17 단계 3에서 정한 것 · 장 번호는 설계 기준 — goal의 '1~5장' = 설계 '1~6장') · 사실 = `docs/dragon/reference.md` · 팀 약속(장소·모델·비행 계약) = `docs/dragon/stage3_plan.md`.
 
-## 지금 상태 (2026-10-31 밤 · 단계 4 끝까지 잇기 끝 · v2 메뉴 연결)
+## 지금 상태 (2026-11-01 · 단계 6 시험 끝 · 마감 보고 초안 — `final_check.md` ✅ 11 · ◐ 1(실제 크롬북 값만) · `final_report.md`)
+- ✅ **단계 6**(팀 L): 전 장 봇 144/144(고친 뒤 다시) · 저장·이어하기 `drg_save.cjs` 확인 101개 통과 · 클릭형 다섯 고친 뒤 53판 모두 못 깸(1-1~8-2 · 8-3~11-10은 다음에) · 읽기 전용 점검으로 진짜 버그 17묶음 고침(쉬움 책 쪽 덮개 · 정리 순서 · 비행 뒤 자세 · 넘어짐 시계 · 저장 best · 선생님 장 고르기 등 — `final_check.md`)
 - ✅ 단계 0 조사 · ✅ 단계 1 설계 v2.1 · ✅ 단계 2 바탕(결 시안 A 확정 — design §17-1) · ✅ 단계 3 수직 조각(2~6장)
 - ✅ **단계 4 끝까지 잇기** — 오프닝(장 0) → 1~10장 → 종장(장 11) → 엔딩(요구 39줄 '이 생각은 여기에' · 영화에서 더 볼 장면 셋) 모두 놀 수 있음
   - 팀 A 오프닝·1장 습격의 밤·종장 + 원소 엔진(`play/elements.js`) · 팀 B 7장·9장 · 팀 C 8장 + 구름·오로라·드래곤 떼 · 팀 D 10장 + 둥지 섬(다섯 차림) + 대장 드래곤(모델·상태 기계)
@@ -31,7 +32,7 @@
 2. ✅ 45분 쉬지 않는 놀이(11-01): 1장 → 종장까지 막힘 없음 · fps 60 · p95 ≤ 16.8ms · 힙 65~82MB · 오류 0(design §17-9)
 3. 하는 법 표 런타임 더하기(fx11 lead11·heal11·shelter11·water11)를 art.js로 · design §3-2 '빛 판 하나' 문장을 지붕 불꽃 띠로 고치기
 4. 길이: 7-5 · 9-7 · 8-5가 봇 2분 넘음 → 아이 시험으로 정하기 · 게임 전체 보통 × 1.5 ≈ 70분
-5. 단계 6: §9 열두 조건 마감 점검표(증거 표 `evidence.md` · 저작권 · 흉내 표 · 눈높이 · 엔딩 카드) + 마감 보고(품질 숫자 8항목)
+5. ✅ 단계 6(11-01 팀 L): §9 마감 점검표 `final_check.md` + 마감 보고 초안 `final_report.md` → 단계 7: 메인이 합치고 v2·홍보판 기준선 · push · 보고를 선생님께
 
 ## 시험(push 전)
 ```
@@ -41,6 +42,7 @@ B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_story.cjs . --dumb=0  # 0~1
 B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_story.cjs . --levels=none   # 클릭형 봇 다섯(장마다 · 오래 걸림 → --ch=로 나눠서)
 B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_long.cjs . --min=40   # 40분 쉬지 않는 놀이(CPU 4× · fps·힙)
 B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_fly.cjs .             # 비행·배(F)
+B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_save.cjs .            # 저장·이어하기(새로 하기 · 1·4·7→8·11장 · 앞 장 다시 · 선생님 장 고르기 · 약 12분)
 node tools/harness/check.cjs . --full  ·  PAGE=/ node tools/harness/check.cjs . --full   # v2 17/17 · 홍보판 16/17
 ```
 - 다른 세션이 main에 자주 push하니 `git pull --rebase` 뒤 push.

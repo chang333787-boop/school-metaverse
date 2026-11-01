@@ -6,11 +6,11 @@
 // 와! = 입 안으로 쏘고 솟구치는 1초 · 변화 = 둥지 하늘이 맑아짐 · 드래곤들이 흩어짐 · 해변 무기 더미 · 기록 = 걸린 시간 · 안 맞은 횟수 · 친구 조합 수
 // 대사는 모두 우리 말로 새로(원문 X) · 피·죽음 X · 깜짝 X(예고 2~3초 · 소리 서서히) · 불·추락은 연기·그림자·먼 구도
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=18';
-import { holdItem, makeItem } from './fx.js?v=18';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=18';
-import { HOWTO, ICONS, PICT, keyCap } from '../ui/art.js?v=18';
-import { createBoss, createShots, makeParts, WARN } from '../play/boss.js?v=18';
+import { wait, until, sayAll } from './runner.js?v=19';
+import { holdItem, makeItem } from './fx.js?v=19';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=19';
+import { HOWTO, ICONS, PICT, keyCap } from '../ui/art.js?v=19';
+import { createBoss, createShots, makeParts, WARN } from '../play/boss.js?v=19';
 
 const TAU = Math.PI * 2;
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -29,12 +29,12 @@ HOWTO.dive10 = HOWTO.dive10 || [[keyCap('S') + keyCap('↓'), PICT.wing, '곧장
 
 /* 드래곤 등 위 자리(안장) — 가슴·엉덩이 뼈 사이 k · 처음 한 번 셈 */
 function seat(D, k = 0, up = 0.3) {
-  if (D._seat && D._seat.k === k) return D._seat.p;
+  const key = k + ':' + up, S = D._seats || (D._seats = {}); if (S[key]) return S[key];   // k마다 캐시(아스트리드 0 · 히컵 0.55를 번갈아 불러 매 프레임 새로 셈하던 것)
   const ch = D.root.getObjectByName('chest'), hp = D.root.getObjectByName('hips');
   D.root.updateMatrixWorld(true);
   const a = new THREE.Vector3(), b = new THREE.Vector3(); if (ch) ch.getWorldPosition(a); if (hp) hp.getWorldPosition(b); else b.copy(a);
   D.root.worldToLocal(a); D.root.worldToLocal(b); a.lerp(b, k); a.y += up;
-  D._seat = { k, p: a }; return a;
+  S[key] = a; return a;
 }
 function sitOn(D, H, k, up) { if (!D.root || !H.root) return; const p = seat(D, k, up); _v.copy(p).applyMatrix4(D.root.matrixWorld); H.root.position.copy(_v); H.root.quaternion.copy(D.root.quaternion); }
 
@@ -254,7 +254,7 @@ function* beachBattle(G, C) {
       if (f.t > 1.6) { C.fireAt = null; C.hitThis = false; }
     }
     for (const H of adults) if (H.backT > 0) { H.backT -= dt; if (H.backT <= 0 && !H.taken) H.walkTo(H.home.x, H.home.z); }
-    if (C.down > 0) { C.down -= dt; if (C.down <= 0) { P.lock = false; P.pose = null; } }
+    if (C.down > 0) { C.down -= dt; if (C.down <= 0) { C.down = 0; P.lock = false; P.pose = null; } }
     if (knocks >= 4) { yield* sayAll(G, [['astrid', '히컵, 숨 돌리고 다시!']]); return 'retry'; }
     /* 몸 가까이 못 감(큰 몸) */
     { const dx = P.W.x - B.x, dz = P.W.z - B.z, d = Math.hypot(dx, dz); if (d < 34 && d > 0.1) { P.W.x = B.x + dx / d * 34; P.W.z = B.z + dz / d * 34; } }
@@ -428,7 +428,7 @@ function* reunion(G, C) {
 /* 비행 한 판 준비(④·⑤가 같이 씀) — flight.js(팀 F) + 뒤따르는 카메라 */
 function* startFlight(G, C, T, world, start) {
   const P = G.player;
-  const mod = yield* awaitP(import('../play/flight.js?v=18').catch(() => null));
+  const mod = yield* awaitP(import('../play/flight.js?v=19').catch(() => null));
   if (!mod || !mod.createFlight) return null;
   const F = mod.createFlight({ world, mode: G.diff, dragon: { root: T.root, rig: T.rig }, rider: { root: P.root, rig: P.rig }, rng: G.rng });
   F.setOpts({ assist: G.diff !== 'hard', ceil: world.ceil, gusts: false });

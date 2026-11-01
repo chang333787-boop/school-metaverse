@@ -1,24 +1,24 @@
 // 게임 본판 — 첫 화면 → 장(2~6 수직 조각) · 장소는 무대 그릇으로 짓고 비움 · 플레이어 = 히컵(걷기 + 뒤따르는 카메라)
 // 장 차례 생성기는 story/ch*.js · G(놀이 상태)를 장과 봇 감각(sense)이 함께 봄 · 봇은 DRG.sense()만 읽고 키만 누름
 import * as THREE from 'three';
-import { createEnv, U } from '../look/kit.js?v=18';
-import { createStageHost } from '../core/stage.js?v=18';
-import { createCollide } from '../play/collide.js?v=18';
-import { createWalker, createFollowCam } from '../play/walker.js?v=18';
-import { loadModel } from '../look/models.js?v=18';
-import { createHumanRig } from '../look/human_rig.js?v=18';
-import { createDragon, createPerson } from '../play/actors.js?v=18';
-import { createHud } from '../ui/hud.js?v=18';
-import { createBook } from '../ui/book.js?v=18';
-import { createMap } from '../ui/map.js?v=18';
-import { createBench } from '../ui/bench.js?v=18';
-import { createSfx } from '../core/sfx.js?v=18';
-import { showTitle, diffOf } from '../ui/title.js?v=18';
-import { createRunner } from '../story/runner.js?v=18';
-import { writeSlot, flushSlot } from '../story/save.js?v=18';
-import { holdItem } from '../story/fx.js?v=18';
-import { createRng } from '../core/rng.js?v=18';
-import { showEnding } from '../ui/ending.js?v=18';
+import { createEnv, U } from '../look/kit.js?v=19';
+import { createStageHost } from '../core/stage.js?v=19';
+import { createCollide } from '../play/collide.js?v=19';
+import { createWalker, createFollowCam } from '../play/walker.js?v=19';
+import { loadModel } from '../look/models.js?v=19';
+import { createHumanRig } from '../look/human_rig.js?v=19';
+import { createDragon, createPerson } from '../play/actors.js?v=19';
+import { createHud } from '../ui/hud.js?v=19';
+import { createBook } from '../ui/book.js?v=19';
+import { createMap } from '../ui/map.js?v=19';
+import { createBench } from '../ui/bench.js?v=19';
+import { createSfx } from '../core/sfx.js?v=19';
+import { showTitle, diffOf } from '../ui/title.js?v=19';
+import { createRunner } from '../story/runner.js?v=19';
+import { writeSlot, flushSlot } from '../story/save.js?v=19';
+import { holdItem } from '../story/fx.js?v=19';
+import { createRng } from '../core/rng.js?v=19';
+import { showEnding } from '../ui/ending.js?v=19';
 
 export const PLAYABLE = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];   // 0 = 오프닝 · 11 = 종장
 const CH_FILE = Object.fromEntries(PLAYABLE.map((n) => [n, 'ch' + n]));
@@ -33,12 +33,13 @@ export async function buildGame(scene, camera, rng, opt = {}) {
   G.book = createBook(G); G.map = createMap(); G.bench = createBench(); G.sfx = createSfx(G); G.music = G.sfx.music;
   /* 플레이어 */
   const P = G.player = { W: null, C: null, root: null, rig: null, item: null, lock: false, fT: 0, fTap: false, fLong: false, reach: false, away: false, cam: 'follow', hidden: false };
-  loadModel('assets/models/hiccup.glb?v=18').then(({ root, bones }) => { P.root = root; P.rig = createHumanRig(bones, root); P.bones = bones; if (G.place) G.place.group.add(root); });
+  loadModel('assets/models/hiccup.glb?v=19').then(({ root, bones }) => { P.root = root; P.rig = createHumanRig(bones, root); P.bones = bones; if (G.place) G.place.group.add(root); });
 
   /* 장소 짓기 — places/<이름>.js가 없으면 자리표시(_stub) */
   G.loadPlace = async (name, time, variant) => {
-    let mod; try { mod = await import(`../places/${name}.js?v=18`); } catch (e) { mod = await import('../places/_stub.js?v=18'); }
+    let mod; try { mod = await import(`../places/${name}.js?v=19`); } catch (e) { mod = await import('../places/_stub.js?v=19'); }
     G.place = null; G.cast.length = 0; G.castBy = {};             // 장 안에서 이어지는 배우(keep)는 장소가 바뀌면 함께 비움
+    if (P.root) P.root.removeFromParent();                         // 히컵은 옛 장소 group과 함께 비우지 않음(11-01 점검: 장소마다 기하·뼈 텍스처를 비웠다가 첫 프레임에 다시 올림)
     let hs = 7; for (const ch of name) hs = (hs * 31 + ch.charCodeAt(0)) >>> 0;   // 장소마다 제 씨앗(앞에서 난수를 얼마나 썼든 같은 마을 · 팀 A 지적)
     const prng = createRng(name === 'village' ? 1656844137 : hs);   // 마을 = 팀 A가 골목·지붕·길을 맞춘 배치(fx1 VILLAGE_SEED)
     const place = await host.load(name, (ctx) => mod.buildPlace(Object.assign(ctx, { env, rng: prng, opt: { time, variant, stub: name, burnt: name === 'village' && G.flags ? G.flags.burnt : undefined } })));
@@ -95,15 +96,22 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     else { if (P.fT > 0 && P.fT < 0.3) P.fTap = true; P.fT = 0; P.fLong = false; }
     P.reach = P.fLong && !P.noReach; P.away = P.reach;
     P.W.lock = P.lock || P.reach;                         // 손 내미는 동안은 멈춤(기다리기)
-    if (P.cam === 'follow') { if (!G.book.draw && !P.aiming && G.bench.el.classList.contains('gone')) P.C.step(dt, I, P.W); P.W.step(dt, I, P.C.moveYaw()); }   // 책·작업대에 그리는 동안 끌기 = 펜
+    if (P.cam === 'follow') {                                   // 책·작업대에 그리는 동안 끌기 = 펜
+      if (!G.book.draw && !P.aiming && G.bench.el.classList.contains('gone')) { if (P.camOff) { I.look(); P.camOff = false; } P.C.step(dt, I, P.W); }   // 카메라가 쉰 동안(작업대·장소 짓기) 쌓인 끌기는 버림 — 끝나는 순간 카메라가 확 돌던 것(11-01 점검)
+      else P.camOff = true;
+      P.W.step(dt, I, P.C.moveYaw());
+    }
   };
   G.playerDraw = (a, dt) => {
     if (!P.root || !P.W) return;
     P.root.visible = !P.hidden;
-    if (P.cam === 'follow') { P.W.draw(a, P.root); if (performance.now() - (G.benchT || -1e9) > 250) P.C.draw(dt, P.root); }   // bench 동안 카메라는 benchPath
+    if (P.cam === 'follow') {
+      P.W.draw(a, P.root); if (performance.now() - (G.benchT || -1e9) > 250) P.C.draw(dt, P.root);   // bench 동안 카메라는 benchPath
+      if (Math.abs(camera.fov - 60) > 0.05) { camera.fov += (60 - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); }   // 비행 엔진이 넓힌 시야각을 걷기에서 되돌림
+    }
     if (P.rig && P.cam === 'follow') {
       const to = P.pose || {}, R = P.rig;
-      const tg = { speed: Math.min(1, P.W.speed / 4.2), low: P.W.low ? 1 : 0, reach: P.reach ? 1 : 0, away: P.away ? 0.8 : 0, throw: 0 };
+      const tg = { speed: Math.min(1, P.W.speed / 4.2), low: P.W.low ? 1 : 0, reach: P.reach ? 1 : 0, away: P.away ? 0.8 : 0, throw: 0, ride: 0, sit: 0 };   // 비행·배에서 내리면 탄 자세·앉은 자세를 풂(골반이 내려간 채 걷던 것 · 11-01 점검) — 앉히려면 P.pose
       for (const k in to) tg[k] = to[k];
       for (const k in tg) if (k in R) R[k] += (tg[k] - R[k]) * Math.min(1, dt * 8);
       R.update(dt);
@@ -112,16 +120,24 @@ export async function buildGame(scene, camera, rng, opt = {}) {
 
   /* 장 진행 */
   const R = G.runner = createRunner(G);
-  G.onStepDone = (ch, idx) => { writeSlot(G.slot, { grade: G.grade, diff: G.diff, ch: ch.id, idx: idx + 1, book: G.book.state(), inv: G.inv, records: G.records, flags: G.flags }, true); };
+  /* 저장 — 칸 0 = 저장 안 함(선생님 장 고르기·?ch= 시험 주소가 아이 칸을 덮지 않게) · best = 가장 멀리 간 장·차례(앞 장을 다시 해도 줄지 않음 · 11-01 점검) */
+  G.best = { ch: 0, idx: 0 };
+  const save = (ch, idx) => {
+    if (!G.slot) return;
+    if (ch > G.best.ch || (ch === G.best.ch && idx > G.best.idx)) G.best = { ch, idx };
+    writeSlot(G.slot, { grade: G.grade, diff: G.diff, ch, idx, best: G.best.ch, bestIdx: G.best.idx, book: G.book.state(), inv: G.inv, records: G.records, flags: G.flags }, true);
+  };
+  G.onStepDone = (ch, idx) => save(ch.id, idx + 1);
   G.onChapterDone = (ch) => {
     const nx = PLAYABLE[PLAYABLE.indexOf(ch.id) + 1];
-    writeSlot(G.slot, { grade: G.grade, diff: G.diff, ch: nx ?? ch.id, idx: 0, book: G.book.state(), inv: G.inv, records: G.records, flags: G.flags }, true);
+    save(nx ?? ch.id, 0);
     G.chDone = (G.chDone || 0) + 1;
     if (nx && Q.get('chain') !== '0') setTimeout(() => startCh(nx, 0), 1800);
   };
   async function startCh(n, idx) {
-    if (G.inv.helmet && n >= 8 && n <= 10) { const fx = await import('../story/fx79.js?v=18'); fx.setHelmet(G, true); }   // 7장에서 받은 투구가 이어하기에도(팀 B)
-    const m = await import(`../story/${CH_FILE[n]}.js?v=18`);
+    if (G.inv.helmet && n >= 8 && n <= 10) { const fx = await import('../story/fx79.js?v=19'); fx.setHelmet(G, true); }   // 7장에서 받은 투구가 이어하기에도(팀 B)
+    const m = await import(`../story/${CH_FILE[n]}.js?v=19`);
+    if (!(idx >= 0 && idx < m.chapter.steps.length)) idx = 0;   // 다 깬 장(차례 번호 = 차례 수)을 다시 고르면 처음부터
     await R.start(m.chapter, idx);
   }
   G.startCh = startCh;
@@ -158,26 +174,32 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     ready = Promise.resolve(); hud.veil.show('성능 재기', '1분쯤 걸려요 · 손대지 말고 기다려 주세요');
     setTimeout(() => G.benchTour().then((l) => { hud.veil.hide(); G.benchShow(l); console.log(l); window.DRG_BENCH = l; }), 600);
   } else if (Q.has('ch')) {
-    G.grade = +(Q.get('grade') || 4); G.diff = diffOf(G.grade, Q); G.slot = +(Q.get('slot') || 3);
+    G.grade = +(Q.get('grade') || 4); G.diff = diffOf(G.grade, Q); G.slot = +(Q.get('slot') || 0);   // 주소로 바로 연 판은 저장 안 함(?slot=1~3을 주면 그 칸)
     ready = startCh(+Q.get('ch'), +(Q.get('step') || 0));
   } else {
     hud.veil.hide();
     ready = Promise.resolve();
     showTitle({ playable: PLAYABLE, Q }).then((r) => {
       G.grade = r.grade; G.diff = diffOf(r.grade, Q); G.slot = r.slot;
-      if (r.save) { G.book.load(r.save.book); Object.assign(G.inv, r.save.inv || {}); Object.assign(G.flags, r.save.flags || {}); Object.assign(G.records, r.save.records || {}); }
+      if (r.save) { G.book.load(r.save.book); Object.assign(G.inv, r.save.inv || {}); Object.assign(G.flags, r.save.flags || {}); Object.assign(G.records, r.save.records || {}); G.best = { ch: r.save.best ?? r.save.ch ?? 0, idx: r.save.best == null ? r.save.idx || 0 : r.save.bestIdx || 0 }; }
       startCh(r.ch, r.idx);
     });
   }
   addEventListener('pagehide', flushSlot);
 
+  /* 배우 그리기 — manual = 비행 엔진이 놓고 자세도 갱신 · 비행이 끝나 처음 다시 그릴 때 몸 기울기(앞뒤·옆)를 바로 세움(투슬리스가 기운 채 걷던 것 · 11-01 점검) */
+  function drawActor(x, a, dt) {
+    if (x.manual) { x.wasManual = true; return; }
+    if (x.wasManual) { x.wasManual = false; if (x.root) { x.root.rotation.x = 0; x.root.rotation.z = 0; } }
+    if (x.draw) x.draw(a, dt, camera.position);
+  }
   let last = performance.now();
   const W = {
     G, env, ready,
     step(dt, I) {
       G.t += dt; U.uTime.value = G.t; G.input = I;
       hud.tick(dt);
-      if (host.busy) return;
+      if (host.busy) { P.camOff = true; return; }
       if (!G.place) { R.tick(dt, I); return; }                  // 장소 없이 책 쪽만(쉬움에서 빠진 도전이 장 첫 차례일 때)
       G.place.step && G.place.step(dt, G.t);
       if (!G.book.open || G.book.draw) G.playerStep(dt, I);
@@ -192,8 +214,8 @@ export async function buildGame(scene, camera, rng, opt = {}) {
       if (!G.place) { env.follow(); return; }
       G.playerDraw(a, dt);
       if (G.camDraw) G.camDraw(a, dt);
-      if (R.C) for (const x of R.C.actors) if (!x.manual) x.draw && x.draw(a, dt, camera.position);   // manual = 비행 엔진이 놓고 자세도 갱신
-      for (const x of G.cast) if (!x.manual) x.draw && x.draw(a, dt, camera.position);
+      if (R.C) for (const x of R.C.actors) drawActor(x, a, dt);
+      for (const x of G.cast) drawActor(x, a, dt);
       G.place.draw && G.place.draw(a);
       env.follow();
       if (G.diff === 'easy') {                          // 쉬움: 쓸 수 있는 물건 위 F 키 그림만(6m 안)
