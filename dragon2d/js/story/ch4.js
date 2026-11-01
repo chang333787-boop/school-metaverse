@@ -153,6 +153,6 @@ export const chapter = {
         yield* wait(1.5);
         return true;
       },
-      sense: (G) => ({ lines: G.flags.lines, trust: +(G.flags.trust || 0).toFixed(2), fear: +(G.flags.fear || 0).toFixed(2) }) },
+      sense: (G) => { const D = G.cast.find('toothless'); return { lines: G.flags.lines, trust: +(G.flags.trust || 0).toFixed(2), fear: +(G.flags.fear || 0).toFixed(2), D: D ? [D.x, D.y] : null }; } },
   ],
 };

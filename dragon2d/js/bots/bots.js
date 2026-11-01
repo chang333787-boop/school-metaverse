@@ -108,7 +108,7 @@ export const BOTS = {
   '2-1': (H) => { const ts = (H.now.x || {}).torches || [], d = ts.filter((q) => q.dim).sort((a, b) => a.lit - b.lit)[0]; if (d && H.walk(d.x, d.y, 0.6, { run: Math.abs(d.x - H.now.me.x) > 5 })) H.tap('use'); },
   '2-2': (H) => {
     const x = H.now.x || {}, me = H.now.me, c = (x.clues || [])[x.ci || 0]; if (!c) { H.walk(41, 15, 0.8); return; }
-    for (const [lx, y0, y1] of x.logs || []) if (me.x > lx - 1.3 && me.x < lx - 0.3 && c[0] > lx && me.y > y0 && me.y < y1 && !me.air) H.hold('jump');
+    for (const [lx, y0, y1] of x.logs || []) if (me.x > lx - 1.6 && me.x < lx - 0.5 && c[0] > lx && me.y > y0 && me.y < y1 + 0.3 && !me.air) H.hold('jump');
     if (H.walk(c[0], c[1] + 0.4, 0.5)) { if (Math.hypot(me.vx, me.vy) < 0.4) H.hold('use'); }
     if (H.keys.jump) H.hold('right');
   },
@@ -150,7 +150,7 @@ export const BOTS = {
     if (x.fear < 0.35 && L.fear < 0.4) H.tap('use', 1);
   },
   '4-3': (H) => {
-    const x = H.now.x || {}, me = H.now.me, D = H.now.actors.find((a) => a.k === 'toothless'); if (!D) return;
+    const x = H.now.x || {}, me = H.now.me; if (!x.D) return; const D = { x: x.D[0], y: x.D[1] };
     if (me.x < 22.3) {
       H.sneak(false);
       const next = (x.lines || []).find((l) => l[0] > me.x - 0.1);
@@ -186,7 +186,7 @@ export const BOTS = {
     if (cur.k === 'terror') { if (H.walk(x.sun[0], x.sun[1] + 0.3, 0.35)) { if (!x.light) H.tap('use', 1); } return; }
     const ld = (L.ds || []).find((d) => d.k === cur.k) || cur;
     if (ld.st === 'gap' && cur.st === 'gap') { if (H.walk(cur.x, cur.y + 1.5, 0.4)) { if (cur.k === 'gronckle') H.tap('use', 0.6); else H.hold('use'); } }
-    else H.walk(cur.x + (me.x < cur.x ? -3.6 : 3.6), cur.y + 2.5, 0.8);
+    else H.walk(cur.x + (me.x < cur.x ? -2.2 : 2.2), cur.y + 2.2, 0.8);
   },
   '6-2': (H) => flyBot(H),
 };

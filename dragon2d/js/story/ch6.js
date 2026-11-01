@@ -47,8 +47,8 @@ export const chapter = {
               G.marks.push({ k: 'text', x: D.x, y: D.y - (D.kind === 'nadder' ? 2.8 : 2.3), t: '휴…', s: 18 });
               const d = Math.hypot(G.P.x - D.x, G.P.y - D.y);
               if (D.kind === 'gronckle' && d < 2.8) { G.fspots.push({ x: D.x, y: D.y + 0.6 }); if (G.I.pressed.use && !(G.P.mashT > 0)) { D.calm = true; D.pose.roll = 1; G.W.prop('nip', D.x - 0.6, D.y + 0.4, {}); sfx(G, 'purr', D.x); say(G, 'fishlegs', '드래곤 풀에 뒹굴어! 책에 없던 거야!', { secs: 2 }); G.book.note('gronckle', 'likes', '드래곤 풀'); } }
-              if (D.kind === 'nadder' && d < 2.4) { G.fspots.push({ x: D.x, y: D.y + 0.6, label: 'F꾹' }); if (G.I.down.use) { chin += dt; G.P.handLock = 1; if (chin > 0.7) { D.calm = true; D.pose.sit = 1; D.pose.eat = 0; sfx(G, 'purr', D.x); say(G, 'snotlout', '저걸 어떻게… 턱을 긁었다고?', { secs: 2 }); G.book.note('nadder', 'likes', '턱 밑 긁기'); G.P.handLock = 0; } } else chin = 0; }
-              if (D.t > (G.diff === 'easy' ? 2.2 : 1.6)) { D.st = 'walk'; D.t = 0; D.pose.eat = 0; D.pose.pupil = 0.3; chin = 0; G.P.handLock = 0; D.to = D.kind === 'nadder' ? [17 + G.rng() * 8, 7 + G.rng() * 6] : [5 + G.rng() * 8, 7 + G.rng() * 6]; D.spd = 2.4; }
+              if (D.kind === 'nadder' && d < 2.4) { G.fspots.push({ x: D.x, y: D.y + 0.6, label: 'F꾹' }); if (G.I.down.use) { chin += dt; G.P.handLock = 1; if (chin > 0.6) { D.calm = true; D.pose.sit = 1; D.pose.eat = 0; sfx(G, 'purr', D.x); say(G, 'snotlout', '저걸 어떻게… 턱을 긁었다고?', { secs: 2 }); G.book.note('nadder', 'likes', '턱 밑 긁기'); G.P.handLock = 0; } } else chin = 0; }
+              if (D.t > (G.diff === 'easy' ? 3 : G.diff === 'hard' ? 1.6 : 2.2)) { D.st = 'walk'; D.t = 0; D.pose.eat = 0; D.pose.pupil = 0.3; chin = 0; G.P.handLock = 0; D.to = D.kind === 'nadder' ? [17 + G.rng() * 8, 7 + G.rng() * 6] : [5 + G.rng() * 8, 7 + G.rng() * 6]; D.spd = 2.4; }
             }
             if (D.calm) { D.pose.tell = 0; D.pose.pupil = 1; D.to = null; G.inv.oldScale = (G.inv.oldScale || 0) + 1; G.hud.banner('묵은 비늘 — 진정시키면 드래곤이 스스로 내려놔요', 'heart', 2.4); }
           }

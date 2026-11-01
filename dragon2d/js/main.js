@@ -182,6 +182,7 @@ let LOOP = null;
 async function boot() {
   document.getElementById('load').classList.add('hide');
   LOOP = startLoop(V, step, draw);
+  if (Q.get('bench') === '1') { bench(); return; }
   let pick;
   if (Q.has('ch')) { const g = +(Q.get('grade') || 4); pick = { grade: g, slot: 0, ch: +Q.get('ch'), idx: +(Q.get('step') || 0) }; }
   else pick = await showTitle({ playable: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], Q });
@@ -193,5 +194,24 @@ async function boot() {
   canvas.focus();
   G.runner.start(pick.ch, pick.idx || 0);
   if (Q.get('bot')) { const m = await import('./bots/bots.js?v=1'); DRG2.bot.run(m.storyBot(Q.get('bot'))); }
+}
+/* ?bench=1 — 교사 크롬북용: 보통 봇이 네 자리(지붕 불 · 골목 · 바다 비행 · 훈련장)를 15초씩 놀고 한 줄 결과(복사) */
+async function bench() {
+  G.grade = 4; G.diff = 'normal'; G.book.give();
+  const m = await import('./bots/bots.js?v=1'), out = [];
+  for (const [c, i, name] of [[1, 1, '지붕불'], [1, 2, '골목'], [6, 1, '바다비행'], [6, 0, '훈련장']]) {
+    await G.runner.start(c, i);
+    await new Promise((r) => { const w = () => (G.runner.state === 'run' ? r() : setTimeout(w, 100)); w(); });
+    DRG2.bot.run(m.storyBot('normal')); await new Promise((r) => setTimeout(r, 1500)); V.perfReset();
+    await new Promise((r) => setTimeout(r, 15000)); DRG2.bot.stop();
+    const p = V.perf(); out.push(name + ' p95 ' + p.p95 + 'ms fps ' + p.fps);
+  }
+  let voice = '없음'; try { voice = speechSynthesis.getVoices().some((v) => /^ko/i.test(v.lang) && v.localService) ? '있음' : '없음'; } catch (e) { /* 그대로 */ }
+  const line = 'DRG2D bench · ' + (IS_CB ? '크롬북' : '다른 기기') + ' · ' + innerWidth + '×' + innerHeight + ' · ' + out.join(' · ') + ' · 한국어 음성 ' + voice + ' · ' + navigator.userAgent.slice(0, 80);
+  const box = document.createElement('div'); box.style.cssText = 'position:fixed;inset:0;z-index:60;background:#1d2730;color:#f4ead2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;font:16px "Noto Sans KR",sans-serif';
+  box.innerHTML = '<div style="font-size:22px;font-weight:800">성능 재기 끝 — 아래 줄을 복사해 보내 주세요</div><textarea style="width:min(900px,94vw);height:120px;font:14px monospace"></textarea><button style="font:700 18px sans-serif;padding:8px 18px">복사</button>';
+  box.querySelector('textarea').value = line; document.body.appendChild(box);
+  box.querySelector('button').onclick = () => { const t = box.querySelector('textarea'); t.select(); try { navigator.clipboard.writeText(line); } catch (e) { document.execCommand('copy'); } };
+  window.DRG2_BENCH = line;
 }
 boot();

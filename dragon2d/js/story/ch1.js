@@ -60,7 +60,7 @@ export const chapter = {
         const line = [['astrid', 35.8, 32.4], ['fishlegs', 38.6, 32.3], ['snotlout', 34.6, 32.6], ['ruffnut', 39.8, 32.5], ['tuffnut', 40.8, 32.6]].map(([w, x, y]) => G.cast.person(w, x, y, { dir: 'up', pose: { carry: 'bucket' } }));
         const sky = skyDragons(G);
         const H = [33, 41, 49].map((x) => G.W.findProp('house', x, 27));
-        const F = H.map((p, i) => ({ x: p.x, y: p.y, w: p.o.w * 0.95, d: p.o.d, h: 3, burn: [0.32, 0.18, 0][i], next: 6, delay: 5, prop: p, saved: false, lost: false, full: 0, grow: G.diff === 'easy' ? 0.025 : 0.035 }));
+        const F = H.map((p, i) => ({ x: p.x, y: p.y, w: p.o.w * 0.95, d: p.o.d, h: 3, burn: [0.62, 0.45, 0.3][i], next: 6, delay: 5, prop: p, saved: false, lost: false, full: 0, grow: G.diff === 'easy' ? 0.025 : 0.035 }));
         F[0].spread = () => F[1]; F[1].spread = () => F[2];
         FX.fires.push(...F); G.flags.fires = F;
         say(G, 'astrid', '불이야! 물 받아!', { icons: ['bucket'] });
@@ -72,13 +72,13 @@ export const chapter = {
             previewArc(G);
             if (G.I.pressed.use) {
               G.P.carry = null; sfx(G, 'whoosh', G.P.x);
-              throwFrom(G, 'water', { shot: { land(s) { for (const f of F) if (f.burn > 0 && onRoof(f, s.x, s.y)) { douse(f, 0.5); sfx(G, 'splash', f.x); if (f.saved) say(G, 'fishlegs', '꺼졌다! 하나 지켰어!', { secs: 1.6 }); return; } } } });
+              throwFrom(G, 'water', { shot: { land(s) { for (const f of F) if (f.burn > 0 && onRoof(f, s.x, s.y)) { douse(f, 0.36); sfx(G, 'splash', f.x); if (f.saved) say(G, 'fishlegs', '꺼졌다! 하나 지켰어!', { secs: 1.6 }); return; } } } });
             }
           }
           for (const f of F) if (f.burn >= 1) { f.full += dt; if (f.full > 8 && G.diff !== 'easy') { f.burn = 0; f.lost = true; f.prop.o.scorch = 1; f.prop.o.burn = 0; burst('smoke', f.x, f.y - 2, 3, 10, 1.5, 2, 0.6, G.rng); say(G, 'villager', '아이고, 우리 집 지붕이…', { secs: 2 }); } }
           const burning = F.filter((f) => f.burn > 0);
           if (burning.length) { const tg = burning.reduce((a, b) => (b.burn > a.burn ? b : a)); if (G.P.carry) goal(G, tg.x, tg.y - 1, { h: 3.6 }); else goal(G, tub.x, tub.y); }
-          if (!burning.length && F[2].burn <= 0) {
+          if (!burning.length) {
             if (F.filter((f) => f.lost).length >= 2) { say(G, 'hiccup', '안 돼… 다시 해 보자.'); yield* wait(1); return 'retry'; }
             break;
           }
@@ -91,7 +91,7 @@ export const chapter = {
       sense: (G) => ({ tub: [37.2, 31.6], carry: G.P.carry, fires: (G.flags.fires || []).map((f) => ({ x: f.x, y: f.y, w: f.w, d: f.d, burn: +f.burn.toFixed(2), lost: f.lost })) }) },
 
     /* ③ 골목 — 망루까지 · 내더 가시(세움 → 부채꼴 셋) · 그롱클 불덩이(볼 부풂 → 떨어질 자리 붉은 고리) · 나이트메어 불길(몸이 달아오름 → 길 가득한 불 줄 = 점프) */
-    { id: '1-3', verb: 'dodge', goal: '망루까지 가라', at: [40, 29], limit: 70,
+    { id: '1-3', verb: 'dodge', goal: '망루까지 가라', at: [22, 29], limit: 70,
       hints: ['! 가 뜨면 곧 쏴요 — 붉은 고리 밖으로, 불 줄은 점프', '가시는 옆으로 비키거나 Space'],
       *run(G) {
         for (const p of G.W.props) if (p.kind === 'house' && p.y === 27 && p.x > 30) p.o.scorch = Math.max(p.o.scorch || 0, 0.5);
@@ -102,9 +102,9 @@ export const chapter = {
         goal(G, 57, 30.6);
         while (dist(G, 57, 30.6) > 1.5) {
           const dt = yield; driftSky(sky, dt, G); pt += dt; zones(G);
-          if (!D && pt > 0.8) {
+          if (!D && pt > (k ? 0.5 : 0.2)) {
             const kind = order[k % 3]; k++;
-            const x = Math.min(G.P.x + 8, 60), y = 29 + (k % 2 ? -0.6 : 0.8);
+            const x = Math.min(G.P.x + 6.5, 60), y = k % 2 ? 31.9 : 27.5;          /* 길가(남쪽 풀밭 · 북쪽 집 앞)에 내려앉아 길 쪽으로 쏨 */
             D = G.cast.dragon(kind, x, y, { z: 7, flip: -1, pose: { wing: 1, pupil: 0.25 } }); ph = 'in'; pt = 0;
           }
           if (D) {

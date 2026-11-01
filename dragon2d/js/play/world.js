@@ -132,6 +132,7 @@ export function makePlace(name, time, opt = {}) {
     return false;
   };
   W.move = (P, nx, ny, r) => {
+    if (W.blocked(P.x, P.y, r, P.z)) { P.x = nx; P.y = ny; return; }      /* 이미 낀 자리(낮은 통나무 위에 내려앉음 등) = 빠져나가게 */
     if (!W.blocked(nx, P.y, r, P.z)) P.x = nx;
     if (!W.blocked(P.x, ny, r, P.z)) P.y = ny;
   };
