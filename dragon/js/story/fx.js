@@ -25,13 +25,15 @@ export function makeItem(name) {
   if (HAND) { let f = null; HAND.traverse((o) => { if (!f && o.isMesh && o.name === name) f = o; }); if (f) { const m = f.clone(); m.position.set(0, 0, 0); m.rotation.set(0, 0, 0); const g = new THREE.Group(); g.add(m); return g; } }
   return fallback(name);
 }
-/* 손에 붙이기 — handR 뼈(팀 M) 또는 아래팔 끝 */
+/* 손에 붙이기 — handR 뼈(팀 M) 또는 아래팔 끝 · 붙인 물건은 셰이더 지킴이가 봄(holdHook = game.js · 뼈에 붙여 장소 group.add를 안 거침 · 팀 C) */
+const HOLD = { f: null };
+export function holdHook(f) { HOLD.f = f; }
 export function holdItem(P, name) {
   if (P.itemObj) { P.itemObj.removeFromParent(); P.itemObj = null; }
   P.item = name; if (!name || !P.bones) return;
   const b = P.bones.handR || P.bones.armLR; if (!b) return;
   const o = makeItem(name); if (!P.bones.handR) o.position.set(0, -0.25, 0.05);
-  b.add(o); P.itemObj = o;
+  b.add(o); P.itemObj = o; if (HOLD.f) HOLD.f(o);
 }
 /* 바닥에 놓인 물건(내려놓은 칼 · 생선 바구니 · 꼬리날개 조각) */
 export function dropItem(group, name, x, y, z, yaw = 0) { const o = makeItem(name); o.position.set(x, y + 0.05, z); o.rotation.set(Math.PI / 2 * (name === 'knife' ? 1 : 0), yaw, 0); group.add(o); return o; }
