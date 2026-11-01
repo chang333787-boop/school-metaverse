@@ -356,6 +356,7 @@ export async function buildPlace(ctx) {
 
   /* ── 벽 선분(1m 마칭 스퀘어) · 경계 ── */
   const walls = NT.contourWalls(D.h, X0, X0, S1, NX1, NX1);
+  for (const w of walls) w.edge = 1;                              // 보이지 않는 길 가장자리 — 카메라는 너머가 바위벽일 때만 막힘(좁은 숲길에서 카메라가 자꾸 툭 당겨지던 것 · 11-01 조작감)
   /* 걷는 곳 안에 박힌 장애물(바위·큰 나무) — 위에서 넣은 것 + 바위 무더기 가장자리 */
 
   /* ── 이름 자리 · 목록 ── */

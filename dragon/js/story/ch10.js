@@ -243,7 +243,7 @@ function* beachBattle(G, C) {
     for (const H of adults) if (H.saved && H.pose.carry && (H.dropT = (H.dropT || 0) + dt) > 1.2) H.pose = { cheer: 0.6 };
     /* 김 가림막 시계 · 불이 다시 붙음 */
     for (const g of groups) { if (g.hideT > 0) { g.hideT -= dt; if ((B.t * 6 | 0) % 2 === 0) steamP.puff(g.x + Math.sin(B.t * 5 + g.i) * 6, g.y + 2, g.z + Math.cos(B.t * 4) * 6, 0, 2, 0, 2.2); if (g.hideT <= 0) g.hidden = false; } if (g.fireOut > 0) { g.fireOut -= dt; if (g.fireOut <= 0) pl.shipFire && pl.shipFire(g.i, true); } }
-    /* 대장 불 → 맞으면(구르기로 피함) · 어른 무리는 흩어졌다 돌아옴(다치지 않음) */
+    /* 대장 불 → 맞으면(점프로 피함 · 공중 = P.W.rollT > 0) · 어른 무리는 흩어졌다 돌아옴(다치지 않음) */
     if (C.fireAt) {
       C.fireAt.t += dt; const f = C.fireAt;
       if (f.t > 0.35 && f.t < 1.3 && B.fire) {

@@ -556,7 +556,7 @@ export async function buildPlace(ctx) {
       else { const h = gridH(x, z); if (h < 1.4 || z < -89 || pal(x, z) < 0) ok = 0; else { const sx = (gridH(x + 0.6, z) - gridH(x - 0.6, z)) / 1.2, sz = (gridH(x, z + 0.6) - gridH(x, z - 0.6)) / 1.2; if (sx * sx + sz * sz > 1.0) ok = 0; } }
       mask[j * (gw + 1) + i] = ok;
     }
-    walls.push(...contourWalls(mask, gw, gd, gx0, gz0, gs));
+    for (const w of contourWalls(mask, gw, gd, gx0, gz0, gs)) { w.edge = 1; walls.push(w); }   // 보이지 않는 걷기 끝 선(물가·비탈) — 카메라는 너머가 바위벽일 때만 막힘(collide.cut · 11-01 조작감)
   }
 
   P.finish(group); P.finishFire(group);

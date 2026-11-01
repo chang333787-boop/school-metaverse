@@ -22,6 +22,7 @@ export function buildPlaceView(scene, camera, rng, opt = {}) {
     W = createWalker({ height: place.height, collide: coll, bound: place.bound, x: a.x, z: a.z, y: a.y, yaw: a.yaw || 0 });
     C = createFollowCam(camera, place.height, { collide: coll, ceil: place.ceil });
     C.yaw = (a.yaw || 0) + Math.PI;
+    { const Q = new URLSearchParams(location.search); if (Q.has('camd')) C.dist = +Q.get('camd'); if (Q.has('camp')) C.pitch = +Q.get('camp'); if (Q.has('caml')) C.lift = +Q.get('caml'); }   // 카메라 거리·높이 견주기
     fc.x = a.x; fc.z = a.z; fc.y = (a.y || 0) + 25;
     if (opt.marks) marks();
     if (hic) place.group.add(hic);
@@ -35,7 +36,7 @@ export function buildPlaceView(scene, camera, rng, opt = {}) {
   loadModel('assets/models/hiccup.glb?v=25').then(({ root, bones }) => { hrig = createHumanRig(bones, root); hic = root; (place ? place.group : scene).add(root); });
   const ready = load();
   return {
-    env, ready, get place() { return place; }, host,
+    env, ready, get place() { return place; }, host, get W() { return W; }, get C() { return C; }, get hic() { return hic; },   // 걷기·카메라 들여다보기(drg_feel.cjs)
     step(dt, I) {
       t += dt; U.uTime.value = t;
       if (!place) return;
@@ -51,14 +52,14 @@ export function buildPlaceView(scene, camera, rng, opt = {}) {
       }
       C.step(dt, I, W); W.step(dt, I, C.moveYaw());
       fHold = I.on('use') ? fHold + dt : 0;
-      if (hrig) { const to = { speed: Math.min(1, W.speed / 4.2), low: W.low ? 1 : 0, reach: fHold > 0.25 ? 1 : 0, away: fHold > 0.25 ? 0.8 : 0 }; for (const k in to) hrig[k] += (to[k] - hrig[k]) * Math.min(1, dt * 8); hrig.update(dt); }
+      if (hrig) { const to = { speed: Math.min(1, W.speed / 4.2), low: W.low ? 1 : 0, reach: fHold > 0.25 ? 1 : 0, away: fHold > 0.25 ? 0.8 : 0 }; for (const k in to) hrig[k] += (to[k] - hrig[k]) * Math.min(1, dt * 8); hrig.jump = W.poseJump(); hrig.land = W.poseLand(); hrig.update(dt); }
     },
     draw(a) {
       const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
       if (place) {
         if (performance.now() - benchT < 250) { /* bench가 카메라를 잡고 있음(benchPath) */ }
         else if (free) { camera.position.set(fp.x + (fc.x - fp.x) * a, fp.y + (fc.y - fp.y) * a, fp.z + (fc.z - fp.z) * a); camera.rotation.set(fc.pitch, fc.yaw + Math.PI, 0, 'YXZ'); }
-        else if (hic && W) { W.draw(a, hic); C.draw(dt, hic); }
+        else if (hic && W) { W.draw(a, hic); C.draw(dt, hic, W); }
         place.draw && place.draw(a);
       }
       env.follow();

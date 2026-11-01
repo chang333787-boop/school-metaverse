@@ -344,7 +344,7 @@ export async function buildPlace(ctx) {
   if (!fogV) {
     const sx = 1.5, nx = 162, nz = 115, x0 = -121, z0 = 82, val = new Float32Array(nx * nz);
     for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const x = x0 + i * sx, z = z0 + j * sx, h = height(x, z); val[j * nx + i] = Math.max(0.35 - h, h - 13, Math.hypot(x - WALK.x, z - WALK.z) - WALK.r); }
-    walls = NT.contourWalls(val, x0, z0, sx, nx, nz);
+    walls = NT.contourWalls(val, x0, z0, sx, nx, nz); for (const w of walls) w.edge = 1;   // 걷기 끝 선 = 카메라는 너머가 바위벽일 때만 막힘(11-01 조작감)
   }
 
   const A = (x, z, yaw = 0, y) => ({ x, y: y ?? height(x, z), z, yaw });
@@ -551,7 +551,7 @@ async function buildCrater(ctx) {
   /* 걷기 벽 — 구덩이 가장자리 · 돌벽 밑 · 틈 밖 끝 */
   const sx = 1.5, nx = 129, nz = 129, x0 = -96, z0 = -96, val = new Float32Array(nx * nz);
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const x = x0 + i * sx, z = z0 + j * sx, r = Math.hypot(x, z), h = crH(x, z); val[j * nx + i] = Math.max(PIT + 1.8 - r, h - 3.2, r - 92); }
-  const walls = NT.contourWalls(val, x0, z0, sx, nx, nz);
+  const walls = NT.contourWalls(val, x0, z0, sx, nx, nz); for (const w of walls) w.edge = 1;   // 걷기 끝 선(카메라 · 11-01 조작감)
   /* 구덩이 김 · 불티(아래서 오름) · 대장 그림자(모델 · 어둡게) · 콧구멍 김 */
   const steam = []; for (let k = 0; k < 22; k++) { const a = hash(k, 1) * TAU, d = hash(k, 2) * PIT * 0.8; steam.push([Math.cos(a) * d, -14, Math.sin(a) * d, k / 22, 10, 0.03, 40, 1]); }
   puffs(group, steam, { c0: 0x3a3230, c1: 0x7a6a62, op: 0.55, rise: true, wx: 0.5, wz: 0.3 });

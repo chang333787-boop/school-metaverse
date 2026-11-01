@@ -71,7 +71,7 @@ export const HOWTO = {
   track:    [[ARROWS, ICONS.map, '지도와 땅 맞대기'], ['', ICONS.eye, '부러진 나무·파인 땅'], [keyCap('F'), ICONS.fin, '줍기']],
   approach: [[keyCap('C'), 'tiptoe', '살금살금 켜기'], [keyCap('F'), ICONS.cod, '짧게 = 내밀기'], [keyCap('F 꾹', true), ICONS.hand, '길게 = 손 내밀기']],
   hide:     [[keyCap('C'), 'tiptoe', '살금살금'], ['', ICONS.eye, '눈길 밖에 있기'], [ARROWS, 'rock', '바위 뒤로']],
-  dodge:    [['', ICONS.eye, '예고를 보고'], [keyCap('Space', true), 'roll', '구르기'], ['', 'wait', '구른 뒤 잠깐 빈틈']],
+  dodge:    [['', ICONS.eye, '예고를 보고'], [keyCap('Space', true), 'jump', '점프 = 피하기'], ['', 'wait', '마구 뛰면 빈틈']],   /* 11-01 교사: 메타버스처럼 Space = 점프(예전 구르기) · 공중에 있는 동안 피함 · 바로 또 뛰면 낮게(피하기 X) */
   throw:    [[keyCap('F 꾹', true), 'aim', '누르는 동안 겨누기'], [ARROWS, 'aim', '방향'], ['', ICONS.bucket, '놓으면 던지기']],
   rhythm:   [['', 'beat', '박자를 보고'], [keyCap('Space', true), ICONS.hammer, '맞춰 누르기'], ['', 'wait', '마구 누르면 엉켜요']],
   bench:    [[ARROWS, 'walkers', '작업대까지 걷기'], [keyCap('F'), ICONS.hammer, '작업대 앞에서 F'], ['', ICONS.torch, '촛불 켜진 뒷방 탁자']],   /* 작업대를 찾기 전(11-01 교사 '대장간 들어가서 뭐 어떻게 하는 거야' — 예전엔 Space 박자 창부터 떠서 헷갈림) */
@@ -83,7 +83,7 @@ export const HOWTO = {
   tail5:    [[ARROWS, 'tiptoe', '꼬리 쪽으로'], [keyCap('F'), ICONS.finNew, '꼬리날개 달기'], ['', 'wait', '먹는 동안에']],
   lift5:    [[`<span class="keys">${keyCap('A')}${keyCap('D')}</span>`, ICONS.finNew, '꼬리날개 돌리기'], ['', 'rock', '돌벽 반대쪽으로'], ['', 'wing', '앞으로는 저절로']],
   sketch3:  [[keyCap('C'), 'tiptoe', '살금살금'], ['', 'rock', '바위 곁에 숨기'], [keyCap('F 꾹', true), ICONS.pencil, '누르는 동안 그리기']],
-  shield3:  [['', ICONS.eye, '예고를 보고'], [keyCap('F'), ICONS.shield, '방패 두드리기'], [keyCap('Space', true), 'roll', '구르기']],
+  shield3:  [['', ICONS.eye, '예고를 보고'], [keyCap('F'), ICONS.shield, '방패 두드리기'], [keyCap('Space', true), 'jump', '점프로 피하기']],
   tell9:    [[ARROWS, 'walkers', '아빠 곁에 있기'], [keyCap('F'), ICONS.book, '책 보여 주기'], ['', FACES.stoick(), '말은 걸어도 들려요']],
   ring10:   [[ARROWS, ICONS.rope, '사슬 따라가기'], ['', ICONS.eye, '눈이 동그랄 때'], [keyCap('F 꾹', true), ICONS.hand, '고리 꽉 잡기']],
   cut2:     [[keyCap('C'), 'tiptoe', '살금살금'], [keyCap('F'), ICONS.knife, '말뚝 곁에서 자르기'], ['', ICONS.eye, '숨 고를 때만']],
@@ -104,6 +104,7 @@ export const PICT = {
   tiptoe: svg('0 0 32 32', `<circle cx="14" cy="8" r="3"/><path d="M14 11 C12 16 13 18 16 20 L13 28 M16 20 L21 26 M10 15 L19 14"/>`),
   rock: svg('0 0 32 32', `<path d="M3 27 C4 16 10 10 17 11 C24 12 29 18 29 27 Z" fill="#9a958a"/>`),
   roll: svg('0 0 32 32', `<circle cx="16" cy="16" r="9"/><path d="M8 8 C12 3 22 3 26 9 M26 9 L27 4 M26 9 L21 9"/>`),
+  jump: svg('0 0 32 32', `<path d="M3 28 L29 28"/><circle cx="17" cy="8" r="3"/><path d="M17 11 L16 18 M16 14 L11 11 M16 14 L22 12 M16 18 L12 21 L14 24 M16 18 L21 20 L20 24"/><path d="M5 25 C6 17 9 13 12 12" stroke-dasharray="2 2.5"/>`),
   wait: svg('0 0 32 32', `<circle cx="16" cy="17" r="11"/><path d="M16 17 L16 10 M16 17 L21 20"/>`),
   aim: svg('0 0 32 32', `<circle cx="16" cy="16" r="10"/><circle cx="16" cy="16" r="3"/><path d="M16 2 L16 8 M16 24 L16 30 M2 16 L8 16 M24 16 L30 16"/>`),
   beat: svg('0 0 32 32', `<path d="M3 20 L8 20 L11 8 L15 26 L18 14 L21 20 L29 20"/>`),

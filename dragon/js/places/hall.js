@@ -112,7 +112,7 @@ export async function buildPlace(ctx) {
       else if (rng() < 0.5) P.blob(p.x, 0.99, p.z, 0.13, 0xb08048, { moss: 0, sy: 0.6, ao: false });
       else { P.put(new THREE.CylinderGeometry(0.035, 0.04, 0.2, 5).translate(0, 0.1, 0), M4(p.x, 0.92, p.z), P.pFlat(0xe8dcc0), { ao: false }); P.put(new THREE.ConeGeometry(0.03, 0.07, 4), M4(p.x, 1.16, p.z), null, { mat: 'e', ao: false }); } }
     const pad = o.bench === false ? 0.25 : 0.75, ring = [[-wid / 2 - pad, -len / 2 - 0.2], [wid / 2 + pad, -len / 2 - 0.2], [wid / 2 + pad, len / 2 + 0.2], [-wid / 2 - pad, len / 2 + 0.2]].map(([a, b]) => W(a, b));
-    for (let i = 0; i < 4; i++) walls.push([ring[i].x, ring[i].z, ring[(i + 1) % 4].x, ring[(i + 1) % 4].z]);
+    for (let i = 0; i < 4; i++) walls.push(Object.assign([ring[i].x, ring[i].z, ring[(i + 1) % 4].x, ring[(i + 1) % 4].z], { low: 1 }));   // 상·걸상 = 낮은 벽(카메라는 넘어 봄 · 11-01 조작감)
   };
   for (const sx of [-1, 1]) { table(sx * 9.35, -11, 12, 1.25, 0); table(sx * 9.35, 11, 12, 1.25, 0); }
   table(0, -14, 7.2, 1.8, Math.PI / 2);
@@ -148,7 +148,7 @@ export async function buildPlace(ctx) {
   for (const sx of [-1, 1]) for (let k = 0; k < 17; k++) { const z = -HZ + 3 + k * 2.75; if (TZ.some((t) => Math.abs(t - z) < 1.0)) continue; P.shield(M4(sx * (HX - 0.05), 5.4 + (k % 2) * 0.35, z, -sx * Math.PI / 2, (rng() - 0.5) * 0.1), 0.6 + rng() * 0.08); }
   for (const [x, z, c] of [[-PX + 1.2, -6.25, 0x7e2f25], [PX - 1.2, 6.25, 0x2e4a66], [-PX + 1.2, 12.5, 0x4f6e4a], [PX - 1.2, -12.5, 0x93713a]]) P.cloth(1.3, 3.4, M4(x - 0.65, EAVE - 0.6, z, Math.PI / 2 * Math.sign(x)), (cc, lx, ly, lz, wx, wy) => { cc.setHex(ly < -2.8 ? PAL.yel : c).multiplyScalar(0.9 + 0.1 * N.v2(wx, wy)); }, { amp: 0.04 });
   P.rack(M4(-HX + 0.5, 0.25, 19.5, Math.PI / 2), 3.4, { shields: 2 });
-  walls.push([-HX + 0.2, 17.6, -HX + 0.95, 17.6], [-HX + 0.95, 17.6, -HX + 0.95, 21.4], [-HX + 0.95, 21.4, -HX + 0.2, 21.4]);
+  for (const w of [[-HX + 0.2, 17.6, -HX + 0.95, 17.6], [-HX + 0.95, 17.6, -HX + 0.95, 21.4], [-HX + 0.95, 21.4, -HX + 0.2, 21.4]]) walls.push(Object.assign(w, { low: 1 }));   // 방패 걸이(낮음)
   for (const [x, z] of [[HX - 0.8, 22.8], [HX - 1.6, 23.6], [HX - 0.8, 23.8], [-HX + 0.8, -18.6], [HX - 0.9, -19.4]]) { P.barrel(x, 0, z, { h: 1.0, r: 0.4 }); blockers.push({ x, z, r: 0.48 }); }
 
   /* ── 큰 문(두 짝 · 밤엔 한 짝이 조금 열려 비가 보임 · 낮엔 활짝) + 문밖 돌바닥 + 문 빛 ── */

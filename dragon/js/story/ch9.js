@@ -142,7 +142,7 @@ function* fury(G, C) {
   const flyP = { flapRate: 1, fold: 0, glide: 0.2 };
   const S0 = { x: c.x - 150, y: 70, z: c.z - 170 }, S1 = { x: c.x + 1, y: 34, z: c.z + 2 };
   const GAP = 0.9, need = 20, RAD = 1.8;
-  let t = 0, hits = 0, next = 1.0, shot = null, down = 0, fireT = 0, jump = 0, said = 0;
+  let t = 0, hits = 0, next = 1.0, shot = null, fired = false, down = 0, fireT = 0, jump = 0, said = 0;
   const flash = { x: 0, z: 0 };
   C.drawHook = () => {
     if (C.jump && C.jump.t < 1 && St.root && St.jumpY != null) St.root.position.y = St.jumpY;
@@ -158,7 +158,9 @@ function* fury(G, C) {
     if (!shot && M.warnT <= 0 && M.beh !== 'attack') { next -= dt; if (next <= 0) { M.windup(WARN[G.diff]); N.stay(); G.sfx.play('cry_' + N.kind, N); } }
     const warn = M.warnT > 0;
     blz.blaze = warn ? 1 : 0.85; blz.crouch = warn ? 0.85 : 0.5; blz.jaw = warn ? 0.2 + 0.25 * (1 - M.warnT / WARN[G.diff]) : 0;
-    if (M.beh === 'attack' && !shot && !warn) {
+    if (M.beh !== 'attack') fired = false;
+    if (M.beh === 'attack' && !shot && !warn && !fired) {   // 한 번 쏘기 = 한 발(불덩이가 0.6초에 떨어지는 그 걸음에 'attack'이 한 걸음 남아 예고 없는 둘째 발이 나가던 것 · 11-01 조작감 팀 A)
+      fired = true;
       const mx = N.x + Math.sin(N.yaw) * 2.6, mz = N.z + Math.cos(N.yaw) * 2.6;
       const ax = P.W.x + P.W.vx * 0.25, az = P.W.z + P.W.vz * 0.25;
       shot = { t: 0, sx: mx, sy: N.y + 2.3, sz: mz, tx: ax, tz: az, ty: pl.height(ax, az, 9) };
@@ -172,7 +174,7 @@ function* fury(G, C) {
         fl.position.set(shot.tx, shot.ty, shot.tz); gl.position.set(shot.tx, shot.ty + 0.9, shot.tz); fl.visible = gl.visible = true; fireT = 1.6; flash.x = shot.tx; flash.z = shot.tz;
         if (Math.hypot(P.W.x - shot.tx, P.W.z - shot.tz) < RAD && !(P.W.rollT > 0)) {
           if (easy) G.hud.say('hiccup', '앗 뜨거!', [], { secs: 0.8 });
-          else { hits++; down = 1.6; P.lock = true; P.pose = { stumble: 1 }; G.hud.say('hiccup', hits < 3 ? '아야! …굴러야 해.' : '으아…!', [], { secs: 1.3 }); }
+          else { hits++; down = 1.6; P.lock = true; P.pose = { stumble: 1 }; G.hud.say('hiccup', hits < 3 ? '아야! …뛰어서 피해야 해.' : '으아…!', [], { secs: 1.3 }); }
         }
         shot = null;
       }
@@ -647,7 +649,7 @@ export const chapter = {
       hints: { 1: '칼을 든 채로는 무서워해. 나를 볼 때 내려놓자.', 2: '나를 볼 때 F 짧게(칼 → 투구) · 살금살금(C) 다가가 F 길게.' }, run: lastTest,
       sense: (G, C) => ({ stage: C.stage || '', reachT: +(C.reachT || 0).toFixed(2), nm: dSense(G, C.N, { blaze: +((C.N && C.N.rig && C.N.rig.blaze) || 0).toFixed(2) }) }) },
     { id: '9-2', verb: 'dodge', place: 'arena', time: 'day', goal: '불을 피해 버티기', limit: 60,
-      hints: { 1: '몸이 달아오르고 입을 벌리면 쏠 거야!', 2: '쏘는 순간 옆으로 구르기(방향키 + Space).' }, run: fury,
+      hints: { 1: '몸이 달아오르고 입을 벌리면 쏠 거야!', 2: '쏘는 순간 옆으로 점프(방향키 + Space).' }, run: fury,
       sense: (G, C) => ({ t: +(C.t || 0).toFixed(1), hits: C.hits || 0, nm: dSense(G, C.N, { warn: !!C.warn, shot: !!C.shot }) }) },
     { id: '9-3', verb: 'approach', place: 'arena', time: 'day', goal: '아빠와 투슬리스 사이에서 손 내밀기', limit: 90,
       hints: { 1: '둘 사이에 서야 해. 둘이 움직이면 나도 옮기자.', 2: '사이에 서서 F 길게 — 옮기면 손을 떼고 다시 사이로.' }, run: between, sense: btwSense },

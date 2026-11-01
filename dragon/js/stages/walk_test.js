@@ -1,4 +1,4 @@
-// 걷기 시험 무대(단계 3 앞) — 시안 A 섬에서 히컵 걷기 · Shift 살금살금 · Space 구르기 · F 길게 손 내밀기 · 투슬리스가 근처에서 쉼
+// 걷기 시험 무대(단계 3 앞) — 시안 A 섬에서 히컵 걷기 · Shift 살금살금 · Space 점프 · F 길게 손 내밀기 · 투슬리스가 근처에서 쉼
 import * as THREE from 'three';
 import { buildLookA } from '../scenes/look_a.js?v=25';
 import { loadModel } from '../look/models.js?v=25';

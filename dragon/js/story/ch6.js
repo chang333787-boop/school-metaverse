@@ -143,7 +143,8 @@ function* trio(G, C) {
       const M = d.mind; d.faceTo(P.W.x, P.W.z);
       d.next -= dt;
       if (d.next <= 0 && M.warnT <= 0 && M.beh !== 'attack' && !M.inGap()) { M.windup(WARN[G.diff]); d.next = 5.5 + G.rng() * 3; G.sfx.play('cry_' + d.kind, d); }
-      if (M.beh === 'attack' && !d.shot) { d.shot = { t: 0, x: P.W.x, z: P.W.z }; }
+      if (M.beh === 'attack' && !d.shot && !d.shotDone) { d.shot = { t: 0, x: P.W.x, z: P.W.z }; d.shotDone = true; }   // 한 번 쏘기 = 한 발(예전: 0.5초에 판정하고 비운 뒤 'attack'이 0.1초 더 남아 예고 없는 둘째 발이 나감 · 11-01 조작감 팀 A)
+      if (M.beh !== 'attack') d.shotDone = false;
       if (d.gapT > 0) d.gapT -= dt;
       if (d.shot) { d.shot.t += dt; if (d.shot.t > 0.5) { d.gapT = { easy: 3, normal: 2.2, hard: 1.5 }[G.diff]; puffs.burst(d.shot.x, 0.3, d.shot.z, 12, 2, 2); if (Math.hypot(P.W.x - d.shot.x, P.W.z - d.shot.z) < 1.5 && !(P.W.rollT > 0)) { if (G.diff === 'easy') G.hud.say('hiccup', '앗 뜨거!', [], { secs: 0.8 }); else { knocks++; P.lock = true; P.pose = { stumble: 1 }; C.down = 2; } } /* 쉬움 = 맞아도 안 넘어짐(design §8) */ d.shot = null; } }
       /* 진정 — 틈 안에서 맞는 것 · 그롱클 = 풀 · 내더 = 턱 밑(F 길게) · 테러 = 생선(또는 빛 점) */

@@ -342,6 +342,7 @@ function fireSense(G, C) {
 /* ── ③ 피하기 — 양 우리 가는 길에 종마다 다른 예고: 내더 가시 세움 · 그롱클 볼 부풂 · 나이트메어 달아오름 · 지플백 초록 김 → 불티 ── */
 const ROUTE = [[-8, 13], [-14, 17.5], [-20, 22.5], [-26.5, 13.5], [-29.5, 2], [-26, -10], [-20, -23], [-28, -33], [-36, -40.5], [-43.5, -42]];
 const GATE = { x: -43.5, z: -42 };
+const NM_REST = { easy: 4.5, normal: 3.5, hard: 2.8 };        // 나이트메어 불꽃 고리가 꺼진 뒤 다음 달아오름까지(초) — 물러섰다가 지나갈 틈
 const STATIONS = [{ kind: 'nadder', x: -24.5, z: 28.5, at: 2 }, { kind: 'gronckle', x: -37, z: 6.5, at: 4 }, { kind: 'nightmare', x: -20.5, z: -12.5, at: 5 }, { kind: 'zippleback', x: -13.5, z: -27, at: 6 }];
 function* gauntlet(G, C) {
   yield* ensureVillage(G, C);                                 // 늘 같은 마을 배치(설계한 골목·지붕 자리)
@@ -407,7 +408,7 @@ function* gauntlet(G, C) {
           if (k >= 1) {
             spikes.forEach((m) => { m.visible = false; puffs.burst(m.position.x, m.position.y, m.position.z, 4, 1, 1.5); });
             let hit = false; for (let i = 0; i < 5; i++) { const o = (i - 2) * 1.0; if (Math.hypot(P.W.x - (atk.tx + atk.px * o), P.W.z - (atk.tz + atk.pz * o)) < 1.0) hit = true; }
-            if (hit && !(P.W.rollT > 0)) hits += knock(G, C, '아야! …옆으로 굴렀어야 했는데.') ? 1 : 0;
+            if (hit && !(P.W.rollT > 0)) hits += knock(G, C, '아야! …옆으로 뛰었어야 했는데.') ? 1 : 0;
             atk.phase = 'end';
           }
         } else if (atk.kind === 'gronckle') {
@@ -420,7 +421,7 @@ function* gauntlet(G, C) {
           if (atk.t > 1.2) { ringF.forEach((f) => { f.visible = false; }); atk.phase = 'end'; }
         } else atk.phase = 'end';
       }
-      if (atk.phase === 'end') { M.lock = 'watch'; atk = null; }
+      if (atk.phase === 'end') { M.lock = 'watch'; if (atk.kind === 'nightmare') d.cd = Math.max(d.cd, NM_REST[G.diff] ?? 3.5); atk = null; }   // 나이트메어는 터진 뒤 숨 고름(예전 0.5초 만에 또 달아올라 '물러서기'로는 지나갈 틈이 없었음 · 11-01 조작감 팀 A)
     }
     C.hits = hits; C.gi = gi;
     if (hits >= 3) { yield* T(C, sayAll(G, [['fishlegs', '히컵! 숨 돌리고 다시 가 보자.']])); return 'retry'; }
@@ -688,7 +689,7 @@ export const chapter = {
       bookPage: { title: '지붕 불', draw: 'nightmare', line: '친구들 물통 줄에 끼어 지붕 불을 껐다. 바람 아래 지붕이 먼저 번졌다.' },
       hints: { 1: '연기가 흘러가는 쪽 지붕이 먼저 번져. 그쪽부터!', 2: 'F 꾹 = 겨누기 · 놓으면 던짐 · 빈손으로 처마 밑 F 꾹 = 갈고리.' }, run: fire, sense: fireSense },
     { id: '1-3', verb: 'dodge', place: 'village', time: 'night', at: { x: -6.5, z: 12.5, yaw: -1.0 }, goal: '양 우리까지 가기', limit: 220,
-      hints: { 1: '드래곤마다 쏘기 전 몸짓이 달라. 보고 피하자.', 2: '가시 = 옆으로 구르기(Space) · 볼 = 방향 바꾸기 · 달아오름 = 물러서기 · 초록 김 = 빠져나오기.' }, run: gauntlet, sense: gauntSense },
+      hints: { 1: '드래곤마다 쏘기 전 몸짓이 달라. 보고 피하자.', 2: '가시 = 옆으로 점프(Space) · 볼 = 방향 바꾸기 · 달아오름 = 물러서기 · 초록 김 = 빠져나오기.' }, run: gauntlet, sense: gauntSense },
     { id: '1-4', verb: 'throw', place: 'village', time: 'night', at: { x: -40.5, z: -39.6, yaw: -2.6 }, goal: '양 지키기', limit: 220,
       hints: { 1: '테러가 날아가는 앞쪽에 던지자.', 2: '볼라 더미에서 F · F 꾹 겨누고 놓기.' }, run: sheep, sense: sheepSense },
     { id: '1-5', verb: 'throw', place: 'village', time: 'night', at: { x: -20, z: 40, yaw: 0.15 }, goal: '나이트 퓨리 맞히기', limit: 200,

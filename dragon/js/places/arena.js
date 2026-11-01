@@ -162,7 +162,7 @@ export async function buildPlace(ctx) {
     const r = FR - 0.75, x = Math.cos(a) * r, z = Math.sin(a) * r, yaw = Math.atan2(-Math.cos(a), -Math.sin(a));
     P.rack(M4(x, floorY(x, z) + 0.25, z, yaw), 2.6, { shields: sh, k: Math.floor(a * 3) });
     lists.racks.push({ x, y: floorY(x, z), z, yaw, kind: sh > 2 ? 'shield' : 'weapon' });
-    const ux = Math.cos(yaw), uz = -Math.sin(yaw); walls.push([x - ux * 1.5, z - uz * 1.5, x + ux * 1.5, z + uz * 1.5]);
+    const ux = Math.cos(yaw), uz = -Math.sin(yaw); walls.push(Object.assign([x - ux * 1.5, z - uz * 1.5, x + ux * 1.5, z + uz * 1.5], { low: 1 }));   // 걸이 = 낮은 벽(카메라는 넘어 봄)
   }
   for (const a of [Math.PI / 2 - 0.62, Math.PI / 2 + 0.66, Math.PI / 2 + 3.4]) {
     const r = FR - 1.0, x = Math.cos(a) * r + Math.sin(a) * 1.0, z = Math.sin(a) * r - Math.cos(a) * 1.0; P.barrel(x, floorY(x, z) - 0.05, z, { water: true, h: 1.05, r: 0.45 }); P.bucket(x + 0.7, floorY(x, z), z + 0.2);

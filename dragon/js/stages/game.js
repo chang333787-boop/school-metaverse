@@ -46,6 +46,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     G.place = place; G.freshPlace = true; G.collide = createCollide(place.blockers || [], place.walls || []);
     P.W = createWalker({ height: place.height, collide: G.collide, bound: place.bound, x: 0, z: 0 });
     P.C = createFollowCam(camera, place.height, { collide: G.collide, ceil: place.ceil });
+    if (Q.has('camd')) P.C.dist = +Q.get('camd'); if (Q.has('camp')) P.C.pitch = +Q.get('camp'); if (Q.has('caml')) P.C.lift = +Q.get('caml');   // 시험 주소(카메라 거리·높이 견주기)
     if (P.root) place.group.add(P.root);
     return place;
   };
@@ -127,6 +128,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     else { if (P.fT > 0 && P.fT < 0.3) P.fTap = true; P.fT = 0; P.fLong = false; }
     P.reach = P.fLong && !P.noReach; P.away = P.reach;
     P.W.lock = P.lock || P.reach;                         // 손 내미는 동안은 멈춤(기다리기)
+    P.W.canRoll = !G.book.draw && G.bench.el.classList.contains('gone') && !P.noJump;   // Space = 점프(책 그리기·작업대 박자 판에선 Space가 펜·박자)
     if (I.locked() && (G.book.draw || !G.bench.el.classList.contains('gone'))) I.unlock();   // 책·작업대(그리기·박자 판)가 열리면 마우스를 돌려줌
     if (P.cam === 'follow') {                                   // 책·작업대에 그리는 동안 끌기 = 펜
       if (!G.book.draw && !P.aiming && G.bench.el.classList.contains('gone')) { if (P.camOff) { I.look(); P.camOff = false; } P.C.step(dt, I, P.W); }   // 카메라가 쉰 동안(작업대·장소 짓기) 쌓인 끌기는 버림 — 끝나는 순간 카메라가 확 돌던 것(11-01 점검)
@@ -136,9 +138,10 @@ export async function buildGame(scene, camera, rng, opt = {}) {
   };
   G.playerDraw = (a, dt) => {
     if (!P.root || !P.W) return;
-    P.root.visible = !P.hidden;
+    P.root.visible = !P.hidden && !(P.cam === 'follow' && P.C.d < 0.6);   // 등 뒤가 바로 벽이라 카메라가 머리 곁까지 오면 몸을 숨김(메타버스 CAM-3)
     if (P.cam === 'follow') {
-      P.W.draw(a, P.root); if (performance.now() - (G.benchT || -1e9) > 250) P.C.draw(dt, P.root);   // bench 동안 카메라는 benchPath
+      const live = !P.camOff && !G.book.draw && !P.aiming && G.bench.el.classList.contains('gone');   // 걸음 사이에 들어온 마우스도 이 프레임에 바로(걸음이 없는 프레임에 카메라가 멈칫하지 않게)
+      P.W.draw(a, P.root); if (performance.now() - (G.benchT || -1e9) > 250) P.C.draw(dt, P.root, P.W, live ? G.input : null);   // bench 동안 카메라는 benchPath
       if (Math.abs(camera.fov - 60) > 0.05) { camera.fov += (60 - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); }   // 비행 엔진이 넓힌 시야각을 걷기에서 되돌림
     }
     if (P.rig && P.cam === 'follow') {
@@ -146,6 +149,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
       const tg = { speed: Math.min(1, P.W.speed / 4.2), low: P.W.low ? 1 : 0, reach: P.reach ? 1 : 0, away: P.away ? 0.8 : 0, throw: 0, ride: 0, sit: 0 };   // 비행·배에서 내리면 탄 자세·앉은 자세를 풂(골반이 내려간 채 걷던 것 · 11-01 점검) — 앉히려면 P.pose
       for (const k in to) tg[k] = to[k];
       for (const k in tg) if (k in R) R[k] += (tg[k] - R[k]) * Math.min(1, dt * 8);
+      R.jump = P.W.poseJump(); R.land = P.W.poseLand();   // 점프는 0.5초라 부드럽게 섞지 않고 바로
       R.update(dt);
     }
   };

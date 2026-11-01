@@ -21,10 +21,10 @@ BOTS['9-2'] = (s, K, M, B, lv) => {
   M.t = (M.t || 0) + 1 / 60;
   if (n.warn && !M.wOn) { M.wOn = true; M.fireAt = M.t + WARN[s.diff] - LAG[lv] + 0.05; }
   if (!n.warn && !n.shot) M.wOn = false;
-  if (M.rollT > 0) { M.rollT -= 1 / 60; K.set(M.side, true); if (!M.rolled) { M.rolled = true; K.tap('Space'); } return; }
+  if (M.rollT > 0) { M.rollT -= 1 / 60; K.set(M.side, true); if (!M.rolled && M.rollT < 0.62) { M.rolled = true; K.tap('Space'); } return; }   // 쏘면 바로 옆으로 · 불덩이가 떨어질 때쯤(0.6초 비행) 점프(공중 = 피함)
   K.set('KeyA', false); K.set('KeyD', false); M.rolled = false;
-  if (s.diff !== 'easy' && M.fireAt && M.t >= M.fireAt) {   // 옆으로 구르기 — 가운데(0,0)에 가까운 쪽
-    M.fireAt = 0; M.rollT = 0.5; K.stop();
+  if (s.diff !== 'easy' && M.fireAt && M.t >= M.fireAt) {   // 옆으로 비켜 점프 — 가운데(0,0)에 가까운 쪽
+    M.fireAt = 0; M.rollT = 0.9; K.stop();
     const fx = n.x - me.x, fz = n.z - me.z, L = Math.hypot(fx, fz) || 1, rx = -fz / L, rz = fx / L;   // 오른쪽(나이트메어를 볼 때 · walker 기준 오른쪽 = (−cos, sin))
     const toC = -me.x * rx - me.z * rz; M.side = toC >= 0 ? 'KeyD' : 'KeyA';
     return;
