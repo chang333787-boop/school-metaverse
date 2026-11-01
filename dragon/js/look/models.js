@@ -8,6 +8,7 @@ import { toon } from './kit.js?v=25';
 
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 const cache = new Map();
+export const INFLIGHT = new Set();                 // 받는 중·푸는 중인 모델(runner warmStep이 덮개 아래에서 기다림 — 차례 가운데 대장 모델 풀기 멈칫 · 팀 C)
 
 /* 재질 이름 → 우리 재질(Blender 재질 이름이 열쇠) — 몸은 정점색(색·그늘 구움) · 눈은 종마다 색 + 약한 발광 */
 const MATS = {
@@ -34,7 +35,7 @@ function prep(g) {
 }
 
 export function loadModel(url) {
-  if (!cache.has(url)) cache.set(url, loader.loadAsync(url).then(prep));
+  if (!cache.has(url)) { const p = loader.loadAsync(url).then(prep); cache.set(url, p); INFLIGHT.add(p); p.finally(() => INFLIGHT.delete(p)).catch(() => {}); }
   return cache.get(url).then((g) => {
     const root = skClone(g.scene);
     const bones = {};

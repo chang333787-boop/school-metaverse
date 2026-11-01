@@ -4,6 +4,7 @@
 // 힌트: 손을 놓고 멈춘 시간 — 쉬움 10초 단계 1 · 20초 단계 2(하는 법 창 다시) · 보통 20초 단계 1 · 어려움 없음(design §8)
 import { createCollide } from '../play/collide.js?v=25';
 import { disposePuffs } from './fx.js?v=25';
+import { INFLIGHT } from '../look/models.js?v=25';
 
 export function createRunner(G) {
   const R = { ch: null, idx: 0, step: null, C: null, it: null, busy: false, idleT: 0, hintLv: 0, stepT: 0, total: 0, log: [], done: false, fails: 0 };
@@ -46,7 +47,7 @@ export function createRunner(G) {
     const it = R.it; let first;
     try { first = it.next(); } catch (e) { first = { err: e }; }
     R.it = { next: (v) => { if (first) { const f = first; first = null; if (f.err) throw f.err; if (f.done) return f; } return it.next(v); } };
-    const ready = [...R.C.actors, ...G.cast].map((a) => a.ready).filter((p) => p && p.then);
+    const ready = [...R.C.actors, ...G.cast].map((a) => a.ready).filter((p) => p && p.then).concat([...INFLIGHT]);   // 배우 + 첫 토막이 부른 모델(대장 등)
     if (ready.length) await Promise.race([Promise.all(ready).catch(() => {}), new Promise((res) => setTimeout(res, 1500))]);
     if (G.host.busy || !G.place || G.place.group !== grp) return;   // 첫 토막이 장소를 새로 짓기 시작함(fx1 ensureVillage) = 그 짓기가 굽기까지 함
     for (const o of grp.children) if (!kids0.has(o)) G.guard.check(o);   // 새로 들어온 것(지킴이가 add 때 이미 봄 · 그 뒤 몸에 붙인 것까지 한 번 더)
