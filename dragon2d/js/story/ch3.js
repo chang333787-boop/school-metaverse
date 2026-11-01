@@ -18,14 +18,14 @@ export const chapter = {
         say(G, 'gobber', '오늘은 그롱클이다! 방패가 제일 중요하지.', { icons: ['shield'] });
         say(G, 'fishlegs', '그롱클은 여섯 발! 내가 셀게!', { secs: 2.2 });
         const tell = TELL[G.diff], NUM = ['하나!', '둘!', '셋!', '넷!', '다섯!', '여섯! 끝!'];
-        let shots = 0, ph = 'walk', t = 0, hits = 0, lastBang = -9, blurred = false, dropped = null;
+        let shots = 0, ph = 'walk', t = 0, hits = 0, lastBang = -9, blurred = false, dropped = null, blurN = 0;
         D.to = [14, 8];
         while (shots < 6 || FX.shots.length) {
           const dt = yield; t += dt;
           if (dropped) { goal(G, dropped.x, dropped.y); if (useAt(G, dropped.x, dropped.y, 1.3)) { G.W.removeProp(dropped); dropped = null; G.P.carry = 'shield'; goal(G, null); } }
           if (G.I.pressed.use && G.P.carry === 'shield') {
             sfx(G, 'clang', G.P.x);
-            if (ph === 'tell' && G.t - lastBang > 0.8 && !(G.P.mashT > 0)) { blurred = true; D.pose.pupil = 0.9; burst('spark', G.P.x, G.P.y, 1.1, 4, 2, 0.3, 0.08, G.rng); }
+            if (ph === 'tell' && G.t - lastBang > 0.8 && !(G.P.mashT > 0)) { if (!blurred) blurN++; blurred = true; D.pose.pupil = 0.9; burst('spark', G.P.x, G.P.y, 1.1, 4, 2, 0.3, 0.08, G.rng); }
             lastBang = G.t;
           }
           if (ph === 'walk') { faceTo(D, G.P.x, G.P.y); if (!D.to && t > 1.2) { ph = 'tell'; t = 0; blurred = false; sfx(G, 'cry_gronckle', D.x); } }
@@ -44,6 +44,7 @@ export const chapter = {
           } else if (ph === 'shot' && t > 0.8) { ph = 'walk'; t = 0; D.pose.mouth = 0; D.to = [8 + G.rng() * 14, 6 + G.rng() * 4]; D.spd = 2.4; }
           if (hits >= 3 && G.diff !== 'easy') { say(G, 'gobber', '히컵, 일어나! 처음부터 다시!'); yield* wait(1); return 'retry'; }
         }
+        if (blurN < 2 && G.P.moved < 8) { say(G, 'gobber', '가만히 서 있으면 훈련이 안 되지! 다시!'); yield* wait(1); return 'retry'; }   /* 두드리거나 움직여서 버텨야 함 */
         D.pose.sit = 1; D.pose.pupil = 0.8;
         say(G, 'gobber', '여섯 발 끝! 오늘은 히컵이 살아남았구나.');
         G.hud.banner('훈련장 순위판에 히컵 이름 — 맨 아래', 'shield', 2.6);

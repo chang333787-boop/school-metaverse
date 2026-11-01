@@ -6,7 +6,7 @@ export const chapter = {
   id: 0, title: '먼 훗날', sub: '먼 훗날, 버크의 하늘', place: 'sea', time: 'sunset',
   end: '처음엔 히컵도 드래곤이 무서웠어요',
   steps: [{
-    id: '0-1', verb: 'fly', goal: '투슬리스와 날아 봐요', limit: 60, at: [24, 0],
+    id: '0-1', verb: 'fly', free: 1, goal: '투슬리스와 날아 봐요', limit: 60, at: [24, 0],
     hints: ['←→로 옆으로 비켜요', 'Space를 누르고 있으면 꼬리를 펴서 휙 꺾여요'],
     *run(G) {
       const F = G.Fl = createFlight(24, 0, { speed: 10, assist: true, fin: 'new', lane: [10, 38] }); G.mode = 'fly'; G.P.cam = 'fly';

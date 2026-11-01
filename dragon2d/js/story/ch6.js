@@ -87,6 +87,7 @@ export const chapter = {
           const y = -22 - i * 15 - R() * 3, gap = 10 + R() * 18;
           addStack(F, gap - 4.6, y, 1.4 + R() * 0.6); addStack(F, gap + 4.6, y - R() * 2, 1.4 + R() * 0.6);
           if (i % 3 === 1) addStack(F, gap > 24 ? 13 : 35, y + 6, 1.6);
+          addStack(F, i % 2 ? 37.2 : 10.8, y - 7.5, 1.3);                      /* 가장자리 바위 — 한쪽 끝에 붙어 날면 막힘(→ 누른 채로는 못 감) */
         }
         for (let i = 0; i < 9; i++) addCloud(F, 12 + R() * 24, -30 - i * 36, 9, 5);
         const card = document.createElement('div'); card.className = 'stepui';

@@ -1,5 +1,5 @@
 // 드래곤 2D판(탑뷰) 장 봇 시험: node tools/harness/drg2d_story.cjs [repo=.] [--ch=0,1,2] [--only=1-2,1-3] [--levels=easy,normal] [--dumb=1] [--kinds=idle,fmash] [--turbo=4]
-//   차례마다 ① 쉬움 봇·보통 봇이 입력만으로 깸(놀이 시간 = 걸음 ÷ 60) ② 가만히·F 연타·F 누른 채·Space 연타·→ 누른 채 F 연타 봇은 제한 ×2 동안 못 깸(동사 없는 이음 차례는 건너뜀)
+//   차례마다 ① 쉬움 봇·보통 봇이 입력만으로 깸(놀이 시간 = 걸음 ÷ 60) ② 가만히·F 연타·F 누른 채·Space 연타·→ 누른 채 F 연타 봇은 제한 ×2 동안 못 깸(동사 없는 이음 차례 · free = 실패 없는 맛보기 비행은 건너뜀)
 //   페이지 오류 0 · 그리기는 켬(CPU 흉내 X) — tools/ops/b2.sh로 돌린다
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -36,7 +36,7 @@ srv.listen(0, async () => {
   try {
     for (const ch of CHS) {
       await open(ch, 0, 'normal');
-      const steps = await p.evaluate(async (ch) => (await import('/dragon2d/js/story/ch' + ch + '.js?v=1')).chapter.steps.map((s) => ({ id: s.id || '', verb: s.verb || '', limit: s.limit || 90 })), ch);
+      const steps = await p.evaluate(async (ch) => (await import('/dragon2d/js/story/ch' + ch + '.js?v=1')).chapter.steps.map((s) => ({ id: s.id || '', verb: s.free ? '' : s.verb || '', limit: s.limit || 90 })), ch);
       for (let i = 0; i < steps.length; i++) {
         const st = steps[i]; if (ONLY && !ONLY.split(',').includes(st.id)) continue;
         for (const lv of LEVELS) {
