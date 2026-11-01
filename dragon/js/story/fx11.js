@@ -2,7 +2,7 @@
 // · 우박 알갱이(땅에 튀는 흰 점 · 한 묶음) · 스콜드런 자리표시 모양(있는 드래곤 모델의 정점색만 바다색으로) · 하는 법 표(런타임 더하기 — 메인이 art.js로 옮길 것)
 // 매 걸음 new X · 장소 group에 넣어 장소가 바뀌면 함께 치움
 import * as THREE from 'three';
-import { HOWTO, ICONS, keyCap } from '../ui/art.js?v=26';
+import { HOWTO, ICONS, keyCap } from '../ui/art.js?v=27';
 
 /* 날씨 넷 — time = kit TIMES의 때 · 그날 하나(실제 날짜 · ?wx=로 고름) */
 export const WX = {
