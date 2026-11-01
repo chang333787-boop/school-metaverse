@@ -10,6 +10,7 @@ import { loadModel } from '../look/models.js?v=27';
 import { createDragonRig } from '../look/dragon_rig.js?v=27';
 
 export const WARN = { easy: 3, normal: 2.5, hard: 2 };
+const FIRE_LOCK = 0.5;                                  // 불 겨눔이 굳는 때(뿜기 전 초) — 그 뒤 방향을 바꾸면 빗나감
 const MOVES = { easy: ['fire', 'sniff'], normal: ['fire', 'tail', 'gust', 'sniff'], hard: ['fire', 'tail', 'gust', 'sniff'] };
 const COOL = { easy: 6.5, normal: 4.2, hard: 3 };
 const SPEED = { easy: 0.85, normal: 1, hard: 1.2 };
@@ -312,8 +313,13 @@ export function createBoss({ group, diff = 'normal', scale = 1, sfx = null, plac
       if (B.actT < T) {                                   // 숨 들이켬(예고) — 목 아래 · 입 안이 차츰 밝아짐 · 목이 부풂
         B.inhale = clamp(B.actT / T, 0, 1);
         if (B.dizzyT > 0) { B.inhale *= 0.5; }
-        const k = W.target === 'cloud' && me.cloud ? me.cloud : B.known || me; tgt.x = k.x; tgt.y = k.y; tgt.z = k.z;
-        if (W.target === 'me' && me.vx != null) { tgt.x = me.x + me.vx * 0.35; tgt.y = me.y + (me.vy || 0) * 0.35; tgt.z = me.z + (me.vz || 0) * 0.35; }
+        /* 겨눔은 뿜기 0.5초 전에 굳음(입 안이 가장 밝아지는 때) — 그 뒤에 방향을 틀면 피함 · 곧게 날면 맞음
+           전엔 뿜는 그 걸음까지 '0.35초 뒤 자리'를 따라 겨눠, 불 줄기가 닿는 때(0.3~0.35초)에 늘 그 자리 = 키로는 못 피함(돌기 가속으론 0.35초에 2m) · 팀 C 11-01 */
+        const lock = B.mode === 'fly' ? FIRE_LOCK : 0;   // 하늘 싸움만(해변 10-2는 점프 = 피하기 그대로)
+        if (B.actT < T - lock) {
+          const k = W.target === 'cloud' && me.cloud ? me.cloud : B.known || me; tgt.x = k.x; tgt.y = k.y; tgt.z = k.z;
+          if (W.target === 'me' && me.vx != null) { const ld = 0.35 + lock; tgt.x = me.x + me.vx * ld; tgt.y = me.y + (me.vy || 0) * ld; tgt.z = me.z + (me.vz || 0) * ld; }
+        }
         if (B.gasT > 0 && B.actT > 0.4) { B.gasT = 0; emit('boom', { x: B.mouth.x, y: B.mouth.y, z: B.mouth.z }); B.stunT = 5; B.cancel(); B.cool = COOL[diff] + 3; return; }   // 가스 + 불꽃 = 펑(입 앞)
       } else if (!B.fire && B.actT < T + 0.1) {
         let tx = tgt.x, ty = tgt.y, tz = tgt.z;
