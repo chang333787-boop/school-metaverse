@@ -62,7 +62,7 @@ export const chapter = {
         const H = [33, 41, 49].map((x) => G.W.findProp('house', x, 27));
         const F = H.map((p, i) => ({ x: p.x, y: p.y, w: p.o.w * 0.95, d: p.o.d, h: 3, burn: [0.62, 0.45, 0.3][i], next: 6, delay: 5, prop: p, saved: false, lost: false, full: 0, grow: G.diff === 'easy' ? 0.025 : 0.035 }));
         F[0].spread = () => F[1]; F[1].spread = () => F[2];
-        FX.fires.push(...F); G.flags.fires = F;
+        FX.fires.push(...F); G.flags.fires = F; G.camOpt = { fixY: 26.6 };   /* 지붕 불과 물통 자리가 한 화면에 */
         say(G, 'astrid', '불이야! 물 받아!', { icons: ['bucket'] });
         say(G, 'hiccup', '바람이 동쪽으로 분다… 불도 그쪽으로 번지겠어.', { icons: ['wind'] });
         while (true) {

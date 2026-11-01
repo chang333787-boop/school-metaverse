@@ -150,6 +150,11 @@ export function makePlace(name, time, opt = {}) {
   return W;
 }
 
+/* 장소를 바꿀 때 조각을 미리 다 구움(덮개 아래 · 걷다가 새 조각을 굽느라 멈칫하지 않게) */
+export function prebake(W) {
+  const nx = Math.ceil(W.w / CH), ny = Math.ceil(W.h / CH);
+  for (let cy = 0; cy < ny; cy++) for (let cx = 0; cx < nx; cx++) { const key = cx + ',' + cy; if (!W.chunks.has(key)) W.chunks.set(key, bakeChunk(W.map, cx, cy, CH, PX)); }
+}
 /* 땅 — 보이는 조각만 굽고(처음 한 번) 그림 · 조각은 24개까지 기억 */
 export function drawGround(W, V) {
   const ctx = V.ctx, S = V.S, x0 = Math.floor((V.cam.x - V.halfW()) / CH), x1 = Math.floor((V.cam.x + V.halfW()) / CH), y0 = Math.floor((V.cam.y - V.halfH()) / CH), y1 = Math.floor((V.cam.y + V.halfH()) / CH);

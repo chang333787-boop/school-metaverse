@@ -1,7 +1,7 @@
 // 장 진행 — 장 = 차례 목록 · 차례 = 생성기(run*) · 걸음마다 dt를 받음 · 끝 = return true · 실패 = return 'retry'(1초 뒤 같은 자리에서 다시)
 // 지금 할 일(목표만) · 하는 법 창(그 장에서 처음 쓰는 동사) · 힌트 단계(쉬움 10·20초 · 보통 20·30초 · 어려움 없음 — 손을 놓고 있을 때만) · 차례마다 저장
 // 차례 = { id, place, time, goal, verb, hints:[1단계, 2단계], limit, at(히컵 시작 x), run*(G), sense(G) }
-import { makePlace } from '../play/world.js?v=1';
+import { makePlace, prebake } from '../play/world.js?v=1';
 import { clearFx, FX } from '../play/fx.js?v=1';
 import { writeSlot, flushSlot } from './save.js?v=1';
 import { createBody } from '../play/body.js?v=1';
@@ -30,7 +30,7 @@ export function createRunner(G) {
     G.hud.reset(); G.cast.clear(true); clearFx(); G.flags = { retry: R.fails }; G.drawOver = null; G.drawUnder = null; G.flyPose = null; G.boss = null; G.tint = null; G.book.close && G.book.open && !G.book.draw && G.book.close();
     document.querySelectorAll('.stepui').forEach((e) => e.remove());
     const pl = st.place || R.ch.place, tm = (G.diff === 'easy' && (st.timeEasy || R.ch.timeEasy)) || st.time || R.ch.time || 'day';
-    if (!G.W || G.W.name !== pl || G.W.time !== tm || st.fresh) G.W = makePlace(pl, tm, st.placeOpt || {}); else G.W.dropTmp();
+    if (!G.W || G.W.name !== pl || G.W.time !== tm || st.fresh) { const old = G.W; G.W = makePlace(pl, tm, st.placeOpt || {}); if (old && old.name === pl && !st.fresh) G.W.chunks = old.chunks; prebake(G.W); }   /* 같은 장소 = 구운 땅 다시 씀(땅은 때와 무관) */ else G.W.dropTmp();
     G.place = G.W;
     const keepHelm = G.P ? G.P.helmet : 0, at = st.at || G.W.A.start || [4, 4];
     G.P = G.player = createBody(at[0], at[1]); G.P.helmet = st.helmet ?? keepHelm; if (st.face) { G.P.fx = st.face[0]; G.P.fy = st.face[1]; G.P.dir = Math.abs(st.face[0]) > Math.abs(st.face[1]) ? 'side' : st.face[1] < 0 ? 'up' : 'down'; G.P.flip = st.face[0] < 0 ? -1 : 1; }

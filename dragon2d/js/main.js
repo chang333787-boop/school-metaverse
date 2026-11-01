@@ -67,7 +67,7 @@ function step(dt) {
 }
 
 /* ── 그리기 ─────────────────────────────────────────────────────────────── */
-const TINT = { night: 'rgba(22,30,64,0.36)', aurora: 'rgba(14,22,44,0.34)', fog: 'rgba(196,202,204,0.22)', sunset: 'rgba(240,140,90,0.10)', storm: 'rgba(60,62,72,0.2)', under: 'rgba(40,120,150,0.26)', dawn: 'rgba(240,200,170,0.08)' };
+const TINT = { night: 'rgba(20,28,62,0.48)', aurora: 'rgba(14,22,44,0.34)', fog: 'rgba(196,202,204,0.22)', sunset: 'rgba(240,140,90,0.10)', storm: 'rgba(60,62,72,0.2)', under: 'rgba(40,120,150,0.26)', dawn: 'rgba(240,200,170,0.08)' };
 const INK = '#2b2118';
 const items = []; let itemN = 0;
 function addItem(y, k, ref) { let it = items[itemN]; if (!it) items[itemN] = it = { y: 0, k: 0, ref: null }; it.y = y; it.k = k; it.ref = ref; itemN++; }
@@ -108,7 +108,7 @@ function draw() {
   const st = G.runner.step, tint = TINT[G.tint || (st && st.tint) || W.time] || (W.name === 'under' ? TINT.under : null);
   if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, V.W, V.H); }
   drawFx(V, t);
-  if (G.Fl) for (const o of G.Fl.ob) { if (o.k !== 'cloud' || !V.onScreen(o.x, o.y, o.w)) continue; V.at(o.x, o.y); ctx.globalAlpha = G.Fl.hidden && Math.abs(G.Fl.x - o.x) < o.w / 2 && Math.abs(G.Fl.y - o.y) < o.h / 2 ? 0.5 : 0.92; drawProp(ctx, 'cloud', { w: o.w, h: o.h }, t); ctx.globalAlpha = 1; }
+  if (G.Fl) for (const o of G.Fl.ob) { if (o.k !== 'cloud' || !V.onScreen(o.x, o.y, o.w)) continue; V.at(o.x, o.y); ctx.globalAlpha = G.Fl.hidden && Math.abs(G.Fl.x - o.x) < o.w / 2 && Math.abs(G.Fl.y - o.y) < o.h / 2 ? 0.45 : 0.78; drawProp(ctx, 'cloud', { w: o.w, h: o.h }, t); ctx.globalAlpha = 1; }
   V.stat.items = n;
   V.reset(); if (G.drawOver) G.drawOver(ctx, V, t);
   drawMarks(ctx);
