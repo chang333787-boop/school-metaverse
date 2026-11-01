@@ -92,7 +92,7 @@ export function createGfx(canvas) {
     for (let k = 0; k < n1; k++) s += iv[(ivI - 1 - k + RING) % RING];
     return {
       fps: n1 ? Math.round(1000 / (s / n1) * 10) / 10 : 0, p95: Math.round(pct(RING, 0.95) * 10) / 10, ft: Math.round(G.ft() * 10) / 10,
-      mode: G.mode, res: G.res, dpr: renderer.getPixelRatio(), step: G.lv, stepName: G.lv ? G.steps[G.lv - 1].name : '', aa: renderer.getContext().getContextAttributes().antialias,
+      mode: G.mode, res: G.res, dpr: renderer.getPixelRatio(), step: G.lv, stepName: G.lv ? G.steps[G.lv - 1].name : '', aa: (renderer.getContext().getContextAttributes() || {}).antialias,
       calls: inf.render.calls, tris: inf.render.triangles, programs: inf.programs ? inf.programs.length : 0, textures: inf.memory.textures, geometries: inf.memory.geometries,
       heapMB: mem ? Math.round(mem.usedJSHeapSize / 1048576) : null, cb: IS_CB, log: G.log.slice(-8),
     };

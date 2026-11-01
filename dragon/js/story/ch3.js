@@ -1,10 +1,10 @@
 // 3장 훈련 첫날 · 숨은 호수(design §2 · reference #5·#6·#7) — 선착장 배웅(이음 · 진눈깨비) → ① 그롱클(방패 두드리기 · 여섯 발)[피하기+던지기 · 쉬움 X]
 // → ② 코브 가장자리에서 숨어 관찰 · 미끄러지는 투슬리스 스케치[숨기] → ③ 밤 큰 회관 드래곤 책 · 점 여섯 잇기[그리기] · 와! = 내 그림이 X 도장을 덮음
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=18';
-import { holdItem, dropItem, makePuffs } from './fx.js?v=18';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=18';
-import { tlSense } from './ch4.js?v=18';
+import { wait, until, sayAll } from './runner.js?v=19';
+import { holdItem, dropItem, makePuffs } from './fx.js?v=19';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=19';
+import { tlSense } from './ch4.js?v=19';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 
@@ -38,7 +38,7 @@ function* gronckle(G, C) {
   const lava = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), toon({ color: 0xd8642a, emissive: 0x8a2a08 })); lava.visible = false; pl.group.add(lava);
   const fl = flameMesh(1.4); fl.visible = false; pl.group.add(fl); const gl = glowSprite(0xff8a3a, 4, 0.5); gl.visible = false; pl.group.add(gl);
   const puffs = makePuffs(pl.group, 80, 0x3a3430);
-  C.cleanup = () => { pl.setMaze && pl.setMaze([]); G.collideReset(); lava.removeFromParent(); lava.geometry.dispose(); fl.removeFromParent(); gl.removeFromParent(); };
+  C.cleanup = () => { C.shieldObj && C.shieldObj.removeFromParent(); pl.setMaze && pl.setMaze([]); G.collideReset(); lava.removeFromParent(); lava.geometry.dispose(); fl.removeFromParent(); gl.removeFromParent(); };
   yield* sayAll(G, [['gobber', '첫날은 그롱클! 방패가 제일 중요하다!', ['shield']], ['fishlegs', '그롱클은 여섯 발! 여섯 발만 버티면 돼!']]);
   let shots = 0, hits = 0, next = 2.5, hab = 0, blur = 0, ball = null, down = 0, shieldOn = true, shieldAt = null;
   const N = ['한 발!', '두 발!', '세 발!', '네 발!', '다섯 발!', '여섯 발! 이제 못 쏴!'];
@@ -80,7 +80,7 @@ function* gronckle(G, C) {
       }
     }
     if (C.fireT > 0) { C.fireT -= dt; if (C.fireT <= 0) fl.visible = gl.visible = false; }
-    if (down > 0) { down -= dt; if (down <= 0) { P.lock = false; P.pose = null; } }
+    if (down > 0) { down -= dt; if (down <= 0) { down = 0; P.lock = false; P.pose = null; } }
     /* 놓친 방패 줍기 */
     G.useSpots = !shieldOn && shieldAt ? [{ x: shieldAt.x, y: 0, z: shieldAt.z }] : [];
     if (!shieldOn && shieldAt && P.fTap && G.near(shieldAt, 2)) { shieldOn = true; holdItem(P, 'shield'); C.shieldObj.removeFromParent(); shieldAt = null; }

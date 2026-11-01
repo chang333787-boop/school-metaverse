@@ -3,11 +3,11 @@
 // → 이어서(이음) 나이트메어가 쫓아옴 → 스토이크가 막음 · 아무도 안 믿음 · '낙서' 공책 → 아침(그을린 지붕 · 덧댄 판자 · 비늘 조각)
 // 쉬움 = 해 질 녘(design §6-5) · 깜짝 X(예고 2~3초) · 피·죽음 X · 대사는 모두 우리 말로 새로(저작권) · 실제 학생 이름 X(영화 인물만)
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=18';
-import { holdItem, makePuffs } from './fx.js?v=18';
-import { setTime, toon, flameMesh, glowSprite } from '../look/kit.js?v=18';
-import { createElements } from '../play/elements.js?v=18';
-import { raidSky, makeBreath, makeThrow, makeFlyer, makeStars, makeTrail, prop, ringWalls, ensureVillage, seedVillage } from './fx1.js?v=18';
+import { wait, until, sayAll } from './runner.js?v=19';
+import { holdItem, makePuffs } from './fx.js?v=19';
+import { setTime, toon, flameMesh, glowSprite } from '../look/kit.js?v=19';
+import { createElements } from '../play/elements.js?v=19';
+import { raidSky, makeBreath, makeThrow, makeFlyer, makeStars, makeTrail, prop, ringWalls, ensureVillage, seedVillage } from './fx1.js?v=19';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const KNOCK = { easy: 0, normal: 2, hard: 2.6 };          // 맞으면 넘어져 있는 초(쉬움 = 안 넘어짐 · design §8)
@@ -77,7 +77,7 @@ function knock(G, C, line) {
   if (!k) { G.hud.say('hiccup', '앗 뜨거! …괜찮아, 계속!', [], { secs: 1 }); return false; }
   P.lock = true; P.pose = { stumble: 1 }; C.down = k; G.hud.say('hiccup', line, [], { secs: 1.6 }); return true;
 }
-function downTick(G, C, dt) { if (C.down > 0) { C.down -= dt; if (C.down <= 0) { G.player.lock = false; G.player.pose = null; } } }
+function downTick(G, C, dt) { if (C.down > 0) { C.down -= dt; if (C.down <= 0) { C.down = 0; G.player.lock = false; G.player.pose = null; } } }
 
 /* ── 이음: 대장간 · 습격이 시작됨 ── */
 function* intro(G, C) {
@@ -359,7 +359,7 @@ function* gauntlet(G, C) {
   yield* T(C, sayAll(G, [['fishlegs', '고버 아저씨가 양 우리로 오래! 이쪽으로!'], ['hiccup', '드래곤마다 쏘기 전에 하는 몸짓이 달라… 잘 보자.']]));
   let hits = 0, atk = null, gas = null;
   const onBoom = (g) => { if (!gas || g.id !== gas.id) return; const d = Math.hypot(P.W.x - g.x, P.W.z - g.z); G.sfx.play('boom'); if (d < g.r + 0.6) { hits += knock(G, C, '펑! …눈썹 아직 있나?') ? 1 : 0; } gas = null; };
-  E.on('boom', onBoom);
+  E.on('boom', onBoom); C.cleanup = ((old) => () => { E.off('boom', onBoom); old && old(); })(C.cleanup);   // 다시 하기마다 리스너가 쌓이던 것(11-01 점검)
   C.stage = 'go'; G.hud.goal('양 우리까지 가기');
   while (true) {
     const dt = yield; C.tk(dt);

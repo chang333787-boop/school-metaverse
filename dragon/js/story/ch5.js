@@ -2,11 +2,11 @@
 // ③ 코브: 뱀장어에 질겁 · 꼬리 살피기(첫 치유)[다가가] ④ 꼬리날개 달고 첫 들림 → 첨벙[관문 비행] ⑤ 훈련 3일 지플백(불꽃 머리에 물 · 다른 길 뱀장어)[던지기 · 쉬움 X]
 // 와! = 첫 들림에 발이 땅에서 떨어지는 3초 · 변화 = 갈색 가죽 꼬리날개 · 대장간 벽 설계도 · 덧댄 방패 · 사이 레벨 1(부르면 오는 거리)
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=18';
-import { holdItem, dropItem, makePuffs } from './fx.js?v=18';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=18';
-import { tlSense } from './ch4.js?v=18';
-import { flySense } from './flysense.js?v=18';
+import { wait, until, sayAll } from './runner.js?v=19';
+import { holdItem, dropItem, makePuffs } from './fx.js?v=19';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=19';
+import { tlSense } from './ch4.js?v=19';
+import { flySense } from './flysense.js?v=19';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const TAU = Math.PI * 2;
@@ -124,7 +124,7 @@ function* eelTail(G, C) {
     if (!touching && flinch <= 0) calm = Math.min(1, calm + dt * 0.8);
     T.rig && (T.pose.pupil = flinch > 0 ? 0.2 : calm);
     C.flinch = flinch > 0; C.calm = +calm.toFixed(2); C.touches = touches;
-    if (C.down > 0) { C.down -= dt; if (C.down <= 0) { P.lock = false; P.pose = null; } }
+    if (C.down > 0) { C.down -= dt; if (C.down <= 0) { C.down = 0; P.lock = false; P.pose = null; } }
     if (knocked >= 3) { yield* sayAll(G, [['hiccup', '…아프게 했나 봐. 천천히 다시.']]); return 'retry'; }
   }
   G.useSpots = []; T.pose = {};
@@ -146,7 +146,7 @@ function* lift(G, C) {
   G.hud.say('hiccup', '…됐다. 가만히 있어 봐…', ['finNew']);
   yield* wait(1.2);
   /* 날기 — flight.js(팀 F) liftOnly · 없으면 간단한 들림(앞으로 저절로 · A/D 꼬리) */
-  const mod = yield* awaitP(import('../play/flight.js?v=18').catch(() => null));
+  const mod = yield* awaitP(import('../play/flight.js?v=19').catch(() => null));
   const lake = pl.lake || { x: (A.lake || T).x, z: (A.lake || T).z, r: 12, y: 0 }, fly = pl.fly || { ground: (x, z) => pl.height(x, z, 0), pillars: [], ceil: 40, bounds: { x: lake.x, z: lake.z, r: 40 } };
   let F = null, cam = null, splash = false, crash = false;
   if (mod && mod.createFlight) {
@@ -218,8 +218,8 @@ function* zipple(G, C) {
     gasT += dt;
     if (gasT > 6) { gasT = 0; const g = hp[heads.findIndex((h) => !h.spark)]; for (let k = 0; k < 6; k++) gas.burst(g.x + (P.W.x - g.x) * k / 6, 1, g.z + (P.W.z - g.z) * k / 6, 10, 1.2, 0.2); C.cloud = { x: P.W.x, z: P.W.z, t: WARN[G.diff] }; }
     if (C.cloud) { C.cloud.t -= dt; if (C.cloud.t <= 0) { const s = heads.find((h) => h.spark); if (s.wet <= 0) { boom = 0.6; sparks.burst(C.cloud.x, 1, C.cloud.z, 40, 5, 4); G.sfx.play('boom'); if (Math.hypot(P.W.x - C.cloud.x, P.W.z - C.cloud.z) < 3 && !(P.W.rollT > 0)) { knocks++; P.lock = true; P.pose = { stumble: 1 }; C.down = 2; G.hud.say('hiccup', '펑! …눈썹 아직 있나?', [], { secs: 1.4 }); } } else steam.burst(C.cloud.x, 1, C.cloud.z, 14, 1, 1); C.cloud = null; } }
-    if (boom > 0) boom -= dt;
-    if (C.down > 0) { C.down -= dt; if (C.down <= 0) { P.lock = false; P.pose = null; } }
+    if (boom > 0) { boom -= dt; if (boom < 0) boom = 0; }   // 0으로 맞춤 — !boom 검사가 -0.01에서 영영 막히던 것(11-01 점검)
+    if (C.down > 0) { C.down -= dt; if (C.down <= 0) { C.down = 0; P.lock = false; P.pose = null; } }
     if (knocks >= 3) { yield* sayAll(G, [['gobber', '히컵, 그을렸구나! 다시.']]); return 'retry'; }
     /* 물통 — 통 옆에서 F 짧게 = 들기 · F 길게 = 겨누기(쉬움 방향키 · 보통 끌기) → 놓으면 던짐 */
     G.useSpots = held === 'none' ? barrels.map((b) => ({ x: b.x, y: 0, z: b.z })) : [];

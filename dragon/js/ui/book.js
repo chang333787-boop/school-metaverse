@@ -1,7 +1,7 @@
 // 드래곤 책 — 손으로 쓴 공책 결 · 종마다 왼쪽 그림·이름·책의 한 줄('매우 위험 · 보이면 처치' + 빨간 X 도장) / 오른쪽 관찰 칸(연필 글이 하나씩 X를 덮음)
 // 열기 = 구석 책 그림을 누름(키 X) · 그리기 놀이(3장 나이트 퓨리 칸 · 점 여섯 잇기) · 쉬움에서 빠진 도전은 flash(쪽 하나 4초)
 // 피시레그 숫자는 reference 0의 15번(1편) · 책의 반 이름·일곱 반 체계는 쓰지 않음(후속)
-import { ICONS } from './art.js?v=18';
+import { ICONS } from './art.js?v=19';
 
 const INK = '#2b2118';
 export const PAGES = [
@@ -58,7 +58,16 @@ export function createBook(G) {
     seen: new Set(['joke', 'gronckle', 'nadder', 'zippleback', 'nightmare', 'terror', 'scauldron', 'nightfury']),
     draw: null,           // 그리기 놀이 상태
   };
-  btn.onclick = () => (B.open ? B.close() : B.show());
+  /* 그리는 동안 책 위 끌기 = 펜(하는 법 '끌어서 펜 옮기기') — 책 덮개가 화면 캔버스를 가려 끌기가 안 닿던 것(11-01 점검) · 같은 길 input.lookAdd */
+  let dragP = null;
+  el.addEventListener('pointerdown', (e) => { if (!B.draw || e.target.tagName === 'BUTTON') return; dragP = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { el.setPointerCapture(e.pointerId); } catch (_) { /* 그대로 */ } });
+  el.addEventListener('pointermove', (e) => {
+    if (!B.draw || !dragP || e.pointerId !== dragP.id || !G.input) return;
+    const dx = e.clientX - dragP.x, dy = e.clientY - dragP.y; dragP.x = e.clientX; dragP.y = e.clientY;
+    if (Math.abs(dx) < 200 && Math.abs(dy) < 150) G.input.lookAdd(dx, dy);
+  });
+  const dragEnd = () => { dragP = null; }; el.addEventListener('pointerup', dragEnd); el.addEventListener('pointercancel', dragEnd);
+  btn.onclick = () => { if (B.draw) return; B.open ? B.close() : B.show(); };   // 그리는 동안은 닫기·넘기기 X(캔버스가 떨어져 나가던 것 · 11-01 점검)
   B.give = () => { B.have = true; btn.classList.remove('gone'); };
   /* 연필 글 — 관찰로 칸이 채워짐(배너로 알림) */
   B.note = (sp, cell, text, banner = true) => {
@@ -78,11 +87,13 @@ export function createBook(G) {
       ${!p.joke && !p.mine && !covered ? `<svg class="stamp" viewBox="0 0 32 32">${ICONS.x.replace(/^<svg[^>]*>|<\/svg>$/g, '')}</svg>` : ''}${p.bookOnly ? '<div class="fl">(책에만 나오는 드래곤)</div>' : ''}</div>`;
     const right = p.joke ? `<div class="pg"><div class="ln" style="margin-top:40px;font-size:22px">${p.line}</div><div class="fl">— 히컵의 낙서</div></div>`
       : `<div class="pg"><h2 style="font-size:20px">내가 본 것</h2>${CELLS.map(([k, t]) => `<div class="cell"><b>${t}</b><span class="pen">${n[k] || ''}</span></div>`).join('')}</div>`;
-    el.innerHTML = `<div class="sp">${left}${right}<div class="nav"><button data-a="prev">◀</button><button data-a="close">닫기</button><button data-a="next">▶</button></div></div>`;
+    el.innerHTML = `<div class="sp">${left}${right}${B.draw ? '' : '<div class="nav"><button data-a="prev">◀</button><button data-a="close">닫기</button><button data-a="next">▶</button></div>'}</div>`;
+    if (B.draw) el.querySelector('.pg').appendChild(B.draw.cv);
     el.querySelectorAll('button').forEach((b) => { b.onclick = () => { const a = b.dataset.a; if (a === 'close') B.close(); else { B.page = (B.page + (a === 'next' ? 1 : PAGES.length - 1)) % PAGES.length; render(); } }; });
   }
-  B.show = (key) => { if (key) B.page = Math.max(0, PAGES.findIndex((p) => p.key === key)); B.open = true; btn.classList.remove('new'); el.classList.remove('gone'); render(); if (G.player) G.player.lock = true; };
-  B.close = () => { B.open = false; el.classList.add('gone'); if (G.player && !B.draw) G.player.lock = false; };
+  let lock0 = false;                                  // 책을 열기 전 잠금(작업대·넘어짐처럼 장이 건 잠금) — 닫으면 그대로 되돌림(11-01 점검: 닫으면 늘 풀려 작업대에서 걸어 나가던 것)
+  B.show = (key) => { if (key) B.page = Math.max(0, PAGES.findIndex((p) => p.key === key)); if (!B.open && G.player) lock0 = !!G.player.lock; B.open = true; btn.classList.remove('new'); el.classList.remove('gone'); render(); if (G.player) G.player.lock = true; };
+  B.close = () => { const was = B.open; B.open = false; el.classList.add('gone'); if (G.player && !B.draw && was) G.player.lock = lock0; };
   /* 쉬움에서 빠진 도전 — 그 장면을 책 한 쪽으로 4초 */
   B.flash = (pg) => {
     if (!pg) { el.classList.add('gone'); B.open = false; return; }
@@ -96,6 +107,7 @@ export function createBook(G) {
     const X = cv.getContext('2d');
     const dots = [[90, 360], [230, 300], [330, 180], [430, 300], [600, 270], [720, 380]];     // 꼬리 → 몸 → 날개 끝 → 몸 → 머리
     B.draw = { cv, X, dots, k: 1, pen: { x: dots[0][0], y: dots[0][1] }, ink: [], easy, done: false, t: 0 };
+    render();                                         // 넘기기·닫기 단추 없이 다시(그리는 동안)
     redraw();
     return B.draw;
   };

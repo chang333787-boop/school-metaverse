@@ -4,10 +4,10 @@
 // ⑥ 아스트리드 '왜 안 죽였어?' · 3장 그림 · 훈련장으로(이음) ⑦ 우리 문을 직접 열고 친구 넷을 드래곤과 이어 줌[다가가] → 와! 다섯 드래곤이 솟아오름
 // 슬픈 셋(③ 끝 붙잡힘 · ④ · ⑤)은 합쳐 90초 안 · 의절 말은 '이제 넌 우리 편이 아니다'까지만 · 대사는 모두 우리 말로 새로 · 피 X · 깜짝 X(예고 먼저)
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=18';
-import { holdItem, dropItem, makePuffs } from './fx.js?v=18';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=18';
-import { setHelmet, helmetObj, crowd, crowdPose, pz, seatOn, drawCoveSketch, drawNestPage, chainBits } from './fx79.js?v=18';
+import { wait, until, sayAll } from './runner.js?v=19';
+import { holdItem, dropItem, makePuffs } from './fx.js?v=19';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=19';
+import { setHelmet, helmetObj, crowd, crowdPose, pz, seatOn, drawCoveSketch, drawNestPage, chainBits } from './fx79.js?v=19';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const ang = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
@@ -117,6 +117,7 @@ function* fury(G, C) {
   const fresh = !G.castBy.nm;
   const N = nightmare(G, { x: c.x + 2, z: c.z + 2, yaw: 0 }); C.N = N; N.show(true);
   yield* until(() => N.root && St.root && P.root);
+  if (St.home9) St.place(St.home9.x, St.home9.z); else St.home9 = { x: St.x, z: St.z };   // 다시 하기 = 처음 자리에서(11-01 점검)
   if (fresh) { yield* awaitP(setHelmet(G, false)); G.putPlayer({ x: c.x, z: c.z + 8, yaw: Math.PI }); if (K.cage) K.cage.open(1); }
   const fb = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 8), toon({ color: 0xf08a2a, emissive: 0xa83e0a })); fb.visible = false; pl.group.add(fb);
   const fl = flameMesh(1.6); fl.visible = false; pl.group.add(fl); const gl = glowSprite(0xff8a3a, 5, 0.55); gl.visible = false; pl.group.add(gl);
@@ -177,7 +178,7 @@ function* fury(G, C) {
       }
     }
     if (fireT > 0) { fireT -= dt; if (fireT <= 0) fl.visible = gl.visible = false; }
-    if (down > 0) { down -= dt; if (down <= 0) { P.lock = false; P.pose = null; } }
+    if (down > 0) { down -= dt; if (down <= 0) { down = 0; P.lock = false; P.pose = null; } }
     if (hits >= 3) { yield* sayAll(G, [['gobber', '히컵, 이리 와! …숨 고르고 다시!']]); return 'retry'; }
     /* 아빠 — 6초에 구덩이로 뛰어내림(쉬운 포물선) · 맞은편 벽가에서 소리침 */
     if (t > 6 && !jump) { jump = 1; C.jump = { t: 0, x0: St.x, y0: St.y, z0: St.z, x1: St.x + (c.x - St.x) * 0.22, z1: St.z + (c.z - St.z) * 0.22 }; St.pose = NONE; }

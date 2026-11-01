@@ -1,7 +1,7 @@
 // 첫 화면(design §0) — 제목 · 비상업 한 줄 · 큰 숫자 단추 1~6(학년 · 1·2 = 쉬움) → 저장 칸 셋(드래곤 얼굴) → 장 그림 줄 · 선생님 장 고르기
 // ?grade= 이면 학년을 묻지 않음 · ?ch=&step= 이면 첫 화면 없이 바로(시험·선생님)
-import { FACES } from './art.js?v=18';
-import { readSlot } from '../story/save.js?v=18';
+import { FACES } from './art.js?v=19';
+import { readSlot } from '../story/save.js?v=19';
 
 const CSS = `
 #title { position:fixed; inset:0; z-index:35; background:#1d2730; color:#f4ead2; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif; pointer-events:auto; }
@@ -31,14 +31,14 @@ export function showTitle({ playable, Q }) {
       el.querySelectorAll('.g').forEach((b) => { b.onclick = () => { pick.grade = +b.dataset.g; slots(); }; });
     }
     function slots() {
-      el.innerHTML = head('어느 칸에서 할까요?') + `<div class="row">${[1, 2, 3].map((k) => { const s = readSlot(k); return `<button class="slot" data-k="${k}">${FACES[DRAGONS[k - 1]]({ pupil: s ? 1 : 0.3, smile: !!s })}<span>${k}번 칸<br>${s ? s.ch + '장까지 · ' + (s.grade || '') + '학년' : '새로 하기'}</span></button>`; }).join('')}</div><button class="small" data-t="1">선생님: 장 고르기</button>`;
+      el.innerHTML = head('어느 칸에서 할까요?') + `<div class="row">${[1, 2, 3].map((k) => { const s = readSlot(k); return `<button class="slot" data-k="${k}">${FACES[DRAGONS[k - 1]]({ pupil: s ? 1 : 0.3, smile: !!s })}<span>${k}번 칸<br>${s ? Math.max(1, s.best ?? s.ch) + '장까지 · ' + (s.grade || '') + '학년' : '새로 하기'}</span></button>`; }).join('')}</div><button class="small" data-t="1">선생님: 장 고르기</button>`;
       el.querySelectorAll('.slot').forEach((b) => { b.onclick = () => { pick.slot = +b.dataset.k; const s = readSlot(pick.slot); chapters(s); }; });
-      el.querySelector('[data-t]').onclick = () => { pick.slot = pick.slot || 1; chapters(null, true); };
+      el.querySelector('[data-t]').onclick = () => { pick.slot = [1, 2, 3].find((k) => !readSlot(k)) || 0; chapters(null, true); };   // 선생님이 고른 장은 빈 칸에만 저장(빈 칸이 없으면 저장 안 함) — 아이 칸을 빈 책으로 덮던 것(11-01 점검)
     }
     function chapters(s, teacher) {
-      const upTo = teacher ? 11 : Math.max(1, s ? s.ch : 1);
+      const upTo = teacher ? 11 : Math.max(1, s ? s.best ?? s.ch : 1);   // 가장 멀리 간 장까지(앞 장을 다시 해도 줄지 않음)
       el.innerHTML = head(s ? '이어서 할까요?' : '어디부터 할까요?') + `<div class="row">${CHAPTERS.map(([n, t]) => `<button class="ch" data-c="${n}" ${playable.includes(n) && n <= upTo ? '' : 'disabled'}><b>${n}</b>${t}</button>`).join('')}</div>`;
-      el.querySelectorAll('.ch').forEach((b) => { if (!b.disabled) b.onclick = () => { let ch = +b.dataset.c; if (ch === 1 && !s && !teacher) ch = 0; end({ grade: pick.grade, slot: pick.slot, ch, idx: s && s.ch === ch ? s.idx || 0 : 0, save: s }); }; });   // 새로 시작하면 오프닝(0)부터
+      el.querySelectorAll('.ch').forEach((b) => { if (!b.disabled) b.onclick = () => { let ch = +b.dataset.c; if (ch === 1 && !s && !teacher) ch = 0; end({ grade: pick.grade, slot: pick.slot, ch, idx: !s ? 0 : s.ch === ch ? s.idx || 0 : (s.best === ch ? s.bestIdx || 0 : 0), save: s }); }; });   // 새로 시작하면 오프닝(0)부터
     }
     if (pick.grade) slots(); else grades();
   });
