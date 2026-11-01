@@ -33,7 +33,7 @@ srv.listen(0, async () => {
       const S = { stuck: [], hitch: [], camJump: [], steps: 0, moveSteps: 0, jumps: 0, path: 0, reached: 0, tried: 0 };
       /* 그리기마다 기록 */
       const F = []; const d0 = Wd.draw.bind(Wd); let lastNow = 0;
-      Wd.draw = (a) => { d0(a); const w = W(), c = C(), now = performance.now(); if (!w || !c) return; const h = Wd.hic.position; F.push([now, h.y, w.dAir || 0, cam.position.y, Math.hypot(cam.position.x - h.x, cam.position.y - h.y - 1.5, cam.position.z - h.z), w.x, w.z, w.speed, w.inAir || w.rollT > 0 ? 1 : 0, c.d != null ? c.d : 0, c.ly || 0, c.by || 0, cam.position.x, cam.position.z]); lastNow = now; };
+      Wd.draw = (a) => { d0(a); const w = W(), c = C(), now = performance.now(); if (!w || !c) return; const h = Wd.hic.position; F.push([now, h.y, w.dAir || 0, cam.position.y, Math.hypot(cam.position.x - h.x, cam.position.y - h.y - 1.5, cam.position.z - h.z), w.x, w.z, w.speed, w.inAir || w.rollT > 0 ? 1 : 0, c.d != null ? c.d : 0, c.ly || 0, c.by || 0, cam.position.x, cam.position.z, c.pushD || 0, c.floor ? 1 : 0, c.sh || 0]); lastNow = now; };
       /* 걷는 봇 — 끌기 + W(이따금 Shift · Space) */
       let ti = -1, path = null, pk = 0, tgtT = 0, lx = 0, lz = 0, chkT = 0, stuckT = 0, runOn = false, jumpCd = 2, last = null, fastT = 0, slowT = 0;
       const next = () => { ti++; if (ti >= A.length) ti = 0; const t = A[ti], w = W(); S.tried++; const far = Math.hypot(t.x - w.x, t.z - w.z); if (far > 120) { path = null; return; }
@@ -75,7 +75,7 @@ srv.listen(0, async () => {
           acc.body.push(Math.abs(vb - lvb) / dtf); acc.cam.push(Math.abs(vc - lvc) / dtf);
         }
         lvb = vb; lvc = vc; if (pvb == null || Math.abs(vb) > 0.05) pvb = vb; if (pvc == null || Math.abs(vc) > 0.05) pvc = vc;
-        if (Math.abs(f[4] - g[4]) > 0.3 && Math.abs(f[4] - g[4]) / dtf > 12) { cj++; if (!seenNear(S.camJump, f[5], f[6])) S.camJump.push([+f[5].toFixed(1), +f[6].toFixed(1), +(f[4] - g[4]).toFixed(2), 'd' + (f[9] - g[9]).toFixed(2), 'ly' + (f[10] - g[10]).toFixed(2), 'xz' + Math.hypot(f[12] - g[12], f[13] - g[13]).toFixed(2), 'ms' + (dtf * 1000).toFixed(0)]); }
+        if (Math.abs(f[4] - g[4]) > 0.3 && Math.abs(f[4] - g[4]) / dtf > 12) { cj++; if (!seenNear(S.camJump, f[5], f[6])) S.camJump.push([+f[5].toFixed(1), +f[6].toFixed(1), +(f[4] - g[4]).toFixed(2), 'd' + (f[9] - g[9]).toFixed(2), 'ly' + (f[10] - g[10]).toFixed(2), 'xz' + Math.hypot(f[12] - g[12], f[13] - g[13]).toFixed(2), 'ms' + (dtf * 1000).toFixed(0), 'push' + (f[14] - g[14]).toFixed(2), 'fl' + g[15] + f[15], 'sh' + (f[16] - g[16]).toFixed(2)]); }
       }
       const p99 = (L) => { const s = L.slice().sort((a, b) => a - b); return s.length ? +s[Math.floor(s.length * 0.99)].toFixed(1) : 0; };
       return { errs: DRG.diag().errs.slice(-3), anchors: A.length, reached: S.reached, frames: F.length, walkSec: +walkSec.toFixed(1), stuck: S.stuck, hitch: S.hitch, camJump: S.camJump, camJumps: cj,

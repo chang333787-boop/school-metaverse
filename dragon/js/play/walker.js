@@ -1,7 +1,7 @@
 // 걷는 사람(플레이어) — 카메라 기준 방향으로 걷기 · Shift 누르고 있기 = 달리기 · C 살금살금(켜고 끄기) · Space = 점프(공중 = 피하기) · 땅 높이 따라 · 원기둥·벽 밀어내기 · 위치는 걸음마다(60Hz) · 그리기는 보간
 import * as THREE from 'three';
 
-const _p = { x: 0, z: 0 }, _c = { x: 0, z: 0 }, FRAC = [0.5, 0.75, 1], FAN = [-0.8, -0.35, 0.35, 0.8];
+const _p = { x: 0, z: 0 }, _c = { x: 0, z: 0 }, FRAC = [0.5, 0.75, 1], FAN = [-1.4, -0.8, -0.35, 0.35, 0.8, 1.4];
 /* 손맛 값(11-01 교사 '조작감이 제일 중요해 · 이동이 이상하고 멀미 나' — 메타버스 v2/js/main.js PHY와 나란히 맞춤 · design §7-1 견줌 표)
    걷기 4.2 · 달리기 7.5 · 살금 1.6 m/s · 서고 가기 = 거의 바로(가속 30 · 멈춤 40 /초 — 90%까지 0.08초 · 멈추며 미끄러짐 0.1m) · 몸 돌기 15/초
    점프 = 꼭대기 0.85m · 0.52초 · 가던 힘 그대로(손을 떼도 날아감 · 누르면 7/초로 틂 · 서서 방향키+Space = 그쪽으로 뛰어오름 60%) · 공중에 있는 동안 = 피하기(W.rollT > 0 — 장 판정은 그대로)
@@ -120,8 +120,8 @@ export function createFollowCam(camera, height, opt = {}) {   // opt = { collide
     let hit = Infinity, soft = Infinity, hard = Infinity;
     if (col) {
       const k = cut(tgt.x, tgt.z, tgt.x + bx * L, tgt.z + bz * L); if (k < 1) { hit = k * L; soft = hit - 0.4; hard = hit - 0.15; }
-      /* 부채 넷(카메라 끝에서 옆으로 ±0.35·±0.8m) — 벽 모서리를 미리 보고 조금씩 당김(가운데 한 줄만 보면 모서리를 지나는 순간 툭) · 먼 줄일수록 덜 당김 · 옆줄은 '벽 뒤 X'를 정하지 않음(모서리 스칠 때 툭 X) */
-      for (const o of FAN) { const k2 = cut(tgt.x, tgt.z, tgt.x + bx * L + ex * o, tgt.z + bz * L + ez * o); if (k2 < 1) soft = Math.min(soft, k2 * L - 0.4 + Math.abs(o) * 0.9); }
+      /* 부채 여섯(카메라 끝에서 옆으로 ±0.35·±0.8·±1.4m) — 벽 모서리·문틈 가장자리를 미리 보고 조금씩 당김(가운데 한 줄만 보면 모서리를 지나는 순간 툭) · 먼 줄일수록 덜 당김 · 옆줄은 '벽 뒤 X'를 정하지 않음(모서리 스칠 때 툭 X) */
+      for (const o of FAN) { const k2 = cut(tgt.x, tgt.z, tgt.x + bx * L + ex * o, tgt.z + bz * L + ez * o); if (k2 < 1) soft = Math.min(soft, k2 * L - 0.4 + Math.abs(o) * 0.7); }
     }
     C.hitD = hit;
     const want = Math.max(0.35, Math.min(C.dist, soft)); hard = Math.max(0.3, hard);
@@ -131,14 +131,15 @@ export function createFollowCam(camera, height, opt = {}) {   // opt = { collide
     if (C.d > hard) C.d = hard;                                    // 벽 뒤로는 절대 X
     if (C.d > C.dist) C.d = C.dist;
     let cx = tgt.x + bx * C.d, cz = tgt.z + bz * C.d;
-    if (col) { _c.x = cx; _c.z = cz; col.push(_c, 0.32, true); cx = _c.x; cz = _c.z; }   // 벽과 나란할 때 화면 가장자리(근평면 반폭 0.31m)가 벽을 파고들지 않게
+    if (col) { _c.x = cx; _c.z = cz; col.push(_c, 0.32, true); C.pushD = Math.hypot(_c.x - cx, _c.z - cz); cx = _c.x; cz = _c.z; }   // 벽과 나란할 때 화면 가장자리(근평면 반폭 0.31m)가 벽을 파고들지 않게
     /* 땅 — 카메라와 머리 사이 언덕·비탈 위로 넘어감(당기지 않고 들어 올림 · 용수철로) · 카메라 발밑 땅 속으로는 절대 X */
     const cy0 = tgt.y + spi * C.d;
     let need = cy0;
     for (const f of FRAC) { const g = height(tgt.x + bx * C.d * f, tgt.z + bz * C.d * f, C.by) + 0.45, ry = tgt.y + (cy0 - tgt.y) * f; if (ry < g) need = Math.max(need, tgt.y + (g - tgt.y) / f); }
     const up = Math.min(2.5, need - cy0);                         // 들어 올림은 2.5m까지(사이 땅이 더 높으면 아래 '발밑 땅' 막이만)
     if (!C.init) { C.ly = up; C.lyv = 0; } else spring(C, 'ly', up, dt, up > C.ly ? 12 : 5, 6);
-    const cy = Math.min(C.ceil - 0.4, Math.max(cy0 + Math.max(0, C.ly), height(cx, cz, C.by) + 0.3));
+    const fl = height(cx, cz, C.by) + 0.3; C.floor = fl > cy0 + Math.max(0, C.ly);
+    const cy = Math.min(C.ceil - 0.4, Math.max(cy0 + Math.max(0, C.ly), fl));
     C.x = cx; C.y = cy; C.z = cz; C.init = true;
     camera.position.set(cx, cy, cz); camera.lookAt(tgt);
   };
