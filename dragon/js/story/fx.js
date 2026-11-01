@@ -59,12 +59,14 @@ export function sandLines(group, place, segs) {
 
 /* 물보라·흙먼지 — 작은 점 파티클 한 풀(합 ≤ 3000 중 한 몫) · 원인 자리에서만 */
 const LIVE = new Set();                                   // 지금 차례의 풀 — runner가 차례를 치울 때 disposePuffs()
-export function disposePuffs() { for (const P of LIVE) { P.mesh.removeFromParent(); P.mesh.geometry.dispose(); P.mesh.material.dispose(); } LIVE.clear(); }
+export function disposePuffs() { for (const P of LIVE) { P.mesh.removeFromParent(); P.mesh.geometry.dispose(); } LIVE.clear(); }   // 재질은 색마다 하나(공유) — 차례마다 지우면 셰이더를 다시 지었음(팀 C)
+const PUFF_M = new Map();
+function puffMat(color) { let m = PUFF_M.get(color); if (!m) { m = new THREE.PointsMaterial({ color, size: 0.18, transparent: true, opacity: 0.85, depthWrite: false }); PUFF_M.set(color, m); SHARED.add(m); } return m; }
 export function makePuffs(group, max = 120, color = 0xe9f0ee) {
   const pos = new Float32Array(max * 3), vel = new Float32Array(max * 3), life = new Float32Array(max);
   for (let j = 0; j < max; j++) pos[j * 3 + 1] = -99;     // 처음엔 땅 밑(한 번도 안 움직인 풀의 점이 장소 원점에 보이던 것 · 4-5)
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const m = new THREE.Points(g, new THREE.PointsMaterial({ color, size: 0.18, transparent: true, opacity: 0.85, depthWrite: false }));
+  const m = new THREE.Points(g, puffMat(color));
   m.frustumCulled = false; group.add(m);
   let k = 0;
   const P = { mesh: m }; LIVE.add(P);

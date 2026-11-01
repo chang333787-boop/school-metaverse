@@ -391,7 +391,7 @@ export function createElements(o = {}) {
     if (!grp) return P;
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const tex = glowSprite(0xffffff, 1, 1).material.map;           // 둥근 판(kit 공유 텍스처)
-    const mat = new THREE.PointsMaterial({ color, size, map: tex, transparent: true, opacity, depthWrite: false, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending, sizeAttenuation: true });
+    const mat = new THREE.PointsMaterial({ color, size, map: tex, transparent: true, opacity, alphaTest: 0.03, depthWrite: false, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending, sizeAttenuation: true });   // alphaTest = 옅은 테·귀퉁이는 섞지 않음(팀 C)
     const m = new THREE.Points(g, mat); m.frustumCulled = false; m.renderOrder = add ? 960 : 930; grp.add(m); P.mesh = m;
     return P;
   }

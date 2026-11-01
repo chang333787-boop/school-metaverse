@@ -218,13 +218,13 @@ function* beachBattle(G, C) {
         f.did = true;
         if (f.job === 'eye') { B.dizzy(4.5); G.sfx.play('clang'); sparkP.burst(f.x, f.y, f.z, 14, 6, 3, 0.6); G.hud.say('fishlegs', '방패를 쾅쾅! 시끄러우면 못 겨눠!', ['shield'], { secs: 1.8 }); pending += 1; }
         else if (f.job === 'wing') { if (B.gasT > 0) boom(B.mouth.x, B.mouth.y, B.mouth.z); else { B.flinchT = 1.2; G.hud.say('snotlout', '날개 막을 그을려 줬지!', [], { secs: 1.6 }); pending += 1; } sparkP.burst(f.x, f.y - 3, f.z, 30, 10, -2, 0.8); f.flapK = 1; }
-        else if (f.job === 'mouth') { B.gas(5.5); for (let q = 0; q < 6; q++) gasP.burst(B.mouth.x + (q - 2.5) * 3, B.mouth.y, B.mouth.z + 4, 10, 4, 1, 4); G.hud.say('twins', '가스 머리, 뿜어! …불꽃 머리는 왜 가만있어?', [], { secs: 2.2 }); }
+        else if (f.job === 'mouth') { B.gas(5.5); for (let q = 0; q < 6; q++) gasP.burst(B.mouth.x + (q - 2.5) * 3, B.mouth.y, B.mouth.z + 4, 7, 4, 1, 4);   /* 점 10 → 7(가운데는 이미 꽉 참 · 겹 99% 18 → 덜 · 팀 C) */ G.hud.say('twins', '가스 머리, 뿜어! …불꽃 머리는 왜 가만있어?', [], { secs: 2.2 }); }
         else if (f.job === 'eye2') G.sfx.play('clang');
       }
       if (B.gasT > 0 && f.job === 'eye' && f.did && f.jobT < 1.4) boom(B.mouth.x, B.mouth.y, B.mouth.z);       // 그롱클 불덩이도 가스에 닿으면 펑
       if (f.jobT > 3.2) { f.job = null; f.did = false; f.home(); f.flapK = 0; }
     }
-    if (B.gasT > 0 && (B.t * 8 | 0) % 2 === 0) gasP.puff(B.mouth.x + Math.sin(B.t * 3) * 4, B.mouth.y + 1, B.mouth.z + 3, 0, 0.6, 0, 1.4);
+    if (B.gasT > 0 && (B.t * 8 | 0) !== C.gasW) { C.gasW = B.t * 8 | 0; gasP.puff(B.mouth.x + Math.sin(B.t * 3) * 4, B.mouth.y + 1, B.mouth.z + 3, 0, 0.6, 0, 1.4); }   // 1/8초에 한 점(전엔 반쪽 칸마다 걸음마다 = 초당 30점 · 입가에 40겹 · 팀 C)
     /* 구하기(아스트리드 · 피시레그) — 안 구한 어른을 무기 더미 곁으로 */
     if (pending > 0) for (const r of rescuers) {
       if (r.res || r.job) continue;

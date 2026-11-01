@@ -78,7 +78,7 @@ function ptTex() { if (PT) return PT; const c = document.createElement('canvas')
 export function makeParts(group, max, color, size, add = false) {
   const pos = new Float32Array(max * 3), vel = new Float32Array(max * 3), life = new Float32Array(max), dur = new Float32Array(max);
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const mat = new THREE.PointsMaterial({ color, size, map: ptTex(), transparent: true, opacity: 0.85, depthWrite: false, sizeAttenuation: true, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending });
+  const mat = new THREE.PointsMaterial({ color, size, map: ptTex(), transparent: true, opacity: 0.85, alphaTest: 0.05, depthWrite: false, sizeAttenuation: true, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending });   // alphaTest = 둥근 점 밖 네모 귀퉁이·옅은 테는 섞지 않음(크롬북 채우기 · 보이는 것 같음 · 팀 C)
   const m = new THREE.Points(g, mat); m.frustumCulled = false; m.renderOrder = 962; group.add(m);
   for (let i = 0; i < max; i++) pos[i * 3 + 1] = -999;
   let k = 0, live = 0;
@@ -323,7 +323,7 @@ export function createBoss({ group, diff = 'normal', scale = 1, sfx = null, plac
       if (B.fire) { B.inhale = Math.max(0, 1 - B.fire.t * 1.5); B.fire.t += dt; if (B.fire.t > 1.5) { endFire(); B.act = ''; B.cool = COOL[diff]; } }
     } else if (B.act === 'sniff') {
       B.sniffK = Math.min(1, B.actT / 0.6);
-      if (((B.t * 3) | 0) % 2 === 0 && B.root) { steam.puff(B.mouth.x + Math.sin(B.yaw + 1.57) * 3 * S, B.mouth.y + 3 * S, B.mouth.z + Math.cos(B.yaw + 1.57) * 3 * S, Math.sin(B.yaw) * 4, 1.5, Math.cos(B.yaw) * 4, 1.1); steam.puff(B.mouth.x - Math.sin(B.yaw + 1.57) * 3 * S, B.mouth.y + 3 * S, B.mouth.z - Math.cos(B.yaw + 1.57) * 3 * S, Math.sin(B.yaw) * 4, 1.5, Math.cos(B.yaw) * 4, 1.1); }
+      if (((B.t * 3) | 0) % 2 === 0 && B.root && (B.t * 12 | 0) !== B.steamW) { B.steamW = B.t * 12 | 0; steam.puff(B.mouth.x + Math.sin(B.yaw + 1.57) * 3 * S, B.mouth.y + 3 * S, B.mouth.z + Math.cos(B.yaw + 1.57) * 3 * S, Math.sin(B.yaw) * 4, 1.5, Math.cos(B.yaw) * 4, 1.1); steam.puff(B.mouth.x - Math.sin(B.yaw + 1.57) * 3 * S, B.mouth.y + 3 * S, B.mouth.z - Math.cos(B.yaw + 1.57) * 3 * S, Math.sin(B.yaw) * 4, 1.5, Math.cos(B.yaw) * 4, 1.1); }
       if (B.actT > T) { B.sniffK = 0; B.known = me.cloud ? { x: me.cloud.x, y: me.cloud.y, z: me.cloud.z } : { x: me.x, y: me.y, z: me.z }; emit('found', B.known); begin('fire', 'cloud'); }
     } else if (B.act === 'tail') {
       if (B.actT < T) { B.tailK = B.actT / T; shadow(Math.min(0.85, B.tailK * 1.1) * (me.near ? 1 : 0.5)); }

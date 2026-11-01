@@ -19,6 +19,7 @@ import { writeSlot, flushSlot } from '../story/save.js?v=25';
 import { holdItem } from '../story/fx.js?v=25';
 import { createRng } from '../core/rng.js?v=25';
 import { showEnding } from '../ui/ending.js?v=25';
+import { createShaderGuard } from '../core/warm.js?v=25';
 
 export const PLAYABLE = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];   // 0 = 오프닝 · 11 = 종장
 const CH_FILE = Object.fromEntries(PLAYABLE.map((n) => [n, 'ch' + n]));
@@ -30,6 +31,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
   const hud = createHud();
   const host = createStageHost({ gfx: opt.gfx, scene, camera, veil: { show: (t) => hud.veil.show(t || '불러오는 중'), hide: () => {} } });
   const G = { scene, camera, gfx: opt.gfx, env, host, hud, rng, diff: 'normal', grade: 0, slot: 1, place: null, placeKey: '', collide: null, inv: {}, flags: {}, t: 0, records: {}, cast: [], castBy: {} };
+  G.guard = opt.gfx && new URLSearchParams(location.search).get('warm') !== '0' ? createShaderGuard(opt.gfx.renderer, camera, scene) : null;   // 셰이더 지킴이(팀 C) — 놀이 중 새 물건은 셰이더가 다 지어질 때까지 안 그림(첫 그리기 멈칫 X) · 끄기 ?warm=0
   G.book = createBook(G); G.map = createMap(); G.bench = createBench(); G.sfx = createSfx(G); G.music = G.sfx.music;
   /* 플레이어 */
   const P = G.player = { W: null, C: null, root: null, rig: null, item: null, lock: false, fT: 0, fTap: false, fLong: false, reach: false, away: false, cam: 'follow', hidden: false };
@@ -43,6 +45,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     let hs = 7; for (const ch of name) hs = (hs * 31 + ch.charCodeAt(0)) >>> 0;   // 장소마다 제 씨앗(앞에서 난수를 얼마나 썼든 같은 마을 · 팀 A 지적)
     const prng = createRng(name === 'village' ? 1656844137 : hs);   // 마을 = 팀 A가 골목·지붕·길을 맞춘 배치(fx1 VILLAGE_SEED)
     const place = await host.load(name, (ctx) => mod.buildPlace(Object.assign(ctx, { env, rng: prng, opt: { time, variant, stub: name, burnt: name === 'village' && G.flags ? G.flags.burnt : undefined } })));
+    if (G.guard) G.guard.watch(place.group);                     // 다 지은 뒤부터(짓는 동안 것은 무대 그릇이 compileAsync)
     G.place = place; G.freshPlace = true; G.collide = createCollide(place.blockers || [], place.walls || []);
     P.W = createWalker({ height: place.height, collide: G.collide, bound: place.bound, x: 0, z: 0 });
     P.C = createFollowCam(camera, place.height, { collide: G.collide, ceil: place.ceil });
@@ -243,6 +246,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     },
     draw(a) {
       const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
+      if (G.guard) G.guard.tick();
       if (!G.place) { env.follow(); return; }
       G.playerDraw(a, dt);
       if (G.camDraw) G.camDraw(a, dt);

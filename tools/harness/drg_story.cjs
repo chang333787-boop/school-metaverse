@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const root = path.resolve(process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : '.');
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
-const CHS = arg('ch', '0,1,2,3,4,5,6,7,8,9,10,11').split(',').map(Number), ONLY = arg('only', ''), LEVELS = arg('levels', 'easy,normal').split(',').filter((x) => x && x !== 'none'), DUMB = arg('dumb', '1') === '1', TURBO = +arg('turbo', 4);
+const CHS = arg('ch', '0,1,2,3,4,5,6,7,8,9,10,11').split(',').map(Number), ONLY = arg('only', ''), LEVELS = arg('levels', 'easy,normal').split(',').filter((x) => x && x !== 'none'), DUMB = arg('dumb', '1') === '1', TURBO = +arg('turbo', 4), EXTRA = arg('q', '');   // --q=warm=0 같은 주소 덤(팀 C)
 const types = { '.js': 'text/javascript', '.html': 'text/html', '.glb': 'model/gltf-binary', '.png': 'image/png', '.json': 'application/json' };
 const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split('?')[0]), p = path.join(root, u, u.endsWith('/') ? 'index.html' : ''); fs.readFile(p, (e, d) => { if (e) { r.writeHead(404); r.end(); return; } r.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); r.end(d); }); });
 const rows = [], fails = [];
@@ -19,7 +19,7 @@ srv.listen(0, async () => {
   p.on('console', m => { if (m.type() === 'error' && !/favicon|404|GPU stall/.test(m.text())) errs.push(m.text().slice(0, 200)); });
   const V = (fs.readFileSync(path.join(root, 'dragon/index.html'), 'utf8').match(/main\.js\?v=(\d+)/) || [])[1];
   async function open(ch, step, diff) {
-    await p.goto(`${base}/dragon/?ch=${ch}&step=${step}&diff=${diff}&chain=0&turbo=${TURBO}&seed=1&mode=smooth`);
+    await p.goto(`${base}/dragon/?ch=${ch}&step=${step}&diff=${diff}&chain=0&turbo=${TURBO}&seed=1&mode=smooth${EXTRA ? '&' + EXTRA : ''}`);
     await p.waitForFunction(() => window.DRG && DRG.sense && DRG.sense() && DRG.sense().id && !DRG.sense().busy, null, { timeout: 90000 });
   }
   async function runBot(kind, level, key, limitSec) {   // → { ok, sec }

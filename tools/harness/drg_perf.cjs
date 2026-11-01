@@ -71,15 +71,16 @@ srv.listen(0, async () => {
     if (HEAP) {
       console.log('\n[장소 열 번 오가기 힙]');
       await open('?ch=4&step=2&diff=normal&chain=0&seed=1&mode=smooth');
-      const hp = await ev(async () => {
-        const G = DRG.world.G, names = ['arena', 'cove', 'village', 'forest', 'sea', 'hall'], GC = () => { if (window.gc) { window.gc(); window.gc(); } };
-        const heap = () => { GC(); return performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0; };
-        for (let i = 0; i < 2; i++) { await G.loadPlace(names[i % 6], 'day'); await new Promise(r => setTimeout(r, 400)); }
-        const h0 = heap(), g0 = DRG.gfx.renderer.info.memory.geometries, t0 = DRG.gfx.renderer.info.memory.textures;
-        for (let i = 0; i < 10; i++) { await G.loadPlace(names[(i + 2) % 6], 'day'); await new Promise(r => setTimeout(r, 400)); }
-        for (let i = 0; i < 2; i++) { await G.loadPlace(names[i % 6], 'day'); await new Promise(r => setTimeout(r, 400)); }
-        return { h0: +h0.toFixed(1), h1: +heap().toFixed(1), g0, g1: DRG.gfx.renderer.info.memory.geometries, t0, t1: DRG.gfx.renderer.info.memory.textures, ms: DRG.world.G.host.lastMs };
-      });
+      /* 힙 = CDP 정밀 값(GC 두 번 뒤) — performance.memory는 헤드리스에서 칸 단위로 뭉개져 늘 같은 값(29.8 → 29.8)이 나왔음(팀 C 11-01) */
+      const heapMB = async () => { await cdp.send('HeapProfiler.collectGarbage'); await cdp.send('HeapProfiler.collectGarbage'); const u = await cdp.send('Runtime.getHeapUsage'); return +(u.usedSize / 1048576).toFixed(1); };
+      const go = (i) => ev(async (i) => { const names = ['arena', 'cove', 'village', 'forest', 'sea', 'hall']; await DRG.world.G.loadPlace(names[i % 6], 'day'); await new Promise(r => setTimeout(r, 400)); }, i);
+      const mem = () => ev(() => ({ g: DRG.gfx.renderer.info.memory.geometries, t: DRG.gfx.renderer.info.memory.textures, ms: DRG.world.G.host.lastMs }));
+      for (let i = 0; i < 2; i++) await go(i);
+      const h0 = await heapMB(), m0 = await mem();
+      for (let i = 0; i < 10; i++) await go(i + 2);
+      for (let i = 0; i < 2; i++) await go(i);
+      const h1 = await heapMB(), m1 = await mem();
+      const hp = { h0, h1, g0: m0.g, g1: m1.g, t0: m0.t, t1: m1.t, ms: m1.ms };
       console.log('   힙 ' + hp.h0 + ' → ' + hp.h1 + 'MB · 기하 ' + hp.g0 + ' → ' + hp.g1 + ' · 텍스처 ' + hp.t0 + ' → ' + hp.t1 + ' · 마지막 짓기 ' + hp.ms + 'ms');
       ok(hp.h1 - hp.h0 <= 10, '장소 열 번 오가기 힙 증가 ' + (hp.h1 - hp.h0).toFixed(1) + 'MB ≤ 10');
       ok(hp.g1 <= hp.g0 + 20 && hp.t1 <= hp.t0 + 4, '기하·텍스처가 쌓이지 않음');

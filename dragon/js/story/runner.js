@@ -31,10 +31,27 @@ export function createRunner(G) {
       await G.loadPlace(want, st.time, st.variant);
       G.placeKey = wantKey;
     }
-    G.hud.veil.hide();
+    const kids0 = G.place ? new Set(G.place.group.children) : null;
     begin();
+    await warmStep(kids0);
+    G.hud.veil.hide();
     R.busy = false;
   };
+  /* 셰이더 미리 짓기(팀 C · 11-01) — 차례 첫 토막(배우·이펙트를 만드는 곳)을 덮개·busy 아래에서 먼저 돌리고, 새로 생긴 물건의 셰이더를 셰이더 지킴이(core/warm.js)가
+     다 지을 때까지 기다린 뒤 덮개를 걷음 → 덮개가 걷히자마자·같은 장소 다음 차례에서 첫 그리기가 셰이더를 짓느라 100~150ms 멈칫하던 것(CPU 4× · 0→1장)
+     첫 토막 = 생성기를 한 번 next(그 뒤 tick이 이어서 · 첫 dt는 원래도 버려짐) · 모델 받기는 1.5초 · 짓기는 2초까지만 기다림 · 차례 가운데 새 물건은 지킴이 혼자 */
+  async function warmStep(kids0) {
+    const grp = G.place && G.place.group;
+    if (!G.guard || !grp || !R.it || !kids0) return;
+    const it = R.it; let first;
+    try { first = it.next(); } catch (e) { first = { err: e }; }
+    R.it = { next: (v) => { if (first) { const f = first; first = null; if (f.err) throw f.err; if (f.done) return f; } return it.next(v); } };
+    const ready = [...R.C.actors, ...G.cast].map((a) => a.ready).filter((p) => p && p.then);
+    if (ready.length) await Promise.race([Promise.all(ready).catch(() => {}), new Promise((res) => setTimeout(res, 1500))]);
+    if (G.host.busy || !G.place || G.place.group !== grp) return;   // 첫 토막이 장소를 새로 짓기 시작함(fx1 ensureVillage) = 그 짓기가 굽기까지 함
+    for (const o of grp.children) if (!kids0.has(o)) G.guard.check(o);   // 새로 들어온 것(지킴이가 add 때 이미 봄 · 그 뒤 몸에 붙인 것까지 한 번 더)
+    await G.guard.idle(2000);
+  }
   function begin() {
     const st = R.step;
     cleanup();

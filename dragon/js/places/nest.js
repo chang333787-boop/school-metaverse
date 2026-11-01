@@ -38,7 +38,10 @@ function puffMat(o) {
         vec3 c = aB.xyz + vec3(wind.x * life * aS.z * 0.25, ${o.rise ? 'life * aS.z' : 'sin(uTime * 0.2 + aB.w * 6.0) * 1.5'}, wind.y * life * aS.z * 0.25);
         float s = aS.x * ${o.rise ? '(0.35 + life * 1.1)' : '1.0'} * aS.w;
         vA = aS.w * ${o.rise ? 'smoothstep(0.0, 0.12, life) * (1.0 - smoothstep(0.55, 1.0, life))' : '1.0'};
-        vec4 mv = viewMatrix * vec4(c, 1.0); mv.xy += position.xy * s * vec2(1.0, ${(o.sy || 1).toFixed(2)}); vW = c; vFogDepth = -mv.z; gl_Position = projectionMatrix * mv; }`,
+        vec4 mv = viewMatrix * vec4(c, 1.0);${o.near ? `
+        vA *= smoothstep(s * ${o.near[0].toFixed(2)}, s * ${o.near[1].toFixed(2)}, -mv.z);   /* 카메라 코앞 판은 흐려져 사라짐(화면을 통째로 덮는 겹 = 크롬북 채우기 몫 · 팀 C) */` : ''}
+        mv.xy += position.xy * s * vec2(1.0, ${(o.sy || 1).toFixed(2)}); vW = c; vFogDepth = -mv.z; gl_Position = projectionMatrix * mv;${o.near ? `
+        if (vA < 0.004) gl_Position = vec4(0.0, 0.0, 2.0, 1.0);   /* 다 흐려진 판은 조각을 하나도 만들지 않음(깊이 밖) */` : ''} }`,
     fragmentShader: `uniform sampler2D map; uniform vec3 c0; uniform vec3 c1; uniform float op; varying vec2 vUv; varying float vA; varying float vK; varying vec3 vW;
       #include <fog_pars_fragment>
       void main(){ vec4 t = texture2D(map, vUv); float a = t.a * vA * op; if (a < 0.01) discard; vec3 c = mix(c0, c1, clamp(vK + (vUv.y - 0.5) * 0.6, 0.0, 1.0));
@@ -283,8 +286,10 @@ export async function buildPlace(ctx) {
   });
   /* ⑥ 연기 — 떨어진 자리 둘레 낮게 깔린 연기(하늘이 맑아지면 걷힘) */
   let groundSmoke = null;
-  if (after) { const L = []; for (let k = 0; k < 46; k++) { const a = hash(k, 1) * TAU, d = 6 + hash(k, 2) * 46, x = 18 + Math.cos(a) * d, z = 150 + Math.sin(a) * d; L.push([x, height(x, z) + 2 + hash(k, 3) * 5, z, hash(k, 4), 12 + hash(k, 5) * 12, 0, 0, 1]); } groundSmoke = puffs(group, L, { c0: 0x4a4542, c1: 0x7c7672, op: 0.62, wx: 0, wz: 0, order: 958 }); }
-  const smoke = smokeList.length ? puffs(group, smokeList, { c0: after ? 0x4a4644 : 0x2e2a29, c1: after ? 0x8a8682 : 0x6a625c, op: after ? 0.75 : 0.85, rise: true, wx: 3, wz: 1.5 }) : null;
+  /* 판 46 · 불투명도 0.62 → 30 · 0.8(겹친 진하기 1-(1-α)^겹 은 거의 같음 · 화면 평균 반투명 겹 2.5 → 1점대 · 팀 C 11-01) + 카메라 코앞 판만 흐려짐 */
+  const GS_N = 30, GS_OP = 0.8;
+  if (after) { const L = []; for (let k = 0; k < GS_N; k++) { const a = hash(k, 1) * TAU, d = 6 + hash(k, 2) * 46, x = 18 + Math.cos(a) * d, z = 150 + Math.sin(a) * d; L.push([x, height(x, z) + 2 + hash(k, 3) * 5, z, hash(k, 4), 12 + hash(k, 5) * 12, 0, 0, 1]); } groundSmoke = puffs(group, L, { c0: 0x4a4542, c1: 0x7c7672, op: GS_OP, wx: 0, wz: 0, order: 958, near: [0.2, 0.55] }); }
+  const smoke = smokeList.length ? puffs(group, smokeList, { c0: after ? 0x4a4644 : 0x2e2a29, c1: after ? 0x8a8682 : 0x6a625c, op: after ? 0.75 : 0.85, rise: true, wx: 3, wz: 1.5, near: [0.25, 0.7] }) : null;
   const embers = emberList.length ? puffs(group, emberList, { c0: 0xffb060, c1: 0xff6a20, op: 0.9, rise: true, add: true, wx: 1, wz: 0.4, order: 965 }) : null;
 
   /* ── 구름(숨는 곳 · 대장전) — 구 목록 하나로 그림과 '숨었나' 판정을 같이(design §12) ── */
@@ -381,7 +386,7 @@ export async function buildPlace(ctx) {
     setTime(env, 'nest', over); env.time = 'nest';
     haze.material.uniforms.op.value = 0.7 * (1 - k);
     if (smoke) smoke.material.uniforms.op.value = 0.75 * (1 - k * 0.6);
-    if (groundSmoke) groundSmoke.material.uniforms.op.value = 0.62 * (1 - k * 0.85);
+    if (groundSmoke) groundSmoke.material.uniforms.op.value = GS_OP * (1 - k * 0.85);
   }
   if (after) setClear(0);
 
