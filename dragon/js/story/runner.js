@@ -2,9 +2,9 @@
 // 도전 차례 = { id, verb, place, time, at, goal, easy, hints, limit, run, sense } · 이음 차례 = verb 없음(봇 판정 X)
 // 실패 = run이 'retry'를 돌려줌 → 5초 안에 같은 자리에서 다시(장소는 그대로) · 끝 = true → 저장 → 다음
 // 힌트: 손을 놓고 멈춘 시간 — 쉬움 10초 단계 1 · 20초 단계 2(하는 법 창 다시) · 보통 20초 단계 1 · 어려움 없음(design §8)
-import { createCollide } from '../play/collide.js?v=27';
-import { disposePuffs } from './fx.js?v=27';
-import { INFLIGHT } from '../look/models.js?v=27';
+import { createCollide } from '../play/collide.js?v=28';
+import { disposePuffs } from './fx.js?v=28';
+import { INFLIGHT } from '../look/models.js?v=28';
 
 /* 배우 몸의 뼈 텍스처 비우기 — 기하·재질은 모델 캐시가 함께 쓰는 것이라 그대로(SkeletonUtils 복제는 뼈대만 따로) */
 const freeBones = (o) => { if (o.isSkinnedMesh && o.skeleton && o.skeleton.boneTexture) o.skeleton.dispose(); };
