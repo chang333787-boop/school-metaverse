@@ -204,7 +204,8 @@ export function storyBot(level) {
     const key = now.ch + ':' + now.idx + ':' + now.fails;
     if (key !== lastKey) { lastKey = key; H.mem = {}; }
     H.keys = {};
-    if (!now.busy && now.me) { const fn = BOTS[now.id]; if (fn) fn(H); }
+    if (now.card || now.dialog) H.tap('use', 0.35);                     /* 대화창·장 카드 = F로 넘김 */
+    else if (!now.busy && now.me) { const fn = BOTS[now.id]; if (fn) fn(H); else if (now.goalXY) H.walk(now.goalXY[0], now.goalXY[1] + 0.6, 0.6); }
     const th = H.mem.tapHold || {};
     for (const a of ACTS) { let v = !!H.keys[a]; if (th[a] > 0) { v = th[a] === 2; th[a]--; } set(a, v); }
   };

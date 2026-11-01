@@ -34,6 +34,22 @@ const CSS = `
 #hud .gone { display:none; }
 #sketch { position:absolute; right:14px; bottom:96px; width:200px; height:150px; padding:4px; }
 #sketch canvas { width:100%; height:100%; display:block; }
+#dlg { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); width:min(760px,94vw); min-height:132px; z-index:24; padding:14px 22px 14px 14px; display:flex; gap:16px; align-items:center; pointer-events:auto; }
+#dlg .face svg { width:96px; height:96px; display:block; }
+#dlg .nm { font-size:16px; color:#a83e1e; font-weight:800; margin-bottom:4px; }
+#dlg .tx { font-size:25px; line-height:1.42; font-weight:600; }
+#dlg .ic { display:flex; gap:4px; } #dlg .ic svg { width:40px; height:40px; }
+#dlg .more { position:absolute; right:18px; bottom:10px; font-size:14px; font-weight:800; color:#6a5a48; animation:dlgb 1s steps(2) infinite; }
+@keyframes dlgb { 50% { opacity:.25; } }
+#card { position:fixed; inset:0; z-index:38; background:rgba(29,39,48,.86); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; pointer-events:auto; }
+#card .ti { color:#f4ead2; font-size:28px; font-weight:800; }
+#card .row { display:flex; gap:14px; align-items:stretch; flex-wrap:wrap; justify-content:center; max-width:96vw; }
+#card .pn { width:min(250px,30vw); padding:14px 12px; display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; }
+#card .pn svg { width:84px; height:84px; } #card .pn .t { font-size:18px; font-weight:700; line-height:1.4; }
+#card .pn .k { font-size:13px; color:#a83e1e; font-weight:800; }
+#card .ar { color:#f4ead2; font-size:30px; align-self:center; }
+#card .ch { width:min(640px,90vw); padding:18px 22px; font-size:23px; font-weight:700; line-height:1.5; text-align:center; }
+#card .go { color:#f4ead2; font-size:16px; opacity:.9; animation:dlgb 1s steps(2) infinite; }
 @media (max-width:700px) { #howto { width:220px; top:70px; } #goal { font-size:16px; } #bubble .tx { font-size:17px; } }
 `;
 
@@ -56,7 +72,7 @@ export function createHud() {
     el.classList.remove('gone', 'hide'); H.howtoT = secs; H.howtoVerb = verb;
   };
   /* 그림 말풍선 — who(얼굴) · text(두 줄 30자 안) · icons(물건) · 차례로 · 걷는 동안 */
-  H.say = (who, text, icons = [], opt = {}) => { H.queue.push({ who, text, icons, secs: opt.secs || Math.min(5.5, 2.2 + text.length * 0.07), name: opt.name }); H.log.push(who + ': ' + text); if (H.log.length > 40) H.log.shift(); };
+  H.say = (who, text, icons = [], opt = {}) => { H.queue.push({ who, text, icons, secs: opt.secs ? Math.max(opt.secs, 1.6 + text.length * 0.06) : Math.min(7, 2.8 + text.length * 0.09), name: opt.name }); H.log.push(who + ': ' + text); if (H.log.length > 40) H.log.shift(); };
   H.sayNow = (who, text, icons = [], opt = {}) => { H.queue.length = 0; H.cur = null; H.say(who, text, icons, opt); };
   H.busy = () => !!H.cur || H.queue.length > 0;
   H.clearSay = () => { H.queue.length = 0; H.cur = null; $('bubble').classList.add('gone'); };
@@ -100,7 +116,23 @@ export function createHud() {
     if (H.bannerT > 0) { H.bannerT -= dt; if (H.bannerT <= 0) $('banner').classList.add('gone'); }
     if (H.howtoT > 0) { H.howtoT -= dt; if (H.howtoT <= 0) $('howto').classList.add('gone'); }
   };
-  H.state = () => ({ goal: H.goalText || '', hint: H.hintText || '', bubble: H.cur ? H.cur.who + ': ' + H.cur.text : '', banner: H.bannerT > 0 ? H.bannerText : '', howto: H.howtoT > 0 ? H.howtoVerb : '' });
-  H.reset = () => { H.clearSay(); H.goal(''); H.hint(''); $('howto').classList.add('gone'); H.howtoVerb = ''; $('banner').classList.add('gone'); H.mood(null); H.fkeys([]); H.sketch(false); };
+  /* 포켓몬식 대화창 — 얼굴 + 이름 + 두 줄 · Space·F로 넘김(저절로 안 넘어감) */
+  const dlg = document.createElement('div'); dlg.id = 'dlg'; dlg.className = 'paper gone'; root.appendChild(dlg);
+  H.dialog = (who, text, icons = []) => {
+    const first = !H.met.has(who); H.met.add(who);
+    dlg.innerHTML = `<div class="face">${FACES[who] ? FACES[who]() : ''}</div><div style="flex:1"><div class="nm">${first && NAMES[who] ? NAMES[who] : NAMES[who] ? NAMES[who].split(' ').pop() : ''}</div><div class="tx">${text}</div></div>${icons.length ? '<div class="ic">' + icons.map((i) => ICONS[i] || '').join('') + '</div>' : ''}<div class="more">▼ Space · F</div>`;
+    dlg.classList.remove('gone'); $('bubble').classList.add('gone'); H.dlgText = who + ': ' + text; H.log.push(H.dlgText); speak(text);
+  };
+  H.dialogHide = () => { dlg.classList.add('gone'); H.dlgText = ''; };
+  /* 장 카드 — 지난 이야기 → 이번에 할 일(그림 셋) / 장 끝 '무엇이 바뀌었나' · Space·F로 계속 */
+  const card = document.createElement('div'); card.id = 'card'; card.className = 'gone'; document.body.appendChild(card);
+  const pic = (k) => (FACES[k] ? FACES[k]() : ICONS[k] || '');
+  H.card = (title, panels, line) => {
+    card.innerHTML = `<div class="ti">${title}</div>` + (panels ? `<div class="row">${panels.map(([k, t, lab], i) => `${i ? '<div class="ar">→</div>' : ''}<div class="pn paper"><div class="k">${lab || ''}</div>${pic(k)}<div class="t">${t}</div></div>`).join('')}</div>` : '') + (line ? `<div class="ch paper">${line}</div>` : '') + '<div class="go">Space · F = 계속</div>';
+    card.classList.remove('gone'); H.cardOpen = true;
+  };
+  H.cardHide = () => { card.classList.add('gone'); H.cardOpen = false; };
+  H.state = () => ({ dialog: H.dlgText || '', card: !!H.cardOpen, goal: H.goalText || '', hint: H.hintText || '', bubble: H.cur ? H.cur.who + ': ' + H.cur.text : '', banner: H.bannerT > 0 ? H.bannerText : '', howto: H.howtoT > 0 ? H.howtoVerb : '' });
+  H.reset = (keepSay) => { if (!keepSay) H.clearSay(); H.goal(''); H.hint(''); $('howto').classList.add('gone'); H.howtoVerb = ''; $('banner').classList.add('gone'); H.mood(null); H.fkeys([]); H.sketch(false); };
   return H;
 }

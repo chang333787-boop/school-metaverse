@@ -26,7 +26,7 @@ let seed = +(Q.get('seed') || 0) || (Date.now() % 100000);
 const rng = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
 const G = {
   Q, V, I, rng, t: 0, turbo: +(Q.get('turbo') || 0), diff: 'normal', grade: 0, slot: 0, best: { ch: 0, idx: 0 }, inv: {},
-  cast: createCast(), fspots: [], marks: [], flags: {}, mode: 'walk', P: null, Fl: null, W: null, goal: null, camOpt: {}, diag: { errs: [] },
+  talkAuto: Q.get('talk') === 'auto', cast: createCast(), fspots: [], marks: [], flags: {}, mode: 'walk', P: null, Fl: null, W: null, goal: null, camOpt: {}, diag: { errs: [] },
 };
 window.addEventListener('error', (e) => G.diag.errs.push(String(e.message).slice(0, 200)));
 G.hud = createHud();
@@ -49,7 +49,7 @@ function step(dt) {
     if (I.pressed.use) { P.useTimes = P.useTimes || []; P.useTimes.push(G.t); while (P.useTimes.length && G.t - P.useTimes[0] > 1.2) P.useTimes.shift(); if (P.useTimes.length >= 5) P.mashT = 1.2; }
   }
   G.marks.length = 0; G.fspots.length = 0;
-  if (G.runner.state === 'run' || G.runner.state === 'wait') G.runner.tick(dt);
+  if (G.runner.state === 'run' || G.runner.state === 'wait' || G.runner.state === 'card') G.runner.tick(dt);
   G.cast.step(dt);
   stepFx(dt, G.W, rng);
   /* 카메라 — 가는 쪽을 조금 더 · 장소 끝에서 멈춤 */
@@ -156,7 +156,7 @@ function sense() {
   const on = (x, y) => V.onScreen(x, y, 1);
   const s = {
     ch: R.chN, idx: R.idx, id: st ? st.id : '', busy: R.state !== 'run', done: R.done, fails: R.fails, t: r2(R.t), diff: G.diff, mode: G.mode,
-    goal: st ? st.goal : '', hint: G.hud.state().hint, bubble: G.hud.state().bubble,
+    goal: st ? st.goal : '', hint: G.hud.state().hint, bubble: G.hud.state().bubble, dialog: G.hud.state().dialog, card: G.hud.state().card,
     me: P ? { x: r2(P.x), y: r2(P.y), vx: r2(P.vx), vy: r2(P.vy), z: r2(P.z), air: P.air, dodge: P.dodge, hurt: P.hurtT > 0, fx: r2(P.fx), fy: r2(P.fy), carry: P.carry, hand: r2(P.hand), sneak: P.sneak } : null,
     fly: F ? { x: r2(F.x), y: r2(F.y), vx: r2(F.vx), vy: r2(F.vy), hidden: F.hidden, splash: F.splashT > 0, hits: F.hits, falls: F.falls, ob: F.ob.filter((o) => Math.abs(o.y - F.y) < 22).map((o) => ({ k: o.k, x: r2(o.x), y: r2(o.y), r: o.r, w: o.w, h: o.h })) } : null,
     goalXY: G.goal ? [G.goal.x, G.goal.y] : null,

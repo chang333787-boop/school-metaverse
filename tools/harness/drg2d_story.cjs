@@ -18,14 +18,14 @@ srv.listen(0, async () => {
   let errs = [];
   p.on('pageerror', (e) => errs.push(e.message.slice(0, 200)));
   p.on('console', (m) => { if (m.type() === 'error' && !/favicon|404/.test(m.text())) errs.push(m.text().slice(0, 200)); });
-  async function open(ch, step, diff) {
-    await p.goto(`${base}/dragon2d/?ch=${ch}&step=${step}&diff=${diff}&chain=0&turbo=${TURBO}&seed=1&mode=smooth`);
-    await p.waitForFunction(() => window.DRG2 && DRG2.sense && DRG2.sense().id && !DRG2.sense().busy, null, { timeout: 60000 });
+  async function open(ch, step, diff, dumb) {
+    await p.goto(`${base}/dragon2d/?ch=${ch}&step=${step}&diff=${diff}&chain=0&turbo=${TURBO}&seed=1&mode=smooth${dumb ? '&card=0&talk=auto' : ''}`);
+    await p.waitForFunction(() => window.DRG2 && DRG2.sense && (DRG2.sense().card || DRG2.sense().id && !DRG2.sense().busy), null, { timeout: 60000 });
   }
   async function runBot(kind, level, limitSec) {
     return p.evaluate(async ({ kind, level, limitSec }) => {
       const m = await import('/dragon2d/js/bots/bots.js?v=1');
-      const s0 = DRG2.sense(), n0 = DRG2.loop.n;
+      const s0 = DRG2.sense(), n0 = DRG2.loop.n; if (s0.card) s0.idx = DRG2.G.runner.idx;
       DRG2.bot.run(kind === 'story' ? m.storyBot(level) : m.dumbBot(kind));
       const trail = []; let lastT = -99;
       return await new Promise((res) => { const iv = setInterval(() => { const s = DRG2.sense(), sec = (DRG2.loop.n - n0) / 60; if (sec - lastT > 10 && s.me) { lastT = sec; trail.push([Math.round(sec), s.me.x, s.me.y]); }
@@ -67,7 +67,7 @@ srv.listen(0, async () => {
         if (DUMB && st.verb) {
           for (const [kind, lab] of [['idle', '가만히'], ['fmash', 'F 연타'], ['fhold', 'F 누른 채'], ['smash', 'Space 연타'], ['wfmash', '→+F 연타']]) {
             if (KINDS.length && !KINDS.includes(kind)) continue;
-            await open(ch, i, 'normal');
+            await open(ch, i, 'normal', true);
             const r = await runBot(kind, 'normal', st.limit * 2);
             rows.push([st.id, st.verb, lab, r.ok ? '깸(✗) ' + r.sec + '초' : '못 깸 ✓']);
             if (r.ok) fails.push(st.id + ' ' + lab + ' 봇이 깸');

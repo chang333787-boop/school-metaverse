@@ -5,6 +5,7 @@ import { makePlace, prebake } from '../play/world.js?v=1';
 import { clearFx, FX } from '../play/fx.js?v=1';
 import { writeSlot, flushSlot } from './save.js?v=1';
 import { createBody } from '../play/body.js?v=1';
+import { RECAP } from './recap.js?v=1';
 
 export const CH_TITLES = ['먼 훗날', '습격의 밤', '숲의 자국', '숨은 호수', '생선과 이름', '꼬리날개', '하늘을 나는 법', '아빠의 투구', '아스트리드와 둥지', '마지막 시험', '대장 드래곤', '함께 사는 버크'];
 export const LAST_CH = 11;
@@ -22,12 +23,17 @@ export function createRunner(G) {
     R.state = 'load'; G.hud.reset();
     R.chN = n; R.ch = await loadCh(n); R.idx = Math.min(idx, R.ch.steps.length - 1); R.seen.clear();
     G.hud.veil.show(n === 0 ? '먼 훗날' : n + '장 · ' + CH_TITLES[n], R.ch.sub || '');
-    setTimeout(() => { begin(); G.hud.veil.hide(); }, G.turbo ? 50 : 1300);
+    const rc = RECAP[n], useCard = rc && G.Q.get('card') !== '0';
+    setTimeout(() => {
+      G.hud.veil.hide();
+      if (useCard) { G.hud.card(n === 0 ? '먼 훗날' : n + '장 · ' + CH_TITLES[n], rc.before); R.state = 'card'; R.cardT = 0; R.after = () => begin(); }   /* 지난 이야기 → 이번에 할 일(그림 셋) */
+      else begin();
+    }, G.turbo ? 50 : 1300);
     if (n + 1 <= LAST_CH) loadCh(n + 1).catch(() => {});      // 다음 장 미리 받기
   };
   function begin() {
     const st = R.ch.steps[R.idx]; R.step = st;
-    G.hud.reset(); G.cast.clear(true); clearFx(); G.flags = { retry: R.fails }; G.drawOver = null; G.drawUnder = null; G.flyPose = null; G.boss = null; G.tint = null; G.book.close && G.book.open && !G.book.draw && G.book.close();
+    G.hud.reset(true); G.cast.clear(true); clearFx(); G.flags = { retry: R.fails }; G.hud.dialogHide(); G.dlg = null; G.drawOver = null; G.drawUnder = null; G.flyPose = null; G.boss = null; G.tint = null; G.book.close && G.book.open && !G.book.draw && G.book.close();
     document.querySelectorAll('.stepui').forEach((e) => e.remove());
     const pl = st.place || R.ch.place, tm = (G.diff === 'easy' && (st.timeEasy || R.ch.timeEasy)) || st.time || R.ch.time || 'day';
     if (!G.W || G.W.name !== pl || G.W.time !== tm || st.fresh) { const old = G.W; G.W = makePlace(pl, tm, st.placeOpt || {}); if (old && old.name === pl && !st.fresh) G.W.chunks = old.chunks; prebake(G.W); }   /* 같은 장소 = 구운 땅 다시 씀(땅은 때와 무관) */ else G.W.dropTmp();
@@ -49,6 +55,7 @@ export function createRunner(G) {
     writeSlot(G.slot, { grade: G.grade, diff: G.diff, ch: R.chN, idx: R.idx, best, bestIdx, book: G.book.state(), inv: G.inv }, force);
   }
   R.tick = (dt) => {
+    if (R.state === 'card') { R.cardT += dt; if (R.cardT > 0.4 && (G.I.pressed.use || G.I.pressed.jump)) { G.hud.cardHide(); R.state = 'idle'; R.after(); } return; }
     if (R.state === 'wait') { R.wait -= dt; if (R.wait <= 0) { R.state = 'idle'; R.after(); } return; }
     if (R.state !== 'run') return;
     R.t += dt;
@@ -73,13 +80,14 @@ export function createRunner(G) {
     else endCh();
   };
   function endCh() {
-    const n = R.chN;
-    if (R.ch.end) G.hud.banner(R.ch.end, 'book', 3.2);
-    R.state = 'wait'; R.wait = G.turbo ? 0.4 : 3;
-    R.after = () => {
+    const n = R.chN, rc = RECAP[n];
+    const next = () => {
       if (n >= LAST_CH || G.Q.get('chain') === '0') { R.done = true; R.state = 'done'; flushSlot(); G.onDone && G.onDone(n); return; }
       R.idx = 0; R.chN = n + 1; save(true); R.start(n + 1, 0);
     };
+    G.hud.clearSay(); G.hud.dialogHide();
+    if (rc && G.Q.get('card') !== '0') { G.hud.card(n === 0 ? '먼 훗날 — 끝' : n + '장 끝 · 무엇이 바뀌었나', null, rc.after + (R.ch.end ? '<br><span style="font-size:18px;opacity:.75">' + R.ch.end + '</span>' : '')); R.state = 'card'; R.cardT = 0; R.after = next; }   /* 장 끝 = 바뀐 것 한 줄 */
+    else { if (R.ch.end) G.hud.banner(R.ch.end, 'book', 3.2); R.state = 'wait'; R.wait = G.turbo ? 0.4 : 3; R.after = next; }
   }
   R.skip = () => { if (R.state === 'run') { R.gen = (function* () { return true; })(); } };
   R.jump = (n, i) => R.start(n, i);

@@ -9,6 +9,25 @@ export function say(G, who, text, o = {}) {
   const a = o.actor || G.cast.find(who); if (a) a.talkT = Math.min(5, 1.5 + text.length * 0.07);
 }
 export const talking = (G) => G.hud.busy();
+/* 포켓몬식 대화 — 한 줄씩 Space·F로 넘김(저절로 안 넘어감) · 그동안 히컵은 멈춤(o.walk면 걸으며) · 날 때는 쏘기 잠금
+   lines = [[who, text, icons?], …] · 시험용 ?talk=auto = 읽는 시간 뒤 저절로(클릭형 봇 시험에서 대화가 막지 않게) */
+export function* talk(G, lines, o = {}) {
+  const P = G.P, lock0 = P ? P.lock : false, ns0 = G.Fl ? G.Fl.noShoot : false;
+  if (P && !o.walk) P.lock = true; if (G.Fl) G.Fl.noShoot = true;
+  G.hud.clearSay();
+  for (const [who, text, icons] of lines) {
+    G.hud.dialog(who, text, icons || []); G.dlg = { who, text };
+    const a = G.cast.find(who);
+    let t = 0;
+    while (true) {
+      const dt = yield; t += dt; if (a) a.talkT = 0.4;
+      if (G.talkAuto ? t > 0.8 + text.length * 0.04 : t > 0.25 && (G.I.pressed.use || G.I.pressed.jump)) break;
+    }
+  }
+  G.hud.dialogHide(); G.dlg = null;
+  yield;                                                       // 마지막 누름이 다음 손(던지기·줍기)으로 새지 않게 한 걸음 쉼
+  if (P && !o.walk) P.lock = lock0; if (G.Fl) G.Fl.noShoot = ns0;
+}
 export function goal(G, x, y, o = {}) { G.goal = x == null ? null : Object.assign({ x, y }, o); }
 export const dist = (G, x, y) => Math.hypot(G.P.x - x, (G.P.y - y) * 1.25);
 export const near = (G, x, y, r = 1.4) => dist(G, x, y) < r;
