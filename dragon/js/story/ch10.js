@@ -6,11 +6,11 @@
 // 와! = 입 안으로 쏘고 솟구치는 1초 · 변화 = 둥지 하늘이 맑아짐 · 드래곤들이 흩어짐 · 해변 무기 더미 · 기록 = 걸린 시간 · 안 맞은 횟수 · 친구 조합 수
 // 대사는 모두 우리 말로 새로(원문 X) · 피·죽음 X · 깜짝 X(예고 2~3초 · 소리 서서히) · 불·추락은 연기·그림자·먼 구도
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=25';
-import { holdItem, makeItem } from './fx.js?v=25';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=25';
-import { HOWTO, ICONS, PICT, keyCap } from '../ui/art.js?v=25';
-import { createBoss, createShots, makeParts, WARN } from '../play/boss.js?v=25';
+import { wait, until, sayAll } from './runner.js?v=27';
+import { holdItem, makeItem } from './fx.js?v=27';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=27';
+import { HOWTO, ICONS, PICT, keyCap } from '../ui/art.js?v=27';
+import { createBoss, createShots, makeParts, WARN } from '../play/boss.js?v=27';
 
 const TAU = Math.PI * 2;
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -243,7 +243,7 @@ function* beachBattle(G, C) {
     for (const H of adults) if (H.saved && H.pose.carry && (H.dropT = (H.dropT || 0) + dt) > 1.2) H.pose = { cheer: 0.6 };
     /* 김 가림막 시계 · 불이 다시 붙음 */
     for (const g of groups) { if (g.hideT > 0) { g.hideT -= dt; if ((B.t * 6 | 0) % 2 === 0) steamP.puff(g.x + Math.sin(B.t * 5 + g.i) * 6, g.y + 2, g.z + Math.cos(B.t * 4) * 6, 0, 2, 0, 2.2); if (g.hideT <= 0) g.hidden = false; } if (g.fireOut > 0) { g.fireOut -= dt; if (g.fireOut <= 0) pl.shipFire && pl.shipFire(g.i, true); } }
-    /* 대장 불 → 맞으면(구르기로 피함) · 어른 무리는 흩어졌다 돌아옴(다치지 않음) */
+    /* 대장 불 → 맞으면(점프로 피함 · 공중 = P.W.rollT > 0) · 어른 무리는 흩어졌다 돌아옴(다치지 않음) */
     if (C.fireAt) {
       C.fireAt.t += dt; const f = C.fireAt;
       if (f.t > 0.35 && f.t < 1.3 && B.fire) {
@@ -428,7 +428,7 @@ function* reunion(G, C) {
 /* 비행 한 판 준비(④·⑤가 같이 씀) — flight.js(팀 F) + 뒤따르는 카메라 */
 function* startFlight(G, C, T, world, start) {
   const P = G.player;
-  const mod = yield* awaitP(import('../play/flight.js?v=25').catch(() => null));
+  const mod = yield* awaitP(import('../play/flight.js?v=27').catch(() => null));
   if (!mod || !mod.createFlight) return null;
   const F = mod.createFlight({ world, mode: G.diff, dragon: { root: T.root, rig: T.rig }, rider: { root: P.root, rig: P.rig }, rng: G.rng });
   F.setOpts({ assist: G.diff !== 'hard', ceil: world.ceil, gusts: false });

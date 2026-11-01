@@ -3,9 +3,9 @@
 // 층 둘: 위 가장자리 길(북쪽 1/3 둘레 · 숨을 바위 셋) / 바닥 — height(x, z, yHint) = yHint에 가까운 층 · 둘은 걸어서 못 오감(입구 틈 = 바닥 출입)
 // 노을 때 해가 낮게 서쪽에서 → 바닥·서쪽 벽은 그늘, 동쪽 벽 위쪽만 빛(지을 때 해 그늘을 정점색에 구움 · 그림자 지도 X)
 import * as THREE from 'three';
-import { setTime, TIMES, toon } from '../look/kit.js?v=25';
-import { createNoise } from '../core/noise.js?v=25';
-import * as NT from '../look/nature.js?v=25';
+import { setTime, TIMES, toon } from '../look/kit.js?v=27';
+import { createNoise } from '../core/noise.js?v=27';
+import * as NT from '../look/nature.js?v=27';
 
 const { C3, mixc, sstep, clamp, hash, TAU, mat4, matLay } = NT;
 const RX = 45, RZ = 35;                                 // 바닥 타원 반지름(벽 밑동)
@@ -322,6 +322,7 @@ export async function buildPlace(ctx) {
   };
   const wallsFrom = (fn, x0, z0, nx, nz) => { const v = new Float32Array(nx * nz); for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) v[j * nx + i] = fn(x0 + i, z0 + j); return NT.contourWalls(v, x0, z0, 1, nx, nz); };
   const walls = [...wallsFrom(floorVal, -50, -40, 111, 82), ...wallsFrom(rimVal, -60, -50, 127, 54)];
+  for (const w of walls) w.edge = 1;                              // 걷기 끝 선 — 카메라는 너머가 바위벽(눈높이보다 높은 땅)일 때만 막힘 · 가장자리 길에서 코브 쪽 낭떠러지는 넘어 봄(11-01 조작감)
 
   /* ── 이름 자리 · 목록 ── */
   const A = (x, z, yaw, y) => ({ x: +x.toFixed(2), y: +(y ?? FG.at(x, z)).toFixed(3), z: +z.toFixed(2), yaw: +yaw.toFixed(4) });

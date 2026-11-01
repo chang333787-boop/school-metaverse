@@ -2,40 +2,51 @@
 // 계약 = docs/dragon/stage3_plan.md §5 · 충돌은 메시 레이 없이 world.ground(x,z) + 원기둥(pillars) + 아치(arches) 목록만(32m 격자) · 매 걸음 new X
 // 조작(보통): ↑↓ = 오르기·내리기 · ←→ = 돌기 · Space = 날갯짓(날개가 다 올라간 박자에 누르면 힘 다 실림 · 연타 = 절반) · 1~4 꼬리 자리
 // 조작(쉬움): 앞으로 저절로 · 방향키 · Space 누르고 있기 = 꼬리 펴기(날카롭게 돎) · 떨어지면 저절로 다시 붙음
+// 조작감 2차(11-01 교사 '조작감이 제일 중요해'): 방향키만으로도 편하게 — 보통도 날갯짓 없이 활공 빠르기(vglide)까지만 줄고 · 느리면 오르기가 저절로 약해져 실속으로 떨어지지 않음(어려움은 예전 그대로)
+//   마우스 잠금(TPS와 같은 손) 중이면 마우스 = 겨눔(F.aim) → 몸이 그쪽으로 틂 · 카메라도 겨눈 쪽을 봄 · 방향키를 누르면 키가 주인 · 꼬리 1~4는 '도움'(틀린 쪽 벌칙 없음 · 4는 3초 뒤 1로)
 // 바깥 갈고리: world.updrafts(함수 또는 배열 [{x, z, r, top?, lift?, power?, y?}]) 위 = 날갯짓 없이 솟음(S.updraft) · F.push(ax, ay, az) = 이 걸음 움직임에만 더함(m/s · 걸음마다 다시 부름)
 // 좌표: 앞 = (sin yaw, cos yaw) · 오른쪽 = (−cos yaw, sin yaw)(걷기와 같음) · roll > 0 = 오른쪽 날개가 내려감 · pitch > 0 = 고개 듦
 import * as THREE from 'three';
-import { getSfx } from '../core/sfx.js?v=25';
+import { getSfx } from '../core/sfx.js?v=27';
+import { loadSet } from '../core/gfx.js?v=27';
+
+const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 /* 손맛 값 — 한곳에서만 고친다(봇 기록으로 맞춤) */
 export const FK = {
   vstall: 10, vcruise: 23, vmax: 33, boostMax: 9,
-  drag: 0.1,              // 보통: 날갯짓 없을 때 속도가 줄어드는 정도(1/초) — 33 → 실속 10까지 약 12초
+  vglide: 17,             // 보통: 날갯짓 없이도 이 빠르기까지만 줄어듦(활공 · 11-01 방향키만으로 39초에 네 번 떨어지던 것) — 어려움은 0까지
+  drag: 0.1,              // 날갯짓 없을 때 속도가 줄어드는 정도(1/초) — 어려움: 33 → 실속 10까지 약 12초 · 보통: 활공 빠르기 쪽으로
   flapDv: 2.7,            // 날갯짓 한 번(힘 다 실림)에 붙는 속도(m/s)
   flapLift: 2.6,          // 날갯짓 한 번에 위로 뜨는 힘(m/s · 곧 사라짐)
   sink: 1.1,              // 활공하면 천천히 내려감(m/s)
-  turn: 1.05,             // 기본 회전율(rad/s) — 쉬움 꼬리 펴기 ×1.8
+  turn: 1.3,              // 기본 회전율(rad/s · 11-01 1.05 → 1.3 = 한 바퀴 6초 → 4.8초) — 쉬움 꼬리 펴기 ×1.6 · 보통 꼬리 맞춤 ×1.6
   pitchUp: 0.42, pitchDown: 0.52,
   body: 1.7,              // 몸이 돌에 닿는 반지름(m)
   graze: 1.6,             // 몸 둘레 + 이만큼 안 = 스침(날개 끝이 1m 안)
-  hitBig: { easy: 99, normal: 20, hard: 16 },   // 돌 쪽으로 이 속도 넘게 박으면 히컵이 떨어짐(25m/s로 53° 넘게 · 쉬움은 도움이 먼저 피함)
+  hitBig: { easy: 99, normal: 22, hard: 16 },   // 돌 쪽으로 이 속도 넘게 박으면 히컵이 떨어짐(25m/s로 62° 넘게 · 쉬움은 도움이 먼저 피함 · 11-01 보통 20 → 22 = 활공 빠르기로 박으면 튕기기만)
 };
-/* 꼬리 자리: [왼쪽으로 돌 때 배수, 오른쪽으로 돌 때 배수, 끌림(브레이크) 배수] — 1 곧게 · 2 왼 · 3 오른 · 4 급강하·브레이크 */
-const TAIL = [null, [1, 1, 1], [1.75, 0.6, 1.12], [0.6, 1.75, 1.12], [1.5, 1.5, 3.4]];
+/* 꼬리 자리: [왼쪽으로 돌 때 배수, 오른쪽으로 돌 때 배수, 끌림(브레이크) 배수] — 1 곧게 · 2 왼 · 3 오른 · 4 급강하·브레이크
+   11-01: 꼬리는 '도움' — 맞으면 더 날카롭고, 틀린 쪽이어도 둔해지지 않음(예전 ×0.6 = 2를 켜 둔 채 오른쪽으로 돌면 안 돌아서 헷갈림) */
+const TAIL = [null, [1, 1, 1], [1.6, 1, 1.1], [1, 1.6, 1.1], [1.45, 1.45, 3.4]];
+const TAIL4_SEC = 3;                  // 4(브레이크)는 잠깐 쓰는 것 — 3초 뒤 저절로 1(켜 둔 채 잊으면 느려지기만 함)
 /* 도움(스마트 핸들) — 떨어지지 않게만: 물 위 바닥 · 돌 피하기 · 실속 길이 · 다시 붙기 저절로 */
+/* glide = 활공 빠르기까지만 줄어듦 · climb = 느리면 오르기가 약해짐(실속 막기) · autoTail = 꼬리 1인데 꾹 돌면 저절로 조금 더 날카롭게
+   turnK = 회전율 배수(쉬움 0.9 = 1.17rad/s · 꼬리 펴기 1.87 — 예전 쉬움과 거의 같음: 1~2학년은 손이 늦어 빨리 돌면 지나침) */
 const ASSIST = {
-  easy:   { floor: 7, avoid: 0.9, look: 0.75, stallFall: 1e9, autoGrab: true, gateR: 1.55, gust: 0.5 },
-  normal: { floor: 3, avoid: 0.45, look: 0.5, stallFall: 3.2, autoGrab: false, gateR: 1.0, gust: 1 },
-  hard:   { floor: 0, avoid: 0, look: 0, stallFall: 2.0, autoGrab: false, gateR: 0.85, gust: 1.3 },
+  easy:   { floor: 7, avoid: 0.9, look: 0.75, stallFall: 1e9, autoGrab: true, gateR: 1.55, gust: 0.5, glide: true, climb: true, autoTail: 1, turnK: 0.9 },
+  normal: { floor: 3, avoid: 0.45, look: 0.5, stallFall: 3.2, autoGrab: false, gateR: 1.0, gust: 1, glide: true, climb: true, autoTail: 1.15, turnK: 1 },
+  hard:   { floor: 0, avoid: 0, look: 0, stallFall: 2.0, autoGrab: false, gateR: 0.85, gust: 1.3, glide: false, climb: false, autoTail: 1, turnK: 1 },
 };
+/* 마우스 겨눔 감도 — 걷기 TPS(카메라 yaw −= 0.006 · pitch += 0.004 / 움직임 1)와 같은 손 · 기기마다 drg-set.msens 또는 ?msens= 로 배수(0.3~3) */
+const MS = (() => { let k = 1; try { const q = new URLSearchParams(location.search).get('msens'); k = q ? +q : +(loadSet().msens || 1); } catch (e) { /* 그대로 */ } k = clamp(k || 1, 0.3, 3); return { yaw: 0.006 * k, pitch: 0.004 * k }; })();
 const CELL = 32;
 const TOP_T = 0.62, TOP_END = 0.98;
 const WING = 0.72;                    // 날갯짓 폭(rig flapRate) — 1이면 날개 끝이 몸 아래로 너무 내려감   // 날갯짓 뒤 0.62~0.98초 = 날개가 다 올라가 있는 때(힘 다 실림)
 
 const _q = new THREE.Quaternion(), _e = new THREE.Euler(0, 0, 0, 'YXZ'), _v = new THREE.Vector3(), _pp = { x: 0, y: 0, z: 0 };
 const SADDLE = new THREE.Vector3(0, 1.16, -0.05);       // 투슬리스 등(모델 좌표) — 히컵 뿌리 자리(웅크린 엉덩이 ≈ 등 위)
-const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
-const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 export function createFlight({ world, mode = 'normal', dragon = null, rider = null, rng = null }) {
   const W = world || {};
@@ -64,13 +75,15 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
   const RD = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, px: 0, py: 0, pz: 0, spin: 0 };   // 떨어진 히컵
   const pose = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, speed: 0, rx: 0, ry: 0, rz: 0 };   // 그린 자리(카메라가 읽음)
   let pushX = 0, pushY = 0, pushZ = 0;
-  let gates = [], turnS = 0, pitchS = 0, turnHeld = 0, tailCool = 0, fp = 1, splashCool = 0, gustT = 4, gustDur = 0, gustA = 0, gustK = 0, autoFlap = 0;
+  let gates = [], turnS = 0, pitchS = 0, turnHeld = 0, tailCool = 0, fp = 1, splashCool = 0, gustT = 4, gustDur = 0, gustA = 0, gustK = 0, autoFlap = 0, tail4T = 0;
+  /* 마우스 겨눔(잠금 중 움직임 · 잠그지 않은 끌기도 같은 길) — on = 지금 마우스가 주인 · idle = 마우스를 멈춘 초 */
+  const AIM = { on: false, yaw: 0, pitch: 0, idle: 0 };
 
   /* 사건 — 드문 일이라 받는 쪽 함수만 부름(값 그릇은 하나씩 다시 씀) */
   const L = {};
   const EV = { gate: { i: 0, matched: false, tail: 1 }, graze: { i: 0, d: 0 }, splash: { speed: 0 }, crash: { speed: 0 }, fall: { why: '' }, regrab: { auto: false }, flap: { power: 0, kind: '' }, miss: { i: 0, d: 0 }, tail: { k: 1, match: false }, done: { t: 0 }, bump: { speed: 0 } };
   const emit = (n) => { const a = L[n]; if (a) for (let i = 0; i < a.length; i++) a[i](EV[n]); };
-  const F = { state: S, pose, mode, world: W, rider: RD };
+  const F = { state: S, pose, mode, world: W, rider: RD, aim: AIM };
   F.on = (ev, fn) => { (L[ev] = L[ev] || []).push(fn); return F; };
   const SX = getSfx();                                      /* 소리(켜졌을 때만 · 보이는 짝 = 날개 · 물보라 · 흔들림) — 날갯짓 박자 · 물보라 · 부딪힘 */
   if (SX) { F.on('flap', (e) => SX.play('flap', null, 0.55 + 0.45 * e.power)); F.on('splash', () => SX.play('splash')); F.on('bump', () => SX.play('thud', null, 0.5)); F.on('crash', () => SX.play('thud')); }
@@ -95,12 +108,12 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
   F.place = (x, y, z, yaw = 0, speed = FK.vcruise) => {
     S.x = P.x = x; S.y = P.y = y; S.z = P.z = z; S.yaw = P.yaw = yaw; S.pitch = P.pitch = 0; S.roll = P.roll = 0;
     S.speed = speed; S.boost = 0; S.lift = 0; S.vx = Math.sin(yaw) * speed; S.vz = Math.cos(yaw) * speed; S.vy = 0;
-    S.fallen = false; S.grab = false; S.stallT = 0; fp = TOP_T; turnS = pitchS = 0; return F;   // 날개가 올라간 채 시작(첫 Space = 힘 다 실림)
+    S.fallen = false; S.grab = false; S.stallT = 0; fp = TOP_T; turnS = pitchS = 0; AIM.on = false; return F;   // 날개가 올라간 채 시작(첫 Space = 힘 다 실림)
   };
 
   function setTail(k) {
     if (k === S.tail) return;
-    S.tail = k;
+    S.tail = k; tail4T = 0;
     /* 꼬리를 직접 맞춤 = 지금 도는 쪽과 같은 꼬리 → 더 날카롭게 돌고 잠깐 빨라짐(도움을 켜도 남음) */
     const match = turnHeld > 0.2 && ((k === 2 && turnS > 0.4) || (k === 3 && turnS < -0.4));
     EV.tail.k = k; EV.tail.match = match;
@@ -133,7 +146,7 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
     S.x = RD.x; S.y = RD.y - 1.2; S.z = RD.z;
     _pp.x = S.x; _pp.y = S.y; _pp.z = S.z; F.pushOut(_pp, FK.body + 1); S.x = _pp.x; S.z = _pp.z;
     S.yaw = Math.atan2(S.vx, S.vz); S.pitch = clamp(Math.atan2(S.vy, Math.hypot(S.vx, S.vz)), -0.5, 0.2);
-    S.speed = Math.max(S.speed, FK.vcruise * 0.85); fp = TOP_T;   // 붙자마자 날개가 올라가 있음 = 바로 한 번 칠 수 있음
+    S.speed = Math.max(S.speed, FK.vcruise * 0.85); fp = TOP_T; AIM.on = false;   // 붙자마자 날개가 올라가 있음 = 바로 한 번 칠 수 있음
     EV.regrab.auto = auto; emit('regrab');
   }
 
@@ -152,18 +165,43 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
     }
   }
 
+  /* 마우스·끌기 → 겨눔(걸음마다 다 가져감 — 비행 동안 쌓였다가 내린 뒤 걷기 카메라가 확 돌던 것도 막음) */
+  function readLook(dt, I) {
+    if (!I.look) return;
+    const lk = I.look();
+    if (Math.abs(lk.x) + Math.abs(lk.y) > 0.01) {
+      if (!AIM.on) { AIM.on = true; AIM.yaw = S.yaw; AIM.pitch = S.pitch; }
+      AIM.yaw = wrap(AIM.yaw - lk.x * MS.yaw); AIM.pitch = clamp(AIM.pitch - lk.y * MS.pitch, -0.55, 0.45); AIM.idle = 0;
+      const d = wrap(AIM.yaw - S.yaw); if (Math.abs(d) > 1.1) AIM.yaw = wrap(S.yaw + Math.sign(d) * 1.1);   // 몸에서 너무 멀리(뒤로) 가지 않게
+    } else AIM.idle += dt;
+  }
+  /* 돌기 입력 하나로: 방향키(누르면 키가 주인) 또는 겨눔 쪽(가까울수록 약하게 = 넘치지 않음) */
+  const _in = { t: 0, p: 0, aimP: null };
+  function steerIn(dt, I) {
+    let tin = I.axis('right', 'left'), pin = I.axis('back', 'fwd'), aimP = null;
+    if (tin || pin) AIM.on = false;
+    else if (AIM.on) {
+      tin = clamp(wrap(AIM.yaw - S.yaw) * 2.4, -1, 1); aimP = AIM.pitch;
+      pin = aimP > 0 ? clamp(aimP / FK.pitchUp, 0, 1) : clamp(aimP / FK.pitchDown, -1, 0);
+      if (AIM.idle > 1) { AIM.yaw = wrap(AIM.yaw + wrap(S.yaw - AIM.yaw) * Math.min(1, dt * 1.5)); AIM.pitch *= 1 - Math.min(1, dt * 0.8); }   // 마우스를 멈추면 겨눔이 몸 쪽 · 수평으로 천천히(도움·경계가 몸을 틀어도 싸우지 않게)
+      if (AIM.idle > 4) AIM.on = false;
+    }
+    _in.t = tin; _in.p = pin; _in.aimP = aimP; return _in;
+  }
+
   /* 한 걸음(1/60초) */
   F.step = (dt, I) => { stepCore(dt, I); stepUps(); pushX = pushY = pushZ = 0; if (SX && SX.on) SX.level('wind', clamp((S.speed + S.boost - 6) / 27, 0, 1) + Math.min(0.25, Math.hypot(S.gustX, S.gustZ) * 0.07)); };   // 바람 = 빠를수록 · 돌풍 때 더
   const stepCore = (dt, I) => {
     S.t += dt; P.x = S.x; P.y = S.y; P.z = S.z; P.yaw = S.yaw; P.pitch = S.pitch; P.roll = S.roll;
     RD.px = RD.x; RD.py = RD.y; RD.pz = RD.z;
     if (tailCool > 0) tailCool -= dt; if (splashCool > 0) splashCool -= dt; if (S.safeT > 0) S.safeT -= dt;
-    if (S.fallen) { stepFallen(dt, I); return; }
+    readLook(dt, I);
+    if (S.fallen) { AIM.on = false; stepFallen(dt, I); return; }
     if (O.liftOnly) { stepLift(dt, I); return; }
 
-    /* 입력: ←→ 돌기(왼쪽 +) · ↑↓ 오르내리기 — 부드럽게 따라감(휘청 X) */
-    const tin = I.axis('right', 'left'), pin = I.axis('back', 'fwd');
-    turnS += (tin - turnS) * Math.min(1, dt * 7); pitchS += (pin - pitchS) * Math.min(1, dt * 5);
+    /* 입력: ←→ 돌기(왼쪽 +) · ↑↓ 오르내리기 · 또는 마우스 겨눔 — 부드럽게 따라감(휘청 X · 11-01 7·5 → 10·7 = 손에 더 바로 붙게) */
+    const In = steerIn(dt, I), tin = In.t, pin = In.p;
+    turnS += (tin - turnS) * Math.min(1, dt * 10); pitchS += (pin - pitchS) * Math.min(1, dt * 7);
     turnHeld = Math.abs(tin) > 0.5 ? turnHeld + dt : 0;
 
     /* 꼬리: 보통 1~4 · 쉬움 Space 누르고 있기 = 꼬리 펴기 */
@@ -171,14 +209,16 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
     if (easy || O.tailAuto) {
       const sp = O.tailAuto ? Math.abs(turnS) > 0.4 : I.on('jump');                  // tailAuto = 도는 쪽으로 꼬리가 저절로(덤 가속 없음)
       if (!O.tailAuto && sp && !S.spread && turnHeld > 0.15 && tailCool <= 0) { boost(3); tailCool = 1.2; S.tailHits++; }   // 도는 중에 직접 폄 = 꼬리 맞춤
-      S.spread = sp; fl = fr = sp ? 1.8 : 1; brake = sp ? 1.15 : 1; S.tail = sp ? (turnS >= 0 ? 2 : 3) : 1;
+      S.spread = sp; fl = fr = sp ? 1.6 : 1; brake = sp ? 1.15 : 1; S.tail = sp ? (turnS >= 0 ? 2 : 3) : 1;
     } else {
       for (let k = 1; k <= 4; k++) if (I.tap('t' + k)) setTail(k);
+      if (S.tail === 4 && (tail4T += dt) > TAIL4_SEC) setTail(1);
       const T = TAIL[S.tail]; fl = T[0]; fr = T[1]; brake = T[2]; S.spread = S.tail !== 1;
+      if (S.tail === 1) fl = fr = A.autoTail;                  // 몰라도 날 수 있게: 꼬리 1인데 돌면 조금 더(손으로 맞추면 ×1.6 + 덤 빠르기)
     }
 
     /* 돌기 · 기울기(돌 때만 기울고 곧 되돌아옴) */
-    let rate = FK.turn * turnS * (turnS > 0 ? fl : fr);
+    let rate = FK.turn * A.turnK * turnS * (turnS > 0 ? fl : fr);
     /* 날갯짓(보통) — 다 올라간 박자 = 힘 1 · 너무 일찍(연타) = 반 이하 · 오래 기다림(활공) = 0.8 */
     fp += dt;
     if (!easy && !O.noFlap && I.tap('jump')) {
@@ -195,14 +235,16 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
     S.flapPh = fp;
 
     /* 오르내리기 — 손을 떼면 저절로 수평 · 실속이면 고개가 떨어짐 · 꼬리 4 = 고개 더 숙임 */
-    let pt = pitchS > 0 ? pitchS * FK.pitchUp : pitchS * FK.pitchDown * (S.tail === 4 && !easy ? 1.5 : 1);
+    let pt = In.aimP != null ? clamp(In.aimP, -FK.pitchDown, FK.pitchUp) : pitchS > 0 ? pitchS * FK.pitchUp : pitchS * FK.pitchDown * (S.tail === 4 && !easy ? 1.5 : 1);
+    if (pt > 0 && A.climb && !(easy || O.autoForward)) pt *= clamp((S.speed + S.boost - FK.vstall) / 7, 0, 1);   // 느리면 오르기가 저절로 약해짐(↑만 꾹 = 실속 → 떨어짐 X · 빨리 오르려면 날갯짓)
     S.stall = S.speed < FK.vstall && !(easy || O.autoForward);
     if (S.stall) pt -= (FK.vstall - S.speed) / FK.vstall * 0.55;
-    S.pitch += (pt - S.pitch) * Math.min(1, dt * 3.2);
+    S.pitch += (pt - S.pitch) * Math.min(1, dt * 4);
 
     /* 속도 하나: 내리막 = 빨라짐 · 오르막 = 느려짐 · 끌림 · 저절로 앞으로(쉬움) · 덤 속도(스침·꼬리 맞춤)는 따로 사라짐 */
     S.speed -= 9.8 * Math.sin(S.pitch) * dt * 0.85;
     if (easy || O.autoForward) { const tgt = FK.vcruise * (S.spread ? 0.92 : 1) - (S.tail === 4 ? 6 : 0); S.speed += (tgt - S.speed) * Math.min(1, dt * 0.9); }
+    else if (A.glide) { const vg = brake > 1.5 ? FK.vglide * 0.62 : FK.vglide; S.speed += S.speed > vg ? -FK.drag * (S.speed - vg) * brake * dt : (vg - S.speed) * 0.35 * dt; }   // 보통: 활공 빠르기 쪽으로(위 = 끌림 · 아래 = 천천히 되찾음)
     else S.speed -= FK.drag * S.speed * brake * dt;
     S.speed = clamp(S.speed, 0, FK.vmax);
     S.boost = Math.max(0, S.boost - dt * (S.boost * 0.9 + 1.2));
@@ -221,10 +263,11 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
     S.lift *= Math.exp(-dt * 2.2);
 
     /* 도움 ① 돌 피하기(부딪히기 0.6~0.95초 앞에서 옆으로 살짝) ② 경계 안으로 ③ 물 위 바닥 ④ 천장 */
-    if (A.avoid > 0) rate += avoidRate(v) * A.avoid;
+    let help = A.avoid > 0 ? avoidRate(v) * A.avoid : 0;
     const bk = boundK(S.x, S.z);
-    if (bk > 0.9) { const b = W.bounds, to = Math.atan2(b.x - S.x, b.z - S.z); rate += clamp(wrap(to - S.yaw) * 2, -1, 1) * (bk - 0.9) * 12; }
-    S.yaw = wrap(S.yaw + rate * dt);
+    if (bk > 0.9) { const b = W.bounds, to = Math.atan2(b.x - S.x, b.z - S.z); help += clamp(wrap(to - S.yaw) * 2, -1, 1) * (bk - 0.9) * 12; }
+    rate += help; S.yaw = wrap(S.yaw + rate * dt);
+    if (AIM.on && help) AIM.yaw = wrap(AIM.yaw + help * dt);   // 도움이 튼 만큼 겨눔도 같이(마우스 겨눔이 도움과 싸워 돌기둥에 박던 것 · 11-01 사람 시험)
     const bankT = clamp(-rate / FK.turn * 0.5, -1.05, 1.05);
     S.roll += (bankT - S.roll) * Math.min(1, dt * 4);
 
@@ -289,7 +332,7 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
         if (vin > FK.hitBig[mode] && S.safeT <= 0) { S.crashes++; EV.crash.speed = vin; emit('crash'); fall('crash'); return; }
         /* 미끄러지듯 비껴 감 — 방향을 기둥 면을 따라(앞으로 가던 쪽) */
         const tx = -nz, tz = nx, sgn = (S.vx * tx + S.vz * tz) >= 0 ? 1 : -1;
-        S.yaw = wrap(S.yaw + clamp(wrap(Math.atan2(tx * sgn, tz * sgn) - S.yaw), -0.6, 0.6));
+        const dyw = clamp(wrap(Math.atan2(tx * sgn, tz * sgn) - S.yaw), -0.6, 0.6); S.yaw = wrap(S.yaw + dyw); if (AIM.on) AIM.yaw = wrap(AIM.yaw + dyw);   // 한 번에 면을 따라(조금씩 틀면 여러 걸음 닿아 걸음마다 ×0.78 = 쉬움 오프닝이 느려짐 · 11-01 시험) · 카메라는 따로 부드럽게 · 겨눔도 같이
         if (vin > 3) { S.speed *= 0.78; S.boost = 0; S.bumps++; EV.bump.speed = vin; emit('bump'); }
       } else if (d < FK.body + FK.graze && S.t - pillarHit[k] > 1.0 && S.speed > 12) {
         pillarHit[k] = S.t; S.grazes++; boost(6); S.tuck = 1; EV.graze.i = k; EV.graze.d = d - FK.body; emit('graze');
@@ -380,11 +423,11 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
   function stepLift(dt, I) {
     if (S.done) { S.speed = 0; S.vx = S.vy = S.vz = 0; S.roll *= Math.exp(-dt * 4); return; }
     S.liftT += dt; const T = S.liftT;
-    const tin = I.axis('right', 'left'); turnS += (tin - turnS) * Math.min(1, dt * 6);
+    const tin = steerIn(dt, I).t; turnS += (tin - turnS) * Math.min(1, dt * 6);
     S.spread = Math.abs(turnS) > 0.3; S.tail = turnS > 0.3 ? 2 : turnS < -0.3 ? 3 : 1;
     const gy = W.ground ? W.ground(S.x, S.z) : 0, wy = waterAt(S.x, S.z), base = Math.max(gy, wy);
     S.speed += ((T < O.liftSec ? 10 : 7) - S.speed) * Math.min(1, dt * 1.5);
-    let rate = FK.turn * 0.9 * turnS;
+    let rate = 0.945 * turnS;                                 // 첫 들림은 예전 회전율 그대로(5장 손볼 값 · 기본 회전율을 올려도 안 바뀜)
     const bk = boundK(S.x, S.z);
     if (bk > 0.86) {                                          // 돌벽에 가까우면 튕겨 나옴(손으로 피하는 연습)
       const b = W.bounds, to = Math.atan2(b.x - S.x, b.z - S.z); rate += clamp(wrap(to - S.yaw), -1, 1) * (bk - 0.86) * 10;
@@ -471,20 +514,41 @@ export function createFlight({ world, mode = 'normal', dragon = null, rider = nu
   return F;
 }
 
-/* 뒤따르는 3인칭 카메라 — 흔들림 적게(기울기 X) · 빠를 때 시야각 60 → 70 · 스칠 때 살짝 넓어짐 · 물·돌기둥 안으로 안 들어감 */
+/* 겨눔 고리(마우스로 방향을 틀 때만 · 화면에 하나 — 카메라가 그리는 동안만 보이고 멈추면 저절로 숨음) */
+let RET = null, retT = 0;
+const _rv = new THREE.Vector3();
+function reticle(camera, x, y, z) {
+  if (typeof document === 'undefined') return;
+  if (!RET) {
+    RET = document.createElement('div');
+    RET.style.cssText = 'position:fixed;left:0;top:0;width:22px;height:22px;margin:-14px 0 0 -14px;border:3px solid #f4ead2;border-radius:50%;box-shadow:0 0 0 2px rgba(43,33,24,.6),inset 0 0 0 2px rgba(43,33,24,.6);pointer-events:none;z-index:19;display:none';
+    document.body.appendChild(RET);
+    setInterval(() => { if (RET.style.display !== 'none' && performance.now() - retT > 250) RET.style.display = 'none'; }, 200);
+  }
+  if (x == null) { RET.style.display = 'none'; return; }
+  _rv.set(x, y, z).project(camera);
+  if (_rv.z > 1) { RET.style.display = 'none'; return; }
+  retT = performance.now();
+  if (RET.style.display !== 'block') RET.style.display = 'block';
+  RET.style.transform = 'translate(' + Math.round((_rv.x + 1) / 2 * innerWidth) + 'px,' + Math.round((1 - _rv.y) / 2 * innerHeight) + 'px)';
+}
+
+/* 뒤따르는 3인칭 카메라 — 흔들림 적게 · 빠를 때만 시야각 60 → 68 · 스칠 때 살짝 넓어짐 · 물·돌기둥 안으로 안 들어감
+   11-01 조작감: 몸을 늦지 않게 따라옴(3.2 → 4.5) · 마우스 겨눔이면 겨눈 쪽을 바로 봄(8) · 수평선은 몸 기울기의 1/8만(최대 3°) */
 export function createFlightCam(camera, o = {}) {
-  const C = { dist: o.dist ?? 10.5, up: o.up ?? 2.9, ahead: 12, fov0: 60, fov1: 70, x: 0, y: 0, z: 0, yaw: 0, lx: 0, ly: 0, lz: 0, init: false, kick: 0, fov: 60 };
+  const C = { dist: o.dist ?? 10.5, up: o.up ?? 2.9, ahead: 12, fov0: 60, fov1: 68, x: 0, y: 0, z: 0, yaw: 0, lx: 0, ly: 0, lz: 0, init: false, kick: 0, fov: 60, roll: 0, aimP: 0 };
   const p = { x: 0, y: 0, z: 0 };
   C.kickFov = (k = 3) => { C.kick = Math.max(C.kick, k); };
   C.update = (dt, F) => {
-    const s = F.pose, st = F.state;
-    let tx = s.x, ty = s.y + 0.6, tz = s.z, yawT = s.yaw;
+    const s = F.pose, st = F.state, aim = F.aim && F.aim.on && !st.fallen ? F.aim : null;
+    let tx = s.x, ty = s.y + 0.6, tz = s.z, yawT = aim ? aim.yaw : s.yaw;
     if (st.fallen) {                                         // 떨어지면 히컵과 투슬리스 사이를 봄
       tx = s.x * 0.45 + s.rx * 0.55; ty = s.y * 0.45 + s.ry * 0.55 + 1; tz = s.z * 0.45 + s.rz * 0.55;
     }
     if (!C.init) { C.yaw = yawT; }
-    C.yaw += wrap(yawT - C.yaw) * Math.min(1, dt * (st.fallen ? 1.5 : 3.2));   // 돌 때 조금 늦게 따라와 옆모습이 살짝 보임
-    const pitchLift = clamp(-s.pitch, -0.5, 0.7) * C.dist * 0.45;              // 내리꽂으면 카메라가 조금 위로
+    C.yaw += wrap(yawT - C.yaw) * Math.min(1, dt * (st.fallen ? 1.5 : aim ? 8 : 4.5));   // 돌 때 조금 늦게 따라와 옆모습이 살짝 보임(늦은 각 15° → 10°)
+    C.aimP += ((aim ? aim.pitch : s.pitch) - C.aimP) * Math.min(1, dt * (aim ? 8 : 20));
+    const pitchLift = clamp(-C.aimP, -0.5, 0.7) * C.dist * 0.45;              // 내리꽂으면 카메라가 조금 위로
     p.x = tx - Math.sin(C.yaw) * C.dist; p.z = tz - Math.cos(C.yaw) * C.dist; p.y = ty + C.up + pitchLift;
     if (F.pushOut) F.pushOut(p, 2.5);
     const wy = F.waterAt ? F.waterAt(p.x, p.z) : 0, gy = F.world && F.world.ground ? F.world.ground(p.x, p.z) : -1e9;
@@ -492,11 +556,15 @@ export function createFlightCam(camera, o = {}) {
     if (!C.init) { C.x = p.x; C.y = p.y; C.z = p.z; C.lx = tx; C.ly = ty; C.lz = tz; C.init = true; }
     const k = 1 - Math.exp(-dt * 7), kl = 1 - Math.exp(-dt * 10);
     C.x += (p.x - C.x) * k; C.y += (p.y - C.y) * k; C.z += (p.z - C.z) * k;
-    const ax = tx + Math.sin(s.yaw) * C.ahead, az = tz + Math.cos(s.yaw) * C.ahead, ay = ty + Math.sin(s.pitch) * C.ahead * 0.6;
+    const ly = aim ? aim.yaw : s.yaw, ax = tx + Math.sin(ly) * C.ahead, az = tz + Math.cos(ly) * C.ahead, ay = ty + Math.sin(C.aimP) * C.ahead * 0.6;
     C.lx += (ax - C.lx) * kl; C.ly += (ay - C.ly) * kl; C.lz += (az - C.lz) * kl;
     camera.position.set(C.x, C.y, C.z); camera.up.set(0, 1, 0); camera.lookAt(C.lx, C.ly, C.lz);
+    C.roll += (clamp(-(s.roll || 0) * 0.125, -0.052, 0.052) * (st.fallen ? 0 : 1) - C.roll) * Math.min(1, dt * 3);
+    if (Math.abs(C.roll) > 1e-4) camera.rotateZ(C.roll);   // 오른쪽으로 기울면 수평선이 아주 조금(돎을 느끼게 · 멀미 X)
+    if (aim) { const cp = Math.cos(aim.pitch); reticle(camera, tx + Math.sin(aim.yaw) * cp * 45, ty + Math.sin(aim.pitch) * 45, tz + Math.cos(aim.yaw) * cp * 45); }
+    else if (RET && RET.style.display !== 'none') reticle(camera, null);
     C.kick = Math.max(0, C.kick - dt * 4);
-    const sp = clamp((s.speed - 18) / 16, 0, 1), f = C.fov0 + (C.fov1 - C.fov0) * sp * sp * (3 - 2 * sp) + C.kick;
+    const sp = clamp((s.speed - 25) / 9, 0, 1), f = C.fov0 + (C.fov1 - C.fov0) * sp * sp * (3 - 2 * sp) + C.kick;   // 늘 나는 빠르기(23)에선 60 그대로 · 날갯짓·내리꽂기로 빨라질 때만
     C.fov += (f - C.fov) * Math.min(1, dt * 3);
     if (Math.abs(camera.fov - C.fov) > 0.05) { camera.fov = C.fov; camera.updateProjectionMatrix(); }
   };

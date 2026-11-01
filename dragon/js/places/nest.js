@@ -4,11 +4,11 @@
 // 결 = 시안 A(toon 정점색 · 상자 X · 깎은 땅·돌) · 불빛은 flameMesh + glowSprite(Light X) · 연기·구름·불티는 정점 셰이더가 움직임(CPU 0) · 매 걸음 new X
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { toon, setTime, TIMES, U, flameMesh, glowSprite, FOG_PARS } from '../look/kit.js?v=25';
-import { createNoise } from '../core/noise.js?v=25';
-import { createRng } from '../core/rng.js?v=25';
-import * as NT from '../look/nature.js?v=25';
-import { loadModel } from '../look/models.js?v=25';
+import { toon, setTime, TIMES, U, flameMesh, glowSprite, FOG_PARS } from '../look/kit.js?v=27';
+import { createNoise } from '../core/noise.js?v=27';
+import { createRng } from '../core/rng.js?v=27';
+import * as NT from '../look/nature.js?v=27';
+import { loadModel } from '../look/models.js?v=27';
 
 const { C3, mixc, sstep, clamp, hash, TAU } = NT;
 /* ── 섬 모양(모든 variant가 같은 섬) — 단위 m · 바다 = y 0 ── */
@@ -349,7 +349,7 @@ export async function buildPlace(ctx) {
   if (!fogV) {
     const sx = 1.5, nx = 162, nz = 115, x0 = -121, z0 = 82, val = new Float32Array(nx * nz);
     for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const x = x0 + i * sx, z = z0 + j * sx, h = height(x, z); val[j * nx + i] = Math.max(0.35 - h, h - 13, Math.hypot(x - WALK.x, z - WALK.z) - WALK.r); }
-    walls = NT.contourWalls(val, x0, z0, sx, nx, nz);
+    walls = NT.contourWalls(val, x0, z0, sx, nx, nz); for (const w of walls) w.edge = 1;   // 걷기 끝 선 = 카메라는 너머가 바위벽일 때만 막힘(11-01 조작감)
   }
 
   const A = (x, z, yaw = 0, y) => ({ x, y: y ?? height(x, z), z, yaw });
@@ -563,7 +563,7 @@ async function buildCrater(ctx) {
   /* 걷기 벽 — 구덩이 가장자리 · 돌벽 밑 · 틈 밖 끝 */
   const sx = 1.5, nx = 129, nz = 129, x0 = -96, z0 = -96, val = new Float32Array(nx * nz);
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const x = x0 + i * sx, z = z0 + j * sx, r = Math.hypot(x, z), h = crH(x, z); val[j * nx + i] = Math.max(PIT + 1.8 - r, h - 3.2, r - 92); }
-  const walls = NT.contourWalls(val, x0, z0, sx, nx, nz);
+  const walls = NT.contourWalls(val, x0, z0, sx, nx, nz); for (const w of walls) w.edge = 1;   // 걷기 끝 선(카메라 · 11-01 조작감)
   /* 구덩이 김 · 불티(아래서 오름) · 대장 그림자(모델 · 어둡게) · 콧구멍 김 */
   const steam = []; for (let k = 0; k < 22; k++) { const a = hash(k, 1) * TAU, d = hash(k, 2) * PIT * 0.8; steam.push([Math.cos(a) * d, -14, Math.sin(a) * d, k / 22, 10, 0.03, 40, 1]); }
   puffs(group, steam, { c0: 0x3a3230, c1: 0x7a6a62, op: 0.55, rise: true, wx: 0.5, wz: 0.3 });
@@ -573,12 +573,12 @@ async function buildCrater(ctx) {
   const BOSS = { x: 0, y: -20, z: -14, yaw: 0 };
   let boss = null, bossRig = null, head = null; const hp = new THREE.Vector3();
   try {
-    const { root, bones } = await loadModel('assets/models/boss.glb?v=25');
+    const { root, bones } = await loadModel('assets/models/boss.glb?v=27');
     root.position.set(BOSS.x, BOSS.y, BOSS.z); root.rotation.y = BOSS.yaw; root.scale.setScalar(0.62);
     const dark = toon({ vc: true, color: 0x6a5e5a });
     root.traverse((o) => { if (o.isMesh && o.userData.mat === 'drg_body') o.material = dark; });
     group.add(root); boss = root; head = bones.head;
-    const { createDragonRig } = await import('../look/dragon_rig.js?v=25'); bossRig = createDragonRig(bones, root, 'boss'); bossRig.fold = 1; bossRig.headUp = 0.4; bossRig.update(0.016);
+    const { createDragonRig } = await import('../look/dragon_rig.js?v=27'); bossRig = createDragonRig(bones, root, 'boss'); bossRig.fold = 1; bossRig.headUp = 0.4; bossRig.update(0.016);
   } catch (e) { /* 모델이 없으면 김·빛만 */ }
   const NB = noseM.geometry.attributes.aB, NS = noseM.geometry.attributes.aS;
   let sign = 0, signShown = -1;

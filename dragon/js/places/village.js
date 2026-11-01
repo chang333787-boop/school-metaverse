@@ -3,9 +3,9 @@
 // 우리 섬 · 우리 배치(영화 화면을 베끼지 않음) · 때 overcast / sleet / night(횃불·창 켜짐) / dawn / day · variant 'charred' = 1장 뒤 아침(그을린 지붕 + 덧댄 새 판자)
 // 걷기: height = 겹(계단·다리·선착장·망루 위) 먼저, 아니면 땅 격자(그린 삼각형과 같은 보간) · 벽 = 집·대장간·울타리 + '걸을 수 있는 칸' 등고선(절벽·둑·물가·산 밑)
 import * as THREE from 'three';
-import { setTime } from '../look/kit.js?v=25';
-import { createNoise } from '../core/noise.js?v=25';
-import { createProps, M4, PAL, ss, inPoly } from '../look/props.js?v=25';
+import { setTime } from '../look/kit.js?v=27';
+import { createNoise } from '../core/noise.js?v=27';
+import { createProps, M4, PAL, ss, inPoly } from '../look/props.js?v=27';
 
 const X0 = -150, Z0 = -150, CS = 2.0, NX = 146, NZ = 126;           // 땅 격자(마디) — x −150~140 · z −150~100
 const capD = (x, z, ax, az, bx, bz) => { const ex = bx - ax, ez = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * ex + (z - az) * ez) / (ex * ex + ez * ez))); return Math.hypot(x - ax - ex * t, z - az - ez * t); };
@@ -556,7 +556,7 @@ export async function buildPlace(ctx) {
       else { const h = gridH(x, z); if (h < 1.4 || z < -89 || pal(x, z) < 0) ok = 0; else { const sx = (gridH(x + 0.6, z) - gridH(x - 0.6, z)) / 1.2, sz = (gridH(x, z + 0.6) - gridH(x, z - 0.6)) / 1.2; if (sx * sx + sz * sz > 1.0) ok = 0; } }
       mask[j * (gw + 1) + i] = ok;
     }
-    walls.push(...contourWalls(mask, gw, gd, gx0, gz0, gs));
+    for (const w of contourWalls(mask, gw, gd, gx0, gz0, gs)) { w.edge = 1; walls.push(w); }   // 보이지 않는 걷기 끝 선(물가·비탈) — 카메라는 너머가 바위벽일 때만 막힘(collide.cut · 11-01 조작감)
   }
 
   P.finish(group); P.finishFire(group);

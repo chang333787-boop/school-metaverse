@@ -2,11 +2,11 @@
 // ④ 훈련장 한 판: 그롱클·내더·테러를 발견으로 진정[다가가] ⑤ 스토이크 귀환 — 배 고치며 듣기(이음 + 손일) ⑥ 첫 바다 비행 · 쪽지가 바람에 날아감[관문 비행] ⑦ 돌기둥 점심 · 다친 테러 치유[다가가]
 // 와! = 쪽지 없이 돌기둥 사이를 빠져나가는 순간 · 변화 = 하늘 지도 · 순위판 1등 · 책 '책이 다 틀렸다' 쪽
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=25';
-import { holdItem, dropItem, makePuffs } from './fx.js?v=25';
-import { toon } from '../look/kit.js?v=25';
-import { tlSense } from './ch4.js?v=25';
-import { flySense as fsFlat } from './flysense.js?v=25';
+import { wait, until, sayAll } from './runner.js?v=27';
+import { holdItem, dropItem, makePuffs } from './fx.js?v=27';
+import { toon } from '../look/kit.js?v=27';
+import { tlSense } from './ch4.js?v=27';
+import { flySense as fsFlat } from './flysense.js?v=27';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 function* awaitP(p) { let v, done = false; p.then((x) => { v = x; done = true; }, () => { done = true; }); while (!done) yield; return v; }
@@ -30,7 +30,7 @@ function* saddle(G, C) {
 function* flyCourse(G, C, o) {
   const P = G.player, pl = G.place, T = o.T;
   let cam = null;
-  const mod = yield* awaitP(import('../play/flight.js?v=25').catch(() => null));
+  const mod = yield* awaitP(import('../play/flight.js?v=27').catch(() => null));
   if (!mod || !mod.createFlight) { G.hud.say('hiccup', '(비행 엔진 준비 중)', [], { secs: 1 }); yield* wait(1); return 'skip'; }
   const F = mod.createFlight({ world: o.world, mode: G.diff, dragon: { root: T.root, rig: T.rig }, rider: { root: P.root, rig: P.rig }, rng: G.rng });
   F.setOpts && F.setOpts(o.opts || {}); F.setGates && F.setGates(o.gates);
@@ -40,7 +40,7 @@ function* flyCourse(G, C, o) {
   F.on('graze', () => { G.sfx.play('whoosh'); if (cam && cam.kickFov) cam.kickFov(4); }); F.on('gate', (e) => { if (e && e.matched && cam && cam.kickFov) cam.kickFov(2); });
   if (o.start) { if (F.place) F.place(o.start.x, o.start.y, o.start.z, o.start.yaw || 0); else if (F.state) Object.assign(F.state, o.start); }
   /* 비행 화면 글(팀 F) — 관문 수 · 지금 꼬리 자리 그림 · 꼬리 쪽지(o.note) · 떨어지면 다시 붙기 안내 */
-  const ftm = yield* awaitP(import('../stages/flight_test.js?v=25').catch(() => null));
+  const ftm = yield* awaitP(import('../stages/flight_test.js?v=27').catch(() => null));
   const ui = ftm && ftm.makeUI ? ftm.makeUI(G.diff, false) : null;
   if (ui) { if (o.note) ui.note(o.gates, 0); else { const nb = document.querySelector('.fl-note:last-of-type'); if (nb) nb.style.display = 'none'; } ui.gates(0, o.gates.length); F.on('fall', () => ui.fall(true)); F.on('regrab', () => ui.fall(false)); }
   let noteGate = 0;
@@ -143,7 +143,8 @@ function* trio(G, C) {
       const M = d.mind; d.faceTo(P.W.x, P.W.z);
       d.next -= dt;
       if (d.next <= 0 && M.warnT <= 0 && M.beh !== 'attack' && !M.inGap()) { M.windup(WARN[G.diff]); d.next = 5.5 + G.rng() * 3; G.sfx.play('cry_' + d.kind, d); }
-      if (M.beh === 'attack' && !d.shot) { d.shot = { t: 0, x: P.W.x, z: P.W.z }; }
+      if (M.beh === 'attack' && !d.shot && !d.shotDone) { d.shot = { t: 0, x: P.W.x, z: P.W.z }; d.shotDone = true; }   // 한 번 쏘기 = 한 발(예전: 0.5초에 판정하고 비운 뒤 'attack'이 0.1초 더 남아 예고 없는 둘째 발이 나감 · 11-01 조작감 팀 A)
+      if (M.beh !== 'attack') d.shotDone = false;
       if (d.gapT > 0) d.gapT -= dt;
       if (d.shot) { d.shot.t += dt; if (d.shot.t > 0.5) { d.gapT = { easy: 3, normal: 2.2, hard: 1.5 }[G.diff]; puffs.burst(d.shot.x, 0.3, d.shot.z, 12, 2, 2); if (Math.hypot(P.W.x - d.shot.x, P.W.z - d.shot.z) < 1.5 && !(P.W.rollT > 0)) { if (G.diff === 'easy') G.hud.say('hiccup', '앗 뜨거!', [], { secs: 0.8 }); else { knocks++; P.lock = true; P.pose = { stumble: 1 }; C.down = 2; } } /* 쉬움 = 맞아도 안 넘어짐(design §8) */ d.shot = null; } }
       /* 진정 — 틈 안에서 맞는 것 · 그롱클 = 풀 · 내더 = 턱 밑(F 길게) · 테러 = 생선(또는 빛 점) */

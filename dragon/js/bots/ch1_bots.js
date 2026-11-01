@@ -1,6 +1,6 @@
 // 1장 봇 — BOTS['1-1'] = (s, K, M, B, level, now) · s = 반응 늦은 감각 · K = 몸(walk·go·face·tap·set·stop · K.cur = 지금 화면) · story_bots.js가 합침
 // 화면에 보이는 것만(sense) · 키·끌기만 · 동시 키 셋 · 초당 6타
-import { planPath } from './story_bots.js?v=25';
+import { planPath } from './story_bots.js?v=27';
 
 const DT = 1 / 60, LAG = { easy: 0.6, normal: 0.35, hard: 0.3 }, WARN = { easy: 3, normal: 2.5, hard: 2 };
 const cd = (M, k, sec) => { M[k] = (M[k] || 0) - DT; if (M[k] <= 0) { M[k] = sec; return true; } return false; };
@@ -71,30 +71,39 @@ BOTS['1-2'] = (s, K, M) => {
   steerAim(K, s, th, tg.x, tg.z, 0.55);
 };
 
-/* ③ 피하기 — 길잡이(피시레그)를 따라감 · 내더 = 쏘는 순간에 구르기 · 그롱클 = 쏘면 멈춰 섬 · 나이트메어 = 달아오르면 물러섬 · 초록 김 = 빠져나옴 */
+/* ③ 피하기 — 길잡이(피시레그)를 따라감 · 내더 = 쏘는 순간에 점프 · 그롱클 = 쏘면 멈춰 섬 · 나이트메어 = 달아오르면 물러섬(이미 지나쳤으면 달려 빠져나감) · 초록 김 = 빠져나옴
+   예고는 기억함 — 걷다 보면 드래곤이 화면 밖으로 나가는데(감각 = 보이는 것만), 예전엔 그 순간 예고를 잊어 내더 가시·그롱클 볼·나이트메어 불에 그대로 맞음(11-01 조작감 팀 A: 보통 봇 247초·못 깸의 까닭 하나) */
 BOTS['1-3'] = (s, K, M, B, lv) => {
   const c = K.cur, me = c.me; if (!me || !c.gate) return;
-  if (s.down) { K.stop(); K.set('KeyA', false); K.set('KeyD', false); return; }
+  if (s.down) { K.stop(); K.set('KeyA', false); K.set('KeyD', false); K.set('ShiftLeft', false); return; }
   const lag = LAG[lv] || 0.35, W = WARN[s.diff] || 2.5;
-  M.w = M.w || {};
-  for (const d of s.dragons || []) { const w = M.w[d.kind] || (M.w[d.kind] = { on: false, t0: 0, rolled: false, stopT: 0 }); if (d.warn && !w.on) { w.on = true; w.t0 = M.T || 0; w.rolled = false; } if (!d.warn && w.on) { w.on = false; if (d.kind === 'gronckle') w.stopT = 0.7; if (d.kind === 'nightmare') w.waitT = 1.6; } }
-  M.T = (M.T || 0) + DT;
-  /* 굴러가는 중 */
+  M.w = M.w || {}; M.T = (M.T || 0) + DT;
+  const end = (w, kind) => { w.on = false; if (kind === 'gronckle') { w.stopT = 0.7; w.jumpAt = 0.45; } if (kind === 'nightmare') w.waitT = 1.6; };
+  const seen = {};
+  for (const d of s.dragons || []) { seen[d.kind] = 1; const w = M.w[d.kind] || (M.w[d.kind] = { on: false, t0: 0, rolled: false, stopT: 0, waitT: 0 }); w.x = d.x; w.z = d.z; if (d.warn && !w.on) { w.on = true; w.t0 = M.T; w.rolled = false; } if (!d.warn && w.on) end(w, d.kind); }
+  for (const k in M.w) { const w = M.w[k]; if (w.on && !seen[k] && M.T - w.t0 > W + 0.1) end(w, k); }   // 안 보이는 동안 예고 시간이 지나면 쏜 것으로 앎
+  /* 점프하는 중 */
   if (M.rollT > 0) { M.rollT -= DT; return; }
   /* 초록 김 안 — 바깥(길 앞쪽)으로 */
   if (c.gas && hyp(c.gas.x - me.x, c.gas.z - me.z) < c.gas.r + 1.2) { const ax = me.x - c.gas.x, az = me.z - c.gas.z, L = hyp(ax, az) || 1; K.walk(c, c.gas.x + ax / L * (c.gas.r + 3), c.gas.z + az / L * (c.gas.r + 3), false, 0.3); return; }
-  for (const d of c.dragons || []) {
-    const w = M.w[d.kind]; if (!w) continue; const dd = hyp(d.x - me.x, d.z - me.z);
-    /* 나이트메어 — 달아오르는 동안·터지는 동안 7.5m 밖에서 기다림 */
-    if (d.kind === 'nightmare' && (w.on || w.waitT > 0) && dd < 8.5) { if (w.waitT > 0) w.waitT -= DT; const ax = me.x - d.x, az = me.z - d.z, L = hyp(ax, az) || 1; K.walk(c, d.x + ax / L * 9, d.z + az / L * 9, false, 0.4); return; }
-    if (d.kind === 'nightmare' && w.waitT > 0) w.waitT -= DT;
-    /* 내더 — 예고가 끝나는 순간(쏨 + 가시가 닿기 전)에 구르기 */
-    if (d.kind === 'nadder' && w.on && !w.rolled && dd < 15 && (M.T - w.t0) > W - lag + 0.08) { w.rolled = true; K.set('KeyW', true); K.tap('Space'); M.rollT = 0.5; return; }
-    /* 그롱클 — 쏜 걸 보면 멈춰 섬(앞날을 노리고 쏘니까) */
-    if (d.kind === 'gronckle' && w.stopT > 0) { w.stopT -= DT; K.stop(); return; }
+  const gt = c.gate, gd = hyp(gt.x - me.x, gt.z - me.z), goal = gd < 18 || !c.guide ? gt : c.guide;
+  for (const k in M.w) {
+    const w = M.w[k], vd = (c.dragons || []).find((q) => q.kind === k), x = vd ? vd.x : w.x, z = vd ? vd.z : w.z, dd = hyp(x - me.x, z - me.z);
+    /* 나이트메어 — 달아오르는 동안·터지는 동안 7.5m 밖에서 기다림 · 이미 옆을 지나쳤으면(갈 곳이 드래곤 반대쪽) 달려서 빠져나감 */
+    if (k === 'nightmare' && (w.on || w.waitT > 0) && dd < 8.5) {
+      if (w.waitT > 0) w.waitT -= DT;
+      const ax = me.x - x, az = me.z - z, L = hyp(ax, az) || 1, gx = goal.x - me.x, gz = goal.z - me.z, gl = hyp(gx, gz) || 1;
+      if ((ax * gx + az * gz) / (L * gl) > 0.2) { K.set('ShiftLeft', true); goC(K, M, goal.x, goal.z, 2.2); return; }
+      K.set('ShiftLeft', false); K.walk(c, x + ax / L * 9, z + az / L * 9, false, 0.4); return;
+    }
+    if (k === 'nightmare' && w.waitT > 0) w.waitT -= DT;
+    /* 내더 — 예고가 끝나는 순간(쏨 + 가시가 닿기 전)에 점프(공중 = 피함) */
+    if (k === 'nadder' && w.on && !w.rolled && dd < 15 && (M.T - w.t0) > W - lag + 0.08) { w.rolled = true; K.set('KeyW', true); K.tap('Space'); M.rollT = 0.55; return; }
+    /* 그롱클 — 쏜 걸 보면 방향을 바꿈(앞날을 노리고 쏘니까 · 뒤로 몇 걸음) + 떨어질 때쯤 점프(천천히 걷던 중이면 앞날 = 지금 자리) */
+    if (k === 'gronckle' && w.stopT > 0) { w.stopT -= DT; K.stop(); K.set('ShiftLeft', false); K.set('KeyS', w.stopT > 0.1); if (w.jumpAt > 0 && (w.jumpAt -= DT) <= 0) K.tap('Space'); return; }
   }
+  K.set('ShiftLeft', false); K.set('KeyS', false);
   /* 길 — 피시레그가 보이면 그쪽, 문이 가까우면 문 */
-  const gt = c.gate, gd = hyp(gt.x - me.x, gt.z - me.z);
   if (gd < 18) { goC(K, M, gt.x, gt.z, 2.5); return; }
   if (c.guide) { goC(K, M, c.guide.x, c.guide.z, 2.2); return; }
   K.stop(); window.DRG.bot.drag(5, 0);

@@ -2,8 +2,8 @@
 //   가장자리 관중 난간 · 문으로 내려가는 돌계단 · 순위판(캔버스 글) · 무기·방패 걸이 · 물통 셋 · 나무벽 미로(setMaze) — 계약 = docs/dragon/stage3_plan.md §2·§3 arena
 // 때 day / overcast · 지붕 그물 때문에 비행 X(fly 없음) · 원점 = 구덩이 가운데 바닥 · +Z = 들어오는 계단 쪽
 import * as THREE from 'three';
-import { setTime, toon } from '../look/kit.js?v=25';
-import { createProps, M4, PAL, ss, textBoard } from '../look/props.js?v=25';
+import { setTime, toon } from '../look/kit.js?v=27';
+import { createProps, M4, PAL, ss, textBoard } from '../look/props.js?v=27';
 
 const FR = 22, RIM = 6, OUT = 38, CW = 1.6, CZ1 = 35.3, B = 9;    // 바닥 반지름 · 가장자리 높이 · 바깥 경계 · 계단 골 반폭 · 계단 위 끝 · 바닥 높이(바다 위 9m — 물결이 구덩이로 안 들어오게)
 const CAGE_A = [0.8, 1.6, 2.4, 3.95, 4.75, 5.55].map((k) => Math.PI / 2 + k);   // 우리 문 자리(들어오는 쪽 +Z = π/2 를 비움)
@@ -162,7 +162,7 @@ export async function buildPlace(ctx) {
     const r = FR - 0.75, x = Math.cos(a) * r, z = Math.sin(a) * r, yaw = Math.atan2(-Math.cos(a), -Math.sin(a));
     P.rack(M4(x, floorY(x, z) + 0.25, z, yaw), 2.6, { shields: sh, k: Math.floor(a * 3) });
     lists.racks.push({ x, y: floorY(x, z), z, yaw, kind: sh > 2 ? 'shield' : 'weapon' });
-    const ux = Math.cos(yaw), uz = -Math.sin(yaw); walls.push([x - ux * 1.5, z - uz * 1.5, x + ux * 1.5, z + uz * 1.5]);
+    const ux = Math.cos(yaw), uz = -Math.sin(yaw); walls.push(Object.assign([x - ux * 1.5, z - uz * 1.5, x + ux * 1.5, z + uz * 1.5], { low: 1 }));   // 걸이 = 낮은 벽(카메라는 넘어 봄)
   }
   for (const a of [Math.PI / 2 - 0.62, Math.PI / 2 + 0.66, Math.PI / 2 + 3.4]) {
     const r = FR - 1.0, x = Math.cos(a) * r + Math.sin(a) * 1.0, z = Math.sin(a) * r - Math.cos(a) * 1.0; P.barrel(x, floorY(x, z) - 0.05, z, { water: true, h: 1.05, r: 0.45 }); P.bucket(x + 0.7, floorY(x, z), z + 0.2);

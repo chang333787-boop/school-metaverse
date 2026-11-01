@@ -1,12 +1,12 @@
 // 장소 보기(단계 3 팀 시험용) — ?scene=place&p=<이름>&time=<때>&variant=&at=<anchor>&marks=1 · 히컵으로 걷기 · G = 자유 카메라(WASD·끌기·Shift 빠르게)
 // 장소 모듈 계약 = docs/dragon/stage3_plan.md §2 · 무대 그릇(core/stage.js)으로 짓고 비움 · ?swap=1 이면 K로 같은 장소를 다시 지음(힙 시험)
 import * as THREE from 'three';
-import { createEnv, U } from '../look/kit.js?v=25';
-import { createStageHost } from '../core/stage.js?v=25';
-import { createCollide } from '../play/collide.js?v=25';
-import { createWalker, createFollowCam } from '../play/walker.js?v=25';
-import { loadModel } from '../look/models.js?v=25';
-import { createHumanRig } from '../look/human_rig.js?v=25';
+import { createEnv, U } from '../look/kit.js?v=27';
+import { createStageHost } from '../core/stage.js?v=27';
+import { createCollide } from '../play/collide.js?v=27';
+import { createWalker, createFollowCam } from '../play/walker.js?v=27';
+import { loadModel } from '../look/models.js?v=27';
+import { createHumanRig } from '../look/human_rig.js?v=27';
 
 export function buildPlaceView(scene, camera, rng, opt = {}) {
   const env = createEnv(scene, camera);
@@ -15,13 +15,14 @@ export function buildPlaceView(scene, camera, rng, opt = {}) {
   let place = null, W = null, C = null, coll = null, hic = null, hrig = null, free = false, t = 0, last = performance.now(), fHold = 0, benchT = -1e9;
   const fc = { x: 0, y: 30, z: 0, yaw: 0, pitch: -0.2 }, fp = { x: 0, y: 0, z: 0 };
   async function load() {
-    const m = await import(`../places/${name}.js?v=25`);
+    const m = await import(`../places/${name}.js?v=27`);
     place = await host.load(name, (ctx) => m.buildPlace(Object.assign(ctx, { env, rng, opt: { time: opt.time, variant: opt.variant } })));
     coll = createCollide(place.blockers || [], place.walls || []);
     const A = place.anchors || {}, a = A[opt.at] || A.spawn || A.plaza || A.gate || A.floor || A.door || Object.values(A)[0] || { x: 0, z: 0, yaw: 0, y: 0 };
     W = createWalker({ height: place.height, collide: coll, bound: place.bound, x: a.x, z: a.z, y: a.y, yaw: a.yaw || 0 });
     C = createFollowCam(camera, place.height, { collide: coll, ceil: place.ceil });
     C.yaw = (a.yaw || 0) + Math.PI;
+    { const Q = new URLSearchParams(location.search); if (Q.has('camd')) C.dist = +Q.get('camd'); if (Q.has('camp')) C.pitch = +Q.get('camp'); if (Q.has('caml')) C.lift = +Q.get('caml'); }   // 카메라 거리·높이 견주기
     fc.x = a.x; fc.z = a.z; fc.y = (a.y || 0) + 25;
     if (opt.marks) marks();
     if (hic) place.group.add(hic);
@@ -32,10 +33,10 @@ export function buildPlaceView(scene, camera, rng, opt = {}) {
     for (const k in place.lists || {}) for (const a of place.lists[k]) { if (a.x == null) continue; const m = new THREE.Mesh(g, mb); m.position.set(a.x, a.y ?? place.height(a.x, a.z), a.z); m.scale.set(0.6, 0.6, 0.6); place.group.add(m); }
     console.log('anchors', JSON.stringify(Object.keys(place.anchors)), 'lists', JSON.stringify(Object.fromEntries(Object.entries(place.lists || {}).map(([k, v]) => [k, v.length]))));
   }
-  loadModel('assets/models/hiccup.glb?v=25').then(({ root, bones }) => { hrig = createHumanRig(bones, root); hic = root; (place ? place.group : scene).add(root); });
+  loadModel('assets/models/hiccup.glb?v=27').then(({ root, bones }) => { hrig = createHumanRig(bones, root); hic = root; (place ? place.group : scene).add(root); });
   const ready = load();
   return {
-    env, ready, get place() { return place; }, host,
+    env, ready, get place() { return place; }, host, get W() { return W; }, get C() { return C; }, get hic() { return hic; },   // 걷기·카메라 들여다보기(drg_feel.cjs)
     step(dt, I) {
       t += dt; U.uTime.value = t;
       if (!place) return;
@@ -51,14 +52,14 @@ export function buildPlaceView(scene, camera, rng, opt = {}) {
       }
       C.step(dt, I, W); W.step(dt, I, C.moveYaw());
       fHold = I.on('use') ? fHold + dt : 0;
-      if (hrig) { const to = { speed: Math.min(1, W.speed / 4.2), low: W.low ? 1 : 0, reach: fHold > 0.25 ? 1 : 0, away: fHold > 0.25 ? 0.8 : 0 }; for (const k in to) hrig[k] += (to[k] - hrig[k]) * Math.min(1, dt * 8); hrig.update(dt); }
+      if (hrig) { const to = { speed: Math.min(1, W.speed / 4.2), low: W.low ? 1 : 0, reach: fHold > 0.25 ? 1 : 0, away: fHold > 0.25 ? 0.8 : 0 }; for (const k in to) hrig[k] += (to[k] - hrig[k]) * Math.min(1, dt * 8); hrig.jump = W.poseJump(); hrig.land = W.poseLand(); hrig.update(dt); }
     },
     draw(a) {
       const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
       if (place) {
         if (performance.now() - benchT < 250) { /* bench가 카메라를 잡고 있음(benchPath) */ }
         else if (free) { camera.position.set(fp.x + (fc.x - fp.x) * a, fp.y + (fc.y - fp.y) * a, fp.z + (fc.z - fp.z) * a); camera.rotation.set(fc.pitch, fc.yaw + Math.PI, 0, 'YXZ'); }
-        else if (hic && W) { W.draw(a, hic); C.draw(dt, hic); }
+        else if (hic && W) { W.draw(a, hic); C.draw(dt, hic, W); }
         place.draw && place.draw(a);
       }
       env.follow();

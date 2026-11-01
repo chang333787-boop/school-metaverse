@@ -1,6 +1,6 @@
 // 비행·배 봇(design §13) — DRG.sense()(화면에 보이는 것)만 읽고 B.press/B.release만 누름 · 상태 직접 쓰기·순간이동 X
 // 반응 늦음: 쉬움 0.6초 · 보통 0.35초(그만큼 지난 화면을 보고 지금 누름 · 움직임은 그 사이만큼 내다봄) · 동시 키 셋 이하 · 초당 6타 상한
-// 쓰는 법: DRG.bot.run(flyBot('easy')) · flyBot('normal') · flyBot('idle'|'mash'|'left') · flyBot('stall')(시험: 날갯짓 없이 떨어졌다 창에서 다시 붙기) · DRG.bot.run(boatBot('beat'|'mash'|'idle'))
+// 쓰는 법: DRG.bot.run(flyBot('easy')) · flyBot('normal') · flyBot('idle'|'mash'|'left') · flyBot('stall')(시험: 날갯짓 없이 떨어졌다 창에서 다시 붙기 · 어려움) · flyBot('arrows')(시험: 방향키만 — Space·꼬리 키 없이 · 보통도 끝내야 함 · 11-01) · flyBot('mouse')(마우스 잠금 손 — 방향은 마우스 움직임만 · Space 날갯짓 · 꼬리 키 없음) · DRG.bot.run(boatBot('beat'|'mash'|'idle'))
 const DT = 1 / 60;
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
@@ -31,7 +31,8 @@ function keys(B) {
 
 export function flyBot(level = 'normal') {
   const kind = level === 'idle' || level === 'mash' || level === 'left' ? level : 'play';
-  const noFlap = level === 'stall';                                          // 시험용: 날갯짓 안 함(실속으로 떨어짐) · 떨어지면 창에서 Space
+  const useMouse = level === 'mouse';
+  const noFlap = level === 'stall' || level === 'arrows', noTail = level === 'arrows' || useMouse;   // 시험용: 날갯짓 안 함(어려움 = 실속으로 떨어짐) · 떨어지면 창에서 Space · arrows = 꼬리 키도 안 씀
   const easy = level === 'easy', delay = Math.round((easy ? 0.6 : 0.35) / DT), dl = delay * DT;
   const hist = [];
   let K = null, n0 = -1, lastFlap = -999, lastTail = -999, lastGrab = -999, spaceHeld = false, prevG = null, seenGate = -1;
@@ -71,11 +72,19 @@ export function flyBot(level = 'normal') {
     const want = Math.atan2(ax - px, az - pz), err = wrap(want - pyaw);
     /* 작은 오차는 톡톡(4박자 창 안에서 오차만큼 누름) · 큰 오차는 꾹 */
     const pwm = (e, dead, big) => { const a = Math.abs(e); if (a < dead) return 0; if (a > big) return Math.sign(e); return ((n - n0) % 20) / 20 < (a - dead) / (big - dead) ? Math.sign(e) : 0; };
-    const st = pwm(err, easy ? 0.06 : 0.04, easy ? 0.4 : 0.3);
-    K.hold('ArrowLeft', st > 0, n); K.hold('ArrowRight', st < 0, n);
     const dy = ay - py - s.vy * 0.8;                                         // 위아래 = 넘으면 꾹 · 거의 맞으면 뗌(누름 수 아낌)
-    if (dy > 2) K.hold('ArrowUp', true, n); else if (dy < 0.5) K.hold('ArrowUp', false);
-    if (dy < -2) K.hold('ArrowDown', true, n); else if (dy > -0.5) K.hold('ArrowDown', false);
+    if (useMouse) {
+      /* 마우스 손: 갈 쪽(늦은 화면으로 정함)으로 겨눔 고리를 옮김 — 고리 자리는 지금 화면(손·눈) · 한 프레임에 손 움직임 상한 */
+      const aimY = cur.aim != null ? cur.aim : cur.yaw, aimP = cur.aimP != null ? cur.aimP : cur.pitch;
+      const wantP = Math.max(-0.5, Math.min(0.4, Math.atan2(dy, Math.max(12, dg))));
+      const ex = wrap(want - aimY), ep = wantP - aimP;
+      if (Math.abs(ex) > 0.015 || Math.abs(ep) > 0.03) B.drag(Math.max(-24, Math.min(24, -ex / 0.006 * 0.2)), Math.max(-16, Math.min(16, -ep / 0.004 * 0.2)));
+    } else {
+      const st = pwm(err, easy ? 0.06 : 0.04, easy ? 0.4 : 0.3);
+      K.hold('ArrowLeft', st > 0, n); K.hold('ArrowRight', st < 0, n);
+      if (dy > 2) K.hold('ArrowUp', true, n); else if (dy < 0.5) K.hold('ArrowUp', false);
+      if (dy < -2) K.hold('ArrowDown', true, n); else if (dy > -0.5) K.hold('ArrowDown', false);
+    }
     /* 다음 관문에서 도는 쪽 — 쪽지가 있으면 쪽지대로 · 없으면 감으로(관문 → 그다음 방향) */
     let tl = 1;
     if (s.note) tl = s.note[0];
@@ -87,7 +96,7 @@ export function flyBot(level = 'normal') {
       if (sp !== spaceHeld && K.hold('Space', sp, n)) spaceHeld = sp;
       return;
     }
-    if (s.tail !== tl && n - lastTail > 20 && dg < 70) { if (K.tap(n, 'Digit' + tl)) lastTail = n; }
+    if (!noTail && s.tail !== tl && n - lastTail > 20 && dg < 70) { if (K.tap(n, 'Digit' + tl)) lastTail = n; }
     /* 날갯짓 — 날개가 다 올라간 박자(봤거나 박자로 내다봄) · 너무 빠르면 쉼 */
     const vt = tl === 4 && dg < 45 ? 22 : 29;
     const since = (n - lastFlap) * DT;

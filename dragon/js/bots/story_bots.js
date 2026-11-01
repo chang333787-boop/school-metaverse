@@ -71,6 +71,7 @@ function body(B) {
       if (!K.path || K.pathKey !== key || K.pk >= K.path.length || (K.replanT = (K.replanT || 0) + 1 / 60) > 4) {
         K.replanT = 0; K.pathKey = key; K.pk = 0;
         K.path = ob && Math.hypot(tx - me.x, tz - me.z) < 70 ? planPath(me.x, me.z, tx, tz, ob.walls, 0.5, 0.5, 8, ob.rocks) || [[tx, tz]] : [[tx, tz]];
+        if (K.path.length) K.path[K.path.length - 1] = [tx, tz]; else K.path = [[tx, tz]];   // 끝 점 = 진짜 목표(격자 칸 가운데로 맞춘 끝 점 안에는 들었는데 목표 거리 밖이라 서 버리던 것 · 11-01 조작감 팀 A — 서기가 빨라져 드러남 · 11-3)
       }
       const p = K.path[K.pk]; if (K.walk(s, p[0], p[1], slow, K.pk === K.path.length - 1 ? arrive : 0.8)) K.pk++;
       return false;
@@ -82,14 +83,14 @@ function body(B) {
 }
 
 /* 장 봇 — level 'easy'|'normal' · 차례 id마다 하는 일 */
-import { flyBot, boatBot } from './flight_bot.js?v=25';
-import { BOTS as B0 } from './ch0_bots.js?v=25';
-import { BOTS as B1 } from './ch1_bots.js?v=25';
-import { BOTS as B7 } from './ch7_bots.js?v=25';
-import { BOTS as B8 } from './ch8_bots.js?v=25';
-import { BOTS as B9 } from './ch9_bots.js?v=25';
-import { BOTS as B10 } from './ch10_bots.js?v=25';
-import { BOTS as B11 } from './ch11_bots.js?v=25';
+import { flyBot, boatBot } from './flight_bot.js?v=27';
+import { BOTS as B0 } from './ch0_bots.js?v=27';
+import { BOTS as B1 } from './ch1_bots.js?v=27';
+import { BOTS as B7 } from './ch7_bots.js?v=27';
+import { BOTS as B8 } from './ch8_bots.js?v=27';
+import { BOTS as B9 } from './ch9_bots.js?v=27';
+import { BOTS as B10 } from './ch10_bots.js?v=27';
+import { BOTS as B11 } from './ch11_bots.js?v=27';
 window.DRG_FLYBOT = flyBot; window.DRG_BOATBOT = boatBot;
 export function storyBot(level = 'normal') {
   const lag = Math.round(RT[level] * 60);

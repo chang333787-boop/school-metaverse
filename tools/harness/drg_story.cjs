@@ -1,10 +1,11 @@
-// 드래곤 이야기 장 봇 시험: node tools/harness/drg_story.cjs [repo=.] [--ch=4] [--only=4-3,4-5] [--levels=easy,normal] [--dumb=1] [--turbo=8]
+// 드래곤 이야기 장 봇 시험: node tools/harness/drg_story.cjs [repo=.] [--ch=4] [--only=4-3,4-5] [--levels=easy,normal] [--dumb=1] [--kinds=smash] [--turbo=8]
 //   차례마다 ① 쉬움 봇·보통 봇이 입력만으로 깸(걸린 놀이 시간) ② 가만히·F 연타·F 누른 채·Space 연타·W 누른 채 F 연타 봇은 제한 ×2 동안 못 깸(이음 차례 · 쉬움에서 빠진 차례는 건너뜀)
 //   ?turbo=8로 빨리(놀이 시간 = 걸음 수 ÷ 60) · 페이지 오류 0 · 무거운 시험이 아님(그리기는 켬 · CPU 흉내 X) — tools/ops/b2.sh로 돌린다
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const root = path.resolve(process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : '.');
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
+const KINDS = arg('kinds', '').split(',').filter(Boolean);   // 클릭형 봇 고르기(비우면 다섯 다): idle,fmash,fhold,smash,wfmash
 const CHS = arg('ch', '0,1,2,3,4,5,6,7,8,9,10,11').split(',').map(Number), ONLY = arg('only', ''), LEVELS = arg('levels', 'easy,normal').split(',').filter((x) => x && x !== 'none'), DUMB = arg('dumb', '1') === '1', TURBO = +arg('turbo', 4), EXTRA = arg('q', '');   // --q=warm=0 같은 주소 덤(팀 C)
 const types = { '.js': 'text/javascript', '.html': 'text/html', '.glb': 'model/gltf-binary', '.png': 'image/png', '.json': 'application/json' };
 const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split('?')[0]), p = path.join(root, u, u.endsWith('/') ? 'index.html' : ''); fs.readFile(p, (e, d) => { if (e) { r.writeHead(404); r.end(); return; } r.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); r.end(d); }); });
@@ -50,7 +51,8 @@ srv.listen(0, async () => {
           console.log(rows[rows.length - 1].join(' | '));
         }
         if (DUMB && st.verb) {
-          for (const [kind, key, lab] of [['idle', '', '가만히'], ['mash', 'KeyF', 'F 연타'], ['hold', 'KeyF', 'F 누른 채'], ['mash', 'Space', 'Space 연타'], ['walkmash', 'KeyF', 'W+F 연타']]) {
+          for (const [kind, key, lab, nm] of [['idle', '', '가만히', 'idle'], ['mash', 'KeyF', 'F 연타', 'fmash'], ['hold', 'KeyF', 'F 누른 채', 'fhold'], ['mash', 'Space', 'Space 연타', 'smash'], ['walkmash', 'KeyF', 'W+F 연타', 'wfmash']]) {
+            if (KINDS.length && !KINDS.includes(nm)) continue;
             await open(ch, i, 'normal');
             const r = await runBot(kind, 'normal', key, st.limit * 2);
             rows.push([st.id, st.verb, lab, r.ok ? '깸(✗) ' + r.sec + '초' : '못 깸 ✓', '']);

@@ -3,10 +3,10 @@
 // 단서(부러진 나무·파인 땅·그을음)는 길가에 붙여 놓아 안개(20~40m) 속에서 가까이 가야 보임 · 지도 큰 것(큰 전나무·갈라진 바위·개울·통나무·벼랑·고사목·바위 무더기)은 멀리서도 실루엣
 // 정적인 것은 모두 청크 굽기(look/nature.js) — 그리기 = 보이는 청크 수 + 물 1 + 꼬리날개 조각 1
 import * as THREE from 'three';
-import { setTime, TIMES, toon } from '../look/kit.js?v=25';
-import { createNoise } from '../core/noise.js?v=25';
-import { createRng } from '../core/rng.js?v=25';
-import * as NT from '../look/nature.js?v=25';
+import { setTime, TIMES, toon } from '../look/kit.js?v=27';
+import { createNoise } from '../core/noise.js?v=27';
+import { createRng } from '../core/rng.js?v=27';
+import * as NT from '../look/nature.js?v=27';
 
 const { C3, mixc, sstep, clamp, hash, TAU, mat4, matLay } = NT;
 /* 때마다 덮어쓸 안개(숲은 나무가 빽빽해 멀리 못 봄) — fog = 20~40m 시야 · overcast = 옅은 숲 안개 */
@@ -356,6 +356,7 @@ export async function buildPlace(ctx) {
 
   /* ── 벽 선분(1m 마칭 스퀘어) · 경계 ── */
   const walls = NT.contourWalls(D.h, X0, X0, S1, NX1, NX1);
+  for (const w of walls) w.edge = 1;                              // 보이지 않는 길 가장자리 — 카메라는 너머가 바위벽일 때만 막힘(좁은 숲길에서 카메라가 자꾸 툭 당겨지던 것 · 11-01 조작감)
   /* 걷는 곳 안에 박힌 장애물(바위·큰 나무) — 위에서 넣은 것 + 바위 무더기 가장자리 */
 
   /* ── 이름 자리 · 목록 ── */

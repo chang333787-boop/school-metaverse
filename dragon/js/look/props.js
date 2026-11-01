@@ -4,8 +4,8 @@
 // 영화 화면·배치를 베끼지 않는다 — 빌린 것은 '늘 고쳐 짓는 나무집 · 가파른 곡선 지붕 · 지붕 끝 갈고리 장식 · 비늘 같은 지붕널 · 클링커 배' 같은 원리뿐
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { toon, flameMesh, glowSprite, U } from './kit.js?v=25';
-import { createNoise } from '../core/noise.js?v=25';
+import { toon, flameMesh, glowSprite, U } from './kit.js?v=27';
+import { createNoise } from '../core/noise.js?v=27';
 
 /* 색 — 실제 바이킹보다 조금 진하고 따뜻하게(r3 F-2 · 젖은 갈색 나무 · 청회색 돌 · 회녹색 풀) · 값은 우리가 새로 고름 */
 export const PAL = {
@@ -23,6 +23,7 @@ const _c = new THREE.Color(), _c2 = new THREE.Color(), _hsl = { h: 0, s: 0, l: 0
 const UP = new THREE.Vector3(0, 1, 0);
 export const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const lowW = (ws) => { for (const w of ws) w.low = 1; return ws; };   // 낮은 벽(난간·밧줄·선착장 끝) — 걷기는 막고 카메라는 넘어 봄(collide.cut · 11-01 조작감)
 /* 짓기 때만 쓰는 행렬(매 프레임 X) — yaw = +Z에서 돈 각 · 'YXZ' = 먼저 돌고 기울임 */
 export function M4(x = 0, y = 0, z = 0, yaw = 0, pitch = 0, roll = 0, sx = 1, sy = sx, sz = sx) {
   return new THREE.Matrix4().compose(V3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(pitch, yaw, roll, 'YXZ')), V3(sx, sy, sz));
@@ -358,6 +359,7 @@ export function createProps(rng, opt = {}) {
         px = x; pz = z; py = y;
       }
     }
+    for (const w of walls) w.low = 1;                             // 낮은 벽(카메라는 넘어 봄 · collide.cut)
     return walls;
   };
 
@@ -453,7 +455,7 @@ export function createProps(rng, opt = {}) {
     }
     const hw = w / 2;
     return { kind: 'ramp', ax, az, bx, bz, ay, by, ux, uz, run, hw, n,
-      walls: [[ax + rx * hw, az + rz * hw, bx + rx * hw, bz + rz * hw], [ax - rx * hw, az - rz * hw, bx - rx * hw, bz - rz * hw]] };
+      walls: lowW([[ax + rx * hw, az + rz * hw, bx + rx * hw, bz + rz * hw], [ax - rx * hw, az - rz * hw, bx - rx * hw, bz - rz * hw]]) };
   };
   /* 걷기 겹 높이(계단 ramp · 평평한 판 flat · 다리 bridge) — 안이면 높이, 밖이면 null */
   P.layerH = (L, x, z) => {
@@ -478,7 +480,7 @@ export function createProps(rng, opt = {}) {
       for (const t of [0, 1]) { const x = ax + dx * t + ox * 1.15, z = az + dz * t + oz * 1.15, y = t ? by : ay; P.log(x, y - 1.2, z, x, y + 1.5, z, 0.16, 0x4f3b2b); }
     }
     const hw = w / 2 - 0.05;
-    return { kind: 'bridge', ax, az, bx, bz, ay, by, ux, uz, run, hw, sag, n, walls: [[ax + rx * hw, az + rz * hw, bx + rx * hw, bz + rz * hw], [ax - rx * hw, az - rz * hw, bx - rx * hw, bz - rz * hw]] };
+    return { kind: 'bridge', ax, az, bx, bz, ay, by, ux, uz, run, hw, sag, n, walls: lowW([[ax + rx * hw, az + rz * hw, bx + rx * hw, bz + rz * hw], [ax - rx * hw, az - rz * hw, bx - rx * hw, bz - rz * hw]]) };
   };
 
   /* ── 선착장 판(널판 + 밑 기둥 + 말뚝) — 평평한 걷기 판과 가장자리 벽 ── */
@@ -494,7 +496,7 @@ export function createProps(rng, opt = {}) {
         if (up > 0.3 && rng() < 0.5) P.put(new THREE.TorusGeometry(0.2, 0.05, 4, 9).rotateX(Math.PI / 2), M4(x, y + 0.15, z), P.pFlat(PAL.rope), { ao: false }); }
     }
     const hw = w / 2;
-    return { walls: [[ax + rx * hw, az + rz * hw, bx + rx * hw, bz + rz * hw], [ax - rx * hw, az - rz * hw, bx - rx * hw, bz - rz * hw], [bx + rx * hw, bz + rz * hw, bx - rx * hw, bz - rz * hw]],
+    return { walls: lowW([[ax + rx * hw, az + rz * hw, bx + rx * hw, bz + rz * hw], [ax - rx * hw, az - rz * hw, bx - rx * hw, bz - rz * hw], [bx + rx * hw, bz + rz * hw, bx - rx * hw, bz - rz * hw]]),
       poly: [[ax + rx * hw, az + rz * hw], [bx + rx * hw, bz + rz * hw], [bx - rx * hw, bz - rz * hw], [ax - rx * hw, az - rz * hw]] };
   };
 

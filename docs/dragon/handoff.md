@@ -4,6 +4,7 @@
 
 ## 지금 상태 (2026-11-01 · 단계 6 시험 끝 · 마감 보고 초안 — `final_check.md` ✅ 11 · ◐ 1(실제 크롬북 값만) · `final_report.md`)
 - ✅ **단계 6**(팀 L): 전 장 봇 144/144(고친 뒤 다시) · 저장·이어하기 `drg_save.cjs` 확인 101개 통과 · 클릭형 다섯 고친 뒤 53판 모두 못 깸(1-1~8-2 · 8-3~11-10은 다음에) · 읽기 전용 점검으로 진짜 버그 17묶음 고침(쉬움 책 쪽 덮개 · 정리 순서 · 비행 뒤 자세 · 넘어짐 시계 · 저장 best · 선생님 장 고르기 등 — `final_check.md`)
+- ✅ **조작감 2차**(11-01 팀 A · 교사 '조작감이 제일 중요해'): Space = 점프(공중 = 피하기) · 카메라 몸에 붙음·위아래 용수철·벽 부채·키 큰 벽만 · 감도·달리기 = 메타버스 · 휠 = 거리 · 1-3 보통 봇 45초 · 6-4·9-2 둘째 발 · 9-7·11-3 봇 막힘 — design §7-1 · §16 끝
 - ✅ 단계 0 조사 · ✅ 단계 1 설계 v2.1 · ✅ 단계 2 바탕(결 시안 A 확정 — design §17-1) · ✅ 단계 3 수직 조각(2~6장)
 - ✅ **단계 4 끝까지 잇기** — 오프닝(장 0) → 1~10장 → 종장(장 11) → 엔딩(요구 39줄 '이 생각은 여기에' · 영화에서 더 볼 장면 셋) 모두 놀 수 있음
   - 팀 A 오프닝·1장 습격의 밤·종장 + 원소 엔진(`play/elements.js`) · 팀 B 7장·9장 · 팀 C 8장 + 구름·오로라·드래곤 떼 · 팀 D 10장 + 둥지 섬(다섯 차림) + 대장 드래곤(모델·상태 기계)
@@ -45,6 +46,7 @@ B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_story.cjs . --levels=none  
 B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_long.cjs . --min=40   # 40분 쉬지 않는 놀이(CPU 4× · fps·힙)
 B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_fly.cjs .             # 비행·배(F)
 B1_MAIN=1 zsh tools/ops/b2.sh node tools/harness/drg_save.cjs .            # 저장·이어하기(새로 하기 · 1·4·7→8·11장 · 앞 장 다시 · 선생님 장 고르기 · 약 12분)
+zsh tools/ops/b2.sh node tools/harness/drg_feel.cjs . --sec=40               # 걷기·카메라 손맛(마을·회관·훈련장·숲·코브 · 막힘·걸림 좌표 · 위아래 흔들림 · 카메라 툭 · 입력 늦음 ⚡/🎨) — design §7-1
 node tools/harness/check.cjs . --full  ·  PAGE=/ node tools/harness/check.cjs . --full   # v2 17/17 · 홍보판 16/17
 ```
 - 다른 세션이 main에 자주 push하니 `git pull --rebase` 뒤 push.
@@ -52,6 +54,7 @@ node tools/harness/check.cjs . --full  ·  PAGE=/ node tools/harness/check.cjs .
 ## 일하는 법 메모
 - **장 하나 더하기**: `story/ch<n>.js`에 `export const chapter = { id, title, sub, steps }` · 차례 = `{ id, verb, place, time, at|atNew, goal, easy, limit, hints:{1,2}, run: function*(G, C), sense(G, C) }` · `run`은 걸음마다 `yield`(dt를 받음) · 끝 = `return true` · 실패 = `return 'retry'`(5초 안에 같은 자리) · 배우는 `G.dragon(kind, at, o)`/`G.person(who, at, o)`(차례가 끝나면 치움 · `keep:'tl'`이면 장소가 바뀔 때까지) · 그 차례 봇 = `bots/story_bots.js`의 `BOTS[id]`.
 - **봇 규칙**: `DRG.sense()`만 읽음 · 반응 늦음 쉬움 0.6초 · 보통 0.35초(손·눈 움직임 = 지금 화면 `K.cur`, 무엇을 할지 = 늦은 화면) · 초당 6타 · 동시 키 셋. 화면에 안 보이는 것은 sense에 넣지 않는다(땅 높이로 보이는지 판정).
+- **걷기·카메라 손맛**(11-01 조작감 팀 A): 값 = `play/walker.js` FEEL · 메타버스와 견줌 = design §7-1 · 카메라를 막는 벽 = 키 큰 벽만 — 새 벽을 만들 때 낮은 것(울타리·난간·상·걸이)은 배열에 `.low = 1`, 보이지 않는 걷기 끝 선(등고선)은 `.edge = 1` · Space = 점프(공중 0.52초 = `P.W.rollT > 0` 피하기)
 - **장소 더하기**: stage3_plan §2 계약 · `?scene=place&p=<이름>&time=&marks=1`로 걸어 보기(G = 자유 카메라).
 - **모델 다시 짓기**: `tools/dragon_blender/`(M 보고 참고) → gltfpack(`npm install --prefix <임시> gltfpack@0.22.0`).
 - **캐시**: `zsh tools/dragon_ver.sh` 한 번이면 dragon/ 전체 `?v=`가 같은 번호. 홍보판·v2는 건드리지 않는다.
