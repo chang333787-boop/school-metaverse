@@ -6,7 +6,7 @@ const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const root = path.resolve(process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : '.');
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
-const ONLY = arg('only', 'easy,normal,dumb,regrab,boat,lift,same,perf').split(','), SEEDS = arg('seeds', '1,2,3').split(',').map(Number), SHOTS = process.argv.includes('--shots');
+const ONLY = arg('only', 'easy,normal,arrows,dumb,regrab,boat,lift,same,perf').split(','), SEEDS = arg('seeds', '1,2,3').split(',').map(Number), SHOTS = process.argv.includes('--shots');
 const types = { '.js': 'text/javascript', '.html': 'text/html', '.css': 'text/css', '.png': 'image/png', '.json': 'application/json', '.glb': 'model/gltf-binary' };
 const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split('?')[0]), p = path.join(root, u, u.endsWith('/') ? 'index.html' : ''); fs.readFile(p, (e, d) => { if (e) { r.writeHead(404); r.end(); return; } r.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); r.end(d); }); });
 const UA = 'Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -59,15 +59,31 @@ srv.listen(0, async () => {
         ok(!s.done, nm + ' 봇(' + lv + ') 못 끝냄 — 관문 ' + s.gates);
       }
     }
+    if (has('arrows')) {   // 11-01 팀 B 조작감: 방향키만(Space·꼬리 키 없이)으로도 보통 코스를 끝내고 떨어지지 않음
+      console.log('\n[방향키만 봇 · 보통 · Space·1~4 없이]');
+      for (const sd of SEEDS.slice(0, 2)) {
+        await open('?scene=fly&diff=normal&seed=' + sd + '&turbo=8&hold=1&mode=smooth');
+        const s = await play(['fly', 'arrows'], 240);
+        rows.push(['방향키만 봇(보통) 씨앗 ' + sd, s.done ? '끝냄' : '못 끝냄', s.done ? s.doneT.toFixed(1) + '초' : '-', '떨어짐 ' + s.falls + ' · 첨벙 ' + s.splashes + ' · 놓침 ' + s.misses]);
+        ok(s.done && s.falls === 0, '방향키만 봇(보통) 씨앗 ' + sd + ' 끝냄 · 떨어짐 0 — ' + (s.done ? s.doneT.toFixed(1) + '초' : '관문 ' + s.gates) + ' · 떨어짐 ' + s.falls);
+      }
+      console.log('\n[마우스 손 봇 · 보통 · 방향 = 마우스 움직임만(잠금 중과 같은 길) + Space]');
+      for (const sd of SEEDS.slice(0, 2)) {
+        await open('?scene=fly&diff=normal&seed=' + sd + '&turbo=8&hold=1&mode=smooth');
+        const s = await play(['fly', 'mouse'], 240);
+        rows.push(['마우스 손 봇(보통) 씨앗 ' + sd, s.done ? '끝냄' : '못 끝냄', s.done ? s.doneT.toFixed(1) + '초' : '-', '떨어짐 ' + s.falls + ' · 첨벙 ' + s.splashes + ' · 놓침 ' + s.misses]);
+        ok(s.done, '마우스 손 봇(보통) 씨앗 ' + sd + ' 끝냄 — ' + (s.done ? s.doneT.toFixed(1) + '초' : '관문 ' + s.gates) + ' · 떨어짐 ' + s.falls);
+      }
+    }
     if (has('regrab')) {
-      console.log('\n[떨어짐 → 다시 붙기 · 보통]');
-      await open('?scene=fly&diff=normal&seed=1&turbo=8&hold=1');
+      console.log('\n[떨어짐 → 다시 붙기 · 어려움(11-01 보통은 활공 = 날갯짓 없이도 안 떨어짐)]');
+      await open('?scene=fly&diff=hard&seed=1&turbo=8&hold=1');
       const s = await play(['fly', 'stall'], 40);
       ok(s.falls >= 1 && s.regrabs >= 1 && s.regrabs > s.splashes, '창에서 Space로 다시 붙음 — 떨어짐 ' + s.falls + ' · 다시 붙음 ' + s.regrabs + ' · 그중 물에서 건짐 ' + s.splashes);
-      rows.push(['떨어졌다 다시 붙는 봇(보통)', '떨어짐 ' + s.falls, '', '다시 붙음 ' + s.regrabs + ' · 물에서 건짐 ' + s.splashes]);
-      await open('?scene=fly&diff=normal&seed=1&turbo=8&hold=1');
+      rows.push(['떨어졌다 다시 붙는 봇(어려움)', '떨어짐 ' + s.falls, '', '다시 붙음 ' + s.regrabs + ' · 물에서 건짐 ' + s.splashes]);
+      await open('?scene=fly&diff=hard&seed=1&turbo=8&hold=1');
       const m = await play(['fly', 'idle'], 40);
-      ok(m.falls >= 1 && m.regrabs === m.splashes, '가만히 = 창에서 못 붙고 물에서 건져짐(첨벙) — 떨어짐 ' + m.falls + ' · 첨벙 ' + m.splashes);
+      ok(m.falls >= 1 && m.regrabs >= m.falls - 1 && m.regrabs <= m.falls && m.splashes >= m.regrabs, '가만히 = 창에서 못 붙고 물에서 건져짐(첨벙) — 떨어짐 ' + m.falls + ' · 건짐 ' + m.regrabs + ' · 첨벙 ' + m.splashes + '(어려움은 물 위 바닥 도움이 없어 그냥 물에 닿는 첨벙도 셈)');
     }
     if (has('boat')) {
       console.log('\n[배 · 노 박자]');

@@ -8,6 +8,7 @@ export function flySense(F, o = {}) {
     x: +s.x.toFixed(2), y: +s.y.toFixed(2), z: +s.z.toFixed(2), vx: +(s.vx || 0).toFixed(2), vy: +(s.vy || 0).toFixed(2), vz: +(s.vz || 0).toFixed(2),
     speed: +((s.speed || 0) + (s.boost || 0)).toFixed(2), yaw: +s.yaw.toFixed(3), pitch: +(s.pitch || 0).toFixed(3), tail: s.tail,
     gate: s.gates || 0, gateN: gs.length, next: nx, note: o.noteGone ? null : gs.slice(s.gates || 0, (s.gates || 0) + 4).map((g) => g.tail),
+    aim: F.aim && F.aim.on ? +F.aim.yaw.toFixed(3) : null, aimP: F.aim && F.aim.on ? +F.aim.pitch.toFixed(3) : null,   // 화면의 겨눔 고리(마우스로 틀 때만)
     wingsUp: F.wingsUp ? F.wingsUp() : false, fallen: !!s.fallen, grab: s.grab, dragonDist: s.fallen ? +(s.riderDist || 0).toFixed(2) : 0, done: !!s.done,
   };
 }

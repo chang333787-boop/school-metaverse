@@ -122,6 +122,7 @@ export async function buildFlightTest(scene, camera, rng, opt = {}) {
         speed: +(s.speed + s.boost).toFixed(2), yaw: +s.yaw.toFixed(3), pitch: +s.pitch.toFixed(3), tail: s.tail,
         gate: s.gates, gateN: gs.length, next: nx,
         note: noteGone ? null : gs.slice(s.gates, s.gates + 4).map((g) => g.tail),
+        aim: F.aim && F.aim.on ? +F.aim.yaw.toFixed(3) : null, aimP: F.aim && F.aim.on ? +F.aim.pitch.toFixed(3) : null,   // 화면의 겨눔 고리(마우스로 틀 때만 보임)
         wingsUp: F.wingsUp(), fallen: s.fallen, grab: s.grab, dragonDist: s.fallen ? +s.riderDist.toFixed(2) : 0, done: s.done,
       };
     },
@@ -148,12 +149,24 @@ export function makeUI(diff, boatMode) {
   .fl-fall b{display:inline-block;border:2px solid #2b2118;border-radius:6px;padding:0 14px;margin-left:8px;background:#fff8e6}
   .fl-fall.on{display:block}.fl-fall.hot b{background:#ffd46a}
   .fl-ban{position:fixed;left:50%;top:18%;z-index:21;transform:translateX(-50%);background:#f4ead2;border:3px solid #2b2118;border-radius:12px;padding:10px 22px;font:700 24px/1.3 "Noto Sans KR",sans-serif;color:#2b2118;display:none}
-  .fl-ban.on{display:block}`;
+  .fl-ban.on{display:block}
+  .fl-wing{display:flex;align-items:center;gap:4px;border-left:2px solid rgba(43,33,24,.25);padding:0 2px 0 8px;font:700 15px/1 "Noto Sans KR",sans-serif;color:rgba(43,33,24,.45)}
+  .fl-wing svg{width:34px;height:24px;display:block;transition:transform .08s}
+  .fl-wing svg path{fill:#8c857a}
+  .fl-wing.on{color:#2b2118}.fl-wing.on svg{transform:translateY(-3px) scale(1.12)}.fl-wing.on svg path{fill:#2a2d33}
+  .fl-wing.on b{background:#ffd46a}
+  .fl-wing b{display:inline-block;border:2px solid currentColor;border-radius:5px;padding:2px 5px;font-size:13px}
+  .fl-wing.hit svg path{fill:#c9603a}`;
   document.head.appendChild(css);
   const tag = document.createElement('div'); tag.className = 'fl-tag'; document.body.appendChild(tag);
   const tagT = document.createElement('span'); tag.appendChild(tagT);
   const finC = document.createElement('canvas'); finC.width = 112; finC.height = 56; if (!boatMode) tag.appendChild(finC);   // 지금 꼬리 자리(보이는 짝 — 뼈 fin이 생기기 전에도)
   let finK = -1;
+  /* 날갯짓 박자 표시(보통 · 11-01 '박자를 알기 어려움') — 날개가 다 올라가 멈춘 동안 = 날개 그림이 올라가고 Space가 노랗게 · 박자 맞춘 날갯짓 = 잠깐 붉게 */
+  const wing = document.createElement('span'); wing.className = 'fl-wing';
+  wing.innerHTML = '<svg viewBox="0 0 34 24"><path d="M2 18 C6 6 16 2 32 4 C25 8 23 11 27 13 C20 13 18 16 20 21 C13 18 7 18 2 18 Z"/></svg><b>Space</b>';
+  if (!boatMode && diff !== 'easy') tag.appendChild(wing);
+  let wingOn = false, perf0 = -1, hitT = 0;
   const drawFin = (k) => { const x = finC.getContext('2d'); x.clearRect(0, 0, 112, 56); x.strokeStyle = x.fillStyle = '#3b2a1c'; x.lineCap = x.lineJoin = 'round'; fin(x, 50, 28, k === 0 ? 1 : k); x.font = '700 26px "Noto Sans KR",sans-serif'; x.fillText(k === 0 ? '' : diff === 'easy' ? (k === 1 ? '' : '펴') : String(k), 82, 38); };
   const fall = document.createElement('div'); fall.className = 'fl-fall'; fall.innerHTML = diff === 'easy' ? '투슬리스가 잡으러 가요!' : '가까워지면 <b>Space</b>'; document.body.appendChild(fall);
   const ban = document.createElement('div'); ban.className = 'fl-ban'; document.body.appendChild(ban);
@@ -167,6 +180,14 @@ export function makeUI(diff, boatMode) {
     fall(on) { fall.classList.toggle('on', on); },
     blow() { box.classList.add('blow'); setTimeout(() => { box.style.display = 'none'; }, 2000); },
     tick(F, t) {
+      if (wing.parentNode) {                           // 박자 표시는 프레임마다(창이 0.36초뿐 — 8프레임에 한 번이면 늦음) · 바뀔 때만 손댐
+        const s = F.state, on = !!(F.wingsUp && F.wingsUp());
+        if (on !== wingOn) { wingOn = on; wing.classList.toggle('on', on); }
+        if (perf0 < 0) perf0 = s.perfect || 0;
+        if ((s.perfect || 0) > perf0) { perf0 = s.perfect; hitT = 14; wing.classList.add('hit'); }
+        if (hitT > 0 && --hitT === 0) wing.classList.remove('hit');
+        const hide = !!(F.opts && (F.opts.noFlap || F.opts.autoForward || F.opts.liftOnly)); if (hide !== (wing.style.display === 'none')) wing.style.display = hide ? 'none' : '';
+      }
       if ((tickN++ & 7) !== 0) return;                 // 화면 글은 7~8프레임에 한 번만
       const s = F.state; if (s.fallen) fall.classList.toggle('hot', s.grab);
       const txt = F.gates().length ? '관문 ' + s.gates + ' / ' + F.gates().length + '   ' + fmt(s.done ? s.doneT : s.t) : '첫 들림 ' + s.liftT.toFixed(1) + '초';
