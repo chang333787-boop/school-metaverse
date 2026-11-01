@@ -467,14 +467,15 @@ addEventListener('keydown', e => { if (e.code === 'KeyV' && !e.repeat) camFirst 
 const CAM_D = 6.3;
 let roomLift = 0;   // INDOOR-CAM(10-17): 게임 방 안에서 뒤가 벽·선반이면 카메라를 위로 올리는 양(부드럽게)
 let camD = CAM_D, camLift = 0;   // CAM-6(10-15 마을 산): 오르막·뒤가 높은 비탈에서 카메라를 들어 올리는 양(부드럽게)
-canvas.addEventListener('click', () => { if (!TOUCH.on && !CTRL.freeMouse) canvas.requestPointerLock(); });   // 터치 기기엔 포인터 잠금이 없다(드래그가 시점) · FREE-MOUSE면 잠그지 않음
+const TWN_MODAL = () => !!document.querySelector('.twn-p,.twn-dlg,.twn-play');   // CTRL-1(11-01 교사 '일반 게임하고 동떨어진 조작'): 마을 창·대화·놀이 판이 떠 있으면 화면 누르기·Tab이 마우스를 잠그지 않고 휠도 카메라를 안 움직임(마을 밖 = 그대로)
+canvas.addEventListener('click', () => { if (!TOUCH.on && !CTRL.freeMouse && !TWN_MODAL()) canvas.requestPointerLock(); });   // 터치 기기엔 포인터 잠금이 없다(드래그가 시점) · FREE-MOUSE면 잠그지 않음
 // 마우스 시점(PERF-WIN): 움직임을 모았다가 프레임마다 한 번 더한다(mouseApply — 이벤트 수·프레임 수와 무관하게 같은 양 · 느린 PC에서 여러 이벤트가 한 프레임에 몰려도 부드럽게). 감도는 예전 그대로(0.0026·0.0022 rad/px).
 //  튀는 값 버리기(물총 '위로 꺾임' 버그 — 크롬이 잠그는 순간·창 포커스 직후, 윈도에선 잠금 중에도 가끔 수백 px 한 번):
 //   ① 잠금/포커스 뒤 0.25초 안: 한 이벤트 |dx| > 200 또는 |dy| > 150이면 버림(잠그려고 클릭한 직후 그만큼 휙 돌리는 손은 없다)
 //   ② 그 밖: 이 이벤트가 담은 시간(지난 이벤트부터 · 프레임 간격 이상 · ≤120ms)에 비례한 문턱 — 사람 손 한계(가로 8px/ms · 세로 6px/ms ≈ 초당 8000px)를 넘으면 버림, 최소 300/200px(60fps에선 예전 물총 문턱과 같다).
 //      느린 프레임(크롬이 mousemove를 rAF에 맞춰 합쳐 보냄 — 20fps면 한 이벤트에 50ms치)에선 문턱이 400px로(6fps면 960px) 커져 진짜 빠른 휙 돌리기는 버리지 않는다(리뷰: 고정 문턱은 그걸 버려 시점이 걸렸다).
 let LOOKT = -1e9, camZ = 1;   // CAM-7(10-16 교사 '마우스로 카메라 이동이 제한적'): LOOKT = 마지막으로 손으로 위아래를 본 때(그 뒤 3초는 산 비탈 자동 들어 올림이 쉼) · camZ = 휠로 바꾼 카메라 거리 배율(마을 땅에서만 · 4~18m)
-canvas.addEventListener('wheel', e => { if (!world.overAt || camFirst) return; e.preventDefault(); camZ = Math.max(4 / CAM_D, Math.min(18 / CAM_D, camZ * Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * 0.004))); }, { passive: false });   // CAM-7: 휠·터치패드 두 손가락 = 카메라 거리(마을 땅에서만 4~18m · 학교는 그대로 — 휠을 쓰지 않음)
+canvas.addEventListener('wheel', e => { if (!world.overAt || camFirst) return; e.preventDefault(); if (TWN_MODAL()) return; camZ = Math.max(4 / CAM_D, Math.min(18 / CAM_D, camZ * Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * 0.004))); }, { passive: false });   // CAM-7: 휠·터치패드 두 손가락 = 카메라 거리(마을 땅에서만 4~18m · 학교는 그대로 — 휠을 쓰지 않음)
 const MOUSE = { dx: 0, dy: 0, t0: 0, fd: 16.7, fl: 0, te: 0, drop: 0 };   // fd = 지난 프레임 간격(ms · 루프가 적음 · ≤120) · te = 지난 이벤트 시각
 document.addEventListener('pointerlockchange', () => { MOUSE.t0 = performance.now(); MOUSE.dx = MOUSE.dy = 0; if (document.pointerLockElement !== canvas) keysClear(); });   // 잠금이 풀리면(Esc·창 전환) 누른 키도 비운다
 addEventListener('focus', () => { MOUSE.t0 = performance.now(); });
@@ -489,6 +490,7 @@ addEventListener('keydown', e => {
   if (e.code !== 'Tab' || e.repeat || TOUCH.on || CTRL.freeMouse || e.ctrlKey || e.altKey || e.metaKey) return;
   const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.tagName === 'SELECT' || tg.isContentEditable)) return;   // 입력 칸에선 원래 Tab(다음 칸)
   if (TITLE && TITLE.phase !== 'off') return;
+  if (TWN_MODAL() && document.pointerLockElement !== canvas) return;   /* CTRL-1: 창이 열린 동안 Tab = 단추 사이 옮기기(브라우저 그대로) · 잠그면 마우스가 사라져 창을 못 누름 */
   e.preventDefault();
   if (document.pointerLockElement === canvas) { CURSOR.on = true; document.exitPointerLock(); toast('👀 마우스가 보여요 — 단추를 눌러요 · 화면을 누르거나 Tab = 다시 둘러보기', 2.6); }
   else if (!(window.__pause && window.__pause.on)) { CURSOR.on = false; canvas.requestPointerLock(); }
@@ -2090,7 +2092,7 @@ window.SD2 = {
   film: FILM, top: TOP, acts: ACTS, hotNow: () => hotNear, actOn: h => act(h), camOvr: f => { CAM_OVR = f; }, pg,   // ACTION-1: 보이는 행동(시험 — SD2.acts.play('drink', {at:[x,y,z]}) · stats())
   perf: () => ({ fps: FM.fps1 || 0, mode: FM.mode, target: FM.target, step: FM.lv, stepName: FM.step, dpr: GFX.dpr, dprLvl: ADAPT.lvl + '/' + (ADAPT.ladder.length - 1), fog: FM.fk, detail: FM.dk, shadow: !FM.shOff && GFX.shadow > 0, drawCalls: FM.dc || 0, gfxMode: GFX.mode, log: FM.log.slice(-8) }),   /* MODE-1: 지금 모드·목표·단계 */
   touch: TOUCH, gfx: GFX, title: TITLE, input: { keys, KEY_NEW, KEY_UP, MOUSE, clear: keysClear }, prewarm, setDpr, setShadowSize, adaptTick,   // PERF-WIN
-  cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
+  cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst, +camZ.toFixed(3)],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)
   map: MAP, phys: { groundAt, blockedAt, ceilAt, camHit, PHY, pGround, pBlocked, pCeil }, ACT, CTRL, camPose: (...a) => ({ ...camPose(...a) }),
   health: opt => import('./health.js?v=8').then(m => m.runHealth(window.SD2, opt || {})),

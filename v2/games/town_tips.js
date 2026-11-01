@@ -140,13 +140,18 @@ export function createTips(A) {
       r(K('Esc') + K('P'), L('잠깐 멈춤', 'Pause'), L('멈춤 창이 열려요', 'Opens the pause window'));
       r(M, L('마우스 방식', 'Mouse style'), drag ? L('메뉴의 👀 단추로 「움직이면 둘러보기」로 바꿔요', 'Switch to “move to look” with the 👀 button in the menu') : L('메뉴의 👀 단추로 「끌어서 둘러보기」로 바꿔요', 'Switch to “drag to look” with the 👀 button in the menu')); }
     g(L('하기', 'Doing'));
-    r(t9 ? TB('✋', L('행동', 'Action')) : K('E'), L('말 걸기와 들어가기', 'Talk and go in'), t9 ? L('노랗게 빛나면 눌러요. 할 수 있는 일이 아래에 떠요', 'Tap when it glows yellow. What you can do shows below') : L('가까이 가면 할 수 있는 일이 아래에 떠요', 'Get close and what you can do shows below'));
+    r(t9 ? TB('✋', L('행동', 'Action')) : K('E'), L('말 걸기와 들어가기', 'Talk and go in'), t9 ? L('노랗게 빛나면 눌러요. 할 수 있는 일이 아래에 떠요', 'Tap when it glows yellow. What you can do shows below') : drag ? L('가까이 가면 할 수 있는 일이 아래에 떠요', 'Get close and what you can do shows below') : L('가까이 가면 할 수 있는 일이 아래에 떠요. 오른쪽 클릭도 돼요', 'Get close and what you can do shows below. Right-click works too'));
     r(t9 ? C(L('왼쪽 위 이야기 줄', 'Story line, top left')) : K('Q'), L('이야기 수첩', 'Story notebook'), L('할 일과 이야기를 봐요', 'See your tasks and stories'));
     if (A.tools()) r(t9 ? M : K(A.tools()) + K('F'), L('도구', 'Tools'), t9 ? L('메뉴의 🧰 도구로 들면 쓰기 단추가 생겨요', 'Pick one with 🧰 Tools in the menu, then a use button appears') : L('숫자로 들고 겨눈 곳에 F나 클릭으로 써요', 'Pick one with a number, then press F or click where you aim'));
     r(t9 ? C('☂ ' + L('우산', 'Umbrella')) : K('U'), L('우산', 'Umbrella'), t9 ? L('비 오는 날 오른쪽 위에 생겨요', 'Shows at the top right on rainy days') : L('비 오는 날 펴고 접어요', 'Open and close it on rainy days'), 'umb');
     r(t9 ? C('🔔 ' + L('따르릉', 'Ring')) : K('R'), L('따르릉', 'Bell'), L('자전거를 탈 때 울려요', 'Ring it while riding'));
     if (A.snow() && H('wx')) r(t9 ? C('⛄ ' + L('눈사람', 'Snowman')) : K('N'), L('눈사람', 'Snowman'), L('눈 오는 날 만들어요', 'Make one on snowy days'));
     r(t9 ? M : K('O'), L('사진 찍기', 'Photo mode'), t9 ? L('메뉴의 📷 사진 찍기', '📷 Photo in the menu') : L('Space로 찍고 Esc로 나와요', 'Space takes a photo, Esc leaves'));
+    /* CTRL-1(11-01): 창과 대화 = 모든 창이 같은 규칙 */
+    g(L('창과 대화', 'Windows and talk'));
+    r(t9 ? C('✕') : K('Esc') + C('✕'), L('창 닫기', 'Close a window'), L('창 바깥을 눌러도 닫혀요', 'Tapping outside the window closes it too'));
+    if (!t9) r(K('Enter'), L('확인', 'OK'), L('창 아래 초록 단추를 눌러요', 'Presses the green button at the bottom'));
+    r(t9 ? C(L('화면 톡', 'Tap')) : K('E') + K('Space') + C(L('클릭', 'Click')), L('대화 넘기기', 'Next line'), L('대화창은 화면 어디를 눌러도 다음으로 넘어가요', 'Tap anywhere on the screen for the next line'));
     g(L('다니기', 'Getting around'));
     r(t9 ? M : K('B'), L('자전거', 'Bike'), t9 ? L('메뉴의 🚲 자전거 타기를 눌러요. 내릴 때는 오른쪽 위 내리기 단추를 눌러요', 'Tap 🚲 Bike in the menu. Tap Get off at the top right to stop') : L('한 번 더 누르면 내려요', 'Press again to get off'), 'bike');
     if (H('mini')) r(t9 ? C('🗺 ' + L('지도', 'Map')) : C(L('작은 지도', 'Small map')), L('작은 지도', 'Small map'), t9 ? L('누르면 펼쳐지고 접혀요', 'Tap to open or fold it') : L('오른쪽 위에 있어요. 누르면 큰 지도가 열려요', 'At the top right. Click it for the big map'), 'mini');
