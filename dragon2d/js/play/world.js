@@ -41,9 +41,9 @@ export const PLACES = {
     M.rect(0, 33, 64, 35, 'sand'); M.rect(0, 35, 64, 46, 'sea'); M.rect(45, 33, 48, 42, 'plank');
     M.rect(0, 17, 64, 19, 'path'); M.rect(0, 28, 57, 30, 'path'); M.rect(23, 19, 27, 28, 'path'); M.rect(19, 20, 31, 27, 'stone');
     M.line([[31, 17], [32, 11], [32, 9]], 1.1, 'path'); M.line([[56, 29], [58, 31]], 1.2, 'stone'); M.rect(54, 29, 62, 33, 'stone'); M.line([[46, 29], [46.5, 33]], 1, 'path');
-    for (const x of [9, 17, 41, 49]) P.push(['house', x, 16, { w: 6, d: 4 }]);
+    [9, 17, 41, 49].forEach((x, i) => P.push(['house', x, 16, { w: 6, d: 4, v: i % 4 }]));
     P.push(['hall', 32, 9, { w: 11, d: 5 }]);
-    P.push(['forge', 7, 27, { w: 7, d: 4 }]); for (const x of [15, 33, 41, 49]) P.push(['house', x, 27, { w: 6, d: 4 }]);
+    P.push(['forge', 7, 27, { w: 7, d: 4 }]); [15, 33, 41, 49].forEach((x, i) => P.push(['house', x, 27, { w: 6, d: 4, v: (i + 2) % 4 }]));
     P.push(['well', 25, 23.5, {}], ['tower', 59, 29, {}], ['catapult', 58.5, 32, { ang: 0 }]);
     for (const [x, y] of [[13, 19.6], [29, 19.6], [45, 19.6], [21, 30.4], [37, 30.4]]) P.push(['torch', x, y, { lit: 1 }]);
     P.push(['fence', 51, 21, { len: 6 }], ['fence', 51, 26, { len: 6 }], ['fence', 54, 26, { len: 5, v: 1 }], ['sheep', 51, 23.5, {}], ['sheep', 52.6, 24.8, {}], ['cart', 37, 21.5, {}], ['barrel', 30, 21, {}], ['crate', 20.2, 21, {}]);
@@ -62,7 +62,7 @@ export const PLACES = {
     const M = grid(30, 18, 'wood'), P = [];
     M.ring(0, 0, 30, 18, 'wall', 2); M.rect(13, 16, 17, 18, 'wood');
     for (const x of [5, 12, 19, 26]) P.push(['torch', x, 2.6, { lit: 1 }]);
-    P.push(['table', 8, 7, { w: 7 }], ['table', 22, 7, { w: 7 }], ['table', 8, 12, { w: 7 }], ['table', 22, 12, { w: 7 }], ['hearth', 15, 10.5, {}], ['book_stand', 26.5, 14.5, {}]);
+    P.push(['table', 8, 7, { w: 7 }], ['table', 22, 7, { w: 7 }], ['table', 8, 12, { w: 7 }], ['table', 22, 12, { w: 7 }], ['hearth', 15, 10.5, { lit: 1 }], ['book_stand', 26.5, 14.5, {}]);
     return { M, P, A: { door: [15, 15.5], front: [15, 5], torches: [[5, 3.2], [12, 3.2], [19, 3.2], [26, 3.2]] }, bounds: [0, 0, 30, 18] };
   },
   cove() {

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>땅·소품 보기판 (dragon2d 탑뷰)</title>
+<style>
+  :root { --paper:#f4ead2; --ink:#2b2118; --line:#cdbf9b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:14px/1.5 "Malgun Gothic","Apple SD Gothic Neo",sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line); }
+  header h1 { font-size:16px; margin:0 8px 0 0; }
+  label { display:flex; align-items:center; gap:6px; }
+  select { font:inherit; padding:3px 8px; background:#fbf5e4; color:var(--ink); border:1px solid var(--line); border-radius:3px; }
+  main { padding:12px 16px 40px; }
+  canvas { display:block; width:100%; max-width:1366px; height:auto; border:1px solid var(--line); background:#1d2730; }
+  h2 { font-size:14px; margin:18px 0 6px; }
+  #info { margin-left:auto; font-size:12px; opacity:.75; }
+</style>
+</head>
+<body>
+<header>
+  <h1>땅·소품 보기판 (탑뷰)</h1>
+  <label>장소 <select id="p"></select></label>
+  <label><input type="checkbox" id="mv" checked> 옆으로 흘리기</label>
+  <span id="info"></span>
+</header>
+<main>
+  <canvas id="scene" width="1366" height="768"></canvas>
+  <h2>소품 전부 (이름 아래 · 한 칸에 하나 · 풀 바탕)</h2>
+  <canvas id="props" width="1366" height="400"></canvas>
+</main>
+<script type="module" src="js/art/scenery_view.js"></script>
+</body>
+</html>

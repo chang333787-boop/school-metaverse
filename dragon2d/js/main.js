@@ -110,7 +110,7 @@ function draw() {
   drawFx(V, t);
   if (G.Fl) for (const o of G.Fl.ob) { if (o.k !== 'cloud' || !V.onScreen(o.x, o.y, o.w)) continue; V.at(o.x, o.y); ctx.globalAlpha = G.Fl.hidden && Math.abs(G.Fl.x - o.x) < o.w / 2 && Math.abs(G.Fl.y - o.y) < o.h / 2 ? 0.5 : 0.92; drawProp(ctx, 'cloud', { w: o.w, h: o.h }, t); ctx.globalAlpha = 1; }
   V.stat.items = n;
-  if (G.drawOver) G.drawOver(ctx, V, t);
+  V.reset(); if (G.drawOver) G.drawOver(ctx, V, t);
   drawMarks(ctx);
 }
 /* 표시 — 목표 ▼(화면 밖이면 가장자리 화살표 + 거리) · 쉬움 F 키 · 예고 ! · 점·고리·글 */
