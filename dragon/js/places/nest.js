@@ -387,6 +387,13 @@ export async function buildPlace(ctx) {
     haze.material.uniforms.op.value = 0.7 * (1 - k);
     if (smoke) smoke.material.uniforms.op.value = 0.75 * (1 - k * 0.6);
     if (groundSmoke) groundSmoke.material.uniforms.op.value = GS_OP * (1 - k * 0.85);
+    const f = env.scene.fog; fogBase.near = f.near; fogBase.far = f.far; fogBase.col.copy(f.color);
+  }
+  /* 땅 연기 속 = 안개를 짙게(코앞 판을 흐리게 해 빠진 '온통 뿌연' 몫을 판 겹 대신 안개 한 번으로 · 하늘이 맑아지면 같이 걷힘 · 팀 C) */
+  const fogBase = { near: 0, far: 0, col: new THREE.Color() }, smokeCol = new THREE.Color(0x635d59);
+  function smokeFog() {
+    const c = camera.position, d = Math.hypot(c.x - 18, c.z - 150), k = (1 - sstep(44, 62, d)) * (1 - sstep(10, 20, c.y - height(c.x, c.z))) * (1 - Math.max(0, clearK));
+    const f = env.scene.fog; f.near = fogBase.near * (1 - 0.7 * k); f.far = fogBase.far * (1 - 0.5 * k); f.color.copy(fogBase.col).lerp(smokeCol, 0.35 * k);
   }
   if (after) setClear(0);
 
@@ -419,7 +426,7 @@ export async function buildPlace(ctx) {
     pile(n) { if (pileMesh) pileMesh.geometry.setDrawRange(0, n <= 0 ? 0 : pileIdx[Math.min(n, pileIdx.length) - 1]); },
     stats: { pillars: pillars.length, clouds: clouds.length, lights: lights.length },
     step(dt, t) {
-      tNow = t; chunkStep(dt);
+      tNow = t; chunkStep(dt); if (groundSmoke) smokeFog();
       for (let i = 0; i < clouds.length; i++) { const c = clouds[i]; if (c.burnT > 0) { c.burnT -= dt; if (c.burnT <= 0) for (let q = 0; q < 7; q++) cloudMesh.setOn(c.i * 7 + q, 1); } }
       if (fogV) {                                                     // 안개 밖 불빛은 숨김(불꽃 셰이더는 안개를 안 먹음) — 2Hz
         const k = Math.floor(t * 2); if (k !== lastLit) { lastLit = k; const cx = camera.position.x, cz = camera.position.z; for (const l of lights) { const vis = Math.hypot(l.x - cx, l.z - cz) < 82; l.f.visible = vis; l.gl.visible = vis; } }
