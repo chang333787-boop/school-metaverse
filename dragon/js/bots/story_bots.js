@@ -59,7 +59,7 @@ function body(B) {
       const px = Math.max(-30, Math.min(30, -da / 0.006 * 0.3));
       if (Math.abs(da) > 0.03) B.drag(px, 0);
       K.set('KeyW', Math.abs(da) < 0.6);
-      if (slow !== null && (K.shiftCd = (K.shiftCd || 0) - 1 / 60) <= 0 && !!me.low !== !!slow) { K.tap('ShiftLeft'); K.shiftCd = 0.5; }   // 바뀐 걸 보고 다시(0.5초)
+      if (slow !== null && (K.shiftCd = (K.shiftCd || 0) - 1 / 60) <= 0 && !!me.low !== !!slow) { K.tap('KeyC'); K.shiftCd = 0.5; }   // 바뀐 걸 보고 다시(0.5초)
       return false;
     },
     stop() { K.set('KeyW', false); },
@@ -82,14 +82,14 @@ function body(B) {
 }
 
 /* 장 봇 — level 'easy'|'normal' · 차례 id마다 하는 일 */
-import { flyBot, boatBot } from './flight_bot.js?v=19';
-import { BOTS as B0 } from './ch0_bots.js?v=19';
-import { BOTS as B1 } from './ch1_bots.js?v=19';
-import { BOTS as B7 } from './ch7_bots.js?v=19';
-import { BOTS as B8 } from './ch8_bots.js?v=19';
-import { BOTS as B9 } from './ch9_bots.js?v=19';
-import { BOTS as B10 } from './ch10_bots.js?v=19';
-import { BOTS as B11 } from './ch11_bots.js?v=19';
+import { flyBot, boatBot } from './flight_bot.js?v=25';
+import { BOTS as B0 } from './ch0_bots.js?v=25';
+import { BOTS as B1 } from './ch1_bots.js?v=25';
+import { BOTS as B7 } from './ch7_bots.js?v=25';
+import { BOTS as B8 } from './ch8_bots.js?v=25';
+import { BOTS as B9 } from './ch9_bots.js?v=25';
+import { BOTS as B10 } from './ch10_bots.js?v=25';
+import { BOTS as B11 } from './ch11_bots.js?v=25';
 window.DRG_FLYBOT = flyBot; window.DRG_BOATBOT = boatBot;
 export function storyBot(level = 'normal') {
   const lag = Math.round(RT[level] * 60);
@@ -125,7 +125,7 @@ const BOTS = {};
 /* ── 4장 ── */
 BOTS['4-1'] = (s, K, M, B) => {                          // 내더 미로: 살금살금 + A* 길 · 가시 예고가 보이면 벽 뒤로 구르기
   if (!s.exit || !s.maze) return;
-  if (!K.cur.me.low) { if ((K.shiftCd = (K.shiftCd || 0) - 1 / 60) <= 0) { K.tap('ShiftLeft'); K.shiftCd = 0.5; } return; }
+  if (!K.cur.me.low) { if ((K.shiftCd = (K.shiftCd || 0) - 1 / 60) <= 0) { K.tap('KeyC'); K.shiftCd = 0.5; } return; }
   if (s.nadder && s.nadder.spines > 0.3) {               // 가시 예고: 벽 뒤로 가거나, 쏘기 직전(예고 끝 0.3초 앞)에 옆으로 구르기
     M.warn = (M.warn || 0) + 1 / 60;
     const end = { easy: 3, normal: 2.5, hard: 2 }[s.diff] - 0.35 - 0.35;   // 반응 늦음만큼 앞당김
@@ -222,7 +222,7 @@ BOTS['3-1'] = (s, K, M) => {                             // 그롱클: 볼이 �
 BOTS['3-2'] = (s, K, M) => {                             // 코브 관찰: 살금살금 가장 가까운 숨을 바위로 → 미끄러질 때 F 꾹
   const me = K.cur.me, w = (s.watch || []).slice().sort((a, b) => Math.hypot(a.x - me.x, a.z - me.z) - Math.hypot(b.x - me.x, b.z - me.z))[0];
   if (!w) return;
-  if (!me.low) { K.set('KeyF', false); if ((K.shiftCd = (K.shiftCd || 0) - 1 / 60) <= 0) { K.tap('ShiftLeft'); K.shiftCd = 0.5; } return; }
+  if (!me.low) { K.set('KeyF', false); if ((K.shiftCd = (K.shiftCd || 0) - 1 / 60) <= 0) { K.tap('KeyC'); K.shiftCd = 0.5; } return; }
   if (!K.walk(s, w.x, w.z, null, 1.0)) { K.set('KeyF', false); return; }
   K.stop();
   if (s.tl && s.tl.x != null) K.face(s, s.tl.x, s.tl.z); else if (w.yaw != null) K.face(s, w.x + Math.sin(w.yaw) * 10, w.z + Math.cos(w.yaw) * 10);

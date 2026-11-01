@@ -2,11 +2,11 @@
 // ④ 훈련장 한 판: 그롱클·내더·테러를 발견으로 진정[다가가] ⑤ 스토이크 귀환 — 배 고치며 듣기(이음 + 손일) ⑥ 첫 바다 비행 · 쪽지가 바람에 날아감[관문 비행] ⑦ 돌기둥 점심 · 다친 테러 치유[다가가]
 // 와! = 쪽지 없이 돌기둥 사이를 빠져나가는 순간 · 변화 = 하늘 지도 · 순위판 1등 · 책 '책이 다 틀렸다' 쪽
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=19';
-import { holdItem, dropItem, makePuffs } from './fx.js?v=19';
-import { toon } from '../look/kit.js?v=19';
-import { tlSense } from './ch4.js?v=19';
-import { flySense as fsFlat } from './flysense.js?v=19';
+import { wait, until, sayAll } from './runner.js?v=25';
+import { holdItem, dropItem, makePuffs } from './fx.js?v=25';
+import { toon } from '../look/kit.js?v=25';
+import { tlSense } from './ch4.js?v=25';
+import { flySense as fsFlat } from './flysense.js?v=25';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 function* awaitP(p) { let v, done = false; p.then((x) => { v = x; done = true; }, () => { done = true; }); while (!done) yield; return v; }
@@ -14,9 +14,9 @@ function* awaitP(p) { let v, done = false; p.then((x) => { v = x; done = true; }
 /* ① 안장 + 무늬 — 바느질 박자 → 모은 물감으로 꼬리날개에 무늬(이 무늬가 비행 내내 보임) */
 function* saddle(G, C) {
   const P = G.player, A = G.place.anchors, b = A.forge_bench || A.forge_anvil || { x: 0, z: 0 };
-  G.useSpots = [{ x: b.x, y: 0, z: b.z }]; G.hud.goal('작업대로');
+  G.useSpots = [{ x: b.x, y: 0, z: b.z }]; G.hud.goal('뒷방 작업대로');
   yield* until(() => P.fTap && G.near(b, 2.6));
-  G.useSpots = []; P.lock = true; C.stage = 'stitch'; G.hud.goal('안장 만들기');
+  G.useSpots = []; P.lock = true; C.stage = 'stitch'; G.hud.goal('안장 만들기'); G.hud.howto('rhythm', 6);
   yield* G.bench.stitch(G.input, G.diff === 'easy', G.diff === 'easy' ? 5 : 7);
   C.stage = 'paint'; G.hud.goal('꼬리날개에 무늬 그리기'); G.hud.howto('draw', 6);
   G.hud.say('hiccup', '코브 열매랑 숯으로 물감을 만들었어.', ['finNew']);
@@ -30,7 +30,7 @@ function* saddle(G, C) {
 function* flyCourse(G, C, o) {
   const P = G.player, pl = G.place, T = o.T;
   let cam = null;
-  const mod = yield* awaitP(import('../play/flight.js?v=19').catch(() => null));
+  const mod = yield* awaitP(import('../play/flight.js?v=25').catch(() => null));
   if (!mod || !mod.createFlight) { G.hud.say('hiccup', '(비행 엔진 준비 중)', [], { secs: 1 }); yield* wait(1); return 'skip'; }
   const F = mod.createFlight({ world: o.world, mode: G.diff, dragon: { root: T.root, rig: T.rig }, rider: { root: P.root, rig: P.rig }, rng: G.rng });
   F.setOpts && F.setOpts(o.opts || {}); F.setGates && F.setGates(o.gates);
@@ -40,7 +40,7 @@ function* flyCourse(G, C, o) {
   F.on('graze', () => { G.sfx.play('whoosh'); if (cam && cam.kickFov) cam.kickFov(4); }); F.on('gate', (e) => { if (e && e.matched && cam && cam.kickFov) cam.kickFov(2); });
   if (o.start) { if (F.place) F.place(o.start.x, o.start.y, o.start.z, o.start.yaw || 0); else if (F.state) Object.assign(F.state, o.start); }
   /* 비행 화면 글(팀 F) — 관문 수 · 지금 꼬리 자리 그림 · 꼬리 쪽지(o.note) · 떨어지면 다시 붙기 안내 */
-  const ftm = yield* awaitP(import('../stages/flight_test.js?v=19').catch(() => null));
+  const ftm = yield* awaitP(import('../stages/flight_test.js?v=25').catch(() => null));
   const ui = ftm && ftm.makeUI ? ftm.makeUI(G.diff, false) : null;
   if (ui) { if (o.note) ui.note(o.gates, 0); else { const nb = document.querySelector('.fl-note:last-of-type'); if (nb) nb.style.display = 'none'; } ui.gates(0, o.gates.length); F.on('fall', () => ui.fall(true)); F.on('regrab', () => ui.fall(false)); }
   let noteGate = 0;
@@ -248,8 +248,8 @@ function lunchSense(G, C) { const t = C.t2; return { stage: C.stage, terror: t &
 export const chapter = {
   id: 6, title: '6장 · 하늘을 나는 법', sub: '대장간 → 숨은 호수 → 훈련장 → 선착장 → 바다 돌기둥',
   steps: [
-    { id: '6-1', verb: 'rhythm', place: 'village', time: 'day', at: 'forge_front', goal: '작업대로', limit: 180,
-      hints: { 1: '바늘이 구멍 위에 올 때.', 2: 'Space를 바늘 박자에 · 칠할 땐 F를 꾹.' }, run: saddle, sense: (G, C) => ({ stage: C.stage, bench: G.bench.sense(), at: G.place.anchors.forge_bench || G.place.anchors.forge_anvil || null }) },
+    { id: '6-1', verb: 'rhythm', howtoVerb: 'bench', place: 'village', time: 'day', at: 'forge_front', goal: '뒷방 작업대로', limit: 180,
+      hints: (G, C) => (C && C.stage ? { 1: '바늘이 구멍 위에 올 때.', 2: 'Space를 바늘 박자에 · 칠할 땐 F를 꾹.' } : { 1: '내 작업대는 대장간 뒷방이야 — 촛불 켜진 문틈으로.', 2: '뒷방 탁자 바로 앞에 서서 F를 눌러.' }), run: saddle, sense: (G, C) => ({ stage: C.stage, bench: G.bench.sense(), at: G.place.anchors.forge_bench || G.place.anchors.forge_anvil || null }) },
     { id: '6-2', verb: 'fly', place: 'cove', time: 'day', at: 'gap_in', goal: '투슬리스에 올라타기', limit: 180,
       hints: { 1: '꼬리 자리를 바꾸면 더 날카롭게 돌아.', 2: '틈이 오른쪽이면 3, 왼쪽이면 2.' }, run: practice, sense: (G, C) => Object.assign(flySense(G, C), { tl: tlSense(G, C.T) }) },
     { id: '6-3', verb: 'approach', place: 'cove', time: 'day', goal: '투슬리스가 좋아하는 것 셋 찾기', limit: 200,

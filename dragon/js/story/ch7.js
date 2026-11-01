@@ -3,11 +3,11 @@
 // 와! = 관중석이 터지는 순간 → 게시판 앞에서 웃음이 사라짐 · 변화 = 히컵 머리에 투구 · 경기장 자리를 맡는 마을 사람들 · 코브에 짐 보따리
 // 대사는 모두 우리 말로 새로(저작권) · 실제 학생 이름 X · 피·죽음 X · 깜짝 X(예고 먼저)
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=19';
-import { holdItem, makeItem, makePuffs } from './fx.js?v=19';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=19';
-import { createGrind, setHelmet, helmetObj, makePack, gazeFan, headMark, crowd, crowdPose, pz } from './fx79.js?v=19';
-import { tlSense } from './ch4.js?v=19';
+import { wait, until, sayAll } from './runner.js?v=25';
+import { holdItem, makeItem, makePuffs } from './fx.js?v=25';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=25';
+import { createGrind, setHelmet, helmetObj, makePack, gazeFan, headMark, crowd, crowdPose, pz } from './fx79.js?v=25';
+import { tlSense } from './ch4.js?v=25';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const ang = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
@@ -237,7 +237,7 @@ function* chosen(G, C) {
 }
 
 /* ⑤ 몰래 떠날 준비 — 짐 넷(생선·담요·공책·물통)을 대장간 뒷방 자루에 · 들고 있을 때 마을 사람 눈길(땅의 부채꼴)에 들면 '?' → '!' 들킴 → 그 물건은 제자리로
-   빈손이면 괜찮음 · 살금살금(Shift)이면 눈길이 짧아짐 · 고버 아저씨는 망치질하다 가끔 고개를 듦 */
+   빈손이면 괜찮음 · 살금살금(C)이면 눈길이 짧아짐 · 고버 아저씨는 망치질하다 가끔 고개를 듦 */
 const ITEMS = [
   { k: 'cod', n: '생선', x: 8.6, z: -4.6 },
   { k: 'cloth', n: '담요', x: -2, z: 13 },
@@ -346,7 +346,7 @@ export const chapter = {
     { id: '7-4', place: 'arena', time: 'day', run: chosen,
       sense: (G, C) => ({ stage: C.stage || '', target: C.stage === 'board' ? C.board : C.stage === 'go' ? C.spot : null }) },
     { id: '7-5', verb: 'hide', place: 'village', time: 'sunset', at: 'forge_front', goal: '들키지 않고 짐 모으기', limit: 220,
-      hints: { 1: '빈손이면 괜찮아. 들고 갈 때만 눈길(노란 부채꼴)을 피하자.', 2: '살금살금(Shift)이면 눈길이 짧아져 · 고개를 돌릴 때 지나가자.' }, run: sneak, sense: sneakSense },
+      hints: { 1: '빈손이면 괜찮아. 들고 갈 때만 눈길(노란 부채꼴)을 피하자.', 2: '살금살금(C)이면 눈길이 짧아져 · 고개를 돌릴 때 지나가자.' }, run: sneak, sense: sneakSense },
     { id: '7-6', place: 'cove', time: 'sunset', at: 'gap_in', run: stash,
       sense: (G, C) => ({ target: C.spot || null, tl: tlSense(G, C.T) }) },
   ],

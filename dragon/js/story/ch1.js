@@ -3,11 +3,11 @@
 // → 이어서(이음) 나이트메어가 쫓아옴 → 스토이크가 막음 · 아무도 안 믿음 · '낙서' 공책 → 아침(그을린 지붕 · 덧댄 판자 · 비늘 조각)
 // 쉬움 = 해 질 녘(design §6-5) · 깜짝 X(예고 2~3초) · 피·죽음 X · 대사는 모두 우리 말로 새로(저작권) · 실제 학생 이름 X(영화 인물만)
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=19';
-import { holdItem, makePuffs } from './fx.js?v=19';
-import { setTime, toon, flameMesh, glowSprite } from '../look/kit.js?v=19';
-import { createElements } from '../play/elements.js?v=19';
-import { raidSky, makeBreath, makeThrow, makeFlyer, makeStars, makeTrail, prop, ringWalls, ensureVillage, seedVillage } from './fx1.js?v=19';
+import { wait, until, sayAll } from './runner.js?v=25';
+import { holdItem, makePuffs } from './fx.js?v=25';
+import { setTime, toon, flameMesh, glowSprite } from '../look/kit.js?v=25';
+import { createElements } from '../play/elements.js?v=25';
+import { raidSky, makeBreath, makeThrow, makeFlyer, makeStars, makeTrail, prop, ringWalls, ensureVillage, seedVillage } from './fx1.js?v=25';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const KNOCK = { easy: 0, normal: 2, hard: 2.6 };          // 맞으면 넘어져 있는 초(쉬움 = 안 넘어짐 · design §8)
@@ -119,7 +119,7 @@ function* weapons(G, C) {
     const id = E.add({ kind: 'cart', x: c.x, y: y + 1.4, z: c.z, r: 1.5, give: 0 }); cartIds.push(id); E.ignite(id, 1); E.cells[id].fuel = 1e6;
     segs.push(...ringWalls(c.x, c.z, 2.0, 8));
   }
-  segs.push([-3.3, 24.4, -0.6, 26.9], [31.0, 10.2, 31.0, 12.2]);                                  // 골목 A를 끝까지 막음(수레와 집 벽 사이 틈)
+  /* (11-01) 골목 A를 끝까지 막던 벽 둘은 뺐다 — 나르기는 길 찾기 퍼즐이 아니라 '예고 읽고 피하기' 자리 · 갈 곳은 목표 표시(▼)가 알려 줌 */
   G.collideAdd(segs);
   const sit = SITTERS.map((s) => { const d = G.dragon(s.kind, { x: s.x, z: s.z, yaw: s.yaw }, { mind: { fear: 0.2, anger: 0.45 }, noCollide: true }); d.solid = true; d.radius = s.kind === 'gronckle' ? 1.6 : 1.3; d.mind.lock = 'watch'; d.cd = 0; return d; });
   const ball = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 8), toon({ color: 0xd8642a, emissive: 0x8a2a08 })); ball.visible = false; pl.group.add(ball);
@@ -308,6 +308,12 @@ function* fire(G, C) {
     bucket.m.position.set(bx + 0.4, pl.height(bx, bz, 25) + 1.15 + Math.sin(f * Math.PI) * 0.25, bz);
     crew.forEach((p, i) => { p.pose = { carry: Math.abs(bi - i) < 0.6 ? 1 : 0.2 }; });
     G.useSpots = ready && !T1.held ? [{ x: HAND.x, y: 0, z: HAND.z }] : [];
+    { /* 지금 할 일을 단계마다(11-01 교사 '물통 나르는 거 뭐 어떻게 하는지 모르겠음') — 받기 → 던지기 · 갈 곳은 ▼ */
+      const fc = T1.held ? nearestFire(E, P.W.x, P.W.z, 60, true) : null;
+      const gs = T1.held ? (fc ? 'throw' : 'wait2') : ready ? 'take' : 'wait';
+      if (gs !== C.gs) { C.gs = gs; G.hud.goal(gs === 'throw' ? '불타는 지붕에 물 — F 꾹 겨누고 놓기' : gs === 'take' ? '줄 끝에서 물통 받기 (F)' : gs === 'wait' ? '물통이 오는 중 — 줄 끝에서 기다리기' : '물통 들고 다음 불 기다리기'); }
+      G.goalSpot = T1.held ? (fc ? { x: fc.x, y: fc.y - 2.2, z: fc.z } : null) : { x: HAND.x, z: HAND.z };
+    }
     if (ready && !T1.held && P.fTap && Math.hypot(P.W.x - HAND.x, P.W.z - HAND.z) < 2.6) { T1.give(); ready = false; bk = -0.6; lines++; }
     /* 갈고리 — 빈손으로 타는 지붕 처마 밑에서 F 꾹(1초) → 판을 끌어내림(그 칸은 더 안 탐 · 집은 조금 다침) */
     if (!T1.held && !G.input.on('use')) hookT = 0;
@@ -360,7 +366,7 @@ function* gauntlet(G, C) {
   let hits = 0, atk = null, gas = null;
   const onBoom = (g) => { if (!gas || g.id !== gas.id) return; const d = Math.hypot(P.W.x - g.x, P.W.z - g.z); G.sfx.play('boom'); if (d < g.r + 0.6) { hits += knock(G, C, '펑! …눈썹 아직 있나?') ? 1 : 0; } gas = null; };
   E.on('boom', onBoom); C.cleanup = ((old) => () => { E.off('boom', onBoom); old && old(); })(C.cleanup);   // 다시 하기마다 리스너가 쌓이던 것(11-01 점검)
-  C.stage = 'go'; G.hud.goal('양 우리까지 가기');
+  C.stage = 'go'; G.hud.goal('피시레그 따라 양 우리까지 가기'); G.goalSpot = FL;
   while (true) {
     const dt = yield; C.tk(dt);
     /* 길잡이 피시레그 — 내가 가까이 오면 다음 굽이로 */

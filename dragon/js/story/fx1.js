@@ -1,8 +1,8 @@
 // 0·1·11장이 같이 쓰는 작은 것 — 습격 하늘(나는 드래곤 실루엣) · 불 뿜기 원뿔 · 던지기(물통·볼라 · 쉬움 방향키 조준) · 날아가는 물건 · 별 하늘 · 둥근 벽(불·드래곤 자리)
 // 모두 원인 → 결과(불 뿜기가 닿은 칸에만 원소 엔진 불씨 · 물통이 떨어진 자리에만 물) · 매 걸음 new X(처음에 한 번 짓고 다시 씀) · Light 추가 X
 import * as THREE from 'three';
-import { toon, flameMesh, glowSprite, SHARED } from '../look/kit.js?v=19';
-import { makeItem } from './fx.js?v=19';
+import { toon, flameMesh, glowSprite, SHARED } from '../look/kit.js?v=25';
+import { makeItem } from './fx.js?v=25';
 
 const TAU = Math.PI * 2;
 export const ang = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
@@ -114,7 +114,7 @@ export function makeThrow(G, o) {
       T.aim.x += rx * ar + fx * af; T.aim.z += rz * ar + fz * af;
       const dx = T.aim.x - P.W.x, dz = T.aim.z - P.W.z, d = Math.hypot(dx, dz) || 1, mx = o.max || 12;
       if (d > mx) { T.aim.x = P.W.x + dx / d * mx; T.aim.z = P.W.z + dz / d * mx; }
-      if (G.diff === 'easy' && o.snap) { const s = o.snap(T.aim.x, T.aim.z); if (s) { T.aim.x += (s.x - T.aim.x) * Math.min(1, dt * 3); T.aim.z += (s.z - T.aim.z) * Math.min(1, dt * 3); } }   // 쉬움 조준 도움(가까운 과녁 쪽으로 살짝)
+      if (G.diff !== 'hard' && o.snap) { const s = o.snap(T.aim.x, T.aim.z); if (s) { T.aim.x += (s.x - T.aim.x) * Math.min(1, dt * 3); T.aim.z += (s.z - T.aim.z) * Math.min(1, dt * 3); } }   // 쉬움 조준 도움(가까운 과녁 쪽으로 살짝)
       P.W.yaw = Math.atan2(dx, dz);
       ring.visible = true; ring.position.set(T.aim.x, (o.ringY ? o.ringY(T.aim.x, T.aim.z) : pl.height(T.aim.x, T.aim.z, P.W.y)) + 0.06, T.aim.z);
     } else if (T.aim) {                                          // 놓음 = 던짐

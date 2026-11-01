@@ -2,8 +2,8 @@
 // 도전 차례 = { id, verb, place, time, at, goal, easy, hints, limit, run, sense } · 이음 차례 = verb 없음(봇 판정 X)
 // 실패 = run이 'retry'를 돌려줌 → 5초 안에 같은 자리에서 다시(장소는 그대로) · 끝 = true → 저장 → 다음
 // 힌트: 손을 놓고 멈춘 시간 — 쉬움 10초 단계 1 · 20초 단계 2(하는 법 창 다시) · 보통 20초 단계 1 · 어려움 없음(design §8)
-import { createCollide } from '../play/collide.js?v=19';
-import { disposePuffs } from './fx.js?v=19';
+import { createCollide } from '../play/collide.js?v=25';
+import { disposePuffs } from './fx.js?v=25';
 
 export function createRunner(G) {
   const R = { ch: null, idx: 0, step: null, C: null, it: null, busy: false, idleT: 0, hintLv: 0, stepT: 0, total: 0, log: [], done: false, fails: 0 };
@@ -42,7 +42,7 @@ export function createRunner(G) {
     if (st.at) G.putPlayer(st.at);
     else if (st.atNew && G.freshPlace) G.putPlayer(st.atNew);      // 이 장소에서 처음 시작할 때만(앞 차례에서 이어지면 그 자리 그대로)
     G.freshPlace = false;
-    G.hold ? G.hold(st.item ?? null) : (G.player.item = st.item ?? null); G.player.lock = false; G.player.pose = null; G.player.noReach = false; G.player.aiming = false; G.useSpots = [];
+    G.hold ? G.hold(st.item ?? null) : (G.player.item = st.item ?? null); G.player.lock = false; G.player.pose = null; G.player.noReach = false; G.player.aiming = false; G.useSpots = []; G.goalSpot = null;
     G.hud.reset();
     if (st.goal) G.hud.goal(st.goal);
     if (st.verb && st.howto !== false) G.hud.howto(G.diff === 'easy' && st.howtoEasy ? st.howtoEasy : G.diff === 'easy' && st.verb === 'fly' ? 'flyEasy' : (st.howtoVerb || st.verb));

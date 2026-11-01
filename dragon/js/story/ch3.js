@@ -1,10 +1,10 @@
 // 3장 훈련 첫날 · 숨은 호수(design §2 · reference #5·#6·#7) — 선착장 배웅(이음 · 진눈깨비) → ① 그롱클(방패 두드리기 · 여섯 발)[피하기+던지기 · 쉬움 X]
 // → ② 코브 가장자리에서 숨어 관찰 · 미끄러지는 투슬리스 스케치[숨기] → ③ 밤 큰 회관 드래곤 책 · 점 여섯 잇기[그리기] · 와! = 내 그림이 X 도장을 덮음
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=19';
-import { holdItem, dropItem, makePuffs } from './fx.js?v=19';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=19';
-import { tlSense } from './ch4.js?v=19';
+import { wait, until, sayAll } from './runner.js?v=25';
+import { holdItem, dropItem, makePuffs } from './fx.js?v=25';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=25';
+import { tlSense } from './ch4.js?v=25';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 
@@ -195,7 +195,7 @@ export const chapter = {
       bookPage: { title: '훈련 1일 — 그롱클', draw: 'gronckle', line: '그롱클은 여섯 발을 쏘면 끝. 방패를 두드리면 조준이 흐려진다.' },
       hints: { 1: '볼이 부풀면 쏠 거야!', 2: '볼이 부풀 때 F 짧게(방패 두드리기) · 아니면 가림막 뒤로.' }, run: gronckle, sense: grSense },
     { id: '3-2', verb: 'hide', howtoVerb: 'sketch3', place: 'cove', time: 'day', at: 'rim_start', goal: '들키지 말고 투슬리스를 그려라', limit: 180,
-      hints: { 1: '바위 뒤에서 살금살금(Shift).', 2: '벽을 오르다 미끄러질 때 F를 꾹 눌러 그리자.' }, run: watch, sense: watchSense },
+      hints: { 1: '바위 뒤에서 살금살금(C).', 2: '벽을 오르다 미끄러질 때 F를 꾹 눌러 그리자.' }, run: watch, sense: watchSense },
     { id: '3-3', verb: 'draw', place: 'hall', time: 'night', at: 'door', goal: '드래곤 책 받기', limit: 150,
       howto: false, hints: (G, C) => (C.draw ? { 1: '빈칸에 내가 본 걸 그리자.', 2: 'F를 누른 채 점을 차례로 이어.' } : { 1: '고버 아저씨가 탁자에 책을 놓았어.', 2: '불가 탁자 곁에서 F 짧게.' }), run: bookNight, sense: (G) => ({ draw: G.book.drawSense(), table: G.place.anchors.table_book || null, have: G.book.have }) },
   ],

@@ -2,7 +2,7 @@
 // · 우박 알갱이(땅에 튀는 흰 점 · 한 묶음) · 스콜드런 자리표시 모양(있는 드래곤 모델의 정점색만 바다색으로) · 하는 법 표(런타임 더하기 — 메인이 art.js로 옮길 것)
 // 매 걸음 new X · 장소 group에 넣어 장소가 바뀌면 함께 치움
 import * as THREE from 'three';
-import { HOWTO, ICONS, keyCap } from '../ui/art.js?v=19';
+import { HOWTO, ICONS, keyCap } from '../ui/art.js?v=25';
 
 /* 날씨 넷 — time = kit TIMES의 때 · 그날 하나(실제 날짜 · ?wx=로 고름) */
 export const WX = {
@@ -100,8 +100,8 @@ export function paintScauldron(root) {
 /* 하는 법 표(종장 또 하기) — 동사 표에 없던 손 */
 const ARROWS = `<span class="keys">${keyCap('W')}${keyCap('A')}${keyCap('S')}${keyCap('D')}</span>`;
 Object.assign(HOWTO, {
-  lead11: [[keyCap('F'), ICONS.nip, '풀 줍기 · 지붕 밑에서 F 꾹'], [keyCap('Shift', true), 'tiptoe', '천천히 이끌기'], [keyCap('F'), ICONS.hand, '가까이서 턱 긁기']],
-  heal11: [[keyCap('Shift', true), 'tiptoe', '살금살금'], [keyCap('F 꾹', true), ICONS.hand, '고개 돌려 손 내밀기'], [keyCap('F'), ICONS.cloth, '다친 곳에 맞는 것']],
+  lead11: [[keyCap('F'), ICONS.nip, '풀 줍기 · 지붕 밑에서 F 꾹'], [keyCap('C'), 'tiptoe', '천천히 이끌기'], [keyCap('F'), ICONS.hand, '가까이서 턱 긁기']],
+  heal11: [[keyCap('C'), 'tiptoe', '살금살금'], [keyCap('F 꾹', true), ICONS.hand, '고개 돌려 손 내밀기'], [keyCap('F'), ICONS.cloth, '다친 곳에 맞는 것']],
   shelter11: [['', ICONS.cloud, '하늘이 어두워지면'], [ARROWS, ICONS.fin, '투슬리스 날개 밑으로'], ['', 'wait', '그친 뒤까지 가만히']],
-  water11: [[keyCap('F'), ICONS.bucket, '물가에서 물 뜨기'], [keyCap('Shift', true), 'tiptoe', '살금살금'], [keyCap('F'), ICONS.water, '날 볼 때 붓기']],
+  water11: [[keyCap('F'), ICONS.bucket, '물가에서 물 뜨기'], [keyCap('C'), 'tiptoe', '살금살금'], [keyCap('F'), ICONS.water, '날 볼 때 붓기']],
 });

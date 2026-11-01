@@ -3,9 +3,9 @@
 // 우리 섬 · 우리 배치(영화 화면을 베끼지 않음) · 때 overcast / sleet / night(횃불·창 켜짐) / dawn / day · variant 'charred' = 1장 뒤 아침(그을린 지붕 + 덧댄 새 판자)
 // 걷기: height = 겹(계단·다리·선착장·망루 위) 먼저, 아니면 땅 격자(그린 삼각형과 같은 보간) · 벽 = 집·대장간·울타리 + '걸을 수 있는 칸' 등고선(절벽·둑·물가·산 밑)
 import * as THREE from 'three';
-import { setTime } from '../look/kit.js?v=19';
-import { createNoise } from '../core/noise.js?v=19';
-import { createProps, M4, PAL, ss, inPoly } from '../look/props.js?v=19';
+import { setTime } from '../look/kit.js?v=25';
+import { createNoise } from '../core/noise.js?v=25';
+import { createProps, M4, PAL, ss, inPoly } from '../look/props.js?v=25';
 
 const X0 = -150, Z0 = -150, CS = 2.0, NX = 146, NZ = 126;           // 땅 격자(마디) — x −150~140 · z −150~100
 const capD = (x, z, ax, az, bx, bz) => { const ex = bx - ax, ez = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * ex + (z - az) * ez) / (ex * ex + ez * ez))); return Math.hypot(x - ax - ex * t, z - az - ez * t); };
@@ -312,7 +312,8 @@ export async function buildPlace(ctx) {
     { const b = W(w / 2 - 0.7, 0, -d / 2 + 1.5); blockers.push({ x: b.x, z: b.z, r: 0.75 }); }
     for (let k = 0; k < 4; k++) P.box(Mx(rx0 + 0.6 + k * 0.75, 1.75 + (k % 2) * 0.2, -d / 2 + 0.37, (rng() - 0.5) * 0.1), 0.55, 0.42, 0.01, P.pFlat(0xd9cdb0, 0.06), { ao: false });   // 벽에 붙인 그림 종이
     P.put(new THREE.CylinderGeometry(0.04, 0.05, 0.16, 6).translate(0, 0.08, 0), Mx(w / 2 - 0.5, 0.89, -d / 2 + 0.7), P.pFlat(0xe6dcc0), { ao: false });
-    const cnd = W(w / 2 - 0.5, 1.12, -d / 2 + 0.7); P.fire(group, cnd.x, cnd.y - 0.04, cnd.z, 0.12, { n: 1, glow: 1.4, op: 0.55, col: 0xffb060 });   /* 뒷방 촛불 */
+    const cnd = W(w / 2 - 0.5, 1.12, -d / 2 + 0.7); P.fire(group, cnd.x, cnd.y - 0.04, cnd.z, 0.12, { n: 1, glow: 3.2, op: 0.7, col: 0xffb060 });   /* 뒷방 촛불 — 밝게(11-01 · 어두운 뒷방에서 작업대를 못 찾음) */
+    { const dl = W(rx0 + 1.8, 2.15, rz1 + 0.25); P.fire(group, dl.x, dl.y, dl.z, 0.1, { n: 1, glow: 2.4, op: 0.65, col: 0xffc070 }); }   /* 뒷방 문틈 등불 — 들어가는 곳을 알려 줌 */
     /* 대장간 벽(뒤 · 옆 뒤 · 앞 트임) */
     wl(-w / 2 - 0.35, -d / 2 - 0.35, w / 2 + 0.35, -d / 2 - 0.35); wl(-w / 2 - 0.35, -d / 2 - 0.35, -w / 2 - 0.35, d * 0.12 + 0.3); wl(w / 2 + 0.35, -d / 2 - 0.35, w / 2 + 0.35, d * 0.12 + 0.3);
     A('forge_front', W(0, 0, d / 2 + 2.0).x, W(0, 0, d / 2 + 2.0).z, yaw + Math.PI);

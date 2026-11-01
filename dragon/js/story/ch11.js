@@ -4,24 +4,24 @@
 // → 다음 날(그날 날씨 하나 · fx11.js) ④ 이웃 둘[보여 주기] ⑤ 다친 야생 드래곤[진정·치유] ⑥ 우박 — 날개 밑[숨기] ⑦ 스콜드런[물 붓기] ⑧ 배 타기[노 박자 → 고기잡이] → 끝(G.ending — 엔딩·크레딧은 메인)
 // 다리는 고버 한 줄 + 몸짓으로만(design §8) · 대사는 모두 우리 말로 새로 · 실제 학생 이름 X · 마을에 드래곤이 함께 삶(지붕 위 테러 · 광장 그롱클 · 대장간 지플백)
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=19';
-import { holdItem, makePuffs, dropItem } from './fx.js?v=19';
-import { loadModel } from '../look/models.js?v=19';
-import { createHumanRig } from '../look/human_rig.js?v=19';
-import { glowSprite } from '../look/kit.js?v=19';
-import { createElements } from '../play/elements.js?v=19';
-import { awaitP, prop, ensureVillage } from './fx1.js?v=19';
-import { tlSense } from './ch4.js?v=19';
-import { flySense, boatSense, boatCam } from './flysense.js?v=19';
-import { SPECIES } from '../play/mind.js?v=19';
-import { WX, wxDay, weather, hailBits, dim, paintScauldron } from './fx11.js?v=19';
+import { wait, until, sayAll } from './runner.js?v=25';
+import { holdItem, makePuffs, dropItem } from './fx.js?v=25';
+import { loadModel } from '../look/models.js?v=25';
+import { createHumanRig } from '../look/human_rig.js?v=25';
+import { glowSprite } from '../look/kit.js?v=25';
+import { createElements } from '../play/elements.js?v=25';
+import { awaitP, prop, ensureVillage } from './fx1.js?v=25';
+import { tlSense } from './ch4.js?v=25';
+import { flySense, boatSense, boatCam } from './flysense.js?v=25';
+import { SPECIES } from '../play/mind.js?v=25';
+import { WX, wxDay, weather, hailBits, dim, paintScauldron } from './fx11.js?v=25';
 
 const ang = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
 /* 히컵 = 의족 모델로(종장 내내) — 손에 든 것은 새 손에 다시 붙임 */
 function* legOn(G) {
   const P = G.player; if (P.leg) return;
-  const m = yield* awaitP(loadModel('assets/models/hiccup_leg.glb?v=19').catch(() => null));
+  const m = yield* awaitP(loadModel('assets/models/hiccup_leg.glb?v=25').catch(() => null));
   if (!m || P.leg) return;
   const old = P.root; P.root = m.root; P.rig = createHumanRig(m.bones, m.root); P.bones = m.bones; P.leg = true; P.itemObj = null;
   if (old) { m.root.position.copy(old.position); m.root.rotation.copy(old.rotation); if (old.parent) old.parent.add(m.root); old.removeFromParent(); }
@@ -117,7 +117,7 @@ function* flyOver(G, C) {
   const RING = [-90, -30, 30, 90, 150, 210].map((d) => [5 + Math.cos(d * Math.PI / 180) * 55, -12 + Math.sin(d * Math.PI / 180) * 55, 20]);   // 마을 둘레 둥근 길(부드럽게 돎)
   const GATES = RING.concat([[0, 3, 16]]).map(([x, z, h]) => ({ x, z, y: Math.max(gy(x, z), 0) + h, r: 11 }));
   const world = { ground: (x, z) => gy(x, z), water: 0, pillars: [{ x: -46.4, z: 41, r: 3.5, top: 34 }], ceil: 230, bounds: { x: 10, z: -10, r: 175 } };
-  const mod = yield* awaitP(import('../play/flight.js?v=19').catch(() => null));
+  const mod = yield* awaitP(import('../play/flight.js?v=25').catch(() => null));
   if (!mod || !mod.createFlight) return true;
   const F = mod.createFlight({ world, mode: G.diff, dragon: { root: T.root, rig: T.rig }, rider: { root: P.root, rig: P.rig }, rng: G.rng });
   F.setOpts({ assist: true, ceil: world.ceil }); F.setGates(GATES);
@@ -125,7 +125,7 @@ function* flyOver(G, C) {
   const cam = mod.createFlightCam(G.camera);
   /* 길잡이 = 그 자리를 도는 테러(친구) — 둥근 고리 대신 마을 것으로 */
   const marks = GATES.map((g, i) => { const d = G.dragon('terror', { x: g.x, z: g.z }, { noCollide: true, scale: 1.6 }); d.manual = true; d.g = g; d.ph = i; return d; });
-  const ftm = yield* awaitP(import('../stages/flight_test.js?v=19').catch(() => null));
+  const ftm = yield* awaitP(import('../stages/flight_test.js?v=25').catch(() => null));
   const ui = ftm && ftm.makeUI ? ftm.makeUI(G.diff, false) : null;
   if (ui) { document.querySelectorAll('.fl-note').forEach((n) => { n.style.display = 'none'; }); ui.gates(0, GATES.length); }
   T.manual = true; P.cam = 'fly'; C.F = F;
@@ -479,7 +479,7 @@ function* wild(G, C) {
       if (d < 18) D.faceTo(P.W.x, P.W.z);                     // 다가오는 사람을 지켜봄(눈을 떼지 않음)
       D.pose = scared ? { crouch: 0.7, teeth: 0.8, tailCurl: 0.6 } : wk === 'wing' ? { tailCurl: 0.3 } : {};
       if (P.reach && P.W.speed < 0.3 && d < 3.8 && M.fear < (easy ? 0.72 : 0.56)) calm += dt; else calm = Math.max(0, calm - dt * 0.5);
-      if (P.reach && d < 3.8 && M.fear >= (easy ? 0.72 : 0.56) && (t * 2 | 0) % 6 === 0) G.hud.say('hiccup', '아직 무서워해… 살금살금(Shift) 낮춰서.', [], { secs: 1.2 });
+      if (P.reach && d < 3.8 && M.fear >= (easy ? 0.72 : 0.56) && (t * 2 | 0) % 6 === 0) G.hud.say('hiccup', '아직 무서워해… 살금살금(C) 낮춰서.', [], { secs: 1.2 });
       if (calm > (easy ? 2 : 2.6)) {
         stage = 'heal'; M.trust = 0.85; M.fear = 0.2; D.pose = { headUp: -0.3 }; G.sfx.play('purr');
         G.hud.banner('마음을 놓았다 — 어디를 다쳤는지 보자', 'eye', 3); G.hud.goal('다친 곳 치료하기');
@@ -654,7 +654,7 @@ function* boatRide(G, C) {
   yield* dayStart(G, C);
   const P = G.player, pl = G.place, easy = G.diff === 'easy';
   C.state = 'row';
-  const mod = yield* awaitP(import('../play/boat.js?v=19').catch(() => null));
+  const mod = yield* awaitP(import('../play/boat.js?v=25').catch(() => null));
   if (mod && mod.createBoat && pl.lists.boatPath) {
     const B = mod.createBoat({ path: pl.lists.boatPath, mode: G.diff, rider: { root: P.root, rig: P.rig } });
     pl.group.add(B.root); if (B.foam) pl.group.add(B.foam);
@@ -734,7 +734,7 @@ export const chapter = {
     { id: '11-1', place: 'village', time: 'clear', at: 'forge_front', run: repaint, sense: (G, C) => ({ stage: C.stage || '', bench: G.bench.sense(), at: C.at || null }) },
     { id: '11-2', place: 'village', time: 'clear', at: 'plaza', run: flyOver, sense: (G, C) => Object.assign(C.F ? flySense(C.F) : {}, { tl: tlSense(G, C.T) }) },
     { id: '11-3', verb: 'approach', place: 'village', time: 'clear', at: { x: 0, z: 9, yaw: Math.PI * 0.75 }, goal: '드래곤 먹이 주기', limit: 200,
-      hints: { 1: '뛰어가면 겁내. 살금살금(Shift).', 2: '바구니에서 생선(F) · 날 볼 때 가까이서 F.' }, run: feed, sense: feedSense },
+      hints: { 1: '뛰어가면 겁내. 살금살금(C).', 2: '바구니에서 생선(F) · 날 볼 때 가까이서 F.' }, run: feed, sense: feedSense },
     { id: '11-4', verb: 'rhythm', howtoVerb: 'fish', place: 'village', time: 'clear', at: 'dock_end', goal: '물고기 잡기', limit: 220,
       hints: { 1: '찌가 쏙 들어갈 때 당겨야 해.', 2: '고기가 당기는 반대쪽 키를 누르자.' }, run: fish, sense: (G, C) => ({ state: C.state, bob: C.bob || '', pull: C.pull || 0, got: C.got || 0, need: C.need || 0 }) },
     { id: '11-5', verb: 'approach', howtoVerb: 'hide', place: 'village', time: 'clear', at: { x: 10, z: -16, yaw: Math.PI / 2 }, goal: '드래곤 책 채우기', limit: 240,

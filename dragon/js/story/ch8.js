@@ -6,16 +6,16 @@
 // ⑥ [관문 비행] 와! 구름을 뚫고 올라 오로라 아래로 · 약속 — 변화 = 책 둥지 쪽 '대장만 나쁘다' · 하늘 지도 안개 바다
 // 대사는 모두 새로 씀(원문 X) · 삼키는 장면 화면 밖 · 깜짝 X(예고 먼저) · 구름·떼·오로라는 G.place.group에 붙였다가 장소와 함께 치움
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=19';
-import { holdItem, makeItem, makePuffs } from './fx.js?v=19';
-import { toon, setTime } from '../look/kit.js?v=19';
-import { createClouds, towerSpheres, clumpSpheres, deckTop, DECK } from '../look/clouds.js?v=19';
-import { createNightSky, blendTime } from '../look/aurora.js?v=19';
-import { createFlock } from '../play/flock.js?v=19';
-import { createFlight, createFlightCam } from '../play/flight.js?v=19';
-import { createRng } from '../core/rng.js?v=19';
-import { flySense as fsFlat } from './flysense.js?v=19';
-import { HOWTO, ICONS, keyCap } from '../ui/art.js?v=19';
+import { wait, until, sayAll } from './runner.js?v=25';
+import { holdItem, makeItem, makePuffs } from './fx.js?v=25';
+import { toon, setTime } from '../look/kit.js?v=25';
+import { createClouds, towerSpheres, clumpSpheres, deckTop, DECK } from '../look/clouds.js?v=25';
+import { createNightSky, blendTime } from '../look/aurora.js?v=25';
+import { createFlock } from '../play/flock.js?v=25';
+import { createFlight, createFlightCam } from '../play/flight.js?v=25';
+import { createRng } from '../core/rng.js?v=25';
+import { flySense as fsFlat } from './flysense.js?v=25';
+import { HOWTO, ICONS, keyCap } from '../ui/art.js?v=25';
 
 const INK = '#2b2118';
 const svg = (b) => `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${b}</svg>`;
@@ -29,7 +29,7 @@ const ARR2 = `<span class="keys">${keyCap('←')}${keyCap('→')}</span>`, ARR4 
 HOWTO.cling8 = [[ARR2, ICONS.wind, '기울면 반대쪽'], [keyCap('↑'), ICONS.fin, '곤두박질엔 ↑ 꾹'], ['', ICONS.hand, '손이 미끄러지지 않게']];
 HOWTO.glide8 = [[ARR4, ICONS.wind, '방향 · ↑ 오르기'], ['', ICONS.cloud, '구름 속 = 숨기'], ['', 'wing', '앞으로는 저절로']];
 HOWTO.flock8 = [[ARR4, ICONS.flock, '떼 가운데 내 자리'], ['', ICONS.eye, '눈이 뜨이면 안쪽으로'], ['', 'wait', '부딪히지 않기']];
-HOWTO.sniff8 = [[keyCap('Shift', true), 'tiptoe', '살금살금(낮게)'], ['', ICONS.nose, '콧구멍 벌름 = 낮게 멈춤'], [`<span class="keys">${keyCap('W')}${keyCap('A')}${keyCap('S')}${keyCap('D')}</span>`, 'rock', '바위 턱 → 틈']];
+HOWTO.sniff8 = [[keyCap('C'), 'tiptoe', '살금살금(낮게)'], ['', ICONS.nose, '콧구멍 벌름 = 낮게 멈춤'], [`<span class="keys">${keyCap('W')}${keyCap('A')}${keyCap('S')}${keyCap('D')}</span>`, 'rock', '바위 턱 → 틈']];
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const SADDLE = new THREE.Vector3(0, 1.16, -0.05), BACK = new THREE.Vector3(0, 1.1, -0.74);
@@ -678,7 +678,7 @@ export const chapter = {
     { id: '8-4', verb: 'hide', howtoVerb: 'flock8', place: 'sea', time: 'sunset', goal: '떼 속에 숨어 따라가기', limit: 120,
       hints: { 1: '둘레 드래곤 눈이 뜨이면 가운데로.', 2: '떼가 도는 쪽으로 같이 돌고, 같이 내려가.' }, run: flockHide, sense: flockSense },
     { id: '8-5', verb: 'hide', howtoVerb: 'sniff8', place: 'nest', variant: 'crater', time: 'nest', goal: '숨어서 지켜보기', limit: 200,
-      hints: { 1: '콧구멍이 벌름하면 낮게 멈춰.', 2: 'Shift로 살금살금 · 킁킁이 끝나면 화살표 쪽으로.' }, run: nest, sense: nestSense },
+      hints: { 1: '콧구멍이 벌름하면 낮게 멈춰.', 2: 'C로 살금살금 · 킁킁이 끝나면 화살표 쪽으로.' }, run: nest, sense: nestSense },
     { id: '8-6', verb: 'fly', howtoVerb: 'glide8', place: 'sea', time: 'night', goal: '구름을 뚫고 위로', limit: 100,
       hints: { 1: '↑ 를 눌러 위로!', 2: '화살표 쪽 구름으로 들어갔다 나와.' }, run: breakout, sense: rideSense },
   ],

@@ -46,7 +46,7 @@ BOTS['8-4'] = (s, K, M, B, lv) => {
 BOTS['8-5'] = (s, K, M, B, lv) => {
   if (s.stage !== 'sneak' || !s.chain) { K.stop(); return; }
   const me = K.cur.me;
-  if (!me.low) { K.stop(); if ((K.shiftCd = (K.shiftCd || 0) - DT) <= 0) { K.tap('ShiftLeft'); K.shiftCd = 0.5; } return; }
+  if (!me.low) { K.stop(); if ((K.shiftCd = (K.shiftCd || 0) - DT) <= 0) { K.tap('KeyC'); K.shiftCd = 0.5; } return; }
   const lag = LAG[lv] || 0.35, W = { easy: 3, normal: 2.5, hard: 2 }[s.diff] || 2.5;
   if (s.state === 'sniff' || (s.state === 'warn' && s.sign > 1 - (lag + 0.9) / W)) { K.stop(); return; }   // 남은 예고 안에 멈춤
   const ch = s.chain, last = ch.length - 1, nx = ch[Math.min(last, s.prog + 1)];

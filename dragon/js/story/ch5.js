@@ -2,11 +2,11 @@
 // ③ 코브: 뱀장어에 질겁 · 꼬리 살피기(첫 치유)[다가가] ④ 꼬리날개 달고 첫 들림 → 첨벙[관문 비행] ⑤ 훈련 3일 지플백(불꽃 머리에 물 · 다른 길 뱀장어)[던지기 · 쉬움 X]
 // 와! = 첫 들림에 발이 땅에서 떨어지는 3초 · 변화 = 갈색 가죽 꼬리날개 · 대장간 벽 설계도 · 덧댄 방패 · 사이 레벨 1(부르면 오는 거리)
 import * as THREE from 'three';
-import { wait, until, sayAll } from './runner.js?v=19';
-import { holdItem, dropItem, makePuffs } from './fx.js?v=19';
-import { toon, flameMesh, glowSprite } from '../look/kit.js?v=19';
-import { tlSense } from './ch4.js?v=19';
-import { flySense } from './flysense.js?v=19';
+import { wait, until, sayAll } from './runner.js?v=25';
+import { holdItem, dropItem, makePuffs } from './fx.js?v=25';
+import { toon, flameMesh, glowSprite } from '../look/kit.js?v=25';
+import { tlSense } from './ch4.js?v=25';
+import { flySense } from './flysense.js?v=25';
 
 const WARN = { easy: 3, normal: 2.5, hard: 2 };
 const TAU = Math.PI * 2;
@@ -64,7 +64,8 @@ function towerSense(G, C) { return { torches: (C.TR || []).map((t) => ({ x: +t.x
 function* forge(G, C) {
   const P = G.player, pl = G.place, A = pl.anchors, bench = A.forge_bench || A.forge_anvil || { x: 0, z: 0 };
   const Gb = G.person('gobber', A.forge_anvil || { x: bench.x + 2, z: bench.z, yaw: 0 }); Gb.pose = { hammer: 1 };
-  G.hud.goal('작업대로');
+  G.hud.goal('뒷방 작업대로');
+  G.hud.say('gobber', '네 작업대는 뒷방에 그대로 있다. 뭘 만들든 불은 조심하고.', ['hammer']);   /* 자리만 알려 줌(방법은 하는 법 창) — 11-01 교사 '대장간 들어가서 뭐 어떻게 하는 거야' */
   G.useSpots = [{ x: bench.x, y: 0, z: bench.z }];
   yield* until(() => P.fTap && G.near(bench, 2.6));
   G.useSpots = []; P.lock = true;
@@ -146,7 +147,7 @@ function* lift(G, C) {
   G.hud.say('hiccup', '…됐다. 가만히 있어 봐…', ['finNew']);
   yield* wait(1.2);
   /* 날기 — flight.js(팀 F) liftOnly · 없으면 간단한 들림(앞으로 저절로 · A/D 꼬리) */
-  const mod = yield* awaitP(import('../play/flight.js?v=19').catch(() => null));
+  const mod = yield* awaitP(import('../play/flight.js?v=25').catch(() => null));
   const lake = pl.lake || { x: (A.lake || T).x, z: (A.lake || T).z, r: 12, y: 0 }, fly = pl.fly || { ground: (x, z) => pl.height(x, z, 0), pillars: [], ceil: 40, bounds: { x: lake.x, z: lake.z, r: 40 } };
   let F = null, cam = null, splash = false, crash = false;
   if (mod && mod.createFlight) {
@@ -273,8 +274,9 @@ export const chapter = {
   steps: [
     { id: '5-1', verb: 'listen', place: 'village', time: 'night', at: 'tower_top', goal: '고버 아저씨 이야기 동안 횃불 지키기', limit: 150,
       hints: { 1: '눈발이 흘러가는 쪽 횃불이 꺼질 거야.', 2: '바람 오는 쪽에 서서 몸으로 막자 · 꺼지면 F.' }, run: tower, sense: towerSense },
-    { id: '5-2', verb: 'rhythm', place: 'village', time: 'night', at: 'forge_front', goal: '작업대로', limit: 200,
-      hints: { 1: '모서리에 닿는 순간이야.', 2: '모양을 보고 맞춰 누르자 · 마구 누르면 엉켜.' }, run: forge, sense: (G, C) => ({ stage: C.stage, bench: G.bench.sense(), at: G.place.anchors.forge_bench || G.place.anchors.forge_anvil || null }) },
+    { id: '5-2', verb: 'rhythm', howtoVerb: 'bench', place: 'village', time: 'night', at: 'forge_front', goal: '뒷방 작업대로', limit: 200,
+      hints: (G, C) => (C && C.stage ? { 1: '모서리에 닿는 순간이야.', 2: '모양을 보고 맞춰 누르자 · 마구 누르면 엉켜.' }
+        : { 1: '내 작업대는 대장간 뒷방이야 — 촛불 켜진 문틈으로.', 2: '뒷방 탁자 바로 앞에 서서 F를 눌러.' }), run: forge,   /* 작업대를 찾기 전과 뒤의 힌트를 나눔(11-01 교사 '대장간 들어가서 뭐 어떻게 하는 거야') */ sense: (G, C) => ({ stage: C.stage, bench: G.bench.sense(), at: G.place.anchors.forge_bench || G.place.anchors.forge_anvil || null }) },
     { id: '5-3', verb: 'approach', place: 'cove', time: 'day', at: 'gap_in', goal: '투슬리스 먹이기', limit: 200,
       hints: { 1: '투슬리스가 뭘 보고 놀랐을까?', 2: '움찔하면 손을 떼고, 눈이 둥글어지면 다시.' }, run: eelTail, sense: eelSense },
     { id: '5-4', verb: 'fly', place: 'cove', time: 'day', goal: '먹는 틈에 꼬리날개 달기', limit: 120,

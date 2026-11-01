@@ -1,24 +1,24 @@
 // 게임 본판 — 첫 화면 → 장(2~6 수직 조각) · 장소는 무대 그릇으로 짓고 비움 · 플레이어 = 히컵(걷기 + 뒤따르는 카메라)
 // 장 차례 생성기는 story/ch*.js · G(놀이 상태)를 장과 봇 감각(sense)이 함께 봄 · 봇은 DRG.sense()만 읽고 키만 누름
 import * as THREE from 'three';
-import { createEnv, U } from '../look/kit.js?v=19';
-import { createStageHost } from '../core/stage.js?v=19';
-import { createCollide } from '../play/collide.js?v=19';
-import { createWalker, createFollowCam } from '../play/walker.js?v=19';
-import { loadModel } from '../look/models.js?v=19';
-import { createHumanRig } from '../look/human_rig.js?v=19';
-import { createDragon, createPerson } from '../play/actors.js?v=19';
-import { createHud } from '../ui/hud.js?v=19';
-import { createBook } from '../ui/book.js?v=19';
-import { createMap } from '../ui/map.js?v=19';
-import { createBench } from '../ui/bench.js?v=19';
-import { createSfx } from '../core/sfx.js?v=19';
-import { showTitle, diffOf } from '../ui/title.js?v=19';
-import { createRunner } from '../story/runner.js?v=19';
-import { writeSlot, flushSlot } from '../story/save.js?v=19';
-import { holdItem } from '../story/fx.js?v=19';
-import { createRng } from '../core/rng.js?v=19';
-import { showEnding } from '../ui/ending.js?v=19';
+import { createEnv, U } from '../look/kit.js?v=25';
+import { createStageHost } from '../core/stage.js?v=25';
+import { createCollide } from '../play/collide.js?v=25';
+import { createWalker, createFollowCam } from '../play/walker.js?v=25';
+import { loadModel } from '../look/models.js?v=25';
+import { createHumanRig } from '../look/human_rig.js?v=25';
+import { createDragon, createPerson } from '../play/actors.js?v=25';
+import { createHud } from '../ui/hud.js?v=25';
+import { createBook } from '../ui/book.js?v=25';
+import { createMap } from '../ui/map.js?v=25';
+import { createBench } from '../ui/bench.js?v=25';
+import { createSfx } from '../core/sfx.js?v=25';
+import { showTitle, diffOf } from '../ui/title.js?v=25';
+import { createRunner } from '../story/runner.js?v=25';
+import { writeSlot, flushSlot } from '../story/save.js?v=25';
+import { holdItem } from '../story/fx.js?v=25';
+import { createRng } from '../core/rng.js?v=25';
+import { showEnding } from '../ui/ending.js?v=25';
 
 export const PLAYABLE = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];   // 0 = 오프닝 · 11 = 종장
 const CH_FILE = Object.fromEntries(PLAYABLE.map((n) => [n, 'ch' + n]));
@@ -33,11 +33,11 @@ export async function buildGame(scene, camera, rng, opt = {}) {
   G.book = createBook(G); G.map = createMap(); G.bench = createBench(); G.sfx = createSfx(G); G.music = G.sfx.music;
   /* 플레이어 */
   const P = G.player = { W: null, C: null, root: null, rig: null, item: null, lock: false, fT: 0, fTap: false, fLong: false, reach: false, away: false, cam: 'follow', hidden: false };
-  loadModel('assets/models/hiccup.glb?v=19').then(({ root, bones }) => { P.root = root; P.rig = createHumanRig(bones, root); P.bones = bones; if (G.place) G.place.group.add(root); });
+  loadModel('assets/models/hiccup.glb?v=25').then(({ root, bones }) => { P.root = root; P.rig = createHumanRig(bones, root); P.bones = bones; if (G.place) G.place.group.add(root); });
 
   /* 장소 짓기 — places/<이름>.js가 없으면 자리표시(_stub) */
   G.loadPlace = async (name, time, variant) => {
-    let mod; try { mod = await import(`../places/${name}.js?v=19`); } catch (e) { mod = await import('../places/_stub.js?v=19'); }
+    let mod; try { mod = await import(`../places/${name}.js?v=25`); } catch (e) { mod = await import('../places/_stub.js?v=25'); }
     G.place = null; G.cast.length = 0; G.castBy = {};             // 장 안에서 이어지는 배우(keep)는 장소가 바뀌면 함께 비움
     if (P.root) P.root.removeFromParent();                         // 히컵은 옛 장소 group과 함께 비우지 않음(11-01 점검: 장소마다 기하·뼈 텍스처를 비웠다가 첫 프레임에 다시 올림)
     let hs = 7; for (const ch of name) hs = (hs * 31 + ch.charCodeAt(0)) >>> 0;   // 장소마다 제 씨앗(앞에서 난수를 얼마나 썼든 같은 마을 · 팀 A 지적)
@@ -83,11 +83,42 @@ export async function buildGame(scene, camera, rng, opt = {}) {
   G.pl = () => ({ x: P.W.x, z: P.W.z, vx: P.W.vx, vz: P.W.vz, yaw: P.W.yaw, low: P.W.low, weapon: P.item === 'knife' || P.item === 'axe', reach: P.reach, away: P.away });
   G.dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
   G.near = (pos, r) => P.W && Math.hypot(P.W.x - pos.x, P.W.z - pos.z) < r;
-  G.useSpots = [];                                      // 쉬움 F 표시 자리 [{x,y,z}] — 장이 채움
+  G.useSpots = [];                                      // F 표시 자리 [{x,y,z}] — 장이 채움
+  G.goalSpot = null;                                    // 지금 갈 곳 {x,(y),z} — 장이 채움(없으면 가장 가까운 F 자리)
+  const gm = document.createElement('div');
+  gm.style.cssText = 'position:fixed;left:0;top:0;z-index:19;pointer-events:none;display:none;transform:translate(-50%,-100%);text-align:center;font:bold 18px/1.2 sans-serif;color:#2b2118';
+  gm.innerHTML = '<div style="background:#efe2c4;border:3px solid #2b2118;border-radius:9px;padding:3px 9px"></div><svg width="30" height="20" viewBox="0 0 22 14" style="display:block;margin:0 auto"><path d="M2 1 L20 1 L11 13 Z" fill="#d9a441" stroke="#2b2118" stroke-width="2"/></svg>';
+  const gmT = gm.firstChild, gmA = gm.lastChild; document.body.appendChild(gm);
+  G.goalMark = () => {
+    let s = G.goalSpot;
+    if (!s && G.useSpots.length && P.W) { let bd = 1e9; for (const u of G.useSpots) { const d = Math.hypot(u.x - P.W.x, u.z - P.W.z); if (d < bd) { bd = d; s = u; } } }
+    const me = P.W || camera.position, d = s ? Math.hypot(s.x - me.x, s.z - me.z) : 0;
+    if (!s || d < 3 || G.book.draw || !G.bench.el.classList.contains('gone')) { if (gm.style.display !== 'none') gm.style.display = 'none'; return; }
+    const y = (s.y != null ? s.y : (G.place && G.place.height ? G.place.height(s.x, s.z, me.y || 0) : 0)) + 2.4;
+    const p = G.toScreen(s.x, y, s.z), m = 40, W = innerWidth, H = innerHeight;
+    gm.style.display = 'block'; gmT.textContent = Math.round(d) + 'm';
+    if (p.front && p.x > m && p.x < W - m && p.y > m + 30 && p.y < H - m) { gm.style.left = p.x + 'px'; gm.style.top = p.y + 'px'; gmA.style.transform = ''; }
+    else {                                              // 화면 밖·뒤 = 가장자리에 화살표(가야 할 쪽)
+      let dx = p.x - W / 2, dy = p.y - H / 2; if (!p.front) { dx = -dx; dy = -dy; }
+      const L = Math.hypot(dx, dy) || 1, R2 = Math.min(W, H) / 2 - 50;
+      gm.style.left = (W / 2 + dx / L * R2) + 'px'; gm.style.top = (H / 2 + dy / L * R2) + 'px';
+      gmA.style.transform = 'rotate(' + (Math.atan2(dy, dx) * 180 / Math.PI - 90) + 'deg)';
+    }
+  };
   G.hold = (name) => holdItem(P, name);
+
+  /* TPS 마우스 잠금 알림(11-01) — 마우스가 있는 기기에서 잠그지 않았을 때만 아래 가운데 작은 쪽지 · 잠그면 사라짐 */
+  const lockTip = document.createElement('div');
+  lockTip.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:20;background:#efe2c4;color:#2b2118;border:2px solid #2b2118;border-radius:9px;padding:5px 12px;font:15px/1.4 sans-serif;pointer-events:none;display:none';
+  lockTip.textContent = '화면을 한 번 누르면 마우스로 둘러봐요 · Esc = 풀기';
+  document.body.appendChild(lockTip);
+  const fine = (() => { try { return matchMedia('(pointer: fine)').matches; } catch (e) { return false; } })();
+  let tipT = 0;
 
   /* 걸음 */
   G.playerStep = (dt, I) => {
+    if (!I.gateSet) { I.gateSet = true; I.lockGate = () => !!P.W && P.cam === 'follow' && !G.book.draw && G.bench.el.classList.contains('gone'); }
+    if ((tipT -= dt) <= 0) { tipT = 0.5; const show = fine && !I.locked() && I.lockGate(); if ((lockTip.style.display !== 'none') !== show) lockTip.style.display = show ? 'block' : 'none'; }
     if (!P.W) return;
     P.fTap = false;
     if (I.tap('use')) { P.taps = (P.taps || []).filter((t) => G.t - t < 1.5); P.taps.push(G.t); }
@@ -96,6 +127,7 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     else { if (P.fT > 0 && P.fT < 0.3) P.fTap = true; P.fT = 0; P.fLong = false; }
     P.reach = P.fLong && !P.noReach; P.away = P.reach;
     P.W.lock = P.lock || P.reach;                         // 손 내미는 동안은 멈춤(기다리기)
+    if (I.locked() && (G.book.draw || !G.bench.el.classList.contains('gone'))) I.unlock();   // 책·작업대(그리기·박자 판)가 열리면 마우스를 돌려줌
     if (P.cam === 'follow') {                                   // 책·작업대에 그리는 동안 끌기 = 펜
       if (!G.book.draw && !P.aiming && G.bench.el.classList.contains('gone')) { if (P.camOff) { I.look(); P.camOff = false; } P.C.step(dt, I, P.W); }   // 카메라가 쉰 동안(작업대·장소 짓기) 쌓인 끌기는 버림 — 끝나는 순간 카메라가 확 돌던 것(11-01 점검)
       else P.camOff = true;
@@ -135,8 +167,8 @@ export async function buildGame(scene, camera, rng, opt = {}) {
     if (nx && Q.get('chain') !== '0') setTimeout(() => startCh(nx, 0), 1800);
   };
   async function startCh(n, idx) {
-    if (G.inv.helmet && n >= 8 && n <= 10) { const fx = await import('../story/fx79.js?v=19'); fx.setHelmet(G, true); }   // 7장에서 받은 투구가 이어하기에도(팀 B)
-    const m = await import(`../story/${CH_FILE[n]}.js?v=19`);
+    if (G.inv.helmet && n >= 8 && n <= 10) { const fx = await import('../story/fx79.js?v=25'); fx.setHelmet(G, true); }   // 7장에서 받은 투구가 이어하기에도(팀 B)
+    const m = await import(`../story/${CH_FILE[n]}.js?v=25`);
     if (!(idx >= 0 && idx < m.chapter.steps.length)) idx = 0;   // 다 깬 장(차례 번호 = 차례 수)을 다시 고르면 처음부터
     await R.start(m.chapter, idx);
   }
@@ -218,10 +250,11 @@ export async function buildGame(scene, camera, rng, opt = {}) {
       for (const x of G.cast) drawActor(x, a, dt);
       G.place.draw && G.place.draw(a);
       env.follow();
-      if (G.diff === 'easy') {                          // 쉬움: 쓸 수 있는 물건 위 F 키 그림만(6m 안)
-        const L = []; for (const s of G.useSpots) { if (!G.near(s, 6)) continue; const p = G.toScreen(s.x, (s.y || 0) + 1.6, s.z); if (p.front) L.push(p); }
+      if (G.diff !== 'hard') {                          // 쓸 수 있는 물건 위 F 키 그림만 — 쉬움 6m · 보통 4m(11-01 교사 '대장간 들어가서 뭐 어떻게 하는 거야' — 보통에선 작업대를 못 찾았음)
+        const rr = G.diff === 'easy' ? 6 : 4, L = []; for (const s of G.useSpots) { if (!G.near(s, rr)) continue; const p = G.toScreen(s.x, (s.y || 0) + 1.6, s.z); if (p.front) L.push(p); }
         hud.fkeys(L);
       }
+      G.goalMark();
       if (R.C && R.C.drawHook) R.C.drawHook(a, dt);
     },
     benchPath: (t) => { G.benchT = performance.now(); if (G.place && G.place.benchPath) G.place.benchPath(t); },

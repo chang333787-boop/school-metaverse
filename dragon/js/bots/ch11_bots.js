@@ -24,7 +24,7 @@ BOTS['11-3'] = (s, K, M) => {
   const d = (c.dragons || []).slice().sort((a, b) => hyp(a.x - me.x, a.z - me.z) - hyp(b.x - me.x, b.z - me.z))[0];
   if (!d) { K.stop(); window.DRG.bot.drag(5, 0); return; }
   const dd = hyp(d.x - me.x, d.z - me.z);
-  if (dd > 3.0) { K.go(c, d.x, d.z, true, 2.9); return; }                         // 살금살금(Shift 켬)
+  if (dd > 3.0) { K.go(c, d.x, d.z, true, 2.9); return; }                         // 살금살금(C 켬)
   K.stop(); K.face(c, d.x, d.z);
   if (s.dragons && s.dragons.some((x) => x.kind === d.kind && x.facingMe && x.pupil > 0.45) && cd(M, 'f', 1.6)) K.tap('KeyF');
 };
@@ -47,7 +47,7 @@ BOTS['11-5'] = (s, K, M) => {
   if (dd > 7.5) { K.go(c, Math.round(t.x / 3) * 3, Math.round(t.z / 3) * 3, dd < 13, 7.0); return; }   // 멀면 그냥 걷고 13m 안에서 살금살금(움직이는 과녁은 3m 칸으로 — 길을 매번 다시 찾지 않게)
   if (dd < 5) { const ax = me.x - t.x, az = me.z - t.z, L = hyp(ax, az) || 1; K.walk(c, t.x + ax / L * 6.5, t.z + az / L * 6.5, true, 0.4); return; }
   K.stop();
-  if (!me.low) { if (cd(M, 'sh', 0.6)) K.tap('ShiftLeft'); return; }
+  if (!me.low) { if (cd(M, 'sh', 0.6)) K.tap('KeyC'); return; }
   K.face(c, t.x, t.z);
 };
 
@@ -78,7 +78,7 @@ BOTS['11-6'] = (s, K, M) => {
   if (dd > 4.5) { K.go(c, Math.round(M.ndx / 2) * 2, Math.round(M.ndz / 2) * 2, dd < 16, 3.2); return; }   // 움직이는 과녁은 2m 칸으로(길을 매번 다시 찾지 않게)
   if (dd > 2.3) { K.walk(c, M.ndx, M.ndz, true, 2.3); return; }
   K.stop(); K.face(c, M.ndx, M.ndz);
-  if (!me.low) { if (cd(M, 'sh', 0.6)) K.tap('ShiftLeft'); return; }
+  if (!me.low) { if (cd(M, 'sh', 0.6)) K.tap('KeyC'); return; }
   if (cd(M, 'f', 1.6)) K.tap('KeyF');
 };
 /* 다친 야생 드래곤 — 도끼는 안 듦(들었으면 바로 내려놓음) · 16m 안부터 살금살금 → 3.3m에서 멈춰 F 꾹 → 다친 곳을 보고 수레에서 맞는 것 → 2.5m에서 F */
@@ -92,7 +92,7 @@ BOTS['11-7'] = (s, K, M) => {
     const d = hyp(M.dx - me.x, M.dz - me.z);
     if (d > 3.3) { K.set('KeyF', false); K.go(c, M.dx, M.dz, d < 16, 3.1); return; }
     K.stop();
-    if (!me.low) { K.set('KeyF', false); if (cd(M, 'sh', 0.6)) K.tap('ShiftLeft'); return; }
+    if (!me.low) { K.set('KeyF', false); if (cd(M, 'sh', 0.6)) K.tap('KeyC'); return; }
     K.set('KeyF', true);
     return;
   }
@@ -121,7 +121,7 @@ BOTS['11-9'] = (s, K, M) => {
   if (M.sx == null) { K.stop(); window.DRG.bot.drag(5, 0); return; }
   if (ds > 3.0) { K.go(c, M.sx, M.sz, true, 2.8); return; }
   K.stop(); K.face(c, M.sx, M.sz);
-  if (!me.low) { if (cd(M, 'sh', 0.6)) K.tap('ShiftLeft'); return; }
+  if (!me.low) { if (cd(M, 'sh', 0.6)) K.tap('KeyC'); return; }
   if (s.sc && s.sc.facingMe && cd(M, 'f', 1.4)) K.tap('KeyF');
 };
 /* 배 타기 — 노(팀 F 배 봇) → 던지기 → 쏙 F → 당기는 반대쪽(11-4와 같은 손) */

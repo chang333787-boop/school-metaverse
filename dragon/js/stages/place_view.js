@@ -1,12 +1,12 @@
 // 장소 보기(단계 3 팀 시험용) — ?scene=place&p=<이름>&time=<때>&variant=&at=<anchor>&marks=1 · 히컵으로 걷기 · G = 자유 카메라(WASD·끌기·Shift 빠르게)
 // 장소 모듈 계약 = docs/dragon/stage3_plan.md §2 · 무대 그릇(core/stage.js)으로 짓고 비움 · ?swap=1 이면 K로 같은 장소를 다시 지음(힙 시험)
 import * as THREE from 'three';
-import { createEnv, U } from '../look/kit.js?v=19';
-import { createStageHost } from '../core/stage.js?v=19';
-import { createCollide } from '../play/collide.js?v=19';
-import { createWalker, createFollowCam } from '../play/walker.js?v=19';
-import { loadModel } from '../look/models.js?v=19';
-import { createHumanRig } from '../look/human_rig.js?v=19';
+import { createEnv, U } from '../look/kit.js?v=25';
+import { createStageHost } from '../core/stage.js?v=25';
+import { createCollide } from '../play/collide.js?v=25';
+import { createWalker, createFollowCam } from '../play/walker.js?v=25';
+import { loadModel } from '../look/models.js?v=25';
+import { createHumanRig } from '../look/human_rig.js?v=25';
 
 export function buildPlaceView(scene, camera, rng, opt = {}) {
   const env = createEnv(scene, camera);
@@ -15,7 +15,7 @@ export function buildPlaceView(scene, camera, rng, opt = {}) {
   let place = null, W = null, C = null, coll = null, hic = null, hrig = null, free = false, t = 0, last = performance.now(), fHold = 0, benchT = -1e9;
   const fc = { x: 0, y: 30, z: 0, yaw: 0, pitch: -0.2 }, fp = { x: 0, y: 0, z: 0 };
   async function load() {
-    const m = await import(`../places/${name}.js?v=19`);
+    const m = await import(`../places/${name}.js?v=25`);
     place = await host.load(name, (ctx) => m.buildPlace(Object.assign(ctx, { env, rng, opt: { time: opt.time, variant: opt.variant } })));
     coll = createCollide(place.blockers || [], place.walls || []);
     const A = place.anchors || {}, a = A[opt.at] || A.spawn || A.plaza || A.gate || A.floor || A.door || Object.values(A)[0] || { x: 0, z: 0, yaw: 0, y: 0 };
@@ -32,7 +32,7 @@ export function buildPlaceView(scene, camera, rng, opt = {}) {
     for (const k in place.lists || {}) for (const a of place.lists[k]) { if (a.x == null) continue; const m = new THREE.Mesh(g, mb); m.position.set(a.x, a.y ?? place.height(a.x, a.z), a.z); m.scale.set(0.6, 0.6, 0.6); place.group.add(m); }
     console.log('anchors', JSON.stringify(Object.keys(place.anchors)), 'lists', JSON.stringify(Object.fromEntries(Object.entries(place.lists || {}).map(([k, v]) => [k, v.length]))));
   }
-  loadModel('assets/models/hiccup.glb?v=19').then(({ root, bones }) => { hrig = createHumanRig(bones, root); hic = root; (place ? place.group : scene).add(root); });
+  loadModel('assets/models/hiccup.glb?v=25').then(({ root, bones }) => { hrig = createHumanRig(bones, root); hic = root; (place ? place.group : scene).add(root); });
   const ready = load();
   return {
     env, ready, get place() { return place; }, host,
@@ -45,7 +45,7 @@ export function buildPlaceView(scene, camera, rng, opt = {}) {
       if (free) {
         fp.x = fc.x; fp.y = fc.y; fp.z = fc.z;
         const lk = I.look(); fc.yaw -= lk.x * 0.004; fc.pitch = Math.max(-1.4, Math.min(1.2, fc.pitch - lk.y * 0.003));
-        fc.yaw -= I.axis('left', 'right') * 1.4 * dt; const sp = I.axis('back', 'fwd') * (I.on('low') ? 60 : 14) * dt;
+        fc.yaw -= I.axis('left', 'right') * 1.4 * dt; const sp = I.axis('back', 'fwd') * (I.on('run') ? 60 : 14) * dt;
         fc.x += Math.sin(fc.yaw) * Math.cos(fc.pitch) * sp; fc.z += Math.cos(fc.yaw) * Math.cos(fc.pitch) * sp; fc.y += Math.sin(fc.pitch) * sp;
         return;
       }
