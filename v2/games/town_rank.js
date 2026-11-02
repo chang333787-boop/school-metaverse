@@ -142,7 +142,7 @@ export function createRank(api) {
   function detail() { const c = C(), m = mis(); if (!m) return ''; const v = c.v, e = en(), [a, n] = count();
     if (m.kind === 'grp') return ['grain', 'veg', 'pro'].map(g => (v.s.includes(g) ? '✔ ' : '') + L(FGN[g])).join(e ? ', ' : ' · ');
     if (m.kind === 'ride') return rides().filter(q => v.need.includes(q[0])).map(q => (v.s.includes(q[0]) ? '✔ ' : '') + L(q[2])).join(e ? ', ' : ' · ');
-    if (m.kind === 'cheap') return ['conv', 'grocery'].map(q => (v.seen[q] ? '✔ ' : '') + L(KINDN[q])).join(e ? ', ' : ' · ') + (e ? ' — then buy' : ' → 사기');
+    if (m.kind === 'cheap') return ['conv', 'grocery'].map(q => (v.seen[q] ? '✔ ' : '') + L(KINDN[q])).join(e ? ', ' : ' · ') + (e ? ' — then buy' : ' → 사기') + (v.last ? (e ? '. Last time: ' : '. 지난번: ') + v.last : '');
     if (m.kind === 'dir') return v.T ? (e ? 'About ' + v.T.d + ' m from where you started' : '시작한 곳에서 ' + v.T.d + 'm쯤') : '';
     return a + '/' + n; }
   function step() { const c = C(); if (!c) return; api.sfx('tick'); save(); const [a, n] = count(); if (a >= n) { finish(); return; } api.toast('🏅 ' + todo() + ' (' + a + '/' + n + ')', 2.4); api.task(); }
@@ -160,7 +160,7 @@ export function createRank(api) {
         if (t === 'buy' && KINDN[d.kind]) { const o = d.kind === 'conv' ? 'grocery' : 'conv', p1 = api.price(d.kind, d.e), p2 = api.price(o, d.e);
           if (p2 == null || p1 == null) { api.toast('🤔 ' + (en() ? 'That isn’t sold in both shops — compare something both sell' : '그 물건은 두 가게에 다 있지 않아요. 둘 다 파는 것으로 견줘 봐요'), 3.4); break; }
           if (!v.seen[o]) { api.toast('🤔 ' + (en() ? 'Check the price at ' + L(KINDN[o]) + ' first' : L(KINDN[o]) + ' 값을 아직 안 봤어요. 먼저 들어가 봐요'), 3.4); break; }
-          if (p1 <= p2) { v.c = 1; step(); } else api.toast('🤔 ' + d.e + ' ' + (en() ? L(KINDN[d.kind]) + ' ' + p1 + ' won, ' + L(KINDN[o]) + ' ' + p2 + ' won. Next time buy at the cheaper one' : L(KINDN[d.kind]) + ' ' + p1 + '원, ' + L(KINDN[o]) + ' ' + p2 + '원이에요. 다음엔 더 싼 곳에서 사 봐요'), 4); }
+          if (p1 <= p2) { v.c = 1; step(); } else { v.last = d.e + ' ' + L(KINDN[d.kind]) + ' ' + p1 + (en() ? ' won, ' : '원, ') + L(KINDN[o]) + ' ' + p2 + (en() ? ' won' : '원'); save(); api.task(); api.toast('🤔 ' + d.e + ' ' + (en() ? L(KINDN[d.kind]) + ' ' + p1 + ' won, ' + L(KINDN[o]) + ' ' + p2 + ' won. Next time buy at the cheaper one' : L(KINDN[d.kind]) + ' ' + p1 + '원, ' + L(KINDN[o]) + ' ' + p2 + '원이에요. 다음엔 더 싼 곳에서 사 봐요'), 4); } }   /* READ-1: 견준 값은 할 일 줄·미션 창에도 남음(가게 창 뒤에 깔린 알림으로만 나오던 것) */
         break;
       case 'away': if (t === 'sell' && d.away) { v.c++; step(); } break;
       case 'likegift': if (t === 'gift' && d.w && d.w.k) { const k9 = d.w.k + ':' + (d.w.cell || ''); if ((api.likes(d.w.k) || []).includes(d.e)) { if (add(k9)) step(); } else api.toast('🤔 ' + (en() ? 'Kindly received — but this worker would be gladder with something else. Think about their work' : '고맙게 받았지만 더 반가워할 것이 있어요. 그 사람이 하는 일을 떠올려 봐요'), 3.4); } break;
@@ -219,6 +219,6 @@ export function createRank(api) {
       + (fl.length ? '<div class="sm">' + (e ? 'Bike flag' : '자전거 깃발') + '</div><div class="row" style="flex-wrap:wrap;justify-content:flex-start">' + btn('rf', '-', !R.bike.f, e ? 'None' : '없음') + fl.map(k => btn('rf', k, R.bike.f === k, SKI[k] + (R.done[k + ':9'] ? ' ⭐' : ''))).join('') + '</div>' : ''); }
   function setDeco(a, val) { const R = S(); if (a === 'rt') R.title = val === '-' ? '-' : val; if (a === 'rc') R.bike.c = val === '-' ? '' : val; if (a === 'rf') R.bike.f = val === '-' ? '' : val; save(); if (a !== 'rt') api.bike(bikeLook(GAME.S)); }
   function title() { const R = S(); if (!R.title || R.title === '-') return null; const [k, lv] = R.title.split(':'), m = MI(k, +lv); return m && R.done[R.title] ? m.name : null; }
-  return { start: k => { const c = C(); if (c && c.k === k && c.lv === tierOf(k)) { c.off = false; save(); api.task(); open(); return true; } return start(k); }, open, tick, ev, todo: () => { const [a, n] = count(); return todo() + ' (' + a + '/' + n + ')' + (C() && C().v.h ? ' 💡' : ''); }, badge, box, decoHTML, setDeco, title, tier: tierOf,
+  return { start: k => { const c = C(); if (c && c.k === k && c.lv === tierOf(k)) { c.off = false; save(); api.task(); open(); return true; } return start(k); }, open, tick, ev, todo: () => { const [a, n] = count(), m9 = mis(); return todo() + ' (' + a + '/' + n + ')' + (C() && C().v.h ? ' 💡' : '') + (m9 && m9.kind === 'cheap' && C().v.last ? (en() ? ' — last: ' : ' — 지난번 ') + C().v.last : ''); }, badge, box, decoHTML, setDeco, title, tier: tierOf,
     get on() { const c = C(); return !!(c && !c.off); }, get cur() { const c = C(); return c ? { k: c.k, lv: c.lv, v: c.v, n: count() } : null; }, done: () => ({ ...S().done }), can };
 }

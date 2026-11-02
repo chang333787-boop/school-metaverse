@@ -366,13 +366,14 @@ export function createBldg(A) {
   // 🩹 병원·보건소: 응급 처치 문제 셋(같은 날은 같은 문제)
   function clinic() { const s = S().clinic, e = en(), D = day(), Q = pick(AID, 3, 'aid:' + D); let i = 0, mis = 0, done = false;
     const opts9 = q => q[1].map((t, j) => [hashS(D + L(t)), t, j]).sort((a, b) => a[0] - b[0]);
-    const draw = () => '<h3>🩹 ' + esc(L(TIP.clinic)) + '</h3>' + (!done
+    let okT = '';   /* READ-1: 맞힌 까닭은 창 안 다음 물음 위에(알림은 창 뒤에 깔려 못 읽던 것) */
+    const draw = () => '<h3>🩹 ' + esc(L(TIP.clinic)) + '</h3>' + (okT ? '<div class="sm" style="font-weight:700;margin:2px 0 6px">✅ ' + esc(okT) + '</div>' : '') + (!done
       ? '<div class="sm">' + esc(e ? 'Nurse: “Let’s go over what to do before the ambulance comes.” (' + (i + 1) + ' of 3)' : '간호사 선생님: "구급차가 오기 전에 할 일을 같이 알아봐요." (' + (i + 1) + '/3)') + '</div><div class="bd-sit">' + esc(L(Q[i][0])) + '</div><div class="bd-ch">' + opts9(Q[i]).map(([, t, j]) => '<button class="sub" data-o="' + j + '">' + esc(L(t)) + '</button>').join('') + '</div><div class="sm" data-m></div>'
       : '<div class="pc-tx">' + esc(e ? 'Nurse: “Good. I put the first aid card on the board. If someone is badly hurt, call 119 first and stay with them.”' : '간호사 선생님: "잘했어요. 응급 처치 카드를 판에 붙여 둘게요. 많이 다친 사람을 보면 먼저 119에 알리고 곁에 있어 줘요."') + '</div>' + wordBox('clinic'))
       + '<div class="row"><button class="' + (done ? '' : 'sub') + '" data-a="x">' + (done ? (e ? 'OK' : '좋아요') : (e ? 'Close' : '닫기')) + '</button></div>';
     const P = A.openP(draw(), false, 'bdaid'), paint = () => { const bx = P.querySelector('.bx'); (bx || P).innerHTML = draw(); }, msg = t => { const m = P.querySelector('[data-m]'); if (m) m.textContent = t; };
     P.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') { A.closeP(); return; }
-      if (b.dataset.o != null) { if (+b.dataset.o === 0) { sfx('ding'); toast('🩹 ' + L(Q[i][2]), 3.2); i++; if (i >= Q.length) { done = true; s.dfa = D; s.nfa = (s.nfa | 0) + 1; mark(); reward('clinic', 'work', 2); A.rec('bldg', { k: 'clinic', ev: 'aid', mis }); boardDraw(); } paint(); return; } mis++; sfx('tick'); msg((e ? 'Nurse: “Think again. ' : '간호사 선생님: "다시 생각해 봐요. ') + L(Q[i][2]) + '"'); } };
+      if (b.dataset.o != null) { if (+b.dataset.o === 0) { sfx('ding'); okT = L(Q[i][2]); i++; if (i >= Q.length) { done = true; s.dfa = D; s.nfa = (s.nfa | 0) + 1; mark(); reward('clinic', 'work', 2); A.rec('bldg', { k: 'clinic', ev: 'aid', mis }); boardDraw(); } paint(); return; } mis++; sfx('tick'); msg((e ? 'Nurse: “Think again. ' : '간호사 선생님: "다시 생각해 봐요. ') + L(Q[i][2]) + '"'); } };
     log('clinic'); }
   async function greet() { const s = S().clinic, nb = CUR && CUR.made.nb, e = en(); if (!nb || (s.hi || []).includes(keyOf(nb.q))) { if (nb) A.bubble({ x: nb.at[0], y: nb.at[1], z: nb.at[2], sc: 1 }, e ? 'See you around!' : '또 만나요!'); return; }
     const heat = nb.q.v === 'heat', n = day() - nb.q.d; await A.dialog({ who: e ? 'Neighbour' : '이웃', icon: '🙂', text: heat ? (e ? 'You helped me ' + ago(n) + ' when I was sick from the heat. I came for a check-up, and I am all better now. Thank you!' : ago(n) + ' 더위를 먹었을 때 도와줘서 고마워요. 오늘 검사를 받으러 왔는데 이제 다 나았대요!') : (e ? 'You called 119 for me ' + ago(n) + ' when I hurt my ankle. The doctor says it has healed. Thank you!' : ago(n) + ' 발목을 다쳤을 때 119에 알려 줘서 고마워요. 의사 선생님이 이제 다 나았대요!') });

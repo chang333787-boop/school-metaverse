@@ -142,7 +142,7 @@ export function createJobs(A) {
   function qPick() { const q = qS(), c = q.cur; if (!c) return; const e = en(), l = L(), pa = pByKey(c.a), J9 = JOBS[c.from], G9 = PG[c.g];
     const h = '<h3 style="background:' + G9[3] + '">🛂 ' + esc(nm(pa)) + (e ? ' — a request' : ' — 이웃 부탁') + '</h3><div class="sm">' + (e ? 'To do: choose where to take it, then walk there.' : '할 일: 어디로 가져갈지 고르고, 걸어가요.') + '</div>'
       + '<div class="pc-jobs"><div>' + jobSvg(c.from, true, 2) + '<span><b>' + esc(J9[0][l]) + '</b><br>“' + esc(qText(c, l)) + '”</span></div></div>'
-      + '<div class="grp">' + (e ? 'Where does the ' + JOBS[c.job][0][1].toLowerCase() + ' work?' : josa(JOBS[c.job][0][0], '은', '는') + ' 어디에서 일할까요?') + '</div>'
+      + (c.why ? '<div class="sm" style="font-weight:700;margin:4px 0">' + esc(c.why) + '</div>' : '') + '<div class="grp">' + (e ? 'Where does the ' + JOBS[c.job][0][1].toLowerCase() + ' work?' : josa(JOBS[c.job][0][0], '은', '는') + ' 어디에서 일할까요?') + '</div>'
       + '<div class="pc-step">' + c.opts.map(k => { const p = pByKey(k); if (!p) return ''; const wr = c.wrong.includes(k); return '<button class="sub' + (wr ? ' no' : '') + '" data-o="' + esc(k) + '"' + (wr ? ' disabled' : '') + '>' + esc(PG[infoOf(p).g][0] + ' ' + nm(p)) + '</button>'; }).join('') + '</div>'
       + '<div class="sm">' + (e ? 'Not sure? Open a place card and look at “People who work here”.' : '모르겠으면 장소 카드의 \'여기서 일하는 사람\'을 봐요.') + '</div><div class="pc-chips">' + c.opts.map(k => { const p = pByKey(k); return p && !c.wrong.includes(k) ? '<button class="sub" data-c="' + esc(k) + '">' + esc(nm(p)) + (e ? ' card' : ' 카드') + '</button>' : ''; }).join('') + '</div>'
       + '<div class="row"><button class="sub" data-a="x">' + (e ? 'Later' : '나중에') + '</button></div>';
@@ -159,7 +159,7 @@ export function createJobs(A) {
     if (!QG && !A.busy() && c.st !== 'pick') qWay(c); const k = c.st === 'go' ? c.go : c.a, p = pByKey(k); if (!p) { q.cur = null; return; } const sp = spotOf(p); if (Math.hypot(me.x - sp[0], me.z - sp[1]) > 5 || A.busy()) return; const e = en(), l = L();
     if (c.st === 'toA') { c.st = 'pick'; A.GAME.mark(); qPick(); return; }
     if (c.st === 'pick') return;
-    if (c.st === 'go') { if (c.go !== c.t) { c.wrong.push(c.go); c.go = null; c.st = 'pick'; A.GAME.mark(); const I9 = infoOf(p); A.toast('🛂 ' + nm(p) + ': ' + (I9 ? I9.does[l] + ' ' : '') + (e ? 'No ' + JOBS[c.job][0][1].toLowerCase() + ' works here.' : josa(JOBS[c.job][0][0], '은', '는') + ' 여기서 일하지 않아요.'), 4.2); qPick(); return; }
+    if (c.st === 'go') { if (c.go !== c.t) { c.wrong.push(c.go); c.go = null; c.st = 'pick'; A.GAME.mark(); const I9 = infoOf(p); c.why = '🛂 ' + nm(p) + ': ' + (I9 ? I9.does[l] + ' ' : '') + (e ? 'No ' + JOBS[c.job][0][1].toLowerCase() + ' works here.' : josa(JOBS[c.job][0][0], '은', '는') + ' 여기서 일하지 않아요.'); A.toast(c.why, 4.2); qPick(); return; }   /* READ-1: 까닭은 다시 열린 고르기 창 안에도(창이 알림을 바로 덮던 것) */
       if (c.kind === 'fetch') { c.st = 'back'; A.GAME.mark(); A.toast('🛂 ' + JOBS[c.job][0][l] + ': “' + (e ? 'Here’s the book. Thanks for coming!' : '여기 책이에요. 와 줘서 고마워요!') + '”', 3); QG = false; qWay(c); return; }
       A.toast('🛂 ' + JOBS[c.job][0][l] + ': “' + (e ? 'Thank you — I needed this.' : '고마워요. 꼭 필요했어요.') + '”', 3); qDone(); return; }
     if (c.st === 'back') { A.toast('🛂 ' + JOBS[c.from][0][l] + ': “' + (e ? 'You brought it back. Thank you!' : '다시 가져왔네요. 고마워요!') + '”', 3); qDone(); } }

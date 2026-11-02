@@ -11,6 +11,7 @@
 //   사람(②): 야시장·강변 쪽으로 모이는 길 사람(LIFE eveHubs) · 시간마다 거리 사람 수(LIFE pvF · 비 오는 밤 = 텅) · 일꾼 저녁 갈래는 town_routine.js ROUTINE-3
 //   지킴: 판타지·귀신·무서움 X · 실명 X(이름 없는 역할) · 사실만(제철·온 곳·집어등·북극성·점자블록·유실물) · 셈 문제 X(손가락 세기·견주기만) · 막대·꾹 X · 알림 say(t, s, 1) · 홍보판(SM_PROMO) X
 //   렉: 새 Light X(불빛 = MeshBasic · 합친 부품 buildParts) · 매 프레임 일 0(1초 칸 sec · 별 = 셰이더가 카메라를 따라감) · 무리마다 그리기 2~3(보일 때만)
+import { readSec } from './town_read.js?v=3';   /* READ-1 글 길이 → 읽을 틈 */
 export const NIGHT_V = 1;
 const T2 = (ko, en) => [ko, en];
 export const NHRS = { mkt: [1080, 1380], sea: [1170, 1440], fish: [1140, 1440], star: [1170, 1440], patrol: [1230, 1410], late: [1110, 1440], auction: [360, 510], bake: [360, 420] };
@@ -340,7 +341,7 @@ export function createNight(A) {
     if (c.k === 'kid') { if (c.st === 0) { A.bubble({ x: c.obj[0].x, y: A.ty(c.obj[0].x, c.obj[0].z) - 0.4, z: c.obj[0].z, sc: 0.75 }, e ? 'I can’t find my mum…' : '엄마가 안 보여요…');
         one('<h3>🧒 ' + (e ? 'A child alone at night' : '밤에 혼자 있는 아이') + '</h3><div class="sm">' + (e ? 'Child: “I came out with my mum and now I can’t see her.” What do we do?' : '아이: "엄마랑 나왔는데 엄마가 안 보여요." 어떻게 할까요?') + '</div>', [T2('엄마 찾으러 같이 멀리 가 봐요', 'Go far away together to look for her'), T2('여기서 같이 기다리고 경찰관에게 알려요', 'Wait here together and tell the officer'), T2('혼자 집에 가 보라고 해요', 'Tell the child to walk home alone')], (k, P) => {
           if (k !== 1) { P.querySelector('.ng-m').textContent = e ? 'If you move around, the parent who comes back to look may miss you. Staying put and telling the police is faster.' : '여기저기 움직이면 되돌아와 찾는 엄마와 엇갈려요. 그 자리에서 기다리며 경찰에 알리는 게 더 빨라요.'; return; }
-          c.st = 1; A.closeP(); sayNow(e ? '👮 “Thank you. Now tell me what the child looks like — what colour is the shirt?”' : '👮 "고마워요. 이제 아이 모습을 알려 줘요. 윗옷이 무슨 색이었어요?"', 4); setTimeout(() => { if (!dead && pat && !c.done) patObj(i, 0); }, 1600); }); return; }
+          c.st = 1; A.closeP(); const q9 = e ? '👮 “Thank you. Now tell me what the child looks like — what colour is the shirt?”' : '👮 "고마워요. 이제 아이 모습을 알려 줘요. 윗옷이 무슨 색이었어요?"'; sayNow(q9, 4); setTimeout(() => { if (!dead && pat && !c.done) patObj(i, 0); }, Math.max(1600, Math.round(readSec(q9) * 1000))); }); return; }   /* READ-1: 경찰관 물음을 다 읽고 아이 윗옷을 볼 틈(1.6초 만에 색 고르기 창이 말과 아이를 덮던 것) */
       one('<h3>📻 ' + (e ? 'Telling the officer' : '경찰관에게 알리기') + '</h3><div class="sm">' + (e ? 'What colour is the child’s shirt? (look if you are not sure)' : '아이 윗옷은 무슨 색이에요? (모르면 다시 보고 와요)') + '</div>', KIDC.map(q => q[2]), (k, P) => {
         if (k !== c.col) { P.querySelector('.ng-m').textContent = e ? 'Hmm, go and look at the child again.' : '음, 아이를 다시 보고 와요.'; return; } c.done = true; pat.notes.push(T2('길 잃은 어린이 — 보호자에게 연락', 'Lost child — parent contacted')); A.closeP(); sfx('done');
         sayNow(e ? '👮 “Got it. Her mum was nearby and is on her way.”' : '👮 "알았어요. 엄마가 근처에 있어서 오고 있대요."', 4); setTimeout(() => { if (!dead && pat) { c.gone = true; scenePaint(c, i); } }, 5000); patNext(); }); return; }

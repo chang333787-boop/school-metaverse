@@ -8,6 +8,7 @@
 //     ⑰ 4-3 집배원(실제 기록) ⑱ 4-5 층층골 화석 → 까망봉 ⑲ 4-6 장구 ⑳ 피날레 = 잔치 엔진 첫 잔치(내일로 당김 · 10시 · 잔치 마당 · 무대 · 모인 이웃) ㉑ 에필로그 마디탑 ㉒ 옛 저장(게시판의 q_contour · 피날레 '밤' 단계)
 //   COVER-3(10-31 남은 기능): ⓪-4 장 차례 ㉓ 3-2 밀물 앞 밀물 알리기(이른 때 = 기다리기 · 밀물 앞 = 엔진 사건 · 한 번 늦음 · 끝 → 염전) ㉔ 4-4 김장 날(남은 날 창 · 하루 앞 = 자고 · 그날 = 행사 마당 · 끝 → 국 · 올해 이미)
 //     ㉕ 4-4 윷(판 놀이 기록) ㉖ 4-5 사진 모드(산 = 아직 · 바다 = 다음) → 안내도 기호·범례(창 안 범례 · 이미 쓴 기호 반응) ㉗ 게시판에 q_legend X ㉘ 옛 저장(4-5 b2 → 사진 · 4-4 safe → 김장 날)
+/* READ-1(11-02): 단계 끝 띠가 다 읽힌 뒤에 다음 창·쪽지가 열림(띠 길이만큼 · 최대 15초) → 창·쪽지 기다림 10초 → 20초 */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const { chromium } = require('./pw.cjs'), { walker } = require('./lib_walk.cjs');
 let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails++; };
@@ -57,8 +58,8 @@ let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m)
     await boot();
     const Wk = walker(p, {}), { ev, W8, shut, waitStep } = Wk;
     const S = () => ev(() => { const s = SM_TOWN.story(); return { cur: s.cur, id: s.step && s.step.id, done: Object.keys((SM_TOWN.game().S.story || {}).done || {}) }; });
-    const dlgAll = async () => { let t = ''; for (let i = 0; i < 40; i++) { const d = await ev(() => (document.querySelector('.twn-dlg') || {}).innerText || ''); if (d) break; await W8(250); } for (let i = 0; i < 16; i++) { const d = await ev(() => (document.querySelector('.twn-dlg') || {}).innerText || ''); if (!d) break; t += ' ' + d; await p.keyboard.press('KeyE'); await W8(380); } return t.replace(/\s+/g, ' '); };
-    const panel = async () => { for (let i = 0; i < 40; i++) { if (await ev(() => !!document.querySelector('.twn-p button[data-k], .twn-p [data-card]'))) return true; await W8(250); } return false; };
+    const dlgAll = async () => { let t = ''; for (let i = 0; i < 80; i++) { const d = await ev(() => (document.querySelector('.twn-dlg') || {}).innerText || ''); if (d) break; await W8(250); } for (let i = 0; i < 16; i++) { const d = await ev(() => (document.querySelector('.twn-dlg') || {}).innerText || ''); if (!d) break; t += ' ' + d; await p.keyboard.press('KeyE'); await W8(380); } return t.replace(/\s+/g, ' '); };
+    const panel = async () => { for (let i = 0; i < 80; i++) { if (await ev(() => !!document.querySelector('.twn-p button[data-k], .twn-p [data-card]'))) return true; await W8(250); } return false; };
     const pickAns = async () => { const A = await ev(() => SM_TOWN.storyAns()); await ev(A9 => { for (const b9 of document.querySelectorAll('.twn-p button.pri[data-k]')) b9.click(); for (const k of A9) { const b9 = document.querySelector('.twn-p button[data-k="' + k + '"]'); if (b9) b9.click(); } const o9 = document.querySelector('.twn-p [data-a="ok"]'); if (o9) o9.click(); }, A); await W8(1400); return A; };
     const prep = () => ev(() => { const G = SM_TOWN.game().S; G.story = G.story || {}; G.story.done = Object.assign(G.story.done || {}, { p0: { d: 1 }, a1_1: { d: 1 } }); G.story.autoNext = null; });
     await prep();
