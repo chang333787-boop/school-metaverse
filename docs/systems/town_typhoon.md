@@ -52,7 +52,7 @@
 ## 4. 연결(town.js) — 캐시 번호는 메인이 올림
 - `createTyphoon(A)`는 setEntries에서 DAY 바로 뒤에 지어요. 1초 칸은 `TYP.sec()`, 'day' 이벤트는 `TYP.day()`예요.
 - 예보 `fcRaw`(7일째 비 · 6일째 흐림 · 8일째 맑음) · `frontOn`(태풍 날 전선 끔) · 풍향 깃발 `TYP.windAt` · `umbStrong` · `waterSec`(lv 1) · `LOOKX wx` 'storm'(town_look.js `OVC.storm`) · 날씨 창 한 줄 `TYP.wxLine()`
-- 할 일 줄 `TYP.line()`(태풍 판 동안 이야기 줄보다 먼저 · 누르면 태풍 수첩) · 오늘 할 일 ⑤ `TYP.ctx(C)`(C.only · ev 'typh') · 위 가운데 줄 `TYP.goal()`(대피 길 확인 중 · 6일째 · 7일째) · town_day.js `A.typh(d1)` → '내일 기다리는 것' 맨 앞
+- 할 일 줄 `TYP.line()`(TYSIDE-1 11-02: 이야기가 있으면 **이야기 줄은 그대로** · 태풍 줄은 그 밑 🌀 단추 `.twn-tyb` · 이야기가 없을 때만 할 일 줄 자리 · 누르면 태풍 수첩 · 1초 칸에서 줄이 바뀌면 바로 다시 그림 · 예보 창에 '하던 이야기는 그대로' 한 줄 · 시험 `town_tyside.cjs`) · 오늘 할 일 ⑤ `TYP.ctx(C)`(C.only · ev 'typh') · 위 가운데 줄 `TYP.goal()`(대피 길 확인 중 · 6일째 · 7일째) · town_day.js `A.typh(d1)` → '내일 기다리는 것' 맨 앞
 - 태풍 날에는 EMG·RD sec를 쉬어요. 시험 손잡이는 `SM_TOWN.typhoon`(start · info · open · dbg · api)이에요.
 - TYPH-2: A에 `homeDoor()` · `fade(fn)` · `table(g)`를 더 넘겨요. `sleep()`은 메뉴 잠과 같은 `sleepNow(false, true)`예요. 잔치(`town_feast.js`)·계절 행사(`town_season.js`)에는 `stormNote(t)`를 넘겨요. 손잡이 `TYP.note(t)` · `TYP.open7()` · `dbg.radio/check/call/yut/actAll/inSchool/safe/spots`.
 - town_case.js 손잡이: `CASES.typhoon`(ext) · `export const CL`(ty_* 여섯) · plan에서 `R.ext`는 건너뜀. town_typhoon.js는 `./town_case.js?v=1`을 읽어요. **town.js의 town_case 캐시 번호를 올리면 여기도 같이 올려요.**
