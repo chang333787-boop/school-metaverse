@@ -19,10 +19,10 @@ srv.listen(0, async () => {
   const rows = [];
   for (const sp of SPOTS) {
     const [ch, k] = sp.split('-').map(Number);
-    const steps = await (async () => { try { await p.goto(`${base}/dragon2d/?ch=${ch}&step=0&chain=0&diff=normal&mode=smooth&adapt=0&seed=1`); await p.waitForFunction(() => window.DRG2 && DRG2.sense().id, null, { timeout: 30000 }); return await p.evaluate(async (ch) => (await import('/dragon2d/js/story/ch' + ch + '.js?v=1')).chapter.steps.map((s) => s.id), ch); } catch (e) { return []; } })();
-    const idx = steps.indexOf(sp); if (idx < 0) { rows.push([sp, '없음']); continue; }
+    const steps = await (async () => { try { await p.goto(`${base}/dragon2d/?ch=${ch}&step=0&chain=0&diff=normal&mode=smooth&adapt=0&seed=1&card=0`); await p.waitForFunction(() => window.DRG2 && DRG2.sense().id, null, { timeout: 30000 }); return await p.evaluate(async (ch) => (await import('/dragon2d/js/story/ch' + ch + '.js?v=1')).chapter.steps.map((s) => s.id), ch); } catch (e) { return []; } })();
+    const idx = steps.indexOf(sp); if (idx < 0) { rows.push([sp, '없음']); console.log(sp + ' 없음'); continue; }
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
-    await p.goto(`${base}/dragon2d/?ch=${ch}&step=${idx}&chain=0&diff=normal&mode=smooth&adapt=0&seed=1`);
+    await p.goto(`${base}/dragon2d/?ch=${ch}&step=${idx}&chain=0&diff=normal&mode=smooth&adapt=0&seed=1&card=0`);
     await p.waitForFunction(() => window.DRG2 && DRG2.sense().id && !DRG2.sense().busy, null, { timeout: 30000 });
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
     const r = await p.evaluate(async (SEC) => {

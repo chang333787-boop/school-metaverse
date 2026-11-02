@@ -36,7 +36,7 @@ srv.listen(0, async () => {
   if (arg('walk', '') === '1') {      /* 이어서 놀기 — 오프닝부터 장을 넘어 엔딩까지(보통 봇 · chain) · 장마다 걸린 시간 */
     const lv = arg('level', 'normal');
     await p.goto(`${base}/dragon2d/?ch=0&step=0&diff=${lv}&turbo=${TURBO}&seed=2&mode=smooth`);
-    await p.waitForFunction(() => window.DRG2 && DRG2.sense().id, null, { timeout: 60000 });
+    await p.waitForFunction(() => window.DRG2 && (DRG2.sense().id || DRG2.sense().card), null, { timeout: 60000 });
     const r = await p.evaluate(async ({ lv }) => {
       const m = await import('/dragon2d/js/bots/bots.js?v=1'); DRG2.bot.run(m.storyBot(lv));
       const n0 = DRG2.loop.n, log = []; let last = '', lastN = n0;
