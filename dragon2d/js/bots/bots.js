@@ -153,9 +153,9 @@ export const BOTS = {
   },
   '4-3': (H) => {
     const x = H.now.x || {}, me = H.now.me; if (!x.D) return; const D = { x: x.D[0], y: x.D[1] };
-    if (me.x < 22.3) {      /* 선 틈으로 지그재그(위·아래 번갈아 열림 · 바위 비켜) */
+    H.mem.wp = H.mem.wp || 0;
+    if (H.mem.wp < 8) {      /* 선 틈으로 지그재그(위·아래 번갈아 열림 · 바위 비켜) */
       const WP = [[12.5, 20.2], [12.5, 10], [16.5, 10], [16.5, 20.2], [20.4, 20.2], [20.4, 10], [22.4, 10], [22.4, 15]];
-      H.mem.wp = H.mem.wp || 0;
       const w = WP[H.mem.wp]; if (w && H.walk(w[0], w[1], 0.3)) H.mem.wp++;
       return;
     }
@@ -193,7 +193,7 @@ export const BOTS = {
   '6-3': (H) => {
     const x = H.now.x || {}, me = H.now.me, L = H.late.x || {};
     if (!x.T) { const g = H.now.goalXY; if (g) H.walk(g[0], g[1] + 0.6, 0.6); return; }
-    if (!x.carry) { if (H.walk(x.basket[0], x.basket[1] + 0.8, 0.5)) H.tap('use', 0.8); return; }
+    if (!x.carry) { if (H.walk(x.basket[0], x.basket[1] - 0.6, 0.45)) H.tap('use', 0.8); return; }
     if (H.walk(x.T[0] - 1.4, x.T[1], 0.35, { sneak: true })) { if (x.pupil > 0.7 && (L.pupil ?? 0) > 0.7) H.tap('use', 1); }
   },
 };
