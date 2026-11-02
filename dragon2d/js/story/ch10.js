@@ -2,7 +2,7 @@
 // ② 물속(밝은 물빛 · 거품): 사슬 셋 가운데 투슬리스 고리 → 숨 고를 때 F 꾹 → 아빠가 끊음 → 서로 구함 → 해변 말 ③ 하늘 싸움(구름 숨기 · 킁킁 · 세로 불 띠 · 날갯바람 · 날개 막 구멍)
 // ④ 마지막: 꼬리날개 불(4초 예고) → 둔해진 조종으로 오르기 → 숨 들이켬 → 급강하 · 입이 밝을 때 F → 곧바로 솟구치기 ⑤ 연기 속 스토이크로 걷기 → 날개를 편 투슬리스 → "고맙다."
 // 깜짝 X: 공격 앞엔 늘 ! + 몸짓 예고(쉬움 3 · 보통 2.5 · 어려움 2초) · 불 겨눔은 뿜기 0.5초 전에 굳음(design §17-10) · 대장만 무찌름 · 떨어지는 장면은 먼 구도 · 폭발 소리는 작게
-import { say, wait, until, goal, near, dist, talking, useAt, throwFrom, previewArc, knock, sfx, shoot, burst, puff, faceTo } from './kit.js?v=1';
+import { say, talk, wait, until, goal, near, dist, talking, useAt, throwFrom, previewArc, knock, sfx, shoot, burst, puff, faceTo } from './kit.js?v=1';
 import { createFlight, addCloud } from '../play/flight.js?v=1';
 import { makePlace } from '../play/world.js?v=1';
 import { clearFx } from '../play/fx.js?v=1';
@@ -86,8 +86,8 @@ export const chapter = {
   end: '대장이 쓰러지고, 둥지 섬 하늘이 맑아졌다',
   steps: [
     /* ① 해변 — 대장 머리(화면 위 · 머리가 아래) · 숨 들이켬 → 가로 불 띠(내 줄을 따라오다 0.5초 전에 굳음) → 위아래로 비키기 · 머리가 내려오면 눈에 볼라 · 셋 맞히면 끝 */
-    { id: '10-1', verb: 'throw', goal: '대장 드래곤을 막아라', at: [25, 14.5], face: [0, -1], zoom: 0.75, limit: 120,
-      hints: ['불을 뿜고 나면 머리가 내려와요 — 그때 눈에 볼라(F)', '▼ 자리에서 위를 보고 F · 붉은 띠가 굳으면 위아래로 비켜요'],
+    { id: '10-1', verb: 'throw', goal: '대장 드래곤을 막아라', at: [25, 14.5], face: [0, -1], zoom: 0.75, limit: 150,
+      hints: ['불을 뿜고 나면 머리가 내려와요 — 그때 눈에 볼라(Space)', '▼ 자리에서 위를 보고 Space · 붉은 띠가 굳으면 위아래로 비켜요'],
       *run(G) {
         const s = 0.55, UP = 7.2, LOW = 8.8, EYE = 4.6 * s, tell = TELL[G.diff], win = { easy: 5, normal: 3.6, hard: 3 }[G.diff], maxHits = { easy: 99, normal: 4, hard: 3 }[G.diff];
         const W = G.W, P = G.P, B = mkBoss(G, 25, UP, Math.PI, s);
@@ -101,8 +101,14 @@ export const chapter = {
         const ast = G.cast.dragon('nadder', 36.5, 15.4, { z: 3.2, flip: -1, fear: 0, pose: { wing: 1, rider: 'astrid' }, flapHz: 1.6 });
         P.carry = 'bola'; P.gate = [3, 10.4, 47, 16.4];
         G.camOpt = { fixY: 10.2 };
-        say(G, 'hiccup', '대장 드래곤이다! 눈을 맞히면 친구들이 도와줄 거야.', { icons: ['eye', 'bola'] });
-        say(G, 'fishlegs', '저렇게 큰 건 책에도 없어!');
+        /* 둥지 도착 — 대장이 깨어나 어른들 배가 탐 → 역할 나누기(누가 무엇을 맡나) · 대장은 아직 머리만 든 채(공격 차례는 말이 끝난 뒤) */
+        const ship0 = W.findProp('ship', 10, 28); if (ship0) ship0.o.burn = 1;
+        G.camOpt = { fixX: 25, fixY: 20.5 };
+        yield* talk(G, [['astrid', '둥지 섬이야! 어른들 배가… 불타고 있어!', ['ship']], ['stoick', '히컵?! 여긴 위험하다! 물러나라!']]);
+        G.camOpt = { fixY: 10.2 }; sfx(G, 'roar', B.x);
+        yield* talk(G, [['hiccup', '아빠가 둥지를 쳐서, 구멍 속 대장이 깨어났어.', ['nose']], ['fishlegs', '저렇게 큰 건 책에도 없어!']]);
+        yield* talk(G, [['hiccup', '다들 맡을 일을 나누자! 나는 볼라로 대장 눈을 맞힐게.', ['eye', 'bola']], ['hiccup', '스노트라우트는 불꽃으로 눈앞을 캄캄하게!'], ['hiccup', '쌍둥이는 가스에 불티를 붙여서 — 펑!'], ['hiccup', '피시레그는 그롱클 돌로 쿵, 큰 소리를 내 줘!'], ['hiccup', '아스트리드는 불 속 어른들을 구해 줘!', ['axe']], ['astrid', '맡겨 둬. 다들, 가자!']]);
+        say(G, 'hiccup', '불을 뿜고 머리가 내려올 때 — 눈이야!', { icons: ['eye'], secs: 2.4 });
         const X = [18, 25, 32], job = [];
         let ph = 'move', pt = 0, tx = 25, lockY = P.y, hits = 0, got = 0, reload = 0, blindT = -9, saidBlind = false;
         G.flags.x10 = () => ({ ph, lockY, lock: ph === 'fire' || (ph === 'tell' && pt >= tell - LOCK), got, hits });
@@ -174,15 +180,14 @@ export const chapter = {
         for (let i = 0; i < 8; i++) puff('bubble', ship.x + (G.rng() - 0.5) * 8, 27.6, 0.2, 0, 0, 1.2, 1.6, 0.14);
         ship.hide = true; if (ship.box) ship.box.off = true; T.hide = true; B.pose.mouth = 0; B.pose.glow = 0; B.pose.tell = 0;
         G.hud.banner('투슬리스가 묶인 배가 가라앉는다', 'ship', 2.4);
-        say(G, 'astrid', '히컵! 투슬리스가 묶인 배가 가라앉고 있어!'); say(G, 'hiccup', '…투슬리스!');
-        yield* until(() => !talking(G), 9);
+        yield* talk(G, [['astrid', '히컵! 투슬리스가 묶인 배가 가라앉고 있어!', ['ship']], ['hiccup', '…투슬리스! 사슬을 풀어야 해 — 물속으로!', ['rope']]]);
         return true;
       },
       sense: (G) => { const f = G.flags.x10 && G.flags.x10(), B = G.boss; if (!f || !B) return {}; const s = 0.55; return { ph: f.ph, B: [r2(B.x), r2(B.y)], eye: [r2(B.x), r2(B.y - 4.6 * s)], stand: r2(8.8 - 4.6 * s + 5), band: f.ph === 'tell' || f.ph === 'fire' ? { y: r2(f.lockY), h: 2.2, lock: f.lock } : null, carry: G.P.carry, got: f.got, hits: f.hits, gate: [10.4, 16.4] }; } },
 
     /* ② 물속(밝은 물빛 · 거품) — 사슬 셋(끝은 해초 덤불에 가림) → 가까이 가면 보임(투슬리스 = 동그란 눈) → 숨 고를 때 고리 앞에서 F 꾹 → 아빠가 끊음 → 서로 구함 → 해변 말 */
-    { id: '10-2', verb: 'ring', place: 'under', time: 'day', goal: '투슬리스를 구해라', at: [12, 3.4], face: [0, 1], zoom: 0.85, limit: 90,
-      hints: ['사슬 끝 덤불에 가까이 가 봐요 — 동그란 눈이 보이는 쪽', '투슬리스가 숨 고를 때 고리 앞에서 F를 꾹'],
+    { id: '10-2', verb: 'ring', place: 'under', time: 'day', goal: '투슬리스를 구해라', at: [12, 3.4], face: [0, 1], zoom: 0.85, limit: 110,
+      hints: ['사슬 끝 덤불에 가까이 가 봐요 — 동그란 눈이 보이는 쪽', '투슬리스가 숨 고를 때 고리 앞에서 Space를 꾹'],
       *run(G) {
         const P = G.P, ti = Math.floor(G.rng() * 3);
         const ends = G.W.A.chains.map(([x, y], i) => ({ x, y, x0: 6 + i * 6, seen: false, kind: i === ti ? 'toothless' : i === (ti + 1) % 3 ? 'anchor' : 'mast' }));
@@ -236,10 +241,9 @@ export const chapter = {
         const st = G.cast.person('stoick', 12, -1.5, { dir: 'down' }); st.to = [ring[0] + 0.9, ring[1] - 0.3]; st.spd = 4.5;
         yield* until(() => !st.to, 6);
         cut = true; P.handLock = 0; sfx(G, 'clang', ring[0]); burst('spark', ring[0], ring[1], 0.5, 8, 2, 0.4, 0.1, G.rng);
-        say(G, 'stoick', '끊었다!', { secs: 1.2 });
-        yield* wait(1);
+        yield* talk(G, [['stoick', '끊었다! 아빠가 왔다, 히컵.'], ['hiccup', '아빠…!']]);
         T.pose.wing = 1; T.flapHz = 2; T.to = [T.x, -3]; T.spd = 3.2; st.to = [st.x, -3]; st.spd = 3.2;
-        say(G, 'hiccup', '아빠가 와 줬어… 투슬리스가 아빠를 끌어올려!', { secs: 2.4 });
+        say(G, 'hiccup', '투슬리스가 아빠를 물 밖으로 끌어올려!', { secs: 2.4 });
         for (let t = 0; t < 2.6;) { t += yield; if (G.rng() < 0.4) puff('bubble', T.x + (G.rng() - 0.5), T.y, 0.5, 0, 0, 1.2, 1.2, 0.12); }
         /* 해변 — 서로 구한 뒤 한마디(아들 이야기는 여기서만 · design §2) */
         yield* until(() => !talking(G), 4);
@@ -251,11 +255,8 @@ export const chapter = {
         const sh = G.W.findProp('ship', 38, 28.5); if (sh) { sh.hide = true; if (sh.box) sh.box.off = true; }
         const sk = G.cast.person('stoick', 26.4, 22, { dir: 'side', flip: -1 }); G.cast.dragon('toothless', 20.4, 22.6, { flip: 1, fear: 0 });
         G.hud.veil.hide();
-        say(G, 'hiccup', '아빠, 회의 때 그러셨잖아요. "바이킹은 겁나도 간다."', { actor: null });
-        say(G, 'stoick', '…그래. 겁나도 가는 건 너였구나.', { actor: sk });
-        say(G, 'stoick', '내가 틀렸다. 넌 내 자랑이야.', { actor: sk, icons: ['heart'] });
-        say(G, 'hiccup', '가자, 투슬리스. 이번엔 같이.', { icons: ['saddle'] });
-        yield* until(() => !talking(G), 26);
+        faceTo(sk, P.x, P.y);
+        yield* talk(G, [['stoick', '네 드래곤이… 나를 물 밖으로 꺼내 줬다.'], ['hiccup', '아빠도 투슬리스 사슬을 끊어 주셨잖아요.'], ['hiccup', '회의 때 그러셨죠. "바이킹은 겁나도 간다."'], ['stoick', '…그래. 겁나도 가는 건 너였구나.'], ['stoick', '내가 틀렸다. 넌 내 자랑이야.', ['heart']], ['hiccup', '가자, 투슬리스. 이번엔 같이.', ['saddle']]]);
         return true;
       },
       sense: (G) => { const f = G.flags.x10 && G.flags.x10(); if (!f || !f.ends) return {}; return { ends: f.ends.map((e) => ({ x: e.x, y: e.y, seen: e.seen, kind: e.seen ? e.kind : null })), ring: f.ringOn ? f.ring : null, calm: f.calm, prog: r2(f.prog) }; } },
@@ -263,7 +264,7 @@ export const chapter = {
     /* ③ 하늘 싸움(싸움터 비행) — 대장이 화면 위(머리가 아래) · 구름 속 = 못 겨눔(킁킁만) · 숨 들이켬 → 내 x로 머리를 옮기다 0.5초 전에 굳음 → 세로 불 띠
        · 날갯바람(보통부터) = 내 줄 가로 띠 · F = 위로 플라스마(한 발씩 · 마구 쏘면 숨이 참) → 날개 막에 구멍 · 쉬움 4 · 보통 6 */
     { id: '10-3', verb: 'boss', place: 'sea', time: 'fog', goal: '대장의 날개를 뚫어라', at: [24, 20.5], zoom: 0.62, limit: 150,
-      hints: ['가운데 머리 말고 양옆 날개 막 밑에서 F — 한 발씩', '목이 부풀면 곧 불 — 붉은 띠가 굳으면 옆으로 비켜요'],
+      hints: ['가운데 머리 말고 양옆 날개 막 밑에서 Space — 한 발씩', '목이 부풀면 곧 불 — 붉은 띠가 굳으면 옆으로 비켜요'],
       *run(G) {
         const A = [10, 15.5, 38, 22.5], s = 0.25;
         const F = G.Fl = createFlight(24, 20.5, { arena: A, fin: 'new', rider: 'hiccup', assist: G.diff === 'easy' }); G.mode = 'fly';
@@ -298,7 +299,7 @@ export const chapter = {
           sfx(G, 'whoosh', F.x);
           shoot({ kind: 'plasma', x: F.x, y: F.y - 1.6, z: 1.2, vx: 0, vy: -20, g: 0, life: 1.3, mine: true, noWall: true, noShadow: true, hit: shotHit });
         };
-        say(G, 'hiccup', '날개 막을 노리자. 구름에 숨었다가 쏘고 — 바로 옮겨!', { icons: ['cloud', 'eye'], secs: 3 });
+        yield* talk(G, [['astrid', '대장이 날아올랐어! 하늘은 너희 둘한테 맡길게!'], ['hiccup', '날개 막을 노리자. 구름에 숨었다가 쏘고 — 바로 옮겨!', ['cloud', 'eye']]]);
         while (holes < need) {
           const dt = yield; pt += dt; if (reveal > 0) reveal -= dt;
           const see = !F.hidden || reveal > 0;
@@ -359,7 +360,7 @@ export const chapter = {
     /* ④ 마지막(영화대로 고정) — 대장이 아래에서 쫓아옴(머리가 위) · 꼬리날개 불(4초 예고 → 조종이 둔해짐) → ↑ 높이(그림이 커짐) → 숨 들이켬(입 안 밝아짐)
        → ↓ 급강하해 입 고리 위로 · 입이 가장 밝을 때 F → 곧바로 ↑ 솟구치기 · 놓치면 오르기부터 다시(짧게) · 와! = 쏘고 솟구치는 1초 */
     { id: '10-4', verb: 'dive', place: 'sea', time: 'fog', tint: 'storm', goal: '대장을 끝내라', at: [24, 10], zoom: 0.56, limit: 120,
-      hints: ['↑로 높이 오른 뒤, 입이 밝아지면 ↓로 곧장 내려가요', '입 고리 바로 위에서 입이 가장 밝을 때 F — 그리고 바로 ↑'],
+      hints: ['↑로 높이 오른 뒤, 입이 밝아지면 ↓로 곧장 내려가요', '입 고리 바로 위에서 입이 가장 밝을 때 Space — 그리고 바로 ↑'],
       *run(G) {
         const A = [12, 2.5, 36, 13.6], MX = 24, MY = 15.6;                 /* 입이 말풍선(화면 아래 가운데) 위에 오게 */
         const F = G.Fl = createFlight(24, 10, { arena: A, fin: 'new', rider: 'hiccup' }); G.mode = 'fly';
@@ -379,7 +380,7 @@ export const chapter = {
             say(G, 'hiccup', '입 안에 들어갔다! 위로!', { secs: 1.2 });
           } else if (ph === 'inhale' && G.t - saidEarly > 3) { saidEarly = G.t; say(G, 'hiccup', '아직! 입이 더 밝아질 때.', { secs: 1.2 }); }
         };
-        say(G, 'hiccup', '꼬리날개에 불티가…!', { icons: ['finNew'], secs: 2 });
+        yield* talk(G, [['hiccup', '꼬리날개에 불티가 붙었어…!', ['finNew']], ['hiccup', '다 타 버리기 전에 끝내야 해. 투슬리스, 조금만 더!']]);
         while (true) {
           const dt = yield; pt += dt;
           /* 탄 꼬리 = 둔한 조종(솟구칠 때만 투슬리스가 힘을 짜냄) */
@@ -435,7 +436,7 @@ export const chapter = {
     /* ⑤ (이음 + 걷기) 연기 속 — 잠깐 스토이크로 걷기 · 날개로 몸을 감싼 투슬리스 앞에서 F → 날개를 펴 히컵을 보여 줌 → 머리에 손 얹고 "고맙다."
        · 변화: 하늘이 맑아짐 · 드래곤들이 흩어져 날아감 · 해변 무기 더미 */
     { id: '10-5', verb: 'walk', place: 'beach', time: 'fog', tint: 'storm', goal: '연기 속에서 히컵을 찾아라', at: [37, 21], face: [-1, 0], limit: 80,
-      hints: ['▼ 쪽으로 걸어요 — 연기 속 검은 날개', '날개로 몸을 감싼 투슬리스 앞에서 F'],
+      hints: ['▼ 쪽으로 걸어요 — 연기 속 검은 날개', '날개로 몸을 감싼 투슬리스 앞에서 Space'],
       *run(G) {
         const P = G.P; P.who = 'stoick';
         const T = G.cast.dragon('toothless', 14, 12.6, { flip: 1, fear: 0, pose: { wing: 0, sit: 1 } }); T.pupilTo = 0.1;
@@ -455,17 +456,16 @@ export const chapter = {
           const dt = yield;
           smk += dt; if (smk > 0.12) { smk = 0; puff('smoke', P.x + (G.rng() - 0.5) * 18, P.y + (G.rng() - 0.5) * 10, 0.3, 0.4, -0.2, 0.4, 2.6, 0.7); if (G.rng() < 0.5) puff('ember', P.x + (G.rng() - 0.5) * 12, P.y + (G.rng() - 0.5) * 8, 2.5, 0, 0, -0.3, 1.6, 0.08); }
           goal(G, T.x, T.y);
-          if (!saw && dist(G, T.x, T.y) < 4.5) { saw = true; say(G, 'stoick', '…안장이 비었구나.', { secs: 2 }); }
+          if (!saw && dist(G, T.x, T.y) < 4.5) { saw = true; yield* talk(G, [['stoick', '…안장이 비었구나. 히컵, 어디 있니?', ['saddle']]]); }
           if (useAt(G, T.x, T.y, 1.9)) break;
         }
         goal(G, null); P.fx = T.x < P.x ? -1 : 1; P.fy = 0; P.dir = 'side'; P.flip = P.fx; P.lock = true;
         sfx(G, 'purr', T.x);
         for (let t = 0; t < 0.8;) { t += yield; T.pose.wing = Math.min(1, t / 0.6); }
         hic.hide = false; T.pupilTo = 1; T.pose.sit = 0;
-        say(G, 'stoick', '살아 있어…! 숨을 쉬어!');
-        yield* until(() => !talking(G), 4);
+        yield* talk(G, [['stoick', '날개로 감싸고 있었구나… 살아 있어! 숨을 쉬어!']]);
         P.handLock = 1;
-        say(G, 'stoick', '고맙다. 내 아들을 지켜 줘서.', { icons: ['heart'] });
+        yield* talk(G, [['stoick', '고맙다. 내 아들을 지켜 줘서.', ['heart']]]);
         const fly = ['nadder', 'gronckle', 'zippleback', 'terror', 'nightmare'].map((k, i) => { const a = i * 1.256 + 0.3, d = G.cast.dragon(k, P.x + Math.cos(a) * 6, P.y - 4 + Math.sin(a) * 3, { z: 2, flip: Math.cos(a) > 0 ? 1 : -1, fear: 0, pose: { wing: 1 }, flapHz: 1.7 }); d.to = [d.x + Math.cos(a) * 30, d.y + Math.sin(a) * 18]; d.spd = 5; return d; });
         G.tint = 'dawn';
         for (let t = 0; t < 4.5 || talking(G);) {

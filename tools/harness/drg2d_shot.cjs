@@ -15,10 +15,10 @@ srv.listen(0, async () => {
   fs.mkdirSync(OUT, { recursive: true });
   for (const sp of SPOTS) {
     const [id, sec] = sp.split(':'); const [ch] = id.split('-').map(Number);
-    await p.goto(`${base}/dragon2d/?ch=${ch}&step=0&chain=0&diff=${DIFF}&seed=1`);
+    await p.goto(`${base}/dragon2d/?ch=${ch}&step=0&chain=0&diff=${DIFF}&seed=1&card=0`);
     await p.waitForFunction(() => window.DRG2 && DRG2.sense().id, null, { timeout: 30000 });
     const idx = await p.evaluate(async (ch) => (await import('/dragon2d/js/story/ch' + ch + '.js?v=1')).chapter.steps.map((s) => s.id), ch).then((l) => l.indexOf(id));
-    await p.goto(`${base}/dragon2d/?ch=${ch}&step=${Math.max(0, idx)}&chain=0&diff=${DIFF}&seed=1`);
+    await p.goto(`${base}/dragon2d/?ch=${ch}&step=${Math.max(0, idx)}&chain=0&diff=${DIFF}&seed=1&card=0`);
     await p.waitForFunction(() => window.DRG2 && DRG2.sense().id && !DRG2.sense().busy, null, { timeout: 30000 });
     await p.evaluate(async () => { const m = await import('/dragon2d/js/bots/bots.js?v=1'); DRG2.bot.run(m.storyBot('normal')); });
     await p.waitForTimeout(+(sec || 3) * 1000);

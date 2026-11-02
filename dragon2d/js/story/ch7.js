@@ -1,7 +1,7 @@
 // 7장 아빠의 투구(#17·#18 · design §2 · 탑뷰) — 아빠와 나란히 걸으며 듣기(엇갈리는 오해 대화 · 3.5m 안 · 가운데에서 투구 선물)
 // → 최종 선발(아스트리드가 도끼로 기절시키기 전에 그롱클을 진정 · 쏜 뒤 '휴…' 틈에 드래곤 풀) → 원로가 히컵을 가리킴 · 관중석이 들썩 → 게시판 앞에서 웃음이 사라짐
 // → 해 질 녘 짐을 들고 마을 빠져나가기(마을 사람 셋의 눈길 부채꼴 · 돌아보기 전 ! · 통 곁에서 C면 숨음 · 들키면 지난 통으로)
-import { say, wait, until, goal, near, talking, hitsMe, knock, bang, sfx, shoot, faceTo } from './kit.js?v=1';
+import { say, talk, wait, until, goal, near, talking, hitsMe, knock, bang, sfx, shoot, faceTo } from './kit.js?v=1';
 
 const TELL = { easy: 3, normal: 2.5, hard: 2 };
 /* 관중석(벽 위) — 이름 없는 마을 사람 · 고버 */
@@ -12,8 +12,9 @@ export const chapter = {
   howto: { '7-1': 'walk' },
   end: '내일이 마지막 시험 — 히컵은 짐을 쌌다',
   steps: [
-    /* ① 아빠와 걸으며 듣기 — 대장간 앞 → 우물 → 큰길 → 큰 회관(40m쯤) · 3.5m(쉬움 4.5) 안에 있을 때만 아빠가 걸음 · 멀면 기다리며 "히컵?" · 큰길 모퉁이에서 투구 선물 */
-    { id: '7-1', verb: 'listen', goal: '아빠와 나란히 걸어라', at: [9, 29.3], face: [1, 0], helmet: 0, limit: 90,
+    /* ① 아빠와 걸으며 듣기 — 대장간 앞 → 우물 → 큰길 → 큰 회관(40m쯤) · 3.5m(쉬움 4.5) 안에 있을 때만 아빠가 걸음 · 멀면 기다리며 "히컵?" · 큰길 모퉁이에서 투구 선물
+       대화창(talk): 엇갈린 오해(아빠는 훈련 얘기 · 히컵은 들킨 줄) 앞 셋은 서서 · 뒤 넷은 걸으며(아빠가 몇 걸음 앞서 감) · 모퉁이 투구 선물은 서서 */
+    { id: '7-1', verb: 'listen', goal: '아빠와 나란히 걸어라', at: [9, 29.3], face: [1, 0], helmet: 0, limit: 120,
       hints: ['아빠(▼) 곁 고리 안에 붙어 걸어요 — 멀어지면 아빠가 기다려요', '너무 앞서도, 뒤처져도 안 돼요 — 같이 걸어요'],
       *run(G) {
         const st = G.cast.person('stoick', 11, 29, { dir: 'side', flip: 1, spd: 1.8 });
@@ -23,13 +24,10 @@ export const chapter = {
         const path = [[22.6, 29.1], [22.6, 18.7], [31.4, 18.3], [31.8, 11.4]];
         let wp = 0, gave = false, farT = 0;
         G.flags.st = st;
-        say(G, 'stoick', '히컵! 같이 좀 걷자.', { secs: 2 });
-        say(G, 'stoick', '다 들었다. 이제 숨길 것 없다.');
-        say(G, 'hiccup', '(헉… 투슬리스를 들켰나?) 아, 아빠, 그게요…');
-        say(G, 'stoick', '그렇게 잘하면서 왜 말을 안 했냐!');
-        say(G, 'hiccup', '(역시 들켰어!) 일부러 숨긴 건 아니고요…');
-        say(G, 'stoick', '훈련장 말이다! 셋을 다 진정시켰다며?');
-        say(G, 'hiccup', '아… 훈련장. 네, 훈련장이요. 휴우.');
+        faceTo(st, G.P.x, G.P.y);
+        yield* talk(G, [['stoick', '히컵! 원정에서 돌아왔다. 같이 좀 걷자.'], ['stoick', '다 들었다. 이제 숨길 것 없다.'], ['hiccup', '(헉… 투슬리스를 들켰나?) 아, 아빠, 그게요…']]);
+        st.to = [15.6, 29.1];                                       /* 걸으며 듣기 — 아빠가 몇 걸음 앞서 감 */
+        yield* talk(G, [['stoick', '그렇게 잘하면서 왜 말을 안 했냐!'], ['hiccup', '(역시 들켰어!) 일부러 숨긴 건 아니고요…'], ['stoick', '훈련장 말이다! 드래곤 셋을 다 진정시켰다며?'], ['hiccup', '아… 훈련장. 네, 훈련장이요. 휴우.']], { walk: true });
         while (true) {
           const dt = yield;
           const d = Math.hypot(G.P.x - st.x, (G.P.y - st.y) * 1.25), close = d < R;
@@ -38,16 +36,10 @@ export const chapter = {
           /* 큰길 모퉁이 — 투구 선물(아빠는 서서 말함) */
           if (wp === 2 && !gave) {
             gave = true; st.to = null; faceTo(st, G.P.x, G.P.y);
-            yield* until(() => !talking(G), 14);
-            faceTo(st, G.P.x, G.P.y);
-            say(G, 'stoick', '선물이다. 네 엄마 가슴판 반쪽으로 만든 투구야.', { icons: ['helmet'] });
-            yield* until(() => !talking(G), 8);
+            yield* talk(G, [['stoick', '잠깐. 너한테 줄 게 있다.'], ['stoick', '네 엄마 가슴판 반쪽으로 만든 투구야.', ['helmet']]]);
             G.P.helmet = 1; sfx(G, 'clang', G.P.x); G.hud.banner('아빠와 같은 무늬 투구', 'helmet', 2.6);
-            say(G, 'stoick', '나머지 반쪽은 내 투구고. 이제 우린 같은 무늬다.');
-            say(G, 'hiccup', '기쁜데… 무겁다.', { secs: 2 });
-            yield* until(() => !talking(G), 10);
-            say(G, 'stoick', '내일은 최종 선발이다. 이겨서 우리 집 체면 좀 세워 다오!');
-            say(G, 'hiccup', '(이기면… 진짜 드래곤을 처치해야 하는데.)');
+            yield* wait(0.7);
+            yield* talk(G, [['stoick', '나머지 반쪽은 내 투구고. 이제 우린 같은 무늬다.'], ['hiccup', '(기쁜데… 무겁다.)'], ['stoick', '내일은 최종 선발이다. 이겨서 체면 좀 세워 다오!'], ['hiccup', '(이기면… 모두 앞에서 드래곤을 처치해야 하는데.)']]);
             continue;
           }
           if (wp >= path.length) { if (!talking(G)) break; continue; }
@@ -65,8 +57,8 @@ export const chapter = {
       sense: (G) => { const s = G.flags.st; return s ? { st: [+s.x.toFixed(2), +s.y.toFixed(2)], R: G.diff === 'easy' ? 4.5 : 3.5 } : {}; } },
 
     /* ② 최종 선발 — 그롱클: 걷기 → 볼 부풂(! · 예고) → 쏘기 → '휴…' 틈(여기서만 드래곤 풀 F) · 아스트리드는 그롱클이 걷거나 쉴 때만 다가가고 볼이 부풀면 멈칫 · 먼저 닿으면 기절 → 다시 */
-    { id: '7-2', verb: 'approach', place: 'arena', time: 'day', goal: '아스트리드보다 먼저 그롱클을 진정시켜라', at: [15, 18], face: [0, -1], helmet: 1, limit: 90,
-      hints: ['그롱클이 쏘고 "휴…" 할 때 가까이 가서 F — 풀을 두 번', '! 가 뜨면 곧 쏴요 — Space로 피하고, 쏜 다음이 기회'],
+    { id: '7-2', verb: 'approach', place: 'arena', time: 'day', goal: '아스트리드보다 먼저 그롱클을 진정시켜라', at: [15, 18], face: [0, -1], helmet: 1, limit: 110,
+      hints: ['그롱클이 쏘고 "휴…" 할 때 가까이 가서 Space — 풀을 두 번', '! 가 뜨면 곧 쏴요 — X로 피하고, 쏜 다음이 기회'],
       *run(G) {
         for (const c of G.W.props) if (c.kind === 'cage') c.o.open = c.x === 8 ? 1 : 0;
         const crowd = CROWD.map(([w, x, y]) => G.cast.person(w, x, y, { dir: y < 3 ? 'down' : 'side', flip: x < 15 ? 1 : -1 }));
@@ -78,8 +70,7 @@ export const chapter = {
         const NEED = G.diff === 'easy' ? 1 : 2;
         let hits = 0, calm = false, early = -9, fed = 0;
         G.P.carry = 'shield'; G.flags.D = D; G.flags.ast = ast; G.flags.board = null;
-        say(G, 'gobber', '최종 선발! 그롱클을 먼저 눕히는 사람이 이긴다!', { icons: ['shield'] });
-        say(G, 'astrid', '이번엔 내가 이겨.', { secs: 1.8 });
+        yield* talk(G, [['gobber', '최종 선발이다! 그롱클을 먼저 눕히는 사람이 1등!', ['shield']], ['astrid', '이번엔 내가 이겨.'], ['hiccup', '(도끼로 기절시키기 전에… 내가 먼저 진정시킬 거야.)', ['nip']]]);
         say(G, 'gobber', '내가 너만 할 땐 그롱클 스무 마리… 아니, 서른 마리를!', { secs: 2.4 });
         const hitMe = (s, ux, uy) => { if (hitsMe(G, s)) { if (knock(G, ux, uy, 0.7)) hits++; return true; } return false; };
         while (!calm) {
@@ -142,6 +133,7 @@ export const chapter = {
         say(G, 'gobber', '우리 히컵이! 내가 가르쳤지, 암!', { secs: 2 });
         for (let t = 0; t < 2.8; t += yield) for (let i = 0; i < crowd.length; i += 2) G.marks.push({ k: 'text', x: crowd[i].x, y: crowd[i].y - 2.2, t: '와아!', s: 16 });
         G.camOpt = {};
+        yield* talk(G, [['gobber', '1등은 히컵! 내일 마지막 시험은 히컵이 치른다!'], ['stoick', '봤느냐! 저게 내 아들이다!', ['heart']]]);
         /* 게시판 — 웃음이 사라짐 */
         const board = G.W.prop('board', 11.2, 19.3, {}); G.flags.board = [board.x, board.y];
         goal(G, board.x, board.y, { h: 1.8 });
@@ -151,16 +143,16 @@ export const chapter = {
         for (const c of crowd) c.pose.cheer = 0;
         dad.pose.cheer = 0;
         G.hud.banner('마지막 시험 — 내일, 마을 모두 앞에서 나이트메어를 처치한다', 'x', 3.6);
-        say(G, 'hiccup', '처치…? 내가?', { secs: 2 });
-        yield* wait(2.6);
+        yield* talk(G, [['hiccup', '(1등은 내일… 모두 앞에서 나이트메어를 처치한다고?)', ['x']], ['hiccup', '(처치…? 내가? 이제 드래곤은 못 해쳐.)']]);
+        yield* wait(0.8);
         return true;
       },
       sense: (G) => { const D = G.flags.D, a = G.flags.ast; return { D: D ? { x: +D.x.toFixed(2), y: +D.y.toFixed(2), st: D.st } : null, ast: a ? [+a.x.toFixed(2), +a.y.toFixed(2)] : null, board: G.flags.board }; } },
 
     /* ③ 해 질 녘 몰래 떠나기 — 큰길(울타리로 막힌 골목)을 동 → 서로 · 마을 사람 셋: 딴 데 봄 → 돌아봄 예고(! · 점선 부채꼴) → 길을 봄(부채꼴 안 = 들킴)
-       통 곁(1.15m)에서 C(살금살금)면 숨음 · 들키면 "히컵, 어디 가니?" → 지난 통 곁으로 · 세 번(쉬움 다섯) 들키면 다시 */
-    { id: '7-3', verb: 'sneak', place: 'village', time: 'sunset', goal: '짐을 들고 몰래 마을을 빠져나가라', at: [57.5, 18], face: [-1, 0], helmet: 1, limit: 100,
-      hints: ['부채꼴 눈길에 들면 들켜요 — 달리면 발소리에 돌아봐요', '통 곁에서 C(살금살금)면 숨어요 — 눈길이 딴 데로 가면 걸어서 지나가요'],
+       통 곁(1.15m)에서 X 꾹(살금살금)이면 숨음 · 들키면 "히컵, 어디 가니?" → 지난 통 곁으로 · 세 번(쉬움 다섯) 들키면 다시 */
+    { id: '7-3', verb: 'sneak', place: 'village', time: 'sunset', goal: '짐을 들고 몰래 마을을 빠져나가라', at: [57.5, 18], face: [-1, 0], helmet: 1, limit: 110,
+      hints: ['부채꼴 눈길에 들면 들켜요 — 달리면 발소리에 돌아봐요', '통 곁에서 X를 꾹(살금살금) 누르면 숨어요 — 눈길이 딴 데로 가면 걸어서 지나가요'],
       *run(G) {
         G.P.carry = 'bag';
         /* 골목 — 집 사이 틈 · 길 남쪽을 울타리로(길 찾기 X · 길은 하나) */
@@ -188,8 +180,7 @@ export const chapter = {
             }
           }
         };
-        say(G, 'hiccup', '(내일 나이트메어를 처치하느니… 투슬리스랑 떠나자.)', { icons: ['map'] });
-        say(G, 'hiccup', '(아무한테도 들키면 안 돼.)', { secs: 1.8 });
+        yield* talk(G, [['hiccup', '(내일 나이트메어를 처치할 순 없어.)'], ['hiccup', '(투슬리스랑 같이 떠나자. 아무한테도 들키면 안 돼.)', ['map']]]);
         while (true) {
           const dt = yield; const P = G.P;
           grace -= dt;
@@ -227,8 +218,8 @@ export const chapter = {
         }
         goal(G, null);
         G.hud.banner('마을을 빠져나왔다 — 숨은 호수로', 'map', 2.6);
-        say(G, 'hiccup', '투슬리스, 기다려. 이제 우리 둘이서…', { secs: 2.2 });
-        yield* wait(1.8);
+        yield* talk(G, [['hiccup', '(숨은 호수로 가자. 이제 투슬리스랑 둘이서…)']]);
+        yield* wait(0.6);
         return true;
       },
       sense: (G) => ({ ws: (G.flags.ws || []).map((w) => ({ x: w.x, y: w.y, ph: w.ph, R: w.R })), covers: G.flags.covers, spots: G.flags.spots, hidden: !!G.flags.hidden }) },

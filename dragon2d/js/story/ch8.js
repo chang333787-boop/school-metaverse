@@ -1,7 +1,7 @@
-// 8장 아스트리드와 둥지(#19·#20 · design §2 · 탑뷰) — 짐을 본 아스트리드를 투슬리스가 낚아챔 → 화난 비행(구르기·곤두박질 · ! + 화살표 → 반대쪽 키 · 손 셋)
+// 8장 아스트리드와 둥지(#19·#20 · design §2 · 탑뷰) — ⓪ 숨은 호수: 짐을 본 아스트리드가 따짐 · 투슬리스를 보고 마을에 알리러 뜀 → 투슬리스가 낚아챔 → 화난 비행(구르기·곤두박질 · ! + 화살표 → 반대쪽 키 · 손 셋)
 // → "미안해!" → 노을 구름 틈으로 올라 오로라 아래로(실패 없음) → 안개 속 드래곤 떼에 섞여 따라가기(떼 가운데 줄 · 밖이면 떼 눈이 이쪽 · 밀려오면 비키기)
 // → 둥지 둘레 길로 빠져나가기(대장 킁킁 = 콧구멍 벌름 → 낮추고 멈추기 · 1장 그 양 · 생선 한 마리 그롱클은 화면 밖 · 겁먹은 눈 → 책 '대장만 나쁘다')
-import { say, wait, until, goal, near, talking, bang, sfx, shoot, FX, burst, puff, faceTo } from './kit.js?v=1';
+import { say, talk, wait, until, goal, near, talking, bang, sfx, shoot, FX, burst, puff, faceTo } from './kit.js?v=1';
 import { createFlight, addCloud } from '../play/flight.js?v=1';
 import { drawFlockTop } from '../art/actors.js?v=1';
 
@@ -29,10 +29,49 @@ export const chapter = {
   id: 8, title: '아스트리드와 둥지', sub: '들킨 비밀 · 그리고 안개 너머', place: 'sea', time: 'sunset',
   end: '드래곤 책에 둥지 쪽이 생겼다 — 대장만 나쁘다',
   steps: [
+    /* ⓪ (이음) 숨은 호수 — 짐을 들고 온 히컵 · 바위 뒤에서 아스트리드가 나와 따짐 → 투슬리스가 나섬 → 마을에 알리러 뛰는 아스트리드를 투슬리스가 낚아채 하늘로(히컵도 등에) */
+    { id: '8-0', place: 'cove', time: 'sunset', goal: '짐을 들고 호숫가로 가라', at: [3.6, 15], face: [1, 0], helmet: 1, limit: 60,
+      *run(G) {
+        const P = G.P; P.carry = 'bag';
+        const T = G.cast.dragon('toothless', 23, 12.6, { flip: -1, fear: 0.2, pose: { sit: 1 } });
+        const spot = [17.5, 15.4];
+        goal(G, spot[0], spot[1]);
+        say(G, 'hiccup', '(해가 지면 투슬리스랑 떠나는 거야.)', { icons: ['map'] });
+        yield* until(() => near(G, spot[0], spot[1], 1.6));
+        goal(G, null);
+        const ast = G.cast.person('astrid', 13.6, 10.9, { dir: 'down', spd: 3.6, pose: { carry: 'axe' } }); ast.to = [15.6, 14.4];
+        sfx(G, 'thud', ast.x);
+        yield* until(() => !ast.to, 3);
+        faceTo(ast, P.x, P.y); P.fx = -1; P.fy = 0; P.dir = 'side'; P.flip = -1;
+        yield* talk(G, [['astrid', '거기 서! 요즘 훈련장에서 무슨 수를 쓰는 거야?'], ['astrid', '…그 짐은 뭐야? 어디 떠나려고?'], ['hiccup', '아, 아스트리드! 그게… 설명할 수 있어.']]);
+        T.pose.sit = 0; T.to = [19.8, 14.4]; T.spd = 6; sfx(G, 'growl', T.x);
+        yield* until(() => !T.to, 3);
+        faceTo(T, ast.x, ast.y); T.pose.ears = -1;
+        yield* talk(G, [['astrid', '드, 드래곤?! 히컵, 비켜!'], ['hiccup', '안 돼! 해치지 마. 이 녀석은 내 친구야.'], ['astrid', '친구? 마을에 다 말할 거야!']]);
+        /* 마을 쪽으로 뛰는 아스트리드 → 투슬리스가 낚아채 하늘로 */
+        ast.to = [3.4, 15]; ast.spd = 4.4;
+        yield* wait(0.7);
+        T.pose.wing = 1; T.pose.ears = 0; T.spd = 10; sfx(G, 'flap', T.x);
+        for (let t = 0; t < 2.5 && Math.hypot(T.x - ast.x, T.y - ast.y) > 0.9;) { t += yield; T.to = [ast.x + 0.4, ast.y - 0.1]; }
+        /* 낚아채 등에 태움 → 히컵 곁으로 와서 히컵도 태움 → 하늘로 */
+        ast.to = null; ast.pose.carry = null; ast.pose.sit = 1; ast.ySort = 0.12; sfx(G, 'whoosh', T.x);
+        G.hud.banner('투슬리스가 아스트리드를 낚아챘다!', 'wind', 2.4);
+        say(G, 'astrid', '으아악! 내려 줘!', { secs: 1.6 });
+        const ride = (a, dx) => { a.x = T.x + dx * T.flip; a.y = T.y + 0.05; a.z = T.z + 1.0; a.flip = T.flip; a.dir = 'side'; };
+        T.to = [P.x + 0.5, P.y - 0.1]; T.spd = 7;
+        for (let t = 0; t < 2.4 && T.to;) { t += yield; ride(ast, -0.45); }
+        P.hide = true;
+        const hc = G.cast.person('hiccup', T.x, T.y, { dir: 'side', ySort: 0.14, pose: { sit: 1, carry: 'bag' } });
+        G.hud.banner('히컵도 올라탔다 — 투슬리스가 하늘로!', 'wind', 2.4);
+        T.to = [9, 6]; T.spd = 5; sfx(G, 'flap', T.x);
+        for (let t = 0; t < 1.8;) { const dt = yield; t += dt; T.z = Math.min(5, T.z + dt * 3); ride(ast, -0.45); ride(hc, 0.35); }
+        return true;
+      } },
+
     /* ① 화난 비행 — 2초쯤마다 구르기(◀▶) 또는 곤두박질(▼ · 작아짐) · ! + 화살표가 뜨면 반대쪽 키(곤두박질은 ↑)를 1초(쉬움 1.5) 안에 새로 누름
        놓치거나 엉뚱한 키 = 아스트리드 손 하나 미끄러짐(셋 다 = 다시) · 미리 누르고 있던 키는 안 침 · 여섯 번 버티면 "미안해!" */
-    { id: '8-1', verb: 'cling', goal: '투슬리스 등에서 버텨라', at: [24, 0], helmet: 1, limit: 70,
-      hints: ['몸이 기우는 반대쪽 방향키를 눌러요 — ◀ 이면 ▶', '곤두박질(작아짐)엔 ↑ — ! 가 뜨면 바로 새로 눌러요'],
+    { id: '8-1', verb: 'cling', goal: '투슬리스 등에서 버텨라', at: [24, 0], helmet: 1,
+      hints: ['몸이 기우는 반대쪽 방향키를 눌러요 — ◀ 이면 ▶', '곤두박질(작아짐)엔 ↑ — ! 가 뜨면 바로 새로 눌러요'], limit: 80,
       *run(G) {
         const F = G.Fl = createFlight(24, 0, { speed: 9, rider: 'hiccup+astrid', fin: 'new', lane: [14, 34] }); G.mode = 'fly';
         F.lockH = true; F.lockV = true; F.noShoot = true;
@@ -41,9 +80,8 @@ export const chapter = {
         const tr = { id: 0, k: 'L', need: 'right', t: 0, done: false };
         let hands = 3, ok = 0, ph = 'calm', t = 0, prev = '', rep = 0, flash = 0, flashT = '';
         G.flags.tr = null; G.flags.hands = 3; G.flags.ok = 0;
-        G.hud.banner('아스트리드가 짐을 봤다 — 투슬리스가 낚아채 하늘로!', 'wind', 3);
-        say(G, 'astrid', '이 짐은 뭐야? 어디 가려고— 으아악!', { secs: 2.4 });
-        say(G, 'hiccup', '투슬리스, 착하게… 착하게 좀 날아!', { secs: 2.2 });
+        yield* talk(G, [['astrid', '으아악! 내려 줘! 지금 당장!'], ['hiccup', '투슬리스가 화났어! 네가 도끼를 들고 소리쳐서…'], ['hiccup', '투슬리스, 착하게… 착하게 좀 날아!']]);
+        say(G, 'hiccup', '꽉 잡아! 몸이 기울면 반대쪽으로!', { secs: 2 });
         const yells = ['내려 줘! 지금 당장!', '히컵! 얘 좀 어떻게 해 봐!', '알았어, 알았다고!', '바다가 코앞이잖아!'];
         G.drawOver = (ctx, V) => {
           V.reset();
@@ -93,9 +131,7 @@ export const chapter = {
           if (t > T) { ph = 'calm'; t = 0; G.flags.tr = null; }
         }
         F.rot = 0; F.scale = 1; F.x = 24; G.flags.tr = null;
-        say(G, 'astrid', '알았어, 알았어! 미안해! 다 미안해!');
-        say(G, 'hiccup', '…투슬리스, 이제 됐어. 천천히.', { secs: 2 });
-        yield* until(() => !talking(G), 6);
+        yield* talk(G, [['astrid', '알았어, 알았어! 미안해! 다 미안해!'], ['hiccup', '…투슬리스, 사과했어. 이제 됐어. 천천히.']]);
         return true;
       },
       sense: (G) => { const tr = G.flags.tr; return { tr: tr ? { id: tr.id, k: tr.k, need: tr.need, t: +tr.t.toFixed(2), done: tr.done } : null, hands: G.flags.hands, ok: G.flags.ok }; } },
@@ -106,14 +142,13 @@ export const chapter = {
       *run(G) {
         const F = G.Fl = createFlight(24, 0, { speed: 8, rider: 'hiccup+astrid', fin: 'new', lane: [10, 38] }); G.mode = 'fly'; F.noShoot = true;
         G.tint = 'clear';
+        yield* talk(G, [['astrid', '…아까는 미안해. 네가 몰래 떠나려는 줄 알고 화가 났어.'], ['hiccup', '나도 미안. 저기 구름 틈으로 올라가 보자.', ['cloud']]]);
         const NEED = G.diff === 'easy' ? 3 : 4, R = G.rng, holes = [];
-        let ny = -26, side = R() < 0.5 ? -1 : 1, got = 0, rev = 0, tEnd = 0, missT = -9;
+        let ny = F.y - 26, side = R() < 0.5 ? -1 : 1, got = 0, rev = 0, tEnd = 0, missT = -9;
         const addHole = () => { side = -side; const h = { x: 24 + side * (5 + R() * 3), y: ny }; ny -= 30; holes.push(h); addCloud(F, h.x - 5.6, h.y, 7.6, 4.2); addCloud(F, h.x + 5.6, h.y, 7.6, 4.2); };
         for (let i = 0; i < NEED; i++) addHole();
-        for (let i = 0; i < 8; i++) addCloud(F, 11 + R() * 26, -12 - i * 19, 4 + R() * 2, 2.5);
+        for (let i = 0; i < 8; i++) addCloud(F, 11 + R() * 26, F.y - 12 - i * 19, 4 + R() * 2, 2.5);
         G.flags.holes = holes;
-        say(G, 'astrid', '…미안해. 짐을 보고 화가 났었어.');
-        say(G, 'hiccup', '나도. 저기 구름 틈으로 올라가 보자.', { secs: 2 });
         G.drawOver = (ctx, V, t) => {
           V.reset();
           const k = Math.min(1, got / NEED * 0.55 + rev * 0.45);
@@ -132,12 +167,13 @@ export const chapter = {
             }
           } else {
             goal(G, null);
-            if (rev === 0) { G.hud.banner('구름 위 — 오로라 아래로!', 'cloud', 3); say(G, 'astrid', '…예쁘다.', { secs: 1.8 }); say(G, 'hiccup', '그치? 이게 투슬리스가 보여 주는 하늘이야.'); }
+            if (rev === 0) G.hud.banner('구름 위 — 오로라 아래로!', 'cloud', 3);
             rev = Math.min(1, rev + dt / 3); tEnd += dt;
             if (tEnd > 6.5) break;
           }
         }
         G.tint = 'aurora';
+        yield* talk(G, [['astrid', '…예쁘다.'], ['hiccup', '그치? 이게 투슬리스가 보여 주는 하늘이야.'], ['astrid', '드래곤이… 이런 애들이었구나.'], ['hiccup', '어? 투슬리스, 왜 그래? 어디로 가?'], ['astrid', '저기 봐! 드래곤 떼가 안개 쪽으로 가!', ['flock']]]);
         return true;
       },
       sense: (G) => ({ hole: (G.flags.holes || [])[0] ? [+G.flags.holes[0].x.toFixed(2), +G.flags.holes[0].y.toFixed(2)] : null }) },
@@ -154,8 +190,9 @@ export const chapter = {
         const KINDS = ['nadder', 'gronckle', 'nightmare', 'zippleback', 'terror'], R = G.rng, flock = [];
         [-16, -12.5, -9, -5.5, 5.5, 9].forEach((dy, r) => { const offs = r % 2 ? [-3.9, -1.5, 0.9, 3.3] : [-3.3, -1.0, 1.4, 3.7]; for (const ox of offs) flock.push({ kind: KINDS[flock.length % 5], dy, ox, wob: R() * 6.28, fl: R(), x: 24 + ox, y: dy, st: 'slot', t: 0, off: 0, tx: 0 }); });
         let outT = 0, hits = 0, nextI = 3.5, intr = null;
+        yield* talk(G, [['hiccup', '투슬리스가 떼를 따라가… 멈추질 않아!'], ['astrid', '쉿! 떼 속에 섞여서 가. 들키면 끝이야.', ['flock']]]);
+        const y0 = F.y;
         const f8 = G.flags.F8 = { cx: 24, band: BAND, out: 0, intr: null }, iv8 = { st: '', tx: 0, x: 0, y: 0 };
-        say(G, 'hiccup', '안개다… 드래곤 떼 한가운데야. 쉿, 섞여서 가자.', { icons: ['flock'] });
         G.drawOver = (ctx, V, t) => {
           V.reset();
           const out = Math.abs(F.x - cx(F.y)) > BAND;
@@ -177,7 +214,7 @@ export const chapter = {
             ctx.strokeStyle = '#a83e1e'; ctx.lineWidth = 4 * s; ctx.beginPath(); ctx.arc(fx, fy, 2.0 * V.S, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0, 1 - outT / 3)); ctx.stroke();
           }
         };
-        while (-F.y < END) {
+        while (y0 - F.y < END) {
           const dt = yield;
           const c0 = cx(F.y);
           for (const m of flock) {
@@ -220,8 +257,8 @@ export const chapter = {
 
     /* ④ 둥지 — 둘레 길(북쪽)을 서쪽 → 동쪽 · 구멍 속 대장(머리만 · 눈 감음) · 킁킁 예고(콧구멍 벌름 · !) → 킁킁(2.6초): C로 낮추고 멈춤(바위 곁이면 낮게 움직여도 됨) · 아니면 눈을 뜸 → 다시
        1장 그 양이 구멍으로 · 생선 한 마리뿐인 그롱클은 화면 밖으로(그림자·소리만) · 겁먹은 눈 셋 → 책 둥지 쪽 */
-    { id: '8-4', verb: 'sniff', place: 'nest', time: 'fog', goal: '들키지 말고 둥지를 빠져나가라', at: [3.6, 5.6], face: [1, 0], helmet: 1, limit: 110, zoom: 0.78,
-      hints: ['콧구멍이 벌름하면 C로 낮추고 멈춰요', '서서 걸으면 대장이 꿈틀해요 — 낮게(C), 바위 곁이면 조금 움직여도 돼요'],
+    { id: '8-4', verb: 'sniff', place: 'nest', time: 'fog', goal: '들키지 말고 둥지를 빠져나가라', at: [3.6, 5.6], face: [1, 0], helmet: 1, limit: 130, zoom: 0.78,
+      hints: ['콧구멍이 벌름하면 X를 꾹 눌러 낮추고 멈춰요', '서서 걸으면 대장이 꿈틀해요 — 낮게(X 꾹), 바위 곁이면 조금 움직여도 돼요'],
       *run(G) {
         G.camOpt = { fixY: 9.6 };
         const rocks = G.W.props.filter((p) => p.kind === 'rock');
@@ -239,8 +276,7 @@ export const chapter = {
         let ev = 0, evT = 0, noted = false, gr = null, sheep = null, bask = null, ter = null, nad = null;
         G.flags.bs = bs;
         const nearRock = (x, y) => { for (const r of rocks) { const b = r.box; const dx = Math.max(b[0] - x, 0, x - b[2]), dy = Math.max(b[1] - y, 0, y - b[3]); if (Math.hypot(dx, dy) < 1.1) return true; } return false; };
-        say(G, 'hiccup', '여기가… 드래곤 둥지야. 쉿.', { secs: 2 });
-        say(G, 'astrid', '저 구멍 속에 뭐가 있어. 엄청 커.', { secs: 2.2 });
+        yield* talk(G, [['hiccup', '떼를 따라왔더니… 여기가 드래곤 둥지야. 쉿.'], ['astrid', '저 구멍 속에 뭐가 있어. 엄청 커.', ['nose']]]);
         while (true) {
           const dt = yield; const P = G.P;
           /* 동무 둘 */
@@ -272,15 +308,17 @@ export const chapter = {
             if (evT < 1.3) { const k = evT / 1.3; B.y = 12.4 + k * 10; B.alpha = 0.95 - k * 0.75; }
             else if (evT < 1.8) { if (gr) { sfx(G, 'boom', 25); sfx(G, 'roar', 25); burst('dust', 25, 17, 0.5, 10, 2, 0.8, 0.5, G.rng); G.cast.remove(gr); gr = null; } G.marks.push({ k: 'text', x: 25, y: 16.4, t: '쿵…', s: 20 }); }
             else if (evT < 3.4) { const k = (evT - 1.8) / 1.6; B.y = 22.4 - k * 10; B.alpha = 0.2 + 0.75 * k; }
-            else { B.y = 12.4; B.alpha = 0.95; bs.ph = 'calm'; bs.t = 0; bs.dur = 3.4; say(G, 'hiccup', '…생선이 한 마리뿐이라서.'); say(G, 'astrid', '저 큰 녀석 혼자만 배부른 거야. 다른 애들은 바치기만 하고.'); }
+            else { B.y = 12.4; B.alpha = 0.95; bs.ph = 'calm'; bs.t = 0; bs.dur = 3.4; yield* talk(G, [['hiccup', '…생선을 한 마리밖에 못 가져와서, 저 대장한테…'], ['astrid', '저 큰 녀석만 배부르고, 다른 애들은 바치기만 해.']]); }
           }
           /* 사건 — 1장 그 양 · 생선 바구니 · 한 마리 그롱클 */
           if (ev === 0 && P.x > 11) {
             ev = 1; evT = 0;
-            ter = G.cast.dragon('terror', 12, 1.5, { z: 3, flip: 1, flapHz: 3, pose: { wing: 1, pupil: 0.2 } }); ter.to = [21, 12.5]; ter.spd = 4.5;
-            nad = G.cast.dragon('nadder', 30, 1.5, { z: 3.5, flip: -1, pose: { wing: 1, pupil: 0.2 } }); nad.to = [27.5, 13]; nad.spd = 4;
-            sheep = G.W.prop('sheep', 12, 1.5, { nobox: 1, lift: 1 }); bask = G.W.prop('fish_basket', 30, 1.5, { nobox: 1, n: 3 });
-            say(G, 'hiccup', '저 양… 1장 그 밤에 끌려간 양이야!', { icons: ['sheep'] });
+            ter = G.cast.dragon('terror', 12, 1.5, { z: 3, flip: 1, flapHz: 3, pose: { wing: 1, pupil: 0.2 } }); ter.spd = 4.5;
+            nad = G.cast.dragon('nadder', 30, 1.5, { z: 3.5, flip: -1, pose: { wing: 1, pupil: 0.2 } }); nad.spd = 4;
+            sheep = G.W.prop('sheep', 12, 1.55, { nobox: 1, lift: 1 }); bask = G.W.prop('fish_basket', 30, 1.55, { nobox: 1, n: 3 });
+            /* 대장이 쉬는 틈이면 대화창(대장 차례도 멈춤) · 아니면 걸으며 듣는 말풍선 — 날아가는 건 말이 끝난 뒤 */
+            if (bs.ph === 'calm') yield* talk(G, [['hiccup', '저 양… 1장 그 밤에 끌려간 양이야!', ['sheep']], ['astrid', '생선 바구니도… 다들 어디로 가져가는 거지?']]); else say(G, 'hiccup', '저 양… 1장 그 밤에 끌려간 양이야!', { icons: ['sheep'] });
+            ter.to = [21, 12.5]; nad.to = [27.5, 13];
           }
           if (ev === 1) {
             if (ter.to) { sheep.x = ter.x; sheep.y = ter.y + 0.05; } else if (!sheep.hide) { sheep.y += dt * 4; if (sheep.y > 16) { sheep.hide = true; puff('dust', 21, 15, 0.3, 0, 0, 0.5, 0.6, 0.4); ter.to = [8, -3]; ter.spd = 5; } }
@@ -297,12 +335,12 @@ export const chapter = {
           if (P.x > 46.5) break;
         }
         goal(G, null);
+        yield* talk(G, [['hiccup', '이제 알겠어. 드래곤들이 왜 마을을 털었는지.'], ['hiccup', '먹이를 안 바치면, 저 대장이 잡아먹으니까.', ['nose']], ['astrid', '그럼 나쁜 건 대장뿐이네. 다른 애들은 겁먹었을 뿐이야.']]);
         G.book.note('nest', 'other', '대장만 나쁘다 — 다른 드래곤은 먹이를 바칠 뿐');
         G.book.note('boss', 'sign', '냄새로 찾음 — 콧구멍이 벌름', false);
         G.hud.banner('책에 둥지 쪽이 생겼다 — 대장만 나쁘다', 'book', 3);
-        say(G, 'astrid', '마을에 알려야 해!');
-        say(G, 'hiccup', '안 돼, 그럼 투슬리스가… 생각할 시간이 필요해.');
-        yield* wait(2.4);
+        yield* wait(0.8);
+        yield* talk(G, [['astrid', '마을에 알려야 해! 어른들한테 지금 당장!'], ['hiccup', '안 돼! 그럼 어른들이 투슬리스를…'], ['hiccup', '(내일 시험까지… 생각할 시간이 필요해.)']]);
         G.boss = null;
         return true;
       },

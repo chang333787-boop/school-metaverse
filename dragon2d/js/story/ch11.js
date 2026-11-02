@@ -1,7 +1,7 @@
 // 11장 함께 사는 버크(#28 · design §2 종장 · 탑뷰) — ① 깨어남: 첫걸음 비틀(처음 몇 걸음 느림) → 투슬리스가 머리로 받쳐 나란히 → 꼬리 끝을 다리 옆에(말 없음) → 다리 친구 · 그 공책
 // ② 지붕 위 배고픈 드래곤 셋에게 생선 던지기(떨어질 곳 고리) → 고버의 새 꼬리날개에 무늬 칠하기(←→ 고르기 · F 칠하기) ③ 마을 위를 함께 날기(실패 없음 · 손 흔드는 이웃) → 엔딩
 // 다리는 고버 한 줄 + 몸짓으로만(design §8) · 대사는 우리 말로 새로(영화 원문 X)
-import { say, wait, until, goal, near, dist, talking, useAt, throwFrom, previewArc, sfx, burst, puff, faceTo } from './kit.js?v=1';
+import { say, talk, wait, until, goal, near, dist, talking, useAt, throwFrom, previewArc, sfx, burst, puff, faceTo } from './kit.js?v=1';
 import { createFlight } from '../play/flight.js?v=1';
 
 const INK = '#2b2118', FINC = '#a9623b', HEART = '#c97a6a';
@@ -37,7 +37,7 @@ function paintCard(ctx, V, sel, strokes) {
     if (i === sel) { ctx.strokeStyle = '#a83e1e'; ctx.lineWidth = 3 * k; ctx.strokeRect(cx - 44 * k, cy - 40 * k, 88 * k, 92 * k); }
     label(ctx, PATS[i][1], cx, cy + 40 * k, 15 * k);
   }
-  label(ctx, strokes ? 'F 칠하기 (' + strokes + ' / 3)' : '←→ 고르기 · F 칠하기', x0 + w / 2, y0 + h - 16 * k, 16 * k);
+  label(ctx, strokes ? 'Space 칠하기 (' + strokes + ' / 3)' : '←→ 고르기 · Space 칠하기', x0 + w / 2, y0 + h - 16 * k, 16 * k);
 }
 /* 하늘에서 — 내가 그린 꼬리날개(작은 쪽지) */
 function finBadge(ctx, V, pat) {
@@ -70,7 +70,8 @@ export const chapter = {
         const T = G.cast.dragon('toothless', 14.8, 18, { flip: 1, fear: 0, pose: { sit: 1 } });
         const st = G.cast.person('stoick', 27.4, 25.4, { dir: 'side', flip: -1, pose: { carry: 'book' } });
         const L = life(G), PL = [24.6, 25.8];
-        say(G, 'gobber', '깼구나! 큰 불에서 다쳤지만, 이제 괜찮아.');
+        faceTo(gob, P.x, P.y);
+        yield* talk(G, [['hiccup', '…여기는? 투슬리스?'], ['gobber', '깼구나! 큰 불에서 다쳤지만, 이제 괜찮아.'], ['gobber', '천천히 걸어 봐. 다들 광장에서 기다린다.']]);
         let lx = P.x, ly = P.y, walked = 0, beat = 0, bt = 0, gm = false;
         G.flags.x11 = () => ({ PL, walked: r2(walked) });
         while (!(walked > 3 && near(G, PL[0], PL[1], 1.7))) {
@@ -94,17 +95,15 @@ export const chapter = {
         }
         goal(G, null); P.handLock = 0;
         faceTo(gob, P.x, P.y); faceTo(st, P.x, P.y); T.to = [P.x - 1.2, P.y + 0.4];
-        say(G, 'gobber', '(막대 다리를 툭) 이제 너랑 나랑 다리 친구다.');
-        say(G, 'stoick', '이 낙서가 버크를 바꿨구나.', { icons: ['book'] });
-        say(G, 'hiccup', '지붕 위에서 드래곤이 낮잠이라니… 여기 버크 맞아?');
-        for (let t = 0; t < 1 || talking(G);) { const dt = yield; t += dt; lifeStep(G, L); if (t > 20) break; }
+        yield* talk(G, [['gobber', '(막대 다리를 툭) 이제 너랑 나랑 다리 친구다.'], ['stoick', '이 낙서가 버크를 바꿨구나.', ['book']], ['hiccup', '지붕 위에서 드래곤이 낮잠이라니… 여기 버크 맞아?']]);
+        for (let t = 0; t < 0.8;) { const dt = yield; t += dt; lifeStep(G, L); }
         return true;
       },
       sense: (G) => (G.flags.x11 ? G.flags.x11() : {}) },
 
     /* ② 먹이 주기 — 생선 바구니(F = 세 마리) → 지붕 위 배고픈 드래곤 쪽을 보고 F(떨어질 곳 고리) → 하트 · 셋 다 먹이면 고버의 새 꼬리날개에 무늬 칠하기 */
     { id: '11-2', verb: 'feed', goal: '배고픈 드래곤에게 생선을', at: [24.6, 25.8], face: [0, 1], limit: 140,
-      hints: ['생선 바구니에서 F — 지붕 위 드래곤을 바라보고 F', '드래곤에서 다섯 걸음쯤 떨어져 바라보면 고리가 닿아요'],
+      hints: ['생선 바구니에서 Space — 지붕 위 드래곤을 바라보고 Space', '드래곤에서 다섯 걸음쯤 떨어져 바라보면 고리가 닿아요'],
       *run(G) {
         const P = G.P; P.peg = 1;
         const basket = G.W.prop('fish_basket', 24.6, 29.1, { n: 3 });
@@ -112,8 +111,7 @@ export const chapter = {
         const gob = G.cast.person('gobber', 21.4, 25.4, { dir: 'side', flip: 1 });
         G.cast.dragon('toothless', 26.6, 26.2, { flip: -1, fear: 0 });
         G.cast.person('astrid', 28.2, 25.2, { dir: 'side', flip: -1 });
-        say(G, 'astrid', '새로 온 드래곤들이야. 지붕 위에서 배고프대.');
-        say(G, 'hiccup', '생선부터!', { icons: ['cod'] });
+        yield* talk(G, [['astrid', '새로 온 드래곤들이야. 지붕 위에서 배고프대.'], ['hiccup', '그럼 생선부터!', ['cod']]]);
         let fish = 0, fed = 0, paint = null;
         G.flags.x11 = () => ({ fish, basket: [basket.x, basket.y], ds: HD, paint });
         const LINES = [['astrid', '배고팠구나. 이제 지붕은 덜 긁겠지?'], ['villager', '우리 지붕 위 손님이 웃네!'], ['fishlegs', '먹는 모습도 드래곤 책에 그려야지!']];
@@ -140,9 +138,10 @@ export const chapter = {
         goal(G, null); P.carry = null;
         for (let t = 0; t < 1.4;) { const dt = yield; t += dt; for (const d of HD) if (d.eatT > 0) { d.eatT -= dt; text(G, d.x, d.y - d.z - 2.4, '♥', 24, HEART); if (d.eatT <= 0) d.pose.eat = 0; } }
         gob.to = [P.x - 1.4, P.y - 0.2]; gob.spd = 3;
-        say(G, 'gobber', '새 꼬리날개다! 무늬는 네가 그려라.', { icons: ['finNew'] });
         yield* until(() => !gob.to, 4);
-        faceTo(gob, P.x, P.y); G.hud.howto('paint', 9);
+        faceTo(gob, P.x, P.y);
+        yield* talk(G, [['gobber', '투슬리스 새 꼬리날개다! 무늬는 네가 그려라.', ['finNew']]]);
+        G.hud.howto('paint', 9);
         P.lock = true; paint = { sel: 0, strokes: 0 };
         G.drawOver = (ctx, V) => paintCard(ctx, V, paint.sel, paint.strokes);
         let saidM = false;
@@ -153,10 +152,9 @@ export const chapter = {
         }
         G.inv.finMark = PATS[paint.sel][0];
         G.hud.banner('새 꼬리날개 — ' + PATS[paint.sel][1], 'finNew', 2.6);
-        say(G, 'gobber', '멋지다! 이번 건 투슬리스 혼자서도 펼 수 있지!');
-        yield* wait(2);
+        yield* wait(1.2);
         G.drawOver = null; P.lock = false;
-        yield* until(() => !talking(G), 6);
+        yield* talk(G, [['gobber', '멋지다! 이번 건 투슬리스 혼자서도 펼 수 있지.'], ['hiccup', '그래도 같이 날 거야. 우린 한 팀이니까.', ['heart']]]);
         return true;
       },
       sense: (G) => { const f = G.flags.x11 && G.flags.x11(); if (!f || !f.ds) return {}; return { fish: f.fish, basket: f.basket, ds: f.ds.map((d) => ({ k: d.kind, x: r2(d.x), y: r2(d.y), hungry: d.hungry, stand: d.stand })), paint: f.paint ? { sel: f.paint.sel, strokes: f.paint.strokes } : null }; } },
@@ -190,9 +188,9 @@ export const chapter = {
           }
           if (best) goal(G, best.x, best.y, { h: 2.4 }); else goal(G, null);
         }
-        say(G, 'hiccup', '여기는 버크. 눈이 많고, 바람이 세고…');
-        say(G, 'hiccup', '이제는 드래곤이 함께 사는 마을.', { icons: ['heart'] });
-        for (let t = 0; t < 1 || talking(G);) { const dt = yield; t += dt; G.camOpt.fixX = F.x; G.camOpt.fixY = F.y - 1.2; wave(dt); if (t > 14) break; }
+        for (let t = 0; t < 1.6 || talking(G);) { const dt = yield; t += dt; G.camOpt.fixX = F.x; G.camOpt.fixY = F.y - 1.2; wave(dt); if (t > 6) break; }
+        /* 끝 내레이션 — 히컵의 목소리(우리 말로 새로 · 영화 원문 X) */
+        yield* talk(G, [['hiccup', '여기는 버크. 예전엔 드래곤과 싸우던 섬이었어.'], ['hiccup', '이제는 드래곤과 함께 사는 마을이야.', ['heart']], ['hiccup', '투슬리스가 못 하는 건 내가, 내가 못 하는 건 투슬리스가.'], ['hiccup', '우리는 서로의 빈 곳을 채워 주는 친구야.', ['finNew']]]);
         return true;
       },
       sense: (G) => (G.flags.x11 ? G.flags.x11() : {}) },

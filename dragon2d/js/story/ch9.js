@@ -1,7 +1,7 @@
 // 9장 마지막 시험(#21~23 · design §2 · 탑뷰) — 모두 앞 나이트메어(볼 때 무기 → 투구 → 살금살금 → 손 내밀기) → 아빠가 철창을 쾅(예고) → 20초 버티기
 // → 투슬리스가 그물 지붕으로(그림자가 커지는 예고) → 둘 사이에 서서 손 내밀기 3초 → 바이킹들이 붙잡음(내 탓 X) → 큰 회관(말로 하는 설득 실패 · '이제 넌 우리 편이 아니다'까지만)
 // → 선착장(앞배가 안개로 · 아빠가 한 번 돌아봄 · 아스트리드) → 우리 문을 열고 친구 넷을 드래곤과 잇기(성격마다 다른 수) → 다섯 드래곤이 솟아오름 · 슬픈 셋(회관·선착장·아스트리드)은 합쳐 90초 안
-import { say, wait, until, goal, useAt, near, talking, hitsMe, knock, bang, sfx, shoot, FX, burst, puff, faceTo } from './kit.js?v=1';
+import { say, talk, wait, until, goal, useAt, near, talking, hitsMe, knock, bang, sfx, shoot, FX, burst, puff, faceTo } from './kit.js?v=1';
 import { mindStep } from '../play/actors.js?v=1';
 
 const TELL = { easy: 3, normal: 2.5, hard: 2 };
@@ -31,8 +31,8 @@ export const chapter = {
   end: '열린 우리 문 — 친구 넷이 드래곤에 올라탔다',
   steps: [
     /* ① 모두 앞 나이트메어 — 나를 볼 때(노란 점) F = 무기 내려놓기 → 한 번 더 F = 투구 벗기 → C 살금살금 → F 꾹(고개 돌려 손 내밀기 · 믿음) · 서두르면 불(! 예고 → 점프) · 세 번 맞으면 다시 */
-    { id: '9-1', verb: 'give', goal: '모두 앞에서 나이트메어와 친구가 되어라', at: [15, 18.4], face: [0, -1], helmet: 1, limit: 110, zoom: 0.85,
-      hints: ['나이트메어가 나를 볼 때 F — 무기를, 다음에 또 볼 때 F — 투구를', 'C로 살금살금 다가가 F를 꾹 — 고개 돌려 손 내밀기'],
+    { id: '9-1', verb: 'give', goal: '모두 앞에서 나이트메어와 친구가 되어라', at: [15, 18.4], face: [0, -1], helmet: 1, limit: 125, zoom: 0.85,
+      hints: ['나이트메어가 나를 볼 때 Space — 무기를, 다음에 또 볼 때 Space — 투구를', 'X를 누른 채 살금살금 다가가 Space를 꾹 — 고개 돌려 손 내밀기'],
       *run(G) {
         G.camOpt = { focus: [15, 7.5] };
         for (const c of G.W.props) if (c.kind === 'cage') c.o.open = c.x === 15 ? 1 : 0;
@@ -51,8 +51,7 @@ export const chapter = {
           ctx.fillStyle = '#eee2c6';
           for (const k of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + k * 0.28 * s, y - 0.18 * s); ctx.quadraticCurveTo(x + k * 0.52 * s, y - 0.3 * s, x + k * 0.48 * s, y - 0.5 * s); ctx.lineTo(x + k * 0.36 * s, y - 0.22 * s); ctx.closePath(); ctx.fill(); ctx.stroke(); }
         };
-        say(G, 'gobber', '히컵의 마지막 시험이다! 모두 조용!');
-        say(G, 'hiccup', '(할 수 있어… 해야 돼.)', { secs: 1.8 });
+        yield* talk(G, [['gobber', '히컵의 마지막 시험이다! 모두 조용!'], ['stoick', '보여 줘라, 히컵. 드래곤을 처치하는 모습을!'], ['hiccup', '(아니요, 아빠. 오늘은 다른 걸 보여 드릴게요.)'], ['hiccup', '(드래곤을 해치지 않아도 된다는 걸.)', ['hand']]]);
         const onHit = (q, ux, uy) => { if (knock(G, ux, uy, 0.8)) hits++; return true; };
         while (true) {
           const dt = yield; const P = G.P;
@@ -102,8 +101,8 @@ export const chapter = {
         faceTo(D, G.P.x, G.P.y); D.pose.pupil = 1; sfx(G, 'purr', D.x);
         for (const c of cr) c.pose.hand = 0;
         G.hud.banner('나이트메어가 코를 댔다 — 마을이 숨을 죽였다', 'hand', 3);
-        say(G, 'hiccup', '봐요. 드래곤은 우리가 알던 그런 게 아니에요.');
-        yield* wait(2.4);
+        yield* talk(G, [['hiccup', '봐요. 드래곤은 우리가 알던 그런 게 아니에요.'], ['hiccup', '우리가 무기를 내려놓으면, 드래곤도 싸우지 않아요!']]);
+        yield* wait(0.6);
         G.P.lock = false; G.P.handLock = 0; G.P.look = 0;
         return true;
       },
@@ -111,7 +110,7 @@ export const chapter = {
 
     /* ② 아빠가 망치를 듦(! · 몸짓 예고) → 철창 쾅 → 나이트메어 몸에 불 → 20초 버티기 · 불 줄 = 점프 · 불덩이 = 붉은 고리 밖 · 세 번 맞으면 다시(쉬움은 안 넘어지고 계속) */
     { id: '9-2', verb: 'dodge', goal: '투슬리스가 올 때까지 버텨라', at: [15, 11.6], face: [0, -1], helmet: 0, limit: 60, zoom: 0.8,
-      hints: ['! 가 뜨면 곧 불 — 불 줄은 Space로 넘고, 붉은 고리는 밖으로', '나이트메어 바로 앞에 서 있지 말고 옆으로 돌아요'],
+      hints: ['! 가 뜨면 곧 불 — 불 줄은 X로 넘고, 붉은 고리는 밖으로', '나이트메어 바로 앞에 서 있지 말고 옆으로 돌아요'],
       *run(G) {
         G.camOpt = { focus: [15, 7] };
         for (const c of G.W.props) if (c.kind === 'cage') c.o.open = c.x === 15 ? 1 : 0;
@@ -121,12 +120,14 @@ export const chapter = {
         const tell = TELL[G.diff], DUR = 20;
         let T = 0, hits = 0, a = 0, ph = 'tell', pt = 0, kind = 'line', bangT = 0;
         G.flags.T = 0;
-        say(G, 'stoick', '그만둬라!', { secs: 1.4 });
+        yield* talk(G, [['stoick', '그만둬라! 드래곤한테서 떨어져!']]);
         /* 예고 — 아빠가 망치를 높이 듦(소리가 꺼져 있어도 보이게 ! ) */
         for (let t = 0; t < tell; t += yield) { dad.pose.cheer = 1; bang(G, dad, 2.6); }
         dad.pose.cheer = 0; bangT = 1.2; sfx(G, 'clang', 8); burst('spark', 8, 4, 1.2, 8, 3, 0.4, 0.1, G.rng);
         D.pose.glow = 1; D.pose.pupil = 0.1; D.fear = 1; D.pupilTo = 0.08; sfx(G, 'roar', D.x);
-        say(G, 'hiccup', '아빠, 안 돼요!', { secs: 1.4 });
+        for (let t = 0; t < 0.7; t += yield) G.marks.push({ k: 'text', x: 8, y: 2.3, t: '쾅!', s: 30, c: '#a83e1e' });
+        bangT = 0;
+        yield* talk(G, [['hiccup', '아빠, 안 돼요! 쇠 소리에 겁먹었어요!']]);
         const onHit = (q, ux, uy) => { if (knock(G, ux, uy, 0.85)) hits++; return true; };
         G.drawOver = (ctx, V) => {
           V.reset(); const s = V.H / 768, w = 300 * s, h = 16 * s, x = V.W / 2 - w / 2, y = 70 * s;
@@ -160,7 +161,7 @@ export const chapter = {
     /* ③ 투슬리스가 그물 지붕으로 — 그림자가 커지는 예고(! · 깜짝 X) → 아빠와 투슬리스가 천천히 맴돎 · 둘 사이 고리 안에서 F 꾹 3초(고리를 벗어나면 처음부터 · 고리가 움직이니 따라가야)
        → 투슬리스가 멈춤 → 아빠가 미리 부른 바이킹들이 붙잡음(내 탓 X) */
     { id: '9-3', verb: 'between', goal: '투슬리스와 아빠 사이에 서라', at: [15, 13.5], face: [0, -1], helmet: 0, limit: 90, zoom: 0.8,
-      hints: ['둘 사이 고리 안에 서서 F를 꾹', '둘이 움직이면 고리도 움직여요 — F를 누른 채 따라가요'],
+      hints: ['둘 사이 고리 안에 서서 Space를 꾹', '둘이 움직이면 고리도 움직여요 — Space를 누른 채 따라가요'],
       *run(G) {
         G.camOpt = { focus: [15, 11] };
         stands(G);
@@ -205,12 +206,11 @@ export const chapter = {
         /* 멈춤 → 붙잡힘 */
         goal(G, null); T.to = null; dad.to = null; T.pose.sit = 1; T.pose.pupil = 1; T.pose.ears = 0; T.fear = 0; sfx(G, 'purr', T.x);
         G.hud.banner('투슬리스가 멈췄다', 'hand', 2);
-        say(G, 'hiccup', '투슬리스, 괜찮아. 아빠도… 괜찮아요.', { secs: 2 });
-        yield* wait(1.6);
+        G.P.handLock = 0; G.P.look = 0;
+        yield* talk(G, [['hiccup', '투슬리스, 괜찮아. 아빠도… 괜찮아요.'], ['stoick', '저 나이트 퓨리가… 네 말을 듣는다고?']]);
         const around = [[-1.6, -0.6], [1.6, -0.6], [-1.4, 0.8], [1.4, 0.8]];
         const vk = [[13.6, 21], [16.4, 21], [12, 21.5], [18, 21.5]].map(([x, y], i) => { const v = G.cast.person(i % 2 ? 'villager2' : 'villager', x, y, { dir: 'up', spd: 5 }); v.to = [T.x + around[i][0], T.y + around[i][1]]; return v; });
-        say(G, 'stoick', '붙잡아라!', { secs: 1.2 });
-        say(G, 'hiccup', '안 돼요! 투슬리스는 멈췄잖아요!', { secs: 2 });
+        yield* talk(G, [['stoick', '붙잡아라!'], ['hiccup', '안 돼요! 투슬리스는 날 지키러 온 거예요!']]);
         yield* until(() => vk.every((v) => !v.to), 4);
         T.pose.sit = 0; T.pose.pupil = 0.1; T.pose.ears = -1;
         G.hud.banner('바이킹들이 투슬리스를 붙잡았다', 'x', 2.6);
@@ -221,30 +221,27 @@ export const chapter = {
       sense: (G) => ({ zone: G.flags.zone, hold: +(G.flags.hold || 0).toFixed(2) }) },
 
     /* ④ 큰 회관 — 책 둥지 쪽을 보여 줌(F) → 아빠는 '둥지'만 붙잡음 → 한 번 더 설득(F) → 말실수 → '이제 넌 우리 편이 아니다'까지만 · 등을 돌려 나감 */
-    { id: '9-4', verb: 'listen', place: 'hall', time: 'day', goal: '아빠에게 책을 보여 줘라', at: [15, 15.4], face: [0, -1], helmet: 0, limit: 80,
-      hints: ['아빠(▼) 앞에서 F — 책을 보여 줘요', '아빠 말이 끝나면 한 번 더 F'],
+    { id: '9-4', verb: 'listen', place: 'hall', time: 'day', goal: '아빠에게 책을 보여 줘라', at: [15, 15.4], face: [0, -1], helmet: 0, limit: 110,
+      hints: ['아빠(▼) 앞에서 Space — 책을 보여 줘요', '아빠 말이 끝나면 한 번 더 Space'],
       *run(G) {
         const dad = G.cast.person('stoick', 15, 12.2, { dir: 'up' });
         G.P.carry = 'book'; G.flags.ph = 'show'; G.flags.dad = [15, 12.2];
-        say(G, 'hiccup', '(아빠한테 둥지 쪽을 보여 드리자. 대장만 나쁘다고.)', { icons: ['book'] });
+        yield* talk(G, [['hiccup', '(아빠한테 책을 보여 드리자. 나쁜 건 대장뿐이라고.)', ['book']]]);
         goal(G, dad.x, dad.y, { h: 2.6 });
         yield* until(() => useAt(G, dad.x, dad.y + 0.8, 1.8) && !(G.P.mashT > 0));
         goal(G, null); faceTo(dad, G.P.x, G.P.y); G.flags.ph = 'talk';
         G.hud.banner('드래곤 책 · 둥지(내가 쓴 쪽) — 대장만 나쁘다', 'book', 3);
-        say(G, 'hiccup', '아빠, 이것 좀 봐요. 둥지 드래곤들은 먹이를 바치는 거예요.');
-        say(G, 'hiccup', '진짜 나쁜 건 구멍 속 대장 하나뿐이라고요!');
-        say(G, 'stoick', '둥지…? 너, 둥지에 갔었냐?');
-        yield* until(() => !talking(G), 20);
+        yield* talk(G, [['hiccup', '아빠, 이것 봐요. 둥지 드래곤들은 먹이를 바칠 뿐이에요.', ['book']], ['hiccup', '진짜 나쁜 건 구멍 속 대장 하나뿐이라고요!'], ['stoick', '둥지…? 너, 둥지에 갔었냐?']]);
         G.flags.ph = 'again'; G.hud.goal('아빠를 한 번 더 설득해라');
         goal(G, dad.x, dad.y, { h: 2.6 });
         yield* until(() => useAt(G, dad.x, dad.y + 0.8, 1.8) && !(G.P.mashT > 0));
         goal(G, null); G.flags.ph = 'talk';
-        say(G, 'hiccup', '그게 중요한 게 아니라요, 드래곤들은 싸우기 싫어해요!');
-        say(G, 'stoick', '몇 대째 찾던 곳이다. 어떻게 갔지?');
-        say(G, 'hiccup', '(안 돼…) 그 섬은 드래곤만 찾아요. 아, 아니…');
-        say(G, 'stoick', '드래곤만 찾는다… 그렇군.', { secs: 2.2 });
-        say(G, 'stoick', '이제 넌 우리 편이 아니다.', { secs: 2.6 });
-        yield* until(() => !talking(G), 30);
+        yield* talk(G, [['hiccup', '그게 중요한 게 아니라요, 드래곤들은 싸우기 싫어해요!'], ['stoick', '몇 대째 찾던 곳이다. 어떻게 갔지?'], ['hiccup', '그 섬은 드래곤만 찾아갈 수 있어요. …아, 아니에요!']]);
+        /* 말실수 — 아빠가 '길잡이'를 떠올림 */
+        faceTo(dad, 15, 6);
+        for (let t = 0; t < 1.1; t += yield) G.marks.push({ k: 'text', x: dad.x, y: dad.y - 3, t: '…!', s: 24 });
+        faceTo(dad, G.P.x, G.P.y);
+        yield* talk(G, [['stoick', '드래곤만 찾는다… 그렇군.'], ['stoick', '그 나이트 퓨리를 길잡이로 삼겠다. 둥지까지 끌고 간다!', ['ship']], ['hiccup', '(투슬리스를 사슬로 묶어 앞장세우겠다는 거야…!)'], ['hiccup', '안 돼요, 아빠! 투슬리스를 데려가지 마세요!'], ['stoick', '이제 넌 우리 편이 아니다.']]);
         dad.to = [17.2, 17.6]; dad.spd = 2.6;
         say(G, 'hiccup', '아빠…', { secs: 1.6 });
         yield* until(() => !dad.to, 5);
@@ -263,6 +260,7 @@ export const chapter = {
         const dad = G.cast.person('stoick', ship.x - 2.6, ship.y - 0.2, { dir: 'down', z: 0.9, ySort: 0.6 });
         const vk = G.cast.person('villager', ship2.x, ship2.y - 0.2, { dir: 'down', z: 0.9, ySort: 0.6 });
         const mv = [[ship, 0.5, 1.3, [T, dad]], [ship2, -0.2, 1.2, [vk]]];
+        G.hud.banner('사슬에 묶인 투슬리스가 앞배를 이끌고 둥지로 간다', 'ship', 3.4);
         say(G, 'hiccup', '(투슬리스…)', { secs: 2.2 });
         for (let t = 0; t < 7.5; ) {
           const dt = yield; t += dt;
@@ -275,12 +273,10 @@ export const chapter = {
         const ast = G.cast.person('astrid', 20.6, 13, { dir: 'down', spd: 3.6 }); ast.to = [21.1, 23.9];
         yield* until(() => !ast.to, 5);
         faceTo(ast, G.P.x, G.P.y);
-        say(G, 'astrid', '왜 안 죽였어? 그때 훈련장에서.', { secs: 2.2 });
+        yield* talk(G, [['astrid', '왜 안 죽였어? 숲에서 그 드래곤을 처음 만났을 때.']]);
         G.hud.banner('3장에서 그린 그림을 펼쳤다', 'pencil', 2.6);
-        say(G, 'hiccup', '칼을 들었는데, 떨고 있는 건 나만이 아니더라.');
-        say(G, 'astrid', '…그래서 이제?', { secs: 1.8 });
-        say(G, 'hiccup', '훈련장으로 가자. 친구들도 불러 줘.', { secs: 2.2 });
-        yield* until(() => !talking(G), 20);
+        yield* wait(0.6);
+        yield* talk(G, [['hiccup', '칼을 들었는데, 떨고 있는 건 나만이 아니더라.', ['pencil']], ['astrid', '…그래서 이제?'], ['hiccup', '투슬리스랑 아빠를 구하러 가야지.'], ['hiccup', '훈련장으로 가자. 친구들도 불러 줘.']]);
         goal(G, 20, 10.5); ast.to = [21.4, 11.2]; ast.spd = 3;
         yield* until(() => G.P.y < 11.8);
         goal(G, null);
@@ -290,8 +286,8 @@ export const chapter = {
     /* ⑥ 우리 문을 직접 열고 친구 넷 잇기 — 문 앞 F → 드래곤마다 다른 수 · 서두르면 물러남
        피시레그+그롱클 = 쏜 뒤 '휴…' 틈에 풀(F) · 스노트라우트+나이트메어 = 고함 → 몸에 불(! 예고) 동안 둘 사이 고리에서 F 꾹 · 쌍둥이+지플백 = 두 머리가 함께 숙일 때 F · 아스트리드+내더 = 살금살금 턱 밑 F 꾹
        → 다섯 드래곤이 솟아오름 */
-    { id: '9-6', verb: 'approach', goal: '우리 문을 열고 친구 넷을 드래곤과 이어 줘라', at: [15, 18.4], face: [0, -1], helmet: 0, limit: 170,
-      hints: ['우리 문 앞(▼)에서 F — 드래곤마다 성격이 달라요', '서두르면 물러나요 — 쏜 다음 틈 · 둘 사이 · 두 머리가 함께 · 턱 밑'],
+    { id: '9-6', verb: 'approach', goal: '우리 문을 열고 친구 넷을 드래곤과 이어 줘라', at: [15, 18.4], face: [0, -1], helmet: 0, limit: 185,
+      hints: ['우리 문 앞(▼)에서 Space — 드래곤마다 성격이 달라요', '서두르면 물러나요 — 쏜 다음 틈 · 둘 사이 · 두 머리가 함께 · 턱 밑'],
       *run(G) {
         const cages = [8, 15, 22].map((x) => G.W.findProp('cage', x, 4)); cages.push(G.W.prop('cage', 4.6, 13.2, { open: 0 }));
         for (const c of cages) c.o.open = 0;
@@ -308,8 +304,7 @@ export const chapter = {
         let pi = 0, ph = 'cage', D = null, t = 0, early = -9, hold = 0, chin = 0, lastBoth = -9, tellT = 0, ruffT = -9;
         const rides = [];
         const onHit = (q, ux, uy) => { knock(G, ux, uy, 0.6); return true; };
-        say(G, 'hiccup', '모두 들어 봐. 드래곤은 싸워서 이기는 게 아니야.', { icons: ['hand'] });
-        say(G, 'fishlegs', '그, 그럼 어떻게 하는데?', { secs: 1.8 });
+        yield* talk(G, [['hiccup', '모두 들어 봐. 어른들이 투슬리스를 끌고 둥지로 갔어.', ['ship']], ['hiccup', '거기엔 아주 큰 대장 드래곤이 있어. 우리가 도와야 해.'], ['snotlout', '우리가? 배도 없는데 어떻게 가?'], ['hiccup', '드래곤을 타고. 드래곤은 싸워서 이기는 게 아니야.', ['hand']], ['fishlegs', '그, 그럼 어떻게 하는데?']]);
         while (pi < 4) {
           const dt = yield; const P = G.P, pr = PAIRS[pi];
           zones(G);
@@ -432,6 +427,7 @@ export const chapter = {
           ter.z = up + 2;
           for (const r of riders) r.z = up + 1.1;
         }
+        yield* talk(G, [['astrid', '다들 준비됐지?'], ['hiccup', '가자! 둥지로 — 투슬리스를 구하러!', ['flock']]]);
         return true;
       },
       sense: (G) => { const s = G.flags.s96 || {}, D = s.D; return { pi: s.pi, ph: s.ph, cage: s.cage, D: D ? { x: +D.x.toFixed(2), y: +D.y.toFixed(2), st: D.st, fear: +D.fear.toFixed(2) } : null, zone: s.zone, tell: s.tell, both: s.both }; } },

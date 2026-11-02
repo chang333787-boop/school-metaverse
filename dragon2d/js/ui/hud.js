@@ -49,6 +49,7 @@ const CSS = `
 #card .pn .k { font-size:13px; color:#a83e1e; font-weight:800; }
 #card .ar { color:#f4ead2; font-size:30px; align-self:center; }
 #card .ch { width:min(640px,90vw); padding:18px 22px; font-size:23px; font-weight:700; line-height:1.5; text-align:center; }
+#card.gone { display:none; }
 #card .go { color:#f4ead2; font-size:16px; opacity:.9; animation:dlgb 1s steps(2) infinite; }
 @media (max-width:700px) { #howto { width:220px; top:70px; } #goal { font-size:16px; } #bubble .tx { font-size:17px; } }
 `;
