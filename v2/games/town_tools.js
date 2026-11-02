@@ -15,7 +15,7 @@ export const TOOL = {
   can: { ic: '💧', t: ['물뿌리개', 'Watering can'], how: ['텃밭·꽃·모닥불을 겨눠 누르고 있으면 물을 뿌려요', 'Aim at the garden, flowers or a campfire and hold to pour'], get: ['처음부터 있어요', 'You have it from the start'] },
   shovel: { ic: '⛏', t: ['삽', 'Shovel'], how: ['흙이나 풀밭을 겨눠 쓰면 땅을 파요. 무엇이 나올까요?', 'Aim at soil or grass to dig. What will you find?'], get: ['처음부터 있어요', 'You have it from the start'] },
   rod: { ic: '🎣', t: ['낚싯대', 'Fishing rod'], how: ['물 위를 겨눠 던져요. 찌가 쏙 들어가면 눌러요. 걸리면 물고기 반대쪽으로 끌어요', 'Aim at the water and cast. When the float dips, press. Then pull the opposite way to the fish'], get: ['부두 어부께 받아요', 'Get it from the pier fisher'] },
-  lens: { ic: '🔍', t: ['돋보기', 'Magnifier'], how: ['곤충·꽃·버섯·돌을 겨눠 들여다봐요. 잡지 않고 보기만 해요', 'Aim at insects, flowers, mushrooms or stones to look closely. Just look, never catch'], get: ['곤충을 처음 관찰하면 생겨요', 'Comes after your first insect watch'] },
+  lens: { ic: '🔍', t: ['돋보기', 'Magnifier'], how: ['곤충·꽃·버섯·돌, 물가의 갈대와 얕은 물을 겨눠 들여다봐요. 잡지 않고 보기만 해요', 'Aim at insects, flowers, mushrooms, stones, or reeds and shallow water by a stream to look closely. Just look, never catch'], get: ['곤충을 처음 관찰하면 생겨요', 'Comes after your first insect watch'] },
   scope: { ic: '🔭', t: ['망원경', 'Spyglass'], how: ['들고 누르면 멀리 당겨 봐요. 가운데 보이는 곳 이름과 거리를 알려 줘요. 한 번 더 누르면 그만', 'Press to zoom far. It tells you the name and distance of the place in the middle. Press again to stop'], get: ['관찰 솜씨 2레벨 보상', 'Nature-watching level 2 reward'] },
   broom: { ic: '🧹', t: ['빗자루', 'Broom'], how: ['낙엽·눈·쓰레기를 겨눠 쓸어요. 마을이 깨끗해져요', 'Aim at leaves, snow or litter and sweep. The town gets clean'], get: ['마을회관이나 경로당 앞에서 빌려요', 'Borrow it at a village hall or senior center'] },
 };
@@ -33,6 +33,8 @@ const LOOKF = {
   poison: [' 독버섯이니 만지지 않아요', ' It is poisonous, so we never touch it'],
   stone: ['⚪ 돌을 자세히 보면 색과 크기가 다른 알갱이가 보여요. 돌은 여러 알갱이(광물)가 모여 만들어져요', '⚪ Look closely: grains of different colours and sizes. Rocks are made of many grains (minerals)'],
   soil: ['🌱 흙 속에 모래 알갱이와 잘게 부서진 잎 조각이 섞여 있어요', '🌱 The soil is a mix of sand grains and tiny bits of broken leaves'],
+  reed: ['🌾 갈대 줄기 사이에 작은 벌레들이 숨어 있어요. 갈대 뿌리 둘레는 물속 찌꺼기를 걸러 물을 맑게 도와요', '🌾 Little bugs hide between the reed stems. Around the reed roots, bits of dirt are filtered out, which helps keep the water clean'],
+  water: ['💧 물이 맑으면 얕은 물속 바닥 돌까지 보여요. 돌 밑에는 다슬기 같은 작은 물속 생물이 붙어 살아요', '💧 When the water is clean you can see the stones on the bottom. Small creatures like river snails cling under the stones'],
 };
 const NOTHING = [['⛏ 흙만 나왔어요 — 다른 곳도 파 봐요', '⛏ Just soil — try digging somewhere else'], ['⛏ 흙만 나왔어요 — 겉흙이 검은 건 썩은 잎이 섞여서예요', '⛏ Just soil — topsoil is dark because rotten leaves are mixed in']];
 const RANGE = { can: [0.9, 3.6], shovel: [0.9, 2.4], rod: [2.4, 9], lens: [0.6, 2.4], broom: [0.8, 2.4], scope: [0.9, 2], rod2: [2.4, 14] };   // 고리 거리(내 앞 m) — 아래를 보면 가까이 · 위를 보면 멀리
@@ -101,7 +103,10 @@ export function createTools(A) {
     if (b) return b; bd = 1.4; for (const m of A.mush() || []) { const d = Math.hypot(m.x - x, m.z - z); if (d < bd) { bd = d; b = { x: m.x, y: A.gy(m.x, m.z, me.y + 1) + 0.1, z: m.z, kind: 'mush', m, key: 'mush' }; } }
     if (b) return b; const f = flowerAt(x, z, 1.0); if (f) return { x: f.x, y: f.y + 0.3, z: f.z, kind: 'flower', key: 'flower' };
     const R9 = A.res(); if (R9 && R9.spots) { bd = 1.4; for (const s of R9.spots()) { if (s.k !== 'stone' || !s.on) continue; const d = Math.hypot(s.x - x, s.z - z); if (d < bd) { bd = d; b = { x: s.x, y: s.y + 0.05, z: s.z, kind: 'stone', key: 'stone' }; } } }
+    if (b) return b; const SH = A.shore && A.shore(); if (SH && Math.abs(SH.x - x) < 9 && Math.abs(SH.z - z) < 9) { bd = 1.0; for (const s of SH.st) { const d = Math.hypot(s[0] - x, s[2] - z); if (d < bd) { bd = d; b = { x: s[0], y: s[1], z: s[2], kind: s[4] ? 'water' : 'stone', key: s[4] ? 'water' : 'stone' }; } } }   /* SHORE-1 생태 하천 물가 돌 — 물속 돌 = '얕은 물속'(바닥 돌·다슬기) · 자갈 띠 돌 = 돌 알갱이 */
+    if (b) return b; bd = 1.2; for (const q of (A.reeds && A.reeds()) || []) { if (Math.abs(q[0] - x) > 1.2 || Math.abs(q[1] - z) > 1.2) continue; const d = Math.hypot(q[0] - x, q[1] - z); if (d < bd) { bd = d; b = { x: q[0], y: A.gy(q[0], q[1], me.y + 1) + 0.9, z: q[1], kind: 'reed', key: 'reed' }; } }   /* SHORE-1 갈대 무리 */
     if (!b) { const xp = A.xp && A.xp(), c = xp && xp.lensAt(x, z); if (c) return c; }   /* EXPLORE-1 까망봉 송이·현무암 */
+    if (!b && A.sd) { const w = water(x, z), sd = w && !w.sea ? A.sd(x, z) : 9; if (sd < -0.05 && sd > -3.5) return { x, y: w.y, z, kind: 'water', key: 'water' }; }   /* SHORE-1 얕은 민물(강·연못 물가 선에서 3.5m 안 · 바다 X) */
     return b; }
 
   // ───────── 숨김·보이기(0.25초) — 실내·자전거·배·버스·지하철·헤엄·쉬기·우산·스키·놀이·직업 체험 중엔 내려 둠(저장된 cur는 그대로) ─────────

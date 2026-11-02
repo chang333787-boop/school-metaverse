@@ -292,7 +292,7 @@ export function createEmerg(A) {
   // ───────── 📖 이야기 112(COVER-1 · 10-31 1-1 「길 잃은 새 친구」 · 설계 docs/systems/town_coverage_1031.md 4-2) ─────────
   //   같은 흐름 = 112 알림(사이렌·배너·빛기둥·칩·위 가운데 줄) → 경찰관 E → 아이에게 묻기(단서 둘) → 지도에서 고르기 · 다른 점만 여기
   //   아이 = 새 친구(마을 새 친구 몸과 같은 옷 색) · 보호자 대신 집(우체국 옆) · 빨간 선 X(셋째 힌트 = 이야기가 그림) · 시간 끝 X · 저장 X(이어 하면 이야기가 다시 부름)
-  //   데려가기 = 마을 새 친구 몸이 내 곁을 따라옴(st 'sw' · 자전거면 잠깐 숨는 마을 규칙 그대로 — 내리라는 말 X) · 집 앞 14m = 끝 → 112 기록(경찰서 칭찬 게시판이 알아봄)
+  //   데려가기 = 마을 새 친구 몸이 내 곁을 따라옴(st 'sw' · 자전거면 친구도 제 자전거로 나란히 — SHORE-1 town.js frRide · 내리라는 말 X) · 집 앞 14m = 끝 → 112 기록(경찰서 칭찬 게시판이 알아봄)
   let KID0 = null; const STY = { st: null, n: 0 };
   function kidLook(on, look) { if (on) { if (!KID0) KID0 = { ...ROLEB.kid }; Object.assign(ROLEB.kid, look || {}); return; } if (!KID0) return; for (const k of Object.keys(ROLEB.kid)) delete ROLEB.kid[k]; Object.assign(ROLEB.kid, KID0); KID0 = null; }
   function styScene(H, R9) { const L0 = (A.places() || []).filter(p => !p.home && !p.school && p.door && p.name && p.name !== H.name && !A.inSchool(p.door[0], p.door[1])).map(p => ({ p, d: Math.hypot(p.door[0] - H.x, p.door[1] - H.z) })), C = L0.filter(q => q.d > 70 && q.d < 300), pref = C.filter(q => GATHER.test(q.p.name)), list = (pref.length ? pref : C).sort((a, b) => a.d - b.d).slice(0, 6);
