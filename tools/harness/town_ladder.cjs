@@ -5,6 +5,7 @@
 //   ⑨ HARD-1 명인 칸: 도전가 둘째 표지판 전 = 칸 4 위로 안 감 · 표지판을 지나면 열림(S.lad.m5 · 그 자리 한 줄) · 칸 4 잘함 = 그대로 · 아주 잘함 = 명인 칸
 //      명인 칸 판이 일곱 갈래(투호·모내기·벼 베기·꿀·배 봉지·나무 심기·김)마다 열리고 그 판단이 들어 있고(dbg) 몇 번 눌러도 오류 없이 끝남 · 나머지 갈래는 칸 4가 끝 · 기록 = '명인 칸'
 //   브라우저 하나 · 그리기 끔(pw.cjs) · b2.sh 자리로
+//   FIX-3(11-07): '그 자리 한 줄'은 0.25초씩 네 번만 보던 것 → 열림 안내는 이제 lv2(놀이 결과 알림이 줄 서 있으면 다 읽힌 뒤에 뜸 · READ-1) = 🔔 지난 알림에 남는지 + 45초 안에 화면에 뜨는지로 봄
 const { chromium } = require('./pw.cjs');
 const pos = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos[0] || 'ourtown', PORT = pos[1] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
@@ -68,10 +69,12 @@ const GEN = ['strawberry', 'shiitake', 'cabbage', 'potato', 'clam', 'beehive', '
       await ev(() => SM_TOWN.rules.season('spring'));
       // 도전가 걸음 8 채우기(스키 셋 + 고누 칸 4·이김) → 둘째 표지판 지나기(첫째는 지난 것으로)
       await W8(4300); await ev(() => { __clean(); const S = __G.S; S.path.got.chal = 1; delete S.lad.m5; S.xp = S.xp || {}; S.xp.ski = Object.assign(S.xp.ski || {}, { c1: { best: 31, last: 33, n: 2 }, c2: { best: 40, last: 41, n: 1 }, c3: { best: 52, last: 55, n: 1 } }); S.tbl = S.tbl || { v: 1 }; S.tbl.g = Object.assign(S.tbl.g || {}, { gonu: { lv: 4, good: 0, fail: 0, w: 1, n: 3, best: {} } }); __G.mark(); });
-      let toast = ''; for (let i = 0; i < 4; i++) { await ev(() => { __clean(); SM_TOWN.mypath().sec(true); }); await W8(250); const t9 = await ev(() => (document.getElementById('toast') || {}).textContent || ''); if (/명인 칸/.test(t9)) toast = t9; if (await ev(() => !!(__G.S.lad && __G.S.lad.m5)) && toast) break; }
-      const I5 = await ev(() => ({ got: (__G.S.path && __G.S.path.got || {}).chal | 0, m5: !!(__G.S.lad && __G.S.lad.m5) }));
+      let toast = ''; for (let i = 0; i < 4; i++) { await ev(() => { __clean(); SM_TOWN.mypath().sec(true); }); await W8(250); const t9 = await ev(() => (document.getElementById('toast') || {}).textContent || ''); if (/명인 칸/.test(t9)) toast = t9; if (await ev(() => !!(__G.S.lad && __G.S.lad.m5))) break; }
+      const I5 = await ev(() => ({ got: (__G.S.path && __G.S.path.got || {}).chal | 0, m5: !!(__G.S.lad && __G.S.lad.m5), ntf: (__G.S.ntf || []).some(e => /명인 칸이 열렸어요/.test(e.t)), q: SM_TOWN.read.tleft() }));
       ok(I5.got >= 2 && I5.m5, '도전가 표지판 ' + I5.got + '개 지남 → 명인 칸 열림(m5 ' + I5.m5 + ')');
-      ok(/명인 칸이 열렸어요/.test(toast), '그 자리 한 줄 「' + toast.slice(0, 60) + '」');
+      ok(I5.ntf, '열림 안내가 🔔 지난 알림에 남음(못 봐도 다시 볼 수 있음 · 그때 알림 줄 ' + Math.round(I5.q / 1000) + '초 밀림)');
+      for (let i = 0; i < 180 && !/명인 칸이 열렸어요/.test(toast); i++) { await W8(250); const t9 = await ev(() => { const e = document.getElementById('toast'); return e && e.style.display !== 'none' ? e.textContent : ''; }); if (/명인 칸/.test(t9)) toast = t9; }   /* 앞 판들 결과 알림이 줄 서 있으면 그것을 다 읽은 뒤에 뜸(READ-1) — 45초 안 */
+      ok(/명인 칸이 열렸어요/.test(toast), '그 자리 한 줄(앞 알림 다 읽은 뒤) 「' + toast.slice(0, 60) + '」');
       // 나머지 갈래 = 칸 4가 끝
       const no5 = []; for (const k of has.filter(q => NO5.includes(q)).slice(0, 3)) { await at4(k, 'spring'); const r = await one(k, 3, 5); no5.push(k + ':' + r.lv + '→' + r.st.lv); }
       ok(no5.every(t => /:4→4$/.test(t)), '명인 칸이 없는 갈래는 칸 4가 끝 · ' + no5.join(' '));

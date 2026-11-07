@@ -1,5 +1,6 @@
 // 마을 구역 이름 시험(REGION-1 · 사용자 10-26 '각 마을 이름이 아직 안 된 것 같은데'): node tools/harness/town_region.cjs [마을=ourtown] [포트=8002] [--shots=폴더(그리기 켬)]
 //   구역 일곱 = 이름 일곱(겹침 X) · 표지석 일곱(제 구역 안 · 몸이 막힘 · 길 위 X) · 표지석 곁으로 옮기면 위 가운데 줄에 그 구역 이름
+//   FIX-3(11-07): 옮기기 전 알림 줄이 빌 때까지 기다림(READ-1 읽을 틈 뒤 4.6초마다 순간 이동하면 앞 알림이 다 안 읽혀 다음 구역 알림이 밀림 — 걸어서는 생기지 않는 빠르기) + 지금 구역이 아닌 '들어왔어요'가 뜨지 않는지
 //   넘어갈 때 알림 한 번(그날 처음 = 뜻까지 긴 글) · 왕복해도 다시 X · 큰 지도(M)에 구역 이름 글씨 일곱 · 바로 가기(J)·찾기(F)에 구역 이름 · 휴대폰 세로 줄이 화면 안 · 페이지 오류 0
 const { chromium } = require('./pw.cjs');
 const pos9 = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = pos9[0] || 'ourtown', PORT = pos9[1] || '8002', URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
@@ -14,8 +15,10 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     const prep = () => ev(() => { const G = SM_TOWN.game(); if (G.setClock) G.setClock(false); G.S.min = 10 * 60; G.S.jobs = G.S.jobs || {}; G.S.jobs.fireNo = G.S.day; G.S.story = G.S.story || {}; G.S.story.p0auto = 1; (G.S.quiz || (G.S.quiz = {})).tip = 1; if (G.rwOff) G.rwOff(true); });
     const boot = async () => { await p.goto(URL); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && SM_TOWN.region && window.SD2, null, { timeout: 240000 }); await W8(2000); await closeAll(); await p.keyboard.press('Escape'); await W8(400); await prep(); await W8(600); await closeAll(); };
     /* 표지석 E 자리(길 쪽 1.4m)로 옮김 + 돌을 봄 · 알림 글을 지켜봄(그동안 뜬 #toast 글 모두) */
-    const go = (q, ms) => ev(([q, ms]) => new Promise(res => { const [x, z] = q.e, T = []; SD2.map.player.teleport([x, SM_TOWN.ground(x, z) + 0.05, z]); SD2.map.player.lookAt([q.x, q.z]); const t0 = performance.now(); let last = '';
-      const f = () => { const e = document.getElementById('toast'), t = e && e.style.display !== 'none' && e.getClientRects().length ? e.textContent : ''; if (t && t !== last) T.push(t); last = t; if (performance.now() - t0 < ms) setTimeout(f, 100); else res({ toasts: T, goal: (document.getElementById('hudGoal') || {}).textContent || '', cur: SM_TOWN.region().cur }); }; f(); }), [q, ms]);
+    /* FIX-3(11-07): 옮기기 전 알림 줄이 빌 때까지(앞 알림이 다 읽힘 + 기다리던 저절로 알림 0.5초 더) — 구역 사이를 걷는 시간 몫. READ-1 뒤 긴 구역 알림(5초+)이 4.6초 창보다 길어 다음 구역 알림이 줄줄이 밀려 창 밖·버림이 되던 것 */
+    const idle = async () => { for (let i = 0; i < 60; i++) { if (await ev(() => !(SM_TOWN.read && SM_TOWN.read.tleft() > 0))) { await W8(500); if (await ev(() => !(SM_TOWN.read && SM_TOWN.read.tleft() > 0))) return; } await W8(250); } };
+    const go = async (q, ms) => { await idle(); return ev(([q, ms]) => new Promise(res => { const [x, z] = q.e, T = []; SD2.map.player.teleport([x, SM_TOWN.ground(x, z) + 0.05, z]); SD2.map.player.lookAt([q.x, q.z]); const t0 = performance.now(); let last = '';
+      const f = () => { const e = document.getElementById('toast'), t = e && e.style.display !== 'none' && e.getClientRects().length ? e.textContent : ''; if (t && t !== last) T.push(t); last = t; if (performance.now() - t0 < ms) setTimeout(f, 100); else res({ toasts: T, goal: (document.getElementById('hudGoal') || {}).textContent || '', cur: SM_TOWN.region().cur }); }; f(); }), [q, ms]); };
     return { ev, W8, panelK, closeAll, prep, boot, go }; };
   try { const p = await page([1366, 768]), K = kit(p), { ev, W8 } = K; await K.boot();
     console.log('① 이름·표지석');
@@ -36,7 +39,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     console.log('② 넘어갈 때 알림 · 위 가운데 줄');
     const ALL = [], order = ['읍내', '들', '관광', '산', '강', '바다', '시내'].filter(k => R.stones.some(q => q.rg === k)); let prev = R.cur;
     for (const k of order) { const q = R.stones.find(s => s.rg === k), r = await K.go(q, 4600), n = NM[k].n; ALL.push(...r.toasts); ok(r.cur === k, n + ': 지금 구역 = ' + r.cur); ok(r.goal.includes(n), n + ': 위 가운데 줄에 이름(' + r.goal + ')');
-      if (prev && prev !== k) ok(ALL.some(t => t.includes(n + '에 들어왔어요') && t.includes(NM[k].mean)), n + ': 들어온 알림(그날 처음 = 뜻까지) ' + JSON.stringify(r.toasts)); prev = k; }
+      if (prev && prev !== k) ok(ALL.some(t => t.includes(n + '에 들어왔어요') && t.includes(NM[k].mean)), n + ': 들어온 알림(그날 처음 = 뜻까지) ' + JSON.stringify(r.toasts));
+      { const wr = r.toasts.filter(t => /에 들어왔어요/.test(t) && !t.includes(n + '에 들어왔어요')); ok(!wr.length, n + ': 다른 구역 알림이 늦게 뜨지 않음' + (wr.length ? ' ' + JSON.stringify(wr) : '')); } prev = k; }
     const L1 = (await ev(() => SM_TOWN.region())).log; ok(L1.every(e => e.long) && new Set(L1.map(e => e.rg)).size === L1.length, '구역마다 알림 한 번(' + L1.map(e => e.rg).join(' ') + ')');
     console.log('③ 왕복해도 다시 X');
     const A9 = R.stones.find(s => s.rg === '강'), B9 = R.stones.find(s => s.rg === '시내'); let rep = []; await W8(6000); const seen0 = new Set((await ev(() => SM_TOWN.region())).log.map(e => e.t));
@@ -46,7 +50,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     const RX = /어울목|넘실들|솔솔재|두런내|출렁포|반짝시|나들터/;
     for (const g of KG.filter(Boolean)) { const q = KS.find(s => s.kid === g.id); if (!q) continue; await W8(4500); const r = await K.go(q, 5000), sh = g.t.replace(/\s*\(.*?\)\s*/g, ''), i0 = r.goal.indexOf(sh), i1 = r.goal.search(RX);
       ok(i0 >= 0 && (i1 < 0 || i0 < i1), g.t + ': 칩에 아이 이름이 구역 이름보다 앞(' + r.goal + ')');
-      ok(r.toasts.some(t => t === g.t + ' — 아이들이 지은 동네'), g.t + ': 알림 한 번(' + JSON.stringify(r.toasts) + ')'); }
+      const hit = r.toasts.some(t => t === g.t + ' — 아이들이 지은 동네'), dg = hit ? '' : ' · 기록 ' + JSON.stringify((await ev(() => SM_TOWN.region().log)).filter(e => e.kid).map(e => e.t.slice(0, 12))) + ' · 알림 줄 ' + JSON.stringify(await ev(() => SM_TOWN.read.stat().toast)) + ' · 지금 ' + JSON.stringify(await ev(() => { const e = document.getElementById('toast'); return e ? [e.style.display, e.textContent.slice(0, 30)] : null; }));
+      ok(hit, g.t + ': 알림 한 번(' + JSON.stringify(r.toasts) + ')' + dg); }
     { const L3 = (await ev(() => SM_TOWN.region())).log.filter(e => e.kid), q = KS.find(s => s.kid === KG[0].id); await K.go(R.stones.find(s => s.rg === '강'), 1900); await K.go(q, 2600); const L4 = (await ev(() => SM_TOWN.region())).log.filter(e => e.kid); ok(L4.length === L3.length, '아이 동네 다시 들어가도 그날은 알림 X(' + L3.length + ' → ' + L4.length + ')'); }
     console.log('④ 큰 지도 · 바로 가기 · 찾기');
     await ev(() => { if (SM_TOWN.map2) SM_TOWN.map2().set('kid', true); });   /* MAP-2(11-07): 아이 동네 이름 = 큰 지도 🔖 우리 이름 칩(첫 화면엔 구역 이름 일곱만) */
