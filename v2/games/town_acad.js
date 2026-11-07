@@ -26,9 +26,11 @@ const CSS = `
 .twn-p .ac-ch button:hover{background:var(--subh)}.twn-p .ac-ch button .k{position:absolute;left:8px;top:4px;font-size:11px;color:var(--mut);font-weight:700}
 .twn-p .ac-ch button.no{background:#eee7dc;color:#9a8f82;border-color:#b9ad9f;box-shadow:0 2px 0 #b9ad9f;text-decoration:line-through}.twn-p .ac-ch button.no::after{content:'✗';margin-left:6px;color:#c8553d;text-decoration:none}
 .twn-p .ac-ch button.ok{background:#dff1d8;border-color:var(--g);color:var(--ink)}.twn-p .ac-ch button.ok::after{content:'✓';margin-left:6px;color:var(--g);font-weight:900}
-.twn-p .ac-ch .emo{font-size:44px;line-height:1}.twn-p .ac-blk{display:inline-flex;flex:none;align-items:center;justify-content:center;min-width:34px;height:34px;border-radius:8px;background:#fff;border:2px solid var(--ink);font-style:normal;font-size:20px;padding:0 4px;white-space:nowrap}.twn-p .ac-blk.rep{background:#fff1c9;gap:3px;font-size:16px;font-weight:900;padding:0 6px}.twn-p .ac-ch button.prog{flex-wrap:wrap;gap:6px;padding:8px 10px}
+.twn-p .ac-ch .emo{font-size:44px;line-height:1}.twn-p .ac-blk{display:inline-flex;flex:none;align-items:center;justify-content:center;min-width:34px;height:34px;border-radius:8px;background:#fff;border:2px solid var(--ink);font-style:normal;font-size:20px;padding:0 4px;white-space:nowrap}.twn-p .ac-blk.rep{background:#fff1c9;gap:3px;font-size:16px;font-weight:900;padding:0 6px;line-height:1}.twn-p .ac-blk.rep i{font-style:normal;font-size:20px;line-height:1}.twn-p .ac-ch button.prog{flex-wrap:wrap;gap:6px;padding:8px 10px}
 .twn-p .ac-legend{font-size:14px;color:var(--mut);display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:-4px 0 8px}
 .twn-p .ac-fr{display:inline-flex;align-items:center;gap:3px;vertical-align:middle;margin:0 2px}.twn-p .ac-fq{display:inline-flex;flex-direction:column;align-items:center;line-height:1.05;font-size:.82em}.twn-p .ac-fq i{font-style:normal;padding:0 3px}.twn-p .ac-fq i:first-child{border-bottom:2px solid currentColor}
+.twn-p .ac-main.side{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:16px;align-items:center}.twn-p .ac-main.side .ac-pic{margin:0 0 4px}.twn-p .ac-main.side .ac-pic svg{max-height:min(48vh,320px);width:auto}.twn-p .ac-main.side .ac-ch{grid-template-columns:1fr;margin:0}.twn-p .ac-main.side .ac-legend{margin:0 0 4px}
+.twn-p .ac-foot{position:sticky;bottom:-16px;z-index:3;margin:8px -18px -16px;padding:2px 18px 10px;background:var(--pap);border-top:2px solid var(--line)}.twn-p .ac-foot .row{margin-top:8px}.twn-p .ac-foot .ac-msg:empty{display:none}
 .twn-p .ac-msg{min-height:30px;font-size:17px;line-height:1.5;margin:8px 0 0;padding:8px 12px;border-radius:12px;background:#fff8e1;border:2px solid #ecd27a}.twn-p .ac-msg:empty{visibility:hidden}.twn-p .ac-msg.ok{background:#e8f5e2;border-color:#9ccf8f}.twn-p .ac-msg.why{background:#eef3fb;border-color:#9bb6dd}
 .twn-p .ac-msg details{margin-top:4px;font-size:15px}.twn-p .ac-msg summary{cursor:pointer;font-weight:800;color:var(--g)}
 .twn-p .ac-play{font-size:16px;min-height:44px}.twn-p .ac-tools{display:flex;gap:8px;justify-content:center;margin:0 0 8px;flex-wrap:wrap}
@@ -41,7 +43,8 @@ const CSS = `
 .twn-p .ac-steps{display:flex;gap:6px;margin:4px 0 8px}.twn-p .ac-steps b{width:44px;height:44px;border-radius:12px;border:3px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;background:#fffdf7}.twn-p .ac-steps b.done{background:#fff1c9;border-color:var(--ink)}.twn-p .ac-steps b.now{border-color:var(--g);background:#e8f5e2}
 .twn-p .ac-marks{display:flex;gap:8px;font-size:26px;margin:4px 0}.twn-p .ac-learn ul{margin:4px 0 0;padding-left:22px;font-size:17px;line-height:1.6}
 .twn-p .ac-nb{display:grid;gap:8px;margin-top:6px}.twn-p .ac-nr{display:flex;gap:12px;align-items:center;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:8px 12px;font-size:16px}.twn-p .ac-nr>b.ic{font-size:30px;flex:none;width:40px;text-align:center}.twn-p .ac-nr>div{flex:1;min-width:0}.twn-p .ac-nr small{color:var(--mut);font-size:14px}.twn-p .ac-nr .ac-steps b{width:28px;height:28px;font-size:13px;border-width:2px;border-radius:8px}.twn-p .ac-nr .side{flex:none;text-align:right;font-size:14px;color:var(--mut);line-height:1.5}
-@media (max-width:620px){.twn-p .ac-ch{grid-template-columns:1fr}.twn-p .ac-q{font-size:19px}.twn-p .ac-emo,.twn-p .ac-bigd{font-size:60px}.twn-p .ac-keys button{min-width:88px}.twn-p .ac-cells b{min-width:50px}.twn-p .ac-nr{flex-wrap:wrap}.twn-p .ac-nr .side{text-align:left;width:100%}}
+@media (max-height:500px){.twn-p .ac-top{margin:0 0 2px;font-size:15px}.twn-p .ac-task{font-size:14px;margin:0 0 2px}.twn-p .ac-q{font-size:18px;margin:2px 0 6px;line-height:1.4}.twn-p .ac-ch{gap:6px;margin:4px 0 2px}.twn-p .ac-ch button{min-height:46px;font-size:17px;padding-top:4px;padding-bottom:4px}.twn-p .ac-pic{margin:2px 0 6px}.twn-p .ac-pic svg{max-height:42vh;width:auto}.twn-p .ac-main.side .ac-pic svg{max-height:38vh}.twn-p .ac-main.side{gap:10px;align-items:start}.twn-p .ac-legend{font-size:12px;gap:6px}.twn-p .ac-blk{height:30px;min-width:30px;font-size:18px}.twn-p .ac-blk.rep{font-size:15px}.twn-p .ac-ch button.prog{gap:5px;padding:5px 8px}.twn-p .ac-emo,.twn-p .ac-bigd{font-size:48px}.twn-p .ac-msg{font-size:15px;padding:5px 10px;margin-top:4px}.twn-p .ac-foot .row{margin-top:4px}.twn-p .ac-intro .ac-big,.twn-p .ac-end .ac-big{font-size:17px;margin:2px 0}.twn-p .ac-intro p,.twn-p .ac-end p{font-size:15px;margin:3px 0}.twn-p .ac-steps b{width:36px;height:36px}.twn-p .ac-cells b{height:46px}.twn-p .ac-keys button{min-height:48px}}
+@media (max-width:620px){.twn-p .ac-main.side{display:block}.twn-p .ac-main.side .ac-pic{margin:4px 0 8px}.twn-p .ac-ch{grid-template-columns:1fr}.twn-p .ac-q{font-size:19px}.twn-p .ac-emo,.twn-p .ac-bigd{font-size:60px}.twn-p .ac-keys button{min-width:88px}.twn-p .ac-cells b{min-width:50px}.twn-p .ac-nr{flex-wrap:wrap}.twn-p .ac-nr .side{text-align:left;width:100%}}
 `;
 const NUMK = ['', '하나', '둘', '셋', '넷', '다섯'];
 const WHERE = { math: '수학 학원', english: '영어 학원', science: '공부방(과학·코딩 반)', study: '공부방', art: '미술 학원', piano: '피아노 학원', taekwondo: '태권도장' };   /* 수첩 '어디서 시작' — 이 마을 과학·코딩은 공부방 선생님 반 */
@@ -77,7 +80,7 @@ export function createAcad(A) {
       + (cls ? '<p>' + (first ? '처음 오셨네요. ' : '') + '문제는 다섯 개예요. 틀리면 힌트가 하나씩 나오고, 마지막엔 까닭을 알려 줘요. 넷 이상을 까닭 보기 전에 맞히면 다음 단계로 올라가요.</p>' : '<p class="ac-note">' + esc(hourLine()) + ' 자습은 세 문제이고, 단계와 도장은 수업에서만 올라요.</p>')
       + (cls && today && sb.clr < 5 ? '<p class="ac-note">오늘은 ' + esc(subName(R.k)) + ' 단계를 벌써 올렸어요. 이번 판은 복습이고, 다음 단계는 내일 수업에서 해요.</p>' : '')
       + (cls && sb.clr >= 5 ? '<p class="ac-note">다섯 단계를 모두 마친 과목이에요. 이번 판은 복습이에요.</p>' : '') + '</div>'
-      + '<div class="row"><button class="sub" data-a="x">닫기</button><button class="sub" data-a="note">📒 학원 수첩</button><button data-a="start" data-def>' + (cls ? '수업 시작' : '자습 시작') + '</button></div>';
+      + '<div class="ac-foot"><div class="row"><button class="sub" data-a="x">닫기</button><button class="sub" data-a="note">📒 학원 수첩</button><button data-a="start" data-def>' + (cls ? '수업 시작' : '자습 시작') + '</button></div></div>';
     if (R.ctx.say && cls) R.ctx.say(first ? subName(R.k) + ' 수업에 온 걸 반가워요. 모르면 힌트를 보면서 천천히 해요.' : sb.st + '단계 수업을 할게요. 천천히 생각해 봐요.'); }
   function start() { const R = RUN, sb = sub(R.k), n = R.mode === 'class' ? 5 : 3, seed = hashS(R.k + ':' + day() + ':' + (sb.n + sb.self) + ':' + (G().id || '') + ':' + Math.round(performance.now() % 997));
     R.L = lesson(R.k, sb.st, seed, { n, recent: sb.rec }); R.i = 0; R.marks = []; R.learned = []; R.phase = 'q'; R.st0 = sb.st; newQ(); sfx('pick'); log('start ' + R.k + ' st' + sb.st + ' n' + R.L.length); drawQ(); }
@@ -92,18 +95,21 @@ export function createAcad(A) {
     return h ? '<div class="ac-pic">' + h + '</div>' : ''; }
   const COLN = { 빨강: '#d8262e', 파랑: '#2f6fd0', 노랑: '#f2c230', 초록: '#3f9f4e' }, colOf = n => COLN[n] || '#888';
   function chH(c) { let h = ''; if (c.sw) h += '<i class="ac-sw" style="background:' + esc(c.sw) + '"></i>'; if (c.sw2) h += c.sw2.map(x => '<i class="ac-sw" style="background:' + esc(x) + '"></i>').join('+'); if (c.emo) h += '<span class="emo" aria-hidden="true">' + esc(c.emo) + '</span>'; if (c.shp) h += shapeSvg(c.shp[0], colOf(c.shp[1]), 30);
-    if (c.prog) return h + c.prog.map(b => (typeof b === 'object' ? '<i class="ac-blk rep">🔁' + b.n + ' ' + b.b.map(x => BLK[x][0]).join('') + '</i>' : '<i class="ac-blk">' + BLK[b][0] + '</i>')).join('');
+    if (c.prog) return h + c.prog.map(b => (typeof b === 'object' ? '<i class="ac-blk rep">🔁' + b.n + '<i>' + b.b.map(x => BLK[x][0]).join('') + '</i></i>' : '<i class="ac-blk">' + BLK[b][0] + '</i>')).join('');
     return h + '<span>' + fr(c.t) + '</span>'; }
   function drawQ() { const R = RUN, p = cur(), b = body(); if (!b || !p) return; setTitle(titleOf(R));
     const n = R.L.length, dots = R.L.map((q, i) => '<i class="' + (i === R.i ? 'now' : '') + '">' + (i < R.marks.length ? ['●', '◐', '○'][R.marks[i]] : i === R.i ? '◆' : '·') + '</i>').join('');
     let h = '<div class="ac-top"><span class="ac-dots" aria-label="문제 ' + (R.i + 1) + ' / ' + n + '">' + dots + '</span><span>' + (R.i + 1) + '/' + n + '</span>' + (p.star ? '<b class="ac-star">★ 도전</b>' : '') + '</div>'
-      + '<div class="ac-task">' + esc(taskOf(p)) + '</div><div class="ac-q">' + fr(p.q) + '</div>' + (p.text ? '<div class="ac-text">' + esc(p.text) + '</div>' : '') + visH(p);
+      + '<div class="ac-task">' + esc(taskOf(p)) + '</div><div class="ac-q">' + fr(p.q) + '</div>' + (p.text ? '<div class="ac-text">' + esc(p.text) + '</div>' : '');
+    const side = !!p.pic && p.kind === 'pick'; h += '<div class="ac-main' + (side ? ' side' : '') + '"><div class="ac-l">' + visH(p);
     const tools = []; if (p.play) tools.push('<button class="sub ac-play" data-a="play">🔊 다시 듣기</button>'); if (p.say && canSay()) tools.push('<button class="sub ac-play" data-a="say">🔊 영어로 듣기</button>');
     if (p.t.endsWith('robot')) h += '<div class="ac-legend"><span>⬆ 한 칸 앞으로</span><span>↺ 왼쪽으로 돌기</span><span>↻ 오른쪽으로 돌기</span>' + (p.ch.some(c => c.prog.some(x => typeof x === 'object')) ? '<span>🔁3 ⬆ = ⬆ 세 번</span>' : '') + '</div>';
     if (tools.length) h += '<div class="ac-tools">' + tools.join('') + '</div>';
+    h += '</div><div class="ac-r">';
     if (p.kind === 'pick') h += '<div class="ac-ch' + (p.long ? ' long' : '') + '" role="group">' + p.ch.map((c, i) => '<button class="' + (c.prog ? 'prog ' : '') + (R.no.includes(i) ? 'no' : R.solved && i === p.ans ? 'ok' : '') + '" data-c="' + i + '"' + (R.no.includes(i) || R.solved ? ' disabled' : '') + ' aria-label="' + esc((i + 1) + '번 ' + (c.prog ? progWords(c.prog) : c.t)) + '"><span class="k">' + (i + 1) + '</span>' + chH(c) + '</button>').join('') + '</div>';
     else if (p.kind === 'order') h += ordH(p); else if (p.kind === 'seq') h += seqH(p);
-    h += '<div class="ac-msg ' + (R.mcls || '') + '" data-m>' + (R.msg || '') + '</div><div class="row"><button class="sub" data-a="x">닫기</button>' + (R.solved ? '<button data-a="next" data-def>' + (R.i + 1 < n ? '다음 문제' : '끝 보기') + '</button>' : '') + '</div>';
+    h += '</div></div>';
+    h += '<div class="ac-foot"><div class="ac-msg ' + (R.mcls || '') + '" data-m>' + (R.msg || '') + '</div><div class="row"><button class="sub" data-a="x">닫기</button>' + (R.solved ? '<button data-a="next" data-def>' + (R.i + 1 < n ? '다음 문제' : '끝 보기') + '</button>' : '') + '</div></div>';
     b.innerHTML = h; if (!R.solved && !R.shown) { R.shown = true; autoPlay(p); } }
   const progWords = pr => pr.map(b => (typeof b === 'object' ? b.n + '번 되풀이 ' + b.b.map(x => BLK[x][1]).join(' ') : BLK[b][1])).join(', ');
   function autoPlay(p) { if (p.play) later(() => playNotes(p), 250); if (p.say) later(() => speak(p.say), 300); if (p.kind === 'seq') later(() => demo(p, false), 450); }
@@ -161,7 +167,7 @@ export function createAcad(A) {
     b.innerHTML = '<div class="ac-end"><div class="ac-marks" aria-label="문제마다 결과">' + R.marks.map(m => ['●', '◐', '○'][m]).join(' ') + '</div><p style="font-size:14px;color:var(--mut);margin:0">● 한 번에 · ◐ 힌트 뒤 · ○ 까닭 뒤</p>'
       + '<p class="ac-big">' + R.marks.length + '문제 가운데 ' + before + '문제를 까닭 보기 전에 풀었어요.</p>' + steps(sb, false)
       + '<div class="ac-learn"><b>오늘 배운 것</b><ul>' + R.learned.slice(0, 3).map(t => '<li>' + fr(t) + '</li>').join('') + '</ul></div>' + '<p>' + esc(res) + '</p>' + (rw ? '<p>' + esc(rw) + '</p>' : '') + '</div>'
-      + '<div class="row"><button class="sub" data-a="x">닫기</button><button class="sub" data-a="note">📒 학원 수첩</button><button data-a="again" data-def>한 판 더</button></div>';
+      + '<div class="ac-foot"><div class="row"><button class="sub" data-a="x">닫기</button><button class="sub" data-a="note">📒 학원 수첩</button><button data-a="again" data-def>한 판 더</button></div></div>';
     sfx(up ? 'done' : 'pick'); log('end ' + k + ' good' + (good ? 1 : 0) + ' up' + (up ? 1 : 0)); }
   // ───────── 학원 수첩 ─────────
   function note() { css(); stopT(); const s = S(), d = day();
@@ -174,7 +180,7 @@ export function createAcad(A) {
   function probe(k, st, n) { const errs = []; let cnt = 0; if (!SUBJ[k] || !shell('probe', 'acadq')) return { errs: ['창 없음'], cnt }; const keep = RUN;
     for (let sd = 1; sd <= n; sd++) { const L = lesson(k, st, 9973 * sd + st * 31); RUN = { k, ctx: {}, day: day(), phase: 'q', mode: 'self', L, i: 0, marks: [], learned: [] };
       for (let i = 0; i < L.length; i++) { const p = L[i]; RUN.i = i; newQ(); RUN.shown = true;
-        try { drawQ(); const h = body().innerHTML; if (!/ac-q/.test(h) || /undefined|NaN|\[object/.test(body().textContent)) errs.push(p.t + ' 글 이상'); if (p.kind === 'pick' && body().querySelectorAll('[data-c]').length !== p.ch.length) errs.push(p.t + ' 보기 수');
+        try { drawQ(); const h = body().innerHTML; if (!/ac-q/.test(h) || /undefined|NaN|\[object/.test(body().textContent)) errs.push(p.t + ' 글 이상'); if (p.kind === 'pick' && body().querySelectorAll('[data-c]').length !== p.ch.length) errs.push(p.t + ' 보기 수'); if (p.t.endsWith('robot')) { const B = [...body().querySelectorAll('.ac-blk')], hs = B.map(e => e.getBoundingClientRect().height), h0 = Math.min(...hs); if (hs.some(x => x > h0 + 2) || B.some(e => e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1)) errs.push(p.t + ' 블록이 두 줄로 꺾임'); if ([...body().querySelectorAll('.ac-ch button')].some(e => e.scrollWidth > e.clientWidth + 1)) errs.push(p.t + ' 블록이 보기 칸을 넘음'); }
           RUN.no = p.kind === 'pick' ? [0, 1, 2, 3].filter(j => j !== p.ans && j < p.ch.length).slice(0, 1) : []; RUN.tries = 3; RUN.msg = '<b>까닭</b> ' + fr(p.why); drawQ(); RUN.solved = true; RUN.pick = p.items ? p.items.map((x, j) => j) : []; RUN.input = p.seq ? p.seq.slice() : []; drawQ(); cnt++; }
         catch (e) { errs.push(p.t + ' ' + e.message); } } }
     RUN = keep; stopT(); A.closeP(); return { errs, cnt }; }
