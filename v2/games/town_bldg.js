@@ -185,7 +185,7 @@ export function createBldg(A) {
   const LP = (x, z, ry) => (lx, lz) => [x + lx * Math.cos(ry) + lz * Math.sin(ry), z - lx * Math.sin(ry) + lz * Math.cos(ry)];
   function dog(K, S9, x, z, y, ry, hex) { const Q = LP(x, z, ry), P = (k, lx, ly, lz, sx, sy, sz, c, rx) => { const [a, b] = Q(lx, lz); K.part(S9, k, a, y + ly, b, sx, sy, sz, c, 0, ry, rx || 0); }, dk = 0x2b2b2b;
     for (const [a, b] of [[-0.1, 0.22], [0.1, 0.22], [-0.1, -0.22], [0.1, -0.22]]) P('b', a, 0, b, 0.08, 0.26, 0.08, hex); P('b', 0, 0.24, 0, 0.3, 0.26, 0.66, hex); P('b', 0, 0.4, 0.36, 0.26, 0.26, 0.26, hex);
-    P('b', 0, 0.42, 0.52, 0.13, 0.11, 0.1, hex); P('b', 0, 0.49, 0.575, 0.05, 0.04, 0.02, dk); for (const s9 of [-1, 1]) { P('b', s9 * 0.07, 0.55, 0.495, 0.035, 0.035, 0.02, dk); P('b', s9 * 0.1, 0.6, 0.33, 0.06, 0.12, 0.08, 0x6b4a2f); } P('b', 0, 0.42, -0.42, 0.05, 0.05, 0.2, hex, -0.6); }   /* 강아지(마을 마당 강아지와 같은 상자 꼴 · 귀 · 눈 · 꼬리) */
+    P('b', 0, 0.42, 0.52, 0.13, 0.11, 0.1, hex); P('b', 0, 0.49, 0.575, 0.05, 0.04, 0.02, dk); for (const s9 of [-1, 1]) { P('b', s9 * 0.07, 0.55, 0.495, 0.035, 0.035, 0.02, dk); P('b', s9 * 0.095, 0.6, 0.33, 0.06, 0.12, 0.08, 0x6b4a2f); } P('b', 0, 0.42, -0.42, 0.05, 0.05, 0.2, hex, -0.6); }   /* 강아지(마을 마당 강아지와 같은 상자 꼴 · 귀 · 눈 · 꼬리) */
   function cat(K, S9, x, z, y, ry, hex) { const Q = LP(x, z, ry), P = (k, lx, ly, lz, sx, sy, sz, c, rx) => { const [a, b] = Q(lx, lz); K.part(S9, k, a, y + ly, b, sx, sy, sz, c, 0, ry, rx || 0); };
     for (const [a, b] of [[-0.07, 0.15], [0.07, 0.15], [-0.07, -0.15], [0.07, -0.15]]) P('b', a, 0, b, 0.06, 0.18, 0.06, hex); P('b', 0, 0.17, 0, 0.22, 0.19, 0.44, hex); P('b', 0, 0.28, 0.27, 0.2, 0.19, 0.18, hex);
     for (const s9 of [-1, 1]) { P('k', s9 * 0.06, 0.47, 0.27, 0.045, 0.09, 0, hex); P('b', s9 * 0.05, 0.4, 0.365, 0.03, 0.03, 0.02, 0x2b2b2b); } P('b', 0, 0.3, -0.25, 0.04, 0.3, 0.04, hex, -0.3); }   /* 고양이(뾰족 귀 · 선 꼬리) */
@@ -196,7 +196,7 @@ export function createBldg(A) {
     const S9 = K.shell(at, W, D, H, { wall: 0xf1f3f6, wains: navy, winY: [], noLights: true, ft: ['tile', 1.0, 0xe9edf2] }), P = S9.put; S9.ac = K.cs(navy);
     { const cx = -1.0, zc = -hd + 1.5; P('b', cx, 0, zc, 4.4, 1.0, 0.6, 0xf6f4ee); P('b', cx, 0.1, zc + 0.306, 4.3, 0.5, 0.012, 0x3d5a8a); P('b', cx, 1.0, zc, 4.46, 0.04, 0.66, 0xd8dce0); K.colL(S9, cx, zc, 2.23, 0.33, -0.5, 1.1);   // 민원 창구 탁자
       P('b', cx + 1.3, 1.04, zc - 0.05, 0.42, 0.3, 0.05, 0x2b2d31); P('b', cx + 1.3, 1.08, zc - 0.022, 0.36, 0.22, 0.012, 0x7fb8e0, 1); P('b', cx - 1.2, 1.04, zc, 0.32, 0.02, 0.24, 0xffffff);   // 화면(빛) · 종이
-      K.sign(S9, en() ? 'Help desk' : '민원 창구', cx, 0.42, zc + 0.33, 0, 1.4, 0.26, { bg: '#3d5a8a', fr: false }); K.standGuest(S9, ox + cx, oy, oz + zc - 0.7, 0, 1); P('c16', cx, 1.6, zc - 0.7, 0.17, 0.08, 0, navy); P('b', cx, 1.6, zc - 0.56, 0.2, 0.02, 0.1, 0x1c2638);   // 경찰관(이름 없음 · 모자)
+      K.sign(S9, en() ? 'Help desk' : '민원 창구', cx, 0.42, zc + 0.33, 0, 1.4, 0.26, { bg: '#3d5a8a', fr: false }); K.standGuest(S9, ox + cx, oy, oz + zc - 0.7, 0, 1); P('c16', cx, 1.6, zc - 0.7, 0.17, 0.08, 0, navy); P('b', cx, 1.605, zc - 0.56, 0.2, 0.02, 0.1, 0x1c2638);   // 경찰관(이름 없음 · 모자 · FIX-4B 챙 밑면을 모자 밑면보다 5mm 위로)
       K.sign(S9, '112', cx, 2.45, -hd + 0.02, 0, 1.2, 0.6, { bg: '#2b3a5c', fr: 0xf6f4ee, fs: 1.2 }); }
     K.mainSign(S9, name, 2.9, 2.75, -hd + 0.02, 0, { bg: '#2b3a5c' });
     { const bz = -0.6; P('b', hw - 0.02, 0.88, bz, 0.04, 1.58, 2.48, 0x8a6a4a); }   // 칭찬 게시판 틀(글 = 캔버스)

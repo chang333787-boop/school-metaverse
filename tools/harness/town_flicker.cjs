@@ -1,6 +1,6 @@
 // 반짝임(같은 방향 면이 같은 평면에서 겹침) 감사 — 마을 감사(SM_TOWN.check)가 못 보는 메시까지(사용자 10-18 '열차 반짝임 · 상점도 반짝이')
 //   실내 방(들어갈 때 짓는 메시) 전부 + 가게 앞 바깥(반경 R m 안 · 지금 보이는 메시 전부 = 병합 덩어리·인스턴스·간판·먼 판/가까운 판이 같이 보이는 경우)
-//   node tools/harness/town_flicker.cjs [마을=ourtown] [포트=8002] [--rooms=all|N] [--out=N(가게 앞 몇 곳)]
+//   node tools/harness/town_flicker.cjs [마을=ourtown] [포트=8002] [--rooms=all|N] [--per=N(같은 이름 방 N곳까지)] [--out=N(가게 앞 몇 곳)]
 // 판정: 두 삼각형이 같은 축 방향·같은 평면(1mm)·겹친 넓이 > 4cm² → 반짝임 후보. 한 면의 두 삼각형은 대각선만 닿아 넓이 0이라 걸리지 않음.
 // 실내(FLICK-IN 10-18): 낮 11시(닫힌 가게 X)에 방이 다 들어간 뒤 셈 · 못 들어간 방·빈 방 = 실패 · 보이지 않는 면은 뺌(방 상자 밖 = 벽·바닥 속 · 벽·바닥·천장에 붙어 바깥을 보는 면) · 깊이를 안 쓰는 빛 자국끼리 겹침은 뺌(가산 — 번갈아 찍히지 않음) · 페이지가 다시 열리면 다시 준비
 const { chromium } = require('playwright');
@@ -41,11 +41,13 @@ const ROOMS = opt('rooms') || 'all', OUTN = +(opt('out') || 6), R = 40, ROOFN = 
   const out = { rooms: [], outside: [], errs };
   // 1) 실내 방
   const list = await p.evaluate(() => SM_TOWN.indoor.list());
-  const pick = ROOMS === 'all' ? list : list.slice(0, +ROOMS);
+  const PER = +(opt('per') || 0), nOf = {}, pick = (ROOMS === 'all' ? list : list.slice(0, +ROOMS)).filter(q => { if (!PER) return true; const k = q.kind + ':' + String(q.name || '').replace(/^\d+동 /, ''); nOf[k] = (nOf[k] || 0) + 1; return nOf[k] <= PER; });   /* FIX-4B --per=N: 같은 이름(같은 방 꼴)은 N곳까지 — 패치마다 빠르게(전부 = 50분 · 밤 판은 그대로 전부) */
   for (const q of pick) { if (!await p.evaluate(() => !!window.SM_TOWN).catch(() => false)) { boots++; await boot(); }   /* 페이지가 다시 열렸으면(멈춤·메모리) 다시 준비 */
     const r = await p.evaluate(async q => { const sl = ms => new Promise(r => setTimeout(r, ms)), I = SM_TOWN.indoor; for (let i = 0; i < 60 && (I.on || I.busy); i++) { if (I.on && !I.busy) I.exit(); await sl(150); }   /* 앞 방이 다 나간 뒤에(덮개 도는 동안 enter는 무시됨) */
-      const before = new Set(SD2.scene.children); try { I.enter(q.id); } catch (e) { return { name: q.name, err: String(e).slice(0, 120) }; } for (let i = 0; i < 60 && !(I.on && !I.busy); i++) await sl(150); if (!I.on) return { name: q.name, kind: q.kind, err: '못 들어감(닫힘·덮개)' }; await sl(300);
-      const add = SD2.scene.children.filter(o => !before.has(o)); const I9 = SM_TOWN.indoor.info, res = window.__flick(add, null, 0, I9 && I9.at ? { at: I9.at, W: I9.W, D: I9.D, H: I9.H || 9 } : null); I.exit(); for (let i = 0; i < 60 && (I.on || I.busy); i++) await sl(150); return { name: q.name, kind: q.kind, look: q.look || null, ...res, ...(res.tri ? {} : { err: '삼각형 0(방 메시를 못 찾음)' }) }; }, q); out.rooms.push(r); process.stderr.write((r.err ? '? ' : r.n ? '✗ ' : '✓ ') + r.name + ' (' + (r.kind || '') + ') 겹침 ' + (r.n ?? '-') + ' · 삼각형 ' + (r.tri ?? '-') + (r.err ? ' · ' + r.err : '') + '\n'); }
+      const before = new Set(SD2.scene.children), G9 = SM_TOWN.game && SM_TOWN.game().S, m0 = G9 ? G9.min : 0;
+      for (const h of [null, 14, 19, 22]) { if (h != null && G9) G9.min = h * 60; try { I.enter(q.id); } catch (e) { if (G9) G9.min = m0; return { name: q.name, err: String(e).slice(0, 120) }; } for (let i = 0; i < 10 && !I.on && !I.busy; i++) await sl(150); if (I.on || I.busy) break; }   /* FIX-4B: ENTER-1(10-27) 뒤 가게마다 여는 시각이 달라(치킨 12시~) 11시에 닫힌 곳은 14·19·22시로 다시 — 그 시각에 연 방을 셈 */
+      for (let i = 0; i < 60 && !(I.on && !I.busy); i++) await sl(150); if (!I.on) { if (G9) G9.min = m0; return { name: q.name, kind: q.kind, err: '못 들어감(닫힘·덮개)' }; } await sl(300);
+      const add = SD2.scene.children.filter(o => !before.has(o)); const I9 = SM_TOWN.indoor.info, res = window.__flick(add, null, 0, I9 && I9.at ? { at: I9.at, W: I9.W, D: I9.D, H: I9.H || 9 } : null); I.exit(); for (let i = 0; i < 60 && (I.on || I.busy); i++) await sl(150); if (G9) G9.min = m0; return { name: q.name, kind: q.kind, look: q.look || null, ...res, ...(res.tri ? {} : { err: '삼각형 0(방 메시를 못 찾음)' }) }; }, q); out.rooms.push(r); process.stderr.write((r.err ? '? ' : r.n ? '✗ ' : '✓ ') + r.name + ' (' + (r.kind || '') + ') 겹침 ' + (r.n ?? '-') + ' · 삼각형 ' + (r.tri ?? '-') + (r.err ? ' · ' + r.err : '') + '\n'); }
   // 2) 가게 앞 바깥(보이는 것 전부 · 반경 R)
   const shops = await p.evaluate(n => { const L = SM_TOWN.indoor.list().filter(q => q.kind === 'shop'); const st = Math.max(1, Math.floor(L.length / n)); return L.filter((_, i) => i % st === 0).slice(0, n); }, OUTN);
   for (const q of shops) { const r = await p.evaluate(async q => { const x = q.at && q.at[0], z = q.at && q.at[1]; if (x == null) return { name: q.name, err: 'no pos' }; SD2.map.player.teleport([x + 6, SM_TOWN.ground(x + 6, z + 6) + 0.3, z + 6]); SD2.map.player.lookAt([x, z]); await new Promise(r => setTimeout(r, 1500)); return { name: q.name, at: [Math.round(x), Math.round(z)], ...window.__flick([SD2.scene], [x, z], 40) }; }, q); out.outside.push(r); }

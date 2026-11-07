@@ -1,11 +1,12 @@
 // (옥상 모드판 · 아트 팀 10-18 · 실내 고친 판은 town_flicker.cjs) 반짝임(같은 방향 면이 같은 평면에서 겹침) 감사 — 마을 감사(SM_TOWN.check)가 못 보는 메시까지(사용자 10-18 '열차 반짝임 · 상점도 반짝이')
 //   실내 방(들어갈 때 짓는 메시) 전부 + 가게 앞 바깥(반경 R m 안 · 지금 보이는 메시 전부 = 병합 덩어리·인스턴스·간판·먼 판/가까운 판이 같이 보이는 경우)
-//   node tools/harness/town_flicker.cjs [마을=ourtown] [포트=8002] [--rooms=all|N] [--out=N(가게 앞 몇 곳)]
+//   node tools/harness/town_flicker_roof.cjs [마을=ourtown] [포트=8002] [--roof=N(기본 8)] [--rooms=0|all|N(기본 0)] [--out=N(가게 앞 몇 곳)]
+//   FIX-4B(11-07): 이 판의 실내 셈은 옛 방식(보이지 않는 면을 빼지 않음 · 방이 다 들어가기 전에 셈 · 닫힌 가게)이라 실내는 town_flicker.cjs가 맡음 → 기본 = 옥상 8곳 + 가게 앞(이 판의 몫) · 실내를 이 판으로 보려면 --rooms=all
 // 판정: 두 삼각형이 같은 축 방향·같은 평면(1mm)·겹친 넓이 > 4cm² → 반짝임 후보. 한 면의 두 삼각형은 대각선만 닿아 넓이 0이라 걸리지 않음.
 const { chromium } = require('playwright');
 const A = process.argv.slice(2), TOWN = A.find(a => !a.startsWith('--') && !/^\d+$/.test(a)) || 'ourtown', PORT = A.find(a => /^\d+$/.test(a)) || '8002';
 const opt = k => { const a = A.find(x => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : null; };
-const ROOMS = opt('rooms') || 'all', OUTN = +(opt('out') || 6), R = 40, ROOFN = +(opt('roof') || 0);   // --roof=N: 옥상 모드(평지붕 N곳 · 정원·태양광 먼저 · 길에서 서서 · 옥상 위 · 위에서 내려다봄)
+const ROOMS = opt('rooms') || '0', OUTN = +(opt('out') || 6), R = 40, ROOFN = +(opt('roof') ?? 8);   // --roof=N: 옥상 모드(평지붕 N곳 · 정원·태양광 먼저 · 길에서 서서 · 옥상 위 · 위에서 내려다봄)
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=metal'] }); const p = await b.newPage({ viewport: { width: 1280, height: 720 } }); const errs = [];
   p.on('pageerror', e => errs.push(e.message.slice(0, 200)));

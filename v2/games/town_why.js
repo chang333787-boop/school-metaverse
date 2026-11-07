@@ -36,7 +36,7 @@ export function createWhy(A) {
 
   // ───────── 몸(상자 꼴 · 보호센터 방 강아지·고양이와 같은 모양 · 꼬리만 따로) ─────────
   function dogMesh(parts, hex, collar) { const g = parts(put => { const dk = 0x2b2b2b; for (const [a, b] of [[-0.1, 0.22], [0.1, 0.22], [-0.1, -0.22], [0.1, -0.22]]) put('b', a, 0, b, 0.08, 0.26, 0.08, hex); put('b', 0, 0.24, 0, 0.3, 0.26, 0.66, hex); put('b', 0, 0.4, 0.36, 0.26, 0.26, 0.26, hex); put('b', 0, 0.42, 0.52, 0.13, 0.11, 0.1, hex); put('b', 0, 0.49, 0.575, 0.05, 0.04, 0.02, dk);
-      for (const s9 of [-1, 1]) { put('b', s9 * 0.07, 0.55, 0.495, 0.035, 0.035, 0.02, dk); put('b', s9 * 0.1, 0.6, 0.33, 0.06, 0.12, 0.08, 0x6b4a2f); } if (collar != null) put('b', 0, 0.36, 0.25, 0.3, 0.07, 0.09, collar); });
+      for (const s9 of [-1, 1]) { put('b', s9 * 0.07, 0.55, 0.495, 0.035, 0.035, 0.02, dk); put('b', s9 * 0.095, 0.6, 0.33, 0.06, 0.12, 0.08, 0x6b4a2f); } if (collar != null) put('b', 0, 0.36, 0.25, 0.31, 0.07, 0.09, collar); });   /* FIX-4B 귀 바깥면·목줄 옆면이 머리·몸 옆면과 같은 평면 X(귀 5mm 안 · 목줄 5mm 밖) */
     const tl = parts(put => put('b', 0, 0, 0, 0.05, 0.22, 0.05, hex)); tl.position.set(0, 0.42, -0.31); tl.rotation.x = -0.8; g.add(tl); g.rotation.order = 'YXZ'; return { g, tl }; }
   function catMesh(parts, hex) { const g = parts(put => { for (const [a, b] of [[-0.07, 0.15], [0.07, 0.15], [-0.07, -0.15], [0.07, -0.15]]) put('b', a, 0, b, 0.06, 0.18, 0.06, hex); put('b', 0, 0.17, 0, 0.22, 0.19, 0.44, hex); put('b', 0, 0.28, 0.27, 0.2, 0.19, 0.18, hex);
       for (const s9 of [-1, 1]) { put('k', s9 * 0.06, 0.47, 0.27, 0.045, 0.09, 0, hex); put('b', s9 * 0.05, 0.4, 0.365, 0.03, 0.03, 0.02, 0x2b2b2b); } });
