@@ -11,6 +11,7 @@ const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0';
 let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails++; };
 (async () => {
+  const FF_I = (await import(require('path').resolve(__dirname, '../../v2/games/town_story.js'))).CHAPTERS.find(q => q.id === 'a1_6').steps.findIndex(q => q.id === 'ff');   /* COVER-4: 1-4에 도감 단계가 들어와 번호 대신 id */
   if (SHOTS) require('fs').mkdirSync(SHOTS, { recursive: true });
   const b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] });
   const errs = [];
@@ -59,7 +60,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m)
 
     console.log('③ 1-4 반딧불이');
     const far = await ev(([sx, sz]) => { for (let r = 90; r < 600; r += 30) for (let a = 0; a < 24; a++) { const x = sx + Math.cos(a / 24 * 6.283) * r, z = sz + Math.sin(a / 24 * 6.283) * r, s = SM_TOWN.sd(x, z); if (s > 1.5 && s < 3 && !SM_TOWN.inSchool(x, z)) return [x, z]; } return null; }, [SH.x, SH.z]);
-    if (far) { await tp(far[0], far[1]); await W8(600); } await ev(() => { const G = SM_TOWN.game().S; SM_TOWN.season('summer'); G.min = 21 * 60; SM_TOWN.rules.wx('clear'); SM_TOWN.storyAt('a1_6', 4); }); await W8(1500); await closeAll(); const ffSt = await step();
+    if (far) { await tp(far[0], far[1]); await W8(600); } await ev(i9 => { const G = SM_TOWN.game().S; SM_TOWN.season('summer'); G.min = 21 * 60; SM_TOWN.rules.wx('clear'); SM_TOWN.storyAt('a1_6', i9); }, FF_I); await W8(1500); await closeAll(); const ffSt = await step();
     if (ffSt === 'ff' && far) { await W8(2600); const f1 = await ev(() => SM_TOWN.ff()), s1 = await step(); ok(s1 === 'ff', '다른 물가(' + Math.round(Math.hypot(far[0] - SH.x, far[1] - SH.z)) + 'm 밖)에선 반딧불이가 떠도(' + (f1 ? f1.n : 0) + ') 안 넘어감');
       await tp(SH.x, SH.z, SH.wx, SH.wz); await W8(3200); await shot('shore_ff'); const s2 = await step(); ok(s2 === 'line', '그 물가에서 반딧불이 → 넘어감 (' + s2 + ')'); }
     else ok(false, '반딧불이 단계 준비 ' + ffSt + ' · 다른 물가 ' + JSON.stringify(far));

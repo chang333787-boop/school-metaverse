@@ -269,7 +269,7 @@ export function createTools(A) {
   /* FISH-2: 찌가 쏙 → 누르면 일 놀이와 같은 줄다리기 한 마리(town.js tug → town_minigame.js mkTug) → 낚으면 놓아주기·가방 */
   function tugGo(fish) { if (!fish) return; const e = en(); const ok = A.tug(fish, res => { if (dead) return; if (res > 0) { A.rec('tug-ok'); catchShow(fish); } else if (res === 0) { A.rec('tug-miss'); toast(e ? '💨 It got away — pull the opposite way to the fish' : '💨 물고기가 달아났어요 — 물고기 반대쪽으로 끌어요', 2.6); } }); if (!ok) catchShow(fish); }
   function catchShow(fish) { const e = en(), G = A.GAME; if (!fish) return; G.use('tool:catch');
-    const neu = G.found('fish:' + fish.id); A.skUp('look', neu ? 3 : 1, 'fish:' + fish.id); A.rec('catch', { id: fish.id }); const full = G.uses('tool:fish') >= 2;
+    const neu = G.found('fish:' + fish.id); A.skUp('look', neu ? 3 : 1, 'fish:' + fish.id); A.rec('catch', { id: fish.id }); A.rec(fish.sea === 'any' ? 'catch-fresh' : 'catch-sea');   /* COVER-4 이야기 3-2 낚시 = 바다 물고기만 */ const full = G.uses('tool:fish') >= 2;
     const P = A.openP('<h3>🎣 ' + (e ? 'You caught a fish!' : '물고기를 낚았어요!') + '</h3><div style="display:flex;gap:14px;align-items:center;margin:6px 0"><div style="font-size:54px;line-height:1">🐟</div><div><b style="font-size:18px">' + esc(L(fish.t)) + '</b><div class="sm">' + esc(L(fish.line)) + '</div></div></div>' + photoHtml('fish:' + fish.id, e, { sm: 1 })
       + (neu ? '<div class="sm">' + (e ? 'Added to the codex: 🎣 Fish met.' : '도감 「🎣 낚은 물고기」에 넣었어요.') + '</div>' : '')
       + '<div class="sm">' + (e ? 'Let it go and it grows up to lay eggs. In breeding season people agree not to fish.' : '놓아주면 다시 자라 알을 낳아요. 알 낳는 때(금어기)엔 잡지 않기로 약속해요.') + '</div>'

@@ -3,9 +3,10 @@
 //   ① 마을 띠: 긴 정보 띠가 2초 만에 안 사라짐 · 바로 온 다음 띠는 앞 띠가 다 읽힌 뒤 · 창이 떠 있으면 창이 닫힌 뒤에 뜸 · 알림: 새 알림은 바로(내 동작의 결과) · 덮인 수 든 알림은 그 뒤 남은 시간만큼 다시 · 수 없는 알림은 다시 안 뜸
 //   ② 2-1 팬케이크 값 알아보기: 처음 들어간 가게 = 합 대신 직접 더하기 창(큰 단추 넷 · 세로셈 · 합 '?') · 할 일 줄·메모 줄 '= ?' · 틀리면 단추 지움 + 자리값 힌트 · 힌트 단추 · 맞히면 닫히고 메모 줄 '(내가 더함)'
 //   ③ 둘째 가게: 값 띠(합 보임)가 1.8초 만에 안 덮임 · 다 읽힌 뒤 다음 단계 · '어느 가게가 더 쌀까' 창은 끝 띠가 읽힌 뒤 + 창 안 '내가 본 값'(두 합 · 내가 더함) · 사기 단계까지 메모 줄 · 사고 나면 메모 줄 사라짐 ④ 페이지 오류 0
+//   ⑤ 휴대폰 세로·가로(COVER-4 11-07): 직접 더하기 창 — 단추 넷 44px 넘게 · 가로 넘침 0 · 창이 화면 안 · 조이스틱(이동 자리 #tJoyHint · 누른 막대 #tJoy)과 겹침 0 · 사진 = --shots 폴더 read1_phone_세로·가로
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null;
-const path = require('path'), { chromium } = require('./pw.cjs'), { walker } = require('./lib_walk.cjs');
+const path = require('path'), { chromium, devices } = require('./pw.cjs'), { walker } = require('./lib_walk.cjs');
 let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails++; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
@@ -99,6 +100,37 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       await shut(); await ev(() => { SM_TOWN.storyOff(); SM_TOWN.game().S.story.autoNext = null; });
     }
     console.log('④ 페이지 오류'); ok(!errs.length, '페이지 오류 ' + errs.length + (errs.length ? ' · ' + errs.slice(0, 3).join(' | ') : ''));
+    // ⑤ 휴대폰 세로·가로 — 같은 창을 아이폰 크기·터치로
+    for (const [nm, dev] of [['세로', devices['iPhone 13']], ['가로', devices['iPhone 13 landscape']]]) {
+      console.log('⑤ 휴대폰 ' + nm + ' — 직접 더하기 창');
+      const ctx = await b.newContext({ ...dev }), q = await ctx.newPage(), e2 = []; q.on('pageerror', e => e2.push(e.message.slice(0, 200)));
+      await q.goto(URL); await q.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && window.SD2 && SM_TOWN.story && SM_TOWN.read, null, { timeout: 240000 }); await q.waitForTimeout(1500);
+      const ev2 = (f, a) => q.evaluate(f, a), W2 = ms => q.waitForTimeout(ms), shut2 = () => ev2(() => { for (let i = 0; i < 5; i++) { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p .twn-x'); if (b9) b9.click(); } });
+      await shut2(); await W2(600);
+      await ev2(() => { const G = SM_TOWN.game(), S9 = G.S; S9.story = S9.story || {}; S9.story.done = Object.assign(S9.story.done || {}, { p0: { d: 1 }, a1_1: { d: 1 } }); S9.story.autoNext = null; if (G.count('🥛') < 1) G.add('🥛', 1, 'test'); });
+      await ev2(i9 => SM_TOWN.storyAt('c1', i9), ix('c1', 'look')); await W2(1200); await shut2(); await W2(600);
+      const G9 = await ev2(() => { const L = SM_TOWN.indoor.census().filter(q9 => q9.in === 'shop' && q9.name); const g = L.filter(q9 => /마트|슈퍼|모두의 상점|식품/.test(q9.name) && !/편의점|산지|도시 상점/.test(q9.name)); return g[0] || null; });
+      if (!G9) { ok(false, nm + ' 마트 없음'); await ctx.close(); continue; }
+      await ev2(i => SM_TOWN.indoor.enterI(i), G9.i); let on = false; for (let i = 0; i < 40 && !on; i++) { await W2(250); on = await ev2(() => !!document.querySelector('.twn-p .twn-addb')); }
+      ok(on, nm + ' 처음 가게 = 직접 더하기 창'); if (!on) { await ctx.close(); continue; }
+      await W2(500);
+      const R = await ev2(() => { const P = document.querySelector('.twn-p'), bx = P.querySelector('.bx') || P, pr = bx.getBoundingClientRect(), vis = el => !!el && getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0;
+        const top9 = (x, y) => document.elementFromPoint(x, y), mine = (el, b9) => !!el && (el === b9 || b9.contains(el)), J = [document.getElementById('tJoyHint'), document.getElementById('tJoy')].filter(vis);
+        const B = [...P.querySelectorAll('.twn-addb button')].map(b9 => { const r = b9.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, h = top9(cx, cy); return { w: Math.round(r.width), h: Math.round(r.height), seen: r.top >= 0 && r.bottom <= innerHeight && mine(h, b9) && mine(top9(cx, r.top + 5), b9) && mine(top9(cx, r.bottom - 5), b9), joy: J.some(j9 => mine(h, j9)) }; });   /* 위·가운데·아래가 다 그 단추 = 반쯤 가려진 단추 X */
+        const T9 = [...P.querySelectorAll('table tr')].pop(), tr9 = T9 ? T9.getBoundingClientRect() : null, tot = !!tr9 && mine(top9(tr9.left + 20, tr9.top + tr9.height / 2), T9) && mine(top9(tr9.left + 20, tr9.bottom - 3), T9);   /* 줄 아래 끝까지 보임 */
+        const A = [...P.querySelectorAll('button')].filter(e => e.offsetParent && getComputedStyle(e).visibility !== 'hidden').map(e => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height), (e.textContent || '').trim().slice(0, 8)]; }).filter(r => r[0] < 44 || r[1] < 44);
+        const jOn = J.filter(j9 => { const r = j9.getBoundingClientRect(), h = top9(r.left + r.width / 2, r.top + r.height / 2); return mine(h, j9); }).map(j9 => j9.id);   /* 조이스틱이 창 위에 보이는가(창이 덮으면 X) */
+        return { B, small: A, docOver: document.documentElement.scrollWidth - innerWidth, boxOver: bx.scrollWidth - bx.clientWidth, inView: pr.left >= -1 && pr.right <= innerWidth + 1 && pr.top >= -1 && pr.bottom <= innerHeight + 1, vw: innerWidth, vh: innerHeight, pr: [Math.round(pr.left), Math.round(pr.top), Math.round(pr.width), Math.round(pr.height)], joy: J.map(j9 => j9.id), jOn, lab: [...P.querySelectorAll('table td:first-child')].map(td => Math.round(td.getBoundingClientRect().height)), tot, touch: document.body.classList.contains('touch') }; });
+      console.log('    ' + JSON.stringify(R));
+      ok(R.touch, nm + ' 터치 화면(body.touch)');
+      ok(R.B.length === 4 && R.B.every(q9 => q9.w >= 44 && q9.h >= 44), nm + ' 단추 넷 44px 넘게(' + R.B.map(q9 => q9.w + '×' + q9.h).join(' · ') + ')');
+      ok(R.B.every(q9 => q9.seen), nm + ' 단추 넷이 내리지 않아도 다 보이고 눌림(가려짐 0 · ' + R.B.map(q9 => q9.seen ? '○' : '×').join('') + ')');
+      ok(R.lab.every(h => h <= 60), nm + ' 값표 이름이 한 줄(칸 높이 ' + R.lab.join(',') + 'px)'); ok(R.tot, nm + ' 「셋 다 ? 원」 줄이 내리지 않아도 보임');
+      ok(!R.small.length, nm + ' 창 안 작은 단추 0' + (R.small.length ? ' ' + JSON.stringify(R.small.slice(0, 3)) : ''));
+      ok(R.docOver <= 1 && R.boxOver <= 1 && R.inView, nm + ' 가로 넘침 0 · 창이 화면 안(쪽 ' + R.docOver + ' · 창 ' + R.boxOver + ' · ' + R.pr.join(',') + ' / ' + R.vw + '×' + R.vh + ')');
+      ok(!R.jOn.length && R.B.every(q9 => !q9.joy), nm + ' 조이스틱과 겹침 0(창 위에 보이는 조이스틱 ' + (R.jOn.join(',') || '없음') + ' · 단추를 덮은 조이스틱 ' + R.B.filter(q9 => q9.joy).length + ')');
+      if (SHOTS) { await W2(300); await q.screenshot({ path: SHOTS + '/read1_phone_' + (nm === '세로' ? 'port' : 'land') + '.png' }); console.log('    📷 ' + SHOTS + '/read1_phone_' + (nm === '세로' ? 'port' : 'land') + '.png'); }
+      ok(!e2.length, nm + ' 페이지 오류 0' + (e2.length ? ' · ' + e2.slice(0, 2).join(' | ') : '')); await ctx.close(); }
   } catch (e) { console.error(e); fails++; } finally { await b.close(); }
   console.log(fails ? '✗ ' + fails + '개 실패' : '✓ 모두 통과'); process.exit(fails ? 1 : 0);
 })();
