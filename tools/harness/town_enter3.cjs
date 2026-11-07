@@ -23,6 +23,10 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     const leave = async () => { await closeAll(); if (await ev(() => !!SM_TOWN.indoor.on)) { await ev(() => SM_TOWN.indoor.exit()); for (let i = 0; i < 20; i++) { await W8(200); if (!await ev(() => SM_TOWN.indoor.on)) break; } } await W8(200); };
     const solve = async () => { for (let k = 0; k < 60; k++) { const st = await PS(); if (!st || st.done) return st; await ev(() => SM_TOWN.ent().play.auto()); await W8(40); } return PS(); };
     const xp = () => ev(() => JSON.stringify(SM_TOWN.skills().xp || {}));
+    /* TAIL-1(POLISH-1 11-07): 말풍선을 안전 칸으로 옮겨도 꼬리가 말하는 사람 머리를 가리키는가 — 보이는 말풍선마다: 꼬리 있음 + (꼬리 끝이 머리에서 화면 높이 10% 안 또는 뿌리→끝이 뿌리→머리와 16° 안) · 꼬리가 없으면 머리가 말풍선 몸 안(옮겨진 것만) */
+    const BUBS = { n: 0, mv: 0, bad: [] }, bubLook = async tag => { for (let i = 0; i < 8; i++) { const b = await ev(() => Object.assign(SM_TOWN.ask.bub(), { H: innerHeight })); if (b.vis && b.tail) { const T = b.tail, [l, t9, r, bt] = T.rect, hx = T.head[0], hy = T.head[1], inR = hx > l - 8 && hx < r + 8 && hy > t9 - 8 && hy < bt + 8;
+        let good; if (!T.on) good = T.mv && inR; else { const vx = T.tip[0] - T.base[0], vy = T.tip[1] - T.base[1], wx = hx - T.base[0], wy = hy - T.base[1], cs = (vx * wx + vy * wy) / ((Math.hypot(vx, vy) * Math.hypot(wx, wy)) || 1); good = Math.hypot(T.tip[0] - hx, T.tip[1] - hy) < 0.1 * b.H || cs > 0.96; }
+        BUBS.n++; if (T.mv) BUBS.mv++; if (!good) BUBS.bad.push(tag + ' ' + JSON.stringify(T)); return; } await W8(120); } };
     await p.goto(URL); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && window.SD2 && SM_TOWN.indoor && SM_TOWN.ent, null, { timeout: 480000 }); await W8(2500); await closeAll();
     await ev(() => { const G = SM_TOWN.game().S; G.story = G.story || {}; G.story.done = Object.assign(G.story.done || {}, { p0: 1, a1_1: 1 }); G.jobs = G.jobs || {}; G.jobs.fireNo = G.day; G.min = 11 * 60; SM_TOWN.rules.wx('clear'); if (G.emerg) { G.emerg.d = G.day; G.emerg.plan = []; } });
     // ① 틀 전수표
@@ -35,6 +39,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     console.log('    판단 틀 갈래 ' + cats.length + '곳 시험: ' + cats.join(' · ')); const hows = new Map(); let nOk = 0, alt = 0; const bad = [], altBad = []; let shotN = 0;
     for (const k of cats) { const q = byCat.get(k), one = [], t = (c, m) => { if (!c) one.push(m); };
       await ev(() => { const G9 = SM_TOWN.game().S; G9.min = 15 * 60; G9.day += 1; }); if (!await enter(q.i)) { bad.push(k + ' 못 들어감'); console.log('    ✗ ' + k + ' 못 들어감'); continue; }
+      await bubLook(k);
       await ev(k => { const c = SM_TOWN.ent().s().c; (c[k] = c[k] || { n: 0, last: [] }).lf = 'walk'; }, k);   /* 번갈아 내기: 바로 앞 = 걷기 → 이번 = 판단 판 */
       const x0 = await xp(), I0 = await EI(); t(I0 && I0.k === k, '갈래 ' + (I0 && I0.k));
       await E('ent:ask', async () => !!(await PS())); const P0 = await panel(); t(P0 && P0.k === 'ent3', '판 창(ent3) (' + (P0 && P0.k) + ')');
@@ -57,7 +62,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     const look = new Map(), kinds = {}, R2 = []; let homeOk = 0, memOk = 0, sameDay = 0, again = 0;
     const doHome = async (q, tag) => { const one = []; const t = (c, m) => { if (!c) one.push(m); }; if (!await enter(q.i)) return { one: ['못 들어감'] }; const I = await EI(); look.set(q.i, [I.jk, I.reg]); kinds[I.plan.kind] = (kinds[I.plan.kind] || 0) + 1; const x0 = await xp(), pc0 = await ev(() => Object.keys((SM_TOWN.ent().s().pc) || {}).length), hv0 = await ev(() => Object.keys((SM_TOWN.ent().s().hv) || {}).length);
       if (shotDir && shotN < 22) { const sp = await ev(() => SM_TOWN.indoor.spawn()); if (sp) await tpA(sp); await W8(700); await p.screenshot({ path: shotDir + '/enter3_home_' + I.plan.kind + '_' + I.jk + '.png' }); shotN++; }
-      const k = I.plan.kind; await E('ent:ask', async () => !!(await panel()));
+      await bubLook('집 ' + I.jk); const k = I.plan.kind; await E('ent:ask', async () => !!(await panel()));
       if (k === 'tidy') { await closeAll(); const I2 = await EI(); const h = I2.task && I2.extra.find(x => x.k === 'ent:s' + I2.task.slot); if (h) { await pressAt(h.at); t(!!await waitSaid('✅'), '정리 = 걸어서 제자리 E ✅'); } else t(false, '정리 부탁 없음'); }
       else if (k === 'find') { await closeAll(); const I2 = await EI(); t(I2.task && I2.task.find, '찾기 부탁'); const sp = I2.extra.filter(x => /^ent:f\d$/.test(x.k)), right = sp.find(x => +x.k.slice(5) === I2.find.at), wr = sp.find(x => x !== right); if (wr) { await pressAt(wr.at); t(!!await waitSaid('여기는 없어요'), '헛걸음 = 「여기는 없어요 · 귀띔」 한 줄'); } if (right) { await pressAt(right.at); t(!!await waitSaid('✅'), '찾음 ✅'); } }
       else { const P0 = await panel(); t(P0 && P0.k === 'ent3', '부탁 판 창 (' + (P0 && P0.k) + ')'); if (shotDir && shotN < 26) { await W8(120); await p.screenshot({ path: shotDir + '/enter3_homeplay_' + k + '.png' }); shotN++; } const st = await solve(); t(st && st.done, '판 끝'); const P2 = await panel(); t(P2 && /고마워요/.test(P2.t), '끝 글'); await closeAll(); }
@@ -89,6 +94,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       if (Array.isArray(day)) { await ev(([d, id]) => { const G = SM_TOWN.game().S; G.day = d; G.min = 10 * 60; const r = SM_TOWN.ent().s().b[id]; if (r) { r.pd = -1; r.pk = null; r.n = Math.max(1, r.n); } }, [day[0], id]); await enter(q.i); const I = await EI(); ok(I.plan && I.plan.ev === day[1], '그 집만의 일 = ' + day[1] + ' (들어가면 소품 · ' + (I.plan && I.plan.kind) + ')');
         if (shotDir) { const sp = await ev(() => SM_TOWN.indoor.spawn()); if (sp) await tpA(sp); await W8(800); await p.screenshot({ path: shotDir + '/enter3_event_' + day[1] + '.png' }); }
         await E('ent:ask', async () => !!(await panel())); const st = await solve(); ok(st && st.done, '그 집만의 일 판 풀림'); await closeAll(); await leave(); } else ok(false, '그 집만의 일 날 찾기 (' + day + ')'); }
+    console.log('    말풍선 ' + BUBS.n + '번 봄 · 안전 칸으로 옮겨진 것 ' + BUBS.mv); ok(BUBS.n > 0 && !BUBS.bad.length, '말풍선 꼬리 = 말하는 사람 머리 쪽(옮겨져도 · ' + BUBS.n + '번 · 옮김 ' + BUBS.mv + ')' + (BUBS.bad.length ? ' — ' + BUBS.bad.slice(0, 2).join(' | ') : ''));
     // ⑥ 모음
     { const s9 = await ev(() => { const s = SM_TOWN.ent().s(); return { hv: Object.keys(s.hv || {}).length, pc: Object.keys(s.pc || {}).length, ck: Object.keys(s.ck || {}).length }; }), h = await ev(() => SM_TOWN.ent().colHtml());
       ok(s9.hv >= homeOk && /도운 집 \d+<\/b> \/ \d+/.test(h), '모음 도운 집 ' + s9.hv + ' · 엽서 ' + s9.pc + ' · 가게 갈래 ' + s9.ck + ' — 가방 글에 n / 전체'); ok(s9.pc >= 1, '엽서 하나 이상'); }

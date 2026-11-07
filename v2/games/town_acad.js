@@ -8,6 +8,8 @@ import { lesson, SUBJ, SUBJ_ORDER, goodRun, hashS, RHY_KEYS, MOVES, shapeSvg, BL
 export const ACAD_V = 1;
 export const ACAD_HOURS = [14, 19];
 export const ACAD_SK = { math: 'explore', english: 'explore', science: 'look', study: 'explore', art: 'look', piano: 'explore', taekwondo: 'explore' };   /* 예전 학원 갈래 솜씨 그대로(town_enter.js CATS sk) */
+// POLISH-1(11-07 '학원 로봇 문제 휴대폰 가로 = 보기 둘 남짓만 보이고 나머지는 내려야 해요'): 낮은 가로 화면(휴대폰 가로 · 사파리 주소창 빼고 300~390px)
+//   그림 있는 문제 = 왼쪽 칸 [문제 번호 · 그림] · 오른쪽 칸 [할 일 · 물음 · 블록 뜻 · 보기 두 칸 격자] · 힌트 칸은 아래 단추 줄 왼쪽(한 줄 띠) · 창 높이 96% · 그림 문제는 .ac-body.side 꼬리표(has 선택자 X)
 const CSS = `
 .twn-p[data-k=acadq] .bx,.twn-p[data-k=acad] .bx{width:min(880px,96vw)!important}
 .twn-p[data-k=acadq] .row button,.twn-p[data-k=acad] .row button,.twn-p .ac-tools button{min-height:48px;font-size:17px}
@@ -44,6 +46,12 @@ const CSS = `
 .twn-p .ac-marks{display:flex;gap:8px;font-size:26px;margin:4px 0}.twn-p .ac-learn ul{margin:4px 0 0;padding-left:22px;font-size:17px;line-height:1.6}
 .twn-p .ac-nb{display:grid;gap:8px;margin-top:6px}.twn-p .ac-nr{display:flex;gap:12px;align-items:center;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:8px 12px;font-size:16px}.twn-p .ac-nr>b.ic{font-size:30px;flex:none;width:40px;text-align:center}.twn-p .ac-nr>div{flex:1;min-width:0}.twn-p .ac-nr small{color:var(--mut);font-size:14px}.twn-p .ac-nr .ac-steps b{width:28px;height:28px;font-size:13px;border-width:2px;border-radius:8px}.twn-p .ac-nr .side{flex:none;text-align:right;font-size:14px;color:var(--mut);line-height:1.5}
 @media (max-height:500px){.twn-p .ac-top{margin:0 0 2px;font-size:15px}.twn-p .ac-task{font-size:14px;margin:0 0 2px}.twn-p .ac-q{font-size:18px;margin:2px 0 6px;line-height:1.4}.twn-p .ac-ch{gap:6px;margin:4px 0 2px}.twn-p .ac-ch button{min-height:46px;font-size:17px;padding-top:4px;padding-bottom:4px}.twn-p .ac-pic{margin:2px 0 6px}.twn-p .ac-pic svg{max-height:42vh;width:auto}.twn-p .ac-main.side .ac-pic svg{max-height:38vh}.twn-p .ac-main.side{gap:10px;align-items:start}.twn-p .ac-legend{font-size:12px;gap:6px}.twn-p .ac-blk{height:30px;min-width:30px;font-size:18px}.twn-p .ac-blk.rep{font-size:15px}.twn-p .ac-ch button.prog{gap:5px;padding:5px 8px}.twn-p .ac-emo,.twn-p .ac-bigd{font-size:48px}.twn-p .ac-msg{font-size:15px;padding:5px 10px;margin-top:4px}.twn-p .ac-foot .row{margin-top:4px}.twn-p .ac-intro .ac-big,.twn-p .ac-end .ac-big{font-size:17px;margin:2px 0}.twn-p .ac-intro p,.twn-p .ac-end p{font-size:15px;margin:3px 0}.twn-p .ac-steps b{width:36px;height:36px}.twn-p .ac-cells b{height:46px}.twn-p .ac-keys button{min-height:48px}}
+@media (max-height:500px) and (min-width:621px){.twn-p[data-k=acadq] .bx{max-height:96vh}.twn-p[data-k=acadq] .bx>h3:first-child{margin-bottom:2px}
+.twn-p .ac-body.side{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto auto auto auto 1fr auto;column-gap:12px;align-items:start}.twn-p .ac-body.side .ac-main,.twn-p .ac-body.side .ac-l,.twn-p .ac-body.side .ac-r{display:contents}
+.twn-p .ac-body.side>.ac-top{grid-column:1;grid-row:1;flex-wrap:wrap;gap:2px 8px;margin:0 0 4px}.twn-p .ac-body.side .ac-pic{grid-column:1;grid-row:2/8;margin:0;justify-content:flex-start}.twn-p .ac-body.side .ac-pic svg{max-height:calc(96vh - 190px);max-width:42vw;width:auto}
+.twn-p .ac-body.side>.ac-task{grid-column:2;grid-row:1;margin:0}.twn-p .ac-body.side>.ac-q{grid-column:2;grid-row:2;margin:0 0 2px;line-height:1.35}.twn-p .ac-body.side>.ac-text{grid-column:2;grid-row:3}.twn-p .ac-body.side .ac-legend{grid-column:2;grid-row:4;justify-content:flex-start;margin:0 0 2px}.twn-p .ac-body.side .ac-tools{grid-column:2;grid-row:5;justify-content:flex-start;margin:0 0 4px}
+.twn-p .ac-body.side .ac-ch{grid-column:2;grid-row:6;grid-template-columns:1fr 1fr;gap:5px;margin:0}.twn-p .ac-body.side .ac-ch button{min-height:44px}.twn-p .ac-body.side .ac-ch button.prog{gap:3px;padding:4px 14px}.twn-p .ac-body.side .ac-blk{box-sizing:border-box;height:26px;min-width:26px;font-size:15px;padding:0 2px;border-radius:7px}.twn-p .ac-body.side .ac-blk.rep{font-size:11px;gap:1px;padding:0 2px}.twn-p .ac-body.side .ac-blk.rep i{font-size:15px}.twn-p .ac-body.side .ac-ch button.no::after,.twn-p .ac-body.side .ac-ch button.ok::after{position:absolute;right:4px;top:3px;margin:0;font-size:14px;line-height:1}.twn-p .ac-body.side>.ac-foot{grid-column:1/-1;grid-row:8}
+.twn-p .ac-foot{display:flex;align-items:center;gap:10px;margin-top:4px;padding:2px 18px 8px}.twn-p .ac-foot .ac-msg{flex:1;min-width:0;margin:4px 0 0;font-size:14px;line-height:1.3;padding:4px 10px}.twn-p .ac-foot .ac-msg details{display:inline-block;margin:0 0 0 6px;font-size:13px}.twn-p .ac-foot .row{flex:none;margin:2px 0 0 auto}}
 @media (max-width:620px){.twn-p .ac-main.side{display:block}.twn-p .ac-main.side .ac-pic{margin:4px 0 8px}.twn-p .ac-ch{grid-template-columns:1fr}.twn-p .ac-q{font-size:19px}.twn-p .ac-emo,.twn-p .ac-bigd{font-size:60px}.twn-p .ac-keys button{min-width:88px}.twn-p .ac-cells b{min-width:50px}.twn-p .ac-nr{flex-wrap:wrap}.twn-p .ac-nr .side{text-align:left;width:100%}}
 `;
 const NUMK = ['', '하나', '둘', '셋', '넷', '다섯'];
@@ -76,7 +84,7 @@ export function createAcad(A) {
   function drawIntro() { const R = RUN, sb = sub(R.k), S9 = SUBJ[R.k], cls = R.mode === 'class', b = body(); if (!b) return; setTitle(titleOf(R));
     const first = !sb.n && !sb.self, today = sb.up === day();
     const subs = R.ctx.subs && R.ctx.subs.length > 1 ? '<div class="ac-subs" role="group" aria-label="과목 고르기">' + R.ctx.subs.map(k9 => '<button class="' + (k9 === R.k ? 'on' : 'sub') + '" data-sub="' + k9 + '">' + SUBJ[k9].ic + ' ' + esc(subName(k9)) + ' · ' + (sub(k9).clr >= 5 ? '수료' : sub(k9).st + '단계') + '</button>').join('') + '</div>' : '';
-    b.innerHTML = subs + '<div class="ac-intro">' + steps(sb, true) + '<p class="ac-big">오늘 배울 것: ' + esc(S9.top[sb.st - 1]) + '</p>'
+    b.classList.remove('side'); b.innerHTML = subs + '<div class="ac-intro">' + steps(sb, true) + '<p class="ac-big">오늘 배울 것: ' + esc(S9.top[sb.st - 1]) + '</p>'
       + (cls ? '<p>' + (first ? '처음 오셨네요. ' : '') + '문제는 다섯 개예요. 틀리면 힌트가 하나씩 나오고, 마지막엔 까닭을 알려 줘요. 넷 이상을 까닭 보기 전에 맞히면 다음 단계로 올라가요.</p>' : '<p class="ac-note">' + esc(hourLine()) + ' 자습은 세 문제이고, 단계와 도장은 수업에서만 올라요.</p>')
       + (cls && today && sb.clr < 5 ? '<p class="ac-note">오늘은 ' + esc(subName(R.k)) + ' 단계를 벌써 올렸어요. 이번 판은 복습이고, 다음 단계는 내일 수업에서 해요.</p>' : '')
       + (cls && sb.clr >= 5 ? '<p class="ac-note">다섯 단계를 모두 마친 과목이에요. 이번 판은 복습이에요.</p>' : '') + '</div>'
@@ -110,7 +118,7 @@ export function createAcad(A) {
     else if (p.kind === 'order') h += ordH(p); else if (p.kind === 'seq') h += seqH(p);
     h += '</div></div>';
     h += '<div class="ac-foot"><div class="ac-msg ' + (R.mcls || '') + '" data-m>' + (R.msg || '') + '</div><div class="row"><button class="sub" data-a="x">닫기</button>' + (R.solved ? '<button data-a="next" data-def>' + (R.i + 1 < n ? '다음 문제' : '끝 보기') + '</button>' : '') + '</div></div>';
-    b.innerHTML = h; if (!R.solved && !R.shown) { R.shown = true; autoPlay(p); } }
+    b.innerHTML = h; b.classList.toggle('side', side); if (!R.solved && !R.shown) { R.shown = true; autoPlay(p); } }   /* POLISH-1 낮은 가로 화면 두 칸 꼬리표 */
   const progWords = pr => pr.map(b => (typeof b === 'object' ? b.n + '번 되풀이 ' + b.b.map(x => BLK[x][1]).join(' ') : BLK[b][1])).join(', ');
   function autoPlay(p) { if (p.play) later(() => playNotes(p), 250); if (p.say) later(() => speak(p.say), 300); if (p.kind === 'seq') later(() => demo(p, false), 450); }
   function playNotes(p) { (p.play || []).forEach(([f, t0, d]) => tone(f, t0, d)); }
@@ -164,7 +172,7 @@ export function createAcad(A) {
     else { sb.self++; res = '자습은 연습이라 단계와 도장은 수업(오후 2시~7시)에서 올라요.'; }
     if (R.ctx.done) R.ctx.done(); if (A.rec) A.rec('acad', { k, st: R.st0, mode: R.mode, marks: R.marks.slice(), good: !!good, up }); A.GAME.mark();
     const b = body(); if (!b) return; setTitle(SUBJ[k].ic + ' ' + subName(k) + ' 학원 · ' + (cls ? '수업' : '자습') + ' 끝');
-    b.innerHTML = '<div class="ac-end"><div class="ac-marks" aria-label="문제마다 결과">' + R.marks.map(m => ['●', '◐', '○'][m]).join(' ') + '</div><p style="font-size:14px;color:var(--mut);margin:0">● 한 번에 · ◐ 힌트 뒤 · ○ 까닭 뒤</p>'
+    b.classList.remove('side'); b.innerHTML = '<div class="ac-end"><div class="ac-marks" aria-label="문제마다 결과">' + R.marks.map(m => ['●', '◐', '○'][m]).join(' ') + '</div><p style="font-size:14px;color:var(--mut);margin:0">● 한 번에 · ◐ 힌트 뒤 · ○ 까닭 뒤</p>'
       + '<p class="ac-big">' + R.marks.length + '문제 가운데 ' + before + '문제를 까닭 보기 전에 풀었어요.</p>' + steps(sb, false)
       + '<div class="ac-learn"><b>오늘 배운 것</b><ul>' + R.learned.slice(0, 3).map(t => '<li>' + fr(t) + '</li>').join('') + '</ul></div>' + '<p>' + esc(res) + '</p>' + (rw ? '<p>' + esc(rw) + '</p>' : '') + '</div>'
       + '<div class="ac-foot"><div class="row"><button class="sub" data-a="x">닫기</button><button class="sub" data-a="note">📒 학원 수첩</button><button data-a="again" data-def>한 판 더</button></div></div>';

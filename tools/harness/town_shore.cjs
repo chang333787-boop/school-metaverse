@@ -55,7 +55,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m)
     if (!lk) lk = await ev(([x, z]) => SM_TOWN.tools.aim(x, z), [SH.ex - SH.ux * 1.0, SH.ez - SH.uz * 1.0]);
     const wa = await ev(([x, z]) => SM_TOWN.tools.aim(x, z), [SH.ex - SH.ux * 1.0, SH.ez - SH.uz * 1.0]); ok(wa.lock === 'water' || wa.lock === 'stone', '얕은 물을 겨누면 노란 고리(' + wa.lock + ')');
     await clrT(); await ev(([x, z]) => SM_TOWN.tools.aim(x, z), [lk.x, lk.z]); await shot('shore_lens_aim'); await ev(() => SM_TOWN.tools.use()); await W8(2800);
-    tt = await toasts(); const st1 = await step(); ok(st1 === 'clean', '물가(' + lk.lock + ')를 보면 넘어감 → ' + st1); ok(tt.some(t => /얕은 물속 돌까지|물속 돌|바닥 돌/.test(t)), '성공 글 = 물속 돌·갈대 「' + (tt.find(t => /돌/.test(t)) || '').slice(0, 70) + '」'); await shot('shore_lens_done');
+    tt = await toasts(); const st1 = await step(); ok(st1 === 'dex' || st1 === 'clean', '물가(' + lk.lock + ')를 보면 넘어감 → ' + st1);   /* COVER-4(11-07)부터 돋보기 다음 = 도감 귀띔(dex) · 🔬가 이미 있으면 짐작(clean) — 낡은 기대 고침(POLISH-1) */ ok(tt.some(t => /얕은 물속 돌까지|물속 돌|바닥 돌/.test(t)), '성공 글 = 물속 돌·갈대 「' + (tt.find(t => /돌/.test(t)) || '').slice(0, 70) + '」'); await shot('shore_lens_done');
     await ev(() => SM_TOWN.tools.aim(null)); await ev(() => SM_TOWN.tools.hold(null)); await closeAll();
 
     console.log('③ 1-4 반딧불이');

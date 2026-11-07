@@ -2,7 +2,7 @@
 //   ① 학원 E(진짜 E 누르기) = 수업 창(오늘 배울 것 · 수업 시작 · 단계 칸)  ② 문제 창 크기(물음 18px 넘게 · 보기 단추 44px 넘게 · 할 일 한 줄)
 //   ③ 틀림 = 그 보기 ✗ 잠김 + 힌트 1 → 힌트 2 → 까닭 · 정답 단추를 칠하지 않음 · 맞힘 = 오늘 배운 것 + 다음  ④ 잘한 판 = 단계 +1 · 칠판 별 · 가방 수료 도장 · 솜씨 +
 //   ⑤ 같은 날 한 판 더 = 단계 그대로 · 솜씨 0(오늘 몫 받음)  ⑥ 학원 수첩(📒 단추 · 수첩 탭)  ⑦ 수업 시간 밖 = '수업은 오후 2시부터' + 자습 셋(단계·도장 X)
-//   ⑧ 다음 날 = 다시 단계 · 솜씨  ⑨ 닫았다 열면 이어서  ⑩ 과목 일곱 한 판씩(있는 학원만 · 차례·리듬·동작·로봇·긴 글)  ⑪ 휴대폰 세로·가로(가로 넘침 X · 단추 44px)  ⑫ 페이지 오류 0
+//   ⑧ 다음 날 = 다시 단계 · 솜씨  ⑨ 닫았다 열면 이어서  ⑩ 과목 일곱 한 판씩(있는 학원만 · 차례·리듬·동작·로봇·긴 글)  ⑪ 휴대폰 세로·가로(가로 넘침 X · 단추 44px) ⑪-2 낮은 가로(844×340 등) 로봇 문제 한 화면  ⑫ 페이지 오류 0
 const { chromium, RENDER } = require('./pw.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
@@ -117,6 +117,17 @@ const SUBJS = ['math', 'english', 'science', 'study', 'art', 'piano', 'taekwondo
         ok(await vis('[data-a="next"]') && await vis('.ac-msg'), '휴대폰 ' + nm + ' 맞힌 뒤 「다음 문제」 단추와 배운 것 칸이 보임'); await shot('11_phone_' + (nm === '세로' ? 'p' : 'l') + '_next'); }
       const pr = []; for (const st of [4, 5]) pr.push(...(await ev(s9 => SM_TOWN.acad().probe('science', s9, 8), st)).errs); ok(!pr.length, '휴대폰 ' + nm + ' 로봇 블록 한 줄 · 보기 칸 안 (' + (pr.slice(0, 2).join(' | ') || '오류 0') + ')');
       await leave(); }
+    /* ⑪-2 POLISH-1(11-07 '로봇 문제 휴대폰 가로 = 보기 둘 남짓만 보이고 나머지는 내려야 해요'): 낮은 가로 화면(844×390 · 사파리 주소창 빼면 844×340 · 740×320)에서 로봇 문제 = 물음·그림·보기 넷·힌트·다음 단추가 창 안 굴림 없이 한 화면 */
+    for (const [w, h, st7] of [[844, 390, 5], [844, 340, 3], [740, 320, 5]]) { await p.setViewportSize({ width: w, height: h }); await ev(() => { document.body.classList.add('touch', 'small'); }); await W8(300); await closeAll();
+      await ev(s7 => { const S9 = SM_TOWN.acad().state(); S9.s.science = { st: s7, clr: s7 - 1, up: -1, rd: -1, n: 1, self: 0, learn: [], rec: [] }; }, st7); await ev(() => SM_TOWN.acad().open('science', {})); await W8(250); await click('[data-a="start"]'); await W8(250);
+      let R7 = null; for (let n = 0; n < 5; n++) { R7 = await RUN(); if (R7 && R7.cur && /robot/.test(R7.cur.t)) break; await solveOne(); await next(); }
+      if (!(R7 && R7.cur && /robot/.test(R7.cur.t))) { ok(false, '로봇 문제 못 찾음 ' + w + '×' + h); continue; }
+      const fit = () => ev(() => { const bx = document.querySelector('.twn-p .bx'), b = bx.getBoundingClientRect(), inV = s9 => [...document.querySelectorAll('.twn-p ' + s9)].every(e => { const r = e.getBoundingClientRect(); return r.top >= b.top - 1 && r.bottom <= b.bottom + 1; }); bx.scrollTop = 0; return { sc: bx.scrollHeight - bx.clientHeight, ch: document.querySelectorAll('.twn-p .ac-ch button').length, chIn: inV('.ac-ch button'), pic: inV('.ac-pic svg'), q: inV('.ac-q'), msg: inV('.ac-msg'), nx: inV('[data-a="next"]'), side: document.querySelector('.twn-p .ac-body').classList.contains('side') }; });
+      const strict = h >= 340, lim = strict ? 1 : 40, tag7 = strict ? '' : ' · 작은 휴대폰은 40px까지(예전 224px)';   /* 844×390·844×340 = 굴림 0 · 740×320(작은 휴대폰) = 거의 한 화면 */
+      const f0 = await fit(); ok(f0.side && f0.sc <= lim && (f0.chIn || !strict) && f0.pic && f0.q, '휴대폰 가로 ' + w + '×' + h + ' 로봇 문제 = 물음·그림·보기 ' + f0.ch + '개가 한 화면(굴림 ' + f0.sc + 'px' + tag7 + ')'); await shot('11b_robot_' + w + 'x' + h);
+      const wr7 = [0, 1, 2, 3].find(i => i !== R7.cur.ans && i < R7.cur.nch); await click('[data-c="' + wr7 + '"]'); await W8(150); const f1 = await fit(); ok(f1.sc <= lim && (f1.chIn || !strict) && f1.msg, '휴대폰 가로 ' + w + '×' + h + ' 틀린 뒤 = 보기·힌트 칸 한 화면(굴림 ' + f1.sc + 'px' + tag7 + ')'); await shot('11b_robot_' + w + 'x' + h + '_hint');
+      await click('[data-c="' + R7.cur.ans + '"]'); await W8(150); const f2 = await fit(); ok(f2.sc <= lim && f2.nx && f2.msg && f2.pic, '휴대폰 가로 ' + w + '×' + h + ' 맞힌 뒤 = 배운 것·「다음 문제」·그림 한 화면(굴림 ' + f2.sc + 'px' + tag7 + ')'); await shot('11b_robot_' + w + 'x' + h + '_next');
+      await closeAll(); }
     await p.setViewportSize({ width: 1366, height: 768 });
     ok(!errs.length, '페이지 오류 0' + (errs.length ? ' — ' + errs.slice(0, 4).join(' | ') : ''));
   } catch (e) { fails.push('예외 ' + e.message); console.log(e); }
