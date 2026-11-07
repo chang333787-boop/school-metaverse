@@ -279,7 +279,7 @@ export function createTyphoon(A) {
   // 남은 기억(결과 날부터 사흘): 그 자리 가까이 가면 이웃 말 한 번(하루 한 번)
   function memSec() { const s = S(), m = me(), d = day(); for (const [key, o] of Object.entries(s.mem)) { if (!o || !o.at || key.startsWith('home:') || d - o.d > 3 || said['mem:' + key] === d) continue;   /* TYPH-2 우리 집은 말하는 이웃이 없음('우리 집: …' X) */ if (Math.hypot(o.at[0] - m.x, o.at[1] - m.z) > 9) continue; said['mem:' + key] = d;
       const t = o.k === 'thx' ? T2('태풍 때 도와줘서 고마워. 덕분에 멀쩡했어.', 'Thanks for helping before the typhoon. Everything was fine.') : o.k === 'both' ? T2('기울어진 건 아쉬웠지만, 같이 고쳐 줘서 고마워.', 'It was a shame it got damaged, but thanks for fixing it with me.') : T2('다음 태풍 땐 미리 같이 준비하자. 다친 사람이 없어서 다행이야.', 'Next time let’s get ready early together. Good thing no one was hurt.');
-      A.say('💬 ' + L(o.who) + ': "' + L(t) + '"', 4); break; } }
+      A.say('💬 ' + L(o.who) + ': "' + L(t) + '"', 4, 2); break; } }   /* FIX-4A: 다가가면 나오는 이웃 기억 말 = lv2(하루 한 번뿐 · 버리지 않고 줄 섬 · 🔔 지난 알림) — lv0이면 방금 고친 결과 알림('같이 고쳤어요')을 0.01초 만에 덮고, lv1이면 구역 알림에 밀려 영영 안 뜸 */
   // ───────── 태풍 날(TYPH-2 · 사용자 10-31 '태풍날 아무것도 못 하고 시간도 못 보내고 이벤트가 뭔가 이상해') ─────────
   //   ① 안 = 건물 안 · 학교 울타리 안 · 집 문가(TY.door) · 대피소 곁 — 학교에서 시작했으면 학교에 머물러도 됨
   //   ② 밖으로 나가면 알림 한 번 → TY.grace초 안에 돌아오면 그대로 · 아니면 어둡게 넘겨 마지막으로 안에 있던 자리로(집이 아니라 — 학교에 있었으면 학교)

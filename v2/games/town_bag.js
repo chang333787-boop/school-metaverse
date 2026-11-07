@@ -11,7 +11,7 @@
 //     workers() · hkOf(w) · who(k) · me() · cell(x, z) · season() · canGet(e) · shopSell(e) [{ name, door }] · mush() [x, z] | null · market() [x, z] | null · kitchen() [x, z] | null · home() [x, z] | null
 //     recipes() [[e, ko, en, need]] (열린 것만) · bundles() [{ B, need, put, done }] · openBundles() · nbMark(w, why, e) · heart(w, n, src) · tally(k)
 //     stam() 상태 | null · stamFill() · stamShow(s) · stamBusy() · stamGraph() | null
-import { GIFT_OF } from './town_news.js?v=13';
+import { GIFT_OF } from './town_news.js?v=14';
 import { inSeason, seaKey } from './town_bundle.js?v=3';
 import { ITEMS, itemName, won } from './town_game.js?v=53';
 import { DECO } from './town_cozy.js?v=3';

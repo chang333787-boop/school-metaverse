@@ -21,7 +21,7 @@ export function newsMake(c) {
   const add = (A, k, ko, e9, o) => A.push(Object.assign({ k, t: en ? e9 : ko }, o || {}));
   // ① 어제 내가 한 일의 결과
   if (c.gift && (c.gift.why === 'like' || c.gift.why === 'req') && c.gift.g) add(one, 'gift', '🎁 어제 ' + c.item(c.gift.g) + josa(c.item(c.gift.g), '을', '를') + ' 받은 ' + c.gift.who + ' 일꾼이 답례로 ' + c.item(c.gift.e) + josa(c.item(c.gift.e), '을', '를') + ' 두고 갔어요', '🎁 The ' + c.gift.who + ' worker you gave ' + c.item(c.gift.g) + ' left ' + c.item(c.gift.e) + ' at our door to say thanks', { mine: 1, at: 'gift' });   /* COZY-1 답례 */   /* DECO-FIX(11-07): 답례 = 문 앞에 실제로 놓인 물건 · 어제 내가 한 일의 결과라 ① 맨 앞(잔치 남은 밤·고장 소식보다 먼저 — 처음 사흘 한 줄일 때 가려지던 것) */
-  for (const q of c.fx || []) if (!q.two) add(one, 'fx:' + q.k, q.t[0], q.t[1], { mine: 1, at: q.at || null });
+  for (const q of c.fx || []) if (!q.two) add(one, 'fx:' + q.k, q.t[0], q.t[1], { mine: 1, at: q.at || null });   /* FIX-4A: 내가 한 일의 결과만(고장 고침 등) — 잔치 남은 밤은 ② 오늘만(①을 먹어 화분·고장 결과를 가리고 아침 알림이 셋이던 것) */
   for (const q of c.fac || []) add(one, 'fac:' + q.k, '🚚 ' + q.t[0], '🚚 ' + q.t[1], { mine: 1, at: q.at || null });   /* BLDG-3b 어제 공장에서 만든 상자가 가게·장터에 들어옴(생산 → 유통) */   /* FIX-1 어제 알린 고장을 고침(맨 앞 = 내가 한 일의 결과가 바로 보이게) */
   const nm = P => c.crop(P.c), st = P => c.plotState(P, d), gw = (A, G9) => (A || []).map((P, i) => ({ P, up: !!(G9 && G9[i]) })).filter(o => o.P && o.P.c && c.CROPS[o.P.c]);
   const pots = gw(c.pots, c.potGrew), potW = pots.filter(o => o.P.w === d - 1 && o.up), potR = pots.filter(o => o.up);   /* up = 밤사이 실제로 한 날 자람(마을이 자라기 전·뒤를 견줘 넘김) */
@@ -39,6 +39,7 @@ export function newsMake(c) {
   if (Y && Y.sold > 0) add(one, 'sold', '🛒 어제 장터에서 물건을 ' + Y.sold + '개 팔았어요', '🛒 You sold ' + Y.sold + ' thing(s) at the market yesterday', { mine: 1 });
   if (Y && Y.shared > 0 && !c.gift) add(one, 'shared', '🍽 어제 이웃에게 요리를 ' + Y.shared + '번 나눠 줬어요', '🍽 You shared food with neighbours ' + Y.shared + ' time(s) yesterday', { mine: 1 });
   // ② 오늘만
+  for (const q of c.fx || []) if (q.two && q.top) add(two, 'fx:' + q.k + (q.k2 ? ':' + q.k2 : ''), q.t[0], q.t[1], { at: q.at || null, top: 1 });   /* FIX-4A 잔치 날·어제 끝난 잔치 = 오늘만 줄 맨 앞(한 번뿐인 날 · 어제 남은 밤 줄과 갈래가 달라 늘 나옴) */
   if (c.chain && c.chain.t) add(two, 'chain:' + c.chain.k, c.chain.t[0], c.chain.t[1], { at: c.chain.at || null, ck: { chain: c.chain.k } });   /* ROUTINE-1 먹이·물 연쇄(비 사흘 → 개구리·왜가리 · 비 없는 닷새 → 물새 줄어듦 · town_routine.js) — 오늘만 줄 맨 앞 */
   if (c.jang && c.jang.on) add(two, 'jang', '🎪 오늘은 장날이에요. 장터 값이 더 좋아요', '🎪 Market day today — the market pays more', { at: c.jang.at || null, ck: { jang: 1 } });
   if (c.seaNext) add(two, 'sea', '📅 내일부터 ' + c.seaNext + josa(c.seaNext, '이에요', '예요'), '📅 ' + c.seaNext + ' starts tomorrow', { ck: { sea: 1 } });
@@ -47,10 +48,10 @@ export function newsMake(c) {
   if (c.twig) add(two, 'twig', '🍂 비 온 다음 날이라 숲에 마른 가지가 많아요', '🍂 After the rain there are lots of dry twigs in the woods', { ck: { twig: 1 } });
   if (c.wx && WXT[c.wx.nm]) add(two, 'wx', c.wx.ic + ' 오늘은 ' + WXT[c.wx.nm][0], c.wx.ic + ' Today is ' + WXT[c.wx.nm][1], { ck: { wx: c.wx.nm } });
   if (c.mush) add(two, 'mush', '🍄 숲의 버섯이 다시 자랐어요', '🍄 The mushrooms in the woods grew back', { ck: { mush: 1 } });
-  for (const q of c.fx || []) if (q.two) add(two, 'fx:' + q.k, q.t[0], q.t[1], { at: q.at || null });   /* FIX-1 오늘 새로 생긴 고장(칸만) */
+  for (const q of c.fx || []) if (q.two && !q.top) add(two, 'fx:' + q.k, q.t[0], q.t[1], { at: q.at || null });   /* FIX-1 오늘 새로 생긴 고장(칸만) */
   if (c.disc && c.disc.card) add(two, 'disc:' + c.disc.id, c.disc.card[0], c.disc.card[1], { at: c.disc.at || null, ck: { disc: c.disc.id } });   /* DISC-1 안 해 본 곳 한 줄(오늘만 줄 맨 뒤 — 다른 소식이 없는 날 칠판에) */
   // 같은 갈래 이틀 연속 X — 내가 한 일 줄은 글이 다르면 됨 · 모두 걸리면 첫 것
-  const fresh = L => last[L.k] !== d - 1 || (L.mine && prevT[L.k] !== L.t);
+  const fresh = L => L.top || last[L.k] !== d - 1 || (L.mine && prevT[L.k] !== L.t);
   const pick = A => A.find(fresh) || A[0] || null;
   const L1 = pick(one), L2 = pick(two.filter(L => !L1 || L.k !== L1.k)), lines = [];
   if (d <= 3) { const L = L1 || L2; if (L) lines.push(L); } else { if (L1) lines.push(L1); if (L2) lines.push(L2); if (!L1) { const L3 = pick(two.filter(L => L !== L2)); if (L3 && L3 !== L2) lines.push(L3); } }

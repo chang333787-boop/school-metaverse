@@ -59,7 +59,9 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     if (opened) { const r = await until(() => SM_TOWN.music.mood === 'play' && SM_TOWN.music.song === 'play', null, 6000); const Mp = await mus(); ok(r.r, '놀이 중 = 빠른 곡 「' + (Mp.title || [])[0] + '」 (' + (r.ms / 1000).toFixed(1) + '초)');
       await p.evaluate(() => { const x = document.querySelector('.twn-play .x'); if (x) x.click(); }); const r2 = await until(() => SM_TOWN.music.song === 'day', null, 6000); ok(r2.r, '놀이 끝 = 낮 곡으로 돌아옴'); }
     // 잔치(이야기 큰 장면): 피날레 '첫 잔치의 밤' 투호 단계 = 손님이 잔치 자리에 → 그 둘레 120m 안에서만 잔치 곡
-    await p.evaluate(() => { SD2.map.time('night'); SM_TOWN.storyAt('f1', 3); }); await W8(2000); const pot = await p.evaluate(() => { const f = SM_TOWN.fest(); return f && f.guests && f.guests.length ? f.pot : null; });
+    /* FIX-4A: COVER-2(10-31) 뒤로 이야기 피날레 = 잔치 엔진(town_feast.js)의 잔치 날 — 손님(모인 이웃)·잔치 자리는 엔진이 세움(이야기 잔치 손님 X) → 엔진이 있으면 잔치 날 밤으로 맞춰 엔진의 잔치 자리에서 봄 */
+    await p.evaluate(() => { SD2.map.time('night'); const F = SM_TOWN.feast && SM_TOWN.feast(); if (F) { const G = SM_TOWN.game(); G.S.day = F.info().fd; G.S.min = 21 * 60; G.mark(); F.sec(true); } else SM_TOWN.storyAt('f1', 3); }); await W8(2000);
+    const pot = await p.evaluate(() => { const F = SM_TOWN.feast && SM_TOWN.feast(); if (F) { F.sec(true); const I = F.info(); return I.on && I.site && SM_TOWN.feastP().length >= 3 ? [I.site[0], I.site[1]] : null; } const f = SM_TOWN.fest(); return f && f.guests && f.guests.length ? f.pot : null; });
     if (pot) { await p.evaluate(a => SD2.map.player.teleport([a[0] + 6, SM_TOWN.ground(a[0] + 6, a[1] + 6) + 0.3, a[1] + 6]), pot); const r = await until(() => SM_TOWN.music.song === 'fest', null, 6000); const Mf = await mus(); ok(r.r, '잔치 밤 잔치 자리 = 「' + (Mf.title || [])[0] + '」 선율 ' + Mf.lead);
       await p.evaluate(a => SD2.map.player.teleport([a[0] + 300, SM_TOWN.ground(a[0] + 300, a[1]) + 0.3, a[1]]), pot); const r2 = await until(() => SM_TOWN.music.song === 'night', null, 6000); ok(r2.r, '잔치 자리에서 300m 떨어지면 = 밤 곡'); }
     else ok(false, '잔치 손님 자리를 못 세움');

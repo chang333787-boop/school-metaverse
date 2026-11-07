@@ -83,8 +83,11 @@ async function browserPart() {
       if (!BN || !BN.money) { ok(false, '[B3] 채울 꾸러미가 없음'); return; }
       await ev(o => { const G = SM_TOWN.game(); for (const [e, n] of Object.entries(o.need)) { const k = n - ((o.put || {})[e] || 0); if (k > 0) G.add(e, k, 'mv:test'); } SM_TOWN.bagRefresh(); }, BN);
       await capRd(); const m0 = await money();
+      const n0 = await ev(() => { if (!window.__BL) { window.__BL = []; new MutationObserver(L => { for (const r of L) { const t = r.target.nodeType === 3 ? r.target.parentNode : r.target; if (t && t.id === 'hudBan' && t.textContent) window.__BL.push(t.textContent); } }).observe(document.body, { subtree: true, childList: true, characterData: true }); } return window.__BL.length; });   /* 화면에 실제로 뜬 띠 기록 */
       for (let i = 0; i < 12; i++) { const done = await ev(id => (SM_TOWN.bundles().find(q => q.id === id) || {}).done, BN.id); if (done) break; await ev(() => SM_TOWN.openBundles()); await W8(200); await ev(id => { const b9 = document.querySelector('.twn-p [data-b="' + id + '"]'); if (b9) b9.click(); }, BN.id); await W8(250); }
-      const ban = await ev(() => (document.getElementById('hudBan') || {}).textContent || ''), m1 = await money(), owe = await ev(() => ({ ...(SM_TOWN.game().S.owe || {}) })), w = BN.money.toLocaleString('ko-KR') + '원';
+      await closeAll(); let ban = '';   /* FIX-4A: 창이 떠 있는 동안 띠는 기다렸다가 창을 닫으면 뜸(READ-1·PLAY-2) — 창을 닫은 뒤 뜬 꾸러미 띠를 읽음(앞 요리 띠가 남아 보이던 것) */
+      for (let i = 0; i < 30 && !ban; i++) { ban = (await ev(n => window.__BL.slice(n), n0)).find(t => /채웠어요/.test(t)) || ''; if (!ban) await W8(200); }
+      const m1 = await money(), owe = await ev(() => ({ ...(SM_TOWN.game().S.owe || {}) })), w = BN.money.toLocaleString('ko-KR') + '원';
       ok(/채웠어요/.test(ban) && m1 === m0, '[B3] 총량을 다 쓴 날 꾸러미를 채움 = 지갑 그대로 · 배너 「' + ban.slice(0, 70) + '」');
       ok(!ban.includes('채웠어요! ' + w), '[B3] 배너에 못 받은 돈(' + w + ')을 받은 것처럼 쓰지 않음');
       ok((owe['bundle:' + BN.id] | 0) === BN.money && /나머지/.test(ban), '[B3] 못 받은 몫은 남겨 두고 「나머지 … 내일」 한 줄 (owe ' + JSON.stringify(owe) + ')');

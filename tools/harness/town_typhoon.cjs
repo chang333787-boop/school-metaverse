@@ -173,7 +173,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     { const f = i0.fix.find(x => x.k !== 'boat' && x.k !== 'vinyl' && x.k !== 'sign') || i0.fix[0]; await setMin(10 * 60); await tp(f.at[0], f.at[1]); if (f.k === 'sign' || f.k === 'vinyl') { await ev(() => { SM_TOWN.game().S.typh.mat.rope = 1; }); } await D('fix', [f.id]); const i9 = await I(), m9 = Object.entries(i9.mem).find(([k]) => k.startsWith(f.k + ':'));
       ok(i9.fix.find(x => x.id === f.id).st === 'done' && m9 && m9[1].k === 'both', '같이 고침 = 흔적 사라짐 · 기억 = 아쉬움+고마움(' + f.k + ')'); }
     // 이웃 말(기억) — 고마움 자리 곁
-    { const m = Object.values((await I()).mem).find(o => o.k === 'thx'); if (m) { await tp(m.at[0] + 1, m.at[1] + 1); await W8(2400); ok(/고마워|고맙/.test(await toastT()), '고마움 기억 = 그 이웃 곁에서 한 줄 — ' + (await toastT()).slice(0, 50)); } }
+    { const m = Object.values((await I()).mem).find(o => o.k === 'thx'); if (m) { await tp(m.at[0] + 1, m.at[1] + 1); let tt = ''; for (let k = 0; k < 40 && !/💬.*(고마워|고맙)/.test(tt); k++) { await W8(300); tt = await toastT(); } ok(/💬.*(고마워|고맙)/.test(tt), '고마움 기억 = 그 이웃 곁에서 한 줄 — ' + tt.slice(0, 50)); } }   /* FIX-4A: 이웃 말(저절로 · lv1)은 방금 고친 결과 알림('같이 고쳤어요. … 고마워!')이 읽힌 뒤에 뜸 — 이웃 말(💬)을 기다려 봄(결과 알림의 '고마워'로 통과하지 않게) */
     // 「다 함」 판: 새 판에서 모든 부탁을 해 둠 → 결과 = 흔적 0
     await D('finish'); await ev(() => SM_TOWN.typhoon.start()); await closeAll(); const i1 = await I();
     await ev(() => { const s = SM_TOWN.game().S.typh; for (const q of s.reqs) { q.st = 'done'; q.dd = SM_TOWN.game().S.day; } s.path.ok = s.path.told = SM_TOWN.game().S.day; s.d0 = SM_TOWN.game().S.day - 7; s.said.k7 = 1; SM_TOWN.game().mark(); }); await D('result'); await W8(1500); await closeAll(); const i2 = await I();

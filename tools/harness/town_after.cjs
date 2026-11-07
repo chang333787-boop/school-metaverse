@@ -18,6 +18,9 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     const closeAll = async () => { for (let i = 0; i < 8; i++) { if (!await ev(() => !!(document.querySelector('.twn-p') || document.querySelector('.twn-dlg')))) break; await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); }); await W8(200); if (await ev(() => !!(document.querySelector('.twn-p') || document.querySelector('.twn-dlg')))) { await p.keyboard.press('Escape'); await W8(200); } } };
     const shot = async n => { if (!SHOTS) return; await p.screenshot({ path: SHOTS + '/' + n + '.png' }); console.log('  📷 ' + SHOTS + '/' + n + '.png'); };
     const ban = () => ev(() => (document.getElementById('hudBan') || {}).textContent || '');
+    /* FIX-4A: 화면에 실제로 뜬 띠 기록(READ-1 — 앞 띠가 다 읽힐 때까지 다음 띠는 줄 섬) · banMark() 뒤 re에 맞는 띠가 뜰 때까지 ms만큼 기다림(못 뜨면 마지막 띠) */
+    const banMark = () => ev(() => { if (!window.__BL) { window.__BL = []; new MutationObserver(L => { for (const r of L) { const t = r.target.nodeType === 3 ? r.target.parentNode : r.target; if (t && t.id === 'hudBan' && t.textContent) window.__BL.push(t.textContent); } }).observe(document.body, { subtree: true, childList: true, characterData: true }); } return window.__BL.length; });
+    const banWait = async (n0, re, ms) => { let B = []; for (let t = 0; t < ms; t += 250) { B = await ev(n => window.__BL.slice(n), n0); const f = B.find(x => re.test(x)); if (f) return f; await W8(250); } return B[B.length - 1] || await ban(); };
     const tp = async (x, z) => { await ev(([x, z]) => SD2.map.player.teleport([x, SM_TOWN.ground(x, z) + 0.05, z]), [x, z]); await W8(150); };
     const look = async (n, P, T) => { if (!SHOTS) return; await closeAll(); await ev(([P, T]) => { SD2.map.player.teleport([P[0], SM_TOWN.ground(P[0], P[1]) + 0.05, P[1]]); SD2.map.player.face(Math.atan2(T[0] - P[0], -(T[1] - P[1])) * 180 / Math.PI); }, [P, T]); await W8(2400); await shot(n); };
     const F = () => ev(() => SM_TOWN.feast().info()), AF = () => ev(() => SM_TOWN.after().info()), SI = () => ev(() => SM_TOWN.seasonEv().info());
@@ -70,8 +73,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     // 두 번째 해 단오를 한 번에 끝냄 → 지난해와 견준 배너 · 기록
     await sday(dano2, 10 * 60); S9 = await SI(); ok(S9.id === 'dano' && S9.yr === 2, '두 번째 해 단오 날 = 해 2');
     const far = await ev(() => { const P = SM_TOWN.seasonEv().dbg.at(-8, 6); return P; }); await tp(far[0], far[1]);
-    const cpk = (await SI()).st.cpk; await D('q', String(cpk)); await D('use', 'cp'); await W8(250); await D('q', 'ok'); await D('use', 'cake'); await W8(250); await D('q', 'b'); await D('use', 'ring'); await W8(900);
-    S9 = await SI(); const b2 = await ban(), lastP = S9.past[S9.past.length - 1] || {};
+    const bn2 = await banMark(); const cpk = (await SI()).st.cpk; await D('q', String(cpk)); await D('use', 'cp'); await W8(250); await D('q', 'ok'); await D('use', 'cake'); await W8(250); await D('q', 'b'); await D('use', 'ring'); await W8(900);
+    S9 = await SI(); const b2 = await banWait(bn2, /두 번째 해 단오|Dano/, 9000), lastP = S9.past[S9.past.length - 1] || {};   /* 씨름 두 줄 띠 뒤에 뜸(1.2초씩) */
     ok(S9.st.done === 1 && lastP.id === 'dano' && lastP.yr === 2 && lastP.wr === 0, '단오 다 함 → 기록 ' + JSON.stringify(lastP));
     ok(/두 번째 해 단오/.test(b2) && /지난해보다 다시 고른 것이 줄었어요/.test(b2), '견준 배너 = 「' + b2 + '」');
 
@@ -109,7 +112,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     // ④ 장인 칭호
     const pickK = await ev(() => { const P = { strawberry: '🍓', shiitake: '🍄', pear: '🍐', beehive: '🍯', cabbage: '🥬', potato: '🥔', fisher: '🐟', saltpan: '🧂', clam: '🐚', seaweed: '🌿', pasture: '🥛' }, ch = SM_TOWN.after().dbg.chain().join(' '); return Object.keys(P).find(k => ch.includes(P[k])) || 'strawberry'; });
     await ev(k => { const G = SM_TOWN.game(); G.S.lad.mg[k] = { lv: 4, z: 0, n: 6, best: { lv: 4, g: 2, n: 7 }, last: { lv: 4, g: 2, n: 7 } }; G.mark(); }, pickK);
-    await ev(() => SM_TOWN.after().sec()); await W8(300); A9 = await AF(); const b4 = await ban(), at = A9.ti.at['lad:' + pickK];
+    const bn4 = await banMark(); await ev(() => SM_TOWN.after().sec()); await W8(300); A9 = await AF(); const b4 = await banWait(bn4, /장인|명수|master/i, 13000), at = A9.ti.at['lad:' + pickK];   /* 앞 '교류 끝 +300원' 띠(수 든 정보 띠)가 다 읽힌 뒤에 뜸 */
     ok(A9.ti.got['lad:' + pickK] != null && A9.ti.pick === 'lad:' + pickK && /장인|명수/.test(b4), '사다리 4칸 잘함 → 칭호 「' + b4 + '」');
     ok(!!at && A9.marks === 1, '장인 깃발 = 일터 곁 ' + JSON.stringify(at) + ' · 합친 상자 하나');
     const tt = await ev(() => SM_TOWN.after().title()); ok(Array.isArray(tt) && /장인|명수/.test(tt[0]), '솜씨 창 머리 칭호 = ' + JSON.stringify(tt));

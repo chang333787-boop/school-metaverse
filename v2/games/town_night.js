@@ -11,7 +11,7 @@
 //   사람(②): 야시장·강변 쪽으로 모이는 길 사람(LIFE eveHubs) · 시간마다 거리 사람 수(LIFE pvF · 비 오는 밤 = 텅) · 일꾼 저녁 갈래는 town_routine.js ROUTINE-3
 //   지킴: 판타지·귀신·무서움 X · 실명 X(이름 없는 역할) · 사실만(제철·온 곳·집어등·북극성·점자블록·유실물) · 셈 문제 X(손가락 세기·견주기만) · 막대·꾹 X · 알림 say(t, s, 1) · 홍보판(SM_PROMO) X
 //   렉: 새 Light X(불빛 = MeshBasic · 합친 부품 buildParts) · 매 프레임 일 0(1초 칸 sec · 별 = 셰이더가 카메라를 따라감) · 무리마다 그리기 2~3(보일 때만)
-import { readSec } from './town_read.js?v=3';   /* READ-1 글 길이 → 읽을 틈 */
+import { readSec } from './town_read.js?v=4';   /* READ-1 글 길이 → 읽을 틈 */
 export const NIGHT_V = 1;
 const T2 = (ko, en) => [ko, en];
 export const NHRS = { mkt: [1080, 1380], sea: [1170, 1440], fish: [1140, 1440], star: [1170, 1440], patrol: [1230, 1410], late: [1110, 1440], auction: [360, 510], bake: [360, 420] };
