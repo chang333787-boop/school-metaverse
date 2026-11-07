@@ -47,7 +47,7 @@ const CSS = PHOTO_CSS + `
 @keyframes pcNo{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 .pc-ret{position:fixed;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #2b2622;pointer-events:none;z-index:30}
 .pc-ret::after{content:'';position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#fff}
-.pc-hud{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;z-index:31;font:800 15px/1.2 system-ui,sans-serif}
+.pc-hud{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;z-index:31;font:800 17px/1.2 system-ui,sans-serif}
 .pc-hud button{font:inherit;color:#fff;background:#3f8f4e;border:3px solid #2b2622;border-radius:12px;padding:8px 16px;box-shadow:0 4px 0 #2b2622;touch-action:none;user-select:none}
 .pc-hud .g{width:180px;height:16px;border:3px solid #2b2622;border-radius:10px;background:#fff;overflow:hidden}
 .pc-hud .g>i{display:block;height:100%;width:0;background:#f2a93b}

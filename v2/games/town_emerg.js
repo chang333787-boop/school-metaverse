@@ -55,7 +55,7 @@ const LOOKC = { salt: T2('하얀 윗옷에 밀짚모자를 썼어요', 'A white 
   bee: T2('위아래 모두 하얀 옷이에요', 'All white clothes, top to bottom'), reach: T2('밀짚모자를 쓰고 사다리 곁에 있어요', 'A straw hat, by a ladder') };
 const GIFT = { shiitake: '🍄', cabbage: '🥬', potato: '🥔', lumber: '🌰', beehive: '🍯', pasture: '🥛', saltpan: '🧂', paddy: '🍚', strawberry: '🍓', pear: '🍐', fisher: '🐟', clam: '🐚' };   /* 보호자가 고맙다고 주는 것 = 그 일에서 나는 것(town_news GIFT_OF와 같은 짝) */
 
-const CSS = `.em-hud{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;z-index:31;font:800 15px/1.2 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+const CSS = `.em-hud{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;z-index:31;font:800 17px/1.2 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
 .em-hud button{font:inherit;color:#fff;background:#3f8f4e;border:3px solid #2b2622;border-radius:12px;padding:8px 16px;box-shadow:0 4px 0 #2b2622;touch-action:none;user-select:none;-webkit-user-select:none}
 .em-hud .g{width:180px;height:16px;border:3px solid #2b2622;border-radius:10px;background:#fff;overflow:hidden}.em-hud .g>i{display:block;height:100%;width:0;background:#f2a93b}
 .em-hud .lk{display:flex;gap:6px;background:#fff8ea;border:3px solid #2b2622;border-radius:12px;padding:6px 10px;color:#2b2420}.em-hud .lk b{opacity:.45}.em-hud .lk b.half{opacity:.8}.em-hud .lk b.on{opacity:1;color:#3f8f4e}

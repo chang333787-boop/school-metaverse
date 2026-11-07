@@ -4,6 +4,7 @@
 //   끝 = 결과 3단계 + '💡 알고 있었나요?' 사실 한 줄(사실만) · 점수 0~3 = 옛 보상 표 그대로 · 실패도 경험치 1(마을 쪽) · 셈 X · 한 판 15~25초
 //   솜씨 perk 'zone'(zw 1~1.25) = 쉬워지는 쪽으로(시간 · 초록 폭 · 삽질 수 · 벌레 느리게)
 //   화면 = DOM + CSS(놀이 창이 열린 동안만 · 마을 tick이 부르는 tick(dt) 하나 — 따로 rAF X) · 입력 = down()/up()(E·스페이스·큰 단추) + key(코드, 반복)(화살표·WASD·숫자) + 누르기·끌기(마우스·터치)
+import { readSec } from './town_read.js?v=3';   /* PLAY-2: 끝 글이 머무는 시간 = 다 읽을 만큼(READ-1) */
 import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2'; import { mkSalt } from './town_salt.js?v=2'; import { ladVal, LADP } from './town_lad.js?v=6';   /* LADDER-2 도전 칸마다 조건 값 */   /* SALT-2 염전 꼬임 넷 */   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
 export const MG_V = 3;
 const KIND = { tuho: 'toss', fisher: 'tug', rod: 'tug', seaweed: 'spread', oyster: 'gauge', strawberry: 'ripe', shiitake: 'ripe', saltpan: 'salt', beehive: 'comb', potato: 'dig', clam: 'dig', cabbage: 'sort', pear: 'cover', lumber: 'order', pasture: 'feed' };
@@ -39,6 +40,8 @@ const FACT = {
   paddylife: ['논은 물이 고인 습지라서 개구리, 우렁이, 미꾸라지 같은 많은 생물의 집이 돼요', 'A rice paddy is a wetland — home to frogs, snails, loaches and more'],
   terrace: ['다랑이 논은 산비탈을 계단처럼 깎아 만든 논이에요. 위 논의 물꼬를 열면 물이 아래 논으로 차례로 흘러요', 'Terraced paddies are cut into hillsides like steps. Opening the upper gate lets water flow down paddy by paddy'],
 };
+// PLAY-2 판 크게: 판이 1.2~1.9배로 커져도 그림 판이 흐리지 않게 — 픽셀만 늘리고 그리는 좌표(w·h)는 그대로(그리는 코드·누르기 셈 그대로)
+const hiCv = (cv, w, h) => { const k = Math.min(3, Math.max(2, Math.ceil((devicePixelRatio || 1) * 1.6))); cv.width = Math.round(w * k); cv.height = Math.round(h * k); const g = cv.getContext('2d'); g.scale(cv.width / w, cv.height / h); return g; };
 const CSS = `
 .twn-play .mg{display:flex;flex-direction:column;gap:6px;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 .twn-play .pb.mg-end .mg{opacity:.55;transition:opacity .2s}
@@ -509,7 +512,7 @@ function mkPlant(c) { const X = jx(c), lv = c.lv, M = X.mem && typeof X.mem === 
   let water = old.includes('water') ? 'dry' : (['dry', 'deep', 'ok'][(Math.random() * 3) | 0]), wOk = false, wBad = false, ph = 'water', qi = 0, side = 0, cur = [0, 0], pick = [null, null], lock = 0, nx = null, miss = 0, gt = 0, revived = 0, newBad = 0, turned = false, wsel = 1;
   const sick = [];
   c.mg.innerHTML = '<div class="pdw"><div class="pdx"></div><div class="pdf" style="position:relative;max-width:' + CW + 'px;margin:0 auto"><canvas width="' + CW + '" height="' + CH + '" style="width:100%;display:block;border-radius:8px"></canvas><div class="pdk"></div></div></div>';
-  const W9 = c.mg.querySelector('.pdx'), cv = c.mg.querySelector('canvas'), g = cv.getContext('2d'), KB = c.mg.querySelector('.pdk'), TB = timeBar(c, 45 * c.zw);
+  const W9 = c.mg.querySelector('.pdx'), cv = c.mg.querySelector('canvas'), g = hiCv(cv, CW, CH), KB = c.mg.querySelector('.pdk'), TB = timeBar(c, 45 * c.zw);
   function drawRow(yl, yr, col, wl) { for (let x = FX0 + RS / 2; x < FX1; x += RS) { const u = (x - FX0) / (FX1 - FX0), y = yl + (yr - yl) * u; g.strokeStyle = wl ? '#a8a070' : col; g.lineWidth = 2.4; g.beginPath(); g.moveTo(x, y + 5); g.lineTo(x - 4, y - 5); g.moveTo(x, y + 5); g.lineTo(x, y - 7); g.moveTo(x, y + 5); g.lineTo(x + 4, y - 5); g.stroke(); } }
   function draw() { g.fillStyle = '#6b8f4a'; g.fillRect(0, 0, CW, CH); g.fillStyle = water === 'dry' ? '#9a8a6a' : water === 'deep' ? '#4f8fc0' : '#7fb0c8'; g.fillRect(FX0 - 8, 6, FX1 - FX0 + 16, CH - 12);   /* 논둑(초록) · 논(물 높이마다 빛깔) */
     for (const s of [0, 1]) { const x = s ? FX1 + 14 : FX0 - 22; g.fillStyle = '#c8a070'; g.fillRect(x - 3, Y0 - 6, 14, CH - Y0); for (let j = 0; j < NMK(s); j++) { const y = mkY(s, j); g.fillStyle = '#2b2420'; g.fillRect(x - 3, y - 1, fine(s) && j % 2 ? 8 : 14, 2); } }   /* 둑 눈금 자 */
@@ -883,8 +886,9 @@ function mkStill(c) { const T = 22 * c.zw, N = PADLIFE.length; let still = 0, pe
   const scare = () => { still = 0; if (peek >= 0) { hide(); pd9.classList.remove('rip'); void pd9.offsetWidth; pd9.classList.add('rip'); c.say(c.T('첨벙! 너무 빨리 움직였어요. 살금살금 다가가요', 'Splash! Too fast — move slowly')); } };
   const rec = i => { const s = S[i]; if (c.done || !s || s.f || peek !== i) return; s.f = 1; found++; peek = -1; s.e.classList.remove('v'); s.e.classList.add('f'); s.e.insertAdjacentHTML('beforeend', '<em>' + c.T(s.q[1][0], s.q[1][1]) + '</em>'); c.snd('pick'); cool = 0.6;
     c.say(s.q[0] + ' ' + c.T(s.q[1][0] + ' — ' + s.q[2][0], s.q[1][1] + ' — ' + s.q[2][1]) + ' (' + found + '/' + N + ')'); if (found >= N) c.finish(3); };
-  const pm = e => { const now = performance.now(), d = lx >= 0 ? Math.hypot(e.clientX - lx, e.clientY - ly) : 0, v = d / Math.max(16, now - lt) * 1000; if (v > 650 * c.zw) scare(); lx = e.clientX; ly = e.clientY; lt = now; };   /* 살금살금(천천히)은 괜찮고 휙 움직이면 숨음 */
-  const pdn = e => { const t9 = e.target.closest('.cr'); e.preventDefault(); lx = e.clientX; ly = e.clientY; if (!t9) return; rec(S.findIndex(s => s.e === t9)); };
+  let zf = 0; const zOf = () => { const w9 = pd9.offsetWidth; return w9 ? Math.max(0.5, pd9.getBoundingClientRect().width / w9) : 1; };   /* PLAY-2: 판이 커진 만큼 화면 속도를 나눔(같은 손 빠르기 = 같은 판정 · 규칙 그대로) */
+  const pm = e => { if (!zf) zf = zOf(); const now = performance.now(), d = lx >= 0 ? Math.hypot(e.clientX - lx, e.clientY - ly) / zf : 0, v = d / Math.max(16, now - lt) * 1000; if (v > 650 * c.zw) scare(); lx = e.clientX; ly = e.clientY; lt = now; };   /* 살금살금(천천히)은 괜찮고 휙 움직이면 숨음 */
+  const pdn = e => { zf = zOf(); const t9 = e.target.closest('.cr'); e.preventDefault(); lx = e.clientX; ly = e.clientY; if (!t9) return; rec(S.findIndex(s => s.e === t9)); };
   pd9.addEventListener('pointermove', pm); pd9.addEventListener('pointerdown', pdn);
   c.say(c.T('가만히 지켜봐요. 생물이 보이면 살금살금 다가가 눌러요. 휙 움직이면 숨어요 (E = 지금 보이는 것)', 'Keep still and watch. When a creature shows, move slowly and tap it — quick moves scare it (E = the one showing)'));
   return { go: '', down() { if (peek >= 0) rec(peek); }, key(code) { if (/^(Arrow|Key[WASD]$)/.test(code)) { scare(); return true; } return false; },
@@ -918,7 +922,7 @@ function mkGate(c) { const T = 24 * c.zw, IN = 0.11, FL = 0.12, LO = 0.5, HI = 0
 const STEP3 = [['한 걸음 뒤', 'Step back'], ['제자리', 'Stay'], ['한 걸음 앞', 'Step forward']];
 function mkToss(c) { const lv = c.lv, N = 5, W = 440, H = 220, GY = 190, LX = 74, SPX = 38, R0 = 4;
   c.mg.innerHTML = '<canvas width="' + W + '" height="' + H + '" style="width:100%;max-width:440px;display:block;margin:0 auto;border-radius:10px;background:#eaf3ff"></canvas><div class="bx3 pick ts"></div><div class="bx3 pick th"></div>';
-  const cv = c.mg.querySelector('canvas'), g = cv.getContext('2d'), BS = c.mg.querySelector('.ts'), BH = c.mg.querySelector('.th'), TB = timeBar(c, 40 * c.zw);
+  const cv = c.mg.querySelector('canvas'), g = hiCv(cv, W, H), BS = c.mg.querySelector('.ts'), BH = c.mg.querySelector('.th'), TB = timeBar(c, 40 * c.zw);
   BS.innerHTML = STEP3.map((t, j) => '<button data-st="' + (j - 1) + '"><small>' + c.T(t[0], t[1]) + '</small></button>').join(''); BH.innerHTML = [['낮게 던지기', 'Throw low'], ['높게 던지기', 'Throw high']].map((t, j) => '<button data-h="' + j + '"><small>' + (j + 1) + '. ' + c.T(t[0], t[1]) + '</small></button>').join('');
   let n = 0, hits = 0, ph = 'aim', s = 0, hsel = 0, P = 4, w = 0, A = null, lock = 0, last = '', miss = 0, br = -9; const lying = [];   /* br = HARD-1 명인 칸 낮은 나뭇가지가 드리운 설 자리(그 밑에선 높게 던지면 가지에 걸림) */
   const wlOf = w9 => (lv >= 3 && Math.abs(w9) >= 2 ? Math.sign(w9) : 0), land = (s9, h9) => s9 + R0 + (h9 ? w : wlOf(w));
@@ -1162,20 +1166,24 @@ export function createMini(kind, o) { css();
   const c = { root: o.root, mg: o.root.querySelector('.mg'), msgEl: o.root.querySelector('.msg'), go: o.root.querySelector('.go'), en: !!o.en, zw: Math.max(1, o.zw || 1), k: o.k, sea: o.sea, x: o.x || null, done: false, lv: Math.max(1, Math.min(LADP[kind] && LADP[kind].v.length >= 5 ? 5 : 4, o.lv | 0 || 1)) }; c.lp = ladVal(kind, c.lv);   /* HARD-1 명인 칸(5) = 다섯째 값이 있는 갈래만 */   /* LADDER-2 lp = 이 칸의 조건 값(없는 놀이 = null → 놀이 틀은 1칸 값으로) */   /* x = 놀이별 자료(부엌: 요리법·사다리·손님·날씨 · KITCHEN-1) */
   c.h9 = { sitPick, flagSide, cloudSvg };   /* DEPTH-2 소금(town_salt.js)이 쓰는 상황 고르기·그림 */
   c.T = (ko, e2) => (c.en ? e2 : ko); c.say = s => { if (c.msgEl && c.msgEl.textContent !== s) c.msgEl.textContent = s; }; c.snd = k => { if (o.sfx) o.sfx(k); }; c.tone = (...a) => { if (o.tone) o.tone(...a); };
-  let endT = -1, score = 0, cntT = -1, recR = null;
-  c.finish = ok => { if (c.done) return; c.done = true; score = Math.max(0, Math.min(3, ok | 0)); if (o.grade === false) { endT = 0; return; } c.root.classList.add('mg-end'); const f9 = FACT[kind === 'plant' || kind === 'cut' ? kind : c.k], tl = g.tail ? g.tail() : ''; c.say(gradeText(score, c.en) + (tl ? ' ' + tl : f9 ? (c.en ? ' 💡 Did you know? ' : ' 💡 알고 있었나요? ') + f9[c.en ? 1 : 0] : '')); c.snd(score >= 3 ? 'done' : score ? 'ding' : 'buzz'); endT = f9 || tl ? 3.2 : 0.8;   /* PLAY-3: 끝 = 결과 + 사실 한 줄(3.2초) */
+  let endT = -1, endA = 0, score = 0, cntT = -1, recR = null;
+  c.finish = ok => { if (c.done) return; c.done = true; score = Math.max(0, Math.min(3, ok | 0)); if (o.grade === false) { endT = 0; return; } c.root.classList.add('mg-end'); const f9 = FACT[kind === 'plant' || kind === 'cut' ? kind : c.k], tl = g.tail ? g.tail() : '', gt = gradeText(score, c.en), rest = tl ? ' ' + tl : f9 ? (c.en ? ' 💡 Did you know? ' : ' 💡 알고 있었나요? ') + f9[c.en ? 1 : 0] : '';
+    if (c.msgEl) { c.msgEl.textContent = ''; const b9 = document.createElement('b'); b9.className = 'mgres'; b9.textContent = gt; c.msgEl.appendChild(b9); if (rest) c.msgEl.appendChild(document.createTextNode(rest)); }   /* PLAY-2: 끝 = 결과(잘했어요)가 크게 한 줄 + 사실 · 글(textContent)은 예전과 같음 */
+    c.snd(score >= 3 ? 'done' : score ? 'ding' : 'buzz'); endA = 0; endT = f9 || tl ? Math.max(3.2, Math.min(6, readSec(gt + rest))) : 0.8;   /* PLAY-3: 끝 = 결과 + 사실 한 줄 · PLAY-2: 머무는 시간 = 글 길이만큼(READ-1 readSec · 3.2~6초 — 다른 시험·놀이 흐름이 기다리는 7초 안) · E·스페이스·결과 글 누르기 = 바로 닫기(1초 뒤부터) */
     if (o.onRec) { try { recR = o.onRec(score, cntNow()); } catch (er) { console.warn('[town_minigame] 기록 오류', er); recR = null; }   /* LADDER-2 끝 창 = 내 최고 한 줄(+ 칸이 바뀌면 다음 판 한 줄) · 새 최고 = 작은 연출 */
       if (recR && recR.lines && recR.lines.length) { const el = document.createElement('div'); el.className = 'mgrec' + (recR.neu ? ' neu' : ''); for (const t of recR.lines) { const d = document.createElement('div'); d.textContent = t; el.appendChild(d); } const ms = c.root.querySelector('.msg'); if (ms) ms.after(el); else c.root.appendChild(el); if (recR.neu && o.onBest) o.onBest(el); endT = Math.max(endT, recR.neu ? 3.6 : 3.2); } } };
   const cntNow = () => (cntT >= 0 ? cntT : g && g.cnt ? g.cnt() | 0 : -1);   /* 모은 수(딸기·감자·고르게 편 김…) · 모르는 놀이 = -1 */
   if (!MK[kind]) console.warn('[town_minigame] 모르는 놀이 갈래 → 익은 것 고르기로:', kind, o.k);   /* 옛 기본값 mkBar(타이밍 막대)는 10-24에 지움 */
   const g = (MK[kind] || mkRipe)(c);
   const pd = e => { e.preventDefault(); if (!c.done) g.down(); }, pu = () => { if (g.up) g.up(); };
+  const skip = () => { if (c.done && endT > 0 && endA > 1) endT = 0.001; }, pskip = e => { if (!e.target.closest || !e.target.closest('.x,.twn-x,.mg')) skip(); };   /* PLAY-2: 끝 글을 읽었으면(1초 뒤부터) E·스페이스·결과 글 누르기로 바로 닫음 — 놀이 칸(.mg)을 계속 누르던 손은 안 닫힘 */
+  c.root.addEventListener('pointerdown', pskip);
   if (c.go && !g.go) c.go.style.display = 'none';   /* 손으로 하는 놀이(끌기·나누기) = 큰 단추 없음 */
   if (c.go && g.go) { c.go.textContent = g.go; c.go.addEventListener('pointerdown', pd); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) c.go.addEventListener(ev, pu); }
   return { kind,
     get ok() { return score; }, get done() { return c.done; }, get extra() { return g.extra ? g.extra() : null; }, get dbg() { return g.dbg || null; }, get lv() { return c.lv; }, get lp() { return c.lp; }, get cnt() { return cntNow(); }, get rec() { return recR; },
     finish(ok, n) { if (c.done) return; if (n != null) cntT = Math.max(0, n | 0); c.finish(ok); },   /* 시험(town_ladder.cjs): 점수·모은 수를 정해 끝내기 — 끝 창·기록 길은 그대로 */
-    down() { if (!c.done) g.down(); }, up() { if (!c.done && g.up) g.up(); }, key(code, rep) { return !c.done && g.key ? !!g.key(code, rep) : false; },
-    tick(dt) { if (dt > 0.1) dt = 0.1; if (!c.done) { g.tick(dt); return; } if (endT >= 0 && (endT -= dt) <= 0) { endT = -1; o.onEnd(score); } },
-    dispose() { c.done = true; endT = -1; if (g.dispose) g.dispose(); if (c.go) { c.go.removeEventListener('pointerdown', pd); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) c.go.removeEventListener(ev, pu); } } };
+    down() { if (!c.done) g.down(); else skip(); }, up() { if (!c.done && g.up) g.up(); }, key(code, rep) { return !c.done && g.key ? !!g.key(code, rep) : false; },
+    tick(dt) { if (dt > 0.1) dt = 0.1; if (!c.done) { g.tick(dt); return; } endA += dt; if (endT >= 0 && (endT -= dt) <= 0) { endT = -1; o.onEnd(score); } },
+    dispose() { c.done = true; endT = -1; c.root.removeEventListener('pointerdown', pskip); if (g.dispose) g.dispose(); if (c.go) { c.go.removeEventListener('pointerdown', pd); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) c.go.removeEventListener(ev, pu); } } };
 }
