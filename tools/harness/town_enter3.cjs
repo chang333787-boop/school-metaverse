@@ -77,9 +77,12 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     ok(memOk === R2.length, '다음 날 들어가면 지난번 일 기억 말 (' + memOk + '/' + R2.length + ')');
     const jks = new Set([...look.values()].map(v => v[0])), regs = new Set([...look.values()].map(v => v[1])); ok(jks.size >= 3 && regs.size >= 2, '집 안 모습이 이웃 일·동네로 다름 (일 ' + [...jks].join('·') + ' · 동네 ' + [...regs].join('·') + ')');
     // ③-2 부탁 갈래 열(일곱 + 그 집만의 일 셋)을 한 번씩 — 오늘 부탁을 정해 두고(기록 pk·pd) 들어가 풂 · 이웃 일 돕기는 일이 다른 집 넷
-    { const KS = ['tidy', 'cook', 'water', 'fix', 'table', 'job', 'find', 'bday', 'move', 'guest'], res = []; let jobs = new Set(), hi = 0;
+    { const KS = ['tidy', 'cook', 'water', 'fix', 'table', 'job', 'find', 'bday', 'move', 'guest'], res = [], ASK = [], ASKBAD = []; let jobs = new Set(), hi = 0;
       const force = async (q, kind) => { await enter(q.i); const id = (await EI()).id; await leave(); await ev(([id, kind]) => { const G = SM_TOWN.game().S; G.day += 1; G.min = 10 * 60; const s = SM_TOWN.ent().s(); const r = s.b[id] || (s.b[id] = { n: 1, d: -1, t: 0 }); r.pk = kind; r.pd = G.day; r.dd = -1; r.n = Math.max(1, r.n | 0); }, [id, kind]); };
-      const run = async (q, kind) => { await force(q, kind); if (!await enter(q.i)) return 'enter'; const I = await EI(); if (!I.plan || I.plan.kind !== kind) return 'plan ' + (I.plan && I.plan.kind); if (kind === 'job') jobs.add(I.jk);
+      /* FIX-4E(11-07): 이웃 부탁 E(🙋)와 그 방의 다른 E(정리 칸 · 찾기 자리 · 일 도구 · 앉기 · 나가기 · 이곳 알아보기) 사이 2.5m 이상 + 문에서 걸어 닿음 — 부탁 갈래마다 소품·찾기 자리가 달라 갈래마다 봄 */
+      const askGap = async tag => { const g = await ev(() => { const sp = SM_TOWN.indoor.spawn(), H = SD2.map.interact.list().filter(h => !h.off && Math.abs(h.y - sp[1]) < 2.5 && Math.hypot(h.x - sp[0], h.z - sp[2]) < 16), v = H.find(h => /^🙋 /.test(h.label)); if (!v) return null; let m = 1e9, who = ''; for (const h of H) if (h !== v) { const d = Math.hypot(h.x - v.x, h.z - v.z); if (d < m) { m = d; who = h.label; } } return { d: +m.toFixed(2), who: who.slice(0, 18) }; }), c = await ev(() => SM_TOWN.indoor.check()), un = (c && c.hots || []).some(h => h.ok === false && /^🙋 /.test(h.label));
+        ASK.push(tag + ' ' + (g ? g.d + 'm(' + g.who + ')' : '부탁 E 없음') + (un ? ' 못 닿음' : '')); if (!g || g.d < 2.5 || un) ASKBAD.push(ASK[ASK.length - 1]); };
+      const run = async (q, kind) => { await force(q, kind); if (!await enter(q.i)) return 'enter'; const I = await EI(); if (!I.plan || I.plan.kind !== kind) return 'plan ' + (I.plan && I.plan.kind); if (kind === 'job') jobs.add(I.jk); await askGap(kind + '·' + q.reg + (q.cat === 'apt' ? '·아파트' : ''));
         await E('ent:ask', async () => !!(await panel())); if (kind === 'tidy') { await closeAll(); const I2 = await EI(); const h = I2.task && I2.extra.find(x => x.k === 'ent:s' + I2.task.slot); if (!h) return 'notask'; await pressAt(h.at); }
         else if (kind === 'find') { await closeAll(); const I2 = await EI(); const h = I2.extra.find(x => x.k === 'ent:f' + I2.find.at); if (!h) return 'nospot'; await pressAt(h.at); }
         else { if (shotDir && shotN < 34) { await W8(120); await p.screenshot({ path: shotDir + '/enter3_force_' + kind + '.png' }); shotN++; } const st = await solve(); if (!st || !st.done) return 'unsolved'; await closeAll(); }
@@ -87,7 +90,9 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       for (const kind of KS) { const q = homes[(37 + hi * 53) % homes.length]; hi++; res.push([kind, await run(q, kind)]); }
       { const seenR = new Set(), JH = []; for (const q of homes) { if (JH.length >= 4) break; if (!seenR.has(q.reg)) { seenR.add(q.reg); JH.push(q); } } for (let j = 0; j < JH.length; j++) res.push(['job+' + JH[j].reg, await run(JH[j], 'job')]); }
       const badK = res.filter(r => r[1]); console.log('    부탁 갈래 풀기: ' + res.map(r => r[0] + (r[1] ? '✗' + r[1] : '✓')).join(' · ') + ' · 이웃 일 ' + [...jobs].join('·'));
-      ok(!badK.length, '부탁 갈래 열(일곱 + 그 집만의 일 셋) + 이웃 일 넷 모두 풀림 · 결과 남음' + (badK.length ? ' — ' + badK.map(r => r.join(':')).join(' ') : '')); }
+      ok(!badK.length, '부탁 갈래 열(일곱 + 그 집만의 일 셋) + 이웃 일 넷 모두 풀림 · 결과 남음' + (badK.length ? ' — ' + badK.map(r => r.join(':')).join(' ') : ''));
+      for (const q of C.filter(q => q.cat === 'inn' && q.in === 'ent').slice(0, 3)) { if (!await enter(q.i)) { ASKBAD.push('민박 못 들어감'); continue; } await askGap('민박·' + q.reg); await leave(); }
+      console.log('    이웃 부탁 E ↔ 가장 가까운 다른 E: ' + ASK.join(' · ')); ok(ASK.length >= 10 && !ASKBAD.length, '집·아파트·민박 이웃 부탁 E ↔ 다른 E 2.5m 이상 · 문에서 걸어 닿음(' + ASK.length + '방)' + (ASKBAD.length ? ' — ' + ASKBAD.join(' / ') : '')); }
     // ⑤ 그 집만의 일 하나(날을 골라 생일·이사·손님이 되는 날)
     { const q = homes[3] || homes[0]; await enter(q.i); const id = (await EI()).id; await leave();
       const day = await ev(async id => { const M9 = await import('/v2/games/town_enter2.js'); const G = SM_TOWN.game().S; for (let d = G.day + 1; d < G.day + 400; d++) { const P = M9.homePlan({ id, day: d, min: 600, n: 1, pk: null, pd: -1 }); if (P.ev) return [d, P.ev]; } return null; }, id).catch(e => 'ERR ' + e.message);
