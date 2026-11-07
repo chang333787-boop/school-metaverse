@@ -46,6 +46,7 @@ export function createGo(A) {
       gx.classList.remove('up', 'dn'); gx.classList.add(pt.x < W / 2 ? 'rt' : 'lf'); return; }   /* 위·아래 어디에 두어도 누른 자리를 덮으면(가로 휴대폰) = 누른 곳 반대쪽 옆 */
     if (!pt) { gx.style.left = Math.max(m, (W - w) / 2) + 'px'; gx.style.top = Math.max(m, (H - h) / 2) + 'px'; return; }
     let x = pt.x + 16, y = pt.y + 14; if (x + w > W - m) x = pt.x - w - 16; if (x < m) x = Math.max(m, Math.min(W - w - m, pt.x - w / 2)); if (y + h > H - m) y = pt.y - h - 14; if (y < m) y = Math.max(m, H - h - m);
+    x = Math.max(m, Math.min(W - w - m, x)); y = Math.max(m, Math.min(H - h - m, y));   /* FIX-4C(11-07): 누른 자리가 화면 밖(긴 장소 목록 아래쪽 줄을 키보드·프로그램으로 누름)이어도 창은 늘 화면 안 — 예전엔 y 5764px에 떠 단추를 못 누름 */
     gx.style.left = Math.round(x) + 'px'; gx.style.top = Math.round(y) + 'px'; }
   function open(t, pt) { if (dead || !t) return false; close('re'); ensureCss(); cur = t; t0 = performance.now(); at0 = pt && Number.isFinite(pt.x) ? { x: pt.x, y: pt.y } : null; back = document.activeElement; downBack = false; DBG.open++; DBG.last = { kind: t.kind, name: t.name, no: t.no || '', left: t.left }; log('open', t.kind + ' ' + t.name);
     el = document.createElement('div'); el.className = 'twn-go ttl-keep'; el.innerHTML = html(t); document.body.appendChild(el); place(pt);
