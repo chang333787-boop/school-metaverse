@@ -39,6 +39,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       const x0 = await xp(), I0 = await EI(); t(I0 && I0.k === k, '갈래 ' + (I0 && I0.k));
       await E('ent:ask', async () => !!(await PS())); const P0 = await panel(); t(P0 && P0.k === 'ent3', '판 창(ent3) (' + (P0 && P0.k) + ')');
       if (P0 && P0.k === 'ent3') { const how = (P0.t.match(/할 일: ([^\n]+)/) || [])[1] || ''; hows.set(k, how); t(!!how, '「할 일」 첫 줄');
+        const band = await ev(() => { const bx = document.querySelector('.twn-p .bx'), h = bx && bx.querySelector('h3'); return bx && h ? Math.round(h.getBoundingClientRect().top - bx.getBoundingClientRect().top) : null; }); t(band != null && band >= 0, '판 제목 띠가 창 안(위로 안 잘림 · ' + band + 'px)');
         if (shotDir && shotN < 14) { await W8(150); await p.screenshot({ path: shotDir + '/enter3_' + k + '.png' }); shotN++; }
         const w = await ev(() => SM_TOWN.ent().play.wrong()); if (w) { await W8(80); const P1 = await panel(); t(/다시|아니에요|달라요|어려워요|위험|그 전에|잘렸|밖|작게|너무|봐요/.test((P1 && P1.t) || ''), '틀린 누름 = 까닭 한 줄'); }
         const st = await solve(); t(st && st.done, '판 끝 (' + JSON.stringify(st) + ')'); const P2 = await panel(); t(P2 && /고마워요|나왔어요|같이 가/.test(P2.t), '끝 글(' + ((P2 && P2.t) || '').replace(/\s+/g, ' ').slice(0, 60) + ')'); await closeAll();

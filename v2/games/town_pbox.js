@@ -60,7 +60,7 @@ body.h-wplay:not(.small):not(#pz0) #toast{top:calc(var(--wcB,76px) + 8px)!import
 body.small .twn-wcard{top:calc(6px + env(safe-area-inset-top));font-size:clamp(15px,4.4vh,18px);padding:4px 14px 5px;border-top-width:5px;max-width:calc(100vw - 340px)}
 @media (orientation:portrait){body.small .twn-wcard{font-size:17px;max-width:calc(100vw - 140px)}}
 .twn-p:is(.pz-game,[data-k=table],[data-k=janggu],[data-k=bake]):not(#pz0) .twn-x{width:44px;height:44px}
-.twn-p.pz-game:not(#pz0) h3.pz-band{position:relative;margin:-14px -18px 12px;padding:11px 64px 10px 18px;background:#3f8f4e;color:#fff;font-size:20px;border-bottom:4px solid #2b2420;border-radius:14px 14px 0 0;text-shadow:0 2px 0 rgba(0,0,0,.22)}
+.twn-p.pz-game:not(#pz0) h3.pz-band{position:sticky;top:-14px;z-index:4;margin:-14px -18px 12px;padding:11px 64px 10px 18px;background:#3f8f4e;color:#fff;font-size:20px;border-bottom:4px solid #2b2420;border-radius:14px 14px 0 0;text-shadow:0 2px 0 rgba(0,0,0,.22)}
 .twn-p:is([data-k=table],[data-k=janggu],[data-k=bake]):not(#pz0) :is(.sm,.tb-msg,.tb-todo){font-size:16px}
 .twn-p:is([data-k=table],[data-k=janggu],[data-k=bake]):not(#pz0) .row button{font-size:16.5px}
 .twn-p:is([data-k=table],[data-k=janggu],[data-k=bake]):not(#pz0) button{min-height:44px}
