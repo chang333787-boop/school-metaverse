@@ -574,8 +574,28 @@ export function createBldg(A) {
     const cand = []; for (const t of types) for (let v = 0; v < VNUM[t]; v++) { const id = t + ':' + v; if (!H9.slice(-2).includes(id)) cand.push(id); }
     if (!cand.length) return null; const id = cand.map(q => [hashS('vis:' + k + ':' + D + ':' + q), q]).sort((a, b) => a[0] - b[0])[0][1];
     s.vt = { d: D, id, p: hashS('vp:' + k + ':' + D) % 997 }; s.vh = H9.concat([id]).slice(-6); mark(); return s.vt; }   /* 오늘 손님 = 들어갈 때 한 번 정함(같은 날은 같은 손님) */
+  // FIX-4E(11-07): 손님 자리 = 그 방의 다른 E(체험 · 이곳 알아보기 · 창구 · 게시판 · 앉기 · 나가기)에서 손님 E가 2.5m 넘게(VGAP)
+  //   우체국 손님 E가 체험 E와 2.45m · 알아보기 E와 1.64m — E는 가까운 쪽이 가져가 다른 창이 열림(lessons E표 COVER-4 줄) · VAT = 첫 바람 자리, 안 맞으면 그 가까이에서 문으로부터 걸어 닿는 빈 자리
+  const VGAP = 2.5;
+  function visSpot(k, made, S9, kid, sat) { const [ox, oy, oz] = S9.at, hw = (made.W || 10) / 2, hd = (made.D || 8) / 2, cols = S9.cols || [], st = 0.25;
+    const solid = (x, z, r) => cols.some(c => c.y1 > oy + 0.3 && c.y0 < oy + 1.7 && ox + x + r > c.x0 && ox + x - r < c.x1 && oz + z + r > c.z0 && oz + z - r < c.z1);   /* town_indoor solid와 같은 셈(로컬 좌표) */
+    const loc = (q, v) => (q.abs ? [v[0] - ox, v[2] - oz] : [v[0], v[2]]), E9 = [[0, hd - 0.9]];   /* 나가기 E(town_indoor enter와 같은 자리) */
+    for (const h of made.extra || []) if (h.k !== 'bd:vis' && h.stand) E9.push(loc(h, h.stand));
+    for (const q of [made.counter, made.bake, made.cook, made.bed, made.job, made.read, made.pass, made.news, made.card]) if (q && q.stand) E9.push(loc(q, q.stand));
+    for (const h of made.hub || []) if (h.stand) E9.push(loc(h, h.stand));
+    (made.seats || []).forEach((s9, i) => { if (s9.taken || (sat && i === 0) || !s9.stand) return; E9.push([s9.stand[0] - ox, s9.stand[2] - oz]); });   /* 앉기 E = 절대 좌표 · 손님(할아버지)이 앉을 0번은 E가 없어짐 */
+    if (!made.card) { const c9 = made.cardAt || [1.7, hd - 1.0]; E9.push([c9[0], c9[1] - 0.75]); }   /* 이곳 알아보기 판은 이 뒤에 섬(town_indoor enter) — 같은 자리로 셈 */
+    const NX = Math.floor((2 * hw) / st), NZ = Math.floor((2 * hd) / st), ix = x => Math.round((x + hw) / st - 0.5), iz = z => Math.round((z + hd) / st - 0.5), cx = i => -hw + (i + 0.5) * st, cz = j => -hd + (j + 0.5) * st, seen = new Uint8Array(NX * NZ), Q = [];
+    { const i0 = ix(0), j0 = iz(hd - 0.9); if (i0 >= 0 && j0 >= 0 && i0 < NX && j0 < NZ) { seen[j0 * NX + i0] = 1; Q.push(i0, j0); } }   /* 문에서 걸어 닿는 칸(몸 0.3m) — 창구 안쪽·진열장 뒤 X */
+    while (Q.length) { const j = Q.pop(), i = Q.pop(); for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const i2 = i + a, j2 = j + b; if (i2 < 0 || j2 < 0 || i2 >= NX || j2 >= NZ || seen[j2 * NX + i2]) continue; seen[j2 * NX + i2] = solid(cx(i2), cz(j2), 0.3) ? 2 : 1; if (seen[j2 * NX + i2] === 1) Q.push(i2, j2); } }
+    const walk = (x, z) => { const i = ix(x), j = iz(z); return i >= 0 && j >= 0 && i < NX && j < NZ && seen[j * NX + i] === 1; }, GP = (S9.gp || []).map(([gx, gz]) => [gx - ox, gz - oz]);
+    const fit = (x, z) => { const ez = z + 0.85; if (ez > hd - 0.5 || !walk(x, ez) || solid(x, z, 0.35) || solid(x, ez, 0.3) || (kid && solid(x + 0.55, z + 0.1, 0.3))) return false; if (GP.some(([a, b]) => Math.hypot(a - x, b - z) < 0.9)) return false; return E9.every(([a, b]) => Math.hypot(a - x, b - ez) >= VGAP); };
+    const [vx, vz] = VAT[k]; if (fit(vx, vz)) return [vx, vz];
+    let best = null, bd = 1e9; for (let i = 0; i < NX; i++) for (let j = 0; j < NZ; j++) { const x = cx(i), z = cz(j), d = Math.hypot(x - vx, z - vz); if (d < bd && fit(x, z)) { bd = d; best = [x, z]; } }
+    if (!best) console.warn('[BLDG] 손님 자리: 다른 E에서 2.5m 넘는 곳 없음 — ' + k);
+    return best; }
   function visPlace(k, made, K) { if (!VTYPE[k] || !K || !CUR || !made || !made.S) return; const D = day(), s = S()[k]; let vt = null; try { vt = visPick(k, D); } catch (x9) { vt = null; } CUR.vis = vt; if (!vt) return; if (s.vok === D) { CUR.visGone = true; return; }   /* 오늘 손님은 도와드린 뒤 돌아감 */
-    const S9 = made.S, [ox, oy, oz] = S9.at, [lx, lz] = VAT[k], t = vt.id.split(':')[0], Lk = VLOOK[t], ad = Lk[0] % 3 ? 1 : 0.75;
+    const S9 = made.S, [ox, oy, oz] = S9.at, t = vt.id.split(':')[0], Lk = VLOOK[t], ad = Lk[0] % 3 ? 1 : 0.75, [lx, lz] = visSpot(k, made, S9, Lk[4] >= 0, Lk[5] >= 0) || VAT[k];
     K.standGuest(S9, ox + lx, oy, oz + lz, 0, Lk[0]);
     if (Lk[1]) K.part(S9, 's', lx, 1.54 * ad, lz, 0.163 * ad, 0.75, 0, 0xdcdcdc);   /* 흰머리(머리카락 공보다 조금 큼) */
     if (Lk[2]) K.part(S9, 'b', lx + 0.3, 0, lz + 0.14, 0.03, 0.86 * ad, 0.03, 0x6b4a2f);   /* 지팡이 */
