@@ -1,6 +1,6 @@
 // 🚪 거의 모든 건물에 들어가기 시험(ENTER-1 · v2/games/town_enter.js): node tools/harness/town_enter.cjs [마을=ourtown] [포트=8002] [--shots=폴더] [--render]
 //   ① 셈: 건물 갈래(간판 이름 · 집 · 아파트) 가운데 들어가는 갈래 전·후(목표 90% 이상) · 건물 수 전·후
-//   ② 갈래마다 하나씩: 문 E 이름표 · 들어감 · 방 E 자리 모두 닿음(indoor.check) · 할 일(부탁 → 틀린 칸 = 한 줄 → 맞는 칸 = 보이는 결과 · 퀴즈 셋 · 진열 돕기 · 게시판) · 문 E로 나옴
+//   ② 갈래마다 하나씩: 문 E 이름표 · 들어감 · 방 E 자리 모두 닿음(indoor.check) · 할 일(부탁 → 틀린 칸 = 한 줄 → 맞는 칸 = 보이는 결과 · 학원 수업 한 판(ACAD-1) · 진열 돕기 · 게시판) · 문 E로 나옴
 //   ③ 밤 잠김(집 22:00 · 가게 닫은 때) ④ 열 번 드나들기 힙(늘지 않음) ⑤ 페이지 오류 0 · ⑥ --shots = 실내 사진(그리기 켬)
 const { chromium } = require('./pw.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
@@ -60,10 +60,15 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
         if (wrong) { await pressAt(wrong.at); const w = await waitSaid('아니에요|다시'); t(!!w, '틀린 칸 = 한 줄'); I2 = await EI(); t(I2.task && I2.task.slot === si, '틀려도 부탁은 그대로'); }
         const right = I2.extra.find(h => h.k === 'ent:s' + si); if (right) { await pressAt(right.at); const d = await waitSaid('✅'); t(!!d || (await ev(() => SM_TOWN.ent().dbg())).slice(-3).includes('done ' + si), '맞는 칸 = ✅ 한 줄'); const I3 = await EI(); t(!I3.task, '부탁 끝'); t(I3.shown.some(Boolean), '보이는 결과(봉투·접시·제자리·표)'); if (I3.mess.length) t(!I3.mess.some(Boolean), '바닥에 놓인 것이 치워짐'); }
         }
-      } else if (I.extra.some(h => h.k === 'ent:quiz')) {
-        await E('ent:quiz', async () => ((await panel()) || {}).k === 'entquiz'); let P0 = await panel(); t(P0 && /1\/3/.test(P0.t), '퀴즈 창 1/3');
-        const pos = []; for (let i = 0; i < 3; i++) { const ix = await ev(() => [...document.querySelectorAll('.twn-p button[data-q]')].findIndex(b9 => b9.dataset.q === '0')); pos.push(ix); if (i === 0) { await ev(() => { const b9 = document.querySelector('.twn-p button[data-q="1"]'); if (b9) b9.click(); }); await W8(150); t(/다시 생각/.test(((await panel()) || {}).t || ''), '틀린 답 = 까닭 + 다시'); } await ev(() => document.querySelector('.twn-p button[data-q="0"]').click()); await W8(200); }
-        P0 = await panel(); t(P0 && /셋 다/.test(P0.t), '셋 다 = 끝 한 줄'); t(!(pos[0] === pos[1] && pos[1] === pos[2]), '정답 자리 세 번 같지 않음 (' + pos.join(',') + ')'); const I3 = await EI(); t(I3.shown.some(Boolean), '칠판 별');
+      } else if (I.extra.some(h => h.k === 'ent:acad')) {   /* ACAD-1 학원 = 수업 한 판(town_acad.js · 자세한 시험은 town_acad.cjs) */
+        await E('ent:acad', async () => ((await panel()) || {}).k === 'acadq'); let P0 = await panel(); t(P0 && /오늘 배울 것/.test(P0.t) && /수업 시작/.test(P0.t), '학원 E = 수업 창(오늘 배울 것 · 수업 시작)');
+        await ev(() => document.querySelector('.twn-p [data-a="start"]').click()); await W8(300);
+        for (let n = 0; n < 8; n++) { const R = await ev(() => SM_TOWN.acad().run()); if (!R || R.phase !== 'q') break; const c = R.cur;
+          if (c.kind === 'pick') await ev(a => document.querySelector('.twn-p [data-c="' + a + '"]').click(), c.ans);
+          else if (c.kind === 'order') { for (let j = 0; j < c.n; j++) await ev(j9 => document.querySelector('.twn-p [data-o="' + j9 + '"]').click(), j); }
+          else { await p.waitForFunction(() => SM_TOWN.acad().run().demoDone && !SM_TOWN.acad().run().demo, null, { timeout: 15000 }); for (const k9 of c.seq) await ev(k9 => document.querySelector('.twn-p [data-k="' + k9 + '"]').click(), k9); }
+          await W8(120); await ev(() => { const b9 = document.querySelector('.twn-p [data-a="next"]'); if (b9) b9.click(); }); await W8(180); }
+        P0 = await panel(); t(P0 && /끝/.test(P0.t) && /단계를 마쳤어요/.test(P0.t), '다섯 문제 = 끝 창 · 단계를 마침'); const I3 = await EI(); t(I3.shown[0] && !I3.shown[1], '칠판 별 하나');
       } else if (I.extra.some(h => h.k === 'ent:board')) { await E('ent:board', async () => !!(await panel())); const P0 = await panel(); t(!!P0, '게시판 창 (' + (P0 && P0.k) + ')');
       } else if (k === 'store') { const r9 = await ev(() => SM_TOWN.indoor.check()), cn = (r9.hots || []).find(h => /계산대/.test(h.label)); t(!!cn, '계산대 E');
         const H9 = await ev(() => { const h = SD2.map.interact.list().find(h9 => /계산대 \(사기 · 진열 돕기\)/.test(h9.label || '')); return h ? [h.x, h.y, h.z] : null; }); if (H9) { await pressAt(H9); let P0 = await panel(); t(P0 && P0.k === 'entstore', '계산대 = 사기 · 진열 돕기 고르기');

@@ -5,7 +5,7 @@
 //   매 프레임 일 0(창을 열 때만 셈) · 이름 X(번호만) · 교사 열쇠는 이 탭 메모리에만(잠그면 지움)
 import { CHAPTERS } from './town_story.js?v=40';
 import { tsum, tsumDays } from './town_tsum.js?v=2';
-import { pickLabel, dayKey } from './town_rec.js?v=21';
+import { pickLabel, dayKey } from './town_rec.js?v=23';
 import { cloudTeach, cloudOn } from './town_cloud.js?v=4';
 
 const CSS = `.twn-p[data-k=tch]{--rib:#2f4f7a}.twn-p[data-k=tch] .bx{max-height:96vh}
