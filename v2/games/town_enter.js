@@ -6,6 +6,8 @@
 //   지킴: 실제 상호·상표 X · 판타지 X · 실명 X(주인·손님·이웃 = 이름 없는 역할 · 몸 있음) · 사실만 · 셈 X · 지역 비하 X · 홍보판(SM_PROMO)엔 X
 //   보상 = 솜씨만(꼬리표 ent:<갈래> → rwCheck 한 문 · 하루 한 번) + 보이는 결과(봉투·접시·제자리·별) · 가방 팔기 = 기본 값(장터보다 낮게 · 'mv:sell' · 가게에서 산 것 X)
 //   렉: 매 프레임 일 0 · 새 Light X · 방은 들어갈 때만(town_indoor.js KIT · 합친 부품 + 인스턴스) · 나오면 치움 · 문 표시 고리·글자판은 그리지 않음(1,300곳 · E 안내만)
+//   ENTER-3(11-07 · town_enter2.js · docs/systems/town_enter3.md): 가게·식당·사무실·창고 = 갈래마다 판단 틀(고르기·그림·도구·나누기·순서·읽기·구도·지도) + 내용 표 · 집·아파트 = 오늘의 부탁(일곱 갈래 · 이웃 일·동네·철·때) + 가끔 그 집만의 일 + 기억 말 + 답례(엽서·그 일의 작은 것) + 모음(도운 집 n/전체)
+import { CONTENT, MENU, HJOB, JOBKEY, HFIND, HEV, PCARDS, PC_WHERE, HMEM, HKNAME, homePlan, homeSpec, createPlay } from './town_enter2.js?v=2';
 export const ENT_V = 1;
 const T2 = (ko, en) => [ko, en];
 const hashS = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -160,6 +162,7 @@ const CATS = {
   // 이미 있는 가게 방(town_indoor.js) — 계산대 = 사기 + 진열 돕기(창 고르기)
   store: { st: 'store', ic: '🛒', owner: '점원', tip: '물건 사기, 진열 돕기', sk: 'trade' },
 };
+for (const k in MENU) if (CATS[k]) CATS[k].menu = MENU[k].dishes.map(d => [d[0], d[1]]);   /* ENTER-3: 식당 차림표 = 갈래마다 다른 차림(town_enter2.js MENU) */
 // 이미 있는 가게 방 진열 돕기(갈래마다 칸 셋 · 물건 → 칸 · 까닭)
 const SORT = {
   conv: [['냉장 칸', '과자 칸', '라면·통조림 칸'], [['우유', 0, '우유는 차갑게 둬야 쉽게 상하지 않아요.'], ['감자칩', 1, '과자는 봉지째 과자 칸에 둬요.'], ['컵라면', 2, '컵라면은 따뜻한 곳에 둬도 돼요.'], ['요구르트', 0, '요구르트도 차갑게 둬요.'], ['참치 통조림', 2, '통조림은 오래 두어도 괜찮아요.']]],
@@ -209,6 +212,15 @@ export function createEnter(A) {
     log('shut ' + k); return false; }
   const bRec = id => { const s = S(); let r = s.b[id]; if (!r) { r = s.b[id] = { n: 0, d: -1, t: 0 }; const ks = Object.keys(s.b); if (ks.length > 240) delete s.b[ks[0]]; } if (r.d !== day()) { r.d = day(); r.t = 0; } return r; };
   const cRec = k => { const s = S(); return s.c[k] || (s.c[k] = { n: 0, last: [] }); };
+  // ENTER-3 판단 틀 · 집 오늘의 부탁 · 모음
+  const PLAY = createPlay({ en, esc, openP: (h, w, k) => A.openP(h, w, k), closeP: () => A.closeP(), sfx });
+  const sea = () => { const s9 = A.season ? A.season() : 'now'; return s9 === 'now' ? 'summer' : s9; };
+  const reg5 = B9 => { const r9 = regOf(B9); return r9 === '읍내' || r9 === '관광' ? '시내' : r9; };
+  const contentOf = (k, nm) => { const X = CONTENT[k]; if (Array.isArray(X)) return X.find(q => q.re.test(nm || '')) || X[X.length - 1]; if (X) return X; if (MENU[k]) { const M9 = MENU[k]; return { f: 'tray', how: M9.how || '주문 쪽지에 맞는 음식을 골라요.', n: 1, items: M9.dishes.map(d => [d[0], '', d[2], d[3], d[1]]), asks: M9.asks, learn: '' }; } return null; };
+  const hk = id => hashS(id).toString(36);
+  function planFor(id) { const b = bRec(id), P9 = homePlan({ id, day: day(), min: A.GAME.S.min | 0, n: b.n, pk: b.pk, pd: b.pd }); b.pk = P9.kind; b.pd = day(); mark(); return P9; }
+  const HINTRO = { tidy: '정리 좀 도와줄래요?', cook: '같이 밥 만들래요?', water: '화분 좀 봐 줄래요?', fix: '고장 난 게 있어요.', table: '상 좀 같이 차릴래요?', job: '일 준비 좀 도와줄래요?', find: '물건이 안 보여요.' };   /* 말풍선 = 한 문장(이웃이 가까이 서 있어 긴 말은 화면을 덮음) */
+  const HTHANK = { tidy: '집이 깔끔해졌어요.', cook: '맛있게 잘 만들었어요.', water: '화분이 싱싱해지겠어요.', fix: '이제 잘 돼요.', table: '상이 예쁘게 차려졌어요.', job: '일이 금방 끝났어요.', find: '찾아 줘서 다행이에요.', bday: '아이가 정말 좋아하겠어요.', move: '짐이 제자리를 찾았어요.', guest: '손님이 좋아하겠어요.' };
 
   // ───────── 물건 꼴(방 안 작은 것 · 인스턴스 규칙: b 상자(밑 = y) · c 기둥(반지름 a·c · 높이 b · 밑 = y) · s 공(반지름 a·b·c · 가운데 = y) · k 고깔) ─────────
   function shape(E, sh, x, y, z, col, ry = 0, s = 1) { const q = (k, dx, dy, dz, a, b, c, hx, r2 = 0, rx = 0, gl = 0) => { const cs = Math.cos(ry), sn = Math.sin(ry); E(k, x + (dx * cs + dz * sn) * s, y + dy * s, z + (-dx * sn + dz * cs) * s, a * s, b * s, c * s, hx, ry + r2, rx, gl); };
@@ -372,7 +384,7 @@ export function createEnter(A) {
     sig(S9, K, E, C, W, D, rnd, seats); K.plant(S9, hw - 0.6, hd - 0.7, 0.9);
     const ex = [{ k: 'ent:ask', stand: [cx + 0.5, 0, cz + 1.0], r: 1.2, label: '🙋 ' + C.owner + ' — ' + C.tip }].concat(st.map((s, i) => ({ k: 'ent:s' + i, stand: s.stand, r: 1.0, label: '🔎 ' + C.slots[i][0] + (en() ? '' : ' 칸') })));
     const bags = C.slots.map(s => bagAt(K, at, cx + 0.6, 1.02, cz + 0.05, s)); bags.forEach(g => { g.visible = false; }); S9.extra = (S9.extra || []).concat(bags);
-    return { S: S9, W, D, H, seats, extra: ex, cam: { d: 4.0, p: 0.55 }, spz: 3.0, st, show: bags, owner: [ox + cx, oy, oz + cz - 0.75], guest: [ox + cx - 0.9, oy, oz + cz + 1.05], items: ['계산대 · ' + C.owner + '(이름 없음)', '손님(이름 없음)'].concat(C.slots.map(s => s[0] + ' 칸')) }; }
+    return { S: S9, W, D, H, seats, extra: ex, cam: { d: 4.0, p: 0.55 }, spz: 3.0, st, show: bags, cnt: [cx + 0.6, 1.02, cz + 0.05], owner: [ox + cx, oy, oz + cz - 0.75], guest: [ox + cx - 0.9, oy, oz + cz + 1.05], items: ['계산대 · ' + C.owner + '(이름 없음)', '손님(이름 없음)'].concat(C.slots.map(s => s[0] + ' 칸')) }; }
   // 식당: 주방 창구(뒤) + 요리사 · 탁자 넷(왼쪽 = 창가 · 오른쪽 = 안쪽 · 손님 혼자/둘) · 차림표
   function roomDiner(at, K, C, nm, B9) { const W = 11, D = 9, H = 3.3, hw = W / 2, hd = D / 2, [ox, oy, oz] = at, rnd = K.rndOf((hashS(nm + B9.cx) % 2147483646) + 1), seats = [], S9 = base(at, K, C, W, D, H), E = roomE(S9, K), P = S9.put;
     P('b', 0, 0, -hd + 1.3, 4.6, 1.0, 0.5, WH); P('b', 0, 0.12, -hd + 1.556, 4.5, 0.6, 0.012, C.acc); P('b', 0, 1.0, -hd + 1.3, 4.66, 0.05, 0.6, WD); K.colL(S9, 0, -hd + 1.3, 2.33, 0.3, -0.5, 1.1);   /* 주방 창구 */
@@ -411,7 +423,7 @@ export function createEnter(A) {
     const ex = [{ k: 'ent:ask', stand: [cx + 0.5, 0, cz + 1.0], r: 1.2, label: '🙋 ' + C.owner + ' — ' + C.tip }].concat(st.map((s, i) => ({ k: 'ent:s' + i, stand: s.stand, r: 1.0, label: '📋 ' + C.slots[i][0] })));
     if (C.mapE) ex.push({ k: 'ent:map', stand: [hw - 1.4, 0, hd - 2.4], r: 0.9, label: '🗺 ' + (en() ? 'Look at the big town map' : '큰 마을 지도 보기') });
     if (C.mapE) { P('b', hw - 0.05, 0.9, hd - 2.4, 0.03, 1.3, 1.6, 0x3a3d42); P('b', hw - 0.07, 0.95, hd - 2.4, 0.012, 1.2, 1.5, 0xe8e0c8); for (let i = 0; i < 6; i++) P('b', hw - 0.08, 1.0 + rnd() * 0.9, hd - 3.0 + rnd() * 1.2, 0.006, 0.16 + rnd() * 0.2, 0.2 + rnd() * 0.3, [0x5aa84c, 0x5fb6e0, 0xd9b46a, 0x8a9098][i % 4]); }
-    return { S: S9, W, D, H, seats, extra: ex, cam: { d: 4.0, p: 0.55 }, spz: 3.0, st, show: ok, owner: [ox + cx, oy, oz + cz - 0.75], items: ['창구 · ' + C.owner + '(이름 없음)', '기다리는 의자 · 손님(이름 없음)'].concat(C.slots.map(s => s[0])) }; }
+    return { S: S9, W, D, H, seats, extra: ex, cam: { d: 4.0, p: 0.55 }, spz: 3.0, st, show: ok, cnt: [cx + 0.6, 1.02, cz + 0.05], owner: [ox + cx, oy, oz + cz - 0.75], items: ['창구 · ' + C.owner + '(이름 없음)', '기다리는 의자 · 손님(이름 없음)'].concat(C.slots.map(s => s[0])) }; }
   // 창고·작업장: 높은 선반(칸) + 손수레 + 일꾼
   function roomWare(at, K, C, nm, B9) { const W = 12, D = 9.6, H = 4.2, hw = W / 2, hd = D / 2, [ox, oy, oz] = at, rnd = K.rndOf((hashS(nm + B9.cx) % 2147483646) + 1), seats = [], S9 = base(at, K, C, W, D, H, { noFront: false }), E = roomE(S9, K), P = S9.put;
     K.standGuest(S9, ox - 2.4, oy, oz - hd + 1.6, 0.3, 4); P('b', -2.4, 1.66, -hd + 1.6, 0.26, 0.12, 0.26, 0xf2c230); K.mainSign(S9, nm, -2.6, 3.3, -hd + 0.03, 0);
@@ -431,9 +443,37 @@ export function createEnter(A) {
     const ex = [{ k: 'ent:board', stand: [0, 0, -hd + 1.4], r: 1.3, label: '📌 ' + (en() ? 'Read the neighbours’ request board' : '이웃 부탁 게시판 보기') }];
     return { S: S9, W, D, H, seats, extra: ex, cam: { d: 4.2, p: 0.6 }, spz: 3.0, show: [], owner: [ox - 2.8, oy, oz - hd + 1.3], items: ['이웃 부탁 게시판', '긴 탁자 둘 · 의자', '이웃(이름 없음)'] }; }
   // 집·아파트·민박: 거실(소파·TV·러그) + 부엌(싱크대·냉장고·식탁) + 정리 칸 넷(책장·장난감·빨래·일 소품) — 바닥에 놓인 것이 부탁
-  function roomHome(at, K, C, nm, B9, kind) { const apt = kind === 'apt', inn = kind === 'inn', W = apt ? 10 : 9.6, D = apt ? 8 : 7.8, H = 2.9, hw = W / 2, hd = D / 2, [ox, oy, oz] = at, rnd = K.rndOf((hashS(nm + B9.cx) % 2147483646) + 1), seats = [], tone = hashS(String(B9.b && B9.b.id) + 't') % 3;
-    const C2 = { ...C, wall: [0xf6efe2, 0xf2f4ee, 0xf7ecef][tone], acc: [0x8a5a34, 0x5a6b7a, 0x9a5a6a][tone], ft: apt ? ['wood', 1.0, 0xf0e2cc] : ['wood', 1.0, [0xe8d2b0, 0xf0dcc0, 0xdcc4a0][tone]], wt: [[['stripe', 0.9, 0xfff8f0, 0.9, H, 'BLR'], ['paper', 1.0, 0xffffff, 0.9, H, 'BLR'], ['wave', 1.2, 0xfffaf4, 0.9, H, 'BLR']][tone]] };
-    const S9 = base(at, K, C2, W, D, H, { noFront: true }), E = roomE(S9, K), P = S9.put;
+  // ENTER-3 집 소품(동네 색 · 이웃 일 구석 · 철 · 그 집만의 일 · 찾기 자리) — 모두 방을 지을 때 한 번(합친 부품 · 인스턴스)
+  const REGPAL = { 바다: [[0xeef5f8, 0xf4f7f2, 0xe8f0f6], [0x2f6f9a, 0x3a8ab0, 0x2a5a7a], [0xe8dcc8, 0xdcd0bc, 0xe2d6c0]], 들: [[0xf7f0dc, 0xf5ecd2, 0xf2ead8], [0xa2741e, 0x8a6a2a, 0x6b8a3a], [0xe8d2a0, 0xe0c890, 0xead8b0]], 산: [[0xf0ece0, 0xe9efe4, 0xf2eadc], [0x4e7a3a, 0x6b4a2f, 0x3f6a4a], [0xc8a070, 0xb8905e, 0xd0aa7a]], 강: [[0xeef6f2, 0xf2f6ee, 0xe8f2ee], [0x2f8f8a, 0x3a7a6a, 0x2a6a7a], [0xe0d4bc, 0xd8ccb4, 0xe6dac2]], 시내: [[0xf6efe2, 0xf2f4ee, 0xf7ecef], [0x8a5a34, 0x5a6b7a, 0x9a5a6a], [0xe8d2b0, 0xf0dcc0, 0xdcc4a0]] };
+  const FINDSP = (hw, hd) => [[[-0.3, 0.02, 1.25], [-0.3, 0, 1.95], '거실 깔개 곁'], [[2.75, 0.755, -0.18], [2.75, 0, 0.55], '부엌 식탁 위'], [[0.3, 0.02, -hd + 0.5], [0.3, 0, -hd + 1.25], '창가 바닥'], [[hw - 1.0, 0.02, hd - 0.95], [hw - 1.7, 0, hd - 1.25], '현관 쪽 화분 곁'], [[hw - 0.35, 0.765, 0.95], [hw - 1.15, 0, 0.95], '일 도구 놓는 곳']];
+  function jobCorner(S9, K, E, jk, hw) { const P = S9.put, x = hw - 0.35, y = 0.76, R = -Math.PI / 2;   /* 오른벽 낮은 장 + 그 일의 소품(그물·김발·밀짚모자·배 바구니·장작·산불 조심·낚싯대·노선도·냄비·노트북·구급상자) */
+    P('b', x, 0, 1.6, 0.6, 0.72, 1.6, W0); P('b', x, 0.72, 1.6, 0.64, 0.04, 1.64, WD); P('b', x - 0.306, 0.1, 1.6, 0.012, 0.5, 1.5, 0xb8905e); K.colL(S9, x, 1.6, 0.32, 0.82, -0.5, 0.8);
+    switch (jk) {
+      case 'fish': shape(E, 'net', x, y, 1.2, 0x2f8f6a, R, 0.8); shape(E, 'ball', x, y, 2.05, 0xef7a24); shape(E, 'ball', x - 0.05, y, 1.8, 0xf6f4ee, 0, 0.8); shape(E, 'boot', hw - 0.3, 0, 0.45, 0xf2c230, R); break;
+      case 'laver': shape(E, 'net', x, y, 1.25, 0x24604a, R, 0.8); E('b', x, y, 2.0, 0.3, 0.06, 0.32, 0x1f2a1c); E('b', x, y + 0.06, 2.0, 0.28, 0.012, 0.3, 0x2b3a2a); P('b', hw - 0.06, 1.15, 1.6, 0.03, 0.62, 0.95, 0x6b4a2f); P('b', hw - 0.08, 1.2, 1.6, 0.012, 0.52, 0.85, 0x1f2a1c); break;
+      case 'farm': shape(E, 'cap', hw - 0.13, 1.42, 1.2, 0xe9d27a, R); P('b', hw - 0.05, 1.5, 1.2, 0.06, 0.03, 0.03, WD); shape(E, 'sack', x, y, 2.0, 0xeee4cc, R, 0.8); shape(E, 'tool', x, y, 1.3, 0x8a5a34, R); break;
+      case 'orchard': shape(E, 'bowl', x, y, 1.25, 0xc8945a, 0, 1.6); shape(E, 'pear', x, y + 0.05, 1.25, 0xd9cc66, 0, 0.8); shape(E, 'pear', x, y, 2.0, 0xd9cc66); break;
+      case 'mush': shape(E, 'plank', x, y, 1.25, 0x8a5a34, 0, 0.7); shape(E, 'shroom', x, y, 2.0, 0x8a5a34, R); break;
+      case 'forest': shape(E, 'cap', hw - 0.13, 1.42, 1.2, 0x4e7a3a, R); P('b', hw - 0.05, 1.5, 1.2, 0.06, 0.03, 0.03, WD); K.sign(S9, en() ? 'Fire safety' : '산불 조심', hw - 0.04, 1.75, 2.0, R, 0.9, 0.3, { bg: '#c8332b', fr: 0xf6f4ee }); shape(E, 'rod', hw - 0.15, 0, 0.55, 0x8a5a34); shape(E, 'bag', x, y, 2.05, 0x4e7a3a, R, 0.8); break;
+      case 'river': shape(E, 'rod', hw - 0.15, 0, 0.5, 0x3a3d42); shape(E, 'rod', hw - 0.15, 0, 0.64, 0x2f6fd0); E('b', x, y, 1.8, 0.3, 0.26, 0.45, 0x3d74c9); E('b', x, y + 0.26, 1.8, 0.31, 0.04, 0.46, 0xf6f4ee); break;
+      case 'bus': P('b', hw - 0.05, 1.05, 1.6, 0.02, 0.42, 1.2, 0xf6f4ee); E('b', hw - 0.066, 1.24, 1.6, 0.01, 0.04, 1.0, 0x2f6fd0); for (let i = 0; i < 5; i++) E('s', hw - 0.072, 1.26, 1.15 + i * 0.22, 0.03, 0.03, 0.01, 0xf6f4ee); K.sign(S9, en() ? 'Bus route' : '버스 노선도', hw - 0.04, 1.62, 1.6, R, 1.1, 0.26, { bg: '#2f6fd0', fr: false }); shape(E, 'cap', x, y, 1.3, 0x2f6fd0, R); break;
+      case 'cook': E('c', x, y, 1.2, 0.16, 0.16, 0.16, 0x9aa0a6); E('c', x, y + 0.16, 1.2, 0.165, 0.015, 0.165, 0x6b7078); E('b', x, y, 1.95, 0.3, 0.03, 0.46, 0xc8a070); shape(E, 'cloth', hw - 0.12, 1.95, 2.25, 0xf6f4ee, 0, 1); break;
+      case 'nurse': E('b', x, y, 1.3, 0.3, 0.2, 0.4, 0xffffff); E('b', x, y + 0.2, 1.3, 0.1, 0.012, 0.03, 0xd8262e); E('b', x, y + 0.203, 1.3, 0.03, 0.012, 0.1, 0xd8262e); shape(E, 'bag', x, y, 2.05, 0xe9eef4, R, 0.8); break;
+      default: E('b', x, y, 1.5, 0.3, 0.02, 0.4, 0x3a3d42); E('b', x + 0.13, y + 0.02, 1.5, 0.02, 0.24, 0.38, 0x2b2d31); E('b', x + 0.118, y + 0.05, 1.5, 0.004, 0.18, 0.32, 0x9fc8f0, 0, 0, 1); shape(E, 'bag', x, y, 2.1, 0x3a3d42, R, 0.8);
+    } }
+  function seasonProp(S9, K, E, s9, x, z) { if (s9 === 'spring') { E('c', x, 0, z, 0.09, 0.32, 0.09, 0xd8e8f0); for (let i = 0; i < 3; i++) shape(E, 'flower', x + (i - 1) * 0.05, 0.28, z, [0xf08fb2, 0xf2c230, 0xffffff][i], 0, 1.1); }   /* 봄 꽃병 · 여름 선풍기 · 가을 감 바구니 · 겨울 난로 */
+    else if (s9 === 'autumn') { shape(E, 'bowl', x, 0, z, 0xc8945a, 0, 1.6); shape(E, 'orange', x, 0.05, z, 0xf08a24, 0, 1); }
+    else if (s9 === 'winter') { E('b', x, 0, z, 0.42, 0.56, 0.26, 0xd8dce0); E('b', x, 0.56, z, 0.44, 0.03, 0.28, 0x8a9098); E('b', x, 0.12, z - 0.136, 0.3, 0.3, 0.01, 0xff8a3a, 0, 0, 1); }
+    else { E('c', x, 0, z, 0.17, 0.03, 0.17, 0xf6f4ee); E('c', x, 0.03, z, 0.022, 0.78, 0.022, 0xf6f4ee); E('c', x, 0.86, z - 0.03, 0.2, 0.06, 0.2, 0x8fc4e8, 0, Math.PI / 2); E('c', x, 0.86, z - 0.07, 0.05, 0.02, 0.05, 0xf6f4ee, 0, Math.PI / 2); }
+    K.colL(S9, x, z, 0.23, 0.18, -0.5, 1.0); }
+  function evProps(S9, K, E, ev, hd, seats, ch0) {   /* 그 집만의 일 — 들어가면 먼저 보이는 것(생일 케이크·고깔·글씨 띠 · 이삿짐 상자 · 손님과 손님 신발) */
+    if (ev === 'bday') { E('c', 2.4, 0.74, -0.42, 0.15, 0.11, 0.15, 0xf6f0e4); E('c', 2.4, 0.85, -0.42, 0.155, 0.02, 0.155, 0xf08fb2); for (let i = 0; i < 4; i++) { const a = i * 1.57 + 0.4, cx9 = 2.4 + Math.cos(a) * 0.07, cz9 = -0.42 + Math.sin(a) * 0.07; E('c', cx9, 0.87, cz9, 0.008, 0.06, 0.008, [0xe0453a, 0x3d74c9, 0xf2c230, 0x3cc76a][i]); E('s', cx9, 0.945, cz9, 0.012, 0.018, 0.012, 0xffd060, 0, 0, 1); }
+      for (const dx of [-0.45, 0.45]) E('k', 2.4 + dx, 0.74, -0.2, 0.06, 0.16, 0.06, dx < 0 ? 0x3d74c9 : 0xe0453a); K.sign(S9, en() ? 'Happy birthday' : '생일 축하해요', -0.2, 2.15, -hd + 0.09, 0, 1.6, 0.32, { bg: '#d85a8a', fr: false }); }
+    if (ev === 'move') { for (let i = 0; i < 5; i++) shape(E, 'crate', -0.75 + (i % 2) * 0.48, ((i / 2) | 0) * 0.3, 1.45 + (i % 2 ? 0.05 : 0), [0xc8945a, 0xb8895a][i % 2], 0, 1); K.colL(S9, -0.51, 1.47, 0.5, 0.22, -0.5, 1.0); }
+    if (ev === 'guest' && ch0 >= 0) { K.sitGuest(S9, seats, ch0 + 1, 5); for (const dx of [-0.75, -0.5]) shape(E, 'shoe', dx, 0, hd - 0.4, 0x3a2414, Math.PI, 0.9); } }
+  function roomHome(at, K, C, nm, B9, kind, plan) { const apt = kind === 'apt', inn = kind === 'inn', pk = plan ? plan.kind : 'tidy', PAL = REGPAL[reg5(B9)] || REGPAL.시내, W = apt ? 10 : 9.6, D = apt ? 8 : 7.8, H = 2.9, hw = W / 2, hd = D / 2, [ox, oy, oz] = at, rnd = K.rndOf((hashS(nm + B9.cx) % 2147483646) + 1), seats = [], tone = hashS(String(B9.b && B9.b.id) + 't') % 3;
+    const C2 = { ...C, wall: inn ? [0xf6efe2, 0xf2f4ee, 0xf7ecef][tone] : PAL[0][tone], acc: inn ? [0x8a5a34, 0x5a6b7a, 0x9a5a6a][tone] : PAL[1][tone], ft: apt ? ['wood', 1.0, 0xf0e2cc] : ['wood', 1.0, inn ? [0xe8d2b0, 0xf0dcc0, 0xdcc4a0][tone] : PAL[2][tone]], wt: [[['stripe', 0.9, 0xfff8f0, 0.9, H, 'BLR'], ['paper', 1.0, 0xffffff, 0.9, H, 'BLR'], ['wave', 1.2, 0xfffaf4, 0.9, H, 'BLR']][tone]] };
+    const S9 = base(at, K, C2, W, D, H, { noFront: true }), E = roomE(S9, K), P = S9.put; let ch0 = -1;
     if (apt) { P('b', 0, 0.3, -hd + 0.04, 4.4, 2.2, 0.04, 0xf7f6f2); P('b', 0, 0.35, -hd + 0.065, 4.2, 2.1, 0.012, 0xbfe3f5, 2); P('b', 0, 0.35, -hd + 0.075, 0.05, 2.1, 0.012, 0xf7f6f2); }   /* 아파트 = 베란다 큰 창(뒤) */
     else K.wwin(S9, 'B', 0, 1.0, 1.8, 1.2, { sun: true }); if (!inn) K.wwin(S9, 'L', 0.4, 1.25, 1.4, 1.0, { sun: true });
     if (inn) { P('b', -1.8, 0, -1.0, 2.0, 0.18, 1.5, 0xf08fb2); P('b', -1.8, 0.18, -1.0, 1.9, 0.08, 1.4, 0xf6f4ee); P('b', -1.8, 0.26, -1.55, 0.5, 0.1, 0.3, 0xffffff); K.colL(S9, -1.8, -1.0, 1.0, 0.75, -0.5, 0.3); K.rtable(S9, 1.2, -0.6, 0.35, 0xe9e2d0, 0.35); K.putF(S9, 'd_i16', 1.2, -0.6, 0); for (const a of [0.6, 2.6]) { P('c16', 1.2 + Math.sin(a) * 0.62, 0, -0.6 + Math.cos(a) * 0.62, 0.22, 0.08, 0, 0xe08a3a); } K.putF(S9, 'd_i2', -3.3, -1.6, 0); P('b', -1.8, 0, -1.9, 2.1, 0.9, 0.06, 0x8a5a34); K.colL(S9, -1.8, -1.9, 1.05, 0.05, -0.5, 0.9); }   /* 방석 둘 · 세움 등 · 이불 머리판 */
@@ -441,7 +481,7 @@ export function createEnter(A) {
       else { K.putF(S9, 'd_i8', -hw + 0.55, 0.4, Math.PI / 2); K.colL(S9, -hw + 0.55, 0.4, 0.42, 1.12, -0.5, 0.7); seats.push({ seat: [ox - hw + 0.5, oy + 0.45, oz + 0.4], yaw: Math.PI / 2, stand: [ox - hw + 1.3, oy, oz + 0.4] }); } K.putF(S9, 'd_i16', -1.2, 0.4, 0); K.putF(S9, 'd_i7', 0.6, 0.4, -Math.PI / 2); K.colL(S9, 0.6, 0.4, 0.25, 0.76, -0.5, 1.3);
       P('b', 2.6, 0, -hd + 0.35, 2.6, 0.9, 0.6, 0xf6f4ee); P('b', 2.6, 0.9, -hd + 0.35, 2.66, 0.04, 0.64, 0x8a9098); P('b', 2.2, 0.94, -hd + 0.35, 0.6, 0.02, 0.4, 0xb8bec4); P('b', 3.3, 0.94, -hd + 0.3, 0.4, 0.12, 0.3, 0x3a3d42); K.colL(S9, 2.6, -hd + 0.35, 1.33, 0.32, -0.5, 1.0);   /* 싱크대 · 개수대 · 가스레인지 */
       P('b', hw - 0.4, 0, -hd + 1.3, 0.7, 1.9, 0.7, 0xeef0f2); P('b', hw - 0.756, 1.1, -hd + 1.3, 0.012, 0.7, 0.6, 0xd8dce0); K.colL(S9, hw - 0.4, -hd + 1.3, 0.35, 0.35, -0.5, 1.9);   /* 냉장고 */
-      K.stable(S9, 2.4, -0.4, 1.2, 0.8, WL, 0.74); K.chair(S9, seats, 2.4 - 0.85, -0.4, Math.PI / 2, C2.acc); K.chair(S9, seats, 2.4 + 0.85, -0.4, -Math.PI / 2, C2.acc); shape(E, 'bowl', 2.3, 0.74, -0.4, 0xf2c230, 0, 0.8); shape(E, 'cup', 2.6, 0.74, -0.3, 0xf6f4ee, 0, 1); }
+      ch0 = seats.length; K.stable(S9, 2.4, -0.4, 1.2, 0.8, WL, 0.74); K.chair(S9, seats, 2.4 - 0.85, -0.4, Math.PI / 2, C2.acc); K.chair(S9, seats, 2.4 + 0.85, -0.4, -Math.PI / 2, C2.acc); if (!['cook', 'bday', 'table', 'guest'].includes(pk)) { shape(E, 'bowl', 2.3, 0.74, -0.4, 0xf2c230, 0, 0.8); shape(E, 'cup', 2.6, 0.74, -0.3, 0xf6f4ee, 0, 1); } }
     const job = jobOf(B9), slots = inn ? C.slots : HOME_SLOTS.concat([[job[1][0], ['cap', 'boot', 'rod', 'cloth'].includes(job[1][1]) ? 'peg' : job[1][1] === 'bag' ? 'table' : 'bin', job[1][1], job[1][2], job[1][3]]]);
     const SP = inn ? [['L', -0.2, 1.8], ['R', -1.8, -0.2], ['F', -hw + 0.4, -2.0], ['R', 0.6, 2.4]] : [['L', -hd + 0.4, -1.6], ['F', 1.3, 3.1], ['B', -hw + 1.0, -1.3], ['F', -hw + 0.5, -1.6]];
     const st = slots.map((s, i) => station(S9, K, E, SP[i][0], SP[i][1], SP[i][2], s, rnd));
@@ -450,31 +490,94 @@ export function createEnter(A) {
     const mess = slots.map((s, i) => K.parts(put => { const E2 = partE(put, at); shape(E2, s[2], -1.6 + (i % 2) * 0.8, 0.03, (i > 1 ? 0.8 : 0), s[3], 0.6 * i, s[2] === 'rod' ? 0.5 : 0.9); })), put9 = slots.map((s, i) => K.parts(put => { const E2 = partE(put, at), p = st[i].top; shape(E2, s[2], p[0], p[1] + 0.005, p[2], s[3], st[i].ry, s[2] === 'rod' ? 0.6 : 0.85); }));
     mess.concat(put9).forEach(g => { g.visible = false; }); S9.extra = mess.concat(put9);
     K.plant(S9, hw - 0.5, hd - 0.6, 0.8);
-    const who = inn ? C.owner : job[0], ex = [{ k: 'ent:ask', stand: [-2.1, 0, 1.0], r: 1.1, label: '🙋 ' + who + ' — ' + (inn ? C.tip : (en() ? 'Help tidy up' : '정리 돕기')) }].concat(st.map((s, i) => ({ k: 'ent:s' + i, stand: s.stand, r: 1.0, label: '🧺 ' + slots[i][0] })));
-    return { S: S9, W, D, H, seats, extra: ex, cam: { d: 3.8, p: 0.6 }, spz: 2.6, st, show: put9, mess, slots, asks, who, owner: [ox - 2.7, oy, oz + 1.6], items: inn ? ['이불 · 작은 탁자', who + '(이름 없음)'] : ['거실 소파 · TV · 러그', '부엌 싱크대 · 냉장고 · 식탁', who + '(이름 없음 · 하는 일로)'].concat(slots.map(s => s[0])) }; }
+    const jk = JOBKEY[job[0]] || 'office'; let fnd = null;
+    if (!inn) { jobCorner(S9, K, E, jk, hw); seasonProp(S9, K, E, sea(), 1.05, hd - 0.45); if (plan && plan.ev) evProps(S9, K, E, plan.ev, hd, seats, ch0);
+      if (pk === 'water') { for (const x of [-0.7, 0, 0.7]) { E('c', x, 0, -hd + 0.45, 0.13, 0.22, 0.13, 0xc8693a); E('c', x, 0.22, -hd + 0.45, 0.12, 0.012, 0.12, 0xc8a070); E('s', x, 0.3, -hd + 0.45, 0.1, 0.05, 0.1, 0xa8b860); } K.colL(S9, 0, -hd + 0.45, 0.85, 0.15, -0.5, 0.4); }   /* 마른 화분 셋(물 주면 흙이 짙어지고 잎이 섬) */
+      if (pk === 'find' && plan) { const SP9 = FINDSP(hw, hd), j = hashS(plan.id + ':f:' + day()) % SP9.length, obj = HFIND[hashS(plan.id + ':o:' + day()) % HFIND.length], g9 = K.parts(put => { const E2 = partE(put, at), p9 = SP9[j][0]; shape(E2, obj[2], p9[0], p9[1], p9[2], obj[3], 0.4, 1.6); }); S9.extra = (S9.extra || []).concat([g9]); fnd = { obj, zone: SP9[j][2], at: j, g: g9, spots: [j, (j + 2) % SP9.length, (j + 4) % SP9.length].map(i => ({ i, stand: SP9[i][1] })) }; } }   /* 찾기 = 진짜 한 곳 + 헛걸음 둘(귀띔으로 고름) */
+    const who = inn ? C.owner : job[0], ex = [{ k: 'ent:ask', stand: [-2.1, 0, 1.0], r: 1.1, label: '🙋 ' + who + ' — ' + (inn ? C.tip : (en() ? 'Help' : HKNAME[pk] || '정리 돕기')) }].concat(st.map((s, i) => ({ k: 'ent:s' + i, stand: s.stand, r: 1.0, label: '🧺 ' + slots[i][0] }))).concat(fnd ? fnd.spots.map(q => ({ k: 'ent:f' + q.i, stand: q.stand, r: 0.9, label: '🔎 ' + (en() ? 'Look here' : '여기 살펴보기') })) : []).concat(inn ? [] : [{ k: 'ent:j', stand: [hw - 1.15, 0, 2.15], r: 0.8, label: '🧰 ' + (en() ? 'The neighbour’s work things' : (HJOB[jk] ? HJOB[jk].nm.replace(' 이웃', '') + ' 일 도구 보기' : '일 도구 보기')) }]);
+    return { S: S9, W, D, H, seats, extra: ex, cam: { d: 3.8, p: 0.6 }, spz: 2.6, st, show: put9, mess, slots, asks, who, jk, find: fnd, owner: [ox - 2.7, oy, oz + 1.6], items: inn ? ['이불 · 작은 탁자', who + '(이름 없음)'] : ['거실 소파 · TV · 러그', '부엌 싱크대 · 냉장고 · 식탁', who + '(이름 없음 · 하는 일로)'].concat(slots.map(s => s[0])) }; }
 
   // ───────── 바깥(town.js) 연결 ─────────
   function opts(B9) { const { nm, k } = info(B9), C = CATS[k], en9 = en(); if (!C) return {}; const id = String(B9.b && B9.b.id || '') + ':' + Math.round(B9.cx) + ',' + Math.round(B9.cz);
     const set = made => { CUR = { k, C, id, nm: name(B9), made, task: null, mis: 0, at: null, B9 }; log('in ' + k); return made; };
     if (C.st === 'store') { const S9 = A.shopOf(nm); return { name: nm, room: (at, K) => { const r = K.shopRoom(at, S9[1], nm); if (r.counter) r.counter.label = en9 ? '🛒 Counter (buy · help stock shelves)' : '🛒 계산대 (사기 · 진열 돕기)'; CUR = null; const m = set(r); CUR.at = at; CUR.sub = S9[1]; return m; }, onShop: () => storeMenu(B9), onBake: /빵|제과/.test(nm) ? () => A.bake() : null, onExtra: kk => use(kk) }; }
-    const R9 = C.st === 'diner' ? roomDiner : C.st === 'class' ? roomClass : C.st === 'office' || C.st === 'term' ? roomOffice : C.st === 'ware' ? roomWare : C.st === 'hall' ? roomHall : C.st === 'home' || C.st === 'apt' || C.st === 'inn' ? (a, K9, C9, n9, B) => roomHome(a, K9, C9, n9, B, C.st) : roomShop;
-    return { name: name(B9), room: (at, K) => { const m = set(R9(at, K, C, name(B9), B9)); CUR.at = at; greet(); return m; }, onExtra: kk => use(kk) }; }
-  function greet() { if (!CUR) return; const r = S().b[CUR.id]; if (r && r.n > 0 && CUR.made.owner) setTimeout(() => { if (CUR) A.bubble({ x: CUR.made.owner[0], y: CUR.made.owner[1], z: CUR.made.owner[2], sc: 1 }, en() ? 'You came back! Thanks for last time.' : '또 왔네요! 지난번에 고마웠어요.'); }, 900); }
+    const home = C.st === 'home' || C.st === 'apt', plan = home ? { ...planFor(id), id } : null;   /* ENTER-3 오늘의 부탁 = 방을 짓기 전에 정함(그 부탁 소품까지 같이 지음) */
+    const R9 = C.st === 'diner' ? roomDiner : C.st === 'class' ? roomClass : C.st === 'office' || C.st === 'term' ? roomOffice : C.st === 'ware' ? roomWare : C.st === 'hall' ? roomHall : C.st === 'home' || C.st === 'apt' || C.st === 'inn' ? (a, K9, C9, n9, B) => roomHome(a, K9, C9, n9, B, C.st, plan) : roomShop;
+    return { name: name(B9), room: (at, K) => { const m = R9(at, K, C, name(B9), B9), late = K.parts(() => {}); m.S.extra = (m.S.extra || []).concat([late]); set(m); CUR.at = at; CUR.K = K; CUR.late = late; CUR.plan = plan; CUR.reg = reg5(B9); CUR.jk = m.jk || null; greet(); return m; }, onExtra: kk => use(kk) }; }   /* late = 끝날 때 한 번 짓는 결과(계산대 봉투·그릇·싱싱한 화분) — 나가면 town_indoor exit가 같이 치움 */
+  function greet() { if (!CUR) return; const r = S().b[CUR.id], P9 = CUR.plan, o = CUR.made.owner, e = en(); if (!o) return; let t = null;   /* ENTER-3 집 = 오늘 한 일 · 그 집만의 일 · 지난번 일 기억 · 처음 = 오늘 부탁 */
+    if (P9) t = r && r.dd === day() ? (e ? 'Thanks again for today!' : '오늘 와 줘서 고마웠어요.') : P9.ev ? (HEV[P9.ev][3].match(/^[^.!?]*[.!?]/) || [HEV[P9.ev][3]])[0] : r && r.n > 0 && r.lk ? (HMEM[r.lk] || '또 왔네요!') : '어서 와요! ' + (HINTRO[P9.kind] || '');
+    else if (r && r.n > 0) t = e ? 'You came back! Thanks for last time.' : '또 왔네요! 지난번에 고마웠어요.';
+    if (t) { log('greet ' + t.slice(0, 40)); setTimeout(() => { if (CUR && CUR.made.owner === o) A.bubble({ x: o[0], y: o[1], z: o[2], sc: 1 }, t); }, 900); } }
   function use(kk) { if (!CUR || A.panelOpen()) return; log('use ' + kk);
     if (kk === 'ent:ask') return ask(); if (kk === 'ent:quiz') return quiz(); if (kk === 'ent:board') return A.board(); if (kk === 'ent:map') return A.openMap();
-    if (/^ent:s\d$/.test(kk)) return slotE(+kk.slice(5)); }
+    if (/^ent:s\d$/.test(kk)) return slotE(+kk.slice(5)); if (/^ent:f\d$/.test(kk)) return findE(+kk.slice(5)); if (kk === 'ent:j') return jobLook(); }
+  function jobLook() { const J = HJOB[CUR.jk]; if (!J) return; const L9 = [J.pc[2], J.task.learn], t = L9[(day() + hashS(CUR.id)) % 2]; sayOwner(t); toast('🧰 ' + t, 3); log('job look'); }   /* 일 구석 = 그 일 사실 두 갈래(날마다 번갈아) */
   const slotsOf = () => CUR.made.slots || CUR.C.slots, asksOf = () => CUR.made.asks || CUR.C.asks;
   const sayOwner = t => { const o = CUR.made.owner; if (o) A.bubble({ x: o[0], y: o[1], z: o[2], sc: 1 }, t); };
   const who = () => CUR.made.who || CUR.C.owner;
   function pick(L9, key, extra) { const c = cRec(CUR.k), D = day(), b = bRec(CUR.id), seed = hashS(CUR.id + ':' + D + ':' + b.t + ':' + (extra || '')); const ok = L9.map((q, i) => i).filter(i => !c.last.includes(key(i))); const pool = ok.length ? ok : L9.map((q, i) => i); return pool[seed % pool.length]; }
   function ask() { const C = CUR.C, e = en(); if (CUR.task) return showTask();
+    if (CUR.plan) return askHome();
+    const X9 = contentOf(CUR.k, CUR.B9 ? info(CUR.B9).nm : CUR.nm); if (X9 && X9.f !== 'walk') { const c = cRec(CUR.k), two = !!(CUR.C.slots && CUR.C.asks && CUR.made.st), form = !two ? 'frame' : c.lf ? (c.lf === 'frame' ? 'walk' : 'frame') : (hashS(CUR.id + ':' + day()) % 2 ? 'frame' : 'walk'); c.lf = form; mark(); log('form ' + form); if (form === 'frame') return askFrame(X9); }   /* 교사 11-07 '건물별로 다 다를 필요는 없어 · 지금보다 다양성 있게' — 한 갈래에 판 꼴 둘(그 갈래 판단 판 · 걸어서 칸 찾기)을 번갈아 */
+    return askWalk(); }
+  function askWalk() { const C = CUR.C, e = en();
     if (C.st === 'diner') { const T = CUR.made.T, c = cRec(CUR.k), hard = c.n >= 3, ti = pick(T, i => 't' + i), t = T[ti], dish = C.menu[(hashS(CUR.id + day() + bRec(CUR.id).t) % C.menu.length)];
       const where = (hard ? (t.back ? '문에서 먼 ' : '문 쪽 ') : '') + (t.win ? '창가에 ' : '안쪽에 ') + (t.n === 1 ? '혼자 앉은 손님' : '둘이 앉은 손님');
       CUR.task = { slot: ti, t: dish[0] + ' — ' + where, dish }; if (hard) CUR.task.t = dish[0] + ' — ' + where; showTask(); return; }
     const L9 = asksOf(), c = cRec(CUR.k), tier = c.n >= 3 ? 2 : 1, cand = L9.map((q, i) => i).filter(i => L9[i][2] <= tier); let ai = pick(cand, i => 'a' + cand[i]); ai = cand[ai];
     CUR.task = { slot: L9[ai][1], ai, t: L9[ai][0] }; if (CUR.made.mess) { CUR.made.mess.forEach(g => { g.visible = false; }); CUR.made.mess[CUR.task.slot].visible = true; }
     showTask(); }
+  // ENTER-3 판단 틀 판(가게·식당·사무실·창고)
+  function askFrame(X9) { const C = CUR.C, c = cRec(CUR.k), b = bRec(CUR.id), din = C.st === 'diner';
+    PLAY.open({ C: X9, ttl: CUR.nm, ic: C.ic, who: din ? '주문 쪽지' : '손님', seed: CUR.id + ':' + day() + ':' + b.t, tier: c.n >= 3 ? 2 : 1, last: c.l || [], sea: sea(), onDone: res => frameDone(res, X9), onBtn: () => sellMenu() });
+    sayOwner(din ? (en() ? 'Could you take this order?' : '이 주문 좀 맡아 줄래요?') : X9.f === 'read' ? (en() ? 'Could you read this for the customer?' : '손님한테 이것 좀 읽어 줄래요?') : (en() ? 'Could you help this customer?' : '이 손님 좀 도와줄래요?')); log('frame ' + X9.f); }
+  const keep = keys => { const c = cRec(CUR.k); c.l = (c.l || []).concat(keys || []).slice(-8); };
+  function lateAdd(fn) { if (!CUR || !CUR.K || !CUR.late) return null; const g = CUR.K.parts(put => fn(partE(put, CUR.at))); CUR.late.add(g); return g; }
+  function lateClear() { if (!CUR || !CUR.late) return; for (const g of CUR.late.children.slice()) { CUR.late.remove(g); g.traverse(m => { if (m.geometry) m.geometry.dispose(); }); } }
+  function credit(o) { const C = CUR.C, b = bRec(CUR.id), c = cRec(CUR.k), first = b.t === 0, s9 = S(); b.t++; b.n++; c.n++; (s9.ck = s9.ck || {})[CUR.k] = 1; mark(); if (first) A.skUp(C.sk || 'work', 2, 'ent:' + CUR.k); A.rec && A.rec('ent', { k: CUR.k, mis: o.mis | 0, f: o.f || 'walk' }); return { first, t: b.t }; }   /* 솜씨 = 예전 그대로(꼬리표 ent:<갈래> · 건물마다 그날 처음) */
+  function frameDone(res, X9) { const C = CUR.C, e = en(), din = C.st === 'diner'; keep(res.keys);
+    if (din) { const T = CUR.made.T, c = cRec(CUR.k), hard = c.n >= 3, ti = pick(T, i => 't' + i), t = T[ti], d9 = res.out[0] || [C.menu[0][0], '', [], '', C.menu[0][1]], where = (hard ? (t.back ? '문에서 먼 ' : '문 쪽 ') : '') + (t.win ? '창가에 ' : '안쪽에 ') + (t.n === 1 ? '혼자 앉은 손님' : '둘이 앉은 손님');
+      CUR.task = { slot: ti, t: d9[0] + ' — ' + where, dish: [d9[0], d9[4]], col: d9[4] }; log('task ' + CUR.task.t); return { say: (e ? 'Kitchen: ' : '주방: "') + d9[0] + ' 나왔어요! ' + where + '에게 가져다줘요."', sub: (e ? 'To do: ' : '할 일: ') + '탁자 번호판을 보며 그 손님 탁자를 찾아가 E를 눌러요.' }; }
+    if (X9.walk && res.slot != null) { CUR.task = { slot: res.slot, t: (res.slot + 1) + '번 타는 곳으로 안내', via: 1 }; log('task ' + CUR.task.t); return { say: '손님: "고마워요! ' + (res.slot + 1) + '번 타는 곳까지 같이 가 줄래요?"', sub: (e ? 'To do: ' : '할 일: ') + (res.slot + 1) + '번 타는 곳 판 앞에 가서 E를 눌러요.' }; }
+    lateClear(); if (CUR.made.cnt) { const [x, y, z] = CUR.made.cnt, it = res.out[0], col = it ? it[4] : X9.res ? X9.res[1] : 0xd9b27a; lateAdd(E2 => { E2('b', x, y, z, 0.3, 0.32, 0.2, 0xd9b27a); E2('b', x, y + 0.32, z, 0.3, 0.025, 0.2, 0xc8a070); shape(E2, (X9.res || ['box'])[0], x, y + 0.345, z, col, 0, 0.8); }); }   /* 계산대 위 봉투 + 그 물건 */
+    if (C.st === 'ware' || C.st === 'office' || C.st === 'term') (CUR.made.show || []).forEach(g => { g.visible = true; });   /* 창고 = 선반 칸마다 상자 · 사무실 = 판마다 초록 표 */
+    const cr = credit(res); sfx('ding'); const thx = it0 => (e ? 'Thank you!' : '고마워요! ' + (it0 ? it0[0] + ', 딱 그거예요.' : '덕분에 잘 됐어요.'));
+    sayOwner(thx(res.out[0])); return { say: who() + ': "' + thx(res.out[0]) + '"', sub: (X9.learn ? X9.learn + ' ' : '') + (e ? '' : '오늘 여기서 ' + cr.t + '번째예요.'), btn: CUR.C.want && sellable().length ? (e ? '🧺 Sell from my bag' : '🧺 가방 물건 팔기') : '' }; }   /* 가방 팔기(want) = 판단 판 차례에도 끝 창에서 */
+  // ENTER-3 집: 오늘의 부탁(하루 한 집 한 부탁)
+  function askHome() { const P9 = CUR.plan, b = bRec(CUR.id), e = en();
+    if (b.dd === day()) { sayOwner(e ? 'That was plenty for today. Come again tomorrow!' : '오늘은 이걸로 충분해요. 내일 또 와요!'); toast('🏠 ' + (e ? 'Done here today. Try another neighbour’s house.' : '오늘 이 집 부탁은 끝났어요. 다른 이웃 집에도 가 봐요.'), 3); return; }
+    if (P9.kind === 'tidy') return askWalk();
+    if (P9.kind === 'find') { const F9 = CUR.made.find; if (!F9) return askWalk(); CUR.task = { find: 1, spot: F9.at, t: F9.obj[0] + josa(F9.obj[0], '을', '를') + ' 어디 뒀더라… ' + F9.zone + '에서 본 것 같아요.' }; showTask(); return; }
+    const X9 = homeSpec(P9.kind, CUR.jk, CUR.reg, sea()); if (!X9) return askWalk();
+    PLAY.open({ C: X9, ttl: CUR.nm, ic: P9.ev ? HEV[P9.ev][0] : '🏠', who: who(), seed: CUR.id + ':' + day(), tier: (b.n | 0) >= 3 ? 2 : 1, last: [], sea: sea(), onDone: res => homeFrameDone(P9.kind, res, X9) }); log('home ' + P9.kind); }
+  function homeFinish(kind, o) { const b = bRec(CUR.id), s9 = S(), P9 = CUR.plan; b.dd = day(); b.lk = kind; const cr = credit(o); (s9.hv = s9.hv || {})[hk(CUR.id)] = 1; s9.pc = s9.pc || {};   /* 답례 = 그 일 엽서(처음) → 아니면 그 일에서 나는 작은 것(꼬리표 ent:gift · 하루 넷) · 알림 = 실제로 들어온 것만 */
+    const pcId = P9 && P9.ev ? 'e:' + P9.ev : 'j:' + CUR.jk, PC9 = PCARDS.find(q => q[0] === pcId); let got = '';
+    if (PC9 && !s9.pc[pcId]) { s9.pc[pcId] = day(); got = en() ? 'a postcard “' + PC9[2] + '”' : '엽서 「' + PC9[2] + '」를 받았어요(엽서 ' + Object.keys(s9.pc).length + '/' + PCARDS.length + ')'; }
+    else { const g9 = (HJOB[CUR.jk] || {}).gift; if (g9) { A.GAME.add(g9, 1, 'ent:gift'); if (A.GAME.lastN > 0) { const n9 = A.itemName(g9); got = en() ? n9 : g9 + ' ' + n9 + josa(n9, '을', '를') + ' 받았어요'; } } }
+    mark(); const hv = Object.keys(s9.hv).length, tot = A.homes ? A.homes() : 0; log('home done ' + kind);
+    return { got, line: en() ? 'Homes helped: ' + hv + (tot ? ' of ' + tot : '') + '.' : '도운 집은 ' + hv + '곳이에요' + (tot ? '(모두 ' + tot + '곳)' : '') + '.', cr }; }
+  const HDONE = { tidy: '정리를 마쳤어요.', cook: '음식을 다 만들었어요.', water: '화분에 물을 줬어요.', fix: '고장 난 것을 고쳤어요.', table: '상을 차렸어요.', job: '이웃 일을 도왔어요.', find: '잃어버린 것을 찾았어요.', bday: '생일 준비를 마쳤어요.', move: '이삿짐을 나눴어요.', guest: '손님상을 차렸어요.' };
+  const homeToast = (kind, R9) => toast('✅ ' + (en() ? 'Done. ' : HDONE[kind] + ' ') + R9.line + (R9.got ? (en() ? ' Thank-you gift: ' + R9.got + '.' : ' 답례로 ' + R9.got + '.') : ''), 3.6);
+  function homeRes(kind, X9, res) { const hd = CUR.made.D / 2, hw = CUR.made.W / 2;   /* 부탁마다 방 안에 남는 결과 */
+    lateAdd(E2 => { switch (kind) {
+      case 'cook': case 'bday': (X9.dish || []).forEach((d, i) => { const x = 2.1 + i * 0.55, z = -0.55; E2('c', x, 0.74, z, 0.11, 0.06, 0.11, 0xffffff); E2('c', x, 0.8, z, 0.095, 0.012, 0.095, d[1]); }); break;
+      case 'water': for (const x of [-0.7, 0, 0.7]) { E2('c', x, 0.233, -hd + 0.45, 0.121, 0.006, 0.121, 0x5a3a22); for (let i = 0; i < 3; i++) E2('s', x + Math.cos(i * 2.1) * 0.06, 0.36 + i * 0.03, -hd + 0.45 + Math.sin(i * 2.1) * 0.06, 0.07, 0.05, 0.07, 0x4e9a43); } shape(E2, 'bowl', 1.1, 0, -hd + 0.55, 0x3d74c9, 0, 1); break;
+      case 'fix': { const rs = (res && res.rs && res.rs[res.rs.length - 1]) || ['box', 0x3a3d42]; if (rs[2]) E2('s', 2.0, 0.83, -0.6, 0.06, 0.07, 0.06, rs[1], 0, 0, 1); else shape(E2, rs[0], 2.0, 0.745, -0.6, rs[1], 0.3, 1.2); break; }
+      case 'table': case 'guest': { const z0 = kind === 'guest' ? -0.6 : -0.2, f = kind === 'guest' ? -1 : 1; E2('c', 2.4 - 0.22 * f, 0.74, z0, 0.06, 0.05, 0.06, 0xffffff); E2('c', 2.4 + 0.02 * f, 0.74, z0, 0.065, 0.045, 0.065, 0x8a5a34); E2('b', 2.4 + 0.2 * f, 0.745, z0, 0.012, 0.008, 0.18, 0xc0c4c8); E2('b', 2.4 + 0.24 * f, 0.745, z0, 0.01, 0.008, 0.2, 0x8a5a34); for (const dx of [-0.12, 0.12]) E2('c', 2.4 + dx, 0.74, z0 - 0.2 * f, 0.05, 0.02, 0.05, dx < 0 ? 0x5aa84c : 0xd8452a); if (kind === 'guest') E2('c', 2.4, 0.74, -0.4, 0.09, 0.07, 0.09, 0xc8332b); break; }
+      case 'job': shape(E2, 'crate', hw - 0.35, 0.76, 1.6, 0x4e9a43, Math.PI / 2, 0.7); break;
+      case 'move': shape(E2, 'bowl', 2.2, 0.94, -hd + 0.35, 0xf6f4ee, 0, 1); shape(E2, 'book', 2.6, 0.745, -0.62, 0x3d74c9, 1.2, 1); break;
+      case 'find': { const o = CUR.made.find.obj; shape(E2, o[2], 2.0, 0.745, -0.62, o[3], 0.3, 1.4); break; }
+    } }); }
+  function homeFrameDone(kind, res, X9) { const e = en(); homeRes(kind, X9, res); const R9 = homeFinish(kind, res); sfx('ding'); const t = (e ? 'Thank you! ' : '고마워요! ') + (HTHANK[kind] || '');
+    sayOwner(t); homeToast(kind, R9);
+    return { say: who() + ': "' + t + '"', sub: (X9.learn ? X9.learn + ' ' : '') + (R9.got ? (e ? 'Thank-you gift: ' + R9.got + '.' : '답례로 ' + R9.got + '.') : '') }; }
+  function findE(i) { const e = en(), t = CUR.task, F9 = CUR.made.find; if (!t || !t.find || !F9) { toast('🔎 ' + (e ? 'Nothing special here.' : '여기엔 별것 없어요.'), 2); return; }
+    if (i !== t.spot) { CUR.mis++; sfx('tick'); toast('🤔 ' + (e ? 'Not here.' : '여기는 없어요. ' + F9.zone + josa(F9.zone, '이라고', '라고') + ' 했지요?'), 2.6); log('find miss ' + i); return; }
+    if (F9.g) F9.g.visible = false; CUR.task = null; homeRes('find', {}, null); const R9 = homeFinish('find', { mis: CUR.mis, f: 'find' }); CUR.mis = 0; sfx('ding'); const tt = (e ? 'You found it! ' : '찾았다! ') + HTHANK.find;
+    sayOwner(tt); homeToast('find', R9); }
   function showTask() { const e = en(), C = CUR.C, home = !!CUR.made.mess, din = C.st === 'diner';
+    if (CUR.task && CUR.task.find) { const P = A.openP('<h3>🔎 ' + esc(CUR.nm) + '</h3><div class="sm">' + esc(e ? 'To do: go where the neighbour says and press E to look.' : '할 일: 이웃이 말한 곳에 가서 E를 눌러 살펴봐요.') + '</div><div class="bd-sit">' + esc(who() + ': "' + CUR.task.t + '"') + '</div><div class="row"><button data-a="go" data-def="1">' + (e ? 'OK' : '찾으러 가요') + '</button></div>', false, 'enttask'); P.onclick = ev => { if (ev.target.closest('button')) A.closeP(); }; sayOwner(e ? 'Could you look for it?' : '같이 좀 찾아 줄래요?'); log('task find'); return; }
+    if (CUR.task && CUR.task.via) { const P = A.openP('<h3>' + (C.ic || '🚌') + ' ' + esc(CUR.nm) + '</h3><div class="sm">' + esc((e ? 'To do: ' : '할 일: ') + CUR.task.t + ' — 그 판 앞에서 E를 눌러요.') + '</div><div class="row"><button data-a="go" data-def="1">' + (e ? 'OK' : '안내하러 가요') + '</button></div>', false, 'enttask'); P.onclick = ev => { if (ev.target.closest('button')) A.closeP(); }; return; }
     const how = din ? (e ? 'Find the table on the order slip and press E there.' : '할 일: 쪽지에 적힌 손님 탁자를 찾아 E를 눌러요.') : home ? (e ? 'Find where this thing belongs and press E there.' : '할 일: 바닥에 놓인 것의 제자리를 찾아 E를 눌러요.') : C.st === 'office' || C.st === 'term' ? (e ? 'Find the board that fits and press E there.' : '할 일: 손님 바람에 맞는 판을 찾아 E를 눌러요.') : (e ? 'Find the shelf that has it and press E there.' : '할 일: 손님이 찾는 것이 있는 칸을 찾아 E를 눌러요.');
     const said = din ? (e ? 'Order slip: ' : '주문 쪽지: ') + CUR.task.t : (home ? who() : C.st === 'ware' || C.st === 'office' || C.st === 'term' ? (e ? 'Customer' : '손님') : (e ? 'Customer' : '손님')) + ': "' + CUR.task.t + '"';
     const P = A.openP('<h3>' + (C.ic || '🙋') + ' ' + esc(CUR.nm) + '</h3><div class="sm">' + esc(how) + '</div><div class="bd-sit">' + esc(said) + '</div>' + (CUR.C.want && !din ? sellRow() : '') + '<div class="row"><button data-a="go">' + (e ? 'OK, I’ll find it' : '찾으러 가요') + '</button></div>', false, 'enttask');
@@ -482,15 +585,15 @@ export function createEnter(A) {
     sayOwner(din ? (e ? 'Table order — off you go!' : '이 주문 좀 날라 줄래요?') : home ? (e ? 'Could you help me tidy up?' : '정리 좀 도와줄래요?') : (e ? 'Could you help this customer?' : '이 손님 좀 도와줄래요?')); log('task ' + CUR.task.t); }
   function slotE(i) { const e = en(), C = CUR.C, sl = (slotsOf() || [])[i], din = C.st === 'diner';
     if (!CUR.task) { if (din) { const t = CUR.made.T[i]; toast('🍽 ' + (i + 1) + (e ? ' table' : '번 탁자 — ') + (t.win ? '창가 · ' : '안쪽 · ') + (t.n === 1 ? '혼자 앉은 손님' : '둘이 앉은 손님'), 2.6); return; } if (sl) toast('🔎 ' + sl[0] + ' — ' + sl[4], 2.8); return; }
+    if (CUR.task.find) { toast('🔎 ' + (e ? 'Look where the neighbour said.' : '이웃이 말한 곳을 찾아봐요.'), 2.2); return; }
     if (i === CUR.task.slot) return done(i);
     CUR.mis++; sfx('tick'); const nm = din ? (i + 1) + '번 탁자' : sl ? sl[0] : '';
     sayOwner(din ? (e ? 'Not that table — check the window side and how many people.' : '그 탁자가 아니에요. 창가인지, 몇 명인지 다시 봐요.') : (e ? 'Hmm, that is ' + nm + '. Listen again.' : '음, 거기는 ' + nm + josa(nm, '이에요', '예요') + '. 손님 말을 다시 들어 봐요.'));
     toast('🤔 ' + (e ? 'Not here — think again' : nm + josa(nm, '은', '는') + ' 아니에요. 다시 생각해 봐요.'), 2.4); log('miss ' + i); }
   function done(i) { const e = en(), C = CUR.C, b = bRec(CUR.id), c = cRec(CUR.k), t = CUR.task; sfx('ding');
-    const sh = CUR.made.show || []; if (CUR.made.mess) { CUR.made.mess[i].visible = false; if (sh[i]) sh[i].visible = true; } else if (C.st === 'diner' || C.st === 'office' || C.st === 'term' || C.st === 'ware') { if (sh[i]) sh[i].visible = true; } else { sh.forEach((g, j) => { g.visible = j === i; }); }
-    const first = b.t === 0; b.t++; b.n++; c.n++; const key = C.st === 'diner' ? 't' + i : 'a' + t.ai; c.last.push(key); while (c.last.length > 2) c.last.shift(); mark();
-    if (first) A.skUp(C.sk || 'work', 2, 'ent:' + CUR.k);
-    A.rec && A.rec('ent', { k: CUR.k, mis: CUR.mis }); CUR.task = null; CUR.mis = 0;
+    const sh = CUR.made.show || []; if (CUR.made.mess) { CUR.made.mess[i].visible = false; if (sh[i]) sh[i].visible = true; } else if (C.st === 'diner' && t && t.col != null && CUR.made.T) { const T9 = CUR.made.T[i]; lateAdd(E2 => { for (const dz of [-0.2, 0.2].slice(0, T9.n)) shape(E2, 'plate', T9.x, 0.75, T9.z + dz, t.col, 0, 1); }); } else if (C.st === 'diner' || C.st === 'office' || C.st === 'term' || C.st === 'ware') { if (sh[i]) sh[i].visible = true; } else { sh.forEach((g, j) => { g.visible = j === i; }); }   /* ENTER-3 식당 = 고른 음식 색 접시(손님 수만큼) */
+    if (CUR.plan && CUR.made.mess) { CUR.task = null; const R9 = homeFinish('tidy', { mis: CUR.mis, f: 'walk' }); CUR.mis = 0; sayOwner(en() ? 'Thank you! The house is tidy.' : '고마워요! ' + HTHANK.tidy); homeToast('tidy', R9); log('done ' + i); return; }
+    const key = C.st === 'diner' ? 't' + i : 'a' + t.ai; c.last.push(key); while (c.last.length > 2) c.last.shift(); credit({ mis: CUR.mis, f: t && t.via ? 'read' : C.st === 'diner' ? 'tray' : 'walk' }); CUR.task = null; CUR.mis = 0;
     sayOwner(e ? 'Thank you! That’s it.' : C.st === 'diner' ? '고마워요! 손님이 좋아해요.' : CUR.made.mess ? '고마워요! 집이 깔끔해졌어요.' : '고마워요! 딱 그거예요.');
     toast('✅ ' + (e ? 'Done! (' + b.t + ' today here)' : (C.st === 'diner' ? '주문을 날랐어요' : CUR.made.mess ? '제자리에 놓았어요' : '찾아 줬어요') + '. 오늘 여기서 ' + b.t + '번째예요') + (c.n === 3 ? (e ? '. Harder requests from now' : '. 이제 조금 어려운 부탁도 와요') : ''), 3); log('done ' + i); }
   // 학원 퀴즈 판 셋(사실만 · 보기 섞기 · 같은 자리 정답 세 번 X)
@@ -519,8 +622,13 @@ export function createEnter(A) {
   function sellMenu() { const e = en(), draw = m => { const L9 = sellable(); return '<h3>🧺 ' + esc(CUR.nm) + (e ? ' buys' : ' — 가방 물건 팔기') + '</h3><div class="sm">' + esc(e ? 'Shop price (markets often pay more).' : '가게 값이에요. 장터에서는 더 받을 때가 많아요.') + '</div>' + (L9.length ? '<div class="bd-ch">' + L9.map(em => '<button class="sub" data-e="' + em + '">' + em + ' ' + esc(A.itemName(em)) + ' ×' + A.own(em) + ' — ' + A.won(A.price(em)) + '</button>').join('') + '</div>' : '<div class="sm">' + esc(e ? 'Nothing this shop buys.' : '이 가게가 사는 물건이 이제 없어요.') + '</div>') + '<div class="sm" data-m>' + esc(m || '') + '</div><div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>'; };
     const P = A.openP(draw(), false, 'entsell'), paint = m => { const bx = P.querySelector('.bx'); (bx || P).innerHTML = draw(m); };
     P.onclick = ev => { const bt = ev.target.closest('button'); if (!bt) return; if (bt.dataset.a === 'x') { A.closeP(); return; } const em = bt.dataset.e; if (!em || A.own(em) < 1) return; const v = A.price(em); if (!A.sell(em, v)) return; sfx('ding'); log('sell ' + em); paint((e ? 'Sold for ' : '팔았어요: ') + A.won(v)); }; }
-  function left() { if (!CUR) return; CUR = null; }   /* 방 모양·숨긴 결과(S9.extra)는 town_indoor exit()가 치움 */
+  // ENTER-3 모음(가방 🏅): 도운 집 n/전체 · 도운 가게·일터 갈래 · 엽서 14
+  function colHtml() { PLAY.css && PLAY.css(); const s9 = S(), e = en(), hv = Object.keys(s9.hv || {}).length, tot = A.homes ? A.homes() : 0, ckT = Object.keys(CATS).filter(k => !['home', 'apt', 'store', 'class'].includes(CATS[k].st)), ck = ckT.filter(k => (s9.ck || {})[k]).length, pc = s9.pc || {};
+    return '<div class="grp" data-b3grp="ent">' + (e ? 'Neighbours' : '이웃 집·가게') + '</div><div class="e3-col"><div><b>🏠 ' + (e ? 'Homes helped ' : '도운 집 ') + hv + '</b>' + (tot ? ' / ' + tot : '') + '</div><div><b>🏪 ' + (e ? 'Shops and workplaces ' : '도운 가게·일터 갈래 ') + ck + '</b> / ' + ckT.length + '</div></div>'
+      + '<div class="e3-pcs">' + PCARDS.map(p => pc[p[0]] ? '<div class="pc" title="' + esc(p[3]) + '"><i>' + p[1] + '</i><b>' + esc(p[2]) + '</b><small>' + esc(p[3]) + '</small></div>' : '<div class="pc no"><i>✉</i><b>?</b><small>' + esc(PC_WHERE[p[0]] || '') + (e ? '' : '에서 받아요') + '</small></div>').join('') + '</div>'; }
+  function left() { if (!CUR) return; CUR = null; PLAY.close(); }   /* 방 모양·숨긴 결과(S9.extra)는 town_indoor exit()가 치움 */
   return { tip, canIn, opts, left, name, hoursOf, catOf, use,
-    info: () => CUR ? { k: CUR.k, id: CUR.id, nm: CUR.nm, task: CUR.task ? { ...CUR.task } : null, extra: (CUR.made.extra || []).map(h => ({ k: h.k, label: h.label, at: CUR.at ? [CUR.at[0] + h.stand[0], CUR.at[1] + h.stand[1], CUR.at[2] + h.stand[2]] : null })), shown: (CUR.made.show || []).map(g => !!g.visible), mess: (CUR.made.mess || []).map(g => !!g.visible), T: CUR.made.T || null } : null,
-    s: () => S(), dbg: () => DBG.slice() };
+    info: () => CUR ? { k: CUR.k, id: CUR.id, nm: CUR.nm, task: CUR.task ? { ...CUR.task } : null, extra: (CUR.made.extra || []).map(h => ({ k: h.k, label: h.label, at: CUR.at ? [CUR.at[0] + h.stand[0], CUR.at[1] + h.stand[1], CUR.at[2] + h.stand[2]] : null })), shown: (CUR.made.show || []).map(g => !!g.visible), mess: (CUR.made.mess || []).map(g => !!g.visible), T: CUR.made.T || null, plan: CUR.plan ? { kind: CUR.plan.kind, ev: CUR.plan.ev || null } : null, jk: CUR.jk || null, reg: CUR.reg || null, find: CUR.made.find ? { at: CUR.made.find.at, zone: CUR.made.find.zone, obj: CUR.made.find.obj[0] } : null, late: CUR.late ? CUR.late.children.length : 0, f: (contentOf(CUR.k, CUR.B9 ? info(CUR.B9).nm : '') || {}).f || null, items: CUR.made.items || [] } : null,
+    s: () => S(), dbg: () => DBG.slice(), play: PLAY, colHtml, contentOf,
+    frames: () => Object.keys(CATS).filter(k => !['home', 'apt', 'store', 'class'].includes(CATS[k].st)).map(k => { const X = CONTENT[k]; return [k, CATS[k].st, Array.isArray(X) ? X.map(q => q.f).join('|') : (contentOf(k, '') || {}).f || (CATS[k].st === 'hall' ? 'board' : 'walk')]; }) };
 }

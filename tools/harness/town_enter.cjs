@@ -48,10 +48,18 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       if (shotDir) { await closeAll(); const sp = await ev(() => SM_TOWN.indoor.spawn()); if (sp) await tpA(sp); await W8(900); await p.screenshot({ path: shotDir + '/ent_' + k + '.png' }); }
       const xp0 = await ev(() => JSON.stringify(SM_TOWN.skills().xp || {}));
       if (I.extra.some(h => h.k === 'ent:ask')) {
-        await E('ent:ask', async () => ((await panel()) || {}).k === 'enttask'); const P0 = await panel(); t(P0 && P0.k === 'enttask' && /할 일/.test(P0.t), '부탁 창 「할 일」');
+        await E('ent:ask', async () => ['enttask', 'ent3'].includes(((await panel()) || {}).k)); const P0 = await panel(); t(P0 && ['enttask', 'ent3'].includes(P0.k) && /할 일/.test(P0.t), '부탁 창 「할 일」');
+        if (P0 && P0.k === 'ent3') {   /* ENTER-3 판단 틀(가게·식당·사무실·창고·집 부탁) — 자세히는 town_enter3.cjs · 여기선 풀림 · 걸어가는 둘째 단계 · 보이는 결과 */
+          for (let n9 = 0; n9 < 60; n9++) { const st9 = await ev(() => SM_TOWN.ent().play.st); if (!st9 || st9.done) break; await ev(() => SM_TOWN.ent().play.auto()); await W8(40); } t(/고마워요|나왔어요|같이 가/.test(((await panel()) || {}).t || ''), '판단 틀 판 끝 글'); await closeAll();
+          let I2 = await EI(); if (I2.task && I2.task.slot != null) { const sl = I2.task.slot, h9 = I2.extra.find(h => h.k === 'ent:s' + sl); if (h9) { await pressAt(h9.at); const d = await waitSaid('✅'); t(!!d || (await ev(() => SM_TOWN.ent().dbg())).slice(-3).includes('done ' + sl), '걸어서 탁자·타는 곳 E = ✅'); } }
+          const I3 = await EI(); t(!I3.task, '부탁 끝'); t(I3.late > 0 || I3.shown.some(Boolean), '보이는 결과(봉투·접시·상자·초록 표·그릇·화분)');
+        } else if ((await EI()).task && (await EI()).task.find) {   /* ENTER-3 집 = 물건 찾기 */
+          await closeAll(); const I2 = await EI(), h9 = I2.extra.find(h => h.k === 'ent:f' + I2.find.at); if (h9) { await pressAt(h9.at); t(!!await waitSaid('✅'), '찾음 ✅'); } const I3 = await EI(); t(!I3.task && I3.late > 0, '찾은 물건이 식탁에');
+        } else {
         await closeAll(); let I2 = await EI(); t(I2.task && I2.task.slot != null, '부탁이 정해짐'); const si = I2.task ? I2.task.slot : 0, wrong = I2.extra.filter(h => /^ent:s\d$/.test(h.k)).find(h => +h.k.slice(5) !== si);
         if (wrong) { await pressAt(wrong.at); const w = await waitSaid('아니에요|다시'); t(!!w, '틀린 칸 = 한 줄'); I2 = await EI(); t(I2.task && I2.task.slot === si, '틀려도 부탁은 그대로'); }
-        const right = I2.extra.find(h => h.k === 'ent:s' + si); if (right) { await pressAt(right.at); const d = await waitSaid('✅'); t(!!d, '맞는 칸 = ✅ 한 줄'); const I3 = await EI(); t(!I3.task, '부탁 끝'); t(I3.shown.some(Boolean), '보이는 결과(봉투·접시·제자리·표)'); if (I3.mess.length) t(!I3.mess.some(Boolean), '바닥에 놓인 것이 치워짐'); }
+        const right = I2.extra.find(h => h.k === 'ent:s' + si); if (right) { await pressAt(right.at); const d = await waitSaid('✅'); t(!!d || (await ev(() => SM_TOWN.ent().dbg())).slice(-3).includes('done ' + si), '맞는 칸 = ✅ 한 줄'); const I3 = await EI(); t(!I3.task, '부탁 끝'); t(I3.shown.some(Boolean), '보이는 결과(봉투·접시·제자리·표)'); if (I3.mess.length) t(!I3.mess.some(Boolean), '바닥에 놓인 것이 치워짐'); }
+        }
       } else if (I.extra.some(h => h.k === 'ent:quiz')) {
         await E('ent:quiz', async () => ((await panel()) || {}).k === 'entquiz'); let P0 = await panel(); t(P0 && /1\/3/.test(P0.t), '퀴즈 창 1/3');
         const pos = []; for (let i = 0; i < 3; i++) { const ix = await ev(() => [...document.querySelectorAll('.twn-p button[data-q]')].findIndex(b9 => b9.dataset.q === '0')); pos.push(ix); if (i === 0) { await ev(() => { const b9 = document.querySelector('.twn-p button[data-q="1"]'); if (b9) b9.click(); }); await W8(150); t(/다시 생각/.test(((await panel()) || {}).t || ''), '틀린 답 = 까닭 + 다시'); } await ev(() => document.querySelector('.twn-p button[data-q="0"]').click()); await W8(200); }

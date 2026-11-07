@@ -4,7 +4,7 @@
 //   지키는 선: 희귀도 색 테두리·반짝이·그라데이션·무게·내구도 X · 매 프레임 일 0(창이 열린 동안 끌기만) · 판타지 X · 실명 X · 이모지 = 윈도 10에서 보이는 것
 //   마을 쪽이 넘기는 것(A): GAME · lang() · esc(t) · bag() · rwd() · tools() · here() [x, z] · me() {x, z} · where(x, z) { ic, nm } · mapSnip(cv, pts) · renderer() · kid() · T3
 //     tone(...) · sfx(k) · typh() { rope, sand } | null · fx() 먹은 힘 한 줄 · lookSig() · night() · reopen(tab) · useShow(P9, e) · useBox() · sell(e) · yard(e)
-import { ITEMS, itemName } from './town_game.js?v=51';
+import { ITEMS, itemName } from './town_game.js?v=52';
 import { TOOL, TOOL_ORDER } from './town_tools.js?v=17';
 export const BAG3_V = 1;
 const T2 = (ko, en) => [ko, en];
@@ -139,7 +139,7 @@ export function createBag3(A) {
   function paneCol(parts, c) { const e9 = en(), st = sorted(bagKeys().filter(e => tabOfE(e) === 'col'));
     let h = '<div class="b3-pane" data-pane="col" role="tabpanel"><div class="grp" style="margin-top:2px" data-b3grp="stamp">' + (e9 ? 'Stamps' : '도장') + '</div>' + (st.length ? '<div class="b3-grid" data-grid="stamp" data-min="1">' + st.map(e => slot(e, e, itemName(e, e9), (A.bag()[e] | 0) > 1 ? A.bag()[e] | 0 : 0)).join('') + '</div>' : '<div class="b3-none">' + esc(e9 ? 'No stamps yet — the summit, the lighthouse and the stepping stones have one.' : '아직 도장이 없어요. 산꼭대기·등대·징검다리에 도장이 있어요.') + '</div>');
     if (parts.badge && parts.badge.length) h += '<div class="grp" data-b3grp="badge">' + (e9 ? 'Badges' : '배지') + '</div><div class="b3-grid" data-grid="badge" data-min="1">' + parts.badge.map(q => slot(q.id, '🏅', q.t.replace(/^\S+\s/, ''), 0)).join('') + '</div>';
-    h += parts.col || '';
+    h += (parts.col || '') + (c.entCol || '');   /* ENTER-3 이웃 집·가게 모음(도운 집 n/전체 · 엽서 14 · town_enter.js colHtml) */
     if (parts.recipe && parts.recipe.length) h += '<div class="grp" data-b3grp="recipe">' + (e9 ? 'Recipes you got' : '받은 요리법') + '</div><div class="b3-rc">' + parts.recipe.map(q => '<div class="st" data-b3="' + esc(q.id) + '"><b class="n">' + q.ic + '</b><span style="flex:1"><b>' + esc(q.t) + '</b><br><small>' + esc(q.use) + '</small></span></div>').join('') + '</div>';
     return h + '<div class="row" style="justify-content:flex-start;margin-top:12px">' + (c.dexBtn ? '<button class="sub" data-a="dex">📖 ' + (e9 ? 'Open the codex' : '도감 바로 가기') + '</button>' : '') + '</div></div>'; }
 

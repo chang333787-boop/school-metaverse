@@ -8,7 +8,7 @@
 //   CSS 셈: 마을·휴대폰 CSS가 #toast·놀이 글에 꼬리표 여럿(+ !important)을 걸어 둬서 이 틀은 :not(#pz0)(없는 id라 늘 맞음 · id 하나만큼 셈)로 이김 · 글 크기 바닥 15px = 판이 1.07배만 커져도 보이는 크기 16px
 export const PBOX_V = 1;
 const TOP = 56, BOT = 22, WMAX = 0.74, ZCAP = 1.9, ZMIN = 0.8, PCAP = 1.5;   /* 데스크톱: 위 56px = 알림 띠 자리 · 판 너비 ≤ 화면 74% · 판 창(openP) 놀이는 1~1.5배 */
-const GAME_P = new Set(['table', 'janggu', 'bake']);   /* 판 창으로 여는 놀이(openP kind) — 그림 판(canvas)이 든 창은 제 맞춤(fitCv)이 있어 키우지 않음 */
+const GAME_P = new Set(['table', 'janggu', 'bake', 'ent3']);   /* ENTER-3 건물 판단 틀 판(town_enter2.js) */   /* 판 창으로 여는 놀이(openP kind) — 그림 판(canvas)이 든 창은 제 맞춤(fitCv)이 있어 키우지 않음 */
 const CSS = `
 .twn-play{position:fixed;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:${TOP}px 16px ${BOT - 6}px;background:rgba(18,22,34,.36);font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif,SMEmoji}
 .twn-play .pb{box-sizing:border-box;position:relative;background:#fff8ea;border:4px solid #2b2420;border-radius:18px;padding:0 16px 14px;width:min(460px,92vw);box-shadow:0 7px 0 #2b2420,0 18px 34px rgba(0,0,0,.28);display:flex;flex-direction:column;gap:8px;color:#2b2420;animation:twnIn .2s ease-out both;overflow:auto;overscroll-behavior:contain}
