@@ -55,6 +55,9 @@ export function createTools(A) {
     if (!t.n || typeof t.n !== 'object') t.n = {}; if (t.cur && !t.have[t.cur]) t.cur = null; return t; };
   const mark = () => A.GAME.mark(), day = () => A.GAME.S.day | 0, toast = (t, s) => map.hud.toast(t, s), tone = (...a) => { if (map.tone) map.tone(...a); };
   const cur = () => S().cur || null;
+  /* BAG-3 도구 띠 차례(가방 🧰 탭에서 끌어 놓기 · S.tools.ord) — 여섯의 순열이 아니면(옛 저장) 기본 차례 · 숫자 키·아래 띠가 이 차례 */
+  const ord = () => { const o = S().ord; return Array.isArray(o) && o.length === TOOL_ORDER.length && TOOL_ORDER.every(k => o.includes(k)) ? o : TOOL_ORDER; };
+  function place(k, j) { if (!TOOL[k] || !(j >= 0 && j < TOOL_ORDER.length)) return false; const o = ord().slice(), i = o.indexOf(k); if (i === j) return true; o[i] = o[j]; o[j] = k; S().ord = o; mark(); if (BAR) barBuild(); if (A.keysLine) A.keysLine(); return true; }
   const gear = id => !!(A.gear && A.gear(id)), tankMax = () => TANK * (gear('tank') ? 2 : 1), rng = k => (k === 'rod' && gear('rod2') ? RANGE.rod2 : RANGE[k]);   /* REWARD-1 큰 물통 · 튼튼한 낚싯대 · 넓은 빗자루 */
 
   // ───────── 그림(처음 쓸 때 한 번 짓기 · map.add = 게임이 멈추면 치움) ─────────
@@ -122,6 +125,7 @@ export function createTools(A) {
   function barSync() { if (!BAR) return; const t = S(), k = cur(), on = !!(A.on() && (shownK || PICK > 0)); BAR.classList.toggle('on', on); if (!on) return;
     for (const b of BAR.children) { const k9 = b.dataset.t; b.classList.toggle('cur', k9 === k); b.classList.toggle('no', !t.have[k9]); b.title = L(TOOL[k9].t) + (t.have[k9] ? '' : ' — ' + L(TOOL[k9].get)); }
     tankSync(); }
+  function barBuild() { if (!BAR) return; BAR.innerHTML = ord().map((k, i) => '<button data-t="' + k + '"><i>' + TOOL[k].ic + '</i><b>' + (i + 1) + '</b>' + (k === 'can' ? '<em><s></s></em>' : '') + '</button>').join(''); tankW = -1; barSync(); }
   let tankW = -1; function tankSync() { if (!BAR) return; const w = Math.round(S().tank / tankMax() * 100); if (w === tankW) return; tankW = w; const s = BAR.querySelector('em s'); if (s) { s.style.width = w + '%'; s.style.background = w < 20 ? '#e0603a' : '#3a8fe0'; } }
   function tchSync() { if (!tchBtn) return; const on = A.tch() && !!shownK && !A.busy(); tchBtn.style.display = on ? 'flex' : 'none'; if (on) { const k = cur(); tchBtn.firstChild.textContent = '🧰 ' + (FS && FS.ph === 'bite' ? (en() ? 'Pull!' : '당겨요!') : (en() ? 'Use' : '쓰기')); tchBtn.title = L(TOOL[k].t); } }
   function ui() { if (BAR) return; CSS = document.createElement('style'); CSS.textContent = '.twn-tools{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:21;display:none;gap:5px;padding:5px 6px;background:#fff8ea;border:2px solid #2b2420;border-radius:12px;box-shadow:0 3px 0 #2b2420;pointer-events:auto}'
@@ -130,7 +134,7 @@ export function createTools(A) {
       + '.twn-tools button em{position:absolute;left:5px;right:5px;bottom:3px;height:5px;border-radius:3px;background:#d9cbb5;overflow:hidden}.twn-tools button em s{display:block;height:100%;width:100%;background:#3a8fe0;text-decoration:none}body.touch .twn-tools button b{display:none}body.h-keys .twn-tools{bottom:58px}body.touch .twn-tools{bottom:12px}'
       + '.twn-tuse{position:fixed;right:calc(196px + env(safe-area-inset-right));bottom:calc(100px + env(safe-area-inset-bottom));z-index:22;display:none;align-items:center;justify-content:center;min-width:92px;height:52px;padding:0 14px;border-radius:26px;background:#fff8ea;color:#2b2420;border:3px solid #2b2420;box-shadow:0 4px 0 #2b2420;font:900 17px system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif,SMEmoji;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}.twn-tuse.dn{transform:translateY(3px);box-shadow:0 1px 0 #2b2420}';
     document.head.appendChild(CSS);
-    BAR = document.createElement('div'); BAR.className = 'twn-tools ttl-keep'; BAR.innerHTML = TOOL_ORDER.map((k, i) => '<button data-t="' + k + '"><i>' + TOOL[k].ic + '</i><b>' + (i + 1) + '</b>' + (k === 'can' ? '<em><s></s></em>' : '') + '</button>').join('');
+    BAR = document.createElement('div'); BAR.className = 'twn-tools ttl-keep'; barBuild();
     BAR.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; e.stopPropagation(); hold(b.dataset.t); }); document.body.appendChild(BAR);
     tchBtn = document.createElement('div'); tchBtn.className = 'twn-tuse ttl-keep'; tchBtn.innerHTML = '<span>🧰 쓰기</span>';
     const dn = e => { e.preventDefault(); e.stopPropagation(); tchBtn.classList.add('dn'); try { tchBtn.setPointerCapture(e.pointerId); } catch (er) { /* 무시 */ } press(true, 't'); }, up = e => { e.stopPropagation(); tchBtn.classList.remove('dn'); press(false, 't'); };
@@ -366,7 +370,7 @@ export function createTools(A) {
     if (on) shoulderTick(dt); }
   // 키(town.js keyDn이 부름 — 창·대화·놀이가 아닐 때): 1~5 = 들기 · 도구를 들고 보일 때만 F = 쓰기(아니면 예전대로 장소 찾기)
   function key(e) { if (dead || !A.on() || A.busy() || (window.__pause && window.__pause.on) || document.body.classList.contains('title-on')) return false; const c = e.code, d = /^(?:Digit|Numpad)([1-6])$/.exec(c);
-    if (d) { hold(TOOL_ORDER[+d[1] - 1]); return true; }
+    if (d) { hold(ord()[+d[1] - 1]); return true; }
     if (c === 'KeyF' && shownK) { press(true, 'f'); return true; } return false; }
   const onKU = e => { if (e.code === 'KeyF') press(false, 'f'); };
   const onMD = e => { if (e.button !== 0 || !shownK || !e.target || e.target.tagName !== 'CANVAS' || !document.pointerLockElement) return; press(true, 'm'); };
@@ -388,8 +392,8 @@ export function createTools(A) {
  aim: (x, z) => { if (x == null) OVR.on = false; else { OVR.on = true; OVR.x = x; OVR.z = z; } aimCalc(true); return { ...T }; }, press: (on, src) => press(on, src || 'k'), use: () => press(true, 'k'),
     bite: () => { if (FS && FS.ph === 'wait') FS.bite = FS.t; else if (FS && FS.ph === 'fly') FS.bite = 0; return !!FS; }, piles: () => PILES.map(p => ({ k: p.k, x: p.x, z: p.z, y: +p.y.toFixed(2), mode: p.mode })), stands: () => STANDS.map(s => ({ x: +s.x.toFixed(1), z: +s.z.toFixed(1) })),
     tank: v => { S().tank = Math.max(0, Math.min(tankMax(), v)); tankSync(); fillSync(); }, faucets: () => FAUCH.map(h => ({ x: +h.hot.x.toFixed(2), z: +h.hot.z.toFixed(2), y: +h.hot.y.toFixed(2), off: h.hot.off, src: !!h.src })), sync: () => { showSync(); fillSync(); barSync(); tchSync(); pilesSync(true); drawAll(); },
-    pick: () => pick(), mesh: () => ({ ring: RING, mound: MOUND && MOUND.count, bits: BITS && BITS.count, hole: HOLE && HOLE.count, wet: WET && WET.count }) };
+    order: () => ord().slice(), place: (k, j) => place(k, j), pick: () => pick(), mesh: () => ({ ring: RING, mound: MOUND && MOUND.count, bits: BITS && BITS.count, hole: HOLE && HOLE.count, wet: WET && WET.count }) };
   function pick() { if (!A.on()) return; ui(); PICK = 8; barSync(); if (!A.tch()) toast(en() ? '🧰 Press 1–5 to hold a tool (click a slot too)' : '🧰 숫자 1~5로 도구를 들어요 (칸을 눌러도 돼요)', 2.6); }
   function keys9() { const e = en(), K = [['1~' + (S().have.scope ? 6 : 5), e ? 'tools' : '도구']]; if (shownK) K.push([e ? 'Click·F' : '클릭·F', e ? 'use' : '쓰기']); return K; }
-  return { init, tick, dispose, key, got, hold, pick, keys: keys9, get cur() { return shownK; }, get have() { return { ...S().have }; }, api: API };
+  return { init, tick, dispose, key, got, hold, pick, place, order: () => ord().slice(), keys: keys9, get cur() { return shownK; }, get have() { return { ...S().have }; }, api: API };
 }

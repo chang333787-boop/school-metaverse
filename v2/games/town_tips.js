@@ -164,7 +164,7 @@ export function createTips(A) {
     r(M, L('하늘에서 보기', 'Sky view'), L('메뉴의 🛰 단추로 마을 전체를 내려다봐요. 누른 곳도 길 안내와 바로 가기 중에 골라요', 'See the whole town with 🛰 in the menu. Tap a spot to pick: show the way or quick travel'));
     if (H('look')) r(t9 ? M : K('Y'), L('판 모습', 'Mat look'), L('우리가 만든 판 모습으로 바꿔요', 'Switch to the mat we built'), 'look');
     g(L('가방과 하루', 'Bag and day'));
-    r(t9 ? M : K('I'), L('가방', 'Bag'), t9 ? L('메뉴의 🎒 가방에서 모은 것을 보고 먹거나 나눠요', '🎒 Bag in the menu: see, eat or share what you collected') : L('모은 것을 보고 먹거나 나눠요', 'See, eat or share what you collected'), 'bag');
+    r(t9 ? M : K('I'), L('가방', 'Bag'), t9 ? L('메뉴의 🎒 가방에서 탭 넷을 골라요. 칸을 누르면 크게 보여요.', '🎒 Bag in the menu has four tabs. Tap a square to see it big.') : L('탭 넷은 ←·→로 옮겨요. 도구 카드를 띠 칸에 끌면 숫자 키 차례가 바뀌어요.', 'Move between the four tabs with ←/→. Drag a tool card onto the belt to change the number keys.'), 'bag');   /* BAG-3 */
     if (H('tasks')) r(C(L('왼쪽 할 일 줄', 'Task line, left')), L('오늘 할 일', 'Today’s tasks'), L('누르고 📋 할 일 칸을 봐요', 'Tap it and open the 📋 Tasks tab'), 'tasks');
     if (H('wx')) r(C(t9 ? '☰ ' + L('메뉴', 'Menu') : L('날씨와 시계', 'Weather and clock')), L('날씨와 시계', 'Weather and clock'), t9 ? L('메뉴 위쪽에 오늘 날씨가 보여요', 'Today’s weather shows at the top of the menu') : L('오른쪽 위를 누르면 오늘과 내일 날씨를 봐요', 'Click it at the top right for today and tomorrow'), 'wx');
     r(M, L('자기', 'Sleep'), L('우리 집 침대나 메뉴의 😴 단추로 다음 날 아침이 돼요. 밤 12시가 되면 저절로 자요', 'Sleep in your bed or use 😴 in the menu to reach the next morning. At midnight you fall asleep anyway'), 'sleep');

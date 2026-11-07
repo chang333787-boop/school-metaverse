@@ -13,7 +13,7 @@
 //     stam() 상태 | null · stamFill() · stamShow(s) · stamBusy() · stamGraph() | null
 import { GIFT_OF } from './town_news.js?v=11';
 import { inSeason, seaKey } from './town_bundle.js?v=3';
-import { ITEMS, itemName, won } from './town_game.js?v=50';
+import { ITEMS, itemName, won } from './town_game.js?v=51';
 import { DECO } from './town_cozy.js?v=3';
 export const BAG2_V = 1;
 const T2 = (ko, en) => [ko, en];
@@ -167,10 +167,10 @@ export function createBag(A) {
     if (DECO[e]) { const h = A.home && A.home(); out.push({ ic: '🏡', t: e9 ? 'You can put it in our yard' : '우리 집 마당에 놓을 수 있어요', p: h ? { icon: '🏡', name: e9 ? 'our house' : '우리 집', en: 'our house', door: h } : null }); }
     return out.slice(0, 7); }
   /* 가방 창 안 '쓸 곳' 칸(.bg-use)에 그 물건의 줄 · 🧭 = 빨간 선 · 꾸러미 = 꾸러미 창 */
-  function useShow(P9, e) { const box = P9 && P9.querySelector('.bg-use'); if (!box) return false; USE = uses(e); const e9 = en();
-    box.innerHTML = '<div style="font-weight:800;margin-bottom:3px">' + e + ' ' + esc(itemName(e, e9)) + (e9 ? ' — where it’s useful' : ' — 쓸 곳') + '</div>' + (USE.length ? USE.map((u, i) => '<div class="bg-u" style="display:flex;gap:8px;align-items:center;margin:3px 0"><span style="flex:1">' + u.ic + ' ' + esc(u.t) + '</span>' + (u.p ? '<button class="sub" data-ug="' + i + '" style="min-height:34px;padding:2px 9px">🧭</button>' : u.a === 'bun' ? '<button class="sub" data-ug="' + i + '" style="min-height:34px;padding:2px 9px">🧺</button>' : '') + '</div>').join('')
+  function useShow(P9, e, noHead) { const box = P9 && P9.querySelector('.bg-use'); if (!box) return false; USE = uses(e); const e9 = en();   /* BAG-3 noHead = 크게 보기 카드가 이름을 이미 보임 → 「쓸 곳」 한 마디만 */
+    box.innerHTML = '<div style="font-weight:800;margin-bottom:3px">' + (noHead ? (e9 ? 'Where it’s useful' : '쓸 곳') : e + ' ' + esc(itemName(e, e9)) + (e9 ? ' — where it’s useful' : ' — 쓸 곳')) + '</div>' + (USE.length ? USE.map((u, i) => '<div class="bg-u" style="display:flex;gap:8px;align-items:center;margin:3px 0"><span style="flex:1">' + u.ic + ' ' + esc(u.t) + '</span>' + (u.p ? '<button class="sub" data-ug="' + i + '" style="min-height:34px;padding:2px 9px">🧭</button>' : u.a === 'bun' ? '<button class="sub" data-ug="' + i + '" style="min-height:34px;padding:2px 9px">🧺</button>' : '') + '</div>').join('')
       : '<div>' + esc(e9 ? 'You don’t know a use yet. Visit a market or listen to neighbours.' : '아직 쓸 곳을 몰라요. 장터에 가 보거나 이웃 이야기를 들어 봐요.') + '</div>');
-    box.style.display = ''; for (const c of P9.querySelectorAll('[data-use]')) c.style.outline = c.dataset.use === e ? '3px solid #ff5a36' : ''; A.sfx('tick'); log('use ' + e + ' ' + USE.length); return true; }
+    box.style.display = ''; if (!noHead) for (const c of P9.querySelectorAll('[data-use]')) c.style.outline = c.dataset.use === e ? '3px solid #ff5a36' : ''; A.sfx('tick'); log('use ' + e + ' ' + USE.length); return true; }
   function useGo(i) { const u = USE[i]; if (!u) return false; if (u.a === 'bun') { A.openBundles(); return true; } if (!u.p) return false; A.closeP(); A.route(u.p); return true; }
   const useBox = () => '<div class="bg-use sm" style="display:none;background:#fffaf0;border:2px solid #2b2420;border-radius:8px;padding:6px 8px;margin:6px 0"></div>';
   const tapHint = () => '<div class="sm" style="opacity:.8">' + esc(en() ? 'Tap a thing to see where it’s useful.' : '물건을 누르면 쓸 곳이 보여요.') + '</div>';
