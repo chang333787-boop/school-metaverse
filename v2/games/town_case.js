@@ -289,15 +289,19 @@ export function createCase(A) {
     A.say('📒 ' + L(R.ann), 5, 2); }   /* NOTE-1 사건 시작 = 중요(lv2 · 창이 닫힌 뒤 · 못 보면 🔔 지난 알림) */
 
   // ───────── 1초 칸 ─────────
-  function sec() { if (dead || !A.on()) return; if (OFF) { if (S().cur) { S().cur = null; mark(); } sync(); hotSync(); chipSync(); return; } const s = S(), D = day(); let q = s.cur;
+  function sec() { if (dead || !A.on()) return; if (OFF) { if (S().cur) { S().cur = null; mark(); } sync(); hotSync(); chipSync(); return; } const s = S(); let q = s.cur;
     if (!q) { plan(false); q = s.cur; }
+    q = roll(q);
+    watchSec(q); sync(); hotSync(); chipSync(); }
+  /* 날이 바뀌며 넘어가는 차례(늦음 · 흙탕 날 · 고침 · 끝) — 1초 칸과 아침 소식판(news)이 같이 씀: 소식판은 잠에서 깨는 순간 만들어져 1초 칸보다 먼저라, 어제 낸 보고서의 결과(고침)가 칠판에 안 실리던 것(FIX-4D) */
+  function roll(q) { const s = S(), D = day();
     if (q) { if (q.st === 'open' && now() > dueAt(q) && D > q.d0 + CASES[q.id].days - 1) { q.st = 'late'; q.late = D; mark(); A.rec('case', { id: q.id, ev: 'late', d: D }); }
       const R = CASES[q.id]; if (q.st === 'late' && !q.mudD && R.lateOn({ wx: A.wxDay ? A.wxDay() : '', jang: A.jang ? A.jang() : null, day: D, d0: q.d0 })) { q.mudD = D; mark(); }   /* 늦으면 = 흐려진 강: 큰비 오는 날 논 한 칸 흙탕(하루) · 저울: 다음 장날 임시 저울(하루) */
       if (q.st === 'late' && !q.mudD && D >= q.late + R.lateMax) { q.mudD = -1; mark(); }   /* 그동안 그날이 안 오면 X */
       if (q.st === 'late' && q.mudD && (q.mudD < 0 || D > q.mudD) && !q.fixD) { q.fixD = D; q.st = 'lateFix'; mark(); }   /* 그다음 날 마을이 흙막이를 세움(벌 X) */
       if (q.st === 'ok' && D > q.rep.d && !q.fixD) { q.fixD = D; q.st = 'fixed'; mark(); s.helper = (s.helper | 0) + 1; A.rec('case', { id: q.id, ev: 'fixed', d: D }); }
       if ((q.st === 'fixed' || q.st === 'lateFix') && D >= q.fixD + 4) { s.log.unshift({ id: q.id, d0: q.d0, st: q.st === 'fixed' ? 'ok' : 'late', fixD: q.fixD, hyp: q.hyp, wrong: q.wrong, rep: q.rep ? q.rep.ev : null }); s.log.length = Math.min(s.log.length, 10); s.done[q.id] = D; const nx = CASES[q.id].next; if (nx) s.seeds[nx] = D; s.cur = null; mark(); q = null; } }
-    watchSec(q); sync(); hotSync(); chipSync(); }
+    return q; }
 
   // ───────── 모습(합친 부품) ─────────
   //   공사장 = 울타리(입구 하나 · 길 쪽) + 흙더미 셋 + 빗물 고랑(물가까지 흙빛 띠) + 공사 일꾼(이름 없는 역할 · 08~18시) · 흙막이 뒤 = 판 여섯 + 흙더미 덮개 · 고랑 X
@@ -593,7 +597,7 @@ export function createCase(A) {
     if (q.st === 'open') return '📒 ' + (e ? 'Waiting tomorrow: ' : '내일 기다리는 것: ') + L(R.t) + ' — ' + (q.d0 + R.days - 1 - d === 1 ? (e ? 'tomorrow is the last day' : '내일이 마지막 날이에요') : q.d0 + R.days - 1 - d <= 0 ? (e ? 'today was the last day' : '오늘이 마지막 날이었어요') : (e ? (q.d0 + R.days - 1 - d + 1) + ' days left' : (q.d0 + R.days - 1 - d + 1) + '일 남았어요'));
     if ((q.st === 'ok' || q.st === 'fixed') && q.rep && q.rep.d === d) return '📒 ' + (q.id === 'scale' ? (e ? 'Tomorrow morning: see if the scale is back at the market' : '내일 아침: 장터에 저울이 돌아왔는지 보러 가요') : q.id === 'siteRoad' ? (e ? 'Tomorrow morning: see how the road by the building site has changed' : '내일 아침: 공사장 앞 길이 어떻게 바뀌었는지 보러 가요') : (e ? 'Tomorrow morning: see the silt fences at the building site' : '내일 아침: 공사장에 흙막이가 서는지 보러 가요'));
     return ''; }
-  function news(d) { const q = S().cur, out = []; if (!q) return out; const R = CASES[q.id], p = q.pl; if (q.id === 'scale') return newsScale(q, d); if (q.id === 'siteRoad') return newsSite(q, d);
+  function news(d) { if (!dead && !OFF && A.on() && d === day() && S().cur) roll(S().cur); const q = S().cur, out = []; if (!q) return out; const R = CASES[q.id], p = q.pl; if (q.id === 'scale') return newsScale(q, d); if (q.id === 'siteRoad') return newsSite(q, d);
     if (q.st === 'open' && q.d0 === d) out.push({ k: 'case:' + q.id, two: 1, t: T2('🌊 비 사흘 뒤 강물이 흙빛이에요. 왜 그럴까요?', '🌊 After three days of rain the river is brown. Why?'), at: null });
     if (q.st === 'fixed' && q.fixD === d) out.push({ k: 'case:' + q.id, t: T2('🚧 어제 낸 보고서대로 ' + p.site.cell + ' 칸 공사장에 흙막이를 세웠어요. 강물이 조금씩 맑아질 거예요', '🚧 As you reported, silt fences went up at the site in ' + p.site.cell + '. The river will slowly clear'), at: [p.site.x, p.site.z] });
     if (q.mudD > 0 && q.mudD === d) out.push({ k: 'case:' + q.id + ':mud', two: 1, t: T2('🌧 큰비에 흙탕물이 농수로를 타고 ' + A.cell(p.mud.x, p.mud.z) + ' 칸 논 한 곳에 들어갔어요', '🌧 In the heavy rain, muddy water ran down the canal into a paddy in ' + A.cell(p.mud.x, p.mud.z)), at: [p.mud.x, p.mud.z] });

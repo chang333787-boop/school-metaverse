@@ -1,7 +1,7 @@
 // 🧩 건물마다 다른 할 일 시험(ENTER-3 · v2/games/town_enter2.js · docs/systems/town_enter3.md): node tools/harness/town_enter3.cjs [마을=ourtown] [포트=8002] [--shots=폴더] [--only=갈래,…] [--homes=n]
 //   ① 틀 전수표: 갈래마다 틀(같은 틀 최대 갈래 수 · 틀 가짓수) ② 가게·식당·사무실·창고 갈래마다 하나씩: 들어감 → E → 판 창 → 틀린 누름 = 까닭 한 줄 → 풀기 → 끝 글 · 방 안 결과(봉투·접시·상자·초록 표) · 솜씨 + · (식당·터미널 = 걸어서 탁자·타는 곳 E) · '할 일' 첫 줄이 갈래마다 다름
 //   ③ 집: 여러 동네·이웃 일 집 → 오늘의 부탁 풀기(정리 = 걸어서 · 찾기 = 헛걸음 한 줄 → 진짜 자리) · 결과 · 답례(엽서·물건) · 같은 날 다시 = 기억 말만 · 다음 날 = 다른 부탁 · 다시 들어가면 기억 말
-//   ④ 집 안 모습이 이웃 일·동네로 달라짐(일 구석 · 벽 색) ⑤ 그 집만의 일(생일·이사·손님) 하나 ⑥ 모음(도운 집 n/전체 · 엽서) · 가방 🏅 글 ⑦ 페이지 오류 0 · --shots = 판·방 사진
+//   ④ 집 안 모습이 이웃 일·동네로 달라짐(일 구석 · 벽 색) ⑤ 그 집만의 일(생일·이사·손님) 하나 ⑥ 모음(도운 집 n곳 · 분모 X · 엽서) · 가방 🏅 글 ⑦ 페이지 오류 0 · --shots = 판·방 사진
 const { chromium } = require('./pw.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const arg = k => (process.argv.find(a => a.startsWith('--' + k + '=')) || '').slice(k.length + 3) || null;
@@ -97,7 +97,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     console.log('    말풍선 ' + BUBS.n + '번 봄 · 안전 칸으로 옮겨진 것 ' + BUBS.mv); ok(BUBS.n > 0 && !BUBS.bad.length, '말풍선 꼬리 = 말하는 사람 머리 쪽(옮겨져도 · ' + BUBS.n + '번 · 옮김 ' + BUBS.mv + ')' + (BUBS.bad.length ? ' — ' + BUBS.bad.slice(0, 2).join(' | ') : ''));
     // ⑥ 모음
     { const s9 = await ev(() => { const s = SM_TOWN.ent().s(); return { hv: Object.keys(s.hv || {}).length, pc: Object.keys(s.pc || {}).length, ck: Object.keys(s.ck || {}).length }; }), h = await ev(() => SM_TOWN.ent().colHtml());
-      ok(s9.hv >= homeOk && /도운 집 \d+<\/b> \/ \d+/.test(h), '모음 도운 집 ' + s9.hv + ' · 엽서 ' + s9.pc + ' · 가게 갈래 ' + s9.ck + ' — 가방 글에 n / 전체'); ok(s9.pc >= 1, '엽서 하나 이상'); }
+      const ht = h.replace(/<[^>]+>/g, ' '); ok(s9.hv >= homeOk && new RegExp('도운 집 ' + s9.hv + '곳').test(ht) && !/\d\s*\/\s*\d|%/.test(ht), '모음 도운 집 ' + s9.hv + ' · 엽서 ' + s9.pc + ' · 가게 갈래 ' + s9.ck + ' — 가방 글에 수 하나(분모·% X · PHASE2 · FIX-4D)'); ok(s9.pc >= 1, '엽서 하나 이상'); }
     ok(!errs.length, '페이지 오류 0' + (errs.length ? ' — ' + errs.slice(0, 4).join(' | ') : ''));
   } catch (e) { fails.push('예외 ' + e.message); console.log(e); }
   await b.close(); console.log(fails.length ? '\n✗ ' + fails.length + '개 실패' : '\n✓ 모두 통과'); process.exit(fails.length ? 1 : 0); })();

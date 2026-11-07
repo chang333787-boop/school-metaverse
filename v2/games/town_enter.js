@@ -549,8 +549,8 @@ export function createEnter(A) {
     const pcId = P9 && P9.ev ? 'e:' + P9.ev : 'j:' + CUR.jk, PC9 = PCARDS.find(q => q[0] === pcId); let got = '';
     if (PC9 && !s9.pc[pcId]) { s9.pc[pcId] = day(); got = en() ? 'a postcard “' + PC9[2] + '”' : '엽서 「' + PC9[2] + '」를 받았어요(엽서 ' + Object.keys(s9.pc).length + '/' + PCARDS.length + ')'; }
     else { const g9 = (HJOB[CUR.jk] || {}).gift; if (g9) { A.GAME.add(g9, 1, 'ent:gift'); if (A.GAME.lastN > 0) { const n9 = A.itemName(g9); got = en() ? n9 : g9 + ' ' + n9 + josa(n9, '을', '를') + ' 받았어요'; } } }
-    mark(); const hv = Object.keys(s9.hv).length, tot = A.homes ? A.homes() : 0; log('home done ' + kind);
-    return { got, line: en() ? 'Homes helped: ' + hv + (tot ? ' of ' + tot : '') + '.' : '도운 집은 ' + hv + '곳이에요' + (tot ? '(모두 ' + tot + '곳)' : '') + '.', cr }; }
+    mark(); const hv = Object.keys(s9.hv).length; log('home done ' + kind);
+    return { got, line: en() ? 'Homes helped: ' + hv + '.' : '도운 집은 ' + hv + '곳이에요.', cr }; }   /* FIX-4D: 분모(집 566채) X — PHASE2 '% 지우기'(모음은 숫자 하나) */
   const HDONE = { tidy: '정리를 마쳤어요.', cook: '음식을 다 만들었어요.', water: '화분에 물을 줬어요.', fix: '고장 난 것을 고쳤어요.', table: '상을 차렸어요.', job: '이웃 일을 도왔어요.', find: '잃어버린 것을 찾았어요.', bday: '생일 준비를 마쳤어요.', move: '이삿짐을 나눴어요.', guest: '손님상을 차렸어요.' };
   const homeToast = (kind, R9) => toast('✅ ' + (en() ? 'Done. ' : HDONE[kind] + ' ') + R9.line + (R9.got ? (en() ? ' Thank-you gift: ' + R9.got + '.' : ' 답례로 ' + R9.got + '.') : ''), 3.6);
   function homeRes(kind, X9, res) { const hd = CUR.made.D / 2, hw = CUR.made.W / 2;   /* 부탁마다 방 안에 남는 결과 */
@@ -611,9 +611,9 @@ export function createEnter(A) {
   function sellMenu() { const e = en(), draw = m => { const L9 = sellable(); return '<h3>🧺 ' + esc(CUR.nm) + (e ? ' buys' : ' — 가방 물건 팔기') + '</h3><div class="sm">' + esc(e ? 'Shop price (markets often pay more).' : '가게 값이에요. 장터에서는 더 받을 때가 많아요.') + '</div>' + (L9.length ? '<div class="bd-ch">' + L9.map(em => '<button class="sub" data-e="' + em + '">' + em + ' ' + esc(A.itemName(em)) + ' ×' + A.own(em) + ' — ' + A.won(A.price(em)) + '</button>').join('') + '</div>' : '<div class="sm">' + esc(e ? 'Nothing this shop buys.' : '이 가게가 사는 물건이 이제 없어요.') + '</div>') + '<div class="sm" data-m>' + esc(m || '') + '</div><div class="row"><button class="sub" data-a="x">' + (e ? 'Close' : '닫기') + '</button></div>'; };
     const P = A.openP(draw(), false, 'entsell'), paint = m => { const bx = P.querySelector('.bx'); (bx || P).innerHTML = draw(m); };
     P.onclick = ev => { const bt = ev.target.closest('button'); if (!bt) return; if (bt.dataset.a === 'x') { A.closeP(); return; } const em = bt.dataset.e; if (!em || A.own(em) < 1) return; const v = A.price(em); if (!A.sell(em, v)) return; sfx('ding'); log('sell ' + em); paint((e ? 'Sold for ' : '팔았어요: ') + A.won(v)); }; }
-  // ENTER-3 모음(가방 🏅): 도운 집 n/전체 · 도운 가게·일터 갈래 · 엽서 14
-  function colHtml() { PLAY.css && PLAY.css(); const s9 = S(), e = en(), hv = Object.keys(s9.hv || {}).length, tot = A.homes ? A.homes() : 0, ckT = Object.keys(CATS).filter(k => !['home', 'apt', 'store', 'class'].includes(CATS[k].st)), ck = ckT.filter(k => (s9.ck || {})[k]).length, pc = s9.pc || {};
-    return '<div class="grp" data-b3grp="ent">' + (e ? 'Neighbours' : '이웃 집·가게') + '</div><div class="e3-col"><div><b>🏠 ' + (e ? 'Homes helped ' : '도운 집 ') + hv + '</b>' + (tot ? ' / ' + tot : '') + '</div><div><b>🏪 ' + (e ? 'Shops and workplaces ' : '도운 가게·일터 갈래 ') + ck + '</b> / ' + ckT.length + '</div></div>'
+  // ENTER-3 모음(가방 🏅): 도운 집 n곳 · 도운 가게·일터 n갈래(분모 X · FIX-4D) · 엽서 14
+  function colHtml() { PLAY.css && PLAY.css(); const s9 = S(), e = en(), hv = Object.keys(s9.hv || {}).length, ckT = Object.keys(CATS).filter(k => !['home', 'apt', 'store', 'class'].includes(CATS[k].st)), ck = ckT.filter(k => (s9.ck || {})[k]).length, pc = s9.pc || {};
+    return '<div class="grp" data-b3grp="ent">' + (e ? 'Neighbours' : '이웃 집·가게') + '</div><div class="e3-col"><div><b>🏠 ' + (e ? 'Homes helped ' : '도운 집 ') + hv + (e ? '' : '곳') + '</b></div><div><b>🏪 ' + (e ? 'Kinds of shops and workplaces ' : '도운 가게·일터 ') + ck + (e ? '' : '갈래') + '</b></div></div>'
       + '<div class="e3-pcs">' + PCARDS.map(p => pc[p[0]] ? '<div class="pc" title="' + esc(p[3]) + '"><i>' + p[1] + '</i><b>' + esc(p[2]) + '</b><small>' + esc(p[3]) + '</small></div>' : '<div class="pc no"><i>✉</i><b>?</b><small>' + esc(PC_WHERE[p[0]] || '') + (e ? '' : '에서 받아요') + '</small></div>').join('') + '</div>'; }
   function left() { if (!CUR) return; CUR = null; PLAY.close(); }   /* 방 모양·숨긴 결과(S9.extra)는 town_indoor exit()가 치움 */
   return { tip, canIn, opts, left, name, hoursOf, catOf, use,

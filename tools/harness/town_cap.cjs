@@ -44,10 +44,11 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     ok(dOff.v <= CAPV, '평소 하루(한도 끔)도 실제 날짜 한도 안 — ' + dOff.v + ' ≤ ' + CAPV);
     // ── ① E 자리마다 200번 ──
     console.log('① E 자리마다 200번 되풀이');
-    const H = await ev(() => __C.hots().map(h => h.label)); let worst = { g: 0 }, nOk = 0; const grow = [];
+    const H = await ev(() => { window.__HL = __C.hots(); return __HL.map(h => h.label); }); let worst = { g: 0 }, nOk = 0; const grow = [];   /* FIX-4D: 자리 목록을 한 번만 뽑아 그대로 씀(자리마다 다시 뽑으면 본 곤충·갯벌 친구가 꺼져 번호가 밀려, 이름과 실제 잰 자리가 어긋났음) */
     for (let i = 0; i < H.length; i++) {
-      await ev(i9 => { __C.fresh(false); window.__s0 = __C.snap(); const h = __C.hots()[i9]; window.__h = h; if (h) __C.at(h); }, i);
-      for (let r = 0; r < 8; r++) { await ev(() => { const h = __h; if (!h) return; __C.at(h); try { h.use(); } catch (e) { /* 아래 pageerror */ } __C.clean(); }); await W8(40); }
+      await ev(i9 => { __C.fresh(false); window.__s0 = __C.snap(); const h = __HL[i9]; window.__h = h; if (h) __C.at(h); }, i);
+      for (let r = 0; r < 8; r++) { const cl = await ev(() => { const h = __h; if (!h) return false; __C.at(h); try { h.use(); } catch (e) { /* 아래 pageerror */ } const E9 = SM_TOWN.efx && SM_TOWN.efx(); if (E9 && E9.closeOn && E9.closeOn()) return true; __C.clean(); return false; }); await W8(40);
+        if (cl) { await W8(450); await ev(() => { const E9 = SM_TOWN.efx(); if (E9.closeOn()) E9.closeKey(); __C.clean(); }); await W8(80); } }   /* FIX-4D: 가까이 보기(CLOSE-1) 자리 = 다가가 창이 뜨기까지 기다려 한 번을 끝까지(순간 이동이 보기를 끊어 8번이 실제론 한 번뿐이라, 뒤 192번 끝의 한 번이 '늘어남'으로 셈) */
       await W8(1100); await ev(() => __C.clean()); await esc(); await ev(() => { window.__s8 = __C.snap(); const R9 = SM_TOWN.game().S.rw; window.__c8 = JSON.stringify((R9 && R9.c) || {}); });
       await ev(() => { const h = __h; if (!h) return; for (let r = 0; r < 192; r++) { __C.at(h); try { h.use(); } catch (e) { /* 아래 */ } __C.clean(); } });
       await W8(1100); await ev(() => __C.clean()); await esc();

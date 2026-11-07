@@ -173,8 +173,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await at(9 * 60); let j2 = null; for (let i = 0; i < 8; i++) { await W8(500); j2 = await I(); if (j2.cur && j2.cur.st === 'fixed') break; }
     ok(j2.cur.st === 'fixed' && j2.cur.fixD === dRS + 1 && !j2.meshes.sc_track && j2.meshes.sc_scale >= 2, '다음 날 = 장터에 고친 저울 + 「정확해요」 판 (바닥 자국 X · 그리기 ' + j2.meshes.sc_scale + ')');
     const nwS = await ev(d => SM_TOWN.case().news(d), dRS + 1); ok(nwS.some(q => /돌아왔어요/.test(q.t[0]) && /서로 고맙다고/.test(q.t[0])), '아침 소식 「' + ((nwS[0] || { t: ['-'] }).t[0]) + '」');
-    { const N9 = await ev(() => SM_TOWN.news()), L9 = (N9 && N9.lines) || [], on9 = L9.some(L => L.k === 'fx:case:scale'), mine9 = L9.find(L => L.mine);   /* 소식판 = '내가 한 일' 줄 하나(town_news.js) — 다른 내 일 결과가 먼저면 그 줄 */
-      ok(on9 || (mine9 && /^fx:/.test(mine9.k)), '소식판 줄에 실림' + (on9 ? '' : ' (오늘 내 일 줄 = ' + (mine9 && mine9.k) + ')')); }
+    { const N9 = await ev(() => SM_TOWN.news()), L9 = (N9 && N9.lines) || [], on9 = L9.some(L => L.k === 'fx:case:scale'), C1 = (N9 && N9.cand && N9.cand.one) || [], mine9 = L9.find(L => C1.includes(L.k));   /* FIX-4D: 저장된 칠판 줄엔 mine 표시가 없음(k·t·at·ck만) → 후보 ①(cand.one)에 든 줄 = 내가 한 일 줄 */   /* 소식판 = '내가 한 일' 줄 하나(town_news.js) — 다른 내 일 결과가 먼저면 그 줄 */
+      ok(on9 || (mine9 && /^fx:/.test(mine9.k) && C1.includes('fx:case:scale')), '소식판 줄에 실림' + (on9 ? '' : ' (오늘 내 일 줄 = ' + (mine9 && mine9.k) + ' · 후보 ① ' + C1.join(',') + ')')); }
     await ev(() => SM_TOWN.case().notebook()); await W8(400); P = await panel(); ok(/정확해요/.test(P.t) && /상인: /.test(P.t) && /옆 가게 이웃: /.test(P.t) && /손해/.test(P.t), '결과 = 본 것(돌아온 저울 · 정확해요 판) + 생각 둘(상인 · 옆 가게 이웃) + 공정한 거래 한 줄'); await closeAll();
     await at(10 * 60); r = await tpL(Q.mk.x, Q.mk.z, '상인과 이야기하기', async () => (await I()).dbg.some(t => /^talkS mk/.test(t))); ok(r, '결과 날 상인 E = 고맙다는 한마디');
     if (SHOTS) await shot('scale_fixed', [Q.track.x - Math.sin(Q.track.fy) * 3.2 + Math.cos(Q.track.fy) * 0.8, Q.track.z - Math.cos(Q.track.fy) * 3.2 - Math.sin(Q.track.fy) * 0.8], [Q.track.x, Q.track.z]);

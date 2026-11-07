@@ -7,6 +7,7 @@ const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(nore
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const SHOTS = (process.argv.find(a => a.startsWith('--shots=')) || '').slice(8) || null, URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1';
 const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
+const POSTE = '📮 (우편함에 편지 넣기|등기 건네기|Post a letter|Hand over the registered letter):';   /* FIX-4D: 집배원 체험 우편함 E만 — 칸 키트(CELLKIT-1) '📮 우편함 살펴보기'는 다른 놀이라 셈에서 뺌 */
 (async () => { const b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] });
   try { const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage(), errs = []; p.on('pageerror', e => errs.push(e.message.slice(0, 160))); p.on('console', m => { const t = m.text(); if ((m.type() === 'error' && !/favicon|404|ERR_|pointer lock/.test(t)) || /게임 tick 오류|꼬리표 없는 보상/.test(t)) errs.push(t.slice(0, 160)); });
     const ev = (f, a) => p.evaluate(f, a), W8 = ms => p.waitForTimeout(ms);
@@ -19,7 +20,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     const NAMES = await ev(async () => { const m = await import('/v2/js/layout.js'); return Object.values(m.SCHOOL.people).flatMap(v => v.s.map(q => q[0])); });
     const po = await ev(() => { const q = SM_TOWN.indoor.list().find(q => q.kind === 'post'); return q ? q.id : null; }); ok(!!po, '우체국 있음'); if (!po) throw new Error('우체국 없음');
     const start = async () => { await ev(id => SM_TOWN.indoor.enter(id), po); await p.waitForFunction(() => SM_TOWN.indoor.on && !SM_TOWN.indoor.busy, null, { timeout: 9000 }); await W8(300);
-      const h = await ev(() => SD2.map.interact.list().filter(h => !h.off && /집배원|Mail/.test(h.label))[0] || null); if (h) { await ev(h => { SD2.map.player.teleport([h.x, h.y + 0.05, h.z]); }, h); await W8(400); await p.keyboard.press('KeyE'); await W8(700); }
+      const h = await ev(() => SD2.map.interact.list().filter(h => !h.off && /오늘 일해 보기 — 집배원|Work today — mail carrier/.test(h.label))[0] || null);   /* FIX-4D: ENTER-3 찾아온 손님(「비에 젖은 편지를 가져온 집배원」)도 '집배원'이라 체험 E 글로만 */ if (h) { await ev(h => { SD2.map.player.teleport([h.x, h.y + 0.05, h.z]); }, h); await W8(400); await p.keyboard.press('KeyE'); await W8(700); }
       if (!(await ev(() => SM_TOWN.jobs().active === 'post'))) { console.log('    (방 안 E로 안 켜짐 · E ' + (h && h.label) + ' · 가까운 E ' + (await ev(() => SD2.near())) + ' · 창 ' + JSON.stringify(await panel()) + ')'); await closeAll(); await ev(() => SM_TOWN.jobs().startJob('post')); await W8(500); return false; }
       return !!h; };
     const viaE = await start(); let P = await panel(); ok(SM_TOWN_ok(await ev(() => SM_TOWN.jobs().active)), '집배원 체험 켜짐(' + (viaE ? '방 안 E' : 'startJob') + ')');
@@ -31,7 +32,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     ok(I.L.every(q => !/네 집|네(\s|$)/.test(q.name)), '아이 집 0'); ok(I.L.every(q => /님$/.test(q.who) && q.who.length > 1), '받는 분 = 역할 이웃(○○님)');
     ok(I.addr.join() !== I.near.join() && I.addr.join() !== I.best.join(), '칸 주소 차례 ≠ 가까운 차례(주소 ' + I.addr.join('') + ' · 가까운 ' + I.near.join('') + ' · 가장 짧은 ' + I.best.join('') + ')');
     await closeAll(); await ev(async () => { SM_TOWN.indoor.exit(); for (let i = 0; i < 40 && (SM_TOWN.indoor.on || SM_TOWN.indoor.busy); i++) await new Promise(r => setTimeout(r, 100)); }); await W8(500);
-    I = await PI(); ok(I.L.every(q => q.mk && q.hot), '우편함마다 E + 빛기둥'); const hl = await ev(() => SD2.map.interact.list().filter(h => !h.off && /우편함|등기/.test(h.label)).length); ok(hl === I.L.length, '우편함 E ' + hl + '곳');
+    I = await PI(); ok(I.L.every(q => q.mk && q.hot), '우편함마다 E + 빛기둥'); const hl = await ev(re => SD2.map.interact.list().filter(h => !h.off && new RegExp(re).test(h.label)).length, POSTE); ok(hl === I.L.length, '우편함 E ' + hl + '곳');
     ok(await ev(() => !!document.querySelector('.pc-hud button')), '화면 아래 편지 단추 하나'); await shot('post_out');
     // ② 길 막힘
     const legs = []; { let a = I.at; for (const i of I.best) { const q = I.L[i]; legs.push([a, [q.x, q.z], q.name]); a = [q.x, q.z]; } for (const q of I.L) legs.push([I.at, [q.x, q.z], q.name]); }
@@ -49,7 +50,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await W8(1600); P = await panel(); ok(P && P.k === 'jobend' && /달린 길/.test(P.t) && /가장 짧은 길/.test(P.t), '끝 창 = 달린 길 + 가장 짧은 길과 견줌'); ok(/첫 기록/.test(P ? P.t : ''), '첫 판 = 첫 기록'); ok(!/바로 가기/.test(P ? P.t : ''), '우체국 방에서 나온 것은 바로 가기로 안 셈');
     const px = await ev(() => { const c = document.querySelector('.twn-p canvas.pc-map'); if (!c) return null; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let blue = 0; for (let k = 0; k < d.length; k += 4) if (Math.abs(d[k] - 47) < 25 && Math.abs(d[k + 1] - 111) < 30 && d[k + 2] > 170) blue++; return blue; });
     ok(px > 300, '지도에 내가 달린 길(파랑) 그려짐 ' + px + '점'); await shot('post_end'); console.log('  ' + (P ? P.t.split('\n').slice(0, 6).join(' / ') : ''));
-    await closeAll(); ok(!(await ev(() => !!SD2.CTRL.frozen)), '끝 창 닫은 뒤 안 멈춤'); ok(!(await ev(() => SD2.map.interact.list().some(h => !h.off && /우편함|등기/.test(h.label)))), '끝나면 우편함 E 남지 않음');
+    await closeAll(); ok(!(await ev(() => !!SD2.CTRL.frozen)), '끝 창 닫은 뒤 안 멈춤'); ok(!(await ev(re => SD2.map.interact.list().some(h => !h.off && new RegExp(re).test(h.label)), POSTE)), '끝나면 우편함 E 남지 않음');
     // ④ 둘째 판(연습 · 내 최고와 견줌) + 등기
     await ev(() => { const G = SM_TOWN.game().S; G.lad.post.lv = 1; G.lad.post.good = 0; G.min = 10 * 60; }); await start(); await closeAll(); I = await PI(); const R9 = I.L.findIndex(q => q.reg);
     ok(I.L.length === 5 && R9 >= 0, '꼬임 2 = 편지 다섯 · 등기 하나'); await ev(() => SM_TOWN.indoor.exit()); await W8(1500);

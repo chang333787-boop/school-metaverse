@@ -53,6 +53,7 @@ export function createRoad(A) {
   let HAT = null, HATG = [], ITEM = null, PAP = null, PAPT = null, PAPG = null;
   let BK = null, BKM = null, BKC = null, BKS = null, BKT = null;   /* DEPTH-3 길 막힘: 지금 지은 막힘 · 울타리 인스턴스 · 고깔 인스턴스 · 팻말 · 팻말 그림 */
   const DBG = [];
+  const modal = () => A.panelOpen() || !!document.querySelector('.twn-dlg,.twn-play');   /* FIX-4D: 멈춤 풀기·고리 시계 = 창·대화·놀이 판만 기다림(busy()는 긴급 사건이 있기만 해도 참이라 '차도예요' 멈춤이 사건이 끝날 때까지 안 풀렸음) */
 
   // ───────── ① 고리 코스 짓기(처음 1초 칸에서 한 번 · 자전거 도로 줄 → 1m 점 → 몸이 막히는 곳에서 끊음 → 36m마다 고리) ─────────
   let BQ = null;   /* 짓기 차례(줄 묶음) — 1초 칸마다 3ms씩 나눠 지음(한 프레임에 12ms 몰리지 않게) */
@@ -142,7 +143,7 @@ export function createRoad(A) {
   function blkOff() { if (!BK) return; for (const h of BK.cols) if (h && h.remove) h.remove(); BK = null; for (const m of [BKM, BKC, BKS]) if (m) m.visible = false; }
   // 달리는 동안: 막힘 앞뒤 4.5m 안에서 차도 쪽(l < −1.5)으로 나가면 = 멈춰 차를 먼저 보냄(3초 · 한 판 한 번) · 바깥쪽(l > w)으로 돌면 = 인도·풀밭으로 돌아감
   function blkFrame(dt, me) { const R = RACE; if (!R || !BK || BK.c !== R.c) return; const p = BK.p, a = aOf(p, me.x, me.z), l = lOf(p, me.x, me.z);
-    if (R.hold > 0) { R.hold -= dt; if (R.hold <= 0) { if (A.busy()) { R.hold = 0.1; return; } map.player.freeze(false);   /* 창이 떠 있으면 창이 닫힌 뒤에 */ toast('🚗 ' + (en() ? 'The cars have passed. Go on carefully.' : '차가 지나갔어요. 조심해서 가요.'), 2); } return; }
+    if (R.hold > 0) { R.hold -= dt; if (R.hold <= 0) { if (modal()) { R.hold = 0.1; return; } map.player.freeze(false);   /* 창이 떠 있으면 창이 닫힌 뒤에 */ toast('🚗 ' + (en() ? 'The cars have passed. Go on carefully.' : '차가 지나갔어요. 조심해서 가요.'), 2); } return; }
     if (Math.abs(a) < BL / 2 + 1.5) { if (!R.rd && l < -1.5) { R.rd = true; R.hold = 3; map.player.freeze(true); tone(392, 0, 0.18, 'square', 0.05); tone(392, 0.25, 0.18, 'square', 0.05); toast('🚗 ' + (en() ? 'This is the road — cars drive here! Stop and let them pass.' : '여기는 차가 다니는 차도예요! 멈춰서 차를 먼저 보내요.'), 3); }
       else if (!R.sw && l > p.w + 0.2) R.sw = true; } }
 
@@ -153,12 +154,12 @@ export function createRoad(A) {
   function raceStart(c, me) { const bk = !!A.bike(); RACE = { c, i: 1, t: 0, bike: bk, lx: me.x, lz: me.z, ps: sOf(c.rings[1], me), walk: 0, off: false, blk: BK && BK.c === c ? BK.p : null, rd: false, sw: false, hold: 0 }; ding(0); paint(); goalT = null;
     toast(bk ? '🚲 ' + (en() ? 'Go! Ride through the yellow rings' : '출발! 노란 고리를 차례로 지나요') : '🚶 ' + (en() ? 'Practice run. Records count only on the bike (B)' : '연습이에요. 기록은 자전거(B)로만 남아요'), 2.2); }
   function ding(i) { const f = NOTES[Math.min(i, NOTES.length - 1)]; tone(f, 0, 0.16, 'triangle', 0.12); tone(f / 2, 0, 0.12, 'sine', 0.05); }
-  function raceFrame(dt, me) { const R = RACE, c = R.c; if (!A.busy()) R.t += dt; if (BK) blkFrame(dt, me); const jp = Math.abs(me.x - R.lx) + Math.abs(me.z - R.lz); R.lx = me.x; R.lz = me.z; if (jp > 30) { raceEnd(true); return; } if (R.bike && !A.bike()) R.walk += jp;   /* 자전거에서 내려(차에 부딪혀도) 걸은 거리 — 20m 넘으면 연습 */
+  function raceFrame(dt, me) { const R = RACE, c = R.c; if (!modal()) R.t += dt; if (BK) blkFrame(dt, me); const jp = Math.abs(me.x - R.lx) + Math.abs(me.z - R.lz); R.lx = me.x; R.lz = me.z; if (jp > 30) { raceEnd(true); return; } if (R.bike && !A.bike()) R.walk += jp;   /* 자전거에서 내려(차에 부딪혀도) 걸은 거리 — 20m 넘으면 연습 */
     const r = c.rings[R.i], s = sOf(r, me); if (R.ps < 0 && s >= 0 && s < 4 && inRing(r, me)) { ding(R.i); R.i++; if (R.i >= c.rings.length) { finish(); return; } R.ps = sOf(c.rings[R.i], me); paint(); goalT = null; return; } R.ps = s; }
   function raceSec(me) { const R = RACE, c = R.c; if (R.bike && !A.bike()) { if (!R.off) { R.off = true; setTimeout(() => { if (RACE === R && R.bike && !A.bike()) toast('🚲 ' + (en() ? 'Press B to get back on and keep going!' : 'B를 눌러 다시 타고 이어 달려요!'), 2.6); }, 2600); } if (R.walk > 20) { R.bike = false; toast('🚶 ' + (en() ? 'You walked off the bike: this run is practice now (no record)' : '자전거에서 내려 걸었어요. 이번 판은 연습이에요(기록 X)'), 2.8); } } else if (A.bike()) R.off = false;
     const r = c.rings[R.i]; if (A.away() || R.t > c.par * 4 + 40 || Math.hypot(me.x - r.x, me.z - r.z) > 130) raceEnd(false); }
-  function raceEnd(jump) { if (!RACE) return; if (RACE.hold > 0 && !A.busy()) map.player.freeze(false); RACE = null; paint(); goalT = null; toast('⏱ ' + (jump ? (en() ? 'Ring course stopped (you moved away)' : '고리 코스를 멈췄어요(다른 곳으로 옮겼어요)') : (en() ? 'Ring course stopped. Next time for sure!' : '고리 코스를 멈췄어요. 다음엔 꼭!')), 2.4); }
-  function finish() { const R = RACE, c = R.c, t = Math.round(R.t * 10) / 10, e = en(); if (R.hold > 0 && !A.busy()) map.player.freeze(false); RACE = null; c.ps = 1; paint(); goalT = null;
+  function raceEnd(jump) { if (!RACE) return; if (RACE.hold > 0 && !modal()) map.player.freeze(false); RACE = null; paint(); goalT = null; toast('⏱ ' + (jump ? (en() ? 'Ring course stopped (you moved away)' : '고리 코스를 멈췄어요(다른 곳으로 옮겼어요)') : (en() ? 'Ring course stopped. Next time for sure!' : '고리 코스를 멈췄어요. 다음엔 꼭!')), 2.4); }
+  function finish() { const R = RACE, c = R.c, t = Math.round(R.t * 10) / 10, e = en(); if (R.hold > 0 && !modal()) map.player.freeze(false); RACE = null; c.ps = 1; paint(); goalT = null;
     const bl = R.blk, why = bl ? (R.rd ? (e ? ' You went round by the road and had to stop for cars.' : ' 차도로 돌아가느라 멈춰 서서 기다렸어요.') : R.sw ? (e ? ' You went round the outside, off the road — a safe choice.' : ' 막힌 곳을 차도 말고 바깥쪽으로 돌아갔어요 — 안전하게 골랐어요.') : '') : '';   /* '무엇이 늦었나' 한 줄 */ tone(1046.5, 0.12, 0.25, 'triangle', 0.12); tone(1318.5, 0.24, 0.25, 'triangle', 0.12); tone(1568, 0.36, 0.4, 'triangle', 0.12);
     if (!R.bike) { banner('🏁 ' + (e ? 'Practice done: ' + t + ' s. Records count only on the bike (B)' : '연습 완주 ' + t + '초! 기록은 자전거(B)로만 남아요') + why, 3.4); A.rec('road', { k: 'ring', id: c.id, t, m: 0 }); return; }
     const s = S(), Q = s.ring[c.id] || (s.ring[c.id] = { b: 0, m: 0, n: 0 }), ex = bl ? Math.round((2 * (bl.w + 1.6)) / 22 * 10) / 10 : 0, best = !Q.b || t < Q.b, m = t <= c.gold + ex ? 3 : t <= c.silver + ex ? 2 : 1, H9 = Array.isArray(Q.h) ? Q.h : (Q.h = []), prev = H9.length ? H9[H9.length - 1].t : null;   /* 막힘 판 = 돌아가는 거리만큼 메달 시간 넉넉히 */
@@ -291,7 +292,7 @@ export function createRoad(A) {
     if (movP >= 50 && !A.GAME.uses('road:paper')) { if (!paperTry(me)) movP -= 15; } }
 
   // ───────── 짓기 · 치우기 ─────────
-  function abort() { if (RACE) { if (RACE.hold > 0 && !A.busy()) map.player.freeze(false); RACE = null; } blkOff(); if (ACT) { const a = ACT; ACT = null; const M = A.wkMesh(); if (M) { M.reset(a.i); if (M.hat) M.hat(a.i, true); } hotOff(a.w, false); if (a.h) a.h.remove(); if (a.hs) for (const h of a.hs) h.remove(); }
+  function abort() { if (RACE) { if (RACE.hold > 0 && !modal()) map.player.freeze(false); RACE = null; } blkOff(); if (ACT) { const a = ACT; ACT = null; const M = A.wkMesh(); if (M) { M.reset(a.i); if (M.hat) M.hat(a.i, true); } hotOff(a.w, false); if (a.h) a.h.remove(); if (a.hs) for (const h of a.hs) h.remove(); }
     if (REQ) reqEnd(true); if (PAPER) paperGone(); if (HAT) HAT.visible = false; if (ITEM) ITEM.visible = false; goalT = null; }
   // 셰이더 미리 짜기: 고리·모자·주울 것·종이를 처음 보일 때 새로 짜면 그 프레임이 늘어짐(town_check frames.worst +5~10ms) → 들어올 때 한 번(마을 warmGPU는 이 모듈 짓기 전에 돎)
   function warm() { const R9 = window.SD2 && window.SD2.renderer, root = A.root(), sc = root && root.parent; ringMesh(); if (root && !RING.parent) root.add(RING); if (!ITEM) itemBuild(); if (!PAP) papMake(); if (!HAT) hatBuild(0xe8d38a);
