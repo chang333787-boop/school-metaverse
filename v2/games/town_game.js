@@ -120,7 +120,8 @@ export const TASK_TP = {
 };
 export const TASK_POOLS = [['work', 'mush', 'farm'], ['sell', 'away', 'buy', 'cook', 'share', 'eat', 'bundle'], ['summit', 'bus', 'boat', 'stones', 'book', 'stars', 'night']];
 export const shopOf = name => { if (/동물 카페|키즈 카페|보드게임 카페|꼬리 용품|반려/.test(name || '')) return null;   /* 놀이 카페·반려 용품 = 파는 가게 아님(뒷걸음 정규식은 옛 아이폰 사파리에서 깨져 함수로) */ for (const S of SHOPS) if (S[0].test(name || '')) return S; return null; };
-export const won = n => (n | 0).toLocaleString('ko-KR') + '원';
+export const num9 = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');   /* OPT-G4: 정수 세 자리 쉼표(toLocaleString('ko-KR')은 부를 때마다 ICU 숫자 틀을 새로 지어 가방 첫 열기에 48ms(CPU 4×) — 글은 같음) */
+export const won = n => num9(n | 0) + '원';
 export const itemName = (e, en) => { const I = ITEMS[e]; return I ? (en ? I[1] : I[0]) : e; };
 
 // REW-1 보상 하루 한도(사용자 10-20 '곤충 하나 관찰하니까 관찰 레벨 무한 복사 · 되풀이 또 요소 없어?' · docs/systems/town_reward_cap.md): 생김(일·줍기·관찰·보상)은 모두 이 문 하나를 지남

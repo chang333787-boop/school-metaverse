@@ -1,7 +1,7 @@
 // 마을 차 끼임 시험(LIFE-3 · 교사 10-14 '차에 꼈는데 뭐야 이거'): node tools/harness/town_trap.cjs [마을=ourtown] [포트=8002] [--n=회수]
 //   차도 한가운데 · 교차로 모퉁이(돌고 있는 차 앞) · 옆에서 차가 쓸고 옴 · 차 위로 순간이동 · 앞에서 들이받기 · 옆구리 들이받기 · 주차 칸 옆 길가
 //   걸어서 + 자전거로 각각 회수만큼. 매 판 끝에 8방향으로 0.6초씩 걸어 보고 어느 쪽으로도 0.3m 못 가면 '갇힘'.
-//   게이트: 갇힘 0 · 몸이 차 상자 안에 남은 프레임 0 · 안전장치(2초 못 움직임 → 옮김)가 차 때문에 쓰인 횟수는 따로 보여 줌
+//   게이트: 갇힘 0 · **차 몸 안 겹침이 0.5초 넘게 이어진 판 0**(OPT-G4 11-08: 밀어냄 = 4m/s로 미끄러져 나옴 — 몇 프레임 겹치는 것은 정상 · 예전 게이트 '겹친 프레임 2 넘음'은 보여 주기만) · 안전장치(2초 못 움직임 → 옮김)가 차 때문에 쓰인 횟수는 따로 보여 줌
 const { chromium } = require('./pw.cjs');   /* FAST-1: 기본 그리기 끔(norender) · 사진·프레임은 --render(docs/systems/town_gates.md) */
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
 const N = +((process.argv.find(a => a.startsWith('--n=')) || '--n=3').slice(4));   // 기본 3 = 7가지 × 걸어서·자전거 × 3 = 42판
@@ -22,7 +22,7 @@ const N = +((process.argv.find(a => a.startsWith('--n=')) || '--n=3').slice(4));
       let c = pick(kind === 'corner' ? 'turn' : 'str'); if (!c && kind === 'corner') { for (let k = 0; k < 40 && !c; k++) { await sl(100); c = pick('turn'); } } if (!c) c = pick('str'); if (!c) return { kind, skip: 'nocar' };
       const [x, z, , hx, hz, y] = c.v, rx = -hz, rz = hx;
       const at = (a, l) => [x + hx * a + rx * l, z + hz * a + rz * l], tp = (q) => M.player.teleport([q[0], y + 0.05, q[1]]);
-      let stuckIn = 0, frames = 0; const watch = (ms) => new Promise(res => { const t0 = performance.now(); const f = () => { frames++; if (inBox()) stuckIn++; if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
+      let stuckIn = 0, frames = 0, run0 = null, maxRun = 0; const watch = (ms) => new Promise(res => { const t0 = performance.now(); const f = () => { frames++; const tn = performance.now(); if (inBox()) { stuckIn++; if (run0 == null) run0 = tn; maxRun = Math.max(maxRun, tn - run0); } else run0 = null; if (tn - t0 < ms) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });   /* maxRun = 차 몸 안에 이어서 있던 가장 긴 ms */
       const look = (q) => M.player.lookAt([q[0], q[1]]);
       if (kind === 'lane') { tp(at(9 + c.v[2] * 0.4, 0)); look([x, z]); await watch(3500); }                 // 차도 한가운데(그 차 차선) — 차가 나에게 옴
       else if (kind === 'corner') { tp(at(5, 1.2)); look([x, z]); await watch(3500); }                     // 돌고 있는 차의 앞쪽 안(모퉁이 쓸기)
@@ -31,7 +31,7 @@ const N = +((process.argv.find(a => a.startsWith('--n=')) || '--n=3').slice(4));
       else if (kind === 'ram') { tp(at(7, 0)); look([x, z]); await watch(2500); }        // 앞에서 들이받기(아래 W)
       else if (kind === 'side') { tp(at(0, 2.2)); look(at(0, 0)); await watch(2500); }   // 옆구리 들이받기
       else if (kind === 'park') { tp(at(4, 2.0)); look(at(4, -3)); await watch(3000); }                   // 길가(인도 턱 쪽)에서 차가 지나감
-      return { kind, bike, car: c.i, frames, stuckIn, seen, at: [+me().x.toFixed(1), +me().z.toFixed(1)] };
+      return { kind, bike, car: c.i, frames, stuckIn, maxRun: Math.round(maxRun), seen, at: [+me().x.toFixed(1), +me().z.toFixed(1)] };
     }, { kind, bike, n });
     if (r.skip) { res.push(r); continue; }
     // ram/side: 실제 키를 누른 채(위 evaluate 안의 시간과 겹치게 하지 않고 따로 2초)
@@ -43,9 +43,10 @@ const N = +((process.argv.find(a => a.startsWith('--n=')) || '--n=3').slice(4));
     res.push({ ...r, esc: esc.best, trapped: esc.best < 0.3, net: esc.net });
   }
   await p.evaluate(() => SM_TOWN.bike(false));
-  const ok = res.filter(r => !r.skip), trapped = ok.filter(r => r.trapped), inside = ok.filter(r => r.stuckIn > 2);
+  const ok = res.filter(r => !r.skip), trapped = ok.filter(r => r.trapped), inside = ok.filter(r => r.stuckIn > 2), longIn = ok.filter(r => r.maxRun > 500);
   const byKind = {}; for (const r of ok) { const k = (r.bike ? '🚲' : '') + r.kind; byKind[k] = byKind[k] || { n: 0, trapped: 0, inBoxFrames: 0 }; byKind[k].n++; if (r.trapped) byKind[k].trapped++; byKind[k].inBoxFrames += r.stuckIn; }
   const net = await p.evaluate(() => SM_TOWN.stuck ? SM_TOWN.stuck() : null), life = await p.evaluate(() => ({ honks: SM_TOWN.life.honks }));
-  const gate = trapped.length === 0 && inside.length === 0;
+  const gate = trapped.length === 0 && longIn.length === 0;
+  console.log((trapped.length ? '  ✗ ' : '  ✓ ') + '갇힘 ' + trapped.length + '판 / ' + ok.length); console.log((longIn.length ? '  ✗ ' : '  ✓ ') + '차 몸 안 겹침 0.5초 넘게 ' + longIn.length + '판(가장 긴 ' + Math.max(0, ...ok.map(r => r.maxRun || 0)) + 'ms · 겹친 프레임 2 넘은 판 ' + inside.length + ' = 보여 주기만)' + (longIn.length ? ' ' + JSON.stringify(longIn.map(r => [r.kind, r.bike ? 'bike' : 'foot', r.maxRun, r.at])) : ''));
   console.log(JSON.stringify({ trials: ok.length, skipped: res.length - ok.length, trapped: trapped.length, inBoxTrials: inside.length, byKind, trappedAt: trapped.map(r => [r.kind, r.bike ? 'bike' : 'foot', r.at]), insideAt: inside.map(r => [r.kind, r.bike ? 'bike' : 'foot', r.stuckIn, r.at, 'car' + r.car, JSON.stringify(r.seen)]), netLog: net, honks: life.honks, gate: gate ? 'PASS' : 'FAIL', errs }, null, 1));
   await b.close(); process.exit(gate ? 0 : 1); })();

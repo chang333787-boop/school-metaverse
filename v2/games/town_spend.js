@@ -16,7 +16,7 @@ const T = {
   ask: ['한 번 더 누르면 맡겨요. 오늘은 물뿌리개 없이 지내요', 'Press once more to leave it. No watering can for today'],
 };
 export function createSpend(A) {
-  const { map, T3 } = A, en = () => A.lang() === 'en', L = a => a[en() ? 1 : 0], won = n => (n | 0).toLocaleString('ko-KR') + (en() ? ' won' : '원');
+  const { map, T3 } = A, en = () => A.lang() === 'en', L = a => a[en() ? 1 : 0], won = n => String(n | 0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (en() ? ' won' : '원');   /* OPT-G4: toLocaleString(ICU) X — 글 같음 */
   const St = () => { const s = A.GAME.S; let p = s.spend; if (!p || typeof p !== 'object' || p.v !== 1) p = s.spend = { v: 1, can: 0, d: 0, seed: 0, used: 0, bonus: 0, at: '' }; return p; };   /* can: 0 그냥 · 1 맡김(그날 없음) · 2 고쳐져 문 앞 · 3 넓은 꼭지 */
   const day = () => A.GAME.S.day | 0, mark = () => A.GAME.mark();
   let HOTS = [], ORCH = null, PEND = null, CANM = null, CANH = null, dead = false, loadT = 0, loadDone = false, dayT = 0, seen = null, built = false;
