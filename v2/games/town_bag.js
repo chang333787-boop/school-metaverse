@@ -180,7 +180,7 @@ export function createBag(A) {
   let sq = 0;
   function sec() { if (dead || !A.on()) return; if (A.tasksOn && !A.tasksOn()) return; make(); lateFix(); if ((sq = (sq + 1) % 2)) return; if (A.busy() || A.panel()) return;
     const me = A.me(), s = S();
-    for (const q of today()) { if (q.st !== 'open' || q.said) continue; const w = wById(q); if (!w || Math.hypot(w.x - me.x, w.z - me.z) > 7) continue; q.said = 1; mark(); A.bubble(w, reqAsk(q)); A.say('📦 ' + reqAsk(q) + (en() ? ' (Bag I → Give)' : ' (가방 I → 드리기)'), 4.2); log('ask ' + q.k); return; }
+    for (const q of today()) { if (q.st !== 'open' || q.said) continue; const w = wById(q); if (!w || Math.hypot(w.x - me.x, w.z - me.z) > 7) continue; q.said = 1; mark(); A.bubble(w, reqAsk(q)); A.say('📦 ' + reqAsk(q) + (en() ? ' (Bag I → Give)' : ' (가방 I → 드리기)'), 4.2, 1);   /* FIX-5 뒤: 다가가면 저절로 뜨는 부탁 = lv1(기다리는 이웃 말을 덮지 않음 · 머리 위 말풍선은 그대로) */ log('ask ' + q.k); return; }
     for (const hk in s.miss) { if (s.miss[hk] !== day()) continue; const w = A.workers().find(q => A.hkOf(q) === hk); if (!w || Math.hypot(w.x - me.x, w.z - me.z) > 6) continue; delete s.miss[hk]; mark(); A.bubble(w, en() ? 'About yesterday — no worries. I’ll ask again another time.' : '어제 부탁은 괜찮아요. 다음에 또 부탁할게요.'); log('miss ' + hk); return; } }
   function dispose() { dead = true; }
   return { extra, fast, edible, canEatNow, eat, fxNow, bagLine, wait, lunchGoal, reqFor, deliverHtml, deliver, goReq, tasksHtml, boardHtml, due, key, uses, useShow, useGo, useBox, tapHint, sawMarket, sec, dispose,
