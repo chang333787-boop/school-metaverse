@@ -10,6 +10,7 @@ sleep 1
 lsof -nP -a -p $SV -iTCP:$P -sTCP:LISTEN >/dev/null 2>&1 || { echo "서버가 포트 $P를 못 잡음 — 멈춤"; echo DONE; exit 2; }
 r=$(node tools/harness/check.cjs . --full 2>&1 | tail -3 | tr '\n' ' '); echo "check: $r"
 r=$(PAGE=/ node tools/harness/check.cjs . --full 2>&1 | tail -3 | tr '\n' ' '); echo "promo: $r"
+r=$(node tools/harness/town_ticolor.cjs 2>&1 | tail -1); echo "ticolor: $r"   # DEB-1 나무·꽃 색 풀기(노드만 · 0.1초) — 흰 꽃이 까맣게 된 셰이더 회귀를 늘 봄
 for h in ${=LIST}; do n=${h%%:*}; a=""; [[ $h == *:* ]] && a=${h#*:}; a=${a//+/ }
   out=$(perl -e "alarm 1800; exec @ARGV" node tools/harness/town_$n.cjs ourtown $P ${=a} 2>&1); rc=$?
   nf=$(echo "$out" | grep -c "✗"); echo "town_$n rc=$rc ✗=$nf :: $(echo "$out" | grep "✗" | head -3 | cut -c1-160 | tr '\n' '|') $(echo "$out" | tail -2 | cut -c1-200 | tr '\n' ' ')"
