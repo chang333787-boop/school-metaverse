@@ -72,7 +72,8 @@ export function createYards({ T3, map, onCollider, removeCollider, en, animals, 
   function pushPart(A, p, world, col) { const g = geoOf(p), P = g.attributes.position, N = g.attributes.normal; partMatrix(p, MP); MW.multiplyMatrices(world, MP); NM.getNormalMatrix(MW);
     for (let i = 0; i < P.count; i++) { pv.fromBufferAttribute(P, i).applyMatrix4(MW); nv.fromBufferAttribute(N, i).applyMatrix3(NM).normalize(); A.p.push(pv.x, pv.y, pv.z); A.n.push(nv.x, nv.y, nv.z); A.c.push(col[0], col[1], col[2]); } }
   const newA = () => ({ p: [], n: [], c: [] });
-  const meshOf = (A, mat) => { if (!A.p.length) return null; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(A.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(A.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(A.c, 3)); g.computeBoundingSphere(); const m = new T3.Mesh(g, mat); m.userData.fx = 1; return m; };
+  const freeArr = function () { this.array = null; }, KEEPARR = typeof location !== 'undefined' && /[?&]keeparr=1/.test(location.search);   /* OPT-G2(11-08 메모리): GPU에 올린 뒤 JS 배열을 놓음(마당 꾸밈 = 큰 마당 하나에 33만 정점 · 마을 전체 약 30MB) — 마당 메시는 자리·돌림만 바꾸고 정점을 다시 읽거나 고치지 않음(다시 지을 땐 새 메시) · 문맥을 잃으면 새로고침(main.js) · ?keeparr=1(반짝임 감사)은 town.js GEOS처럼 남김 */
+  const meshOf = (A, mat) => { if (!A.p.length) return null; const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(A.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(A.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(A.c, 3)); g.computeBoundingSphere(); if (!KEEPARR) for (const k in g.attributes) g.attributes[k].onUpload(freeArr); const m = new T3.Mesh(g, mat); m.userData.fx = 1; return m; };
   const IDN = new T3.Matrix4();
 
   // ── 바닥: 칸(1.4m)마다 판 하나(버텍스 색) + 꽃밭 가족 = 꽃 몇 송이 + 테두리 · 쓴 범위 안만 ──

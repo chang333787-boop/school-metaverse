@@ -479,7 +479,7 @@ export function buildWorld(scene) {
     const at = document.createElement('canvas'); at.width = AW; at.height = AH;
     const g = at.getContext('2d');
     for (const [c, [ux, uy, uw]] of uv) g.drawImage(c, ux, uy, uw, RH);
-    const tex = new THREE.CanvasTexture(at); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    const tex = new THREE.CanvasTexture(at); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; tex.onUpdate = t => { const c9 = t.image; if (c9 && c9.width > 1) { c9.width = 1; c9.height = 1; if (/[?&]debug=1/.test(location.search)) { const st = Object.getOwnPropertyDescriptor(THREE.Texture.prototype, 'needsUpdate').set; Object.defineProperty(t, 'needsUpdate', { configurable: true, set(v) { if (v) console.error('[world] 픽셀을 놓은 팻말 아틀라스에 needsUpdate — 1×1 빈 판이 올라감', new Error().stack); st.call(t, v); } }); } } };   // OPT-G2(11-08 메모리): GPU에 올린 뒤 아틀라스 캔버스(2048 × 2,400 = 20MB) 픽셀을 놓음 — 다시 올리는 곳 없음(팻말 낱장은 signCanvas에 그대로) · ?debug=1 = 다시 올리려는 곳을 콘솔 오류로
     const pos = [], uvs = [], v = new THREE.Vector3();
     for (const { m, c, w, h } of signList) {
       m.updateMatrix();
@@ -6720,6 +6720,7 @@ export function buildWorld(scene) {
   }
   details.brect = BRECT; details.wing = 2; details.FH = FH;   // OCC-CULL: main.js 가림 컬링이 건물 칸(BRECT 순서 — 2 = 서관, 2층이 있는 유일한 동)·층고를 읽는다
   for (const g of CYLC.values()) g.dispose(); CYLC.clear();   // 원기둥 캐시는 빌드 동안만(dGeo가 정점을 청크로 복사했다 — 더 안 씀 · 메모리)
+  chunks.clear(); DNEAR.clear(); PAT.clear(); PG9.clear();   // OPT-G2(11-08 메모리): 청크·디테일·무늬 짓기 배열(숫자 배열 pos·col·nor·ao·own·obj · 무늬 캔버스)은 위에서 메시로 다 옮김 — 돌려주는 함수(baseAt 등)의 닫힘이 이 칸을 같이 쥐어 힙 약 60MB가 남던 것 · 짓기 뒤 이 표를 읽는 곳 없음(사람 대역 굽기 = PSINK)
   for (const o of OBJS) {   // OBJ-2: 물건이 만든 유리(진열장 앞 유리·백보드)·팻말(냉장고 '우유'·배너 글자)도 그 물건 몫 — 부수면 같이 접힌다(정점 범위만 적음 · 모양 변화 0)
     if (glassMesh && o.g1 > o.g0) o.parts.push({ mesh: glassMesh, start: o.g0 / 3, count: (o.g1 - o.g0) / 3 });
     if (signMesh && o.s1 > o.s0) o.parts.push({ mesh: signMesh, start: o.s0 * 12, count: (o.s1 - o.s0) * 12 });
