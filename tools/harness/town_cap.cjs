@@ -23,7 +23,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       const hots = () => { const seen = new Set(), out = []; for (const h of SD2.map.interact.list({ kind: 'game' })) { if (h.off || !h.use) continue; const L = String(h.label || '').replace(/[0-9]+/g, '#'); if (seen.has(L)) continue; seen.add(L); out.push(h); } return out; };
       const at = h => { try { SD2.map.player.teleport([h.x + 0.6, SM_TOWN.ground(h.x + 0.6, h.z) + 0.05, h.z]); } catch (e) { /* 설 곳 없음 */ } };
       const keep = () => JSON.stringify(S), back = j => { const o = JSON.parse(j), B = S.bag; for (const k of Object.keys(B)) delete B[k]; Object.assign(B, o.bag); for (const k of Object.keys(o)) if (k !== 'bag') S[k] = o[k]; };   /* 두 번 잴 때 같은 출발(처음 본 것·가 본 칸이 먼저 잰 쪽에만 생기지 않게) */
-      window.__C = { G, S, M, val, snap, diff, clean, fresh, hots, at, keep, back }; });
+      const gw = sec => new Promise(r => { let acc = 0, l = performance.now(); const f = () => { const n = performance.now(); acc += Math.min(0.05, (n - l) / 1000); l = n; if (acc >= sec) r(); else requestAnimationFrame(f); }; requestAnimationFrame(f); });   /* FIX-5 게임 시계로 기다림(벽시계로도 그 이상 — 예전 W8(1100) 자리): 프레임마다 min(0.05초, 프레임 간격)을 더함(main.js dt 상한과 같음) — 자리로 판정하는 1초 칸 일(썰물섬에서 돌아옴 등)은 게임 시간으로 돌아, 맥이 바빠 프레임이 느리면 벽시계 1.1초 안에 안 끝나고 '9번째 뒤' 칸으로 넘어가 늘어남으로 셈(물때표 보기 + xp:isle) */
+      window.__C = { G, S, M, val, snap, diff, clean, fresh, hots, at, keep, back, gw }; });
     const esc = async () => { await p.keyboard.press('Escape'); await W8(60); };
     const D = await ev(() => ({ day: __C.M.RW_DAY, rd: __C.M.RW_RD, gen: __C.M.RW_GEN, heart: __C.M.RW_HEART }));
     const CAPV = D.day.v * D.rd, CAPX = D.day.x * D.rd, CAPH = D.day.h * D.rd;
@@ -49,9 +50,9 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       await ev(i9 => { __C.fresh(false); window.__s0 = __C.snap(); const h = __HL[i9]; window.__h = h; if (h) __C.at(h); }, i);
       for (let r = 0; r < 8; r++) { const cl = await ev(() => { const h = __h; if (!h) return false; __C.at(h); try { h.use(); } catch (e) { /* 아래 pageerror */ } const E9 = SM_TOWN.efx && SM_TOWN.efx(); if (E9 && E9.closeOn && E9.closeOn()) return true; __C.clean(); return false; }); await W8(40);
         if (cl) { await W8(450); await ev(() => { const E9 = SM_TOWN.efx(); if (E9.closeOn()) E9.closeKey(); __C.clean(); }); await W8(80); } }   /* FIX-4D: 가까이 보기(CLOSE-1) 자리 = 다가가 창이 뜨기까지 기다려 한 번을 끝까지(순간 이동이 보기를 끊어 8번이 실제론 한 번뿐이라, 뒤 192번 끝의 한 번이 '늘어남'으로 셈) */
-      await W8(1100); await ev(() => __C.clean()); await esc(); await ev(() => { window.__s8 = __C.snap(); const R9 = SM_TOWN.game().S.rw; window.__c8 = JSON.stringify((R9 && R9.c) || {}); });
+      await ev(() => __C.gw(1.3)); await ev(() => __C.clean()); await esc(); await ev(() => { window.__s8 = __C.snap(); const R9 = SM_TOWN.game().S.rw; window.__c8 = JSON.stringify((R9 && R9.c) || {}); });
       await ev(() => { const h = __h; if (!h) return; for (let r = 0; r < 192; r++) { __C.at(h); try { h.use(); } catch (e) { /* 아래 */ } __C.clean(); } });
-      await W8(1100); await ev(() => __C.clean()); await esc();
+      await ev(() => __C.gw(1.3)); await ev(() => __C.clean()); await esc();
       const g = await ev(() => { const c0 = JSON.parse(__c8 || '{}'), R9 = SM_TOWN.game().S.rw, c1 = (R9 && R9.c) || {}, src = Object.keys(c1).filter(k => (c1[k] || 0) > (c0[k] || 0)).map(k => k + '+' + ((c1[k] || 0) - (c0[k] || 0))); return { a: __C.diff(__s0, __s8), z: __C.diff(__s8, __C.snap()), src }; });
       const more = g.z.v + g.z.xpT + g.z.hMax; if (more > 0) grow.push(H[i] + ' (+가치 ' + g.z.v + ' · +솜씨 ' + g.z.xpT + ' · +하트 ' + g.z.hMax + ' · 출처 ' + (g.src.join(',') || '?') + ')'); else nOk++;
       const tot = g.a.v + g.z.v; if (tot > worst.g) worst = { g: tot, l: H[i], xp: g.a.xpT + g.z.xpT }; }
