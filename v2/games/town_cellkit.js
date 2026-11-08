@@ -4,7 +4,7 @@
 //   유비식 X: 아이콘·물음표·'몇 칸 중'·% 0 — 찾는 길은 세상 단서(움직임·소리·비) · 지어내지 않음: 새 건물·명소·실명 인물 0 · 판타지 X
 //   이 파일 위쪽(자료·규칙·고르기)은 순수 함수 — Node 하네스(tools/harness/town_cells.cjs)와 게임이 같은 함수를 씀
 export const CK_V = 1;
-import { seaLinesOf } from './town_sea4.js?v=2';   /* SEA4-1 바다·모래사장 칸 할 거리(같은 줄을 haveOf에 셈) */
+import { seaLinesOf } from './town_sea4.js?v=5';   /* SEA4-1 바다·모래사장 칸 할 거리(같은 줄을 haveOf에 셈) */
 const HG = '가나다라마바사아자차카타파하';
 export const FAMS = ['생', '손', '사'];
 export const SEAS = ['spring', 'summer', 'autumn', 'winter'];

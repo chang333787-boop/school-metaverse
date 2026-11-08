@@ -33,7 +33,7 @@ const keys = o => (o && typeof o === 'object' && !Array.isArray(o) ? Object.keys
 const NK = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉', '열', '열한', '열두', '열세', '열네', '열다섯', '열여섯', '열일곱', '열여덟', '열아홉', '스무'];
 const NE = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
 /* 잔치까지 남은 밤(낱말 · 숫자 X) */
-export const nightsW = (n, en) => (n <= 0 ? (en ? 'today' : '오늘') : en ? (NE[n] || 'many') + (n === 1 ? ' night' : ' nights') : (NK[n] || '스무 넘는') + ' 밤');
+export const nightsW = (n, en) => (n <= 0 ? (en ? 'today' : '오늘') : en ? (NE[n] || 'many') + (n === 1 ? ' night' : ' nights') : (NK[n] ? NK[n] + ' 밤' : '스무 밤 넘게'));   /* DEB-3(토론 판정 12): '스무 넘는 밤' → '스무 밤 넘게' */
 
 // 주제(잔치 날의 계절 · 실제 풍습만)
 export const THEMES = {
@@ -310,7 +310,7 @@ export function createFeast(A) {
     return (s.n > 0 ? '🎉 ' : '') + out.join(' '); }
   /* STORYF-1(코덱스 10-27 '이야기를 끝내면 잔치인가, 날짜가 오면 잔치인가'): 창 맨 위 한 줄 = 이야기의 잔치와 이 잔치의 관계 */
   function storyLine() { const s = S(), e = en(), Q = G().story || {}, F = Q.fest || {}, n = left(), when = isDay() ? (e ? 'It is today.' : '오늘이 그날이에요.') : (e ? nightsW(n, 1).replace(/^./, c => c.toUpperCase()) + ' to go.' : nightsW(n) + ' 남았어요.');
-    const D = Q.done || {}; if (s.n === 0) return '📜 ' + (e ? 'The feast the prologue note asked helpers for is this one. ' + (D.f1 ? '' : 'Finishing Act 4 of the story moves it to the next day. ') : '프롤로그 쪽지가 도우미를 찾던 그 첫 잔치가 바로 이 잔치예요. ' + (D.f1 ? '' : '이야기 4막을 마치면 그다음 날로 당겨져요. ')) + when;   /* COVER-2: 이야기 피날레 = 이 잔치 */
+    const D = Q.done || {}; if (s.n === 0) return '📜 ' + (e ? 'The feast the first note asked helpers for is this one. ' + (D.f1 ? '' : 'Help the story to the end and the feast day is set. ') : '첫 쪽지가 도우미를 찾던 그 첫 잔치가 바로 이 잔치예요. ' + (D.f1 ? '' : '이야기를 끝까지 도우면 잔치 날이 정해져요. ')) + when;   /* DEB-3(토론 판정 8): '프롤로그'·'4막을 마치면 당겨져요' 같은 게임 구조 말 X */   /* COVER-2: 이야기 피날레 = 이 잔치 */
     const fin = F.site && !D.f1 ? (e ? ' The story finale uses the next feast, at ' + F.site + '.' : ' 이야기 마지막 장은 ' + F.site + '에서 여는 다음 잔치를 써요.') : '';
     return '📜 ' + (e ? 'After the first feast, a town feast comes back every two weeks. ' : '첫 잔치 뒤로 두 이레마다 돌아오는 마을 잔치예요. ') + when + fin; }
   // ───────── 수첩 🎉 잔치 · 게시판 창 ─────────

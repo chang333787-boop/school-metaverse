@@ -187,7 +187,7 @@ export function jobSvg(key, f, k = 0) { const J = JOBS[key]; if (!J) return ''; 
 export const jobRow = (name, keys) => { let h = 7; for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return keys.map((k, i) => ({ k, f: (h + i) % 2 === 0, skin: (h + i) % 3 })); };
 
 // 실제 사진(창 안에서만 — 3D 세상에 붙이지 않음 · 실사 금지 규칙): 표·그리기는 town_photos.js(REALPIC-1 · 곤충·동물·물고기·식물·자연 장소와 같이 씀) — 장소 카드는 이름으로 찾음(PHOTO_OF)
-export { PHOTOS, PHOTO_OF, photoKey, photoHtml, PHOTO_CSS } from './town_photos.js?v=2';
+export { PHOTOS, PHOTO_OF, photoKey, photoHtml, PHOTO_CSS } from './town_photos.js?v=5';
 
 // 사서 체험 자료(한국십진분류법 KDC — 책등 번호 첫 자리로 갈래): [번호, 이름, 영어, 책장 색, 무엇이 있나]
 export const LIB_CATS = [

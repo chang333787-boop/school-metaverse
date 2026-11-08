@@ -59,7 +59,7 @@ async function toFirstTry(Wk, o) {
     const k = await ev(nm => { const L9 = [...document.querySelectorAll('.twn-p [data-card]')], b9 = L9.find(q => q.textContent.includes(nm)) || L9[0]; b9.click(); return b9.textContent; }, PICK); await W8(300);
     const C1 = await ev(() => [...document.querySelectorAll('.twn-p [data-card]')].map(b9 => b9.textContent)); ok(C1.includes('가까운'), '둘째 칸 = 까닭 카드'); await ev(() => document.querySelector('.twn-p [data-card]').click()); await W8(1800);
     s = await S(); ok(s.id === 'show', '카드 둘 → 데려가기(' + s.id + ' · 고른 곳 ' + k + ')'); }
-  mark('🚶 노란 ❗ 보고 데려가기(빨간 선 X)');
+  mark('🚶 노란 느낌표 보고 데려가기(빨간 선 X)');
   { await W8(700); const T = await ev(() => SM_TOWN.storyTarget()); const r0 = await S(); ok(!r0.route, '데려가기 = 빨간 선 없음'); await shot('first_2_mark'); await walk(T.x, T.z, { self: 1, r: 10, until: r => r.sid !== 'show', tag: 'show' }); }
   s = await waitStep(q => q.done.includes('p0'), 8000); ok(s.done.includes('p0'), '프롤로그 끝(' + mmss(t()) + ')'); mark('프롤로그 끝');
   s = await waitStep(q => q.cur === 'a1_1', 20000); ok(s.cur === 'a1_1', '1-1이 저절로 시작(' + s.cur + ')'); mark('1-1 쪽지');

@@ -104,6 +104,20 @@ const PK = () => { const e = document.querySelector('.twn-p'); return e ? (e.dat
           await p.keyboard.press('Escape'); await W(1500); ok(!(await ev(() => !!document.querySelector('.twn-play'))), 'Esc = 놀이 그만'); }
         else console.log('   (놀이 판을 못 열어 건너뜀)'); }
       await closeAll();
+      // ⑦ E 줄 글 = E 동작(DEB-3 · 토론 판정 7): 양몰이 중 일꾼 E 줄 X(E가 판을 끝내지 않음) · 그만하기 = 놀이 줄 단추 · 잠긴 E 자리 = 'E' 글자 없는 회색 줄
+      console.log('⑦ E 줄 글 = E 동작');
+      { const st = await ev(() => { if (SM_TOWN.storyOff) SM_TOWN.storyOff(); return !!SM_TOWN.herdGo(1, ''); }); await W(1200);
+        if (st && await ev(() => SM_TOWN.herd().on)) { const h = await ev(() => { const e = document.getElementById('hint'); return e && e.style.display !== 'none' ? e.textContent : ''; });
+          ok(!/양몰이|herding/i.test(h), '양몰이 중 일꾼 곁 E 줄 = 양몰이 글 없음 (「' + h + '」)');
+          await p.keyboard.press('KeyE'); await W(500); ok(await ev(() => SM_TOWN.herd().on), '양몰이 중 E = 판이 안 끝남');
+          const q = await ev(() => { const b = document.querySelector('.twn-wcard .wq'); return b && b.offsetParent ? b.textContent : ''; }); ok(/그만/.test(q), '놀이 줄에 그만하기 단추 (「' + q + '」)');
+          await ev(() => { const b = document.querySelector('.twn-wcard .wq'); if (b) b.click(); }); await W(600); ok(!(await ev(() => SM_TOWN.herd().on)), '그만하기 단추 = 양몰이 끝'); }
+        else console.log('   (목장이 없어 양몰이 건너뜀)'); }
+      { const L = await ev(() => { const h = (SD2.world.hotspots || []).find(q => q.lock && !q.off); return h ? [h.x, h.z, h.label] : null; });
+        if (L) { await ev(([x, z]) => { const M = SD2.map; M.player.teleport([x + 0.3, M.q.groundAt(x, z, SM_TOWN.ground(x, z) + 3) + 0.05, z + 0.3]); }, L); await W(900);
+          const h = await ev(() => { const e = document.getElementById('hint'); return e && e.style.display !== 'none' ? e.textContent : ''; });
+          ok(!!h && !/^\s*(E|✋)\s/.test(h) && /🔒/.test(h) && !/막에서|막에/.test(h), '잠긴 E 자리 = E 글자 없는 줄 (「' + h + '」)'); }
+        else console.log('   (잠긴 E 자리 없음 — 건너뜀)'); }
       ok(errs.length === 0, '페이지 오류 ' + errs.length + (errs.length ? ' ' + errs.slice(0, 2).join(' | ') : ''));
       await ctx.close(); }
 

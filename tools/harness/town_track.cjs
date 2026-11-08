@@ -49,7 +49,7 @@ const numsOf = t => (String(t || '').match(/\d+(?:\.\d)?\s?k?m\b/g) || []).map(s
       ok(S.rowOn && /따라가는 중/.test(S.row) && S.row.includes(story0.name), '따라가는 중 줄 「' + S.row + '」');
       ok(S.gsp && near([S.gsp.x, S.gsp.z], story0.at, 4), '머리 위 ❗ = 이야기 목적지');
       { const e9 = await ev(() => { const P9 = SM_TOWN.routePts(); return P9 && P9.length ? P9[P9.length - 1] : null; }), n = await starAt(S.comp[0], S.comp[1]); ok(n > 0, '작은 지도 별 = 이야기 목적지(노란 화소 ' + n + ' · 선 끝 ' + JSON.stringify(e9) + ' · 목적지 ' + JSON.stringify(S.comp.slice(0, 2).map(Math.round)) + ')'); }
-      { const a = numsOf(S.row), c = numsOf(S.compTag), g = numsOf(S.goal); ok(a.length && c.length && a[0] === c[0] && (!g.length || g[0] === a[0]), '한 대상에 수 하나: 줄 ' + a[0] + ' · 띠 ' + c[0] + ' · 위 줄 ' + (g[0] || '-')); }
+      { const a = numsOf(S.row), c = numsOf(S.compTag), g = numsOf(S.goal); ok(!a.length && !c.length && /쪽|north|south|east|west/.test(S.row), '한 대상에 수 하나(DEB-3 · 수는 위 줄에만): 줄 「' + S.row + '」 · 띠 「' + S.compTag + '」 · 위 줄 ' + (g[0] || '-')); }
       ok(/쪽/.test(S.task), '할 일 줄 = 이야기 방향 꼬리(이야기를 따라감) 「' + S.task + '」');
       await shot('trk_desk_story');
       console.log('② 사건이 새로 생겨도 안 빼앗음');
@@ -71,7 +71,7 @@ const numsOf = t => (String(t || '').match(/\d+(?:\.\d)?\s?k?m\b/g) || []).map(s
       ok(S.notes.some(t => /이제 👮 길 잃은 어린이로 안내해요/.test(t)), '바뀔 때 한 줄 「' + S.notes[S.notes.length - 1] + '」');
       { const n = await starAt(S.emEv[0], S.emEv[1]), n2 = await starAt(story0.at[0], story0.at[1]); ok(n > 0 && n2 === 0, '작은 지도 별 = 사건 자리 하나(이야기 자리 별 X · ' + n + '/' + n2 + ')'); }
       ok(!/쪽$/.test(S.task.trim()), '할 일 줄 = 이야기 방향 꼬리 X(사건을 따라감) 「' + S.task + '」');
-      { const a = numsOf(S.row), c = numsOf(S.compTag), g = numsOf(S.goal); ok(a[0] && a[0] === c[0] && a[0] === g[0], '한 대상에 수 하나(사건): 줄 ' + a[0] + ' · 띠 ' + c[0] + ' · 위 줄 ' + g[0]); }
+      { const a = numsOf(S.row), c = numsOf(S.compTag), g = numsOf(S.goal); ok(!a.length && !c.length && g.length === 1, '한 대상에 수 하나(사건 · 수는 위 줄에만): 줄 「' + S.row + '」 · 띠 「' + S.compTag + '」 · 위 줄 ' + g[0]); }
       await shot('trk_desk_em');
       await ev(() => { const c9 = [...document.querySelectorAll('.gchip')].find(c => /👮/.test(c.textContent)); if (c9) c9.click(); }); await W8(500);
       ok(await ev(() => !!document.querySelector('.twn-p [data-a="way"]') && /안내 받기/.test(document.querySelector('.twn-p [data-a="way"]').textContent)), '사건 칩 → 창의 「🧭 안내 받기」');

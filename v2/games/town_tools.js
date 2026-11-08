@@ -8,7 +8,7 @@
 //     그리기 = 고리 1 + 물방울 1 + 덩이 1 + 조각 1 + 구덩이 1 + 젖은 자국 1(있을 때만) — 바뀔 때만 setMatrixAt
 //   지어내지 않음(사실만: 지렁이·분해자 · 금어기·놓아주기 · 바닷물 · 꽃의 암술·수술) · 새 사람 X(빗자루 = 마을회관 앞 쪽지 · 낚싯대 = 부두 어부 일꾼) · 홍보판(SM_PROMO) X
 import { fishAt, FISH_FACT } from './town_fish.js?v=2';   /* FISH-2: 바다 = 물때·계절로 걸리는 고기(가까운 얕은 물) */
-import { photoHtml } from './town_photos.js?v=2';   /* REALPIC-1 낚은 물고기 실제 모습(창 안에서만) */
+import { photoHtml } from './town_photos.js?v=5';   /* REALPIC-1 낚은 물고기 실제 모습(창 안에서만) */
 export const TOOLS_V = 1;
 export const TOOL_ORDER = ['can', 'shovel', 'rod', 'lens', 'broom', 'scope'];   /* REWARD-1: 6 = 망원경(관찰 2레벨 보상) */
 export const TOOL = {
@@ -122,15 +122,15 @@ export function createTools(A) {
     const nk = k && t.cur !== k ? k : null; if (nk === t.cur) return true; stopPour(); if (FS) fishStop(); t.cur = nk; mark(); showSync(); aimCalc(true); barSync(); tchSync(); A.keysLine(); PICK = 0;
     if (nk) { tone(880, 0, 0.06, 'triangle', 0.05); tone(1320, 0.06, 0.08, 'triangle', 0.04); if (!t.n['h:' + nk]) { t.n['h:' + nk] = 1; toast(TOOL[nk].ic + ' ' + L(TOOL[nk].how) + (A.tch() ? (en() ? ' (🧰 Use)' : ' (🧰 쓰기)') : (en() ? ' (click or F)' : ' (클릭 또는 F)')), 4); } }
     else tone(520, 0, 0.06, 'triangle', 0.04); return true; }
-  function barSync() { if (!BAR) return; const t = S(), k = cur(), on = !!(A.on() && (shownK || PICK > 0)); BAR.classList.toggle('on', on); if (!on) return;
-    for (const b of BAR.children) { const k9 = b.dataset.t; b.classList.toggle('cur', k9 === k); b.classList.toggle('no', !t.have[k9]); b.title = L(TOOL[k9].t) + (t.have[k9] ? '' : ' — ' + L(TOOL[k9].get)); }
+  function barSync() { if (!BAR) return; const t = S(), k = cur(), wk = A.want && !hiddenWhy() ? A.want() : null, on = !!(A.on() && (shownK || PICK > 0 || (wk && TOOL[wk]))); BAR.classList.toggle('on', on); if (!on) return;   /* DEB-3: 이야기 도구 단계 = 띠를 보이고 쓸 칸 깜박임(want) */
+    for (const b of BAR.children) { const k9 = b.dataset.t; b.classList.toggle('cur', k9 === k); b.classList.toggle('want', k9 === wk && k9 !== k); b.classList.toggle('no', !t.have[k9]); b.title = L(TOOL[k9].t) + (t.have[k9] ? '' : ' — ' + L(TOOL[k9].get)); }
     tankSync(); }
   function barBuild() { if (!BAR) return; BAR.innerHTML = ord().map((k, i) => '<button data-t="' + k + '"><i>' + TOOL[k].ic + '</i><b>' + (i + 1) + '</b>' + (k === 'can' ? '<em><s></s></em>' : '') + '</button>').join(''); tankW = -1; barSync(); }
   let tankW = -1; function tankSync() { if (!BAR) return; const w = Math.round(S().tank / tankMax() * 100); if (w === tankW) return; tankW = w; const s = BAR.querySelector('em s'); if (s) { s.style.width = w + '%'; s.style.background = w < 20 ? '#e0603a' : '#3a8fe0'; } }
   function tchSync() { if (!tchBtn) return; const on = A.tch() && !!shownK && !A.busy(); tchBtn.style.display = on ? 'flex' : 'none'; if (on) { const k = cur(); tchBtn.firstChild.textContent = '🧰 ' + (FS && FS.ph === 'bite' ? (en() ? 'Pull!' : '당겨요!') : (en() ? 'Use' : '쓰기')); tchBtn.title = L(TOOL[k].t); } }
   function ui() { if (BAR) return; CSS = document.createElement('style'); CSS.textContent = '.twn-tools{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:21;display:none;gap:5px;padding:5px 6px;background:#fff8ea;border:2px solid #2b2420;border-radius:12px;box-shadow:0 3px 0 #2b2420;pointer-events:auto}'
       + '.twn-tools.on{display:flex}.twn-tools button{position:relative;width:44px;height:44px;padding:0;border:2px solid #2b2420;border-bottom-width:4px;border-radius:9px;background:#fff;cursor:pointer;font:24px/1 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif,SMEmoji;color:#2b2420}'
-      + '.twn-tools button i{font-style:normal}.twn-tools button b{position:absolute;left:3px;top:1px;font:900 11px system-ui,sans-serif;color:#6a5a4a}.twn-tools button.cur{background:#ffe48a;border-color:#c8443a}.twn-tools button.no{opacity:.35}'
+      + '.twn-tools button i{font-style:normal}.twn-tools button b{position:absolute;left:3px;top:1px;font:900 11px system-ui,sans-serif;color:#6a5a4a}.twn-tools button.cur{background:#ffe48a;border-color:#c8443a}.twn-tools button.want{animation:twnWant 1s steps(1) infinite}@keyframes twnWant{50%{background:#ffe48a;border-color:#c8443a}}@media (prefers-reduced-motion:reduce){.twn-tools button.want{animation:none;background:#ffe48a}}.twn-tools button.no{opacity:.35}'
       + '.twn-tools button em{position:absolute;left:5px;right:5px;bottom:3px;height:5px;border-radius:3px;background:#d9cbb5;overflow:hidden}.twn-tools button em s{display:block;height:100%;width:100%;background:#3a8fe0;text-decoration:none}body.touch .twn-tools button b{display:none}body.h-keys .twn-tools{bottom:58px}body.touch .twn-tools{bottom:12px}'
       + '.twn-tuse{position:fixed;right:calc(196px + env(safe-area-inset-right));bottom:calc(100px + env(safe-area-inset-bottom));z-index:22;display:none;align-items:center;justify-content:center;min-width:92px;height:52px;padding:0 14px;border-radius:26px;background:#fff8ea;color:#2b2420;border:3px solid #2b2420;box-shadow:0 4px 0 #2b2420;font:900 17px system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif,SMEmoji;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}.twn-tuse.dn{transform:translateY(3px);box-shadow:0 1px 0 #2b2420}';
     document.head.appendChild(CSS);
@@ -189,7 +189,7 @@ export function createTools(A) {
     const f = flowerAt(x, z, 0.8); if (f) { const k = Math.round(f.x * 2) + ':' + Math.round(f.z * 2); if (!acc('f' + k, dt, 0.8)) return; const B = t.bloom, b = B[k];
       if (b && b.w === day()) { if (main) toast(en9 ? '🌷 You watered this flower today — come back tomorrow' : '🌷 이 꽃은 오늘 물을 줬어요 — 내일 또 줘요', 2.2); return; }
       B[k] = { x: +f.x.toFixed(2), y: +f.y.toFixed(2), z: +f.z.toFixed(2), c: Math.min(9, ((b && b.c) || 0) + 1), w: day() }; const ks = Object.keys(B); if (ks.length > 20) { ks.sort((a9, b9) => B[a9].w - B[b9].w); delete B[ks[0]]; } mark(); dirty = true;
-      A.skUp('farm', 1, 'flower'); A.rec('can-flower'); toast(en9 ? '🌷 Watered the flowers — one more will bloom tomorrow' : '🌷 꽃에 물을 줬어요 — 내일 한 송이 더 피어요', 2.6); return; }
+      A.skUp('farm', 1, 'flower'); const sw9 = !!(A.recWant && A.recWant('can-flower', f.x, f.z)); A.rec('can-flower'); if (!sw9) toast(en9 ? '🌷 Watered the flowers — one more will bloom tomorrow' : '🌷 꽃에 물을 줬어요 — 내일 한 송이 더 피어요', 2.6); return; }   /* DEB-3: 이야기가 받으면 이야기 띠 한 번만 */
     const p = potAt(x, z); if (p) { const k = Math.round(p[0]) + ':' + Math.round(p[2]); if (!acc('p' + k, dt, 0.8)) return; if (t.n['pot:' + k] === day()) return; t.n['pot:' + k] = day(); mark(); A.skUp('farm', 1, 'pot:' + k); toast(en9 ? '🌱 Watered the pot plant' : '🌱 화분에 물을 줬어요', 2); } }
   function dropTick(dt) { if (!pAlive) { if (DROP && DROP.visible) DROP.visible = false; return; } let n = 0;
     for (let i = 0; i < PMAX; i++) { const k = kind[i]; if (!k) continue; if ((life[i] -= dt) <= 0) { kind[i] = 0; pAlive--; if (k === 1 && Math.random() < 0.35) splash(px[i], py[i], pz[i], 1); continue; }
@@ -393,7 +393,7 @@ export function createTools(A) {
     bite: () => { if (FS && FS.ph === 'wait') FS.bite = FS.t; else if (FS && FS.ph === 'fly') FS.bite = 0; return !!FS; }, piles: () => PILES.map(p => ({ k: p.k, x: p.x, z: p.z, y: +p.y.toFixed(2), mode: p.mode })), stands: () => STANDS.map(s => ({ x: +s.x.toFixed(1), z: +s.z.toFixed(1) })),
     tank: v => { S().tank = Math.max(0, Math.min(tankMax(), v)); tankSync(); fillSync(); }, faucets: () => FAUCH.map(h => ({ x: +h.hot.x.toFixed(2), z: +h.hot.z.toFixed(2), y: +h.hot.y.toFixed(2), off: h.hot.off, src: !!h.src })), sync: () => { showSync(); fillSync(); barSync(); tchSync(); pilesSync(true); drawAll(); },
     order: () => ord().slice(), place: (k, j) => place(k, j), pick: () => pick(), mesh: () => ({ ring: RING, mound: MOUND && MOUND.count, bits: BITS && BITS.count, hole: HOLE && HOLE.count, wet: WET && WET.count }) };
-  function pick() { if (!A.on()) return; ui(); PICK = 8; barSync(); if (!A.tch()) toast(en() ? '🧰 Press 1–5 to hold a tool (click a slot too)' : '🧰 숫자 1~5로 도구를 들어요 (칸을 눌러도 돼요)', 2.6); }
-  function keys9() { const e = en(), K = [['1~' + (S().have.scope ? 6 : 5), e ? 'tools' : '도구']]; if (shownK) K.push([e ? 'Click·F' : '클릭·F', e ? 'use' : '쓰기']); return K; }
+  function pick() { if (!A.on()) return; ui(); PICK = 8; barSync(); if (!A.tch()) toast(en() ? '🧰 Press 1–6 to hold a tool (click a slot too)' : '🧰 숫자 1~6으로 도구를 들어요 (칸을 눌러도 돼요)', 2.6); }
+  function keys9() { const e = en(), K = [['1~6', e ? 'tools' : '도구']];   /* DEB-3(토론 판정 12): 도구 키 이름 = 어디서나 1~6(망원경이 없어도 같은 이름 · 빈 칸은 흐리게) */ if (shownK) K.push([e ? 'Click·F' : '클릭·F', e ? 'use' : '쓰기']); return K; }
   return { init, tick, dispose, key, got, hold, pick, place, order: () => ord().slice(), keys: keys9, get cur() { return shownK; }, get have() { return { ...S().have }; }, api: API };
 }

@@ -96,10 +96,12 @@ export function createTrack(A) {
   function ensure() { if (el) return; css = document.createElement('style'); css.textContent = CSS; document.head.appendChild(css); el = document.createElement('div'); el.className = 'twn-trk'; el.setAttribute('role', 'status'); el.innerHTML = '<span class="t"></span><button type="button"></button>';
     el.querySelector('button').addEventListener('click', e => { e.stopPropagation(); open(); }); el.addEventListener('pointerdown', e => e.stopPropagation()); document.body.appendChild(el); }
   const rowWant = () => { const k = S().k; return !A.hidden() && (LC.length >= 2 || (!!k && k !== 'story')); };
+  const D8K = ['북', '북동', '동', '남동', '남', '남서', '서', '북서'], D8E = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+  const dirW = c => { const m = A.me(), b = (Math.atan2(c.at[0] - m.x, -(c.at[1] - m.z)) * 57.29578 + 360) % 360, i = Math.round(b / 45) % 8; return en() ? D8E[i] : D8K[i] + '쪽'; };   /* 지도 위 = 북(-z) · 나침반 띠와 같은 셈 */
   function row() { if (dead) return; const k = S().k, c = k ? LC.find(q => q.k === k) : null;
     if (!rowWant()) { if (el && el.classList.contains('on')) { el.classList.remove('on'); rowSig = ''; A.stack(); } return; }
     ensure(); const d = c && c.at && !c.self ? A.dist(c) : -1;
-    const tx = c ? labOf(c) + (c.at && !c.self ? ' · ' + cellT(c) + (d >= 0 ? ' · ' + fmtC(c, d) : '') : c.self ? L(' · 스스로 찾는 중', ' · finding it yourself') : '') : L('없음', 'nothing');
+    const tx = c ? labOf(c) + (c.at && !c.self ? (d >= 0 ? ' · ' + dirW(c) : ' · ' + cellT(c)) : c.self ? L(' · 스스로 찾는 중', ' · finding it yourself') : '') : L('없음', 'nothing');   /* DEB-3(토론 판정 11): 거리 수는 위 줄 한 곳만 — 이 줄은 '목장 일꾼 · 북서쪽'(칸 주소는 작은 지도 칸 배지에 늘) */
     const sig = tx + '|' + (en() ? 1 : 0); if (sig !== rowSig) { rowSig = sig; el.querySelector('.t').innerHTML = '<b>🧭 ' + L('따라가는 중', 'Following') + '</b> ' + esc(tx); el.querySelector('button').textContent = L('바꾸기', 'Change'); }
     if (!el.classList.contains('on')) { el.classList.add('on'); S().seen = 1; A.stack(); }
     if (LC.length >= 2) A.tipWant(); }

@@ -369,13 +369,17 @@ export function createMapApi(host, NAV, META) {
       const m = { x, y, z, color: o.color ?? 0xffd23c, beam: o.beam !== false }; marks.push(m); mkSync();
       return { set(nx, ny, nz) { m.x = nx; m.y = ny; m.z = nz; }, color(c) { m.color = c; mkSync(); }, remove() { const i = marks.indexOf(m); if (i >= 0) { marks.splice(i, 1); mkSync(); } } }; },
     // 바닥 +6cm 리본(길 안내) — 한 메시
+    //   o.edge = { color, width } — 밑띠(더 넓게 먼저 깔고 그 위에 띠 · 마을 빨간 선이 붉은 찻길과 구별되게 · DEB-3) · o.opacity(기본 0.75) · from(i) = i번째 토막부터만 그림(지나온 토막·발밑 숨기기)
     trail(pts, o = {}) {
-      const W = (o.width || 0.35) / 2, pos = [];
-      for (let i = 0; i + 1 < pts.length; i++) { const a = pts[i], b = pts[i + 1], dx = b[0] - a[0], dz = b[2] - a[2], l = Math.hypot(dx, dz) || 1, nx = -dz / l * W, nz = dx / l * W, ya = a[1] + 0.06, yb = b[1] + 0.06;
-        pos.push(a[0] + nx, ya, a[2] + nz, b[0] + nx, yb, b[2] + nz, b[0] - nx, yb, b[2] - nz, a[0] + nx, ya, a[2] + nz, b[0] - nx, yb, b[2] - nz, a[0] - nx, ya, a[2] - nz); }
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: o.color ?? 0x3cc8ff, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
-      m.renderOrder = 3; scene.add(m); return { obj: m, remove() { scene.remove(m); g.dispose(); m.material.dispose(); } };
+      const band = (W, color, ro) => { const pos = [];
+        for (let i = 0; i + 1 < pts.length; i++) { const a = pts[i], b = pts[i + 1], dx = b[0] - a[0], dz = b[2] - a[2], l = Math.hypot(dx, dz) || 1, nx = -dz / l * W, nz = dx / l * W, ya = a[1] + 0.06, yb = b[1] + 0.06;
+          pos.push(a[0] + nx, ya, a[2] + nz, b[0] + nx, yb, b[2] + nz, b[0] - nx, yb, b[2] - nz, a[0] + nx, ya, a[2] + nz, b[0] - nx, yb, b[2] - nz, a[0] - nx, ya, a[2] - nz); }
+        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: o.opacity ?? 0.75, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+        m.renderOrder = ro; scene.add(m); return m; };
+      const e = o.edge ? band((o.edge.width || (o.width || 0.35) + 0.2) / 2, o.edge.color ?? 0xffffff, 3) : null, m = band((o.width || 0.35) / 2, o.color ?? 0x3cc8ff, e ? 4 : 3);
+      return { obj: m, edge: e, from(i) { const s = Math.max(0, i | 0) * 6; m.geometry.setDrawRange(s, Infinity); if (e) e.geometry.setDrawRange(s, Infinity); },
+        remove() { for (const q of e ? [m, e] : [m]) { scene.remove(q); q.geometry.dispose(); q.material.dispose(); } } };
     },
     // 같은 모양 여럿(공·고깔·별) — InstancedMesh 한 개 = 드로우콜 1
     many(kind, count, o = {}) {

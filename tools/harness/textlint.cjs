@@ -5,6 +5,7 @@
 //   ② CSS `:has(` — 아이폰 사파리에서 '맞다'면서 적용 안 됨(mobile.md HAS-1) · JS 문자열 속 CSS·querySelector와 .css 파일
 //   ③ 줄 가운데 // 주석 뒤에 다시 코드가 오는 줄 — `a(); // 설명 b();`면 b()가 주석이 되어 안 돎(메모리 '줄 가운데 // 주석 금지' · 조각 설명은 /* */)
 //   --slop = 경고만(종료 코드와 무관 · town_lessons.md B '슬롭티'): ④ 한 줄 화면 글(문자열)에 이모지 셋 이상(이모지 하나뿐인 문자열 = 자료 표 열쇠는 뺌) ⑤ '·'로 이은 조각 넷 이상('·' 셋 이상)
+//   ⑥ 아이 화면 금지어(DEB-3 · 토론 판정 8·12 · v2/games/town*.js 문자열 속만): 게임 구조 말('배울 거리:'·'○막에서'·'프롤로그'·'당겨져') · 뜻 없는 수('콤보') · 어색한 낱말('스무 넘는'·'격자 주소'·'곁' → 옆) · 조사 괄호('을(를)'·'이(가)'·'은(는)')
 //   SMFix 글꼴(tools/fonts/smfix.py · v2/index.html /*SMFIX*/)에 든 글자는 고침으로 셈
 //   --diff=<커밋> = 그 커밋 뒤 새로 쓰거나 고친 줄만(관문용) · --warn = 찾아도 종료 코드 0 · 종료 코드 1 = 하나라도 찾음
 const fs = require('fs'), path = require('path'), { execSync } = require('child_process');
@@ -99,6 +100,8 @@ function lint(file) {
   if (!css) for (let li = 0; li < lines.length; li++) { const L = lines[li], s0 = starts[li]; let j = -1; for (let c = 0; c + 1 < L.length; c++) if (L[c] === '/' && L[c + 1] === '/' && K[s0 + c] === 2 && (c === 0 || K[s0 + c - 1] !== 2)) { j = c; break; }
     if (j <= 0 || !/\S/.test(L.slice(0, j))) continue; let pre = false; for (let c = 0; c < j; c++) if (K[s0 + c] === 0 && /\S/.test(L[c])) { pre = true; break; } if (!pre) continue;
     const t = L.slice(j + 2); if (CODEISH.some(re => re.test(t))) push(li, j, 'midline', '줄 가운데 // 뒤에 코드처럼 보이는 글 — 정말 주석이면 /* */로, 코드면 // 앞으로'); }
+  // ⑥ 아이 화면 금지어(마을 문자열만)
+  if (!css && /v2[\\/]games[\\/]town[^\\/]*\.js$/.test(file)) for (const m of src.matchAll(KIDBAN)) { const i = m.index; if (K[i] !== 1) continue; const li = lineOf(i); push(li, i - starts[li], 'word', '아이 화면 금지어 「' + m[0] + '」 — ' + (KIDWHY[m[0]] || '쉬운 말로')); }
   // ④⑤ 슬롭티(--slop · 경고)
   if (SLOP && !css) for (let li = 0; li < lines.length; li++) { const L = lines[li], s0 = starts[li]; let emo = 0, dots = 0, piece = '';
     const flush = () => { const t = piece.replace(/[\s\uFE0F\u200D]/g, ''); const cps = [...t].filter(ch => isEmo(ch.codePointAt(0))); if (!(cps.length === 1 && [...t].length === 1)) emo += cps.length; dots += (piece.match(/·/g) || []).length; piece = ''; };
@@ -107,6 +110,8 @@ function lint(file) {
     if (dots >= 3) push(li, 0, 'slopDot', "'·'로 이은 조각 " + (dots + 1) + '개(짧은 문장으로)'); }
   return F;
 }
+const KIDBAN = /배울 거리:|[0-9]막에서|프롤로그|당겨져|콤보|스무 넘는|격자 주소|곁(?!들)|을\(를\)|를\(을\)|이\(가\)|은\(는\)/g;
+const KIDWHY = { '배울 거리:': '장 시작은 물음 한 줄(ask)', '막에서': '무엇을 하면 열리는지로', '프롤로그': "'첫 쪽지'·'시작'으로", '당겨져': '무엇을 하면 정해지는지로', '콤보': '뜻 없는 수 — 소리로만', '스무 넘는': "'스무 밤 넘게'", '격자 주소': "'칸 이름'", '곁': "'옆'", '을(를)': '조사 함수(jo)로', '를(을)': '조사 함수(jo)로', '이(가)': '조사 함수(jo)로', '은(는)': '조사 함수(jo)로' };
 const isEmo = cp => (cp >= 0x1F000 && cp <= 0x1FAFF) || (cp >= 0x2600 && cp <= 0x27BF) || cp === 0x2B50 || cp === 0x2B06 || cp === 0x2934 || cp === 0x2935 || cp === 0x23F0 || cp === 0x23F3 || cp === 0x231B;
 function inCssComment(src, i) { const a = src.lastIndexOf('/*', i), b = src.lastIndexOf('*/', i); return a > b; }
 
@@ -114,9 +119,9 @@ const files = listFiles(); const found = []; for (const f of files) found.push(.
 if (JSONOUT) console.log(JSON.stringify({ files: files.length, n: all.length, findings: all, slop }, null, 1));
 else {
   const by = k => all.filter(f => f.kind === k);
-  const head = { emoji: '① 윈도 10에서 깨지는 이모지(글자 속)', has: '② CSS :has(', midline: '③ 줄 가운데 // 뒤 코드' };
+  const head = { emoji: '① 윈도 10에서 깨지는 이모지(글자 속)', has: '② CSS :has(', midline: '③ 줄 가운데 // 뒤 코드', word: '⑥ 아이 화면 금지어(마을 글)' };
   console.log('글 검사 — 파일 ' + files.length + '개' + (DIFF ? ' · ' + DIFF + ' 뒤 바뀐 줄만' : ''));
-  for (const k of ['emoji', 'has', 'midline']) { const L = by(k); console.log('\n' + head[k] + ': ' + L.length); for (const f of L) console.log('  ' + f.file + ':' + f.line + ':' + f.col + '  ' + f.msg + '\n      ' + f.at); }
+  for (const k of ['emoji', 'has', 'midline', 'word']) { const L = by(k); console.log('\n' + head[k] + ': ' + L.length); for (const f of L) console.log('  ' + f.file + ':' + f.line + ':' + f.col + '  ' + f.msg + '\n      ' + f.at); }
   if (FIXED.size) console.log('\n(SMFix 글꼴이 그린 글자 ' + FIXED.size + '종 — 글자 속 ' + nFixed + '곳은 고침으로 셈 · 캔버스 글씨는 따로 확인)');
   if (SLOP) { const byF = {}; for (const f of slop) { const k = f.file; (byF[k] = byF[k] || { emo: 0, dot: 0 }); byF[k][f.kind === 'slopEmo' ? 'emo' : 'dot']++; }
     console.log('\n④⑤ 슬롭티(경고 · 고치지 않고 목록만): 이모지 셋 이상 ' + slop.filter(f => f.kind === 'slopEmo').length + '줄 · \'·\' 조각 넷 이상 ' + slop.filter(f => f.kind === 'slopDot').length + '줄');

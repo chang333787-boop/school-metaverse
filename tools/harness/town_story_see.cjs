@@ -228,7 +228,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m)
         await ev(i9 => SM_TOWN.storyAt('a1_5', i9), ix('a1_5', 'alert')); await W8(900); await shut();
         const s0 = await S(); if (s0.id !== 'alert') console.log('    (갯벌·엔진이 없는 마을 = 한 줄로 넘어감 · ' + s0.id + ')'); else {
           await ev(() => { const a9 = SM_TOWN.storyTarget(); if (a9) SD2.map.player.teleport([a9.x + 2, SM_TOWN.ground(a9.x + 2, a9.z) + 1.5, a9.z]); }); await W8(2500);
-          const r1 = await ev(() => ({ on: SM_TOWN.emerg().on, todo: SM_TOWN.storyTodo() })); ok(!r1.on && /밀물 앞\(\d\d:\d\d\)까지 갯벌 곁에서/.test(r1.todo || ''), '이른 때 = 사건 X · 할 일 줄에 밀물 앞 시각(「' + (r1.todo || '').slice(0, 50) + '」)');
+          const r1 = await ev(() => ({ on: SM_TOWN.emerg().on, todo: SM_TOWN.storyTodo() })); ok(!r1.on && /밀물 앞\(\d\d:\d\d\)까지 갯벌 (곁|옆)에서/.test(r1.todo || ''), '이른 때 = 사건 X · 할 일 줄에 밀물 앞 시각(「' + (r1.todo || '').slice(0, 50) + '」)');
           const wt = await waitLbl(); ok(/밀물 앞\(\d\d:\d\d\)까지 기다리기/.test(wt), '기다리기 단추 = ' + wt);
           await ev(m => { SM_TOWN.game().S.min = m; }, T0.min); let r2 = null; for (let i = 0; i < 14; i++) { await W8(700); r2 = await ev(() => ({ i: SM_TOWN.emerg().info().ev, s: SM_TOWN.story().step && SM_TOWN.story().step.id })); if (r2.i) break; }
           ok(!!(r2 && r2.i && r2.i.k === 'tide') && r2.s === 'alert', '밀물 앞 = 그 자리에 밀물 사건(' + JSON.stringify(r2 && r2.i && { k: r2.i.k, st: r2.i.st }) + ' · 단계 ' + (r2 && r2.s) + ')');

@@ -7,7 +7,7 @@
 //   보상 = 솜씨만(꼬리표 ent:<갈래> → rwCheck 한 문 · 하루 한 번) + 보이는 결과(봉투·접시·제자리·별) · 가방 팔기 = 기본 값(장터보다 낮게 · 'mv:sell' · 가게에서 산 것 X)
 //   렉: 매 프레임 일 0 · 새 Light X · 방은 들어갈 때만(town_indoor.js KIT · 합친 부품 + 인스턴스) · 나오면 치움 · 문 표시 고리·글자판은 그리지 않음(1,300곳 · E 안내만)
 //   ENTER-3(11-07 · town_enter2.js · docs/systems/town_enter3.md): 가게·식당·사무실·창고 = 갈래마다 판단 틀(고르기·그림·도구·나누기·순서·읽기·구도·지도) + 내용 표 · 집·아파트 = 오늘의 부탁(일곱 갈래 · 이웃 일·동네·철·때) + 가끔 그 집만의 일 + 기억 말 + 답례(엽서·그 일의 작은 것) + 모음(도운 집 n/전체)
-import { CONTENT, MENU, HJOB, JOBKEY, HFIND, HEV, PCARDS, PC_WHERE, HMEM, HKNAME, homePlan, homeSpec, createPlay } from './town_enter2.js?v=2';
+import { CONTENT, MENU, HJOB, JOBKEY, HFIND, HEV, PCARDS, PC_WHERE, HMEM, HKNAME, homePlan, homeSpec, createPlay } from './town_enter2.js?v=5';
 export const ENT_V = 1;
 const T2 = (ko, en) => [ko, en];
 const hashS = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };

@@ -4,7 +4,7 @@
 //   E 한 번에 끝 X — 창 안에 본 것(구멍 둘레 · 물때 표 · 부표 그림 · 몸에 맞는지)을 같이 두고 아이가 고름 · 고른 것이 세상에 남음(주운 쓰레기가 사라짐 · 부표 사이로 지나가 봄)
 //   위쪽 = 순수(칸 서명 → 줄) — 칸 키트 haveOf와 Node 하네스(town_cells.cjs)가 같이 씀 · 아래 = 게임(createSea4)
 //   그리기 = 상자 인스턴스 하나(+ 밤 부표 불빛 인스턴스 하나 · 밤에 가까울 때만) · 새 Light X · 매 프레임 = 0.1초 거름 + 가까울 때만 움직임(게·갈매기·물에 뜬 것) · 새 객체 X
-import { isLow, lowsOf, lowAt, tideLvl, TIDE_P, hm } from './town_shore.js?v=6';
+import { isLow, lowsOf, lowAt, tideLvl, TIDE_P, hm } from './town_shore.js?v=9';
 export const SEA4_V = 1;
 const T2 = (ko, en9) => [ko, en9];
 const SAND = s => (s.land && s.land.sand) || 0, SWIMC = s => /오리배/.test(s.ar || '');   /* 오리배 바다 = 해수욕장 앞바다(수영 구역에 둘러싸여 배가 못 들어감 · 헤엄으로 감) */

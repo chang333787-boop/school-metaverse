@@ -24,7 +24,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     ok(I.have.includes('can') && I.have.includes('shovel'), '처음부터 물뿌리개·삽');
     // ── 키·띠·메뉴 ──
     await p.keyboard.press('Digit1'); await W8(500); I = await info(); ok(I.cur === 'can' && I.shown === 'can' && I.engine === 'can', '1 = 물뿌리개 들기(손에 보임 · 엔진 hold)'); ok(I.bar, '도구 띠 보임');
-    let keys = await ev(() => { const k = document.querySelector('.twn-keys'); return k ? k.textContent : ''; }); ok(/1~5/.test(keys) && /F/.test(keys), '키 안내 줄에 1~5·F — ' + keys.slice(0, 90));
+    let keys = await ev(() => { const k = document.querySelector('.twn-keys'); return k ? k.textContent : ''; }); ok(/1~6/.test(keys) && /F/.test(keys), '키 안내 줄에 1~6·F — ' + keys.slice(0, 90));
     await p.keyboard.press('Digit1'); await W8(400); I = await info(); ok(!I.cur && !I.shown, '1 한 번 더 = 내려놓기');
     await p.keyboard.press('KeyF'); await W8(700); { const t9 = await panel(); ok(/장소|Places|찾/.test(t9), '도구 없이 F = 예전대로 장소 찾기 — ' + t9.slice(0, 30)); } await p.keyboard.press('Escape'); await W8(400);
     { const m = await ev(() => { const c = [...document.querySelectorAll('.gchip')].find(e => /메뉴|Menu/.test(e.textContent)); if (!c) return null; c.click(); const b9 = document.querySelector('.twn-p [data-tq="tools"]'); const r = !!b9; if (b9) b9.click(); return r; }); await W8(500); I = await info(); ok(m === true, '☰ 메뉴 바로 쓰기에 🧰 도구'); ok(I.bar, '🧰 누르면 띠가 펼쳐짐'); }

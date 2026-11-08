@@ -11,7 +11,7 @@
 //     ① 생기자마자 그 자리 사람이 세상에 서 있음(bodies) + 머리 위 표시(화면에서 늘 같은 크기 · 건물 뒤에서도) + 작은·큰 지도 점(dots) — 200m 밖은 몸만 숨김(표시는 그대로)
 //     ② 첫날 불 X · 불을 아직 못 봤으면 둘째 날부터 한 칸은 불(보통 2~3일째 한 번) ③ 따라오기 = 자전거 그대로(따르는 몸이 뛰고 · 마을이 자전거를 걸음 빠르기로 · 멈춤은 거리만)
 //     ④ 건물 안 = 잠시 멈춤(사건 시계·따라오기·구급차 그대로 · 나오면 이어서) · 끝내는 것은 잠·시간 넘기기뿐(한 줄 알림 · 순간 이동은 '그 자리에서 기다려요')
-import { isLow, lowAt, lowsOf, hm, LOW_W, TIDE_P } from './town_shore.js?v=6';   /* TIDE-1 물때(마을과 같은 모듈 · 같은 ?v) */
+import { isLow, lowAt, lowsOf, hm, LOW_W, TIDE_P } from './town_shore.js?v=9';   /* TIDE-1 물때(마을과 같은 모듈 · 같은 ?v) */
 export const EM_V = 1;
 const T2 = (ko, en) => [ko, en];
 const hashS = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };

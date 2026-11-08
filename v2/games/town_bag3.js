@@ -6,7 +6,7 @@
 //   마을 쪽이 넘기는 것(A): GAME · lang() · esc(t) · bag() · rwd() · tools() · here() [x, z] · me() {x, z} · where(x, z) { ic, nm } · mapSnip(cv, pts) · renderer() · kid() · T3
 //     tone(...) · sfx(k) · typh() { rope, sand } | null · fx() 먹은 힘 한 줄 · lookSig() · night() · reopen(tab) · useShow(P9, e) · useBox() · sell(e) · yard(e)
 import { ITEMS, itemName } from './town_game.js?v=60';
-import { TOOL, TOOL_ORDER } from './town_tools.js?v=17';
+import { TOOL, TOOL_ORDER } from './town_tools.js?v=20';
 export const BAG3_V = 1;
 const T2 = (ko, en) => [ko, en];
 export const TABS = [['item', '🎒', T2('물건', 'Items')], ['tool', '🧰', T2('도구·장비', 'Tools')], ['wear', '👕', T2('옷·꾸미기', 'Clothes')], ['col', '🏅', T2('모은 것', 'Collection')]];
@@ -21,6 +21,7 @@ const IDX = {}; Object.keys(ITEMS).forEach((e, i) => { IDX[e] = i; });
 const EQ = [['head', '🧢', T2('머리', 'Head'), 'l', 0], ['neck', '🧣', T2('목', 'Neck'), 'l', 1], ['back', '🎒', T2('등', 'Back'), 'l', 2], ['hand', '✋', T2('손', 'Hand'), 'r', 1], ['foot', '🥾', T2('발', 'Feet'), 'r', 3]];
 const kindOf = e => (ITEMS[e] || [])[2] || 'food';
 const tabOfE = e => ICAT[kindOf(e)] || 'item';
+export const bagTabName = (e, en) => { const t = TABS.find(q => q[0] === tabOfE(e)); return t ? t[2][en ? 1 : 0] : ''; };   /* DEB-3(토론 판정 15): 얻은 물건이 들어간 탭 이름(가방 넣기 팝 '→ 가방 · 모은 것') */
 const fltOf = e => (kindOf(e) === 'farm' ? 'wild' : kindOf(e));
 const jo = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1); return w + (c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? a : b); };
 const hex6 = c => '#' + ((c >>> 0) & 0xffffff).toString(16).padStart(6, '0');

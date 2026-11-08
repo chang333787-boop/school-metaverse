@@ -1130,7 +1130,7 @@ function mkKitchen(c) {
   const pdMore = e => { e.preventDefault(); addMore(); };
   tray.addEventListener('pointerdown', pdTray); stv.addEventListener('pointerdown', pdStove); pls.addEventListener('pointerdown', pdPl); if (moreB) moreB.addEventListener('pointerdown', pdMore);
   if (c.go) c.go.style.display = 'none';
-  say(lv >= 2 ? T('쪽지를 보고 재료를 차례대로 냄비로 끌어 넣어요', 'Read the note, then drag the ingredients into the pot in order') : T('재료를 냄비로 끌어 넣고 불을 켜요', 'Drag the ingredient into the pot, then turn on the heat'), 4);
+  { const vn = potNm(P[0]), ro = (c9 => c9 >= 0xac00 && c9 <= 0xd7a3 && (c9 - 0xac00) % 28 && (c9 - 0xac00) % 28 !== 8 ? '으로' : '로')(String(vn).slice(-1).charCodeAt(0)); say(lv >= 2 ? T('쪽지를 보고 재료를 차례대로 ' + vn + ro + ' 끌어 넣어요', 'Read the note, then drag the ingredients into the ' + String(vn).toLowerCase() + ' in order') : T('재료를 ' + vn + ro + ' 끌어 넣고 불을 켜요', 'Drag the ingredient into the ' + String(vn).toLowerCase() + ', then turn on the heat'), 4); }   /* DEB-3(토론 판정 12): 팬 요리에 '냄비로' X — 그 판 그릇 이름 그대로 */
   /* 시험(봇)용: 상태 읽기 · 손잡이 */
   const dbg = { get cfg() { return { lv, cond, story, req, req2, guest, guest2, side, pots: P.map(q => q.kind), chips: CH.map(h => h.e), ws: WS }; }, get res() { return res; }, get ph() { return ph; },
     state: () => P.map(q => ({ kind: q.kind, st: q.done ? 'done:' + q.done : potSt(q), T: Math.round(q.T), heat: q.heat, lid: q.lid, water: q.water, el: q.need.map(s => +s.el.toFixed(2)), need: q.need.map(s => s.t), lb: q.lb, wantSalt: q.wantSalt })),
