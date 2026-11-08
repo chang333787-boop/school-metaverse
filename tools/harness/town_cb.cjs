@@ -1,5 +1,5 @@
 // 🧪 크롬북 흉내로 마을 재기(PERF-M · 11-08 교사 '크롬북 최적화 · 저번에 학급에서 좀 덜 쾌적') — 전·후 두 판을 같은 방법으로 잰다(고치기 X · 재기만)
-//   zsh tools/ops/b2.sh node tools/harness/town_cb.cjs <서빙할 폴더> <태그> [--port=8801] [--prof|--low] [--only=build,spots,panels,modes] [--out=폴더]   (결과 = <out>/cb_<태그>[_prof|_low].json)
+//   zsh tools/ops/b2.sh node tools/harness/town_cb.cjs <서빙할 폴더> <태그> [--port=8801] [--prof|--low] [--only=build,spots,walk,panels,modes] [--out=폴더]   (walk = 시내 한 자리만 · PERF-C)   (결과 = <out>/cb_<태그>[_prof|_low].json)
 //   전·후 견주기 = 전 판을 따로 꺼낸 폴더(worktree)를 다른 포트로 · 후·전·후·전 번갈아 · 결과 표 = docs/systems/perf.md 'PERF-M'
 //   흉내 = CrOS UA(= cb 판) · 1366×768 ×1 · 자동 해상도 켬(시험 주소 X) · GPU ANGLE(swiftshader X) · CPU 4×(CDP setCPUThrottlingRate · 열기 전부터)
 //   서버 = 이 파일이 <폴더>를 그 포트로 서빙(GitHub Pages처럼 max-age=600 → 이어 하기는 캐시에서)
@@ -167,6 +167,13 @@ srv.listen(PORT, async () => {
       /* 잔치 날 광장 10:30(마지막 — 날을 바꿈) */
       await spot('feast', '잔치 날 광장 10:30', async () => { await ev(fd => { const G = SM_TOWN.game(); G.S.day = fd; G.mark && G.mark(); G.S.min = 10 * 60 + 30; }, site.fd); for (let i = 0; i < 3; i++) { await closeAll(); await ev(() => SM_TOWN.feast().sec(true)); await W8(100); } const P = await ev(() => SM_TOWN.feast().dbg.at(0, 4)); if (P) await tp(P[0], P[1]); R.feastOn = await ev(() => SM_TOWN.feast().info().on); });
       await ev(d0 => { const G = SM_TOWN.game(); G.S.day = d0; G.mark && G.mark(); G.S.min = 12 * 60; }, site.day); for (let i = 0; i < 2; i++) { await closeAll(); await ev(() => SM_TOWN.feast().sec(true)); await W8(100); }
+    }
+
+    if (ONLY.includes('walk') && !ONLY.includes('spots')) {
+      /* --only=walk(PERF-C 11-08): 시내 한낮 한 자리만(카메라 한 바퀴 10초 + 걷기 20초) — 걷기 스타일 다시 계산 횟수·ms를 짧게 */
+      await setGm(0); R.spots = {}; await closeAll(); await setMin(12 * 60); const a = await free(123, 785); await tp(a[0], a[1]); await W8(5000); await closeAll(); await calm();
+      const s1 = await win(10, { k: 'spin', dur: 10 }); const s2 = await win(20, { k: 'circle', dur: 20, sp: 4.2 }); R.spots.down = { nm: '시내 한낮', spin: s1, walk: s2, all: both(s1, s2) };
+      console.log('[' + TAG + '] ② 시내 한낮 카메라 ' + JSON.stringify({ styleN: s1.styleN, styleMsS: s1.styleMsS, layoutMsS: s1.layoutMsS, taskMsF: s1.taskMsF }) + ' · 걷기 ' + JSON.stringify({ styleN: s2.styleN, styleMsS: s2.styleMsS, layoutN: s2.layoutN, layoutMsS: s2.layoutMsS, taskMsF: s2.taskMsF, fpsMed: s2.fpsMed, dist: s2.dist }) + ' (' + el() + ')');
     }
 
     if (on('panels')) {

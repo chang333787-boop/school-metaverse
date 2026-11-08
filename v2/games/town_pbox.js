@@ -2,7 +2,9 @@
 //   판 놀이(.twn-play — 일 놀이·투호·낚시·부엌·강/들 놀이 · 판 창 놀이 GAME_P) = 화면 가운데 큰 판 + 뒤 세상 살짝 어둡게
 //   세상 놀이(양몰이·모내기 소리·사방치기) = 위 가운데 큰 놀이 줄(.twn-wcard) · 세상을 봐야 하는 판(누워 뜨기 .twn-play.pz-world) = 위 가운데 카드(어둡게 X)
 //   같은 틀: 초록 제목 띠 + ✕(그 놀이의 '그만'과 같음) · 할 일 한 줄 · 글은 보이는 크기 16px 넘게 · 단추 44px 넘게 · Esc = 그만(놀이마다 있던 것 그대로) · 끝 = 결과가 크게(town_minigame.js mg-end)
-//   크게 하는 법 = zoom 하나(데스크톱만 · 휴대폰은 1) — 열릴 때·창 크기가 바뀔 때·판이 화면을 넘칠 때만 다시 잼(매 프레임 X · 0.5초 시계는 판이 떠 있는 동안만)
+//   크게 하는 법 = zoom 하나(데스크톱만 · 휴대폰은 1) — 열릴 때·창 크기가 바뀔 때·판이 화면을 넘칠 때만 다시 잼(매 프레임 X)
+//     PERF-C(11-08 크롬북 '창 여는 순간 멈칫'): 0.5초 시계(판마다 scrollHeight 읽기 = 강제 레이아웃) X → ResizeObserver 하나(판 바로 아래 칸들 = 안 내용이 자라 넘치는지 · 레이아웃이 끝난 뒤 불림 = 읽어도 강제 레이아웃 X)
+//     ✕ 다시 붙이기(놀이가 판을 다시 그리면 ✕가 사라짐)·새 칸 지켜보기 = MutationObserver 하나(판 안 바뀜 · 하는 일 = 찾기 한 번)
 //     누르기 좌표는 놀이들이 비율(clientX − 판 왼쪽) / 판 너비 · elementFromPoint로 셈 → zoom이어도 그대로 맞음(10-07 크롬 153 확인: offsetWidth = 그대로 · 사각형 = 커진 크기)
 //   body 꼬리표(:has() X): h-pbox = 판이 떠 있음(마을 칩·작은 지도·조이스틱·행동 단추 잠깐 숨김 · 알림을 판 위 띠로) · h-wplay = 세상 놀이 줄(위 가운데 목표 줄·나침반 띠 잠깐 숨김) · h-pwl = 세상 판(누워 뜨기 — 휴대폰은 조이스틱·칩 잠깐 숨김 · 세로는 아래 카드)
 //   CSS 셈: 마을·휴대폰 CSS가 #toast·놀이 글에 꼬리표 여럿(+ !important)을 걸어 둬서 이 틀은 :not(#pz0)(없는 id라 늘 맞음 · id 하나만큼 셈)로 이김 · 글 크기 바닥 15px = 판이 1.07배만 커져도 보이는 크기 16px
@@ -68,8 +70,9 @@ body.small .twn-wcard{top:calc(6px + env(safe-area-inset-top));font-size:clamp(1
 
 // o = { en() 영어인가 }
 export function createPbox(o = {}) {
-  let css = null, mo = null, tm = 0, card = null, cardT = '';
+  let css = null, mo = null, card = null, cardT = '', ro = null, mi = null;
   const B = new Set(), P = new Set(), WL = new Set();   /* 판(.twn-play.pz-board) · 키운 판 창(.twn-p.pz-game) · 세상 판(.pz-world) */
+  const OWN = new WeakMap(), OBS = new Map(), FIT = new WeakSet(), LATE = new Set();   /* 지켜보는 칸 → 판 · 판 → 지켜보는 칸들 · 처음 맞춤을 한 판 · 끄는 동안 미룬 판 */
   const body = () => document.body, small = () => body().classList.contains('small');
   const en = () => !!(o.en && o.en());
   function addCss() { if (css) return; css = document.createElement('style'); css.id = 'twn-pbox-css'; css.textContent = CSS; document.head.appendChild(css); }
@@ -94,17 +97,28 @@ export function createPbox(o = {}) {
     if (shrink && z0 && z >= z0 - 0.01) return; if (Math.abs(z - z0) > 0.004) bx.style.zoom = String(z); bx.style.setProperty('max-width', Math.floor(vw * 0.94 / z) + 'px', 'important'); bx.style.setProperty('max-height', Math.floor(vh * 0.9 / z) + 'px', 'important'); }
   const over = el => { const r = el.getBoundingClientRect(); return r.top < 2 || r.bottom > innerHeight - 2; };
   function tags() { const b = body(); const nb = [...B].some(e => e.isConnected); b.classList.toggle('h-pbox', nb); const nw = [...WL].some(e => e.isConnected); b.classList.toggle('h-wplay', !!cardT || nw); b.classList.toggle('h-pwl', nw); }
-  function tick() { for (const el of B) { if (!el.isConnected) { B.delete(el); continue; } addX(el); const pb = el.querySelector('.pb'); if (pb && !el.dataset.pzDn && (over(pb) || (!pb.classList.contains('mg-end') && pb.scrollHeight > pb.clientHeight + 4))) fitB(el, true); }   /* 화면을 넘치거나 판 안 내용이 넘치면(놀이 단계가 바뀌어 길어짐) 줄여 맞춤 — 끝 화면·끄는 중은 그대로 */
-    for (const el of P) { if (!el.isConnected) { P.delete(el); continue; } const bx = el.querySelector('.bx'); if (bx && over(bx)) fitP(el, true); }
-    for (const el of WL) { if (!el.isConnected) WL.delete(el); else { addX(el); wplace(el); } }
-    tags(); if (!B.size && !P.size && !WL.size && tm) { clearInterval(tm); tm = 0; } }
-  const arm = () => { if (!tm) tm = setInterval(tick, 500); };
-  function onBoard(el) { if (el.classList.contains('pz-world')) { WL.add(el); addX(el); wplace(el); tags(); arm(); return; }
-    el.classList.add('pz-board'); B.add(el); addX(el); fitB(el, false); tags(); arm();
+  // 지켜보기(PERF-C): 판 = .pb 바로 아래 칸들 · 판 창 = .bx 바로 아래 칸들(내용이 자라면 칸 크기가 바뀜 → 넘치는지 봄)
+  //   .pb·.bx 자신은 안 지켜봄 — 콜백 안에서 그 zoom·최대 높이를 바꾸므로(자신을 보면 'ResizeObserver loop' 오류) · 안 칸 크기는 zoom·최대 높이와 상관없음 · 창 크기 = resize(onRz)
+  const boxOf = el => el.querySelector(B.has(el) || WL.has(el) ? '.pb' : '.bx');
+  function track(el) { if (!ro) return; const bx = boxOf(el); let L = OBS.get(el); if (!L) OBS.set(el, L = new Set());
+    for (const t of L) if (!t.isConnected || t.parentElement !== bx) { ro.unobserve(t); L.delete(t); }
+    if (!bx) return; for (const c of bx.children) if (!L.has(c)) { L.add(c); OWN.set(c, el); ro.observe(c); } }
+  function untrack(el) { const L = OBS.get(el); if (L && ro) for (const t of L) ro.unobserve(t); OBS.delete(el); LATE.delete(el); if (mi && !OBS.size) mi.disconnect(); }   /* MutationObserver는 끊기만 하고(판이 하나도 없을 때) 다음 판에서 다시 */
+  function drop(el) { B.delete(el); P.delete(el); WL.delete(el); untrack(el); }
+  /* 맞추기 판정 = 예전 0.5초 시계와 같은 조건(화면을 넘치거나 판 안 내용이 넘치면 줄여 맞춤 — 끝 화면·끄는 중은 그대로) · 처음 = 예전처럼 맞추고 다음 프레임 한 번 더(놀이가 첫 tick에 판을 채운 뒤 · 키우기까지) */
+  function check(el) { if (!el.isConnected) { drop(el); tags(); return; }
+    if (WL.has(el)) { wplace(el); return; }
+    if (B.has(el)) { const pb = el.querySelector('.pb'); if (!pb) return; if (!FIT.has(el)) { FIT.add(el); fitB(el, false); requestAnimationFrame(() => { if (el.isConnected) fitB(el, false); }); return; } if (el.dataset.pzDn) { LATE.add(el); return; } if (over(pb) || (!pb.classList.contains('mg-end') && pb.scrollHeight > pb.clientHeight + 4)) fitB(el, true); return; }
+    if (P.has(el)) { const bx = el.querySelector('.bx'); if (!bx) return; if (!FIT.has(el)) { FIT.add(el); fitP(el, false); requestAnimationFrame(() => { if (el.isConnected) fitP(el, false); }); return; } if (over(bx)) fitP(el, true); } }
+  const onRO = E => { const S9 = new Set(); for (const e of E) { const el = OWN.get(e.target); if (el) S9.add(el); } for (const el of S9) check(el); };
+  /* 판 안이 바뀜(놀이가 판을 다시 그림): ✕ 다시 · 새 칸 지켜보기 — 글자만 바뀐 것은 찾기 한 번으로 끝 */
+  const onMI = L => { const S9 = new Set(); for (const m of L) { for (let n = m.target; n; n = n.parentElement) { if (OBS.has(n)) { S9.add(n); break; } } } for (const el of S9) { if (!el.isConnected) { drop(el); continue; } if (!P.has(el)) addX(el); track(el); } };   /* 판 창 띠(bandP)는 예전처럼 열 때 한 번만 */
+  function watchEl(el) { if (!ro) ro = new ResizeObserver(onRO); if (!mi) mi = new MutationObserver(onMI); track(el); mi.observe(el, { childList: true, subtree: true }); }
+  function onBoard(el) { if (el.classList.contains('pz-world')) { WL.add(el); addX(el); watchEl(el); tags(); return; }
+    el.classList.add('pz-board'); B.add(el); addX(el); watchEl(el); tags();   /* 처음 맞춤 = 첫 레이아웃 뒤 ResizeObserver 첫 부름(그리기 전 · 놀이 틀이 같은 차례에 판을 채운 뒤) */
     el.addEventListener('pointerdown', () => { el.dataset.pzDn = '1'; }, true);   /* 끄는 동안엔 크기를 안 바꿈(잡은 것이 손가락 밑에서 미끄러지지 않게 · 뗌은 창 전체에서 clrDn) */
-    el.addEventListener('click', e => { if (e.target === el) e.stopPropagation(); });   /* 판 바깥(어두운 곳) 누르기 = 아무 일 없음(판 놀이는 실수로 그만두지 않게 — 닫기는 ✕·Esc·그만) */
-    requestAnimationFrame(() => { if (el.isConnected) fitB(el, false); }); }   /* 놀이 틀이 같은 차례에 판을 채운 뒤 한 번 더 */
-  function onPanel(el) { if (!isGameP(el)) return; el.classList.add('pz-game'); P.add(el); bandP(el); fitP(el, false); arm(); requestAnimationFrame(() => { if (el.isConnected) fitP(el, false); }); }
+    el.addEventListener('click', e => { if (e.target === el) e.stopPropagation(); }); }   /* 판 바깥(어두운 곳) 누르기 = 아무 일 없음(판 놀이는 실수로 그만두지 않게 — 닫기는 ✕·Esc·그만) */
+  function onPanel(el) { if (!isGameP(el)) return; el.classList.add('pz-game'); P.add(el); bandP(el); watchEl(el); }
   function onRz() { for (const el of B) if (el.isConnected) fitB(el, false); for (const el of P) if (el.isConnected) fitP(el, false); for (const el of WL) if (el.isConnected) wplace(el); if (cardT) cardB(); }
   // 세상 판(누워 뜨기): 위 가운데 · 알림은 그 밑으로
   function wplace(el) { const pb = el.querySelector('.pb'); if (!pb) return; const r = pb.getBoundingClientRect(); body().style.setProperty('--wcB', Math.round(r.bottom) + 'px'); }
@@ -112,9 +126,9 @@ export function createPbox(o = {}) {
   // 세상 놀이 줄: 위 가운데 큰 한 줄(t = 글 · null = 끔) — 양몰이·모내기 소리·사방치기가 쓰던 왼쪽 할 일 칩 대신
   function wcard(t) { t = t ? String(t) : ''; if (t === cardT) return; cardT = t; if (t && !card) { addCss(); card = document.createElement('div'); card.className = 'twn-wcard'; card.setAttribute('role', 'status'); document.body.appendChild(card); }
     if (card) { if (card.textContent !== t) card.textContent = t; card.classList.toggle('on', !!t); } tags(); if (t) cardB(); }   /* 빈 놀이 줄은 안 보임(세상 판만 떠 있을 때 빈 칸이 남던 것) */
-  const clrDn = () => { for (const el of B) delete el.dataset.pzDn; };
-  function watch() { addCss(); if (mo) return; mo = new MutationObserver(L => { for (const m of L) for (const n of m.addedNodes) { if (n.nodeType !== 1) continue; if (n.classList.contains('twn-play')) onBoard(n); else if (n.classList.contains('twn-p')) onPanel(n); } for (const m of L) if (m.removedNodes.length) { tags(); break; } });
+  const clrDn = () => { for (const el of B) delete el.dataset.pzDn; if (LATE.size) { const L9 = [...LATE]; LATE.clear(); requestAnimationFrame(() => { for (const el of L9) if (B.has(el)) check(el); }); } };   /* 끄는 동안 미룬 맞춤 = 뗀 뒤 한 번 */
+  function watch() { addCss(); if (mo) return; mo = new MutationObserver(L => { for (const m of L) for (const n of m.addedNodes) { if (n.nodeType !== 1) continue; if (n.classList.contains('twn-play')) onBoard(n); else if (n.classList.contains('twn-p')) onPanel(n); } let rm = false; for (const m of L) for (const n of m.removedNodes) { if (OBS.has(n) && !n.isConnected) drop(n); rm = true; } if (rm) tags(); });
     mo.observe(document.body, { childList: true }); addEventListener('resize', onRz); addEventListener('pointerup', clrDn, true); addEventListener('pointercancel', clrDn, true); for (const n of document.querySelectorAll('body>.twn-play')) onBoard(n); }
-  function dispose() { if (mo) { mo.disconnect(); mo = null; } removeEventListener('resize', onRz); removeEventListener('pointerup', clrDn, true); removeEventListener('pointercancel', clrDn, true); if (tm) { clearInterval(tm); tm = 0; } if (card) { card.remove(); card = null; } cardT = ''; B.clear(); P.clear(); WL.clear(); const b = body(); if (b) { b.classList.remove('h-pbox', 'h-wplay', 'h-pwl'); b.style.removeProperty('--wcB'); } if (css) { css.remove(); css = null; } }
+  function dispose() { if (mo) { mo.disconnect(); mo = null; } removeEventListener('resize', onRz); removeEventListener('pointerup', clrDn, true); removeEventListener('pointercancel', clrDn, true); if (ro) { ro.disconnect(); ro = null; } if (mi) { mi.disconnect(); mi = null; } OBS.clear(); LATE.clear(); if (card) { card.remove(); card = null; } cardT = ''; B.clear(); P.clear(); WL.clear(); const b = body(); if (b) { b.classList.remove('h-pbox', 'h-wplay', 'h-pwl'); b.style.removeProperty('--wcB'); } if (css) { css.remove(); css = null; } }
   return { watch, wcard, dispose, busy: () => { for (const el of B) if (el.isConnected) return true; return false; }, info: () => ({ boards: [...B].filter(e => e.isConnected).map(e => { const pb = e.querySelector('.pb'); return { z: pb ? parseFloat(pb.style.zoom) || 1 : 0 }; }), panels: [...P].filter(e => e.isConnected).map(e => { const bx = e.querySelector('.bx'); return { k: e.dataset.k, z: bx ? parseFloat(bx.style.zoom) || 1 : 0 }; }), card: cardT, world: [...WL].filter(e => e.isConnected).length }) };
 }

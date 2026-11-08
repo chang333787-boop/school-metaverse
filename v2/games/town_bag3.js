@@ -2,6 +2,7 @@
 //   갈래 탭 넷: 🎒 물건(네모 칸 격자 · 거르기 · 정렬 · 크게 보기 카드) · 🧰 도구·장비(쓰임 카드 · 도구 띠 1~6 끌어 놓기) · 👕 옷·꾸미기(쓰기/벗기 · 마당 장식) · 🏅 모은 것(도장 · 배지 · 칭호 · 요리법 · 도감)
 //   게임 가방: 내 아이 인형(지금 렌더러로 창 열 때 한 번 · 새 WebGL 컨텍스트 X) + 장비 칸 다섯 · 어디서 났나 꼬리표(누르면 지도 조각) · 새로 얻은 것 빨간 점 · 지금 켜진 효과 · 톡/착 소리 · ←→ 탭
 //   지키는 선: 희귀도 색 테두리·반짝이·그라데이션·무게·내구도 X · 매 프레임 일 0(창이 열린 동안 끌기만) · 판타지 X · 실명 X · 이모지 = 윈도 10에서 보이는 것
+//   PERF-C(11-08 크롬북 '여는 순간 멈칫' 22→124ms): 지금 탭만 짓고 다른 탭은 누를 때(또는 쉬는 틈에 하나씩) · 빈 칸 = CSS 배경(점선 칸 그림 · 레이아웃 읽기 X) · CSS는 마을 지을 때(init) 한 번
 //   마을 쪽이 넘기는 것(A): GAME · lang() · esc(t) · bag() · rwd() · tools() · here() [x, z] · me() {x, z} · where(x, z) { ic, nm } · mapSnip(cv, pts) · renderer() · kid() · T3
 //     tone(...) · sfx(k) · typh() { rope, sand } | null · fx() 먹은 힘 한 줄 · lookSig() · night() · reopen(tab) · useShow(P9, e) · useBox() · sell(e) · yard(e)
 import { ITEMS, itemName } from './town_game.js?v=55';
@@ -44,7 +45,8 @@ const CSS = `
 .b3-pane{display:none;min-width:0}.b3[data-b3tab=item] [data-pane=item],.b3[data-b3tab=tool] [data-pane=tool],.b3[data-b3tab=wear] [data-pane=wear],.b3[data-b3tab=col] [data-pane=col]{display:block}
 .b3-bar{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between}.b3-chips,.b3-sort{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.b3-sort small{font-size:12px;font-weight:800;color:var(--mut)}
 .twn-p .b3-chips button,.twn-p .b3-sort button{min-height:34px;padding:3px 8px;font-size:12.5px;border-width:2px;box-shadow:0 2px 0 var(--ink);background:var(--sub);color:var(--ink);text-shadow:none}.twn-p .b3-chips button.on,.twn-p .b3-sort button.on{background:var(--ink);color:#fff8ea}
-.twn-p .b3-grid{display:grid;grid-template-columns:repeat(auto-fill,72px);gap:8px;margin-top:8px}
+.twn-p .b3-grid{position:relative;display:grid;grid-template-columns:repeat(auto-fill,72px);gap:8px;margin-top:8px;min-height:72px}.twn-p .b3-grid[data-min="3"]{min-height:232px}.twn-p .b3-grid[data-min="4"]{min-height:312px}
+.twn-p .b3-grid::before{content:'';position:absolute;grid-column:1/-1;left:0;right:0;top:0;bottom:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect x='1' y='1' width='70' height='70' rx='11' fill='%23fffdf7' fill-opacity='.5' stroke='%23e6d6b8' stroke-width='2' stroke-dasharray='6 4'/%3E%3C/svg%3E") 0 0/80px 80px;pointer-events:none}
 .twn-p .b3s{position:relative;width:72px;height:72px;min-height:0;box-sizing:border-box;padding:0 0 12px;margin:0;display:flex;align-items:center;justify-content:center;background:var(--card);color:var(--ink);border:2px solid var(--line);border-radius:12px;box-shadow:0 3px 0 var(--line);text-shadow:none;font-weight:800}
 .twn-p button.b3s:hover{background:#fffaf0;border-color:var(--ink)}.twn-p .b3s b{font-size:30px;line-height:1;font-weight:400}.twn-p .b3s small{position:absolute;left:5px;bottom:3px;max-width:42px;font-size:10.5px;line-height:1.2;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .twn-p .b3s i{position:absolute;right:5px;bottom:2px;font-style:normal;font-size:12px;font-weight:900;color:var(--ink)}.twn-p .b3s.sel{border:3px solid var(--ink);background:#fff1c9;box-shadow:0 3px 0 var(--ink)}
@@ -78,7 +80,7 @@ const CSS = `
   .b3-main{grid-template-columns:minmax(0,1fr)}.b3-me{flex-direction:row;flex-wrap:nowrap;align-items:stretch;gap:8px}.b3-info{display:none}
   .b3-doll{flex:none;width:204px;height:176px}.b3-cv{left:54px;top:6px;width:96px;height:128px}.twn-p .b3-eq{width:46px;height:46px}.b3-eq.l{left:4px}.b3-eq.r{right:4px}.b3-eq.p0{top:4px}.b3-eq.p1{top:65px}.b3-eq.p2{top:126px}.b3-eq.p3{top:126px;bottom:auto}.b3-doll>small{top:140px;bottom:auto;left:54px;right:auto;width:96px}
   .b3-fx{flex:1 1 0;min-width:0;padding:6px 7px}.b3-fx li{font-size:12px}.b3-fxh{font-size:12px}
-  .twn-p .b3-t{flex-direction:column;gap:0;font-size:12.5px;padding:4px 2px;min-height:52px}.twn-p .b3-t s{display:none}.twn-p .b3-grid{grid-template-columns:repeat(auto-fill,58px);gap:6px}.twn-p .b3s{width:58px;height:58px}.twn-p .b3s b{font-size:25px}.twn-p .b3s small{max-width:30px;font-size:10px}
+  .twn-p .b3-t{flex-direction:column;gap:0;font-size:12.5px;padding:4px 2px;min-height:52px}.twn-p .b3-t s{display:none}.twn-p .b3-grid{grid-template-columns:repeat(auto-fill,58px);gap:6px;min-height:58px}.twn-p .b3-grid[data-min="3"]{min-height:186px}.twn-p .b3-grid[data-min="4"]{min-height:250px}.twn-p .b3-grid::before{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect x='1' y='1' width='56' height='56' rx='11' fill='%23fffdf7' fill-opacity='.5' stroke='%23e6d6b8' stroke-width='2' stroke-dasharray='6 4'/%3E%3C/svg%3E") 0 0/64px 64px}.twn-p .b3s{width:58px;height:58px}.twn-p .b3s b{font-size:25px}.twn-p .b3s small{max-width:30px;font-size:10px}
   .b3-cards{grid-template-columns:minmax(0,1fr)}.twn-p .b3-bs{width:48px;height:52px;font-size:24px}}
 body.touch .twn-p .b3 button{min-width:44px}
 @media (max-height:500px){.twn-p[data-k=I] .bx>.row:last-child{position:static}.b3-beltw{position:static;box-shadow:none}.twn-p[data-k=I] .nb-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-bottom:6px}.twn-p[data-k=I] .nb-grp{flex-wrap:nowrap}.b3-info{display:none}.b3-belth{display:none}.b3-bl{display:none}.b3-doll{height:200px}.b3-eq.p1{top:54px}.b3-eq.p2{top:100px}.b3-eq.p3{bottom:24px}}
@@ -90,7 +92,8 @@ export function createBag3(A) {
   const PREFK = 'sm-bag3-ui'; let PREF = { tab: 'item', flt: 'all', sort: 'kind' }; try { const j = JSON.parse(localStorage.getItem(PREFK) || 'null'); if (j && typeof j === 'object') PREF = Object.assign(PREF, j); } catch (e) { /* 막힘 */ }
   const savePref = () => { try { localStorage.setItem(PREFK, JSON.stringify(PREF)); } catch (e) { /* 막힘 */ } };
   const UI = { tab: 'item', sel: null, pick: null, snip: false }, SHOW = new Set(), DOLL = { sig: '', img: null, ok: false, n: 0, ms: 0 }, DRAG = { on: false, k: null, from: -1, x0: 0, y0: 0, el: null, end: 0, hov: null };
-  let P = null, CTX = {}, styleEl = null, RT = null, CAM = null, BUF = null, dead = false;
+  let P = null, CTX = {}, styleEl = null, RT = null, CAM = null, BUF = null, TMP = null, dead = false, PARTS = null, IDLE = 0;
+  const WARM = { doll: -1, done: false };
   const LOG = []; const log = t => { LOG.push(t); if (LOG.length > 40) LOG.shift(); };
 
   // ───────── 저장(S.bag3) — 옛 저장(칸 없음) = 지금 가진 것을 모두 본 것으로(점 홍수 X) · 꼬리표는 그 뒤부터 ─────────
@@ -139,7 +142,7 @@ export function createBag3(A) {
   function paneCol(parts, c) { const e9 = en(), st = sorted(bagKeys().filter(e => tabOfE(e) === 'col'));
     let h = '<div class="b3-pane" data-pane="col" role="tabpanel"><div class="grp" style="margin-top:2px" data-b3grp="stamp">' + (e9 ? 'Stamps' : '도장') + '</div>' + (st.length ? '<div class="b3-grid" data-grid="stamp" data-min="1">' + st.map(e => slot(e, e, itemName(e, e9), (A.bag()[e] | 0) > 1 ? A.bag()[e] | 0 : 0)).join('') + '</div>' : '<div class="b3-none">' + esc(e9 ? 'No stamps yet — the summit, the lighthouse and the stepping stones have one.' : '아직 도장이 없어요. 산꼭대기·등대·징검다리에 도장이 있어요.') + '</div>');
     if (parts.badge && parts.badge.length) h += '<div class="grp" data-b3grp="badge">' + (e9 ? 'Badges' : '배지') + '</div><div class="b3-grid" data-grid="badge" data-min="1">' + parts.badge.map(q => slot(q.id, '🏅', q.t.replace(/^\S+\s/, ''), 0)).join('') + '</div>';
-    h += (parts.col || '') + (c.entCol || '');   /* ENTER-3 이웃 집·가게 모음(도운 집 n/전체 · 엽서 14 · town_enter.js colHtml) */
+    h += (parts.col || '') + (typeof c.entCol === 'function' ? c.entCol() : c.entCol || '');   /* ENTER-3 이웃 집·가게 모음(도운 집 n/전체 · 엽서 14 · town_enter.js colHtml) */
     if (parts.recipe && parts.recipe.length) h += '<div class="grp" data-b3grp="recipe">' + (e9 ? 'Recipes you got' : '받은 요리법') + '</div><div class="b3-rc">' + parts.recipe.map(q => '<div class="st" data-b3="' + esc(q.id) + '"><b class="n">' + q.ic + '</b><span style="flex:1"><b>' + esc(q.t) + '</b><br><small>' + esc(q.use) + '</small></span></div>').join('') + '</div>';
     return h + '<div class="row" style="justify-content:flex-start;margin-top:12px">' + (c.dexBtn ? '<button class="sub" data-a="dex">📖 ' + (e9 ? 'Open the codex' : '도감 바로 가기') + '</button>' : '') + '</div></div>'; }
 
@@ -154,30 +157,38 @@ export function createBag3(A) {
       + (c.info ? '<div class="sm b3-info">' + c.info + '</div>' : '') + '</aside>'; }
 
   // ───────── 창 짓기 ─────────
-  function html(c) { if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'b3-css'; styleEl.textContent = CSS; document.head.appendChild(styleEl); }
+  function addCss() { if (styleEl) return; styleEl = document.createElement('style'); styleEl.id = 'b3-css'; styleEl.textContent = CSS; document.head.appendChild(styleEl); }   /* PERF-C: 처음 열 때 넣으면 문서 전체 스타일을 다시 셈 → 마을 지을 때(init) 한 번 */
+  const NOPARTS = { wear: '', gear: '', col: '', badge: [], recipe: [], ups: {}, ids: [] }, parts9 = () => PARTS || (PARTS = R() ? R().bagParts() : NOPARTS);   /* 보상 조각 = 그 탭을 지을 때 한 번(물건 탭만 볼 땐 안 셈) */
+  const PANES = { item: () => paneItem(CTX), tool: () => paneTool(parts9()), wear: () => paneWear(parts9()), col: () => paneCol(parts9(), CTX) };
+  const shell = k => '<div class="b3-pane" data-pane="' + k + '" data-lazy="1" role="tabpanel"></div>';
+  function html(c) { addCss();
     CTX = c || {}; S(); if (!CTX.re) { SHOW.clear(); UI.pick = null; UI.snip = false; UI.sel = CTX.sel || null; } else if (CTX.sel) UI.sel = CTX.sel;
     UI.tab = CTX.tab || (CTX.re ? UI.tab : PREF.tab) || 'item'; if (!TABS.some(t => t[0] === UI.tab)) UI.tab = 'item';
     if (UI.sel && !(A.bag()[UI.sel] > 0) && !(R() && R().info(UI.sel))) UI.sel = null;
-    const r = R(), parts = r ? r.bagParts() : { wear: '', gear: '', col: '', badge: [], recipe: [], ups: {}, ids: [] }, e9 = en();
+    PARTS = null; IDLE++; const e9 = en();
     const ids = ownedIds(), nw = {}; for (const id of ids) if (!S().seen[id]) nw[tabOfId(id)] = 1;
     const cnt = { item: bagKeys().filter(e => tabOfE(e) === 'item').length };
     const tabs = '<div class="b3-tabs" role="tablist">' + TABS.map(([k, ic, t]) => '<button class="b3-t' + (UI.tab === k ? ' on' : '') + '" data-b3t="' + k + '" role="tab" aria-selected="' + (UI.tab === k) + '"><i>' + ic + '</i>' + esc(L(t)) + (cnt[k] ? ' <s>' + cnt[k] + '</s>' : '') + (nw[k] ? '<span class="b3-dot b3-tdot"></span>' : '') + '</button>').join('') + '</div>';
     const card = '<aside class="b3-card" aria-live="polite"><div class="b3-ph">' + esc(e9 ? 'Tap a square to see it big — what it is for, where you got it, and buttons.' : '칸을 누르면 여기에 크게 보여요. 쓸 곳, 어디서 났는지, 단추가 나와요.') + '</div></aside>';
-    return '<div class="b3" data-b3tab="' + UI.tab + '">' + (CTX.coach || '') + '<div class="b3-main">' + aside(CTX) + '<section class="b3-body">' + tabs + '<div class="b3-split"><div class="b3-panes">' + paneItem(CTX) + paneTool(parts) + paneWear(parts) + paneCol(parts, CTX) + '</div>' + card + '</div></section></div></div>'; }
+    return '<div class="b3" data-b3tab="' + UI.tab + '">' + (CTX.coach || '') + '<div class="b3-main">' + aside(CTX) + '<section class="b3-body">' + tabs + '<div class="b3-split"><div class="b3-panes">' + TABS.map(([k]) => (k === UI.tab ? PANES[k]() : shell(k))).join('') + '</div>' + card + '</div></section></div></div>'; }
   /* openP 뒤: 수첩 줄 이름표 · 새 점 · 빈 칸 채우기 · 지금 탭 본 것으로 · 고른 칸 다시 · 인형 그리기 · 끌기 */
-  function bind(P9) { P = P9; const nb = P9.querySelector('.nb-tabs'); if (nb && !nb.querySelector('.b3-nbl')) nb.insertAdjacentHTML('afterbegin', '<small class="b3-nbl">📒 ' + (en() ? 'Notebook' : '수첩') + '</small>');
+  function bind(P9) { P = P9; WARM.done = true; const nb = P9.querySelector('.nb-tabs'); if (nb && !nb.querySelector('.b3-nbl')) nb.insertAdjacentHTML('afterbegin', '<small class="b3-nbl">📒 ' + (en() ? 'Notebook' : '수첩') + '</small>');
     dots(P9); showTab(UI.tab, false); if (UI.sel) select(UI.sel, true); dollPaint(P9.querySelector('.b3-cv'));
-    P9.addEventListener('pointerdown', dragDown); }
+    P9.addEventListener('pointerdown', dragDown); idleRest(P9, IDLE); }
+  /* 다른 탭 짓기: 누를 때(showTab) 또는 쉬는 틈에 하나씩(창을 닫거나 다시 열면 그만) — 숨은 탭은 display:none이라 스타일·레이아웃 일 X */
+  function ensure(t) { if (!P) return null; let pane = P.querySelector('[data-pane="' + t + '"]'); if (!pane || !pane.dataset.lazy) return pane; pane.insertAdjacentHTML('afterend', PANES[t]()); pane.remove(); pane = P.querySelector('[data-pane="' + t + '"]'); if (!pane) return null;
+    dots(pane); if (UI.sel) { const c = pane.querySelector('.b3s[data-b3s="' + cssq(UI.sel) + '"]'); if (c) c.classList.add('sel'); } log('pane ' + t); return pane; }
+  const ric = (f, ms) => (window.requestIdleCallback ? requestIdleCallback(f, { timeout: ms }) : setTimeout(() => f({ didTimeout: true, timeRemaining: () => 0 }), 60));
+  function idleRest(P9, g) { const go = d => { if (dead || P !== P9 || IDLE !== g || !P9.isConnected) return; const lz = P9.querySelector('.b3-pane[data-lazy]'); if (!lz) return; if (d && !d.didTimeout && d.timeRemaining() < 6) { ric(go, 500); return; } ensure(lz.dataset.pane); ric(go, 500); }; ric(go, 500); }
   function dots(root) { for (const el of root.querySelectorAll('[data-b3]')) { if (el.querySelector(':scope > .b3-dot')) continue; if (String(el.dataset.b3).split(' ').some(isNew)) el.insertAdjacentHTML('beforeend', '<span class="b3-dot"></span>'); } }
-  function fill(grid) { if (!grid || !grid.offsetParent) return; for (const x of grid.querySelectorAll('.b3s.e')) x.remove(); const tr = getComputedStyle(grid).gridTemplateColumns, cols = Math.max(1, tr && tr !== 'none' ? tr.split(' ').length : 6), n = grid.querySelectorAll('.b3s').length, rows = Math.max(Math.ceil(n / cols), +grid.dataset.min || 1);
-    let h = ''; for (let i = n; i < rows * cols; i++) h += '<div class="b3s e" aria-hidden="true"></div>'; if (h) grid.insertAdjacentHTML('beforeend', h); }
+  /* 빈 칸(줄 끝까지 · 적어도 data-min 줄) = CSS .b3-grid::before 배경 — 예전 fill(getComputedStyle로 열 수 읽기 = 강제 레이아웃 73ms at 4×) X */
   function showTab(t, user) { if (!P || !TABS.some(q => q[0] === t)) return; const was = UI.tab; UI.tab = t; const root = P.querySelector('.b3'); if (root) root.dataset.b3tab = t;
     for (const b of P.querySelectorAll('[data-b3t]')) { const on = b.dataset.b3t === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }
-    const pane = P.querySelector('[data-pane="' + t + '"]'); if (pane) { for (const g of pane.querySelectorAll('.b3-grid')) fill(g); let ch = false; for (const el of pane.querySelectorAll('[data-b3]')) for (const id of String(el.dataset.b3).split(' ')) if (!S().seen[id]) { S().seen[id] = 1; SHOW.add(id); ch = true; } if (ch) A.GAME.mark(); }
+    const pane = ensure(t); if (pane) { let ch = false; for (const el of pane.querySelectorAll('[data-b3]')) for (const id of String(el.dataset.b3).split(' ')) if (!S().seen[id]) { S().seen[id] = 1; SHOW.add(id); ch = true; } if (ch) A.GAME.mark(); }
     const tb = P.querySelector('[data-b3t="' + t + '"] .b3-tdot'); if (tb) tb.remove();
     if (UI.sel && tabOfId(UI.sel) !== t) cardClear(); if (UI.pick && t !== 'tool') { UI.pick = null; pickSync(); }
     if (user) { PREF.tab = t; savePref(); if (was !== t) snd('tab'); } log('tab ' + t); }
-  function regrid() { if (!P) return; const pane = P.querySelector('[data-pane="item"]'); if (!pane) return; const bar = pane.querySelector('.b3-bar'), grid = pane.querySelector('[data-grid="item"]'); if (bar) bar.outerHTML = itemBar(); if (grid) { grid.innerHTML = itemGrid(); dots(grid); fill(grid); } if (UI.sel) { const c = P.querySelector('.b3s[data-b3s="' + cssq(UI.sel) + '"]'); if (c) c.classList.add('sel'); } snd('tab'); }
+  function regrid() { if (!P) return; const pane = P.querySelector('[data-pane="item"]'); if (!pane) return; const bar = pane.querySelector('.b3-bar'), grid = pane.querySelector('[data-grid="item"]'); if (bar) bar.outerHTML = itemBar(); if (grid) { grid.innerHTML = itemGrid(); dots(grid); } if (UI.sel) { const c = P.querySelector('.b3s[data-b3s="' + cssq(UI.sel) + '"]'); if (c) c.classList.add('sel'); } snd('tab'); }
   const cssq = s => String(s).replace(/["\\]/g, '\\$&');
 
   // ───────── 크게 보기 카드 ─────────
@@ -191,7 +202,7 @@ export function createBag3(A) {
         + '<canvas class="b3-snip" width="300" height="170" style="display:' + (UI.snip ? 'block' : 'none') + '"></canvas>' + (acts ? '<div class="b3-acts">' + acts + '</div>' : '') + (k === 'stamp' ? '<div class="b3-use1">' + esc(e9 ? 'A stamp for something you did. It stays in your collection.' : '해낸 일의 도장이에요. 모은 것에 늘 남아요.') + '</div>' : (A.useBox ? A.useBox() : '')); }
     else { const it = R() && R().info(id); if (!it) { cardClear(); return; } h = '<div class="b3-ch"><b class="b3-big">' + it.ic + '</b><div><b class="b3-nm">' + esc(it.t) + '</b></div></div><div class="b3-use1">' + esc(it.use) + '</div>'; }
     card.innerHTML = h; if (isBag && kindOf(id) !== 'stamp' && A.useShow) A.useShow(P, id); if (UI.snip) snipDraw(id);
-    if (!quiet) { snd('sel'); const sp = P.querySelector('.b3-split'); if (sp && getComputedStyle(sp).gridTemplateColumns.split(' ').length < 2) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } log('sel ' + id); }
+    if (!quiet) { snd('sel'); if (matchMedia('(max-width:999px)').matches) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } log('sel ' + id); }   /* 카드가 격자 밑으로 내려가는 한 줄 판(.b3-split 미디어 질의와 같음 · 예전 getComputedStyle 열 수 읽기 = 강제 레이아웃 X) */
   function snipDraw(e) { const cv = P && P.querySelector('.b3-snip'), o = S().o[e]; if (!cv || !o) return; const me = A.me(), e9 = en(), far = Math.hypot(me.x - o[0], me.z - o[1]) > 40;
     A.mapSnip(cv, [{ x: o[0], z: o[1], label: e9 ? 'Got it here' : '여기서 얻었어요', main: true }].concat(far ? [{ x: me.x, z: me.z, label: e9 ? 'Me' : '나' }] : [])); }
 
@@ -235,9 +246,9 @@ export function createBag3(A) {
   //   모습 서명(모자·목수건·가방 색·전등 · 내 모습 색 · 밤/낮 · 실내)이 같으면 캐시 그림
   function dollSig() { const r = R(), w = r ? r.wearNow() : {}; return [w.sig || '', A.lookSig ? A.lookSig() : '', A.night && A.night() ? 'n' : 'd'].join('#'); }
   function dollPaint(cv) { if (!cv) return; const g = cv.getContext('2d'); if (!g) return; const sig = dollSig();
-    if (DOLL.img && DOLL.sig === sig && DOLL.img.width === cv.width && DOLL.img.height === cv.height) { g.putImageData(DOLL.img, 0, 0); return; }
+    if (DOLL.img && DOLL.sig === sig && DOLL.img.width === cv.width && DOLL.img.height === cv.height) { g.clearRect(0, 0, cv.width, cv.height); g.drawImage(DOLL.img, 0, 0); return; }   /* PERF-C: 캐시 = 캔버스 복사(예전 getImageData·putImageData 1MB 오가기 X) */
     const t0 = performance.now(); let ok = false; try { ok = dollRender(cv, g); } catch (e) { console.warn('[가방] 인형', e); ok = false; }
-    DOLL.ms = +(performance.now() - t0).toFixed(1); DOLL.ok = ok; if (ok) { DOLL.n++; DOLL.sig = sig; DOLL.img = g.getImageData(0, 0, cv.width, cv.height); } else dollFlat(cv, g); log('doll ' + (ok ? 'ok ' : 'flat ') + DOLL.ms + 'ms'); }
+    DOLL.ms = +(performance.now() - t0).toFixed(1); DOLL.ok = ok; if (ok) { DOLL.n++; DOLL.sig = sig; const c9 = DOLL.img && DOLL.img.width === cv.width && DOLL.img.height === cv.height ? DOLL.img : document.createElement('canvas'); c9.width = cv.width; c9.height = cv.height; c9.getContext('2d').drawImage(cv, 0, 0); DOLL.img = c9; } else dollFlat(cv, g); log('doll ' + (ok ? 'ok ' : 'flat ') + DOLL.ms + 'ms'); }
   function dollRender(cv, g) { const R9 = A.renderer(), K = A.kid(), T3 = A.T3; if (!R9 || !K || !K.rig || !T3 || !K.rig.parent) return false; let sc = K.rig; while (sc.parent) sc = sc.parent; if (!sc.isScene) return false;
     const W = cv.width, H = cv.height, keep = [], chain = []; for (let o = K.rig; o && o !== sc; o = o.parent) chain.push(o);
     for (const node of chain) { const par = node.parent; for (const c of par.children) { if (c.isLight) continue; keep.push([c, c.visible]); c.visible = c === node; } }
@@ -249,14 +260,21 @@ export function createBag3(A) {
     try { sc.background = null; R9.shadowMap.needsUpdate = false; R9.shadowMap.autoUpdate = false; R9.setClearColor(0x000000, 0); R9.setRenderTarget(RT); R9.clear(); R9.render(sc, CAM); R9.readRenderTargetPixels(RT, 0, 0, W, H, BUF); }
     finally { R9.setRenderTarget(prevRT); sc.background = bg; R9.setClearColor(cc, ca); R9.shadowMap.needsUpdate = smU; R9.shadowMap.autoUpdate = smA; for (let i = keep.length - 1; i >= 0; i--) keep[i][0].visible = keep[i][1]; }
     let sum = 0, cnt = 0; for (let i = 0; i < BUF.length; i += 16) if (BUF[i + 3] > 200) { sum += BUF[i] * 0.2126 + BUF[i + 1] * 0.7152 + BUF[i + 2] * 0.0722; cnt++; } if (cnt < 40) return false;
-    const f = Math.max(1, Math.min(2.4, 128 / Math.max(1, sum / cnt))), img = g.createImageData(W, H), D = img.data;   /* 밤처럼 어두우면 밝게만(낮 그대로) */
-    for (let y = 0; y < H; y++) { const sr = (H - 1 - y) * W * 4, dr = y * W * 4; for (let x = 0; x < W * 4; x += 4) { D[dr + x] = Math.min(255, BUF[sr + x] * f); D[dr + x + 1] = Math.min(255, BUF[sr + x + 1] * f); D[dr + x + 2] = Math.min(255, BUF[sr + x + 2] * f); D[dr + x + 3] = BUF[sr + x + 3]; } }
-    g.clearRect(0, 0, W, H); g.putImageData(img, 0, 0); return true; }
+    const f = Math.max(1, Math.min(2.4, 128 / Math.max(1, sum / cnt)));   /* 밤처럼 어두우면 밝게만(낮 그대로) */
+    if (f > 1.001 && !('filter' in g)) { const img = g.createImageData(W, H), D = img.data;   /* 캔버스 필터가 없는 옛 브라우저 = 예전 화소 고리 */
+      for (let y = 0; y < H; y++) { const sr = (H - 1 - y) * W * 4, dr = y * W * 4; for (let x = 0; x < W * 4; x += 4) { D[dr + x] = Math.min(255, BUF[sr + x] * f); D[dr + x + 1] = Math.min(255, BUF[sr + x + 1] * f); D[dr + x + 2] = Math.min(255, BUF[sr + x + 2] * f); D[dr + x + 3] = BUF[sr + x + 3]; } }
+      g.clearRect(0, 0, W, H); g.putImageData(img, 0, 0); return true; }
+    if (!TMP || TMP.width !== W || TMP.height !== H) { TMP = document.createElement('canvas'); TMP.width = W; TMP.height = H; }   /* PERF-C: 화소 고리(23만 칸 × 뒤집기·밝기) 대신 = 그대로 올리고 위아래 뒤집어 그림 + 밝기 필터(같은 곱셈·255에서 멈춤) */
+    TMP.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(BUF.buffer, BUF.byteOffset, W * H * 4), W, H), 0, 0);
+    g.clearRect(0, 0, W, H); g.save(); if (f > 1.001) g.filter = 'brightness(' + f.toFixed(3) + ')'; g.setTransform(1, 0, 0, -1, 0, H); g.drawImage(TMP, 0, 0); g.restore(); return true; }
   /* 그리기를 못 하면(그래픽 막힘) — 평평한 아이 그림(모자 색 · 가방 색) */
   function dollFlat(cv, g) { const W = cv.width, H = cv.height, q = eqNow(), s = W / 208; g.clearRect(0, 0, W, H); g.save(); g.scale(s, s); g.fillStyle = '#f1c9a5'; g.beginPath(); g.arc(104, 92, 34, 0, 7); g.fill(); g.fillStyle = q.back && q.back.c != null ? hex6(q.back.c) : '#e45c46'; g.fillRect(70, 126, 68, 74); g.fillStyle = '#3f6fb6'; g.fillRect(80, 196, 20, 44); g.fillRect(108, 196, 20, 44);
     if (q.head) { g.font = '58px system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif,SMEmoji'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(q.head.ic, 104, 66); } else { g.fillStyle = '#f2c230'; g.beginPath(); g.arc(104, 82, 36, Math.PI, 0); g.fill(); } g.restore(); }   /* 쓴 모자는 그 그림으로(입히면 바뀜) */
 
+  /* 인형 미리 그리기(PERF-C): 처음 여는 순간의 인형 첫 그리기(지금 렌더러로 한 번 + 화소 읽기)를 불러오기 뒤 쉬는 틈에 → 첫 열기 = 캐시(모습 서명이 같으면)
+     (보이지 않는 가방을 미리 지어 레이아웃을 데우는 것도 해 봤지만 첫 레이아웃 69ms(4×)가 그대로라 뺌 — 수첩 탭 줄·제목·닫기 줄이 빠져 덜 데워짐 · perf.md PERF-C) */
+  function warm() { if (dead || WARM.done || window.SM_PROMO || (P && P.isConnected)) return; WARM.done = true; const t1 = performance.now(), cv = document.createElement('canvas'); cv.width = 416; cv.height = 554; dollPaint(cv); WARM.doll = +(performance.now() - t1).toFixed(1); }
   function dispose() { dead = true; if (RT) RT.dispose(); RT = null; if (styleEl) styleEl.remove(); styleEl = null; if (DRAG.el) DRAG.el.remove(); removeEventListener('pointermove', dragMove); removeEventListener('pointerup', dragUp); removeEventListener('pointercancel', dragUp); }
-  const API = { state: () => JSON.parse(JSON.stringify(S())), ui: () => ({ ...UI, pref: { ...PREF } }), tab: t => showTab(t, true), sel: id => select(id), ids: () => ownedIds(), tabOf: id => tabOfId(id), doll: () => ({ ...DOLL, img: !!DOLL.img }), dbg: () => LOG.slice(), pick: k => act('put', k), place: (k, j) => placeTool(k, j), seen: id => !!S().seen[id] };
-  return { init: () => { S(); }, got, html, bind, click, key, snd, isOpen: () => !!(P && P.isConnected), dispose, api: API };
+  const API = { state: () => JSON.parse(JSON.stringify(S())), ui: () => ({ ...UI, pref: { ...PREF } }), tab: t => showTab(t, true), sel: id => select(id), ids: () => ownedIds(), tabOf: id => tabOfId(id), doll: () => ({ ...DOLL, img: !!DOLL.img }), warm: () => ({ ...WARM }), dbg: () => LOG.slice(), pick: k => act('put', k), place: (k, j) => placeTool(k, j), seen: id => !!S().seen[id] };
+  return { init: () => { S(); addCss(); setTimeout(() => ric(warm, 3000), 1500); }, got, html, bind, click, key, snd, isOpen: () => !!(P && P.isConnected), dispose, api: API };
 }

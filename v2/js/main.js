@@ -1230,7 +1230,7 @@ let locT = 0;
 function updateLoc() {   // MAP-API-1: 가장 좁은 구역(겹쳐도 순서에 안 흔들림)·높이 띠(계단 참도 '계단')
   const Z = MAP ? MAP.zoneAt(P.x, P.y, P.z) : null;
   inCorr = !!(Z && Z.kind === 'corridor' && Z.id !== 'music-passage');
-  locBox.textContent = '📍 ' + (Z ? Z.label : '학교');
+  const t = '📍 ' + (Z ? Z.label : '학교'); if (t !== locBox.textContent) locBox.textContent = t;   /* PERF-C: 같은 글이면 안 씀(0.4초마다 글 마디를 새로 넣어 스타일 다시 계산) */
 }
 
 // ---------- 디테일 층 거리 컬링(DETAIL-1) ----------
