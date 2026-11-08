@@ -4,7 +4,7 @@
 //   🎨 그래픽 우선 = 그린 프레임 간격 33ms 안팎(fps 29~31) · ⚡ 부드럽게 = fps와 단계(50 위 유지인지)
 //   고르기 창(?gmpick=1 · 3m 걸으면 뜸) → 고름 → 새로고침 뒤 기억 · 설정 창 줄로 바꾸기 → 새로고침 뒤 기억
 //   stress = CPU 16×로 단계가 내려가는지 → 1×로 되돌려 다시 올라오는지(깜빡임 없이 차례대로) · 페이지 오류 0
-//   low = 2코어 흉내(PERF-B 11-08) — 해상도 사다리 1 → 0.75 · 자동도 단계 켬 · 홍보판은 예전 그대로
+//   low = 2코어 흉내(PERF-B 11-08) — 해상도 사다리 1 → 0.75 · 자동도 단계 켬 · 홍보판은 예전 그대로 · 학교 = 60 목표(PERF-F · 30 고정은 마을 안에서만)
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const root = path.resolve(process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : '.');
@@ -87,10 +87,10 @@ srv.listen(0, async () => {
       await q2.goto(base + '/v2/?title=0'); await q2.waitForFunction(() => window.SD2 && SD2.gfx && SD2.gfx.fm, null, { timeout: 120000 }); await q2.evaluate(() => localStorage.removeItem('sm-set')); await q2.reload(); await q2.waitForFunction(() => window.SD2 && SD2.gfx && SD2.gfx.fm, null, { timeout: 120000 }); await q2.waitForTimeout(1500);
       const L2 = await q2.evaluate(() => ({ mode: SD2.gfx.mode, ladder: SD2.gfx.auto.ladder.slice(), floor: SD2.gfx.floor, pf: SD2.perf() }));
       ok(L2.mode === 'low' && L2.ladder.join(',') === '1,0.75' && L2.floor === 0.75, '저사양 = 해상도 사다리 ' + L2.ladder.join(' → ') + ' · 바닥 ' + L2.floor + '(예전 [1] 하나)');
-      ok(L2.pf.mode === 'auto' && L2.pf.steps === true && L2.pf.target === 30, '저사양 자동 = 30 고정 + 못 지키면 단계(' + L2.pf.mode + ' · 목표 ' + L2.pf.target + ' · steps ' + L2.pf.steps + ')');
+      ok(L2.pf.mode === 'auto' && L2.pf.steps === true && L2.pf.target === 60, '저사양 자동 학교 = 60 목표 + 못 지키면 단계 · 30 고정은 마을 안에서만(PERF-F)(' + L2.pf.mode + ' · 목표 ' + L2.pf.target + ' · steps ' + L2.pf.steps + ')');
       await q2.evaluate(() => SD2.map.player.teleport('zone:운동장')); await q2.waitForTimeout(3000);
       { const iv = await q2.evaluate(async () => { const F = SD2.gfx.fm, a = []; let d0 = F.draws, last = null; await new Promise(res => { const t0 = performance.now(); const f = ts => { if (F.draws !== d0) { d0 = F.draws; if (last != null) a.push(ts - last); last = ts; } if (performance.now() - t0 < 4000) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); }); a.sort((x, y) => x - y); return { fps: a.length / 4, med: a[a.length >> 1] }; });
-        ok(iv.fps >= 28 && iv.fps <= 31.5 && Math.abs(iv.med - 33.3) < 3, '저사양 자동 운동장 = 30fps 고르게(' + iv.fps + ' · 간격 ' + (iv.med || 0).toFixed(1) + 'ms)'); }
+        ok(iv.fps > 45, '저사양 자동 운동장 = 30 고정 아님(PERF-F · ' + iv.fps + ' · 간격 ' + (iv.med || 0).toFixed(1) + 'ms)'); }
       { const g9 = await q2.evaluate(() => import((performance.getEntriesByType('resource').find(e => /\/settings\.js/.test(e.name)) || { name: '/v2/js/settings.js' }).name).then(m => { m.setSet({ gm: 2 }); return SD2.perf(); }));
         ok(g9.mode === 'smooth' && g9.target === 60, '저사양도 ⚡ 부드럽게를 고르면 60 목표(' + g9.mode + ' · ' + g9.target + ')'); }
       await q2.goto(base + '/'); await q2.waitForFunction(() => window.SD2 && SD2.gfx && SD2.gfx.fm, null, { timeout: 120000 }); await q2.waitForTimeout(1500);
@@ -100,6 +100,7 @@ srv.listen(0, async () => {
     }
     if (on('town') || on('stress')) {
       console.log('\n[마을] 짓는 중…');
+      if (!/\/v2\//.test(p.url())) { await p.goto(base + '/v2/?title=0'); await p.waitForFunction(() => window.SD2 && SD2.gfx && SD2.gfx.fm, null, { timeout: 120000 }); }   /* PERF-F: 홍보판 칸 뒤엔 p가 홍보판(setSet = 아무것도 안 함)이라 그래픽 우선이 저장 안 돼 '마을도 같은 모드'가 늘 ✗였음 */
       await setGm(1).catch(() => null);
       await p.goto(base + '/v2/?town=ourtown&all=1'); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.load && SM_TOWN.game && window.SD2, null, { timeout: 400000, polling: 500 }); await W8(3000);
       const closeAll = async () => { for (let i = 0; i < 8; i++) { if (await ev(() => !!(SM_TOWN.dlgOn && SM_TOWN.dlgOn()))) { await p.keyboard.press('Escape'); await W8(250); continue; } if (!(await ev(() => !!document.querySelector('.twn-p')))) break; await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button.sub') || document.querySelector('.twn-p button'); if (b9) b9.click(); }); await W8(300); } };

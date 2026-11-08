@@ -16,7 +16,7 @@ import { createTop } from './topview.js?v=11';   // TOP-1(10-04 교사 '탑뷰�
 import { createActions } from './actions.js?v=5';   // ACTION-1(09-28 아이 "상호작용이 말만 되고 보이지 않는다"): 보이는 행동(자세·손 소품·물줄기·알갱이) + 버스 접이문 — 정본 docs/map_api.md §19
 /* OPT-G1 ④(11-08 심판 판정): ?town= 첫 열기 = 마을 모듈(town.js와 그 정적 import 전부)을 학교 짓기와 같은 때에 받음(modulepreload) · 마을 주소면 registry ?t= 왕복을 건너뜀(SM_TOWNV)
    목록·번호는 tools/ops/bump.py가 registry town v와 town.js import 줄에서 만들어 아래 한 줄을 다시 씀 — 손으로 고치지 않음 · 홍보판(SM_PROMO)은 마을을 열지 않으니 X */
-const TOWN_PRE = ['games/town.js?v=338', 'games/town_yard.js?v=12', 'games/town_indoor.js?v=21', 'games/town_fire.js?v=1', 'games/town_jobs.js?v=29', 'games/town_bake.js?v=3', 'games/town_table.js?v=19', 'games/town_game.js?v=60', 'games/town_story.js?v=41', 'js/look.js?v=1', 'js/kid.js?v=5', 'js/keytext.js?v=1', 'games/town_tips.js?v=8', 'games/town_track.js?v=3', 'games/town_read.js?v=4', 'games/town_go.js?v=5', 'games/town_map2.js?v=3', 'games/town_friends.js?v=1', 'js/settings.js?v=8', 'js/photo.js?v=7', 'games/town_bugs.js?v=2', 'games/town_photos.js?v=2', 'games/town_anim.js?v=2', 'games/town_herd.js?v=2', 'games/town_worker.js?v=9', 'games/town_rhy.js?v=1', 'games/town_sim.js?v=2', 'games/town_show.js?v=3', 'games/town_showfind.js?v=2', 'games/town_outcrop.js?v=3', 'games/town_lifem.js?v=2', 'games/town_skill.js?v=5', 'games/town_minigame.js?v=15', 'games/town_lad.js?v=6', 'games/town_rank.js?v=6', 'games/town_reward.js?v=4', 'games/town_sea4.js?v=2', 'games/town_beach.js?v=3', 'games/town_rf.js?v=4', 'games/town_quiz.js?v=14', 'games/town_rec.js?v=23', 'js/lobby.js?v=19', 'games/town_boat.js?v=6', 'games/town_pollen.js?v=1', 'games/town_res.js?v=2', 'games/town_shore.js?v=6', 'games/town_xp.js?v=9', 'games/town_news.js?v=14', 'games/town_treasure.js?v=9', 'games/town_bus.js?v=1', 'games/town_emerg.js?v=17', 'games/town_why.js?v=7', 'games/town_fix.js?v=2', 'games/town_case.js?v=8', 'games/town_bldg.js?v=16', 'games/town_day.js?v=13', 'games/town_typhoon.js?v=11', 'games/town_wxev.js?v=1', 'games/town_road.js?v=9', 'games/town_ask.js?v=2', 'games/town_stam.js?v=5', 'games/town_enter.js?v=6', 'games/town_janggu.js?v=4', 'games/town_tower.js?v=2', 'games/town_night.js?v=6', 'games/town_chem.js?v=13', 'games/town_cellkit.js?v=7', 'games/town_tools.js?v=17', 'games/town_spend.js?v=6', 'games/town_cozy.js?v=3', 'games/town_bag.js?v=15', 'games/town_bag3.js?v=13', 'games/town_routine.js?v=4', 'games/town_wild.js?v=14', 'games/town_path.js?v=19', 'games/town_bundle2.js?v=1', 'games/town_regen.js?v=5', 'games/town_orient.js?v=5', 'games/town_photo.js?v=11', 'games/town_nb.js?v=2', 'games/town_after.js?v=2', 'games/town_feast.js?v=8', 'games/town_season.js?v=6', 'games/town_market.js?v=1', 'games/town_cue.js?v=8', 'games/town_disc.js?v=3', 'games/town_music.js?v=4', 'games/town_feel.js?v=4', 'games/town_efx.js?v=2', 'games/town_surp.js?v=6', 'games/town_ski.js?v=2', 'games/town_heal.js?v=1', 'games/town_subway.js?v=8', 'games/town_look.js?v=6', 'games/town_region.js?v=1', 'games/town_kidlook.js?v=7', 'games/town_pbox.js?v=8', 'games/town_cloud.js?v=6', 'games/town_dex.js?v=23', 'games/town_bundle.js?v=3', 'games/town_sky.js?v=1', 'games/town_farm.js?v=3', 'games/town_fish.js?v=2', 'games/town_deco.js?v=2', 'games/town_places.js?v=4', 'games/town_fire5.js?v=1', 'games/town_animals.js?v=1', 'games/town_salt.js?v=2', 'games/town_tsum.js?v=2', 'js/chatfilter.js?v=1', 'games/town_cine.js?v=2', 'games/town_enter2.js?v=2', 'games/town_laws.js?v=5', 'games/town_close.js?v=1'];   /*TOWNPRE*/
+const TOWN_PRE = ['games/town.js?v=339', 'games/town_yard.js?v=12', 'games/town_indoor.js?v=21', 'games/town_fire.js?v=1', 'games/town_jobs.js?v=29', 'games/town_bake.js?v=3', 'games/town_table.js?v=19', 'games/town_game.js?v=60', 'games/town_story.js?v=41', 'js/look.js?v=1', 'js/kid.js?v=5', 'js/keytext.js?v=1', 'games/town_tips.js?v=8', 'games/town_track.js?v=3', 'games/town_read.js?v=4', 'games/town_go.js?v=5', 'games/town_map2.js?v=3', 'games/town_friends.js?v=1', 'js/settings.js?v=8', 'js/photo.js?v=7', 'games/town_bugs.js?v=2', 'games/town_photos.js?v=2', 'games/town_anim.js?v=2', 'games/town_herd.js?v=2', 'games/town_worker.js?v=9', 'games/town_rhy.js?v=1', 'games/town_sim.js?v=2', 'games/town_show.js?v=3', 'games/town_showfind.js?v=2', 'games/town_outcrop.js?v=3', 'games/town_lifem.js?v=2', 'games/town_skill.js?v=5', 'games/town_minigame.js?v=15', 'games/town_lad.js?v=6', 'games/town_rank.js?v=6', 'games/town_reward.js?v=4', 'games/town_sea4.js?v=2', 'games/town_beach.js?v=3', 'games/town_rf.js?v=4', 'games/town_quiz.js?v=14', 'games/town_rec.js?v=23', 'js/lobby.js?v=19', 'games/town_boat.js?v=6', 'games/town_pollen.js?v=1', 'games/town_res.js?v=2', 'games/town_shore.js?v=6', 'games/town_xp.js?v=9', 'games/town_news.js?v=14', 'games/town_treasure.js?v=9', 'games/town_bus.js?v=1', 'games/town_emerg.js?v=17', 'games/town_why.js?v=7', 'games/town_fix.js?v=2', 'games/town_case.js?v=8', 'games/town_bldg.js?v=16', 'games/town_day.js?v=13', 'games/town_typhoon.js?v=11', 'games/town_wxev.js?v=1', 'games/town_road.js?v=9', 'games/town_ask.js?v=2', 'games/town_stam.js?v=5', 'games/town_enter.js?v=6', 'games/town_janggu.js?v=4', 'games/town_tower.js?v=2', 'games/town_night.js?v=6', 'games/town_chem.js?v=13', 'games/town_cellkit.js?v=7', 'games/town_tools.js?v=17', 'games/town_spend.js?v=6', 'games/town_cozy.js?v=3', 'games/town_bag.js?v=15', 'games/town_bag3.js?v=13', 'games/town_routine.js?v=4', 'games/town_wild.js?v=14', 'games/town_path.js?v=19', 'games/town_bundle2.js?v=1', 'games/town_regen.js?v=5', 'games/town_orient.js?v=5', 'games/town_photo.js?v=11', 'games/town_nb.js?v=2', 'games/town_after.js?v=2', 'games/town_feast.js?v=8', 'games/town_season.js?v=6', 'games/town_market.js?v=1', 'games/town_cue.js?v=8', 'games/town_disc.js?v=3', 'games/town_music.js?v=4', 'games/town_feel.js?v=4', 'games/town_efx.js?v=2', 'games/town_surp.js?v=6', 'games/town_ski.js?v=2', 'games/town_heal.js?v=1', 'games/town_subway.js?v=8', 'games/town_look.js?v=6', 'games/town_region.js?v=1', 'games/town_kidlook.js?v=7', 'games/town_pbox.js?v=8', 'games/town_cloud.js?v=6', 'games/town_dex.js?v=23', 'games/town_bundle.js?v=3', 'games/town_sky.js?v=1', 'games/town_farm.js?v=3', 'games/town_fish.js?v=2', 'games/town_deco.js?v=2', 'games/town_places.js?v=4', 'games/town_fire5.js?v=1', 'games/town_animals.js?v=1', 'games/town_salt.js?v=2', 'games/town_tsum.js?v=2', 'js/chatfilter.js?v=1', 'games/town_cine.js?v=2', 'games/town_enter2.js?v=2', 'games/town_laws.js?v=5', 'games/town_close.js?v=1'];   /*TOWNPRE*/
 { const q9 = new URLSearchParams(location.search); if (q9.get('town') && !window.SM_PROMO && TOWN_PRE.length) { window.SM_TOWNV = +TOWN_PRE[0].split('?v=')[1] || 0; for (const u of TOWN_PRE) { const l9 = document.createElement('link'); l9.rel = 'modulepreload'; l9.href = new URL('../' + u, import.meta.url).href; document.head.appendChild(l9); } } }
 var inCorr = false;   // CORR-FEEL(09-28): 지금 복도 구역인지(0.4초마다 updateLoc에서 — 매 프레임 구역 찾기 없음)
 
@@ -68,19 +68,25 @@ const GFX = (() => { const q = new URLSearchParams(location.search), hq = q.get(
   const adapt = !hq && !fix && q.get('adapt') !== '0' && !/[?&](check|health)=1/.test(location.search) && !q.get('shot');
   const aaQ = q.get('aa'), aa = aaQ === '1' ? true : aaQ === '0' ? false : !low && !cros;   // STORY-PERF(10-06): 크롬북도 MSAA 끔(약한 내장 그래픽 — 4배 표본·풀기 대역폭이 프레임을 먹는다 · ?aa=1이면 켬)   // 10-04 교사 '폰으로 하면 계속 떨리고 멀미': 휴대폰도 MSAA(타일 GPU라 싸다 — 가장자리 지글거림이 걸을 때 떨림으로 보였다) · 저사양만 끔
   /* PERF-B(11-08 교사 '학급에서 좀 덜 쾌적'): 약한 크롬북(low · 셀러론 2코어·메모리 ≤3GB)은 바닥 0.75 — 예전 1이라 사다리가 [1] 하나뿐(1배 밑으로 못 내림) · 0.75 아래는 팻말 글씨가 흐려 X · 휴대폰·홍보판은 예전 그대로(1) */
-  return { mode: low ? 'low' : mobile ? 'mobile' : cros ? 'cb' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, mobile || (low && window.SM_PROMO) ? 1 : low ? 0.75 : 0.6), ios, shadow: low ? 0 : mobile || cros ? 1024 : 2048, adapt, aa, dev }; })();
+  /* PERF-F(11-08 토론 판정 6): 4코어 크롬북(cb)도 바닥 0.75(예전 0.6 = 위 '글씨 흐림' 근거와 어긋남) → cb·low 사다리 둘 다 [1, 0.75] · 데스크톱(0.6)·홍보판 크롬북은 예전 그대로 */
+  return { mode: low ? 'low' : mobile ? 'mobile' : cros ? 'cb' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, mobile || (low && window.SM_PROMO) ? 1 : low || (cros && !window.SM_PROMO) ? 0.75 : 0.6), ios, shadow: low ? 0 : mobile || cros ? 1024 : 2048, adapt, aa, dev }; })();
 if (NORENDER) { const p = Math.min(0.25, 64 / Math.max(64, innerWidth)); Object.assign(GFX, { dpr: p, cap: p, start: p, floor: p, adapt: false, aa: false, norender: true }); }   // FAST-1: 그리는 판 ≈ 가로 64px(1280 창 = 배율 0.05) · 자동 해상도·MSAA 끔 · 판 갈래(mode)·그림자 값은 그대로(그걸 보고 정하는 게임 규칙이 같게)
 // MODE-1(10-27 사용자 '성능모드 30fps, 최적모드 60fps 두 개 · 60 유지 빡세면 50이라도'): 화면 모드 둘 — 설정 SET.gm(settings.js) · 값 = SD2.gfx.fm · SD2.perf()
 //   🎨 그래픽 우선(gm 1) = 30fps 고정(rAF는 돌되 33ms마다 그림 — 남는 시간 = CPU·GPU 쉼) · 해상도·디테일·그림자 = 기기 기본 · 자동 해상도는 30 아래일 때만
 //   ⚡ 부드럽게(gm 2 · 안 고름 0) = 60 목표 · 50 아래가 이어지면 차례로 1) 자동 해상도(ADAPT) 2) 안개·먼 평면 ×0.8 3) 디테일 거리 ×0.75 4) 그림자 끔 — 되돌림은 거꾸로(단계마다 쉼 3초 · 다시 올리는 기다림 6초×2^실패)
 //   홍보판·시험 주소(게이트·검진·사진·?hq·?dpr·?adapt=0·그리기 끔) = 예전 그대로(on false · 고르기 창 X)
 const FM = (() => { const q = new URLSearchParams(location.search), fixed = !!(window.SM_PROMO || NORENDER || q.get('hq') === '1' || +q.get('dpr') || q.get('adapt') === '0' || /[?&](check|health)=1/.test(location.search) || q.get('shot'));
-  return { on: !fixed, q: false, mode: 'fixed', target: 60, lv: 0, step: '기본', fps: 0, fk: 1, dk: 1, shOff: false, slowN: 0, goodT: 0, cool: 0, hold: 0, upAt: -1e9, pre: 0, fail: [0, 0, 0], bt: 0, bn: 0, last: 0, lt: 0, draws: 0, fa: 0, fb: 0, nb: 0, ca: 0, cb: 0, town: false, log: [] }; })();
+  return { on: !fixed, q: false, mode: 'fixed', target: 60, lv: 0, step: '기본', fps: 0, fk: 1, dk: 1, shOff: false, slowN: 0, goodT: 0, cool: 0, hold: 0, upAt: -1e9, pre: 0, fail: [0, 0, 0], bt: 0, bn: 0, last: 0, lt: 0, draws: 0, vOn: 0, fb: 0, nb: 0, cb: 0, town: false, log: [] }; })();
 const FM_STEP = ['기본', '안개 당김', '디테일 줄임', '그림자 끔'];
 const FM_LITE = GFX.mode === 'cb' || GFX.mode === 'low', FM_LOW30 = GFX.mode === 'low';   /* PERF-B: 크롬북·저사양 = 안 고름(자동)도 부드럽게처럼 ② 안개 ③ 디테일 ④ 그림자 단계를 씀(해상도를 다 내린 뒤에만 · 되돌림 그대로) · 저사양(2코어) 자동 = 30 고정 + 30도 못 지키면 단계 */
-function fmMode() { const a30 = FM.on && !SET.gm && FM_LOW30; FM.q = FM.on && (SET.gm === 1 || a30); FM.mode = !FM.on ? 'fixed' : SET.gm === 1 ? 'graphics' : SET.gm === 2 ? 'smooth' : 'auto'; FM.target = FM.q ? 30 : 60; FM.st = FM.mode === 'smooth' || (FM.mode === 'auto' && FM_LITE); }   /* MODE-2 auto = 예전 그대로(자동 해상도만 · 안개·디테일·그림자 단계 X · 30 고정 X) — PERF-B 크롬북·저사양만 단계도(st) · 저사양 자동은 30 고정(q) · 🎨 그래픽 우선은 그대로(단계 X) */
+/* PERF-F(11-08 토론 판정 7): 저사양 자동 30 고정은 마을 안에서만(body.h-town · 근거가 마디탑 한 자리뿐) — 학교 맵·놀이는 60 목표(입력도 60Hz) · 들고 날 때 fmTick이 fmMode를 다시 부름 */
+function fmMode() { const a30 = FM.on && !SET.gm && FM_LOW30 && !!document.body && document.body.classList.contains('h-town'); FM.q = FM.on && (SET.gm === 1 || a30); FM.mode = !FM.on ? 'fixed' : SET.gm === 1 ? 'graphics' : SET.gm === 2 ? 'smooth' : 'auto'; FM.target = FM.q ? 30 : 60; FM.st = FM.mode === 'smooth' || (FM.mode === 'auto' && FM_LITE); }   /* MODE-2 auto = 예전 그대로(자동 해상도만 · 안개·디테일·그림자 단계 X · 30 고정 X) — PERF-B 크롬북·저사양만 단계도(st) · 저사양 자동은 30 고정(q) · 🎨 그래픽 우선은 그대로(단계 X) */
 fmMode(); GFX.fm = FM;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: GFX.aa, powerPreference: 'high-performance' });
+/* PERF-F(11-08 토론 판정 3): 3D 판을 못 만들면(그래픽 드라이버 멈춤·메모리 모자람) 예전엔 글 없는 빈 쪽 → 한 줄 안내를 띄우고 멈춤 */
+const renderer = (() => { try { return new THREE.WebGLRenderer({ canvas, antialias: GFX.aa, powerPreference: 'high-performance' }); } catch (e) {
+  console.warn('[화면] WebGL을 만들지 못했어요', e); const d = document.createElement('div'); d.className = 'ttl-keep'; d.textContent = '3D 화면을 열지 못했어요. 크롬(브라우저)을 완전히 껐다가 다시 켜 주세요.';
+  Object.assign(d.style, { position: 'fixed', inset: '0', zIndex: '100000', display: 'grid', placeItems: 'center', padding: '16px', textAlign: 'center', background: '#10213f', color: '#fff', font: '700 18px/1.5 sans-serif' });
+  document.body.appendChild(d); throw e; } })();
 if (NORENDER) {   // FAST-1: 그리기만 건너뜀 — three render가 하던 장면·카메라 행렬 갱신은 그대로 해 둔다(레이·투영·말풍선 자리·getWorldPosition이 그리는 판과 같게) · 셰이더 짓기(compile)도 건너뜀
   //   '올림'만 흉내: 카메라 안에 드는 메시(three와 같은 보임·층·절두체 검사)는 GPU에 올린 것처럼 onUploadCallback·onAfterRender를 부른다 → 마을이 올린 뒤 비우는 정적 배열(GEOS·armFree)이 그리는 판과 같은 때 비워짐(힙이 같고 '비운 배열 읽기' 버그도 같이 드러남)
   const fr = new THREE.Frustum(), pm = new THREE.Matrix4(), upv = new WeakMap();
@@ -95,11 +101,19 @@ if (NORENDER) {   // FAST-1: 그리기만 건너뜀 — three render가 하던 �
 renderer.debug.checkShaderErrors = /[?&](debug|check)=1/.test(location.search);
 const DBG9 = /[?&]debug=1/.test(location.search);   /* PERF-A: 예산 초과 콘솔 경고(1초마다)는 ?debug=1에서만 */
 // MOB-2 그래픽 끊김(WebGL 컨텍스트 잃음): 아이폰은 메모리가 모자라면(영상 재생·다른 앱) 3D 화면을 통째로 잃어 검게 멈춘다 → 알리고 다시 불러온다(도장은 저장돼 있음)
-canvas.addEventListener('webglcontextlost', e => { e.preventDefault();
-  const d = document.createElement('div'); d.className = 'ttl-keep'; d.textContent = '🔄 화면을 다시 불러오는 중이에요…';
-  Object.assign(d.style, { position: 'fixed', inset: '0', zIndex: '99999', display: 'grid', placeItems: 'center', background: 'rgba(16,33,63,.88)', color: '#fff', font: '700 18px sans-serif' });
-  document.body.appendChild(d); setTimeout(() => location.reload(), 1800); }, false);
-canvas.addEventListener('webglcontextrestored', () => location.reload(), false);
+//   PERF-F(11-08 토론 판정 3): 10분 안 두 번째부터는 저절로 다시 불러오지 않고 단추 — 메모리가 모자란 기기에서 '잃음 → 새로고침 → 또 잃음' 고리가 돌던 것 · 첫 번째는 예전 그대로(아이폰 홍보판 복구 MOB-2)
+//   횟수 = sessionStorage 'sm-ctxlost'(이 탭의 잃은 시각 목록 · 끝 다섯 · 현장 기록 SD.diag가 읽을 수 있게) + console 한 줄
+let CTXB = false;
+canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); if (CTXB) return;
+  let L = []; try { L = JSON.parse(sessionStorage.getItem('sm-ctxlost') || '[]').filter(t => Date.now() - t < 600000); } catch (er) { L = []; }
+  L.push(Date.now()); try { sessionStorage.setItem('sm-ctxlost', JSON.stringify(L.slice(-5))); } catch (er) { /* 사파리 사생활 모드 */ }
+  CTXB = L.length >= 2; console.warn('[화면] WebGL 문맥 잃음 — 10분 안 ' + L.length + '번째' + (CTXB ? ' · 단추로 다시 불러오기' : ' · 저절로 다시 불러오기'));
+  const d = document.createElement('div'); d.className = 'ttl-keep';
+  Object.assign(d.style, { position: 'fixed', inset: '0', zIndex: '99999', display: 'grid', placeItems: 'center', padding: '16px', textAlign: 'center', background: 'rgba(16,33,63,.88)', color: '#fff', font: '700 18px/1.5 sans-serif' });
+  if (!CTXB) { d.textContent = '🔄 화면을 다시 불러오는 중이에요…'; document.body.appendChild(d); setTimeout(() => location.reload(), 1800); return; }
+  d.id = 'ctxLost'; d.innerHTML = '<div>🔄 화면이 또 멈췄어요.<br>다른 탭을 닫고 아래 단추를 눌러 주세요.<br><button type="button" style="margin-top:14px;min-height:48px;padding:8px 24px;font:800 18px sans-serif;color:#10213f;background:#ffd23c;border:3px solid #fff;border-radius:12px;cursor:pointer">다시 불러오기</button></div>';
+  document.body.appendChild(d); const b9 = d.querySelector('button'); b9.onclick = () => location.reload(); try { if (document.exitPointerLock) document.exitPointerLock(); b9.focus(); } catch (er) { /* */ } }, false);
+canvas.addEventListener('webglcontextrestored', () => { if (!CTXB) location.reload(); }, false);   /* 단추 판(둘째부터)은 아이가 다른 탭을 닫고 누를 때까지 기다림 */
 // MOB-2 소리: 아이폰 사파리는 손가락으로 누르는 그 순간에만 소리 장치를 깨울 수 있다(나중에 첫 소리에서 깨우면 막혀 끝까지 조용) →
 //   누를 때마다(깨어 있으면 바로 끝) 깨우고 빈 소리 한 번 · 무음 스위치를 켠 아이폰도 동영상처럼 들리게(audioSession 'playback' — iOS 17+)
 function audioUnlock() {
@@ -1463,11 +1477,16 @@ function adaptWin() {   // 최근 2초 창의 '느린 쪽 8%를 뺀 평균'(할�
   for (let j = 0; j < m; j++) s += S[j];
   return s / m;
 }
+/* PERF-F(11-08 토론 판정 4): 마을 짓는 중(window.SM_BUILD > 0) — 짓기는 90ms마다 한 프레임 쉬어 프레임 간격이 ≈100ms라, 자동 해상도가 그걸 재서 내렸다가 '낮춰도 안 빨라짐'으로 5분 잠금(cap) + 실패 한 칸을 걸던 것 · ?town= 주소는 오프닝이 없어 hold도 없음
+   깃발을 처음 본 시각부터 90초가 넘으면 무시(짓기가 터져 깃발이 남아도 스스로 풀림 · town.js quitEarly도 0으로) */
+let BLD9 = 0;
+function building() { if (!(window.SM_BUILD > 0)) { BLD9 = 0; return false; } const t = performance.now(); if (!BLD9) BLD9 = t; return t - BLD9 < 90000; }
 function adaptReset(cool) { const A = ADAPT; A.bn = 0; A.winT = 0; A.evT = 0; A.slowT = A.goodT = 0; if (cool != null) A.coolT = Math.max(A.coolT, cool); }
 function adaptTick(ts) {
   const A = ADAPT, raw = A.last ? ts - A.last : 0; A.last = ts;
   if (!GFX.adapt || !(raw > 0) || document.hidden) return;   // (첫 호출은 performance.now — rAF 시각이 그보다 앞설 수 있다)
   if (A.hold && A.hold()) { if (A.bn || A.winT) adaptReset(2); return; }   // 오프닝·메뉴 동안은 재지 않고, 끝나면 2초 쉬고 새 창으로
+  if (building()) { adaptReset(3); return; }   /* PERF-F: 마을 짓는 동안 + 끝난 뒤 3초는 재지 않음(위 building) */
   if (raw > 250) { if (++A.big < 3) return; } else A.big = 0;   // 한두 번 끊김(게임 열기·탭 전환)은 버리고, 250ms 넘는 프레임이 셋 이어지면(아주 느린 기기) 느림으로 센다
   const d = Math.min(100, raw), sec = d / 1000;
   if (A.coolT > 0) { A.coolT -= sec; return; }
@@ -1509,32 +1528,33 @@ function fmEval(fps, now) {
   if (F.pre) { const p0 = F.pre; F.pre = 0; if (fps < p0 * 1.04 + 0.5 && F.lv > 0) { F.log.push([+now.toFixed(1), 'nohelp', F.lv, F.fps]); fmSet(F.lv - 1); F.hold = now + 120; F.cool = 2; return; } }   /* 내렸는데 안 빨라짐(브라우저 30fps 잠금·에너지 절약) = 되돌리고 2분 쉼 */
   if (fps < (F.q ? 27 : 50)) { F.slowN++; F.goodT = 0; } else F.slowN = 0;   /* PERF-B 저사양 자동(30 고정) = 27 아래가 이어지면 */
   const A = ADAPT, dprDone = !GFX.adapt || A.lvl >= A.ladder.length - 1 || (A.capT && performance.now() < A.capT);   /* 해상도를 낮춰도 안 빨라진 기기(CPU가 버거움 · ADAPT cap) = 해상도 다음 단계로 — 진짜 30fps 잠금이면 아래 '안 빨라짐' 되돌림이 잡음 */
-  if (F.slowN >= 2 && F.lv < (GFX.shadow > 0 ? 3 : 2) && now >= F.hold && dprDone) { if (now - F.upAt < 12) F.fail[F.lv] = Math.min(4, F.fail[F.lv] + 1);   /* 올린 지 얼마 안 돼 다시 버거움 = 그 단계는 더 오래 기다림 */
+  if (F.slowN >= 2 && F.lv < (F.town ? 1 : GFX.shadow > 0 ? 3 : 2) && now >= F.hold && dprDone) {   /* PERF-F(토론 판정 6): 마을 = ②(안개)까지 — ③ 디테일은 마을에서 읽는 곳 0(헛칸 → 안 빨라짐 → 2분 쉼) · ④ 그림자는 마을에 받는 면 0인데 셰이더 한 벌만 다시 지음 · 학교 맵은 그대로 */ if (now - F.upAt < 12) F.fail[F.lv] = Math.min(4, F.fail[F.lv] + 1);   /* 올린 지 얼마 안 돼 다시 버거움 = 그 단계는 더 오래 기다림 */
     F.pre = fps; fmSet(F.lv + 1); F.cool = 3; F.slowN = 0; F.log.push([+now.toFixed(1), 'down', F.lv, F.fps]); if (F.log.length > 40) F.log.splice(0, 20); return; }
-  if (F.lv > 0 && fps >= (F.q ? 29.5 : 57)) { F.goodT++; if (F.goodT >= 6 * 2 ** F.fail[F.lv - 1]) { F.upAt = now; fmSet(F.lv - 1); F.cool = 3; F.goodT = 0; F.log.push([+now.toFixed(1), 'up', F.lv, F.fps]); if (F.log.length > 40) F.log.splice(0, 20); } } else F.goodT = 0;
+  if (F.lv > 0 && fps >= (F.q ? 29.5 : 57)) { F.goodT++; if (F.goodT >= (F.q ? 30 : 6) * 2 ** F.fail[F.lv - 1]) {   /* PERF-F(토론 판정 7): 30 고정 중엔 29.5를 넘기 쉬워 6초 바탕이면 96초 주기로 오르내림 → 30초 바탕 */ F.upAt = now; fmSet(F.lv - 1); F.cool = 3; F.goodT = 0; F.log.push([+now.toFixed(1), 'up', F.lv, F.fps]); if (F.log.length > 40) F.log.splice(0, 20); } } else F.goodT = 0;
 }
 function fmTick(ts) {   // 그린 프레임마다 — 1초 창이 차면 fmEval
   const F = FM, raw = F.last ? ts - F.last : 0; F.last = ts; F.draws++;
   if (!F.on || !(raw > 0)) return;
   if (document.hidden || window.SM_HOLD3D > 0 || (ADAPT.hold && ADAPT.hold())) { F.bt = F.bn = 0; return; }
-  if (window.SM_BUILD > 0) { F.bt = F.bn = 0; F.cool = Math.max(F.cool, 3); return; }   /* PERF-B: 마을 짓는 동안(+ 끝난 뒤 3초) 단계 판정 쉼 — 짓기 프레임의 느림을 기기 탓으로 셈하던 것(CPU 4× 흉내에서 짓는 중 안개·디테일이 내려감) */
+  if (building()) { F.bt = F.bn = 0; F.cool = Math.max(F.cool, 3); return; }   /* PERF-B: 마을 짓는 동안(+ 끝난 뒤 3초) 단계 판정 쉼 — 짓기 프레임의 느림을 기기 탓으로 셈하던 것(CPU 4× 흉내에서 짓는 중 안개·디테일이 내려감) */
   if (raw > 250) { F.bt = F.bn = 0; return; }   /* 게임 열기·탭 전환 같은 한 번 끊김은 버림 */
   F.bt += raw; F.bn++; if (F.bt < 1000) return;
-  const fps = F.bn * 1000 / F.bt; F.bt = F.bn = 0; F.town = document.body.classList.contains('h-town');
+  const fps = F.bn * 1000 / F.bt; F.bt = F.bn = 0; const tw = document.body.classList.contains('h-town');
+  if (tw !== F.town) { F.town = tw; const q0 = F.q; fmMode(); if (F.q !== q0) { F.cool = Math.max(F.cool, 2); F.pre = 0; adaptReset(2); F.log.push([+(ts / 1000).toFixed(1), 'mode', F.mode + (F.q ? '30' : '60')]); if (F.log.length > 40) F.log.splice(0, 20); return; } }   /* PERF-F: 저사양 자동 30 고정 = 마을 안에서만 → 목표가 바뀐 그 창(옛 목표로 잰 fps)은 판정에 안 씀 · 실패·기록은 그대로 */
   if (F.q && !F.st) { F.fps = Math.round(fps * 10) / 10; return; }   /* 🎨 그래픽 우선 = 단계 X(PERF-B 저사양 자동 30은 단계 O) */
   fmEval(fps, ts / 1000);
 }
-function fmView() {   // 그리기 직전: 안개(·학교 맵은 먼 평면도)를 바탕값 × fk로 — 다른 쪽(시간대·게임 화풍·높은 곳 전망)이 바꾸면 그 값을 새 바탕으로
-  const F = FM, f = scene.fog; if (!f || (F.fk === 1 && !F.fa)) return;
-  if (f.far !== F.fa) { F.fb = f.far; F.nb = f.near; }
-  if (F.fk === 1) { f.far = F.fb; f.near = F.nb; F.fa = 0; } else { f.far = F.fb * F.fk; f.near = F.nb * F.fk; F.fa = f.far; }
-  const ck = F.town ? 1 : F.fk;   /* 마을 = 먼 평면은 그대로(먼 산 깊이 당기기 HAZE-1 · 안개 끝 밖 숨김 lodTick이 안개를 보고 덜 그림) */
-  if (ck === 1 && !F.ca) return;
-  if (camera.far !== F.ca) F.cb = camera.far;
-  const nf = ck === 1 ? F.cb : Math.max(f.far + 10, F.cb * ck);
-  if (camera.far !== nf) { camera.far = nf; camera.updateProjectionMatrix(); }
-  F.ca = ck === 1 ? 0 : nf; skyDome.scale.setScalar(ck === 1 ? 1 : Math.min(1, nf * 0.95 / 290));   /* 하늘 돔(반지름 290)이 먼 평면 안에 들게 */
+function fmView() {   // 그리기 직전에만: 안개(·학교 맵은 먼 평면·하늘 돔도)를 바탕값 × fk로 — 그린 바로 뒤 fmViewEnd가 바탕값으로 되돌림
+  /* PERF-F(11-08 토론 판정 5): 예전엔 scene.fog·camera.far를 고쳐 쓴 채 두어, 그 값을 쥐었다가 되돌리는 쪽(하늘에서 보기 topview · 마을 높은 곳 전망 VA · 영상 film)을 들락일 때마다 ×0.8이 쌓이고 단계가 풀려도 남았음
+     → 이제 scene.fog·camera.far는 늘 바탕값(시간대·화풍·전망이 쓰는 값) · 줄인 값은 이 그리기 한 번에만 · 마을 숨김 거리(lodTick 등)는 fog.far × SD2.gfx.fm.fk로 읽음 */
+  const F = FM, f = scene.fog; F.vOn = 0; if (!f || F.fk === 1) return;
+  F.nb = f.near; F.fb = f.far; f.near = F.nb * F.fk; f.far = F.fb * F.fk; F.vOn = 1;
+  if (F.town) return;   /* 마을 = 먼 평면은 그대로(먼 산 깊이 당기기 HAZE-1 · 안개 끝 밖 숨김 lodTick이 안개를 보고 덜 그림) */
+  F.cb = camera.far; const nf = Math.max(f.far + 10, F.cb * F.fk);
+  if (nf !== F.cb) { camera.far = nf; camera.updateProjectionMatrix(); F.vOn |= 2; }
+  skyDome.scale.setScalar(Math.min(1, nf * 0.95 / 290)); F.vOn |= 4;   /* 하늘 돔(반지름 290)이 먼 평면 안에 들게 */
 }
+function fmViewEnd() { const F = FM, v = F.vOn; if (!v) return; F.vOn = 0; const f = scene.fog; if (f) { f.near = F.nb; f.far = F.fb; } if (v & 2) { camera.far = F.cb; camera.updateProjectionMatrix(); } if (v & 4) skyDome.scale.setScalar(1); }
 addEventListener('sm-set', (e) => { const d = e && e.detail, was = FM.mode; if (d && d.gm != null && d.gm !== SET.gm) SET.gm = d.gm; fmMode(); if (was === FM.mode) return;
   fmSet(0); FM.fail.fill(0); FM.hold = 0; FM.cool = 2; FM.pre = 0; FM.lt = 0; FM.bt = FM.bn = 0; adaptReset(1.5); FM.log.push([+(performance.now() / 1000).toFixed(1), 'mode', FM.mode]); });
 // ---------- 셰이더 미리 짓기(PERF-WIN) — 첫 프레임 뒤 쉬는 시간에 ----------
@@ -1909,6 +1929,7 @@ function loop(ts) {
   const tR0 = performance.now();
   renderer.render(scene, camera);
   afterRender(canvas);   // PHOTO-1: 찍을 때만 그 한 번 2D로 옮김(평소엔 null 확인 하나 — preserveDrawingBuffer 없이)
+  fmViewEnd();   /* PERF-F: 안개·먼 평면을 바탕값으로(다른 쪽은 늘 바탕만 봄) */
   const tR1 = performance.now();
   acc += dt; n++;
   locT += dt;
@@ -2096,7 +2117,7 @@ window.SD2 = {
   tp(x, z, y = null) { P.x = x; P.z = z; P.y = y ?? (world.baseAt(x, z) + 0.01); P.vy = 0; },
   yaw(v) { camYaw = v; }, pitch(v) { if (v != null) camPitch = Math.max(-0.2, Math.min(1.1, v)); return camPitch; },   // 시험용(리뷰 SHRINK)
   pos: () => [P.x.toFixed(1), P.y.toFixed(1), P.z.toFixed(1)],
-  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { mouseApply(); step(1/60); doorTick(1/60); hotTick(1/60); MAP.tick(1/60); keysFrameEnd(); } keyList.forEach(k => keys.delete(k)); detailTick(1); renderer.render(scene, camera); },
+  step(nn = 1, keyList = []) { keyList.forEach(k => keys.add(k)); for (let i = 0; i < nn; i++) { mouseApply(); step(1/60); doorTick(1/60); hotTick(1/60); MAP.tick(1/60); keysFrameEnd(); } keyList.forEach(k => keys.delete(k)); detailTick(1); fmView(); renderer.render(scene, camera); fmViewEnd(); },
   doors: () => DOORS.length, doorCheck,
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
   film: FILM, top: TOP, acts: ACTS, hotNow: () => hotNear, actOn: h => act(h), camOvr: f => { CAM_OVR = f; }, pg,   // ACTION-1: 보이는 행동(시험 — SD2.acts.play('drink', {at:[x,y,z]}) · stats())
