@@ -65,13 +65,19 @@ export function createTeach(A) {
       + (due ? card(T('다시 세는 날로 넘기기', 'Skip to the count-again day'), T('며칠 뒤 다시 보는 의뢰를 오늘로 당겨요.', 'Brings the wait-a-few-days request to today.'), 'due', '⏩ ' + T('넘기기', 'Skip')) : '')
       + '<div class="grp">' + T('날씨와 계절', 'Weather and season') + '</div>' + card(T('날씨·계절 바꾸기', 'Change weather or season'), T('수업에서 비, 눈, 계절을 보여 줄 때 써요. 아이 화면에는 달력대로·예보대로 돌아가기만 있어요.', 'For showing rain, snow or a season in class. Pupils only see “back to calendar / forecast”.'), 'wx', '🌦 ' + T('날씨 창', 'Weather'))
       + '<div class="grp">' + T('이 기기 기록', 'This device') + '</div>' + card(T('학급 기록(이 기기)', 'Class record (this device)'), T('최근 14일 단계, 힌트, 고른 것, 한 줄 카드예요. 복사해서 반 표에 붙여 넣을 수 있어요.', 'Last 14 days of steps, hints, choices and line cards. Copy it into the class table.'), 'rec', '📊 ' + T('열기', 'Open'))
+      + card(T('화면 기록(이 기기)', 'Screen log (this device)'), T('이 기기에서 연 판마다 첫 화면까지 걸린 때, 끊김, 화면이 멈춘 일을 저절로 적어 둬요. 복사해서 채팅이나 패들렛에 붙여 넣어요.', 'Each time this device opens the game it notes load time, stutters and screen freezes. Copy it into a chat or Padlet.'), 'diag', '📋 ' + T('복사', 'Copy'))
       + '<div class="row"><button class="sub" data-a="lock">🔒 ' + T('잠그고 닫기', 'Lock and close') + '</button></div>', false, 'tch');   /* DEB-1(11-08): '닫기' 단추 X — 선생님 칸을 닫는 길(✕·Esc·바깥 포함 · town.js closeP)은 모두 잠금 · 잠그지 않고 닫아 그 탭만 순간이동 무제한·칩 다 열림으로 남던 것 */
     P.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; const a = b.dataset.a;
       if (a === 'x' || a === 'lock') return lock();
       if (!A.tchOn()) { A.closeP(); return open(); }   /* 다른 탭에서 잠갔으면 다시 묻기 */
       if (a === 'board') return board(); if (a === 'ch') return A.chapters(() => home()); if (a === 'due') { A.closeP(); A.dueSkip(); A.say(T('⏩ 다시 세는 날로 넘겼어요', '⏩ Skipped to the count-again day'), 2.4); return; }
-      if (a === 'wx') { A.wx(); return; }   /* 창을 바꿈(닫기 X = 잠금 X) — 날씨 창의 계절 단추가 선생님 모드로 보이게 */ if (a === 'rec') { A.rec(); return; } };
+      if (a === 'wx') { A.wx(); return; }   /* 창을 바꿈(닫기 X = 잠금 X) — 날씨 창의 계절 단추가 선생님 모드로 보이게 */ if (a === 'rec') { A.rec(); return; } if (a === 'diag') { copyDiag(b); return; } };
     return P; }
+  /* PERF-G 화면 기록 복사(diag.js · SD.diagText — 이름·저장 내용 X) */
+  function copyDiag(b) { const t = window.SD && window.SD.diagText ? window.SD.diagText() : ''; if (!t) { A.say(T('화면 기록이 아직 없어요', 'No screen log yet'), 2.4); return; }
+    const ok = () => { b.textContent = '✓ ' + T('복사했어요', 'Copied'); A.say(T('📋 화면 기록을 복사했어요', '📋 Screen log copied'), 2.4); };
+    const old = () => { try { const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;left:-9999px;top:0'; document.body.appendChild(ta); ta.select(); const r = document.execCommand('copy'); ta.remove(); if (r) { ok(); return; } } catch (e) { /* 아래로 */ } A.say(T('복사하지 못했어요. 한 번 더 눌러 주세요', 'Could not copy. Press once more'), 2.4); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, old); else old(); }
   function lock() { tkey = ''; RS.dev = []; RS.paste = []; RS.cloud = []; src = 'dev'; paste = ''; pN = 0; claim = 0; A.tchOff(); A.closeP(); A.say(T('🔒 선생님 칸을 잠갔어요', '🔒 Teacher section locked'), 2.4); }
   // ① 이 기기 판: 같은 반(반 코드) 번호 판 + 번호 없는 칸(칸 1~3) — 이 탭 판은 지금 상태 그대로
   function devRows() { const c = (A.cls && A.cls()) || '', rx = new RegExp('^sm-town-game:' + escRx(A.id) + '(?:@(?:([a-z0-9]{4,8}):)?s(\\d{2}))?(?:#([23]))?$'), out = [];

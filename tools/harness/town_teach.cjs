@@ -68,6 +68,7 @@ const ROOT = path.resolve(__dirname, '../..');
     { const e9 = await ev(() => { const a = document.querySelector('.lb-ask'); return a ? a.querySelector('.err').textContent : null; }); ok(!!e9 && /달라요/.test(e9) && !(await tch()), '틀린 비밀번호 = 그대로 잠김(' + e9 + ')'); }
     await ev(() => { const i = document.querySelector('.lb-ask input'); if (i) i.value = ''; }); await p.keyboard.type(PIN); await p.keyboard.press('Enter'); await W8(900);
     { const P = await pan(); ok((await tch()) === '1' && P && P.k === 'tch', '맞는 비밀번호 = 선생님 칸(' + (P && P.t.slice(0, 40)) + ')'); await shot('teach_3_home'); }
+    { const d = await ev(() => ({ n: document.querySelectorAll('.twn-p [data-a="diag"]').length, t: (window.SD && SD.diagText ? SD.diagText() : '').slice(0, 14) })); ok(d.n === 1 && /^📒/.test(d.t), 'PERF-G 선생님 칸: 화면 기록 복사 줄 하나 · 글 ' + JSON.stringify(d.t)); }
 
     console.log('③ 비밀번호 뒤 누름');
     await ev(() => document.querySelector('.twn-p [data-a="ch"]').click()); await W8(600);
