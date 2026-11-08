@@ -105,6 +105,15 @@ const ROOT = path.resolve(__dirname, '../..');
     await ev(() => { SM_TOWN.teach().home(); return 1; }); await W8(400); await ev(() => document.querySelector('.twn-p [data-a="lock"]').click()); await W8(500);
     ok(!(await tch()), '잠그고 닫기 = sm.t 꺼짐'); await ev(() => SM_TOWN.sim.openWx()); await W8(400); ok((await ev(() => document.querySelectorAll('.twn-p [data-w="rain"]').length)) === 0, '잠근 뒤 날씨 창 = 다시 아이 화면'); await shutAll();
     { await ev(() => { SM_TOWN.teach().board(); return 1; }); await W8(500); ok(await ev(() => !!document.querySelector('.lb-ask')), '잠근 뒤 교사 화면 = 다시 비밀번호'); await shutAll(); }
+    { const chipOn = () => ev(() => [...document.querySelectorAll('.gchip')].some(c => /선생님 모드/.test(c.textContent)));   /* DEB-1: 닫기 = 늘 잠금 · 선생님 모드 칩 */
+      await ev(() => { SM_TOWN.teach().home(); return 1; }); await W8(500); await p.keyboard.type(PIN); await p.keyboard.press('Enter'); await W8(1500);
+      const H = await ev(() => { const P = document.querySelector('.twn-p'); return P ? { k: P.dataset.k, x: P.querySelectorAll('[data-a="x"]').length, lock: P.querySelectorAll('[data-a="lock"]').length } : null; });
+      ok(H && H.k === 'tch' && H.x === 0 && H.lock === 1, 'DEB-1 선생님 칸 아래 줄 = 「잠그고 닫기」 하나(닫기 X) ' + JSON.stringify(H)); ok(await chipOn(), 'DEB-1 선생님 모드 동안 칩 「🔒 선생님 모드」');
+      await p.keyboard.press('Escape'); await W8(700); ok(!(await tch()) && !(await ev(() => !!document.querySelector('.twn-p[data-k="tch"]'))), 'DEB-1 Esc로 닫아도 = 잠김(sm.t 꺼짐)'); await W8(1300); ok(!(await chipOn()), 'DEB-1 잠그면 칩 사라짐');
+      await ev(() => { SM_TOWN.teach().home(); return 1; }); await W8(500); for (let k = 0; k < 3; k++) { await ev(() => { const i = document.querySelector('.lb-ask input'); if (i) i.value = ''; }); await p.keyboard.type('9999'); await p.keyboard.press('Enter'); await W8(500); }
+      const e3 = await ev(() => { const a = document.querySelector('.lb-ask'); return a ? a.querySelector('.err').textContent : null; }); await ev(() => { const i = document.querySelector('.lb-ask input'); if (i) i.value = ''; }); await p.keyboard.type(PIN); await p.keyboard.press('Enter'); await W8(700);
+      const e4 = await ev(() => { const a = document.querySelector('.lb-ask'); return a ? a.querySelector('.err').textContent : null; });
+      ok(/1분/.test(e3 || '') && /초 뒤/.test(e4 || '') && !(await tch()), 'DEB-1 세 번 틀리면 1분 쉼(맞는 비밀번호도 기다림) 「' + e3 + '」 → 「' + e4 + '」'); await ev(() => { try { sessionStorage.removeItem('sm.tpf'); } catch (e) { void e; } }); await shutAll(); }
 
     console.log('⑤ 아이 흐름 안 막힘');
     /* 계절 문 대화창: 나올 때까지(이야기 창 20초 쉼 포함) 기다리고 → 쪽마다 E로 넘기며 글을 모음 → 고르기 단추가 나오면 멈춤 */

@@ -18,6 +18,12 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
   try { const p = await page([1280, 720]), ev = (f, a) => p.evaluate(f, a), W8 = ms => p.waitForTimeout(ms);
     await boot(p); await closeAll(p); await W8(800);
     await ev(() => { const G = SM_TOWN.game().S; G.min = 9 * 60; G.jobs = G.jobs || {}; G.jobs.fireNo = G.day; G.story = G.story || {}; G.story.p0auto = 1; SM_TOWN.weather('clear'); }); await W8(400);
+    { const r = await ev(() => { const G = SM_TOWN.game().S, D = G.story.done = G.story.done || {}, had = D.p0; delete D.p0; const F = SM_TOWN.feast(); F.sec(true); const a = F.dbg.add('guest', 'st:cells'), pr = F.info().prep; D.p0 = had || { d: G.day }; G.feast.dc = null; G.feast.lv.guest = 0; return { a, pr }; });   /* DEB-1 '듣기 전엔 조용히' */
+      ok(r.a === false && !r.pr, 'DEB-1 프롤로그(잔치 도우미 모집) 전 = 준비 안 셈 · 알림 X ' + JSON.stringify(r)); }
+    { const w = await ev(async () => { const m = await import('/v2/games/town_feast.js?deb1'), f = (k, o) => (m.whoOf('safe', k, o) || ['-'])[0]; return { lost: f('emerg', { k: 'lost', ev: 'done' }), p112: f('bldg', { k: 'police', ev: '112' }), pat: f('night', { k: 'patrol' }), smoke: f('emerg', { k: 'smoke', ev: 'done' }), tide: f('emerg', { k: 'tide', ev: 'done' }), food: m.whoOf('food', 'tally:cooked') }; });
+      ok(w.lost === '경찰관' && w.p112 === '경찰관' && w.pat === '경찰관' && w.smoke === '소방관' && w.tide === '해양경찰관' && w.food === null, 'DEB-1 안전 보탬 맡은 사람 = 112·길 잃은 아이·밤 순찰 경찰관 · 불 소방관 · 밀물 해양경찰관 ' + JSON.stringify(w)); }
+    { const c = await ev(() => { const s = SM_TOWN.game().S.feast; s.dc = null; const n0 = document.getElementById('toast') ? document.getElementById('toast').textContent : ''; SM_TOWN.feast().dbg.add('guest', 'st:cells'); const t = document.getElementById('toast'); return { lv: s.lv.guest, same: !t || t.style.display === 'none' || t.textContent === n0 || !/한 걸음/.test(t.textContent) }; });
+      ok(c.lv === 1 && c.same, 'DEB-1 걷다 새 칸(저절로) = 게시판에만 · 「한 걸음」 알림 X ' + JSON.stringify(c)); await ev(() => { const s = SM_TOWN.game().S.feast; s.dc = null; s.lv.guest = 0; }); }
     const F = () => ev(() => SM_TOWN.feast().info()), sec = async (n = 2) => { for (let i = 0; i < n; i++) { await closeAll(p); await ev(() => SM_TOWN.feast().sec(true)); await W8(80); } };
     const ban = () => ev(() => (document.getElementById('hudBan') || {}).textContent || '');
     const setDay = async d => { await ev(d => { const G = SM_TOWN.game(); G.S.day = d; G.mark(); }, d); await sec(2); };

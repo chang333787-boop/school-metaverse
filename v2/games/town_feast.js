@@ -66,13 +66,16 @@ export const BR = {
     things: [T2('어서 오세요 안내판', 'a welcome sign'), T2('손님 돗자리와 걸상', 'mats and stools for guests'), T2('안내 천막과 방명록', 'a help tent and a guest book')],
     how: T2('마을 새 칸 가 보기(하루 한 번), 직업 체험(마을 여권), 여권 부탁 들어주기, 이웃 부탁·선물, 우체국에서 소포 보내기', 'Visit a new map cell (once a day), job experiences (town passport), passport requests, neighbour requests and presents, send a parcel at the post office'),
     made: T2('안내판 덕분에 처음 온 손님도 길을 안 헤맸어.', 'Thanks to the sign, even first-time guests didn’t get lost.'), miss: T2('다음 잔치엔 손님 맞을 안내판이 있으면 좋겠어. 마을 길을 많이 알아 두면 안내할 수 있어.', 'Next feast, a welcome sign would help. If you know the town’s roads, you can guide guests.') },
-  safe: { ic: '🧯', col: '#2f8a4e', t: T2('안전', 'Safety'), who: T2('소방관', 'the firefighter'),
+  safe: { ic: '🧯', col: '#2f8a4e', t: T2('안전', 'Safety'), who: T2('소방관과 경찰관', 'the firefighter and the police officer'),   /* DEB-1: 112·밤 순찰은 경찰관 일(알림 한 줄은 whoOf로 한 사람) */
     ask: T2('사람이 많이 모여도 안전하게 준비해 줄래?', 'Will you help keep everyone safe when lots of people gather?'),
     things: [T2('구급함 탁자', 'a first-aid table'), T2('소화기와 안전 고깔', 'fire extinguishers and safety cones'), T2('안전 쉼터 천막', 'a safety tent')],
     how: T2('긴급 출동, 고칠 곳 신고, 사건 수첩 풀기, 태풍 준비, 112 신고 연습, 응급 처치 배우기, 밤 순찰', 'Emergencies, reporting repairs, solving cases, typhoon prep, 112-call practice, first aid, night patrol'),
     made: T2('구급함이랑 소화기가 있으니 마음 놓고 놀 수 있어.', 'With the first-aid kit and extinguishers here, everyone can relax and have fun.'), miss: T2('다음 잔치엔 구급함을 챙겨 두자. 사람이 모이면 다치는 일도 생겨.', 'Next feast, let’s have a first-aid kit ready. When crowds gather, people can get hurt.') },
 };
 export const B_ORDER = ['food', 'deco', 'show', 'guest', 'safe'];
+/* DEB-1(11-08 '경찰 일은 경찰관에게'): 안전 갈래 보탬 알림의 맡은 사람 = 기록 갈래로(112·길 잃은 아이·밤 순찰 = 경찰관 · 갯벌 밀물 = 해양경찰관 · 나머지 = 소방관) · 다른 갈래 = null(BR.who) */
+const WHO_POL = T2('경찰관', 'the police officer'), WHO_SEA = T2('해양경찰관', 'the coast guard officer'), WHO_FIRE = T2('소방관', 'the firefighter');
+export function whoOf(b, k, o) { o = o || {}; if (b !== 'safe') return null; if ((k === 'emerg' && o.k === 'lost') || (k === 'bldg' && o.k === 'police') || (k === 'night' && o.k === 'patrol')) return WHO_POL; if (k === 'emerg' && o.k === 'tide') return WHO_SEA; return WHO_FIRE; }
 export const GIVE = { food: e => e, deco: ['🌰', '🍂', '🧶', '🌻', '🎐'] };
 /* 이미 있는 기록 → 갈래(순수 · 시험이 그대로 부름) · k = REC 갈래 | 'tally:…' | 'st:…'(저장 칸 늘어남) | 'give:…' */
 export function srcOf(k, o) { o = o || {};
@@ -100,6 +103,7 @@ export const ENT_BR = { food: ['noodle', 'kimbap', 'snack', 'chicken', 'cutlet',
   guest: ['realty', 'travel', 'center', 'office', 'terminal', 'inn', 'hall', 'home', 'apt', 'gift', 'laundry', 'salon', 'bath'], safe: ['pharmacy', 'via:clinic', 'machine'] };
 export const entBr = k => B_ORDER.find(b => ENT_BR[b].includes(String(k || ''))) || null;
 const SRC_CAP = { 'st:cells': 1 };   /* 걷기만으로 손님맞이가 다 차지 않게(하루 한 번) */
+const SRC_AUTO = { 'st:cells': 1 };   /* DEB-1 저절로 쌓이는 출처(걷다 새 칸) = '한 걸음' 알림 X · 게시판에만(단계가 서면 안내 띠 'low') */
 export const stageOf = n => Math.min(3, ((n | 0) / PER) | 0);
 
 const CSS = `.twn-p .fst-row{border:3px solid #2b2420;border-left:9px solid var(--fc,#c8423a);border-radius:12px;background:#fffdf6;padding:8px 10px;margin:8px 0}
@@ -131,7 +135,8 @@ export function createFeast(A) {
   const st = b => stageOf(S().lv[b]);
   const stages = () => Object.fromEntries(B_ORDER.map(b => [b, st(b)]));
   const isDay = () => day() === S().fd;
-  const prepOn = () => { const s = S(), d = day(); return s.fd > 0 && d >= s.d0 && (d < s.fd || (d === s.fd && min() < 600)); };
+  const heard = () => { const S0 = G().story, D = S0 && S0.done; return !!(D && D.p0) || !(A.storyOn && A.storyOn()); };   /* DEB-1 '듣기 전엔 조용히': 프롤로그(잔치 도우미 모집)를 끝내야 준비가 셈 · 알림도 */
+  const prepOn = () => { const s = S(), d = day(); return heard() && s.fd > 0 && d >= s.d0 && (d < s.fd || (d === s.fd && min() < 600)); };
   const festOn = () => isDay() && min() >= 600 && min() < 23 * 60;
   const title = () => { const s = S(), th = THEMES[s.th] || THEMES.homi; return s.n === 0 ? (en() ? 'First town feast (' + th.t[1] + ')' : '첫 마을 잔치(' + th.t[0] + ')') : L(th.t); };
   const banT = () => { const s = S(), th = THEMES[s.th] || THEMES.homi; return s.n === 0 ? (en() ? 'Our First Town Feast' : '우리 마을 첫 잔치') : (en() ? 'Our Town ' + th.t[1] : '우리 마을 ' + th.t[0]); };
@@ -232,20 +237,20 @@ export function createFeast(A) {
     const p = A.photo(lab); if (p && p.then) p.then(rec => { if (dead || !rec) return; s.fx.ph = 1; mark(); A.chip('twn-fst', null); chipK = ''; A.rec('feast', { ev: 'photo', d: day() }); if (A.diary) A.diary((e ? 'Took a photo at the ' : '') + lab + (e ? '' : '에서 사진을 찍었어요')); }); log('photo ' + !!p); return p; }
 
   // ───────── 보탬(이미 있는 기록이 들어오는 곳) ─────────
-  function add(b, src, loud) { const s = S(), d = day(), e = en(); if (!b || !BR[b] || !prepOn()) return false; if (!s.dc || s.dc.d !== d) s.dc = { d, b: {}, s: {} };
+  function add(b, src, loud, who) { const s = S(), d = day(), e = en(), auto = !!SRC_AUTO[src]; if (!b || !BR[b] || !prepOn()) return false; const W9 = who || whoOf(b, src) || BR[b].who; if (!s.dc || s.dc.d !== d) s.dc = { d, b: {}, s: {} };
     if ((s.dc.b[b] | 0) >= CAP) { if (loud) A.say(e ? '🎉 That is enough ' + BR[b].t[1].toLowerCase() + ' for today. You can help again tomorrow.' : '🎉 오늘 ' + BR[b].t[0] + ' 몫은 했어요. 내일 또 도울 수 있어요.', 2.6); return false; }
     if (SRC_CAP[src] && (s.dc.s[src] | 0) >= SRC_CAP[src]) return false;
     const n0 = st(b); s.dc.b[b] = (s.dc.b[b] | 0) + 1; s.dc.s[src] = (s.dc.s[src] | 0) + 1; s.lv[b] = (s.lv[b] | 0) + 1; mark(); const n1 = st(b);
     A.rec('feast', { ev: 'prep', b, src: src.slice(0, 20), st: n1 }); log('add ' + b + ' ' + src + ' → ' + s.lv[b]);
-    if (n1 > n0) { build(b + ':' + (n1 - 1)); if (VIS.board && VIS.board.B) VIS.board.B.redraw(); A.banner(BR[b].ic + ' ' + (e ? 'Feast yard: ' : '잔치 마당에 ') + L(BR[b].things[n1 - 1]) + (e ? ' is up' : jo(BR[b].things[n1 - 1][0], '이', '가') + ' 생겼어요'), 4); A.sfx('done');
+    if (n1 > n0) { build(b + ':' + (n1 - 1)); if (VIS.board && VIS.board.B) VIS.board.B.redraw(); A.banner(BR[b].ic + ' ' + (e ? 'Feast yard: ' : '잔치 마당에 ') + L(BR[b].things[n1 - 1]) + (e ? ' is up' : jo(BR[b].things[n1 - 1][0], '이', '가') + ' 생겼어요'), 4, auto ? 'low' : undefined); A.sfx('done');
       chipK = 'see'; chipT = performance.now(); A.chip('twn-fst', '🎉 ' + (e ? 'See the feast yard' : '잔치 마당 보기'), { onClick: () => { A.chip('twn-fst', null); chipK = ''; const p = toDoor(); if (p) A.route(p); } });
       if (A.diary) A.diary(e ? BR[b].t[1] + ': ' + BR[b].things[n1 - 1][1] : BR[b].t[0] + ': ' + BR[b].things[n1 - 1][0] + jo(BR[b].things[n1 - 1][0], '이', '가') + ' 잔치 마당에 생겼어요'); }
-    else A.say(BR[b].ic + ' ' + (e ? 'A step closer for ' + BR[b].t[1].toLowerCase() + ' (' + BR[b].who[1] + ')' : BR[b].t[0] + ' 준비가 한 걸음 나아갔어요(' + BR[b].who[0] + ')'), 2.4, loud ? 0 : 1);
+    else if (!auto) A.say(BR[b].ic + ' ' + (e ? 'A step closer for ' + BR[b].t[1].toLowerCase() + ' (' + W9[1] + ')' : BR[b].t[0] + ' 준비가 한 걸음 나아갔어요(' + W9[0] + ')'), 2.4, loud ? 0 : 1);
     return true; }
   function jo(w, a, b9) { const c = String(w).charCodeAt(String(w).length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? a : b9; }
   function tap(k, o) { if (dead || !A.on() || k === 'feast') return; const s = S(), e = en();
     if (((k === 'janggu' && o && o.s != null) || k === 'busk') && isDay() && s.fx.want === day() && !s.fx.show) { s.fx.show = 1; mark(); A.cheer(); A.banner('🥁 ' + (e ? 'The neighbours clap along to your rhythm on the stage' : '무대에서 친 장단에 이웃들이 손뼉을 쳐요'), 4); A.sfx('done'); A.rec('feast', { ev: 'show', d: day() }); return; }
-    const b = srcOf(k, o); if (b) add(b, k); }
+    const b = srcOf(k, o); if (b) add(b, k, false, whoOf(b, k, o)); }
   /* 저장 칸 늘어남(기록이 따로 없는 것: 새 칸 · 태풍 준비 · 마당 꾸미기) */
   function counters() { const g = G(), d = day(), ty = g.typh && Array.isArray(g.typh.reqs) ? g.typh.reqs.filter(q => q && q.st === 'done').length : 0, cn = { cells: keys(g.cells).length, typ: ty, deco: (Array.isArray(g.deeds) ? g.deeds : []).filter(q => q && q.t === 'deco' && q.d === d).length, d };
     const s = S(), o = s.cn; s.cn = cn; if (!o) return; if (cn.cells > o.cells) add('guest', 'st:cells'); if (cn.typ > o.typ) add('safe', 'st:typh'); if (o.d === d && cn.deco > o.deco) add('deco', 'st:deco'); }
@@ -272,7 +277,7 @@ export function createFeast(A) {
     else if (first && s.n > 0) { A.banner('🎉 ' + (e ? title() + ' in ' + nightsW(n, 1) : title() + '까지 ' + nightsW(n)), 5, 'low'); A.say(afterLine() + ' ' + (e ? BR[b].ask[1] : BR[b].ask[0]), 6, 1); }   /* AFTER-1 두 번째 잔치부터 = 남은 것 · 기념물 · 손님 */
     else if (first) { A.banner('🎉 ' + (e ? title() + ' in ' + nightsW(n, 1) : title() + '까지 ' + nightsW(n)), 5, 'low');   /* FIX-4A 저절로 뜬 안내 띠 = 아이가 한 일의 띠가 오면 자리를 내줌(town_read.js) */ A.say(e ? BR[b].who[1].replace(/^./, c => c.toUpperCase()) + ' put up the feast board: five kinds of preparation. ' + BR[b].ask[1] : BR[b].who[0] + jo(BR[b].who[0], '이', '가') + ' 잔치 준비 게시판을 세웠어요. 준비 다섯 갈래가 있어요. ' + BR[b].ask[0], 5, 1); }
     else A.say('🎉 ' + (e ? nightsW(n, 1).replace(/^./, c => c.toUpperCase()) + ' until the feast. Today, how about ' + BR[b].t[1].toLowerCase() + ' for ' + BR[b].who[1] + '?' : title() + '까지 ' + nightsW(n) + '이에요. 오늘은 ' + BR[b].who[0] + jo(BR[b].who[0], '이', '가') + ' 맡긴 ' + BR[b].t[0] + jo(BR[b].t[0], '을', '를') + ' 해 볼까요?'), 4.5, 1);
-    if (p) { chipK = 'go'; chipT = performance.now(); A.chip('twn-fst', '🎉 ' + (e ? 'Feast board' : '잔치 게시판') + (isDay() ? '' : ' · ' + (e ? nightsW(n, 1) : nightsW(n))), { onClick: () => { A.chip('twn-fst', null); chipK = ''; A.route(p); } }); } log('notice ' + (first ? 'first' : '') + ' ' + b); }
+    if (p && (isDay() || n <= 7 || (A.act4 && A.act4()))) { chipK = 'go'; chipT = performance.now(); A.chip('twn-fst', '🎉 ' + (e ? 'Feast board' : '잔치 게시판') + (isDay() ? '' : ' · ' + (e ? nightsW(n, 1) : nightsW(n))), { onClick: () => { A.chip('twn-fst', null); chipK = ''; A.route(p); } }); } log('notice ' + (first ? 'first' : '') + ' ' + b); }
   /* 잔치 날 모이기(앞 두 줄 · 무대를 봄) */
   function gatherSpots(n) { const P = site(); if (!P) return []; const out = [], [sx, sz] = P.Q(0, -6.6); for (let i = 0; i < n; i++) { const row = i < 6 ? 0 : 1, k = row ? i - 6 : i, cnt = row ? 5 : 6, lx = (k - (cnt - 1) / 2) * 1.5, lz = row ? 0.9 : -1.6, [x, z] = P.Q(lx + (row ? 0.4 : 0), lz); out.push([x, z, Math.atan2(sx - x, sz - z)]); } return out; }
   function feastSec() { const s = S(), e = en(), on = festOn(), m = min();
@@ -291,7 +296,7 @@ export function createFeast(A) {
     { const hk = A.home ? String(A.home() || '') : ''; if (HOMEK === null) HOMEK = hk; else if (hk !== HOMEK) { HOMEK = hk; if (SITE && !festOn()) { rebuild(); log('home → ' + hk); } } }   /* COVER-2: 이야기 4-1 한 표 = 잔치 마당이 그 자리로(잔치 중이면 끝난 뒤) */
     if (isDay() && A.storm && A.storm() && min() < 600) { s.fd++; s.ann = -1; mark(); const t9 = '🌀 ' + (en() ? 'A typhoon is here, so the feast moves to tomorrow.' : '태풍이 와서 잔치를 하루 미뤄요.'); if (!(A.stormNote && A.stormNote(t9))) A.say(t9, 4, 1); log('storm → ' + s.fd); }   /* TYPH-2 = 태풍 날 창 안 한 줄(따로 알림 X) */
     if (!VIS.board) buildAll(); counters();
-    if (A.ready() && !A.busy() && !A.panel()) { if (s.ann0 !== s.n) { s.ann0 = s.n; s.ann = d; mark(); notice(true); } else if (s.ann !== d && min() >= 6 * 60) { s.ann = d; mark(); notice(false); } }
+    if (A.ready() && heard() && !A.busy() && !A.panel()) { if (s.ann0 !== s.n) { s.ann0 = s.n; s.ann = d; mark(); notice(true); } else if (s.ann !== d && min() >= 6 * 60) { s.ann = d; mark(); notice(false); } }
     feastSec(); hots(); lightNow(false);
     const bk = [left(), isDay(), JSON.stringify(stages()), en()].join('|'); if (bk !== BKEY) { BKEY = bk; if (VIS.board && VIS.board.B) VIS.board.B.redraw(); }
     if (chipK && performance.now() - chipT > 90000) { A.chip('twn-fst', null); chipK = ''; } }

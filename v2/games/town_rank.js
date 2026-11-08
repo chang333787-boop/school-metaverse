@@ -77,7 +77,7 @@ export const MISSIONS = {
       did: T2('세 지역의 일터에서 거들었어요.', 'You helped in three different areas.'), card: T2('바다에선 고기잡이와 소금, 들에선 농사, 산에선 버섯과 나무 기르기처럼 자연에 따라 하는 일이 달라요.', 'Fishing and salt by the sea, farming in the fields, mushrooms and trees in the mountains — work follows nature.'), name: T2('⛰ 고장 일꾼', '⛰ Area helper'), use: ['region:env'] },
     9: { kind: 'made', n: 2, t: T2('만든 것을 장터로', 'From work to market'), todo: T2('거든 일터에서 얻은 것을 장터에서 두 번 팔기', 'Twice, sell at a market what you got from helping at work'), how: T2('만드는 사람과 쓰는 사람이 장터에서 만나요', 'Makers and users meet at the market'),
       hint: [T2('일터에서 거들면 그 일터에서 나는 것을 받아요', 'Helping at a workplace gives you what it makes'), T2('받은 것을 들고 장터(🛒)로 가서 팔아요', 'Take it to a market (🛒) and sell it'), T2('미션을 시작한 뒤에 거든 일터의 물건만 세요', 'Only goods from work you helped after starting count')],
-      did: T2('거들어서 얻은 것을 장터에서 두 번 팔았어요.', 'You sold what you made at the market twice.'), card: T2('만드는 일(생산)과 쓰는 일(소비)이 이어져서 물건이 돌아요.', 'Making (production) and using (consumption) link up so goods keep moving.'), name: T2('🤝 장터 일꾼', '🤝 Market helper'), use: ['region:jang'] } },
+      did: T2('거들어서 얻은 것을 장터에서 두 번 팔았어요.', 'You sold what you made at the market twice.'), card: T2('생산(만들고 나르고 파는 일)과 소비(사서 쓰는 일)가 이어져서 물건이 돌아요.', 'Production (making, carrying, selling) and consumption (buying, using) link up so goods keep moving.'), name: T2('🤝 장터 일꾼', '🤝 Market helper'), use: ['region:jang'] } },
 };
 const MI = (k, lv) => (MISSIONS[k] || {})[lv];
 const fill = (s, o) => s.replace(/\{(\w+)\}/g, (m, q) => (o[q] != null ? o[q] : m));

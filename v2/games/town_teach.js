@@ -3,9 +3,9 @@
 //   교사 화면(반 표) = 번호 · 지금 장 · 오늘 한 일 · 남긴 결과물 · 마지막 접속 — 한 줄 = 판 요약(town_tsum.js)
 //     자료 셋: ① 이 기기 판(같은 반 번호 판 + 번호 없는 칸) ② 붙여 넣기(기록 복사하기 JSON 여러 개 · 판 JSON) ③ 서버(반 코드 + 교사 열쇠 → /class · 배포 전이면 안내만)
 //   매 프레임 일 0(창을 열 때만 셈) · 이름 X(번호만) · 교사 열쇠는 이 탭 메모리에만(잠그면 지움)
-import { CHAPTERS } from './town_story.js?v=41';
+import { CHAPTERS } from './town_story.js?v=42';
 import { tsum, tsumDays } from './town_tsum.js?v=2';
-import { pickLabel, dayKey } from './town_rec.js?v=23';
+import { pickLabel, dayKey } from './town_rec.js?v=24';
 import { cloudTeach, cloudOn } from './town_cloud.js?v=6';
 
 const CSS = `.twn-p[data-k=tch]{--rib:#2f4f7a}.twn-p[data-k=tch] .bx{max-height:96vh}
@@ -56,7 +56,7 @@ export function createTeach(A) {
   const rowsGet = () => RS[src] || [], rowsSet = L => { RS[src] = L; };
   const T = (ko, e9) => (en() ? e9 : ko);
   async function open() { if (window.SM_PROMO) return false; if (!A.tchOn()) { const ok = await A.pin(); if (!ok) return false; } home(); return true; }
-  // 선생님 칸(첫 화면) — 단추 넷 + 잠그기
+  // 선생님 칸(첫 화면) — 단추 넷 + 잠그기(닫으면 늘 잠김 · DEB-1)
   function home() { if (!A.tchOn()) return open(); addCss(); const e = en(), due = A.due && A.due();
     const card = (t, d, a, b, cls9) => '<div class="st"><span style="flex:1"><b>' + t + '</b><br><small>' + d + '</small></span><button class="' + (cls9 || 'sub') + '" data-a="' + a + '">' + b + '</button></div>';
     const P = A.openP('<h3>🔒 ' + T('선생님 칸', 'Teacher section') + '</h3><div class="sm">' + T('이 탭은 지금 선생님 모드예요. 다 쓰면 잠그고 아이에게 넘겨요.', 'This tab is in teacher mode. Lock it before handing it back to a pupil.') + '</div>'
@@ -65,12 +65,12 @@ export function createTeach(A) {
       + (due ? card(T('다시 세는 날로 넘기기', 'Skip to the count-again day'), T('며칠 뒤 다시 보는 의뢰를 오늘로 당겨요.', 'Brings the wait-a-few-days request to today.'), 'due', '⏩ ' + T('넘기기', 'Skip')) : '')
       + '<div class="grp">' + T('날씨와 계절', 'Weather and season') + '</div>' + card(T('날씨·계절 바꾸기', 'Change weather or season'), T('수업에서 비, 눈, 계절을 보여 줄 때 써요. 아이 화면에는 달력대로·예보대로 돌아가기만 있어요.', 'For showing rain, snow or a season in class. Pupils only see “back to calendar / forecast”.'), 'wx', '🌦 ' + T('날씨 창', 'Weather'))
       + '<div class="grp">' + T('이 기기 기록', 'This device') + '</div>' + card(T('학급 기록(이 기기)', 'Class record (this device)'), T('최근 14일 단계, 힌트, 고른 것, 한 줄 카드예요. 복사해서 반 표에 붙여 넣을 수 있어요.', 'Last 14 days of steps, hints, choices and line cards. Copy it into the class table.'), 'rec', '📊 ' + T('열기', 'Open'))
-      + '<div class="row"><button class="sub" data-a="lock">🔒 ' + T('잠그고 닫기', 'Lock and close') + '</button><button class="sub" data-a="x">' + T('닫기', 'Close') + '</button></div>', false, 'tch');
+      + '<div class="row"><button class="sub" data-a="lock">🔒 ' + T('잠그고 닫기', 'Lock and close') + '</button></div>', false, 'tch');   /* DEB-1(11-08): '닫기' 단추 X — 선생님 칸을 닫는 길(✕·Esc·바깥 포함 · town.js closeP)은 모두 잠금 · 잠그지 않고 닫아 그 탭만 순간이동 무제한·칩 다 열림으로 남던 것 */
     P.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; const a = b.dataset.a;
-      if (a === 'x') return A.closeP(); if (a === 'lock') return lock();
+      if (a === 'x' || a === 'lock') return lock();
       if (!A.tchOn()) { A.closeP(); return open(); }   /* 다른 탭에서 잠갔으면 다시 묻기 */
       if (a === 'board') return board(); if (a === 'ch') return A.chapters(() => home()); if (a === 'due') { A.closeP(); A.dueSkip(); A.say(T('⏩ 다시 세는 날로 넘겼어요', '⏩ Skipped to the count-again day'), 2.4); return; }
-      if (a === 'wx') { A.closeP(); A.wx(); return; } if (a === 'rec') { A.rec(); return; } };
+      if (a === 'wx') { A.wx(); return; }   /* 창을 바꿈(닫기 X = 잠금 X) — 날씨 창의 계절 단추가 선생님 모드로 보이게 */ if (a === 'rec') { A.rec(); return; } };
     return P; }
   function lock() { tkey = ''; RS.dev = []; RS.paste = []; RS.cloud = []; src = 'dev'; paste = ''; pN = 0; claim = 0; A.tchOff(); A.closeP(); A.say(T('🔒 선생님 칸을 잠갔어요', '🔒 Teacher section locked'), 2.4); }
   // ① 이 기기 판: 같은 반(반 코드) 번호 판 + 번호 없는 칸(칸 1~3) — 이 탭 판은 지금 상태 그대로

@@ -32,6 +32,12 @@ const CSS = `
 .lb-ask input.pin{font-size:30px;font-weight:800;letter-spacing:.45em;text-align:center;padding:8px 0 8px .45em;margin:8px 0 2px}
 .lb-ask input.pin::placeholder{font-size:15px;font-weight:600;letter-spacing:0;color:#9aa7b6}
 .lb-ask .err{min-height:1.5em;color:#c92a2a;font-size:13px;font-weight:700}
+.lb-ask .lb-pop{background:#fff8ea;color:#2b2420;border:4px solid #2b2420;border-radius:18px;box-shadow:0 7px 0 #2b2420,0 22px 44px rgba(0,0,0,.3);padding:14px 18px 16px}
+.lb-ask .lb-pop h4{font-size:19px;font-weight:900}
+.lb-ask input.pin{border:3px solid #2b2420;border-radius:12px;background:#fff;color:#2b2420;width:100%;box-sizing:border-box}
+.lb-ask .lb-pop button{font-weight:800;font-size:15px;color:#fff;background:#3f8f4e;border:3px solid #2b2420;border-radius:12px;padding:7px 14px;min-height:44px;box-shadow:0 4px 0 #2b2420;cursor:pointer}
+.lb-ask .lb-pop button:active{transform:translateY(3px);box-shadow:0 1px 0 #2b2420}
+.lb-ask .lb-pop button.sub{background:#f4e6c8;color:#2b2420}
 `;
 // UX-1(10-05 교사 편의성): 창 안 알림 줄(.msg — 오프닝 메뉴 위에서도 보임) · 방 놀이 '▶ 같이 하기' 큰 단추 · 칩 강조 · 터치 44px — 따로 붙임(메모장·블록 놀이가 읽는 옛 판 lobby.js가 먼저 lb-css를 붙여도 빠지지 않게)
 const CSS2 = `
@@ -90,6 +96,10 @@ for (const t of ['keydown', 'keypress']) addEventListener(t, (e) => {
   if (e.key === 'Enter') { e.preventDefault(); w._ok && w._ok(); } else if (e.key === 'Escape') { e.preventDefault(); w._x && w._x(); }
 }, true);
 
+// DEB-1(11-08 토론 판정 20): 선생님 비밀번호 세 번 틀리면 1분 쉼 — 이 탭 sessionStorage 'sm.tpf' {n, until}(새로고침해도 이어짐) · 맞히면 0
+const PINF = 'sm.tpf', pinGet = () => { try { const j = JSON.parse(ss.get(PINF) || 'null'); return j && typeof j === 'object' ? j : { n: 0, until: 0 }; } catch (e) { return { n: 0, until: 0 }; } };
+const pinWait = () => { const j = pinGet(), left = Math.ceil(((j.until || 0) - Date.now()) / 1000); return left > 0 ? '세 번 틀려서 잠시 쉬어요 — ' + left + '초 뒤에 다시 넣어 주세요' : null; };
+const pinMiss = (bad) => { if (!bad) { ss.set(PINF, JSON.stringify({ n: 0, until: 0 })); return null; } const j = pinGet(), n = (j.n | 0) + 1; if (n >= 3) { ss.set(PINF, JSON.stringify({ n: 0, until: Date.now() + 60000 })); return '세 번 틀렸어요 — 1분 뒤에 다시 넣어 주세요'; } ss.set(PINF, JSON.stringify({ n, until: 0 })); return '비밀번호가 달라요 — 다시 넣어 주세요(' + (3 - n) + '번 남음)'; };
 // 선생님 비밀번호(메모장·블록 놀이와 같은 memoPin) — 이 탭에서 한 번 맞히면 sessionStorage sm.t + 'sm-teacher' 알림(열려 있는 놀이도 바로 선생님 모드로)
 //   돌려줌: false = 안 됨 · true = 맞힘(또는 이미 맞힘) · 'new' = 처음 정함
 export async function teacherPin(toast = () => {}) {
@@ -102,7 +112,7 @@ export async function teacherPin(toast = () => {}) {
     if (!(await askPin('한 번 더 넣어 주세요', { check: (v) => v === a ? null : '처음 넣은 것과 달라요 — 다시 넣거나, 취소하고 처음부터 해요' }))) return false;
     try { await req('/memoPin', 'PUT', await hash(a)); } catch (e) { toast('저장하지 못했어요'); return false; }
     r = 'new';
-  } else if (!(await askPin('선생님 비밀번호', { check: async (v) => (await hash(v)) === saved ? null : '비밀번호가 달라요 — 다시 넣어 주세요' }))) return false;
+  } else if (!(await askPin('선생님 비밀번호', { check: async (v) => { const w = pinWait(); if (w) return w; if ((await hash(v)) === saved) { pinMiss(0); return null; } return pinMiss(1); } }))) return false;   /* DEB-1: 세 번 틀리면 1분 쉼(아이가 숫자를 끝없이 찍지 않게) */
   ss.set('sm.t', '1'); dispatchEvent(new CustomEvent('sm-teacher')); return r;
 }
 

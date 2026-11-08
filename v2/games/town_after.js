@@ -11,8 +11,8 @@
 //   저장 GAME.S.aft = { v, tr: { d 붙은 날, n 몇 번째, ph 단계, A·B·C { k, x, z, r }, a·b·c 물건, wr 틀린 수, re 다시 받음, done 끝낸 수, log [{ d, r [A,B,C], e [a,b,c] }] }, ti: { got { 열쇠: 날 }, pick, at { 열쇠: [x, z] }, gd { 열쇠: 날 } } }
 import { regName } from './town_region.js?v=1';
 import { SKILLS, SK_ORDER, levelOf } from './town_skill.js?v=5';
-import { EV, yrWord } from './town_season.js?v=6';
-import { nightsW } from './town_feast.js?v=8';
+import { EV, yrWord } from './town_season.js?v=7';
+import { nightsW } from './town_feast.js?v=9';
 export const AFTER_V = 1;
 const T2 = (ko, en) => [ko, en];
 const keys = o => (o && typeof o === 'object' && !Array.isArray(o) ? Object.keys(o) : []);
