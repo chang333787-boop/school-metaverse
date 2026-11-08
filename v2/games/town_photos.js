@@ -49,7 +49,7 @@ export const PHOTOS = {
   'fish:pirami': P('fish_pirami.jpg', '피라미 수컷(알 낳을 때의 고운 빛깔)', 'Pale chub male in breeding colours', 'かわむっちゃん', 'CC BY-SA 3.0', 'https://commons.wikimedia.org/wiki/File:%E3%82%AA%E3%82%A4%E3%82%AB%E3%83%AF.JPG'),
   'fish:megi': P('fish_megi.jpg', '메기', 'Amur catfish', '뭘로할까', 'CC BY-SA 4.0', 'https://commons.wikimedia.org/wiki/File:%ED%95%9C%EA%B5%AD%EB%A9%94%EA%B8%B0.jpg'),
   /* 바다 친구 */
-  '🐙': P('sea_octopus.jpg', '문어(바닷속 바위 곁)', 'Common octopus by the rocks', 'Diego Delso', 'CC BY-SA 4.0', 'https://commons.wikimedia.org/wiki/File:Pulpo_com%C3%BAn_(Octopus_vulgaris),_Parque_natural_de_la_Arr%C3%A1bida,_Portugal,_2020-07-21,_DD_33.jpg'),
+  '🐙': P('sea_octopus.jpg', '문어(바닷속 바위 옆)', 'Common octopus by the rocks', 'Diego Delso', 'CC BY-SA 4.0', 'https://commons.wikimedia.org/wiki/File:Pulpo_com%C3%BAn_(Octopus_vulgaris),_Parque_natural_de_la_Arr%C3%A1bida,_Portugal,_2020-07-21,_DD_33.jpg'),
   /* 식물·작물 */
   '🍓': P('plant_strawberry.jpg', '밭에서 익은 딸기', 'Strawberries ripening in a garden', 'Kora27', 'CC BY-SA 4.0', 'https://commons.wikimedia.org/wiki/File:Erdbeeren_im_Garten_2H1A9599WI.jpg'),
   '🥔': P('plant_potato.jpg', '갓 캔 감자', 'Freshly dug potatoes', 'Rasbak', 'CC BY-SA 3.0', 'https://commons.wikimedia.org/wiki/File:Aardappel_%27Dor%C3%A9%27_(Solanum_tuberosum_%27Dor%C3%A9%27).jpg'),

@@ -39,8 +39,8 @@ export const CAUSE = {
     clue: T2('가스레인지 위 냄비가 까맣게 탔고, 불이 켜진 채였어요.', 'The pan on the stove is burnt black, and the burner was still on.'),
     tip: T2('요리할 땐 자리를 비우지 않아요. 기름 불엔 물을 붓지 말고 뚜껑을 덮어요.', 'Never leave cooking alone. Do not pour water on an oil fire — cover it with a lid.'),
     next: T2('어제 불난 집 이웃이 부엌에 주방용 소화기를 두었어요. 요리할 땐 자리를 지킨대요', 'Yesterday’s fire house put a kitchen extinguisher by the stove. They will stay by the stove from now on') },
-  heater: { k: 'gen', icon: '♨️', t: T2('난로 곁 빨래', 'Laundry by the heater'), types: ['house', 'apt', 'store'], noSummer: true,
-    say: T2('젖은 빨래를 빨리 말리려고 난로 바로 곁에 널어 두었어요.', 'I hung wet laundry right by the heater to dry it fast.'),
+  heater: { k: 'gen', icon: '♨️', t: T2('난로 옆 빨래', 'Laundry by the heater'), types: ['house', 'apt', 'store'], noSummer: true,
+    say: T2('젖은 빨래를 빨리 말리려고 난로 바로 옆에 널어 두었어요.', 'I hung wet laundry right by the heater to dry it fast.'),
     clue: T2('난로 바로 앞 빨래 건조대가 타서 휘어 있어요.', 'The drying rack right in front of the heater is burnt and bent.'),
     tip: T2('난로 둘레에는 옷·이불·종이처럼 탈 것을 두지 않아요.', 'Keep clothes, blankets and paper away from heaters.'),
     next: T2('어제 불난 곳 이웃이 난로 둘레에 안전 울타리를 쳤어요. 빨래는 햇볕에 말린대요', 'Yesterday’s fire place put a safety guard round the heater. Laundry dries in the sun now') },
@@ -103,7 +103,7 @@ export const TASK = {
   spot: T2('옆 불티 자리 막기', 'Stop the sparks next door'),
   guide: T2('이웃 대피 안내', 'Guide the neighbours to safety'),
   ladder: T2('사다리 펴기', 'Raise the ladder'),
-  watch: T2('소방차 곁에서 구경하기', 'Stand by the engine and watch'),
+  watch: T2('소방차 옆에서 구경하기', 'Stand by the engine and watch'),
 };
 
 // 씨앗 꼴(같은 날·같은 판 수 = 같은 판 · 시험에서 되풀이)

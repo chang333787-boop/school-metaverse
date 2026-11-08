@@ -60,7 +60,7 @@ const SURP = [
     log: T2('오전에 해를 등지고 폭포를 보니 물보라에 무지개가 떴어요', 'In the morning, back to the sun, saw a rainbow in the waterfall spray') },
   { id: 'crab', ic: '🦀', land: '바다', at: { k: 'ipool', r: 7 }, when: { m: [360, 1140], tide: 'low' }, how: 'still', n: 3, fx: 'splash', sk: 'look',
     t: T2('웅덩이 속 작은 게', 'A little crab in the pool'), fact: T2('썰물 때 바위 틈에 남은 바닷물에서 게가 지내요. 보기만 하고 그대로 둬요', 'At low tide, crabs live in the seawater left between rocks. Just watch and leave them be'),
-    log: T2('썰물 때 섬 웅덩이 곁에 가만히 있으니 작은 게가 집게발을 흔들었어요', 'At low tide, stood still by the island pool and a little crab waved its claws') },
+    log: T2('썰물 때 섬 웅덩이 옆에 가만히 있으니 작은 게가 집게발을 흔들었어요', 'At low tide, stood still by the island pool and a little crab waved its claws') },
   { id: 'salt', ic: '🧂', land: '바다', at: { re: /염전/, r: 36 }, when: { m: [660, 900], wx: 'clear', sea: ['spring', 'summer', 'autumn', 'fall'] }, how: 'still', n: 3, fx: 'sparkle', sk: 'look',
     t: T2('소금꽃', 'Salt flowers'), fact: T2('바닷물이 햇볕에 마르면 소금 알갱이가 꽃처럼 피어나요', 'When seawater dries in the sun, salt crystals bloom like flowers'),
     log: T2('맑은 한낮 염전에서 하얀 소금 알갱이가 반짝이는 것을 봤어요', 'On a clear midday at the salt pan, saw white salt crystals sparkle') },

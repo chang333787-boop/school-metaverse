@@ -14,9 +14,9 @@ export const RWT = {
   work: {
     2: I('gloves', '🧤', 'gear', T2('목장갑', 'Work gloves'), T2('밧줄·쇠사슬 바위를 더 빨리 오르고 손이 덜 지쳐요', 'Climb rope and chain rocks faster, and your hands tire less'), { go: 'spot:climb' }),
     3: I('h:straw', '👒', 'hat', T2('밀짚모자', 'Straw hat'), T2('햇볕을 가려 주는 일꾼 모자예요', 'A worker’s hat that keeps the sun off'), { go: 'wear' }),
-    4: I('n:work', '🏷', 'nick', T2('이웃이 부르는 이름 「든든한 일손」', 'Neighbours call you “Reliable Hands”'), T2('일꾼 이웃 곁에 가면 알아보고 말을 걸어요', 'Worker neighbours recognise you and say something when you come close'), { go: 'spot:worker' }),
+    4: I('n:work', '🏷', 'nick', T2('이웃이 부르는 이름 「든든한 일손」', 'Neighbours call you “Reliable Hands”'), T2('일꾼 이웃 옆에 가면 알아보고 말을 걸어요', 'Worker neighbours recognise you and say something when you come close'), { go: 'spot:worker' }),
     5: { pick: [I('b:work', '🚲', 'bike', T2('자전거 밀짚색', 'Straw bike'), T2('자전거 뼈대를 밀짚색으로 칠해요', 'Paint your bike frame straw yellow'), { go: 'ride' }), I('g:work', '🎒', 'bag', T2('가방 밀짚색', 'Straw backpack'), T2('메고 다니는 가방이 밀짚색이 돼요', 'Your backpack turns straw yellow'), { go: 'wear' })] },
-    6: I('broom2', '🧹', 'gear', T2('넓은 빗자루', 'Wide broom'), T2('한 번 쓸 때 곁(3m)에 있는 낙엽·눈·쓰레기까지 같이 쓸려요', 'One sweep also clears leaves, snow or litter within 3 m'), { go: 'hold:broom' }),
+    6: I('broom2', '🧹', 'gear', T2('넓은 빗자루', 'Wide broom'), T2('한 번 쓸 때 옆(3m)에 있는 낙엽·눈·쓰레기까지 같이 쓸려요', 'One sweep also clears leaves, snow or litter within 3 m'), { go: 'hold:broom' }),
     7: I('f:work', '🚩', 'flag', T2('자전거 깃발 🌾', 'Bike flag 🌾'), T2('자전거 뒤에 일솜씨 깃발을 달아요', 'A helping-hands flag on the back of your bike'), { go: 'ride' }),
     8: I('d:🌻', '🌻', 'deco', T2('해바라기 화분', 'Sunflower pot'), T2('가방에 넣었어요. 우리 집 마당 자리에 놓아 보세요', 'It is in your bag. Put it in your yard'), { e: '🌻', go: 'spot:home' }),
     9: I('s:work', '🧣', 'scarf', T2('목수건 밀짚색', 'Straw neckerchief'), T2('땀을 닦는 일꾼 목수건이에요', 'A worker’s neckerchief for wiping sweat'), { go: 'wear' }),
@@ -157,7 +157,7 @@ export function createReward(A) {
     return { hat: pick('hat', 'h:'), scarf: pick('scarf', 's:'), bag: pick('bag', 'g:'), boots: has('boots') ? info('boots') : has('hike') ? info('hike') : null, lamp: has('lamp') && !r.lampOff, sig: [r.hat, r.scarf, r.bag, has('lamp') && !r.lampOff ? 1 : 0].join('|') }; }
   function effects() { const e = en(), r = S(), E = [], add = (id, ic, ko, en9) => { if (has(id)) E.push({ id, ic, t: e ? en9 : ko }); };
     add('gloves', '🧤', '오르기 +35% · 덜 지침', 'Climbing +35%, tire less'); add('hike', '🥾', '오르막 달리기 숨 ½', 'Uphill running breath ½'); add('flask', '🥤', '숨 돌아옴 1.5배', 'Breath back ×1.5'); add('lunch', '🍱', '먹은 힘 1.5배 오래', 'Food energy lasts ×1.5');
-    add('boots', '🥾', '갯벌·논에서 안 느려짐', 'No slowdown in mud or paddies'); add('tank', '💧', '물뿌리개 물 2배', 'Watering can ×2'); add('rod2', '🎣', '낚싯대 14m까지', 'Cast up to 14 m'); add('broom2', '🧹', '빗자루 곁 3m까지', 'Broom clears 3 m around');
+    add('boots', '🥾', '갯벌·논에서 안 느려짐', 'No slowdown in mud or paddies'); add('tank', '💧', '물뿌리개 물 2배', 'Watering can ×2'); add('rod2', '🎣', '낚싯대 14m까지', 'Cast up to 14 m'); add('broom2', '🧹', '빗자루 옆 3m까지', 'Broom clears 3 m around');
     if (has('lamp') && !r.lampOff) E.push({ id: 'lamp', ic: '🔦', t: e ? 'Head lamp at night' : '밤에 이마 전등' }); add('book', '📒', '장터마다 값 방위', 'Which market pays more'); if (has('stall')) E.push({ id: 'stall', ic: '🧺', t: e ? 'Market mat: ' + stMax() + ' spaces' : '좌판 ' + stMax() + '칸' });
     return E; }
   function bagClick(b) { if (A.promo()) return false; const d = b.dataset, r = S();

@@ -72,7 +72,7 @@ export const CASES = {
     words: [[T2('보도', 'Pavement'), T2('사람이 걸어 다니도록 찻길과 나누어 만든 길', 'The part of a street made for people to walk on, apart from the cars')], [T2('시야', 'Line of sight'), T2('눈으로 볼 수 있는 넓이', 'How far and wide your eyes can see')]],
     clues: ['sr_truck', 'sr_mud', 'sr_pile', 'sr_gap', 'sr_nbr', 'sr_crew'], chkOnly: ['sr_slow', 'sr_lamp', 'sr_cross'], lead0: 'sr0',
     hyps: [{ k: 'speed', t: T2('트럭이 너무 빨리 달려서 위험해요', 'The trucks drive too fast'), chk: 'slow', fk: 'sr_slow', no: T2('입구 앞 찻길에 과속 방지 턱과 "천천히" 표지가 있어 트럭이 빨리 달릴 수 없어요. 빨라서 위험한 것은 아니었어요.', 'There is a speed bump and a “Slow” sign by the gate, so trucks cannot go fast there. Speed was not it.') },
-      { k: 'dark', t: T2('저녁에 길이 어두워서 위험해요', 'The road is too dark in the evening'), chk: 'lamp', fk: 'sr_lamp', no: T2('입구 곁에 가로등이 둘 서 있어요. 아이들이 학교 가는 아침엔 해가 떠서 밝아요. 어두워서 위험한 것은 아니었어요.', 'There are two street lamps by the gate, and the morning school walk is in daylight. Darkness was not it.') },
+      { k: 'dark', t: T2('저녁에 길이 어두워서 위험해요', 'The road is too dark in the evening'), chk: 'lamp', fk: 'sr_lamp', no: T2('입구 옆에 가로등이 둘 서 있어요. 아이들이 학교 가는 아침엔 해가 떠서 밝아요. 어두워서 위험한 것은 아니었어요.', 'There are two street lamps by the gate, and the morning school walk is in daylight. Darkness was not it.') },
       { k: 'cross', t: T2('아이들이 다니는 때에 트럭이 드나들고, 보도가 끊기고, 자재가 눈을 가려요', 'Trucks come and go while children walk by, the pavement breaks off, and building materials block the view'), chk: 'c', fk: 'sr_cross', ok: 1 }],
     sup: ['sr_truck', 'sr_pile', 'sr_gap', 'sr_cross'], repTo: 'hall', lateMax: 2, lateOn: () => true,   /* 늦으면 = 기한 다음 날 하루 보도 막힘(길 건너편으로 돌아감) */
     fixes: [{ k: 'fix', ok: 1, t: T2('등교 때(아침 8~9시)는 트럭이 쉬고, 끊긴 자리에 울타리 친 보도를 내고, 자재를 안쪽으로 옮겨요', 'Trucks rest during the school walk (8–9 am), a fenced path fills the gap, and the materials move inside') },
@@ -104,7 +104,7 @@ export const CL = {
   ty_walk: { f: 'fact', ic: '🧭', who: T2('내가 걸어 본 것', 'What I walked'), t: T2('내가 직접 걸어 보니 강가 낮은 곳과 가파른 비탈을 안 지나요.', 'I walked it myself: no low riverside ground, no steep slope.') },
   far: { f: 'fact', ic: '💧', t: T2('비는 똑같이 왔는데 먼 호숫가 물은 맑았어요.', 'The same rain fell, but the far shore was clear.') },
   // ⚖️ 사라진 장터 저울 — 글에 자리(방위·곳 이름)가 들어가는 것은 함수(p = 사건 자리)
-  track: { f: 'fact', ic: '👣', t: p => T2('판매대 앞 바닥에 저울 받침 자국 넷이 있고, 그 곁에서 수레 바퀴 자국이 ' + DIR8[p.dir][0] + '쪽으로 나 있어요.', 'By the stall there are four marks from the scale’s feet, and cart wheel tracks lead off to the ' + DIR8[p.dir][1] + '.') },
+  track: { f: 'fact', ic: '👣', t: p => T2('판매대 앞 바닥에 저울 받침 자국 넷이 있고, 그 옆에서 수레 바퀴 자국이 ' + DIR8[p.dir][0] + '쪽으로 나 있어요.', 'By the stall there are four marks from the scale’s feet, and cart wheel tracks lead off to the ' + DIR8[p.dir][1] + '.') },
   bus: { f: 'fact', ic: '🚏', t: T2('장터 앞 정류장 시간표를 보니 마지막 버스는 저녁 6시 10분이에요.', 'The timetable at the market bus stop says the last bus is at 6:10 pm.') },
   wit: { f: 'idea', ic: '🗣', who: T2('정자 이웃', 'the neighbour at the pavilion'), t: p => T2('정자 이웃: "어제 마지막 버스를 기다리는데, 버스가 오기 조금 전에 장터에서 수레 끄는 소리가 ' + DIR8[p.dir][0] + '쪽으로 났어요. 누가 저울을 가져간 걸까요?"', 'Pavilion neighbour: “Yesterday, while I waited for the last bus, just before it came I heard a cart going ' + DIR8[p.dir][1] + ' from the market. Did someone take the scale?”') },
   nbr: { f: 'idea', ic: '🗣', who: T2('옆 가게 이웃', 'the neighbour at the next stall'), t: p => T2('옆 가게 이웃: "아, 그 바퀴 자국은 제 수레예요! 어제 저녁에 저울 눈금이 0에 안 맞길래 ' + p.fix.name + '에 맡겼어요. 아차, 상인에게 말을 못 했네요."', 'Next-stall neighbour: “Oh, those are my cart tracks! Yesterday evening the scale did not read zero, so I took it to the ' + p.fix.name + '. Oops, I forgot to tell the seller.”') },
@@ -113,14 +113,14 @@ export const CL = {
   roll: { f: 'fact', ic: '🔎', t: T2('판매대 뒤 낮은 곳까지 살펴봤는데 저울이 없고, 받침 자국도 반듯하게 남아 있어요.', 'I looked down in the low ground behind the stall: no scale, and the foot marks are still neat.') },
   lost: { f: 'fact', ic: '🔎', t: p => T2(p.lost.name + ' 분실물 장부에 저울은 없어요.', 'There is no scale in the lost-and-found book at the ' + p.lost.name + '.') },
   // 🚧 공사장 길 안전 — 본 것 넷(지켜보기는 몸으로) · 들은 생각 둘(그럴듯하지만 틀린 의견) · 확인 자리에서만 얻는 본 것 셋
-  sr_truck: { f: 'fact', ic: '🚚', t: T2('입구 곁에 서서 지켜보니, 아이들이 학교 가는 아침 8시~9시에 흙 실은 트럭이 입구를 드나들어요.', 'Standing by the gate I watched: from 8 to 9 am, when children walk to school, soil trucks go in and out.') },
+  sr_truck: { f: 'fact', ic: '🚚', t: T2('입구 옆에 서서 지켜보니, 아이들이 학교 가는 아침 8시~9시에 흙 실은 트럭이 입구를 드나들어요.', 'Standing by the gate I watched: from 8 to 9 am, when children walk to school, soil trucks go in and out.') },
   sr_mud: { f: 'fact', ic: '👣', t: T2('입구 앞 찻길에 트럭 바퀴에서 떨어진 흙이 깔려 있어요. 밟아 보니 미끄러워요.', 'Soil from the truck wheels covers the road by the gate. It is slippery underfoot.') },
-  sr_pile: { f: 'fact', ic: '📦', t: T2('보도 곁에 공사 자재가 어른 키보다 높게 쌓여 있어요. 아이 눈높이에서는 입구에서 나오는 트럭이 안 보여요.', 'Building materials are piled higher than a grown-up by the pavement. At a child’s eye height you cannot see trucks coming out of the gate.') },
+  sr_pile: { f: 'fact', ic: '📦', t: T2('보도 옆에 공사 자재가 어른 키보다 높게 쌓여 있어요. 아이 눈높이에서는 입구에서 나오는 트럭이 안 보여요.', 'Building materials are piled higher than a grown-up by the pavement. At a child’s eye height you cannot see trucks coming out of the gate.') },
   sr_gap: { f: 'fact', ic: '🚶', t: T2('입구 앞에서 보도가 끊겨 있어요. 걷는 사람은 트럭이 나오는 길로 내려서야 해요.', 'The pavement stops at the gate. People on foot must step into the trucks’ way.') },
   sr_nbr: { f: 'idea', ic: '🗣', who: T2('그 길을 자주 지나는 이웃', 'the neighbour who often walks that road'), t: T2('그 길을 자주 지나는 이웃: "트럭이 너무 빨리 달려서 위험한 거예요. 빠르기만 줄이면 될 거예요."', 'Neighbour who often walks there: “The trucks are just too fast. Slow them down and it will be fine.”') },
   sr_crew: { f: 'idea', ic: '🗣', who: T2('공사 일꾼', 'the site worker'), t: T2('공사 일꾼: "우리 트럭은 아침에만 흙을 날라요. 천천히 다니니까 괜찮아요. 저녁에 길이 어두운 게 문제 아닐까요?"', 'Site worker: “Our trucks only carry soil in the morning, and they go slowly. Isn’t the dark road in the evening the problem?”') },
   sr_slow: { f: 'fact', ic: '🔎', t: T2('입구 앞 찻길에 과속 방지 턱이 있고 "공사 차량 천천히" 표지가 서 있어요.', 'There is a speed bump by the gate and a “Works vehicles: slow” sign.') },
-  sr_lamp: { f: 'fact', ic: '🔎', t: T2('입구 곁에 가로등이 둘 서 있어요. 아이들은 해가 뜬 밝은 아침에 이 길로 다녀요.', 'Two street lamps stand by the gate, and children walk here in the bright morning.') },
+  sr_lamp: { f: 'fact', ic: '🔎', t: T2('입구 옆에 가로등이 둘 서 있어요. 아이들은 해가 뜬 밝은 아침에 이 길로 다녀요.', 'Two street lamps stand by the gate, and children walk here in the bright morning.') },
   sr_cross: { f: 'fact', ic: '🔎', t: T2('끊긴 보도 자리에 아이 눈높이로 서 보니, 자재 더미에 가려 입구 쪽이 안 보이고 바로 앞이 트럭이 나오는 길이에요.', 'Standing at child height where the pavement breaks, the pile hides the gate, and the trucks’ way is right in front of me.') },
   shelf: { f: 'fact', ic: '🔎', t: p => T2(p.fix.name + ' 선반에 "장터" 이름표를 단 저울이 있고, 눈금을 0에 다시 맞춰 두었어요.', 'On a shelf at the ' + p.fix.name + ' is a scale tagged “market”, with its marks set back to zero.') },
 };
@@ -143,9 +143,9 @@ const LEAD = {
   sc_nbr: p => [T2('저울을 맡겼다는 ' + p.fix.name + '(' + p.fix.cell + ' 칸)에 가서 장부를 직접 봐요(9~18시).', 'Go and read the book at the ' + p.fix.name + ' (' + p.fix.cell + ') yourself (9 am–6 pm).')],
   // 🚧 공사장 길 안전(빨간 선 X · 칸 이름과 '흙막이 세운 공사장'만)
   sr0: p => [T2('흙막이를 세운 공사장(' + p.cell + ' 칸) 입구 앞 길을 따라 걸으며 위험한 곳을 찾아봐요.', 'Walk along the road by the gate of the silt-fenced site (' + p.cell + ') and look for danger spots.'),
-    T2('트럭이 언제 다니는지는 입구 곁에 서서 지켜봐야 알 수 있어요.', 'To know when the trucks run, stand by the gate and watch.'),
+    T2('트럭이 언제 다니는지는 입구 옆에 서서 지켜봐야 알 수 있어요.', 'To know when the trucks run, stand by the gate and watch.'),
     T2('그 길을 자주 지나는 이웃(' + p.nb.cell + ' 칸에서 일해요)과 공사 일꾼(낮)에게도 물어봐요.', 'Ask the neighbour who often walks that road (works in ' + p.nb.cell + ') and the site worker (daytime) too.')],
-  sr_crew: () => [T2('공사 일꾼은 트럭이 아침에만 다닌대요. 아침에 입구 곁에 서서 지켜봐요.', 'The site worker says the trucks run only in the morning. Stand by the gate in the morning and watch.')],
+  sr_crew: () => [T2('공사 일꾼은 트럭이 아침에만 다닌대요. 아침에 입구 옆에 서서 지켜봐요.', 'The site worker says the trucks run only in the morning. Stand by the gate in the morning and watch.')],
   sc_wit: () => [T2('정자 이웃은 마지막 버스가 오기 조금 전에 들었대요. 그때가 몇 시인지 정류장 시간표로 알아봐요.', 'The pavilion neighbour heard it just before the last bus. Check the bus stop timetable for the time.')],
 };
 
@@ -453,7 +453,7 @@ export function createCase(A) {
 
   // 🚧 공사장 길 E 자리(단서 자리엔 빨간 선 X · 확인 자리만) — 지켜보기 = 그 시각(8~9시)에 그 자리에 서 있어야(1초 칸이 셈 · 떠나면 처음부터)
   function hotSite(q) { const e = en(), open = !!(q && q.st === 'open'), p = q && q.pl, done9 = !!(q && q.fixD && day() >= q.fixD);
-    hot('sr_watch', open && !q.clues.sr_truck && !q.watch, p && p.watch.x, p && p.watch.z, '🔍 ' + (e ? 'Stand by the gate and watch' : '입구 곁에 서서 지켜보기'), () => watchStart(), 2.0);
+    hot('sr_watch', open && !q.clues.sr_truck && !q.watch, p && p.watch.x, p && p.watch.z, '🔍 ' + (e ? 'Stand by the gate and watch' : '입구 옆에 서서 지켜보기'), () => watchStart(), 2.0);
     hot('sr_mud', open, p && p.mud.x, p && p.mud.z, '🔍 ' + (e ? 'Look at the road surface' : '길바닥 살펴보기'), () => clue('sr_mud', 'look'), 2.0);
     hot('sr_pile', open, p && p.pile.x, p && p.pile.z, '🔍 ' + (e ? 'Look at the pile of materials' : '쌓인 자재 살펴보기'), () => clue('sr_pile', 'look'), 2.4);
     hot('sr_gap', open, p && p.c.x, p && p.c.z, q && q.hyp === 'cross' ? '🔎 ' + (e ? 'Stand at child height where it breaks' : '끊긴 보도에 아이 눈높이로 서 보기') : '🔍 ' + (e ? 'Look at the pavement' : '보도 살펴보기'), () => (q.hyp === 'cross' ? check('cross') : clue('sr_gap', 'look')), 1.8);

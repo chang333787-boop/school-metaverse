@@ -126,7 +126,7 @@ export function createTreasure(A) {
   const jo = (w, a, b) => { const k = String(w).charCodeAt(String(w).length - 1); return k >= 0xAC00 && k <= 0xD7A3 && (k - 0xAC00) % 28 ? a : b; };
   // ── 지시문 한 문장 ──
   function say(c, short) { const e = en();
-    if (c.lv === 1) return short ? (e ? '✕ is beside a symbol — check the legend' : '✕ 곁 기호를 범례에서 찾아요') : (e ? 'Find what the symbol next to ✕ means in the legend, then go there.' : '범례에서 ✕ 곁 기호의 뜻을 찾아 그곳으로 가요.');
+    if (c.lv === 1) return short ? (e ? '✕ is beside a symbol — check the legend' : '✕ 옆 기호를 범례에서 찾아요') : (e ? 'Find what the symbol next to ✕ means in the legend, then go there.' : '범례에서 ✕ 옆 기호의 뜻을 찾아 그곳으로 가요.');
     if (c.lv === 2) { const a = c.anc, dn = L(DIRN[a.d8]); return e ? 'Go ' + a.dist + ' m ' + dn + ' from ' + a.sym + ' ' + a.nm + (short ? '' : ' and dig.') : a.sym + ' ' + a.nm + '에서 ' + dn + '쪽으로 ' + a.dist + 'm' + (short ? '' : ' 가서 파요.'); }
     const H = c.hill, dn = L(DIRN[H.d8]), lh = Math.round(H.Lh - H.base); return e ? 'Dig on the ' + lh + ' m contour, on the ' + dn + ' slope from the top' + (short ? '' : '.') : '꼭대기 ' + dn + '쪽 비탈의 ' + lh + 'm 등고선 위' + (short ? '' : '를 파요.'); }
 
@@ -195,7 +195,7 @@ export function createTreasure(A) {
   // ── 도움 셋(1·2·3분 · 쓴 수는 기록에만 · 벌 X) ──
   const hintReady = c => c.h < 3 && c.el >= 60 * (c.h + 1);
   function hint() { const c = S().cur; if (!c || !hintReady(c)) return; const e = en(), me = A.map.player.pos(); c.h++; mark(); let t = '';
-    if (c.h === 1) t = c.lv === 1 ? (c.k === 'bridge' ? (e ? 'Find a bridge near ✕ on the big map (M) first.' : '큰 지도(M)에서 ✕ 곁 다리를 먼저 찾아요.') : c.k === 'lake' ? (e ? 'Find the blue water near ✕ on the big map (M) first.' : '큰 지도(M)에서 ✕ 곁 파란 물을 먼저 찾아요.') : (e ? 'Find the ' + c.sym + ' symbol on the big map (M) first.' : '큰 지도(M)에서 ' + c.sym + ' 기호를 먼저 찾아요.'))
+    if (c.h === 1) t = c.lv === 1 ? (c.k === 'bridge' ? (e ? 'Find a bridge near ✕ on the big map (M) first.' : '큰 지도(M)에서 ✕ 옆 다리를 먼저 찾아요.') : c.k === 'lake' ? (e ? 'Find the blue water near ✕ on the big map (M) first.' : '큰 지도(M)에서 ✕ 옆 파란 물을 먼저 찾아요.') : (e ? 'Find the ' + c.sym + ' symbol on the big map (M) first.' : '큰 지도(M)에서 ' + c.sym + ' 기호를 먼저 찾아요.'))
       : c.lv === 2 ? (e ? 'Stand at the door of ' + c.anc.nm + ', then follow the compass strip at the top.' : c.anc.nm + ' 문 앞에 선 다음 화면 위 나침반 띠를 보고 걸어요.') : (e ? 'Walk up and down the slope and match the height on the card.' : '비탈을 오르내리며 카드의 높이를 등고선 숫자와 맞춰요.');
     else if (c.h === 2) { const dx = c.x - me.x, dz = c.z - me.z, d = Math.hypot(dx, dz); t = e ? 'The chest is ' + L(DIRN[dir8(bearing(dx, dz))]) + ' of you, about ' + r10(d) + ' m.' : '보물은 지금 자리에서 ' + L(DIRN[dir8(bearing(dx, dz))]) + '쪽, ' + r10(d) + 'm쯤이에요.'; }
     else { const r = A.guide([c.x, c.z], e ? 'Treasure' : '보물 상자'); t = r ? (e ? 'Follow the red line.' : '빨간 선을 따라가요.') : (e ? 'Look for the fresh dirt pile.' : '갓 판 흙더미를 찾아봐요.'); }
@@ -248,7 +248,7 @@ export function createTreasure(A) {
   function clear() { if (dig) digStop(); if (CHEST) { try { CHEST.remove(); } catch (e) { /* 이미 치움 */ } CHEST = null; } if (MD && MD.parent) MD.parent.remove(MD); if (MD) MD.visible = false; HB = HD = null; SRC = null; CAND = null; }
   function dispose() { clear(); if (MG) MG.dispose(); if (MM) MM.dispose(); MD = MG = MM = null; if (CARD) { CARD.remove(); CARD = null; } CV = null; CVK = ''; }
   // 도감 갈래(town_dex.js dexBook 마지막 인자): 이 마을에 있는 상자 자리 갈래만 · 빈칸 귀띔 = 놀람 자리 이름(장소 이름 X)
-  function dex() { const ks = [...new Set(cands().map(c => c.k))]; return ks.map(k => { const K = KOF[k]; return { id: k, icon: K.box, t: K.t, hint: ['지도 조각을 따라 ' + K.surp[0] + ' 곁에서', 'Follow a map piece to a ' + K.surp[1].toLowerCase()] }; }); }
+  function dex() { const ks = [...new Set(cands().map(c => c.k))]; return ks.map(k => { const K = KOF[k]; return { id: k, icon: K.box, t: K.t, hint: ['지도 조각을 따라 ' + K.surp[0] + ' 옆에서', 'Follow a map piece to a ' + K.surp[1].toLowerCase()] }; }); }
   const titleNow = () => { const s = S(); return s.title.length ? TLV[Math.max(...s.title)].title : null; };
   return { init, tick, dispose, dex, titleNow, take, openMap, hint, give, cur: () => S().cur, get on() { return !!HB; }, free: () => { const s = S(); return !!HB && A.ready() && !s.cur && s.last !== day() && !allDone(); },   /* WAKE-1b: 오늘 새 조각을 받을 수 있나(바람에 날아온 종이 — town_road.js) */ dir8: () => { const c = S().cur; return !!(c && c.lv === 2); },   /* ★★ 지도를 든 동안 = 나침반 띠 8방위(town.js compStrip) */ get digging() { return !!dig; },
     info: () => { const s = S(); return { src: SRC && { x: +SRC.x.toFixed(1), z: +SRC.z.toFixed(1), name: SRC.name }, cur: s.cur && JSON.parse(JSON.stringify(s.cur)), got: { ...s.got }, n: s.n.slice(), last: s.last, title: s.title.slice(), lv: lvNow(), card: !!(CARD && CARD.style.display !== 'none'), mound: !!(MD && MD.visible), dig: HD && !HD.hot.off ? HD.hot.label : null, board: HB && HB.hot.label, chest: !!CHEST }; },

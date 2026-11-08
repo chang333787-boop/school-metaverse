@@ -95,7 +95,7 @@ const PADDYF = `
 { vec2 q = vWP_a.xz; vec3 toC = cameraPosition - vWP_a; float dist = length(toC); vec3 V = toC / dist; float fd = 1.0 - smoothstep(25.0, 90.0, dist), t = uT_a;
   float ph = fract(vRUv_a.x * 4.0), rd = abs(ph - 0.5) * 2.0, sp = uSea_a.x, su = uSea_a.y, au = uSea_a.z, wi = uSea_a.w;
   vec2 ax = vAc_a > 0.5 ? vec2(0.0, 1.0) : vec2(1.0, 0.0); float sa = dot(uSunW_a.xz, ax) * sign(ph - 0.5);
-  float row = 1.0 - smoothstep(0.26, 0.62, rd); outgoingLight *= 1.0 - (su + au) * row * (0.08 + 0.16 * max(0.0, -sa));   /* 벼 줄 곁 그늘(해 반대쪽이 더 어둡게) = 줄 결 */
+  float row = 1.0 - smoothstep(0.26, 0.62, rd); outgoingLight *= 1.0 - (su + au) * row * (0.08 + 0.16 * max(0.0, -sa));   /* 벼 줄 옆 그늘(해 반대쪽이 더 어둡게) = 줄 결 */
   float wu = max(uWlv_a, 0.0), wd = max(-uWlv_a, 0.0), pw = clamp(sp + wu * (su * 0.7 + au * 0.3), 0.0, 1.0), lo = 0.2 - 0.12 * wu * sp + 0.24 * wd, wm = 0.0;   /* WATER-1 논물: 비 뒤 = 줄 사이 물이 차오름(여름 논에도 물낯) · 가뭄 = 물이 줄 가운데로 물러남 */
   if (pw > 0.01) { vec2 g = vec2(cos(q.x * 0.9 + q.y * 0.5 + t * 1.3), cos(q.y * 1.1 - q.x * 0.4 + t * 1.6)) * 0.03;
 #ifndef LITE_A

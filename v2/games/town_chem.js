@@ -9,14 +9,14 @@ export const CHEM_V = 1;
 // 요소 표: [그림, 한, 영]
 export const ELEM = { water: ['💧', '물', 'Water'], fire: ['🔥', '불', 'Fire'], wind: ['🌬', '바람', 'Wind'], cold: ['❄️', '추위', 'Cold'], sun: ['☀️', '햇빛', 'Sunlight'] };
 // 물건 표: [한, 영, 상태들]
-export const OBJS = { me: ['나(옷)', 'Me (clothes)', ['dry', 'wet']], puddle: ['길 웅덩이', 'Puddle', ['none', 'water']], pond: ['논·연못', 'Paddy · pond', ['water', 'ice']], fire: ['모닥불', 'Campfire', ['lit', 'out']], snow: ['모닥불 곁 눈', 'Snow by the fire', ['snow', 'water', 'ice']], seed: ['민들레 홀씨', 'Dandelion seeds', ['head', 'fly', 'flower']] };
+export const OBJS = { me: ['나(옷)', 'Me (clothes)', ['dry', 'wet']], puddle: ['길 웅덩이', 'Puddle', ['none', 'water']], pond: ['논·연못', 'Paddy · pond', ['water', 'ice']], fire: ['모닥불', 'Campfire', ['lit', 'out']], snow: ['모닥불 옆 눈', 'Snow by the fire', ['snow', 'water', 'ice']], seed: ['민들레 홀씨', 'Dandelion seeds', ['head', 'fly', 'flower']] };
 // 규칙 표: id · 요소 · 물건 · 바뀜 · 도감 글(제목·본 것·💡 한 줄·까닭·빈칸 귀띔·4학년 과학 단원 — 단원은 2015 개정 이름 · 2022 개정 성취기준 원문은 확인 필요)
 export const RULES = [
   { id: 'dry', ic: '💧', e: ['water', 'sun', 'fire'], o: 'me', ch: ['dry→wet', 'wet→dry'],
     t: ['젖은 옷이 말라요', 'Wet clothes dry'], saw: ['몸에서 김이 오르며 옷이 말랐어요', 'Steam rose from me as my clothes dried'],
     tip: ['젖은 옷의 물은 수증기가 되어 날아가요 — 증발', 'Water in wet clothes turns into water vapour — evaporation'],
-    why: ['물은 열을 받으면 눈에 안 보이는 수증기가 되어 공기 속으로 날아가요. 햇볕보다 불 곁이 더 빨라요. 하얀 김은 수증기가 식은 작은 물방울이에요.', 'With heat, water becomes invisible water vapour and drifts into the air. A fire dries faster than sunshine. White steam is vapour that cooled into tiny droplets.'],
-    hint: ['🌧 비를 맞은 뒤, 햇볕이나 모닥불 곁', '🌧 After the rain, in sunshine or by a campfire'], unit: ['물의 상태 변화', 'Changes of state of water'] },
+    why: ['물은 열을 받으면 눈에 안 보이는 수증기가 되어 공기 속으로 날아가요. 햇볕보다 불 옆이 더 빨라요. 하얀 김은 수증기가 식은 작은 물방울이에요.', 'With heat, water becomes invisible water vapour and drifts into the air. A fire dries faster than sunshine. White steam is vapour that cooled into tiny droplets.'],
+    hint: ['🌧 비를 맞은 뒤, 햇볕이나 모닥불 옆', '🌧 After the rain, in sunshine or by a campfire'], unit: ['물의 상태 변화', 'Changes of state of water'] },
   { id: 'puddle', ic: '🌧', e: ['water', 'sun'], o: 'puddle', ch: ['none→water', 'water→none'],
     t: ['웅덩이가 사라져요', 'Puddles disappear'], saw: ['첨벙 뛰었던 웅덩이가 맑은 낮이 지나자 없어졌어요', 'The puddle I splashed in was gone after a sunny day'],
     tip: ['웅덩이 물도 햇볕을 받아 수증기가 되어 날아가요', 'Puddle water also turns into vapour in the sun'],
@@ -33,11 +33,11 @@ export const RULES = [
     why: ['뜨거워진 물은 수증기가 되고, 수증기가 식으면 하얀 김(작은 물방울)으로 보여요. 불은 꼭 어른과 함께 써요.', 'The hot water turns into vapour, and when it cools you see white steam (tiny droplets). Always use fire with a grown-up.'],
     hint: ['🏕 캠핑장 모닥불을 다 쬔 뒤, 또는 비 오는 날', '🏕 The campfire after warming up, or on a rainy day'], unit: ['물의 상태 변화 · 불 안전', 'Changes of state of water · fire safety'] },
   { id: 'melt', ic: '⛄', e: ['fire', 'cold'], o: 'snow', ch: ['snow→water', 'water→ice', 'ice→water'],
-    t: ['녹았다 얼었다', 'Melt and freeze again'], saw: ['모닥불 곁 눈이 녹아 웅덩이가 되었어요', 'Snow by the fire melted into a puddle'],
+    t: ['녹았다 얼었다', 'Melt and freeze again'], saw: ['모닥불 옆 눈이 녹아 웅덩이가 되었어요', 'Snow by the fire melted into a puddle'],
     tip: ['눈과 얼음은 따뜻하면 녹아 물이 돼요', 'Snow and ice melt into water when warm'],
     tip2: ['녹은 물은 0℃ 아래에서 다시 얼어요 — 얼음과 물은 서로 바뀔 수 있어요', 'Melted water freezes again below 0℃ — ice and water can change back and forth'],
     why: ['얼음 → 물 → 얼음처럼 물의 상태는 온도에 따라 되돌아갈 수 있어요.', 'Like ice → water → ice, the state of water can go back and forth with temperature.'],
-    hint: ['❄️ 겨울 캠핑장 모닥불 곁 (N = 눈사람)', '❄️ By the campfire in winter (N = snowman)'], unit: ['물의 상태 변화', 'Changes of state of water'] },
+    hint: ['❄️ 겨울 캠핑장 모닥불 옆 (N = 눈사람)', '❄️ By the campfire in winter (N = snowman)'], unit: ['물의 상태 변화', 'Changes of state of water'] },
   { id: 'seed', ic: '🌼', e: ['wind'], o: 'seed', ch: ['head→fly', 'fly→flower'],
     t: ['씨가 바람을 타요', 'Seeds ride the wind'], saw: ['홀씨를 분 쪽에 사흘 뒤 민들레꽃이 피었어요', 'Three days after I blew the seeds, dandelions bloomed downwind'],
     tip: ['민들레 씨는 바람을 타고 날아가 새 자리에서 자라요', 'Dandelion seeds ride the wind and grow in a new place'],
@@ -130,7 +130,7 @@ export function createChem(A) {
       if (E.rain && !E.shelter) { const w0 = wet; wet = Math.min(1, wet + 0.5 * dt); wetPk = Math.max(wetPk, wet); dryBy = ''; if (w0 < 0.5 && wet >= 0.5 && C().wt !== S().day && !E.inb && S().min > 6 * 60 + 20) {   /* MORNING-1: 깬 바로 뒤(아침 알림 몰림)엔 미룸 */ C().wt = S().day; map.hud.toast(en() ? '💧 You got wet in the rain — eaves and indoors keep you dry' : '💧 비에 젖었어요 — 처마 밑이나 실내에선 안 젖어요', 3); } }
       else if (wet > 0) { const f = E.fire, k = E.sea === 'summer' ? 1.25 : E.sea === 'winter' ? 0.7 : 1, r = f ? 0.1 : E.sun ? k / 60 : 1 / 180; if (f) dryBy = 'fire'; else if (E.sun && dryBy !== 'fire') dryBy = 'sun';
         wet = Math.max(0, wet - r * dt); if (!E.inb && (f || E.sun) && wet > 0.05) { if (f) for (let i = 0; i < 4; i++) emit(0, (Math.random() - 0.5) * 0.4, 0.9 + Math.random() * 0.45, (Math.random() - 0.5) * 0.4, 0, 0.7 + Math.random() * 0.3, 0, 1.6, 0.4, 0.5, true, i * 0.25); else if ((q++ & 1) === 0) emit(0, (Math.random() - 0.5) * 0.3, 1.1 + Math.random() * 0.3, (Math.random() - 0.5) * 0.3, 0, 0.5, 0, 1.4, 0.32, 0.22, true, 0); }   /* 김: 불 곁 = 짙게 넷 · 햇볕 = 옅게 하나 */
-        if (wet <= 0 && wetPk >= 0.5) { if ((dryBy === 'fire' || dryBy === 'sun') && discover('dry', dryBy) === false && dryBy === 'fire') map.hud.toast(en() ? '🔥 All dry by the fire' : '🔥 모닥불 곁에서 옷이 다 말랐어요', 2.2); wetPk = 0; dryBy = ''; } }
+        if (wet <= 0 && wetPk >= 0.5) { if ((dryBy === 'fire' || dryBy === 'sun') && discover('dry', dryBy) === false && dryBy === 'fire') map.hud.toast(en() ? '🔥 All dry by the fire' : '🔥 모닥불 옆에서 옷이 다 말랐어요', 2.2); wetPk = 0; dryBy = ''; } }
       if (wet > 0.12 && !E.inb) { const n = wet > 0.6 ? 4 : 2; for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, r = 0.22 + Math.random() * 0.12; emit(1, Math.cos(a) * r, 1.05 + Math.random() * 0.5, Math.sin(a) * r, 0, -0.2, 0, 0.6, 0.095, 0.95, true, i / n); } } }   /* 물방울 = 어깨·모자 둘레에서 떨어짐 */
     return { id: 'dry', sec, info: o => { o.wet = +wet.toFixed(2); }, set: o => { if (o.wet != null) { wet = o.wet; wetPk = Math.max(wetPk, wet); } } }; }
 
@@ -247,7 +247,7 @@ export function createChem(A) {
         ringDraw(f, R.s); }
       const SN = A.snowmen(); if (win && SN && SN.length) for (let k = SN.length - 1; k >= 0; k--) { const s = SN[k], f = nearFire(s[0], s[2], 2.6); if (!f) { s.m9 = 0; continue; } s.m9 = (s.m9 || 0) + dt;
         for (let i = 0; i < 3; i++) emit(1, s[0] + (Math.random() - 0.5) * 0.6, s[1] + 0.4 + Math.random() * 0.6, s[2] + (Math.random() - 0.5) * 0.6, 0, -0.2, 0, 0.5, 0.07, 0.9, false, i * 0.3); steamAt(s[0], s[1] + 1.0, s[2], 1, false, 0.4);
-        if (s.m9 >= 8) { SN.splice(k, 1); A.snowDraw(); c.sp.push([+s[0].toFixed(2), +s[1].toFixed(2), +s[2].toFixed(2), 'w', 0]); if (c.sp.length > 6) c.sp.shift(); A.GAME.mark(); map.hud.toast(en() ? '⛄ The snowman melted by the fire — now it is a puddle' : '⛄ 모닥불 곁 눈사람이 녹아 웅덩이가 되었어요', 3); discover('melt', 'snowman', false, 3600); } }
+        if (s.m9 >= 8) { SN.splice(k, 1); A.snowDraw(); c.sp.push([+s[0].toFixed(2), +s[1].toFixed(2), +s[2].toFixed(2), 'w', 0]); if (c.sp.length > 6) c.sp.shift(); A.GAME.mark(); map.hud.toast(en() ? '⛄ The snowman melted by the fire — now it is a puddle' : '⛄ 모닥불 옆 눈사람이 녹아 웅덩이가 되었어요', 3); discover('melt', 'snowman', false, 3600); } }
       if (!win && c.sp.length) { c.sp.length = 0; A.GAME.mark(); }
       for (let k = c.sp.length - 1; k >= 0; k--) { const p = c.sp[k], f = nearFire(p[0], p[2], 2.6), d = Math.hypot(p[0] - E.me.x, p[2] - E.me.z); let ns = p[3];
         if (p[3] === 'w') { if (E.T0 < 0 && !nearFire(p[0], p[2], 2.2)) { p[4] += dm; if (p[4] >= 20) ns = 'i'; } else if (E.T0 > 0 && E.sun0) { p[4] += dm; if (p[4] >= 180) { c.sp.splice(k, 1); A.GAME.mark(); continue; } } }
@@ -368,7 +368,7 @@ export function createChem(A) {
     function rackDraw() { const R9 = C().rack; for (let k = 0; k < 4; k++) { const r = R9[k]; if (!r) { if (SPR[1 + k]) SPR[1 + k].sp.visible = false; continue; } const o = spr(1 + k); sprSet(o, r[0], 0.45); o.sp.position.set(r[3], r[4], r[5]); } }
     function deiDraw() { const D9 = C().dei; for (let k = 0; k < 6; k++) { const d = D9[k]; if (!d) { put(L0 + DOME.dei + k, 0, 0, 0); continue; } put(L0 + DOME.dei + k, d[0], d[1] - 0.2, d[2], 1.1, 0.004, 1.1, 0x6b6258, k); } }
     function plantDraw() { const P9 = C().plant, d0 = S().day; for (let k = 0; k < 6; k++) { const p = P9[k]; if (!p) { put(L0 + DOME.sprout + k, 0, 0, 0); continue; } const g = Math.max(0.15, Math.min(1, 1 - (p[5] - d0) / 3)); put(L0 + DOME.sprout + k, p[2], p[3] - 0.25, p[4], 0.12 + 0.22 * g, 0.1 + 0.3 * g, 0.12 + 0.22 * g, 0x5c9a48, k); } }
-    const NUDGE = { water: ['물가예요 — 가방(I)을 열면 물건을 물에 넣어 볼 수 있어요', 'By the water — open your bag (I) and try putting things in'], sea: ['바닷가예요 — 가방(I)을 열면 물건을 바닷물에 넣어 볼 수 있어요', 'By the sea — open your bag (I) and try putting things in'], fire: ['모닥불 곁이에요 — 가방(I)에서 굽거나 땔감을 넣어 볼 수 있어요', 'By the fire — open your bag (I) to roast food or add twigs'], sun: ['햇볕이 좋아요 — 가방(I)에서 먹거리를 널어 말려 볼 수 있어요', 'Sunny — open your bag (I) to lay food out to dry'], snow: ['눈 쌓인 땅이에요 — 가방(I)에서 물건을 눈 위에 둬 볼 수 있어요', 'Snowy ground — open your bag (I) and try things on the snow'] };
+    const NUDGE = { water: ['물가예요 — 가방(I)을 열면 물건을 물에 넣어 볼 수 있어요', 'By the water — open your bag (I) and try putting things in'], sea: ['바닷가예요 — 가방(I)을 열면 물건을 바닷물에 넣어 볼 수 있어요', 'By the sea — open your bag (I) and try putting things in'], fire: ['모닥불 옆이에요 — 가방(I)에서 굽거나 땔감을 넣어 볼 수 있어요', 'By the fire — open your bag (I) to roast food or add twigs'], sun: ['햇볕이 좋아요 — 가방(I)에서 먹거리를 널어 말려 볼 수 있어요', 'Sunny — open your bag (I) to lay food out to dry'], snow: ['눈 쌓인 땅이에요 — 가방(I)에서 물건을 눈 위에 둬 볼 수 있어요', 'Snowy ground — open your bag (I) and try things on the snow'] };
     function sec(E, dm) { lastE = E; const c = C(), en9 = en(); for (const o of SPR) if (o && o.sp.visible) o.mat.color.setScalar(UDIM.value);
       let ch = false; for (let k = c.rack.length - 1; k >= 0; k--) { const r = c.rack[k], need = r[2] === 'dry' ? 30 : 20;
         if (r[2] === 'dry') { if (E.rain) { if (r[6] > 0) { r[6] = Math.max(0, r[6] - dm * 2); ch = true; if (!c.nudge.wet && Math.hypot(r[3] - E.me.x, r[5] - E.me.z) < 40) { c.nudge.wet = 1; map.hud.toast(en9 ? '🌧 Rain! The things you laid out are getting wet again' : '🌧 비가 와요! 널어 둔 것이 다시 젖어요', 3); } } } else if (E.sun0 && !eaves(r[3], r[5])) { r[6] += dm; ch = ch || dm > 0; } }
@@ -386,7 +386,7 @@ export function createChem(A) {
 
   // ───────── 수첩 🔬 규칙 칸(규칙 도감) — 처음 알아낸 뒤에 탭이 생김 · 카드 = 해 본 것 → 본 것 → 까닭 → 4학년 과학 단원 · 빈칸 = ❔ + 때·곳 귀띔 · 점수·순위 X ─────────
   const WORDS = [['증발', '물이 수증기가 되어 공기 속으로 날아가는 것', 'Evaporation', 'water turning into vapour and drifting into the air'], ['수증기', '물이 바뀐 기체 — 눈에 안 보여요', 'Water vapour', 'water as a gas — you cannot see it'], ['용해', '소금처럼 물에 녹아 골고루 섞이는 것', 'Dissolving', 'mixing evenly into water like salt'], ['분해자', '죽은 생물을 잘게 부숴 흙으로 돌려보내는 생물(지렁이·곰팡이)', 'Decomposer', 'living things that break dead plants into soil']];   /* 낱말 상자(새 낱말 둘까지) */
-  const HOW = { sun: ['햇볕에 말림', 'dried in the sun'], fire: ['모닥불 곁에서 말림', 'dried by the fire'], slip: ['언 논에 올라섬', 'stepped on the frozen paddy'], pond: ['언 연못을 봄', 'saw the frozen pond'], kid: ['물을 부어 끔', 'poured water on it'], rain: ['비가 불을 끔', 'the rain put it out'], ring: ['모닥불 곁을 지켜봄', 'watched by the fire'], snowman: ['눈사람을 불 곁에 세움', 'built a snowman by the fire'], wind: ['홀씨를 붊', 'blew the seeds'] };
+  const HOW = { sun: ['햇볕에 말림', 'dried in the sun'], fire: ['모닥불 옆에서 말림', 'dried by the fire'], slip: ['언 논에 올라섬', 'stepped on the frozen paddy'], pond: ['언 연못을 봄', 'saw the frozen pond'], kid: ['물을 부어 끔', 'poured water on it'], rain: ['비가 불을 끔', 'the rain put it out'], ring: ['모닥불 옆을 지켜봄', 'watched by the fire'], snowman: ['눈사람을 불 옆에 세움', 'built a snowman by the fire'], wind: ['홀씨를 붊', 'blew the seeds'] };
   function bookOpen() { const c = C(), E9 = en(), found = RULES.filter(r => c.found[r.id]).length, D = d => (E9 ? 'Day ' + d : d + '일째');
     let h = '<h3>🔬 ' + (E9 ? 'Rules I found' : '알아낸 규칙') + ' · ' + found + ' / ' + RULES.length + '</h3><div class="sm">' + (E9 ? 'How the world changes — found out with your own body' : '세상이 어떻게 바뀌는지 몸으로 알아낸 것이 모여요') + '</div>';
     for (const r of RULES) { const f = c.found[r.id];

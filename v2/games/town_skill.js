@@ -5,7 +5,7 @@
 export const SKILL_V = 1;
 const T2 = (ko, en) => [ko, en];
 export const SKILLS = {
-  work: { icon: '🌾', t: T2('일솜씨', 'Helping hands'), how: T2('일꾼 곁에서 거들기(E)', 'Help workers (E)') },
+  work: { icon: '🌾', t: T2('일솜씨', 'Helping hands'), how: T2('일꾼 옆에서 거들기(E)', 'Help workers (E)') },
   cook: { icon: '🍳', t: T2('요리', 'Cooking'), how: T2('아이 집 부엌에서 요리', 'Cook in a home kitchen') },
   farm: { icon: '🌱', t: T2('농사', 'Gardening'), how: T2('학교 텃밭 심기·물 주기·거두기', 'Plant, water and harvest the school garden') },
   look: { icon: '🔍', t: T2('관찰', 'Nature watching'), how: T2('곤충·별·물고기·버섯을 찾아 도감에', 'Find insects, stars, fish and mushrooms') },

@@ -369,7 +369,7 @@ export function createBldg(A) {
     let okT = '';   /* READ-1: 맞힌 까닭은 창 안 다음 물음 위에(알림은 창 뒤에 깔려 못 읽던 것) */
     const draw = () => '<h3>🩹 ' + esc(L(TIP.clinic)) + '</h3>' + (okT ? '<div class="sm" style="font-weight:700;margin:2px 0 6px">✅ ' + esc(okT) + '</div>' : '') + (!done
       ? '<div class="sm">' + esc(e ? 'Nurse: “Let’s go over what to do before the ambulance comes.” (' + (i + 1) + ' of 3)' : '간호사 선생님: "구급차가 오기 전에 할 일을 같이 알아봐요." (' + (i + 1) + '/3)') + '</div><div class="bd-sit">' + esc(L(Q[i][0])) + '</div><div class="bd-ch">' + opts9(Q[i]).map(([, t, j]) => '<button class="sub" data-o="' + j + '">' + esc(L(t)) + '</button>').join('') + '</div><div class="sm" data-m></div>'
-      : '<div class="pc-tx">' + esc(e ? 'Nurse: “Good. I put the first aid card on the board. If someone is badly hurt, call 119 first and stay with them.”' : '간호사 선생님: "잘했어요. 응급 처치 카드를 판에 붙여 둘게요. 많이 다친 사람을 보면 먼저 119에 알리고 곁에 있어 줘요."') + '</div>' + wordBox('clinic'))
+      : '<div class="pc-tx">' + esc(e ? 'Nurse: “Good. I put the first aid card on the board. If someone is badly hurt, call 119 first and stay with them.”' : '간호사 선생님: "잘했어요. 응급 처치 카드를 판에 붙여 둘게요. 많이 다친 사람을 보면 먼저 119에 알리고 옆에 있어 줘요."') + '</div>' + wordBox('clinic'))
       + '<div class="row"><button class="' + (done ? '' : 'sub') + '" data-a="x">' + (done ? (e ? 'OK' : '좋아요') : (e ? 'Close' : '닫기')) + '</button></div>';
     const P = A.openP(draw(), false, 'bdaid'), paint = () => { const bx = P.querySelector('.bx'); (bx || P).innerHTML = draw(); }, msg = t => { const m = P.querySelector('[data-m]'); if (m) m.textContent = t; };
     P.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') { A.closeP(); return; }

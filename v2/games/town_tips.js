@@ -174,7 +174,7 @@ export function createTips(A) {
     if (H('skill')) r(M, L('내 솜씨', 'Skills'), H('rank') ? L('할수록 솜씨가 늘어요. 승급 미션도 여기서 골라요', 'Skills grow as you do things. Pick skill missions here too') : L('할수록 솜씨가 늘어요', 'Skills grow as you do things'), 'skill');
     if (H('jobs')) r(t9 ? TB('✋') : K('E'), L('직업 체험', 'Job experience'), L('소방서, 우체국, 도서관 안에서 해요', 'Inside the fire station, post office or library'), 'jobs');
     if (H('board')) r(t9 ? TB('✋') : K('E'), L('의뢰 게시판', 'Request board'), L('본부 게시판 앞에서 이웃 부탁을 골라요', 'Pick a neighbour’s request at the HQ board'), 'board');
-    if (H('quiz')) r(t9 ? TB('✋') : K('E'), L('보너스 문제', 'Bonus questions'), L('낮에 일꾼 곁에 가면 물어봐요', 'Workers ask you in the daytime'), 'quiz');
+    if (H('quiz')) r(t9 ? TB('✋') : K('E'), L('보너스 문제', 'Bonus questions'), L('낮에 일꾼 옆에 가면 물어봐요', 'Workers ask you in the daytime'), 'quiz');
     if (H('together')) r(M, L('함께하기', 'Play together'), L('메뉴의 👥 함께하기로 친구와 같은 방에 들어가요', 'Join friends with 👥 Together in the menu'), 'together');
     r(t9 ? M : K('H'), L('조작 도움', 'Controls'), t9 ? L('지금 보는 이 창이에요. 메뉴의 ❓ 단추로 열어요', 'This window. Open it with ❓ in the menu') : L('이 창이에요. 아래 키 줄을 눌러도 열려요', 'This window. Clicking the key line opens it too'), 'help');
     return R; }

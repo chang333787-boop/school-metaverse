@@ -6,9 +6,9 @@
 export const BAKE_V = 1;
 const T2 = (ko, en) => [ko, en];
 const LV = [T2('오늘 굽는 빵', 'Bread for today'), T2('계절 따라', 'Follow the season'), T2('내일 아침 빵', 'Bread for tomorrow morning')];
-const UP = [null, T2('이제 계절을 보고 자리를 골라 봐요. 오늘은 화덕 곁 선반이 꽉 찼어요.', 'Now choose the spot by the season. The shelf by the oven is full today.'), T2('이제 반죽 둘을 맡겨 볼게요. 하나는 오늘, 하나는 내일 아침에 구워요.', 'Now I’ll give you two doughs: one for today, one for tomorrow morning.')];
+const UP = [null, T2('이제 계절을 보고 자리를 골라 봐요. 오늘은 화덕 옆 선반이 꽉 찼어요.', 'Now choose the spot by the season. The shelf by the oven is full today.'), T2('이제 반죽 둘을 맡겨 볼게요. 하나는 오늘, 하나는 내일 아침에 구워요.', 'Now I’ll give you two doughs: one for today, one for tomorrow morning.')];
 const DOOR_T = { spring: 18, summer: 27, autumn: 17, winter: 8 };   /* 문 옆 창가 = 계절 바깥 기온쯤(어림 · 읽기·견주기만) */
-const SPOTS = { warm: ['🔥', T2('화덕 곁 선반', 'Shelf by the oven'), 28], cold: ['❄️', T2('냉장고', 'Fridge'), 4], door: ['🚪', T2('문 옆 창가', 'By the door window'), 0], bowl: ['🥣', T2('따뜻한 물 그릇 위', 'Over a bowl of warm water'), 30] };
+const SPOTS = { warm: ['🔥', T2('화덕 옆 선반', 'Shelf by the oven'), 28], cold: ['❄️', T2('냉장고', 'Fridge'), 4], door: ['🚪', T2('문 옆 창가', 'By the door window'), 0], bowl: ['🥣', T2('따뜻한 물 그릇 위', 'Over a bowl of warm water'), 30] };
 const tOf = (k, sea) => (k === 'door' ? DOOR_T[sea] ?? 18 : SPOTS[k][2]);
 const riseOf = T => (T >= 24 ? 2 : T >= 15 ? 1.5 : 1.1);   /* 60~90분 동안 부푼 정도(어림): 따뜻함 = 두 배쯤 · 선선함 = 반쯤 더 · 차가움 = 거의 그대로 */
 const waitOf = T => (T >= 24 ? 60 : T >= 15 ? 75 : 90);
@@ -153,7 +153,7 @@ export function createBake(A) {
     const ask = q === 'tom' ? (e ? 'Dough 2 will be baked tomorrow morning. Where can it rise slowly all night?' : '반죽 둘째는 내일 아침에 구워요. 밤새 천천히 부풀 자리는 어디일까요?') : b.lv === 2 ? (e ? 'Dough 1 is baked this afternoon. Where will it rise well in an hour?' : '반죽 첫째는 오늘 오후에 구워요. 한 시간 남짓 만에 잘 부풀 자리는 어디일까요?') : (e ? 'We bake it this afternoon. Where will it rise well in about an hour?' : '오늘 오후에 구울 반죽이에요. 한 시간 남짓 만에 잘 부풀 자리는 어디일까요?');
     const opts = b.lv === 2 ? ['warm', 'cold', 'door'] : b.opts;
     bx.innerHTML = '<h3>🍞 ' + (e ? 'Where should it rise?' : '어디에서 부풀릴까요?') + '</h3><div class="sm">' + (e ? 'To do: choose where the dough rises.' : '할 일: 반죽이 부풀 자리를 골라요.') + '</div><div class="pc-tx">' + ask + '</div>'
-      + (b.lv === 1 ? '<div class="sm">' + (e ? 'The shelf by the oven is full today.' : '오늘은 화덕 곁 선반이 꽉 찼어요.') + '</div>' : '')
+      + (b.lv === 1 ? '<div class="sm">' + (e ? 'The shelf by the oven is full today.' : '오늘은 화덕 옆 선반이 꽉 찼어요.') + '</div>' : '')
       + '<div class="bk-spots">' + opts.map(k => { const S9 = SPOTS[k], T = tOf(k, s); return '<button class="sub" data-s="' + k + '"><b>' + S9[0] + '</b>' + esc(S9[1][l]) + '<small>' + (e ? 'about ' : '약 ') + T + '℃</small></button>'; }).join('') + '</div>'
       + '<div class="row"><button class="sub" data-a="x">' + (e ? 'Stop' : '그만') + '</button></div>'; }
   function pick(k) { const b = B; if (!b || b.ph !== 'spot') return; const q = b.want.find(w => !b.pick[w]); if (!q) return; b.pick[q] = k; A.sfx('pop'); if (b.want.some(w => !b.pick[w])) { draw(); return; } place(); }

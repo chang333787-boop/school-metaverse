@@ -85,7 +85,7 @@ export function createWhy(A) {
     else {
       if (sleepy(d)) { br = 'sleep'; S().td.n['pet' + i] = n - 1; P.lie = 1; P.act = 'idle'; P.t = 6; snd('snore'); t = e ? nm + ' is asleep on its tummy. Older dogs sleep a lot. Let it sleep and just watch.' : nm + '가 배를 깔고 잠들어 있어요. 나이 든 개는 잠이 많아요. 깨우지 않고 지켜봐요.'; }
       else if (n === 1) { br = 'slow'; P.lie = 0; go(P, 'come', fenceX(P), P.fz, 6); P.wag = 0.35; t = e ? nm + ' gets up slowly and comes over. When you stroke its back, it closes its eyes.' : nm + '가 천천히 일어나 다가와요. 등을 쓰다듬으니 눈을 지그시 감아요.'; }
-      else { br = 'lie'; go(P, 'liefence', fenceX(P), P.fz, 5); P.wag = 0.15; t = e ? nm + ' lies down by the fence. Just staying close makes it happy.' : nm + '가 울타리 곁에 엎드려요. 곁에 있어 주는 것만으로도 좋아해요.'; } }
+      else { br = 'lie'; go(P, 'liefence', fenceX(P), P.fz, 5); P.wag = 0.15; t = e ? nm + ' lies down by the fence. Just staying close makes it happy.' : nm + '가 울타리 옆에 엎드려요. 옆에 있어 주는 것만으로도 좋아해요.'; } }
     if (br !== 'back' && br !== 'sleep') played(d); say('🐶 ' + t, 4.2); P.br = br; log('pet ' + d.id + ' ' + br); return br; }
   function throwBall(P, lx, lz, low) { const B = R.ball, m = me(); B.sx = m.x; B.sy = m.y + 1.0; B.sz = m.z; const [wx, wz] = W9(lx, lz); B.fx = wx; B.fz = wz; B.t = 0; B.fly = low ? 1.1 : 0.65; B.low = low; B.own = -1; B.hide = 0; B.life = 12; B.g.visible = true; B.dog = P.i; snd('ball'); }
   function dogBall(i) { if (!R) return; const P = R.dogs[i], d = P.d, e = en(), b = S().bond[d.id] | 0, nm = L(d.nm); if (R.ball.g.visible) { say('⚾ ' + (e ? 'Wait until the ball comes back.' : '공이 돌아올 때까지 기다려요.'), 2.4); return 'wait'; }
@@ -209,7 +209,7 @@ export function createWhy(A) {
     h.x = q.x; h.z = q.z; h.y = q.y; h.off = false; h.label = q.k === 'sheep' ? (en() ? '🐑 Say hello to the sheep' : '🐑 양에게 인사하기') : (en() ? '🐄 Say hello to the cow' : '🐄 소에게 인사하기'); }
   // 동물 마당 강아지(상자 몸 · 움직이지 않음 → 짖는 말풍선 + 소리 + 한 줄)
   function yardUse(Y) { const e = en(), n = bump('yd'), dg = Y.d[(n - 1) % Y.d.length] || [Y.x, Y.z]; let t = '', br = '';
-    if (night()) { br = 'night'; if (A.bubble) A.bubble({ x: dg[0], y: Y.y, z: dg[1], sc: 0.6 }, e ? '(zzz)' : '(쿨쿨)'); snd('snore'); t = e ? 'The dogs are sleeping by the kennel. Walk past quietly.' : '강아지들이 개집 곁에서 자요. 조용히 지나가요.'; }
+    if (night()) { br = 'night'; if (A.bubble) A.bubble({ x: dg[0], y: Y.y, z: dg[1], sc: 0.6 }, e ? '(zzz)' : '(쿨쿨)'); snd('snore'); t = e ? 'The dogs are sleeping by the kennel. Walk past quietly.' : '강아지들이 개집 옆에서 자요. 조용히 지나가요.'; }
     else if (n === 1) { br = 'hello'; if (A.bubble) A.bubble({ x: dg[0], y: Y.y, z: dg[1], sc: 0.6 }, e ? 'Woof woof!' : '멍멍!'); snd('bark'); t = e ? 'A dog in the yard barks hello. With a dog you don’t know, ask the owner first before going near.' : '마당 강아지가 반갑다고 짖어요. 모르는 강아지에게는 주인에게 먼저 물어보고 다가가요.'; }
     else if (n === 2) { br = 'home'; if (A.bubble) A.bubble({ x: dg[0], y: Y.y, z: dg[1], sc: 0.6 }, e ? 'Arf!' : '왈!'); snd('yip'); t = e ? 'Barking can also mean “this is my home”. Dogs tell others about their place.' : '강아지가 짖는 건 "여기 우리 집이야" 하고 알리는 말이기도 해요.'; }
     else { br = 'water'; if (A.bubble) A.bubble({ x: Y.x + 3.5, y: Y.y, z: Y.z + 3.4, sc: 0.5 }, e ? '(full bowl)' : '(물그릇 가득)'); tone(880, 0, 0.07, 'sine', 0.04, 560); t = e ? 'The water bowl is full. Dogs drink a lot on hot days, so they always need fresh water.' : '물그릇에 물이 가득해요. 강아지는 더운 날 물을 많이 마셔서, 늘 새 물을 채워 줘요.'; }

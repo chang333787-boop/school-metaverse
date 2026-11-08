@@ -38,7 +38,7 @@ const FACT = {
 // 지키는 법(야생동물 사진 예절 · 사실)
 const CARE = [T2('야생동물은 멀리서 보고, 먹이를 주지 않아요. 사람 음식은 동물을 아프게 해요.', 'We watch wild animals from afar and never feed them. Our food can make them sick.'),
   T2('쫓아가거나 소리치지 않아요. 놀란 동물은 먹이 먹을 시간을 잃어요.', 'We never chase or shout. A scared animal loses time it needs to feed.'),
-  T2('둥지나 새끼 곁에는 오래 머물지 않아요.', 'We never stay long near nests or young animals.'),
+  T2('둥지나 새끼 옆에는 오래 머물지 않아요.', 'We never stay long near nests or young animals.'),
   T2('다 찍으면 조용히 물러나요.', 'When we are done, we step back quietly.')];
 const SEA = { spring: T2('봄', 'spring'), summer: T2('여름', 'summer'), autumn: T2('가을', 'autumn'), winter: T2('겨울', 'winter') };
 const TM = { night: T2('밤', 'at night'), dawn: T2('이른 아침', 'early morning'), dusk: T2('저녁 노을', 'at sunset') }, WXN = { rain: T2('비 오는 날', 'on a rainy day'), snow: T2('눈 오는 날', 'on a snowy day') };
@@ -98,7 +98,7 @@ export function createPress(A) {
     const thH = th ? (() => { const w = wildById(th.id); return '<div style="margin-top:8px;padding:6px 8px;border-left:6px solid #7d5bb8;background:#f3eefb"><b>' + (e9 ? 'Next issue: ' : '다음 호 주제: ') + esc(w.t[L]) + '</b> — ' + (e9 ? 'when and where would you meet it? Codex hint: ' : '언제, 어디에 가면 만날까요? 도감 귀띔: ') + esc(w.hint[L]) + '</div>'; })() : '';
     const news = P.news.slice(-5).reverse(), nwH = news.length ? '<div class="grp">' + (e9 ? 'Town newsletter' : '마을 소식지') + '</div>' + news.map(q => '<div class="sm">· ' + esc(q.h[L] || q.h[0]) + '</div>').join('') : '';
     const P9 = A.openP('<h3>📰 ' + (e9 ? 'Newsletter editor' : '소식지 편집장') + '</h3><div class="sm">' + (e9 ? '“A good story shows exactly what you saw. Bring me photos of animals doing something.”' : '“본 것을 그대로 담은 기사가 좋은 기사예요. 동물이 무엇을 하는지 보이게 찍어 와요.”') + '</div>'
-      + (U.length ? U.map(row).join('') : '<div class="st" style="margin-top:8px">' + (e9 ? 'No news notes yet. Near an animal, press K (📷) to take a photo.' : '아직 낼 기사가 없어요. 동물 곁에서 K(📷)를 눌러 찍어 와요.') + '</div>') + thH + nwH
+      + (U.length ? U.map(row).join('') : '<div class="st" style="margin-top:8px">' + (e9 ? 'No news notes yet. Near an animal, press K (📷) to take a photo.' : '아직 낼 기사가 없어요. 동물 옆에서 K(📷)를 눌러 찍어 와요.') + '</div>') + thH + nwH
       + '<div class="sm" style="margin-top:8px">' + esc(care()) + '</div><div class="row"><button class="sub" data-a="x">' + (e9 ? 'Close' : '닫기') + '</button></div>', false, 'pressdesk');
     if (U.length && A.photos) A.photos().then(L9 => { if (!P9.isConnected) return; for (const el of P9.querySelectorAll('[data-t]')) { if (el.tagName === 'BUTTON') continue; const p = L9.find(q => String(q.t) === el.dataset.t), sp = el.querySelector('.ph'); if (p && sp) sp.innerHTML = img(p.b, 64); } }).catch(() => {});
     P9.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') { A.closeP(); return; } if (b.dataset.a === 'send') { const r = send(+b.dataset.t), box = b.parentElement, res = box && box.querySelector('.res'); if (res && r) res.innerHTML = '<b>' + esc(r.msg) + '</b>'; b.remove(); } }; }

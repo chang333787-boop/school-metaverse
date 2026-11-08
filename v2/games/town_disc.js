@@ -92,7 +92,7 @@ export const DISC = [
     card: T2('목장 — 양들을 우리로 몰아요', 'Farm — guide the sheep into the pen'), nx: T2('동물보호센터 동물들도 밥때를 기다린대요', 'the animals at the shelter are waiting to be fed') },
   { id: 'jg', ic: '🥁', at: { k: 'jg' }, v: S => O(S, 'jg').n | 0, next: ['cafe'],
     t: T2('장구 장단 배우기', 'Learn a janggu rhythm'), tp: T2('장구 장단을 배웠어요', 'Learned a janggu rhythm'),
-    rum: T2('광장 곁에서 장구 선생님이 쿵 덕 장단을 가르쳐 준대', 'Near the square the janggu teacher teaches kung-deok rhythms'),
+    rum: T2('광장 옆에서 장구 선생님이 쿵 덕 장단을 가르쳐 준대', 'Near the square the janggu teacher teaches kung-deok rhythms'),
     card: T2('장구 — 쿵 덕 장단 주고받기', 'Janggu — trade kung-deok rhythms'), nx: T2('내 장단을 지으면 사람들 앞에서 들려줄 수도 있대요', 'once you make your own rhythm you can play it for people') },
   { id: 'yard', ic: '🌼', at: { k: 'home' }, v: S => (Array.isArray(O(S, 'home').yard) ? O(S, 'home').yard.filter(Boolean).length : 0), next: ['cafe'],
     t: T2('우리 집 마당에 물건 놓아 꾸미기', 'Decorate our yard with something from the bag'), tp: T2('우리 집 마당을 꾸몄어요', 'Decorated our yard'),

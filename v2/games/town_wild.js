@@ -71,7 +71,7 @@ export const WILD = [
     win: ['우리나라에서 일 년 내내 사는 텃새예요. 겨울에는 여럿이 무리 지어 다녀요.', 'It lives in Korea all year round. In winter sparrows move about in flocks.'],
     care: ['뛰어가면 놀라 한꺼번에 날아올라요. 멀리서 가만히 지켜봐요.', 'Run at them and the whole flock takes off — watch quietly from a distance.'] },
 ];
-const HABN = { tree: ['산 숲 나무 곁', 'by trees in the hill woods'], edge: ['산 숲 가장자리 풀밭', 'grass at the edge of the hill woods'], river: ['강가', 'the riverbank'], water: ['강·연못 물 위', 'on rivers and ponds'], pond: ['연못 물 위', 'on a pond'], paddyEdge: ['논 가장자리', 'the edge of a rice field'], paddyIn: ['논 한가운데', 'out in a rice field'], bigTree: ['마을의 오래된 큰 나무', 'an old, big tree in the village'], street: ['마을 길가·처마 밑', 'town streets and eaves'] };
+const HABN = { tree: ['산 숲 나무 옆', 'by trees in the hill woods'], edge: ['산 숲 가장자리 풀밭', 'grass at the edge of the hill woods'], river: ['강가', 'the riverbank'], water: ['강·연못 물 위', 'on rivers and ponds'], pond: ['연못 물 위', 'on a pond'], paddyEdge: ['논 가장자리', 'the edge of a rice field'], paddyIn: ['논 한가운데', 'out in a rice field'], bigTree: ['마을의 오래된 큰 나무', 'an old, big tree in the village'], street: ['마을 길가·처마 밑', 'town streets and eaves'] };
 const SEAN = { spring: ['봄', 'spring'], summer: ['여름', 'summer'], autumn: ['가을', 'autumn'], winter: ['겨울', 'winter'] }, TIMEN = { day: ['낮', 'daytime'], night: ['밤·새벽', 'night and dawn'], any: ['', ''] };
 for (const w of WILD) { const s = w.sea.length === 4 ? ['일 년 내내', 'all year'] : w.sea.length === 3 ? ['봄~가을', 'spring to autumn'] : [SEAN[w.sea[0]][0], SEAN[w.sea[0]][1]], tm = TIMEN[w.time];
   const pl = w.reed ? [HABN[w.hab][0] + ', 갈대 있는 물가', HABN[w.hab][1] + ' or reedy water'] : HABN[w.hab];   /* 못 만난 칸 귀띔 = 때 · 곳(예: 봄~가을 밤 · 강가) */
