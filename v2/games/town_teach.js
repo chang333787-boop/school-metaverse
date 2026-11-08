@@ -6,7 +6,7 @@
 import { CHAPTERS } from './town_story.js?v=41';
 import { tsum, tsumDays } from './town_tsum.js?v=2';
 import { pickLabel, dayKey } from './town_rec.js?v=23';
-import { cloudTeach, cloudOn } from './town_cloud.js?v=4';
+import { cloudTeach, cloudOn } from './town_cloud.js?v=6';
 
 const CSS = `.twn-p[data-k=tch]{--rib:#2f4f7a}.twn-p[data-k=tch] .bx{max-height:96vh}
 .tch-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 6px}

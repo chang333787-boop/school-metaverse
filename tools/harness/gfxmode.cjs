@@ -4,6 +4,7 @@
 //   🎨 그래픽 우선 = 그린 프레임 간격 33ms 안팎(fps 29~31) · ⚡ 부드럽게 = fps와 단계(50 위 유지인지)
 //   고르기 창(?gmpick=1 · 3m 걸으면 뜸) → 고름 → 새로고침 뒤 기억 · 설정 창 줄로 바꾸기 → 새로고침 뒤 기억
 //   stress = CPU 16×로 단계가 내려가는지 → 1×로 되돌려 다시 올라오는지(깜빡임 없이 차례대로) · 페이지 오류 0
+//   low = 2코어 흉내(PERF-B 11-08) — 해상도 사다리 1 → 0.75 · 자동도 단계 켬 · 홍보판은 예전 그대로
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const root = path.resolve(process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : '.');
@@ -43,6 +44,7 @@ srv.listen(0, async () => {
       await p.goto(base + '/v2/?title=0&gmpick=1'); await p.waitForFunction(() => window.SD2 && SD2.map && SD2.gfx && SD2.gfx.fm, null, { timeout: 120000 }); await W8(2500);
       await ev(() => { localStorage.removeItem('sm-set'); }); await p.reload(); await p.waitForFunction(() => window.SD2 && SD2.gfx && SD2.gfx.fm, null, { timeout: 120000 }); await W8(2500);
       const p0 = await perf(); ok(p0.mode === 'auto', '안 고른 기기 = 자동(MODE-2 · ' + p0.mode + ' · 판 ' + p0.gfxMode + ')');
+      ok(p0.steps === true, '크롬북 자동 = 버거우면 안개·디테일·그림자 단계도(PERF-B · steps ' + p0.steps + ')');
       ok(!(await ev(() => !!document.getElementById('gmPop'))), '걷기 전엔 고르기 창 없음');
       await ev(() => SD2.map.player.teleport('zone:운동장')); await W8(1200); await p.keyboard.down('KeyW'); await W8(2500); await p.keyboard.up('KeyW');
       let pop = false; for (let i = 0; i < 8 && !pop; i++) { await W8(700); pop = await ev(() => !!document.getElementById('gmPop')); }
@@ -76,6 +78,25 @@ srv.listen(0, async () => {
       await ev(() => { const P = SD2.map.player.get(); SD2.map.player.teleport([P.x + 6, P.z]); }); await W8(4000);
       ok(!(await ev(() => !!document.getElementById('gmPop'))), '홍보판엔 고르기 창 없음');
       const q = await measure(4, false); ok(q.fps > 45, '홍보판 그리기 ' + q.fps + 'fps(30 고정 아님)');
+    }
+    if (on('low')) {   /* PERF-B: 약한 크롬북(2코어 = low) — 해상도 사다리 1 → 0.75 · 자동도 단계 켬 · 홍보판은 예전 그대로(바닥 1 · 모드 끔) */
+      console.log('\n[저사양 크롬북] 2코어 흉내');
+      const c2 = await b.newContext({ viewport: { width: 1366, height: 768 }, deviceScaleFactor: 1, userAgent: UA });
+      await c2.addInitScript(() => { Object.defineProperty(Navigator.prototype, 'hardwareConcurrency', { get: () => 2 }); });
+      const q2 = await c2.newPage(); q2.on('pageerror', e => errs.push(e.message.slice(0, 200)));
+      await q2.goto(base + '/v2/?title=0'); await q2.waitForFunction(() => window.SD2 && SD2.gfx && SD2.gfx.fm, null, { timeout: 120000 }); await q2.evaluate(() => localStorage.removeItem('sm-set')); await q2.reload(); await q2.waitForFunction(() => window.SD2 && SD2.gfx && SD2.gfx.fm, null, { timeout: 120000 }); await q2.waitForTimeout(1500);
+      const L2 = await q2.evaluate(() => ({ mode: SD2.gfx.mode, ladder: SD2.gfx.auto.ladder.slice(), floor: SD2.gfx.floor, pf: SD2.perf() }));
+      ok(L2.mode === 'low' && L2.ladder.join(',') === '1,0.75' && L2.floor === 0.75, '저사양 = 해상도 사다리 ' + L2.ladder.join(' → ') + ' · 바닥 ' + L2.floor + '(예전 [1] 하나)');
+      ok(L2.pf.mode === 'auto' && L2.pf.steps === true && L2.pf.target === 30, '저사양 자동 = 30 고정 + 못 지키면 단계(' + L2.pf.mode + ' · 목표 ' + L2.pf.target + ' · steps ' + L2.pf.steps + ')');
+      await q2.evaluate(() => SD2.map.player.teleport('zone:운동장')); await q2.waitForTimeout(3000);
+      { const iv = await q2.evaluate(async () => { const F = SD2.gfx.fm, a = []; let d0 = F.draws, last = null; await new Promise(res => { const t0 = performance.now(); const f = ts => { if (F.draws !== d0) { d0 = F.draws; if (last != null) a.push(ts - last); last = ts; } if (performance.now() - t0 < 4000) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); }); a.sort((x, y) => x - y); return { fps: a.length / 4, med: a[a.length >> 1] }; });
+        ok(iv.fps >= 28 && iv.fps <= 31.5 && Math.abs(iv.med - 33.3) < 3, '저사양 자동 운동장 = 30fps 고르게(' + iv.fps + ' · 간격 ' + (iv.med || 0).toFixed(1) + 'ms)'); }
+      { const g9 = await q2.evaluate(() => import((performance.getEntriesByType('resource').find(e => /\/settings\.js/.test(e.name)) || { name: '/v2/js/settings.js' }).name).then(m => { m.setSet({ gm: 2 }); return SD2.perf(); }));
+        ok(g9.mode === 'smooth' && g9.target === 60, '저사양도 ⚡ 부드럽게를 고르면 60 목표(' + g9.mode + ' · ' + g9.target + ')'); }
+      await q2.goto(base + '/'); await q2.waitForFunction(() => window.SD2 && SD2.gfx && SD2.gfx.fm, null, { timeout: 120000 }); await q2.waitForTimeout(1500);
+      const P2 = await q2.evaluate(() => ({ ladder: SD2.gfx.auto.ladder.slice(), floor: SD2.gfx.floor, pf: SD2.perf() }));
+      ok(P2.floor === 1 && P2.ladder.join(',') === '1' && P2.pf.mode === 'fixed' && !P2.pf.steps, '홍보판 저사양 = 예전 그대로(사다리 ' + P2.ladder.join(',') + ' · ' + P2.pf.mode + ')');
+      await c2.close();
     }
     if (on('town') || on('stress')) {
       console.log('\n[마을] 짓는 중…');

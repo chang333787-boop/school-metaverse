@@ -2,8 +2,8 @@
 import * as THREE from 'three';
 import { buildKid } from './kid.js?v=5';   // CHAR-2 내 캐릭터(치비·노란 모자)
 import { attachLook, openLookPanel, parseLook, lookColors } from './look.js?v=1';
-import { SET, openSetPanel, openGfxPick } from './settings.js?v=6';   // SET-1 설정·접근성(글씨·색 구분·소리 끄기·흔들림·읽어 주기 — body 꼬리표 · 홍보판 = 기본값)
-import { afterRender, takePhoto, openPhotoPanel } from './photo.js?v=6';   // PHOTO-1 사진관(렌더 바로 뒤 한 번 잡기 · 이 기기 IndexedDB)   // LOOK-1 내 모습(모자·윗옷·바지·머리·피부 색 — 정점 색만 · 홍보판 = 기본)
+import { SET, openSetPanel, openGfxPick } from './settings.js?v=8';   // SET-1 설정·접근성(글씨·색 구분·소리 끄기·흔들림·읽어 주기 — body 꼬리표 · 홍보판 = 기본값)
+import { afterRender, takePhoto, openPhotoPanel } from './photo.js?v=7';   // PHOTO-1 사진관(렌더 바로 뒤 한 번 잡기 · 이 기기 IndexedDB)   // LOOK-1 내 모습(모자·윗옷·바지·머리·피부 색 — 정점 색만 · 홍보판 = 기본)
 import { buildWorld } from './world.js?v=159';   // ⚠️world.js를 고치면 이 숫자도 올린다(안 올리면 옛 월드로 검증하게 된다)
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
@@ -61,7 +61,8 @@ const GFX = (() => { const q = new URLSearchParams(location.search), hq = q.get(
   // 자동 해상도는 게이트·검진·사진 대조·?hq=1·?dpr=·?adapt=0에서 끈다(같은 화면을 다시 재야 하는 주소) · 휴대폰·저사양 판(mobile·low)도 끈다(리뷰 — 휴대폰 판은 예전 그대로)
   const adapt = !hq && !fix && q.get('adapt') !== '0' && !/[?&](check|health)=1/.test(location.search) && !q.get('shot');
   const aaQ = q.get('aa'), aa = aaQ === '1' ? true : aaQ === '0' ? false : !low && !cros;   // STORY-PERF(10-06): 크롬북도 MSAA 끔(약한 내장 그래픽 — 4배 표본·풀기 대역폭이 프레임을 먹는다 · ?aa=1이면 켬)   // 10-04 교사 '폰으로 하면 계속 떨리고 멀미': 휴대폰도 MSAA(타일 GPU라 싸다 — 가장자리 지글거림이 걸을 때 떨림으로 보였다) · 저사양만 끔
-  return { mode: low ? 'low' : mobile ? 'mobile' : cros ? 'cb' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, mobile || low ? 1 : 0.6), ios, shadow: low ? 0 : mobile || cros ? 1024 : 2048, adapt, aa, dev }; })();
+  /* PERF-B(11-08 교사 '학급에서 좀 덜 쾌적'): 약한 크롬북(low · 셀러론 2코어·메모리 ≤3GB)은 바닥 0.75 — 예전 1이라 사다리가 [1] 하나뿐(1배 밑으로 못 내림) · 0.75 아래는 팻말 글씨가 흐려 X · 휴대폰·홍보판은 예전 그대로(1) */
+  return { mode: low ? 'low' : mobile ? 'mobile' : cros ? 'cb' : 'desktop', dpr: fix || start, cap: fix || cap, start: fix || start, floor: fix || Math.min(start, mobile || (low && window.SM_PROMO) ? 1 : low ? 0.75 : 0.6), ios, shadow: low ? 0 : mobile || cros ? 1024 : 2048, adapt, aa, dev }; })();
 if (NORENDER) { const p = Math.min(0.25, 64 / Math.max(64, innerWidth)); Object.assign(GFX, { dpr: p, cap: p, start: p, floor: p, adapt: false, aa: false, norender: true }); }   // FAST-1: 그리는 판 ≈ 가로 64px(1280 창 = 배율 0.05) · 자동 해상도·MSAA 끔 · 판 갈래(mode)·그림자 값은 그대로(그걸 보고 정하는 게임 규칙이 같게)
 // MODE-1(10-27 사용자 '성능모드 30fps, 최적모드 60fps 두 개 · 60 유지 빡세면 50이라도'): 화면 모드 둘 — 설정 SET.gm(settings.js) · 값 = SD2.gfx.fm · SD2.perf()
 //   🎨 그래픽 우선(gm 1) = 30fps 고정(rAF는 돌되 33ms마다 그림 — 남는 시간 = CPU·GPU 쉼) · 해상도·디테일·그림자 = 기기 기본 · 자동 해상도는 30 아래일 때만
@@ -70,7 +71,8 @@ if (NORENDER) { const p = Math.min(0.25, 64 / Math.max(64, innerWidth)); Object.
 const FM = (() => { const q = new URLSearchParams(location.search), fixed = !!(window.SM_PROMO || NORENDER || q.get('hq') === '1' || +q.get('dpr') || q.get('adapt') === '0' || /[?&](check|health)=1/.test(location.search) || q.get('shot'));
   return { on: !fixed, q: false, mode: 'fixed', target: 60, lv: 0, step: '기본', fps: 0, fk: 1, dk: 1, shOff: false, slowN: 0, goodT: 0, cool: 0, hold: 0, upAt: -1e9, pre: 0, fail: [0, 0, 0], bt: 0, bn: 0, last: 0, lt: 0, draws: 0, fa: 0, fb: 0, nb: 0, ca: 0, cb: 0, town: false, log: [] }; })();
 const FM_STEP = ['기본', '안개 당김', '디테일 줄임', '그림자 끔'];
-function fmMode() { FM.q = FM.on && SET.gm === 1; FM.mode = !FM.on ? 'fixed' : FM.q ? 'graphics' : SET.gm === 2 ? 'smooth' : 'auto'; FM.target = FM.q ? 30 : 60; }   /* MODE-2 auto = 예전 그대로(자동 해상도만 · 안개·디테일·그림자 단계 X · 30 고정 X) */
+const FM_LITE = GFX.mode === 'cb' || GFX.mode === 'low', FM_LOW30 = GFX.mode === 'low';   /* PERF-B: 크롬북·저사양 = 안 고름(자동)도 부드럽게처럼 ② 안개 ③ 디테일 ④ 그림자 단계를 씀(해상도를 다 내린 뒤에만 · 되돌림 그대로) · 저사양(2코어) 자동 = 30 고정 + 30도 못 지키면 단계 */
+function fmMode() { const a30 = FM.on && !SET.gm && FM_LOW30; FM.q = FM.on && (SET.gm === 1 || a30); FM.mode = !FM.on ? 'fixed' : SET.gm === 1 ? 'graphics' : SET.gm === 2 ? 'smooth' : 'auto'; FM.target = FM.q ? 30 : 60; FM.st = FM.mode === 'smooth' || (FM.mode === 'auto' && FM_LITE); }   /* MODE-2 auto = 예전 그대로(자동 해상도만 · 안개·디테일·그림자 단계 X · 30 고정 X) — PERF-B 크롬북·저사양만 단계도(st) · 저사양 자동은 30 고정(q) · 🎨 그래픽 우선은 그대로(단계 X) */
 fmMode(); GFX.fm = FM;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: GFX.aa, powerPreference: 'high-performance' });
 if (NORENDER) {   // FAST-1: 그리기만 건너뜀 — three render가 하던 장면·카메라 행렬 갱신은 그대로 해 둔다(레이·투영·말풍선 자리·getWorldPosition이 그리는 판과 같게) · 셰이더 짓기(compile)도 건너뜀
@@ -1434,7 +1436,7 @@ MAP = createMapApi({ THREE, scene, camera, renderer, world, SCHOOL, film: FILM, 
 //  올리기: 시작 배율(start)까지는 '화면 주사율에 딱 맞게 돈다'(ft < 17.5 · 60Hz면 16.7) 또는 ft < 13이 4초 · start 위(cap까지 — 2배 화면)는 ft < 13(진짜 여유)만.
 //   한 번 버거웠던 칸으로 다시 오르려면 4초 × 2^실패 횟수(최대 64초) · 세 번 실패한 칸은 이번 판엔 다시 안 오른다(오르락내리락 막기).
 //  바닥 칸에선 그림자 지도도 1024로(한 번 다시 굽기 · 2048이던 기기만) — 바닥을 벗어나면 되돌림. 바꾼 뒤 1.5초는 쉬고 창을 비운다(새 창이 1초 차야 판단).
-//  재지 않는 때: 오프닝·메뉴·날아오기(TITLE — 첫 셰이더·길격자 짓기와 겹친다) · 탭 숨김. 휴대폰·저사양 판(mobile·low)은 예전 그대로(끔).
+//  재지 않는 때: 오프닝·메뉴·날아오기(TITLE — 첫 셰이더·길격자 짓기와 겹친다) · 탭 숨김. (PERF-3부터 휴대폰·저사양·크롬북도 켬 — 휴대폰 바닥 1 · 저사양 크롬북 바닥 0.75 = PERF-B)
 //  끄기: ?hq=1(품질 강제) · ?dpr=x(고정) · ?adapt=0 · 게이트·검진·사진 대조 주소. 값 = SD2.gfx(dpr·cap·start·floor·shadow·adapt) · SD2.gfx.auto(ft·단계 log)
 const ADAPT = (() => { const FL = GFX.floor || 0.6, L = []; for (let v = GFX.cap; v >= Math.max(0.75, FL) - 1e-6; v = Math.round((v - 0.25) * 100) / 100) L.push(v);   // MOB-2: 휴대폰 바닥 = 1배
   if (!L.includes(GFX.start)) { L.push(GFX.start); L.sort((a, b) => b - a); } if (L[L.length - 1] > FL + 1e-6) L.push(FL);
@@ -1495,23 +1497,24 @@ function fmSet(lv) {   // 단계 바꾸기: 1 = 안개·먼 평면 ×0.8(fmView�
   const off = lv >= 3 && GFX.shadow > 0; if (off !== FM.shOff) { FM.shOff = off; sun.castShadow = !off; renderer.shadowMap.enabled = !off && GFX.shadow > 0; if (!off) bakeShadows(); }
 }
 function fmEval(fps, now) {
-  const F = FM; F.fps = Math.round(fps * 10) / 10; if (F.mode !== 'smooth') { if (F.lv) fmSet(0); return; }   /* MODE-2: 자동·그래픽 우선 = 단계 X */
+  const F = FM; F.fps = Math.round(fps * 10) / 10; if (!F.st) { if (F.lv) fmSet(0); return; }   /* MODE-2: 자동·그래픽 우선 = 단계 X(PERF-B: 크롬북·저사양 자동은 단계 O) */
   if (F.cool > 0) { F.cool--; F.slowN = 0; F.goodT = 0; return; }
   if (F.pre) { const p0 = F.pre; F.pre = 0; if (fps < p0 * 1.04 + 0.5 && F.lv > 0) { F.log.push([+now.toFixed(1), 'nohelp', F.lv, F.fps]); fmSet(F.lv - 1); F.hold = now + 120; F.cool = 2; return; } }   /* 내렸는데 안 빨라짐(브라우저 30fps 잠금·에너지 절약) = 되돌리고 2분 쉼 */
-  if (fps < 50) { F.slowN++; F.goodT = 0; } else F.slowN = 0;
+  if (fps < (F.q ? 27 : 50)) { F.slowN++; F.goodT = 0; } else F.slowN = 0;   /* PERF-B 저사양 자동(30 고정) = 27 아래가 이어지면 */
   const A = ADAPT, dprDone = !GFX.adapt || A.lvl >= A.ladder.length - 1 || (A.capT && performance.now() < A.capT);   /* 해상도를 낮춰도 안 빨라진 기기(CPU가 버거움 · ADAPT cap) = 해상도 다음 단계로 — 진짜 30fps 잠금이면 아래 '안 빨라짐' 되돌림이 잡음 */
   if (F.slowN >= 2 && F.lv < (GFX.shadow > 0 ? 3 : 2) && now >= F.hold && dprDone) { if (now - F.upAt < 12) F.fail[F.lv] = Math.min(4, F.fail[F.lv] + 1);   /* 올린 지 얼마 안 돼 다시 버거움 = 그 단계는 더 오래 기다림 */
     F.pre = fps; fmSet(F.lv + 1); F.cool = 3; F.slowN = 0; F.log.push([+now.toFixed(1), 'down', F.lv, F.fps]); if (F.log.length > 40) F.log.splice(0, 20); return; }
-  if (F.lv > 0 && fps >= 57) { F.goodT++; if (F.goodT >= 6 * 2 ** F.fail[F.lv - 1]) { F.upAt = now; fmSet(F.lv - 1); F.cool = 3; F.goodT = 0; F.log.push([+now.toFixed(1), 'up', F.lv, F.fps]); if (F.log.length > 40) F.log.splice(0, 20); } } else F.goodT = 0;
+  if (F.lv > 0 && fps >= (F.q ? 29.5 : 57)) { F.goodT++; if (F.goodT >= 6 * 2 ** F.fail[F.lv - 1]) { F.upAt = now; fmSet(F.lv - 1); F.cool = 3; F.goodT = 0; F.log.push([+now.toFixed(1), 'up', F.lv, F.fps]); if (F.log.length > 40) F.log.splice(0, 20); } } else F.goodT = 0;
 }
 function fmTick(ts) {   // 그린 프레임마다 — 1초 창이 차면 fmEval
   const F = FM, raw = F.last ? ts - F.last : 0; F.last = ts; F.draws++;
   if (!F.on || !(raw > 0)) return;
   if (document.hidden || window.SM_HOLD3D > 0 || (ADAPT.hold && ADAPT.hold())) { F.bt = F.bn = 0; return; }
+  if (window.SM_BUILD > 0) { F.bt = F.bn = 0; F.cool = Math.max(F.cool, 3); return; }   /* PERF-B: 마을 짓는 동안(+ 끝난 뒤 3초) 단계 판정 쉼 — 짓기 프레임의 느림을 기기 탓으로 셈하던 것(CPU 4× 흉내에서 짓는 중 안개·디테일이 내려감) */
   if (raw > 250) { F.bt = F.bn = 0; return; }   /* 게임 열기·탭 전환 같은 한 번 끊김은 버림 */
   F.bt += raw; F.bn++; if (F.bt < 1000) return;
   const fps = F.bn * 1000 / F.bt; F.bt = F.bn = 0; F.town = document.body.classList.contains('h-town');
-  if (F.q) { F.fps = Math.round(fps * 10) / 10; return; }
+  if (F.q && !F.st) { F.fps = Math.round(fps * 10) / 10; return; }   /* 🎨 그래픽 우선 = 단계 X(PERF-B 저사양 자동 30은 단계 O) */
   fmEval(fps, ts / 1000);
 }
 function fmView() {   // 그리기 직전: 안개(·학교 맵은 먼 평면도)를 바탕값 × fk로 — 다른 쪽(시간대·게임 화풍·높은 곳 전망)이 바꾸면 그 값을 새 바탕으로
@@ -2090,7 +2093,7 @@ window.SD2 = {
   doors: () => DOORS.length, doorCheck,
   near: () => hotNear && hotNear.label, act: () => hotNear && act(hotNear),
   film: FILM, top: TOP, acts: ACTS, hotNow: () => hotNear, actOn: h => act(h), camOvr: f => { CAM_OVR = f; }, pg,   // ACTION-1: 보이는 행동(시험 — SD2.acts.play('drink', {at:[x,y,z]}) · stats())
-  perf: () => ({ fps: FM.fps1 || 0, mode: FM.mode, target: FM.target, step: FM.lv, stepName: FM.step, dpr: GFX.dpr, dprLvl: ADAPT.lvl + '/' + (ADAPT.ladder.length - 1), fog: FM.fk, detail: FM.dk, shadow: !FM.shOff && GFX.shadow > 0, drawCalls: FM.dc || 0, gfxMode: GFX.mode, log: FM.log.slice(-8) }),   /* MODE-1: 지금 모드·목표·단계 */
+  perf: () => ({ fps: FM.fps1 || 0, mode: FM.mode, steps: !!FM.st, target: FM.target, step: FM.lv, stepName: FM.step, dpr: GFX.dpr, dprLvl: ADAPT.lvl + '/' + (ADAPT.ladder.length - 1), fog: FM.fk, detail: FM.dk, shadow: !FM.shOff && GFX.shadow > 0, drawCalls: FM.dc || 0, gfxMode: GFX.mode, log: FM.log.slice(-8) }),   /* MODE-1: 지금 모드·목표·단계 */
   touch: TOUCH, gfx: GFX, title: TITLE, input: { keys, KEY_NEW, KEY_UP, MOUSE, clear: keysClear }, prewarm, setDpr, setShadowSize, adaptTick,   // PERF-WIN
   cam: () => [+camYaw.toFixed(3), +camPitch.toFixed(3), camFirst, +camZ.toFixed(3)],   // TOUCH-1: 터치 상태·성능 판·시점(시험용)
   // MAP-API-1: 지도 API · 물리 함수(검진·게임과 같은 식) · 맵 건강 검진(health.js 지연 로드 — Promise)

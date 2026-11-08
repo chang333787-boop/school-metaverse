@@ -4,7 +4,7 @@
 //   지키는 선: 희귀도 색 테두리·반짝이·그라데이션·무게·내구도 X · 매 프레임 일 0(창이 열린 동안 끌기만) · 판타지 X · 실명 X · 이모지 = 윈도 10에서 보이는 것
 //   마을 쪽이 넘기는 것(A): GAME · lang() · esc(t) · bag() · rwd() · tools() · here() [x, z] · me() {x, z} · where(x, z) { ic, nm } · mapSnip(cv, pts) · renderer() · kid() · T3
 //     tone(...) · sfx(k) · typh() { rope, sand } | null · fx() 먹은 힘 한 줄 · lookSig() · night() · reopen(tab) · useShow(P9, e) · useBox() · sell(e) · yard(e)
-import { ITEMS, itemName } from './town_game.js?v=53';
+import { ITEMS, itemName } from './town_game.js?v=55';
 import { TOOL, TOOL_ORDER } from './town_tools.js?v=17';
 export const BAG3_V = 1;
 const T2 = (ko, en) => [ko, en];
