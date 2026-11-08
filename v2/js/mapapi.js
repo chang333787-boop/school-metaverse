@@ -263,13 +263,14 @@ export function createMapApi(host, NAV, META) {
   };
   const trigIn = s => s.rect ? (P.x >= s.rect[0] && P.x <= s.rect[2] && P.z >= s.rect[1] && P.z <= s.rect[3] && P.y >= (s.y0 ?? -1e9) && P.y <= (s.y1 ?? 1e9))
     : ((P.x - s.x) ** 2 + (P.z - s.z) ** 2 < s.r * s.r && Math.abs(P.y - (s.y ?? P.y)) < 1.6);
+  const CFREE = [], DBG9 = /[?&]debug=1/.test(location.search);   /* PERF-A: CFREE = 지운 동적 충돌 칸 번호(다시 씀 — 마을 차 상자가 8m마다 열 개씩 쌓여 world.colliders가 끝없이 늘던 것 · 이어받기 B5) */
   const collider = {
     // 동적 충돌 상자 — 길격자에는 안 들어간다(같이 nav.block을 걸 것)
     add(b, o = {}) {
       const c = { x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1, z0: b.z0, z1: b.z1, nc: !!(o.ns || b.nc), dyn: true }; if (o.ns) { c.vy1 = c.y1; c.y1 = Math.max(c.y1, c.y0 + 1.6); }   // vy1 = 보이는 윗면(ENGINE-1 술래 시야)
-      const i = world.colliders.push(c) - 1, cells = []; if (pl.tinyAdd) pl.tinyAdd(c);   // SHRINK-1: 작아진 동안 더한 충돌도 작은 몸 판에
+      let i; if (CFREE.length) { i = CFREE.pop(); world.colliders[i] = c; } else i = world.colliders.push(c) - 1; const cells = []; let dead = false; if (pl.tinyAdd) pl.tinyAdd(c);   // SHRINK-1: 작아진 동안 더한 충돌도 작은 몸 판에
       for (let gx = Math.floor(c.x0 / 8); gx <= Math.floor(c.x1 / 8); gx++) for (let gz = Math.floor(c.z0 / 8); gz <= Math.floor(c.z1 / 8); gz++) { const k = gx + ':' + gz; if (!world.grid.has(k)) world.grid.set(k, []); world.grid.get(k).push(i); cells.push(k); }
-      return { box: c, remove() { c.y0 = c.y1 = -1e6; for (const k of cells) { const a = world.grid.get(k), j = a ? a.indexOf(i) : -1; if (j >= 0) a.splice(j, 1); } cells.length = 0; } };   // 인덱스는 유지(다른 참조가 안 밀리게)
+      return { box: c, remove() { if (dead) return; dead = true; c.y0 = c.y1 = -1e6; for (const k of cells) { const a = world.grid.get(k), j = a ? a.indexOf(i) : -1; if (j >= 0) a.splice(j, 1); } cells.length = 0; if (world.colliders[i] === c) { world.colliders[i] = { x0: 0, x1: 0, y0: -1e6, y1: -1e6, z0: 0, z1: 0, nc: true, dyn: true }; CFREE.push(i); } } };   // 다른 칸 번호는 그대로(안 밀림) · PERF-A: 지운 칸은 빈 상자로 바꿔 두고 다음 add가 다시 씀(두 번 지워도 한 번만)
     },
   };
 
@@ -589,7 +590,7 @@ export function createMapApi(host, NAV, META) {
       const t0 = performance.now();
       try { cur.handle.tick(dt); } catch (e) { console.error('[map] 게임 tick 오류', e); stopGame('error'); hud.toast('게임에 문제가 생겨 멈췄어요'); }
       game.ms += performance.now() - t0; game.msN++;
-      if ((game.msT += dt) >= 2) { const avg = game.ms / Math.max(1, game.msN); if (avg > 1) console.warn('게임 예산 초과: tick 평균 ' + avg.toFixed(2) + 'ms'); game.last = avg; game.ms = game.msN = game.msT = 0; }
+      if ((game.msT += dt) >= 2) { const avg = game.ms / Math.max(1, game.msN); if (avg > 1 && DBG9) console.warn('게임 예산 초과: tick 평균 ' + avg.toFixed(2) + 'ms');   /* PERF-A: 2초마다 경고는 ?debug=1에서만 */ game.last = avg; game.ms = game.msN = game.msT = 0; }
     }
     emitTick(dt);
   }

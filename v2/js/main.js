@@ -8,7 +8,7 @@ import { buildWorld } from './world.js?v=159';   // ⚠️world.js를 고치면 
 import { SCHOOL } from './layout.js?v=16';   // LAYOUT-3 실측 배치(v1 data.js 대신)
 import * as NAV from './nav.js?v=7';               // MAP-API-1: 길격자·길찾기(도달성 게이트와 단일 출처)
 import { makeMeta } from './mapmeta.js?v=12';       // MAP-API-1: 구역 계약표·출발점·표지점
-import { createMapApi } from './mapapi.js?v=98';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
+import { createMapApi } from './mapapi.js?v=100';    // MAP-API-1: 게임용 지도 API(SD2.map) — 정본 docs/map_api.md
 import { createTouch, touchPrimary } from './touch.js?v=11';   // TOUCH-1(09-26): 휴대폰·태블릿 조작(조이스틱·시점 드래그·점프/행동 버튼)
 import { createTitle } from './title.js?v=29';   // TITLE-1(09-27): 오프닝 화면·놀이 고르기(주소에 ?game·?tour·?shot·?check·?health·?title=0이 없을 때만)
 import { createFilm } from './film.js?v=17';
@@ -47,8 +47,10 @@ const canvas = document.getElementById('scene');
 // HAS-1(10-04 아이폰 시뮬레이터 실측): 아이폰 사파리는 CSS :has()가 '맞다'고 판정해도 화면에 적용하지 않는 경우가 있었다(대화창이 열려도 칩·단추가 그대로)
 //   → 창이 열려 있으면 body에 h-<이름> 꼬리표를 직접 붙인다(phone.css·title.css는 :has 대신 이 꼬리표 · 몸통 아래 바뀜만 보고 한 프레임에 한 번)
 { const HAS = ['#tour-talk', '#tour-media', '#tour-card', '#story-talk', '#story-end', '#memo-board', '#memo-form', '#memo-pick', '.eng-note', '.esc-lock', '.hudAsk', '.lb-pop', '.wg-lobby', '#mmap.mm-ov|mm-ov'];   // '고르개|꼬리표 이름'(이름이 따로면)
-  let pend = false; const sync = () => { pend = false; const B = document.body; if (!B) return; for (const q0 of HAS) { const [q, n] = q0.split('|'), c = 'h-' + (n || q.slice(1)), on = !!document.querySelector(q); if (B.classList.contains(c) !== on) B.classList.toggle(c, on); } };
-  new MutationObserver(() => { if (!pend) { pend = true; requestAnimationFrame(sync); } }).observe(document.documentElement, { childList: true, subtree: true }); }
+  let pend = false, MM9 = null; const kick = () => { if (!pend) { pend = true; requestAnimationFrame(sync); } }, MO9 = new MutationObserver(kick); const sync = () => { pend = false; const B = document.body; if (!B) return; for (const q0 of HAS) { const [q, n] = q0.split('|'), c = 'h-' + (n || q.slice(1)), on = !!document.querySelector(q); if (B.classList.contains(c) !== on) B.classList.toggle(c, on); } const mm = document.getElementById('mmap'); if (mm !== MM9) { MO9.disconnect(); MM9 = mm; if (mm) MO9.observe(mm, { attributes: true, attributeFilter: ['class'] }); } };   /* PERF-A: #mmap.mm-ov는 class만 바뀜 → 그 상자 하나의 class만 따로 봄 */
+  /* PERF-A(교사 11-08 크롬북): 칩 글 바꾸기(글자 마디만 바뀜)마다 고르개 14개를 다시 찾던 것 → 요소가 붙거나 떨어질 때만(창은 붙일 때 이름이 이미 있음 — 같은 작업 안에서 붙인 class·id도 다음 프레임 sync가 봄) · 홍보판도 같은 main.js */
+  const el9 = L => { for (let i = 0; i < L.length; i++) if (L[i].nodeType === 1) return true; return false; };
+  new MutationObserver(R => { if (pend) return; for (const r of R) if (el9(r.addedNodes) || el9(r.removedNodes)) { kick(); return; } }).observe(document.documentElement, { childList: true, subtree: true }); }
 // SAFE-1(10-04 아이폰 시뮬레이터 실측): 아이폰 가로 화면 + viewport-fit=cover이면 재생 중인 유튜브 영상만 노치 쪽 안전 여백(≈60px)만큼 밀려 그려지고(검은 띠·반대쪽 잘림)
 //   글자도 노치·다이내믹 아일랜드에 가렸다 → 아이폰은 cover를 빼서 안전한 영역 안에만 그린다(양옆 노치 자리 = 어두운 여백 · 홍보판 index.html은 그대로 — 실행 때 바꿈)
 if (/iP(hone|od)/.test(navigator.userAgent || '')) { const m = document.querySelector('meta[name=viewport]'); if (m && /viewport-fit=cover/.test(m.content)) m.content = m.content.replace(/,?\s*viewport-fit=cover/, ''); document.documentElement.style.background = '#0b1220'; if (document.body) document.body.style.background = '#0b1220'; }
@@ -87,6 +89,7 @@ if (NORENDER) {   // FAST-1: 그리기만 건너뜀 — three render가 하던 �
 }
 // PERF-WIN: 셰이더 오류 검사(getShaderInfoLog·getProgramInfoLog)는 컴파일이 끝날 때까지 주 스레드를 세운다(점검 실측 300~800ms) — 배포판은 끄고 ?debug=1·?check=1에서만 켠다
 renderer.debug.checkShaderErrors = /[?&](debug|check)=1/.test(location.search);
+const DBG9 = /[?&]debug=1/.test(location.search);   /* PERF-A: 예산 초과 콘솔 경고(1초마다)는 ?debug=1에서만 */
 // MOB-2 그래픽 끊김(WebGL 컨텍스트 잃음): 아이폰은 메모리가 모자라면(영상 재생·다른 앱) 3D 화면을 통째로 잃어 검게 멈춘다 → 알리고 다시 불러온다(도장은 저장돼 있음)
 canvas.addEventListener('webglcontextlost', e => { e.preventDefault();
   const d = document.createElement('div'); d.className = 'ttl-keep'; d.textContent = '🔄 화면을 다시 불러오는 중이에요…';
@@ -1911,8 +1914,8 @@ function loop(ts) {
     const fps = Math.round(n / acc);
     const dc = renderer.info.render.calls; FM.fps1 = fps; FM.dc = dc;   /* MODE-1: SD2.perf() */
     fpsBox.textContent = fps + ' fps · ' + Math.round(GFX.dpr * 100) / 100 + 'x · ' + dc + ' dc · sim ' + simMs.toFixed(2) + 'ms' + (MAP.game.current ? ' · game ' + MAP.game.lastMs.toFixed(2) + 'ms' : '');
-    if (dc > 300) console.warn('예산 초과: drawCalls', dc);
-    if (simMs > 1) console.warn('예산 초과: sim ms', simMs.toFixed(2));
+    if (DBG9 && dc > 300) console.warn('예산 초과: drawCalls', dc);   /* PERF-A: 1초마다 콘솔 경고는 ?debug=1에서만(크롬북·시험 브라우저가 매초 글을 쌓던 것) */
+    if (DBG9 && simMs > 1) console.warn('예산 초과: sim ms', simMs.toFixed(2));
     acc = 0; n = 0; simMs = 0;
   }
 }
