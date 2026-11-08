@@ -1,7 +1,7 @@
 // 🎓 학원 공부 시험(ACAD-1 · v2/games/town_acad.js · 설계 docs/systems/town_acad.md §8) — 브라우저: zsh tools/ops/b2.sh node tools/harness/town_acad.cjs ourtown <포트> [--shots=폴더]
 //   ① 학원 E(진짜 E 누르기) = 수업 창(오늘 배울 것 · 수업 시작 · 단계 칸)  ② 문제 창 크기(물음 18px 넘게 · 보기 단추 44px 넘게 · 할 일 한 줄)
 //   ③ 틀림 = 그 보기 ✗ 잠김 + 힌트 1 → 힌트 2 → 까닭 · 정답 단추를 칠하지 않음 · 맞힘 = 오늘 배운 것 + 다음  ④ 잘한 판 = 단계 +1 · 칠판 별 · 가방 수료 도장 · 솜씨 +
-//   ⑤ 같은 날 한 판 더 = 단계 그대로 · 솜씨 0(오늘 몫 받음)  ⑥ 학원 수첩(📒 단추 · 수첩 탭)  ⑦ 수업 시간 밖 = '수업은 오후 2시부터' + 자습 셋(단계·도장 X)
+//   ⑤ 같은 날 한 판 더 = 단계 그대로 · 솜씨 0(오늘 몫 받음)  ⑥ 학원 수첩(📒 단추 · 수첩 탭)  ⑦ 수업 시간 밖 = '수업은 오전 10시부터' + 자습 셋(단계·도장 X) · DEB-2 ⑥ 수업 = 오전 10시~밤 9시
 //   ⑧ 다음 날 = 다시 단계 · 솜씨  ⑨ 닫았다 열면 이어서  ⑩ 과목 일곱 한 판씩(있는 학원만 · 차례·리듬·동작·로봇·긴 글)  ⑪ 휴대폰 세로·가로(가로 넘침 X · 단추 44px) ⑪-2 낮은 가로(844×340 등) 로봇 문제 한 화면  ⑫ 페이지 오류 0
 const { chromium, RENDER } = require('./pw.cjs');
 const ID = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'ourtown', PORT = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '8002';
@@ -68,15 +68,15 @@ const SUBJS = ['math', 'english', 'science', 'study', 'art', 'piano', 'taekwondo
     ok(s2.st === 2 && s2.clr === 1 && (await ev(e => SM_TOWN.game().S.bag[e] || 0, STAMP[K0])) === 1, '같은 날 잘한 판 = 단계·도장 그대로'); ok(xpB === xpA && /이미 받았어요/.test(P0.t), '같은 날 솜씨 0 · 「오늘 몫은 이미 받았어요」');
     // ⑥ 학원 수첩
     console.log('⑥ 학원 수첩'); await click('[data-a="note"]'); await W8(300); P0 = await panel(); await shot('6_note');
-    ok(P0 && P0.k === 'acad' && /학원 수첩/.test(P0.t) && /2단계/.test(P0.t) && /도장 1/.test(P0.t), '수첩 창: ' + K0 + ' 2단계 · 도장 1'); ok(/수업 시간: 오후 2시~7시/.test(P0.t), '수첩에 수업 시간 줄');
+    ok(P0 && P0.k === 'acad' && /학원 수첩/.test(P0.t) && /2단계/.test(P0.t) && /도장 1/.test(P0.t), '수첩 창: ' + K0 + ' 2단계 · 도장 1'); ok(/수업 시간: 오전 10시~밤 9시/.test(P0.t), '수첩에 수업 시간 줄');
     ok(await ev(() => [...document.querySelectorAll('.twn-p [data-nb]')].some(b9 => /학원/.test(b9.textContent))), '수첩 탭 줄에 📒 학원 탭');
     ok(!/[0-9]+위|순위|1등/.test(P0.t), '수첩에 순위·견주기 없음');
     // ⑦ 수업 시간 밖 = 자습
-    console.log('⑦ 자습'); await closeAll(); await setT(10 * 60 + 30); await ev(() => SM_TOWN.ent().use('ent:acad')); await W8(300); P0 = await panel();
-    ok(/수업은 오후 2시부터예요/.test(P0.t) && /자습 시작/.test(P0.t) && /자습/.test(P0.t), '오전 10시 반 = 「수업은 오후 2시부터예요」 · 자습 시작'); await shot('7_self');
+    console.log('⑦ 자습'); await closeAll(); await setT(9 * 60 + 30); await ev(() => SM_TOWN.ent().use('ent:acad')); await W8(300); P0 = await panel();
+    ok(/수업은 오전 10시부터예요/.test(P0.t) && /자습 시작/.test(P0.t) && /자습/.test(P0.t), '오전 9시 반 = 「수업은 오전 10시부터예요」 · 자습 시작'); await shot('7_self');
     await click('[data-a="start"]'); await W8(250); R = await RUN(); ok(R.mode === 'self' && R.n === 3, '자습 = 세 문제'); await solveAll(); P0 = await panel(); const s3 = await ST(K0);
     ok(s3.st === 2 && s3.clr === 1 && s3.self === 1 && /자습은 연습/.test(P0.t), '자습 = 단계·도장 그대로 · 자습 1');
-    await closeAll(); await setT(20 * 60); await ev(() => SM_TOWN.ent().use('ent:acad')); await W8(300); P0 = await panel(); ok(/오늘 수업은 끝났어요/.test(P0.t), '저녁 8시 = 「오늘 수업은 끝났어요」');
+    await closeAll(); await setT(21 * 60 + 30); await ev(() => SM_TOWN.ent().use('ent:acad')); await W8(300); P0 = await panel(); ok(/오늘 수업은 끝났어요/.test(P0.t), '밤 9시 반 = 「오늘 수업은 끝났어요」');
     // ⑧ 다음 날
     console.log('⑧ 다음 날'); await closeAll(); await setT(15 * 60, 1); const xpC = await XP(SK0); await ev(() => SM_TOWN.ent().use('ent:acad')); await W8(300); await click('[data-a="start"]'); await W8(250); await solveAll(); const s4 = await ST(K0), xpD = await XP(SK0);
     ok(s4.st === 3 && s4.clr === 2 && (await ev(e => SM_TOWN.game().S.bag[e] || 0, STAMP[K0])) === 2, '다음 날 잘한 판 = 3단계 · 도장 2'); ok(xpD > xpC, '다음 날 솜씨 다시 + (' + xpC + ' → ' + xpD + ')');

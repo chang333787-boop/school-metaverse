@@ -177,6 +177,7 @@ export function createTools(A) {
     aimHold = 0.6; map.player.aim(Math.atan2(T.x - me.x, -(T.z - me.z)) * 180 / Math.PI);
     pourHit(dt); }
   /* 젖는 자리 판정 = 물줄기마다(가운데 + 옆 둘) · 쌓임 = 자리마다(날이 바뀌거나 새로 누르면 처음부터 — 예전엔 한 번 물 준 두둑은 그 탭이 닫힐 때까지 다시 안 젖던 것) */
+  let DRYT = -1e9;   /* DEB-2 ⑯ 이야기 마른 꽃을 살린 때(곁 꽃에 이어 부어도 6초 동안은 같은 말 X) */
   const ACM = new Map(); let acmD = -1, pourN = 0, pourMax = 0; const POURB = new Set();
   const acc = (k, dt, need) => { const v = ACM.get(k) || 0; if (v < 0) return false; const n = v + dt; if (n >= need) { ACM.set(k, -1); return true; } ACM.set(k, n); return false; };
   function pourHit(dt) { if (acmD !== day()) { acmD = day(); ACM.clear(); } const wet = (wetQ -= dt) <= 0; if (wet) wetQ = 0.4; hitAt(T.x, T.z, T.y, dt, true, wet); if (SIDE[0].on) for (const s of SIDE) if (s.on) hitAt(s.x, s.z, s.y, dt, false, wet); }
@@ -189,7 +190,7 @@ export function createTools(A) {
     const f = flowerAt(x, z, 0.8); if (f) { const k = Math.round(f.x * 2) + ':' + Math.round(f.z * 2); if (!acc('f' + k, dt, 0.8)) return; const B = t.bloom, b = B[k];
       if (b && b.w === day()) { if (main) toast(en9 ? '🌷 You watered this flower today — come back tomorrow' : '🌷 이 꽃은 오늘 물을 줬어요 — 내일 또 줘요', 2.2); return; }
       B[k] = { x: +f.x.toFixed(2), y: +f.y.toFixed(2), z: +f.z.toFixed(2), c: Math.min(9, ((b && b.c) || 0) + 1), w: day() }; const ks = Object.keys(B); if (ks.length > 20) { ks.sort((a9, b9) => B[a9].w - B[b9].w); delete B[ks[0]]; } mark(); dirty = true;
-      A.skUp('farm', 1, 'flower'); const sw9 = !!(A.recWant && A.recWant('can-flower', f.x, f.z)); A.rec('can-flower'); if (!sw9) toast(en9 ? '🌷 Watered the flowers — one more will bloom tomorrow' : '🌷 꽃에 물을 줬어요 — 내일 한 송이 더 피어요', 2.6); return; }   /* DEB-3: 이야기가 받으면 이야기 띠 한 번만 */
+      const dry9 = !!f.dry; A.skUp('farm', 1, 'flower'); const sw9 = !!(A.recWant && A.recWant('can-flower', f.x, f.z)); A.rec('can-flower'); if (sw9 || dry9) DRYT = performance.now(); else if (performance.now() - DRYT > 6000) toast(en9 ? '🌷 Watered the flowers — one more will bloom tomorrow' : '🌷 꽃에 물을 줬어요 — 내일 한 송이 더 피어요', 2.6); return; }   /* DEB-3: 이야기가 받으면 이야기 띠 한 번만 */
     const p = potAt(x, z); if (p) { const k = Math.round(p[0]) + ':' + Math.round(p[2]); if (!acc('p' + k, dt, 0.8)) return; if (t.n['pot:' + k] === day()) return; t.n['pot:' + k] = day(); mark(); A.skUp('farm', 1, 'pot:' + k); toast(en9 ? '🌱 Watered the pot plant' : '🌱 화분에 물을 줬어요', 2); } }
   function dropTick(dt) { if (!pAlive) { if (DROP && DROP.visible) DROP.visible = false; return; } let n = 0;
     for (let i = 0; i < PMAX; i++) { const k = kind[i]; if (!k) continue; if ((life[i] -= dt) <= 0) { kind[i] = 0; pAlive--; if (k === 1 && Math.random() < 0.35) splash(px[i], py[i], pz[i], 1); continue; }

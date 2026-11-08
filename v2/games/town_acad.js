@@ -6,7 +6,7 @@
 //   지키는 선: 순위·견주기 X · 빈 칭찬 X(무엇을 했는지 한 줄) · 판타지 X · 실명 X · 매 프레임 일 0(창 안 타이머만 · 창이 닫히면 멈춤) · 새 Light X
 import { lesson, SUBJ, SUBJ_ORDER, goodRun, hashS, RHY_KEYS, MOVES, shapeSvg, BLK } from './town_acad_bank.js?v=4';
 export const ACAD_V = 1;
-export const ACAD_HOURS = [14, 19];
+export const ACAD_HOURS = [10, 21];   /* DEB-2 ⑥(11-08 토론 판정): 오후 2~7시 → 오전 10시~밤 9시(시계 빠르기는 그대로 · 과목마다 하루 한 번 상한도 그대로) — 첫 수업에 학원에 가면 '오늘 수업은 끝났어요'가 먼저 뜨던 것 */
 export const ACAD_SK = { math: 'explore', english: 'explore', science: 'look', study: 'explore', art: 'look', piano: 'explore', taekwondo: 'explore' };   /* 예전 학원 갈래 솜씨 그대로(town_enter.js CATS sk) */
 // POLISH-1(11-07 '학원 로봇 문제 휴대폰 가로 = 보기 둘 남짓만 보이고 나머지는 내려야 해요'): 낮은 가로 화면(휴대폰 가로 · 사파리 주소창 빼고 300~390px)
 //   그림 있는 문제 = 왼쪽 칸 [문제 번호 · 그림] · 오른쪽 칸 [할 일 · 물음 · 블록 뜻 · 보기 두 칸 격자] · 힌트 칸은 아래 단추 줄 왼쪽(한 줄 띠) · 창 높이 96% · 그림 문제는 .ac-body.side 꼬리표(has 선택자 X)
@@ -70,7 +70,7 @@ export function createAcad(A) {
   const speak = t => { if (!canSay()) return; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'en-US'; u.rate = 0.85; speechSynthesis.speak(u); } catch (e) { /* 소리 막힘 */ } };
   const hm = () => { const m = G().min | 0, h = Math.floor(m / 60); return (h < 12 ? '오전 ' : '오후 ') + (h % 12 || 12) + '시 ' + String(m % 60).padStart(2, '0') + '분'; };
   const subName = k => (SUBJ[k] ? SUBJ[k].t : k);
-  function hourLine() { const h = hour(); return h < ACAD_HOURS[0] ? '수업은 오후 2시부터예요. 지금은 자습만 할 수 있어요.' : h >= ACAD_HOURS[1] ? '오늘 수업은 끝났어요(오후 7시까지). 지금은 자습만 할 수 있어요.' : ''; }
+  function hourLine() { const h = hour(); return h < ACAD_HOURS[0] ? '수업은 오전 10시부터예요. 지금은 자습만 할 수 있어요.' : h >= ACAD_HOURS[1] ? '오늘 수업은 끝났어요(밤 9시까지). 지금은 자습만 할 수 있어요.' : ''; }
   const steps = (sb, now) => '<div class="ac-steps" aria-label="단계">' + [1, 2, 3, 4, 5].map(i => '<b class="' + (i <= sb.clr ? 'done' : i === sb.st && now ? 'now' : '') + '">' + (i <= sb.clr ? '⭐' : i) + '</b>').join('') + '</div>';
   // ───────── 창 열기 ─────────
   function shell(title, kind) { css(); stopT(); P = A.openP('<h3><span class="ac-ttl">' + esc(title) + '</span></h3><div class="ac-body"></div>', false, kind || 'acadq'); if (!P) return null; P.onclick = onClick; P.addEventListener('keydown', onKey); return P; }
@@ -169,7 +169,7 @@ export function createAcad(A) {
       if (sb.rd !== d) { const x0 = A.skXp ? A.skXp(skk) : 0; A.skUp(skk, 2, 'acad:' + k); const got = (A.skXp ? A.skXp(skk) : 2) - x0; if (got > 0) { sb.rd = d; rw = '솜씨가 ' + got + ' 늘었어요(오늘 ' + subName(k) + ' 수업 몫).'; } else rw = '오늘은 솜씨를 충분히 모았어요. 배운 것은 수첩에 남아요.'; }
       else rw = '오늘 ' + subName(k) + ' 수업 몫은 이미 받았어요. 이번 판은 연습이에요.';
       if (R.ctx.say) R.ctx.say(up ? R.st0 + '단계를 마쳤어요. 칠판에 별을 붙일게요.' : good ? '잘 풀었어요. 다음 단계는 내일 해요.' : '까닭을 본 문제를 다시 떠올려 봐요.'); }
-    else { sb.self++; res = '자습은 연습이라 단계와 도장은 수업(오후 2시~7시)에서 올라요.'; }
+    else { sb.self++; res = '자습은 연습이라 단계와 도장은 수업(오전 10시~밤 9시)에서 올라요.'; }
     if (R.ctx.done) R.ctx.done(); if (A.rec) A.rec('acad', { k, st: R.st0, mode: R.mode, marks: R.marks.slice(), good: !!good, up }); A.GAME.mark();
     const b = body(); if (!b) return; setTitle(SUBJ[k].ic + ' ' + subName(k) + ' 학원 · ' + (cls ? '수업' : '자습') + ' 끝');
     b.classList.remove('side'); b.innerHTML = '<div class="ac-end"><div class="ac-marks" aria-label="문제마다 결과">' + R.marks.map(m => ['●', '◐', '○'][m]).join(' ') + '</div><p style="font-size:14px;color:var(--mut);margin:0">● 한 번에 · ◐ 힌트 뒤 · ○ 까닭 뒤</p>'
@@ -182,7 +182,7 @@ export function createAcad(A) {
     const rows = SUBJ_ORDER.map(k => { const S9 = SUBJ[k], sb = s.s[k]; if (!sb) return '<div class="ac-nr"><b class="ic">' + S9.ic + '</b><div><b>' + esc(S9.t) + '</b> <small>아직 안 들었어요</small><div><small>' + esc('1단계: ' + S9.top[0]) + '</small></div></div><div class="side">' + esc(WHERE[k] || S9.t + ' 학원') + '에서 시작</div></div>';
       return '<div class="ac-nr" data-acn="' + k + '"><b class="ic">' + S9.ic + '</b><div><b>' + esc(S9.t) + '</b> <small>' + (sb.clr >= 5 ? '수료' : sb.st + '단계') + '</small>' + steps(sb, true) + '<small>' + (sb.learn.length ? '최근 배운 것: ' + fr(sb.learn[0]) : esc('다음: ' + S9.top[sb.st - 1])) + '</small></div>'
         + '<div class="side">' + S9.stamp + ' 도장 ' + sb.clr + '<br>수업 ' + sb.n + ' · 자습 ' + sb.self + '<br>' + (sb.rd === d ? '오늘 수업 했어요' : '오늘 수업 전') + '</div></div>'; }).join('');
-    P = A.openP('<h3>📒 학원 수첩</h3><div class="ac-note" style="margin:0 0 8px;font-size:16px">수업 시간: 오후 2시~7시(마을 시계) · 지금 ' + esc(hm()) + (inClass() ? ' · 수업 중' : ' · 자습만') + '</div><div class="ac-nb">' + rows + '</div><p style="font-size:14px;color:var(--mut)">단계를 마칠 때마다 칠판에 별이 붙고 가방 🏅 모은 것에 수료 도장이 쌓여요. 단계는 과목마다 하루 한 번 올라요.</p><div class="row"><button class="sub" data-a="x">닫기</button>' + (RUN && RUN.phase !== 'end' && RUN.L ? '<button data-a="back" data-def>하던 수업으로</button>' : '') + '</div>', false, 'acad');
+    P = A.openP('<h3>📒 학원 수첩</h3><div class="ac-note" style="margin:0 0 8px;font-size:16px">수업 시간: 오전 10시~밤 9시(마을 시계) · 지금 ' + esc(hm()) + (inClass() ? ' · 수업 중' : ' · 자습만') + '</div><div class="ac-nb">' + rows + '</div><p style="font-size:14px;color:var(--mut)">단계를 마칠 때마다 칠판에 별이 붙고 가방 🏅 모은 것에 수료 도장이 쌓여요. 단계는 과목마다 하루 한 번 올라요.</p><div class="row"><button class="sub" data-a="x">닫기</button>' + (RUN && RUN.phase !== 'end' && RUN.L ? '<button data-a="back" data-def>하던 수업으로</button>' : '') + '</div>', false, 'acad');
     if (P) { P.onclick = ev => { const bt = ev.target.closest('button'); if (!bt) return; if (bt.dataset.a === 'x') { A.closeP(); return; } if (bt.dataset.a === 'back' && RUN) { open(RUN.k, RUN.ctx); } }; } log('note'); }
   // 시험용: 과목·단계마다 n판을 모두 그려 봄(풀기 전 · 틀린 뒤 · 맞힌 뒤) → 오류 목록(상태는 그대로 되돌림)
   function probe(k, st, n) { const errs = []; let cnt = 0; if (!SUBJ[k] || !shell('probe', 'acadq')) return { errs: ['창 없음'], cnt }; const keep = RUN;

@@ -52,6 +52,12 @@ const numsOf = t => (String(t || '').match(/\d+(?:\.\d)?\s?k?m\b/g) || []).map(s
       { const a = numsOf(S.row), c = numsOf(S.compTag), g = numsOf(S.goal); ok(!a.length && !c.length && /쪽|north|south|east|west/.test(S.row), '한 대상에 수 하나(DEB-3 · 수는 위 줄에만): 줄 「' + S.row + '」 · 띠 「' + S.compTag + '」 · 위 줄 ' + (g[0] || '-')); }
       ok(/쪽/.test(S.task), '할 일 줄 = 이야기 방향 꼬리(이야기를 따라감) 「' + S.task + '」');
       await shot('trk_desk_story');
+      console.log('①-2 곁일(손 든 일꾼)이 위 가운데 줄을 빼앗지 않음(DEB-2 ②)');
+      { const rq = await ev(() => { const R = SM_TOWN.road(); R.abort(); let r9 = false; for (const k of ['hat', 'pick']) { if (r9) break; r9 = R.dbg.help(k); } return r9; }); await W8(1300); const S2 = await st(), rI = await ev(() => SM_TOWN.road().info());
+        ok(!/손을 들었어요/.test(S2.goal) && S2.key === 'story', '이야기 단계 + 손 든 일꾼 = 위 가운데 줄 그대로 「' + S2.goal + '」' + (rI.req ? '' : ' (부탁 안 생김 ' + rq + ')'));
+        if (rI.req) ok(S2.chips.some(t => /🙋/.test(t) && /손을 들었어요/.test(t)), '손 든 일꾼 = 오른쪽 칩 「' + (S2.chips.find(t => /🙋/.test(t)) || '-') + '」');
+        ok(!!(await ev(() => SM_TOWN.road().mine === false)), '부탁만 온 동안 = 내 일(mine) 아님'); await ev(() => SM_TOWN.road().abort()); await W8(400);
+        ok(!(await st()).chips.some(t => /🙋/.test(t)), '부탁이 끝나면 칩도 걷힘'); }
       console.log('② 사건이 새로 생겨도 안 빼앗음');
       const E0 = await spawnEm(P); ok(!!E0 && E0.k === 'lost', '👮 길 잃은 어린이 생김(' + (E0 && E0.cell) + ')');
       S = await st(); ok(S.key === 'story' && S.drawn === 'story' && near(S.comp, story0.at, 4), '따라가는 목표 그대로 = 이야기(빨간 선·띠)');

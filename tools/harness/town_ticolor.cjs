@@ -12,8 +12,8 @@ const M = SRC.match(/uint h9 = uint\(i1\.w(?:\s*([+-])\s*([0-9.]+))?\);/);
 ok(!!M, '셰이더에 잎 색 풀기 식(uint h9 = uint(i1.w …))이 있음' + (M ? ' — ' + M[0] : ' — 식이 바뀌었으면 이 시험을 맞춰요'));
 const ADD = M && M[1] ? (M[1] === '-' ? -1 : 1) * parseFloat(M[2]) : 0;
 ok(/\(h9 >> 16u\) & 255u/.test(SRC) && /\(h9 >> 8u\) & 255u/.test(SRC) && /h9 & 255u/.test(SRC), '셰이더가 h9를 R(>>16)·G(>>8)·B(&255)로 나눔');
-const nW = (SRC.match(/D\[q \+ 7\] = seaHex\(t, sp\) & 0xffffff/g) || []).length;
-ok(nW === 2, '쓰는 쪽 = seaHex(t, sp) & 0xffffff 두 곳(짓기·계절) — ' + nW + '곳');
+const nW = (SRC.match(/D\[q \+ 7\] = (?:seaHex|flHex)\(t, sp\) & 0xffffff/g) || []).length, fW = /function flHex\(t, sp\) \{ const h = seaHex\(t, sp\); if \(!t\.dry\) return h;/.test(SRC);   /* DEB-2 ⑯ flHex = seaHex + 이야기 마른 꽃(dry)일 때만 바랜 색 */
+ok(nW === 2 && fW, '쓰는 쪽 = seaHex(t, sp)(마른 꽃만 flHex로 바램) & 0xffffff 두 곳(짓기·계절) — ' + nW + '곳');
 ok(/new Float32Array\(2048 \* IH \* 4\)/.test(SRC) && /T3\.FloatType/.test(SRC), '나무 그림 = Float32(RGBA32F) — 정수 24비트가 그대로 들어감');
 // GLSL: f = 텍셀(float32) → f + 상수(float32 덧셈 · 가장 가까운 짝수) → uint(잘라 버림)
 const dec = h => { const f = f32(h), v = ADD ? f32(f + ADD) : f; const u = v < 0 ? 0 : Math.trunc(v) >>> 0; return [(u >>> 16) & 255, (u >>> 8) & 255, u & 255]; };
