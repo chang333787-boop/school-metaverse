@@ -538,7 +538,7 @@ export function createMapApi(host, NAV, META) {
     if (game.current) stopGame('replace');
     const my = ++game.seq;   // 리뷰(found2): 모듈을 받는 동안 ⏹(또는 다른 게임 고르기)가 오면 이 로드는 버린다 — 예전엔 stop이 무시되고 게임이 그대로 시작했다(두 번 누르면 두 게임)
     try {
-      const reg = await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url));
+      const reg = id === 'town' && window.SM_TOWNV > 0 && new URLSearchParams(location.search).get('town') ? { GAMES: { town: { v: window.SM_TOWNV } } } : await import(new URL('../games/registry.js?t=' + Date.now(), import.meta.url));   /* OPT-G1 ④: ?town= 마을 = main.js가 이미 아는 번호(bump.py가 registry에서 씀)로 바로 — registry ?t= 왕복 X */
       if (my !== game.seq) return null;
       const ent = reg.GAMES && reg.GAMES[id]; if (!ent) { hud.toast('없는 게임이에요: ' + id); return null; }
       if (window.SM_PROMO && ent.use === 'town') return null;

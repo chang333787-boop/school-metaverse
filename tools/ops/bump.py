@@ -62,8 +62,31 @@ while True:
     if not more: break
     for f in more:
         done.add(os.path.basename(f)); bump_name(os.path.basename(f))
+# OPT-G1 ④(11-08): main.js 맨 앞 TOWN_PRE(?town= 첫 열기 modulepreload 목록) = registry town v + town.js에서 시작한 정적 import 전부(번호까지) — 손으로 쓰지 않고 여기서만 다시 씀
+#   정적 import만 따라감(import(…) 동적은 X) · 'three' 같은 맨 이름 X · 첫 칸 = games/town.js?v=<registry v>(main.js가 이 번호로 registry 왕복을 건너뜀)
+def town_pre():
+    mp = os.path.join(M, 'v2/js/main.js'); rp = os.path.join(M, 'v2/games/registry.js')
+    if mp not in src or rp not in src or '/*TOWNPRE*/' not in src[mp]: return False
+    m = re.search(r"town: \{ title: '마을 세계', v: (\d+)", src[rp])
+    if not m: return False
+    imp = re.compile(r"""\bimport\s*(?:[\w*{}\s,$]+?\s*from\s*)?(['"])(\.{1,2}/[A-Za-z0-9_./-]+?\.js(?:\?v=\d+)?)\1""")
+    v2 = os.path.normpath(os.path.join(M, 'v2')); NS = {os.path.normpath(k): v for k, v in src.items()}
+    order, seen = ['games/town.js?v=' + m.group(1)], {os.path.join(v2, 'games', 'town.js')}
+    q = [os.path.join(v2, 'games', 'town.js')]
+    while q:
+        f = q.pop(0); s = NS.get(f)
+        if s is None: continue
+        for mm in imp.finditer(s):
+            rel = mm.group(2); path = rel.split('?')[0]; ab = os.path.normpath(os.path.join(os.path.dirname(f), path))
+            if ab in seen or not ab.startswith(v2 + os.sep): continue
+            seen.add(ab); order.append(os.path.relpath(ab, v2).replace(os.sep, '/') + ('?' + rel.split('?', 1)[1] if '?' in rel else '')); q.append(ab)
+    line = 'const TOWN_PRE = [' + ', '.join("'" + u + "'" for u in order) + '];   /*TOWNPRE*/'
+    s2 = re.sub(r"const TOWN_PRE = \[[^\]]*\];   /\*TOWNPRE\*/", lambda x: line, src[mp])
+    if s2 == src[mp]: return False
+    src[mp] = s2; out.append('TOWN_PRE %d개 (town v%s)' % (len(order), m.group(1))); return True
+pre_changed = town_pre()
 for f in files: open(f, 'w', encoding='utf-8').write(src[f])
-if jsmods or games:
+if jsmods or games or pre_changed:
     for ix in ('v2/index.html', 'v3/index.html'):
         p = os.path.join(M, ix)
         if not os.path.exists(p): continue

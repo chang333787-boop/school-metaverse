@@ -261,12 +261,13 @@ export function createKidLook(A) {
       if (!best) continue; const K = kitK(best), r9 = best.r; A.occ(best.x - r9, best.z - r9, best.x + r9, best.z + r9); A.clear(best.x, best.z, r9 + 0.3); f(K, R9); out.push({ k: nm, x: best.x, z: best.z, r: r9, d: +Math.hypot(best.x - g.sx, best.z - g.sz).toFixed(1) }); }
     return out; }
   // ───────── 짓기(town.js가 구역 표지석 뒤에 한 번) ─────────
-  function build(list) { KL.length = 0; HOT.length = 0; STM.length = 0; if (!A.on()) return;
+  async function build(list, yb) { KL.length = 0; HOT.length = 0; STM.length = 0; if (!A.on()) return;   /* OPT-G1: yb = 짓기 쉼(town.js yb9 — 90ms 지났을 때만 한 프레임) · 동네 하나 끝날 때마다 */
     const G = A.groups();
-    for (const it of list || []) { const k = it.k, def = KITS[k], b = BUILD[k]; if (!def || !b) continue; const g = G.find(q => q.cells.includes(it.cell)); if (!g || KL.some(q => q.g === g.id)) continue;
+    for (const it of list || []) { if (yb) await yb(); const k = it.k, def = KITS[k], b = BUILD[k]; if (!def || !b) continue; const g = G.find(q => q.cells.includes(it.cell)); if (!g || KL.some(q => q.g === g.id)) continue;
       const tg = it.mid && A.cellXZ(it.cell) ? [A.cellXZ(it.cell), [g.sx, g.sz]] : [[g.sx, g.sz], [g.cx, g.cz]], hill = k === 'tree' || k === 'wood' || k === 'hole'; let sp = null;   /* 표지석 곁에서 가장 가까운 자리(크기 셋 · 산 동네는 비탈 허용 · KIDLOOK-2 학교 울 곁 X — 울과 큰길 사이에 갇혀 못 들어가던 것) */
       if (g.sx != null) { const lx = g.lx ?? g.cx, lz = g.lz ?? g.cz, L9 = Math.hypot(lx - g.sx, lz - g.sz) || 1, fx = (lx - g.sx) / L9, fz = (lz - g.sz) / L9;   /* 앞 = 표지석 → 지도 글씨 자리(그 동네 이름 칸들 가운데) */   /* KIDLOOK-2 들머리 앞: 표지석에서 동네 쪽을 볼 때 보이는 자리(36m 안 · 앞 ±40°) 먼저 */
         for (const dd of [14, 20, 26, 32]) for (const an of [0, 0.3, -0.3, 0.55, -0.55, 0.75, -0.75]) { const c9 = Math.cos(an), s9 = Math.sin(an), tx9 = g.sx + (fx * c9 - fz * s9) * dd, tz9 = g.sz + (fx * s9 + fz * c9) * dd;
+          if (sp && dd - 9 + 30 * Math.max(0, Math.abs(an) - Math.asin(9 / dd)) - 1e-6 >= sp.sc) continue;   /* OPT-G1: 찾는 자리는 목표에서 9m 안 → 점수(거리 + 각 × 30)가 아무리 좋아도 지금 고른 것보다 낮을 수 없는 목표는 건너뜀(고른 자리 같음 · 찾기는 부작용 없음) */
           for (const tol of hill ? [0.6, 1.2, 2.0] : [0.6]) { let q = null; for (const f of [1, 0.85, 0.72]) { q = A.spot(tx9, tz9, def.w * f, def.d * f, tol, 9, k === 'tree' || k === 'alley'); if (q) break; } if (!q) continue;
             const qx = q.x - g.sx, qz = q.z - g.sz, qd = Math.hypot(qx, qz), qa = Math.acos(Math.max(-1, Math.min(1, (qx * fx + qz * fz) / (qd || 1)))), sc = qd + qa * 30; if (qd <= 36 && qa < 0.8 && !(A.nearSchool && A.nearSchool(q.x, q.z, Math.max(def.w, def.d) / 2 + 8)) && (!sp || sc < sp.sc)) sp = { ...q, sc, dd: qd }; break; } } }
       if (!sp) for (const [tx9, tz9] of tg) { if (tx9 == null) continue; for (const tol of hill ? [0.6, 1.2, 2.0] : [0.6]) { for (const f of [1, 0.85, 0.72]) { const q = A.spot(tx9, tz9, def.w * f, def.d * f, tol); if (q && !(A.nearSchool && A.nearSchool(q.x, q.z, Math.max(def.w, def.d) / 2 + 8)) && (!sp || Math.hypot(q.x - tx9, q.z - tz9) < sp.dd - 6)) sp = { ...q, dd: Math.hypot(q.x - tx9, q.z - tz9) }; } if (sp) break; } if (sp) break; } if (!sp) continue;
