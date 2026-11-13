@@ -6,7 +6,7 @@
 //   마을 쪽이 넘기는 것(A): GAME · lang() · esc(t) · bag() · rwd() · tools() · here() [x, z] · me() {x, z} · where(x, z) { ic, nm } · mapSnip(cv, pts) · renderer() · kid() · T3
 //     tone(...) · sfx(k) · typh() { rope, sand } | null · fx() 먹은 힘 한 줄 · lookSig() · night() · reopen(tab) · useShow(P9, e) · useBox() · sell(e) · yard(e)
 import { ITEMS, itemName } from './town_game.js?v=60';
-import { TOOL, TOOL_ORDER } from './town_tools.js?v=23';
+import { TOOL, TOOL_ORDER } from './town_tools.js?v=24';
 export const BAG3_V = 1;
 const T2 = (ko, en) => [ko, en];
 export const TABS = [['item', '🎒', T2('물건', 'Items')], ['tool', '🧰', T2('도구·장비', 'Tools')], ['wear', '👕', T2('옷·꾸미기', 'Clothes')], ['col', '🏅', T2('모은 것', 'Collection')]];

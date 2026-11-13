@@ -101,7 +101,8 @@ export function createTrack(A) {
   function row() { if (dead) return; const k = S().k, c = k ? LC.find(q => q.k === k) : null;
     if (!rowWant()) { if (el && el.classList.contains('on')) { el.classList.remove('on'); rowSig = ''; A.stack(); } return; }
     ensure(); const d = c && c.at && !c.self ? A.dist(c) : -1;
-    const tx = c ? labOf(c) + (c.at && !c.self ? (d >= 0 ? ' · ' + dirW(c) : ' · ' + cellT(c)) : c.self ? L(' · 스스로 찾는 중', ' · finding it yourself') : '') : L('없음', 'nothing');   /* DEB-3(토론 판정 11): 거리 수는 위 줄 한 곳만 — 이 줄은 '목장 일꾼 · 북서쪽'(칸 주소는 작은 지도 칸 배지에 늘) */
+    const m9 = d >= 0 ? A.me() : null, here = !!m9 && Math.hypot(c.at[0] - m9.x, c.at[1] - m9.z) < 8;   /* PATH-1A2(평가 A #15 '🎉 소방서에 왔어요!'인데 줄은 '소방서 · 남동쪽' · 도움말은 '✕는 남서쪽'): 고른 곳 8m 안 = 방위 말 대신 '다 왔어요'(할 일 줄 꼬리와 같은 말·같은 8m) — 서로 다른 곳을 가리키는 방위 말 둘이 나란히 뜨지 않게 */
+    const tx = c ? labOf(c) + (c.at && !c.self ? (d >= 0 ? ' · ' + (here ? L('다 왔어요', 'you’re here') : dirW(c)) : ' · ' + cellT(c)) : c.self ? L(' · 스스로 찾는 중', ' · finding it yourself') : '') : L('없음', 'nothing');   /* DEB-3(토론 판정 11): 거리 수는 위 줄 한 곳만 — 이 줄은 '목장 일꾼 · 북서쪽'(칸 주소는 작은 지도 칸 배지에 늘) */
     const sig = tx + '|' + (en() ? 1 : 0); if (sig !== rowSig) { rowSig = sig; el.querySelector('.t').innerHTML = '<b>🧭 ' + L('따라가는 중', 'Following') + '</b> ' + esc(tx); el.querySelector('button').textContent = L('바꾸기', 'Change'); }
     if (!el.classList.contains('on')) { el.classList.add('on'); S().seen = 1; A.stack(); }
     if (LC.length >= 2) A.tipWant(); }

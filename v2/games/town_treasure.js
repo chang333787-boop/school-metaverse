@@ -198,7 +198,7 @@ export function createTreasure(A) {
     if (c.h === 1) t = c.lv === 1 ? (c.k === 'bridge' ? (e ? 'Find a bridge near ✕ on the big map (M) first.' : '큰 지도(M)에서 ✕ 옆 다리를 먼저 찾아요.') : c.k === 'lake' ? (e ? 'Find the blue water near ✕ on the big map (M) first.' : '큰 지도(M)에서 ✕ 옆 파란 물을 먼저 찾아요.') : (e ? 'Find the ' + c.sym + ' symbol on the big map (M) first.' : '큰 지도(M)에서 ' + c.sym + ' 기호를 먼저 찾아요.'))
       : c.lv === 2 ? (e ? 'Stand at the door of ' + c.anc.nm + ', then follow the compass strip at the top.' : c.anc.nm + ' 문 앞에 선 다음 화면 위 나침반 띠를 보고 걸어요.') : (e ? 'Walk up and down the slope and match the height on the card.' : '비탈을 오르내리며 카드의 높이를 등고선 숫자와 맞춰요.');
     else if (c.h === 2) { const dx = c.x - me.x, dz = c.z - me.z, d = Math.hypot(dx, dz); t = e ? 'The chest is ' + L(DIRN[dir8(bearing(dx, dz))]) + ' of you, about ' + r10(d) + ' m.' : '보물은 지금 자리에서 ' + L(DIRN[dir8(bearing(dx, dz))]) + '쪽, ' + r10(d) + 'm쯤이에요.'; }
-    else { const r = A.guide([c.x, c.z], e ? 'Treasure' : '보물 상자'); t = r ? (e ? 'Follow the red line.' : '빨간 선을 따라가요.') : (e ? 'Look for the fresh dirt pile.' : '갓 판 흙더미를 찾아봐요.'); }
+    else { const r = Math.hypot(c.x - me.x, c.z - me.z) >= 8 && A.guide([c.x, c.z], e ? 'Treasure' : '보물 상자');   /* PATH-1A2 G5: 8m 안 = 그릴 선이 없음 → '빨간 선을 따라가요' 대신 흙더미 찾기 글 */ t = r ? (e ? 'Follow the red line.' : '빨간 선을 따라가요.') : (e ? 'Look for the fresh dirt pile.' : '갓 판 흙더미를 찾아봐요.'); }
     lastHint = t; cardSig = ''; A.map.hud.toast('💡 ' + t, 4.5); }
 
   // ── 흙더미(30m 안에서만) · 파기 E ──
@@ -253,9 +253,12 @@ export function createTreasure(A) {
   // 도감 갈래(town_dex.js dexBook 마지막 인자): 이 마을에 있는 상자 자리 갈래만 · 빈칸 귀띔 = 놀람 자리 이름(장소 이름 X)
   function dex() { const ks = [...new Set(cands().map(c => c.k))]; return ks.map(k => { const K = KOF[k]; return { id: k, icon: K.box, t: K.t, hint: ['지도 조각을 따라 ' + K.surp[0] + ' 옆에서', 'Follow a map piece to a ' + K.surp[1].toLowerCase()] }; }); }
   const titleNow = () => { const s = S(); return s.title.length ? TLV[Math.max(...s.title)].title : null; };
+  /* PATH-1A2 G5(평가 A #16 '흙더미를 눌렀는데 내 발밑이 파이고 조약돌이 나왔어요'): 삽 = 내가 흙더미 4.5m 안에 서 있으면 어디를 보든 고리가 흙더미로(물뿌리개가 곁의 마른 꽃에 붙는 것과 같은 꼴) — 예전엔 내가 3m 안 + 고리(내 앞 0.9 ~ 2.4m)가 흙더미 2.6m 안일 때만이라 옆을 보거나 3m 밖이면 발밑 맨땅을 팠음 · 잃은 물건(흙더미 없음)·E 꾹 파기(3m)는 그대로 */
+  const REACH = 4.5, NR = { x: 0, y: 0, z: 0 }, inReach = (c, me, pad) => !c.lost && !!MD && MD.visible && !A.inb() && Math.hypot(me.x - c.x, me.z - c.z) < REACH + (pad || 0) && Math.abs(MD.userData.y - me.y) < 3;
   return { init, tick, dispose, dex, titleNow, take, openMap, hint, give, cur: () => S().cur, get on() { return !!HB; }, free: () => { const s = S(); return !!HB && A.ready() && !s.cur && s.last !== day() && !allDone(); },   /* WAKE-1b: 오늘 새 조각을 받을 수 있나(바람에 날아온 종이 — town_road.js) */ dir8: () => { const c = S().cur; return !!(c && c.lv === 2); },   /* ★★ 지도를 든 동안 = 나침반 띠 8방위(town.js compStrip) */ get digging() { return !!dig; },
     info: () => { const s = S(); return { src: SRC && { x: +SRC.x.toFixed(1), z: +SRC.z.toFixed(1), name: SRC.name }, cur: s.cur && JSON.parse(JSON.stringify(s.cur)), got: { ...s.got }, n: s.n.slice(), last: s.last, title: s.title.slice(), lv: lvNow(), card: !!(CARD && CARD.style.display !== 'none'), mound: !!(MD && MD.visible), dig: HD && !HD.hot.off ? HD.hot.label : null, board: HB && HB.hot.label, chest: !!CHEST }; },
-    near: (x, z) => { const c = S().cur; if (!c || !HD || HD.hot.off || dig) return null; return Math.hypot(x - c.x, z - c.z) < 2.6 ? { x: c.x, z: c.z, y: MD ? MD.userData.y : A.gy(c.x, c.z) } : null; },   /* TOOL-1 삽: 고리가 흙더미 곁인가 */
-    shovel: () => { const c = S().cur; if (!c || !HD || HD.hot.off || dig || A.busy()) return false; reveal(c); return true; },   /* TOOL-1 삽으로 판 순간 = 상자(E 꾹 1.6초 대신) */
+    near: (x, z, me) => { const c = S().cur; if (!c || !HD || dig) return null; if (!(me && inReach(c, me)) && (HD.hot.off || Math.hypot(x - c.x, z - c.z) >= 2.6)) return null; NR.x = c.x; NR.z = c.z; NR.y = MD ? MD.userData.y : A.gy(c.x, c.z); return NR; },   /* TOOL-1 삽: 고리가 흙더미 곁인가 · PATH-1A2 G5: 내가 흙더미 4.5m 안이면 고리가 어디든 흙더미(돌려주는 것은 한 객체 다시 씀) */
+    away: me => { const c = S().cur; return c && !c.lost && MD && MD.visible && !dig && !A.inb() ? Math.hypot(me.x - c.x, me.z - c.z) : -1; },   /* PATH-1A2 G5: 보이는 흙더미까지 거리(없으면 −1) — 삽이 닿지 않는 곁(4.5 ~ 9m)에서 맨땅 대신 '곁에 가서 파요' */
+    shovel: () => { const c = S().cur; if (!c || !HD || dig || A.busy()) return false; if (HD.hot.off && !inReach(c, A.map.player.pos(), 0.6)) return false; reveal(c); return true; },   /* TOOL-1 삽으로 판 순간 = 상자(E 꾹 1.6초 대신) */
     mesh: () => MD, dbg: () => DBG.slice(), spots: () => cands().map(c => ({ id: c.id, k: c.k, x: c.x, z: c.z, walk: c.walk, lm: c.lm, hill: !!c.hill })), plan: () => plan() };
 }

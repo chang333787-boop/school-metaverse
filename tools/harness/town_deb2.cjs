@@ -96,7 +96,7 @@ const D8 = ['북', '북동', '동', '남동', '남', '남서', '서', '북서'],
     console.log('⑥ 해 진 뒤 목장의 아침');
     await setT(18 * 60 + 20); for (let i = 0; i < 20 && (await S()).cur !== 'a1_3'; i++) { await shut(); await W8(1500); } s = await S(); if (s.cur !== 'a1_3') { await ev(() => SM_TOWN.storyStart('a1_3')); await W8(1500); }
     await dlgWait(9000); await W8(600); await closeDlg(); await W8(2500); s = await S(); const td = await ev(() => ({ task: (document.querySelector('.twn-task') || {}).innerText || '', wait: (document.querySelector('.twn-waitb') || {}).textContent || '', min: SM_TOWN.game().S.min }));
-    ok(s.v && s.v.amW === 1 && /자고 아침에 목장으로/.test(td.task) && /자고 아침에 목장으로/.test(td.wait), '18시 넘어 열림 = 할 일 「' + td.task.replace(/\s+/g, ' ').slice(0, 40) + '」 · 단추 「' + td.wait + '」'); await shot('06a_night');
+    ok(s.v && s.v.amW === 1 && /자고 아침에 목장으로/.test(td.task) && /자고 내일 아침에 하기/.test(td.wait) /* PATH-1A2 G14: 단추 = 하는 일(할 일 줄과 같은 글 X) */, '18시 넘어 열림 = 할 일 「' + td.task.replace(/\s+/g, ' ').slice(0, 40) + '」 · 단추 「' + td.wait + '」'); await shot('06a_night');
     await W8(3000); await shot('06b_night_friend');
     await ev(() => { const b9 = document.querySelector('.twn-waitb'); if (b9) b9.click(); }); for (let i = 0; i < 60; i++) { await W8(1000); const r = await ev(() => ({ m: SM_TOWN.game().S.min, sl: !!document.querySelector('.twn-sleep,.twn-p') })); if (r.m < 12 * 60 && r.m > 5 * 60) break; }
     for (let i = 0; i < 12; i++) { await shut(); await W8(1500); s = await S(); if (!(s.v && s.v.amW)) break; } console.log('    깬 뒤 창 ' + (await ev(() => [...document.querySelectorAll('.twn-p,.twn-dlg')].map(e => (e.dataset.k || e.className) + ':' + e.innerText.slice(0, 30)).join(' | '))));
