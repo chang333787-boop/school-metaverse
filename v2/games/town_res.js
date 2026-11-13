@@ -64,7 +64,7 @@ export function createRes(A) {
     for (let i = cx - 1; i <= cx + 1; i++) for (let j = cz - 1; j <= cz + 1; j++) { const L9 = GRID.get(i + ':' + j); if (L9) for (const s of L9) { if (!avail(s)) continue; const d = (s.x - me.x) ** 2 + (s.z - me.z) ** 2; if (d < bd && Math.abs(s.y - me.y) < 2.5) { bd = d; best = s; } } }
     if (!best) { if (!H.hot.off) H.hot.off = true; cur = null; return; }
     const en = A.lang() === 'en', W = WILD[best.k], lb = W.e + ' ' + W.t[en ? 1 : 0] + (en ? ' — pick up' : ' 줍기'); cur = best; const h = H.hot; h.x = best.x; h.z = best.z; h.y = best.y; if (h.label !== lb) h.label = lb; if (h.off) h.off = false;
-    if (told !== S().day && bd < 36) { told = S().day; A.map.hud.toast(en ? '🌲 Twigs, pine cones and pebbles lie on the forest floor — walk up close and press E' : '🌲 숲 바닥에 마른 가지·솔방울·조약돌이 떨어져 있어요 — 가까이 가서 E', 3); } }
+    if (told !== S().day && bd < 36 && !(A.quiet && A.quiet())) {   /* PATH-1B G3: 첫 이야기 동안은 숲 바닥 알림 X */ told = S().day; A.map.hud.toast(en ? '🌲 Twigs, pine cones and pebbles lie on the forest floor — walk up close and press E' : '🌲 숲 바닥에 마른 가지·솔방울·조약돌이 떨어져 있어요 — 가까이 가서 E', 3); } }
   // 새 날(잠들 때 · 마을 'day'): 어제 비 = 하루 빨리 자람 + 오늘 마른 가지 하나 더 · 다 자란 자리는 저장에서 지움(기본과 다른 자리만)
   function day(rain) { const S9 = S(), R9 = R(); if (rain) S9.resRain = S9.day; for (const k of Object.keys(R9)) { if (rain) R9[k]--; if (R9[k] <= S9.day) delete R9[k]; } A.GAME.mark(); dDay = -1; }
   function dispose() { clear(); for (const o of [M1, M2, G1, G2, MT, MT2]) if (o) o.dispose(); M1 = M2 = G1 = G2 = MT = MT2 = null; }

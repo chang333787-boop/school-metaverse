@@ -26,7 +26,7 @@ function TIP(id, en, q) {
     case 'umb': return { d: [L('비가 와요. ', 'It is raining. '), K('U'), L(' 를 누르면 우산을 펴요. 한 번 더 누르면 접어요.', ' opens the umbrella. Press again to close it.')], t: [L('비가 와요. 오른쪽 위 ', 'It is raining. Tap '), C('☂ ' + L('우산', 'Umbrella')), L(' 을 누르면 우산을 펴요.', ' at the top right to open it.')] };
     case 'lost': return { d: [L('길을 찾나요? ', 'Looking for the way? '), K('J'), L(' 에서 장소 이름을 쓰고 Enter를 누르면 빨간 선이 생겨요.', ' — type a place and press Enter for a red line.')], t: [L('길을 찾나요? ', 'Looking for the way? '), M, L(' 의 📍 바로 가기에서 장소를 찾고 길 안내를 눌러요.', ' → 📍 Jump: find the place and tap Guide.')] };
     case 'bag': return { d: [L('가방에 물건이 들어왔어요. ', 'Something went into your bag. '), K('I'), L(' 를 누르면 가방이 열려요.', ' opens the bag.')], t: [L('가방에 물건이 들어왔어요. ', 'Something went into your bag. '), M, L(' 의 🎒 가방에서 볼 수 있어요.', ' → 🎒 Bag to see it.')] };
-    case 'sleep': { const x = [L('밤이 됐어요. 우리 집 침대나 ', 'It is night. Sleep in your bed at home or use '), M, L(' 의 😴 단추로 자면 다음 날 아침이 돼요.', ' → 😴 to wake up the next morning.')]; return { d: x, t: x }; }
+    case 'sleep': { const x = [L('밤이 됐어요. 하던 일을 마치면 우리 집 침대나 ', 'It is night. When you are done, sleep in your bed at home or use '), M, L(' 의 😴 단추로 자요. 자고 나면 다음 날 아침이에요.', ' → 😴. You wake up the next morning.')];   /* PATH-1B G3: 하던 일(이야기)과 다투지 않게 '마치면' */ return { d: x, t: x }; }
     case 'track': { const x = [L('할 일이 여러 개예요. 왼쪽 위 ', 'You have several things to do. Tap '), C('🧭 ' + L('바꾸기', 'Change')), L(' 를 누르면 따라갈 것을 하나 골라요. 나침반과 지도가 그것만 가리켜요.', ' at the top left to pick one. The compass and map show only that one.')]; return { d: x, t: x }; }   /* TRACK-1 */
     case 'help': return { d: ['', K('H'), L(' 를 누르면 지금 쓸 수 있는 키를 모두 볼 수 있어요.', ' shows every key you can use now.')], t: ['', M, L(' 의 ❓ 조작 도움에서 단추 쓰는 법을 모두 볼 수 있어요.', ' → ❓ Controls shows how every button works.')] };
   }
@@ -71,8 +71,8 @@ export function createTips(A) {
   function used(id) { if (dead || seen(id)) return; mark(id); for (let i = Q.length - 1; i >= 0; i--) if (Q[i].id === id) Q.splice(i, 1); if (ST.cur && ST.cur.id === id) hide(true); log(id, 'used'); }
   function plain(h) { return h.replace(/<[^>]+>/g, ''); }
   function html(q) { const d = TIP(q.id, en(), q); if (!d) return null; const P = tch() ? d.t : d.d; if (!P) return null; return { h: (d.tag ? '<span class="tg">' + d.tag + '</span>' : '') + '<span class="tx">' + P.join('') + '</span>', n: plain(P.join('')).length }; }
-  function show(q, now) { const h = html(q); if (!h) { mark(q.id); return false; } ensure(); EL.innerHTML = h.h; EL.classList.remove('on'); void EL.offsetWidth; EL.classList.add('on'); ST.cur = q; ST.curAt = now; ST.curDur = Math.max(6000, Math.min(9500, 4600 + h.n * 70)); ST.shows.push(now); log(q.id, 'show'); return true; }
-  function hide(done) { const q = ST.cur; if (!q) return; if (EL) EL.classList.remove('on'); const now = performance.now(), el = now - ST.curAt; ST.cur = null;
+  function show(q, now) { const h = html(q); if (!h) { mark(q.id); return false; } ensure(); EL.innerHTML = h.h; EL.classList.remove('on'); void EL.offsetWidth; EL.classList.add('on'); document.body.classList.add('tip-on'); ST.cur = q;   /* PATH-1B 걸14: 한 줄 안내가 떠 있는 동안 점수 막대는 그 위로(body 꼬리표 · :has X) */ ST.curAt = now; ST.curDur = Math.max(6000, Math.min(9500, 4600 + h.n * 70)); ST.shows.push(now); log(q.id, 'show'); return true; }
+  function hide(done) { const q = ST.cur; if (!q) return; if (EL) EL.classList.remove('on'); document.body.classList.remove('tip-on'); const now = performance.now(), el = now - ST.curAt; ST.cur = null;
     if (done || el >= SEEN_MS) { ST.lastHide = now; mark(q.id); if (q.keys) for (const k of q.keys) mark('u:' + k); log(q.id, 'seen'); } else { Q.unshift(q); ST.shows.pop(); log(q.id, 'back'); } }   /* 1.5초 안에 창이 덮으면 맨 앞에 다시(셈·20초 간격도 되돌림 — 창이 닫히고 1.5초 뒤 다시) */
   const near = (L9, x, z, r, ex) => { if (!L9) return false; const r2 = r * r; for (const p of L9) { const px = ex ? p.ex : p[0], pz = ex ? p.ez : p[1]; if ((px - x) * (px - x) + (pz - z) * (pz - z) < r2) return true; } return false; };
   function valid(q, now) { const id = q.id, me = A.me();
@@ -97,7 +97,7 @@ export function createTips(A) {
   function circReset() { ST.cn = 0; ST.ci = 0; }
   function sec() { if (dead) return; const now = performance.now(), me = A.me(); ST.n++;
     noteUse(now);
-    if (A.SET.tips === false || A.off()) { if (ST.cur) { if (EL) EL.classList.remove('on'); Q.unshift(ST.cur); ST.cur = null; ST.shows.pop(); } return; }
+    if (A.SET.tips === false || A.off()) { if (ST.cur) { if (EL) EL.classList.remove('on'); document.body.classList.remove('tip-on'); Q.unshift(ST.cur); ST.cur = null; ST.shows.pop(); } return; }
     const walk = A.out() && A.roam() && !A.bike();   /* 걸어서 다닌 거리(탈것·실내·놀이 X · 0.5초에 5m 넘게 = 순간이동이라 셈 X) */
     if (walk && Number.isFinite(ST.lx)) { const d = Math.hypot(me.x - ST.lx, me.z - ST.lz); if (d < 5) ST.walk += d; }
     if (walk) { ST.lx = me.x; ST.lz = me.z; } else ST.lx = NaN;
@@ -192,6 +192,6 @@ export function createTips(A) {
   const api = { info: () => ({ cur: ST.cur ? ST.cur.id : null, on: !!(EL && EL.classList.contains('on')), text: EL && ST.cur ? EL.innerText.replace(/\s+/g, ' ').trim() : '', q: Q.map(q => q.id), seen: { ...S().s }, nw: { ...S().nw }, shows5: ST.shows.length, walk: +ST.walk.toFixed(1), circ: ST.cn, log: ST.log.slice(), off: A.SET.tips === false, why: { out: A.out(), roam: A.roam(), bike: A.bike(), busy: A.busy(), route: A.route() } }),
     want: (id, o) => want(id, o), used: id => used(id), spots: () => ({ bus: (A.stops() || []).map(q => [q[0], q[1]]), sub: (A.stations() || []).map(q => [q.ex, q.ez]) }), sec: () => sec(), help: () => help(), rows: () => rows().filter(q => q[1]).map(q => q[4] + ':' + plain(q[2])), unlocked: L9 => unlocked(L9),
     age: ms => { ST.skew += ms; ST.t0 -= ms; ST.lastHide -= ms; ST.lastBusy -= ms; for (let i = 0; i < ST.shows.length; i++) ST.shows[i] -= ms; for (const q of Q) { q.t0 -= ms; if (q.exp) q.exp -= ms; } if (ST.cur) ST.curAt -= ms; },   /* 시험: 시간 건너뛰기(안내 사이·5분 셈) */
-    reset: () => { A.GAME.S.tips = { s: {}, nw: {} }; Q.length = 0; ST.shows.length = 0; ST.lastHide = ST.lastBusy = -1e9; ST.walk = 0; ST.lx = NaN; circReset(); if (ST.cur) { if (EL) EL.classList.remove('on'); ST.cur = null; } ST.log.length = 0; } };
+    reset: () => { A.GAME.S.tips = { s: {}, nw: {} }; Q.length = 0; ST.shows.length = 0; ST.lastHide = ST.lastBusy = -1e9; ST.walk = 0; ST.lx = NaN; circReset(); if (ST.cur) { if (EL) EL.classList.remove('on'); document.body.classList.remove('tip-on'); ST.cur = null; } ST.log.length = 0; } };
   return { tick, sec, want, used, unlocked, help, stop, api };
 }

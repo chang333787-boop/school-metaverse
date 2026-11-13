@@ -6,7 +6,7 @@
 //   마을 쪽이 넘기는 것(A): GAME · lang() · esc(t) · bag() · rwd() · tools() · here() [x, z] · me() {x, z} · where(x, z) { ic, nm } · mapSnip(cv, pts) · renderer() · kid() · T3
 //     tone(...) · sfx(k) · typh() { rope, sand } | null · fx() 먹은 힘 한 줄 · lookSig() · night() · reopen(tab) · useShow(P9, e) · useBox() · sell(e) · yard(e)
 import { ITEMS, itemName } from './town_game.js?v=60';
-import { TOOL, TOOL_ORDER } from './town_tools.js?v=22';
+import { TOOL, TOOL_ORDER } from './town_tools.js?v=23';
 export const BAG3_V = 1;
 const T2 = (ko, en) => [ko, en];
 export const TABS = [['item', '🎒', T2('물건', 'Items')], ['tool', '🧰', T2('도구·장비', 'Tools')], ['wear', '👕', T2('옷·꾸미기', 'Clothes')], ['col', '🏅', T2('모은 것', 'Collection')]];
@@ -165,6 +165,7 @@ export function createBag3(A) {
   function html(c) { addCss();
     CTX = c || {}; S(); if (!CTX.re) { SHOW.clear(); UI.pick = null; UI.snip = false; UI.sel = CTX.sel || null; } else if (CTX.sel) UI.sel = CTX.sel;
     UI.tab = CTX.tab || (CTX.re ? UI.tab : PREF.tab) || 'item'; if (!TABS.some(t => t[0] === UI.tab)) UI.tab = 'item';
+    if (!CTX.tab && !CTX.re) { let t9 = null, n9 = -1, here = false; const o9 = S().o, sn = S().seen; for (const e of bagKeys()) { if (sn[e]) continue; const k = tabOfId(e); if (k === UI.tab) { here = true; break; } const q = (o9[e] || [])[3] || 0; if (q > n9) { n9 = q; t9 = k; } } if (!here && t9) UI.tab = t9; }   /* PATH-1B G7('가방에 물건이 들어왔어요' → 「물건」 탭 '아직 비어 있어요!'): 그냥 열 때 기억한 탭에 새 물건이 없고 다른 탭에 아직 못 본 가방 물건이 있으면 가장 늦게 얻은 것의 탭으로 엶 · 기억(PREF)은 그대로 — 다 본 뒤엔 예전 탭 */
     if (UI.sel && !(A.bag()[UI.sel] > 0) && !(R() && R().info(UI.sel))) UI.sel = null;
     PARTS = null; IDLE++; const e9 = en();
     const ids = ownedIds(), nw = {}; for (const id of ids) if (!S().seen[id]) nw[tabOfId(id)] = 1;

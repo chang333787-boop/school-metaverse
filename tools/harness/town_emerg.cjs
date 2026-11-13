@@ -63,7 +63,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     const opts = (await I()).ev.opts, par = (await I()).ev.par, wrong = opts.findIndex(k => k !== par.k), right = opts.findIndex(k => k === par.k);
     await ev(i => document.querySelector('.twn-p button[data-o="' + i + '"]').click(), wrong); await W8(300); ok(/고개를 저어요/.test((await panel() || {}).t || ''), '틀린 곳 = 아이가 단서를 다시 말함');
     const hk0 = await ev(() => JSON.stringify(SM_TOWN.game().S.hearts || {})), bag0 = await ev(() => JSON.stringify(SM_TOWN.game().S.bag || {}));
-    await ev(i => document.querySelector('.twn-p button[data-o="' + i + '"]').click(), right); await W8(700); I1 = await I(); ok(I1.ev.st === 'walk', '맞는 곳 = 손잡고 걸어가기 (보호자 = ' + par.k + ')'); const cop0 = I1.ev.cop; ok(!!cop0, '경찰관도 같이 걸음(DEB-1 · 따라오기 · 「같이 가요 — 앞장서서 길을 알려 줘요」)'); let maxGapC = 0;
+    await ev(i => document.querySelector('.twn-p button[data-o="' + i + '"]').click(), right); await W8(700); I1 = await I(); ok(I1.ev.st === 'walk', '맞는 곳 = 손잡고 걸어가기 (보호자 = ' + par.k + ')'); const cop0 = I1.ev.cop; ok(!!cop0, '경찰관도 같이 걸음(DEB-1 · 따라오기 · 「같이 가요 — 앞에서 걸으며 길을 알려 줘요」)'); let maxGapC = 0;
     // 걷기: 처음 두 토막 = 빨간 선을 0.8m씩 0.25초(초속 3.2m) · EMERG-3 셋째 토막부터는 자전거로 끝까지(내리지 않음 · 실제 빠르기 = 걷기 4.2 × 마을이 맞춘 자전거 몫)
     //   FOLLOW-2(11-01 흔들림): 자전거 토막은 페이지 안 rAF가 매 프레임 빨간 선 점을 향해 steer(사람이 키를 누르고 있는 것과 같음) — 예전 봇은 0.12초 + evaluate 왕복마다 방향을 줘서, 다른 시험 브라우저와 겹쳐 봇이 늦으면 그 사이 비탈 굴러감(BIKE-3 · 키 입력이 없을 때만)이 방향을 빼앗음
     //   봇은 0.25초마다 보기만(아이 간격 · 자전거 위 · 걸림) · 점을 다 가면 보호자 곁 1.5m까지 · 3초 동안 0.3m 못 가면 반 걸음 옮김 · 끝 시간 = 남은 길 ÷ 2.5m/s + 60초(봇 수가 아니라 시간·거리)

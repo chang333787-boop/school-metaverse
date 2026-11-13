@@ -473,7 +473,7 @@ export function createCellKit(A) {
     let fl = false; const busy = A.busy(), W = I9 => I9.id === 'wind' && I9.d < 90 && c9 && c9.kitEmit;
     for (const I of INST.values()) { I.d = Math.hypot(I.ex - me.x, I.ez - me.z);
       if (!I.dr && c9) { if (I.ns && I.sl < 0) I.sl = alloc(I.ns); if (I.sl !== -2) { drawI(I); fl = true; } else hotOff(I); I.dr = true; }   /* 칸이 모자라면(드묾) 그림 없는 E를 남기지 않음 */
-      if (I.h && TX[I.id] && TX[I.id].hint && I.d < 9 && !busy) { const c = ST(); if (c.hint[I.id] !== day) { c.hint[I.id] = day; A.say(tx(TX[I.id].hint), 3); } }
+      if (I.h && TX[I.id] && TX[I.id].hint && I.d < 9 && !busy && !(A.quiet && A.quiet())) {   /* PATH-1B G3: 첫 이야기 동안은 칸 힌트 알림 X(그날 표시도 X — 끝난 뒤 다시 지나가면 뜸) */ const c = ST(); if (c.hint[I.id] !== day) { c.hint[I.id] = day; A.say(tx(TX[I.id].hint), 3); } }
       if (W(I) && (steamQ = (steamQ + 1) % 2) === 0) { const ch = A.chem && A.chem(), Wd = ch && ch.wind ? ch.wind(day) : { x: 0.7, z: 0.7 }, s = I.sp; c9.kitEmit(0, s.sx + (Math.random() - 0.5) * 1.5, s.sy, s.sz + (Math.random() - 0.5) * 1.5, Wd.x * 1.3, 0.7, Wd.z * 1.3, 4, 1.3, 0.6); } }
     if (fl) c9.kitFlush(); shadowSec(); if (QUE.length) fillSome(1.5);
     const ms = performance.now() - t0; secMs = ms; if (ms > secMax) secMax = ms; }
@@ -487,7 +487,7 @@ export function createCellKit(A) {
         case 'ant': if (I.d < 20) { antAt(I); fl = true; } break;
         case 'moth': mothAt(I); fl = true; break;
         case 'ice': if (I.st === 'run' || I.st === 'melted') { iceAt(I); fl = true; if (I.st === 'run' && I.t >= 24) { I.st = 'melted'; ST().ic[I.n] = S().day; A.GAME.mark(); if (I.d < 40) toast(tx(TX.ice.done), 5.5); reward('ice'); } } break;
-        case 'cross': if (I.d < 10) crossTick(I, el); break;
+        case 'cross': if (I.d < 10) crossTick(I, el); else if (I.ox != null) { I.ox = null; I.mv = 0; } break;   /* PATH-1B G9: 멀어지면 가는 쪽을 처음부터 다시 잼 */
         case 'cat': if (I.peek > 0) I.peek = Math.max(0, I.peek - el); catAt(I); fl = true; break;
         case 'cricket': singTick(I, el); break;
         case 'frog': singTick(I, el); singAt(I); fl = true; break;
@@ -497,11 +497,15 @@ export function createCellKit(A) {
       } }
     if (fl) c9.kitFlush(); }
   // 횡단보도: 빨간불에 연석 곁(2.6m)에서 기다렸다가 초록불이 켜지면 = 보행 신호 소리 + 한 줄(하루 처음 솜씨) · 빨간불에 차도로 들어서면 한 번 알림
-  function crossTick(I, el) { const sp = I.sp, s9 = sp.s9, me = map.player.pos(), st = A.sigSt(s9, 1), near = Math.hypot(me.x - sp.x, me.z - sp.z) < 2.6, day = S().day, c = ST();
-    const dx = me.x - s9.x, dz = me.z - s9.z, t0 = s9.t[0], ga = Math.abs(dx * -t0[1] + dz * t0[0]), gb = Math.abs(dx * t0[0] + dz * t0[1]), road = (ga < s9.hw[0] - 1.2 && gb < 30) || (gb < s9.hw[1] - 1.2 && ga < 30);   /* 이 신호의 두 길 차도 안(배열 훑기 X) */
+  function crossTick(I, el) { const sp = I.sp, s9 = sp.s9, me = map.player.pos(), near = Math.hypot(me.x - sp.x, me.z - sp.z) < 2.6, day = S().day, c = ST();
+    const dx = me.x - s9.x, dz = me.z - s9.z, t0 = s9.t[0], t1 = s9.t[1], ga = Math.abs(dx * -t0[1] + dz * t0[0]), gb = Math.abs(dx * t0[0] + dz * t0[1]), onA = ga < s9.hw[0] - 1.2 && gb < 30, onB = gb < s9.hw[1] - 1.2 && ga < 30, road = onA || onB;   /* 이 신호의 두 길 차도 안(배열 훑기 X) */
+    /* PATH-1B G9(평가 A #13 '빨간불이에요 글인데 보이는 신호등은 초록'): 늘 축 1(둘째 길)만 읽어서, 첫째 길을 따라 자전거로 가거나 둘째 길을 건너는 아이에게는 글이 보이는 등과 거꾸로였음 → 아이가 가는 쪽의 축으로 읽음(0.6m 움직일 때마다 다시 잼 · 가는 쪽 차 신호 = 그 길과 나란히 건너는 보행 신호와 같은 축) */
+    if (I.ox == null) { I.ox = me.x; I.oz = me.z; } const mx = me.x - I.ox, mz = me.z - I.oz; let ax = I.ax ?? (onB && !onA ? 0 : 1);
+    if (mx * mx + mz * mz > 0.36) { ax = Math.abs(mx * t0[0] + mz * t0[1]) >= Math.abs(mx * t1[0] + mz * t1[1]) ? 0 : 1; I.ox = me.x; I.oz = me.z; I.mv = 1; }
+    const st = A.sigSt(s9, ax); if (ax !== I.ax) { if (I.ax != null) I.wait = 0; I.ax = ax; I.prev = st; }   /* 가는 쪽이 바뀌면 기다린 시간을 처음부터(다른 건널목의 초록을 '켜졌어요'로 세지 않게) */
     if (near && st === 2 && !road) I.wait += el; else if (st !== 0 && !near) I.wait = 0;
     if (st === 0 && I.prev !== 0 && I.wait > 1.5) { I.wait = 0; if (map.tone) for (let k = 0; k < 3; k++) { map.tone(1047, k * 0.42, 0.12, 'sine', 0.06); map.tone(1319, k * 0.42 + 0.14, 0.12, 'sine', 0.06); } toast(tx(TX.cross.ok), 3.6); if (c.n.crossD !== day) { c.n.crossD = day; reward('cross', 'explore'); } }
-    if (st === 2 && road && Math.hypot(me.x - sp.x, me.z - sp.z) < 9 && c.n.redD !== day) { c.n.redD = day; A.GAME.mark(); toast(tx(TX.cross.red), 2.6); }
+    if (st === 2 && road && I.mv && Math.hypot(me.x - sp.x, me.z - sp.z) < 9 && c.n.redD !== day) {   /* I.mv = 가는 쪽을 한 번은 잰 뒤(막 가까이 온 첫 표본의 어림 축으로 알리지 않음) */ c.n.redD = day; A.GAME.mark(); toast(tx(TX.cross.red), 2.6); }
     I.prev = st; }
 
   // ───────── 다른 엔진에 넘기는 자리 · 시험 ─────────

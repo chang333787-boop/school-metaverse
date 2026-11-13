@@ -45,6 +45,8 @@ const hiCv = (cv, w, h) => { const k = Math.min(3, Math.max(2, Math.ceil((device
 const CSS = `
 .twn-play .mg{display:flex;flex-direction:column;gap:6px;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 .twn-play .pb.mg-end .mg{opacity:.55;transition:opacity .2s}
+.twn-play .pb.mg-end>small,.twn-play .pb.mg-end>.mglad{display:none}
+.twn-play .pb.mg-end>.row:last-child{position:static}
 .twn-play .mg .dim{opacity:.35}
 .twn-play .dots{display:flex;gap:6px;justify-content:center}
 .twn-play .dots i{width:14px;height:14px;border-radius:7px;background:#e7efe3;border:2px solid #c9d6c4}
@@ -667,17 +669,19 @@ function mkComb(c) { const C9 = 6, N = 24, X = jx(c), lv = c.lv, NB = Math.max(1
 
 // ⑧ 캐기(감자 = 줄기 둘레 · 조개 = 작은 숨구멍 두 개 밑): 단서를 보고 흙 파기 — 삽질 수가 정해져 있음(찾기)
 function mkDig(c) { const clam = c.k === 'clam', C9 = 7, N = 28, ND = (clam ? 8 : 10) + (c.zw > 1.1 ? 2 : 0) - (c.lp | 0);   /* LADDER-2: 흙이 단단할수록 삽질 수가 줄어듦(4칸에도 찾을 수보다 많음) */ let digs = ND, found = 0; const hide = new Array(N).fill(0), clue = new Array(N).fill('');
+  const NDW = [c.zw > 1.1 ? c.T('일솜씨 +2', 'work skill +2') : '', c.lp ? c.T((clam ? '질척한 갯벌 -' : '단단한 흙 -') + (c.lp | 0), (clam ? 'sticky mud -' : 'hard soil -') + (c.lp | 0)) : ''].filter(Boolean).join(' · '), NDT = NDW ? ' (' + NDW + ')' : '';   /* PATH-1B 걸28: 사다리 글은 '삽질 수가 줄어요'인데 숫자는 늘어 보이던 것 — 늘고 준 까닭을 숫자 옆에 */
   const nb = i => [-C9 - 1, -C9, -C9 + 1, -1, 1, C9 - 1, C9, C9 + 1].map(d => i + d).filter(j => j >= 0 && j < N && Math.abs((j % C9) - (i % C9)) <= 1);
   const pickFree = (L, n) => { const out = []; const P = L.slice(); while (out.length < n && P.length) out.push(P.splice((Math.random() * P.length) | 0, 1)[0]); return out; };
   let NT; if (clam) { const H = pickFree([...Array(N).keys()], 6); H.slice(0, 4).forEach(i => { clue[i] = 'hole2'; hide[i] = 1; }); H.slice(4).forEach(i => { clue[i] = 'crab'; }); NT = 4; }   /* 조개 = 작은 구멍 둘 · 게 구멍 = 큰 구멍 하나(조개 없음) */
   else { const ST = pickFree([...Array(N).keys()].filter(i => i % C9 > 0 && i % C9 < C9 - 1), 3); NT = 0; for (const s of ST) { clue[s] = 'stem'; for (const j of pickFree(nb(s).concat([s]).filter(j => !hide[j]), 2)) { hide[j] = 1; NT++; } } }
   c.mg.innerHTML = gridHTML(C9, N, clam ? 'mud' : 'soil'); const gd = c.mg.querySelector('.gd'), dug = new Array(N).fill(0);
-  const dig = i => { if (c.done || dug[i] || digs <= 0) return; dug[i] = 1; digs--; if (hide[i]) { found++; G.B[i].className = 'gc dug hit'; G.B[i].textContent = clam ? '🐚' : '🥔'; c.snd('pick'); } else { G.B[i].className = 'gc dug'; G.B[i].textContent = ''; c.snd('pop'); }
-    c.say((hide[i] ? c.T('찾았다! ', 'Found one! ') : c.T('여긴 없어요 — ', 'Nothing here — ')) + c.T('삽질 ' + digs + '번 남음 · 찾은 것 ' + found + '/' + NT, digs + ' digs left · found ' + found + '/' + NT)); if (found >= NT || digs <= 0) setTimeout(() => c.finish(score()), 500); G.mark(); }, G = gridCtl(gd, C9, N, dig);
+  const dig = i => { if (c.done || dug[i] || digs <= 0) return; dug[i] = 1; digs--; if (hide[i]) { found++; G.B[i].className = 'gc dug hit'; G.B[i].textContent = clam ? '🐚' : '🥔'; c.snd('pick'); } else { G.B[i].className = 'gc dug'; G.B[i].textContent = clue[i] === 'stem' ? '🌿' : ''; c.snd('pop'); }   /* PATH-1B 걸24: 빈 줄기 칸을 파도 줄기 그림은 남김(단서가 사라지던 것) */
+    c.say((hide[i] ? c.T('찾았다! ', 'Found one! ') : clue[i] === 'stem' ? c.T('줄기 바로 밑엔 없어요. 줄기 옆 칸을 파 봐요 — ', 'Nothing right under the stem. Try the spots next to it — ') : c.T('여긴 없어요 — ', 'Nothing here — ')) + c.T('삽질 ' + digs + '번 남음 · 찾은 것 ' + found + '/' + NT, digs + ' digs left · found ' + found + '/' + NT)); if (found >= NT || digs <= 0) setTimeout(() => c.finish(score()), 500); G.mark(); }, G = gridCtl(gd, C9, N, dig);
   const score = () => (clam ? (found >= 4 ? 3 : found >= 3 ? 2 : found >= 1 ? 1 : 0) : (found >= NT ? 3 : found >= NT - 2 ? 2 : found >= 2 ? 1 : 0));
   G.B.forEach((b, i) => { b.className = 'gc ' + (clue[i] || ''); b.textContent = clue[i] === 'stem' ? '🌿' : ''; }); G.mark();
-  c.say(clam ? c.T('작은 숨구멍 두 개 밑에 조개가 숨어요 — 큰 구멍 하나는 게 구멍! 삽질 ' + ND + '번', 'Clams hide under pairs of tiny holes — one big hole is a crab’s! ' + ND + ' digs') : c.T('감자는 줄기 밑 둘레 땅속에 달려요 — 줄기 둘레를 파요. 삽질 ' + ND + '번', 'Potatoes grow underground around the stem — dig around 🌿! ' + ND + ' digs'));
-  return { go: c.T('여기 파기', 'Dig here'), cnt: () => found, down() { dig(G.sel); }, key: code => G.key(code), tick() {}, dispose: () => G.dispose() }; }
+  c.say(clam ? c.T('작은 숨구멍 두 개 밑에 조개가 숨어요 — 큰 구멍 하나는 게 구멍! 삽질 ' + ND + '번' + NDT, 'Clams hide under pairs of tiny holes — one big hole is a crab’s! ' + ND + ' digs' + NDT) : c.T('감자는 줄기 밑 둘레 땅속에 달려요 — 줄기 둘레를 파요. 삽질 ' + ND + '번' + NDT, 'Potatoes grow underground around the stem — dig around 🌿! ' + ND + ' digs' + NDT));
+  return { go: c.T('고른 칸 파기', 'Dig the chosen spot'), cnt: () => found, down() { if (!c.done && dug[G.sel] && digs > 0) c.say(c.T('이미 판 칸이에요. 다른 칸을 눌러요', 'Already dug — tap another spot')); else dig(G.sel); },   /* PATH-1B 걸24: 큰 단추·E = 고른(테두리) 칸 파기 — 이미 판 칸이면 말없이 넘기지 않고 한마디 */
+    key: code => G.key(code), tick() {}, dispose: () => G.dispose() }; }
 
 // ⑨ 배추 거두기(DEPTH-2 · 크기대로 나누기 → 주문 보고 밭에서 고르기): 주문 쪽지(동네 가게 = 작은 배추 · 학교 급식실 = 중간 · 김장하는 집 = 큰 배추 · 김장은 가을·겨울만)마다 벨 배추가 다름
 //   밭 열두 포기(크기 셋이 섞임 · 크기 차이가 눈에 보임 · 사다리 = 크기가 비슷해짐) → 주문 크기만 눌러 주문 상자 네 칸을 채움 · 다른 크기 = 장터 바구니로(주문 상자는 안 참 · 까닭 한 줄) · 끌기·누르기·화살표 + E
@@ -696,8 +700,9 @@ function mkSort(c) { const X = jx(c), C9 = 4, N = 12, NQ = 4, T = 30 * c.zw, SQ 
     c.say((sz[i] > W ? c.T('주문보다 큰 배추예요', 'Bigger than the order') : c.T('주문보다 작은 배추예요', 'Smaller than the order')) + (sz[i] === 0 ? c.T('. 작은 배추는 밭에 두면 더 자라요', '. A small one would keep growing in the field') : '') + c.T('. 장터 바구니로 가요', '. It goes to the market basket')); };
   const G = gridCtl(gd, C9, N, i => put(i)); for (let i = 0; i < N; i++) G.B[i].innerHTML = '<i style="font-size:' + Math.round(30 * sc[i]) + 'px">🥬</i>'; G.mark();
   const score = () => (ok >= NQ ? (miss === 0 ? 3 : miss <= 2 ? 2 : 1) : ok >= 2 ? 1 : 0);
-  c.say(P0.n === 0 ? c.T('쪽지 그림과 크기를 견줘요. 주문 크기만 눌러 베어요', 'Compare with the picture on the note. Tap only the ordered size to cut it') : c.T('오늘 주문은 어떤 크기일까요? 쪽지를 봐요', 'Which size is today’s order? Check the note'));
-  return { go: c.T('이 배추 베기', 'Cut this one'), cnt: () => ok, down() { put(G.sel); }, key: code => G.key(code),
+  c.say(P0.n === 0 ? c.T('쪽지 그림과 크기를 비교해요. 주문 크기만 눌러 베어요', 'Compare with the picture on the note. Tap only the ordered size to cut it') : c.T('오늘 주문은 어떤 크기일까요? 쪽지를 봐요', 'Which size is today’s order? Check the note'));
+  return { go: c.T('고른 배추 베기', 'Cut the chosen one'), cnt: () => ok, down() { if (!c.done && got[G.sel]) c.say(c.T('이미 벤 자리예요. 다른 배추를 눌러요', 'Already cut — tap another cabbage')); else put(G.sel); },   /* PATH-1B 걸24 */
+    key: code => G.key(code),
     tail: () => '💡 ' + (miss ? c.T('장터 바구니로 간 배추 ' + miss + '포기. ', miss + ' went to the market basket. ') : '') + CAB_FACT[ORD][c.en ? 1 : 0],
     tick(dt) { if (TB.tick(dt)) c.finish(score()); },
     get dbg() { return { ord: ORD, want: W, sz: sz.slice(), got: Array.from(got), ok, miss, n: P0.n, pick: i => put(i) }; },
@@ -1167,11 +1172,13 @@ export function createMini(kind, o) { css();
   c.h9 = { sitPick, flagSide, cloudSvg };   /* DEPTH-2 소금(town_salt.js)이 쓰는 상황 고르기·그림 */
   c.T = (ko, e2) => (c.en ? e2 : ko); c.say = s => { if (c.msgEl && c.msgEl.textContent !== s) c.msgEl.textContent = s; }; c.snd = k => { if (o.sfx) o.sfx(k); }; c.tone = (...a) => { if (o.tone) o.tone(...a); };
   let endT = -1, endA = 0, score = 0, cntT = -1, recR = null;
-  c.finish = ok => { if (c.done) return; c.done = true; score = Math.max(0, Math.min(3, ok | 0)); if (o.grade === false) { endT = 0; return; } c.root.classList.add('mg-end'); const f9 = FACT[kind === 'plant' || kind === 'cut' ? kind : c.k], tl = g.tail ? g.tail() : '', gt = gradeText(score, c.en), rest = tl ? ' ' + tl : f9 ? (c.en ? ' 💡 Did you know? ' : ' 💡 알고 있었나요? ') + f9[c.en ? 1 : 0] : '';
+  c.finish = ok => { if (c.done) return; c.done = true; score = Math.max(0, Math.min(3, ok | 0)); if (o.grade === false) { endT = 0; return; } c.root.classList.add('mg-end'); { const xb = c.root.querySelector('.row .x'); if (c.go) c.go.style.display = 'none'; if (xb) xb.textContent = c.en ? 'Close' : '닫기'; }   /* PATH-1B 걸25: 끝나면 단추는 [닫기] 하나(놀이 단추·[그만]이 그대로 남아 닫는 법을 몰랐음) */
+    const f9 = FACT[kind === 'plant' || kind === 'cut' ? kind : c.k], tl = g.tail ? g.tail() : '', gt = gradeText(score, c.en), rest = tl ? ' ' + tl : f9 ? (c.en ? ' 💡 Did you know? ' : ' 💡 알고 있었나요? ') + f9[c.en ? 1 : 0] : '';
     if (c.msgEl) { c.msgEl.textContent = ''; const b9 = document.createElement('b'); b9.className = 'mgres'; b9.textContent = gt; c.msgEl.appendChild(b9); if (rest) c.msgEl.appendChild(document.createTextNode(rest)); }   /* PLAY-2: 끝 = 결과(잘했어요)가 크게 한 줄 + 사실 · 글(textContent)은 예전과 같음 */
     c.snd(score >= 3 ? 'done' : score ? 'ding' : 'buzz'); endA = 0; endT = f9 || tl ? Math.max(3.2, Math.min(6, readSec(gt + rest))) : 0.8;   /* PLAY-3: 끝 = 결과 + 사실 한 줄 · PLAY-2: 머무는 시간 = 글 길이만큼(READ-1 readSec · 3.2~6초 — 다른 시험·놀이 흐름이 기다리는 7초 안) · E·스페이스·결과 글 누르기 = 바로 닫기(1초 뒤부터) */
     if (o.onRec) { try { recR = o.onRec(score, cntNow()); } catch (er) { console.warn('[town_minigame] 기록 오류', er); recR = null; }   /* LADDER-2 끝 창 = 내 최고 한 줄(+ 칸이 바뀌면 다음 판 한 줄) · 새 최고 = 작은 연출 */
-      if (recR && recR.lines && recR.lines.length) { const el = document.createElement('div'); el.className = 'mgrec' + (recR.neu ? ' neu' : ''); for (const t of recR.lines) { const d = document.createElement('div'); d.textContent = t; el.appendChild(d); } const ms = c.root.querySelector('.msg'); if (ms) ms.after(el); else c.root.appendChild(el); if (recR.neu && o.onBest) o.onBest(el); endT = Math.max(endT, recR.neu ? 3.6 : 3.2); } } };
+      if (recR && recR.lines && recR.lines.length) { const el = document.createElement('div'); el.className = 'mgrec' + (recR.neu ? ' neu' : ''); for (const t of recR.lines) { const d = document.createElement('div'); d.textContent = t; el.appendChild(d); } const ms = c.root.querySelector('.msg'); if (ms) ms.after(el); else c.root.appendChild(el); if (recR.neu && o.onBest) o.onBest(el); endT = Math.max(endT, recR.neu ? 3.6 : 3.2); } }
+    c.root.scrollTop = c.root.scrollHeight; };   /* PATH-1B 걸25: 결과 글·내 최고 줄·[닫기]가 판 안에 보이게(끝 화면은 판을 다시 줄이지 않으므로 아래로 굴려 둠) */
   const cntNow = () => (cntT >= 0 ? cntT : g && g.cnt ? g.cnt() | 0 : -1);   /* 모은 수(딸기·감자·고르게 편 김…) · 모르는 놀이 = -1 */
   if (!MK[kind]) console.warn('[town_minigame] 모르는 놀이 갈래 → 익은 것 고르기로:', kind, o.k);   /* 옛 기본값 mkBar(타이밍 막대)는 10-24에 지움 */
   const g = (MK[kind] || mkRipe)(c);
