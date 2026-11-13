@@ -1,6 +1,7 @@
 # 합치기·시험 도구(메인 세션용 · 10-24)
 - `b2.sh` — 브라우저 시험 자리. 그림 없는 시험(pw.cjs · --sm-norender)은 자리 셋(부하 8 아래). 그림 켠 시험은 한 자리(부하 6 아래 · 무거운 브라우저 한 대 이하). 메인은 `B1_MAIN=1`로 자기 자리 `m1.lock`을 써요. 잠금 폴더는 `SM_OPS_DIR`(기본 /tmp/sm-ops).
 - `gm.sh <폴더> <포트> "<하네스 이름들>"` — 문법 → check.cjs --full → 홍보판(PAGE=/) → town_<이름> 하네스(인자는 `이름:--a+--b`) → 줄마다 결과 · 끝에 DONE.
+- `core.sh [포트=8821]` — 수업 전 핵심 시험 묶음(CORE-1 11-13). check.cjs --full → 홍보판 → town_ticolor → 한 차시 수업 길에 걸리는 마을 하네스 열일곱을 둘씩(b2.sh 자리) → 줄마다 `이름 rc=0 ✗=0 n초` · 끝에 `통과 n / 전체 m · 걸린 k분`과 DONE(20~25분 · 모두 통과 = exit 0). 고른 까닭 = 파일 안 목록 주석. `CORE_LIST="gate open"`으로 하네스만 바꿔 돌려요. 기록 = `CORE_OUT`(기본 /tmp/sm-core). 교사가 읽는 운영 안내 = `docs/systems/town_ops.md`.
 - `bump.py <합치기 폴더>` — 스테이지된 변경을 보고 모듈 ?v=·registry town v·v2·v3 index의 main.js?v=를 한 번에 올려요(홍보판 X).
 - `r5.py <파일>` — `git apply -3` 뒤 남은 충돌 표시 자리만 풀어요(base→theirs 문자 바꿈을 ours 줄에 끼움). 못 푼 자리는 그대로 남기니 손으로 봐요. 이미 들어간 바꿈이 또 들어가지 않는지 꼭 확인해요.
 - 합치기 폴더: `git worktree add --detach <폴더> origin/main` + `ln -s <저장소>/node_modules <폴더>/node_modules`.
