@@ -282,7 +282,7 @@ export function createRoad(A) {
     const g = goalNow(me); if (g !== goalT) goalT = g; sideSync(me); }
   /* DEB-2 ②(11-08 토론 판정 '위 가운데 줄은 이야기 것'): 위 가운데 줄은 내가 하는 중인 것(고리 달리기·부탁 일 = mine)만 · 손 든 일꾼·날아온 종이·고리 출발 권유 = 오른쪽 칩 한 줄(말풍선은 그대로) · 글이 바뀔 때만 DOM(거리 수 X) */
   let sideT = null;
-  function sideNow(me) { if (RACE || ACT) return null; const e = en(); if (REQ) return '🙋 ' + (e ? 'The ' + who(REQ.w) + ' worker is waving — go and press E' : who(REQ.w) + ' 일꾼이 손을 들었어요 — 가서 E');
+  function sideNow(me) { if (RACE || ACT) return null; const e = en(); if (REQ) return '🙋 ' + (e ? 'The ' + who(REQ.w) + ' worker is waving — go and press E' : who(REQ.w) + ' 일꾼이 손을 들었어요 — ' + DIRN[dir8(bearing(REQ.w.x - me.x, REQ.w.z - me.z))][0] + '쪽 ' + Math.max(5, Math.round(Math.hypot(REQ.w.x - me.x, REQ.w.z - me.z) / 5) * 5) + 'm · 가서 E');   /* PATH-1A 막3(평가 B: 두 번 다 못 찾음 — '일꾼 어디 있어요?'): 칩에 방위 + 거리(글이 바뀔 때만 DOM) */
     if (PAPER && PAPER.fly <= 0 && Math.hypot(me.x - PAPER.x, me.z - PAPER.z) < 50) return '🗺 ' + (e ? 'A paper blew in — pick it up (E)' : '날아온 종이 — 주워 봐요 (E)');
     if (goalT && goalT.startsWith('🚲')) return '🚲 ' + (e ? 'Ring course — ride through the green ring to start' : '고리 코스 — 초록 고리를 자전거로 지나면 시작'); return null; }
   function sideSync(me) { if (!A.chip) return; const t = sideNow(me); if (t === sideT) return; sideT = t; A.chip('twn-rd', t); }
@@ -290,7 +290,7 @@ export function createRoad(A) {
     const m9 = A.GAME.S.min, dm = lastMin >= 0 && m9 > lastMin && m9 - lastMin < 6 ? m9 - lastMin : 0; lastMin = m9;
     if (RACE) { raceSec(me); return; }
     if (ACT) { if (A.away() || A.night()) actEnd(false, 'away'); return; }
-    if (REQ) { REQ.t++; const w = REQ.w, d = Math.hypot(me.x - w.x, me.z - w.z); if (A.away() || A.night() || REQ.t > 50 || d > 120) { reqEnd(d > 120 || REQ.t > 50); movMin = 30; return; } if (!A.busy() && (REQ.bq += 1) >= 6 && d < 60) { REQ.bq = 0; A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, en() ? 'Excuse me! Can you help?' : '저기요! 잠깐 도와줄래요?'); } return; }
+    if (REQ) { REQ.t++; const w = REQ.w, d = Math.hypot(me.x - w.x, me.z - w.z); if (A.away() || A.night() || REQ.t > 50 || d > 120) { reqEnd(d > 120 || REQ.t > 50); movMin = 30; return; } if (!A.busy() && (REQ.bq += 1) >= 3 && d < 60) { REQ.bq = 0;   /* PATH-1A 막3: 말풍선 6 → 3초마다(3.2초 보임 = 부탁하는 동안 끊기지 않음 — 말풍선 쪽으로 돌았는데 사라져 못 찾음) */ A.bubble({ x: w.x, y: w.g, z: w.z, sc: 1 }, en() ? 'Excuse me! Can you help?' : '저기요! 잠깐 도와줄래요?'); } return; }
     if (PAPER) { PAPER.life++; if (PAPER.life > 120 || Math.hypot(me.x - PAPER.x, me.z - PAPER.z) > 100 || A.away()) paperGone(); return; }
     if (A.busy() || A.away() || A.inSchool(me.x, me.z) || (A.emCall && A.emCall()) || (A.hold && A.hold())) return;   /* DEB-2 ②: 이야기 장이 막 시작된 20초 동안은 새 부탁·종이 X(친구와 일꾼이 한꺼번에 부탁하던 것) */   /* FIX-4C: 긴급 출동 알림이 떠 있는 동안은 새 길 사건(손 든 일꾼·날아온 종이)을 더 만들지 않음 — 이미 생긴 부탁·고리 코스는 그대로 */
     const moving = mv > 1.2 && mv < 40; if (!moving) return; movMin += dm; movP += dm;
