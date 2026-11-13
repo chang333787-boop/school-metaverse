@@ -74,7 +74,7 @@ import { createSubway } from './town_subway.js?v=8';   // SUBWAY-1 승강장·�
 import { createLook, SKYF as SKYF9 } from './town_look.js?v=9';
 import { REGN, REG_KEYS, regName, createRegion, kidHoods } from './town_region.js?v=1';   /* REGION-1 구역 이름 */
 import { createKidLook } from './town_kidlook.js?v=7';   /* KIDLOOK-1 아이 동네 이름답게(들머리 시설 묶음 + 할 거리) */
-import { createPbox } from './town_pbox.js?v=11';   /* PLAY-2 판 크게(교사 11-07 '미니게임이 왜 왼아래에 고정') — 놀이 판 공용 틀(가운데 큰 판 · 세상 놀이 줄) */
+import { createPbox } from './town_pbox.js?v=12';   /* PLAY-2 판 크게(교사 11-07 '미니게임이 왜 왼아래에 고정') — 놀이 판 공용 틀(가운데 큰 판 · 세상 놀이 줄) */
 import { classCode, cloudCall, cloudPull, cloudSync } from './town_cloud.js?v=6';   // SAVE-CF 이어 하기(v4 번호 + 반 코드 ?cls=)   // ART-2 빛·물·바람(하늘 · 물 비침 · 젖은 갯벌 · 갈대 바람 · 하루 빛 이어 바꾸기)
 import { dexBook, dexLine, dexStamp, DEX_HINT } from './town_dex.js?v=26'; import { bundleBook, bundlePut, inSeason, ALL_STAMP } from './town_bundle.js?v=3'; import { STARS as SKYSTARS, SKY_OF, drawSky } from './town_sky.js?v=1'; import { CROPS, seedsOf, plotState, farmGrow, plantSpots, FARM_MAX } from './town_farm.js?v=3'; import { FISH } from './town_fish.js?v=2';   // GAME-5b 도감 틀(놀이 코드와 떼어 둠 · 교과서 사진·도감 부품과 같은 틀)   // GAME-0 게임 상태 한 곳(하루·시계·가방·돈·도감) + 이 기기 저장(교사 10-16 주말 '실제 게임처럼')   // INDOOR-1 들어갈 수 있는 집·가게 안(들어갈 때만 지음 · 10-15 3차)
 const KALIAS = { market: 'shop', museum: 'public', aquarium: 'public', hut: 'shop', pension: 'house', aquadom: 'public', kidscafe: 'shop', clinic: 'hospital', terminal: 'public', mart: 'shop', store: 'shop' };   // 자료의 종류 이름 → 엔진 종류(10-15)

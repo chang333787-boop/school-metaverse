@@ -1,6 +1,6 @@
 // 🐞 10-27 사용자 버그 넷 시험(BUG4): node tools/harness/town_bug4.cjs [마을=ourtown] [포트=8002] [--only=1,2,3,4] [--shots=폴더]
 //   ① 여권 이름(BUG4-1 '여권 도장에 이상한 영어 · pub_gaf 뭔데'): 모든 곳 도장 → 여권 창 · 공공시설 장소 카드 · 바로 가기(J) · 장소 찾기(F) · 하루 마무리 '새 여권 도장' 줄 · 도장 알림
-//      화면 글에 /pub_|gaf_|gfill_|글자_두자리수/ 꼴 0 · 같은 이름 칩은 '마을회관(숲속 마을)'처럼 동네로 구별(여권 칩 글이 서로 다름)
+//      화면 글에 /pub_|gaf_|gfill_|글자_두자리수/ 꼴 0 · 같은 이름 칩은 '마을회관 · 숲속 마을'처럼 동네로 구별(여권 칩 글이 서로 다름 · DEB-3 판정 12 뒤 괄호 대신 가운뎃점)
 //   ② 장구 선생님(BUG4-2 '사람은 없는데 · 위치도 저기 있어야 함?'): 몸 = 있는 일꾼(수 그대로) · 잔치 마당(정자 곁) 무대 옆 15m 안 · 장터 상인 X · 돗자리·장구 소품
 //      11시 = 몸 보임(out9 0) · E = 창 · 20시 = 몸 숨김 + E = '쉬는 때 — 9시에 와요' 한 줄 · 잔치 무대 perform = 쉬는 때에도 창(잔치 갈래와 이어짐)
 //   ③ 하늘 상자(BUG4-3 '정체불명의 박스 선'): 비 띠 커튼(town_sim.js makeFrontView) = 가장자리 흐림(alphaMap) + 가까이 옅어짐(front2) · 사진 자리 재현 캡처(그리기 켬 · --shots)
@@ -38,7 +38,8 @@ const tp = (p, x, z, lx, lz) => p.evaluate(([x, z, lx, lz]) => { const M = SD2.m
       const badT = r.toasts.filter(t => IDRE.test(t)); ok(!badT.length, '도장 알림 글 ' + r.toasts.length + '개에 id 꼴 0' + (badT.length ? ' — ' + badT.slice(0, 3).join(' | ') : ''));
       const txt = async () => p.evaluate(() => { const q = document.querySelector('.twn-p'); return q ? q.innerText : ''; });
       await p.evaluate(() => SM_TOWN.jobs().openPass()); await W8(p, 500); const tp1 = await txt(); ok(tp1.length > 100 && !IDRE.test(tp1), '여권 창 글(' + tp1.length + '자)에 id 꼴 0' + (IDRE.test(tp1) ? ' — ' + (tp1.match(new RegExp('.{0,20}(' + IDRE.source + ').{0,20}')) || [''])[0] : ''));
-      const chips = await p.evaluate(() => [...document.querySelectorAll('.twn-p .pc-chips button[data-p]')].map(b9 => b9.textContent)); ok(chips.length > 50 && chips.some(t => /^마을회관\(/.test(t)), '여권 칩 ' + chips.length + '개 · 「' + (chips.find(t => /^마을회관\(/.test(t)) || '-') + '」');
+      const chips = await p.evaluate(() => [...document.querySelectorAll('.twn-p .pc-chips button[data-p]')].map(b9 => b9.textContent)); const hc = chips.filter(t => /^마을회관/.test(t));   /* FIX-6: DEB-3 판정 12로 '마을회관(숲속 마을)' → '마을회관 · 숲속 마을'(괄호 둘 겹침 X) — 꼴은 바뀌어도 '같은 이름 칩 글이 서로 다름 + 동네가 붙음'은 그대로 봄 */
+      ok(chips.length > 50 && hc.length >= 2 && new Set(hc).size === hc.length && hc.every(t => /^마을회관 · \S/.test(t)), '여권 칩 ' + chips.length + '개 · 마을회관 ' + hc.length + '곳 글이 서로 다름 「' + (hc.join(' / ') || '-') + '」');
       if (SHOTS) { require('fs').mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: SHOTS + '/bug4_1_pass.png' }); } await closeAll(p);
       for (const id of r.pub.map(q => q.id).slice(0, 4)) { await p.evaluate(id => { const J = SM_TOWN.jobs(), q = J.eligible().find(o => o.id === id); if (q) J.openCard(q); }, id); await W8(p, 400); const t = await txt(); ok(t && !IDRE.test(t), '장소 카드 ' + (t.split('\n')[0] || '').slice(0, 40) + ' — id 꼴 0'); await closeAll(p); }
       for (const k of ['KeyJ', 'KeyF']) { await p.keyboard.press(k); await W8(p, 700); const t = await txt(); ok(t.length > 50 && !IDRE.test(t), (k === 'KeyJ' ? '바로 가기(J)' : '장소 찾기(F)') + ' 창 글(' + t.length + '자) id 꼴 0' + (IDRE.test(t) ? ' — ' + (t.match(new RegExp('.{0,20}(' + IDRE.source + ').{0,20}')) || [''])[0] : '')); await closeAll(p); }

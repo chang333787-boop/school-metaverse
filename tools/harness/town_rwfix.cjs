@@ -73,7 +73,9 @@ async function browserPart() {
       { const st = await ev(() => SM_TOWN.kitchen().play.dbg.state()); for (let i = 0; i < st.length; i++) if (st[i].wantSalt) await ev(i => SM_TOWN.kitchen().play.dbg.salt(i, 1), i); }
       for (let i = 0; i < 60 && await ev(() => !!document.querySelector('.twn-play .kc')); i++) await W8(250); await W8(1200);
       const B = await bag(), P = await pops(); ok((B['🥞'] | 0) === 2 && !(B['🌾'] | 0), '[E11] 하루 총량을 다 쓴 날도 두 그릇 = 🥞 ' + (B['🥞'] | 0) + '개(재료 두 벌 → 두 그릇 · 고치기 전 = 둘째 재료만 사라짐)');
-      ok(P.includes('+🥞×' + (B['🥞'] | 0)) || ((B['🥞'] | 0) === 1 && P.includes('+🥞')), '[E11] 팝 = 실제로 들어온 그릇 수 (' + P.filter(t => /🥞/.test(t)).join(' ') + ')');
+      /* FIX-6: 팝 글이 '+🥞×2' 뒤에 작은 줄 '팬케이크 → 가방 · 물건'(DEB-3 판정 15 · 화면에서는 아랫줄)을 달게 됨 → 글 전체가 아니라 머리가 '+🥞×그릇 수'인지 봄(×20 같은 다른 수는 X) */
+      { const n9 = B['🥞'] | 0, hit = P.some(t => (n9 > 1 ? t.startsWith('+🥞×' + n9) && !/\d/.test(t.charAt(('+🥞×' + n9).length)) : n9 === 1 && t.startsWith('+🥞') && t.charAt('+🥞'.length) !== '×'));
+        ok(hit, '[E11] 팝 = 실제로 들어온 그릇 수 (' + P.filter(t => /🥞/.test(t)).join(' ') + ')'); }
       const F1 = await ev(() => { const F = SM_TOWN.feast && SM_TOWN.feast(); return F ? F.info() : null; });
       if (F0 && F0.prep) { const a = (F0.dc && F0.dc.d === F0.day ? F0.dc.b.food | 0 : 0), z = (F1.dc && F1.dc.b ? F1.dc.b.food | 0 : 0); ok(z - a === 1, '[E12] 한 번 요리(두 그릇) = 잔치 음식 보탬 한 번 (' + a + ' → ' + z + ' · 고치기 전 = 두 번)'); }
       else console.log('    (잔치 준비 기간이 아니라 E12 브라우저 칸 건너뜀 — node 칸이 봄)'); await uncap(); });

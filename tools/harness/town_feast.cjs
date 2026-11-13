@@ -1,5 +1,5 @@
 // 🎉 마을 잔치 시험(FEAST-1 · v2/games/town_feast.js): node tools/harness/town_feast.cjs [마을=ourtown] [포트=8002] [--shots=폴더(그리기 켬 · 잔치 날 낮·밤 캡처 + 사진 찍기)]
-//   ① 새 저장 = 잔치 날 28일째(COVER-2 10-31: 이야기를 하는 판의 첫 잔치 = 이야기 피날레 · 늦어도 한 해 끝 · 4막을 마치면 이야기가 내일로 당김 — 당기기는 town_story_see.cjs ⑳) · '잔치까지 스무 넘는 밤'(낱말 · 숫자 X) · 잔치 마당 게시판이 장면에 · 달력(날씨 창)·아침 소식·하루 마무리 손잡이에 잔치 줄 · 수첩 🎉 잔치 탭
+//   ① 새 저장 = 잔치 날 28일째(COVER-2 10-31: 이야기를 하는 판의 첫 잔치 = 이야기 피날레 · 늦어도 한 해 끝 · 4막을 마치면 이야기가 내일로 당김 — 당기기는 town_story_see.cjs ⑳) · '잔치까지 스무 밤 넘게'(낱말 · 숫자 X · DEB-3 판정 12로 '스무 넘는 밤'에서 바뀜) · 잔치 마당 게시판이 장면에 · 달력(날씨 창)·아침 소식·하루 마무리 손잡이에 잔치 줄 · 수첩 🎉 잔치 탭
 //   ② 이미 있는 기록이 갈래로: GAME.tally·REC.add(요리·꾸러미·장구·우체국·사건 수첩) → 보탬 · 하루 두 번까지(셋째는 안 셈) · 두 번 = 한 단계 = 그 갈래 물건이 잔치 마당에 생김(배너 한 줄)
 //   ③ 여러 날 준비 → 음식 셋 · 꾸미기 셋 · 공연 둘 · 손님맞이 하나 · 안전 0 · 게시판 가방 드리기(솔방울) = 꾸미기 보탬 · 창 글에 숫자·% 0
 //   ④ 잔치 날 10:30 = 일꾼이 잔치 마당에 모임 · 무대·상 E · 게시판 E = 📷 · 안전 = 빈 자리(물건 0) · 가까이 가면 이웃 말(잘한 것 · '다음 잔치엔…') · 무대 장단 = 손뼉 · 음식 나누기
@@ -32,7 +32,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     ok(I.fd === Math.max(28, I.day + 7) && I.n === 0 && I.prep, '잔치 날 = 28일째(이야기를 하는 판 · 피날레가 당김) · 준비 중 · 주제 ' + I.th);
     ok(!!I.site && I.vis.includes('board') && I.vat.board[0][3], '잔치 마당 자리 ' + JSON.stringify(I.site) + ' · 게시판이 장면에');
     const cal = await ev(() => SM_TOWN.feast().calLine()), nw = await ev(d => SM_TOWN.feast().news(d), I.day), wt = await ev(d => SM_TOWN.feast().wait(d), I.fd - 3);
-    ok(/까지 스무 넘는 밤/.test(cal) && !/\d/.test(cal), '달력 줄 = 「' + cal + '」(숫자 0)'); ok(nw.length === 1 && /까지 스무 넘는 밤/.test(nw[0].t[0]) && !!nw[0].at, '아침 소식 줄 = 「' + (nw[0] && nw[0].t[0]) + '」 + 자리');
+    ok(/까지 스무 밤 넘게/.test(cal) && !/\d/.test(cal), '달력 줄 = 「' + cal + '」(숫자 0)'); ok(nw.length === 1 && /까지 스무 밤 넘게/.test(nw[0].t[0]) && !!nw[0].at, '아침 소식 줄 = 「' + (nw[0] && nw[0].t[0]) + '」 + 자리');
     ok(wt && /세 밤/.test(wt.t[0]) && wt.p && wt.p.door, '하루 마무리 「내일 기다리는 것」(잔치 사흘 전) = 「' + (wt && wt.t[0]) + '」 + 빨간 선 자리');
     // ② 이미 있는 기록 → 갈래 · 하루 두 번까지
     await ev(() => { SM_TOWN.game().tally('cooked'); }); I = await F(); ok(I.lv.food === 1 && !I.vis.includes('food:0'), '요리하기(GAME.tally cooked) = 잔치 음식 보탬 하나(아직 물건 X)');
@@ -54,7 +54,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await ev(() => SM_TOWN.feast().open(true)); await W8(300);
     const PT = await ev(() => { const P9 = document.querySelector('.twn-p'); return P9 ? { rows: P9.querySelectorAll('.fst-row').length, txt: [...P9.querySelectorAll('.fst-row,.sm')].map(e => e.textContent).join(' | '), give: !!P9.querySelector('[data-gb="deco"]'), tab: [...P9.querySelectorAll('.nb-tabs button')].map(b => b.textContent).join(',') } : null; });
     ok(PT && PT.rows === 5 && !/\d|%/.test(PT.txt.replace(/112/g, '')), '게시판 창 = 다섯 갈래 · 글에 숫자·% 0(112 신고 말고)'); ok(PT && /잔치/.test(PT.tab), '수첩 탭 줄에 🎉 잔치 (' + (PT && PT.tab) + ')');
-    const SL = await ev(() => { const q = document.querySelector('.twn-p .fst-story'); return q ? q.textContent : ''; }); ok(/프롤로그 쪽지가 도우미를 찾던 그 첫 잔치/.test(SL) && /밤 남았어요/.test(SL), '창 맨 위 이야기 관계 줄(STORYF-1) = 「' + SL + '」');
+    const SL = await ev(() => { const q = document.querySelector('.twn-p .fst-story'); return q ? q.textContent : ''; }); ok(/첫 쪽지가 도우미를 찾던 그 첫 잔치/.test(SL) && !/프롤로그|4막/.test(SL) && /밤( 넘게)? 남았어요/.test(SL) && !/\d/.test(SL),   /* FIX-6: DEB-3 판정 8('프롤로그' 같은 게임 구조 말 X) · 판정 12('스무 밤 넘게') 뒤 글 */ '창 맨 위 이야기 관계 줄(STORYF-1) = 「' + SL + '」');
     const dl0 = (await F()).lv.deco; await ev(() => { const b9 = document.querySelector('.twn-p [data-gb="deco"]'); if (b9) b9.click(); }); await W8(300); I = await F();
     ok(PT && PT.give && I.lv.deco === dl0 + 1 && (await ev(() => SM_TOWN.game().S.bag['🌰'] | 0)) === 1, '게시판에 솔방울 드리기 = 꾸미기 보탬 · 가방에서 하나 빠짐');
     await shot(p, '01_board_panel'); await closeAll(p);
