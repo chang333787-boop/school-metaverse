@@ -158,8 +158,13 @@ export function createGame(id, opt) {
   if (!(S.min >= 0 && S.min < DAY_END)) S.min = 7 * 60;
   /* PERF-B(11-08 교사 '학급 크롬북 덜 쾌적'): 판 전체 JSON.stringify + localStorage 쓰기가 시계(게임 10분 = 7초)·자리(3초)마다 돌았음 → 가벼운 변화(lite = 시계·이어 하기 자리)는 30초에 한 번 · 진짜 변화(dirty)는 예전처럼 2초 상한 · 쓰기는 쉬는 틈(requestIdleCallback · 없으면 setTimeout)
      지키는 것 그대로(SAVE-3): 잠·하루 넘김·창 숨김·닫기·칸 바꾸기·처음부터 = 바로 flush · 가벼운 변화가 남아 있는 동안 :own 손 표시는 5초마다(다른 창이 '넘겨 줘'를 묻게 — 20초 창) · G.st = 쓴 수·시간·크기(SM_TOWN.save().st) */
-  let dirty = false, lite = false, idleQ = false, ownT = 0, since = 0, acc = 0, ph = phaseOf(S.min), on = null; const LITE_S = 30; const T0 = () => ({ earned: 0, got: {}, cells: 0, tasks: 0, cooked: 0, shared: 0, dex: 0, gift: 0, farmW: 0, sold: 0, rainW: 0 });   /* PHASE1 조각 2: 선물 · 물 준 칸 · 판 수 · 비 온 날 물 준 칸 */ if (!S.today || typeof S.today !== 'object') S.today = T0(); else for (const [k, v] of Object.entries(T0())) if (typeof S.today[k] !== typeof v) S.today[k] = v;   /* FIX-CX7(코덱스 10-18): today:{}처럼 빠진 칸 */   // 오늘 한 일(하루 마무리 · 잠들면 비움)
+  let dirty = false, lite = false, idleQ = false, ownT = 0, since = 0, acc = 0, wallT = 0, ph = phaseOf(S.min), on = null; const LITE_S = 30; const T0 = () => ({ earned: 0, got: {}, cells: 0, tasks: 0, cooked: 0, shared: 0, dex: 0, gift: 0, farmW: 0, sold: 0, rainW: 0 });   /* PHASE1 조각 2: 선물 · 물 준 칸 · 판 수 · 비 온 날 물 준 칸 */ if (!S.today || typeof S.today !== 'object') S.today = T0(); else for (const [k, v] of Object.entries(T0())) if (typeof S.today[k] !== typeof v) S.today[k] = v;   /* FIX-CX7(코덱스 10-18): today:{}처럼 빠진 칸 */   // 오늘 한 일(하루 마무리 · 잠들면 비움)
   const emit = (t) => { if (on) on(t); };
+  /* HOST-1 손님 시계 한 걸음(매 프레임 · 새 객체 X): 목표 = 받은 분 + 그 뒤 흐른 시간 · 1분 안이면 목표 그대로 · 더 벌어졌으면 2초쯤에 걸쳐 따라감(앞뒤 모두 · 갑자기 튀지 않게) · 자정은 넘지 않음(하루는 방장이 잘 때 넘어감) */
+  function hostStep(dt) { const H = G.host, tg = Math.min(DAY_END - 0.02, H.p ? H.m : H.m + (performance.now() - H.at) / 1000 / SPM), cur = S.min + acc / SPM, d = tg - cur;
+    const nx = Math.abs(d) < 1 ? tg : cur + d * Math.min(1, dt * 2.3), m0 = S.min; S.min = Math.max(0, Math.floor(nx)); acc = (Math.max(0, nx) - S.min) * SPM; if (S.min === m0) return;
+    if (((S.min / 10) | 0) !== ((m0 / 10) | 0)) { lite = true; emit('clock'); }
+    const p = phaseOf(S.min); if (p !== ph) { ph = p; emit('phase'); } }
   let ro = !!(opt && opt.ro), roSay = ro, failSaid = false, bakAt = 0;   /* SAVE-3b: claimSave가 'ro'(앞 창이 저장을 못 해 안 넘김) = 처음부터 읽기만 */
   /* 창을 숨기거나 닫을 때 = 바로 저장(2초 기다림 X) · 닫을 때는 손도 뗌(다음 창이 기다리지 않게) */ const onHide = e => { if (ro) return; G.flush(true); if (e && e.type === 'pagehide') LS.set(KEY + ':own', JSON.stringify({ id: null, rel: TAB_ID, at: Date.now() })); }, onVis = () => { if (typeof document !== 'undefined' && document.visibilityState === 'hidden') onHide(); };
   /* 다른 창: '넘겨 줘' = 마지막 몫을 쓰고 손을 뗌 · 다른 창이 주인이 됨 = 읽기만(덮어쓰지 않음) */ const onStore = e => { if (!e || ro) return;
@@ -196,7 +201,9 @@ export function createGame(id, opt) {
     tick(dt, paused) {
       since += dt; if (!idleQ && ((dirty && since >= 2) || (lite && since >= LITE_S))) { idleQ = true; idleRun(flushIdle); }   /* PERF-B: 프레임 안에서 바로 쓰지 않고 쉬는 틈에(1초 안) */
       if (lite && !ro && (ownT += dt) >= 5) { ownT = 0; LS.set(KEY + ':own', '{"id":"' + TAB_ID + '","at":' + Date.now() + '}'); }   /* PERF-B: 안 쓴 몫이 있는 동안 '이 창이 쥐고 있음'(20초 창)을 이어 줌 — 새 창이 넘겨 달라고 물어 마지막 몫까지 받게 */
-      if (!S.clock || paused) return;
+      if (G.host) { G.flow = true; hostStep(dt); return; }   /* HOST-1 손님 = 방장 시계를 따름(내 시계 멈춤·창 멈춤 X · 주인이 되는 순간 옛 '멈춤'을 싣지 않게) */
+      if (G.cont) { const n9 = performance.now(); dt = wallT ? Math.min(2, (n9 - wallT) / 1000) : dt; wallT = n9; } else wallT = 0;   /* HOST-1 방장 = 벽시계로 흐름(프레임이 느려 dt가 0.05초에 잘려도 손님 시계와 같은 빠르기) */
+      G.flow = !!S.clock && !(paused && !G.cont); if (!G.flow) return;   /* HOST-1 cont = 따르는 손님이 있는 방장(창·놀이를 열어도 방 시계는 흐름) · flow = 지금 시계가 흐르나(방장이 알림에 실음) */
       acc += dt; if (acc < SPM) return;
       while (acc >= SPM) { acc -= SPM; S.min++; }
       if (S.min % 10 === 0) { lite = true; emit('clock'); }   /* PERF-B: 시계만 = 가벼운 변화(30초에 한 번) */
@@ -208,8 +215,12 @@ export function createGame(id, opt) {
     syncPhase(k) { if (!PHASE_AT[k] || phaseOf(S.min) === k) return false; S.min = PHASE_AT[k]; ph = k; acc = 0; dirty = true; emit('clock'); return true; },
     // QUEST-3 기다리기(같은 날 앞으로만 · 낮 12시처럼 시간대 안의 한 시각): 지난 시각이면 그대로
     waitMin(m) { if (!(m > S.min && m < DAY_END)) return false; S.min = m; acc = 0; const p = phaseOf(S.min); dirty = true; emit('clock'); if (p !== ph) { ph = p; emit('phase'); } return true; },
-    clockText(en) { const h = (S.min / 60) | 0, m = ((S.min % 60) / 10 | 0) * 10;   /* 10분 단위(스타듀처럼 — 칩 글이 1초마다 바뀌지 않게) */ return (en ? 'Day ' + S.day + ' ' : S.day + '일째 ') + (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; },
-    setClock(onoff) { S.clock = !!onoff; dirty = true; emit('clock'); },
+    clockText(en) { const h = (S.min / 60) | 0, m = ((S.min % 60) / 10 | 0) * 10;   /* 10분 단위(스타듀처럼 — 칩 글이 1초마다 바뀌지 않게) */ return (en ? 'Day ' + S.day + ' ' : S.day + '일째 ') + (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + (G.tag ? G.tag(en) : ''); },   /* HOST-1 방 안 = 뒤에 '⏰방장 시계'(칩·메뉴·침대 한 곳에서) */
+    setClock(onoff) { if (G.guard && G.guard('clock')) return; S.clock = !!onoff; dirty = true; emit('clock'); },
+    /* HOST-1 방장 시계(town_host.js가 넣고 뺌): host = 손님이 따를 목표 { m 분(소수) · at 그 분이던 때(performance.now ms) · p 멈춤 } · cont = 방장(따르는 손님이 있음) · guard(k) = 손님이 시계를 바꾸려 하면 true(한 줄은 guard가 띄움) */
+    host: null, cont: false, guard: null, tag: null, flow: true,
+    minF() { return S.min + acc / SPM; },   /* 지금 시각(분 · 소수) */
+    hostAim() { const H = G.host; return H ? (H.p ? H.m : H.m + (performance.now() - H.at) / 1000 / SPM) : null; },   /* 손님이 따르는 목표 분(없으면 null) */
     // 잠 = 다음 날 아침 · 오늘 딴 자리는 다시 자람 · 바로 저장
     sleep() { G.lastDay = { day: S.day, ...S.today }; S.yday = G.lastDay; S.today = T0(); S.day++; S.min = DAY_START; acc = 0; ph = phaseOf(S.min); S.picked = {}; S.uses = {}; S.tasks = null; dirty = true; try { emit('clock'); emit('phase'); emit('day'); } finally { G.flush(); } },   // lastDay = 하루 마무리 창이 읽음   SAVE-3b(코덱스 A 하루 넘김): 저장은 day 처리(텃밭·화분 자람·소식 근거) 뒤에 한 번 — 예전엔 날짜만 먼저 저장
     seasonAt(d) { const c = S.cal; if (!c.on) return c.s || 'now'; const n = Math.floor((d - c.d0) / CAL_LEN); return n <= 0 ? 'now' : CAL_SEQ[(n - 1) % CAL_SEQ.length]; },   // GAME-1d 그날의 계절(손으로 고른 동안은 그 계절)

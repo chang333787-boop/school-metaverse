@@ -5,7 +5,7 @@
 //   PERF-C(11-08 크롬북 '여는 순간 멈칫' 22→124ms): 지금 탭만 짓고 다른 탭은 누를 때(또는 쉬는 틈에 하나씩) · 빈 칸 = CSS 배경(점선 칸 그림 · 레이아웃 읽기 X) · CSS는 마을 지을 때(init) 한 번
 //   마을 쪽이 넘기는 것(A): GAME · lang() · esc(t) · bag() · rwd() · tools() · here() [x, z] · me() {x, z} · where(x, z) { ic, nm } · mapSnip(cv, pts) · renderer() · kid() · T3
 //     tone(...) · sfx(k) · typh() { rope, sand } | null · fx() 먹은 힘 한 줄 · lookSig() · night() · reopen(tab) · useShow(P9, e) · useBox() · sell(e) · yard(e)
-import { ITEMS, itemName } from './town_game.js?v=60';
+import { ITEMS, itemName } from './town_game.js?v=62';
 import { TOOL, TOOL_ORDER } from './town_tools.js?v=27';
 export const BAG3_V = 1;
 const T2 = (ko, en) => [ko, en];

@@ -6,7 +6,7 @@ import { mpTicket } from './town_cloud.js?v=10';
 export function createClassMP({ THREE, scene, map, say, en, quiet }) {
   const OFF = !!window.SM_PROMO || new URLSearchParams(location.search).get('mp') === 'off';
   const P = { x: 0, y: 0, z: 0, h: 0 }; let N = null, M = null, t = 0, said = false, goneTk = '', lx = 0, lz = 0, eT = -1e9;
-  if (!OFF) import('../js/net.js?v=19').then(m => { M = m; }).catch(() => { /* 못 받으면 혼자 놀기 그대로 */ });
+  if (!OFF) import('../js/net.js?v=21').then(m => { M = m; }).catch(() => { /* 못 받으면 혼자 놀기 그대로 */ });
   const lab = u => (en() ? 'No. ' + u : u + '번');
   const note = k => { if (k === 'dev') say(en() ? '👥 You came in on another device. Here you play on your own' : '👥 다른 기기에서 들어왔어요. 여기서는 혼자 놀아요', 4); };
   const onEmo = e => { const b = e.target.closest && e.target.closest('#mpEmo .emo-bar [data-e]'); if (!b || !N || !N.cf.ok) return; const now = performance.now(); if (now - eT < 1500) return; eT = now; N.emote(+b.dataset.e); };   /* main.js doEmote와 같은 1.5초 상한 */
