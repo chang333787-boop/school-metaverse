@@ -7,11 +7,13 @@
 #  ② 가벼운 시험(pw.cjs를 쓰는 하네스 + --render·--shots·--perf·--gpu·--before·RENDER=1 없음) = 자리 셋(nr1~3.lock) · 부하 8 아래 · 무거운 브라우저 하나 이하
 #     — 가벼운 브라우저는 pw.cjs가 붙이는 이름표 --sm-norender로 따로 셈
 #  ③ 무거운 시험(그리기 켬)은 예전 규칙 그대로(b1.lock 하나 · 부하 6 아래 · 맥 전체 무거운 브라우저 한 대 이하)
+#  ④ (11-14) 브라우저 셈 = 이 프로젝트 하네스가 띄운 것만(부모 명령 줄에 tools/harness/ 또는 school-metaverse) — 다른 프로젝트 세션의 브라우저 둘이 이어 돌면 우리 시험이 20분 넘게 못 들어감(부하는 2였음) · 맥 전체는 부하 숫자가 지킴
 SP=${SM_OPS_DIR:-/tmp/sm-ops}; mkdir -p $SP
 F=''; for a in "$@"; do case $a in *harness/*.cjs) F=$a;; esac; done
 LIGHT=0
 if [ -n "$F" ] && [ "$RENDER" != 1 ] && grep -q "require('./pw.cjs')" "$F" 2>/dev/null && ! printf '%s\n' "$@" | grep -qE '^--(render|shots|perf|gpu|before)'; then LIGHT=1; fi
 count() { HV=0; LT=0; for q in $(pgrep -f '^[^ ]*/chrome-headless-shell( |$)'); do c=$(ps -o command= -p $q 2>/dev/null); case $c in *--type=*) continue;; esac
+  pp=$(ps -o ppid= -p $q 2>/dev/null | tr -d ' '); pc=''; [ -n "$pp" ] && pc=$(ps -o command= -p $pp 2>/dev/null); case $pc in *tools/harness/*|*school-metaverse*) ;; *) continue;; esac
   case $c in *--sm-norender*) LT=$((LT+1));; *) HV=$((HV+1));; esac; done; }
 # 메인(B1_MAIN=1) = 무거운 시험도 자기 자리 m1.lock · 부하 7 아래
 if [ -n "$B1_MAIN" ] && [ $LIGHT = 0 ]; then while true; do ld=$(sysctl -n vm.loadavg | awk '{print int($2)}'); count; if [ "$ld" -lt 7 ] && [ $HV -lt 2 ] && mkdir $SP/m1.lock 2>/dev/null; then L=$SP/m1.lock; break; fi; sleep 10; done; trap 'rmdir "$L" 2>/dev/null' EXIT INT TERM; "$@"; exit $?; fi
