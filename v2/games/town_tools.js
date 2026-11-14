@@ -100,7 +100,8 @@ export function createTools(A) {
     if (k === 'can') { const y = surfY(x, z, me.y); if (bedAt(x, z) >= 0) return [x, y, z, 'bed']; const ch = A.chem(); if (ch && ch.fireAt && ch.fireAt(x, z, 1.0) >= 0) return [x, y, z, 'fire'];
       const fd = flowerAt(me.x, me.z, MAG, 1); if (fd) return [fd.x, surfY(fd.x, fd.z, me.y), fd.z, 'flower'];   /* PATH-1A: 이야기 마른 꽃 = 곁(3.6m)에만 서도 고리가 그 꽃으로(고리가 꽃을 지나쳐 물만 비던 것) */
       if (flowerAt(x, z, 0.8)) return [x, y, z, 'flower']; if (potAt(x, z)) return [x, y, z, 'pot'];
-      const fn = flowerAt(x, z, 1.6); if (fn) return [fn.x, surfY(fn.x, fn.z, me.y), fn.z, 'flower']; }   /* 고리 1.6m 안 꽃 = 그 꽃으로 붙음(0.8m 안은 예전대로 고리 자리 그대로) */
+      const fn = flowerAt(x, z, 1.6); if (fn) return [fn.x, surfY(fn.x, fn.z, me.y), fn.z, 'flower'];   /* 고리 1.6m 안 꽃 = 그 꽃으로 붙음(0.8m 안은 예전대로 고리 자리 그대로) */
+      if (!OVR.on) { const fm = flowerAt(me.x, me.z, 2.0); if (fm) return [fm.x, surfY(fm.x, fm.z, me.y), fm.z, 'flower']; } }   /* PATH-1D 10(x · R2B 31 · 사진 279): 다른 겨눌 것이 없을 때 내 곁 2m 안 꽃 = 그 꽃으로(꽃 바로 곁에 서서 F — 고리가 꽃을 지나쳐 물방울만 머리 위로 뜨고 글이 없던 것) */
     return null; }
   function bedAt(x, z) { const B = A.farm.beds() || []; for (let i = 0; i < B.length; i++) { const b = B[i]; if (x > b[0] - 0.3 && x < b[1] + 0.3 && Math.abs(z - b[2]) < 0.85) return i; } return -1; }
   function flowerGrid() { if (FGRID.size) return; for (const f of A.flowers() || []) { const k = Math.floor(f.x / 8) + ':' + Math.floor(f.z / 8); let a = FGRID.get(k); if (!a) FGRID.set(k, a = []); a.push(f); } FGRID.set('_', []); }   // 꽃 자리 8m 칸(처음 한 번 · 짓기마다 다시)
@@ -198,8 +199,9 @@ export function createTools(A) {
     if (main) { const ch = A.chem(), fi = ch && ch.fireAt ? ch.fireAt(x, z, 1.0) : -1; if (fi >= 0) { if (ACC.fi !== fi) { ACC.fi = fi; ACC.fire = 0; } ACC.fire += dt; if ((hissT -= dt) <= 0) { hissT = 0.3; tone(2300, 0, 0.25, 'sawtooth', 0.012, 900); } if (ACC.fire >= 1.1) { ACC.fire = 0; if (ch.fireDouse(fi)) { A.rec('can-fire'); A.skUp('look', 1, 'fire'); } } return; } }
     const f = flowerAt(x, z, 0.8); if (f) { const k = Math.round(f.x * 2) + ':' + Math.round(f.z * 2); if (!acc('f' + k, dt, 0.8)) return; const B = t.bloom, b = B[k];
       if (b && b.w === day()) { if (main) toast(en9 ? '🌷 You watered this flower today — come back tomorrow' : '🌷 이 꽃은 오늘 물을 줬어요 — 내일 또 줘요', 2.2); return; }
+      let same9 = false; for (const k9 in B) { const q9 = B[k9]; if (k9 !== k && q9.w === day() && Math.hypot(q9.x - f.x, q9.z - f.z) < 4) { same9 = true; break; } }   /* PATH-1D 4(2차 평가 A 145 '꽃 하나에 꾹 눌렀을 뿐인데 2곳에 물 줌'): 한 자리에서 꾹 누르면 곁의 꽃(같은 꽃 무더기·화분 줄)까지 차례로 물이 감 → 하루 마무리의 '곳'은 4 m 안 꽃 무더기 하나를 한 곳으로 셈(솜씨 +1은 꽃마다 그대로) */
       B[k] = { x: +f.x.toFixed(2), y: +f.y.toFixed(2), z: +f.z.toFixed(2), c: Math.min(9, ((b && b.c) || 0) + 1), w: day() }; const ks = Object.keys(B); if (ks.length > 20) { ks.sort((a9, b9) => B[a9].w - B[b9].w); delete B[ks[0]]; } mark(); dirty = true;
-      const dry9 = !!f.dry; A.skUp('farm', 1, 'flower'); if (A.GAME && A.GAME.tally) A.GAME.tally('flowW');   /* PATH-1B G12 꽃 물 주기도 하루 마무리 '물 준 곳'에 셈(farmW는 잔치 음식 갈래가 세므로 따로) */ const sw9 = !!(A.recWant && A.recWant('can-flower', f.x, f.z)); A.rec('can-flower'); if (sw9 || dry9) DRYT = performance.now(); else if (performance.now() - DRYT > 6000) toast(en9 ? '🌷 Watered the flowers — one more will bloom tomorrow' : '🌷 꽃에 물을 줬어요 — 내일 한 송이 더 피어요', 2.6); return; }   /* DEB-3: 이야기가 받으면 이야기 띠 한 번만 */
+      const dry9 = !!f.dry; A.skUp('farm', 1, 'flower'); if (!same9 && A.GAME && A.GAME.tally) A.GAME.tally('flowW');   /* PATH-1B G12 꽃 물 주기도 하루 마무리 '물 준 곳'에 셈(farmW는 잔치 음식 갈래가 세므로 따로) */ const sw9 = !!(A.recWant && A.recWant('can-flower', f.x, f.z)); A.rec('can-flower'); if (sw9 || dry9) DRYT = performance.now(); else if (performance.now() - DRYT > 6000) toast(en9 ? '🌷 Watered the flowers — one more will bloom tomorrow' : '🌷 꽃에 물을 줬어요 — 내일 한 송이 더 피어요', 2.6); return; }   /* DEB-3: 이야기가 받으면 이야기 띠 한 번만 */
     const p = potAt(x, z); if (p) { const k = Math.round(p[0]) + ':' + Math.round(p[2]); if (!acc('p' + k, dt, 0.8)) return; if (t.n['pot:' + k] === day()) return; t.n['pot:' + k] = day(); mark(); A.skUp('farm', 1, 'pot:' + k); toast(en9 ? '🌱 Watered the pot plant' : '🌱 화분에 물을 줬어요', 2); } }
   function dropTick(dt) { if (!pAlive) { if (DROP && DROP.visible) DROP.visible = false; return; } let n = 0;
     for (let i = 0; i < PMAX; i++) { const k = kind[i]; if (!k) continue; if ((life[i] -= dt) <= 0) { kind[i] = 0; pAlive--; if (k === 1 && Math.random() < 0.35) splash(px[i], py[i], pz[i], 1); continue; }
@@ -416,6 +418,8 @@ export function createTools(A) {
   function pick() { if (!A.on()) return; ui(); PICK = 8; barSync(); if (!A.tch()) toast(en() ? '🧰 Press 1–6 to hold a tool (click a slot too)' : '🧰 숫자 1~6으로 도구를 들어요 (칸을 눌러도 돼요)', 2.6); }
   function keys9() { const e = en(), K = [['1~6', e ? 'tools' : '도구']];   /* DEB-3(토론 판정 12): 도구 키 이름 = 어디서나 1~6(망원경이 없어도 같은 이름 · 빈 칸은 흐리게) */ if (shownK) K.push([e ? 'Click·F' : '클릭·F', e ? 'use' : '쓰기']); return K; }
   /* PATH-1A: 도구를 들었는데 자전거·우산 때문에 내려 둔 동안 F = 까닭 한마디(town.js가 '이야기를 따라가면 열려요' 대신 부름) */
-  function hidSay() { if (dead || !cur() || !A.on()) return false; const why = hiddenWhy(); if (!why || !HIDE[why]) return false; toast(L(HIDE[why]), 2.4); return true; }
+  function hidSay() { if (dead || !A.on()) return false; const why = hiddenWhy();
+    if (!cur()) { const h9 = S().have || {}; if (!ord().some(k => h9[k])) return false; toast(why && HIDE[why] ? L(HIDE[why]) : (en() ? '🧰 Pick a tool first (1 – 6)' : '🧰 숫자 키(1 ~ 6)로 도구를 먼저 들어요'), 2.4); return true; }   /* PATH-1D 10(x · R2B 6 · 사진 035): 도구를 안 든 채 F — 가진 도구가 있으면 '이야기를 따라가면 열려요' 대신 까닭(자전거·우산 …)이나 「도구를 먼저 들어요」 */
+    if (!why || !HIDE[why]) return false; toast(L(HIDE[why]), 2.4); return true; }
   return { init, tick, dispose, key, got, hold, pick, place, hidSay, order: () => ord().slice(), keys: keys9, get cur() { return shownK; }, get have() { return { ...S().have }; }, api: API };
 }

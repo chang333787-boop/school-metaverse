@@ -198,7 +198,9 @@ export function createEnter(A) {
   function name(B9) { const { nm, k } = info(B9); if ((k === 'home' || k === 'apt') && B9.name) return B9.name; if (k === 'home') return jobOf(B9)[0] + (en() ? "'s house" : '네 집'); if (k === 'apt') return (B9.dong ? B9.dong + ' ' : '') + (en() ? jobOf(B9)[0] + "'s flat" : jobOf(B9)[0] + '네 집'); return nm; }
   const catOf = B9 => { const k = info(B9).k; return k && !k.startsWith('via:') ? k : null; };
   const hoursOf = B9 => { const k = catOf(B9); if (k === 'store') { const S9 = A.shopOf(info(B9).nm); return S9 ? [S9[2], S9[3]] : null; } return k && CATS[k] ? CATS[k].h : null; };
-  function tip(B9) { const k = catOf(B9); return k ? (en() ? 'Help inside' : CATS[k].tip) : ''; }
+  function tip(B9) { const k = catOf(B9); if (!k) return ''; if (en()) return 'Help inside'; const C = CATS[k], g = A.GAME && A.GAME.S;
+    if (g && (C.st === 'home' || C.st === 'apt')) { const id = String(B9.b && B9.b.id || '') + ':' + Math.round(B9.cx) + ',' + Math.round(B9.cz), r = (g.ent && g.ent.b && g.ent.b[id]) || {}; return HKNAME[homePlan({ id, day: g.day | 0, min: g.min | 0, n: r.n | 0, pk: r.pk, pd: r.pd }).kind] || C.tip; }   /* PATH-1D 3(2차 평가 '문 글은 정리 돕기인데 안에서는 다른 부탁'): 집 문 글 = 그날 그 집 부탁 이름(planFor와 같은 셈 · 여기서는 읽기만 — 적지 않음) */
+    return C.tip; }
   function canIn(B9) { const H = hoursOf(B9); if (!H || A.GAME.open(H[0], H[1])) return true; const k = catOf(B9), nm = name(B9);
     if (k === 'home' || k === 'apt') toast('🌙 ' + (en() ? 'The neighbour is resting. The door is locked. Come back after 8:00.' : nm + josa(nm, '은', '는') + ' 쉬는 시간이에요. 문이 잠겼어요. 아침 8시부터 찾아가요.'), 3.2);
     else toast('🌙 ' + (en() ? nm + ' is closed now. It opens at ' + hh(H[0]) + '.' : nm + josa(nm, '은', '는') + ' 지금 문을 닫았어요. ' + hh(H[0]) + '에 열어요.'), 3.2);
