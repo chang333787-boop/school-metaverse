@@ -38,7 +38,7 @@ import { createFriends } from './town_friends.js?v=5'; import { createClassMP } 
 import { SET, CB, setHTML, bindSet, speak, hush, setSet } from '../js/settings.js?v=8'; import { takePhoto, fillAlbum, listPhotos, PHOTO_MAX, photoCss } from '../js/photo.js?v=7';   // SET-1 설정·접근성 · PHOTO-1 사진관(학교와 같은 모듈)
 import { BUGS, bugAt, drawBug } from './town_bugs.js?v=2';
 import { photoHtml, hasPhoto } from './town_photos.js?v=5';   /* REALPIC-1 실제 사진(관찰 창·도감 카드 안에서만 · 3D X · 열 때만 부름) */
-import { createAnimals } from './town_anim.js?v=2'; import { createHerd, penOf } from './town_herd.js?v=7';   // HERD-1 양몰이(세상 안 놀이 · 목장 먹이 주기 창을 갈아 끼움)
+import { createAnimals } from './town_anim.js?v=2'; import { createHerd, penOf } from './town_herd.js?v=9';   // HERD-1 양몰이(세상 안 놀이 · 목장 먹이 주기 창을 갈아 끼움)
 import { makeWorkerMesh } from './town_worker.js?v=9'; import { createRhy } from './town_rhy.js?v=1';   // RHY-1 노동요 리듬 놀이(모내기 소리 · docs/systems/town_rhy.md)
 import { createSim, makeFrontView, makeFlags, makeUmbrellas, wetChain } from './town_sim.js?v=2';   // SIM-1 칸 상태판 · 날씨 전선(단계 4 조각 0·1)
 import { createShow, showFor } from './town_show.js?v=3'; import { createShowFind, SF_HRS } from './town_showfind.js?v=5'; import { createOutcrop } from './town_outcrop.js?v=6';   /* DEPTH-3 쇼 뒤 본 것 찾기 */
@@ -74,7 +74,7 @@ import { createSubway } from './town_subway.js?v=8';   // SUBWAY-1 승강장·�
 import { createLook, SKYF as SKYF9 } from './town_look.js?v=9';
 import { REGN, REG_KEYS, regName, createRegion, kidHoods } from './town_region.js?v=1';   /* REGION-1 구역 이름 */
 import { createKidLook } from './town_kidlook.js?v=8';   /* KIDLOOK-1 아이 동네 이름답게(들머리 시설 묶음 + 할 거리) */
-import { createPbox } from './town_pbox.js?v=12';   /* PLAY-2 판 크게(교사 11-07 '미니게임이 왜 왼아래에 고정') — 놀이 판 공용 틀(가운데 큰 판 · 세상 놀이 줄) */
+import { createPbox } from './town_pbox.js?v=14';   /* PLAY-2 판 크게(교사 11-07 '미니게임이 왜 왼아래에 고정') — 놀이 판 공용 틀(가운데 큰 판 · 세상 놀이 줄) */
 import { classCode, cloudCall, cloudPull, cloudSync } from './town_cloud.js?v=10';   // SAVE-CF 이어 하기(v4 번호 + 반 코드 ?cls=)   // ART-2 빛·물·바람(하늘 · 물 비침 · 젖은 갯벌 · 갈대 바람 · 하루 빛 이어 바꾸기)
 import { dexBook, dexLine, dexStamp, DEX_HINT } from './town_dex.js?v=26'; import { bundleBook, bundlePut, inSeason, ALL_STAMP } from './town_bundle.js?v=3'; import { STARS as SKYSTARS, SKY_OF, drawSky } from './town_sky.js?v=1'; import { CROPS, seedsOf, plotState, farmGrow, plantSpots, FARM_MAX } from './town_farm.js?v=3'; import { FISH } from './town_fish.js?v=2';   // GAME-5b 도감 틀(놀이 코드와 떼어 둠 · 교과서 사진·도감 부품과 같은 틀)   // GAME-0 게임 상태 한 곳(하루·시계·가방·돈·도감) + 이 기기 저장(교사 10-16 주말 '실제 게임처럼')   // INDOOR-1 들어갈 수 있는 집·가게 안(들어갈 때만 지음 · 10-15 3차)
 const KALIAS = { market: 'shop', museum: 'public', aquarium: 'public', hut: 'shop', pension: 'house', aquadom: 'public', kidscafe: 'shop', clinic: 'hospital', terminal: 'public', mart: 'shop', store: 'shop' };   // 자료의 종류 이름 → 엔진 종류(10-15)
@@ -133,8 +133,8 @@ export default async function start(map, params) {
   //   이 놀이의 범위 파사드(map)만 바꿈 — 학교·홍보판 HUD는 그대로 · 이야기는 READQ.left()만큼 다음 단계·창을 미룸(town_story.js laterRead)
   const HUDB0 = map.hud.banner, HUDT0 = map.hud.toast, hudVis9 = id => { const e = document.getElementById(id); return !!(e && e.style.display !== 'none' && e.textContent); };
   const PBX = createPbox({ en: () => { try { return LANG === 'en'; } catch (e) { return false; } } }); PBX.watch();   /* PLAY-2: 놀이 판(.twn-play)·판 창 놀이를 지켜보다 열리면 가운데 큰 판으로(판마다 고치지 않고 한 곳에서) */
-  const BANQ = createLineQ({ show: (t, s) => HUDB0(t, s), vis: () => hudVis9('hudBan'), hold: () => { try { return !!panel || PBX.busy(); } catch (e) { return false; } }, protect: (t, dur, info) => (info ? readSec(t) : Math.min(1.2, dur)) });   /* PLAY-2: 가운데 띠는 놀이 판이 닫힌 뒤(판 밑에 깔려 안 읽히던 것) */
-  const TOSQ = createLineQ({ cut: true, show: (t, s) => HUDT0(t, s), vis: () => hudVis9('toast'), protect: t => readSec(t) });   /* 알림 = 새 글은 바로(내 동작의 결과) · 덜 읽힌 수·방위 알림은 그 뒤에 남은 시간만큼 다시 */
+  const BANQ = createLineQ({ show: (t, s) => { HUDB0(t, s); PBX.banFit(); }, vis: () => hudVis9('hudBan'), hold: () => { try { return !!panel || PBX.busy(); } catch (e) { return false; } }, protect: (t, dur, info) => (info ? readSec(t) : Math.min(1.2, dur)) });   /* PLAY-2: 가운데 띠는 놀이 판이 닫힌 뒤(판 밑에 깔려 안 읽히던 것) */
+  const TOSQ = createLineQ({ cut: true, show: (t, s) => { HUDT0(t, s); PBX.banFit(); }, vis: () => hudVis9('toast'), protect: t => readSec(t) });   /* POLISH-3: 띠·알림이 뜰 때마다 띠가 알림 밑에 깔리지 않게 자리 맞춤(PBX.banFit · 뜰 때 한 번) */   /* 알림 = 새 글은 바로(내 동작의 결과) · 덜 읽힌 수·방위 알림은 그 뒤에 남은 시간만큼 다시 */
   map.hud.banner = (t, s, info) => { if (dead) return HUDB0(t, s); BANQ.put(t, s, info); return { remove() {} }; };   /* info = 정보 띠(이야기 띠 · 수·방위는 저절로) */
   map.hud.toast = (t, s) => { if (dead) return HUDT0(t, s); TOSQ.put(t, s); };
   const readDrop = () => { BANQ.clear(); TOSQ.clear(); if (SAYN.h) { clearTimeout(SAYN.h); SAYN.h = 0; } SAYN.q = ''; SAYN.last = performance.now() + 2500; const e = document.getElementById('toast'); if (e) e.style.display = 'none'; };   /* FIX-4A 잠 = 어제 띠·알림 줄을 비움(어제 '자고 일어나면 자라요' 알림이 아침에 다시 떠 아침 알림이 셋 넘던 것) · 저절로 생긴 아침 알림(lv1 잔치·목표 바뀜)은 깬 자리 알림(lv0 '문 앞 칠판…')이 다 읽힌 뒤에(먼저 떴다가 0.1초 만에 덮여 사라지던 것) · 중요한 알림(lv2)은 그대로 줄 섬 */
