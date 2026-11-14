@@ -3,6 +3,7 @@
 //   = 친구가 몇 명이든 그리기 ≤ 11번(없으면 0 — 수가 0이면 숨김) · 색 = 옷 코드(LOOK-1 k) → instanceColor · 기본 모습이면 친구 색(net PAL) 모자·윗옷
 //   200m 밖 = 안 그림(작은 지도 점만 — dots()) · 이름표 = 40m 안 · 걷기 = 받은 자리의 빠르기로 팔다리 · 이모트 몸짓 = net 값(기울기·폴짝·흔들기)
 //   매 프레임 새 객체 X(행렬·색 스크래치) · 친구마다 상태 하나(처음 볼 때만)
+//   NET-CF3(11-14): 가까운 열 명만 몸(0.5초에 한 번 카메라에서 가까운 차례로 고름 · 그리던 친구는 거리를 ×0.8로 쳐 줌 = 경계에서 안 깜빡임) · 나머지는 작은 지도 점만 · 이름을 모르는 친구(웹소켓 명단만) = 이름표 X
 import { parseLook, lookColors } from '../js/look.js?v=1';
 const MAXN = 40, TAGW = 256, TAGH = 64, TCOLS = 4, TROWS = 10, AW = TAGW * TCOLS, AH = TAGH * TROWS;
 const SKIN = 0xf1c9a0, BOT = 0x2b3a55, HAIR = 0x5b3f2e;
@@ -43,8 +44,14 @@ export function createFriends({ T3, map }) {
   const st = (O) => { let S = ST.get(O.pid); if (!S) { S = { ph: Math.random() * 6, lx: O.x, lz: O.z, sp: 0, sig: '', cTop: new T3.Color(), cBot: new T3.Color(), cSkin: new T3.Color(), cHair: new T3.Color(), cCap: new T3.Color(), seen: 0, slot: -1, name: '' }; ST.set(O.pid, S); } if (S.sig !== O.k + ':' + O.c) colorsOf(S, O); return S; };
   const B = new T3.Matrix4(), L9 = new T3.Matrix4(), R9 = new T3.Matrix4(), T9 = new T3.Matrix4(), Q = new T3.Quaternion(), E = new T3.Euler(0, 0, 0, 'YXZ'), V = new T3.Vector3(), ONE = new T3.Vector3(1, 1, 1);
   const limb = (m, i, px, py, ax) => { L9.makeRotationX(ax); L9.setPosition(px, py, 0); R9.multiplyMatrices(B, L9); m.setMatrixAt(i, R9); };
-  let n = 0, nb = 0, no = 0, nt = 0, dtNow = 0, CP = null, last = { n: 0, tags: 0, bike: 0, boat: 0 };
-  const one = (O) => { if (n >= MAXN) return; const dx = O.x - CP.x, dz = O.z - CP.z, d2 = dx * dx + dz * dz; if (d2 > 40000) return;   // 200m 밖 = 작은 지도 점만
+  let n = 0, nb = 0, no = 0, nt = 0, dtNow = 0, CP = null, last = { n: 0, tags: 0, bike: 0, boat: 0, all: 0 };
+  const NEAR = 10, CA = [], CD = []; let PK = new Set(), PK2 = new Set(), pkT = 0;   /* NET-CF3: 몸을 그릴 친구(가까운 열 명) — 스크래치 배열 둘 + 모음 둘을 번갈아 씀 */
+  const cand = (O) => { const dx = O.x - CP.x, dz = O.z - CP.z, d2 = dx * dx + dz * dz; if (d2 > 40000) return; CA.push(O.pid); CD.push(PK.has(O.pid) ? d2 * 0.64 : d2); };
+  const pick = (N) => { CA.length = CD.length = 0; N.each(cand); PK2.clear(); const m = CA.length;
+    if (m <= NEAR) for (let i = 0; i < m; i++) PK2.add(CA[i]);
+    else for (let j = 0; j < NEAR; j++) { let b = -1, bd = Infinity; for (let i = 0; i < m; i++) if (CD[i] < bd) { bd = CD[i]; b = i; } if (b < 0) break; PK2.add(CA[b]); CD[b] = Infinity; }
+    const t9 = PK; PK = PK2; PK2 = t9; last.all = m; };
+  const one = (O) => { if (n >= MAXN || !PK.has(O.pid)) return; const dx = O.x - CP.x, dz = O.z - CP.z, d2 = dx * dx + dz * dz; if (d2 > 40000) return;   // 200m 밖 = 작은 지도 점만
     const S = st(O); S.seen = FR; const mv = Math.hypot(O.x - S.lx, O.z - S.lz); S.lx = O.x; S.lz = O.z; S.sp += (Math.min(8, mv / Math.max(dtNow, 1e-3)) - S.sp) * Math.min(1, dtNow * 8); S.ph += dtNow * (4 + S.sp * 1.6);
     const v = O.v, i = n++; let lift = 0, lean = 0, aL, aR, lL, lR;
     const sw = Math.sin(S.ph) * Math.min(0.75, S.sp * 0.28);
@@ -57,16 +64,16 @@ export function createFriends({ T3, map }) {
     limb(legL, i, -0.075, 0.42, lL); limb(legR, i, 0.075, 0.42, lR); body.setMatrixAt(i, B); head.setMatrixAt(i, B); hair.setMatrixAt(i, B); hat.setMatrixAt(i, B); limb(armL, i, -0.2, 0.84, aL); limb(armR, i, 0.2, 0.84, aR);
     legL.setColorAt(i, S.cBot); legR.setColorAt(i, S.cBot); body.setColorAt(i, S.cTop); armL.setColorAt(i, S.cTop); armR.setColorAt(i, S.cTop); head.setColorAt(i, S.cSkin); hair.setColorAt(i, S.cHair); hat.setColorAt(i, S.cCap);
     if (v === 'b' || v === 'o') { E.set(0, O.h, 0); Q.setFromEuler(E); V.set(O.x, O.y - (v === 'o' ? 0.25 : 0), O.z); T9.compose(V, Q, ONE); if (v === 'b') bike.setMatrixAt(nb++, T9); else boat.setMatrixAt(no++, T9); }
-    if (d2 < 1600 && nt < MAXN) { if (S.slot < 0 || S.name !== O.n) { if (S.slot < 0) { if (!FREE.length) { let old = null, ot = 1e9; for (const [p9, S9] of ST) if (S9.slot >= 0 && S9.seen < ot && S9 !== S) { ot = S9.seen; old = S9; } if (old) { FREE.push(old.slot); old.slot = -1; } } S.slot = FREE.length ? FREE.pop() : 0; } S.name = O.n; drawSlot(S.slot, O.n); }
+    if (d2 < 1600 && nt < MAXN && O.n) { if (S.slot < 0 || S.name !== O.n) { if (S.slot < 0) { if (!FREE.length) { let old = null, ot = 1e9; for (const [p9, S9] of ST) if (S9.slot >= 0 && S9.seen < ot && S9 !== S) { ot = S9.seen; old = S9; } if (old) { FREE.push(old.slot); old.slot = -1; } } S.slot = FREE.length ? FREE.pop() : 0; } S.name = O.n; drawSlot(S.slot, O.n); }
       const s9 = S.slot; uvOff.setXY(nt, (s9 % TCOLS) * TAGW / AW, 1 - (Math.floor(s9 / TCOLS) + 1) * TAGH / AH); T9.makeTranslation(O.x, O.y + lift + 1.62, O.z); tags.setMatrixAt(nt++, T9); } };
   const fin = (m, c) => { m.count = c; m.visible = c > 0; if (c) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } };
   const API = {
     update(dt) { const MP = window.SM_MP, N = MP && MP.net && MP.net(); if (!N || !N.each) { if (last.n || last.tags) { for (const m of PARTS) fin(m, 0); fin(bike, 0); fin(boat, 0); fin(tags, 0); last.n = last.tags = 0; } return; }
-      N.ext(true); FR++; dtNow = dt; CP = map.camera.position; n = nb = no = nt = 0; N.each(one);
+      N.ext(true); FR++; dtNow = dt; CP = map.camera.position; if ((pkT -= dt) <= 0) { pkT = 0.5; pick(N); } n = nb = no = nt = 0; N.each(one);
       for (const m of PARTS) fin(m, n); fin(bike, nb); fin(boat, no); fin(tags, nt); if (nt) uvOff.needsUpdate = true; last.n = n; last.tags = nt; last.bike = nb; last.boat = no;
       if ((FR & 255) === 0) for (const [p9, S9] of ST) if (FR - S9.seen > 600) { if (S9.slot >= 0) FREE.push(S9.slot); ST.delete(p9); } },   // 오래 안 보인 친구 상태 치움
     dots(g, toXY) { const MP = window.SM_MP, N = MP && MP.net && MP.net(); if (!N || !N.each) return 0; let k = 0; N.each(O => { const [a, b] = toXY(O.x, O.z); g.fillStyle = '#' + (O.c >>> 0).toString(16).padStart(6, '0'); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.beginPath(); g.arc(a, b, 3.5, 0, 7); g.fill(); g.stroke(); k++; }); return k; },
-    get stats() { return { ...last, calls: (last.n ? PARTS.length : 0) + (last.bike ? 1 : 0) + (last.boat ? 1 : 0) + (last.tags ? 1 : 0), states: ST.size }; },
+    get stats() { return { ...last, calls: (last.n ? PARTS.length : 0) + (last.bike ? 1 : 0) + (last.boat ? 1 : 0) + (last.tags ? 1 : 0), states: ST.size, near: [...PK] }; },   /* near = 지금 몸을 그리는 친구(시험) */
     dispose() { const MP = window.SM_MP, N = MP && MP.net && MP.net(); if (N && N.ext) N.ext(false); for (const m of [...M, tags]) { map.remove(m); m.geometry.dispose(); m.dispose && m.dispose(); } MAT.dispose(); MV.dispose(); tagMat.dispose(); tex.dispose(); ST.clear(); if (window.SM_FRIENDS === API) delete window.SM_FRIENDS; },
   };
   window.SM_FRIENDS = API;   // 시험·디버그(stats)

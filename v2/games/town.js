@@ -34,7 +34,7 @@ import { createTrack } from './town_track.js?v=9';
 import { createLineQ, readSec, infoOf } from './town_read.js?v=4';   /* READ-1 읽을 틈(교사 11-02 '너무 순식간에 지나가서 눈에 잘 안 읽혀') — 글 길이 → 머무는 시간 · 띠·알림 차례 줄 */   /* TRACK-1 따라가는 목표 하나 · 아이가 고름(빨간 선·나침반·지도·위 가운데 줄이 그것만) */
 import { createGo } from './town_go.js?v=5';   /* GO-1 목적지 고르기 한 가지 방식(어디서 장소를 누르든 🧭 길 안내 / 🚌 바로 가기 / 닫기 작은 창) */
 import { createMap2, LAY as MLAY, rankPlaces, tierMax, createPlacer, placeLabels, drawArrow, meBoxes, createHeading, MAP2_CSS, ME_RED } from './town_map2.js?v=3';   /* MAP-2 지도 정리(사용자 11-07 '지도가 너무 난잡 · 내가 동그라미가 아니라 방향이 있는 아이콘') — 칩·중요도·이름표 자리·내 화살표 */
-import { createFriends } from './town_friends.js?v=1';   // TOGETHER-0 같은 방 친구를 마을에서(인스턴스 · 그리기 ≤ 11번)   // TOUCH-2 터치 키 글자 거르기(한 곳)
+import { createFriends } from './town_friends.js?v=2';   // TOGETHER-0 같은 방 친구를 마을에서(인스턴스 · 그리기 ≤ 11번)   // TOUCH-2 터치 키 글자 거르기(한 곳)
 import { SET, CB, setHTML, bindSet, speak, hush, setSet } from '../js/settings.js?v=8'; import { takePhoto, fillAlbum, listPhotos, PHOTO_MAX, photoCss } from '../js/photo.js?v=7';   // SET-1 설정·접근성 · PHOTO-1 사진관(학교와 같은 모듈)
 import { BUGS, bugAt, drawBug } from './town_bugs.js?v=2';
 import { photoHtml, hasPhoto } from './town_photos.js?v=5';   /* REALPIC-1 실제 사진(관찰 창·도감 카드 안에서만 · 3D X · 열 때만 부름) */

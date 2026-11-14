@@ -9,6 +9,13 @@ const DB = 'https://class-rpg-6f409-default-rtdb.asia-southeast1.firebasedatabas
 //   움직일 때만 초당 10번 · 받은 자리는 100ms 늦게 두 자리 사이를 섞어 그림(보간) · 내 몸은 늘 바로(예측) · 서버엔 이름을 보내지 않음 · 끊기면 예전 Firebase 길로 저절로
 //   ?cf=off = 끔 · ?cf=http://127.0.0.1:포트 = 로컬 wrangler dev · 홍보판(SM_PROMO)은 끔
 const CF_WS = (() => { try { if (window.SM_PROMO) return ''; const q = new URLSearchParams(location.search).get('cf'); if (q === 'off') return ''; if (q && /^https?:\/\/(127\.0\.0\.1|localhost)(:\d{1,5})?$/.test(q)) return q.replace(/^http/, 'ws'); return 'wss://sm-rooms.sm-rooms.workers.dev'; } catch (e) { return ''; } })();
+// NET-CF3(11-14 교사 '클라우드플레어로 가기 + 멀티접속 ㄱ' · 30명이 한꺼번에): 웹소켓 명단만으로도 친구를 그림 — 들어올 때 이름 없이 모양 칸만(k 옷 코드 · c 색 번호 · a 세계 머리표 't:다7.b'·'i:12'·'' 학교) · Firebase 명단이 오면 이름·나머지를 합침(이름 없는 동안은 이름표 X · 목록엔 '친구')
+//   보내기 빈도 = 방 사람 수 따라 8명까지 초당 10번 · 16명까지 6번 · 그보다 많으면 4번(방 놀이·대결 중엔 10번 그대로 · 멈추면 마지막 자리 한 번 보내고 끝 · 탭이 가려지면 X) · 섞어 그리는 지연 = 친구마다 받은 간격 × 1.5(10번 150 · 6번 250 · 4번 375ms · 천천히 옮김)
+//   핑 = 들어와서 1초 간격 세 번 → 그 뒤 5초에 한 번, 방이 조용할 때만({"t":"ping"} = 서버 자동 답 · 방을 안 깨움) · 답 없는 핑 세 번 = 닫고 다시 · 꽉 참(4002 하루 · 4003 40명) = 글 한 번 + 다시 안 붙음 · 4000(같은 id 새 탭) = 다시 안 붙음 → 그 뒤는 예전 Firebase 길
+const CELL_RX = /^(?:(?:[가-힣]|[A-Z]{1,2})\d{1,2}|\d{1,2}(?:[가-힣]|[A-Z]{1,2}))$/;   /* 서버로 보내는 칸 이름 = 이 꼴만(그 밖은 빈칸 — 자유 글이 실리지 않게) */
+let fullSaid = false;   /* '꽉 찼어요' 글은 한 번만 */
+function fullNote() { if (fullSaid) return; fullSaid = true; try { const el = document.getElementById('toast'); if (!el) return; const M9 = '오늘은 함께하기가 꽉 찼어요. 혼자서는 그대로 놀 수 있어요', T9 = document.body.classList.contains('title-on'); el.classList.toggle('ttl-keep', T9); el.style.zIndex = T9 ? '45' : ''; el.textContent = M9; el.style.display = ''; let n9 = 0;
+  const iv = setInterval(() => { if (el.textContent !== M9) { clearInterval(iv); return; } if (++n9 >= 20) { clearInterval(iv); el.style.display = 'none'; } else el.style.display = ''; }, 250); } catch (e) { /* 알림 틀이 없는 쪽 */ } }   /* 있는 알림 틀(#toast)에 5초 — 그사이 다른 알림이 오면 그쪽에 넘김 */
 const wsRoomOf = r => { let h = 5381; for (const ch of String(r)) h = ((h * 33) ^ ch.charCodeAt(0)) >>> 0; return ('m' + h.toString(36) + 'xxxx').slice(0, 8); };   // 방 서버 이름 = 영문·숫자 4~8자
 const PAL = [0xff6b6b, 0xffa94d, 0xffd43b, 0x69db7c, 0x38d9a9, 0x4dabf7, 0x748ffc, 0xda77f2, 0xf783ac, 0x20c997];
 const SKIN = 0xf1c9a0;
@@ -47,6 +54,7 @@ export function createNet(o) {
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   const _m = new THREE.Matrix4(), _c = new THREE.Color();
   let ws = null, wsOk = false, wsBack = 1, wsOff = null, wsSendT = 0, wsGone = false, wsN = 0;   /* NET-CF2 */
+  const wsIn = new Set(), wl = { x: 1e9, y: 0, z: 0, h: 0 }; let fbAt = -1e9, mT = 0, mDirty = false, mSent = '', pingT = 1, pingN = 0, pingAt = 0, pingMiss = 0, rtt = null, rxAt = 0;   /* NET-CF3: 웹소켓 명단(나 빼고) · 웹소켓으로 마지막에 보낸 자리 · Firebase 소식 받은 때 · 모양 칸 알림 · 핑 */
   let es = null, dead = false, hidden = false, mQ = 0, CTL = {}, selfE = null, act = '', CHAT = {}, chatSeen = new Set(), chatT0 = Date.now(), selfB = null, offset = 0, sendT = 0, beatT = 0, cleanT = 8, fxQ = 0, denyT = -1e9, away = false, actSent = '', wq = -1, ext = false, last = { x: 1e9, y: 0, z: 0, h: 0 }, onChange = o.onChange || (() => {});
 
   function merge(parts) {
@@ -94,7 +102,7 @@ export function createNet(o) {
     const now = performance.now(); if (!meP || O.away || MUTE.has(O.pid) || now - (O.comboT || 0) < 3000) return;
     if (Math.hypot(O.x - meP.x, O.z - meP.z) > 2 || Math.abs(O.y - meP.y) > 1.5) return;
     O.comboT = now; const kd = comboKind(i); if (kd === 'dance') O.mo = { i: 9, t: 0, dur: 3.2 };   // 같이 춤 = 친구 춤도 길게
-    if (o.onCombo) o.onCombo({ x: O.x, y: O.y, z: O.z, label: O.n }, i, kd);
+    if (o.onCombo) o.onCombo({ x: O.x, y: O.y, z: O.z, label: O.n || '친구' }, i, kd);
   }
   function moTick(O, dt) {   // EMOTE-2: 친구 몸짓 — 통짜 몸 변환만(rotation 순서 YXZ = 몸 기준 기울기)
     const M = O.mo; if (!M) return 0; M.t += dt; const t = M.t, d = M.dur;
@@ -130,21 +138,27 @@ export function createNet(o) {
     O.tx = nx; O.ty = ny; O.tz = nz;
     if (O.w !== 's') { if (O.rh > 90 && O.rh < 110) { O.away = false; O.th = O.rh - 100; } else O.away = Math.abs(O.rh) > 50; }
     else if (Math.abs(O.rh) > 50) O.away = true; else { O.away = false; O.th = O.rh; } }
+  /* NET-CF3: 친구 하나 만들기(Firebase 명단 · 웹소켓 명단 둘 다 이것으로) — ws 웹소켓 명단에 있음 · fb Firebase 자료를 받음 · has 자리를 한 번이라도 받음(그 전엔 안 그림) · iv 받은 간격 어림 · dl 섞어 그리는 지연 */
+  function mk(pid, k9, c9, n9) { const mesh = avatar(k9, c9), tg = tag(n9);
+    const O = { pid, a: '', w: 's', cell: '', v: '', lbl: '', rx: 0, ry: 0, rz: 0, rh: 0, vx: 0, vz: 0, rt: 0, vis: false, mrx: 0, mrz: 0, mry: 0, mdy: 0, k: k9, away: false, mo: null, mesh, tag: tg, n: n9, c: c9, x: 0, y: 0, z: 0, h: 0, tx: 0, ty: 0, tz: 0, th: 0, t: 0, seen: performance.now(), fxQ: 0, mQ: 0, em: null, B: new Float64Array(24), Bn: 0, Bh: 0, wsAt: 0, ws: false, fb: false, has: false, wsSeen: 0, lts: 0, iv: 100, dl: 150 };   /* NET-CF2 B = 받은 자리 여섯 [ts,x,y,z] 고리 */
+    mesh.visible = tg.visible = false; scene.add(mesh, tg); others.set(pid, O); onChange(); return O; }
+  function relook(O, k9, c9) { if (k9 === O.k && c9 === O.c) return; O.k = k9; O.c = c9; const g = avatarGeo(k9, c9); O.mesh.geometry.dispose(); O.mesh.geometry = g; }   // LOOK-1: 친구가 모습을 바꿈(NET-CF3: 색도 같이)
   function upsert(pid, d) {
     if (pid === id) { if (d && typeof d.t === 'number') offset = d.t - Date.now(); return; }
-    if (!d) { drop(pid); return; }
+    if (!d) { const O9 = others.get(pid); if (O9 && O9.ws) { if (O9.t && Date.now() + offset - O9.t > 20000) O9.wsSeen = -1e9; O9.fb = false; } else drop(pid); return; }   /* NET-CF3: 웹소켓 명단에 있는 친구는 Firebase 자료가 지워져도 남김(오래 소식 없던 자료가 지워진 것이면 새 웹소켓 소식이 올 때까지 숨김) */
     let O = others.get(pid);
     if (!O) {
       if (others.size >= 40) return;
-      const mesh = avatar(d.k || kind, PAL.includes(d.c) ? d.c : PAL[0]), tg = tag(d.n || '친구');
-      O = { pid, a: '', w: 's', cell: '', v: '', lbl: '', rx: 0, ry: 0, rz: 0, rh: 0, vx: 0, vz: 0, rt: 0, vis: false, mrx: 0, mrz: 0, mry: 0, mdy: 0, k: d.k || kind, away: false, mo: null, mesh, tag: tg, n: d.n || '친구', c: PAL.includes(d.c) ? d.c : PAL[0], x: d.x || 0, y: d.y || 0, z: d.z || 0, h: d.h || 0, tx: 0, ty: 0, tz: 0, th: 0, t: 0, seen: performance.now(), fxQ: d.fx ? d.fx.q : 0, mQ: d.m ? d.m.q : 0, em: null, B: new Float64Array(24), Bn: 0, Bh: 0, wsAt: 0 };   /* NET-CF2 B = 받은 자리 여섯 [ts,x,y,z] 고리 */
-      scene.add(mesh, tg); others.set(pid, O); onChange();
+      O = mk(pid, d.k || kind, PAL.includes(d.c) ? d.c : PAL[0], d.n || '친구');
+      if (wsIn.has(pid)) { O.ws = true; O.wsSeen = performance.now(); }   /* NET-CF3: 웹소켓 명단에 먼저 와 있던 친구(모양 칸 없는 옛 화면) */
     }
-    if (typeof d.a === 'string' && d.a !== O.a) { O.a = d.a; const q9 = parseAct(d.a); O.w = q9.w; O.cell = q9.cell; O.v = q9.v; O.lbl = q9.label; retarget(O, false); }   // TOGETHER-0: 머리표 = 세계(먼저 읽어 같은 소식의 자리를 바로 풂)
+    if (!O.fb) { O.fb = true; if (d.fx) O.fxQ = d.fx.q; if (d.m) O.mQ = d.m.q; }   /* 처음 받은 자료의 효과·이모트는 지난 것(다시 틀지 않음 — 예전 그대로) */
+    if (typeof d.a === 'string' && d.a !== O.a) { O.a = d.a; const q9 = parseAct(d.a); if (wKey(q9.w) !== wKey(O.w)) { O.Bn = 0; O.lts = 0; } O.w = q9.w; O.cell = q9.cell; O.v = q9.v; O.lbl = q9.label; retarget(O, false); }   // TOGETHER-0: 머리표 = 세계(먼저 읽어 같은 소식의 자리를 바로 풂)
     let pos9 = false; for (const k of ['x', 'y', 'z']) if (typeof d[k] === 'number') { O['r' + k] = d[k]; pos9 = true; }
     if (typeof d.h === 'number') O.rh = d.h;
     if (pos9 || typeof d.h === 'number') retarget(O, pos9);   // NET-OOB(h 99)·마을(h 100+) 풀기는 retarget
-    if (typeof d.k === 'string' && d.k !== O.k) { O.k = d.k; const g = avatarGeo(d.k, O.c); O.mesh.geometry.dispose(); O.mesh.geometry = g; }   // LOOK-1: 친구가 모습을 바꿈
+    if (pos9 && !O.has) { O.has = true; O.x = O.tx; O.y = O.ty; O.z = O.tz; if (!O.away) O.h = O.th; }   /* 처음 받은 자리 = 바로 그 자리에(멀리서 미끄러져 오지 않게) */
+    relook(O, typeof d.k === 'string' ? d.k : O.k, PAL.includes(d.c) ? d.c : O.c);
     if (typeof d.t === 'number') O.t = d.t;
     if (d.n && d.n !== O.n) { O.n = d.n; scene.remove(O.tag); O.tag.material.map.dispose(); O.tag = tag(O.n); scene.add(O.tag); onChange(); }
     if (d.fx && d.fx.q !== O.fxQ) { O.fxQ = d.fx.q; if (o.onFx && O.seen) o.onFx(O, d.fx); }
@@ -153,6 +167,7 @@ export function createNet(o) {
   }
   function onEvt(type, e) {
     let msg; try { msg = JSON.parse(e.data); } catch (er) { return; }
+    fbAt = performance.now();   /* NET-CF3: Firebase 스트림이 살아 있음(내 5초 박동도 되돌아오므로 15초 넘게 조용하면 죽은 것) */
     const path = (msg.path || '/').split('/').filter(Boolean), data = msg.data;
     if (!path.length) {
       if (type === 'put') { players('put', [], data && data.players || null); ctlEvt('put', [], data && data.ctl || null); }
@@ -186,7 +201,7 @@ export function createNet(o) {
   }
   function players(type, path, data) {
     if (!path.length) {
-      if (type === 'put') { for (const pid of [...others.keys()]) if (!data || !data[pid]) drop(pid); }
+      if (type === 'put') { for (const pid of [...others.keys()]) if (!data || !data[pid]) { const O9 = others.get(pid); if (O9.ws) O9.fb = false; else drop(pid); } }   /* NET-CF3: 웹소켓 명단에 있는 친구는 남김 */
       if (data) for (const pid in data) upsert(pid, data[pid]);
     } else if (path.length === 1) {
       if (type === 'put' || data === null) { if (data === null) upsert(path[0], null); else { const O = others.get(path[0]); upsert(path[0], data); if (O && type === 'put') O.seen = performance.now(); } }
@@ -212,23 +227,49 @@ export function createNet(o) {
     es = new EventSource(base + '.json');
     es.addEventListener('put', (e) => onEvt('put', e)); es.addEventListener('patch', (e) => onEvt('patch', e));
   }
-  // NET-CF2 웹소켓: 들어올 때 이름 없이 id만 · 's'·'w' 자리 묶음 → 그 친구 O(Firebase로 이미 아는 친구만) · 끊기면 2·4·8…30초 뒤 다시
-  function wsPos(p, ts) { const O = others.get(p[0]); if (!O || p[0] === id) return; O.rx = p[1]; O.ry = p[2]; O.rz = p[3]; O.rh = p[4]; retarget(O, true); const k = O.Bh * 4; O.B[k] = ts; O.B[k + 1] = O.tx; O.B[k + 2] = O.ty; O.B[k + 3] = O.tz; O.Bh = (O.Bh + 1) % 6; if (O.Bn < 6) O.Bn++; O.wsAt = performance.now(); O.t = Date.now() + offset; }
-  function wsOpen() { if (!CF_WS || dead || wsGone || ws) return; try { ws = new WebSocket(CF_WS + '/room/' + wsRoomOf(room)); } catch (e) { ws = null; return; }
-    ws.onopen = () => { try { ws.send(JSON.stringify({ t: 'j', id, n: '' })); } catch (e) { return; } wsOk = true; wsBack = 1; };
-    ws.onmessage = (ev) => { let d; try { d = JSON.parse(ev.data); } catch (e) { return; } if (d.t === 's' || d.t === 'w') { const est = d.ts - Date.now(); wsOff = wsOff == null ? est : wsOff + (est - wsOff) * 0.05; if (Array.isArray(d.P)) for (const p of d.P) if (Array.isArray(p)) wsPos(p, d.ts); } else if (d.t === 'full') wsGone = true; };
-    ws.onclose = () => { ws = null; wsOk = false; if (!dead && !wsGone) setTimeout(wsOpen, Math.min(30, (wsBack *= 2)) * 1000); };
-    ws.onerror = () => { /* onclose가 다시 엶 */ }; }
-  const onLook = () => { if (joined && !dead && kind === 'kid') req('/players/' + id, 'PATCH', { k: myK() }); };   // LOOK-1: 모습을 바꾸면 옷 코드만 한 번
+  // NET-CF2 웹소켓: 들어올 때 이름 없이 id만 · 's'·'w' 자리 묶음 → 그 친구 O · 끊기면 2·4·8…30초 뒤 다시 · NET-CF3: 명단('w'의 L · 'j' · 'm' · 'l')만으로도 친구를 만듦
+  const wsTag = () => { const W9 = myW(); if (!W9) return ''; const w9 = String(W9.w), v9 = /^[bokz]$/.test(W9.v || '') ? '.' + W9.v : ''; if (w9[0] === 't') return 't:' + (CELL_RX.test(w9.slice(2)) ? w9.slice(2) : '') + v9; return /^i:\d{1,3}$/.test(w9) ? w9 + v9 : null; };   /* 서버로 가는 세계 머리표(정해진 꼴만 — 활동 글은 싣지 않음 · 모르는 꼴이면 null = Firebase 길로만) */
+  const wsIvl = () => { const n9 = wsIn.size + 1; return n9 <= 8 || hidden || (window.SM_MP && window.SM_MP.roomRun && window.SM_MP.roomRun()) ? 0.1 : n9 <= 16 ? 1 / 6 : 0.25; };   /* 보내기 간격: 8명까지 10번 · 16명까지 6번 · 그보다 많으면 4번 · 방 놀이·대결(몸 숨김) 중엔 10번 그대로 */
+  const live = (O, now, pn) => ((O.ws && (!O.fb || pn - fbAt > 15000)) ? pn - O.wsSeen < 300000 : !(O.t && now - O.t > 20000));   /* 살아 있음: Firebase 자료가 없거나 스트림이 죽었으면 웹소켓 명단(5분 안에 소식) · 그 밖엔 예전 20초 규칙 */
+  function wsMem(pid, k9, c9, a9) { if (typeof pid !== 'string' || pid === id) return; wsIn.add(pid); let O = others.get(pid);
+    if (!O) { if (typeof a9 !== 'string' || others.size >= 40) return;   /* 모양 칸이 없는 옛 화면·옛 서버 = Firebase 명단이 올 때까지 기다림(예전 그대로) */
+      O = mk(pid, typeof k9 === 'string' ? k9 : 'kid', PAL[Number.isInteger(c9) && c9 >= 0 && c9 < PAL.length ? c9 : [...pid].reduce((q, ch) => q + ch.charCodeAt(0), 0) % PAL.length], ''); }
+    O.ws = true; O.wsSeen = performance.now();
+    if (typeof k9 === 'string') relook(O, k9, O.c);
+    if (typeof a9 === 'string') { const q9 = parseAct(a9 + ' '); if (q9.w !== O.w || q9.v !== O.v || (q9.cell && q9.cell !== O.cell)) { if (wKey(q9.w) !== wKey(O.w)) { O.Bn = 0; O.lts = 0; } O.w = q9.w; O.v = q9.v; if (q9.cell || !O.fb) O.cell = q9.cell; retarget(O, false); } }
+    else if (!O.fb) O.w = 'i:?';   /* 세계를 모르는 친구(Firebase 자료도 없음) = 어느 세계에도 안 그림 */
+  }
+  function wsLost() { for (const pid of [...wsIn]) { const O = others.get(pid); if (!O) continue; O.ws = false; if (!O.fb) drop(pid); } wsIn.clear(); }   /* 내 웹소켓이 닫힘 = 웹소켓 명단을 믿지 않음(Firebase로 아는 친구만 남김) */
+  function wsPos(p, ts) { const O = others.get(p[0]); if (!O || p[0] === id) return; O.rx = p[1]; O.ry = p[2]; O.rz = p[3]; O.rh = p[4]; retarget(O, true); O.vx = O.vz = 0;   /* 속도 0 = 멈춘 뒤 앞으로 미끄러지지 않게(웹소켓 자리는 두 자리 사이를 섞어 그림) */
+    if (!O.has) { O.has = true; O.x = O.tx; O.y = O.ty; O.z = O.tz; if (!O.away) O.h = O.th; }
+    const g9 = ts - O.lts; if (g9 > 0 && g9 <= 600) O.iv += (g9 - O.iv) * (g9 > O.iv ? 0.5 : 0.25); O.lts = ts;   /* 이 친구가 자리를 보내는 간격 어림(서버 시각 · 길어질 땐 빨리 따라감 = 단계가 바뀔 때 덜 끊김) */
+    const k = O.Bh * 4; O.B[k] = ts; O.B[k + 1] = O.tx; O.B[k + 2] = O.ty; O.B[k + 3] = O.tz; O.Bh = (O.Bh + 1) % 6; if (O.Bn < 6) O.Bn++; O.wsAt = O.wsSeen = performance.now(); O.t = Date.now() + offset; }
+  function wsOpen() { if (!CF_WS || dead || wsGone || ws) return; let s9; try { s9 = ws = new WebSocket(CF_WS + '/room/' + wsRoomOf(room)); } catch (e) { ws = null; return; }
+    s9.onopen = () => { if (ws !== s9) return; const a9 = wsTag(), k9 = myK(); try { s9.send(JSON.stringify(a9 == null ? { t: 'j', id, n: '', k: k9, c: PAL.indexOf(color) } : { t: 'j', id, n: '', k: k9, c: PAL.indexOf(color), a: a9 })); } catch (e) { return; }
+      wsOk = true; wsBack = 1; wl.x = 1e9; wsSendT = 0; mSent = k9 + '|' + a9; mDirty = false; mT = 0; pingT = 1; pingN = 0; pingAt = 0; pingMiss = 0; rxAt = performance.now(); };   /* 들어오면 내 자리를 한 번 바로(wl 비움) */
+    s9.onmessage = (ev) => { if (ws !== s9) return; let d; try { d = JSON.parse(ev.data); } catch (e) { return; } rxAt = performance.now(); pingMiss = 0;
+      if (d.t === 's' || d.t === 'w') { const est = d.ts - Date.now(); wsOff = wsOff == null ? est : wsOff + (est - wsOff) * 0.05;
+        if (d.t === 'w' && Array.isArray(d.L)) { for (const pid of [...wsIn]) { const O = others.get(pid); if (O) O.ws = false; } wsIn.clear(); for (const m of d.L) if (Array.isArray(m)) wsMem(m[0], m[2], m[3], m[4]); for (const [pid, O] of [...others]) if (!O.ws && !O.fb) drop(pid); }   /* 명단 먼저(다시 붙었으면 명단을 새로) → 자리 */
+        if (Array.isArray(d.P)) for (const q of d.P) if (Array.isArray(q)) wsPos(q, d.ts); }
+      else if (d.t === 'j') wsMem(d.id, d.k, d.c, d.a);
+      else if (d.t === 'm') { if (wsIn.has(d.id)) wsMem(d.id, d.k, d.c, d.a); }
+      else if (d.t === 'l') { if (wsIn.delete(d.id)) { const O = others.get(d.id); if (O) { O.ws = false; if (!O.fb) drop(d.id); } } }
+      else if (d.t === 'pong') { if (pingAt) { rtt = Math.round(performance.now() - pingAt); pingAt = 0; } }
+      else if (d.t === 'full') { wsGone = true; wsOk = false; fullNote(); } };   /* 닫히는 인사가 늦게 와도(로컬 2초쯤) 글은 바로 · 그 사이 자리도 안 보냄 */
+    s9.onclose = (ev) => { if (ws !== s9) return; ws = null; wsOk = false; wsLost(); const c9 = ev && ev.code; if (c9 === 4002 || c9 === 4003) { wsGone = true; fullNote(); } else if (c9 === 4000) wsGone = true;   /* 꽉 참 = 글 한 번 + 다시 안 붙음 · 4000 = 같은 id가 다른 탭에서 들어옴(서로 밀어내지 않게 다시 안 붙음) */
+      if (!dead && !wsGone) setTimeout(wsOpen, Math.min(30, (wsBack *= 2)) * 1000); };
+    s9.onerror = () => { /* onclose가 다시 엶 */ }; }
+  const onLook = () => { if (joined && !dead && kind === 'kid') { req('/players/' + id, 'PATCH', { k: myK() }); mDirty = true; } };   // LOOK-1: 모습을 바꾸면 옷 코드만 한 번(NET-CF3: 웹소켓 명단에도)
   addEventListener('sm-look', onLook);
-  const leave = () => { if (dead) return; dead = true; if (ws) { try { ws.close(); } catch (e) { /* */ } ws = null; } removeEventListener('sm-look', onLook); if (es) es.close(); req('/players/' + id, 'DELETE'); for (const pid of [...others.keys()]) drop(pid); if (selfE) { scene.remove(selfE.s); selfE.s.material.dispose(); } for (const t of ETEX) if (t) t.dispose(); removeEventListener('pagehide', leave); if (selfB) { scene.remove(selfB.s); if (selfB.s.material.map) selfB.s.material.map.dispose(); selfB.s.material.dispose(); selfB = null; } mat.dispose(); };   /* FIX-CX8(코덱스 점검): 방을 나갈 때 pagehide 리스너·내 말풍선·공유 재질도 치움(들고 나기를 되풀이하면 쌓이던 것) */
+  const leave = () => { if (dead) return; dead = true; if (ws) { try { ws.close(); } catch (e) { /* */ } ws = null; wsOk = false; } wsIn.clear(); removeEventListener('sm-look', onLook); if (es) es.close(); req('/players/' + id, 'DELETE'); for (const pid of [...others.keys()]) drop(pid); if (selfE) { scene.remove(selfE.s); selfE.s.material.dispose(); } for (const t of ETEX) if (t) t.dispose(); removeEventListener('pagehide', leave); if (selfB) { scene.remove(selfB.s); if (selfB.s.material.map) selfB.s.material.map.dispose(); selfB.s.material.dispose(); selfB = null; } mat.dispose(); };   /* FIX-CX8(코덱스 점검): 방을 나갈 때 pagehide 리스너·내 말풍선·공유 재질도 치움(들고 나기를 되풀이하면 쌓이던 것) */
   addEventListener('pagehide', leave);
   let joined = false;
   return {
-    get cf() { return { on: !!CF_WS, ok: wsOk, gone: wsGone, sent: wsN, off: wsOff == null ? null : Math.round(wsOff), room: CF_WS ? wsRoomOf(room) : '' }; },   /* NET-CF2 시험 */
+    get cf() { let wo = 0; for (const O of others.values()) if (O.ws && !O.fb) wo++; return { on: !!CF_WS, ok: wsOk, gone: wsGone, sent: wsN, off: wsOff == null ? null : Math.round(wsOff), room: CF_WS ? wsRoomOf(room) : '', n: wsIn.size + 1, hz: Math.round(1 / wsIvl()), rtt, wsOnly: wo, fbDead: performance.now() - fbAt > 15000 }; },   /* NET-CF2 시험 · NET-CF3: n 웹소켓 명단 사람 수(나 포함) · hz 지금 보내기 빈도 · rtt 핑 왕복(ms) · wsOnly 웹소켓 명단만으로 아는 친구 수 */
+    cfPeers() { const a = []; for (const O of others.values()) a.push({ id: O.pid, ws: O.ws, fb: O.fb, has: O.has, vis: O.vis, n: O.n, k: O.k, c: O.c, w: O.w, v: O.v, iv: Math.round(O.iv), dl: Math.round(O.dl), tag: O.tag.visible, x: +O.x.toFixed(2), z: +O.z.toFixed(2) }); return a; },   /* NET-CF3 시험(읽기만) */
     get id() { return id; }, get name() { return name; }, get color() { return color; }, get away() { return away; }, get kindCode() { return myK(); },
-    get count() { let n = 1; const now = Date.now() + offset; for (const O of others.values()) if (now - O.t < 20000) n++; return n; },
-    get names() { const now = Date.now() + offset, a = []; for (const O of others.values()) if (now - O.t < 20000) a.push(O.n); return a; },
+    get count() { let n = 1; const now = Date.now() + offset, pn = performance.now(); for (const O of others.values()) if (O.ws ? live(O, now, pn) : now - O.t < 20000) n++; return n; },   /* NET-CF3: 웹소켓 명단에 있는 친구도 셈 */
+    get names() { const now = Date.now() + offset, pn = performance.now(), a = []; for (const O of others.values()) if (O.ws ? live(O, now, pn) : now - O.t < 20000) a.push(O.n || '친구'); return a; },
     setName(v) { v = String(v || '').replace(/[<>]/g, '').trim().slice(0, 8); if (!v || joined || !checkChat(v).ok) return false; /* SAFE-1: 거르개 · 방에 들어간 뒤(이름표가 친구들에게 보인 뒤)엔 못 바꿈 */ name = v; try { localStorage.setItem('mp.name', v); } catch (e) { /* */ } if (joined) req('/players/' + id, 'PATCH', { n: v }); onChange(); },
     fx(f) { fxQ++; if (joined) req('/players/' + id + '/fx', 'PUT', { q: fxQ, ...f }); },
     tick(dt, P) {
@@ -236,15 +277,22 @@ export function createNet(o) {
       if (!joined) { joined = true; join(P); wsOpen(); }
       sendT -= dt; beatT -= dt;
       const moved = Math.abs(P.x - last.x) + Math.abs(P.z - last.z) + Math.abs(P.y - last.y) > 0.05 || Math.abs(P.h - last.h) > 0.08;
-      { const W9 = myW(), q9 = W9 ? W9.q : -1; if (q9 !== wq) { wq = q9; actPut(); sendT = 0; } }   // TOGETHER-0: 세계·탈것이 바뀌면 머리표를 바로 + 자리도 바로
-      wsSendT -= dt; if (wsOk && moved && wsSendT <= 0) { const E9 = enc(P); if (inRule(E9)) { wsSendT = 0.1; wsN++; try { ws.send('{"t":"p","x":' + E9.x.toFixed(2) + ',"y":' + E9.y.toFixed(2) + ',"z":' + E9.z.toFixed(2) + ',"h":' + E9.h.toFixed(2) + ',"s":0}'); } catch (e) { /* 닫히는 중 */ } } }   /* NET-CF2: 움직일 때만 초당 10번(문자열로 바로 — 새 객체 X) */
+      { const W9 = myW(), q9 = W9 ? W9.q : -1; if (q9 !== wq) { wq = q9; actPut(); sendT = 0; mDirty = true; wl.x = 1e9; } }   // TOGETHER-0: 세계·탈것이 바뀌면 머리표를 바로 + 자리도 바로(NET-CF3: 웹소켓 명단·자리도)
+      const pn = performance.now();
+      if (wsOk) {   /* NET-CF3: 모양 칸 알림(세계·탈것·옷이 바뀌면 · 2초에 한 번까지 — 서버 상한 1초에 걸려 버려지지 않게) · 핑(조용할 때만) */
+        mT -= dt; if (mDirty && mT <= 0) { const a9 = wsTag(), k9 = myK(), m9 = k9 + '|' + a9; mDirty = false; if (m9 !== mSent) { mSent = m9; mT = 2; wsN++; try { ws.send(JSON.stringify({ t: 'm', k: k9, a: a9 })); } catch (e) { /* 닫히는 중 */ } } }
+        pingT -= dt; if (pingT <= 0) { if (pingAt && pn - pingAt > 1900) { pingAt = 0; if (++pingMiss >= 3) { pingMiss = 0; try { ws.close(); } catch (e) { /* 닫히는 중 */ } } }   /* 답 없는 핑 세 번 = 죽은 연결 → 닫고 다시 */
+          if (pingN < 3 || pingMiss || pn - rxAt > 5000) { pingAt = pn; pingN++; pingT = pingN < 3 ? 1 : pingMiss ? 2 : 5; try { if (ws) ws.send('{"t":"ping"}'); } catch (e) { /* 닫히는 중 */ } } else pingT = 1; }
+      }
+      wsSendT -= dt; if (wsOk && wsSendT <= 0 && !document.hidden && (Math.abs(P.x - wl.x) + Math.abs(P.y - wl.y) + Math.abs(P.z - wl.z) > 0.03 || Math.abs(P.h - wl.h) > 0.05)) { const E9 = enc(P); if (inRule(E9)) { wsSendT = wsIvl(); wsN++; wl.x = P.x; wl.y = P.y; wl.z = P.z; wl.h = P.h; try { ws.send('{"t":"p","x":' + E9.x.toFixed(2) + ',"y":' + E9.y.toFixed(2) + ',"z":' + E9.z.toFixed(2) + ',"h":' + E9.h.toFixed(2) + ',"s":0}'); } catch (e) { /* 닫히는 중 */ } } }   /* NET-CF2: 움직일 때만(문자열로 바로 — 새 객체 X) · NET-CF3: 간격 = 사람 수 따라(wsIvl) · 마지막에 보낸 자리(wl)에서 움직였을 때만 → 멈추면 마지막 자리 한 번 보내고 끝 */
       if ((moved && sendT <= 0 && !wsOk && (inRule(enc(P)) || !away)) || beatT <= 0 || (wsOk && moved && away)) { send(P); sendT = Math.max(1 / 6, (others.size + 1) / 60); beatT = 5; }   // TOGETHER-0 예산: 방 전체 초당 60번을 나눔 · 가만히면 5초 · NET-OOB · NET-CF2: 웹소켓이 열려 있으면 Firebase는 5초 박동(늦게 온 친구·끊김 대비)만   // TOGETHER-0 예산: 방 전체 초당 60번을 나눔 · 가만히면 5초 · NET-OOB: 범위 밖이면 움직여도 5초마다(처음 나갈 때 한 번은 바로)
-      const now = Date.now() + offset, k = Math.min(1, dt * 12), pn = performance.now(), mw = wKey(myW() ? myW().w : 's');
+      const now = Date.now() + offset, k = Math.min(1, dt * 12), mw = wKey(myW() ? myW().w : 's');
       meP = P; emoteTick(selfE, dt, P.x, P.y - 0.25, P.z); bubbleTick(selfB, dt, P.x, P.y - 0.25, P.z);
       for (const O of others.values()) {
-        const stale = O.t && now - O.t > 20000; O.vis = !stale && !hidden && !O.away && wKey(O.w) === mw; O.mesh.visible = O.tag.visible = O.vis && !ext;   // TOGETHER-0: 같은 세계만 · 마을(ext)은 마을 그리개가 그림
+        O.vis = live(O, now, pn) && !hidden && !O.away && O.has && wKey(O.w) === mw; O.mesh.visible = O.vis && !ext; O.tag.visible = O.mesh.visible && !!O.n;   // TOGETHER-0: 같은 세계만 · 마을(ext)은 마을 그리개가 그림 · NET-CF3: 자리를 받은 친구만 · 이름을 모르면 이름표 X
         if (!O.vis) { if (O.em) O.em.s.visible = false; if (O.sb) O.sb.s.visible = false; } else { emoteTick(O.em, dt, O.x, O.y, O.z); bubbleTick(O.sb, dt, O.x, O.y, O.z); }
-        if (O.Bn >= 2 && pn - O.wsAt < 1000 && wsOff != null) { const rt = Date.now() + wsOff - 100, B = O.B, n = O.Bn, h0 = (O.Bh - n + 6) % 6; let a = -1;   /* NET-CF2 보간: 서버 시각 100ms 전 자리 = 앞뒤 두 자리 사이 */
+        if (O.Bn >= 2 && pn - O.wsAt < 1000 && wsOff != null) { const dl9 = O.iv < 85 ? 100 : O.iv < 150 ? 150 : O.iv < 225 ? 250 : 375, dd9 = dl9 - O.dl; O.dl += dd9 > 0 ? Math.min(dd9, dt * 400) : Math.max(dd9, dt * -100);   /* NET-CF3: 지연 = 100ms와 받은 간격 × 1.5 가운데 큰 값(15번 100 · 10번 150 · 6번 250 · 4번 375) · 늘 땐 초당 400ms · 줄 땐 초당 100ms씩만 옮김(단계가 바뀔 때 안 튐) */
+          const rt = Date.now() + wsOff - O.dl, B = O.B, n = O.Bn, h0 = (O.Bh - n + 6) % 6; let a = -1;   /* NET-CF2 보간: 서버 시각으로 지연만큼 전 자리 = 앞뒤 두 자리 사이 */
           for (let i = 0; i < n - 1; i++) { const k = ((h0 + i) % 6) * 4, k2 = ((h0 + i + 1) % 6) * 4; if (B[k] <= rt && rt <= B[k2]) { a = k; const u = (rt - B[k]) / Math.max(1, B[k2] - B[k]); O.x = B[k + 1] + (B[k2 + 1] - B[k + 1]) * u; O.y = B[k + 2] + (B[k2 + 2] - B[k + 2]) * u; O.z = B[k + 3] + (B[k2 + 3] - B[k + 3]) * u; break; } }
           if (a < 0) { const kL = ((O.Bh + 5) % 6) * 4, kF = h0 * 4; if (rt < B[kF]) { O.x = B[kF + 1]; O.y = B[kF + 2]; O.z = B[kF + 3]; } else { O.x += (B[kL + 1] - O.x) * k; O.y += (B[kL + 2] - O.y) * k; O.z += (B[kL + 3] - O.z) * k; } } }
         else { const age = Math.min(0.45, (pn - O.rt) / 1000), gx = O.tx + O.vx * age, gz = O.tz + O.vz * age;   // NET-SMOOTH(걷기에도): 받은 두 자리의 속도로 앞질러 · 10m 넘게 어긋나면 바로
@@ -252,7 +300,7 @@ export function createNet(o) {
         let dh = O.th - O.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); O.h += dh * k;
         O.mesh.position.set(O.x, O.y, O.z); O.mesh.rotation.y = O.h; if (O.mo) O.mesh.position.y += moTick(O, dt); O.tag.position.set(O.x, O.y + 2.05 * scale, O.z);   // EMOTE-2 몸짓(도는 동안만)
       }
-      if ((cleanT -= dt) <= 0) { cleanT = 30; for (const [pid, O] of others) if (O.t && now - O.t > 120000) { req('/players/' + pid, 'DELETE'); drop(pid); } }
+      if ((cleanT -= dt) <= 0) { cleanT = 30; for (const [pid, O] of others) if (!O.ws && O.t && now - O.t > 120000) { req('/players/' + pid, 'DELETE'); drop(pid); } }   /* NET-CF3: 웹소켓 명단에 있는 친구(탭만 가려 둠)는 지우지 않음 */
     },
     say(tx) { if (!joined) return Promise.resolve(false); const cid = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
       const ids = Object.keys(CHAT).sort((a, b) => ((CHAT[a] || {}).t || 0) - ((CHAT[b] || {}).t || 0)); for (const old of ids.slice(0, Math.max(0, ids.length - 39))) req('/chat/' + old, 'DELETE');   // 40개만 남김
@@ -264,16 +312,16 @@ export function createNet(o) {
       for (const O of others.values()) if (O.mi === i && myE.t - (O.mt || -1e9) < 3000) combo(O, i); },   // EMOTE-2: 친구가 먼저 한 같은 이모트와 맞춤
     mute(pid, on) { const O = others.get(pid); if (on) { MUTE.add(pid); if (O) { if (O.em) O.em.t = 0; if (O.sb) O.sb.t = 0; O.mo = null; O.mesh.rotation.x = O.mesh.rotation.z = 0; } } else MUTE.delete(pid); try { sessionStorage.setItem('mp.mute', JSON.stringify([...MUTE])); } catch (e) { /* */ } onChange(); },   // SAFE-1 🙈(이 탭에서 나에게만)
     muted: (pid) => MUTE.has(pid),
-    peers() { const now = Date.now() + offset, a = [], mw = wKey(myW() ? myW().w : 's'); if (!hidden) for (const O of others.values()) if (!(O.t && now - O.t > 20000) && !O.away && wKey(O.w) === mw) a.push({ id: O.pid, mu: MUTE.has(O.pid), x: O.x, y: O.y, z: O.z, act: O.a, label: O.n, color: '#' + O.c.toString(16).padStart(6, '0'), r: 4, floor: O.y > 2.5 ? 2 : 1 }); return a; },
+    peers() { const now = Date.now() + offset, pn = performance.now(), a = [], mw = wKey(myW() ? myW().w : 's'); if (!hidden) for (const O of others.values()) if (live(O, now, pn) && !O.away && O.has && wKey(O.w) === mw) a.push({ id: O.pid, mu: MUTE.has(O.pid), x: O.x, y: O.y, z: O.z, act: O.a, label: O.n || '친구', color: '#' + O.c.toString(16).padStart(6, '0'), r: 4, floor: O.y > 2.5 ? 2 : 1 }); return a; },
     ctl(path, data) { return req('/ctl/' + path, 'PUT', data); },
     get ctlData() { return CTL; },
-    roster() { const now = Date.now() + offset, a = []; for (const [id, O] of others) if (!(O.t && now - O.t > 20000)) a.push({ id, label: O.n, act: O.w === 's' ? O.a : O.lbl, color: O.c, k: O.k, mu: MUTE.has(id), w: O.w, v: O.v, cell: O.cell }); return a; },   // TOGETHER-0: act = 머리표 뺀 글(방 놀이 비교)
+    roster() { const now = Date.now() + offset, a = []; for (const [id, O] of others) if (O.fb && !(O.t && now - O.t > 20000)) a.push({ id, label: O.n || '친구', act: O.w === 's' ? O.a : O.lbl, color: O.c, k: O.k, mu: MUTE.has(id), w: O.w, v: O.v, cell: O.cell }); return a; },   // TOGETHER-0: act = 머리표 뺀 글(방 놀이 비교) · NET-CF3: 방 놀이 명단 = Firebase로 아는 친구만(예전 그대로 — 활동 글은 Firebase에만 있음)
     // TOGETHER-0 👥 목록: 모든 친구(다른 세계는 '📍 마을 다7' · 곁으로 X)
-    friends() { const now = Date.now() + offset, a = [], mw = wKey(myW() ? myW().w : 's'); for (const O of others.values()) { if (O.t && now - O.t > 20000) continue; const here = wKey(O.w) === mw && !O.away; a.push({ id: O.pid, label: O.n, here, mu: MUTE.has(O.pid), x: O.x, y: O.y, z: O.z, color: '#' + O.c.toString(16).padStart(6, '0'), act: here ? (O.w === 's' ? O.a : O.lbl) : placeText(O) + (O.w === 's' && O.a ? ' · ' + O.a : '') }); } return a; },
+    friends() { const now = Date.now() + offset, pn = performance.now(), a = [], mw = wKey(myW() ? myW().w : 's'); for (const O of others.values()) { if (!live(O, now, pn)) continue; const here = wKey(O.w) === mw && !O.away && O.has; a.push({ id: O.pid, label: O.n || '친구', here, mu: MUTE.has(O.pid), x: O.x, y: O.y, z: O.z, color: '#' + O.c.toString(16).padStart(6, '0'), act: here ? (O.w === 's' ? O.a : O.lbl) : placeText(O) + (O.w === 's' && O.a ? ' · ' + O.a : '') }); } return a; },
     ext(on) { ext = !!on; },   // 마을 그리개가 몸·이름표를 대신 그림(이모지·말풍선은 그대로)
     each(fn) { for (const O of others.values()) if (O.vis) fn(O); },   // 같은 세계에 보이는 친구(읽기만 — 매 프레임 새 객체 X)
     get sendEvery() { return Math.max(1 / 6, (others.size + 1) / 60); },   // ROOM-2: 경기 중(hide)에도 같은 방 친구 명단
-    hide(on) { hidden = !!on; for (const O of others.values()) O.mesh.visible = O.tag.visible = !hidden && !O.away; },   // 물총 친구 대결 동안 걷기 몸 숨김(경기 몸이 대신)
+    hide(on) { hidden = !!on; for (const O of others.values()) { O.mesh.visible = !hidden && !O.away && O.has; O.tag.visible = O.mesh.visible && !!O.n; } },   // 물총 친구 대결 동안 걷기 몸 숨김(경기 몸이 대신)
     leave,
   };
 }

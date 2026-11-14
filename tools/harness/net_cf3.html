@@ -1,0 +1,39 @@
+<!doctype html><meta charset="utf-8"><title>net cf3 시험</title>
+<div id="toast" style="display:none"></div>
+<script type="importmap">{ "imports": { "three": "../../lib/three.module.min.js" } }</script>
+<script>
+// NET-CF3 시험 쪽: Firebase(EventSource·fetch)는 가짜 — 명단을 비워 둠(?peer= 를 주면 그 친구 하나) · 자리·명단은 진짜 방 서버(?cf=)로만
+//   ?me=내 id · ?r=방 꼬리 · ?move=1 원 돌기 · ?town=1 마을 세계('t:다7') + 마을 친구 그리개 · ?old=1 옛 화면(net_old9.js — 시험이 잠깐 만들어 둠)
+//   fbPut(path, data) = 가짜 Firebase 소식 넣기 · addGuests(n, {…}) = 방 서버에 바로 붙는 손님(이름 없음) · WSN = 이 쪽이 연 웹소켓 수
+const Q = new URLSearchParams(location.search); sessionStorage.setItem('mp.id', Q.get('me'));
+window.fetch = async () => new Response('null', { status: 200 });
+window.ES = [];
+window.EventSource = class { constructor() { this.l = {}; window.ES.push(this); const peer = Q.get('peer'); setTimeout(() => this.l.put && this.l.put({ data: JSON.stringify({ path: '/', data: peer ? { players: { [peer]: { n: '친구', c: 0xff8844, k: 'kid', x: 0, y: 0, z: 0, h: 0, a: '', t: Date.now() } } } : null }) }), 50); } addEventListener(k, f) { this.l[k] = f; } close() {} };
+window.fbPut = (path, data, type) => { for (const e of window.ES) { const f = e.l[type || 'put']; if (f) f({ data: JSON.stringify({ path, data }) }); } };
+window.WSN = 0; { const W0 = window.WebSocket; window.WebSocket = class extends W0 { constructor(...a) { super(...a); window.WSN++; } }; }
+if (Q.get('town') === '1') window.SM_WORLD = { w: 't:다7', v: '', q: 1 };
+</script>
+<script type="module">
+import * as THREE from 'three';
+const Q = new URLSearchParams(location.search), TOWN = Q.get('town') === '1', CF = (Q.get('cf') || '').replace(/^http/, 'ws');
+const { createNet } = await import(Q.get('old') === '1' ? '../../v2/js/net_old9.js' : '../../v2/js/net.js');
+const scene = new THREE.Scene(), N = createNet({ THREE, scene, room: 'zzcf' + Q.get('r') });
+window.SM_MP = { net: () => N, roomRun: () => (window.RUN ? 'x' : null) };
+let FR = null; const cam = new THREE.Vector3(0, 4, 0);
+if (TOWN) { const m = await import('../../v2/games/town_friends.js'); FR = m.createFriends({ T3: THREE, map: { add: (x) => scene.add(x), remove: (x) => scene.remove(x), camera: { position: cam } } }); }
+const P = { x: 0, y: 0, z: 0, h: 0 }, T00 = performance.now(); let last = T00, t = 0; window.T0 = Date.now(); window.LOG = [];   /* T0 = 원 돌기 시작 시각(시험이 A의 진짜 자리를 같은 식으로 셈) */
+window.dropGuests = (k) => { for (let j = 0; j < k; j++) { const g = window.G.pop(); if (g) { try { g.s.close(); } catch (e) { /* */ } } } return window.G.length; }; window.N = N; window.P = P; window.move = Q.get('move') === '1'; window.watch = Q.get('watch') || '';
+window.dots = () => { if (!FR) return -1; const g = { beginPath() {}, arc() {}, fill() {}, stroke() {} }; return FR.dots(g, (x, z) => [x, z]); };
+// 손님: 방 서버에 바로 붙음 — old = 옛 꼴({t:'j', id, n:''} · 모양 칸 없음) · a = 세계 머리표 · x0·dx = 보내는 자리(받는 쪽이 마을이면 ×4)
+window.G = [];
+window.addGuests = (n, o = {}) => Promise.all(Array.from({ length: n }, (_, j) => new Promise((res) => { const i = window.G.length, gid = (o.pre || 'g') + i + Q.get('r'), s = new WebSocket(CF + '/room/' + N.cf.room), g = { id: gid, s, open: false, code: 0, full: false }; window.G.push(g);
+  s.onopen = () => { g.open = true; s.send(JSON.stringify(o.old ? { t: 'j', id: gid, n: '' } : { t: 'j', id: gid, n: '', k: o.k || 'kid', c: i % 10, a: o.a == null ? '' : o.a })); if (o.pos !== false) s.send(JSON.stringify({ t: 'p', x: (o.x0 || 0) + j * (o.dx || 0), y: 0, z: o.z0 || 0, h: o.h == null ? 0 : o.h, s: 0 })); setTimeout(() => res(gid), 60); };
+  s.onmessage = (ev) => { if (String(ev.data).includes('"t":"full"')) g.full = true; };
+  s.onclose = (e) => { g.open = false; g.code = e.code; res(gid); }; s.onerror = () => {}; })));
+window.guestSend = (gid, m) => { const g = window.G.find((q) => q.id === gid); if (g && g.open) g.s.send(JSON.stringify(m)); return !!(g && g.open); };
+window.closeGuests = () => { for (const g of window.G) { try { g.s.close(); } catch (e) { /* */ } } window.G.length = 0; };
+function f() { const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now; t = (now - T00) / 1000; if (window.move) { P.x = Math.sin(t * 0.8) * 20; P.z = Math.cos(t * 0.8) * 20; P.h = t; }
+  N.tick(dt, P); if (FR) FR.update(dt);
+  let o = null; N.each((O) => { if (!window.watch || O.pid === window.watch) o = O; }); window.LOG.push(o ? [Date.now(), o.x, o.z] : [Date.now(), NaN, NaN]); if (window.LOG.length > 3000) window.LOG.shift(); requestAnimationFrame(f); }
+requestAnimationFrame(f); window.READY = true;
+</script>

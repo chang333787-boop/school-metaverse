@@ -1,12 +1,14 @@
 // 학교 메타버스 실시간 방 서버 시험판(NET-CF 1단계 · 사용자 10-20 '클라우드플레어 해 보자')
 // Worker = 문지기(주소·Origin·방 이름 확인) → Room Durable Object = 방 하나 = 서버 하나(웹소켓).
 // 주고받기(JSON · 짧은 키)
-//   받기  {t:'j', id, n}            들어오기(id = 영문·숫자·_- 16자 · n = 이름 12자)
+//   받기  {t:'j', id, n, k?, c?, a?, u?}  들어오기(id = 영문·숫자·_- 16자 · n = 늘 빈 글 — 이름은 받지 않음(보내도 버림))
+//                                     NET-CF3 모양 칸(이름 X · 꼴이 안 맞으면 버림 = null): k 옷 코드(영문·숫자 8자) · c 색 번호 0~9 · a 세계 머리표('' 학교 · 't:다7.b' · 'i:12') · u 번호 1~40
+//         {t:'m', k?, a?}           모양 칸이 바뀜(옷·세계) — 한 사람 1초에 한 번(더 잦으면 버림) → 다른 사람에게 {t:'m', id, k, c, a}
 //         {t:'p', x, y, z, h, s}    내 위치(h = 바라보는 방향 · s = 상태 번호나 짧은 글)
 //         {t:'e', ...}              사건 → 방의 다른 사람에게 그대로(보낸 이 f를 서버가 붙임 · all:1이면 나도 받음)
-//         {t:'ping', c}             지연 재기 → {t:'pong', c, ts}
-//   보내기 {t:'w', id, ts, L:[[id,n]...], P:[[id,x,y,z,h,s]...]}  들어온 나에게 방 전체 모습
-//         {t:'j', id, n} · {t:'l', id}                          누가 들어옴 · 나감
+//         {t:'ping', c}             지연 재기 → {t:'pong', c, ts} · 글이 정확히 {"t":"ping"}이면 방을 깨우지 않고 {"t":"pong"}(자동 답 · 하루 세기에도 안 듦)
+//   보내기 {t:'w', id, ts, L:[[id,n,k,c,a,u]...], P:[[id,x,y,z,h,s]...]}  들어온 나에게 방 전체 모습(옛 화면은 P만 읽음)
+//         {t:'j', id, n, k, c, a, u} · {t:'l', id}              누가 들어옴 · 나감
 //         {t:'s', ts, P:[[id,x,y,z,h,s]...]}                    초당 20번 · 그사이 움직인 사람만
 //         {t:'full', m}                                         꽉 참(닫기 직전)
 // 돈 0원 지키기
@@ -26,6 +28,7 @@ const ROOM_MAX = 40;          /* 방당 사람 수 */
 const RATE_MAX = 30;          /* 한 사람 1초 메시지 상한(넘으면 버림) */
 const RATE_KICK = 90;         /* 1초에 이만큼 넘게 보내면 끊음 */
 const MSG_BYTES = 1024;       /* 메시지 한 개 크기 상한 */
+const LOOK_MS = 1000;         /* NET-CF3 모양 칸 바뀜 알림({t:'m'}) — 한 사람 이 간격에 한 번 */
 
 const ORIGIN_OK = 'https://chang333787-boop.github.io';
 const ORIGIN_LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/;
@@ -84,6 +87,13 @@ function st(v) {
   if (typeof v === 'string') return v.slice(0, 8);
   return 0;
 }
+/* NET-CF3 모양 칸 — 자유 글 칸이 아님: 정해진 꼴만 받고 그 밖은 null(= '모름' · 옛 화면이 안 보낸 것과 같음)
+   세계 머리표 a = '' 학교 · 't:' + 칸(한글 한 글자나 영문 대문자 1~2자 + 숫자 1~2자 · 차례 바뀐 꼴 · 빈칸) · 'i:' + 건물 번호 · 끝에 탈것 .b .o .k .z — 이름이 실릴 수 없는 꼴 */
+const K_RX = /^[A-Za-z0-9]{1,8}$/;
+const A_RX = /^(?:t:(?:(?:[가-힣]|[A-Z]{1,2})[0-9]{1,2}|[0-9]{1,2}(?:[가-힣]|[A-Z]{1,2}))?|i:[0-9]{1,3})(?:\.[bokz])?$/;
+function okK(v) { return typeof v === 'string' && K_RX.test(v) ? v : null; }
+function okA(v) { return typeof v === 'string' && v.length <= 20 && (v === '' || A_RX.test(v)) ? v : null; }
+function okInt(v, lo, hi) { return Number.isInteger(v) && v >= lo && v <= hi ? v : null; }
 /* 무료 한도도 UTC 0시(한국 아침 9시)에 새로 시작하니 하루도 UTC로 셈 */
 /* 닫힌 소켓에 보내면 런타임 오류가 남 → 보내기는 늘 이것으로 */
 function send(ws, s) { try { ws.send(s); } catch (e) { /* 이미 닫힘 */ } }
@@ -96,7 +106,7 @@ export class Room extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.dayMax = Number(env.DAY_MSG_MAX) || 1500000;
-    this.info = new Map();   /* ws → {id, n, win, cnt} (메모리 · 휴면에서 깨면 다시 채움) */
+    this.info = new Map();   /* ws → {id, n, k, c, a, u, mAt, win, cnt} (메모리 · 휴면에서 깨면 다시 채움) */
     this.dead = new WeakSet(); /* 서버가 닫은 소켓(닫힌 뒤 늦게 온 메시지는 버림) */
     this.pos = new Map();    /* id → [id,x,y,z,h,s] */
     this.dirty = new Set();  /* 이번 박자에 움직인 id */
@@ -112,9 +122,11 @@ export class Room extends DurableObject {
     for (const ws of this.ctx.getWebSockets()) {
       const a = ws.deserializeAttachment();
       if (!a || !a.id) continue;
-      this.info.set(ws, { id: a.id, n: a.n, win: 0, cnt: 0 });
+      this.info.set(ws, { id: a.id, n: a.n, k: a.k ?? null, c: a.c ?? null, a: a.a ?? null, u: a.u ?? null, mAt: 0, win: 0, cnt: 0 });
       if (a.p) this.pos.set(a.id, a.p);
     }
+    /* NET-CF3 핑 자동 답 — 글이 정확히 같으면 방(DO)을 깨우지 않고 답함(조용한 방은 휴면 그대로 · 하루 세기에도 안 듦) */
+    try { this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('{"t":"ping"}', '{"t":"pong"}')); } catch (e) { /* 없는 곳에서는 아래 'ping' 갈래가 답함 */ }
     this.ctx.blockConcurrencyWhile(async () => {
       const d = await this.ctx.storage.get('day');
       if (d && d.d === this.day) { this.cnt = d.c; this.cntSaved = d.c; }
@@ -153,7 +165,7 @@ export class Room extends DurableObject {
     let i = this.info.get(ws);
     if (!i) {
       const a = ws.deserializeAttachment() || {};
-      i = { id: a.id || null, n: a.n || '', win: 0, cnt: 0 };
+      i = { id: a.id || null, n: a.n || '', k: a.k ?? null, c: a.c ?? null, a: a.a ?? null, u: a.u ?? null, mAt: 0, win: 0, cnt: 0 };
       this.info.set(ws, i);
     }
     return i;
@@ -208,7 +220,7 @@ export class Room extends DurableObject {
       case 'j': {
         const id = String(d.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 16);
         if (!id || i.id) return;
-        const n = String(d.n || '').replace(/[\u0000-\u001f<>]/g, '').slice(0, 12);
+        const n = '';   /* NET-CF3: 이름은 받지 않음 — 누가 보내도 버리고 늘 빈 글(이름·자유 글은 이 서버에 두지 않음 · 칸은 옛 화면과 꼴을 맞추려고 남김) */
         /* 같은 id가 이미 있으면(새로고침·다른 탭) 옛 연결을 닫음 */
         for (const [w, o] of this.info) if (w !== ws && o.id === id) {
           o.id = null;
@@ -216,15 +228,25 @@ export class Room extends DurableObject {
           shut(w, 4000, 'replaced');
         }
         i.id = id; i.n = n;
-        ws.serializeAttachment({ id, n });
+        i.k = okK(d.k); i.c = okInt(d.c, 0, 9); i.a = okA(d.a); i.u = okInt(d.u, 1, 40);   /* NET-CF3 모양 칸(안 보냈거나 꼴이 다르면 null) */
+        this.tagOf(ws, i, false);
         const L = [], P = [];
         for (const o of this.info.values()) if (o.id) {
-          L.push([o.id, o.n]);
+          L.push([o.id, o.n, o.k, o.c, o.a, o.u]);
           const p = this.pos.get(o.id);
           if (p) P.push(p);
         }
         send(ws, JSON.stringify({ t: 'w', id, ts: now, L, P }));
-        this.others(ws, JSON.stringify({ t: 'j', id, n }));
+        this.others(ws, JSON.stringify({ t: 'j', id, n, k: i.k, c: i.c, a: i.a, u: i.u }));
+        return;
+      }
+      case 'm': {   /* NET-CF3: 옷·세계가 바뀜 — 보낸 칸만 바꿈 · 1초에 한 번 */
+        if (!i.id || now - i.mAt < LOOK_MS) return;
+        i.mAt = now;
+        if ('k' in d) i.k = okK(d.k);
+        if ('a' in d) i.a = okA(d.a);
+        this.tagOf(ws, i, true);
+        this.others(ws, JSON.stringify({ t: 'm', id: i.id, k: i.k, c: i.c, a: i.a }));
         return;
       }
     }
@@ -274,11 +296,14 @@ export class Room extends DurableObject {
     this.beat = setTimeout(() => this.tick(), this.nextAt - now);
   }
 
+  /* 소켓 꼬리표(휴면에서 깨어나도 남는 것) = id · 이름(빈 글) · 모양 칸 · 마지막 자리 */
+  tagOf(w, i, withPos) {
+    try { w.serializeAttachment({ id: i.id, n: i.n, k: i.k, c: i.c, a: i.a, u: i.u, p: withPos ? this.pos.get(i.id) || null : null }); } catch (e) { /* 닫히는 중 */ }
+  }
+
   /* 박자를 멈추고 휴면 준비 — 마지막 자리를 소켓 꼬리표에 적어 깨어나도 방 모습이 남게 */
   park() {
-    for (const [w, i] of this.info) if (i.id) {
-      try { w.serializeAttachment({ id: i.id, n: i.n, p: this.pos.get(i.id) || null }); } catch (e) { /* 닫히는 중 */ }
-    }
+    for (const [w, i] of this.info) if (i.id) this.tagOf(w, i, true);
     this.flush();
   }
 }
