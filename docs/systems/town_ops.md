@@ -42,6 +42,6 @@
 4. 공개판: `zsh tools/export/town_export.sh /Users/dobuk/Projects/uri-maeul --commit "…"` → `git -C /Users/dobuk/Projects/uri-maeul push`.
 
 ## 7. 멈춘 판으로 돌아가기
-멈춘 판마다 git 꼬리표가 붙어요. `town-1114` = 처음 15분 길 다듬기(PATH-1) 뒤 판 · `town-1113` = 그 앞 판이에요. 그 뒤에 고친 것이 수업을 망치면 Claude에게 "꼬리표 `town-1114` 판으로 되돌려 줘"라고 하면 돼요(처음 15분 길 고침이 말썽이면 `town-1113`).
+멈춘 판마다 git 꼬리표가 붙어요. `town-1115` = 11-14 오후 묶음(남긴 것 닫기 · 또 하고 싶게 · 양몰이 · 비밀번호 풀기 · 함께하기 30명 · 반 코드로 저절로 함께) 뒤 판 · `town-1114` = 처음 15분 길 다듬기(PATH-1) 뒤 판 · `town-1113` = 그 앞 판이에요. 그 뒤에 고친 것이 수업을 망치면 Claude에게 "꼬리표 `town-1115` 판으로 되돌려 줘"라고 하면 돼요(11-14 오후 묶음이 말썽이면 `town-1114` · 처음 15분 길 고침이 말썽이면 `town-1113`). ⚠️ 되돌려도 방 서버(`sm-rooms`)는 따로 올린 것이라 그대로예요 — 서버까지 되돌리려면 `server/cf-rooms`를 그 판으로 맞춘 뒤 `npx wrangler deploy` 한 번(보통은 그대로 둬도 돼요 — 새 서버는 옛 화면의 들어오기·저장을 그대로 받게 지었어요. 다만 선생님이 비밀번호를 푼 번호는 옛 화면에서 「저장이 안 돼요」 알림만 뜨니 그 아이는 새로고침해서 다시 들어오게 해요).
 
 출처: `town_handoff_1031.md` 맨 위 · `town_teacher.md` · `perf.md` · `town_open.md` · `memo.md` · `server/cf-rooms/README.md` · `tools/ops/README.md` · `CLAUDE.md`

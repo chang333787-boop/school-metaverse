@@ -32,7 +32,7 @@
 | 이 놀이들(hideseek·robots·guide·blocks·watergun)을 고치거나 새 대결 놀이를 만들 때 | `docs/systems/games.md` — 놀이 — 숨바꼭질·로봇인 척·길잡이·블록·편의성 |
 | 이야기·상상 세계·방탈출(story.js·world_*.js·story_*.js·escape*)을 고치거나 새로 만들 때 | `docs/systems/stories.md` — 이야기·상상 세계·방탈출 (story.js 엔진) |
 | memo.js(이야기 판·세계 판·퀴즈·현실 방탈출·Firebase 판)를 고칠 때 · 교사가 "○○판대로 만들어"·"세계 n번 판에 고르기 올려줘" 할 때 | `docs/systems/memo.md` — 메타버스 메모장·세계 만들기 (생각 모으기) |
-| net.js·lobby.js·방 대기실·친구 대결·채팅·순위표(standings.js)·반 코드로 저절로 함께(CLASS-MP · 반 방·입장표·`town_classmp.js`)를 고칠 때 | `docs/systems/multiplayer.md` — 함께하기 방·네트워크·채팅·순위표 |
+| net.js·lobby.js·방 대기실·친구 대결·채팅·순위표(standings.js)·반 코드로 저절로 함께(CLASS-MP · 반 방·입장표·`town_classmp.js` · 시험 `town_classmp` · `net_cf3` · 서버 `test_classmp.mjs` · 봇 30명 `bots_cls.mjs`)를 고칠 때 | `docs/systems/multiplayer.md` — 함께하기 방·네트워크·채팅·순위표 |
 | 견학(tour.js·tour_data.js)·홍보판·오프닝/클로징 영상(film.js·tour_film.js)을 고칠 때 | `docs/systems/tour_promo.md` — 학교 견학·홍보판·영상(film) |
 | worldfx.js·actions.js·title.js·topview.js·registry 메뉴(폴더·싱글/멀티/생각)를 고칠 때 | `docs/systems/engine.md` — 엔진 — 사람 옮기기·세상 바꾸기·보이는 행동·오프닝·메뉴·하늘에서 보기 |
 | 자동 해상도·입력·끊김·크롬북 렉을 다룰 때 | `docs/systems/perf.md` — 성능·입력·크롬북 |
@@ -40,10 +40,10 @@
 | 마을 메인 스토리(town_story.js — 이웃 쪽지 장 다섯 · 힌트 세 단계 · 난도) | `docs/systems/town_story.md` — 퀘스트 틀 명세(2027 교과서 엔진)와 같은 꼴 |
 | **새 메인 세션을 이어받을 때 = 먼저 이것(10-31 · 지금 상태·멈춘 팀 셋·남은 차례) → 일하는 법은 1024** | `docs/systems/town_handoff_1031.md` · `docs/systems/town_handoff_1024.md` → 정본 차례 `docs/systems/town_week_1024.md` |
 | **토요일(10-24) 시작 = 먼저 이것(단계 0 합치기 차례 · 역할 분담 · 물을 것)** | `docs/systems/town_kickoff_1024.md` |
-| **수업 전 점검 · 수업 중 고장 · 비밀번호 · 서버가 멈추면 · 올리는 차례(11-13 · 손을 뗀 뒤에도 쓰는 한 쪽)** — 수업 전 핵심 시험 = `zsh tools/ops/core.sh`(20 ~ 25분) · 멈춘 판 꼬리표 `town-1114`(그 앞 판 `town-1113`) | `docs/systems/town_ops.md` |
+| **수업 전 점검 · 수업 중 고장 · 비밀번호 · 서버가 멈추면 · 올리는 차례(11-13 · 손을 뗀 뒤에도 쓰는 한 쪽)** — 수업 전 핵심 시험 = `zsh tools/ops/core.sh`(20 ~ 25분) · 멈춘 판 꼬리표 `town-1115`(11-14 오후 묶음 뒤 · 그 앞 판 `town-1114` · `town-1113`) | `docs/systems/town_ops.md` |
 | 프로그램 전체 분석·발전 방향(11-10 · 증거 → 얼리기 → 하나만 · 하지 않을 것) | `docs/systems/town_review_1110.md` |
 | "마을이 늦게 열려요"를 다룰 때 · 모듈 늦게 받기·묶기를 제안하기 전에(11-13 재기 · 가장 큰 몫 = 짓기) | `docs/systems/town_load.md` |
-| 처음 15분 길(첫 아침 → 이웃 부탁 → 놀이 → 다음 날)에서 아이가 멈춘 자리를 고칠 때 · 길 안내·거리 숫자·E 판정·알림 차례(11-14 PATH-1 · 화면만 보는 평가 두 번) — 시험 `town_path1` · `town_path1b` · `town_path1c` · PATH-1 뒤 판 꼬리표 `town-1114` | `docs/systems/town_path1.md` |
+| 처음 15분 길(첫 아침 → 이웃 부탁 → 놀이 → 다음 날)에서 아이가 멈춘 자리를 고칠 때 · 길 안내·거리 숫자·E 판정·알림 차례(11-14 PATH-1 · 화면만 보는 평가 두 번) — 시험 `town_path1` · `town_path1b` · `town_path1c` · `town_path1d` · `town_path1d2` · PATH-1 뒤 판 꼬리표 `town-1114` · 11-14 오후(PATH-1D 가·나 · 남긴 것 = `town_review_1110.md` §9) 뒤 `town-1115` | `docs/systems/town_path1.md` |
 | **마을 업그레이드를 시작할 때마다(10-19 '기능만 무한으로 넣는 것 같아 · 계획 세우고 유기적으로')** | `docs/systems/town_upgrade_plan.md` — 하루 한 바퀴 뼈대 · 기둥 넷 · 단계 0~5 · 새 기능은 비어 있는 고리를 채울 때만 |
 | 마을을 어떻게 키울지(발전 방향 50 · 큰 줄거리 「첫 마을 잔치」 · 선생님께 여쭤볼 것) | `docs/systems/town_roadmap.md` — 다섯 팀 보고를 합친 순서표(✅·🔨·⏭·❓) |
 | 마을 일을 시작할 때마다(사용자 10-17 '이상해 하면 다시 안 생기게') | `docs/systems/town_lessons.md` — 들은 말·문제·규칙·확인 · 새 지적은 그날 한 줄 · 하위 에이전트 지시문 첫 줄에도 |
@@ -62,7 +62,7 @@
 | 마을 길 위 사건(town_road.js · 자전거 고리 코스 · 모자 잡기 · 떨어진 것 줍기 · 날아온 지도 조각) | `docs/systems/town_road.md` |
 | 마을 보상 하루 한도(rwCheck 한 문 · 출처마다 하루 n번 · 실제 날짜 총량 · 전수표) — 새 보상은 src 꼬리표로 이 문만 | `docs/systems/town_reward_cap.md` |
 | 마을 긴급 출동(town_emerg.js · 112 길 잃은 어린이 · 119 넘어진 이웃 · 불의 때 · 사건 표 한 줄 = 사건 하나 · 남은 아홉 차례) | `docs/systems/town_emergency.md` |
-| 마을 선생님 칸·교사 반 표(town_teach.js · town_tsum.js · 장 열기·날 넘기기·날씨 고정은 비밀번호 뒤 · 반 표 = 이 기기·붙여 넣기·서버 /class · 비밀번호 풀기 · 서버는 배포 전) | `docs/systems/town_teacher.md` |
+| 마을 선생님 칸·교사 반 표(town_teach.js · town_tsum.js · 장 열기·날 넘기기·날씨 고정은 비밀번호 뒤 · 반 표 = 이 기기·붙여 넣기·서버 /class · 비밀번호 풀기(PIN-1 · 시험 `town_pin1`) · 「우리 반 함께 보기」 켬/끔 · 방 서버 sm-rooms에 배포됨) | `docs/systems/town_teacher.md` |
 | 마을 야생동물(town_wild.js · 아홉 종 · 서식지·계절·달아남·관찰 별) | `docs/systems/town_wild.md` |
 | **10-24 밤샘 아침 보고(올린 것·성능 전후·10시 확인 다섯)** | `docs/systems/town_night_1024.md` |
 | **밤샘 차례표(10-24 · A~H 39줄)** · 단계 1 설계(하루 한 바퀴 + 내 집) · 직업 놀이 엔진 설계(JOBS-2 · 양몰이·장구·부엌·낚시…) · 단계 2 표시 걷기·길 묻기 · 단계 3 기억하는 이웃·돈 쓸 곳 | `docs/systems/town_night_queue.md` · `docs/systems/town_phase1.md` · `docs/systems/town_jobs2.md` · `docs/systems/town_phase2.md` · `docs/systems/town_phase3.md` · `docs/systems/town_phase4.md`(엔진 여덟) · `docs/systems/town_explore.md`(탐험·특수 지형) |
