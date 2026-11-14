@@ -3,7 +3,7 @@
 //   갈래: 🧰 도구·장비(실제 효과 코드) · 🔓 자리(내 좌판) · 📜 요리법·씨앗·마당 물건 · 👕 모자·목수건·가방 색 · 🚲 자전거 색·깃발(여럿 가운데 하나) · 🏷 이웃이 부르는 이름(이웃 말이 달라짐) · 🏅 10레벨 배지
 //   5레벨 = 고르기(둘 가운데 하나 · 고르지 않은 것은 10레벨에 같이 옴) · 칩(🎁)을 눌렀을 때만 창(LVCHIP-1 그대로) · 이미 지난 레벨도 빠진 보상이 칩 하나에 쌓여 하나씩
 //   저장 = GAME.S.rwd { got:{'갈래:레벨':날}, pick:{'갈래:5':0|1}, hat, scarf, bag, nick, st(좌판), nk(이웃 말 하루 셈) } · 받을 거리는 저장하지 않고 솜씨 레벨에서 셈(옛 저장도 저절로)
-//   한도: 물건·능력이라 rwCheck 밖('mv:rwd' · 평생 한 번) · 좌판 판 돈 = 장터 팔기와 같은 'mv:sell'
+//   한도: 능력·옷·요리법은 생김 아님 · 마당 물건(deco)은 평생 한 번이라도 보상 문 'rwd:<id>'(once — 실제 날짜 총량이 다 찼으면 S.owe에 남아 다음 날짜에 · CAP-FIX) · 좌판 판 돈 = 장터 팔기와 같은 'mv:sell'
 //   지키는 선: 판타지·전투 X · 실명 X(이웃 = 일 이름) · 숫자·% 칸 X · 빈 칭찬 X · 새 Light X(이마 전등 = MeshBasic 빛 원뿔) · 매 프레임 일 0(0.25초·1초 칸) · 홍보판(SM_PROMO) X
 export const REWARD_V = 1;
 const T2 = (ko, en) => [ko, en];
@@ -107,7 +107,7 @@ export function createReward(A) {
   const { map, T3, GAME } = A, en = () => A.lang() === 'en', L = a => (Array.isArray(a) ? a[en() ? 1 : 0] : a || ''), esc = t => A.esc(t);
   const S = () => { const s = GAME.S; let r = s.rwd; if (!r || typeof r !== 'object' || r.v !== 1) r = s.rwd = { v: 1, got: {}, pick: {}, hat: '', scarf: '', bag: '', nick: '', st: null, nk: null }; if (!r.got || typeof r.got !== 'object') r.got = {}; if (!r.pick || typeof r.pick !== 'object') r.pick = {}; return r; };
   const mark = () => GAME.mark(), day = () => GAME.S.day | 0, SK = () => A.skills();
-  let dead = false, OWN = null, q4 = 0, q1 = 0, MUDN = '', MUDT = -1, RIG = null, HAT = null, SCF = null, LAMP = null, BAGI = null, MAT = null, SC = { on: false, q: 0, el: null, first: false };
+  let dead = false, OWN = null, LATE = '', q4 = 0, q1 = 0, MUDN = '', MUDT = -1, RIG = null, HAT = null, SCF = null, LAMP = null, BAGI = null, MAT = null, SC = { on: false, q: 0, el: null, first: false };
   const GEOS = [], MATS = [];
   // ── 받은 것 · 가진 것 ──
   const itemOf = (k, L9) => { const r = RWT[k] && RWT[k][L9]; if (!r) return null; if (r.pick) { const p = S().pick[k + ':' + L9]; return p == null ? null : r.pick[p | 0]; } return r; };
@@ -123,11 +123,11 @@ export function createReward(A) {
       case 'hat': case 'scarf': case 'bag': case 'bike': case 'flag': break;   /* WEAR-1: 받기만(가방 👕 칸) · 쓰기는 창의 「지금 쓰기」나 가방에서 */
       case 'nick': if (!r.nick) r.nick = it.id.slice(2); break;
       case 'recipe': { const U = GAME.S.unlock || (GAME.S.unlock = {}); U['r:' + it.e] = 1; break; }
-      case 'deco': A.add(it.e, 1, 'mv:rwd'); break;   /* 평생 한 번 받는 물건 = 한도 밖(rwCheck 'mv') */
+      case 'deco': if (!(A.add(it.e, 1, 'rwd:' + it.id, true) > 0)) LATE = it.id; break;   /* CAP-FIX ②: 평생 한 번 받는 물건도 보상 문(rwCheck 'rwd:') — 실제 날짜 총량이 다 찼으면 S.owe에 남아 다음 날짜에 들어옴(LATE = 이번에 못 넣은 것 · 줄 글이 '받았어요'라고 하지 않게) */
       case 'gear': if (it.id === 'scope') A.toolOwn('scope'); if (it.id === 'rod2') A.toolOwn('rod'); if (it.id === 'broom2') A.toolOwn('broom'); if (it.id === 'tank') A.toolTank(); if (it.id === 'lamp') lampSync(); if (it.id === 'boots' && MUDN) A.walkRe(); break;
       default: break; }
     void k; void e; }
-  function take(k, l9, pick) { const r = S(), key = k + ':' + l9; if (r.got[key]) return null; const R9 = RWT[k][l9]; if (R9.pick) r.pick[key] = pick ? 1 : 0; r.got[key] = day() || 1; OWN = null; const it = itemOf(k, l9); if (it) apply(it, k); if (l9 === RW_MAX) { const o = otherOf(k); if (o) apply(o, k); } mark(); if (A.sfx) A.sfx('done'); chip(); return it; }
+  function take(k, l9, pick) { const r = S(), key = k + ':' + l9; LATE = ''; if (r.got[key]) return null; const R9 = RWT[k][l9]; if (R9.pick) r.pick[key] = pick ? 1 : 0; r.got[key] = day() || 1; OWN = null; const it = itemOf(k, l9); if (it) apply(it, k); if (l9 === RW_MAX) { const o = otherOf(k); if (o) apply(o, k); } mark(); if (A.sfx) A.sfx('done'); chip(); return it; }
   // ── 👕 옷·장비(WEAR-1 · 사용자 10-28 '보상들은 인벤토리에 없는 거야? 모자 받으면 무조건 쓰고?') — 쓰기/벗기 = 가방 👕 칸 한 곳 ──
   const WEARK = ['hat', 'scarf', 'bag', 'bike', 'flag'], WPF = { hat: 'h:', scarf: 's:', bag: 'g:', bike: 'b:', flag: 'f:' };
   const curOf = kd => { const r = S(); return kd === 'bike' ? A.bikeGet('c') : kd === 'flag' ? A.bikeGet('f') : r[kd] || ''; };
@@ -194,13 +194,14 @@ export function createReward(A) {
       : '<div class="row"><button data-a="y">' + goName(l9 === RW_MAX && otherOf(k) ? otherOf(k) : R9) + '</button><button class="sub" data-a="x">' + (e ? 'Just take it' : '받기만 하기') + '</button></div>';
     const P9 = A.openP(h, false, 'lvr');
     P9.onclick = ev => { const b = ev.target.closest('button'); if (!b || !b.dataset.a) return; const a = b.dataset.a, it = take(k, l9, R9.pick ? a === 'x' : false); A.closeP(); chip();
-      if (!it) return; const o = l9 === RW_MAX ? otherOf(k) : null; if (R9.pick) { A.say(it.ic + ' ' + (e ? L(it.t) + ' — got it' : L(it.t) + ' — 받았어요') + (WEARK.includes(it.kind) || it.kind === 'gear' ? inBag(it.kind) : ''), 2.8); return; }
+      if (!it) return; if (LATE && LATE === it.id) { A.say(autoLine(it, false), 3.4); return; } const o = l9 === RW_MAX ? otherOf(k) : null; if (R9.pick) { A.say(it.ic + ' ' + (e ? L(it.t) + ' — got it' : L(it.t) + ' — 받았어요') + (WEARK.includes(it.kind) || it.kind === 'gear' ? inBag(it.kind) : ''), 2.8); return; }
       if (W) { if (a === 'y') { putOn(W.kind, W.id.slice(2)); A.say(W.ic + ' ' + (e ? L(W.t) + ' — on now. Change it in the 👕 Clothes tab of your bag' : L(W.t) + ' — 지금 써요. 가방 👕 옷·꾸미기 탭에서 바꿀 수 있어요'), 2.8); } else A.say(W.ic + ' ' + (e ? L(W.t) + ' — in the 👕 Clothes tab of your bag' : L(W.t) + ' — 가방 👕 옷·꾸미기 탭에 넣었어요'), 2.6); return; }
       if (a === 'y') go(o || it); else A.say(it.ic + ' ' + (e ? L(it.t) + ' — got it' : L(it.t) + ' — 받았어요') + (['gear', 'nick', 'badge'].includes(it.kind) ? inBag(it.kind) : ''), 2.6); }; }   /* Esc로 닫으면 칩에 그대로 남음 */
   /* DEB-3(토론 판정 15): 고를 것이 없는 레벨 보상 = 레벨이 오른 그 자리에서 손에(창 X — LVCHIP-1 그대로) · 입는 것은 그 칸이 비었으면 바로 씀 · 🎁 칩은 5레벨 고르기(와 그 뒤 10레벨 덤)만 · 돌려주는 줄 = 레벨 카드 한 줄 '🥾 등산화를 신었어요 (가방 · 도구·장비)' */
   const VERB = { hat: ['썼어요', 'on now'], scarf: ['둘렀어요', 'on now'], bag: ['바꿔 멨어요', 'on now'], bike: ['칠했어요', 'painted on'], flag: ['자전거에 달았어요', 'on your bike'] }, FOOT = { hike: 1, boots: 1 };
   const jo9 = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 ? a : b; };
   function autoLine(it, on) { const e = en(), t = L(it.t), tb = it.kind === 'deco' ? ['물건', 'Items'] : it.kind === 'place' ? null : TABN[tabOf(it.kind)].map(x => x.replace(/^\S+\s/, '')), tail = tb ? ' (' + (e ? 'bag · ' + tb[1] : '가방 · ' + tb[0]) + ')' : '';
+    if (LATE && it.id === LATE) return it.ic + ' ' + t + (e ? ' — you gathered plenty today. Come back tomorrow for it' : ' — 오늘은 충분히 모았어요. 내일 다시 들어오면 받아요');   /* CAP-FIX ②: 못 넣은 물건 = 꾸러미 상과 같은 말(RWFIX-1 알림 = 실제로 들어온 것) */
     if (e) return it.ic + ' ' + t + ' — ' + (on && VERB[it.kind] ? VERB[it.kind][1] : 'got it') + tail;
     if (it.kind === 'nick' || it.kind === 'place') return it.ic + ' ' + t + tail;
     const v = on && VERB[it.kind] ? VERB[it.kind][0] : FOOT[it.id] ? '신었어요' : it.kind === 'recipe' ? '배웠어요' : '받았어요'; return it.ic + ' ' + t + jo9(t, '을', '를') + ' ' + v + tail; }

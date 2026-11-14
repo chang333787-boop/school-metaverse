@@ -9,7 +9,7 @@
 //     손님의 잠·기다리기·쉬기·시계 멈춤·날씨·계절 바꾸기 = 「방장만 할 수 있어요」 한 줄(town.js가 guest()를 봄) · 방을 나가면 그 순간 시각·날씨로 내 시계가 이어 흐름(튐 X)
 //   새로 주인이 되는 기기 = 다른 기기의 살아 있는 시계가 있으면 그 시계에서 이어 감(방장이 마을에 돌아와도 모두의 하늘이 튀지 않게 · 그 뒤로는 방장이 정함)
 //   반 계정 반 방(CLASS-MP · 웹소켓만 · 방장 없음)은 아직 X — 다음 걸음(town_together.md)
-import { SPM } from './town_game.js?v=62';
+import { SPM } from './town_game.js?v=63';
 const WXN = ['clear', 'rain', 'snow'], SEAN = ['now', 'spring', 'summer', 'autumn', 'winter'];
 const FRESH = 30000, EVERY = 10, NIGHT_MAX = 40000, HAND_MAX = 6;
 export function createHost({ GAME, say, en, act }) {
