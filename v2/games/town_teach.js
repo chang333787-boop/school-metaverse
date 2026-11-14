@@ -5,9 +5,9 @@
 //   매 프레임 일 0(창을 열 때만 셈) · 이름 X(번호만) · 교사 열쇠는 이 탭 메모리에만(잠그면 지움)
 //   CLASS-MP(11-14) 「👥 우리 반 함께 보기 켬/끔」: ☁️ 서버 판(교사 열쇠로 받은 뒤) 띠 한 칸 → /tset(서버 반 칸) · 아이는 다음 /load·/save 답부터(이미 붙은 아이는 몇 분 안에 · 처음 = 켬)
 //   PIN-1(11-14) 아이 번호 비밀번호 풀기: ☁️ 서버 판 번호 줄의 「풀기」 → 그 줄 아래에서 한 번 더 묻기 → /pinclear(판은 그대로 · 다음에 들어오는 아이가 새 비밀번호를 정함)
-import { CHAPTERS } from './town_story.js?v=50';
+import { CHAPTERS } from './town_story.js?v=52';
 import { tsum, tsumDays } from './town_tsum.js?v=2';
-import { pickLabel, dayKey } from './town_rec.js?v=32';
+import { pickLabel, dayKey } from './town_rec.js?v=34';
 import { cloudTeach, cloudOn } from './town_cloud.js?v=10';
 
 const CSS = `.twn-p[data-k=tch]{--rib:#2f4f7a}.twn-p[data-k=tch] .bx{max-height:96vh}

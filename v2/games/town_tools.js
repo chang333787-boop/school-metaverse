@@ -247,7 +247,7 @@ export function createTools(A) {
     { const tr = A.trs(), d9 = tr && tr.away ? tr.away(map.player.pos()) : -1; if (d9 >= 0 && d9 < 9) { toast(en9 ? '⛏ Go right next to the dirt pile, then dig' : '⛏ 흙더미 바로 곁에 가서 파요', 2.4); return; } }   /* PATH-1A2 G5: 흙더미가 보이는데 삽이 안 닿는 거리(4.5 ~ 9m) = 발밑 맨땅을 파 조약돌이 나오는 대신 어디에 서야 하는지 한 줄 */
     if (A.inSchool(x, z)) { toast(en9 ? '🏫 We do not dig at school — dig in the town soil' : '🏫 학교 땅은 파지 않아요 — 마을 흙에서 파요', 2.4); return; }
     if (water(x, z)) { toast(en9 ? '💧 You cannot dig in water' : '💧 물에서는 팔 수 없어요', 2); return; }
-    const snow = A.snowy(); if (!snow && !A.okGround(x, z)) { toast(en9 ? '⛏ Not here — dig on soil or grass' : '⛏ 여기는 팔 수 없어요 — 흙이나 풀밭에서 파요', 2.2); return; }
+    const snow = A.snowy(); if (!snow && !A.okGround(x, z)) { const tr9 = A.trs(), hu9 = !!(tr9 && tr9.hunt && tr9.hunt()); toast(hu9 ? (en9 ? '⛏ Not here — dig beside the dirt pile at the ✕ on your map' : '⛏ 여기는 팔 수 없어요 — 지도의 ✕ 자리 흙더미 곁에서 파요') : (en9 ? '⛏ Not here — dig on soil or grass' : '⛏ 여기는 팔 수 없어요 — 흙이나 풀밭에서 파요'), 2.4); return; }   /* PATH-1D 나 ⑦(3차 평가 B 127 '보물 찾는 중인데 「흙이나 풀밭에서 파요」만 — ✕ 얘기가 없음'): 보물 지도를 따라가는 중이면 지도의 ✕ 흙더미 곁으로 */
     if (t.holes.some(h => h[4] === day() && Math.hypot(h[0] - x, h[1] - z) < 0.7)) { toast(en9 ? '⛏ You already dug here' : '⛏ 여기는 벌써 팠어요', 1.8); return; }
     map.player.act('dig', { at: [x, y, z], msg: null, midAt: 1.55, color: snow ? 0xf4f8fb : 0x6b4a2e, color2: snow ? 0xdde6ec : 0x8a6a48, onMid: () => digDone(x, y, z, snow) }); }
   function digDone(x, y, z, snow) { const t = S(), en9 = en(); t.holes.push([+x.toFixed(2), +z.toFixed(2), +y.toFixed(2), snow ? 's' : 'd', day()]); while (t.holes.length > HMAX) t.holes.shift(); mark(); dirty = true; holeDraw(); A.rec(snow ? 'dig-snow' : 'dig');

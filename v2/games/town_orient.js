@@ -9,7 +9,7 @@
 //     장소 안내 = 이웃 말 한 줄(칸·방위·랜드마크 — town_ask.js wayLine) · 그렇게 찾아가 닿으면(40m 넘게 떨어진 곳) 나의 길 🏅 도전가 걸음 하나(하루 한도)
 //   저장 GAME.S.orient = { v, cd: { 날: 1 }, best: { c1: { t, w, d } }, last: { c1: { t, w, d, j } }, n: { c1: 번 }, rw: { c1: 날 } } — 진행 중인 판은 저장하지 않음(새로고침 = 출발 판에서 다시)
 //   지킴: 판타지 X · 실명 X(판·깃발에 사람 X) · 순위 X · 아이콘·% X(수첩 시간만) · 새 Light X · 매 프레임 = 0.25초 칸 하나(시험 중에만) · 새 객체 X(스크래치) · 캔버스 글자에 이모지 X
-import { mapInk } from './town_treasure.js?v=18';
+import { mapInk } from './town_treasure.js?v=20';
 export const OR_V = 1;
 const T2 = (ko, en) => [ko, en];
 export const COURSES = [
@@ -101,7 +101,7 @@ export function createOrient(A) {
     for (const C of COURSES) { const st = startOf(C.id); if (!st) continue; const [x, z] = st, sc = A.school(), face = C.id === 'c1' && sc ? sc.gate : C.id === 'c3' && A.trail() ? A.trail()[1] : null, ry = face ? Math.atan2(face[0] - x, face[1] - z) : 0, w = 1.5, h = 0.9, y0 = 0.75;
       const g = A.buildParts(put => { for (const s of [-1, 1]) put('b', s * (w / 2 + 0.04), 0, -0.05, 0.09, y0 + h + 0.1, 0.09, 0x6b4a2f); put('b', 0, y0 - 0.06, -0.08, w + 0.16, h + 0.14, 0.05, 0x8a6a4a); });
       g.position.set(x, A.gy(x, z), z); g.rotation.y = ry; g.userData.fx = 1; map.add(g); const m = new T3.Mesh(new T3.PlaneGeometry(w, h), new T3.MeshLambertMaterial({ map: boardTex(C.id) })); m.position.set(0, y0 + h / 2 + 0.01, -0.045); m.userData.fx = 1; g.add(m); g.updateMatrixWorld(true);
-      const hh = map.interact.add({ kind: 'game', x, z, y: A.gy(x, z), r: 2.2, label: label(C.id), use: () => openStart(C.id) }); BOARDS.push({ c: C.id, x, z, g, m, h: hh }); } }
+      const hh = map.interact.add({ kind: 'game', x, z, y: A.gy(x, z), r: 2.2, label: label(C.id), use: () => openStart(C.id) }); if (hh.hot) hh.hot.lock = /^🔒/.test(hh.hot.label);   /* PATH-1D 나 ①: 잠긴 글(🔒)은 잠긴 줄로(E 글자 없는 회색 줄) */ BOARDS.push({ c: C.id, x, z, g, m, h: hh }); } }
   function label(c) { const C = COURSES.find(q9 => q9.id === c), e = en(); if (!A.ready()) return '🔒 🚩 ' + (e ? 'Orienteering — opens with the big map' : '길찾기 시험 — 큰 지도가 생기면 열려요'); if (!open9(c)) { const P = COURSES[COURSES.findIndex(q9 => q9.id === c) - 1]; return '🔒 🚩 ' + (e ? 'Finish the ' + P.t[1] + ' course first' : P.t[0] + ' 코스를 마치면 열려요'); }
     if (RUN && RUN.c === c) return '🚩 ' + (e ? 'Look at the course map' : '시험 지도 다시 보기'); return '🚩 ' + (e ? 'Orienteering: ' + C.t[1] : '길찾기 시험 · ' + C.t[0]); }
 
@@ -220,7 +220,7 @@ export function createOrient(A) {
   // ───────── 칸 ─────────
   function tick(dt) { if (!RUN || dead) return; const pnl = A.panel(); if (pnl) { RUN.mapT += dt; if (RUN.mapT < 60) { RUN.t += dt; RUN.leg += dt; } } else { RUN.mapT = 0; RUN.t += dt; RUN.leg += dt; }   /* 지도를 읽는 시간도 셈(한 번에 60초까지 — 창을 띄워 두고 자리를 비우면 멈춤) */
     if ((q += dt) < 0.25) return; q = 0; if (!A.on()) { stop(''); return; } if (pnl) return; const t0 = performance.now(); check(); if (RUN) hintTick(); DBG.ms = Math.max(DBG.ms, performance.now() - t0); }
-  function sec() { if (dead) return; if ((sq += 1) % 3 === 0) for (const B of BOARDS) { const lb = label(B.c); if (B.h.hot.label !== lb) B.h.hot.label = lb; }
+  function sec() { if (dead) return; if ((sq += 1) % 3 === 0) for (const B of BOARDS) { const lb = label(B.c); if (B.h.hot.label !== lb) B.h.hot.label = lb; B.h.hot.lock = /^🔒/.test(lb); }
     if (RUN && RUN.d0 !== day()) stop(en() ? '🚩 A new day began, so the test stopped. Start again at the start board.' : '🚩 하루가 지나 시험을 멈췄어요. 출발 판에서 다시 시작해요.');
     const c9 = chalOn(); if (lastChal && !c9 && !RUN) A.reguide(); lastChal = c9; }
   function init() { COURSE = {}; if (!A.on()) return; boards(); }

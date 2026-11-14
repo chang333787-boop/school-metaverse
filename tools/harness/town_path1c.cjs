@@ -323,7 +323,7 @@ const want = k => !ONLY || ONLY.includes(k);
         let e = null; for (let i = 0; i < 80; i++) { e = await st(); if (e.pn) break; await W8(300); } await W8(400); e = await st(); await T.shot('p2_card');
         ok(!!e.pn && !/지도 판/.test(e.pn) && e.bkOn === 0 && !e.ind, '친구 말이 끝나면 이야기 창이 저절로 뜸(' + e.pn.slice(0, 22) + '…) · 발밑 줄은 꺼짐');
         await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); }); await W8(500); await T.tp(Hm[0] + 0.3, Hm[1] + 0.3, Tg.x, Tg.z); await W8(900); const h = await st();
-        ok(!h.pn && h.id === 'first' && h.soon && h.bkOn === 0 && /마을 지도 판/.test(h.hot) && !h.lock, '창을 ✕로 닫은 뒤(20초 쉼)에는 줄이 안 켜짐 · 지도 판 곁 E = 「' + (h.hot || '없음') + '」(아이가 다른 것을 보러 갈 수 있음)'); }
+        ok(!h.pn && h.id === 'first' && /새 친구와 이야기하기/.test(h.hot) && !h.lock, '창을 ✕로 닫은 뒤에도 새 친구가 곁이면 E = 「' + (h.hot || '없음') + '」(PATH-1D 나 ① 사람 먼저 — 창 단계는 그 창 없이 못 넘어가고 20초 뒤 저절로 다시 뜸 · 3차 평가 B 032 · 035 지도 판 → 도서관)'); }
       await T.ctx.close(); }
     if (want('w')) { console.log("w 이야기 112 — 할 일 줄·112 창 글이 화면에 보이는 것을 가리킴(위 줄 방위·거리 · 지도의 빨간 점)");
       const T = await fresh(), { p, ev, W8 } = T; await T.start(); await T.closeDlg(); await T.shut();
