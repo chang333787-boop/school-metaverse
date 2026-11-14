@@ -93,9 +93,9 @@ setInterval(() => { if (moved()) ws.send(JSON.stringify({ t: 'p', x, y, z, h, s:
 |---|---|---|
 | `/load/<반코드>/<번호>` | `{pin}` | `{ok, at, data}` · 없으면 `{ok, none:1}` |
 | `/save/<반코드>/<번호>` | `{pin, data}` | `{ok, at}` |
-| `/drop/<반코드>/<번호>` | `{pin}` | 내 저장 지우기 |
+| `/drop/<반코드>/<번호>` | `{pin}` | 내 저장 지우기(비밀번호가 풀려 비어 있는 동안은 403 `{nopin:1}`) |
 - 반 코드 = 영문·숫자 4~8자 · 번호 1~40 · 핀 = 숫자 넷(주소에 넣지 않고 본문으로만).
-- 반 코드 하나 = Durable Object `Saves` 하나(SQLite 표). 핀은 **소금(비밀값 `PEPPER` + 반 코드 + 번호) + SHA-256 해시만** 둬요. 처음 저장한 핀이 그 번호의 핀이 돼요. 5번 틀리면 1분 잠겨요.
+- 반 코드 하나 = Durable Object `Saves` 하나(SQLite 표). 핀은 **소금(비밀값 `PEPPER` + 반 코드 + 번호) + SHA-256 해시만** 둬요. 처음 저장한 핀이 그 번호의 핀이 돼요. 5번 틀리면 1분 잠겨요. 선생님이 풀어서(`/pinclear`) 핀이 빈 줄은 다음 `/load`·`/save`가 보낸 핀이 새 핀이 돼요(판은 그대로).
 - **이름은 두지 않아요**: 저장 JSON의 `name`·`nick`·`realName` 글 칸은 빼고 받아요(마을 저장에는 원래 이름이 없어요).
 - 한도: 저장 하나 256KB · 반 하나 하루 2만 번(넘으면 '오늘은 저장이 꽉 찼어요 — 이 기기에는 남아 있어요').
 - 비밀값 넣기: `openssl rand -hex 24 | npx wrangler secret put PEPPER`(10-24에 넣음 · 바꾸면 모든 핀이 틀리게 되니 바꾸지 않아요).
@@ -109,6 +109,9 @@ setInterval(() => { if (moved()) ws.send(JSON.stringify({ t: 'p', x, y, z, h, s:
 | `/tclaim/<반코드>` | `{tkey}` | 그 반 교사 열쇠를 처음 정함 · 다른 열쇠가 있으면 409 |
 | `/class/<반코드>` | `{tkey}` | `{ok, at, L:[{n, at, s}]}` — s = 판 요약(`v2/games/town_tsum.js`) · 판 전체·핀 X |
 | `/treset/<반코드>` | `{admin, tkey}` | 비밀값 `ADMIN`이 맞을 때만 교사 열쇠를 바꿈 |
+| `/pinclear/<반코드>/<번호>` | `{tkey}` | 아이 번호 비밀번호 풀기(PIN-1 · 11-14) — 그 번호 핀만 비움 `{ok, had:1}` · 줄 없음 `{ok, had:0}` · 판·요약·시각은 그대로 · 열쇠 검사·잠금은 `/class`와 같음 |
 - 교사 열쇠 = 6~32자 · `PEPPER` 소금 해시만 · 5번 틀리면 10분 잠금. 요약은 `/save` 때 `s.sum` 칸에 만들어 둠(예전 판은 표를 열 때 채움).
+- `/class` 줄의 `np:1` = 그 번호 핀이 비어 있음(풀림).
 - 흉내 시험(배포·로그인 X): `node --no-warnings test_teach.mjs` · 흉내 HTTP 서버: `node mock.mjs <포트>` → 마을을 `?cf=http://127.0.0.1:<포트>`로.
+- 배포한 뒤 확인: `node --no-warnings test_teach.mjs https://<배포 주소>` — 시험 반 zzpin1의 31번으로 풀기·다시 잡기·판 그대로를 보고 그 번호 판을 지워요(교사 열쇠 해시 한 줄은 남아요). `/pinclear`를 모르는 옛 서버면 '(배포 전)'이라고 알려요.
 - 자세한 것·교사가 정할 것: `docs/systems/town_teacher.md`.

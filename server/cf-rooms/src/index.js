@@ -49,6 +49,8 @@ export default {
     if (sv) return saveRoute(req, env, sv[1], sv[2], +sv[3]);
     const tv = url.pathname.match(/^\/(class|tclaim|treset)\/([^/]+)$/);
     if (tv) return teachRoute(req, env, tv[1], tv[2]);
+    const pv = url.pathname.match(/^\/pinclear\/([^/]+)\/(\d{1,2})$/);   /* PIN-1 아이 번호 비밀번호 풀기(교사 열쇠) */
+    if (pv) return teachRoute(req, env, 'pinclear', pv[1], +pv[2]);
     const m = url.pathname.match(/^\/room\/([^/]+)$/);
     if (!m) return text('없는 주소예요', 404);
     if (!originOk(req.headers.get('Origin'))) return text('허락되지 않은 곳이에요', 403);
@@ -305,17 +307,21 @@ async function saveRoute(req, env, kind, code, num) {
    POST /tclaim/<반코드>  {tkey}         → 그 반 교사 열쇠를 처음 정함 {ok, made:1} · 이미 같은 열쇠면 {ok, made:0} · 다른 열쇠가 있으면 409
    POST /class/<반코드>   {tkey}         → {ok, at, L:[{n, at, s}]} · s = 판 요약(town_tsum.js) — 판 전체·핀은 보내지 않음 · 열쇠가 아직 없으면 404 {nokey:1}
    POST /treset/<반코드>  {admin, tkey}  → 관리 열쇠(비밀값 ADMIN)가 맞을 때만 교사 열쇠를 바꿈 · ADMIN을 안 넣었으면 늘 403
+   POST /pinclear/<반코드>/<번호>  {tkey} → PIN-1(11-14) 그 번호의 핀만 비움(판·요약·시각은 그대로 · 틀린 횟수·잠금 0) {ok, had:1} · 그 번호 줄이 없으면 {ok, had:0}
+     교사 열쇠 확인 = /class와 같은 자리(틀리면 세고 다섯 번이면 10분 잠금 · 열쇠가 없으면 404 {nokey:1})
+     핀이 빈 줄 = 처음 잡는 것과 같음: 다음 /load·/save가 보낸 핀이 새 핀(판은 그대로 돌려줌) · /drop은 받지 않음(403 {nopin:1} — 아무 핀으로나 판을 지우지 못하게)
    - 교사 열쇠 = 6~32자(띄어쓰기 X) · 소금(PEPPER + 반 코드) + SHA-256 해시만 둠 · 5번 틀리면 10분 잠금(정하기 다툼 409도 틀림으로 셈)
    - 요약은 저장할 때 한 번 만들어 둠(표를 열 때 판 25개를 다시 읽지 않음) · 예전 판(요약 없음)은 표를 열 때 열 개씩 채움 */
 const TKEY_RX = /^\S{6,32}$/, TLOCK_MS = 10 * 60 * 1000, TFILL_MAX = 10;
-async function teachRoute(req, env, kind, code) {
+async function teachRoute(req, env, kind, code, num = 0) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(req) });
   if (!originOk(req.headers.get('Origin'))) return text('허락되지 않은 곳이에요', 403);
   if (req.method !== 'POST') return json(req, { ok: false, m: 'POST로 보내요' }, 405);
   if (!CLASS_RX.test(code)) return json(req, { ok: false, m: '반 코드는 영문·숫자 4~8자' }, 400);
+  if (kind === 'pinclear' && !(num >= 1 && num <= 40)) return json(req, { ok: false, m: '번호는 1~40' }, 400);
   const body = await req.text(); if (body.length > 1000) return json(req, { ok: false, m: '너무 길어요' }, 413);
   const stub = env.SAVES.get(env.SAVES.idFromName(code.toLowerCase()));
-  const r = await stub.fetch('https://saves/t/' + kind + '/' + code.toLowerCase(), { method: 'POST', body });
+  const r = await stub.fetch('https://saves/t/' + kind + '/' + code.toLowerCase() + (kind === 'pinclear' ? '/' + num : ''), { method: 'POST', body });
   const out = await r.text(); return new Response(out, { status: r.status, headers: { 'content-type': 'application/json; charset=utf-8', ...cors(req) } });
 }
 async function keyHash(pepper, code, key) { const b = new TextEncoder().encode((pepper || 'sm-town') + '|' + code + '|T|' + key); const h = await crypto.subtle.digest('SHA-256', b); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); }
@@ -335,7 +341,7 @@ export class Saves extends DurableObject {
     try { this.sql.exec('ALTER TABLE s ADD COLUMN sum TEXT'); } catch (e) { /* 이미 있음 */ }
     this.sql.exec('CREATE TABLE IF NOT EXISTS t (k INTEGER PRIMARY KEY, h TEXT, fails INTEGER DEFAULT 0, lock INTEGER DEFAULT 0, at INTEGER)');
   }
-  async teach(kind, code, d, now) {
+  async teach(kind, code, d, now, num = 0) {
     const tk = String((d && d.tkey) || ''); if (!TKEY_RX.test(tk)) return Response.json({ ok: false, m: '교사 열쇠는 띄어쓰기 없이 6~32자예요' }, { status: 400 });
     const h = await keyHash(this.env.PEPPER, code, tk), row = this.sql.exec('SELECT h, fails, lock FROM t WHERE k = 1').toArray()[0];
     if (kind === 'treset') {
@@ -350,27 +356,36 @@ export class Saves extends DurableObject {
     if (row.h !== h) { const f = (row.fails || 0) + 1; this.sql.exec('UPDATE t SET fails = ?, lock = ? WHERE k = 1', f >= 5 ? 0 : f, f >= 5 ? now + TLOCK_MS : 0); return kind === 'tclaim' ? Response.json({ ok: false, taken: 1, m: '이 반은 이미 다른 교사 열쇠가 있어요' }, { status: 409 }) : Response.json({ ok: false, bad: 1, m: '교사 열쇠가 달라요' }, { status: 403 }); }
     if (row.fails || row.lock) this.sql.exec('UPDATE t SET fails = 0, lock = 0 WHERE k = 1');
     if (kind === 'tclaim') return Response.json({ ok: true, made: 0 });
+    if (kind === 'pinclear') {   /* PIN-1: 그 번호 핀만 비움(판·요약·시각 그대로) — 다음에 들어오는 아이가 새 핀을 정함 */
+      const pr = this.sql.exec('SELECT num FROM s WHERE num = ?', num).toArray()[0];
+      if (pr) this.sql.exec("UPDATE s SET pin = '', fails = 0, lock = 0 WHERE num = ?", num);
+      return Response.json({ ok: true, had: pr ? 1 : 0 });
+    }
+    if (kind !== 'class') return Response.json({ ok: false, m: '없는 주소예요' }, { status: 404 });
     /* class: 번호 · 마지막 저장 · 요약만(판 전체 X) */
     let fill = 0; const L = [];
-    for (const r of this.sql.exec('SELECT num, at, sum FROM s ORDER BY num').toArray()) {
+    for (const r of this.sql.exec('SELECT num, at, sum, pin FROM s ORDER BY num').toArray()) {
       let s = r.sum;
       if (!s && fill < TFILL_MAX) { fill++; const dr = this.sql.exec('SELECT data FROM s WHERE num = ?', r.num).toArray()[0]; s = dr && dr.data ? sumOf(dr.data) : null; if (s) this.sql.exec('UPDATE s SET sum = ? WHERE num = ?', s, r.num); }
       let o = null; try { o = s ? JSON.parse(s) : null; } catch (e) { o = null; }
-      L.push({ n: r.num, at: r.at, s: o });
+      L.push(r.pin ? { n: r.num, at: r.at, s: o } : { n: r.num, at: r.at, s: o, np: 1 });   /* np = 핀이 비어 있음(선생님이 풀었고 아직 새로 안 정함 · 핀 값은 보내지 않음) */
     }
     return Response.json({ ok: true, at: now, L });
   }
   async fetch(req) {
     const [, kind, code, n] = new URL(req.url).pathname.split('/'), num = +n, now = Date.now();
     let d; try { d = JSON.parse(await req.text()); } catch (e) { return Response.json({ ok: false, m: '읽을 수 없는 저장' }, { status: 400 }); }
-    if (kind === 't') { const [, , tk, tcode] = new URL(req.url).pathname.split('/'); return this.teach(tk, tcode, d, now); }
+    if (kind === 't') { const [, , tk, tcode, tn] = new URL(req.url).pathname.split('/'); return this.teach(tk, tcode, d, now, +tn || 0); }
     const pin = String((d && d.pin) || ''); if (!/^\d{4}$/.test(pin)) return Response.json({ ok: false, m: '비밀번호는 숫자 네 자리' }, { status: 400 });
     const row = this.sql.exec('SELECT pin, data, at, fails, lock FROM s WHERE num = ?', num).toArray()[0];
     const h = await pinHash(this.env.PEPPER, code, num, pin);
     if (row) {
       if (row.lock > now) return Response.json({ ok: false, m: '잠깐 잠겼어요. 1분 뒤에 다시 해요', lock: 1 }, { status: 423 });
-      if (row.pin !== h) { const f = (row.fails || 0) + 1; this.sql.exec('UPDATE s SET fails = ?, lock = ? WHERE num = ?', f >= 5 ? 0 : f, f >= 5 ? now + 60000 : 0, num); return Response.json({ ok: false, m: '비밀번호가 달라요', bad: 1 }, { status: 403 }); }
-      if (row.fails) this.sql.exec('UPDATE s SET fails = 0 WHERE num = ?', num);
+      if (!row.pin) {   /* PIN-1: 선생님이 푼 번호 = 처음 잡는 것과 같게 — 지금 보낸 핀이 새 핀(판은 그대로) · 지우기는 받지 않음 */
+        if (kind === 'drop') return Response.json({ ok: false, m: '비밀번호를 먼저 새로 정해요', nopin: 1 }, { status: 403 });
+        this.sql.exec('UPDATE s SET pin = ?, fails = 0 WHERE num = ?', h, num);
+      } else if (row.pin !== h) { const f = (row.fails || 0) + 1; this.sql.exec('UPDATE s SET fails = ?, lock = ? WHERE num = ?', f >= 5 ? 0 : f, f >= 5 ? now + 60000 : 0, num); return Response.json({ ok: false, m: '비밀번호가 달라요', bad: 1 }, { status: 403 }); }
+      else if (row.fails) this.sql.exec('UPDATE s SET fails = 0 WHERE num = ?', num);
     }
     if (kind === 'drop') { if (row) this.sql.exec('DELETE FROM s WHERE num = ?', num); return Response.json({ ok: true, dropped: row ? 1 : 0 }); }   /* 내 저장 지우기(핀이 맞을 때 · 시험 판 zz 치우기) */
     if (kind === 'load') return Response.json(row && row.data ? { ok: true, at: row.at, data: JSON.parse(row.data) } : { ok: true, none: 1 });
