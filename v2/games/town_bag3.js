@@ -27,6 +27,7 @@ const jo = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1); 
 const hex6 = c => '#' + ((c >>> 0) & 0xffffff).toString(16).padStart(6, '0');
 const CSS = `
 .twn-p[data-k=I] .bx{width:min(1040px,96vw)!important}.twn-p.b3-re .bx{animation:none}
+.twn-p[data-k=I]{align-items:flex-start}.twn-p[data-k=I] .bx{margin-top:max(5vh,calc(50vh - 360px));max-height:calc(95vh - max(5vh,calc(50vh - 360px)))}   /* PATH-1C k(2차 평가 A 165 · 166 '탭을 바꾸면 창이 50px쯤 내려앉아 탭 단추가 손 밑에서 달아남'): 가방 창은 가운데 맞춤이 아니라 위쪽 자리를 못박음 — 탭마다 내용 높이가 달라도 머리·탭 줄은 제자리(아래 끝만 달라짐) · 크롬북(768)에서는 긴 탭의 자리와 똑같음 */
 .twn-p[data-k=I] .nb-tabs{margin-bottom:8px;align-items:center}.twn-p .b3-nbl{flex:none;align-self:center;font:900 12px system-ui,sans-serif;color:var(--mut);margin-right:2px;white-space:nowrap}
 .b3-main{display:grid;grid-template-columns:208px minmax(0,1fr);gap:16px;align-items:start}.b3-me{display:flex;flex-direction:column;gap:10px;min-width:0}
 .b3-doll{position:relative;width:208px;height:277px;box-sizing:border-box;border:3px solid var(--ink);border-radius:14px;background:#e8f1e6;box-shadow:inset 0 -40px 0 #d3e4cc;overflow:hidden}
