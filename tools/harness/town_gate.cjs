@@ -43,7 +43,7 @@ const T00 = Date.now(), el = () => ((Date.now() - T00) / 1000).toFixed(0) + '초
     const eOK = (n, tag) => ok(n >= E_MIN && n >= E0 * 0.9, '③ ' + tag + ' E 자리 ' + E0 + ' → ' + n + '(기준선 ' + E_MIN + ' · 처음의 90% ' + Math.ceil(E0 * 0.9) + ')');
 
     console.log('② 첫 아침 → 첫 장 첫 해 보기까지 걸어서 (' + el() + ')');
-    await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); }); await p.waitForTimeout(1200);
+    await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } }); await p.waitForTimeout(1200);
     const T0 = Date.now(), t = () => (Date.now() - T0) / 1000, Wk = walker(p, { t }), { S, shut, st } = Wk;
     const mark = n => console.log('   ' + mmss(t()) + '  ' + n), shot = async () => {};
     const R1 = await toFirstTry(Wk, { ok, mark, shot, mmss, t, PICK: '마트' });
@@ -63,7 +63,7 @@ const T00 = Date.now(), el = () => ((Date.now() - T00) / 1000).toFixed(0) + '초
       t9 = Date.now(); let re = false; try { await p.reload(); await ready(); re = true; } catch (e) { console.log('    ' + String(e.message || e).slice(0, 200)); }
       ok(re, '새로고침 뒤 마을이 다시 지어짐(' + ((Date.now() - t9) / 1000).toFixed(1) + '초)');
       if (re) { const btn = await p.evaluate(() => { const b9 = document.querySelector('.twn-ld [data-a="x"]'); return b9 ? b9.textContent.trim() : ''; }); ok(/이어하기|Continue/.test(btn), "첫 화면 첫 단추 = 이어하기('" + btn + "')");
-        await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); }); await p.waitForTimeout(1500);
+        await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } }); await p.waitForTimeout(1500);
         const B = await snap(), sv2 = await p.evaluate(() => SM_TOWN.save()), diff = Object.keys(A).filter(k => A[k] !== B[k]);
         ok(sv2.had && !sv2.ro, '저장 판을 읽음(had ' + sv2.had + ' · 읽기만 ' + sv2.ro + ')');
         ok(!diff.length, '그대로 — ' + (diff.length ? diff.map(k => k + ' ' + JSON.stringify(A[k]) + ' → ' + JSON.stringify(B[k])).join(' · ') : '날 ' + B.day + ' · 돈 ' + B.money + ' · 장 ' + B.cur + '.' + B.step + ' · 끝낸 장 ' + B.done + ' · 모자 ' + JSON.stringify(B.hat)));

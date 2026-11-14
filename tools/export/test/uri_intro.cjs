@@ -84,7 +84,7 @@ const NIGHT = 1230;
     await p.mouse.click(600, 300); await p.waitForFunction(() => !document.getElementById('iv'), null, { timeout: 5000 }); await p.waitForTimeout(900); S = await state(p);
     ok(S.done === 'skip' && S.title && S.ldVis === 'visible', '클릭 = 건너뜀 · 첫 화면 그대로');
     ok(S.min === env3.min && S.ph === env3.ph, '밤 장면에서 건너뛰어도 원래 시각·시간대(' + S.min + ' ' + S.ph + ')');
-    await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-ld [data-a="x"]'); if (b9) b9.click(); }); await p.waitForTimeout(2500);
+    await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-ld [data-a="x"]'); if (b9) b9.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } }); await p.waitForTimeout(2500);   /* TITLE-2: 처음하기 → 하는 법 한 장 → 첫날 시작 */
     const W = await p.evaluate(() => { const q = SD2.map.player.get(), H = SM_TOWN.home(); return { title: SM_TOWN.title(), d: H && H.e ? Math.hypot(q.x - H.e[0], q.z - H.e[1]) : null, min: SM_TOWN.game().S.min, ph: SD2.map.time() }; });
     ok(!W.title && W.d != null && W.d < 7, '처음부터 → 우리 집 현관 앞에서 시작(' + (W.d && W.d.toFixed(1)) + 'm · ' + W.min + ' ' + W.ph + ')'); await shot(p, 'intro_first_morning');
     await ctx.close();

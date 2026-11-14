@@ -27,7 +27,7 @@ const J = o => JSON.stringify(o), DIR8 = ['북', '북동', '동', '남동', '남
     const shot = async n => { if (!SHOTS) return; await W8(350); try { await p.screenshot({ path: SHOTS + '/' + n + '.jpg', type: 'jpeg', quality: 62 }); console.log('    📷 ' + SHOTS + '/' + n + '.jpg'); } catch (e) { console.log('    (사진 실패 ' + n + ')'); } };
     await p.goto(URL); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && window.SD2 && SM_TOWN.story, null, { timeout: 240000 }); await W8(1500);
     const Wk = walker(p, {}), { S, closeDlg, shut, waitStep } = Wk;
-    const closeP = async () => { for (let i = 0; i < 4; i++) { const had = await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); return !!b9; }); if (!had) break; await W8(500); } };
+    const closeP = async () => { for (let i = 0; i < 4; i++) { const had = await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } return !!b9; }); if (!had) break; await W8(500); } };
     const tp = (x, z, lx, lz) => ev(([x, z, lx, lz]) => { const M9 = SD2.map; M9.player.teleport([x, M9.q.groundAt(x, z, SM_TOWN.ground(x, z) + 2) + 0.05, z]); if (lx != null) M9.player.lookAt([lx, lz]); }, [x, z, lx, lz]);
     const hint = () => ev(() => { const e = document.getElementById('hint'); return e && getComputedStyle(e).display !== 'none' ? (e.textContent || '').replace(/\s+/g, ' ').trim() : ''; });
     const goal = () => ev(() => { const g = document.getElementById('hudGoal'); return g && getComputedStyle(g).display !== 'none' ? (g.innerText || '').replace(/\s+/g, ' ').trim() : ''; });

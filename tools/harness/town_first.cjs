@@ -30,7 +30,7 @@ const mmss = s => Math.floor(s / 60) + '분 ' + String(Math.round(s % 60)).padSt
     const shot = async n => { if (!SHOTS) return; await W8(350); await p.screenshot({ path: SHOTS + '/' + n + '.png' }); console.log('    📷 ' + SHOTS + '/' + n + '.png'); };
     await p.goto(URL); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && window.SD2 && SM_TOWN.story, null, { timeout: 240000 }); await W8(1500);
     { const CPU = +(arg('cpu') || process.env.CPU || 0); if (CPU > 1) { const cdp = await ctx.newCDPSession(p); await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU }); console.log('   CPU ' + CPU + '× 느리게(크롬북 흉내)'); } }
-    await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); }); await W8(1200);
+    await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } }); await W8(1200);
     const T0 = Date.now(), t = () => (Date.now() - T0) / 1000, LOG = [];
     await ev(() => { window.__HG = []; setInterval(() => { const g = document.getElementById('hudGoal'), t9 = g && g.style.display !== 'none' ? g.innerText : ''; if (t9 && window.__HG[window.__HG.length - 1] !== t9) window.__HG.push(t9); }, 500); });   /* DEB-2 ② 위 가운데 줄 0.5초마다(바뀐 글만) */
     const Wk = walker(p, { t }), { S, closeDlg, shut, walk, waitStep, st } = Wk;   /* 걷기 = lib_walk.cjs(town_gate.cjs와 같이 씀) */

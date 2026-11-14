@@ -45,7 +45,7 @@ async function run(b, port, tag) {
     R.C = { before: L0, building: L1, after: L2, waitS: Math.round((Date.now() - t0) / 1000) }; await c.close(); }
   { const c = await b.newContext({ viewport: { width: 1280, height: 760 } }), p = await c.newPage(); watch(p, tag + ':D');
     await p.goto(base + '/v2/?town=ourtown&adapt=0'); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && SM_TOWN.save, null, { timeout: 300000 }); await wait(1200);
-    await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); }); await wait(1500);
+    await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } }); await wait(1500);
     R.D = await p.evaluate(() => { const G = SM_TOWN.game(), d0 = G.S.day; G.sleep(); const j = JSON.parse(localStorage.getItem(SM_TOWN.save().key) || 'null'); return { d0, day: G.S.day, saved: j ? j.day : null, grew: j && j.grew ? j.grew : null, gen: j && j.gen ? j.gen.id : null }; });
     await wait(3000); await c.close(); }
   return R; }

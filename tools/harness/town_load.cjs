@@ -61,7 +61,7 @@ const PROBE = cfg => { if (window.top !== window || window.__TL) return; const L
   trap('SD2', x => { if (x && L.t.school == null) L.t.school = now(); });
   trap('SM_BUILD', x => { if (x === 1 && L.t.townStart == null) L.t.townStart = now(); else if (x === 0 && L.t.townStart != null && L.t.built == null) L.t.built = now(); });
   trap('SM_T_RDY', x => { if (!(x > 0) || L.t.title != null) return; L.t.title = now();
-    requestAnimationFrame(() => { const c = new MessageChannel(); c.port1.onmessage = () => { L.t.titlePaint = now(); const b = document.querySelector('.twn-ld [data-a="x"]'); if (b) { L.btn = b.textContent.trim().slice(0, 24); b.click(); L.clicked = 1; } }; c.port2.postMessage(0); }); });   /* 첫 화면이 한 번 그려진 뒤 이어하기/처음부터를 눌러 예약(= 다 지으면 바로 시작) */
+    requestAnimationFrame(() => { const c = new MessageChannel(); c.port1.onmessage = () => { L.t.titlePaint = now(); const b = document.querySelector('.twn-ld [data-a="x"]'); if (b) { L.btn = b.textContent.trim().slice(0, 24); b.click(); { const h9 = document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } L.clicked = 1; }   /* TITLE-2: 처음하기 다음 하는 법 한 장이면 ▶ 첫날 시작도(예약) */ }; c.port2.postMessage(0); }); });   /* 첫 화면이 한 번 그려진 뒤 이어하기/처음부터를 눌러 예약(= 다 지으면 바로 시작) */
   trap('SM_TOWN', x => { if (x && L.t.ready == null) L.t.ready = now(); });
   const mo = new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.tagName === 'LINK' && n.rel === 'modulepreload') { if (L.t.mainStart == null) L.t.mainStart = now(); mo.disconnect(); return; } });
   mo.observe(document, { childList: true, subtree: true });

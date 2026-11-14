@@ -22,7 +22,7 @@ let fail = 0; const ok = (c, m) => { if (!c) fail++; console.log((c ? '✓ ' : '
   const built = () => p.waitForFunction(() => window.SM_TOWN && SM_TOWN.load && window.SD && SD.diag && !window.SM_BUILD, null, { timeout: 400000, polling: 300 });
   console.log('① 마을 한 판');
   await p.goto(url); await built(); await W8(3500);
-  await ev(() => { const b9 = document.querySelector('.twn-ld [data-a="x"]') || document.querySelector('.twn-p button'); if (b9) b9.click(); }); await p.keyboard.press('KeyW'); await W8(400);
+  await ev(() => { const b9 = document.querySelector('.twn-ld [data-a="x"]') || document.querySelector('.twn-p button'); if (b9) b9.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } }); await p.keyboard.press('KeyW'); await W8(400);
   let D = await ev(() => SD.diag());
   const n = D.now, t = n.t || {};
   ok(n.hw && n.hw.c === 2 && n.hw.m === 4 && n.mode === 'low', '기기 칸: 코어 ' + (n.hw && n.hw.c) + ' · 메모리 ' + (n.hw && n.hw.m) + ' · 판 ' + n.mode + ' · GPU ' + JSON.stringify(n.hw && n.hw.gpu));

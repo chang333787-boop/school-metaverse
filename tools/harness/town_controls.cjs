@@ -13,7 +13,7 @@ const URL = 'http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0';
 let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails++; };
 async function boot(ctx, touch) { const p = await ctx.newPage(), errs = []; p.on('pageerror', e => errs.push(e.message.slice(0, 200))); p.on('console', m => { if (m.type() === 'error' && !/favicon|404|ERR_|pointer lock|WebGL|GPU stall/.test(m.text())) errs.push(m.text().slice(0, 200)); });
   await p.goto(URL); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && window.SD2 && SM_TOWN.ctl, null, { timeout: 240000 }); await p.waitForTimeout(1500);
-  for (let i = 0; i < 3; i++) { await p.evaluate(() => { const b = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button'); if (b) b.click(); }); await p.waitForTimeout(500); }
+  for (let i = 0; i < 3; i++) { await p.evaluate(() => { const b = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button'); if (b) b.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } }); await p.waitForTimeout(500); }
   await p.keyboard.press('Escape'); if (touch) await p.touchscreen.tap(200, 300); await p.waitForTimeout(1500);
   await p.evaluate(() => { window.__pl = 0; const c = document.querySelector('canvas'); c.requestPointerLock = () => { window.__pl++; return Promise.resolve(); }; if (window.SM_TOWN.tips) SM_TOWN.tips.age(-1e7); });   /* 잠금 요청 셈(머리 없는 브라우저) · 한 줄 안내는 뒤로 미룸 */
   return { p, errs }; }

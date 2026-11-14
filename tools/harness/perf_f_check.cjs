@@ -31,7 +31,7 @@ srv.listen(PORT, async () => {
     return c; };
   const watchErr = (p, tag) => { p.on('pageerror', e => errs.push(tag + ' ' + e.message.slice(0, 200))); };
   const closeAll = async (p) => { for (let i = 0; i < 8; i++) { const st = await p.evaluate(() => ({ dlg: !!(window.SM_TOWN && SM_TOWN.dlgOn && SM_TOWN.dlgOn()), pn: !!document.querySelector('.twn-p') })).catch(() => ({})); if (st.dlg) { await p.keyboard.press('Escape'); await W8(250); continue; } if (!st.pn) break;
-    await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button.sub') || document.querySelector('.twn-p button'); if (b9) b9.click(); }).catch(() => null); await W8(300); } };
+    await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button.sub') || document.querySelector('.twn-p button'); if (b9) b9.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } }).catch(() => null); await W8(300); } };
   try {
     if (on('town')) {
       console.log('\n[town] 2코어 크롬북 흉내 · 새 판 · ' + el());

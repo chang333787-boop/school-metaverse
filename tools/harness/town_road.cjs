@@ -13,7 +13,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
   try { const p = await b.newPage({ viewport: { width: 1366, height: 768 } }), errs = []; p.on('pageerror', e => errs.push(e.message.slice(0, 200))); p.on('console', m => { const t = m.text(); if ((m.type() === 'error' && !/favicon|404|ERR_|pointer lock/.test(t)) || /게임 tick 오류/.test(t)) errs.push(t.slice(0, 200)); });
     const W8 = ms => p.waitForTimeout(ms), ev = (f, a) => p.evaluate(f, a), info = () => ev(() => SM_TOWN.road().info());
     await p.goto(URL); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.road && SM_TOWN.road() && SM_TOWN.game, null, { timeout: 240000 }); await W8(1500);
-    await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button'); if (b9) b9.click(); }); await p.keyboard.press('Escape'); await W8(600);
+    await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button'); if (b9) b9.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } }); await p.keyboard.press('Escape'); await W8(600);
     await ev(() => { window.__R = {
       tp(x, z, lx, lz, y) { const M = SD2.map, g = M.q.groundAt(x, z, (y ?? SM_TOWN.ground(x, z)) + (y != null ? 0.8 : 2)); M.player.teleport([x, g + 0.05, z]); if (lx != null) M.player.lookAt([lx, lz]); },
       free(x, z, ox, oz, y) { const M = SD2.map, B = (M.q.blocked || M.q.blockedAt); for (let r = 0.5; r < 8; r += 0.5) for (let a = 0; a < 12; a++) { const u = x + ox * r + Math.cos(a * 0.5236) * r * 0.6, v = z + oz * r + Math.sin(a * 0.5236) * r * 0.6, g = M.q.groundAt(u, v, (y ?? SM_TOWN.ground(u, v)) + (y != null ? 0.8 : 2)); if (!B(u, v, g + 0.6) && SM_TOWN.sd(u, v) > 1 && (y == null || Math.abs(g - y) < 1.2)) return [u, v]; } return [x + ox, z + oz]; },
@@ -110,7 +110,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     ok(pp, '바람에 종이가 날아옴'); await W8(4200); let I6 = await info(); ok(!!I6.paper && I6.paper.h, '종이가 바닥에 떨어짐 · E 생김'); await shot('road_6_paper');
     if (I6.paper) { await goTo('(() => { const q = SM_TOWN.road().info().paper; return q ? [q.x, q.z] : null; })()', 4.2, 0.9); await W8(300); await clr(); const nr6 = await ev(() => __R.near()); ok(/날아온 종이/.test(nr6 || ''), '종이 곁 E = 종이 줍기(' + nr6 + ')'); await p.keyboard.press('KeyE'); await W8(700);
       const T6 = await ev(() => ({ cur: !!SM_TOWN.treasure().info().cur, pan: (document.querySelector('.twn-p') || {}).textContent || '', use: SM_TOWN.road().info().uses.paper, ok: SM_TOWN.road().dbg.paperOk() }));
-      ok(T6.cur && /지도 조각/.test(T6.pan), '주우면 보물 지도 조각을 받음(창: ' + T6.pan.slice(0, 20) + ')'); ok(T6.use === 1 && !T6.ok, '하루 한 번 · 받은 뒤엔 더 안 날아옴'); await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); }); }
+      ok(T6.cur && /지도 조각/.test(T6.pan), '주우면 보물 지도 조각을 받음(창: ' + T6.pan.slice(0, 20) + ')'); ok(T6.use === 1 && !T6.ok, '하루 한 번 · 받은 뒤엔 더 안 날아옴'); await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } }); }
 
     console.log('순간이동으로 메운 걸음: ' + tpN + '번(걷기 봇이 막혔을 때)');
     ok(errs.length === 0, '페이지 오류 0(' + errs.length + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : '') + ')');

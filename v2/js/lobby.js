@@ -48,7 +48,19 @@ const CSS2 = `
 #mpChip.mp-call{background:#ffd23c;color:#1d3557;font-weight:800;box-shadow:0 0 0 3px #1d3557}
 body.touch .lb-pop button,body.touch .lb-big button{min-height:44px}
 `;
-const addCss = () => { for (const [id, tx] of [['lb-css', CSS], ['lb-css2', CSS2]]) if (!document.getElementById(id)) { const st = document.createElement('style'); st.id = id; st.textContent = tx; document.head.appendChild(st); } };
+// TITLE-2(11-14 교사 '같이하기 = 방 만들고 들어가기'): 마을(body.h-town · 짓는 중 SM_BUILD)에서 연 창 = 마을 창 결(종이 · 잉크 테두리 · 눌리는 단추 · 44px) — 학교 맵 창은 예전 그대로(.tw9가 안 붙음)
+const CSS3 = `
+.lb-pop.tw9{width:min(420px,94vw);background:#fff8ea;color:#2b2420;border:4px solid #2b2420;border-radius:18px;box-shadow:0 7px 0 #2b2420,0 22px 44px rgba(0,0,0,.3);padding:14px 18px 16px;font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+.lb-pop.tw9 h4{font-size:20px;font-weight:900;margin-bottom:8px}.lb-pop.tw9 .sm{color:#6f6257;font-size:14px}
+.lb-pop.tw9 button{font-weight:800;font-size:16px;color:#fff;background:#3f8f4e;border:3px solid #2b2420;border-radius:12px;padding:7px 14px;min-height:44px;box-shadow:0 4px 0 #2b2420;cursor:pointer}
+.lb-pop.tw9 button:active{transform:translateY(3px);box-shadow:0 1px 0 #2b2420}.lb-pop.tw9 button.sub{background:#f4e6c8;color:#2b2420}.lb-pop.tw9 button.warn{background:#ffe3e3;color:#a23a1e}
+.lb-pop.tw9 .rooms button{background:#fffdf7;color:#2b2420;border:3px solid #2b2420;box-shadow:0 3px 0 #2b2420;text-align:left}.lb-pop.tw9 .rooms button.on{background:#ffe7a3}
+.lb-pop.tw9 input{border:3px solid #2b2420;border-radius:12px;color:#2b2420;font-size:17px;min-height:44px}
+.lb-pop.tw9 .box{background:#fffdf7;border:2px solid #e6d6b8;border-radius:12px}.lb-pop.tw9 .now{background:#fff1c9;border:2px solid #2b2420;border-radius:12px;font-weight:800}
+`;
+const addCss = () => { for (const [id, tx] of [['lb-css', CSS], ['lb-css2', CSS2], ['lb-css3', CSS3]]) if (!document.getElementById(id)) { const st = document.createElement('style'); st.id = id; st.textContent = tx; document.head.appendChild(st); } };
+const inTown = () => !!(document.body && document.body.classList.contains('h-town')) || window.SM_BUILD === 1;   /* TITLE-2: 마을 안(다 지은 뒤 h-town · 짓는 동안 SM_BUILD) */
+const roomNm = (c) => { const n = String((c && c.n) || '').replace(/^🧒\s*/, ''); return /방$/.test(n) ? n : n + ' 방'; };   /* TITLE-2 마을 방 칩: '🧒 철수의 방' → '철수의 방' · '우리 반' → '우리 반 방' */
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const req = (path, method = 'GET', data) => fetch(DB + path + '.json', { method, body: data == null ? undefined : JSON.stringify(data) }).then((r) => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)));
 // CLOSE-1(10-17 함께·표현 팀): 방 기록 치우기 — rooms/c<번호>(학교 '' · 마법사 마을 'w')의 채팅·신호. 규칙이 '살아 있는(안 닫힌) 방에만 쓰기'라 닫기(x) 전에 지움 · 실패해도 닫기는 그대로
@@ -119,7 +131,7 @@ export async function teacherPin(toast = () => {}) {
 export function createLobby(o) {
   const { chip, suffix = '', label = '', join, leave, net, toast = () => {}, onTeacher = null, onGoTo = null, rooms = null } = o;   // ROOM-1: rooms = 방 놀이 { list, cur, inIt, count, pick, start, end, join }
   addCss();
-  let cur = null, pop = null, big = null, pollT = 0, popT = 0, anchor = null;   // anchor = 창을 연 단추(메뉴 머리 👥·카드 — 없으면 👥 칩 밑)
+  let cur = null, pop = null, big = null, pollT = 0, popT = 0, anchor = null, ctr = false;   // anchor = 창을 연 단추(메뉴 머리 👥·카드 — 없으면 👥 칩 밑) · ctr = 화면 가운데(TITLE-2 마을 첫 화면·☰)
   const live = (p) => p && typeof p.e === 'number' && p.e > Date.now();
   // UX-1: 알림은 열린 창 안 빨간 줄(오프닝 메뉴에선 #toast가 가려져 '번호가 달라요'가 안 보였다) · 창이 없으면 예전처럼 toast
   const say = (m, sec = 3, ok) => { const el = pop && pop.isConnected && pop.querySelector('.msg'); if (el) { el.textContent = m || ''; el.classList.toggle('ok', !!ok); } else if (m) toast(m, sec); };
@@ -129,7 +141,7 @@ export function createLobby(o) {
   }
   function draw() {   // UX-1(10-05 교사 편의성): 방 놀이가 도는데 나(아이)는 밖이면(⏹·🏠로 나옴) 칩이 노랗게 '…하는 중' → 누르면 창 맨 위 '▶ 같이 하기'
     const N = net(), rgi9 = rooms ? (rooms.run ? rooms.run() : rooms.cur()) : 0, rg = rooms && cur && !cur.k && N && rgi9 ? rooms.list().find((q) => q.i === rgi9) : null, call = !!(rg && !rooms.inIt());   // ROOM-2: '…하는 중' = 방 놀이가 도는 동안만
-    chip.textContent = cur && N ? (call ? '👥 ' + (document.body.classList.contains('small') ? '' : cur.n + ' · ') + '🎮 ' + rg.t.replace(/^\S+\s+/, '').replace(/\s*\(.*?\)/, '') + ' 하는 중' : '👥 ' + cur.n + ' · ' + N.count + '명 · ' + N.name) : '👥 함께하기 (방 들어가기)';   // 휴대폰은 방 이름을 빼고 짧게(왼쪽 위 칩 줄)
+    chip.textContent = cur && N ? (call ? '👥 ' + (document.body.classList.contains('small') ? '' : cur.n + ' · ') + '🎮 ' + rg.t.replace(/^\S+\s+/, '').replace(/\s*\(.*?\)/, '') + ' 하는 중' : inTown() ? '👥 ' + roomNm(cur) + ' · ' + N.count + '명' + (cur.k ? ' · 내가 방장' : '') : '👥 ' + cur.n + ' · ' + N.count + '명 · ' + N.name) : '👥 함께하기 (방 들어가기)';   // 휴대폰은 방 이름을 빼고 짧게(왼쪽 위 칩 줄)   /* TITLE-2 마을 = 「👥 ○○ 방 · n명 · 내가 방장」(같은 칩 자리) */
     chip.classList.toggle('mp-call', call);
   }
   function enter(info, quiet) {
@@ -142,6 +154,7 @@ export function createLobby(o) {
   function out(msg) { clearInterval(pollT); if (cur) leave(); cur = null; ls.set('mp.room', null); draw(); closePop(); if (msg) toast(msg, 3); dispatchEvent(new CustomEvent('sm-room', { detail: null })); }
   const closePop = () => { clearInterval(popT); if (pop) pop.remove(); pop = null; };
   function place(p) {   // UX-1: 연 단추 밑(오른쪽 단추면 오른쪽 끝을 맞춤) · 숨은 단추면 👥 칩 밑
+    if (ctr) { const w9 = p.offsetWidth, h9 = p.offsetHeight; p.style.left = Math.max(8, (innerWidth - w9) / 2) + 'px'; p.style.top = Math.max(8, (innerHeight - h9) / 2) + 'px'; return; }   /* TITLE-2: 마을 첫 화면 · ☰에서 연 창 = 가운데 */
     const A = anchor && anchor.isConnected && anchor.getClientRects().length ? anchor : chip, r = A.getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight;
     const x = r.left > innerWidth / 2 ? r.right - w : r.left;
     p.style.left = Math.max(8, Math.min(innerWidth - w - 8, x)) + 'px';
@@ -149,7 +162,7 @@ export function createLobby(o) {
   }
   function popup(html) {
     closePop(); document.exitPointerLock?.();
-    pop = document.createElement('div'); pop.className = 'lb-pop ttl-keep'; /* ttl-keep = 오프닝 화면(놀이 카드) 위에서도 보임 */ pop.innerHTML = html;
+    pop = document.createElement('div'); pop.className = 'lb-pop ttl-keep' + (inTown() ? ' tw9' : ''); /* ttl-keep = 오프닝 화면(놀이 카드) 위에서도 보임 · tw9 = 마을 창 결(TITLE-2) */ pop.innerHTML = html;
     for (const t of ['keydown', 'keyup']) pop.addEventListener(t, (e) => e.stopPropagation());
     pop.addEventListener('click', (e) => e.stopPropagation());
     document.body.appendChild(pop); place(pop); return pop;
@@ -158,7 +171,8 @@ export function createLobby(o) {
     if (!cur) return; if (big) big.remove();
     big = document.createElement('div'); big.className = 'lb-big ttl-keep';
     big.innerHTML = '<div><div style="font-size:20px;font-weight:800">🏫 ' + esc(cur.n) + '</div><div class="sm" style="font-size:16px;color:#5a6b80">방 번호</div><div class="code">' + cur.c + '</div>'
-      + '<div style="font-size:17px"><b>👥 함께하기</b> 단추(메뉴 화면 = 오른쪽 위 · 걷는 화면 = 왼쪽 위) → 「' + esc(cur.n) + '」 고르기 → 번호 4자리</div><div class="sm" style="font-size:15px;margin-top:4px">친구들이 들어오면 🏠 대기실에서 놀이를 고르고 ▶ 시작</div><button>닫기</button></div>';   // UX-1: 메뉴 화면엔 👥가 오른쪽 위(title.js 머리 단추)
+      + (inTown() ? '<div style="font-size:17px">친구 첫 화면에서 <b>👥 같이하기</b> → <b>🚪 방 들어가기</b> → 「' + esc(roomNm(cur)) + '」 고르기 → 번호 4자리</div><div class="sm" style="font-size:15px;margin-top:4px">들어온 친구는 저마다 자기 판으로 이어서 놀아요</div><button>닫기</button></div>'   /* TITLE-2 마을 = 첫 화면 같이하기 길 · 대기실 놀이 X */
+        : '<div style="font-size:17px"><b>👥 함께하기</b> 단추(메뉴 화면 = 오른쪽 위 · 걷는 화면 = 왼쪽 위) → 「' + esc(cur.n) + '」 고르기 → 번호 4자리</div><div class="sm" style="font-size:15px;margin-top:4px">친구들이 들어오면 🏠 대기실에서 놀이를 고르고 ▶ 시작</div><button>닫기</button></div>');   // UX-1: 메뉴 화면엔 👥가 오른쪽 위(title.js 머리 단추)
     big.querySelector('button').onclick = () => { big.remove(); big = null; };
     big.addEventListener('click', (e) => { if (e.target === big) { big.remove(); big = null; } });   // UX-1: 어두운 바깥을 눌러도 닫힘(Esc는 아래 잡기 단계 듣개)
     for (const t of ['keydown', 'keyup']) big.addEventListener(t, (e) => { e.stopPropagation(); if (e.key === 'Escape' && big) { big.remove(); big = null; } });
@@ -196,7 +210,8 @@ export function createLobby(o) {
     out('🔒 방을 닫았어요');
   }
   async function openList(a) {
-    anchor = a instanceof Element ? a : null;
+    const o9 = a && typeof a === 'object' && !(a instanceof Element) ? a : {}, TW = !!o9.town || inTown();   /* TITLE-2: open({ step: 'mine' | 'join' | 'teacher', town, center, note }) — 마을 첫 화면 같이하기의 두 갈래가 바로 그 단계로 · 단추(Element)·빈 값 = 예전 그대로 */
+    anchor = a instanceof Element ? a : null; ctr = !!o9.center; const reo = a;   /* reo = 다시 그릴 때 같은 자리·같은 결로(아래 누름 처리의 a는 단추 이름) */
     const N = net();
     if (cur) {
       const frs = () => (N && N.friends ? N.friends() : N && N.peers ? N.peers() : []);   // TOGETHER-0: 👥 목록 = 모든 친구(다른 세계는 '📍 마을 다7' — 곁으로 X)
@@ -204,37 +219,38 @@ export function createLobby(o) {
       // ROOM-1(10-05 교사 '멀티방을 만들고 그 안에서 모드를 정하는 게 직관적일까?'): 방을 만든 선생님 = '🎮 다 같이 놀이'(누르면 방 친구 모두 그 놀이 대기실로) · 모두 = 지금 방 놀이 줄
       const RG = rooms ? rooms.list() : [], rgi = rooms ? rooms.cur() : 0, rgNow = RG.find(q => q.i === rgi), inIt = !!(rooms && rooms.inIt()), rgName = rgNow ? rgNow.t.replace(/\s*\(.*?\)/, '') : '';
       // UX-1(10-05 교사 편의성): 순서 = 지금 방 놀이(맨 위 — 아이는 노란 '▶ 같이 하기' 큰 단추) → 알림 줄 → (선생님) 다 같이 놀이·선생님 단추 → 친구 → 도움말 — 선생님 단추가 도움말 밑에 묻혀 스크롤해야 보이던 것
-      const wrHtml = rooms && rooms.panel ? '<button data-l="wr" class="big" style="margin:4px 0 6px">🏠 대기실 ' + (rgNow ? '· 🎮 ' + esc(rgName) : '— 놀이 고르기·▶ 시작') + '</button>' : '';   // ROOM-2: 놀이 고르기·시작·결과 = 대기실(카트라이더처럼)
-      const roomHtml = rooms && rooms.panel ? '' : !rooms || !rgNow ? '' : '<div class="now">🎮 지금 방 놀이: ' + esc(rgNow.t) + (cur.k ? ' <span class="sm cnt">· 들어온 친구 ' + rooms.count(rgi) + '/' + others.length + '</span>' : '')
+      const wrHtml = !TW && rooms && rooms.panel ? '<button data-l="wr" class="big" style="margin:4px 0 6px">🏠 대기실 ' + (rgNow ? '· 🎮 ' + esc(rgName) : '— 놀이 고르기·▶ 시작') + '</button>' : '';   // ROOM-2: 놀이 고르기·시작·결과 = 대기실(카트라이더처럼)
+      const roomHtml = TW || (rooms && rooms.panel) ? '' : !rooms || !rgNow ? '' : '<div class="now">🎮 지금 방 놀이: ' + esc(rgNow.t) + (cur.k ? ' <span class="sm cnt">· 들어온 친구 ' + rooms.count(rgi) + '/' + others.length + '</span>' : '')
         + (cur.k ? '<div class="row" style="justify-content:flex-start;margin-top:6px"><button data-l="rstart" title="다 모이면 — 대기실 방장 화면이 시작을 눌러요">▶ 모두 시작 · ' + rooms.count(rgi) + '명 들어옴</button><button class="sub" data-l="rend">⏹ 놀이 끝(자유롭게)</button>' + (!inIt ? '<button class="sub" data-l="rjoin">🎮 나도 같이</button>' : '') + '</div><div class="sm" style="font-weight:400;margin-top:3px">▶ = 친구들이 대기실에 다 들어오면 눌러요</div>'
           : !inIt ? '<button data-l="rjoin" class="big" style="margin-top:6px">▶ ' + esc(rgName) + ' 같이 하기</button><div class="sm" style="font-weight:400;margin-top:3px">친구들이 지금 하고 있어요</div>' : '<div class="sm" style="font-weight:400">지금 같이 하고 있어요</div>')
         + '</div>';
       const frHtml = () => '나: <b>' + esc(N ? N.name : '') + '</b><br>' + (others.length ? '친구 ' + others.length + '명' + (onGoTo ? ' <span class="sm">(누르면 그 친구 곁으로)</span>' : '') + '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + others.map((p, i) => '<span style="display:inline-flex;gap:2px;align-items:center">' + (onGoTo ? '<button class="sub" data-go="' + i + '" style="padding:4px 9px"><span style="color:' + p.color + '">●</span> ' + esc(p.label) + (p.mu ? ' 🔇' : '') + (p.act ? ' <span class="sm">' + esc(p.act) + '</span>' : '') + '</button>' : '<span style="padding:2px 6px"><span style="color:' + p.color + '">●</span> ' + esc(p.label) + (p.act ? ' <span class="sm">' + esc(p.act) + '</span>' : '') + '</span>')
           + (N && N.mute && p.id ? '<button class="sub" data-mu="' + i + '" style="padding:4px 7px" title="' + (p.mu ? '이 친구의 말·이모지를 다시 봐요' : '이 친구의 말·이모지를 나에게만 안 보이게 해요(친구는 몰라요)') + '" aria-label="' + esc(p.label) + (p.mu ? ' 다시 보기' : ' 말·이모지 숨기기') + '">' + (p.mu ? '👀 다시 보기' : '🙈') + '</button>' : '') + '</span>').join('') + '</div>' + (others.some(p => p.mu) ? '<div class="sm" style="margin-top:3px">🔇 = 말·이모지를 나에게만 숨긴 친구(이 탭 · 친구는 몰라요)</div>' : '') : '<span class="sm">아직 들어온 친구가 없어요</span>');
-      const tips = '• 걷기·뛰기 · 😀 인사는 서로 보여요<br>• 📝 메모장은 같은 판이면 장면·깃발을 함께 써요<br>' + (rooms ? '• 🎮 <b>다 같이 놀이</b>(물총·숨바꼭질·로봇인 척·길잡이)는 🏠 대기실에서 방장이 고르고 ▶ 시작하면 모두 같이 들어가요<br>' : '• 💦 <b>물총 친구 대결</b>은 같은 방 친구들과 함께<br>') + '• 이야기·방탈출 같은 놀이는 <b>각자 따로</b> 해요';
+      const tips = TW ? '• 걷기 · 😀 인사는 서로 보여요<br>• 이야기 · 가방 · 돈은 저마다 자기 판에 이어져요' : '• 걷기·뛰기 · 😀 인사는 서로 보여요<br>• 📝 메모장은 같은 판이면 장면·깃발을 함께 써요<br>' + (rooms ? '• 🎮 <b>다 같이 놀이</b>(물총·숨바꼭질·로봇인 척·길잡이)는 🏠 대기실에서 방장이 고르고 ▶ 시작하면 모두 같이 들어가요<br>' : '• 💦 <b>물총 친구 대결</b>은 같은 방 친구들과 함께<br>') + '• 이야기·방탈출 같은 놀이는 <b>각자 따로</b> 해요';
       const P = popup('<h4>👥 ' + esc(cur.n) + ' <span class="sm">· 방 번호 ' + cur.c + '</span></h4>'
         + wrHtml + roomHtml + '<div class="msg" role="alert"></div>'
-        + (cur.k && rooms && !rooms.panel ? '<div style="margin-top:8px;font-weight:800">🎮 다 같이 놀이 <span class="sm">— 누르면 방 친구 모두 그 놀이 대기실로 들어가요</span></div><div class="rg">' + RG.map(q => '<button data-rg="' + q.i + '"' + (q.i === rgi ? ' class="on"' : '') + '>' + esc(q.t) + (q.i === rgi ? ' ✓ 지금' : '') + '</button>').join('') + '</div>' : '')
+        + (!TW && cur.k && rooms && !rooms.panel ? '<div style="margin-top:8px;font-weight:800">🎮 다 같이 놀이 <span class="sm">— 누르면 방 친구 모두 그 놀이 대기실로 들어가요</span></div><div class="rg">' + RG.map(q => '<button data-rg="' + q.i + '"' + (q.i === rgi ? ' class="on"' : '') + '>' + esc(q.t) + (q.i === rgi ? ' ✓ 지금' : '') + '</button>').join('') + '</div>' : '')
         + (isTeacherRoom(cur) ? '<div style="margin-top:8px;font-weight:800">🧑‍🏫 선생님</div><div class="row" style="justify-content:flex-start;margin-top:4px">' + (onTeacher ? '<button data-l="gather" title="방 친구 모두를 내 곁으로">📣 모두 내 곁으로</button><button data-l="hold" title="모두 잠깐 멈추고 선생님 말씀 듣기">✋ 모두 멈춤</button><button class="sub" data-l="release">▶ 다시 움직여요</button><button class="sub" data-l="chatoff">💬 채팅 ' + (N && N.ctlData && N.ctlData.chat && N.ctlData.chat.off ? '켜기' : '끄기') + '</button><button class="sub" data-l="chatclr">🧹 채팅 지우기</button>' : '') + '<button class="sub" data-l="big">📺 번호 크게</button><button class="warn" data-l="shut">🔒 방 닫기</button></div>' : '')
+        + (TW && cur.k && !isTeacherRoom(cur) ? '<div class="row" style="justify-content:flex-start;margin-top:6px"><button class="sub" data-l="big">📺 번호 크게</button><button class="warn" data-l="shut">🔒 방 닫기</button></div>' : '')   /* TITLE-2 마을: 아이가 연 방의 방장 = 번호 크게 · 방 닫기(학교 맵은 대기실에 있던 것) */
         + '<div class="box fr">' + frHtml() + '</div>'
         + (cur.k ? '<details class="sm"><summary>❓ 친구들이 할 수 있는 것</summary>' + tips + '</details>' : '<div class="sm">' + tips + '</div>')
         + '<div class="row"><button class="sub" data-l="out">🚪 방 나가기</button><button class="sub" data-l="x">닫기</button></div>');
       // UX-1: 창이 열린 동안 2초마다 친구 목록·들어온 수만 고침(창 전체를 다시 짓지 않음 — 스크롤·누름 그대로) · 방 놀이가 바뀌면(선생님이 고름·내가 들어감) 그때만 다시 짓기
       clearInterval(popT); popT = setInterval(() => {
         if (pop !== P || !P.isConnected) { clearInterval(popT); return; }
-        if (rooms && (rooms.cur() !== rgi || rooms.inIt() !== inIt)) { const m = P.querySelector('.msg'), mt = m ? m.textContent : '', ok = !!(m && m.classList.contains('ok')); openList(anchor); if (mt) say(mt, 0, ok); return; }
+        if (rooms && (rooms.cur() !== rgi || rooms.inIt() !== inIt)) { const m = P.querySelector('.msg'), mt = m ? m.textContent : '', ok = !!(m && m.classList.contains('ok')); openList(reo); if (mt) say(mt, 0, ok); return; }
         others = frs(); const f = P.querySelector('.fr'); if (f) f.innerHTML = frHtml();
         if (rooms && rgNow) { const c = P.querySelector('.cnt'); if (c) c.textContent = '· 들어온 친구 ' + rooms.count(rgi) + '/' + others.length; const s = P.querySelector('[data-l=rstart]'); if (s) s.textContent = '▶ 모두 시작 · ' + rooms.count(rgi) + '명 들어옴'; }
       }, 2000);
       P.onclick = (e) => { e.stopPropagation(); const mu = e.target.closest('[data-mu]'); if (mu && N && N.mute) { const p9 = others[+mu.dataset.mu]; if (p9) { N.mute(p9.id, !p9.mu); others = frs(); const f = P.querySelector('.fr'); if (f) f.innerHTML = frHtml(); say(p9.mu ? '👀 ' + p9.label + ' 친구의 말·이모지가 다시 보여요' : '🙈 ' + p9.label + ' 친구의 말·이모지를 나에게만 숨겼어요 — 친구는 몰라요', 0, true); } return; }   /* SAFE-1 🙈 */
         const g = e.target.closest('[data-go]'); if (g && onGoTo) { const p9 = others[+g.dataset.go]; if (p9 && p9.here === false) { say('📍 ' + p9.label + ' 친구는 지금 다른 곳(' + p9.act + ')에 있어요 — 같은 곳에 가면 보여요'); return; } closePop(); onGoTo(p9); return; }
         // UX-1: 다 같이 놀이 고르기·▶ 모두 시작·⏹ 끝 = 창을 닫지 않고 다시 그려 '보냈어요'를 창 안에(메뉴 화면에선 toast가 안 보였다)
-        const rg = e.target.closest('[data-rg]'); if (rg && rooms) { rooms.pick(+rg.dataset.rg, true); openList(anchor); say('✓ 보냈어요 — 친구들이 2초 뒤 대기실로 가요 · 다 모이면 ▶ 모두 시작', 0, true); return; }
+        const rg = e.target.closest('[data-rg]'); if (rg && rooms) { rooms.pick(+rg.dataset.rg, true); openList(reo); say('✓ 보냈어요 — 친구들이 2초 뒤 대기실로 가요 · 다 모이면 ▶ 모두 시작', 0, true); return; }
         const b = e.target.closest('[data-l]'); if (!b) return; const a = b.dataset.l;
         if (rooms && a === 'wr') { closePop(); rooms.panel(); return; }
         if (rooms && a === 'rjoin') { closePop(); rooms.join(); return; }
-        if (rooms && a === 'rstart') { rooms.start(true); openList(anchor); say('▶ 시작 신호를 보냈어요 — 대기실 화면이 3·2·1을 세요', 0, true); return; }
-        if (rooms && a === 'rend') { rooms.end(true); openList(anchor); say('⏹ 방 놀이를 마쳤어요 — 모두 자유롭게 다녀요', 0, true); return; }
+        if (rooms && a === 'rstart') { rooms.start(true); openList(reo); say('▶ 시작 신호를 보냈어요 — 대기실 화면이 3·2·1을 세요', 0, true); return; }
+        if (rooms && a === 'rend') { rooms.end(true); openList(reo); say('⏹ 방 놀이를 마쳤어요 — 모두 자유롭게 다녀요', 0, true); return; }
         if (a === 'name') { say('방 안에서는 이름을 바꿀 수 없어요 — 방을 나가 다시 들어올 때 바꿔요'); return; }   // SAFE-1: 방 안 이름 바꾸기 막기(단추도 뺌)
         else if (a === 'out') out('👋 방에서 나왔어요'); else if (a === 'big') { closePop(); showBig(); } else if (a === 'shut') shut();
         else if ((a === 'gather' || a === 'hold' || a === 'release') && onTeacher) { closePop(); onTeacher(a); }
@@ -242,12 +258,19 @@ export function createLobby(o) {
         else if (a === 'chatclr' && N) { if (confirm('방 채팅을 모두 지울까요?')) { N.clearChat(); toast('🧹 채팅을 지웠어요', 2); } closePop(); } else closePop(); };
       return;
     }
-    const P = popup('<h4>👥 함께하기</h4><div class="sm">선생님이나 친구가 연 방을 고르고, 방장 화면의 <b>번호 4자리</b>를 넣어요 · 내 방을 만들 수도 있어요.</div><div class="rooms"><div class="sm">방을 찾는 중…</div></div>'
-      + '<div class="pick" style="display:none"><div style="display:flex;gap:6px;margin-top:4px"><input class="nm" maxlength="8" placeholder="내 이름" style="flex:1"><input class="cd" maxlength="4" inputmode="numeric" placeholder="번호 4자리" style="width:110px"></div><div class="row"><button data-l="go">들어가기</button></div></div>'
+    if (o9.step === 'teacher') { create(); return; }   /* TITLE-2 마을 첫 화면 「🔒 선생님 방」 = 선생님 비밀번호 → 방 이름(예전 길) */
+    const MINE = o9.step === 'mine', JOIN = o9.step === 'join', NOTE = o9.note ? '<div class="now">' + esc(o9.note) + '</div>' : '';   /* TITLE-2 두 갈래: 🏠 방 만들기(이름 하나) · 🚪 방 들어가기(목록 → 이름 + 번호) — 예전 한 창의 기능 그대로 나눔 */
+    const PICK = '<div class="pick" style="display:none"><div style="display:flex;gap:6px;margin-top:4px"><input class="nm" maxlength="8" placeholder="내 이름" style="flex:1"><input class="cd" maxlength="4" inputmode="numeric" placeholder="번호 4자리" style="width:110px"></div><div class="row"><button data-l="go">들어가기</button></div></div>';
+    const P = popup(MINE ? '<h4>🏠 방 만들기</h4><div class="sm">내가 방장이 돼요. 방을 만들면 번호 4자리가 크게 나와요. 그 번호를 친구에게 알려 주면 같은 방에서 놀아요(2시간).</div>' + NOTE
+        + '<div class="pick"><input class="nm" maxlength="8" placeholder="내 이름(방 이름이 돼요)" style="margin-top:8px"></div><div class="msg" role="alert"></div><div class="row"><button class="sub" data-l="x">닫기</button><button data-l="mine">🏠 방 만들기</button></div>'
+      : JOIN ? '<h4>🚪 방 들어가기</h4><div class="sm">들어갈 방을 고르고, 방장 화면의 <b>번호 4자리</b>를 넣어요.</div>' + NOTE + '<div class="rooms"><div class="sm">방을 찾는 중…</div></div>' + PICK + '<div class="msg" role="alert"></div><div class="row"><button class="sub" data-l="x">닫기</button></div>'
+      : '<h4>👥 함께하기</h4><div class="sm">선생님이나 친구가 연 방을 고르고, 방장 화면의 <b>번호 4자리</b>를 넣어요 · 내 방을 만들 수도 있어요.</div><div class="rooms"><div class="sm">방을 찾는 중…</div></div>'
+      + PICK
       + '<div class="msg" role="alert"></div>'
       + '<div class="row"><button data-l="mine" title="내가 방장 — 번호를 친구들에게 알려 주면 같이 놀아요(2시간)">🏠 내 방 만들기</button><button class="sub" data-l="new" title="선생님 비밀번호가 필요해요">🔒 선생님 방</button><button class="sub" data-l="x">닫기</button></div>');
     let sel = null;
     const nm = P.querySelector('.nm'), cd = P.querySelector('.cd'); nm.value = ls.get('mp.name') || '';
+    const mineGo = () => { P.querySelector('.pick').style.display = ''; const name = nm.value.trim().replace(/[<>]/g, '').slice(0, 8); if (!name) { say('내 이름을 먼저 적어 주세요 — 방 이름이 돼요'); place(P); nm.focus(); return; } if (!checkChat(name).ok) { say('이름을 고운 말로 바꿔 주세요'); place(P); nm.select(); return; } ls.set('mp.name', name); create(name); };   // ROOM-2
     const go = async () => {   // UX-1: 틀림·빠짐은 창 안 빨간 줄(say)
       const name = nm.value.trim().replace(/[<>]/g, '').slice(0, 8), c = cd.value.trim();
       if (!name) { say('내 이름을 적어 주세요'); nm.focus(); return; }
@@ -259,13 +282,13 @@ export function createLobby(o) {
       const M = net(); if (M) M.setName(name); draw();
     };
     nm.addEventListener('input', () => say(''));
-    cd.addEventListener('input', () => { const v = cd.value.replace(/\D/g, '').slice(0, 4); if (v !== cd.value) cd.value = v; say(''); });   // 숫자만
-    nm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (cd.value) go(); else cd.focus(); } });   // UX-1: 이름 칸 Enter = 번호 칸으로(한글 입력 중 Enter는 글자 마무리)
-    cd.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) go(); });
+    if (cd) cd.addEventListener('input', () => { const v = cd.value.replace(/\D/g, '').slice(0, 4); if (v !== cd.value) cd.value = v; say(''); });   // 숫자만
+    nm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (MINE) mineGo(); else if (cd.value) go(); else cd.focus(); } });   // UX-1: 이름 칸 Enter = 번호 칸으로(한글 입력 중 Enter는 글자 마무리) · TITLE-2 방 만들기 = 만들기
+    if (cd) cd.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) go(); });
     P.onclick = (e) => { e.stopPropagation(); const b = e.target.closest('[data-l],[data-r]'); if (!b) return;
       if (b.dataset.r) { sel = { r: b.dataset.r, n: b.dataset.n }; P.querySelectorAll('.rooms button').forEach((x) => x.classList.toggle('on', x === b)); P.querySelector('.pick').style.display = ''; place(P); (nm.value ? cd : nm).focus(); return; }
       const a = b.dataset.l; if (a === 'go') go(); else if (a === 'new') create();
-      else if (a === 'mine') { P.querySelector('.pick').style.display = ''; const name = nm.value.trim().replace(/[<>]/g, '').slice(0, 8); if (!name) { say('내 이름을 먼저 적어 주세요 — 방 이름이 돼요'); place(P); nm.focus(); return; } if (!checkChat(name).ok) { say('이름을 고운 말로 바꿔 주세요'); place(P); nm.select(); return; } ls.set('mp.name', name); create(name); }   // ROOM-2
+      else if (a === 'mine') mineGo();   // ROOM-2
       else closePop(); };
     // UX-1: 열린 방이 없으면 4초마다 다시 찾음(2분까지 — 선생님이 방을 열기 전에 창을 연 아이가 '없어요'에 갇히지 않게) · 방 칸만 다시 씀(이름·번호 칸 그대로)
     const t0 = Date.now(), again = () => { if (Date.now() - t0 < 120000) setTimeout(() => { if (pop === P && !sel) load(); }, 4000); };
@@ -274,9 +297,10 @@ export function createLobby(o) {
       if (pop !== P || sel) return;
       const kidR = (id) => /^🧒/.test(L[id].n || '') ? 1 : 0, ids = Object.keys(L).filter((id) => live(L[id]) && !L[id].x).sort((a, b) => kidR(a) - kidR(b) || (L[b].t || 0) - (L[a].t || 0));   // ROOM-2: 선생님 방 먼저
       P.querySelector('.rooms').innerHTML = ids.length ? ids.map((id) => '<button data-r="' + esc(id) + '" data-n="' + esc(L[id].n) + '">' + (kidR(id) ? '' : '🏫 ') + esc(L[id].n) + (L[id].t ? ' <span class="sm">· ' + new Date(L[id].t).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }) + ' 열림</span>' : '') + '</button>').join('')
-        : '<div class="sm">아직 열린 방이 없어요 — 🏠 내 방 만들기로 열거나, 선생님·친구가 방을 열면 저절로 여기에 보여요.</div>';
+        : JOIN ? '<div class="sm">아직 열린 방이 없어요 — 친구가 방을 만들면 저절로 여기에 보여요.</div>' : '<div class="sm">아직 열린 방이 없어요 — 🏠 내 방 만들기로 열거나, 선생님·친구가 방을 열면 저절로 여기에 보여요.</div>';
       place(P); if (!ids.length) again();
     };
+    if (MINE) { nm.focus(); return; }   /* 방 만들기 = 목록 X */
     await load();
   }
   chip.addEventListener('click', (e) => { e.stopPropagation(); if (pop) closePop(); else openList(); });

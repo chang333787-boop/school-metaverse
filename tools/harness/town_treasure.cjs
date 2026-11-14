@@ -12,10 +12,10 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
 (async () => { const b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] });
   try { const ctx = await b.newContext({ viewport: { width: 1366, height: 768 } }), p = await ctx.newPage(), errs = []; p.on('pageerror', e => errs.push(e.message.slice(0, 160)));
     const boot = async () => { await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && window.SD2 && SM_TOWN.treasure, null, { timeout: 240000 }); await p.waitForTimeout(1500);
-      await p.evaluate(() => { const b = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button'); if (b) b.click(); }); await p.keyboard.press('Escape'); await p.waitForTimeout(800);
+      await p.evaluate(() => { const b = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button'); if (b) b.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } }); await p.keyboard.press('Escape'); await p.waitForTimeout(800);
       await p.evaluate(() => { const G = SM_TOWN.game().S; G.story = G.story || {}; G.story.done = Object.assign(G.story.done || {}, { p0: 1, a1_1: 1 }); try { SM_TOWN.storyOff(); } catch (e) { void e; } }); };   /* FIX-4C(11-07): 첫날 행정복지센터 게시판 E = 프롤로그 모집 공고(📯 어린이 도우미를 찾아요 대화창)라 그동안 몸이 안 움직임 → 보물 엔진만 보는 시험이라 프롤로그·1-1을 끝낸 판으로(town_night·town_rules와 같게) */
     const info = () => p.evaluate(() => SM_TOWN.treasure().info());
-    const closeP = async () => { await p.evaluate(() => { const b = document.querySelector('.twn-p [data-a="x"]'); if (b) b.click(); else { const q = document.querySelector('.twn-p'); if (q) q.click(); } }); await p.waitForTimeout(500); };
+    const closeP = async () => { await p.evaluate(() => { const b = document.querySelector('.twn-p [data-a="x"]'); if (b) { b.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } } else { const q = document.querySelector('.twn-p'); if (q) q.click(); } }); await p.waitForTimeout(500); };
     const tp = (x, z) => p.evaluate(([x, z]) => { SD2.map.player.teleport([x, SM_TOWN.ground(x, z) + 0.05, z]); }, [x, z]);
     const atBoard = async () => { const s = (await info()).src; await tp(s.x, s.z); await p.waitForTimeout(900); return s; };
     const pressE = async () => { await p.keyboard.press('KeyE'); await p.waitForTimeout(700); };
@@ -73,7 +73,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
 
       // ⑥ 같은 날 두 번 X → 다음 날
       await atBoard(); I = await info(); ok(/내일/.test(I.board || ''), tag + ' 같은 날 게시판 = 내일(' + I.board + ')'); await pressE(); I = await info(); ok(!I.cur, tag + ' 같은 날 두 번 X(새 지도 없음)'); await closeP();
-      await p.evaluate(() => SM_TOWN.game().sleep()); await p.waitForTimeout(2500); await p.evaluate(() => { const b = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button'); if (b) b.click(); }); await p.keyboard.press('Escape'); await p.waitForTimeout(600);
+      await p.evaluate(() => SM_TOWN.game().sleep()); await p.waitForTimeout(2500); await p.evaluate(() => { const b = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button'); if (b) b.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } }); await p.keyboard.press('Escape'); await p.waitForTimeout(600);
       I = await info(); if (I.n[0] >= 2 && I.n[1] >= 2 && I.n[2] >= 1) break;
       if (round === 2 && LVMAX >= 2 && I.n[1] < 2) { await p.evaluate(() => { const s = SM_TOWN.game().S.tmap; s.n[1] = 2; }); console.log('  (★★ 둘째는 건너뜀 — 시간 줄이기)'); }
     }

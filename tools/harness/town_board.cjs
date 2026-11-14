@@ -6,7 +6,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
 (async () => { const T0 = Date.now(), b = await chromium.launch({ args: ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] }); const errs = [];
   try { const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage(); p.on('pageerror', e => errs.push(e.message.slice(0, 200)));
     await p.goto('http://127.0.0.1:' + PORT + '/v2/?town=' + ID + '&adapt=0&all=1'); await p.waitForFunction(() => window.SM_TOWN && SM_TOWN.tasksNow && window.SD2, null, { timeout: 240000 }); await p.waitForTimeout(1500);
-    await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button'); if (b9) b9.click(); });
+    await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="x"]') || document.querySelector('.twn-p button'); if (b9) b9.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } });
     const ev = (f, a) => p.evaluate(f, a);
     await ev(() => { window.__G = SM_TOWN.game(); });
     // 열흘: 날마다 셋 · 서로 다른 것 수 · 까닭 있는 줄 수
@@ -19,7 +19,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     // 할 일 창: 받는 것 먼저 · 까닭 줄
     const t = await ev(() => { __G.S.day = 2; const L = SM_TOWN.tasksNow(); document.querySelector('.twn-task') && document.querySelector('.twn-task').click(); const P = document.querySelector('.twn-p'); return P ? P.textContent : ''; });
     ok(/💰.*받는 일/.test(t), '할 일 창 = 받는 것(💰) 먼저');
-    await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); });
+    await ev(() => { const b9 = document.querySelector('.twn-p [data-a="x"]'); if (b9) b9.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } });
     // 빈 게시판 → 오늘 할 일 단추
     const bd = await ev(async () => { const S = __G.S; if (!S.story) return { txt: '', btn: false }; S.story.board = { day: S.day, list: [], took: {} }; const Q = SM_TOWN.hub ? null : null; try { SM_TOWN.storyOpen(); } catch (e) { /* */ } await new Promise(r => setTimeout(r, 300)); const yb = document.querySelector('.twn-p [data-yb="board"]'); if (yb) { yb.click(); await new Promise(r => setTimeout(r, 300)); } const P = document.querySelector('.twn-p'); return { txt: P ? P.textContent.slice(0, 200) : '', btn: !!(P && P.querySelector('[data-a="tasks"]')) }; });
     console.log('    게시판: ' + bd.txt.slice(0, 120));

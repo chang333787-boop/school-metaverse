@@ -45,6 +45,10 @@ PATCHES = {
     'v2/games/town_classmp.js': [
         ("const OFF = !!window.SM_PROMO ||", "const OFF = true ||"),
     ],
+    # TITLE-2(11-14): 공개판 첫 화면에는 [👥 같이하기]를 두지 않음 — 학교와 같은 방 목록(아이 이름이 든 방 이름)이 바깥 사람 첫 화면에 크게 뜨지 않게 · ☰ 함께하기는 예전 그대로
+    'v2/games/town.js': [
+        ("const TTLMP9 = true;", "const TTLMP9 = false;"),
+    ],
 }
 FORBID = [r'정림', r'(?i)junglim', r'화성시', r'효행', r'망월', r'정남면', r'RAS On', r'수상한정림', r'docs/systems', r'PEPPER',
           r'패들렛 \d', r'교사 (?:0?9|10|11)-\d', r'사용자 (?:0?9|10|11)-\d']

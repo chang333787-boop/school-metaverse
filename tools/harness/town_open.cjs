@@ -10,7 +10,7 @@ const GPU = ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist', '--disa
 let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails++; };
 const errs = []; const watch = (p, tag) => { p.on('pageerror', e => errs.push(tag + ' ' + e.message.slice(0, 160))); p.on('console', m => { if (m.type() === 'error' && !/favicon|404|ERR_|pointer lock|WebGL|GPU stall/.test(m.text())) errs.push(tag + ' ' + m.text().slice(0, 160)); }); };
 const ready = p => p.waitForFunction(() => window.SM_TOWN && SM_TOWN.game && SM_TOWN.save, null, { timeout: 240000 }).then(() => p.waitForTimeout(1200));
-const click = (p, a) => p.evaluate(a9 => { const b = document.querySelector('.twn-p [data-a="' + a9 + '"]'); if (b) b.click(); return !!b; }, a);
+const click = (p, a) => p.evaluate(a9 => { const b = document.querySelector('.twn-p [data-a="' + a9 + '"]'); if (b) b.click(); if (a9 === 'x') { const h9 = document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } return !!b; }, a);   /* TITLE-2: 첫 화면 x(저장 없음 = ✨ 처음하기) 다음 하는 법 한 장이면 ▶ 첫날 시작까지(하는 법 단계 자체는 town_title2) */
 const closeAll = async p => { for (let i = 0; i < 6; i++) { const n = await p.evaluate(() => document.querySelectorAll('.twn-dlg,.twn-p').length); if (!n) return; await p.keyboard.press('Escape'); await p.waitForTimeout(250); } };
 const shot = async (p, n) => { if (SHOTS) { await p.waitForTimeout(400); await p.screenshot({ path: SHOTS + '/' + n + '.png' }); console.log('    📷 ' + SHOTS + '/' + n + '.png'); } };
 const where = p => p.evaluate(() => { const q = SD2.map.player.get(), H = SM_TOWN.home(), d = H && H.e ? Math.hypot(q.x - H.e[0], q.z - H.e[1]) : null; return { x: +q.x.toFixed(1), z: +q.z.toFixed(1), school: SM_TOWN.cell(q.x, q.z), inSchool: SM_TOWN.inSchool(q.x, q.z), dHome: d == null ? null : +d.toFixed(1), min: SM_TOWN.game().S.min, goal: (document.getElementById('hudGoal') || {}).textContent || '', open: SM_TOWN.opening() }; });
@@ -19,7 +19,7 @@ const where = p => p.evaluate(() => { const q = SD2.map.player.get(), H = SM_TOW
   try {
     console.log('① 처음부터 = 우리 집 앞 첫 아침');
     let ctx = await b.newContext({ viewport: { width: 1366, height: 768 } }), p = await ctx.newPage(); watch(p, 'A'); await p.goto(URL); await ready(p);
-    const T0 = await p.evaluate(() => (document.querySelector('.twn-ld') || {}).innerText || ''); ok(!/정림/.test(T0), '첫 화면에 실제 학교 이름 X'); await shot(p, 'open_0_title_desktop');
+    const T0 = await p.evaluate(() => (document.querySelector('.twn-ld') || {}).innerText || ''); ok(!/정림/.test(T0), '첫 화면에 실제 학교 이름 X'); ok(/처음하기/.test(T0) && /이어하기/.test(T0), '첫 화면 = 이어하기 · 처음하기(TITLE-2)'); await shot(p, 'open_0_title_desktop');
     await click(p, 'x'); await p.waitForTimeout(1600); let W = await where(p);
     ok(W.dHome != null && W.dHome < 7, '우리 집 현관 앞에서 시작(문에서 ' + W.dHome + 'm · ' + W.school + ')'); { const h9 = await p.evaluate(() => (document.getElementById('hint') || {}).textContent || ''); ok(/쪽지 읽기/.test(h9), '첫 E 안내 = 칠판(' + h9.trim() + ')'); } ok(!W.inSchool && !/우리 학교/.test(W.goal), '학교 울타리 안에서 시작하지 않음'); ok(W.min >= 6 * 60 && W.min < 9 * 60, '아침(' + Math.floor(W.min / 60) + '시)');
     ok(/현관 칠판/.test(W.goal) && W.open && W.open.board, '첫 할 일 한 줄 = ' + W.goal); await shot(p, 'open_1_first10s_desktop');
@@ -74,7 +74,7 @@ const where = p => p.evaluate(() => { const q = SD2.map.player.get(), H = SM_TOW
     ok(Math.hypot(A1.x - A0.x, A1.z - A0.z) < 3 && !(A1.open && A1.open.board), '지난 자리(' + L0 + ' 곁)에서 이어짐 · 첫 아침 장면 X');
     await ctx.close();
     { console.log('⑥ 2분 넘게 막힘 = 그때만 쪽지가 먼저 옴'); ctx = await b.newContext({ viewport: { width: 1280, height: 720 } }); p = await ctx.newPage(); watch(p, 'C'); await p.goto(URL); await ready(p);
-      await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="new"],.twn-p [data-a="x"]'); if (b9) b9.click(); }); await p.waitForTimeout(1600);
+      await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="new"],.twn-p [data-a="x"]'); if (b9) b9.click(); { const h9 = typeof document !== 'undefined' && document.querySelector('.twn-ld .how3') && document.querySelector('.twn-ld [data-a="x"]'); if (h9) h9.click(); } }); await p.waitForTimeout(1600);
       const o0 = await p.evaluate(() => SM_TOWN.opening()); if (!o0) { await p.evaluate(() => { const b9 = [...document.querySelectorAll('.twn-p button')].find(e => /처음부터/.test(e.textContent)); if (b9) b9.click(); }); await p.waitForTimeout(800); await p.evaluate(() => { const b9 = document.querySelector('.twn-p [data-a="ok"],.twn-p [data-a="yes"]'); if (b9) b9.click(); }); await p.waitForTimeout(3000); }
       const o1 = await p.evaluate(() => SM_TOWN.opening({ idle: 117 })); await p.waitForTimeout(4200); const c1 = await p.evaluate(() => SM_TOWN.game().S.story && SM_TOWN.game().S.story.cur);
       ok(o1 && c1 === 'p0', '가만히 2분(막힌 초 120) = 프롤로그 쪽지가 먼저 옴(' + c1 + ')'); await ctx.close(); }
