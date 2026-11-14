@@ -41,6 +41,6 @@
 4. 공개판: `zsh tools/export/town_export.sh /Users/dobuk/Projects/uri-maeul --commit "…"` → `git -C /Users/dobuk/Projects/uri-maeul push`.
 
 ## 7. 멈춘 판으로 돌아가기
-손을 뗀 날의 판에는 git 꼬리표 `town-1113`이 붙어요. 그 뒤에 고친 것이 수업을 망치면 Claude에게 "꼬리표 `town-1113` 판으로 되돌려 줘"라고 하면 돼요.
+멈춘 판마다 git 꼬리표가 붙어요. `town-1114` = 처음 15분 길 다듬기(PATH-1) 뒤 판 · `town-1113` = 그 앞 판이에요. 그 뒤에 고친 것이 수업을 망치면 Claude에게 "꼬리표 `town-1114` 판으로 되돌려 줘"라고 하면 돼요(처음 15분 길 고침이 말썽이면 `town-1113`).
 
 출처: `town_handoff_1031.md` 맨 위 · `town_teacher.md` · `perf.md` · `town_open.md` · `memo.md` · `server/cf-rooms/README.md` · `tools/ops/README.md` · `CLAUDE.md`

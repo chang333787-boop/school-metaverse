@@ -40,9 +40,10 @@
 | 마을 메인 스토리(town_story.js — 이웃 쪽지 장 다섯 · 힌트 세 단계 · 난도) | `docs/systems/town_story.md` — 퀘스트 틀 명세(2027 교과서 엔진)와 같은 꼴 |
 | **새 메인 세션을 이어받을 때 = 먼저 이것(10-31 · 지금 상태·멈춘 팀 셋·남은 차례) → 일하는 법은 1024** | `docs/systems/town_handoff_1031.md` · `docs/systems/town_handoff_1024.md` → 정본 차례 `docs/systems/town_week_1024.md` |
 | **토요일(10-24) 시작 = 먼저 이것(단계 0 합치기 차례 · 역할 분담 · 물을 것)** | `docs/systems/town_kickoff_1024.md` |
-| **수업 전 점검 · 수업 중 고장 · 비밀번호 · 서버가 멈추면 · 올리는 차례(11-13 · 손을 뗀 뒤에도 쓰는 한 쪽)** — 수업 전 핵심 시험 = `zsh tools/ops/core.sh`(20 ~ 25분) · 멈춘 판 꼬리표 `town-1113` | `docs/systems/town_ops.md` |
+| **수업 전 점검 · 수업 중 고장 · 비밀번호 · 서버가 멈추면 · 올리는 차례(11-13 · 손을 뗀 뒤에도 쓰는 한 쪽)** — 수업 전 핵심 시험 = `zsh tools/ops/core.sh`(20 ~ 25분) · 멈춘 판 꼬리표 `town-1114`(그 앞 판 `town-1113`) | `docs/systems/town_ops.md` |
 | 프로그램 전체 분석·발전 방향(11-10 · 증거 → 얼리기 → 하나만 · 하지 않을 것) | `docs/systems/town_review_1110.md` |
 | "마을이 늦게 열려요"를 다룰 때 · 모듈 늦게 받기·묶기를 제안하기 전에(11-13 재기 · 가장 큰 몫 = 짓기) | `docs/systems/town_load.md` |
+| 처음 15분 길(첫 아침 → 이웃 부탁 → 놀이 → 다음 날)에서 아이가 멈춘 자리를 고칠 때 · 길 안내·거리 숫자·E 판정·알림 차례(11-14 PATH-1 · 화면만 보는 평가 두 번) — 시험 `town_path1` · `town_path1b` · `town_path1c` · PATH-1 뒤 판 꼬리표 `town-1114` | `docs/systems/town_path1.md` |
 | **마을 업그레이드를 시작할 때마다(10-19 '기능만 무한으로 넣는 것 같아 · 계획 세우고 유기적으로')** | `docs/systems/town_upgrade_plan.md` — 하루 한 바퀴 뼈대 · 기둥 넷 · 단계 0~5 · 새 기능은 비어 있는 고리를 채울 때만 |
 | 마을을 어떻게 키울지(발전 방향 50 · 큰 줄거리 「첫 마을 잔치」 · 선생님께 여쭤볼 것) | `docs/systems/town_roadmap.md` — 다섯 팀 보고를 합친 순서표(✅·🔨·⏭·❓) |
 | 마을 일을 시작할 때마다(사용자 10-17 '이상해 하면 다시 안 생기게') | `docs/systems/town_lessons.md` — 들은 말·문제·규칙·확인 · 새 지적은 그날 한 줄 · 하위 에이전트 지시문 첫 줄에도 |
