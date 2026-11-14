@@ -4,16 +4,18 @@
 const CF_HTTP = (() => { try { const q = new URLSearchParams(location.search).get('cf'); if (q === 'off') return ''; if (q && /^https?:\/\/(127\.0\.0\.1|localhost)(:\d{1,5})?$/.test(q)) return q; return 'https://sm-rooms.sm-rooms.workers.dev'; } catch (e) { return ''; } })();
 const CLS_K = 'sm-town-cls';
 export function classCode() { try { const q = new URLSearchParams(location.search).get('cls'); if (q != null) { const c = /^[A-Za-z0-9]{4,8}$/.test(q) ? q.toLowerCase() : ''; if (c) localStorage.setItem(CLS_K, c); else localStorage.removeItem(CLS_K); return CF_HTTP ? c : ''; } return CF_HTTP ? (localStorage.getItem(CLS_K) || '') : ''; } catch (e) { return ''; } }
+/* CLASS-MP(11-14): /load·/save 답의 mp = { r 반 방, tk 입장표, u 번호 } — 메모리에만(저장·주소 X) · 0 = 선생님이 「우리 반 함께 보기」를 끔 · 망이 안 되면 그대로 둠 */
+let MPT = null; export const mpTicket = () => MPT;
 // 한 번 부르기 → { st: 상태 번호(0 = 망 안 됨), j: 답 }
 /* PERF-B: body = 객체 또는 이미 만든 JSON 글(저장 올리기 = 이 기기 저장 글을 그대로 끼움 · 다시 parse·stringify X) · ka = 창 닫을 때(keepalive) */
 export async function cloudCall(kind, code, num, body, ms = 5000, ka) {
   if (!CF_HTTP || !code) return { st: 0, j: null }; const ac = typeof AbortController !== 'undefined' ? new AbortController() : null, t = ac ? setTimeout(() => ac.abort(), ms) : 0, raw = typeof body === 'string';
-  try { const r = await fetch(CF_HTTP + '/' + kind + '/' + code + '/' + num, { method: 'POST', headers: { 'content-type': 'application/json' }, body: raw ? body : JSON.stringify(body), signal: ac ? ac.signal : undefined, keepalive: kind === 'save' && !!(ka != null ? ka : !raw && body.k9) }); let j = null; try { j = await r.json(); } catch (e) { /* */ } return { st: r.status, j }; }
+  try { const r = await fetch(CF_HTTP + '/' + kind + '/' + code + '/' + num, { method: 'POST', headers: { 'content-type': 'application/json' }, body: raw ? body : JSON.stringify(body), signal: ac ? ac.signal : undefined, keepalive: kind === 'save' && !!(ka != null ? ka : !raw && body.k9) }); let j = null; try { j = await r.json(); } catch (e) { /* */ } if (r.status === 200 && j && j.ok && 'mp' in j) MPT = j.mp && typeof j.mp.r === 'string' && typeof j.mp.tk === 'string' ? { r: j.mp.r, tk: j.mp.tk, u: j.mp.u | 0 } : null; return { st: r.status, j }; }
   catch (e) { return { st: 0, j: null }; } finally { if (t) clearTimeout(t); } }
 // TEACH-1 교사 표(/class·/tclaim — 번호 없이 반 코드만 · 교사 열쇠는 본문으로만) → { st, j } · 서버가 아직 그 주소를 모르면(배포 전) st 404 + j null
 //   PIN-1 아이 번호 비밀번호 풀기(/pinclear/<반코드>/<번호> · num = 1~40 · 본문은 교사 열쇠만)
 export async function cloudTeach(kind, code, body, ms = 8000, num = 0) {
-  const pc = kind === 'pinclear'; if (!CF_HTTP || !code || !/^(class|tclaim|pinclear)$/.test(kind) || (pc && !(num >= 1 && num <= 40))) return { st: 0, j: null }; const ac = typeof AbortController !== 'undefined' ? new AbortController() : null, t = ac ? setTimeout(() => ac.abort(), ms) : 0;
+  const pc = kind === 'pinclear'; if (!CF_HTTP || !code || !/^(class|tclaim|pinclear|tset)$/.test(kind) || (pc && !(num >= 1 && num <= 40))) return { st: 0, j: null }; const ac = typeof AbortController !== 'undefined' ? new AbortController() : null, t = ac ? setTimeout(() => ac.abort(), ms) : 0;
   try { const r = await fetch(CF_HTTP + '/' + kind + '/' + code + (pc ? '/' + (num | 0) : ''), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ac ? ac.signal : undefined }); let j = null; try { j = await r.json(); } catch (e) { /* 글 답(없는 주소) */ } return { st: r.status, j }; }
   catch (e) { return { st: 0, j: null }; } finally { if (t) clearTimeout(t); } }
 export const cloudOn = () => !!CF_HTTP;

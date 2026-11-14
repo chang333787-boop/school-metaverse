@@ -3,11 +3,12 @@
 //   교사 화면(반 표) = 번호 · 지금 장 · 오늘 한 일 · 남긴 결과물 · 마지막 접속 — 한 줄 = 판 요약(town_tsum.js)
 //     자료 셋: ① 이 기기 판(같은 반 번호 판 + 번호 없는 칸) ② 붙여 넣기(기록 복사하기 JSON 여러 개 · 판 JSON) ③ 서버(반 코드 + 교사 열쇠 → /class · 배포 전이면 안내만)
 //   매 프레임 일 0(창을 열 때만 셈) · 이름 X(번호만) · 교사 열쇠는 이 탭 메모리에만(잠그면 지움)
+//   CLASS-MP(11-14) 「👥 우리 반 함께 보기 켬/끔」: ☁️ 서버 판(교사 열쇠로 받은 뒤) 띠 한 칸 → /tset(서버 반 칸) · 아이는 다음 /load·/save 답부터(이미 붙은 아이는 몇 분 안에 · 처음 = 켬)
 //   PIN-1(11-14) 아이 번호 비밀번호 풀기: ☁️ 서버 판 번호 줄의 「풀기」 → 그 줄 아래에서 한 번 더 묻기 → /pinclear(판은 그대로 · 다음에 들어오는 아이가 새 비밀번호를 정함)
 import { CHAPTERS } from './town_story.js?v=50';
 import { tsum, tsumDays } from './town_tsum.js?v=2';
 import { pickLabel, dayKey } from './town_rec.js?v=32';
-import { cloudTeach, cloudOn } from './town_cloud.js?v=8';
+import { cloudTeach, cloudOn } from './town_cloud.js?v=10';
 
 const CSS = `.twn-p[data-k=tch]{--rib:#2f4f7a}.twn-p[data-k=tch] .bx{max-height:96vh}
 .tch-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 6px}
@@ -55,7 +56,7 @@ export function mergeRows(L) { const by = new Map(), rest = []; for (const r of 
 // A: GAME · id(마을) · key(이 탭 저장 칸) · en() · esc · openP(h, wide, kind) · closeP() · say(t, s) · pin() → 선생님 비밀번호 · tchOn() · tchOff() · cls() → 반 코드 · chapters(back) · due() · dueSkip() · wx() · rec()
 export function createTeach(A) {
   const en = () => A.en(), esc = A.esc;
-  let src = 'dev', tkey = '', msg = '', paste = '', claim = 0, open9 = -1, code = '', pN = 0, ask9 = 0, okM = '', pcB = false;   /* pN = 붙여 넣어 읽은 덩어리 수(읽었으면 글 상자를 접어 표가 한 화면에) · PIN-1 ask9 = 풀지 묻는 번호 · okM = 잘 됐다는 알림 글(빨강 X) · pcB = 푸는 중 */
+  let src = 'dev', tkey = '', msg = '', paste = '', claim = 0, open9 = -1, code = '', pN = 0, ask9 = 0, okM = '', pcB = false, mpS = -1;   /* CLASS-MP mpS = 서버 반 칸 「우리 반 함께 보기」(1 켬 · 0 끔 · -1 모름) */   /* pN = 붙여 넣어 읽은 덩어리 수(읽었으면 글 상자를 접어 표가 한 화면에) · PIN-1 ask9 = 풀지 묻는 번호 · okM = 잘 됐다는 알림 글(빨강 X) · pcB = 푸는 중 */
   const RS = { dev: [], paste: [], cloud: [] };   /* 자료마다 줄(띠를 오가도 섞이지 않게) */
   const rowsGet = () => RS[src] || [], rowsSet = L => { RS[src] = L; };
   const T = (ko, e9) => (en() ? e9 : ko);
@@ -82,7 +83,7 @@ export function createTeach(A) {
     const ok = () => { b.textContent = '✓ ' + T('복사했어요', 'Copied'); A.say(T('📋 화면 기록을 복사했어요', '📋 Screen log copied'), 2.4); };
     const old = () => { try { const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;left:-9999px;top:0'; document.body.appendChild(ta); ta.select(); const r = document.execCommand('copy'); ta.remove(); if (r) { ok(); return; } } catch (e) { /* 아래로 */ } A.say(T('복사하지 못했어요. 한 번 더 눌러 주세요', 'Could not copy. Press once more'), 2.4); };
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, old); else old(); }
-  function lock() { tkey = ''; RS.dev = []; RS.paste = []; RS.cloud = []; src = 'dev'; paste = ''; pN = 0; claim = 0; ask9 = 0; okM = ''; A.tchOff(); A.closeP(); A.say(T('🔒 선생님 칸을 잠갔어요', '🔒 Teacher section locked'), 2.4); }
+  function lock() { tkey = ''; RS.dev = []; RS.paste = []; RS.cloud = []; src = 'dev'; paste = ''; pN = 0; claim = 0; ask9 = 0; okM = ''; mpS = -1; A.tchOff(); A.closeP(); A.say(T('🔒 선생님 칸을 잠갔어요', '🔒 Teacher section locked'), 2.4); }
   // ① 이 기기 판: 같은 반(반 코드) 번호 판 + 번호 없는 칸(칸 1~3) — 이 탭 판은 지금 상태 그대로
   function devRows() { const c = (A.cls && A.cls()) || '', rx = new RegExp('^sm-town-game:' + escRx(A.id) + '(?:@(?:([a-z0-9]{4,8}):)?s(\\d{2}))?(?:#([23]))?$'), out = [];
     let keys = []; try { for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i)); } catch (e) { keys = []; }
@@ -95,7 +96,7 @@ export function createTeach(A) {
     if (!/^\S{6,32}$/.test(key)) { msg = T('교사 열쇠는 띄어쓰기 없이 6~32자예요', 'The teacher key is 6–32 characters, no spaces'); return board(); }
     msg = T('☁️ 받는 중…', '☁️ Loading…'); board(); const r = mk ? await cloudTeach('tclaim', c, { tkey: key }) : await cloudTeach('class', c, { tkey: key });
     if (mk && r.st === 200 && r.j && r.j.ok) { claim = 0; return pull(key, false); }
-    if (r.st === 200 && r.j && r.j.ok && Array.isArray(r.j.L)) { tkey = key; code = c; msg = ''; ask9 = 0; RS.cloud = mergeRows(r.j.L.map(q => ({ n: q.n | 0, lab: String(q.n | 0), at: +q.at || 0, s: q.s || null, np: q.np ? 1 : 0 }))); return board(); }
+    if (r.st === 200 && r.j && r.j.ok && Array.isArray(r.j.L)) { tkey = key; code = c; msg = ''; ask9 = 0; RS.cloud = mergeRows(r.j.L.map(q => ({ n: q.n | 0, lab: String(q.n | 0), at: +q.at || 0, s: q.s || null, np: q.np ? 1 : 0 }))); mpS = r.j.mp === 0 ? 0 : r.j.mp === 1 ? 1 : -1; return board(); }
     if (r.st === 404 && r.j && r.j.nokey) { claim = 1; msg = T('이 반은 아직 교사 열쇠가 없어요. 아래에서 처음 정해요(아이에게 반 코드를 주기 전에).', 'This class has no teacher key yet. Set one below (before giving pupils the class code).'); return board(); }
     msg = r.st === 403 ? T('교사 열쇠가 달라요', 'Wrong teacher key') : r.st === 409 ? T('이 반은 이미 다른 교사 열쇠가 있어요', 'This class already has a different teacher key') : r.st === 423 ? T('잠깐 잠겼어요. 10분 뒤에 다시 해요', 'Locked for a moment. Try again in 10 minutes') : r.st === 404 ? T('서버에 아직 교사 표가 없어요(배포 전). 이 기기 판이나 붙여 넣기로 봐요.', 'The server has no class table yet (not deployed). Use this device or paste.') : r.st === 0 ? T('서버에 닿지 못했어요. 인터넷이 끊겼거나, 서버에 교사 표가 아직 없어요(배포 전).', 'Could not reach the server: no internet, or the class table is not deployed yet.') : (r.j && r.j.m) || T('받지 못했어요', 'Could not load'); return board(); }
   // PIN-1 아이 번호 비밀번호 풀기(서버 판 · 교사 열쇠는 표를 받을 때 넣은 것 그대로 · 새로 저장 X) — 판은 그대로, 핀만 비움
@@ -105,6 +106,10 @@ export function createTeach(A) {
       msg = okM = r.j.had ? T(n + '번 비밀번호를 풀었어요. 그 아이가 들어와서 새 비밀번호를 정하면 돼요', 'Cleared the PIN for No. ' + n + '. That pupil sets a new one the next time they come in') : T(n + '번은 서버에 판이 없어요. 그 아이가 들어와서 비밀번호를 정하면 돼요', 'No. ' + n + ' has no game on the server. That pupil sets a PIN when they come in'); return board(); }
     if (r.st === 403 || (r.st === 404 && r.j && r.j.nokey)) tkey = '';   /* 열쇠가 그사이 바뀜 = 다시 넣게 */
     msg = r.st === 403 ? T('교사 열쇠가 달라요. 열쇠를 다시 넣고 받아요', 'Wrong teacher key. Enter it again and load') : r.st === 423 ? T('잠깐 잠겼어요. 10분 뒤에 다시 해요', 'Locked for a moment. Try again in 10 minutes') : r.st === 404 && r.j && r.j.nokey ? T('이 반은 교사 열쇠가 없어요. 열쇠를 다시 넣고 받아요', 'This class has no teacher key. Enter it again and load') : r.st === 404 ? T('서버가 아직 준비 중이에요. 조금 뒤에 다시 해요', 'The server is not ready for this yet. Try again a little later') : r.st === 0 ? T('서버에 닿지 못했어요. 인터넷이 끊겼거나 서버가 아직 준비 중이에요. 조금 뒤에 다시 해요', 'Could not reach the server: no internet, or the server is not ready for this yet. Try again a little later') : (r.j && r.j.m) || T('풀지 못했어요. 다시 해요', 'Could not clear. Try again'); return board(); }   /* 배포 전 서버는 이 주소의 미리 묻기(OPTIONS)에 허락 머리 없이 404 → 브라우저에서는 끊김(0)과 같게 보임 → 한 줄에 둘 다 */
+  // CLASS-MP 「우리 반 함께 보기」 켬·끔(교사 열쇠는 표를 받을 때 넣은 것 그대로)
+  async function mpSet(v) { if (pcB || !tkey) return; pcB = true; msg = T('☁️ 바꾸는 중…', '☁️ Saving…'); board(); const r = await cloudTeach('tset', code, { tkey, mp: v ? 1 : 0 }); pcB = false; if (!A.tchOn() || !tkey) return;
+    if (r.st === 200 && r.j && r.j.ok) { mpS = r.j.mp ? 1 : 0; msg = okM = mpS ? T('우리 반 함께 보기를 켰어요. 아이가 다음에 들어오거나 저장할 때부터 같은 반 친구가 보여요', 'Class view is on. Pupils see classmates from their next sign-in or save') : T('우리 반 함께 보기를 껐어요. 몇 분 안에, 늦어도 다음에 들어올 때부터 혼자 놀아요', 'Class view is off. Pupils play on their own within a few minutes, at the latest from their next sign-in'); return board(); }
+    if (r.st === 403) tkey = ''; msg = r.st === 403 ? T('교사 열쇠가 달라요. 열쇠를 다시 넣고 받아요', 'Wrong teacher key. Enter it again and load') : r.st === 423 ? T('잠깐 잠겼어요. 10분 뒤에 다시 해요', 'Locked for a moment. Try again in 10 minutes') : r.st === 0 || r.st === 404 ? T('서버에 닿지 못했거나 서버가 아직 준비 중이에요. 조금 뒤에 다시 해요', 'Could not reach the server, or it is not ready yet. Try again a little later') : (r.j && r.j.m) || T('바꾸지 못했어요. 다시 해요', 'Could not change it. Try again'); return board(); }
   // 칸 그리기
   const chOf = id => CHAPTERS.find(c => c.id === id);
   const chT = id => { const c = chOf(id); return c ? c.icon + ' ' + L2(c.t, en()) : id; };
@@ -145,6 +150,7 @@ export function createTeach(A) {
     let h = '<h3>📋 ' + T('우리 반 한눈에', 'Class at a glance') + '</h3><div class="tch-bar"><button class="sub" data-a="home">◀ ' + T('선생님 칸', 'Teacher') + '</button>' + B('dev', T('이 기기 판', 'This device')) + B('paste', T('붙여 넣기', 'Paste')) + (cOn ? B('cloud', '☁️ ' + T('서버', 'Server')) : '') + '<span class="sm">' + T('오늘 ', 'Today ') + esc(dayKey().slice(5).replace('-', '/')) + (src === 'dev' ? ' · ' + (c ? T('반 ', 'class ') + esc(c) : T('반 코드 없음', 'no class code')) : src === 'cloud' && tkey ? ' · ' + T('반 ', 'class ') + esc(code) : src === 'paste' && pN && rows.length ? ' · ' + T('붙여 넣은 기록 ', 'pasted ') + pN + T('개', '') : '') + '</span>' + (src === 'paste' && pN && rows.length ? '<button class="sub" data-a="pedit">' + T('다시 붙여 넣기', 'Paste again') + '</button>' : '') + '</div>';   /* 붙여 넣은 뒤 = 한 띠에(25줄이 한 화면에) */
     if (src === 'paste' && !(pN && rows.length)) h += '<div class="sm">' + T('기기마다 학급 기록의 「복사하기」로 받은 글을 여러 개 한꺼번에 붙여 넣어요(패들렛에 모은 글을 통째로 복사해도 돼요).', 'Paste several “Copy record” texts at once (a whole Padlet column is fine).') + '</div><textarea class="tch-paste" placeholder="{&quot;kind&quot;:&quot;sm-town-rec&quot;, …}">' + esc(paste) + '</textarea><div class="tch-bar"><button class="pri" data-a="parse">' + T('표로 보기', 'Show table') + '</button><button class="sub" data-a="pclr">' + T('지우기', 'Clear') + '</button></div>';
     if (src === 'cloud' && (!tkey || claim)) h += '<div class="tch-bar"><span class="sm">' + T('반 코드', 'Class code') + '</span><input class="tch-in" data-i="code" maxlength="8" autocomplete="off" value="' + esc(c) + '"><span class="sm">' + (claim ? T('새 교사 열쇠(6자 넘게)', 'New teacher key (6+)') : T('교사 열쇠', 'Teacher key')) + '</span><input class="tch-in tch-key" data-i="key" maxlength="32" autocomplete="off" spellcheck="false">' + (claim ? '<input class="tch-in tch-key" data-i="key2" maxlength="32" autocomplete="off" spellcheck="false" placeholder="' + T('한 번 더', 'again') + '"><button class="pri" data-a="claim">' + T('처음 정하기', 'Set key') + '</button>' : '<button class="pri" data-a="pull">' + T('받기', 'Load') + '</button>') + '</div>';
+    if (src === 'cloud' && tkey && !claim && mpS >= 0) h += '<div class="tch-bar"><span class="sm">👥 ' + T('우리 반 함께 보기', 'Class view (see classmates)') + '</span><button class="sub' + (mpS ? ' on' : '') + '" data-a="mp1">' + T('켬', 'On') + '</button><button class="sub' + (mpS ? '' : ' on') + '" data-a="mp0">' + T('끔', 'Off') + '</button><span class="sm">' + T('번호만 보여요(이름 X)', 'Numbers only (no names)') + '</span></div>';
     h += (msg ? '<div class="tch-msg' + (msg === okM ? ' ok' : '') + '">' + esc(msg) + '</div>' : '') + tableHtml(rows) + footHtml(rows);
     const P = A.openP(h, true, 'tch');
     P.onclick = ev => { { const ta = P.querySelector('.tch-paste'); if (ta) paste = ta.value; }   /* 다시 그리기 전에 붙여 넣던 글을 남김 */
@@ -152,6 +158,7 @@ export function createTeach(A) {
       if (!A.tchOn()) { A.closeP(); return open(); }
       if (b.dataset.s) return board(b.dataset.s); const a = b.dataset.a;
       if (a === 'home') return home();
+      if (a === 'mp1' || a === 'mp0') return mpSet(a === 'mp1');
       if (a === 'pc' || a === 'pcn' || a === 'pcy') { const n9 = +b.dataset.n || 0, y = P.querySelector('.bx'), t9 = y ? y.scrollTop : 0; if (a === 'pcy') { pinClear(n9); } else { ask9 = a === 'pc' && !pcB ? n9 : 0; if (a === 'pc') msg = ''; board(); } const y1 = document.querySelector('.twn-p .bx'); if (y1) y1.scrollTop = t9; if (a === 'pc') { const q9 = document.querySelector('.twn-p tr.dt.ask'); if (q9 && q9.scrollIntoView) q9.scrollIntoView({ block: 'nearest' }); } return; }   /* PIN-1: 풀기 → 그 줄 아래에서 한 번 더 묻기(맨 아랫줄이면 묻는 줄이 보이게 내림) → [풀기]·[그만] */
       if (a === 'parse') { const L = parseBlobs(paste).map((o, i) => rowOf(o, i, en())), ok9 = L.filter(Boolean); RS.paste = mergeRows(ok9); pN = ok9.length; open9 = -1; msg = !ok9.length ? T('읽을 수 있는 기록이 없어요. 「복사하기」로 받은 글인지 봐요', 'Nothing readable. Is it from “Copy record”?') : ok9.length < L.length ? T('덩어리 ', 'Skipped ') + (L.length - ok9.length) + T('개는 기록이 아니라 뺐어요', ' that were not records') : ''; return board(); }
       if (a === 'pclr') { paste = ''; RS.paste = []; msg = ''; pN = 0; return board(); } if (a === 'pedit') { pN = 0; return board(); }

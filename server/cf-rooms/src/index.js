@@ -11,6 +11,8 @@
 //         {t:'j', id, n, k, c, a, u} · {t:'l', id}              누가 들어옴 · 나감
 //         {t:'s', ts, P:[[id,x,y,z,h,s]...]}                    초당 20번 · 그사이 움직인 사람만
 //         {t:'full', m}                                         꽉 참(닫기 직전)
+// CLASS-MP(11-14) 반 방 = 'c' + 16진 7자(반 코드의 PEPPER 해시 · 거꾸로 못 앎) · /load·/save 답의 mp = {r 방, tk 입장표, u 번호}(PEPPER 서명 · 그날과 다음 날)
+//   반 방은 {t:'j', tk}가 맞을 때만 들임(아니면 4004) · 번호 u = 표에서 읽음(보낸 u는 버림) · 같은 번호가 다른 id로 들어오면 먼저 것을 4005로 내보냄
 // 돈 0원 지키기
 //   - 휴면 웹소켓(ctx.acceptWebSocket): 아무 일 없으면 DO가 메모리에서 내려가 시간 요금이 안 쌓임.
 //   - 박자(50ms)는 DO 안 타이머로 돌림. setAlarm은 한 번마다 '요청 1건'으로 세어
@@ -33,6 +35,7 @@ const LOOK_MS = 1000;         /* NET-CF3 모양 칸 바뀜 알림({t:'m'}) — �
 const ORIGIN_OK = 'https://chang333787-boop.github.io';
 const ORIGIN_LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/;
 const ROOM_NAME = /^[A-Za-z0-9]{4,8}$/;
+const CLS_ROOM = /^c[0-9a-f]{7}$/;   /* CLASS-MP 반 방(입장표가 있어야 들어옴) */
 
 /* 동시 방 수를 '대략' 막기 — 이 isolate가 최근 10분에 본 방 이름 수. 전 세계 합계는 아님(완벽할 필요 X). */
 const seenRooms = new Map();
@@ -50,7 +53,7 @@ export default {
     if (url.pathname === '/' || url.pathname === '/health') return text('sm-rooms 살아 있어요', 200);
     const sv = url.pathname.match(/^\/(save|load|drop)\/([^/]+)\/(\d{1,2})$/);
     if (sv) return saveRoute(req, env, sv[1], sv[2], +sv[3]);
-    const tv = url.pathname.match(/^\/(class|tclaim|treset)\/([^/]+)$/);
+    const tv = url.pathname.match(/^\/(class|tclaim|treset|tset)\/([^/]+)$/);
     if (tv) return teachRoute(req, env, tv[1], tv[2]);
     const pv = url.pathname.match(/^\/pinclear\/([^/]+)\/(\d{1,2})$/);   /* PIN-1 아이 번호 비밀번호 풀기(교사 열쇠) */
     if (pv) return teachRoute(req, env, 'pinclear', pv[1], +pv[2]);
@@ -122,7 +125,7 @@ export class Room extends DurableObject {
     for (const ws of this.ctx.getWebSockets()) {
       const a = ws.deserializeAttachment();
       if (!a || !a.id) continue;
-      this.info.set(ws, { id: a.id, n: a.n, k: a.k ?? null, c: a.c ?? null, a: a.a ?? null, u: a.u ?? null, mAt: 0, win: 0, cnt: 0 });
+      this.info.set(ws, { id: a.id, n: a.n, k: a.k ?? null, c: a.c ?? null, a: a.a ?? null, u: a.u ?? null, cr: a.cr || 0, mAt: 0, win: 0, cnt: 0 });
       if (a.p) this.pos.set(a.id, a.p);
     }
     /* NET-CF3 핑 자동 답 — 글이 정확히 같으면 방(DO)을 깨우지 않고 답함(조용한 방은 휴면 그대로 · 하루 세기에도 안 듦) */
@@ -137,6 +140,7 @@ export class Room extends DurableObject {
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server);
+    const rn = (new URL(req.url).pathname.split('/')[2] || '').toLowerCase(); if (CLS_ROOM.test(rn)) server.serializeAttachment({ rn });   /* CLASS-MP: 반 방 이름(들어오기 확인용 · 휴면에도 남음) */
     if (this.dayFull()) { this.bye(server, '오늘은 꽉 찼어요. 내일 다시 만나요', 4002); }
     else if (this.ctx.getWebSockets().length > ROOM_MAX) { this.bye(server, `방이 꽉 찼어요(${ROOM_MAX}명)`, 4003); }
     return new Response(null, { status: 101, webSocket: client });
@@ -165,7 +169,7 @@ export class Room extends DurableObject {
     let i = this.info.get(ws);
     if (!i) {
       const a = ws.deserializeAttachment() || {};
-      i = { id: a.id || null, n: a.n || '', k: a.k ?? null, c: a.c ?? null, a: a.a ?? null, u: a.u ?? null, mAt: 0, win: 0, cnt: 0 };
+      i = { id: a.id || null, n: a.n || '', k: a.k ?? null, c: a.c ?? null, a: a.a ?? null, u: a.u ?? null, cr: a.cr || 0, mAt: 0, win: 0, cnt: 0 };
       this.info.set(ws, i);
     }
     return i;
@@ -210,6 +214,7 @@ export class Room extends DurableObject {
         return;
       case 'e': {
         if (!i.id) return;
+        if (i.cr) { const m = okInt(d.m, 0, 9); if (m == null) return; d = { t: 'e', m, all: d.all }; }   /* CLASS-MP 반 방 = 이모트 번호만(자유 글 X) */
         d.f = i.id;
         const all = d.all === 1;
         const s = JSON.stringify(d);
@@ -220,6 +225,9 @@ export class Room extends DurableObject {
       case 'j': {
         const id = String(d.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 16);
         if (!id || i.id) return;
+        const rn = (ws.deserializeAttachment() || {}).rn; let tu = null;   /* CLASS-MP: 반 방 = 입장표가 맞아야 · 번호는 표에서 */
+        if (rn) { tu = await tkCheck(this.env.PEPPER, rn, d.tk, now); if (!tu) { this.dead.add(ws); shut(ws, 4004, 'ticket'); return; } if (i.id || this.dead.has(ws)) return;
+          for (const [w, o] of this.info) if (w !== ws && o.id && o.id !== id && o.u === tu) { o.id = null; this.dead.add(w); shut(w, 4005, 'other device'); } }
         const n = '';   /* NET-CF3: 이름은 받지 않음 — 누가 보내도 버리고 늘 빈 글(이름·자유 글은 이 서버에 두지 않음 · 칸은 옛 화면과 꼴을 맞추려고 남김) */
         /* 같은 id가 이미 있으면(새로고침·다른 탭) 옛 연결을 닫음 */
         for (const [w, o] of this.info) if (w !== ws && o.id === id) {
@@ -228,7 +236,7 @@ export class Room extends DurableObject {
           shut(w, 4000, 'replaced');
         }
         i.id = id; i.n = n;
-        i.k = okK(d.k); i.c = okInt(d.c, 0, 9); i.a = okA(d.a); i.u = okInt(d.u, 1, 40);   /* NET-CF3 모양 칸(안 보냈거나 꼴이 다르면 null) */
+        i.k = okK(d.k); i.c = okInt(d.c, 0, 9); i.a = okA(d.a); i.u = rn ? tu : okInt(d.u, 1, 40); i.cr = rn ? 1 : 0;   /* NET-CF3 모양 칸(안 보냈거나 꼴이 다르면 null) */
         this.tagOf(ws, i, false);
         const L = [], P = [];
         for (const o of this.info.values()) if (o.id) {
@@ -298,7 +306,7 @@ export class Room extends DurableObject {
 
   /* 소켓 꼬리표(휴면에서 깨어나도 남는 것) = id · 이름(빈 글) · 모양 칸 · 마지막 자리 */
   tagOf(w, i, withPos) {
-    try { w.serializeAttachment({ id: i.id, n: i.n, k: i.k, c: i.c, a: i.a, u: i.u, p: withPos ? this.pos.get(i.id) || null : null }); } catch (e) { /* 닫히는 중 */ }
+    try { w.serializeAttachment({ id: i.id, n: i.n, k: i.k, c: i.c, a: i.a, u: i.u, cr: i.cr || 0, p: withPos ? this.pos.get(i.id) || null : null }); } catch (e) { /* 닫히는 중 */ }
   }
 
   /* 박자를 멈추고 휴면 준비 — 마지막 자리를 소켓 꼬리표에 적어 깨어나도 방 모습이 남게 */
@@ -351,6 +359,12 @@ async function teachRoute(req, env, kind, code, num = 0) {
   const out = await r.text(); return new Response(out, { status: r.status, headers: { 'content-type': 'application/json; charset=utf-8', ...cors(req) } });
 }
 async function keyHash(pepper, code, key) { const b = new TextEncoder().encode((pepper || 'sm-town') + '|' + code + '|T|' + key); const h = await crypto.subtle.digest('SHA-256', b); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+/* CLASS-MP 입장표 — 방 = 'c' + HMAC(PEPPER, 반 코드) 7자 · 표 = '번호.날.서명' (날 = UTC 날 번호 · 그날과 다음 날까지) · 값은 어디에도 찍지 않음 */
+let HK = null, HKP = null;
+async function hmac(pepper, msg) { const p = pepper || 'sm-town'; if (!HK || HKP !== p) { HKP = p; HK = await crypto.subtle.importKey('raw', new TextEncoder().encode(p), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']); } const s = await crypto.subtle.sign('HMAC', HK, new TextEncoder().encode(msg)); return [...new Uint8Array(s)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+export async function mpOf(pepper, code, num, now) { const r = 'c' + (await hmac(pepper, 'room|' + code)).slice(0, 7), d = Math.floor(now / 86400000); return { r, u: num, tk: num + '.' + d + '.' + (await hmac(pepper, 'tk|' + r + '|' + num + '|' + d)).slice(0, 24) }; }
+export async function tkCheck(pepper, rn, tk, now) { const m = /^(\d{1,2})\.(\d{5,6})\.([0-9a-f]{24})$/.exec(String(tk || '')); if (!m) return null; const u = +m[1], d = +m[2], g = Math.floor(now / 86400000) - d; if (!(u >= 1 && u <= 40) || g < 0 || g > 1) return null;
+  return sameStr(m[3], (await hmac(pepper, 'tk|' + rn + '|' + u + '|' + d)).slice(0, 24)) ? u : null; }
 function sameStr(a, b) { a = String(a); b = String(b); let d = a.length ^ b.length; for (let i = 0; i < Math.max(a.length, b.length); i++) d |= (a.charCodeAt(i) | 0) ^ (b.charCodeAt(i) | 0); return d === 0; }
 function sumOf(dataStr) { try { const s = tsum(JSON.parse(dataStr)); return s ? JSON.stringify(s) : null; } catch (e) { return null; } }
 
@@ -366,7 +380,9 @@ export class Saves extends DurableObject {
     /* TEACH-1: 판 요약 칸(예전 표에 한 번 더함 · 이미 있으면 그대로) + 교사 열쇠 표(반 하나 = 한 줄) */
     try { this.sql.exec('ALTER TABLE s ADD COLUMN sum TEXT'); } catch (e) { /* 이미 있음 */ }
     this.sql.exec('CREATE TABLE IF NOT EXISTS t (k INTEGER PRIMARY KEY, h TEXT, fails INTEGER DEFAULT 0, lock INTEGER DEFAULT 0, at INTEGER)');
+    try { this.sql.exec('ALTER TABLE t ADD COLUMN mp INTEGER DEFAULT 1'); } catch (e) { /* CLASS-MP 「우리 반 함께 보기」 스위치(처음 = 켬) · 이미 있음 */ }
   }
+  async mp(code, num, now) { const t = this.sql.exec('SELECT mp FROM t WHERE k = 1').toArray()[0]; return t && t.mp === 0 ? 0 : mpOf(this.env.PEPPER, code, num, now); }   /* CLASS-MP: 스위치가 꺼졌으면 0 · 반 칸(열쇠)이 없으면 켬 */
   async teach(kind, code, d, now, num = 0) {
     const tk = String((d && d.tkey) || ''); if (!TKEY_RX.test(tk)) return Response.json({ ok: false, m: '교사 열쇠는 띄어쓰기 없이 6~32자예요' }, { status: 400 });
     const h = await keyHash(this.env.PEPPER, code, tk), row = this.sql.exec('SELECT h, fails, lock FROM t WHERE k = 1').toArray()[0];
@@ -382,6 +398,7 @@ export class Saves extends DurableObject {
     if (row.h !== h) { const f = (row.fails || 0) + 1; this.sql.exec('UPDATE t SET fails = ?, lock = ? WHERE k = 1', f >= 5 ? 0 : f, f >= 5 ? now + TLOCK_MS : 0); return kind === 'tclaim' ? Response.json({ ok: false, taken: 1, m: '이 반은 이미 다른 교사 열쇠가 있어요' }, { status: 409 }) : Response.json({ ok: false, bad: 1, m: '교사 열쇠가 달라요' }, { status: 403 }); }
     if (row.fails || row.lock) this.sql.exec('UPDATE t SET fails = 0, lock = 0 WHERE k = 1');
     if (kind === 'tclaim') return Response.json({ ok: true, made: 0 });
+    if (kind === 'tset') { const v = d && d.mp ? 1 : 0; this.sql.exec('UPDATE t SET mp = ? WHERE k = 1', v); return Response.json({ ok: true, mp: v }); }   /* CLASS-MP 「우리 반 함께 보기」 켬·끔(다음 /load·/save부터) */
     if (kind === 'pinclear') {   /* PIN-1: 그 번호 핀만 비움(판·요약·시각 그대로) — 다음에 들어오는 아이가 새 핀을 정함 */
       const pr = this.sql.exec('SELECT num FROM s WHERE num = ?', num).toArray()[0];
       if (pr) this.sql.exec("UPDATE s SET pin = '', fails = 0, lock = 0 WHERE num = ?", num);
@@ -396,7 +413,8 @@ export class Saves extends DurableObject {
       let o = null; try { o = s ? JSON.parse(s) : null; } catch (e) { o = null; }
       L.push(r.pin ? { n: r.num, at: r.at, s: o } : { n: r.num, at: r.at, s: o, np: 1 });   /* np = 핀이 비어 있음(선생님이 풀었고 아직 새로 안 정함 · 핀 값은 보내지 않음) */
     }
-    return Response.json({ ok: true, at: now, L });
+    const m9 = this.sql.exec('SELECT mp FROM t WHERE k = 1').toArray()[0];
+    return Response.json({ ok: true, at: now, L, mp: m9 && m9.mp === 0 ? 0 : 1 });
   }
   async fetch(req) {
     const [, kind, code, n] = new URL(req.url).pathname.split('/'), num = +n, now = Date.now();
@@ -415,7 +433,7 @@ export class Saves extends DurableObject {
       else if (row.fails) this.sql.exec('UPDATE s SET fails = 0 WHERE num = ?', num);
     }
     if (kind === 'drop') { if (row) this.sql.exec('DELETE FROM s WHERE num = ?', num); return Response.json({ ok: true, dropped: row ? 1 : 0 }); }   /* 내 저장 지우기(핀이 맞을 때 · 시험 판 zz 치우기) */
-    if (kind === 'load') return Response.json(row && row.data ? { ok: true, at: row.at, data: JSON.parse(row.data) } : { ok: true, none: 1 });
+    if (kind === 'load') return Response.json(row && row.data ? { ok: true, at: row.at, data: JSON.parse(row.data), mp: await this.mp(code, num, now) } : { ok: true, none: 1 });   /* CLASS-MP: 핀이 맞은 판에만 입장표 */
     const day = new Date(now).toISOString().slice(0, 10), c = (this.sql.exec('SELECT c FROM d WHERE day = ?', day).toArray()[0] || { c: 0 }).c;
     if (c >= SAVE_DAY_MAX) return Response.json({ ok: false, m: '오늘은 저장이 꽉 찼어요. 이 기기에는 남아 있어요', full: 1 }, { status: 429 });
     if (!d.data || typeof d.data !== 'object' || Array.isArray(d.data)) return Response.json({ ok: false, m: '저장할 것이 없어요' }, { status: 400 });
@@ -424,6 +442,6 @@ export class Saves extends DurableObject {
     this.sql.exec('INSERT INTO s (num, pin, data, at, fails, lock, sum) VALUES (?, ?, ?, ?, 0, 0, ?) ON CONFLICT(num) DO UPDATE SET data = excluded.data, at = excluded.at, sum = excluded.sum', num, h, data, now, sum);
     this.sql.exec('INSERT INTO d (day, c) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET c = c + 1', day);
     if (Math.random() < 0.02) this.sql.exec('DELETE FROM d WHERE day < ?', new Date(now - 7 * 86400000).toISOString().slice(0, 10));
-    return Response.json({ ok: true, at: now });
+    return Response.json({ ok: true, at: now, mp: await this.mp(code, num, now) });
   }
 }

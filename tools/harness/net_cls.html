@@ -1,0 +1,31 @@
+<!doctype html><meta charset="utf-8"><title>net cls 시험</title>
+<div id="toast" style="display:none"></div>
+<script type="importmap">{ "imports": { "three": "../../lib/three.module.min.js" } }</script>
+<script>
+// CLASS-MP 시험 쪽(tools/harness/town_classmp.cjs): ?cr=반 방 · ?tk=입장표 → createNet({cls}) · cr이 없으면 예전 방(?r= 꼬리) · ?old=1 = 지금 배포된 net.js(시험이 잠깐 꺼내 둠 net_oldcmp.js)
+//   Firebase(fetch·EventSource)는 가짜이고 몇 번 불렸는지 셈(FBN · ES) · SHIFT = performance.now를 앞으로 당김(가만히 6분 시험) · NOTES = cls.note가 받은 것 · raw(...) = 방 서버에 바로 붙는 손님
+const Q = new URLSearchParams(location.search); sessionStorage.setItem('mp.id', Q.get('me'));
+window.FBN = 0; window.fetch = async () => { window.FBN++; return new Response('null', { status: 200 }); };
+window.ES = [];
+window.EventSource = class { constructor() { this.l = {}; window.ES.push(this); setTimeout(() => this.l.put && this.l.put({ data: JSON.stringify({ path: '/', data: null }) }), 50); } addEventListener(k, f) { this.l[k] = f; } close() {} };
+window.SHIFT = 0; { const pn0 = performance.now.bind(performance); performance.now = () => pn0() + window.SHIFT; }
+window.SM_WORLD = { w: 't:다7', v: '', q: 1 };
+</script>
+<script type="module">
+import * as THREE from 'three';
+const Q = new URLSearchParams(location.search), CF = (Q.get('cf') || '').replace(/^http/, 'ws'), CR = Q.get('cr') || '';
+const { createNet } = await import(Q.get('old') === '1' ? '../../v2/js/net_oldcmp.js' : '../../v2/js/net.js');
+window.NOTES = [];
+const scene = new THREE.Scene(), N = createNet(CR ? { THREE, scene, room: 'x', cls: { r: CR, tk: () => window.TK, lab: (u) => u + '번', note: (k) => window.NOTES.push(k) } } : { THREE, scene, room: 'zzcm' + Q.get('r') });
+window.TK = Q.get('tk') || ''; window.N = N; window.SM_MP = { net: () => N, roomRun: () => null };
+const P = { x: 0, y: 0, z: 0, h: 0 }, T00 = performance.now(); let last = T00; window.move = Q.get('move') === '1';
+window.emoSeen = () => { let k = 0; N.each((O) => { if (O.em && O.em.t > 0) k++; }); return k; };
+window.raw = (o) => new Promise((res) => { const s = new WebSocket(CF + '/room/' + o.room), g = { s, code: 0, msgs: [], open: false }; window.RAW = window.RAW || []; window.RAW.push(g);
+  s.onopen = () => { g.open = true; s.send(JSON.stringify(o.j)); if (o.p) s.send(JSON.stringify({ t: 'p', x: 1, y: 0, z: 1, h: 0, s: 0 })); setTimeout(() => res(window.RAW.length - 1), 400); };
+  s.onmessage = (ev) => g.msgs.push(String(ev.data)); s.onclose = (e) => { g.open = false; g.code = e.code; res(window.RAW.length - 1); }; s.onerror = () => {}; });
+window.rawSend = (i, m) => { const g = window.RAW[i]; if (g && g.open) g.s.send(JSON.stringify(m)); return !!(g && g.open); };
+window.rawGet = (i) => { const g = window.RAW[i]; return g ? { code: g.code, open: g.open, msgs: g.msgs.slice(-20) } : null; };
+function f() { const now = performance.now(), dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now; const t = (now - T00) / 1000; if (window.move) { P.x = Math.sin(t * 0.8) * 20; P.z = Math.cos(t * 0.8) * 20; P.h = t; }
+  N.tick(dt, P); requestAnimationFrame(f); }
+requestAnimationFrame(f); window.READY = true;
+</script>

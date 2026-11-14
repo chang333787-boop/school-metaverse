@@ -7,6 +7,7 @@
 import { parseLook, lookColors } from '../js/look.js?v=1';
 const MAXN = 40, TAGW = 256, TAGH = 64, TCOLS = 4, TROWS = 10, AW = TAGW * TCOLS, AH = TAGH * TROWS;
 const SKIN = 0xf1c9a0, BOT = 0x2b3a55, HAIR = 0x5b3f2e;
+const netOf = () => { const MP = window.SM_MP, N = MP && MP.net && MP.net(); if (N) return N; const C = window.SM_CLS; return C && C.net ? C.net() : null; };   /* 예전 함께하기 방(main.js) · 없으면 CLASS-MP 우리 반 방(town_classmp.js) */
 export function createFriends({ T3, map }) {
   const FBA = (a, n) => new T3.Float32BufferAttribute(a, n), _m = new T3.Matrix4(), _c = new T3.Color();
   // 모양 굽기(정점 색 · 한 지오메트리): parts = [[geo, hex, tx, ty, tz, rx?]]
@@ -68,13 +69,13 @@ export function createFriends({ T3, map }) {
       const s9 = S.slot; uvOff.setXY(nt, (s9 % TCOLS) * TAGW / AW, 1 - (Math.floor(s9 / TCOLS) + 1) * TAGH / AH); T9.makeTranslation(O.x, O.y + lift + 1.62, O.z); tags.setMatrixAt(nt++, T9); } };
   const fin = (m, c) => { m.count = c; m.visible = c > 0; if (c) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } };
   const API = {
-    update(dt) { const MP = window.SM_MP, N = MP && MP.net && MP.net(); if (!N || !N.each) { if (last.n || last.tags) { for (const m of PARTS) fin(m, 0); fin(bike, 0); fin(boat, 0); fin(tags, 0); last.n = last.tags = 0; } return; }
+    update(dt) { const N = netOf(); if (!N || !N.each) { if (last.n || last.tags) { for (const m of PARTS) fin(m, 0); fin(bike, 0); fin(boat, 0); fin(tags, 0); last.n = last.tags = 0; } return; }
       N.ext(true); FR++; dtNow = dt; CP = map.camera.position; if ((pkT -= dt) <= 0) { pkT = 0.5; pick(N); } n = nb = no = nt = 0; N.each(one);
       for (const m of PARTS) fin(m, n); fin(bike, nb); fin(boat, no); fin(tags, nt); if (nt) uvOff.needsUpdate = true; last.n = n; last.tags = nt; last.bike = nb; last.boat = no;
       if ((FR & 255) === 0) for (const [p9, S9] of ST) if (FR - S9.seen > 600) { if (S9.slot >= 0) FREE.push(S9.slot); ST.delete(p9); } },   // 오래 안 보인 친구 상태 치움
-    dots(g, toXY) { const MP = window.SM_MP, N = MP && MP.net && MP.net(); if (!N || !N.each) return 0; let k = 0; N.each(O => { const [a, b] = toXY(O.x, O.z); g.fillStyle = '#' + (O.c >>> 0).toString(16).padStart(6, '0'); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.beginPath(); g.arc(a, b, 3.5, 0, 7); g.fill(); g.stroke(); k++; }); return k; },
+    dots(g, toXY) { const N = netOf(); if (!N || !N.each) return 0; let k = 0; N.each(O => { const [a, b] = toXY(O.x, O.z); g.fillStyle = '#' + (O.c >>> 0).toString(16).padStart(6, '0'); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.beginPath(); g.arc(a, b, 3.5, 0, 7); g.fill(); g.stroke(); k++; }); return k; },
     get stats() { return { ...last, calls: (last.n ? PARTS.length : 0) + (last.bike ? 1 : 0) + (last.boat ? 1 : 0) + (last.tags ? 1 : 0), states: ST.size, near: [...PK] }; },   /* near = 지금 몸을 그리는 친구(시험) */
-    dispose() { const MP = window.SM_MP, N = MP && MP.net && MP.net(); if (N && N.ext) N.ext(false); for (const m of [...M, tags]) { map.remove(m); m.geometry.dispose(); m.dispose && m.dispose(); } MAT.dispose(); MV.dispose(); tagMat.dispose(); tex.dispose(); ST.clear(); if (window.SM_FRIENDS === API) delete window.SM_FRIENDS; },
+    dispose() { const N = netOf(); if (N && N.ext) N.ext(false); for (const m of [...M, tags]) { map.remove(m); m.geometry.dispose(); m.dispose && m.dispose(); } MAT.dispose(); MV.dispose(); tagMat.dispose(); tex.dispose(); ST.clear(); if (window.SM_FRIENDS === API) delete window.SM_FRIENDS; },
   };
   window.SM_FRIENDS = API;   // 시험·디버그(stats)
   return API;
