@@ -39,8 +39,11 @@ async function bot(p, R) { await p.evaluate(() => { const L = window.__TL = []; 
       if (!COUNT) { const has = await p.evaluate(() => !!(SM_TOWN.hud)); ok(has, 'SM_TOWN.hud 있음');
         if (has) { ok(!(await p.evaluate(() => SM_TOWN.hud.all())), '새 아이 = 진행 열림(모두 열림 아님)'); { const g9 = R.desk.filter(t => /gchip/.test(t)); ok(g9.length === 2 && g9.some(t => /메뉴/.test(t)) && g9.some(t => /자전거/.test(t)), '칩 = ☰ 메뉴 · 🚲 자전거 둘(OPEN-1 10-27 자전거는 처음부터)'); }
           await p.keyboard.press('KeyB'); await p.waitForTimeout(400); ok(await p.evaluate(() => SM_TOWN.indoor.state().bike), 'KeyB = 첫날부터 자전거 탐(OPEN-1)'); await p.keyboard.press('KeyB'); await p.waitForTimeout(300);
-          for (const k of ['KeyM', 'KeyF', 'KeyY']) { await p.keyboard.press(k); await p.waitForTimeout(350); const pn = await p.evaluate(() => !!document.querySelector('.twn-p')); ok(!pn, k + ' 잠김 = 창 안 열림'); if (pn) await p.keyboard.press('Escape'); }
-          ok(/이야기를 따라가면/.test(await toastT(p)), '잠긴 키 = 짧은 알림');
+          const lk9 = {}; for (const k of ['KeyM', 'KeyF', 'KeyY']) { if (k === 'KeyY') await p.waitForTimeout(4100); /* 잠김 알림(hudNo)은 4초에 한 번 — Y도 제 알림을 내는지 보려고 기다림 */ await p.keyboard.press(k); await p.waitForTimeout(350); const pn = await p.evaluate(() => !!document.querySelector('.twn-p')); ok(!pn, k + ' 잠김 = 창 안 열림'); lk9[k] = await toastT(p); if (pn) await p.keyboard.press('Escape'); }
+          /* CORE-FIX(11-14): 예전엔 M·F·Y를 잇달아 누르고 마지막 알림 하나만 봄 — PATH-1D 가(cbc36e5f · town_path1.md 「라」 10)부터 F는 도구 쓰기 키라, 도구를 가졌는데 안 든 아이에겐 「숫자 키로 도구를 먼저 들어요」가 맞는 글(아이가 F를 왜 눌렀는지에 답함) → 키마다 그 키의 알림을 봄(게임과 같은 조건 = 가진 도구가 있고 든 도구가 없음) */
+          const tl9 = await p.evaluate(() => { const T = SM_TOWN.tools; if (!T) return null; const I9 = T.info(); return { has: T.order().some(k => I9.have.includes(k)), cur: I9.cur || null }; });
+          ok(/이야기를 따라가면/.test(lk9.KeyM) && /이야기를 따라가면/.test(lk9.KeyY), '잠긴 키(M · Y) = 짧은 알림 「이야기를 따라가면 하나씩 열려요」 (' + lk9.KeyM + ' / ' + lk9.KeyY + ')');
+          ok(tl9 && (tl9.has && !tl9.cur ? /도구를 먼저 들어요/.test(lk9.KeyF) : /이야기를 따라가면/.test(lk9.KeyF)), 'F = 도구를 가졌는데 안 들었으면 「숫자 키로 도구를 먼저 들어요」 · 도구가 없으면 잠김 알림 (' + JSON.stringify(tl9) + ' · ' + lk9.KeyF + ')');
           ok(await p.evaluate(() => ['pass', 'jobs', 'rank'].every(k => SM_TOWN.hud.keys().includes(k))), '열림 키에 여권·직업 체험·승급 미션');
           const tabs = async () => { await p.keyboard.press('KeyQ'); await p.waitForTimeout(500); const t = await p.evaluate(() => { const e = document.querySelector('.twn-p .nb-tabs'); return e ? e.textContent : null; }); await p.keyboard.press('Escape'); await p.waitForTimeout(300); return t; };
           { const t = await tabs(); ok(t != null && !/할 일|도감|솜씨|배움|여권/.test(t), '첫날 수첩 탭 = 가방·이야기·일기·앨범(가방은 처음부터 · 10-19) (' + t + ')'); }

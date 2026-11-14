@@ -94,8 +94,11 @@ async function page(b, ctxOpt, url) {
         await put(0.25); await ev(([dx, dz]) => SD2.yaw(Math.atan2(-dx, -dz)), [dx, dz]); await W8(500);
         let h = await walk('KeyW', 1400); ok(angD(h.deg, road) < 25 && h.by === 'move', '앞으로 걷기 = 화살표가 길 쪽(' + h.deg + '° · 길 ' + Math.round(road) + '°)');
         const mini = () => ev(() => { const cv = document.querySelector('.twn-mini canvas'); if (!cv || !cv.width) return null; const m = SD2.map.player.pos(), [px, py] = SM_TOWN.miniPt(m.x, m.z), a = SM_TOWN.map2().head.a, g = cv.getContext('2d'), red = (x, y) => { const d = g.getImageData(Math.round(x), Math.round(y), 1, 1).data; return d[0] > 190 && d[1] < 90 && d[2] < 90; }, s = 9.5;
-          return { tip: red(px + Math.sin(a) * s * 0.6, py - Math.cos(a) * s * 0.6), tail: red(px - Math.sin(a) * s * 0.6, py + Math.cos(a) * s * 0.6), mid: red(px, py) }; });
-        await W8(250); let m9 = await mini(); ok(m9 && m9.tip && !m9.tail, '작은 지도 화살표 앞 끝 = 가는 쪽(앞 ' + (m9 && m9.tip) + ' · 꼬리 홈 ' + (m9 && m9.tail) + ')');
+          /* CORE-FIX(11-14 · core 한 번 ✗ · 같은 판 HEAD에서 여섯 번 ✓ · 오늘 커밋은 작은 지도 그리기를 안 건드림): 화살표 중심이 x.5 자리면(이 길 = 89.5) 앞 0.6s 화소(반올림)가 화살표 가장자리에서 0.06 px뿐 → 0.3 m만 어긋나도 흰 테두리와 섞여 '빨강 아님' — 앞 끝 표본을 몸통 안 0.45s로(같은 자리에서 여유 0.76 px · 화소 한 칸 그대로) · 거꾸로 그린 화살표면 그 자리는 흰 홈이라 그대로 떨어짐 · 꼬리 0.6s 그대로 · 떨어지면 화소 값을 찍음 */
+          const col = (x, y) => [...g.getImageData(Math.round(x), Math.round(y), 1, 1).data].slice(0, 3).join(','), tx = px + Math.sin(a) * s * 0.45, ty = py - Math.cos(a) * s * 0.45, bx = px - Math.sin(a) * s * 0.6, by = py + Math.cos(a) * s * 0.6;
+          return { tip: red(tx, ty), tail: red(bx, by), mid: red(px, py), dbg: { tipC: col(tx, ty), tailC: col(bx, by), p: [+px.toFixed(2), +py.toFixed(2)], deg: SM_TOWN.map2().head.deg, by: SM_TOWN.map2().head.by } }; });
+        const why = m9 => m9 && m9.tip && !m9.tail ? '' : ' ' + JSON.stringify(m9);
+        await W8(250); let m9 = await mini(); ok(m9 && m9.tip && !m9.tail, '작은 지도 화살표 앞 끝 = 가는 쪽(앞 ' + (m9 && m9.tip) + ' · 꼬리 홈 ' + (m9 && m9.tail) + ')' + why(m9));
         await shot('mini_walk', await ev(() => { const r = document.querySelector('.twn-mini').getBoundingClientRect(); return { x: r.left, y: r.top, width: r.width, height: r.height }; }));
         await put(0.25); await ev(([dx, dz]) => SD2.yaw(Math.atan2(-dz, dx)), [dx, dz]); await W8(500);   /* 오른쪽 = 길 쪽 · 카메라는 길에서 90° */
         h = await walk('KeyD', 1400); const ch9 = await camH(); ok(angD(h.deg, road) < 25 && angD(ch9, road) > 60, '옆으로 걷기 = 화살표는 가는 쪽(' + h.deg + '°) · 카메라 쪽(' + Math.round(ch9) + '°) 아님');
@@ -105,7 +108,7 @@ async function page(b, ctxOpt, url) {
         h = await walk('KeyW', 1300); ok(angD(h.deg, road) < 30, '자전거 앞으로 = 길 쪽(' + h.deg + '° · ' + Math.round(road) + '°)');
         await put(0.7); await ev(([dx, dz]) => SD2.yaw(Math.atan2(dx, dz)), [dx, dz]); await W8(400);
         h = await walk('KeyW', 1300); ok(angD(h.deg, (road + 180) % 360) < 30, '자전거 거꾸로 = 반대쪽(' + h.deg + '° · ' + Math.round((road + 180) % 360) + '°)');
-        m9 = await mini(); ok(m9 && m9.tip && !m9.tail, '자전거 = 작은 지도 화살표도 돎');
+        m9 = await mini(); ok(m9 && m9.tip && !m9.tail, '자전거 = 작은 지도 화살표도 돎' + why(m9));
         await ev(() => SM_TOWN.bike(false)); await W8(400);
         await put(0.4); await ev(([dx, dz]) => SD2.yaw(Math.atan2(-dx, -dz)), [dx, dz]); await walk('KeyW', 900);
         B = await big(); { const r = await ev(() => { const cv = document.querySelector('.twn-p canvas.twn-big'), S = cv._st, M = S && S.me; if (!M) return null; const g = cv.getContext('2d'), mg = cv._view.mg, red = (x, y) => { const d = g.getImageData(Math.round(x + mg), Math.round(y + mg), 1, 1).data; return d[0] > 190 && d[1] < 90 && d[2] < 90; }; return { tip: red(M.px + Math.sin(M.a) * M.s * 0.6, M.pz - Math.cos(M.a) * M.s * 0.6), tail: red(M.px - Math.sin(M.a) * M.s * 0.6, M.pz + Math.cos(M.a) * M.s * 0.6), deg: Math.round(((M.a * 180 / Math.PI) % 360 + 360) % 360) }; });

@@ -54,7 +54,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     // ③ 현장: 경찰관 → 아이 → 묻기 → 고르기
     await E('near'); for (let i = 0; i < 8; i++) { await W8(400); if ((await I()).ev.st !== 'call') break; } let I1 = await I(); ok(I1.ev.st === 'cop', '도착 = 경찰관·아이 몸 · 경찰관 E'); await shot('em_lost_scene');
     const c1 = await calls(); await E('vis', false); const c1b = await calls(); await E('vis', true); ok(c1 - c1b <= 4, '사건 몸 그리기 +' + (c1 - c1b) + ' (그 자리 ' + c1b + ' → ' + c1 + ')'); void c0;
-    const tpH = async re => { await closeAll(); const h = await ev(re => SD2.map.interact.list().find(h9 => !h9.off && new RegExp(re).test(h9.label)) || null, re); if (!h) return false; await tp(h.x + 0.3, h.z + 0.3); await W8(450); await p.keyboard.press('KeyE'); await W8(600); return true; };
+    /* CORE-FIX(11-14): PATH-1D 나 ①(3b74c13e)부터 사건 사람 곁 4.5 m 안이면 「내 발밑 대리 줄」이 그 사람 글을 그대로 베껴 E 목록 앞쪽에 섬(아이가 조금 떨어져 E를 눌러도 그 사람에게 감 — 일부러 바꾼 것) → 글로만 찾으면 대리 줄 = 내 자리로 '순간이동'해 +0.3 m씩 밀리다 4.5 m 밖으로 나가 E가 아무 데도 안 감(산불 이웃 두 번째 말 걸기) · 내 발밑 줄은 건너뛰고 진짜 사람 지점으로 감(확인은 그대로: 그 곁에서 E → 대화) */
+    const tpH = async re => { await closeAll(); const h = await ev(re => { const m = SD2.map.player.pos(), L = SD2.map.interact.list().filter(h9 => !h9.off && new RegExp(re).test(h9.label)); return L.find(h9 => Math.hypot(h9.x - m.x, h9.z - m.z) > 0.05) || L[0] || null; }, re); if (!h) return false; await tp(h.x + 0.3, h.z + 0.3); await W8(450); await p.keyboard.press('KeyE'); await W8(600); return true; };
     ok(await tpH('경찰관과'), '경찰관 E'); await dlgClick(); I1 = await I(); ok(I1.ev.st === 'ask', '경찰관 부탁 → 아이에게 묻기');
     ok(await tpH('아이에게 물어보기'), '아이 E'); let P = await panel(); ok(P && P.k === 'emlost' && /단서 수첩/.test(P.t), '묻기 창(질문 넷 · 단서 수첩)');
     await ev(() => document.querySelector('.twn-p button[data-q="tel"]').click()); await W8(300); ok(!(await ev(() => !!document.querySelector('.twn-p button[data-o]'))), '전화번호(못 씀)만으로는 고르기 안 열림');
@@ -152,7 +153,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
       await E('near'); for (let i = 0; i < 8; i++) { await W8(400); if ((await I()).ev.st !== 'call') break; } Sm = await I(); ok(Sm.ev.st === 'talk', '도착 = 이웃 곁 불씨 · 말 걸기'); await shot('em_smoke_scene');
       ok(await tpH('이웃에게 말 걸기'), '이웃 E'); await dlgClick('다 타면'); Sm = await I(); ok(Sm.ev.tries === 1 && Sm.ev.hots.some(l => /다시 말 걸기/.test(l)), '틀린 말 = 이웃이 그대로 · 힌트 · 다시 말 걸기 E');
       ok(await tpH('다시 말 걸기'), '다시 말 걸기 E'); await dlgClick('바람이 세요'); await dlgClick(); await W8(400); Sm = await I(); P = await panel(); ok(Sm.ev.st === 'phone' && P && P.k === 'emcall', '바람 센 날 불씨 = 이웃 "먼저 119에 알려야겠어요" → 119 신고 창 먼저(DEB-1 · 끄기 전)');
-      await dial(['1', '1', '9', '📞']); await W8(300); P = await panel(); ok(/어디세요/.test(P.t), '119 = 칸 묻기(지도)');
+      await dial(['1', '1', '9', '📞']); await W8(300); P = await panel(); ok(!!P && /어디세요/.test(P.t), '119 = 칸 묻기(지도)');
       { const B = await ev(() => [...document.querySelectorAll('.twn-p button[data-at]')].map(b9 => b9.textContent)), ri2 = B.findIndex(t => t.startsWith(Sm.ev.cell)); await ev(i => document.querySelector('.twn-p button[data-at="' + i + '"]').click(), ri2); await W8(300); }
       { const kd = await ev(() => [...document.querySelectorAll('.twn-p button[data-w]')].map(b9 => b9.textContent)); ok(kd.some(t => /연기가 나요/.test(t)) && !kd.some(t => /껐어요/.test(t)), '무슨 일 = 지금 일(연기가 나요 · 껐어요 X) ' + JSON.stringify(kd)); }
       await ev(() => { const o = [...document.querySelectorAll('.twn-p button[data-w]')].find(b9 => /불씨/.test(b9.textContent)); if (o) o.click(); }); await W8(500); Sm = await I(); P = await panel();
