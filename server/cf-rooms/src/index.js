@@ -309,8 +309,8 @@ export class Room extends DurableObject {
 }
 
 /* ───────── 이어 하기 저장(SAVE-CF · 최종 차례 8 · 사용자 10-24 '크롬북 ↔ 컴퓨터실 이어 하기') ─────────
-   POST /save/<반코드>/<번호>  {pin, data}  → {ok, at}        · 핀이 다르면 403 · 5번 틀리면 1분 잠금 423 · 너무 크면 413 · 오늘 꽉 차면 429
-   POST /load/<반코드>/<번호>  {pin}        → {ok, at, data} · 없으면 {ok, none:1}
+   POST /save/<반코드>/<번호>  {pin, data}  → {ok, at}        · 핀이 다르면 403 · 5번 틀리면 1분 잠금 423 · 너무 크면 413 · 오늘 꽉 차면 429 · 선생님이 푼 번호면 409 {relog:1}(PIN-1B)
+   POST /load/<반코드>/<번호>  {pin}        → {ok, at, data} · 없으면 {ok, none:1} · {pin, chk:1} = 열린 창의 주기 확인(선생님이 푼 번호면 잡지 않고 409 {relog:1})
    POST /drop/<반코드>/<번호>  {pin}        → 내 저장 지우기(핀이 맞을 때)
    - 반 코드 하나 = Durable Object 하나(SQLite 표 한 개) · 번호 1~40 · 핀은 소금(반 코드·번호·PEPPER) + SHA-256 해시만 둠
    - 이름은 받지도 두지도 않음(저장 JSON에서 이름 칸을 빼고 받음 · 아래 NAME_KEYS) · 핀은 주소에 넣지 않음(본문)
@@ -334,7 +334,8 @@ async function saveRoute(req, env, kind, code, num) {
    POST /treset/<반코드>  {admin, tkey}  → 관리 열쇠(비밀값 ADMIN)가 맞을 때만 교사 열쇠를 바꿈 · ADMIN을 안 넣었으면 늘 403
    POST /pinclear/<반코드>/<번호>  {tkey} → PIN-1(11-14) 그 번호의 핀만 비움(판·요약·시각은 그대로 · 틀린 횟수·잠금 0) {ok, had:1} · 그 번호 줄이 없으면 {ok, had:0}
      교사 열쇠 확인 = /class와 같은 자리(틀리면 세고 다섯 번이면 10분 잠금 · 열쇠가 없으면 404 {nokey:1})
-     핀이 빈 줄 = 처음 잡는 것과 같음: 다음 /load·/save가 보낸 핀이 새 핀(판은 그대로 돌려줌) · /drop은 받지 않음(403 {nopin:1} — 아무 핀으로나 판을 지우지 못하게)
+     핀이 빈 줄 = 들어오는 길에서만 새로 잡음: 다음 /load가 보낸 핀이 새 핀(판은 그대로 돌려줌) · /drop은 받지 않음(403 {nopin:1} — 아무 핀으로나 판을 지우지 못하게)
+     PIN-1B(11-14) 열려 있던 창은 다시 못 잡음: 핀이 빈 줄에 /save 또는 주기 확인(/load {chk:1})이 오면 409 {relog:1}(판·핀 그대로 · 틀린 횟수 X) — 그 창은 저장을 멈추고 「새로고침해서 다시 들어와요」
    - 교사 열쇠 = 6~32자(띄어쓰기 X) · 소금(PEPPER + 반 코드) + SHA-256 해시만 둠 · 5번 틀리면 10분 잠금(정하기 다툼 409도 틀림으로 셈)
    - 요약은 저장할 때 한 번 만들어 둠(표를 열 때 판 25개를 다시 읽지 않음) · 예전 판(요약 없음)은 표를 열 때 열 개씩 채움 */
 const TKEY_RX = /^\S{6,32}$/, TLOCK_MS = 10 * 60 * 1000, TFILL_MAX = 10;
@@ -406,8 +407,9 @@ export class Saves extends DurableObject {
     const h = await pinHash(this.env.PEPPER, code, num, pin);
     if (row) {
       if (row.lock > now) return Response.json({ ok: false, m: '잠깐 잠겼어요. 1분 뒤에 다시 해요', lock: 1 }, { status: 423 });
-      if (!row.pin) {   /* PIN-1: 선생님이 푼 번호 = 처음 잡는 것과 같게 — 지금 보낸 핀이 새 핀(판은 그대로) · 지우기는 받지 않음 */
+      if (!row.pin) {   /* PIN-1: 선생님이 푼 번호 = 들어오는 길(/load)에서 보낸 핀이 새 핀(판은 그대로) · 지우기는 받지 않음 */
         if (kind === 'drop') return Response.json({ ok: false, m: '비밀번호를 먼저 새로 정해요', nopin: 1 }, { status: 403 });
+        if (row.data && (kind === 'save' || (d && d.chk))) return Response.json({ ok: false, m: '비밀번호가 풀렸어요. 새로고침해서 다시 들어와요', relog: 1 }, { status: 409 });   /* PIN-1B: 열려 있던 창(주기 저장 /save · 주기 확인 /load {chk:1})은 다시 잡지 못함 — 판·핀 그대로 · 틀린 횟수로 세지 않음 */
         this.sql.exec('UPDATE s SET pin = ?, fails = 0 WHERE num = ?', h, num);
       } else if (row.pin !== h) { const f = (row.fails || 0) + 1; this.sql.exec('UPDATE s SET fails = ?, lock = ? WHERE num = ?', f >= 5 ? 0 : f, f >= 5 ? now + 60000 : 0, num); return Response.json({ ok: false, m: '비밀번호가 달라요', bad: 1 }, { status: 403 }); }
       else if (row.fails) this.sql.exec('UPDATE s SET fails = 0 WHERE num = ?', num);

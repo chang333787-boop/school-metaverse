@@ -2,7 +2,7 @@
 //   cloudflare:workers = 작은 대역(DurableObject 틀) · DO SQLite = node:sqlite 메모리 DB · 웹소켓 방(Room)은 흉내 X
 //   가져다 쓰기: import { M, makeEnv, DBS } from './mock.mjs'  (test_teach.mjs)
 //   HTTP로 띄우기: node server/cf-rooms/mock.mjs <포트>  → 마을을 ?cf=http://127.0.0.1:<포트> 로 열면 /save·/load·/class·/tclaim·/pinclear가 여기로 (tools/harness/town_teach.cjs · town_pin1.cjs)
-//   src/index.js를 그대로 부르므로 서버에 주소를 더하면(PIN-1 /pinclear) 흉내도 저절로 따라옴 — 여기는 고칠 것 없음
+//   src/index.js를 그대로 부르므로 서버에 주소를 더하면(PIN-1 /pinclear) 흉내도 저절로 따라옴 — 여기는 고칠 것 없음(PIN-1B 풀린 번호에 /save·주기 확인 = 409 relog도 같은 코드)
 import { registerHooks } from 'node:module';
 import { DatabaseSync } from 'node:sqlite';
 registerHooks({ resolve(spec, ctx, next) { if (spec === 'cloudflare:workers') return { url: 'data:text/javascript,export class DurableObject { constructor(ctx, env) { this.ctx = ctx; this.env = env; } }', shortCircuit: true }; return next(spec, ctx); } });

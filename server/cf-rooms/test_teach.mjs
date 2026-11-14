@@ -2,7 +2,8 @@
 //   흉내 = mock.mjs(cloudflare:workers 대역 · node:sqlite 메모리 DB) · Worker fetch를 그대로 부름
 //   보는 것: 아이 저장 → 요약 칸 · 열쇠 없음 404 · 처음 정하기 · 다른 열쇠 409 · 틀림 다섯 번 = 10분 잠금 · 잠금 풀린 뒤 표 · 요약만(판·핀·이름 X)
 //            예전 판(요약 없음) 채우기 · 관리 열쇠 없으면 바꾸기 X · 다른 곳(Origin) 막힘 · 25명 표 크기
-//            PIN-1 아이 번호 비밀번호 풀기(/pinclear): 핀만 비움(판·요약·시각 그대로) · 새 핀·옛 핀·저장으로 다시 잡힘 · 빈 핀은 지우기 X · 없는 번호 had 0 · 교사 열쇠 잠금은 /class와 한 자리
+//            PIN-1 아이 번호 비밀번호 풀기(/pinclear): 핀만 비움(판·요약·시각 그대로) · 들어오는 길(/load)에서 새 핀·옛 핀으로 다시 잡힘 · 빈 핀은 지우기 X · 없는 번호 had 0 · 교사 열쇠 잠금은 /class와 한 자리
+//            PIN-1B 열려 있던 창은 다시 못 잡음: 푼 줄에 /save · 주기 확인(/load {chk:1}) = 409 relog(판·핀 그대로 · 잠기지 않음) → 새 핀 /load로 잡힘 → 새 핀 /save 됨 · 줄이 없는 번호의 첫 /save는 그대로
 //   배포 서버 확인(짧게 · 시험 반 zzpin1 · 끝나면 판을 지움 — 교사 열쇠 해시 한 줄은 남음): node server/cf-rooms/test_teach.mjs https://<배포 주소>
 import { M, makeEnv, DBS } from './mock.mjs';
 
@@ -33,6 +34,8 @@ if (LIVE) {
   r = await live('/pinclear/' + C + '/' + N, { tkey: 'zz-wrong-key-9' }); ok(r.st === 403 && r.j && r.j.bad, '틀린 열쇠 = 403');
   r = await live('/pinclear/' + C + '/' + N, { tkey: KEY }); ok(r.st === 200 && r.j && r.j.had === 1, '맞는 열쇠 = had 1');
   r = await live('/class/' + C, { tkey: KEY }); { const q = r.j && (r.j.L || []).find(x => x.n === N); ok(!!q && q.np === 1 && !!q.s && q.s.day === 10 + N, '표: 그 번호 np · 요약 그대로(' + (10 + N) + '일째)'); ok(!/"pin"|진짜이름/.test(r.t), '표 답에 핀·이름 없음'); }
+  r = await live('/save/' + C + '/' + N, { pin: PA, data: kidSave(N) }); ok(r.st === 409 && r.j && r.j.relog === 1, '푼 줄에 저장 = 409 relog(PIN-1B · 열린 창이 다시 못 잡음) ' + r.st);
+  r = await live('/load/' + C + '/' + N, { pin: PA, chk: 1 }); ok(r.st === 409 && r.j && r.j.relog === 1, '푼 줄에 주기 확인(chk) = 409 relog ' + r.st);
   r = await live('/drop/' + C + '/' + N, { pin: PB }); ok(r.st === 403 && r.j && r.j.nopin, '핀이 빈 줄은 지우기를 받지 않음');
   r = await live('/load/' + C + '/' + N, { pin: PB }); ok(r.st === 200 && r.j && r.j.data && r.j.data.day === 10 + N && !r.j.data.name, '새 핀으로 불러오기 = 판 그대로');
   r = await live('/load/' + C + '/' + N, { pin: PA }); ok(r.st === 403, '옛 핀은 이제 403');
@@ -104,9 +107,19 @@ console.log('⑥ 아이 번호 비밀번호 풀기(PIN-1)');
   for (let i = 0; i < 5; i++) await call(env, '/load/zzteach/3', { pin: '000' + i }); r = await call(env, '/load/zzteach/3', { pin: '1111' }); ok(r.st === 423, '3번: 다섯 번 틀려 잠김(맞는 핀도 423)');
   r = await call(env, '/pinclear/zzteach/3', { tkey: K }); ok(r.j.had === 1 && rowOf(3).lock === 0 && rowOf(3).fails === 0, '풀면 틀린 횟수·잠금도 0');
   r = await call(env, '/load/zzteach/3', { pin: '1111' }); ok(r.st === 200 && r.j.data.day === 13, '옛 핀으로 들어와도 새로 잡힘 = 판 그대로(13일째)');
-  /* 저장으로 먼저 와도 잡힘(12번) */
-  r = await call(env, '/pinclear/zzteach/12', { tkey: K }); r = await call(env, '/save/zzteach/12', { pin: '9753', data: kidSave(12, { steps: 3 }) }); ok(r.st === 200 && /^[0-9a-f]{64}$/.test(rowOf(12).pin), '빈 핀 줄에 저장 = 그 핀으로 잡히고 저장됨');
-  r = await call(env, '/load/zzteach/12', { pin: '9753' }); ok(r.st === 200 && r.j.data.day === 22, '그 핀으로 불러오기'); r = await call(env, '/load/zzteach/12', { pin: '1357' }); ok(r.st === 403, '다른 핀은 403');
+  /* PIN-1B 열려 있던 창은 다시 못 잡음(12번) — 푼 줄에 /save · 주기 확인(/load {chk:1})이 오면 409 relog(판·핀 그대로 · 틀린 횟수 X) · 새로 잡는 것은 들어오는 길(/load)에서만 */
+  r = await call(env, '/pinclear/zzteach/12', { tkey: K }); const b12 = rowOf(12);
+  r = await call(env, '/save/zzteach/12', { pin: '9753', data: kidSave(12, { steps: 3 }) }); const c12 = rowOf(12); ok(r.st === 409 && r.j.relog === 1 && !r.j.ok, '푼 줄에 저장(/save) = 409 relog');
+  ok(c12.pin === '' && c12.data === b12.data && c12.sum === b12.sum && c12.at === b12.at && c12.fails === 0 && c12.lock === 0, '거절 뒤 핀은 빈 채 · 판·요약·시각 그대로 · 틀린 횟수 0');
+  r = await call(env, '/load/zzteach/12', { pin: '9753', chk: 1 }); ok(r.st === 409 && r.j.relog === 1 && rowOf(12).pin === '', '주기 확인(/load chk) = 409 relog(안 잡힘)');
+  for (let i = 0; i < 6; i++) r = await call(env, '/save/zzteach/12', { pin: '9753', data: kidSave(12) }); ok(r.st === 409 && rowOf(12).pin === '' && rowOf(12).lock === 0, '여섯 번 되풀이해도 409(잠기지 않음 · 안 잡힘)');
+  r = await call(env, '/class/zzteach', { tkey: K }); ok((r.j.L || []).find(q => q.n === 12).np === 1, '표에 12번 여전히 np');
+  r = await call(env, '/load/zzteach/12', { pin: '8642' }); ok(r.st === 200 && r.j.data && r.j.data.day === 22 && r.j.at === b12.at && /^[0-9a-f]{64}$/.test(rowOf(12).pin), '들어오는 길(/load) 새 핀 = 잡히고 판 그대로(22일째)');
+  r = await call(env, '/save/zzteach/12', { pin: '8642', data: { ...kidSave(12), day: 23 } }); ok(r.st === 200 && r.j.ok, '그 뒤 새 핀 저장 = 됨');
+  r = await call(env, '/load/zzteach/12', { pin: '8642', chk: 1 }); ok(r.st === 200 && r.j.data.day === 23, '새 핀 주기 확인(chk) = 200 · 방금 올린 판(23일째)');
+  r = await call(env, '/save/zzteach/12', { pin: '9753', data: kidSave(12) }); ok(r.st === 403 && r.j.bad, '옛 창의 저장 = 이제 403(다른 핀)'); r = await call(env, '/load/zzteach/12', { pin: '9753', chk: 1 }); ok(r.st === 403 && r.j.bad, '옛 창의 주기 확인도 403');
+  /* 줄이 없는 번호의 첫 저장은 그대로(21번) */
+  ok(!rowOf(21), '21번: 줄 없음'); r = await call(env, '/save/zzteach/21', { pin: '3141', data: kidSave(21) }); ok(r.st === 200 && /^[0-9a-f]{64}$/.test(rowOf(21).pin), '줄이 없는 번호의 첫 저장 = 그 핀으로 잡히고 저장됨'); r = await call(env, '/load/zzteach/21', { pin: '3141', chk: 1 }); ok(r.st === 200 && r.j.data.day === 31, '그 번호 주기 확인(chk) = 200');
   /* 없는 번호 */
   r = await call(env, '/pinclear/zzteach/20', { tkey: K }); ok(r.st === 200 && r.j.ok && r.j.had === 0 && !rowOf(20), '판이 없는 번호 = had 0(줄을 만들지 않음)');
   /* 열쇠가 없는 반 · 잠금은 /class와 한 자리 */

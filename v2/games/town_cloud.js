@@ -38,10 +38,12 @@ export async function cloudPull(key, code, num, pin) {
   return 'kept'; }
 // 놀이 중: 45초마다 바뀌었으면 올림 · 창을 닫을 때 한 번(작으면) · 결과는 say로 한 번만(실패 알림 남발 X)
 //   SAVE-3b: 올리기 전에 서버 세대 확인(첫 올림 전 · 3분마다 · 짓기 전 cloudPull = 첫 확인) — 'dead'(이 판 세대를 서버가 버림 = 다른 기기에서 처음부터) · 'behind'(다른 기기가 올린 판이 더 진행) = 올리지 않고 onGen(까닭) 한 번
+//   PIN-1B(11-14): 선생님이 이 번호 비밀번호를 풀었으면(서버 409 {relog:1} — 주기 확인 /load {chk:1} 또는 /save) 'relog' = 올림을 멈추고 onGen('relog') 한 번 · 이 창은 그 번호를 다시 잡지 못함(새로 잡는 것은 들어오는 길 cloudPull·로그인에서만)
 export function cloudSync({ key, code, num, pin, alive, onFail, flush, more, onGen }) {
   let lastS = '', busy = false, failed = false, stop9 = false, blk = '', chk = SEEN[key] && Date.now() - SEEN[key] < CHK_MS ? SEEN[key] : 0;
   try { lastS = more ? '' : (localStorage.getItem(key) || ''); } catch (e) { /* */ }   /* more = 이 기기가 더 진행 → 첫 올림에서 바로 서버를 고침 */
-  const check = async () => { const r = await cloudCall('load', code, num, { pin }); if (r.st !== 200 || !r.j || !r.j.ok) return ''; chk = Date.now(); if (r.j.none) return 'ok';
+  const badPin = m => { stop9 = true; blk = 'pin'; if (!failed) { failed = true; if (onFail) onFail(m); } };   /* PIN-1B: 놀이 중에 핀이 달라짐(선생님이 풀고 다른 아이가 새로 정함) = 올림을 멈춤 — 45초마다 틀린 핀을 보내 그 번호를 1분씩 잠그던 것 */
+  const check = async () => { const r = await cloudCall('load', code, num, { pin, chk: 1 }); if (r.st === 409 && r.j && r.j.relog) return 'relog';   /* PIN-1B: chk = 열린 창의 주기 확인(들어오는 길이 아님) — 선생님이 푼 번호를 이 창이 다시 잡지 않음 */ if (r.st === 403 && r.j && r.j.bad) { badPin(r.j.m); return ''; } if (r.st !== 200 || !r.j || !r.j.ok) return ''; chk = Date.now(); if (r.j.none) return 'ok';
     let loc = null, meta = {}; try { loc = JSON.parse(localStorage.getItem(key) || 'null'); meta = JSON.parse(localStorage.getItem(metaK(key)) || '{}') || {}; } catch (e) { /* */ }
     const gw = genWin(r.j.data, loc); if (gw === 'a') return 'dead'; if (gw === 'b') return 'ok';
     if (!(meta.at && r.j.at <= meta.at) && prog(r.j.data) > prog(loc)) return 'behind';   /* 내가 마지막으로 올린·받은 뒤 다른 기기가 올렸고 그 판이 더 진행 = 덮지 않음 */
@@ -50,7 +52,7 @@ export function cloudSync({ key, code, num, pin, alive, onFail, flush, more, onG
   const push = async (k9) => { if (busy || stop9 || !alive()) return; if (flush) { try { if (flush() === false) return; } catch (e) { /* */ } } let s = '';   /* SAVE-2: 이 기기 저장을 먼저 끝낸 뒤(성공했을 때만) 서버로 — 탭을 닫을 때 마지막 2초 몫이 빠지던 것 */ try { s = localStorage.getItem(key) || ''; } catch (e) { return; } if (!s || s === lastS || !okJ(s)) return;   /* PERF-B: 판 글을 parse하지 않고 그대로(올릴 때 다시 stringify X) */
     if (!chk || Date.now() - chk > CHK_MS) { if (k9) { if (!chk) return; } else { busy = true; const c = await check(); busy = false; if (stop9 || !alive() || !c) return; if (c !== 'ok') { stop9 = true; blk = c; if (onGen) onGen(c); return; } try { s = localStorage.getItem(key) || ''; } catch (e) { return; } if (!s || s === lastS || !okJ(s)) return; } }   /* 창 닫을 때(keepalive)는 기다릴 수 없어 지난 확인으로 · 한 번도 확인 못 했으면 올리지 않음(이 기기엔 남음) */
     busy = true; const r = await cloudCall('save', code, num, '{' + (pin == null ? '' : '"pin":' + JSON.stringify(pin) + ',') + '"data":' + s + ',"k9":' + !!k9 + '}', 5000, !!k9); busy = false;   /* = JSON.stringify({ pin, data, k9 }) 와 같은 글 */
-    if (r.st === 200 && r.j && r.j.ok) { lastS = s; failed = false; try { localStorage.setItem(metaK(key), JSON.stringify({ at: r.j.at })); } catch (e) { /* */ } } else if (!failed) { failed = true; if (onFail) onFail(r.j && r.j.m); } };
+    if (r.st === 200 && r.j && r.j.ok) { lastS = s; failed = false; try { localStorage.setItem(metaK(key), JSON.stringify({ at: r.j.at })); } catch (e) { /* */ } } else if (r.st === 409 && r.j && r.j.relog) { if (!stop9) { stop9 = true; blk = 'relog'; if (onGen && alive()) onGen('relog'); } }   /* PIN-1B: 선생님이 이 번호 비밀번호를 풂 — 올림을 멈추고 한 번 알림(이 기기에는 남음) */ else if (r.st === 403 && r.j && r.j.bad) badPin(r.j.m); else if (!failed) { failed = true; if (onFail) onFail(r.j && r.j.m); } };
   const iv = setInterval(() => { if (!alive()) { clearInterval(iv); removeEventListener('pagehide', ph); return; } push(false); }, 45000);
   const ph = () => { let n = 0; try { n = (localStorage.getItem(key) || '').length; } catch (e) { /* */ } if (n < 60000) push(true); };   /* keepalive 본문 64KB 상한 */
   addEventListener('pagehide', ph);

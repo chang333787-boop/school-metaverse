@@ -7,12 +7,13 @@
 //   ⑤ 영어 글
 //   ⑥ 아이 B(빈 저장소): 3번 + 새 비밀번호 한 번 → 판 그대로(5일째 · 돈) · 다른 빈 기기에서 옛 비밀번호 = 못 들어감
 //   ⑦ 아이 A 기기(노란 번호): 「비밀번호를 잊었어요」 → 선생님 비밀번호 → 새 네 자리 = 들어감
+//   ⑧ PIN-1B 열려 있는 창: 아이 A가 3번으로 놀고 있을 때 선생님이 풂 → 그 창의 다음 주기 저장(45초)을 서버가 거절(409 relog) → 알림 한 번 · 서버 줄은 풀린 채(판 그대로) · 그 창은 저장을 멈춤 → 새 비밀번호 /load로 잡힘 · /save 됨(기다림 두 번 = 약 1분 반)
 //   아래 열쇠·비밀번호는 모두 이 시험만의 가짜 값
 const { chromium } = require('./pw.cjs');
 const path = require('path'), fs = require('fs'), net = require('net'), cp = require('child_process'), crypto = require('crypto');
 const AR = process.argv.slice(2).filter(a => !a.startsWith('--')), ID = AR.find(a => !/^\d+$/.test(a)) || 'ourtown', PORT = AR.find(a => /^\d+$/.test(a)) || '8921';
 const arg = k => { const a = process.argv.find(s => s.startsWith('--' + k)); return a ? (a.includes('=') ? a.slice(a.indexOf('=') + 1) : true) : null; };
-const PICS = arg('pics'), CLS = 'zzpin1', TPIN = '1234', HASH = crypto.createHash('sha256').update('mv-memo:' + TPIN).digest('hex'), KEY = 'pinkey77', P_OLD = '1234', P_NEW = '5678', P_3RD = '2468';
+const PICS = arg('pics'), CLS = 'zzpin1', TPIN = '1234', HASH = crypto.createHash('sha256').update('mv-memo:' + TPIN).digest('hex'), KEY = 'pinkey77', P_OLD = '1234', P_NEW = '5678', P_3RD = '2468', P_4TH = '1357';
 let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails++; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const portFree = p9 => new Promise(r => { const s = net.createServer(); s.once('error', () => r(false)); s.listen(p9, '127.0.0.1', () => s.close(() => r(true))); });
@@ -151,6 +152,20 @@ const ROOT = path.resolve(__dirname, '../..');
     ok(gone, '새 네 자리 한 번 → 번호 화면이 닫히고 들어감');
     { const r = await post('/class/' + CLS, { tkey: KEY }), q = r.j && r.j.L ? r.j.L.find(x => x.n === 3) : null, bad = (await post('/load/' + CLS + '/3', { pin: P_NEW })).st, good = (await post('/load/' + CLS + '/3', { pin: P_3RD })).st;   /* np부터 봄 — 빈 채였다면 아래 /load가 스스로 잡아 버림 */
       ok(!!q && !q.np && bad === 403 && good === 200, '서버: 3번 = 아이가 누른 새 비밀번호로 잡힘(앞의 것 ' + bad + ' · 새것 ' + good + ')'); }
+    console.log('⑧ 열려 있는 창(PIN-1B) — 선생님이 풀어도 그 창이 다시 잡지 못함');
+    await inGame(A); await A.waitForTimeout(2000);
+    const seen = []; A.on('response', r9 => { const m = r9.url().match(/\/(save|load)\/zzpin1\/3$/); if (m) seen.push(m[1] + ' ' + r9.status()); });
+    const pre = await post('/load/' + CLS + '/3', { pin: P_3RD });   /* 풀기 전 서버 판(견줄 것) */
+    ok(pre.st === 200 && (await post('/pinclear/' + CLS + '/3', { tkey: KEY })).j.had === 1, '아이 A가 3번으로 놀고 있는 동안 선생님이 풂');
+    await A.evaluate(() => { const G = SM_TOWN.game(); G.S.money = 999; G.S.day = 6; G.mark(); G.flush(); });
+    const told = await A.waitForFunction(() => (SM_TOWN.game().S.ntf || []).some(o => /비밀번호가 풀렸어요\. 새로고침해서 다시 들어와요/.test(o.t)), null, { timeout: 70000 }).then(() => true, () => false);
+    ok(told && seen.some(x => / 409$/.test(x)) && !seen.some(x => / 200$/.test(x)), '그 창의 다음 주기 저장(45초) = 서버가 거절(' + seen.join(' · ') + ') → 알림 「비밀번호가 풀렸어요. 새로고침해서 다시 들어와요」');
+    { const r = await post('/class/' + CLS, { tkey: KEY }), q = r.j && r.j.L ? r.j.L.find(x => x.n === 3) : null; ok(!!q && q.np === 1 && q.at === pre.j.at && !!q.s && q.s.day === pre.j.data.day, '서버: 3번은 여전히 풀린 채(np) · 판 그대로(' + (q && q.s && q.s.day) + '일째 — 열린 창의 6일째가 안 올라감)'); }
+    const n0 = seen.length; await A.evaluate(() => { const G = SM_TOWN.game(); G.S.money = 1000; G.mark(); G.flush(); }); await A.waitForTimeout(47000);
+    { const n9 = await A.evaluate(() => SM_TOWN.game().S.ntf.filter(o => /비밀번호가 풀렸어요/.test(o.t)).length); ok(seen.length === n0 && n9 === 1, '그 창은 저장을 멈춤(다음 주기에 서버로 아무것도 안 보냄 · 알림은 한 번뿐)'); }
+    { const q0 = (await post('/class/' + CLS, { tkey: KEY })).j.L.find(x => x.n === 3), r1 = await post('/load/' + CLS + '/3', { pin: P_4TH }), q1 = (await post('/class/' + CLS, { tkey: KEY })).j.L.find(x => x.n === 3);   /* np부터 봄(아래 /load가 잡음) */
+      ok(q0.np === 1 && r1.st === 200 && !!r1.j.data && r1.j.at === pre.j.at && r1.j.data.day === pre.j.data.day && r1.j.data.money === pre.j.data.money && !q1.np, '그 뒤 다른 기기에서 새 비밀번호로 들어옴(/load) = 잡힘 · 판 그대로(' + (r1.j && r1.j.data && r1.j.data.day) + '일째 · 돈 ' + (r1.j && r1.j.data && r1.j.data.money) + ')');
+      const r2 = await post('/save/' + CLS + '/3', { pin: P_4TH, data: { ...r1.j.data, day: 7 } }), r3 = await post('/load/' + CLS + '/3', { pin: P_3RD }); ok(r2.st === 200 && r3.st === 403, '새 비밀번호 저장 = 됨(' + r2.st + ') · 열려 있던 창의 비밀번호는 이제 ' + r3.st); }
     await A.goto('about:blank');
   } catch (e) { ok(false, '예외: ' + String(e && e.stack || e).slice(0, 400)); }
   ok(!errs.length, '콘솔 에러 0' + (errs.length ? ' — ' + errs.slice(0, 4).join(' / ') : ''));
