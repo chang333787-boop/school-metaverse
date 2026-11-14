@@ -5,7 +5,7 @@
 //   솜씨 perk 'zone'(zw 1~1.25) = 쉬워지는 쪽으로(시간 · 초록 폭 · 삽질 수 · 벌레 느리게)
 //   화면 = DOM + CSS(놀이 창이 열린 동안만 · 마을 tick이 부르는 tick(dt) 하나 — 따로 rAF X) · 입력 = down()/up()(E·스페이스·큰 단추) + key(코드, 반복)(화살표·WASD·숫자) + 누르기·끌기(마우스·터치)
 import { readSec } from './town_read.js?v=4';   /* PLAY-2: 끝 글이 머무는 시간 = 다 읽을 만큼(READ-1) */
-import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2'; import { mkSalt } from './town_salt.js?v=2'; import { ladVal, LADP } from './town_lad.js?v=7';   /* LADDER-2 도전 칸마다 조건 값 */   /* SALT-2 염전 꼬임 넷 */   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
+import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2'; import { mkSalt } from './town_salt.js?v=2'; import { ladVal, LADP } from './town_lad.js?v=8';   /* LADDER-2 도전 칸마다 조건 값 */   /* SALT-2 염전 꼬임 넷 */   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
 export const MG_V = 3;
 const KIND = { tuho: 'toss', fisher: 'tug', rod: 'tug', seaweed: 'spread', oyster: 'gauge', strawberry: 'ripe', shiitake: 'ripe', saltpan: 'salt', beehive: 'comb', potato: 'dig', clam: 'dig', cabbage: 'sort', pear: 'cover', lumber: 'order', pasture: 'feed' };
 export const mgKind = (k, sea) => (k === 'paddy' ? (sea === 'autumn' ? 'cut' : 'plant') : KIND[k] || 'ripe');   /* 논 = 봄 모내기 · 가을 벼 베기 */
@@ -448,6 +448,7 @@ function mkRipe(c) {
   h += '<div class="rg' + (wet ? ' wet' : '') + '" data-c="' + R[0] + '">'; for (let i = 0; i < N; i++) h += '<button class="rt u" data-i="' + i + '"><span class="rf">' + R[1] + '</span><em>' + (i + 1) + '</em></button>'; h += '</div><div class="bar tmb"><i class="tm"></i></div>';
   c.mg.innerHTML = h; const rg = c.mg.querySelector('.rg:not(.smp)'), B = rg.querySelectorAll('.rt'), tm = c.mg.querySelector('.tm'), st = new Array(N).fill('u'), age = new Array(N).fill(0), BK = { o: 0, r: 0, h: 0 };
   let sel = 4, left = T, rip = 0, none = 0, P = 0, M = 0;
+  const U9 = CK === 'm' ? '송이' : '개';   /* REPLAY-1B: 세는 낱말 하나로(표고 = 송이 — 기록 줄·조건 글과 같게 · 예전에는 말풍선·끝 글만 「개」) */
   const G2 = 4;   /* REPLAY-1: 다음 칸 문턱(주문 상자 수 − 덜 자란 것 누른 수) — 아래 점수 셈과 끝 창 조건 글(nextT)이 이 수 하나를 같이 씀 */
   const draw = i => setCls(B[i], 'rt ' + st[i] + (i === sel ? ' sel' : ''));
   const grow = (a, b, amin) => { let k = -1, n = 0; for (let i = 0; i < N; i++) if (st[i] === a && age[i] >= amin) { n++; if (Math.random() * n < 1) k = i; } if (k >= 0) { st[k] = b; age[k] = 0; draw(k); } return k; };   /* a 단계 가운데 하나를 골라 b로(따로 배열 X) */
@@ -455,7 +456,7 @@ function mkRipe(c) {
   const pick = i => { if (c.done || i < 0 || i >= N) return; if (sel !== i) { const o = sel; sel = i; draw(o); } const s = st[i]; if (s === 'e') return;
     if (s === 'u') { M++; draw(i); pop(B[i], 'no'); c.snd('pop'); c.say(R[3][c.en ? 1 : 0]); return; }   /* 초록 = 어느 주문에도 X(관찰 한 줄) */
     st[i] = 'e'; age[i] = 0; draw(i);
-    if (s === WANT) { P++; c.snd('pick'); c.say(c.T('똑! 주문 상자에 ' + P + '개', 'Pick! ' + P + ' in the order box')); return; }
+    if (s === WANT) { P++; c.snd('pick'); c.say(c.T('똑! 주문 상자에 ' + P + U9, 'Pick! ' + P + ' in the order box')); return; }
     BK[s]++; c.snd('pop'); pop(B[i], 'no'); const w = RIPE_WHY[CK][ORD] && RIPE_WHY[CK][ORD][s], b = RIPE_BK[CK][s];
     c.say((w ? w[c.en ? 1 : 0] + '. ' : '') + (c.en ? 'It goes to ' + b[1] + '.' : b[0] + '로 가요')); };   /* 주문과 다른 것 = 그 열매에 맞는 바구니로(버리지 않음 · 주문 상자만 덜 참) */
   const onPd = e => { const b = e.target.closest('.rt'); if (!b || !rg.contains(b)) return; e.preventDefault(); pick(+b.dataset.i); }; rg.addEventListener('pointerdown', onPd);
@@ -463,8 +464,8 @@ function mkRipe(c) {
   c.say(first ? c.T('쪽지를 봐요. 주문에 맞는 것만 주문 상자에 담겨요. 다른 것은 다른 바구니로 가요', 'Read the note. Only what the order asks for goes in the order box. Others go to other baskets')
     : wet ? c.T('땅이 젖었어요. 무른 것이 섞여 있어요. 쪽지를 보고 골라요', 'The ground is wet and some are soft. Check the note and choose') : c.T('오늘 주문은 무엇일까요? 쪽지를 보고 골라요', 'What is today’s order? Check the note and choose'));
   const other = () => BK.o + BK.r + BK.h;
-  return { go: '', cnt: () => P,
-    tail: () => { const f = RIPE_FACT[CK][wet && WANT !== 'o' ? 'wet' : ORD] || RIPE_FACT[CK][ORD]; return '💡 ' + c.T('주문 상자 ' + P + '개' + (other() ? ', 다른 바구니 ' + other() + '개' : '') + '. ', P + ' in the order box' + (other() ? ', ' + other() + ' in other baskets' : '') + '. ') + f[c.en ? 1 : 0]; },
+  return { go: '', cnt: () => P, why: () => M,   /* REPLAY-1B why = 이번 판에 틀린 수(덜 자란 것을 누른 번) → 끝 창 기록 글이 까닭을 같이 말함 */
+    tail: () => { const f = RIPE_FACT[CK][wet && WANT !== 'o' ? 'wet' : ORD] || RIPE_FACT[CK][ORD]; return '💡 ' + c.T('주문 상자 ' + P + U9 + (other() ? ', 다른 바구니 ' + other() + U9 : '') + '. ', P + ' in the order box' + (other() ? ', ' + other() + ' in other baskets' : '') + '. ') + f[c.en ? 1 : 0]; },
     down() { pick(sel); },
     key(code, rep) { const d = /^(Digit|Numpad)([1-9])$/.exec(code); if (d) { if (!rep) pick(+d[2] - 1); return true; }
       const mv = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1, ArrowUp: -3, KeyW: -3, ArrowDown: 3, KeyS: 3 }[code]; if (!mv) return false; const n = sel + mv; if (n < 0 || n >= N || (Math.abs(mv) === 1 && ((n / 3) | 0) !== ((sel / 3) | 0))) return true; const o = sel; sel = n; draw(o); draw(n); return true; },
@@ -709,7 +710,7 @@ function mkSort(c) { const X = jx(c), C9 = 4, N = 12, NQ = 4, T = 30 * c.zw, SQ 
   const MG2 = 2;   /* REPLAY-1: 다음 칸 문턱(주문 상자를 다 채우고 장터 바구니로 간 수가 이 수까지) — 점수 셈과 끝 창 조건 글(nextT)이 같이 씀 */
   const score = () => (ok >= NQ ? (miss === 0 ? 3 : miss <= MG2 ? 2 : 1) : ok >= 2 ? 1 : 0);
   c.say(P0.n === 0 ? c.T('쪽지 그림과 크기를 비교해요. 주문 크기만 눌러 베어요', 'Compare with the picture on the note. Tap only the ordered size to cut it') : c.T('오늘 주문은 어떤 크기일까요? 쪽지를 봐요', 'Which size is today’s order? Check the note'));
-  return { go: c.T('고른 배추 베기', 'Cut the chosen one'), cnt: () => ok, down() { if (!c.done && got[G.sel]) c.say(c.T('이미 벤 자리예요. 다른 배추를 눌러요', 'Already cut — tap another cabbage')); else put(G.sel); },   /* PATH-1B 걸24 */
+  return { go: c.T('고른 배추 베기', 'Cut the chosen one'), cnt: () => ok, why: () => miss, down() { if (!c.done && got[G.sel]) c.say(c.T('이미 벤 자리예요. 다른 배추를 눌러요', 'Already cut — tap another cabbage')); else put(G.sel); },   /* PATH-1B 걸24 */
     key: code => G.key(code),
     tail: () => '💡 ' + (miss ? c.T('장터 바구니로 간 배추 ' + miss + '포기. ', miss + ' went to the market basket. ') : '') + CAB_FACT[ORD][c.en ? 1 : 0],
     tick(dt) { if (TB.tick(dt)) c.finish(score()); },
@@ -1180,14 +1181,15 @@ export function createMini(kind, o) { css();
   const c = { root: o.root, mg: o.root.querySelector('.mg'), msgEl: o.root.querySelector('.msg'), go: o.root.querySelector('.go'), en: !!o.en, zw: Math.max(1, o.zw || 1), k: o.k, sea: o.sea, x: o.x || null, done: false, lv: Math.max(1, Math.min(LADP[kind] && LADP[kind].v.length >= 5 ? 5 : 4, o.lv | 0 || 1)) }; c.lp = ladVal(kind, c.lv);   /* HARD-1 명인 칸(5) = 다섯째 값이 있는 갈래만 */   /* LADDER-2 lp = 이 칸의 조건 값(없는 놀이 = null → 놀이 틀은 1칸 값으로) */   /* x = 놀이별 자료(부엌: 요리법·사다리·손님·날씨 · KITCHEN-1) */
   c.h9 = { sitPick, flagSide, cloudSvg };   /* DEPTH-2 소금(town_salt.js)이 쓰는 상황 고르기·그림 */
   c.T = (ko, e2) => (c.en ? e2 : ko); c.say = s => { if (c.msgEl && c.msgEl.textContent !== s) c.msgEl.textContent = s; }; c.snd = k => { if (o.sfx) o.sfx(k); }; c.tone = (...a) => { if (o.tone) o.tone(...a); };
-  let endT = -1, endA = 0, score = 0, cntT = -1, recR = null;
+  let endT = -1, endA = 0, score = 0, cntT = -1, whyT = -1, recR = null;
   c.finish = ok => { if (c.done) return; c.done = true; score = Math.max(0, Math.min(3, ok | 0)); if (o.grade === false) { endT = 0; return; } c.root.classList.add('mg-end'); { const xb = c.root.querySelector('.row .x'); if (c.go) c.go.style.display = 'none'; if (xb) xb.textContent = c.en ? 'Close' : '닫기'; }   /* PATH-1B 걸25: 끝나면 단추는 [닫기] 하나(놀이 단추·[그만]이 그대로 남아 닫는 법을 몰랐음) */
     const f9 = FACT[kind === 'plant' || kind === 'cut' ? kind : c.k], tl = g.tail ? g.tail() : '', gt = gradeText(score, c.en), rest = tl ? ' ' + tl : f9 ? (c.en ? ' 💡 Did you know? ' : ' 💡 알고 있었나요? ') + f9[c.en ? 1 : 0] : '';
     if (c.msgEl) { c.msgEl.textContent = ''; const b9 = document.createElement('b'); b9.className = 'mgres'; b9.textContent = gt; c.msgEl.appendChild(b9); if (rest) c.msgEl.appendChild(document.createTextNode(rest)); }   /* PLAY-2: 끝 = 결과(잘했어요)가 크게 한 줄 + 사실 · 글(textContent)은 예전과 같음 */
     c.snd(score >= 3 ? 'done' : score ? 'ding' : 'buzz'); endA = 0; endT = f9 || tl ? Math.max(3.2, Math.min(6, readSec(gt + rest))) : 0.8;   /* PLAY-3: 끝 = 결과 + 사실 한 줄 · PLAY-2: 머무는 시간 = 글 길이만큼(READ-1 readSec · 3.2~6초 — 다른 시험·놀이 흐름이 기다리는 7초 안) · E·스페이스·결과 글 누르기 = 바로 닫기(1초 뒤부터) */
-    if (o.onRec) { try { recR = o.onRec(score, cntNow(), g.nextT ? g.nextT() : ''); } catch (er) { console.warn('[town_minigame] 기록 오류', er); recR = null; }   /* LADDER-2 끝 창 = 내 최고 한 줄(+ 칸이 바뀌면 다음 판 한 줄) · 새 최고 = 작은 연출 */
+    if (o.onRec) { try { recR = o.onRec(score, cntNow(), g.nextT ? g.nextT() : '', whyNow()); } catch (er) { console.warn('[town_minigame] 기록 오류', er); recR = null; }   /* LADDER-2 끝 창 = 내 최고 한 줄(+ 칸이 바뀌면 다음 판 한 줄) · 새 최고 = 작은 연출 */
       if (recR && recR.lines && recR.lines.length) { const el = document.createElement('div'); el.className = 'mgrec' + (recR.neu ? ' neu' : ''); for (const t of recR.lines) { const d = document.createElement('div'); d.textContent = t; el.appendChild(d); } const ms = c.root.querySelector('.msg'); if (ms) ms.after(el); else c.root.appendChild(el); if (recR.neu && o.onBest) o.onBest(el); endT = Math.max(endT, recR.neu ? 3.6 : 3.2); } }
     c.root.scrollTop = c.root.scrollHeight; };   /* PATH-1B 걸25: 결과 글·내 최고 줄·[닫기]가 판 안에 보이게(끝 화면은 판을 다시 줄이지 않으므로 아래로 굴려 둠) */
+  const whyNow = () => (whyT >= 0 ? whyT : g && g.why ? g.why() | 0 : -1);   /* REPLAY-1B 이번 판에 틀린 수(딸기·표고·배추만 · 모르는 놀이 = -1) */
   const cntNow = () => (cntT >= 0 ? cntT : g && g.cnt ? g.cnt() | 0 : -1);   /* 모은 수(딸기·감자·고르게 편 김…) · 모르는 놀이 = -1 */
   if (!MK[kind]) console.warn('[town_minigame] 모르는 놀이 갈래 → 익은 것 고르기로:', kind, o.k);   /* 옛 기본값 mkBar(타이밍 막대)는 10-24에 지움 */
   const g = (MK[kind] || mkRipe)(c);
@@ -1198,7 +1200,7 @@ export function createMini(kind, o) { css();
   if (c.go && g.go) { c.go.textContent = g.go; c.go.addEventListener('pointerdown', pd); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) c.go.addEventListener(ev, pu); }
   return { kind,
     get ok() { return score; }, get done() { return c.done; }, get extra() { return g.extra ? g.extra() : null; }, get dbg() { return g.dbg || null; }, get lv() { return c.lv; }, get lp() { return c.lp; }, get cnt() { return cntNow(); }, get rec() { return recR; },
-    finish(ok, n) { if (c.done) return; if (n != null) cntT = Math.max(0, n | 0); c.finish(ok); },   /* 시험(town_ladder.cjs): 점수·모은 수를 정해 끝내기 — 끝 창·기록 길은 그대로 */
+    finish(ok, n, y) { if (c.done) return; if (n != null) cntT = Math.max(0, n | 0); if (y != null) whyT = Math.max(0, y | 0); c.finish(ok); },   /* 시험(town_ladder.cjs): 점수·모은 수를 정해 끝내기 — 끝 창·기록 길은 그대로 */
     down() { if (!c.done) g.down(); else skip(); }, up() { if (!c.done && g.up) g.up(); }, key(code, rep) { return !c.done && g.key ? !!g.key(code, rep) : false; },
     tick(dt) { if (dt > 0.1) dt = 0.1; if (!c.done) { g.tick(dt); return; } endA += dt; if (endT >= 0 && (endT -= dt) <= 0) { endT = -1; o.onEnd(score); } },
     dispose() { c.done = true; endT = -1; c.root.removeEventListener('pointerdown', pskip); if (g.dispose) g.dispose(); if (c.go) { c.go.removeEventListener('pointerdown', pd); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) c.go.removeEventListener(ev, pu); } } };
