@@ -41,6 +41,10 @@ PATCHES = {
         (re.compile(r"g\.fillText\('🏫', 90, 72\)"), "g.fillText('🏘', 90, 72)"),
         (re.compile(r"g\.fillText\('정림초', 90, 157\)"), "g.fillText('@APP@', 90, 157)"),
     ],
+    # CLASS-MP(11-14): 공개판에서는 반 코드로 저절로 함께를 켜지 않음(설계 1 '공개판은 지금 그대로' · 예전 함께하기 메뉴는 그대로)
+    'v2/games/town_classmp.js': [
+        ("const OFF = !!window.SM_PROMO ||", "const OFF = true ||"),
+    ],
 }
 FORBID = [r'정림', r'(?i)junglim', r'화성시', r'효행', r'망월', r'정남면', r'RAS On', r'수상한정림', r'docs/systems', r'PEPPER',
           r'패들렛 \d', r'교사 (?:0?9|10|11)-\d', r'사용자 (?:0?9|10|11)-\d']
