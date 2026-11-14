@@ -38,7 +38,7 @@ import { createFriends } from './town_friends.js?v=5'; import { createClassMP } 
 import { SET, CB, setHTML, bindSet, speak, hush, setSet } from '../js/settings.js?v=8'; import { takePhoto, fillAlbum, listPhotos, PHOTO_MAX, photoCss } from '../js/photo.js?v=7';   // SET-1 설정·접근성 · PHOTO-1 사진관(학교와 같은 모듈)
 import { BUGS, bugAt, drawBug } from './town_bugs.js?v=2';
 import { photoHtml, hasPhoto } from './town_photos.js?v=5';   /* REALPIC-1 실제 사진(관찰 창·도감 카드 안에서만 · 3D X · 열 때만 부름) */
-import { createAnimals } from './town_anim.js?v=2'; import { createHerd, penOf } from './town_herd.js?v=6';   // HERD-1 양몰이(세상 안 놀이 · 목장 먹이 주기 창을 갈아 끼움)
+import { createAnimals } from './town_anim.js?v=2'; import { createHerd, penOf } from './town_herd.js?v=7';   // HERD-1 양몰이(세상 안 놀이 · 목장 먹이 주기 창을 갈아 끼움)
 import { makeWorkerMesh } from './town_worker.js?v=9'; import { createRhy } from './town_rhy.js?v=1';   // RHY-1 노동요 리듬 놀이(모내기 소리 · docs/systems/town_rhy.md)
 import { createSim, makeFrontView, makeFlags, makeUmbrellas, wetChain } from './town_sim.js?v=2';   // SIM-1 칸 상태판 · 날씨 전선(단계 4 조각 0·1)
 import { createShow, showFor } from './town_show.js?v=3'; import { createShowFind, SF_HRS } from './town_showfind.js?v=5'; import { createOutcrop } from './town_outcrop.js?v=6';   /* DEPTH-3 쇼 뒤 본 것 찾기 */
