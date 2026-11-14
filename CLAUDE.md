@@ -40,7 +40,7 @@
 | 마을 메인 스토리(town_story.js — 이웃 쪽지 장 다섯 · 힌트 세 단계 · 난도) | `docs/systems/town_story.md` — 퀘스트 틀 명세(2027 교과서 엔진)와 같은 꼴 |
 | **새 메인 세션을 이어받을 때 = 먼저 이것(10-31 · 지금 상태·멈춘 팀 셋·남은 차례) → 일하는 법은 1024** | `docs/systems/town_handoff_1031.md` · `docs/systems/town_handoff_1024.md` → 정본 차례 `docs/systems/town_week_1024.md` |
 | **토요일(10-24) 시작 = 먼저 이것(단계 0 합치기 차례 · 역할 분담 · 물을 것)** | `docs/systems/town_kickoff_1024.md` |
-| **수업 전 점검 · 수업 중 고장 · 비밀번호 · 서버가 멈추면 · 올리는 차례(11-13 · 손을 뗀 뒤에도 쓰는 한 쪽)** — 수업 전 핵심 시험 = `zsh tools/ops/core.sh`(20 ~ 25분) · 멈춘 판 꼬리표 `town-1115`(11-14 오후 묶음 뒤 · 그 앞 판 `town-1114` · `town-1113`) | `docs/systems/town_ops.md` |
+| **수업 전 점검 · 수업 중 고장 · 비밀번호 · 서버가 멈추면 · 올리는 차례(11-13 · 손을 뗀 뒤에도 쓰는 한 쪽)** — 수업 전 핵심 시험 = `zsh tools/ops/core.sh`(20 ~ 25분) · 멈춘 판 꼬리표 `town-1115b`(게임 첫 화면·방장 시계 뒤 · 그 앞 `town-1115` · `town-1114` · `town-1113`) | `docs/systems/town_ops.md` |
 | 프로그램 전체 분석·발전 방향(11-10 · 증거 → 얼리기 → 하나만 · 하지 않을 것) | `docs/systems/town_review_1110.md` |
 | "마을이 늦게 열려요"를 다룰 때 · 모듈 늦게 받기·묶기를 제안하기 전에(11-13 재기 · 가장 큰 몫 = 짓기) | `docs/systems/town_load.md` |
 | 처음 15분 길(첫 아침 → 이웃 부탁 → 놀이 → 다음 날)에서 아이가 멈춘 자리를 고칠 때 · 길 안내·거리 숫자·E 판정·알림 차례(11-14 PATH-1 · 화면만 보는 평가 두 번) — 시험 `town_path1` · `town_path1b` · `town_path1c` · `town_path1d` · `town_path1d2` · PATH-1 뒤 판 꼬리표 `town-1114` · 11-14 오후(PATH-1D 가·나 · 남긴 것 = `town_review_1110.md` §9) 뒤 `town-1115` | `docs/systems/town_path1.md` |
@@ -50,7 +50,7 @@
 | 마을 장소가 하는 일·직업 체험·서브퀘스트·쇼·집 특색(장소 카드·마을 여권·소방관 출동 등) | `docs/systems/town_living.md` — LIVING-1 설계안(사용자 10-17 '너가 생각하는 최선으로 ㄱ') |
 | 거점(어린이 도우미 본부)·교류·지역 문제·지리 퀘스트 · 교사 차시 지도 | `docs/systems/town_quests.md` — QUEST-2 설계(교육적 평가 · 배운 것을 '써야' 풀리는 퀘스트) |
 | v4 계정(총관리자·관리자·선생님·학생 · 학교 코드 + 개인 핀)을 만들거나 고칠 때 | `docs/systems/town_accounts.md` — ACCT-1(v4만 · 이름은 서버에 X · DB 규칙은 교사 결정) |
-| 마을 함께하기(같은 방 친구 · 세상 시계·날씨·계절 · 각자 진행 · 선물·두레 · 선생님 칸)를 만들거나 고칠 때 | `docs/systems/town_together.md` — TOGETHER-1 규칙(협동 게임 실패 열 가지 → 우리 규칙 · 세상은 방 하나 · 진행은 각자) |
+| 마을 함께하기(같은 방 친구 · 세상 시계·날씨·계절 · 각자 진행 · 선물·두레 · 선생님 칸 · **방장 시계** HOST-1 `town_host.js` · 시험 `town_host1`)를 만들거나 고칠 때 | `docs/systems/town_together.md` — TOGETHER-1 규칙(협동 게임 실패 열 가지 → 우리 규칙 · 세상은 방 하나 · 진행은 각자 · 11-14 교사 「시간은 방장 기준」) |
 | 마을이 4학년에게 직관적인지 · 화면 칩·처음 30분 흐름·다음 목표 표시를 고칠 때 | `docs/systems/town_intuit.md` — INTUIT-1 이야기가 등뼈(동물의 숲 견줌 · HUD 진행 열림 · 세상 안 목표 표시 · 한 번에 한 동작) |
 | 화학 규칙(물·불·바람·추위·햇빛 × 물건 · 규칙 도감)·🧪 실험 표(가방 물건 × 자리 = 자연법칙 · 과학+사회 · `town_laws.js`에 줄만 더함)·보물 지도(기호·방위·축척·등고선)를 고칠 때 | `docs/systems/town_chem.md`(§10 LAWS-1) · `docs/systems/town_treasure.md` |
 | 마을 퀘스트를 만들거나 고칠 때(배움 다섯 칸 · 방문만 단계 줄이기 · 주차 새 흐름 · 공용 도구) | `docs/systems/town_quest_audit.md` — 10-18 감사(27장 181단계 · 방문만 72%) |
@@ -68,7 +68,7 @@
 | **밤샘 차례표(10-24 · A~H 39줄)** · 단계 1 설계(하루 한 바퀴 + 내 집) · 직업 놀이 엔진 설계(JOBS-2 · 양몰이·장구·부엌·낚시…) · 단계 2 표시 걷기·길 묻기 · 단계 3 기억하는 이웃·돈 쓸 곳 | `docs/systems/town_night_queue.md` · `docs/systems/town_phase1.md` · `docs/systems/town_jobs2.md` · `docs/systems/town_phase2.md` · `docs/systems/town_phase3.md` · `docs/systems/town_phase4.md`(엔진 여덟) · `docs/systems/town_explore.md`(탐험·특수 지형) |
 | 마을 건물 들어가기(town_enter.js · 갈래 표 한 줄 = 방 하나 · 99%) · 레벨 보상(town_reward.js · 솜씨 × 레벨 = 쓰는 물건) · 땅이름·아이 동네 이름·구역 이름(town_names.md) | `docs/systems/town_enter.md` · `docs/systems/town_rewards.md` · `docs/systems/town_names.md` |
 | 마을 잔치(town_feast.js · 준비 다섯 갈래) · 밤(town_night.js) · 날씨 사건(town_wxev.js 폭염·폭설) · 계절 행사(town_season.js 설·대보름·단오·추석·김장) | `docs/systems/town_feast.md` · `docs/systems/town_hours.md` · `docs/systems/town_wxev.md` · `docs/systems/town_season.md` |
-| 마을 처음 화면·저장 칸 셋·첫날 시작(town_game.js 저장 옮기기·bak·old · 우리 집 현관에서 첫 아침) · 화면 모드 둘(그래픽 우선 30 / 부드럽게 60) | `docs/systems/town_open.md` · `docs/systems/perf.md` |
+| 마을 처음 화면(TITLE-2 게임 첫 화면 「우리 마을」 + [이어하기][처음하기][같이하기] · 같이하기 = 방 만들기/방 들어가기 · 시험 `town_title2`)·저장 칸 셋·첫날 시작(town_game.js 저장 옮기기·bak·old · 우리 집 현관에서 첫 아침) · 화면 모드 둘(그래픽 우선 30 / 부드럽게 60) | `docs/systems/town_open.md` · `docs/systems/perf.md` |
 | **드래곤 길들이기 게임(10-31 · `dragon/` · 4학년 기획 · 다른 학년용 · 메타버스 결 X)** — 정본 goal · 사실 · 이어받기 | `docs/dragon/goal_prompt.md` · `docs/dragon/reference.md` · `docs/dragon/handoff.md` — 이 게임엔 v2 지오메트리 규칙·마을 '판타지 X'를 쓰지 않음(goal §1) |
 | **드래곤 2D판(11-01 · `dragon2d/` · 포켓몬식 탑뷰 · 교사 '2D로 · 포켓몬처럼')** — 3D판과 이야기·대사 같음 · 엔진·조작·시험 | `docs/dragon/handoff_2d.md` · 그림 약속 `docs/dragon/art2d_contract.md` |
 | 게임용 지도 API 정본(map.*) | `docs/map_api.md` |
