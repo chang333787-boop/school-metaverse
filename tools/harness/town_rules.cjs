@@ -27,8 +27,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  �
     await ev(() => SM_TOWN.rules.playEnd(3)); await W8(700); ok((await ev(() => SM_TOWN.game().S.bag['🥔'] || 0)) > 0, '② 감자가 가방에');
     // ③ 이야기 없음 = 연습 판
     await ev(() => SM_TOWN.storyOff()); await W8(300); await close(); await worst();
-    { const b0 = await ev(() => ({ p: SM_TOWN.game().S.bag['🥔'] || 0, m: SM_TOWN.game().S.money })); await ev(() => SM_TOWN.rules.work('potato')); await W8(400); pl = await ev(() => SM_TOWN.rules.play()); ok(pl && pl.pr, '③ 이야기 없이 몫을 다 쓰면 연습 판(놀이는 열림)'); ok(/연습/.test(await toast()) && /6시/.test(await toast()), '③ 언제 다시 받는지 한 줄: ' + (await toast()).slice(0, 60));
-      await ev(() => SM_TOWN.rules.playEnd(3)); await W8(700); const b1 = await ev(() => ({ p: SM_TOWN.game().S.bag['🥔'] || 0, m: SM_TOWN.game().S.money })); ok(b1.p === b0.p && b1.m === b0.m, '③ 연습 판은 받는 것 없음 ' + JSON.stringify([b0, b1])); }
+    { const b0 = await ev(() => ({ p: SM_TOWN.game().S.bag['🥔'] || 0, m: SM_TOWN.game().S.money })); await ev(() => SM_TOWN.rules.work('potato')); await W8(400); pl = await ev(() => SM_TOWN.rules.play()); ok(pl && pl.pr, '③ 이야기 없이 몫을 다 쓰면 연습 판(놀이는 열림)'); ok(/연습/.test(await toast()) && /내 최고/.test(await toast()), '③ 연습 판 시작 한 줄(받을 것은 다 받음 · 내 최고는 남음): ' + (await toast()).slice(0, 60));   /* REPLAY-1(11-14): 언제 다시 받는지는 끝 글이 말함 */
+      await ev(() => SM_TOWN.rules.playEnd(3)); await W8(700); ok(/받은 것은 없어요/.test(await toast()) && /내일/.test(await toast()), '③ 연습 판 끝 = 언제 다시 받는지 한 줄: ' + (await toast()).slice(0, 60)); const b1 = await ev(() => ({ p: SM_TOWN.game().S.bag['🥔'] || 0, m: SM_TOWN.game().S.money })); ok(b1.p === b0.p && b1.m === b0.m, '③ 연습 판은 받는 것 없음 ' + JSON.stringify([b0, b1])); }
     // ④ 심부름 사기: 닫힌 마트 · 돈 0
     const shops = await ev(() => SM_TOWN.shops()); const mart = shops.find(q => q.kind === 'grocery');
     if (!mart) ok(false, '④ 마트 없음'); else {

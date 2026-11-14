@@ -5,7 +5,7 @@
 //   솜씨 perk 'zone'(zw 1~1.25) = 쉬워지는 쪽으로(시간 · 초록 폭 · 삽질 수 · 벌레 느리게)
 //   화면 = DOM + CSS(놀이 창이 열린 동안만 · 마을 tick이 부르는 tick(dt) 하나 — 따로 rAF X) · 입력 = down()/up()(E·스페이스·큰 단추) + key(코드, 반복)(화살표·WASD·숫자) + 누르기·끌기(마우스·터치)
 import { readSec } from './town_read.js?v=4';   /* PLAY-2: 끝 글이 머무는 시간 = 다 읽을 만큼(READ-1) */
-import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2'; import { mkSalt } from './town_salt.js?v=2'; import { ladVal, LADP } from './town_lad.js?v=6';   /* LADDER-2 도전 칸마다 조건 값 */   /* SALT-2 염전 꼬임 넷 */   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
+import { fishAt, fishBest, FISH_FACT } from './town_fish.js?v=2'; import { mkSalt } from './town_salt.js?v=2'; import { ladVal, LADP } from './town_lad.js?v=7';   /* LADDER-2 도전 칸마다 조건 값 */   /* SALT-2 염전 꼬임 넷 */   /* FISH-2 줄 낚시 = 물때·자리·미끼로 걸리는 고기 */
 export const MG_V = 3;
 const KIND = { tuho: 'toss', fisher: 'tug', rod: 'tug', seaweed: 'spread', oyster: 'gauge', strawberry: 'ripe', shiitake: 'ripe', saltpan: 'salt', beehive: 'comb', potato: 'dig', clam: 'dig', cabbage: 'sort', pear: 'cover', lumber: 'order', pasture: 'feed' };
 export const mgKind = (k, sea) => (k === 'paddy' ? (sea === 'autumn' ? 'cut' : 'plant') : KIND[k] || 'ripe');   /* 논 = 봄 모내기 · 가을 벼 베기 */
@@ -448,6 +448,7 @@ function mkRipe(c) {
   h += '<div class="rg' + (wet ? ' wet' : '') + '" data-c="' + R[0] + '">'; for (let i = 0; i < N; i++) h += '<button class="rt u" data-i="' + i + '"><span class="rf">' + R[1] + '</span><em>' + (i + 1) + '</em></button>'; h += '</div><div class="bar tmb"><i class="tm"></i></div>';
   c.mg.innerHTML = h; const rg = c.mg.querySelector('.rg:not(.smp)'), B = rg.querySelectorAll('.rt'), tm = c.mg.querySelector('.tm'), st = new Array(N).fill('u'), age = new Array(N).fill(0), BK = { o: 0, r: 0, h: 0 };
   let sel = 4, left = T, rip = 0, none = 0, P = 0, M = 0;
+  const G2 = 4;   /* REPLAY-1: 다음 칸 문턱(주문 상자 수 − 덜 자란 것 누른 수) — 아래 점수 셈과 끝 창 조건 글(nextT)이 이 수 하나를 같이 씀 */
   const draw = i => setCls(B[i], 'rt ' + st[i] + (i === sel ? ' sel' : ''));
   const grow = (a, b, amin) => { let k = -1, n = 0; for (let i = 0; i < N; i++) if (st[i] === a && age[i] >= amin) { n++; if (Math.random() * n < 1) k = i; } if (k >= 0) { st[k] = b; age[k] = 0; draw(k); } return k; };   /* a 단계 가운데 하나를 골라 b로(따로 배열 X) */
   { const base = wet ? ['o', 'o', 'r', 'r', 'h', 'h', 'u', 'u', 'u'] : WANT === 'o' ? ['o', 'r', 'r', 'r', 'h', 'h', 'u', 'u', 'u'] : ['r', 'r', 'r', 'h', 'h', 'h', 'u', 'u', 'u']; shuf(base); for (let i = 0; i < N; i++) { st[i] = base[i]; age[i] = 1; draw(i); } }
@@ -471,8 +472,10 @@ function mkRipe(c) {
       for (let i = 0; i < N; i++) { age[i] += dt; if (st[i] === 'e' && age[i] > 1.4) { st[i] = 'u'; age[i] = 0; draw(i); } else if (st[i] === 'r' && SOFT && age[i] > SOFT) { st[i] = 'o'; age[i] = 0; draw(i); } else if (st[i] === 'o' && age[i] > OL) { st[i] = 'u'; age[i] = 0; draw(i); } if (st[i] === WANT) nw++; }   /* 익은 채 오래 두면 무름 · 무른 것은 떨어지고 새 열매 자리 */
       if ((rip += dt) > 1.25) { rip = 0; grow('h', 'r', 0.6); grow('u', 'h', 0.8); }
       if (nw) none = 0; else if ((none += dt) > 0.4) { none = 0; if (WANT === 'h') grow('u', 'h', 0); else if (WANT === 'r') { if (grow('h', 'r', 0) < 0) grow('u', 'r', 0); } else if (grow('r', 'o', 0) < 0) grow('h', 'o', 0); }   /* 주문에 맞는 것이 늘 하나는 생김 */
-      if (left <= 0) { const s = P - M; c.finish(s >= 6 ? 3 : s >= 4 ? 2 : s >= 2 ? 1 : 0); } },
-    get dbg() { return { ord: ORD, want: WANT, wet, st: st.slice(), P, M, bk: { ...BK }, soft: SOFT, n: P0.n, first, pick: i => pick(i) }; },
+      if (left <= 0) { const s = P - M; c.finish(s >= 6 ? 3 : s >= G2 ? 2 : s >= 2 ? 1 : 0); } },
+    nextT: () => (CK === 'm' ? c.T('작은 봉오리를 안 누르고 주문 상자에 ' + G2 + '송이를 담으면 다음 칸이에요', 'Next step: ' + G2 + ' in the order box, no tiny buttons tapped')
+      : c.T('초록 딸기를 안 누르고 주문 상자에 ' + G2 + '개를 담으면 다음 칸이에요', 'Next step: ' + G2 + ' in the order box, no green berries tapped')),   /* REPLAY-1: 덜 자란 것을 안 누르면 점수 = 주문 상자 수 → G2개면 점수 2 = 다음 칸(사다리 규칙 g ≥ 2) */
+    get dbg() { return { ord: ORD, want: WANT, wet, st: st.slice(), P, M, bk: { ...BK }, soft: SOFT, n: P0.n, first, left, pick: i => pick(i) }; },
     dispose() { rg.removeEventListener('pointerdown', onPd); } };
 }
 
@@ -677,11 +680,15 @@ function mkDig(c) { const clam = c.k === 'clam', C9 = 7, N = 28, ND = (clam ? 8 
   c.mg.innerHTML = gridHTML(C9, N, clam ? 'mud' : 'soil'); const gd = c.mg.querySelector('.gd'), dug = new Array(N).fill(0);
   const dig = i => { if (c.done || dug[i] || digs <= 0) return; dug[i] = 1; digs--; if (hide[i]) { found++; G.B[i].className = 'gc dug hit'; G.B[i].textContent = clam ? '🐚' : '🥔'; c.snd('pick'); } else { G.B[i].className = 'gc dug'; G.B[i].textContent = clue[i] === 'stem' ? '🌿' : ''; c.snd('pop'); }   /* PATH-1B 걸24: 빈 줄기 칸을 파도 줄기 그림은 남김(단서가 사라지던 것) */
     c.say((hide[i] ? c.T('찾았다! ', 'Found one! ') : clue[i] === 'stem' ? c.T('줄기 바로 밑엔 없어요. 줄기 옆 칸을 파 봐요 — ', 'Nothing right under the stem. Try the spots next to it — ') : c.T('여긴 없어요 — ', 'Nothing here — ')) + c.T('삽질 ' + digs + '번 남음 · 찾은 것 ' + found + '/' + NT, digs + ' digs left · found ' + found + '/' + NT)); if (found >= NT || digs <= 0) setTimeout(() => c.finish(score()), 500); G.mark(); }, G = gridCtl(gd, C9, N, dig);
-  const score = () => (clam ? (found >= 4 ? 3 : found >= 3 ? 2 : found >= 1 ? 1 : 0) : (found >= NT ? 3 : found >= NT - 2 ? 2 : found >= 2 ? 1 : 0));
+  const G2 = clam ? 3 : NT - 2;   /* REPLAY-1: 다음 칸 문턱(찾은 수) — 점수 셈과 끝 창 조건 글(nextT)이 같이 씀 */
+  const score = () => (clam ? (found >= 4 ? 3 : found >= G2 ? 2 : found >= 1 ? 1 : 0) : (found >= NT ? 3 : found >= G2 ? 2 : found >= 2 ? 1 : 0));
   G.B.forEach((b, i) => { b.className = 'gc ' + (clue[i] || ''); b.textContent = clue[i] === 'stem' ? '🌿' : ''; }); G.mark();
   c.say(clam ? c.T('작은 숨구멍 두 개 밑에 조개가 숨어요 — 큰 구멍 하나는 게 구멍! 삽질 ' + ND + '번' + NDT, 'Clams hide under pairs of tiny holes — one big hole is a crab’s! ' + ND + ' digs' + NDT) : c.T('감자는 줄기 밑 둘레 땅속에 달려요 — 줄기 둘레를 파요. 삽질 ' + ND + '번' + NDT, 'Potatoes grow underground around the stem — dig around 🌿! ' + ND + ' digs' + NDT));
   return { go: c.T('고른 칸 파기', 'Dig the chosen spot'), cnt: () => found, down() { if (!c.done && dug[G.sel] && digs > 0) c.say(c.T('이미 판 칸이에요. 다른 칸을 눌러요', 'Already dug — tap another spot')); else dig(G.sel); },   /* PATH-1B 걸24: 큰 단추·E = 고른(테두리) 칸 파기 — 이미 판 칸이면 말없이 넘기지 않고 한마디 */
-    key: code => G.key(code), tick() {}, dispose: () => G.dispose() }; }
+    key: code => G.key(code), tick() {},
+    nextT: () => (clam ? c.T('조개를 ' + G2 + '개 찾으면 다음 칸이에요', 'Next step: find ' + G2 + ' clams') : c.T('감자를 ' + G2 + '개 찾으면 다음 칸이에요', 'Next step: find ' + G2 + ' potatoes')),   /* REPLAY-1 */
+    get dbg() { return { hide: hide.slice(), clue: clue.slice(), nt: NT, g2: G2, found, digs, pick: i => dig(i) }; },
+    dispose: () => G.dispose() }; }
 
 // ⑨ 배추 거두기(DEPTH-2 · 크기대로 나누기 → 주문 보고 밭에서 고르기): 주문 쪽지(동네 가게 = 작은 배추 · 학교 급식실 = 중간 · 김장하는 집 = 큰 배추 · 김장은 가을·겨울만)마다 벨 배추가 다름
 //   밭 열두 포기(크기 셋이 섞임 · 크기 차이가 눈에 보임 · 사다리 = 크기가 비슷해짐) → 주문 크기만 눌러 주문 상자 네 칸을 채움 · 다른 크기 = 장터 바구니로(주문 상자는 안 참 · 까닭 한 줄) · 끌기·누르기·화살표 + E
@@ -699,13 +706,15 @@ function mkSort(c) { const X = jx(c), C9 = 4, N = 12, NQ = 4, T = 30 * c.zw, SQ 
     miss++; MB.textContent = miss; c.snd('pop'); pop(G.B[i], 'no');
     c.say((sz[i] > W ? c.T('주문보다 큰 배추예요', 'Bigger than the order') : c.T('주문보다 작은 배추예요', 'Smaller than the order')) + (sz[i] === 0 ? c.T('. 작은 배추는 밭에 두면 더 자라요', '. A small one would keep growing in the field') : '') + c.T('. 장터 바구니로 가요', '. It goes to the market basket')); };
   const G = gridCtl(gd, C9, N, i => put(i)); for (let i = 0; i < N; i++) G.B[i].innerHTML = '<i style="font-size:' + Math.round(30 * sc[i]) + 'px">🥬</i>'; G.mark();
-  const score = () => (ok >= NQ ? (miss === 0 ? 3 : miss <= 2 ? 2 : 1) : ok >= 2 ? 1 : 0);
+  const MG2 = 2;   /* REPLAY-1: 다음 칸 문턱(주문 상자를 다 채우고 장터 바구니로 간 수가 이 수까지) — 점수 셈과 끝 창 조건 글(nextT)이 같이 씀 */
+  const score = () => (ok >= NQ ? (miss === 0 ? 3 : miss <= MG2 ? 2 : 1) : ok >= 2 ? 1 : 0);
   c.say(P0.n === 0 ? c.T('쪽지 그림과 크기를 비교해요. 주문 크기만 눌러 베어요', 'Compare with the picture on the note. Tap only the ordered size to cut it') : c.T('오늘 주문은 어떤 크기일까요? 쪽지를 봐요', 'Which size is today’s order? Check the note'));
   return { go: c.T('고른 배추 베기', 'Cut the chosen one'), cnt: () => ok, down() { if (!c.done && got[G.sel]) c.say(c.T('이미 벤 자리예요. 다른 배추를 눌러요', 'Already cut — tap another cabbage')); else put(G.sel); },   /* PATH-1B 걸24 */
     key: code => G.key(code),
     tail: () => '💡 ' + (miss ? c.T('장터 바구니로 간 배추 ' + miss + '포기. ', miss + ' went to the market basket. ') : '') + CAB_FACT[ORD][c.en ? 1 : 0],
     tick(dt) { if (TB.tick(dt)) c.finish(score()); },
-    get dbg() { return { ord: ORD, want: W, sz: sz.slice(), got: Array.from(got), ok, miss, n: P0.n, pick: i => put(i) }; },
+    nextT: () => c.T('주문 상자를 다 채우고 장터 바구니가 ' + MG2 + '포기까지면 다음 칸이에요', 'Next step: fill the order box, market basket ' + MG2 + ' or fewer'),   /* REPLAY-1 */
+    get dbg() { return { ord: ORD, want: W, sz: sz.slice(), got: Array.from(got), ok, miss, n: P0.n, left: TB.left, pick: i => put(i) }; },
     dispose() { G.dispose(); } }; }
 
 // ⑩ 배 봉지 씌우기(DEPTH-2 · 벌레 경주 → 벌레가 오는 쪽을 보고 차례 정하기): 과수원 한 줄(위에서 본 그림 · 위 = 북)에서 봉지를 씌울 나무를 하나씩 고름(한 번 = 한 그루 · 시간 X)
@@ -1166,7 +1175,7 @@ function mkKitchen(c) {
 
 const MK = { toss: mkToss, spread: mkSpread, gauge: mkGauge, tug: mkTug, ripe: mkRipe, plant: mkPlant, cut: mkCut, salt: mkSalt, comb: mkComb, dig: mkDig, sort: mkSort, cover: mkCover, order: mkOrder, feed: mkFeed, lens: mkLens, bend: mkBend, still: mkStill, gate: mkGate, kitchen: mkKitchen };
 // 놀이 하나 열기: o = { root(.pb — 안에 .mg · .msg · .go가 있어야 함), k(일 갈래), en, zw(솜씨 배수 = 초록 칸·시간 · 부엌은 여유 시간), sea, x(놀이별 자료), sfx(k), tone(...), grade(false = 결과 말 없이 바로 끝 — 부엌·투호), onEnd(점수 0~3),
-//   lv(LADDER-2 도전 칸 1~4 · 조건 값 = town_lad.js LADP) · onRec(점수, 모은 수) → { lines: [내 최고 줄 · 다음 판 줄], neu } | null(끝 창에 덧붙임) · onBest(줄 요소) = 새 내 최고 연출 }
+//   lv(LADDER-2 도전 칸 1~4 · 조건 값 = town_lad.js LADP) · onRec(점수, 모은 수, 다음 칸 조건 글(REPLAY-1 · 놀이 틀의 nextT() · 없으면 '')) → { lines: [내 최고 줄 · 다음 판 줄], neu } | null(끝 창에 덧붙임) · onBest(줄 요소) = 새 내 최고 연출 }
 export function createMini(kind, o) { css();
   const c = { root: o.root, mg: o.root.querySelector('.mg'), msgEl: o.root.querySelector('.msg'), go: o.root.querySelector('.go'), en: !!o.en, zw: Math.max(1, o.zw || 1), k: o.k, sea: o.sea, x: o.x || null, done: false, lv: Math.max(1, Math.min(LADP[kind] && LADP[kind].v.length >= 5 ? 5 : 4, o.lv | 0 || 1)) }; c.lp = ladVal(kind, c.lv);   /* HARD-1 명인 칸(5) = 다섯째 값이 있는 갈래만 */   /* LADDER-2 lp = 이 칸의 조건 값(없는 놀이 = null → 놀이 틀은 1칸 값으로) */   /* x = 놀이별 자료(부엌: 요리법·사다리·손님·날씨 · KITCHEN-1) */
   c.h9 = { sitPick, flagSide, cloudSvg };   /* DEPTH-2 소금(town_salt.js)이 쓰는 상황 고르기·그림 */
@@ -1176,7 +1185,7 @@ export function createMini(kind, o) { css();
     const f9 = FACT[kind === 'plant' || kind === 'cut' ? kind : c.k], tl = g.tail ? g.tail() : '', gt = gradeText(score, c.en), rest = tl ? ' ' + tl : f9 ? (c.en ? ' 💡 Did you know? ' : ' 💡 알고 있었나요? ') + f9[c.en ? 1 : 0] : '';
     if (c.msgEl) { c.msgEl.textContent = ''; const b9 = document.createElement('b'); b9.className = 'mgres'; b9.textContent = gt; c.msgEl.appendChild(b9); if (rest) c.msgEl.appendChild(document.createTextNode(rest)); }   /* PLAY-2: 끝 = 결과(잘했어요)가 크게 한 줄 + 사실 · 글(textContent)은 예전과 같음 */
     c.snd(score >= 3 ? 'done' : score ? 'ding' : 'buzz'); endA = 0; endT = f9 || tl ? Math.max(3.2, Math.min(6, readSec(gt + rest))) : 0.8;   /* PLAY-3: 끝 = 결과 + 사실 한 줄 · PLAY-2: 머무는 시간 = 글 길이만큼(READ-1 readSec · 3.2~6초 — 다른 시험·놀이 흐름이 기다리는 7초 안) · E·스페이스·결과 글 누르기 = 바로 닫기(1초 뒤부터) */
-    if (o.onRec) { try { recR = o.onRec(score, cntNow()); } catch (er) { console.warn('[town_minigame] 기록 오류', er); recR = null; }   /* LADDER-2 끝 창 = 내 최고 한 줄(+ 칸이 바뀌면 다음 판 한 줄) · 새 최고 = 작은 연출 */
+    if (o.onRec) { try { recR = o.onRec(score, cntNow(), g.nextT ? g.nextT() : ''); } catch (er) { console.warn('[town_minigame] 기록 오류', er); recR = null; }   /* LADDER-2 끝 창 = 내 최고 한 줄(+ 칸이 바뀌면 다음 판 한 줄) · 새 최고 = 작은 연출 */
       if (recR && recR.lines && recR.lines.length) { const el = document.createElement('div'); el.className = 'mgrec' + (recR.neu ? ' neu' : ''); for (const t of recR.lines) { const d = document.createElement('div'); d.textContent = t; el.appendChild(d); } const ms = c.root.querySelector('.msg'); if (ms) ms.after(el); else c.root.appendChild(el); if (recR.neu && o.onBest) o.onBest(el); endT = Math.max(endT, recR.neu ? 3.6 : 3.2); } }
     c.root.scrollTop = c.root.scrollHeight; };   /* PATH-1B 걸25: 결과 글·내 최고 줄·[닫기]가 판 안에 보이게(끝 화면은 판을 다시 줄이지 않으므로 아래로 굴려 둠) */
   const cntNow = () => (cntT >= 0 ? cntT : g && g.cnt ? g.cnt() | 0 : -1);   /* 모은 수(딸기·감자·고르게 편 김…) · 모르는 놀이 = -1 */
