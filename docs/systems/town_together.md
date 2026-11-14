@@ -82,8 +82,9 @@
 - **아이 화면**: 새 창·새 단추 X. ☰ 바로 쓰기 줄 글만 「👥 우리 반 함께 · 12명」(누르면 「우리 반 방에 있어요」 한 줄 + 2장부터는 예전 방 고르기 그대로) · 처음 붙어 친구가 보일 때 알림 한 번 「👥 우리 반 친구가 보여요」(첫 이야기 두 장 동안은 미룸 — quiet9). 예전 함께하기 방에 들어가면(`mp-in`) 반 방은 잠깐 나갔다가 나오면 다시.
 - **끄는 길 둘**: 선생님 칸 → 반 표 → ☁️ 서버(교사 열쇠로 받은 뒤) 「👥 우리 반 함께 보기 켬/끔」(`/tset` · 처음 = 켬) — 아이는 다음 `/load`·`/save` 답부터(놀던 아이도 3분마다 하는 확인 `/load`에서 몇 분 안에 나감) · 기기 하나 = 주소 `?mp=off`.
 - **한도**: 방 40명 · 보내기 빈도 NET-CF3 단계 · 꽉 참·하루 한도 = NET-CF3 글 한 번 뒤 혼자.
+- **CLASS-MP-B(11-14 뒤 고침)**: 같은 번호가 다른 기기로 옮겨 들어오면 옛 id의 나감 알림 `{t:'l'}`을 반 친구에게 보내고 서버 자리를 지움(안 그러면 「안 숨김」 때문에 옛 몸이 얼어붙어 남음) · 반 방 이모트의 `all` 칸도 1일 때만(글이 지나가던 구멍) · 배포 서버 확인에 반 방 웹소켓(표 = `{t:'w'}` · 표 없음·틀린 표 = 4004) · 흉내 시험 ④(세 연결 · 34개).
 - **10번 단계 늦게 그리기 = 100ms로 되돌림**(NET-CF3에서 150으로 늘어 학교 맵 두 명 방에도 닿던 것 · 6번 250 · 4번 375 그대로).
-- **시험**: 서버 흉내 `node --no-warnings server/cf-rooms/test_classmp.mjs`(26개) · 화면+로컬 방 서버 `zsh tools/ops/b2.sh node tools/harness/town_classmp.cjs <화면 포트> http://127.0.0.1:<wrangler dev 포트>`(net 쪽 ①~⑥ · 마을 쪽 ⑦~⑩ · `--net`·`--town`으로 반만) · 배포 서버 `node --no-warnings server/cf-rooms/test_classmp.mjs https://sm-rooms.sm-rooms.workers.dev`(시험 반 zzcmp1).
+- **시험**: 서버 흉내 `node --no-warnings server/cf-rooms/test_classmp.mjs`(34개) · 화면+로컬 방 서버 `zsh tools/ops/b2.sh node tools/harness/town_classmp.cjs <화면 포트> http://127.0.0.1:<wrangler dev 포트>`(net 쪽 ①~⑥ · 마을 쪽 ⑦~⑩ · `--net`·`--town`으로 반만) · 배포 서버 `node --no-warnings server/cf-rooms/test_classmp.mjs https://sm-rooms.sm-rooms.workers.dev`(시험 반 zzcmp1).
 
 ## 선생님 결정이 필요한 것
 - Firebase 규칙: 방 문서는 선생님만 쓰기(지금 DB는 공개 읽기·쓰기 — 교사가 알고 정한 것) · 반 기록 올리기 칸.

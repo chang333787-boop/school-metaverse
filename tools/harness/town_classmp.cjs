@@ -51,6 +51,7 @@ const api = async (p, body) => { const r = await fetch(CF + p, { method: 'POST',
       /* ⑤ 같은 번호 두 기기 */
       const A2 = await open({ me: 'cz' + r, cr: T3.r, tk: T3.tk }); await A.waitForTimeout(1500); sA = await st(A); const sA2 = await st(A2);
       ok('⑤같은 번호가 다른 기기로 = 먼저 것 나감 + 한 줄', sA.cf.gone && !sA.cf.ok && sA.notes.join() === 'dev' && sA2.cf.ok && sA2.peers.some((q) => q.n === '4번'), { gone: sA.cf.gone, notes: sA.notes, A2: sA2.cf.ok });
+      { const s3 = await st(B); ok('⑤셋째 화면(B)에서 옛 몸(A)이 사라짐 · 새 3번(A2)은 보임', !s3.peers.some((q) => q.id === 'ca' + r) && s3.peers.some((q) => q.id === 'cz' + r && q.n === '3번'), s3.peers.map((q) => q.id + ':' + q.n)); }   /* CLASS-MP-B */
       for (const p of ctx.pages()) await p.close();
       /* ⑥ 지금 배포된 화면(입장표를 모름)이 예전 방에서 */
       try { fs.writeFileSync(OLD, execSync('git show ' + OLD_REV + ':v2/js/net.js', { cwd: ROOT, encoding: 'utf8' })); oldMade = true; } catch (e) { /* 없으면 건너뜀 */ }

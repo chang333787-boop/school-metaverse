@@ -22,6 +22,15 @@ if (LIVE) {
   r = await live('/class/' + C, { tkey: KEY }); ok(r.st === 200 && r.j.mp === 0, '/class에 mp 0');
   r = await live('/tset/' + C, { tkey: 'zz-wrong-key-9', mp: 1 }); ok(r.st === 403, '틀린 열쇠로 /tset = 403');
   r = await live('/tset/' + C, { tkey: KEY, mp: 1 }); ok(r.st === 200 && r.j.mp === 1, '다시 켬');
+  /* CLASS-MP-B ③ 배포 서버 반 방 웹소켓 — 표로 들어오면 {t:w} · 표 없음·틀린 표 = 4004 */
+  const wsTry = (tk) => new Promise((res) => { let w; try { w = new WebSocket(LIVE.replace(/^http/, 'ws') + '/room/' + mp.r, { headers: { Origin: ORIGIN } }); } catch (e) { return res({ err: e.message }); } const o = { t: '', code: 0 }, tm = setTimeout(() => { try { w.close(); } catch (e) { /* */ } res(o); }, 6000);
+    w.onopen = () => w.send(JSON.stringify(tk == null ? { t: 'j', id: 'zzlive' + Math.random().toString(36).slice(2, 6), n: '' } : { t: 'j', id: 'zzlive' + Math.random().toString(36).slice(2, 6), n: '', k: 'kid', c: 0, a: '', tk }));
+    w.onmessage = (ev) => { const d = JSON.parse(ev.data); if (d.t === 'w') { o.t = 'w'; o.u = (d.L.find((q) => q[0] === d.id) || [])[5]; clearTimeout(tm); w.close(); res(o); } };
+    w.onclose = (ev) => { o.code = ev.code; clearTimeout(tm); res(o); }; w.onerror = () => {}; });
+  r = await live('/load/' + C + '/' + N, { pin: PIN }); const tk9 = r.j && r.j.mp && r.j.mp.tk;
+  let q = await wsTry(tk9); ok(q.t === 'w' && q.u === N, '배포 반 방: 표로 들어오면 {t:w} · 번호 ' + q.u + (q.err ? ' ' + q.err : ''));
+  q = await wsTry(null); ok(q.code === 4004, '배포 반 방: 표 없음 = 4004 (' + q.code + ')');
+  q = await wsTry(String(tk9).replace(/^\d+\./, '9.')); ok(q.code === 4004, '배포 반 방: 틀린 표 = 4004 (' + q.code + ')');
   r = await live('/drop/' + C + '/' + N, { pin: PIN }); ok(r.st === 200 && r.j && r.j.dropped === 1, '시험 판 지움');
   console.log(fails ? '✗ 실패 ' + fails : '✓ 배포 서버 통과'); process.exit(fails ? 1 : 0);
 }
@@ -62,6 +71,28 @@ r = await call(env, '/save/zzcls1/7', { pin: '1234', data: kid(7) }); ok(r.j.ok 
 r = await call(env, '/class/zzcls1', { tkey: 'teach123' }); ok(r.j.mp === 0, '/class에 mp 0');
 r = await call(env, '/tset/zzcls1', { tkey: 'teach123', mp: 1 }); r = await call(env, '/load/zzcls1/7', { pin: '1234' }); ok(r.j.mp && r.j.mp.tk === A.tk, '다시 켜면 표');
 r = await call(env, '/save/zzcls2/7', { pin: '1234', data: kid(7) }); ok(!!r.j.mp, '다른 반은 그대로');
+
+console.log('④ 반 방 웹소켓(흉내 · CLASS-MP-B)');
+{ const socks = [], store = new Map();
+  const ctx = { acceptWebSocket: (w) => socks.push(w), getWebSockets: () => socks.filter((w) => !w.closed), storage: { get: async (k) => store.get(k), put: (k, v) => store.set(k, v) }, blockConcurrencyWhile: async (f) => f(), setWebSocketAutoResponse() {} };
+  const room = new M.Room(ctx, { PEPPER: 'test-pepper', DAY_MSG_MAX: '1500000' });
+  const sock = (rn) => { const w = { msgs: [], att: { rn }, closed: false, code: 0, send(x) { if (!this.closed) this.msgs.push(JSON.parse(x)); }, close(c) { if (this.closed) return; this.closed = true; this.code = c; queueMicrotask(() => room.webSocketClose(this)); }, serializeAttachment(a) { this.att = a; }, deserializeAttachment() { return this.att; } }; ctx.acceptWebSocket(w); return w; };
+  const T3 = await M.mpOf('test-pepper', 'zzws1', 3, Date.now()), T4 = await M.mpOf('test-pepper', 'zzws1', 4, Date.now()), RN = T3.r;
+  const join = async (w, id, tk, ex = {}) => { await room.webSocketMessage(w, JSON.stringify({ t: 'j', id, n: '', k: 'kid', c: 1, a: 't:다7', tk, ...ex })); await new Promise((r) => setTimeout(r, 5)); };
+  const A = sock(RN), B = sock(RN); await join(A, 'a', T3.tk); await join(B, 'b', T4.tk);
+  await room.webSocketMessage(A, JSON.stringify({ t: 'p', x: 1, y: 0, z: 2, h: 0, s: 0 }));
+  ok(A.msgs[0].t === 'w' && B.msgs[0].L.some((q) => q[0] === 'a' && q[5] === 3), 'A(3번)·B(4번) 들어옴 · 명단 번호 = 표에서');
+  const C = sock(RN); await join(C, 'c', T3.tk); await new Promise((r) => setTimeout(r, 20));
+  ok(A.closed && A.code === 4005, 'C(3번 · id c)가 들어오면 A는 4005로 닫힘');
+  ok(B.msgs.some((q) => q.t === 'l' && q.id === 'a'), 'B가 {t:l, id:a}를 받음(옛 몸이 안 남음)');
+  ok(!C.msgs.some((q) => q.t === 'l'), '새로 들어온 C에는 나감 알림이 안 감(others = id 있는 연결만)');
+  const D = sock(RN); await join(D, 'd', (await M.mpOf('test-pepper', 'zzws1', 5, Date.now())).tk); const w = D.msgs.find((q) => q.t === 'w');
+  ok(w && !w.L.some((q) => q[0] === 'a') && !w.P.some((q) => q[0] === 'a') && w.L.some((q) => q[0] === 'c'), 'D의 {t:w} 명단·자리에 a가 없음(c는 있음)');
+  B.msgs.length = 0; await room.webSocketMessage(C, JSON.stringify({ t: 'e', m: 2, all: '아무 글', tx: '자유', q: { x: 1 } })); await room.webSocketMessage(C, JSON.stringify({ t: 'e', m: 3, all: 1 }));
+  const E = B.msgs.filter((q) => q.t === 'e');
+  ok(E.length === 2 && !JSON.stringify(E).includes('아무 글') && !JSON.stringify(E).includes('자유') && E.every((q) => Object.keys(q).every((k) => ['t', 'm', 'f', 'all'].includes(k))) && E[0].all === undefined && E[1].all === 1, 'all에 글을 넣어도 안 넘어감 · 칸은 t·m·f·all(1)만');
+  const X = sock(RN); await join(X, 'x', T3.tk.replace(/^3\./, '9.')); ok(X.closed && X.code === 4004, '틀린 표 = 4004');
+  const Y = sock(RN); await join(Y, 'y', ''); ok(Y.closed && Y.code === 4004, '표 없음 = 4004'); }
 
 console.log(fails ? '✗ 실패 ' + fails : '✓ 모두 통과');
 process.exit(fails ? 1 : 0);

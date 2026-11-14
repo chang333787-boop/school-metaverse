@@ -214,7 +214,7 @@ export class Room extends DurableObject {
         return;
       case 'e': {
         if (!i.id) return;
-        if (i.cr) { const m = okInt(d.m, 0, 9); if (m == null) return; d = { t: 'e', m, all: d.all }; }   /* CLASS-MP 반 방 = 이모트 번호만(자유 글 X) */
+        if (i.cr) { const m = okInt(d.m, 0, 9); if (m == null) return; d = d.all === 1 ? { t: 'e', m, all: 1 } : { t: 'e', m }; }   /* CLASS-MP 반 방 = 이모트 번호만(자유 글 X · CLASS-MP-B: all도 1만) */
         d.f = i.id;
         const all = d.all === 1;
         const s = JSON.stringify(d);
@@ -227,7 +227,7 @@ export class Room extends DurableObject {
         if (!id || i.id) return;
         const rn = (ws.deserializeAttachment() || {}).rn; let tu = null;   /* CLASS-MP: 반 방 = 입장표가 맞아야 · 번호는 표에서 */
         if (rn) { tu = await tkCheck(this.env.PEPPER, rn, d.tk, now); if (!tu) { this.dead.add(ws); shut(ws, 4004, 'ticket'); return; } if (i.id || this.dead.has(ws)) return;
-          for (const [w, o] of this.info) if (w !== ws && o.id && o.id !== id && o.u === tu) { o.id = null; this.dead.add(w); shut(w, 4005, 'other device'); } }
+          for (const [w, o] of this.info) if (w !== ws && o.id && o.id !== id && o.u === tu) { const old = o.id; this.pos.delete(old); this.dirty.delete(old); this.others(w, JSON.stringify({ t: 'l', id: old })); o.id = null; this.dead.add(w); shut(w, 4005, 'other device'); } }   /* CLASS-MP-B: 옛 id는 진짜로 나감 → 나감 알림·자리 지움(그러지 않으면 drop이 id 없음에서 돌아가 옛 몸이 남음) · others는 아직 id 없는 새 연결엔 안 보냄 */
         const n = '';   /* NET-CF3: 이름은 받지 않음 — 누가 보내도 버리고 늘 빈 글(이름·자유 글은 이 서버에 두지 않음 · 칸은 옛 화면과 꼴을 맞추려고 남김) */
         /* 같은 id가 이미 있으면(새로고침·다른 탭) 옛 연결을 닫음 */
         for (const [w, o] of this.info) if (w !== ws && o.id === id) {
